@@ -442,7 +442,7 @@ void CoM(int i, COORD_TYPE* rxcm, COORD_TYPE* rycm, COORD_TYPE* rzcm)
     { 
       *rxcm += rx[n][i]*m[n];
       *rycm += ry[n][i]*m[n];
-      *rzcm += ry[n][i]*m[n];
+      *rzcm += rz[n][i]*m[n];
     }
   *rxcm /= Mtot;
   *rycm /= Mtot;
