@@ -572,6 +572,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double norm[3];
   double modn, denom;
+  double shift[3];
   int na, a, b;
 #if 0
   if (i < parnumA && j < parnumA)
@@ -592,26 +593,31 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
   /*printf("mredl: %f\n", mredl);*/
-#if 0
-  rxij = rx[i] - rx[j];
-  if (fabs (rxij) > L2)
-    rxij = rxij - SignR(L, rxij);
-  ryij = ry[i] - ry[j];
-  if (fabs (ryij) > L2)
-    ryij = ryij - SignR(L, ryij);
-  rzij = rz[i] - rz[j];
-#if !defined(MD_GRAVITY)
-  if (fabs (rzij) > L2)
-    rzij = rzij - SignR(L, rzij);
-#endif
-#endif
   MD_DEBUG(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
+#if 1
+  for (a=0; a < 3; a++)
+    if (fabs (rAC[a]) > L2)
+      rAC[a] = - SignR(L, rAC[a]);
+#if !defined(MD_GRAVITY)
+  if (fabs (rAC[a]) > L2)
+    rAC[a] -= SignR(L, rAC[a]);
+#endif
+#endif
   rBC[0] = rx[j] - rCx;
   rBC[1] = ry[j] - rCy;
   rBC[2] = rz[j] - rCz;
+#if 1
+  for (a=0; a < 3; a++)
+    if (fabs (rBC[a]) > L2)
+      rBC[a] = - SignR(L, rBC[a]);
+#if !defined(MD_GRAVITY)
+  if (fabs (rBC[a]) > L2)
+    rBC[a] -= SignR(L, rBC[a]);
+#endif
+#endif 
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
@@ -723,12 +729,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
   for (a=0; a < 3; a++)
     {
-      wx[i] -= factor*invIa[0][a]*rACn[a];
-      wx[j] += factor*invIb[0][a]*rBCn[a];
-      wy[i] -= factor*invIa[1][a]*rACn[a];
-      wy[j] += factor*invIb[1][a]*rBCn[a];
-      wz[i] -= factor*invIa[2][a]*rACn[a];
-      wz[j] += factor*invIb[2][a]*rBCn[a];
+      wx[i] += factor*invIa[0][a]*rACn[a];
+      wx[j] -= factor*invIb[0][a]*rBCn[a];
+      wy[i] += factor*invIa[1][a]*rACn[a];
+      wy[j] -= factor*invIb[1][a]*rBCn[a];
+      wz[i] += factor*invIa[2][a]*rACn[a];
+      wz[j] -= factor*invIb[2][a]*rBCn[a];
     }
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
@@ -981,6 +987,7 @@ void UpdateAtom(int i)
 	  
 	  for (k2 = 0; k2 < 3; k2++)
 	    {
+	      Omega[k1][k2] = -Omega[k1][k2];
 	      Rtmp[k1][k2] = R[i][k1][k2];
 	      M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
 	      if (k1==k2)
@@ -1105,9 +1112,9 @@ UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
  
       for (k1 = 0; k1 < 3; k1++)
 	{
-	  
 	  for (k2 = 0; k2 < 3; k2++)
 	    {
+	      Omega[k1][k2] = -Omega[k1][k2];
 	      M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
 	      if (k1==k2)
 		M[k1][k1] += 1.0;
@@ -1218,7 +1225,7 @@ void calcFxtFt(double x[3], double **X,
 	 }
      }
 }
-#define MD_GLOBALNR
+#undef MD_GLOBALNR
 #undef MD_GLOBALNR2
 double rA[3], rB[3];
 void fdjacGuess(int n, double x[], double fvec[], double **df, 
@@ -1317,7 +1324,6 @@ void fdjac(int n, double x[], double fvec[], double **df,
   DB[0][0] = invaSq[na];
   DB[1][1] = invbSq[na];
   DB[2][2] = invcSq[na];
-
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
@@ -1483,6 +1489,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = x[4] - atomTime[j];
+  MD_DEBUG(printf("x[4]:%.15f atomTime[%d]:%.15f\n",x[4], j, atomTime[j]));
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
@@ -1502,15 +1509,19 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
       fx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+      MD_DEBUG(printf("[FUNC2BEZ]x[%d]:%.15f rA[%d]:%f fx:%.15f\n", k1, x[k1], k1, rA[k1],fx[k1]));
+
     }
   for (k1 = 0; k1 < 3; k1++)
     {
       gx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	gx[k1] += 2.0*Xb[k1][k2]*(x[k2] - rB[k2]);
+      MD_DEBUG(printf("[FUNC2BEZ]x[%d]:%.15f rB[%d]:%f gx:%.15f\n", k1, x[k1], k1, rB[k1],gx[k1]));
     }
 
-   for (k1 = 0; k1 < 3; k1++)
+  MD_DEBUG(print_matrix(Xb,3));
+  for (k1 = 0; k1 < 3; k1++)
     {
 #if 0
       fvec[k1] = 0;
@@ -2065,7 +2076,7 @@ no_core_bump:
 			      MD_DEBUG(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
 			      MD_DEBUG2(printf("r[%d](%f,%f,%f)-r[%d](%f,%f,%f)\n",
 					      na, rx[na], ry[na], rz[na], n, rx[n], ry[n], rz[n]));
-			      vecg[3] = 1.0; /* questa stima di alpha andrebbe fatta meglio!*/
+			      vecg[3] = 0.1; /* questa stima di alpha andrebbe fatta meglio!*/
 			      vecg[4] = t;
 			      MD_DEBUG(printf("time=%.15f vecguess: %f,%f,%f alpha=%f t=%f\n",Oparams.time, vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
 #endif
@@ -2113,9 +2124,9 @@ no_core_bump:
 			      rxC = vecg[0];
 			      ryC = vecg[1];
 			      rzC = vecg[2];
-			      rxC = rxC - L*rint(rxC/L);
-			      ryC = ryC - L*rint(ryC/L);
-			      rzC = rzC - L*rint(rzC/L);
+			      //rxC = rxC - L*rint(rxC/L);
+			      //ryC = ryC - L*rint(ryC/L);
+			      //rzC = rzC - L*rint(rzC/L);
 			      MD_DEBUG(printf("A x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)-B x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)",
 					      rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
 					      rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]));
