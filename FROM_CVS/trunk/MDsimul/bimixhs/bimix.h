@@ -291,6 +291,11 @@ struct progStatus
   double nextcheckTime;
   double nextSumTime;
   double nextDt;
+  /* questi servono per salvare le conf usando la stessa formula di Giuseppe */
+  double nextStoreTime;
+  int KK;
+  int JJ;
+  double storerate;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   int maxbonds;
 #endif
@@ -477,6 +482,10 @@ struct pascii opro_ascii[] =
   {"xvaSavedMode", &OS(xvaSaveMode),                1,  1,    "%d"},
   {"bakSavedMode", &OS(bakSaveMode),                1,  1,    "%d"},
   {"intervalSum"   ,&OS(intervalSum),               1,  1,    "%.10G"}, 
+  {"nextStoreTime", &OS(nextStoreTime),             1, 1,     "%.10G"},
+  {"storerate",     &OS(storerate),                 1, 1,     "%.10G"},
+  {"KK",            &OS(KK),                        1, 1,     "%d"},
+  {"JJ",            &OS(JJ),                        1, 1,     "%d"},
   {"tmpPath",      OS(tmpPath),                     1,  NAME_LENGTH, "%s"},
   {"misPath",      OS(misPath),                     1,  NAME_LENGTH, "%s"},
   {"base",         &OS(base),                       1,  1, "%.6G"},
@@ -615,6 +624,7 @@ struct singlePar OsinglePar[] = {
   {"nebrTabFac", &OprogStatus.nebrTabFac,     INT},
   {"intervalSum", &OprogStatus.intervalSum,   CT},
   {"rescaleTime", &OprogStatus.rescaleTime,   CT},
+  {"storerate",     &OprogStatus.storerate,     CT},
   {"scalevel",   &OprogStatus.scalevel,       INT},
   {"endtime",    &OprogStatus.endtime,        CT},
   {"Dt",         &Oparams.Dt,                 CT},

@@ -713,6 +713,7 @@ void saveBakAscii(char *fn)
 
   if (fn == NULL)
     {
+    
 #ifdef MDLLINT
       sprintf(fileop2 ,"CnfT%.6G_%s_%lld", 
 	      Oparams.T, 

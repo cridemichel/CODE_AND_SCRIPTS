@@ -648,6 +648,9 @@ void usrInitBef(void)
     OprogStatus.nextSumTime = 0.0;
     OprogStatus.nextcheckTime = 0.0;
     OprogStatus.intervalSum = 1.0;
+    OprogStatus.storerate = 0.01;
+    OprogStatus.KK = 0;
+    OprogStatus.JJ = 0;
     /* Parameters relative to Ruocco AC force
        See: cond-mat/00001311, Ruocco et al. */
     OprogStatus.rNebrShell = 2.7; /* the radius of neighbour list shell */
@@ -820,6 +823,7 @@ void usrInitAft(void)
 	atomTime[i] = 0.0;
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
+      OprogStatus.nextStoreTime = 0.0;
       OprogStatus.nextDt += Oparams.Dt;
     }
   else
@@ -862,6 +866,8 @@ void usrInitAft(void)
 #endif
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
