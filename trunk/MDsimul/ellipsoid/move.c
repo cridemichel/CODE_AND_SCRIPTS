@@ -17,6 +17,7 @@ double Ia, Ib, invIa, invIb;
 #endif
 int *lastbump;
 extern double *axa, *axb, *axc;
+extern int *scdone;
 extern double maxax[2];
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
@@ -278,12 +279,13 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
 double calc_phi(void)
 {
   double N = 0;
-  int i;
+  //const double pi = acos(0)*2;
+  int i ;
   for (i=0; i < Oparams.parnum; i++)
     {
       N += axa[i]*axb[i]*axc[i];
     }
-  N *= (4/3)*pi;
+  N *= 4.0*pi/3.0;
   return N / (L*L*L);
 }
 double calc_norm(double *vec);
@@ -373,7 +375,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   phi = calc_phi();
   phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
   phi0 +=((double)Oparams.parnum-Oparams.parnumA)*Oparams.a[1]*Oparams.b[1]*Oparams.c[1];
-  phi0 *= (4/3)*pi;
+  phi0 *= 4.0*pi/3.0;
   phi0 /= L*L*L;
   C = cbrt(OprogStatus.targetPhi/phi0);
   if (i < Oparams.parnumA)
@@ -505,6 +507,11 @@ void scale_Phi(void)
   for (i = 0; i < Oparams.parnum; i++)
     {
       j = -1;
+      if (scdone[i]==1)
+	{
+	  done++;
+	  continue;
+	}
       distMin = get_min_dist(i, &j, rC, rD, shift);
       if (j == -1)
 	continue;
@@ -550,9 +557,10 @@ void scale_Phi(void)
 	    }
 	}
 #endif
-      if (fabs(axa[i] / a0I - target) < 1E-8)
+      if (fabs(axa[i] / a0I - target) < OprogStatus.axestol)
 	{
 	  done++;
+	  scdone[i] = 1;
 	  if (done == Oparams.parnum)
 	    break;
 	  continue;
@@ -578,18 +586,20 @@ void scale_Phi(void)
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
   printf("Scaled successfully %d/%d ellipsoids \n", done, Oparams.parnum);
-  if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<1E-10 )
+  if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
     {
       ENDSIM = 1;
       /* riduce gli ellissoidi alle dimensioni iniziali e comprime il volume */
       factor = a0I/axa[0];
       Oparams.rcut *= factor;
+#if 0
       Oparams.a[0] *= factor;
       Oparams.b[0] *= factor;
       Oparams.c[0] *= factor;
       Oparams.a[1] *= factor;
       Oparams.b[1] *= factor;
       Oparams.c[1] *= factor;
+#endif
       scale_coords(factor);
     }
 }
