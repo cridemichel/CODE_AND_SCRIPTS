@@ -780,7 +780,7 @@ void usrInitBef(void)
     OprogStatus.springkSD = -1.0;
     OprogStatus.stepSDA = 1.0;
     OprogStatus.stepSDB = 1.0;
-    OprogStatus.maxitsSD=10;
+    OprogStatus.maxitsSD=200;
     OprogStatus.zbrakn = 100;
     OprogStatus.zbrentTol = 0.00001;
     OprogStatus.forceguess = 1;
@@ -789,8 +789,8 @@ void usrInitBef(void)
     OprogStatus.nextSumTime = 0.0;
     OprogStatus.nextcheckTime = 0.0;
     OprogStatus.intervalSum = 1.0;
-    OprogStatus.n1 = 20;
-    OprogStatus.n2 = 20;
+    OprogStatus.n1 = 80;
+    OprogStatus.n2 = 30;
     OprogStatus.storerate = 0.01;
     OprogStatus.KK = 0;
     OprogStatus.JJ = 0;
@@ -926,15 +926,17 @@ void EvalSuperEllipse(double theta,double phi, double a, double b, double c, MES
    cphi = cos(phi);
    sth= sin(theta);
    sphi = sin(phi);
-   pm->point[0] = a * cth * sphi;
-   pm->point[1] = b * sth * sphi;
-   pm->point[2] = c * cphi;
+   pm->point[0] = a * cphi * sth;
+   pm->point[1] = b * sphi * sth;
+   pm->point[2] = c * cth;
+#if 0
      {
        FILE* f;
        f = fopen("mesh.dat", "a");
-       fprintf(f,"%f %f %f @ 0.1\n", pm->point[0], pm->point[1], pm->point[2]);
+       fprintf(f,"%f %f %f\n", pm->point[0], pm->point[1], pm->point[2]);
        fclose(f);
      }
+#endif
 #if 0
    pm->grad[0] = 2.0*pm->point[0]/Sqr(a);
    pm->grad[1] = 2.0*pm->point[1]/Sqr(b);
