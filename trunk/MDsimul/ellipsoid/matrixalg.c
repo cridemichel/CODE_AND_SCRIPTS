@@ -99,7 +99,7 @@ void nrerror(char *msg)
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 #define DABS fabs
 long long int itsfrprmn=0, callsfrprmn=0,callsok=0, callsprojonto=0, itsprojonto=0;
-double xicom[8], pcom[8], pcom2[8], xi[8], G[8], H[8], grad[8];//, vec[6];
+double xicom[8], pcomI[8], pcom[8], pcom2[8], xi[8], G[8], H[8], grad[8];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
 int cghalfspring, icg, jcg, doneryck;
 double shiftcg[3], lambdacg, minaxicg, minaxjcg;
@@ -236,7 +236,7 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
       u=(fabs(d) >= tol1 ? x+d : x+SIGN(tol1,d));
       fu=(*f)(u); /*This is the one function evaluation per iteration.*/
 #if 0
-      if (powmeth && 2.0*fabs(fuold-fu) <= tol*(fabs(fuold)+fabs(fu)+ZEPSBR)) 
+      if (2.0*fabs(fuold-fu) <= tol*(fabs(fuold)+fabs(fu)+ZEPSBR)) 
 	{ 
 	  *xmin=u;
 	  return fu;
@@ -552,7 +552,7 @@ double f1dimPow(double x)
   /*Must accompany linmin.*/
 {
   int j; 
-  double f, xt[4];
+  double f, xt[6];
   for (j=0;j<ncom;j++) 
     xt[j]=pcom[j]+x*xicom[j]; 
   f=(*nrfunc)(xt); 
@@ -579,7 +579,7 @@ void linminPow(double p[], double xi[], int n, double *fret, double (*func)(doub
       pcom[j]=p[j];
       xicom[j]=xi[j];
     } 
-  ax=0.0; /*Initial guess for brackets.*/
+  ax=0; /*Initial guess for brackets.*/
   xx=1.0; 
   mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimPow); 
   *fret=brent(ax,xx,bx,f1dimPow,TOLLM,&xmin);
@@ -601,7 +601,7 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
    * iterations taken. The routine linmin is used.*/
 {
   int i,ibig,j; 
-  double del,fp,fptt,t,pt[4],ptt[4],xit[4]; 
+  double del,fp,fptt,t,pt[6],ptt[6],xit[6]; 
   const int ITMAXPOW=200;
   //pt=vector(1,n);
   //ptt=vector(1,n); xit=vector(1,n);
@@ -744,6 +744,7 @@ double funcPowell(double angs[])
 }
 extern double pi, **powdirs;
 double powdirsI[4][4]={{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
+
 void powellmethod(double *vec)
 {
   double Fret, r1p[3], r2p[3], vecP[6], angs[4], sinth;
@@ -770,7 +771,7 @@ void powellmethod(double *vec)
   sinth = vecP[4]/axb[jcg]/sin(angs[3]);
   if (sinth < 0)
     angs[2] = 2.0*pi-angs[2];
-   powell(angs, powdirs, 4, OprogStatus.tolSD, &iter, &Fret, funcPowell);
+  powell(angs, powdirs, 4, OprogStatus.tolSD, &iter, &Fret, funcPowell);
 
   /* trovo le coordinate cartesiane dei punti trovati */
   angs2coord(angs, vecP);
@@ -780,6 +781,19 @@ void powellmethod(double *vec)
   body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
   //free_matrix(powdirs, 4);
   powmeth = 0;
+}
+double powdirsP[6][6]={{1,0,0,0,0,0},{0,1,0,0,0,0},{0,0,1,0,0,0},{0,0,0,1,0,0},
+    {0,0,0,0,1,0},{0,0,0,0,0,1}};
+double  cgfunc(double *vec);
+
+void powellmethodPenalty(double *vec)
+{
+  int k1, k2, iter; 
+  double Fret;
+  for (k1=0; k1 < 6; k1++)
+    for (k2=0; k2 < 6; k2++)
+      powdirs[k1][k2] = powdirsP[k1][k2];
+  powell(vec, powdirs, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc);
 }
 int check_point(char* msg, double *p, double *rc, double **XX)
 {
@@ -952,6 +966,14 @@ double polintfuncRyck(double x)
     polinterr = 0;
   return y;
 }
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
 void vectProdVec(double *A, double *B, double *C)
 {
   C[0] = A[1] * B[2] - A[2] * B[1]; 
@@ -960,6 +982,7 @@ void vectProdVec(double *A, double *B, double *C)
 }
 double Asd, Bsd, OmegaSqAsd[3][3], OmegaAsd[3][3], OmegaBsd[3][3], OmegaSqBsd[3][3];
 extern void calc_intersec(double *rB, double *rA, double **Xa, double* rI);
+double omA[3], omB[3]; 
 double funcPowellRyck(double phi[])
 {
   int kk, k1, k2;
@@ -982,8 +1005,8 @@ double funcPowellRyck(double phi[])
     }
   for (k1 = 0; k1 < 3; k1++)
      {
-       vA[k1] = pcom[k1]-rA[k1];
-       vB[k1] = pcom[k1+3]-rB[k1];
+       vA[k1] = pcomI[k1]-rA[k1];
+       vB[k1] = pcomI[k1+3]-rB[k1];
      } 
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -996,6 +1019,8 @@ double funcPowellRyck(double phi[])
 	  pn[k1+3] += MB[k1][k2]*vB[k2]; 
 	}
     }
+  //printf("scal prod1=%.15G scalprod2=%.15G\n", scalProd(pn,omA), scalProd(&pn[3],omB));
+  //printf("pcomI = (%.15G,%.15G,%.15G)\n", pcomI[0], pcomI[1], pcomI[2]);
   for (k1 = 0; k1 < 3; k1++)
     {
       pn[k1] += rA[k1];
@@ -1062,7 +1087,6 @@ void linminRyck(double p[], double xi[], double *fret)
  * the value of func at the returned location p. This is actually all accomplished by calling
  * the routines mnbrak and brent. */
 { 
-  const double TOLLM=1.0E-3;
   double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
   double f1dimPhi(double x); 
   void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, 
@@ -1070,12 +1094,12 @@ void linminRyck(double p[], double xi[], double *fret)
   int j, kk; 
   int k1, k2; 
   double fx2[3], r1[3], r2[3];
-  double xx,xminA, xminB,fx,fb,fa,bx,ax, omA[3], omB[3], nA, nB;
+  double xx,xminA, xminB,fx,fb,fa,bx,ax, nA, nB;
  
 #if 1
   for (j=0;j<6;j++)
     { 
-      pcom[j]=p[j];
+      pcomI[j]=pcom[j]=p[j];
       xicom[j]=xi[j];
     }
 #endif
@@ -1129,9 +1153,9 @@ void linminRyck(double p[], double xi[], double *fret)
   OmegaSqBsd[2][0] = omB[0]*omB[2];
   OmegaSqBsd[2][1] = omB[1]*omB[2];
   OmegaSqBsd[2][2] = -Sqr(omB[0]) - Sqr(omB[1]);
-  printf("pcom ini (%f %f %f)\n", pcom[0], pcom[1], pcom[2]);
+  //printf("pcom ini (%f %f %f)\n", pcom[0], pcom[1], pcom[2]);
   powellmethodRyck(fret);
-  printf("pcom2 fine (%f %f %f)\n", pcom2[0], pcom2[1], pcom2[2]);
+  //printf("pcom2 fine (%f %f %f)\n", pcom2[0], pcom2[1], pcom2[2]);
   for (j=0;j<6;j++)
     p[j] = pcom2[j]; 
   //printf("xminA=%f xminB=%f dist=%.15G\n", xminA, xminB, *fret);
@@ -1823,8 +1847,9 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
   	 vec[3], vec[4], vec[5]);
   printf(">>> vec[6]:%.15G vec[7]: %.15G\n", vec[6], vec[7]);
 #endif
-  //frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
-  frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+  frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
+  powellmethodPenalty(vec);
+  //frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
   //powellmethod(vec);
   for (kk=0; kk < 6; kk++)
     {
