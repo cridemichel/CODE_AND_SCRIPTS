@@ -325,26 +325,26 @@ void bump (int i, int j, double* W, int bt)
   double rxij, ryij, rzij, factor, invmi, invmj;
   double delpx, delpy, delpz;
   double mredl, ene;
-  //double sigSq, sigDeltaSq, intdistSq;
+  double sigSq, sigDeltaSq, intdistSq;
   double distSq;
   double vxij, vyij, vzij, b;
 
   if (i < parnumA && j < parnumA)
     {
-      //sigSq = Sqr(Oparams.sigma[0][0]);
-      //sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta);
+      sigSq = Sqr(Oparams.sigma[0][0]);
+      sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
       mredl = Mred[0][0];
     }
   else if (i >= parnumA && j >= parnumA)
     {
-      //sigSq = Sqr(Oparams.sigma[1][1]);
-      //sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta);
+      sigSq = Sqr(Oparams.sigma[1][1]);
+      sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
       mredl = Mred[1][1];
     }
   else
     {
-      //sigSq = Sqr(Oparams.sigma[0][1]);
-      //sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta);
+      sigSq = Sqr(Oparams.sigma[0][1]);
+      sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
       mredl = Mred[0][1]; 
     }
   vxij = vx[i] - vx[j];
@@ -368,6 +368,12 @@ void bump (int i, int j, double* W, int bt)
   distSq = Sqr(rxij)+Sqr(ryij)+Sqr(rzij);
   /*printf("distSq:%.20f\n",distSq);*/
   b = rxij * vxij + ryij * vyij + rzij * vzij;
+  if ((i==614||i==643) || (j==643||j==614))
+    {
+      printf("[ProcessCollision, time=%.20f, type=%d, b=%f] na=%d n=%d dist:%.15f\n", 
+	     Oparams.time, bt, b ,i, j, sqrt(distSq));
+      
+    }
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
   factor = 0.0;
@@ -379,20 +385,26 @@ void bump (int i, int j, double* W, int bt)
      * è una quantità positiva!!*/
     case MD_CORE_BARRIER:
       factor = -2.0*b;
+      factor *= mredl / sigSq;
       break;
     case MD_INOUT_BARRIER:
 #ifdef MD_INFBARRIER
       factor = -2.0*b;
 #elif defined(MD_SQWELL)
-      if (Sqr(b) < 2.0*distSq*Oparams.bheight/mredl)
-	factor = -2.0*b;
+      if (Sqr(b) < 2.0*sigDeltaSq*Oparams.bheight/mredl)
+	{
+	  factor = -2.0*b;
+	}
       else
 	{
-	  factor = -b + sqrt(Sqr(b) - 2.0*distSq*Oparams.bheight/mredl);
+	  factor = -b + sqrt(Sqr(b) - 2.0*sigDeltaSq*Oparams.bheight/mredl);
 	  remove_bond(i, j);
 	  remove_bond(j, i);
 	}
 #endif
+      factor *= mredl / sigDeltaSq;
+      if (fabs(distSq - sigDeltaSq)>1E-12)    
+	printf("[bump]dist:%.20f\n",sqrt(distSq));
       break;
     case MD_OUTIN_BARRIER:
 #ifdef MD_INFBARRIER
@@ -400,12 +412,12 @@ void bump (int i, int j, double* W, int bt)
 #elif defined(MD_SQWELL)
       add_bond(i, j);
       add_bond(j, i);
-      factor = -b - sqrt(Sqr(b) + 2.0*distSq*Oparams.bheight/mredl);
+      factor = -b - sqrt(Sqr(b) + 2.0*sigDeltaSq*Oparams.bheight/mredl);
 #endif
+      factor *= mredl / sigDeltaSq;
       break;
     }
   
-  factor *= mredl / distSq;
   delpx = factor * rxij;
   delpy = factor * ryij;
   delpz = factor * rzij;
@@ -417,6 +429,8 @@ void bump (int i, int j, double* W, int bt)
   vy[j] = vy[j] - delpy*invmj;
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
+#if defined(MD_SQWELL)
+#endif
 }
 #else
 void bump (int i, int j, double* W)
@@ -744,18 +758,30 @@ void UpdateSystem(void)
 void remove_bond(int na, int n)
 {
   int i, nb, ii;
-  memcpy(bondscache, bonds[na], sizeof(int)*numbonds[na]);
   nb = numbonds[na];
+  if (!nb)
+    return;
   ii = 0;
+  memcpy(bondscache, bonds[na], sizeof(int)*numbonds[na]);
   for (i = 0; i < nb; i++)
     if (bondscache[i] != n)
       {
-	bonds[na][++ii] = bondscache[i];
+	bonds[na][ii++] = bondscache[i];
       } 
-  numbonds[na]--;
+    else
+      numbonds[na]--;
+  if (nb==numbonds[na])
+    printf("nessun bond rimosso fra %d,%d\n", n, na);
 }
+int bound(int na, int n);
+
 void add_bond(int na, int n)
 {
+  if (bound(na, n))
+    {
+      printf("il bond %d,%d eiste già!\n", na, n);
+      return;
+    }
   bonds[na][numbonds[na]] = n;
   numbonds[na]++;
 }
@@ -787,7 +813,8 @@ void PredictEvent (int na, int nb)
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER) 
   int collCode;
   double sigDeltaSq, intdistSq, distSq, s;
-  const double EPSILON = 1E-14;
+  const double EPSILON = 1E-10;
+  double mredl;
 #endif
   int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
@@ -1016,6 +1043,7 @@ void PredictEvent (int na, int nb)
 			{
 			  sigSq = Sqr(Oparams.sigma[0][0]);
 			  sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
+			  mredl = Mred[0][0];
 #if 0
 			  inthreshold =  Sqr(Oparams.sigma[0][0]-Oparams.delta[0][0]/2.0);
 		          outthreshold = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]/2.0);	
@@ -1025,6 +1053,7 @@ void PredictEvent (int na, int nb)
 			{
 			  sigSq = Sqr(Oparams.sigma[1][1]);
 			  sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
+			  mredl = Mred[1][1]; 
 #if 0
 			  inthreshold =  Sqr(Oparams.sigma[1][1]-Oparams.delta[1][1]/2.0);
 		          outthreshold = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]/2.0);
@@ -1034,6 +1063,7 @@ void PredictEvent (int na, int nb)
 			{
 			  sigSq = Sqr(Oparams.sigma[0][1]);
 			  sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
+			  mredl = Mred[0][1]; 
 #if 0
 			  inthreshold =  Sqr(Oparams.sigma[0][1]-Oparams.delta[0][1]/2.0);
 		          outthreshold = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]/2.0);
@@ -1065,48 +1095,71 @@ void PredictEvent (int na, int nb)
 #if defined(MD_SQWELL)|| defined(MD_INFBARRIER)
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
       		      s = 0;
-		      if ( b < 0.0 && distSq >= sigDeltaSq && !bound(na, n) ) 
+		      if ( b < 0.0 ) 
 			{
-			  collCode = MD_OUTIN_BARRIER;
-		      	  s = -1.0;
-			  /* la piccola correzione serve poichè a causa
-			   * di errori numerici dopo l'evento la particella
-			   * potrebbe essere ancora fuori dalla buca (distSq > sigDeltaSq)*/
-			  intdistSq = sigDeltaSq;
+			  if (!bound(n, na))//(distSq > sigDeltaSq)
+			    {
+			      collCode = MD_OUTIN_BARRIER;
+			      s = -1.0;
+			      /* la piccola correzione serve poichè a causa
+			       * di errori numerici dopo l'evento la particella
+			       * potrebbe essere ancora fuori dalla buca (distSq > sigDeltaSq)*/
+			      intdistSq = sigDeltaSq;
+			    }
+			  else
+			    {
+			      collCode = MD_CORE_BARRIER;
+			      s = -1.0; 
+			      intdistSq = sigSq;
+			    }
 			}
-		      else if ( b > 0.0 && (distSq < sigDeltaSq || bound(na, n)) )  
+		      else if ( b > 0.0 && bound(n, na) )//distSq < sigDeltaSq)//  
 			{ 
 			  collCode = MD_INOUT_BARRIER;
 			  s = 1.0;
 			  /* ved. sopra riguardo a EPSILON */
 			  intdistSq = sigDeltaSq;
 			}
-		      else if (b < 0.0)
+#if 1
+		      if ((n==614||n==643) && (na==643||na==614))
 			{
-			  collCode = MD_CORE_BARRIER;
-			  s = -1.0; 
-			  intdistSq = sigSq;
+			  printf("()[PredictEvent,time=%.20f,b=%f,vv=%.10f,bound=%d]dist:%.15f s=%f\n",Oparams.time, b, vv, bound(n,na), sqrt(Sqr(dr[0])+Sqr(dr[1])+
+										  							Sqr(dr[2])),s);
 			}
+#endif			
+
 		      if (s != 0)
 	    		{
 			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
 			  d = Sqr (b) - vv * 
 			    (distSq - intdistSq);
-    			  if (d >= 0.) 
+			  if ((n==614||n==643) && (na==643||na==614))
+			    {
+			      printf("(*)[PredictEvent,time=%.20f,b=%f,vv=%.10f,bound=%d]dist:%.15f s=%f\n",Oparams.time, b, vv, bound(n,na), sqrt(Sqr(dr[0])+Sqr(dr[1])+
+					   													   Sqr(dr[2])),s);
+			      printf("d=%f\n", d);
+			    }
+			  if (d >= 0.) 
 			    {
 			      t = (s*sqrt (d) - b) / vv;
+			      if ((n==614||n==643) && (na==643||na==614))
+				{
+				  printf("[PredictEvent,time=%.20f,b=%f,vv=%.10f,bound=%d]dist:%.15f\n",Oparams.time, b, vv, bound(n,na), sqrt(Sqr(dr[0])+Sqr(dr[1])+
+						     	      Sqr(dr[2])));
+				  printf("s=%f predicted time: %.20f\n",s, t);
+				}
 			      if (t < 0)
 				{
 #if 1
-				  printf("time:%.15f tInt:%.15f\n", Oparams.time,
-					 tInt);
+				  printf("time:%.15f tInt:%.15f t:%.20f\n", Oparams.time,
+					 tInt, t);
 				  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-					 Sqr(dr[2]))-1.0 );
+					 Sqr(dr[2])));
 				  printf("STEP: %lld\n", (long long int)Oparams.curStep);
 				  printf("atomTime: %.10f \n", atomTime[n]);
 				  printf("n:%d na:%d\n", n, na);
 				  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
-				  /*exit(-1);*/
+				  //exit(-1);
 #endif
 				  t = 0;
 				}
@@ -1140,7 +1193,6 @@ void PredictEvent (int na, int nb)
 				  printf("atomTime: %.10f \n", atomTime[n]);
 				  printf("n:%d na:%d\n", n, na);
 				  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
-				  /*exit(-1);*/
 #endif
 				  t = 0;
 				}
@@ -1327,9 +1379,11 @@ void ProcessCellCrossing(void)
 #ifdef BROWNIAN
 void velsBrown(double T)
 {
-  /*printf("time: %f step: %d velsBrown \n", Oparams.time, Oparams.curStep);
-  */
+  printf("time: %.20f step: %d velsBrown \n", Oparams.time, Oparams.curStep);
+  
   comvel(Oparams.parnum, T, Oparams.m, 0); 
+  if (Oparams.curStep==360)
+   exit(-1);
 }
 #endif
 
@@ -1450,7 +1504,19 @@ void move(void)
 	    }
 	  K *= 0.5;
 #endif
+	  printf("PRIMA 643-614 dist: %.20f\n", sqrt(Sqr(rx[614]-rx[643])+Sqr(ry[614]-ry[643])+
+		 Sqr(rz[614]-rz[643])));
+	  printf("b=%.15f\n",
+		 (rx[614] - rx[643])*(vx[614] - vx[643])+
+		 (ry[614] - ry[643])*(vy[614] - vy[643])+
+		 (rz[614] - rz[643])*(vz[614] - vz[643]));
 	  velsBrown(Oparams.T);
+	  printf("DOPO643-614 dist: %.20f\n", sqrt(Sqr(rx[614]-rx[643])+Sqr(ry[614]-ry[643])+
+		 Sqr(rz[614]-rz[643])));
+	  printf("b=%.15f\n",
+		 (rx[614] - rx[643])*(vx[614] - vx[643])+
+		 (ry[614] - ry[643])*(vy[614] - vy[643])+
+		 (rz[614] - rz[643])*(vz[614] - vz[643]));
 	  rebuildCalendar();
 	  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
