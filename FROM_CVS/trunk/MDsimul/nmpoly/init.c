@@ -1313,7 +1313,7 @@ void usrInitAft(void)
   BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcut);
   BuildNebrListNoLinked(Oparams.parnum, OprogStatus.rcutInner);
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-  //LJForce(Oparams.parnum, OprogStatus.rcutInner);
+  LJForce(Oparams.parnum, OprogStatus.rcutInner);
 #endif
   printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);
 }
