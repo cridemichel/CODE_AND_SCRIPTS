@@ -724,7 +724,7 @@ void  AnlzConstraintDevs (void)
 	}
       
     }
-  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-10, 150, NA-1, Oparams.d,
+  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-9, 150, NA-1, Oparams.d,
 		    Oparams.m, Oparams.parnum);
   if (doneshake)
     {
@@ -1475,14 +1475,14 @@ void updImpNoseAndAft(double dt, double c)
 #endif
 #if 1
 #ifdef MD_RAPACONSTR
-   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
- 		    1E-10, px, py, pz);
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
+ 		    1E-9, px, py, pz);
 #endif
 #endif
 #if 1
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
-		   1E-10, px, py, pz);
+		   1E-9, px, py, pz);
 #endif
 #endif
    for (i=0; i < Oparams.parnum; i++)
@@ -2311,10 +2311,10 @@ void movelongRespaNPTBef(double dt)
   //  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
 #endif
 
-#if 0
+#if 1
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   if (OprogStatus.rcutInner != Oparams.rcut)
-    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 1E-12, px, py, pz);
+    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 1E-9, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
 #endif
@@ -2455,13 +2455,13 @@ void movelongRespaNPTAft(double dt)
 #if  1
 #ifdef MD_RAPACONSTR
   if (OprogStatus.rcutInner != Oparams.rcut)
-    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
+    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 1E-9, px, py, pz);
 #endif
 #endif
 #if 1
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR) 
   if (OprogStatus.rcutInner != Oparams.rcut)
-    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 1E-12, px, py, pz);
+    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 1E-9, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
 #endif
