@@ -27,6 +27,9 @@ double **rx_old, **ry_old, **rz_old, **vxold, **vyold, **vzold, **sigmag;
 double *rxi[NA], *ryi[NA], *rzi[NA];
 double **rx_oldLong, **ry_oldLong, **rz_oldLong;
 #endif
+#ifdef MD_RAPACONSTR
+extern double *cvMatInvS[NA][NA];
+#endif
 double *Fcoeff[3]; 
 /* coefficienti delle forze dovute agli atomi senza massa
  * 0 = r1
@@ -1134,6 +1137,13 @@ void usrInitAft(void)
       rxi[a] = malloc(sizeof(double)*Oparams.parnum);
       ryi[a] = malloc(sizeof(double)*Oparams.parnum);
       rzi[a] = malloc(sizeof(double)*Oparams.parnum);
+#endif
+#ifdef MD_RAPACONSTR
+      if (OprogStatus.keepInvMat)
+	{
+	  for (b = 0; b < NA; b++ )
+	    cMatInvS[a][b] = malloc(sizeof(double)*Oparams.parnum);
+	}
 #endif
       vxold[a] = malloc(sizeof(double)*Oparams.parnum);
       vyold[a] = malloc(sizeof(double)*Oparams.parnum);
