@@ -264,7 +264,10 @@ void updImpConstrVsq(double dt, double c, int i, double **cVec)
 	  if (w != 0.) 
 	    {
 	      cost = 0;
-	      for (mm = 0; mm < NB; mm++)
+	      dx = cVec[0][m];
+	      dy = cVec[1][m];
+	      dz = cVec[2][m];
+      	      for (mm = 0; mm < NB; mm++)
 		{
 		  if (cAtom1[mm] != a && cAtom2[mm] != a)
 		    {
@@ -272,24 +275,17 @@ void updImpConstrVsq(double dt, double c, int i, double **cVec)
 		      dvSq = Sqr(px[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - px[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]) + 
 			Sqr(py[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - py[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]) + 
 			Sqr(pz[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - pz[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]); 
-		      cost -= cvMatInv[m][mm]*dvSq;
+		      cost = -cvMatInv[m][mm]*dvSq;
+		      px[a][i] += w * cdt * cost * dx;
+		      py[a][i] += w * cdt * cost * dy;
+		      pz[a][i] += w * cdt * cost * dz;
+      	     	      continue;
 		    }
-		}
-	      dx = cVec[0][m];
-	      dy = cVec[1][m];
-	      dz = cVec[2][m];
-      	      //printf("a: %d cAtom1: %d cAtom2: %d w:%f\n", a, cAtom1[m], cAtom2[m], w);
-	      px[a][i] += w * cdt * cost * dx;
-	      py[a][i] += w * cdt * cost * dy;
-	      pz[a][i] += w * cdt * cost * dz;
-      	      for (mm = 0; mm < NB; mm++)
-		{
-		  if (cAtom1[mm] == a)
+		  else if (cAtom1[mm] == a)
 		    b = cAtom2[mm];
 		  else if (cAtom2[mm] == a)
 		    b = cAtom1[mm];
-		  else 
-		    continue;
+		 	
 		  costx = w*cdt*dx*cvMatInv[m][mm]; 
 		  costy = w*cdt*dy*cvMatInv[m][mm];
 		  costz = w*cdt*dz*cvMatInv[m][mm];
@@ -325,6 +321,7 @@ void updImpConstrVsq(double dt, double c, int i, double **cVec)
     		  py[a][i] -= costy * pm;
 		  pz[a][i] -= costz * pm;
 		}
+	      //printf("a: %d cAtom1: %d cAtom2: %d w:%f\n", a, cAtom1[m], cAtom2[m], w);
  	    }
 	}
     }
@@ -348,12 +345,24 @@ void updImpConstrVsqAft(double dt, double c, int i, double **cVec)
 	      dz = cVec[2][m];
 	      for (mm = NB-1; mm >= 0; mm--)
 		{
+		  if (cAtom1[mm] != a && cAtom2[mm] != a)
+		    {
+		      dvSq = Sqr(px[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - px[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]) + 
+			Sqr(py[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - py[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]) + 
+			Sqr(pz[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - pz[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]); 
+		      cost =- cvMatInv[m][mm]*dvSq;
+		      px[a][i] += w * cdt * cost * dx;
+		      py[a][i] += w * cdt * cost * dy;
+		      pz[a][i] += w * cdt * cost * dz;
+		      
+		      continue;
+		    }
+		  
 		  if (cAtom1[mm] == a)
 		    b = cAtom2[mm];
 		  else if (cAtom2[mm] == a) 
 		    b = cAtom1[mm];
-		  else 
-		    continue;
+		  
  		  pm = Sqr(px[b][i]/Oparams.m[b]) +  
 		    Sqr(py[b][i]/Oparams.m[b]) +
 		    Sqr(pz[b][i]/Oparams.m[b]);
@@ -364,10 +373,9 @@ void updImpConstrVsqAft(double dt, double c, int i, double **cVec)
 		  costy2 = 2.0*w*cdt*dy*cvMatInv[m][mm];
 		  costz2 = 2.0*w*cdt*dz*cvMatInv[m][mm];
 
-	      	  px[a][i] -= costx * pm;
-    		  py[a][i] -= costy * pm;
 		  pz[a][i] -= costz * pm;
-	
+    		  py[a][i] -= costy * pm;
+	      	  px[a][i] -= costx * pm;
 		  pz[a][i] += costz2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
 		  pz[a][i] += costz2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
 		  py[a][i] += costy2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
@@ -387,28 +395,11 @@ void updImpConstrVsqAft(double dt, double c, int i, double **cVec)
 		  px[a][i] /= (1 + costx*px[a][i]/Oparams.m[a]);
 		  py[a][i] /= (1 + costy*py[a][i]/Oparams.m[a]);
 		  pz[a][i] /= (1 + costz*pz[a][i]/Oparams.m[a]);
-
 		}
-	      cost = 0;
-	      for (mm = NB-1; mm >= 0; mm--)
-		{
-		  if (cAtom1[mm] != a && cAtom2[mm] != a)
-		    {
-		      dvSq = Sqr(px[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - px[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]) + 
-			Sqr(py[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - py[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]) + 
-			Sqr(pz[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - pz[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]); 
-		      cost -= cvMatInv[m][mm]*dvSq;
-		    }
-		}
-	      px[a][i] += w * cdt * cost * dx;
-	      py[a][i] += w * cdt * cost * dy;
-	      pz[a][i] += w * cdt * cost * dz;
-	   
- 	    }
+	    }
 	}
     }
 }
-
 void updImpConstrForce(double dt, double c, int i, double **cVec)
 {
   int m, a, mm;
@@ -699,8 +690,9 @@ void  AnlzConstraintDevs (void)
   if (constraintDevL > 1E-6)
     {
       /* do Shake!! */
-      //shakePosRespa(Oparams.steplength, 0.001, 150, NA-1, Oparams.d,
-    	//	    Oparams.m, Oparams.parnum);
+      printf("Step: %d let's SHAKE!\n", Oparams.curStep);
+      shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 0.0000000001, 150, NA-1, Oparams.d,
+    		    Oparams.m, Oparams.parnum);
     }
 }
 #endif
@@ -858,7 +850,7 @@ void shakePosRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE 
 	  rx[a][i] = pxi[a];
 	  ry[a][i] = pyi[a];
 	  rz[a][i] = pzi[a];
-#if 1
+#if 0
 	  px[a][i] = vxi[a]*m[a];
 	  py[a][i] = vyi[a]*m[a];
 	  pz[a][i] = vzi[a]*m[a];
@@ -2383,7 +2375,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   printf("tol=%.20f\n", tol);
   printf("L=%f Vol=%.f dt=%f\n", L, Vol, dt);
 #endif
-#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
+#if !defined(MD_FENE)// && !defined(MD_RAPACONSTR)
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
@@ -2399,7 +2391,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 #ifdef MD_RESPA_NOSELONG
   if (OprogStatus.Nose == 1)
     {
-     updImpNoseAnd(dt, 0.5);
+      updImpNoseAnd(dt, 0.5);
       updPv(dt, 0.5);
       updVol(dt, 0.5);
       updPositionsNPT(dt, 1.0);
@@ -2454,7 +2446,9 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 #endif
       updPositions(dt, 1.0);
     }
-
+#ifdef MD_RAPACONSTR
+  AnlzConstraintDevs();
+#endif
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 0.000000001, 150, NA-1, Oparams.d,
 		Oparams.m, Oparams.parnum);
