@@ -550,8 +550,8 @@ void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *
 	g += rBC[k1]*Xb[k1][k2]*rBC[k2];
       } 
   printf("f(rC)=%.15G g(rC)=%.15G\n", f, g);
-  if (fabs(f) > 1E-5||fabs(g) > 1E-5)
-    exit(-1);
+  //if (fabs(f) > 1E-5||fabs(g) > 1E-5)
+   // exit(-1);
 }
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
@@ -619,6 +619,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
   tRDiagR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
  
+  MD_DEBUG(store_bump(evIdA, evIdB);)
   MD_DEBUG(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
   /* calcola le matrici inverse del tensore d'inerzia */
   InvMatrix(Ia, invIa, 3);
@@ -1304,7 +1305,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
       for (k2 = 0; k2 < 3; k2++)
 	df[k1][3] += 4.0*x[3]*Xb[k1][k2]*(x[k2]-rB[k2]); 
 #endif
-      df[k1][3] = 4.0*x[3]*gx[k1];
+      df[k1][3] = 2.0*x[3]*gx[k1];
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
@@ -1407,7 +1408,7 @@ void PredictEvent (int na, int nb)
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
-  b, d, t, tInt, vv;
+	 b, d, t, tInt, vv, distSq;
   int et, kk, retcheck;
   double ncong, cong[3], pos[3], vecg[5];
   /*double cells[NDIM];*/
@@ -1778,8 +1779,8 @@ no_core_bump:
 		      if (b < 0.0) 
 			{
 			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-			  d = Sqr (b) - vv * 
-			    (Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]) - sigSq);
+			  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+			  d = Sqr (b) - vv * (distSq - sigSq);
 #if 0
 			  if (OprogStatus.quenchend > 0.0 && Oparams.curStep > 700000)
 			    printf("dist:%.15G\n", 
@@ -1787,8 +1788,15 @@ no_core_bump:
 #endif
     			  if (d >= 0.) 
 			    {
-			      t = - (sqrt (d) + b) / vv;
-			      MD_DEBUG(printf("t=%f curtime: %f\n", t, Oparams.time));
+			      if (distSq >= sigSq)
+				t = - (sqrt (d) + b) / vv;
+			      else
+				{
+				  MD_DEBUG(printf("Centroids overlap!\n"));
+				  t = (sqrt (d) - b) / vv;
+				}
+			      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
+			      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
 			      t += Oparams.time; 
 			      /* t è il guess per il newton-raphson */
 			      /* come guess per x possiamo usare il punto di contatto 
@@ -1830,9 +1838,13 @@ no_core_bump:
 				  printf("[ERROR] newton-raphson failed to converge!\n");
 				  exit(-1);
 				}
-			      else if (retcheck==2)
+			      else if (retcheck==2 || vecg[4] < Oparams.time)
 				{
-				  printf("qui\n");
+				  /* se l'urto è nel passato chiaramente va scartato
+				   * tuttavia se t è minore di zero per errori di roundoff? */
+				  /* Notare che i centroidi si possono overlappare e quindi t può
+				   * essere tranquillamente negativo */
+				  MD_DEBUG(printf("qui\n"));
 				  continue;
 				}
 			      rxC = vecg[0];
@@ -1963,7 +1975,6 @@ void ProcessCollision(void)
 #else
   bump(evIdA, evIdB, rxC, ryC, rzC, &W);
 #endif
-  MD_DEBUG(store_bump(evIdA, evIdB);)
   MD_DEBUG(calc_energy("dopo"));
   //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
