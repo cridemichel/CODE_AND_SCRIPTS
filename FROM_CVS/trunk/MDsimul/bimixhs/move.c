@@ -709,10 +709,14 @@ void calcObserv(void)
 }
 #endif
 extern double *treeTime;
+
 void UpdateAtom(int i)
 {
   double ti;
+  double wSq, w, sinw, cosw, uxn, uyn, uzn;
+  double Omega[3][3], OmegaSq[3][3];
   ti = Oparams.time - atomTime[i];
+  
   rx[i] += vx[i]*ti;
   ry[i] += vy[i]*ti;
 #if defined(MD_GRAVITY)
@@ -721,6 +725,40 @@ void UpdateAtom(int i)
 #else
   rz[i] += vz[i]*ti;
 #endif
+  /* ...and now orientations */
+  wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
+  w = sqrt(wSq);
+  if (w == 0.0) 
+    return;
+  sinw = sin(w*ti);
+  cosw = (1.0 - cos(w*ti))/wSq;
+  Omega[0][0] = 0;
+  Omega[0][1] = wz[i];
+  Omega[0][2] = -wy[i];
+  Omega[1][0] = -wz[i];
+  Omega[1][1] = 0;
+  Omega[1][2] = wx[i];
+  Omega[2][0] = wy[i];
+  Omega[2][1] = -wx[i];
+  Omega[2][2] = 0;
+  OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
+  OmegaSq[0][1] = wx[i]*wy[i];
+  OmegaSq[0][2] = wx[i]*wz[i];
+  OmegaSq[1][0] = wx[i]*wy[i];
+  OmegaSq[1][1] = -Sqr(wx[i]) - Sqr(wz[i]);
+  OmegaSq[1][2] = wy[i]*wz[i];
+  OmegaSq[2][0] = wx[i]*wz[i];
+  OmegaSq[2][1] = wy[i]*wz[i];
+  OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
+  uxn += sinw*(Omega[0][0]*ux[i]+Omega[0][1]*uy[i]+Omega[0][2]*uz[i]) + 
+    cosw*(OmegaSq[0][0]*ux[i]+OmegaSq[0][1]*uy[i]+OmegaSq[0][2]*uz[i]);
+  uyn += sinw*(Omega[1][0]*ux[i]+Omega[1][1]*uy[i]+Omega[1][2]*uz[i]) + 
+    cosw*(OmegaSq[1][0]*ux[i]+OmegaSq[1][1]*uy[i]+OmegaSq[1][2]*uz[i]);
+  uzn += sinw*(Omega[2][0]*ux[i]+Omega[2][1]*uy[i]+Omega[2][2]*uz[i]) + 
+    cosw*(OmegaSq[2][0]*ux[i]+OmegaSq[2][1]*uy[i]+OmegaSq[2][2]*uz[i]);
+  ux[i] = uxn;
+  uy[i] = uyn;
+  uz[i] = uzn;
 #if 0
   if (rz[i]+Lz*0.5-Oparams.sigma/2.0 < 0. && OprogStatus.quenchend > 0.0)
     {
