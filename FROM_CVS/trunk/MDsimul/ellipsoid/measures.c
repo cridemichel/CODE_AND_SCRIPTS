@@ -134,6 +134,8 @@ void calcV(void)
   V = 0;
 #endif
 }
+void calc_energy(char *msg);
+
 /* ============================== >>> Energy <<< ============================*/
 void energy(void)
 {
@@ -155,17 +157,7 @@ void energy(void)
   sprintf(TXTA[0],"STEP %lld [MEASURE]\n  L: %.10f\n", 
 	  (long long int)Oparams.curStep, L);
 #endif
-  K = 0.0;
-  for (i = 0; i < Oparams.parnumA; i++)
-    {
-      K += Oparams.m[0]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
-    }
-  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
-    {
-      K += Oparams.m[1]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
-    }
-  K *= 0.5;
-  
+  calc_energy("[MEASURES]"); 
 #ifdef MD_GRAVITY
   E = K + V;
 #else
