@@ -135,9 +135,9 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
    mdarray.c file).
 */
 #ifdef MD_GRAVITY
-#define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz, &lastcol
+#define ALLOC_LIST  &rx, &ry, &rz, &ux, &uy, &uz, &vx, &vy, &vz, &wx, &wy, &wz, &lastcol
 #else
-#define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz
+#define ALLOC_LIST  &rx, &ry, &rz, &ux, &uy, &uz, &vx, &vy, &vz, &wx, &wy, &wz 
 #endif
 
 /* this is used to declare the particle variables ( see below ) 
@@ -148,9 +148,9 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
    finally the coordinate, for example consider the position: 
    coordinate(rx, ry, rz) <- atom <- molecule*/
 #ifdef MD_GRAVITY
-#define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz, *lastcol
+#define DECL_LIST   *rx, *ry, *rz, *ux, *uy, *uz, *vx, *vy, *vz, *wx, *wy, *wz, *lastcol
 #else
-#define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz 
+#define DECL_LIST   *rx, *ry, *rz, *ux, *uy, *uz, *vx, *vy, *vz, *wx, *wy, *wz
 #endif
 				   
 #undef EXT_DLST
@@ -374,7 +374,10 @@ struct params
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
   COORD_TYPE m[2];             /* atoms masses */
-  COORD_TYPE sigma[2][2];     /* pair potential length parameters */
+  
+  double a[2];
+  double b[2];
+  double c[2];
   double rcut;
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
@@ -517,7 +520,9 @@ struct pascii opar_ascii[]=
   {"P",                 &OP(P),                           1,   1, "%.6G"},
   {"T",                 &OP(T),                           1,   1, "%.6G"},
   {"m",                 OP(m),                            2,   1, "%.6G"},
-  {"sigma",             OP(sigma),                        2,   2, "%.8G"},
+  {"a",                 OP(a),                             2,   1, "%.8G"},
+  {"b",                 OP(b),                             2,   1, "%.8G"},
+  {"c",                 OP(c),                             2,   1, "%.8G"},
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
@@ -656,14 +661,17 @@ struct singlePar OsinglePar[] = {
   /* ======================================================================= */
  
   /* ==================== >>> PUT HERE YOUR PARAMS <<< ===================== */
-  {"sigAA",      &Oparams.sigma[0][0],      CT},
-  {"sigBB",      &Oparams.sigma[1][1],      CT},
-  {"sigAB",      &Oparams.sigma[0][1],      CT},
+  {"A0",      &Oparams.a[0],      CT},
+  {"A1",      &Oparams.a[1],      CT},
+  {"B0",      &Oparams.b[0],      CT},
+  {"B1",      &Oparams.b[1],      CT},
+  {"C0",      &Oparams.c[0],      CT},
+  {"C1",      &Oparams.c[1],      CT},
 #ifdef MD_GRAVITY
   {"ggrav",      &Oparams.ggrav,            CT},
 #endif
-  {"massA",       &Oparams.m[0],                CT},
-  {"massB",       &Oparams.m[1],                CT},
+  {"mass0",       &Oparams.m[0],                CT},
+  {"mass1",       &Oparams.m[1],                CT},
 #ifdef MD_GRAVITY
   {"wallDiss",   &Oparams.wallDiss,         CT},
   {"partDiss",   &Oparams.partDiss,         CT},
@@ -726,7 +734,7 @@ extern struct singlePar OsinglePar[];
 
 #ifdef MAIN
 COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,
-  press_m, press_at, rcmz, rho;
+  press_m, press_at, rcmz, rho, ItensD[2][3];
 COORD_TYPE Ptens[3], DQtens[3], 
   sqrtdr2, Aa, V, DrSqTot, temp_transl;
 int MB[NUMV];
@@ -734,7 +742,7 @@ int MB[NUMV];
 extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs,
   press, press_m, press_at, temp_transl, rcmz, rho;
 extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot,
-  DphiSq;
+  DphiSq, ItensD[2][3];
 extern int MB[NUMV];
 #endif
 
