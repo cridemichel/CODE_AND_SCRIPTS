@@ -2542,9 +2542,9 @@ void v2p(void)
       CoM(i, &Rxl, &Ryl, &Rzl);
       for (a=0; a < NA; a++)
 	{
-	  px[a][i] = Oparams.m[a]*(px[a][i] - (Vol1 / Vol / 3.0)*Rxl);
-	  py[a][i] = Oparams.m[a]*(py[a][i] - (Vol1 / Vol / 3.0)*Ryl);
-	  pz[a][i] = Oparams.m[a]*(pz[a][i] - (Vol1 / Vol / 3.0)*Rzl);
+	  px[a][i] = Oparams.m[a]*(vx[a][i] - (Vol1 / Vol / 3.0)*Rxl);
+	  py[a][i] = Oparams.m[a]*(vy[a][i] - (Vol1 / Vol / 3.0)*Ryl);
+	  pz[a][i] = Oparams.m[a]*(vz[a][i] - (Vol1 / Vol / 3.0)*Rzl);
 	}
     }
   Ps = OprogStatus.Q * s1 / Sqr(s);
@@ -2573,8 +2573,8 @@ void updNoseAnd(double dt, double c)
   double dlns, dlnV;
   double PCMx, PCMy, PCMz;
   cdt = c*dt;
-  dlns = s1 / s ;
-  dlnV = Vol / Vol2 / 3.0 ; 
+  dlns = s*Ps / OprogStatus.Q ;
+  dlnV = Pv*Sqr(s)/OprogStatus.W/3.0/Vol; 
   for (a = 0; a < NA; a++)
     {
       mM[a] = Oparams.m[a] / Mtot;
@@ -2634,7 +2634,7 @@ void updLs(double dt, double c)
   cdt = c*dt;
   Nm = Oparams.parnum;
   cdt2 = cdt / 2.0;
-  s = s / (1 - Ps*cdt2/OprogStatus.Q);
+  s = s / (1 - s*Ps*cdt2/OprogStatus.Q);
   Kin = 0;
   for (i = 0; i < Oparams.parnum; i++)
     for (a = 0; a < NA; a++)
@@ -2650,7 +2650,7 @@ void updLs(double dt, double c)
   Ps += DT * cdt2;
   Ps = Ps / (1 - Ps*cdt*s/OprogStatus.Q);
   Ps += DT * cdt2;
-  s = s / (1 - Ps*cdt2/OprogStatus.Q);
+  s = s / (1 - s*Ps*cdt2/OprogStatus.Q);
 }
 
 /* ======================= >>> calcT1diagMol <<< =========================== */
@@ -2739,11 +2739,17 @@ void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz)
 void movelongRespaNPTBef(double dt)
 {
   updImpLong(dt, 0.25);
+  printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updNoseAnd(dt, 0.25);
+  printf("2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updLv(dt, 0.25);
+  printf("3) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updLs(dt, 0.5);
+  printf("4) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updLv(dt, 0.25);
+  printf("5) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updNoseAnd(dt, 0.25);
+  printf("6) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updImpLong(dt, 0.25);
   updNoseAndRef(dt, 0.5); 
 }
@@ -2775,10 +2781,19 @@ void move(void)
   int a, i, kk;
   distance = Oparams.d;
   /* calc predicted coords*/
+  Mtot = 0;
+  for (a = 0; a < NA; a++)
+    Mtot += Oparams.m[a];
+
   if (Oparams.curStep == 1)  
     {
       BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcut);
+      BuildNebrListNoLinked(Oparams.parnum, OprogStatus.rcutInner);
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+      LJForce(Oparams.parnum, OprogStatus.rcutInner);
+#ifdef MD_FENE
+      FENEForce();
+#endif
     } 
 #ifdef MD_RESPA_NPT
   v2p();
