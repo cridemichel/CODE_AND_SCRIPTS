@@ -1779,50 +1779,54 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
-double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha)
+double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
+		double *vecgsup, int calcguess)
 {
   double vecg[8], rC[3], rD[3], rDC[3], r12[3];
   double ti, segno;
   int retcheck;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
-  int k1, na;
+  int k1, k2, na;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
-  ti = t - atomTime[i];
-  rA[0] = rx[i] + vx[i]*ti;
-  rA[1] = ry[i] + vy[i]*ti;
-  rA[2] = rz[i] + vz[i]*ti;
-  MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
-  /* ...and now orientations */
-  UpdateOrient(i, ti, Rt, Omega);
-  na = (i < Oparams.parnumA)?0:1;
-  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
-
-  ti = t - atomTime[j];
-  rB[0] = rx[j] + vx[j]*ti + shift[0];
-  rB[1] = ry[j] + vy[j]*ti + shift[1];
-  rB[2] = rz[j] + vz[j]*ti + shift[2];
-  UpdateOrient(j, ti, Rt, Omega);
-  na = (j < Oparams.parnumA)?0:1;
-  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
-  calc_intersec(rB, rA, Xa, rC);
-  calc_intersec(rA, rB, Xb, rD);
-  MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
-		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
-  calc_grad(rC, rA, Xa, gradf);
-  calc_grad(rD, rB, Xb, gradg);
-  MD_DEBUG(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
-		  gradf[0], gradf[1], gradf[2], gradg[0], gradg[1], gradg[2]));
-  nf = calc_norm(gradf);
-  ng = calc_norm(gradg);
-  
-  vecg[6] = sqrt(nf/ng);
-  for (k1=0; k1 < 3; k1++)
+  if (calcguess)
     {
-      vecg[k1] = rC[k1];
-      vecg[k1+3] = rD[k1];
-      rDC[k1] = rD[k1] - rC[k1];
+      ti = t - atomTime[i];
+      rA[0] = rx[i] + vx[i]*ti;
+      rA[1] = ry[i] + vy[i]*ti;
+      rA[2] = rz[i] + vz[i]*ti;
+      MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
+      /* ...and now orientations */
+      UpdateOrient(i, ti, Rt, Omega);
+      na = (i < Oparams.parnumA)?0:1;
+      tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
+
+      ti = t - atomTime[j];
+      rB[0] = rx[j] + vx[j]*ti + shift[0];
+      rB[1] = ry[j] + vy[j]*ti + shift[1];
+      rB[2] = rz[j] + vz[j]*ti + shift[2];
+      UpdateOrient(j, ti, Rt, Omega);
+      na = (j < Oparams.parnumA)?0:1;
+      tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+      calc_intersec(rB, rA, Xa, rC);
+      calc_intersec(rA, rB, Xb, rD);
+      MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
+		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
+      calc_grad(rC, rA, Xa, gradf);
+      calc_grad(rD, rB, Xb, gradg);
+      MD_DEBUG(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
+		      gradf[0], gradf[1], gradf[2], gradg[0], gradg[1], gradg[2]));
+      nf = calc_norm(gradf);
+      ng = calc_norm(gradg);
+      
+      vecg[6] = sqrt(nf/ng);
+      for (k1=0; k1 < 3; k1++)
+	{
+	  vecg[k1] = rC[k1];
+	  vecg[k1+3] = rD[k1];
+	  rDC[k1] = rD[k1] - rC[k1];
+	}
+      vecg[7] = sqrt(calc_norm(rDC)/nf);  
     }
-  vecg[7] = sqrt(calc_norm(rDC)/nf);  
   MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
   newtDist(vecg, 8, &retcheck, funcs2beZeroedDist, i, j, shift); 
   if (retcheck != 0)
@@ -1830,6 +1834,10 @@ double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2,
       printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
       exit(-1);
     }
+  for (k1 = 0; k1 < 8; k1++)
+    {
+      vecgsup[k1] = vecg[k1]; 
+    }  
   for (k1 = 0; k1 < 3; k1++)
     {
       r1[k1] = vecg[k1];
@@ -1929,9 +1937,9 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   return (vc > 0);
 }
 #define EPS 1e-7
-void evolveVec(double ti, double *vecout, double *vecni)
+void evolveVec(int i, double ti, double *vecout, double *vecin)
 {
-  double wSq, w, OmegaSq[3][3], M[3][3];
+  double wSq, w, OmegaSq[3][3], M[3][3], Omega[3][3];
   double sinw, cosw;
   int k1, k2;
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
@@ -1984,21 +1992,22 @@ void evolveVec(double ti, double *vecout, double *vecni)
     }
 
 }
-void calcvecF(int i, int j, double t1, double t, double *r1, double *r2, double* d)
+double calcvecF(int i, int j, double t1, double t, double *r1, double *r2, double* ddot)
 {
   int kk;
   double rcat[3], rdbt[3], wra[3], wrb[3];
-  evolveVec(t-t1, rcat, r1);
-  evolveVec(t-t1, rdbt, r2);
-  d[0] = vx[i] - vx[j];
-  d[1] = vy[i] - vy[j];
-  d[2] = vx[i] - vz[j];
+  evolveVec(i, t-t1, rcat, r1);
+  evolveVec(j, t-t1, rdbt, r2);
+  ddot[0] = vx[i] - vx[j];
+  ddot[1] = vy[i] - vy[j];
+  ddot[2] = vx[i] - vz[j];
   vectProd(wx[i], wy[i], wz[i], rcat[0], rcat[1], rcat[2], &wra[0], &wra[1], &wra[2]);
   vectProd(wx[j], wy[j], wz[j], rdbt[0], rdbt[1], rdbt[2], &wrb[0], &wrb[1], &wrb[2]);
   for (kk=0; kk < 3; kk++)
-    d[kk] += wra[kk] - wrb[kk];
+    ddot[kk] += wra[kk] - wrb[kk];
+  return calc_norm(ddot);
 }
-}
+
 
 const COORD_TYPE bc1 = 14.0/45.0, bc2 = 64.0/45.0, bc3 = 24.0/45.0;
 /* =========================== >>> BodeTerm <<< ============================*/
@@ -2017,9 +2026,9 @@ void PredictEvent (int na, int nb)
    *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
-  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
-	 b, d, t, tInt, vv, distSq, t1, t2, tmp, alpha, d1, d2, h, gd, delt, d1o, d2o;
-  int et, kk, retcheck, ii, overlap, mm;
+  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], ddot[3], vecgd[8], normddot,
+	 b, d, t, tInt, vv, distSq, t1, t2, tmp, alpha, d1, d2, h;
+  int et, kk, retcheck, ii, overlap, mm, foundrc;
   double ncong, cong[3], pos[3], vecg[5], pos2[3], vecgold[5], vecgf[5], r1[3], r2[3];
   const double epsd = 0.1; 
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
@@ -2480,11 +2489,18 @@ no_core_bump:
 		      //continue;
 		      //exit(-1);
 		      t = t1;
-		      d1 = calcDist(t, na, n, shift, r1, r2, &alpha);
+		      d1 = calcDist(t, na, n, shift, r1, r2, &alpha, vecgd, 1);
 		      h = EPS*(t2-t1);
+		      foundrc = 0;
 		      while (t < t2)
 			{
-			  d2 += ;
+			  d1 = calcDist(t, na, n, shift, r1, r2, &alpha, vecgd, 0);
+			  normddot = calcvecF(na, n, t1, t, r1, r2, ddot);
+			  if (normddot!=0)
+			    t += epsd/normddot;
+			  else
+			    t += h;
+			  d2 = calcDist(t, na, n, shift, r1, r2, &alpha, vecgd, 0);
 			  if (d1 > 0 && d2 < 0)
 			    {
 			      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
@@ -2501,14 +2517,17 @@ no_core_bump:
 				}
 			      else
 				{
+				  foundrc = 1; 
 				  break;
 				}
 			    }
+#if 0
 			  gd = (d2 - d1)/h; 
 			  if (fabs(gd) > 1E-12)
 			    delt = (epsd*(maxax[0]+maxax[1])*0.5)/gd;
 			  d1o = d1;
 			  d2o = d2;
+#endif
 			}
 #if 0
 		      for (kk=0; kk < 5; kk++)
@@ -2569,6 +2588,8 @@ no_core_bump:
 			  continue;
 			}
 #endif		      
+		      if (!foundrc)
+			continue;
 		      rxC = vecg[0];
 		      ryC = vecg[1];
 		      rzC = vecg[2];
