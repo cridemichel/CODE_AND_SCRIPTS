@@ -4058,6 +4058,7 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
   *troot += tref;
   return 0;
 }
+#ifdef MD_NNL
 double calcvecFNeigh(int i, double t, double t1, double* ddot)
 {
   int kk;

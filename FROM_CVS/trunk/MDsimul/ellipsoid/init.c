@@ -732,8 +732,10 @@ void usrInitBef(void)
     OprogStatus.targetPhi = 0.0;
     OprogStatus.scalfact = 0.8;
     OprogStatus.reducefact = 0.9;
+#ifdef MD_NNL
     OprogStatus.nebrTabFac = 150;
     OprogStatus.rNebrShell = 0.4;
+#endif
     /* If 1 the program calculate of the corrisponding variable a mean from
        the begin of the run and not the instanteaneous value */
     OprogStatus.avnggr    = 0;
@@ -802,7 +804,6 @@ void usrInitBef(void)
     OprogStatus.JJ = 0;
     /* Parameters relative to Ruocco AC force
        See: cond-mat/00001311, Ruocco et al. */
-    OprogStatus.rNebrShell = 2.7; /* the radius of neighbour list shell */
     for (i = 0; i < PE_POINTS; i++)
       OprogStatus.PE[i] = 0;
     /* ======================================================================= */

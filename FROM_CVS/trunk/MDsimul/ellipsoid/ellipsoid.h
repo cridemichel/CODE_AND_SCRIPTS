@@ -174,6 +174,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeIdC    tree[9]
 #endif
 #define ATOM_LIMIT 10000000
+#ifdef MD_NNL
 struct nebrTabStruct 
 {
   int *list;       /* ellissoidi nella NNL */
@@ -181,7 +182,8 @@ struct nebrTabStruct
   int len;         /* numero di ellissoidi nella NNL */
   double time;     /* tempo a cui è stata costruita la NNL */
   double nexttime; /* tempo a cui la NNL deve essere ricostruita */
-}
+};
+#endif
 /* ======================== >>> struct progStatus <<< =======================*/
 struct progStatus
 {
@@ -486,8 +488,10 @@ struct pascii opro_ascii[] =
   {"W",            &OS(W),                          1,              1, "%.6G"},
   {"savedXva",     &OS(savedXva),                   1,   1,   "%d"},
   {"CMreset",      &OS(CMreset),                    1,   1,  "%d"},
+#ifdef MD_NNL
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
   {"rNebrShell",   &OS(rNebrShell),                 1,   1, "%.6G"},
+#endif
   {"tolT",         &OS(tolT),                       1,   1, "%.8G"},
 #ifdef MD_GRAVITY
   {"tc",           &OS(tc),                          1,              1, "%.15G"},
