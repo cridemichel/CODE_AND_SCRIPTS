@@ -5,67 +5,21 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include "molgl.h"
 
-#define MAXN 25000 /* maximum number of molecules to plot */
-#define NUMBW 256
-#define MAXAT 16 /* maximum number of aroms per molecule allowed
-		       (equal to the number of greys) */
-
-#define PI 2.0*acos(0.0)
-#define STACKS 10
-#define SLIDES 10
-#define MGL_NO_FADE  1
-#define MGL_FADE_LIN 2
-#define MGL_FADE_QUAD 3
-#define MGL_MAX_FRAMES 4
-
-#define Sqr(x) (x)*(x)
 const int NUMCOLS = 746;
+float mgl_bw[NUMBW][4];
 char *mglrgb[]={
 #include "mglrgb.h"
 };
-struct colStruct 
-{
-  float rgba[4];
-  char name[32];
-} 
-*mgl_col;
-int saved_counter=0;
-/*int saveimage=0, savedimg=0;*/
-float mgl_bw[NUMBW][4];
-int saveandquit = 0;
-char *savefile = NULL;
-int drawcube = 1;
-double ivpx, ivpy, ivpz;
+struct molecules* mols = NULL;
+struct global_settings globset;
 
-double sig[MAXAT], rx[MGL_MAX_FRAMES][MAXAT][MAXN], 
-  ry[MGL_MAX_FRAMES][MAXAT][MAXN], 
-  rz[MGL_MAX_FRAMES][MAXAT][MAXN];
-double radius[MAXAT][MAXN];
-int atcol[MAXAT][MAXN];
-int greyLvl[MAXAT][MAXN];
-
+/* array con i valori di default */
 char inputFile[512];
-int NumMols;
-float degx = 0.0, degy = 0.0, degz = 0.0, deginc = 5.0;
-GLuint atomsList[MGL_MAX_FRAMES][MAXAT];
-double L; /* lenght of an edge of the cubic box */
-int Width = 500, Height = 500;
-int infos = 1, bw = 0;
-int frameNo = 1; 
-int fadeMode = 2; /* default = linear fading */
-int NA = 1; 
-int axon = 0;/* perspective by default */
-/* NA = number of atom of the subsequent molecules (during reading
-   the input file) */
-
-int NAarr[MAXN]; /* NAarr[i] is the number of atoms of the i-molecule */
+GLuint *atomsList = NULL;
 
 /* mgl_*[colIdx*[j]] is the color of the j-th atom */ 
-int colIdxCol[MAXAT];
-int colIdxBw[MAXAT];
-double viewangle = 45.0, near, far;
-double  dist = 0.0;
 void setLight(void)
 {
   GLfloat light_ambient0[] = { 1.0, 1.0, 1.0, 0.15 };
@@ -123,8 +77,10 @@ void myinit (void)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     
-    //glEnable(GL_AUTO_NORMAL);
-    //glEnable(GL_NORMALIZE);
+#if 0
+    glEnable(GL_AUTO_NORMAL);
+    glEnable(GL_NORMALIZE);
+#endif
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
     glClearColor(1.0, 1.0, 1.0, 0.0);
@@ -137,8 +93,10 @@ void setColor(float col[4], double ff)
      scaling this by df and af respectively */
   float mat[4]; /* atoms color */
   float df = 0.95, af = 0.2;
-  //int i;
-  /*
+#if 0
+  int i;
+#endif
+#if 0
     mat[0] = ff*af*col[0]; mat[1] = ff*af*col[1]; 
     mat[2] = ff*af*col[2]; mat[3] = ff*col[3];
     glMaterialfv (GL_FRONT, GL_AMBIENT, mat);
@@ -147,7 +105,7 @@ void setColor(float col[4], double ff)
     mat[0] = ff*col[0]; mat[1] = ff*col[1]; mat[2] = ff*col[2];
     glMaterialfv (GL_FRONT, GL_SPECULAR, mat);
     glMaterialf (GL_FRONT, GL_SHININESS, 0.9*128.0);
-  */
+#endif
   mat[0] = af*col[0]; mat[1] = af*col[1]; 
   mat[2] = af*col[2]; mat[3] = ff*col[3];
   glMaterialfv (GL_FRONT, GL_AMBIENT, mat);
@@ -156,7 +114,6 @@ void setColor(float col[4], double ff)
   mat[0] = col[0]; mat[1] = col[1]; mat[2] = col[2];
   glMaterialfv (GL_FRONT, GL_SPECULAR, mat);
   glMaterialf (GL_FRONT, GL_SHININESS, 0.9*128.0);
-
 }
 /* ======================== >>> calcFadeFact <<< ===========================*/
 double  calcFadeFact(int mode, int nf)
@@ -178,15 +135,17 @@ double  calcFadeFact(int mode, int nf)
 void displayAtom(int nf, int nm, int na)
 {
   float fadeFact;
-  //GLUquadricObj* ss;
+  GLUquadricObj* ss;
+  atom_s *atom;
   glPushMatrix();
-  glTranslatef(rx[nf][na][nm],ry[nf][na][nm],rz[nf][na][nm]);/* 1st atom */ 
+  atom = mols[nm].atom[na];
+  glTranslatef(atom.common.rx,atom.common.ry,atom.common.rz);/* 1st atom */ 
   
   fadeFact = calcFadeFact(fadeMode, nf);
-
-  if (greyLvl[na][nm])
+  
+  if (atom.common.greyLvl)
     {
-      setColor(mgl_bw[greyLvl[na][nm]], fadeFact);
+      setColor(mgl_bw[atom.common.greyLvl], fadeFact);
     }
   else 
     {
@@ -194,18 +153,37 @@ void displayAtom(int nf, int nm, int na)
 	setColor(mgl_bw[colIdxBw[na]], fadeFact);
       else
 	{
-	  if (atcol[na][nm]>=0 && atcol[na][nm]<NUMCOLS)
+	  if (atom.common.atcol>=0 && atom.common.atcol<NUMCOLS)
 	    {
-	      setColor(mgl_col[atcol[na][nm]].rgba, fadeFact);
+	      setColor(mgl_col[atom.common.atcol].rgba, fadeFact);
 	    }
 	  else
 	    setColor(mgl_col[colIdxCol[na]].rgba, fadeFact);
 	}
     }
-  glutSolidSphere (radius[na][nm], STACKS, SLIDES);
-  
-  //ss = gluNewQuadric();
-  //gluSphere(ss, sig[na], 12, 12);
+  if (atom.common.type==MGL_ATOM_SPHERE)
+    {
+      glutSolidSphere (atom.sphere.radius, STACKS, SLIDES);
+    }
+  else if (atom.common.type==MGL_ATOM_DISK)
+    {
+      ss = gluNewQuadric();
+      gluCylinder(ss, atom.disk.radius, 
+		      atom.disk.radius, 
+		      atom.disk.height, 
+		      STACKS, SLIDES);
+    }
+  else if (atom.common.type==MGL_ATOM_CYLINDER)
+    {
+      ss = gluNewQuadric();
+      gluCylinder(ss, atom.disk.toprad, 
+		      atom.disk.botrad, 
+		      atom.disk.height, 
+		      STACKS, SLIDES);
+    }
+ /*ss = gluNewQuadric();
+    gluSphere(ss, sig[na], 12, 12);
+  */
   glPopMatrix();
 
 }
@@ -213,21 +191,18 @@ void displayAtom(int nf, int nm, int na)
 void buildAtomsList()
 {
   int i, j, nf;
-  //float col[4];
+  /*float col[4];*/
 
   /* NOTE: frameno is the number of frames read from postions file */
   for (nf = 0; nf < frameNo; ++nf )
     {
-      for (j = 0; j < NA; ++j)
+      atomsList[nf] = glGenLists(1);
+      glNewList(atomsList[nf], GL_COMPILE);
+      for(i = 0; i < NumMols[nf]; ++i)
 	{
-	  atomsList[nf][j] = glGenLists(1);
-	  glNewList(atomsList[nf][j], GL_COMPILE);
-	  for(i = 0; i < NumMols; ++i)
-	    {
-	      displayAtom(nf, i, j);
-	    }
-	  glEndList();
+	  displayAtom(nf, i, j);
 	}
+      glEndList();
     }
 }
 
@@ -251,7 +226,7 @@ void onScreenInfo()
   char text[255];
   glPushAttrib(GL_ALL_ATTRIB_BITS);
   glDisable(GL_LIGHTING);
-  glDisable(GL_DEPTH);
+  glDisable(GL_DEPTH_TEST);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   gluOrtho2D(0, Width, 0, Height);
@@ -394,8 +369,9 @@ void save_image(void)
 void display (void)
 {
   int j, nf;
-  //double fadeFact;
-
+  /*
+   * double fadeFact;
+   */
   if (saveandquit)
     glutHideWindow();
 
@@ -432,15 +408,13 @@ void display (void)
 	  glDepthMask(GL_FALSE);
 	}
       
-      for (j = 0; j < NA; ++j)
-	{
-	  glCallList(atomsList[nf][j]);
-	}
+      glCallList(atomsList[nf]);
+	
     }
   glPopMatrix ();
   
   if (infos) onScreenInfo();
-  glFlush ();
+  /*glFlush ();*/
   glutSwapBuffers();
   if (saveandquit==1)
     {
@@ -496,13 +470,11 @@ void print_usage(void)
   printf("| --viewpoint/-vp (x,y,z) | --diameter/-d <atoms_diameter> | --noinfos/-ni\n");
   printf("| --nobox|-nb ] <input_file> \n");
 }
-int setvp = 0, setdiameter=0;
 /* ============================= >>> args <<< ============================= */
 void args(int argc, char* argv[])
 {
   int i=1;
   int ii;
-  double diameter=1.0;
 
   if (argc == 1)
     {
@@ -578,14 +550,7 @@ void args(int argc, char* argv[])
       exit(-1);
     }
   
-  if (setdiameter)
-    {
-      for (ii = 0; ii < MAXAT; ++ii)
-	{
-	  sig[ii] = diameter;
-	} 
-    }
-    
+      
   if (savefile == NULL)
     savefile = "molglimg.png";
 
@@ -610,44 +575,66 @@ int parsecol(char *str)
     }
   else
     {
-      //printf("Color Number: %d\n", colNum);
+      /*printf("Color Number: %d\n", colNum);*/
       return colNum;
     }
 }
 /* ========================== >>> assignAtom <<< ===========================*/
 void assignAtom(int nf, int i, int j, const char* L)
 {
-  char s1[128], s2[128], s3[128], s4[128], s5[128];
-    /* TODO: Permit different grey levels for different mols
-     if (sscanf(L,"%s %s %s GL: %s ", s1, s2, s3, s4) == 4 )
-     {
-       printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
-       rx[nf][j][i] = atof(s1);
-       ry[nf][j][i] = atof(s2);
-       rz[nf][j][i] = atof(s3);
-       greylLvl[j][i] = atof(s4);
-       radius[j][i] = sig[j];
-       }
-  */
-  
-  if (sscanf(L,"%s %s %s @ %s $ %s ", s1, s2, s3, s4, s5) == 5 )
+  char s1[128], s2[128], s3[128], s4[128], s5[128], s6[128], s7[128], s8[128];
+
+  if (sscanf(L,"%s %s %s %s %s %s", s1, s2, s3, s4, s5, s6) == 6)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
 	     atoi(s5),i, j);*/
-      rx[nf][j][i] = atof(s1);
-      ry[nf][j][i] = atof(s2);
-      rz[nf][j][i] = atof(s3);
-      //greylLvl[j][i] = colIdxBW[j];// default value of grey level
+      rx[j][i][nf] = atof(s1);
+      ry[j][i][nf] = atof(s2);
+      rz[j][i][nf] = atof(s3);
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      nx[j][i][nf] = atof(s4);
+      ny[j][i][nf] = atof(s5);
+      nz[j][i][nf] = atof(s6);
+      radius[j][i] = sig[j];
+      greyLvl[j][i] = 0; /*colIdxBW[j];// default value of grey level */
+      atcol[j][i]  = -1;
+    }
+  else if (sscanf(L,"%s %s %s %s %s %s @ %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8) == 8)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	     atoi(s5),i, j);*/
+      rx[j][i][nf] = atof(s1);
+      ry[j][i][nf] = atof(s2);
+      rz[j][i][nf] = atof(s3);
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      nx[j][i][nf] = atof(s4);
+      ny[j][i][nf] = atof(s5);
+      nz[j][i][nf] = atof(s6);
+      radius[j][i] = atof(s7);
+      greyLvl[j][i] = 0; /*colIdxBW[j];// default value of grey level */
+      atcol[j][i]  = parsecol(s8);
+    }
+  else if (sscanf(L,"%s %s %s @ %s $ %s ", s1, s2, s3, s4, s5) == 5 )
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	     atoi(s5),i, j);*/
+      rx[j][i][nf]= atof(s1);
+      ry[j][i][nf]= atof(s2);
+      rz[j][i][nf]= atof(s3);
+      /*greylLvl[j][i] = colIdxBW[j];*/
+      /* default value of grey level*/
       radius[j][i] = atof(s4);
       greyLvl[j][i] = atoi(s5);
       atcol[j][i]  = -1;
     }
   if (sscanf(L,"%s %s %s C[%[^]]", s1, s2, s3, s4) == 4 )
     {
-      rx[nf][j][i] = atof(s1);
-      ry[nf][j][i] = atof(s2);
-      rz[nf][j][i] = atof(s3);
+      rx[j][i][nf] = atof(s1);
+      ry[j][i][nf] = atof(s2);
+      rz[j][i][nf] = atof(s3);
       radius[j][i] = sig[j];
       greyLvl[j][i] = 0;
       atcol[j][i] = parsecol(s4);
@@ -656,9 +643,9 @@ void assignAtom(int nf, int i, int j, const char* L)
     {
       /* printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       */
-      rx[nf][j][i] = atof(s1);
-      ry[nf][j][i] = atof(s2);
-      rz[nf][j][i] = atof(s3);
+      rx[j][i][nf]= atof(s1);
+      ry[j][i][nf]= atof(s2);
+      rz[j][i][nf]= atof(s3);
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
       radius[j][i] = atof(s4);
       greyLvl[j][i] = 0;
@@ -668,9 +655,9 @@ void assignAtom(int nf, int i, int j, const char* L)
     {
       /* printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       */
-      rx[nf][j][i] = atof(s1);
-      ry[nf][j][i] = atof(s2);
-      rz[nf][j][i] = atof(s3);
+      rx[j][i][nf]= atof(s1);
+      ry[j][i][nf]= atof(s2);
+      rz[j][i][nf]= atof(s3);
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
       radius[j][i] = atof(s4);
       greyLvl[j][i] = 0;
@@ -678,9 +665,9 @@ void assignAtom(int nf, int i, int j, const char* L)
     }
   else if (sscanf(L,"%s %s %s ", s1, s2, s3) == 3 )
     {
-      rx[nf][j][i] = atof(s1);
-      ry[nf][j][i] = atof(s2);
-      rz[nf][j][i] = atof(s3);
+      rx[j][i][nf]= atof(s1);
+      ry[j][i][nf]= atof(s2);
+      rz[j][i] [nf]= atof(s3);
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
       radius[j][i] = sig[j];
       greyLvl[j][i] = 0;
@@ -706,6 +693,24 @@ int getColByName(const char* name)
     }
   printf("ERROR: Unrecognized color %s!\n", name);
   exit(-1);
+}
+
+void add_atom(int curat)
+{}
+
+void add_mol(int curmol)
+{}
+
+void add_frame(int curframes)
+{
+  int nf;
+  nf = curframes + 1;
+  globset.NumMols = realloc(globset.NumMols, sizeof(int)*nf);
+  globset.NumMols[nf] = 0;
+  atomsList = realloc(atomsList, sizeof(GLuint)*nf);
+  mols = realloc(mols, sizeof(struct molecule)*nf);
+  mols.atom = NULL;
+  mols.bond = NULL;
 }
 
 /* =========================== >>> readLine <<< =============================*/
@@ -744,7 +749,7 @@ void assignCol(char* S, int j)
   if (eptr == S) /* not a number */
     {
       dropSpaces(S);
-      colIdxCol[j] = getColByName(S);
+      globset.colIdxCol[j] = getColByName(S);
       /* Find the number of the color named 's1'*/
       /*printf("col:%s:, %d\n", S, colIdxCol[j]);
       */
@@ -752,18 +757,18 @@ void assignCol(char* S, int j)
   else
     {
       //printf("Color Number: %d\n", colNum);
-      colIdxCol[j] = colNum;
+      globset.colIdxCol[j] = colNum;
     }
 }
 
 /* ========================== >>> pareseLine <<< =========================== */
-int parseLine(const char* Line, int* nf, int* i)
+int parseLine(const char* Line, int* nf, int* i, int alloc)
 {
   /*
     return true if this is a parameter, 0 otherwise
   */
   char parName[128], parVal[512], s1[512];
-  int lett, j;
+  int lett, j, jj, ii;
   /* Syntax:
      <parname> : <value>
      where <parname> is of the form ".<name>"
@@ -775,12 +780,22 @@ int parseLine(const char* Line, int* nf, int* i)
   if (parName[0] != '.') return 0; // no a parameter line!
   
   /* new frames */
-  if (!strcmp(parName, ".newframe"))
+  if (!strcmp(parName, ".newmol"))
+    {
+      ++(*i);
+      if (alloc)
+	add_mol(*i);
+    }
+  else if (!strcmp(parName, ".newframe"))
     {
       if (!((*nf == 0) && (*i == 0)))
 	{
+	  NumMols[nf] = i;
 	  ++(*nf);
 	  *i = 0;
+	  if (alloc)
+      	    /* allocate a new frame here */
+	    add_frame(*nf);
 	}
       return 1;
     }
@@ -791,57 +806,108 @@ int parseLine(const char* Line, int* nf, int* i)
       /* Build a string of this type: "%f , %f , ..." with NA '%f' */
       //strcpy(s1, strtok(parVal, ","));
       //printf("radius[0]: %s\n", s1);
-      sig[0] = atof(strtok(parVal, ","));
-
-      for (j = 1; j < NA; ++j) 
+      ns = strtok(parVal, ",");
+      a = 0;
+      if (globset.sig)
+	free(globset.sig);
+      while(ns)
 	{
 	  //strcpy(s1, strtok(NULL, ","));
-	  sig[j] = atof(strtok(NULL, ","));
+	  globset.sig = realloc(globset.sig,a+1);
+	  globset.sig[a] = atof(ns);
+	  a++;
+	  ns = strtok(NULL, ",");
 	}
+    
       //printf("---->%f %f\n", sig[0], sig[1]);
       return 1;
     }
   if (!strcmp(parName, ".Vol"))
     {
-      L = atof(parVal);
-      L = cbrt(L);
+      globset.L = atof(parVal);
+      globset.L = cbrt(globset.L);
       return 1;
     }
   
   if (!strcmp(parName, ".fadeMode"))
     {
-      fadeMode = atoi(parVal);
+      globset.fadeMode = atoi(parVal);
       return 1;
     }
   
   if (!strcmp(parName, ".atomCol"))
     {
-      strcpy(s1, strtok(parVal, ","));
-      assignCol(s1, 0); /* assignCol ignores inital and final spaces */
-      for (j = 1; j < NA; ++j)
+      ns = strtok(parVal, ",");
+      j = 0; 
+      if (globset.colIdxCol)
+	free(globset.colIdxCol);
+      while(ns)
 	{
-	  strcpy(s1, strtok(NULL, ","));
+	  strcpy(s1, ns);
+	  globset.colIdxCol = realloc(globset.colIdxCol, j+1);
 	  assignCol(s1, j);
+	  ns = strtok(NULL, ",");
+	  j++;
 	}
+    
       return 1;
     }
   if (!strcmp(parName, ".atomBw"))
     {
       /* Build a string of this type: "%f , %f , ..." with NA '%f' */
-      colIdxBw[0] = atoi(strtok(parVal, ","));
-      for (j = 1; j < NA; ++j) colIdxBw[j] = atoi(strtok(NULL, ","));
+      ns = strtok(parVal, ",");
+      if (globset.colIdxBw)
+	free(globset.colIdxBw);
+      a = 0;
+      while (ns)
+	{
+	  globset.colIdxBw = realloc(globset.colIdxBw, a+1);
+	  globset.colIdxBw[a] = atoi(ns);
+	  ns = strtok(NULL, ",");
+	  a++;
+	}
       return 1;
     }
 
   if (!strcmp(parName, ".numAt"))
     {
-      NA = atoi(parVal);
+      globset.NA = atoi(parVal);
       return 1;
     }
   printf("ERROR: Invalid parameter %s!\n", parName);
   exit(-1);
 }
-
+void setdefaults_after_fakeread(void)
+{
+  int a;
+  if (globset.NA)
+    {
+      for (a = 0; a < globset.NA; ++a)
+	{
+	  /*  sig[i] = 0.5;*/
+	  globset.colIdxCol[a] = a;
+	  /* first (and only those ones) 25 grey are quite different in this way */
+	  if (i < 25)
+	    globset.colIdxBw[a] = a*10;
+	  else 
+	    globset.colIdxBw[a] = a;
+	}
+      globset.colIdxCol[0] = 466; /* red1 */
+      if (globset.NA > 1)
+	globset.colIdxCol[1] = 126; /* green */
+      globset.colIdxBw[0] = 120;
+      if (globset.NA > 1 )
+	globset.colIdxBw[1] = 220;
+    }
+  if (globset.setdiameter && globset.NA)
+    {
+      for (a = 0; a < globset.NA; ++a)
+	{
+	  globset.sig[a] = globset.diameter;
+	} 
+    }
+  
+}
 /* ========================== >>> loadAtomPos <<< ===========================*/
 void loadAtomPos(void)
 {
@@ -854,58 +920,79 @@ void loadAtomPos(void)
      .
      where 0 refers to atom 0 and 1 refers to atom 1*/
   FILE* ifs;
-  int i, j, nf;
+  int i, a, nf, first=1;
   char line[1024];
-
+  long fpostmp, fpos=0;
   /*printf("Loading file %s\n", inputFile);*/
   i = 0;
   nf = 0;
-
+  a = 0;
+  add_one_frame(0);
   ifs = fopen(inputFile, "r"); 
   if (!ifs)
     {
       fprintf(stderr, "ERROR: invalid input file or wrong arguments!\n");
       exit(-1);
     }
+  /* fake reading to get number of particles etc. */
   while(!feof(ifs))
     {
+      fpostmp=ftell(ifs);
       readLine(ifs, line);
-      /*
-      if (strlen(line) == 0) 
-	{
-	  printf("eccomi\n");
-	  continue;
-	}*/
-      /*printf("line:%s\n", line);*/
 
-      if (parseLine(line, &nf, &i)) continue;
+      if (parseLine(line, &nf, &i, 1)) 
+	continue;
       
-      /* NA is the current number  of atoms per molecule */
-      NAarr[i] = NA; /* the i-th molcule has NA atoms 
-			(mixture of molesules NOT IMPLEMENTED YET)*/
-      assignAtom(nf, i, 0, line);
-      
-      for (j = 1; j < NA; ++j)
+      if (first)
 	{
-	  readLine(ifs, line);
-	  assignAtom(nf, i, j, line);
+	  first=0;
+	  fpos = fpostmp;  
 	}
+      /*assignAtom(nf, i, 0, line);*/
       
-      ++i;
+      /*readLine(ifs, line);*/
+      /*assignAtom(nf, i, j, line);*/
+      
+      ++a;
     }
-  
-  NumMols = i;
+
   /*printf("NumMols:%d", NumMols);*/
-  if (NumMols == 0)
+  
+  if (nf == 0 && globset.NumMols[0] == 0 && mols == NULL)
     {
       printf("ERROR: Presumbly the input file you supplied is void!\n");
       exit(-1);
     }
-  frameNo = ++nf;
+  if (globset.NA)
+    globset.sig = malloc(sizeof(double)*globset.NA);
+  setdefaults_after_fakeread();
+  globset.frameNo = ++nf;
+  globset.NumMols[nf] = i;
   /* printf("Read %i molecule\n", NumMols);
      printf("Number of frames: %d\n", frameNo);
   */
-  fclose(ifs);
+  nf = i = 0;
+  if (fseek(ifs, fpos, SEEK_SET))
+    {
+      perror("Error seeking the positions file:");
+      exit(-1);
+    }
+  while(!feof(ifs))
+    {
+      readLine(ifs, line);
+
+      assignAtom(nf, i, a, line);
+      
+      if (parseLine(line, &nf, &i, 0)) 
+	continue;
+      ++a;
+      if (NA && i >= NA)
+	{
+	  a = 0;
+	  i++;
+	}
+    }
+ fclose(ifs);
   /*
      printf("File with atoms positions successfully read.\n");*/
 }
@@ -935,22 +1022,34 @@ void default_pars(void)
 {
   int i;
 
-  L = 14.0;
-  
-  for (i = 0; i < MAXAT; ++i)
-    {
-      sig[i] = 0.5;
-      colIdxCol[i] = i;
-      /* first (and only those ones) 25 grey are quite different in this way */
-      if (i < 25)
-	colIdxBw[i] = i*10;
-      else 
-	colIdxBw[i] = i;
-    }
-  colIdxCol[0] = 466; /* red1 */
-  colIdxCol[1] = 126; /* green */
-  colIdxBw[0] = 120;
-  colIdxBw[1] = 220;
+  globset.L = 14.0;
+  globset.saved_counter = 0;
+  globset saveandquit = 0;
+  globset.savefile = NULL;
+  globset.drawcube = 1;
+  globset.sig = NULL;
+  globset.height = NULL;
+  globset.setdiameter = 0;
+  globset.numAt = 0; /* atomi per molecola 0=illimitati a meno che non si usi .newmol*/
+  globset.setdiameter = 0;
+  globset.NumMols = NULL;
+  globset.Width = 500;
+  globset.Height = 500;
+  globset.infos = 1;
+  globset.frameNo = 1;
+  globset.fadeMode = 2;
+  globset.NA = 1;
+  globset.axon = 0;
+  globset.bw = 0;
+  globset.degx = 0.0;
+  globset.degy = 0.0;
+  globset.degz = 0.0;
+  globset.deginc = 5.0;
+  globset.viewangle=45.0;
+  globset.setvp = 0;
+  globset.diameter = 1.0;
+  globset.dist = 1.0;
+ 
   readRGB();
 
   setBW();
