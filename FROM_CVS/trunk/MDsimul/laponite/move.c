@@ -35,7 +35,7 @@ extern void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely,
  in the move function and in the measuring functions, note that the variables 
  to measures have to be put in the 'mdsimdep.h' file (see that) */
 COORD_TYPE pi, s1t, Vol1t, L, invL, s1p, Elrc, Plrc;   
-COORD_TYPE Vc, V, W, K, WC, T1xx, T1yy, T1zz,
+COORD_TYPE W, K, WC, T1xx, T1yy, T1zz,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, WCxy, WCyz, WCzx, 
   WCxx, WCyy, WCzz, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Wm, Wmxx, Wmyy, Wmzz, 
@@ -2243,7 +2243,7 @@ void move(void)
     }
   else
     {
-      movea(Oparams.steplength, 0.0000000001, 30, 3, distance, Oparams.m, 
+      movea(Oparams.steplength, 0.000000000001, 30, 3, distance, Oparams.m, 
 	    Oparams.parnum);        
     }
   buildAtomsPositions();
@@ -2284,9 +2284,10 @@ void move(void)
   else if (OprogStatus.Nose == 2)
     {
       /* NPT ensemble */
-      movebNTV(Oparams.steplength, 0.0000000001, 30, 3, Oparams.m, distance, 
-	       Oparams.parnum);             
-    }
+      /*movebNTV(Oparams.steplength, 0.0000000001, 30, 3, Oparams.m, distance, 
+	       Oparams.parnum); */            
+      movebNTV(Oparams.steplength, 0.000000000001, 30, 3, Oparams.m, distance, 
+	       Oparams.parnum);  }
   else if (OprogStatus.Nose == -2)
     {
       movebBrownAnd(Oparams.steplength, 0.0000000001, 30, 3, Oparams.m, distance, 
