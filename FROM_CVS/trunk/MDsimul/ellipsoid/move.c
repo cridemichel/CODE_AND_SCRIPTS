@@ -16,6 +16,7 @@ double **Ia, **Ib, **invIa, **invIb;
 double Ia, Ib, invIa, invIb;
 #endif
 int *lastbump;
+extern double *axa, *axb, *axc;
 extern double maxax[2];
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
@@ -248,7 +249,7 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
 	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 	      for (n = cellList[n]; n > -1; n = cellList[n]) 
 		{
-		  if (n < na) 
+		  if (n!=na) 
 		    {
 		      dist = calcDistNeg(Oparams.time, na, n, shift, r1, r2, &alpha, vecg, 1);
 #if 0
@@ -277,8 +278,11 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
 double calc_phi(void)
 {
   double N = 0;
-  N = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
-  N +=((double)(Oparams.parnum-Oparams.parnumA))*Oparams.a[1]*Oparams.b[1]*Oparams.c[1];
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      N += axa[i]*axb[i]*axc[i];
+    }
   N *= (4/3)*pi;
   return N / (L*L*L);
 }
@@ -318,36 +322,34 @@ void calc_ellips_norms(double *rAC, double *rBD, double *norm, double *norm2)
     norm2[a] /= modn;
 }
 
-double rcutL, aL[2], bL[2], cL[2], maxaxL[2], invaSqL[2], invbSqL[2], invcSqL[2];
-void store_values(void)
+double rcutL, aL, bL, cL;
+void store_values(int i)
 {
   int aa;
   rcutL = Oparams.rcut;
-  for (aa = 0; aa < 2; aa++)
-    {
-      maxaxL[aa] = maxax[aa];
-      aL[aa] = Oparams.a[aa];
-      bL[aa] = Oparams.b[aa];
-      cL[aa] = Oparams.c[aa];
-      invaSqL[aa] = invaSq[aa];
-      invbSqL[aa] = invbSq[aa];
-      invcSqL[aa] = invcSq[aa]; 
-    }
+  aL = axa[i];
+  bL = axb[i];
+  cL = axc[i];
 }
-void restore_values(void)
+void restore_values(int i)
 {
   int aa;
   Oparams.rcut = rcutL;
-  for (aa = 0; aa < 2; aa++)
-    {
-      maxax[aa] = maxaxL[aa];
-      Oparams.a[aa] = aL[aa];
-      Oparams.b[aa] = bL[aa];
-      Oparams.c[aa] = cL[aa];
-      invaSq[aa] = invaSqL[aa];
-      invbSq[aa] = invbSqL[aa];
-      invcSq[aa] = invcSqL[aa]; 
-    }
+  axa[i] = aL;
+  axb[i] = bL;
+  axc[i] = cL;
+}
+double max_ax(int i)
+{
+  double ma;
+  ma = 0;
+  if (axa[i]>ma)
+    ma = axa[i];
+  if (axb[i]>ma)
+    ma = axb[i];
+  if (axc[i]>ma)
+    ma = axc[i];
+  return ma;
 }
 void scale_coords(double sf)
 {
@@ -361,78 +363,60 @@ void scale_coords(double sf)
     }
 }
 
-double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double rD[3], 
+double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], double rD[3], 
 		      double shift[3], double scalfact, double *factor)
 {
-  int i, kk, a;
-  double phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
+  int kk, a;
+  double C, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
 
   L2 = 0.5 * L;
   phi = calc_phi();
-
-  if (phi > OprogStatus.targetPhi)
+  phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
+  phi0 +=((double)Oparams.parnum-Oparams.parnumA)*Oparams.a[1]*Oparams.b[1]*Oparams.c[1];
+  phi0 *= (4/3)*pi;
+  phi0 /= L*L*L;
+  C = cbrt(OprogStatus.targetPhi/phi0);
+  
+  for (kk=0; kk < 3; kk++)
     {
-      fact = 1/cbrt(OprogStatus.targetPhi/phi);
+      rAC[kk] = rA[kk] - rC[kk];
+      if (fabs (rAC[kk]) > L2)
+	rAC[kk] -= SignR(L, rAC[kk]);
     }
+  for (kk=0; kk < 3; kk++)
+    {
+      rBD[kk] = rB[kk] - rD[kk];
+      if (fabs (rBD[kk]) > L2)
+	rBD[kk] -= SignR(L, rBD[kk]);
+    }
+  /* 0.99 serve per evitare che si tocchino */
+  if (C < 1)
+    fact = C;
   else
     {
-      for (kk=0; kk < 3; kk++)
-	{
-	  rAC[kk] = rA[kk] - rC[kk];
-	  if (fabs (rAC[kk]) > L2)
-	    rAC[kk] -= SignR(L, rAC[kk]);
-	}
-      for (kk=0; kk < 3; kk++)
-	{
-	  rBD[kk] = rB[kk] - rD[kk];
-	  if (fabs (rBD[kk]) > L2)
-	    rBD[kk] -= SignR(L, rBD[kk]);
-	}
-      /* 0.99 serve per evitare che si tocchino */
-      fact1 = 1 + scalfact*(d / (calc_norm(rAC)+calc_norm(rBD)));
-      fact2 = cbrt(OprogStatus.targetPhi/phi);
+      fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
+      fact2 = C;
       if (fact2 < fact1)
-	{
-	  fact = fact2;
-	}
+	fact = fact2;
       else
 	fact = fact1;
     }
-  //printf("phi=%f fact1: %.8G fact2:%.8G scaling factor: %.8G\n", phi, fact1, fact2, fact);
-  Oparams.rcut *= fact;
-  Oparams.a[0] *= fact;
-  Oparams.b[0] *= fact;
-  Oparams.c[0] *= fact;
-  Oparams.a[1] *= fact;
-  Oparams.b[1] *= fact;
-  Oparams.c[1] *= fact;
-  /* maxax è il diametro del centroide */
-  for (a = 0; a < 2; a++)
-    {
-      maxax[a] = 0.0;
-      if (Oparams.a[a] > maxax[a])
-	maxax[a] = Oparams.a[a];
-      if (Oparams.b[a] > maxax[a])
-	maxax[a] = Oparams.b[a];
-      if (Oparams.c[a] > maxax[a])
-	maxax[a] = Oparams.c[a];
-      maxax[a] *= 2.0;
-    }
-  for (a = 0; a < 2; a++)
-    {
-      invaSq[a] = Sqr(1/Oparams.a[a]);
-      invbSq[a] = Sqr(1/Oparams.b[a]);
-      invcSq[a] = Sqr(1/Oparams.c[a]);
-    };
+  //printf("phi=%f  scaling factor: %.8G\n", phi, fact);
+  axa[i] *= fact;
+  axb[i] *= fact;
+  axc[i] *= fact;
   *factor = fact;
+  if (2.0*max_ax(i) > Oparams.rcut)
+    Oparams.rcut = 2.0*max_ax(i)*1.01;
   return calc_phi();
 }
-void rebuild_linked_list(void)
+
+void rebuild_linked_list()
 {
   double L2;
   int j, n;
   L2 = 0.5 * L;
-  cellsx = L / Oparams.rcut;
+   cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
 #ifdef MD_GRAVITY
   cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
@@ -458,34 +442,41 @@ void rebuild_linked_list(void)
       cellList[j] = n;
     }
 }
-double check_dist_min(char *msg)
+double check_dist_min(int i, char *msg)
 {
-  int imin, j, i, jmin;
+  int imin, j;
   double distMin=1E60, dist, rC[3], rD[3], shift[3];
   
-  imin = -1;
-  for (i = 0; i < Oparams.parnum; i++)
-    {
-      j = -1;
-      dist = get_min_dist(i, &j, rC, rD, shift);
-      if (dist < distMin)
-	{
-	  distMin = dist;
-	  imin = i;
-	  jmin = j;
-	}
-    }
+  j = -1;
+  distMin = get_min_dist(i, &j, rC, rD, shift);
+    
   if (msg)
     printf("[check_dist_min] %s distMin: %.12G\n", msg, distMin);
 
   return distMin;
 } 
-
+double check_alldist_min(char *msg)
+{
+  int j, i;
+  double distMin=1E60, dist;
+  double rC[3], rD[3], shift[3];
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      j = -1;
+      dist = get_min_dist(i, &j, rC, rD, shift);
+      if (j != -1 && dist < distMin)
+	distMin = dist;
+    }
+  if (msg)
+    printf("[dist all] %s: %.10G\n", msg, distMin);
+  return distMin;
+  
+}
 void scale_Phi(void)
 {
-  int i, j, imin, jmin=-1, kk, n, its;
+  int i, j, imin, jmin=-1, kk, n, its, done=0;
   static int first = 1;
-  static double a0I;
+  static double a0I, target;
   double dist, distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
   double L2, shift[3], shiftmin[3], phi, scalfact, factorold, factor;
   if (OprogStatus.targetPhi <= 0)
@@ -495,15 +486,57 @@ void scale_Phi(void)
     {
       first = 0;
       a0I = Oparams.a[0];
+      target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
   //UpdateSystem();   
   L2 = 0.5 * L;
   /* get the minimum distance in the system */
+  for (kk = 0;  kk < 3; kk++)
+    {
+      cellRange[2*kk]   = - 1;
+      cellRange[2*kk+1] =   1;
+    }
   imin = -1;
   for (i = 0; i < Oparams.parnum; i++)
     {
       j = -1;
-      dist = get_min_dist(i, &j, rC, rD, shift);
+      if (fabs(axa[i] / a0I - target) < 1E-12)
+	{
+	  done++;
+	  continue;
+	}
+      distMin = get_min_dist(i, &j, rC, rD, shift);
+      if (j == -1)
+	continue;
+      //printf("i=%d j=%d distmin=%.10G\n", i, j, distMin);
+      rAmin[0] = rx[i];
+      rAmin[1] = ry[i];
+      rAmin[2] = rz[i];
+      rBmin[0] = rx[j];
+      rBmin[1] = ry[j];
+      rBmin[2] = rz[j];
+      scalfact = OprogStatus.scalfact;
+      store_values(i);
+      if (distMin < 10*OprogStatus.epsdFast)
+	continue;
+      phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor);
+      rebuild_linked_list();
+      distMinT = check_dist_min(i, NULL);
+      its = 0;
+      while (distMinT < 0)
+	{
+	  restore_values(i);
+	  phi = scale_axes(i, distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact, &factor);
+	  rebuild_linked_list();
+	  distMinT = check_dist_min(i, "Alla fine di calc_Phi()");
+	  //printf("t=%.8G cellsx: %d rcut: %.8G imin=%d jmin=%d distMinT= %.15G phi=%.8G\n", 
+	  //     Oparams.time, cellsx, Oparams.rcut, imin, jmin, distMinT, phi);
+	  scalfact *= OprogStatus.reducefact;
+	  its++;
+	}
+  
+
+#if 0
       if (dist < distMin)
 	{
 	  distMin = dist;
@@ -516,58 +549,24 @@ void scale_Phi(void)
 	      shiftmin[kk] = shift[kk];
 	    }
 	}
+#endif
     }
-  for (kk = 0;  kk < 3; kk++)
-    {
-      cellRange[2*kk]   = - 1;
-      cellRange[2*kk+1] =   1;
-    }
- 
-  rAmin[0] = rx[imin];
-  rAmin[1] = ry[imin];
-  rAmin[2] = rz[imin];
-  rBmin[0] = rx[jmin];
-  rBmin[1] = ry[jmin];
-  rBmin[2] = rz[jmin];
-  scalfact = OprogStatus.scalfact;
-  store_values();
-  if (distMin < 10*OprogStatus.epsdFast)
-    return;
-  if (distMin < 0)
-    {
-      printf("[scale_Phi] I can't scale axes, minimum distance is negative!");
-      return;
-    }
-  phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact, &factor);
-  rebuild_linked_list();
-  distMinT = check_dist_min(NULL);
-  its = 0;
-  while (distMinT < 0)
-    {
-      restore_values();
-      phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact, &factor);
-      rebuild_linked_list();
-      distMinT = check_dist_min("Alla fine di calc_Phi()");
-      //printf("t=%.8G cellsx: %d rcut: %.8G imin=%d jmin=%d distMinT= %.15G phi=%.8G\n", 
-	//     Oparams.time, cellsx, Oparams.rcut, imin, jmin, distMinT, phi);
-      scalfact *= OprogStatus.reducefact;
-      its++;
-    }
-  
+
+  //check_alldist_min("DOPO");
   printf("Scaled axes succesfully phi=%.8G\n", phi);
   //check_dist_min("PRIMA");
+  rebuild_linked_list();
   rebuildCalendar();
-  //check_dist_min("DOPO");
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-  if (fabs(phi - OprogStatus.targetPhi) < 0.001)
+  if (done == Oparams.parnum)
     {
       ENDSIM = 1;
       /* riduce gli ellissoidi alle dimensioni iniziali e comprime il volume */
-      factor = a0I/Oparams.a[0];
+      factor = a0I/axa[0];
       Oparams.rcut *= factor;
       Oparams.a[0] *= factor;
       Oparams.b[0] *= factor;
@@ -1090,13 +1089,25 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   MD_DEBUG(printf("\n"));
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
-  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
 #ifdef MD_ASYM_ITENS
   RDiagtR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[i]);
 #else
   Ia = Oparams.I[na];
 #endif
   na = (j < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
 #ifdef MD_ASYM_ITENS
   RDiagtR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
@@ -1956,6 +1967,12 @@ void fdjac(int n, double x[], double fvec[], double **df,
   MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
   MD_DEBUG2(print_matrix(RA, 3));
   na = (iA < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[iA]);
+      invbSq[na] = 1/Sqr(axb[iA]);
+      invcSq[na] = 1/Sqr(axc[iA]);
+    }
   tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
   MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
   MD_DEBUG2(print_matrix(Xa, 3));
@@ -1972,6 +1989,12 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vB[2] = vz[iB];
   UpdateOrient(iB, ti, RB, OmegaB);
   na = (iB < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[iB]);
+      invbSq[na] = 1/Sqr(axb[iB]);
+      invcSq[na] = 1/Sqr(axc[iB]);
+    }
   tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
   DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
   DB[0][0] = invaSq[na];
@@ -2068,6 +2091,13 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   /* ...and now orientations */
   UpdateOrient(i, ti, Rt, Omega);
   na = (i < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = tGuess - atomTime[j];
@@ -2076,6 +2106,12 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   rB[2] = rz[j] + vz[j]*ti + shift[2];
   UpdateOrient(j, ti, Rt, Omega);
   na = (j < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 
 }
@@ -2139,6 +2175,12 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   /* ...and now orientations */
   UpdateOrient(i, ti, Rt, Omega);
   na = (i < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = x[4] - atomTime[j];
@@ -2148,7 +2190,13 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   rB[2] = rz[j] + vz[j]*ti + shift[2];
   UpdateOrient(j, ti, Rt, Omega);
   na = (j < Oparams.parnumA)?0:1;
-  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+ tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 #if 0
   printf("Xa=\n");
   print_matrix(Xa, 3);
@@ -2601,6 +2649,12 @@ double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *
   /* ...and now orientations */
   UpdateOrient(i, ti, Rt, Omega);
   na = (i < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = t - atomTime[j];
@@ -2609,6 +2663,12 @@ double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *
   rB[2] = rz[j] + vz[j]*ti + shift[2];
   UpdateOrient(j, ti, Rt, Omega);
   na = (j < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
   if (calcguess)
     {
@@ -2829,10 +2889,23 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   na = (i < Oparams.parnumA)?0:1;
   
   UpdateOrient(i, t-atomTime[i], RA, OmegaA);
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
 
   na = (j < Oparams.parnumA)?0:1;
   UpdateOrient(j, t-atomTime[j], RB, OmegaB);
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
   for (a=0; a < 3; a++)
     {
@@ -3701,12 +3774,19 @@ void PredictEvent (int na, int nb)
 #else
 		      /* maxax[...] è il diametro dei centroidi dei due tipi
 		       * di ellissoidi */
-		      if (na < parnumA && n < parnumA)
-			sigSq = Sqr(maxax[0]);
-		      else if (na >= parnumA && n >= parnumA)
-			sigSq = Sqr(maxax[1]);
+		      if (OprogStatus.targetPhi > 0)
+			{
+			  sigSq = Sqr(max_ax(na)+max_ax(n));
+			}
 		      else
-			sigSq = Sqr((maxax[0]+maxax[1])*0.5);
+		       {
+			 if (na < parnumA && n < parnumA)
+			   sigSq = Sqr(maxax[0]);
+			 else if (na >= parnumA && n >= parnumA)
+			   sigSq = Sqr(maxax[1]);
+			 else
+			   sigSq = Sqr((maxax[0]+maxax[1])*0.5);
+		       }
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 #endif
 		      tInt = Oparams.time - atomTime[n];
