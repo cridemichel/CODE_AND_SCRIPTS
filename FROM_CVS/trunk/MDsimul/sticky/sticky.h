@@ -65,7 +65,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 
 #define C_T COORD_TYPE
 #define NK 10000
-#define NA 1 /* number of atoms for each molecule (particle) */
+#define NA 5 /* number of atoms for each molecule (particle) */
 
 #define MAXPAR 3000      /* maximum number of simulated particles */
 
