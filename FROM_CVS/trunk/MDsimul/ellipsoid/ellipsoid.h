@@ -287,6 +287,7 @@ struct progStatus
   double epsdFast;
   double epsdFastR;
   double epsdMax;
+  double targetPhi;
 #ifdef MD_GRAVITY
   double taptau;
   int tapampl;
@@ -685,6 +686,7 @@ struct singlePar OsinglePar[] = {
   {"B1",      &Oparams.b[1],      CT},
   {"C0",      &Oparams.c[0],      CT},
   {"C1",      &Oparams.c[1],      CT},
+  {"targetPhi", &OprogStatus.targetPhi, CT},
 #ifndef MD_ASYM_ITENS
   {"Ia",      &Oparams.I[0],      CT},
   {"Ib",      &Oparams.I[1],      CT},

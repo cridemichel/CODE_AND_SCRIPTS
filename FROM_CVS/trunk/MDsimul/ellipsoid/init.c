@@ -723,6 +723,7 @@ void usrInitBef(void)
     
     Oparams.time = 0.0;
     OprogStatus.tolT = 0.0;
+    OprogStatus.targetPhi = 0.0;
     OprogStatus.nebrTabFac = 150;
     OprogStatus.rNebrShell = 0.4;
     /* If 1 the program calculate of the corrisponding variable a mean from

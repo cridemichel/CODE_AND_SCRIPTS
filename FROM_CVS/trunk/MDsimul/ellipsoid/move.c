@@ -178,7 +178,219 @@ void calcKVz(void)
   K += dd;
 }
 #endif
+double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
+     		double *vecgsup, int calcguess);
 
+
+double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
+{
+  /* na = atomo da esaminare 0 < na < Oparams.parnum 
+   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
+   *      -2 = controlla solo cell crossing e urti con pareti 
+   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
+   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
+   *      */
+  double distMin=1E60,dist,vecg[8], alpha, shift[3], d;
+  /*double cells[NDIM];*/
+  int collCode, j, kk;
+  double s, r1[3], r2[3];
+  const double EPSILON = 1E-10;
+  double mredl;
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+ /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCell[2][na] + iZ;    
+      shift[2] = 0.;
+      /* apply periodico boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  jZ = cellsz - 1;    
+	  shift[2] = - L;
+	} 
+      else if (jZ == cellsz) 
+	{
+	  jZ = 0;    
+	  shift[2] = L;
+	}
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCell[1][na] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsy - 1;    
+	      shift[1] = -L;
+	    } 
+	  else if (jY == cellsy) 
+	    {
+	      jY = 0;    
+	      shift[1] = L;
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCell[0][na] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsx - 1;    
+		  shift[0] = - L;
+		} 
+	      else if (jX == cellsx) 
+		{
+		  jX = 0;   
+		  shift[0] = L;
+		}
+	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+	      for (n = cellList[n]; n > -1; n = cellList[n]) 
+		{
+		  if (n < na) 
+		    {
+		      dist = calcDistNeg(Oparams.time, na, n, shift, r1, r2, &alpha, vecg, 1);
+		      if (*jmin == -1 || dist<distMin)
+			{
+			  distMin = dist;
+			  for (kk = 0; kk < 3; kk++)
+			    {
+			      rCmin[kk] = r1[kk];
+			      rDmin[kk] = r2[kk];
+			      shiftmin[kk] = shift[kk];
+			    }
+			  *jmin = n;
+			}
+		    }
+		} 
+	    }
+	}
+    }
+  return distMin;
+}
+double calc_phi(void)
+{
+  double N = 0;
+  N = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
+  N +=((double)(Oparams.parnum-Oparams.parnumA))*Oparams.a[1]*Oparams.b[1]*Oparams.c[1];
+  N *= (4/3)*pi;
+  return N / (L*L*L);
+}
+double calc_norm(double *vec);
+
+double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double rD[3], 
+		      double shift[3])
+{
+  int i, kk;
+  double phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
+
+  L2 = 0.5 * L;
+  phi = calc_phi();
+
+  if (phi > OprogStatus.targetPhi)
+    {
+      fact = 1/cbrt(OprogStatus.targetPhi/phi);
+    }
+  else
+    {
+      for (kk=0; kk < 3; kk++)
+	{
+	  rAC[kk] = rA[kk] - rC[kk] - shift[kk];
+	}
+      for (kk=0; kk < 3; kk++)
+	{
+	  rBD[kk] = rB[kk] - rD[kk] - shift[kk];
+	}
+      /* 0.99 serve per evitare che si tocchino */
+      fact1 = 1 + 0.99*(d / (calc_norm(rAC)+calc_norm(rBD)));
+      fact2 = cbrt(OprogStatus.targetPhi/phi);
+      if (fact2 < fact1)
+	{
+	  fact = fact2;
+	}
+      else
+	fact = fact1;
+    }
+  printf("phi=%f fact1: %.8G fact2:%.8G scaling factor: %.8G\n", phi, fact1, fact2, fact);
+  //L *= fact;
+  Oparams.rcut *= fact;
+  Oparams.a[0] *= fact;
+  Oparams.b[0] *= fact;
+  Oparams.c[0] *= fact;
+  Oparams.a[1] *= fact;
+  Oparams.b[1] *= fact;
+  Oparams.c[1] *= fact;
+    
+  return calc_phi();
+}
+void scale_Phi(void)
+{
+  int i, j, jmin=-1, kk, n;
+  double dist, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
+  double L2, shift[3], shiftmin[3], phi;
+  if (OprogStatus.targetPhi <= 0)
+    return;
+    
+  UpdateSystem();   
+  L2 = 0.5 * L;
+  /* get the minimum distance in the system */
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      j = -1;
+      dist = get_min_dist(i, &j, rC, rD, shift);
+      if (dist < distMin)
+	{
+	  distMin = dist;
+	  jmin = j;
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      rCmin[kk] = rC[kk];
+	      rDmin[kk] = rD[kk];
+	      shiftmin[kk] = shift[kk];
+	    }
+	}
+    }
+  rAmin[0] = rx[jmin];
+  rAmin[1] = ry[jmin];
+  rAmin[2] = rz[jmin];
+  phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shift);
+  printf("distMin= %.15G phi=%.8G\n", distMin, phi);
+ 
+  L2 = 0.5 * L;
+  cellsx = L / Oparams.rcut;
+  cellsy = L / Oparams.rcut;
+#ifdef MD_GRAVITY
+  cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
+#else
+  cellsz = L / Oparams.rcut;
+#endif 
+  for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
+    cellList[j] = -1;
+
+  /* rebuild event calendar */
+  for (n = 0; n < Oparams.parnum; n++)
+    {
+      inCell[0][n] =  (rx[n] + L2) * cellsx / L;
+      inCell[1][n] =  (ry[n] + L2) * cellsy / L;
+#ifdef MD_GRAVITY
+      inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+#else
+      inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+#endif
+      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+	inCell[0][n] + Oparams.parnum;
+      cellList[n] = cellList[j];
+      cellList[j] = n;
+    }
+  rebuildCalendar();
+  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+  if (fabs(phi - OprogStatus.targetPhi) < 0.001)
+    ENDSIM = 1;
+}
 void outputSummary(void)
 {
   FILE *f;
@@ -187,6 +399,7 @@ void outputSummary(void)
   printf("Average iterations in locate_contact: %.6G\n", ((double)itsS)/timesS);
   printf("Average iterations in search_contact_faster: %.6G\n",  ((double)itsF)/timesF);
   printf("Number of collisions: %lld\n", numcoll);
+  scale_Phi();
 #ifdef MD_GRAVITY
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
 	 (2.0*K/(3.0*Oparams.parnum-3.0)), Vz);
