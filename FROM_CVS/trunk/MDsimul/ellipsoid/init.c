@@ -1212,8 +1212,15 @@ void usrInitAft(void)
   axc = malloc(sizeof(double)*Oparams.parnum);
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MD_NNL
+  nebrTab = malloc(sizeof(nebrTabStruct)*Oparams.parnum);
+#endif
   for (i=0; i < Oparams.parnumA; i++)
     {
+#ifdef MD_NNL
+      nebrTab[i].len = 0;
+      nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+#endif
       scdone[i] = 0;
       axa[i] = Oparams.a[0];
       axb[i] = Oparams.b[0];
@@ -1221,6 +1228,10 @@ void usrInitAft(void)
     }
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
     {
+#ifdef MD_NNL
+      nebrTab[i].len = 0;
+      nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+#endif
       scdone[i] = 0;
       axa[i] = Oparams.a[1];
       axb[i] = Oparams.b[1];
@@ -1365,6 +1376,13 @@ void usrInitAft(void)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+#ifdef MD_NNL
+  for (i=0; i < Oparams.parnum; i++) 
+    {
+      BuildNNL(i);
+      //ScheduleEvent(i, ATOM_LIMIT+11,nebrTab[i].nexttime);
+    }
+#endif
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)

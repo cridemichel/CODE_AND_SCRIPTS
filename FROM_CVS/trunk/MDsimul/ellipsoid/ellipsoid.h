@@ -174,6 +174,14 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeIdC    tree[9]
 #endif
 #define ATOM_LIMIT 10000000
+struct nebrTabStruct 
+{
+  int *list;       /* ellissoidi nella NNL */
+  double shift[3];
+  int len;         /* numero di ellissoidi nella NNL */
+  double time;     /* tempo a cui è stata costruita la NNL */
+  double nexttime; /* tempo a cui la NNL deve essere ricostruita */
+}
 /* ======================== >>> struct progStatus <<< =======================*/
 struct progStatus
 {
@@ -281,8 +289,10 @@ struct progStatus
   int nebrTabFac;                /* How much storage sould be provided for 
                                    the neighbour list (see Rapaport pag.53
 				   for details )*/
-  COORD_TYPE rNebrShell;   /* Dr of shell of neighbour list shell see Rapaport pag. 53 */
-
+#ifdef MD_NNL
+  double rNebrShell;   /* Dr of shell of neighbour list shell see Rapaport pag. 53 */
+  int nebrTabFac;
+#endif
   COORD_TYPE tolT;
   int ipart;
   int HNBOX;
@@ -518,6 +528,10 @@ struct pascii opro_ascii[] =
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
   {"phitol",       &OS(phitol),                     1,  1,    "%.14G"},
   {"axestol",      &OS(axestol),                    1,  1,    "%.14G"},
+#ifdef MD_NNL
+  {"rNebrShell",      &OS(rNebrShell),             1,  1,    "%.14G"},
+  {"nebrTabFac",      &OS(nebrTabFac),             1,  1,    "%d"},        
+#endif
   {"endtime",      &OS(endtime),                    1,  1,    "%.15G"},
   {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
   {"nextSumTime"  ,&OS(nextSumTime),                1,  1,    "%.15G"},
@@ -678,7 +692,10 @@ struct singlePar OsinglePar[] = {
   {"VCalc",   &OprogStatus.measCalc[9],    LLINT},   
   {"VName",   &OprogStatus.dataFiles[9],   STR},
   {"CMreset",    &OprogStatus.CMreset,        INT},
+#ifdef MD_NNL
   {"rNebrShell", &OprogStatus.rNebrShell,     CT},
+  {"nebrTabFac", &OprogStatus.nebrTabFac,     INT},
+#endif
   {"overlaptol", &OprogStatus.overlaptol,     CT},
   {"nebrTabFac", &OprogStatus.nebrTabFac,     INT},
   {"intervalSum", &OprogStatus.intervalSum,   CT},
