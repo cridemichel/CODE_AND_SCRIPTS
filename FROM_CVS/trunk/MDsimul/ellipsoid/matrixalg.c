@@ -1041,7 +1041,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
   /* commentando questa riga il valore di sf usato per rimanere "aderenti" alla superficie
    * non viene mantenuto.
    * In tal modo il passo non puo' decrescere in maniera irreversibile se non intorno al minimo. */
-  //*sfA = sf;
+  *sfA = sf;
 }
 void projectgrad(double *p, double *xi, double *gradf, double *gradg)
 {

@@ -21,12 +21,12 @@
 #undef ADJUST_LASTCOL 
 #define ADJUST_LASTCOL AdjustLastcol();
 #endif
-#define MD_HOME "/home/demichel/"
-#define MD_SIMDAT MD_HOME "/simdat"
-#define MD_HD_TMP MD_SIMDAT "/mdtmp/"
+#define MD_HOME "./"
+#define MD_SIMDAT MD_HOME ""
+#define MD_HD_TMP MD_SIMDAT ""
 /* directory to store temporary files */ 
 
-#define MD_HD_MIS MD_SIMDAT "/measures/" 
+#define MD_HD_MIS MD_SIMDAT "" 
 /* directory to store measures files */
 
 #define MD_TAPE_TMP "/iomega/mdtmp/"
