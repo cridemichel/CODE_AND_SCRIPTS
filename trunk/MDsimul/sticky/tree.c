@@ -468,7 +468,8 @@ void NextEvent (void)
     {
       /* L'evento è un cell-crossing o un evento generico (output o misura) */
       DeleteEvent (idNow);
-      if (evIdB < ATOM_LIMIT + 100) 
+      /* se evIdC == 1 vuol dire che si tratta di un cell crossing ma nc=1 */
+      if ((evIdB >= ATOM_LIMIT+100 && evIdB <= ATOM_LIMIT+105 && evIdC == 1) || evIdB < ATOM_LIMIT + 100) 
 	{
 	  treeCircAR[idNow] = treeIdA[0];
 	  treeIdA[0] = idNow;
