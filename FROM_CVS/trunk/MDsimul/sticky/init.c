@@ -59,7 +59,7 @@ int poolSize;
 int parnumA, parnumB;
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 double invaSq[2], invbSq[2], invcSq[2];
-double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, 
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double dists[MD_PBONDS]);
 
 /* ================================= */
@@ -1273,7 +1273,7 @@ void check_all_bonds(void)
 #ifdef MD_SILICA
 		      assign_bond_mapping(i, j); 
 #endif
-		      dist = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin, dists);
+		      dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists);
 		      for (nn=0; nn < MD_PBONDS; nn++)
 			{
 			  if (dists[nn]<0.0)// && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
@@ -1496,7 +1496,7 @@ void usrInitAft(void)
 #ifdef MD_SILICA
 	assign_bond_mapping(i, j); 
 #endif
-	dist = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin, dists);
+	dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists);
 	for (nn=0; nn < MD_PBONDS; nn++)
 	  {
 	    if (dists[nn]<0)

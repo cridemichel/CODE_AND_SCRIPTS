@@ -51,7 +51,7 @@ long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
 void ScheduleEventBarr (int idA, int idB, int idata, int atb, int idcollcode, double tEvent);
-double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, 
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double dists[MD_PBONDS]);
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
 void remove_bond(int na, int n, int a, int b);
@@ -1843,11 +1843,11 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
     }
 }
 
-double calcDistNegOne(double t, int i, int j, int nn, double shift[3]);
+double calcDistNegOne(double t, double t1, int i, int j, int nn, double shift[3]);
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 int ibr, jbr, nnbr; 
-double shiftbr[3];
+double shiftbr[3], trefbr;
 #ifdef MD_SILICA
 void assign_bond_mapping(int i, int j)
 {
@@ -1877,7 +1877,7 @@ void assign_bond_mapping(int i, int j)
 
 }
 #endif
-double funcs2beZeroed(double x, int i, int j, int nn, double shift[3])
+double funcs2beZeroed(double x, double tref, int i, int j, int nn, double shift[3])
 {
 #if 0
   int na, ata, atb; 
@@ -1915,11 +1915,11 @@ double funcs2beZeroed(double x, int i, int j, int nn, double shift[3])
     }
   //tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 #endif
-  return calcDistNegOne(x, i, j, nn, shift);
+  return calcDistNegOne(x, trefbr, i, j, nn, shift);
 }
 double  funcs2beZeroedBrent(double x)
 {
-  return funcs2beZeroed(x, ibr, jbr, nnbr, shiftbr); 
+  return funcs2beZeroed(x, trefbr, ibr, jbr, nnbr, shiftbr); 
 }
 double tdist;
 double rA[3], rB[3];
@@ -1936,7 +1936,7 @@ extern int check_point(char* msg, double *p, double *rc, double **XX);
 extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
 extern int maxitsRyck;
 extern double sigmaSqSticky;
-double calcDistNegOne(double t, int i, int j, int nn, double shift[3])
+double calcDistNegOne(double t, double t1, int i, int j, int nn, double shift[3])
 {
   double distSq, ti;
   double ratA[NA][3], ratB[NA][3];
@@ -1948,7 +1948,7 @@ double calcDistNegOne(double t, int i, int j, int nn, double shift[3])
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   MD_DEBUG20(printf("BRENT nn=%d\n", nn));
-  ti = t - atomTime[i];
+  ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
@@ -1962,7 +1962,7 @@ double calcDistNegOne(double t, int i, int j, int nn, double shift[3])
     {
       /* qui deve scalare i raggi degli atomi che compongono la molecola */
     }
-  ti = t - atomTime[j];
+  ti = t + (t1 - atomTime[j]);
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
@@ -1991,7 +1991,7 @@ double calcDistNegOne(double t, int i, int j, int nn, double shift[3])
 }
 
 /* N.B. per la silica tale routine va cambiata! */
-double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, 
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double dists[MD_PBONDS])
 {
   double distmin, distSq, ti;
@@ -2000,7 +2000,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
   double Omega[3][3];
   int na;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
-  ti = t - atomTime[i];
+  ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
@@ -2014,7 +2014,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
     {
       /* qui deve scalare i raggi degli atomi che compongono la molecola */
     }
-  ti = t - atomTime[j];
+  ti = t + (t1 - atomTime[j]);
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
@@ -2233,7 +2233,7 @@ double BodeTerm(double dt, double* fi)
   return dt * (bc1 * fi[0] + bc2 * fi[1] + bc3 * fi[2] + bc2 * fi[3] +
 	       bc1 * fi[4]);
 }
-int refine_contact(int i, int j, double t1, double t2, int nn, double shift[3], double *troot)
+int refine_contact(int i, int j, double tref, double t1, double t2, int nn, double shift[3], double *troot)
 {
   int kk;//, retcheck;
 
@@ -2242,9 +2242,11 @@ int refine_contact(int i, int j, double t1, double t2, int nn, double shift[3], 
   ibr = i;
   jbr = j;
   nnbr = nn;
+  trefbr = tref;
   for (kk=0; kk < 3; kk++)
     shiftbr[kk] = shift[kk];
   *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-16);
+  *troot += tref;
   if (polinterr==1)
     {
       MD_DEBUG10(printf("newt did not find any contact point!\n"));
@@ -2320,7 +2322,7 @@ void assign_dists(double a[], double b[])
   memcpy(b, a, MD_PBONDS*sizeof(double));
 }
 
-int search_contact_faster(int i, int j, double *shift, double *t, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS])
+int search_contact_faster(int i, int j, double *shift, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS])
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
@@ -2331,7 +2333,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
-  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, distsOld);
+  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, distsOld);
   MD_DEBUG30(printf("[IN SEARCH CONTACT FASTER]*d1=%.15G t=%.15G\n", *d1, *t));
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
@@ -2354,12 +2356,12 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
       *t += delt;
       //printf("delt: %.15G t=%f \n", delt, *t);
 #if 1
-      if (*t > t2)
+      if (*t+t1 > t2)
 	{
 	 *t = told;
 	  MD_DEBUG30(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG30(printf("convergence t>t2\n"));
-	  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, dists);
+	  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists);
 	  return 1;
 	}
 #endif
@@ -2382,7 +2384,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
 	    }
       printf("*t=%f\n", *t);
 #endif
-      *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, dists);
+      *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists);
 #if 0
       for (nn=0; nn < MD_PBONDS; nn++)
 	{
@@ -2396,7 +2398,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
 	  MD_DEBUG30(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG30(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
-	  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, dists);
+	  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists);
 	  return 0;
 	}
       told = *t;
@@ -2429,14 +2431,14 @@ double distfunc(double x)
 }
 
 int interpol(int i, int j, int nn, 
-	     double t, double delt, double d1, double d2,
+	     double tref, double t, double delt, double d1, double d2,
 	     double *troot, double shift[3], int bracketing)
 {
   int nb, amin, bmin;
   double d3, t1, t2;
   double xb1[2], xb2[2], dists[MD_PBONDS];
   /* NOTA: dists di seguito può non essere usata? controllare!*/
-  d3 = calcDistNegOne(t+delt*0.5, i, j, nn, shift);
+  d3 = calcDistNegOne(t+delt*0.5, tref, i, j, nn, shift);
 #if 0
   if (d1 > OprogStatus.epsd)
     {
@@ -2474,7 +2476,7 @@ int interpol(int i, int j, int nn,
 	}
       /* NOTA: t1 resta fisso in zbrak */
       //t1 = xb1[0];
-      *troot = xb2[0];
+      *troot = xb2[0]+tref;
     }
   if (polinterr)
     return 1;
@@ -2549,7 +2551,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
    *   sfiorano per poi allontanrsi. 
    */
   int its, foundrc, goback;
-  t = t1;
+  t = 0;//t1;
 
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
@@ -2616,7 +2618,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
 #endif
   MD_DEBUG30(printf("[BEFORE SEARCH CONTACT FASTER]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
-  if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast, dists))
+  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists))
     {
       return 0;  
     }
@@ -2656,10 +2658,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #else
   //assign_dists(dists, distsOld);
   //dold = d;
-  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
+  dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld);
   firstaftsf = 1;
 #endif
-  while (t < t2)
+  while (t+t1 < t2)
     {
       //normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
 #if 0
@@ -2713,7 +2715,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
         //   normddot, t, delt, maxddot, t*h);
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       //dold2 = dold;
-      d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
+      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists);
       deldist = get_max_deldist(distsOld, dists);
       if (deldist > epsdMax)
 	{
@@ -2742,7 +2744,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
+	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists);
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
      MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
@@ -2803,7 +2805,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  if (tocheck[nn])
 	    {
 	      //printf("tocheck[%d]:%d\n", nn, tocheck[nn]);
-	      if (interpol(i, j, nn, t-delt, delt, distsOld[nn], dists[nn], 
+	      if (interpol(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
 			   &troot, shift, 1))
 		dorefine[nn] = MD_EVENT_NONE;
 	      else 
@@ -2831,7 +2833,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      //printf("distsOld[%d]:%.15f dists[%d]: %.15f\n", nn, distsOld[nn], nn, dists[nn]);
 	      //printf("t-delt: %.15f t=%.15f\n", t-delt, t);
 #endif
-	      if (refine_contact(i, j, t-delt, t2arr[nn], nn, shift, &troot))
+	      if (refine_contact(i, j, t1, t-delt, t2arr[nn], nn, shift, &troot))
 		{
 		  //printf("[locate_contact] Adding collision between %d-%d\n", i, j);
 		  MD_DEBUG30(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
@@ -2895,7 +2897,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #if 1
       if (fabs(d) > epsdFastR)
 	{
-	  if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast, dists))
+	  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists))
 	    {
 	      MD_DEBUG30(printf("[search contact faster locate_contact] d: %.15G\n", d));
 	      return 0;
@@ -2907,7 +2909,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
 #else
 	  //dold = d;
-	  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
+	  dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld);
 	  //assign_dists(dists, distsOld);
 	  firstaftsf = 1;
 #endif
