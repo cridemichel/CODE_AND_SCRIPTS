@@ -846,13 +846,7 @@ void usrInitAft(void)
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = Oparams.time;
     }
-  /* evaluation of principal inertia moments*/ 
-  for (a = 0; a < 2; a++)
-    {
-      ItensD[a][0] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.b[a])+Sqr(Oparams.c[a]));
-      ItensD[a][1] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.c[a]));
-      ItensD[a][2] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.b[a]));
-    };
+
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -1044,13 +1038,11 @@ void writeAllCor(FILE* fs)
   for (i = 0; i < Oparams.parnum; i++)
     {
       fprintf(fs, tipodat, rx[i], ry[i], rz[i]);
-      fprintf(fs, tipodat, ux[i], uy[i], uz[i]);
     }
   
   for (i = 0; i < Oparams.parnum; i++)
     {
       fprintf(fs, tipodat, vx[i], vy[i], vz[i]);
-      fprintf(fs, tipodat, wx[i], wy[i], wz[i]);
     }
 #ifdef MD_GRAVITY
   fprintf(fs, "%.15G %.15G\n", L, Lz);
@@ -1072,11 +1064,6 @@ void readAllCor(FILE* fs)
 	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	  exit(-1);
 	}
-      if (fscanf(fs, "%lf %lf %lf\n", &ux[i], &uy[i], &uz[i]) < 3)
-	{
-	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
-	  exit(-1);
-	}
     }
   
   for (i = 0; i < Oparams.parnum; i++)
@@ -1086,11 +1073,7 @@ void readAllCor(FILE* fs)
 	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
 	  exit(-1);
 	}
-      if (fscanf(fs, "%lf %lf %lf\n", &wx[i], &wy[i], &wz[i]) < 3)
-	{
-	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
-	  exit(-1);
-	}
+      
     }
   
 
