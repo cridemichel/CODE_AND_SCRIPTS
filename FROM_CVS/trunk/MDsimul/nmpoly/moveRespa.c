@@ -578,12 +578,26 @@ void updImp(double dt, double c)
 	}
     }
 }
+void calcImp(int i, double *PCMx, double *PCMy, double *PCMz)
+{
+  int a;
+  *PCMx = 0.0;
+  *PCMy = 0.0;
+  *PCMz = 0.0;
+  for (a = 0; a < NA; a++)
+    {
+      *PCMx += px[a][i];
+      *PCMy += py[a][i];
+      *PCMz += pz[a][i];
+    }
+}
+
 void updImpNoseAndAft(double dt, double c)
 {
   int i, a;
-  double cdt, expdt[NA], mM[NA], cost[NA], dlnVmM[NA];
+  double cdt, expdtN[NA], expdt2[NA], mM[NA], cost[NA], dlnVmM[NA];
   double dlnV, dlns;
-  double PCMx, PCMy, PCMz, cdt2;
+  double DPx, DPy, DPz, PCMx, PCMy, PCMz, cdt2, pxo, pyo, pzo;
   cdt = c*dt;
   cdt2 = cdt/2.0;
   dlnV = Pv*Sqr(s)/OprogStatus.W/3.0/Vol;
@@ -592,7 +606,81 @@ void updImpNoseAndAft(double dt, double c)
     {
       mM[a] = Oparams.m[a] / Mtot;
       dlnVmM[a] = mM[a] * dlnV;
+      expdt2[a] = exp(-dlnVmM[a] * cdt2);
+      expdtN[a]= exp(-dlns * cdt);
+      /*cost[a] = (expdt[a] - 1.0) / dlnVmM[a];*/
+    }
+
+   for (i=0; i < Oparams.parnum; i++)
+    {
+      PCMx = 0.0;
+      PCMy = 0.0;
+      PCMz = 0.0;
+      for (a = 0; a < NA; a++)
+	{
+	  PCMx += px[a][i];
+	  PCMy += py[a][i];
+	  PCMz += pz[a][i];
+	}
+      for (a=0; a < NA; a++)
+	{
+	  pxo = px[a][i];
+	  pyo = py[a][i];
+	  pzo = pz[a][i];
+	  DPx = PCMx-px[a][i];
+	  DPy = PCMy-py[a][i];
+	  DPz = PCMz-pz[a][i];
+	  px[a][i] = px[a][i]*expdt2[a];
+	  py[a][i] = py[a][i]*expdt2[a];
+	  pz[a][i] = pz[a][i]*expdt2[a];
+	  px[a][i] += (-dlnVmM[a]*DPx)*cdt;
+	  py[a][i] += (-dlnVmM[a]*DPy)*cdt;
+	  pz[a][i] += (-dlnVmM[a]*DPz)*cdt;
+	  px[a][i] = px[a][i]*expdt2[a];
+	  py[a][i] = py[a][i]*expdt2[a];
+	  pz[a][i] = pz[a][i]*expdt2[a];
+	  PCMx += px[a][i] - pxo;
+	  PCMy += py[a][i] - pyo;
+	  PCMz += pz[a][i] - pzo;
+	} 
+    }
+  
+   for (i=0; i < Oparams.parnum; i++)
+    {
+      for (a = 0; a < NA; a++)
+	{
+	  px[a][i] += Fx[a][i]*cdt2;
+	  py[a][i] += Fy[a][i]*cdt2;
+	  pz[a][i] += Fz[a][i]*cdt2;
+	  px[a][i] = px[a][i]*expdtN[a];
+	  py[a][i] = py[a][i]*expdtN[a];
+	  pz[a][i] = pz[a][i]*expdtN[a];
+	  px[a][i] += Fx[a][i]*cdt2;
+	  py[a][i] += Fy[a][i]*cdt2;
+	  pz[a][i] += Fz[a][i]*cdt2;
+	 }
+    }
+
+
+}
+void updImpNoseAndSym(double dt, double c)
+{
+  int i, a;
+  double cdt, expdt[NA], expdt2[NA], mM[NA], cost[NA], dlnVmM[NA];
+  double dlnV, dlns;
+  double DPx, DPy, DPz, PCMx, PCMy, PCMz, cdt2, pxo, pyo, pzo, cdt4, expdt4[NA];
+  cdt = c*dt;
+  cdt2 = cdt/2.0;
+  cdt4 = cdt2 /2.0;
+  dlnV = Pv*Sqr(s)/OprogStatus.W/3.0/Vol;
+  dlns = s*Ps / OprogStatus.Q;
+  for (a = 0; a < NA; a++)
+    {
+      mM[a] = Oparams.m[a] / Mtot;
+      dlnVmM[a] = mM[a] * dlnV;
       expdt[a] = exp(-(dlnVmM[a] + dlns) * cdt);
+      expdt2[a] = exp(-(dlnVmM[a] + dlns) * cdt2);
+      expdt4[a] = exp(-(dlnVmM[a] + dlns) * cdt4);
       /*cost[a] = (expdt[a] - 1.0) / dlnVmM[a];*/
     }
   for (i=0; i < Oparams.parnum; i++)
@@ -606,23 +694,76 @@ void updImpNoseAndAft(double dt, double c)
 	  PCMy += py[a][i];
 	  PCMz += pz[a][i];
 	}
-      for (a=0; a < NA; a++)
+      for (a=NA-1; a > 0; a--)
 	{
-	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt;
-	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt;
-	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt;
-	  px[a][i] = px[a][i]*expdt[a];
-	  py[a][i] = py[a][i]*expdt[a];
-	  pz[a][i] = pz[a][i]*expdt[a];
-	} 
+	  pxo = px[a][i];
+	  pyo = py[a][i];
+	  pzo = pz[a][i];
+	  DPx = PCMx-px[a][i];
+	  DPy = PCMy-py[a][i];
+	  DPz = PCMz-pz[a][i];
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*DPx)*cdt4;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*DPy)*cdt4;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*DPz)*cdt4;
+	  px[a][i] = px[a][i]*expdt2[a];
+	  py[a][i] = py[a][i]*expdt2[a];
+	  pz[a][i] = pz[a][i]*expdt2[a];
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*DPx)*cdt4;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*DPy)*cdt4;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*DPz)*cdt4;
+	  //PCMx += px[a][i] - pxo;
+	  //PCMy += py[a][i] - pyo;
+	  //PCMz += pz[a][i] - pzo;
+	}
+      a = 0;
+      pxo = px[a][i];
+      pyo = py[a][i];
+      pzo = pz[a][i];
+      DPx = PCMx-px[a][i];
+      DPy = PCMy-py[a][i];
+      DPz = PCMz-pz[a][i];
+      px[a][i] += (Fx[a][i]-dlnVmM[a]*DPx)*cdt2;
+      py[a][i] += (Fy[a][i]-dlnVmM[a]*DPy)*cdt2;
+      pz[a][i] += (Fz[a][i]-dlnVmM[a]*DPz)*cdt2;
+      px[a][i] = px[a][i]*expdt[a];
+      py[a][i] = py[a][i]*expdt[a];
+      pz[a][i] = pz[a][i]*expdt[a];
+      px[a][i] += (Fx[a][i]-dlnVmM[a]*DPx)*cdt2;
+      py[a][i] += (Fy[a][i]-dlnVmM[a]*DPy)*cdt2;
+      pz[a][i] += (Fz[a][i]-dlnVmM[a]*DPz)*cdt2;
+      //PCMx += px[a][i] - pxo;
+      //PCMy += py[a][i] - pyo;
+      //PCMz += pz[a][i] - pzo;
+      for (a=1; a < NA; a++)
+	{
+	  pxo = px[a][i];
+	  pyo = py[a][i];
+	  pzo = pz[a][i];
+	  DPx = PCMx-px[a][i];
+	  DPy = PCMy-py[a][i];
+	  DPz = PCMz-pz[a][i];
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*DPx)*cdt4;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*DPy)*cdt4;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*DPz)*cdt4;
+	  px[a][i] = px[a][i]*expdt2[a];
+	  py[a][i] = py[a][i]*expdt2[a];
+	  pz[a][i] = pz[a][i]*expdt2[a];
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*DPx)*cdt4;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*DPy)*cdt4;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*DPz)*cdt4;
+	  //PCMx += px[a][i] - pxo;
+	  //PCMy += py[a][i] - pyo;
+	  //PCMz += pz[a][i] - pzo;
+	}
     }
 }
+
 void updImpNoseAnd(double dt, double c)
 {
   int i, a;
-  double cdt, expdt[NA], mM[NA], cost[NA], dlnVmM[NA];
+  double cdt, expdt2[NA], expdtN[NA], mM[NA], cost[NA], dlnVmM[NA];
   double dlnV, dlns;
-  double PCMx, PCMy, PCMz, cdt2;
+  double DPx, DPy, DPz, PCMx, PCMy, PCMz, cdt2, pxo, pyo, pzo;
   cdt = c*dt;
   cdt2 = cdt/2.0;
   dlnV = Pv*Sqr(s)/OprogStatus.W/3.0/Vol;
@@ -631,8 +772,24 @@ void updImpNoseAnd(double dt, double c)
     {
       mM[a] = Oparams.m[a] / Mtot;
       dlnVmM[a] = mM[a] * dlnV;
-      expdt[a] = exp(-(dlnVmM[a] + dlns) * cdt);
+      expdt2[a] = exp(-dlnVmM[a] * cdt2);
+      expdtN[a]= exp(-dlns * cdt);
       /*cost[a] = (expdt[a] - 1.0) / dlnVmM[a];*/
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      for (a = 0; a < NA; a++)
+	{
+	  px[a][i] += Fx[a][i]*cdt2;
+	  py[a][i] += Fy[a][i]*cdt2;
+	  pz[a][i] += Fz[a][i]*cdt2;
+	  px[a][i] = px[a][i]*expdtN[a];
+	  py[a][i] = py[a][i]*expdtN[a];
+	  pz[a][i] = pz[a][i]*expdtN[a];
+	  px[a][i] += Fx[a][i]*cdt2;
+	  py[a][i] += Fy[a][i]*cdt2;
+	  pz[a][i] += Fz[a][i]*cdt2;
+	 }
     }
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -645,56 +802,87 @@ void updImpNoseAnd(double dt, double c)
 	  PCMy += py[a][i];
 	  PCMz += pz[a][i];
 	}
-      for (a=0; a < NA; a++)
+      for (a=NA-1; a >= 0; a--)
 	{
-	  px[a][i] = px[a][i]*expdt[a];
-	  py[a][i] = py[a][i]*expdt[a];
-	  pz[a][i] = pz[a][i]*expdt[a];
-	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt;
-	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt;
-	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt;
+	  pxo = px[a][i];
+	  pyo = py[a][i];
+	  pzo = pz[a][i];
+	  DPx = PCMx-px[a][i];
+	  DPy = PCMy-py[a][i];
+	  DPz = PCMz-pz[a][i];
+	  px[a][i] = px[a][i]*expdt2[a];
+	  py[a][i] = py[a][i]*expdt2[a];
+	  pz[a][i] = pz[a][i]*expdt2[a];
+	  px[a][i] += (-dlnVmM[a]*DPx)*cdt;
+	  py[a][i] += (-dlnVmM[a]*DPy)*cdt;
+	  pz[a][i] += (-dlnVmM[a]*DPz)*cdt;
+	  px[a][i] = px[a][i]*expdt2[a];
+	  py[a][i] = py[a][i]*expdt2[a];
+	  pz[a][i] = pz[a][i]*expdt2[a];
+	  PCMx += px[a][i] - pxo;
+	  PCMy += py[a][i] - pyo;
+	  PCMz += pz[a][i] - pzo;
 	} 
     }
 }
 void updImpAnd(double dt, double c)
 {
   int i, a;
-  double cdt, expdt[NA], mM[NA], cost[NA], dlnVmM[NA];
+  double cdt, expdt[NA], expdt2[NA], mM[NA], cost[NA], dlnVmM[NA];
   double dlnV;
-  double PCMx, PCMy, PCMz, cdt2;
+  double PCMx, PCMy, PCMz, cdt2, cdt4;
   cdt = c*dt;
   cdt2 = cdt/2.0;
+  cdt4 = cdt2 / 2.0;
   dlnV = Pv*Sqr(s)/OprogStatus.W/3.0/Vol; 
   for (a = 0; a < NA; a++)
     {
       mM[a] = Oparams.m[a] / Mtot;
       dlnVmM[a] = mM[a] * dlnV;
       expdt[a] = exp(-(dlnVmM[a]) * cdt);
+      expdt2[a] = exp(-(dlnVmM[a]) * cdt2);
       /*cost[a] = (expdt[a] - 1.0) / dlnVmM[a];*/
     }
   for (i=0; i < Oparams.parnum; i++)
     {
-      PCMx = 0.0;
-      PCMy = 0.0;
-      PCMz = 0.0;
-      for (a = 0; a < NA; a++)
+      calcImp(i, &PCMx, &PCMy, &PCMz);
+      for (a=NA-1; a > 0; a--)
 	{
-	  PCMx += px[a][i];
-	  PCMy += py[a][i];
-	  PCMz += pz[a][i];
-	}
-      for (a=0; a < NA; a++)
-	{
-	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt2;
-	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt2;
-	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt2;
-	  px[a][i] = px[a][i]*expdt[a];
-	  py[a][i] = py[a][i]*expdt[a];
-	  pz[a][i] = pz[a][i]*expdt[a];
-	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt2;
-	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt2;
-	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt2;
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt4;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt4;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt4;
+	  px[a][i] = px[a][i]*expdt2[a];
+	  py[a][i] = py[a][i]*expdt2[a];
+	  pz[a][i] = pz[a][i]*expdt2[a];
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt4;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt4;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt4;
 	} 
+      a = 0;
+      calcImp(i, &PCMx, &PCMy, &PCMz);
+      px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt2;
+      py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt2;
+      pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt2;
+      px[a][i] = px[a][i]*expdt[a];
+      py[a][i] = py[a][i]*expdt[a];
+      pz[a][i] = pz[a][i]*expdt[a];
+      px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt2;
+      py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt2;
+      pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt2;
+     
+      calcImp(i, &PCMx, &PCMy, &PCMz);
+      for (a=1; a < NA; a++)
+	{
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt4;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt4;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt4;
+	  px[a][i] = px[a][i]*expdt2[a];
+	  py[a][i] = py[a][i]*expdt2[a];
+	  pz[a][i] = pz[a][i]*expdt2[a];
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt4;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt4;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt4;
+	}
     }
 }
 void updPositions(double dt, double c)
@@ -717,11 +905,12 @@ void updPositions(double dt, double c)
 void updPositionsNPT(double dt, double c)
 {
   int i, a;
-  double cdt, expdt[NA], mM[NA], *m;
-  double cost2, cdt2, cost2mM[NA];
-  double RCMx, RCMy, RCMz;
+  double cdt, expdt[NA], mM[NA], *m, expdt2[NA];
+  double cost2, cdt2, cost2mM[NA], cdt4;
+  double RCMx, RCMy, RCMz, rxo, ryo, rzo, DRCMx, DRCMy, DRCMz;
   cdt = c*dt;
   cdt2 = cdt / 2.0;
+  cdt4 = cdt2 / 2.0;
   m = Oparams.m;
   cost2 = Pv*Sqr(s)/(3.0*Vol*OprogStatus.W);
   for (a = 0; a < NA; a++)
@@ -729,22 +918,72 @@ void updPositionsNPT(double dt, double c)
       mM[a] = Oparams.m[a] / Mtot;
       cost2mM[a] = cost2 * mM[a];
       expdt[a] = exp(cost2mM[a]*cdt);
+      expdt2[a] = exp(cost2mM[a]*cdt2);
     }
   for (i=0; i < Oparams.parnum; i++)
     {
       CoM(i, &RCMx, &RCMy, &RCMz);
-      for (a=0; a < NA; a++)
+      for (a=NA-1; a > 0; a--)
 	{
-	  rx[a][i] += cdt2*(px[a][i]/m[a] + cost2*(RCMx - rx[a][i]*mM[a]));
-	  ry[a][i] += cdt2*(py[a][i]/m[a] + cost2*(RCMy - ry[a][i]*mM[a]));
-	  rz[a][i] += cdt2*(pz[a][i]/m[a] + cost2*(RCMz - rz[a][i]*mM[a]));
-	  rx[a][i] = rx[a][i]*expdt[a];
-	  ry[a][i] = ry[a][i]*expdt[a];
-	  rz[a][i] = rz[a][i]*expdt[a];
-	  rx[a][i] += cdt2*(px[a][i]/m[a] + cost2*(RCMx - rx[a][i]*mM[a]));
-	  ry[a][i] += cdt2*(py[a][i]/m[a] + cost2*(RCMy - ry[a][i]*mM[a]));
-	  rz[a][i] += cdt2*(pz[a][i]/m[a] + cost2*(RCMz - rz[a][i]*mM[a]));
+	  rxo = rx[a][i];
+	  ryo = ry[a][i];
+	  rzo = rz[a][i];
+	  DRCMx = RCMx - rx[a][i]*mM[a];
+          DRCMy = RCMy - ry[a][i]*mM[a];
+	  DRCMz = RCMz - rz[a][i]*mM[a];
+	  rx[a][i] += cdt4*(px[a][i]/m[a] + cost2*DRCMx);
+	  ry[a][i] += cdt4*(py[a][i]/m[a] + cost2*DRCMy);
+	  rz[a][i] += cdt4*(pz[a][i]/m[a] + cost2*DRCMz);
+       	  rx[a][i] = rx[a][i]*expdt2[a];
+	  ry[a][i] = ry[a][i]*expdt2[a];
+	  rz[a][i] = rz[a][i]*expdt2[a];
+	  rx[a][i] += cdt4*(px[a][i]/m[a] + cost2*DRCMx);
+	  ry[a][i] += cdt4*(py[a][i]/m[a] + cost2*DRCMy);
+	  rz[a][i] += cdt4*(pz[a][i]/m[a] + cost2*DRCMz);
+	  RCMx = RCMx + (-rxo + rx[a][i])*mM[a]; 
+	  RCMy = RCMy + (-ryo + ry[a][i])*mM[a];
+	  RCMz = RCMz + (-rzo + rz[a][i])*mM[a];
 	}
+      a = 0;
+      rxo = rx[a][i];
+      ryo = ry[a][i];
+      rzo = rz[a][i];
+      DRCMx = RCMx - rx[a][i]*mM[a];
+      DRCMy = RCMy - ry[a][i]*mM[a];
+      DRCMz = RCMz - rz[a][i]*mM[a];
+      rx[a][i] += cdt2*(px[a][i]/m[a] + cost2*DRCMx);
+      ry[a][i] += cdt2*(py[a][i]/m[a] + cost2*DRCMy);
+      rz[a][i] += cdt2*(pz[a][i]/m[a] + cost2*DRCMz);
+      rx[a][i] = rx[a][i]*expdt[a];
+      ry[a][i] = ry[a][i]*expdt[a];
+      rz[a][i] = rz[a][i]*expdt[a];
+      rx[a][i] += cdt2*(px[a][i]/m[a] + cost2*DRCMx);
+      ry[a][i] += cdt2*(py[a][i]/m[a] + cost2*DRCMy);
+      rz[a][i] += cdt2*(pz[a][i]/m[a] + cost2*DRCMz);
+      RCMx = RCMx + (-rxo + rx[a][i])*mM[a]; 
+      RCMy = RCMy + (-ryo + ry[a][i])*mM[a];
+      RCMz = RCMz + (-rzo + rz[a][i])*mM[a];
+      for (a=1; a < NA; a++)
+	{
+	  rxo = rx[a][i];
+	  ryo = ry[a][i];
+	  rzo = rz[a][i];
+	  DRCMx = RCMx - rx[a][i]*mM[a];
+	  DRCMy = RCMy - ry[a][i]*mM[a];
+	  DRCMz = RCMz - rz[a][i]*mM[a];
+	  rx[a][i] += cdt4*(px[a][i]/m[a] + cost2*DRCMx);
+	  ry[a][i] += cdt4*(py[a][i]/m[a] + cost2*DRCMy);
+	  rz[a][i] += cdt4*(pz[a][i]/m[a] + cost2*DRCMz);
+	  rx[a][i] = rx[a][i]*expdt2[a];
+	  ry[a][i] = ry[a][i]*expdt2[a];
+	  rz[a][i] = rz[a][i]*expdt2[a];
+	  rx[a][i] += cdt4*(px[a][i]/m[a] + cost2*DRCMx);
+	  ry[a][i] += cdt4*(py[a][i]/m[a] + cost2*DRCMy);
+	  rz[a][i] += cdt4*(pz[a][i]/m[a] + cost2*DRCMz);
+	  RCMx = RCMx + (-rxo + rx[a][i])*mM[a]; 
+	  RCMy = RCMy + (-ryo + ry[a][i])*mM[a];
+	  RCMz = RCMz + (-rzo + rz[a][i])*mM[a];
+     	}
     }
 } 
 void updPs(double dt, double c)
