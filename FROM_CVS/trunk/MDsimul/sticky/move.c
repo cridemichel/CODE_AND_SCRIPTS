@@ -2646,7 +2646,7 @@ void PredictEvent (int na, int nb)
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], vecgd[8],
-	 b, d, t, tInt, vv, distSq, t1, t2;
+	 b, d, t, tInt, vv, distSq, t1, t2, tbigat;
   int et, kk, ii, overlap, mm, retcheck;
   double ncong, cong[3], pos[3], vecg[5], pos2[3], r1[3], r2[3];
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
@@ -3035,7 +3035,6 @@ no_core_bump:
 			   * nessun urto sotto tali condizioni */
 			  continue;
 			}
-#if 1
 		      MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
 		      if (vv==0.0)
 			{
@@ -3067,127 +3066,45 @@ no_core_bump:
 		      //t += Oparams.time; 
 		      t2 += Oparams.time;
 		      t1 += Oparams.time;
-#if 0
-		      /* t è il guess per il newton-raphson */
-		      /* come guess per x possiamo usare il punto di contatto 
-		       * fra i centroidi */
-		      /* vecg è un guess per il vettore a 5 dimensioni (x, alpha ,t) */
-		      /* NOTA: qui va calcolato il vettore guess vecg 
-		       * che è il punto di contatto dei due centroidi */
-		      cong[0] = rx[na] + vx[na] * (t-atomTime[na]) 
-			- (rx[n] + vx[n] * (t-atomTime[n])) - shift[0];
-		      cong[1] = ry[na] + vy[na] * (t-atomTime[na]) 
-			- (ry[n] + vy[n] * (t-atomTime[n])) - shift[1];
-		      cong[2] = rz[na] + vz[na] * (t-atomTime[na]) 
-			- (rz[n] + vz[n] * (t-atomTime[n])) - shift[2];
-		      ncong=0.0;
-		      for (kk=0; kk < 3; kk++)
-			ncong +=  Sqr(cong[kk]);
-		      ncong = sqrt(ncong);
-		      for (kk=0; kk < 3; kk++)
+		      /* calcola cmq l'urto fra le due sfere grandi */
+		      if (na < parnumA && n < parnumA)
+			sigSq = Sqr(Oparams.sigma[0][0]);
+		      else if (na >= parnumA && n >= parnumA)
+			sigSq = Sqr(Oparams.sigma[1][1]);
+		      else
+			sigSq = Sqr(Oparams.sigma[0][1]);
+		      if (b < 0.0) 
 			{
-			  cong[kk] /= ncong;
-			}
-		      pos[0] =  rx[na] + vx[na] * (t-atomTime[na]);
-		      pos[1] =  ry[na] + vy[na] * (t-atomTime[na]);
-		      pos[2] =  rz[na] + vz[na] * (t-atomTime[na]);
-		      for (kk=0; kk < 3; kk++)
-			{
-			  vecg[kk] = pos[kk] - 0.5*cong[kk]*maxax[na<Oparams.parnumA?0:1];
-			  pos[kk] = vecg[kk];
-			}
-		      MD_DEBUG(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
-		      MD_DEBUG2(printf("r[%d](%f,%f,%f)-r[%d](%f,%f,%f)\n",
-				       na, rx[na], ry[na], rz[na], n, rx[n], ry[n], rz[n]));
-		      
+			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+			  d = Sqr (b) - vv * 
+			    (Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]) - sigSq);
+    			  if (d >= 0.) 
+			    {
+			      t = - (sqrt (d) + b) / vv;
+			      if (t < 0)
+				{
 #if 1
-		      t = Oparams.time;
-		      vecg[0] = (rx[na] + rx[n] + shift[0])*0.5;
-		      vecg[1] = (ry[na] + ry[n] + shift[1])*0.5;
-		      vecg[2] = (rz[na] + rz[n] + shift[2])*0.5;
+				  printf("time:%.15f tInt:%.15f\n", Oparams.time,
+					 tInt);
+				  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+					 Sqr(dr[2]))-1.0 );
+				  printf("STEP: %lld\n", (long long int)Oparams.curStep);
+				  printf("atomTime: %.10f \n", atomTime[n]);
+				  printf("n:%d na:%d\n", n, na);
+				  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
 #endif
-		      vecg[3] = 1.0; /* questa stima di alpha andrebbe fatta meglio!*/
-		      vecg[4] = t1;
-		      
-		      MD_DEBUG(printf("time=%.15f vecguess: %f,%f,%f alpha=%f t=%f\n",Oparams.time, vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
-		      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
-	    	      if (retcheck==2 || vecg[4] < Oparams.time ||
-    			  fabs(vecg[4] - Oparams.time)<1E-12 )
-			{
-			  /* se l'urto è nel passato chiaramente va scartato
-			   * tuttavia se t è minore di zero per errori di roundoff? */
-			  /* Notare che i centroidi si possono overlappare e quindi t può
-			   * essere tranquillamente negativo */
-			  MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
-					  vecg[4], Oparams.time));
-			  continue; 
+				  t = 0;
+				}
+			      tbigat = Oparams.time + t;
+			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
+			    } 
 			}
-#endif		      
-#endif
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 		      	continue;
-#if 0
-		      for (kk=0; kk < 5; kk++)
-		      	vecgold[kk] = vecg[kk];
-	     	      for(mm=0; mm < 10000; mm++)
-			{
-			  MD_DEBUG(printf(">>> mm=%d\n", mm));
-			  newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
-			  if (retcheck==2 || vecg[4] < Oparams.time ||
-			      fabs(vecg[4] - Oparams.time)<1E-12 )
-			    {
-			      /* se l'urto è nel passato chiaramente va scartato
-			       * tuttavia se t è minore di zero per errori di roundoff? */
-			      /* Notare che i centroidi si possono overlappare e quindi t può
-			       * essere tranquillamente negativo */
-			      MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
-					      vecg[4], Oparams.time));
-			      break;
-			    }
-	  		  if (vc_is_pos(na, n, vecg[0], vecg[1], vecg[2], vecg[4]))
-			    {
-			      MD_DEBUG(printf("vc is positive!\n"));
-			      MD_DEBUG(printf("t=%.15f collision predicted %d-%d\n",
-					      Oparams.time, na, n));
-			      break;
-			    }
-			  else if (mm == 0)
-			    {
-			      MD_DEBUG(printf("vc is negative!\n"));
-			      for (kk=0; kk < 5; kk++)
-				vecgf[kk] = vecg[kk];
-			    }
-			  for (kk=0; kk < 5; kk++)
-			    vecg[kk] = vecgold[kk] + (vecgf[kk] - vecgold[kk])/(10002-mm);
-			
-			}
-		      if (mm==10000)
-			{
-			  printf("MAX VCPOS!!!!\n");
-			  printf("%d-%d t=%.15G\n", na, n, Oparams.time);
-			  continue;
-			}
-		      else
-			{
-			  printf("OK maybe got contact point mm=%d\n", mm);
-			}
-#endif
-#if 0
-		      if (retcheck==2 || vecg[4] < Oparams.time ||
-	    		  fabs(vecg[4] - Oparams.time)<1E-12 )
-    			{
-			  /* se l'urto è nel passato chiaramente va scartato
-			   * tuttavia se t è minore di zero per errori di roundoff? */
-			  /* Notare che i centroidi si possono overlappare e quindi t può
-			   * essere tranquillamente negativo */
-			  MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
-					  vecg[4], Oparams.time));
-			  continue;
-			}
-#endif		      
+	      
 		      rxC = vecg[0];
 		      ryC = vecg[1];
 		      rzC = vecg[2];
