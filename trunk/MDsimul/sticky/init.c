@@ -1426,13 +1426,17 @@ void usrInitAft(void)
     {
       comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
       angvel(); 
+      calc_energy(NULL);
+      scalevels(Oparams.T, K);
       resetCM();
     }
   else if (OprogStatus.CMreset==-2)
     {
       comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
       angvel(); 
-    }
+      calc_energy(NULL);
+      scalevels(Oparams.T, K);
+     }
 
   if (Oparams.curStep == 1)
     {
