@@ -928,6 +928,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
+  //printf("BUMP %d-%d bt=%d time=%.15G\n", i, j,bt, Oparams.time);
 #if 1
   if (bt == MD_CORE_BARRIER)
     {
@@ -2642,11 +2643,16 @@ int check_negpairs(int *negpairs, double *dists, int bondpair, int i, int j)
       if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
 	&& lastbump[j].at == mapbondsb[nn]))
 	continue;
+      negpairs[nn] = 1;
+      sum += 1;
+#if 0
       if (bound(i, j, mapbondsa[nn], mapbondsb[nn]) && dists[nn] > 0.0)
 	negpairs[nn] = 1;
       else if (!bound(i, j, mapbondsa[nn], mapbondsb[nn]) && dists[nn] < 0.0)
 	negpairs[nn] = 1;
       sum += negpairs[nn];
+#endif
+      //printf("bondpair: %d dists[%d]:%.15G\n", bondpair, nn, dists[nn]);
     }
   return (sum > 0)?1:0;
 }
@@ -2665,11 +2671,17 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 	&& lastbump[j].at == mapbondsb[nn]))
 	continue;
 #endif
+#if 0
       if (distsOld[nn] > 0.0 && dists[nn] > 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	return 1;
       if (distsOld[nn] < 0.0 && dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	return 1;
-    }
+#endif
+    if (dists[nn] > 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+      return 1;
+    if (dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+      return 1;
+}
   return 0;
 }
 #define MD_NEGPAIRS
@@ -2918,6 +2930,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       //dold2 = dold;
       d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+
+      //printf("sumnegpairs: %d t=%.15G d=%.15G \n", sumnegpairs, t, dists[bondpair]);
 #ifdef MD_NEGPAIRS
       itstb = 0;
       /* NOTA: se la distanza tra due sticky spheres è positiva a t (per errori numerici 
@@ -2969,7 +2983,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
-     MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
+      MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
       for (nn=0; nn < MD_PBONDS; nn++)
 	dorefine[nn] = MD_EVENT_NONE;
       ncr=check_cross(distsOld, dists, crossed, bondpair);
