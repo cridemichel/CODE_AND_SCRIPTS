@@ -762,7 +762,7 @@ void print_usage(void)
 void args(int argc, char* argv[])
 {
   int i=1;
-
+  //printf("argc=%d %s,%s\n",argc, argv[0], argv[1]);
   if (argc == 1)
     {
       print_usage();
@@ -770,13 +770,18 @@ void args(int argc, char* argv[])
     }
   else if (argc > 2)
     {
+      if (!strcmp(argv[i], "-h") || !strcmp(argv[i],"--help"))
+	{
+    	  print_usage();
+	  exit(-1);
+	}
       while (i < argc-1)
 	{
 	  if (!strcmp(argv[i], "-h") || !strcmp(argv[i],"--help"))
 	    {
 	      print_usage();
 	      exit(-1);
-	    }
+	    }  
 	  else if (!strcmp(argv[i],"--saveandquit") || !strcmp(argv[i],"-sq"))
 	    {
 	      globset.saveandquit = 1;
@@ -972,42 +977,6 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
     }
-  else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12) == 12)
-    {
-      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
-      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
-	     atoi(s5),i, j);*/
-      at->common.rx = atof(s1);
-      at->common.ry = atof(s2);
-      at->common.rz = atof(s3);
-      at->common.type = MGL_ATOM_SUPELLIPS;
-      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
-      at->supellips.R[0][0] = atof(s4);
-      at->supellips.R[0][1] = atof(s5);
-      at->supellips.R[0][2] = atof(s6);
-      at->supellips.R[1][0] = atof(s7);
-      at->supellips.R[1][1] = atof(s8);
-      at->supellips.R[1][2] = atof(s9);
-      at->supellips.R[2][0] = atof(s10);
-      at->supellips.R[2][1] = atof(s11);
-      at->supellips.R[2][2] = atof(s12);
-      if (globset.NA)
-	{
-    	  at->supellips.a = globset.a[a];
-	  at->supellips.b = globset.b[a];
-	  at->supellips.c = globset.c[a];
-	}
-      else
-	{
-	  at->supellips.a = 1.0;
-	  at->supellips.b = 1.0;
-	  at->supellips.c = 0.5;
-	}
-      at->supellips.n1 = 1.0;
-      at->supellips.n2 = 1.0;
-      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = -1;
-    }
   else if (sscanf(L,"%s %s %s %s %s %s @ %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9) == 9)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
@@ -1044,32 +1013,6 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
     }
-  else if (sscanf(L,"%s %s %s %s %s %s", s1, s2, s3, s4, s5, s6) == 6)
-    {
-      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
-      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
-	     atoi(s5),i, j);*/
-      at->common.rx = atof(s1);
-      at->common.ry = atof(s2);
-      at->common.rz = atof(s3);
-      at->common.type = MGL_ATOM_DISK;
-      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
-      at->disk.nx = atof(s4);
-      at->disk.ny = atof(s5);
-      at->disk.nz = atof(s6);
-      if (globset.NA)
-	{
-	  at->disk.radius = globset.sig[a];
-	  at->disk.height = globset.height;
-	}
-      else
-	{
-	  at->disk.radius = globset.diameter/2.0;
-	  at->disk.height = globset.height;
-	}
-      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = -1;
-    }
   else if (sscanf(L,"%s %s %s @ %s $ %s ", s1, s2, s3, s4, s5) == 5 )
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
@@ -1098,7 +1041,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.greyLvl = 0;
       at->common.atcol = parsecol(s5);
     }
-  else if (sscanf(L,"%s %s %s C[%[^]]", s1, s2, s3, s4) == 4 )
+   else if (sscanf(L,"%s %s %s C[%[^]]", s1, s2, s3, s4) == 4 )
     {
       at->common.rx = atof(s1);
       at->common.ry = atof(s2);
@@ -1111,7 +1054,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.greyLvl = 0;
       at->common.atcol = parsecol(s4);
     }
-    else if (sscanf(L,"%s %s %s @ %s ", s1, s2, s3, s4) == 4 )
+  else if (sscanf(L,"%s %s %s @ %s ", s1, s2, s3, s4) == 4 )
     {
       /* printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       */
@@ -1122,6 +1065,69 @@ void assignAtom(int nf, int i, int a, const char* L)
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
       at->sphere.radius = atof(s4);
       at->common.greyLvl = 0;
+      at->common.atcol  = -1;
+    }
+  else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12) == 12)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	     atoi(s5),i, j);*/
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SUPELLIPS;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->supellips.R[0][0] = atof(s4);
+      at->supellips.R[0][1] = atof(s5);
+      at->supellips.R[0][2] = atof(s6);
+      at->supellips.R[1][0] = atof(s7);
+      at->supellips.R[1][1] = atof(s8);
+      at->supellips.R[1][2] = atof(s9);
+      at->supellips.R[2][0] = atof(s10);
+      at->supellips.R[2][1] = atof(s11);
+      at->supellips.R[2][2] = atof(s12);
+      if (globset.NA)
+	{
+    	  at->supellips.a = globset.a[a];
+	  at->supellips.b = globset.b[a];
+	  at->supellips.c = globset.c[a];
+	}
+      else
+	{
+	  at->supellips.a = 1.0;
+	  at->supellips.b = 1.0;
+	  at->supellips.c = 0.5;
+	}
+      at->supellips.n1 = 1.0;
+      at->supellips.n2 = 1.0;
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = -1;
+    }
+  else if (sscanf(L,"%s %s %s %s %s %s", s1, s2, s3, s4, s5, s6) == 6)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	     atoi(s5),i, j);*/
+      printf("qui\n");
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_DISK;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->disk.nx = atof(s4);
+      at->disk.ny = atof(s5);
+      at->disk.nz = atof(s6);
+      if (globset.NA)
+	{
+	  at->disk.radius = globset.sig[a];
+	  at->disk.height = globset.height;
+	}
+      else
+	{
+	  at->disk.radius = globset.diameter/2.0;
+	  at->disk.height = globset.height;
+	}
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
     }
   else if (sscanf(L,"%s %s %s ", s1, s2, s3) == 3 )
@@ -1255,7 +1261,7 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
   /*
     return true if this is a parameter, 0 otherwise
   */
-  char parName[128], parVal[512], s1[512], s2[512], s3[512], s4[512], *ns;
+  char parName[1024], parVal[1024], s1[1024], s2[1024], s3[1024], s4[1024], *ns;
   int lett, j, a, nb;
   double defbondthick;
   int defbondcolor;
