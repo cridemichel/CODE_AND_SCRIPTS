@@ -775,6 +775,19 @@ void lab2body(int i, double x[], double xp[], double *rO, double **R)
        	} 
     }
 }
+void body2labR(int i, double xp[], double x[], double *rO, double **R)
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+    }
+}
+
 void body2lab(int i, double xp[], double x[], double *rO, double **R)
 {
   int k1, k2;
@@ -2113,16 +2126,20 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 		     double *distSq, double *S, double maxstA, double maxstB, double *vec, 
 		     int calc_sign)
 {
-  int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB, distSqold;
+  int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB;
   int nphi1, nth1, nphi2, nth2;
-  double sp, spmaxA=0.0, spmaxB=0.0, dx[3], dxA, dxB;
- 
+  double sp, spmaxA=0.0, spmaxB=0.0, dx[3], dxP[3], cdxA[3], cdxB[3], dxA, dxB, distSqold, normdx, dxN[3];
+  double vecini[6];
+  
   cth1 = *th1;
   cphi1 = *phi1;
   cth2 = *th2;
   cphi2 = *th2;
   mA = (icg<Oparams.parnumA)?0:1;
   mB = (jcg<Oparams.parnumA)?0:1;
+  //printf("maxstA=%.15G maxstB=%.15G\n", maxstA, maxstB);
+  for (kk=0; kk < 6; kk++)
+    vecini[kk] = vec[kk];
   for (k1=-1; k1 <= 1; k1+=2)
     {
       for (k2=-1; k2 <= 1; k2+=2)
@@ -2138,50 +2155,65 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 	  if (nphi1 == -1)
 	    nphi1 = OprogStatus.n2-1;
 
-
 	  for (kk=0; kk < 3; kk++) 
-	    dx[kk] = ellips_mesh[mA][nth1][nphi1].point[kk] -
+	    dxP[kk] = ellips_mesh[mA][nth1][nphi1].point[kk] -
 	      ellips_mesh[mA][*th1][*phi1].point[kk];
-	  sp = fabs(scalProd(grad, dx));
+	  body2labR(icg, dxP, dx, rA, RtA);
+	  normdx = calc_norm(dx);
+	  for (kk=0; kk < 3; kk++) 
+	    dxN[kk] = dx[kk] / normdx;
+	  
+	  sp = fabs(scalProd(grad, dxN));
 	  if (sp > spmaxA)
 	    {
 	      cth1 = nth1;
 	      cphi1 = nphi1;
 	      spmaxA = sp;
+    	      for (kk=0; kk < 3; kk++)
+		cdxA[kk] = dx[kk];
 	    }
 	  
 	  nth2 = *th2 + k1;
 	  if (nth2 == OprogStatus.n1)
-	    nth1 = 0;
+	    nth2 = 0;
 	  if (nth2 == -1)
 	    nth2 = OprogStatus.n1-1;
 	  nphi2 = *phi2 + k2;
 	  if (nphi2 == OprogStatus.n2)
-	    nphi1 = 0;
+	    nphi2 = 0;
 	  if (nphi2 == -1)
 	    nphi2 = OprogStatus.n2-1;
 
 	  for (kk=0; kk < 3; kk++) 
-	    dx[kk] = ellips_mesh[mB][nth2][nphi2].point[kk] -
-	      ellips_mesh[mB][*th2][*phi2].point[kk];
-	  sp = fabs(scalProd(grad, dx));
+	    {
+	      dxP[kk] = ellips_mesh[mB][nth2][nphi2].point[kk] -
+		ellips_mesh[mB][*th2][*phi2].point[kk];
+	      //printf("dxP[%d]: %.15G\n", kk, dxP[kk]);   
+	    }
+	  body2labR(jcg, dxP, dx, rB, RtB);
+	  normdx = calc_norm(dx);
+	  for (kk=0; kk < 3; kk++) 
+	    dxN[kk] = dx[kk] / normdx;
+	  sp = fabs(scalProd(&grad[3], dxN));
 	  if (sp > spmaxB)
 	    {
 	      cth2 = nth2;
 	      cphi2 = nphi2;
 	      spmaxB = sp;
+	      for (kk=0; kk < 3; kk++)
+		cdxB[kk] = dx[kk];
 	    }
 	}
     }
   /* calcola la nuova distanza, il nuovo gradiente e le nuove coordinate del punto */
+  //printf("nth2 nphi2 = %d %d *th2 *nphi2 = %d %d\n", nth2, nphi2, *th2, *phi2);
+  //printf("nth1 nphi1 = %d %d *th1 *nphi1 = %d %d\n", nth1, nphi1, *th1, *phi1);
+  
   for (kk = 0; kk < 3; kk++)
     {
-      dxA = ellips_mesh[mA][cth1][cphi1].point[kk] -
-	ellips_mesh[mA][*th1][*phi1].point[kk];
-      vec[kk] += dxA;
-      dxB = ellips_mesh[mB][cth2][cphi2].point[kk] -
-	ellips_mesh[mB][*th2][*phi2].point[kk];
-      vec[kk+3] += dxB;
+      //printf("dxA[%d] = %.15G\n", kk, cdxA[kk]);
+      vec[kk] += cdxA[kk];
+      vec[kk+3] += cdxB[kk];
     }
   distSqold = *distSq;
   *distSq = 0;
@@ -2189,8 +2221,13 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
     {
       *distSq += Sqr(vec[kk+3]-vec[kk]);
     }
+  //printf("distSqold=%.15G distSq=%.15G\n",sqrt(fabs(distSqold)), sqrt(fabs(*distSq)));
   if (*distSq > distSqold)
-    return 1;
+    {
+      for (kk=0; kk < 6; kk++)
+	vec[kk] = vecini[kk];
+      return 1;
+    }
   if (calc_sign)
     {
       *S = get_sign(vec);
@@ -2211,7 +2248,7 @@ extern double *maxax;
 
 void findminMesh(double *vec)
 {
-  int kk, th1, th2, phi1, phi2, calc_sign=0;
+  int kk, th1, th2, phi1, phi2, calc_sign=0, its;
   double S, angs[4], vecP[6], sinth, grad[6], maxstA, maxstB, distSq;
   const double TWOPI = 2.0*pi;
   lab2body(icg, vec, vecP, rA, RtA);
@@ -2219,6 +2256,7 @@ void findminMesh(double *vec)
   angs[1] = acos(vecP[2]/axc[icg]);
   angs[0] = acos(vecP[0]/axa[icg]/sin(angs[1]));
   sinth = vecP[1]/axb[icg]/sin(angs[1]);
+  callsfrprmn++;
   if (sinth < 0)
     angs[0] = 2.0*pi-angs[0];
   angs[3] = acos(vecP[5]/axc[jcg]);
@@ -2227,11 +2265,11 @@ void findminMesh(double *vec)
   if (sinth < 0)
     angs[2] = 2.0*pi-angs[2];
   /* determino lo starting point sulla mesh */	
-  th1 = rint(OprogStatus.n1*angs[0]/TWOPI); 
-  phi1 = rint(OprogStatus.n2*angs[1]/TWOPI);
-  th2 = rint(OprogStatus.n1*angs[2]/TWOPI); 
-  phi2 = rint(OprogStatus.n2*angs[3]/TWOPI);
-
+  th1 = OprogStatus.n1*angs[0]/TWOPI; 
+  phi1 = OprogStatus.n2*angs[1]/TWOPI;
+  th2 = OprogStatus.n1*angs[2]/TWOPI; 
+  phi2 = OprogStatus.n2*angs[3]/TWOPI;
+  //printf("INIZIO: (%d,%d,%d,%d)\n", th1, phi1, th2, phi2);
   /* maggiorazione degli step sui due ellissoidi */
   if (OprogStatus.n1 > OprogStatus.n2)
     maxstA = maxax[icg]*TWOPI/OprogStatus.n2;
@@ -2251,9 +2289,14 @@ void findminMesh(double *vec)
       grad[kk+3] = -S*(vec[kk+3]-vec[kk]); 
       distSq += S*Sqr(vec[kk+3]-vec[kk]);
     }
-  
+  if (S < 0)
+    calc_sign=1;
+  //printf(">>> distSq: %.15G\n", distSq);
+  its = 0;
   while (1)
     {
+      its++;
+      itsfrprmn++;
       /* calcola il segno se necessario */
       if (!calc_sign && distSq < Sqr(maxstA+maxstB))
 	{
@@ -2274,6 +2317,7 @@ void findminMesh(double *vec)
 	    body2lab(icg, vecP, vec, rA, RtA);
 	    body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
 #endif
+	    //printf("FINE its= %d\n", its);
 	    break;
 	  } 
     }

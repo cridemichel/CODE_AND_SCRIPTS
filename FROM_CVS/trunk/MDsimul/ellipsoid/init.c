@@ -789,8 +789,8 @@ void usrInitBef(void)
     OprogStatus.nextSumTime = 0.0;
     OprogStatus.nextcheckTime = 0.0;
     OprogStatus.intervalSum = 1.0;
-    OprogStatus.n1 = 20;
-    OprogStatus.n2 = 20;
+    OprogStatus.n1 = 100;
+    OprogStatus.n2 = 100;
     OprogStatus.storerate = 0.01;
     OprogStatus.KK = 0;
     OprogStatus.JJ = 0;
@@ -922,9 +922,9 @@ void EvalSuperEllipse(double t1,double t2, double a, double b, double c, MESHXYZ
    ct2 = cos(t2);
    st1 = sin(t1);
    st2 = sin(t2);
-   pm->point[0] = a * ct1 * ct2;
-   pm->point[1] = b * ct1 * st2;
-   pm->point[2] = c * st1;
+   pm->point[0] = a * ct1 * st2;
+   pm->point[1] = b * st1 * st2;
+   pm->point[2] = c * ct2;
    pm->grad[0] = 2.0*pm->point[0]/Sqr(a);
    pm->grad[1] = 2.0*pm->point[1]/Sqr(b);
    pm->grad[2] = 2.0*pm->point[2]/Sqr(c);
@@ -939,9 +939,9 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
    * n2 = slides */
   n1 = OprogStatus.n1;
   n2 = OprogStatus.n2;
-  for (j=0;j<n2/2;j++)
+  for (j=0;j<n2;j++)
     {
-      phi = j * TWOPI / (double)n2 - PID2;
+      phi = j * TWOPI / (double)n2;
       for (i=0;i<n1;i++) 
 	{
 	  theta = i * TWOPI / n1;
