@@ -2278,7 +2278,8 @@ int valid_collision(int i, int j, int ata, int atb, int collCode)
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
-  double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS]; 
+  double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS],
+	 distsOld2[MD_PBONDS]; 
   double normddot, maxddot, delt, troot, tmin; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax, deldist; 
@@ -2337,18 +2338,18 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
   MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
-  assign_dists(dists, distsOld);
-  dold = d;
+  assign_dists(dists, distsOld2);
+  //dold = d;
   its = 0;
   /* il primo delt è semplicemente un valore ragionevolmente
    * piccolo, poi si adatta */
   delt = h*t;
   t += delt;
-  d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
+  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
   while (t < t2)
     {
       //normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
-      deldist = get_max_deldist(distsOld, dists);
+      deldist = get_max_deldist(distsOld2, distsOld);
       normddot = fabs(deldist)/delt;
       if (normddot!=0)
 	delt = epsd/normddot;
@@ -2357,10 +2358,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       if (dold < epsd)
 	delt = epsd / maxddot;
       t += delt;
-      //printf("t=%.15G delt=%.15G maxddot: %.15G t*h=%.15G\n", t, delt, maxddot, t*h);
+      //printf("normddot= %.15G t=%.15G delt=%.15G maxddot: %.15G t*h=%.15G\n", 
+        //   normddot, t, delt, maxddot, t*h);
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
-      dold2 = dold;
-      //assign_dists(distsOld,  distsOld2);
+      //dold2 = dold;
       d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
       deldist = get_max_deldist(distsOld, dists);
       if (deldist > epsdMax)
@@ -2388,8 +2389,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
 	    }
-	  assign_dists(dists, distsOld);
-	  dold = d;
+	  assign_dists(dists, distsOld2);
+	  delt = h*t;
+	  t += delt;
+	  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
 	  its++;
 	  //itsS++;
 	  continue;
@@ -2523,6 +2526,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       else if (gotcoll == -1)
 	return 0;
       dold = d;
+      assign_dists(distsOld,  distsOld2);
       assign_dists(dists, distsOld);
       its++;
       itsS++;
