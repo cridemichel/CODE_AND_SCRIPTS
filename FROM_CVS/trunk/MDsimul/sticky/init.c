@@ -586,7 +586,8 @@ void buildTetrahedras(void)
    *       i >= Oparams.parnumA => Si */
   /* Oxygen */
   Oangle = acos(0) * 2.0 * 145.8 / 180.0;
-  for (i=0; i < Oparams.parnum; i++)
+  printf("radius = %f\n", Oparams.sigma[0][1]);
+  for (i=0; i < Oparams.parnumA; i++)
     {
       /* il raggio è quello dell'interazione Si-O */
       radius = Oparams.sigma[0][1]/2.0;
@@ -609,7 +610,7 @@ void buildTetrahedras(void)
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
     {
       /* il raggio è quello dell'interazione Si-O */
-      radius = Oparams.sigma[1][0]/2.0;
+      radius = Oparams.sigma[0][1]/2.0;
       uxx[i] = Kl * radius / 2.0;
       uyx[i] = -Ktr * radius;
       uzx[i] = -Kdh * radius;
@@ -1631,8 +1632,10 @@ void usrInitAft(void)
   poolSize = OprogStatus.eventMult*Oparams.parnum;
   m = Oparams.m;
   Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
+#ifndef MD_SILICA
   Oparams.sigma[1][1] = Oparams.sigma[0][0];
-  Oparams.sigma[0][1] = Oparams.sigma[1][0] = Oparams.sigma[0][0];
+#endif
+  Oparams.sigma[1][0] = Oparams.sigma[0][1];
   invmA = 1.0/Oparams.m[0];
   invmB = 1.0/Oparams.m[1];
   /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
@@ -1757,7 +1760,6 @@ void usrInitAft(void)
   deltat = matrix(Oparams.parnum,NA);
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
-  Oparams.sigma[1][0] = Oparams.sigma[0][1];
   for (i=0; i < Oparams.parnumA; i++)
     {
       scdone[i] = 0;
@@ -1969,7 +1971,7 @@ void writeAllCor(FILE* fs)
 	  if (a == 0)
 	    {
 	      fprintf(fs, "%.15G %.15G %.15G @ %f C[red]\n", rat[a][0], rat[a][1], rat[a][2],
-		      Oparams.sigma[0][0]/2.0);
+		      Oparams.sigma[0][1]/2.0);
 	    }
 	  else if (a < 3)
 	    {
@@ -2002,7 +2004,7 @@ void writeAllCor(FILE* fs)
 	  if (a == 0)
 	    {
 	      fprintf(fs, "%.15G %.15G %.15G @ %f C[YellowGreen]\n", rat[a][0], rat[a][1], rat[a][2],
-		      Oparams.sigma[0][0]/2.0);
+		      Oparams.sigma[0][1]/2.0);
 	    }
 	  else if (a < 5)
 	    {

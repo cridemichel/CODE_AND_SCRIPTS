@@ -675,15 +675,15 @@ struct singlePar OsinglePar[] = {
   {"P",          &Oparams.P,                  CT},
   {"L",          &L,                          CT},
 #ifdef MD_SILICA
-  {"sigmaSiSi", &Oparams.sigma[0][0], CT},
-  {"sigmaOO",  &Oparams.sigma[1][0], CT},
+  {"sigmaSiSi", &Oparams.sigma[1][1], CT},
+  {"sigmaOO",  &Oparams.sigma[0][0], CT},
   {"sigmaSiO", &Oparams.sigma[0][1], CT},
-  {"massSi",   &Oparams.m[0], CT},
-  {"massO",    &Oparams.m[1], CT},
+  {"massSi",   &Oparams.m[1], CT},
+  {"massO",    &Oparams.m[0], CT},
   {"bheight",  &Oparams.bheight,            CT},
 #ifndef MD_ASYM_ITENS
-  {"ISi",      &Oparams.I[0],      CT},
-  {"IO",       &Oparams.I[1],      CT},
+  {"ISi",      &Oparams.I[1],      CT},
+  {"IO",       &Oparams.I[0],      CT},
 #endif
 #else
   /* sigma[0][0] = atomo grande  
