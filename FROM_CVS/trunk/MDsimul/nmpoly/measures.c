@@ -108,7 +108,6 @@ void energy(void)
   dist = ((rx[0][mol] - rx[1][mol]) * (vx[0][mol] - vx[1][mol]) + 
     (ry[0][mol] - ry[1][mol]) * (vy[0][mol] - vy[1][mol]) + 
     (rz[0][mol] - rz[1][mol]) * (vz[0][mol] - vz[1][mol]))/dist;
-  dist = 0.0;
   printf("Molecule relative velocity along bond: %.15f\n", dist); 
 
   Px = 0.0;
