@@ -887,10 +887,10 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
    */
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
   double factor=0, invmi, invmj, sigmai, mredl;
-  double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3];
+  double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3], r12[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
-  double denom, rCx, rCy, rCz, nrAB;
+  double denom, rCx, rCy, rCz, nrAB, Dr;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
 #endif
@@ -930,7 +930,15 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   rB[0] = rx[j];
   rB[1] = ry[j];
   rB[2] = rz[j];
-  MD_DEBUG10(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
+#if 1
+  for (a=0; a < 3; a++)
+    {
+      Dr = rA[a]-rB[a];
+      if (fabs(Dr) > L2)
+	rB[a] += SignR(L, Dr);
+    }
+#endif
+   MD_DEBUG10(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   /* qui calcolo il punto di contatto */
   MD_DEBUG20(printf("ata: %d atb: %d\n", ata, atb));
   MD_DEBUG20(printf("rA %f %f %f\n", rA[0], rA[1], rA[2]));
@@ -942,32 +950,54 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   for (kk = 0; kk < 3; kk++)
     rAB[kk] = ratA[kk] - ratB[kk];
   /* reduce to minimum image rAB[]!! */
-#if 1
-  for (a=0; a < 3; a++)
-    if (fabs (rAB[a]) > L2)
-      rAB[a] -= SignR(L, rAB[a]);
-#endif
- 
+
   nrAB = calc_norm(rAB);
+  MD_DEBUG(printf("sigmaSticky= %.15G norm rAB: %.15G\n", Oparams.sigmaSticky, calc_norm(rAB)));
+#if 1
+  if (fabs(nrAB - Oparams.sigmaSticky)> 1E-4)
+    {
+      printf("distance (%d,%d)-(%d,%d): %.15G)between sticky point is wrong!", 
+	     i, j, ata, atb, nrAB);
+      exit(-1);
+    }
+  for (kk=0; kk < 3; kk++)
+    r12[kk] = rA[kk]-rB[kk];
+  if (fabs(calc_norm(r12) - (Oparams.sigma[0][0]+Oparams.sigmaSticky))> 1E-4)
+    {
+      printf("distance (%d,%d)-(%d,%d): %.15G between oxygens molecules is wrong!\n", 
+	     i, j, ata, atb, calc_norm(r12));
+      for (kk=0; kk < 3; kk++)
+	r12[kk] = ratA[kk]-rA[kk];
+      printf("dist atA-A:%.15G\n", calc_norm(r12));
+      for (kk=0; kk < 3; kk++)
+	r12[kk] = ratB[kk]-rB[kk];
+      printf("dist atB-B:%.15G\n", calc_norm(r12));
+      for (kk=0; kk < 3; kk++)
+	r12[kk] = ratA[kk]-ratB[kk];
+      printf("dist atA-atB:%.15G\n", calc_norm(r12));
+      exit(-1);
+    }
+	
+#endif
   for (kk = 0; kk < 3; kk++)
     rAB[kk] /= nrAB;
   /* controllare con cura la scelta dei parametri relativi ai diametri delle sferette
    * e alle larghezze delle buche dei potenziali a buca quadrata */
   MD_DEBUG20(printf("coll code: %d\n", bt));
-  rCx = rA[0] - rAB[0]*sigmai*0.5;
-  rCy = rA[1] - rAB[1]*sigmai*0.5;
-  rCz = rA[2] - rAB[2]*sigmai*0.5;
-  rAC[0] = rx[i] - rCx;
-  rAC[1] = ry[i] - rCy;
-  rAC[2] = rz[i] - rCz;
+  rCx = ratA[0] - rAB[0]*Oparams.sigmaSticky*0.5;
+  rCy = ratA[1] - rAB[1]*Oparams.sigmaSticky*0.5;
+  rCz = ratA[2] - rAB[2]*Oparams.sigmaSticky*0.5;
+  rAC[0] = rA[i] - rCx;
+  rAC[1] = rA[i] - rCy;
+  rAC[2] = rA[i] - rCz;
 #if 0
   for (a=0; a < 3; a++)
     if (fabs (rAC[a]) > L2)
       rAC[a] -= SignR(L, rAC[a]);
 #endif
-  rBC[0] = rx[j] - rCx;
-  rBC[1] = ry[j] - rCy;
-  rBC[2] = rz[j] - rCz;
+  rBC[0] = rB[j] - rCx;
+  rBC[1] = rB[j] - rCy;
+  rBC[2] = rB[j] - rCz;
 #if 0
   for (a=0; a < 3; a++)
     {
@@ -1129,8 +1159,8 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       add_bond(i, j, ata, atb);
       add_bond(j, i, atb, ata);
       factor = -vc - sqrt(Sqr(vc) + 2.0*Oparams.bheight/mredl);
-      printf("delta= %f height: %f mredl=%f\n", 
-	     Sqr(vc) + 2.0*Oparams.bheight/mredl, Oparams.bheight, mredl );
+      MD_DEBUG(printf("delta= %f height: %f mredl=%f\n", 
+		      Sqr(vc) + 2.0*Oparams.bheight/mredl, Oparams.bheight, mredl));
       factor *= mredl;
       break;
     }

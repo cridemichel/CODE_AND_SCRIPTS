@@ -1113,7 +1113,7 @@ void usrInitAft(void)
   if (OprogStatus.CMreset==-1)
     {
       comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-      resetCM(1);
+      resetCM(0);
     }
   else if (OprogStatus.CMreset==-2)
     {
