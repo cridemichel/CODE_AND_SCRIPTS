@@ -743,8 +743,7 @@ void add_bonds (int na, int *numbonds)
   const double EPSILON = 1E-10;
   double mredl;
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
-
-  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+ /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 
@@ -850,7 +849,10 @@ void usrInitAft(void)
     double sigDeltaSq, drx, dry, drz;
     int j, nbonds;
 #endif
-    /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
+#ifdef MD_HSVISCO
+    double mass;
+#endif
+ /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
     /* initialize global varibales */
     pi = 2.0 * acos(0);
@@ -1085,7 +1087,7 @@ void usrInitAft(void)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-  /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
+ /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)
     {
@@ -1105,6 +1107,22 @@ void usrInitAft(void)
       fclose(f);
       f = fopenMPI(MD_HD_MIS "D.dat", "w");
       fclose(f);
+#endif
+#ifdef MD_HSVISCO
+      OprogStatus.lastcoll = -1;
+      OprogStatus.Txy = 0.0;
+      OprogStatus.Tyz = 0.0;
+      OprogStatus.Tzx = 0.0;
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  if (i < Oparams.parnumA)
+	    mass = Oparams.m[0];
+	  else 
+	    mass = Oparams.m[1];
+	  OprogStatus.Txy += mass*vx[i]*vy[i];
+	  OprogStatus.Tyz += mass*vy[i]*vz[i];
+	  OprogStatus.Tzx += mass*vz[i]*vx[i];
+	}
 #endif
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
