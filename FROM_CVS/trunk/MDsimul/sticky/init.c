@@ -1757,6 +1757,7 @@ void usrInitAft(void)
   deltat = matrix(Oparams.parnum,NA);
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
+  Oparams.sigma[1][0] = Oparams.sigma[0][1];
   for (i=0; i < Oparams.parnumA; i++)
     {
       scdone[i] = 0;
