@@ -1961,7 +1961,7 @@ extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lam
 extern int maxitsRyck;
 extern double sigmaSqSticky;
 /* N.B. per la silica tale routine va cambiata! */
-double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin)
+double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, double dists[NA][NA])
 {
   double distmin, distSq;
   double ratA[NA][3], ratB[NA][3], dist;
@@ -2016,7 +2016,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
 	  distSq = 0;
 	  for (kk=0; kk < 3; kk++)
 	    distSq += Sqr(ratA[a][kk]-ratB[b][kk]);
-	  dist = sqrt(distSq) - Oparams.sigmaSticky;
+	  dists[a][b] = dist = sqrt(distSq) - Oparams.sigmaSticky;
 	  if (firstdist || fabs(dist) < fabs(distmin))
 	    {
 	      firstdist = 0;
@@ -2240,6 +2240,16 @@ int refine_contact(int i, int j, double t1, double t2, int ata, int atb,
       return 1; 
     }
 }
+int check_cross(distsOld[NA][NA], dists[NA][NA])
+{
+  int a, b;
+  for (a = 0; a < NA; a++)
+    for (b = 0; b < NA; b++)
+      {
+      
+      }
+}
+
 int search_contact_faster(int i, int j, double *shift, double *t, double t2, double epsd, double *d1, double epsdFast)
 {
   /* NOTA: 
