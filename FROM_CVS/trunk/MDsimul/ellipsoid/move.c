@@ -13,6 +13,7 @@ void lubksbR(double **a, int* indx, double *b, int n);
 void SolveLineq (double **a, double *x, int n);
 void InvMatrix(double **a, double **b, int NB);
 extern double invaSq[2], invbSq[2], invcSq[2];
+double rxC, ryC, rzC;
 #ifdef MD_GRAVITY
 int checkz(char *msg)
 {
@@ -1652,7 +1653,7 @@ no_core_bump:
     			  if (d >= 0.) 
 			    {
 			      t = - (sqrt (d) + b) / vv;
-			     
+			      t += Oparams.time; 
 			      /* t è il guess per il newton-raphson */
 			      /* come guess per x possiamo usare il punto di contatto 
 			       * fra i centroidi */
@@ -1680,6 +1681,10 @@ no_core_bump:
 			      vecg[4] = t;
 			      
 			      newt(vecg, 5, &check, funcs2beZeroed, na, n, shift); 
+			      rxC = vecg[0];
+			      ryC = vecg[1];
+			      rzC = vecg[2];
+			      t = vecg[4];
 			      if (t < 0)
 				{
 #if 1
@@ -1694,7 +1699,8 @@ no_core_bump:
 #endif
 				  t = 0;
 				}
-			      ScheduleEvent (na, n, Oparams.time + t);
+			      /* il tempo restituito da newt() è già un tempo assoluto */
+			      ScheduleEvent (na, n, t);
 			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
 			    } 
 			}
