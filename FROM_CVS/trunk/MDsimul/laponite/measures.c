@@ -418,7 +418,7 @@ void rotDiff(void)
   /* Drot should be multiplied by 1/<1/s> because in the denominator here
      we have the virtual time, for more details see S. Nose' Mol. Phys.
      1984, vol. 52, No.2, 255-268 */
-  Drot = DoSqTot / ( 4.0 * dt * ((COORD_TYPE) Oparams.curStep) * 
+  Drot = DoSqTot / ( 6.0 * dt * ((COORD_TYPE) Oparams.curStep) * 
 			((COORD_TYPE) Nm) ); 
   DoSqTot /= ((COORD_TYPE) Nm);
   DphiSq = DoSqTot;

@@ -2720,9 +2720,9 @@ void updateAng(int Nm)
       ludcmp(Itens,indx, &d, &ok);
       /* forward and backward substitution */
       lubksb(Itens, indx, L);
-      ox[a] = L[0];
-      oy[a] = L[1];
-      oz[a] = L[2];
+      ox[i] = L[0];
+      oy[i] = L[1];
+      oz[i] = L[2];
 #if 0
       oz[a] = Lz / Itens[2][2];
       oy[a] = (Ly - Itens[1][2] * oz[a]) / Itens[1][1];
@@ -3243,7 +3243,7 @@ void move(void)
 	  ( OprogStatus.snapSteps > 0 && (Oparams.curStep % OprogStatus.snapSteps == 0) )  )
       savesnap();
   /* Update accumulators for calculating the angular diffusion coefficent */
-  //updateAng(Oparams.parnum);  
+  updateAng(Oparams.parnum);  
   
   /* Update the integral of the pressure tensor */
   updateDQ(Oparams.steplength);
