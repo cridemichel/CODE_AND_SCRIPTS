@@ -1,5 +1,5 @@
 #commSrc Makefile
-COMMEXECS = md2ascii bak2cor# log calcEta chkStatus 
+COMMEXECS = md2ascii bak2cor calcEta# log calcEta chkStatus 
 COMMEXECS_PT = md2ascii_PT log calcEta chkStatus bak2cor
 COMMEXECS_DPT = md2ascii_DPT calcEta chkStatus bak2cor xva2ascii
 OBJS= mdutil.o mdsimul.o mdio.o mdchoose.o mdarray.o mdinit.o scalProc.o bak2cor.o
