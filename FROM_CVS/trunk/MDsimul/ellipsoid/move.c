@@ -2605,7 +2605,7 @@ int refine_contact(int i, int j, double t, double vecgd[8], double shift[3],doub
       return 1; 
     }
 }
-int search_contact_faster(int i, int j, double *shift, double *t, double t2, double *vecgd, double epsd, double *d1, double epsdTimes)
+int search_contact_faster(int i, int j, double *shift, double *t, double t2, double *vecgd, double epsd, double *d1, double epsdFast)
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
@@ -2620,9 +2620,9 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i<Oparams.parnumA?0:1]
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j<Oparams.parnumA?0:1];
   *d1 = calcDistNeg(*t, i, j, shift, r1, r2, &alpha, vecgd, 1);
-  MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsd*epsdTimes));
+  MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
-  while (*d1 > epsdTimes*epsd && its < MAXOPTITS)
+  while (*d1 > epsdFast && its < MAXOPTITS)
     {
       delt = *d1 / maxddot;
       normddot = calcvecF(i, j, *t, r1, r2, ddot, shift);
@@ -2667,8 +2667,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   double h, d1, d2, d1Neg, d1Pos, alpha, vecgd1old[8], vecgd1[8], vecgd2[8], vecgd3[8], t, r1[3], r2[3]; 
   double vd, normddot, ddot[3], maxddot, delt, told;
   //const int MAXOPTITS = 4;
-  const double epsd = 0.0005, epsdTimes = 2.0, epsdTimesIsteresi = 5.0; 
+  double epsd, epsdFast, epsdFastR, epsdMax; 
   double d2old;
+  epsd = OprogStatus.epsd;
+  epsdFast = OprogStatus.epsdFast;
+  epsdFastR= OprogStatus.epsdFastR;
+  epsdMax = OprogStatus.epsdMax;
   /* NOTA: 
    * - epsd è di quanto varia d ad ogni iterazione e quindi determina il grado di accuratezza
    * con cui viene individuato il punto di contatto. In generale se due ellissoidi si "spizzicano"
@@ -2721,7 +2725,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     }
 #else
   //d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
-  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdTimes))
+  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast))
     return 0;  
 #if 0
   if (refine_contact(i, j, t, vecgd1, shift, vecg))
@@ -2761,6 +2765,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     {
       printf("[WARNING] d1=%.15G < 0 i=%d j=%d\n",d1, i, j);
       printf("[WARNING] Some collision has been missed, ellipsoid may overlap!\n");
+      store_bump(i, j);
       return 0;
     }
 #endif
@@ -2803,7 +2808,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	vecgd1old[kk] = vecgd1[kk];
       d2old = d1;
       d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 0);
-      if (fabs(d2-d2old) > 2.0*epsd)
+      if (fabs(d2-d2old) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
 	   * cerca di correggere il passo per ottenere un valore
@@ -2817,9 +2822,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
 #if 1
-      if (d2 > epsdTimesIsteresi*epsd)
+      if (d2 > epsdFastR)
 	{
-	  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdTimes))
+	  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast))
 	    {
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
