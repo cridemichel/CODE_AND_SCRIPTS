@@ -2323,6 +2323,9 @@ void move(void)
   check_distances("tra movea moveb");
 #endif
   LJForce(Oparams.parnum, Oparams.rcut);
+#ifdef MD_FENE
+  FENEForce();
+#endif
   /* considera tutti i contributi alle forza agente sugli atomi "di base"
    * ossia somma anche le forze dovute agli atomi senza massa moltiplicate
    * per gli opportuni coefficienti "vincolari" 

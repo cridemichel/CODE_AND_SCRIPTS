@@ -698,24 +698,27 @@ void LJForce(int Nm, double rcut)
 	  /* Calculate all terms of molecular
 	     pressure tensor */
 #ifdef MOLPTENS	  
-	  DRmx = (Rmx[i] - Rmx[j]);
-	  DRmx = DRmx - L * rint(invL * DRmx);
-	  DRmy = (Rmy[i] - Rmy[j]);
-	  DRmy = DRmy - L * rint(invL * DRmy);
-	  DRmz = (Rmz[i] - Rmz[j]);
-	  DRmz = DRmz - L * rint(invL * DRmz);
-	  
-	  Wmxx += DRmx * fxab;
-	  Wmyy += DRmy * fyab;
-	  Wmzz += DRmz * fzab;
-	  
-	  Wmyx += DRmy * fxab;
-	  Wmzy += DRmz * fyab;
-	  Wmxz += DRmx * fzab;
-	
-	  Wmxy += DRmx * fyab;
-	  Wmyz += DRmy * fzab;
-	  Wmzx += DRmz * fxab;
+	  if ( i != j )
+	    {
+	      DRmx = (Rmx[i] - Rmx[j]);
+	      DRmx = DRmx - L * rint(invL * DRmx);
+	      DRmy = (Rmy[i] - Rmy[j]);
+	      DRmy = DRmy - L * rint(invL * DRmy);
+	      DRmz = (Rmz[i] - Rmz[j]);
+	      DRmz = DRmz - L * rint(invL * DRmz);
+	      
+	      Wmxx += DRmx * fxab;
+	      Wmyy += DRmy * fyab;
+	      Wmzz += DRmz * fzab;
+	      
+	      Wmyx += DRmy * fxab;
+	      Wmzy += DRmz * fyab;
+	      Wmxz += DRmx * fzab;
+	      
+	      Wmxy += DRmx * fyab;
+	      Wmyz += DRmy * fzab;
+	      Wmzx += DRmz * fxab;
+	    }
 #endif
 	  Fxa   = Fxa + fxab;     /* total force acting on atom (a,i)*/
 	  Fya   = Fya + fyab;
@@ -766,3 +769,56 @@ void LJForce(int Nm, double rcut)
      Wmzx = (Wmzx + Wmxz)/2.0;
      */
 } 
+
+#ifdef MD_FENE
+void FENEForce(void)
+{
+  int i, a;
+  double ff, invff;
+  double rabSq, L, drx, dry, drz, R0Sq, fx, fy, fz;
+  L = cbrt(Vol);
+  Vfe = Wfe = 0;
+#ifdef ATPTENS
+  Wfexy = 0.0; /* virial off-diagonal terms of pressure tensor */
+  Wfeyz = 0.0;
+  Wfezx = 0.0;
+  Wfexx = Wfeyy = Wfezz = 0.0;
+#endif
+  R0Sq = Sqr(Oparams.R0);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      for (a = 0; a < NA-1; a++)
+	{
+	  drx = rx[a][i] - rx[a+1][i];
+	  dry = ry[a][i] - ry[a+1][i];
+	  drz = rz[a][i] - rz[a+1][i];
+	  drx = drx - L * rint(drx/L);
+	  dry = dry - L * rint(dry/L);
+	  drz = drz - L * rint(drz/L);
+	  rabSq = Sqr(drx) + Sqr(dry) + Sqr(drz); 
+	  ff = 1 - rabSq / R0Sq;
+	  invff = -Oparams.kfe / ff;
+	  fx = drx * invff;
+	  fy = dry * invff;
+	  fz = drz * invff;
+	  Fx[a][i] += fx;
+	  Fy[a][i] += fy;
+	  Fz[a][i] += fz;
+	  Fx[a+1][i] -= fx;
+	  Fy[a+1][i] -= fy;
+	  Fz[a+1][i] -= fz;
+#ifdef ATPTENS
+	  /* Virial off-diagonal terms of atomic pressure tensor */
+	  Wfexy += dx * fy;
+	  Wfeyz += dy * fz;
+	  Wfezx += dz * fx;
+	  Wfexx += dx * fx;
+	  Wfeyy += dy * fy;
+	  Wfezz += dz * fz;
+#endif
+	  Wfe += rabSq * invff; 
+	  Vfe += -0.5 * Oparams.kfe * R0Sq * log(ff);
+	}
+    }
+}
+#endif
