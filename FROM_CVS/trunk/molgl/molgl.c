@@ -662,33 +662,47 @@ void save_image(void)
 void display (void)
 {
   int nf;
+  static int counter = 0;
 #ifndef MGL_USELIST
   int i, j;
 #endif
   /*
    * double fadeFact;
    */
-  if (globset.saveandquit)
-    glutHideWindow();
+  if (globset.saveandquit && counter == 0)
+    {
+      glutHideWindow();
+    }
+  glDisable (GL_SCISSOR_TEST);
 
 
   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  
-  glLoadIdentity();
-  
-  if (!globset.axon) 
-    glTranslatef(0.0, 0.0, -(globset.near+globset.L/2.0));
+  //glEnable (GL_SCISSOR_TEST);
+ 
+  if (globset.setvp)
+    {
+      glLoadIdentity();
+      gluLookAt(globset.ivpx,globset.ivpy,globset.ivpz,0, 0, 0, 0, 1, 0);
+      glPushMatrix ();
+    }
   else
-    glTranslatef(0.0, 0.0,-globset.L/2.0);
-  glTranslatef(0.0, 0.0, -globset.dist);
-  glPushMatrix ();
-  /* NOTE:
-     First arg is the degrees of the rotation, the others are the component
-     of the vector around which we perfomr the rotation */
-  glRotatef(-globset.degz, 0.0, 0.0, 1.0);
-  glRotatef(-globset.degy, 0.0, 1.0, 0.0);
-  glRotatef(-globset.degx, 1.0, 0.0, 0.0);
+    {
+      glLoadIdentity();
+      
+      if (!globset.axon) 
+	glTranslatef(0.0, 0.0, -(globset.near+globset.L/2.0));
+      else
+	glTranslatef(0.0, 0.0,-globset.L/2.0);
 
+      glTranslatef(0.0, 0.0, -globset.dist);
+      glPushMatrix ();
+      /* NOTE:
+	 First arg is the degrees of the rotation, the others are the component
+	 of the vector around which we perfomr the rotation */
+      glRotatef(-globset.degz, 0.0, 0.0, 1.0);
+      glRotatef(-globset.degy, 0.0, 1.0, 0.0);
+      glRotatef(-globset.degx, 1.0, 0.0, 0.0);
+    }
   setColor(mgl_bw[0], 1.0);
   if (globset.drawcube)
     glutWireCube(globset.L);
@@ -717,12 +731,23 @@ void display (void)
   glPopMatrix ();
   
   if (globset.infos) onScreenInfo();
-  /*glFlush ();*/
+
   glutSwapBuffers();
   if (globset.saveandquit==1)
     {
+#if 1
       save_image();
       exit(0);
+#else
+      if (counter == MGL_REDBEFQUIT-1)
+	{
+	  save_image();
+	  exit(0);
+	}
+      else
+	counter++;
+      printf("counter = %d\n", counter);
+#endif
     }
 }
 
@@ -963,6 +988,7 @@ int parsecol(char *str)
       return colNum;
     }
 }
+/* PARSE parse  parsing  PARSING */
 /* ========================== >>> assignAtom <<< ===========================*/
 void assignAtom(int nf, int i, int a, const char* L)
 {
@@ -1842,8 +1868,10 @@ void key(unsigned char k, int x, int y)
  */
 int main(int argc, char** argv)
 {
+  int i;
   default_pars();
   args(argc, argv);
+
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowPosition(100, 100);
@@ -1853,6 +1881,18 @@ int main(int argc, char** argv)
   loadAtomPos();
 #ifdef MGL_USELIST
   buildAtomsList();
+#endif
+#if 0
+  if (globset.saveandquit)
+    {
+      for (i=0; i < MGL_REDBEFQUIT; i++)
+	{
+	  printf("i=%d\n", i);
+	  display(); 
+	  glutPostRedisplay();
+	  //glFlush();
+	}
+    }
 #endif
   glutDisplayFunc(display);
   glutReshapeFunc(myReshape);
