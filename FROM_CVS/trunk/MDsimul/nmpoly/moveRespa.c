@@ -510,6 +510,9 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
     vxi[NA], vyi[NA], vzi[NA];
   int i, a, b, it;
   const COORD_TYPE rptol = 1.0E-6;
+  double expdt[NA], mM[NA];
+  double cost[NA];
+  double RCMx, RCMy, RCMz;
 
   if ( ( NB != NA ) && ( NB != NA-1 ) ) 
     {
@@ -529,21 +532,43 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   dt2    = dt / 2.0;
   dtSq2  = dt * dt2;
   dSq = Sqr(d); /* In general you must supply a vector of bond lengths */
+  for (a = 0; a < NA; a++)
+    {
+      mM[a] = Oparams.m[a] / Mtot;
+      expdt[a] = exp(Pv*Sqr(s)*mM[a]*dt/(3.0*Vol*OprogStatus.W));
+      cost[a] = (expdt[a] - 1.0);
+    }
+#ifdef MOLPTENS
+  press = calcT1diagMolRespa(Nm) + (WmLong + WmShort) / 3.0 / Vol; /* press(t+dt) */
+#else
+  press = calcT1diagAtRespa(Nm) + (WLong + WShort + WC) / Vol; /* press(t+dt) */
+#endif
+  DP = press - Oparams.P;
+  Pv += DP  * dt2;
+  
   /* ===== LOOP OVER MOLECULES ===== */
   for (i=0; i < Nm; i++)
     {
+      CoM(i, &RCMx, &RCMy, &RCMz);
       /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
       for(a=0; a < NA; a++)
 	{
+#if 0
 	  axia = Fx[a][i] / m[a];
 	  ayia = Fy[a][i] / m[a];
 	  azia = Fz[a][i] / m[a];
+#endif
 	  rxi[a] = rx[a][i];
 	  ryi[a] = ry[a][i];
 	  rzi[a] = rz[a][i];
-	  pxi[a] = rx[a][i] + dt * vx[a][i] + dtSq2 * axia;
-	  pyi[a] = ry[a][i] + dt * vy[a][i] + dtSq2 * ayia;
-	  pzi[a] = rz[a][i] + dt * vz[a][i] + dtSq2 * azia;
+	  px[a][i] = px[a][i] + dt2 * Fx[a][i];
+	  py[a][i] = py[a][i] + dt2 * Fy[a][i];
+	  pz[a][i] = pz[a][i] + dt2 * Fz[a][i];
+	  
+	  pxi[a][i] = dt * px[a][i]/m[a] + cost[a]*(RCMx - rx[a][i]*mM[a]) + rx[a][i]*expdt[a];
+	  pyi[a][i] = dt * py[a][i]/m[a] + cost[a]*(RCMy - ry[a][i]*mM[a]) + ry[a][i]*expdt[a];
+	  pzi[a][i] = dt * pz[a][i]/m[a] + cost[a]*(RCMz - rz[a][i]*mM[a]) + rz[a][i]*expdt[a];
+
 #if 0 
 	  printf("[%d-%d] v=(%f,%f,%f) a=(%f,%f,%f) pr=(%f,%f,%f) r=(%f,%f,%f) (%f,%f,%f)\n", a, i, 
 		 vx[a][i], vy[a][i], vz[a][i],
@@ -686,21 +711,9 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 	}
       
     }
-  /* END OF LOOP OVER MOLECULES */
-#if !defined(MD_RESPA_NPT)
-  if (OprogStatus.Nose == 0) return;
-  /* Calculate the friction coefficent at time t and its derivative at time
-     t + dt/2 */
-  s = s + dt * s1 + dtSq2 * s2;
-  s1t = s1;       /* s1(t) */
-  s1 = s1 + dt2 * s2;
   
-  if (OprogStatus.Nose == 2) return;
-  Vol = Vol + dt * Vol1 + dtSq2 * Vol2;
-  Volot = Vol;
-  Vol1t = Vol1;   /* Vol1(t) */
-  Vol1 = Vol1 + dt2 * Vol2;
-#endif
+  Vol += dt * Sqr(s)*Pv/OprogStatus.W;
+
 }
 
 /* ========================= >>> moveb <<< =========================== */
@@ -712,11 +725,11 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
      ******************************************************************* */
   int done;
   int moving[NA], moved[NA];
-  COORD_TYPE Ka[NA], Mtot, vmx, vmy, vmz;
+  COORD_TYPE Ka[NA], Mtot, pmx, pmy, pmz;
   COORD_TYPE rxab, ryab, rzab, rvab, gab, dSq;
   COORD_TYPE vxab, vyab, vzab;
   COORD_TYPE dx, dy, dz, dt2, rma, rmb, c2dt;
-  COORD_TYPE rxi[NA], ryi[NA], rzi[NA], vxi[NA], vyi[NA], vzi[NA];
+  COORD_TYPE rxi[NA], ryi[NA], rzi[NA], pxi[NA], pyi[NA], pzi[NA];
   double c0, c1, c2,chsi; 
   int i, a, b, it;
 
@@ -773,7 +786,20 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   T1myy = 0.0;
   T1mzz = 0.0;
 #endif
-
+  for (a = 0; a < NA; a++)
+    {
+      mM[a] = Oparams.m[a] / Mtot;
+      expdt[a] = exp(Pv*Sqr(s)*mM[a]*dt/(3.0*Vol*OprogStatus.W));
+      cost[a] = (expdt[a] - 1.0);
+    }
+#ifdef MOLPTENS
+  press = calcT1diagMolRespa(Nm) + (WmLong + WmShort) / 3.0 / Vol; /* press(t+dt) */
+#else
+  press = calcT1diagAtRespa(Nm) + (WLong + WShort + WC) / Vol; /* press(t+dt) */
+#endif
+  DP = press - Oparams.P;
+  Pv += DP  * dt2;
+ 
   dSq = Sqr(d);
   /* LOOP OVER ALL MOLECULES */
   for(i=0; i < Nm; i++)
@@ -784,9 +810,9 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	  rxi[a] = rx[a][i];
 	  ryi[a] = ry[a][i];
 	  rzi[a] = rz[a][i];
-	  vxi[a] = vx[a][i] + c2dt * Fx[a][i] / m[a];
-	  vyi[a] = vy[a][i] + c2dt * Fy[a][i] / m[a];
-	  vzi[a] = vz[a][i] + c2dt * Fz[a][i] / m[a];
+	  vxi[a] = (px[a][i] + c2dt * Fx[a][i]) / m[a];
+	  vyi[a] = (py[a][i] + c2dt * Fy[a][i]) / m[a];
+	  vzi[a] = (pz[a][i] + c2dt * Fz[a][i]) / m[a];
 	  moving[a] = 0;
 	  moved[a] = 1;
 	}
@@ -875,33 +901,33 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
     for(a=0; a < NA;  a++)
 	{
-	  vx[a][i] = vxi[a];
-	  vy[a][i] = vyi[a];
-	  vz[a][i] = vzi[a];
+	  px[a][i] = vxi[a]*m[a];
+	  py[a][i] = vyi[a]*m[a];
+	  pz[a][i] = vzi[a]*m[a];
 #ifdef MOLPTENS
-	  vmx += vxi[a] * m[a];
-	  vmy += vyi[a] * m[a];
-	  vmz += vzi[a] * m[a];
+	  pmx += pxi[a] * m[a];
+	  pmy += pyi[a] * m[a];
+	  pmz += pzi[a] * m[a];
 #endif
 #if !defined(MOLPTENS) || defined(ATPTENS)
 	  /* Kinetic terms of the pressure-tensor */
-	  T1xy += vx[a][i] * vy[a][i] * m[a]; 
-	  T1yz += vy[a][i] * vz[a][i] * m[a];
-	  T1zx += vz[a][i] * vx[a][i] * m[a];
-	  T1xx += vx[a][i] * vx[a][i] * m[a]; 
-	  T1yy += vy[a][i] * vy[a][i] * m[a];
-	  T1zz += vz[a][i] * vz[a][i] * m[a];
+	  T1xy += px[a][i] * py[a][i] / m[a]; 
+	  T1yz += py[a][i] * pz[a][i] / m[a];
+	  T1zx += pz[a][i] * px[a][i] / m[a];
+	  T1xx += px[a][i] * px[a][i] / m[a]; 
+	  T1yy += py[a][i] * py[a][i] / m[a];
+	  T1zz += pz[a][i] * pz[a][i] / m[a];
 #endif
-	  Ka[a] = Ka[a] + Sqr(vxi[a]) + Sqr(vyi[a]) + Sqr(vzi[a]);
+	  Ka[a] = Ka[a] + Sqr(pxi[a]) + Sqr(pyi[a]) + Sqr(pzi[a]);
 	}
 #ifdef MOLPTENS
     /* Kinetic component of pressure tensor (all terms) */
-    T1mxy += vmx * vmy / Mtot; 
-    T1myz += vmy * vmz / Mtot;
-    T1mzx += vmz * vmx / Mtot;
-    T1mxx += vmx * vmx / Mtot;
-    T1myy += vmy * vmy / Mtot;
-    T1mzz += vmz * vmz / Mtot;
+    T1mxy += pmx * pmy / Mtot; 
+    T1myz += pmy * pmz / Mtot;
+    T1mzx += pmz * pmx / Mtot;
+    T1mxx += pmx * pmx / Mtot;
+    T1myy += pmy * pmy / Mtot;
+    T1mzz += pmz * pmz / Mtot;
 #endif    
     }
   /* END OF LOOP OVER MOLECULES */
