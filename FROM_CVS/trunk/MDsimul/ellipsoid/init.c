@@ -16,6 +16,7 @@ void setToZero(COORD_TYPE* ptr, ...);
 double maxax[2];
 extern int *lastbump;
 extern double *lastcol;
+double *axa, *axb, *axc;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
  in the move function and in the measuring functions, note that the variables 
@@ -1048,6 +1049,21 @@ void usrInitAft(void)
     {
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = Oparams.time;
+    }
+  axa = malloc(sizeof(double)*Oparams.parnum);
+  axb = malloc(sizeof(double)*Oparams.parnum);
+  axc = malloc(sizeof(double)*Oparams.parnum);
+  for (i=0; i < Oparams.parnumA; i++)
+    {
+      axa[i] = Oparams.a[0];
+      axb[i] = Oparams.b[0];
+      axc[i] = Oparams.c[0];
+    }
+  for (i=Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      axa[i] = Oparams.a[1];
+      axb[i] = Oparams.b[1];
+      axc[i] = Oparams.c[1];
     }
   /* evaluation of principal inertia moments*/ 
   for (a = 0; a < 2; a++)
