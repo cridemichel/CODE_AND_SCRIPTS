@@ -8,7 +8,9 @@
 */
 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
-#define MD_DEBUG(x) x
+void writeAsciiPars(FILE* fs, struct pascii strutt[]);
+void writeAllCor(FILE* fs);
+void scalevels(double temp, double K);
 extern char TXT[MSG_LEN];
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
@@ -96,7 +98,7 @@ void FCC(int Nm, COORD_TYPE *m)
        COORD_TYPE    rRoot3               1.0 / sqrt ( 3.0 ) */
   int Nc, Ncz;
   double rRoot3; /* = 0.5773503; */
-  double Lold, Cell, Cell2;
+  double Cell, Cell2;
 #ifdef MD_GRAVITY
   double Cellz, Cell2z;
 #endif
@@ -659,7 +661,7 @@ void initCoord(void)
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
   angvel(); 
-#if MD_DEBUG(x) == x
+#if 0
     {
      const char sepStr[] = "@@@\n";
      FILE *bf;
@@ -771,6 +773,7 @@ void usrInitBef(void)
     OprogStatus.collCount = 0;
     OprogStatus.crossCount = 0;
     OprogStatus.epsd = 0.0005;
+    OprogStatus.h = 1E-7;
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
     OprogStatus.epsdMax = 0.001;
@@ -1007,7 +1010,6 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 {
   int i,j, n1, n2;
   double theta, phi;
-  XYZ p;
   const double TWOPI=2.0*pi;
   /* n1 = stacks
    * n2 = slides */

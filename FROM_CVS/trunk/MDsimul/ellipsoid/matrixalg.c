@@ -9,6 +9,7 @@
 #define MD_DEBUG18(X) 
 int ncom;
 double (*nrfunc)(double []); 
+void polintRyck(double xain[], double yain[], int n, double x, double *y, double *dy);
 int *ivector(int n)
 {
   return calloc(n, sizeof(int)); 
@@ -24,7 +25,7 @@ void polint(double xain[], double yain[], int n, double x, double *y, double *dy
 double **matrix(int n, int m)
 {
   double **M;
-  int i, j;
+  int i;
   M = malloc(sizeof(double*)*n);
   for (i=0; i < n; i++)
     M[i] = calloc(m, sizeof(double));
@@ -188,7 +189,7 @@ double brentRyck(double ax, double bx, double cx, double (*f)(double), double to
   int iter, ITMAXBR=100;
   const double CGOLD=0.3819660;
   const double ZEPSBR=1E-10;
-  double a,b,d,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
+  double a,b,d=0.0,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
   double e=0.0, fuold;
   /* This will be the distance moved on the step before last.*/
   a=(ax < cx ? ax : cx); /*a and b must be in ascending order, 
@@ -284,7 +285,7 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
   int iter, ITMAXBR=100;
   const double CGOLD=0.3819660;
   const double ZEPSBR=1E-10;
-  double a,b,d,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
+  double a,b,d=0.0,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
   double e=0.0, fuold;
   /* This will be the distance moved on the step before last.*/
   a=(ax < cx ? ax : cx); /*a and b must be in ascending order, 
@@ -858,7 +859,7 @@ double powdirsI[4][4]={{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
 
 void powellmethod(double *vec)
 {
-  double Fret, r1p[3], r2p[3], vecP[6], angs[4], sinth;
+  double Fret, vecP[6], angs[4], sinth;
   int iter, k1, k2;
   //powdirs = matrix(4,4);
   powmeth = 1;
@@ -1035,9 +1036,8 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 }
 void projectgrad(double *p, double *xi, double *gradf, double *gradg)
 {
-  int kk, k1, k2, k3;
-  double r1[3], r2[3], rIf[3], rIg[3], pp[3], dist;
-  double r1A[3], r2B[3], A1, B1, C1, Delta1, A2, B2, C2, Delta2; 
+  int kk;
+  double dist;
   //double gradf[3], gradg[3];
 #if 0
   for (kk=0; kk < 3; kk++)
@@ -1208,9 +1208,8 @@ void linminRyck(double p[], double xi[], double *fret)
   void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, 
 	      double (*func)(double));
   int j, kk; 
-  int k1, k2; 
-  double fx2[3], r1[3], r2[3];
-  double xx,xminA, xminB,fx,fb,fa,bx,ax, nA, nB;
+  double r1[3], r2[3];
+  double nA, nB;
   double omA[3], omB[3]; 
 #if 1
   for (j=0;j<6;j++)
@@ -1291,9 +1290,8 @@ void updateByRot(double p[], double xi[])
 {
   int kk, k1, k2;
   double sinwA, sinwB, coswA, coswB, phiA, phiB;
-  double MA[3][3], pn[6], MB[3][3], A, B, distini, distfine, scp;
-  double omA[3], omB[3], vA[3], vB[3], r1[3], r2[3], nA, nB, pi[6];
-  double F, S;
+  double MA[3][3], pn[6], MB[3][3];
+  double omA[3], omB[3], vA[3], vB[3], r1[3], r2[3], nA, nB;
   for (kk =0; kk < 3; kk++)
     {
       r1[kk] = p[kk] - rA[kk];
@@ -1441,13 +1439,12 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
    * (the number of iterations that were performed), and fret (the minimum value of the function).
    * The routine linmin is called to perform line minimizations. */
 { 
-  int j,its,kk;
+  int j,its;
   const int ITMAXFR = OprogStatus.maxitsSD;
-  const double EPSFR=1E-10, GOLD=1.618034;
-  double normxi,gg,gam,fp,dgg,norm1,norm2, sp, fpold, gradf[3], gradg[3], signA, signB;
-  double minax, distini, distfin, dist, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3], xiold[6];
-  double pm[6], fpm, signAold, signBold, pold[6];
-  double xmin, xim[6];
+  const double GOLD=1.618034;
+  double fp, fpold, signA, signB;
+  double minax, xi[6], xiold[6];
+  double signAold, signBold, pold[6];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
  
   minax = min(minaxicg,minaxjcg);
@@ -1597,7 +1594,7 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
 /* =========================== >>> forces <<< ======================= */
 double  cgfunc2(double *vec)
 {
-  int kk, k1, k2, k3;
+  int k1, k2;
   double fx[3], gx[3], fx2[3], gx2[3];
   double Q1, Q2, A, B, F;
   for (k1 = 0; k1 < 3; k1++)
@@ -1649,7 +1646,7 @@ void gradcgfunc2(double *vec, double *grad)
 {
   int kk, k1, k2; 
   double fx[3], gx[3], fx2[3], gx2[3];
-  double S, Q1, Q2, A, B;
+  double Q1, Q2;
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
@@ -1776,7 +1773,7 @@ void gradcgfunc(double *vec, double *grad)
 /* =========================== >>> forces <<< ======================= */
 double  cgfunc(double *vec)
 {
-  int kk, k1, k2, k3;
+  int kk, k1, k2;
   double fx[3], gx[3], fx2[3], gx2[3];
   double Q1, Q2, A, B, F;
   if (OprogStatus.forceguess)
@@ -1846,9 +1843,8 @@ double  cgfunc(double *vec)
 double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double *signA, double *signB)
 {
   int kk, k1, k2; 
-  double K1, K2, F, nf, ng, nf2, ng2, gx2[3], fx2[3], dd[3], normdd, ngA, ngB;
-  double Q1, Q2, S=1.0, A=1.0, B, gradfx, gradgx, normgA, normgB, fact;
-  const double FACT=100;
+  double K1, K2, F, nf, ng, gx2[3], fx2[3], dd[3], normdd, ngA, ngB;
+  double S=1.0, A=1.0, B, gradfx, gradgx;
   doneryck = 0;
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -2000,9 +1996,9 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double 
 /* =========================== >>> forces <<< ======================= */
 double  cgfuncRyck(double *vec)
 {
-  int kk, k1, k2, k3;
-  double fx[3], gx[3], fx2[3], gx2[3];
-  double Q1, Q2, A, B, F;
+  int kk, k1, k2;
+  double fx2[3], gx2[3];
+  double A, B, F;
   if (OprogStatus.forceguess)
     {
       for (k1 = 0; k1 < 3; k1++)
@@ -2125,7 +2121,7 @@ int choose_neighbour2(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 {
   int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB;
   int nphi1, nth1, nphi2, nth2, firstdist=1;
-  double distSqold, distSqT, normdx, dxN[3], distSqmin;
+  double distSqold, distSqT, distSqmin=1E200;
   double vecini[6], cxmesh[6],xmesh[6], xmeshP1[3], xmeshP2[3];
 
   cth1 = *th1;
@@ -2230,9 +2226,9 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 		     double *distSq, double *S, double maxstA, double maxstB, double *vec, 
 		     int calc_sign)
 {
-  int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB;
+  int k1, kk, cth1, cphi1, cth2, cphi2, mA, mB;
   int nphi1, nth1, nphi2, nth2, firstspA=1, firstspB=1;
-  double sp, spmaxA=0.0, spmaxB=0.0, dx[3], dxP[3], cdxA[3], cdxB[3], dxA, dxB, distSqold, normdx, dxN[3];
+  double sp, spmaxA=0.0, spmaxB=0.0, dx[3], dxP[3], cdxA[3], cdxB[3], distSqold;
   double vecini[6], xmesh[3], xmeshP[3], xmeshA[3], xmeshB[3];
 
   cth1 = *th1;
@@ -2530,8 +2526,6 @@ void findminMesh(double *vec)
 void guessdistByMesh(int i, int j, double shift[3], double *vecg)
 {
   int kk;
-  double Fret;
-  int iter;
   double vec[8];
   icg = i;
   jcg = j;
@@ -2639,7 +2633,7 @@ double zbrentRyck(double (*func)(double), double x1, double x2, double tol)
  * The root, returned as zbrent, will be refined until its accuracy is tol.*/
 {
   int iter; 
-  double a=x1,b=x2,c=x2,d,e,min1,min2; 
+  double a=x1,b=x2,c=x2,d=0.0,e=0.0,min1,min2; 
   double fa=(*func)(a),fb=(*func)(b),fc,p,q,r,s,tol1,xm; 
   if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 
     {
@@ -2720,7 +2714,7 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
  * The root, returned as zbrent, will be refined until its accuracy is tol.*/
 {
   int iter; 
-  double a=x1,b=x2,c=x2,d,e,min1,min2; 
+  double a=x1,b=x2,c=x2,d=0.0,e=0.0,min1,min2; 
   double fa=(*func)(a),fb=(*func)(b),fc,p,q,r,s,tol1,xm; 
   if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 
     {
@@ -3307,13 +3301,156 @@ extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
 #ifdef MD_GLOBALNR2
 double fmin2(double x[], int iA, int iB, double shift[3]);
 #endif
+#ifdef MD_NNL
+void newtNeigh(double x[], int n, int *check, 
+	  void (*vecfunc)(int, double [], double [], int),
+	  int iA)
+{
+  int i,its, j, *indx, ok;
+  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
+#ifdef MD_GLOBALNR2
+  int check2;
+  double f2, stpmax2, fold2, *xold2, *g2;
+  xold2 = vector(n);
+  g2 = vector(n);
+#endif
+  indx=ivector(n); 
+  fjac=matrix(n, n);
+  g=vector(n);
+  p=vector(n); 
+  xold=vector(n); 
+  fvec=vector(n); 
+  fvecG=vector(n);
+  /*Define global variables.*/
+  nn=n; 
+  nn2=n-1;
+  nrfuncv=vecfunc; 
+  f=fmin(x,iA,iB,shift); /*fvec is also computed by this call.*/
+  test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
+  for (i=0;i<n;i++) 
+    if (fabs(fvec[i]) > test)
+      test=fabs(fvec[i]); 
+  if (test < 0.01*TOLF)
+    {
+      *check=0; 
+      FREERETURN;
+    }
+  for (sum=0.0,i=0;i<n;i++) 
+    sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
+  stpmax=STPMX*FMAX(sqrt(sum),(double)n);
+#ifndef MD_GLOBALNR2
+  funcs2beZeroedNeigh(n,x,fvec,iA,iB,shift);
+#endif
+  for (its=0;its<MAXITS;its++)
+    { /* Start of iteration loop. */
+       //funcs2beZeroed(n,x,fvec,iA,iB,shift);
+       fdjacNeigh(n,x,fvec,fjac,vecfunc, iA); 
+       /* If analytic Jacobian is available, you can 
+	  replace the routine fdjac below with your own routine.*/
+#ifdef MD_GLOBALNR
+       for (i=0;i<n;i++) { /* Compute  f for the line search.*/
+	 for (sum=0.0,j=0;j<n;j++)
+	  sum += fjac[j][i]*fvec[j]; 
+	g[i]=sum; 
+      } 
+      for (i=0;i<n;i++) 
+	xold[i]=x[i]; /* Store x,*/ 
+      fold=f; /* and f. */
+#else
+      test=0.0; /* Test for convergence on function values.*/
+      for (i=0;i<n;i++) 
+	test +=fabs(fvec[i]); 
+      if (test < TOLF)
+	{
+	  *check = 0;
+	  MD_DEBUG(printf(" test < TOLF\n"));
+	  FREERETURN;
+	}
+#endif 
+      for (i=0;i<n;i++) 
+	p[i] = -fvec[i]; /* Right-hand side for linear equations.*/
+#ifdef MD_USE_LAPACK
+      SolveLineq(fjac,p,n);
+#else
+      ludcmp(fjac,n,indx,&d, &ok); /* Solve linear equations by LU decomposition.*/
+      lubksb(fjac,n,indx,p);
+#endif 
+      /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
+#ifdef MD_GLOBALNR
+      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift, TOLX); 
+      MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
+      test=0.0; /* Test for convergence on function values.*/
+      for (i=0;i<n;i++) 
+	if (fabs(fvec[i]) > test) 
+	  test=fabs(fvec[i]); 
+      if (test < TOLF) 
+	{ 
+	  *check=0; 
+	  MD_DEBUG(printf("test < TOLF\n"));
+	  FREERETURN
+	}
+      if (*check) 
+	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
+	  test=0.0; 
+	  den=FMAX(f,0.5*n);
+	  for (i=0;i<n;i++)
+	    {
+	      temp=fabs(g[i])*FMAX(fabs(x[i]),1.0)/den;
+	      if (temp > test) 
+		test=temp; 
+	    } 
+	  *check=(test < TOLMIN ? 2 : 0);
+	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
+  	  //FREERETURN 
+	} 
+      test=0.0; /* Test for convergence on x. */
+      for (i=0;i<n;i++) 
+	{
+	  temp=(fabs(x[i]-xold[i]))/FMAX(fabs(x[i]),1.0); 
+	  if (temp > test) 
+	    test=temp; 
+	} 
+      if (test < TOLX) 
+	{
+	  MD_DEBUG(printf("test<TOLX test=%.15f\n", test));
+	  FREERETURN;
+	}
+#if 1
+      if (*check==2)
+	{
+	  MD_DEBUG(printf("spurious convergence\n"));
+	  FREERETURN;
+	}
+#endif
+#else
+      test = 0;
+      for (i=0;i<n;i++) 
+	{ 
+      	  test += fabs(p[i]);
+	  x[i] += p[i];
+	}
+      MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
+      if (test < TOLX) 
+	{ 
+	  *check = 0;
+	  MD_DEBUG(printf("test < TOLX\n"));
+	  FREERETURN; 
+	}
+#endif
+    } 
+  MD_DEBUG10(printf("maxits!!!\n"));
+  *check = 2;
+  FREERETURN; 
+  return;
+  nrerror("MAXITS exceeded in newt"); 
+}
+#endif
 void newt(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int ii, i,its, its2,j,*indx, ok;
-  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold, alphaold; 
-  double r1[3], r2[3], alpha;
+  int i,its, j, *indx, ok;
+  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
 #ifdef MD_GLOBALNR2
   int check2;
   double f2, stpmax2, fold2, *xold2, *g2;
@@ -3592,8 +3729,8 @@ void newtDistNeg(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int ii, i,its=0, its2,j,*indx, ok;
-  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold, alphaold; 
+  int i,its=0, j, *indx, ok;
+  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
   indx=ivector(n); 
   fjac=matrix(n, n);
   g=vector(n);
@@ -3746,8 +3883,8 @@ void newtDist(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int ii, i,its, its2,j,*indx, ok;
-  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold, alphaold; 
+  int i, its, j, *indx, ok;
+  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
   indx=ivector(n); 
   fjac=matrix(n, n);
   g=vector(n);
