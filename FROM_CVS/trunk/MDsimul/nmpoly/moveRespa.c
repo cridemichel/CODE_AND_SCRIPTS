@@ -469,6 +469,33 @@ void printMat(char* s, double** a, int ovrw)
   fprintf(f,"}\n");
   fclose(f);
 }
+
+double cvMatBak[NA-1][NA-1];
+void checkInvMat(void)
+{
+  int m1, m2, m;
+  double I[NA-1][NA-1];
+  for (m1 = 0; m1 < NA-1; m1++)
+    {
+      for (m2 = 0; m2 < NA-1; m2++)
+	{
+	  I[m1][m2] = 0;
+	  for (m=0; m < NA-1; m++)
+	    I[m1][m2] += cvMatBak[m1][m]*cvMatInv[m][m2];
+	  if (m1==m2 && fabs(I[m1][m2]-1.0) > 1E-1)
+	    {
+	      printf("inverse matrix is wrong! diagonal value is (%d):%f\n", m1, I[m1][m2]);
+	      exit(-1);
+	    }
+	  else if (m1 != m2 && fabs(I[m1][m2]) > 1E-1)
+	    {
+	      printf("inverse matrix is wrong! diagonal value is (%d,%d):%f\n", m1, m2, I[m1][m2]);
+	      exit(-1);
+	    }
+	  
+	}
+    }
+}
 void ComputeConstraints(double dt, double c, int RefSys, int after)
 {
   /* RefSys=1 allora calcola le forze del ref system */
@@ -536,6 +563,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 		  			    cVec[1][m1] * cVec[1][m2] + cVec[2][m1] * cVec[2][m2]);
 		    //printf("(%d,%d): %f\n", m1, m2, cvMat[m1][m2]);
 		  }
+		cvMatBak[m1][m1]=cvMat[m1][m1];
 	      } 
 	  }
       }
@@ -585,6 +613,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	  for (m2=0;m2 < NB; m2++)
 	    cvMatInv[m1][m2] = cvMatInvS[m1][m2][i];
       }
+    checkInvMat();
     if (i==0)
      {
 	printMat("cvMatInv", cvMatInv, 1);
