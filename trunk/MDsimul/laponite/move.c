@@ -1739,51 +1739,53 @@ COORD_TYPE BodeTerm(COORD_TYPE dt, COORD_TYPE* fi)
   return dt * (bc1 * fi[0] + bc2 * fi[1] + bc3 * fi[2] + bc2 * fi[3] +
 	       bc1 * fi[4]);
 }
-
 /* Routines for LU decomposition from Numerical Recipe online */
 #define TINY 1E-20
-void ludcmp(double a[3][3], int* indx, double* d)
+void ludcmp(double a[3][3], int* indx, double* d, int *ok)
 {
   /* A[i][j] = Aij 
    * A x = b  
    * per semplicità nel seguito si assume che l'ordine della matrice è 3 */
-  int i,imax=0,j,k;
-  const int n = 3;
+  int i,imax=-1,j,k;
+  const int n = 3; 
   double big,dum,sum,temp; 
   double vv[3]; /* vv stores the implicit scaling of each row.*/
-  
   /*vv = vector(1,n);*/
   *d=1.0; /* No row interchanges yet. */
-  for (i=1;i<=n;i++) 
+  *ok = 0;
+  for (i=0;i<n;i++) 
     { 
       /* Loop over rows to get the implicit scaling information.*/ 
       big=0.0; 
-      for (j=1;j<=n;j++) 
-	if ((temp=fabs(a[i][j])) > big) big=temp; 
+      for (j=0;j<n;j++)
+	{
+	  if ((temp=fabs(a[i][j])) > big) big=temp; 
+	}
       if (big == 0.0)
 	{
 	  printf("ERROR: Singular matrix in routine ludcmp\n"); 
-	  exit(-1);
+	  *ok = 1;
+	  return;
 	}
       /* No nonzero largest element. */
       vv[i]=1.0/big; /* Save the scaling.*/
     } 
-  for (j=1;j<=n;j++) 
+  for (j=0;j<n;j++) 
     { /* This is the loop over columns of Crout s method.*/
-      for (i=1;i<j;i++) 
+      for (i=0;i<j;i++) 
 	{ 
 	  /* This is equation (2.3.12) except for i = j. */
 	  sum=a[i][j]; 
-	  for (k=1;k<i;k++) 
+	  for (k=0;k<i;k++) 
 	    sum -= a[i][k]*a[k][j]; 
 	  a[i][j]=sum; 
 	} 
       big=0.0; /* Initialize for the search for largest pivot element. */ 
-      for (i=j;i<=n;i++) 
+      for (i=j;i<n;i++) 
 	{ 
 	  /* This is i = j of equation (2.3.12) and i = j+1. . .N of equation (2.3.13).*/
 	  sum=a[i][j]; 
-	  for (k=1;k<j;k++)
+	  for (k=0;k<j;k++)
 	    sum -= a[i][k]*a[k][j]; 
 	    a[i][j]=sum; 
 	    if ( (dum=vv[i]*fabs(sum)) >= big) 
@@ -1795,7 +1797,7 @@ void ludcmp(double a[3][3], int* indx, double* d)
       if (j != imax) 
 	{ 
 	  /* Do we need to interchange rows? */
-	  for (k=1;k<=n;k++) 
+	  for (k=0;k<n;k++) 
 	    { 
 	      /* Yes, do so...*/ 
 	      dum=a[imax][k]; 
@@ -1818,19 +1820,19 @@ void ludcmp(double a[3][3], int* indx, double* d)
 	{ 
 	  /* Now,  nally, divide by the pivot element.*/
 	  dum=1.0/(a[j][j]); 
-	  for (i=j+1;i<=n;i++) a[i][j] *= dum; 
+	  for (i=j+1;i<n;i++) a[i][j] *= dum; 
 	} 
     } 
   /* Go back for the next column in the reduction.*/
   /*free_vector(vv,1,n); */
 }
 
-void lubksb(double a[3][3], int* indx, double* b)
+void lubksb(double a[3][3], int* indx, double *b)
 { 
   int i,ii=0,ip,j; 
   double sum; 
-  const int n=3;
-  for (i=1;i<=n;i++) 
+  const int n = 3;
+  for (i=0;i<n;i++) 
     { 
       /* When ii is set to a positive value, it will become the index of the  
        * rst nonvanishing element of b. Wenow do the forward substitution,
@@ -1838,7 +1840,7 @@ void lubksb(double a[3][3], int* indx, double* b)
       ip=indx[i];
       sum=b[ip];
       b[ip]=b[i]; 
-      if (ii) 
+      if (ii>-1) 
 	for (j=ii;j<=i-1;j++) 
 	  sum -= a[i][j]*b[j]; 
       else if (sum) 
@@ -1847,20 +1849,21 @@ void lubksb(double a[3][3], int* indx, double* b)
        * the sums in the loop above. */ 
       b[i]=sum; 
     } 
-  for (i=n;i>=1;i--) 
+  for (i=n-1;i>=0;i--) 
     { 
       /* Now we do the backsubstitution, equation (2.3.7).*/
       sum=b[i]; 
-      for (j=i+1;j<=n;j++) 
+      for (j=i+1;j<n;j++) 
 	sum -= a[i][j]*b[j]; b[i]=sum/a[i][i]; 
       /* Store a component of the solution vector X. */ 
     } /* All done! */
 }
 
+
 /* ========================== >>> updateAng <<< ============================ */
 void updateAng(int Nm)
 {
-  int i, a, b, indx[3];
+  int ok, i, a, b, indx[3];
   double rcmx[3], rcmy[3], rcmz[3], 
   vcmx[3], vcmy[3], vcmz[3], RCMx, RCMy, RCMz, VCMx, VCMy, VCMz, dt;
   double L[3], rvx, rvy, rvz, Itens[3][3], d;
@@ -1904,7 +1907,7 @@ void updateAng(int Nm)
       Itens[2][1] = Itens[1][2];
       /* now we solve the linear system L = I omega using LU decomposition */
       /*gaussElimination(Itens, Lx, Ly, Lz);*/
-      ludcmp(Itens, indx, &d);
+      ludcmp(Itens,indx, &d, &ok);
       /* forward and backward substitution */
       lubksb(Itens, indx, L);
       ox[a] = L[0];
@@ -2430,7 +2433,7 @@ void move(void)
 	  ( OprogStatus.snapSteps > 0 && (Oparams.curStep % OprogStatus.snapSteps == 0) )  )
       savesnap();
   /* Update accumulators for calculating the angular diffusion coefficent */
-  updateAng(Oparams.parnum);  
+  //updateAng(Oparams.parnum);  
   
   /* Update the integral of the pressure tensor */
   updateDQ(Oparams.steplength);
