@@ -176,9 +176,9 @@ double get_min_dist (int na, int *jmin, double *shiftmin)
 		      r1[1] = ry[na] + vy[na]*ti;
 		      r1[2] = rz[na] + vz[na]*ti;
 		      ti = OprogStatus.time-atomTime[n];
-		      r2[0] = rx[n] + vx[n]*ti;
-		      r2[1] = ry[n] + vy[n]*ti;
-		      r2[2] = rz[n] + vz[n]*ti;
+		      r2[0] = rx[n] + vx[n]*ti + shift[0];
+		      r2[1] = ry[n] + vy[n]*ti + shift[1];
+		      r2[2] = rz[n] + vz[n]*ti + shift[2];
 		      dist = 0.0;
 		      for (kk = 0; kk < 3; kk++)
 			dist += Sqr(r1[kk]-r2[kk]);		      
@@ -276,6 +276,7 @@ double scale_radius(int i, int j, double rA[3], double rB[3], double shift[3], d
   else
     {
       fact1 = (nrAB-radii[j])/radii[i];
+      fact1 *= OprogStatus.scalfact;
       fact2 = F;
       //printf("fact1: %15G fact2: %.15G\n", fact1, fact2);
       if (fact2 < fact1)
@@ -597,6 +598,8 @@ void check ( double sigma, int *overlap, double *K, double *V)
 	  rzij = rzij - L*rint(invL*rzij);
 #endif
 	  rijSq = Sqr(rxij) + Sqr(ryij) + Sqr(rzij);
+	  if (OprogStatus.targetPhi > 0.0)
+	    sigSq = Sqr(radii[i]+radii[j]);
 	  if ( rijSq < sigSq ) 
 	    {
 	      rij = sqrt(rijSq / sigSq);
@@ -772,8 +775,16 @@ void calcRho(void)
 	  n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 	  for (n = cellList[n]; n > -1; n = cellList[n]) 
 	    {
-	      if (rz[n] + Lz2 + Oparams.sigma*0.5 < hhcp)
-		npart++;
+	      if (OprogStatus.targetPhi > 0.0)
+		{
+		  if (rz[n] + Lz2 + radii[n] < hhcp)
+		    npart++;
+		}
+	      else
+		{
+		  if (rz[n] + Lz2 + Oparams.sigma*0.5 < hhcp)
+		    npart++;
+		}
 	      if (jZ < jZmax)
 		rhoz[jZ/2]+= 1.0;
 	    }
@@ -912,7 +923,10 @@ void PredictEvent (int na, int nb)
     {
       hh1 =  vz[na] * vz[na] + 2.0 * Oparams.ggrav *
 	(rz[na] + Lz2);
-      h1 = hh1 -  Oparams.ggrav * Oparams.sigma;
+      if (OprogStatus.targetPhi > 0.0)
+	h1 = hh1 -  Oparams.ggrav * 2.0 * radii[na];
+      else
+	h1 = hh1 -  Oparams.ggrav * Oparams.sigma;
     }
   else
     h1 = hh1 = vz[na] * vz[na] + 2.0 * Oparams.ggrav *
