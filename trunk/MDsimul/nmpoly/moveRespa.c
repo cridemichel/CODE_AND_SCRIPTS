@@ -79,6 +79,148 @@ extern COORD_TYPE  *Rmx, *Rmy, *Rmz;
 /* ========================================================================= */
 extern void check_distances(char* str);
 extern double *atcharge;
+#ifdef MD_RAPACONSTR
+void BuildConstraintMatrix (void) 
+{
+  int i, m;
+  for (i = 0; i < NA * (NA-1); i ++) 
+    cMat[i] = 0.;
+  for (i = 0; i < NA; i ++) 
+    {
+      m = i - 1;
+      if (m >= 0) 
+	cMat[m  * NA + i] = 2;
+      m = m + 1;
+      if (m < NA-1) 
+	cMat[m  * NA + i] = -2;
+    }
+  for (m = 0; m < NA-1; m ++) 
+    {
+      cDistSq[m] = Sqr(Oparams.d);
+      cAtom1[m] = m; 
+      cAtom2[m] = m + 1;
+    }
+}
+void ComputeConstraintsShort(int RefSys, double **FxI, double **FyI, double **FzI, double **FxO, double **FyO, double **FzO )
+{
+  /* RefSys=1 allora calcola le forze del ref system */
+  double **FxI,**FyI, **FzI, **FxO, **FyO, **FzO; 
+  double dv, w;
+  int NB = NA-1;
+  double rp1[3], rp2[3];
+  int i, k, m, mDif, m1, m2, n, nn;
+  if (RefSys)
+    {
+       FxI = Fx;
+       FyI = Fy;
+       FzI = Fz;
+       FxO = FxC;
+       FyO = FyC;
+       FzO = FzC;
+    }
+  else
+    {
+      FxI = FxLong;
+      FyI = FyLong;
+      FzI = FzLong;
+      FxO = FxCL;
+      FyO = FyCL;
+      FzO = FzCL;
+    }
+  for (n = 0; n < Oparams.parnum; n ++)
+    {
+      //nn = n  * NA;
+      for (m = 0; m < NB; m ++) 
+	{
+	rp1[0] = rx[cAtom1[m]][n];
+	rp1[1] = ry[cAtom1[m]][n];
+	rp1[2] = rz[cAtom1[m]][n];
+	rp2[0] = rx[cAtom2[m]][n];
+	rp2[1] = ry[cAtom2[m]][n];
+	rp2[2] = rz[cAtom2[m]][n];
+	
+	for (k = 0; k < 3; k ++) 
+	  {
+	    cVec[k][m] = rp1[k] - rp2[k];
+	    cVec[k][m] = cVec[k][m] - L*rint (cVec[k][m]/L);
+	  } 
+      }
+    m = 0;
+    for (m1 = 0; m1 < NB; m1 ++) 
+      {
+  	for (m2 = 0; m2 < NB; m2 ++) 
+	  {
+	    m = m + 1;
+	    mDif = cMat[m1 * NA + cAtom1[m2]] -
+	      cMat[m1 * NA + cAtom2[m2]];
+	    cvMat[m] = 0.;
+	    if (mDif != 0) cvMat[m] = mDif * (cVec[0][m1] * cVec[0][m2] +
+			       		      cVec[1][m1] * cVec[1][m2] + cVec[2][m1] * cVec[2][m2]);
+	  } 
+      }
+    for (m = 0; m < NB; m ++) 
+      {
+	vVec[m] = 0.;
+	if (RefSys)
+	  dv = vx[cAtom1[m]][n] - vx[cAtom2[m]][n];
+	else
+	  dv = 0;
+	vVec[m] = vVec[m] - (FxI[cAtom1[m]][n]/Oparams.m[cAtom1[m]] -
+			     FxI[cAtom2[m]][n]/Oparams.m[cAtom2[m]]) * cVec[k][m] - Sqr (dv);
+	if (RefSys)
+	  dv = vy[cAtom1[m]][n] - vy[cAtom2[m]][n];
+	else
+	  dv = 0;
+	vVec[m] = vVec[m] - (FyI[cAtom1[m]][n]/Oparams.m[cAtom1[m]] -
+			     FyI[cAtom2[m]][n]/Oparams.m[cAtom2[m]]) * cVec[k][m] - Sqr (dv);
+	if (RefSys)
+	  dv = vz[cAtom1[m]][n] - vz[cAtom2[m]][n];
+	else
+	  dv = 0;
+	vVec[m] = vVec[m] - (FzI[cAtom1[m]][n]/Oparams.m[cAtom1[m]] -
+			     FzI[cAtom2[m]][n]/Oparams.m[cAtom2[m]]) * cVec[k][m] - Sqr (dv);
+      }
+    SolveLineq (cvMat, vVec, NB);
+    for (m = 0; m < NB; m ++)
+      {
+	for (i = 0; i < NA; i ++) 
+	  {
+	    w = cMat[m * NA + i];
+	    if (w != 0.) 
+	      {
+		/* qui calcolo le forze vincolari dovute alle forze nel reference system */
+		FxO[i][n] = w * vVec[m] * cVec[0][m];
+		FyO[i][n] = w * vVec[m] * cVec[1][m];
+		FzO[i][n] = w * vVec[m] * cVec[2][m];
+	      } 
+	  }
+      }
+  }
+}
+
+void  AnlzConstraintDevs (void) 
+{
+  real dr1[NDIM + 1], sumL;
+  int i, k, n, ni;
+  sumL = 0.;
+  for (n = 1; n <= nChain; n ++) 
+    {
+      for (i = 1; i <= chainLen - 1; i ++) 
+	{
+	  ni = (n - 1) * chainLen + i;
+	  for (k = 1; k <= NDIM; k ++)
+	    {
+	      dr1[k] = r[k][ni + 1] - r[k][ni];
+	      if (fabs (dr1[k]) > regionH[k])
+		dr1[k] = dr1[k] - SignR (region[k], dr1[k]);
+	    }
+	  curBondLenSq[i] = Sqr (dr1[1]) + Sqr (dr1[2]) + Sqr (dr1[3]);
+	  sumL = sumL + curBondLenSq[i];
+	}
+    }
+  constraintDevL = sqrt (sumL / (nChain * (chainLen - 1))) - bondLen;
+}
+#endif
 #ifdef MD_RESPA_NPT
 void shakePosRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
 	   COORD_TYPE m[NA], int Nm)
@@ -566,7 +708,7 @@ void updImpNose(double dt, double c)
 	pz[a][i] += Fz[a][i] * cdt;
       }
 #ifndef MD_FENE
-  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
 #endif
 }
 void updImpNoseAft(double dt, double c)
@@ -990,7 +1132,7 @@ void updImpNoseAnd(double dt, double c)
 #if 1
 #ifndef MD_FENE  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
-		   0.0000000000001, px, py, pz);
+		   0.000000001, px, py, pz);
 #endif
 #endif
 }
@@ -1568,7 +1710,7 @@ void movelongRespaNPTBef(double dt)
    updImpLong(dt, 0.5);
    if (OprogStatus.Nose==1)
      updPvLong(dt, 0.5);
-#if 0
+#if 1
 #ifndef MD_FENE
   if (OprogStatus.rcutInner != Oparams.rcut)
     shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
@@ -1711,7 +1853,7 @@ void movelongRespaNPTAft(double dt)
 #if 1
 #ifndef MD_FENE
   if (OprogStatus.rcutInner != Oparams.rcut)
-    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
+    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
 #endif
@@ -1810,13 +1952,13 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
       updImp(dt, 0.5);
 #ifndef MD_FENE  
       shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
-    		       0.000000000001, px, py, pz);
+    		       0.000000001, px, py, pz);
 #endif
       updPositions(dt, 1.0);
     }
 
 #if !defined(MD_FENE)
-  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 0.0000000000001, 150, NA-1, Oparams.d,
+  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 0.000000001, 150, NA-1, Oparams.d,
 		Oparams.m, Oparams.parnum);
 #endif
 
