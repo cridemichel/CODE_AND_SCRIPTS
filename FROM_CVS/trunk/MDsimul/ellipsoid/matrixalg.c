@@ -18,7 +18,7 @@ double *vector(int n)
   return calloc(n, sizeof(double)); 
 }
 void projectgrad(double *p, double *xi, double *gradf, double *gradg);
-void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf);
+void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, double *sfA, double dist);
 
 double **matrix(int n, int m)
 {
@@ -75,7 +75,7 @@ double min(double a, double b)
 static double maxarg1,maxarg2;
 #define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
         (maxarg1) : (maxarg2))
-
+double sfA, sfB;
 /* =========================== >>> max <<< ================================= */
 double max(double a, double b)
 {
@@ -461,8 +461,8 @@ double f1dimConstr(double x)
     {
       dxG[j]=x*xicom[j];
     }
-  projonto(pcom, dxG, rA, Xa, gradfG);
-  projonto(&pcom[3], &dxG[3], rB, Xb, gradgG);
+  projonto(pcom, dxG, rA, Xa, gradfG, &sfA, 0);
+  projonto(&pcom[3], &dxG[3], rB, Xb, gradgG, &sfB, 0);
   for (j=0;j<ncom;j++) 
     {
       xt[j]=pcom[j]+dxG[j]; 
@@ -626,14 +626,16 @@ int check_point(char* msg, double *p, double *rc, double **XX)
   else
     return 1;
 }
-void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
+
+void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, double *sfA, double dist)
 {
   int kk, its, done=0, k1, k2, MAXITS=100;
   const double GOLD=1.618034;
   double r1[3], r1A[3], sf, s1, s2;
-  double A, B, C, Delta, sol=0.0;
-  sf = 1.0;
+  double A, B, C, Delta, sol=0.0, ng;
+  sf = *sfA;
   its = 0;
+  
   while (!done && its <= MAXITS)
     {
       //printf("sf*dr=%.15G %.15G %.15G dr=%.15G\n", dr[0], dr[1], dr[2], calc_norm(dr));
@@ -655,8 +657,8 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 	{
 	  for (k2=0; k2 < 3; k2++)
 	    {
-	      A += Sqr(OprogStatus.stepSD)*gradf[k1]*Xa[k1][k2]*gradf[k2];
-	      B += OprogStatus.stepSD*r1A[k1]*Xa[k1][k2]*gradf[k2];
+	      A += gradf[k1]*Xa[k1][k2]*gradf[k2];
+	      B += r1A[k1]*Xa[k1][k2]*gradf[k2];
 	      //  printf("riA[%d]=%f Xa[%d][%d]=%f\n", r1A[k1], Xa[k1][k2]);
 	      C += r1A[k1]*Xa[k1][k2]*r1A[k2];
 	    }
@@ -670,11 +672,23 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 	  its++;
 	  continue;
 	}	
-      if (B<=0)
-	sol = (-B - sqrt(Delta))/(2.0*A);
+      s1 = (-B - sqrt(Delta))/(2.0*A);
+      s2 = (-B + sqrt(Delta))/(2.0*A);
+      if (fabs(s1) < fabs(s2))
+	sol = s1;
       else
-	sol = (-B + sqrt(Delta))/(2.0*A);
+	sol = s2;
+#if 1
+      ng = calc_norm(gradf);
+      if (fabs(sol)*ng > dist*OprogStatus.tolSD)
+	{
+	  sf /= GOLD;
+	  its++;
+	  continue;
+	}
+#endif
       done = 1;
+    
     }
  
   if (!done)
@@ -701,13 +715,14 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 #endif
   for (kk = 0; kk < 3; kk++)
     {
-      dr[kk] = OprogStatus.stepSD*sol*gradf[kk] + sf*dr[kk]; 
+      dr[kk] = sol*gradf[kk] + sf*dr[kk]; 
     }
+  *sfA = sf;
 }
 void projectgrad(double *p, double *xi, double *gradf, double *gradg)
 {
   int kk, k1, k2, k3;
-  double r1[3], r2[3], rIf[3], rIg[3], pp[3];
+  double r1[3], r2[3], rIf[3], rIg[3], pp[3], dist;
   double r1A[3], r2B[3], A1, B1, C1, Delta1, A2, B2, C2, Delta2; 
   //double gradf[3], gradg[3];
 #if 0
@@ -728,8 +743,14 @@ void projectgrad(double *p, double *xi, double *gradf, double *gradg)
   calc_grad(p, rA, Xa, gradf);
   calc_grad(&p[3], rB, Xb, gradg);
 #endif
-  projonto(p, xi, rA, Xa, gradf);
-  projonto(&p[3], &xi[3], rB, Xb, gradg);
+  dist = 0;
+  for (kk=0; kk < 3; kk++)
+    {
+      dist+=Sqr(p[kk+3]-p[kk]);
+    }
+  dist = sqrt(dist);
+  projonto(p, xi, rA, Xa, gradf, &sfA, dist);
+  projonto(&p[3], &xi[3], rB, Xb, gradg, &sfB, dist);
 }
 long long int itsfrprmn=0, callsfrprmn=0,callsok=0;
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double []))
@@ -746,6 +767,8 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   double g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
   
+  sfA = OprogStatus.stepSD;
+  sfB = OprogStatus.stepSD;
   callsfrprmn++;
   //fp=(*func)(p); 
   /*Initializations.*/
@@ -807,7 +830,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
        //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
 	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
        itsfrprmn++;      
-       if ( (1 && fp < Sqr(OprogStatus.epsd)) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 0 && sqrt(normxi) < (fp+EPSFR)*ftol) )
+       if ( (0 && fp < Sqr(OprogStatus.epsd)) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 0 && sqrt(normxi) < (fp+EPSFR)*ftol) )
 	 {
 	   callsok++;
 	   return;
@@ -1010,7 +1033,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
 {
   int kk, k1, k2; 
   double F, nf, ng, fx2[3], dd[3], normdd;
-  double Q1, Q2, A, gradfx, gradgx, normg, fact;
+  double Q1, Q2, A, gradfx, gradgx, normgA, normgB, fact;
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
@@ -1068,20 +1091,26 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
       grad[kk+3] -= gradgx*gx[kk];
     }
 #if 0
-  normg = 0.0;
-  for (kk=0; kk < 6; kk++)
+  normgA = normgB = 0.0;
+  for (kk=0; kk < 3; kk++)
     {
-      normg += Sqr(grad[kk]); 
+      normgA += Sqr(grad[kk]); 
+      normgB += Sqr(grad[kk+3]);
     }
-  normg=sqrt(normg);
-#endif
-  fact = cgstep;
+  normgA=sqrt(normgA);
+  normgB=sqrt(normgB);
+  //fact = 1/normg;//cgstep;
   //fact = OprogStatus.stepSD/(normdd+OprogStatus.epsd);
   //fact = OprogStatus.stepSD*normdd;
-  for (kk=0; kk < 6; kk++)
+  for (kk=0; kk < 3; kk++)
     {
-      grad[kk] *= fact;
+      grad[kk] /= normgA;
     } 
+  for (kk=0; kk < 3; kk++)
+    {
+      grad[kk+3] /= normgB;
+    } 
+#endif
   F = 0.0;
   for (kk=0; kk < 3; kk++)
     F += A*Sqr(dd[kk]);
