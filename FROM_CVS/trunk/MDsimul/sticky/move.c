@@ -3564,10 +3564,24 @@ void PredictEvent (int na, int nb, int nl)
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
-	signDir[2] = 0;/* direzione positiva */
+	{
+	  signDir[2] = 0;/* direzione positiva */
+	  if (inCell[nc][2][na]==cellsz[nl]-2)
+	    ignorecross = 1;
+	  else
+	    ignorecross = 0;
+	}
       else 
-	signDir[2] = 1;/* direzione negativa */
-      tm[2] = ((inCell[nc][2][na] + 1 - signDir[2]) * L /
+	{
+	  signDir[2] = 1;/* direzione negativa */
+	  if (inCell[nc][2][na]==cellsz[nl]-2)
+	    ignorecross = 1;
+	  else
+	    ignorecross = 0;}
+	  if (ignorecross)
+	    tm[2] = timbig;
+	    else
+	  tm[2] = ((inCell[nc][2][na] + 1 - signDir[2]) * L /
 	       cellsz[nl] - rz[na] - L2) / vz[na];
     } 
   else 
@@ -3580,6 +3594,7 @@ void PredictEvent (int na, int nb, int nl)
 	signDir[0] = 0;/* direzione positiva */
       else 
 	signDir[0] = 1;/* direzione negativa */
+      
       tm[0] = ((inCell[nc][0][na] + 1 - signDir[0]) * L /
 	       cellsx[nl] - rx[na] - L2) / vx[na];
     } 
@@ -4500,8 +4515,9 @@ void ProcessCollision(void)
 #endif
 }
 #ifdef MD_SILICA
-void docellcross(int k, double velk, double *rkptr, int cellsk, int nc)
+void docellcross(int k, double velk, double *rkptr, int cellsk, int nc, int cellsk2)
 {
+  int nc2;
 #if 0
   if (inCell[0][evIdA]+1> cellsx ||inCell[1][evIdA]+1> cellsy||inCell[2][evIdA]+1> cellsz) 
     {printf("PRIMAin cell cross ?!?\n");
@@ -4515,11 +4531,10 @@ void docellcross(int k, double velk, double *rkptr, int cellsk, int nc)
 	  if (inCell[nc][k][evIdA] == cellsk) 
 	    {
 	      inCell[nc][k][evIdA] = 0;
+	      nc2 = (~nc)&1;
+	      inCell[nc2][k][evIdA] = 0;
 	      *rkptr = -L2;
-	      if (nc==0)
-		{
-		  OprogStatus.DR[evIdA][k]++;
-		}
+	      OprogStatus.DR[evIdA][k]++;
 	    }
 
 	}
@@ -4530,11 +4545,10 @@ void docellcross(int k, double velk, double *rkptr, int cellsk, int nc)
 	  if (inCell[nc][k][evIdA] == -1) 
 	    {
 	      inCell[nc][k][evIdA] = cellsk - 1;
+	      nc2 = (~nc)&1;
+	      inCell[nc2][k][evIdA] = cellsk2 - 1;
 	      *rkptr = L2;
-	      if (nc == 0)
-		{
-		  OprogStatus.DR[evIdA][k]--;
-		}
+	      OprogStatus.DR[evIdA][k]--;
 	    }
 	}
 #if 0
@@ -4633,13 +4647,13 @@ void ProcessCellCrossing(void)
       switch (k)
 	{
 	case 0: 
-	  docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc);
+	  docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl]);
 	  break;
 	case 1: 
-	  docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc);
+	  docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc, cellsy[nl]);
 	  break;
 	case 2:
-	  docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc);
+	  docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl]);
 	  break;
 	}
       PredictEvent(evIdA, evIdB);
@@ -4666,13 +4680,13 @@ void ProcessCellCrossing(void)
   switch (kk)
     {
     case 0: 
-      docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc);
+      docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl]);
       break;
     case 1: 
-      docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc);
+      docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc, cellsy[nl]);
       break;
     case 2:
-      docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc);
+      docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl]);
       break;
     }
   PredictEvent(evIdA, evIdB, nl);
