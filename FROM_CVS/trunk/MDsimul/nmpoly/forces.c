@@ -32,11 +32,13 @@ extern COORD_TYPE W, K, WC, T1xx, T1yy, T1zz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Wm, Wmxx, Wmyy, Wmzz, 
   Wmxy, Wmyz, Wmzx, Pmxx, Pmyy, Pmzz, Pmxy, Pmyz, Pmzx, T1mxy, 
   Patxy, Patyz, Patzx, Patxx, Patyy, Patzz,
-  T1myz, T1mzx, T1mxx, T1myy, T1mzz;  
+  T1myz, T1mzx, T1mxx, T1myy, T1mzz; 
 #ifdef MD_RESPA
 extern double WLong, WxxLong, WyyLong, WzzLong,
   WxyLong, WyzLong, WzxLong, WmLong, WmxxLong, WmyyLong, WmzzLong, 
-  WmxyLong, WmyzLong, WmzxLong, WmyxLong, WmzyLong, WmxzLong;
+  WmxyLong, WmyzLong, WmzxLong, WmyxLong, WmzyLong, WmxzLong, WShort, VShort, VcShort;
+extern double WmShort, WmxxShort, WmyyShort, WmzzShort, WmxyShort, WmyzShort, WmzxShort,
+       WShort, VcShort, VShort, WxxShort, WyyShort, WzzShort, WxyShort, WyzShort, WzxShort;
 #endif
 extern COORD_TYPE Mtot;
 /* used by linked list routines */
@@ -1190,6 +1192,27 @@ void LJForce(int Nm, double rcut)
 #ifdef MOLPTENS
   Wm = Wmxx + Wmyy + Wmzz;
 #endif
+#ifdef MD_RESPA_NPT
+  WShort = W;
+  VShort = V;
+  VcShort = Vc;
+#if defined(MOLPTENS)
+  WmxyShort = Wmxy;
+  WmyzShort = Wmyz;
+  WmzxShort = Wmzx;
+  WmxxShort = Wmxx;
+  WmyyShort = Wmyy;
+  WmzzShort = Wmzz;
+  WmShort = Wm;
+#else
+  WxyShort = Wxy;
+  WyzShort = Wyz;
+  WzxShort = Wzx;
+  WxxShort = Wxx;
+  WyyShort = Wyy;
+  WzzShort = Wzz;
+#endif
+#endif
   /* NOTA: controllare se questo va effettivamente commentato!!!
      Wmxy = (Wmxy + Wmyx)/2.0;
      Wmyz = (Wmyz + Wmzy)/2.0;
@@ -1284,7 +1307,6 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
       rxa = rx[a][i];
       rya = ry[a][i];
       rza = rz[a][i];
-	  
       Fxa = FxLong[a][i];
       Fya = FyLong[a][i];
       Fza = FzLong[a][i];

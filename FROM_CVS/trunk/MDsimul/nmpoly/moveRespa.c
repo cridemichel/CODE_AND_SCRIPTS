@@ -51,7 +51,9 @@ extern COORD_TYPE W, K, WC, T1xx, T1yy, T1zz,
 extern COORD_TYPE WLong, WxxLong, WyyLong, WzzLong,
   WxyLong, WyzLong, WzxLong, WmLong, WmxxLong, WmyyLong, WmzzLong, 
   WmxyLong, WmyzLong, WmzxLong, WmyxLong, WmzyLong, WmxzLong,
-  WCxxLong, WCyyLong, WCzzLong, WCxyLomg, WCyzLong, WCzxLong;
+  WCxxLong, WCyyLong, WCzzLong, WCxyLomg, WCyzLong, WCzxLong, WShort, VShort, VcShort;
+double WmShort, WmxxShort, WmyyShort, WmzzShort, WmxyShort, WmyzShort, WmzxShort,
+       WShort, VcShort, VShort, WxxShort, WyyShort, WzzShort, WxyShort, WyzShort, WzxShort;
 #endif
 extern double DrSq,  Mtot;
 /* used by linked list routines */
@@ -304,20 +306,27 @@ void updImpLong(double dt, double c)
 void updImpLongNose(double dt, double c)
 {
   int i, a;
-  double cdt, expdt[NA], cost[NA], dlns;
+  double cdt, expdt[NA], cost[NA], dlns, cdt2;
   cdt = c*dt;
+  cdt2 = cdt / 2.0;
   dlns = s*Ps / OprogStatus.Q ;
   for (a = 0; a < NA; a++)
     {
       expdt[a] = exp(-dlns * cdt);
-      cost[a] = (expdt[a] - 1.0) / dlns;
+      /*cost[a] = (expdt[a] - 1.0) / dlns;*/
     }
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
-	px[a][i] += cost[a] * FxLong[a][i] + px[a][i]*expdt[a];
-      	py[a][i] += cost[a] * FyLong[a][i] + py[a][i]*expdt[a];
-	pz[a][i] += cost[a] * FzLong[a][i] + pz[a][i]*expdt[a];
+        px[a][i] += FxLong[a][i] * cdt2;
+	py[a][i] += FyLong[a][i] * cdt2;
+	pz[a][i] += FzLong[a][i] * cdt2;
+	px[a][i] = px[a][i]*expdt[a];
+      	py[a][i] = py[a][i]*expdt[a];
+	pz[a][i] = pz[a][i]*expdt[a];
+	px[a][i] += FxLong[a][i] * cdt2;
+	py[a][i] += FyLong[a][i] * cdt2;
+	pz[a][i] += FzLong[a][i] * cdt2;
       }
 #ifndef MD_FENE
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
@@ -354,15 +363,16 @@ void updImpAnd(double dt, double c)
   int i, a;
   double cdt, expdt[NA], mM[NA], cost[NA], dlnVmM[NA];
   double dlnV;
-  double PCMx, PCMy, PCMz;
+  double PCMx, PCMy, PCMz, cdt2;
   cdt = c*dt;
+  cdt2 = cdt/2.0;
   dlnV = Pv*Sqr(s)/OprogStatus.W/3.0/Vol; 
   for (a = 0; a < NA; a++)
     {
       mM[a] = Oparams.m[a] / Mtot;
       dlnVmM[a] = mM[a] * dlnV;
-      expdt[a] = exp(-(dlnV * mM[a]) * cdt);
-      cost[a] = (expdt[a] - 1.0) / dlnVmM[a];
+      expdt[a] = exp(-(dlnVmM[a]) * cdt);
+      /*cost[a] = (expdt[a] - 1.0) / dlnVmM[a];*/
     }
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -377,9 +387,15 @@ void updImpAnd(double dt, double c)
 	}
       for (a=0; a < NA; a++)
 	{
-	  px[a][i] = cost[a]*(-Fx[a][i] + dlnVmM[a]*(PCMx - px[a][i])) + px[a][i]*expdt[a];
-	  py[a][i] = cost[a]*(-Fy[a][i] + dlnVmM[a]*(PCMy - py[a][i])) + py[a][i]*expdt[a];
-	  pz[a][i] = cost[a]*(-Fz[a][i] + dlnVmM[a]*(PCMz - pz[a][i])) + pz[a][i]*expdt[a];
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt2;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt2;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt2;
+	  px[a][i] = px[a][i]*expdt[a];
+	  py[a][i] = py[a][i]*expdt[a];
+	  pz[a][i] = pz[a][i]*expdt[a];
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt2;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt2;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt2;
 	} 
     }
 }
@@ -404,26 +420,32 @@ void updPositionsNPT(double dt, double c)
 {
   int i, a;
   double cdt, expdt[NA], mM[NA], *m;
-  double cost[NA], cost2[NA], cost2mM[NA];
+  double cost2, cdt2, cost2mM[NA];
   double RCMx, RCMy, RCMz;
   cdt = c*dt;
+  cdt2 = cdt / 2.0;
   m = Oparams.m;
+  cost2 = Pv*Sqr(s)/(3.0*Vol*OprogStatus.W);
   for (a = 0; a < NA; a++)
     {
-      cost2[a] = Pv*Sqr(s)/(3.0*Vol*OprogStatus.W);
       mM[a] = Oparams.m[a] / Mtot;
-      cost2mM[a] = cost2[a] * mM[a];
+      cost2mM[a] = cost2 * mM[a];
       expdt[a] = exp(cost2mM[a]*cdt);
-      cost[a] = (expdt[a] - 1.0);
     }
   for (i=0; i < Oparams.parnum; i++)
     {
       CoM(i, &RCMx, &RCMy, &RCMz);
       for (a=0; a < NA; a++)
 	{
-	  rx[a][i] = cost[a]*(px[a][i]/m[a] + cost2[a]*(RCMx - rx[a][i]*mM[a]))/cost2mM[a] + rx[a][i]*expdt[a];
-	  ry[a][i] = cost[a]*(py[a][i]/m[a] + cost2[a]*(RCMy - ry[a][i]*mM[a]))/cost2mM[a] + ry[a][i]*expdt[a];
-	  rz[a][i] = cost[a]*(pz[a][i]/m[a] + cost2[a]*(RCMz - rz[a][i]*mM[a]))/cost2mM[a] + rz[a][i]*expdt[a];
+	  rx[a][i] += cdt2*(px[a][i]/m[a] + cost2*(RCMx - rx[a][i]*mM[a]));
+	  ry[a][i] += cdt2*(py[a][i]/m[a] + cost2*(RCMy - ry[a][i]*mM[a]));
+	  rz[a][i] += cdt2*(pz[a][i]/m[a] + cost2*(RCMz - rz[a][i]*mM[a]));
+	  rx[a][i] = rx[a][i]*expdt[a];
+	  ry[a][i] = ry[a][i]*expdt[a];
+	  rz[a][i] = rz[a][i]*expdt[a];
+	  rx[a][i] += cdt2*(px[a][i]/m[a] + cost2*(RCMx - rx[a][i]*mM[a]));
+	  ry[a][i] += cdt2*(py[a][i]/m[a] + cost2*(RCMy - ry[a][i]*mM[a]));
+	  rz[a][i] += cdt2*(pz[a][i]/m[a] + cost2*(RCMz - rz[a][i]*mM[a]));
 	}
     }
 
@@ -520,11 +542,11 @@ void updPv(double dt, double c)
   cdt = c * dt;
   cdt2 = c * dt / 2.0;
 #ifdef MOLPTENS
-  press = calcT1diagMolRespa(Nm) + Wm / 3.0 / Vol; /* press(t+dt) */
+  press = calcT1diagMolRespa(Nm) + (WmShort + WmLong ) / 3.0 / Vol; /* press(t+dt) */
 #else
-  press = calcT1diagAtRespa(Nm) + (W + WC) / Vol; /* press(t+dt) */
+  press = calcT1diagAtRespa(Nm) + (WShort + WLong + WCShort + WCLong) / Vol; /* press(t+dt) */
 #endif
-  printf("press: %f\n", press);
+  printf("press: %f Wm: %f WmLong: %f\n", press, Wm, WmLong);
   DP = press - Oparams.P;
   Pv += DP  * cdt2;
   Pv *= exp(-cdt*Ps*s/OprogStatus.Q);
@@ -558,7 +580,7 @@ void movelongRespaNPTAft(double dt)
   updLs(dt, 0.5);
   printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcut);
-  updImpLong(dt, 0.5);
+  updImpLongNose(dt, 0.5);
   printf("A2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
 }
 /* ========================== >>> movea <<< =============================== */
@@ -872,7 +894,9 @@ void move(void)
   if (Oparams.curStep == 1)  
     {
       BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcut);
+      BuildNebrListNoLinked(Oparams.parnum, OprogStatus.rcutInner);
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+      LJForce(Oparams.parnum, OprogStatus.rcutInner);
     } 
 #ifdef MD_RESPA_NPT
   v2p();
@@ -920,31 +944,31 @@ void move(void)
 #ifdef MD_FENE
       FENEForce();
 #endif
-      Wm += WmLong;
+      Wm = Wm + WmLong;
 #ifdef MOLPTENS
-      Wmxy += WmyzLong;
-      Wmyz += WmyzLong;
-      Wmzx += WmzxLong;
+      Wmxy = Wmxy + WmyzLong;
+      Wmyz = Wmyz + WmyzLong;
+      Wmzx = Wmzx + WmzxLong;
 #endif
 #if defined(MOLPTENS)  || (!defined(ATPTENS) && !defined(ATPRESS))
-      Wmxx += WmxxLong;
-      Wmyy += WmyyLong;
-      Wmzz += WmzzLong;
+      Wmxx = Wmxx + WmxxLong;
+      Wmyy = Wmyy + WmyyLong;
+      Wmzz = Wmzz + WmzzLong;
 #endif
 #if defined(ATPTENS)
-      Wxx += WxxLong + WCxxLong;
-      Wyy += WyyLong + WCyyLong;
-      Wzz += WzzLong + WCzzLong;
-      Wxy += WxyLong + WxyzLong;
-      Wzx += WzxLong + WzxzLong;
-      Wyz += WyzLong + WyzzLong;
+      Wxx = Wxx + WCxx + WxxLong + WCxxLong;
+      Wyy = Wyy + WCyy + WyyLong + WCyyLong;
+      Wzz = Wzz + WCzz + WzzLong + WCzzLong;
+      Wxy = Wxy + WCxy + WCxyLong + WxyLong;
+      Wzx = Wzx + WCzx + WCzxLong + WzxLong;
+      Wyz = Wyz + WCyz + WCyzLong + WyzLong;
 #endif
       VcR = Vc;
-      Vc += VcLong;
-      V += VLong;
-      W += WLong;
+      Vc = Vc + VcLong;
+      V = V + VLong;
+      W = W + WLong;
 #if defined(ATPRESS)
-      W += WCLong;
+      W = W + WCLong;
 #endif
       /* kinet(Oparams.parnum, vx, vy, vz, Vol1); */
 #ifdef MD_RESPA_NPT
