@@ -413,6 +413,7 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
 	 sqrt(2*PI)           2     */
     }
  
+  angvel();
 }
 
 /* ========================== >>> comvel <<< =============================== */
@@ -1499,7 +1500,7 @@ void usrInitAft(void)
 	dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists);
 	for (nn=0; nn < MD_PBONDS; nn++)
 	  {
-	    if (dists[nn]<0)
+	    if (dists[nn]<0.0)
 	      {
 		aa = mapbondsa[nn];
 		bb = mapbondsb[nn];
