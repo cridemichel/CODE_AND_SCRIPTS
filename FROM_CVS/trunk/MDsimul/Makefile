@@ -14,8 +14,8 @@ export MPIDIR =/usr/include/lam
 #export CFLAGS  = -Wall -mcpu=i686 -O3\
 	  -frerun-cse-after-loop -fstrength-reduce -fexpensive-optimizations\
           -felide-constructors -malign-loops=2 -malign-jumps=2\
-	  -malign-functions=2
-export CFLAGS  = -Wall -O3  -mcpu=athlon-xp -march=athlon-xp -g
+	  -malign-functions
+export CFLAGS  = -Wall  -O3  -mcpu=athlon-xp -march=athlon-xp 
 #export CFLAGS  =-Wall -O3 -msse2 -mfpmath=sse -march=pentium4 -mcpu=pentium4 
 #export CFLAGS  =-Wall -O3  -march=pentium4 -mcpu=pentium4 
 #export CFLAGS=  -B -tp p6 -fast#ottimizzazioni per beowulf
@@ -25,7 +25,7 @@ export CFLAGS  = -Wall -O3  -mcpu=athlon-xp -march=athlon-xp -g
 #export CFLAGS  = -qarch=pwr4 -qtune=pwr4  -O3 -bmaxdata:0x70000000 -qcpluscmt #-I$(TURBOMP)/POWER4/include#per SP4
 #export CFLAGS= -g -Wall 
 # MACROS passed to the pre-processor
-export MACROS=  -DMD_LOADMESH -DXDISP -DATPTENS -UMOLPTENS -UATPRESS #-DMD_SQWELL -DSOFT_SPHERE  -DMD_STATIC_PP8 # -DMD_BONDHIST -DMD_BILOG -DMPI##-DMD_TSHAPED# -DSOFT_SPHERE  -DMD_STATIC_PP6#-DMDLLINT#-DMPI##-DMC_SIMUL -DSOFT_SPHERE #-DMPI -DMD_GRAVITY -DPRINTER_PROC -DTAPPING -DMD_LOADMESH
+export MACROS= -UMD_SQWELL -UMD_HSVISCO -UMD_RESPA_FILTER -UMD_RAPACONSTR -UMD_RESPA_NOSELONG -UMD_RESPA_NPT -UMD_RESPA_SWITCH -UMD_FENE -UMD_RESPA -DMD_LOADMESH -DXDISP -UATPTENS -DMOLPTENS -UATPRESS #-DMD_INFBARRIER#-DMD_SQWELL# -DSOFT_SPHERE  -DMD_STATIC_PP8 # -DMD_BONDHIST -DMD_BILOG -DMPI##-DMD_TSHAPED# -DSOFT_SPHERE  -DMD_STATIC_PP6#-DMDLLINT#-DMPI##-DMC_SIMUL -DSOFT_SPHERE #-DMPI -DMD_GRAVITY -DPRINTER_PROC -DTAPPING -DMD_LOADMESH
 #export MACROS= -DMD_LOADMESH -DSOFT_SPHERE -DMD_STATIC_PP18 -DXDISP  -DATPTENS -UMOLPTENS -UATPRESS -DORIGIN -DMPI #-DPRINTER_PROC -DTAPPING -DMD_LOADMESH #per SP4
 export LDFLAGS=#-L /usr/lib/lam/lib -llamf77mpi -lmpi -llam -lnsl -lutil -lpmpi -llammpio
 #export LDFLAGS= #-L$(TURBOMP)/POWER4/lib -lxlf90#per SP4
@@ -54,7 +54,7 @@ LAPO=$(PERC)/laponite
 LAPOOBJS= $(LAPO)/move.o $(LAPO)/measures.o $(LAPO)/init.o $(LAPO)/forces.o
 
 NMPOLY=$(PERC)/nmpoly
-NMPOLYOBJS= $(NMPOLY)/move.o $(NMPOLY)/measures.o $(NMPOLY)/init.o $(NMPOLY)/forces.o
+NMPOLYOBJS= $(NMPOLY)/move.o $(NMPOLY)/measures.o $(NMPOLY)/init.o $(NMPOLY)/forces.o $(NMPOLY)/moveRespa.o
 
 
 # dependencies for all simulation codes
@@ -95,6 +95,10 @@ MONOHSOBJS= $(MONOHS)/move.o $(MONOHS)/measures.o $(MONOHS)/init.o $(MONOHS)/tre
 #biatomic mixture of hard spheres
 BIMIXHS= $(PERC)/bimixhs
 BIMIXHSOBJS= $(BIMIXHS)/move.o $(BIMIXHS)/measures.o $(BIMIXHS)/init.o $(BIMIXHS)/tree.o
+
+#biatomic mixture of hard spheres
+ELLIPSOID= $(PERC)/ellipsoid
+ELLIPSOIDOBJS= $(ELLIPSOID)/move.o $(ELLIPSOID)/measures.o $(ELLIPSOID)/init.o $(ELLIPSOID)/tree.o
 
 #monoatomic Lennard-Jones with Ruocco many body term and Parallel Tempering
 MONO_PT = $(PERC)/monoLJ_PT
@@ -152,6 +156,9 @@ monohs: monohs_link common monohsObjs
 bimixhs: bimixhs_link common bimixhsObjs
 	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJ) $(BIMIXHSOBJS) -o $(BIN)/bimixhs -lm 
 
+ellipsoid: ellipsoid_link common ellipsoidObjs
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJ) $(ELLIPSOIDOBJS) -o $(BIN)/ellipsoid -lm 
+
 monoLMC: monoLMC_link commonMLMC monoLMCObjs
 	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMONMLMC) $(MONOLMCOBJS) -o $(BIN)/monoLMC -lm 
 
@@ -199,6 +206,9 @@ monohsObjs:
 
 bimixhsObjs:
 	cd $(PERC)/bimixhs && $(MAKE)
+
+ellipsoidObjs:
+	cd $(PERC)/ellipsoid && $(MAKE)
 
 monoLJPTObjs:
 	cd $(PERC)/monoLJ_PT && $(MAKE)
@@ -268,6 +278,9 @@ monohs_link:
 
 bimixhs_link:
 	cd $(PERC)/bimixhs && $(MAKE) link
+
+ellipsoid_link:
+	cd $(PERC)/ellipsoid && $(MAKE) link
 
 gauss_link:
 	cd $(PERC)/gauss && $(MAKE) link
