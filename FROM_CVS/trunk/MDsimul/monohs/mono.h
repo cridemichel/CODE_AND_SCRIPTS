@@ -230,6 +230,7 @@ struct progStatus
 
   int savedXva; 
   int CMreset;
+  int mdseed;
   int nebrTabFac;                /* How much storage sould be provided for 
 			   	    the neighbour list (see Rapaport pag.53
 			 	    for details )*/
@@ -366,6 +367,7 @@ struct pascii opro_ascii[] =
   {"bakSteps",     &OS(bakSteps),                  1,               1, "%d"},
   {"bakStepsAscii",&OS(bakStepsAscii),             1,               1, "%d"},
   {"staSteps",     &OS(staSteps),                  1,               1, "%d"},
+  {"mdseed",       &OS(mdseed),                    1,               1, "%d"},
   {"measSteps",    OS(measSteps),         NUM_MISURE,               1, "%d"},
   {"measCalc",     OS(measCalc),          NUM_MISURE,               1, "%d"},
   {"initCalc",     OS(initCalc),          NUM_MISURE,               1, "%d"},
