@@ -2350,7 +2350,7 @@ void move(void)
   if (OprogStatus.Nose == 1)
     {  
       /* NPT ensemble */
-      movebNPT(Oparams.steplength, 0.0000000001, 50, NA-1, Oparams.m, distance, 
+      movebNPT(Oparams.steplength, 0.00000000001, 150, NA-1, Oparams.m, distance, 
 	       Oparams.parnum);             
     }
   else if (OprogStatus.Nose == 2)
