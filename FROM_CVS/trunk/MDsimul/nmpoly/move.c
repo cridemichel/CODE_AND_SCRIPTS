@@ -1191,6 +1191,276 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
     }
   /* END OF ITERATION LOOP TO IMPROVE ANDERSEN-NOSE FORCE ESTIMATION */
 }
+void UnscaleCoords(void)
+{
+  int i, a;
+  double L;
+  L = cbrt(Vol);
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      for (a = 0; a < NA; a++)
+	{
+	  rx[a][i] *= L;
+	  ry[a][i] *= L;
+	  rz[a][i] *= L;
+	}
+    }
+}
+void ScaleCoords(void)
+{
+  int i, a;
+  double L;
+  L = cbrt(Vol);
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      for (a = 0; a < NA; a++)
+	{
+	  rx[a][i] /= L;
+	  ry[a][i] /= L;
+	  rz[a][i] /= L;
+	}
+    }
+}
+
+/* ========================= >>> moveb <<< =========================== */
+void movebNPTvirt(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
+	      COORD_TYPE m[NA], COORD_TYPE d, int Nm)
+{
+  /* *******************************************************************
+     ** SECOND PART OF VELOCITY VERLET WITH CONSTRAINTS               **
+     ******************************************************************* */
+  COORD_TYPE FxNose, FyNose, FzNose, FxAnd, FyAnd, FzAnd, cfAnd, dlns, dlnV,
+    dlnVSq; 
+  COORD_TYPE Vol1g, s1i, Vol1i;
+  COORD_TYPE DT, A, B, DP, dt2; 
+  int i, a, k, numok, dof;
+  const int MAXNUMIT = 40;
+  double L, s1old, Vol1old;
+  /* ******************************************************************* */
+  dt2 = dt / 2.0;
+  L = cbrt(Vol);
+  for(i=0; i < Nm; i++)
+    {
+      CoM(i, &Rx[i], &Ry[i], &Rz[i]);
+#if 0
+      Rx[i] -=  L * rint(invL * Rx[i]);
+      Ry[i] -=  L * rint(invL * Ry[i]);
+      Rz[i] -=  L * rint(invL * Rz[i]);
+#endif
+      for(a=0; a < NA; a++)
+	{
+#if 0
+	  rx[a][i] = rx[a][i] - L * rint( rx[a][i]/L);
+	  ry[a][i] = ry[a][i] - L * rint( ry[a][i]/L);
+	  rz[a][i] = rz[a][i] - L * rint( rz[a][i]/L);
+#endif
+	  vxt2[a][i] = vx[a][i]; /* v*t2 = v*(t+dt/2) */
+	  vyt2[a][i] = vy[a][i];
+	  vzt2[a][i] = vz[a][i];
+
+	  FxLJ[a][i] = Fx[a][i];
+	  FyLJ[a][i] = Fy[a][i];
+	  FzLJ[a][i] = Fz[a][i];
+	
+	  /* predicted values of velocities at time t+dt */
+	  /*vx[a][i] = 13.0 * vxt[a][i] / 6.0 - 4.0 * vxo1[a][i] / 3.0 + 
+	    vxo2[a][i] / 6.0;
+	    vy[a][i] = 13.0 * vyt[a][i] / 6.0 - 4.0 * vyo1[a][i] / 3.0 + 
+	    vyo2[a][i] / 6.0;
+	    vz[a][i] = 13.0 * vzt[a][i] / 6.0 - 4.0 * vzo1[a][i] / 3.0 + 
+	    vzo2[a][i] / 6.0;
+	  */
+	  /*vx[a][i] = 2.0 * vxt[a][i] - vxo1[a][i]; */ /* Verlet */
+	  /*vy[a][i] = 2.0 * vyt[a][i] - vyo1[a][i];
+	    vz[a][i] = 2.0 * vzt[a][i] - vzo1[a][i];*/
+
+	  vx[a][i] = 5.0 * vxt[a][i] / 2.0 - 2.0 * vxo1[a][i] + 
+	    vxo2[a][i] / 2.0;
+	  vy[a][i] = 5.0 * vyt[a][i] / 2.0 - 2.0 * vyo1[a][i] + 
+	    vyo2[a][i] / 2.0;
+	  vz[a][i] = 5.0 * vzt[a][i] / 2.0 - 2.0 * vzo1[a][i] + 
+	    vzo2[a][i] / 2.0;
+	}
+    }
+  s1i = s1;    /* s1i = s1(t+dt/2) */
+  Vol1i = Vol1;/* Vol1i = Vol1(t+dt/2)*/
+
+  /* Initial guess for Vol1 */
+  /* Vol1 = 13.0*Vol1t/6.0 - 4.0*Vol1o1/3.0 + Vol1o2 / 6.0; */ /* Vol1(t+dt) */
+  
+  /* Vol1 = 2.0 * Vol1t - Vol1o1; *//* Verlet */  
+  
+  Vol1 = 5.0 * Vol1t / 2.0 - 2.0 * Vol1o1 + Vol1o2 / 2.0;  
+#if defined(MD_FENE)
+  dof = 3 * NA;
+#else
+  dof = 2 * NA + 1;
+  shakeVel(Nm, dt, m, maxIt, NB, d, tol, vx, vy, vz);
+#endif
+  for(k=0; k < MAXNUMIT; k++) /* Loop to convergence (NUMIT ~ 5 is enough)*/
+    {
+      s1old = s1;
+      Vol1old = Vol1;
+      kinet(Nm, vx, vy, vz, Vol1);  /* K(t+dt) */
+
+      DT = s * (2.0 * K - (dof * Nm - 3.0) * Oparams.T) / 
+	OprogStatus.Q;
+      A = s1i + 0.5 * dt * DT;
+      /* s1(t+dt) */
+      s1 = A + 0.5 * Sqr(A) * dt / s + Sqr(dt) * 0.5 * Sqr(A) * A / Sqr(s);
+      dlns = s1 / s ; 
+      s2 = Sqr(s1) / s + DT; /* s2(t+dt) */
+      
+      /* Calculate pressure, calcT1diagMol is a term proportional to the 
+	 translational kinetic energy, see Ferrario and Ryckaert */
+#ifdef MOLPTENS
+      press_m = calcT1diagMol(Nm, Vol1) + Wm / 3.0 / Vol; /* press(t+dt) */
+      
+      /* Volume acceleration */
+      DP = Sqr(s) * (press_m - Oparams.P) / OprogStatus.W;
+#else
+      press_at = calcT1diagAt(Nm, Vol1) + (W + WC) / Vol; /* press(t+dt) */
+      /* Volume acceleration */
+      DP = Sqr(s) * (press_at - Oparams.P) / OprogStatus.W;
+#endif
+      B = Vol1i + 0.5 * dt * DP;
+      Vol1 = B / (1.0 - 0.5 * dt * s1 / s); /* Vol1(t+dt) */
+      Vol2 = DP + s1 * Vol1 / s;            /* Vol2(t+dt) */
+      
+      /* Calculate the Andersen forces */
+      dlnV   = Vol1 / Vol; 
+      dlnVSq = Sqr(dlnV);
+      cfAnd  = - 2.0 * dlnVSq / 9.0;
+      cfAnd += Vol2 / Vol / 3.0;
+      cfAnd += dlns * dlnV / 3.0;
+	 
+      for(i=0; i < Nm; i++)
+	{
+	  for(a=0; a < NA; a++)
+	    {
+	      /* Calculate center of mass position for molecule to which
+		 belong atom (a, i) */
+	      /* The forces due to interactions don't change inside this 
+		 loop */
+	    
+	      FxAnd  = cfAnd * Rx[i] * m[a];
+	      FyAnd  = cfAnd * Ry[i] * m[a];
+	      FzAnd  = cfAnd * Rz[i] * m[a];
+	      Fx[a][i] = FxLJ[a][i] + FxAnd;
+	      Fy[a][i] = FyLJ[a][i] + FyAnd;
+	      Fz[a][i] = FzLJ[a][i] + FzAnd;
+	      /* vt2 = v(t+dt/2) */
+	      vxold[a][i] = vx[a][i];
+	      vyold[a][i] = vy[a][i];
+	      vzold[a][i] = vz[a][i];
+
+	      vx[a][i] = vxt2[a][i] + dt2 * Fx[a][i] / m[a];
+	      vy[a][i] = vyt2[a][i] + dt2 * Fy[a][i] / m[a];
+	      vz[a][i] = vzt2[a][i] + dt2 * Fz[a][i] / m[a];
+	      vx[a][i] /= 1.0 + 0.5 * dt * dlns;
+	      vy[a][i] /= 1.0 + 0.5 * dt * dlns;
+	      vz[a][i] /= 1.0 + 0.5 * dt * dlns;
+	      /* Velocity calculated with contribution of Andersen and Nose 
+		 Forces */
+	      FxNose = - dlns * vx[a][i] * m[a];
+	      FyNose = - dlns * vy[a][i] * m[a];
+	      FzNose = - dlns * vz[a][i] * m[a];
+	      /* F = Flennard-jones + Fnose + Fandersen */
+	      Fx[a][i] = Fx[a][i] + FxNose;
+	      Fy[a][i] = Fy[a][i] + FyNose;
+	      Fz[a][i] = Fz[a][i] + FzNose;
+	    } 
+	}
+#if !defined(MD_FENE)
+      shakeVel(Nm, dt, m, maxIt, NB, d, tol, vx, vy, vz);
+      /* Zero the velocity along bond and calculate the constraint virial, this
+	 should be as before because the Andersen Forces don't act along 
+	 bond.*/
+#endif
+      numok=0;
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  for (a = 0; a < NA; a++)
+	    {
+	      /* F = Flennard-jones + Fnose + Fandersen */
+	      if (fabs(vx[a][i]- vxold[a][i]) < ittolNPT &&
+		  fabs(vy[a][i]- vyold[a][i]) < ittolNPT &&
+		  fabs(vz[a][i]- vzold[a][i]) < ittolNPT )
+		numok++;
+	    }
+	}
+      if (numok == NA*Oparams.parnum && fabs(s1-s1old) < ittolNPT && fabs(Vol1-Vol1old) < ittolNPT )
+	{
+	  /* for all atoms diff between current velocities and prev vels is below tol! */ 
+	  /*printf("Done %d iterations instead of %d\n", k, NUMIT);
+	  */
+	  break;
+	}
+    }
+  //printf("kkk=%d\n", k);
+  if (k == MAXNUMIT)
+    printf("[movebNPT] maximum number of iterations to convergens reached!\n");
+  if (k > 6)
+    printf("[movebNPT] many iterations done...it may look strange\n");
+  /* Calculate kinetic energy */
+  kinet(Nm, vx, vy, vz, Vol1);/* K(t+dt) */
+  //printf("K exact: %.20f\n", K);
+
+#ifdef MOLPTENS
+  /* Calculate all components of molecular pressure tensor */
+  calcPtensMol(Nm, Vol1);
+  press_m = (Pmxx + Pmyy + Pmzz) / 3.0; /* press(t+dt) */
+#endif
+
+#if !defined(MOLPTENS) || defined(ATPTENS)
+  /* Calculate all components of atomic pressure tensor */
+  calcPtensAt(Nm, Vol1);
+  press_at = (Patxx + Patyy + Patzz) / 3.0;
+#endif 
+
+#if !defined(MOLPTENS) && !defined(ATPTENS) && defined(ATPRESS)
+  /* NOTE: Calculate Pressure (Eliminate in the future NOT USED only output)*/
+  press_at = calcT1diagAt(Nm, Vol1) + (W + WC) / Vol;
+  /* NOTE: Nm*5/3 = (6Nm - Nm) / 3.0 */ 
+#endif
+
+#ifdef MOLPTENS
+  /* Atomic pressure */
+  press = press_m;
+  Pxy = Pmxy;
+  Pyz = Pmyz;
+  Pzx = Pmzx;
+#else
+  press = press_at;
+  Pxy = Patxy;
+  Pyz = Patyz;
+  Pzx = Patzx;
+#endif
+
+  /* These are the values of velocities at t-dt and at t-2*dt, used to 
+     estimate the temperature at time t+dt at begin of this procedure */
+  Volo2 = Volo1;
+  Volo1 = Volot;
+  Vol1o2 = Vol1o1;
+  s1o2  = s1o1;
+  Vol1o1 = Vol1t;
+  s1o1 = s1t;
+  for(i=0; i < Nm; i++)
+    {
+      for(a=0; a < NA; a++)
+	{
+	  vxo2[a][i] = vxo1[a][i]; /* vo2(t+dt) = v(t-dt) */
+	  vyo2[a][i] = vyo1[a][i];
+	  vzo2[a][i] = vzo1[a][i];
+	  vxo1[a][i] = vxt[a][i];  /* vo1(t+dt) = v(t) */
+	  vyo1[a][i] = vyt[a][i];
+	  vzo1[a][i] = vzt[a][i];
+	}
+    }
+  /* END OF ITERATION LOOP TO IMPROVE ANDERSEN-NOSE FORCE ESTIMATION */
+}
+
+
 
 
 /* ========================= >>> moveb <<< =========================== */
@@ -1728,23 +1998,27 @@ void moveb(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 void scalCor(int Nm)
 { 
   int i, a;
-  COORD_TYPE cost, costo1, costo2, DRx, DRy, DRz, Rx, Ry, Rz;
-  
+  COORD_TYPE cost2, cost, costo1, costo2, DRx, DRy, DRz, Rx, Ry, Rz, Vx, Vy, Vz;
+  double *m; 
   L = cbrt(Vol);
   invL = 1.0 / L;
+  m = Oparams.m;
   cost = Vol1 / Vol / 3.0;
   costo1 = Vol1o1 / Vol / 3.0;
   costo2 = Vol1o2 / Vol / 3.0;
-  
+  cost2 = (-(2.0/3.0)*Sqr(Vol1/Vol) + Vol2 / Vol) / 3.0;   
   /* Reduced particles to first box */
   for(i=0; i < Oparams.parnum; i++)
     {
       CoM(i, &Rx, &Ry, &Rz);
       /* (DRx, DRy, DRz) is the quantity to add to the positions to 
 	 scale them */
-      DRx = - L * rint(invL * Rx);
-      DRy = - L * rint(invL * Ry);
-      DRz = - L * rint(invL * Rz);
+      DRx = -L * rint(invL * Rx);
+      DRy = -L * rint(invL * Ry);
+      DRz = -L * rint(invL * Rz);
+      /* optimization */
+      if (DRx==0.0 && DRy == 0 && DRz == 0 )
+	continue;
       OprogStatus.DR[i][0] -= DRx;
       OprogStatus.DR[i][1] -= DRy;
       OprogStatus.DR[i][2] -= DRz;
@@ -1767,6 +2041,9 @@ void scalCor(int Nm)
 	  vxo2[a][i] += costo2*DRx;
 	  vyo2[a][i] += costo2*DRy;
 	  vzo2[a][i] += costo2*DRz;
+	  Fx[a][i] += m[a]*cost2*DRx;
+	  Fy[a][i] += m[a]*cost2*DRy;
+	  Fz[a][i] += m[a]*cost2*DRz;
 	}
     }
 }
@@ -2331,11 +2608,11 @@ void move(void)
   checkdists("prima movea");
   check_distances("prima movea");
 #endif
-  //if (OprogStatus.Nose == 1)
-    //scalCor(Oparams.parnum);
+  if (OprogStatus.Nose == 1)
+    scalCor(Oparams.parnum);
   movea(Oparams.steplength, 0.000000000001, 150, NA-1, distance, Oparams.m, 
 	Oparams.parnum);        
-    /* buildAtomsPositions();*/
+  /* buildAtomsPositions();*/
   if (nebrNow)
     {
       nebrNow = 0;
