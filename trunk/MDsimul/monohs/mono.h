@@ -270,6 +270,7 @@ struct progStatus
   double targetPhi;
   double phitol;
   double axestol;
+  double scalfact;
   double checkquenchTime;
   double rescaleTime;
   double nextcheckTime;
@@ -438,6 +439,7 @@ struct pascii opro_ascii[] =
   {"maxquench",    &OS(maxquench),             1,   1, "%d"},
   {"scalevel",     &OS(scalevel),              1,   1, "%d"},
   {"phitol",       &OS(phitol),                     1,  1,    "%.14G"},
+  {"scalfact",     &OS(scalfact),             1, 1,           "%.14G"},
   {"axestol",      &OS(axestol),                    1,  1,    "%.14G"},
   {"extraLz",      &OS(extraLz),                    1,   1, "%.15G"},
   {"eventMult",    &OS(eventMult),                  1,   1,  "%d"},  
@@ -622,6 +624,7 @@ struct singlePar OsinglePar[] = {
   {"mass",       &Oparams.m,                CT},
   {"targetPhi", &OprogStatus.targetPhi, CT},
   {"phitol",      &OprogStatus.phitol,        CT},
+  {"scalfact",    &OprogStatus.scalfact,      CT},
   {"axestol",     &OprogStatus.axestol,       CT},
   {"wallDiss",   &Oparams.wallDiss,         CT},
   {"partDiss",   &Oparams.partDiss,         CT},

@@ -502,6 +502,7 @@ void usrInitBef(void)
   OprogStatus.rNebrShell = 0.4;
   OprogStatus.targetPhi = 0.0;
   OprogStatus.phitol = 1E-12;
+  OprogStatus.scalfact = 0.99;
   OprogStatus.axestol = 1E-8;
   OprogStatus.accrcmz = 0.0;
   /* If 1 the program calculate of the corrisponding variable a mean from
