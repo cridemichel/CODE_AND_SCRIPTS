@@ -1516,7 +1516,7 @@ void move(void)
 	    }
           OprogStatus.nextStoreTime = OprogStatus.storerate *
 	    (pow(OprogStatus.base,OprogStatus.NN)*OprogStatus.KK+pow(OprogStatus.base,OprogStatus.JJ));
-	  ScheduleEvent(-1, ATOM_LIMIT + 7, OprogStatus.nextStoreTime);
+	  ScheduleEvent(-1, ATOM_LIMIT + 8, OprogStatus.nextStoreTime);
 	}
       else if (evIdB == ATOM_LIMIT + 10)
 	{
