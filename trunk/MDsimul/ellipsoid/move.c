@@ -4058,7 +4058,83 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
   *troot += tref;
   return 0;
 }
-#ifdef MD_NNL
+double calcvecFNeigh(int i, double t, double t1, double* ddot)
+{
+  int kk;
+  double rcat[3], wra[3], dti;
+  dti = t1 - atomTime[i];
+  rcat[0] = r1[0] - (rx[i] + vx[i]*(t+dti)); 
+  rcat[1] = r1[1] - (ry[i] + vy[i]*(t+dti));
+  rcat[2] = r1[2] - (rz[i] + vz[i]*(t+dti));
+  ddot[0] = vx[i];
+  ddot[1] = vy[i];
+  ddot[2] = vz[i];
+  vectProd(wx[i], wy[i], wz[i], rcat[0], rcat[1], rcat[2], &wra[0], &wra[1], &wra[2]);
+  for (kk=0; kk < 3; kk++)
+    ddot[kk] += wra[kk];
+  return calc_norm(ddot);
+}
+
+int search_contact_faster_neigh(int i, int j, double *shift, double *t, double t1, double t2, 
+				double *vecgd, double epsd, double *d1, double epsdFast,
+				double *r1, double *r2)
+{
+  /* NOTA: 
+   * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
+  double maxddot, told, delt, normddot, ddot[3];
+  const int MAXOPTITS = 500;
+  double alpha;
+  int its=0; 
+    
+  /* estimate of maximum rate of change for d */
+  maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5;
+  *d1 = calcDistNegNeigh(*t, t1, i, vecgd, 1);
+  timesF++;
+  MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
+  told = *t;
+  while (*d1 > epsdFast && its < MAXOPTITS)
+    {
+      delt = *d1 / maxddot;
+      normddot = calcvecFNeigh(i, *t, t1, ddot);
+      //printf("normddot: %.15G\n", epsd/normddot);
+      /* check for convergence */
+     
+      if (normddot!=0 && delt < (epsd / normddot))
+	{
+	  MD_DEBUG10(printf("convergence reached in %d iterations\n", its));
+	  return 0;
+	}
+      *t += delt;
+#if 1
+      if (*t + t1 > t2)
+	{
+	  *t = told;
+	  MD_DEBUG10(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG10(printf("convergence t>t2\n"));
+	  *d1 = calcDistNegNeigh(*t, t1, i, vecgd, 1);
+	  return 1;
+	}
+#endif
+      *d1 = calcDistNegNeigh(*t, t1, i, vecgd, 1);
+      if (*d1 < 0)
+	{
+	  /* go back! */
+	  MD_DEBUG10(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG10(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
+	  *t = told;	  
+	  *d1 = calcDistNegNeigh(*t, t1, i, vecgd, 1);
+	  return 0;
+	}
+      told = *t;
+      its++;
+      itsF++;
+    }
+
+  MD_DEBUG10(printf("max iterations %d iterations reached t=%f t2=%f\n", its, *t, t2));
+  return 0;
+
+}
 int refine_contact_neigh(int i, int j, double t1, double t, double vecgd[8], double shift[3],double  vecg[5])
 {
   int kk, retcheck;
@@ -4082,7 +4158,7 @@ int refine_contact_neigh(int i, int j, double t1, double t, double vecgd[8], dou
   vecg[4] += t1;
   if (retcheck==2)
     {
-      MD_DEBUG10(printf("newt did not find any contact point!\n"));
+      MD_DEBUG10(printf("newtNeigh did not find any contact point!\n"));
       return 0;
     }
   else
@@ -4110,7 +4186,7 @@ int locate_contact_neigh(int i, double vecg[5])
   t1 = Oparams.time;	
   t2 = timbig;
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i];
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5;
   h = OprogStatus.h; /* last resort time increment */
   if (search_contact_faster_neigh(i, &t, t1, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0;  
@@ -4122,11 +4198,9 @@ int locate_contact_neigh(int i, double vecg[5])
   its = 0;
   while (t + t1 < t2)
     {
-#if 1
-      normddot = calcvecF(i, j, t, t1, r1, r2, ddot, shift);
+      normddot = calcvecFNeigh(i, t, t1, ddot);
       if (normddot!=0)
 	delt = epsd/normddot;
-#endif
       else
 	delt = h;
       if (dold < epsd)
@@ -4694,12 +4768,13 @@ void BuildNNL(int na)
   int et, kk, ii, overlap, mm, retcheck;
   double ncong, cong[3], pos[3], vecg[5], pos2[3], r1[3], r2[3];
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
-  /*double cells[NDIM];*/
+  /*double cels[NDIM];*/
   int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
 
   for (kk=0; kk < 3; kk++)
     shift[kk] = 0;
+  /* calcola il tempo a cui si deve ricostruire la NNL */
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
   else
@@ -4711,7 +4786,7 @@ void BuildNNL(int na)
     {
       jZ = inCell[2][na] + iZ;    
       shift[2] = 0.;
-      /* apply periodico boundary condition along z if gravitational
+      /* apply periodic boundary condition along z if gravitational
        * fiels is not present */
       if (jZ == -1) 
 	{
@@ -4757,12 +4832,13 @@ void BuildNNL(int na)
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
       		      dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
-		      if (dist < OprogStatus.distNNL)
+		      if (dist < 2.0*OprogStatus.rNebrShell + 1.0E-6)
 			{
 			  nebrTab[na].list[nebrTab[na].len] = n;
 			  for (kk=0; kk < 3; kk++)
 			    nebrTab[na].shift[kk] = shift[kk];
 			  nebrTab[na].len++;
+			  nebrTab[na].time = Oparams.time;
 			}
 		    }
 		} 
@@ -6055,7 +6131,8 @@ void move(void)
 #ifdef MD_NNL
       else if (evIdB == ATOM_LIMIT + 11)
 	{
-	  buildNNL(evIdA);	  
+	  BuildNNL(evIdA);	  
+	  //ScheduleEvent(evIdA, ATOM_LIMIT+11,nebrTab[i].nexttime);
 	}
 #endif
 #ifdef MD_GRAVITY
