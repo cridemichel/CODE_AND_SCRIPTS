@@ -372,7 +372,6 @@ void radDens(void)
 #endif 
   rend = cbrt(Vol) / 2.0;
   DELR = (rend - RBEG) / MAXBIN;
-  printf ("DELR: %f rend:%f RBEG:%f\n", DELR,rend, RBEG);
   hist = OprogStatus.hist;
   
   if (OprogStatus.avnggr == 0)
