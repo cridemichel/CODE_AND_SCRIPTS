@@ -2429,6 +2429,11 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
+  if (fabs(*d1) < epsdFast)
+    {
+      assign_dists(distsOld, dists);
+      return 0;
+    }
   while (fabs(*d1) > epsdFast && its < MAXOPTITS)
     {
       delt = fabs(*d1) / maxddot;
@@ -2861,9 +2866,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   t += delt;
   dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
 #else
-  //assign_dists(dists, distsOld);
-  //dold = d;
+#if 1
+  assign_dists(dists, distsOld);
+  dold = d;
+#else
   dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
+#endif
 #ifdef MD_NEGPAIRS
   sumnegpairs = check_negpairs(negpairs, distsOld, bondpair, i, j); 
 #endif
@@ -2913,7 +2921,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	{
 	  delt = 1E-15;
 	  //printf("delt=%.15G t=%.15G h=%.15G\n", delt, t, h);
-	  //firstaftsf = 0;
+	  firstaftsf = 0;
+	  t += delt;
+	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	  dold = d;
+	  MD_DEBUG30(printf("==========>>>>> t=%.15G t2=%.15G\n", t, t2));
+	  assign_dists(distsOld,  distsOld2);
+	  assign_dists(dists, distsOld);
+	  continue;
 	}
 #endif
 #if 0
@@ -2942,7 +2957,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       /* NOTA: se la distanza tra due sticky spheres è positiva a t (per errori numerici 
        * accade spesso) e t+delt allora delt è troppo grande e qui lo riduce fino ad un 
        * valore accettabile. */
-      if (sumnegpairs && !firstaftsf)
+      if (sumnegpairs)// && !firstaftsf)
 	{
 	  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 		 delt > minh)
@@ -2955,8 +2970,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  sumnegpairs = 0;
 	}
 #endif
-      if (firstaftsf)
-	firstaftsf = 0;
+      //if (firstaftsf)
+	//firstaftsf = 0;
       deldist = get_max_deldist(distsOld, dists, bondpair);
       if (deldist > epsdMax)
 	{
@@ -3090,10 +3105,23 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		  if (troot > t2 || troot < t1
 #if 1
 		  || 
-		      (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i])<1E-12))
+		      (lastbump[i].mol == j && lastbump[j].mol==i && 
+		       lastbump[i].at == mapbondsa[nn]
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 2E-15))
 #endif
 		    {
+		      if (lastbump[i].mol == j && lastbump[j].mol==i && 
+		       lastbump[i].at == mapbondsa[nn]
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 2E-15)
+			{
+			  printf("dold[%d]:%.15G d[%d]:%.15G\n", nn, distsOld[nn], nn, dists[nn]);
+			  printf("state: %d collision type: %d\n", 
+				 bound(i,j,mapbondsa[nn],mapbondsb[nn]), dorefine[nn]);
+			  printf("lastcol[%d]: %.15G troot: %.15G\n", i, lastcol[i], troot);
+			  printf("fabs(lastcol[i]-troot):%.15G\n",  fabs(troot - lastcol[i]));
+			  printf("t1: %.15G t2: %.15G\n", t1, t2);
+			  printf("delt: %.15G\n", delt);
+			}
 		      //gotcoll = -1;
 		      continue;
 		    }
@@ -3152,17 +3180,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      MD_DEBUG30(printf("[search contact faster locate_contact] d: %.15G\n", d));
 	      return 0;
 	    }
-#if 0
-	  assign_dists(dists, distsOld2);
-	  delt = 1E-15;
-	  t += delt;
-	  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
+#if 1
+	  dold = d;
+	  assign_dists(dists, distsOld);
 #else
-	  //dold = d;
 	  dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
-	  //assign_dists(dists, distsOld);
-	  firstaftsf = 1;
 #endif
+	  firstaftsf = 1;
 	  its++;
 	  //itsS++;
 	  continue;
