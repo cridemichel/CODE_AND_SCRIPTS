@@ -154,6 +154,15 @@ void temperat(void)
   /* DESCRIPTION:
      This the calculation of the instantaneous temperature */
   double Ktransl, m;
+  int i;
+  K = 0.0;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      K += Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]);
+    }
+
+  K = 0.5 * K * Oparams.m;
+
   temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
 
   Ktransl = 0.0;
