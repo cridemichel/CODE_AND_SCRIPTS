@@ -3186,11 +3186,45 @@ double calc_norm(double *vec)
 extern int check_point(char* msg, double *p, double *rc, double **XX);
 extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
 extern int maxitsRyck;
+extern double min(double a, double b);
+extern double min3(double a, double b, double c);
+extern double scalProd(double *A, double *B);
+#if 0
+void adjustBeta(double *rC, double *rD, double *Beta)
+{
+  double g2, g1, nrDC, rDC[3], nf, gradf[3], vecnf[3], nvecnf, SP;
+  int k1;
+  calc_grad(rC, rA, Xa, gradf);
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      rDC[k1] = rD[k1] - rC[k1];
+    }
+  nf = calc_norm(gradf);
+  g1 = calc_norm(rDC)/nf;
+  nrDC = calc_norm(rDC);
+  SP = scalProd(rDC,gradf)/nf;
+  for (k1=0; k1 < 3; k1++)
+    {
+      vecnf[k1] = rDC[k1] - SP*gradf[k1]; 
+    }
+  nvecnf = calc_norm(vecnf);
+  if ( nvecnf > 0.0)
+    g2 = OprogStatus.epsdGDO*1.0/calc_norm(vecnf); 
+  else 
+    g2 = g1;
+  //printf("*BetaPRIMA: %.15f\n", *Beta);
+  //if (scalProd(gradf, rDC) < 0.0)
+  if (*Beta > 0.0)
+    *Beta = min(g1, g2);
+  //printf("*BetaDOPO: %.15f\n", *Beta);
+}
+#endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
   double vecg[8], rC[3], rD[3], rDC[3], r12[3], fx[3], vecgcg[6];
   double ti, segno;
+  double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
   int k1, k2, na;
@@ -3307,12 +3341,60 @@ retry:
 #endif
 	  rDC[k1] = rD[k1] - rC[k1];
 	}
+      if (OprogStatus.epsdGDO > 0.0)
+	{
+	  g1 = calc_norm(rDC)/nf;
+	  nrDC = calc_norm(rDC);
+	  SP = scalProd(rDC,gradf)/nf;
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      vecnf[k1] = rDC[k1] - SP*gradf[k1]; 
+	    }
+	  nvecnf = calc_norm(vecnf);
+	  if ( nvecnf > 0.0)
+	    g2 = OprogStatus.epsdGDO*min3(axa[j],axb[j],axc[j])/calc_norm(vecnf); 
+	  else 
+	    g2 = g1;
+	}	  
 #ifdef MD_DIST5
       //vecg[4] = calc_norm(rDC)/nf;  
-      vecg[4] = 0.0;
+      if (OprogStatus.springkSD>0)
+	if (scalProd(gradf, rDC) < 0.0)
+	  vecg[4] = 0.0;
+	else
+	  vecg[4] = calc_norm(rDC)/nf;  
+      else
+	{
+	  if (OprogStatus.epsdGDO > 0.0)
+	    {
+	      if (scalProd(gradf, rDC) < 0.0)
+		vecg[4] = 0.0;
+	      else
+		vecg[4] = min(g1,g2);
+	    }
+	  else
+	    vecg[4] = 0.0;
+	}
 #else
-      //vecg[7] = calc_norm(rDC)/nf;  
-      vecg[7] = 0.0;
+      if (OprogStatus.springkSD>0)
+	if (scalProd(gradf, rDC) < 0.0)
+	  vecg[7] = 0.0;
+	else
+	  vecg[7] = calc_norm(rDC)/nf;  
+      else
+	{
+	  if (OprogStatus.epsdGDO > 0.0)
+	    {
+	      if (scalProd(gradf, rDC) < 0.0)
+		vecg[7] = 0.0;
+	      else
+		vecg[7] = min(g1,g2);
+	    }
+	  else
+	    vecg[7] = 0.0;
+	}
+      //printf("i=%d j=%d g1=%f g2=%f\n", i, j, g1, g2);
+      //vecg[7] = 0.0;
 #endif
     }
   else
