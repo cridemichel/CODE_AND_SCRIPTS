@@ -1122,9 +1122,9 @@ void movelongRespaNPTBefAlt(double dt)
       /*printf("temp= %f\n", 2*Kin/dof);*/
       DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
       /*printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);*/
-      Ps += DT * cdt2;
+      Ps += DT * cdt;
       Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
-      Ps += DT * cdt2;
+      //Ps += DT * cdt2;
       updImpLongNoseSym(dt, 0.5);
       s = s / (1 - s*Ps*cdt/OprogStatus.Q);
     }
@@ -1169,9 +1169,9 @@ void movelongRespaNPTAftAlt(double dt)
       /*printf("temp= %f\n", 2*Kin/dof);*/
       DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
       /*printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);*/
-      Ps += DT * cdt2;
       Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
-      Ps += DT * cdt2;
+      Ps += DT * cdt;
+      //Ps += DT * cdt2;
       //s = s / (1 - s*Ps*cdt2/OprogStatus.Q);
     }
 #else
@@ -1488,7 +1488,7 @@ void move(void)
   for (a = 0; a < NA; a++)
     Mtot += Oparams.m[a];
 #ifdef MD_RESPA_NPT
-  movelongRespaNPTBefAlt(Oparams.steplength);
+  movelongRespaNPTBef(Oparams.steplength);
 #else
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
@@ -1593,7 +1593,7 @@ void move(void)
    
   //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
 #ifdef MD_RESPA_NPT
-  movelongRespaNPTAftAlt(Oparams.steplength);
+  movelongRespaNPTAft(Oparams.steplength);
   p2v();
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
