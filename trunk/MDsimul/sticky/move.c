@@ -2837,6 +2837,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
   firstaftsf = 1;
 #endif
+  its = 0;
   while (t+t1 < t2)
     {
       //normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
@@ -2885,9 +2886,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
 #if 1
       /* se all'inizio c'erano sticky spots che si overlappavano finché le distanze non sono corrette
-       * usa il passo minimo (dell'ordine della precisione di macchina) */
-      if (use_min_delt(negpairs, distsOld, bondpair))
+       * usa il passo minimo (dell'ordine della precisione di macchina) 
+       * NOTA: evita di fare più di MAXITS passi "minimi" */
+      if (its < MAXITS && use_min_delt(negpairs, distsOld, bondpair))
 	{
+	  its++;
 	  delt = sh;
 	}
 #endif
