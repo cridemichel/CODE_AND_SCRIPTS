@@ -101,7 +101,7 @@ long long int itsfrprmn=0, callsfrprmn=0,callsok=0, callsprojonto=0, itsprojonto
 double xicom[6], pcom[6], xi[6], G[6], H[6], grad[6];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
 int cghalfspring, icg, jcg, minaxicg, minaxjcg, doneryck;
-double shiftcg[3], lambdacg, cgstep;
+double shiftcg[3], lambdacg;
 double gradfG[3], gradgG[3], dxG[6];
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3];
 /* ============================ >>> brent <<< ============================ */
@@ -769,8 +769,8 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   double distini, distfin, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
   
-  sfA = OprogStatus.stepSD;
-  sfB = OprogStatus.stepSD;
+  sfA = icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
+  sfB = jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
   //sfB = 0.4;//OprogStatus.stepSD;
   callsfrprmn++;
   //fp=(*func)(p); 
@@ -1065,7 +1065,7 @@ double  cgfunc(double *vec)
 double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
 {
   int kk, k1, k2; 
-  double F, nf, ng, fx2[3], dd[3], normdd;
+  double K1, K2, F, nf, ng, fx2[3], dd[3], normdd;
   double Q1, Q2, A, gradfx, gradgx, normgA, normgB, fact;
   doneryck = 0;
   for (k1 = 0; k1 < 3; k1++)
@@ -1092,17 +1092,19 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     }
   A = 0.5*A - 1.0;
   if (A>=0)
-    A = OprogStatus.springkSD;
+    A = 1.0;
   else
-    A = -OprogStatus.springkSD;
+    A = -1.0;
   normdd =calc_norm(dd);
    
-  //if (normdd < OprogStatus.epsd)
-    //A*=1/OprogStatus.epsd;
+  /* la norma dei gradienti è sempre stepSDA e stepSDB*/ 
+  K1= icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
+  K2= jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
   for (kk=0; kk < 3; kk++)
     {
-      grad[kk]= OprogStatus.stepSD*2.0*dd[kk]*A/normdd;
-      grad[kk+3]= -grad[kk];
+      grad[kk]= A*dd[kk]/normdd;
+      grad[kk+3]= -A*K1*grad[kk];
+      grad[kk] *= K2;
     }
   nf = calc_norm(fx);
   ng = calc_norm(gx);
@@ -1154,6 +1156,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     } 
 #endif
   F = 0.0;
+  A *= OprogStatus.springkSD;
   for (kk=0; kk < 3; kk++)
     F += A*Sqr(dd[kk]);
  return F; 
@@ -1220,7 +1223,6 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
 
   lambdacg = lambda;
   cghalfspring = halfspring;
-  cgstep = OprogStatus.stepSD;
   for (kk=0; kk < 3; kk++)
     {
       shiftcg[kk] = shift[kk];
