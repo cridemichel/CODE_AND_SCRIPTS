@@ -2356,7 +2356,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
 
 double tdist;
 double rA[3], rB[3];
-#define MD_GLOBALNRD
+//#define MD_GLOBALNRD
 void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 {
@@ -3016,8 +3016,8 @@ retry:
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
 	  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
-	  //distconjgrad(i, j, shift, vecgcg, 100, 1); 
-	  //distconjgrad(i, j, shift, vecgcg, 10000, 1);
+	  //distconjgrad(i, j, shift, vecgcg, 1, 1); 
+	  //distconjgrad(i, j, shift, vecgcg, 1/OprogStatus.tolSD, 1);
 	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
 #if 0
 	  if (maxitsRyck)
