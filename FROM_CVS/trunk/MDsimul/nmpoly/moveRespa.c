@@ -711,7 +711,7 @@ void  AnlzConstraintDevs (void)
 	  dr1[2] = rz[i + 1][n] - rz[i][n];
   	  dr1[2] = dr1[2] - L*rint(dr1[2]/L);
 	  curBondLenSq[i] = Sqr (dr1[0]) + Sqr (dr1[1]) + Sqr (dr1[2]);
-	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d)/Oparams.d > 3E-7)
+	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d)/Oparams.d > 3E-8)
 	    {
 	      sumsteps = sumsteps + OprogStatus.nrespa*(Oparams.curStep - laststep[n]);
 	      numshake=numshake+1.0;
@@ -728,7 +728,7 @@ void  AnlzConstraintDevs (void)
 		    Oparams.m, Oparams.parnum);
   if (doneshake)
     {
-      if (sumsteps/numshake < 1.5 || Oparams.curStep % 1000 == 0)
+      if (sumsteps/numshake < 1.5 || Oparams.curStep % 100 == 0)
 	printf("<<<< [WARNING] >>>> average steps between two SHAKE: %f \n", sumsteps/numshake);
       
     }
@@ -1857,7 +1857,7 @@ void updPositionsNPT(double dt, double c)
   RCMz = RCMz + (-rzo + rz[a][i])*mM[a];
 #endif
 #ifdef MD_RAPACONSTR
-      ComputeConstraints(dt, 1.0, 1, 0); 
+      ComputeConstraints(dt, 0.5, 1, 0); 
       /*RAPA<<<<<<<<<<<<<<<< */
 #endif
  
@@ -2280,6 +2280,7 @@ void movelongRespaNPTBef(double dt)
   //printf("MOVE LONG BEF\n");
   ComputeConstraints(dt, 0.5, 0, 0); 
   /*RAPA<<<<<<<<<<<<<<<< */
+  //  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
 #endif
 
 #if 1
@@ -2423,9 +2424,11 @@ void movelongRespaNPTAft(double dt)
   if (OprogStatus.Nose==1)
     updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
+#if  1
 #ifdef MD_RAPACONSTR
   if (OprogStatus.rcutInner != Oparams.rcut)
     shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
+#endif
 #endif
 #if 1
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR) 
@@ -2536,7 +2539,6 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
       updPositions(dt, 1.0);
     }
 #ifdef MD_RAPACONSTR
-  //ComputeConstraints(dt, 1.0, 1, 1); 
   /*RAPA<<<<<<<<<<<<<<<< */
   AnlzConstraintDevs();
 #endif
