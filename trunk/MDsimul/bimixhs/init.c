@@ -666,7 +666,9 @@ void usrInitBef(void)
   void StartRun(void)
   {
     int j, k, n;
-
+#ifdef MD_INFBARRIER
+    int i, numbonds;
+#endif
     for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
       cellList[j] = -1;
     /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
@@ -693,6 +695,19 @@ void usrInitBef(void)
 	cellList[n] = cellList[j];
 	cellList[j] = n;
       }
+#ifdef MD_INFBARRIER
+    for (k = 0;  k < NDIM; k++)
+      {
+	cellRange[2*k]   = - 1;
+	cellRange[2*k+1] =   1;
+      }
+    numbonds = 0;
+    for (i = 0; i < Oparams.parnum; i++)
+      {
+	add_bonds(i, &numbonds);
+      }
+    printf("numbonds: %d/%d\n", numbonds, Oparams.parnum); 
+#endif
     InitEventList();
     for (k = 0;  k < NDIM; k++)
       {
@@ -713,7 +728,7 @@ double corrini3, corrini0, corrini1, corrini2, corrnorm;
 double *lastbreak1, *lastbreak2;
 #endif
 #ifdef MD_INFBARRIER
-void add_bonds (int na) 
+void add_bonds (int na, int *numbonds) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
    * nb = -2,-1, 0 ... (Oparams.parnum - 1)
@@ -723,12 +738,10 @@ void add_bonds (int na)
    *      */
   double sigSq, dr[NDIM], shift[NDIM], d;
   /*double cells[NDIM];*/
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER) 
   int collCode;
   double sigDeltaSq, intdistSq, distSq, s;
   const double EPSILON = 1E-10;
   double mredl;
-#endif
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
 
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
@@ -784,52 +797,31 @@ void add_bonds (int na)
 		{
 		  if (n < na) 
 		    {
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 		      if (na < parnumA && n < parnumA)
 			{
 			  sigSq = Sqr(Oparams.sigma[0][0]);
 			  sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
 			  mredl = Mred[0][0];
-#if 0
-			  inthreshold =  Sqr(Oparams.sigma[0][0]-Oparams.delta[0][0]/2.0);
-		          outthreshold = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]/2.0);	
-#endif
 			}
 		      else if (na >= parnumA && n >= parnumA)
 			{
 			  sigSq = Sqr(Oparams.sigma[1][1]);
 			  sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
 			  mredl = Mred[1][1]; 
-#if 0
-			  inthreshold =  Sqr(Oparams.sigma[1][1]-Oparams.delta[1][1]/2.0);
-		          outthreshold = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]/2.0);
-#endif
 			}
 		      else
 			{
 			  sigSq = Sqr(Oparams.sigma[0][1]);
 			  sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
 			  mredl = Mred[0][1]; 
-#if 0
-			  inthreshold =  Sqr(Oparams.sigma[0][1]-Oparams.delta[0][1]/2.0);
-		          outthreshold = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]/2.0);
-#endif
 			}
-#else
-		      if (na < parnumA && n < parnumA)
-			sigSq = Sqr(Oparams.sigma[0][0]);
-		      else if (na >= parnumA && n >= parnumA)
-			sigSq = Sqr(Oparams.sigma[1][1]);
-		      else
-			sigSq = Sqr(Oparams.sigma[0][1]);
-#endif
 		      dr[0] = rx[na] - rx[n] - shift[0];	  
 		      dr[1] = ry[na] - ry[n] - shift[1];
 		      dr[2] = rz[na] - rz[n] - shift[2];
-#if defined(MD_SQWELL)|| defined(MD_INFBARRIER)
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
 		      if (distSq < sigDeltaSq)
 			{
+			  (*numbonds)++;
 			  add_bond(n, na);
 			  add_bond(na, n);
 			}
@@ -838,7 +830,6 @@ void add_bonds (int na)
 	    }
 	}
     }
-#endif
 }
 #endif
 /* ======================== >>> usrInitAft <<< ==============================*/
@@ -857,7 +848,7 @@ void usrInitAft(void)
     COORD_TYPE *m;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
     double sigDeltaSq, drx, dry, drz;
-    int j;
+    int j, nbonds;
 #endif
     /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
@@ -986,10 +977,8 @@ void usrInitAft(void)
       lastbreak2[i] = 0.0;
 #endif
     }
-#ifdef MD_INFBARRIER
-  for (i = 0; i < Oparams.parnum; i++)
-    add_bonds(i);
-#else
+#ifndef MD_INFBARRIER
+  nbonds = 0;
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
@@ -1013,10 +1002,12 @@ void usrInitAft(void)
 	drz = drz - L * rint(drz / L);
 	if (Sqr(drx)+Sqr(dry)+Sqr(drz) < sigDeltaSq) 
 	  {
+	    nbonds++;
 	    add_bond(i, j);
 	    add_bond(j, i);
 	  }
       }
+  printf("numbonds: %d/%d\n", nbonds, Oparams.parnum);
 #endif
 #ifdef MD_BONDCORR
   corrnorm=0;
