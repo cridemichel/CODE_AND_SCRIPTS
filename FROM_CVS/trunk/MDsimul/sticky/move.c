@@ -373,7 +373,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 void rebuild_linked_list()
 {
   double L2;
-  int j, n, nl, iA, iB;
+  int j, n, nl, iA, nc;
   L2 = 0.5 * L;
   for (nl = 0; nl < 3; nl++)
     {
@@ -391,27 +391,29 @@ void rebuild_linked_list()
 	cellList[nl][j] = -1;
     }
 
-  for (iB = 0; iB < 2; iB++)
+  for (nc = 0; nc < 2; nc++)
     {
       /* rebuild event calendar */
       for (n = 0; n < Oparams.parnum; n++)
 	{
 	  iA = (n < Oparams.parnumA)?0:1;
-	  if (iA==0 && iB == 0)
+	  if (iA==0 && nc == 0)
 	    nl = 0;
-	  else if (iA == 1 && iB == 1)
+	  else if (iA == 1 && nc == 0)
 	    nl = 1;
-	  else
+	  else if (iA == 0 && nc == 1)
 	    nl = 2;
-	  inCell[iB][0][n] =  (rx[n] + L2) * cellsx[nl] / L;
-	  inCell[iB][1][n] =  (ry[n] + L2) * cellsy[nl] / L;
+	  else
+	    nl = 3;
+	  inCell[nc][0][n] =  (rx[n] + L2) * cellsx[nl] / L;
+	  inCell[nc][1][n] =  (ry[n] + L2) * cellsy[nl] / L;
 #ifdef MD_GRAVITY
-	  inCell[iB][2][n] =  (rz[n] + Lz2) * cellsz[nl] / (Lz+OprogStatus.extraLz);
+	  inCell[nc][2][n] =  (rz[n] + Lz2) * cellsz[nl] / (Lz+OprogStatus.extraLz);
 #else
-	  inCell[iB][2][n] =  (rz[n] + L2)  * cellsz[nl] / L;
+	  inCell[nc][2][n] =  (rz[n] + L2)  * cellsz[nl] / L;
 #endif
-	  j = (inCell[iB][2][n]*cellsy[nl] + inCell[iB][1][n])*cellsx[nl] + 
-	    inCell[iB][0][n] + Oparams.parnum;
+	  j = (inCell[nc][2][n]*cellsy[nl] + inCell[nc][1][n])*cellsx[nl] + 
+	    inCell[nc][0][n] + Oparams.parnum;
 	  cellList[nl][n] = cellList[nl][j];
 	  cellList[nl][j] = n;
 	}
@@ -4551,52 +4553,48 @@ void ProcessCollision(void)
 #endif
 }
 #ifdef MD_SILICA
-int docellcross(int k, double velk, double *rkptr, int cellsk, int nc, int cellsk2)
+void docellcross2(int k, double velk, int cellsk, int nc)
 {
-  int boxwall=0;
-  int nc2;
-#if 0
-  if (inCell[0][evIdA]+1> cellsx ||inCell[1][evIdA]+1> cellsy||inCell[2][evIdA]+1> cellsz) 
-    {printf("PRIMAin cell cross ?!?\n");
-      printf("velk: %f (%d,%d,%d) (%d,%d,%d) k=%d cellsk:%d\n",velk,  cellsx , cellsy,cellsz,
-	     inCell[0][evIdA],inCell[1][evIdA], inCell[2][evIdA], k, cellsk );}
-#endif
-      if (velk > 0.0)
+  if (velk > 0.0)
+    {
+      inCell[nc][k][evIdA] = inCell[nc][k][evIdA] + 1;
+      cellRange[2 * k] = 1;
+      if (inCell[nc][k][evIdA] == cellsk) 
+	inCell[nc][k][evIdA] = 0;
+    }
+  else
+    { 
+      cellRange[2 * k + 1] = -1;
+      inCell[nc][k][evIdA] = inCell[nc][k][evIdA] - 1;
+      if (inCell[nc][k][evIdA] == -1) 
+	inCell[nc][k][evIdA] = cellsk - 1;
+    }
+}
+void docellcross(int k, double velk, double *rkptr, int cellsk, int nc)
+{
+  if (velk > 0.0)
+    {
+      inCell[nc][k][evIdA] = inCell[nc][k][evIdA] + 1;
+      cellRange[2 * k] = 1;
+      if (inCell[nc][k][evIdA] == cellsk) 
 	{
-	  inCell[nc][k][evIdA] = inCell[nc][k][evIdA] + 1;
-	  cellRange[2 * k] = 1;
-	  if (inCell[nc][k][evIdA] == cellsk) 
-	    {
-	      inCell[nc][k][evIdA] = 0;
-	      nc2 = (~nc)&1;
-	      inCell[nc2][k][evIdA] = 0;
-	      *rkptr = -L2;
-	      boxwall = 1;
-	      OprogStatus.DR[evIdA][k]++;
-	    }
+	  inCell[nc][k][evIdA] = 0;
+	  *rkptr = -L2;
+	  OprogStatus.DR[evIdA][k]++;
+	}
 
+    }
+  else
+    { 
+      cellRange[2 * k + 1] = -1;
+      inCell[nc][k][evIdA] = inCell[nc][k][evIdA] - 1;
+      if (inCell[nc][k][evIdA] == -1) 
+	{
+	  inCell[nc][k][evIdA] = cellsk - 1;
+	  *rkptr = L2;
+	  OprogStatus.DR[evIdA][k]--;
 	}
-      else
-	{ 
-	  cellRange[2 * k + 1] = -1;
-	  inCell[nc][k][evIdA] = inCell[nc][k][evIdA] - 1;
-	  if (inCell[nc][k][evIdA] == -1) 
-	    {
-	      inCell[nc][k][evIdA] = cellsk - 1;
-	      nc2 = (~nc)&1;
-	      inCell[nc2][k][evIdA] = cellsk2 - 1;
-	      boxwall = 1;
-	      *rkptr = L2;
-	      OprogStatus.DR[evIdA][k]--;
-	    }
-	}
-#if 0
-      if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
-	{printf("in cell cross ?!?\n");
-	  printf("velk: %f(%d,%d,%d) (%d,%d,%d) k=%d cellsk:%d\n",  velk,cellsx , cellsy,cellsz,
-		 inCell[0][evIdA],inCell[1][evIdA], inCell[2][evIdA], k, cellsk );}
-#endif
-	  return boxwall;
+    }
 }
 #else
 void docellcross(int k, double velk, double *rkptr, int cellsk)
@@ -4639,6 +4637,24 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 }
 #endif
 #ifdef MD_SILICA
+int check_boxwall(int k, int n, int nc, int nl)
+{
+  int cellsk;
+  switch (k)
+    {
+    case 0:
+      cellsk = cellsx[nl];
+      break;
+    case 1:
+      cellsk = cellsy[nl];
+      break;
+    case 2:
+      cellsk = cellsz[nl];
+      break;
+    }
+  if (inCell[nc][k][n]==0 || inCell[nc][k][n]==cellsk-1)
+    return 1;
+}
 void ProcessCellCrossing(void)
 {
   int kk, n, iA, k;
@@ -4656,24 +4672,24 @@ void ProcessCellCrossing(void)
   if (iA == 0 && nc == 0)
     {
       nl = 0;
-      nl2 = 3;
+      nl2 = 2;
       nc2 = 1;
     }
   else if (iA == 1 && nc == 0)
     { 
       nl = 1;
-      nl2 = 2;
+      nl2 = 3;
       nc2 = 1; 
     }
   else if (iA == 0 && nc == 1)
     {
-      nl = 3;
+      nl = 2;
       nl2 = 0;
       nc2 = 0;
     }
   else
     {
-      nl = 2;
+      nl = 3;
       nl2 = 1;
       nc2 = 0;
     }
@@ -4687,6 +4703,8 @@ void ProcessCellCrossing(void)
   n = (inCell[nc][2][evIdA] * cellsy[nl] + inCell[nc][1][evIdA])*cellsx[nl] + 
     inCell[nc][0][evIdA]
     + Oparams.parnum;
+  printf("nc=%d n=%d cellList[%d][%d]:%d\n",nc, n, nl, n, cellList[nl][n]);
+  printf("inCell= %d %d %d\n", inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
   while (cellList[nl][n] != evIdA) 
     n = cellList[nl][n];
   /* Eliminazione di evIdA dalla lista della cella n-esima */
@@ -4705,13 +4723,13 @@ void ProcessCellCrossing(void)
       switch (k)
 	{
 	case 0: 
-	  boxwall = docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl]);
+	  docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl]);
 	  break;
 	case 1: 
-	  boxwall = docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc, cellsy[nl]);
+	  docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc, cellsy[nl]);
 	  break;
 	case 2:
-	  boxwall = docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl]);
+	  docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl]);
 	  break;
 	}
       PredictEvent(evIdA, evIdB);
@@ -4735,27 +4753,28 @@ void ProcessCellCrossing(void)
   if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
     printf("Cells(%d,%d,%d)\n", inCell[0][evIdA],inCell[1][evIdA],inCell[2][evIdA]);
 #endif
+  boxwall = check_boxwall(kk, n, nc2, nl2);
+  if (boxwall)
+    {
+      n = (inCell[nc2][2][evIdA] * cellsy[nl2] + inCell[nc2][1][evIdA])*cellsx[nl2] + 
+	inCell[nc2][0][evIdA]
+	+ Oparams.parnum;
+      while (cellList[nl2][n] != evIdA) 
+	n = cellList[nl2][n];
+      /* Eliminazione di evIdA dalla lista della cella n-esima della lista nl2 */
+      cellList[nl2][n] = cellList[nl2][evIdA];
+    }
   switch (kk)
     {
     case 0: 
-      boxwall = docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl2]);
+      docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc);
       break;
     case 1: 
-      boxwall = docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc, cellsy[nl2]);
+      docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc);
       break;
     case 2:
-      boxwall = docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl2]);
+      docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc);
       break;
-    }
-  /* TO BE REMOVED */
-  if (boxwall)
-    {
-      PredictEvent(evIdA, evIdB, nl2);
-      n = (inCell[nc2][2][evIdA] * cellsy[nl] + inCell[nc2][1][evIdA])*cellsx[nl2] + 
-	inCell[nc2][0][evIdA] + Oparams.parnum;
-      /* Inserimento di evIdA nella nuova cella (head) */
-      cellList[nl2][evIdA] = cellList[nl2][n];
-      cellList[nl2][n] = evIdA;
     }
   PredictEvent(evIdA, evIdB, nl);
   n = (inCell[nc][2][evIdA] * cellsy[nl] + inCell[nc][1][evIdA])*cellsx[nl] + 
@@ -4763,6 +4782,32 @@ void ProcessCellCrossing(void)
   /* Inserimento di evIdA nella nuova cella (head) */
   cellList[nl][evIdA] = cellList[nl][n];
   cellList[nl][n] = evIdA;
+  for (k = 0; k < NDIM; k++)
+    { 
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  if (boxwall)
+    {
+      switch (kk)
+	{
+	case 0: 
+	  docellcross2(0, vx[evIdA], cellsx[nl2], nc2);
+	  break;
+	case 1: 
+	  docellcross2(1, vy[evIdA], cellsy[nl2], nc2);
+	  break;
+      	case 2:
+	  docellcross2(2, vz[evIdA], cellsz[nl2], nc2);
+	  break;
+	}
+       PredictEvent(evIdA, evIdB, nl2);
+       n = (inCell[nc2][2][evIdA] * cellsy[nl2] + inCell[nc2][1][evIdA])*cellsx[nl2] + 
+	inCell[nc2][0][evIdA] + Oparams.parnum;
+       /* Inserimento di evIdA nella nuova cella (head) */
+       cellList[nl2][evIdA] = cellList[nl2][n];
+       cellList[nl2][n] = evIdA;
+    }
 #endif
 }
 #else
