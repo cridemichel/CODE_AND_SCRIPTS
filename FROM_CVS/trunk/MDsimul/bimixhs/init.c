@@ -33,7 +33,7 @@ extern const double timbig;
 int poolSize;
 int parnumA, parnumB;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-int *bondscache, *numbonds, **bonds;
+int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 #endif
 /* ================================= */
 
@@ -708,8 +708,8 @@ extern void add_bond(int na, int n);
 extern void remove_bond(int na, int n);
 extern double calcpotene(void);
 #endif
-#if defined(MD_SQWELL) && defined(MD_BONDHIST) 
-int bondhist[5]; 
+#if defined(MD_SQWELL) && defined(MD_BONDCORR) 
+double corrini;
 #endif
   /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
@@ -718,7 +718,10 @@ void usrInitAft(void)
        This function is called after the parameters were read from disk, put
        here all initialization that depends upon such parameters, and call 
        all your function for initialization, like maps() in this case */
-
+#if defined(MD_SQWELL) && defined(MD_BONDCORR) 
+    char fileop[1024], fileop2[1024], fileop3[1024];
+    FILE *bof;
+#endif    
     int Nm, i, sct, overlap;
     COORD_TYPE vcmx, vcmy, vcmz;
     COORD_TYPE *m;
@@ -786,7 +789,9 @@ void usrInitAft(void)
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
     tree = AllocMatI(10, poolSize);
     bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+    bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
     numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+    numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
     bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
 #else
     tree = AllocMatI(9, poolSize);
@@ -820,10 +825,6 @@ void usrInitAft(void)
     }
 #endif
   
-#if defined(MD_SQWELL) && defined(MD_BONDHIST) 
-  for (i=0; i < 5; i++)
-    bondhist[i] = 0;
-#endif
   if (newSim)
     {
       Oparams.time=0.0;
@@ -871,8 +872,34 @@ void usrInitAft(void)
 	    add_bond(j, i);
 	  }
       }
+#ifdef MD_BONDCORR
+  for (i=0; i < Oparams.parnum; i++)
+    { 
+      numbonds0[i]=numbonds[i];
+      for (j=0; j < numbonds0[i]; j++)
+	bonds0[i][j]=bonds[i][j];
+    }
+  corrini = 0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (numbonds0[i]==2)
+	{
+	  corrini++;
+	}
+    }
+  sprintf(fileop2 ,"BondCorrFunc.dat");
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bof = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+      exit(-1);
+    }
+  fprintf(bof,"%.15f %.15f\n", Oparams.time, 1.0);
+  fclose(bof);
 #endif
-  printf("Energia all'inizio: %.15f\n", calcpotene());
+  printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
+#endif
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)

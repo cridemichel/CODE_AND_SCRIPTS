@@ -120,10 +120,6 @@ void calcKVz(void)
   K += dd;
 }
 #endif
-#if defined(MD_SQWELL) && defined(MD_BONDHIST)
-int brokenbonds[2000];
-extern int bondhist[5];
-#endif
 
 void outputSummary(void)
 {
@@ -147,16 +143,6 @@ void outputSummary(void)
   else
     fprintf(f, "%.15f %.15f\n", Oparams.time, (2.0*K/(3.0*Oparams.parnum-3.0)));
   fclose(f);
-#endif
-#if defined(MD_SQWELL) && defined(MD_BONDHIST)
-  printf("bonds histogram: ");
-  for (i=0; i < 5; i++)
-    {
-      if (i==4)
-	printf("%d: %d\n", i, bondhist[i]);
-      else
-	printf("%d: %d, ", i, bondhist[i]);
-    }
 #endif
 #ifdef MD_GRAVITY
   f = fopenMPI(MD_HD_MIS "Vz2.dat", "a");
@@ -1434,17 +1420,27 @@ void distanza(int ia, int ib)
   printf("dist(%d,%d): %f\n", ia, ib, sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz)));
 }
 void rebuildLinkedList(void);
+#if defined(MD_SQWELL) && defined(MD_BONDCORR)
+extern int **bonds0, *numbonds0;
+extern double corrini; 
+#endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
   char fileop[1024], fileop2[1024], fileop3[1024];
   FILE *bf;
+#if defined(MD_SQWELL) && defined(MD_BONDCORR)
+  FILE *bof;
+  int j, cc;
+  double corr;
+#endif
   const char sepStr[] = "@@@\n";
   int db, i, innerstep=0;
 #ifdef MD_GRAVITY
   int ii;
   double rzmax, zfact;
 #endif
+
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;
@@ -1453,12 +1449,6 @@ void move(void)
   Wxx = Wyy = Wzz = 0.0;
 #endif
   /* get next event */
-#if defined(MD_SQWELL) && defined(MD_BONDHIST)
-  for (i=0; i < Oparams.parnum; i++)
-    { 
-      brokenbonds[i]=numbonds[i];
-    }
-#endif
   while (1)
     {
       innerstep++;
@@ -1727,12 +1717,31 @@ void move(void)
       updatePE(Oparams.parnum);
 #endif
     }
-#if defined(MD_SQWELL) && defined(MD_BONDHIST)
+#if defined(MD_SQWELL) && defined(MD_BONDCORR)
+  corr = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
-      db = brokenbonds[i]-numbonds[i];
-      if (db > 0 && db < 5)   
-	bondhist[db-1]++;
+      if (numbonds0[i]==2)
+	{
+	  cc = 0;
+	  for (j=0; j < numbonds0[i]; j++)
+	    {
+	      if (bound(i,bonds0[i][j]))
+		cc++;
+	    }
+	  if (cc>0)
+	    corr++;
+	}
     }
+  sprintf(fileop2 ,"BondCorrFunc.dat");
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bof = fopenMPI(fileop, "a")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+      exit(-1);
+    }
+  fprintf(bof,"%.15f %.15f\n", Oparams.time, corr/corrini);
+  fclose(bof);
 #endif
 }
