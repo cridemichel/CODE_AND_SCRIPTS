@@ -150,7 +150,12 @@ void displayAtom(int nf, int nm, int na)
   else 
     {
       if (globset.bw)
-	setColor(mgl_bw[globset.colIdxBw[na]], fadeFact);
+	{
+	  if (globset.NA)
+	    setColor(mgl_bw[globset.colIdxBw[na]], fadeFact);
+	  else
+	    setColor(mgl_bw[globset.default_bw], fadeFact);
+	}
       else
 	{
 	  if (atom->common.atcol>=0 && atom->common.atcol<NUMCOLS)
@@ -158,7 +163,12 @@ void displayAtom(int nf, int nm, int na)
 	      setColor(mgl_col[atom->common.atcol].rgba, fadeFact);
 	    }
 	  else
-	    setColor(mgl_col[globset.colIdxCol[na]].rgba, fadeFact);
+	    {
+	      if (globset.NA)
+		setColor(mgl_col[globset.colIdxCol[na]].rgba, fadeFact);
+	      else
+		setColor(mgl_col[globset.default_col].rgba, fadeFact);
+	    }
 	}
     }
   if (atom->common.type==MGL_ATOM_SPHERE)
@@ -198,8 +208,10 @@ void buildAtomsList()
     {
       atomsList[nf] = glGenLists(1);
       glNewList(atomsList[nf], GL_COMPILE);
+      printf("numols[%d]:%d\n", nf, globset.NumMols[nf]);
       for(i = 0; i < globset.NumMols[nf]; ++i)
 	{
+	  printf("mols[%d][%d].numat:%d\n", nf, i, mols[nf][i].numat);
 	  for (j=0; j < mols[nf][i].numat; j++)
 	    displayAtom(nf, i, j);
 	}
@@ -733,7 +745,9 @@ void add_atom(int cf, int curmol, int curat)
   if (mols==NULL)
     add_frame(0);
   if (mols[cf]==NULL)
-    add_mol(cf, 0);
+    {
+      add_mol(cf, 0);
+    }
   mols[cf][curmol].atom = realloc(mols[cf][curmol].atom, sizeof(atom_u)*(curat+1));
   /*mols[cf][curmol].atom[curat-1]*/
   mols[cf][curmol].numat++;
@@ -1003,7 +1017,7 @@ void loadAtomPos(void)
 	  add_mol(nf, i);
 	}
 #if 0  
-      if (first)
+        if (first)
 	{
 	  first=0;
 	  fpos = fpostmp;  
@@ -1026,12 +1040,13 @@ void loadAtomPos(void)
       exit(-1);
     }
   setdefaults_after_fakeread();
+  globset.NumMols[nf] = i+1;
   globset.frameNo = ++nf;
-  globset.NumMols[nf] = i;
-  /* printf("Read %i molecule\n", NumMols);
-     printf("Number of frames: %d\n", frameNo);
-  */
-  nf = i = 0;
+#if 0
+   printf("Read %i molecule\n", globset.NumMols[nf]);
+   printf("Number of frames: %d\n", globset.frameNo);
+#endif
+  a = nf = i = 0;
 #if 0
   if (fseek(ifs, fpos, SEEK_SET))
     {
@@ -1112,6 +1127,8 @@ void default_pars(void)
   globset.diameter = 1.0;
   globset.height = 0.2;
   globset.dist = 1.0;
+  globset.default_bw=120;
+  globset.default_col=466;
   readRGB();
 
   setBW();

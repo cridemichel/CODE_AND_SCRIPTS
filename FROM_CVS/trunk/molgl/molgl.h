@@ -117,5 +117,7 @@ struct global_settings
   double ivpx;
   double ivpy;
   double ivpz;
+  int default_bw;
+  int default_col;
 };
 
