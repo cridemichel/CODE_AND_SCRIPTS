@@ -82,9 +82,10 @@
 #define SAVE_LIST rx, NA, ry, NA, rz, NA,\
                   vx, NA, vy, NA, vz, NA,\
                   Fx, NA, Fy, NA, Fz, NA,\
-		  FxLong, NA, FyLong, NA, FzLong, NA,\
                   vxo1, NA, vyo1, NA, vzo1, NA,\
                   vxo2, NA, vyo2, NA, vzo2, NA 
+		  
+		  //FxLong, NA, FyLong, NA, FzLong, NA,
 #else
 #define SAVE_LIST rx, NA, ry, NA, rz, NA,\
                   vx, NA, vy, NA, vz, NA,\
