@@ -179,6 +179,7 @@ void temperat(void)
 {
   /* DESCRIPTION:
      This the calculation of the instantaneous temperature */
+  int i;
   double m;
   K = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
