@@ -1234,6 +1234,7 @@ void usrInitAft(void)
 #ifdef MD_NNL
       nebrTab[i].len = 0;
       nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+      nebrTab[i].R = matrix(3, 3);
 #endif
       scdone[i] = 0;
       axa[i] = Oparams.a[0];

@@ -182,6 +182,11 @@ struct nebrTabStruct
   int len;         /* numero di ellissoidi nella NNL */
   double time;     /* tempo a cui è stata costruita la NNL */
   double nexttime; /* tempo a cui la NNL deve essere ricostruita */
+  double **R;
+  double r[3];
+  double axa;
+  double axb;
+  double axc;
 };
 #endif
 /* ======================== >>> struct progStatus <<< =======================*/
@@ -314,7 +319,7 @@ struct progStatus
   double epsdFastR;
   double epsdMax;
   int guessDistOpt;
-  double forceguess;
+  int forceguess;
   double targetPhi;
   double scalfact;
   double reducefact;
