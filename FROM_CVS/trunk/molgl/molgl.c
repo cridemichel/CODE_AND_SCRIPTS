@@ -238,9 +238,11 @@ void renderSolidCylinder(double rx, double ry, double rz,
 			 double radius, double height)
 {
   GLUquadricObj *ss, *ss2, *ss3;
-  
   glPushMatrix();
   glTranslatef(0, 0, height);
+  ss = gluNewQuadric();
+  ss2 =  gluNewQuadric();
+  ss3 =  gluNewQuadric();
   gluDisk(ss2, 0, radius, STACKS, SLIDES);
   glPopMatrix();
   gluCylinder(ss, radius, 
@@ -261,12 +263,15 @@ void displayBonds(int nf, int i)
   
   fadeFact = calcFadeFact(globset.fadeMode, nf);
   
-  glPushMatrix();
   Pi = 2.0 * acos(0);
   for (nb = 0; nb < mols[nf][i].numbonds; nb++)
     {
+      glPushMatrix();
       from = mols[nf][i].bond[nb].from;
       to   = mols[nf][i].bond[nb].to;
+#if 1
+      printf("nb: %d from:%d to:%d\n", nb, from, to);
+#endif
       if (from < 0 || from >= mols[nf][i].numat ||
 	  to < 0 || to >= mols[nf][i].numat)
 	{
@@ -275,16 +280,23 @@ void displayBonds(int nf, int i)
 		  from, to, i, nf);
 	  continue;
 	}
-      rcmx = 0.5*(mols[nf][i].atom[from].common.rx + mols[nf][i].atom[to].common.rx);
-      rcmy = 0.5*(mols[nf][i].atom[from].common.ry + mols[nf][i].atom[to].common.ry);
-      rcmz = 0.5*(mols[nf][i].atom[from].common.rz + mols[nf][i].atom[to].common.rz);
-      nx = mols[nf][i].atom[from].common.rx - mols[nf][i].atom[to].common.rx;
-      ny = mols[nf][i].atom[from].common.ry - mols[nf][i].atom[to].common.ry;
-      nz = mols[nf][i].atom[from].common.rz - mols[nf][i].atom[to].common.rz;
+      rcmx = mols[nf][i].atom[from].common.rx;
+      rcmy = mols[nf][i].atom[from].common.ry;
+      rcmz = mols[nf][i].atom[from].common.rz;
+      nx = mols[nf][i].atom[to].common.rx - mols[nf][i].atom[from].common.rx;
+      ny = mols[nf][i].atom[to].common.ry - mols[nf][i].atom[from].common.ry;
+      nz = mols[nf][i].atom[to].common.rz - mols[nf][i].atom[from].common.rz;
+#if 0
+      printf("rx[%d]:%f rx[%d]:%f\n", from,  mols[nf][i].atom[from].common.rx, to,
+	     mols[nf][i].atom[to].common.rx);
+#endif
       glTranslatef(rcmx, rcmy, rcmz);
       vectProd(0,0,1, nx, ny, nz, &rax, &ray, &raz);
       normra = sqrt(Sqr(rax)+Sqr(ray)+Sqr(raz));
       normn = sqrt(Sqr(nx)+Sqr(ny)+Sqr(nz));
+      printf("normn:%f\n", normn);
+      if (normn==0)
+	continue;
       rotangle = 180.0*acos(nz/normn)/Pi; 	       
 #if 0
       printf("Rotation Angle: %f around (%f,%f,%f) n(%f,%f,%f)\n", 
@@ -300,8 +312,8 @@ void displayBonds(int nf, int i)
 	  setColor(mgl_col[globset.default_col].rgba, fadeFact);
 	}
       renderSolidCylinder(rcmx, rcmy, rcmz, mols[nf][i].bond[nb].thickness, normn);
+      glPopMatrix();
     }
-  glPopMatrix();
 }
 /* ========================= >>> buildAtomsList <<< ======================= */
 void buildAtomsList()
@@ -314,7 +326,7 @@ void buildAtomsList()
     {
       atomsList[nf] = glGenLists(1);
       glNewList(atomsList[nf], GL_COMPILE);
-     /* printf("numols[%d]:%d\n", nf, globset.NumMols[nf]);*/
+      /* printf("numols[%d]:%d\n", nf, globset.NumMols[nf]);*/
       for(i = 0; i < globset.NumMols[nf]; ++i)
 	{
 	  /*printf("mols[%d][%d].numat:%d\n", nf, i, mols[nf][i].numat);*/
@@ -648,6 +660,26 @@ void args(int argc, char* argv[])
 		}
 	      globset.diameter = atof(argv[i]);
 	    }
+	  else if (!strcmp(argv[i],"--bondthickness")|| !strcmp(argv[i],"-bt"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the bond thickness!\n");
+		  exit(-1);
+		}
+	      globset.defbondthick = atof(argv[i]);
+	    }
+	  else if (!strcmp(argv[i],"--bondcolor")|| !strcmp(argv[i],"-bc"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the bond color!\n");
+		  exit(-1);
+		}
+	      globset.defbondcol = atoi(argv[i]);
+	    }
 	  else if (!strcmp(argv[i],"--height")|| !strcmp(argv[i],"-ht"))
 	    {
 	      i++;
@@ -881,6 +913,9 @@ void add_atom(int cf, int curmol, int curat)
     {
       add_mol(cf, 0);
     }
+#if 0
+  printf("adding atom (%d,%d, %d)\n", cf, curmol, curat);
+#endif
   mols[cf][curmol].atom = realloc(mols[cf][curmol].atom, sizeof(atom_u)*(curat+1));
   /*mols[cf][curmol].atom[curat-1]*/
   mols[cf][curmol].numat++;
@@ -956,7 +991,7 @@ void assignCol(char* S, int j)
 }
 
 /* ========================== >>> pareseLine <<< =========================== */
-int parseLine(const char* Line, int* nf, int* i, int alloc)
+int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
 {
   /*
     return true if this is a parameter, 0 otherwise
@@ -981,6 +1016,7 @@ int parseLine(const char* Line, int* nf, int* i, int alloc)
       if (!globset.NA)
 	{
 	  ++(*i);
+	  *at = 0;
 	  if (alloc)
 	    add_mol(*nf,*i);
 	}
@@ -1032,39 +1068,47 @@ int parseLine(const char* Line, int* nf, int* i, int alloc)
     {
       ns = strtok(parVal, ",");
       nb = 0;
-      printf("qui\n");
       defbondthick = globset.defbondthick;
       defbondcolor = globset.defbondcol;
       while(ns)
 	{
 	  nb++;
 	  mols[*nf][*i].numbonds = nb;
-	  printf("ns: %s nb:%d nf:%d i:%d mols:%d\n", ns, nb, *nf, *i, mols[*nf][*i].bond[0].from);
 	  if (alloc)
 	    mols[*nf][*i].bond = realloc(mols[*nf][*i].bond, sizeof(bond_s)*nb);
-	  if (sscanf(ns, "[%s,%s]",s1,s2)==2)
-	    {
-	      /* [spessore,colore] */
-	      defbondthick = atoi(s1);
-	      defbondcolor = atoi(s2);
-	    }
-	  else if (sscanf(ns, "%s-%s", s1, s2)==2)
-	    {
-	      /* atomo-atomo */ 
-	      mols[*nf][*i].bond[nb-1].from = atoi(s1);
-	      mols[*nf][*i].bond[nb-1].to   = atoi(s2);
-	     }
-	  else if (sscanf(ns, "%s-%s[%s,%s]", s1, s2, s3, s4)==4) 
+	  
+	  if (sscanf(ns, "%[^-]-%[^[][%[^:]:%[^]]]", s1, s2, s3, s4)==4) 
 	    {
 	      /* atomo-atomo[spessore,colore] */
 	      mols[*nf][*i].bond[nb-1].from = atoi(s1);
 	      mols[*nf][*i].bond[nb-1].to   = atoi(s2);
+	      mols[*nf][*i].bond[nb-1].thickness = atof(s3);
+	      mols[*nf][*i].bond[nb-1].color     = parsecol(s4);
 	      defbondthick = atoi(s3);
 	      defbondcolor = atoi(s4);
 	    }
-	  ns = strtok(NULL, ",");
+	  else if (sscanf(ns, "[%[^,],%[^]]",s1,s2)==2)
+	    {
+	      /* [spessore,colore] */
+	      defbondthick = atof(s1);
+	      defbondcolor = atoi(s2);
+	    }
+	  else if (sscanf(ns, "%[^-]-%s", s1, s2)==2)
+	    {
+	      /* atomo-atomo */ 
+	      mols[*nf][*i].bond[nb-1].from = atoi(s1);
+	      mols[*nf][*i].bond[nb-1].to   = atoi(s2);
+	      mols[*nf][*i].bond[nb-1].thickness = defbondthick;
+	      mols[*nf][*i].bond[nb-1].color     = defbondcolor;
+#if 0
+	      printf("qui [%s,%s] bondthick:%f\n", s1,s2, mols[*nf][*i].bond[nb-1].thickness );
+#endif
+	    }
+ 	  ns = strtok(NULL, ",");
 	}
-    
+#if 0 
+      printf("ns: %s nb:%d nf:%d i:%d mols:%d\n", ns, nb, *nf, *i, mols[*nf][*i].bond[0].to);
+#endif
       return 1;
     }
   if (!strcmp(parName, ".fadeMode"))
@@ -1182,15 +1226,9 @@ void loadAtomPos(void)
 #endif
       readLine(ifs, line);
 
-      if (parseLine(line, &nf, &i, 1)) 
+      if (parseLine(line, &nf, &i, &a, 1)) 
 	continue;
-      if (globset.NA && a >= globset.NA) 
-	{
-	  a = 0;
-	  i++;
-	  add_mol(nf, i);
-	}
-#if 0  
+      #if 0  
         if (first)
 	{
 	  first=0;
@@ -1202,8 +1240,14 @@ void loadAtomPos(void)
       /*readLine(ifs, line);*/
       /*assignAtom(nf, i, j, line);*/
       
-      ++a;
       add_atom(nf, i, a);
+      ++a;
+      if (globset.NA && a >= globset.NA) 
+	{
+	  a = 0;
+	  i++;
+	  add_mol(nf, i);
+	}
     }
 
   /*printf("NumMols:%d", NumMols);*/
@@ -1234,11 +1278,11 @@ void loadAtomPos(void)
     {
       readLine(ifs, line);
 
-      if (parseLine(line, &nf, &i, 0)) 
+      if (parseLine(line, &nf, &i, &a, 0)) 
 	continue;
       assignAtom(nf, i, a, line);
       ++a;
-      if (globset.NA && i >= globset.NA)
+      if (globset.NA && a >= globset.NA)
 	{
 	  a = 0;
 	  i++;
@@ -1304,7 +1348,7 @@ void default_pars(void)
   globset.default_bw=120;
   globset.default_col=466;
   globset.defbondthick = 1.0;
-  globset.defbondcol = 0;
+  globset.defbondcol = 465;
   readRGB();
 
   setBW();
