@@ -1045,6 +1045,9 @@ void usrInitAft(void)
     char fileop[1024], fileop2[1024], fileop3[1024];
     FILE *bof;
 #endif    
+#ifdef MD_NNL
+    double nltime;
+#endif
     int Nm, i, sct, overlap;
     COORD_TYPE vcmx, vcmy, vcmz;
     COORD_TYPE *m;
@@ -1385,9 +1388,14 @@ void usrInitAft(void)
 #ifdef MD_NNL
   for (i=0; i < Oparams.parnum; i++) 
     {
+      printf("Building NNL for particle %d\n", i);
       BuildNNL(i);
       //ScheduleEvent(i, ATOM_LIMIT+11,nebrTab[i].nexttime);
+      if (i==0 || nebrTab[i].nexttime < nltime)
+	nltime = nebrTab[i].nexttime;
+      ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
     }
+  exit(-1);
 #endif
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
