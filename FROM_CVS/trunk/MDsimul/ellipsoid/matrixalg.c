@@ -891,6 +891,8 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	 {
 	   if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
 	     {
+	       if (fp <0)
+		 printf("guessed dist=%.15G\n", sqrt(-fp));
 	       callsok++;
 	       return;
 	     }
@@ -1149,7 +1151,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
 	  B += (vec[k1]-rB[k1])*gx2[k1];
 	}
       A = 0.5*A - 1.0;
-      B = 0.5*A - 1.0;
+      B = 0.5*B - 1.0;
       if (A<0 && B<0)
 	A = -1.0;
       else
