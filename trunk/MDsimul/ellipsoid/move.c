@@ -1970,6 +1970,7 @@ double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2,
       fprintf(f,"%.15f %.15f\n", Oparams.time, (segno>0)?calc_norm(rDC):-calc_norm(rDC));  
       fclose(f);
     }
+  return calc_norm(rDC);
 #endif
 #endif
 }
@@ -2122,8 +2123,65 @@ double BodeTerm(double dt, double* fi)
   return dt * (bc1 * fi[0] + bc2 * fi[1] + bc3 * fi[2] + bc2 * fi[3] +
 	       bc1 * fi[4]);
 }
-
-
+int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[8])
+{
+  double h, d1, d2, alpha, vecgd[8], t, r1[3], r2[3]; 
+  double normddot, ddot[3], maxddot, delt;
+  const double epsd = 0.1; 
+  int foundrc, retcheck;
+  t = t1;
+  d1 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i<Oparams.parnumA?0:1]
+	 + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j<Oparams.parnumA?0:1];
+  if (maxddot==0)
+    return 0;
+  MD_DEBUG(printf("d1:%f\n", d1));
+  h = EPS*(t2-t1);
+  foundrc = 0;
+  
+  while (t < t2)
+    {
+      delt = d1 / maxddot;
+      if ((delt < h)||(d1<10*epsd))
+	{
+	  while (d1 < 10*epsd)
+	    {
+	      normddot = calcvecF(i, j, t1, t, r1, r2, ddot);
+	      if (normddot!=0)
+		t += epsd/normddot;
+	      else
+		t += h;
+	      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
+	      
+	      if (d1 > 0 && d2 < 0)
+		{
+		  newt(vecg, 5, &retcheck, funcs2beZeroed, i, j, shift); 
+		  if (retcheck==2 || vecg[4] < Oparams.time ||
+		      fabs(vecg[4] - Oparams.time)<1E-12 )
+		    {
+		      /* se l'urto è nel passato chiaramente va scartato
+		       * tuttavia se t è minore di zero per errori di roundoff? */
+		      /* Notare che i centroidi si possono overlappare e quindi t può
+		       * essere tranquillamente negativo */
+		      MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
+				      vecg[4], Oparams.time));
+		      continue;
+		    }
+		  else
+		    return 1; 
+		}
+	      d1 = d2;
+	    }
+	}
+      else
+	{
+	  t += delt;
+	  d1 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+	}
+    }
+  return foundrc;
+}
 void PredictEvent (int na, int nb) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -2132,11 +2190,10 @@ void PredictEvent (int na, int nb)
    *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
-  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], ddot[3], vecgd[8], normddot,
-	 b, d, t, tInt, vv, distSq, t1, t2, tmp, alpha, d1, d2, h;
-  int et, kk, retcheck, ii, overlap, mm, foundrc;
-  double ncong, cong[3], pos[3], vecg[5], pos2[3], vecgold[5], vecgf[5], r1[3], r2[3];
-  const double epsd = 0.1; 
+  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], vecgd[8],
+	 b, d, t, tInt, vv, distSq, t1, t2;
+  int et, kk, ii, overlap, mm;
+  double ncong, cong[3], pos[3], vecg[5], pos2[3], r1[3], r2[3];
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
@@ -2595,48 +2652,15 @@ no_core_bump:
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
-		      t = t1;
-		      d1 = calcDist(t, na, n, shift, r1, r2, &alpha, vecgd, 1);
-		      MD_DEBUG(printf("d1:%f\n", d1));
-		      h = EPS*(t2-t1);
-		      foundrc = 0;
-		      while (t < t2)
-			{
-			  d1 = calcDist(t, na, n, shift, r1, r2, &alpha, vecgd, 0);
-			  normddot = calcvecF(na, n, t1, t, r1, r2, ddot);
-			  if (normddot!=0)
-			    t += epsd/normddot;
-			  else
-			    t += h;
-			  d2 = calcDist(t, na, n, shift, r1, r2, &alpha, vecgd, 0);
-			  if (d1 > 0 && d2 < 0)
-			    {
-			      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
-			      if (retcheck==2 || vecg[4] < Oparams.time ||
-				  fabs(vecg[4] - Oparams.time)<1E-12 )
-				{
-				  /* se l'urto è nel passato chiaramente va scartato
-				   * tuttavia se t è minore di zero per errori di roundoff? */
-				  /* Notare che i centroidi si possono overlappare e quindi t può
-				   * essere tranquillamente negativo */
-				  MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
-						  vecg[4], Oparams.time));
-				  continue;
-				}
-			      else
-				{
-				  foundrc = 1; 
-				  break;
-				}
-			    }
+		      if (!locate_contact(na, n, shift, t1, t2, vecg))
+			continue;
 #if 0
-			  gd = (d2 - d1)/h; 
-			  if (fabs(gd) > 1E-12)
-			    delt = (epsd*(maxax[0]+maxax[1])*0.5)/gd;
-			  d1o = d1;
-			  d2o = d2;
+	    	      gd = (d2 - d1)/h; 
+    		      if (fabs(gd) > 1E-12)
+			delt = (epsd*(maxax[0]+maxax[1])*0.5)/gd;
+		      d1o = d1;
+		      d2o = d2;
 #endif
-			}
 #if 0
 		      for (kk=0; kk < 5; kk++)
 		      	vecgold[kk] = vecg[kk];
@@ -2696,8 +2720,6 @@ no_core_bump:
 			  continue;
 			}
 #endif		      
-		      if (!foundrc)
-			continue;
 		      rxC = vecg[0];
 		      ryC = vecg[1];
 		      rzC = vecg[2];
