@@ -77,6 +77,7 @@ struct molecule
 {
   atom_s *atom;
   bond_s *bond; 
+  int numat;
 };
 struct global_settings
 {
@@ -86,9 +87,10 @@ struct global_settings
   char *savefile;
   int drawcube;
   double *sig;
-  double *height;
+  /*double *height;*/
   int numAt;
   int setdiameter;
+  int setheight;
   int *NumMols;
   int Width;
   int Height;
@@ -110,6 +112,7 @@ struct global_settings
   double far;
   int setvp;
   double diameter;
+  double height;
   double  dist;
   double ivpx;
   double ivpy;
