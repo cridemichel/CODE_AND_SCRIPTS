@@ -227,7 +227,7 @@ struct progStatus
 
   COORD_TYPE sumTemp;
   COORD_TYPE sumPress;
-  
+  int mdseed; 
   /* Accumulators for calculating the rotational diffusion coefficent */
   COORD_TYPE sumox[MAXPAR];
   COORD_TYPE sumoy[MAXPAR];
@@ -524,7 +524,7 @@ struct singlePar OsinglePar[] = {
   {"nplus",      &Oparams.nplus,      CT},
   {"nminus",     &Oparams.nminus,     CT},
 #endif
-  {"seed",       &mdseed,                   INT},
+  {"seed",       &OprogStatus.mdseed,                   INT},
   {"m0",       &Oparams.m[0],             CT},
   {"m1",       &Oparams.m[1],             CT},
   {"m2",       &Oparams.m[2],             CT},

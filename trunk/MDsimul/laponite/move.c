@@ -58,7 +58,7 @@ COORD_TYPE *ux, *uy, *uz; /* Molecular orientations */
 COORD_TYPE  *Rmx, *Rmy, *Rmz;
 /* ========================================================================= */
 extern void check_distances(void);
-
+extern double *atcharge;
 /* ========================== >>> movea <<< =============================== */
 void movea(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
 	   COORD_TYPE m[NA], int Nm)
@@ -82,7 +82,6 @@ void movea(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 	    NULL);
       exit(-1);
     }
-        
   L = cbrt(Vol);
   invL = 1.0 / L;
 #if 0
@@ -2234,7 +2233,6 @@ void move(void)
    * Notare che i 3 atomi formano un triangolo equiliatero quindi
    * le 3 distanze sono uguali */
   distance = sqrt(3)*0.5*Oparams.Diam;
-
   /* calc predicted coords*/
   /* -1 = brownian dynamics NTV 
    * -2 = brownian dynamics at fixed pressure NTP */
@@ -2309,8 +2307,11 @@ void move(void)
   if ( (OprogStatus.Nose == 1) || (OprogStatus.Nose == 2))
     {
       /*scalCor(Oparams.parnum);*/
-      if ( (OprogStatus.sResetSteps != 0) &&
-	  (Oparams.curStep == OprogStatus.sResetSteps) )
+      if ( ( (OprogStatus.sResetSteps > 0) &&
+	     (Oparams.curStep == OprogStatus.sResetSteps) ) 
+	  || ( OprogStatus.sResetSteps < 0 &&
+	   Oparams.curStep % abs(OprogStatus.sResetSteps) == 0) )
+
 	{
 	  /* NOTE:
 	     Reset s to 1 and set to zero its time derivatives
@@ -2344,7 +2345,6 @@ void move(void)
       /* 24/3/99 CHG:((Oparams.curStep % OprogStatus.CMreset) == 0)) */
       (Oparams.curStep == OprogStatus.CMreset) ) 
       resetCM(Oparams.parnum);
-  
 #if 0
   check_distances();
 #endif
