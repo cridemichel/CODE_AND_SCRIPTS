@@ -1164,7 +1164,7 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   Pyz = Patyz;
   Pzx = Patzx;
 #endif
-
+  /*press += Plrc;*/
   /* These are the values of velocities at t-dt and at t-2*dt, used to 
      estimate the temperature at time t+dt at begin of this procedure */
   s1o2  = s1o1;
