@@ -135,9 +135,9 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
    mdarray.c file).
 */
 #ifdef MD_GRAVITY
-#define ALLOC_LIST  &rx, &ry, &rz, &ux, &uy, &uz, &vx, &vy, &vz, &wx, &wy, &wz, &lastcol
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyy, &uyz, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &lastcol
 #else
-#define ALLOC_LIST  &rx, &ry, &rz, &ux, &uy, &uz, &vx, &vy, &vz, &wx, &wy, &wz 
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyy, &uyz, &uzz, &vx, &vy, &vz, &wx, &wy, &wz 
 #endif
 
 /* this is used to declare the particle variables ( see below ) 
@@ -148,9 +148,9 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
    finally the coordinate, for example consider the position: 
    coordinate(rx, ry, rz) <- atom <- molecule*/
 #ifdef MD_GRAVITY
-#define DECL_LIST   *rx, *ry, *rz, *ux, *uy, *uz, *vx, *vy, *vz, *wx, *wy, *wz, *lastcol
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyy, *uyz, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *lastcol
 #else
-#define DECL_LIST   *rx, *ry, *rz, *ux, *uy, *uz, *vx, *vy, *vz, *wx, *wy, *wz
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyy, *uyz, *uzz, *vx, *vy, *vz, *wx, *wy, *wz
 #endif
 				   
 #undef EXT_DLST
