@@ -501,10 +501,6 @@ void scale_Phi(void)
   if (first)
     {
       first = 0;
-      if (i < Oparams.parnumA)
-	a0I = Oparams.a[0];
-      else
-	a0I = Oparams.a[1];
       target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
   //UpdateSystem();   
@@ -578,6 +574,10 @@ void scale_Phi(void)
 	    }
 	}
 #endif
+      if (i < Oparams.parnumA)
+	a0I = Oparams.a[0];
+      else
+	a0I = Oparams.a[1];
       if (fabs(axa[i] / a0I - target) < OprogStatus.axestol)
 	{
 	  done++;
