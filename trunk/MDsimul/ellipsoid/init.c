@@ -691,7 +691,7 @@ void initCoord(void)
 #endif
     }
 #endif
-  //wrap_initCoord();
+  wrap_initCoord();
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
