@@ -3542,7 +3542,10 @@ double distfunc(double x)
   if (polinterr==1)
     return 0.0;
   if (dy > OprogStatus.epsd)
-    polinterr = 1;
+    {
+      printf("dy=%.15G\n", dy);
+      polinterr = 1;
+    }
   else 
     polinterr = 0;
   return y;
@@ -3553,6 +3556,11 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   double d3, Delta, t1, t2;
   double r1[3], r2[3], alpha, xb1[2], xb2[2];
   d3 = calcDistNeg(t+delt*0.5, i, j, shift, r1, r2, &alpha, vecg, 0);
+  if (d1 > OprogStatus.epsd)
+    {
+      printf("d1=%.15G t=%.15G\n", d1, t);
+      exit(-1);
+    }
   xa[0] = t;
   ya[0] = d1;
   xa[1] = t+delt*0.5;
@@ -3613,7 +3621,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   double h, d1, d2, d1Neg, d1Pos, alpha, vecgd1old[8], vecgd1[8], vecgd2[8], vecgd3[8], t, r1[3], r2[3]; 
   double vd, normddot, ddot[3], maxddot, delt, told, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
-  double epsd, epsdFast, epsdFastR, epsdMax; 
+  double epsd, epsdFast, epsdFastR, epsdMax, firstafterfast; 
   double d2old;
   int dorefine;
   epsd = OprogStatus.epsd;
@@ -3675,6 +3683,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast, r1, r2))
     return 0;  
   timesS++;
+  firstafterfast = 1;
 #if 0
   if (refine_contact(i, j, t, vecgd1, shift, vecg))
   {
@@ -3706,7 +3715,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  t += h*t;
 	  if (t > t2)
 	    return 0;
-	  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 0);
+	  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, firstafterfast);
+	  firstafterfast = 0;
 	}
     }
   else if (d1<0&&fabs(d1)>1E-7)
@@ -3757,7 +3767,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       for (kk = 0; kk < 8; kk++)
 	vecgd1old[kk] = vecgd1[kk];
       d2old = d1;
-      d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 0);
+      d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, firstafterfast);
       if (fabs(d2-d2old) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -3765,16 +3775,20 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	   * più vicino a epsd*/
 	  //printf("P delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt, fabs(d2-d2old), d2, d2old);
 	  t -= delt;
-	  delt = d2old / maxddot;
+	  //delt = d2old / maxddot;
+	  delt = epsd /maxddot;
 	  if (delt < t*h)
 	    delt = t*h;
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1old, 0);
+	  d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1old, firstafterfast);
+	  for (kk = 0; kk < 8; kk++)
+	    vecgd1[kk] = vecgd1old[kk];
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
 #if 1
+      firstafterfast = 0;
       if (d2 > epsdFastR)
 	{
 	  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast, r1, r2))
@@ -3782,6 +3796,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
 	    }
+	  firstafterfast = 1;
 	  for (kk = 0; kk < 8; kk++)
 	    vecgd2[kk] = vecgd1[kk];
 	  d1 = d2;
@@ -3807,6 +3822,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	 if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift, 0))
 #endif
 	    {
+	      /* vecgd2 è vecgd al tempo t-delt */
 	      for (kk=0; kk < 8; kk++)
 		vecgroot[kk] = vecgd2[kk];
 	      troot = t - delt;
