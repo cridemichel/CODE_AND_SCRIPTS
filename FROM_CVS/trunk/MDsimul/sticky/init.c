@@ -1195,11 +1195,16 @@ void usrInitAft(void)
       /* scegliere rigorosamente a seconda del modello!!*/
       if (i < Oparams.parnumA)
 	{
-	  maxax[i] = Oparams.sigma[0][0]*1.2;
+#ifdef MD_SILICA
+	  /* nella silica l'unica interazione bonded è quella Si-O! */
+	  maxax[i] = Oparams.sigma[0][0];
+#else
+	  maxax[i] = Oparams.sigma[0][0] + Oparams.sigmaSticky;
+#endif
 	}
       else
 	{
-	  maxax[i] = Oparams.sigma[1][1]*1.2;
+	  maxax[i] = Oparams.sigma[1][1];
 	}
     }
 #endif
