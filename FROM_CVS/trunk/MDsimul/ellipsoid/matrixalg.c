@@ -176,6 +176,7 @@ void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *
       SHFT(*fa,*fb,*fc,fu);
     }
 }
+int powmeth;
 double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin)
 /*Given a function f, and given a bracketing triplet of abscissas ax, bx, cx 
  * (such that bx is between ax and cx, and f(bx) is less than both f(ax) and f(cx)),
@@ -187,13 +188,14 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
   const double CGOLD=0.3819660;
   const double ZEPSBR=1E-10;
   double a,b,d,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
-  double e=0.0;
+  double e=0.0, fuold;
   /* This will be the distance moved on the step before last.*/
   a=(ax < cx ? ax : cx); /*a and b must be in ascending order, 
 			   but input abscissas need not be.*/
   b=(ax > cx ? ax : cx);
   x=w=v=bx; /*Initializations...*/
   fw=fv=fx=(*f)(x); 
+  fuold = fv;
   for (iter=1;iter<=ITMAXBR;iter++)
     { 
       /*Main program loop.*/
@@ -233,6 +235,14 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
 	} 
       u=(fabs(d) >= tol1 ? x+d : x+SIGN(tol1,d));
       fu=(*f)(u); /*This is the one function evaluation per iteration.*/
+#if 0
+      if (powmeth && 2.0*fabs(fuold-fu) <= (tol/5)*(fabs(fuold)+fabs(fu)+ZEPSBR)) 
+	{ 
+	  *xmin=x;
+	  return fx;
+	}
+#endif
+      fuold = fu;//
       if (fu <= fx)
 	{ /*Now decide what to do with our function evaluation.*/
 	  if (u >= x) 
@@ -620,11 +630,13 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
 	{
 	  //free_vector(xit,1,n); /*Termination criterion.*/
 	  //free_vector(ptt,1,n); free_vector(pt,1,n);
+	  //printf("powell iter=%d\n", *iter);
 	  return;
 	}
 
       if (*iter == ITMAXPOW) 
 	{
+	  printf("powell iter=%d\n", *iter);
 	  return;
 	  nrerror("powell exceeding maximum iterations."); 
 	}
@@ -681,11 +693,16 @@ void body2lab(int i, double xp[], double x[], double *rO, double **R)
 }
 void angs2coord(double angs[], double p[])
 {
-  p[0] = axa[icg]*cos(angs[0])*sin(angs[1]);
-  p[1] = axb[icg]*sin(angs[0])*sin(angs[1]);
+  double sin1, sin3;
+
+  sin1 = sin(angs[1]);
+  p[0] = axa[icg]*cos(angs[0])*sin1;
+  p[1] = axb[icg]*sin(angs[0])*sin1;
   p[2] = axc[icg]*cos(angs[1]);
-  p[3] = axa[jcg]*cos(angs[2])*sin(angs[3]);
-  p[4] = axb[jcg]*sin(angs[2])*sin(angs[3]);
+  
+  sin3 = sin(angs[3]);
+  p[3] = axa[jcg]*cos(angs[2])*sin3;
+  p[4] = axb[jcg]*sin(angs[2])*sin3;
   p[5] = axc[jcg]*cos(angs[3]);
 }
 double funcPowell(double angs[])
@@ -732,6 +749,7 @@ void powellmethod(double *vec)
   double Fret, **powdirs, r1p[3], r2p[3], vecP[6], angs[4], sinth;
   int iter, k1, k2;
   powdirs = matrix(4,4);
+  powmeth = 1;
   for (k1=0; k1 < 4; k1++)
     for (k2=0; k2 < 4; k2++)
       powdirs[k1][k2] = powdirsI[k1][k2];
@@ -761,7 +779,7 @@ void powellmethod(double *vec)
   body2lab(icg, vecP, vec, rA, RtA);
   body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
   free_matrix(powdirs, 4);
-
+  powmeth = 0;
 }
 int check_point(char* msg, double *p, double *rc, double **XX)
 {
