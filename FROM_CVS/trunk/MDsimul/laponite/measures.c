@@ -161,6 +161,9 @@ void energy(void)
       RCMy += Ry;
       RCMz += Rz;
     }
+  RCMx /= (double)Oparams.parnum;
+  RCMy /= (double)Oparams.parnum;
+  RCMz /= (double)Oparams.parnum;
   printf("Box CoM RCMx: %.15f RCMy: %.15f RCMz: %.15f\n", RCMx, RCMy, RCMz);
 }
 
