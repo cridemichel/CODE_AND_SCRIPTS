@@ -3107,9 +3107,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		  || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && 
 		       lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 2E-15))
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-15))
 #endif
 		    {
+#if 0
 		      if (lastbump[i].mol == j && lastbump[j].mol==i && 
 		       lastbump[i].at == mapbondsa[nn]
 		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 2E-15)
@@ -3122,6 +3123,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 			  printf("t1: %.15G t2: %.15G\n", t1, t2);
 			  printf("delt: %.15G\n", delt);
 			}
+#endif
 		      //gotcoll = -1;
 		      continue;
 		    }
