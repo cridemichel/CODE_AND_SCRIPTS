@@ -31,7 +31,12 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
-double **Xa, **Xb, **Ia, **Ib, **invIa, **invIb, **RA, **RB, ***R, **Rt;
+double **Xa, **Xb, **RA, **RB, ***R, **Rt;
+#ifdef MD_ASYM_ITENS
+double **Ia, **Ib, **invIa, **invIb;
+#else
+double Ia, Ib, invIa, invIb;
+#endif
 extern double **matrix(int n, int m);
 int poolSize;
 int parnumA, parnumB;
@@ -700,6 +705,10 @@ void usrInitBef(void)
     OprogStatus.rhobh = 0.0;
     OprogStatus.vztap = 10.0;
 #endif
+#ifndef MD_ASYM_ITENS
+    for (i = 0; i < 2; i++)
+      Oparams.I[i] = 1.0;
+#endif
     OprogStatus.eventMult = 100;
     OprogStatus.overlaptol = 0.0001;
     /* Il promo step inizia con un tapping a temperatura T */
@@ -910,10 +919,12 @@ void usrInitAft(void)
     treeRzC  = malloc(sizeof(double)*poolSize);
     Xa = matrix(3, 3);
     Xb = matrix(3, 3);
+#ifdef MD_ASYM_ITENS
     Ia = matrix(3, 3);
     Ib = matrix(3, 3);
     invIa = matrix(3, 3);
     invIb = matrix(3, 3);
+#endif
     RA = matrix(3, 3);
     RB = matrix(3, 3);
     Rt = matrix(3, 3);
@@ -973,9 +984,11 @@ void usrInitAft(void)
       invaSq[a] = Sqr(1/Oparams.a[a]);
       invbSq[a] = Sqr(1/Oparams.b[a]);
       invcSq[a] = Sqr(1/Oparams.c[a]);
-      ItensD[a][0] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.b[a])+Sqr(Oparams.c[a]));
-      ItensD[a][1] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.c[a]));
-      ItensD[a][2] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.b[a]));
+#ifdef MD_ASYM_ITENS
+      ItensD[a][0] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.b[a])+Sqr(Oparams.c[a]));
+      ItensD[a][1] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.c[a]));
+      ItensD[a][2] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.b[a]));
+#endif
     };
  
   /* maxax è il diametro del centroide */
