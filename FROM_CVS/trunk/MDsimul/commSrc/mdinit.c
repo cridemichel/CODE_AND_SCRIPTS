@@ -62,6 +62,15 @@ void Continue(void)
 
   newSim = 0; /* New = 0 means: not a new simulation, i.e. continuing a
 		 previously interrupted one */
+#if !defined(MPI)
+  printf("setting seed:%d time:%d\n", OprogStatus.mdseed, (int)time(NULL));
+  if (OprogStatus.mdseed>=0) 
+    srand(OprogStatus.mdseed);
+  else
+    srand(((int)time(NULL)));
+#endif
+
+
   /* <------------------------------------------------------- OPEN LOG FILE */
   openLog("a"); /* append: continue to write on previously created log file */
 
@@ -458,7 +467,7 @@ void getseed(char* argom)
 
       if (!strcmp(str1, "seed")) 
 	{
-	  mdseed = atoi(str2);
+	  OprogStatus.mdseed = atoi(str2);
 	  break;
 	}
     }  
@@ -695,9 +704,9 @@ void Newsimul (char *argom)
   newSim = 1;
 #if !defined(MPI)
   getseed(argom);
-  printf("setting seed:%d time:%d\n", mdseed, (int)time(NULL));
-  if (mdseed>=0) 
-    srand(mdseed);
+  printf("setting seed:%d time:%d\n", OprogStatus.mdseed, (int)time(NULL));
+  if (OprogStatus.mdseed>=0) 
+    srand(OprogStatus.mdseed);
   else
     srand(((int)time(NULL)));
 #endif
