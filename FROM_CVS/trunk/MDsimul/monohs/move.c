@@ -273,18 +273,24 @@ double scale_radius(int i, int j, double rA[3], double rB[3], double shift[3], d
   nrAB = calc_norm(rAB);
   /* 0.99 serve per evitare che si tocchino */
   if (F < 1)
-    fact = F;
+    {
+      //printf("qui...\n");
+      fact = F;
+    }
   else
     {
       fact1 = (nrAB-radii[j])/radii[i];
-      fact1 *= OprogStatus.scalfact;
       fact2 = F;
       //printf("fact1: %15G fact2: %.15G\n", fact1, fact2);
       if (fact2 < fact1)
 	fact = fact2;
       else
-	fact = fact1;
-
+	{
+	  fact1 *= OprogStatus.scalfact;
+	  if (fact1 < 1.0)
+	    fact1 = 1.0;
+	  fact = fact1;
+	}
     }
   //printf("phi=%f fact1=%.8G fact2=%.8G scaling factor: %.8G\n", phi, fact1, fact2, fact);
   radii[i] *= fact;
@@ -372,6 +378,7 @@ void scale_Phi(void)
       rad0I = Oparams.sigma*0.5;
       target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
+  //printf("[scale_Phi] >>>> Volume fraction: %.15G target: %.15G\n", phi, target);
   //UpdateSystem();   
   L2 = 0.5 * L;
   /* get the minimum distance in the system */

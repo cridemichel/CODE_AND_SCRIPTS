@@ -585,6 +585,7 @@ void StartRun(void)
     PredictEvent(n, -2); 
 }
 double *rhoz;
+extern double calc_phi(void);
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
 {
@@ -761,6 +762,7 @@ void usrInitAft(void)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+  printf(">>>> Volume fraction: %.15G\n", calc_phi());
 
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
