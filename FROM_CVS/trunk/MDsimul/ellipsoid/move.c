@@ -827,7 +827,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     }
 #else
   factorinvIa = factor*invIa;
-  factorinvIb = factor*invIb;
+  factorinvIb = -factor*invIb;
   wx[i] += factorinvIa*rACn[0];
   wx[j] -= factorinvIb*rBCn[0];
   wy[i] += factorinvIa*rACn[1];
@@ -1089,7 +1089,6 @@ void adjust_norm(double **R)
 {
   int k1, k2; 
   double n[3];
-  
   for (k1 = 0; k1 < 3; k1++)
     {
       n[k1]=0;
@@ -2412,7 +2411,7 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   MD_DEBUG(printf("VCPOS vc=%.15f\n", vc));
   return (vc > 0);
 }
-#define EPS 1e-7
+#define EPS 1e-5
 void evolveVec(int i, double ti, double *vecout, double *vecin)
 {
   double wSq, w, OmegaSq[3][3], M[3][3], Omega[3][3];
@@ -2665,11 +2664,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 {
   double h, d1, d2, alpha, vecgd[8], t, r1[3], r2[3]; 
   double normddot, ddot[3], maxddot, delt;
-  const double epsd = 0.001; 
+  const double epsd = 0.0001; 
   int foundrc, retcheck, kk;
   t = t1;
   MD_DEBUG(printf("[locate_contact] t1=%f t2=%f shift=(%f,%f,%f)\n", t1, t2, shift[0], shift[1], shift[2]));
-  d1 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i<Oparams.parnumA?0:1]
 	 + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j<Oparams.parnumA?0:1];
@@ -2678,6 +2677,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   MD_DEBUG(printf(">>>>d1:%f\n", d1));
   h = EPS*(t2-t1);
   foundrc = 0;
+  while (d1 < 0)
+    {
+      t+=h;
+      if (t > t2)
+	return 0;
+      d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
+    }
+
   
   while (t < t2)
     {
@@ -2691,7 +2698,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 		t += epsd/normddot;
 	      else
 		t += h;
-	      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
+	      d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
 	      MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f\n", t, d1, d2));
 	      if (d1 > 0 && d2 < 0)
 		{
@@ -3196,7 +3203,7 @@ no_core_bump:
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
-		      if (!locate_contact_trivial(na, n, shift, t1, t2, vecg))
+		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 			continue;
 		     			  
 #if 0
