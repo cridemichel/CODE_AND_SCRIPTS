@@ -1395,16 +1395,18 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[])
    * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
    * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
    * a partire da questi. */
-  
+ 
   if (ata == 0)
     {
       for (kk = 0; kk < 3; kk++)
 	rat[kk] = rO[kk];
+      printf("%f %f %f @ 0.5 C[red]\n", rat[0], rat[1], rat[2]);
     }
   else if (ata <= 3)
     {
       for (kk = 0; kk < 3; kk++)
 	rat[kk] = rO[kk] + R[kk][ata]; 
+      printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
     }
   else
     {
@@ -1420,9 +1422,10 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[])
 	r3[kk] *= MD_DIST_ELECTSITES/nr;
       for (kk = 0; kk < 3; kk++)
 	rat[kk] = rO[kk] + r3[kk]; 
+      printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
     }
 }
-void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
+void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
   int a;
