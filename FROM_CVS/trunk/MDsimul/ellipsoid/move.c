@@ -418,6 +418,48 @@ void tRDiagR(int i, double **M, double a, double b, double c, double **Ri)
 	  }
       }
 }
+void RDiagtR(int i, double **M, double a, double b, double c, double **Ri)
+{
+  int na;
+  int k1, k2, k3;
+  double Di[3][3];
+  double Rtmp[3][3];
+  /* calcolo del tensore d'inerzia */ 
+  na = (i < Oparams.parnumA)?0:1;
+  Di[0][0] = a;
+  Di[1][1] = b;
+  Di[2][2] = c;
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	if (k1 != k2)
+	  Di[k1][k2] = 0.0;
+      } 
+  MD_DEBUG2(printf("a=%f b=%f c=%f Di=\n", a, b, c));
+  MD_DEBUG2(print_matrixArr(Di));
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Rtmp[k1][k2] = 0.0;
+	for (k3=0; k3 < 3; k3++)
+	  {
+	    if (Di[k1][k3] == 0.0)
+	      continue;
+	    Rtmp[k1][k2] += Di[k1][k3]*Ri[k2][k3];
+	  }
+      }
+  MD_DEBUG2(print_matrixArr(Rtmp));
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	M[k1][k2] = 0.0;
+	for (k3=0; k3 < 3; k3++)
+	  {
+	    M[k1][k2] += Ri[k1][k3]*Rtmp[k3][k2];
+	  }
+      }
+}
+
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 void add_bond(int na, int n);
 void remove_bond(int na, int n);
@@ -593,6 +635,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
   /*printf("mredl: %f\n", mredl);*/
+  //MD_DEBUG(calc_energy("dentro bump1"));
   MD_DEBUG(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
@@ -600,35 +643,34 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #if 1
   for (a=0; a < 3; a++)
     if (fabs (rAC[a]) > L2)
-      rAC[a] = - SignR(L, rAC[a]);
-#if !defined(MD_GRAVITY)
-  if (fabs (rAC[a]) > L2)
-    rAC[a] -= SignR(L, rAC[a]);
-#endif
+      rAC[a] -= SignR(L, rAC[a]);
 #endif
   rBC[0] = rx[j] - rCx;
   rBC[1] = ry[j] - rCy;
   rBC[2] = rz[j] - rCz;
 #if 1
   for (a=0; a < 3; a++)
-    if (fabs (rBC[a]) > L2)
-      rBC[a] = - SignR(L, rBC[a]);
-#if !defined(MD_GRAVITY)
-  if (fabs (rBC[a]) > L2)
-    rBC[a] -= SignR(L, rBC[a]);
-#endif
+    {
+      MD_DEBUG(printf("P rBC[%d]:%.15f ", a, rBC[a]));
+      if (fabs (rBC[a]) > L2)
+	rBC[a] -= SignR(L, rBC[a]);
+      MD_DEBUG(printf("D rBC[%d]:%.15f ", a, rBC[a]));
+    }
+  MD_DEBUG(printf("\n"));
 #endif 
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
-  tRDiagR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[i]);
+  RDiagtR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[i]);
 
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
-  tRDiagR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
+  RDiagtR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
  
-  MD_DEBUG(store_bump(evIdA, evIdB);)
+  //MD_DEBUG(calc_energy("dentro bump2"));
   MD_DEBUG(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
+  
+  //MD_DEBUG(calc_energy("dentro bump3"));
   /* calcola le matrici inverse del tensore d'inerzia */
   InvMatrix(Ia, invIa, 3);
   InvMatrix(Ib, invIb, 3);
@@ -738,6 +780,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     }
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
+  MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
+		  
+		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
 /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
 #if 0
   *W = delpx * rxij + delpy * ryij + delpz * rzij;
@@ -939,12 +984,34 @@ void calcObserv(void)
 }
 #endif
 extern double *treeTime;
+void adjust_norm(double **R)
+{
+  int k1, k2; 
+  double n[3];
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      n[k1]=0;
+      for(k2 = 0; k2 < 3; k2++)
+	n[k1] += Sqr(R[k2][k1]);
+      n[k1] = sqrt(n[k1]);
+      if (fabs((n[k1])-1.0)>1E-10)
+	{
+	  MD_DEBUG(printf("Adjusting norm of orientations time=%.15f\n", Oparams.time));
+	  MD_DEBUG(printf("delta = %.15f\n", fabs(n[k1]-1.0)));
+	  for(k2 = 0; k2 < 3; k2++)
+	    R[k2][k1] /= n[k1];
+	}
+    }
+  
+}
 
 void UpdateAtom(int i)
 {
   double ti;
   double wSq, w, sinw, cosw;
   double Omega[3][3], OmegaSq[3][3], Rtmp[3][3], M[3][3];
+  double w1[3],w2[3];
   int k1, k2, k3;
   ti = Oparams.time - atomTime[i];
   
@@ -961,8 +1028,16 @@ void UpdateAtom(int i)
   w = sqrt(wSq);
   if (w != 0.0) 
     {
+#if 0
+      if (fabs(w*ti) < 1E-8)
+	{
+	  sinw = ti*(1-Sqr(w*ti)/6.0);	  
+	  cosw = Sqr(ti)*(0.5 - Sqr(w*ti)/24.0);
+	}
+#endif
       sinw = sin(w*ti)/w;
       cosw = (1.0 - cos(w*ti))/wSq;
+	
       Omega[0][0] = 0;
       Omega[0][1] = -wz[i];
       Omega[0][2] = wy[i];
@@ -982,6 +1057,7 @@ void UpdateAtom(int i)
       OmegaSq[2][1] = wy[i]*wz[i];
       OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
       
+      
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  
@@ -990,18 +1066,40 @@ void UpdateAtom(int i)
 	      Omega[k1][k2] = -Omega[k1][k2];
 	      Rtmp[k1][k2] = R[i][k1][k2];
 	      M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+#if 0
 	      if (k1==k2)
 		M[k1][k1] += 1.0;
+#endif
 	    }
 	}
-      
+#if MD_DEBUG(x)==x
+      w1[0] = wx[i];
+      w1[1] = wy[i];
+      w1[2] = wz[i];
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  w2[k1] = 0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      w2[k1] += (sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2])*w1[k2];   
+	    }	 
+	   
+	}
+      if (fabs(w2[0])>1E-12 || fabs(w2[1])>1E-12
+	  || fabs(w2[2])>1E-12)
+	printf("ti=%.15G w=%.15G cosw=%.15G sinw=%.15G w = (%.15f,%.15f,%.15f) Exp(Omega t) w = (%.15f,%.15f,%.15f)\n",
+	       ti, w, cosw, sinw, w1[0],w1[1],w1[2],w2[0],w2[1],w2[2]);	
+#endif
       for (k1 = 0; k1 < 3; k1++)
 	for (k2 = 0; k2 < 3; k2++)
 	  {
+#if 0
 	    R[i][k1][k2] = 0.0;
+#endif
 	    for (k3 = 0; k3 < 3; k3++)
 	      R[i][k1][k2] += M[k1][k3]*Rtmp[k3][k2];
 	  }
+      adjust_norm(R[i]);
 #if 0
       if (rz[i]+Lz*0.5-Oparams.sigma/2.0 < 0. && OprogStatus.quenchend > 0.0)
 	{
@@ -1089,6 +1187,18 @@ UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
   w = sqrt(wSq);
   if (w != 0.0) 
     {
+#if 0
+      if (fabs(w*ti) < 1E-8)
+	{
+	  sinw = ti*(1-Sqr(w*ti)/6.0);	  
+	  cosw = Sqr(ti)*(0.5 - Sqr(w*ti)/24.0);
+	}
+      else 
+	{
+	  sinw = sin(w*ti)/w;
+    	  cosw = (1.0 - cos(w*ti))/wSq;
+	}
+#endif
       sinw = sin(w*ti)/w;
       cosw = (1.0 - cos(w*ti))/wSq;
       Omega[0][0] = 0;
@@ -1116,18 +1226,21 @@ UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 	    {
 	      Omega[k1][k2] = -Omega[k1][k2];
 	      M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+#if 0
 	      if (k1==k2)
-		M[k1][k1] += 1.0;
+	      	M[k1][k1] += 1.0;
+#endif
 	    }
 	}
       
       for (k1 = 0; k1 < 3; k1++)
 	for (k2 = 0; k2 < 3; k2++)
 	  {
-	    Ro[k1][k2] = 0.0;
+	    Ro[k1][k2] = R[i][k1][k2];
 	    for (k3 = 0; k3 < 3; k3++)
 	      Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
 	  }
+      adjust_norm(Ro);
     }
   else
     {
@@ -1606,7 +1719,7 @@ void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double s
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*Sqr(x[7]); 
   MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
   MD_DEBUG(printf("fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
-  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 }
 double calcDist(double t, int i, int j, double shift[3])
 {
@@ -1656,8 +1769,8 @@ void PredictEvent (int na, int nb)
    *      */
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
 	 b, d, t, tInt, vv, distSq, t1, t2, tmp;
-  int et, kk, retcheck, ii;
-  double ncong, cong[3], pos[3], vecg[5];
+  int et, kk, retcheck, ii, overlap;
+  double ncong, cong[3], pos[3], vecg[5], pos2[3];
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
   double Lzx, h1, h2, sig, hh1;
@@ -1672,6 +1785,7 @@ void PredictEvent (int na, int nb)
   iX, iY, iZ, jX, jY, jZ, k, n;
 
   MD_DEBUG(printf("PredictEvent: %d,%d\n", na, nb));
+  MD_DEBUG(calc_energy("PredEv"));
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
 #ifdef MD_GRAVITY
@@ -2039,23 +2153,26 @@ no_core_bump:
 			      if (distSq >= sigSq)
 				{
 				  t = - (sqrt (d) + b) / vv;
+				  overlap = 0;
 				}
 			      else
 				{
 				  MD_DEBUG(printf("Centroids overlap!\n"));
 				  t = (sqrt (d) - b) / vv;
+				  overlap = 1;
+				  MD_DEBUG(printf("altro t=%.15f\n", (-sqrt (d) - b) / vv));
 				}
 			      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
 			      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
 			      t += Oparams.time; 
-			      /* t è il guess per il newton-raphson */
+    			      /* t è il guess per il newton-raphson */
 			      /* come guess per x possiamo usare il punto di contatto 
 			       * fra i centroidi */
 			      /* vecg è un guess per il vettore a 5 dimensioni (x, alpha ,t) */
 			      /* NOTA: qui va calcolato il vettore guess vecg 
 			       * che è il punto di contatto dei due centroidi */
 			      cong[0] = rx[na] + vx[na] * (t-atomTime[na]) 
-				 - (rx[n] + vx[n] * (t-atomTime[n])) - shift[0];
+				- (rx[n] + vx[n] * (t-atomTime[n])) - shift[0];
 			      cong[1] = ry[na] + vy[na] * (t-atomTime[na]) 
 				- (ry[n] + vy[n] * (t-atomTime[n])) - shift[1];
 			      cong[2] = rz[na] + vz[na] * (t-atomTime[na]) 
@@ -2072,13 +2189,13 @@ no_core_bump:
 			      pos[1] =  ry[na] + vy[na] * (t-atomTime[na]);
 			      pos[2] =  rz[na] + vz[na] * (t-atomTime[na]);
 			      for (kk=0; kk < 3; kk++)
-				vecg[kk] = pos[kk] - 0.5*cong[kk]*maxax[na<Oparams.parnumA?0:1];
+		    		vecg[kk] = pos[kk] - 0.5*cong[kk]*maxax[na<Oparams.parnumA?0:1];
 			      MD_DEBUG(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
 			      MD_DEBUG2(printf("r[%d](%f,%f,%f)-r[%d](%f,%f,%f)\n",
-					      na, rx[na], ry[na], rz[na], n, rx[n], ry[n], rz[n]));
-			      vecg[3] = 0.1; /* questa stima di alpha andrebbe fatta meglio!*/
-			      vecg[4] = t;
-			      MD_DEBUG(printf("time=%.15f vecguess: %f,%f,%f alpha=%f t=%f\n",Oparams.time, vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
+					       na, rx[na], ry[na], rz[na], n, rx[n], ry[n], rz[n]));
+			      vecg[3] = 1.0; /* questa stima di alpha andrebbe fatta meglio!*/
+		    	      vecg[4] = t;
+	    		      MD_DEBUG(printf("time=%.15f vecguess: %f,%f,%f alpha=%f t=%f\n",Oparams.time, vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
 #endif
 
 			      //calcDist(Oparams.time, na, n, shift);
@@ -2182,17 +2299,100 @@ void ProcessCollWall(void)
   lastcol[evIdA] = Oparams.time;
 }
 #endif
-void calc_energy(char *msg)
+void calc_energynew(char *msg)
 {
   int i, k1, k2;
   double wt[3];
+  double **Ia, **Ib;
+  Ia = matrix(3,3); 
+  Ib = matrix(3,3);
   K = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
       if (i<Oparams.parnumA)
 	{
 	  /* calcola tensore d'inerzia e le matrici delle due quadriche */
-	  tRDiagR(i, Ia, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+	  K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  wt[0] = wx[i];
+	  wt[1] = wy[i];
+	  wt[2] = wz[i];
+	  for (k1=0; k1 < 3; k1++)
+	    {
+      	      K += wt[k1]*ItensD[0][k1]*wt[k1];
+	    }
+	}
+      else
+	{
+	  K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  wt[0] = wx[i];
+	  wt[1] = wy[i];
+	  wt[2] = wz[i];
+	  for (k1=0; k1 < 3; k1++)
+	    {
+      	      K += wt[k1]*ItensD[1][k1]*wt[k1];
+	    }
+	}
+    }
+  K *= 0.5;
+  free_matrix(Ia,3);
+  free_matrix(Ib,3);
+  printf("[%s] Kinetic Energy: %f\n", msg, K);
+}
+void calc_energy_i(char *msg, int i)
+{
+  int k1, k2;
+  double wt[3];
+  double **Ia, **Ib;
+  Ia = matrix(3,3); 
+  Ib = matrix(3,3);
+  K = 0;
+  if (i<Oparams.parnumA)
+    {
+      /* calcola tensore d'inerzia e le matrici delle due quadriche */
+      RDiagtR(i, Ia, ItensD[0][0], ItensD[0][1], ItensD[0][2], R[i]);
+      K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+      wt[0] = wx[i];
+      wt[1] = wy[i];
+      wt[2] = wz[i];
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    K += wt[k1]*Ia[k1][k2]*wt[k2];
+	  }
+    }
+  else
+    {
+      RDiagtR(i, Ib, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+      K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+      wt[0] = wx[i];
+      wt[1] = wy[i];
+      wt[2] = wz[i];
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    K += wt[k1]*Ib[k1][k2]*wt[k2];
+	  }
+    }
+  K *= 0.5;
+  free_matrix(Ia,3);
+  free_matrix(Ib,3);
+  printf("[%s] Kinetic Energy of %d: %f\n", msg, i, K);
+  
+}
+void calc_energy(char *msg)
+{
+  int i, k1, k2;
+  double wt[3];
+  double **Ia, **Ib;
+  Ia = matrix(3,3); 
+  Ib = matrix(3,3);
+  K = 0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (i<Oparams.parnumA)
+	{
+	  /* calcola tensore d'inerzia e le matrici delle due quadriche */
+	  RDiagtR(i, Ia, ItensD[0][0], ItensD[0][1], ItensD[0][2], R[i]);
 	  K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 	  wt[0] = wx[i];
 	  wt[1] = wy[i];
@@ -2205,7 +2405,7 @@ void calc_energy(char *msg)
 	}
       else
 	{
-	  tRDiagR(i, Ib, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+	  RDiagtR(i, Ib, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
 	  K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 	  wt[0] = wx[i];
 	  wt[1] = wy[i];
@@ -2218,6 +2418,8 @@ void calc_energy(char *msg)
 	}
     }
   K *= 0.5;
+  free_matrix(Ia,3);
+  free_matrix(Ib,3);
   printf("[%s] Kinetic Energy: %f\n", msg, K);
 }
 void store_bump(int i, int j)
@@ -2268,6 +2470,7 @@ void ProcessCollision(void)
   bump(evIdA, evIdB, rxC, ryC, rzC, &W);
 #endif
   MD_DEBUG(calc_energy("dopo"));
+  MD_DEBUG(store_bump(evIdA, evIdB));
   //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY

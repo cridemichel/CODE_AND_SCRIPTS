@@ -150,12 +150,12 @@ void InvMatrix(double **a, double **b, int NB)
 }
 
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
-#define TOLX 1.0E-13//1.0e-7 /* Convergence criterion on  x.*/ 
-#define TOLX2 1.E-13
+#define TOLX 1.0E-12//1.0e-7 /* Convergence criterion on  x.*/ 
+#define TOLX2 1.E-12
 #define MAXITS 200 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define MAXITS2 200
-#define TOLF 1.0e-10 // 1.0e-4
-#define TOLF2 1.0E-10
+#define TOLF 1.0e-9 // 1.0e-4
+#define TOLF2 1.0E-9
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
@@ -465,7 +465,7 @@ void newt(double x[], int n, int *check,
 	{
 	  //*check = 2;
 	  MD_DEBUG(printf("MAXITS2!!\n"));
-	  //FREERETURN;
+	  FREERETURN;
 	}
 #else
        if (its2 == MAXITS2)
@@ -478,8 +478,8 @@ void newt(double x[], int n, int *check,
 #endif
 #endif
        /* ============ */
-       funcs2beZeroed(n,x,fvec,iA,iB,shift);
-       fdjacFD(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
+       //funcs2beZeroed(n,x,fvec,iA,iB,shift);
+       fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
        /* If analytic Jacobian is available, you can 
 	  replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNR
@@ -533,7 +533,7 @@ void newt(double x[], int n, int *check,
 	    } 
 	  *check=(test < TOLMIN ? 2 : 0);
 	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
-  	  FREERETURN 
+  	  //FREERETURN 
 	} 
       test=0.0; /* Test for convergence on x. */
       for (i=0;i<n;i++) 
@@ -547,11 +547,13 @@ void newt(double x[], int n, int *check,
 	  MD_DEBUG(printf("test<TOLX test=%.15f\n", test));
 	  FREERETURN;
 	}
+#if 1
       if (*check==2)
 	{
 	  MD_DEBUG(printf("spurious convergence\n"));
 	  FREERETURN;
 	}
+#endif
 #else
       test = 0;
       for (i=0;i<n;i++) 
@@ -576,7 +578,7 @@ void newt(double x[], int n, int *check,
   
 }
 
-#define EPS 1e-8//1.0E-4 /* Approximate square root of the machine precision.*/
+#define EPS 1e-7//1.0E-4 /* Approximate square root of the machine precision.*/
 void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 { int i,j; 
   double h,temp,*f; 

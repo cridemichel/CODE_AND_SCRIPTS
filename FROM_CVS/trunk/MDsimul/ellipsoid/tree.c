@@ -269,6 +269,8 @@ void NextEvent (void)
 #endif
   MD_DEBUG2(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
+  printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
+		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time);
   if (evIdB < ATOM_LIMIT + 2 * NDIM) 
     /* Se si tratta di un urto fra particelle o con le pareti...
      * qui in sostanza si considerano solo gli eventi che cambiano lo stato 
