@@ -1341,7 +1341,7 @@ void calcFxtFt(double x[3], double **X,
 	 }
      }
 }
-#define MD_GLOBALNR
+#undef MD_GLOBALNR
 #undef MD_GLOBALNR2
 double rA[3], rB[3];
 void fdjacGuess(int n, double x[], double fvec[], double **df, 

@@ -636,7 +636,7 @@ void initCoord(void)
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
   angvel(); 
-  wrap_initCoord();
+  //wrap_initCoord();
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
