@@ -4637,23 +4637,30 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 }
 #endif
 #ifdef MD_SILICA
-int check_boxwall(int k, int n, int nc, int nl)
+int check_boxwall(int k, int nc, int nl)
 {
   int cellsk;
+  double vel;
   switch (k)
     {
     case 0:
       cellsk = cellsx[nl];
+      vel = vx[evIdA];
       break;
     case 1:
       cellsk = cellsy[nl];
+      vel = vy[evIdA];
       break;
     case 2:
       cellsk = cellsz[nl];
+      vel = vz[evIdA];
       break;
     }
-  if (inCell[nc][k][n]==0 || inCell[nc][k][n]==cellsk-1)
+  //printf("CHECK BOXWALL k=%d inCell[%d][%d][%d]:%d\n", k, nc, k, evIdA, inCell[nc][k][evIdA]);
+  if ((vel < 0 && inCell[nc][k][evIdA]==0) || (vel > 0 && inCell[nc][k][evIdA]==cellsk-1))
     return 1;
+  else 
+    return 0;
 }
 void ProcessCellCrossing(void)
 {
@@ -4753,9 +4760,10 @@ void ProcessCellCrossing(void)
   if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
     printf("Cells(%d,%d,%d)\n", inCell[0][evIdA],inCell[1][evIdA],inCell[2][evIdA]);
 #endif
-  boxwall = check_boxwall(kk, n, nc2, nl2);
+  boxwall = check_boxwall(kk, nc, nl);
   if (boxwall)
     {
+      printf("BOXWALL nc=%d nc2=%d nl=%d nl2=%d evIdA=%d time=%.15G\n", nc, nc2, nl, nl2, evIdA, Oparams.time);
       n = (inCell[nc2][2][evIdA] * cellsy[nl2] + inCell[nc2][1][evIdA])*cellsx[nl2] + 
 	inCell[nc2][0][evIdA]
 	+ Oparams.parnum;
