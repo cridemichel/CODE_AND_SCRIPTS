@@ -524,9 +524,9 @@ void shakeVelRespaNPT(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB
 	  ryi[a] = ry[a][i];
 	  rzi[a] = rz[a][i];
 
-	  vxi[a] = p2sx[a][i]/Oparms.m[a];
-	  vyi[a] = p2sy[a][i]/Oparms.m[a];
-	  vzi[a] = p2sz[a][i]/Oparms.m[a];
+	  vxi[a] = p2sx[a][i]/Oparams.m[a];
+	  vyi[a] = p2sy[a][i]/Oparams.m[a];
+	  vzi[a] = p2sz[a][i]/Oparams.m[a];
 	  
 	  moving[a] = 0;
 	  moved[a] = 1;
@@ -2569,7 +2569,7 @@ void updImpLong(double dt, double c)
 void updNoseAnd(double dt, double c)
 {
   int i, a;
-  double cdt, expdt[NA], nM[NA], cost[NA];
+  double cdt, expdt[NA], mM[NA], cost[NA];
   double dlns, dlnV;
   double PCMx, PCMy, PCMz;
   cdt = c*dt;
@@ -2577,7 +2577,7 @@ void updNoseAnd(double dt, double c)
   dlnV = Vol / Vol2 / 3.0 ; 
   for (a = 0; a < NA; a++)
     {
-      nM[a] = Oparams.m[a] / Mtot;
+      mM[a] = Oparams.m[a] / Mtot;
       expdt[a] = exp(-(dlns + dlnV * mM[a]) * cdt);
       cost[a] = (expdt[a] - 1.0) * dlnV * mM[a] / (dlns + dlnV*mM[a]);
     }
@@ -2594,33 +2594,33 @@ void updNoseAnd(double dt, double c)
 	}
       for (a=0; a < NA; a++)
 	{
-	  px[a][i] = costa[a]*(PCMx - px[a][i]) + px[a][i]*expdt[a];
-	  py[a][i] = costa[a]*(PCMy - py[a][i]) + py[a][i]*expdt[a];
-	  pz[a][i] = costa[a]*(PCMz - pz[a][i]) + pz[a][i]*expdt[a];
+	  px[a][i] = cost[a]*(PCMx - px[a][i]) + px[a][i]*expdt[a];
+	  py[a][i] = cost[a]*(PCMy - py[a][i]) + py[a][i]*expdt[a];
+	  pz[a][i] = cost[a]*(PCMz - pz[a][i]) + pz[a][i]*expdt[a];
 	}
     }
 }
 void updNoseAndRef(double dt, double c)
 {
   int i, a;
-  double cdt, expdt[NA], nM[NA];
+  double cdt, expdt[NA], mM[NA];
   double cost[NA];
   double RCMx, RCMy, RCMz;
   cdt = c*dt;
   for (a = 0; a < NA; a++)
     {
-      nM[a] = Oparams.m[a] / Mtot;
+      mM[a] = Oparams.m[a] / Mtot;
       expdt[a] = exp(Pv*Sqr(s)*mM[a]*cdt/(3.0*Vol*OprogStatus.W));
       cost[a] = (expdt[a] - 1.0);
     }
   for (i=0; i < Oparams.parnum; i++)
     {
-      CoM(&RCMx, &RCMy, &RCMz);
+      CoM(i, &RCMx, &RCMy, &RCMz);
       for (a=0; a < NA; a++)
 	{
 	  rx[a][i] = cost[a]*(RCMx - rx[a][i]*mM[a]) + rx[a][i]*expdt[a];
-	  ry[a][i] = cost[a]*(PCMy - ry[a][i]*mM[a]) + ry[a][i]*expdt[a];
-	  rz[a][i] = cost[a]*(PCMz - rz[a][i]*mM[a]) + rz[a][i]*expdt[a];
+	  ry[a][i] = cost[a]*(RCMy - ry[a][i]*mM[a]) + ry[a][i]*expdt[a];
+	  rz[a][i] = cost[a]*(RCMz - rz[a][i]*mM[a]) + rz[a][i]*expdt[a];
 	}
     }
 
@@ -2628,17 +2628,18 @@ void updNoseAndRef(double dt, double c)
 void updLs(double dt, double c)
 {
   double cdt, cdt2;
-  double dof;
-  double DT, Kin, Tist;
+  double dof, Nm;
+  double DT, Kin;
   int i, a;
   cdt = c*dt;
+  Nm = Oparams.parnum;
   cdt2 = cdt / 2.0;
   s = s / (1 - Ps*cdt2/OprogStatus.Q);
   Kin = 0;
   for (i = 0; i < Oparams.parnum; i++)
     for (a = 0; a < NA; a++)
       {
-	Kin += Sqr(px[a][i])+Sqr(py[a][y])+Sqr(pz[a][i]);  
+	Kin += Sqr(px[a][i])+Sqr(py[a][i])+Sqr(pz[a][i]);  
       }
 #ifdef MD_FENE
   dof = 3*NA*Oparams.parnum;
@@ -2704,7 +2705,8 @@ COORD_TYPE  calcT1diagAtRespa(int Nm)
 
 void updLv(double dt, double c)
 {
-  double press, cdt, cdt2, DP;
+  double press, cdt, cdt2, DP, Nm;
+  Nm = Oparams.parnum;
   cdt = c * dt;
   cdt2 = c * dt / 2.0;
   Vol += cdt2*Sqr(s)*Pv/OprogStatus.W;
@@ -2720,8 +2722,7 @@ void updLv(double dt, double c)
   Vol += cdt2*Sqr(s)*Pv/OprogStatus.W;
 }
 /* =========================== >>> kinet <<< ============================== */
-void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz,
-	   COORD_TYPE VOL1)
+void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz)
 {
   int i, a;
   K = 0.0;
@@ -2729,7 +2730,7 @@ void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz,
     {
       for(a=0; a < NA; a++)
 	{
-	  K = K + (Sqr(px) + Sqr(py) + Sqr(pz))/m[a];
+	  K = K + (Sqr(px[a][i]) + Sqr(py[a][i]) + Sqr(pz[a][i]))/Oparams.m[a];
 	}
     }
   K *= 0.5;
@@ -2738,11 +2739,11 @@ void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz,
 void movelongRespaNPTBef(double dt)
 {
   updImpLong(dt, 0.25);
-  updNoseAnd(dt, 0.25)
+  updNoseAnd(dt, 0.25);
   updLv(dt, 0.25);
   updLs(dt, 0.5);
   updLv(dt, 0.25);
-  updNoseAnd(dt, 0.25)
+  updNoseAnd(dt, 0.25);
   updImpLong(dt, 0.25);
   updNoseAndRef(dt, 0.5); 
 }
@@ -2751,11 +2752,11 @@ void movelongRespaNPTAft(double dt)
 {
   updNoseAndRef(dt, 0.5); 
   updImpLong(dt, 0.25);
-  updNoseAnd(dt, 0.25)
+  updNoseAnd(dt, 0.25);
   updLv(dt, 0.25);
   updLs(dt, 0.5);
   updLv(dt, 0.25);
-  updNoseAnd(dt, 0.25)
+  updNoseAnd(dt, 0.25);
   updImpLong(dt, 0.25);
 }
 #endif
@@ -2781,7 +2782,7 @@ void move(void)
     } 
 #ifdef MD_RESPA_NPT
   v2p();
-  movelongRespaNPT(Oparams.steplength);
+  movelongRespaNPTBef(Oparams.steplength);
 #else
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
