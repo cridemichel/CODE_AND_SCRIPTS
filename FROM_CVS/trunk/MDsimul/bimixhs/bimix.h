@@ -252,6 +252,7 @@ struct progStatus
 
   int savedXva; 
   int CMreset;
+  int mdseed;
   int nebrTabFac;                /* How much storage sould be provided for 
                                    the neighbour list (see Rapaport pag.53
 				   for details )*/
