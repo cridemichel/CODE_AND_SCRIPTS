@@ -287,7 +287,7 @@ void updImpLong(double dt, double c)
 	pz[a][i] += cost[a] * FzLong[a][i] + pz[a][i]*expdt[a];
       }
 #ifndef MD_FENE
-  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
 #endif
@@ -301,10 +301,58 @@ void updImpLong(double dt, double c)
 #endif 
 #endif
 }
+void updImpLongNose(double dt, double c)
+{
+  int i, a;
+  double cdt, expdt[NA], cost[NA], dlns;
+  cdt = c*dt;
+  dlns = s*Ps / OprogStatus.Q ;
+  for (a = 0; a < NA; a++)
+    {
+      expdt[a] = exp(-dlns * cdt);
+      cost[a] = (expdt[a] - 1.0) / dlns;
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    for (a=0; a < NA; a++)
+      {
+	px[a][i] += cost[a] * FxLong[a][i] + px[a][i]*expdt[a];
+      	py[a][i] += cost[a] * FyLong[a][i] + py[a][i]*expdt[a];
+	pz[a][i] += cost[a] * FzLong[a][i] + pz[a][i]*expdt[a];
+      }
+#ifndef MD_FENE
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
+#ifdef ATPRESS 
+  WCLong = WC;
+#endif
+#ifdef ATPTENS  
+  WCxxLong = WCxx;
+  WCyyLong = WCyy;
+  WCzzLong = WCzz;
+  WCxyLong = WCxy;
+  WCzxLong = WCzx;
+  WCyzLong = WCyz;
+#endif 
+#endif
+}
+void updImp(double dt, double c)
+{
+  int i, a;
+  double cdt;
+  cdt = c*dt;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      for (a=0; a < NA; a++)
+	{
+	  px[a][i] = cdt*Fx[a][i] + px[a][i];
+	  py[a][i] = cdt*Fy[a][i] + py[a][i];
+	  pz[a][i] = cdt*Fz[a][i] + pz[a][i];
+	}
+    }
+}
 void updImpAnd(double dt, double c)
 {
   int i, a;
-  double cdt, expdt[NA], mM[NA], cost[NA];
+  double cdt, expdt[NA], mM[NA], cost[NA], dlnVmM[NA];
   double dlnV;
   double PCMx, PCMy, PCMz;
   cdt = c*dt;
@@ -312,8 +360,9 @@ void updImpAnd(double dt, double c)
   for (a = 0; a < NA; a++)
     {
       mM[a] = Oparams.m[a] / Mtot;
+      dlnVmM[a] = mM[a] * dlnV;
       expdt[a] = exp(-(dlnV * mM[a]) * cdt);
-      cost[a] = (expdt[a] - 1.0) / dlnV*mM[a];
+      cost[a] = (expdt[a] - 1.0) / dlnVmM[a];
     }
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -328,23 +377,43 @@ void updImpAnd(double dt, double c)
 	}
       for (a=0; a < NA; a++)
 	{
-	  px[a][i] = cost[a]*(-Fx[a][i] + PCMx - px[a][i]) + px[a][i]*expdt[a];
-	  py[a][i] = cost[a]*(-Fx[a][i] + PCMy - py[a][i]) + py[a][i]*expdt[a];
-	  pz[a][i] = cost[a]*(-Fx[a][i] + PCMz - pz[a][i]) + pz[a][i]*expdt[a];
-	}
+	  px[a][i] = cost[a]*(-Fx[a][i] + dlnVmM[a]*(PCMx - px[a][i])) + px[a][i]*expdt[a];
+	  py[a][i] = cost[a]*(-Fy[a][i] + dlnVmM[a]*(PCMy - py[a][i])) + py[a][i]*expdt[a];
+	  pz[a][i] = cost[a]*(-Fz[a][i] + dlnVmM[a]*(PCMz - pz[a][i])) + pz[a][i]*expdt[a];
+	} 
     }
 }
 void updPositions(double dt, double c)
 {
   int i, a;
-  double cdt, expdt[NA], mM[NA];
-  double cost[NA];
+  double cdt, *m;
+  cdt = c*dt;
+  m = Oparams.m;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      for (a=0; a < NA; a++)
+	{
+	  rx[a][i] = cdt*px[a][i]/m[a] + rx[a][i];
+	  ry[a][i] = cdt*py[a][i]/m[a] + ry[a][i];
+	  rz[a][i] = cdt*pz[a][i]/m[a] + rz[a][i];
+	}
+    }
+} 
+
+void updPositionsNPT(double dt, double c)
+{
+  int i, a;
+  double cdt, expdt[NA], mM[NA], *m;
+  double cost[NA], cost2[NA], cost2mM[NA];
   double RCMx, RCMy, RCMz;
   cdt = c*dt;
+  m = Oparams.m;
   for (a = 0; a < NA; a++)
     {
+      cost2[a] = Pv*Sqr(s)/(3.0*Vol*OprogStatus.W);
       mM[a] = Oparams.m[a] / Mtot;
-      expdt[a] = exp(Pv*Sqr(s)*mM[a]*cdt/(3.0*Vol*OprogStatus.W));
+      cost2mM[a] = cost2[a] * mM[a];
+      expdt[a] = exp(cost2mM[a]*cdt);
       cost[a] = (expdt[a] - 1.0);
     }
   for (i=0; i < Oparams.parnum; i++)
@@ -352,9 +421,9 @@ void updPositions(double dt, double c)
       CoM(i, &RCMx, &RCMy, &RCMz);
       for (a=0; a < NA; a++)
 	{
-	  rx[a][i] = cost[a]*(RCMx - rx[a][i]*mM[a]) + rx[a][i]*expdt[a];
-	  ry[a][i] = cost[a]*(RCMy - ry[a][i]*mM[a]) + ry[a][i]*expdt[a];
-	  rz[a][i] = cost[a]*(RCMz - rz[a][i]*mM[a]) + rz[a][i]*expdt[a];
+	  rx[a][i] = cost[a]*(px[a][i]/m[a] + cost2[a]*(RCMx - rx[a][i]*mM[a]))/cost2mM[a] + rx[a][i]*expdt[a];
+	  ry[a][i] = cost[a]*(py[a][i]/m[a] + cost2[a]*(RCMy - ry[a][i]*mM[a]))/cost2mM[a] + ry[a][i]*expdt[a];
+	  rz[a][i] = cost[a]*(pz[a][i]/m[a] + cost2[a]*(RCMz - rz[a][i]*mM[a]))/cost2mM[a] + rz[a][i]*expdt[a];
 	}
     }
 
@@ -503,12 +572,9 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   COORD_TYPE  rabSq, diffSq, rxab, ryab, rzab, rpab, gab;
   COORD_TYPE  dx, dy, dz, rma, rmb;
   COORD_TYPE  axia, ayia, azia;
-  COORD_TYPE  rxi[NA], ryi[NA], rzi[NA], pxi[NA], pyi[NA], pzi[NA],
-    vxi[NA], vyi[NA], vzi[NA];
+  COORD_TYPE  rxi[NA], ryi[NA], rzi[NA], vxi[NA], vyi[NA], vzi[NA], pxi[NA], pyi[NA], pzi[NA];
   int i, a, b, it;
   const COORD_TYPE rptol = 1.0E-6;
-  double expdt[NA], mM[NA];
-  double cost[NA];
   double RCMx, RCMy, RCMz;
 
   if ( ( NB != NA ) && ( NB != NA-1 ) ) 
@@ -529,49 +595,46 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   dt2    = dt / 2.0;
   dtSq2  = dt * dt2;
   dSq = Sqr(d); /* In general you must supply a vector of bond lengths */
-  
+#ifndef MD_FENE
+  for (i=0; i < Oparams.parnum; i++)
+    for (a=0; a < NA; a++)
+      {
+	rxi[a] = rx[a][i];
+	ryi[a] = ry[a][i];
+	rzi[a] = rz[a][i];
+      }	 
+#endif
+  if (OprogStatus.Nose == 1)
+    {
+      updImpAnd(dt, 0.5);
+      updPv(dt, 0.5);
+      updVol(dt, 0.5);
+      updPositionsNPT(dt, 0.5);
+    }
+  else
+    {
+      updImpAnd(dt, 0.5);
+      updPositions(dt, 0.5);
+    }
+
+#if !defined(MD_FENE)
   /* ===== LOOP OVER MOLECULES ===== */
   for (i=0; i < Nm; i++)
     {
-      CoM(i, &RCMx, &RCMy, &RCMz);
       /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
       for(a=0; a < NA; a++)
 	{
-#if 0
-	  axia = Fx[a][i] / m[a];
-	  ayia = Fy[a][i] / m[a];
-	  azia = Fz[a][i] / m[a];
-#endif
-	  rxi[a] = rx[a][i];
-	  ryi[a] = ry[a][i];
-	  rzi[a] = rz[a][i];
-	  px[a][i] = px[a][i] + dt2 * Fx[a][i];
-	  py[a][i] = py[a][i] + dt2 * Fy[a][i];
-	  pz[a][i] = pz[a][i] + dt2 * Fz[a][i];
-	  
-	  pxi[a][i] = dt * px[a][i]/m[a] + cost[a]*(RCMx - rx[a][i]*mM[a]) + rx[a][i]*expdt[a];
-	  pyi[a][i] = dt * py[a][i]/m[a] + cost[a]*(RCMy - ry[a][i]*mM[a]) + ry[a][i]*expdt[a];
-	  pzi[a][i] = dt * pz[a][i]/m[a] + cost[a]*(RCMz - rz[a][i]*mM[a]) + rz[a][i]*expdt[a];
-
-#if 0 
-	  printf("[%d-%d] v=(%f,%f,%f) a=(%f,%f,%f) pr=(%f,%f,%f) r=(%f,%f,%f) (%f,%f,%f)\n", a, i, 
-		 vx[a][i], vy[a][i], vz[a][i],
-		 axia, ayia, azia, pxi[a], pyi[a], pzi[a],
-		 rxi[a], ryi[a], rzi[a], Fx[a][i], Fy[a][i], Fz[a][i]);
-#endif
-	  vxt[a][i] = vx[a][i]; /* v(t) */
-	  vyt[a][i] = vy[a][i];
-	  vzt[a][i] = vz[a][i];
-	  
-	  vxi[a] = vx[a][i] + dt2 * axia;
-	  vyi[a] = vy[a][i] + dt2 * ayia;
-	  vzi[a] = vz[a][i] + dt2 * azia;
+	  pxi[a] = rx[a][i];
+	  pyi[a] = ry[a][i];
+	  pzi[a] = rz[a][i];
+	  vxi[a][i] = px[a][i]/m[a];
+	  vyi[a][i] = py[a][i]/m[a];
+	  vzi[a][i] = pz[a][i]/m[a];
 	  moving[a] = 0;
 	  moved[a]  = 1;
 	}
       it = 0;
       done = 0;
-#if !defined(MD_FENE)
       /* START OF ITERATIVE LOOP */
       while ( (done == 0) && (it <= maxIt) )
 	{
@@ -680,24 +743,21 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 	  exit(-1);
 	}
       /* STORE AWAY NEW VALUES */
-#endif
       for(a=0; a < NA; a++)
 	{
 	  rx[a][i] = pxi[a];
 	  ry[a][i] = pyi[a];
 	  rz[a][i] = pzi[a];
 
-	  vx[a][i] = vxi[a];
-	  vy[a][i] = vyi[a];
-	  vz[a][i] = vzi[a];
+	  px[a][i] = vxi[a]*m[a];
+	  py[a][i] = vyi[a]*m[a];
+	  pz[a][i] = vzi[a]*m[a];
 	  //printf("v(%f,%f,%f) F(%f,%f,%f)\n", vx[a][i], vy[a][i], vz[a][i],
 	//	 Fx[a][i], Fy[a][i], Fz[a][i]);
 	}
-      
     }
-  
-  Vol += dt * Sqr(s)*Pv/OprogStatus.W;
-
+#endif
+  updVol(dt, 0.5);
 }
 
 /* ========================= >>> moveb <<< =========================== */
@@ -707,215 +767,24 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   /* *******************************************************************
      ** SECOND PART OF VELOCITY VERLET WITH CONSTRAINTS               **
      ******************************************************************* */
-  int done;
-  int moving[NA], moved[NA];
-  COORD_TYPE Ka[NA], Mtot, pmx, pmy, pmz;
-  COORD_TYPE rxab, ryab, rzab, rvab, gab, dSq;
-  COORD_TYPE vxab, vyab, vzab;
-  COORD_TYPE dx, dy, dz, dt2, rma, rmb, c2dt;
-  COORD_TYPE rxi[NA], ryi[NA], rzi[NA], pxi[NA], pyi[NA], pzi[NA];
-  double c0, c1, c2,chsi; 
-  int i, a, b, it;
-
-  
+  COORD_TYPE dx, dy, dz, dt2;
   /* ******************************************************************* */
   dt2 = dt*0.5;
-#if 0
-  if (OprogStatus.Nose == -1)
-    {
-      chsi = Oparams.chsi;
-      c0 = exp(-chsi*dt);
-      c1 = (1-c0)/(chsi*dt);
-      c2 = (1-c1)/(chsi*dt);
-      c2dt = dt * c2;
-    }
-  else
-    {
-      c2dt= dt / 2.0;
-    }
-#endif
-  c2dt= dt / 2.0;
   K = 0.0;
   L = cbrt(Vol);
   invL = 1.0 / L;
-  Mtot = 0.0;
-  for(a=0; a < NA; a++)
+  if (OprogStatus.Nose == 1)
     {
-      Mtot += m[a];
-      Ka[a] = 0.0;
+      updPv(dt, 0.5);
+      updImpAnd(dt, 0.5);
     }
-
-  WC = 0.0;
-#if !defined(MOLPTENS) || defined(ATPTENS)
-  WCxy = 0.0; /* Constraints-virial off-diagonal terms of pressure tensor */
-  WCyz = 0.0;
-  WCzx = 0.0;
-
-  WCxx = 0.0; /* Constraints-virial off-diagonal terms of pressure tensor */
-  WCyy = 0.0;
-  WCzz = 0.0;
-  T1xy = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
-  T1yz = 0.0;
-  T1zx = 0.0;
-  T1xx = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
-  T1yy = 0.0;
-  T1zz = 0.0;
+  else
+    updImp(dt, 0.5);
+#ifndef MD_FENE  
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
+		   0.000000000001, px, py, pz);
 #endif
-
-#ifdef MOLPTENS
-  T1mxy = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
-  T1myz = 0.0;
-  T1mzx = 0.0;
-  T1mxx = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
-  T1myy = 0.0;
-  T1mzz = 0.0;
-#endif
-  for (a = 0; a < NA; a++)
-    {
-      mM[a] = Oparams.m[a] / Mtot;
-      expdt[a] = exp(Pv*Sqr(s)*mM[a]*dt/(3.0*Vol*OprogStatus.W));
-      cost[a] = (expdt[a] - 1.0);
-    }
-#ifdef MOLPTENS
-  press = calcT1diagMolRespa(Nm) + (WmLong + WmShort) / 3.0 / Vol; /* press(t+dt) */
-#else
-  press = calcT1diagAtRespa(Nm) + (WLong + WShort + WC) / Vol; /* press(t+dt) */
-#endif
-  DP = press - Oparams.P;
-  Pv += DP  * dt2;
- 
-  dSq = Sqr(d);
-  /* LOOP OVER ALL MOLECULES */
-  for(i=0; i < Nm; i++)
-    {
-      /* VELOCITY VERLET ALGORITHM PART B */
-      for(a=0; a < NA; a++)
-	{
-	  rxi[a] = rx[a][i];
-	  ryi[a] = ry[a][i];
-	  rzi[a] = rz[a][i];
-	  vxi[a] = (px[a][i] + c2dt * Fx[a][i]) / m[a];
-	  vyi[a] = (py[a][i] + c2dt * Fy[a][i]) / m[a];
-	  vzi[a] = (pz[a][i] + c2dt * Fz[a][i]) / m[a];
-	  moving[a] = 0;
-	  moved[a] = 1;
-	}
-#if !defined(MD_FENE)
-      /* START OF ITERATIVE LOOP */
-      it = 0;
-      done = 0;
-      while ((done == 0 ) && ( it <= maxIt ))
-	{
-	  done = 1;
-	  for(a=0; a < NB; a++)
-	    {
-	      b = a + 1;
-	      //if (b >= NA) b = 0;
-
-	      if ( (moved[a] == 1) || (moved[b] == 1) ) 
-		{
-		  vxab = vxi[a] - vxi[b];
-		  vyab = vyi[a] - vyi[b];
-		  vzab = vzi[a] - vzi[b];
-		  rxab = rxi[a] - rxi[b];
-		  ryab = ryi[a] - ryi[b];
-		  rzab = rzi[a] - rzi[b];
-		  rxab = rxab - L*rint(invL*rxab);
-		  ryab = ryab - L*rint(invL*ryab);
-		  rzab = rzab - L*rint(invL*rzab);
-		  rvab = rxab * vxab + ryab * vyab + rzab * vzab;
-		  rma  = 1.0 / m[a];
-		  rmb  = 1.0 / m[b];
-		  gab  = (-rvab) / ( ( rma + rmb ) * dSq );
-		  
-		  if ( fabs(gab) > tol )
-		    {
-		      WC = WC + gab * dSq;
-		      dx = rxab * gab;
-		      dy = ryab * gab;
-		      dz = rzab * gab;
-		      
-		      /* Non-diagonal terms of stress tensor 
-			 NOTE: gab * (rxab, ryab, rzab) = F * (dt/2) */
-#if !defined(MOLPTENS) || defined(ATPTENS)
-			  WCxx += rxab * dx;
-			  WCyy += ryab * dy;
-			  WCzz += rzab * dz;
-			  WCxy = WCxy + rxab * dy;
-			  WCyz = WCyz + ryab * dz;
-			  WCzx = WCzx + rzab * dx;
-			 
-#endif 
-
-		      /* =================================== */
-		      
-		      vxi[a] = vxi[a] + rma * dx;
-		      vyi[a] = vyi[a] + rma * dy;
-		      vzi[a] = vzi[a] + rma * dz;
-		      vxi[b] = vxi[b] - rmb * dx;
-		      vyi[b] = vyi[b] - rmb * dy;
-		      vzi[b] = vzi[b] - rmb * dz;
-		      moving[a] = 1;
-		      moving[b] = 1;
-		      done = 0;
-		    }
-		}
-	    }
-	  for(a=0; a < NA; a++)
-	    {
-	      moved[a]  = moving[a];
-	      moving[a] = 0;
-	    }
-	  it = it + 1;
-	 } 
-      /* END OF ITERATIVE LOOP */
-      if (done == 0)
-	{
-	  sprintf(msgStrA, "MOLECULE N. %d", i);
-	  mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,
-		"TOO MANY CONSTRAINT ITERATIONS IN MOVEB",
-		msgStrA,
-		NULL);
-	  exit(-1);
-	  
-	}
-#endif
-#ifdef MOLPTENS
-    vmx = vmy = vmz = 0.0;  /* Velocity of center of mass of molecule i */
-#endif
-    for(a=0; a < NA;  a++)
-	{
-	  px[a][i] = vxi[a]*m[a];
-	  py[a][i] = vyi[a]*m[a];
-	  pz[a][i] = vzi[a]*m[a];
-#ifdef MOLPTENS
-	  pmx += pxi[a] * m[a];
-	  pmy += pyi[a] * m[a];
-	  pmz += pzi[a] * m[a];
-#endif
-#if !defined(MOLPTENS) || defined(ATPTENS)
-	  /* Kinetic terms of the pressure-tensor */
-	  T1xy += px[a][i] * py[a][i] / m[a]; 
-	  T1yz += py[a][i] * pz[a][i] / m[a];
-	  T1zx += pz[a][i] * px[a][i] / m[a];
-	  T1xx += px[a][i] * px[a][i] / m[a]; 
-	  T1yy += py[a][i] * py[a][i] / m[a];
-	  T1zz += pz[a][i] * pz[a][i] / m[a];
-#endif
-	  Ka[a] = Ka[a] + Sqr(pxi[a]) + Sqr(pyi[a]) + Sqr(pzi[a]);
-	}
-#ifdef MOLPTENS
-    /* Kinetic component of pressure tensor (all terms) */
-    T1mxy += pmx * pmy / Mtot; 
-    T1myz += pmy * pmz / Mtot;
-    T1mzx += pmz * pmx / Mtot;
-    T1mxx += pmx * pmx / Mtot;
-    T1myy += pmy * pmy / Mtot;
-    T1mzz += pmz * pmz / Mtot;
-#endif    
-    }
-  /* END OF LOOP OVER MOLECULES */
-  
+#if 0
   for(i=0; i < Nm; i++)
     {
       for(a=0; a < NA; a++)
@@ -928,22 +797,7 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	  vzo1[a][i] = vzt[a][i];
 	}
     }
-
-  for(a=0; a < NA; a++)
-    {
-      K  = K + Ka[a] * m[a] * 0.5;
-    }
-     
-  WC = WC / dt2 / 3.0;
-
-#if !defined(MOLPTENS) || defined(ATPTENS)
-  WCxy = WCxy / dt2; /* WCxy, ... are not exactly virial terms and the 3.0
-			is not present */
-  WCyz = WCyz / dt2;
-  WCzx = WCzx / dt2;
 #endif
-
-  /* !!!!!##$$%%^^*/
 #ifdef MOLPTENS
   /* Calculate molecular pressure */
   press_m =  T1mxx + T1myy + T1mzz + Wm;
@@ -1015,24 +869,15 @@ void move(void)
   Mtot = 0;
   for (a = 0; a < NA; a++)
     Mtot += Oparams.m[a];
-
   if (Oparams.curStep == 1)  
     {
       BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcut);
-#if 0
-      BuildNebrListNoLinked(Oparams.parnum, OprogStatus.rcutInner);
-#endif
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-#if 0
-      LJForce(Oparams.parnum, OprogStatus.rcutInner);
-#ifdef MD_FENE
-      FENEForce();
-#endif
-#endif
     } 
 #ifdef MD_RESPA_NPT
   v2p();
-  movelongRespaNPTBef(Oparams.steplength);
+  if (OprogStatus.Nose == 1 || OprogStatus.Nose == 2)
+    movelongRespaNPTBef(Oparams.steplength);
 #else
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
@@ -1075,10 +920,6 @@ void move(void)
 #ifdef MD_FENE
       FENEForce();
 #endif
-      /* considera tutti i contributi alle forza agente sugli atomi "di base"
-       * ossia somma anche le forze dovute agli atomi senza massa moltiplicate
-       * per gli opportuni coefficienti "vincolari" 
-       * */
       Wm += WmLong;
 #ifdef MOLPTENS
       Wmxy += WmyzLong;
@@ -1091,22 +932,25 @@ void move(void)
       Wmzz += WmzzLong;
 #endif
 #if defined(ATPTENS)
-      Wxx += WxxLong;
-      Wyy += WyyLong;
-      Wzz += WzzLong;
-      Wxy += WxyLong;
-      Wzx += WzxLong;
-      Wyz += WyzLong;
+      Wxx += WxxLong + WCxxLong;
+      Wyy += WyyLong + WCyyLong;
+      Wzz += WzzLong + WCzzLong;
+      Wxy += WxyLong + WxyzLong;
+      Wzx += WzxLong + WzxzLong;
+      Wyz += WyzLong + WyzzLong;
 #endif
       VcR = Vc;
       Vc += VcLong;
       V += VLong;
       W += WLong;
-      kinet(Oparams.parnum, vx, vy, vz, Vol1);
+#if defined(ATPRESS)
+      W += WCLong;
+#endif
+      /* kinet(Oparams.parnum, vx, vy, vz, Vol1); */
 #ifdef MD_RESPA_NPT
       /* NVE ensemble o Dinamica Browniana */
       movebRespa(Oparams.steplength/n, 0.00000000001, 150, NA-1, Oparams.m, distance, 
-	    Oparams.parnum); 
+		 Oparams.parnum); 
 #else
       /* correct the coords */
       if (OprogStatus.Nose == 1)
@@ -1173,7 +1017,8 @@ void move(void)
   //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
   //LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcut);
 #ifdef MD_RESPA_NPT
-  movelongRespaNPTAft(Oparams.steplength);
+  if (OprogStatus.Nose == 1 || OprogStatus.Nose == 2)
+    movelongRespaNPTAft(Oparams.steplength);
   p2v();
 #else
   for (i=0; i < Oparams.parnum; i++)
