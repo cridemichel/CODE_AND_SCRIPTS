@@ -12,7 +12,7 @@ float mgl_bw[NUMBW][4];
 char *mglrgb[]={
 #include "mglrgb.h"
 };
-struct molecule *mols = NULL;
+struct molecule **mols = NULL;
 struct global_settings globset;
 
 /* array con i valori di default */
@@ -138,7 +138,7 @@ void displayAtom(int nf, int nm, int na)
   GLUquadricObj* ss;
   atom_s *atom;
   glPushMatrix();
-  atom = &mols[nm].atom[na];
+  atom = &mols[nf][nm].atom[na];
   glTranslatef(atom->common.rx,atom->common.ry,atom->common.rz);/* 1st atom */ 
   
   fadeFact = calcFadeFact(globset.fadeMode, nf);
@@ -200,7 +200,8 @@ void buildAtomsList()
       glNewList(atomsList[nf], GL_COMPILE);
       for(i = 0; i < globset.NumMols[nf]; ++i)
 	{
-	  displayAtom(nf, i, j);
+	  for (j=0; j < mols[nf][i].numat; j++)
+	    displayAtom(nf, i, j);
 	}
       glEndList();
     }
@@ -368,7 +369,7 @@ void save_image(void)
 /* ======================== >>> display <<< ===============================*/
 void display (void)
 {
-  int j, nf;
+  int nf;
   /*
    * double fadeFact;
    */
@@ -476,7 +477,6 @@ void print_usage(void)
 void args(int argc, char* argv[])
 {
   int i=1;
-  int ii;
 
   if (argc == 1)
     {
@@ -529,7 +529,18 @@ void args(int argc, char* argv[])
 		}
 	      globset.diameter = atof(argv[i]);
 	    }
-	  else if (!strcmp(argv[i],"--nobox")|| !strcmp(argv[i],"-nb"))
+	  else if (!strcmp(argv[i],"--height")|| !strcmp(argv[i],"-ht"))
+	    {
+	      i++;
+	      globset.setheight = 1;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the viewpoint (x,y,z)!\n");
+		  exit(-1);
+		}
+	      globset.height = atof(argv[i]);
+	    }
+ else if (!strcmp(argv[i],"--nobox")|| !strcmp(argv[i],"-nb"))
 	    {
 	      globset.drawcube = 0;
 	    }
@@ -582,98 +593,115 @@ int parsecol(char *str)
     }
 }
 /* ========================== >>> assignAtom <<< ===========================*/
-void assignAtom(int nf, int i, int j, const char* L)
+void assignAtom(int nf, int i, int a, const char* L)
 {
   char s1[128], s2[128], s3[128], s4[128], s5[128], s6[128], s7[128], s8[128];
+  atom_s *at;
 
+  at = &mols[nf][i].atom[a];
   if (sscanf(L,"%s %s %s %s %s %s", s1, s2, s3, s4, s5, s6) == 6)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
 	     atoi(s5),i, j);*/
-      rx[j][i][nf] = atof(s1);
-      ry[j][i][nf] = atof(s2);
-      rz[j][i][nf] = atof(s3);
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
       /* nx, ny, nz sono le componenti del vettore normale al dischetto */
-      nx[j][i][nf] = atof(s4);
-      ny[j][i][nf] = atof(s5);
-      nz[j][i][nf] = atof(s6);
-      radius[j][i] = globset.sig[j];
-      greyLvl[j][i] = 0; /*colIdxBW[j];// default value of grey level */
-      atcol[j][i]  = -1;
+      at->disk.nx = atof(s4);
+      at->disk.ny = atof(s5);
+      at->disk.nz = atof(s6);
+      if (globset.NA)
+	{
+	  at->disk.radius = globset.sig[a];
+	  at->disk.height = globset.height;
+	}
+      else
+	{
+	  at->disk.radius = globset.diameter/2.0;
+	  at->disk.height = globset.height;
+	}
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = -1;
     }
   else if (sscanf(L,"%s %s %s %s %s %s @ %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8) == 8)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
 	     atoi(s5),i, j);*/
-      rx[j][i][nf] = atof(s1);
-      ry[j][i][nf] = atof(s2);
-      rz[j][i][nf] = atof(s3);
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
       /* nx, ny, nz sono le componenti del vettore normale al dischetto */
-      nx[j][i][nf] = atof(s4);
-      ny[j][i][nf] = atof(s5);
-      nz[j][i][nf] = atof(s6);
-      radius[j][i] = atof(s7);
-      greyLvl[j][i] = 0; /*colIdxBW[j];// default value of grey level */
-      atcol[j][i]  = parsecol(s8);
+      at->disk.nx = atof(s4);
+      at->disk.ny = atof(s5);
+      at->disk.nz = atof(s6);
+      at->disk.radius = atof(s7);
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = parsecol(s8);
     }
   else if (sscanf(L,"%s %s %s @ %s $ %s ", s1, s2, s3, s4, s5) == 5 )
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
 	     atoi(s5),i, j);*/
-      rx[j][i][nf]= atof(s1);
-      ry[j][i][nf]= atof(s2);
-      rz[j][i][nf]= atof(s3);
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz= atof(s3);
       /*greylLvl[j][i] = colIdxBW[j];*/
       /* default value of grey level*/
-      radius[j][i] = atof(s4);
-      greyLvl[j][i] = atoi(s5);
-      atcol[j][i]  = -1;
+      at->sphere.radius = atof(s4);
+      at->common.greyLvl = atoi(s5);
+      at->common.atcol  = -1;
     }
   if (sscanf(L,"%s %s %s C[%[^]]", s1, s2, s3, s4) == 4 )
     {
-      rx[j][i][nf] = atof(s1);
-      ry[j][i][nf] = atof(s2);
-      rz[j][i][nf] = atof(s3);
-      radius[j][i] = sig[j];
-      greyLvl[j][i] = 0;
-      atcol[j][i] = parsecol(s4);
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      if (globset.NA)
+	at->sphere.radius = globset.sig[a];
+      else
+	at->sphere.radius = globset.diameter/2.0;
+      at->common.greyLvl = 0;
+      at->common.atcol = parsecol(s4);
     }
   else if (sscanf(L,"%s %s %s @ %s C[%[^]]", s1, s2, s3, s4, s5) == 5)
     {
       /* printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       */
-      rx[j][i][nf]= atof(s1);
-      ry[j][i][nf]= atof(s2);
-      rz[j][i][nf]= atof(s3);
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
-      radius[j][i] = atof(s4);
-      greyLvl[j][i] = 0;
-      atcol[j][i] = parsecol(s5);
+      at->sphere.radius = atof(s4);
+      at->common.greyLvl = 0;
+      at->common.atcol = parsecol(s5);
     }
   else if (sscanf(L,"%s %s %s @ %s ", s1, s2, s3, s4) == 4 )
     {
       /* printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       */
-      rx[j][i][nf]= atof(s1);
-      ry[j][i][nf]= atof(s2);
-      rz[j][i][nf]= atof(s3);
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
-      radius[j][i] = atof(s4);
-      greyLvl[j][i] = 0;
-      atcol[j][i]  = -1;
+      at->sphere.radius = atof(s4);
+      at->common.greyLvl = 0;
+      at->common.atcol  = -1;
     }
   else if (sscanf(L,"%s %s %s ", s1, s2, s3) == 3 )
     {
-      rx[j][i][nf]= atof(s1);
-      ry[j][i][nf]= atof(s2);
-      rz[j][i] [nf]= atof(s3);
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
-      radius[j][i] = sig[j];
-      greyLvl[j][i] = 0;
-      atcol[j][i]  = -1;
+      if (globset.NA)
+	at->sphere.radius = globset.sig[a];
+      else
+	at->sphere.radius = globset.diameter/2.0;
+      at->common.greyLvl = 0;
+      at->common.atcol  = -1;
     }
   else
     {
@@ -697,17 +725,28 @@ int getColByName(const char* name)
   exit(-1);
 }
 
+void add_mol(int cf, int curmol);
+void add_frame(int curframes);
+
 void add_atom(int cf, int curmol, int curat)
 {
-  mols[cf][curmol].atom = realloc(mols[cf][curmol].atom, sizeof(atom_u)*curat);
-  mols[cf][curmol].atom[curat-1]
+  if (mols==NULL)
+    add_frame(0);
+  if (mols[cf]==NULL)
+    add_mol(cf, 0);
+  mols[cf][curmol].atom = realloc(mols[cf][curmol].atom, sizeof(atom_u)*(curat+1));
+  /*mols[cf][curmol].atom[curat-1]*/
+  mols[cf][curmol].numat++;
 }
 
 void add_mol(int cf, int curmol)
 { 
-  mols[cf] = realloc(mols[cf], sizeof(struct molecules)*curmol);
-  mols[cf][curmol-1].atom = NULL;
-  mols[cf][curmol-1].bond = NULL;
+  if (mols == NULL)
+    add_frame(0);
+  mols[cf] = realloc(mols[cf], sizeof(struct molecule)*(curmol+1));
+  mols[cf][curmol].atom = NULL;
+  mols[cf][curmol].bond = NULL;
+  mols[cf][curmol].numat = 0;
 }
 
 void add_frame(int curframes)
@@ -718,7 +757,7 @@ void add_frame(int curframes)
   globset.NumMols[nf] = 0;
   atomsList = realloc(atomsList, sizeof(GLuint)*nf);
   mols = realloc(mols, sizeof(struct molecule*)*nf);
-  mols[nf-1] = NULL;
+  mols[curframes] = NULL;
 }
 
 /* =========================== >>> readLine <<< =============================*/
@@ -775,8 +814,8 @@ int parseLine(const char* Line, int* nf, int* i, int alloc)
   /*
     return true if this is a parameter, 0 otherwise
   */
-  char parName[128], parVal[512], s1[512];
-  int lett, j, jj, ii;
+  char parName[128], parVal[512], s1[512], *ns;
+  int lett, j, a;
   /* Syntax:
      <parname> : <value>
      where <parname> is of the form ".<name>"
@@ -790,15 +829,18 @@ int parseLine(const char* Line, int* nf, int* i, int alloc)
   /* new frames */
   if (!strcmp(parName, ".newmol"))
     {
-      ++(*i);
-      if (alloc)
-	add_mol(*i);
+      if (!globset.NA)
+	{
+	  ++(*i);
+	  if (alloc)
+	    add_mol(*nf,*i);
+	}
     }
   else if (!strcmp(parName, ".newframe"))
     {
       if (!((*nf == 0) && (*i == 0)))
 	{
-	  NumMols[nf] = i;
+	  globset.NumMols[*nf] = *i;
 	  ++(*nf);
 	  *i = 0;
 	  if (alloc)
@@ -890,12 +932,14 @@ void setdefaults_after_fakeread(void)
   int a;
   if (globset.NA)
     {
+      globset.colIdxCol = malloc(sizeof(int)*globset.NA);
+      globset.colIdxBw  = malloc(sizeof(int)*globset.NA);
       for (a = 0; a < globset.NA; ++a)
 	{
 	  /*  sig[i] = 0.5;*/
 	  globset.colIdxCol[a] = a;
 	  /* first (and only those ones) 25 grey are quite different in this way */
-	  if (i < 25)
+	  if (a < 25)
 	    globset.colIdxBw[a] = a*10;
 	  else 
 	    globset.colIdxBw[a] = a;
@@ -909,12 +953,13 @@ void setdefaults_after_fakeread(void)
     }
   if (globset.setdiameter && globset.NA)
     {
+      globset.sig = malloc(sizeof(double)*globset.NA);
       for (a = 0; a < globset.NA; ++a)
 	{
 	  globset.sig[a] = globset.diameter;
 	} 
     }
-  
+
 }
 /* ========================== >>> loadAtomPos <<< ===========================*/
 void loadAtomPos(void)
@@ -928,14 +973,13 @@ void loadAtomPos(void)
      .
      where 0 refers to atom 0 and 1 refers to atom 1*/
   FILE* ifs;
-  int i, a, nf, first=1;
+  int i, a, nf;
   char line[1024];
-  long fpostmp, fpos=0;
   /*printf("Loading file %s\n", inputFile);*/
   i = 0;
   nf = 0;
   a = 0;
-  add_one_frame(0);
+ 
   ifs = fopen(inputFile, "r"); 
   if (!ifs)
     {
@@ -955,7 +999,8 @@ void loadAtomPos(void)
       if (globset.NA && a >= globset.NA) 
 	{
 	  a = 0;
-	  add_mol(i);
+	  i++;
+	  add_mol(nf, i);
 	}
 #if 0  
       if (first)
@@ -970,7 +1015,7 @@ void loadAtomPos(void)
       /*assignAtom(nf, i, j, line);*/
       
       ++a;
-      add_atom(i, a);
+      add_atom(nf, i, a);
     }
 
   /*printf("NumMols:%d", NumMols);*/
@@ -980,8 +1025,6 @@ void loadAtomPos(void)
       printf("ERROR: Presumbly the input file you supplied is void!\n");
       exit(-1);
     }
-  if (globset.NA)
-    globset.sig = malloc(sizeof(double)*globset.NA);
   setdefaults_after_fakeread();
   globset.frameNo = ++nf;
   globset.NumMols[nf] = i;
@@ -1002,12 +1045,11 @@ void loadAtomPos(void)
     {
       readLine(ifs, line);
 
-      assignAtom(nf, i, a, line);
-      
       if (parseLine(line, &nf, &i, 0)) 
 	continue;
+      assignAtom(nf, i, a, line);
       ++a;
-      if (NA && i >= NA)
+      if (globset.NA && i >= globset.NA)
 	{
 	  a = 0;
 	  i++;
@@ -1041,25 +1083,24 @@ void readRGB(void)
 /* ======================== >>> default_pars <<< ==========================*/
 void default_pars(void)
 {
-  int i;
-
   globset.L = 14.0;
   globset.saved_counter = 0;
-  globset saveandquit = 0;
+  globset.saveandquit = 0;
   globset.savefile = NULL;
   globset.drawcube = 1;
   globset.sig = NULL;
-  globset.height = NULL;
+  /*globset.height = NULL;*/
   globset.setdiameter = 0;
+  globset.setheight = 0;
   globset.numAt = 0; /* atomi per molecola 0=illimitati a meno che non si usi .newmol*/
-  globset.setdiameter = 0;
+  globset.setheight = 0;
   globset.NumMols = NULL;
   globset.Width = 500;
   globset.Height = 500;
   globset.infos = 1;
   globset.frameNo = 1;
   globset.fadeMode = 2;
-  globset.NA = 1;
+  globset.NA = 0;
   globset.axon = 0;
   globset.bw = 0;
   globset.degx = 0.0;
@@ -1069,8 +1110,8 @@ void default_pars(void)
   globset.viewangle=45.0;
   globset.setvp = 0;
   globset.diameter = 1.0;
+  globset.height = 0.2;
   globset.dist = 1.0;
- 
   readRGB();
 
   setBW();
