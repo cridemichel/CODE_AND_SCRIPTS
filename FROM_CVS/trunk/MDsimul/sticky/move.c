@@ -2602,6 +2602,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   //printf("wx:%f maxax: %f,%f\n", sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i])), maxax[i], maxax[j]);
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = OprogStatus.h; /* last resort time increment */
+  if (*collCode!=MD_EVENT_NONE)
+    {
+      if (t2 > *evtime)
+	t2 = *evtime+h;
+    }
   delt = h;
   MD_DEBUG(printf("QUIIII collCode=%d\n", *collCode));
   //printf("t1= %f t2 = %f\n", t1, t2);
