@@ -3738,7 +3738,6 @@ void newt(double x[], int n, int *check,
 }
 //#define MD_GLOBALNRD
 #define MAXITS3 200
-extern void adjustBeta(double *rC, double *rD, double *Beta);
 void newtDistNeg(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
@@ -3885,13 +3884,6 @@ void newtDistNeg(double x[], int n, int *check,
 	  MD_DEBUG(printf("test < TOLX\n"));
 	  FREERETURND; 
 	}
-#endif
-#if 0
-#ifdef MD_DIST5
-      adjustBeta(&x[0], &x[3], &x[4]);
-#else
-      adjustBeta(&x[0], &x[3], &x[7]);
-#endif
 #endif
     } 
   MD_DEBUG18(printf("maxits!!!\n"));
