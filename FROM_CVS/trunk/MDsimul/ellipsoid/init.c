@@ -17,6 +17,7 @@ double maxax[2];
 extern int *lastbump;
 extern double *lastcol;
 double *axa, *axb, *axc;
+double **Aip;
 int *scdone;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
@@ -1003,6 +1004,7 @@ void usrInitAft(void)
     RA = matrix(3, 3);
     RB = matrix(3, 3);
     Rt = matrix(3, 3);
+    Aip = matrix(3,3);
     R = malloc(sizeof(double**)*Oparams.parnum);
     for (i=0; i < Oparams.parnum; i++)
       {
