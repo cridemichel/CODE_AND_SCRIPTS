@@ -711,9 +711,9 @@ void  AnlzConstraintDevs (void)
 	  dr1[2] = rz[i + 1][n] - rz[i][n];
   	  dr1[2] = dr1[2] - L*rint(dr1[2]/L);
 	  curBondLenSq[i] = Sqr (dr1[0]) + Sqr (dr1[1]) + Sqr (dr1[2]);
-	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d)/Oparams.d > 5E-8)
+	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d)/Oparams.d > 3E-7)
 	    {
-	      sumsteps = sumsteps +(Oparams.curStep - laststep[n]);
+	      sumsteps = sumsteps + OprogStatus.nrespa*(Oparams.curStep - laststep[n]);
 	      numshake=numshake+1.0;
 	      doneshake++;
 	      doshake[n] = 1;
@@ -724,11 +724,11 @@ void  AnlzConstraintDevs (void)
 	}
       
     }
-  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-8, 150, NA-1, Oparams.d,
+  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-10, 150, NA-1, Oparams.d,
 		    Oparams.m, Oparams.parnum);
   if (doneshake)
     {
-      if (sumsteps/numshake < 2 || Oparams.curStep % 1000 == 0)
+      if (sumsteps/numshake < 1.5 || Oparams.curStep % 1000 == 0)
 	printf("<<<< [WARNING] >>>> average steps between two SHAKE: %f \n", sumsteps/numshake);
       
     }
@@ -2278,9 +2278,10 @@ void movelongRespaNPTBef(double dt)
      updPvLong(dt, 0.5);
 #ifdef MD_RAPACONSTR
   //printf("MOVE LONG BEF\n");
-  ComputeConstraints(dt, 1.0, 0, 0); 
+  ComputeConstraints(dt, 0.5, 0, 0); 
   /*RAPA<<<<<<<<<<<<<<<< */
 #endif
+
 #if 1
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   if (OprogStatus.rcutInner != Oparams.rcut)
@@ -2419,13 +2420,13 @@ void movelongRespaNPTAft(double dt)
     }
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-#ifdef MD_RAPACONSTR
-  ComputeConstraints(dt, 1.0, 0, 1);
-#endif
-
   if (OprogStatus.Nose==1)
     updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
+#ifdef MD_RAPACONSTR
+  if (OprogStatus.rcutInner != Oparams.rcut)
+    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
+#endif
 #if 1
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR) 
   if (OprogStatus.rcutInner != Oparams.rcut)
@@ -2606,7 +2607,7 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #if 1
 #if defined(MD_RAPACONSTR)
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
-		   1E-8, px, py, pz);
+		   1E-9, px, py, pz);
 #endif
 #endif
 #if 1
