@@ -765,13 +765,13 @@ void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, COORD_TYPE** velz,
 inline double SwitchFunc(double r)
 {
   double R;
-  if (r < Oparams.rcut - OprogStatus.lambda)
+  if (r < OprogStatus.rcutInner - OprogStatus.lambda)
     return 1; 
-  else if (r > Oparams.rcut)
+  else if (r > OprogStatus.rcutInner)
     return 0;
   else
     {
-      R = (r - (Oparams.rcut - OprogStatus.lambda))/OprogStatus.lambda ;
+      R = (r - (OprogStatus.rcutInner - OprogStatus.lambda))/OprogStatus.lambda ;
       return 1.0 + Sqr(R)*(2.0*R - 3.0);
     }    
 }

@@ -283,6 +283,7 @@ struct progStatus
      					for details )*/
   COORD_TYPE rNebrShellLong;         /* = Dr see Rapaport pag. 53 */
   int nrespa;                    /* numero di iterazioni del reference system */
+  double rcutInner;
   double lambda;
 #endif
   int nebrTabFac;                /* How much storage sould be provided for 
@@ -358,9 +359,6 @@ struct params
   COORD_TYPE m[NA];                 /* atom mass */
   int nsites;
   COORD_TYPE rcut;              /* cutoff for the pair potential */ 
-#ifdef MD_RESPA
-  double rcutO;
-#endif
   int NN;
   int MM;
   double epsilon;               /* dieletric constant */
@@ -587,7 +585,7 @@ struct singlePar OsinglePar[] = {
   {"d",          &Oparams.d,            CT},
   {"rcut",       &Oparams.rcut,             CT},
 #ifdef MD_RESPA
-  {"rcutO",      &Oparams.rcutO,            CT},
+  {"rcutInner",  &OprogStatus.rcutInner,            CT},
   {"nrespa",     &OprogStatus.nrespa,      INT},
   {"lambda",     &OprogStatus.lambda,      CT},
 #endif
@@ -674,6 +672,9 @@ struct pascii opro_ascii[] =
 #ifdef MD_RESPA
   {"nebrTabFacLong",   &OS(nebrTabFacLong),                 1,   1,   "%d"},
   {"rNebrShellLong",   &OS(rNebrShellLong),                 1,   1, "%.6G"},
+  {"lambda",           &OS(lambda),                         1,   1, "%.10G"},
+  {"nrespa",           &OS(nrespa),                         1,   1,  "%d"},
+  {"rcutInner",        &OS(rcutInner),                      1,   1, "%.10G"},
 #endif
   {"noLinkedList", &OS(noLinkedList),               1,   1,  "%d"},
   {"avVol",          &OS(avVol),                    1,   1, "%.8G"},
