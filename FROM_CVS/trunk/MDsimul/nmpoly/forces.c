@@ -256,7 +256,7 @@ void BuildNebrListNoLinkedLong(int Nm, double rCut)
 		/*   i > j because of 3rd law */
 		{
 #if defined(MD_FENE)
-		  if (i==j && b <= a)
+		  if (i==j && b < a+2)
 		    continue;
 #else
 		  if (i==j && b < a+2)
@@ -485,7 +485,7 @@ void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut)
 		/*   i > j because of 3rd law */
 		{
 #if defined(MD_FENE)
-		  if (i==j && b <= a)
+		  if (i==j && b < a+2)
 		    continue;
 #else
 		  if (i==j && b < a+2)
@@ -1616,6 +1616,15 @@ void FENEForce(void)
   int i, a;
   double ff, invff;
   double rabSq, L, drx, dry, drz, R0Sq, fx, fy, fz;
+  double wab, srab2, srab6, srab12, vab, epsab4; 
+  double rcutab, rcutabSq, sigmaSq, vabCut, rab, fab;
+#ifdef NM_SPHERE
+  double vabNN, vabMM;
+#endif
+  rcutab = Oparams.rcut * Oparams.sigma;
+  rcutabSq = Sqr(rcutab);
+  sigmaSq = Sqr(Oparams.sigma);
+
   L = cbrt(Vol);
   Vfe = WC = 0;
 #ifdef ATPTENS
@@ -1624,6 +1633,19 @@ void FENEForce(void)
   WCzx = 0.0;
   WCxx = WCyy = WCzz = 0.0;
 #endif
+  rab   = Oparams.rcut*Oparams.sigma;
+  rabSq = Sqr(rab);
+  srab2   = sigmaSq / rabSq;
+#if defined(SOFT_SPHERE)
+  vabCut = pow(srab2, Oparams.NN/2.0);
+#elif defined(NM_SPHERE)
+  vabCut = pow(srab2, Oparams.NN/2.0)-pow(srab2,Oparams.MM/2.0);
+#else
+  srab6 = srab2 * srab2 * srab2;
+  srab12 = srab6 * srab6;
+  vabCut = srab12 - srab6;
+#endif
+  epsab4 = 4.0 * Oparams.epsilon;
   R0Sq = Sqr(Oparams.R0);
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -1652,9 +1674,35 @@ void FENEForce(void)
 	  ff = 1 - rabSq / R0Sq;
 	  invff = -Oparams.kfe / ff;
 	  //printf("invff: %f\n", invff);
-	  fx = drx * invff;
-	  fy = dry * invff;
-	  fz = drz * invff;
+	  if (OprogStatus.grow)
+	    srab2 = Sqr((sigmag[a][i]+sigmag[a+1][i])/2.0)/rabSq; 
+	  else
+	    srab2 = sigmaSq / rabSq;
+#if defined(SOFT_SPHERE)
+	  vab = pow(srab2, ((double)Oparams.NN)/2.0);
+  	  wab = ((double)Oparams.NN)*vab;
+#elif defined(NM_SPHERE)
+	  vabNN = pow(srab2, ((double)Oparams.NN)/2.0);
+	  vabMM = -pow(srab2, ((double)Oparams.MM)/2.0);
+	  vab = vabNN + vabMM;
+  	  wab = ((double)Oparams.NN)*vabNN - ((double)Oparams.MM)*vabMM ;
+#else
+	  /* Lennard-Jones */
+	  srab6   = srab2 * srab2 * srab2;
+	  srab12  = Sqr(srab6);
+	  vab     = srab12 - srab6;
+	  /*vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);*/
+	  wab     = 6.0*(vab + srab12);
+#endif
+	  fab   = epsab4 * wab / rabSq;
+#if 0
+	  if (OprogStatus.grow && fabs(fab) > 1000)
+	    fab = 1000;
+#endif
+	  fx = drx * (invff + fab);
+	  fy = dry * (invff + fab);
+	  fz = drz * (invff + fab);
+	
 	  Fx[a][i] += fx;
 	  Fy[a][i] += fy;
 	  Fz[a][i] += fz;
@@ -1671,8 +1719,8 @@ void FENEForce(void)
 	  WCyy += dry * fy;
 	  WCzz += drz * fz;
 #endif
-	  WC += rabSq * invff; 
-	  Vfe += -0.5 * Oparams.kfe * R0Sq * log(ff);
+	  WC += rabSq * invff + wab; 
+	  Vfe += -0.5 * Oparams.kfe * R0Sq * log(ff) + epsab4*(vab - vabCut);
 	}
     }
   WC /=3.0;
