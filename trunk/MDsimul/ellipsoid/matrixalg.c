@@ -148,12 +148,11 @@ void InvMatrix(double **a, double **b, int NB)
     }
 }
 
-#define ALF 1.0e-4 /* Ensures su cient decrease in function value.*/
-#define TOLX 1.0e-7 /* Convergence criterion on  x.*/ 
+#define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
+#define TOLX 1.0E-8//1.0e-7 /* Convergence criterion on  x.*/ 
 #define MAXITS 200 
-#define TOLF 1.0e-4 
-#define TOLMIN 1.0e-6 
-#define TOLX 1.0e-7 
+#define TOLF 1.0e-5 // 1.0e-4
+#define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) (A)>(B)?(A):(B)
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
@@ -277,7 +276,8 @@ void free_matrix(double **M, int n)
 }
 int nn; /* Global variables to communicate with fmin.*/
 double *fvec; 
-#define FREERETURN {free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);return;}
+#define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
+free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);return;}
 
 void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[3]);
 
@@ -356,8 +356,7 @@ void newt(double x[], int n, int *check,
 		test=temp; 
 	    } 
 	  *check=(test < TOLMIN ? 1 : 0);
-	  MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], test, its, *check));
-	  FREERETURN 
+  	  FREERETURN 
 	} 
       test=0.0; /* Test for convergence on ´x. */
       for (i=0;i<n;i++) 
