@@ -2116,7 +2116,16 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   vB[0] = 0.0;
   vB[1] = 0.0;
   vB[2] = 0.0;
-  
+  OmegaB[0][0] = 0;
+  OmegaB[0][1] = 0;
+  OmegaB[0][2] = 0;
+  OmegaB[1][0] = 0;
+  OmegaB[1][1] = 0;
+  OmegaB[1][2] = 0;
+  OmegaB[2][0] = 0;
+  OmegaB[2][1] = 0;
+  OmegaB[2][2] = 0;
+   
   invaSqN = 1.0/Sqr(nebrTab[iA].axa);
   invbSqN = 1.0/Sqr(nebrTab[iA].axb);
   invcSqN = 1.0/Sqr(nebrTab[iA].axc);
@@ -3615,6 +3624,7 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
   MD_DEBUG20(printf("AAAA ti= %.15G rA (%.15G,%.15G,%.15G)\n", ti, rA[0], rA[1], rA[2]));
+  MD_DEBUG20(printf("AAAA t1=%.15G atomTime[%d]=%.15G\n",t1,i,atomTime[i]));
   /* ...and now orientations */
   UpdateOrient(i, ti, RtA, Omega);
   invaSqN = 1.0/Sqr(axa[i]);
@@ -4009,7 +4019,8 @@ retry:
       for (k1 = 0; k1 < 8; k1++)
 	vecg[k1] = vecgsup[k1];
     }
-  MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
+  MD_DEBUG(printf(">>>>>>> alpha: %f beta: %f\n", vecg[6], vecg[7]));
+  printf(">>>>>>> MAHHH alpha: %f beta: %f\n", vecg[6], vecg[7]);
 #ifdef MD_DIST5
   newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift); 
 #else
@@ -4837,7 +4848,7 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
   double maxddot, told, delt, normddot, ddot[3];
   const int MAXOPTITS = 500;
   double factori;
-  int its=0, distfailed; 
+  int its=0, distfailed, itsf=0; 
   const double GOLD= 1.618034;  
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 
@@ -4883,12 +4894,20 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
        * con il loop che segue compenso questo problema riducendo il passo fino a che 
        * non arrivo ad una distanza positiva con il passo veloce */
 #if 1
+      itsf = 0;
       while (*d1 < 0 || distfailed)
 	{
 	  /* reduce step size */
 	  delt /= GOLD;
 	  *t = told + delt;
 	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed);
+	  itsf++;	
+	  if (itsf > 100)
+	    {
+	      printf("*d1=%.15G too many times calculation of distance failed!\n", *d1);
+	      printf("aborting...\n");
+	      exit(-1);
+	    }
 	}
 #else
       if (*d1 < 0)
@@ -5186,6 +5205,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
   MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d));
 #if 1
+  MD_DEBUG20(printf("[LOCATE_CONTACT] INIZIO\n"));
   d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
   if (lastbump[j]==i && lastbump[i]==j)
     {
@@ -5208,9 +5228,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       return 0;
     }
 #endif
+  MD_DEBUG20(printf("[LOCATE_CONTACT] prima search contact faster\n"));
   if (search_contact_faster(i, j, shift, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0; 
-  MD_DEBUG(printf(">>>>d:%f\n", d));
+  MD_DEBUG20(printf("[LOCATE_CONTACT]>>>>d:%f t=%.15G\n", d,t));
   foundrc = 0;
 #if 0
   if (d1 < 0)
@@ -5649,10 +5670,10 @@ void BuildNNL(int na)
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cels[NDIM];*/
   int nb, cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
-#if 0
-  nebrTab[na].axa = 1.5*axa[na];
-  nebrTab[na].axb = 1.5*axb[na];
-  nebrTab[na].axc = 1.5*axc[na];
+#if 1
+  nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];
+  nebrTab[na].axb = OprogStatus.rNebrShell*axb[na];
+  nebrTab[na].axc = OprogStatus.rNebrShell*axc[na];
 #else
   nebrTab[na].axa = OprogStatus.rNebrShell+axa[na];
   nebrTab[na].axb = OprogStatus.rNebrShell+axb[na];
@@ -5668,6 +5689,7 @@ void BuildNNL(int na)
   for (kk=0; kk < 3; kk++)
     shift[kk] = 0;
   /* calcola il tempo a cui si deve ricostruire la NNL */
+  printf("BUILDING NNL FOR i=%d\n",na);
 #if 1
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
@@ -6813,7 +6835,9 @@ void move(void)
   int ii;
   double rzmax, zfact;
 #endif
-  double nltime = timbig;
+#ifdef MD_NNL
+  double timeold, nltime = timbig;
+#endif
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;
@@ -6825,12 +6849,14 @@ void move(void)
   while (!ENDSIM)
     {
       innerstep++;
+      timeold = Oparams.time;
       NextEvent();
       /* l'evento di ricostruzione della NNL è mantenuto fuori dal calendario degli eventi per
        * semplicità */
 #ifdef MD_NNL
       if (Oparams.time > nextNNLrebuild)
 	{
+	  Oparams.time = timeold;
 	  rebuildNNL();
 	  rebuildCalendar();
 	  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);

@@ -3405,6 +3405,7 @@ extern void fdjac(int n, double x[], double fvec[], double **fjac,
 double fmin(double x[], int iA, int iB, double shift[3]);
 #ifdef MD_NNL
 double fminNeigh(double x[], int iA);
+double fminDNeigh(double x[], int iA);
 #endif
 double fminD(double x[], int iA, int iB, double shift[3]);
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, 
@@ -3489,7 +3490,7 @@ void newtNeigh(double x[], int n, int *check,
 #endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNRNL
-      lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA, TOLX); 
+      lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fminNeigh,iA, TOLX); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
