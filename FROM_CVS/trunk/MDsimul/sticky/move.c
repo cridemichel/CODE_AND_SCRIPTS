@@ -52,7 +52,7 @@ extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto
 extern double accngA, accngB;
 void ScheduleEventBarr (int idA, int idB, int idata, int atb, int idcollcode, double tEvent);
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
-		   double dists[MD_PBONDS]);
+		   double dists[MD_PBONDS], int bondpair);
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
 void remove_bond(int na, int n, int a, int b);
 void add_bond(int na, int n, int a, int b);
@@ -1752,12 +1752,15 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
     body2lab(i, rat_body[a], rat[a], rO, R);
 }
 #endif
-void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
+void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3], int bondpair)
 { 
   double wSq, w, OmegaSq[3][3], M[3][3];
-  double sinw, cosw;
+  double sqrwx, sqrwy, sqrwz, sinw, cosw;
   int k1, k2, k3;
-  wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
+  sqrwx = Sqr(wx[i]);
+  sqrwy = Sqr(wy[i]);
+  sqrwz = Sqr(wz[i]);
+  wSq = sqrwx+sqrwy+sqrwz;
   w = sqrt(wSq);
   if (w != 0.0 && ti != 0.0) 
     {
@@ -1784,15 +1787,15 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
       Omega[2][0] = -wy[i];
       Omega[2][1] = wx[i];
       Omega[2][2] = 0;
-      OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
+      OmegaSq[0][0] = -sqrwy - sqrwz;
       OmegaSq[0][1] = wx[i]*wy[i];
       OmegaSq[0][2] = wx[i]*wz[i];
-      OmegaSq[1][0] = wx[i]*wy[i];
-      OmegaSq[1][1] = -Sqr(wx[i]) - Sqr(wz[i]);
+      OmegaSq[1][0] = OmegaSq[0][1];//wx[i]*wy[i];
+      OmegaSq[1][1] = -sqrwx - sqrwz;
       OmegaSq[1][2] = wy[i]*wz[i];
-      OmegaSq[2][0] = wx[i]*wz[i];
-      OmegaSq[2][1] = wy[i]*wz[i];
-      OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
+      OmegaSq[2][0] = OmegaSq[0][2];//wx[i]*wz[i];
+      OmegaSq[2][1] = OmegaSq[1][2];//wy[i]*wz[i];
+      OmegaSq[2][2] = -sqrwx - sqrwy;
 
       for (k1 = 0; k1 < 3; k1++)
 	{
@@ -1820,14 +1823,21 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 	  Ro[k1][k2] = Rtmp2[k1][k2];
 #endif
 #else 
-      for (k1 = 0; k1 < 3; k1++)
-	for (k2 = 0; k2 < 3; k2++)
-	  {
-	    Ro[k1][k2] = R[i][k1][k2];
-	    for (k3 = 0; k3 < 3; k3++)
-	      Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (bondpair != -1 && bondpair != 4 && (k2+1 != bondpair))
+	    {
+	      //printf("qui in UpdateOrient\n");
+	      continue;
+	    }
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      Ro[k1][k2] = R[i][k1][k2];
+	      for (k3 = 0; k3 < 3; k3++)
+		Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
 	      //Ro[k1][k2] += R[i][k1][k3]*M[k3][k2];
-	  }
+	    }
+	}
 #endif
       //adjust_norm(Ro);
     }
@@ -1961,7 +1971,7 @@ double calcDistNegOne(double t, double t1, int i, int j, int nn, double shift[3]
   rA[2] = rz[i] + vz[i]*ti;
   MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
-  UpdateOrient(i, ti, RtA, Omega);
+  UpdateOrient(i, ti, RtA, Omega, mapbondsa[nn]);
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
   na = (i < Oparams.parnumA)?0:1;
@@ -1973,7 +1983,7 @@ double calcDistNegOne(double t, double t1, int i, int j, int nn, double shift[3]
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
-  UpdateOrient(j, ti, RtB, Omega);
+  UpdateOrient(j, ti, RtB, Omega, mapbondsb[nn]);
   na = (j < Oparams.parnumA)?0:1;
   BuildAtomPos(j, rB, RtB, ratB);
   if (OprogStatus.targetPhi > 0)
@@ -1999,7 +2009,7 @@ double calcDistNegOne(double t, double t1, int i, int j, int nn, double shift[3]
 
 /* N.B. per la silica tale routine va cambiata! */
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
-		   double dists[MD_PBONDS])
+		   double dists[MD_PBONDS], int bondpair)
 {
   double distmin, distSq, ti;
   double ratA[NA][3], ratB[NA][3], dist;
@@ -2013,7 +2023,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin
   rA[2] = rz[i] + vz[i]*ti;
   MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
-  UpdateOrient(i, ti, RtA, Omega);
+  UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
   na = (i < Oparams.parnumA)?0:1;
@@ -2026,7 +2036,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
  
-  UpdateOrient(j, ti, RtB, Omega);
+  UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
   na = (j < Oparams.parnumA)?0:1;
   BuildAtomPos(j, rB, RtB, ratB);
   if (OprogStatus.targetPhi > 0)
@@ -2037,6 +2047,11 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin
   distmin = 0;
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
+      if (bondpair != -1 && bondpair != nn)
+	{
+	  //printf("qui in calcDistNeg\n");
+	  continue;
+	}
       distSq = 0;
       for (kk=0; kk < 3; kk++)
 	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
@@ -2085,7 +2100,7 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
 
-  UpdateOrient(i, t-atomTime[i], RA, OmegaA);
+  UpdateOrient(i, t-atomTime[i], RA, OmegaA, -1);
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
@@ -2096,7 +2111,7 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
 
   na = (j < Oparams.parnumA)?0:1;
-  UpdateOrient(j, t-atomTime[j], RB, OmegaB);
+  UpdateOrient(j, t-atomTime[j], RB, OmegaB, -1);
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
@@ -2273,14 +2288,14 @@ int refine_contact(int i, int j, double tref, double t1, double t2, int nn, doub
  * dell'acqua e della silica, quindi lo tratto a parte.
  * Inoltre non c'è interazione tra un atomo grosso e un atomo sticky. */
 int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS], 
-		int crossed[MD_PBONDS])
+		int crossed[MD_PBONDS], int bondpair)
 {
   int nn;
   int retcross = 0;
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
       crossed[nn] = MD_EVENT_NONE;
-      if (dists[nn]*distsOld[nn] < 0)
+      if (dists[nn]*distsOld[nn] < 0 && (bondpair== -1 || bondpair == nn))
 	{
 	  if (distsOld[nn] > 0)
 	    crossed[nn] = MD_OUTIN_BARRIER; 
@@ -2329,7 +2344,7 @@ void assign_dists(double a[], double b[])
   memcpy(b, a, MD_PBONDS*sizeof(double));
 }
 
-int search_contact_faster(int i, int j, double *shift, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS])
+int search_contact_faster(int i, int j, double *shift, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS], int bondpair)
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
@@ -2338,9 +2353,9 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
   int nn, its=0, amin, bmin, crossed[MD_PBONDS]; 
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
-    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
-  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, distsOld);
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5
+    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j]*0.5;
+  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
   MD_DEBUG30(printf("[IN SEARCH CONTACT FASTER]*d1=%.15G t=%.15G\n", *d1, *t));
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
@@ -2368,7 +2383,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	 *t = told;
 	  MD_DEBUG30(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG30(printf("convergence t>t2\n"));
-	  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists);
+	  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	  return 1;
 	}
 #endif
@@ -2391,7 +2406,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	    }
       printf("*t=%f\n", *t);
 #endif
-      *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists);
+      *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 #if 0
       for (nn=0; nn < MD_PBONDS; nn++)
 	{
@@ -2399,13 +2414,13 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	  printf("distsOld[%d]: %.15G\n", nn, distsOld[nn]);
 	}
 #endif
-      if (check_cross(distsOld, dists, crossed))
+      if (check_cross(distsOld, dists, crossed, bondpair))
 	{
 	  /* go back! */
 	  MD_DEBUG30(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG30(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
-	  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists);
+	  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	  return 0;
 	}
       told = *t;
@@ -2529,7 +2544,28 @@ int valid_collision(int i, int j, int ata, int atb, int collCode)
   else
     return 1;
 }
+int get_bonded(int i, int j)
+{
+  int nb, jj, jj2, kk, nn, aa, bb;
+  nb = numbonds[i];
+  if (!OprogStatus.assumeOneBond)
+    return -1;
+  for (kk = 0; kk < nb; kk++)
+    {
+      jj = bonds[i][kk] / (NA*NA);
+      jj2 = bonds[i][kk] % (NA*NA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      if (jj == j)
+	{
+	  for (nn=0; nn < MD_PBONDS; nn++)
+	    if (mapbondsa[nn]==aa && mapbondsb[nn]==bb)
+	      return nn;
+	} 
+    }
+  return -1; 
 
+}
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
@@ -2537,6 +2573,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	 distsOld2[MD_PBONDS], deltth; 
   double normddot, maxddot, delt, troot, tmin; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
+  int bondpair;
   double epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
   int kk,tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
       crossed[MD_PBONDS], firstaftsf;
@@ -2559,13 +2596,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
    */
   int its, foundrc, goback;
   t = 0;//t1;
-
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
-    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5
+    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j]*0.5;
   //printf("wx:%f maxax: %f,%f\n", sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i])), maxax[i], maxax[j]);
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = OprogStatus.h; /* last resort time increment */
+  delt = h;
   MD_DEBUG(printf("QUIIII collCode=%d\n", *collCode));
   //printf("t1= %f t2 = %f\n", t1, t2);
 #if 0
@@ -2624,8 +2661,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
     }
 #endif
 #endif
+  bondpair = get_bonded(i, j);
+  //printf(">>>>>>>>>>>>>>bondpair=%d\n", bondpair);
   MD_DEBUG30(printf("[BEFORE SEARCH CONTACT FASTER]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
-  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists))
+  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair))
     {
       return 0;  
     }
@@ -2665,7 +2704,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #else
   //assign_dists(dists, distsOld);
   //dold = d;
-  dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld);
+  dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
   firstaftsf = 1;
 #endif
   while (t+t1 < t2)
@@ -2722,7 +2761,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
         //   normddot, t, delt, maxddot, t*h);
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       //dold2 = dold;
-      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists);
+      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
       deldist = get_max_deldist(distsOld, dists);
       if (deldist > epsdMax)
 	{
@@ -2751,13 +2790,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists);
+	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
      MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
       for (nn=0; nn < MD_PBONDS; nn++)
 	dorefine[nn] = MD_EVENT_NONE;
-      ncr=check_cross(distsOld, dists, crossed);
+      ncr=check_cross(distsOld, dists, crossed, bondpair);
       /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
        * sticky */
       for (nn = 0; nn < MD_PBONDS; nn++)
@@ -2904,7 +2943,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #if 1
       if (fabs(d) > epsdFastR)
 	{
-	  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists))
+	  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair))
 	    {
 	      MD_DEBUG30(printf("[search contact faster locate_contact] d: %.15G\n", d));
 	      return 0;
@@ -2916,7 +2955,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
 #else
 	  //dold = d;
-	  dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld);
+	  dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
 	  //assign_dists(dists, distsOld);
 	  firstaftsf = 1;
 #endif
