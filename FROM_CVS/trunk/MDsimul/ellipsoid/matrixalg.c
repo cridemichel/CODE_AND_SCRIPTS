@@ -535,9 +535,53 @@ void dlinmin(double p[], double xi[], int n, double *fret, double (*func)(double
     } 
   //free_vector(xicom,1,n); free_vector(pcom,1,n); 
 }
-#if 0
+#if 1
+extern double *axa, *axb, *axc;
+
+double f1dimPow(double x) 
+  /*Must accompany linmin.*/
+{
+  int j; 
+  double f, xt[4];
+  for (j=0;j<ncom;j++) 
+    xt[j]=pcom[j]+x*xicom[j]; 
+  f=(*nrfunc)(xt); 
+  return f;
+}
+void linminPow(double p[], double xi[], int n, double *fret, double (*func)(double []))
+/*Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and 
+ * resets p to where the function func(p) takes on a minimum along the direction xi from p,
+ * and replaces xi by the actual vector displacement that p was moved. Also returns as fret 
+ * the value of func at the returned location p. This is actually all accomplished by calling
+ * the routines mnbrak and brent. */
+{ 
+  const double TOLLM=OprogStatus.tolSD;
+  double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
+  double f1dim(double x); 
+  void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, 
+	      double (*func)(double));
+  int j; 
+  double xx,xmin,fx,fb,fa,bx,ax;
+  ncom=n; /*Define the global variables.*/
+  nrfunc=func; 
+  for (j=0;j<n;j++)
+    { 
+      pcom[j]=p[j];
+      xicom[j]=xi[j];
+    } 
+  ax=0.0; /*Initial guess for brackets.*/
+  xx=1.0; 
+  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimPow); 
+  *fret=brent(ax,xx,bx,f1dimPow,TOLLM,&xmin);
+  for (j=0;j<n;j++)
+    { /*Construct the vector results to return. */
+      xi[j] *= xmin;
+      p[j] += xi[j]; 
+    } 
+}
+
 void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret, 
-	    double (*func)(float []))
+	    double (*func)(double []))
   /* Minimization of a function func of n variables. Input consists of an initial starting
    * point p[1..n]; an initial matrix xi[1..n][1..n], whose columns contain the initial set
    * of directions (usually the n unit vectors); and ftol, the fractional tolerance in the
@@ -547,7 +591,7 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
    * iterations taken. The routine linmin is used.*/
 {
   int i,ibig,j; 
-  double del,fp,fptt,t,pt[6],ptt[6],xit[6]; 
+  double del,fp,fptt,t,pt[4],ptt[4],xit[4]; 
   const int ITMAXPOW=100;
   //pt=vector(1,n);
   //ptt=vector(1,n); xit=vector(1,n);
@@ -565,7 +609,7 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
 	  for (j=0;j<n;j++)
 	    xit[j]=xi[j][i]; /*Copy the direction,*/
 	  fptt=(*fret); 
-	  linmin(p,xit,n,fret,func); /*minimize along it,*/
+	  linminPow(p,xit,n,fret,func); /*minimize along it,*/
 	  if (fptt-(*fret) > del)
 	    { /*and record it if it is the largest decrease so far.*/
 	      del=fptt-(*fret); 
@@ -607,6 +651,114 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
   /*Back for another iteration.*/
 }
 #endif
+void lab2body(int i, double x[], double xp[])
+{
+  int k1, k2;
+  for (k1=0; k1 < 4; k1++)
+    {
+      xp[k1] = 0;
+      for (k2=0; k2 < 4; k2++)
+	{
+	  xp[k1] += R[i][k1][k2]*x[k2];
+       	} 
+    }
+}
+void body2lab(int i, double xp[], double x[])
+{
+  int k1, k2;
+  for (k1=0; k1 < 4; k1++)
+    {
+      x[k1] = 0;
+      for (k2=0; k2 < 4; k2++)
+	{
+	  x[k1] += R[i][k2][k1]*xp[k2];
+       	} 
+    }
+}
+void angs2coord(double angs[], double p[])
+{
+  p[0] = axa[icg]*cos(angs[0])*cos(angs[1]);
+  p[1] = axb[icg]*sin(angs[0])*sin(angs[1]);
+  p[2] = axc[icg]*cos(angs[1]);
+  p[3] = axa[jcg]*cos(angs[2])*cos(angs[3]);
+  p[4] = axb[jcg]*sin(angs[2])*sin(angs[3]);
+  p[5] = axc[jcg]*cos(angs[3]);
+}
+double funcPowell(double angs[])
+{
+  double vec[6], vecP[6], gx2[3], fx2[3];
+  double A, B, S=1.0, F;
+  int k1, k2;
+  angs2coord(angs, vecP);
+  body2lab(icg, vecP, vec);
+  body2lab(jcg, &vecP[3], &vec[3]);
+  if (OprogStatus.forceguess)
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  gx2[k1] = 0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    gx2[k1] += 2.0*Xb[k1][k2]*(vec[k2] - rB[k2]);
+       	  fx2[k1] = 0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    fx2[k1] += 2.0*Xa[k1][k2]*(vec[k2+3] - rA[k2]);
+	}
+      A = B = 0.0;
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  A += (vec[k1+3]-rA[k1])*fx2[k1];
+	  B += (vec[k1]-rB[k1])*gx2[k1];
+	}
+      A = 0.5*A - 1.0;
+      B = 0.5*B - 1.0;
+      if (A<0 && B<0)
+	S = -1.0;
+      else
+	S = 1.0;
+    }
+  F = 0;
+  for (k1 = 0; k1 < 3; k1++)
+    F += S*Sqr(vec[k1+3]-vec[k1]);
+  return F;
+}
+extern double pi;
+double powdirsI[4][4]={{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
+void powellmethod(double *vec)
+{
+  double Fret, **powdirs, r1p[3], r2p[3], vecP[6], angs[4], sinth;
+  int iter, k1, k2;
+  powdirs = matrix(4,4);
+  for (k1=0; k1 < 4; k1++)
+    for (k2=0; k2 < 4; k2++)
+      powdirs[k1][k2] = powdirsI[k1][k2];
+  /* trovo le coordinate nel riferimento del corpo rigido (assi principali) */
+  lab2body(icg, vec, vecP);
+  lab2body(jcg, &vec[3], &vecP[3]);
+  /* determino theta e phi per entrambi gli ellissoidi 
+   * angs[] = (thetaA,phiA,thetaB,phiB)
+   * 0 < theta < 2PI
+   * 0 < phi < PI */
+  angs[1] = acos(vecP[2]/axc[icg]);
+  angs[0] = acos(vecP[0]/axa[icg]/sin(angs[1]));
+  sinth = vecP[1]/axb[icg]/sin(angs[1]);
+  if (sinth < 0)
+    angs[0] = 2.0*pi-angs[0];
+  angs[3] = acos(vecP[5]/axc[icg]);
+  angs[2] = acos(vecP[3]/axa[icg]/sin(angs[3]));
+  sinth = vecP[4]/axb[icg]/sin(angs[3]);
+  if (sinth < 0)
+    angs[2] = 2.0*pi-angs[2];
+  powell(angs, powdirs, 4, OprogStatus.tolSD, &iter, &Fret, funcPowell);
+
+  /* trovo le coordinate cartesiane dei punti trovati */
+  angs2coord(angs, vecP);
+
+  /* torno nel riferimento del laboratorio */
+  body2lab(icg, vecP, vec);
+  body2lab(jcg, &vecP[3], &vec[3]);
+  free_matrix(powdirs, 4);
+
+}
 int check_point(char* msg, double *p, double *rc, double **XX)
 {
   int k1, k2;
@@ -784,41 +936,122 @@ void vectProdVec(double *A, double *B, double *C)
   C[1] = A[2] * B[0] - A[0] * B[2];
   C[2] = A[0] * B[1] - A[1] * B[0];
 }
-double OmegaSqAsd[3][3], OmegaAsd[3][3], OmegaBsd[3][3], OmegaSqBsd[3][3];
+double Asd, Bsd, OmegaSqAsd[3][3], OmegaAsd[3][3], OmegaBsd[3][3], OmegaSqBsd[3][3];
 extern void calc_intersec(double *rB, double *rA, double **Xa, double* rI);
-double f1dimPhi(double phi)
+double f1dimPhiA(double phi)
 {
   int kk, k1, k2;
   double sinw, cosw;
-  double dd[3], dist, dphi, MA[3][3], MB[3][3], pn[6];
-  sinw = sin(-phi);
+  double MA[3][3], pn[6];
+  double gx2[3];
+  double F, S;
+  sinw = sin(phi);
   cosw = (1.0 - cos(phi));
   
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  MA[k1][k2] = -sinw*OmegaAsd[k1][k2]+cosw*OmegaSqAsd[k1][k2];
-	  MB[k1][k2] = -sinw*OmegaBsd[k1][k2]+cosw*OmegaSqBsd[k1][k2];
+	  MA[k1][k2] = sinw*OmegaAsd[k1][k2]+cosw*OmegaSqAsd[k1][k2];
 	}
     }
    for (k1 = 0; k1 < 3; k1++)
      {
-       pn[k1] = 0;
-       pn[k1+3] = 0;
+       pn[k1] = pcom[k1]-rA[k1];
        for (k2 = 0; k2 < 3; k2++)
 	 {
-	   pn[k1] += MA[k1][k2]*pcom[k1];
-	   pn[k1+3] += MB[k1][k2]*pcom[k1+3]; 
+	   pn[k1] += MA[k1][k2]*(pcom[k2]-rA[k2]);
 	 }
+       pn[k1] += rA[k1];
      }	
    calc_intersec(pn, rA, Xa, pcom2);
-   calc_intersec(&pn[3], rB, Xb, &pcom2[3]);
-   for (kk=0; kk < 3; kk++)
-     dd[kk] = pcom2[kk+3] - pcom2[kk];
-   dist = calc_norm(dd);
-   return dist;
+   if (OprogStatus.forceguess)
+     {
+       for (k1 = 0; k1 < 3; k1++)
+ 	 {
+ 	   gx2[k1] = 0;
+ 	   for (k2 = 0; k2 < 3; k2++)
+ 	     gx2[k1] += 2.0*Xb[k1][k2]*(pcom2[k2] - rB[k2]);
+ 	 }
+       Bsd = 0.0;
+       for (k1 = 0; k1 < 3; k1++)
+ 	 {
+ 	   Bsd += (pcom2[k1]-rB[k1])*gx2[k1];
+ 	 }
+       Bsd = 0.5*Bsd - 1.0;
+      
+      if (Asd<0 && Bsd<0)
+	S = - OprogStatus.springkSD;
+      else
+	S = OprogStatus.springkSD;
+     }
+  else
+    S = OprogStatus.springkSD;
+ 
+  F = 0.0;
+  for (kk=0; kk < 3; kk++)
+    F += S*Sqr(pcom2[kk]-pcom[kk+3]);
+  //printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
+  return F;
 }
+
+double f1dimPhiB(double phi)
+{
+  int kk, k1, k2;
+  double sinw, cosw;
+  double MB[3][3], pn[6];
+  double fx2[3];
+  double S, F;
+  sinw = sin(phi);
+  cosw = (1.0 - cos(phi));
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  MB[k1][k2] = sinw*OmegaBsd[k1][k2]+cosw*OmegaSqBsd[k1][k2];
+	}
+    }
+   for (k1 = 0; k1 < 3; k1++)
+     {
+       pn[k1+3] = pcom[k1+3]-rB[k1];
+       for (k2 = 0; k2 < 3; k2++)
+	 {
+	   pn[k1+3] += MB[k1][k2]*(pcom[k2+3]-rB[k2]); 
+	 }
+       pn[k1+3] += rB[k1];
+     }	
+   calc_intersec(&pn[3], rB, Xb, &pcom2[3]);
+   if (OprogStatus.forceguess)
+     {
+       for (k1 = 0; k1 < 3; k1++)
+ 	 {
+  	   fx2[k1] = 0;
+ 	   for (k2 = 0; k2 < 3; k2++)
+ 	     fx2[k1] += 2.0*Xa[k1][k2]*(pcom2[k2+3] - rA[k2]);
+ 	 }
+       Asd = 0.0;
+       for (k1 = 0; k1 < 3; k1++)
+ 	 {
+ 	   Asd += (pcom2[k1+3]-rA[k1])*fx2[k1];
+ 	 }
+       Asd = 0.5*Asd - 1.0;
+      
+      if (Asd<0 && Bsd<0)
+	S = - OprogStatus.springkSD;
+      else
+	S = OprogStatus.springkSD;
+     }
+  else
+    S = OprogStatus.springkSD;
+ 
+  F = 0.0;
+  for (kk=0; kk < 3; kk++)
+    F += S*Sqr(pcom2[kk]-pcom2[kk+3]);
+  //printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
+  return F;
+}
+
 void linminRyck(double p[], double xi[], double *fret)
 /*Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and 
  * resets p to where the function func(p) takes on a minimum along the direction xi from p,
@@ -826,13 +1059,15 @@ void linminRyck(double p[], double xi[], double *fret)
  * the value of func at the returned location p. This is actually all accomplished by calling
  * the routines mnbrak and brent. */
 { 
-  const double TOLLM=1.0E-2;
+  const double TOLLM=1.0E-3;
   double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
   double f1dimPhi(double x); 
   void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, 
 	      double (*func)(double));
   int j, kk; 
-  double xx,xmin,fx,fb,fa,bx,ax, omA[3], omB[3], nA, nB;
+  int k1, k2; 
+  double fx2[3];
+  double xx,xminA, xminB,fx,fb,fa,bx,ax, omA[3], omB[3], nA, nB;
  
 #if 1
   for (j=0;j<6;j++)
@@ -886,16 +1121,45 @@ void linminRyck(double p[], double xi[], double *fret)
   OmegaSqBsd[2][0] = omB[0]*omB[2];
   OmegaSqBsd[2][1] = omB[1]*omB[2];
   OmegaSqBsd[2][2] = -Sqr(omB[0]) - Sqr(omB[1]);
-
+  if (OprogStatus.forceguess)
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  fx2[k1] = 0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    fx2[k1] += 2.0*Xa[k1][k2]*(pcom[k2+3] - rA[k2]);
+	}
+      Asd = 0.0;
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  Asd += (pcom[k1+3]-rA[k1])*fx2[k1];
+	}
+       Asd = 0.5*Asd - 1.0;
+    }
+ 
   ax=0.0; /*Initial guess for brackets.*/
   xx=1.0; 
-  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimPhi); 
-  printf("ax=%f xx=%f bx=%f\n", ax, xx, bx);
-  *fret=brent(ax,xx,bx,f1dimPhi,TOLLM,&xmin);
-  f1dimPhi(xmin);
+  //printf("dist0=%.15G\n", f1dimPhiA(0));
+  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimPhiA); 
+  //printf("ax=%f xx=%f bx=%f\n", ax, xx, bx);
+  *fret=brent(ax,xx,bx,f1dimPhiA,TOLLM,&xminA);
+  ax=0.0; /*Initial guess for brackets.*/
+  xx=1.0;
+  
+  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimPhiB); 
+#if 0
+  printf("dist1A=%.15G\n", f1dimPhiA(xminA));
+  printf("dist1B=%.15G\n", *fret);
+  printf("dist1C=%.15G\n",  f1dimPhiB(0));
+#endif
+  *fret=brent(ax,xx,bx,f1dimPhiB,TOLLM,&xminB);
+  //printf("i=%d j=%d dist2=%.15G\n", icg, jcg, *fret);
+  //printf("dist2B=%.15G\n", f1dimPhiB(xminB));
+  //f1dimPhiA(xminA);
+  //f1dimPhiB(xminB);
   for (j=0;j<6;j++)
     p[j] = pcom2[j]; 
-  printf("xmin=%f dist=%.15G\n", xmin, *fret);
+  //printf("xminA=%f xminB=%f dist=%.15G\n", xminA, xminB, *fret);
 }
 
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*))
@@ -916,102 +1180,30 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   
   sfA = icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
   sfB = jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
-  //sfB = 0.4;//OprogStatus.stepSD;
   callsfrprmn++;
-  //fp=(*func)(p); 
   /*Initializations.*/
   fp = (*dfunc)(p,xi,gradfG,gradgG, &signA, &signB); 
-  linminRyck(p, xi, &dist);
-#if 0
-  distini = 0;
-  for (kk = 0; kk < 3; kk++)
-    {
-      distini += Sqr(p[kk+3]-p[kk]);
-    }
-  distini = sqrt(distini);
-  maxitsRyck = 0;
-#endif
-
-  //printf("g=%f %f %f %f %f %f\n", g[0], g[1], g[2], g[3], g[4], g[5]);
   if (doneryck==2)
     {
       callsok++;
       return;
     }
-  //projectgrad(p,xi,gradfG,gradgG);  
+  projectgrad(p,xi,gradfG,gradgG);  
   
   for (its=1;its<=ITMAXFR;its++)
     { 
-       itsfrprmn++;      
+      itsfrprmn++;      
       *iter=its;
-      linminRyck(p, xi, &dist);
-#if 0
-      printf("prima xi=%.15G %.15G %.15G %.15G %.15G %.15G\n", xi[0],xi[1],xi[2],xi[3],xi[4],xi[5]);
-      printf("prima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
-#endif
-#if 0
-     	{
-	  int kk;
-	  double dd[3];
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      dd[kk] = p[kk+3] - p[kk];
-	    }
-	  printf("its = %d distanza = %.15G\n", its, calc_norm(dd));
-	}
-#endif
-#if 0
       for (j=0; j < n; j++)
 	{
 	  p[j] += xi[j];
 	}
-#endif
- 
-      //if (its > 30)
-	//printf("sfA=%.15G sfB=%.15G its=%d fp=%.15G fpold: %.15G\n",sfA, sfB, its, fp,fpold );
-#if 0
-      if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
-	{ 
-	  return;
-	}
-#endif
       signAold = signA;
       signBold = signB;
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
-#if 0
-      if (signBold < 0 && signB > 0)
+      if (fp > fpold)
 	{
-	  for (j=0; j < 3; j++)
-	    xi[j+3] = 0;
-	  sfB /= GOLD;
-	  projectgrad(p, xi, gradfG, gradgG);
-	  continue;
-	}
-      if (signAold < 0 && signA > 0)
-	{
-	  for (j=0; j < 3; j++)
-	    xi[j] = 0;
-	  sfA /= GOLD;
-	  projectgrad(p, xi, gradfG, gradgG);
-	  continue;
-	}
-#endif
-#if 0
-      if (signB > 0 && signA < 0)
-	{
-	  for (j=0; j < 3; j++)
-	    xi[j] = 0;
-	}
-      else if (signA > 0 && signB < 0)
-	{
-	  for (j=0; j < 3; j++)
-    	    xi[j+3] = 0;
-	}
-      else
-#endif
-       	if (fp > fpold)
-  	  {
 #if 0
 	  for (j=0; j < 3; j++)
 	    xim[j] = xi[j]/2.0;
@@ -1033,49 +1225,21 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	    }
 	  else
 #endif
-#if 0
-	  if (signA<0&&signB>0)
-	    {
-	      for (j=0; j < 3; j++)
-		xi[j] = 0;
-	    }
-	  else if (signA>0&&signB<0)
- 	    {
-	      for (j=0; j < 3; j++)
-		xi[j+3] = 0;
-	    }
-#endif
 	  sfA /= GOLD;
 	  sfB /= GOLD;
 	  }
-     //printf("its=%d fpold=%.15G ,fp=%.15G\n", its, fpold, fp);
-      //fp=(*func)(p);
-#if 1
 
        if (doneryck==2)
 	 {
 	   callsok++;
 	   return;
 	 }
-       //projectgrad(p, xi, gradfG, gradgG);
+       projectgrad(p, xi, gradfG, gradgG);
        
-#if 0
-       normxi=0.0;
-       for (kk = 0; kk < 6; kk++)
-	 {
-	   normxi += Sqr(xi[kk]);
-	 }
-#endif
-       //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
-	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
        if (OprogStatus.tolSDgrad <=0  || (fp > 0 && sqrt(fp) > 1E-8)) 
 	 {
 	   if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
 	     {
-#if 0
-	       if (fp <0)
-		 printf("guessed dist=%.15G\n", sqrt(-fp));
-#endif
 	       callsok++;
 	       return;
 	     }
@@ -1085,37 +1249,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	   callsok++;
 	   return;
 	 }
-#if 0
-      
-       if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
-	 { 
-	   //linminConstr(p,xi,n,fret,func); /* Next statement is the normal return: */
-	   itsfrprmn++;
-	   return;
-	 } 
-#endif
-
-#endif
     } 
-
-  //linminConstr(p,xi,n,fret,func); /* Next statement is the normal return: */
-#if 0
-    {
-    double ng=0;
-  distfin = 0;
-  for (kk = 0; kk < 3; kk++)
-    {
-      ng += Sqr(xi[kk]);
-      distfin += Sqr(p[kk+3]-p[kk]);
-    }
-  distfin = sqrt(distfin);
-  ng =sqrt(ng);
-  printf(">>> distini=%.15G distfin=%.15G sfA: %.15G sfB:%.15G\n", distini, distfin, sfA, sfB);
-  printf(">>> fpold=%.15G fp=%.15G normgrad=%.15G\n", fpold, fp, ng);
-  maxitsRyck=1;
-    }
-#endif
-  //printf("segnoA= %.15G segnoB=%.15G\n", signA, signB);
   return; 
   nrerror("Too many iterations in frprmn");
   
@@ -1705,8 +1839,7 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
 #endif
   //frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
   frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
-
-  //powell(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc);
+  //powellmethod(vec);
   for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];

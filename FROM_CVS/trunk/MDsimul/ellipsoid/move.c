@@ -3014,7 +3014,7 @@ retry:
 	  for(k1=0; k1 < 3; k1++)
 	    r12[k1] = rC[k1]-rD[k1]; 
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
-	  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+	  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
 	  //distconjgrad(i, j, shift, vecgcg, 1, 1); 
 	  //distconjgrad(i, j, shift, vecgcg, 1/OprogStatus.tolSD, 1);
@@ -3036,14 +3036,7 @@ retry:
 	  for(k1=0; k1 < 3; k1++)
 	    r12[k1] = rC[k1]-rD[k1]; 
 	  dist = calc_norm(r12);
-	  if (dist>0)
-	    {
-	      distVera= calcDist(t, i, j, shift, r1, r2, alpha, vecgcg, 1);
-	      if (fabs((dist-distVera)/distVera)> 0.1 )
-		printf("dist: %.15G distVera: %.15G\n", dist,distVera);
-	    }
-	  else 
-	    printf("dist: %.15G\n", dist);
+	  printf("dist: %.15G\n", dist);
 	      //printf("dist=%.15f\n",calc_norm(r12));
 	}
 #endif
