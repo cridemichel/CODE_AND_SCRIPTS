@@ -8,7 +8,7 @@
 */
 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
-
+#define MD_DEBUG(x) x
 extern char TXT[MSG_LEN];
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
@@ -548,7 +548,27 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
     }
   /* Now the center of mass of the box is in the origin */
 }
+void angvel(void)
+{
+  int i;
 
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      uxx[i] = 1.0;
+      uyx[i] = 0.0;
+      uzx[i] = 0.0;
+      uxy[i] = 0.0;
+      uyy[i] = 1.0;
+      uzy[i] = 0.0;
+      uxz[i] = 0.0;
+      uyz[i] = 0.0;
+      uzz[i] = 1.0;
+      wx[i] = 0;
+      wy[i] = 0;
+      wz[i] = 0;
+    }
+  
+}
 /* =========================== >>> initCoord <<< ============================*/
 void initCoord(void)
 {
@@ -578,7 +598,7 @@ void initCoord(void)
 #endif
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
-  //angvel(Oparams.parnum, Oparams.T, Oparams.m, Oparams.d); 
+  angvel(); 
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
@@ -716,6 +736,8 @@ extern double calcpotene(void);
 double corrini3, corrini0, corrini1, corrini2, corrnorm;
 double *lastbreak1, *lastbreak2;
 #endif
+extern void print_matrix(double **M, int n);
+
 void u2R(void)
 {
   int i;
@@ -730,7 +752,9 @@ void u2R(void)
       R[i][2][0] = uzx[i];
       R[i][2][1] = uzy[i];
       R[i][2][2] = uzz[i];
+      MD_DEBUG2(print_matrix(R[i], 3));
     }
+  
 }
 void R2u(void)
 {

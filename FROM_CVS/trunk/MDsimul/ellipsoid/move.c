@@ -1,6 +1,7 @@
 #include<mdsimul.h>
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
+#define MD_DEBUG(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -15,6 +16,45 @@ void SolveLineq (double **a, double *x, int n);
 void InvMatrix(double **a, double **b, int NB);
 extern double invaSq[2], invbSq[2], invcSq[2];
 double rxC, ryC, rzC;
+void print_matrix(double **M, int n)
+{
+  int k1, k2;
+  printf("{");
+  for (k1 = 0; k1 < n; k1++)
+    {
+      printf("{");
+      for (k2 = 0; k2 < n; k2++)
+	{
+	  printf("%.15G", M[k1][k2]);
+	  if (k2 < n - 1)
+	    printf(", ");
+	}
+      printf("}");
+      if (k1 < n-1)
+	printf(",\n");
+    }
+  printf("}\n");
+}
+void print_matrixArr(double M[3][3])
+{
+  int k1, k2;
+  const int n = 3;
+  printf("{");
+  for (k1 = 0; k1 < n; k1++)
+    {
+      printf("{");
+      for (k2 = 0; k2 < n; k2++)
+	{
+	  printf("%.15G", M[k1][k2]);
+	  if (k2 < n - 1)
+	    printf(", ");
+	}
+      printf("}");
+      if (k1 < n-1)
+	printf(",\n");
+    }
+  printf("}\n");
+}
 #ifdef MD_GRAVITY
 int checkz(char *msg)
 {
@@ -340,12 +380,11 @@ void check (int *overlap, double *K, double *V)
 void tRDiagR(int i, double **M, double a, double b, double c, double **Ri)
 {
   int na;
-  int k1, k2, k3, Di[3][3];
+  int k1, k2, k3;
+  double Di[3][3];
   double Rtmp[3][3];
   /* calcolo del tensore d'inerzia */ 
   na = (i < Oparams.parnumA)?0:1;
-
-
   Di[0][0] = a;
   Di[1][1] = b;
   Di[2][2] = c;
@@ -355,6 +394,8 @@ void tRDiagR(int i, double **M, double a, double b, double c, double **Ri)
 	if (k1 != k2)
 	  Di[k1][k2] = 0.0;
       } 
+  MD_DEBUG2(printf("a=%f b=%f c=%f Di=\n", a, b, c));
+  MD_DEBUG2(print_matrixArr(Di));
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       {
@@ -366,6 +407,7 @@ void tRDiagR(int i, double **M, double a, double b, double c, double **Ri)
 	    Rtmp[k1][k2] += Di[k1][k3]*Ri[k3][k2];
 	  }
       }
+  MD_DEBUG2(print_matrixArr(Rtmp));
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       {
@@ -1137,6 +1179,7 @@ void calcFxtFt(double x[3], double **X,
 	 }
      }
 }
+
 /* funzione che calcola lo Jacobiano */
 void fdjac(int n, double x[], double fvec[], double **df, 
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
@@ -1155,13 +1198,17 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vA[2] = vz[iA];
   /* ...and now orientations */
   UpdateOrient(iA, ti, RA, OmegaA);
+  MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
+  MD_DEBUG2(print_matrix(RA, 3));
   na = (iA < Oparams.parnumA)?0:1;
   tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
+  MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
+  MD_DEBUG2(print_matrix(Xa, 3));
   DA[0][1] = DA[0][2] = DA[1][0] = DA[1][2] = DA[2][0] = DA[2][1] = 0.0;
   DA[0][0] = invaSq[na];
   DA[1][1] = invbSq[na];
   DA[2][2] = invcSq[na];
-    ti = x[4] - atomTime[iB];
+  ti = x[4] - atomTime[iB];
   rB[0] = rx[iB] + vx[iB]*ti + shift[0];
   rB[1] = ry[iB] + vy[iB]*ti + shift[1];
   rB[2] = rz[iB] + vz[iB]*ti + shift[2];
@@ -1264,7 +1311,7 @@ void PredictEvent (int na, int nb)
    *      */
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
   b, d, t, tInt, vv;
-  int et, kk;
+  int et, kk, retcheck;
   double ncong, cong[3], pos[3], vecg[5];
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
@@ -1666,11 +1713,18 @@ no_core_bump:
 				}
 			      for (kk=0; kk < 3; kk++)
 				vecg[kk] = pos[kk] - cong[kk]*maxax[na<Oparams.parnumA?0:1];
-
+			      MD_DEBUG(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
+			      MD_DEBUG(printf("r[%d](%f,%f,%f)-r[%d](%f,%f,%f)\n",
+					      na, rx[na], ry[na], rz[na], n, rx[n], ry[n], rz[n]));
 			      vecg[3] = 1.0; /* questa stima di alpha andrebbe fatta meglio!*/
 			      vecg[4] = t;
 			      
-			      newt(vecg, 5, &check, funcs2beZeroed, na, n, shift); 
+			      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
+			      if (retcheck)
+				{
+				  printf("[ERROR] newton-raphson failed to converge!\n");
+				  exit(-1);
+				}
 			      rxC = vecg[0];
 			      ryC = vecg[1];
 			      rzC = vecg[2];
