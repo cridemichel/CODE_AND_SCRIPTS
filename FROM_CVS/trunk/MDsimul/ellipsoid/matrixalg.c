@@ -448,6 +448,78 @@ void dlinmin(double p[], double xi[], int n, double *fret, double (*func)(double
     } 
   //free_vector(xicom,1,n); free_vector(pcom,1,n); 
 }
+#if 0
+void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret, 
+	    double (*func)(float []))
+  /* Minimization of a function func of n variables. Input consists of an initial starting
+   * point p[1..n]; an initial matrix xi[1..n][1..n], whose columns contain the initial set
+   * of directions (usually the n unit vectors); and ftol, the fractional tolerance in the
+   * function value such that failure to decrease by more than this amount on one iteration
+   * signals doneness. On output, p is set to the best point found, xi is the then-current 
+   * direction set, fret is the returned function value at p, and iter is the number of 
+   * iterations taken. The routine linmin is used.*/
+{
+  int i,ibig,j; 
+  double del,fp,fptt,t,pt[6],ptt[6],xit[6]; 
+  const int ITMAXPOW=100;
+  //pt=vector(1,n);
+  //ptt=vector(1,n); xit=vector(1,n);
+  *fret=(*func)(p);
+  for (j=0;j<n;j++) 
+    pt[j]=p[j]; /*Save the initial point.*/
+  for (*iter=1;;++(*iter))
+    { 
+      fp=(*fret);
+      ibig=0;
+      del=0.0;
+      /*Will be the biggest function decrease.*/
+      for (i=0;i<n;i++)
+	{ /*In each iteration, loop over all directions in the set.*/
+	  for (j=0;j<n;j++)
+	    xit[j]=xi[j][i]; /*Copy the direction,*/
+	  fptt=(*fret); 
+	  linmin(p,xit,n,fret,func); /*minimize along it,*/
+	  if (fptt-(*fret) > del)
+	    { /*and record it if it is the largest decrease so far.*/
+	      del=fptt-(*fret); 
+	      ibig=i;
+	    }
+	} 
+      if (2.0*(fp-(*fret)) <= ftol*(fabs(fp)+fabs(*fret))+TINY)
+	{
+	  //free_vector(xit,1,n); /*Termination criterion.*/
+	  //free_vector(ptt,1,n); free_vector(pt,1,n);
+	  return;
+	}
+
+      if (*iter == ITMAXPOW) 
+	nrerror("powell exceeding maximum iterations."); 
+      for (j=0;j<n;j++) 
+	{ /*Construct the extrapolated point and the average direction moved.
+	    Save the old starting point.*/
+	  ptt[j]=2.0*p[j]-pt[j];
+	  xit[j]=p[j]-pt[j];
+	  pt[j]=p[j];
+	} 
+      fptt=(*func)(ptt); /*Function value at extrapolated point.*/
+      if (fptt < fp)
+	{ 
+	  t=2.0*(fp-2.0*(*fret)+fptt)*Sqr(fp-(*fret)-del)-del*Sqr(fp-fptt); 
+	  if (t < 0.0)
+	    {
+	      linmin(p,xit,n,fret,func);/* Move to the minimum of the new direction, 
+					   and save the new direction.*/
+	      for (j=0;j<n;j++)
+		{
+		  xi[j][ibig]=xi[j][n]; 
+		  xi[j][n]=xit[j];
+		}
+	    }
+	}
+    }
+  /*Back for another iteration.*/
+}
+#endif
 void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -618,7 +690,8 @@ void distconjgrad(int i, int j, double shift[3], double *vecg)
       vec[kk] = vecg[kk];
     }
   //printf(">>> vec[6]: %f vec[7]:%f\n", vec[6], vec[7]);
-  frprmn(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc, gradcgfunc);
+  //frprmn(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc, gradcgfunc);
+  powell(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc);
   for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];
