@@ -789,6 +789,8 @@ void usrInitBef(void)
     OprogStatus.nextSumTime = 0.0;
     OprogStatus.nextcheckTime = 0.0;
     OprogStatus.intervalSum = 1.0;
+    OprogStatus.n1 = 20;
+    OprogStatus.n2 = 20;
     OprogStatus.storerate = 0.01;
     OprogStatus.KK = 0;
     OprogStatus.JJ = 0;
@@ -908,7 +910,7 @@ typedef struct {
 } XYZ;
 typedef struct {
 	double point[3];
-	doublw grad[3];
+	double grad[3];
 } MESHXYZ;
 
 MESHXYZ **ellips_mesh[2];
@@ -923,9 +925,9 @@ void EvalSuperEllipse(double t1,double t2, double a, double b, double c, MESHXYZ
    pm->point[0] = a * ct1 * ct2;
    pm->point[1] = b * ct1 * st2;
    pm->point[2] = c * st1;
-   pm->grad[0] = 2.0*pm->point.x/Sqr(a);
-   pm->grad[1] = 2.0*pm->point.y/Sqr(b);
-   pm->grad[2] = 2.0*pm->point.z/Sqr(c);
+   pm->grad[0] = 2.0*pm->point[0]/Sqr(a);
+   pm->grad[1] = 2.0*pm->point[1]/Sqr(b);
+   pm->grad[2] = 2.0*pm->point[2]/Sqr(c);
 }
 void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 {
