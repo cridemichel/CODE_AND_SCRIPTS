@@ -620,12 +620,15 @@ void scalevels(double temp, double K)
   int i; 
   double sf;
 
-  sf = sqrt( ( (3.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
+  sf = sqrt( ( (6.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
   for (i = 0; i < Oparams.parnumA; i++)
     {
       vx[i] *= sf;
       vy[i] *= sf;
       vz[i] *= sf;
+      wx[i] *= sf;
+      wy[i] *= sf;
+      wz[i] *= sf;
       /* scala anche i tempi di collisione! */
     } 
   for (i = Oparams.parnumA; i < Oparams.parnum; i++)
@@ -633,6 +636,9 @@ void scalevels(double temp, double K)
       vx[i] *= sf;
       vy[i] *= sf;
       vz[i] *= sf;
+      wx[i] *= sf;
+      wy[i] *= sf;
+      wz[i] *= sf;
       /* scala anche i tempi di collisione! */
     } 
   MD_DEBUG2(printf("sf: %.15f temp: %f K: %f Vz: %.15f minvz:%.15G\n", sf, temp, K, Vz));
@@ -3927,6 +3933,8 @@ void move(void)
 	      OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
 	      MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%lld Vz: %.15f\n", 
 			       (long long int)Oparams.curStep,Vz));
+	      calc_energy(NULL);
+#if 0
 	      K = 0.0;
 	      for (i = 0; i < Oparams.parnumA; i++)
 		{
@@ -3937,6 +3945,7 @@ void move(void)
 		  K += Oparams.m[1]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
 		}
 	      K *= 0.5;
+#endif
 	      scalevels(Oparams.T, K);
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
