@@ -3705,7 +3705,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     printf("non ho convergiuto\n");
 #endif
 #endif
-  MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d1));
+  MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d));
 #if 1
   if (lastbump[j]==i && lastbump[i]==j)
     {
@@ -3750,6 +3750,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
   for (kk = 0; kk < 8; kk++)
     vecgdold[kk] = vecgd[kk];
+  dold = d;
   its = 0;
   while (t < t2)
     {
@@ -3760,13 +3761,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
       else
 	delt = h*t;
-      if (d < epsd)
+      if (dold < epsd)
 	delt = epsd / maxddot;
       t += delt;
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       for (kk = 0; kk < 8; kk++)
 	vecgdold2[kk] = vecgd[kk];
-      dold2 = d;
+      dold2 = dold;
       d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, firstafterfast);
       if (fabs(d-dold2) > epsdMax)
 	{
