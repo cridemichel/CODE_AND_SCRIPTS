@@ -541,8 +541,10 @@ void bump (int i, int j, double* W, int bt)
 void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *rBC)
 {
   int k1, k2;
-  double f, g;
+  double f, g, del[3];
   f = g = -1; 
+  for (k1=0; k1 < 3; k1++)
+    del[0] = -L*rint((rAC[k1] - rBC[k1])/L);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       {
@@ -659,7 +661,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   if (vc < 0 && fabs(vc) > 1E-5)
     {
       printf("[ERROR] maybe second collision has been wrongly predicted\n");
-      printf("relative velocity at contact point is negative! Aborting simulation...\n");
+      printf("relative velocity (vc=%.15G) at contact point is negative! Aborting simulation...\n", vc);
       exit(-1);
     }
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
@@ -1214,6 +1216,71 @@ void calcFxtFt(double x[3], double **X,
 	 }
      }
 }
+void fdjacGuess(int n, double x[], double fvec[], double **df, 
+	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
+{
+  /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
+  int na; 
+  double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
+  double DA[3][3], DB[3][3], fx[3], gx[3];
+  double Fxt[3], Gxt[3], Ft, Gt;
+  int k1, k2, k3;
+  ti = x[4] - atomTime[iA];
+  rA[0] = rx[iA] + vx[iA]*ti;
+  rA[1] = ry[iA] + vy[iA]*ti;
+  rA[2] = rz[iA] + vz[iA]*ti;
+  vA[0] = vx[iA];
+  vA[1] = vy[iA];
+  vA[2] = vz[iA];
+  /* ...and now orientations */
+  UpdateOrient(iA, ti, RA, OmegaA);
+  MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
+  MD_DEBUG2(print_matrix(RA, 3));
+  na = (iA < Oparams.parnumA)?0:1;
+  tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
+  MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
+  MD_DEBUG2(print_matrix(Xa, 3));
+  ti = x[4] - atomTime[iB];
+  rB[0] = rx[iB] + vx[iB]*ti + shift[0];
+  rB[1] = ry[iB] + vy[iB]*ti + shift[1];
+  rB[2] = rz[iB] + vz[iB]*ti + shift[2];
+  vB[0] = vx[iB];
+  vB[1] = vy[iB];
+  vB[2] = vz[iB];
+  UpdateOrient(iB, ti, RB, OmegaB);
+  na = (iB < Oparams.parnumA)?0:1;
+  tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*(Xa[k1][k2] + Sqr(x[3])*Xb[k1][k2]);
+	}
+    }
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]);
+	}
+    } 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][3] = 2.0*x[3]*gx[k1];
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1] - gx[k1];
+    } 
+
+  df[3][3] = 0.0;
+}
 
 /* funzione che calcola lo Jacobiano */
 void fdjac(int n, double x[], double fvec[], double **df, 
@@ -1321,6 +1388,86 @@ void fdjac(int n, double x[], double fvec[], double **df,
  df[4][4] = Gt;
 }
 #endif
+void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double shift[3])
+{
+  int na, k1, k2; 
+  double  rA[3], rB[3], ti;
+  double fx[3], gx[3];
+  double Omega[3][3];
+  /* x = (r, alpha, t) */ 
+  
+  ti = x[4] - atomTime[i];
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  /* ...and now orientations */
+  UpdateOrient(i, ti, Rt, Omega);
+  na = (i < Oparams.parnumA)?0:1;
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
+
+  ti = x[4] - atomTime[j];
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+  UpdateOrient(j, ti, Rt, Omega);
+  na = (j < Oparams.parnumA)?0:1;
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+#if 0
+  printf("Xa=\n");
+  print_matrix(Xa, 3);
+  printf("Xb=\n");
+  print_matrix(Xb, 3);
+#endif
+  
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(x[k2] - rB[k2]);
+    }
+
+   for (k1 = 0; k1 < 3; k1++)
+    {
+#if 0
+      fvec[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fvec[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]) + 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
+#endif
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+#if 0
+  fvec[3] = -1.0;
+  fvec[4] = -1.0;
+#endif
+#if 0
+  MD_DEBUG(printf("fx+Sqr(alpha)*gx=(%f,%f,%f) fx=(%f,%f,%f) gx=(%f,%f,%f)\n", fvec[0], fvec[1], fvec[2],
+	 fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+#endif
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#if 0
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fvec[3] += (x[k1]-rA[k1])*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  fvec[4] += (x[k1]-rB[k1])*Xb[k1][k2]*(x[k2]-rB[k2]);
+	}
+#endif
+#if 1
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1]-rB[k1])*gx[k1];
+#endif
+    }
+  fvec[3] = 0.5*fvec[3]-1.0 - (0.5*fvec[4]-1.0);
+}
 void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
   int na, k1, k2; 
@@ -1378,6 +1525,10 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
 #if 0
   fvec[3] = -1.0;
   fvec[4] = -1.0;
+#endif
+#if 0
+  MD_DEBUG(printf("fx+Sqr(alpha)*gx=(%f,%f,%f) fx=(%f,%f,%f) gx=(%f,%f,%f)\n", fvec[0], fvec[1], fvec[2],
+	 fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
 #endif
   fvec[3] = 0.0;
   fvec[4] = 0.0;
@@ -1850,6 +2001,9 @@ no_core_bump:
 			      rxC = vecg[0];
 			      ryC = vecg[1];
 			      rzC = vecg[2];
+			      MD_DEBUG(printf("A x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)-B x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)",
+					      rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
+					      rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]));
 			      t = vecg[4];
 			      if (t < 0)
 				{
@@ -1866,6 +2020,7 @@ no_core_bump:
 				  t = 0;
 				}
 			      /* il tempo restituito da newt() è già un tempo assoluto */
+			      MD_DEBUG(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
 			      ScheduleEvent (na, n, t);
 			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
 			    } 
@@ -1940,7 +2095,9 @@ void calc_energy(char *msg)
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
+  int ii;
   FILE *bf;
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
   sprintf(fileop2 ,"StoreBump-%d-%d-t%.8f", i, j, Oparams.time);
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
@@ -1951,8 +2108,15 @@ void store_bump(int i, int j)
     }
   UpdateSystem();
   R2u();
+  fprintf(bf, ".Vol: %f\n", L*L*L);
   MD_DEBUG(printf("[Store bump]: %.15G\n", Oparams.time));
-  writeAllCor(bf);
+  for (ii = 0; ii < Oparams.parnum; ii++)
+    {
+      if (ii==i || ii==j)
+	fprintf(bf, tipodat2,rx[ii], ry[ii], rz[ii], uxx[ii], uxy[ii], uxz[ii], uyx[ii], uyy[ii], 
+		uyz[ii], uzx[ii], uzy[ii], uzz[ii]);
+    }
+  //writeAllCor(bf);
   fprintf(bf,"%.15f %.15f %.15f @ 0.1 C[green]\n", rxC, ryC, rzC);
   fclose(bf);
 
@@ -2333,6 +2497,7 @@ void move(void)
 	  printf("qui\n");
 #endif
 	  MD_DEBUG(printf("[Store event]: %.15G JJ=%d KK=%d\n", Oparams.time, OprogStatus.JJ, OprogStatus.KK));
+	  fprintf(bf, ".Vol: %f\n", L*L*L);
 	  writeAllCor(bf);
 	  fclose(bf);
 #ifndef MD_STOREMGL
