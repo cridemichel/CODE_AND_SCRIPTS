@@ -3924,8 +3924,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
     
   /* estimate of maximum rate of change for d */
   
-  factori = sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
-  factorj = sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
+  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factorj = 0.5*maxax[j]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
@@ -4355,8 +4355,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
    */
   t = 0;//t1;
 
-  factori = sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
-  factorj = sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
+  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factorj = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
@@ -5142,16 +5142,16 @@ void PredictEvent (int na, int nb)
 		       * di ellissoidi */
 		      if (OprogStatus.targetPhi > 0)
 			{
-			  sigSq = Sqr(max_ax(na)+max_ax(n));
+			  sigSq = Sqr(max_ax(na)+max_ax(n)+OprogStatus.epsd);
 			}
 		      else
 		       {
 			 if (na < parnumA && n < parnumA)
-			   sigSq = Sqr(maxax[na]);
+			   sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 			 else if (na >= parnumA && n >= parnumA)
-			   sigSq = Sqr(maxax[na]);
+			   sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 			 else
-			   sigSq = Sqr((maxax[n]+maxax[na])*0.5);
+			   sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
 		       }
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 #endif
