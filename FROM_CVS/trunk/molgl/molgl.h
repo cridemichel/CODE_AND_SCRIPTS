@@ -70,6 +70,8 @@ struct bond
   int to;
   /* tipo del bond: ossia come deve essere rappresentato graficamente */
   bond_types_e type;
+  double thickness; /* spessore del bond */
+  int color; /* colore del bond */ 
 };
 typedef union atom atom_s; 
 typedef struct bond bond_s;
@@ -77,6 +79,7 @@ struct molecule
 {
   atom_s *atom;
   bond_s *bond; 
+  int numbonds;
   int numat;
 };
 struct global_settings
@@ -119,5 +122,7 @@ struct global_settings
   double ivpz;
   int default_bw;
   int default_col;
+  double defbondthick;
+  int defbondcol;
 };
 
