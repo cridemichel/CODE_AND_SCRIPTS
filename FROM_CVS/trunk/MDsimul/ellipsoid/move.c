@@ -2356,7 +2356,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
 
 double tdist;
 double rA[3], rB[3];
-#undef MD_GLOBALNRD
+#define MD_GLOBALNRD
 void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 {
@@ -3134,7 +3134,7 @@ retry:
 	  calcdist_retcheck = 1;
 	  return 0.0;
 	}
-      printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[4]);
+      printf("segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[4], calc_norm(r12));
       return calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1);
       //exit(-1);
     }
@@ -3147,7 +3147,7 @@ retry:
 	  calcdist_retcheck = 1;
 	  return 0.0;
 	}
-      printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[7]);
+      printf("segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[7], calc_norm(r12));
       return calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1);
       //exit(-1);
     }
