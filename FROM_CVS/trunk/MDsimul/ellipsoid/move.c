@@ -3615,7 +3615,7 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   int retcheck, firstDist = 0;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
   int k1, na;
-  MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t-atomTime[i],i));
+  MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i],i));
   MD_DEBUG20(printf("v = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
   *err = 0;
   ti = t + (t1 - atomTime[i]);
@@ -3666,7 +3666,7 @@ retryneigh:
       else
 #endif
       if (OprogStatus.guessDistOpt==1)
-	guess_distNeigh(i, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
+	guess_distNeigh(i, rA, rB, Xa, Xb, rC, rD, RtA, nebrTab[i].R);
       else
 	{
 	  calc_intersec_neigh(rB, rA, Xa, rC, -1);
@@ -3833,7 +3833,314 @@ retryneigh:
     }
 }
 #endif
+#ifdef MD_NNL
+double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
 
+     		double *vecgsup, int calcguess)
+{
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], fx[3];
+  double ti, segno;
+  double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
+  int retcheck;
+  double Omega[3][3], nf, ng, gradf[3], gradg[3], invaSq, invbSq, invcSq;
+  int k1, k2, na;
+  MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+  ti = nebrTab[i].time - Oparams.time;
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
+  /* ...and now orientations */
+  invaSq = 1/Sqr(nebrTab[i].axa);
+  invbSq = 1/Sqr(nebrTab[i].axb);
+  invcSq = 1/Sqr(nebrTab[i].axc);
+  tRDiagR(i, Xa, invaSq, invbSq, invcSq, nebrTab[i].R);
+
+  ti = nebrTab[j].time - Oparams.time;
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+  invaSq = 1/Sqr(nebrTab[j].axa);
+  invbSq = 1/Sqr(nebrTab[j].axb);
+  invcSq = 1/Sqr(nebrTab[j].axc);
+    
+  tRDiagR(j, Xb, invaSq, invbSq, invcSq, nebrTab[j].R);
+retry:
+  if (OprogStatus.forceguess)
+    calcguess = 1;
+  if (calcguess)
+    {
+      if (OprogStatus.guessDistOpt==1)
+	guess_dist(i, j, rA, rB, Xa, Xb, rC, rD, nebrTab[i].R, nebrTab[j].R);
+#if 0
+	  for(k1=0; k1 < 3; k1++)
+	    r12[k1] = rC[k1]-rD[k1]; 
+	  printf("PRIMA PRIMA dist=%.15f\n",calc_norm(r12));
+#endif
+      else
+	{
+	  calc_intersec(rB, rA, Xa, rC);
+	  calc_intersec(rA, rB, Xb, rD);
+	}
+#if 1
+
+      for(k1=0; k1 < 3; k1++)
+	r12[k1] = rC[k1]-rD[k1]; 
+
+      if (OprogStatus.springkSD>0 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
+	{
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      vecgcg[k1] = rC[k1];
+	      vecgcg[k1+3] = rD[k1];
+	    }
+	  //check_point("calcDistNeg", &vecgcg[3], rB, Xb);
+#if 0
+	  for(k1=0; k1 < 3; k1++)
+	    r12[k1] = rC[k1]-rD[k1]; 
+	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
+	  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+#endif
+	  //distconjgrad(i, j, shift, vecgcg, 100, 1); 
+	  //distconjgrad(i, j, shift, vecgcg, 1/OprogStatus.tolSD, 1);
+	  //guessdistByMesh(i, j, shift, vecgcg);
+	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+#if 0
+	  if (maxitsRyck)
+	    printf("distVera=%.15G\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+#endif
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      rC[k1] = vecgcg[k1];
+	      rD[k1] = vecgcg[k1+3];
+	    }	 
+#endif
+	}
+#if 0
+	{
+	  double dist, distVera;
+	  for(k1=0; k1 < 3; k1++)
+	    r12[k1] = rC[k1]-rD[k1]; 
+	  dist = calc_norm(r12);
+	  printf("dist: %.15G\n", dist);
+	      //printf("dist=%.15f\n",calc_norm(r12));
+	}
+#endif
+      //exit(-1);
+      MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
+		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
+      calc_grad(rC, rA, Xa, gradf);
+      calc_grad(rD, rB, Xb, gradg);
+      MD_DEBUG(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
+		      gradf[0], gradf[1], gradf[2], gradg[0], gradg[1], gradg[2]));
+      nf = calc_norm(gradf);
+      ng = calc_norm(gradg);
+#ifdef MD_DIST5 
+      vecg[3] = sqrt(nf/ng);
+#else
+      vecg[6] = sqrt(nf/ng);
+#endif
+      for (k1=0; k1 < 3; k1++)
+	{
+	  vecg[k1] = rC[k1];
+#ifndef MD_DIST5
+	  vecg[k1+3] = rD[k1];
+#endif
+	  rDC[k1] = rD[k1] - rC[k1];
+	}
+      if (OprogStatus.epsdGDO > 0.0)
+	{
+	  g1 = calc_norm(rDC)/nf;
+	  nrDC = calc_norm(rDC);
+	  SP = scalProd(rDC,gradf)/nf;
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      vecnf[k1] = rDC[k1] - SP*gradf[k1]; 
+	    }
+	  nvecnf = calc_norm(vecnf);
+	  if ( nvecnf > 0.0)
+	    g2 = OprogStatus.epsdGDO*min3(axa[j],axb[j],axc[j])/calc_norm(vecnf); 
+	  else 
+	    g2 = g1;
+	}	  
+#ifdef MD_DIST5
+      //vecg[4] = calc_norm(rDC)/nf;  
+      if (OprogStatus.springkSD>0)
+	if (scalProd(gradf, rDC) < 0.0)
+	  vecg[4] = 0.0;
+	else
+	  vecg[4] = calc_norm(rDC)/nf;  
+      else
+	{
+	  if (OprogStatus.epsdGDO > 0.0)
+	    {
+	      if (scalProd(gradf, rDC) < 0.0)
+		vecg[4] = 0.0;
+	      else
+		vecg[4] = min(g1,g2);
+	    }
+	  else
+	    vecg[4] = 0.0;
+	}
+#else
+      if (OprogStatus.springkSD>0)
+	{
+	  if (scalProd(gradf, rDC) < 0.0)
+	    vecg[7] = 0.0;
+	  else
+	    vecg[7] = calc_norm(rDC)/nf;  
+	}
+      else
+	{
+	  if (OprogStatus.epsdGDO > 0.0)
+	    {
+	      if (scalProd(gradf, rDC) < 0.0)
+		vecg[7] = 0.0;
+	      else
+		vecg[7] = min(g1,g2);
+	    }
+	  else
+	    vecg[7] = 0.0;
+	}
+      //printf("i=%d j=%d g1=%f g2=%f\n", i, j, g1, g2);
+      //vecg[7] = 0.0;
+#endif
+    }
+  else
+    {
+      for (k1 = 0; k1 < 8; k1++)
+	vecg[k1] = vecgsup[k1];
+    }
+  MD_DEBUG(printf(">>>>>>> alpha: %f beta: %f\n", vecg[6], vecg[7]));
+  printf(">>>>>>> MAHHH alpha: %f beta: %f\n", vecg[6], vecg[7]);
+#ifdef MD_DIST5
+  newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift); 
+#else
+  newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift); 
+#endif
+  if (retcheck != 0)
+    {
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck=1;
+	  return 0.0;
+	}
+      printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      if (calcguess==0)
+	{
+	  calcguess=2;
+	  goto retry;
+	} 
+      Oparams.time = t + t1;
+      store_bump(i, j);
+      exit(-1);
+    }
+#ifndef MD_DIST5
+  for (k1 = 0; k1 < 8; k1++)
+    {
+      vecgsup[k1] = vecg[k1]; 
+    }  
+#else
+   for (k1 = 0; k1 < 5; k1++)
+    {
+      vecgsup[k1] = vecg[k1]; 
+    }  
+#endif
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      r1[k1] = vecg[k1];
+#ifndef MD_DIST5
+      r2[k1] = vecg[k1+3];
+#endif
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#ifdef MD_DIST5
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(r1[k2]-rA[k2]);
+	}
+      r2[k1] = r1[k1] + fx[k1]*vecg[4];
+      vecgsup[k1+5] = r2[k1];
+#endif
+      r12[k1] = r1[k1] - r2[k1];
+    } 
+  
+  *alpha = vecg[3];
+  segno = -1;
+  /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++) 
+      segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
+#if 0
+#ifndef MD_DIST5
+  if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
+    {
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck = 1;
+	  return 0.0;
+	}
+      printf("segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[4], calc_norm(r12));
+      exit(-1);
+      //return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
+      //exit(-1);
+    }
+#endif
+#endif
+#if 1
+#ifdef MD_DIST5
+  if (segno*vecg[4]<0 && fabs(segno*vecg[4])>3E-8)
+    {
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck = 1;
+	  return 0.0;
+	}
+      printf("segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[4], calc_norm(r12));
+      return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
+      //exit(-1);
+    }
+#elif defined(MD_DISTCG)
+#else
+  if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
+    {
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck = 1;
+	  return 0.0;
+	}
+      printf("segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[7], calc_norm(r12));
+      return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
+      //exit(-1);
+    }
+#endif
+#endif
+#if 1
+  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+  //exit(-1);
+  if (segno > 0)
+    return calc_norm(r12);
+  else
+    return -calc_norm(r12);
+#else
+#if 0
+#if MD_DEBUG(x) == x
+  for (k1 = 0; k1 < 3; k1++)
+    rDC[k1] = r1[k1] - r2[k1];
+    {
+      FILE *f;
+      f =fopen("distNeg.dat","a");
+      fprintf(f,"%.15f %.15f\n", Oparams.time, (segno>0)?calc_norm(rDC):-calc_norm(rDC));  
+      fclose(f);
+    }
+  return calc_norm(rDC);
+#endif
+#endif
+#endif
+}
+#endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -3873,6 +4180,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
       invcSq[na] = 1/Sqr(axc[j]);
     }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
+  printf(">>>>>>> BOHHHHHHHHHHHHHHHHH\n");
 retry:
   if (OprogStatus.forceguess)
     calcguess = 1;
