@@ -84,7 +84,7 @@ void nrerror(char *msg)
 #define DABS fabs
 double xicom[6], pcom[6], xi[6], G[6], H[6], grad[6];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
-int cghalfspring, icg, jcg;
+int cghalfspring, icg, jcg, minaxicg, minaxjcg;
 double shiftcg[3], lambdacg;
 /* ============================ >>> brent <<< ============================ */
 void  conjgradfunc(void);
@@ -539,12 +539,15 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
       B=0;
       C=0;
       for (k1=0; k1 < 3; k1++)
-	for (k2=0; k2 < 3; k2++)
-	  {
-	    A += gradf[k1]*Xa[k1][k2]*gradf[k2];
-	    B += r1A[k1]*Xa[k1][k2]*gradf[k2];
-	    C += r1A[k1]*Xa[k1][k2]*r1A[k2];
-	  }
+	{
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      A += gradf[k1]*Xa[k1][k2]*gradf[k2];
+	      B += r1A[k1]*Xa[k1][k2]*gradf[k2];
+	      //  printf("riA[%d]=%f Xa[%d][%d]=%f\n", r1A[k1], Xa[k1][k2]);
+	      C += r1A[k1]*Xa[k1][k2]*r1A[k2];
+	    }
+	}
       B *= 2.0;
       C -= 1.0;
       Delta = Sqr(B) - 4.0*A*C;
@@ -561,7 +564,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 	sol = s2;
       done = 1;
     }
-#if 0
+#if 1
     {
       double Q= 0;
       int k1, k2;
@@ -573,6 +576,17 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 	    }
 	}
       Q -= 1.0;
+      if (isnan(sol) ||isnan(A))
+	{
+	  printf("A=%.15G B=%.15G C=%.15G Delta=%.15G\n", A, B, C, Delta);
+	  printf("gradf=%f %f %f \n", gradf[0], gradf[1], gradf[2]);
+	  printf("ri=%f %f %f dr=%f %f %f\n", ri[0], ri[1], ri[2], dr[0], dr[1], dr[2]);
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      printf("Xa[%d][%d]:%.15G\n", k1, k2, Xa[k1][k2]);
+	
+	  exit(-1);
+	}
       printf("should be zero: %.15G sf:%.15G\n", Q, sf);
     }
   printf("done! sol=%.15G\n", sol);
@@ -585,7 +599,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 void projectgrad(double *p, double *xi)
 {
   int kk, k1, k2, k3;
-  double r1[3], r2[3], rIf[3], rIg[3];
+  double r1[3], r2[3], rIf[3], rIg[3], pp[3];
   double r1A[3], r2B[3], A1, B1, C1, Delta1, A2, B2, C2, Delta2; 
   double gradf[3], gradg[3];
   for (kk=0; kk < 3; kk++)
@@ -605,9 +619,16 @@ void projectgrad(double *p, double *xi)
     }
 #endif
   calc_grad(p, rA, Xa, gradf);
-  calc_grad(&p[kk+3], rB, Xb, gradg);
+  for (kk=0; kk < 3; kk++)
+    pp[kk] = p[kk+3];
+  calc_grad(pp, rB, Xb, gradg);
+
   projonto(r1, xi, rA, Xa, gradf);
-  projonto(r2, &xi[3], rB, Xb, gradg);
+  for (kk=0; kk < 3; kk++)
+    pp[kk] = xi[kk+3];
+  projonto(r2, pp, rB, Xb, gradg);
+  for (kk=0; kk < 3; kk++)
+    xi[kk+3] = pp[kk];
 }
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
@@ -618,32 +639,53 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 { 
   int j,its;
   const int ITMAXFR = 200;
-  const double EPSFR=1E-10;
-  double gg,gam,fp,dgg;
+  const double EPSFR=1E-10, INITSTEP=1E-4;
+  double gg,gam,fp,dgg,norm1, norm2;
   double g[6],h[6],xi[6];
+  printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
   fp=(*func)(p); /*Initializations.*/
   (*dfunc)(p,xi); 
-  //projectgrad(p, xi);  
+  projectgrad(p, xi);  
   
+  norm1 = calc_norm(xi);
+  norm2 = calc_norm(&xi[3]); 
+  printf("$$$$$$$$$$$$$$ norm2=%.15G\n", norm2);
   for (j=0;j<n;j++)
     { 
       g[j] = -xi[j]; 
+      if (j < 3)
+	{
+	  g[j] /= norm1;
+	  g[j] *= minaxicg*INITSTEP;   
+	}
+      else
+	{
+	  g[j] /= norm2;
+	  g[j] *= minaxjcg*INITSTEP;
+	}
       xi[j]=h[j]=g[j];
     }
-  for (its=1;its<=ITMAXFR;its++)
+  printf("g=%f %f %f %f %f %f\n");
+  for (its=1;its<=ITMAXFR;its++, g[0], g[1], g[2], g[3], g[4], g[5]);
     { /* Loop over iterations.*/
       *iter=its;
       printf("prima xi=%.15G %.15G %.15G %.15G %.15G %.15G\n", xi[0],xi[1],xi[2],xi[3],xi[4],xi[5]);
+      printf("prima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
+      for (j=0; j < n; j++)
+	p[j] += xi[j];
+      *fret = (*func)(p);
       //linmin(p,xi,n,fret,func); /* Next statement is the normal return: */
-      projectgrad(p, xi);
-      printf("dopo xi=%.15G %.15G %.15G %.15G %.15G %.15G\n", xi[0],xi[1],xi[2],xi[3],xi[4],xi[5]);
-      //printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
+      printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
       if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
 	{ 
 	  return;
 	} 
       fp= *fret; 
+      
       (*dfunc)(p,xi);
+      projectgrad(p, xi);
+      printf("dopo xi=%.15G %.15G %.15G %.15G %.15G %.15G\n", xi[0],xi[1],xi[2],xi[3],xi[4],xi[5]);
+      printf("dopo p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
       dgg=gg=0.0;
       for (j=0;j<n;j++) 
 	{
@@ -663,6 +705,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	} 
     } 
   nrerror("Too many iterations in frprmn");
+  
 }
 void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
@@ -890,7 +933,16 @@ double  cgfuncRyck(double *vec)
   return F;
 }
 
-
+double min3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b < m)
+    m = b;
+  if (c < m)
+    m = c;
+  return m;
+}
 void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring)
 {
   int kk;
@@ -899,6 +951,16 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
   double vec[6];
   icg = i;
   jcg = j;
+  
+  if (i < Oparams.parnumA)
+    minaxicg = min3(Oparams.a[0],Oparams.b[0],Oparams.c[0]);
+  else 
+    minaxicg = min3(Oparams.a[1],Oparams.b[1],Oparams.c[1]);
+  if (j < Oparams.parnumA)
+    minaxjcg = min3(Oparams.a[0],Oparams.b[0],Oparams.c[0]);
+  else 
+    minaxjcg = min3(Oparams.a[1],Oparams.b[1],Oparams.c[1]);
+
   lambdacg = lambda;
   cghalfspring = halfspring;
   for (kk=0; kk < 3; kk++)
@@ -909,7 +971,8 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
     {
       vec[kk] = vecg[kk];
     }
-  //printf(">>> vec[6]: %f vec[7]:%f\n", vec[6], vec[7]);
+  printf(">>> vec: %.15G %.15G %.15G %.15G %.15G %.15G\n", vec[0], vec[1], vec[2],
+	 vec[3], vec[4], vec[5]);
   frprmnRyck(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
   //powell(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc);
   for (kk=0; kk < 6; kk++)
