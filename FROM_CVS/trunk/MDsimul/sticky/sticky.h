@@ -175,6 +175,11 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeIdD    tree[10]
 #define treeIdE    tree[11]
 #endif
+struct LastBumpS 
+{
+  int mol;
+  int at;
+};
 #define ATOM_LIMIT 10000000
 /* ======================== >>> struct progStatus <<< =======================*/
 struct progStatus
@@ -390,8 +395,7 @@ struct params
   double partDiss;             /*dissipazione negli urti fra particelle */
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
-  COORD_TYPE mA[NA];             /* atoms masses */
-  COORD_TYPE mB[NA];  
+  COORD_TYPE m[2];             /* atoms masses */
   double sigmaA[NA];
   double sigmaB[NA];
   double deltaA[NA]; /* larghezza delle buche */
@@ -483,7 +487,7 @@ struct pascii opro_ascii[] =
   {"epsdFast",     &OS(epsdFast),              1,   1, "%.12G"},
   {"epsdFastR",    &OS(epsdFastR),             1,   1, "%.12G"},
   {"epsdMax",      &OS(epsdMax),               1,   1, "%.12G"},
-  {"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
+  //{"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
   {"forceguess",   &OS(forceguess),            1,   1, "%d"},
   {"zbrakn",       &OS(zbrakn),              1,   1,  "%d"},
   {"zbrentTol",    &OS(zbrentTol),           1,   1,  ".15G"},
@@ -544,8 +548,7 @@ struct pascii opar_ascii[]=
   {"curStep",           &OP(curStep),                     1,   1,  MDINTFMT},
   {"P",                 &OP(P),                           1,   1, "%.6G"},
   {"T",                 &OP(T),                           1,   1, "%.6G"},
-  {"mA",                OP(mA),                            NA,   1, "%.10G"},
-  {"mB",                OP(mB),                            NA,   1, "%.10G"},
+  {"m",                OP(m),                            2,   1, "%.10G"},
   {"sigmaA",           OP(sigmaA),                         NA,   1, "%.10G"},
   {"sigmaB",           OP(sigmaB),                         NA,   1, "%.10G"},
   {"deltaA",           OP(deltaA),                         NA,   1, "%.10G"},
@@ -658,7 +661,7 @@ struct singlePar OsinglePar[] = {
   {"epsdFast",   &OprogStatus.epsdFast,       CT},
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
-  {"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
+  //{"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
   {"zbrakn",     &OprogStatus.zbrakn,         INT},
   {"zbrentTol",  &OprogStatus.zbrentTol,      CT},
   {"scalfact",   &OprogStatus.scalfact,       CT},
@@ -687,12 +690,6 @@ struct singlePar OsinglePar[] = {
   /* ======================================================================= */
  
   /* ==================== >>> PUT HERE YOUR PARAMS <<< ===================== */
-  {"A0",      &Oparams.a[0],      CT},
-  {"A1",      &Oparams.a[1],      CT},
-  {"B0",      &Oparams.b[0],      CT},
-  {"B1",      &Oparams.b[1],      CT},
-  {"C0",      &Oparams.c[0],      CT},
-  {"C1",      &Oparams.c[1],      CT},
   {"targetPhi", &OprogStatus.targetPhi, CT},
 #ifndef MD_ASYM_ITENS
   {"Ia",      &Oparams.I[0],      CT},
@@ -715,7 +712,7 @@ struct singlePar OsinglePar[] = {
   {"equilibrat", &Oparams.equilibrat,       INT},
   {"eqlevel",    &OprogStatus.eqlevel,       CT},
   {"temperat",   &Oparams.T,                CT},
-  {"tol",        &Oparams.tol,              CT},
+  //{"tol",        &Oparams.tol,              CT},
   {"seed",       &mdseed,                   INT},
   /* parametri per scegliere il tipo di salvataggio del file xva
      (lineare o semilog) */
