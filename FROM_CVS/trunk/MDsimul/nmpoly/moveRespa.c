@@ -60,6 +60,7 @@ double WmShort, WmxxShort, WmyyShort, WmzzShort, WmxyShort, WmyzShort, WmzxShort
 #endif
 #ifdef MD_RAPACONSTR
 double **cvMat, **cvMatInv, ***cvMatInvS, *cDistSq, *vVec, *vVecLong, *curBondLenSq, *cVec[3]; 
+double **lambvel;
 int **cMat; 
 int *cAtom1, *cAtom2;
 int *laststep;
@@ -507,6 +508,30 @@ void checkInvMat(void)
 	}
     }
 }
+void shakeVelLambda(void)
+{
+  int m, a, NB=NA-1;
+  int i;
+  double w2;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      for (m = 0; m < NB; m++)
+	{
+	  for (a = 0; a < NA; a++)
+	    {
+	      w2 = cMat[m][a]/2.0;
+	      if (w2 != 0.) 
+		{
+	      /* notare che il meno serve per essere consistenti con shakeVelNPT */
+		  px[a][i] -= w2*cVec[0][m]*lambvel[i][m];
+		  py[a][i] -= w2*cVec[1][m]*lambvel[i][m];
+		  pz[a][i] -= w2*cVec[2][m]*lambvel[i][m];
+		}
+	    }
+	}
+    }
+}
+
 void ComputeConstraints(double dt, double c, int RefSys, int after)
 {
   /* RefSys=1 allora calcola le forze del ref system */
@@ -514,7 +539,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 #if 0
   double **FxO, **FyO, **FzO; 
 #endif
-  double dv, w, cdt, cost;
+  double dv, w, cdt, cost, w2;
   int NB = NA-1;
   double rp1[3], rp2[3];
   int i, k, m, mm, mDif, m1, m2, a;
@@ -562,8 +587,10 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	    cVec[k][m] = cVec[k][m] - L*rint (cVec[k][m]/L);
 	  } 
       }
-    if (!after)
-      {
+
+    //if (!OprogStatus.rapafaster || (OprogStatus.rapafaster && !after))
+    //if (!after)
+      //{
 	for (m1 = 0; m1 < NB; m1 ++) 
 	  {
 	    for (m2 = 0; m2 < NB; m2 ++) 
@@ -580,7 +607,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 		cvMatBak[m1][m2]=cvMat[m1][m2];
 	      } 
 	  }
-      }
+      //}
     for (m = 0; m < NB; m ++) 
       {
 	vVecL[m] = 0.;
@@ -635,24 +662,34 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
       }
     checkInvMat();
 #endif
-    if (!after)
-      SolveLineq(cvMat, vVecL, NA-1);
+    //if (!OprogStatus.rapafaster || (OprogStatus.rapafaster && !after))
+    SolveLineq(cvMat, vVecL, NA-1);
     L = cbrt(Vol);
     for (m = 0; m < NB; m++)
       {
 	for (a = 0; a < NA; a++)
 	  {
 	    w = cMat[m][a];
+	    //printf("a=%d m=%d cMat[][]:%d\n",a,m,cMat[m][a]);
+	    w2 = w/2.0;
   	    if (w != 0.) 
   	      {
   		cost = vVecL[m]*w*cdt;
   		px[a][i] += cost * cVec[0][m];
   		py[a][i] += cost * cVec[1][m];
   		pz[a][i] += cost * cVec[2][m];
-  	      }
+#if 0
+		if (RefSys && after)
+		  {
+		    /* notare che il meno serve per essere consistenti con shakeVelNPT */
+		    px[a][i] -= w2*cVec[0][m]*lambvel[i][m];
+		    py[a][i] -= w2*cVec[1][m]*lambvel[i][m];
+		    pz[a][i] -= w2*cVec[2][m]*lambvel[i][m];
+		  }
+#endif
+	      }
 	  }
       }
-    
 #if 0
     if (i==0)
       {
@@ -711,7 +748,7 @@ void  AnlzConstraintDevs (void)
 	  dr1[2] = rz[i + 1][n] - rz[i][n];
   	  dr1[2] = dr1[2] - L*rint(dr1[2]/L);
 	  curBondLenSq[i] = Sqr (dr1[0]) + Sqr (dr1[1]) + Sqr (dr1[2]);
-	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d)/Oparams.d > 5E-8)
+	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d)/Oparams.d > 1E-6)
 	    {
 	      sumsteps = sumsteps + OprogStatus.nrespa*(Oparams.curStep - laststep[n]);
 	      numshake=numshake+1.0;
@@ -724,14 +761,24 @@ void  AnlzConstraintDevs (void)
 	}
       
     }
-  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-9, 150, NA-1, Oparams.d,
+  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-10, 150, NA-1, Oparams.d,
 		    Oparams.m, Oparams.parnum);
-  if (doneshake)
+  
+  if (numshake && sumsteps/numshake < 2)
     {
-      if (sumsteps/numshake < 1.5 || Oparams.curStep % 100 == 0)
-	printf("<<<< [WARNING] >>>> average steps between two SHAKE: %f \n", sumsteps/numshake);
-      
+      char msg[512];
+      sprintf(msg, "<<<< [WARNING] >>>> average steps between two SHAKE is %f.\n This value is too small, hence either increase bond tolerance or reduce integration step.\n If you increase tolerance please check energy conservation after!", sumsteps/numshake);
+      mdPrintf(ALL,msg, NULL);
+      exit(-1);
     }
+#if 1
+  if (numshake && Oparams.curStep % 100 == 0)
+    {
+      char msg[512];
+      sprintf(msg, "<<<< [INFO] >>>> average steps between two SHAKE is %f\n", sumsteps/numshake);
+      mdPrintf(ALL,msg, NULL);
+    }
+#endif    
 #if 0
   constraintDevL = sqrt (sumL / (Oparams.parnum * (NA-1))) - Oparams.d;
   if (fabs(constraintDevL) > 4E-8)
@@ -774,11 +821,13 @@ void shakePosRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE 
   L = cbrt(Vol);
   for (i=0; i < Nm; i++)
     {
+#if 1
 #ifdef MD_RAPACONSTR
       if (!doshake[i])
 	continue;
-      else
-	doshake[i] = 0;
+  //    else
+//	doshake[i] = 0;
+#endif
 #endif
       /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
       for(a=0; a < NA; a++)
@@ -948,7 +997,7 @@ void shakeVelRespaNPT(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB
   dt2 = dt * 0.5;
   for (i=0; i < Nm; i++)
     {
-#if 0
+#if 1
 #ifdef MD_RAPACONSTR
       if (!doshake[i])
 	continue;
@@ -957,12 +1006,15 @@ void shakeVelRespaNPT(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB
 #endif
 #endif
       /* VELOCITY VERLET ALGORITHM PART B */
+#ifdef MD_RAPACONSTR
+      for (a=0; a < NA-1; a++)
+	lambvel[i][a] = 0.0;
+#endif
       for(a=0; a < NA; a++)
 	{
 	  rxi[a] = rx[a][i];
 	  ryi[a] = ry[a][i];
 	  rzi[a] = rz[a][i];
-
 	  vxi[a] = p2sx[a][i]/Oparams.m[a];
 	  vyi[a] = p2sy[a][i]/Oparams.m[a];
 	  vzi[a] = p2sz[a][i]/Oparams.m[a];
@@ -1013,6 +1065,9 @@ void shakeVelRespaNPT(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB
 		      if ( fabs(gab) > tol )
 			{
 			  WC = WC + gab * dSq;
+#ifdef MD_RAPACONSTR
+			  lambvel[i][a] += gab;
+#endif
 
 			  dx = rxab * gab;
 			  dy = ryab * gab;
@@ -1716,6 +1771,12 @@ void updImpNoseAnd(double dt, double c)
 	  pz[a][i] += Fz[a][i]*cdt;
 	}
     }	
+#endif
+#if 0
+#if defined(MD_RAPACONSTR)  
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
+		   1E-9, px, py, pz);
+#endif
 #endif
 #if 0
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
@@ -2449,10 +2510,14 @@ void movelongRespaNPTAft(double dt)
     }
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+#ifdef MD_RAPACONSTR
+  ComputeConstraints(dt, 0.5, 0, 0); 
+#endif
   if (OprogStatus.Nose==1)
     updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
-#if  1
+
+#if  0
 #ifdef MD_RAPACONSTR
   if (OprogStatus.rcutInner != Oparams.rcut)
     shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 1E-9, px, py, pz);
@@ -2535,12 +2600,12 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
       updPv(dt, 0.5);
       updPs(dt, 0.5);
       updImpNoseAnd(dt, 0.5);
-      updVol(dt, 0.5);
-      upds(dt, 0.5);
 #ifdef MD_RAPACONSTR
       ComputeConstraints(dt, 0.5, 1, 0); 
       /*RAPA<<<<<<<<<<<<<<<< */
 #endif
+      updVol(dt, 0.5);
+      upds(dt, 0.5);
       updPositionsNPT(dt, 1.0);
       upds(dt, 0.5);
       updVol(dt, 0.5);
@@ -2614,6 +2679,10 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   if (OprogStatus.Nose == 1)
     {
       updPvAft(dt, 0.5);
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(dt, 0.5, 1, 1); 
+      /*RAPA<<<<<<<<<<<<<<<< */
+#endif
       updImpNoseAndAft(dt, 0.5);
     }
 #else
@@ -2624,6 +2693,10 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
       updImpNoseAndAft(dt, 0.5);
       updPvAft(dt, 0.5);
 #else
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(dt, 0.5, 1, 1); 
+      /*RAPA<<<<<<<<<<<<<<<< */
+#endif
       updImpNoseAndAft(dt, 0.5);
       updPsAft(dt, 0.5);
       updPvAft(dt, 0.5);
@@ -2635,6 +2708,10 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
       updPsAft(dt, 0.5);
       updImpNoseAft(dt, 0.5);
 #else
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(dt, 0.5, 1, 1); 
+      /*RAPA<<<<<<<<<<<<<<<< */
+#endif
       updImpNoseAft(dt, 0.5);
       updPsAft(dt, 0.5);
 #endif
@@ -2642,7 +2719,11 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
   else
     {
-      updImp(dt, 0.5);
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(dt, 0.5, 1, 1); 
+      /*RAPA<<<<<<<<<<<<<<<< */
+#endif
+       updImp(dt, 0.5);
 #if 1
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
       shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
