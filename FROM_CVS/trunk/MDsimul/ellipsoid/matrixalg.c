@@ -125,10 +125,10 @@ void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
 { 
   int i,m,ns=0; 
   double den,dif,dift,ho,hp,w;
-  double *c,*d; 
+  double c[3], d[3]; 
   dif=fabs(x-xa[0]); 
-  c=vector(n); 
-  d=vector(n); 
+  //c=vector(n); 
+  //d=vector(n); 
   for (i=0;i<n;i++) 
     { 
       /* Here we find the index ns of the closest table entry,*/
@@ -171,8 +171,8 @@ void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
        * This route keeps the partial approximations centered (insofar as possible) on the target x. 
        * The last dy added is thus the error indication. */
     } 
-  free_vector(d); 
-  free_vector(c); 
+  //free_vector(d); 
+  //free_vector(c); 
 }
 #define SWAP(a,b) {temp=(a);(a)=(b);(b)=temp;}
 void gaussj(double **a, int n, double *bb) 
