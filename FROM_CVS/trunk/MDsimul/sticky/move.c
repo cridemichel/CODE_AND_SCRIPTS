@@ -3683,7 +3683,7 @@ void PredictEvent (int na, int nb, int nl)
   /* 100+0 = attraversamento cella lungo x
    * 100+1 =       "           "     "   y
    * 100+2 =       "           "     "   z */
-  evCode = 100 + k + 3*nc;
+  evCode = 100 + k;// + 3*nc;
   /* urto con le pareti, il che vuol dire:
    * se lungo z e rz = -L/2 => urto con parete */ 
   MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
@@ -4669,11 +4669,10 @@ void ProcessCellCrossing(void)
   int nc2, nl2;
 
   UpdateAtom(evIdA);
-  k = evIdB - 100 - ATOM_LIMIT; 
+  kk = evIdB - 100 - ATOM_LIMIT; 
   /* trattandosi di due specie qui c'è un due */
-  nc = k / 3;
-  kk = k % 3;
- 
+  nc = evIdC;
+
   printf("time=%.15G Proc CellCrossing nc=%d k=%d evIdA=%d\n", Oparams.time, nc, k, evIdA);
   iA = (evIdA < Oparams.parnumA)?0:1;
   if (iA == 0 && nc == 0)
@@ -4725,9 +4724,7 @@ void ProcessCellCrossing(void)
   j = evIdB - ATOM_LIMIT;
   if (j >= 100)
     {
-      k = (j - 100) % 3;
-      nc = (j - 100) / 3;
-      switch (k)
+      switch (kk)
 	{
 	case 0: 
 	  docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl]);
@@ -4748,7 +4745,7 @@ void ProcessCellCrossing(void)
     }
   else
     {
-      k = j / 2;
+      kk = j / 2;
       cellRange[j] = 0;
       ProcessCollWall();
       PredictEvent(evIdA, evIdB);

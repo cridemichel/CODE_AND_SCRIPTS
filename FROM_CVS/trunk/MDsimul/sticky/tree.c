@@ -469,11 +469,19 @@ void NextEvent (void)
       /* L'evento è un cell-crossing o un evento generico (output o misura) */
       DeleteEvent (idNow);
       /* se evIdC == 1 vuol dire che si tratta di un cell crossing ma nc=1 */
-      if ((evIdB >= ATOM_LIMIT+100 && evIdB <= ATOM_LIMIT+105 && evIdC == 1) || evIdB < ATOM_LIMIT + 100) 
+#ifdef MD_SILICA
+      if ((evIdB >= ATOM_LIMIT+100 && evIdC == 1) || evIdB < ATOM_LIMIT + 100) 
 	{
 	  treeCircAR[idNow] = treeIdA[0];
 	  treeIdA[0] = idNow;
 	} 
+#else
+      if (evIdB < ATOM_LIMIT + 100) 
+	{
+	  treeCircAR[idNow] = treeIdA[0];
+	  treeIdA[0] = idNow;
+	}
+#endif
     }
   /*check_node("next event", 0, -1, 0);*/
   if (Oparams.time < 0)  
