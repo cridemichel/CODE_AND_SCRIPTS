@@ -336,7 +336,7 @@ void check (int *overlap, double *K, double *V)
  *  Trasposta(R) * | 0 b 0 | * R  dove R = | -uyx  uyy uyz |
  *                 | 0 0 c |               | -uzx -uzy uzz | 
  * */
-void tRDiagR(int i, double M[3][3], double a, double b, double c, 
+void tRDiagR(int i, double **M, double a, double b, double c, 
 	     double uxxi, double uxyi, double uxzi, double uyyi, double uyzi, double uzzi)
 {
   int na;
@@ -482,6 +482,8 @@ void bump (int i, int j, double* W, int bt)
   vz[j] = vz[j] - delpz*invmj;
 }
 #else
+extern double **matrix(int n, int m);
+extern void free_matrix(double **M, int n);
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
   /*
@@ -495,7 +497,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double rxij, ryij, rzij, factor, invmi, invmj;
   double delpx, delpy, delpz, sigSq, wrx, wry, wrz, rACn[3], rBCn[3], rnI[3];
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
-  double norm[3], Ia[3][3], Ib[3][3], invIa[3][3], invIb[3][3];
+  double norm[3], **Ia, **Ib, **invIa, **invIb;
   double  Xa[3][3], Xb[3][3];
   double modn, denom;
   int na, a, b;
@@ -538,6 +540,10 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   rBC[1] = ry[j] - rCy;
   rBC[2] = rz[j] - rCz;
  
+  Ia = matrix(3, 3);
+  Ib = matrix(3, 3);
+  invIa = matrix(3, 3);
+  invIb = matrix(3, 3);
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], 
@@ -651,6 +657,10 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       wz[i] += factor*invIa[2][a]*rACn[a];
       wz[j] -= factor*invIb[2][a]*rBCn[a];
     }
+  free_matrix(Ia, 3);
+  free_matrix(Ib, 3);
+  free_matrix(invIa, 3);
+  free_matrix(invIb, 3);
 /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
 #if 0
   *W = delpx * rxij + delpy * ryij + delpz * rzij;

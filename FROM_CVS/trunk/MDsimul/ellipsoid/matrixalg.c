@@ -1,5 +1,13 @@
 #define TINY 1E-20
 #define MD_NBMAX 3
+#include<math.h>
+#include<stdio.h>
+#include<stdlib.h>
+void nrerror(char *msg)
+{
+  printf(msg);
+  exit(-1);
+}
 void ludcmpR(double **a, int* indx, double* d, int n)
 {
   /* A[i][j] = Aij 
@@ -121,7 +129,7 @@ void SolveLineq (double **a, double *x, int n)
   lubksbR(a, indx, x, n);
 }
 
-void InvMatrix(double a[3][3], double b[3][3], int NB)
+void InvMatrix(double **a, double **b, int NB)
 {
   int m1, m2, indx[MD_NBMAX]; 
   double col[MD_NBMAX];
@@ -146,7 +154,9 @@ void InvMatrix(double a[3][3], double b[3][3], int NB)
 #define TOLX 1.0e-7 
 #define STPMX 100.0
 #define FMAX(A,B) (A)>(B)?(A):(B)
-void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, double stpmax, int *check, double (*func)(double [], int, int, double[]), int iA, int iB, shift)
+void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
+	    double *f, double stpmax, int *check, 
+	    double (*func)(double [], int, int, double[]), int iA, int iB, double shift[3])
 /*
    Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
    fold and g[1..n], and a direction p[1..n],  nds a new point x[1..n] along the direction p
@@ -262,18 +272,13 @@ void free_matrix(double **M, int n)
     }
   free(M);
 }
-void nrerror(char *msg)
-{
-  printf(msg);
-  exit(-1);
-}
 int nn; /* Global variables to communicate with fmin.*/
 double *fvec; 
 void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[]); 
 #define FREERETURN {free_vector(fvec);free_vector(xold);\ free_vector(p);\
- free_vector(g);free_matrix(fjac,n);\ free_ivector(indx);\
- return;}
-extern void fdjac(int n,double x[], fvec[], **fjac, 
+ free_vector(g);free_matrix(fjac,n);\ free_ivector(indx); return;}
+
+extern void fdjac(int n, double x[], fvec[], **fjac, 
 		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j)); 
 double fmin(double x[], int iA, int iB, double shift[3]);
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, 
