@@ -1078,7 +1078,7 @@ void usrInitAft(void)
     inCell[0] = malloc(sizeof(int)*Oparams.parnum);
     inCell[1]= malloc(sizeof(int)*Oparams.parnum);
     inCell[2] = malloc(sizeof(int)*Oparams.parnum);
-    tree = AllocMatI(10, poolSize);
+    tree = AllocMatI(12, poolSize);
     bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
     bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
     numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
