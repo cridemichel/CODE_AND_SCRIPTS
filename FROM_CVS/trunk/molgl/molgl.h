@@ -6,6 +6,8 @@
 #define PI 2.0*acos(0.0)
 #define STACKS 10
 #define SLIDES 10
+#define MGL_DISK_STACKS 15
+#define MGL_DISK_SLIDES 15
 #define MGL_NO_FADE  1
 #define MGL_FADE_LIN 2
 #define MGL_FADE_QUAD 3

@@ -209,15 +209,15 @@ void displayAtom(int nf, int nm, int na)
       glRotatef(rotangle, rax, ray, raz);
       glPushMatrix();
       glTranslatef(0, 0, atom->disk.height);
-      gluDisk(ss2, 0, atom->disk.radius, STACKS, SLIDES);
+      gluDisk(ss2, 0, atom->disk.radius, MGL_DISK_STACKS, MGL_DISK_SLIDES);
       glPopMatrix();
       gluCylinder(ss, atom->disk.radius, 
 		      atom->disk.radius, 
 		      atom->disk.height, 
-		      STACKS, SLIDES);
+		      MGL_DISK_STACKS, MGL_DISK_SLIDES);
       glPushMatrix();
       gluQuadricOrientation(ss3, GLU_INSIDE);
-      gluDisk(ss3, 0, atom->disk.radius, STACKS, SLIDES);
+      gluDisk(ss3, 0, atom->disk.radius, MGL_DISK_STACKS, MGL_DISK_SLIDES);
       glPopMatrix();
     }
   else if (atom->common.type==MGL_ATOM_CYLINDER)
