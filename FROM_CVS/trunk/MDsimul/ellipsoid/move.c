@@ -4,6 +4,7 @@
 #define MD_DEBUG10(x)  
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
+#define MD_DEBUG20(x) x
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -2053,7 +2054,7 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
   int na; 
   double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
-  double DA[3][3], DB[3][3], fx[3], gx[3];
+  double DA[3][3], DB[3][3], fx[3], gx[3], invaSqN[2], invbSqN[2], invcSqN[2];
   double Fxt[3], Gxt[3], Ft, Gt, scalfact[3];
   int k1, k2;
   ti = x[4] + (trefG - atomTime[iA]);
@@ -2068,19 +2069,17 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
   MD_DEBUG2(print_matrix(RA, 3));
   na = (iA < Oparams.parnumA)?0:1;
-  if (OprogStatus.targetPhi > 0)
-    {
-      invaSq[na] = 1/Sqr(axa[iA]);
-      invbSq[na] = 1/Sqr(axb[iA]);
-      invcSq[na] = 1/Sqr(axc[iA]);
-    }
-  tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
+  invaSqN[na] = 1/Sqr(axa[iA]);
+  invbSqN[na] = 1/Sqr(axb[iA]);
+  invcSqN[na] = 1/Sqr(axc[iA]);
+
+  tRDiagR(iA, Xa, invaSqN[na], invbSqN[na], invcSqN[na], RA);
   MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
   MD_DEBUG2(print_matrix(Xa, 3));
   DA[0][1] = DA[0][2] = DA[1][0] = DA[1][2] = DA[2][0] = DA[2][1] = 0.0;
-  DA[0][0] = invaSq[na];
-  DA[1][1] = invbSq[na];
-  DA[2][2] = invcSq[na];
+  DA[0][0] = invaSqN[na];
+  DA[1][1] = invbSqN[na];
+  DA[2][2] = invcSqN[na];
   /*N.B. l'ellissoide B in tale caso non evolve! */
   ti = 0.0;//x[4] + (trefG - atomTime[iB]);
   rB[0] = rx[iA];
@@ -2091,24 +2090,29 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   vB[2] = vz[iA];
   UpdateOrient(iA, ti, RB, OmegaB);
   na = (iA < Oparams.parnumA)?0:1;
+#if 1
+  scalfact[0] = (OprogStatus.rNebrShell+axa[iA])/axa[iA];
+  scalfact[1] = (OprogStatus.rNebrShell+axb[iA])/axb[iA];
+  scalfact[2] = (OprogStatus.rNebrShell+axc[iA])/axc[iA];
+#else
+  scalfact[0] = axa[iA]*OprogStatus.rNebrShell;
+  scalfact[1] = axb[iA]*OprogStatus.rNebrShell;
+  scalfact[2] = axc[iA]*OprogStatus.rNebrShell; 
+#endif
+  invaSqN[na] = 1.0/Sqr(axa[iA]*scalfact[0]);
+  invbSqN[na] = 1.0/Sqr(axb[iA]*scalfact[1]);
+  invcSqN[na] = 1.0/Sqr(axc[iA]*scalfact[2]);
 
-  scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[iA]);
-  scalfact[1] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axb[iA]);
-  scalfact[2] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axc[iA]);
-  invaSq[na] = 1.0/Sqr(axa[iA]*scalfact[0]);
-  invbSq[na] = 1.0/Sqr(axb[iA]*scalfact[1]);
-  invcSq[na] = 1.0/Sqr(axc[iA]*scalfact[2]);
-
-  tRDiagR(iA, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
+  tRDiagR(iA, Xb, invaSqN[na], invbSqN[na], invcSqN[na], RB);
   DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
-  DB[0][0] = invaSq[na];
-  DB[1][1] = invbSq[na];
-  DB[2][2] = invcSq[na];
+  DB[0][0] = invaSqN[na];
+  DB[1][1] = invbSqN[na];
+  DB[2][2] = invcSqN[na];
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
        	{
-	  df[k1][k2] = 2.0*(Xa[k1][k2] + Sqr(x[3])*Xb[k1][k2]);
+	  df[k1][k2] = 2.0*(Xa[k1][k2] - Sqr(x[3])*Xb[k1][k2]);
 	}
     }
   /* calc fx e gx */
@@ -2150,7 +2154,7 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
       for (k2 = 0; k2 < 3; k2++)
 	df[k1][3] += 4.0*x[3]*Xb[k1][k2]*(x[k2]-rB[k2]); 
 #endif
-      df[k1][3] = 2.0*x[3]*gx[k1];
+      df[k1][3] = -2.0*x[3]*gx[k1];
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
@@ -2160,7 +2164,7 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
     {
       //df[k1][4] = 0;
       //for (k2 = 0; k2 < 3; k2++)
-      df[k1][4] = Fxt[k1]+Sqr(x[3])*Gxt[k1]; 
+      df[k1][4] = Fxt[k1]-Sqr(x[3])*Gxt[k1]; 
     } 
  df[3][4] = Ft;
  df[4][4] = Gt;
@@ -2168,7 +2172,7 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
  /* and now evaluate fvec */
  for (k1 = 0; k1 < 3; k1++)
     {
-      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+      fvec[k1] = fx[k1] - Sqr(x[3])*gx[k1];
     }
  fvec[3] = 0.0;
  fvec[4] = 0.0;
@@ -2404,7 +2408,7 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   int na, k1, k2; 
   double  rA[3], rB[3], ti;
   double fx[3], gx[3];
-  double Omega[3][3], scalfact[3];
+  double Omega[3][3], scalfact[3], invaSqN[2], invbSqN[2], invcSqN[2];
   /* x = (r, alpha, t) */ 
   ti = x[4] + (trefG - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
@@ -2413,13 +2417,10 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   /* ...and now orientations */
   UpdateOrient(i, ti, Rt, Omega);
   na = (i < Oparams.parnumA)?0:1;
-  if (OprogStatus.targetPhi > 0)
-    {
-      invaSq[na] = 1.0/Sqr(axa[i]);
-      invbSq[na] = 1.0/Sqr(axb[i]);
-      invcSq[na] = 1.0/Sqr(axc[i]);
-    }
-  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
+  invaSqN[na] = 1.0/Sqr(axa[i]);
+  invbSqN[na] = 1.0/Sqr(axb[i]);
+  invcSqN[na] = 1.0/Sqr(axc[i]);
+  tRDiagR(i, Xa, invaSqN[na], invbSqN[na], invcSqN[na], Rt);
 
   //ti = trefG - atomTime[j];
   /* il secondo ellissoide resta fermo al tempo iniziale */
@@ -2431,14 +2432,19 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   rB[2] = rz[i];
   UpdateOrient(i, ti, Rt, Omega);
   na = (i < Oparams.parnumA)?0:1;
-
-  scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[i]);
-  scalfact[1] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axb[i]);
-  scalfact[2] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axc[i]);
-  invaSq[na] = 1.0/Sqr(axa[i]*scalfact[0]);
-  invbSq[na] = 1.0/Sqr(axb[i]*scalfact[1]);
-  invcSq[na] = 1.0/Sqr(axc[i]*scalfact[2]);
-  tRDiagR(i, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+#if 1
+  scalfact[0] = (OprogStatus.rNebrShell+axa[i])/axa[i];
+  scalfact[1] = (OprogStatus.rNebrShell+axb[i])/axb[i];
+  scalfact[2] = (OprogStatus.rNebrShell+axc[i])/axc[i];
+#else
+  scalfact[0] = axa[i]*OprogStatus.rNebrShell;
+  scalfact[1] = axb[i]*OprogStatus.rNebrShell;
+  scalfact[2] = axc[i]*OprogStatus.rNebrShell; 
+#endif
+  invaSqN[na] = 1.0/Sqr(axa[i]*scalfact[0]);
+  invbSqN[na] = 1.0/Sqr(axb[i]*scalfact[1]);
+  invcSqN[na] = 1.0/Sqr(axc[i]*scalfact[2]);
+  tRDiagR(i, Xb, invaSqN[na], invbSqN[na], invcSqN[na], Rt);
   
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -2464,7 +2470,7 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
       for (k2 = 0; k2 < 3; k2++)
 	fvec[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]) + 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
 #endif
-      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+      fvec[k1] = fx[k1] - Sqr(x[3])*gx[k1];
     }
 #if 0
   fvec[3] = -1.0;
@@ -3589,14 +3595,14 @@ extern double scalProd(double *A, double *B);
 #ifdef MD_NNL
 double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess)
 {
-  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6];
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], invaSqN[2], invbSqN[2], invcSqN[2];
   double shift[3] = {0.0, 0.0, 0.0};
   double ti, segno;
   double scalfact[3];
   int retcheck;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
   int k1, na;
-  MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+  MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t-atomTime[i],i));
   ti = t + (t1 - atomTime[i]);
   //printf("t1-atomTime[%d]:%.15G\n", i, t1-atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
@@ -3606,13 +3612,11 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   /* ...and now orientations */
   UpdateOrient(i, ti, RtA, Omega);
   na = (i < Oparams.parnumA)?0:1;
-  if (OprogStatus.targetPhi > 0)
-    {
-      invaSq[na] = 1.0/Sqr(axa[i]);
-      invbSq[na] = 1.0/Sqr(axb[i]);
-      invcSq[na] = 1.0/Sqr(axc[i]);
-    }
-  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
+  invaSqN[na] = 1.0/Sqr(axa[i]);
+  invbSqN[na] = 1.0/Sqr(axb[i]);
+  invcSqN[na] = 1.0/Sqr(axc[i]);
+
+  tRDiagR(i, Xa, invaSqN[na], invbSqN[na], invcSqN[na], RtA);
 
   //printf("ti= %.15G rNebrShell: %f\n", ti, OprogStatus.rNebrShell);
   ti = 0.0;//t + (t1 - atomTime[i]);
@@ -3623,15 +3627,21 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   if ((Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]))==0.0 || (rA[0]==rB[0] && rA[1]==rB[1] && rA[2]==rB[2]))
     return OprogStatus.rNebrShell;
   na = (i < Oparams.parnumA)?0:1;
+#if 1
   scalfact[0] = (OprogStatus.rNebrShell+axa[i])/axa[i];
   scalfact[1] = (OprogStatus.rNebrShell+axb[i])/axb[i];
   scalfact[2] = (OprogStatus.rNebrShell+axc[i])/axc[i];
+#else
+  scalfact[0] = axa[i]*OprogStatus.rNebrShell;
+  scalfact[1] = axb[i]*OprogStatus.rNebrShell;
+  scalfact[2] = axc[i]*OprogStatus.rNebrShell; 
+#endif
   printf("semi-axes: (%f,%f,%f)\n",axa[i]*scalfact[0], axb[i]*scalfact[1],
 	 axc[i]*scalfact[2]);
-  invaSq[na] = 1.0/Sqr(axa[i]*scalfact[0]);
-  invbSq[na] = 1.0/Sqr(axb[i]*scalfact[1]);
-  invcSq[na] = 1.0/Sqr(axc[i]*scalfact[2]);
-  tRDiagR(i, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
+  invaSqN[na] = 1.0/Sqr(axa[i]*scalfact[0]);
+  invbSqN[na] = 1.0/Sqr(axb[i]*scalfact[1]);
+  invcSqN[na] = 1.0/Sqr(axc[i]*scalfact[2]);
+  tRDiagR(i, Xb, invaSqN[na], invbSqN[na], invcSqN[na], RtB);
 retry:
   if (OprogStatus.forceguess)
     calcguess = 1;
@@ -3644,7 +3654,7 @@ retry:
 	  calc_intersec_neigh(rB, rA, Xa, rC, -1);
 	  calc_intersec_neigh(rA, rB, Xb, rD, 1);
 	}
-#if 0
+#if 1
 	{
 	  int kk;
 	  double rCA[3], rDB[3];
@@ -3791,12 +3801,12 @@ retry:
 #endif
   if (segno > 0)
     {
-      printf("distanza: %.15G\n", calc_norm(r12));
+      printf("t=%.15G distanza: %.15G\n", t, calc_norm(r12));
       return calc_norm(r12);
     }
   else
     {
-      printf("distanza: %.15G\n", -calc_norm(r12));
+      printf("t=%.15G distanza: %.15G\n", t, -calc_norm(r12));
       return -calc_norm(r12);
     }
 }
@@ -4873,18 +4883,9 @@ int refine_contact_neigh(int i, double t1, double t, double vecgd[8], double  ve
   int kk, retcheck;
 
   for (kk = 0; kk < 3; kk++)
-    {
-#ifdef MD_DIST5
-      vecg[kk] = (vecgd[kk]+vecgd[kk+5])*0.5; 
-#else
-      vecg[kk] = (vecgd[kk]+vecgd[kk+3])*0.5; 
-#endif
-    }
-#ifdef MD_DIST5
-  vecg[3] = vecgd[3];
-#else
+    vecg[kk] = (vecgd[kk]+vecgd[kk+3])*0.5; 
+    
   vecg[3] = vecgd[6];
-#endif
   vecg[4] = t-t1;
   trefG = t1;
   newtNeigh(vecg, 5, &retcheck, funcs2beZeroedNeigh, i); 
@@ -5011,11 +5012,12 @@ int locate_contact_neigh(int i, double vecg[5])
 	}
       if (dorefine)
 	{
+	  //printf("REFINING CONTACT t=%.15G\n", t);
 	  if (refine_contact_neigh(i, t1, troot, vecgroot, vecg))
 	    {
-	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
-	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+	      MD_DEBUG20(printf("[locate_contact] Adding collision between %d\n", i));
+	      MD_DEBUG20(printf("collision will occur at time %.15G\n", vecg[4])); 
+	      MD_DEBUG20(printf("[locate_contact] its: %d\n", its));
 	      if (vecg[4]>t2 || vecg[4]< t1)
 		return 0;
 	      else
@@ -5572,7 +5574,9 @@ void BuildNNL(int na)
 		  if (n != na)// && n != nb && (nb >= -1 || n < na)) 
 		    {
       		      dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
-		      if (dist < 2.0*OprogStatus.rNebrShell + 1.0E-6)
+		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
+		       * in OprogStatus */
+		      if (dist < 2.0*OprogStatus.rNebrShell + 0.1)
 			{
 			  nebrTab[na].list[nebrTab[na].len] = n;
 			  for (kk=0; kk < 3; kk++)
