@@ -1,7 +1,7 @@
 #include<mdsimul.h>
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
-#define MD_DEBUG(x) x
+#define MD_DEBUG(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -594,7 +594,6 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   rBC[0] = rx[j] - rCx;
   rBC[1] = ry[j] - rCy;
   rBC[2] = rz[j] - rCz;
- 
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
@@ -608,16 +607,17 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   InvMatrix(Ia, invIa, 3);
   InvMatrix(Ib, invIb, 3);
 
-  modn = 0.0;
   for (a=0; a < 3; a++)
     {
       norm[a] = 0;
       for (b = 0; b < 3; b++)
 	{
 	  norm[a] += -Xa[a][b]*rAC[b];
-	  modn += Sqr(norm[a]);
 	}
     }
+  modn = 0.0;
+  for (a = 0; a < 3; a++)
+    modn += Sqr(norm[a]);
   modn = sqrt(modn);
   for (a=0; a < 3; a++)
     norm[a] /= modn;
@@ -1800,6 +1800,8 @@ void ProcessCollision(void)
 #else
   bump(evIdA, evIdB, rxC, ryC, rzC, &W);
 #endif
+  //printf("Fine: %f\n", Oparams.time);
+  //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
@@ -2010,7 +2012,7 @@ void move(void)
   Wxx = Wyy = Wzz = 0.0;
 #endif
   /* get next event */
-  while (1)
+  while (!ENDSIM)
     {
       innerstep++;
       NextEvent();

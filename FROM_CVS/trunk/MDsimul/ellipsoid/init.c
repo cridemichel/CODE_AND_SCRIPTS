@@ -1140,20 +1140,18 @@ void usrInitAft(void)
 void writeAllCor(FILE* fs)
 {
   int i;
-  const char tipodat[] = "%.15G %.15G %.15G\n";
-  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
+  const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
    
   for (i = 0; i < Oparams.parnum; i++)
     {
-      fprintf(fs, tipodat, rx[i], ry[i], rz[i]);
-      fprintf(fs, tipodat2, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+      fprintf(fs, tipodat2,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 	      uyz[i], uzx[i], uzy[i], uzz[i]);
     }
   
   for (i = 0; i < Oparams.parnum; i++)
     {
-      fprintf(fs, tipodat, vx[i], vy[i], vz[i]);
-      fprintf(fs, tipodat, wx[i], wy[i], wz[i]);
+      fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
     }
 #ifdef MD_GRAVITY
   fprintf(fs, "%.15G %.15G\n", L, Lz);
@@ -1170,7 +1168,7 @@ void readAllCor(FILE* fs)
 
   for (i = 0; i < Oparams.parnum; i++)
     {
-      if (fscanf(fs, "%lf %lf %lf\n", &rx[i], &ry[i], &rz[i]) < 3)
+      if (fscanf(fs, "%lf %lf %lf ", &rx[i], &ry[i], &rz[i]) < 3)
 	{
 	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	  exit(-1);
@@ -1185,7 +1183,7 @@ void readAllCor(FILE* fs)
   
   for (i = 0; i < Oparams.parnum; i++)
     {
-      if (fscanf(fs, "%lf %lf %lf\n", &vx[i], &vy[i], &vz[i]) < 3)
+      if (fscanf(fs, "%lf %lf %lf ", &vx[i], &vy[i], &vz[i]) < 3)
 	{
 	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
 	  exit(-1);

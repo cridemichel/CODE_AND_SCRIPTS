@@ -1,5 +1,5 @@
 #define TINY 1E-20
-#define MD_NBMAX 3
+#define MD_NBMAX 5 
 #include<mdsimul.h>
 #include<math.h>
 #include<stdio.h>
