@@ -110,9 +110,16 @@ struct global_settings
   char *savefile;
   int drawcube;
   double *sig;
+  double* a;
+  double* b;
+  double* c;
   /*double *height;*/
   int numAt;
   int setdiameter;
+  int setsemiax;
+  double sa;
+  double sb;
+  double sc;
   int setheight;
   int *NumMols;
   int Width;
