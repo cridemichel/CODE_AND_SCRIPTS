@@ -21,7 +21,7 @@ void CoMV(int i, COORD_TYPE* vxcm, COORD_TYPE* vycm, COORD_TYPE* vzcm);
  in the move function and in the measuring functions, note that the variables 
  to measures have to be put in the 'mdsimdep.h' file (see that) */
 extern COORD_TYPE pi, s1t, Vol1t, L, invL, s1p, Elrc, Plrc;   
-extern COORD_TYPE Vc, V, W, K, WC, T1xx, T1yy, T1zz,
+extern COORD_TYPE W, K, WC, T1xx, T1yy, T1zz,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, WCxy, WCyz, WCzx, 
   WCxx, WCyy, WCzz, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Wm, Wmxx, Wmyy, Wmzz, 
@@ -65,6 +65,7 @@ void energy(void)
 
   Nm = Oparams.parnum;
   mdShow("SHIFTED POTENTIAL ENERGY: %.10f", Vc);
+  mdShow("POTENTIAL ENERGY: %.10f", V);
   printf("KINETIC ENERGY: %.10f\n", K);
   printf("s: %.10f s1: %.10f Vol: %.10f Vol1: %.10f\n", s, s1, Vol, Vol1);
   E = K + Vc;

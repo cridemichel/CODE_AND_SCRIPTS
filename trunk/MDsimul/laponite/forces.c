@@ -21,7 +21,7 @@ extern double *Fcoeff[3];
  in the move function and in the measuring functions, note that the variables 
  to measures have to be put in the 'mdsimdep.h' file (see that) */
 extern COORD_TYPE pi, s1t, Vol1t, L, invL, s1p, Elrc, Plrc;   
-extern COORD_TYPE Vc, V, W, K, WC, T1xx, T1yy, T1zz,
+extern COORD_TYPE W, K, WC, T1xx, T1yy, T1zz,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, WCxy, WCyz, WCzx, 
   WCxx, WCyy, WCzz, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Wm, Wmxx, Wmyy, Wmzz, 
@@ -610,7 +610,7 @@ void LJForce(int Nm, double rcut)
       if ( rabSq < rcutabSq )/* 'rcut' is the cutoff for V */
 	{
 	  rab   = sqrt(rabSq);
-	  srab2   = 1.0 / rabSq;
+  	  srab2   = 1.0 / rabSq;
 	  srab6   = srab2 * srab2 * srab2;
 	  /*srab12  = Sqr(srab6);*/
 	  vabhc = Oparams.crep * srab6;
@@ -622,6 +622,31 @@ void LJForce(int Nm, double rcut)
 	  /*vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);*/
 	  vab = vabhc + vabyu;
 	  wab     = 6.0*vabhc + vabyu * (1.0 + rab*kD);
+#if 0
+	  if (rab < 1.0)
+	    {
+	      int aa;
+	      double raex, raey, raez;
+	      printf("vabhc:%f vabyu:%f\n", vabhc, vabyu);
+	      printf("(%d,%d)-(%d,%d) rab=%f\n", i, a, j, b, rab);
+	      raex = rallx[a][i]- rallx[b][j]; 
+	      raey = rally[a][i] - rally[b][j];
+	      raez = rallz[a][i] - rallz[b][j];
+	      printf("Distanza senaa MI: %f (%f,%f,%f)\n", sqrt(Sqr(raex)+Sqr(raey)+Sqr(raez)),
+		     raex, raey, raez);
+	      for (aa=0; aa < 3; aa++)
+		{
+		  printf("[vel] i=%d: (%f,%f,%f), j=%d (%f,%f,%f)\n", i,
+			 vx[aa][i], vy[aa][i], vz[aa][i], 
+			 j, vx[aa][j], vy[aa][j], vz[aa][j]);
+		 printf("[pos] i=%d: (%f,%f,%f), j=%d (%f,%f,%f)\n", i,
+			 rx[aa][i], ry[aa][i], rz[aa][i], 
+			 j, rx[aa][j], ry[aa][j], rz[aa][j]);
+		
+
+		}
+	    }
+#endif
 	  V = V + vab;
 	  /* total potential between all a-b atoms pairs */
 	  W = W + wab; 
@@ -680,7 +705,38 @@ void LJForce(int Nm, double rcut)
       Fally[a][i] = Fya;
       Fallz[a][i] = Fza;
     }
+    if (Oparams.curStep==1)
   /* OUTER LOOP ENDS */
+    {
+	      FILE* f;
+	      int ii;
+	      double r;
+	      f = fopen ("potentialRimFace.dat","w");
+	      for (ii=0; ii < 300; ii++)
+		{
+		  r = 0.2 + ((2.5 - 0.2)/300)*ii;
+		  fprintf(f, "%.15f %.15f\n", r, Oparams.crep / pow(r,6) +
+			  inv4pieps0*atcharge[0]*atcharge[60]*exp(-r*kD)/(r*Oparams.epsilon));
+		}
+	      fclose(f);
+	      f = fopen ("potentialRimRim.dat","w");
+	      for (ii=0; ii < 300; ii++)
+		{
+		  r = 0.2 + ((5 - 0.2)/300)*ii;
+		  fprintf(f, "%.15f %.15f\n", r, Oparams.crep / pow(r,6) +
+			  inv4pieps0*atcharge[0]*atcharge[0]*exp(-r*kD)/(r*Oparams.epsilon));
+		}
+	      fclose(f);
+	      f = fopen ("potentialFaceFace.dat","w");
+	      for (ii=0; ii < 300; ii++)
+		{
+		  r = 0.2 + ((5 - 0.2)/300)*ii;
+		  fprintf(f, "%.15f %.15f\n", r, Oparams.crep / pow(r,6) +
+			  inv4pieps0*atcharge[60]*atcharge[60]*exp(-r*kD)/(r*Oparams.epsilon));
+		}
+	      fclose(f);
+
+}
 
   /* CALCULATE SHIFTED POTENTIAL
      shifted potential, for each atoms within rcut 
