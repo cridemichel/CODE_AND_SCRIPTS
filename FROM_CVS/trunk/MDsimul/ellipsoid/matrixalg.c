@@ -557,12 +557,13 @@ int check_point(char* msg, double *p, double *rc, double **XX)
 }
 void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 {
-  int kk, done=0, k1, k2;
+  int kk, its, done=0, k1, k2, MAXITS=10;
   const double GOLD=1.618034;
   double r1[3], r1A[3], sf, s1, s2;
   double A, B, C, Delta, sol;
   sf = 1.0;
-  while (!done)
+  its = 0;
+  while (!done || its >= MAXITS)
     {
       //printf("sf*dr=%.15G %.15G %.15G dr=%.15G\n", dr[0], dr[1], dr[2], calc_norm(dr));
 #if 0
@@ -595,6 +596,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
       if (Delta < 0 || A==0.0)
 	{
 	  sf /= GOLD;
+	  its++;
 	  continue;
 	}	
       s1 = (-B + sqrt(Delta))/(2.0*A);
@@ -604,6 +606,12 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
       else
 	sol = s2;
       done = 1;
+    }
+ 
+  if (!done)
+    {
+      printf("maximum number of iterations reached in projont! Aborting...\n");
+      exit(-1);
     }
 #if 0
     {
@@ -667,8 +675,8 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   int j,its,kk;
   const int ITMAXFR = 1000;
   const double EPSFR=1E-10, INITSTEP=0.000000001;
-  double gg,gam,fp,dgg,norm1, norm2, sp;
-  double g[6],h[6],xi[6], dx[3], fx[3], gx[3];
+  double gg,gam,fp,dgg,norm1, norm2, sp, fpold;
+  double g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[kk];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
   
   fp=(*func)(p); 
@@ -678,8 +686,8 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   for (kk = 0; kk < 6; kk++)
     sp += Sqr(xi[kk]);
   //printf("sp=%.15G\n", sp);
-    if (sqrt(sp) < OprogStatus.cgtol)
-    return;
+    //if (sqrt(sp) < OprogStatus.cgtol)
+    //return;
   // printf("$$$$$$$$$$$$$$ norm1=%.15G norm2=%.15G\n", norm1, norm2);
 #if 0
   for (j=0;j<n;j++)
@@ -722,16 +730,27 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	  return;
 	}
 #endif
-      fp= *fret; 
+      fpold = fp; 
       
       (*dfunc)(p,xi);
+      fp=(*func)(p);
       sp = 0;
       for (kk = 0; kk < 6; kk++)
 	sp += Sqr(xi[kk]);
       //printf("sp=%.15G\n", sqrt(sp));
-      if (sqrt(sp) < OprogStatus.cgtol)
-	return;
-#if 0
+      //if (sqrt(sp) < OprogStatus.cgtol)
+	//return;
+       for (kk = 0; kk < 3; kk++)
+	 {
+	   dd[kk] = p[kk+3]-p[kk];
+	 }
+       if (calc_norm(dd) < OprogStatus.epsd)
+	 return;
+       if (2.0*fabs(fpold-fp) <= OprogStatus.cgtol*(fabs(fpold)+fabs(fp)+EPSFR)) 
+	 { 
+	  return;
+	 } 
+    #if 0
       for (j=0;j<n;j++)
 	{ 
 	  g[j] = -OprogStatus.lambda2*xi[j]; 
@@ -765,6 +784,66 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   nrerror("Too many iterations in frprmn");
   
 }
+void frprmnRyckCG(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
+  /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
+   * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
+   * input as ftol. Returned quantities are p (the location of the minimum), iter
+   * (the number of iterations that were performed), and fret (the minimum value of the function).
+   * The routine linmin is called to perform line minimizations. */
+{ 
+  int j,its;
+  const int ITMAXFR = 2000;
+  const double EPSFR=1E-10;
+  double gg,gam,fp,dgg;
+  double g[6],h[6],xi[6];
+  fp=(*func)(p); /*Initializations.*/
+  (*dfunc)(p,xi); 
+  projectgrad(p, xi);  
+  for (j=0;j<n;j++)
+    { 
+      g[j] = -xi[j]; 
+      xi[j]=h[j]=g[j];
+    }
+  for (its=1;its<=ITMAXFR;its++)
+    { /* Loop over iterations.*/
+      *iter=its;
+      for (j=0; j < n; j++)
+	p[j] += xi[j];
+      //linmin(p,xi,n,fret,func); /* Next statement is the normal return: */
+      //printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
+      if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
+	{ 
+	  return;
+	} 
+      fp= *fret; 
+      (*dfunc)(p,xi);
+      projectgrad(p, xi);  
+      dgg=gg=0.0;
+      for (j=0;j<n;j++) 
+	{
+	  gg += g[j]*g[j]; 
+	  //dgg += xi[j]*xi[j];  /* This statement for Fletcher-Reeves.*/
+	  dgg += (xi[j]+g[j])*xi[j]; /*This statement for Polak-Ribiere.*/
+	} 
+      if (gg == 0.0) 
+	{ /* Unlikely. If gradient is exactly zero then we are already done.*/
+	  return; 
+	} 
+      gam=dgg/gg; 
+      for (j=0;j<n;j++) 
+	{ 
+	  g[j] = -xi[j]; 
+	} 
+      projectgrad(p, g);
+      for (j=0;j<n;j++) 
+	{ 
+	  xi[j]=h[j]=g[j]+gam*h[j]; 
+	} 
+      projectgrad(p, xi);
+    } 
+  nrerror("Too many iterations in frprmn");
+}
+
 void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -934,7 +1013,7 @@ double  cgfunc(double *vec)
 void gradcgfuncRyck(double *vec, double *grad)
 {
   int kk, k1, k2; 
-  double nf, ng, fx2[3], fx[3], gx[3];
+  double nf, ng, fx2[3], fx[3], gx[3], dd[3];
   double Q1, Q2, A, gradfx, gradgx;
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -950,6 +1029,7 @@ void gradcgfuncRyck(double *vec, double *grad)
       gx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	gx[k1] += 2.0*Xb[k1][k2]*(vec[k2+3] - rB[k2]);
+      dd[k1] = vec[k1+3]-vec[k1];
     }
 
   A = 0.0;
