@@ -609,8 +609,8 @@ void newtDist(double x[], int n, int *check,
   f=fminD(x,iA,iB,shift); /*fvec is also computed by this call.*/
   test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
   for (i=0;i<n;i++) 
-    if (fabs(fvec[i]) > test)
-      test=fabs(fvec[i]); 
+    if (fabs(fvecD[i]) > test)
+      test=fabs(fvecD[i]); 
   if (test < 0.01*TOLFD)
     {
       *check=0; 
@@ -687,7 +687,10 @@ void newtDist(double x[], int n, int *check,
 	} 
       if (test < TOLXD) 
 	{
-	  MD_DEBUG(printf("test<TOLX test=%.15f\n", test));
+	  MD_DEBUG(printf("test<TOLXD test=%.15f\n", test));
+	  MD_DEBUG(printf("fvec: (%f,%f,%f,%f,%f,%f,%f,%f)\n",
+			  fvecD[0], fvecD[1], fvecD[2], fvecD[2], fvecD[3], 
+			  fvecD[4], fvecD[5], fvecD[6], fvecD[7]));
 	  FREERETURND;
 	}
 #if 1
@@ -775,7 +778,7 @@ the calling program.*/
 }
 #endif
 #ifdef MD_GLOBALNRD
-double fminD(double x[], int iA, int iB, double shift[3]) 
+double fminD(double x[], int iA, int iB, double shift[]) 
 /* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
 calling program. Global variables also communicate the function values back to 
