@@ -123,11 +123,13 @@ void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *
 	  if (fu < *fc) 
 	    { /*Got a minimum between b and c. */
 	      *ax=(*bx); *bx=u; *fa=(*fb); *fb=fu;
+	      //printf("fa: %.15G fb: %.15G fc: %.15G\n", *fa, *fb, *fc);
 	      return;
 	    } 
 	  else if (fu > *fb) 
 	    { /*Got a minimum between between a and u.*/
 	      *cx=u; *fc=fu;
+	      //printf("fa: %.15G fb: %.15G fc: %.15G\n", *fa, *fb, *fc);
 	      return;
 	    } 
 	  u=(*cx)+GOLD*(*cx-*bx);/* Parabolic fit was no use. Use default magnification.*/
@@ -154,7 +156,128 @@ void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *
       SHFT(*fa,*fb,*fc,fu);
     }
 }
-#define MOV3(a,b,c, d,e,f) (a)=(d);(b)=(e);(c)=(f);
+double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin)
+/*Given a function f, and given a bracketing triplet of abscissas ax, bx, cx 
+ * (such that bx is between ax and cx, and f(bx) is less than both f(ax) and f(cx)),
+ * this routine isolates the minimum to a fractional precision of about tol using Brent's
+ * method. The abscissa of the minimum is returned as xmin, and the minimum function value 
+ * is returned as brent, the returned function value. */
+{ 
+  int iter, ITMAXBR=100;
+  const double CGOLD=0.3819660;
+  const double ZEPSBR=1E-10;
+  double a,b,d,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
+  double e=0.0;
+  /* This will be the distance moved on the step before last.*/
+  a=(ax < cx ? ax : cx); /*a and b must be in ascending order, 
+			   but input abscissas need not be.*/
+  b=(ax > cx ? ax : cx);
+  x=w=v=bx; /*Initializations...*/
+  fw=fv=fx=(*f)(x); 
+  for (iter=1;iter<=ITMAXBR;iter++)
+    { 
+      /*Main program loop.*/
+      xm=0.5*(a+b);
+      tol2=2.0*(tol1=tol*fabs(x)+ZEPSBR); 
+      if (fabs(x-xm) <= (tol2-0.5*(b-a)))
+	{ /*Test for done here.*/
+	  *xmin=x;
+	  return fx;
+	} 
+      if (fabs(e) > tol1) 
+	{ /*Construct a trial parabolic fit.*/
+	  r=(x-w)*(fx-fv);
+	  q=(x-v)*(fx-fw);
+	  p=(x-v)*q-(x-w)*r;
+	  q=2.0*(q-r);
+	  if (q > 0.0)
+	    p = -p; 
+	  q=fabs(q);
+	  etemp=e; 
+	  e=d; 
+	  if (fabs(p) >= fabs(0.5*q*etemp) || p <= q*(a-x) || p >= q*(b-x))
+	    d=CGOLD*(e=(x >= xm ? a-x : b-x)); 
+	    /*The above conditions determine the acceptability of the parabolic fit.
+	     * Here we take the golden section step into the larger of the two segments.*/
+	  else
+	    {
+	      d=p/q; /* Take the parabolic step.*/
+	      u=x+d; 
+	      if (u-a < tol2 || b-u < tol2)
+		d=SIGN(tol1,xm-x); 
+	    }
+	}
+      else
+	{
+	  d=CGOLD*(e=(x >= xm ? a-x : b-x));
+	} 
+      u=(fabs(d) >= tol1 ? x+d : x+SIGN(tol1,d));
+      fu=(*f)(u); /*This is the one function evaluation per iteration.*/
+      if (fu <= fx)
+	{ /*Now decide what to do with our function evaluation.*/
+	  if (u >= x) 
+	    a=x;
+	  else
+	    b=x;
+	  SHFT(v,w,x,u) /* Housekeeping follows:*/
+	    SHFT(fv,fw,fx,fu) 
+	} 
+      else
+	{ 
+	  if (u < x) 
+	    a=u; 
+	  else 
+	    b=u; 
+	  if (fu <= fw || w == x)
+	    {
+	      v=w; w=u; fv=fw; fw=fu;
+	    }
+	  else if (fu <= fv || v == x || v == w)
+	    { v=u; fv=fu;
+	    }
+	} /* Done with housekeeping. Back for another iteration.*/
+    }
+  nrerror("Too many iterations in brent"); 
+  *xmin=x; /*Never get here.*/
+  return fx;
+}
+
+void linmin(double p[], double xi[], int n, double *fret, double (*func)(double []))
+/*Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and 
+ * resets p to where the function func(p) takes on a minimum along the direction xi from p,
+ * and replaces xi by the actual vector displacement that p was moved. Also returns as fret 
+ * the value of func at the returned location p. This is actually all accomplished by calling
+ * the routines mnbrak and brent. */
+{ 
+  const double TOLLM=1.0E-10;
+  double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
+  double f1dim(double x); 
+  void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, 
+	      double (*func)(double));
+  int j; 
+  double xx,xmin,fx,fb,fa,bx,ax;
+  ncom=n; /*Define the global variables.*/
+  //pcom=vector(1,n);
+  //xicom=vector(1,n); 
+  nrfunc=func; 
+  for (j=0;j<n;j++)
+    { 
+      pcom[j]=p[j];
+      xicom[j]=xi[j];
+    } 
+  ax=0.0; /*Initial guess for brackets.*/
+  xx=1.0; 
+  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dim); 
+  *fret=brent(ax,xx,bx,f1dim,TOLLM,&xmin);
+  //printf("xmin: %.15G\n", xmin);
+  for (j=0;j<n;j++)
+    { /*Construct the vector results to return. */
+      xi[j] *= xmin;
+      p[j] += xi[j]; 
+    } 
+  //free_vector(xicom,1,n); free_vector(pcom,1,n);
+}
+#define MOV3(a,b,c,d,e,f) (a)=(d);(b)=(e);(c)=(f);
 double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)(double), double tol, double *xmin) 
   /* Given a function f and its derivative function df, and given a bracketing triplet of abscissas ax, bx, cx
    * [such that bx is between ax and cx, and f(bx) is less than both f(ax) and f(cx)], this routine isolates the
@@ -171,6 +294,7 @@ double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)
    * as function values. */
   for (iter=1;iter<=ITMAXDBR;iter++)
     { 
+      printf("x=%.15G iter=%d\n", x, iter );
       xm=0.5*(a+b); 
       tol1=tol*fabs(x)+ZEPSDBR; tol2=2.0*tol1; 
       if (fabs(x-xm) <= (tol2-0.5*(b-a))) 
@@ -189,7 +313,8 @@ double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)
 				   pointed to by the derivative at x: */
 	  u1=x+d1; u2=x+d2; 
 	  ok1 = (a-u1)*(u1-b) > 0.0 && dx*d1 <= 0.0; 
-	  ok2 = (a-u2)*(u2-b) > 0.0 && dx*d2 <= 0.0; olde=e; 
+	  ok2 = (a-u2)*(u2-b) > 0.0 && dx*d2 <= 0.0; 
+	  olde=e; 
 	  /*Movement on the step before last.*/
 	  e=d; 
 	  if (ok1 || ok2) 
@@ -348,7 +473,7 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
   for (its=1;its<=ITMAXFR;its++)
     { /* Loop over iterations.*/
       *iter=its;
-      dlinmin(p,xi,n,fret,func,dfunc); /* Next statement is the normal return: */
+      linmin(p,xi,n,fret,func); /* Next statement is the normal return: */
       //printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
       if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
 	{ 
@@ -360,7 +485,7 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
       for (j=0;j<n;j++) 
 	{
 	  gg += g[j]*g[j]; 
-	   //dgg += xi[j]*xi[j];  /* This statement for Fletcher-Reeves.*/
+	  //dgg += xi[j]*xi[j];  /* This statement for Fletcher-Reeves.*/
 	  dgg += (xi[j]+g[j])*xi[j]; /*This statement for Polak-Ribiere.*/
 	} 
       if (gg == 0.0) 
@@ -419,7 +544,7 @@ void gradcgfunc(double *vec, double *grad)
       grad[kk]=-2.0*(vec[kk+3]-vec[kk])*A + 2.0*OprogStatus.lambda1*fx[kk]*Q1;
       grad[kk+3]=2.0*(vec[kk+3]-vec[kk])*A + 2.0*OprogStatus.lambda2*gx[kk]*Q2;
       grad[kk] = -grad[kk];
-      grad[kk+3] = -grad[kk];
+      grad[kk+3] = -grad[kk+3];
     }
   //grad[6] = Sqr(Q1);
   //grad[7] = Sqr(Q2);
@@ -471,8 +596,8 @@ double  cgfunc(double *vec)
   F += OprogStatus.lambda2*Sqr(Q2);
   //F += vec[6]*Q1;
   //F += vec[7]*Q2;
-  //printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
-  //printf("vec[6]:%.15G vec[7]: %.15G Q1=%.15G Q2=%.15G\n", vec[6], vec[7], Q1, Q2);
+  printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
+  printf("Q1=%.15G Q2=%.15G\n",  Q1, Q2);
   return F;
 }
 
@@ -493,7 +618,7 @@ void distconjgrad(int i, int j, double shift[3], double *vecg)
       vec[kk] = vecg[kk];
     }
   //printf(">>> vec[6]: %f vec[7]:%f\n", vec[6], vec[7]);
-  frprmn(vec, 6, 1E-8, &iter, &Fret, cgfunc, gradcgfunc);
+  frprmn(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc, gradcgfunc);
   for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];
