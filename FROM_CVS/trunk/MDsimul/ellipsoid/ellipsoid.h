@@ -244,6 +244,8 @@ struct progStatus
   int hist[MAXBIN];
   int equilibrated;
   double eqlevel;
+  int zbrakn;
+  double zbrentTol;
   /* Accumulator for the static structure factor */ 
   COORD_TYPE sumS[NUMK];
 
@@ -484,6 +486,8 @@ struct pascii opro_ascii[] =
   {"epsdFast",     &OS(epsdFast),              1,   1, ".12G"},
   {"epsdFastR",    &OS(epsdFastR),             1,   1, ".12G"},
   {"epsdMax",      &OS(epsdMax),               1,   1, ".12G"},
+  {"zbrakn",       &OS(zbrakn),              1,   1,  "%d"},
+  {"zbrentTol",    &OS(zbrentTol),           1,   1,  ".15G"},
   {"scalfact",     &OS(scalfact),              1,   1, ".12G"},
   {"reducefact",   &OS(reducefact),            1,   1, ".12G"},
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
@@ -662,6 +666,8 @@ struct singlePar OsinglePar[] = {
   {"epsdFast",   &OprogStatus.epsdFast,       CT},
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
+  {"zbrakn",     &OprogStatus.zbrakn,         INT},
+  {"zbrentTol",  &OprogStatus.zbrentTol,      CT},
   {"scalfact",   &OprogStatus.scalfact,       CT},
   {"reducefact", &OprogStatus.reducefact,     CT},
   {"phitol",      &OprogStatus.phitol,        CT},

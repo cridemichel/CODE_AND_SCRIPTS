@@ -773,6 +773,8 @@ void usrInitBef(void)
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
     OprogStatus.epsdMax = 0.001;
+    OprogStatus.zbrakn = 100;
+    OprogStatus.zbrentTol = 0.00001;
     OprogStatus.phitol = 1E-12;
     OprogStatus.axestol = 1E-8;
     OprogStatus.nextSumTime = 0.0;
