@@ -1107,7 +1107,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
    ** THE ROUTINE ALSO COMPUTES COLLISIONAL VIRIAL W.               **
    *******************************************************************
    */
-  double rxij, ryij, rzij, factor, invmi, invmj;
+  double rxij, ryij, rzij, factor, invmi, invmj, sigmai;
   double delpx, delpy, delpz, sigSq, wrx, wry, wrz, rACn[3], rBCn[3], rnI[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3], norm2[3];
@@ -1117,21 +1117,16 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 #endif
   double shift[3];
   int na, a, b, kk;
-#if 0
-  if (i < parnumA && j < parnumA)
+#if 1
+  if (i < Oparams.parnumA)
     {
-      sigSq = Sqr(Oparams.sigma[0][0]);
-      //mredl = Mred[0][0];
+      /* qui si assume che ci possano essere due specie e che i diametri degli atomi
+       * componenti la molecola possano avere diametri diversi */ 
+      sigmai = Oparams.sigmaA[ata];
     }
-  else if (i >= parnumA && j >= parnumA)
+  else if (i >= parnumA)
     {
-      sigSq = Sqr(Oparams.sigma[1][1]);
-      //mredl = Mred[1][1];
-    }
-  else
-    {
-      sigSq = Sqr(Oparams.sigma[0][1]);
-      mredl = Mred[0][1]; 
+      sigmai = Oparams.sigmaB[ata];
     }
 #endif
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
@@ -1149,13 +1144,13 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
     rAB[kk] /= nrAB;
   /* controllare con cura la scelta dei parametri relativi ai diametri delle sferette
    * e alle larghezze delle buche dei potenziali a buca quadrata */
-  rCx = rA[0] - rAB[0]*Oparams.sig[ata]*0.5;
-  rCy = rA[1] - rAB[1]*Oparams.sig[ata]*0.5;
-  rCz = rA[2] - rAB[2]*Oparams.sig[ata]*0.5;
+  rCx = rA[0] - rAB[0]*sigmai*0.5;
+  rCy = rA[1] - rAB[1]*sigmai*0.5;
+  rCz = rA[2] - rAB[2]*sigmai*0.5;
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
-#if 1
+#if 0
   for (a=0; a < 3; a++)
     if (fabs (rAC[a]) > L2)
       rAC[a] -= SignR(L, rAC[a]);
@@ -1163,6 +1158,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   rBC[0] = rx[j] - rCx;
   rBC[1] = ry[j] - rCy;
   rBC[2] = rz[j] - rCz;
+#if 0
   for (a=0; a < 3; a++)
     {
       MD_DEBUG(printf("P rBC[%d]:%.15f ", a, rBC[a]));
@@ -1170,6 +1166,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 	rBC[a] -= SignR(L, rBC[a]);
       MD_DEBUG(printf("D rBC[%d]:%.15f ", a, rBC[a]));
     }
+#endif
   MD_DEBUG(printf("\n"));
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
@@ -1206,34 +1203,8 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG(printf("Ia=%f Ib=%f\n", Ia, Ib));
 #endif
   for (a=0; a < 3; a++)
-    {
-      norm[a] = 0;
-      for (b = 0; b < 3; b++)
-	{
-	  norm[a] += -Xa[a][b]*rAC[b];
-	}
-    }
-  modn = 0.0;
-  for (a = 0; a < 3; a++)
-    modn += Sqr(norm[a]);
-  modn = sqrt(modn);
-  for (a=0; a < 3; a++)
-    norm[a] /= modn;
-  
-  for (a=0; a < 3; a++)
-    {
-      norm2[a] = 0;
-      for (b = 0; b < 3; b++)
-	{
-	  norm2[a] += -Xb[a][b]*rBC[b];
-	}
-    }
-  modn = 0.0;
-  for (a = 0; a < 3; a++)
-    modn += Sqr(norm2[a]);
-  modn = sqrt(modn);
-  for (a=0; a < 3; a++)
-    norm2[a] /= modn;
+    norm[a] = rAB[a];
+    
   MD_DEBUG(printf("CYL %f %f %f %f %f %f\n", rCx, rCy, rCz, norm[0], norm[1], norm[2]));
   /* calcola le velocità nel punto di contatto */
   vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
@@ -1253,6 +1224,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   for (a=0; a < 3; a++)
     vc += (vCA[a]-vCB[a])*norm[a];
   MD_DEBUG(printf("[bump] before bump vc=%.15G\n", vc));
+#if 0
     {
       double sp=0;
       for (a=0; a < 3; a++)
@@ -1265,6 +1237,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 	  sp += -rBC[a]*norm2[a];	  
 	} 
     }
+#endif
   if (vc < 0)// && fabs(vc) > 1E-10)
     {
       MD_DEBUG(printf("norm = (%f,%f,%f)\n", norm[0], norm[1],norm[2]));
@@ -1311,6 +1284,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
    * Gli urti in tale caso sono tutti elastici. */ 
   /* SQUARE WELL: modify here */
   //factor =2.0*vc/denom;
+  mredl = -1 / denom;
   switch (bt)
     {
     /* N.B.
@@ -1325,17 +1299,17 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 #ifdef MD_INFBARRIER
       factor = -2.0*vc;
 #elif defined(MD_SQWELL)
-      if (Sqr(vc) < 2.0*sigDeltaSq*Oparams.bheight/mredl)
+      if (Sqr(vc) < 2.0*Oparams.bheight/mredl)
 	{
 	  factor = -2.0*vc;
 	}
       else
 	{
-	  factor = -b + sqrt(Sqr(b) - 2.0*sigDeltaSq*Oparams.bheight/mredl);
+	  factor = -vc + sqrt(Sqr(vc) - 2.0*Oparams.bheight/mredl);
 	  remove_bond(i, j, ata, atb);
-	  remove_bond(j, i, ata, atb);
+	  remove_bond(j, i, atb, ata);
 	}
-      factor *= mredl / sigDeltaSq;
+      factor *= mredl;
 #if 0
       if (fabs(distSq - sigDeltaSq)>1E-12)    
 	printf("[bump]dist:%.20f\n",sqrt(distSq));
@@ -1343,13 +1317,13 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       break;
     case MD_OUTIN_BARRIER:
 #ifdef MD_INFBARRIER
-      factor = -2.0*b;
+      factor = -2.0*vc;
 #elif defined(MD_SQWELL)
       add_bond(i, j, ata, atb);
-      add_bond(j, i, ata, atb);
-      factor = -b - sqrt(Sqr(b) + 2.0*sigDeltaSq*Oparams.bheight/mredl);
+      add_bond(j, i, atb, ata);
+      factor = -vc - sqrt(Sqr(vc) + 2.0*Oparams.bheight/mredl);
 #endif
-      factor *= mredl / sigDeltaSq;
+      factor *= mredl;
       break;
     }
  
@@ -3149,14 +3123,6 @@ no_core_bump:
 		      //exit(-1);
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 		      	continue;
-		     			  
-#if 0
-	    	      gd = (d2 - d1)/h; 
-    		      if (fabs(gd) > 1E-12)
-			delt = (epsd*(maxax[0]+maxax[1])*0.5)/gd;
-		      d1o = d1;
-		      d2o = d2;
-#endif
 #if 0
 		      for (kk=0; kk < 5; kk++)
 		      	vecgold[kk] = vecg[kk];
