@@ -605,6 +605,11 @@ void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *
 }
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
+double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
+     		double *vecgsup, int calcguess);
+double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
+     		double *vecgsup, int calcguess);
+
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
   /*
@@ -658,6 +663,16 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   rBC[1] = ry[j] - rCy;
   rBC[2] = rz[j] - rCz;
 #if 1
+#if MD_DEBUG(x) == x
+    {
+      double shift[3], r1[3], r2[3], alpha, vecgd[8], r12[3];
+      shift[0] = L*rint((rx[i]-rx[j])/L);
+      shift[1] = L*rint((ry[i]-ry[j])/L);
+      shift[2] = L*rint((rz[i]-rz[j])/L);
+      printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]);
+      printf("[bump] distance between %d-%d: %.15f\n", i, j, calcDistNeg(Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
+    }
+#endif
   for (a=0; a < 3; a++)
     {
       MD_DEBUG(printf("P rBC[%d]:%.15f ", a, rBC[a]));
@@ -1906,7 +1921,7 @@ void fdjacDist(int n, double x[], double fvec[], double **df,
    * essere anche negativa! */
   for (k1=0; k1 < 3; k1++)
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*Sqr(x[7]); 
-  MD_DEBUG(printf("F2BZdist fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  //MD_DEBUG(printf("F2BZdist fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
 }
 void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3])
@@ -2471,7 +2486,7 @@ int refine_contact(int i, int j, double t, double vecgd[8], double shift[3],doub
 }
 int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
-  double h, d1, d2, d1Neg, d1Pos, alpha, vecgd[8], t, r1[3], r2[3]; 
+  double h, d1, d2, d1Neg, d1Pos, alpha, vecgd1[8], vecgd2[8], t, r1[3], r2[3]; 
   double vd, normddot, ddot[3], maxddot, delt;
   const double epsd = 0.001; 
   int foundrc, retcheck, kk;
@@ -2484,10 +2499,15 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
       MD_DEBUG(printf("last collision was between %d-%d\n",i,j));
       MD_DEBUG(printf("atomTime[%d]:%.15G atomTime[%d]:%.15G\n", i, atomTime[i], j, atomTime[j])); 
     }
-  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
   MD_DEBUG(printf("distances d1=%.12G", d1));
+  if (d1<0&&fabs(d1)>1E-2)
+    {
+      printf("d1 < 0 i=%d j=%d\n",i, j);
+      exit(-1);
+    }
 #if 1
-  d1Pos = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  d1Pos = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
   MD_DEBUG(printf("distances d1=%.12G d1Neg: %.12G t1=%.15G curtime=%.15G\n", d1Pos, d1,
 		  t1, Oparams.time));
   
@@ -2497,7 +2517,7 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
       //exit(-1);
     }
 #endif
-#if 1
+#if 0
   if ((lastbump[0]==i || lastbump[0]==j) &&
       (lastbump[1]==i || lastbump[1]==j))
     {
@@ -2545,7 +2565,7 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
       
 #endif
       t += h;
-      d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+      d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f\n", t, d1, d2));
       if (d1 > 0 && d2 < 0)
 	{
@@ -2556,7 +2576,7 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
 	      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
 	    }
 #endif
-	  if (refine_contact(i, j, t, vecgd, shift, vecg))
+	  if (refine_contact(i, j, t-h, vecgd1, shift, vecg))
 	    {
 	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
@@ -2581,6 +2601,8 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
 	    }
 	}
       d1 = d2;
+      for (kk = 0; kk < 8; kk++)
+	vecgd1[kk] = vecgd2[kk];
     }
   MD_DEBUG(  
   if (foundrc==0)
@@ -3475,7 +3497,7 @@ void ProcessCollision(void)
 #endif
   MD_DEBUG(calc_energy("dopo"));
   MD_DEBUG(store_bump(evIdA, evIdB));
-  //ENDSIM=1;
+    //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;

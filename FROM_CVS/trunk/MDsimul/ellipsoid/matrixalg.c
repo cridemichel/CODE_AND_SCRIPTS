@@ -152,12 +152,12 @@ void InvMatrix(double **a, double **b, int NB)
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
 #define TOLX 1.0E-12//1.0e-7 /* Convergence criterion on  x.*/ 
 #define TOLX2 1.E-6
-#define TOLXD 1.0E-6
+#define TOLXD 1.0E-7
 #define MAXITS 50 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define MAXITS2 20
 #define TOLF 1.0e-9// 1.0e-4
 #define TOLF2 1.0E-3
-#define TOLFD 1.0E-4
+#define TOLFD 1.0E-5
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
@@ -594,7 +594,7 @@ void newt(double x[], int n, int *check,
   
 }
 #undef MD_GLOBALNRD
-#define MAXITS3 200
+#define MAXITS3 50
 void newtDistNeg(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
