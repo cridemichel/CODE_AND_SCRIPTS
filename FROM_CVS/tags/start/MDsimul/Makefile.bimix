@@ -1,0 +1,260 @@
+#MAIN Makefile
+# === >>> Put your PERC here !!! <<< ===
+export PERC=$(HOME)/MDsimul
+# ======================================
+export COMM = $(PERC)/commSrc
+
+export CC=ccache gcc
+export MPIDIR =/usr/include/lam
+#export MPIDIR=$(MPICH)#per beowulf 
+#export CC= $(MPIDIR)/bin/hcc
+#export CC=mpicc_mpich
+#export CFLAGS  = -Wall -mcpu=i686 -O3\
+	  -frerun-cse-after-loop -fstrength-reduce -fexpensive-optimizations\
+          -felide-constructors -malign-loops=2 -malign-jumps=2\
+	  -malign-functions=2
+export CFLAGS  = -Wall -mcpu=i686 -O3 
+#export CFLAGS=  -B -tp p6 -fast#ottimizzazioni per beowulf
+#export CFLAGS= -Wall -O3 -mcpu=i686 -march=i686
+#export CFLAGS=  -Wall -O3 -mcpu=athlon-xp -march=athlon-xp
+#CFLAGS = -Wall -m486 -fomit-frame-pointer -finline-functions -O2
+#export CFLAGS= -g -Wall 
+# MACROS passed to the pre-processor
+export MACROS= -DMD_LOADMESH -DSOFT_SPHERE  -DXDISP  -DATPTENS -UMOLPTENS -UATPRESS #-DMC_SIMUL -DMD_GRAVITY #-DMPI #-DSOFT_SPHERE -DPRINTER_PROC -DTAPPING -DMD_LOADMESH
+export LDFLAGS=-L /usr/lib/lam/lib -llamf77mpi -lmpi -llam -lnsl -lutil -lpmpi -llammpio
+# ATPTENS defined(-DATPTENS -U... undefined)=>calculate atomic pressure tensor
+# MOLPTENS defined => calculate mlecular pressor tensor
+# ATPRESS defined => calculate atomic pressure(if ATPTENS defined the atomic
+# pressure is automatically calculate)
+
+export BIN = $(PERC)/bin
+
+#directories to search for #include
+export INCLUDES =  -I$(MPIDIR)  -I. -I$(PERC)/include -I$(COMM)
+
+# ============================================================================
+COMMOBJ = $(COMM)/mdsimul.o $(COMM)/mdinit.o $(COMM)/mdarray.o $(COMM)/mdutil.o $(COMM)/mdio.o $(COMM)/mdchoose.o
+
+COMMOBJMIX = $(COMM)/mdsimul.o $(COMM)/mdinit.o $(COMM)/mdarrayMIX.o $(COMM)/mdutil.o $(COMM)/mdio.o $(COMM)/mdchoose.o 
+
+COMMONMLMC = $(COMM)/mdsimul.o $(COMM)/mdinitMLMC.o $(COMM)/mdarrayMLMC.o $(COMM)/mdutil.o $(COMM)/mdio.o $(COMM)/mdchoose.o 
+
+COMMOBJ_PT = $(COMM)/mdsimul_PT.o $(COMM)/mdinit_PT.o $(COMM)/mdarray_PT.o $(COMM)/mdutil.o $(COMM)/mdio.o $(COMM)/mdchoose.o
+
+COMMOBJ_DPT = $(COMM)/mdsimul_PT.o $(COMM)/mdinit_DPT.o $(COMM)/mdarray_DPT.o $(COMM)/mdutil.o $(COMM)/mdio_DPT.o $(COMM)/mdchoose_DPT.o
+
+# dependencies for all simulation codes
+# rigid AB dumbell interacting by LJ12-6 potential
+RIGID = $(PERC)/rigidABdbLJ
+
+RIGIDOBJS = $(RIGID)/move.o $(RIGID)/measures.o $(RIGID)/init.o $(RIGID)/forces.o
+
+BIMIX = $(PERC)/bimix
+
+BIMIXOBJS = $(BIMIX)/move.o $(BIMIX)/measures.o $(BIMIX)/init.o $(BIMIX)/forces.o $(BIMIX)/conjgrad.o
+
+BIMIXLMC= $(PERC)/bimixLMC
+
+BIMIXLMCOBJS = $(BIMIXLMC)/moveLMC.o $(BIMIXLMC)/measuresLMC.o $(BIMIXLMC)/initLMC.o $(BIMIXLMC)/forcesLMC.o
+
+MONOLMC=$(PERC)/monoLMC
+MONOLMCOBJS = $(MONOLMC)/moveMLMC.o $(MONOLMC)/measuresMLMC.o $(MONOLMC)/initMLMC.o $(MONOLMC)/forcesMLMC.o
+
+#monoatomic Lennard-Jones system with Ruocco many body term
+MONO = $(PERC)/monoLJ
+
+MONOOBJS =  $(MONO)/move.o $(MONO)/measures.o $(MONO)/init.o $(MONO)/forces.o
+
+#monoatomic Monte Carlo  
+MONOMC = $(PERC)/monoMC
+
+MONOMCOBJS =  $(MONOMC)/move.o $(MONOMC)/measures.o $(MONOMC)/init.o $(MONOMC)/forces.o
+
+
+#gauss
+GAUSS = $(PERC)/gauss
+
+GAUSSOBJS =  $(GAUSS)/move.o $(GAUSS)/measures.o $(GAUSS)/init.o $(GAUSS)/forces.o
+#monoatomic hard sphere
+MONOHS= $(PERC)/monohs
+MONOHSOBJS= $(MONOHS)/move.o $(MONOHS)/measures.o $(MONOHS)/init.o $(MONOHS)/tree.o
+#biatomic mixture of hard spheres
+BIMIXHS= $(PERC)/bimixhs
+BIMIXHSOBJS= $(BIMIXHS)/move.o $(BIMIXHS)/measures.o $(BIMIXHS)/init.o $(BIMIXHS)/tree.o
+
+#monoatomic Lennard-Jones with Ruocco many body term and Parallel Tempering
+MONO_PT = $(PERC)/monoLJ_PT
+
+MONO_PT_OBJS =  $(MONO_PT)/move_PT.o $(MONO_PT)/measures.o $(MONO_PT)/init_PT.o $(MONO_PT)/forces_PT.o
+
+#monoatomic Lennard-Jones with Ruocco many body term and Parallel Tempering
+MONO_DPT = $(PERC)/monoLJ_DPT
+
+MONO_DPT_OBJS =  $(MONO_DPT)/move_DPT.o $(MONO_DPT)/measures.o $(MONO_DPT)/init_DPT.o $(MONO_DPT)/forces_DPT.o
+
+default: monoLJ
+
+all: rigidABdbLJ monoLJ H2S monoLJPT monoLJDPT bimix bimixLMC monoLMC monoMC
+
+# make sub-make
+rigidABdbLJ: rigidAB_link common rigidABdbLJObjs#common always here
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJ) $(RIGIDOBJS) -o $(BIN)/rigidABdbLJ
+
+bimix: bimix_link commonMIX bimixObjs#common always here
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJMIX) $(BIMIXOBJS) -o $(BIN)/bimix
+bimix1:  bimix_link1 commonMIX bimixObjs#common always here
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJMIX) $(BIMIXOBJS) -o $(BIN)/bimix2
+bimix2: bimix_link2 commonMIX bimixObjs#common always here
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJMIX) $(BIMIXOBJS) -o $(BIN)/bimix2
+bimix3: bimix_link3 commonMIX bimixObjs#common always here
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJMIX) $(BIMIXOBJS) -o $(BIN)/bimix3
+bimix4: bimix_link4 commonMIX bimixObjs#common always here
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJMIX) $(BIMIXOBJS) -o $(BIN)/bimix4
+
+bimixLMC: bimixLMC_link commonMIX bimixLMCObjs
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJMIX) $(BIMIXLMCOBJS) -o $(BIN)/bimixLMC
+
+monoLJ: monoLJ_link common monoLJObjs
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJ) $(MONOOBJS) -o $(BIN)/monoLJ
+
+monoMC: monoMC_link common monoMCObjs
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJ) $(MONOMCOBJS) -o $(BIN)/monoMC
+
+
+gauss: gauss_link common gaussObjs
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJ) $(GAUSSOBJS) -o $(BIN)/gauss
+
+monohs: monohs_link common monohsObjs
+	$(CC) -L$(PERC)/lib/ -lm $(COMMOBJ) $(MONOHSOBJS) -o $(BIN)/monohs $(LDFLAGS) 
+
+bimixhs: bimixhs_link common bimixhsObjs
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJ) $(BIMIXHSOBJS) -o $(BIN)/bimixhs
+
+monoLMC: monoLMC_link commonMLMC monoLMCObjs
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMONMLMC) $(MONOLMCOBJS) -o $(BIN)/monoLMC
+
+monoLJPT: monoLJPT_link commonPT monoLJPTObjs
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm $(COMMOBJ_PT) $(MONO_PT_OBJS) -o $(BIN)/monoLJPT 
+
+monoLJDPT: monoLJDPT_link commonDPT monoLJDPTObjs
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ -lm  $(COMMOBJ_DPT) $(MONO_DPT_OBJS) -o $(BIN)/monoLJDPT
+
+H2S: common
+
+rigidABdbLJObjs:
+	cd $(PERC)/rigidABdbLJ && $(MAKE) 
+
+bimixObjs:
+	cd $(PERC)/bimix && $(MAKE) 
+
+bimixLMCObjs:
+	cd $(PERC)/bimixLMC && $(MAKE) 
+
+monoLMCObjs:
+	cd $(PERC)/monoLMC && $(MAKE) 
+
+gaussObjs:
+	cd $(PERC)/gauss && $(MAKE) 
+
+
+H2SObjs:
+	cd $(PERC)/H2S && $(MAKE)
+
+monoLJObjs:
+	cd $(PERC)/monoLJ && $(MAKE)
+
+monoMCObjs:
+	cd $(PERC)/monoMC && $(MAKE)
+
+monohsObjs:
+	cd $(PERC)/monohs && $(MAKE)
+
+bimixhsObjs:
+	cd $(PERC)/bimixhs && $(MAKE)
+
+monoLJPTObjs:
+	cd $(PERC)/monoLJ_PT && $(MAKE)
+
+monoLJDPTObjs:
+	cd $(PERC)/monoLJ_DPT && $(MAKE)
+
+common: 
+	cd $(COMM) && $(MAKE)
+
+commonMIX: 
+	cd $(COMM) && $(MAKE) commonMIX
+
+commonMLMC:
+	cd $(COMM) && $(MAKE) commonMLMC
+
+commonPT:
+	cd $(COMM) && $(MAKE) commonPT
+
+commonDPT: 
+	cd $(COMM) && $(MAKE) commonDPT
+
+# if you change the simulation code change here!!!!!!!!!!!!!!
+link:
+	cd $(PERC)/bimix && $(MAKE) link
+
+bimix_link:
+	cd $(PERC)/bimix && $(MAKE) link
+
+bimix_link1:
+	cd $(PERC)/bimix && $(MAKE) link1
+bimix_link2:
+	cd $(PERC)/bimix && $(MAKE) link2
+bimix_link3:
+	cd $(PERC)/bimix && $(MAKE) link3
+bimix_link4:
+	cd $(PERC)/bimix && $(MAKE) link4
+
+bimixLMC_link:
+	cd $(PERC)/bimixLMC && $(MAKE) link
+
+monoLMC_link:
+	cd $(PERC)/monoLMC && $(MAKE) link
+
+monoLJDPT_link:
+	cd $(PERC)/monoLJ_DPT && $(MAKE) link
+
+monoLJPT_link:
+	cd $(PERC)/monoLJ_PT && $(MAKE) link
+
+monoLJ_link:
+	cd $(PERC)/monoLJ && $(MAKE) link
+
+monoMC_link:
+	cd $(PERC)/monoMC && $(MAKE) link
+
+
+monohs_link:
+	cd $(PERC)/monohs && $(MAKE) link
+
+bimixhs_link:
+	cd $(PERC)/bimixhs && $(MAKE) link
+
+gauss_link:
+	cd $(PERC)/gauss && $(MAKE) link
+
+rigidAB_link:
+	cd $(PERC)/rigidABdbLJ  && $(MAKE) link
+
+realclean: clean 
+
+# delete all bins
+realclean: clean
+	rm -f $(BIN)/*
+
+clean:
+	cd rigidABdbLJ && $(MAKE) clean
+	cd gauss && $(MAKE) clean
+	cd bimix && $(MAKE) clean
+	cd bimixLMC && $(MAKE) clean
+	cd monoLJ && $(MAKE) clean
+	cd monohs && $(MAKE) clean
+	cd bimixhs && $(MAKE) clean
+	cd commSrc && $(MAKE) clean
+	cd monoLJ_PT && $(MAKE) clean
+	cd monoLJ_DPT && $(MAKE) clean	
+	cd monoLMC && $(MAKE) clean
