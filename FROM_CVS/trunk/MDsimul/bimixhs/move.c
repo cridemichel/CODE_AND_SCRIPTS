@@ -1619,6 +1619,7 @@ void move(void)
 	      scalevels(Oparams.T, K);
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	      if (OprogStatus.rescaleTime > 0)
 		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	      else
