@@ -2907,21 +2907,20 @@ retry:
 	  vecgcg[k1+3] = rD[k1];
 	}
       //check_point("calcDistNeg", &vecgcg[3], rB, Xb);
+#if 0
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
       printf("PRIMA dist=%.15f\n",calc_norm(r12));
       printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
-
+#endif
       distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda1, 1); 
       for (k1=0; k1 < 3; k1++)
 	{
 	  rC[k1] = vecgcg[k1];
 	  rD[k1] = vecgcg[k1+3];
 	}	 
-#else
-
 #endif
-#if 1
+#if 0
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
       printf("dist=%.15f\n",calc_norm(r12));
