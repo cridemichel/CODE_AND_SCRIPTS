@@ -179,12 +179,23 @@ void temperat(void)
 {
   /* DESCRIPTION:
      This the calculation of the instantaneous temperature */
-  double Ktransl, m;
-  temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
+  double m;
+  K = 0.0;
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      K += Oparams.m[0]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
+    }
+  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      K += Oparams.m[1]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
+    }
+  K *= 0.5;
+  
+  if (OprogStatus.brownian==1)
+    temp = 2.0 * K / (3.0 * Oparams.parnum);
+  else
+    temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
 
-  Ktransl = 0.0;
-  m = Oparams.m[0];
-  temp_transl = 2.0 * Ktransl  / (3.0 * Oparams.parnum - 3.0);
   if (OprogStatus.avngTemp == 1)
     {
       OprogStatus.sumTemp += temp;
