@@ -1148,8 +1148,8 @@ void usrInitAft(void)
 	{
 	  
 	  /* store the initial positions of particles */
-	  OprogStatus.rxCMi[i] = (m0 * rx[0][i] + m1 * rx[1][i] + m2 * rz[2][i]) * invMtot;
-	  OprogStatus.ryCMi[i] = (m0 * ry[0][i] + m1 * ry[1][i] + m2 * rz[2][i]) * invMtot;
+	  OprogStatus.rxCMi[i] = (m0 * rx[0][i] + m1 * rx[1][i] + m2 * rx[2][i]) * invMtot;
+	  OprogStatus.ryCMi[i] = (m0 * ry[0][i] + m1 * ry[1][i] + m2 * ry[2][i]) * invMtot;
 	  OprogStatus.rzCMi[i] = (m0 * rz[0][i] + m1 * rz[1][i] + m2 * rz[2][i]) * invMtot;
 	 
 	  /* zero the accumulators that contains the temporal integral of 

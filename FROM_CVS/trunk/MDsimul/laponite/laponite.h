@@ -454,6 +454,9 @@ struct singlePar OsinglePar[] = {
   {"DQtensName", &OprogStatus.dataFiles[12],  STR},
   {"DphiSqName", &OprogStatus.dataFiles[13],  STR},
   {"DphiSqSteps",&OprogStatus.measSteps[13],  INT},
+  {"VSteps", &OprogStatus.measSteps[14],      INT},
+  {"VName",  &OprogStatus.dataFiles[14],       STR},
+  {"VCalc",  &OprogStatus.measCalc[14],        INT},
 #if 0
   {"C1Name",     &OprogStatus.dataFiles[14],  STR},
   {"C1Steps",    &OprogStatus.measSteps[14],  INT},
@@ -712,7 +715,7 @@ extern struct pascii opar_ascii[];
 		       perform a mean */
 
 #ifdef MAIN
-COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], invs, press,
+COORD_TYPE Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], invs, press,
   gr23[MAXBIN], gr33[MAXBIN], press_m, press_at;
 COORD_TYPE Ptens[3], DQtens[3], C1c, C2c, C3c, C4c, velc, Gs[GSPOINT], 
   psi1c, psi2c, sqrtdr2, Aa, DrSqTot, DphiSq, GsAng[GSANGPOINT], Fs[FSPOINT],
@@ -721,7 +724,7 @@ int MB[NUMV];
 COORD_TYPE *Dphix, *Dphiy, *Dphiz;/* Time integrals of angulars velocity
 				     components */
 #else 
-extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], 
+extern COORD_TYPE Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], 
   gr23[MAXBIN], gr33[MAXBIN], invs,
   press, press_m, press_at, C1c, C2c, C3c, C4c, velc, psi1c, psi2c, 
   Gs[GSPOINT], 
@@ -778,6 +781,7 @@ struct measure Omeasure[NUM_MISURE]=
   {Ptens,   sizeof(COORD_TYPE)*3,     Ptensor     },
   {DQtens,  sizeof(COORD_TYPE)*3,     DQtensor    },
   {&DphiSq, sizeof(COORD_TYPE),       NULL        },
+  {&Vc,     sizeof(COORD_TYPE),       NULL},
   {gr23,    sizeof(COORD_TYPE)*MAXBIN,radDens23   },
   {gr33,    sizeof(COORD_TYPE)*MAXBIN,radDens33   },
 /* {&C1c,    sizeof(COORD_TYPE),       corrFuncs  },
