@@ -2713,6 +2713,106 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
  //printf("F2BZdistNeg5 fvec (%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]);
 #endif
 }
+void fdjacDistNegNew(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
+{
+  double fx[3], gx[3], nf, nfSq;
+  int k1, k2;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*Xa[k1][k2];
+	  df[k1][k2+3] = 2.0*Sqr(x[6])*Xb[k1][k2];
+	}
+    }
+  /* calc fx e gx */
+  nf = 0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
+	}
+      nf += Sqr(fx[k1]);
+    } 
+  nfSq = nf;
+  nf = sqrt(nf);
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  for (k1 = 0; k1 < 5; k1++)
+    {
+      df[3][k1+3] = 0;
+    } 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = 0;
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1+3] = gx[k1];
+    } 
+  df[4][6] = df[4][7] = 0;
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][6] = 2.0*x[6]*gx[k1];
+      df[k1][7] = 0.0;
+    } 
+
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2] = 1 + 2.0*x[7]*Xa[k1][k2]/nf - x[7]*fx[k1]*fx[k2]/nfSq;
+	  else 
+	    df[k1+5][k2] = 2.0*x[7]*Xa[k1][k2]/nf - x[7]*fx[k1]*fx[k2]/nfSq;
+	}
+    }
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2+3] = -1;
+	  else 
+	    df[k1+5][k2+3] = 0;
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][6] = 0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][7] = fx[k1]/nf;
+#ifndef MD_GLOBALNRD
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+ fvec[4] = 0.5*fvec[4]-1.0;
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]/nf; 
+  //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+#endif
+}
+
 
 
 void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
@@ -2907,6 +3007,60 @@ void fdjacDist(int n, double x[], double fvec[], double **df,
   //MD_DEBUG(printf("F2BZdist fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
 }
+void funcs2beZeroedDistNegNew(int n, double x[], double fvec[], int i, int j, double shift[3])
+{
+  int k1, k2; 
+  double fx[3], gx[3], nf;
+  /* x = (r, alpha, t) */ 
+
+#if 0
+  printf("Xa=\n");
+  print_matrix(Xa, 3);
+  printf("Xb=\n");
+  print_matrix(Xb, 3);
+#endif
+  
+  nf = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+      nf += Sqr(fx[k1]);
+    }
+  nf = sqrt(nf);
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3] - rB[k2]);
+    }
+
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
+
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]/nf; 
+#if 0
+  MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+  MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+#endif
+}
+
 void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
   int k1, k2; 
@@ -4172,12 +4326,14 @@ int search_contact_faster_neigh(int i, int j, double *shift, double *t, double t
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
   double maxddot, told, delt, normddot, ddot[3];
   const int MAXOPTITS = 500;
-  double alpha;
+  double alpha, factori;
   int its=0; 
-    
+   
+  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+ 
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5;
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
   *d1 = calcDistNegNeigh(*t, t1, i, vecgd, 1);
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
@@ -4260,7 +4416,7 @@ int locate_contact_neigh(int i, double vecg[5])
   double h, d, dold, dold2, d1Neg, d1Pos, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double vd, normddot, ddot[3], t1, t2, maxddot, delt, told, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
-  double epsd, epsdFast, epsdFastR, epsdMax; 
+  double epsd, epsdFast, epsdFastR, epsdMax, factori; 
   double d2old;
   int dorefine;
   epsd = OprogStatus.epsd;
@@ -4274,8 +4430,10 @@ int locate_contact_neigh(int i, double vecg[5])
   t = 0.0;//Oparams.time;
   t1 = Oparams.time;	
   t2 = timbig;
+  
+  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5;
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
   h = OprogStatus.h; /* last resort time increment */
   if (search_contact_faster_neigh(i, &t, t1, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0;  
