@@ -186,6 +186,9 @@ struct progStatus
   int iniFormat; /* 0 = binary 1 = ascii 2 = both */
   int endFormat; /* 0 = binary 1 = ascii 2 = both */
 
+#ifdef MD_BILOG
+  double basew;
+#endif
   char endfile[NAME_LENGTH];
   /* stringa contenente il nome del file in cui
      si salvano le coordinate delle particelle alla fine della simulazione.
