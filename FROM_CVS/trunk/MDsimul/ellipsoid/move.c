@@ -1260,9 +1260,9 @@ void fdjac(int n, double x[], double fvec[], double **df,
   calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, Gxt, &Gt);
   for (k1 = 0; k1 < 3; k1++)
     {
-      df[k1][4] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	df[k1][4] += Fxt[k1]+Sqr(x[3])*Gxt[k1]; 
+      //df[k1][4] = 0;
+      //for (k2 = 0; k2 < 3; k2++)
+      df[k1][4] = Fxt[k1]+Sqr(x[3])*Gxt[k1]; 
     } 
  df[3][4] = Ft;
  df[4][4] = Gt;
