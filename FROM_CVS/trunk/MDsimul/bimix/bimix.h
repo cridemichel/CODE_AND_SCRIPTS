@@ -232,6 +232,7 @@ struct progStatus
   int xvaSteps;     /* steps between two tape file savings */
   int bakSteps;    /* steps between two savings of restore files on HD*/
 
+  int mdseed;
   int endFormat; /* 0 = binary 1 = ascii 2 = both */
 
   int bakStepsAscii;
