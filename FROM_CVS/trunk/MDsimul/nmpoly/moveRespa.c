@@ -475,6 +475,96 @@ void updLs(double dt, double c)
   Ps += DT * cdt2;
   s = s / (1 - s*Ps*cdt2/OprogStatus.Q);
 }
+/*========================== >>> calcPtensMol <<< ===========================*/
+void calcPtensMolRespa(int Nm)
+{
+  int i, a;
+  COORD_TYPE Px, Py, Pz, *m;
+  
+  T1mxy = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
+  T1myz = 0.0;
+  T1mzx = 0.0;
+  T1mxx = 0.0; /* Kinetic diagonal terms of pressure tensor */
+  T1myy = 0.0;
+  T1mzz = 0.0;
+  m = Oparams.m;
+  for(i=0; i < Nm; i++)
+    {
+      Px = Py = Pz = 0.0;  /* Velocity of center of mass of molecule i */
+      for(a=0; a < NA; a++)
+	{
+	  Px += px[a][i];
+	  Py += py[a][i];
+	  Pz += pz[a][i];
+	}
+      /* Kinetic component of pressure tensor (all terms) */
+      T1mxy += Px * Py / Mtot; 
+      T1myz += Py * Pz / Mtot;
+      T1mzx += Pz * Px / Mtot;
+      T1mxx += Px * Px / Mtot;
+      T1myy += Py * Py / Mtot;
+      T1mzz += Pz * Pz / Mtot;
+    }
+  /* Calculate the other element (off-diagonal) of the molecular 
+     pressure tensor */
+  Pmxy = T1mxy + Wmxy;
+  Pmyz = T1myz + Wmyz;
+  Pmzx = T1mzx + Wmzx;  
+  Pmxx = T1mxx + Wmxx;
+  Pmyy = T1myy + Wmyy;
+  Pmzz = T1mzz + Wmzz;
+
+  Pmxx /= Vol;
+  Pmyy /= Vol;
+  Pmzz /= Vol;
+  Pmxy /= Vol;
+  Pmyz /= Vol;
+  Pmzx /= Vol;
+}
+
+/*============================ >>> calcPtensAt <<< =========================*/
+void calcPtensAtRespa(int Nm, COORD_TYPE VOL1)
+{
+  /* Calculate all components of atomic pressure tensor */
+  int i, a;
+  COORD_TYPE *m;
+  
+  m = Oparams.m;
+  T1xy = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
+  T1yz = 0.0;
+  T1zx = 0.0;
+  T1xx = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
+  T1yy = 0.0;
+  T1zz = 0.0;
+
+  for(i=0; i < Nm; i++)
+    {
+      for(a=0; a < NA; a++)
+	{
+	  /* Kinetic component of pressure tensor (all terms) */
+	  T1xy += px[a][i] * py[a][i] / m[a]; 
+	  T1yz += py[a][i] * pz[a][i] / m[a];
+	  T1zx += pz[a][i] * px[a][i] / m[a] ;
+	  T1xx += px[a][i] * px[a][i] / m[a];
+	  T1yy += py[a][i] * py[a][i] / m[a];
+	  T1zz += pz[a][i] * pz[a][i] / m[a];
+	}
+    }
+  /* Calculate the other element (off-diagonal) of the molecular 
+     pressure tensor */
+  Patxy = T1xy + Wxy + WCxy;
+  Patyz = T1yz + Wyz + WCyz;
+  Patzx = T1zx + Wzx + WCzx;  
+  Patxx = T1xx + Wxx + WCxx;
+  Patyy = T1yy + Wyy + WCyy;
+  Patzz = T1zz + Wzz + WCzz;
+  Patxx /= Vol;
+  Patyy /= Vol;
+  Patzz /= Vol;
+  Patxy /= Vol;
+  Patyz /= Vol;
+  Patzx /= Vol;
+}
 
 /* ======================= >>> calcT1diagMol <<< =========================== */
 COORD_TYPE  calcT1diagMolRespa(int Nm)
@@ -542,6 +632,14 @@ void updPv(double dt, double c)
   press = calcT1diagAtRespa(Nm) + (WShort + WLong + WCShort + WCLong) / Vol; /* press(t+dt) */
 #endif
   DP = press - Oparams.P;
+#if 0
+    {
+    FILE *f;
+    f = fopen("press.dat", "a");
+    fprintf(f, "%d %f\n", Oparams.curStep, press);
+    fclose(f);
+    }
+#endif
   /*printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);*/
   Pv += DP  * cdt2;
   Pv *= exp(-cdt*Ps*s/OprogStatus.Q);
@@ -791,7 +889,90 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
     updVol(dt, 0.5);
 #endif
 }
+void calcPressTens(void)
+{
+  Wm = Wm + WmLong;
+#ifdef MOLPTENS
+  Wmxy = Wmxy + WmyzLong;
+  Wmyz = Wmyz + WmyzLong;
+  Wmzx = Wmzx + WmzxLong;
+#endif
+#if defined(MOLPTENS)  || (!defined(ATPTENS) && !defined(ATPRESS))
+  Wmxx = Wmxx + WmxxLong;
+  Wmyy = Wmyy + WmyyLong;
+  Wmzz = Wmzz + WmzzLong;
+#endif
+#if defined(ATPTENS)
+  Wxx = Wxx + WCxx + WxxLong + WCxxLong;
+  Wyy = Wyy + WCyy + WyyLong + WCyyLong;
+  Wzz = Wzz + WCzz + WzzLong + WCzzLong;
+  Wxy = Wxy + WCxy + WCxyLong + WxyLong;
+  Wzx = Wzx + WCzx + WCzxLong + WzxLong;
+  Wyz = Wyz + WCyz + WCyzLong + WyzLong;
+#endif
+  //VcR = Vc;
+  Vc = Vc + VcLong;
+  V = V + VLong;
+  W = W + WLong;
+#if defined(ATPRESS)
+  W = W + WCLong;
+#endif
+#ifdef MOLPTENS
+  /* Calculate molecular pressure */
+  calcPtensMolRespa(Oparams.parnum);
+  press_m =  T1mxx + T1myy + T1mzz + Wm;
+  press_m /= Vol * 3.0;
+#endif  
+  
+#if !defined(MOLPTENS) || defined(ATPTENS)
+  /* Calculate the other element (off-diagonal) of the pressure tensor */
+  calcPtensAtRespa(Oparams.parnum);
+#if 0
+  Patxy = T1xy + Wxy + WCxy;
+  Patyz = T1yz + Wyz + WCyz;
+  Patzx = T1zx + Wzx + WCzx;  
+  Patxy /= Vol;
+  Patyz /= Vol;
+  Patzx /= Vol;
+#endif
+  press_at = (T1xx + T1yy + T1zz)/3.0 + WC + W;
+  press_at /= Vol;
+#elif defined(ATPRESS)
+  /* NOTE: Calculate Pressure (Eliminate in the future NOT USED only output)*/
+  press_at = calcT1diagAt(Nm, 0.0) + (W + WC) / Vol;
+  /* NOTE: Nm*5/3 = (6Nm - Nm) / 3.0 */ 
+#endif
 
+#ifdef MOLPTENS
+   /* Calculate the other element (off-diagonal) of the molecular 
+      pressure tensor */
+#if 0
+  Pmxy = T1mxy + Wmxy;
+  Pmyz = T1myz + Wmyz;
+  Pmzx = T1mzx + Wmzx;  
+  Pmxy /= Vol;
+  Pmyz /= Vol;
+  Pmzx /= Vol;
+#endif
+  /* Calculate molecular pressure */
+  press_m =  T1mxx + T1myy + T1mzz + Wm;
+  press_m /= Vol * 3.0;
+#endif
+
+#ifdef MOLPTENS
+  Pxy = Pmxy;
+  Pyz = Pmyz;
+  Pzx = Pmzx;
+  press = press_m;
+#else
+  Pxy = Patxy;
+  Pyz = Patyz;
+  Pzx = Patzx;
+  press = press_at;
+#endif
+  /* ===================================================*/
+}
+#endif
 /* ========================= >>> moveb <<< =========================== */
 void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	   COORD_TYPE m[NA], COORD_TYPE d, int Nm)
@@ -816,71 +997,7 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
 		   0.000000000001, px, py, pz);
 #endif
-#if 0
-  for(i=0; i < Nm; i++)
-    {
-      for(a=0; a < NA; a++)
-	{
-	  vxo2[a][i] = vxo1[a][i]; /* vo2(t+dt) = v(t-dt) */
-	  vyo2[a][i] = vyo1[a][i];
-	  vzo2[a][i] = vzo1[a][i];
-	  vxo1[a][i] = vxt[a][i];  /* vo1(t+dt) = v(t) */
-	  vyo1[a][i] = vyt[a][i];
-	  vzo1[a][i] = vzt[a][i];
-	}
-    }
-#endif
-#ifdef MOLPTENS
-  /* Calculate molecular pressure */
-  press_m =  T1mxx + T1myy + T1mzz + Wm;
-  press_m /= Vol * 3.0;
-
-#endif  
-  
-#if !defined(MOLPTENS) || defined(ATPTENS)
-  /* Calculate the other element (off-diagonal) of the pressure tensor */
-  Patxy = T1xy + Wxy + WCxy;
-  Patyz = T1yz + Wyz + WCyz;
-  Patzx = T1zx + Wzx + WCzx;  
-  Patxy /= Vol;
-  Patyz /= Vol;
-  Patzx /= Vol;
-  press_at = (T1xx + T1yy + T1zz)/3.0 + WC + W;
-  press_at /= Vol;
-#elif defined(ATPRESS)
-  /* NOTE: Calculate Pressure (Eliminate in the future NOT USED only output)*/
-  press_at = calcT1diagAt(Nm, 0.0) + (W + WC) / Vol;
-  /* NOTE: Nm*5/3 = (6Nm - Nm) / 3.0 */ 
-#endif
-
-#ifdef MOLPTENS
-   /* Calculate the other element (off-diagonal) of the molecular 
-      pressure tensor */
-  Pmxy = T1mxy + Wmxy;
-  Pmyz = T1myz + Wmyz;
-  Pmzx = T1mzx + Wmzx;  
-  Pmxy /= Vol;
-  Pmyz /= Vol;
-  Pmzx /= Vol;
-  /* Calculate molecular pressure */
-  press_m =  T1mxx + T1myy + T1mzz + Wm;
-  press_m /= Vol * 3.0;
-#endif
-
-#ifdef MOLPTENS
-  Pxy = Pmxy;
-  Pyz = Pmyz;
-  Pzx = Pmzx;
-  press = press_m;
-#else
-  Pxy = Patxy;
-  Pyz = Patyz;
-  Pzx = Patzx;
-  press = press_at;
-#endif
-  /* ===================================================*/
 }
-#endif
 #endif
 #ifdef MD_RESPA
 /* ============================ >>> move<<< =================================*/
@@ -954,33 +1071,7 @@ void move(void)
 #ifdef MD_FENE
       FENEForce();
 #endif
-      Wm = Wm + WmLong;
-#ifdef MOLPTENS
-      Wmxy = Wmxy + WmyzLong;
-      Wmyz = Wmyz + WmyzLong;
-      Wmzx = Wmzx + WmzxLong;
-#endif
-#if defined(MOLPTENS)  || (!defined(ATPTENS) && !defined(ATPRESS))
-      Wmxx = Wmxx + WmxxLong;
-      Wmyy = Wmyy + WmyyLong;
-      Wmzz = Wmzz + WmzzLong;
-#endif
-#if defined(ATPTENS)
-      Wxx = Wxx + WCxx + WxxLong + WCxxLong;
-      Wyy = Wyy + WCyy + WyyLong + WCyyLong;
-      Wzz = Wzz + WCzz + WzzLong + WCzzLong;
-      Wxy = Wxy + WCxy + WCxyLong + WxyLong;
-      Wzx = Wzx + WCzx + WCzxLong + WzxLong;
-      Wyz = Wyz + WCyz + WCyzLong + WyzLong;
-#endif
-      VcR = Vc;
-      Vc = Vc + VcLong;
-      V = V + VLong;
-      W = W + WLong;
-#if defined(ATPRESS)
-      W = W + WCLong;
-#endif
-      /* kinet(Oparams.parnum, vx, vy, vz, Vol1); */
+            /* kinet(Oparams.parnum, vx, vy, vz, Vol1); */
 #ifdef MD_RESPA_NPT
       /* NVE ensemble o Dinamica Browniana */
       movebRespa(Oparams.steplength/n, 0.00000000001, 150, NA-1, Oparams.m, distance, 
@@ -1020,6 +1111,8 @@ void move(void)
 	  checkNebrRebuildLong();
 	}
     }
+    
+  
   if (nebrNowLong)
     {
       nebrNowLong = 0;
@@ -1054,6 +1147,7 @@ void move(void)
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
 #endif
 #endif
+  calcPressTens();
   /* Calculate the kinetic energy */
   kinet(Oparams.parnum, vx, vy, vz, Vol1);
 
