@@ -620,9 +620,12 @@ void outputSummary(void)
   FILE *f;
   int i;
   /* mettere qualcosa qui */
-  printf("Average iterations in locate_contact: %.6G\n", ((double)itsS)/timesS);
-  printf("Average iterations in search_contact_faster: %.6G\n",  ((double)itsF)/timesF);
-  printf("Average iterations in frprmn: %.6G\n", ((double) itsfrprmn)/callsfrprmn);
+  if (timesS>0)
+    printf("Average iterations in locate_contact: %.6G\n", ((double)itsS)/timesS);
+  if (timesF>0)
+    printf("Average iterations in search_contact_faster: %.6G\n",  ((double)itsF)/timesF);
+  if (callsfrprmn>0)
+    printf("percentage of convergence in frprmn: %.6G\%\n", ((double) itsfrprmn)*100.0/callsfrprmn);
   printf("Number of collisions: %lld\n", numcoll);
   
   scale_Phi();
@@ -2904,25 +2907,28 @@ retry:
       calc_intersec(rB, rA, Xa, rC);
       calc_intersec(rA, rB, Xb, rD);
 #if 1
-      for (k1=0; k1 < 3; k1++)
+      if (OprogStatus.lambda1>0 && OprogStatus.lambda2>0)
 	{
-	  vecgcg[k1] = rC[k1];
-	  vecgcg[k1+3] = rD[k1];
-	}
-      //check_point("calcDistNeg", &vecgcg[3], rB, Xb);
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      vecgcg[k1] = rC[k1];
+	      vecgcg[k1+3] = rD[k1];
+	    }
+	  //check_point("calcDistNeg", &vecgcg[3], rB, Xb);
 #if 0
-      for(k1=0; k1 < 3; k1++)
-	r12[k1] = rC[k1]-rD[k1]; 
-      printf("PRIMA dist=%.15f\n",calc_norm(r12));
-      printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+	  for(k1=0; k1 < 3; k1++)
+	    r12[k1] = rC[k1]-rD[k1]; 
+	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
+	  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
-      distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda1, 1); 
-      for (k1=0; k1 < 3; k1++)
-	{
-	  rC[k1] = vecgcg[k1];
-	  rD[k1] = vecgcg[k1+3];
-	}	 
+	  distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda1, 1); 
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      rC[k1] = vecgcg[k1];
+	      rD[k1] = vecgcg[k1+3];
+	    }	 
 #endif
+	}
 #if 0
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
