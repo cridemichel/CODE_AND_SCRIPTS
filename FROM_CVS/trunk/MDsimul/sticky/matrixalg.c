@@ -1890,9 +1890,11 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
   int iter; 
   double a=x1,b=x2,c=x2,d,e,min1,min2; 
   double fa=(*func)(a),fb=(*func)(b),fc,p,q,r,s,tol1,xm; 
+  printf("==>>>a=%f b=%f fa: %f fb: %f\n",a, b, fa, fb);
   if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 
     {
       polinterr = 1;
+      printf("bohbohboh\n");
       return 0.0;
       //nrerror("Root must be bracketed in zbrent");
     }
@@ -1912,7 +1914,9 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
       /* Convergence check. */
       xm=0.5*(c-b); 
       if (fabs(xm) <= tol1 || fb == 0.0) 
-	return b;
+	{
+	  return b;
+	}
       if (fabs(e) >= tol1 && fabs(fa) > fabs(fb))
 	{
 	  s=fb/fa;/* Attempt inverse quadratic interpolation.*/

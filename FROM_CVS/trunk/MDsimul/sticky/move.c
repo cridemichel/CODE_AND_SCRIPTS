@@ -1536,8 +1536,8 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 	  {
 	    Ro[k1][k2] = R[i][k1][k2];
 	    for (k3 = 0; k3 < 3; k3++)
-	      //Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
-	      Ro[k1][k2] += R[i][k1][k3]*M[k3][k2];
+	      Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
+	      //Ro[k1][k2] += R[i][k1][k3]*M[k3][k2];
 	  }
 #endif
       //adjust_norm(Ro);
@@ -1665,6 +1665,7 @@ double calcDistNegOne(double t, int i, int j, int nn, double shift[3])
   assign_bond_mapping(i, j);
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+  printf("BRENT nn=%d\n", nn);
   ti = t - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -1999,14 +2000,15 @@ int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS],
   return retcross;
 }
 
-int get_dists_tocheck(double distsOld[], double dists[], int tocheck[])
+int get_dists_tocheck(double distsOld[], double dists[], int tocheck[], int dorefine[])
 {
   int nn;
   int rettochk = 0;
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
       tocheck[nn] = 0;
-      if (dists[nn] < OprogStatus.epsd && distsOld[nn] < OprogStatus.epsd)
+      if (dists[nn] < OprogStatus.epsd && distsOld[nn] < OprogStatus.epsd &&
+	  dorefine[nn] == MD_EVENT_NONE)
 	{
 	  tocheck[nn] = 1; 
 	  rettochk++;
@@ -2159,11 +2161,15 @@ int interpol(int i, int j, int nn,
 	{
 	  return 1;
 	}
-      t1 = xb1[0];
-      t2 = xb2[0];
+      /* NOTA: t1 resta fisso in zbrak */
+      //t1 = xb1[0];
+      *troot = xb2[0];
     }
   if (polinterr)
     return 1;
+#if 0
+  /* NOTA: è inutile che calcola lo zero poichè zbrent in refine_contact non 
+   * userà *troot! */
   *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
   if (polinterr)
     {
@@ -2187,6 +2193,7 @@ int interpol(int i, int j, int nn,
    * non ci serve più */
   //calcDistNeg(*troot, i, j, shift, &amin, &bmin, dists);
   //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
+#endif
   return 0;
 }
 
@@ -2202,7 +2209,7 @@ int valid_collision(int i, int j, int ata, int atb, int collCode)
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
-  double h, d, dold, dold2, t, dists[MD_PBONDS], distsOld[MD_PBONDS]; 
+  double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS]; 
   double normddot, maxddot, delt, troot, tmin; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax, deldist; 
@@ -2280,6 +2287,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       if (dold < epsd)
 	delt = epsd / maxddot;
       t += delt;
+      //printf("t=%.15G delt=%.15G\n", t, delt);
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       dold2 = dold;
       //assign_dists(distsOld,  distsOld2);
@@ -2317,14 +2325,22 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  continue;
 	}
 #endif
+      for (nn=0; nn < MD_PBONDS; nn++)
+	dorefine[nn] = MD_EVENT_NONE;
       ncr=check_cross(distsOld, dists, crossed);
       /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
        * sticky */
-      for (nn = 0; nn < ncr; nn++)
+      for (nn = 0; nn < MD_PBONDS; nn++)
 	{
+	  t2arr[nn] = t; 
 	  dorefine[nn] = MD_EVENT_NONE;
 	  if (crossed[nn]!=MD_EVENT_NONE)
 	    {
+#if 0
+	      /* NOTA:
+	       * se c'è stato un "crossing" cioè un cambio di segno della distanza
+	       * zbrent sicuramente troverà lo zero per cui non è più necessaria nessuna
+	       * interpolazione */
 #ifndef MD_NOINTERPOL  
 	      if (interpol(i, j, nn, 
 			   t-delt, delt, distsOld[nn], dists[nn], &troot, shift, 0))
@@ -2333,20 +2349,24 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		  /* vecgd2 è vecgd al tempo t-delt */
 		  troot = t - delt;
 		}
+#endif
 	      /* se dorefine è 2 vuol dire che due superfici si sono
 	       * attraversate */
 	      if (valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
-		dorefine[nn] = crossed[nn];
+		{
+		  dorefine[nn] = crossed[nn];
+		  //printf("CROSSING dorefine[%d]:%d\n", nn, dorefine[nn]);
+		}
 	    }
 	}
-      ntc = get_dists_tocheck(distsOld, dists, tocheck);
-      for (nn = 0; nn < ntc; nn++)
+#ifdef MD_INTERPOL
+      ntc = get_dists_tocheck(distsOld, dists, tocheck, dorefine);
+		  
+      for (nn = 0; nn < MD_PBONDS; nn++)
 	{
-	  /* se dorefine è 1 vuol dire che il polinomio interpolante 
-	   * è passato per 0 */
-#ifndef MD_NOINTERPOL
 	  if (tocheck[nn])
 	    {
+	      //printf("tocheck[%d]:%d\n", nn, tocheck[nn]);
 	      if (interpol(i, j, nn, t-delt, delt, distsOld[nn], dists[nn], 
 			   &troot, shift, 1))
 		dorefine[nn] = MD_EVENT_NONE;
@@ -2358,6 +2378,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		    dorefine[nn] = MD_INOUT_BARRIER;
 		  if (!valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
 		    dorefine[nn] = MD_EVENT_NONE;
+		  else
+		    t2arr[nn] = troot;
 		}
 	    }
 	}
@@ -2368,9 +2390,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	{
 	  if (dorefine[nn]!=MD_EVENT_NONE)
 	    {
-	      if (refine_contact(i, j, nn, t-delt, t, shift, &troot))
+#if 0
+	      printf("REFINE dorefine[%d]:%d\n", nn, dorefine[nn]);
+	      printf("distsOld[%d]:%.15f dists[%d]: %.15f\n", nn, distsOld[nn], nn, dists[nn]);
+	      printf("t-delt: %.15f t=%.15f\n", t-delt, t);
+#endif
+	      if (refine_contact(i, j, t-delt, t2arr[nn], nn, shift, &troot))
 		{
-		  printf("[locate_contact] Adding collision between %d-%d\n", i, j);
+		  //printf("[locate_contact] Adding collision between %d-%d\n", i, j);
 		  MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
@@ -2399,7 +2426,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		{
 		  MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
 		  printf("[locate_contact] can't find contact point!\n");
-		  gotcoll = -1;
+		  /* Se refine_contact fallisce deve cmq continuare a cercare 
+		   * non ha senso smettere...almeno credo */
+		  //gotcoll = -1;
 		  continue;
 #if 0
 		  if (dorefine[nn] == 2)
