@@ -1503,9 +1503,9 @@ void move(void)
 	  writeAllCor(bf);
 	  fclose(bf);
 #ifdef MPI
-          sprintf(fileop3, "/bin/gzip %s_R%d", fileop, my_rank);
+          sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
 #else 
-          sprintf(fileop3, "/bin/gzip %s", fileop);
+          sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
 	  system(fileop3);
 	  OprogStatus.JJ++;
