@@ -2048,6 +2048,16 @@ double  cgfuncRyck(double *vec)
   //printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
   return F;
 }
+double max3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b > m)
+    m = b;
+  if (c > m)
+    m = c;
+  return m;
+}
 
 double min3(double a, double b, double c)
 {
@@ -3196,6 +3206,94 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLFD 1.0E-10
 #define TOLMIN 1.0E-12//1.0e-6 
 #define STPMX 100.0
+#ifdef MD_NNL
+void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], double x[], 
+	    double *f, double stpmax, int *check, 
+	    double (*func)(double [], int), int iA, 
+	    double tolx)
+/*
+   Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
+   fold and g[1..n], and a direction p[1..n], finds a new point x[1..n] along the direction p
+   from xold where the function func has decreased  "sufficiently".  The new function value is 
+   returned in f. stpmax is an input quantity that limits the length of the steps so that 
+   you do not try to evaluate the function in regions where it is unde ned or subject 
+   to overflow.
+   p is usually the Newton direction. The output quantity check is false (0) on a normal exit. 
+   It is true (1) when x is too close to xold. In a minimization algorithm, this usually 
+   signals convergence and can be ignored. 
+   However, in a zero-finding algorithm the calling program 
+   should check whether the convergence is spurious. Some  difficult  problems may require 
+   double precision in this routine.*/
+{
+  int i; 
+  double a,alam,alam2=0.0,alamin,b,disc,f2=0.0,rhs1,rhs2,slope,sum,temp, test,tmplam; 
+  *check=0; 
+  for (sum=0.0,i=0;i<n;i++) 
+    sum += p[i]*p[i]; 
+  sum=sqrt(sum); 
+  if (sum > stpmax) 
+    for (i=0;i<n;i++) 
+      p[i] *= stpmax/sum; /*Scale if attempted step is too big.*/ 
+  for (slope=0.0,i=0;i<n;i++) 
+    slope += g[i]*p[i]; 
+  if (slope >= 0.0) 
+    nrerror("Roundoff problem in lnsrch."); 
+  test=0.0; /*Compute lambda_min.*/
+  for (i=0;i<n;i++) 
+    {
+      temp=fabs(p[i])/FMAX(fabs(xold[i]),1.0); 
+      if (temp > test) 
+	test=temp; 
+    } 
+  alamin=tolx/test; alam=1.0;
+  for (;;) 
+    { 
+      for (i=0;i<n;i++) 
+	x[i]=xold[i]+alam*p[i]; 
+      *f=(*func)(x,iA); 
+      if (alam < alamin) 
+	{ /* Convergence on  x. For zero  nding, the calling program 
+	     should verify the convergence.*/ 
+	  for (i=0;i<n;i++) 
+	    x[i]=xold[i]; 
+	  *check=1; 
+	  return;
+	}
+      else if (*f <= fold+ALF*alam*slope) 
+	return; 
+	/* Su cient function decrease.*/
+      else 
+	{ /* Backtrack. */
+	  if (alam == 1.0) 
+	    tmplam = -slope/(2.0*(*f-fold-slope));/* First time.*/
+	  else
+	    { /* Subsequent backtracks.*/
+	      rhs1 = *f-fold-alam*slope;
+	      rhs2=f2-fold-alam2*slope;
+	      a=(rhs1/(alam*alam)-rhs2/(alam2*alam2))/(alam-alam2);
+	      b=(-alam2*rhs1/(alam*alam)+alam*rhs2/(alam2*alam2))/(alam-alam2); 
+	      if (a == 0.0) 
+		tmplam = -slope/(2.0*b); 
+	      else 
+		{
+		  disc=b*b-3.0*a*slope; 
+		  if (disc < 0.0) 
+		    tmplam=0.5*alam; 
+		  else if (b <= 0.0) 
+		    tmplam=(-b+sqrt(disc))/(3.0*a); 
+		  else 
+		    tmplam=-slope/(b+sqrt(disc)); 
+		} 
+	      if (tmplam > 0.5*alam) 
+		tmplam=0.5*alam; /* lambda <= 0.5 lambda_1.*/
+	    } 
+	}
+      alam2=alam;
+      f2 = *f; 
+      alam=FMAX(tmplam,0.1*alam); /* lambda >= 0.1 lambda_1.*/
+    }/* Try again.*/
+}
+#endif
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
 	    double *f, double stpmax, int *check, 
 	    double (*func)(double [], int, int, double[]), int iA, int iB, double shift[3],
@@ -3330,12 +3428,6 @@ void newtNeigh(double x[], int n, int *check,
 {
   int i,its, j, *indx, ok;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
-#ifdef MD_GLOBALNR2
-  int check2;
-  double f2, stpmax2, fold2, *xold2, *g2;
-  xold2 = vector(n);
-  g2 = vector(n);
-#endif
   indx=ivector(n); 
   fjac=matrix(n, n);
   g=vector(n);
@@ -3360,16 +3452,14 @@ void newtNeigh(double x[], int n, int *check,
   for (sum=0.0,i=0;i<n;i++) 
     sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
   stpmax=STPMX*FMAX(sqrt(sum),(double)n);
-#ifndef MD_GLOBALNR2
   funcs2beZeroedNeigh(n,x,fvec,iA);
-#endif
   for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
        //funcs2beZeroed(n,x,fvec,iA,iB,shift);
        fdjacNeigh(n,x,fvec,fjac,vecfunc, iA); 
        /* If analytic Jacobian is available, you can 
 	  replace the routine fdjac below with your own routine.*/
-#ifdef MD_GLOBALNR
+#ifdef MD_GLOBALNRNL
        for (i=0;i<n;i++) { /* Compute  f for the line search.*/
 	 for (sum=0.0,j=0;j<n;j++)
 	  sum += fjac[j][i]*fvec[j]; 
@@ -3398,8 +3488,8 @@ void newtNeigh(double x[], int n, int *check,
       lubksb(fjac,n,indx,p);
 #endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
-#ifdef MD_GLOBALNR
-      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift, TOLX); 
+#ifdef MD_GLOBALNRNL
+      lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA, TOLX); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
@@ -3785,8 +3875,8 @@ void newtDistNegNeigh(double x[], int n, int *check,
   /*Define global variables.*/
   nnD=n; 
   nrfuncvDNeigh=vecfunc; 
-#ifdef MD_GLOBALNRD
-  f=fminD(x,iA,iB,shift); /*fvec is also computed by this call.*/
+#ifdef MD_GLOBALNRDNL
+  f=fminDNeigh(x,iA); /*fvec is also computed by this call.*/
 #else
   funcs2beZeroedDistNegNeigh(n,x,fvecD,iA);
 #endif
@@ -3808,7 +3898,7 @@ void newtDistNegNeigh(double x[], int n, int *check,
       fdjacDistNegNeigh(n,x,fvecD,fjac,vecfunc, iA);
       /* If analytic Jacobian is available, you can 
 	  replace the routine fdjac below with your own routine.*/
-#ifdef MD_GLOBALNRD
+#ifdef MD_GLOBALNRDNL
        for (i=0;i<n;i++) { /* Compute  f for the line search.*/
 	 for (sum=0.0,j=0;j<n;j++)
 	  sum += fjac[j][i]*fvecD[j]; 
@@ -3841,8 +3931,8 @@ void newtDistNegNeigh(double x[], int n, int *check,
 #endif
 #endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
-#ifdef MD_GLOBALNRD
-      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift, TOLXD); 
+#ifdef MD_GLOBALNRDNL
+      lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fminDNeigh,iA, TOLXD); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
