@@ -729,7 +729,7 @@ void saveBakAscii(char *fn)
       strcpy(fileop, fn);
     }
   
-  if ( (bf = fopen(fileop, "w")) == NULL)
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
     {
       mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
       exit(-1);
