@@ -789,8 +789,8 @@ void usrInitBef(void)
     OprogStatus.nextSumTime = 0.0;
     OprogStatus.nextcheckTime = 0.0;
     OprogStatus.intervalSum = 1.0;
-    OprogStatus.n1 = 80;
-    OprogStatus.n2 = 30;
+    OprogStatus.n1 = 160;
+    OprogStatus.n2 = 60;
     OprogStatus.storerate = 0.01;
     OprogStatus.KK = 0;
     OprogStatus.JJ = 0;
@@ -929,7 +929,7 @@ void EvalSuperEllipse(double theta,double phi, double a, double b, double c, MES
    pm->point[0] = a * cphi * sth;
    pm->point[1] = b * sphi * sth;
    pm->point[2] = c * cth;
-#if 0
+#if 1
      {
        FILE* f;
        f = fopen("mesh.dat", "a");
@@ -942,6 +942,64 @@ void EvalSuperEllipse(double theta,double phi, double a, double b, double c, MES
    pm->grad[1] = 2.0*pm->point[1]/Sqr(b);
    pm->grad[2] = 2.0*pm->point[2]/Sqr(c);
 #endif
+}
+void add_neighbours(MESHXYZ** mesh, int i, int j)
+{
+  int n1, n2;
+  n1 = OprogStatus.n1;
+  n2 = OprogStatus.n2;
+
+  if (i==1)
+    {
+      mesh[i][j].neigh[0].i = i;
+      if (j==0)
+	mesh[i][j].neigh[0].j = OprogStatus.n2-1;
+      else
+	mesh[i][j].neigh[0].j = j-1;
+      mesh[i][j].neigh[1].i = i;
+      if (j==OprogStatus.n2-1)
+	mesh[i][j].neigh[1].j = 0;
+      else
+	mesh[i][j].neigh[1].j = j+1;
+      mesh[i][j].neigh[2].i = i+1;
+      mesh[i][j].neigh[2].j = j;
+      mesh[i][j].neigh[3].i = -1;
+      mesh[i][j].neigh[3].j = -1;
+    }
+  else if (i==n1/2-1)
+    {
+      mesh[i][j].neigh[0].i = i;
+      if (j==0)
+	mesh[i][j].neigh[0].j = OprogStatus.n2-1;
+      else
+	mesh[i][j].neigh[0].j = j-1;
+      mesh[i][j].neigh[1].i = i;
+      if (j == OprogStatus.n2-1)
+	mesh[i][j].neigh[1].j = 0;
+      else	
+	mesh[i][j].neigh[1].j = j+1;
+      mesh[i][j].neigh[2].i = i-1;
+      mesh[i][j].neigh[2].j = j;
+      mesh[i][j].neigh[3].i = -1;
+      mesh[i][j].neigh[3].j = -1;
+    }
+  else
+    {
+      mesh[i][j].neigh[0].i = i;
+      if (j==0)
+	mesh[i][j].neigh[0].j = OprogStatus.n2-1;
+      else
+	mesh[i][j].neigh[0].j = j-1;
+      mesh[i][j].neigh[1].i = i;
+      if (j == OprogStatus.n2-1)
+	mesh[i][j].neigh[1].j = 0;
+      else	
+	mesh[i][j].neigh[1].j = j+1;
+      mesh[i][j].neigh[2].i = i-1;
+      mesh[i][j].neigh[2].j = j;
+      mesh[i][j].neigh[3].i = i+1;
+      mesh[i][j].neigh[3].j = j;
+    }
 }
 void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 {
@@ -960,58 +1018,7 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 	{
 	  theta = i * TWOPI / (double)n1;
 	  EvalSuperEllipse(theta,phi,a,b,c,&mesh[i][j]);
-	  
-	  if (i==1)
-	    {
-	      mesh[i][j].neigh[0].i = i;
-	      if (j==0)
-		mesh[i][j].neigh[0].j = OprogStatus.n2-1;
-	      else
-		mesh[i][j].neigh[0].j = j-1;
-	      mesh[i][j].neigh[1].i = i;
-	      if (j==OprogStatus.n2-1)
-		mesh[i][j].neigh[1].j = 0;
-	      else
-		mesh[i][j].neigh[1].j = j+1;
-	      mesh[i][j].neigh[2].i = i+1;
-	      mesh[i][j].neigh[2].j = j;
-	      mesh[i][j].neigh[3].i = -1;
-	      mesh[i][j].neigh[3].j = -1;
-	    }
-	  else if (i==n1/2-1)
-	    {
-	      mesh[i][j].neigh[0].i = i;
-	      if (j==0)
-		mesh[i][j].neigh[0].j = OprogStatus.n2-1;
-	      else
-		mesh[i][j].neigh[0].j = j-1;
-	      mesh[i][j].neigh[1].i = i;
-	      if (j == OprogStatus.n2-1)
-		mesh[i][j].neigh[1].j = 0;
-	      else	
-		mesh[i][j].neigh[1].j = j+1;
-	      mesh[i][j].neigh[2].i = i-1;
-	      mesh[i][j].neigh[2].j = j;
-	      mesh[i][j].neigh[3].i = -1;
-	      mesh[i][j].neigh[3].j = -1;
-	    }
-	  else
-	    {
-      	      mesh[i][j].neigh[0].i = i;
-	      if (j==0)
-		mesh[i][j].neigh[0].j = OprogStatus.n2-1;
-	      else
-		mesh[i][j].neigh[0].j = j-1;
-	      mesh[i][j].neigh[1].i = i;
-	      if (j == OprogStatus.n2-1)
-		mesh[i][j].neigh[1].j = 0;
-	      else	
-		mesh[i][j].neigh[1].j = j+1;
-	      mesh[i][j].neigh[2].i = i-1;
-	      mesh[i][j].neigh[2].j = j;
-	      mesh[i][j].neigh[3].i = i+1;
-	      mesh[i][j].neigh[3].j = j;
-	    }
+	  add_neighbours(mesh, i, j); 
 	}
     }
 }
@@ -1125,12 +1132,12 @@ void usrInitAft(void)
     invIb = matrix(3, 3);
 #endif
     powdirs = matrix(6,6);
-    ellips_mesh[0]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1);
-    ellips_mesh[1]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1);
+    ellips_mesh[0]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
+    ellips_mesh[1]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
     for (i = 0; i < OprogStatus.n1; i++)
       {
-	ellips_mesh[0][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2);
-	ellips_mesh[1][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2);
+	ellips_mesh[0][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
+	ellips_mesh[1][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
       }
     build_mesh(ellips_mesh[0], Oparams.a[0], Oparams.b[0], Oparams.c[0]);
     build_mesh(ellips_mesh[1], Oparams.a[1], Oparams.b[1], Oparams.c[1]);
