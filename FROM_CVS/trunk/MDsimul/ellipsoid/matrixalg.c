@@ -11,6 +11,57 @@ void nrerror(char *msg)
   printf(msg);
   exit(-1);
 }
+
+void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
+/* Given arrays xa[1..n] and ya[1..n], and given a value x, this routine returns a value y, and an error estimate dy. If P(x) is the polynomial of degree N   1 such that P(xai) = yai, i = 1, . . . , n, then the returned value y = P(x).*/
+{ 
+  int i,m,ns=1; 
+  double den,dif,dift,ho,hp,w;
+  double *c,*d; 
+  dif=fabs(x-xa[0]); 
+  c=vector(n); 
+  d=vector(n); 
+  for (i=0;i<n;i++) 
+    { 
+      /* Here we find the index ns of the closest table entry,*/
+      if ( (dift=fabs(x-xa[i])) < dif) 
+	{ 
+	  ns=i; 
+	  dif=dift;
+	} 
+      c[i]=ya[i];
+      /* and initialize the tableau of c s and d s.*/
+      d[i]=ya[i]; 
+    } 
+  *y=ya[ns--];
+  /* This is the initial approximation to y.*/
+  for (m=0;m<n-1;m++) 
+    { 
+      /* For each column of the tableau,*/
+      for (i=0;i<n-m;i++)
+	{
+	  /* we loop over the current c s and d s and update them.*/
+	  ho=xa[i]-x; 
+	  hp=xa[i+m]-x; 
+	  w=c[i+1]-d[i]; 
+	  if ( (den=ho-hp) == 0.0) 
+	    nrerror("Error in routine polint"); 
+	  /* This error can occur only if two input xa s are (to within roundoff)*/
+	  den=w/den; d[i]=hp*den; 
+	  /*Here the c s and d s are updated. */
+	  c[i]=ho*den; 
+	} 
+      *y += (*dy=(2*ns < (n-m) ? c[ns+1] : d[ns--])); 
+      /* After each column in the tableau is completed, we decide which correction, 
+       * c or d, we want to add to our accumulating value of y, i.e., which path to take through the tableau 
+       * forking up or down. We do this in such a way as to take the most  straight line  route through the 
+       * tableau to its apex, updating ns accordingly to keep track of where we are. 
+       * This route keeps the partial approximations centered (insofar as possible) on the target x. 
+       * The last dy added is thus the error indication. */
+    } 
+  free_vector(d); 
+  free_vector(c); 
+}
 #define SWAP(a,b) {temp=(a);(a)=(b);(b)=temp;}
 void gaussj(double **a, int n, double *bb) 
 /* Linear equation solution by Gauss-Jordan elimination, equation (2.1.1) above. a[1..n][1..n] 
@@ -107,7 +158,7 @@ void gaussj(double **a, int n, double *bb)
   free_ivector(indxc);
 } 
 void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
-void ludcmp(double **a, int n,  int* indx, double* d)
+void ludcmp(double **a, int n,  int* indx, double* d, int *ok)
 {
   /* A[i][j] = Aij 
    * A x = b  
@@ -117,6 +168,7 @@ void ludcmp(double **a, int n,  int* indx, double* d)
   double vv[MD_NBMAX]; /* vv stores the implicit scaling of each row.*/
   /*vv = vector(1,n);*/
   *d=1.0; /* No row interchanges yet. */
+  *ok = 0;
   for (i=0;i<n;i++) 
     { 
       /* Loop over rows to get the implicit scaling information.*/ 
@@ -128,7 +180,8 @@ void ludcmp(double **a, int n,  int* indx, double* d)
       if (big == 0.0)
 	{
 	  printf("ERROR: Singular matrix in routine ludcmp\n"); 
-	  exit(-1);
+	  *ok = 1;
+	  return;
 	}
       /* No nonzero largest element. */
       vv[i]=1.0/big; /* Save the scaling.*/
@@ -221,7 +274,7 @@ void lubksb(double **a, int n, int* indx, double *b)
     } /* All done! */
 }
 #ifdef MD_USE_LAPACK
-void wrap_dgesv(double **a, double *x, int n)
+void wrap_dgesv(double **a, double *x, int n, int *ok)
 {
   double AT[MD_NBMAX*MD_NBMAX];
   int i, j, c1, c2, ok, pivot[MD_NBMAX];
@@ -231,27 +284,30 @@ void wrap_dgesv(double **a, double *x, int n)
     }						
   c1 = n;
   c2 = 1;
-  dgesv_(&c1, &c2, AT, &c1, pivot, x, &c1, &ok);      
+  dgesv_(&c1, &c2, AT, &c1, pivot, x, &c1, ok);      
 }
 #endif
-void SolveLineq (double **a, double *x, int n) 
+int SolveLineq (double **a, double *x, int n) 
 {
-  int indx[MD_NBMAX];
+  int indx[MD_NBMAX], ok;
   double dd;
 #ifdef MD_USE_LAPACK
-  wrap_dgesv(a, x, n);
+  wrap_dgesv(a, x, n, &ok);
 #else
-  ludcmp(a, n, indx, &dd);
+  ludcmp(a, n, indx, &dd, &ok);
+  if (ok==1)
+    return 1;
   lubksb(a, n, indx, x);
 #endif
+  return 0;
 }
 
 void InvMatrix(double **a, double **b, int NB)
 {
-  int m1, m2, indx[MD_NBMAX]; 
+  int m1, m2, indx[MD_NBMAX], ok; 
   double col[MD_NBMAX];
   double d;
-  ludcmp(a, NB, indx, &d); 
+  ludcmp(a, NB, indx, &d, &ok); 
   for(m2=0;m2<NB;m2++) 
     { 
       for(m1=0;m1<NB;m1++) 
@@ -422,7 +478,7 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
 	    double stpmax, int *check, double (*func)(double [], int, int, double []),
 	    int iA, int iB, double shift[3], double tolx);
 void lubksb(double **a, int n, int *indx, double b[]); 
-void ludcmp(double **a, int n, int *indx, double *d); 
+void ludcmp(double **a, int n, int *indx, double *d, int *ok); 
 extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
 
@@ -436,7 +492,7 @@ void newt(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int ii, i,its, its2,j,*indx;
+  int ii, i,its, its2,j,*indx, ok;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold, alphaold; 
   double r1[3], r2[3], alpha;
 #ifdef MD_GLOBALNR2
@@ -637,7 +693,7 @@ void newt(double x[], int n, int *check,
 #ifdef MD_USE_LAPACK
       SolveLineq(fjac,p,n);
 #else
-      ludcmp(fjac,n,indx,&d); /* Solve linear equations by LU decomposition.*/
+      ludcmp(fjac,n,indx,&d, &ok); /* Solve linear equations by LU decomposition.*/
       lubksb(fjac,n,indx,p);
 #endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
@@ -717,7 +773,7 @@ void newtDistNeg(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int ii, i,its, its2,j,*indx;
+  int ii, i,its, its2,j,*indx, ok;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold, alphaold; 
   indx=ivector(n); 
   fjac=matrix(n, n);
@@ -786,7 +842,7 @@ void newtDistNeg(double x[], int n, int *check,
       SolveLineq(fjac,p,n);
 #else
 #if 1
-      ludcmp(fjac,n,indx,&d); /* Solve linear equations by LU decomposition.*/
+      ludcmp(fjac,n,indx,&d, &ok); /* Solve linear equations by LU decomposition.*/
       lubksb(fjac,n,indx,p);
 #else
       gaussj(fjac,n,p);
@@ -871,7 +927,7 @@ void newtDist(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int ii, i,its, its2,j,*indx;
+  int ii, i,its, its2,j,*indx, ok;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold, alphaold; 
   indx=ivector(n); 
   fjac=matrix(n, n);
@@ -931,7 +987,7 @@ void newtDist(double x[], int n, int *check,
 #ifdef MD_USE_LAPACK
       SolveLineq(fjac,p,n);
 #else
-      ludcmp(fjac,n,indx,&d); /* Solve linear equations by LU decomposition.*/
+      ludcmp(fjac,n,indx,&d, &ok); /* Solve linear equations by LU decomposition.*/
       lubksb(fjac,n,indx,p);
 #endif
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
