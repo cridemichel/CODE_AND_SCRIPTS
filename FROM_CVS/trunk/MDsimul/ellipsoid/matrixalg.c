@@ -6,7 +6,7 @@
 #include<stdlib.h>
 #define MD_DEBUG(X) 
 #define MD_DEBUG10(X) 
-#define MD_DEBUG18(X) X
+#define MD_DEBUG18(X) 
 int ncom;
 double (*nrfunc)(double []); 
 int *ivector(int n)
@@ -927,7 +927,6 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLFD 1.0E-6
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
-#define FMAX(A,B) ((A)>(B)?(A):(B))
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
 	    double *f, double stpmax, int *check, 
 	    double (*func)(double [], int, int, double[]), int iA, int iB, double shift[3],
@@ -1023,7 +1022,7 @@ free_vector(fvec);free_vector(xold);free_vector(g2); free_vector(xold2); free_ve
 #define FREERETURN {MD_DEBUG10(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d fvec=(%.15G,%.15G,%.15G,%.15G,%.15G)\n", x[0], x[1], x[2], x[3], x[4], test, its, *check, fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));\
 free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);free_vector(fvecG);return;}
 #endif
-#define FREERETURND {if(its>10)printf("calcDistNeg its=%d\n", its); MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
+#define FREERETURND {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
 free_vector(fvecD);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);return;}
 
 void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[3]);
@@ -1336,7 +1335,7 @@ void newtDistNeg(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int ii, i,its, its2,j,*indx, ok;
+  int ii, i,its=0, its2,j,*indx, ok;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold, alphaold; 
   indx=ivector(n); 
   fjac=matrix(n, n);
