@@ -12,7 +12,7 @@ float mgl_bw[NUMBW][4];
 char *mglrgb[]={
 #include "mglrgb.h"
 };
-struct molecules* mols = NULL;
+struct molecule *mols = NULL;
 struct global_settings globset;
 
 /* array con i valori di default */
@@ -121,11 +121,11 @@ double  calcFadeFact(int mode, int nf)
   double ff;
   if (mode == MGL_FADE_LIN)
     {
-      ff =  1.0 - ((double)nf) / ((double)frameNo) ;
+      ff =  1.0 - ((double)nf) / ((double)globset.frameNo) ;
     }
   else if(mode == MGL_FADE_QUAD)
     {
-      ff = 1.0 / Sqr(((double)nf) / ((double)frameNo));
+      ff = 1.0 / Sqr(((double)nf) / ((double)globset.frameNo));
     }
   else ff = 1;
 
@@ -138,47 +138,47 @@ void displayAtom(int nf, int nm, int na)
   GLUquadricObj* ss;
   atom_s *atom;
   glPushMatrix();
-  atom = mols[nm].atom[na];
-  glTranslatef(atom.common.rx,atom.common.ry,atom.common.rz);/* 1st atom */ 
+  atom = &mols[nm].atom[na];
+  glTranslatef(atom->common.rx,atom->common.ry,atom->common.rz);/* 1st atom */ 
   
-  fadeFact = calcFadeFact(fadeMode, nf);
+  fadeFact = calcFadeFact(globset.fadeMode, nf);
   
-  if (atom.common.greyLvl)
+  if (atom->common.greyLvl)
     {
-      setColor(mgl_bw[atom.common.greyLvl], fadeFact);
+      setColor(mgl_bw[atom->common.greyLvl], fadeFact);
     }
   else 
     {
-      if (bw)
-	setColor(mgl_bw[colIdxBw[na]], fadeFact);
+      if (globset.bw)
+	setColor(mgl_bw[globset.colIdxBw[na]], fadeFact);
       else
 	{
-	  if (atom.common.atcol>=0 && atom.common.atcol<NUMCOLS)
+	  if (atom->common.atcol>=0 && atom->common.atcol<NUMCOLS)
 	    {
-	      setColor(mgl_col[atom.common.atcol].rgba, fadeFact);
+	      setColor(mgl_col[atom->common.atcol].rgba, fadeFact);
 	    }
 	  else
-	    setColor(mgl_col[colIdxCol[na]].rgba, fadeFact);
+	    setColor(mgl_col[globset.colIdxCol[na]].rgba, fadeFact);
 	}
     }
-  if (atom.common.type==MGL_ATOM_SPHERE)
+  if (atom->common.type==MGL_ATOM_SPHERE)
     {
-      glutSolidSphere (atom.sphere.radius, STACKS, SLIDES);
+      glutSolidSphere (atom->sphere.radius, STACKS, SLIDES);
     }
-  else if (atom.common.type==MGL_ATOM_DISK)
+  else if (atom->common.type==MGL_ATOM_DISK)
     {
       ss = gluNewQuadric();
-      gluCylinder(ss, atom.disk.radius, 
-		      atom.disk.radius, 
-		      atom.disk.height, 
+      gluCylinder(ss, atom->disk.radius, 
+		      atom->disk.radius, 
+		      atom->disk.height, 
 		      STACKS, SLIDES);
     }
-  else if (atom.common.type==MGL_ATOM_CYLINDER)
+  else if (atom->common.type==MGL_ATOM_CYLINDER)
     {
       ss = gluNewQuadric();
-      gluCylinder(ss, atom.disk.toprad, 
-		      atom.disk.botrad, 
-		      atom.disk.height, 
+      gluCylinder(ss, atom->cylinder.toprad, 
+		      atom->cylinder.botrad, 
+		      atom->cylinder.height, 
 		      STACKS, SLIDES);
     }
  /*ss = gluNewQuadric();
@@ -194,11 +194,11 @@ void buildAtomsList()
   /*float col[4];*/
 
   /* NOTE: frameno is the number of frames read from postions file */
-  for (nf = 0; nf < frameNo; ++nf )
+  for (nf = 0; nf < globset.frameNo; ++nf )
     {
       atomsList[nf] = glGenLists(1);
       glNewList(atomsList[nf], GL_COMPILE);
-      for(i = 0; i < NumMols[nf]; ++i)
+      for(i = 0; i < globset.NumMols[nf]; ++i)
 	{
 	  displayAtom(nf, i, j);
 	}
@@ -229,16 +229,16 @@ void onScreenInfo()
   glDisable(GL_DEPTH_TEST);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluOrtho2D(0, Width, 0, Height);
+  gluOrtho2D(0, globset.Width, 0, globset.Height);
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
   glLoadIdentity();
   glColor3f(0.8, 0.0, 0.0);
-  sprintf(text, "degx: %.1f degy: %.1f degz: %.1f", degx, degy, degz);
-  printStr(10, Height - 20, text);
-  sprintf(text, "L: %.1f deginc: %.1f", L, deginc);
-  printStr(10, Height - 45, text);
-  myReshape(Width, Height);
+  sprintf(text, "degx: %.1f degy: %.1f degz: %.1f", globset.degx, globset.degy, globset.degz);
+  printStr(10, globset.Height - 20, text);
+  sprintf(text, "L: %.1f deginc: %.1f", globset.L, globset.deginc);
+  printStr(10, globset.Height - 45, text);
+  myReshape(globset.Width, globset.Height);
   glPopAttrib();
   glPopMatrix();
 }
@@ -270,11 +270,11 @@ void save_image(void)
    glPixelStorei(GL_PACK_ALIGNMENT,1);
 
    /* Open the file */
-   fn = malloc(sizeof(char)*(strlen(savefile)+257));
-   strcpy(fn,savefile);
-   if (saved_counter > 0)
+   fn = malloc(sizeof(char)*(strlen(globset.savefile)+257));
+   strcpy(fn,globset.savefile);
+   if (globset.saved_counter > 0)
      {
-       snprintf(numstr, 256, "%d",saved_counter);
+       snprintf(numstr, 256, "%d",globset.saved_counter);
        strcat(fn, numstr);
      }
    if ((fp = fopen(fn,"wb")) == NULL) {
@@ -372,7 +372,7 @@ void display (void)
   /*
    * double fadeFact;
    */
-  if (saveandquit)
+  if (globset.saveandquit)
     glutHideWindow();
 
 
@@ -380,24 +380,24 @@ void display (void)
   
   glLoadIdentity();
   
-  if (!axon) 
-    glTranslatef(0.0, 0.0, -(near+L/2.0));
+  if (!globset.axon) 
+    glTranslatef(0.0, 0.0, -(globset.near+globset.L/2.0));
   else
-    glTranslatef(0.0, 0.0,-L/2.0);
-  glTranslatef(0.0, 0.0, -dist);
+    glTranslatef(0.0, 0.0,-globset.L/2.0);
+  glTranslatef(0.0, 0.0, -globset.dist);
   glPushMatrix ();
   /* NOTE:
      First arg is the degrees of the rotation, the others are the component
      of the vector around which we perfomr the rotation */
-  glRotatef(-degz, 0.0, 0.0, 1.0);
-  glRotatef(-degy, 0.0, 1.0, 0.0);
-  glRotatef(-degx, 1.0, 0.0, 0.0);
+  glRotatef(-globset.degz, 0.0, 0.0, 1.0);
+  glRotatef(-globset.degy, 0.0, 1.0, 0.0);
+  glRotatef(-globset.degx, 1.0, 0.0, 0.0);
 
   setColor(mgl_bw[0], 1.0);
-  if (drawcube)
-    glutWireCube(L);
+  if (globset.drawcube)
+    glutWireCube(globset.L);
  
-  for (nf = 0; nf < frameNo; ++nf)
+  for (nf = 0; nf < globset.frameNo; ++nf)
     {
       if (nf == 0)
 	{
@@ -413,10 +413,10 @@ void display (void)
     }
   glPopMatrix ();
   
-  if (infos) onScreenInfo();
+  if (globset.infos) onScreenInfo();
   /*glFlush ();*/
   glutSwapBuffers();
-  if (saveandquit==1)
+  if (globset.saveandquit==1)
     {
       save_image();
       exit(0);
@@ -427,10 +427,12 @@ void display (void)
 /* =========================== >>> setproj <<< ============================*/
 void setproj(void)
 {
+  double L;
+  L = globset.L;
   /*int w = Width, h = Height;*/
   glMatrixMode (GL_PROJECTION);
   glLoadIdentity ();
-  if (axon)
+  if (globset.axon)
     {
       /*printf("orto\n");*/
       glOrtho (-L, L, -L, 
@@ -444,10 +446,10 @@ void setproj(void)
     }
   else 
     {
-      near = L / tan(PI*viewangle/360.0) / 2.0;
-      far = 100*near;
-      gluPerspective(viewangle, (GLdouble) Width / (GLdouble) Height, 
-		     near, far);
+      globset.near = L / tan(PI*globset.viewangle/360.0) / 2.0;
+      globset.far = 100*globset.near;
+      gluPerspective(globset.viewangle, (GLdouble) globset.Width / (GLdouble) globset.Height, 
+		     globset.near, globset.far);
     }
 
   glMatrixMode (GL_MODELVIEW);
@@ -456,8 +458,8 @@ void setproj(void)
 /* ========================== >>> myReshape <<< ========================*/
 void myReshape(int w, int h)
 {
-  Width = w;
-  Height = h;
+  globset.Width = w;
+  globset.Height = h;
   glViewport (0, 0, w, h);
   setproj();
   glMatrixMode (GL_MODELVIEW);
@@ -492,7 +494,7 @@ void args(int argc, char* argv[])
 	    }
 	  else if (!strcmp(argv[i],"--saveandquit") || !strcmp(argv[i],"-sq"))
 	    {
-	      saveandquit = 1;
+	      globset.saveandquit = 1;
 	    }
 	  else if (!strcmp(argv[i],"--pngfile") || !strcmp(argv[i],"-f"))
 	    {
@@ -502,8 +504,8 @@ void args(int argc, char* argv[])
 		  fprintf(stderr, "ERROR: You must supply a file name!\n");
 		  exit(-1);
 		}
-	      savefile = malloc(sizeof(char)*(strlen(argv[i])+1));
-	      strcpy(savefile,argv[i]);
+	      globset.savefile = malloc(sizeof(char)*(strlen(argv[i])+1));
+	      strcpy(globset.savefile,argv[i]);
 	    }
 	  else if (!strcmp(argv[i],"--viewpoint")||!strcmp(argv[i],"-vp"))
 	    {
@@ -513,27 +515,27 @@ void args(int argc, char* argv[])
 		  fprintf(stderr, "ERROR: You must supply the viewpoint (x,y,z)!\n");
 		  exit(-1);
 		}
-	      sscanf(argv[i], "(%lf,%lf,%lf)", &ivpx, &ivpy, &ivpz);
-	      setvp = 1;
+	      sscanf(argv[i], "(%lf,%lf,%lf)", &globset.ivpx, &globset.ivpy, &globset.ivpz);
+	      globset.setvp = 1;
 	    }
 	  else if (!strcmp(argv[i],"--diameter")|| !strcmp(argv[i],"-d"))
 	    {
 	      i++;
-	      setdiameter = 1;
+	      globset.setdiameter = 1;
 	      if (i == argc)
 		{
 		  fprintf(stderr, "ERROR: You must supply the viewpoint (x,y,z)!\n");
 		  exit(-1);
 		}
-	      diameter = atof(argv[i]);
+	      globset.diameter = atof(argv[i]);
 	    }
 	  else if (!strcmp(argv[i],"--nobox")|| !strcmp(argv[i],"-nb"))
 	    {
-	      drawcube = 0;
+	      globset.drawcube = 0;
 	    }
 	  else if (!strcmp(argv[i],"--noinfos")|| !strcmp(argv[i],"-ni"))
 	    {
-	      infos = 0;
+	      globset.infos = 0;
 	    }
 	  else
 	    {
@@ -551,8 +553,8 @@ void args(int argc, char* argv[])
     }
   
       
-  if (savefile == NULL)
-    savefile = "molglimg.png";
+  if (globset.savefile == NULL)
+    globset.savefile = "molglimg.png";
 
   strcpy(inputFile, argv[i]);
 }
@@ -596,7 +598,7 @@ void assignAtom(int nf, int i, int j, const char* L)
       nx[j][i][nf] = atof(s4);
       ny[j][i][nf] = atof(s5);
       nz[j][i][nf] = atof(s6);
-      radius[j][i] = sig[j];
+      radius[j][i] = globset.sig[j];
       greyLvl[j][i] = 0; /*colIdxBW[j];// default value of grey level */
       atcol[j][i]  = -1;
     }
@@ -695,11 +697,18 @@ int getColByName(const char* name)
   exit(-1);
 }
 
-void add_atom(int curat)
-{}
+void add_atom(int cf, int curmol, int curat)
+{
+  mols[cf][curmol].atom = realloc(mols[cf][curmol].atom, sizeof(atom_u)*curat);
+  mols[cf][curmol].atom[curat-1]
+}
 
-void add_mol(int curmol)
-{}
+void add_mol(int cf, int curmol)
+{ 
+  mols[cf] = realloc(mols[cf], sizeof(struct molecules)*curmol);
+  mols[cf][curmol-1].atom = NULL;
+  mols[cf][curmol-1].bond = NULL;
+}
 
 void add_frame(int curframes)
 {
@@ -708,9 +717,8 @@ void add_frame(int curframes)
   globset.NumMols = realloc(globset.NumMols, sizeof(int)*nf);
   globset.NumMols[nf] = 0;
   atomsList = realloc(atomsList, sizeof(GLuint)*nf);
-  mols = realloc(mols, sizeof(struct molecule)*nf);
-  mols.atom = NULL;
-  mols.bond = NULL;
+  mols = realloc(mols, sizeof(struct molecule*)*nf);
+  mols[nf-1] = NULL;
 }
 
 /* =========================== >>> readLine <<< =============================*/
@@ -937,23 +945,32 @@ void loadAtomPos(void)
   /* fake reading to get number of particles etc. */
   while(!feof(ifs))
     {
+#if 0
       fpostmp=ftell(ifs);
+#endif
       readLine(ifs, line);
 
       if (parseLine(line, &nf, &i, 1)) 
 	continue;
-      
+      if (globset.NA && a >= globset.NA) 
+	{
+	  a = 0;
+	  add_mol(i);
+	}
+#if 0  
       if (first)
 	{
 	  first=0;
 	  fpos = fpostmp;  
 	}
+#endif
       /*assignAtom(nf, i, 0, line);*/
       
       /*readLine(ifs, line);*/
       /*assignAtom(nf, i, j, line);*/
       
       ++a;
+      add_atom(i, a);
     }
 
   /*printf("NumMols:%d", NumMols);*/
@@ -972,11 +989,15 @@ void loadAtomPos(void)
      printf("Number of frames: %d\n", frameNo);
   */
   nf = i = 0;
+#if 0
   if (fseek(ifs, fpos, SEEK_SET))
     {
       perror("Error seeking the positions file:");
       exit(-1);
     }
+#else
+  rewind(ifs);
+#endif
   while(!feof(ifs))
     {
       readLine(ifs, line);
@@ -1062,28 +1083,28 @@ void special(int k, int x, int y)
 {
   switch (k) {
   case GLUT_KEY_UP:
-    degx += deginc;
+    globset.degx += globset.deginc;
     //printf("degx: %f\n", degx);
     break;
   case GLUT_KEY_DOWN:
-    degx -= deginc;
+    globset.degx -= globset.deginc;
     //printf("degx: %f\n", degx);
     break;
   case GLUT_KEY_LEFT:
-    degy -= deginc;
+    globset.degy -= globset.deginc;
     //printf("degy: %f\n", degy);
     break;
   case GLUT_KEY_RIGHT:
-    degy += deginc;
+    globset.degy += globset.deginc;
     //printf("degy: %f\n", degy);
     break;
   case GLUT_KEY_PAGE_UP:
   case GLUT_KEY_F1:
-    dist += L / 10.0;
+    globset.dist += globset.L / 10.0;
     break;
   case GLUT_KEY_PAGE_DOWN:
   case GLUT_KEY_F2:
-    dist -= L / 10.0;
+    globset.dist -= globset.L / 10.0;
     break;
 
   default:
@@ -1099,59 +1120,59 @@ void key(unsigned char k, int x, int y)
    switch(k) 
      {
      case '+':
-       if (deginc > 179.0) break;/* Maximu increment is 180.0 degrees */
-       deginc += 1.0; 
+       if (globset.deginc > 179.0) break;/* Maximu increment is 180.0 degrees */
+       globset.deginc += 1.0; 
        //printf("degree increment: %.0f\n", deginc);
        break;
      case '-':
-       if (deginc < 2.0) break; /* Minimum increment is 1.0 degree */
-       deginc -= 1.0;
+       if (globset.deginc < 2.0) break; /* Minimum increment is 1.0 degree */
+       globset.deginc -= 1.0;
        //printf("deg increment: %.0f\n", deginc);
        break;
      case 'a':
-       L += 1.0;
+       globset.L += 1.0;
        //printf("L=%.0f\n", L);
        setproj();
        break;
      case 'z':
-       if (L > 1.0)
-	 L -= 1.0;
+       if (globset.L > 1.0)
+	 globset.L -= 1.0;
        //printf("L=%.0f\n", L);
        setproj();
        break;
      case 'i':
-       deginc = -deginc;
+       globset.deginc = -globset.deginc;
        //printf("deginc inverted %.0f to %.0f\n", -deginc, deginc);
        break;
      case 'r':
-       degx=0.0;
-       degy=0.0;
-       degz=0.0;
+       globset.degx=0.0;
+       globset.degy=0.0;
+       globset.degz=0.0;
        //printf("Reset rotations to (0,0,0)\n");
        break;
      case 27: // escape  
        exit(0);
        break;
      case 'p':
-       infos = !infos;
+       globset.infos = !globset.infos;
        break;
      case 'c':
-       bw = !bw;
+       globset.bw = !globset.bw;
        //printf("bw: %d\n", bw);     
        break;
      case 'f':
-       ++fadeMode;
-       if (fadeMode > 3) fadeMode = 1;
+       ++globset.fadeMode;
+       if (globset.fadeMode > 3) globset.fadeMode = 1;
        break;
      case 'v':
-       axon = !axon;
-       myReshape(Width, Height);
+       globset.axon = !globset.axon;
+       myReshape(globset.Width, globset.Height);
        break;
      case 's':
        /* save the current image here */
        save_image();
-       if (saved_counter < 256000) 
-	 saved_counter++;
+       if (globset.saved_counter < 256000) 
+	 globset.saved_counter++;
      break;
      default: return;
 
@@ -1170,8 +1191,8 @@ int main(int argc, char** argv)
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowPosition(100, 100);
-  glutInitWindowSize(Width,Height);
-  glutCreateWindow("MOLGL by De Michele Cristiano");
+  glutInitWindowSize(globset.Width,globset.Height);
+  glutCreateWindow("MOLGL by Cristiano De Michele (C) 1998-2004");
   myinit();
   loadAtomPos();
   buildAtomsList();
