@@ -974,7 +974,7 @@ void usrInitAft(void)
   const int numk2av = 150;
 #endif
   double sig;
-  int Nm, i, sct;
+  int Nm, i, sct, cc;
   COORD_TYPE invMtot, d, dSq;
   COORD_TYPE vcmx, vcmy, vcmz;
   COORD_TYPE* m, invrcut3, rcut;
@@ -1229,8 +1229,8 @@ void usrInitAft(void)
 	      OprogStatus.rxCMi[i] += m[a] * rx[a][i];
 	      OprogStatus.ryCMi[i] += m[a] * ry[a][i];
 	      OprogStatus.rzCMi[i] += m[a] * rz[a][i]; 
-	      for ( a = 0; a < 3; a++)
-		OprogStatus.DR[i][a] = 0.0;
+	      for ( cc = 0; cc < 3; cc++)
+		OprogStatus.DR[i][cc] = 0.0;
 	    }
 	  OprogStatus.rxCMi[i] /= Mtot;
 	  OprogStatus.ryCMi[i] /= Mtot;
