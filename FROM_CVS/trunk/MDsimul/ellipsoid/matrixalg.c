@@ -164,7 +164,7 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
 	    double (*func)(double [], int, int, double[]), int iA, int iB, double shift[3])
 /*
    Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
-   fold and g[1..n], and a direction p[1..n],  nds a new point x[1..n] along the direction p
+   fold and g[1..n], and a direction p[1..n], finds a new point x[1..n] along the direction p
    from xold where the function func has decreased  "sufficiently".  The new function value is 
    returned in f. stpmax is an input quantity that limits the length of the steps so that 
    you do not try to evaluate the function in regions where it is unde ned or subject 
@@ -298,7 +298,7 @@ extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, 
 extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
 
 extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
-#undef MD_GLOBALNR
+#define MD_GLOBALNR
 #undef MD_GLOBALNR2
 #ifdef MD_GLOBALNR2
 double fmin2(double x[], int iA, int iB, double shift[3]);
@@ -478,6 +478,7 @@ void newt(double x[], int n, int *check,
 #endif
 #endif
        /* ============ */
+       //funcs2beZeroed(n,x,fvec,iA,iB,shift);
        fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
        /* If analytic Jacobian is available, you can 
 	  replace the routine fdjac below with your own routine.*/
@@ -529,7 +530,7 @@ void newt(double x[], int n, int *check,
 	      if (temp > test) 
 		test=temp; 
 	    } 
-	  *check=(test < TOLMIN ? 2 : 0);
+	  *check=(test < TOLMIN ? 1 : 0);
 	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
   	  FREERETURN 
 	} 

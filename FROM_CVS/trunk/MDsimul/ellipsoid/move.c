@@ -723,13 +723,15 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
   for (a=0; a < 3; a++)
     {
-      wx[i] += factor*invIa[0][a]*rACn[a];
-      wx[j] -= factor*invIb[0][a]*rBCn[a];
-      wy[i] += factor*invIa[1][a]*rACn[a];
-      wy[j] -= factor*invIb[1][a]*rBCn[a];
-      wz[i] += factor*invIa[2][a]*rACn[a];
-      wz[j] -= factor*invIb[2][a]*rBCn[a];
+      wx[i] -= factor*invIa[0][a]*rACn[a];
+      wx[j] += factor*invIb[0][a]*rBCn[a];
+      wy[i] -= factor*invIa[1][a]*rACn[a];
+      wy[j] += factor*invIb[1][a]*rBCn[a];
+      wz[i] -= factor*invIa[2][a]*rACn[a];
+      wz[j] += factor*invIb[2][a]*rBCn[a];
     }
+  MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
+		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
 /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
 #if 0
   *W = delpx * rxij + delpy * ryij + delpz * rzij;
@@ -1216,7 +1218,7 @@ void calcFxtFt(double x[3], double **X,
 	 }
      }
 }
-#undef MD_GLOBALNR
+#define MD_GLOBALNR
 #undef MD_GLOBALNR2
 double rA[3], rB[3];
 void fdjacGuess(int n, double x[], double fvec[], double **df, 
@@ -1642,8 +1644,8 @@ void PredictEvent (int na, int nb)
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
-	 b, d, t, tInt, vv, distSq;
-  int et, kk, retcheck;
+	 b, d, t, tInt, vv, distSq, t1, t2, tmp;
+  int et, kk, retcheck, ii;
   double ncong, cong[3], pos[3], vecg[5];
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
@@ -2024,12 +2026,13 @@ no_core_bump:
 			    {
 #if 1
 			      if (distSq >= sigSq)
-				t = - (sqrt (d) + b) / vv;
+				{
+				  t = - (sqrt (d) + b) / vv;
+				}
 			      else
 				{
 				  MD_DEBUG(printf("Centroids overlap!\n"));
 				  t = (sqrt (d) - b) / vv;
-				  t = 0;
 				}
 			      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
 			      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
@@ -2070,11 +2073,31 @@ no_core_bump:
 			      //calcDist(Oparams.time, na, n, shift);
 			      //exit(-1);
 			      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
-			      
+			       
 			      if (retcheck==1)
 				{
-				  printf("[ERROR] newton-raphson failed to converge!\n");
-				  exit(-1);
+				  for (ii=0;ii<100&&(retcheck==1);ii++)
+				    {
+				      double PI=2*acos(0);
+				      MD_DEBUG(printf("t=%.10f dt=%f\n",t, 0.001*2.0*PI/
+					(sqrt(Sqr(wx[na])+Sqr(wy[na])+Sqr(wz[na]))+
+					      sqrt(Sqr(wx[n]) + Sqr(wy[n]) + Sqr(wz[n])))));
+				      t = t + 0.01*2.0*PI/
+					(sqrt(Sqr(wx[na])+Sqr(wy[na])+Sqr(wz[na]))+
+					      sqrt(Sqr(wx[n]) + Sqr(wy[n]) + Sqr(wz[n])));
+				      pos[0] =  rx[na] + vx[na] * (t-atomTime[na]);
+				      pos[1] =  ry[na] + vy[na] * (t-atomTime[na]);
+				      pos[2] =  rz[na] + vz[na] * (t-atomTime[na]);
+				      for (kk=0; kk < 3; kk++)
+					vecg[kk] = pos[kk] - 0.5*cong[kk]*maxax[na<Oparams.parnumA?0:1];
+				      vecg[4] = t;  
+				      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
+				    }
+				  if (retcheck)
+				    {
+				      printf("[ERROR] newton-raphson failed to converge!\n");
+				      continue;
+				    }
 				}
 			      else if (retcheck==2 || 
 				       vecg[4] < Oparams.time)
@@ -2090,6 +2113,9 @@ no_core_bump:
 			      rxC = vecg[0];
 			      ryC = vecg[1];
 			      rzC = vecg[2];
+			      rxC = rxC - L*rint(rxC/L);
+			      ryC = ryC - L*rint(ryC/L);
+			      rzC = rzC - L*rint(rzC/L);
 			      MD_DEBUG(printf("A x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)-B x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)",
 					      rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
 					      rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]));

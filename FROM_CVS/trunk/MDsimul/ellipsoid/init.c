@@ -594,7 +594,7 @@ void wrap_initCoord(void)
   uyz[0] = 0.0;
   uzz[0] = 1.0;
   rx[1] = 1.0;
-  ry[1] = 1.4;
+  ry[1] = 1.75;
   rz[1] = 0;
   vx[1] = -1.0;
   vy[1] = 0;
@@ -633,7 +633,7 @@ void initCoord(void)
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
   angvel(); 
-  wrap_initCoord();
+  //wrap_initCoord();
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
