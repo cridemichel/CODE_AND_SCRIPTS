@@ -2942,7 +2942,7 @@ double calc_norm(double *vec)
 }
 extern int check_point(char* msg, double *p, double *rc, double **XX);
 extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
-
+extern int maxitsRyck;
 double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -3019,6 +3019,10 @@ retry:
 	  //distconjgrad(i, j, shift, vecgcg, 100, 1); 
 	  //distconjgrad(i, j, shift, vecgcg, 10000, 1);
 	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+#if 0
+	  if (maxitsRyck)
+	    printf("distVera=%.15G\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+#endif
 	  for (k1=0; k1 < 3; k1++)
 	    {
 	      rC[k1] = vecgcg[k1];
