@@ -101,7 +101,6 @@ void movea(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
       /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
       for(a=0; a < NA; a++)
 	{
-	  Fx[a][i] = Fy[a][i] = Fz[a][i] = 0;
 	  axia = Fx[a][i] / m[a];
 	  ayia = Fy[a][i] / m[a];
 	  azia = Fz[a][i] / m[a];
