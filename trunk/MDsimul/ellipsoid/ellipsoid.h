@@ -247,6 +247,7 @@ struct progStatus
   double tolSDlong;
   double tolSDconstr;
   double tolSDgrad;
+  double epsdSD;
   /* Accumulator for the radial distribution function */
   int hist[MAXBIN];
   int equilibrated;
@@ -495,6 +496,7 @@ struct pascii opro_ascii[] =
   {"scalevel",     &OS(scalevel),              1,   1, "%d"},
   {"equilibrated", &OS(equilibrated),          1,   1, "%d"},
   {"epsd",         &OS(epsd),                  1,   1, "%.12G"},
+  {"epsdSD",       &OS(epsdSD),                1,   1, "%.12G"},
   {"h",            &OS(h),                     1,   1, "%.15G"},
   {"epsdFast",     &OS(epsdFast),              1,   1, "%.12G"},
   {"epsdFastR",    &OS(epsdFastR),             1,   1, "%.12G"},
@@ -686,6 +688,7 @@ struct singlePar OsinglePar[] = {
   {"endtime",    &OprogStatus.endtime,        CT},
   {"Dt",         &Oparams.Dt,                 CT},
   {"epsd",       &OprogStatus.epsd,           CT},
+  {"epsdSD",     &OprogStatus.epsdSD,         CT},
   {"h",          &OprogStatus.h,              CT},
   {"epsdFast",   &OprogStatus.epsdFast,       CT},
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
