@@ -234,6 +234,7 @@ struct progStatus
   COORD_TYPE rxCMi[MAXPAR]; /* initial coordinates of center of mass */
   COORD_TYPE ryCMi[MAXPAR]; /* MAXPAR is the maximum number of particles */
   COORD_TYPE rzCMi[MAXPAR];
+  double DR[MAXPAR][3];
   int ipart;            /* Particle to follow in its motion inside the box */
   COORD_TYPE Q;
   COORD_TYPE W;
@@ -596,6 +597,7 @@ struct pascii opro_ascii[] =
   {"rxCMi",        OS(rxCMi),          MAXPAR,               1, "%.15G"},
   {"ryCMi",        OS(ryCMi),          MAXPAR,               1, "%.15G"},
   {"rzCMi",        OS(rzCMi),          MAXPAR,               1, "%.15G"},
+/// {"DR",           OS(DR),             MAXPAR,               3, "%.15G"},
 #if 0 
   {"vcmx0",        OS(vcmx0),          MAXPAR,               1, "%.15G"},
   {"vcmy0",        OS(vcmy0),          MAXPAR,               1, "%.15G"},
