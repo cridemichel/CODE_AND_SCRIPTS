@@ -149,9 +149,12 @@ void InvMatrix(double **a, double **b, int NB)
 }
 
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
-#define TOLX 1.0E-8//1.0e-7 /* Convergence criterion on  x.*/ 
+#define TOLX 1.0E-6//1.0e-7 /* Convergence criterion on  x.*/ 
+#define TOLX2 1.E-6
 #define MAXITS 200 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
-#define TOLF 1.0e-5 // 1.0e-4
+#define MAXITS2 200
+#define TOLF 1.0e-4 // 1.0e-4
+#define TOLF2 1.0E-4
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
@@ -275,9 +278,9 @@ void free_matrix(double **M, int n)
   free(M);
 }
 int nn; /* Global variables to communicate with fmin.*/
-double *fvec, *fvecGuess; 
+double *fvec, *fvecG; 
 #define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], x[5], test, its, *check));\
-free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);return;}
+free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);free_vector(fvecG);return;}
 
 void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[3]);
 
@@ -292,12 +295,13 @@ void ludcmp(double **a, int n, int *indx, double *d);
 extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
 
+extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
 
 void newt(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int ii, i,its,j,*indx;
+  int ii, i,its, its2,j,*indx;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
   indx=ivector(n); 
   fjac=matrix(n, n);
@@ -305,6 +309,7 @@ void newt(double x[], int n, int *check,
   p=vector(n); 
   xold=vector(n); 
   fvec=vector(n); 
+  fvecG=vector(n);
   /*Define global variables.*/
   nn=n; 
   nrfuncv=vecfunc; 
@@ -324,22 +329,53 @@ void newt(double x[], int n, int *check,
   for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
       /* Stabilization */
-#if 0
-      for (ii = 0; ii < 5; ii++)
+#if 1
+
+      MD_DEBUG(printf("its=%d time = %.15f\n",its, x[4]));
+      upd2tGuess(iA, iB, shift, x[4]);
+      for (its2=0; its2 <MAXITS2 ; its2++)
 	{
 	  //printf("Guessing\n");
-	  funcs2beZeroedGuess(n-1,x,fvec,iA,iB,shift);
-	  fdjacGuess(n-1,x,fvec,fjac,funcs2beZeroedGuess, iA, iB, shift);
+	  //funcs2beZeroedGuess(n-1,x,fvecG,iA,iB,shift);
+	  fdjacFD(n-1,x,fvec,fjac,funcs2beZeroedGuess, iA, iB, shift); 
+	  test=0.0; /* Test for convergence on function values.*/
+	  for (i=0;i<n-1;i++) 
+	      test +=fabs(fvec[i]); 
+	  if (test < TOLF2)
+	    {
+	      MD_DEBUG(printf("GUESS test < TOLF\n"));
+	      break;
+	    }
+	  for (i=0;i<n-1;i++) 
+	    p[i] = -fvec[i]; /* Right-hand side for linear equations.*/
 	  ludcmp(fjac,n-1,indx,&d); /* Solve linear equations by LU decomposition.*/
 	  lubksb(fjac,n-1,indx,p);
-	  for (i=0; i < n-1; i++)
-	    x[i] = p[i];	
+	  test=0.0; /* Test for convergence on function values.*/
+	  for (i=0;i<n-1;i++) 
+	    { 
+	      test += fabs(p[i]);
+	      x[i] += p[i];
+	    }
+	  //MD_DEBUG(printf("iA: %d iB: %d test: %.15f\n",iA, iB,  test));
+	  MD_DEBUG(printf("GUESSx = (%.15f, %.15f, %.15f, %.15f\n", x[0], x[1], x[2], x[3]));
+	  if (test < TOLX2) 
+	    { 
+	      MD_DEBUG(printf("GUESS test < TOLF\n"));
+	      break;
+	    }	
+	}
+      if (its2 == MAXITS2)
+	{
+	  *check = 2;
+	  MD_DEBUG(printf("MAXITS2!!\n"));
+	  FREERETURN;
 	}
 #endif
       /* ============ */
       fdjacFD(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
       /* If analytic Jacobian is available, you can 
 	 replace the routine fdjac below with your own routine.*/
+#if 0
       for (i=0;i<n;i++) { /* Compute  f for the line search.*/
 	for (sum=0.0,j=0;j<n;j++)
 	  sum += fjac[j][i]*fvec[j]; 
@@ -348,12 +384,25 @@ void newt(double x[], int n, int *check,
       for (i=0;i<n;i++) 
 	xold[i]=x[i]; /* Store x,*/ 
       fold=f; /* and f. */
+#endif
+      test=0.0; /* Test for convergence on function values.*/
+      for (i=0;i<n;i++) 
+	test +=fabs(fvec[i]); 
+      if (test < TOLF)
+	{
+	  *check = 0;
+	  MD_DEBUG(printf(" test < TOLF\n"));
+	  break;
+	}
+      
       for (i=0;i<n;i++) 
 	p[i] = -fvec[i]; /* Right-hand side for linear equations.*/
       ludcmp(fjac,n,indx,&d); /* Solve linear equations by LU decomposition.*/
       lubksb(fjac,n,indx,p);
-      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift); 
+      //lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift); 
+      
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
+#if 0
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	if (fabs(fvec[i]) > test) 
@@ -363,7 +412,21 @@ void newt(double x[], int n, int *check,
 	  *check=0; 
 	  MD_DEBUG(printf("test < TOLF\n"));
 	  FREERETURN
-	} 
+	}
+#endif
+      for (i=0;i<n;i++) 
+	{ 
+      	  test += fabs(p[i]);
+	  x[i] += p[i];
+	}
+      MD_DEBUG(printf("test = %.15f GUESSx = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
+      //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
+      if (test < TOLX) 
+	{ 
+	  *check = 0;
+	  MD_DEBUG(printf("test < TOLX\n"));
+	  break;
+	}	
 #if 0
       if (*check) 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
@@ -393,6 +456,8 @@ void newt(double x[], int n, int *check,
 	  FREERETURN;
 	}
 #endif
+#endif
+#if 0
       if (*check==2)
 	{
 	  MD_DEBUG(printf("spurious convergence\n"));
@@ -407,7 +472,7 @@ void newt(double x[], int n, int *check,
   
 }
 
-#define EPS 1.0e-7//1.0E-4 /* Approximate square root of the machine precision.*/
+#define EPS 3.0e-8//1.0E-4 /* Approximate square root of the machine precision.*/
 void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 { int i,j; 
   double h,temp,*f; 

@@ -1388,15 +1388,13 @@ void fdjac(int n, double x[], double fvec[], double **df,
  df[4][4] = Gt;
 }
 #endif
-void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double shift[3])
+double rA[3], rB[3];
+void upd2tGuess(int i, int j, double shift[3], double tGuess)
 {
-  int na, k1, k2; 
-  double  rA[3], rB[3], ti;
-  double fx[3], gx[3];
+  double ti;
+  int na;
   double Omega[3][3];
-  /* x = (r, alpha, t) */ 
-  
-  ti = x[4] - atomTime[i];
+  ti = tGuess - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
@@ -1405,21 +1403,26 @@ void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double 
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
-  ti = x[4] - atomTime[j];
+  ti = tGuess - atomTime[j];
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
   UpdateOrient(j, ti, Rt, Omega);
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
-#if 0
+
+}
+void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double shift[3])
+{
+  int na, k1, k2; 
+  double fx[3], gx[3], tmp;
+  /* x = (r, alpha, t) */ 
+ #if 0
   printf("Xa=\n");
   print_matrix(Xa, 3);
   printf("Xb=\n");
   print_matrix(Xb, 3);
 #endif
-  
-  
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
@@ -1435,11 +1438,6 @@ void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double 
 
    for (k1 = 0; k1 < 3; k1++)
     {
-#if 0
-      fvec[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	fvec[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]) + 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
-#endif
       fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
     }
 #if 0
@@ -1451,22 +1449,13 @@ void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double 
 	 fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
 #endif
   fvec[3] = 0.0;
-  fvec[4] = 0.0;
+  tmp = 0;
   for (k1 = 0; k1 < 3; k1++)
     {
-#if 0
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  fvec[3] += (x[k1]-rA[k1])*Xa[k1][k2]*(x[k2]-rA[k2]);
-	  fvec[4] += (x[k1]-rB[k1])*Xb[k1][k2]*(x[k2]-rB[k2]);
-	}
-#endif
-#if 1
       fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      fvec[4] += (x[k1]-rB[k1])*gx[k1];
-#endif
+      tmp += (x[k1]-rB[k1])*gx[k1];
     }
-  fvec[3] = 0.5*fvec[3]-1.0 - (0.5*fvec[4]-1.0);
+  fvec[3] = 0.5*fvec[3]-1.0 - (0.5*tmp-1.0);
 }
 void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
@@ -1625,10 +1614,12 @@ double calcDist(double t, int i, int j, double shift[3])
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 
+#if 0
   for (k1 = 0; k1 < 3; k1++)
     {
       rAB[k1] = rA[k1] - rB[k1];
     }
+#endif
   vecg[0] -= 0.01;
   vecg[3] += 0.01;
   vecg[6] = 1;
@@ -2025,7 +2016,7 @@ no_core_bump:
 #endif
     			  if (d >= 0.) 
 			    {
-#if 0
+#if 1
 			      if (distSq >= sigSq)
 				t = - (sqrt (d) + b) / vv;
 			      else
@@ -2071,9 +2062,9 @@ no_core_bump:
 			      MD_DEBUG(printf("vecguess: %f,%f,%f alpha=%f t=%f\n", vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
 #endif
 
-			      calcDist(Oparams.time, na, n, shift);
-			      exit(-1);
-			      //newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
+			      //calcDist(Oparams.time, na, n, shift);
+			      //exit(-1);
+			      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
 			      
 			      if (retcheck==1)
 				{
