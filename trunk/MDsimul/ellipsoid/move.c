@@ -181,8 +181,9 @@ void calcKVz(void)
   K += dd;
 }
 #endif
-double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-     		double *vecgsup, int calcguess);
+double 
+calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
+	    double *vecgsup, int calcguess);
 
 
 double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
@@ -2855,7 +2856,7 @@ double calc_norm(double *vec)
 double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
-  double vecg[8], rC[3], rD[3], rDC[3], r12[3], fx[3];
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], fx[3], vecgcg[6];
   double ti, segno;
   int retcheck;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
@@ -2897,6 +2898,28 @@ retry:
     {
       calc_intersec(rB, rA, Xa, rC);
       calc_intersec(rA, rB, Xb, rD);
+      for (k1=0; k1 < 3; k1++)
+	{
+	  vecgcg[k1] = rC[k1];
+	  vecgcg[k1+3] = rD[k1];
+	}
+      //for(k1=0; k1 < 3; k1++)
+	//r12[k1] = rC[k1]-rD[k1]; 
+      //printf("PRIMA dist=%.15f\n",calc_norm(r12));
+      distconjgrad(i, j, shift, vecgcg); 
+      for (k1=0; k1 < 3; k1++)
+	{
+	  rC[k1] = vecgcg[k1];
+	}	  
+#ifndef MD_DIST5
+      for (k1=0; k1 < 3; k1++)
+	{
+	  rD[k1+3] = vecgcg[k1+3];
+	}	
+#endif
+      for(k1=0; k1 < 3; k1++)
+	r12[k1] = rC[k1]-rD[k1]; 
+      //printf("dist=%.15f\n",calc_norm(r12));
       MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
       calc_grad(rC, rA, Xa, gradf);
@@ -2932,11 +2955,6 @@ retry:
   MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
 #ifdef MD_DIST5
   newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift); 
-#elif defined MD_DISTCG
-  retcheck = 0;
-  vecg[6]=10000.0;
-  vecg[7]=10000.0;
-  distconjgrad(i, j, shift, vecg); 
 #else
   newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift); 
 #endif
@@ -3009,9 +3027,8 @@ retry:
 #endif
 #endif
 #if 1
-  printf("dist=%.15f\n",calc_norm(r12));
-  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
-  exit(-1);
+  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+  //exit(-1);
   if (segno > 0)
     return calc_norm(r12);
   else

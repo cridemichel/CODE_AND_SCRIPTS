@@ -239,7 +239,8 @@ struct progStatus
   COORD_TYPE PxyArr[5];
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
-  
+  double lambda1;
+  double lambda2;
   /* Accumulator for the radial distribution function */
   int hist[MAXBIN];
   int equilibrated;
@@ -669,6 +670,8 @@ struct singlePar OsinglePar[] = {
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
   {"forceguess", &OprogStatus.forceguess,     INT},
+  {"lambda1",    &OprogStatus.lambda1,        CT},
+  {"lambda2",    &OprogStatus.lambda2,        CT},
   {"zbrakn",     &OprogStatus.zbrakn,         INT},
   {"zbrentTol",  &OprogStatus.zbrentTol,      CT},
   {"scalfact",   &OprogStatus.scalfact,       CT},

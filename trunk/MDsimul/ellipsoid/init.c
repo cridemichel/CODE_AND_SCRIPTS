@@ -691,7 +691,7 @@ void initCoord(void)
 #endif
     }
 #endif
-  wrap_initCoord();
+  //wrap_initCoord();
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
@@ -773,6 +773,8 @@ void usrInitBef(void)
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
     OprogStatus.epsdMax = 0.001;
+    OprogStatus.lambda1 = 1000;
+    OprogStatus.lambda2 = 1000;
     OprogStatus.zbrakn = 100;
     OprogStatus.zbrentTol = 0.00001;
     OprogStatus.forceguess = 1;
