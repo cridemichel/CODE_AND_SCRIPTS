@@ -4592,7 +4592,7 @@ no_core_bump:
 #endif		      
 #endif
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
-		      continue;
+		      //continue;
 		      //exit(-1);
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 		      	continue;
@@ -5339,7 +5339,7 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 1
+#if 0
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
