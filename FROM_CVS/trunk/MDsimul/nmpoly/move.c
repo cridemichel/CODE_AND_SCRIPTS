@@ -2471,7 +2471,7 @@ void move(void)
   if (OprogStatus.Nose==1)
     checkNebrRebuildNPT();
   else
-    checkNebrRebuildNPT();
+    checkNebrRebuild();
   if ( (OprogStatus.Nose == 1) || (OprogStatus.Nose == 2))
     {
       /*scalCor(Oparams.parnum);*/
