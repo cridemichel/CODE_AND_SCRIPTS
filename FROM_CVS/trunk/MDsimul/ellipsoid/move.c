@@ -1045,13 +1045,13 @@ UpdateOrient(int i, double ti, double *uxxn, double *uxyt, double *uxzt,
 #ifndef MD_APPROX_JACOB
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
-void calcFxt(double x[3], double X[3][3],
-	     double D[3][3], double Omega[3][3], double R[3][3], 
-	     double pos[3], double vel[3],
-	     double Fxt[3])
+void calcFxtFt(double x[3], double X[3][3],
+	       double D[3][3], double Omega[3][3], double R[3][3], 
+	       double pos[3], double vel[3],
+	       double Fxt[3], double *Ft)
 {
   double tOmegaD[3][3], DOmega[3][3];
-  double sumDOmega[3][3], Mtmp[3][3], DtX[3][3];
+  double sumDOmega[3][3], Mtmp[3][3], DtX[3][3], dx[3];
   int k1, k2, k3;
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -1107,6 +1107,16 @@ void calcFxt(double x[3], double X[3][3],
        for (k2 = 0; k2 < 3; k2++)
 	 Fxt[k1] += 2.0*DtX[k1][k2]*(x[k2]-pos[k2]) - 2.0*Sqr(x[3])*X[k1][k2]*vel[k2]; 
      } 
+   *Ft = 0;
+   for (k1 = 0; k1 < 3; k1++)
+     dx[k1] = x[k1]-pos[k1];
+   for (k1 = 0; k1 < 3; k1++)
+     {
+       for (k2 = 0; k2 < 3; k2++)
+	 {
+	   *Ft += -vel[k1]*X[k1][k2]*dx[k2]+dx[k1]*DtX[k1][k2]*dx[k2]-dx[k1]*X[k1][k2]*vel[k2];
+	 }
+     }
 }
 /* funzione che calcola lo Jacobiano */
 void fdjac(int n, double x[], double fvec[], double **df, 
@@ -1116,7 +1126,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
   double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
   double DA[3][3], DB[3][3], RA[3][3], RB[3][3];
   double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
-  double Fxt[3][3], Gxt[3][3];
+  double Fxt[3][3], Gxt[3][3], Ft, Gt;
   int k1, k2, k3;
   ti = x[4] - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
@@ -1194,16 +1204,16 @@ void fdjac(int n, double x[], double fvec[], double **df,
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
-  calcFxt(x, Xa, DA, OmegaA, RA, rA, vA, Fxt);
-  calcFxt(x, Xb, DB, OmegaB, RB, rB, vB, Gxt);
-
+  calcFxt(x, Xa, DA, OmegaA, RA, rA, vA, Fxt, &Ft);
+  calcFxt(x, Xb, DB, OmegaB, RB, rB, vB, Gxt, &Gt);
   for (k1 = 0; k1 < 3; k1++)
     {
       df[k1][4] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	df[k1][4] += Fxt[k1]+Sqr(x[3])*Gxt[k1]; 
     } 
-
+ df[3][4] = Ft;
+ df[4][4] = Gt;
 
 }
 #endif
