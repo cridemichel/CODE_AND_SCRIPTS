@@ -120,7 +120,7 @@ double calcpotene(void)
     }
 #else
  for (na = 0; na < Oparams.parnum; na++)
-    Epot -= numbonds[na];
+    Epot -= Oparams.bheight*numbonds[na];
 #endif
  return 0.5*Epot;
 }
@@ -256,6 +256,7 @@ void temperat(void)
      This the calculation of the instantaneous temperature */
   int i;
   double m;
+#if 0
   K = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
     {
@@ -266,11 +267,13 @@ void temperat(void)
       K += Oparams.m[1]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
     }
   K *= 0.5;
-  
   if (OprogStatus.brownian==1)
     temp = 2.0 * K / (3.0 * Oparams.parnum);
   else
     temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
+#endif
+  calc_energy(NULL);
+  temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
 
   if (OprogStatus.avngTemp == 1)
     {

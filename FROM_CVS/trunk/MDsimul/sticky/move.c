@@ -892,12 +892,12 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3], r12[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
-  double denom, rCx, rCy, rCz, nrAB, Dr;
+  double denom, rCx, rCy, rCz, nrAB, Dr, V, Eold, E, Vold, Kold;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
 #endif
   //double shift[3];
-  int na, a, kk;
+  int na, a, kk, oldbond=-1;
 #if 1
   if (i < Oparams.parnumA && j < Oparams.parnumA)
     {
@@ -952,11 +952,12 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   for (kk = 0; kk < 3; kk++)
     rAB[kk] = ratA[kk] - ratB[kk];
   /* reduce to minimum image rAB[]!! */
-#if 0
+#if 1
   calc_energy(NULL); 
-  V = calcpotene();
-  E = K + V;
-  printf("E PRIMA= %.15f\n", E);
+  Kold = K;
+  Vold = calcpotene();
+  Eold = K + Vold;
+  //printf("E PRIMA= %.15f\n", E);
 #endif
   nrAB = calc_norm(rAB);
   MD_DEBUG(printf("sigmaSticky= %.15G norm rAB: %.15G\n", Oparams.sigmaSticky, calc_norm(rAB)));
@@ -994,17 +995,17 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   rCx = ratA[0] - rAB[0]*Oparams.sigmaSticky*0.5;
   rCy = ratA[1] - rAB[1]*Oparams.sigmaSticky*0.5;
   rCz = ratA[2] - rAB[2]*Oparams.sigmaSticky*0.5;
-  rAC[0] = rA[i] - rCx;
-  rAC[1] = rA[i] - rCy;
-  rAC[2] = rA[i] - rCz;
+  rAC[0] = rA[0] - rCx;
+  rAC[1] = rA[1] - rCy;
+  rAC[2] = rA[2] - rCz;
 #if 0
   for (a=0; a < 3; a++)
     if (fabs (rAC[a]) > L2)
       rAC[a] -= SignR(L, rAC[a]);
 #endif
-  rBC[0] = rB[j] - rCx;
-  rBC[1] = rB[j] - rCy;
-  rBC[2] = rB[j] - rCz;
+  rBC[0] = rB[0] - rCx;
+  rBC[1] = rB[1] - rCy;
+  rBC[2] = rB[2] - rCz;
 #if 0
   for (a=0; a < 3; a++)
     {
@@ -1134,7 +1135,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   /* SQUARE WELL: modify here */
   //factor =2.0*vc/denom;
   /* NOTA + o -????*/
-  mredl = 1 / denom;
+  mredl = 1.0 / denom;
   switch (bt)
     {
       /* N.B.
@@ -1153,7 +1154,9 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       else
 	{
 	  factor = -vc + sqrt(Sqr(vc) - 2.0*Oparams.bheight/mredl);
+	  oldbond = bound(i, j, ata, atb);
 	  remove_bond(i, j, ata, atb);
+	  printf("ata: %d atb: %d V-Vold: %f\n", ata, atb, calcpotene()-Vold);
 	  remove_bond(j, i, atb, ata);
 	}
       factor *= mredl;
@@ -1219,11 +1222,37 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
-#if 0
+#if 1
   calc_energy(NULL); 
   V = calcpotene();
   E = K + V;
-  printf("E DOPO= %.15f\n", E);
+  //printf("E DOPO= %.15f\n", E);
+  if (fabs(E-Eold) > 1E-3)
+    {
+      printf("K-Kold: %f\n", K-Kold);
+      printf("V-Vold: %f\n", V-Vold);
+      printf("rC-ratA: %f\n", sqrt(Sqr(ratA[0]-rCx)+Sqr(ratA[1]-rCy)+Sqr(ratA[2]-rCz)));
+      printf("rC-rA: %f\n",   sqrt(Sqr(rA[0]-rCx)+Sqr(rA[1]-rCy)+Sqr(rA[2]-rCz)));
+      for (kk=0; kk < 3; kk++)
+	r12[kk] = rA[kk]-rB[kk];
+      printf("rAC: %f rBC=%f\n", calc_norm(rAC), calc_norm(rBC));
+      printf("rAB: %f\n", calc_norm(rAB));
+      printf("factor=%.15f\n", factor);
+      printf("distance (%d,%d)-(%d,%d): %.15G sigma+sigsticky=%.15G between oxygens molecules is wrong!\n", 
+	     i, ata, j, atb, calc_norm(r12), Oparams.sigma[0][0]+Oparams.sigmaSticky);
+      for (kk=0; kk < 3; kk++)
+	r12[kk] = ratA[kk]-rA[kk];
+      printf("dist atA-A:%.15G\n", calc_norm(r12));
+      for (kk=0; kk < 3; kk++)
+	r12[kk] = ratB[kk]-rB[kk];
+      printf("dist atB-B:%.15G\n", calc_norm(r12));
+      for (kk=0; kk < 3; kk++)
+	r12[kk] = ratA[kk]-ratB[kk];
+      printf("dist atA-atB:%.15G\n", calc_norm(r12));
+      printf("E-Eold= %.15G bt=%d\n", E-Eold,  bt);
+      printf("bound:%d oldbond:%d\n", bound(i, j, ata, atb), oldbond);
+      exit(-1);
+    }
 #endif
 
   /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
@@ -1475,6 +1504,8 @@ void remove_bond(int na, int n, int a, int b)
     }
   if (nb==numbonds[na])
     printf("nessun bond rimosso fra %d,%d\n", n, na);
+  if (abs(nb - numbonds)==2)
+    printf("rimossi due bond boh...\n")
 }
 
 void add_bond(int na, int n, int a, int b)
@@ -2670,8 +2701,8 @@ void PredictEvent (int na, int nb)
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], 
-	 b, d, t, tInt, vv, distSq, t1, t2, evtime;
-  int overlap, ac, bc;
+	 b, d, t, tInt, vv, distSq, t1, t2, evtime, evtimeHC;
+  int overlap, ac, bc, acHC, bcHC, collCodeOld;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
   int collCode;
@@ -2910,8 +2941,10 @@ void PredictEvent (int na, int nb)
 			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
 			    } 
 			}
-		      ac = 0; 
-		      bc = 0;
+		      collCodeOld = collCode;
+		      evtimeHC = evtime;
+		      acHC = ac = 0; 
+		      acHC = bc = 0;
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
@@ -2924,6 +2957,15 @@ void PredictEvent (int na, int nb)
 #else
 		      if (collCode == MD_EVENT_NONE)
 			continue;
+#endif
+#if 0
+		      if (collCode!=MD_CORE_BARRIER && collCodeOld==MD_CORE_BARRIER &&
+			  fabs(evtime - evtimeHC)<1E-5)
+			{
+			  ac = bc = 0;
+			  evtime = evtimeHC;
+			  collCode = collCodeOld;
+			}
 #endif
 		      MD_DEBUG(printf("A x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)-B x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)",
 				      rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
