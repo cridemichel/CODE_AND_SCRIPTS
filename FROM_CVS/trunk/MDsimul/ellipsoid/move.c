@@ -3031,9 +3031,21 @@ retry:
 #endif
 	}
 #if 0
-      for(k1=0; k1 < 3; k1++)
-	r12[k1] = rC[k1]-rD[k1]; 
-      printf("dist=%.15f\n",calc_norm(r12));
+	{
+	  double dist, distVera;
+	  for(k1=0; k1 < 3; k1++)
+	    r12[k1] = rC[k1]-rD[k1]; 
+	  dist = calc_norm(r12);
+	  if (dist>0)
+	    {
+	      distVera= calcDist(t, i, j, shift, r1, r2, alpha, vecgcg, 1);
+	      if (fabs((dist-distVera)/distVera)> 0.1 )
+		printf("dist: %.15G distVera: %.15G\n", dist,distVera);
+	    }
+	  else 
+	    printf("dist: %.15G\n", dist);
+	      //printf("dist=%.15f\n",calc_norm(r12));
+	}
 #endif
       //exit(-1);
       MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
