@@ -512,11 +512,11 @@ int chkBakAsciiSteps(void)
 /* =========================== >>> chkXvaStep <<< ========================== */
 int chkXvaSteps(void)
 {
-  double base; 
+  double base, logblockbase; 
 #ifdef MDLLINT
-  long long int cslb, oldfstps, retval;// *timeout; 
+  long long int cslb, oldfstps, retval, oldlogblock;// *timeout; 
 #else
-  int cslb, oldfstps, retval;// *timeout; 
+  int cslb, oldfstps, retval, oldlogblock;// *timeout; 
 #endif
   base = OprogStatus.base;
   //timeout = &OprogStatus.timeout;

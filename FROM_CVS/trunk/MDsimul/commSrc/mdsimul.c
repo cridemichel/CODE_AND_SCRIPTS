@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.1.1.1 2004-02-28 10:53:55 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.2 2004-05-14 23:22:27 demichel Exp $     */
 #ifndef lint
-static char vcid[] = "$Id: mdsimul.c,v 1.1.1.1 2004-02-28 10:53:55 demichel Exp $";
+static char vcid[] = "$Id: mdsimul.c,v 1.2 2004-05-14 23:22:27 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -290,6 +290,60 @@ void commMD(void)
 	"Simulation successfully terminated",
 	NULL);
 } /* <------------------------------------------------------- END FATHER */
+#ifdef MD_BILOG
+int *bilog_arr;
+int compare_int(const void *a, const void *b)
+{
+  int n1, n2;
+  n1 = *((int*)a);
+  n2 = *((int*)b);
+  if (n1 < n2)
+    return -1;
+  else if (n1 == n2)
+    return 0;
+  else
+    return 1;
+}
+void build_bilog_arr(void)
+{
+  double fstpsw=1.0, fstps=1.0;
+  const int maxpts = 10000; 
+  int exist, end=0, npts, i; 
+  bilog_arr = malloc(sizeof(int)*maxpts);
+  npts = 0;
+  while (!end)
+    {
+      while (!end)
+	{
+	  exist = 0;
+	  for (i=0; i < npts; i++)
+	    {
+	      if (bilog_arr[i]==(int)fstps) 
+		{
+		  exist = 1;
+		  break;
+		}
+	    }
+	  if (!exist)
+	    {
+	      bilog_arr[npts] = (int) fstps;
+	      npts++;
+	    }
+	  fstps = fstpsw + fstps * OprogStatus.base;
+	  if (npts == maxpts)
+	    end=1;
+	}
+      fstpsw = fstpsw * OprogStatus.basew;
+    }
+  qsort((void*)bilog_arr, npts, npts*sizeof(int), compare_int);
+
+  for (i=0; i < npts; i++)
+    {
+      printf("bilog_arr[%d]=%d\n", i, bilog_arr[i]);
+    }
+  exit(-1);
+}
+#endif
 /* =============================== >>> MAIN <<< ============================*/
 void main(int argc, char *argv[])
 {
@@ -365,7 +419,9 @@ void main(int argc, char *argv[])
       ++Oparams.curStep;
     }       
   usrInitAft(); /* user initialization */
-  
+#ifdef MD_BILOG
+  build_bilog_arr();
+#endif  
   delTmpHD(CF); /* Delete the check file */
   
   ENDSIM = 0;
