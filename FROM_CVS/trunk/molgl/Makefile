@@ -5,7 +5,7 @@ molgl: molgl.o #mglgui.o
 	gcc   -lpng -O2  -o molgl molgl.o $(MGL_LIBS) 
 
 molgl.o: molgl.c
-	gcc -O2 -c -Wall $(MGL_INCLUDE) -o molgl.o molgl.c
+	gcc -g -O2 -c -Wall $(MGL_INCLUDE) -o molgl.o molgl.c
 
 #mglgui.o : mglgui.C mglgui.H
 #	g++ -c -Wall $(MGL_INCLUDE) -o mglgui.o mglgui.C
