@@ -100,7 +100,7 @@ void nrerror(char *msg)
 double xicom[6], pcom[6], xi[6], G[6], H[6], grad[6];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
 int cghalfspring, icg, jcg, minaxicg, minaxjcg;
-double shiftcg[3], lambdacg;
+double shiftcg[3], lambdacg, cgstep;
 double gradfG[3], gradgG[3], dxG[6];
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3];
 /* ============================ >>> brent <<< ============================ */
@@ -670,12 +670,10 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 	  its++;
 	  continue;
 	}	
-      s1 = (-B + sqrt(Delta))/(2.0*A);
-      s2 = (-B - sqrt(Delta))/(2.0*A);
-      if (fabs(s1) < fabs(s2)) 
-	sol = s1;
+      if (B<=0)
+	sol = (-B - sqrt(Delta))/(2.0*A);
       else
-	sol = s2;
+	sol = (-B + sqrt(Delta))/(2.0*A);
       done = 1;
     }
  
@@ -733,7 +731,7 @@ void projectgrad(double *p, double *xi, double *gradf, double *gradg)
   projonto(p, xi, rA, Xa, gradf);
   projonto(&p[3], &xi[3], rB, Xb, gradg);
 }
-long long int itsfrprmn=0, callsfrprmn=0;
+long long int itsfrprmn=0, callsfrprmn=0,callsok=0;
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double []))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -752,11 +750,10 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   //fp=(*func)(p); 
   /*Initializations.*/
   fp = (*dfunc)(p,xi,gradfG,gradgG); 
-  projectgrad(p,xi,gradfG,gradgG);  
   //printf("g=%f %f %f %f %f %f\n", g[0], g[1], g[2], g[3], g[4], g[5]);
+  projectgrad(p,xi,gradfG,gradgG);  
   for (its=1;its<=ITMAXFR;its++)
     { 
-      /* Loop over iterations.*/
       *iter=its;
 #if 0
       printf("prima xi=%.15G %.15G %.15G %.15G %.15G %.15G\n", xi[0],xi[1],xi[2],xi[3],xi[4],xi[5]);
@@ -801,6 +798,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 #endif
 #if 1
        projectgrad(p, xi, gradfG, gradgG);
+       
        normxi=0.0;
        for (kk = 0; kk < 6; kk++)
 	 {
@@ -808,13 +806,14 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	 }
        //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
 	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
-              
-       if ( (0 && fp < Sqr(OprogStatus.epsd)) ||  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR) || ( 0 && sqrt(normxi) < (fp+EPSFR)*ftol) )
+       itsfrprmn++;      
+       if ( (1 && fp < Sqr(OprogStatus.epsd)) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 0 && sqrt(normxi) < (fp+EPSFR)*ftol) )
 	 {
-	   itsfrprmn++;
+	   callsok++;
 	   return;
 	 }
 #if 0
+      
        if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
 	 { 
 	   //linminConstr(p,xi,n,fret,func); /* Next statement is the normal return: */
@@ -1045,8 +1044,8 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     //A*=1/OprogStatus.epsd;
   for (kk=0; kk < 3; kk++)
     {
-      grad[kk]= 2.0*(vec[kk+3]-vec[kk])*A;
-      grad[kk+3]= -2.0*(vec[kk+3]-vec[kk])*A;
+      grad[kk]= 2.0*dd[kk]*A;
+      grad[kk+3]= -grad[kk];
     }
   nf = calc_norm(fx);
   ng = calc_norm(gx);
@@ -1076,7 +1075,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     }
   normg=sqrt(normg);
 #endif
-  fact = OprogStatus.stepSD;
+  fact = cgstep;
   //fact = OprogStatus.stepSD/(normdd+OprogStatus.epsd);
   //fact = OprogStatus.stepSD*normdd;
   for (kk=0; kk < 6; kk++)
@@ -1150,6 +1149,7 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
 
   lambdacg = lambda;
   cghalfspring = halfspring;
+  cgstep = OprogStatus.stepSD;
   for (kk=0; kk < 3; kk++)
     {
       shiftcg[kk] = shift[kk];

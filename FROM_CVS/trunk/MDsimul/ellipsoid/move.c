@@ -30,7 +30,7 @@ extern int SolveLineq (double **a, double *x, int n);
 int calcdist_retcheck;
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
-extern long long int itsfrprmn, callsfrprmn;
+extern long long int itsfrprmn, callsfrprmn, callsok;
 void print_matrix(double **M, int n)
 {
   int k1, k2;
@@ -657,7 +657,10 @@ void outputSummary(void)
   if (timesF>0)
     printf("Average iterations in search_contact_faster: %.6G\n",  ((double)itsF)/timesF);
   if (callsfrprmn>0)
-    printf("percentage of convergence in frprmn: %.6G\%\n", ((double) itsfrprmn)*100.0/callsfrprmn);
+    {
+      printf("percentage of convergence in frprmn: %.6G\%\n", ((double) callsok)*100.0/callsfrprmn);
+      printf("avg its in frprmn: %.10G\n", ((double) itsfrprmn)/callsfrprmn);
+    }
   printf("Number of collisions: %lld\n", numcoll);
   
   scale_Phi();
@@ -2873,7 +2876,7 @@ void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
       rI[k1] = rA[k1] + tt*rBA[k1];  
     }
 }
-#define MD_ELLGRID
+#undef MD_ELLGRID
 void guess_dist(int i, int j, 
 		double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
 		double **RA, double **RB)
@@ -2910,8 +2913,8 @@ void guess_dist(int i, int j,
       dB[k1] = rB[k1];
       for (n=0; n < 3;n++)
 	{
-	  dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]; 
-	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n];
+	  dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
 	}
     }
   calc_intersec(dA, rA, Xa, rC);
@@ -2995,6 +2998,9 @@ retry:
       calc_intersec(rA, rB, Xb, rD);
 #endif
 #if 1
+      for(k1=0; k1 < 3; k1++)
+	r12[k1] = rC[k1]-rD[k1]; 
+
       if (OprogStatus.springkSD>0 && OprogStatus.stepSD>0)
 	{
 	  for (k1=0; k1 < 3; k1++)
