@@ -20,7 +20,7 @@
 #define ADJUST_LASTCOL AdjustLastcol();
 #endif
 #define MD_HOME "/home/demichel/"
-#define MD_SIMDAT MD_HOME "/simdat2"
+#define MD_SIMDAT MD_HOME "/simdat"
 #define MD_HD_TMP MD_SIMDAT "/mdtmp/"
 /* directory to store temporary files */ 
 
@@ -288,6 +288,8 @@ struct progStatus
   double epsdFastR;
   double epsdMax;
   double targetPhi;
+  double scalfact;
+  double reducefact;
 #ifdef MD_GRAVITY
   double taptau;
   int tapampl;
@@ -478,6 +480,8 @@ struct pascii opro_ascii[] =
   {"epsdFast",     &OS(epsdFast),              1,   1, ".12G"},
   {"epsdFastR",    &OS(epsdFastR),             1,   1, ".12G"},
   {"epsdMax",      &OS(epsdMax),               1,   1, ".12G"},
+  {"scalfact",     &OS(scalfact),              1,   1, ".12G"},
+  {"reducefact",   &OS(reducefact),            1,   1, ".12G"},
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
   {"endtime",      &OS(endtime),                    1,  1,    "%.15G"},
   {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
@@ -652,6 +656,8 @@ struct singlePar OsinglePar[] = {
   {"epsdFast",   &OprogStatus.epsdFast,       CT},
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
+  {"scalfact",   &OprogStatus.scalfact,       CT},
+  {"reducefact", &OprogStatus.reducefact,     CT},
 #ifdef MD_GRAVITY
   {"taptau",     &OprogStatus.taptau,         CT},
   {"quenchtol",  &OprogStatus.quenchtol,      CT},
