@@ -490,9 +490,11 @@ struct pascii opro_ascii[] =
   {"CMreset",      &OS(CMreset),                    1,   1,  "%d"},
 #ifdef MD_NNL
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
+#ifdef MD_NNL
   {"rNebrShell",   &OS(rNebrShell),                 1,   1, "%.6G"},
 #endif
   {"tolT",         &OS(tolT),                       1,   1, "%.8G"},
+#endif
 #ifdef MD_GRAVITY
   {"tc",           &OS(tc),                          1,              1, "%.15G"},
   {"quenchtol",    &OS(quenchtol),                  1,   1, "%.10G"},
