@@ -240,8 +240,13 @@ void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut)
 		   (a, b, i, j) start from 0 ... */
 		/*   i > j because of 3rd law */
 		{
+#if defined(MD_FENE)
+		  if (i==j && b <= a)
+		    continue;
+#else
 		  if (i==j && b < a+2)
 		    continue;
+#endif
 		  rxab = rxa - rx[b][j]; /* distance between two atomes */
 		  ryab = rya - ry[b][j];
 		  rzab = rza - rz[b][j];
@@ -318,14 +323,21 @@ void BuildNebrList(int Nm, COORD_TYPE rCut)
 	    { 
 	      j = lst / NA;
 	      b = lst % NA;
-	 
-	      if (j == i)
+#if defined(MD_FENE)
+	      if (j == i && b <= a)
 		/* atoms in the same molecule don't interact */
 		{
 		  lst = list[lst];
 		  continue;
 		}
-	    
+#else
+    	      if (j == i && b < a+2)
+		/* atoms in the same molecule don't interact */
+		{
+		  lst = list[lst];
+		  continue;
+		}
+#endif
 	      rxab = rxa - rx[b][j]; /* distance between two atomes */
 	      ryab = rya - ry[b][j];
 	      rzab = rza - rz[b][j];
@@ -363,12 +375,22 @@ void BuildNebrList(int Nm, COORD_TYPE rCut)
 		{
 		  j = lst / NA;
 		  b = lst % NA;
-		  if ( j == i) /* atoms in the same molecule don't interact */
-		    {
-		      lst = list[lst];
-		      continue;
-		    }
-		 
+#if defined(MD_FENE)
+		  if (j == i && b <= a)
+    		    /* atoms in the same molecule don't interact */
+    		    {
+    		      lst = list[lst];
+    		      continue;
+    		    }
+
+#else
+    		  if (j == i && b < a+2)
+    		    /* atoms in the same molecule don't interact */
+    		    {
+    		      lst = list[lst];
+    		      continue;
+    		    }
+#endif
 		  rxab = rxa - rx[b][j]; /* distance between two atomes */
 		  ryab = rya - ry[b][j];
 		  rzab = rza - rz[b][j];
