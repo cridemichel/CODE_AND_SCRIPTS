@@ -1800,8 +1800,8 @@ void ProcessCollision(void)
 #else
   bump(evIdA, evIdB, rxC, ryC, rzC, &W);
 #endif
-  //printf("Fine: %f\n", Oparams.time);
-  //ENDSIM=1;
+  printf("Fine: %f\n", Oparams.time);
+  ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
@@ -2149,18 +2149,23 @@ void move(void)
 	      exit(-1);
 	    }
 	  UpdateSystem();
+#ifndef MD_STOREMGL
 	  writeAsciiPars(bf, opro_ascii);
 	  fprintf(bf, sepStr);
 	  writeAsciiPars(bf, opar_ascii);
 	  fprintf(bf, sepStr);
+	  printf("qui\n");
+#endif
 	  writeAllCor(bf);
 	  fclose(bf);
+#ifndef MD_STOREMGL
 #ifdef MPI
           sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
 #else 
           sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
 	  system(fileop3);
+#endif
 #endif
 	  OprogStatus.JJ++;
 	  if (OprogStatus.JJ == OprogStatus.NN)
