@@ -3556,9 +3556,13 @@ void PredictEvent (int na, int nb, int nl)
   /* iB indica la specie con cui puo' interagire na e per ogni specie abbiamo 
    * differenti celle */
   if (nl < 2)
-    nc = 0;
+    {
+      nc = 0;
+    }
   else
-    nc = 1;
+    {
+      nc = 1;
+    }
   printf("[PredictEvent ]nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
 	 nl, nc, na, inCell[nc][0][na], inCell[nc][1][na], inCell[nc][2][na],
 	 cellsx[nl], cellsy[nl], cellsz[nl]);
@@ -3690,7 +3694,10 @@ void PredictEvent (int na, int nb, int nl)
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
 
   if (!ignorecross[k])
-    ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, Oparams.time + tm[k]);
+    {
+      printf("<<< NOT IGNORE >>> evIdA=%d nc=%d time=%.15G k=%d\n", na, nc, Oparams.time+tm[k],k);
+      ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, Oparams.time + tm[k]);
+    }
   printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.16G time=%.15G evCode:%d\n", 
 	 na, ATOM_LIMIT+evCode, k, tm[k], tm[k]+Oparams.time, evCode);
   /* NOTA: le linked list sono tre:
@@ -4673,7 +4680,7 @@ void ProcessCellCrossing(void)
   /* trattandosi di due specie qui c'è un due */
   nc = evIdC;
 
-  printf("time=%.15G Proc CellCrossing nc=%d k=%d evIdA=%d\n", Oparams.time, nc, k, evIdA);
+  printf("time=%.15G Proc CellCrossing nc=%d kk=%d evIdA=%d\n", Oparams.time, nc, kk, evIdA);
   iA = (evIdA < Oparams.parnumA)?0:1;
   if (iA == 0 && nc == 0)
     {
@@ -4700,6 +4707,10 @@ void ProcessCellCrossing(void)
       nc2 = 0;
     }
   
+  boxwall = check_boxwall(kk, nc, nl);
+  if (nc==1 && boxwall)
+    return;
+  
   //printf("ProcellCellCross nl=%d nc=%d k=%d\n", nl, nc, k);
   /* NOTA: cellList[i] con 0 < i < Oparams.parnum è la cella in cui si trova la particella
    * i-esima mentre cellList[j] con 
@@ -4710,7 +4721,7 @@ void ProcessCellCrossing(void)
     inCell[nc][0][evIdA]
     + Oparams.parnum;
   printf("nc=%d n=%d cellList[%d][%d]:%d\n",nc, n, nl, n, cellList[nl][n]);
-  printf("inCell= %d %d %d\n", inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
+  printf("vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
   while (cellList[nl][n] != evIdA) 
     n = cellList[nl][n];
   /* Eliminazione di evIdA dalla lista della cella n-esima */
@@ -4757,7 +4768,7 @@ void ProcessCellCrossing(void)
   if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
     printf("Cells(%d,%d,%d)\n", inCell[0][evIdA],inCell[1][evIdA],inCell[2][evIdA]);
 #endif
-  boxwall = check_boxwall(kk, nc, nl);
+    
   if (boxwall)
     {
       printf("BOXWALL nc=%d nc2=%d nl=%d nl2=%d evIdA=%d time=%.15G\n", nc, nc2, nl, nl2, evIdA, Oparams.time);
