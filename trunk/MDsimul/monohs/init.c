@@ -494,6 +494,7 @@ void usrInitBef(void)
   OprogStatus.rzup = 0.0;
   OprogStatus.expandFact= 1.0;
   OprogStatus.scalevel = 0;
+  OprogStatus.brownian = 0;
   OprogStatus.eventMult = 100;
   OprogStatus.overlaptol = 0.0001;
   /* Il promo step inizia con un tapping a temperatura T */
