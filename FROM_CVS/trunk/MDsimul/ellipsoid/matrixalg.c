@@ -99,7 +99,7 @@ void nrerror(char *msg)
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 #define DABS fabs
 long long int itsfrprmn=0, callsfrprmn=0,callsok=0, callsprojonto=0, itsprojonto=0;
-double xicom[8], pcom[8], xi[8], G[8], H[8], grad[8];//, vec[6];
+double xicom[8], pcom[8], pcom2[8], xi[8], G[8], H[8], grad[8];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
 int cghalfspring, icg, jcg, minaxicg, minaxjcg, doneryck;
 double shiftcg[3], lambdacg;
@@ -791,7 +791,7 @@ double f1dimPhi(double phi)
   int kk, k1, k2;
   double sinw, cosw;
   double dd[3], dist, dphi, MA[3][3], MB[3][3], pn[6];
-  sinw = sin(phi);
+  sinw = sin(-phi);
   cosw = (1.0 - cos(phi));
   
   for (k1 = 0; k1 < 3; k1++)
@@ -812,10 +812,10 @@ double f1dimPhi(double phi)
 	   pn[k1+3] += MB[k1][k2]*pcom[k1+3]; 
 	 }
      }	
-   calc_intersec(pn, rA, Xa, pn);
-   calc_intersec(&pn[3], rB, Xb, &pn[3]);
+   calc_intersec(pn, rA, Xa, pcom2);
+   calc_intersec(&pn[3], rB, Xb, &pcom2[3]);
    for (kk=0; kk < 3; kk++)
-     dd[kk] = pn[kk+3] - pn[kk];
+     dd[kk] = pcom2[kk+3] - pcom2[kk];
    dist = calc_norm(dd);
    return dist;
 }
@@ -834,13 +834,15 @@ void linminRyck(double p[], double xi[], double *fret)
   int j, kk; 
   double xx,xmin,fx,fb,fa,bx,ax, omA[3], omB[3], nA, nB;
  
+#if 1
   for (j=0;j<6;j++)
     { 
       pcom[j]=p[j];
       xicom[j]=xi[j];
-    } 
-  vectProdVec(pcom, xicom, omA);
-  vectProdVec(&pcom[3], &xicom[3], omB);
+    }
+#endif
+  vectProdVec(p, xi, omA);
+  vectProdVec(&p[3], &xi[3], omB);
   nA = calc_norm(omA);
   nB = calc_norm(omB);
   for (kk=0; kk < 3; kk++)
@@ -888,12 +890,12 @@ void linminRyck(double p[], double xi[], double *fret)
   ax=0.0; /*Initial guess for brackets.*/
   xx=1.0; 
   mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimPhi); 
+  printf("ax=%f xx=%f bx=%f\n", ax, xx, bx);
   *fret=brent(ax,xx,bx,f1dimPhi,TOLLM,&xmin);
+  f1dimPhi(xmin);
   for (j=0;j<6;j++)
-    { /*Construct the vector results to return. */
-      xi[j] *= xmin;
-      p[j] += xi[j]; 
-    } 
+    p[j] = pcom2[j]; 
+  printf("xmin=%f dist=%.15G\n", xmin, *fret);
 }
 
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*))
@@ -936,7 +938,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       callsok++;
       return;
     }
-  projectgrad(p,xi,gradfG,gradgG);  
+  //projectgrad(p,xi,gradfG,gradgG);  
   
   for (its=1;its<=ITMAXFR;its++)
     { 
@@ -1055,7 +1057,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	   callsok++;
 	   return;
 	 }
-       projectgrad(p, xi, gradfG, gradgG);
+       //projectgrad(p, xi, gradfG, gradgG);
        
 #if 0
        normxi=0.0;
