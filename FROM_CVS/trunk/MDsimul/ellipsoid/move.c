@@ -1378,6 +1378,7 @@ void fdjacGuess(int n, double x[], double fvec[], double **df,
   for (k1 = 0; k1 < 3; k1++)
     {
       df[3][k1] = fx[k1] - gx[k1];
+      printf("[fdjacGuess] fx[%d]:%.15G gx=%.15G\n",k1 , fx[k1],gx[k1]);
     } 
 
   df[3][3] = 0.0;
@@ -1762,6 +1763,74 @@ double calcDist(double t, int i, int j, double shift[3])
   newt(vecg, 8, &retcheck, funcs2beZeroedDist, i, j, shift); 
 }
 void rebuildCalendar(void);
+int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
+	       double t)
+{ 
+  double rAC[3], rBC[3], vCA[3], vCB[3], vc;
+  double norm[3], wrx, wry, wrz, OmegaA[3][3], OmegaB[3][3];
+  double modn;
+  double shift[3];
+  int na, a, b;
+  MD_DEBUG(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
+  rAC[0] = rx[i] + vx[i]*(t - atomTime[i]) - rCx;
+  rAC[1] = ry[i] + vy[i]*(t - atomTime[i]) - rCy;
+  rAC[2] = rz[i] + vz[i]*(t - atomTime[i]) - rCz;
+#if 1
+  for (a=0; a < 3; a++)
+    if (fabs (rAC[a]) > L2)
+      rAC[a] -= SignR(L, rAC[a]);
+#endif
+  rBC[0] = rx[j] + vx[j]*(t-atomTime[j]) - rCx;
+  rBC[1] = ry[j] + vy[j]*(t-atomTime[j]) - rCy;
+  rBC[2] = rz[j] + vz[j]*(t-atomTime[j]) - rCz;
+#if 1
+  for (a=0; a < 3; a++)
+    {
+      MD_DEBUG(printf("P rBC[%d]:%.15f ", a, rBC[a]));
+      if (fabs (rBC[a]) > L2)
+	rBC[a] -= SignR(L, rBC[a]);
+      MD_DEBUG(printf("D rBC[%d]:%.15f ", a, rBC[a]));
+    }
+  MD_DEBUG(printf("\n"));
+#endif 
+  /* calcola tensore d'inerzia e le matrici delle due quadriche */
+  na = (i < Oparams.parnumA)?0:1;
+  
+  UpdateOrient(i, t-atomTime[i], RA, OmegaA);
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
+
+  na = (j < Oparams.parnumA)?0:1;
+  UpdateOrient(j, t-atomTime[j], RB, OmegaB);
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
+  for (a=0; a < 3; a++)
+    {
+      norm[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  norm[a] += -Xa[a][b]*rAC[b];
+	}
+    }
+  modn = 0.0;
+  for (a = 0; a < 3; a++)
+    modn += Sqr(norm[a]);
+  modn = sqrt(modn);
+  for (a=0; a < 3; a++)
+    norm[a] /= modn;
+  /* calcola le velocità nel punto di contatto */
+  vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
+  vCA[0] = vx[i] + wrx;
+  vCA[1] = vy[i] + wry;
+  vCA[2] = vz[i] + wrz;
+  vectProd(wx[j], wy[j], wz[j], -rBC[0], -rBC[1], -rBC[2], &wrx, &wry, &wrz);
+  vCB[0] = vx[j] + wrx;
+  vCB[1] = vy[j] + wry;
+  vCB[2] = vz[j] + wrz;
+  vc = 0;
+  for (a=0; a < 3; a++)
+    vc += (vCA[a]-vCB[a])*norm[a];
+  MD_DEBUG(printf("VCPOS vc=%.15f\n", vc));
+  return (vc > 0);
+}
 void PredictEvent (int na, int nb) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -1772,8 +1841,8 @@ void PredictEvent (int na, int nb)
    *      */
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
 	 b, d, t, tInt, vv, distSq, t1, t2, tmp;
-  int et, kk, retcheck, ii, overlap;
-  double ncong, cong[3], pos[3], vecg[5], pos2[3];
+  int et, kk, retcheck, ii, overlap, mm;
+  double ncong, cong[3], pos[3], vecg[5], pos2[3], vecgold[5], vecgf[5];
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
   double Lzx, h1, h2, sig, hh1;
@@ -2196,22 +2265,78 @@ no_core_bump:
 		      pos[1] =  ry[na] + vy[na] * (t-atomTime[na]);
 		      pos[2] =  rz[na] + vz[na] * (t-atomTime[na]);
 		      for (kk=0; kk < 3; kk++)
-			vecg[kk] = pos[kk] - 0.5*cong[kk]*maxax[na<Oparams.parnumA?0:1];
+			{
+			  vecg[kk] = pos[kk] - 0.5*cong[kk]*maxax[na<Oparams.parnumA?0:1];
+			  pos[kk] = vecg[kk];
+			}
 		      MD_DEBUG(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
 		      MD_DEBUG2(printf("r[%d](%f,%f,%f)-r[%d](%f,%f,%f)\n",
 				       na, rx[na], ry[na], rz[na], n, rx[n], ry[n], rz[n]));
+		      
+#if 0
+		      t = Oparams.time;
+		      vecg[0] = (rx[na] + rx[n] + shift[0])*0.5;
+		      vecg[1] = (ry[na] + ry[n] + shift[1])*0.5;
+		      vecg[2] = (rz[na] + rz[n] + shift[2])*0.5;
+#endif
 		      vecg[3] = 1.0; /* questa stima di alpha andrebbe fatta meglio!*/
 		      vecg[4] = t;
+		      
 		      MD_DEBUG(printf("time=%.15f vecguess: %f,%f,%f alpha=%f t=%f\n",Oparams.time, vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
 #endif
 		      
 		      //calcDist(Oparams.time, na, n, shift);
 		      //exit(-1);
 		      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
-		      
-		      if (retcheck==2 || vecg[4] < Oparams.time ||
-			 fabs(vecg[4] - Oparams.time)<1E-12 )
+#if 0
+		      for (kk=0; kk < 5; kk++)
+		      	vecgold[kk] = vecg[kk];
+	     	      for(mm=0; mm < 10000; mm++)
 			{
+			  MD_DEBUG(printf(">>> mm=%d\n", mm));
+			  newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
+			  if (retcheck==2 || vecg[4] < Oparams.time ||
+			      fabs(vecg[4] - Oparams.time)<1E-12 )
+			    {
+			      /* se l'urto è nel passato chiaramente va scartato
+			       * tuttavia se t è minore di zero per errori di roundoff? */
+			      /* Notare che i centroidi si possono overlappare e quindi t può
+			       * essere tranquillamente negativo */
+			      MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
+					      vecg[4], Oparams.time));
+			      break;
+			    }
+	  		  if (vc_is_pos(na, n, vecg[0], vecg[1], vecg[2], vecg[4]))
+			    {
+			      MD_DEBUG(printf("vc is positive!\n"));
+			      MD_DEBUG(printf("t=%.15f collision predicted %d-%d\n",
+					      Oparams.time, na, n));
+			      break;
+			    }
+			  else if (mm == 0)
+			    {
+			      MD_DEBUG(printf("vc is negative!\n"));
+			      for (kk=0; kk < 5; kk++)
+				vecgf[kk] = vecg[kk];
+			    }
+			  for (kk=0; kk < 5; kk++)
+			    vecg[kk] = vecgold[kk] + (vecgf[kk] - vecgold[kk])/(10002-mm);
+			
+			}
+		      if (mm==10000)
+			{
+			  printf("MAX VCPOS!!!!\n");
+			  printf("%d-%d t=%.15G\n", na, n, Oparams.time);
+			  continue;
+			}
+		      else
+			{
+			  printf("OK maybe got contact point mm=%d\n", mm);
+			}
+#endif
+		      if (retcheck==2 || vecg[4] < Oparams.time ||
+	    		  fabs(vecg[4] - Oparams.time)<1E-12 )
+    			{
 			  /* se l'urto è nel passato chiaramente va scartato
 			   * tuttavia se t è minore di zero per errori di roundoff? */
 			  /* Notare che i centroidi si possono overlappare e quindi t può
@@ -2220,6 +2345,7 @@ no_core_bump:
 					  vecg[4], Oparams.time));
 			  continue;
 			}
+		      
 		      rxC = vecg[0];
 		      ryC = vecg[1];
 		      rzC = vecg[2];
