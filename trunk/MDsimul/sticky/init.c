@@ -300,7 +300,7 @@ COORD_TYPE gauss(void)
   return  (((( a9 * r2 + a7 ) * r2 + a5 ) * r2 + a3 ) * r2 + a1 ) * r;
 }
 
-void resetCM(int onlyz)
+void resetCM(void)
 {
   COORD_TYPE sumx, sumy, sumz, RCMx, RCMy, RCMz;
   COORD_TYPE Mtot;
@@ -366,14 +366,9 @@ void resetCM(int onlyz)
 
   for(i = 0; i < Oparams.parnum; i++)
     {
-      if (onlyz)
-	 rz[i] -= RCMz;
-      else
-	{
-       	  rx[i] -= RCMx;
-	  ry[i] -= RCMy;
-	  rz[i] -= RCMz;
-	}
+      rx[i] -= RCMx;
+      ry[i] -= RCMy;
+      rz[i] -= RCMz;
     }
 }
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
@@ -541,6 +536,7 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 
   if (!resetCM)
     return;
+
 #ifndef MD_GRAVITY
   printf("temp: %f T: %f\n", temp, 2.0*K/(3.0*Oparams.parnum - 3.0));
   scalevels(temp, K);
@@ -623,8 +619,8 @@ void angvel(void)
   Mtot = Oparams.m[0]; /* total mass of molecule */
 
   inert = Oparams.I[0]; /* momentum of inertia */
-  
-  mean = 2.0 * Oparams.T / inert;
+ 
+  mean = 3.0*Oparams.T / inert;
 
   for (i = 0; i < Oparams.parnum; i++)
     {
@@ -681,11 +677,11 @@ void wrap_initCoord(void)
 {
   /* A x(-0.603750000000000,4.226250000000000,-0.805000000000000) v(-0.099616130522196,-1.839280599669232,0.357754947051492f)-B x(-2.616250000000000,2.213750000000000,-0.805000000000000) v(1.011838511395152,0.876050550528104,-0.426995365917961)
    * */
-  rx[0] = -2.0;
+  rx[0] = -0.51;
   ry[0] = 0.0;
   rz[0] =  0;
   
-  vx[0] = 10.0;
+  vx[0] = 0.0;
   vy[0] = 0;
   vz[0] = 0;
   /* -0.285316712824933 -0.182347469854598 -0.530547025349427*/
@@ -694,16 +690,139 @@ void wrap_initCoord(void)
   wy[0] = 0.0;//-0.1823475;// -1.5;
   wz[0] = 0.0;//-0.530547;// -0.5;
 
-  rx[1] = 2.0;
+  rx[1] = 0.51;
   ry[1] = 0.0;
   rz[1] = 0.0;
-  vx[1] = -10.0;
+  vx[1] = 0.0;
   vy[1] = 0;
   vz[1] = 0;
   /* -0.102514772783053 -0.439677384690882 0.330913950385712*/
   wx[1] =0.0;//-0.102415;//-1;
   wy[1] =0.0;//-0.43968;//-0.3;
-  wz[1] =0.0;//0.330914;// 0.1;
+  wz[1] =1.0;//0.330914;// 0.1;
+{ 
+  double Rt[3][3],Omega[3][3],wSq, w, Ro[3][3], OmegaSq[3][3], M[3][3];
+  double ti=4.2, sinw, cosw;
+  int k1, k2, k3,i=1;
+  wSq = 1.0;
+  w = sqrt(wSq);
+  if (w != 0.0) 
+    {
+#if 0
+      if (fabs(w*ti) < 1E-8)
+	{
+	  sinw = ti*(1-Sqr(w*ti)/6.0);	  
+	  cosw = Sqr(ti)*(0.5 - Sqr(w*ti)/24.0);
+	}
+      else 
+	{
+	  sinw = sin(w*ti)/w;
+	  cosw = (1.0 - cos(w*ti))/wSq;
+	}
+#endif
+      sinw = sin(w*ti)/w;
+      cosw = (1.0 - cos(w*ti))/wSq;
+      Omega[0][0] = 0;
+      Omega[0][1] = -wz[i];
+      Omega[0][2] = wy[i];
+      Omega[1][0] = wz[i];
+      Omega[1][1] = 0;
+      Omega[1][2] = -wx[i];
+      Omega[2][0] = -wy[i];
+      Omega[2][1] = wx[i];
+      Omega[2][2] = 0;
+      OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
+      OmegaSq[0][1] = wx[i]*wy[i];
+      OmegaSq[0][2] = wx[i]*wz[i];
+      OmegaSq[1][0] = wx[i]*wy[i];
+      OmegaSq[1][1] = -Sqr(wx[i]) - Sqr(wz[i]);
+      OmegaSq[1][2] = wy[i]*wz[i];
+      OmegaSq[2][0] = wx[i]*wz[i];
+      OmegaSq[2][1] = wy[i]*wz[i];
+      OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
+
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      //Omega[k1][k2] = -Omega[k1][k2];
+	      M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+#ifdef MD_USE_CBLAS
+	      Rtmp2[k1][k2] = Rtmp[k1][k2] = R[i][k1][k2];
+#endif
+#if 0
+	      if (k1==k2)
+		M[k1][k1] += 1.0;
+#endif
+	    }
+	}
+#ifdef MD_USE_CBLAS
+      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
+		  3, 3, 3, 1.0, &Rtmp[0][0],
+		  3, &M[0][0], 3,
+		  1.0, &Rtmp2[0][0], 3);
+#if 1
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  Ro[k1][k2] = Rtmp2[k1][k2];
+#endif
+#else 
+      Ro[0][0] = uxx[i];
+      Ro[0][1] = uxy[i];
+      Ro[0][2] = uxz[i];
+      Ro[1][0] = uyx[i];
+      Ro[1][1] = uyy[i];
+      Ro[1][2] = uyz[i];
+      Ro[2][0] = uzx[i];
+      Ro[2][1] = uzy[i];
+      Ro[2][2] = uzz[i];
+      Rt[0][0] = uxx[i];
+      Rt[0][1] = uxy[i];
+      Rt[0][2] = uxz[i];
+      Rt[1][0] = uyx[i];
+      Rt[1][1] = uyy[i];
+      Rt[1][2] = uyz[i];
+      Rt[2][0] = uzx[i];
+      Rt[2][1] = uzy[i];
+      Rt[2][2] = uzz[i];
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    for (k3 = 0; k3 < 3; k3++)
+	      Ro[k1][k2] += M[k1][k3]*Rt[k3][k2];
+	      //Ro[k1][k2] += R[i][k1][k3]*M[k3][k2];
+	  }
+#endif
+      uxx[i] = Ro[0][0];
+      uxy[i] = Ro[0][1];
+      uxz[i] = Ro[0][2];
+      uyx[i] = Ro[1][0];
+      uyy[i] = Ro[1][1];
+      uyz[i] = Ro[1][2];
+      uzx[i] = Ro[2][0];
+      uzy[i] = Ro[2][1];
+      uzz[i] = Ro[2][2];
+    }
+  else
+    {
+      Omega[0][0] = 0;
+      Omega[0][1] = 0;
+      Omega[0][2] = 0;
+      Omega[1][0] = 0;
+      Omega[1][1] = 0;
+      Omega[1][2] = 0;
+      Omega[2][0] = 0;
+      Omega[2][1] = 0;
+      Omega[2][2] = 0;
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    Ro[k1][k2] = R[i][k1][k2];
+	  }
+    }
+}
+
+
 }
 
 void adjust_norm(double **R);
@@ -731,7 +850,7 @@ void initCoord(void)
       K += Oparams.m[1]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
     }
   K *= 0.5;
-  printf("All'inizio T=%f\n", 2.0 * K / (3.0 * Oparams.parnum - 3.0));
+  printf("All'inizio T=%f\n", 2.0 * K / (6.0 * Oparams.parnum - 3.0));
 
 #endif
   /* set the exact velocity of both atoms, considering the rotational motion 
@@ -783,6 +902,7 @@ void usrInitBef(void)
     OprogStatus.endtime = 0;
     OprogStatus.rescaleTime = 1.0;
     OprogStatus.brownian = 0;
+    OprogStatus.checkGrazing = 0;
 #ifndef MD_ASYM_ITENS
     for (i = 0; i < 2; i++)
       Oparams.I[i] = 1.0;
@@ -794,6 +914,7 @@ void usrInitBef(void)
     //Oparams.sigma[0][0] = Oparams.sigma[1][1] = Oparams.sigma[1][0]= Oparams.sigma[0][1]=1.0;
     OprogStatus.collCount = 0;
     OprogStatus.crossCount = 0;
+    OprogStatus.h=1E-8;
     OprogStatus.epsd = 0.0005;
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
@@ -1074,7 +1195,68 @@ void save_init_conf(void)
   system(fileop3);
 #endif
 }
-
+void check_all_bonds(void)
+{
+  int nn, amin, bmin, i, j, aa, bb, *nb, wnn, wj;
+  double wdist,drx, dry, drz, shift[3], dist, rat[5][3], dists[MD_PBONDS], ri[3];
+  nb = malloc(sizeof(int)*Oparams.parnum);
+  for ( i = 0; i < Oparams.parnum-1; i++)
+    {
+      nb[i] = 0;
+      ri[0] = rx[i];
+      ri[1] = ry[i];
+      ri[2] = rz[i];
+      ////BuildAtomPos(i, ri, R[i], rat);
+      for ( j = 0; j < Oparams.parnum; j++)
+	{
+	  if (i == j)
+	    continue;
+	  drx = rx[i] - rx[j];
+	  shift[0] = L*rint(drx/L);
+	  dry = ry[i] - ry[j];
+	  shift[1] = L*rint(dry/L);
+	  drz = rz[i] - rz[j]; 
+	  shift[2] = L*rint(drz/L);
+#ifdef MD_SILICA
+	  assign_bond_mapping(i, j); 
+#endif
+  	  dist = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin, dists);
+  	  for (nn=0; nn < MD_PBONDS; nn++)
+  	    {
+#if 0
+	      if (i==78&& j==98)
+    		{
+		  printf(">>>>>>>>>i=%d j=%d dists[%d]: %.15G\n", i, j, nn, dists[nn]);
+		}
+#endif
+	      if (dists[nn]<0.0)// && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
+		{
+  		  aa = mapbondsa[nn];
+  		  bb = mapbondsb[nn];
+		  wdist=dists[nn];
+		  wnn = nn;
+		  //printf("i=%d j=%d dists[%d]: %.15G\n", i, j, nn, dists[nn]);
+		  //printf("QUIII\n");
+  		  //if (bound(i, j, aa, bb))
+		  wj = j;
+  		  nb[i]++;
+  		}
+  	    }
+    	}
+#if 1
+      if (numbonds[i]!=nb[i])
+	{
+	  printf("[WARNING] Number of bonds for molcule %d incorrect\n", i);
+	  printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
+		 numbonds[i], nb[i]);
+	  printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
+	  store_bump(i,j);
+	  exit(-1);
+	}
+#endif
+    }
+ free(nb); 
+}
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
 {
@@ -1164,11 +1346,13 @@ void usrInitAft(void)
   if (OprogStatus.CMreset==-1)
     {
       comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-      resetCM(0);
+      angvel(); 
+      resetCM();
     }
   else if (OprogStatus.CMreset==-2)
     {
       comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+      angvel(); 
     }
 
   if (Oparams.curStep == 1)
@@ -1239,7 +1423,7 @@ void usrInitAft(void)
 	  /* nella silica l'unica interazione bonded è quella Si-O! */
 	  maxax[i] = Oparams.sigma[0][0];
 #else
-	  maxax[i] = Oparams.sigma[0][0] + Oparams.sigmaSticky;
+	  maxax[i] =(Oparams.sigma[0][0] + Oparams.sigmaSticky);
 #endif
 	}
       else
@@ -1256,18 +1440,18 @@ void usrInitAft(void)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
 	drx = rx[i] - rx[j];
-	shift[0] = -L*rint(drx/L);
+	shift[0] = L*rint(drx/L);
 	dry = ry[i] - ry[j];
-	shift[1] = -L*rint(dry/L);
+	shift[1] = L*rint(dry/L);
 	drz = rz[i] - rz[j]; 
-	shift[2] = -L*rint(drz/L);
+	shift[2] = L*rint(drz/L);
 #ifdef MD_SILICA
 	assign_bond_mapping(i, j); 
 #endif
 	dist = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin, dists);
 	for (nn=0; nn < MD_PBONDS; nn++)
 	  {
-	    if (dists[nn]<Oparams.sigmaSticky)
+	    if (dists[nn]<0)
 	      {
 		aa = mapbondsa[nn];
 		bb = mapbondsb[nn];
@@ -1397,8 +1581,9 @@ void writeAllCor(FILE* fs)
       fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
     }
   fprintf(fs, "%.15G\n", L);
-#endif
+#else
   free_matrix(Rl, 3);
+#endif
 }
 
 
