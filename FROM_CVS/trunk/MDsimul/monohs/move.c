@@ -56,6 +56,7 @@ int evIdA, evIdB;
 extern int poolSize;
 extern double *radii;
 extern int *scdone;
+double presst1=-1.0, presst2=-1.0;
 /* ========================== >>> scalCor <<< ============================= */
 void scalCor(int Nm)
 { 
@@ -728,7 +729,10 @@ void bump (int i, int j, double* W)
 #endif
 #endif
   /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
+  if (*W == 0.0)
+    presst1 = presst2;
   *W += Oparams.m*(delvx * rxij + delvy * ryij + delvz * rzij);
+  presst2 = OprogStatus.time;
 }
 void calccmz(void)
 {
@@ -1535,7 +1539,10 @@ void move(void)
 	      //printf("STEP #%d DQ= %f %f %f\n", Oparams.curStep, OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
 	    }
 #endif
-	  press = W / Oparams.Dt / (L*L*Lz) / 3.0;
+	  if (presst2 > 0.0 && presst1 > 0.0)
+	    press = W / (presst2 - presst1) / (L*L*Lz) / 3.0;
+	  else 
+	    press = 0.0;
 	  W = 0;
 	  OprogStatus.nextDt += Oparams.Dt;
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
