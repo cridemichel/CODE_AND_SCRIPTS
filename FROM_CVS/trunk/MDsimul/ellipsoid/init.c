@@ -662,16 +662,16 @@ void initCoord(void)
 #if MD_DEBUG(x) == x
     {
      const char sepStr[] = "@@@\n";
-  FILE *bf;
-      char fileop[512],fileop2[512], fileop3[512];
-      sprintf(fileop2 ,"Store-Init");
-	  /* store conf */
-	  strcpy(fileop, absTmpAsciiHD(fileop2));
-	  if ( (bf = fopenMPI(fileop, "w")) == NULL)
-	    {
-	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-	      exit(-1);
-	    }
+     FILE *bf;
+     char fileop[512],fileop2[512], fileop3[512];
+     sprintf(fileop2 ,"Store-Init");
+     /* store conf */
+     strcpy(fileop, absTmpAsciiHD(fileop2));
+     if ( (bf = fopenMPI(fileop, "w")) == NULL)
+       {
+	 mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+	 exit(-1);
+       }
 #ifndef MD_STOREMGL
 	  writeAsciiPars(bf, opro_ascii);
 	  fprintf(bf, sepStr);
@@ -1012,7 +1012,7 @@ void usrInitAft(void)
     invIa = matrix(3, 3);
     invIb = matrix(3, 3);
 #endif
-    powdirs = matrix(4,4);
+    powdirs = matrix(6,6);
     RA = matrix(3, 3);
     RB = matrix(3, 3);
     Rt = matrix(3, 3);

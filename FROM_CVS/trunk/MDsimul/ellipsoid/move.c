@@ -3016,7 +3016,7 @@ retry:
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
 	  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
-	  //distconjgrad(i, j, shift, vecgcg, 1, 1); 
+	  distconjgrad(i, j, shift, vecgcg, 1000, 1); 
 	  //distconjgrad(i, j, shift, vecgcg, 1/OprogStatus.tolSD, 1);
 	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
 #if 0
