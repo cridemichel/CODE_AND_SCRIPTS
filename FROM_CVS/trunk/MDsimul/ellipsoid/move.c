@@ -1929,6 +1929,7 @@ void store_bump(int i, int j)
   R2u();
   MD_DEBUG(printf("[Store bump]: %.15G\n", Oparams.time));
   writeAllCor(bf);
+  fprintf(bf,"%.15f %.15f %.15f @ 0.1 C[green]\n", rxC, ryC, rzC);
   fclose(bf);
 
 }
