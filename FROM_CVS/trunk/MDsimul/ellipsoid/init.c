@@ -596,7 +596,7 @@ void wrap_initCoord(void)
 {
   /* A x(-0.603750000000000,4.226250000000000,-0.805000000000000) v(-0.099616130522196,-1.839280599669232,0.357754947051492f)-B x(-2.616250000000000,2.213750000000000,-0.805000000000000) v(1.011838511395152,0.876050550528104,-0.426995365917961)
    * */
-  rx[0] = -2.0;
+  rx[0] = -2.2;
   ry[0] = 0.0;
   rz[0] =  0;
   
@@ -622,7 +622,7 @@ void wrap_initCoord(void)
   rx[1] = 2.0;
   ry[1] = 0.0;
   
-  rz[1] = 0.0;
+  rz[1] = 0.2;
   vx[1] = -0.1;
   vy[1] = 0;
   vz[1] = 0;
@@ -696,7 +696,7 @@ void initCoord(void)
 #endif
     }
 #endif
-  //wrap_initCoord();
+  wrap_initCoord();
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
@@ -1234,6 +1234,7 @@ void usrInitAft(void)
 #ifdef MD_NNL
       nebrTab[i].len = 0;
       nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+      nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
       nebrTab[i].R = matrix(3, 3);
 #endif
       scdone[i] = 0;

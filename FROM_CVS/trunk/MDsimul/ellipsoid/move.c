@@ -175,6 +175,7 @@ void rebuildNNL(void)
     }
   /* next complete update */
   nextNNLrebuild = nltime;
+  printf("nextNNLrebuild=%.15G\n", nextNNLrebuild);
   //ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 }
 #endif
@@ -5381,7 +5382,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	      MD_DEBUG20(printf("[locate_contact] Adding collision between %d\n", i));
 	      MD_DEBUG20(printf("collision will occur at time %.15G\n", vecg[4])); 
 	      MD_DEBUG20(printf("[locate_contact] its: %d\n", its));
-	      if (vecg[4]>t2 || vecg[4]< t1)
+	      if (vecg[4]>t2 || vecg[4]<t1)
 		return 0;
 	      else
 		return 1;
@@ -5863,8 +5864,10 @@ void PredictEventNNL(int na, int nb)
       n = nebrTab[na].list[i]; 
       if (!(n != na && n!=nb && (nb >= -1 || n < na)))
 	continue;
+      
       for (kk=0; kk < 3; kk++)
-	shift[kk] = nebrTab[na].shift[kk];
+	shift[kk] = nebrTab[na].shift[i][kk];
+      
       /* maxax[...] è il diametro dei centroidi dei due tipi
        * di ellissoidi */
       if (OprogStatus.targetPhi > 0)
@@ -5961,6 +5964,22 @@ void updrebuildNNL(int na)
     nebrTab[na].nexttime = timbig;
   else
     nebrTab[na].nexttime = vecg[4];
+#if 1
+    {
+      double gradA[3], gradB[3], sp;
+      calc_grad(vecg, rA, Xa, gradA);
+      calc_grad(vecg, rB, Xb, gradB);
+      sp = scalProd(gradA, gradB);
+      if (sp < 0)
+	{
+	  printf("BOH i prodotti scalari sono diretti in maniera opposta!\n");
+	  exit(-1);
+	}
+      else 
+	printf("sp > 0!!!!!!!!!\n");
+    }
+#endif
+  
   if (nebrTab[na].nexttime < nextNNLrebuild)
     nextNNLrebuild = nebrTab[na].nexttime;
 }
@@ -5992,6 +6011,7 @@ void BuildNNL(int na)
   DelDist = OprogStatus.rNebrShell;
 #endif
   DelDist += distBuf;
+  printf("DelDist=%.15G\n", DelDist);
   nebrTab[na].r[0] = rx[na];
   nebrTab[na].r[1] = ry[na];
   nebrTab[na].r[2] = rz[na];
@@ -6009,7 +6029,23 @@ void BuildNNL(int na)
   else
     nebrTab[na].nexttime = vecg[4];
 #endif
-#if 0
+#if 1
+    {
+      double gradA[3], gradB[3], sp;
+      calc_grad(vecg, rA, Xa, gradA);
+      calc_grad(vecg, rB, Xb, gradB);
+      sp = scalProd(gradA, gradB);
+      if (sp < 0)
+	{
+	  printf("[BUILDNNL] BOH i prodotti scalari sono diretti in maniera opposta!\n");
+	  exit(-1);
+	}
+      else 
+	printf("[BUILD NNL] sp > 0!!!!!!!!!\n");
+    }
+#endif
+  
+ #if 0
   factori = 0.5*maxax[na];
   maxddot = sqrt(Sqr(vx[na])+Sqr(vy[na])+Sqr(vz[na])) +
     sqrt(Sqr(wx[na])+Sqr(wy[na])+Sqr(wz[na]))*factori;
@@ -6017,6 +6053,12 @@ void BuildNNL(int na)
   //ScheduleEvent(na, ATOM_LIMIT + 11, vecg[4]); 
 #endif
   nebrTab[na].len=0;
+  nebrTab[na].time = Oparams.time;
+  for (k = 0; k < NDIM; k++)
+    { 
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
@@ -6075,9 +6117,8 @@ void BuildNNL(int na)
 			  printf("Adding ellipsoid N. %d to NNL of %d\n", n, na);
 			  nebrTab[na].list[nebrTab[na].len] = n;
 			  for (kk=0; kk < 3; kk++)
-			    nebrTab[na].shift[kk] = shift[kk];
+			    nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
 			  nebrTab[na].len++;
-			  nebrTab[na].time = Oparams.time;
 			}
 		    }
 		} 
@@ -6669,9 +6710,9 @@ no_core_bump:
 			}
 #endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
-		      MD_DEBUG(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
+		      MD_DEBUG20(printf("time: %f Adding collision %d-%d\n", Oparams.time+t, na, n));
 		      ScheduleEvent (na, n, t);
-		      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
+		      MD_DEBUG20(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
 #endif
 		    }
 		} 
@@ -6915,7 +6956,7 @@ void ProcessCollision(void)
       cellRange[2*k+1] =   1;
     }
   MD_DEBUG10(calc_energy("prima"));
-
+  MD_DEBUG20(printf("[BUMP] t=%.15G i=%d j=%d\n", Oparams.time,evIdA,evIdB)); 
 #if defined(MD_SQWELL)||defined(MD_INFBARRIER)
   /* i primi due bit sono il tipo di event (uscit buca, entrata buca, collisione con core 
    * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */
@@ -7167,7 +7208,7 @@ void move(void)
       /* l'evento di ricostruzione della NNL è mantenuto fuori dal calendario degli eventi per
        * semplicità */
 #ifdef MD_NNL
-      if (Oparams.time > nextNNLrebuild)
+      if (Oparams.time >= nextNNLrebuild)
 	{
 	  Oparams.time = timeold;
 	  rebuildNNL();

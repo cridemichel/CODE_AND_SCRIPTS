@@ -178,7 +178,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 struct nebrTabStruct 
 {
   int *list;       /* ellissoidi nella NNL */
-  double shift[3];
+  double **shift;
   int len;         /* numero di ellissoidi nella NNL */
   double time;     /* tempo a cui è stata costruita la NNL */
   double nexttime; /* tempo a cui la NNL deve essere ricostruita */
