@@ -28,7 +28,10 @@ double *rxi[NA], *ryi[NA], *rzi[NA];
 double **rx_oldLong, **ry_oldLong, **rz_oldLong;
 #endif
 #ifdef MD_RAPACONSTR
-extern double *cvMatInvS[NA][NA];
+extern double **cvMat, **cvMatInv, ***cvMatInvS, 
+       *cDistSq, *vVec, *curBondLenSq; 
+extern int *cMat[NA]; 
+extern int *cAtom1, *cAtom2;
 #endif
 double *Fcoeff[3]; 
 /* coefficienti delle forze dovute agli atomi senza massa
@@ -994,6 +997,9 @@ void usrInitAft(void)
   COORD_TYPE invMtot, d, dSq;
   COORD_TYPE vcmx, vcmy, vcmz;
   COORD_TYPE* m, invrcut3, rcut;
+#ifdef MD_RAPACONSTR
+  int NB = NA-1;
+#endif
   int a, b, n;
   /* le masse dei tre atomi "di base" sono uguali */
   
@@ -1114,6 +1120,13 @@ void usrInitAft(void)
   ry_oldLong = malloc(sizeof(double*)*NA);
   rz_oldLong = malloc(sizeof(double*)*NA);
 #endif
+#ifdef MD_RAPACONSTR
+  cMatInvS = malloc(sizeof(**double)*NB);
+  cMatInv  = malloc(sizeof(*double)*NB);
+  cDistSq = malloc(sizeof(double)*NB);
+  curBondLenSq = malloc(sizeof(double)*NB);
+  vVec = malloc(sizeof(double)*NB);
+#endif
   sigmag = malloc(sizeof(double*)*NA);
 #if 0
   Rx = malloc(sizeof(double)*Oparams.parnum);
@@ -1139,9 +1152,11 @@ void usrInitAft(void)
       rzi[a] = malloc(sizeof(double)*Oparams.parnum);
 #endif
 #ifdef MD_RAPACONSTR
+      cMatInvS[a] = malloc(sizeof(double*)*NB);
+      cMatInv[a] = malloc(sizeof(double)*NB);
       if (OprogStatus.keepInvMat)
 	{
-	  for (b = 0; b < NA; b++ )
+	  for (b = 0; b < NA; b++)
 	    cMatInvS[a][b] = malloc(sizeof(double)*Oparams.parnum);
 	}
 #endif
