@@ -30,6 +30,7 @@ double **rx_oldLong, **ry_oldLong, **rz_oldLong;
 #ifdef MD_RAPACONSTR
 extern double **cvMat, **cvMatInv, ***cvMatInvS, 
        *cDistSq, *vVec, *vVecLong, *curBondLenSq, *cVec[3]; 
+extern double **lambvel;
 extern int **cMat; 
 extern int *cAtom1, *cAtom2;
 extern int *laststep;
@@ -1128,6 +1129,7 @@ void usrInitAft(void)
   rz_oldLong = malloc(sizeof(double*)*NA);
 #endif
 #ifdef MD_RAPACONSTR
+  lambvel = malloc(sizeof(double*)*Oparams.parnum);
   cvMatInvS = malloc(sizeof(double**)*NB);
   cvMatInv  = malloc(sizeof(double*)*NB);
   cvMat     = malloc(sizeof(double*)*NB);
@@ -1158,6 +1160,9 @@ void usrInitAft(void)
   doshake = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
     {
+      lambvel[i] = malloc(sizeof(double)*NB);
+      for (a = 0; a < NB; a++)
+	lambvel[i][a] = 0;
       doshake[i] = 0;
       laststep[i] = 0;
     }
