@@ -524,6 +524,7 @@ struct singlePar OsinglePar[] = {
   {"nplus",      &Oparams.nplus,      CT},
   {"nminus",     &Oparams.nminus,     CT},
 #endif
+  {"seed",       &mdseed,                   INT},
   {"m0",       &Oparams.m[0],             CT},
   {"m1",       &Oparams.m[1],             CT},
   {"m2",       &Oparams.m[2],             CT},
