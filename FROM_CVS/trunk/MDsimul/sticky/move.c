@@ -1095,8 +1095,7 @@ extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess);
-double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-     		double *vecgsup, int calcguess);
+double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin);
 
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
@@ -1905,358 +1904,12 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
     }
 }
 
-#ifndef MD_APPROX_JACOB
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
-void calcFxtFt(double x[3], double **X,
-	       double D[3][3], double Omega[3][3], double **R, 
-	       double pos[3], double vel[3], double gradf[3],
-	       double Fxt[3], double *Ft)
-{
-  double OmegaD[3][3],tOmegaD[3][3], DOmega[3][3];
-  double OmegaX[3][3], XOmega[3][3]; 
-  double sumDOmega[3][3], Mtmp[3][3], DtX[3][3], dx[3];
-  int k1, k2, k3;
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  XOmega[k1][k2] = 0;
-	  for (k3 = 0; k3 < 3; k3++)
-	    {
-	      if (X[k1][k3] == 0.0 || Omega[k3][k2] == 0.0)
-		continue;
-	      XOmega[k1][k2] += X[k1][k3]*Omega[k3][k2];
-	    }
-	}
-    }
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  OmegaX[k1][k2] = 0;
-	  for (k3 = 0; k3 < 3; k3++)
-	    {
-	      if (X[k3][k2] == 0.0 || Omega[k3][k1] == 0.0)
-		continue;
-	      OmegaX[k1][k2] += Omega[k1][k3]*X[k3][k2]; 
-	    }
-	}
-    }
-  for (k1 = 0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      DtX[k1][k2] = OmegaX[k1][k2] - XOmega[k1][k2];
-#if 0
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  Mtmp[k1][k2] = 0;
-	  for (k3 = 0; k3 < 3; k3++)
-	    Mtmp[k1][k2] += sumDOmega[k1][k3]*R[k3][k2]; 
-	}
-    }
-   for (k1 = 0; k1 < 3; k1++)
-    {
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  DtX[k1][k2] = 0;
-	  for (k3 = 0; k3 < 3; k3++)
-	    DtX[k1][k2] += R[k3][k1]*Mtmp[k3][k2]; 
-	}
-    }
-#endif
-   for (k1 = 0; k1 < 3; k1++)
-     {
-       Fxt[k1] = 0;
-       for (k2 = 0; k2 < 3; k2++)
-	 Fxt[k1] += DtX[k1][k2]*(x[k2]-pos[k2]) - X[k1][k2]*vel[k2]; 
-       Fxt[k1] *= 2.0;
-     } 
-   *Ft = 0;
-   for (k1 = 0; k1 < 3; k1++)
-     dx[k1] = x[k1]-pos[k1];
-   for (k1 = 0; k1 < 3; k1++)
-     {
-       for (k2 = 0; k2 < 3; k2++)
-	 {
-	   *Ft += -vel[k1]*X[k1][k2]*dx[k2]+dx[k1]*DtX[k1][k2]*dx[k2]-dx[k1]*X[k1][k2]*vel[k2];
-	 }
-     }
-}
-#define MD_GLOBALNR
-#undef MD_GLOBALNR2
 double rA[3], rB[3];
-void fdjacGuess(int n, double x[], double fvec[], double **df, 
-	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
-{
-  /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
-  double fx[3], gx[3], tmp;
-  double Fxt[3], Gxt[3], Ft, Gt;
-  int k1, k2, k3;
-
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      for (k2 = 0; k2 < 3; k2++)
-       	{
-	  df[k1][k2] = 2.0*(Xa[k1][k2] + Sqr(x[3])*Xb[k1][k2]);
-	}
-    }
-  /* calc fx e gx */
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fx[k1] = 0;
-      gx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
-	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]);
-	}
-    } 
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      df[k1][3] = 2.0*x[3]*gx[k1];
-    } 
-
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      df[3][k1] = fx[k1] - gx[k1];
-      printf("[fdjacGuess] fx[%d]:%.15G gx=%.15G\n",k1 , fx[k1],gx[k1]);
-    } 
-
-  df[3][3] = 0.0;
-#ifndef MD_GLOBALNR2
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
-    }
-  fvec[3] = 0.0;
-  tmp = 0;
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      tmp += (x[k1]-rB[k1])*gx[k1];
-    }
-  fvec[3] = 0.5*fvec[3]-1.0 - (0.5*tmp-1.0);
-#endif
-}
-
-/* funzione che calcola lo Jacobiano */
-void fdjac(int n, double x[], double fvec[], double **df, 
-	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
-{
-  /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
-  int na; 
-  double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
-  double DA[3][3], DB[3][3], fx[3], gx[3];
-  double Fxt[3], Gxt[3], Ft, Gt;
-  int k1, k2, k3;
-  ti = x[4] - atomTime[iA];
-  rA[0] = rx[iA] + vx[iA]*ti;
-  rA[1] = ry[iA] + vy[iA]*ti;
-  rA[2] = rz[iA] + vz[iA]*ti;
-  vA[0] = vx[iA];
-  vA[1] = vy[iA];
-  vA[2] = vz[iA];
-  /* ...and now orientations */
-  UpdateOrient(iA, ti, RA, OmegaA);
-  MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
-  MD_DEBUG2(print_matrix(RA, 3));
-  na = (iA < Oparams.parnumA)?0:1;
-  if (OprogStatus.targetPhi > 0)
-    {
-      invaSq[na] = 1/Sqr(axa[iA]);
-      invbSq[na] = 1/Sqr(axb[iA]);
-      invcSq[na] = 1/Sqr(axc[iA]);
-    }
-  tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
-  MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
-  MD_DEBUG2(print_matrix(Xa, 3));
-  DA[0][1] = DA[0][2] = DA[1][0] = DA[1][2] = DA[2][0] = DA[2][1] = 0.0;
-  DA[0][0] = invaSq[na];
-  DA[1][1] = invbSq[na];
-  DA[2][2] = invcSq[na];
-  ti = x[4] - atomTime[iB];
-  rB[0] = rx[iB] + vx[iB]*ti + shift[0];
-  rB[1] = ry[iB] + vy[iB]*ti + shift[1];
-  rB[2] = rz[iB] + vz[iB]*ti + shift[2];
-  vB[0] = vx[iB];
-  vB[1] = vy[iB];
-  vB[2] = vz[iB];
-  UpdateOrient(iB, ti, RB, OmegaB);
-  na = (iB < Oparams.parnumA)?0:1;
-  if (OprogStatus.targetPhi > 0)
-    {
-      invaSq[na] = 1/Sqr(axa[iB]);
-      invbSq[na] = 1/Sqr(axb[iB]);
-      invcSq[na] = 1/Sqr(axc[iB]);
-    }
-  tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
-  DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
-  DB[0][0] = invaSq[na];
-  DB[1][1] = invbSq[na];
-  DB[2][2] = invcSq[na];
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      for (k2 = 0; k2 < 3; k2++)
-       	{
-	  df[k1][k2] = 2.0*(Xa[k1][k2] + Sqr(x[3])*Xb[k1][k2]);
-	}
-    }
-  /* calc fx e gx */
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fx[k1] = 0;
-      gx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
-	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]);
-	}
-    } 
-
-  for (k1 = 0; k1 < 3; k1++)
-    {
-#if 0
-      df[3][k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	df[3][k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]); 
-#endif
-      df[3][k1] = fx[k1];
-    } 
-
-  for (k1 = 0; k1 < 3; k1++)
-    {
-#if 0
-      df[4][k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	df[4][k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]); 
-#endif
-      df[4][k1] = gx[k1];
-    } 
-
-  for (k1 = 0; k1 < 3; k1++)
-    {
-#if 0
-      df[k1][3] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	df[k1][3] += 4.0*x[3]*Xb[k1][k2]*(x[k2]-rB[k2]); 
-#endif
-      df[k1][3] = 2.0*x[3]*gx[k1];
-    } 
-  df[3][3] = 0.0;
-  df[4][3] = 0.0;
-  calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
-  calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      //df[k1][4] = 0;
-      //for (k2 = 0; k2 < 3; k2++)
-      df[k1][4] = Fxt[k1]+Sqr(x[3])*Gxt[k1]; 
-    } 
- df[3][4] = Ft;
- df[4][4] = Gt;
-#ifndef MD_GLOBALNR
- /* and now evaluate fvec */
- for (k1 = 0; k1 < 3; k1++)
-    {
-      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
-    }
- fvec[3] = 0.0;
- fvec[4] = 0.0;
- for (k1 = 0; k1 < 3; k1++)
-   {
-      fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      fvec[4] += (x[k1]-rB[k1])*gx[k1];
-   }
- fvec[3] = 0.5*fvec[3]-1.0;
- fvec[4] = 0.5*fvec[4]-1.0;
- MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
-#endif
-}
-#endif
-void upd2tGuess(int i, int j, double shift[3], double tGuess)
-{
-  double ti;
-  int na;
-  double Omega[3][3];
-  ti = tGuess - atomTime[i];
-  rA[0] = rx[i] + vx[i]*ti;
-  rA[1] = ry[i] + vy[i]*ti;
-  rA[2] = rz[i] + vz[i]*ti;
-  /* ...and now orientations */
-  UpdateOrient(i, ti, Rt, Omega);
-  na = (i < Oparams.parnumA)?0:1;
-  if (OprogStatus.targetPhi > 0)
-    {
-      invaSq[na] = 1/Sqr(axa[i]);
-      invbSq[na] = 1/Sqr(axb[i]);
-      invcSq[na] = 1/Sqr(axc[i]);
-    }
-
-  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
-
-  ti = tGuess - atomTime[j];
-  rB[0] = rx[j] + vx[j]*ti + shift[0];
-  rB[1] = ry[j] + vy[j]*ti + shift[1];
-  rB[2] = rz[j] + vz[j]*ti + shift[2];
-  UpdateOrient(j, ti, Rt, Omega);
-  na = (j < Oparams.parnumA)?0:1;
-  if (OprogStatus.targetPhi > 0)
-    {
-      invaSq[na] = 1/Sqr(axa[j]);
-      invbSq[na] = 1/Sqr(axb[j]);
-      invcSq[na] = 1/Sqr(axc[j]);
-    }
-  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
-
-}
-void funcs2beZeroedGuess(int n, double x[], double fvecG[], int i, int j, double shift[3])
-{
-  int na, k1, k2; 
-  double fx[3], gx[3], tmp;
-  /* x = (r, alpha, t) */ 
-#if 0
-  printf("Xa=\n");
-  print_matrix(Xa, 3);
-  printf("Xb=\n");
-  print_matrix(Xb, 3);
-#endif
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
-    }
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      gx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	gx[k1] += 2.0*Xb[k1][k2]*(x[k2] - rB[k2]);
-    }
-
-   for (k1 = 0; k1 < 3; k1++)
-    {
-      fvecG[k1] = fx[k1] + Sqr(x[3])*gx[k1];
-    }
-#if 0
-  fvec[3] = -1.0;
-  fvec[4] = -1.0;
-#endif
-#if 0
-  MD_DEBUG(printf("fx+Sqr(alpha)*gx=(%f,%f,%f) fx=(%f,%f,%f) gx=(%f,%f,%f)\n", fvec[0], fvec[1], fvec[2],
-	 fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
-#endif
-  fvecG[3] = 0.0;
-  tmp = 0;
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fvecG[3] += (x[k1]-rA[k1])*fx[k1];
-      tmp += (x[k1]-rB[k1])*gx[k1];
-    }
-  fvecG[3] = 0.5*fvecG[3]-1.0 - (0.5*tmp-1.0);
-}
-void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3])
+int ibr, jbr, atabr, atbbr; 
+double shiftbr[3];
+void funcs2beZeroed(double x, int i, int j, int ata, int atb, double shift[3])
 {
   int na, k1, k2; 
   double  rA[3], rB[3], ti;
@@ -2292,70 +1945,12 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
- tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
-#if 0
-  printf("Xa=\n");
-  print_matrix(Xa, 3);
-  printf("Xb=\n");
-  print_matrix(Xb, 3);
-#endif
-  
-  
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
-      MD_DEBUG(printf("[FUNC2BEZ]x[%d]:%.15f rA[%d]:%f fx:%.15f\n", k1, x[k1], k1, rA[k1],fx[k1]));
-
-    }
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      gx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	gx[k1] += 2.0*Xb[k1][k2]*(x[k2] - rB[k2]);
-      MD_DEBUG(printf("[FUNC2BEZ]x[%d]:%.15f rB[%d]:%f gx:%.15f\n", k1, x[k1], k1, rB[k1],gx[k1]));
-    }
-
-  MD_DEBUG(print_matrix(Xb,3));
-  for (k1 = 0; k1 < 3; k1++)
-    {
-#if 0
-      fvec[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	fvec[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]) + 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
-#endif
-      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
-    }
-#if 0
-  fvec[3] = -1.0;
-  fvec[4] = -1.0;
-#endif
-#if 0
-  MD_DEBUG(printf("fx+Sqr(alpha)*gx=(%f,%f,%f) fx=(%f,%f,%f) gx=(%f,%f,%f)\n", fvec[0], fvec[1], fvec[2],
-	 fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
-#endif
-  fvec[3] = 0.0;
-  fvec[4] = 0.0;
-  for (k1 = 0; k1 < 3; k1++)
-    {
-#if 0
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  fvec[3] += (x[k1]-rA[k1])*Xa[k1][k2]*(x[k2]-rA[k2]);
-	  fvec[4] += (x[k1]-rB[k1])*Xb[k1][k2]*(x[k2]-rB[k2]);
-	}
-#endif
-#if 1
-      fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      fvec[4] += (x[k1]-rB[k1])*gx[k1];
-#endif
-    }
-  fvec[3] = 0.5*fvec[3]-1.0;
-  fvec[4] = 0.5*fvec[4]-1.0;
-  MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 }
-
+double funcs2beZeroedBrent(double x)
+{
+  funcs2beZeroed(x, ibr, jbr, atabr atbbr, shiftbr); 
+}
 double tdist;
 double rA[3], rB[3];
 
@@ -2625,71 +2220,43 @@ double BodeTerm(double dt, double* fi)
   return dt * (bc1 * fi[0] + bc2 * fi[1] + bc3 * fi[2] + bc2 * fi[3] +
 	       bc1 * fi[4]);
 }
-int refine_contact(int i, int j, double t, double vecgd[8], double shift[3],double  vecg[5])
+int refine_contact(int i, int j, double t1, double t2, int ata, int atb,
+		   double shift[3], double *troot)
 {
   int kk, retcheck;
 
-  for (kk = 0; kk < 3; kk++)
-    {
-#ifdef MD_DIST5
-      vecg[kk] = (vecgd[kk]+vecgd[kk+5])*0.5; 
-#else
-      vecg[kk] = (vecgd[kk]+vecgd[kk+3])*0.5; 
-#endif
-    }
-#ifdef MD_DIST5
-  vecg[3] = vecgd[3];
-#else
-  vecg[3] = vecgd[6];
-#endif
-  vecg[4] = t;
-  newt(vecg, 5, &retcheck, funcs2beZeroed, i, j, shift); 
+  //newt(vecg, 5, &retcheck, funcs2beZeroed, i, j, shift); 
+  ibr = i;
+  jbr = j;
+  atabr = ata;
+  atbbr = atb;
+  for (kk=0; kk < 3; kk++)
+    shiftbr[kk] = shift[kk];
+  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-12);
   if (retcheck==2)
     {
       MD_DEBUG10(printf("newt did not find any contact point!\n"));
       return 0;
     }
-#if 0
-  else if (vecg[4] < Oparams.time ||
-	   fabs(vecg[4] - Oparams.time)<1E-12 )
-    {
-      /* se l'urto è nel passato chiaramente va scartato
-       * tuttavia se t è minore di zero per errori di roundoff? */
-      /* Notare che i centroidi si possono overlappare e quindi t può
-       * essere tranquillamente negativo */
-      MD_DEBUG(printf("i=%d j=%d <<< vecg[4]=%.15f time:%.15f\n",
-		      i, j, vecg[4], Oparams.time));
-      return 0;
-    }
-#endif
   else
     {
-#if 0
-      if (!vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
-	{
-	  MD_DEBUG(printf("vc is positive!\n"));
-	  MD_DEBUG(printf("t=%.15f collision predicted %d-%d\n",
-			  Oparams.time, i, j));
-	  return 0;
-	}
-#endif
       return 1; 
     }
 }
-int search_contact_faster(int i, int j, double *shift, double *t, double t2, double *vecgd, double epsd, double *d1, double epsdFast, double *r1, double *r2)
+int search_contact_faster(int i, int j, double *shift, double *t, double t2, double epsd, double *d1, double epsdFast)
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
   double maxddot, told, delt, normddot, ddot[3];
   const int MAXOPTITS = 500;
   double alpha;
-  int its=0; 
+  int its=0, amin, bmin; 
     
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
-  *d1 = calcDistNeg(*t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin);
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
@@ -2712,18 +2279,18 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
 	  *t = told;
 	  MD_DEBUG10(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG10(printf("convergence t>t2\n"));
-	  *d1 = calcDistNeg(*t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+	  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin);
 	  return 1;
 	}
 #endif
-      *d1 = calcDistNeg(*t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+      *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin);
       if (*d1 < 0)
 	{
 	  /* go back! */
 	  MD_DEBUG10(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG10(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
-	  *d1 = calcDistNeg(*t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+	  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin);
 	  return 0;
 	}
       told = *t;
@@ -2854,63 +2421,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
  
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = 1E-7; /* last resort time increment */
-#if 0
-  if (lastbump[i]==j && lastbump[j]==i)
-    {
-      t += h;
-      MD_DEBUG(printf("last collision was between %d-%d\n",i,j));
-      MD_DEBUG(printf("atomTime[%d]:%.15G atomTime[%d]:%.15G\n", i, atomTime[i], j, atomTime[j])); 
-    }
-#endif
-#if 0
-  maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
-    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
-  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
-  MD_DEBUG(printf("Pri distances between %d-%d d1=%.12G", i, j, d1));
-  told = t;
-  its = 0;
-  while (d1 > 10*epsd && its < MAXOPTITS)
-    {
-      delt = d1 / maxddot;
-      t += delt;
-      d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
-      if (d1 < 0)
-	{
-	  /* go back! */
-	  t = told;	  
-	  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
-	}
-      told = t;
-      its++;
-    }
-#else
-  //d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
-
-  if (search_contact_faster(i, j, shift, &t, t2, vecgd, epsd, &d, epsdFast, r1, r2))
+  if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast))
     return 0;  
   timesS++;
-#if 0
-  if (refine_contact(i, j, t, vecgd1, shift, vecg))
-  {
-    MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-    MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
-    MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
-    if (vecg[4]>t2 || vecg[4]< t1 || 
-	(lastbump[i] == j && lastbump[j]==i && fabs(t - lastcol[i])<1E-8))
-      ;
-    else
-      {
-	if (vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
-	  return 1;
-	else
-	  printf("Vc is Negative!!\n");
-      }
-  }
-  else
-    printf("non ho convergiuto\n");
-#endif
-#endif
   MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d));
 #if 1
   if (lastbump[j]==i && lastbump[i]==j)
@@ -2921,7 +2434,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  t += h*t;
 	  if (t > t2)
 	    return 0;
-	  d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
+	  d = calcDistNeg(t, i, j, shift, &amin, &bmin);
 	}
     }
   else if (d<0&&fabs(d)>1E-7)
@@ -2934,46 +2447,21 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
   MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
-#if 0
-  if (d1 < 0)
-    {
-      if (refine_contact(i, j, t, vecgd, shift, vecg))
-	{
-	  MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-	  return 1;
-	}
-      else 
-	{
-	  MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
-	  if (d2 < 0)
-	    {
-	      MD_DEBUG(printf("d2 < 0 and I did not find contact point, boh...\n"));
-	      return 0;
-	    }
-	}
-    }
-#endif
-  for (kk = 0; kk < 8; kk++)
-    vecgdold[kk] = vecgd[kk];
   dold = d;
   its = 0;
   while (t < t2)
     {
-#if 1
       normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
       if (normddot!=0)
 	delt = epsd/normddot;
-#endif
       else
 	delt = h*t;
       if (dold < epsd)
 	delt = epsd / maxddot;
       t += delt;
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
-      for (kk = 0; kk < 8; kk++)
-	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;
-      d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
+      d = calcDistNeg(t, i, j, shift, &amin, &bmin);
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -2988,21 +2476,17 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgdold2, 0);
-	  for (kk = 0; kk < 8; kk++)
-	    vecgd[kk] = vecgdold2[kk];
+	  d = calcDistNeg(t, i, j, shift, &amin, &bmin);
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
 #if 1
       if (d > epsdFastR)
 	{
-	  if (search_contact_faster(i, j, shift, &t, t2, vecgd, epsd, &d, epsdFast, r1, r2))
+	  if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast))
 	    {
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
 	    }
-	  for (kk = 0; kk < 8; kk++)
-	    vecgdold[kk] = vecgd[kk];
 	  dold = d;
 	  its++;
 	  //itsS++;
@@ -3013,22 +2497,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       dorefine = 0;      
       if (dold > 0 && d < 0)
 	{
-#if 0
-	  if (d2 <0)
-	    {
-	      t -= h;
-	      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
-	    }
-#endif
-       	  for (kk=0; kk < 8; kk++)
-	    vecgroot[kk] = vecgd[kk];
 #ifndef MD_NOINTERPOL  
-	 if (interpol(i, j, t-delt, delt, dold, d, &troot, vecgroot, shift, 0))
+	 if (interpol(i, j, t-delt, delt, dold, d, &troot, shift, 0))
 #endif
 	    {
 	      /* vecgd2 è vecgd al tempo t-delt */
-	      for (kk=0; kk < 8; kk++)
-		vecgroot[kk] = vecgdold[kk];
 	      troot = t - delt;
 	    }
 	  dorefine = 1;
@@ -3036,10 +2509,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       else if (dold < OprogStatus.epsd && d < OprogStatus.epsd)
 	{
 #ifndef MD_NOINTERPOL
-	  for (kk=0; kk < 8; kk++)
-	    vecgroot[kk] = vecgd[kk];
-	  
-	  if (interpol(i, j, t-delt, delt, dold, d, &troot, vecgroot, shift, 1))
+	  if (interpol(i, j, t-delt, delt, dold, d, &troot, shift, 1))
 	    dorefine = 0;
 	  else 
 	    dorefine = 1;
@@ -3047,13 +2517,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	}
       if (dorefine)
 	{
-	  if (refine_contact(i, j, troot, vecgroot, shift, vecg))
+	  if (refine_contact(i, j, t-delt, t, shift, &troot))
 	    {
 	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
-	      if (vecg[4]>t2 || vecg[4]< t1 || 
-		  (lastbump[i] == j && lastbump[j]==i && fabs(t - lastcol[i])<1E-8))
+	      if (troot > t2 || troot < t1 || 
+		  (lastbump[i] == j && lastbump[j]==i && fabs(troot - lastcol[i])<1E-8))
 		return 0;
 	      else
 		return 1;
@@ -3067,21 +2537,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 		  MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
 		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 		  return 0;
-		  //if (lastbump[i] == j && lastbump[j]==i )
-		   // return 0;
-		  //exit(-1);
 		}
 	      else
 		{
 		  printf("d: %.15G dold: %.15G\n", d, dold); 
 		}
-		//continue;
-	      
 	    }
 	}
       dold = d;
-      for (kk = 0; kk < 8; kk++)
-	vecgdold[kk] = vecgd[kk];
       its++;
       itsS++;
     }
