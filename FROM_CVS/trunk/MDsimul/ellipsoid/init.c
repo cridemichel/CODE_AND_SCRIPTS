@@ -789,8 +789,8 @@ void usrInitBef(void)
     OprogStatus.nextSumTime = 0.0;
     OprogStatus.nextcheckTime = 0.0;
     OprogStatus.intervalSum = 1.0;
-    OprogStatus.n1 = 100;
-    OprogStatus.n2 = 100;
+    OprogStatus.n1 = 20;
+    OprogStatus.n2 = 20;
     OprogStatus.storerate = 0.01;
     OprogStatus.KK = 0;
     OprogStatus.JJ = 0;
@@ -910,31 +910,43 @@ typedef struct {
 } XYZ;
 typedef struct {
 	double point[3];
-	double grad[3];
+//	double grad[3];
+	struct {
+	  int i;	  
+	  int j;
+	} neigh[4];
 } MESHXYZ;
 
 MESHXYZ **ellips_mesh[2];
-void EvalSuperEllipse(double t1,double t2, double a, double b, double c, MESHXYZ *pm)
+void EvalSuperEllipse(double theta,double phi, double a, double b, double c, MESHXYZ *pm)
 {
-   double ct1,ct2,st1,st2;
+   double cth,cphi,sth,sphi;
 
-   ct1 = cos(t1);
-   ct2 = cos(t2);
-   st1 = sin(t1);
-   st2 = sin(t2);
-   pm->point[0] = a * ct1 * st2;
-   pm->point[1] = b * st1 * st2;
-   pm->point[2] = c * ct2;
+   cth = cos(theta);
+   cphi = cos(phi);
+   sth= sin(theta);
+   sphi = sin(phi);
+   pm->point[0] = a * cth * sphi;
+   pm->point[1] = b * sth * sphi;
+   pm->point[2] = c * cphi;
+     {
+       FILE* f;
+       f = fopen("mesh.dat", "a");
+       fprintf(f,"%f %f %f @ 0.1\n", pm->point[0], pm->point[1], pm->point[2]);
+       fclose(f);
+     }
+#if 0
    pm->grad[0] = 2.0*pm->point[0]/Sqr(a);
    pm->grad[1] = 2.0*pm->point[1]/Sqr(b);
    pm->grad[2] = 2.0*pm->point[2]/Sqr(c);
+#endif
 }
 void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 {
   int i,j, n1, n2;
   double theta, phi;
   XYZ p;
-  const double TWOPI=2.0*pi, PID2=pi/2.0;
+  const double TWOPI=2.0*pi;
   /* n1 = stacks
    * n2 = slides */
   n1 = OprogStatus.n1;
@@ -942,10 +954,62 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
   for (j=0;j<n2;j++)
     {
       phi = j * TWOPI / (double)n2;
-      for (i=0;i<n1;i++) 
+      for (i=1;i<n1/2;i++) 
 	{
 	  theta = i * TWOPI / (double)n1;
 	  EvalSuperEllipse(theta,phi,a,b,c,&mesh[i][j]);
+	  
+	  if (i==1)
+	    {
+	      mesh[i][j].neigh[0].i = i;
+	      if (j==0)
+		mesh[i][j].neigh[0].j = OprogStatus.n2-1;
+	      else
+		mesh[i][j].neigh[0].j = j-1;
+	      mesh[i][j].neigh[1].i = i;
+	      if (j==OprogStatus.n2-1)
+		mesh[i][j].neigh[1].j = 0;
+	      else
+		mesh[i][j].neigh[1].j = j+1;
+	      mesh[i][j].neigh[2].i = i+1;
+	      mesh[i][j].neigh[2].j = j;
+	      mesh[i][j].neigh[3].i = -1;
+	      mesh[i][j].neigh[3].j = -1;
+	    }
+	  else if (i==n1/2-1)
+	    {
+	      mesh[i][j].neigh[0].i = i;
+	      if (j==0)
+		mesh[i][j].neigh[0].j = OprogStatus.n2-1;
+	      else
+		mesh[i][j].neigh[0].j = j-1;
+	      mesh[i][j].neigh[1].i = i;
+	      if (j == OprogStatus.n2-1)
+		mesh[i][j].neigh[1].j = 0;
+	      else	
+		mesh[i][j].neigh[1].j = j+1;
+	      mesh[i][j].neigh[2].i = i-1;
+	      mesh[i][j].neigh[2].j = j;
+	      mesh[i][j].neigh[3].i = -1;
+	      mesh[i][j].neigh[3].j = -1;
+	    }
+	  else
+	    {
+      	      mesh[i][j].neigh[0].i = i;
+	      if (j==0)
+		mesh[i][j].neigh[0].j = OprogStatus.n2-1;
+	      else
+		mesh[i][j].neigh[0].j = j-1;
+	      mesh[i][j].neigh[1].i = i;
+	      if (j == OprogStatus.n2-1)
+		mesh[i][j].neigh[1].j = 0;
+	      else	
+		mesh[i][j].neigh[1].j = j+1;
+	      mesh[i][j].neigh[2].i = i-1;
+	      mesh[i][j].neigh[2].j = j;
+	      mesh[i][j].neigh[3].i = i+1;
+	      mesh[i][j].neigh[3].j = j;
+	    }
 	}
     }
 }
