@@ -86,6 +86,197 @@ void check_distances(void)
   if (!baddist)
     printf("[Step N.%d] Tutte le distanze sono corrette\n", Oparams.curStep);
 }
+#ifdef MD_TSHAPED
+/* ============================= >>> FCC <<< ================================*/
+void FCC2(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol)
+{
+  /*   DESCRIPTION:
+       Sets up the alpha fcc lattice for n linear molecules.   
+       The simulation box is a unit cube centred at the origin.
+       N should be an integer of the form ( 4 * ( Nc ** 3 ) ),
+       Where Nc is the number of FCC unit cells in each direction.  
+       See figure 5.10 for a diagram of the lattice and a           
+       definition of the four orientational sublattices.            
+       PRINCIPAL VARIABLES:                                         
+       int           Nm                   Number of molecules             
+       COORD_TYPE    D                    disk diameter of laponite molecule 
+       COORD_TYPE    rxCm, ryCm, rzCm     Molecular Center of mass 
+                                          positions             
+       COORD_TYPE    ex, ey, ez           half of vector joining atom a and b 
+                                          in a molecule 
+       COORD_TYPE    rRoot3               1.0 / sqrt ( 3.0 ) */
+  int Nc;
+  COORD_TYPE dist, norm, d0x, d0y, d0z, d1x, d1y, d1z, d2x, d2y, d2z;
+  COORD_TYPE iRoot3, sRoot3; // = 0.5773503;
+  COORD_TYPE  Cell, Cell2, rxCm, ryCm, rzCm, Mtot, fact, fact2;
+  int a, i, ix, iy, iz, iref, ii;
+  COORD_TYPE bx[4], by[4], bz[4]; /* base vectors for FCC lattice */
+  COORD_TYPE ex[4], ey[4], ez[4]; /* orientations of each molecule in the 
+				     primitive cell */
+  COORD_TYPE e2x[4], e2y[4], e2z[4]; /* orientations of each molecule in the 
+				     primitive cell */
+  
+
+  /*COORD_TYPE d0x, d0y, d0z, d1x, d1y, d1z, d2z, d2y, d2z;*/
+
+  /*printf("FCC Vol: %f\n", Vol);*/
+  L = cbrt(Vol);
+  Nc = ceil(  pow( ((COORD_TYPE)Nm)/4.0, 1.0/3.0 )  );
+  Mtot = m[0] + m[1];
+  /*printf("Nc: %d\n", Nc);*/
+  /* Calculate the side of the unit cell */
+  Cell  = D/2.0 + distmol; /* unit cell length */
+  Cell2 = 0.5 * Cell;              /* half unit cell length */
+
+  /* Sublattice A */
+  iRoot3 = 1.0 / sqrt(3.0);
+  sRoot3 = sqrt(3.0);
+  /* NOTA: solo in un caso e and e2 sono ortogonali dunque sono stati 
+   * costruiti male, risolvere tale problema!!!
+   * 0 dovrebbe essere ok mentre 1 2 3 sono scazzati */
+  bx[0] =  0.0;
+  by[0] =  0.0;
+  bz[0] =  0.0;
+  ex[0] =  0.0;
+  ey[0] =  1.0;
+  ez[0] =  0.0;
+  
+  /* questa è una direzione ortogonale per fissare l'orientazione
+   * dei dischi di laponite */
+  e2x[0] = 1.0;
+  e2y[0] = 0.0;
+  e2z[0] = 0.0;
+   
+  /*  Sublattice B */
+  bx[1] =  0.0;
+  by[1] =  0.0;
+  bz[1] =  Cell;
+  ex[1] =  0.0;
+  ey[1] =  1.0;
+  ez[1] =  0.0;
+  /* e2 è ortogonale a e */
+  e2x[1] = 0.0;
+  e2y[1] = 0.0;
+  e2z[1] = 1.0;
+
+  /* Center of Mass of the actual molecule (m + iref) */
+  rxCm = bx[0];
+  ryCm = by[0];
+  rzCm = bz[0];
+  //printf("CM:(%f,%f,%f)\n", rxCm, ryCm, rzCm);
+  /* (d0x, d0y, d0z) is the vector from the Center of Mass
+     to the atom 0 */
+  fact = - D * 0.5;
+  
+  d0x  = ex[0] * fact;
+  d0y  = ey[0] * fact;
+  d0z  = ez[0] * fact;
+ 
+  /* (d1x, d1y, d1z) is the vector from the Center of Mass
+     to the atom 1 */
+  fact = D * 0.25;
+  fact2 = D * sRoot3 * 0.25;
+  d1x  = ex[0] * fact + e2x[0] * fact2;
+  d1y  = ey[0] * fact + e2y[0] * fact2;
+  d1z  = ez[0] * fact + e2z[0] * fact2;
+		  
+  /* (d1x, d1y, d1z) is the vector from the Center of Mass
+     to the atom 1 */
+  fact2 = -D * sRoot3 * 0.25;
+  d2x  = ex[0] * fact + e2x[0] * fact2;
+  d2y  = ey[0] * fact + e2y[0] * fact2;
+  d2z  = ez[0] * fact + e2z[0] * fact2;
+  
+  /* The positions of two atoms are obtained by a displacement 
+     from the Center of Mass given by adding or subtracting the
+     d1 and d0 vectors (see above) */
+  rx[0][0] = rxCm + d0x;
+  rx[1][0] = rxCm + d1x;
+  rx[2][0] = rxCm + d2x;
+  
+  ry[0][0] = ryCm + d0y;
+  ry[1][0] = ryCm + d1y;
+  ry[2][0] = ryCm + d2y;
+  
+  rz[0][0] = rzCm + d0z;
+  rz[1][0] = rzCm + d1z;
+  rz[2][0] = rzCm + d2z;
+  
+  /* Shift centre of box to the origin */
+   /* Center of Mass of the actual molecule (m + iref) */
+  rxCm = bx[1];
+  ryCm = by[1];
+  rzCm = bz[1];
+  //printf("CM:(%f,%f,%f)\n", rxCm, ryCm, rzCm);
+  /* (d0x, d0y, d0z) is the vector from the Center of Mass
+     to the atom 0 */
+  fact = - D * 0.5;
+  
+  d0x  = ex[1] * fact;
+  d0y  = ey[1] * fact;
+  d0z  = ez[1] * fact;
+ 
+  /* (d1x, d1y, d1z) is the vector from the Center of Mass
+     to the atom 1 */
+  fact = D * 0.25;
+  fact2 = D * sRoot3 * 0.25;
+  d1x  = ex[1] * fact + e2x[1] * fact2;
+  d1y  = ey[1] * fact + e2y[1] * fact2;
+  d1z  = ez[1] * fact + e2z[1] * fact2;
+		  
+  /* (d1x, d1y, d1z) is the vector from the Center of Mass
+     to the atom 1 */
+  fact2 = -D * sRoot3 * 0.25;
+  d2x  = ex[1] * fact + e2x[1] * fact2;
+  d2y  = ey[1] * fact + e2y[1] * fact2;
+  d2z  = ez[1] * fact + e2z[1] * fact2;
+  
+  /* The positions of two atoms are obtained by a displacement 
+     from the Center of Mass given by adding or subtracting the
+     d1 and d0 vectors (see above) */
+  rx[0][1] = rxCm + d0x;
+  rx[1][1] = rxCm + d1x;
+  rx[2][1] = rxCm + d2x;
+  
+  ry[0][1] = ryCm + d0y;
+  ry[1][1] = ryCm + d1y;
+  ry[2][1] = ryCm + d2y;
+  
+  rz[0][1] = rzCm + d0z;
+  rz[1][1] = rzCm + d1z;
+  rz[2][1] = rzCm + d2z;
+#if 0
+  for(i=0; i < Nm; i++)
+    {
+      for(a=0; a < NA; a++)
+	{
+	  /* Initial position values are between -0.5 and 0.5 */
+	  rx[a][i] = rx[a][i] - 0.5 * L; 
+	  ry[a][i] = ry[a][i] - 0.5 * L;
+	  rz[a][i] = rz[a][i] - 0.5 * L;
+	}
+    }
+#endif
+#if 1
+  return;
+#endif
+  /* DEBUG !!!!!!!!!!!! */
+  for(i=0; i < Nm; i++)
+    {
+      dist = sqrt( Sqr(rx[0][i] - rx[1][i]) + Sqr(ry[0][i] - ry[1][i]) + 
+		 Sqr(rz[0][i] - rz[1][i]) );
+      printf("dist1: %f\n", dist);
+      dist = sqrt( Sqr(rx[1][i] - rx[2][i]) + Sqr(ry[1][i] - ry[2][i]) + 
+		 Sqr(rz[1][i] - rz[2][i]) );
+      printf("dist2: %f\n", dist);
+      dist = sqrt( Sqr(rx[2][i] - rx[0][i]) + Sqr(ry[2][i] - ry[0][i]) + 
+		 Sqr(rz[2][i] - rz[0][i]) );
+      printf("dist3: %f\n", dist);
+    }
+  exit(1);
+}
+#endif
+
 /* ============================= >>> FCC <<< ================================*/
 void FCC(int Nm, COORD_TYPE D, COORD_TYPE* m)
 {
@@ -771,7 +962,7 @@ void initCoord(void)
 {
   setToZero(SAVE_LIST, 
 	    NULL);  /* Set to zero all the coordinates */
-
+#ifndef MD_TSHAPED
   FCC(Oparams.parnum, Oparams.Diam, Oparams.m); 
   /* Put the baricenter of each molecule on a FCC lattice, and set 
      their orientations */  
@@ -781,6 +972,7 @@ void initCoord(void)
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
   //angvel(Oparams.parnum, Oparams.T, Oparams.m, Oparams.d); 
+#endif
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
@@ -878,8 +1070,15 @@ void usrInitAft(void)
   pi = 2.0 * acos(0);
   
   M = Oparams.M;
-
-  /* calcola il numero di siti per disco usando invsp */
+#ifdef MD_TSHAPED
+  if (Oparams.parnum != 2)
+    {
+      printf("You compiled the program with MD_TSHAPED macro defined,\n");
+      printf("therefore the number of particled must be 2!\n");
+      exit(-1);
+    };
+#endif
+   /* calcola il numero di siti per disco usando invsp */
   Oparams.nsites = 0;
   for (n=(Oparams.invsp/2)-1; n >= 0; n--)
     {
