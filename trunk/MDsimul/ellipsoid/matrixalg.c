@@ -891,8 +891,10 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	 {
 	   if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
 	     {
+#if 0
 	       if (fp <0)
 		 printf("guessed dist=%.15G\n", sqrt(-fp));
+#endif
 	       callsok++;
 	       return;
 	     }
