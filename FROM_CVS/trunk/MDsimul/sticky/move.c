@@ -2295,6 +2295,7 @@ int refine_contact(int i, int j, double tref, double t1, double t2, int nn, doub
 /* N.B. l'urto 0-0 è tra due sfere dure nei primitive model 
  * dell'acqua e della silica, quindi lo tratto a parte.
  * Inoltre non c'è interazione tra un atomo grosso e un atomo sticky. */
+#ifdef MD_NO_STRICT_CHECK
 int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS], 
 		int crossed[MD_PBONDS], int bondpair)
 {
@@ -2316,6 +2317,50 @@ int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS],
     }
   return retcross;
 }
+#else
+int check_cross(int i, int j, double distsOld[MD_PBONDS], double dists[MD_PBONDS], 
+		int crossed[MD_PBONDS], int bondpair)
+{
+  int nn;
+  int retcross = 0;
+  for (nn = 0; nn < MD_PBONDS; nn++)
+    {
+      crossed[nn] = MD_EVENT_NONE;
+      if (bondpair != -1 && bondpair != nn)
+	continue;
+      if (dists[nn] > 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	{
+	  crossed[nn] = MD_INOUT_BARRIER; 
+	  retcross = 1;
+	}	  
+      if (dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	{
+	  crossed[nn] = MD_OUTIN_BARRIER;
+	  retcross = 1;
+	}
+    }
+  return retcross;
+}
+#endif
+int check_cross_sf(int i, int j, double distsOld[MD_PBONDS], double dists[MD_PBONDS], 
+		int crossed[MD_PBONDS], int bondpair)
+{
+  int nn;
+  int retcross = 0;
+  for (nn = 0; nn < MD_PBONDS; nn++)
+    {
+      if (bondpair != -1 && bondpair != nn)
+	continue;
+      if (fabs(dists[nn]) < OprogStatus.epsdFast)
+	return 1;
+      if (dists[nn] > 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	return 1;
+      if (dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	return 1;
+    }
+  return retcross;
+}
+
 
 int get_dists_tocheck(double distsOld[], double dists[], int tocheck[], int dorefine[],
 		      int bondpair)
@@ -2481,6 +2526,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	  printf("distsOld[%d]: %.15G\n", nn, distsOld[nn]);
 	}
 #endif
+#ifdef MD_NO_STRICT_CHECK
       if (check_cross(distsOld, dists, crossed, bondpair))
 	{
 	  /* go back! */
@@ -2490,6 +2536,17 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	  return 0;
 	}
+#else
+      if (check_cross_sf(i,j,distsOld, dists, crossed, bondpair))
+	{
+	  /* go back! */
+	  MD_DEBUG30(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG30(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
+	  *t = told;	  
+	  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	  return 0;
+	}
+#endif
 #if 1
       if (*t+t1 > t2)
 	{
@@ -2705,9 +2762,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS],
 	 distsOld2[MD_PBONDS], deltth; 
   double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
+  double deltRef, t1Ref, dists1Ref, t2Ref, dists2Ref;
   //const int MAXOPTITS = 4;
   int bondpair, itstb;
   const int MAXITS = 100;
+  int itsRef;
   int its, foundrc, goback;
   double epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
   int kk,tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
@@ -2748,7 +2807,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   if (*collCode!=MD_EVENT_NONE)
     {
       if (t2 > *evtime)
-	t2 = *evtime+h;
+	t2 = *evtime+1E-7;
     }
   delt = h;
   MD_DEBUG(printf("QUIIII collCode=%d\n", *collCode));
@@ -3028,7 +3087,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
       for (nn=0; nn < MD_PBONDS; nn++)
 	dorefine[nn] = MD_EVENT_NONE;
+#ifndef MD_NO_STRICT_CHECK
+      ncr=check_cross(i, j, distsOld, dists, crossed, bondpair);
+#else
       ncr=check_cross(distsOld, dists, crossed, bondpair);
+#endif
       /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
        * sticky */
       for (nn = 0; nn < MD_PBONDS; nn++)
@@ -3116,7 +3179,78 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      //printf("distsOld[%d]:%.15f dists[%d]: %.15f\n", nn, distsOld[nn], nn, dists[nn]);
 	      //printf("t-delt: %.15f t=%.15f\n", t-delt, t);
 #endif
-	      if (refine_contact(i, j, t1, t-delt, t2arr[nn], nn, shift, &troot))
+	      t1Ref = t-delt;
+	      t2Ref = t2arr[nn];
+	      deltRef = delt;
+	      dists1Ref=distsOld[nn];
+	      dists2Ref=dists[nn];
+	      itsRef = 0;
+#ifndef MD_NO_STRICT_CHECK
+	      while (itsRef < MAXITS && dists1Ref*dists2Ref > 0.0 && 
+		     fabs(dists1Ref)+fabs(dists2Ref) < 2.0*epsd)
+		{
+		  deltRef *= GOLD;
+		  if (dists1Ref > 0.0)
+		    {
+		      t1Ref = t2Ref - deltRef;
+		      dists1Ref = calcDistNegOne(t1Ref, t1, i, j, nn, shift);
+		      if ((dorefine[nn]==MD_INOUT_BARRIER && dists1Ref > 0.0) ||
+			  (dorefine[nn]==MD_OUTIN_BARRIER && dists1Ref < 0.0) )
+			{
+			  deltRef /= GOLD;
+			  t1Ref = t2Ref - deltRef;
+			}
+		    }
+		  else
+		    {
+		      t2Ref = t1Ref + deltRef;
+		      dists2Ref = calcDistNegOne(t2Ref, t1, i, j, nn, shift);
+		      if ( (dorefine[nn]==MD_INOUT_BARRIER && dists2Ref < 0.0) ||
+			(dorefine[nn]==MD_OUTIN_BARRIER && dists2Ref > 0.0) )
+			{
+			  deltRef /= GOLD;
+			  t2Ref = t1Ref + deltRef;
+			}
+		    }
+       		  itsRef++;
+		}
+#if 1
+	      itsRef = 0;
+	      while (itsRef < MAXITS && fabs(dists1Ref) < 0.01*epsd)
+		{
+		  deltRef *= GOLD;
+		  t1Ref = t2Ref - deltRef;
+		  dists1Ref = calcDistNegOne(t1Ref, t1, i, j, nn, shift);
+		  if ((dorefine[nn]==MD_INOUT_BARRIER && dists1Ref > 0.0) ||
+		      (dorefine[nn]==MD_OUTIN_BARRIER && dists1Ref < 0.0) )
+		    {
+		      deltRef /= GOLD;
+		      t1Ref = t2Ref - deltRef;
+		      break;
+		    }
+
+		  itsRef++;
+		}
+#endif
+#if 1
+	      itsRef = 0;
+	      while (itsRef < MAXITS && fabs(dists2Ref) < 0.01*epsd)
+		{
+		  deltRef *= GOLD;
+		  t2Ref = t1Ref + deltRef;
+		  dists2Ref = calcDistNegOne(t2Ref, t1, i, j, nn, shift);
+		  if ((dorefine[nn]==MD_INOUT_BARRIER && dists2Ref < 0.0) ||
+		      (dorefine[nn]==MD_OUTIN_BARRIER && dists2Ref > 0.0) )
+		    {
+		      deltRef /= GOLD;
+		      t2Ref = t1Ref + deltRef;
+		      break;
+		    }
+		  itsRef++;
+		}
+#endif
+#endif
+	      if (refine_contact(i, j, t1, t1Ref, t2Ref, nn, shift, &troot))
 		{
 		  //printf("[locate_contact] Adding collision between %d-%d\n", i, j);
 		  MD_DEBUG30(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
