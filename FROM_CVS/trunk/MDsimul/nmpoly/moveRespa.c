@@ -59,9 +59,10 @@ double WmShort, WmxxShort, WmyyShort, WmzzShort, WmxyShort, WmyzShort, WmzxShort
        WShort, VcShort, VShort, WxxShort, WyyShort, WzzShort, WxyShort, WyzShort, WzxShort;
 #endif
 #ifdef MD_RAPACONSTR
-double **cvMat, **cvMatInv, ***cvMatInvS, *cDistSq, *vVec, *curBondLenSq, *cVec[3]; 
+double **cvMat, **cvMatInv, ***cvMatInvS, *cDistSq, *vVec, *vVecLong, *curBondLenSq, *cVec[3]; 
 int **cMat; 
 int *cAtom1, *cAtom2;
+int *laststep;
 #endif
 extern double DrSq,  Mtot;
 /* used by linked list routines */
@@ -96,7 +97,7 @@ void ludcmpR(double **a, int* indx, double* d, int n)
   /* A[i][j] = Aij 
    * A x = b  
    * per semplicità nel seguito si assume che l'ordine della matrice è 3 */
-  int i,imax=0,j,k;
+  int i,imax=-1,j,k;
   double big,dum,sum,temp; 
   double vv[MD_NBMAX]; /* vv stores the implicit scaling of each row.*/
   /*vv = vector(1,n);*/
@@ -176,7 +177,7 @@ void ludcmpR(double **a, int* indx, double* d, int n)
 
 void lubksbR(double **a, int* indx, double *b, int n)
 { 
-  int i,ii=-1,ip,j; 
+  int i,ii=0,ip,j; 
   double sum; 
   for (i=0;i<n;i++) 
     { 
@@ -517,13 +518,14 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
   int NB = NA-1;
   double rp1[3], rp2[3];
   int i, k, m, mm, mDif, m1, m2, a;
- 
+  double *vVecL; 
   cdt = dt * c;
   if (RefSys)
     {
-       FxI = Fx;
-       FyI = Fy;
-       FzI = Fz;
+      vVecL = vVec;
+      FxI = Fx;
+      FyI = Fy;
+      FzI = Fz;
 #if 0
        FxO = FxC;
        FyO = FyC;
@@ -532,6 +534,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
     }
   else
     {
+      vVecL = vVecLong;
       FxI = FxLong;
       FyI = FyLong;
       FzI = FzLong;
@@ -559,7 +562,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	    cVec[k][m] = cVec[k][m] - L*rint (cVec[k][m]/L);
 	  } 
       }
-    if (!OprogStatus.keepInvMat || (OprogStatus.keepInvMat && RefSys && after))
+    if (!after)
       {
 	for (m1 = 0; m1 < NB; m1 ++) 
 	  {
@@ -580,31 +583,32 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
       }
     for (m = 0; m < NB; m ++) 
       {
-	vVec[m] = 0.;
+	vVecL[m] = 0.;
 #if 1
 	if (RefSys)
 	  dv = px[cAtom1[m]][i]/Oparams.m[cAtom1[m]] - px[cAtom2[m]][i]/Oparams.m[cAtom2[m]];
 	else
 	  dv = 0;
 #endif
-	vVec[m] = vVec[m] - (FxI[cAtom1[m]][i]/Oparams.m[cAtom1[m]] -
-			     FxI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[0][m] - Sqr(dv);
+	vVecL[m] = vVecL[m] - (FxI[cAtom1[m]][i]/Oparams.m[cAtom1[m]] -
+			       
+			       FxI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[0][m] - Sqr(dv);
 #if 1
 	if (RefSys)
 	  dv = py[cAtom1[m]][i]/Oparams.m[cAtom1[m]] - py[cAtom2[m]][i]/Oparams.m[cAtom2[m]];
 	else
 	  dv = 0;
 #endif
-	vVec[m] = vVec[m] - (FyI[cAtom1[m]][i]/Oparams.m[cAtom1[m]] -
-			     FyI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[1][m] - Sqr(dv) ;
+	vVecL[m] = vVecL[m] - (FyI[cAtom1[m]][i]/Oparams.m[cAtom1[m]] -
+			       FyI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[1][m] - Sqr(dv) ;
 #if 1
 	if (RefSys)
 	  dv = pz[cAtom1[m]][i]/Oparams.m[cAtom1[m]]  - pz[cAtom2[m]][i]/Oparams.m[cAtom2[m]];
 	else
 	  dv = 0;
 #endif
-	vVec[m] = vVec[m] - (FzI[cAtom1[m]][i]/Oparams.m[cAtom1[m]] -
-			     FzI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[2][m] - Sqr(dv);
+	vVecL[m] = vVecL[m] - (FzI[cAtom1[m]][i]/Oparams.m[cAtom1[m]] -
+			       FzI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[2][m] - Sqr(dv);
       }
     /* qui bisogna trovare l'inversa della matrice cvMat !!!*/
 #if 0
@@ -631,7 +635,8 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
       }
     checkInvMat();
 #endif
-    SolveLineq(cvMat, vVec, NA-1);
+    if (!after)
+      SolveLineq(cvMat, vVecL, NA-1);
     L = cbrt(Vol);
     for (m = 0; m < NB; m++)
       {
@@ -640,7 +645,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	    w = cMat[m][a];
   	    if (w != 0.) 
   	      {
-  		cost = vVec[m]*w*cdt;
+  		cost = vVecL[m]*w*cdt;
   		px[a][i] += cost * cVec[0][m];
   		py[a][i] += cost * cVec[1][m];
   		pz[a][i] += cost * cVec[2][m];
@@ -692,8 +697,7 @@ double constraintDevL;
 void  AnlzConstraintDevs (void) 
 {
   double dr1[3], sumL;
-  static int laststep=0;
-  static int sumsteps=0, numshake=0; 
+  static double sumsteps=0, numshake=0; 
   int i, k, n, ni, doneshake=0;
   sumL = 0.;
   for (n = 0; n < Oparams.parnum; n ++) 
@@ -707,23 +711,26 @@ void  AnlzConstraintDevs (void)
 	  dr1[2] = rz[i + 1][n] - rz[i][n];
   	  dr1[2] = dr1[2] - L*rint(dr1[2]/L);
 	  curBondLenSq[i] = Sqr (dr1[0]) + Sqr (dr1[1]) + Sqr (dr1[2]);
-	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d) > 1E-7)
+	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d)/Oparams.d > 5E-8)
 	    {
+	      sumsteps = sumsteps +(Oparams.curStep - laststep[n]);
+	      numshake=numshake+1.0;
 	      doneshake++;
 	      doshake[n] = 1;
+	      laststep[n] = Oparams.curStep;
+	      break;
 	    }
 	  sumL = sumL + curBondLenSq[i];
 	}
       
     }
-  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-7, 150, NA-1, Oparams.d,
+  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-8, 150, NA-1, Oparams.d,
 		    Oparams.m, Oparams.parnum);
   if (doneshake)
     {
-      numshake++;
-      sumsteps += Oparams.curStep - laststep;
-      laststep = Oparams.curStep;
-      //printf(">>>> average steps: %d numb. of shake: %d\n", sumsteps/numshake, doneshake);
+      if (sumsteps/numshake < 2 || Oparams.curStep % 1000 == 0)
+	printf("<<<< [WARNING] >>>> average steps between two SHAKE: %f \n", sumsteps/numshake);
+      
     }
 #if 0
   constraintDevL = sqrt (sumL / (Oparams.parnum * (NA-1))) - Oparams.d;
@@ -770,8 +777,8 @@ void shakePosRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE 
 #ifdef MD_RAPACONSTR
       if (!doshake[i])
 	continue;
-      //else 
-	//doshake[i]=0;
+      else
+	doshake[i] = 0;
 #endif
       /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
       for(a=0; a < NA; a++)
@@ -941,7 +948,7 @@ void shakeVelRespaNPT(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB
   dt2 = dt * 0.5;
   for (i=0; i < Nm; i++)
     {
-#if 1
+#if 0
 #ifdef MD_RAPACONSTR
       if (!doshake[i])
 	continue;
@@ -1243,8 +1250,10 @@ void updImpNose(double dt, double c)
 	py[a][i] += Fy[a][i] * cdt;
 	pz[a][i] += Fz[a][i] * cdt;
       }
+#if 0
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
+#endif
 #endif
 }
 void updImpNoseAft(double dt, double c)
@@ -1410,6 +1419,10 @@ void updImp(double dt, double c)
 	  pz[a][i] = cdt*Fz[a][i] + pz[a][i];
 	}
     }
+#ifdef MD_RAPACONSTR
+ shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
+		   0.00000001, px, py, pz);
+#endif
 }
 void calcImp(int i, double *PCMx, double *PCMy, double *PCMz)
 {
@@ -1493,6 +1506,12 @@ void updImpNoseAndAft(double dt, double c)
 	  pz[a][i] += Fz[a][i]*cdt;
 	 }
     }
+#endif
+#if 0
+#ifdef MD_RAPACONSTR
+   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
+ 		    0.000000001, px, py, pz);
+#endif
 #endif
 #if 0
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
@@ -1665,7 +1684,7 @@ void updImpNoseAnd(double dt, double c)
 	  PCMz += pz[a][i] - pzo;
 	} 
     }
-#if 1
+#if 0
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
 		   0.000000001, px, py, pz);
@@ -2401,13 +2420,13 @@ void movelongRespaNPTAft(double dt)
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
 #ifdef MD_RAPACONSTR
-  //ComputeConstraints(dt, 0.5, 0, 1);
+  ComputeConstraints(dt, 1.0, 0, 1);
 #endif
 
   if (OprogStatus.Nose==1)
     updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
-#if 0
+#if 1
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR) 
   if (OprogStatus.rcutInner != Oparams.rcut)
     shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
@@ -2441,7 +2460,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
     }
   L = cbrt(Vol);
   invL = 1.0 / L;
-#if 0
+ #if 0
   printf("d=%.15f NB=%d NA=%d m[0]=%f m[1]=%f m[2]=%f\n",d,NB,NA,m[0], m[1], m[2]);
   printf("tol=%.20f\n", tol);
   printf("L=%f Vol=%.f dt=%f\n", L, Vol, dt);
@@ -2507,20 +2526,23 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   else
     {
       updImp(dt, 0.5);
+#if 0
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
       shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
     		       0.000000001, px, py, pz);
 #endif
+#endif
       updPositions(dt, 1.0);
     }
 #ifdef MD_RAPACONSTR
+  //ComputeConstraints(dt, 1.0, 1, 1); 
+  /*RAPA<<<<<<<<<<<<<<<< */
   AnlzConstraintDevs();
 #endif
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
-  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 0.000000001, 150, NA-1, Oparams.d,
+  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-9, 150, NA-1, Oparams.d,
 		Oparams.m, Oparams.parnum);
 #endif
-
 #if 0
   if (OprogStatus.Nose == 1)
     updVol(dt, 0.5);
@@ -2555,9 +2577,9 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
       updImpNoseAndAft(dt, 0.5);
       updPvAft(dt, 0.5);
 #else
-      updImpNoseAndAft(dt, 0.5);
-      updPsAft(dt, 0.5);
-      updPvAft(dt, 0.5);
+     updImpNoseAndAft(dt, 0.5);
+     updPsAft(dt, 0.5);
+     updPvAft(dt, 0.5);
 #endif
     }
   else if (OprogStatus.Nose == 2)
@@ -2582,9 +2604,15 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
     }
 #if 1
-#if defined(MD_RAPACONSTR)  
+#if defined(MD_RAPACONSTR)
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
-  		      1E-7, px, py, pz);
+		   1E-8, px, py, pz);
+#endif
+#endif
+#if 1
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
+  		      1E-9, px, py, pz);
 #endif
 #endif
 }
