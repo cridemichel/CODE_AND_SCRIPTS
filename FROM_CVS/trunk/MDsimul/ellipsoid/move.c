@@ -3531,10 +3531,11 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
-int interpol(int i, int j, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3])
+int interpol(int i, int j, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3], int bracketing)
 {
+  int nb;
   double d3, Delta, t1, t2;
-  double r1[3], r2[3], alpha;
+  double r1[3], r2[3], alpha, xb1[2], xb2[2];
   d3 = calcDistNeg(t+delt/2, i, j, shift, r1, r2, &alpha, vecg, 0);
   xa[0] = t;
   ya[0] = d1;
@@ -3546,9 +3547,29 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   //printf("{%.8f %.8f %.8f}\n", bip[0], bip[1], bip[2]);
   //print_matrix(Aip, 3);
 
-  printf("d1:%.10f d2: %.10f\n", d1, d2); 
-  printf("polint1: %.10f polint2: %.10f\n",distfunc(t), distfunc(t+delt));
-  *troot=zbrent(distfunc, t, t+delt, OprogStatus.epsd/100);
+  //printf("d1:%.10f d2: %.10f\n", d1, d2); 
+  //printf("polint1: %.10f polint2: %.10f\n",distfunc(t), distfunc(t+delt));
+  polinterr = 0;
+  if (bracketing)
+    {
+      t1 = t;
+      t2 = t+delt*0.5;
+      
+    }
+  else
+    {
+      t1 = t;
+      t2 = t+delt;
+      nb = 1;
+      zbrak(distfunc, t1, t2, OprogStatus.zbrakn, xb1, xb2, &nb);
+      if (nb==0)
+	return 1;
+      t1 = xb1[0];
+      t2 = xb2[0];
+    }
+  if (polinterr)
+    return 1;
+  *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
   if (polinterr)
     return 1;
   calcDistNeg(*troot, i, j, shift, r1, r2, &alpha, vecg, 0);
@@ -3562,6 +3583,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax; 
   double d2old;
+  int dorefine;
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
@@ -3737,7 +3759,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	}
 #endif
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f d1-d2:%.15G\n", t, d1, d2, fabs(d1-d2)));
-       
+      dorefine = 0;      
       if (d1 > 0 && d2 < 0)
 	{
 #if 0
@@ -3751,13 +3773,25 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
        	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd1[kk];
 	    
-	  if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift))
+	  if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift, 0))
 	    {
 	      for (kk=0; kk < 8; kk++)
 		vecgroot[kk] = vecgd2[kk];
 	      troot = t - delt;
 	    }
 #endif
+	  dorefine = 1;
+	}
+      else if (d1 < OprogStatus.epsd && d2 < OprogStatus.epsd)
+	{
+	  for (kk=0; kk < 8; kk++)
+	    vecgroot[kk] = vecgd1[kk];
+	  
+	  if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift, 1))
+	    dorefine = 0;
+	}
+      if (dorefine)
+	{
 	  if (refine_contact(i, j, troot, vecgroot, shift, vecg))
 	    {
 	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
