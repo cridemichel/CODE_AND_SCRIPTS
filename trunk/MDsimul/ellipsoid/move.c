@@ -3633,7 +3633,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   double h, d, dold, dold2, d1Neg, d1Pos, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double vd, normddot, ddot[3], maxddot, delt, told, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
-  double epsd, epsdFast, epsdFastR, epsdMax, firstafterfast; 
+  double epsd, epsdFast, epsdFastR, epsdMax; 
   double d2old;
   int dorefine;
   epsd = OprogStatus.epsd;
@@ -3695,7 +3695,6 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   if (search_contact_faster(i, j, shift, &t, t2, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0;  
   timesS++;
-  firstafterfast = 1;
 #if 0
   if (refine_contact(i, j, t, vecgd1, shift, vecg))
   {
@@ -3727,8 +3726,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  t += h*t;
 	  if (t > t2)
 	    return 0;
-	  d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, firstafterfast);
-	  firstafterfast = 0;
+	  d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
 	}
     }
   else if (d<0&&fabs(d)>1E-7)
@@ -3780,7 +3778,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       for (kk = 0; kk < 8; kk++)
 	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;
-      d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, firstafterfast);
+      d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -3795,13 +3793,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgdold2, firstafterfast);
+	  d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgdold2, 0);
 	  for (kk = 0; kk < 8; kk++)
 	    vecgd[kk] = vecgdold2[kk];
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
 #if 1
-      firstafterfast = 0;
       if (d > epsdFastR)
 	{
 	  if (search_contact_faster(i, j, shift, &t, t2, vecgd, epsd, &d, epsdFast, r1, r2))
@@ -3809,7 +3806,6 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
 	    }
-	  firstafterfast = 1;
 	  for (kk = 0; kk < 8; kk++)
 	    vecgdold[kk] = vecgd[kk];
 	  dold = d;
