@@ -366,6 +366,8 @@ void bump (int i, int j, double* W, int bt)
   b = rxij * vxij + ryij * vyij + rzij * vzij;
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
+  factor = 0.0;
+  printf("bump(%d,%d):%d distSq: %f b:%f\n", i, j, bt, distSq, b);
   switch (bt)
     {
     /* N.B.
@@ -375,7 +377,10 @@ void bump (int i, int j, double* W, int bt)
       factor = -2.0*b;
       break;
     case MD_INOUT_BARRIER:
-      factor = -b + sqrt(Sqr(b) - 2.0*distSq*Oparams.bheight/mredl);
+      if (Sqr(b) < 2.0*distSq*Oparams.bheight/mredl)
+	factor = -2.0*b;
+      else
+	factor = -b + sqrt(Sqr(b) - 2.0*distSq*Oparams.bheight/mredl);
       break;
     case MD_OUTIN_BARRIER:
       factor = -b - sqrt(Sqr(b) + 2.0*distSq*Oparams.bheight/mredl);
@@ -383,9 +388,9 @@ void bump (int i, int j, double* W, int bt)
     }
   
   factor *= mredl / distSq;
-  delpx = - factor * rxij;
-  delpy = - factor * ryij;
-  delpz = - factor * rzij;
+  delpx = factor * rxij;
+  delpy = factor * ryij;
+  delpz = factor * rzij;
   ene= (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
 	Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
   vx[i] = vx[i] + delpx*invmi;
@@ -998,29 +1003,27 @@ void PredictEvent (int na, int nb)
      		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
 #ifdef MD_BARRIER
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
-      		      if (distSq < sigDeltaSq || b < 0.0) 
+      		      s = 0;
+		      if (distSq > sigDeltaSq && b < 0.0) 
 			{
-			  if (distSq < sigDeltaSq)
-			    { 
-			      if (b < 0.0)
-				{
-				  collCode = MD_CORE_BARRIER;
-				  s = -1.0; 
-				  intdistSq = sigSq;
-				}
-			      else
-				{
-				  collCode = MD_INOUT_BARRIER;
-				  s = 1.0;
-				  intdistSq = sigDeltaSq;
-				}
-			    }
-			  else
-			    {
-			      collCode = MD_OUTIN_BARRIER;
-			      s = -1.0;
-			      intdistSq = sigDeltaSq;
-			    }
+			  collCode = MD_OUTIN_BARRIER;
+		      	  s = -1.0;
+	    		  intdistSq = sigDeltaSq;
+			}
+		      else if (distSq < sigDeltaSq && b > 0.0)
+			{ 
+			  collCode = MD_INOUT_BARRIER;
+			  s = 1.0;
+			  intdistSq = sigDeltaSq;
+			}
+		      else if (b < 0.0)
+			{
+			  collCode = MD_CORE_BARRIER;
+			  s = -1.0; 
+			  intdistSq = sigSq;
+			}
+		      if (s != 0)
+	    		{
 			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
 			  d = Sqr (b) - vv * 
 			    (distSq - intdistSq);
