@@ -3750,7 +3750,7 @@ retry:
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
-  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6];
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], fx[3];
   double ti, segno;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck;
