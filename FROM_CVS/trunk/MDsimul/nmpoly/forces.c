@@ -1197,22 +1197,25 @@ void LJForce(int Nm, double rcut)
   VShort = V;
   VcShort = Vc;
 #if defined(MOLPTENS)
+#if 0
   WmxyShort = Wmxy;
   WmyzShort = Wmyz;
   WmzxShort = Wmzx;
   WmxxShort = Wmxx;
   WmyyShort = Wmyy;
   WmzzShort = Wmzz;
+#endif
   WmShort = Wm;
   /*printf("[LJForce] >>>>>>>>>> WmShort: %f\n", WmShort);*/
 #else
-  WShort = W;
+#if 0
   WxyShort = Wxy;
   WyzShort = Wyz;
   WzxShort = Wzx;
   WxxShort = Wxx;
   WyyShort = Wyy;
   WzzShort = Wzz;
+#endif
 #endif
 #endif
   /* NOTA: controllare se questo va effettivamente commentato!!!

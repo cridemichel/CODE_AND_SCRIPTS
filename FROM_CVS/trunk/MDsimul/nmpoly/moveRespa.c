@@ -459,7 +459,7 @@ void updLs(double dt, double c)
   for (i = 0; i < Oparams.parnum; i++)
     for (a = 0; a < NA; a++)
       {
-	Kin += Sqr(px[a][i])+Sqr(py[a][i])+Sqr(pz[a][i])/Oparams.m[a];  
+	Kin += (Sqr(px[a][i])+Sqr(py[a][i])+Sqr(pz[a][i]))/Oparams.m[a];  
       }
   Kin *= 0.5;
 #ifdef MD_FENE
@@ -659,30 +659,116 @@ void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz)
     }
   K *= 0.5;
 }
-
-void movelongRespaNPTBef(double dt)
+void movelongRespaNPTBefOrig(double dt)
 {
   if (OprogStatus.Nose == 0)
     updImpLong(dt, 0.5);
   else
     {
-      updImpLongNose(dt, 0.5);
+      updImpLongNose(dt, 0.25);
       /*printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
       updLs(dt, 0.5);
+      updImpLongNose(dt, 0.25);
       /*printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
+    }
+}
+
+void movelongRespaNPTBef(double dt)
+{
+   double cdt, cdt2;
+  double dof, Nm;
+  double DT, Kin;
+  int i, a;
+  double c;
+
+  if (OprogStatus.Nose == 0)
+    updImpLong(dt, 0.5);
+  else
+    {
+      cdt = 0.5*dt;
+      LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+      Nm = Oparams.parnum;
+      cdt2 = cdt / 2.0;
+      ///s = s / (1 - s*Ps*cdt/OprogStatus.Q);
+      Kin = 0;
+      for (i = 0; i < Oparams.parnum; i++)
+    	for (a = 0; a < NA; a++)
+	  {
+	    Kin += (Sqr(px[a][i])+Sqr(py[a][i])+Sqr(pz[a][i]))/Oparams.m[a];  
+	  }
+      Kin *= 0.5;
+#ifdef MD_FENE
+      dof = 3*NA*Oparams.parnum;
+#else
+      dof = (2*NA - 1)*Oparams.parnum;
+#endif
+      /*printf("temp= %f\n", 2*Kin/dof);*/
+      DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
+      /*printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);*/
+      Ps += DT * cdt2;
+      Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
+      Ps += DT * cdt2;
+      updImpLongNose(dt, 0.5);
+      s = s / (1 - s*Ps*cdt/OprogStatus.Q);
     }
 }
 
 void movelongRespaNPTAft(double dt)
 {
+  double cdt, cdt2;
+  double dof, Nm;
+  double DT, Kin;
+  int i, a;
+  double c = 0.5;
   if (OprogStatus.Nose == 0)
-    updImpLong(dt, 0.5);
+    {
+      LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+      updImpLong(dt, 0.5);
+    }
   else
     {
+      cdt = c*dt;
+      LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+      Nm = Oparams.parnum;
+      cdt2 = cdt / 2.0;
+      s = s / (1 - s*Ps*cdt/OprogStatus.Q);
+      updImpLongNose(dt, 0.5);
+      Kin = 0;
+      for (i = 0; i < Oparams.parnum; i++)
+    	for (a = 0; a < NA; a++)
+	  {
+	    Kin += (Sqr(px[a][i])+Sqr(py[a][i])+Sqr(pz[a][i]))/Oparams.m[a];  
+	  }
+      Kin *= 0.5;
+#ifdef MD_FENE
+      dof = 3*NA*Oparams.parnum;
+#else
+      dof = (2*NA - 1)*Oparams.parnum;
+#endif
+      /*printf("temp= %f\n", 2*Kin/dof);*/
+      DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
+      /*printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);*/
+      Ps += DT * cdt2;
+      Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
+      Ps += DT * cdt2;
+      //s = s / (1 - s*Ps*cdt2/OprogStatus.Q);
+    }
+}
+
+void movelongRespaNPTAftOrig(double dt)
+{
+  if (OprogStatus.Nose == 0)
+    {
+      LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+      updImpLong(dt, 0.5);
+    }
+  else
+    {
+      LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+      updImpLongNose(dt, 0.25);
       updLs(dt, 0.5);
       /*printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
-      LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-      updImpLongNose(dt, 0.5);
+      updImpLongNose(dt, 0.25);
       /*printf("A2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 }
@@ -1027,7 +1113,7 @@ void move(void)
     } 
 #ifdef MD_RESPA_NPT
   v2p();
-  movelongRespaNPTBef(Oparams.steplength);
+  movelongRespaNPTBefOrig(Oparams.steplength);
 #else
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
@@ -1133,7 +1219,7 @@ void move(void)
   //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
   //LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcut);
 #ifdef MD_RESPA_NPT
-  movelongRespaNPTAft(Oparams.steplength);
+  movelongRespaNPTAftOrig(Oparams.steplength);
   p2v();
 #else
   for (i=0; i < Oparams.parnum; i++)
