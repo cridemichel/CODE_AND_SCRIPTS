@@ -1494,13 +1494,13 @@ void move(void)
 	    }
 	  sprintf(fileop2 ,"Store-%d-%d", 
 		  OprogStatus.KK, OprogStatus.JJ);
+	  strcpy(fileop, absTmpAsciiHD(fileop2));
 	  /* store conf */
 	  if ( (bf = fopenMPI(fileop, "w")) == NULL)
 	    {
 	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
 	      exit(-1);
 	    }
-	  strcpy(fileop, absTmpAsciiHD(fileop2));
 	  UpdateSystem();
 	  writeAsciiPars(bf, opro_ascii);
 	  fprintf(bf, sepStr);
