@@ -2261,6 +2261,27 @@ int check_cross(double distsOld[NA][NA], double dists[NA][NA], int crossed[NA][N
       }
   return retcross;
 }
+int get_dists_tocheck(double distsOld[NA][NA], double dists[NA][NA], int tocheck[NA][NA])
+{
+  int a, b;
+  int rettochk = 0;
+  for (a = 0; a < NA; a++)
+    for (b = 0; b < NA; b++)
+      {
+	tocheck[a][b] = 0;
+	if ( ((a==1 || a==2) && (b==1 || b==2)) ||
+	     ((a==3 || a==4) && (b==3 || b==4)) )
+	  continue;
+	if (a == 0 || b == 0)
+	  continue;
+	if (dists[a][b] < OprogStatus.epsd && distsOld[a][b] < OprogStatus.epsd)
+	  {
+	    tocheck[a][b] = 1; 
+	    rettochk++;
+	  }
+      }
+  return rettochk;
+}
 void assign_dists(double a[][], double b[][])
 {
   memcpy(b, a, NA*NA*sizeof(double));
@@ -2416,11 +2437,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 		   double vecg[5])
 {
   double h, d, dold, dold2, d1Neg, d1Pos, t, r1[3], r2[3], dists[NA][NA], distsOld[NA][NA]; 
-  double vd, normddot, ddot[3], maxddot, delt, told, troot;
+  double vd, normddot, ddot[3], maxddot, delt, told, troot, tmin;
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax; 
   double d2old;
-  int dorefine;
+  int dorefine, ntc, ncr, nn, gotcoll;
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
@@ -2448,7 +2469,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
     return 0;  
   timesS++;
   MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d));
-#if 1
+#if 0
   if (lastbump[j]==i && lastbump[i]==j)
     {
       MD_DEBUG10(printf("last collision was between (%d-%d)\n", i, j));
@@ -2505,7 +2526,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 #if 1
       if (d > epsdFastR)
 	{
-	  if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast))
+	  if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast, dists))
 	    {
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
@@ -2517,56 +2538,88 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 	}
 #endif
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f d1-d2:%.15G\n", t, d1, d2, fabs(d1-d2)));
-      dorefine = 0;      
-      if (dold > 0 && d < 0)
+      ncr=check_cross(distsOld, dists, crossed);
+      /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
+       * sticky */
+      for (nn = 0; nn < ncr; nn++)
 	{
-#ifndef MD_NOINTERPOL  
-	 if (interpol(i, j, t-delt, delt, dold, d, &troot, shift, 0))
-#endif
+	  dorefine[nn] = 0;
+	  if (crossed[nn])
 	    {
-	      /* vecgd2 è vecgd al tempo t-delt */
-	      troot = t - delt;
+#ifndef MD_NOINTERPOL  
+	      if (interpol(i, j, mapbonds[nn].a, mapbonds[nn].b, 
+			   t-delt, delt, distsOld[nn], dists[nn], &troot, shift, 0))
+#endif
+    		{
+    		  /* vecgd2 è vecgd al tempo t-delt */
+    		  troot = t - delt;
+    		}
+    	      dorefine[nn] = 1;
 	    }
-	  dorefine = 1;
 	}
-      else if (dold < OprogStatus.epsd && d < OprogStatus.epsd)
+      ntc = get_dists_tocheck(tocheck);
+      for (nn = 0; nn < ntc; nn++)
 	{
 #ifndef MD_NOINTERPOL
-	  if (interpol(i, j, t-delt, delt, dold, d, &troot, shift, 1))
-	    dorefine = 0;
-	  else 
-	    dorefine = 1;
+	  if (tocheck[nn])
+	    {
+	      if (interpol(i, j, mapbonds[nn].a, mapbonds[nn].b, t-delt, delt, distsOld[nn], dists[nn], 
+			   &troot, shift, 1))
+		dorefine[nn] = 0;
+	      else 
+		dorefine[nn] = 1;
+	    }
+	}
 #endif
-	}
-      if (dorefine)
+      tmin = 0;
+      gotcoll = 0;
+      for (nn = 0; nn < 8; nn++)
 	{
-	  if (refine_contact(i, j, t-delt, t, shift, &troot))
+	  if (dorefine[nn])
 	    {
-	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
-	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
-	      if (troot > t2 || troot < t1 || 
-		  (lastbump[i] == j && lastbump[j]==i && fabs(troot - lastcol[i])<1E-8))
-		return 0;
-	      else
-		return 1;
-	    }
-	  else 
-	    {
-	      MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
-	      if (d < 0)
+	      if (refine_contact(i, j, mapbonds[nn].a, mapbonds[nn].b, t-delt, t, shift, &troot))
 		{
-		  MD_DEBUG10(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
-		  MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
+		  MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
+		  MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
 		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
-		  return 0;
+		  if (troot > t2 || troot < t1 || 
+		      (lastbump[i].i == j && lastbump[j].j==i && lastbump[i].a == mapbonds[nn].a &&
+		       lastbump[j].b == mapbonds[nn].b && fabs(troot - lastcol[i])<1E-8))
+		    continue;
+		  else
+		    {
+		      gotcoll = 1;
+		      if (troot < tmin && troot < tbigat)
+			{
+			  tmin = troot;
+			  imin = i;
+			  jmin = j;
+			}
+		      continue;
+		    }
 		}
-	      else
+	      else 
 		{
-		  printf("d: %.15G dold: %.15G\n", d, dold); 
+		  MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+		  if (d < 0)
+		    {
+		      MD_DEBUG10(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
+		      MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
+		      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+		      gotcoll = -1;
+		      continue;
+		    }
+		  else
+		    {
+		      printf("d: %.15G dold: %.15G\n", d, dold); 
+		    }
 		}
 	    }
 	}
+      if (gotcoll)
+	return 1;
+      else if (gotcoll == -1)
+	return 0;
       dold = d;
       its++;
       itsS++;
