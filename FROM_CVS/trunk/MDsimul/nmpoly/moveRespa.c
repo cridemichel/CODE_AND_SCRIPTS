@@ -35,6 +35,24 @@ extern void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z,
 	 COORD_TYPE* r3x, COORD_TYPE* r3y, COORD_TYPE* r3z);
 extern void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, 
 		  COORD_TYPE** velz, COORD_TYPE VOL1);
+extern void LJForceLong(int Nm, double rcutI, double rcutO);
+extern void FENEForce(void);
+extern void checkNebrRebuildNPT(void);
+extern void checkNebrRebuildNPTLong(void);
+extern void checkNebrRebuild(void);
+extern void checkNebrRebuildLong(void);
+extern void chksVol(void);
+extern void chks(void);
+extern void update_sigmas(void);
+extern int check_sigmas(void);
+extern void savesnap(void);
+extern void updateAng(int Nm);
+extern void updateDQ(COORD_TYPE dt);
+extern void BuildNebrListNoLinkedLong(int Nm, double rCut); 
+extern void BuildNebrListLong(int Nm, COORD_TYPE rCut); 
+
+void calcPtensMolRespa(int Nm);
+
 int nrs;
 #ifdef MD_RAPACONSTR
 int *doshake;
@@ -809,7 +827,7 @@ void shakePosRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE 
   COORD_TYPE  tol2, pxab, pyab, pzab, pabSq, dt2, dtSq2;
   COORD_TYPE  rabSq, diffSq, rxab, ryab, rzab, rpab, gab;
   COORD_TYPE  dx, dy, dz, rma, rmb;
-  COORD_TYPE  axia, ayia, azia;
+  COORD_TYPE  axia=0.0, ayia=0.0, azia=0.0;
   COORD_TYPE  vxi[NA], vyi[NA], vzi[NA], pxi[NA], pyi[NA], pzi[NA];
   int i, a, b, it;
   const COORD_TYPE rptol = 1.0E-6;
