@@ -735,8 +735,8 @@ void usrInitBef(void)
     OprogStatus.scalfact = 0.8;
     OprogStatus.reducefact = 0.9;
 #ifdef MD_NNL
-    OprogStatus.nebrTabFac = 150;
-    OprogStatus.rNebrShell = 0.4;
+    OprogStatus.nebrTabFac = 200;
+    OprogStatus.rNebrShell = 1.0;
 #endif
     /* If 1 the program calculate of the corrisponding variable a mean from
        the begin of the run and not the instanteaneous value */
@@ -1246,6 +1246,7 @@ void usrInitAft(void)
 #ifdef MD_NNL
       nebrTab[i].len = 0;
       nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+      nebrTab[i].R = matrix(3, 3);
 #endif
       scdone[i] = 0;
       axa[i] = Oparams.a[1];
@@ -1394,7 +1395,7 @@ void usrInitAft(void)
 #ifdef MD_NNL
   rebuildNNL();
   MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
-  exit(-1);
+  //exit(-1);
 #endif
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
