@@ -1002,44 +1002,45 @@ void StartRun(void)
 {
   int j, k, n, nl, nc, iA;
 
-  for (nl=0; nl < 2; nl++)
+  for (nl=0; nl < 3; nl++)
     {
       for (j = 0; j < cellsx[nl]*cellsy[nl]*cellsz[nl] + Oparams.parnum; j++)
 	cellList[nl][j] = -1;
     }
-  
   for (nc=0; nc < 2; nc++)
-    /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
-    for (n = 0; n < Oparams.parnum; n++)
-      {
-	iA = (n < Oparams.parnumA)?0:1;
-	if (iA == 0 && nc == 0)
-	  nl = 0;
-	else if (iA == 1 && nc == 0)
-	  nl = 1;
-	else
-	  nl = 2;
-	atomTime[n] = Oparams.time;
-	inCell[nc][0][n] =  (rx[n] + L2) * cellsx[nl] / L;
-	inCell[nc][1][n] =  (ry[n] + L2) * cellsy[nl] / L;
+    {
+      /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
+      for (n = 0; n < Oparams.parnum; n++)
+	{
+	  iA = (n < Oparams.parnumA)?0:1;
+	  if (iA == 0 && nc == 0)
+	    nl = 0;
+	  else if (iA == 1 && nc == 0)
+	    nl = 1;
+	  else
+	    nl = 2;
+	  atomTime[n] = Oparams.time;
+	  inCell[nc][0][n] =  (rx[n] + L2) * cellsx[nl] / L;
+	  inCell[nc][1][n] =  (ry[n] + L2) * cellsy[nl] / L;
 #ifdef MD_GRAVITY
-	inCell[nc][2][n] =  (rz[n] + Lz2) * cellsz[nl] / (Lz+OprogStatus.extraLz);
+	  inCell[nc][2][n] =  (rz[n] + Lz2) * cellsz[nl] / (Lz+OprogStatus.extraLz);
 #else
-	inCell[nc][2][n] =  (rz[n] + L2)  * cellsz[nl] / L;
+	  inCell[nc][2][n] =  (rz[n] + L2)  * cellsz[nl] / L;
 #endif
 #if 0
-	if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
-	  {
-	    printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
-	    printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
-		   inCell[0][n],inCell[1][n], inCell[2][n]);
-	  }
+	  if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
+	    {
+	      printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
+	      printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
+		     inCell[0][n],inCell[1][n], inCell[2][n]);
+	    }
 #endif	  
-	j = (inCell[nc][2][n]*cellsy[nl] + inCell[nc][1][n])*cellsx[nl] + 
-	  inCell[nc][0][n] + Oparams.parnum;
-	cellList[nl][n] = cellList[nl][j];
-	cellList[nl][j] = n;
-      }
+	  j = (inCell[nc][2][n]*cellsy[nl] + inCell[nc][1][n])*cellsx[nl] + 
+	    inCell[nc][0][n] + Oparams.parnum;
+	  cellList[nl][n] = cellList[nl][j];
+	  cellList[nl][j] = n;
+	}
+    }
   InitEventList();
   for (k = 0;  k < NDIM; k++)
     {
@@ -1047,7 +1048,9 @@ void StartRun(void)
       cellRange[2*k+1] =   1;
     }
   for (n = 0; n < Oparams.parnum; n++)
-    PredictEvent(n, -2); 
+    {
+      PredictEvent(n, -2); 
+    }
   //exit(-1);
 #if 0
     {
