@@ -584,8 +584,8 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 	{
 	  for (k2=0; k2 < 3; k2++)
 	    {
-	      A += Sqr(OprogStatus.lambda2)*gradf[k1]*Xa[k1][k2]*gradf[k2];
-	      B += OprogStatus.lambda2*r1A[k1]*Xa[k1][k2]*gradf[k2];
+	      A += Sqr(OprogStatus.stepSD)*gradf[k1]*Xa[k1][k2]*gradf[k2];
+	      B += OprogStatus.stepSD*r1A[k1]*Xa[k1][k2]*gradf[k2];
 	      //  printf("riA[%d]=%f Xa[%d][%d]=%f\n", r1A[k1], Xa[k1][k2]);
 	      C += r1A[k1]*Xa[k1][k2]*r1A[k2];
 	    }
@@ -621,8 +621,8 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 	{
 	  for (k2 = 0; k2 < 3; k2++)
 	    {
-	      Q += (ri[k1]+sf*dr[k1]+OprogStatus.lambda2*sol*gradf[k1]-rA[k1])*Xa[k1][k2]*
-		(ri[k2]+ sf*dr[k2]+OprogStatus.lambda2*sol*gradf[k2]-rA[k2]);  
+	      Q += (ri[k1]+sf*dr[k1]+OprogStatus.stepSD*sol*gradf[k1]-rA[k1])*Xa[k1][k2]*
+		(ri[k2]+ sf*dr[k2]+OprogStatus.stepSD*sol*gradf[k2]-rA[k2]);  
 	    }
 	}
       Q -= 1.0;
@@ -632,7 +632,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 #endif
   for (kk = 0; kk < 3; kk++)
     {
-      dr[kk] = OprogStatus.lambda2*sol*gradf[kk] + sf*dr[kk]; 
+      dr[kk] = OprogStatus.stepSD*sol*gradf[kk] + sf*dr[kk]; 
     }
 }
 void projectgrad(double *p, double *xi, double *gradf, double *gradg)
@@ -671,7 +671,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
    * The routine linmin is called to perform line minimizations. */
 { 
   int j,its,kk;
-  const int ITMAXFR = 20;
+  const int ITMAXFR = OprogStatus.maxitsSD;
   const double EPSFR=1E-10;
   double gg,gam,fp,dgg,norm1, norm2, sp, fpold, gradf[3], gradg[3];
   double g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[kk];
@@ -726,7 +726,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	   return;
 	 }
 #endif
-       if (2.0*fabs(fpold-fp) <= OprogStatus.cgtol*(fabs(fpold)+fabs(fp)+EPSFR)) 
+       if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
 	 { 
 	   itsfrprmn++;
 	   return;
@@ -934,9 +934,9 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     }
   A = 0.5*A - 1.0;
   if (A>=0)
-    A = OprogStatus.lambda1;
+    A = OprogStatus.springkSD;
   else
-    A = -OprogStatus.lambda1;
+    A = -OprogStatus.springkSD;
   for (kk=0; kk < 3; kk++)
     {
       grad[kk]= 2.0*(vec[kk+3]-vec[kk])*A;
@@ -962,15 +962,17 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
       grad[kk] -= gradfx*fx[kk];
       grad[kk+3] -= gradgx*gx[kk];
     }
+#if 0
   normg = 0.0;
   for (kk=0; kk < 6; kk++)
     {
       normg += Sqr(grad[kk]); 
     }
   normg=sqrt(normg);
+#endif
   for (kk=0; kk < 6; kk++)
     {
-      grad[kk] *= OprogStatus.lambda2/normg;
+      grad[kk] *= OprogStatus.stepSD;
     } 
   F = 0.0;
   for (kk=0; kk < 3; kk++)
@@ -998,9 +1000,9 @@ double  cgfuncRyck(double *vec)
     }
   A = 0.5*A - 1.0;
   if (A>=0)
-    A = OprogStatus.lambda1;
+    A = OprogStatus.springkSD;
   else
-    A = -OprogStatus.lambda1;
+    A = -OprogStatus.springkSD;
 
   F = 0.0;
   for (kk=0; kk < 3; kk++)
@@ -1049,7 +1051,7 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
     }
   //printf(">>> vec: %.15G %.15G %.15G %.15G %.15G %.15G\n", vec[0], vec[1], vec[2],
 //	 vec[3], vec[4], vec[5]);
-  frprmnRyck(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+  frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
   //powell(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc);
   for (kk=0; kk < 6; kk++)
     {

@@ -239,9 +239,10 @@ struct progStatus
   COORD_TYPE PxyArr[5];
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
-  double lambda1;
-  double lambda2;
-  double cgtol;
+  double springkSD;
+  double stepSD;
+  int maxitsSD;
+  double tolSD;
   /* Accumulator for the radial distribution function */
   int hist[MAXBIN];
   int equilibrated;
@@ -485,10 +486,14 @@ struct pascii opro_ascii[] =
 #endif
   {"scalevel",     &OS(scalevel),              1,   1, "%d"},
   {"equilibrated", &OS(equilibrated),          1,   1, "%d"},
-  {"epsd",         &OS(epsd),                  1,   1, ".12G"},
-  {"epsdFast",     &OS(epsdFast),              1,   1, ".12G"},
-  {"epsdFastR",    &OS(epsdFastR),             1,   1, ".12G"},
-  {"epsdMax",      &OS(epsdMax),               1,   1, ".12G"},
+  {"epsd",         &OS(epsd),                  1,   1, "%.12G"},
+  {"epsdFast",     &OS(epsdFast),              1,   1, "%.12G"},
+  {"epsdFastR",    &OS(epsdFastR),             1,   1, "%.12G"},
+  {"epsdMax",      &OS(epsdMax),               1,   1, "%.12G"},
+  {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
+  {"stepSD",       &OS(stepSD),                1,   1, "%.12G"},
+  {"maxitsSD",     &OS(maxitsSD),              1,   1, "%d"},
+  {"tolSD",        &OS(tolSD),                 1,   1, "%.15G"},         
   {"forceguess",   &OS(forceguess),            1,   1, "%d"},
   {"zbrakn",       &OS(zbrakn),              1,   1,  "%d"},
   {"zbrentTol",    &OS(zbrentTol),           1,   1,  ".15G"},
@@ -670,11 +675,11 @@ struct singlePar OsinglePar[] = {
   {"epsdFast",   &OprogStatus.epsdFast,       CT},
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
-  {"cgtol",      &OprogStatus.cgtol,          CT},
+  {"tolSD",      &OprogStatus.tolSD,          CT},
   {"forceguess", &OprogStatus.forceguess,     INT},
-  {"lambda1",    &OprogStatus.lambda1,        CT},
-  {"lambda2",    &OprogStatus.lambda2,        CT},
-  {"cgtol",      &OprogStatus.cgtol,          CT},
+  {"springkSD",  &OprogStatus.springkSD,    CT},
+  {"stepSD",     &OprogStatus.stepSD,         CT},
+  {"maxitsSD",   &OprogStatus.maxitsSD,       INT},
   {"zbrakn",     &OprogStatus.zbrakn,         INT},
   {"zbrentTol",  &OprogStatus.zbrentTol,      CT},
   {"scalfact",   &OprogStatus.scalfact,       CT},
