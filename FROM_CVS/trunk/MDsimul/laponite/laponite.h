@@ -706,7 +706,7 @@ extern struct pascii opar_ascii[];
 #define KBEG 0.63
 #define KEND 25.0
 #define RBEG 0.2
-#define REND 5.65
+#define REND 57.0
 #define HNBOX 0
 #define NUMK2AV 150 /* Number of k on the same modulus over which we must 
 		       perform a mean */

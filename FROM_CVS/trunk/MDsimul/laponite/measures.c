@@ -483,10 +483,10 @@ void radDens(void)
     {
       for(j=i+1; j < Nm; j++)
 	{
-	  rxCMi = (m0*rx[0][i] + m1*rx[1][i] + m2*ry[2][i]) * invMtot;
-	  ryCMi = (m0*ry[0][i] + m1*ry[1][i] + m2*rz[2][i]) * invMtot;
+	  rxCMi = (m0*rx[0][i] + m1*rx[1][i] + m2*rx[2][i]) * invMtot;
+	  ryCMi = (m0*ry[0][i] + m1*ry[1][i] + m2*ry[2][i]) * invMtot;
 	  rzCMi = (m0*rz[0][i] + m1*rz[1][i] + m2*rz[2][i]) * invMtot;
-	  rxCMj = (m0*rx[0][j] + m1*rx[1][j] + m2*rz[2][j]) * invMtot;
+	  rxCMj = (m0*rx[0][j] + m1*rx[1][j] + m2*rx[2][j]) * invMtot;
 	  ryCMj = (m0*ry[0][j] + m1*ry[1][j] + m2*ry[2][j]) * invMtot;
 	  rzCMj = (m0*rz[0][j] + m1*rz[1][j] + m2*rz[2][j]) * invMtot;
 	  rxij = rxCMi - rxCMj;
