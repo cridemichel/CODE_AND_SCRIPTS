@@ -360,10 +360,13 @@ int copy(char *src, char* dest) /* src and dest must be absolute */
   sync();
   return 0;   /* 0 means SUCCESS */
 }
+#ifdef MD_BILOG
+extern int *bilog_arr;
+#endif
 /* =========================== >>> chkBakAsciiSteps <<< ==================*/
 int chkBakAsciiSteps(void)
 {
-  double base, logblockbase; 
+  double base; 
 #ifdef MDLLINT
   long long int oldfstps, retval, oldlogblock;// *timeout; 
   long long int cslb;
@@ -372,9 +375,6 @@ int chkBakAsciiSteps(void)
   int cslb;
 #endif
   base = OprogStatus.base;
-#ifdef MD_BILOG
-  logblockbase = OprogStatus.logblockbase;
-#endif
   //timeout = &OprogStatus.timeout;
   switch (OprogStatus.bakSaveMode){ 
   case 0:
@@ -441,64 +441,14 @@ int chkBakAsciiSteps(void)
     printf("add necessary fields to OprogStatus struct and define macro MD_BILOG!!!\n");
     exit(-1);
 #else
-    if (OprogStatus.NN == 0)
-      return 0;
-
-    //printf("logBlock:%d\n", logBlock);
-    cslb = Oparams.curStep % logBlock;
-    retval = 0;
-#ifdef MDLLINT
-    if ( (cslb == ((long long int)OprogStatus.fstps)) || (cslb == 0))
-#else
-    if ( (cslb == ((int)OprogStatus.fstps)) || (cslb == 0))
-#endif
-     {
-	retval = 1;
-	/*printf("[%d]  cs mod lb: %d fsteps: %f logblock: %d\n", Oparams.curStep,
-	  Oparams.curStep % logBlock,
-	  OprogStatus.fstps, logBlock);*/
-
-	//OprogStatus.fstps = (int) (base * 
-	//((double) OprogStatus.fstps));
-#ifdef MDLLINT
-	oldfstps = (long long int)OprogStatus.fstps;
-	while (oldfstps == (long long int)OprogStatus.fstps)
-	  OprogStatus.fstps = base * OprogStatus.fstps;
-#else
-	oldfstps = (int)OprogStatus.fstps;
-	while (oldfstps == (int)OprogStatus.fstps)
-	  OprogStatus.fstps = base * OprogStatus.fstps;
-#endif
-#ifdef MDLLINT
-#ifdef MPI
-	if(my_rank == 0)
-#endif
-	  printf("[%lld] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
-	if ( ((long long int)OprogStatus.fstps) > logBlock )
-	  {
-    	    oldlogblock = (long long int)OprogStatus.logblock;
-    	    while (oldlogblock == (long long int)OprogStatus.logblock)
-    	      OprogStatus.logblock = logblockbase * OprogStatus.logblock;
-	    printf("[%lld] fstps: %.6f\n\n", Oparams.curStep, OprogStatus.fstps);
-	    logBlock = (long long int) OprogStatus.logblock;
-	    OprogStatus.fstps = 1;
-	  }
-#else
-#ifdef MPI
-	if(my_rank == 0)
-#endif
-	  printf("[%lld] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
-	if ( ((int)OprogStatus.fstps) > logBlock )
-	  {
-    	    oldlogblock = (int)OprogStatus.logblock;
-    	    while (oldlogblock == (int)OprogStatus.logblock)
-    	      OprogStatus.logblock = logblockbase * OprogStatus.logblock;
-	    printf("[%lld] fstps: %.6f\n\n", Oparams.curStep, OprogStatus.fstps);
-	    logBlock = (int) OprogStatus.logblock;
-	    OprogStatus.fstps = 1;
-	  }
-#endif
-     }
+    /* OprogStatus.fstps viene usata per memorizzare l'indice nell'array bilog_arr
+     * del prossimo step a cui si salvare */
+    if (Oparams.curStep == bilog_arr[OprogStatus.lastbilogsaved])
+      {
+	OprogStatus.lastbilogsaved++;
+	return 1;
+      }
+    return 0;
 #endif
     break;
   default:
@@ -512,7 +462,7 @@ int chkBakAsciiSteps(void)
 /* =========================== >>> chkXvaStep <<< ========================== */
 int chkXvaSteps(void)
 {
-  double base, logblockbase; 
+  double base; 
 #ifdef MDLLINT
   long long int cslb, oldfstps, retval, oldlogblock;// *timeout; 
 #else
@@ -576,64 +526,7 @@ int chkXvaSteps(void)
     printf("add necessary fields to OprogStatus struct and define macro MD_BILOG!!!\n");
     exit(-1);
 #else
-    if (OprogStatus.NN == 0)
-      return 0;
-
-    //printf("logBlock:%d\n", logBlock);
-    cslb = Oparams.curStep % logBlock;
-    retval = 0;
-#ifdef MDLLINT
-    if ( (cslb == ((long long int)OprogStatus.fstps)) || (cslb == 0))
-#else
-    if ( (cslb == ((int)OprogStatus.fstps)) || (cslb == 0))
-#endif
-     {
-	retval = 1;
-	/*printf("[%d]  cs mod lb: %d fsteps: %f logblock: %d\n", Oparams.curStep,
-	  Oparams.curStep % logBlock,
-	  OprogStatus.fstps, logBlock);*/
-
-	//OprogStatus.fstps = (int) (base * 
-	//((double) OprogStatus.fstps));
-#ifdef MDLLINT
-	oldfstps = (long long int)OprogStatus.fstps;
-	while (oldfstps == (long long int)OprogStatus.fstps)
-	  OprogStatus.fstps = base * OprogStatus.fstps;
-#else
-	oldfstps = (int)OprogStatus.fstps;
-	while (oldfstps == (int)OprogStatus.fstps)
-	  OprogStatus.fstps = base * OprogStatus.fstps;
-#endif
-#ifdef MDLLINT
-#ifdef MPI
-	if(my_rank == 0)
-#endif
-	  printf("[%lld] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
-	if ( ((long long int)OprogStatus.fstps) > logBlock )
-	  {
-    	    oldlogblock = (long long int)OprogStatus.logblock;
-    	    while (oldlogblock == (long long int)OprogStatus.logblock)
-    	      OprogStatus.logblock = logblockbase * OprogStatus.logblock;
-	    printf("[%lld] fstps: %.6f\n\n", Oparams.curStep, OprogStatus.fstps);
-	    logBlock = (long long int) OprogStatus.logblock;
-	    OprogStatus.fstps = 1;
-	  }
-#else
-#ifdef MPI
-	if(my_rank == 0)
-#endif
-	  printf("[%lld] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
-	if ( ((int)OprogStatus.fstps) > logBlock )
-	  {
-    	    oldlogblock = (int)OprogStatus.logblock;
-    	    while (oldlogblock == (int)OprogStatus.logblock)
-    	      OprogStatus.logblock = logblockbase * OprogStatus.logblock;
-	    printf("[%lld] fstps: %.6f\n\n", Oparams.curStep, OprogStatus.fstps);
-	    logBlock = (int) OprogStatus.logblock;
-	    OprogStatus.fstps = 1;
-	  }
-#endif
-     }
+    
 #endif
     break;
   default:

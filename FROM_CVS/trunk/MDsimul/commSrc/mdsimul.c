@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.2 2004-05-14 23:22:27 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.3 2004-05-17 11:47:07 demichel Exp $     */
 #ifndef lint
-static char vcid[] = "$Id: mdsimul.c,v 1.2 2004-05-14 23:22:27 demichel Exp $";
+static char vcid[] = "$Id: mdsimul.c,v 1.3 2004-05-17 11:47:07 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -291,12 +291,21 @@ void commMD(void)
 	NULL);
 } /* <------------------------------------------------------- END FATHER */
 #ifdef MD_BILOG
+#ifdef MDLLINT
+long long int *bilog_arr;
+#else
 int *bilog_arr;
+#endif
 int compare_int(const void *a, const void *b)
 {
   int n1, n2;
+#ifdef MDLLINT
+  n1 = *((long long int*)a);
+  n2 = *((long long int*)b);
+#else
   n1 = *((int*)a);
   n2 = *((int*)b);
+#endif
   if (n1 < n2)
     return -1;
   else if (n1 == n2)
@@ -304,21 +313,41 @@ int compare_int(const void *a, const void *b)
   else
     return 1;
 }
+#ifdef MDLLINT
+#define MD_INT long long int
+#define MD_INTP long long int *
+#define MD_INTSTR "%lld"
+#else
+#define MD_INT int
+#define MD_INTP int *
+#define MD_INTSTR "%d"
+#endif
 void build_bilog_arr(void)
 {
   double fstpsw=1.0, fstps=1.0;
-  const int maxpts = 10000; 
-  int exist, end=0, npts, i; 
-  bilog_arr = malloc(sizeof(int)*maxpts);
+  int maxpts, maxptw=80, maxpt=80; 
+  int exist, end=0, npts, nptst, nptstw, i; 
+  int tots;
+  tots = Oparams.totStep?Oparams.totStep:2000000; 
+  maxptw = 1+(int)log10((double)tots)/log10(OprogStatus.basew);
+  maxpt =  1+(int)log10((double)tots)/log10(OprogStatus.base);
+  maxpts = maxptw*maxpt;
+  printf("Building bilog array maxptw: %d maxpt: %d\n", maxptw, maxpt);
+  bilog_arr = malloc(sizeof(MD_INT)*maxpts);
   npts = 0;
+  for (i=0; i < maxpts; i++)
+    bilog_arr[i] = -1;
+  nptstw = 0;
   while (!end)
     {
+      nptst = 0;
+      fstps = 1.0;
       while (!end)
 	{
 	  exist = 0;
 	  for (i=0; i < npts; i++)
 	    {
-	      if (bilog_arr[i]==(int)fstps) 
+	      if (bilog_arr[i]==(MD_INT)fstps) 
 		{
 		  exist = 1;
 		  break;
@@ -326,20 +355,30 @@ void build_bilog_arr(void)
 	    }
 	  if (!exist)
 	    {
-	      bilog_arr[npts] = (int) fstps;
+	      bilog_arr[npts] = (MD_INT) fstps;
 	      npts++;
+	      if (npts == maxpts)
+		{
+		  end = 1;
+		  break;
+		}
 	    }
 	  fstps = fstpsw + fstps * OprogStatus.base;
-	  if (npts == maxpts)
-	    end=1;
-	}
+	  nptst++; 
+	  if (nptst == maxpt && nptstw == maxptw)
+	    end = 1;
+	  if (nptst == maxpt)
+	    break;
+  	}
       fstpsw = fstpsw * OprogStatus.basew;
+      nptstw++;
+      printf("nptstw: %d nptst:%d npts: %d fstpw: %f fstps: %f\n",nptstw, nptst, npts, fstpsw, fstps);
     }
-  qsort((void*)bilog_arr, npts, npts*sizeof(int), compare_int);
+  qsort((void*)bilog_arr, npts, sizeof(MD_INT), compare_int);
 
   for (i=0; i < npts; i++)
     {
-      printf("bilog_arr[%d]=%d\n", i, bilog_arr[i]);
+      printf("bilog_arr[%d]=" MD_INTSTR "\n", i, bilog_arr[i]);
     }
   exit(-1);
 }
