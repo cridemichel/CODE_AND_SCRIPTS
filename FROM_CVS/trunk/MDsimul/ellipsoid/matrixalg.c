@@ -99,6 +99,7 @@ void nrerror(char *msg)
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 #define DABS fabs
 long long int itsfrprmn=0, callsfrprmn=0,callsok=0, callsprojonto=0, itsprojonto=0;
+double accngA=0, accngB=0;
 double xicom[8], pcomI[8], pcom[8], pcom2[8], xi[8], G[8], H[8], grad[8];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
 int cghalfspring, icg, jcg, doneryck;
@@ -1501,10 +1502,10 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       if (doneryck==2)
 	{
 	  callsok++;
-	   return;
+	  return;
 	 }
-       
-       if (OprogStatus.tolSDgrad <=0  || (fp > 0 && sqrt(fp) > 1E-8)) 
+#if 0
+      if (OprogStatus.tolSDgrad <=0  || sqrt(fabs(fp)) < OprogStatus.epsd) 
 	 {
 #if 1
 	   if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
@@ -1528,8 +1529,22 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	     }
 #endif
 	 }
-       else if (doneryck)
+       else 
+#endif
+       if (doneryck==1 || 2.0*fabs(fpold-fp) <= ftol*Sqr(minax))//ftol*(fabs(fpold)+fabs(fp)+EPSFR))
 	 {
+	   double ngA, ngB;
+	   (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
+	   ngA = ngB = 0;  
+	   for (kk=0; kk < 3; kk++)
+	     {
+	       ngA += Sqr(xi[kk]);
+	       ngB += Sqr(xi[kk+3]); 
+	     }
+	   ngA = sqrt(ngA);
+	   ngB = sqrt(ngB);
+	   accngA += ngA/(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB);
+	   accngB += ngB/(jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB);
 	   callsok++;
 	   return;
 	 }
@@ -1853,6 +1868,7 @@ double  cgfunc(double *vec)
   //printf("Q1=%.15G Q2=%.15G\n",  Q1, Q2);
   return F;
 }
+
 double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double *signA, double *signB)
 {
   int kk, k1, k2; 
