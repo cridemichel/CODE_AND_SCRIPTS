@@ -30,10 +30,12 @@ void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], doub
   /* Determine the spacing appropriate to the mesh.*/
   fp=(*fx)(x=x1); 
   for (i=0;i<n;i++) { /* Loop over all intervals*/
-    fc=(*fx)(x += dx); 
+    x += dx;
+    fc=(*fx)(x); 
     if (fp >= 0 && fc <= 0.0) 
       { /* If a sign change occurs then record values for the bounds.*/
-	xb1[++nbb]=x-dx; xb2[nbb]=x;
+	xb1[nbb]=x1; xb2[nbb]=x;
+	nbb++;
 	if(*nb == nbb) 
 	  return;
       } 
@@ -41,6 +43,7 @@ void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], doub
   } 
   *nb = nbb;
 }
+
 double zbrent(double (*func)(double), double x1, double x2, double tol)
 /* Using Brent s method, find the root of a function func known to lie between x1 and x2. 
  * The root, returned as zbrent, will be refined until its accuracy is tol.*/
@@ -50,6 +53,7 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
   double fa=(*func)(a),fb=(*func)(b),fc,p,q,r,s,tol1,xm; 
   if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 
     {
+      printf("qui!!!\n");
       polinterr = 1;
       return 0.0;
       //nrerror("Root must be bracketed in zbrent");
@@ -120,16 +124,23 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
   //nrerror("Maximum number of iterations exceeded in zbrent"); 
   return 0.0; /* Never get here.*/ 
 }
-void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
-/* Given arrays xa[1..n] and ya[1..n], and given a value x, this routine returns a value y, and an error estimate dy. If P(x) is the polynomial of degree N   1 such that P(xai) = yai, i = 1, . . . , n, then the returned value y = P(x).*/
+void polint(double xain[], double yain[], int n, double x, double *y, double *dy)
+/* Given arrays xa[1..n] and ya[1..n], and given a value x, this routine returns a value y,
+ * and an error estimate dy. If P(x) is the polynomial of degree N-1 such that P(xai) = yai, 
+ * i = 1, . . . , n, then the returned value y = P(x).*/
 { 
-  int i,m,ns=0; 
-  double den,dif,dift,ho,hp,w;
-  double c[3], d[3]; 
-  dif=fabs(x-xa[0]); 
+  int i,m,ns=1; 
+  double den,dif,dift,ho,hp,w, xa[4], ya[4];
+  double c[4], d[4];
+  for (i=0; i < n; i++)
+    {
+      xa[i+1] = xain[i];
+      ya[i+1] = yain[i];
+    }
+  dif=fabs(x-xa[1]); 
   //c=vector(n); 
   //d=vector(n); 
-  for (i=0;i<n;i++) 
+  for (i=1;i<=n;i++) 
     { 
       /* Here we find the index ns of the closest table entry,*/
       if ( (dift=fabs(x-xa[i])) < dif) 
@@ -143,10 +154,10 @@ void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
     } 
   *y=ya[ns--];
   /* This is the initial approximation to y.*/
-  for (m=0;m<n-1;m++) 
+  for (m=1;m<n;m++) 
     { 
       /* For each column of the tableau,*/
-      for (i=0;i<n-m-1;i++)
+      for (i=1;i<=n-m;i++)
 	{
 	  /* we loop over the current c s and d s and update them.*/
 	  ho=xa[i]-x; 
@@ -163,7 +174,7 @@ void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
 	  /*Here the c s and d s are updated. */
 	  c[i]=ho*den; 
 	} 
-      *y += (*dy=(2*(ns+1) < (n-m)-1 ? c[ns+1] : d[ns--])); 
+      *y += (*dy=(2*ns < (n-m) ? c[ns+1] : d[ns--])); 
       /* After each column in the tableau is completed, we decide which correction, 
        * c or d, we want to add to our accumulating value of y, i.e., which path to take through the tableau 
        * forking up or down. We do this in such a way as to take the most  straight line  route through the 
