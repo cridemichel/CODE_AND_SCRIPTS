@@ -151,11 +151,11 @@ void InvMatrix(double **a, double **b, int NB)
 
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
 #define TOLX 1.0E-12//1.0e-7 /* Convergence criterion on  x.*/ 
-#define TOLX2 1.E-12
+#define TOLX2 1.E-9
 #define MAXITS 200 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define MAXITS2 200
-#define TOLF 1.0e-9 // 1.0e-4
-#define TOLF2 1.0E-9
+#define TOLF 1.0e-10// 1.0e-4
+#define TOLF2 1.0E-6
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
@@ -298,7 +298,7 @@ extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, 
 extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
 
 extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
-#define MD_GLOBALNR
+#undef MD_GLOBALNR
 #undef MD_GLOBALNR2
 #ifdef MD_GLOBALNR2
 double fmin2(double x[], int iA, int iB, double shift[3]);
@@ -345,7 +345,7 @@ void newt(double x[], int n, int *check,
   for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
       /* Stabilization */
-#if 0
+#if 1
       MD_DEBUG(printf("its=%d time = %.15f\n",its, x[4]));
       upd2tGuess(iA, iB, shift, x[4]);
 #ifdef MD_GLOBALNR2
