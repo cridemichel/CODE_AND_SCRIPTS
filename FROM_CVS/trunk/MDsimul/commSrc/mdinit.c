@@ -275,12 +275,17 @@ void Parsing(char stringA[NAME_LENGTH], char stringB[NAME_LENGTH])
 	    case STR : 
 	      strcpy((char *) OsinglePar[i].ptr, stringB);
 	      break;
+#ifndef MDLLINT
+	    case LLINT:
+#endif
 	    case INT :
 	      *(int*) OsinglePar[i].ptr = atoi(stringB);
 	      break;
+#ifdef MDLLINT
 	    case LLINT :
 	      *(long long int*) OsinglePar[i].ptr = atoll(stringB);
 	      break;
+#endif
 	    case CT :
 	      ( *((COORD_TYPE*)OsinglePar[i].ptr) ) = 
 		(COORD_TYPE) atof(stringB); 
