@@ -1037,6 +1037,42 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
     }
+  else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s C[%[^]]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13) == 13)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	     atoi(s5),i, j);*/
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SUPELLIPS;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->supellips.R[0][0] = atof(s4);
+      at->supellips.R[0][1] = atof(s5);
+      at->supellips.R[0][2] = atof(s6);
+      at->supellips.R[1][0] = atof(s7);
+      at->supellips.R[1][1] = atof(s8);
+      at->supellips.R[1][2] = atof(s9);
+      at->supellips.R[2][0] = atof(s10);
+      at->supellips.R[2][1] = atof(s11);
+      at->supellips.R[2][2] = atof(s12);
+      if (globset.NA)
+	{
+    	  at->supellips.a = globset.a[a];
+	  at->supellips.b = globset.b[a];
+	  at->supellips.c = globset.c[a];
+	}
+      else
+	{
+	  at->supellips.a = 1.0;
+	  at->supellips.b = 1.0;
+	  at->supellips.c = 0.5;
+	}
+      at->supellips.n1 = 1.0;
+      at->supellips.n2 = 1.0;
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = parsecol(s13);
+    }
   else if (sscanf(L,"%s %s %s %s %s %s @ %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9) == 9)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
