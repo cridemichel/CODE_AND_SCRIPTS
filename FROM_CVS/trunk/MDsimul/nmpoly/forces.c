@@ -769,13 +769,15 @@ inline double SwitchFunc(double r)
   double R;
   if (r < OprogStatus.rcutInner - OprogStatus.lambda)
     return 1; 
-  else if (r > OprogStatus.rcutInner)
-    return 0;
-  else
+  else if (r < OprogStatus.rcutInner)
     {
       R = (r - (OprogStatus.rcutInner - OprogStatus.lambda))/OprogStatus.lambda ;
       return 1.0 + Sqr(R)*(2.0*R - 3.0);
-    }    
+    } 
+  else
+    return 0;
+  
+       
 }
 void checkNebrRebuildLong(void)
 {
@@ -959,6 +961,121 @@ void checkNebrRebuildNPT(void)
 #endif
 }
 const double inv4pieps0=1.43999;
+/* ============================ >>> force <<< ==============================*/
+#ifdef MD_RESPA_SWITCH
+void calcEnePot(int Nm, double rcut)
+{
+  /* ======================== >>>LOCAL VARIABLES <<< ====================== */
+  int a, b, i, j, ncut;
+  /*int ncut[NA][NA];*/
+  COORD_TYPE rcutab, rcutabSq, epsab4, sigmaSq; 
+  COORD_TYPE rxab, ryab, rzab, rabSq, fxab, fyab, fzab, rab;
+  COORD_TYPE srab2, srab6, srab12, fab, vabhc, wab, vabyu, vab;
+  COORD_TYPE rxa, rya, rza;
+  COORD_TYPE vabCut, Vcab;
+  COORD_TYPE rho;
+  /* Local variables to implement linked list */
+  int  n, nebrTab0, nebrTab1;
+#ifdef NM_SPHERE
+  double vabNN, vabMM;
+#endif
+  /* ======================================================================= */
+  /*calculate useful quantities
+   NOTE: We refer to "ab-quantities" for all bidimensional arrays 
+         that depend upon atoms pair(e.g. 'Vab[a][b]' is a 'ab'-variable, 
+	 instead 'sigab[a][b]' is an ab-constant */
+  rcutab = rcut * Oparams.sigma;
+  rcutabSq = Sqr(rcutab);
+  sigmaSq = Sqr(Oparams.sigma);
+  epsab4 = 4.0 * Oparams.epsilon;
+  L = cbrt(Vol);
+  invL = 1.0  / L;
+  ncut = 0;
+  /* initialize forces vector */
+  V = 0.0; /* potential energy */
+  Vc = 0.0;
+  /*printf("nebrTabLen:%d\n", nebrTabLen);*/
+  for (n=0; n < nebrTabLen; n++)
+    {
+      nebrTab0 = nebrTab[0][n]; 
+      nebrTab1 = nebrTab[1][n];
+
+      i = nebrTab0 / NA;
+      a = nebrTab0 % NA;
+      j = nebrTab1 / NA;
+      b = nebrTab1 % NA;
+      rxa = rx[a][i];
+      rya = ry[a][i];
+      rza = rz[a][i];
+
+      rxab = rxa - rx[b][j]; /* distance between two atomes */
+      ryab = rya - ry[b][j];
+      rzab = rza - rz[b][j];
+
+      rxab = rxab - L * rint(invL * rxab);      /* minimum image */
+      ryab = ryab - L * rint(invL * ryab);
+      rzab = rzab - L * rint(invL * rzab);
+
+      rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
+      if (rabSq < rcutabSq )/* 'rcut' is the cutoff for V */
+	{
+	  /*rab   = sqrt(rabSq);*/
+	  if (OprogStatus.grow)
+	    srab2 = Sqr((sigmag[a][i]+sigmag[b][j])/2.0)/rabSq; 
+	  else
+	    srab2 = sigmaSq / rabSq;
+#if defined(SOFT_SPHERE)
+	  vab = pow(srab2, ((double)Oparams.NN)/2.0);
+	  wab = ((double)Oparams.NN)*vab;
+#elif defined(NM_SPHERE)
+	  vabNN = pow(srab2, ((double)Oparams.NN)/2.0);
+	  vabMM = -pow(srab2, ((double)Oparams.MM)/2.0);
+	  vab = vabNN + vabMM;
+	  wab = ((double)Oparams.NN)*vabNN - ((double)Oparams.MM)*vabMM ;
+#else
+	  /* Lennard-Jones */
+	  srab6   = srab2 * srab2 * srab2;
+	  srab12  = Sqr(srab6);
+	  vab     = srab12 - srab6;
+	  /*vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);*/
+	  wab     = 6.0*(vab + srab12);
+#endif
+#if 0
+	  vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);
+#endif
+	  V = V + vab;
+	  /* total potential between all a-b atoms pairs */
+	  W = W + wab; 
+	  ++ncut;
+	}
+    }
+  /* CALCULATE SHIFTED POTENTIAL
+     shifted potential, for each atoms within rcut 
+     subtracts Vcut = V(rcut) 
+     (see pag 145 A.T.) */
+  rab   = rcut*Oparams.sigma;
+  rabSq = Sqr(rab);
+  srab2   = sigmaSq / rabSq;
+#if defined(SOFT_SPHERE)
+  vabCut = pow(srab2, Oparams.NN/2.0);
+  //printf("NN: %d srab2:%f rab:%f vabCut: %f\n", Oparams.NN, srab2, rab, vabCut);
+#elif defined(NM_SPHERE)
+  vabCut = pow(srab2, Oparams.NN/2.0)-pow(srab2,Oparams.MM/2.0);
+#else
+  srab6 = srab2 * srab2 * srab2;
+  srab12 = srab6 * srab6;
+  vabCut = srab12 - srab6;
+#endif
+  /*vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);*/
+  Vcab = ((double)ncut) * vabCut;
+  /*printf("ncut[%d][%d]:%d\n Vcab:%f\n",a,b, ncut[a][b], vabCut);*/
+  /* ncut[a][b] is the number of atoms pairs a-b within 
+	 rcutab[a][b] */ 
+  W = epsab4 * W / 3.0;
+  Vc = epsab4 * (V - Vcab); 
+  V = epsab4 * V;
+} 
+#endif
 
 /* ============================ >>> force <<< ==============================*/
 void LJForce(int Nm, double rcut)
@@ -987,7 +1104,6 @@ void LJForce(int Nm, double rcut)
    NOTE: We refer to "ab-quantities" for all bidimensional arrays 
          that depend upon atoms pair(e.g. 'Vab[a][b]' is a 'ab'-variable, 
 	 instead 'sigab[a][b]' is an ab-constant */
-
   rcutab = rcut * Oparams.sigma;
   rcutabSq = Sqr(rcutab);
   sigmaSq = Sqr(Oparams.sigma);
@@ -1253,8 +1369,12 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
    NOTE: We refer to "ab-quantities" for all bidimensional arrays 
          that depend upon atoms pair(e.g. 'Vab[a][b]' is a 'ab'-variable, 
 	 instead 'sigab[a][b]' is an ab-constant */
-
+#ifdef MD_RESPA_SWITCH
+  rcutabI = rcutI * Oparams.sigma - OprogStatus.lambda;
+  rabSqI =  Sqr(rcutI * Oparams.sigma);
+#else
   rcutabI = rcutI * Oparams.sigma;
+#endif
   rcutabSqI = Sqr(rcutabI);
   rcutabO = rcutO * Oparams.sigma;
   rcutabSqO = Sqr(rcutabO);
@@ -1356,12 +1476,61 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
 #if 0
 	  vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);
 #endif
+	  fab   = epsab4 * wab / rabSq;
+#ifdef MD_RESPA_SWITCH
+	  /* se la distanza è minore di rc allora non bisogna calcolare di nuovo
+	   * l'energia potenziale, viriale ecc. poiché è già stato stimato in LJForce */
+	  fxab  = fab * rxab;         
+      	  fyab  = fab * ryab;
+	  fzab  = fab * rzab;
+	  if (rabSq >= rabSqI)
+	    {
+	      VLong = VLong + vab;
+	      WLong = WLong + wab; 
+	      /* force between two atoms */
+	      #ifdef ATPTENS
+	      WxyLong += rxab * fyab;
+	      WyzLong += ryab * fzab;
+	      WzxLong += rzab * fxab;
+	      WxxLong += rxab * fxab;
+	      WyyLong += ryab * fyab;
+	      WzzLong += rzab * fzab;
+#endif
+    	      /* Calculate all terms of molecular
+    		 pressure tensor */
+#ifdef MOLPTENS	  
+    	      if ( i != j )
+    		{
+    		  DRmx = (Rmx[i] - Rmx[j]);
+    		  DRmx = DRmx - L * rint(invL * DRmx);
+    		  DRmy = (Rmy[i] - Rmy[j]);
+    		  DRmy = DRmy - L * rint(invL * DRmy);
+    		  DRmz = (Rmz[i] - Rmz[j]);
+    		  DRmz = DRmz - L * rint(invL * DRmz);
+    		  
+    		  WmxxLong += DRmx * fxab;
+    		  WmyyLong += DRmy * fyab;
+    		  WmzzLong += DRmz * fzab;
+    		  
+    		  WmyxLong += DRmy * fxab;
+    		  WmzyLong += DRmz * fyab;
+    		  WmxzLong += DRmx * fzab;
+    		  
+    		  WmxyLong += DRmx * fyab;
+    		  WmyzLong += DRmy * fzab;
+    		  WmzxLong += DRmz * fxab;
+    		}
+#endif
+	      
+	    } 
+	  else 
+	    ncutI++;
+#else 
 	  VLong = VLong + vab;
 	  /* total potential between all a-b atoms pairs */
 	  WLong = WLong + wab; 
 	  /* NOTE: If you will use a shifted-force potential then 
 	     calculate the force using that potential */
-	  fab   = epsab4 * wab / rabSq;
 #if 0
 	  if (OprogStatus.grow && fabs(fab) > 1000)
 	    fab = 1000;
@@ -1406,6 +1575,7 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
 	      WmzxLong += DRmz * fxab;
 	    }
 #endif
+#endif
 #ifdef MD_RESPA_SWITCH
 	  SwFact = 1.0 - SwitchFunc(sqrt(rabSq));
 	  fxab *= SwFact;
@@ -1419,6 +1589,10 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
 	  FxLong[b][j] = FxLong[b][j] - fxab;  /* -fxab = fxba (3rd law) */
 	  FyLong[b][j] = FyLong[b][j] - fyab;
 	  FzLong[b][j] = FzLong[b][j] - fzab;
+#if 0
+	  if (rabSq < rabSqI)
+	    ++ncutI;
+#endif
 	  ++ncut;
 	}
     
