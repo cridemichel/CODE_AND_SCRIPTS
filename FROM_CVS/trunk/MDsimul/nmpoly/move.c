@@ -128,7 +128,7 @@ void movea(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 	}
       it = 0;
       done = 0;
-
+#if !defined(MD_FENE)
       /* START OF ITERATIVE LOOP */
       while ( (done == 0) && (it <= maxIt) )
 	{
@@ -237,7 +237,7 @@ void movea(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 	  exit(-1);
 	}
       /* STORE AWAY NEW VALUES */
-
+#endif
       for(a=0; a < NA; a++)
 	{
 	  rx[a][i] = pxi[a];
@@ -1055,8 +1055,9 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	}
     }
   s1i = s1;    /* s1i = s1(t+dt/2) */
-
+#if !defined(MD_FENE)
   shakeVel(Nm, dt, m, maxIt, NB, d, tol, vx, vy, vz);
+#endif
   //printf("Vol1: %f Vol1o1: %f Vol1o2: %f Vol1t:%f\n", 
 	// Vol1, Vol1o1, Vol1o2, Vol1t);
   for(k=0; k < MAXNUMIT; k++) /* Loop to convergence (NUMIT ~ 5 is enough)*/
@@ -1107,7 +1108,9 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	      Fz[a][i] = FzLJ[a][i] + FzNose;
 	    } 
 	}
+#if !defined(MD_FENE)
       shakeVel(Nm, dt, m, maxIt, NB, d, tol, vx, vy, vz);
+#endif
       for (i=0; i < Oparams.parnum; i++)
 	{
 	  for (a = 0; a < NA; a++)
@@ -1244,8 +1247,9 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   /* Vol1 = 2.0 * Vol1t - Vol1o1; *//* Verlet */  
   
   Vol1 = 5.0 * Vol1t / 2.0 - 2.0 * Vol1o1 + Vol1o2 / 2.0;  
-
+#if !defined(MD_FENE)
   shakeVel(Nm, dt, m, maxIt, NB, d, tol, vx, vy, vz);
+#endif
   for(k=0; k < MAXNUMIT; k++) /* Loop to convergence (NUMIT ~ 5 is enough)*/
     {
       kinet(Nm, vx, vy, vz, Vol1);  /* K(t+dt) */
@@ -1318,10 +1322,12 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	      Fz[a][i] = Fz[a][i] + FzNose;
 	    } 
 	}
+#if !defined(MD_FENE)
       shakeVel(Nm, dt, m, maxIt, NB, d, tol, vx, vy, vz);
       /* Zero the velocity along bond and calculate the constraint virial, this
 	 should be as before because the Andersen Forces don't act along 
 	 bond.*/
+#endif
       numok=0;
       for (i=0; i < Oparams.parnum; i++)
 	{
