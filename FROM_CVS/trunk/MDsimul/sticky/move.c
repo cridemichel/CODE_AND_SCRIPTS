@@ -2309,7 +2309,8 @@ int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS],
   return retcross;
 }
 
-int get_dists_tocheck(double distsOld[], double dists[], int tocheck[], int dorefine[])
+int get_dists_tocheck(double distsOld[], double dists[], int tocheck[], int dorefine[],
+		      int bondpair)
 {
   int nn;
   int rettochk = 0;
@@ -2317,7 +2318,7 @@ int get_dists_tocheck(double distsOld[], double dists[], int tocheck[], int dore
     {
       tocheck[nn] = 0;
       if (dists[nn] < OprogStatus.epsd && distsOld[nn] < OprogStatus.epsd &&
-	  dorefine[nn] == MD_EVENT_NONE)
+	  dorefine[nn] == MD_EVENT_NONE && (bondpair== -1 || bondpair == nn))
 	{
 	  tocheck[nn] = 1; 
 	  rettochk++;
@@ -2913,7 +2914,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	}
 //#define MD_INTERPOL
 #ifdef MD_INTERPOL
-      ntc = get_dists_tocheck(distsOld, dists, tocheck, dorefine);
+      ntc = get_dists_tocheck(distsOld, dists, tocheck, dorefine, bondpair);
 		  
       for (nn = 0; nn < MD_PBONDS; nn++)
 	{
@@ -2982,6 +2983,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      else 
 		{
 		  MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+#ifdef MD_INTERPOL
+		  if (!tocheck[nn])
+#endif
 		  printf("[locate_contact] can't find contact point!\n");
 		  /* Se refine_contact fallisce deve cmq continuare a cercare 
 		   * non ha senso smettere...almeno credo */
