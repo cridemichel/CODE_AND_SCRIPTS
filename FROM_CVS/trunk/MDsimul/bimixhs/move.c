@@ -1117,16 +1117,25 @@ void PredictEvent (int na, int nb)
 			}
 		      else
 			{
+#ifdef MD_INFBARRIER
+			  if (sigDeltaSq == 0)
+			    goto no_core_bump;
+			  
+#endif
+		  	    
 			  if (b < 0.0)
 			    { 
-			      d= Sqr (b) - vv * (distSq - sigSq);
-			      if (d > 0.0)
-				{
+		      	      d= Sqr (b) - vv * (distSq - sigSq);
+	      		      if (d > 0.0)
+      				{
 				  t = (-sqrt (d) - b) / vv;
 				  if (t > 0 || (t < 0 && distSq < sigSq))
 				    collCode = MD_CORE_BARRIER;
 				}
 			    }
+#ifdef MD_INFBARRIER
+no_core_bump:
+#endif
 			  if (collCode == MD_EVENT_NONE)
 			    {
 			      d = Sqr (b) - vv * (distSq - sigDeltaSq);
