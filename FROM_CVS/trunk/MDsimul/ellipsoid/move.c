@@ -6,7 +6,7 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
-extern double **Xa, **Xb, **Ia, **Ib, **invIa, **invIb;
+extern double **Xa, **Xb, **Ia, **Ib, **invIa, **invIb, **RA, **RB, ***R, **Rt;
 extern double maxax[2];
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
@@ -333,35 +333,48 @@ void check (int *overlap, double *K, double *V)
 #endif
 /* effettua la seguente moltiplicazione tra matrici:
  * 
- *                 | a 0 0 |               |  uxx  uxy uxz | 
- *  Trasposta(R) * | 0 b 0 | * R  dove R = | -uyx  uyy uyz |
- *                 | 0 0 c |               | -uzx -uzy uzz | 
+ *                 | a 0 0 |               
+ *  Trasposta(R) * | 0 b 0 | * R  dove R = {matrix unitaria relativa all'orientazione dell'ell.}
+ *                 | 0 0 c |             
  * */
-void tRDiagR(int i, double **M, double a, double b, double c, 
-	     double uxxi, double uxyi, double uxzi, double uyyi, double uyzi, double uzzi)
+void tRDiagR(int i, double **M, double a, double b, double c, double **Ri)
 {
   int na;
+  int k1, k2, k3, Di[3][3];
+  double Rtmp[3][3];
   /* calcolo del tensore d'inerzia */ 
   na = (i < Oparams.parnumA)?0:1;
-  M[0][0] =  a*uxxi;
-  M[0][1] =  a*uxyi;
-  M[0][2] =  a*uxzi;
-  M[1][0] = -b*uxyi;
-  M[1][1] =  b*uyyi;
-  M[1][2] =  b*uyzi;
-  M[2][0] = -c*uxzi;
-  M[2][1] = -c*uyzi;
-  M[2][2] =  c*uzzi; 
-  
-  M[0][0] =  a*Sqr(uxxi)+b*Sqr(uxyi)+c*Sqr(uxzi);
-  M[0][1] =  a*uxxi*uxyi-b*uxyi*uyyi+c*uxzi*uyzi;
-  M[0][2] =  a*uxxi*uxzi-b*uxyi*uyzi-c*uxzi*uzzi;
-  M[1][0] =  a*uxyi*uxxi+b*uyyi*uxyi+c*uyzi*uxzi;
-  M[1][1] =  a*Sqr(uxyi)+b*Sqr(uyyi)+c*Sqr(uyzi); 
-  M[1][2] =  a*uxyi*uxzi+b*uyyi*uyzi-c*uyzi*uzzi;
-  M[2][0] =  a*uxzi*uxxi-b*uyzi*uxyi-c*uzzi*uxzi;
-  M[2][1] =  a*uxzi*uxyi+b*uyzi*uyyi-c*uzzi*uyzi;
-  M[2][2] =  a*Sqr(uxzi)+b*Sqr(uyzi)+c*Sqr(uzzi); 
+
+
+  Di[0][0] = a;
+  Di[1][1] = b;
+  Di[2][2] = c;
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	if (k1 != k2)
+	  Di[k1][k2] = 0.0;
+      } 
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Rtmp[k1][k2] = 0.0;
+	for (k3=0; k3 < 3; k3++)
+	  {
+	    if (Di[k1][k3] == 0.0)
+	      continue;
+	    Rtmp[k1][k2] += Di[k1][k3]*Ri[k3][k2];
+	  }
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	M[k1][k2] = 0.0;
+	for (k3=0; k3 < 3; k3++)
+	  {
+	    M[k1][k2] += Ri[k3][k1]*Rtmp[k3][k2];
+	  }
+      }
 }
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 void add_bond(int na, int n);
@@ -542,16 +555,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
  
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
-  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], 
-	  uxx[i], uxy[i], uxz[i], uyy[i], uyz[i], uzz[i]);
-  tRDiagR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2],
-	  uxx[i], uxy[i], uxz[i], uyy[i], uyz[i], uzz[i]);
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
+  tRDiagR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[i]);
 
   na = (j < Oparams.parnumA)?0:1;
-  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na],
-	  uxx[j], uxy[j], uxz[j], uyy[j], uyz[j], uzz[j]);
-  tRDiagR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2],
-	  uxx[j], uxy[j], uxz[j], uyy[j], uyz[j], uzz[j]);
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
+  tRDiagR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
  
   /* calcola le matrici inverse del tensore d'inerzia */
   InvMatrix(Ia, invIa, 3);
@@ -858,8 +867,9 @@ extern double *treeTime;
 void UpdateAtom(int i)
 {
   double ti;
-  double wSq, w, sinw, cosw, uxxn, uxyn, uxzn, uyyn, uyzn, uzzn;
-  double Omega[3][3], OmegaSq[3][3];
+  double wSq, w, sinw, cosw;
+  double Omega[3][3], OmegaSq[3][3], Rtmp[3][3], M[3][3];
+  int k1, k2, k3;
   ti = Oparams.time - atomTime[i];
   
   rx[i] += vx[i]*ti;
@@ -875,7 +885,7 @@ void UpdateAtom(int i)
   w = sqrt(wSq);
   if (w == 0.0) 
     return;
-  sinw = sin(w*ti);
+  sinw = sin(w*ti)/w;
   cosw = (1.0 - cos(w*ti))/wSq;
   Omega[0][0] = 0;
   Omega[0][1] = wz[i];
@@ -895,26 +905,26 @@ void UpdateAtom(int i)
   OmegaSq[2][0] = wx[i]*wz[i];
   OmegaSq[2][1] = wy[i]*wz[i];
   OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
-  uxxn = uxx[i] + sinw*(Omega[0][0]*uxx[i]-Omega[0][1]*uxy[i]-Omega[0][2]*uxz[i]) + 
-    cosw*(OmegaSq[0][0]*uxx[i]-OmegaSq[0][1]*uxy[i]-OmegaSq[0][2]*uxz[i]);
-  uxyn = uxy[i] + sinw*(Omega[0][0]*uxy[i]+Omega[0][1]*uyy[i]-Omega[0][2]*uyz[i]) + 
-    cosw*(OmegaSq[0][0]*uxy[i]+OmegaSq[0][1]*uyy[i]-OmegaSq[0][2]*uyz[i]);
-  uxzn = uxz[i] + sinw*(Omega[0][0]*uxz[i]+Omega[0][1]*uyz[i]+Omega[0][2]*uzz[i]) + 
-    cosw*(OmegaSq[0][0]*uxz[i]+OmegaSq[0][1]*uyz[i]+OmegaSq[0][2]*uzz[i]);
+ 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  Rtmp[k1][k2] = R[i][k1][k2];
+	  M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	  if (k1==k2)
+	    M[k1][k1] += 1.0;
+	}
+    }
 
-  uyyn = uyy[i] + sinw*(Omega[1][0]*uxy[i]+Omega[1][1]*uyy[i]-Omega[1][2]*uyz[i]) + 
-    cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyy[i]-OmegaSq[1][2]*uyz[i]);
-  uyzn = uyz[i] + sinw*(Omega[1][0]*uxz[i]+Omega[1][1]*uyz[i]+Omega[1][2]*uzz[i]) + 
-    cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyz[i]+OmegaSq[1][2]*uzz[i]);
-  uzzn = uzz[i] + sinw*(Omega[2][0]*uxz[i]+Omega[2][1]*uyz[i]+Omega[2][2]*uzz[i]) + 
-    cosw*(OmegaSq[2][0]*uxz[i]+OmegaSq[2][1]*uyz[i]+OmegaSq[2][2]*uzz[i]);
-
-  uxx[i] = uxxn;
-  uxy[i] = uxyn;
-  uxz[i] = uxzn;
-  uyy[i] = uyyn;
-  uyz[i] = uyzn;
-  uzz[i] = uzzn;
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	R[i][k1][k2] = 0.0;
+	for (k3 = 0; k3 < 3; k3++)
+	  R[i][k1][k2] += M[k1][k3]*Rtmp[k3][k2];
+      }
 #if 0
   if (rz[i]+Lz*0.5-Oparams.sigma/2.0 < 0. && OprogStatus.quenchend > 0.0)
     {
@@ -992,13 +1002,11 @@ int bound(int na, int n)
   return 0;
 }
 #endif
-UpdateOrient(int i, double ti, double *uxxt, double *uxyt, double *uxzt, 
-	     double *uyyt, double *uyzt, double *uzzt, double Omega[3][3])
+UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 { 
-  double wSq, w, OmegaSq[3][3];
+  double wSq, w, OmegaSq[3][3], M[3][3];
   double sinw, cosw;
-  double uxxn, uxyn, uxzn, uyyn, uyzn, uzzn;
-
+  int k1, k2, k3;
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
   w = sqrt(wSq);
   if (w != 0.0) 
@@ -1023,34 +1031,33 @@ UpdateOrient(int i, double ti, double *uxxt, double *uxyt, double *uxzt,
       OmegaSq[2][0] = wx[i]*wz[i];
       OmegaSq[2][1] = wy[i]*wz[i];
       OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
-      uxxn = uxx[i] + sinw*(Omega[0][0]*uxx[i]-Omega[0][1]*uxy[i]-Omega[0][2]*uxz[i]) + 
-	cosw*(OmegaSq[0][0]*uxx[i]-OmegaSq[0][1]*uxy[i]-OmegaSq[0][2]*uxz[i]);
-      uxyn = uxy[i] + sinw*(Omega[0][0]*uxy[i]+Omega[0][1]*uyy[i]-Omega[0][2]*uyz[i]) + 
-	cosw*(OmegaSq[0][0]*uxy[i]+OmegaSq[0][1]*uyy[i]-OmegaSq[0][2]*uyz[i]);
-      uxzn = uxz[i] + sinw*(Omega[0][0]*uxz[i]+Omega[0][1]*uyz[i]+Omega[0][2]*uzz[i]) + 
-	cosw*(OmegaSq[0][0]*uxz[i]+OmegaSq[0][1]*uyz[i]+OmegaSq[0][2]*uzz[i]);
+ 
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	      if (k1==k2)
+		M[k1][k1] += 1.0;
+	    }
+	}
       
-      uyyn = uyy[i] + sinw*(Omega[1][0]*uxy[i]+Omega[1][1]*uyy[i]-Omega[1][2]*uyz[i]) + 
-	cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyy[i]-OmegaSq[1][2]*uyz[i]);
-      uyzn = uyz[i] + sinw*(Omega[1][0]*uxz[i]+Omega[1][1]*uyz[i]+Omega[1][2]*uzz[i]) + 
-	cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyz[i]+OmegaSq[1][2]*uzz[i]);
-      uzzn = uzz[i] + sinw*(Omega[2][0]*uxz[i]+Omega[2][1]*uyz[i]+Omega[2][2]*uzz[i]) + 
-	cosw*(OmegaSq[2][0]*uxz[i]+OmegaSq[2][1]*uyz[i]+OmegaSq[2][2]*uzz[i]);
-      *uxxt = uxxn;
-      *uxyt = uxyn;
-      *uxzt = uxzn;
-      *uyyt = uyyn;
-      *uyzt = uyzn;
-      *uzzt = uzzn;
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    Ro[k1][k2] = 0.0;
+	    for (k3 = 0; k3 < 3; k3++)
+	      Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
+	  }
     }
   else
     {
-      *uxxt = uxx[i];
-      *uxyt = uxy[i];
-      *uxzt = uxz[i];
-      *uyyt = uyy[i];
-      *uyzt = uyz[i];
-      *uzzt = uzz[i];
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    Ro[k1][k2] = R[i][k1][k2];
+	  }
     }
 }
 
@@ -1058,7 +1065,7 @@ UpdateOrient(int i, double ti, double *uxxt, double *uxyt, double *uxzt,
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 void calcFxtFt(double x[3], double **X,
-	       double D[3][3], double Omega[3][3], double R[3][3], 
+	       double D[3][3], double Omega[3][3], double **R, 
 	       double pos[3], double vel[3],
 	       double Fxt[3], double *Ft)
 {
@@ -1135,13 +1142,10 @@ void fdjac(int n, double x[], double fvec[], double **df,
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 {
   int na; 
-  double  **Xa, **Xb, rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
-  double DA[3][3], DB[3][3], RA[3][3], RB[3][3];
-  double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
+  double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
+  double DA[3][3], DB[3][3];
   double Fxt[3], Gxt[3], Ft, Gt;
   int k1, k2, k3;
-  Xa = matrix(3,3);
-  Xb = matrix(3,3);
   ti = x[4] - atomTime[iA];
   rA[0] = rx[iA] + vx[iA]*ti;
   rA[1] = ry[iA] + vy[iA]*ti;
@@ -1150,53 +1154,30 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vA[1] = vy[iA];
   vA[2] = vz[iA];
   /* ...and now orientations */
-  UpdateOrient(iA, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, OmegaA);
+  UpdateOrient(iA, ti, RA, OmegaA);
   na = (iA < Oparams.parnumA)?0:1;
-  tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na],
-	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
+  tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
   DA[0][1] = DA[0][2] = DA[1][0] = DA[1][2] = DA[2][0] = DA[2][1] = 0.0;
   DA[0][0] = invaSq[na];
   DA[1][1] = invbSq[na];
   DA[2][2] = invcSq[na];
-  RA[0][0] = uxx[iA];
-  RA[0][1] = uxy[iA];
-  RA[0][2] = uxz[iA];
-  RA[1][0] = -uxy[iA];
-  RA[1][1] = uyy[iA];
-  RA[1][2] = uyz[iA];
-  RA[2][0] = -uxz[iA];
-  RA[2][1] = -uyz[iA];
-  RA[2][2] = uzz[iA];
-
-  ti = x[4] - atomTime[iB];
+    ti = x[4] - atomTime[iB];
   rB[0] = rx[iB] + vx[iB]*ti + shift[0];
   rB[1] = ry[iB] + vy[iB]*ti + shift[1];
   rB[2] = rz[iB] + vz[iB]*ti + shift[2];
   vB[0] = vx[iB];
   vB[1] = vy[iB];
   vB[2] = vz[iB];
-  UpdateOrient(iB, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, OmegaB);
+  UpdateOrient(iB, ti, RB, OmegaB);
   na = (iB < Oparams.parnumA)?0:1;
-  tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na],
-	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
+  tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
   DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
   DB[0][0] = invaSq[na];
   DB[1][1] = invbSq[na];
   DB[2][2] = invcSq[na];
-  RB[0][0] = uxx[iB];
-  RB[0][1] = uxy[iB];
-  RB[0][2] = uxz[iB];
-  RB[1][0] = -uxy[iB];
-  RB[1][1] = uyy[iB];
-  RB[1][2] = uyz[iB];
-  RB[2][0] = -uxz[iB];
-  RB[2][1] = -uyz[iB];
-  RB[2][2] = uzz[iB];
-  
 
   for (k1 = 0; k1 < 3; k1++)
     {
-      df[k1][k2] = 0;
       for (k2 = 0; k2 < 3; k2++)
        	{
 	  df[k1][k2] = Xa[k1][k2] + Sqr(x[3])*Xb[k1][k2];
@@ -1228,8 +1209,6 @@ void fdjac(int n, double x[], double fvec[], double **df,
     } 
  df[3][4] = Ft;
  df[4][4] = Gt;
- free_matrix(Xa, 3);
- free_matrix(Xb, 3);
 }
 #endif
 void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3])
@@ -1237,7 +1216,6 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   int na, k1, k2; 
   double  rA[3], rB[3], ti;
   double Omega[3][3];
-  double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
   /* x = (r, alpha, t) */ 
   
   ti = x[4] - atomTime[i];
@@ -1245,19 +1223,17 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
   /* ...and now orientations */
-  UpdateOrient(i, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, Omega);
+  UpdateOrient(i, ti, Rt, Omega);
   na = (i < Oparams.parnumA)?0:1;
-  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na],
-	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = x[4] - atomTime[j];
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
-  UpdateOrient(j, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, Omega);
+  UpdateOrient(j, ti, Rt, Omega);
   na = (j < Oparams.parnumA)?0:1;
-  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na],
-	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -2138,6 +2114,7 @@ void move(void)
       else if (evIdB == ATOM_LIMIT + 10)
 	{
 	  UpdateSystem();
+	  R2u();
 	  if (OprogStatus.brownian)
 	    {
 	      velsBrown(Oparams.T);
