@@ -1,0 +1,559 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.5.4	//
+ADJUST_LASTCOL	bimix.h	19;"	d
+ADJUST_LASTCOL	bimix.h	20;"	d
+ALLOC_LIST	bimix.h	138;"	d
+ALLOC_LIST	bimix.h	140;"	d
+ATOM_LIMIT	bimix.h	174;"	d
+Aa	bimix.h	/^  sqrtdr2, Aa, V, DrSqTot, temp_transl;$/;"	v
+Aalpha	xvautil.h	/^COORD_TYPE *drSq, *dphiSq, *Dr, *Dt, *ddtdrSq, *ddtdphiSq, *Aalpha, *dr4,$/;"	v
+AalphaFile	xvautil.h	/^  AalphaFile[128], GselfFile[128], GsGsgaussFile[128], FselfFile[128],$/;"	v
+AalphaFlag	xvautil.h	/^  ddtdrFlag = 1, ddtdphiFlag = 1, AalphaFlag = 1, GselfFlag = 1,$/;"	v
+Allocate	xvautil.c	/^void Allocate(int totSize, COORD_TYPE** pointer, ...)$/;"	f
+C1File	xvautil.h	/^char velFile[128], psi1File[128], psi2File[128], C1File[128], C2File[128], $/;"	v
+C1Flag	xvautil.h	/^int velFlag=1, psi1Flag=1, psi2Flag=1, vhFlag=1, C1Flag=1, C2Flag=1, C3Flag=1,$/;"	v
+C1acf	xvautil.h	/^COORD_TYPE *velacf, *psi1acf, *psi2acf, *C1acf, *C2acf, *C3acf, $/;"	v
+C2File	xvautil.h	/^char velFile[128], psi1File[128], psi2File[128], C1File[128], C2File[128], $/;"	v
+C2Flag	xvautil.h	/^int velFlag=1, psi1Flag=1, psi2Flag=1, vhFlag=1, C1Flag=1, C2Flag=1, C3Flag=1,$/;"	v
+C2acf	xvautil.h	/^COORD_TYPE *velacf, *psi1acf, *psi2acf, *C1acf, *C2acf, *C3acf, $/;"	v
+C3File	xvautil.h	/^  C3File[128], C4File[128], dphiSqFile[128], drSqFile[128], DtFile[128], $/;"	v
+C3Flag	xvautil.h	/^int velFlag=1, psi1Flag=1, psi2Flag=1, vhFlag=1, C1Flag=1, C2Flag=1, C3Flag=1,$/;"	v
+C3acf	xvautil.h	/^COORD_TYPE *velacf, *psi1acf, *psi2acf, *C1acf, *C2acf, *C3acf, $/;"	v
+C4File	xvautil.h	/^  C3File[128], C4File[128], dphiSqFile[128], drSqFile[128], DtFile[128], $/;"	v
+C4Flag	xvautil.h	/^  phiFlag=1, C4Flag=1, dphiSqFlag=1, drSqFlag=1, DtFlag=1, DrFlag=1, $/;"	v
+C4acf	xvautil.h	/^  *C4acf, *wtd;$/;"	v
+CMreset	bimix.h	/^  int CMreset;$/;"	m	struct:progStatus
+C_T	bimix.h	64;"	d
+DECL_LIST	bimix.h	/^COORD_TYPE DECL_LIST;$/;"	v
+DECL_LIST	bimix.h	151;"	d
+DECL_LIST	bimix.h	153;"	d
+DECL_LIST	corutil.c	/^COORD_TYPE DECL_LIST;$/;"	v
+DQtens	bimix.h	/^COORD_TYPE Ptens[3], DQtens[3], $/;"	v
+DQtensor	measures.c	/^void DQtensor(void)$/;"	f
+DQxy	bimix.h	/^  COORD_TYPE DQxy;$/;"	m	struct:progStatus
+DQyz	bimix.h	/^  COORD_TYPE DQyz;$/;"	m	struct:progStatus
+DQzx	bimix.h	/^  COORD_TYPE DQzx;$/;"	m	struct:progStatus
+DR	bimix.h	/^  COORD_TYPE DR[MAXPAR][3];$/;"	m	struct:progStatus
+DeleteEvent	tree.c	/^void DeleteEvent (int id)$/;"	f
+Dr	xvautil.h	/^COORD_TYPE *drSq, *dphiSq, *Dr, *Dt, *ddtdrSq, *ddtdphiSq, *Aalpha, *dr4,$/;"	v
+DrFile	xvautil.h	/^  DrFile[128], vhFile[128], ddtdrFile[128], ddtdphiFile[128],$/;"	v
+DrFlag	xvautil.h	/^  phiFlag=1, C4Flag=1, dphiSqFlag=1, drSqFlag=1, DtFlag=1, DrFlag=1, $/;"	v
+DrSq	move.c	/^double DrSq = 0.0; $/;"	v
+DrSqTot	bimix.h	/^  sqrtdr2, Aa, V, DrSqTot, temp_transl;$/;"	v
+Dt	bimix.h	/^  double Dt;$/;"	m	struct:params
+Dt	xvautil.h	/^COORD_TYPE *drSq, *dphiSq, *Dr, *Dt, *ddtdrSq, *ddtdphiSq, *Aalpha, *dr4,$/;"	v
+DtFile	xvautil.h	/^  C3File[128], C4File[128], dphiSqFile[128], drSqFile[128], DtFile[128], $/;"	v
+DtFlag	xvautil.h	/^  phiFlag=1, C4Flag=1, dphiSqFlag=1, drSqFlag=1, DtFlag=1, DrFlag=1, $/;"	v
+Dtrans	bimix.h	/^COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,$/;"	v
+E	bimix.h	/^COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,$/;"	v
+ENmax	bimix.h	/^  double ENmax;$/;"	m	struct:progStatus
+ENmin	bimix.h	/^  double ENmin;$/;"	m	struct:progStatus
+EXT_DLST	bimix.h	/^COORD_TYPE EXT_DLST;$/;"	v
+EXT_DLST	bimix.h	156;"	d
+EXT_DLST	bimix.h	158;"	d
+EXT_DLST	bimix.h	160;"	d
+EXT_DLST	corutil.c	/^COORD_TYPE EXT_DLST;$/;"	v
+EXT_SLST	bimix.h	105;"	d
+EXT_SLST	bimix.h	107;"	d
+EXT_SLST	bimix.h	109;"	d
+ErrExit	tree.c	/^void ErrExit(char *str)$/;"	f
+FCC	init.c	/^void FCC(int Nm, COORD_TYPE *m)$/;"	f
+FSKMAX	bimix.h	81;"	d
+FSPOINT	bimix.h	79;"	d
+Fself	xvautil.h	/^  **Gself, **GsGsgauss, *Fself;$/;"	v
+FselfFile	xvautil.h	/^  AalphaFile[128], GselfFile[128], GsGsgaussFile[128], FselfFile[128],$/;"	v
+FselfFlag	xvautil.h	/^  GsGsgaussFlag = 1, FselfFlag = 1, wtdFlag = 1;$/;"	v
+GSPOINT	bimix.h	77;"	d
+GSRMAX	bimix.h	76;"	d
+GsGsgauss	xvautil.h	/^  **Gself, **GsGsgauss, *Fself;$/;"	v
+GsGsgaussFile	xvautil.h	/^  AalphaFile[128], GselfFile[128], GsGsgaussFile[128], FselfFile[128],$/;"	v
+GsGsgaussFlag	xvautil.h	/^  GsGsgaussFlag = 1, FselfFlag = 1, wtdFlag = 1;$/;"	v
+Gself	xvautil.h	/^  **Gself, **GsGsgauss, *Fself;$/;"	v
+GselfFile	xvautil.h	/^  AalphaFile[128], GselfFile[128], GsGsgaussFile[128], FselfFile[128],$/;"	v
+GselfFlag	xvautil.h	/^  ddtdrFlag = 1, ddtdphiFlag = 1, AalphaFlag = 1, GselfFlag = 1,$/;"	v
+Gsnr	xvautil.h	/^int tCor, printEvery, nTeta, tBeg, Gsnr, base, NN, xvaSaveMode = 0; $/;"	v
+GsrMax	xvautil.h	/^COORD_TYPE m0, m1, d, Vol, GsrMax, wtdRmax, kMax;$/;"	v
+HNBOX	bimix.h	/^  int HNBOX;$/;"	m	struct:progStatus
+HNBOX	bimix.h	723;"	d
+InitEventList	tree.c	/^void InitEventList (void) $/;"	f
+JJ	bimix.h	/^  int JJ;$/;"	m	struct:progStatus
+K	move.c	/^double W, K, T1xx, T1yy, T1zz,$/;"	v
+KBEG	bimix.h	719;"	d
+KEND	bimix.h	720;"	d
+KK	bimix.h	/^  int KK;$/;"	m	struct:progStatus
+L2	move.c	/^double pi, invL, L2, Vz;   $/;"	v
+Lz2	move.c	/^double Lz2;$/;"	v
+M	bimix.h	/^  int M;                        \/* number of cells in each direction $/;"	m	struct:params
+MAXBIN	bimix.h	73;"	d
+MAXPAR	bimix.h	68;"	d
+MB	bimix.h	/^int MB[NUMV];$/;"	v
+MDINT	bimix.h	45;"	d
+MDINT	bimix.h	46;"	d
+MDINT	bimix.h	49;"	d
+MDINT	bimix.h	50;"	d
+MDINTFMT	bimix.h	47;"	d
+MDINTFMT	bimix.h	51;"	d
+MDSIMUL	bimix.h	12;"	d
+MD_CORE_BARRIER	bimix.h	/^enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};$/;"	e
+MD_DEBUG	bimix.h	55;"	d
+MD_DEBUG2	bimix.h	56;"	d
+MD_DEBUG3	bimix.h	57;"	d
+MD_DEBUG4	bimix.h	58;"	d
+MD_EVENT_NONE	bimix.h	/^enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};$/;"	e
+MD_HARDSPHERES	bimix.h	10;"	d
+MD_HD_MIS	bimix.h	27;"	d
+MD_HD_TMP	bimix.h	24;"	d
+MD_HD_XVA	bimix.h	38;"	d
+MD_HOME	bimix.h	22;"	d
+MD_INOUT_BARRIER	bimix.h	/^enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};$/;"	e
+MD_OUTIN_BARRIER	bimix.h	/^enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};$/;"	e
+MD_SIMDAT	bimix.h	23;"	d
+MD_TAPE_MIS	bimix.h	34;"	d
+MD_TAPE_TMP	bimix.h	30;"	d
+MD_TAPE_XVA	bimix.h	39;"	d
+Mred	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+Mtot	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+Mtot	xvautil.h	/^COORD_TYPE Mtot, xvadt, dt, dteta, T; \/* T = temperature *\/$/;"	v
+N	bimix.h	/^  int N;$/;"	m	struct:measHead
+NA	bimix.h	66;"	d
+NDIM	bimix.h	54;"	d
+NK	bimix.h	65;"	d
+NN	bimix.h	/^  int NN;         \/* Logatithmic block length *\/$/;"	m	struct:progStatus
+NN	bimix.h	/^  int NN;$/;"	m	struct:xvaHead
+NN	xvautil.h	/^int tCor, printEvery, nTeta, tBeg, Gsnr, base, NN, xvaSaveMode = 0; $/;"	v
+NUMK	bimix.h	71;"	d
+NUMK2AV	bimix.h	724;"	d
+NUMV	bimix.h	75;"	d
+NUM_MISURE	bimix.h	42;"	d
+NUM_PAR	bimix.h	70;"	d
+NextEvent	tree.c	/^void NextEvent (void) $/;"	f
+Nm	corutil.c	/^int SEGSIZE, corBool = 0, tBool = 0, ihdr = 1, ohdr = 1, posBool = 0, Nm,$/;"	v
+Nm	xvautil.h	/^int Nm; \/* Number of points for which calculate the time correlation$/;"	v
+OP	bimix.h	406;"	d
+OS	bimix.h	405;"	d
+OconvStruct	bimix.h	/^struct convStruct OconvStruct[]=$/;"	v
+OmeasHead	bimix.h	/^struct measHead OmeasHead[NUM_MISURE];$/;"	v
+Omeasure	bimix.h	/^struct measure Omeasure[NUM_MISURE]=$/;"	v
+Oparams	bimix.h	/^struct params Oparams;$/;"	v
+OprogStatus	bimix.h	/^struct progStatus OprogStatus;$/;"	v
+OsinglePar	bimix.h	/^struct singlePar OsinglePar[] = { $/;"	v
+OxvaH	xvautil.c	/^struct xvaHead OxvaH; \/* measure file header (see mdsimul.h)*\/$/;"	v
+OxvaHead	bimix.h	/^struct xvaHead OxvaHead;$/;"	v
+OxvaPar	xvautil.h	/^struct singlePar OxvaPar[] = { $/;"	v
+P	bimix.h	/^  COORD_TYPE P;			\/* pressure *\/$/;"	m	struct:params
+PE	bimix.h	/^  int PE[PE_POINTS];$/;"	m	struct:progStatus
+PE_POINTS	bimix.h	83;"	d
+PredictEvent	move.c	/^void PredictEvent (int na, int nb) $/;"	f
+ProcessCellCrossing	move.c	/^void ProcessCellCrossing(void)$/;"	f
+ProcessCollWall	move.c	/^void ProcessCollWall(void)$/;"	f
+ProcessCollision	move.c	/^void ProcessCollision(void)$/;"	f
+Ptens	bimix.h	/^COORD_TYPE Ptens[3], DQtens[3], $/;"	v
+Ptensor	measures.c	/^void Ptensor(void)$/;"	f
+Pxx	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+Pxy	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+PxyArr	bimix.h	/^  COORD_TYPE PxyArr[5];$/;"	m	struct:progStatus
+Pyy	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+Pyz	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+PyzArr	bimix.h	/^  COORD_TYPE PyzArr[5];$/;"	m	struct:progStatus
+Pzx	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+PzxArr	bimix.h	/^  COORD_TYPE PzxArr[5];$/;"	m	struct:progStatus
+Pzz	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+RBEG	bimix.h	721;"	d
+REND	bimix.h	722;"	d
+S	bimix.h	/^COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,$/;"	v
+SAVE_LIST	bimix.h	101;"	d
+SAVE_LIST	bimix.h	103;"	d
+SEGSIZE	corutil.c	/^int SEGSIZE, corBool = 0, tBool = 0, ihdr = 1, ohdr = 1, posBool = 0, Nm,$/;"	v
+SIMUL	init.c	2;"	d	file:
+SIMUL	measures.c	2;"	d	file:
+SIMUL	move.c	2;"	d	file:
+ScheduleEvent	tree.c	/^void ScheduleEvent (int idA, int idB, double tEvent) $/;"	f
+ScheduleEvent	tree.c	/^void ScheduleEvent(int IdA, int IdB, double tEvent)$/;"	f
+ScheduleEventBarr	tree.c	/^void ScheduleEventBarr (int idA, int idB, int idC, double tEvent) $/;"	f
+SignR	move.c	3;"	d	file:
+StartRun	init.c	/^  void StartRun(void)$/;"	f
+T	bimix.h	/^  COORD_TYPE T;			\/* temperature *\/$/;"	m	struct:params
+T	bimix.h	/^  double T;$/;"	m	struct:measHead
+T	bimix.h	/^  double T;$/;"	m	struct:xvaHead
+T	corutil.c	/^COORD_TYPE T;$/;"	v
+T	xvautil.h	/^COORD_TYPE Mtot, xvadt, dt, dteta, T; \/* T = temperature *\/$/;"	v
+T1xx	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,$/;"	v
+T1xx	move.c	/^double W, K, T1xx, T1yy, T1zz,$/;"	v
+T1xy	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,$/;"	v
+T1yy	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,$/;"	v
+T1yy	move.c	/^double W, K, T1xx, T1yy, T1zz,$/;"	v
+T1yz	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,$/;"	v
+T1zx	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,$/;"	v
+T1zz	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,$/;"	v
+T1zz	move.c	/^double W, K, T1xx, T1yy, T1zz,$/;"	v
+TXT	measures.c	/^char TXT[MSG_LEN];$/;"	v
+TXTA	measures.c	/^char TXTA[10][MSG_LEN];$/;"	v
+UPDATE_SYSTEM	bimix.h	16;"	d
+UPDATE_SYSTEM	bimix.h	17;"	d
+UpdateAtom	move.c	/^void UpdateAtom(int i)$/;"	f
+UpdateSystem	move.c	/^void UpdateSystem(void)$/;"	f
+V	bimix.h	/^  sqrtdr2, Aa, V, DrSqTot, temp_transl;$/;"	v
+VBEG	bimix.h	717;"	d
+VEND	bimix.h	718;"	d
+Vol	bimix.h	/^  double Vol;$/;"	m	struct:measHead
+Vol	bimix.h	/^  double Vol;$/;"	m	struct:xvaHead
+Vol	xvautil.h	/^COORD_TYPE m0, m1, d, Vol, GsrMax, wtdRmax, kMax;$/;"	v
+Vz	move.c	/^double pi, invL, L2, Vz;   $/;"	v
+W	bimix.h	/^  COORD_TYPE W;$/;"	m	struct:progStatus
+W	move.c	/^double W, K, T1xx, T1yy, T1zz,$/;"	v
+Wxx	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,$/;"	v
+Wxy	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+Wyy	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,$/;"	v
+Wyz	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+Wzx	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+Wzz	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,$/;"	v
+XTERM	bimix.h	15;"	d
+XVA_ALST	bimix.h	121;"	d
+XVA_ALST	bimix.h	124;"	d
+XVA_DLST	bimix.h	122;"	d
+XVA_DLST	bimix.h	125;"	d
+XVA_DLST	xvautil.c	/^COORD_TYPE XVA_DLST;$/;"	v
+XVA_LIST	bimix.h	113;"	d
+XVA_LIST	bimix.h	116;"	d
+XVA_NUM	bimix.h	114;"	d
+XVA_NUM	bimix.h	117;"	d
+accV	bimix.h	/^  double accV;$/;"	m	struct:progStatus
+accrcmz	bimix.h	/^  double accrcmz;$/;"	m	struct:progStatus
+aclose	xvautil.c	/^void aclose(FILE* ofs)$/;"	f
+add_bond	move.c	/^void add_bond(int na, int n)$/;"	f
+aopen	xvautil.c	/^FILE* aopen(char *fileName)$/;"	f
+args	xvautil.c	/^void args(int argc,char **argv)$/;"	f
+atomTime	init.c	/^  double *atomTime, *treeTime;$/;"	v
+atomTime	move.c	/^double *treetime, *atomTime;$/;"	v
+avngMB	bimix.h	/^  int avngMB;$/;"	m	struct:progStatus
+avngPress	bimix.h	/^  int avngPress;$/;"	m	struct:progStatus
+avngS	bimix.h	/^  int avngS;$/;"	m	struct:progStatus
+avngTemp	bimix.h	/^  int avngTemp;$/;"	m	struct:progStatus
+avnggr	bimix.h	/^  int avnggr;$/;"	m	struct:progStatus
+bakSaveMode	bimix.h	/^  int bakSaveMode;\/* save mode for ascii backup *\/$/;"	m	struct:progStatus
+bakSteps	bimix.h	/^  MDINT bakSteps;    \/* steps between two savings of restore files on HD*\/$/;"	m	struct:progStatus
+bakStepsAscii	bimix.h	/^  MDINT bakStepsAscii; $/;"	m	struct:progStatus
+base	bimix.h	/^  double base;    \/* We save at base^^NN step *\/$/;"	m	struct:progStatus
+base	bimix.h	/^  double base;$/;"	m	struct:xvaHead
+base	xvautil.h	/^int tCor, printEvery, nTeta, tBeg, Gsnr, base, NN, xvaSaveMode = 0; $/;"	v
+basew	bimix.h	/^  double basew;$/;"	m	struct:progStatus
+bheight	bimix.h	/^  double bheight;$/;"	m	struct:params
+bonds	init.c	/^int *bondscache, *numbonds, **bonds;$/;"	v
+bondscache	init.c	/^int *bondscache, *numbonds, **bonds;$/;"	v
+bound	move.c	/^int bound(int na, int n)$/;"	f
+boxcmBool	corutil.c	/^  boxcmBool = 0;$/;"	v
+brokenbonds	move.c	/^int brokenbonds[2000];$/;"	v
+brownian	bimix.h	/^  int brownian;$/;"	m	struct:progStatus
+bump	move.c	/^void bump (int i, int j, double* W)$/;"	f
+bump	move.c	/^void bump (int i, int j, double* W, int bt)$/;"	f
+calcAngVel	xvautil.c	/^void calcAngVel(COORD_TYPE* ox, COORD_TYPE* oy, COORD_TYPE *oz)$/;"	f
+calcCM	xvautil.c	/^void calcCM(COORD_TYPE* rCMx, COORD_TYPE* rCMy, COORD_TYPE* rCMz)$/;"	f
+calcCMVel	xvautil.c	/^void calcCMVel(COORD_TYPE *vxCM, COORD_TYPE *vyCM, COORD_TYPE *vzCM)$/;"	f
+calcKVz	move.c	/^void calcKVz(void)$/;"	f
+calcObserv	move.c	/^void calcObserv(void)$/;"	f
+calcOrientVect	xvautil.c	/^void calcOrientVect(COORD_TYPE* u01x, COORD_TYPE* u01y, COORD_TYPE *u01z)$/;"	f
+calcRho	move.c	/^void calcRho(void)$/;"	f
+calcV	measures.c	/^void calcV(void)$/;"	f
+calccmz	move.c	/^void calccmz(void)$/;"	f
+calcpotene	measures.c	/^double calcpotene(void)$/;"	f
+cellList	init.c	/^  int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];$/;"	v
+cellList	move.c	/^int *inCell[3], **tree, *cellList, cellRange[2*NDIM], $/;"	v
+cellRange	init.c	/^  int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];$/;"	v
+cellRange	move.c	/^int *inCell[3], **tree, *cellList, cellRange[2*NDIM], $/;"	v
+cellsx	init.c	/^  int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];$/;"	v
+cellsx	move.c	/^  cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;$/;"	v
+cellsy	init.c	/^  int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];$/;"	v
+cellsy	move.c	/^  cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;$/;"	v
+cellsz	init.c	/^  int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];$/;"	v
+cellsz	move.c	/^  cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;$/;"	v
+check	move.c	/^void check (int *overlap, double *K, double *V)$/;"	f
+check_node	tree.c	/^int check_node(char* str, int id, int idNew, int idUp)$/;"	f
+checkquenchTime	bimix.h	/^  double checkquenchTime;$/;"	m	struct:progStatus
+checkz	move.c	/^int checkz(char *msg)$/;"	f
+closeMeasFile	xvautil.c	/^void closeMeasFile(int fd)$/;"	f
+collCount	bimix.h	/^  int collCount;$/;"	m	struct:progStatus
+comvel	init.c	/^void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)$/;"	f
+comvel_brown	init.c	/^void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)$/;"	f
+corBool	corutil.c	/^int SEGSIZE, corBool = 0, tBool = 0, ihdr = 1, ohdr = 1, posBool = 0, Nm,$/;"	v
+crossCount	bimix.h	/^  int crossCount;$/;"	m	struct:progStatus
+curStep	bimix.h	/^  MDINT curStep;	\/* current step of simulation *\/$/;"	m	struct:params
+d	xvautil.h	/^COORD_TYPE m0, m1, d, Vol, GsrMax, wtdRmax, kMax;$/;"	v
+dataFiles	bimix.h	/^  char dataFiles[NUM_MISURE][NAME_LENGTH];$/;"	m	struct:progStatus
+ddtdphiFile	xvautil.h	/^  DrFile[128], vhFile[128], ddtdrFile[128], ddtdphiFile[128],$/;"	v
+ddtdphiFlag	xvautil.h	/^  ddtdrFlag = 1, ddtdphiFlag = 1, AalphaFlag = 1, GselfFlag = 1,$/;"	v
+ddtdphiSq	xvautil.h	/^COORD_TYPE *drSq, *dphiSq, *Dr, *Dt, *ddtdrSq, *ddtdphiSq, *Aalpha, *dr4,$/;"	v
+ddtdrFile	xvautil.h	/^  DrFile[128], vhFile[128], ddtdrFile[128], ddtdphiFile[128],$/;"	v
+ddtdrFlag	xvautil.h	/^  ddtdrFlag = 1, ddtdphiFlag = 1, AalphaFlag = 1, GselfFlag = 1,$/;"	v
+ddtdrSq	xvautil.h	/^COORD_TYPE *drSq, *dphiSq, *Dr, *Dt, *ddtdrSq, *ddtdphiSq, *Aalpha, *dr4,$/;"	v
+defaults	xvautil.c	/^void defaults(void)$/;"	f
+delta	bimix.h	/^  double delta[2][2]; \/* ampiezza della buca *\/$/;"	m	struct:params
+distanza	move.c	/^void distanza(int ia, int ib)$/;"	f
+docellcross	move.c	/^void docellcross(int k, double velk, double *rkptr, int cellsk)$/;"	f
+dphiSq	xvautil.h	/^COORD_TYPE *drSq, *dphiSq, *Dr, *Dt, *ddtdrSq, *ddtdphiSq, *Aalpha, *dr4,$/;"	v
+dphiSqFile	xvautil.h	/^  C3File[128], C4File[128], dphiSqFile[128], drSqFile[128], DtFile[128], $/;"	v
+dphiSqFlag	xvautil.h	/^  phiFlag=1, C4Flag=1, dphiSqFlag=1, drSqFlag=1, DtFlag=1, DrFlag=1, $/;"	v
+dr4	xvautil.h	/^COORD_TYPE *drSq, *dphiSq, *Dr, *Dt, *ddtdrSq, *ddtdphiSq, *Aalpha, *dr4,$/;"	v
+drSq	xvautil.h	/^COORD_TYPE *drSq, *dphiSq, *Dr, *Dt, *ddtdrSq, *ddtdphiSq, *Aalpha, *dr4,$/;"	v
+drSqFile	xvautil.h	/^  C3File[128], C4File[128], dphiSqFile[128], drSqFile[128], DtFile[128], $/;"	v
+drSqFlag	xvautil.h	/^  phiFlag=1, C4Flag=1, dphiSqFlag=1, drSqFlag=1, DtFlag=1, DrFlag=1, $/;"	v
+dt	bimix.h	/^  double dt;     \/* dt of each steps *\/$/;"	m	struct:xvaHead
+dt	bimix.h	/^  double dt;$/;"	m	struct:measHead
+dt	xvautil.h	/^COORD_TYPE Mtot, xvadt, dt, dteta, T; \/* T = temperature *\/$/;"	v
+dteta	xvautil.h	/^COORD_TYPE Mtot, xvadt, dt, dteta, T; \/* T = temperature *\/$/;"	v
+dummy	bimix.h	/^COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,$/;"	v
+endFormat	bimix.h	/^  int endFormat; \/* 0 = binary 1 = ascii 2 = both *\/$/;"	m	struct:progStatus
+endfile	bimix.h	/^  char endfile[NAME_LENGTH];$/;"	m	struct:progStatus
+endtime	bimix.h	/^  double endtime;$/;"	m	struct:progStatus
+energy	measures.c	/^void energy(void)$/;"	f
+eqlevel	bimix.h	/^  double eqlevel;$/;"	m	struct:progStatus
+equilibrat	bimix.h	/^  int equilibrat;               \/* != 0 if equilibrating *\/$/;"	m	struct:params
+equilibrated	bimix.h	/^  int equilibrated;$/;"	m	struct:progStatus
+eta	bimix.h	/^COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,$/;"	v
+evIdA	move.c	/^int evIdA, evIdB, parnumB, parnumA;$/;"	v
+evIdB	move.c	/^int evIdA, evIdB, parnumB, parnumA;$/;"	v
+evIdC	move.c	/^int evIdC;$/;"	v
+eventCount	bimix.h	/^  int eventCount;$/;"	m	struct:progStatus
+eventMult	bimix.h	/^  int eventMult;$/;"	m	struct:progStatus
+expandFact	bimix.h	/^  double expandFact;$/;"	m	struct:progStatus
+extraLz	bimix.h	/^  double extraLz;$/;"	m	struct:progStatus
+fstps	bimix.h	/^  double fstps;         \/* There are KK block each base^NN long *\/$/;"	m	struct:progStatus
+g2	init.c	/^double mgA, mgB, g2;$/;"	v
+gauss	init.c	/^COORD_TYPE gauss(void)$/;"	f
+getPhi	xvautil.c	/^void getPhi(COORD_TYPE* fix, COORD_TYPE* fiy, COORD_TYPE* fiz)$/;"	f
+get_tt0	xvautil.c	/^int get_tt0(int t0, int t)$/;"	f
+ggrav	bimix.h	/^  double ggrav;$/;"	m	struct:params
+gr	bimix.h	/^COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,$/;"	v
+hist	bimix.h	/^  int hist[MAXBIN];$/;"	m	struct:progStatus
+histMB	bimix.h	/^  int histMB[NUMV];$/;"	m	struct:progStatus
+ihdr	corutil.c	/^int SEGSIZE, corBool = 0, tBool = 0, ihdr = 1, ohdr = 1, posBool = 0, Nm,$/;"	v
+inCell	init.c	/^  int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];$/;"	v
+inCell	move.c	/^int *inCell[3], **tree, *cellList, cellRange[2*NDIM], $/;"	v
+info	corutil.c	/^void info(void)$/;"	f
+infoBool	corutil.c	/^int infoBool = 0;$/;"	v
+iniFormat	bimix.h	/^  int iniFormat; \/* 0 = binary 1 = ascii 2 = both *\/$/;"	m	struct:progStatus
+inifile	bimix.h	/^  char inifile[NAME_LENGTH];$/;"	m	struct:progStatus
+initCalc	bimix.h	/^  MDINT initCalc[NUM_MISURE];$/;"	m	struct:progStatus
+initCoord	init.c	/^void initCoord(void)$/;"	f
+initStep	bimix.h	/^  MDINT initStep[NUM_MISURE]; $/;"	m	struct:progStatus
+initUcellx	move.c	/^  cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;$/;"	v
+initUcelly	move.c	/^  cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;$/;"	v
+initUcellz	move.c	/^  cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;$/;"	v
+inputFile	corutil.c	/^char inputFile[NAME_LENGTH];\/* input file (measures file) *\/$/;"	v
+inputFile	xvautil.h	/^char inputFile[NAME_LENGTH], xvaparsFile[NAME_LENGTH];$/;"	v
+intervalSum	bimix.h	/^  double intervalSum;$/;"	m	struct:progStatus
+invL	move.c	/^double pi, invL, L2, Vz;   $/;"	v
+invalArg	xvautil.c	/^void invalArg(void)$/;"	f
+invmA	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+invmB	move.c	/^  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;$/;"	v
+invs	bimix.h	/^COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,$/;"	v
+ipart	bimix.h	/^  int ipart;$/;"	m	struct:progStatus
+kMax	xvautil.h	/^COORD_TYPE m0, m1, d, Vol, GsrMax, wtdRmax, kMax;$/;"	v
+lastV	bimix.h	/^  double lastV;$/;"	m	struct:progStatus
+lastbilogsaved	bimix.h	/^  int lastbilogsaved;$/;"	m	struct:progStatus
+m	bimix.h	/^  COORD_TYPE m[2];             \/* atoms masses *\/$/;"	m	struct:params
+m0	xvautil.h	/^COORD_TYPE m0, m1, d, Vol, GsrMax, wtdRmax, kMax;$/;"	v
+m1	xvautil.h	/^COORD_TYPE m0, m1, d, Vol, GsrMax, wtdRmax, kMax;$/;"	v
+main	corutil.c	/^void main(int argc, char* argv[])$/;"	f
+main	cri2fra.c	/^void main(int argc, char** argv)$/;"	f
+main	xvautil.c	/^void main(int argc, char** argv)$/;"	f
+maxbonds	bimix.h	/^  int maxbonds;$/;"	m	struct:progStatus
+maxquench	bimix.h	/^  int maxquench;$/;"	m	struct:progStatus
+maxwell	measures.c	/^void maxwell(void)$/;"	f
+mdseed	bimix.h	/^  int mdseed;$/;"	m	struct:progStatus
+measCalc	bimix.h	/^  MDINT measCalc[NUM_MISURE]; \/*steps between two measure calculation *\/$/;"	m	struct:progStatus
+measHead	bimix.h	/^struct measHead$/;"	s
+measSteps	bimix.h	/^  MDINT measSteps[NUM_MISURE];\/*steps after which save every measure *\/$/;"	m	struct:progStatus
+mgA	init.c	/^double mgA, mgB, g2;$/;"	v
+mgB	init.c	/^double mgA, mgB, g2;$/;"	v
+mis	bimix.h	/^void* mis;$/;"	v
+misPath	bimix.h	/^  char misPath[NAME_LENGTH];$/;"	m	struct:progStatus
+mkFormat	xvautil.c	/^void mkFormat(char* fmtStr)$/;"	f
+mode	bimix.h	/^  int mode;$/;"	m	struct:xvaHead
+move	move.c	/^void move(void)$/;"	f
+nRun	bimix.h	/^  char nRun[32];$/;"	m	struct:progStatus
+nTeta	xvautil.h	/^int tCor, printEvery, nTeta, tBeg, Gsnr, base, NN, xvaSaveMode = 0; $/;"	v
+nebrTabFac	bimix.h	/^  int nebrTabFac;                \/* How much storage sould be provided for $/;"	m	struct:progStatus
+nextDt	bimix.h	/^  double nextDt;$/;"	m	struct:progStatus
+nextStoreTime	bimix.h	/^  double nextStoreTime;$/;"	m	struct:progStatus
+nextSumTime	bimix.h	/^  double nextSumTime;$/;"	m	struct:progStatus
+nextcheckTime	bimix.h	/^  double nextcheckTime;$/;"	m	struct:progStatus
+norm	xvautil.h	/^int *normv, *norm, numOfProcs;$/;"	v
+normv	xvautil.h	/^int *normv, *norm, numOfProcs;$/;"	v
+numOfProcs	xvautil.h	/^int *normv, *norm, numOfProcs;$/;"	v
+numbonds	init.c	/^int *bondscache, *numbonds, **bonds;$/;"	v
+numbonds	measures.c	/^int *numbonds;$/;"	v
+numquench	bimix.h	/^  int numquench;$/;"	m	struct:progStatus
+ohdr	corutil.c	/^int SEGSIZE, corBool = 0, tBool = 0, ihdr = 1, ohdr = 1, posBool = 0, Nm,$/;"	v
+opar_ascii	bimix.h	/^struct pascii opar_ascii[]=$/;"	v
+openMeasFile	xvautil.c	/^int openMeasFile(char* FileName)$/;"	f
+openMeasFileWR	xvautil.c	/^int openMeasFileWR(char* FileName, int rank)$/;"	f
+opro_ascii	bimix.h	/^struct pascii opro_ascii[] =$/;"	v
+outBool	corutil.c	/^int outBool = 0; \/* if true writes output coordinates file *\/$/;"	v
+outFile	corutil.c	/^char outFile[NAME_LENGTH];  \/* output file (ascii file) name *\/$/;"	v
+outputSummary	move.c	/^void outputSummary(void)$/;"	f
+overlaptol	bimix.h	/^  double overlaptol;$/;"	m	struct:progStatus
+params	bimix.h	/^struct params$/;"	s
+parnum	bimix.h	/^  int parnum;        	\/* total number of particles *\/$/;"	m	struct:params
+parnum	bimix.h	/^  int parnum;$/;"	m	struct:xvaHead
+parnumA	bimix.h	/^  int parnumA;          \/* number of particles A *\/$/;"	m	struct:params
+parnumA	init.c	/^int parnumA, parnumB;$/;"	v
+parnumA	move.c	/^int evIdA, evIdB, parnumB, parnumA;$/;"	v
+parnumB	init.c	/^int parnumA, parnumB;$/;"	v
+parnumB	move.c	/^int evIdA, evIdB, parnumB, parnumA;$/;"	v
+partDiss	bimix.h	/^  double partDiss;             \/*dissipazione negli urti fra particelle *\/$/;"	m	struct:params
+phi0x	xvautil.h	/^COORD_TYPE *phix, *phiy, *phiz, *phi0x, *phi0y, *phi0z,$/;"	v
+phi0y	xvautil.h	/^COORD_TYPE *phix, *phiy, *phiz, *phi0x, *phi0y, *phi0z,$/;"	v
+phi0z	xvautil.h	/^COORD_TYPE *phix, *phiy, *phiz, *phi0x, *phi0y, *phi0z,$/;"	v
+phiFile	xvautil.h	/^char phiFile[128]; \/* File containing the angular positions at all instants *\/$/;"	v
+phiFlag	xvautil.h	/^  phiFlag=1, C4Flag=1, dphiSqFlag=1, drSqFlag=1, DtFlag=1, DrFlag=1, $/;"	v
+phitt0x	xvautil.h	/^  *phitt0x, *phitt0y, *phitt0z;$/;"	v
+phitt0y	xvautil.h	/^  *phitt0x, *phitt0y, *phitt0z;$/;"	v
+phitt0z	xvautil.h	/^  *phitt0x, *phitt0y, *phitt0z;$/;"	v
+phix	xvautil.h	/^COORD_TYPE *phix, *phiy, *phiz, *phi0x, *phi0y, *phi0z,$/;"	v
+phiy	xvautil.h	/^COORD_TYPE *phix, *phiy, *phiz, *phi0x, *phi0y, *phi0z,$/;"	v
+phiz	xvautil.h	/^COORD_TYPE *phix, *phiy, *phiz, *phi0x, *phi0y, *phi0z,$/;"	v
+pi	move.c	/^double pi, invL, L2, Vz;   $/;"	v
+pi	xvautil.h	/^COORD_TYPE pi;$/;"	v
+poolSize	init.c	/^int poolSize;$/;"	v
+posBool	corutil.c	/^int SEGSIZE, corBool = 0, tBool = 0, ihdr = 1, ohdr = 1, posBool = 0, Nm,$/;"	v
+posFile	corutil.c	/^char posFile[NAME_LENGTH];  \/* name of the positions file *\/$/;"	v
+precision	bimix.h	/^char precision[64];         $/;"	v
+precision	xvautil.h	/^char precision[64];$/;"	v
+press	bimix.h	/^COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,$/;"	v
+press_at	bimix.h	/^  press_m, press_at, rcmz, rho;$/;"	v
+press_m	bimix.h	/^  press_m, press_at, rcmz, rho;$/;"	v
+printEvery	xvautil.h	/^int tCor, printEvery, nTeta, tBeg, Gsnr, base, NN, xvaSaveMode = 0; $/;"	v
+progStatus	bimix.h	/^struct progStatus$/;"	s
+psi1File	xvautil.h	/^char velFile[128], psi1File[128], psi2File[128], C1File[128], C2File[128], $/;"	v
+psi1Flag	xvautil.h	/^int velFlag=1, psi1Flag=1, psi2Flag=1, vhFlag=1, C1Flag=1, C2Flag=1, C3Flag=1,$/;"	v
+psi1acf	xvautil.h	/^COORD_TYPE *velacf, *psi1acf, *psi2acf, *C1acf, *C2acf, *C3acf, $/;"	v
+psi2File	xvautil.h	/^char velFile[128], psi1File[128], psi2File[128], C1File[128], C2File[128], $/;"	v
+psi2Flag	xvautil.h	/^int velFlag=1, psi1Flag=1, psi2Flag=1, vhFlag=1, C1Flag=1, C2Flag=1, C3Flag=1,$/;"	v
+psi2acf	xvautil.h	/^COORD_TYPE *velacf, *psi1acf, *psi2acf, *C1acf, *C2acf, *C3acf, $/;"	v
+quenchend	bimix.h	/^  double quenchend;$/;"	m	struct:progStatus
+quenchtol	bimix.h	/^  double quenchtol;$/;"	m	struct:progStatus
+rNebrShell	bimix.h	/^  COORD_TYPE rNebrShell;   \/* Dr of shell of neighbour list shell see Rapaport pag. 53 *\/$/;"	m	struct:progStatus
+radDens	measures.c	/^void radDens(void)$/;"	f
+ranf	init.c	/^COORD_TYPE ranf(void)$/;"	f
+rcmz	bimix.h	/^  press_m, press_at, rcmz, rho;$/;"	v
+rcut	bimix.h	/^  double rcut;$/;"	m	struct:params
+readAllCor	init.c	/^void readAllCor(FILE* fs)$/;"	f
+readMeas	xvautil.c	/^int readMeas(int fd, int nmeas, COORD_TYPE* firstPtr, ...)$/;"	f
+readPars	xvautil.c	/^void readPars(char* fileName)$/;"	f
+rebuildCalendar	move.c	/^void rebuildCalendar(void)$/;"	f
+rebuildLinkedList	move.c	/^void rebuildLinkedList(void)$/;"	f
+redTime	xvautil.c	/^double redTime(int p, int NN, double base)$/;"	f
+remove_bond	move.c	/^void remove_bond(int na, int n)$/;"	f
+rescaleTime	bimix.h	/^  double rescaleTime;$/;"	m	struct:progStatus
+resetCM	init.c	/^void resetCM(int onlyz)$/;"	f
+rho	bimix.h	/^  press_m, press_at, rcmz, rho;$/;"	v
+rhobh	bimix.h	/^  double rhobh;$/;"	m	struct:progStatus
+rxCMi	bimix.h	/^  COORD_TYPE rxCMi[MAXPAR]; \/* initial coordinates of center of mass *\/$/;"	m	struct:progStatus
+ryCMi	bimix.h	/^  COORD_TYPE ryCMi[MAXPAR]; \/* MAXPAR is the maximum number of particles *\/$/;"	m	struct:progStatus
+rzCMi	bimix.h	/^  COORD_TYPE rzCMi[MAXPAR];$/;"	m	struct:progStatus
+rzup	bimix.h	/^  double rzup;$/;"	m	struct:progStatus
+saveAcf	xvautil.c	/^void saveAcf(char* fileName, COORD_TYPE* acf)$/;"	f
+saveFself	xvautil.c	/^void saveFself(char* fileName, COORD_TYPE* fs)$/;"	f
+saveGself	xvautil.c	/^void saveGself(char* fileName, COORD_TYPE** gs)$/;"	f
+saveSteps	bimix.h	/^  MDINT saveSteps; \/* save between two tape savings *\/$/;"	m	struct:xvaHead
+saveSteps	bimix.h	/^  MDINT saveSteps;$/;"	m	struct:measHead
+saveVH	xvautil.c	/^void saveVH(char *fileName, COORD_TYPE** vh)$/;"	f
+save_rho	move.c	/^void save_rho(void)$/;"	f
+save_rzcm	move.c	/^void save_rzcm(void)$/;"	f
+savedXva	bimix.h	/^  int savedXva; $/;"	m	struct:progStatus
+scalCor	move.c	/^void scalCor(int Nm)$/;"	f
+scaleVolTime	bimix.h	/^  double scaleVolTime;$/;"	m	struct:progStatus
+scalevel	bimix.h	/^  int scalevel;$/;"	m	struct:progStatus
+scalevels	move.c	/^void scalevels(double temp, double K)$/;"	f
+scalevels	move.c	/^void scalevels(double temp, double K, double Vz)$/;"	f
+setFlags	xvautil.c	/^void setFlags(void)$/;"	f
+sigma	bimix.h	/^  COORD_TYPE sigma[2][2];     \/* pair potential length parameters *\/$/;"	m	struct:params
+size	bimix.h	/^  int size ;     \/* size of each xva savings = $/;"	m	struct:xvaHead
+size	bimix.h	/^  int size;  \/* size in bytes of each measure *\/$/;"	m	struct:measHead
+sqrtdr2	bimix.h	/^  sqrtdr2, Aa, V, DrSqTot, temp_transl;$/;"	v
+staSteps	bimix.h	/^  MDINT staSteps;     \/* steps after which must save sim_stat structure $/;"	m	struct:progStatus
+storerate	bimix.h	/^  double storerate;$/;"	m	struct:progStatus
+structFacts	measures.c	/^void structFacts(void)$/;"	f
+structFacts_OLD	measures.c	/^void structFacts_OLD(void)$/;"	f
+sumEta	bimix.h	/^  COORD_TYPE sumEta; \/* accumulators for obtaining the mean value of eta *\/$/;"	m	struct:progStatus
+sumPress	bimix.h	/^  COORD_TYPE sumPress;$/;"	m	struct:progStatus
+sumS	bimix.h	/^  COORD_TYPE sumS[NUMK];$/;"	m	struct:progStatus
+sumTemp	bimix.h	/^  COORD_TYPE sumTemp;$/;"	m	struct:progStatus
+tBeg	xvautil.h	/^int tCor, printEvery, nTeta, tBeg, Gsnr, base, NN, xvaSaveMode = 0; $/;"	v
+tBool	corutil.c	/^int SEGSIZE, corBool = 0, tBool = 0, ihdr = 1, ohdr = 1, posBool = 0, Nm,$/;"	v
+tCor	xvautil.h	/^int tCor, printEvery, nTeta, tBeg, Gsnr, base, NN, xvaSaveMode = 0; $/;"	v
+tapampl	bimix.h	/^  int tapampl;$/;"	m	struct:progStatus
+tapeTimes	bimix.h	/^  int tapeTimes;    \/* every 'tapeTimes * Omeasure[].saveSteps' $/;"	m	struct:progStatus
+taptau	bimix.h	/^  double taptau;$/;"	m	struct:progStatus
+tc	bimix.h	/^  double tc;$/;"	m	struct:progStatus
+temp	bimix.h	/^COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,$/;"	v
+temp_transl	bimix.h	/^  sqrtdr2, Aa, V, DrSqTot, temp_transl;$/;"	v
+temperat	measures.c	/^void temperat(void)$/;"	f
+tgap	xvautil.h	/^int tgap; \/* Increment of t0 *\/$/;"	v
+timbig	move.c	/^const double timbig = 1E12;$/;"	v
+time	bimix.h	/^  double time;$/;"	m	struct:params
+tmpPath	bimix.h	/^  char tmpPath[NAME_LENGTH];$/;"	m	struct:progStatus
+tol	bimix.h	/^  COORD_TYPE tol;               \/* Tolerance of the shake algoritm used $/;"	m	struct:params
+tolT	bimix.h	/^  COORD_TYPE tolT;$/;"	m	struct:progStatus
+totStep	bimix.h	/^  MDINT totStep;	\/* temporal step number that simulation $/;"	m	struct:params
+transDiff	measures.c	/^void transDiff(void)$/;"	f
+tree	init.c	/^  int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];$/;"	v
+tree	move.c	/^int *inCell[3], **tree, *cellList, cellRange[2*NDIM], $/;"	v
+treeCircAL	bimix.h	166;"	d
+treeCircAL	tree.c	21;"	d	file:
+treeCircAR	bimix.h	168;"	d
+treeCircAR	tree.c	23;"	d	file:
+treeCircBL	bimix.h	167;"	d
+treeCircBL	tree.c	22;"	d	file:
+treeCircBR	bimix.h	169;"	d
+treeCircBR	tree.c	24;"	d	file:
+treeIdA	bimix.h	170;"	d
+treeIdA	tree.c	25;"	d	file:
+treeIdB	bimix.h	171;"	d
+treeIdB	tree.c	26;"	d	file:
+treeIdC	bimix.h	172;"	d
+treeLeft	bimix.h	163;"	d
+treeLeft	tree.c	18;"	d	file:
+treeRight	bimix.h	164;"	d
+treeRight	tree.c	19;"	d	file:
+treeTime	init.c	/^  double *atomTime, *treeTime;$/;"	v
+treeUp	bimix.h	165;"	d
+treeUp	tree.c	20;"	d	file:
+treetime	move.c	/^double *treetime, *atomTime;$/;"	v
+updateDQ	move.c	/^void updateDQ(COORD_TYPE dt)$/;"	f
+updatePE	move.c	/^void updatePE(int Nm)$/;"	f
+usrInitAft	init.c	/^void usrInitAft(void)$/;"	f
+usrInitBef	init.c	/^void usrInitBef(void)$/;"	f
+vanHove	xvautil.h	/^COORD_TYPE **vanHove;$/;"	v
+vcmx0	bimix.h	/^  COORD_TYPE vcmx0[MAXPAR];$/;"	m	struct:progStatus
+vcmy0	bimix.h	/^  COORD_TYPE vcmy0[MAXPAR];$/;"	m	struct:progStatus
+vcmz0	bimix.h	/^  COORD_TYPE vcmz0[MAXPAR];$/;"	m	struct:progStatus
+vectProd	init.c	/^void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z, $/;"	f
+vectProd	xvautil.c	/^void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z, $/;"	f
+velFile	xvautil.h	/^char velFile[128], psi1File[128], psi2File[128], C1File[128], C2File[128], $/;"	v
+velFlag	xvautil.h	/^int velFlag=1, psi1Flag=1, psi2Flag=1, vhFlag=1, C1Flag=1, C2Flag=1, C3Flag=1,$/;"	v
+velacf	xvautil.h	/^COORD_TYPE *velacf, *psi1acf, *psi2acf, *C1acf, *C2acf, *C3acf, $/;"	v
+velsBrown	move.c	/^void velsBrown(double T)$/;"	f
+vhFile	xvautil.h	/^  DrFile[128], vhFile[128], ddtdrFile[128], ddtdphiFile[128],$/;"	v
+vhFlag	xvautil.h	/^int velFlag=1, psi1Flag=1, psi2Flag=1, vhFlag=1, C1Flag=1, C2Flag=1, C3Flag=1,$/;"	v
+vhgap	xvautil.h	/^int vhgap; \/* steps every which save the van Hove function *\/$/;"	v
+vztap	bimix.h	/^  double vztap;$/;"	m	struct:progStatus
+wallDiss	bimix.h	/^  double wallDiss;             \/* dissipazione negli urti contro il muro *\/$/;"	m	struct:params
+wallcollCount	bimix.h	/^  int wallcollCount;$/;"	m	struct:progStatus
+writeAllCor	init.c	/^void writeAllCor(FILE* fs)$/;"	f
+wtd	xvautil.h	/^  *C4acf, *wtd;$/;"	v
+wtdFile	xvautil.h	/^  wtdFile[128];$/;"	v
+wtdFlag	xvautil.h	/^  GsGsgaussFlag = 1, FselfFlag = 1, wtdFlag = 1;$/;"	v
+wtdRmax	xvautil.h	/^COORD_TYPE m0, m1, d, Vol, GsrMax, wtdRmax, kMax;$/;"	v
+xvaHead	bimix.h	/^struct xvaHead $/;"	s
+xvaParsing	xvautil.c	/^void xvaParsing(char stringA[NAME_LENGTH], char stringB[NAME_LENGTH])$/;"	f
+xvaSaveMode	bimix.h	/^  int xvaSaveMode;\/* 0 = linear 1 = semilog 2 = bilog (not impl. yet) *\/$/;"	m	struct:progStatus
+xvaSaveMode	xvautil.h	/^int tCor, printEvery, nTeta, tBeg, Gsnr, base, NN, xvaSaveMode = 0; $/;"	v
+xvaSteps	bimix.h	/^  MDINT xvaSteps;     \/* steps between two tape file savings *\/$/;"	m	struct:progStatus
+xvadt	xvautil.h	/^COORD_TYPE Mtot, xvadt, dt, dteta, T; \/* T = temperature *\/$/;"	v
+xvafile	bimix.h	/^  char xvafile[NAME_LENGTH]; \/* file containing positions, velocities and $/;"	m	struct:progStatus
+xvaparsFile	xvautil.h	/^char inputFile[NAME_LENGTH], xvaparsFile[NAME_LENGTH];$/;"	v
