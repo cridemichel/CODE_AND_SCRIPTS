@@ -129,6 +129,21 @@ int evIdA, evIdB, parnumB, parnumA;
 int evIdC;
 extern int *bondscache, *numbonds, **bonds;
 #endif
+void newtDist(double x[], int n, int *check, 
+	  void (*vecfunc)(int, double [], double [], int, int, double []),
+	  int iA, int iB, double shift[3]);
+void newtDistNeg(double x[], int n, int *check, 
+	  void (*vecfunc)(int, double [], double [], int, int, double []),
+	  int iA, int iB, double shift[3]);
+void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], double xb2[], 
+	   int *nb);
+void newt(double x[], int n, int *check, 
+	  void (*vecfunc)(int, double [], double [], int, int, double []),
+	  int iA, int iB, double shift[3]);
+void rebuildCalendar(void);
+void R2u(void);
+void store_bump(int i, int j);
+
 /* ========================== >>> scalCor <<< ============================= */
 void scalCor(int Nm)
 { 
@@ -2877,6 +2892,7 @@ double calc_norm(double *vec)
   return sqrt(norm);
 }
 extern int check_point(char* msg, double *p, double *rc, double **XX);
+extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
 
 double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
@@ -2938,7 +2954,9 @@ retry:
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
 	  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
-	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1); 
+	  //distconjgrad(i, j, shift, vecgcg, 100, 1); 
+	  //distconjgrad(i, j, shift, vecgcg, 10000, 1);
+	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
 	  for (k1=0; k1 < 3; k1++)
 	    {
 	      rC[k1] = vecgcg[k1];
@@ -2951,6 +2969,7 @@ retry:
 	r12[k1] = rC[k1]-rD[k1]; 
       printf("dist=%.15f\n",calc_norm(r12));
 #endif
+      //exit(-1);
       MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
       calc_grad(rC, rA, Xa, gradf);
@@ -3978,7 +3997,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #define EPS 1e-4
 int locate_contact_notworking(int i, int j, double shift[3], double t1, double t2, double vecg[8])
 {
-  double h, d, dold, told, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
+  double h, d, dold, told=0, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double normddot, ddot[3], maxddot, delt;
   const double epsd = 0.0001; 
   int foundrc, retcheck, kk;

@@ -17,6 +17,9 @@ double *vector(int n)
 {
   return calloc(n, sizeof(double)); 
 }
+void projectgrad(double *p, double *xi, double *gradf, double *gradg);
+void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf);
+
 double **matrix(int n, int m)
 {
   double **M;
@@ -262,7 +265,7 @@ void linminConstr(double p[], double xi[], int n, double *fret, double (*func)(d
  * the value of func at the returned location p. This is actually all accomplished by calling
  * the routines mnbrak and brent. */
 { 
-  const double TOLLM=OprogStatus.tolSD;
+  const double TOLLM=OprogStatus.tolSD/10;
   double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
   double f1dimConstr(double x); 
   void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, 
@@ -276,17 +279,25 @@ void linminConstr(double p[], double xi[], int n, double *fret, double (*func)(d
   for (j=0;j<n;j++)
     { 
       pcom[j]=p[j];
+    }
+  for (j=0;j<n;j++)
+    { 
       xicom[j]=xi[j];
     } 
+  projectgrad(p,xicom,gradfG,gradgG);
   ax=0.0; /*Initial guess for brackets.*/
   xx=1.0; 
   mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimConstr); 
   *fret=brent(ax,xx,bx,f1dimConstr,TOLLM,&xmin);
-  //printf("xmin: %.15G\n", xmin);
   for (j=0;j<n;j++)
     { /*Construct the vector results to return. */
-      p[j] += dxG[j]; 
+      xi[j] *= xmin;
     } 
+  projectgrad(p,xi,gradfG,gradgG);
+  for (j=0;j<n;j++)
+    {  
+      p[j] += xi[j]; 
+    }
   //free_vector(xicom,1,n); free_vector(pcom,1,n);
 }
 
@@ -316,8 +327,13 @@ void linmin(double p[], double xi[], int n, double *fret, double (*func)(double 
   ax=0.0; /*Initial guess for brackets.*/
   xx=1.0; 
   mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dim); 
+  //printf("ax=%.15G xx=%.15G bx=%.15G\n", ax, xx, bx);
   *fret=brent(ax,xx,bx,f1dim,TOLLM,&xmin);
   //printf("xmin: %.15G\n", xmin);
+  //printf("xi=%.15G %.15G %.15G %.15G %.15G %.15G \n",
+	// xi[0], xi[1], xi[2], xi[3], xi[4], xi[5]);
+  //printf("p=%.15G %.15G %.15G %.15G %.15G %.15G \n",
+	// p[0], p[1], p[2], p[3], p[4], p[5]);
   for (j=0;j<n;j++)
     { /*Construct the vector results to return. */
       xi[j] *= xmin;
@@ -439,16 +455,19 @@ double f1dimConstr(double x)
   /*Must accompany linmin.*/
 {
   int j; 
-  double f, xt[6], dx[6];
+  double f, xt[6];
   // xt=vector(1,ncom);
   for (j=0;j<ncom;j++) 
     {
       dxG[j]=x*xicom[j];
+    }
+  projonto(pcom, dxG, rA, Xa, gradfG);
+  projonto(&pcom[3], &dxG[3], rB, Xb, gradgG);
+  for (j=0;j<ncom;j++) 
+    {
       xt[j]=pcom[j]+dxG[j]; 
     }
   f=(*nrfunc)(xt); 
-  projonto(pcom, dxG, rA, Xa, gradfG);
-  projonto(&pcom[6], &dxG[3], rB, Xb, gradgG);
   // free_vector(xt,1,ncom); 
   return f;
 }
@@ -609,7 +628,7 @@ int check_point(char* msg, double *p, double *rc, double **XX)
 }
 void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 {
-  int kk, its, done=0, k1, k2, MAXITS=10;
+  int kk, its, done=0, k1, k2, MAXITS=100;
   const double GOLD=1.618034;
   double r1[3], r1A[3], sf, s1, s2;
   double A, B, C, Delta, sol=0.0;
@@ -725,15 +744,15 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   int j,its,kk;
   const int ITMAXFR = OprogStatus.maxitsSD;
   const double EPSFR=1E-10;
-  double gg,gam,fp,dgg,norm1, norm2, sp, fpold, gradf[3], gradg[3];
-  double g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[kk];
+  double normxi,gg,gam,fp,dgg,norm1, norm2, sp, fpold, gradf[3], gradg[3];
+  double g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
   
   callsfrprmn++;
   //fp=(*func)(p); 
   /*Initializations.*/
-  fp = (*dfunc)(p,xi,gradf,gradg); 
-  projectgrad(p,xi,gradf,gradg);  
+  fp = (*dfunc)(p,xi,gradfG,gradgG); 
+  projectgrad(p,xi,gradfG,gradgG);  
   //printf("g=%f %f %f %f %f %f\n", g[0], g[1], g[2], g[3], g[4], g[5]);
   for (its=1;its<=ITMAXFR;its++)
     { 
@@ -756,7 +775,6 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 #endif
       for (j=0; j < n; j++)
 	p[j] += xi[j];
-      //linmin(p,xi,n,fret,func); /* Next statement is the normal return: */
       //printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
 #if 0
       if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
@@ -765,27 +783,50 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	}
 #endif
       fpold = fp; 
-      fp = (*dfunc)(p,xi,gradf, gradg);
+      fp = (*dfunc)(p,xi,gradfG, gradgG);
+      //printf("its=%d fpold=%.15G ,fp=%.15G\n", its, fpold, fp);
       //fp=(*func)(p);
 #if 0
        for (kk = 0; kk < 3; kk++)
 	 {
 	   dd[kk] = p[kk+3]-p[kk];
 	 }
-       if (calc_norm(dd) < OprogStatus.epsd)
+#endif
+#if 0
+       if (fp < Sqr(OprogStatus.epsd))
 	 {
 	   itsfrprmn++;
 	   return;
 	 }
 #endif
+#if 1
+       projectgrad(p, xi, gradfG, gradgG);
+       normxi=0.0;
+       for (kk = 0; kk < 6; kk++)
+	 {
+	   normxi += Sqr(xi[kk]);
+	 }
+       //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
+	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
+              
+       if (  fp < Sqr(OprogStatus.epsd) ||  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR) ||   sqrt(normxi) < (fp+EPSFR)*ftol )
+	 {
+	   itsfrprmn++;
+	   return;
+	 }
+#if 0
        if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
 	 { 
+	   //linminConstr(p,xi,n,fret,func); /* Next statement is the normal return: */
 	   itsfrprmn++;
 	   return;
 	 } 
-      projectgrad(p, xi, gradf, gradg);
+#endif
+
+#endif
     } 
 
+  //linminConstr(p,xi,n,fret,func); /* Next statement is the normal return: */
   return; 
   nrerror("Too many iterations in frprmn");
   
@@ -807,7 +848,11 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
   double g[6],h[6],xi[6];
   fp=(*func)(p); /*Initializations.*/
   (*dfunc)(p,xi); 
-  //projectgrad(p, xi);  
+  // printf("P p=%.15G %.15G %.15G %.15G %.15G %.15G \n",
+  //	     p[0], p[1], p[2], p[3], p[4], p[5]);
+  // printf("P xi=%.15G %.15G %.15G %.15G %.15G %.15G \n",
+  //	 xi[0], xi[1], xi[2], xi[3], xi[4], xi[5]);
+
   for (j=0;j<n;j++)
     { 
       g[j] = -xi[j]; 
@@ -824,6 +869,10 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
 	} 
       fp= *fret; 
       (*dfunc)(p,xi);
+      //printf("p=%.15G %.15G %.15G %.15G %.15G %.15G \n",
+      //     p[0], p[1], p[2], p[3], p[4], p[5]);
+      //printf("xi=%.15G %.15G %.15G %.15G %.15G %.15G \n",
+      // xi[0], xi[1], xi[2], xi[3], xi[4], xi[5]);
       dgg=gg=0.0;
       for (j=0;j<n;j++) 
 	{
@@ -840,9 +889,8 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
 	{ 
 	  g[j] = -xi[j]; xi[j]=h[j]=g[j]+gam*h[j]; 
 	} 
-      //projectgrad(p, xi);
     } 
-  nrerror("Too many iterations in frprmn");
+  nrerror("[frprmn]Too many iterations in frprmn");
 }
 void gradcgfunc(double *vec, double *grad)
 {
@@ -947,7 +995,9 @@ double  cgfunc(double *vec)
     F += A*Sqr(vec[kk]-vec[kk+3]);
 #if 1
   if (cghalfspring && Q1 > 0)
-    F += lambdacg*Sqr(Q1);
+    {
+      F += lambdacg*Sqr(Q1);
+    }
   if (cghalfspring && Q2 > 0)
     F += lambdacg*Sqr(Q2);
 #endif
@@ -1018,7 +1068,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
       grad[kk] -= gradfx*fx[kk];
       grad[kk+3] -= gradgx*gx[kk];
     }
-#if 1
+#if 0
   normg = 0.0;
   for (kk=0; kk < 6; kk++)
     {
@@ -1026,7 +1076,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     }
   normg=sqrt(normg);
 #endif
-  fact = OprogStatus.stepSD/normg;
+  fact = OprogStatus.stepSD;
   //fact = OprogStatus.stepSD/(normdd+OprogStatus.epsd);
   //fact = OprogStatus.stepSD*normdd;
   for (kk=0; kk < 6; kk++)
@@ -1109,8 +1159,10 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
       vec[kk] = vecg[kk];
     }
   //printf(">>> vec: %.15G %.15G %.15G %.15G %.15G %.15G\n", vec[0], vec[1], vec[2],
-//	 vec[3], vec[4], vec[5]);
+  //	 vec[3], vec[4], vec[5]);
+  //frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc, gradcgfunc);
   frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+
   //powell(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc);
   for (kk=0; kk < 6; kk++)
     {
