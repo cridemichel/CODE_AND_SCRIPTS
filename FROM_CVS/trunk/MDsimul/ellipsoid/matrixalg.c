@@ -1195,11 +1195,12 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   const int ITMAXFR = OprogStatus.maxitsSD;
   const double EPSFR=1E-10, GOLD=1.618034;
   double normxi,gg,gam,fp,dgg,norm1, norm2, sp, fpold, gradf[3], gradg[3], signA, signB;
-  double distini, distfin, dist, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3], xiold[6];
+  double minax, distini, distfin, dist, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3], xiold[6];
   double pm[6], fpm, signAold, signBold;
   double xmin, xim[6];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
-  
+ 
+  minax = min(minaxicg,minaxjcg);
   sfA = icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
   sfB = jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
   callsfrprmn++;
@@ -1260,7 +1261,14 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
        
        if (OprogStatus.tolSDgrad <=0  || (fp > 0 && sqrt(fp) > 1E-8)) 
 	 {
-	   if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
+	   if (fp > OprogStatus.springkSD*Sqr(OprogStatus.epsd) &&
+	       2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
+	     {
+	       callsok++;
+	       return;
+	     }
+	   else if ( fp < OprogStatus.springkSD*Sqr(OprogStatus.epsd) 
+		     && fabs(fpold-fp) < ftol*Sqr(minax) )
 	     {
 	       callsok++;
 	       return;
@@ -1860,8 +1868,8 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
   printf(">>> vec[6]:%.15G vec[7]: %.15G\n", vec[6], vec[7]);
 #endif
   //frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
-  //frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
-  powellmethod(vec);
+  frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+  //powellmethod(vec);
   for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];
