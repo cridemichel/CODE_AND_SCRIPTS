@@ -2137,10 +2137,11 @@ no_core_bump:
 		      	} 
 
 #else
+		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+			  
 		      if (b < 0.0) 
 			{
 			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-			  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
 			  d = Sqr (b) - vv * (distSq - sigSq);
 #if 0
 			  if (OprogStatus.quenchend > 0.0 && Oparams.curStep > 700000)
