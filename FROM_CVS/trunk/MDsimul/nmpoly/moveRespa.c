@@ -103,8 +103,10 @@ void ludcmpR(double **a, int* indx, double* d, int n)
     { 
       /* Loop over rows to get the implicit scaling information.*/ 
       big=0.0; 
-      for (j=0;j<n;j++) 
-	if ((temp=fabs(a[i][j])) > big) big=temp; 
+      for (j=0;j<n;j++)
+	{
+	  if ((temp=fabs(a[i][j])) > big) big=temp; 
+	}
       if (big == 0.0)
 	{
 	  printf("ERROR: Singular matrix in routine ludcmp\n"); 
@@ -422,7 +424,22 @@ void updImpConstrForce(double dt, double c, int i, double **cVec)
 	}
     }
 }
-
+void checkNan(char *s)
+{ 
+  int i, a;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      for (a = 0; a < NA; a++)
+	{
+	  if (isnan(px[a][i]))
+	    printf("[%s] step: %d px[%d][%d] is a nan\n", s, Oparams.curStep, i, a);
+	  if (isnan(py[a][i]))
+	    printf("[%s] step: %d py[%d][%d] is a nan\n", s, Oparams.curStep, i, a);
+	  if (isnan(pz[a][i]))
+	    printf("[%s] step: %d pz[%d][%d] is a nan\n", s, Oparams.curStep, i, a);
+	}
+    }
+}
 void ComputeConstraints(double dt, double c, int RefSys, int after)
 {
   /* RefSys=1 allora calcola le forze del ref system */
@@ -476,7 +493,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	    cVec[k][m] = cVec[k][m] - L*rint (cVec[k][m]/L);
 	  } 
       }
-    if (OprogStatus.keepInvMat && RefSys && after)
+    if (!OprogStatus.keepInvMat || (OprogStatus.keepInvMat && RefSys && after))
       {
 	for (m1 = 0; m1 < NB; m1 ++) 
 	  {
@@ -485,8 +502,11 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 		mDif = cMat[m1][cAtom1[m2]]/Oparams.m[m1] - cMat[m1][cAtom2[m2]]/Oparams.m[m2];
 		cvMat[m1][m2] = 0.;
 		if (mDif != 0) 
-		  cvMat[m1][m2] = mDif * (cVec[0][m1] * cVec[0][m2] +
-			    		  cVec[1][m1] * cVec[1][m2] + cVec[2][m1] * cVec[2][m2]);
+		  {
+		    cvMat[m1][m2] = mDif * (cVec[0][m1] * cVec[0][m2] +
+		  			    cVec[1][m1] * cVec[1][m2] + cVec[2][m1] * cVec[2][m2]);
+		    //printf("(%d,%d): %f\n", m1, m2, cvMat[m1][m2]);
+		  }
 	      } 
 	  }
       }
@@ -563,6 +583,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	  updImpConstrVsq(dt, c, i, cVec); 
       }
     }
+  checkNan("ComputeConstraints");
 }
 double constraintDevL;
 void  AnlzConstraintDevs (void) 
@@ -2065,6 +2086,7 @@ void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz)
 void movelongRespaNPTBef(double dt)
 {
 #ifdef MD_RAPACONSTR
+      printf("MOVE LONG BEF\n");
       ComputeConstraints(dt, 0.5, 0, 0); 
       /*RAPA<<<<<<<<<<<<<<<< */
 #endif

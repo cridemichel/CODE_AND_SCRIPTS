@@ -897,6 +897,9 @@ void usrInitBef(void)
   OprogStatus.avngEta   = 0;
   OprogStatus.grow = 0;
   OprogStatus.growth = 0.7; /* growth * sigma = minima distanza accettabile */
+#ifdef MD_RAPACONSTR
+  OprogStatus.keepInvMat = 0;
+#endif
 #ifdef MD_FENE
   Oparams.kfe = 30.0;
   Oparams.R0 = 1.1;
@@ -1349,6 +1352,9 @@ void usrInitAft(void)
 	}
     }
 #ifdef MD_RESPA
+#ifdef MD_RAPACONSTR
+  BuildConstraintMatrix();
+#endif
 #ifdef MD_RESPA_NPT  
   v2p();
 #endif
