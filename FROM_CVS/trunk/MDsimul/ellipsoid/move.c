@@ -2898,7 +2898,7 @@ retry:
     {
       calc_intersec(rB, rA, Xa, rC);
       calc_intersec(rA, rB, Xb, rD);
-#if 0
+#if 1
       for (k1=0; k1 < 3; k1++)
 	{
 	  vecgcg[k1] = rC[k1];
@@ -2917,7 +2917,7 @@ retry:
 #else
 
 #endif
-#if 0
+#if 1
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
       printf("dist=%.15f\n",calc_norm(r12));
@@ -3029,8 +3029,8 @@ retry:
 #endif
 #endif
 #if 1
-  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
-  //exit(-1);
+  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+  exit(-1);
   if (segno > 0)
     return calc_norm(r12);
   else
