@@ -820,6 +820,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   
   for (its=1;its<=ITMAXFR;its++)
     { 
+       itsfrprmn++;      
       *iter=its;
 #if 0
       printf("prima xi=%.15G %.15G %.15G %.15G %.15G %.15G\n", xi[0],xi[1],xi[2],xi[3],xi[4],xi[5]);
@@ -854,18 +855,22 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       signBold = signB;
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
-#if 1
+#if 0
       if (signBold < 0 && signB > 0)
 	{
 	  for (j=0; j < 3; j++)
 	    xi[j+3] = 0;
 	  sfB /= GOLD;
+	  projectgrad(p, xi, gradfG, gradgG);
+	  continue;
 	}
       if (signAold < 0 && signA > 0)
 	{
 	  for (j=0; j < 3; j++)
 	    xi[j] = 0;
 	  sfA /= GOLD;
+	  projectgrad(p, xi, gradfG, gradgG);
+	  continue;
 	}
 #endif
 #if 0
@@ -910,6 +915,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	    }
 	  else
 #endif
+#if 0
 	  if (signA<0&&signB>0)
 	    {
 	      for (j=0; j < 3; j++)
@@ -921,10 +927,9 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 		xi[j+3] = 0;
 	    }
 	  else
-	    {
-	      sfA /= GOLD;
-	      sfB /= GOLD;
-	    }
+#endif
+          sfA /= GOLD;
+	  sfB /= GOLD;
 	}
      //printf("its=%d fpold=%.15G ,fp=%.15G\n", its, fpold, fp);
       //fp=(*func)(p);
@@ -946,7 +951,6 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 #endif
        //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
 	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
-       itsfrprmn++;      
        if (OprogStatus.tolSDgrad <=0  || (fp > 0 && sqrt(fp) > 1E-8)) 
 	 {
 	   if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
@@ -994,7 +998,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   maxitsRyck=1;
     }
 #endif
-
+  //printf("segnoA= %.15G segnoB=%.15G\n", signA, signB);
   return; 
   nrerror("Too many iterations in frprmn");
   
@@ -1315,8 +1319,9 @@ double  cgfunc(double *vec)
 double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double *signA, double *signB)
 {
   int kk, k1, k2; 
-  double K1, K2, F, nf, ng, gx2[3], fx2[3], dd[3], normdd, ngA, ngB;
+  double K1, K2, F, nf, ng, nf2, ng2, gx2[3], fx2[3], dd[3], normdd, ngA, ngB;
   double Q1, Q2, S, A=1.0, B, gradfx, gradgx, normgA, normgB, fact;
+  const double FACT=100;
   doneryck = 0;
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -1373,18 +1378,32 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double 
       grad[kk]= S*dd[kk]/normdd;
       grad[kk+3]= -S*K1*grad[kk];
       grad[kk] *= K2;
-#if 0
-      if (A > 0 && B < 0)
-	grad[kk] += gx2[kk];
-      else if (A < 0 && B > 0)
-	grad[kk+3] += fx2[kk];
-      else if (A < 0 && B < 0)
-	{
-	  grad[kk] += gx2[kk];
-	  grad[kk+3] += fx2[kk];
-	}
-#endif
     }
+
+#if 0
+  if (A < 0 || B < 0)
+    {
+      nf2 = calc_norm(fx2);
+      ng2 = calc_norm(gx2);
+      for (kk=0; kk < 3; kk++)
+	{
+	  fx2[kk] /= nf2;
+	  gx2[kk] /= ng2;
+	}	
+      for (kk=0; kk < 3; kk++)
+	{
+	  if (A > 0 && B < 0)
+	    grad[kk+3] -= FACT*fx2[kk];
+	  else if (A < 0 && B > 0)
+	    grad[kk] -= FACT*gx2[kk];
+	  else if (A < 0 && B < 0)
+	    {
+	      grad[kk] -= FACT*gx2[kk];
+	      grad[kk+3] -= FACT*fx2[kk];
+	    }
+	}
+    }
+#endif
   nf = calc_norm(fx);
   ng = calc_norm(gx);
   for (k1=0; k1 < 3; k1++)
@@ -1565,8 +1584,8 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
   	 vec[3], vec[4], vec[5]);
   printf(">>> vec[6]:%.15G vec[7]: %.15G\n", vec[6], vec[7]);
 #endif
-  frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
-  //frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+  //frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
+  frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
 
   //powell(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc);
   for (kk=0; kk < 6; kk++)
