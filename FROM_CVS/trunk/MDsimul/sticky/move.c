@@ -2343,18 +2343,69 @@ void assign_dists(double a[], double b[])
 {
   memcpy(b, a, MD_PBONDS*sizeof(double));
 }
+#undef MD_OPTDDIST
+#ifdef MD_OPTDDIST
+double eval_maxddist(int i, int j, int bondpair, double t1)
+{
+  double ti, rA[3], rB[3], Omega[3][3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
+	 r12i[3], r12j[3], maxddotOpt[MD_PBONDS];
+  double maxddot;
+  int nn, kk;
+  ti = t1 - atomTime[i];
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  /* ...and now orientations */
+  UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
+  BuildAtomPos(i, rA, RtA, ratA);
+  ti = t1 - atomTime[j];
+  rB[0] = rx[j] + vx[j]*ti;
+  rB[1] = ry[j] + vy[j]*ti;
+  rB[2] = rz[j] + vz[j]*ti;
+  /* ...and now orientations */
+  UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
+  BuildAtomPos(j, rB, RtB, ratB);
+  for (nn = 0; nn < MD_PBONDS; nn++)
+    {
+      for (kk = 0; kk < 3; kk++)
+	{
+	  r12i[kk] = ratA[mapbondsa[nn]][kk]-rA[kk];
+  	  r12j[kk] = ratB[mapbondsb[nn]][kk]-rB[kk];	  
+	}
+      vectProd(wx[i], wy[i], wz[i], r12i[0], r12i[1], r12i[2], &wri[0], &wri[1], &wri[2]);
+      nwri = calc_norm(wri);
+      vectProd(wx[j], wy[j], wz[j], r12j[0], r12j[1], r12j[2], &wrj[0], &wrj[1], &wrj[2]);
+      nwrj = calc_norm(wrj);
+      maxddotOpt[nn] = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
+	nwri + nwrj;
+      if (OprogStatus.assumeOneBond && nn==bondpair)
+	{
+	  maxddot = maxddotOpt[nn];
+	  return maxddot;
+	}
+      else
+	{
+	  if (nn==0 || maxddotOpt[nn] > maxddot)
+	    maxddot = maxddotOpt[nn];
+	}
+    }
+  return maxddot;
+}
+#endif
 
-int search_contact_faster(int i, int j, double *shift, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS], int bondpair)
+int search_contact_faster(int i, int j, double *shift, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS], int bondpair, double maxddot)
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
-  double maxddot, told, delt, distsOld[MD_PBONDS];
+  double told, delt, distsOld[MD_PBONDS];
   const int MAXOPTITS = 500;
   int nn, its=0, amin, bmin, crossed[MD_PBONDS]; 
   /* estimate of maximum rate of change for d */
+#if 0
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j]*0.5;
+#endif
   *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
   MD_DEBUG30(printf("[IN SEARCH CONTACT FASTER]*d1=%.15G t=%.15G\n", *d1, *t));
   timesF++;
@@ -2577,7 +2628,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   double epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
   int kk,tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
       crossed[MD_PBONDS], firstaftsf;
-  epsd = OprogStatus.epsd;
+ epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
   epsdMax = OprogStatus.epsdMax;
@@ -2596,10 +2647,15 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
    */
   int its, foundrc, goback;
   t = 0;//t1;
+  bondpair = get_bonded(i, j);
+#ifdef MD_OPTDDIST
+  maxddot = eval_maxddist(i, j, bondpair, t1);
+#else
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j]*0.5;
   //printf("wx:%f maxax: %f,%f\n", sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i])), maxax[i], maxax[j]);
+#endif
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = OprogStatus.h; /* last resort time increment */
   if (*collCode!=MD_EVENT_NONE)
@@ -2666,10 +2722,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
     }
 #endif
 #endif
-  bondpair = get_bonded(i, j);
   //printf(">>>>>>>>>>>>>>bondpair=%d\n", bondpair);
   MD_DEBUG30(printf("[BEFORE SEARCH CONTACT FASTER]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
-  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair))
+  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot))
     {
       return 0;  
     }
@@ -2948,7 +3003,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #if 1
       if (fabs(d) > epsdFastR)
 	{
-	  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair))
+	  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair,
+				    maxddot))
 	    {
 	      MD_DEBUG30(printf("[search contact faster locate_contact] d: %.15G\n", d));
 	      return 0;
