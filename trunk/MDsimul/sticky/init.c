@@ -1318,9 +1318,9 @@ void check_all_bonds(void)
 	  sprintf(TXT,"[WARNING] Number of bonds for molecules %d incorrect\n", i);
 	  mdPrintf(ALL, TXT, NULL);
 	  if (warn==1)
-	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n");
+	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n",NULL);
 	  else
-	    mdPrintf(ALL,"Distance > 0 but bonded, probably a collision has been missed\n");
+	    mdPrintf(ALL,"Distance > 0 but bonded, probably a collision has been missed\n", NULL);
 	  //printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
 	  //	 numbonds[i], nb);
 	  //printf("I've adjusted the number of bonds\n");
