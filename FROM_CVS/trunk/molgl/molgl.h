@@ -14,7 +14,7 @@
 #define MGL_FADE_LIN 2
 #define MGL_FADE_QUAD 3
 #define MGL_MAX_FRAMES 4
-
+#define MGL_REDBEFQUIT 5
 #define SIGN(X) ((X>0)?1.0:(-1.0)) 
 typedef struct {
 	double x,y,z;
