@@ -592,7 +592,9 @@ void PredictEvent (int na, int nb)
     {
       tm[k] = 0.0;
       printf("tm[%d]<0 step %d na=%d\n", k, Oparams.curStep, na);
+#ifdef MD_GRAVITY
       printf("rz:%f diff:%f\n", rz[na], rz[na]+Lz2);
+#endif
       printf("h1:%f hh1:%f vz:%f cellz:%d\n", h1, hh1, vz[na], inCell[2][na]);
       printf("Cells(%d,%d,%d)\n", inCell[0][na], inCell[1][na], inCell[2][na]);
       printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
@@ -1011,6 +1013,7 @@ void move(void)
 		  calcKVz();
     		  scalevels(Oparams.T, K, Vz);
 #endif
+#ifdef MD_GRAVITY
 		  MD_DEBUG3(printf("rzmax:%f\n", rzmax));
 		  rzmax = -Lz2;
 		  for (ii=0; ii < Oparams.parnum; ii++)
@@ -1028,6 +1031,7 @@ void move(void)
 		      rz[ii] += OprogStatus.rzup;
 		      vz[ii] += OprogStatus.vztap; 
 		    }
+#endif
 		  rebuildLinkedList();
 		  MD_DEBUG3(distanza(996, 798));
     		  rebuildCalendar();
