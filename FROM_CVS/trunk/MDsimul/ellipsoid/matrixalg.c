@@ -51,10 +51,13 @@ void free_matrix(double **M, int n)
 extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3]);
+extern void funcs2beZeroedDistNegNew(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void funcs2beZeroedDistNeg5(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
 extern void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
+extern void fdjacDistNegNew(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
 extern void fdjacDist(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
