@@ -1570,7 +1570,8 @@ void movelongRespaNPTBef(double dt)
      updPvLong(dt, 0.5);
 #if 0
 #ifndef MD_FENE
-  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
+  if (OprogStatus.rcutInner != Oparams.rcut)
+    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
 #endif
@@ -1709,7 +1710,8 @@ void movelongRespaNPTAft(double dt)
   updImpLong(dt, 0.5);
 #if 1
 #ifndef MD_FENE
-  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
+  if (OprogStatus.rcutInner != Oparams.rcut)
+    shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
 #endif
@@ -2033,6 +2035,7 @@ void move(void)
     }
   
    //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
+  
 #ifdef MD_RESPA_NPT
   movelongRespaNPTAft(Oparams.steplength);
   p2v();
@@ -2050,8 +2053,9 @@ void move(void)
 #endif
 #endif
   calcPressTens();
+  kinetRespaNPT(Oparams.parnum, px, py, pz);
   /* Calculate the kinetic energy */
-  kinet(Oparams.parnum, vx, vy, vz, Vol1);
+  //kinet(Oparams.parnum, vx, vy, vz, Vol1);
 
   if ( (OprogStatus.Nose == 1) || (OprogStatus.Nose == 2))
     {
