@@ -903,7 +903,8 @@ void usrInitBef(void)
   OprogStatus.grow = 0;
   OprogStatus.growth = 0.7; /* growth * sigma = minima distanza accettabile */
 #ifdef MD_RAPACONSTR
-  OprogStatus.keepInvMat = 0;
+  //OprogStatus.keepInvMat = 0;
+  OprogStatus.rapatol = 1E-6;
 #endif
 #ifdef MD_FENE
   Oparams.kfe = 30.0;
@@ -1174,12 +1175,13 @@ void usrInitAft(void)
 #ifdef MD_RAPACONSTR
       cMat[a] = malloc(sizeof(int)*NA);
 #endif
-      
+#if 0 
       if (OprogStatus.keepInvMat)
 	{
 	  for (b = 0; b < NB; b++)
 	    cvMatInvS[a][b] = malloc(sizeof(double)*Oparams.parnum);
 	}
+#endif
     }
 #endif
   for (a = 0; a < NA; a++)
