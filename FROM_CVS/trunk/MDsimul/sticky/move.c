@@ -3688,9 +3688,9 @@ void PredictEvent (int na, int nb, int nl)
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
 
   if (!ignorecross[k])
-    ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
-  printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.16G\n", 
-	 na, ATOM_LIMIT+evCode, k, tm[k]);
+    ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, Oparams.time + tm[k]);
+  printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.16G time=%.15G evCode:%d\n", 
+	 na, ATOM_LIMIT+evCode, k, tm[k], tm[k]+Oparams.time, evCode);
   /* NOTA: le linked list sono tre:
    *  0 = lista dell'interazione AA
    *  1 = lista dell'interazione BB
@@ -3751,6 +3751,7 @@ void PredictEvent (int na, int nb, int nl)
 	      n = (jZ *cellsy[nl] + jY) * cellsx[nl] + jX + Oparams.parnum;
 	      for (n = cellList[nl][n]; n > -1; n = cellList[nl][n]) 
 		{
+		  printf("nl=%d cellList[nl=%d][n=%d]:%d na=%d\n", nl, nl, n, cellList[nl][n], na);
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
 		      collCode = MD_EVENT_NONE;
@@ -3875,7 +3876,7 @@ void PredictEvent (int na, int nb, int nl)
 		      //exit(-1);
 #if 1
 		      /* gli sticky spots esistono solo nell'interazione AB */
-		      if (nl == 2||nl==3)
+		      if (nl == 2 || nl == 3)
 			{
 			  if (!locate_contact(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 			    {
@@ -4532,7 +4533,8 @@ void ProcessCollision(void)
     {
       if (nl==nl_ignore || nl==iA+2)
 	continue;
-      PredictEvent(evIdA, -1, nl);
+      //if (nl==0)
+	PredictEvent(evIdA, -1, nl);
     }
   iB = (evIdB<Oparams.parnumA)?0:1;
   nl_ignore = (evIdB<Oparams.parnumA)?1:0;
@@ -4540,7 +4542,8 @@ void ProcessCollision(void)
     {
       if (nl==nl_ignore || nl==iB+2)
 	continue;
-      PredictEvent(evIdB, evIdA, nl);
+      //if (nl==0)
+	PredictEvent(evIdB, evIdA, nl);
     }
 #else
   PredictEvent(evIdA, -1);
@@ -4744,6 +4747,7 @@ void ProcessCellCrossing(void)
       boxwall = docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl2]);
       break;
     }
+  /* TO BE REMOVED */
   if (boxwall)
     {
       PredictEvent(evIdA, evIdB, nl2);

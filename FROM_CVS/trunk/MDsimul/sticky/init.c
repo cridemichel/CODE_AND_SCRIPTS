@@ -1066,6 +1066,9 @@ void StartRun(void)
 	   * ma con tutte e sole le molecole iA */
 	  if (nl==nl_ignore || nl==iA+2)
 	    continue;
+	  /*TO BE REMOVED*/
+	  //if (nl==3)
+	    //continue;
 	  printf("======>qui nl=%d\n", nl);
 	  PredictEvent(n, -2, nl); 
 	}
