@@ -44,10 +44,10 @@ int main(void)
 	  if (!esiste)
 	    {
 	      /* se arriva qui non esiste! */
-	      printf(" New time: %d %d %d\n",np,it1,it2);
+	      fprintf(stderr," New time: %d %d %d\n",np,it1,it2);
 	      if (np > npt) 
 		{
-		  printf("Errore dimensionamento");
+		  fprintf(stderr,"Errore dimensionamento");
 		  exit(-1);
 		}
 	      time1[np]=it1;
@@ -65,13 +65,13 @@ int main(void)
   fclose(fsl);
   /* Write results */
 
-  fsl = fopen("SelfCnfq22.dat", "w");
+  //fsl = fopen("SelfCnfq22.dat", "w");
   
   for (i=0; i < np; i++)
     {
       tt=nacc[i];
-      fprintf(fsl,"%.12f %f %d\n", dt*(time2[i]-time1[i]), sqRe[i]/tt, tt);
+      fprintf(stdout,"%.12f %f %d\n", dt*(time2[i]-time1[i]), sqRe[i]/tt, tt);
     }
 
-  fclose(fsl);
+  //fclose(fsl);
 }
