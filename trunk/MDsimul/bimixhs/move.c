@@ -64,6 +64,7 @@ int *inCell[3], **tree, *cellList, cellRange[2*NDIM],
 int evIdA, evIdB, parnumB, parnumA;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 int evIdC;
+extern int *bondscache, *numbonds, **bonds;
 #endif
 /* ========================== >>> scalCor <<< ============================= */
 void scalCor(int Nm)
@@ -309,6 +310,8 @@ void check (int *overlap, double *K, double *V)
      }
 }
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+void add_bond(int na, int n);
+void remove_bond(int na, int n);
 void bump (int i, int j, double* W, int bt)
 {
   /*
@@ -384,13 +387,19 @@ void bump (int i, int j, double* W, int bt)
       if (Sqr(b) < 2.0*distSq*Oparams.bheight/mredl)
 	factor = -2.0*b;
       else
-	factor = -b + sqrt(Sqr(b) - 2.0*distSq*Oparams.bheight/mredl);
+	{
+	  factor = -b + sqrt(Sqr(b) - 2.0*distSq*Oparams.bheight/mredl);
+	  remove_bond(i, j);
+	  remove_bond(j, i);
+	}
 #endif
       break;
     case MD_OUTIN_BARRIER:
 #ifdef MD_INFBARRIER
       factor = -2.0*b;
 #elif defined(MD_SQWELL)
+      add_bond(i, j);
+      add_bond(j, i);
       factor = -b - sqrt(Sqr(b) + 2.0*distSq*Oparams.bheight/mredl);
 #endif
       break;
@@ -730,6 +739,36 @@ void UpdateSystem(void)
 #endif
     }
 }
+
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+void remove_bond(int na, int n)
+{
+  int i, nb, ii;
+  memcpy(bondscache, bonds[na], sizeof(int)*numbonds[na]);
+  nb = numbonds[na];
+  ii = 0;
+  for (i = 0; i < nb; i++)
+    if (bondscache[i] != n)
+      {
+	bonds[na][++ii] = bondscache[i];
+      } 
+  numbonds[na]--;
+}
+void add_bond(int na, int n)
+{
+  bonds[na][numbonds[na]] = n;
+  numbonds[na]++;
+}
+
+int bound(int na, int n)
+{
+  int i;
+  for (i = 0; i < numbonds[na]; i++)
+    if (bonds[na][i] == n)
+      return 1;
+  return 0;
+}
+#endif
 void rebuildCalendar(void);
 void PredictEvent (int na, int nb) 
 {
@@ -747,8 +786,8 @@ void PredictEvent (int na, int nb)
 #endif
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER) 
   int collCode;
-  const double EPSILON = 1E-13;
   double sigDeltaSq, intdistSq, distSq, s;
+  const double EPSILON = 1E-14;
 #endif
   int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
@@ -977,16 +1016,28 @@ void PredictEvent (int na, int nb)
 			{
 			  sigSq = Sqr(Oparams.sigma[0][0]);
 			  sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
+#if 0
+			  inthreshold =  Sqr(Oparams.sigma[0][0]-Oparams.delta[0][0]/2.0);
+		          outthreshold = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]/2.0);	
+#endif
 			}
 		      else if (na >= parnumA && n >= parnumA)
 			{
 			  sigSq = Sqr(Oparams.sigma[1][1]);
 			  sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
+#if 0
+			  inthreshold =  Sqr(Oparams.sigma[1][1]-Oparams.delta[1][1]/2.0);
+		          outthreshold = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]/2.0);
+#endif
 			}
 		      else
 			{
 			  sigSq = Sqr(Oparams.sigma[0][1]);
 			  sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
+#if 0
+			  inthreshold =  Sqr(Oparams.sigma[0][1]-Oparams.delta[0][1]/2.0);
+		          outthreshold = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]/2.0);
+#endif
 			}
 #else
 		      if (na < parnumA && n < parnumA)
@@ -1014,22 +1065,21 @@ void PredictEvent (int na, int nb)
 #if defined(MD_SQWELL)|| defined(MD_INFBARRIER)
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
       		      s = 0;
-		      /* EPSILON è necessaria a causa degli errori di numerici */
-		      if (distSq >= sigDeltaSq && b < 0.0) 
+		      if ( b < 0.0 && distSq >= sigDeltaSq && !bound(na, n) ) 
 			{
 			  collCode = MD_OUTIN_BARRIER;
 		      	  s = -1.0;
 			  /* la piccola correzione serve poichè a causa
 			   * di errori numerici dopo l'evento la particella
 			   * potrebbe essere ancora fuori dalla buca (distSq > sigDeltaSq)*/
-	    		  intdistSq = sigDeltaSq - EPSILON;
+			  intdistSq = sigDeltaSq;
 			}
-		      else if (distSq <= sigDeltaSq && b > 0.0)
+		      else if ( b > 0.0 && (distSq < sigDeltaSq || bound(na, n)) )  
 			{ 
 			  collCode = MD_INOUT_BARRIER;
 			  s = 1.0;
 			  /* ved. sopra riguardo a EPSILON */
-			  intdistSq = sigDeltaSq + EPSILON;
+			  intdistSq = sigDeltaSq;
 			}
 		      else if (b < 0.0)
 			{
@@ -1139,13 +1189,15 @@ void ProcessCollision(void)
       cellRange[2*k+1] =   1;
     }
 #if defined(MD_SQWELL)||defined(MD_INFBARRIER)
+  /* i primi due bit sono il tipo di event (uscit buca, entrata buca, collisione con core 
+   * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */
   bump(evIdA, evIdB, &W, evIdC);
 #else
   bump(evIdA, evIdB, &W);
 #endif
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY
-  lastcol[evIdA] = lastcol[evIdB] = Oparms.time;
+  lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
 #endif
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
@@ -1330,7 +1382,7 @@ void rebuildLinkedList(void);
 #ifdef BROWNIAN
 void move(void)
 {
-  int i, innerstep=0;;
+  int i, innerstep=0;
   while (1)
     {
       innerstep++;

@@ -153,7 +153,7 @@ void ScheduleEventBarr (int idA, int idB, int idC, double tEvent)
 }
 void ScheduleEvent(int IdA, int IdB, double tEvent)
 {
-  ScheduleEventBarr(IdA, IdB, -1, tEvent);
+  ScheduleEventBarr(IdA, IdB, MD_EVENT_NONE, tEvent);
 }
 #else
 void ScheduleEvent (int idA, int idB, double tEvent) 
