@@ -23,6 +23,9 @@ double **rallx, **rally, **rallz, **Fallx, **Fally, **Fallz,
   **rallx_old, **rally_old, **rallz_old, *atcharge, 
 #endif
 double **rx_old, **ry_old, **rz_old, **vxold, **vyold, **vzold, **sigmag;
+#ifdef MD_RESPA
+double **rx_oldLong, **ry_oldLong, **rz_oldLong;
+#endif
 double *Fcoeff[3]; 
 /* coefficienti delle forze dovute agli atomi senza massa
  * 0 = r1
@@ -48,6 +51,9 @@ extern double Volo1, Volo2, Volot;
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
+#ifdef MD_RESPA
+extern int **nebrTabLong, nebrNowLong, nebrTabLenLong, nebrTabMaxLong;
+#endif
 /* ================================= */
 
 extern COORD_TYPE *ox, *oy, *oz; /* Angular velocities of each particle */
@@ -868,6 +874,12 @@ void usrInitBef(void)
   OprogStatus.sResetSteps = 0; /* Don't reset s by default */
   OprogStatus.nebrTabFac = 150;
   OprogStatus.rNebrShell = 0.4;
+#ifdef MD_RESPA
+  OprogStatus.nebrTabFac = 150;
+  OprogStatus.rNebrShell = 0.4;
+  OprogStatus.nrespa = 3;
+  OprogStatus.lambda = 0.1;
+#endif
   OprogStatus.noLinkedList = 0; /* Use Linked List */
   /* If 1 the program calculate of the corrisponding variable a mean from
      the begin of the run and not the instanteaneous value */
@@ -1093,6 +1105,11 @@ void usrInitAft(void)
   rx_old = malloc(sizeof(double*)*NA);
   ry_old = malloc(sizeof(double*)*NA);
   rz_old= malloc(sizeof(double*)*NA);
+#ifdef MD_RESPA
+  rx_oldLong = malloc(sizeof(double*)*NA);
+  ry_oldLong = malloc(sizeof(double*)*NA);
+  rz_oldLong = malloc(sizeof(double*)*NA);
+#endif
   sigmag = malloc(sizeof(double*)*NA);
 #if 0
   Rx = malloc(sizeof(double)*Oparams.parnum);
@@ -1109,6 +1126,11 @@ void usrInitAft(void)
       rx_old[a] = malloc(sizeof(double)*Oparams.parnum);
       ry_old[a] = malloc(sizeof(double)*Oparams.parnum);
       rz_old[a] = malloc(sizeof(double)*Oparams.parnum);
+#ifdef MD_RESPA
+      rx_oldLong[a] = malloc(sizeof(double)*Oparams.parnum);
+      ry_oldLong[a] = malloc(sizeof(double)*Oparams.parnum);
+      rz_oldLong[a] = malloc(sizeof(double)*Oparams.parnum);
+#endif
       vxold[a] = malloc(sizeof(double)*Oparams.parnum);
       vyold[a] = malloc(sizeof(double)*Oparams.parnum);
       vzold[a] = malloc(sizeof(double)*Oparams.parnum);
@@ -1169,7 +1191,12 @@ void usrInitAft(void)
   printf("INIT nebrTabMax: %d\n", nebrTabMax);
   nebrNow = 1;
   nebrTab = AllocMatI(2, nebrTabMax); 
-  
+#ifdef MD_RESPA
+  nebrTabMaxLong = OprogStatus.nebrTabFacLong * Nm * NA;
+  printf("INIT nebrTabMax: %d\n", nebrTabMaxLong);
+  nebrNowLong = 1;
+  nebrTabLong = AllocMatI(2, nebrTabMaxLong); 
+#endif
   /* =============================================== */
   
   /* Store the Center of Mass initial position for all particles */
