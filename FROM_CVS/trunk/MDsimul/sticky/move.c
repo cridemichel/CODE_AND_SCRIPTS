@@ -1400,13 +1400,14 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[])
     {
       for (kk = 0; kk < 3; kk++)
 	rat[kk] = rO[kk];
-      printf("%f %f %f @ 0.5 C[red]\n", rat[0], rat[1], rat[2]);
+      //printf("%f %f %f @ 0.5 C[red]\n", rat[0], rat[1], rat[2]);
     }
   else if (ata <= 3)
     {
       for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk] + R[kk][ata]; 
-      printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
+	rat[kk] = rO[kk] + R[kk][ata-1]; 
+      //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
+      //printf("ata=%d %f %f %f @ 0.075 C[blue]\n", ata, R[0][ata-1], R[1][ata-1], R[2][ata-1]);
     }
   else
     {
@@ -1421,8 +1422,8 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[])
       for (kk = 0; kk < 3; kk++)
 	r3[kk] *= MD_DIST_ELECTSITES/nr;
       for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk] + r3[kk]; 
-      printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
+	rat[kk] = rO[kk] - r3[kk]; 
+      //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
     }
 }
 void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
