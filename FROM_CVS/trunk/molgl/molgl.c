@@ -779,7 +779,8 @@ void print_usage(void)
   printf ("USAGE:\n");
   printf("molgl [-h/--help | --saveandquit/-sq | --pngfile/-f <filename> \n");
   printf("| --viewpoint/-vp (x,y,z) | --diameter/-d <atoms_diameter> | --noinfos/-ni\n");
-  printf("| --nobox|-nb ] <input_file> \n");
+  printf("| --nobox|-nb | --semiax/-sa (a,b,c) | --stacks/-st <stacks>\n");
+  printf("| --slides/-sl <slides>] <input_file> \n");
 }
 /* ============================= >>> args <<< ============================= */
 void args(int argc, char* argv[])
@@ -791,13 +792,13 @@ void args(int argc, char* argv[])
       print_usage();
       exit(-1);
     }
+  else if (argc == 2 && (!strcmp(argv[i], "-h") || !strcmp(argv[i],"--help")))
+    {
+      print_usage();
+      exit(-1);
+    }
   else if (argc > 2)
     {
-      if (!strcmp(argv[i], "-h") || !strcmp(argv[i],"--help"))
-	{
-    	  print_usage();
-	  exit(-1);
-	}
       while (i < argc-1)
 	{
 	  if (!strcmp(argv[i], "-h") || !strcmp(argv[i],"--help"))
