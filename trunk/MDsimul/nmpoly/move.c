@@ -794,7 +794,7 @@ void calcPtensAt(int Nm, COORD_TYPE VOL1)
   Patzx /= Vol;
 }
 const double ittol = 1E-14;
-const double ittolNPT = 1E-14;
+const double ittolNPT = 1E-11;
 #if 0
 void movebBrownAnd(double dt, double tol, int maxIt, int NB, double m[3], double d, 
 		    int Nm) 
@@ -1153,7 +1153,6 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	 bond.*/
     }
   kinet(Nm, vx, vy, vz, 0.0);/* K(t+dt) */
-
 #ifdef MOLPTENS
   /* Calculate all components of molecular pressure tensor */
   calcPtensMol(Nm, 0.0);
@@ -2379,8 +2378,8 @@ void move(void)
   /* calc predicted coords*/
   if (Oparams.curStep == 1)  
     {
-      BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcutO);
-      LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcutO);
+      BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcut);
+      LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
     } 
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
@@ -2389,6 +2388,9 @@ void move(void)
       	vy[a][i] += 0.5 * dt * FyLong[a][i]/Oparams.m[a];
 	vz[a][i] += 0.5 * dt * FzLong[a][i]/Oparams.m[a];
       }
+#ifndef MD_FENE
+  shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
+#endif
   for (kk=0; kk < n; kk++)
     {
       movea(Oparams.steplength/n, 0.000000000001, 150, NA-1, distance, Oparams.m, 
@@ -2401,17 +2403,19 @@ void move(void)
 	     coordinates (only father do it)*/
 	  if (OprogStatus.noLinkedList)
 	    {
-	      BuildNebrListNoLinked(Oparams.parnum, Oparams.rcut);
+	      BuildNebrListNoLinked(Oparams.parnum, OprogStatus.rcutInner);
 	    }
 	  else
 	    {
-	      links(Oparams.parnum, Oparams.rcut);
+	      links(Oparams.parnum, OprogStatus.rcutInner);
 	      /* Build up neighbour list */  
-	      BuildNebrList(Oparams.parnum, Oparams.rcut);
+	      BuildNebrList(Oparams.parnum, OprogStatus.rcutInner);
 	    }
 	}
-      LJForce(Oparams.parnum, Oparams.rcut);
+      LJForce(Oparams.parnum, OprogStatus.rcutInner);
+#ifdef MD_FENE
       FENEForce();
+#endif
       /* considera tutti i contributi alle forza agente sugli atomi "di base"
        * ossia somma anche le forze dovute agli atomi senza massa moltiplicate
        * per gli opportuni coefficienti "vincolari" 
@@ -2482,18 +2486,18 @@ void move(void)
 	 coordinates (only father do it)*/
       if (OprogStatus.noLinkedList)
 	{
-	  BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcutO);
+	  BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcut);
 	}
       else
 	{
-	  links(Oparams.parnum, Oparams.rcutO);
+	  links(Oparams.parnum, Oparams.rcut);
     	  /* Build up neighbour list */  
-	  BuildNebrListLong(Oparams.parnum, Oparams.rcutO);
+	  BuildNebrListLong(Oparams.parnum, Oparams.rcut);
 	}
     }
    
   //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
-  LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcutO);
+  LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcut);
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
@@ -2501,7 +2505,9 @@ void move(void)
       	vy[a][i] += 0.5 * dt * FyLong[a][i]/Oparams.m[a];
 	vz[a][i] += 0.5 * dt * FzLong[a][i]/Oparams.m[a];
       }
-
+#ifndef MD_FENE  
+  shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
+#endif
   /* Calculate the kinetic energy */
   kinet(Oparams.parnum, vx, vy, vz, Vol1);
 
