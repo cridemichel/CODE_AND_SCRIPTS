@@ -152,10 +152,12 @@ void InvMatrix(double **a, double **b, int NB)
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
 #define TOLX 1.0E-12//1.0e-7 /* Convergence criterion on  x.*/ 
 #define TOLX2 1.E-6
+#define TOLXD 1.0E-4
 #define MAXITS 30 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define MAXITS2 20
 #define TOLF 1.0e-10// 1.0e-4
 #define TOLF2 1.0E-4
+#define TOLFD 1.0E-3
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
@@ -609,7 +611,7 @@ void newtDist(double x[], int n, int *check,
   for (i=0;i<n;i++) 
     if (fabs(fvec[i]) > test)
       test=fabs(fvec[i]); 
-  if (test < 0.01*TOLF)
+  if (test < 0.01*TOLFD)
     {
       *check=0; 
       FREERETURND;
@@ -636,7 +638,7 @@ void newtDist(double x[], int n, int *check,
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	test +=fabs(fvecD[i]); 
-      if (test < TOLF)
+      if (test < TOLFD)
 	{
 	  *check = 0;
 	  MD_DEBUG(printf(" test < TOLF\n"));
@@ -656,7 +658,7 @@ void newtDist(double x[], int n, int *check,
       for (i=0;i<n;i++) 
 	if (fabs(fvecD[i]) > test) 
 	  test=fabs(fvecD[i]); 
-      if (test < TOLF) 
+      if (test < TOLFD) 
 	{ 
 	  *check=0; 
 	  MD_DEBUG(printf("test < TOLF\n"));
@@ -683,7 +685,7 @@ void newtDist(double x[], int n, int *check,
 	  if (temp > test) 
 	    test=temp; 
 	} 
-      if (test < TOLX) 
+      if (test < TOLXD) 
 	{
 	  MD_DEBUG(printf("test<TOLX test=%.15f\n", test));
 	  FREERETURND;
@@ -704,7 +706,7 @@ void newtDist(double x[], int n, int *check,
 	}
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
-      if (test < TOLX) 
+      if (test < TOLXD) 
 	{ 
 	  *check = 0;
 	  MD_DEBUG(printf("test < TOLX\n"));
@@ -720,7 +722,7 @@ void newtDist(double x[], int n, int *check,
 }
 
 
-#define EPS 1e-7//1.0E-4 /* Approximate square root of the machine precision.*/
+#define EPS 1.0E-4 /* Approximate square root of the machine precision.*/
 void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 { int i,j; 
   double h,temp,*f; 
