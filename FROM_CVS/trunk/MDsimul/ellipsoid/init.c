@@ -855,7 +855,9 @@ void StartRun(void)
 	cellRange[2*k+1] =   1;
       }
     for (n = 0; n < Oparams.parnum; n++)
-      PredictEvent(n, -2); 
+      {
+	PredictEvent(n, -2);
+      }
 #if 0
     {
       double dist, rC[3], rD[3], shift[3];
@@ -1013,6 +1015,9 @@ void add_neighbours(MESHXYZ** mesh, int i, int j)
       mesh[i][j].neigh[3].j = j;
     }
 }
+#ifdef MD_NNL
+extern void rebuildNNL(void);
+#endif
 void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 {
   int i,j, n1, n2;
@@ -1036,7 +1041,7 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 double calc_phi(void);
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
-  {
+{
     /* DESCRIPTION:
        This function is called after the parameters were read from disk, put
        here all initialization that depends upon such parameters, and call 
@@ -1355,7 +1360,7 @@ void usrInitAft(void)
     }
   fclose(bof);
 #if 1
- sprintf(fileop2 ,"BondCorrFuncB2.dat");
+  sprintf(fileop2 ,"BondCorrFuncB2.dat");
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
   if ( (bof = fopenMPI(fileop, "w")) == NULL)
@@ -1380,21 +1385,13 @@ void usrInitAft(void)
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
 #endif
   StartRun(); 
-  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 #ifdef MD_NNL
-  for (i=0; i < Oparams.parnum; i++) 
-    {
-      printf("Building NNL for particle %d\n", i);
-      BuildNNL(i);
-      //ScheduleEvent(i, ATOM_LIMIT+11,nebrTab[i].nexttime);
-      if (i==0 || nebrTab[i].nexttime < nltime)
-	nltime = nebrTab[i].nexttime;
-      ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
-    }
+  rebuildNNL();
+  MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
   exit(-1);
 #endif
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
