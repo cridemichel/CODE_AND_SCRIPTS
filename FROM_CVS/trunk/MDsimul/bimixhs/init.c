@@ -950,6 +950,7 @@ void usrInitAft(void)
       {
 	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
       }
+#if 0
 #ifndef MD_INFBARRIER
     if (Oparams.curStep == 1)
     {
@@ -961,6 +962,7 @@ void usrInitAft(void)
  	  exit(1);      
   	}
     }
+#endif
 #endif
 #if 0
   for (i= 0; i < Oparams.parnum; i++)
@@ -1129,10 +1131,13 @@ void usrInitAft(void)
       OprogStatus.DQTxy = 0.0;
       OprogStatus.DQTyz = 0.0;
       OprogStatus.DQTzx = 0.0;
+      OprogStatus.DQWxy = 0.0;
+      OprogStatus.DQWyz = 0.0;
+      OprogStatus.DQWzx = 0.0;
       OprogStatus.lastcoll = -1;
       calcT();
 #endif
-      OprogStatus.DQxy = 0.0;
+            OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
       OprogStatus.DQzx = 0.0;
 #ifdef MD_GRAVITY
