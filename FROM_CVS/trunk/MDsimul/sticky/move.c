@@ -2351,13 +2351,15 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
-int interpol(int i, int j, double t, double delt, double d1, double d2, double *troot, int* amin, int *bmin, double shift[3], int bracketing)
+int interpol(int i, int j, int a, int b, 
+	     double t, double delt, double d1, double d2,
+	     double *troot, double shift[3], int bracketing)
 {
-  int nb;
+  int nb, amin, bmin;
   double d3, Delta, t1, t2;
   double r1[3], r2[3], alpha, xb1[2], xb2[2], dists[MD_PBONDS];
   /* NOTA: dists di seguito può non essere usata? controllare!*/
-  d3 = calcDistNeg(t+delt*0.5, i, j, shift, amin, bmin, dists);
+  d3 = calcDistNegOne(t+delt*0.5, i, j, a, b, shift);
 #if 0
   if (d1 > OprogStatus.epsd)
     {
