@@ -1169,10 +1169,11 @@ void usrInitAft(void)
   
   /* Store the Center of Mass initial position for all particles */
   m = Oparams.m;
-
+  
   Mtot = 0.0;
   for(a=0; a < NA; a++)
     {
+      m[a] = m[0];
       printf("m:%f\n", Oparams.m[a]);
       Mtot += m[a];
     }
