@@ -268,6 +268,7 @@ void updImpConstrVsq(double dt, double c, int i, double **cVec)
 		{
 		  if (cAtom1[mm] != a && cAtom2[mm] != a)
 		    {
+		      //printf("a: %d m:%d cMat: %d cAtom1\n", a, m, cMat[m][a]);
 		      dvSq = Sqr(px[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - px[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]) + 
 			Sqr(py[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - py[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]) + 
 			Sqr(pz[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - pz[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]); 
@@ -306,9 +307,9 @@ void updImpConstrVsq(double dt, double c, int i, double **cVec)
 		  pz[a][i] -= costz * Sqr(px[a][i]/Oparams.m[a]);
 		  pz[a][i] -= costz * Sqr(py[a][i]/Oparams.m[a]);
 		  
-	      	  px[a][i] *= exp(costx2*px[b][i]/Oparams.m[a]*Oparams.m[b]);    
-    		  py[a][i] *= exp(costy2*py[b][i]/Oparams.m[a]*Oparams.m[b]);
-		  pz[a][i] *= exp(costz2*pz[b][i]/Oparams.m[a]*Oparams.m[b]);
+	      	  px[a][i] *= exp(costx2*px[b][i]/(Oparams.m[a]*Oparams.m[b]));    
+    		  py[a][i] *= exp(costy2*py[b][i]/(Oparams.m[a]*Oparams.m[b]));
+		  pz[a][i] *= exp(costz2*pz[b][i]/(Oparams.m[a]*Oparams.m[b]));
 		  px[a][i] += costx2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
 		  px[a][i] += costx2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
 		  py[a][i] += costy2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
@@ -373,9 +374,9 @@ void updImpConstrVsqAft(double dt, double c, int i, double **cVec)
 		  py[a][i] += costy2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
 		  px[a][i] += costx2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
 		  px[a][i] += costx2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
-	      	  px[a][i] *= exp(costx2*px[b][i]/Oparams.m[a]*Oparams.m[b]);    
-    		  py[a][i] *= exp(costy2*py[b][i]/Oparams.m[a]*Oparams.m[b]);
-		  pz[a][i] *= exp(costz2*pz[b][i]/Oparams.m[a]*Oparams.m[b]);
+	      	  px[a][i] *= exp(costx2*px[b][i]/(Oparams.m[a]*Oparams.m[b]));    
+    		  py[a][i] *= exp(costy2*py[b][i]/(Oparams.m[a]*Oparams.m[b]));
+		  pz[a][i] *= exp(costz2*pz[b][i]/(Oparams.m[a]*Oparams.m[b]));
 
 		  pz[a][i] -= costz * Sqr(px[a][i]/Oparams.m[a]);
 		  pz[a][i] -= costz * Sqr(py[a][i]/Oparams.m[a]);
@@ -666,7 +667,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	updImpConstrForce(dt, c, i, cVec);
 	if (RefSys)
 	  /* Qui bisogna considerare il contributo del termine in v^2 */
-	  updImpConstrVsq(dt, c, i, cVec); 
+	  updImpConstrVsqAft(dt, c, i, cVec); 
       }
     }
   checkNan("ComputeConstraints");
@@ -2520,8 +2521,8 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
     }
 #ifdef MD_RAPACONSTR
-      ComputeConstraints(dt, 0.5, 1, 1); 
-      /*RAPA<<<<<<<<<<<<<<<< */
+  ComputeConstraints(dt, 0.5, 1, 1); 
+  /*RAPA<<<<<<<<<<<<<<<< */
 #endif
 #if 0
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
