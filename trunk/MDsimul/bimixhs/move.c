@@ -120,9 +120,15 @@ void calcKVz(void)
   K += dd;
 }
 #endif
+#if defined(MD_SQWELL) && defined(MD_BONDHIST)
+int brokenbonds[2000];
+extern int bondhist[5];
+#endif
+
 void outputSummary(void)
 {
   FILE *f;
+  int i;
   /* mettere qualcosa qui */
 #ifdef MD_GRAVITY
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
@@ -134,12 +140,24 @@ void outputSummary(void)
 	 (2.0*K/(3.0*Oparams.parnum-3.0)));
 #endif
 #endif
+#if 0
   f = fopenMPI(MD_HD_MIS "T.dat", "a");
   if (OprogStatus.brownian==1)
     fprintf(f, "%.15f %.15f\n", Oparams.time, (2.0*K/(3.0*Oparams.parnum)));
   else
     fprintf(f, "%.15f %.15f\n", Oparams.time, (2.0*K/(3.0*Oparams.parnum-3.0)));
   fclose(f);
+#endif
+#if defined(MD_SQWELL) && defined(MD_BONDHIST)
+  printf("bonds histogram: ");
+  for (i=0; i < 5; i++)
+    {
+      if (i==4)
+	printf("%d: %d\n", i, bondhist[i]);
+      else
+	printf("%d: %d, ", i, bondhist[i]);
+    }
+#endif
 #ifdef MD_GRAVITY
   f = fopenMPI(MD_HD_MIS "Vz2.dat", "a");
   fprintf(f, "%.15f %.15f\n", Oparams.time, Sqr(Vz));
@@ -1416,7 +1434,6 @@ void distanza(int ia, int ib)
   printf("dist(%d,%d): %f\n", ia, ib, sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz)));
 }
 void rebuildLinkedList(void);
-
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -1436,6 +1453,12 @@ void move(void)
   Wxx = Wyy = Wzz = 0.0;
 #endif
   /* get next event */
+#if defined(MD_SQWELL) && defined(MD_BONDHIST)
+  for (i=0; i < Oparams.parnum; i++)
+    { 
+      brokenbonds[i]=0;
+    }
+#endif
   while (1)
     {
       innerstep++;
@@ -1457,6 +1480,10 @@ void move(void)
       if (evIdB < ATOM_LIMIT)
 	{
 	  MD_DEBUG(printf("collision (evIdA: %d evIdB:%d)\n", evIdA, evIdB));
+#if defined(MD_SQWELL) && defined(MD_BONDHIST)
+	  brokenbonds[evIdA]++;
+	  brokenbonds[evIdB]++;
+#endif
 	  ProcessCollision();
 	  OprogStatus.collCount++;
 	}
@@ -1481,7 +1508,7 @@ void move(void)
 	  UpdateSystem();
 	  OprogStatus.nextSumTime += OprogStatus.intervalSum;
 	  ScheduleEvent(-1, ATOM_LIMIT + 7, OprogStatus.nextSumTime);
-	  calcObserv();
+	  /*calcObserv();*/
 	  outputSummary(); 
 	}
       else if (evIdB == ATOM_LIMIT + 8)
@@ -1526,7 +1553,8 @@ void move(void)
 	      velsBrown(Oparams.T);
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-	      ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+	      if (OprogStatus.storerate > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
 	  OprogStatus.nextDt += Oparams.Dt;
@@ -1588,7 +1616,8 @@ void move(void)
 		      rebuildLinkedList();
 		      MD_DEBUG3(distanza(996, 798));
 		      rebuildCalendar();
-		      ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+		      if (OprogStatus.storerate > 0.0)
+			ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 		      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 		      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 		    }
@@ -1603,7 +1632,8 @@ void move(void)
 		  scalevels(Oparams.T, K, Vz);
 		  rebuildLinkedList();
 		  rebuildCalendar();
-		  ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+		  if (OprogStatus.storerate > 0.0)
+		    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 		  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 		  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 		}
@@ -1623,7 +1653,8 @@ void move(void)
 	      scalevels(Oparams.T, K, Vz);
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-	      ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+	      if (OprogStatus.storerate > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	    }
@@ -1660,7 +1691,8 @@ void move(void)
 	      scalevels(Oparams.T, K);
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-	      ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+	      if (OprogStatus.storerate > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	      if (OprogStatus.rescaleTime > 0)
 		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
@@ -1699,4 +1731,11 @@ void move(void)
       updatePE(Oparams.parnum);
 #endif
     }
+#if defined(MD_SQWELL) && defined(MD_BONDHIST)
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (brokenbonds[i] <= 5 && brokenbonds[i] > 0)   
+	bondhist[brokenbonds[i]-1]++;
+    }
+#endif
 }
