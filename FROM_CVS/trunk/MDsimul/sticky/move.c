@@ -7,6 +7,7 @@
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x) 
 #define MD_DEBUG29(x) 
+#define MD_DEBUG30(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -891,7 +892,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
    *******************************************************************
    */
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
-  double factor=0, invmi, invmj, sigmai, mredl;
+  double factor=0, invmi, invmj, sigmai, mredl, shift[3];
   double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3], r12[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
@@ -921,6 +922,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
+#if 1
   if (bt == MD_CORE_BARRIER)
     {
       /* do a normal collison between hard spheres 
@@ -930,9 +932,10 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       core_bump(i, j, W, Sqr(sigmai));
       //check_all_bonds();
       MD_DEBUG10(printf(">>>>>>>>>>collCode: %d\n", bt));
-      //printf("collision type= %d i=%d j=%d ata=%d atb=%d\n", bt, i, j, ata, atb);
+      MD_DEBUG30(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
       return;
     }
+#endif
   rA[0] = rx[i];
   rA[1] = ry[i];
   rA[2] = rz[i];
@@ -944,7 +947,14 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
     {
       Dr = rA[a]-rB[a];
       if (fabs(Dr) > L2)
-	rB[a] += SignR(L, Dr);
+	{
+	  
+	  rB[a] += SignR(L, Dr);
+//	  shift[a] =SignR(L, Dr);
+//	  printf("in if L2: %f a=%d shift: %f Dr:%f\n",L2, a, SignR(L, Dr), Dr);
+	}
+  //   else
+//	shift[a] = 0.0;
     }
 #endif
   MD_DEBUG10(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
@@ -994,7 +1004,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
     }
 	
 #endif
-  for (kk = 0; kk < 3; kk++)
+     for (kk = 0; kk < 3; kk++)
     rAB[kk] /= nrAB;
   /* controllare con cura la scelta dei parametri relativi ai diametri delle sferette
    * e alle larghezze delle buche dei potenziali a buca quadrata */
@@ -1005,15 +1015,52 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   rAC[0] = rA[0] - rCx;
   rAC[1] = rA[1] - rCy;
   rAC[2] = rA[2] - rCz;
+ 
+  rBC[0] = rB[0] - rCx;
+  rBC[1] = rB[1] - rCy;
+  rBC[2] = rB[2] - rCz;
+
   //printf("contact point %f %f %f\n", rCx, rCy, rCz);
 #if 0
   for (a=0; a < 3; a++)
     if (fabs (rAC[a]) > L2)
       rAC[a] -= SignR(L, rAC[a]);
 #endif
-  rBC[0] = rB[0] - rCx;
-  rBC[1] = rB[1] - rCy;
-  rBC[2] = rB[2] - rCz;
+#if 0
+  r12[0] = ratA[0]-rCx;
+  r12[1] = ratA[1]-rCy;
+  r12[2] = ratA[2]-rCz;
+  printf("ratAC: %.15G\n", calc_norm(r12));
+  r12[0] = ratB[0]-rCx;
+  r12[1] = ratB[1]-rCy;
+  r12[2] = ratB[2]-rCz;
+  printf("ratBC: %.15G\n",calc_norm(r12));
+#endif
+#if 0
+    {
+      int kk, amin, bmin;
+      double Dr, dist, distSq, dists[MD_PBONDS], d1;
+      /* calcola sigmaSq[][]!!! */
+      distSq = 0;
+      for (kk=0; kk < 3; kk++)
+	distSq += Sqr(ratA[kk]-ratB[kk]);
+      dist =  sqrt(distSq)-Oparams.sigmaSticky;
+      //if (fabs(dist) > 1E-6)
+      printf("[BUMP] %d-%d %d-%d type=%d ata=%d atb=%d t=%.15G dist= %.15G\n", i, j, j, i, bt,ata, atb, Oparams.time, dist);
+      for (kk=0; kk < 3; kk++)
+    	{
+	  Dr = rA[kk]-rB[kk];
+	  if (fabs(Dr) > L2)
+	    shift[kk] = SignR(L, Dr);
+	  printf("shift[%d]: %f\n", kk, shift);
+	}
+      printf("time-atomtime[%d]:%.15G time-atomtime[%d]:%.15G\n", i, Oparams.time - 
+      atomTime[i], j, Oparams.time - atomTime[j]);
+      d1 = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin, dists);
+      for (kk=0; kk < MD_PBONDS; kk++)
+  	printf("time=%.15G i=%d j=%d d1=%.15G dists[%d]:%.15G\n", Oparams.time, i, j, d1, kk, dists[kk]);
+  }
+#endif
 #if 0
   for (a=0; a < 3; a++)
     {
@@ -1157,18 +1204,18 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
     case MD_INOUT_BARRIER:
       if (Sqr(vc) < 2.0*Oparams.bheight/mredl)
 	{
-#if 0
-	  printf("t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n", Oparams.time,
+#if 1
+	  MD_DEBUG30(printf("t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n", Oparams.time,
 		 vc,  bt,
-		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2])));
+		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 #endif
 	  factor = -2.0*vc;
 	}
       else
 	{
-#if 0
-	  printf("t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", Oparams.time, vc, bt,
-		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2])));
+#if 1
+	  MD_DEBUG(printf("t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", Oparams.time, vc, bt,
+		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 #endif
 	  factor = -vc + sqrt(Sqr(vc) - 2.0*Oparams.bheight/mredl);
 	  //oldbond = bound(i, j, ata, atb);
@@ -1705,7 +1752,7 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
   int k1, k2, k3;
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
   w = sqrt(wSq);
-  if (w != 0.0) 
+  if (w != 0.0 && ti != 0.0) 
     {
 #if 0
       if (fabs(w*ti) < 1E-8)
@@ -1971,7 +2018,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
-  
+ 
   UpdateOrient(j, ti, RtB, Omega);
   na = (j < Oparams.parnumA)?0:1;
   BuildAtomPos(j, rB, RtB, ratB);
@@ -2285,7 +2332,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
   *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, distsOld);
-  //printf("*d1=%.15G\n", *d1);
+  MD_DEBUG30(printf("[IN SEARCH CONTACT FASTER]*d1=%.15G t=%.15G\n", *d1, *t));
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
@@ -2310,8 +2357,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
       if (*t > t2)
 	{
 	 *t = told;
-	  MD_DEBUG10(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG10(printf("convergence t>t2\n"));
+	  MD_DEBUG30(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG30(printf("convergence t>t2\n"));
 	  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, dists);
 	  return 1;
 	}
@@ -2346,8 +2393,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
       if (check_cross(distsOld, dists, crossed))
 	{
 	  /* go back! */
-	  MD_DEBUG10(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG10(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
+	  MD_DEBUG30(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG30(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
 	  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, dists);
 	  return 0;
@@ -2463,6 +2510,10 @@ int interpol(int i, int j, int nn,
 
 int valid_collision(int i, int j, int ata, int atb, int collCode)
 {
+  MD_DEBUG30(printf("lastbump[i=%d].mol=%d lastbump[j=%d].mol=%d lastbump[i=%d].at=%d lastbump[j=%d].at=%d\n",
+	i, lastbump[i].mol, j, lastbump[j].mol, i, lastbump[i].at, j, lastbump[j].at));
+  MD_DEBUG30(printf("collCode=%d ata=%d atb=%d bound: %d\n", collCode, ata, atb,  bound(i, j, ata, atb)));
+  
   if ((collCode==MD_INOUT_BARRIER && !bound(i, j, ata, atb)) ||
       (collCode==MD_OUTIN_BARRIER && bound(i, j, ata, atb)) ) 
     return 0; 
@@ -2538,17 +2589,19 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
 #if 0
   d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
+  
   goback = 0;
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
       if (dists[nn] >=0.0 && bound(i,j,mapbondsa[nn], mapbondsb[nn]))
 	{
 	  goback = 1;
-	  //printf("i=%d j=%d nn=%d dist=%.15G dti=%.15G dtj=%.15G\n", i, j, nn, dists[nn], Oparams.time-lastcol[i],
-	  //	 Oparams.time-lastcol[j]);
+	  MD_DEBUG30(printf("[LOCATE_CONTACT] t=%.15G dt=%.15G i=%d j=%d nn=%d dist=%.15G dti=%.15G dtj=%.15G\n",t, t - Oparams.time, i, j, nn, dists[nn], Oparams.time-lastcol[i],
+	  	 Oparams.time-lastcol[j]));
 	  break;
 	}
     }
+#if 0
   if (goback)
     {
       while (dists[nn] >= 0.0)
@@ -2561,12 +2614,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	}
     }
 #endif
+#endif
+  MD_DEBUG30(printf("[BEFORE SEARCH CONTACT FASTER]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
   if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast, dists))
     {
       return 0;  
     }
   timesS++;
-  //printf("[AFTER SEARCH CONTACT FASTER]Dopo distances between %d-%d d1=%.12G", i, j, d);
+  MD_DEBUG30(printf("[AFTER SEARCH CONTACT FASTER]Dopo distances between %d-%d d1=%.12G\n", i, j, d));
 #if 0
   if (lastbump[j]==i && lastbump[i]==j)
     {
@@ -2651,7 +2706,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	}
 #endif
 
-      //printf("delt: %f epsd/maxddot:%f h*t:%f maxddot:%f\n", delt, epsd/maxddot,h*t,maxddot);
+      MD_DEBUG30(printf("delt: %f epsd/maxddot:%f h*t:%f maxddot:%f\n", delt, epsd/maxddot,h*t,maxddot));
       ///delt = h;///
       t += delt;
       //printf("normddot= %.15G t=%.15G delt=%.15G maxddot: %.15G t*h=%.15G\n", 
@@ -2690,30 +2745,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
-#if 1
-      if (fabs(d) > epsdFastR)
-	{
-	  if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast, dists))
-	    {
-	      MD_DEBUG(printf("[search contact faster locate_contact] its: %d\n", its));
-	      return 0;
-	    }
-#if 0
-	  assign_dists(dists, distsOld2);
-	  delt = 1E-15;
-	  t += delt;
-	  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
-#else
-	  //dold = d;
-	  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
-	  //assign_dists(dists, distsOld);
-	  firstaftsf = 1;
-#endif
-	  its++;
-	  //itsS++;
-	  continue;
-	}
-#endif
+     MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
       for (nn=0; nn < MD_PBONDS; nn++)
 	dorefine[nn] = MD_EVENT_NONE;
       ncr=check_cross(distsOld, dists, crossed);
@@ -2723,6 +2755,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	{
 	  t2arr[nn] = t; 
 	  //printf("t=%.15G dists[%d]:%.15G\n",t , nn, dists[nn]);
+	  //printf("dists[%d]: %.15G distsOld[%d]: %.15G\n", nn, dists[nn], nn, distsOld[nn]);
 	  dorefine[nn] = MD_EVENT_NONE;
 	  if (crossed[nn]!=MD_EVENT_NONE)
 	    {
@@ -2744,7 +2777,19 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	       * attraversate */
 	      if (valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
 		{
-		  dorefine[nn] = crossed[nn];
+		  MD_DEBUG30(printf("type: %d i=%d j=%d ata=%d atb=%d bound:%d\n", crossed[nn], i, j, mapbondsa[nn],
+			 mapbondsb[nn], bound(i, j, mapbondsa[nn], mapbondsb[nn])));
+#if 0
+		  if (collCode==MD_INOUT_BARRIER && lastbump[i].mol==j && lastbump[j].mol==i
+		      && lastbump[i].at == ata && lastbump[j].at==atb// && bound(i, j, ata, atb) 
+		      && fabs(lastcol[i]-t)< 1E-14) 
+		    {
+		      printf("qui\n");
+		      
+		    }
+		  else
+#endif
+		    dorefine[nn] = crossed[nn];
 		  //printf("CROSSING dorefine[%d]:%d\n", nn, dorefine[nn]);
 		}
 	    }
@@ -2781,23 +2826,24 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	{
 	  if (dorefine[nn]!=MD_EVENT_NONE)
 	    {
-#if 0
-	      printf("REFINE dorefine[%d]:%d\n", nn, dorefine[nn]);
-	      printf("distsOld[%d]:%.15f dists[%d]: %.15f\n", nn, distsOld[nn], nn, dists[nn]);
-	      printf("t-delt: %.15f t=%.15f\n", t-delt, t);
+#if 1
+	      MD_DEBUG30(printf("REFINE dorefine[%d]:%d\n", nn, dorefine[nn]));
+	      //printf("distsOld[%d]:%.15f dists[%d]: %.15f\n", nn, distsOld[nn], nn, dists[nn]);
+	      //printf("t-delt: %.15f t=%.15f\n", t-delt, t);
 #endif
 	      if (refine_contact(i, j, t-delt, t2arr[nn], nn, shift, &troot))
 		{
 		  //printf("[locate_contact] Adding collision between %d-%d\n", i, j);
-		  MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+		  MD_DEBUG30(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
+		  MD_DEBUG30(printf("[locate_contact] t=%.15G nn=%d\n", t, nn));
+		  MD_DEBUG(printf("[locate_contact] its: %d\n", its));
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
 		   * scarta tale urto */
-		  if (troot > t2 || troot < t1)
-#if 0
+		  if (troot > t2 || troot < t1
+#if 1
 		  || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i])<1E-8))
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i])<1E-14))
 #endif
 		    {
 		      //gotcoll = -1;
@@ -2846,7 +2892,33 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	return 1;
       else if (gotcoll == -1)
 	return 0;
+#if 1
+      if (fabs(d) > epsdFastR)
+	{
+	  if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast, dists))
+	    {
+	      MD_DEBUG30(printf("[search contact faster locate_contact] d: %.15G\n", d));
+	      return 0;
+	    }
+#if 0
+	  assign_dists(dists, distsOld2);
+	  delt = 1E-15;
+	  t += delt;
+	  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
+#else
+	  //dold = d;
+	  dold = calcDistNeg(t, i, j, shift, &amin, &bmin, distsOld);
+	  //assign_dists(dists, distsOld);
+	  firstaftsf = 1;
+#endif
+	  its++;
+	  //itsS++;
+	  continue;
+	}
+#endif
+ 
       dold = d;
+      MD_DEBUG30(printf("==========>>>>> t=%.15G t2=%.15G\n", t, t2));
       assign_dists(distsOld,  distsOld2);
       assign_dists(dists, distsOld);
       its++;
@@ -3142,11 +3214,14 @@ void PredictEvent (int na, int nb)
 			{
 			  MD_DEBUG29(printf("Centroids overlap!\n"));
 			  t2 = t = (sqrt (d) - b) / vv;
-			  t1 = -OprogStatus.h;
+			  t1 = 0;//-OprogStatus.h;
 			  overlap = 1;
 			  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
 			  MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
 			}
+		      //printf("na=%d j=%d type=%d t1=%.15G\n", na, lastbump[na].mol,
+			//     lastbump[na].type, 
+			  //   t1);
 		      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
 		      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
 		      //t += Oparams.time; 
@@ -3238,9 +3313,10 @@ void PredictEvent (int na, int nb)
 			}
 #endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
-		      MD_DEBUG29(printf("EVENT TIME=%.15G\n",evtime));
-		      MD_DEBUG29(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
-		      MD_DEBUG29(printf("ac=%d bc=%d\n",ac,bc));
+		      MD_DEBUG30(printf("EVENT TIME=%.15G\n",evtime));
+		      MD_DEBUG30(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
+		      MD_DEBUG30(printf("t=%.15G %d-%d %d-%d ac=%d bc=%d type=%d\n",
+					t, na,n,n,na,ac,bc, collCode));
 		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 		      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
 		    }
