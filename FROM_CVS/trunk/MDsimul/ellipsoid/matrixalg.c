@@ -804,16 +804,16 @@ void body2lab(int i, double xp[], double x[], double *rO, double **R)
 
 void angs2coord(double angs[], double p[])
 {
-  double sin1, sin3;
-  sin1 = sin(angs[1]);
-  p[0] = axa[icg]*cos(angs[0])*sin1;
-  p[1] = axb[icg]*sin(angs[0])*sin1;
-  p[2] = axc[icg]*cos(angs[1]);
+  double sin0, sin2;
+  sin0 = sin(angs[0]);
+  p[0] = axa[icg]*cos(angs[1])*sin0;
+  p[1] = axb[icg]*sin(angs[1])*sin0;
+  p[2] = axc[icg]*cos(angs[0]);
   
-  sin3 = sin(angs[3]);
-  p[3] = axa[jcg]*cos(angs[2])*sin3;
-  p[4] = axb[jcg]*sin(angs[2])*sin3;
-  p[5] = axc[jcg]*cos(angs[3]);
+  sin2 = sin(angs[2]);
+  p[3] = axa[jcg]*cos(angs[3])*sin2;
+  p[4] = axb[jcg]*sin(angs[3])*sin2;
+  p[5] = axc[jcg]*cos(angs[2]);
 }
 double funcPowell(double angs[])
 {
@@ -2131,9 +2131,9 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 		     int calc_sign)
 {
   int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB;
-  int nphi1, nth1, nphi2, nth2;
+  int nphi1, nth1, nphi2, nth2, firstspA=1, firstspB=1;
   double sp, spmaxA=0.0, spmaxB=0.0, dx[3], dxP[3], cdxA[3], cdxB[3], dxA, dxB, distSqold, normdx, dxN[3];
-  double vecini[6], xmesh[3], xmeshP[3];
+  double vecini[6], xmesh[3], xmeshP[3], xmeshA[3], xmeshB[3];
 
   cth1 = *th1;
   cphi1 = *phi1;
@@ -2144,6 +2144,11 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
   //printf("maxstA=%.15G maxstB=%.15G\n", maxstA, maxstB);
   for (kk=0; kk < 6; kk++)
     vecini[kk] = vec[kk];
+#if 0
+  printf("$$$PR VECA=(%.15G,%.15G, %.15G)\n", vec[0], vec[1], vec[2]);
+  printf("$$$PR VECB=(%.15G,%.15G, %.15G)\n", vec[3], vec[4], vec[5]);
+#endif
+
   for (k1 = 0; k1 < 4; k1++)
     {
       nth1  = ellips_mesh[mA][*th1][*phi1].neigh[k1].i;
@@ -2155,13 +2160,15 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 	  xmeshP[kk] = ellips_mesh[mA][nth1][nphi1].point[kk];
 	  dxP[kk] = xmeshP[kk] - ellips_mesh[mA][*th1][*phi1].point[kk]; 
 	}
+      body2labR(icg, dxP, dx, rA, RtA);
+#if 0
       body2lab(jcg, xmeshP, xmesh, rA, RtA);
       for (kk=0; kk < 3; kk++)
 	{
 	  dx[kk] = xmesh[kk] - vec[kk];
 	}
-
-      if (calc_norm(dxP) > 0.2)
+#endif
+      if (calc_norm(dxP) > 0.7)
       	{
 	  printf("nth1 nphi1 = %d %d *th1 *phi1 = %d %d\n", nth1, nphi1, *th1, *phi1);
 	  printf("norm(dxP) %.15G\n",calc_norm(dxP));   
@@ -2182,13 +2189,17 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
       //dxN[kk] = dx[kk] / normdx;
 
       sp = scalProd(grad, dx);
-      if (sp > spmaxA)
+      if (firstspA || sp > spmaxA)
 	{
+	  firstspA=0;
 	  cth1 = nth1;
 	  cphi1 = nphi1;
 	  spmaxA = sp;
 	  for (kk=0; kk < 3; kk++)
-	    cdxA[kk] = dx[kk];
+	   {
+	     xmeshA[kk] = xmesh[kk];
+	     cdxA[kk] = dx[kk];
+	   }
 	}
     }
   for (k1 = 0; k1 < 4; k1++)
@@ -2202,12 +2213,15 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 	  xmeshP[kk] = ellips_mesh[mB][nth2][nphi2].point[kk];
 	  dxP[kk] = xmeshP[kk] - ellips_mesh[mB][*th2][*phi2].point[kk]; 
 	}
+      body2labR(jcg, dxP, dx, rB, RtB);
+#if 0
       body2lab(jcg, xmeshP, xmesh, rB, RtB);
       for (kk=0; kk < 3; kk++)
 	{
 	  dx[kk] = xmesh[kk] - vec[kk+3];
 	}
-      if (calc_norm(dxP) > 0.2)
+#endif
+      if (calc_norm(dxP) > 0.7)
 	{
 	  printf("nth2 nphi2 = %d %d *th2 *phi2 = %d %d\n", nth2, nphi2, *th2, *phi2);
 	  printf("norm(dxP): %.15G\n", calc_norm(dxP));   
@@ -2218,27 +2232,27 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
       //dxN[kk] = dx[kk] / normdx;
       sp = scalProd(&grad[3], dx);
       //printf("B sp=%.15G\n", sp);
-      if (sp > spmaxB)
+      if (firstspB || sp > spmaxB)
 	{
+	  firstspB = 0;
 	  cth2 = nth2;
 	  cphi2 = nphi2;
 	  spmaxB = sp;
 	  for (kk=0; kk < 3; kk++)
-	    cdxB[kk] = dx[kk];
+	    {
+	      cdxB[kk] = dx[kk];
+	      xmeshB[kk]= xmesh[kk];
+	    }
 	}
     }
   /* calcola la nuova distanza, il nuovo gradiente e le nuove coordinate del punto */
   //printf("nth2 nphi2 = %d %d *th2 *nphi2 = %d %d\n", nth2, nphi2, *th2, *phi2);
   //printf("nth1 nphi1 = %d %d *th1 *nphi1 = %d %d\n", nth1, nphi1, *th1, *phi1);
-#if 0
-  printf("$$$PR VECA=(%.15G,%.15G, %.15G)\n", vec[0], vec[1], vec[2]);
-  printf("$$$PR VECB=(%.15G,%.15G, %.15G)\n", vec[3], vec[4], vec[5]);
-#endif
   for (kk = 0; kk < 3; kk++)
     {
       //printf("dxA[%d] = %.15G\n", kk, cdxA[kk]);
-      vec[kk] += cdxA[kk];
-      vec[kk+3] += cdxB[kk];
+      vec[kk] += cdxA[kk];//xmeshA[kk];//cdxA[kk];
+      vec[kk+3]+= cdxB[kk];//xmeshB[kk];//cdxB[kk];
     }
 #if 0
     {
@@ -2284,6 +2298,7 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
   *phi1 = cphi1;
   *th2 = cth2;
   *phi2 = cphi2;
+  //printf("USCENDO *th1 *phi1 = %d %d *th2 *phi2 = %d %d\n", *th1, *phi1, *th2, *phi2);
   return 0;	
 }
 extern double *maxax;
@@ -2309,6 +2324,18 @@ void findminMesh(double *vec)
   sinth = vecP[4]/axb[jcg]/sin(angs[2]);
   if (sinth < 0)
     angs[3] = 2.0*pi-angs[3];
+#if 0 
+    {
+      double vv[6], vl[6];
+      printf("INIZIO VECA=(%.15G,%.15G, %.15G)\n", vec[0], vec[1], vec[2]);
+      printf("INIZIO VECB=(%.15G,%.15G, %.15G)\n", vec[3], vec[4], vec[5]);
+      angs2coord(angs, vv);
+      body2lab(icg, vv, vl, rA, RtA);
+      body2lab(jcg, &vv[3], &vl[3], rB, RtB);
+      printf("INIZIO2 VECA=(%.15G,%.15G, %.15G)\n", vl[0], vl[1], vl[2]);
+      printf("INIZIO2 VECB=(%.15G,%.15G, %.15G)\n", vl[3], vl[4], vl[5]);
+   }
+#endif
   /* determino lo starting point sulla mesh */	
   th1 = OprogStatus.n1*angs[0]/TWOPI; 
   phi1 = OprogStatus.n2*angs[1]/TWOPI;
@@ -2388,13 +2415,13 @@ void findminMesh(double *vec)
 	    /* torno nel riferimento del laboratorio */
 	    body2lab(icg, vecP, vec, rA, RtA);
 	    body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
-	    printf("BOH distSq=%.15G\n", sqrt(distSq));
+	    //printf("BOH distSq=%.15G\n", sqrt(distSq));
 	    distSq = 0;
 	    for (kk = 0; kk < 3; kk++)
 	      {
 		distSq += S*Sqr(vec[kk+3]-vec[kk]);
 	      }
-	    printf("FINE S=%f its= %d dist=%.15G\n", S,its, sqrt(distSq));
+	    //printf("FINE S=%f its= %d dist=%.15G\n", S,its, sqrt(distSq));
 #endif
 	    break;
 	  } 
@@ -2470,9 +2497,9 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
 #endif
   //frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
   //powellmethodPenalty(vec);
-  //frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+  frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
   //powellmethod(vec);
-  findminMesh(vec);
+  //findminMesh(vec);
   for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];
