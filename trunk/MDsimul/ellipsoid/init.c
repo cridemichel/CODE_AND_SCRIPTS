@@ -50,7 +50,9 @@ int parnumA, parnumB;
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 #endif
 double invaSq[2], invbSq[2], invcSq[2];
-
+#ifdef MD_NNL
+struct nebrTabStruct *nebrTab;
+#endif
 /* ================================= */
 
 /* ========================================================================= */
@@ -1217,7 +1219,7 @@ void usrInitAft(void)
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
 #ifdef MD_NNL
-  nebrTab = malloc(sizeof(nebrTabStruct)*Oparams.parnum);
+  nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
 #endif
   for (i=0; i < Oparams.parnumA; i++)
     {
