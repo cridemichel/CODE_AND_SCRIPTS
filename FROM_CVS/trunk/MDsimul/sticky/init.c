@@ -19,14 +19,10 @@ extern double *lastcol;
 double *axa, *axb, *axc;
 double **Aip;
 #ifdef MD_SILICA
-extern int mapbondsaSiSi[MD_PBONDS_SiSi];
-extern int mapbondsbSiSi[MD_PBONDS_SiSi];
-extern int mapbondsaOO[MD_PBONDS_OO];
-extern int mapbondsbOO[MD_PBONDS_OO];
-extern int mapbondsaSiO[MD_PBONDS_SiO];
-extern int mapbondsbSiO[MD_PBONDS_SiO];
-extern int *mapsbondsa;
-extern int *mapsbondsb;
+extern int mapbondsaSiO[MD_PBONDS];
+extern int mapbondsbSiO[MD_PBONDS];
+extern int *mapbondsa;
+extern int *mapbondsb;
 #else
 extern int mapbondsa[MD_PBONDS];
 extern int mapbondsb[MD_PBONDS];
@@ -580,6 +576,69 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 #ifdef MD_SILICA
 /* nella silica l'ossigeno ha solo due sticky points quindi l'inizializzazione
  * è diversa */
+void buildTetrahedras(void)
+{
+  int i;
+  const double Kl = sqrt(8.0/3.0), Kdh = 1.0/3.0, Ktr = sqrt(8.0)/6.0;
+  double Oangle;
+  double radius; 
+  /* NOTA: i < Oparams.parnumA => O
+   *       i >= Oparams.parnumA => Si */
+  /* Oxygen */
+  Oangle = acos(0) * 2.0 * 145.8 / 180.0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* il raggio è quello dell'interazione Si-O */
+      radius = Oparams.sigma[0][1]/2.0;
+      uxx[i] = radius * cos(Oangle);
+      uyx[i] = radius * sin(Oangle);
+      uzx[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxx[i], uyx[i], uzx[i]);
+      uxy[i] = radius;
+      uyy[i] = 0.0;
+      uzy[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxy[i], uyy[i], uzy[i]);
+      /* NOTA: l'ossigeno ha solo due sticky spots */
+      uxz[i] = 0.0;
+      uyz[i] = 0.0;
+      uzz[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[green]\n", uxz[i], uyz[i], uzz[i]);
+    }
+
+  /* Silicon */
+  for (i=Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      /* il raggio è quello dell'interazione Si-O */
+      radius = Oparams.sigma[1][0]/2.0;
+      uxx[i] = Kl * radius / 2.0;
+      uyx[i] = -Ktr * radius;
+      uzx[i] = -Kdh * radius;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxx[i], uyx[i], uzx[i]);
+      uxy[i] = -Kl * radius / 2.0;
+      uyy[i] = -Ktr * radius;
+      uzy[i] = -Kdh * radius;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxy[i], uyy[i], uzy[i]);
+      uxz[i] = 0.0;
+      uyz[i] = Ktr * 2.0 * radius;
+      uzz[i] = -Kdh * radius;
+      //printf("%f %f %f @ 0.075 C[green]\n", uxz[i], uyz[i], uzz[i]);
+    }
+}
+void angvel(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* N.B. ora i tre vettori ux uy e uz non sono altro che le coordinate
+       * di due hydrogen sites e 1 electron sites. Quindi vanno 
+       * scelti in modo da stare su tre spigoli di un tetraedro regolare.
+       * In particolare formeranno un triangolo equilatero.
+       * Qui il terzo vettore uXz è un electron site. */ 
+      wx[i] = 0;
+      wy[i] = 0;
+      wz[i] = 0;
+    }
+}
 #else
 void buildTetrahedras(void)
 {
@@ -609,7 +668,6 @@ void buildTetrahedras(void)
 void angvel(void)
 {
   int i;
-#ifndef MD_SILICA
   double inert;                 /* momentum of inertia of the molecule */
   double norm, dot, osq, o, mean;
   double  xisq, xi1, xi2, xi;
@@ -659,19 +717,6 @@ void angvel(void)
       wy[i] = oy;
       wz[i] = oz;
     }
-#else
-  for (i=0; i < Oparams.parnum; i++)
-    {
-      /* N.B. ora i tre vettori ux uy e uz non sono altro che le coordinate
-       * di due hydrogen sites e 1 electron sites. Quindi vanno 
-       * scelti in modo da stare su tre spigoli di un tetraedro regolare.
-       * In particolare formeranno un triangolo equilatero.
-       * Qui il terzo vettore uXz è un electron site. */ 
-      wx[i] = 0;
-      wy[i] = 0;
-      wz[i] = 0;
-    }
-#endif 
 }
 #endif
 void wrap_initCoord(void)
@@ -944,7 +989,7 @@ void usrInitBef(void)
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
 #ifdef MD_SILICA
-int *inCell[2][3], *cellList[2][2], cellsx[2][2], cellsy[2][2], cellsz[2][2];
+int *inCell[2][3], *cellList[3], cellsx[3], cellsy[3], cellsz[3];
 #else
 int *inCell[3], *cellList, cellsx, cellsy, cellsz;
 #endif
@@ -954,27 +999,32 @@ extern void InitEventList(void);
 #ifdef MD_SILICA
 void StartRun(void)
 {
-  int j, k, n;
+  int j, k, n, nl, nc, iA;
 
-  for (iA=0; iA < 2; iA++)
-    for (iB=0; iB < 2; iB++)
-      {
-	for (j = 0; j < cellsx[iA][iB]*cellsy[iA][iB]*cellsz[iA][iB] + Oparams.parnum; j++)
-	  cellList[iA][iB][j] = -1;
-      }
-      
-  for (iB=0; iB < 2; iB++)
+  for (nl=0; nl < 2; nl++)
+    {
+      for (j = 0; j < cellsx[nl]*cellsy[nl]*cellsz[nl] + Oparams.parnum; j++)
+	cellList[nl][j] = -1;
+    }
+  
+  for (nc=0; nc < 2; nc++)
     /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
     for (n = 0; n < Oparams.parnum; n++)
       {
 	iA = (n < Oparams.parnumA)?0:1;
+	if (iA == 0 && nc == 0)
+	  nl = 0;
+	else if (iA == 1 && nc == 0)
+	  nl = 1;
+	else
+	  nl = 2;
 	atomTime[n] = Oparams.time;
-	inCell[iB][0][n] =  (rx[n] + L2) * cellsx[iA][iB] / L;
-	inCell[iB][1][n] =  (ry[n] + L2) * cellsy[iA][iB] / L;
+	inCell[nc][0][n] =  (rx[n] + L2) * cellsx[nl] / L;
+	inCell[nc][1][n] =  (ry[n] + L2) * cellsy[nl] / L;
 #ifdef MD_GRAVITY
-	inCell[iB][2][n] =  (rz[n] + Lz2) * cellsz[iA][iB] / (Lz+OprogStatus.extraLz);
+	inCell[nc][2][n] =  (rz[n] + Lz2) * cellsz[nl] / (Lz+OprogStatus.extraLz);
 #else
-	inCell[iB][2][n] =  (rz[n] + L2)  * cellsz[iA][iB] / L;
+	inCell[nc][2][n] =  (rz[n] + L2)  * cellsz[nl] / L;
 #endif
 #if 0
 	if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
@@ -984,10 +1034,10 @@ void StartRun(void)
 		   inCell[0][n],inCell[1][n], inCell[2][n]);
 	  }
 #endif	  
-	j = (inCell[iB][2][n]*cellsy[iA][iB] + inCell[iB][1][n])*cellsx[iA][iB] + 
-	  inCell[iB][0][n] + Oparams.parnum;
-	cellList[iA][iB][n] = cellList[iA][iB][j];
-	cellList[iA][iB][j] = n;
+	j = (inCell[nc][2][n]*cellsy[nl] + inCell[nc][1][n])*cellsx[nl] + 
+	  inCell[nc][0][n] + Oparams.parnum;
+	cellList[nl][n] = cellList[nl][j];
+	cellList[nl][j] = n;
       }
   InitEventList();
   for (k = 0;  k < NDIM; k++)
@@ -1265,7 +1315,7 @@ void save_init_conf(void)
 #ifdef MD_SILICA
 void check_all_bonds(void)
 {
-  int nn, warn, amin, bmin, i, j, aa, bb, nb, wnn, wj;
+  int nl, nn, warn, amin, bmin, i, j, aa, bb, nb, wnn, wj, iA, nc;
   static int errtimes=0;
   double wdist,drx, dry, drz, shift[3], dist, rat[5][3], dists[MD_PBONDS], ri[3];
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
@@ -1278,102 +1328,112 @@ void check_all_bonds(void)
     }
   
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
-
   warn = 0;
   for ( i = 0; i < Oparams.parnum; i++)
     {
       if (warn)
 	break;
       nb = 0;
-      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+      for (nl = 0; nl < 3; nl++)
 	{
-	  jZ = inCell[2][i] + iZ;    
-	  shift[2] = 0.;
-	  /* apply periodico boundary condition along z if gravitational
-	   * fiels is not present */
-	  if (jZ == -1) 
+	  /* i legami possono essere solo tra Si e O!! */
+	  if (nl != 2)
+	    continue;
+	  
+	  iA = (i < Oparams.parnumA)?0:1;
+	  if (nl < 2)
+	    nc = 0;
+	  else
+	    nc = 1; 
+	  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
 	    {
-	      jZ = cellsz - 1;    
-	      shift[2] = - L;
-	    } 
-	  else if (jZ == cellsz) 
-	    {
-	      jZ = 0;    
-	      shift[2] = L;
-	    }
-	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
-	    {
-	      jY = inCell[1][i] + iY;    
-	      shift[1] = 0.0;
-	      if (jY == -1) 
+	      jZ = inCell[nc][2][i] + iZ;    
+	      shift[2] = 0.;
+	      /* apply periodico boundary condition along z if gravitational
+	       * fiels is not present */
+	      if (jZ == -1) 
 		{
-		  jY = cellsy - 1;    
-		  shift[1] = -L;
+		  jZ = cellsz[nl] - 1;    
+		  shift[2] = - L;
 		} 
-	      else if (jY == cellsy) 
+	      else if (jZ == cellsz[nl]) 
 		{
-		  jY = 0;    
-		  shift[1] = L;
+		  jZ = 0;    
+		  shift[2] = L;
 		}
-	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
 		{
-		  jX = inCell[0][i] + iX;    
-		  shift[0] = 0.0;
-		  if (jX == -1) 
+		  jY = inCell[nc][1][i] + iY;    
+		  shift[1] = 0.0;
+		  if (jY == -1) 
 		    {
-		      jX = cellsx - 1;    
-		      shift[0] = - L;
+		      jY = cellsy[nl] - 1;    
+		      shift[1] = -L;
 		    } 
-		  else if (jX == cellsx) 
+		  else if (jY == cellsy[nl]) 
 		    {
-		      jX = 0;   
-		      shift[0] = L;
+		      jY = 0;    
+		      shift[1] = L;
 		    }
-		  j = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
-		  for (j = cellList[j]; j > -1; j = cellList[j]) 
+		  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
 		    {
-		      if (i == j)
-			continue;
-#if 0 
-		      drx = rx[i] - rx[j];
-		      shift2[0] = L*rint(drx/L);
-		      dry = ry[i] - ry[j];
-		      shift2[1] = L*rint(dry/L);
-		      drz = rz[i] - rz[j]; 
-		      shift2[2] = L*rint(drz/L);
-#endif
-#ifdef MD_SILICA
-		      assign_bond_mapping(i, j); 
-#endif
-		      dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-		      for (nn=0; nn < MD_PBONDS; nn++)
+		      jX = inCell[nc][0][i] + iX;    
+		      shift[0] = 0.0;
+		      if (jX == -1) 
 			{
-			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
-			      && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
-			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
-			    {
-			      warn=1;
-#if 0
-			      aa = mapbondsa[nn];
-			      bb = mapbondsb[nn];
-			      wdist=dists[nn];
-			      wnn = nn;
-			      wj = j;
+			  jX = cellsx[nl] - 1;    
+			  shift[0] = - L;
+			} 
+		      else if (jX == cellsx[nl]) 
+			{
+			  jX = 0;   
+			  shift[0] = L;
+			}
+		      j = (jZ *cellsy[nl] + jY) * cellsx[nl] + jX + Oparams.parnum;
+		      for (j = cellList[nl][j]; j > -1; j = cellList[nl][j]) 
+			{
+			  if (i == j)
+			    continue;
+#if 0 
+			  drx = rx[i] - rx[j];
+			  shift2[0] = L*rint(drx/L);
+			  dry = ry[i] - ry[j];
+			  shift2[1] = L*rint(dry/L);
+			  drz = rz[i] - rz[j]; 
+			  shift2[2] = L*rint(drz/L);
 #endif
-			      //nb++;
-			    }
-			  else if (dists[nn]>0.0 && 
-				   fabs(dists[nn])> OprogStatus.epsd && 
-				   bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+
+			  assign_bond_mapping(i, j);
+			  dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+			  for (nn=0; nn < MD_PBONDS; nn++)
 			    {
-			      warn = 2;
-			      printf("wrong number of bonds between %d and %d\n", i, j);
-			      if (OprogStatus.checkGrazing==1)
+			      if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
+				  && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+				// && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
 				{
-				  remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
+				  warn=1;
+#if 0
+				  aa = mapbondsa[nn];
+				  bb = mapbondsb[nn];
+				  wdist=dists[nn];
+				  wnn = nn;
+				  wj = j;
+#endif
+				  //nb++;
+				}
+			      else if (dists[nn]>0.0 && 
+				       fabs(dists[nn])> OprogStatus.epsd && 
+				       bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+				{
+				  warn = 2;
+				  printf("wrong number of bonds between %d and %d\n", i, j);
+				  if (OprogStatus.checkGrazing==1)
+				    {
+				      remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
+				    }
 				}
 			    }
-  			}
+			}
 		    }
 		}
 	    }
@@ -1482,9 +1542,6 @@ void check_all_bonds(void)
 		      drz = rz[i] - rz[j]; 
 		      shift2[2] = L*rint(drz/L);
 #endif
-#ifdef MD_SILICA
-		      assign_bond_mapping(i, j); 
-#endif
 		      dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 		      for (nn=0; nn < MD_PBONDS; nn++)
 			{
@@ -1558,7 +1615,7 @@ void usrInitAft(void)
   COORD_TYPE *m;
   double sigDeltaSq, drx, dry, drz, shift[3], dists[MD_PBONDS];
   int j;
-  int a;
+  int a, nl, nc;
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
   /* initialize global varibales */
@@ -1581,18 +1638,17 @@ void usrInitAft(void)
   /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
 #ifdef MD_SILICA
-  for (iA = 0; iA < 2; iA++)
-    for (iB = 0; iB < 2; iB++)
-      {
-	if (Oparams.rcut[iA][iB] <= 0.0)
-	  Oparams.rcut[iA][iB] = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
-   	cellsx[iA][iB] = L / Oparams.rcut[iA][iB];
-	cellsy[iA][iB] = L / Oparams.rcut[iA][iB];
-	cellsz[iA][iB] = L / Oparams.rcut[iA][iB];
-	printf("[%d,%d] Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", iA, iB, 
-	       Oparams.rcut,
-	       cellsx[iA][iB], cellsy[iA][iB], cellsz[iA][iB]);
-      }
+  for (nl = 0; nl < 3; nl++)
+    {
+      if (Oparams.rcut[nl] <= 0.0)
+	Oparams.rcut[nl] = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+      cellsx[nl] = L / Oparams.rcut[nl];
+      cellsy[nl] = L / Oparams.rcut[nl];
+      cellsz[nl] = L / Oparams.rcut[nl];
+      printf("[%d] Oparams.rcut: %f %f %f cellsx:%d cellsy: %d cellsz:%d\n", nl, 
+	     Oparams.rcut[0], Oparams.rcut[1], Oparams.rcut[2],
+	     cellsx[nl], cellsy[nl], cellsz[nl]);
+    }
 #else
   if (Oparams.rcut <= 0.0)
     Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
@@ -1606,15 +1662,14 @@ void usrInitAft(void)
   atomTime = malloc(sizeof(double)*Oparams.parnum);
   lastbump = malloc(sizeof(struct LastBumpS)*Oparams.parnum);
 #ifdef MD_SILICA
-  for (iA = 0; iA < 2; iA++)
-    for (iB = 0; iB < 2; iB++)
-      cellList[iA][iB] = malloc(sizeof(int)*
-				(cellsx[iA][iB]*cellsy[iA][iB]*cellsz[iA][iB]+Oparams.parnum));
-  for (iB = 0; iB < 2; iB++)
+  for (nl = 0; nl < 3; nl++)
+    cellList[nl] = malloc(sizeof(int)*
+  			  (cellsx[nl]*cellsy[nl]*cellsz[nl]+Oparams.parnum));
+  for (nc = 0; nc < 2; nc++)
     {
-      inCell[0] = malloc(sizeof(int)*Oparams.parnum);
-      inCell[1]= malloc(sizeof(int)*Oparams.parnum);
-      inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+      inCell[nc][0] = malloc(sizeof(int)*Oparams.parnum);
+      inCell[nc][1]= malloc(sizeof(int)*Oparams.parnum);
+      inCell[nc][2] = malloc(sizeof(int)*Oparams.parnum);
     }
 #else
   cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
@@ -1729,6 +1784,11 @@ void usrInitAft(void)
     };
 #ifdef MD_SILICA
   /* write code for silica here!! */
+  /* maxax è il diametro del centroide, notare che nel caso della
+   * Silica l'interazione bonded è solo tra Si e O, per cui basta avere un solo maxax per 
+   * particella!! */
+  for (i = 0; i < Oparams.parnum; i++)
+    maxax[i] =(Oparams.sigma[0][1] + Oparams.sigmaSticky + OprogStatus.epsd);
 #else
   /* maxax è il diametro del centroide */
   for (i = 0; i < Oparams.parnum; i++)
@@ -1736,12 +1796,7 @@ void usrInitAft(void)
       /* scegliere rigorosamente a seconda del modello!!*/
       if (i < Oparams.parnumA)
 	{
-#ifdef MD_SILICA
-	  /* nella silica l'unica interazione bonded è quella Si-O! */
-	  maxax[i] = Oparams.sigma[0][0];
-#else
 	  maxax[i] =(Oparams.sigma[0][0] + Oparams.sigmaSticky + OprogStatus.epsd);
-#endif
 	}
       else
 	{
@@ -1753,18 +1808,21 @@ void usrInitAft(void)
     {
       numbonds[i] = 0;
     }
+#ifdef MD_SILICA
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
+	/* l'interazione bonded è solo tra Si e O!! */
+	if ( !((i < Oparams.parnumA && j >= Oparams.parnumA)||
+	       (i >= Oparams.parnumA && j < Oparams.parnumA)) )
+	  continue; 
 	drx = rx[i] - rx[j];
 	shift[0] = L*rint(drx/L);
 	dry = ry[i] - ry[j];
 	shift[1] = L*rint(dry/L);
 	drz = rz[i] - rz[j]; 
 	shift[2] = L*rint(drz/L);
-#ifdef MD_SILICA
-	assign_bond_mapping(i, j); 
-#endif
+	assign_bond_mapping(i, j);
 	dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 	for (nn=0; nn < MD_PBONDS; nn++)
 	  {
@@ -1782,6 +1840,34 @@ void usrInitAft(void)
 	      }
 	  }
       }
+#else
+  for ( i = 0; i < Oparams.parnum-1; i++)
+    for ( j = i + 1; j < Oparams.parnum; j++)
+      {
+	drx = rx[i] - rx[j];
+	shift[0] = L*rint(drx/L);
+	dry = ry[i] - ry[j];
+	shift[1] = L*rint(dry/L);
+	drz = rz[i] - rz[j]; 
+	shift[2] = L*rint(drz/L);
+	dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+	for (nn=0; nn < MD_PBONDS; nn++)
+	  {
+#if 0
+	    if (i==0) 
+	      printf("i=0 j=%d dists[%d-%d]:%.15G\n", j, mapbondsa[nn], mapbondsb[nn], dists[nn]+Oparams.sigmaSticky);
+#endif
+	    if (dists[nn]<0.0)
+	      {
+		//printf("(%d,%d)-(%d,%d)\n", i, mapbondsa[nn], j, mapbondsb[nn]);
+		aa = mapbondsa[nn];
+		bb = mapbondsb[nn];
+		add_bond(i, j, aa, bb);
+		add_bond(j, i, bb, aa);
+	      }
+	  }
+      }
+#endif
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
   //exit(-1);
   StartRun(); 
@@ -1855,6 +1941,77 @@ void writeAllCor(FILE* fs)
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
 #ifdef MD_STOREMGL
 #ifdef MD_SILICA
+  int a;
+  double rat[5][3], rO[3], **Rl;
+  Rl = matrix(3,3);
+  /* Oxygen */
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      rO[0] = rx[i];
+      rO[1] = ry[i];
+      rO[2] = rz[i];
+
+      Rl[0][0] = uxx[i];
+      Rl[0][1] = uxy[i];
+      Rl[0][2] = uxz[i];
+      Rl[1][0] = uyx[i];
+      Rl[1][1] = uyy[i];
+      Rl[1][2] = uyz[i];
+      Rl[2][0] = uzx[i];
+      Rl[2][1] = uzy[i];
+      Rl[2][2] = uzz[i];
+ 
+      BuildAtomPos(i, rO, Rl, rat);
+      /* write coords */
+      for (a = 0; a < 5; a++)
+	{
+	  if (a == 0)
+	    {
+	      fprintf(fs, "%.15G %.15G %.15G @ %f C[red]\n", rat[a][0], rat[a][1], rat[a][2],
+		      Oparams.sigma[0][0]/2.0);
+	    }
+	  else if (a < 3)
+	    {
+	      fprintf(fs, "%.15G %.15G %.15G @ %f C[grey]\n", rat[a][0], rat[a][1], rat[a][2],
+		      Oparams.sigmaSticky/2.0);
+	    }
+	}
+    }
+  /* Silicon */
+  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      rO[0] = rx[i];
+      rO[1] = ry[i];
+      rO[2] = rz[i];
+
+      Rl[0][0] = uxx[i];
+      Rl[0][1] = uxy[i];
+      Rl[0][2] = uxz[i];
+      Rl[1][0] = uyx[i];
+      Rl[1][1] = uyy[i];
+      Rl[1][2] = uyz[i];
+      Rl[2][0] = uzx[i];
+      Rl[2][1] = uzy[i];
+      Rl[2][2] = uzz[i];
+ 
+      BuildAtomPos(i, rO, Rl, rat);
+      /* write coords */
+      for (a = 0; a < 5; a++)
+	{
+	  if (a == 0)
+	    {
+	      fprintf(fs, "%.15G %.15G %.15G @ %f C[YellowGreen]\n", rat[a][0], rat[a][1], rat[a][2],
+		      Oparams.sigma[0][0]/2.0);
+	    }
+	  else if (a < 5)
+	    {
+	      fprintf(fs, "%.15G %.15G %.15G @ %f C[grey]\n", rat[a][0], rat[a][1], rat[a][2],
+		      Oparams.sigmaSticky/2.0);
+	    }
+	}
+    }
+
+
 #else
   int a;
   double rat[5][3], rO[3], **Rl;
