@@ -294,6 +294,7 @@ struct progStatus
   double epsdFast;
   double epsdFastR;
   double epsdMax;
+  int guessDistOpt;
   double forceguess;
   double targetPhi;
   double scalfact;
@@ -490,6 +491,7 @@ struct pascii opro_ascii[] =
   {"epsdFast",     &OS(epsdFast),              1,   1, "%.12G"},
   {"epsdFastR",    &OS(epsdFastR),             1,   1, "%.12G"},
   {"epsdMax",      &OS(epsdMax),               1,   1, "%.12G"},
+  {"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
   {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
   {"stepSD",       &OS(stepSD),                1,   1, "%.12G"},
   {"maxitsSD",     &OS(maxitsSD),              1,   1, "%d"},
@@ -675,6 +677,7 @@ struct singlePar OsinglePar[] = {
   {"epsdFast",   &OprogStatus.epsdFast,       CT},
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
+  {"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
   {"tolSD",      &OprogStatus.tolSD,          CT},
   {"forceguess", &OprogStatus.forceguess,     INT},
   {"springkSD",  &OprogStatus.springkSD,    CT},
