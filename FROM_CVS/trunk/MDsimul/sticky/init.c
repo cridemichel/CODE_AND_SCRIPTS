@@ -1200,6 +1200,7 @@ void save_init_conf(void)
 void check_all_bonds(void)
 {
   int nn, warn, amin, bmin, i, j, aa, bb, nb, wnn, wj;
+  static int errtimes=0;
   double wdist,drx, dry, drz, shift[3], dist, rat[5][3], dists[MD_PBONDS], ri[3];
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
@@ -1299,7 +1300,7 @@ void check_all_bonds(void)
 				   fabs(dists[nn])> OprogStatus.epsd && 
 				   bound(i,j,mapbondsa[nn], mapbondsb[nn]))
 			    {
-			      warn = 1;
+			      warn = 2;
 			    }
   			}
 		    }
@@ -1309,13 +1310,20 @@ void check_all_bonds(void)
       if (warn)
 	{
 	  mdPrintf(ALL, "[WARNING] wrong number of bonds\n", NULL);
-	  printf("[WARNING] Number of bonds for molecules %d incorrect\n", i);
+	  sprintf(TXT,"[WARNING] Number of bonds for molecules %d incorrect\n", i);
+	  mdPrintf(ALL, TXT, NULL);
+	  if (warn==1)
+	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n");
+	  else
+	    mdPrintf(ALL,"Distance > 0 but bonded, probably a collision has been missed\n");
+	  if (warn == 2)
+	    errtimes++;
 	  //printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
-	//	 numbonds[i], nb);
-	  printf("I've adjusted the number of bonds\n");
+	  //	 numbonds[i], nb);
+	  //printf("I've adjusted the number of bonds\n");
 	  //printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
 	  //store_bump(i,j);
-	  if (OprogStatus.checkGrazing==2)
+	  if ((OprogStatus.checkGrazing==2 && warn==2) || errtimes > 100)
 	    exit(-1);
 	}
     }
