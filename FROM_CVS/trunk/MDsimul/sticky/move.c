@@ -2919,15 +2919,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	}
       else
 	{
-	  delt = 1E-15;
+	  delt = h;
 	  //printf("delt=%.15G t=%.15G h=%.15G\n", delt, t, h);
 	  firstaftsf = 0;
-	  t += delt;
-	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-	  dold = d;
+	  //t += delt;
+	  dold2 = calcDistNeg(t-delt, t1, i, j, shift, &amin, &bmin, distsOld2, bondpair);
 	  MD_DEBUG30(printf("==========>>>>> t=%.15G t2=%.15G\n", t, t2));
-	  assign_dists(distsOld,  distsOld2);
-	  assign_dists(dists, distsOld);
+	  //assign_dists(distsOld,  distsOld2);
+	  //assign_dists(dists, distsOld);
 	  continue;
 	}
 #endif
