@@ -2927,6 +2927,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  firstaftsf = 0;
 	  //t += delt;
 	  dold2 = calcDistNeg(t-delt, t1, i, j, shift, &amin, &bmin, distsOld2, bondpair);
+#if 0
+	  if (fabs(dold2-dold)<1E-12)
+	    printf("=====> delt: %.15G dold: %.15G d: %.15G d-dold: %.15G\n", delt, dold, dold2, dold-dold2);
+#endif
 	  MD_DEBUG30(printf("==========>>>>> t=%.15G t2=%.15G\n", t, t2));
 	  //assign_dists(distsOld,  distsOld2);
 	  //assign_dists(dists, distsOld);
@@ -2945,6 +2949,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
       MD_DEBUG30(printf("delt: %f epsd/maxddot:%f h*t:%f maxddot:%f\n", delt, epsd/maxddot,h*t,maxddot));
       ///delt = h;///
+#if 0
+      if (sumnegpairs)
+	delt = 1E-6;
+#endif
       tini = t;
       t += delt;
       //printf("normddot= %.15G t=%.15G delt=%.15G maxddot: %.15G t*h=%.15G\n", 
@@ -2954,24 +2962,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 
       //printf("sumnegpairs: %d t=%.15G d=%.15G \n", sumnegpairs, t, dists[bondpair]);
-#ifdef MD_NEGPAIRS
-      itstb = 0;
-      /* NOTA: se la distanza tra due sticky spheres è positiva a t (per errori numerici 
-       * accade spesso) e t+delt allora delt è troppo grande e qui lo riduce fino ad un 
-       * valore accettabile. */
-      if (sumnegpairs)// && !firstaftsf)
-	{
-	  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
-		 delt > minh)
-	    {
-	      delt /= GOLD; 
-	      t = tini + delt;
-	      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-	      itstb++;
-	    }
-	  sumnegpairs = 0;
-	}
-#endif
+
       //if (firstaftsf)
 	//firstaftsf = 0;
       deldist = get_max_deldist(distsOld, dists, bondpair);
@@ -3005,6 +2996,35 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
+#ifdef MD_NEGPAIRS
+      itstb = 0;
+      /* NOTA: se la distanza tra due sticky spheres è positiva a t (per errori numerici 
+       * accade spesso) e t+delt allora delt è troppo grande e qui lo riduce fino ad un 
+       * valore accettabile. */
+#if 0
+      if (fabs(dold-d)<1E-12)
+      	printf("=====> delt: %.15G dold: %.15G d: %.15G d-dold: %.15G\n", delt, dold, d, fabs(dold-d));
+#endif
+      if (sumnegpairs)// && !firstaftsf)
+	{
+	  while (fabs(dold-d)<1E-12)
+	    {
+	      delt *= GOLD;
+	      t = tini + delt;
+	      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	    }
+	  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
+		 delt > minh)
+	    {
+	      //printf(">>>QUI<<< delt=%.15G\n", delt);
+	      delt /= GOLD; 
+	      t = tini + delt;
+	      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	      itstb++;
+	    }
+	  sumnegpairs = 0;
+	}
+#endif
       MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
       for (nn=0; nn < MD_PBONDS; nn++)
 	dorefine[nn] = MD_EVENT_NONE;

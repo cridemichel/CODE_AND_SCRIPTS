@@ -915,7 +915,7 @@ void usrInitBef(void)
     //Oparams.sigma[0][0] = Oparams.sigma[1][1] = Oparams.sigma[1][0]= Oparams.sigma[0][1]=1.0;
     OprogStatus.collCount = 0;
     OprogStatus.crossCount = 0;
-    OprogStatus.h=1E-8;
+    OprogStatus.h=1E-7;
     OprogStatus.assumeOneBond=0;
     OprogStatus.epsd = 0.0005;
     OprogStatus.epsdFast = 0.002;
