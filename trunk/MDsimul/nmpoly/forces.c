@@ -821,7 +821,9 @@ void FENEForce(void)
 	  if (rabSq > R0Sq)
 	    {
 	      if (OprogStatus.grow)
-		{}
+		{
+		   rabSq = R0Sq - 1E-10; 
+		}
 	      else
 		{
 		  printf("FENE bond broken, exiting...\n");
@@ -831,12 +833,14 @@ void FENEForce(void)
 	    }
 	  ff = 1 - rabSq / R0Sq;
 	  invff = -Oparams.kfe / ff;
+	  //printf("invff: %f\n", invff);
 	  fx = drx * invff;
 	  fy = dry * invff;
 	  fz = drz * invff;
 	  Fx[a][i] += fx;
 	  Fy[a][i] += fy;
 	  Fz[a][i] += fz;
+	  //printf("FENE (%f,%f,%f)\n", fx,fy,fz);
 	  Fx[a+1][i] -= fx;
 	  Fy[a+1][i] -= fy;
 	  Fz[a+1][i] -= fz;
