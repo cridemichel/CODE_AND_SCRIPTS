@@ -612,6 +612,57 @@ void buildTetrahedras(void)
 void angvel(void)
 {
   int i;
+#ifndef MD_SILICA
+  double inert;                 /* momentum of inertia of the molecule */
+  double norm, dot, osq, o, mean;
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz;
+  //L = cbrt(Vol);
+  invL = 1.0 / L;
+  
+  Mtot = Oparams.m[0]; /* total mass of molecule */
+
+  inert = Oparams.I[0]; /* momentum of inertia */
+  
+  mean = 2.0 * Oparams.T / inert;
+
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      xisq = 1.0;
+      
+      while (xisq >= 1.0)
+	{
+	  xi1  = ranf() * 2.0 - 1.0;
+	  xi2  = ranf() * 2.0 - 1.0;
+	  xisq = xi1 * xi1 + xi2 * xi2;
+	}
+      
+      xi = sqrt (fabs(1.0 - xisq));
+      ox = 2.0 * xi1 * xi;
+      oy = 2.0 * xi2 * xi;
+      oz = 1.0 - 2.0 * xisq;
+      
+      /* Renormalize */
+      osq   = ox * ox + oy * oy + oz * oz;
+      norm  = sqrt(fabs(osq));
+      ox    = ox / norm;
+      oy    = oy / norm;
+      oz    = oz / norm;
+      
+      /* Choose the magnitude of the angular velocity
+         NOTE: consider that it is an exponential distribution 
+	 (i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+      
+      osq   = - mean * log(ranf());
+      o     = sqrt(fabs(osq));
+      ox    = o * ox;
+      oy    = o * oy;
+      oz    = o * oz;
+      wx[i] = ox;
+      wy[i] = oy;
+      wz[i] = oz;
+    }
+#else
   for (i=0; i < Oparams.parnum; i++)
     {
       /* N.B. ora i tre vettori ux uy e uz non sono altro che le coordinate
@@ -623,7 +674,7 @@ void angvel(void)
       wy[i] = 0;
       wz[i] = 0;
     }
-  
+#endif 
 }
 #endif
 void wrap_initCoord(void)
