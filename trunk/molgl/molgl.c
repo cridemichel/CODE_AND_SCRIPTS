@@ -591,11 +591,34 @@ void args(int argc, char* argv[])
 
   strcpy(inputFile, argv[i]);
 }
+void dropSpaces(char *S);
+int getColByName(const char* name);
+
+int parsecol(char *str)
+{
+  int colNum;
+  char* eptr;
+  
+  colNum = (int) strtod(str, &eptr);
+  if (eptr == str) /* not a number */
+    {
+      dropSpaces(str);
+      return  getColByName(str);
+      /* Find the number of the color named 's1'*/
+      /*printf("col:%s:, %d\n", S, colIdxCol[j]);
+      */
+    }
+  else
+    {
+      //printf("Color Number: %d\n", colNum);
+      return colNum;
+    }
+}
 /* ========================== >>> assignAtom <<< ===========================*/
 void assignAtom(int nf, int i, int j, const char* L)
 {
   char s1[128], s2[128], s3[128], s4[128], s5[128];
-  /* TODO: Permit different grey levels for different mols
+    /* TODO: Permit different grey levels for different mols
      if (sscanf(L,"%s %s %s GL: %s ", s1, s2, s3, s4) == 4 )
      {
        printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
@@ -620,16 +643,16 @@ void assignAtom(int nf, int i, int j, const char* L)
       greyLvl[j][i] = atoi(s5);
       atcol[j][i]  = -1;
     }
-  if (sscanf(L,"%s %s %s C %s", s1, s2, s3, s4) == 4 )
+  if (sscanf(L,"%s %s %s C[%[^]]", s1, s2, s3, s4) == 4 )
     {
       rx[nf][j][i] = atof(s1);
       ry[nf][j][i] = atof(s2);
       rz[nf][j][i] = atof(s3);
       radius[j][i] = sig[j];
       greyLvl[j][i] = 0;
-      atcol[j][i]  = atoi(s4);
+      atcol[j][i] = parsecol(s4);
     }
-  else if (sscanf(L,"%s %s %s @ %s C %s", s1, s2, s3, s4, s5) == 5)
+  else if (sscanf(L,"%s %s %s @ %s C[%[^]]", s1, s2, s3, s4, s5) == 5)
     {
       /* printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       */
@@ -639,7 +662,7 @@ void assignAtom(int nf, int i, int j, const char* L)
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
       radius[j][i] = atof(s4);
       greyLvl[j][i] = 0;
-      atcol[j][i]  = atoi(s5);
+      atcol[j][i] = parsecol(s5);
     }
   else if (sscanf(L,"%s %s %s @ %s ", s1, s2, s3, s4) == 4 )
     {
