@@ -1105,12 +1105,14 @@ void movelongRespaNPTBef(double dt)
       /*printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
       updLs(dt, 0.5);
       updImpLongNose(dt, 0.5);
-      updPvLong(dt, 0.5);
+      if (OprogStatus.Nose==1)
+	updPvLong(dt, 0.5);
       /*printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 #else
    updImpLong(dt, 0.5);
-   updPvLong(dt, 0.5);
+   if (OprogStatus.Nose==1)
+     updPvLong(dt, 0.5);
 #endif
 }
 
@@ -1150,12 +1152,14 @@ void movelongRespaNPTBefAlt(double dt)
       Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
       //Ps += DT * cdt2;
       updImpLongNoseSym(dt, 0.5);
-      updPvLong(dt, 0.5);
+      if (OprogStatus.Nose==1)
+	updPvLong(dt, 0.5);
       s = s / (1 - s*Ps*cdt/OprogStatus.Q);
     }
 #else
   updImpLong(dt, 0.5);
-  updPvLong(dt, 0.5);
+  if (OprogStatus.Nose == 1)
+    updPvLong(dt, 0.5);
 #endif
 }
 
@@ -1179,7 +1183,8 @@ void movelongRespaNPTAftAlt(double dt)
       Nm = Oparams.parnum;
       cdt2 = cdt / 2.0;
       s = s / (1 - s*Ps*cdt/OprogStatus.Q);
-      updPvLong(dt, 0.5);
+      if (OprogStatus.Nose==1)
+	updPvLong(dt, 0.5);
       updImpLongNoseSym(dt, 0.5);
       Kin = 0;
       for (i = 0; i < Oparams.parnum; i++)
@@ -1203,7 +1208,8 @@ void movelongRespaNPTAftAlt(double dt)
     }
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-  updPvLong(dt, 0.5);
+  if (OprogStatus.Nose==1)
+    updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
 #endif   
 }
@@ -1219,14 +1225,16 @@ void movelongRespaNPTAft(double dt)
   else
     {
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-      updPvLong(dt, 0.5);
+      if (OprogStatus.Nose==1)
+	updPvLong(dt, 0.5);
       updImpLongNoseAft(dt, 0.5);
       updLsAft(dt, 0.5);
       /*printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-  updPvLong(dt, 0.5);
+  if (OprogStatus.Nose==1)
+    updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
 #endif
 }
