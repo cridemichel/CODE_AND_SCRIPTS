@@ -871,16 +871,16 @@ void powellmethod(double *vec)
    * angs[] = (thetaA,phiA,thetaB,phiB)
    * 0 < theta < 2PI
    * 0 < phi < PI */
-  angs[1] = acos(vecP[2]/axc[icg]);
-  angs[0] = acos(vecP[0]/axa[icg]/sin(angs[1]));
-  sinth = vecP[1]/axb[icg]/sin(angs[1]);
+  angs[0] = acos(vecP[2]/axc[icg]);
+  angs[1] = acos(vecP[0]/axa[icg]/sin(angs[0]));
+  sinth = vecP[1]/axb[icg]/sin(angs[0]);
   if (sinth < 0)
-    angs[0] = 2.0*pi-angs[0];
-  angs[3] = acos(vecP[5]/axc[jcg]);
-  angs[2] = acos(vecP[3]/axa[jcg]/sin(angs[3]));
-  sinth = vecP[4]/axb[jcg]/sin(angs[3]);
+    angs[1] = 2.0*pi-angs[1];
+  angs[2] = acos(vecP[5]/axc[jcg]);
+  angs[3] = acos(vecP[3]/axa[jcg]/sin(angs[2]));
+  sinth = vecP[4]/axb[jcg]/sin(angs[2]);
   if (sinth < 0)
-    angs[2] = 2.0*pi-angs[2];
+    angs[3] = 2.0*pi-angs[3];
   powell(angs, powdirs, 4, OprogStatus.tolSD, &iter, &Fret, funcPowell);
 
   /* trovo le coordinate cartesiane dei punti trovati */
@@ -1389,6 +1389,7 @@ void updateByRot(double p[], double xi[])
 }
 double  cgfuncRyck(double *vec);
 double zbrentRyck(double (*func)(double), double x1, double x2, double tol);
+double get_sign(double *vec);
 
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
@@ -2126,6 +2127,113 @@ typedef struct {
 
 MESHXYZ **ellips_mesh[2];
 
+int choose_neighbour2(double *grad, int *th1, int *phi1, int *th2, int *phi2,
+		     double *distSq, double *S, double maxstA, double maxstB, double *vec, 
+		     int calc_sign)
+{
+  int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB;
+  int nphi1, nth1, nphi2, nth2, firstdist=1;
+  double distSqold, distSqT, normdx, dxN[3], distSqmin;
+  double vecini[6], cxmesh[6],xmesh[6], xmeshP1[3], xmeshP2[3];
+
+  cth1 = *th1;
+  cphi1 = *phi1;
+  cth2 = *th2;
+  cphi2 = *phi2;
+  mA = (icg<Oparams.parnumA)?0:1;
+  mB = (jcg<Oparams.parnumA)?0:1;
+  //printf("maxstA=%.15G maxstB=%.15G\n", maxstA, maxstB);
+  for (kk=0; kk < 6; kk++)
+    vecini[kk] = vec[kk];
+#if 0
+  printf("$$$PR VECA=(%.15G,%.15G, %.15G)\n", vec[0], vec[1], vec[2]);
+  printf("$$$PR VECB=(%.15G,%.15G, %.15G)\n", vec[3], vec[4], vec[5]);
+#endif
+  for (k1 = 0; k1 < 4; k1++)
+    {
+      for (k2=0; k2 < 4; k2++)
+	{
+	  nth1  = ellips_mesh[mA][*th1][*phi1].neigh[k1].i;
+	  nphi1 = ellips_mesh[mA][*th1][*phi1].neigh[k1].j;
+	  nth2  = ellips_mesh[mB][*th2][*phi2].neigh[k2].i;
+	  nphi2 = ellips_mesh[mB][*th2][*phi2].neigh[k2].j;
+      	  if (nth1==-1 || nphi1==-1|| nth2 ==-1 || nphi2 ==-1)
+	    continue;
+	  for (kk=0; kk < 3; kk++) 
+	    {
+	      xmeshP1[kk] = ellips_mesh[mA][nth1][nphi1].point[kk];
+	      //dxP[kk] = xmeshP1[kk] - ellips_mesh[mA][*th1][*phi1].point[kk]; 
+	      xmeshP2[kk] = ellips_mesh[mB][nth2][nphi2].point[kk];
+	      //dxP[kk] = xmeshP[kk] - ellips_mesh[mB][*th2][*phi2].point[kk]; 
+	    }
+	  body2lab(icg, xmeshP1, xmesh, rA, RtA);
+	  body2lab(jcg, xmeshP2, &xmesh[3], rB, RtB);
+	  //normdx = calc_norm(dx);
+	  distSqT = 0;
+	  for (kk=0; kk < 3; kk++) 
+	    distSqT += Sqr(xmesh[kk+3]-xmesh[kk]);
+	  if (calc_sign)
+	    {
+	      *S = get_sign(xmesh);
+	      distSqT *= *S;
+	    }
+	  distSqT *= *S;
+	  if (firstdist || distSqT < distSqmin )
+	    {
+	      firstdist=0;
+	      distSqmin = distSqT;
+	      cth1 = nth1;
+	      cphi1 = nphi1;
+	      cth2= nth2;
+	      cphi2 = nphi2;
+	      for (kk=0; kk < 6; kk++)
+		{
+		  cxmesh[kk] = xmesh[kk];
+		}
+	    }
+	}
+    }
+  /* calcola la nuova distanza, il nuovo gradiente e le nuove coordinate del punto */
+  //printf("nth2 nphi2 = %d %d *th2 *nphi2 = %d %d\n", nth2, nphi2, *th2, *phi2);
+  //printf("nth1 nphi1 = %d %d *th1 *nphi1 = %d %d\n", nth1, nphi1, *th1, *phi1);
+  for (kk = 0; kk < 6; kk++)
+    {
+      vec[kk] =  cxmesh[kk];
+    }
+#if 0
+    {
+      double VP[6], VL[6];
+      for (kk=0; kk < 3; kk++)
+	{
+	  VP[kk] = ellips_mesh[mA][*th1][*phi1].point[kk]; 
+	  VP[kk+3]=ellips_mesh[mB][*th2][*phi2].point[kk];  
+	}
+      body2lab(icg, VP, VL, rA, RtA);
+      body2lab(jcg, &VP[3], &VL[3], rB, RtB);
+      printf("$$$ VA= (%.15G,%.15G, %.15G)\n", VL[0], VL[1], VL[2]);
+      printf("$$$ VB= (%.15G,%.15G, %.15G)\n", VL[3], VL[4], VL[5]);
+      printf("$$$ VECA=(%.15G,%.15G, %.15G)\n", vec[0], vec[1], vec[2]);
+      printf("$$$ VECB=(%.15G,%.15G, %.15G)\n", vec[3], vec[4], vec[5]);
+    }
+#endif
+  distSqold = *distSq;
+  *distSq = distSqmin;
+  //printf("distSqold=%.15G distSq=%.15G\n",sqrt(fabs(distSqold)), sqrt(fabs(*distSq)));
+  if (*distSq > distSqold)
+    {
+      for (kk=0; kk < 6; kk++)
+	vec[kk] = vecini[kk];
+      *distSq = distSqold;
+      return 1;
+    }
+  *th1 = cth1;
+  *phi1 = cphi1;
+  *th2 = cth2;
+  *phi2 = cphi2;
+  //printf("USCENDO *th1 *phi1 = %d %d *th2 *phi2 = %d %d\n", *th1, *phi1, *th2, *phi2);
+  return 0;	
+}
+
 int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 		     double *distSq, double *S, double maxstA, double maxstB, double *vec, 
 		     int calc_sign)
@@ -2402,7 +2510,7 @@ void findminMesh(double *vec)
 	  S = get_sign(vec);
 	  calc_sign = 1;
 	}
-      if (choose_neighbour(grad, &th1, &phi1, &th2, &phi2, &distSq, &S, 
+      if (choose_neighbour2(grad, &th1, &phi1, &th2, &phi2, &distSq, &S, 
       			   maxstA, maxstB, vec, calc_sign))
 	{
 #if 0
