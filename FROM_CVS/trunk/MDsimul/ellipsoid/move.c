@@ -2991,7 +2991,7 @@ retry:
       exit(-1);
     }
 #else
-  if (segno*vecg[7]<0 && fabs(segno*vecg[4])>3E-8)
+  if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
     {
       printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[7]);
       exit(-1);
