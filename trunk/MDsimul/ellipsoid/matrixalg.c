@@ -632,7 +632,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 {
   int kk, its, done=0, k1, k2, MAXITS=50;
   const double GOLD=1.618034;
-  double r1[3], r1A[3], sf, s1, s2;
+  double r1[3], r1A[3], sf, s1, s2, sqrtDelta, A2;
   double A, B, C, Delta, sol=0.0, ng;
   sf = *sfA;
   its = 0;
@@ -674,9 +674,11 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	  sf /= GOLD;
 	  its++;
 	  continue;
-	}	
-      s1 = (-B - sqrt(Delta))/(2.0*A);
-      s2 = (-B + sqrt(Delta))/(2.0*A);
+	}
+      sqrtDelta = sqrt(Delta);
+      A2 = 2.0*A;
+      s1 = (-B - sqrtDelta)/A2;
+      s2 = (-B + sqrtDelta)/A2;
       if (fabs(s1) < fabs(s2))
 	sol = s1;
       else
@@ -853,7 +855,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
        //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
 	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
        itsfrprmn++;      
-       if ( (1 && fp < Sqr(OprogStatus.epsd*2.0)) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 1 && sqrt(normxi) < (fp+EPSFR)*ftol) )
+       if ( (0 && fp < Sqr(OprogStatus.epsd*2.0)) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 0 && sqrt(normxi) < (fp+EPSFR)*ftol) )
 	 {
 	   callsok++;
 	   return;
@@ -1157,8 +1159,10 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
 #endif
   F = 0.0;
   A *= OprogStatus.springkSD;
+  F = A*Sqr(normdd);
+  /*
   for (kk=0; kk < 3; kk++)
-    F += A*Sqr(dd[kk]);
+    F += A*Sqr(dd[kk]);*/
  return F; 
 }
 /* =========================== >>> forces <<< ======================= */
