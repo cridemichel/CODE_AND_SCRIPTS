@@ -58,7 +58,7 @@ const double timbig = 1E12;
 extern double g2, mgA, mgB;
 #endif
 /* double *lastcol;*/
-double *treetime, *atomTime;
+double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 int evIdA, evIdB, parnumB, parnumA;
@@ -713,7 +713,7 @@ extern double *treeTime;
 void UpdateAtom(int i)
 {
   double ti;
-  double wSq, w, sinw, cosw, uxn, uyn, uzn;
+  double wSq, w, sinw, cosw, uxxn, uxyn, uxzn, uyyn, uyzn, uzzn;
   double Omega[3][3], OmegaSq[3][3];
   ti = Oparams.time - atomTime[i];
   
@@ -750,15 +750,26 @@ void UpdateAtom(int i)
   OmegaSq[2][0] = wx[i]*wz[i];
   OmegaSq[2][1] = wy[i]*wz[i];
   OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
-  uxn += sinw*(Omega[0][0]*ux[i]+Omega[0][1]*uy[i]+Omega[0][2]*uz[i]) + 
-    cosw*(OmegaSq[0][0]*ux[i]+OmegaSq[0][1]*uy[i]+OmegaSq[0][2]*uz[i]);
-  uyn += sinw*(Omega[1][0]*ux[i]+Omega[1][1]*uy[i]+Omega[1][2]*uz[i]) + 
-    cosw*(OmegaSq[1][0]*ux[i]+OmegaSq[1][1]*uy[i]+OmegaSq[1][2]*uz[i]);
-  uzn += sinw*(Omega[2][0]*ux[i]+Omega[2][1]*uy[i]+Omega[2][2]*uz[i]) + 
-    cosw*(OmegaSq[2][0]*ux[i]+OmegaSq[2][1]*uy[i]+OmegaSq[2][2]*uz[i]);
-  ux[i] = uxn;
-  uy[i] = uyn;
-  uz[i] = uzn;
+  uxxn = uxx[i] + sinw*(Omega[0][0]*uxx[i]-Omega[0][1]*uxy[i]-Omega[0][2]*uxz[i]) + 
+    cosw*(OmegaSq[0][0]*uxx[i]-OmegaSq[0][1]*uxy[i]-OmegaSq[0][2]*uxz[i]);
+  uxyn = uxy[i] + sinw*(Omega[0][0]*uxy[i]+Omega[0][1]*uyy[i]-Omega[0][2]*uyz[i]) + 
+    cosw*(OmegaSq[0][0]*uxy[i]+OmegaSq[0][1]*uyy[i]-OmegaSq[0][2]*uyz[i]);
+  uxzn = uxz[i] + sinw*(Omega[0][0]*uxz[i]+Omega[0][1]*uyz[i]+Omega[0][2]*uzz[i]) + 
+    cosw*(OmegaSq[0][0]*uxz[i]+OmegaSq[0][1]*uyz[i]+OmegaSq[0][2]*uzz[i]);
+
+  uyyn += sinw*(Omega[1][0]*uxy[i]+Omega[1][1]*uyy[i]-Omega[1][2]*uyz[i]) + 
+    cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyy[i]-OmegaSq[1][2]*uyz[i]);
+  uyzn += sinw*(Omega[1][0]*uxz[i]+Omega[1][1]*uyz[i]+Omega[1][2]*uzz[i]) + 
+    cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyz[i]+OmegaSq[1][2]*uzz[i]);
+  uzzn += sinw*(Omega[2][0]*uxz[i]+Omega[2][1]*uyz[i]+Omega[2][2]*uzz[i]) + 
+    cosw*(OmegaSq[2][0]*uxz[i]+OmegaSq[2][1]*uyz[i]+OmegaSq[2][2]*uzz[i]);
+
+  uxx[i] = uxxn;
+  uxy[i] = uxyn;
+  uxz[i] = uxzn;
+  uyy[i] = uyyn;
+  uyz[i] = uyzn;
+  uzz[i] = uzzn;
 #if 0
   if (rz[i]+Lz*0.5-Oparams.sigma/2.0 < 0. && OprogStatus.quenchend > 0.0)
     {
