@@ -1301,6 +1301,10 @@ void check_all_bonds(void)
 				   bound(i,j,mapbondsa[nn], mapbondsb[nn]))
 			    {
 			      warn = 2;
+			      if (OprogStatus.checkGrazing==1)
+				{
+				  remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
+				}
 			    }
   			}
 		    }
@@ -1316,15 +1320,18 @@ void check_all_bonds(void)
 	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n");
 	  else
 	    mdPrintf(ALL,"Distance > 0 but bonded, probably a collision has been missed\n");
-	  if (warn == 2)
-	    errtimes++;
 	  //printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
 	  //	 numbonds[i], nb);
 	  //printf("I've adjusted the number of bonds\n");
 	  //printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
 	  //store_bump(i,j);
-	  if ((OprogStatus.checkGrazing==2 && warn==2) || errtimes > 100)
-	    exit(-1);
+	  if (warn==2)
+	    {
+	      if (OprogStatus.checkGrazing==2)
+		exit(-1);
+	      else
+		mdPrintf(ALL,"I adjusted the number of bonds...energy won't conserve!", NULL);
+	    }
 	}
     }
 }
