@@ -485,10 +485,12 @@ void shakeVel(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB,
   COORD_TYPE rxab, ryab, rzab, rvab, gab, dSq;
   COORD_TYPE vxab, vyab, vzab;
   COORD_TYPE dx, dy, dz, dt2, rma, rmb;
+  double L;
   int i, a, b, it;
   int done;
   int moving[NA], moved[NA];
   
+  L = cbrt(Vol);
   dSq = Sqr(d);
 
   WC = 0.0;
@@ -1203,16 +1205,21 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   COORD_TYPE Vol1g, s1i, Vol1i;
   COORD_TYPE DT, A, B, DP, dt2; 
   int i, a, k, numok, dof;
-  const int MAXNUMIT = 20;
-
+  const int MAXNUMIT = 40;
+  double L;
   /* ******************************************************************* */
   dt2 = dt / 2.0;
-  
+  L = cbrt(Vol);
   for(i=0; i < Nm; i++)
     {
       CoM(i, &Rx[i], &Ry[i], &Rz[i]);
       for(a=0; a < NA; a++)
 	{
+#if 0
+	  rx[a][i] = rx[a][i] - L * rint( rx[a][i]/L);
+	  ry[a][i] = ry[a][i] - L * rint( ry[a][i]/L);
+	  rz[a][i] = rz[a][i] - L * rint( rz[a][i]/L);
+#endif
 	  vxt2[a][i] = vx[a][i]; /* v*t2 = v*(t+dt/2) */
 	  vyt2[a][i] = vy[a][i];
 	  vzt2[a][i] = vz[a][i];
