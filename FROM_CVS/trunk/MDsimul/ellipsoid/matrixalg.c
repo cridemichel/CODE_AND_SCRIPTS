@@ -3177,17 +3177,18 @@ void InvMatrix(double **a, double **b, int NB)
 	 b[m1][m2]=col[m1]; 
     }
 }
-
-#define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
-#define TOLX 1.0E-12//1.0e-7 /* Convergence criterion on  x.*/ 
+#if 0
 #define TOLX2 1.E-6
-#define TOLXD 1.0E-7
-#define MAXITS 50 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
-#define MAXITS2 20
-#define TOLF 1.0e-9// 1.0e-4
 #define TOLF2 1.0E-3
-#define TOLFD 1.0E-6
-#define TOLMIN 1.0E-7//1.0e-6 
+#endif
+#define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
+#define TOLX 1.0E-14//1.0e-7 /* Convergence criterion on  x.*/ 
+#define TOLXD 1.0E-14
+#define MAXITS 100 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
+#define MAXITS2 100
+#define TOLF 1.0E-10// 1.0e-4
+#define TOLFD 1.0E-10
+#define TOLMIN 1.0E-12//1.0e-6 
 #define STPMX 100.0
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
 	    double *f, double stpmax, int *check, 
