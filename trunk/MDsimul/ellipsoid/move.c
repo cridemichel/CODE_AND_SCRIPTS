@@ -2873,15 +2873,26 @@ void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
       rI[k1] = rA[k1] + tt*rBA[k1];  
     }
 }
-void guess_dist(double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
+#define MD_ELLGRID
+void guess_dist(int i, int j, 
+		double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
 		double **RA, double **RB)
 {
   double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
   int k1, k2, n;
+  double saA[3], saB[3];
+
+  saA[0] = axa[i];
+  saA[1] = axb[i];
+  saA[2] = axc[i];
+  saB[0] = axa[j];
+  saB[1] = axb[j];
+  saB[2] = axc[j];
+
   for (k1 = 0; k1 < 3; k1++)
     {
-      gradA[k1] =  (rA[k1]-rB[k1]);
-      gradB[k1] = -(rA[k1]-rB[k1]);
+      gradA[k1] =  (rB[k1]-rA[k1]);
+      gradB[k1] = -(rB[k1]-rA[k1]);
     }
   for (n = 0; n < 3; n++)
     {
@@ -2889,18 +2900,18 @@ void guess_dist(double *rA, double *rB, double **Xa, double **Xb, double *rC, do
       gradaxB[n] = 0;
       for (k1 = 0; k1 < 3; k1++) 
 	{
-	  gradaxA[n] += gradA[k1]*RA[k1][n];
-	  gradaxB[n] += gradB[k1]*RB[k1][n];
+	  gradaxA[n] += gradA[k1]*RA[n][k1];
+	  gradaxB[n] += gradB[k1]*RB[n][k1];
 	}
     }
   for (k1=0; k1 < 3; k1++)
     {
-      dA[k1] = 0;
-      dB[k1] = 0;
+      dA[k1] = rA[k1];
+      dB[k1] = rB[k1];
       for (n=0; n < 3;n++)
 	{
-	  dA[k1] += gradaxA[n]*RA[k1][n]; 
-	  dB[k1] += gradaxB[n]*RB[k1][n];
+	  dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]; 
+	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n];
 	}
     }
   calc_intersec(dA, rA, Xa, rC);
@@ -2972,8 +2983,14 @@ retry:
   if (calcguess)
     {
 #ifdef MD_ELLGRID
-      guess_dist(rA, rB, Xa, Xb, gridA, gridB, rC, rD, RtA, RtB);
+      guess_dist(i, j, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
 #else
+#if 0
+	  for(k1=0; k1 < 3; k1++)
+	    r12[k1] = rC[k1]-rD[k1]; 
+	  printf("PRIMA PRIMA dist=%.15f\n",calc_norm(r12));
+#endif
+	
       calc_intersec(rB, rA, Xa, rC);
       calc_intersec(rA, rB, Xb, rD);
 #endif
