@@ -36,7 +36,7 @@ extern int *head, *list, *map;  /* arrays of integer */
 extern int NCell, mapSize, M;
 
 /* neighbour list method variables */
-extern COORD_TYPE dispHi;
+extern double dispHi,Volold;
 extern int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
 /* ================================= */
 
@@ -137,7 +137,6 @@ void  links(int Nm, COORD_TYPE rcut)
     {
       head[iCell] = -1; /* -1 means end of list, that is no more particles */
     }
-  pool;
 
   celli = (COORD_TYPE) M;
   cell  = 1.0 / celli;
@@ -212,7 +211,7 @@ void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut)
 	ry_old[a][i] = ry[a][i];
 	rz_old[a][i] = rz[a][i];
       }
-
+  Volold = Vol;
   /* useful ab-constants inside OUTER LOOP below */
   rcutab = rCut * Oparams.sigma;
   rcutabSq = Sqr(rcutab);
@@ -520,14 +519,14 @@ void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, COORD_TYPE** velz,
      t (v(t)) */
   K *= 0.5;
 }
-
 void checkNebrRebuild(void)
 {
   int i, a, Nm = Oparams.parnum;
   double rNebrShellSq;
-  /*double norm, vv, vvMax = 0.0;
-  double RCMx, RCMy, RCMz, VCMx, VCMy, VCMz;*/
-
+#if 0
+  double norm, vv, vvMax = 0.0;
+#endif
+  /*double RCMx, RCMy, RCMz, VCMx, VCMy, VCMz;*/
   rNebrShellSq = Sqr(0.5*OprogStatus.rNebrShell);
   for(i=0; i < Nm && !nebrNow ; i++)
     {
@@ -539,6 +538,7 @@ void checkNebrRebuild(void)
 	   * vengono calcolate le velocità di tutti gli atomi */
 	  /* vectProd(omegax, omegay, omegaz, rx[a][i], ry[a][i], rz[a][i],
 	     &vax, &vay, &vaz); */
+#if 1
 	  if (Sqr(rx[a][i]-rx_old[a][i])+Sqr(ry[a][i]-ry_old[a][i])+
 	      Sqr(rz[a][i]-rz_old[a][i]) > rNebrShellSq)
 	    {
@@ -548,18 +548,73 @@ void checkNebrRebuild(void)
 	      nebrNow=1;
 	      break;
 	    } 
-	    /*
-	  vv = Sqr(VCMx) + Sqr(VCMy) + Sqr(VCMz);
+#endif
+#if 0
+	  vv = Sqr(vx[a][i]) + Sqr(vy[a][i]) + Sqr(vz[a][i]);
 	  if (vv > vvMax) 
-	    vvMax = vv;*/
+	    vvMax = vv;
+#endif
 	}
     }
-  /* dispHi = dispHi + sqrt(vvMax) * Oparams.steplength;*/
+#if 0
+  dispHi = dispHi + sqrt(vvMax) * Oparams.steplength + cbrt(fabs(Vol1)*Oparams.steplength);
   /* If the maximum displacement is too high rebuild Neighbour List
      see Rapaport pag .54 */
-  /*if (dispHi > 0.5 * OprogStatus.rNebrShell)
-    nebrNow = 1;*/
 
+  if (dispHi > 0.5 * OprogStatus.rNebrShell)
+    nebrNow = 1;
+#endif
+}
+
+void checkNebrRebuildNPT(void)
+{
+  int i, a, Nm = Oparams.parnum;
+  double rNebrShellSq;
+#if 0
+  double norm, vv, vvMax = 0.0;
+#endif
+  /*double RCMx, RCMy, RCMz, VCMx, VCMy, VCMz;*/
+  double L, Lold, DL;
+  rNebrShellSq = Sqr(0.5*OprogStatus.rNebrShell);
+  Lold = cbrt(Volold);
+  L = cbrt(Vol);
+  DL = fabs(L-Lold);
+  for(i=0; i < Nm && !nebrNow ; i++)
+    {
+      /*CoM(i, &RCMx, &RCMy, &RCMz);
+	CoMV(i, &VCMx, &VCMy, &VCMz);*/
+      for(a=0; a < NA; a++)
+	{
+	  /* usando la velocità angolare calcolata sopra, 
+	   * vengono calcolate le velocità di tutti gli atomi */
+	  /* vectProd(omegax, omegay, omegaz, rx[a][i], ry[a][i], rz[a][i],
+	     &vax, &vay, &vaz); */
+#if 1
+	  if (Sqr(DL+fabs(rx[a][i]-rx_old[a][i]))+Sqr(DL+fabs(ry[a][i]-ry_old[a][i]))+
+	      Sqr(DL+fabs(rz[a][i]-rz_old[a][i])) > rNebrShellSq)
+	    {
+	      printf("STEP N. %d rebuilding neghbourlists!\n", Oparams.curStep);
+	      printf("(%f,%f,%f)-(%f,%f,%f)\n", rx[a][i], ry[a][i],rz[a][i],
+		     rx_old[a][i], ry_old[a][i],rz_old[a][i]);
+	      nebrNow=1;
+	      break;
+	    } 
+#endif
+#if 0
+	  vv = Sqr(vx[a][i]) + Sqr(vy[a][i]) + Sqr(vz[a][i]);
+	  if (vv > vvMax) 
+	    vvMax = vv;
+#endif
+	}
+    }
+#if 0
+  dispHi = dispHi + sqrt(vvMax) * Oparams.steplength + cbrt(fabs(Vol1)*Oparams.steplength);
+  /* If the maximum displacement is too high rebuild Neighbour List
+     see Rapaport pag .54 */
+
+  if (dispHi > 0.5 * OprogStatus.rNebrShell)
+    nebrNow = 1;
+#endif
 }
 const double inv4pieps0=1.43999;
 

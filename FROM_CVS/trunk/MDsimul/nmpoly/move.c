@@ -48,7 +48,7 @@ COORD_TYPE DrSq = 0.0, Mtot;
 /* used by linked list routines */
 int *head, *list, *map;  /* arrays of integer */
 int NCell, mapSize, M;
-double Volo1, Volo2, Volot;
+double Volold, Volo1, Volo2, Volot;
 /* neighbour list method variables */
 COORD_TYPE dispHi;
 int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
@@ -2006,7 +2006,7 @@ void scalCor(int Nm)
   cost = Vol1 / Vol / 3.0;
   costo1 = Vol1o1 / Vol / 3.0;
   costo2 = Vol1o2 / Vol / 3.0;
-  cost2 = (-(2.0/3.0)*Sqr(Vol1/Vol) + Vol2 / Vol) / 3.0;   
+  cost2 = ((Vol1/Vol)*(s1/s)-(2.0/3.0)*Sqr(Vol1/Vol) + Vol2 / Vol) / 3.0;   
   /* Reduced particles to first box */
   for(i=0; i < Oparams.parnum; i++)
     {
@@ -2027,6 +2027,9 @@ void scalCor(int Nm)
 	  rx[a][i] += DRx;
 	  ry[a][i] += DRy;
 	  rz[a][i] += DRz;
+	  rx_old[a][i] += DRx;
+	  ry_old[a][i] += DRy;
+	  rz_old[a][i] += DRz;
 	  
 	  /* The velocity in the Andersen method depend upon the position,
 	     so we must add a term also to velocity when switching attention
@@ -2041,9 +2044,11 @@ void scalCor(int Nm)
 	  vxo2[a][i] += costo2*DRx;
 	  vyo2[a][i] += costo2*DRy;
 	  vzo2[a][i] += costo2*DRz;
+#if 1
 	  Fx[a][i] += m[a]*cost2*DRx;
 	  Fy[a][i] += m[a]*cost2*DRy;
 	  Fz[a][i] += m[a]*cost2*DRz;
+#endif
 	}
     }
 }
@@ -2608,11 +2613,11 @@ void move(void)
   checkdists("prima movea");
   check_distances("prima movea");
 #endif
-  if (OprogStatus.Nose == 1)
-    scalCor(Oparams.parnum);
+  /*if (OprogStatus.Nose == 1)
+    scalCor(Oparams.parnum);*/
   movea(Oparams.steplength, 0.000000000001, 150, NA-1, distance, Oparams.m, 
 	Oparams.parnum);        
-  /* buildAtomsPositions();*/
+    /* buildAtomsPositions();*/
   if (nebrNow)
     {
       nebrNow = 0;
@@ -2691,7 +2696,10 @@ void move(void)
   /* Calculate the kinetic energy */
   kinet(Oparams.parnum, vx, vy, vz, Vol1);
 
-  checkNebrRebuild();
+  if (OprogStatus.Nose==1)
+    checkNebrRebuildNPT();
+  else
+    checkNebrRebuildNPT();
   if ( (OprogStatus.Nose == 1) || (OprogStatus.Nose == 2))
     {
       /*scalCor(Oparams.parnum);*/
