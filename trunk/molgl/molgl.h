@@ -18,7 +18,7 @@ struct colStruct
   char name[32];
 } *mgl_col;
 enum atom_types {MGL_ATOM_SPHERE, MGL_ATOM_DISK, MGL_ATOM_CYLINDER};
-typedef struct atom_types atom_types_e;
+typedef enum atom_types atom_types_e;
 
 struct atom_common {
   atom_types_e type;
@@ -43,7 +43,7 @@ struct atom_disk
   double radius;
   double height;
 };
-struct atom_disk
+struct atom_cylinder
 {
   struct atom_common common;
   double nx; 
@@ -58,10 +58,10 @@ union atom
   struct atom_common common; 
   struct atom_disk disk;
   struct atom_sphere sphere;
-  struct atom_disk cylinder;
-}
+  struct atom_cylinder cylinder;
+};
 enum bond_types {NONE, MGL_BOND_WIRE, MGL_BOND_CYLINDER};
-typedef struct bond_types bond_types_e;
+typedef enum bond_types bond_types_e;
 typedef union atom atom_u;
 struct bond 
 {
@@ -71,8 +71,8 @@ struct bond
   /* tipo del bond: ossia come deve essere rappresentato graficamente */
   bond_types_e type;
 };
-typedef struct atom atom_s; 
-typedef struct bond bind_s;
+typedef union atom atom_s; 
+typedef struct bond bond_s;
 struct molecule 
 {
   atom_s *atom;
@@ -80,7 +80,7 @@ struct molecule
 };
 struct global_settings
 {
-  iint saved_counter;
+  int saved_counter;
   /*int saveimage=0, savedimg=0;*/
   int saveandquit;
   char *savefile;
@@ -109,7 +109,6 @@ struct global_settings
   double near;
   double far;
   int setvp;
-  int setdiameter;
   double diameter;
   double  dist;
   double ivpx;
