@@ -1582,7 +1582,7 @@ void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double s
 
    for (k1 = 0; k1 < 3; k1++)
     {
-      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+      fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
     }
   fvec[3] = 0.0;
   fvec[4] = 0.0;
@@ -1593,39 +1593,46 @@ void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double s
     }
   fvec[3] = 0.5*fvec[3]-1.0;
   fvec[4] = 0.5*fvec[4]-1.0;
-  MD_DEBUG(printf("fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 
   for (k1=0; k1 < 3; k1++)
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*Sqr(x[7]); 
+  MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+  MD_DEBUG(printf("fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]));
 }
 double calcDist(double t, int i, int j, double shift[3])
 {
-  double vecg[7];
-  double retcheck;
+  double vecg[8];
+  double retcheck, ti;
   double Omega[3][3];
   int k1, na;
-  rA[0] = rx[i] + vx[i]*t;
-  rA[1] = ry[i] + vy[i]*t;
-  rA[2] = rz[i] + vz[i]*t;
+  MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+  ti = t - atomTime[i];
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
-  UpdateOrient(i, t, Rt, Omega);
+  UpdateOrient(i, ti, Rt, Omega);
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
-  rB[0] = rx[j] + vx[j]*t + shift[0];
-  rB[1] = ry[j] + vy[j]*t + shift[1];
-  rB[2] = rz[j] + vz[j]*t + shift[2];
-  UpdateOrient(j, t, Rt, Omega);
+  ti = t - atomTime[j];
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+  UpdateOrient(j, ti, Rt, Omega);
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   for (k1 = 0; k1 < 3; k1++)
     {
-      vecg[k1] = rA[k1];
-      vecg[k1+3] = rB[k1];
+      rAB[k1] = rA[k1] - rB[k1];
     }
-  vecg[6] = 1.0;
-  vecg[7] = 1.0;
+  vecg[0] -= 0.01;
+  vecg[3] += 0.01;
+  vecg[6] = 1;
+  vecg[7] = 1;
   newt(vecg, 8, &retcheck, funcs2beZeroedDist, i, j, shift); 
 }
 void rebuildCalendar(void);

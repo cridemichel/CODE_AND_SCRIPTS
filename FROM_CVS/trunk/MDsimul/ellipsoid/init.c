@@ -594,8 +594,8 @@ void wrap_initCoord(void)
   uyz[0] = 0.0;
   uzz[0] = 1.0;
   rx[1] = 1.5;
-  ry[1] = 1.4;
-  rz[1] = 0.4;
+  ry[1] = 0;
+  rz[1] = 0;
   vx[1] = -2.0;
   vy[1] = 0;
   vz[1] = 0;
