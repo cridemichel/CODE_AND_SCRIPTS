@@ -951,7 +951,7 @@ void UpdateAtom(int i)
   for (k1 = 0; k1 < 3; k1++)
     {
       
-      for (k1 = 0; k1 < 3; k1++)
+      for (k2 = 0; k2 < 3; k2++)
 	{
 	  Rtmp[k1][k2] = R[i][k1][k2];
 	  M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
@@ -1053,7 +1053,7 @@ UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
   w = sqrt(wSq);
   if (w != 0.0) 
     {
-      sinw = sin(w*ti);
+      sinw = sin(w*ti)/w;
       cosw = (1.0 - cos(w*ti))/wSq;
       Omega[0][0] = 0;
       Omega[0][1] = wz[i];
@@ -1077,7 +1077,7 @@ UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  
-	  for (k1 = 0; k1 < 3; k1++)
+	  for (k2 = 0; k2 < 3; k2++)
 	    {
 	      M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
 	      if (k1==k2)
