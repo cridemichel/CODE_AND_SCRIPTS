@@ -485,12 +485,10 @@ void shakeVel(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB,
   COORD_TYPE rxab, ryab, rzab, rvab, gab, dSq;
   COORD_TYPE vxab, vyab, vzab;
   COORD_TYPE dx, dy, dz, dt2, rma, rmb;
-  double L;
   int i, a, b, it;
   int done;
   int moving[NA], moved[NA];
   
-  L = cbrt(Vol);
   dSq = Sqr(d);
 
   WC = 0.0;
@@ -1205,7 +1203,7 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   COORD_TYPE Vol1g, s1i, Vol1i;
   COORD_TYPE DT, A, B, DP, dt2; 
   int i, a, k, numok, dof;
-  const int MAXNUMIT = 40;
+  const int MAXNUMIT = 150;
   double L;
   /* ******************************************************************* */
   dt2 = dt / 2.0;
@@ -1732,7 +1730,9 @@ void scalCor(int Nm)
       DRx = - L * rint(invL * Rx);
       DRy = - L * rint(invL * Ry);
       DRz = - L * rint(invL * Rz);
-      
+      OprogStatus.DR[i][0] -= DRx;
+      OprogStatus.DR[i][1] -= DRy;
+      OprogStatus.DR[i][2] -= DRz;
       for(a=0; a < NA; a++)
 	{
 	  rx[a][i] += DRx;
@@ -2316,9 +2316,11 @@ void move(void)
   checkdists("prima movea");
   check_distances("prima movea");
 #endif
+  if (OprogStatus.Nose == 1)
+    scalCor(Oparams.parnum);
   movea(Oparams.steplength, 0.000000000001, 150, NA-1, distance, Oparams.m, 
 	Oparams.parnum);        
-  /* buildAtomsPositions();*/
+    /* buildAtomsPositions();*/
   if (nebrNow)
     {
       nebrNow = 0;

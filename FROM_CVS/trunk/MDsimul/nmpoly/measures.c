@@ -208,9 +208,9 @@ void transDiff(void)
       rxCM *= invMtot;
       ryCM *= invMtot;
       rzCM *= invMtot;
-      Drx = rxCM - OprogStatus.rxCMi[i]; 
-      Dry = ryCM - OprogStatus.ryCMi[i];
-      Drz = rzCM - OprogStatus.rzCMi[i];
+      Drx = rxCM - OprogStatus.rxCMi[i] + OprogStatus.DR[i][0]; 
+      Dry = ryCM - OprogStatus.ryCMi[i] + OprogStatus.DR[i][0];
+      Drz = rzCM - OprogStatus.rzCMi[i] + OprogStatus.DR[i][0];
       /*printf("step: %d DR: (%f,%f,%f)\n", Oparams.curStep, Drx, Dry, Drz);*/
       if (OprogStatus.ipart == i)
 	{
