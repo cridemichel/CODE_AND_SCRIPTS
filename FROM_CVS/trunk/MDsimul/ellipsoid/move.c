@@ -1293,17 +1293,17 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
     {
       fvec[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
-	fvec[k1] += -2.0*Xa[k1][k2]*(x[k2] - rA[k2]) - 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
+	fvec[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]) + 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
     }
-  fvec[3] = 1.0;
-  fvec[4] = 1.0;
+  fvec[3] = -1.0;
+  fvec[4] = -1.0;
   
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  fvec[3] += -(x[k1]-rA[k1])*Xa[k1][k2]*(x[k2]-rA[k2]);
-	  fvec[4] += -(x[k1]-rB[k1])*Xb[k1][k2]*(x[k2]-rB[k2]);
+	  fvec[3] += (x[k1]-rA[k1])*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  fvec[4] += (x[k1]-rB[k1])*Xb[k1][k2]*(x[k2]-rB[k2]);
 	}
     }
 }
@@ -1795,6 +1795,24 @@ void ProcessCollWall(void)
 }
 
 #endif
+void store_bump(int i, int j)
+{
+  char fileop2[512], fileop[512];
+  FILE *bf;
+  sprintf(fileop2 ,"StoreBump-%d-%d-t%.8f", i, j, Oparams.time);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+      exit(-1);
+    }
+  UpdateSystem();
+  MD_DEBUG(printf("[Store bump]: %.15G\n", Oparams.time));
+  writeAllCor(bf);
+  fclose(bf);
+
+}
 void ProcessCollision(void)
 {
   int k;
@@ -1812,8 +1830,8 @@ void ProcessCollision(void)
 #else
   bump(evIdA, evIdB, rxC, ryC, rzC, &W);
 #endif
-  printf("Fine: %f\n", Oparams.time);
-  ENDSIM=1;
+  MD_DEBUG(store_bump(evIdA, evIdB);)
+  //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
