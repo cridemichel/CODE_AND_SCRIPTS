@@ -943,9 +943,75 @@ void usrInitBef(void)
   }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
-int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
+#ifdef MD_SILICA
+int *inCell[2][3], *cellList[2][2], cellsx[2][2], cellsy[2][2], cellsz[2][2];
+#else
+int *inCell[3], *cellList, cellsx, cellsy, cellsz;
+#endif
+int **tree, cellRange[2*NDIM];
 extern void PredictEvent(int, int);
 extern void InitEventList(void);
+#ifdef MD_SILICA
+void StartRun(void)
+{
+  int j, k, n;
+
+  for (iA=0; iA < 2; iA++)
+    for (iB=0; iB < 2; iB++)
+      {
+	for (j = 0; j < cellsx[iA][iB]*cellsy[iA][iB]*cellsz[iA][iB] + Oparams.parnum; j++)
+	  cellList[iA][iB][j] = -1;
+      }
+      
+  for (iB=0; iB < 2; iB++)
+    /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
+    for (n = 0; n < Oparams.parnum; n++)
+      {
+	iA = (n < Oparams.parnumA)?0:1;
+	atomTime[n] = Oparams.time;
+	inCell[iB][0][n] =  (rx[n] + L2) * cellsx[iA][iB] / L;
+	inCell[iB][1][n] =  (ry[n] + L2) * cellsy[iA][iB] / L;
+#ifdef MD_GRAVITY
+	inCell[iB][2][n] =  (rz[n] + Lz2) * cellsz[iA][iB] / (Lz+OprogStatus.extraLz);
+#else
+	inCell[iB][2][n] =  (rz[n] + L2)  * cellsz[iA][iB] / L;
+#endif
+#if 0
+	if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
+	  {
+	    printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
+	    printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
+		   inCell[0][n],inCell[1][n], inCell[2][n]);
+	  }
+#endif	  
+	j = (inCell[iB][2][n]*cellsy[iA][iB] + inCell[iB][1][n])*cellsx[iA][iB] + 
+	  inCell[iB][0][n] + Oparams.parnum;
+	cellList[iA][iB][n] = cellList[iA][iB][j];
+	cellList[iA][iB][j] = n;
+      }
+  InitEventList();
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  for (n = 0; n < Oparams.parnum; n++)
+    PredictEvent(n, -2); 
+  //exit(-1);
+#if 0
+    {
+      double dist, rC[3], rD[3], shift[3];
+      int i, j;
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  j=-1;
+	  dist = get_min_dist(i, &j, rC, rD, shift);
+	  printf("dist %d:%.8G\n", i, dist);
+	}
+    }
+#endif
+}
+#else
 void StartRun(void)
   {
     int j, k, n;
@@ -997,9 +1063,8 @@ void StartRun(void)
     }
     }
 #endif
-
   }
-
+#endif
 extern void add_bond(int na, int n, int a, int b);
 extern void remove_bond(int na, int n, int a, int b);
 extern double calcpotene(void);
@@ -1197,6 +1262,7 @@ void save_init_conf(void)
   system(fileop3);
 #endif
 }
+#ifdef MD_SILICA
 void check_all_bonds(void)
 {
   int nn, warn, amin, bmin, i, j, aa, bb, nb, wnn, wj;
@@ -1336,6 +1402,147 @@ void check_all_bonds(void)
 	}
     }
 }
+#else
+void check_all_bonds(void)
+{
+  int nn, warn, amin, bmin, i, j, aa, bb, nb, wnn, wj;
+  static int errtimes=0;
+  double wdist,drx, dry, drz, shift[3], dist, rat[5][3], dists[MD_PBONDS], ri[3];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  warn = 0;
+  for ( i = 0; i < Oparams.parnum; i++)
+    {
+      if (warn)
+	break;
+      nb = 0;
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	{
+	  jZ = inCell[2][i] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      jZ = cellsz - 1;    
+	      shift[2] = - L;
+	    } 
+	  else if (jZ == cellsz) 
+	    {
+	      jZ = 0;    
+	      shift[2] = L;
+	    }
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	    {
+	      jY = inCell[1][i] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsy - 1;    
+		  shift[1] = -L;
+		} 
+	      else if (jY == cellsy) 
+		{
+		  jY = 0;    
+		  shift[1] = L;
+		}
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		{
+		  jX = inCell[0][i] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsx - 1;    
+		      shift[0] = - L;
+		    } 
+		  else if (jX == cellsx) 
+		    {
+		      jX = 0;   
+		      shift[0] = L;
+		    }
+		  j = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+		  for (j = cellList[j]; j > -1; j = cellList[j]) 
+		    {
+		      if (i == j)
+			continue;
+#if 0 
+		      drx = rx[i] - rx[j];
+		      shift2[0] = L*rint(drx/L);
+		      dry = ry[i] - ry[j];
+		      shift2[1] = L*rint(dry/L);
+		      drz = rz[i] - rz[j]; 
+		      shift2[2] = L*rint(drz/L);
+#endif
+#ifdef MD_SILICA
+		      assign_bond_mapping(i, j); 
+#endif
+		      dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+		      for (nn=0; nn < MD_PBONDS; nn++)
+			{
+			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
+			      && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
+			    {
+			      warn=1;
+#if 0
+			      aa = mapbondsa[nn];
+			      bb = mapbondsb[nn];
+			      wdist=dists[nn];
+			      wnn = nn;
+			      wj = j;
+#endif
+			      //nb++;
+			    }
+			  else if (dists[nn]>0.0 && 
+				   fabs(dists[nn])> OprogStatus.epsd && 
+				   bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+			    {
+			      warn = 2;
+			      printf("wrong number of bonds between %d and %d\n", i, j);
+			      if (OprogStatus.checkGrazing==1)
+				{
+				  remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
+				}
+			    }
+  			}
+		    }
+		}
+	    }
+	}
+      if (warn)
+	{
+	  mdPrintf(ALL, "[WARNING] wrong number of bonds\n", NULL);
+	  sprintf(TXT,"[WARNING] Number of bonds for molecules %d incorrect\n", i);
+	  mdPrintf(ALL, TXT, NULL);
+	  if (warn==1)
+	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n",NULL);
+	  else
+	    mdPrintf(ALL,"Distance > 0 but bonded, probably a collision has been missed\n", NULL);
+	  //printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
+	  //	 numbonds[i], nb);
+	  //printf("I've adjusted the number of bonds\n");
+	  //printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
+	  //store_bump(i,j);
+	  if (warn==2)
+	    {
+	      if (OprogStatus.checkGrazing==2)
+		exit(-1);
+	      else
+		mdPrintf(ALL,"I adjusted the number of bonds...energy won't conserve!", NULL);
+	    }
+	}
+    }
+}
+#endif
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
 {
@@ -1373,6 +1580,20 @@ void usrInitAft(void)
   invmB = 1.0/Oparams.m[1];
   /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
+#ifdef MD_SILICA
+  for (iA = 0; iA < 2; iA++)
+    for (iB = 0; iB < 2; iB++)
+      {
+	if (Oparams.rcut[iA][iB] <= 0.0)
+	  Oparams.rcut[iA][iB] = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+   	cellsx[iA][iB] = L / Oparams.rcut[iA][iB];
+	cellsy[iA][iB] = L / Oparams.rcut[iA][iB];
+	cellsz[iA][iB] = L / Oparams.rcut[iA][iB];
+	printf("[%d,%d] Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", iA, iB, 
+	       Oparams.rcut,
+	       cellsx[iA][iB], cellsy[iA][iB], cellsz[iA][iB]);
+      }
+#else
   if (Oparams.rcut <= 0.0)
     Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
   cellsx = L / Oparams.rcut;
@@ -1380,14 +1601,27 @@ void usrInitAft(void)
   cellsz = L / Oparams.rcut;
   printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
 	 cellsx, cellsy, cellsz);
+#endif
   lastcol= malloc(sizeof(double)*Oparams.parnum);
   atomTime = malloc(sizeof(double)*Oparams.parnum);
   lastbump = malloc(sizeof(struct LastBumpS)*Oparams.parnum);
-
+#ifdef MD_SILICA
+  for (iA = 0; iA < 2; iA++)
+    for (iB = 0; iB < 2; iB++)
+      cellList[iA][iB] = malloc(sizeof(int)*
+				(cellsx[iA][iB]*cellsy[iA][iB]*cellsz[iA][iB]+Oparams.parnum));
+  for (iB = 0; iB < 2; iB++)
+    {
+      inCell[0] = malloc(sizeof(int)*Oparams.parnum);
+      inCell[1]= malloc(sizeof(int)*Oparams.parnum);
+      inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+    }
+#else
   cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
   inCell[0] = malloc(sizeof(int)*Oparams.parnum);
   inCell[1]= malloc(sizeof(int)*Oparams.parnum);
   inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+#endif
   tree = AllocMatI(12, poolSize);
   bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
