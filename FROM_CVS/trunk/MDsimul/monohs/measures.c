@@ -360,7 +360,7 @@ void radDens(void)
   int* hist;
   double Vol, rij, rxij, ryij, rzij, rijSq;
   double m, rlower, rupper, cost, nIdeal; 
-  double rhoAv, DELR;
+  double rhoAv, DELR, rend;
   invL = 1.0 / L;
   Nm = Oparams.parnum;
   rhoAv = (double) Nm;
@@ -370,8 +370,9 @@ void radDens(void)
 #else
   Vol = L*L*L;
 #endif 
-  DELR = (REND - RBEG) / MAXBIN;
-
+  rend = cbrt(Vol) / 2.0;
+  DELR = (rend - RBEG) / MAXBIN;
+  printf ("DELR: %f rend:%f RBEG:%f\n", DELR,rend, RBEG);
   hist = OprogStatus.hist;
   
   if (OprogStatus.avnggr == 0)

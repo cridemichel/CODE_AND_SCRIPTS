@@ -129,11 +129,11 @@ void writeg(FILE* afs, MDINT step, int size)
   int i;
   rend = cbrt(Vol) / 2.0;
   DELR = (rend - rbeg) / MAXBIN;
-  for (i=0; i < size / sizeof(COORD_TYPE); ++i)
+  for (i=0; i < size / sizeof(double); ++i)
     {
       r = rbeg + ((COORD_TYPE) i) * DELR; 
       fprintf(afs, sum("%.", precision, "f ", "%.", precision, "f ", NULL),
-	      r, ((COORD_TYPE *) mis)[i]);
+	      r+0.5*DELR, ((COORD_TYPE *) mis)[i]);
       fprintf(afs,"\n");
     }
   fprintf(afs, "&\n"); /* This indicates to xmgr that begins a new set */
