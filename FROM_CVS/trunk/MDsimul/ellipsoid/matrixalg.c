@@ -57,7 +57,7 @@ double min(double a, double b)
       return a;
     }
 }
-static float maxarg1,maxarg2;
+static double maxarg1,maxarg2;
 #define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
         (maxarg1) : (maxarg2))
 
@@ -82,7 +82,7 @@ void nrerror(char *msg)
 }
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 #define DABS fabs
-double xicom[8], pcom[8], xi[8], G[8], H[8], grad[8], vec[8];
+double xicom[6], pcom[6], xi[6], G[6], H[6], grad[6];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
 int icg, jcg;
 double shiftcg[3];
@@ -165,7 +165,7 @@ double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)
   const double ZEPSDBR = 1E-10;
   const int ITMAXDBR=100; 
   int iter,ok1,ok2; /*Will be used as  ags for whether proposed steps are acceptable or not.*/
-  double a,b,d,d1,d2,du,dv,dw,dx,e=0.0; double fu,fv,fw,fx,olde,tol1,tol2,u,u1,u2,v,w,x,xm; 
+  double a,b,d=0.0,d1,d2,du,dv,dw,dx,e=0.0; double fu,fv,fw,fx,olde,tol1,tol2,u,u1,u2,v,w,x,xm; 
   a=(ax < cx ? ax : cx); b=(ax > cx ? ax : cx); x=w=v=bx; fw=fv=fx=(*f)(x); dw=dv=dx=(*df)(x); 
   /*All our housekeeping chores are doubled by the necessity of moving derivative values around as well 
    * as function values. */
@@ -267,7 +267,8 @@ double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)
 double f1dim(double x) 
   /*Must accompany linmin.*/
 {
-  int j; double f, xt[8];
+  int j; 
+  double f, xt[6];
   // xt=vector(1,ncom);
   for (j=0;j<ncom;j++) 
     xt[j]=pcom[j]+x*xicom[j]; 
@@ -279,7 +280,7 @@ double df1dim(double x)
 { 
   int j;
   double df1=0.0; 
-  double xt[8], df[8];
+  double xt[6], df[6];
   //xt=vector(1,ncom); df=vector(1,ncom);
   for (j=0;j<ncom;j++) 
     xt[j]=pcom[j]+x*xicom[j]; 
@@ -336,9 +337,10 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
   const int ITMAXFR = 200;
   const double EPSFR=1E-10;
   double gg,gam,fp,dgg;
-  double g[8],h[8],xi[8];
+  double g[6],h[6],xi[6];
   fp=(*func)(p); /*Initializations.*/
   (*dfunc)(p,xi); 
+  
   for (j=0;j<n;j++)
     { 
       g[j] = -xi[j]; 
@@ -347,7 +349,9 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
   for (its=1;its<=ITMAXFR;its++)
     { /* Loop over iterations.*/
       *iter=its;
+      
       dlinmin(p,xi,n,fret,func,dfunc); /* Next statement is the normal return: */
+      printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR) );
       if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
 	{ 
 	  return;
@@ -409,17 +413,21 @@ void gradcgfunc(double *vec, double *grad)
   if (A>=0)
     A = 1.0;
   else
-    A = 1.0;
+    A = -1.0;
   for (kk=0; kk < 3; kk++)
     {
-      grad[kk]=2.0*(vec[kk+3]-vec[kk])*A - vec[6]*fx[kk];
-      grad[kk+3]=-2.0*(vec[kk+3]-vec[kk])*A - vec[7]*gx[kk];
+      //grad[kk]=-2.0*(vec[kk+3]-vec[kk])*A + vec[6]*fx[kk];
+      //grad[kk+3]=2.0*(vec[kk+3]-vec[kk])*A + vec[7]*gx[kk];
+      grad[kk]=-2.0*(vec[kk+3]-vec[kk])*A + 2.0*10000*fx[kk]*Q1;
+      grad[kk+3]=2.0*(vec[kk+3]-vec[kk])*A + 2.0*10000*gx[kk]*Q2;
     }
-  grad[6] = -Q1;
-  grad[7] = -Q2;
+  //grad[6] = Sqr(Q1);
+  //grad[7] = Sqr(Q2);
+  //grad[6] = Q1;
+  //grad[7] = Q2;
 }
 /* =========================== >>> forces <<< ======================= */
-void  cgfunc(double *vec)
+double  cgfunc(double *vec)
 {
   int kk, k1, k2, k3;
   double fx[3], gx[3], fx2[3];
@@ -454,16 +462,18 @@ void  cgfunc(double *vec)
   if (A>=0)
     A = 1.0;
   else
-    A = 1.0;
+    A = -1.0;
 
   F = 0.0;
   for (kk=0; kk < 3; kk++)
     F += A*Sqr(vec[kk]-vec[kk+3]);
-  F += vec[6]*Q1;
-  F += vec[7]*Q2;
-  return F;
-  printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], Epoten);
+  F += 10000*Sqr(Q1);
+  F += 10000*Sqr(Q2);
+  //F += vec[6]*Q1;
+  //F += vec[7]*Q2;
+  printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
   printf("vec[6]:%.15G vec[7]: %.15G Q1=%.15G Q2=%.15G\n", vec[6], vec[7], Q1, Q2);
+  return F;
 }
 
 void distconjgrad(int i, int j, double shift[3], double *vecg)
@@ -471,6 +481,7 @@ void distconjgrad(int i, int j, double shift[3], double *vecg)
   int kk;
   double Fret;
   int iter;
+  double vec[8];
   icg = i;
   jcg = j;
   for (kk=0; kk < 3; kk++)
@@ -481,8 +492,9 @@ void distconjgrad(int i, int j, double shift[3], double *vecg)
     {
       vec[kk] = vecg[kk];
     }
-  frprmn(vec, 8, 1E-8, &iter, &Fret, cgfunc, gradcgfunc);
-  for (kk=0; kk < 8; kk++)
+  printf(">>> vec[6]: %f vec[7]:%f\n", vec[6], vec[7]);
+  frprmn(vec, 6, 1E-5, &iter, &Fret, cgfunc, gradcgfunc);
+  for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];
     }
