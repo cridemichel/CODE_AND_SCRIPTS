@@ -53,6 +53,9 @@ double *treetime, *atomTime;
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
     cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 int evIdA, evIdB;
+extern int poolSize;
+extern double *radii;
+extern int *scdone;
 /* ========================== >>> scalCor <<< ============================= */
 void scalCor(int Nm)
 { 
@@ -91,10 +94,368 @@ void calcKVz(void)
 }
 void calccmz(void);
 void calcRho(void);
+double rcutL, radiusL;
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
+double get_min_dist (int na, int *jmin, double *shiftmin) 
+{
+  /* na = atomo da esaminare 0 < na < Oparams.parnum 
+   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
+   *      -2 = controlla solo cell crossing e urti con pareti 
+   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
+   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
+   *      */
+  double distMin=1E10,dist,shift[3], ti;
+  /*double cells[NDIM];*/
+  int kk;
+  double r1[3], r2[3];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+ /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  //calcdist_retcheck = 0;
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCell[2][na] + iZ;    
+      shift[2] = 0.;
+      /* apply periodico boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  jZ = cellsz - 1;    
+	  shift[2] = - L;
+	} 
+      else if (jZ == cellsz) 
+	{
+	  jZ = 0;    
+	  shift[2] = L;
+	}
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCell[1][na] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsy - 1;    
+	      shift[1] = -L;
+	    } 
+	  else if (jY == cellsy) 
+	    {
+	      jY = 0;    
+	      shift[1] = L;
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCell[0][na] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsx - 1;    
+		  shift[0] = - L;
+		} 
+	      else if (jX == cellsx) 
+		{
+		  jX = 0;   
+		  shift[0] = L;
+		}
+	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+	      for (n = cellList[n]; n > -1; n = cellList[n]) 
+		{
+		  if (n!=na) 
+		    {
+		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
+		      ti = OprogStatus.time-atomTime[na];
+		      r1[0] = rx[na] + vx[na]*ti;
+		      r1[1] = ry[na] + vy[na]*ti;
+		      r1[2] = rz[na] + vz[na]*ti;
+		      ti = OprogStatus.time-atomTime[n];
+		      r2[0] = rx[n] + vx[n]*ti;
+		      r2[1] = ry[n] + vy[n]*ti;
+		      r2[2] = rz[n] + vz[n]*ti;
+		      dist = 0.0;
+		      for (kk = 0; kk < 3; kk++)
+			dist += r1[kk] - r2[kk];		      
+		      dist = sqrt(dist);
+		      dist -= radii[na] + radii[n];
+		      //if (calcdist_retcheck)
+			//continue;
+		      if (*jmin == -1 || dist<distMin)
+			{
+			  distMin = dist;
+			  for (kk = 0; kk < 3; kk++)
+			    {
+			      //rCmin[kk] = r1[kk];
+			      //rDmin[kk] = r2[kk];
+			      shiftmin[kk] = shift[kk];
+			    }
+			  *jmin = n;
+			}
+		    }
+		} 
+	    }
+	}
+    }
+  return distMin;
+}
+
+double calc_phi(void)
+{
+  double N = 0;
+  //const double pi = acos(0)*2;
+  int i ;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      N += radii[i]*radii[i]*radii[i];
+    }
+  N *= 4.0*pi/3.0;
+  return N / (L*L*Lz);
+}
+
+void store_values(int i)
+{
+  rcutL = Oparams.rcut;
+  radiusL = radii[i];
+}
+void restore_values(int i)
+{
+  Oparams.rcut = rcutL;
+  radii[i] = radiusL;
+}
+double max_ax(int i)
+{
+  double ma;
+  ma = 0;
+  if (radii[i]>ma)
+    ma = radii[i];
+  return ma;
+}
+void scale_coords(double sf)
+{
+  int i; 
+  L *= sf;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      rx[i] *= sf;
+      ry[i] *= sf;
+      rz[i] *= sf;
+    }
+}
+
+double scale_radius(int i, int j, double rA[3], double rB[3], double shift[3], double *factor)
+{
+  int kk;
+  double C, Ccur, F, phi0, phi, fact, L2, rAB[3], fact1, fact2, nrAB;
+
+  L2 = 0.5 * L;
+  phi = calc_phi();
+  phi0 =((double)Oparams.parnum)*(Oparams.sigma*0.5);
+  phi0 *= 4.0*pi/3.0;
+  phi0 /= L*L*Lz;
+  C = cbrt(OprogStatus.targetPhi/phi0);
+  Ccur = radii[i]/(Oparams.sigma*0.5); 
+  F = C / Ccur;
+  for (kk=0; kk < 3; kk++)
+    {
+      rAB[kk] = rA[kk] - rB[kk] - shift[kk];
+    }
+  nrAB = calc_norm(rAB);
+  /* 0.99 serve per evitare che si tocchino */
+  if (F < 1)
+    fact = F;
+  else
+    {
+      fact1 = (nrAB-radii[j])/radii[i];
+      fact2 = F;
+      if (fact2 < fact1)
+	fact = fact2;
+      else
+	fact = fact1;
+
+    }
+  //printf("phi=%f fact1=%.8G fact2=%.8G scaling factor: %.8G\n", phi, fact1, fact2, fact);
+  radii[i] *= fact;
+  *factor = fact;
+  if (2.0*radii[i] > Oparams.rcut)
+    Oparams.rcut = 2.0*radii[i]*1.01;
+  return calc_phi();
+}
+
+void rebuild_linked_list()
+{
+  double L2;
+  int j, n;
+  L2 = 0.5 * L;
+   cellsx = L / Oparams.rcut;
+  cellsy = L / Oparams.rcut;
+#ifdef MD_GRAVITY
+  cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
+#else
+  cellsz = L / Oparams.rcut;
+#endif 
+  for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
+    cellList[j] = -1;
+  
+  /* rebuild event calendar */
+  for (n = 0; n < Oparams.parnum; n++)
+    {
+      inCell[0][n] =  (rx[n] + L2) * cellsx / L;
+      inCell[1][n] =  (ry[n] + L2) * cellsy / L;
+#ifdef MD_GRAVITY
+      inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+#else
+      inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+#endif
+      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+	inCell[0][n] + Oparams.parnum;
+      cellList[n] = cellList[j];
+      cellList[j] = n;
+    }
+}
+double check_dist_min(int i, char *msg)
+{
+  int j;
+  double distMin=1E60, shift[3];
+  
+  j = -1;
+  distMin = get_min_dist(i, &j, shift);
+    
+  if (msg)
+    printf("[check_dist_min] %s distMin: %.12G\n", msg, distMin);
+
+  return distMin;
+} 
+double check_alldist_min(char *msg)
+{
+  int j, i;
+  double distMin=1E60, dist;
+  double rC[3], rD[3], shift[3];
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      j = -1;
+      dist = get_min_dist(i, &j, shift);
+      if (j != -1 && dist < distMin)
+	distMin = dist;
+    }
+  if (msg)
+    printf("[dist all] %s: %.10G\n", msg, distMin);
+  return distMin;
+  
+}
+void scale_Phi(void)
+{
+  int i, j, imin, kk, its, done=0;
+  static int first = 1;
+  static double rad0I, target;
+  double distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
+  double L2, shift[3], shiftmin[3], phi, factor, radai;
+  if (OprogStatus.targetPhi <= 0.0)
+    return;
+
+  phi=calc_phi();
+  if (first)
+    {
+      first = 0;
+      rad0I = Oparams.sigma*0.5;
+      target = cbrt(OprogStatus.targetPhi/calc_phi());
+    }
+  //UpdateSystem();   
+  L2 = 0.5 * L;
+  /* get the minimum distance in the system */
+  phi = calc_phi();
+  for (kk = 0;  kk < 3; kk++)
+    {
+      cellRange[2*kk]   = - 1;
+      cellRange[2*kk+1] =   1;
+    }
+  imin = -1;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      j = -1;
+      if (scdone[i]==1)
+	{
+	  done++;
+	  continue;
+	}
+      distMin = get_min_dist(i, &j, shift);
+      //if (calcdist_retcheck)
+	//continue;
+      if (j == -1)
+	continue;
+      //printf("i=%d j=%d distmin=%.10G\n", i, j, distMin);
+      rAmin[0] = rx[i];
+      rAmin[1] = ry[i];
+      rAmin[2] = rz[i];
+      rBmin[0] = rx[j];
+      rBmin[1] = ry[j];
+      rBmin[2] = rz[j];
+      //scalfact = OprogStatus.scalfact;
+      store_values(i);
+      if (distMin < 1E-13)
+	continue;
+      phi = scale_radius(i, j, rAmin, rBmin, shift, &factor);
+      rebuild_linked_list();
+      distMinT = check_dist_min(i, NULL);
+#if 0
+      if (calcdist_retcheck)
+	{
+	  restore_values(i);
+	  rebuild_linked_list();
+	  continue;
+	}
+#endif
+      its = 0;
+      while (distMinT < 0)
+	{
+	  restore_values(i);
+	  phi = scale_radius(i, j, rAmin, rBmin, shiftmin, &factor);
+	  rebuild_linked_list();
+	  distMinT = check_dist_min(i, "Alla fine di calc_Phi()");
+	  its++;
+	}
+
+      radai = Oparams.sigma*0.5;
+      if (fabs(radii[i] / radai - target) < OprogStatus.axestol)
+	{
+	  done++;
+	  scdone[i] = 1;
+	  if (done == Oparams.parnum)
+	    break;
+	}
+     
+    }
+
+  printf("Scaled axes succesfully phi=%.8G\n", phi);
+  rebuild_linked_list();
+  rebuildCalendar();
+  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+  printf("Scaled successfully %d/%d ellipsoids \n", done, Oparams.parnum);
+  if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
+    {
+      ENDSIM = 1;
+      /* riduce gli ellissoidi alle dimensioni iniziali e comprime il volume */
+      factor = rad0I/radii[0];
+      Oparams.rcut *= factor;
+      scale_coords(factor);
+    }
+}
 
 void outputSummary(void)
 {
   FILE *f;
+  
+  scale_Phi();
+  
   /* mettere qualcosa qui */
 #if 0
   printf("time=%.15f\n", OprogStatus.time);
