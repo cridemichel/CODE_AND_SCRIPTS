@@ -991,16 +991,15 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
       else
 	sol = (-B - sqrtDelta)/A2;
 #endif
-      if (OprogStatus.tolSDgrad <=0)
+      ng = calc_norm(gradf);
+      //if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*sf*calc_norm(dr))
+      if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*dist/2.0)
 	{
-	  ng = calc_norm(gradf);
-	  if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSD*dist/2.0)
-	    {
-	      sf /= GOLD;
-	      its++;
-	      continue;
-	    }
+	  sf /= GOLD;
+	  its++;
+	  continue;
 	}
+    
       done = 1;
     
     }
@@ -1399,6 +1398,41 @@ void updateByRot(double p[], double xi[])
 double  cgfuncRyck(double *vec);
 double zbrentRyck(double (*func)(double), double x1, double x2, double tol);
 double get_sign(double *vec);
+int check_done(double fp, double fpold, double minax)
+{
+  const double EPSFR=1E-10;
+  if (OprogStatus.tolSDgrad > 0)
+    {
+      if (fp > Sqr(OprogStatus.epsd)) 
+	{
+	  if (doneryck == 1 || 
+	      2.0*fabs(fpold-fp) < OprogStatus.tolSDlong*(fabs(fpold)+fabs(fp)+EPSFR))
+	  //fabs(fpold-fp) < OprogStatus.tolSDlong*Sqr(minax*2))
+	    return 1;
+	}
+      else 
+	{
+	  if (2.0*fabs(fpold-fp) < OprogStatus.tolSD*(fabs(fpold)+fabs(fp)+EPSFR))
+	    return 1;
+	}
+    }
+  else
+    {
+      if (fp < Sqr(OprogStatus.epsd))
+	{
+	  if (2.0*fabs(fpold-fp) < OprogStatus.tolSD*(fabs(fpold)+fabs(fp)+EPSFR))
+	    return 1;
+	}
+      else
+	{
+	  if (2.0*fabs(fpold-fp) < OprogStatus.tolSDlong*(fabs(fpold)+fabs(fp)+EPSFR))
+	    return 1;
+	  //if (fabs(fpold-fp) < OprogStatus.tolSDlong*Sqr(minax*2))
+	    //return 1;
+	}
+    }
+  return 0;
+}
 
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
@@ -1448,98 +1482,24 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       signBold = signB;
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
-#if 0
-      if (fp > fpold)
-	{
-	  for (j=0; j < 6; j++)
-	    xim[j] = xiold[j]/2.0;
-	  for (j=0; j < 6; j++)
-	    pm[j] = pold[j] + xim[j];
-	  fpm = (*func)(pm);
-	  xaRyck[0] = 0;
-	  yaRyck[0] = fpold;
-	  xaRyck[1] = 0.5;
-	  xaRyck[1] = fpm;
-	  xaRyck[2] = 1.0;
-	  xaRyck[2] = fp;
-	  if (fpm < fp && fpm < fpold)
-	    {
-	      polinterrRyck = 0;
-	      //printf("fpm=%.15G fp=%.15G fpold=%.15G\n", fpm, fp, fpold);
-	      brentRyck(0, 0.5, 1, polintfuncRyck, OprogStatus.tolSD/100, &xmin);
-	      //printf("xmin=%.15G\n", xmin);
-#if 1
-	      if (polinterrRyck ==0 && xmin > 0 && xmin < 1) 
-		{
-		  for (j=0; j < 6; j++)
-		    xi[j] = xiold[j]*xmin;
-		  for (j=0; j < 6; j++)
-		    p[j] = pold[j]+xiold[j];
-		  //printf("P fabs(fp-fpold):%.15G xmin=%.15G\n", fabs(fp-fpold), xmin);
-		  fp = (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
-		  projectgrad(p, xi, gradfG, gradgG);
-		  //printf("D fabs(fp-fpold):%.15G\n", fabs(fp-fpold));
-		  //fp = (*func)(p);
-		  //printf("xmin=%.15G\n", xmin);
-		}
-	      else 
-		{
-		  sfA /= GOLD;
-		  sfB /= GOLD;
-		  projectgrad(p, xi, gradfG, gradgG);
-		}
-#endif
-	    }
-	  else
-	    {
-	      sfA /= GOLD;
-	      sfB /= GOLD;
-	      projectgrad(p, xi, gradfG, gradgG);
-	    }
-	}
-      else
-	projectgrad(p, xi, gradfG, gradgG);
-#else
       if (fp > fpold)
 	{
 	  sfA /= GOLD;
 	  sfB /= GOLD;
 	}      
       projectgrad(p, xi, gradfG, gradgG);
-#endif
       if (doneryck==2)
 	{
 	  callsok++;
 	  return;
 	 }
+      if (check_done(fp, fpold, minax))
+	{
+	  callsok++;
+	  return;
+	}
 #if 0
-      if (OprogStatus.tolSDgrad <=0  || sqrt(fabs(fp)) < OprogStatus.epsd) 
-	 {
-#if 1
-	   if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
-	     {
-	       callsok++;
-	       return;
-	     }
-#endif
-#if 0
-	   if (fp > ftol*OprogStatus.springkSD*Sqr(minax) &&
-	       2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
-	     {
-	       callsok++;
-	       return;
-	     }
-	   else if ( fp < ftol*OprogStatus.springkSD*Sqr(minax) 
-		     && fabs(fpold-fp) < ftol*Sqr(minax) )
-	     {
-	       callsok++;
-	       return;
-	     }
-#endif
-	 }
-       else 
-#endif
-       if ((OprogStatus.tolSDgrad <=0|| 
+	if ((OprogStatus.tolSDgrad <=0|| 
 	    doneryck==1) 
 	   && (OprogStatus.tolSD <=0 || 
 	       2.0*fabs(fpold-fp) < ftol*(fabs(fpold)+fabs(fp)+EPSFR)))
@@ -1561,6 +1521,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	   callsok++;
 	   return;
 	 }
+#endif
     } 
   return; 
   nrerror("Too many iterations in frprmn");
