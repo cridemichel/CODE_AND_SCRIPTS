@@ -707,7 +707,7 @@ void  AnlzConstraintDevs (void)
 	  dr1[2] = rz[i + 1][n] - rz[i][n];
   	  dr1[2] = dr1[2] - L*rint(dr1[2]/L);
 	  curBondLenSq[i] = Sqr (dr1[0]) + Sqr (dr1[1]) + Sqr (dr1[2]);
-	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d) > 1E-8)
+	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d) > 1E-7)
 	    {
 	      doneshake++;
 	      doshake[n] = 1;
@@ -716,7 +716,7 @@ void  AnlzConstraintDevs (void)
 	}
       
     }
-  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-8, 150, NA-1, Oparams.d,
+  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-7, 150, NA-1, Oparams.d,
 		    Oparams.m, Oparams.parnum);
   if (doneshake)
     {
@@ -2578,10 +2578,10 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
 #endif
     }
-#if 0
+#if 1
 #if !defined(MD_FENE) //&& !defined(MD_RAPACONSTR)  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
-  		      1E-8, px, py, pz);
+  		      1E-6, px, py, pz);
 #endif
 #endif
 }
