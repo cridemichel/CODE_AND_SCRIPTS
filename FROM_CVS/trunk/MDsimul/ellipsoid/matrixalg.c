@@ -145,21 +145,23 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLMIN 1.0e-6 
 #define TOLX 1.0e-7 
 #define STPMX 100.0
-void lnsrch(int n, float xold[], float fold, float g[], float p[], float x[], float *f, float stpmax, int *check, float (*func)(float []))
+void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, double stpmax, int *check, double (*func)(double []))
 /*
-Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
-fold and g[1..n], and a direction p[1..n],  nds a new point x[1..n] along the direction p
-from xold where the function func has decreased  "sufficiently".  The new function value is 
-returned in f. stpmax is an input quantity that limits the length of the steps so that 
-you do not try to evaluate the function in regions where it is unde ned or subject to overflow.
-p is usually the Newton direction. The output quantity check is false (0) on a normal exit. 
-It is true (1) when x is too close to xold. In a minimization algorithm, this usually signals 
-convergence and can be ignored. However, in a zero-finding algorithm the calling program 
-should check whether the convergence is spurious. Some  difficult  problems may require 
-double precision in this routine.*/
+   Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
+   fold and g[1..n], and a direction p[1..n],  nds a new point x[1..n] along the direction p
+   from xold where the function func has decreased  "sufficiently".  The new function value is 
+   returned in f. stpmax is an input quantity that limits the length of the steps so that 
+   you do not try to evaluate the function in regions where it is unde ned or subject 
+   to overflow.
+   p is usually the Newton direction. The output quantity check is false (0) on a normal exit. 
+   It is true (1) when x is too close to xold. In a minimization algorithm, this usually 
+   signals convergence and can be ignored. 
+   However, in a zero-finding algorithm the calling program 
+   should check whether the convergence is spurious. Some  difficult  problems may require 
+   double precision in this routine.*/
 {
   int i; 
-  float a,alam,alam2,alamin,b,disc,f2,rhs1,rhs2,slope,sum,temp, test,tmplam; 
+  double a,alam,alam2,alamin,b,disc,f2,rhs1,rhs2,slope,sum,temp, test,tmplam; 
   *check=0; 
   for (sum=0.0,i=1;i<=n;i++) 
     sum += p[i]*p[i]; sum=sqrt(sum); 
@@ -227,20 +229,20 @@ double precision in this routine.*/
 }
 
 int nn; /* Global variables to communicate with fmin.*/
-float *fvec; 
-void (*nrfuncv)(int n, float v[], float f[]); 
+double *fvec; 
+void (*nrfuncv)(int n, double v[], double f[]); 
 #define FREERETURN {free_vector(fvec,1,n);free_vector(xold,1,n);\ free_vector(p,1,n);\
  free_vector(g,1,n);free_matrix(fjac,1,n,1,n);\ free_ivector(indx,1,n);\
  return;}
-double fmin(float x[]);
-void newt(float x[], int n, int *check, void (*vecfunc)(int, double [], double []))
+double fmin(double x[]);
+void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double []))
 {
-  void lnsrch(int n, float xold[], float fold, float g[], float p[], float x[], float *f, 
- 	      float stpmax, int *check, float (*func)(float []));
-  void lubksb(float **a, int n, int *indx, float b[]); 
-  void ludcmp(float **a, int n, int *indx, float *d); 
+  void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, 
+ 	      double stpmax, int *check, double (*func)(double []));
+  void lubksb(double **a, int n, int *indx, double b[]); 
+  void ludcmp(double **a, int n, int *indx, double *d); 
   int i,its,j,*indx;
-  float d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
+  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
   indx=ivector(1,n); 
   fjac=matrix(1,n,1,n);
   g=vector(1,n);
@@ -262,7 +264,7 @@ void newt(float x[], int n, int *check, void (*vecfunc)(int, double [], double [
     }
   for (sum=0.0,i=1;i<=n;i++) 
     sum += SQR(x[i]); /* Calculate stpmax for line searches.*/
-  stpmax=STPMX*FMAX(sqrt(sum),(float)n);
+  stpmax=STPMX*FMAX(sqrt(sum),(double)n);
   for (its=1;its<=MAXITS;its++)
     { /* Start of iteration loop. */
       fdjac(n,x,fvec,fjac,vecfunc); /* If analytic Jacobian is available, you can 
@@ -318,9 +320,9 @@ void newt(float x[], int n, int *check, void (*vecfunc)(int, double [], double [
 
 #define EPS 1.0e-4 /* Approximate square root of the machine precision.*/
 #ifdef MD_APPROX_JACOB
-void fdjac(int n, float x[], float fvec[], float **df, void (*vecfunc)(int, float [], float []))
+void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []))
 { int i,j; 
-  float h,temp,*f; 
+  double h,temp,*f; 
   f=vector(1,n); 
   for (j=1;j<=n;j++) 
     {
@@ -339,22 +341,22 @@ void fdjac(int n, float x[], float fvec[], float **df, void (*vecfunc)(int, floa
   free_vector(f,1,n); 
 }
 #else
-void fdjac(int n, float x[], float fvec[], float **df, void (*vecfunc)(int, float [], float []))
+void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []))
 {
   /* evaluate Jacobian here! */
 }
 #endif
 extern int nn; 
-extern float *fvec;
-extern void (*nrfuncv)(int n, float v[], float f[]); 
-float fmin(float x[]) 
+extern double *fvec;
+extern void (*nrfuncv)(int n, double v[], double f[]); 
+double fmin(double x[]) 
 /* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
 calling program. Global variables also communicate the function values back to 
 the calling program.*/
 {
   int i;
-  float sum;
+  double sum;
   (*nrfuncv)(nn,x,fvec);
   for (sum=0.0,i=1;i<=nn;i++)
     sum += SQR(fvec[i]); 
