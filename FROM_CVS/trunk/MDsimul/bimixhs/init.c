@@ -704,9 +704,12 @@ void usrInitBef(void)
   }
 
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  extern void add_bond(int na, int n);
-  extern void remove_bond(int na, int n);
-  extern double calcpotene(void);
+extern void add_bond(int na, int n);
+extern void remove_bond(int na, int n);
+extern double calcpotene(void);
+#endif
+#if defined(MD_SQWELL) && defined(MD_BONDHIST) 
+int bondhist[5]; 
 #endif
   /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
@@ -816,7 +819,11 @@ void usrInitAft(void)
       lastcol[i] = 0.0;
     }
 #endif
- 
+  
+#if defined(MD_SQWELL) && defined(MD_BONDHIST) 
+  for (i=0; i < 5; i++)
+    bondhist[i] = 0;
+#endif
   if (newSim)
     {
       Oparams.time=0.0;
