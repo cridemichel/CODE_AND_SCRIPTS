@@ -5,6 +5,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #define MD_DEBUG(X) 
+#define MD_DEBUG10(X) 
 void nrerror(char *msg)
 {
   printf(msg);
@@ -124,12 +125,30 @@ void lubksb(double **a, int n, int* indx, double *b)
       /* Store a component of the solution vector X. */ 
     } /* All done! */
 }
+#ifdef MD_USE_LAPACK
+void wrap_dgesv(double **a, double *x, int n)
+{
+  double AT[MD_NBMAX*MD_NBMAX];
+  int i, j, c1, c2, ok, pivot[MD_NBMAX];
+  for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
+    }						
+  c1 = n;
+  c2 = 1;
+  dgesv_(&c1, &c2, AT, &c1, pivot, x, &c1, &ok);      
+}
+#endif
 void SolveLineq (double **a, double *x, int n) 
 {
   int indx[MD_NBMAX];
   double dd;
+#ifdef MD_USE_LAPACK
+  wrap_dgesv(a, x, n);
+#else
   ludcmp(a, n, indx, &dd);
   lubksb(a, n, indx, x);
+#endif
 }
 
 void InvMatrix(double **a, double **b, int NB)
@@ -157,7 +176,7 @@ void InvMatrix(double **a, double **b, int NB)
 #define MAXITS2 20
 #define TOLF 1.0e-9// 1.0e-4
 #define TOLF2 1.0E-3
-#define TOLFD 1.0E-5
+#define TOLFD 1.0E-6
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
@@ -287,7 +306,7 @@ double *fvec, *fvecG, *fvecD;
 #define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
 free_vector(fvec);free_vector(xold);free_vector(g2); free_vector(xold2); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);free_vector(fvecG);return;}
 #else
-#define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
+#define FREERETURN {MD_DEBUG10(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d fvec=(%.15G,%.15G,%.15G,%.15G,%.15G)\n", x[0], x[1], x[2], x[3], x[4], test, its, *check, fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));\
 free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);free_vector(fvecG);return;}
 #endif
 #define FREERETURND {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
@@ -313,7 +332,7 @@ extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, 
 extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
 
 extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
-#undef MD_GLOBALNR
+#define MD_GLOBALNR
 #undef MD_GLOBALNR2
 #ifdef MD_GLOBALNR2
 double fmin2(double x[], int iA, int iB, double shift[3]);
@@ -520,9 +539,12 @@ void newt(double x[], int n, int *check,
 #endif 
       for (i=0;i<n;i++) 
 	p[i] = -fvec[i]; /* Right-hand side for linear equations.*/
+#ifdef MD_USE_LAPACK
+      SolveLineq(fjac,p,n);
+#else
       ludcmp(fjac,n,indx,&d); /* Solve linear equations by LU decomposition.*/
       lubksb(fjac,n,indx,p);
-      
+#endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNR
       lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift, TOLX); 
@@ -587,8 +609,9 @@ void newt(double x[], int n, int *check,
 	}
 #endif
     } 
-  MD_DEBUG(printf("maxits!!!\n"));
+  MD_DEBUG10(printf("maxits!!!\n"));
   *check = 2;
+  FREERETURN; 
   return;
   nrerror("MAXITS exceeded in newt"); 
   
@@ -610,7 +633,11 @@ void newtDistNeg(double x[], int n, int *check,
   /*Define global variables.*/
   nnD=n; 
   nrfuncvD=vecfunc; 
+#ifdef MD_GLOBALNRD
   f=fminD(x,iA,iB,shift); /*fvec is also computed by this call.*/
+#else
+  funcs2beZeroedDist(n,x,fvecD,iA,iB,shift);
+#endif
   test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
   for (i=0;i<n;i++) 
     if (fabs(fvecD[i]) > test)
@@ -652,9 +679,12 @@ void newtDistNeg(double x[], int n, int *check,
 #endif 
       for (i=0;i<n;i++) 
 	p[i] = -fvecD[i]; /* Right-hand side for linear equations.*/
+#ifdef MD_USE_LAPACK
+      SolveLineq(fjac,p,n);
+#else
       ludcmp(fjac,n,indx,&d); /* Solve linear equations by LU decomposition.*/
       lubksb(fjac,n,indx,p);
-      
+#endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNRD
       lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift, TOLXD); 
@@ -724,6 +754,7 @@ void newtDistNeg(double x[], int n, int *check,
     } 
   MD_DEBUG(printf("maxits!!!\n"));
   *check = 2;
+  FREERETURND;
   return;
   nrerror("MAXITS exceeded in newt"); 
   
@@ -744,7 +775,9 @@ void newtDist(double x[], int n, int *check,
   /*Define global variables.*/
   nnD=n; 
   nrfuncvD=vecfunc; 
+#ifdef MD_GLOBALNRD
   f=fminD(x,iA,iB,shift); /*fvec is also computed by this call.*/
+#endif
   test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
   for (i=0;i<n;i++) 
     if (fabs(fvecD[i]) > test)
@@ -786,9 +819,12 @@ void newtDist(double x[], int n, int *check,
 #endif 
       for (i=0;i<n;i++) 
 	p[i] = -fvecD[i]; /* Right-hand side for linear equations.*/
+#ifdef MD_USE_LAPACK
+      SolveLineq(fjac,p,n);
+#else
       ludcmp(fjac,n,indx,&d); /* Solve linear equations by LU decomposition.*/
       lubksb(fjac,n,indx,p);
-      
+#endif
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNRD
       lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift, TOLXD); 
@@ -858,6 +894,7 @@ void newtDist(double x[], int n, int *check,
     } 
   MD_DEBUG(printf("maxits!!!\n"));
   *check = 2;
+  FREERETURND; 
   return;
   nrerror("MAXITS exceeded in newt"); 
   
