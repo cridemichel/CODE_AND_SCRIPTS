@@ -240,7 +240,8 @@ struct progStatus
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
   double springkSD;
-  double stepSD;
+  double stepSDA;
+  double stepSDB;
   int maxitsSD;
   double tolSD;
   /* Accumulator for the radial distribution function */
@@ -493,7 +494,8 @@ struct pascii opro_ascii[] =
   {"epsdMax",      &OS(epsdMax),               1,   1, "%.12G"},
   {"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
   {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
-  {"stepSD",       &OS(stepSD),                1,   1, "%.12G"},
+  {"stepSDA",       &OS(stepSDA),                1,   1, "%.12G"},
+  {"stepSDB",       &OS(stepSDB),                1,   1, "%.12G"},
   {"maxitsSD",     &OS(maxitsSD),              1,   1, "%d"},
   {"tolSD",        &OS(tolSD),                 1,   1, "%.15G"},         
   {"forceguess",   &OS(forceguess),            1,   1, "%d"},
@@ -681,7 +683,8 @@ struct singlePar OsinglePar[] = {
   {"tolSD",      &OprogStatus.tolSD,          CT},
   {"forceguess", &OprogStatus.forceguess,     INT},
   {"springkSD",  &OprogStatus.springkSD,    CT},
-  {"stepSD",     &OprogStatus.stepSD,         CT},
+  {"stepSDA",     &OprogStatus.stepSDA,         CT},
+  {"stepSDB",     &OprogStatus.stepSDB,         CT},
   {"maxitsSD",   &OprogStatus.maxitsSD,       INT},
   {"zbrakn",     &OprogStatus.zbrakn,         INT},
   {"zbrentTol",  &OprogStatus.zbrentTol,      CT},

@@ -776,7 +776,8 @@ void usrInitBef(void)
     OprogStatus.guessDistOpt = 0;
     OprogStatus.tolSD = 0.005;
     OprogStatus.springkSD = -1.0;
-    OprogStatus.stepSD = 0.1;
+    OprogStatus.stepSDA = 1.0;
+    OprogStatus.stepSDB = 1.0;
     OprogStatus.maxitsSD=10;
     OprogStatus.zbrakn = 100;
     OprogStatus.zbrentTol = 0.00001;
