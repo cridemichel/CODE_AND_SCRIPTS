@@ -35,7 +35,7 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
-double **Xa, **Xb, **RA, **RB, ***R, **Rt;
+double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
 #else
@@ -1011,6 +1011,8 @@ void usrInitAft(void)
     RA = matrix(3, 3);
     RB = matrix(3, 3);
     Rt = matrix(3, 3);
+    RtA = matrix(3, 3);
+    RtB = matrix(3, 3);
     Aip = matrix(3,3);
     R = malloc(sizeof(double**)*Oparams.parnum);
     for (i=0; i < Oparams.parnum; i++)

@@ -809,7 +809,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
        //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
 	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
               
-       if (  fp < Sqr(OprogStatus.epsd) ||  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR) ||   sqrt(normxi) < (fp+EPSFR)*ftol )
+       if ( (0 && fp < Sqr(OprogStatus.epsd)) ||  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR) || ( 0 && sqrt(normxi) < (fp+EPSFR)*ftol) )
 	 {
 	   itsfrprmn++;
 	   return;

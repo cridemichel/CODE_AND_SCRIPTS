@@ -10,7 +10,7 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
-extern double **Xa, **Xb, **RA, **RB, ***R, **Rt;
+extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
 #else
@@ -2873,6 +2873,40 @@ void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
       rI[k1] = rA[k1] + tt*rBA[k1];  
     }
 }
+void guess_dist(double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
+		double **RA, double **RB)
+{
+  double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
+  int k1, k2, n;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gradA[k1] =  (rA[k1]-rB[k1]);
+      gradB[k1] = -(rA[k1]-rB[k1]);
+    }
+  for (n = 0; n < 3; n++)
+    {
+      gradaxA[n] = 0;
+      gradaxB[n] = 0;
+      for (k1 = 0; k1 < 3; k1++) 
+	{
+	  gradaxA[n] += gradA[k1]*RA[k1][n];
+	  gradaxB[n] += gradB[k1]*RB[k1][n];
+	}
+    }
+  for (k1=0; k1 < 3; k1++)
+    {
+      dA[k1] = 0;
+      dB[k1] = 0;
+      for (n=0; n < 3;n++)
+	{
+	  dA[k1] += gradaxA[n]*RA[k1][n]; 
+	  dB[k1] += gradaxB[n]*RB[k1][n];
+	}
+    }
+  calc_intersec(dA, rA, Xa, rC);
+  calc_intersec(dB, rB, Xb, rD);
+}
+
 void calc_grad(double *rC, double *rA, double **Xa, double *grad)
 {
   int k1, k2;
@@ -2909,7 +2943,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *
   rA[2] = rz[i] + vz[i]*ti;
   MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
-  UpdateOrient(i, ti, Rt, Omega);
+  UpdateOrient(i, ti, RtA, Omega);
   na = (i < Oparams.parnumA)?0:1;
   if (OprogStatus.targetPhi > 0)
     {
@@ -2917,13 +2951,13 @@ double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
-  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
 
   ti = t - atomTime[j];
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
-  UpdateOrient(j, ti, Rt, Omega);
+  UpdateOrient(j, ti, RtB, Omega);
   na = (j < Oparams.parnumA)?0:1;
   if (OprogStatus.targetPhi > 0)
     {
@@ -2931,14 +2965,18 @@ double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
-  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
 retry:
   if (OprogStatus.forceguess)
     calcguess = 1;
   if (calcguess)
     {
+#ifdef MD_ELLGRID
+      guess_dist(rA, rB, Xa, Xb, gridA, gridB, rC, rD, RtA, RtB);
+#else
       calc_intersec(rB, rA, Xa, rC);
       calc_intersec(rA, rB, Xb, rD);
+#endif
 #if 1
       if (OprogStatus.springkSD>0 && OprogStatus.stepSD>0)
 	{
