@@ -538,6 +538,21 @@ void bump (int i, int j, double* W, int bt)
   vz[j] = vz[j] - delpz*invmj;
 }
 #else
+void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *rBC)
+{
+  int k1, k2;
+  double f, g;
+  f = g = -1; 
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	f += rAC[k1]*Xa[k1][k2]*rAC[k2];
+	g += rBC[k1]*Xb[k1][k2]*rBC[k2];
+      } 
+  printf("f(rC)=%.15G g(rC)=%.15G\n", f, g);
+  if (fabs(f) > 1E-5||fabs(g) > 1E-5)
+    exit(-1);
+}
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
@@ -604,6 +619,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
   tRDiagR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
  
+  MD_DEBUG(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
   /* calcola le matrici inverse del tensore d'inerzia */
   InvMatrix(Ia, invIa, 3);
   InvMatrix(Ib, invIb, 3);
@@ -695,7 +711,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   vy[j] = vy[j] - delpy*invmj;
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
-
+  MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
   for (a=0; a < 3; a++)
     {
       wx[i] += factor*invIa[0][a]*rACn[a];
@@ -1110,7 +1126,7 @@ extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 void calcFxtFt(double x[3], double **X,
 	       double D[3][3], double Omega[3][3], double **R, 
-	       double pos[3], double vel[3],
+	       double pos[3], double vel[3], double gradf[3],
 	       double Fxt[3], double *Ft)
 {
   double tOmegaD[3][3], DOmega[3][3];
@@ -1190,7 +1206,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
   int na; 
   double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
-  double DA[3][3], DB[3][3];
+  double DA[3][3], DB[3][3], fx[3], gx[3];
   double Fxt[3], Gxt[3], Ft, Gt;
   int k1, k2, k3;
   ti = x[4] - atomTime[iA];
@@ -1234,31 +1250,51 @@ void fdjac(int n, double x[], double fvec[], double **df,
 	  df[k1][k2] = 2.0*(Xa[k1][k2] + Sqr(x[3])*Xb[k1][k2]);
 	}
     }
-  
+  /* calc fx e gx */
   for (k1 = 0; k1 < 3; k1++)
     {
+      fx[k1] = 0;
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]);
+	}
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#if 0
       df[3][k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	df[3][k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]); 
+#endif
+      df[3][k1] = fx[k1];
     } 
 
   for (k1 = 0; k1 < 3; k1++)
     {
+#if 0
       df[4][k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	df[4][k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]); 
+#endif
+      df[4][k1] = gx[k1];
     } 
 
   for (k1 = 0; k1 < 3; k1++)
     {
+#if 0
       df[k1][3] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	df[k1][3] += 4.0*x[3]*Xb[k1][k2]*(x[k2]-rB[k2]); 
+#endif
+      df[k1][3] = 4.0*x[3]*gx[k1];
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
-  calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, Fxt, &Ft);
-  calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, Gxt, &Gt);
+  calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
   for (k1 = 0; k1 < 3; k1++)
     {
       //df[k1][4] = 0;
@@ -1273,6 +1309,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
 {
   int na, k1, k2; 
   double  rA[3], rB[3], ti;
+  double fx[3], gx[3];
   double Omega[3][3];
   /* x = (r, alpha, t) */ 
   
@@ -1298,23 +1335,52 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   printf("Xb=\n");
   print_matrix(Xb, 3);
 #endif
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fvec[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	fvec[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]) + 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
-    }
-  fvec[3] = -1.0;
-  fvec[4] = -1.0;
+  
   
   for (k1 = 0; k1 < 3; k1++)
     {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(x[k2] - rB[k2]);
+    }
+
+   for (k1 = 0; k1 < 3; k1++)
+    {
+#if 0
+      fvec[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fvec[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]) + 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
+#endif
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+#if 0
+  fvec[3] = -1.0;
+  fvec[4] = -1.0;
+#endif
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#if 0
       for (k2 = 0; k2 < 3; k2++)
 	{
 	  fvec[3] += (x[k1]-rA[k1])*Xa[k1][k2]*(x[k2]-rA[k2]);
 	  fvec[4] += (x[k1]-rB[k1])*Xb[k1][k2]*(x[k2]-rB[k2]);
 	}
+#endif
+#if 1
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1]-rB[k1])*gx[k1];
+#endif
     }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
 }
 void rebuildCalendar(void);
 void PredictEvent (int na, int nb) 
@@ -1802,8 +1868,45 @@ void ProcessCollWall(void)
     }	 
   lastcol[evIdA] = Oparams.time;
 }
-
 #endif
+void calc_energy(char *msg)
+{
+  int i, k1, k2;
+  double wt[3];
+  K = 0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (i<Oparams.parnumA)
+	{
+	  /* calcola tensore d'inerzia e le matrici delle due quadriche */
+	  tRDiagR(i, Ia, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+	  K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  wt[0] = wx[i];
+	  wt[1] = wy[i];
+	  wt[2] = wz[i];
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      {
+		K += wt[k1]*Ia[k1][k2]*wt[k2];
+	      }
+	}
+      else
+	{
+	  tRDiagR(i, Ib, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+	  K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  wt[0] = wx[i];
+	  wt[1] = wy[i];
+	  wt[2] = wz[i];
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      {
+		K += wt[k1]*Ib[k1][k2]*wt[k2];
+	      }
+	}
+    }
+  K *= 0.5;
+  printf("[%s] Kinetic Energy: %f\n", msg, K);
+}
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
@@ -1832,6 +1935,7 @@ void ProcessCollision(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
+  MD_DEBUG(calc_energy("prima"));
 #if defined(MD_SQWELL)||defined(MD_INFBARRIER)
   /* i primi due bit sono il tipo di event (uscit buca, entrata buca, collisione con core 
    * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */
@@ -1840,6 +1944,7 @@ void ProcessCollision(void)
   bump(evIdA, evIdB, rxC, ryC, rzC, &W);
 #endif
   MD_DEBUG(store_bump(evIdA, evIdB);)
+  MD_DEBUG(calc_energy("dopo"));
   //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY
