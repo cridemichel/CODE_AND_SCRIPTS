@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.5 2004-05-17 14:14:29 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.6 2004-11-26 15:37:13 demichel Exp $     */
 #ifndef lint
-static char vcid[] = "$Id: mdsimul.c,v 1.5 2004-05-17 14:14:29 demichel Exp $";
+static char vcid[] = "$Id: mdsimul.c,v 1.6 2004-11-26 15:37:13 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -111,7 +111,6 @@ void commMD(void)
 	{
 	  /* ADDED 09/04/2001: Se negativi glil steps allora salva sopra */
 	  msteps = llabs(OprogStatus.measSteps[i]);
-	    
 	  if ( (msteps != 0) &&
 	       ((Oparams.curStep % msteps) == 0) &&
 	       ((Oparams.curStep / msteps) >=
@@ -123,7 +122,6 @@ void commMD(void)
 	       OprogStatus.measStep[i] */
 	    
 	    {
-	      
 	      //printf("curStep: %d initStep[%d]: %d", Oparams.curStep, 
 	      //     i, OprogStatus.initStep[i]);
 
