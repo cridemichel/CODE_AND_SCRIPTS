@@ -1,12 +1,12 @@
 #bimixhs Makefile
-SDHDR=ellipsoid.h
+SDHDR=bimix.h
 
 UTIL = wtdutil heteroutil xvautil corutil jumps
 
 ellipsoid: link measures.o move.o init.o corutil tree.o# $(UTIL)
 
 link:
-	rm $(COMM)/mdsimdep.h ; ln -s $(PERC)/ellipsoid/$(SDHDR) $(COMM)/mdsimdep.h 
+	rm $(COMM)/mdsimdep.h ; ln -s $(PERC)/bimixhs/$(SDHDR) $(COMM)/mdsimdep.h 
 # rigidABdbLJ utilities 
 wtdutil: wtdutil.o
 	$(CC) $(LDFLAGS) wtdutil.o -o $(BIN)/MOwtdutil -lm 
