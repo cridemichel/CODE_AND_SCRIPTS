@@ -83,17 +83,15 @@ extern double *atcharge;
 #define N_MAX 1000
 /* Routines for LU decomposition from Numerical Recipe online */
 #define TINY 1E-20
-#define MD_NCMAX 200
-void ludcmp(double a[NA][NA], int* indx, double* d)
+#define MD_NBMAX 200
+void ludcmp(double **a, int* indx, double* d, int n)
 {
   /* A[i][j] = Aij 
    * A x = b  
    * per semplicità nel seguito si assume che l'ordine della matrice è 3 */
   int i,imax=0,j,k;
-  int n = NA;
   double big,dum,sum,temp; 
-  double vv[NA]; /* vv stores the implicit scaling of each row.*/
-  
+  double vv[MD_NBMAX]; /* vv stores the implicit scaling of each row.*/
   /*vv = vector(1,n);*/
   *d=1.0; /* No row interchanges yet. */
   for (i=0;i<n;i++) 
@@ -167,11 +165,10 @@ void ludcmp(double a[NA][NA], int* indx, double* d)
   /*free_vector(vv,1,n); */
 }
 
-void lubksb(double a[NA][NA], int* indx, double b[NA])
+void lubksb(double **a, int* indx, double *b, int n)
 { 
   int i,ii=0,ip,j; 
   double sum; 
-  const int n=NA;
   for (i=0;i<n;i++) 
     { 
       /* When ii is set to a positive value, it will become the index of the  
@@ -198,32 +195,26 @@ void lubksb(double a[NA][NA], int* indx, double b[NA])
       /* Store a component of the solution vector X. */ 
     } /* All done! */
 }
-double a1[NA][NA];
-void SolveLineq (double a[NA][NA], double x[NA], int n) 
+void SolveLineq (double **a, double *x, int n) 
 {
-  int m1, m2, indx[NA];
+  int indx[MD_NBMAX];
   double dd;
-  for (m1 = 0; m1 < NA; m1++)
-    {
-      for (m2 = 0; m2 < NA; m2++)
-	al[m1][m2] = a[m1][m2];
-    }
-  ludcmp(al, indx, &dd);
-  lubksb(al, indx, x);
+  ludcmp(al, indx, &dd, n);
+  lubksb(al, indx, x, n);
 }
 
-void InvMatrix(double a[NA][NA], double b[NA][NA])
+void InvMatrix(double **a, double **b, int NB)
 {
-  int m1, m2, indx[NA], col[NA];
+  int m1, m2, indx[MD_NBMAX], col[MD_NBMAX];
   double dd;
-  ludcmp(a, indx, &d); 
-  for(m2=0;m2<NA;m2++) 
+  ludcmp(a, indx, &d, NB); 
+  for(m2=0;m2<NB;m2++) 
     { 
-      for(m1=0;m1<NA;m1++) 
+      for(m1=0;m1<NB;m1++) 
 	col[m1]=0.0; 
       col[m2]=1.0; 
-      lubksb(a, indx, col); 
-      for(m1=0;m1<NA;m1++) 
+      lubksb(a, indx, col, NB);
+      for(m1=0;m1<NB;m1++) 
 	 b[m1][m2]=col[m1]; 
     }
 }
@@ -250,10 +241,179 @@ void BuildConstraintMatrix (void)
     }
 }
 
-double cvMat[NA][NA], cvMatInv[NA][NA], *cvMatInvS[NA][NA], 
-       cDistSq[NA], vVec[NA], curBondLenSq[NA]; 
-int cMat[NA][NA]; 
-int cAtom1[NA], cAtom2[NA], unitVec[NA];
+double **cvMat, **cvMatInv, ***cvMatInvS, *cDistSq, *vVec, *curBondLenSq; 
+int *cMat[NA]; 
+int *cAtom1, *cAtom2;
+void updImpConstrVsq(double dt, double c, int i)
+{
+  int m, mm, a, b;
+  int NB = NA-1;
+  double cost, L, w, cdt = c*dt, dvSq, dx, dy, dz;
+  L = cbrt(Vol);
+  for (m = 0; m < NB; m++)
+    {
+      for (a = 0; a < NA; a++)
+	{
+	  w = cMat[a][m];
+	  if (w != 0.) 
+	    {
+	      cost = 0;
+	      for (mm = 0; mm < NB; mm++)
+		{
+		  if (cAtom1[mm] != a && cAtom2[mm] != a)
+		    {
+		      dvSq = Sqr(px[cAtom1[mm]][n]/Oparams.m[cAtom1[mm]] - px[cAtom2[mm]][n]/Oparams.m[cAtom2[mm]]) + 
+			Sqr(py[cAtom1[mm]][n]/Oparams.m[cAtom1[mm]] - py[cAtom2[mm]][n]/Oparams.m[cAtom2[mm]]) + 
+			Sqr(pz[cAtom1[mm]][n]/Oparams.m[cAtom1[mm]] - pz[cAtom2[mm]][n]/Oparams.m[cAtom2[mm]]); 
+		      cost -= cvMatInv[m][mm]*dvSq;
+		    }
+		}
+	      dx = cVec[0][m];
+	      dy = cVec[1][m];
+	      dz = cVec[2][m];
+	      px[a][i] += w * cdt * cost * dx;
+	      py[a][i] += w * cdt * cost * dy;
+	      pz[a][i] += w * cdt * cost * dz;
+	      for (mm = 0; mm < NB; mm++)
+		{
+		  if (cAtom1[mm] == a)
+		    b = cAtom2[mm];
+		  else
+		    b = cAtom1[mm];
+		  px[a][i] /= (1 + w*dx*cdt*px[a][i]/Oparams.m[a]);
+		  py[a][i] /= (1 + w*dy*cdt*py[a][i]/Oparams.m[a]);
+		  pz[a][i] /= (1 + w*dz*cdt*pz[a][i]/Oparams.m[a]);
+	     	  px[a][i] -= w * cdt * dx * Sqr(py[a][i]/Oparams.m[a]);
+		  px[a][i] -= w * cdt * dx * Sqr(pz[a][i]/Oparams.m[a]);
+		  py[a][i] -= w * cdt * dy * Sqr(px[a][i]/Oparams.m[a]);
+		  py[a][i] -= w * cdt * dy * Sqr(pz[a][i]/Oparams.m[a]);
+		  pz[a][i] -= w * cdt * dz * Sqr(px[a][i]/Oparams.m[a]);
+		  pz[a][i] -= w * cdt * dz * Sqr(py[a][i]/Oparams.m[a]);
+		  
+	      	  px[a][i] *= exp(w*dx*cdt*2.0*px[b]/Oparams.m[a]*params.m[b]);    
+    		  py[a][i] *= exp(w*dy*cdt*2.0*py[b]/Oparams.m[a]*params.m[b]);
+		  pz[a][i] *= exp(w*dz*cdt*2.0*pz[b]/Oparams.m[a]*params.m[b]);
+		  px[a][i] -= w * 2.0 * cdt * dx * py[a][i]*py[b]/(Oparams.m[a]*params.m[b]);
+		  px[a][i] -= w * 2.0 * cdt * dx * pz[a][i]*pz[b]/(Oparams.m[a]*params.m[b]);
+		  py[a][i] -= w * 2.0 * cdt * dy * px[a][i]*px[b]/(Oparams.m[a]*params.m[b]);
+		  py[a][i] -= w * 2.0 * cdt * dy * pz[a][i]*pz[b]/(Oparams.m[a]*params.m[b]);
+		  pz[a][i] -= w * 2.0 * cdt * dz * px[a][i]*px[b]/(Oparams.m[a]*params.m[b]);
+		  pz[a][i] -= w * 2.0 * cdt * dz * py[a][i]*py[b]/(Oparams.m[a]*params.m[b]);
+
+		  pm = Sqr(px[b][i]/Oparams.m[b]) +  
+		    Sqr(py[b][i]/Oparams.m[b]) +
+		    Sqr(pz[b][i]/Oparams.m[b]);
+		  
+	      	  px[a][i] -= w * cdt * dx * pm;
+    		  py[a][i] -= w * cdt * dy * pm;
+		  pz[a][i] -= w * cdt * dz * pm;
+		}
+ 	    }
+	}
+    }
+}
+void updImpConstrVsqAft(double dt, double c, int i, double **cVec)
+{
+  int m, mm, a, b;
+  int NB = NA-1;
+  double cost, L, w, cdt = c*dt, dvSq, dx, dy, dz;
+  L = cbrt(Vol);
+  for (m = NB-1; m >= 0; m--)
+    {
+      for (a = NA-1; a >=0; a--)
+	{
+	  w = cMat[a][m];
+	  if (w != 0.) 
+	    {
+	      dx = cVec[0][m];
+	      dy = cVec[1][m];
+	      dz = cVec[2][m];
+	     	      for (mm = NB-1; mm >= 0; mm--)
+		{
+		  if (cAtom1[mm] == a)
+		    b = cAtom2[mm];
+		  else
+		    b = cAtom1[mm];
+ 		  pm = Sqr(px[b][i]/Oparams.m[b]) +  
+		    Sqr(py[b][i]/Oparams.m[b]) +
+		    Sqr(pz[b][i]/Oparams.m[b]);
+		  
+	      	  px[a][i] -= w * cdt * dx * pm;
+    		  py[a][i] -= w * cdt * dy * pm;
+		  pz[a][i] -= w * cdt * dz * pm;
+	
+		  pz[a][i] -= w * 2.0 * cdt * dz * px[a][i]*px[b]/(Oparams.m[a]*params.m[b]);
+		  pz[a][i] -= w * 2.0 * cdt * dz * py[a][i]*py[b]/(Oparams.m[a]*params.m[b]);
+		  py[a][i] -= w * 2.0 * cdt * dy * px[a][i]*px[b]/(Oparams.m[a]*params.m[b]);
+		  py[a][i] -= w * 2.0 * cdt * dy * pz[a][i]*pz[b]/(Oparams.m[a]*params.m[b]);
+		  px[a][i] -= w * 2.0 * cdt * dx * py[a][i]*py[b]/(Oparams.m[a]*params.m[b]);
+		  px[a][i] -= w * 2.0 * cdt * dx * pz[a][i]*pz[b]/(Oparams.m[a]*params.m[b]);
+	      	  px[a][i] *= exp(w*dx*cdt*2.0*px[b]/Oparams.m[a]*params.m[b]);    
+    		  py[a][i] *= exp(w*dy*cdt*2.0*py[b]/Oparams.m[a]*params.m[b]);
+		  pz[a][i] *= exp(w*dz*cdt*2.0*pz[b]/Oparams.m[a]*params.m[b]);
+
+		  pz[a][i] -= w * cdt * dz * Sqr(px[a][i]/Oparams.m[a]);
+		  pz[a][i] -= w * cdt * dz * Sqr(py[a][i]/Oparams.m[a]);
+		  py[a][i] -= w * cdt * dy * Sqr(px[a][i]/Oparams.m[a]);
+		  py[a][i] -= w * cdt * dy * Sqr(pz[a][i]/Oparams.m[a]);
+		  px[a][i] -= w * cdt * dx * Sqr(py[a][i]/Oparams.m[a]);
+		  px[a][i] -= w * cdt * dx * Sqr(pz[a][i]/Oparams.m[a]);
+		  px[a][i] /= (1 + w*dx*cdt*px[a][i]/Oparams.m[a]);
+		  py[a][i] /= (1 + w*dy*cdt*py[a][i]/Oparams.m[a]);
+		  pz[a][i] /= (1 + w*dz*cdt*pz[a][i]/Oparams.m[a]);
+
+		}
+	      cost = 0;
+	      for (mm = NB-1; mm >= 0; mm--)
+		{
+		  if (cAtom1[mm] != a && cAtom2[mm] != a)
+		    {
+		      dvSq = Sqr(px[cAtom1[mm]][n]/Oparams.m[cAtom1[mm]] - px[cAtom2[mm]][n]/Oparams.m[cAtom2[mm]]) + 
+			Sqr(py[cAtom1[mm]][n]/Oparams.m[cAtom1[mm]] - py[cAtom2[mm]][n]/Oparams.m[cAtom2[mm]]) + 
+			Sqr(pz[cAtom1[mm]][n]/Oparams.m[cAtom1[mm]] - pz[cAtom2[mm]][n]/Oparams.m[cAtom2[mm]]); 
+		      cost -= cvMatInv[m][mm]*dvSq;
+		    }
+		}
+	      px[a][i] += w * cdt * cost * dx;
+	      py[a][i] += w * cdt * cost * dy;
+	      pz[a][i] += w * cdt * cost * dz;
+	   
+ 	    }
+	}
+    }
+}
+
+void updImpConstrForce(double dt, double c, double **cVec)
+{
+  int m, a;
+  double cost, w;
+  for (m = 0; m < NB; m ++)
+      {
+	for (a = 0; a < NA; a++) 
+	  {
+	    w = cMat[a][m];
+	    if (w != 0.) 
+	      {
+		/* qui calcolo le forze vincolari dovute alle forze nel reference system */
+		cost = 0;
+		for (mm = 0; mm < NB; mm++)
+		  {
+		    /* qui si è assunto che cvMatInv è l'inversa di cvMat calcolata all'inizio */
+		    cost += cvMatInv[m][mm]*vVec[mm];
+		  }
+		px[a][i] += cdt * w * cost * cVec[0][m];
+		py[a][i] += cdt * w * cost * cVec[1][m];
+		pz[a][i] += cdt * w * cost * cVec[2][m];
+#if 0
+		FxO[a][i] += w * b * cVec[0][m];
+		FyO[a][i] += w * b * cVec[1][m];
+		FzO[a][i] += w * b * cVec[2][m];
+#endif
+	      } 
+	  }
+      }
+}
+
 void ComputeConstraints(double dt, double c, int RefSys, int after)
 {
   /* RefSys=1 allora calcola le forze del ref system */
@@ -351,18 +511,18 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
       }
     /* qui bisogna trovare l'inversa della matrice cvMat !!!*/
     if (!OprogStatus.keepInvMat)
-      InvMatrix (cvMat, cvMatInv);
+      InvMatrix (cvMat, cvMatInv, NA-1);
     else if (OprogStatus.keepInvMat && after && RefSys)
       {
-	InvMatrix (cvMat, cvMatInv);
-	for (m1=0; m1 < NA; m1++)
-	  for (m2=0; m2 < NA; m2++)
+	InvMatrix (cvMat, cvMatInv, NA-1);
+	for (m1=0; m1 < NB; m1++)
+	  for (m2=0; m2 < NB; m2++)
 	    cvMatInvS[m1][m2][i] = cvMatInv[m1][m2];
       }
     else
       {
-	for (m1=0; m1 < NA; m1++)
-	  for (m2=0;m2 < NA; m2++)
+	for (m1=0; m1 < NB; m1++)
+	  for (m2=0;m2 < NB; m2++)
 	    cvMatInv[m1][m2] = cvMatInvS[m1][m2][i];
       }
 /* ============================================== */
@@ -374,38 +534,26 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	FzO[a][i] = 0;
       }
 #endif
-    for (m = 0; m < NB; m ++)
+    /* se RefSys == 2 e la matrice inversa viene salvata calcola solo la matrice inversa
+     * ( N.B. questa possibilità serve per inizializzarla in init() )*/
+    if (RefSys == 2 && OprogStatus.keepInvMat)
+      return;
+
+    if (!after)
       {
-	for (a = 0; a < NA; a++) 
-	  {
-	    w = cMat[a][m];
-	    if (w != 0.) 
-	      {
-		/* qui calcolo le forze vincolari dovute alle forze nel reference system */
-		b = 0;
-		for (mm = 0; mm < NB; mm++)
-		  {
-		    /* qui si è assunto che cvMatInv è l'inversa di cvMat calcolata all'inizio */
-		    b += cvMatInv[m][mm]*vVec[mm];
-		  }
-		px[a][i] += cdt * w * b * cVec[0][m];
-		py[a][i] += cdt * w * b * cVec[1][m];
-		pz[a][i] += cdt * w * b * cVec[1][m];
-		if (RefSys)
-		  {
-		    /* Qui bisogna considerare il contributo del termine in v^2 */
-		  
-		  
-		  }
-#if 0
-		FxO[a][i] += w * b * cVec[0][m];
-		FyO[a][i] += w * b * cVec[1][m];
-		FzO[a][i] += w * b * cVec[2][m];
-#endif
-	      } 
-	  }
+	if (RefSys)
+	  /* Qui bisogna considerare il contributo del termine in v^2 */
+	  updImpConstrVsq(dt, c, i, cVec); 
+	updImpConstrForce(dt, c, i, cVec);
       }
-  }
+    else
+      {
+	updImpConstrForceAft(dt, c, i, cVec);
+	if (RefSys)
+	  /* Qui bisogna considerare il contributo del termine in v^2 */
+	  updImpConstrVsq(dt, c, i, cVec); 
+      }
+    }
 }
 
 void  AnlzConstraintDevs (void) 
@@ -1907,13 +2055,14 @@ void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz)
 }
 void movelongRespaNPTBef(double dt)
 {
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(dt, 0.5, 0, 0); 
+      /*RAPA<<<<<<<<<<<<<<<< */
+#endif
 #ifdef MD_RESPA_NOSELONG
   if (OprogStatus.Nose == 0)
     {
       updImpLong(dt, 0.5);
-#ifdef MD_RAPACONSTR
-      updImpRapa(dt, 0.5);
-#endif
     }
   else
     {
@@ -2083,10 +2232,9 @@ void movelongRespaNPTAft(double dt)
     updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
 #ifdef MD_RAPACONSTR
-  ComputeConstraints(0);
-  updImpRapa(dt, 0.5);
+  ComputeConstraints(dt, 0.5, 0, 1);
 #endif
- #if 1
+#if 1
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR) 
   if (OprogStatus.rcutInner != Oparams.rcut)
     shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
@@ -2134,14 +2282,14 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 	rzi[a][i] = rz[a][i];
       }	 
 #endif
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(dt, 0.5, 1, 0); 
+      /*RAPA<<<<<<<<<<<<<<<< */
+#endif
 #ifdef MD_RESPA_NOSELONG
   if (OprogStatus.Nose == 1)
     {
-#ifdef MD_RAPACONSTR
-      updImpRapa(dt, 0.5);
-      /*RAPA<<<<<<<<<<<<<<<< */
-#endif
-      updImpNoseAnd(dt, 0.5);
+     updImpNoseAnd(dt, 0.5);
       updPv(dt, 0.5);
       updVol(dt, 0.5);
       updPositionsNPT(dt, 1.0);
@@ -2261,7 +2409,11 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	  	       0.000000000001, px, py, pz);
 #endif
 #endif
-    } 
+    }
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(dt, 0.5, 1, 1); 
+      /*RAPA<<<<<<<<<<<<<<<< */
+#endif
 #if 0
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
