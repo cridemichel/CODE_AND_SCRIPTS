@@ -727,7 +727,7 @@ void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, COORD_TYPE** velz,
      correcting the Hoover friction coefficent with the appropriate value
      of the temperature (i.e. the predicted one) */
   int i, a;
-  COORD_TYPE dlnV, px, py, pz;
+  COORD_TYPE dlnV, px, py, pz, Rx, Ry, Rz;
 #if 0
   double vmed;
 #endif
@@ -743,11 +743,12 @@ void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, COORD_TYPE** velz,
 #endif
   for(i=0; i < Nm; i++)
     {
+      CoM(i, &Rx, &Ry, &Rz);
       for(a=0; a < NA; a++)
 	{
-	  px = velx[a][i] - dlnV * Rx[i];
-	  py = vely[a][i] - dlnV * Ry[i];
-	  pz = velz[a][i] - dlnV * Rz[i];
+	  px = velx[a][i] - dlnV * Rx;
+	  py = vely[a][i] - dlnV * Ry;
+	  pz = velz[a][i] - dlnV * Rz;
 	  K = K + Oparams.m[a] * (Sqr(px) + Sqr(py) + Sqr(pz));
 	}
 #if 0
