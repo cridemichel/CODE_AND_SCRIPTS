@@ -250,8 +250,10 @@ int main(int argc, char **argv)
       strcat(filewalter, filename[t1]);
       readRestart(filewalter);
       init();
+#ifdef SOFT_SPHERE
       if (PP!=-1)
 	Oparams.PP = PP;
+#endif
       for (i=0; i < Oparams.parnum[0]; i++)
 	{
 	  r1x[i] = rx[0][i];
