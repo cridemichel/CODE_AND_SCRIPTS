@@ -281,7 +281,7 @@ void free_matrix(double **M, int n)
   free(M);
 }
 int nn, nn2, nnD; /* Global variables to communicate with fmin.*/
-double *fvec, *fvecG; 
+double *fvec, *fvecG, *fvecD; 
 #ifdef MD_GLOBALNR2
 #define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
 free_vector(fvec);free_vector(xold);free_vector(g2); free_vector(xold2); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);free_vector(fvecG);return;}
@@ -744,7 +744,6 @@ void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int,
   free_vector(f); 
 }
 extern int nn, nn2; 
-extern double *fvec, *fvecG, *fvecD;
 extern void (*nrfuncv)(int n, double v[], double f[], int iA, int iB, double shift[3]); 
 extern void (*nrfuncv2)(int n, double v[], double f[], int iA, int iB, double shift[3]); 
 double fmin(double x[], int iA, int iB, double shift[3]) 
