@@ -245,8 +245,9 @@ void transDiff(void)
   DrSqTot /= ((double) Oparams.parnumA);
 #if 1
   mf = fopenMPI(absMisHD("msdA.dat"),"a");
-  fprintf(mf, "%15G %.15G\n", Oparams.time, DrSqTot / ((double)Oparams.parnumA));
+  fprintf(mf, "%15G %.15G\n", Oparams.time, DrSqTot);
   fclose(mf);
+  DrSqTot = 0.0;
   if (Oparams.parnum > Oparams.parnumA)
     {
       for(i=Oparams.parnumA; i < Oparams.parnum; i++)
