@@ -2909,10 +2909,10 @@ retry:
       //check_point("calcDistNeg", &vecgcg[3], rB, Xb);
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
-      //printf("PRIMA dist=%.15f\n",calc_norm(r12));
+      printf("PRIMA dist=%.15f\n",calc_norm(r12));
+      printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 
       distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda1, 1); 
-      //distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda2, 1);
       for (k1=0; k1 < 3; k1++)
 	{
 	  rC[k1] = vecgcg[k1];
@@ -2921,7 +2921,7 @@ retry:
 #else
 
 #endif
-#if 0
+#if 1
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
       printf("dist=%.15f\n",calc_norm(r12));
@@ -5366,7 +5366,7 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 0
+#if 1
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
