@@ -1123,9 +1123,12 @@ void usrInitAft(void)
 #ifdef MD_RAPACONSTR
   cvMatInvS = malloc(sizeof(double**)*NB);
   cvMatInv  = malloc(sizeof(double*)*NB);
+  cvMat     = malloc(sizeof(double*)*NB);
   cDistSq = malloc(sizeof(double)*NB);
   curBondLenSq = malloc(sizeof(double)*NB);
   vVec = malloc(sizeof(double)*NB);
+  cAtom1 = malloc(sizeof(int)*NB);
+  cAtom2 = malloc(sizeof(int)*NB);
 #endif
   sigmag = malloc(sizeof(double*)*NA);
 #if 0
@@ -1146,6 +1149,7 @@ void usrInitAft(void)
     {
       cvMatInvS[a] = malloc(sizeof(double*)*NB);
       cvMatInv[a] = malloc(sizeof(double)*NB);
+      cvMat[a] = malloc(sizeof(double)*NB);
       if (OprogStatus.keepInvMat)
 	{
 	  for (b = 0; b < NB; b++)
