@@ -267,7 +267,7 @@ void movea(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
       
     }
   /* END OF LOOP OVER MOLECULES */
-
+#if !defined(MD_RESPA_NPT)
   if (OprogStatus.Nose == 0) return;
   /* Calculate the friction coefficent at time t and its derivative at time
      t + dt/2 */
@@ -280,7 +280,7 @@ void movea(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   Volot = Vol;
   Vol1t = Vol1;   /* Vol1(t) */
   Vol1 = Vol1 + dt2 * Vol2;
- 
+#endif
 }
 #if 0
 /* ========================== >>> movea <<< =============================== */
@@ -1715,7 +1715,7 @@ void moveb(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	  moving[a] = 0;
 	  moved[a] = 1;
 	}
-
+#if !defined(MD_FENE)
       /* START OF ITERATIVE LOOP */
       it = 0;
       done = 0;
@@ -1794,6 +1794,7 @@ void moveb(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	  exit(-1);
 	  
 	}
+#endif
 #ifdef MOLPTENS
     vmx = vmy = vmz = 0.0;  /* Velocity of center of mass of molecule i */
 #endif
@@ -2646,7 +2647,8 @@ void updLs(double dt, double c)
 #else
   dof = (2*NA - 1)*Oparams.parnum;
 #endif
-  DT =  (2.0 * Kin - (dof * Nm - 3.0) * Oparams.T)/s;
+  DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
+  printf("DT: %f Kin: %f\n", DT, Kin);
   Ps += DT * cdt2;
   Ps = Ps / (1 - Ps*cdt*s/OprogStatus.Q);
   Ps += DT * cdt2;
@@ -2752,17 +2754,25 @@ void movelongRespaNPTBef(double dt)
   printf("6) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updImpLong(dt, 0.25);
   updNoseAndRef(dt, 0.5); 
+  printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
 }
 
 void movelongRespaNPTAft(double dt)
 {
   updNoseAndRef(dt, 0.5); 
+  printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updImpLong(dt, 0.25);
+  printf("A2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updNoseAnd(dt, 0.25);
+  printf("A3) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updLv(dt, 0.25);
+  printf("A4) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updLs(dt, 0.5);
+  printf("A5) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updLv(dt, 0.25);
+  printf("A6) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updNoseAnd(dt, 0.25);
+  printf("A7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updImpLong(dt, 0.25);
 }
 #endif
