@@ -3,7 +3,7 @@ SDHDR=nmpoly.h
 
 UTIL = #xvautil wtdutil heteroutil
 
-nmpoly:  link measures.o forces.o move.o init.o $(UTIL)
+nmpoly:  link measures.o forces.o move.o init.o moveRespa.o $(UTIL)
 
 link:
 	rm $(COMM)/mdsimdep.h ; ln -s $(PERC)/nmpoly/$(SDHDR) $(COMM)/mdsimdep.h 
@@ -26,6 +26,10 @@ measures.o: measures.c $(SDHDR) $(COMM)/mdsimul.h
 
 move.o: move.c $(SDHDR) $(COMM)/mdsimul.h
 	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o move.o move.c
+
+moveRespa.o: moveRespa.c $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o moveRespa.o moveRespa.c
+
 
 forces.o: forces.c $(SDHDR) $(COMM)/mdsimul.h
 	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o forces.o forces.c
