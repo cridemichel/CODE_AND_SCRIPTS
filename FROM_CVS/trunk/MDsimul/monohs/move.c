@@ -243,6 +243,7 @@ void scale_coords(double sf)
 {
   int i; 
   L *= sf;
+  Lz*= sf;
   for (i = 0; i < Oparams.parnum; i++)
     {
       rx[i] *= sf;
@@ -647,8 +648,12 @@ void bump (int i, int j, double* W)
 #ifdef MD_HSVISCO
   double taus, invm, delpx, delpy, delpz;
 #endif
-
-  sigSq = Sqr(Oparams.sigma);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      sigSq = Sqr(radii[i]+radii[j]);
+    }
+  else
+    sigSq = Sqr(Oparams.sigma);
   rxij = rx[i] - rx[j];
   if (fabs (rxij) > L2)
     rxij = rxij - SignR(L, rxij);
@@ -1110,6 +1115,11 @@ void PredictEvent (int na, int nb)
 		    {
 		      if (n != na && n != nb && (nb >= -1 || n < na)) 
 			{
+		      	  if (OprogStatus.targetPhi > 0.0)
+			    {
+			      sigSq = Sqr(radii[na]+radii[n]);
+			    }
+			  
 			  tInt = OprogStatus.time - atomTime[n];
 			  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
 			  dv[0] = vx[na] - vx[n];
