@@ -100,6 +100,7 @@ void energy(void)
 #endif
   printf("TOTAL ENERGY: %.10f\n", E);
   printf("Elrc:: %.6f Plrc: %.6f\n", Elrc, Plrc);
+#if 0
   mol = 0;
   dist = sqrt( Sqr(rx[0][mol] - rx[1][mol]) + Sqr(ry[0][mol] - ry[1][mol]) + 
 	       Sqr(rz[0][mol] - rz[1][mol]) );
@@ -109,7 +110,7 @@ void energy(void)
     (ry[0][mol] - ry[1][mol]) * (vy[0][mol] - vy[1][mol]) + 
     (rz[0][mol] - rz[1][mol]) * (vz[0][mol] - vz[1][mol]))/dist;
   printf("Molecule relative velocity along bond: %.15f\n", dist); 
-
+#endif
   Px = 0.0;
   Py = 0.0;
   Pz = 0.0;

@@ -1083,10 +1083,12 @@ void movelongRespaNPTBef(double dt)
       /*printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
       updLs(dt, 0.5);
       updImpLongNose(dt, 0.5);
+      updPv(dt, 0.5);
       /*printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 #else
    updImpLong(dt, 0.5);
+   updPv(dt, 0.5);
 #endif
 }
 
@@ -1126,10 +1128,12 @@ void movelongRespaNPTBefAlt(double dt)
       Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
       //Ps += DT * cdt2;
       updImpLongNoseSym(dt, 0.5);
+      updPv(dt, 0.5);
       s = s / (1 - s*Ps*cdt/OprogStatus.Q);
     }
 #else
-    updImpLong(dt, 0.5);
+  updImpLong(dt, 0.5);
+  updPv(dt, 0.5);
 #endif
 }
 
@@ -1153,6 +1157,7 @@ void movelongRespaNPTAftAlt(double dt)
       Nm = Oparams.parnum;
       cdt2 = cdt / 2.0;
       s = s / (1 - s*Ps*cdt/OprogStatus.Q);
+      updPvAft(dt, 0.5);
       updImpLongNoseSym(dt, 0.5);
       Kin = 0;
       for (i = 0; i < Oparams.parnum; i++)
@@ -1191,12 +1196,14 @@ void movelongRespaNPTAft(double dt)
   else
     {
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+      updPvAft(dt, 0.5);
       updImpLongNoseAft(dt, 0.5);
       updLsAft(dt, 0.5);
       /*printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+  updPvAft(dt, 0.5);
   updImpLong(dt, 0.5);
 #endif
 }
@@ -1247,7 +1254,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   if (OprogStatus.Nose == 1)
     {
       updImpAnd(dt, 0.5);
-      updPv(dt, 0.5);
+      //updPv(dt, 0.5);
       updVol(dt, 0.5);
       updPositionsNPT(dt, 1.0);
       updVol(dt, 0.5);
@@ -1256,7 +1263,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   if (OprogStatus.Nose == 1)
     {
       updImpNoseAnd(dt, 0.5);
-      updPv(dt, 0.5);
+      //updPv(dt, 0.5);
       updPs(dt, 0.5);
       upds(dt, 0.5);
       updVol(dt, 0.5);
@@ -1443,14 +1450,14 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #ifdef MD_RESPA_NOSELONG
   if (OprogStatus.Nose == 1)
     {
-      updPv(dt, 0.5);
+      //updPv(dt, 0.5);
       updImpAnd(dt, 0.5);
     }
 #else
   if (OprogStatus.Nose == 1)
     {
       updPsAft(dt, 0.5);
-      updPvAft(dt, 0.5);
+      //updPvAft(dt, 0.5);
       updImpNoseAndAft(dt, 0.5);
     }
   else if (OprogStatus.Nose == 2)
@@ -1528,6 +1535,29 @@ void move(void)
 	      BuildNebrList(Oparams.parnum, OprogStatus.rcutInner);
 	    }
 	}
+#if 0 
+      if (OprogStatus.Nose==1 && nebrNowLong)
+	{
+	  nebrNowLong = 0;
+	  /* build up linked list on predicted 
+	     coordinates (only father do it)*/
+	  if (OprogStatus.noLinkedList)
+	    {
+	      BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcut);
+	      if (OprogStatus.Nose == 1)
+		LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+	    }
+	  else
+	    {
+	      links(Oparams.parnum, Oparams.rcut);
+	      /* Build up neighbour list */  
+	      BuildNebrListLong(Oparams.parnum, Oparams.rcut);
+	      if (OprogStatus.Nose == 1)
+		LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+	    }
+	}
+#endif 
+      
       LJForce(Oparams.parnum, OprogStatus.rcutInner);
 #ifdef MD_FENE
       FENEForce();
@@ -1561,6 +1591,7 @@ void move(void)
 	    Oparams.parnum);             
 	}
 #endif
+
       if (OprogStatus.Nose==1)
 	{
 	  checkNebrRebuildNPT();
@@ -1572,8 +1603,6 @@ void move(void)
 	  checkNebrRebuildLong();
 	}
     }
-    
-  
   if (nebrNowLong)
     {
       nebrNowLong = 0;
@@ -1586,12 +1615,12 @@ void move(void)
       else
 	{
 	  links(Oparams.parnum, Oparams.rcut);
-    	  /* Build up neighbour list */  
+	  /* Build up neighbour list */  
 	  BuildNebrListLong(Oparams.parnum, Oparams.rcut);
 	}
     }
-   
-  //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
+  
+   //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
 #ifdef MD_RESPA_NPT
   movelongRespaNPTAft(Oparams.steplength);
   p2v();
