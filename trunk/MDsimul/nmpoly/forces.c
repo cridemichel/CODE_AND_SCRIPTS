@@ -1098,7 +1098,7 @@ void LJForce(int Nm, double rcut)
   double SwFact;
 #endif
 #ifdef NM_SPHERE
-  double vabNN, vabMM;
+  double vabNN, vabMM, epsabnm, factor;
 #endif
   /* ======================================================================= */
   /*calculate useful quantities
@@ -1107,12 +1107,20 @@ void LJForce(int Nm, double rcut)
 	 instead 'sigab[a][b]' is an ab-constant */
   rcutab = rcut * Oparams.sigma;
   rcutabSq = Sqr(rcutab);
+#ifdef NM_SPHERE
+  factor = pow(2.0,1.0/6.0);
+  sigmaSq = Sqr(Oparams.sigma*factor);
+#else
   sigmaSq = Sqr(Oparams.sigma);
+#endif
   epsab4 = 4.0 * Oparams.epsilon;
+#ifdef NM_SPHERE
+  epsabnm = Oparams.epsilon / (((double) Oparams.NN) - ((double)Oparams.MM));
+#endif
   Vab = 0.0;
   Wab = 0.0;
   L = cbrt(Vol);
-  invL = 1.0  / L;
+  invL = 1.0 / L;
   ncut = 0;
   /* initialize forces vector */
   for (i=0;i < Nm; i++) 
@@ -1188,15 +1196,21 @@ void LJForce(int Nm, double rcut)
 	{
 	  /*rab   = sqrt(rabSq);*/
 	  if (OprogStatus.grow)
-	    srab2 = Sqr((sigmag[a][i]+sigmag[b][j])/2.0)/rabSq; 
+	    {
+#ifdef NM_SPHERE
+    	      srab2 = Sqr(factor*(sigmag[a][i]+sigmag[b][j])/2.0)/rabSq; 
+#else
+    	      srab2 = Sqr((sigmag[a][i]+sigmag[b][j])/2.0)/rabSq; 
+#endif
+	    }
 	  else
 	    srab2 = sigmaSq / rabSq;
 #if defined(SOFT_SPHERE)
 	  vab = pow(srab2, ((double)Oparams.NN)/2.0);
   	  wab = ((double)Oparams.NN)*vab;
 #elif defined(NM_SPHERE)
-	  vabNN = pow(srab2, ((double)Oparams.NN)/2.0);
-	  vabMM = -pow(srab2, ((double)Oparams.MM)/2.0);
+	  vabNN = ((double)Oparams.MM)*pow(srab2, ((double)Oparams.NN)/2.0);
+	  vabMM = -((double)Oparams.NN)*pow(srab2, ((double)Oparams.MM)/2.0);
 	  vab = vabNN + vabMM;
   	  wab = ((double)Oparams.NN)*vabNN - ((double)Oparams.MM)*vabMM ;
 #else
@@ -1217,7 +1231,11 @@ void LJForce(int Nm, double rcut)
 #endif
 	  /* NOTE: If you will use a shifted-force potential then 
 	     calculate the force using that potential */
+#if defined(NM_SPHERE)
+	  fab   = epsabnm * wab / rabSq;
+#else
 	  fab   = epsab4 * wab / rabSq;
+#endif
 #if 0
 	  if (OprogStatus.grow && fabs(fab) > 1000)
 	    fab = 1000;
@@ -1291,7 +1309,7 @@ void LJForce(int Nm, double rcut)
   vabCut = pow(srab2, Oparams.NN/2.0);
   //printf("NN: %d srab2:%f rab:%f vabCut: %f\n", Oparams.NN, srab2, rab, vabCut);
 #elif defined(NM_SPHERE)
-  vabCut = pow(srab2, Oparams.NN/2.0)-pow(srab2,Oparams.MM/2.0);
+  vabCut = ((double)Oparams.MM)*pow(srab2, Oparams.NN/2.0)-((double)Oparams.NN)*pow(srab2,Oparams.MM/2.0);
 #else
   srab6 = srab2 * srab2 * srab2;
   srab12 = srab6 * srab6;
@@ -1302,9 +1320,15 @@ void LJForce(int Nm, double rcut)
   /*printf("ncut[%d][%d]:%d\n Vcab:%f\n",a,b, ncut[a][b], vabCut);*/
   /* ncut[a][b] is the number of atoms pairs a-b within 
      rcutab[a][b] */ 
+#ifdef NM_SPHERE
+  W = epsabnm * W / 3.0;
+  Vc = epsabnm * (V - Vcab); 
+  V = epsabnm * V;
+#else
   W = epsab4 * W / 3.0;
   Vc = epsab4 * (V - Vcab); 
   V = epsab4 * V;
+#endif
 #ifdef MD_RESPA
   V = Vc;
 #endif
@@ -1366,7 +1390,7 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
   double SwFact;
 #endif
 #ifdef NM_SPHERE
-  double vabNN, vabMM;
+  double vabNN, vabMM, epsabnm, factor;
 #endif
   /* ======================================================================= */
   /*calculate useful quantities
@@ -1382,7 +1406,15 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
   rcutabSqI = Sqr(rcutabI);
   rcutabO = rcutO * Oparams.sigma;
   rcutabSqO = Sqr(rcutabO);
+#ifdef NM_SPHERE
+  factor = pow(2.0,1.0/6.0);
+  sigmaSq = Sqr(Oparams.sigma*factor);
+#else
   sigmaSq = Sqr(Oparams.sigma);
+#endif
+#ifdef NM_SPHERE
+  epsabnm = Oparams.epsilon / (((double) Oparams.NN) - ((double)Oparams.MM));
+#endif
   epsab4 = 4.0 * Oparams.epsilon;
   Vab = 0.0;
   Wab = 0.0;
@@ -1458,15 +1490,21 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
 	{
 	  /*rab   = sqrt(rabSq);*/
 	  if (OprogStatus.grow)
-	    srab2 = Sqr((sigmag[a][i]+sigmag[b][j])/2.0)/rabSq; 
+	    {
+#ifdef NM_SPHERE
+	      srab2 = Sqr(factor*(sigmag[a][i]+sigmag[b][j])/2.0)/rabSq; 
+#else
+	      srab2 = Sqr((sigmag[a][i]+sigmag[b][j])/2.0)/rabSq; 
+#endif
+	    }
 	  else
 	    srab2 = sigmaSq / rabSq;
 #if defined(SOFT_SPHERE)
 	  vab = pow(srab2, ((double)Oparams.NN)/2.0);
   	  wab = ((double)Oparams.NN)*vab;
 #elif defined(NM_SPHERE)
-	  vabNN = pow(srab2, ((double)Oparams.NN)/2.0);
-	  vabMM = -pow(srab2, ((double)Oparams.MM)/2.0);
+	  vabNN = ((double)Oparams.MM)*pow(srab2, ((double)Oparams.NN)/2.0);
+	  vabMM = -((double)Oparams.NN)*pow(srab2, ((double)Oparams.MM)/2.0);
 	  vab = vabNN + vabMM;
   	  wab = ((double)Oparams.NN)*vabNN - ((double)Oparams.MM)*vabMM ;
 #else
@@ -1480,7 +1518,11 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
 #if 0
 	  vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);
 #endif
+#ifdef NM_SPHERE
+	  fab   = epsabnm * wab / rabSq;
+#else
 	  fab   = epsab4 * wab / rabSq;
+#endif
 	  fxab  = fab * rxab;         
       	  fyab  = fab * ryab;
 	  fzab  = fab * rzab;
@@ -1580,8 +1622,8 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
   vabCutI= pow(srab2I, Oparams.NN/2.0);
   //printf("NN: %d srab2:%f rab:%f vabCut: %f\n", Oparams.NN, srab2, rab, vabCut);
 #elif defined(NM_SPHERE)
-  vabCut = pow(srab2, Oparams.NN/2.0)-pow(srab2,Oparams.MM/2.0);
-  vabCutI= pow(srab2I,Oparams.NN/2.0)-pow(srab2I,Oparams.MM/2.0);
+  vabCut = ((double)Oparams.MM)*pow(srab2, Oparams.NN/2.0)-((double)Oparams.NN)*pow(srab2,Oparams.MM/2.0);
+  vabCutI= ((double)Oparams.MM)*pow(srab2I,Oparams.NN/2.0)-((double)Oparams.NN)*pow(srab2I,Oparams.MM/2.0);
 #else
   srab6 = srab2 * srab2 * srab2;
   srab12 = srab6 * srab6;
@@ -1596,9 +1638,15 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
   /*printf("ncut[%d][%d]:%d\n Vcab:%f\n",a,b, ncut[a][b], vabCut);*/
   /* ncut[a][b] is the number of atoms pairs a-b within 
      rcutab[a][b] */ 
+#ifdef NM_SPHERE
+  WLong = epsabnm * WLong / 3.0;
+  VcLong = epsabnm * (VLong - Vcab + VcabI); 
+  VLong = epsabnm * (VLong + VcabI);
+#else
   WLong = epsab4 * WLong / 3.0;
   VcLong = epsab4 * (VLong - Vcab + VcabI); 
   VLong = epsab4 * (VLong + VcabI);
+#endif
   /* MULTIPLY FOR ENERGY FACTORS */
 #ifdef MOLPTENS
   WmLong = WmxxLong + WmyyLong + WmzzLong;
@@ -1640,7 +1688,10 @@ void FENEForce(void)
 #if defined(SOFT_SPHERE)
   vabCut = pow(srab2, Oparams.NN/2.0);
 #elif defined(NM_SPHERE)
-  vabCut = pow(srab2, Oparams.NN/2.0)-pow(srab2,Oparams.MM/2.0);
+  //vabCut = pow(srab2, Oparams.NN/2.0)-pow(srab2,Oparams.MM/2.0);
+  srab6 = srab2 * srab2 * srab2;
+  srab12 = srab6 * srab6;
+  vabCut = srab12 - srab6;
 #else
   srab6 = srab2 * srab2 * srab2;
   srab12 = srab6 * srab6;
@@ -1683,10 +1734,19 @@ void FENEForce(void)
 	  vab = pow(srab2, ((double)Oparams.NN)/2.0);
   	  wab = ((double)Oparams.NN)*vab;
 #elif defined(NM_SPHERE)
+#if 0
+	  vabCut = pow(srab2, Oparams.NN/2.0);
 	  vabNN = pow(srab2, ((double)Oparams.NN)/2.0);
 	  vabMM = -pow(srab2, ((double)Oparams.MM)/2.0);
 	  vab = vabNN + vabMM;
   	  wab = ((double)Oparams.NN)*vabNN - ((double)Oparams.MM)*vabMM ;
+#endif
+	  /* Lennard-Jones */
+	  srab6   = srab2 * srab2 * srab2;
+	  srab12  = Sqr(srab6);
+	  vab     = srab12 - srab6;
+	  /*vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);*/
+	  wab     = 6.0*(vab + srab12);
 #else
 	  /* Lennard-Jones */
 	  srab6   = srab2 * srab2 * srab2;
