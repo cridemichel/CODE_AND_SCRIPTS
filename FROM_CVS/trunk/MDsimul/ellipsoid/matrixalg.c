@@ -150,13 +150,13 @@ void InvMatrix(double **a, double **b, int NB)
 }
 
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
-#define TOLX 1.0E-10//1.0e-7 /* Convergence criterion on  x.*/ 
-#define TOLX2 1.E-10
-#define MAXITS 50 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
-#define MAXITS2 50
-#define TOLF 1.0e-7 // 1.0e-4
-#define TOLF2 1.0E-7
-#define TOLMIN 1.0E-6//1.0e-6 
+#define TOLX 1.0E-13//1.0e-7 /* Convergence criterion on  x.*/ 
+#define TOLX2 1.E-13
+#define MAXITS 200 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
+#define MAXITS2 200
+#define TOLF 1.0e-10 // 1.0e-4
+#define TOLF2 1.0E-10
+#define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
@@ -477,13 +477,13 @@ void newt(double x[], int n, int *check,
 
 #endif
 #endif
-      /* ============ */
-     fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
-      /* If analytic Jacobian is available, you can 
-	 replace the routine fdjac below with your own routine.*/
+       /* ============ */
+       fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
+       /* If analytic Jacobian is available, you can 
+	  replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNR
-      for (i=0;i<n;i++) { /* Compute  f for the line search.*/
-	for (sum=0.0,j=0;j<n;j++)
+       for (i=0;i<n;i++) { /* Compute  f for the line search.*/
+	 for (sum=0.0,j=0;j<n;j++)
 	  sum += fjac[j][i]*fvec[j]; 
 	g[i]=sum; 
       } 
@@ -574,7 +574,7 @@ void newt(double x[], int n, int *check,
   
 }
 
-#define EPS 3.0e-8//1.0E-4 /* Approximate square root of the machine precision.*/
+#define EPS 1e-12//1.0E-4 /* Approximate square root of the machine precision.*/
 void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 { int i,j; 
   double h,temp,*f; 

@@ -658,11 +658,11 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   vc = 0;
   for (a=0; a < 3; a++)
     vc += (vCA[a]-vCB[a])*norm[a];
-  if (vc < 0 && fabs(vc) > 1E-5)
+  if (vc < 0)// && fabs(vc) > 1E-10)
     {
       printf("[ERROR] maybe second collision has been wrongly predicted\n");
-      printf("relative velocity (vc=%.15G) at contact point is negative! Aborting simulation...\n", vc);
-      //exit(-1);
+      printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
+      return;
     }
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
   
@@ -2029,6 +2029,7 @@ no_core_bump:
 				{
 				  MD_DEBUG(printf("Centroids overlap!\n"));
 				  t = (sqrt (d) - b) / vv;
+				  t = 0;
 				}
 			      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
 			      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
@@ -2061,11 +2062,9 @@ no_core_bump:
 			      MD_DEBUG(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
 			      MD_DEBUG2(printf("r[%d](%f,%f,%f)-r[%d](%f,%f,%f)\n",
 					      na, rx[na], ry[na], rz[na], n, rx[n], ry[n], rz[n]));
-			      
-			      
 			      vecg[3] = 1.0; /* questa stima di alpha andrebbe fatta meglio!*/
 			      vecg[4] = t;
-			      MD_DEBUG(printf("vecguess: %f,%f,%f alpha=%f t=%f\n", vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
+			      MD_DEBUG(printf("time=%.15f vecguess: %f,%f,%f alpha=%f t=%f\n",Oparams.time, vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
 #endif
 
 			      //calcDist(Oparams.time, na, n, shift);
@@ -2077,14 +2076,16 @@ no_core_bump:
 				  printf("[ERROR] newton-raphson failed to converge!\n");
 				  exit(-1);
 				}
-			      else if (retcheck==2 || vecg[4] < Oparams.time)
+			      else if (retcheck==2 || 
+				       vecg[4] < Oparams.time)
 				{
 				  /* se l'urto è nel passato chiaramente va scartato
 				   * tuttavia se t è minore di zero per errori di roundoff? */
 				  /* Notare che i centroidi si possono overlappare e quindi t può
 				   * essere tranquillamente negativo */
-				  MD_DEBUG(printf("qui\n"));
-				  continue;
+				  MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
+			      			  vecg[4], Oparams.time));
+		    		  continue;
 				}
 			      rxC = vecg[0];
 			      ryC = vecg[1];
@@ -2093,6 +2094,7 @@ no_core_bump:
 					      rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
 					      rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]));
 			      t = vecg[4];
+#if 1
 			      if (t < 0)
 				{
 #if 1
@@ -2107,6 +2109,7 @@ no_core_bump:
 #endif
 				  t = 0;
 				}
+#endif
 			      /* il tempo restituito da newt() è già un tempo assoluto */
 			      MD_DEBUG(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
 			      ScheduleEvent (na, n, t);
