@@ -334,7 +334,12 @@ struct params
   double chargerim;             /* charge of rim sites */
   double chargeface;            /* charge of face sites */   
   double epsilon;               /* dieletric constant */
+#ifdef MD_BROWN_BETTER
+  double chsiP;                  /* friction coefficient (brownian motion) */
+  double chsiN;
+#else
   double chsi;                  /* friction coefficient (brownian motion) */
+#endif
   double Diam;                  /* laponite diameter */
   int invsp;                    /* spacing of atom along diameter is D/invsp (invsp = 4,6,8) */
   double crep;                  /* constant of soft repulsion term c/r^6 */
@@ -538,7 +543,12 @@ struct singlePar OsinglePar[] = {
   {"Diam",       &Oparams.Diam,          CT},
   {"invsp",      &Oparams.invsp,         INT},
   {"crep",       &Oparams.crep,          CT},
+#ifdef MD_BROWN_BETTER
+  {"chsiP",       &Oparams.chsiP,          CT},
+  {"chsiN",       &Oparams.chsiN,          CT},
+#else
   {"chsi",       &Oparams.chsi,          CT},
+#endif
   {"cellNum",    &Oparams.M,                INT},
   {"epsilon",    &Oparams.epsilon,      CT},
   {"rcut",       &Oparams.rcut,             CT},
@@ -674,7 +684,12 @@ struct pascii opar_ascii[]=
   {"chargerim",         &OP(chargerim),                   1,   1, "%.10G"},
   {"chargeface",        &OP(chargeface),                  1,   1, "%.10G"},
   {"epsilon",           &OP(epsilon),                     1,   1, "%.10G"},
+#ifdef MD_BROWN_BETTER
+  {"chsiP",              &OP(chsiP),                        1,   1, "%.10G"},
+  {"chsiN",              &OP(chsiN),                        1,   1, "%.10G"},
+#else
   {"chsi",              &OP(chsi),                        1,   1, "%.10G"},
+#endif
   {"Diam",              &OP(Diam),                        1,   1, "%.10G"},
   {"invsp",             &OP(invsp),                       1,   1, "%d"},
   {"crep",              &OP(crep),                        1,   1, "%.10G"},
