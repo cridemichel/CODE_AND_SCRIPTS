@@ -3584,11 +3584,14 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
     }
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
 
+  printf("ti= %.15G\n", ti);
   ti = 0.0;//t + (t1 - atomTime[i]);
   rB[0] = rx[i];// + vx[j]*ti;
   rB[1] = ry[i];// + vy[j]*ti;
   rB[2] = rz[i];// + vz[j]*ti;
   UpdateOrient(i, ti, RtB, Omega);
+  if ((Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]))==0.0 || (rA[0]==rB[0] && rA[1]==rB[1] && rA[2]==rB[2]))
+    return OprogStatus.rNebrShell;
   na = (i < Oparams.parnumA)?0:1;
   scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[i]);
   scalfact[1] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axb[i]);
@@ -3609,6 +3612,9 @@ retry:
 	  calc_intersec(rB, rA, Xa, rC);
 	  calc_intersec(rA, rB, Xb, rD);
 	}
+      printf("rC = (%f,%f,%f) rD = (%f, %f, %f) \n"
+	     , rC[0]-rA[0], rC[1]-rA[1], rC[2]-rA[2],  
+	     rD[0]-rB[0], rD[1]-rB[1], rD[2]-rB[2]);
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
 
