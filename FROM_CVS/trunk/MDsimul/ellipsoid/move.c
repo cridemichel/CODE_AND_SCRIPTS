@@ -3138,8 +3138,8 @@ void guess_dist(int i, int j,
       gradaxB[n] = 0;
       for (k1 = 0; k1 < 3; k1++) 
 	{
-	  gradaxA[n] += gradA[k1]*RA[k1][n];
-	  gradaxB[n] += gradB[k1]*RB[k1][n];
+	  gradaxA[n] += gradA[k1]*RA[n][k1];
+	  gradaxB[n] += gradB[k1]*RB[n][k1];
 	}
     }
 #if 0 
@@ -3157,8 +3157,8 @@ void guess_dist(int i, int j,
       dB[k1] = rB[k1];
       for (n=0; n < 3;n++)
 	{
-	  dA[k1] += gradaxA[n]*RA[k1][n]*saA[n]/2.0; 
-	  dB[k1] += gradaxB[n]*RB[k1][n]*saB[n]/2.0;
+	  dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
 	}
     }
   calc_intersec(dA, rA, Xa, rC);
