@@ -57,7 +57,7 @@ double WmShort, WmxxShort, WmyyShort, WmzzShort, WmxyShort, WmyzShort, WmzxShort
        WShort, VcShort, VShort, WxxShort, WyyShort, WzzShort, WxyShort, WyzShort, WzxShort;
 #endif
 #ifdef MD_RAPACONSTR
-double **cvMat, **cvMatInv, ***cvMatInvS, *cDistSq, *vVec, *curBondLenSq, **cVec; 
+double **cvMat, **cvMatInv, ***cvMatInvS, *cDistSq, *vVec, *curBondLenSq, *cVec[3]; 
 int *cMat[NA]; 
 int *cAtom1, *cAtom2;
 #endif
@@ -500,7 +500,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	  dv = 0;
 #endif
 	vVec[m] = vVec[m] - (FxI[cAtom1[m]][i]/Oparams.m[cAtom1[m]] -
-			     FxI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[k][m];
+			     FxI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[0][m];
 #if 0
 	if (RefSys)
 	  dv = py[cAtom1[m]][n]/Oparams.m[cAtom1[m]] - py[cAtom2[m]][n]/Oparams.m[cAtom2[m]];
@@ -508,7 +508,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	  dv = 0;
 #endif
 	vVec[m] = vVec[m] - (FyI[cAtom1[m]][i]/Oparams.m[cAtom1[m]] -
-			     FyI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[k][m];
+			     FyI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[1][m];
 #if 0
 	if (RefSys)
 	  dv = pz[cAtom1[m]][n]/Oparams.m[cAtom1[m]]  - pz[cAtom2[m]][n]/Oparams.m[cAtom2[m]] ;
@@ -516,7 +516,7 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	  dv = 0;
 #endif
 	vVec[m] = vVec[m] - (FzI[cAtom1[m]][i]/Oparams.m[cAtom1[m]] -
-			     FzI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[k][m];
+			     FzI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[2][m];
       }
     /* qui bisogna trovare l'inversa della matrice cvMat !!!*/
     if (!OprogStatus.keepInvMat)
