@@ -978,21 +978,29 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	}
       sqrtDelta = sqrt(Delta);
       A2 = 2.0*A;
+#if 1
       s1 = (-B - sqrtDelta)/A2;
       s2 = (-B + sqrtDelta)/A2;
       if (fabs(s1) < fabs(s2))
 	sol = s1;
       else
 	sol = s2;
-#if 1
-      ng = calc_norm(gradf);
-      if (dist > 0 && dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSD*dist/2.0)
-	{
-	  sf /= GOLD;
-	  its++;
-	  continue;
-	}
+#else
+      if (B > 0)
+	sol = (-B + sqrtDelta)/A2; 
+      else
+	sol = (-B - sqrtDelta)/A2;
 #endif
+      if (OprogStatus.tolSDgrad <=0)
+	{
+	  ng = calc_norm(gradf);
+	  if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSD*dist/2.0)
+	    {
+	      sf /= GOLD;
+	      its++;
+	      continue;
+	    }
+	}
       done = 1;
     
     }
@@ -1531,8 +1539,12 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	 }
        else 
 #endif
-       if (doneryck==1 || 2.0*fabs(fpold-fp) <= ftol*Sqr(minax))//ftol*(fabs(fpold)+fabs(fp)+EPSFR))
+       if ((OprogStatus.tolSDgrad <=0|| 
+	    doneryck==1) 
+	   && (OprogStatus.tolSD <=0 || 
+	       2.0*fabs(fpold-fp) < ftol*(fabs(fpold)+fabs(fp)+EPSFR)))
 	 {
+#if 0
 	   double ngA, ngB;
 	   (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
 	   ngA = ngB = 0;  
@@ -1545,6 +1557,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	   ngB = sqrt(ngB);
 	   accngA += ngA/(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB);
 	   accngB += ngB/(jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB);
+#endif
 	   callsok++;
 	   return;
 	 }
@@ -1880,13 +1893,15 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double 
     {
       fx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
-	fx[k1] += 2.0*Xa[k1][k2]*(vec[k2] - rA[k2]);
+	fx[k1] += Xa[k1][k2]*(vec[k2] - rA[k2]);
+      fx[k1] *= 2.0;
     }
   for (k1 = 0; k1 < 3; k1++)
     {
       gx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
-	gx[k1] += 2.0*Xb[k1][k2]*(vec[k2+3] - rB[k2]);
+	gx[k1] += Xb[k1][k2]*(vec[k2+3] - rB[k2]);
+      gx[k1] *= 2.0;
       dd[k1] = vec[k1+3]-vec[k1];
     }
 
@@ -1928,7 +1943,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double 
   for (kk=0; kk < 3; kk++)
     {
       grad[kk]= S*dd[kk]/normdd;
-      grad[kk+3]= -S*K1*grad[kk];
+      grad[kk+3]= -K1*grad[kk];
       grad[kk] *= K2;
     }
 
@@ -2013,7 +2028,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double 
       grad[kk+3] /= normgB;
     } 
 #endif
-  F = 0.0;
+  //F = 0.0;
   S *= OprogStatus.springkSD;
   F = S*Sqr(normdd);
   /*
