@@ -1500,6 +1500,14 @@ void move(void)
 	  fprintf(bf, sepStr);
 	  writeAsciiPars(bf, opar_ascii);
 	  fprintf(bf, sepStr);
+	  writeAllCor(bf);
+	  fclose(bf);
+#ifdef MPI
+          sprintf(fileName, "/bin/gzip %s_R%d", fileop, my_rank);
+#else
+          sprintf(fileop3, "/bin/gzip %s", fileop);
+#endif
+          system(fileop3);
 	  OprogStatus.JJ++;
 	  if (OprogStatus.JJ == OprogStatus.NN)
 	    {
