@@ -829,11 +829,9 @@ void StartRun(void)
 
   }
 
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-extern void add_bond(int na, int n);
-extern void remove_bond(int na, int n);
+extern void add_bond(int na, int n, int a, int b);
+extern void remove_bond(int na, int n, int a, int b);
 extern double calcpotene(void);
-#endif
 #if defined(MD_SQWELL) && defined(MD_BONDCORR) 
 double corrini3, corrini0, corrini1, corrini2, corrnorm;
 double *lastbreak1, *lastbreak2;
