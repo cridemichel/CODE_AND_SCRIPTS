@@ -286,6 +286,7 @@ struct progStatus
   int nrespa;                    /* numero di iterazioni del reference system */
   double rcutInner;
   double lambda;
+  int keepInvMat;
 #endif
   int nebrTabFac;                /* How much storage sould be provided for 
                                    the neighbour list (see Rapaport pag.53
@@ -589,6 +590,7 @@ struct singlePar OsinglePar[] = {
   {"rcutInner",  &OprogStatus.rcutInner,            CT},
   {"nrespa",     &OprogStatus.nrespa,      INT},
   {"lambda",     &OprogStatus.lambda,      CT},
+  {"keepInvMat", &OprogStatus.keepInvMat,  INT},
 #endif
 #if 0
   {"atomsDist",  &Oparams.d,                CT},
@@ -676,6 +678,7 @@ struct pascii opro_ascii[] =
   {"lambda",           &OS(lambda),                         1,   1, "%.10G"},
   {"nrespa",           &OS(nrespa),                         1,   1,  "%d"},
   {"rcutInner",        &OS(rcutInner),                      1,   1, "%.10G"},
+  {"keepInvMat",       &OS(keepInvMat),                     1,   1,  "%d"},
 #endif
   {"noLinkedList", &OS(noLinkedList),               1,   1,  "%d"},
   {"avVol",          &OS(avVol),                    1,   1, "%.8G"},
