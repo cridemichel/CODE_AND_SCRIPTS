@@ -20,7 +20,7 @@
 #define ADJUST_LASTCOL AdjustLastcol();
 #endif
 #define MD_HOME "/home/demichel/"
-#define MD_SIMDAT MD_HOME "/simdat"
+#define MD_SIMDAT MD_HOME "/simdat2"
 #define MD_HD_TMP MD_SIMDAT "/mdtmp/"
 /* directory to store temporary files */ 
 
