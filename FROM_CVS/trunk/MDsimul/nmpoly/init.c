@@ -44,7 +44,7 @@ extern COORD_TYPE Mtot;
 /* used by linked list routines */
 extern int *head, *list, *map;  /* arrays of integer */
 extern int NCell, mapSize, M;
-
+extern double Volo1, Volo2, Volot;
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
@@ -1046,7 +1046,7 @@ void usrInitAft(void)
   f = fopen(MD_MESHDIR "/ntripl.dat", "r");
   if (!f)
     exit(-1);
-
+  Volo1  = Volo2 = Vol;
   for (i1 = 0; i1 < numk; i1++)
     {
       ntripl[i1] = 0;
