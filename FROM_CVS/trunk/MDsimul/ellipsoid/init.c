@@ -887,6 +887,8 @@ void R2u(void)
       uzz[i] = R[i][2][2];
     }
 }
+
+double calc_phi(void);
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
   {
@@ -1033,7 +1035,6 @@ void usrInitAft(void)
       lastcol[i] = 0.0;
     }
 #endif
-  
   if (newSim)
     {
       Oparams.time=0.0;
@@ -1065,6 +1066,7 @@ void usrInitAft(void)
       axb[i] = Oparams.b[1];
       axc[i] = Oparams.c[1];
     }
+  printf(">>>> phi=%.12G\n", calc_phi()); 
   /* evaluation of principal inertia moments*/ 
   for (a = 0; a < 2; a++)
     {

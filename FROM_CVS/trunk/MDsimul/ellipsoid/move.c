@@ -367,7 +367,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 		      double shift[3], double scalfact, double *factor)
 {
   int kk, a;
-  double C, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
+  double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
 
   L2 = 0.5 * L;
   phi = calc_phi();
@@ -376,7 +376,11 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   phi0 *= (4/3)*pi;
   phi0 /= L*L*L;
   C = cbrt(OprogStatus.targetPhi/phi0);
-  
+  if (i < Oparams.parnumA)
+    Ccur = axa[i]/Oparams.a[0]; 
+  else
+    Ccur = axa[i]/Oparams.a[1]; 
+  F = C / Ccur;
   for (kk=0; kk < 3; kk++)
     {
       rAC[kk] = rA[kk] - rC[kk];
@@ -390,18 +394,19 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 	rBD[kk] -= SignR(L, rBD[kk]);
     }
   /* 0.99 serve per evitare che si tocchino */
-  if (C < 1)
-    fact = C;
+  if (F < 1)
+    fact = F;
   else
     {
       fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
-      fact2 = C;
+      fact2 = F;
       if (fact2 < fact1)
 	fact = fact2;
       else
 	fact = fact1;
+
     }
-  //printf("phi=%f  scaling factor: %.8G\n", phi, fact);
+  //printf("phi=%f fact1=%.8G fact2=%.8G scaling factor: %.8G\n", phi, fact1, fact2, fact);
   axa[i] *= fact;
   axb[i] *= fact;
   axc[i] *= fact;
@@ -500,11 +505,6 @@ void scale_Phi(void)
   for (i = 0; i < Oparams.parnum; i++)
     {
       j = -1;
-      if (fabs(axa[i] / a0I - target) < 1E-12)
-	{
-	  done++;
-	  continue;
-	}
       distMin = get_min_dist(i, &j, rC, rD, shift);
       if (j == -1)
 	continue;
@@ -550,10 +550,25 @@ void scale_Phi(void)
 	    }
 	}
 #endif
+      if (fabs(axa[i] / a0I - target) < 1E-8)
+	{
+	  done++;
+	  if (done == Oparams.parnum)
+	    break;
+	  continue;
+	}
+     
     }
 
   //check_alldist_min("DOPO");
   printf("Scaled axes succesfully phi=%.8G\n", phi);
+#if 0
+  if (fabs(phi - OprogStatus.targetPhi)<1E-8)
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	printf("axes of %d (%.15f,%.15f,%.15f)\n", i, axa[i], axb[i], axc[i]);
+    }
+#endif
   //check_dist_min("PRIMA");
   rebuild_linked_list();
   rebuildCalendar();
@@ -562,7 +577,8 @@ void scale_Phi(void)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-  if (done == Oparams.parnum)
+  printf("Scaled successfully %d/%d ellipsoids \n", done, Oparams.parnum);
+  if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<1E-10 )
     {
       ENDSIM = 1;
       /* riduce gli ellissoidi alle dimensioni iniziali e comprime il volume */
