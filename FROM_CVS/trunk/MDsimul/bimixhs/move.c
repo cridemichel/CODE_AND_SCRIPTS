@@ -1118,7 +1118,8 @@ void PredictEvent (int na, int nb)
 		      else
 			{
 #ifdef MD_INFBARRIER
-			  if (sigDeltaSq == 0)
+			  //printf("sigDeltaSq: %f sigSq: %f\n", sigDeltaSq, sigSq);
+			  if (sigDeltaSq == sigSq)
 			    goto no_core_bump;
 			  
 #endif
