@@ -250,6 +250,8 @@ struct progStatus
   int equilibrated;
   double eqlevel;
   int zbrakn;
+  int n1;
+  int n2;
   double zbrentTol;
   /* Accumulator for the static structure factor */ 
   COORD_TYPE sumS[NUMK];
