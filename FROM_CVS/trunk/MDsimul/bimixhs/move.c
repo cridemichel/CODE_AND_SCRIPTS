@@ -335,7 +335,9 @@ void bump (int i, int j, double* W, int bt)
   double sigSq, sigDeltaSq, intdistSq;
   double distSq;
   double vxij, vyij, vzij, b;
-
+#ifdef MD_HSVISCO
+  double taus;
+#endif
   if (i < parnumA && j < parnumA)
     {
       sigSq = Sqr(Oparams.sigma[0][0]);
@@ -428,12 +430,33 @@ void bump (int i, int j, double* W, int bt)
   ene= (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
 	Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
 #endif
+#ifdef MD_HSVISCO
+  OprogStatus.Txy += delpx*delpy*invmi + vx[i]*delpy + delpx*vy[i];
+  OprogStatus.Txy += delpx*delpy*invmj + vx[j]*delpy + delpx*vy[j]; 
+  OprogStatus.Tyz += delpy*delpz*invmi + vy[i]*delpz + delpy*vz[i];
+  OprogStatus.Tyz += delpy*delpz*invmj + vy[j]*delpz + delpy*vz[j];
+  OprogStatus.Tzx += delpz*delpx*invmi + vz[i]*delpx + delpz*vx[i];
+  OprogStatus.Tzx += delpz*delpx*invmj + vz[j]*delpx + delpz*vx[j];
+#endif
   vx[i] = vx[i] + delpx*invmi;
   vx[j] = vx[j] - delpx*invmj;
   vy[i] = vy[i] + delpy*invmi;
   vy[j] = vy[j] - delpy*invmj;
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
+#ifdef MD_HSVISCO 
+  if (OprogStatus.lastcoll!=-1)
+    {
+      taus = Oparams.time - OprogStatus.lastcoll;
+      OprogStatus.DQxy += OprogStatus.Txy*taus + rxij*delpy;
+      OprogStatus.DQyz += OprogStatus.Tyz*taus + ryij*delpz;
+      OprogStatus.DQzx += OprogStatus.Tzx*taus + rzij*delpx;
+    }
+#endif
+#if 0
+  *W = delpx * rxij + delpy * ryij + delpz * rzij;
+#endif
+
 }
 #else
 void bump (int i, int j, double* W)
@@ -1236,6 +1259,7 @@ void ProcessCollWall(void)
 void ProcessCollision(void)
 {
   int k;
+  
   UpdateAtom(evIdA);
   UpdateAtom(evIdB);
   for (k = 0;  k < NDIM; k++)
@@ -1249,6 +1273,9 @@ void ProcessCollision(void)
   bump(evIdA, evIdB, &W, evIdC);
 #else
   bump(evIdA, evIdB, &W);
+#endif
+#ifdef MD_HSVISCO
+  OprogStatus.lastcoll = Oparams.time;
 #endif
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY
