@@ -363,7 +363,7 @@ struct params
 				   (linked list) */   
 
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  double delta; /* ampiezza della buca */
+  double delta[2][2]; /* ampiezza della buca */
   double bheight;
 #endif
 #ifdef MD_GRAVITY
@@ -498,7 +498,7 @@ struct pascii opar_ascii[]=
   {"M",                 &OP(M),                           1,   1,   "%d"},
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  {"delta",             &OP(delta),                       1,   1, "%.15G"},
+  {"delta",             &OP(delta),                       2,   2, "%.15G"},
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
 #endif
   {"", NULL, 0, 0, ""}
@@ -609,7 +609,9 @@ struct singlePar OsinglePar[] = {
   {"P",          &Oparams.P,                  CT},
   {"L",          &L,                        CT},
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  {"delta",      &Oparams.delta,            CT},
+  {"deltaAA",    &Oparams.delta[0][0],            CT},
+  {"deltaBB",    &Oparams.delta[1][1],            CT},
+  {"deltaAB",    &Oparams.delta[0][1],            CT},
   {"bheight",    &Oparams.bheight,          CT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},

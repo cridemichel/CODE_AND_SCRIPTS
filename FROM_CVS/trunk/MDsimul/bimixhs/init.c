@@ -551,7 +551,7 @@ void usrInitBef(void)
   V = 0.0;
   L = 9.4;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  Oparams.delta = 0.0;
+  Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
   Oparams.bheight = 0.0;
 #endif
 #ifdef MD_GRAVITY
@@ -685,6 +685,9 @@ void usrInitAft(void)
   invmA = 1.0/Oparams.m[0];
   invmB = 1.0/Oparams.m[1];
   Oparams.sigma[1][0] = Oparams.sigma[0][1];
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+  Oparams.delta[1][0] = Oparams.delta[0][1];
+#endif
   Mred[0][0] = Mred[1][1] = 0.5;
   Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
   /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
