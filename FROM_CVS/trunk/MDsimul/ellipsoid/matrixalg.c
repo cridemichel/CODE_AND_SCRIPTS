@@ -105,7 +105,7 @@ int cghalfspring, icg, jcg, doneryck;
 double shiftcg[3], lambdacg, minaxicg, minaxjcg;
 double gradfG[3], gradgG[3], dxG[6];
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3], **RtA, **RtB;
-extern int polinterr;
+extern int polinterr, polinterrRyck;
 /* ============================ >>> brent <<< ============================ */
 void  conjgradfunc(void);
 
@@ -177,6 +177,102 @@ void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *
     }
 }
 int powmeth;
+double brentRyck(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin)
+/*Given a function f, and given a bracketing triplet of abscissas ax, bx, cx 
+ * (such that bx is between ax and cx, and f(bx) is less than both f(ax) and f(cx)),
+ * this routine isolates the minimum to a fractional precision of about tol using Brent's
+ * method. The abscissa of the minimum is returned as xmin, and the minimum function value 
+ * is returned as brent, the returned function value. */
+{ 
+  int iter, ITMAXBR=100;
+  const double CGOLD=0.3819660;
+  const double ZEPSBR=1E-10;
+  double a,b,d,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
+  double e=0.0, fuold;
+  /* This will be the distance moved on the step before last.*/
+  a=(ax < cx ? ax : cx); /*a and b must be in ascending order, 
+			   but input abscissas need not be.*/
+  b=(ax > cx ? ax : cx);
+  x=w=v=bx; /*Initializations...*/
+  fw=fv=fx=(*f)(x); 
+  fuold = fv;
+  for (iter=1;iter<=ITMAXBR;iter++)
+    { 
+      /*Main program loop.*/
+      xm=0.5*(a+b);
+      tol2=2.0*(tol1=tol*fabs(x)+ZEPSBR); 
+      if (fabs(x-xm) <= (tol2-0.5*(b-a)))
+	{ /*Test for done here.*/
+	  *xmin=x;
+	  return fx;
+	} 
+      if (fabs(e) > tol1) 
+	{ /*Construct a trial parabolic fit.*/
+	  r=(x-w)*(fx-fv);
+	  q=(x-v)*(fx-fw);
+	  p=(x-v)*q-(x-w)*r;
+	  q=2.0*(q-r);
+	  if (q > 0.0)
+	    p = -p; 
+	  q=fabs(q);
+	  etemp=e; 
+	  e=d; 
+	  if (fabs(p) >= fabs(0.5*q*etemp) || p <= q*(a-x) || p >= q*(b-x))
+	    d=CGOLD*(e=(x >= xm ? a-x : b-x)); 
+	    /*The above conditions determine the acceptability of the parabolic fit.
+	     * Here we take the golden section step into the larger of the two segments.*/
+	  else
+	    {
+	      d=p/q; /* Take the parabolic step.*/
+	      u=x+d; 
+	      if (u-a < tol2 || b-u < tol2)
+		d=SIGN(tol1,xm-x); 
+	    }
+	}
+      else
+	{
+	  d=CGOLD*(e=(x >= xm ? a-x : b-x));
+	} 
+      u=(fabs(d) >= tol1 ? x+d : x+SIGN(tol1,d));
+      fu=(*f)(u); /*This is the one function evaluation per iteration.*/
+#if 0
+      if (2.0*fabs(fuold-fu) <= tol*(fabs(fuold)+fabs(fu)+ZEPSBR)) 
+	{ 
+	  *xmin=u;
+	  return fu;
+	}
+#endif
+      fuold = fu;//
+      if (fu <= fx)
+	{ /*Now decide what to do with our function evaluation.*/
+	  if (u >= x) 
+	    a=x;
+	  else
+	    b=x;
+	  SHFT(v,w,x,u); /* Housekeeping follows:*/
+	  SHFT(fv,fw,fx,fu); 
+	} 
+      else
+	{ 
+	  if (u < x) 
+	    a=u; 
+	  else 
+	    b=u; 
+	  if (fu <= fw || w == x)
+	    {
+	      v=w; w=u; fv=fw; fw=fu;
+	    }
+	  else if (fu <= fv || v == x || v == w)
+	    { 
+	      v=u; fv=fu;
+	    }
+	} /* Done with housekeeping. Back for another iteration.*/
+    }
+  polinterrRyck=1;
+  nrerror("Too many iterations in brent"); 
+  *xmin=x; /*Never get here.*/
+  return fx;
+}
 double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin)
 /*Given a function f, and given a bracketing triplet of abscissas ax, bx, cx 
  * (such that bx is between ax and cx, and f(bx) is less than both f(ax) and f(cx)),
@@ -249,8 +345,8 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
 	    a=x;
 	  else
 	    b=x;
-	  SHFT(v,w,x,u) /* Housekeeping follows:*/
-	    SHFT(fv,fw,fx,fu) 
+	  SHFT(v,w,x,u); /* Housekeeping follows:*/
+	  SHFT(fv,fw,fx,fu); 
 	} 
       else
 	{ 
@@ -263,7 +359,8 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
 	      v=w; w=u; fv=fw; fw=fu;
 	    }
 	  else if (fu <= fv || v == x || v == w)
-	    { v=u; fv=fu;
+	    { 
+	      v=u; fv=fu;
 	    }
 	} /* Done with housekeeping. Back for another iteration.*/
     }
@@ -297,7 +394,7 @@ void linminConstr(double p[], double xi[], int n, double *fret, double (*func)(d
     { 
       xicom[j]=xi[j];
     } 
-  projectgrad(p,xicom,gradfG,gradgG);
+  //projectgrad(p,xicom,gradfG,gradgG);
   ax=0.0; /*Initial guess for brackets.*/
   xx=1.0; 
   mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimConstr); 
@@ -602,7 +699,7 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
 {
   int i,ibig,j; 
   double del,fp,fptt,t,pt[6],ptt[6],xit[6]; 
-  const int ITMAXPOW=200;
+  const int ITMAXPOW=OprogStatus.maxitsSD;
   //pt=vector(1,n);
   //ptt=vector(1,n); xit=vector(1,n);
   *fret=(*func)(p);
@@ -875,8 +972,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	sol = s2;
 #if 1
       ng = calc_norm(gradf);
-
-      if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSD*dist/2.0)
+      if (dist > 0 && dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSD*dist/2.0)
 	{
 	  sf /= GOLD;
 	  its++;
@@ -955,15 +1051,15 @@ double xaRyck[3], yaRyck[3];
 double polintfuncRyck(double x)
 {
   double dy, y;
-  polint(xaRyck, yaRyck, 3, x, &y, &dy);
-  if (polinterr==1)
+  polintRyck(xaRyck, yaRyck, 3, x, &y, &dy);
+  if (polinterrRyck==1)
     return 0.0;
   if (dy > OprogStatus.epsd)
     {
-      polinterr = 1;
+      polinterrRyck = 1;
     }
   else 
-    polinterr = 0;
+    polinterrRyck = 0;
   return y;
 }
 double scalProd(double *A, double *B)
@@ -982,7 +1078,6 @@ void vectProdVec(double *A, double *B, double *C)
 }
 double Asd, Bsd, OmegaSqAsd[3][3], OmegaAsd[3][3], OmegaBsd[3][3], OmegaSqBsd[3][3];
 extern void calc_intersec(double *rB, double *rA, double **Xa, double* rI);
-double omA[3], omB[3]; 
 double funcPowellRyck(double phi[])
 {
   int kk, k1, k2;
@@ -1095,7 +1190,7 @@ void linminRyck(double p[], double xi[], double *fret)
   int k1, k2; 
   double fx2[3], r1[3], r2[3];
   double xx,xminA, xminB,fx,fb,fa,bx,ax, nA, nB;
- 
+  double omA[3], omB[3]; 
 #if 1
   for (j=0;j<6;j++)
     { 
@@ -1161,6 +1256,127 @@ void linminRyck(double p[], double xi[], double *fret)
   //printf("xminA=%f xminB=%f dist=%.15G\n", xminA, xminB, *fret);
 }
 
+double calc_dist(double *p)
+{
+  int kk;
+  double D;
+  D = 0;
+  for (kk=0; kk < 3; kk++)
+    D += Sqr(p[kk+3]-p[kk]);
+  D = sqrt(D);
+  return D;
+}
+void updateByRot(double p[], double xi[])
+{
+  int kk, k1, k2;
+  double sinwA, sinwB, coswA, coswB, phiA, phiB;
+  double MA[3][3], pn[6], MB[3][3], A, B, distini, distfine, scp;
+  double omA[3], omB[3], vA[3], vB[3], r1[3], r2[3], nA, nB, pi[6];
+  double F, S;
+  for (kk =0; kk < 3; kk++)
+    {
+      r1[kk] = p[kk] - rA[kk];
+      r2[kk] = p[kk+3] - rB[kk];
+    }
+
+  vectProdVec(r1, xi, omA);
+  vectProdVec(r2, &xi[3], omB);
+  nA = calc_norm(omA);
+  nB = calc_norm(omB);
+  for (kk=0; kk < 3; kk++)
+    { 
+      omA[kk] /= nA;
+      omB[kk] /= nB;
+    }
+  OmegaAsd[0][0] = 0;
+  OmegaAsd[0][1] = -omA[2];
+  OmegaAsd[0][2] = omA[1];
+  OmegaAsd[1][0] = omA[2];
+  OmegaAsd[1][1] = 0;
+  OmegaAsd[1][2] = -omA[0];
+  OmegaAsd[2][0] = -omA[1];
+  OmegaAsd[2][1] = omA[0];
+  OmegaAsd[2][2] = 0;
+  OmegaSqAsd[0][0] = -Sqr(omA[1]) - Sqr(omA[2]);
+  OmegaSqAsd[0][1] = omA[0]*omA[1];
+  OmegaSqAsd[0][2] = omA[0]*omA[2];
+  OmegaSqAsd[1][0] = omA[0]*omA[1];
+  OmegaSqAsd[1][1] = -Sqr(omA[0]) - Sqr(omA[2]);
+  OmegaSqAsd[1][2] = omA[1]*omA[2];
+  OmegaSqAsd[2][0] = omA[0]*omA[2];
+  OmegaSqAsd[2][1] = omA[1]*omA[2];
+  OmegaSqAsd[2][2] = -Sqr(omA[0]) - Sqr(omA[1]);
+  OmegaBsd[0][0] = 0;
+  OmegaBsd[0][1] = -omB[2];
+  OmegaBsd[0][2] = omB[1];
+  OmegaBsd[1][0] = omB[2];
+  OmegaBsd[1][1] = 0;
+  OmegaBsd[1][2] = -omB[0];
+  OmegaBsd[2][0] = -omB[1];
+  OmegaBsd[2][1] = omB[0];
+  OmegaBsd[2][2] = 0;
+  OmegaSqBsd[0][0] = -Sqr(omB[1]) - Sqr(omB[2]);
+  OmegaSqBsd[0][1] = omB[0]*omB[1];
+  OmegaSqBsd[0][2] = omB[0]*omB[2];
+  OmegaSqBsd[1][0] = omB[0]*omB[1];
+  OmegaSqBsd[1][1] = -Sqr(omB[0]) - Sqr(omB[2]);
+  OmegaSqBsd[1][2] = omB[1]*omB[2];
+  OmegaSqBsd[2][0] = omB[0]*omB[2];
+  OmegaSqBsd[2][1] = omB[1]*omB[2];
+  OmegaSqBsd[2][2] = -Sqr(omB[0]) - Sqr(omB[1]);
+  phiA = sfA;
+  phiB = sfB;
+  sinwA = sin(phiA);
+  coswA = (1.0 - cos(phiA));
+  sinwB = sin(phiB);
+  coswB = (1.0 - cos(phiB));
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  MA[k1][k2] = sinwA*OmegaAsd[k1][k2]+coswA*OmegaSqAsd[k1][k2];
+	  MB[k1][k2] = sinwB*OmegaBsd[k1][k2]+coswB*OmegaSqBsd[k1][k2];
+	}
+    }
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      vA[k1] = p[k1]-rA[k1];
+      vB[k1] = p[k1+3]-rB[k1];
+    } 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      pn[k1] = vA[k1];
+      pn[k1+3] = vB[k1];
+
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  pn[k1] += MA[k1][k2]*vA[k2];
+	  pn[k1+3] += MB[k1][k2]*vB[k2]; 
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      pn[k1] += rA[k1];
+      pn[k1+3] += rB[k1];
+    }	
+  calc_intersec(pn, rA, Xa, p);
+  calc_intersec(&pn[3], rB, Xb, &p[3]);
+
+  //printf("scal prod1=%.15G scalprod2=%.15G\n", scalProd(pn,omA), scalProd(&pn[3],omB));
+  //printf("pcomI = (%.15G,%.15G,%.15G)\n", pcomI[0], pcomI[1], pcomI[2]);
+  //distfine= calc_dist(p);
+  //for (kk=0; kk < 6; kk++)
+    //pi[kk] = p[kk]-pi[kk];
+  //scp = scalProd(pi,xi);
+  //printf("scp=%.15G\n", scp);
+  //if (scp < 0)
+    //printf("scp=%.15G distini=%.15G distfine=%.15G phiA=%.15G phiB=%.15G\n", scp, distini, distfine, phiA,phiB);
+}
+double  cgfuncRyck(double *vec);
+double zbrentRyck(double (*func)(double), double x1, double x2, double tol);
+
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -1173,7 +1389,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   const double EPSFR=1E-10, GOLD=1.618034;
   double normxi,gg,gam,fp,dgg,norm1,norm2, sp, fpold, gradf[3], gradg[3], signA, signB;
   double minax, distini, distfin, dist, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3], xiold[6];
-  double pm[6], fpm, signAold, signBold;
+  double pm[6], fpm, signAold, signBold, pold[6];
   double xmin, xim[6];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
  
@@ -1188,16 +1404,20 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       callsok++;
       return;
     }
-  //projectgrad(p,xi,gradfG,gradgG);  
+  projectgrad(p,xi,gradfG,gradgG);  
   for (its=1;its<=ITMAXFR;its++)
     { 
       itsfrprmn++;      
       *iter=its;
-#if 1
+#if 0
       linminRyck(p, xi, &fp);  
+      //updateByRot(p, xi);
+      //linminConstr(p, xi, 6, &fret, cgfuncRyck);
 #else
       for (j=0; j < n; j++)
 	{
+	  pold[j] = p[j];
+	  xiold[j] = xi[j];
 	  p[j] += xi[j];
 	}
 #endif
@@ -1205,14 +1425,14 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       signBold = signB;
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
+#if 0
       if (fp > fpold)
 	{
-#if 0
-	  for (j=0; j < 3; j++)
-	    xim[j] = xi[j]/2.0;
-
-	  polinterr = 0;
-	  fpm = (*func)(p);
+	  for (j=0; j < 6; j++)
+	    xim[j] = xiold[j]/2.0;
+	  for (j=0; j < 6; j++)
+	    pm[j] = pold[j] + xim[j];
+	  fpm = (*func)(pm);
 	  xaRyck[0] = 0;
 	  yaRyck[0] = fpold;
 	  xaRyck[1] = 0.5;
@@ -1221,26 +1441,65 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	  xaRyck[2] = fp;
 	  if (fpm < fp && fpm < fpold)
 	    {
-	      xmin=zbrent(polintfuncRyck, 0, 1, OprogStatus.tolSD);
-	      if (polinterr ==0 && xmin > 0 && xmin < 1) 
-		for (j=0; j < 6; j++)
-		  xi[j] *= xmin;
+	      polinterrRyck = 0;
+	      //printf("fpm=%.15G fp=%.15G fpold=%.15G\n", fpm, fp, fpold);
+	      brentRyck(0, 0.5, 1, polintfuncRyck, OprogStatus.tolSD/100, &xmin);
+	      //printf("xmin=%.15G\n", xmin);
+#if 1
+	      if (polinterrRyck ==0 && xmin > 0 && xmin < 1) 
+		{
+		  for (j=0; j < 6; j++)
+		    xi[j] = xiold[j]*xmin;
+		  for (j=0; j < 6; j++)
+		    p[j] = pold[j]+xiold[j];
+		  //printf("P fabs(fp-fpold):%.15G xmin=%.15G\n", fabs(fp-fpold), xmin);
+		  fp = (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
+		  projectgrad(p, xi, gradfG, gradgG);
+		  //printf("D fabs(fp-fpold):%.15G\n", fabs(fp-fpold));
+		  //fp = (*func)(p);
+		  //printf("xmin=%.15G\n", xmin);
+		}
+	      else 
+		{
+		  sfA /= GOLD;
+		  sfB /= GOLD;
+		  projectgrad(p, xi, gradfG, gradgG);
+		}
+#endif
 	    }
 	  else
+	    {
+	      sfA /= GOLD;
+	      sfB /= GOLD;
+	      projectgrad(p, xi, gradfG, gradgG);
+	    }
+	}
+      else
+	projectgrad(p, xi, gradfG, gradgG);
+#else
+      if (fp > fpold)
+	{
+	  sfA /= GOLD;
+	  sfB /= GOLD;
+	}      
+      projectgrad(p, xi, gradfG, gradgG);
 #endif
-	    sfA /= GOLD;
-	    sfB /= GOLD;
-	  }
-
-       if (doneryck==2)
-	 {
-	   callsok++;
+      if (doneryck==2)
+	{
+	  callsok++;
 	   return;
 	 }
-       //projectgrad(p, xi, gradfG, gradgG);
        
        if (OprogStatus.tolSDgrad <=0  || (fp > 0 && sqrt(fp) > 1E-8)) 
 	 {
+#if 1
+	   if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
+	     {
+	       callsok++;
+	       return;
+	     }
+#endif
+#if 0
 	   if (fp > ftol*OprogStatus.springkSD*Sqr(minax) &&
 	       2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
 	     {
@@ -1253,6 +1512,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	       callsok++;
 	       return;
 	     }
+#endif
 	 }
        else if (doneryck)
 	 {
@@ -1847,9 +2107,9 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
   	 vec[3], vec[4], vec[5]);
   printf(">>> vec[6]:%.15G vec[7]: %.15G\n", vec[6], vec[7]);
 #endif
-  frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
-  powellmethodPenalty(vec);
-  //frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+  //frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
+  //powellmethodPenalty(vec);
+  frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
   //powellmethod(vec);
   for (kk=0; kk < 6; kk++)
     {
@@ -1884,6 +2144,86 @@ void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], doub
     //fp=fc;
   } 
   *nb = nbb;
+}
+double zbrentRyck(double (*func)(double), double x1, double x2, double tol)
+/* Using Brent s method, find the root of a function func known to lie between x1 and x2. 
+ * The root, returned as zbrent, will be refined until its accuracy is tol.*/
+{
+  int iter; 
+  double a=x1,b=x2,c=x2,d,e,min1,min2; 
+  double fa=(*func)(a),fb=(*func)(b),fc,p,q,r,s,tol1,xm; 
+  if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 
+    {
+      polinterrRyck = 1;
+      return 0.0;
+      //nrerror("Root must be bracketed in zbrent");
+    }
+  fc=fb;
+  for (iter=0;iter<ITMAXZB;iter++) 
+    { 
+      if ((fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0))
+	{ 
+	  c=a; /* Rename a, b, c and adjust bounding interval d.*/
+	  fc=fa; e=d=b-a;
+	} 
+      if (fabs(fc) < fabs(fb)) 
+	{
+	  a=b; b=c; c=a; fa=fb; fb=fc; fc=fa;
+	}
+      tol1=2.0*EPSP*fabs(b)+0.5*tol;
+      /* Convergence check. */
+      xm=0.5*(c-b); 
+      if (fabs(xm) <= tol1 || fb == 0.0) 
+	return b;
+      if (fabs(e) >= tol1 && fabs(fa) > fabs(fb))
+	{
+	  s=fb/fa;/* Attempt inverse quadratic interpolation.*/
+	  if (a == c) 
+    	    { 
+	      p=2.0*xm*s; q=1.0-s;
+	    } 
+	  else 
+	    { 
+	      q=fa/fc; r=fb/fc; 
+	      p=s*(2.0*xm*q*(q-r)-(b-a)*(r-1.0));
+	      q=(q-1.0)*(r-1.0)*(s-1.0);
+	    }
+	  if (p > 0.0)
+	    q = -q;  /* Check whether in bounds. */
+	  p=fabs(p); 
+	  min1=3.0*xm*q-fabs(tol1*q); 
+	  min2=fabs(e*q);
+	  if (2.0*p < (min1 < min2 ? min1 : min2)) 
+	    {
+	      e=d; /*Accept interpolation. */ 
+	      d=p/q; 
+	    } 
+	  else 
+	    { 
+	      d=xm; /*Interpolation failed, use bisection.*/
+	      e=d; 
+	    } 
+	} 
+      else 
+	{ 
+	  /* Bounds decreasing too slowly, use bisection.*/
+	  d=xm; e=d;
+	} 
+      a=b; /* Move last best guess to a. */
+      fa=fb;
+      if (fabs(d) > tol1) /* Evaluate new trial root.*/
+	b += d; 
+      else 
+	b += SIGN(tol1,xm); 
+      fb=(*func)(b); 
+      if (polinterrRyck)
+	return 0.0;
+    } 
+
+  polinterrRyck = 1;
+  return 0.0;
+  //nrerror("Maximum number of iterations exceeded in zbrent"); 
+  return 0.0; /* Never get here.*/ 
 }
 
 double zbrent(double (*func)(double), double x1, double x2, double tol)
@@ -1966,6 +2306,68 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
   //nrerror("Maximum number of iterations exceeded in zbrent"); 
   return 0.0; /* Never get here.*/ 
 }
+void polintRyck(double xain[], double yain[], int n, double x, double *y, double *dy)
+/* Given arrays xa[1..n] and ya[1..n], and given a value x, this routine returns a value y,
+ * and an error estimate dy. If P(x) is the polynomial of degree N-1 such that P(xai) = yai, 
+ * i = 1, . . . , n, then the returned value y = P(x).*/
+{ 
+  int i,m,ns=1; 
+  double den,dif,dift,ho,hp,w, xa[4], ya[4];
+  double c[4], d[4];
+  for (i=0; i < n; i++)
+    {
+      xa[i+1] = xain[i];
+      ya[i+1] = yain[i];
+    }
+  dif=fabs(x-xa[1]); 
+  //c=vector(n); 
+  //d=vector(n); 
+  for (i=1;i<=n;i++) 
+    { 
+      /* Here we find the index ns of the closest table entry,*/
+      if ( (dift=fabs(x-xa[i])) < dif) 
+	{ 
+	  ns=i; 
+	  dif=dift;
+	} 
+      c[i]=ya[i];
+      /* and initialize the tableau of c s and d s.*/
+      d[i]=ya[i]; 
+    } 
+  *y=ya[ns--];
+  /* This is the initial approximation to y.*/
+  for (m=1;m<n;m++) 
+    { 
+      /* For each column of the tableau,*/
+      for (i=1;i<=n-m;i++)
+	{
+	  /* we loop over the current c s and d s and update them.*/
+	  ho=xa[i]-x; 
+	  hp=xa[i+m]-x; 
+	  w=c[i+1]-d[i]; 
+	  if ( (den=ho-hp) == 0.0) 
+	    {
+	      polinterrRyck=1;
+	      return ;
+	      //nrerror("Error in routine polint"); 
+	    }
+	  /* This error can occur only if two input xa s are (to within roundoff)*/
+	  den=w/den; d[i]=hp*den; 
+	  /*Here the c s and d s are updated. */
+	  c[i]=ho*den; 
+	} 
+      *y += (*dy=(2*ns < (n-m) ? c[ns+1] : d[ns--])); 
+      /* After each column in the tableau is completed, we decide which correction, 
+       * c or d, we want to add to our accumulating value of y, i.e., which path to take through the tableau 
+       * forking up or down. We do this in such a way as to take the most  straight line  route through the 
+       * tableau to its apex, updating ns accordingly to keep track of where we are. 
+       * This route keeps the partial approximations centered (insofar as possible) on the target x. 
+       * The last dy added is thus the error indication. */
+    } 
+  //free_vector(d); 
+  //free_vector(c); 
+}
+
 void polint(double xain[], double yain[], int n, double x, double *y, double *dy)
 /* Given arrays xa[1..n] and ya[1..n], and given a value x, this routine returns a value y,
  * and an error estimate dy. If P(x) is the polynomial of degree N-1 such that P(xai) = yai, 
