@@ -1,7 +1,6 @@
 #include<mdsimul.h>
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
-#define MD_DEBUG(x) 
 #define MD_DEBUG10(x)  
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
@@ -28,6 +27,10 @@ extern double invaSq[2], invbSq[2], invcSq[2];
 double rxC, ryC, rzC, trefG;
 extern int SolveLineq (double **a, double *x, int n); 
 int calcdist_retcheck;
+void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
+void InitEventList (void);
+void writeAsciiPars(FILE* fs, struct pascii strutt[]);
+void writeAllCor(FILE* fs);
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
@@ -1813,7 +1816,7 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
   int k1, k2, k3;
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
   w = sqrt(wSq);
-  if (w != 0.0) 
+  if (ti != 0.0 && w != 0.0) 
     {
 #if 0
       if (fabs(w*ti) < 1E-8)
@@ -2037,7 +2040,146 @@ void fdjacGuess(int n, double x[], double fvec[], double **df,
   fvec[3] = 0.5*fvec[3]-1.0 - (0.5*tmp-1.0);
 #endif
 }
+#ifdef MD_NNL
+/* funzione che calcola lo Jacobiano */
+/* N.B. In tale caso l'ellissoide B è semplicemente l'ellissoide A riscalato di un opportuno 
+ * fattore */
+void fdjacNeigh(int n, double x[], double fvec[], double **df, 
+		void (*vecfunc)(int, double [], double []), int iA)
+{
+  /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
+  int na; 
+  double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
+  double DA[3][3], DB[3][3], fx[3], gx[3];
+  double Fxt[3], Gxt[3], Ft, Gt, scalfact[3];
+  int k1, k2;
+  ti = x[4] + (trefG - atomTime[iA]);
+  rA[0] = rx[iA] + vx[iA]*ti;
+  rA[1] = ry[iA] + vy[iA]*ti;
+  rA[2] = rz[iA] + vz[iA]*ti;
+  vA[0] = vx[iA];
+  vA[1] = vy[iA];
+  vA[2] = vz[iA];
+  /* ...and now orientations */
+  UpdateOrient(iA, ti, RA, OmegaA);
+  MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
+  MD_DEBUG2(print_matrix(RA, 3));
+  na = (iA < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[iA]);
+      invbSq[na] = 1/Sqr(axb[iA]);
+      invcSq[na] = 1/Sqr(axc[iA]);
+    }
+  tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
+  MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
+  MD_DEBUG2(print_matrix(Xa, 3));
+  DA[0][1] = DA[0][2] = DA[1][0] = DA[1][2] = DA[2][0] = DA[2][1] = 0.0;
+  DA[0][0] = invaSq[na];
+  DA[1][1] = invbSq[na];
+  DA[2][2] = invcSq[na];
+  /*N.B. l'ellissoide B in tale caso non evolve! */
+  ti = 0.0;//x[4] + (trefG - atomTime[iB]);
+  rB[0] = rx[iB];
+  rB[1] = ry[iB];
+  rB[2] = rz[iB];
+  vB[0] = vx[iB];
+  vB[1] = vy[iB];
+  vB[2] = vz[iB];
+  UpdateOrient(iB, ti, RB, OmegaB);
+  na = (iB < Oparams.parnumA)?0:1;
 
+  scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[i]);
+  scalfact[1] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axb[i]);
+  scalfact[2] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axc[i]);
+  invaSq[na] = 1.0/Sqr(axa[i]*scalfact[0]);
+  invbSq[na] = 1.0/Sqr(axb[i]*scalfact[1]);
+  invcSq[na] = 1.0/Sqr(axc[i]*scalfact[2]);
+
+  tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
+  DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
+  DB[0][0] = invaSq[na];
+  DB[1][1] = invbSq[na];
+  DB[2][2] = invcSq[na];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*(Xa[k1][k2] + Sqr(x[3])*Xb[k1][k2]);
+	}
+    }
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]);
+	}
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#if 0
+      df[3][k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	df[3][k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]); 
+#endif
+      df[3][k1] = fx[k1];
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#if 0
+      df[4][k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	df[4][k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]); 
+#endif
+      df[4][k1] = gx[k1];
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#if 0
+      df[k1][3] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	df[k1][3] += 4.0*x[3]*Xb[k1][k2]*(x[k2]-rB[k2]); 
+#endif
+      df[k1][3] = 2.0*x[3]*gx[k1];
+    } 
+  df[3][3] = 0.0;
+  df[4][3] = 0.0;
+  calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      //df[k1][4] = 0;
+      //for (k2 = 0; k2 < 3; k2++)
+      df[k1][4] = Fxt[k1]+Sqr(x[3])*Gxt[k1]; 
+    } 
+ df[3][4] = Ft;
+ df[4][4] = Gt;
+#ifndef MD_GLOBALNR
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1]-rB[k1])*gx[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+ fvec[4] = 0.5*fvec[4]-1.0;
+ MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+#endif
+}
+#endif
 /* funzione che calcola lo Jacobiano */
 void fdjac(int n, double x[], double fvec[], double **df, 
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
@@ -2253,6 +2395,102 @@ void funcs2beZeroedGuess(int n, double x[], double fvecG[], int i, int j, double
     }
   fvecG[3] = 0.5*fvecG[3]-1.0 - (0.5*tmp-1.0);
 }
+#ifdef MD_NNL
+void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
+{
+  int na, k1, k2; 
+  double  rA[3], rB[3], ti;
+  double fx[3], gx[3];
+  double Omega[3][3], scalfact[3];
+  /* x = (r, alpha, t) */ 
+  ti = x[4] + (trefG - atomTime[i]);
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  /* ...and now orientations */
+  UpdateOrient(i, ti, Rt, Omega);
+  na = (i < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1.0/Sqr(axa[i]);
+      invbSq[na] = 1.0/Sqr(axb[i]);
+      invcSq[na] = 1.0/Sqr(axc[i]);
+    }
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
+
+  //ti = trefG - atomTime[j];
+  ti = 0.0;
+  MD_DEBUG(printf("x[4]:%.15f atomTime[%d]:%.15f\n",x[4], j, atomTime[j]));
+  /* il secondo ellissoide non deve evolvere nel tempo */
+  rB[0] = rx[j];
+  rB[1] = ry[j];
+  rB[2] = rz[j];
+  UpdateOrient(j, ti, Rt, Omega);
+  na = (j < Oparams.parnumA)?0:1;
+
+  scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[i]);
+  scalfact[1] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axb[i]);
+  scalfact[2] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axc[i]);
+  invaSq[na] = 1.0/Sqr(axa[i]*scalfact[0]);
+  invbSq[na] = 1.0/Sqr(axb[i]*scalfact[1]);
+  invcSq[na] = 1.0/Sqr(axc[i]*scalfact[2]);
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+      	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+      MD_DEBUG(printf("[FUNC2BEZ]x[%d]:%.15f rA[%d]:%f fx:%.15f\n", k1, x[k1], k1, rA[k1],fx[k1]));
+      
+   }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(x[k2] - rB[k2]);
+      MD_DEBUG(printf("[FUNC2BEZ]x[%d]:%.15f rB[%d]:%f gx:%.15f\n", k1, x[k1], k1, rB[k1],gx[k1]));
+    }
+
+  MD_DEBUG(print_matrix(Xb,3));
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#if 0
+      fvec[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fvec[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]) + 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
+#endif
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+#if 0
+  fvec[3] = -1.0;
+  fvec[4] = -1.0;
+#endif
+#if 0
+  MD_DEBUG(printf("fx+Sqr(alpha)*gx=(%f,%f,%f) fx=(%f,%f,%f) gx=(%f,%f,%f)\n", fvec[0], fvec[1], fvec[2],
+	 fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+#endif
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#if 0
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fvec[3] += (x[k1]-rA[k1])*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  fvec[4] += (x[k1]-rB[k1])*Xb[k1][k2]*(x[k2]-rB[k2]);
+	}
+#endif
+#if 1
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1]-rB[k1])*gx[k1];
+#endif
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
+  MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+}
+#endif
 void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
   int na, k1, k2; 
@@ -3796,6 +4034,37 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
   return 0;
 }
 #ifdef MD_NNL
+int refine_contact_neigh(int i, int j, double t1, double t, double vecgd[8], double shift[3],double  vecg[5])
+{
+  int kk, retcheck;
+
+  for (kk = 0; kk < 3; kk++)
+    {
+#ifdef MD_DIST5
+      vecg[kk] = (vecgd[kk]+vecgd[kk+5])*0.5; 
+#else
+      vecg[kk] = (vecgd[kk]+vecgd[kk+3])*0.5; 
+#endif
+    }
+#ifdef MD_DIST5
+  vecg[3] = vecgd[3];
+#else
+  vecg[3] = vecgd[6];
+#endif
+  vecg[4] = t-t1;
+  trefG = t1;
+  newtNeigh(vecg, 5, &retcheck, funcs2beZeroedNeigh, i, j, shift); 
+  vecg[4] += t1;
+  if (retcheck==2)
+    {
+      MD_DEBUG10(printf("newt did not find any contact point!\n"));
+      return 0;
+    }
+  else
+    {
+      return 1; 
+    }
+}
 int locate_contact_neigh(int i, double vecg[5])
 {
   double h, d, dold, dold2, d1Neg, d1Pos, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
@@ -3812,13 +4081,13 @@ int locate_contact_neigh(int i, double vecg[5])
   /* NOTA: implementare le varie funzioni _neigh (search_contact_faster_neigh, ecc.)
    * in tali funzioni la particella j non è altro che un ellissoide più grande di i
    * con lo stesso centro e immobile */
-  t = Oparams.time;
-  t1 = t;	
+  t = 0.0;//Oparams.time;
+  t1 = Oparams.time;	
   t2 = timbig;
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i];
-  h = 1E-7; /* last resort time increment */
-  if (search_contact_faster_neigh(i, &t, t2, vecgd, epsd, &d, epsdFast, r1, r2))
+  h = OprogStatus.h; /* last resort time increment */
+  if (search_contact_faster_neigh(i, &t, t1, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0;  
   MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
@@ -3826,7 +4095,7 @@ int locate_contact_neigh(int i, double vecg[5])
     vecgdold[kk] = vecgd[kk];
   dold = d;
   its = 0;
-  while (t < t2)
+  while (t + t1 < t2)
     {
 #if 1
       normddot = calcvecF(i, j, t, t1, r1, r2, ddot, shift);
@@ -3834,7 +4103,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	delt = epsd/normddot;
 #endif
       else
-	delt = h*t;
+	delt = h;
       if (dold < epsd)
 	delt = epsd / maxddot;
       t += delt;
@@ -3842,7 +4111,7 @@ int locate_contact_neigh(int i, double vecg[5])
       for (kk = 0; kk < 8; kk++)
 	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;
-      d = calcDistNegNeigh(t, i, vecgd, 0);
+      d = calcDistNegNeigh(t, t1, i, vecgd, 0);
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -3852,12 +4121,12 @@ int locate_contact_neigh(int i, double vecg[5])
 	  t -= delt;
 	  //delt = d2old / maxddot;
 	  delt = epsd /maxddot;
-	  if (delt < t*h)
-	    delt = t*h;
+	  if (delt < h)
+	    delt = h;
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d = calcDistNegNeigh(t, i, vecgdold2, 0);
+	  d = calcDistNegNeigh(t, t1, i, vecgdold2, 0);
 	  for (kk = 0; kk < 8; kk++)
 	    vecgd[kk] = vecgdold2[kk];
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
@@ -3865,7 +4134,7 @@ int locate_contact_neigh(int i, double vecg[5])
 #if 1
       if (d > epsdFastR)
 	{
-	  if (search_contact_faster_neigh(i, &t, vecgd, epsd, &d, epsdFast, r1, r2))
+	  if (search_contact_faster_neigh(i, &t, t1, vecgd, epsd, &d, epsdFast, r1, r2))
 	    {
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
@@ -3885,13 +4154,13 @@ int locate_contact_neigh(int i, double vecg[5])
        	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
 #ifndef MD_NOINTERPOL  
-	 if (interpol(i, j, t-delt, delt, dold, d, &troot, vecgroot, shift, 0))
+	 if (interpol(i, j, t1, t-delt, delt, dold, d, &troot, vecgroot, shift, 0))
 #endif
 	    {
 	      /* vecgd2 è vecgd al tempo t-delt */
 	      for (kk=0; kk < 8; kk++)
 		vecgroot[kk] = vecgdold[kk];
-	      troot = t - delt;
+	      troot = t1 + t - delt;
 	    }
 	  dorefine = 1;
 	}
@@ -3901,7 +4170,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
 	  
-	  if (interpol(i, j, t-delt, delt, dold, d, &troot, vecgroot, shift, 1))
+	  if (interpol(i, j, t1, t-delt, delt, dold, d, &troot, vecgroot, shift, 1))
 	    dorefine = 0;
 	  else 
 	    dorefine = 1;
@@ -3985,7 +4254,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
  
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
-  h = 1E-7; /* last resort time increment */
+  h = OprogStatus.h; /* last resort time increment */
 #if 0
   if (lastbump[i]==j && lastbump[j]==i)
     {
