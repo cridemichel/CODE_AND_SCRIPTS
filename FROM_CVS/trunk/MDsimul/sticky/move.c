@@ -1373,7 +1373,51 @@ int bound(int na, int n, int a, int b)
 /* array con le posizioni degli atomi nel riferimento del corpo rigido 
  * nel caso dell'acqua i siti idrogeno ed elettroni sono disposti su 
  * di un tetraedro */
-double rat_body[NA][3] = {{0,0,0},{-1,-1,0},{1,-1,0},{0,1,0},{0,0,1}};
+double rat_body[NA][3] = {{0,0,0},{0,0,1},{1,-1,0},{0,1,0},{0,0,1}};
+#if 1
+void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[])
+{
+  /* calcola le coordinate nel laboratorio di uno specifico atomo */
+  int kk;
+  double r1[3], nr;
+  /* l'atomo zero si suppone nell'origine 
+   * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
+   * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
+   * a partire da questi. */
+  
+  if (ata == 0)
+    {
+      for (kk = 0; kk < 3; kk++)
+	rat[kk] = rO[kk];
+    }
+  else if (ata <= 3)
+    {
+      for (kk = 0; kk < 3; kk++)
+	rat[kk] = R[kk][ata]; 
+    }
+  else
+    {
+      for (kk = 0; kk < 3; kk++)
+	{
+	  r1[kk] = R[kk][0] + R[kk][1]; 
+	}
+    	nr = calc_norm(r1);
+	for (kk = 0; kk < 3; kk++)
+	  {
+	    r1[kk] *= MD_DIST_ELECTSITES/nr;
+	  }
+    }
+}
+void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
+{
+  /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
+  int a;
+  /* l'atomo zero si suppone nell'origine */
+  for (a=0; a < 5; a++)
+    BuildAtomPosAt(i, a, rO, R, rat[a]);
+}
+
+#else
 void body2lab(int i, double xp[], double x[], double *rO, double **R);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[])
 {
@@ -1400,6 +1444,7 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
   for (a=1; a < 5; a++)
     body2lab(i, rat_body[a], rat[a], rO, R);
 }
+#endif
 void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 { 
   double wSq, w, OmegaSq[3][3], M[3][3];
