@@ -48,7 +48,7 @@
 
 #define NDIM 3
 #define MD_DEBUG(X)  
-#define MD_DEBUG2(X)    
+#define MD_DEBUG2(X)     
 #define MD_DEBUG3(X) 
 #define MD_DEBUG4(X) 
 /* ========================================================================= */

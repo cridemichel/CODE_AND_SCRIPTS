@@ -7,6 +7,9 @@
 *********************************************************************/
 #include <mdsimul.h>
 extern int **tree, evIdA, evIdB;
+#ifdef MD_BARRIER
+extern int evIdC;
+#endif
 extern double *treeTime;
 void DeleteEvent(int );
 void NextEvent(void);
@@ -254,6 +257,9 @@ void NextEvent (void)
   Oparams.time = treeTime[idNow];   
   evIdA = treeIdA[idNow];    
   evIdB = treeIdB[idNow];
+#ifdef MD_BARRIER
+  evIdC = treeIdC[idNow];
+#endif
   MD_DEBUG2(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
   if (evIdB < ATOM_LIMIT + 2 * NDIM) 
