@@ -1059,8 +1059,6 @@ void usrInitAft(void)
     Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
     Oparams.sigmaA[2] = Oparams.sigmaA[1];
     Oparams.sigmaA[4] = Oparams.sigmaA[3];
-    Oparams.deltaA[2] = Oparams.deltaA[1];
-    Oparams.deltaA[4] = Oparams.deltaA[3];
     invmA = 1.0/Oparams.m[0];
     invmB = 1.0/Oparams.m[1];
     /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 

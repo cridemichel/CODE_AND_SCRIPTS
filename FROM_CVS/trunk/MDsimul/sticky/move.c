@@ -1959,10 +1959,11 @@ double calc_norm(double *vec)
 extern int check_point(char* msg, double *p, double *rc, double **XX);
 extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
 extern int maxitsRyck;
+/* N.B. per la silica tale routine va cambiata! */
 double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin)
 {
   double vecg[8], rC[3], rD[3], rDC[3], r12[3], fx[3], vecgcg[6];
-  double ti, segno, distSqmin, distSq;
+  double ti, segno, distmin, distSq;
   double ratA[NA][3], ratB[NA][3], dist, sigmaSq[NA][NA];
   int a, b, firsdist = 1;
   double Omega[3][3];
@@ -2007,22 +2008,27 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
 	  if ( (a==1 && b==1) || (a==2 && b == 2) ||
 	       (a==3 && b==3) || (a==4 && b == 4) )
 	    continue;
+	  if ((a == 0 && b != 0) || (a != 0 && b == 0))
+	    continue;
 	  distSq = 0;
 	  for (kk=0; kk < 3; kk++)
 	    distSq += Sqr(ratA[a][kk]-ratB[b][kk]);
-	  if (firstdist || distSq < distSqmin)
+	  if (a==0)
+	    dist = sqrt(distSq)-Oparams.sigmaA[0];
+	  else if (a==1)
+	    dist = sqrt(distSq)-Oparams.sigmaA[1];
+	  else
+	    dist = sqrt(distSq)-Oparams.sigmaA[2];
+	  if (firstdist || fabs(dist) < fabs(distmin))
 	    {
-	      distSqmin = distSq;
+	      firstdist = 0;
+	      distmin = dist;
 	      *amin = a;
 	      *bmin = b;
 	    }
 	}
     }
-  if (distSqmin < sigmaSq[*amin][*bmin])
-    dist = -sqrt(distSqmin);
-  else
-    dist = sqrt(distSqmin);
-  return dist;
+  return distmin;
   /* qui deve calcolare la distanza!!*/
 }
 
