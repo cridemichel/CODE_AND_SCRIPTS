@@ -135,7 +135,10 @@ void outputSummary(void)
 #endif
 #endif
   f = fopenMPI(MD_HD_MIS "T.dat", "a");
-  fprintf(f, "%.15f %.15f\n", Oparams.time, (2.0*K/(3.0*Oparams.parnum-3.0)));
+  if (OprogStatus.brownian==1)
+    fprintf(f, "%.15f %.15f\n", Oparams.time, (2.0*K/(3.0*Oparams.parnum)));
+  else
+    fprintf(f, "%.15f %.15f\n", Oparams.time, (2.0*K/(3.0*Oparams.parnum-3.0)));
   fclose(f);
 #ifdef MD_GRAVITY
   f = fopenMPI(MD_HD_MIS "Vz2.dat", "a");
@@ -1480,9 +1483,9 @@ void move(void)
 	}
       else if (evIdB == ATOM_LIMIT + 10)
 	{
+	  UpdateSystem();
 	  if (OprogStatus.brownian)
 	    {
-	      UpdateSystem();
 	      velsBrown(Oparams.T);
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
