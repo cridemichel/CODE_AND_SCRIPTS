@@ -44,9 +44,7 @@ double Ia, Ib, invIa, invIb;
 extern double **matrix(int n, int m);
 int poolSize;
 int parnumA, parnumB;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
-#endif
 double invaSq[2], invbSq[2], invcSq[2];
 double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin);
 

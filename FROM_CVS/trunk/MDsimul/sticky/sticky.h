@@ -67,6 +67,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define NK 10000
 #define NA 5 /* number of atoms for each molecule (particle) */
 
+#define MD_PBONDS 4
 #define MAXPAR 3000      /* maximum number of simulated particles */
 
 #define NUM_PAR 2000   /* Number of particles for the simulation */
@@ -396,10 +397,8 @@ struct params
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
   COORD_TYPE m[2];             /* atoms masses */
-  double sigmaA[NA];
-  double sigmaB[NA];
-  double deltaA[NA]; /* larghezza delle buche */
-  double deltaB[NA];
+  double sigma[2];
+  double sigmaSticky;
   double rcut;
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
@@ -549,10 +548,8 @@ struct pascii opar_ascii[]=
   {"P",                 &OP(P),                           1,   1, "%.6G"},
   {"T",                 &OP(T),                           1,   1, "%.6G"},
   {"m",                OP(m),                            2,   1, "%.10G"},
-  {"sigmaA",           OP(sigmaA),                         NA,   1, "%.10G"},
-  {"sigmaB",           OP(sigmaB),                         NA,   1, "%.10G"},
-  {"deltaA",           OP(deltaA),                         NA,   1, "%.10G"},
-  {"deltaB",           OP(deltaB),                         NA,   1, "%.10G"},
+  {"sigma",           OP(sigma),                        2,   1, "%.10G"},
+  {"sigmaSticky",     &OP(sigmaSticky),                  1,   1, "%.10G"},
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
@@ -675,11 +672,8 @@ struct singlePar OsinglePar[] = {
 #else
   /* sigmaA[0] = atomo grande sigmaA[1,2] = hydrogen sites sigmaA[3,4] = electron sites 
    * bheight = barriere dell'interazione a buca quadrata tra H e Elettrone */
-  {"deltaH",     &Oparams.deltaA[1],        CT},
-  {"deltaEl",    &Oparams.deltaA[3],            CT},
-  {"sigma",      &Oparams.sigmaA[0],          CT},
-  {"sigmaH",     &Oparams.sigmaA[1],         CT},
-  {"sigmaEl",    &Oparams.sigmaA[3],         CT},    
+  {"sigma",      &Oparams.sigma[0],          CT},
+  {"sigmaSticky",&Oparams.sigmaSticky,        CT},
   {"bheight",    &Oparams.bheight,            CT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},

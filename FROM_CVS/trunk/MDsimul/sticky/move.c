@@ -28,10 +28,15 @@ extern double invaSq[2], invbSq[2], invcSq[2];
 double rxC, ryC, rzC;
 extern int SolveLineq (double **a, double *x, int n); 
 int calcdist_retcheck;
-
+double rA[3], rB[3];
+int mapbondsa[MD_PBONDS]={1,1,2,2};
+int mapbondsb[MD_PBONDS]={3,4,3,4};
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
+double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, 
+		   double dists[MD_PBONDS]);
+int bound(int na, int n, int a, int b);
 void print_matrix(double **M, int n)
 {
   int k1, k2;
@@ -126,10 +131,8 @@ double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto d
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 int evIdA, evIdB, parnumB, parnumA;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 int evIdC;
 extern int *bondscache, *numbonds, **bonds;
-#endif
 void newtDist(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3]);
@@ -199,11 +202,7 @@ void calcKVz(void)
   K += dd;
 }
 #endif
-double 
-calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-	    double *vecgsup, int calcguess);
-
-
+#if 0
 double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -311,6 +310,7 @@ double calc_phi(void)
   N *= 4.0*pi/3.0;
   return N / (L*L*L);
 }
+#endif
 double calc_norm(double *vec);
 void calc_ellips_norms(double *rAC, double *rBD, double *norm, double *norm2)
 { 
@@ -473,6 +473,7 @@ void rebuild_linked_list()
       cellList[j] = n;
     }
 }
+#if 0
 double check_dist_min(int i, char *msg)
 {
   int imin, j;
@@ -648,6 +649,7 @@ void scale_Phi(void)
       scale_coords(factor);
     }
 }
+#endif
 void outputSummary(void)
 {
   FILE *f;
@@ -659,7 +661,7 @@ void outputSummary(void)
     printf("Average iterations in search_contact_faster: %.6G\n",  ((double)itsF)/timesF);
   if (callsfrprmn>0)
     {
-      printf("percentage of convergence in frprmn: %.6G\%\n", ((double) callsok)*100.0/callsfrprmn);
+      printf("percentage of convergence in frprmn: %.6G\n", ((double) callsok)*100.0/callsfrprmn);
       printf("avg its in frprmn: %.10G\n", ((double) itsfrprmn)/callsfrprmn);
       printf("avg percentage of gradient: %.10G\n", (accngA+accngB)/callsfrprmn/2.0);
     }
@@ -667,7 +669,7 @@ void outputSummary(void)
     printf("Average iterations in projonto: %.8G\n", ((double) itsprojonto)/callsprojonto);
   printf("Number of collisions: %lld\n", numcoll);
   
-  scale_Phi();
+  //scale_Phi();
 #ifdef MD_GRAVITY
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
 	 (2.0*K/(3.0*Oparams.parnum-3.0)), Vz);
@@ -1095,7 +1097,7 @@ extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess);
-double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin);
+void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
 
 void bump (int i, int j, int ata, int atb, double* W, int bt)
 {
@@ -1107,7 +1109,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
    ** THE ROUTINE ALSO COMPUTES COLLISIONAL VIRIAL W.               **
    *******************************************************************
    */
-  double rxij, ryij, rzij, factor, invmi, invmj, sigmai;
+  double rxij, ryij, rzij, factor, invmi, invmj, sigmai, mredl;
   double delpx, delpy, delpz, sigSq, wrx, wry, wrz, rACn[3], rBCn[3], rnI[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3], norm2[3];
@@ -1122,11 +1124,11 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
     {
       /* qui si assume che ci possano essere due specie e che i diametri degli atomi
        * componenti la molecola possano avere diametri diversi */ 
-      sigmai = Oparams.sigmaA[ata];
+      sigmai = Oparams.sigma[0];
     }
   else if (i >= parnumA)
     {
-      sigmai = Oparams.sigmaB[ata];
+      sigmai = Oparams.sigma[1];
     }
 #endif
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
@@ -1747,11 +1749,10 @@ void remove_bond(int na, int n, int a, int b)
   if (nb==numbonds[na])
     printf("nessun bond rimosso fra %d,%d\n", n, na);
 }
-int bound(int na, int n);
 
 void add_bond(int na, int n, int a, int b)
 {
-  if (bound(na, n))
+  if (bound(na, n, a, b))
     {
       printf("il bond %d,%d eiste già!\n", na, n);
       return;
@@ -1781,20 +1782,20 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[])
   if (ata == 0)
     {
       for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk]
+	rat[kk] = rO[kk];
     }
   else
     {
       body2lab(i, rat_body[a], rat, rO, R);
     }
 }
-void BuildAtomPos(int i, double *rO, double **R, double rat[][])
+void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
   int kk, a;
   /* l'atomo zero si suppone nell'origine */
   for (kk = 0; kk < 3; kk++)
-    rat[0][kk] = rO[kk]
+    rat[0][kk] = rO[kk];
   for (a=1; a < 5; a++)
     body2lab(i, rat_body[a], rat[a], rO, R);
 }
@@ -1898,7 +1899,6 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
-double rA[3], rB[3];
 int ibr, jbr, atabr, atbbr; 
 double shiftbr[3];
 void funcs2beZeroed(double x, int i, int j, int ata, int atb, double shift[3])
@@ -1909,7 +1909,7 @@ void funcs2beZeroed(double x, int i, int j, int ata, int atb, double shift[3])
   double Omega[3][3];
   /* x = (r, alpha, t) */ 
   
-  ti = x[4] - atomTime[i];
+  ti = x - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
@@ -1924,7 +1924,7 @@ void funcs2beZeroed(double x, int i, int j, int ata, int atb, double shift[3])
     }
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
-  ti = x[4] - atomTime[j];
+  ti = x - atomTime[j];
   MD_DEBUG(printf("x[4]:%.15f atomTime[%d]:%.15f\n",x[4], j, atomTime[j]));
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
@@ -1939,9 +1939,9 @@ void funcs2beZeroed(double x, int i, int j, int ata, int atb, double shift[3])
     }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 }
-double funcs2beZeroedBrent(double x)
+void funcs2beZeroedBrent(double x)
 {
-  funcs2beZeroed(x, ibr, jbr, atabr atbbr, shiftbr); 
+  funcs2beZeroed(x, ibr, jbr, atabr, atbbr, shiftbr); 
 }
 double tdist;
 double rA[3], rB[3];
@@ -1962,9 +1962,9 @@ extern double sigmaSqSticky;
 double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double dists[MD_PBONDS])
 {
-  double distmin, distSq;
+  double distmin, distSq, ti;
   double ratA[NA][3], ratB[NA][3], dist;
-  int a, b, firsdist = 1;
+  int a, b, firstdist = 1, nn;
   double Omega[3][3];
   int k1, k2, na;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
@@ -1999,7 +1999,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
     {
       distSq = 0;
       for (kk=0; kk < 3; kk++)
-	distSq += Sqr(ratA[mapbondsba[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
       dists[nn] = dist = sqrt(distSq) - Oparams.sigmaSticky;
       if (firstdist || fabs(dist) < fabs(distmin))
 	{
@@ -2223,9 +2223,6 @@ int refine_contact(int i, int j, double t1, double t2, int ata, int atb,
       return 1; 
     }
 }
-#define MD_PBONDS 4
-int mapbondsa[MD_PBONDS]={1,1,2,2};
-int mapbondsb[MD_PBONDS]={3,4,3,4};
 /* 0 = atomo grosso 
  * 1,2 = hydrogen sites
  * 3,4 = electon sites */
@@ -2253,7 +2250,7 @@ int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS],
     }
   return retcross;
 }
-int get_dists_tocheck(double distsOld[NA][NA], double dists[NA][NA], int tocheck[NA][NA])
+int get_dists_tocheck(double distsOld[], double dists[], int tocheck[])
 {
   int nn;
   int rettochk = 0;
@@ -2272,14 +2269,14 @@ void assign_dists(double a[], double b[])
 {
   memcpy(b, a, MD_PBONDS*sizeof(double));
 }
-int search_contact_faster(int i, int j, double *shift, double *t, double t2, double epsd, double *d1, double epsdFast, double dists[][])
+int search_contact_faster(int i, int j, double *shift, double *t, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS])
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
-  double maxddot, told, delt, normddot, ddot[3], distsOld[NA][NA];
+  double maxddot, told, delt, normddot, ddot[3], distsOld[MD_PBONDS];
   const int MAXOPTITS = 500;
   double alpha;
-  int its=0, amin, bmin, crossed[NA][NA]; 
+  int its=0, amin, bmin, crossed[MD_PBONDS]; 
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
@@ -2291,6 +2288,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
   while (*d1 > epsdFast && its < MAXOPTITS)
     {
       delt = *d1 / maxddot;
+#if 0
+      /* CALCOLARE normddot usando la distanza vecchia come in locate_contact */
       normddot = calcvecF(i, j, *t, r1, r2, ddot, shift);
       //printf("normddot: %.15G\n", epsd/normddot);
       /* check for convergence */
@@ -2300,6 +2299,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
 	  MD_DEBUG10(printf("convergence reached in %d iterations\n", its));
 	  return 0;
 	}
+#endif
       *t += delt;
 #if 1
       if (*t > t2)
@@ -2351,12 +2351,13 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
-int interpol(int i, int j, double t, double delt, double d1, double d2, double *troot, double* amin, double *bmin, double shift[3], int bracketing)
+int interpol(int i, int j, double t, double delt, double d1, double d2, double *troot, int* amin, int *bmin, double shift[3], int bracketing)
 {
   int nb;
   double d3, Delta, t1, t2;
-  double r1[3], r2[3], alpha, xb1[2], xb2[2];
-  d3 = calcDistNeg(t+delt*0.5, i, j, shift, amin, bmin);
+  double r1[3], r2[3], alpha, xb1[2], xb2[2], dists[MD_PBONDS];
+  /* NOTA: dists di seguito può non essere usata? controllare!*/
+  d3 = calcDistNeg(t+delt*0.5, i, j, shift, amin, bmin, dists);
 #if 0
   if (d1 > OprogStatus.epsd)
     {
@@ -2415,7 +2416,7 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
       printf("distfunc(t+delt*0.5)=%.10G\n", distfunc(t+delt*0.5));
       return 1;
     }
-  calcDistNeg(*troot, i, j, shift, amin, bmin);
+  calcDistNeg(*troot, i, j, shift, amin, bmin, dists);
   //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
   return 0;
 }
@@ -2431,12 +2432,12 @@ int valid_collision(int i, int j, int ata, int atb, int collCode)
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double tbigat,
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
-  double h, d, dold, dold2, d1Neg, d1Pos, t, r1[3], r2[3], dists[NA][NA], distsOld[NA][NA]; 
+  double h, d, dold, dold2, d1Neg, d1Pos, t, r1[3], r2[3], dists[MD_PBONDS], distsOld[MD_PBONDS]; 
   double vd, normddot, ddot[3], maxddot, delt, told, troot, tmin;
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax; 
   double d2old;
-  int dorefine, ntc, ncr, nn, gotcoll;
+  int dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin, crossed[MD_PBONDS];
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
@@ -2522,7 +2523,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d = calcDistNeg(t, i, j, shift, &amin, &bmin);
+	  d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
 #if 1
@@ -2650,7 +2651,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 }
 
 #define EPS 1e-4
-#if 1
+#if 0
 double estimate_tmin(double t, int na, int nb)
 {
   int cellRangeT[2 * NDIM];
