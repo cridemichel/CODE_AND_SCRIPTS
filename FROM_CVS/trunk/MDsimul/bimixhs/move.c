@@ -62,6 +62,9 @@ double *treetime, *atomTime;
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 int evIdA, evIdB, parnumB, parnumA;
+#ifdef MD_BARRIER
+int evIdC;
+#endif
 /* ========================== >>> scalCor <<< ============================= */
 void scalCor(int Nm)
 { 
@@ -305,6 +308,94 @@ void check (int *overlap, double *K, double *V)
          }
      }
 }
+#ifdef MD_BARRIER
+void bump (int i, int j, double* W, int bt)
+{
+  /*
+   *******************************************************************
+   ** COMPUTES COLLISION DYNAMICS FOR PARTICLES I AND J.            **
+   **                                                               **
+   ** IT IS ASSUMED THAT I AND J ARE IN CONTACT.                    **
+   ** THE ROUTINE ALSO COMPUTES COLLISIONAL VIRIAL W.               **
+   *******************************************************************
+   */
+  double rxij, ryij, rzij, factor, invmi, invmj;
+  double delpx, delpy, delpz;
+  double mredl, ene;
+  //double sigSq, sigDeltaSq, intdistSq;
+  double distSq;
+  double vxij, vyij, vzij, b;
+
+  if (i < parnumA && j < parnumA)
+    {
+      //sigSq = Sqr(Oparams.sigma[0][0]);
+      //sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta);
+      mredl = Mred[0][0];
+    }
+  else if (i >= parnumA && j >= parnumA)
+    {
+      //sigSq = Sqr(Oparams.sigma[1][1]);
+      //sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta);
+      mredl = Mred[1][1];
+    }
+  else
+    {
+      //sigSq = Sqr(Oparams.sigma[0][1]);
+      //sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta);
+      mredl = Mred[0][1]; 
+    }
+  vxij = vx[i] - vx[j];
+  vyij = vy[i] - vy[j];
+  vzij = vz[i] - vz[j];
+  /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
+  /*printf("mredl: %f\n", mredl);*/
+  rxij = rx[i] - rx[j];
+  if (fabs (rxij) > L2)
+    rxij = rxij - SignR(L, rxij);
+  ryij = ry[i] - ry[j];
+  if (fabs (ryij) > L2)
+    ryij = ryij - SignR(L, ryij);
+  rzij = rz[i] - rz[j];
+  if (fabs (rzij) > L2)
+    rzij = rzij - SignR(L, rzij);
+  /* Nel caso di gravita' e' intuile implementare il TC-model di Luding
+   * per evitare il collasso inelastico.
+   * Gli urti in tale caso sono tutti elastici. */ 
+  /* SQUARE WELL: modify here */
+  distSq = Sqr(rxij)+Sqr(ryij)+Sqr(rzij);
+  b = rxij * vxij + ryij * vyij + rzij * vzij;
+  invmi = (i<Oparams.parnumA)?invmA:invmB;
+  invmj = (j<Oparams.parnumA)?invmA:invmB;
+  switch (bt)
+    {
+    /* N.B.
+     * Notare che Oparams.bheight è la profondità della buca ed 
+     * è una quantità positiva!!*/
+    case MD_CORE_BARRIER:
+      factor = -2.0*b;
+      break;
+    case MD_INOUT_BARRIER:
+      factor = -b + sqrt(Sqr(b) - 2.0*distSq*Oparams.bheight/mredl);
+      break;
+    case MD_OUTIN_BARRIER:
+      factor = -b - sqrt(Sqr(b) + 2.0*distSq*Oparams.bheight/mredl);
+      break;
+    }
+  
+  factor *= mredl / distSq;
+  delpx = - factor * rxij;
+  delpy = - factor * ryij;
+  delpz = - factor * rzij;
+  ene= (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
+	Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
+  vx[i] = vx[i] + delpx*invmi;
+  vx[j] = vx[j] - delpx*invmj;
+  vy[i] = vy[i] + delpy*invmi;
+  vy[j] = vy[j] - delpy*invmj;
+  vz[i] = vz[i] + delpz*invmi;
+  vz[j] = vz[j] - delpz*invmj;
+}
+#else
 void bump (int i, int j, double* W)
 {
   /*
@@ -318,42 +409,21 @@ void bump (int i, int j, double* W)
   double rxij, ryij, rzij, factor, invmi, invmj;
   double delpx, delpy, delpz, sigSq;
   double mredl, ene;
-#ifdef MD_INFBARRIER
-  double sigDeltaSq, intdistSq, sigDelta2Sq, distSq;
-  double vxij, vyij, vzij, b;
-#endif
   if (i < parnumA && j < parnumA)
     {
       sigSq = Sqr(Oparams.sigma[0][0]);
       mredl = Mred[0][0];
-#ifdef MD_INFBARRIER
-      sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta);
-      sigDelta2Sq = Sqr(Oparams.sigma[0][0]+Oparams.delta/2.0);
-#endif
     }
   else if (i >= parnumA && j >= parnumA)
     {
       sigSq = Sqr(Oparams.sigma[1][1]);
       mredl = Mred[1][1];
-#ifdef MD_INFBARRIER
-      sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta);
-      sigDelta2Sq = Sqr(Oparams.sigma[1][1]+Oparams.delta/2.0);
-#endif
     }
   else
     {
       sigSq = Sqr(Oparams.sigma[0][1]);
-#ifdef MD_INFBARRIER
-      sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta);
-      sigDelta2Sq = Sqr(Oparams.sigma[0][1]+Oparams.delta/2.0);
-#endif
       mredl = Mred[0][1]; 
     }
-#ifdef MD_INFBARRIER
-  vxij = vx[i] - vx[j];
-  vyij = vy[i] - vy[j];
-  vzij = vz[i] - vz[j];
-#endif
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
   /*printf("mredl: %f\n", mredl);*/
   rxij = rx[i] - rx[j];
@@ -380,28 +450,10 @@ void bump (int i, int j, double* W)
    * per evitare il collasso inelastico.
    * Gli urti in tale caso sono tutti elastici. */ 
   /* SQUARE WELL: modify here */
-#ifdef MD_INFBARRIER
-  distSq = Sqr(rxij)+Sqr(ryij)+Sqr(rzij);
-  b = rxij * vxij + ryij * vyij + rzij * vzij;
-  if (distSq > sigDelta2Sq && b < 0.0)
-    intdistSq = sigDeltaSq;
-  else
-    {
-      if (b < 0.0)
-      	intdistSq = sigSq;
-      else
-	intdistSq = sigDeltaSq;
-    }
-  factor = ( rxij * vxij +
-	     ryij * vyij +
-	     rzij * vzij ) / intdistSq;
-  factor *= mredl*2; /*(1+Oparams.partDiss);*/
-#else
   factor = ( rxij * ( vx[i] - vx[j] ) +
 	     ryij * ( vy[i] - vy[j] ) +
 	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
   factor *= mredl*2; /*(1+Oparams.partDiss);*/
-#endif
 #endif
   delpx = - factor * rxij;
   delpy = - factor * ryij;
@@ -416,24 +468,12 @@ void bump (int i, int j, double* W)
   vy[j] = vy[j] - delpy*invmj;
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
-#if 0
-  if (fabs(ene- (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
-	    Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j]))) > 1E-10)
-    
-    {
-      printf("bah (%d,%d) energia non conservata: %.15f\n",
-	     i, j,ene- (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
-	    Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])) );
-      printf("invmi: %f invmj: %f delpx:%.15f delpy:%.15f delpz: %.15f\n", 
-	     invmi, invmj, delpx, delpy, delpz);
-      exit(-1);
-    }
-#endif
 /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
 #if 0
   *W = delpx * rxij + delpy * ryij + delpz * rzij;
 #endif
 }
+#endif
 #ifdef MD_GRAVITY
 void calccmz(void)
 {
@@ -691,8 +731,9 @@ void PredictEvent (int na, int nb)
 #ifdef MD_GRAVITY
   double Lzx, h1, h2, sig, hh1;
 #endif
-#ifdef MD_INFBARRIER
-  double sigDeltaSq, intdistSq, distSq;
+#ifdef MD_BARRIER
+  int collCode;
+  double sigDeltaSq, intdistSq, distSq, s;
 #endif
   int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
@@ -916,7 +957,7 @@ void PredictEvent (int na, int nb)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
-#ifdef MD_INFBARRIER
+#ifdef MD_BARRIER
 		      if (na < parnumA && n < parnumA)
 			{
 			  sigSq = Sqr(Oparams.sigma[0][0]);
@@ -955,31 +996,37 @@ void PredictEvent (int na, int nb)
 
 #endif
      		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
-#ifdef MD_INFBARRIER
+#ifdef MD_BARRIER
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
       		      if (distSq < sigDeltaSq || b < 0.0) 
 			{
 			  if (distSq < sigDeltaSq)
 			    { 
 			      if (b < 0.0)
-				intdistSq = sigSq;
+				{
+				  collCode = MD_CORE_BARRIER;
+				  s = -1.0; 
+				  intdistSq = sigSq;
+				}
 			      else
-				intdistSq = sigDeltaSq;
+				{
+				  collCode = MD_INOUT_BARRIER;
+				  s = 1.0;
+				  intdistSq = sigDeltaSq;
+				}
 			    }
 			  else
-			    intdistSq = sigDeltaSq;
-
+			    {
+			      collCode = MD_OUTIN_BARRIER;
+			      s = -1.0;
+			      intdistSq = sigDeltaSq;
+			    }
 			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
 			  d = Sqr (b) - vv * 
 			    (distSq - intdistSq);
-#if 0
-			  if (OprogStatus.quenchend > 0.0 && Oparams.curStep > 700000)
-			    printf("dist:%.15G\n", 
-				   (Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2])) - sigSq );
-#endif
     			  if (d >= 0.) 
 			    {
-			      t = - (sqrt (d) + b) / vv;
+			      t = (s*sqrt (d) - b) / vv;
 			      if (t < 0)
 				{
 #if 1
@@ -995,7 +1042,7 @@ void PredictEvent (int na, int nb)
 #endif
 				  t = 0;
 				}
-			      ScheduleEvent (na, n, Oparams.time + t);
+			      ScheduleEventBarr (na, n, collCode, Oparams.time + t);
 			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
 			    } 
 			}
@@ -1066,7 +1113,6 @@ void ProcessCollWall(void)
 void ProcessCollision(void)
 {
   int k;
-
   UpdateAtom(evIdA);
   UpdateAtom(evIdB);
   for (k = 0;  k < NDIM; k++)
@@ -1074,7 +1120,11 @@ void ProcessCollision(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
+#ifdef MD_BARRIER
+  bump(evIdA, evIdB, &W, evIdC);
+#else
   bump(evIdA, evIdB, &W);
+#endif
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY
   lastcol[evIdA] = lastcol[evIdB] = Oparms.time;

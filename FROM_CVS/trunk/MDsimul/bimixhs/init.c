@@ -550,8 +550,9 @@ void usrInitBef(void)
 
   V = 0.0;
   L = 9.4;
-#ifdef MD_INFBARRIER
+#ifdef MD_BARRIER
   Oparams.delta = 0.0;
+  Oparams.bheight = 0.0;
 #endif
 #ifdef MD_GRAVITY
   Lz = 9.4;
@@ -716,7 +717,11 @@ void usrInitAft(void)
   inCell[0] = malloc(sizeof(int)*Oparams.parnum);
   inCell[1]= malloc(sizeof(int)*Oparams.parnum);
   inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MD_BARRIER
+  tree = AllocMatI(10, poolSize);
+#else
   tree = AllocMatI(9, poolSize);
+#endif
   treeTime = malloc(sizeof(double)*poolSize);
   if (OprogStatus.CMreset==-1)
     {
