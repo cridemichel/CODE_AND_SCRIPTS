@@ -1229,6 +1229,8 @@ void usrInitAft(void)
 	      OprogStatus.rxCMi[i] += m[a] * rx[a][i];
 	      OprogStatus.ryCMi[i] += m[a] * ry[a][i];
 	      OprogStatus.rzCMi[i] += m[a] * rz[a][i]; 
+	      for ( a = 0; a < 3; a++)
+		OprogStatus.DR[i][a] = 0.0;
 	    }
 	  OprogStatus.rxCMi[i] /= Mtot;
 	  OprogStatus.ryCMi[i] /= Mtot;
