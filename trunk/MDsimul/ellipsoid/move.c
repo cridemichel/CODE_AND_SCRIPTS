@@ -3002,7 +3002,7 @@ retry:
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
 
-      if (OprogStatus.springkSD>0 && OprogStatus.stepSD>0)
+      if (OprogStatus.springkSD>0 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
 	{
 	  for (k1=0; k1 < 3; k1++)
 	    {
