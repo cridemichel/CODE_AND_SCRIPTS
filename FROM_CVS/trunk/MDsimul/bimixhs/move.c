@@ -1658,6 +1658,7 @@ void move(void)
 	  UpdateSystem();
 	  if (OprogStatus.brownian)
 	    {
+#ifdef MD_HSVISCO
 	      double taus;
 	      if (OprogStatus.lastcoll!=-1)
 		{
@@ -1670,8 +1671,11 @@ void move(void)
 		  OprogStatus.DQTzx += taus * OprogStatus.Tzx;
 		  OprogStatus.lastcoll = Oparams.time;
 		}
+#endif
 	      velsBrown(Oparams.T);
+#ifdef MD_HSVISCO
 	      calcT();
+#endif
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
