@@ -368,12 +368,6 @@ void bump (int i, int j, double* W, int bt)
   distSq = Sqr(rxij)+Sqr(ryij)+Sqr(rzij);
   /*printf("distSq:%.20f\n",distSq);*/
   b = rxij * vxij + ryij * vyij + rzij * vzij;
-  if ((i==614||i==643) || (j==643||j==614))
-    {
-      printf("[ProcessCollision, time=%.20f, type=%d, b=%f] na=%d n=%d dist:%.15f\n", 
-	     Oparams.time, bt, b ,i, j, sqrt(distSq));
-      
-    }
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
   factor = 0.0;
@@ -1095,78 +1089,68 @@ void PredictEvent (int na, int nb)
 #if defined(MD_SQWELL)|| defined(MD_INFBARRIER)
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
       		      s = 0;
-		      if ( b < 0.0 ) 
+		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+		      collCode = MD_EVENT_NONE;
+		      if (!bound(n, na))
 			{
-			  if (!bound(n, na))//(distSq > sigDeltaSq)
+			  if ( b < 0.0 ) 
 			    {
-			      collCode = MD_OUTIN_BARRIER;
-			      s = -1.0;
 			      /* la piccola correzione serve poichè a causa
 			       * di errori numerici dopo l'evento la particella
 			       * potrebbe essere ancora fuori dalla buca (distSq > sigDeltaSq)*/
-			      intdistSq = sigDeltaSq;
-			    }
-			  else
-			    {
-			      collCode = MD_CORE_BARRIER;
-			      s = -1.0; 
-			      intdistSq = sigSq;
+			      d = Sqr (b) - vv * (distSq - sigDeltaSq);
+			      if (d > 0.0)
+				{
+				  t = (-sqrt (d) - b) / vv;
+				  //if (t > 0)
+				  collCode = MD_OUTIN_BARRIER;
+				}
 			    }
 			}
-		      else if ( b > 0.0 && bound(n, na) )//distSq < sigDeltaSq)//  
-			{ 
-			  collCode = MD_INOUT_BARRIER;
-			  s = 1.0;
-			  /* ved. sopra riguardo a EPSILON */
-			  intdistSq = sigDeltaSq;
-			}
-#if 1
-		      if ((n==614||n==643) && (na==643||na==614))
+		      else
 			{
-			  printf("()[PredictEvent,time=%.20f,b=%f,vv=%.10f,bound=%d]dist:%.15f s=%f\n",Oparams.time, b, vv, bound(n,na), sqrt(Sqr(dr[0])+Sqr(dr[1])+
-										  							Sqr(dr[2])),s);
-			}
-#endif			
-
-		      if (s != 0)
-	    		{
-			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-			  d = Sqr (b) - vv * 
-			    (distSq - intdistSq);
-			  if ((n==614||n==643) && (na==643||na==614))
-			    {
-			      printf("(*)[PredictEvent,time=%.20f,b=%f,vv=%.10f,bound=%d]dist:%.15f s=%f\n",Oparams.time, b, vv, bound(n,na), sqrt(Sqr(dr[0])+Sqr(dr[1])+
-					   													   Sqr(dr[2])),s);
-			      printf("d=%f\n", d);
+			  if (b < 0.0)
+			    { 
+			      d= Sqr (b) - vv * (distSq - sigSq);
+			      if (d > 0.0)
+				{
+				  t = (-sqrt (d) - b) / vv;
+				  //if (t > 0)
+				  collCode = MD_CORE_BARRIER;
+				}
 			    }
-			  if (d >= 0.) 
+			  if (collCode == MD_EVENT_NONE)
 			    {
-			      t = (s*sqrt (d) - b) / vv;
-			      if ((n==614||n==643) && (na==643||na==614))
+			      d = Sqr (b) - vv * (distSq - sigDeltaSq);
+			      if (d > 0.0)
 				{
-				  printf("[PredictEvent,time=%.20f,b=%f,vv=%.10f,bound=%d]dist:%.15f\n",Oparams.time, b, vv, bound(n,na), sqrt(Sqr(dr[0])+Sqr(dr[1])+
-						     	      Sqr(dr[2])));
-				  printf("s=%f predicted time: %.20f\n",s, t);
+				  t = ( sqrt (d) - b) / vv;
+				  //if (t > 0 || (t < 0 && distSq > sigDeltaSq))
+				  collCode = MD_INOUT_BARRIER;
 				}
-			      if (t < 0)
-				{
-#if 1
-				  printf("time:%.15f tInt:%.15f t:%.20f\n", Oparams.time,
-					 tInt, t);
-				  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-					 Sqr(dr[2])));
-				  printf("STEP: %lld\n", (long long int)Oparams.curStep);
-				  printf("atomTime: %.10f \n", atomTime[n]);
-				  printf("n:%d na:%d\n", n, na);
-				  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
-				  //exit(-1);
-#endif
-				  t = 0;
-				}
-			      ScheduleEventBarr (na, n, collCode, Oparams.time + t);
-			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
-			    } 
+			    }
 			}
+		      if (t < 0)
+			{
+#if 1
+			  printf("time:%.15f tInt:%.15f t:%.20f\n", Oparams.time,
+				 tInt, t);
+			  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+	     					      Sqr(dr[2])));
+			  printf("STEP: %lld\n", (long long int)Oparams.curStep);
+			  printf("atomTime: %.10f \n", atomTime[n]);
+			  printf("n:%d na:%d\n", n, na);
+			  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
+			  //exit(-1);
+#endif
+			  t = 0;
+			}
+
+		      if (collCode != MD_EVENT_NONE)
+			{
+			  ScheduleEventBarr (na, n, collCode, Oparams.time + t);
+			  MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
+		      	} 
 
 #else
 		      if (b < 0.0) 
@@ -1379,11 +1363,7 @@ void ProcessCellCrossing(void)
 #ifdef BROWNIAN
 void velsBrown(double T)
 {
-  printf("time: %.20f step: %d velsBrown \n", Oparams.time, Oparams.curStep);
-  
   comvel(Oparams.parnum, T, Oparams.m, 0); 
-  if (Oparams.curStep==360)
-   exit(-1);
 }
 #endif
 
@@ -1504,19 +1484,7 @@ void move(void)
 	    }
 	  K *= 0.5;
 #endif
-	  printf("PRIMA 643-614 dist: %.20f\n", sqrt(Sqr(rx[614]-rx[643])+Sqr(ry[614]-ry[643])+
-		 Sqr(rz[614]-rz[643])));
-	  printf("b=%.15f\n",
-		 (rx[614] - rx[643])*(vx[614] - vx[643])+
-		 (ry[614] - ry[643])*(vy[614] - vy[643])+
-		 (rz[614] - rz[643])*(vz[614] - vz[643]));
 	  velsBrown(Oparams.T);
-	  printf("DOPO643-614 dist: %.20f\n", sqrt(Sqr(rx[614]-rx[643])+Sqr(ry[614]-ry[643])+
-		 Sqr(rz[614]-rz[643])));
-	  printf("b=%.15f\n",
-		 (rx[614] - rx[643])*(vx[614] - vx[643])+
-		 (ry[614] - ry[643])*(vy[614] - vy[643])+
-		 (rz[614] - rz[643])*(vz[614] - vz[643]));
 	  rebuildCalendar();
 	  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
