@@ -2301,7 +2301,9 @@ int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS],
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
       crossed[nn] = MD_EVENT_NONE;
-      if (dists[nn]*distsOld[nn] < 0 && (bondpair== -1 || bondpair == nn))
+      if (bondpair != -1 && bondpair != nn)
+	continue;
+      if (dists[nn]*distsOld[nn] < 0)
 	{
 	  if (distsOld[nn] > 0)
 	    crossed[nn] = MD_OUTIN_BARRIER; 
@@ -2336,8 +2338,10 @@ double get_max_deldist(double distsOld[MD_PBONDS], double dists[MD_PBONDS], int 
   double maxdd=0.0, dd;
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
+      if (bondpair != -1 && bondpair != nn)
+	continue;
       dd = fabs(dists[nn]-distsOld[nn]);
-      if ((first || dd > maxdd) && (bondpair == -1 || bondpair == nn))
+      if (first || dd > maxdd)
 	{
 	  first = 0;
 	  maxdd = dd;
@@ -2638,6 +2642,7 @@ int check_negpairs(int *negpairs, double *dists, int bondpair, int i, int j)
   sum = 0;
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
+      negpairs[nn] = 0;
       if (bondpair != -1 && bondpair != nn)
 	continue;
       if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
@@ -2992,8 +2997,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       for (nn = 0; nn < MD_PBONDS; nn++)
 	{
 	  t2arr[nn] = t; 
-	  //printf("t=%.15G dists[%d]:%.15G\n",t , nn, dists[nn]);
-	  //printf("dists[%d]: %.15G distsOld[%d]: %.15G\n", nn, dists[nn], nn, distsOld[nn]);
+#if 0
+	  if (i==61 && j==224)
+	    {
+	      printf("t=%.15G dists[%d]:%.15G\n",t , nn, dists[nn]);
+	     // printf("dists[%d]: %.15G distsOld[%d]: %.15G\n", nn, dists[nn], nn, distsOld[nn]);
+	    }
+#endif
 	  dorefine[nn] = MD_EVENT_NONE;
 	  if (crossed[nn]!=MD_EVENT_NONE)
 	    {
