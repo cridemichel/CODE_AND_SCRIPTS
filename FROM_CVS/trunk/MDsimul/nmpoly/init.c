@@ -253,7 +253,6 @@ void FCC(int Nm, COORD_TYPE D, COORD_TYPE* m)
 		  rz[mid][ii+iref] = rzCm;
 		  for (n = mid+1; n < NA; n++)
 		    {
-		      printf("qui1 n=%d\n", n);
 		      notdone = maxit;
 		      while (notdone)
 			{
@@ -274,7 +273,6 @@ void FCC(int Nm, COORD_TYPE D, COORD_TYPE* m)
 		    }
 		   for (n = mid-1; n>=0; n--)
 		    {
-		      printf("qui2 n=%d\n", n);
 		      notdone = maxit;
 		      while (notdone)
 			{
@@ -880,6 +878,10 @@ void usrInitBef(void)
   OprogStatus.avngEta   = 0;
   OprogStatus.grow = 0;
   OprogStatus.growth = 0.7; /* growth * sigma = minima distanza accettabile */
+#ifdef MD_FENE
+  Oparams.kfe = 30.0;
+  Oparams.R0 = 1.1;
+#endif
   OprogStatus.snapSteps = 0;
   OprogStatus.snapmode = 0;
   for (i=0; i<NA; ++i)

@@ -321,6 +321,10 @@ struct params
 #if 0
   double chsi;                  /* friction coefficient (brownian motion) */
 #endif
+#ifdef MD_FENE
+  double kfe;
+  double R0;
+#endif
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
@@ -514,9 +518,11 @@ struct singlePar OsinglePar[] = {
   {"nminus",     &Oparams.nminus,     CT},
 #endif
   {"seed",       &OprogStatus.mdseed,                   INT},
-  {"m0",       &Oparams.m[0],             CT},
-  {"m1",       &Oparams.m[1],             CT},
-  {"m2",       &Oparams.m[2],             CT},
+  {"m",          &Oparams.m[0],             CT},
+#ifdef MD_FENE
+  {"kfe",        &Oparams.kfe,              CT},
+  {"R0",         &Oparams.R0,               CT},
+#endif
 #if 0
   {"chsi",       &Oparams.chsi,          CT},
 #endif
