@@ -1197,65 +1197,113 @@ void save_init_conf(void)
 }
 void check_all_bonds(void)
 {
-  int nn, amin, bmin, i, j, aa, bb, *nb, wnn, wj;
+  int nn, amin, bmin, i, j, aa, bb, nb, wnn, wj;
   double wdist,drx, dry, drz, shift[3], dist, rat[5][3], dists[MD_PBONDS], ri[3];
-  nb = malloc(sizeof(int)*Oparams.parnum);
-  for ( i = 0; i < Oparams.parnum-1; i++)
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+  for (k = 0;  k < NDIM; k++)
     {
-      nb[i] = 0;
-      ri[0] = rx[i];
-      ri[1] = ry[i];
-      ri[2] = rz[i];
-      ////BuildAtomPos(i, ri, R[i], rat);
-      for ( j = 0; j < Oparams.parnum; j++)
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  for ( i = 0; i < Oparams.parnum; i++)
+    {
+      nb = 0;
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
 	{
-	  if (i == j)
-	    continue;
-	  drx = rx[i] - rx[j];
-	  shift[0] = L*rint(drx/L);
-	  dry = ry[i] - ry[j];
-	  shift[1] = L*rint(dry/L);
-	  drz = rz[i] - rz[j]; 
-	  shift[2] = L*rint(drz/L);
-#ifdef MD_SILICA
-	  assign_bond_mapping(i, j); 
-#endif
-  	  dist = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin, dists);
-  	  for (nn=0; nn < MD_PBONDS; nn++)
-  	    {
-#if 0
-	      if (i==78&& j==98)
-    		{
-		  printf(">>>>>>>>>i=%d j=%d dists[%d]: %.15G\n", i, j, nn, dists[nn]);
-		}
-#endif
-	      if (dists[nn]<0.0)// && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
+	  jZ = inCell[2][i] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      jZ = cellsz - 1;    
+	      shift[2] = - L;
+	    } 
+	  else if (jZ == cellsz) 
+	    {
+	      jZ = 0;    
+	      shift[2] = L;
+	    }
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	    {
+	      jY = inCell[1][i] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
 		{
-  		  aa = mapbondsa[nn];
-  		  bb = mapbondsb[nn];
-		  wdist=dists[nn];
-		  wnn = nn;
-		  //printf("i=%d j=%d dists[%d]: %.15G\n", i, j, nn, dists[nn]);
-		  //printf("QUIII\n");
-  		  //if (bound(i, j, aa, bb))
-		  wj = j;
-  		  nb[i]++;
-  		}
-  	    }
-    	}
-#if 1
-      if (numbonds[i]!=nb[i])
+		  jY = cellsy - 1;    
+		  shift[1] = -L;
+		} 
+	      else if (jY == cellsy) 
+		{
+		  jY = 0;    
+		  shift[1] = L;
+		}
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		{
+		  jX = inCell[0][i] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsx - 1;    
+		      shift[0] = - L;
+		    } 
+		  else if (jX == cellsx) 
+		    {
+		      jX = 0;   
+		      shift[0] = L;
+		    }
+		  j = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+		  for (j = cellList[j]; j > -1; j = cellList[j]) 
+		    {
+		      if (i == j)
+			continue;
+#if 0 
+		      drx = rx[i] - rx[j];
+		      shift2[0] = L*rint(drx/L);
+		      dry = ry[i] - ry[j];
+		      shift2[1] = L*rint(dry/L);
+		      drz = rz[i] - rz[j]; 
+		      shift2[2] = L*rint(drz/L);
+#endif
+#ifdef MD_SILICA
+		      assign_bond_mapping(i, j); 
+#endif
+		      dist = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin, dists);
+		      for (nn=0; nn < MD_PBONDS; nn++)
+			{
+			  if (dists[nn]<0.0)// && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
+			    {
+#if 0
+			      aa = mapbondsa[nn];
+			      bb = mapbondsb[nn];
+			      wdist=dists[nn];
+			      wnn = nn;
+			      wj = j;
+#endif
+			      nb++;
+			    }
+  			}
+		    }
+		}
+	    }
+	}
+      if (numbonds[i]!=nb)
 	{
 	  printf("[WARNING] Number of bonds for molcule %d incorrect\n", i);
 	  printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
-		 numbonds[i], nb[i]);
-	  printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
-	  store_bump(i,j);
-	  exit(-1);
+		 numbonds[i], nb);
+	  printf("I've adjusted the number of bonds\n");
+	  //printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
+	  //store_bump(i,j);
+	  if (OprogStatus.checkGrazing==2)
+	    exit(-1);
 	}
-#endif
     }
- free(nb); 
 }
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
