@@ -205,6 +205,19 @@ struct progStatus
   COORD_TYPE DQxy;
   COORD_TYPE DQyz;
   COORD_TYPE DQzx;
+#ifdef MD_HSVISCO
+  double DQW;
+  double DQTxy;
+  double DQTyz;
+  double DQTzx;
+  double DQWxy;
+  double DQWyz;
+  double DQWzx;
+  double Txy;
+  double Tyz;
+  double Tzx;
+  double lastcoll;
+#endif
 
   COORD_TYPE PxyArr[5];
   COORD_TYPE PyzArr[5];

@@ -49,6 +49,23 @@ void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z,
 }
 
 void ScheduleEvent (int idA, int idB, double tEvent); 
+#ifdef MD_HSVISCO
+void calcT(void)
+{
+  double mass;
+  int i;
+  OprogStatus.Txy = 0.0;
+  OprogStatus.Tyz = 0.0;
+  OprogStatus.Tzx = 0.0;
+  mass = Oparams.m;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      OprogStatus.Txy += mass*vx[i]*vy[i];
+      OprogStatus.Tyz += mass*vy[i]*vz[i];
+      OprogStatus.Tzx += mass*vz[i]*vx[i];
+    }
+} 
+#endif
 
 /* ============================= >>> FCC <<< ================================*/
 void FCC(int Nm, COORD_TYPE m)
@@ -742,6 +759,16 @@ void usrInitAft(void)
       fclose(f);
       f = fopenMPI(MD_HD_MIS "rho_ist.dat", "w");
       fclose(f);
+#ifdef MD_HSVISCO
+      OprogStatus.DQTxy = 0.0;
+      OprogStatus.DQTyz = 0.0;
+      OprogStatus.DQTzx = 0.0;
+      OprogStatus.DQWxy = 0.0;
+      OprogStatus.DQWyz = 0.0;
+      OprogStatus.DQWzx = 0.0;
+      OprogStatus.lastcoll = -1;
+      calcT();
+#endif
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
       OprogStatus.DQzx = 0.0;

@@ -1,5 +1,9 @@
 #include<mdsimul.h>
 #define SIMUL
+#ifdef MD_HSVISCO
+void calcT(void);
+#endif
+
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 int checkz(char *msg)
 {
@@ -34,7 +38,7 @@ double pi, invL, L2, Vz;
 #ifdef MD_GRAVITY
 double Lz2;
 #endif
-double W, K, T1xx, T1yy, T1zz,
+double W=0.0, K, T1xx, T1yy, T1zz,
        T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
        Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx;
 /*  Patxy, Patyz, Patzx, Patxx, Patyy, Patzz,
@@ -264,6 +268,12 @@ void bump (int i, int j, double* W)
    */
   double rxij, ryij, rzij, factor;
   double delvx, delvy, delvz, sigSq;
+#ifdef MD_HSVISCO
+  double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold;
+#endif
+#ifdef MD_HSVISCO
+  double taus, invm, delpx, delpy, delpz;
+#endif
 
   sigSq = Sqr(Oparams.sigma);
   rxij = rx[i] - rx[j];
@@ -287,14 +297,57 @@ void bump (int i, int j, double* W)
   delvx = - factor * rxij;
   delvy = - factor * ryij;
   delvz = - factor * rzij;
+#ifdef MD_HSVISCO
+  invm = 1.0/Oparams.m;
+  delpx = delvx*Oparams.m;
+  delpy = delvy*Oparams.m;
+  delpz = delvz*Oparams.m;
+  DTxy = delpx*delpy*invm + vx[i]*delpy + delpx*vy[i];
+  DTxy += delpx*delpy*invm - vx[j]*delpy - delpx*vy[j]; 
+  DTyz = delpy*delpz*invm + vy[i]*delpz + delpy*vz[i];
+  DTyz += delpy*delpz*invm - vy[j]*delpz - delpy*vz[j];
+  DTzx = delpz*delpx*invm + vz[i]*delpx + delpz*vx[i];
+  DTzx += delpz*delpx*invm - vz[j]*delpx - delpz*vx[j];
+#endif
   vx[i] = vx[i] + delvx;
   vx[j] = vx[j] - delvx;
   vy[i] = vy[i] + delvy;
   vy[j] = vy[j] - delvy;
   vz[i] = vz[i] + delvz;
   vz[j] = vz[j] - delvz;
+#ifdef MD_HSVISCO 
+  if (OprogStatus.lastcoll!=-1)
+    {
+      taus = OprogStatus.time - OprogStatus.lastcoll;
+      OprogStatus.DQTxy += OprogStatus.Txy*taus; 
+      OprogStatus.DQTyz += OprogStatus.Tyz*taus;
+      OprogStatus.DQTzx += OprogStatus.Tzx*taus;
+      //taus = Oparams.time - OprogStatus.lastcoll;
+      //printf("DQT= %f %f %f\n", OprogStatus.DQTxy, OprogStatus.DQTyz, OprogStatus.DQTzx);
+      OprogStatus.DQWxy += rxij*delpy;
+      OprogStatus.DQWyz += ryij*delpz;
+      OprogStatus.DQWzx += rzij*delpx;
+      OprogStatus.DQW += rxij*delpx + ryij*delpy + rzij*delpz;
+      //printf("DQW= %f %f %f\n", OprogStatus.DQWxy, OprogStatus.DQWyz, OprogStatus.DQWzx);
+    }
+#if 0
+  Txyold = OprogStatus.Txy;
+  Tyzold = OprogStatus.Tyz;
+  Tzxold = OprogStatus.Tzx;
+#endif
+  OprogStatus.Txy += DTxy; 
+  OprogStatus.Tyz += DTyz;
+  OprogStatus.Tzx += DTzx;
+#if 0
+  printf("P STEP #%d T= %f %f %f\n", Oparams.curStep, OprogStatus.Txy, OprogStatus.Tyz, OprogStatus.Tzx);
+  printf("P STEP #%d DT=%f %f %f\n", Oparams.curStep, DTxy, DTyz, DTzx);
+  calcT();
+  printf("D STEP #%d T= %f %f %f\n", Oparams.curStep, OprogStatus.Txy, OprogStatus.Tyz, OprogStatus.Tzx);
+  printf("DT STEP #%d T= %f %f %f\n", Oparams.curStep, OprogStatus.Txy-Txyold, OprogStatus.Tyz-Tyzold, OprogStatus.Tzx-Tzxold);
+#endif
+#endif
   /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
-  *W = delvx * rxij + delvy * ryij + delvz * rzij;
+  *W += Oparams.m*(delvx * rxij + delvy * ryij + delvz * rzij);
 }
 void calccmz(void)
 {
@@ -770,6 +823,10 @@ void ProcessCollision(void)
       cellRange[2*k+1] =   1;
     }
   bump(evIdA, evIdB, &W);
+#ifdef MD_HSVISCO
+  OprogStatus.lastcoll = OprogStatus.time;
+#endif
+  /* questa invero è la pressione in eccesso */
   /*printf("qui time: %.15f\n", OprogStatus.time);*/
   lastcol[evIdA] = lastcol[evIdB] = OprogStatus.time;
 
@@ -1032,16 +1089,57 @@ void move(void)
 	}
       else if (evIdB == ATOM_LIMIT + 10)
 	{
+	  UpdateSystem();
 	  if (OprogStatus.brownian)
 	    {
-	      UpdateSystem();
+#ifdef MD_HSVISCO
+	      double taus, Vol;
+	      if (OprogStatus.lastcoll!=-1)
+		{
+		  /* notare che nel caso di dinamica browniana
+		   * lastcoll è in generale l'ultima collisione o tra due particelle
+		   * o tra le particelle e il fluido (reset delle velocità)*/
+		  taus = OprogStatus.time - OprogStatus.lastcoll; 
+		  OprogStatus.DQTxy += taus * OprogStatus.Txy;
+		  OprogStatus.DQTyz += taus * OprogStatus.Tyz;
+		  OprogStatus.DQTzx += taus * OprogStatus.Tzx;
+		  OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
+		  OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
+		  OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+		  Vol = L*L*Lz;
+		  OprogStatus.DQxy /= Vol;
+		  OprogStatus.DQyz /= Vol;
+		  OprogStatus.DQzx /= Vol;
+	      	  //printf("DQ= %f %f %f\n", OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
+		  OprogStatus.lastcoll = OprogStatus.time;
+		}
+#endif
 	      velsBrown(Oparams.T);
+#ifdef MD_HSVISCO
+	      calcT();
+#endif
 	      rebuildCalendar();
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
+#ifdef MD_HSVISCO
+	  else
+	    {
+	      double Vol;
+    	      OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
+	      OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
+	      OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+	      Vol = L*L*Lz;
+	      OprogStatus.DQxy /= Vol;
+	      OprogStatus.DQyz /= Vol;
+	      OprogStatus.DQzx /= Vol;
+	      //printf("STEP #%d DQ= %f %f %f\n", Oparams.curStep, OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
+	    }
+#endif
+	  press = W / Oparams.Dt / (L*L*Lz) / 3.0;
+	  W = 0;
 	  OprogStatus.nextDt += Oparams.Dt;
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	  break;
