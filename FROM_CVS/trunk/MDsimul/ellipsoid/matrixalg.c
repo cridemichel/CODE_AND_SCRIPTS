@@ -104,7 +104,7 @@ double Ftol, Epoten, Emin, fnorm;
 int cghalfspring, icg, jcg, minaxicg, minaxjcg, doneryck;
 double shiftcg[3], lambdacg;
 double gradfG[3], gradgG[3], dxG[6];
-extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3];
+extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3], **RtA, **RtB;
 extern int polinterr;
 /* ============================ >>> brent <<< ============================ */
 void  conjgradfunc(void);
@@ -557,7 +557,7 @@ void linminPow(double p[], double xi[], int n, double *fret, double (*func)(doub
 { 
   const double TOLLM=OprogStatus.tolSD;
   double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
-  double f1dim(double x); 
+  double f1dimPow(double x); 
   void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, 
 	      double (*func)(double));
   int j; 
@@ -592,7 +592,7 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
 {
   int i,ibig,j; 
   double del,fp,fptt,t,pt[4],ptt[4],xit[4]; 
-  const int ITMAXPOW=100;
+  const int ITMAXPOW=200;
   //pt=vector(1,n);
   //ptt=vector(1,n); xit=vector(1,n);
   *fret=(*func)(p);
@@ -624,7 +624,10 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
 	}
 
       if (*iter == ITMAXPOW) 
-	nrerror("powell exceeding maximum iterations."); 
+	{
+	  return;
+	  nrerror("powell exceeding maximum iterations."); 
+	}
       for (j=0;j<n;j++) 
 	{ /*Construct the extrapolated point and the average direction moved.
 	    Save the old starting point.*/
@@ -638,12 +641,12 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
 	  t=2.0*(fp-2.0*(*fret)+fptt)*Sqr(fp-(*fret)-del)-del*Sqr(fp-fptt); 
 	  if (t < 0.0)
 	    {
-	      linmin(p,xit,n,fret,func);/* Move to the minimum of the new direction, 
+	      linminPow(p,xit,n,fret,func);/* Move to the minimum of the new direction, 
 					   and save the new direction.*/
 	      for (j=0;j<n;j++)
 		{
-		  xi[j][ibig]=xi[j][n]; 
-		  xi[j][n]=xit[j];
+		  xi[j][ibig]=xi[j][n-1]; 
+		  xi[j][n-1]=xit[j];
 		}
 	    }
 	}
@@ -651,36 +654,37 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
   /*Back for another iteration.*/
 }
 #endif
-void lab2body(int i, double x[], double xp[])
+void lab2body(int i, double x[], double xp[], double *rO, double **R)
 {
   int k1, k2;
-  for (k1=0; k1 < 4; k1++)
+  for (k1=0; k1 < 3; k1++)
     {
       xp[k1] = 0;
-      for (k2=0; k2 < 4; k2++)
+      for (k2=0; k2 < 3; k2++)
 	{
-	  xp[k1] += R[i][k1][k2]*x[k2];
+	  xp[k1] += R[k1][k2]*(x[k2]-rO[k2]);
        	} 
     }
 }
-void body2lab(int i, double xp[], double x[])
+void body2lab(int i, double xp[], double x[], double *rO, double **R)
 {
   int k1, k2;
-  for (k1=0; k1 < 4; k1++)
+  for (k1=0; k1 < 3; k1++)
     {
       x[k1] = 0;
-      for (k2=0; k2 < 4; k2++)
+      for (k2=0; k2 < 3; k2++)
 	{
-	  x[k1] += R[i][k2][k1]*xp[k2];
+	  x[k1] += R[k2][k1]*xp[k2];
        	} 
+      x[k1] += rO[k1];
     }
 }
 void angs2coord(double angs[], double p[])
 {
-  p[0] = axa[icg]*cos(angs[0])*cos(angs[1]);
+  p[0] = axa[icg]*cos(angs[0])*sin(angs[1]);
   p[1] = axb[icg]*sin(angs[0])*sin(angs[1]);
   p[2] = axc[icg]*cos(angs[1]);
-  p[3] = axa[jcg]*cos(angs[2])*cos(angs[3]);
+  p[3] = axa[jcg]*cos(angs[2])*sin(angs[3]);
   p[4] = axb[jcg]*sin(angs[2])*sin(angs[3]);
   p[5] = axc[jcg]*cos(angs[3]);
 }
@@ -690,8 +694,8 @@ double funcPowell(double angs[])
   double A, B, S=1.0, F;
   int k1, k2;
   angs2coord(angs, vecP);
-  body2lab(icg, vecP, vec);
-  body2lab(jcg, &vecP[3], &vec[3]);
+  body2lab(icg, vecP, vec, rA, RtA);
+  body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
   if (OprogStatus.forceguess)
     {
       for (k1 = 0; k1 < 3; k1++)
@@ -732,8 +736,8 @@ void powellmethod(double *vec)
     for (k2=0; k2 < 4; k2++)
       powdirs[k1][k2] = powdirsI[k1][k2];
   /* trovo le coordinate nel riferimento del corpo rigido (assi principali) */
-  lab2body(icg, vec, vecP);
-  lab2body(jcg, &vec[3], &vecP[3]);
+  lab2body(icg, vec, vecP, rA, RtA);
+  lab2body(jcg, &vec[3], &vecP[3], rB, RtB);
   /* determino theta e phi per entrambi gli ellissoidi 
    * angs[] = (thetaA,phiA,thetaB,phiB)
    * 0 < theta < 2PI
@@ -743,9 +747,9 @@ void powellmethod(double *vec)
   sinth = vecP[1]/axb[icg]/sin(angs[1]);
   if (sinth < 0)
     angs[0] = 2.0*pi-angs[0];
-  angs[3] = acos(vecP[5]/axc[icg]);
-  angs[2] = acos(vecP[3]/axa[icg]/sin(angs[3]));
-  sinth = vecP[4]/axb[icg]/sin(angs[3]);
+  angs[3] = acos(vecP[5]/axc[jcg]);
+  angs[2] = acos(vecP[3]/axa[jcg]/sin(angs[3]));
+  sinth = vecP[4]/axb[jcg]/sin(angs[3]);
   if (sinth < 0)
     angs[2] = 2.0*pi-angs[2];
   powell(angs, powdirs, 4, OprogStatus.tolSD, &iter, &Fret, funcPowell);
@@ -754,8 +758,8 @@ void powellmethod(double *vec)
   angs2coord(angs, vecP);
 
   /* torno nel riferimento del laboratorio */
-  body2lab(icg, vecP, vec);
-  body2lab(jcg, &vecP[3], &vec[3]);
+  body2lab(icg, vecP, vec, rA, RtA);
+  body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
   free_matrix(powdirs, 4);
 
 }
@@ -1838,8 +1842,8 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
   printf(">>> vec[6]:%.15G vec[7]: %.15G\n", vec[6], vec[7]);
 #endif
   //frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
-  frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
-  //powellmethod(vec);
+  //frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+  powellmethod(vec);
   for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];
