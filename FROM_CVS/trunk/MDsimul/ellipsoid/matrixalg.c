@@ -98,6 +98,8 @@ double xicom[6], pcom[6], xi[6], G[6], H[6], grad[6];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
 int cghalfspring, icg, jcg, minaxicg, minaxjcg;
 double shiftcg[3], lambdacg;
+double gradfG[3], gradgG[3], dxG[6];
+extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3];
 /* ============================ >>> brent <<< ============================ */
 void  conjgradfunc(void);
 
@@ -253,6 +255,40 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
   *xmin=x; /*Never get here.*/
   return fx;
 }
+void linminConstr(double p[], double xi[], int n, double *fret, double (*func)(double []))
+/*Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and 
+ * resets p to where the function func(p) takes on a minimum along the direction xi from p,
+ * and replaces xi by the actual vector displacement that p was moved. Also returns as fret 
+ * the value of func at the returned location p. This is actually all accomplished by calling
+ * the routines mnbrak and brent. */
+{ 
+  const double TOLLM=OprogStatus.tolSD;
+  double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
+  double f1dimConstr(double x); 
+  void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, 
+	      double (*func)(double));
+  int j; 
+  double xx,xmin,fx,fb,fa,bx,ax;
+  ncom=n; /*Define the global variables.*/
+  //pcom=vector(1,n);
+  //xicom=vector(1,n); 
+  nrfunc=func; 
+  for (j=0;j<n;j++)
+    { 
+      pcom[j]=p[j];
+      xicom[j]=xi[j];
+    } 
+  ax=0.0; /*Initial guess for brackets.*/
+  xx=1.0; 
+  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimConstr); 
+  *fret=brent(ax,xx,bx,f1dimConstr,TOLLM,&xmin);
+  //printf("xmin: %.15G\n", xmin);
+  for (j=0;j<n;j++)
+    { /*Construct the vector results to return. */
+      p[j] += dxG[j]; 
+    } 
+  //free_vector(xicom,1,n); free_vector(pcom,1,n);
+}
 
 void linmin(double p[], double xi[], int n, double *fret, double (*func)(double []))
 /*Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and 
@@ -399,6 +435,23 @@ double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)
   nrerror("Too many iterations in routine dbrent"); 
   return 0.0; /*Never get here.*/
 }
+double f1dimConstr(double x) 
+  /*Must accompany linmin.*/
+{
+  int j; 
+  double f, xt[6], dx[6];
+  // xt=vector(1,ncom);
+  for (j=0;j<ncom;j++) 
+    {
+      dxG[j]=x*xicom[j];
+      xt[j]=pcom[j]+dxG[j]; 
+    }
+  f=(*nrfunc)(xt); 
+  projonto(pcom, dxG, rA, Xa, gradfG);
+  projonto(&pcom[6], &dxG[3], rB, Xb, gradgG);
+  // free_vector(xt,1,ncom); 
+  return f;
+}
 
 double f1dim(double x) 
   /*Must accompany linmin.*/
@@ -532,7 +585,6 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
   /*Back for another iteration.*/
 }
 #endif
-extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3];
 int check_point(char* msg, double *p, double *rc, double **XX)
 {
   int k1, k2;
@@ -560,7 +612,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
   int kk, its, done=0, k1, k2, MAXITS=10;
   const double GOLD=1.618034;
   double r1[3], r1A[3], sf, s1, s2;
-  double A, B, C, Delta, sol;
+  double A, B, C, Delta, sol=0.0;
   sf = 1.0;
   its = 0;
   while (!done && its <= MAXITS)
