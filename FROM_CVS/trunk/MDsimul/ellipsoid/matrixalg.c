@@ -154,7 +154,7 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLF 1.0e-5 // 1.0e-4
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
-#define FMAX(A,B) (A)>(B)?(A):(B)
+#define FMAX(A,B) ((A)>(B)?(A):(B))
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
 	    double *f, double stpmax, int *check, 
 	    double (*func)(double [], int, int, double[]), int iA, int iB, double shift[3])
@@ -290,6 +290,9 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
 void lubksb(double **a, int n, int *indx, double b[]); 
 void ludcmp(double **a, int n, int *indx, double *d); 
 extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double shift[3]);
+extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
+
+
 void newt(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
@@ -324,7 +327,8 @@ void newt(double x[], int n, int *check,
 #if 0
       for (ii = 0; ii < 5; ii++)
 	{
-	  printf("Guessing\n");
+	  //printf("Guessing\n");
+	  funcs2beZeroedGuess(n-1,x,fvec,iA,iB,shift);
 	  fdjacGuess(n-1,x,fvec,fjac,funcs2beZeroedGuess, iA, iB, shift);
 	  ludcmp(fjac,n-1,indx,&d); /* Solve linear equations by LU decomposition.*/
 	  lubksb(fjac,n-1,indx,p);
@@ -333,7 +337,7 @@ void newt(double x[], int n, int *check,
 	}
 #endif
       /* ============ */
-      fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
+      fdjacFD(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
       /* If analytic Jacobian is available, you can 
 	 replace the routine fdjac below with your own routine.*/
       for (i=0;i<n;i++) { /* Compute  f for the line search.*/
@@ -357,8 +361,10 @@ void newt(double x[], int n, int *check,
       if (test < TOLF) 
 	{ 
 	  *check=0; 
+	  MD_DEBUG(printf("test < TOLF\n"));
 	  FREERETURN
 	} 
+#if 0
       if (*check) 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
 	  test=0.0; 
@@ -369,10 +375,12 @@ void newt(double x[], int n, int *check,
 	      if (temp > test) 
 		test=temp; 
 	    } 
-	  *check=(test < TOLMIN ? 1 : 0);
+	  *check=(test < TOLMIN ? 2 : 0);
+	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
   	  FREERETURN 
 	} 
-      test=0.0; /* Test for convergence on ´x. */
+#if 1
+      test=0.0; /* Test for convergence on x. */
       for (i=0;i<n;i++) 
 	{
 	  temp=(fabs(x[i]-xold[i]))/FMAX(fabs(x[i]),1.0); 
@@ -380,17 +388,27 @@ void newt(double x[], int n, int *check,
 	    test=temp; 
 	} 
       if (test < TOLX) 
-	FREERETURN 
+	{
+	  MD_DEBUG(printf("test<TOLX test=%.15f\n", test));
+	  FREERETURN;
+	}
+#endif
+      if (*check==2)
+	{
+	  MD_DEBUG(printf("spurious convergence\n"));
+	  FREERETURN;
+	}
+#endif
     } 
+  MD_DEBUG(printf("maxits!!!\n"));
   *check = 2;
   return;
   nrerror("MAXITS exceeded in newt"); 
   
 }
 
-#define EPS 1.0e-4 /* Approximate square root of the machine precision.*/
-#ifdef MD_APPROX_JACOB
-void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
+#define EPS 1.0e-8//1.0E-4 /* Approximate square root of the machine precision.*/
+void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 { int i,j; 
   double h,temp,*f; 
   f=vector(n); 
@@ -410,7 +428,6 @@ void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, d
     }
   free_vector(f); 
 }
-#endif
 extern int nn; 
 extern double *fvec;
 extern void (*nrfuncv)(int n, double v[], double f[], int iA, int iB, double shift[3]); 

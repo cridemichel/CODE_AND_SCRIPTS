@@ -1548,6 +1548,85 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
     }
   fvec[3] = 0.5*fvec[3]-1.0;
   fvec[4] = 0.5*fvec[4]-1.0;
+  MD_DEBUG(printf("fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+}
+
+double tdist;
+double rA[3], rB[3];
+
+void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double shift[3])
+{
+  int k1, k2; 
+  double fx[3], gx[3];
+  /* x = (r, alpha, t) */ 
+  
+#if 0
+  printf("Xa=\n");
+  print_matrix(Xa, 3);
+  printf("Xb=\n");
+  print_matrix(Xb, 3);
+#endif
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3] - rB[k2]);
+    }
+
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
+  MD_DEBUG(printf("fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*Sqr(x[7]); 
+}
+double calcDist(double t, int i, int j, double shift[3])
+{
+  double vecg[7];
+  double retcheck;
+  double Omega[3][3];
+  int k1, na;
+  rA[0] = rx[i] + vx[i]*t;
+  rA[1] = ry[i] + vy[i]*t;
+  rA[2] = rz[i] + vz[i]*t;
+  /* ...and now orientations */
+  UpdateOrient(i, t, Rt, Omega);
+  na = (i < Oparams.parnumA)?0:1;
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
+
+  rB[0] = rx[j] + vx[j]*t + shift[0];
+  rB[1] = ry[j] + vy[j]*t + shift[1];
+  rB[2] = rz[j] + vz[j]*t + shift[2];
+  UpdateOrient(j, t, Rt, Omega);
+  na = (j < Oparams.parnumA)?0:1;
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      vecg[k1] = rA[k1];
+      vecg[k1+3] = rB[k1];
+    }
+  vecg[6] = 1.0;
+  vecg[7] = 1.0;
+  newt(vecg, 8, &retcheck, funcs2beZeroedDist, i, j, shift); 
 }
 void rebuildCalendar(void);
 void PredictEvent (int na, int nb) 
@@ -1939,6 +2018,7 @@ no_core_bump:
 #endif
     			  if (d >= 0.) 
 			    {
+#if 0
 			      if (distSq >= sigSq)
 				t = - (sqrt (d) + b) / vv;
 			      else
@@ -1982,7 +2062,11 @@ no_core_bump:
 			      vecg[3] = 1.0; /* questa stima di alpha andrebbe fatta meglio!*/
 			      vecg[4] = t;
 			      MD_DEBUG(printf("vecguess: %f,%f,%f alpha=%f t=%f\n", vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
-			      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
+#endif
+
+			      calcDist(Oparams.time, na, n, shift);
+			      exit(-1);
+			      //newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
 			      
 			      if (retcheck==1)
 				{
