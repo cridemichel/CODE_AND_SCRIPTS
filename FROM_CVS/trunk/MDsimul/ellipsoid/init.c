@@ -31,7 +31,7 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
-double **Xa, **Xb, **Ia, **Ib, **invIa, **invIb;
+double **Xa, **Xb, **Ia, **Ib, **invIa, **invIb, **RA, **RB, ***R, **Rt;
 extern double **matrix(int n, int m);
 int poolSize;
 int parnumA, parnumB;
@@ -716,7 +716,39 @@ extern double calcpotene(void);
 double corrini3, corrini0, corrini1, corrini2, corrnorm;
 double *lastbreak1, *lastbreak2;
 #endif
-  /* ======================== >>> usrInitAft <<< ==============================*/
+void u2R(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      R[i][0][0] = uxx[i];
+      R[i][0][1] = uxy[i];
+      R[i][0][2] = uxz[i];
+      R[i][1][0] = uyx[i];
+      R[i][1][1] = uyy[i];
+      R[i][1][2] = uyz[i];
+      R[i][2][0] = uzx[i];
+      R[i][2][1] = uzy[i];
+      R[i][2][2] = uzz[i];
+    }
+}
+void R2u(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      uxx[i] = R[i][0][0];
+      uxy[i] = R[i][0][1];
+      uxz[i] = R[i][0][2];
+      uyx[i] = R[i][1][0];
+      uyy[i] = R[i][1][1];
+      uyz[i] = R[i][1][2];
+      uzx[i] = R[i][2][0];
+      uzy[i] = R[i][2][1];
+      uzz[i] = R[i][2][2];
+    }
+}
+/* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
   {
     /* DESCRIPTION:
@@ -820,6 +852,16 @@ void usrInitAft(void)
     Ib = matrix(3, 3);
     invIa = matrix(3, 3);
     invIb = matrix(3, 3);
+    RA = matrix(3, 3);
+    RB = matrix(3, 3);
+    Rt = matrix(3, 3);
+    R = malloc(sizeof(double**)*Oparams.parnum);
+    for (i=0; i < Oparams.parnum; i++)
+      {
+	R[i] = matrix(3, 3);
+      }
+    u2R();
+
     if (OprogStatus.CMreset==-1)
       {
 	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
@@ -1075,11 +1117,13 @@ void writeAllCor(FILE* fs)
 {
   int i;
   const char tipodat[] = "%.15G %.15G %.15G\n";
-  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G\n";
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
+   
   for (i = 0; i < Oparams.parnum; i++)
     {
       fprintf(fs, tipodat, rx[i], ry[i], rz[i]);
-      fprintf(fs, tipodat2, uxx[i], uxy[i], uxz[i], uyy[i], uyz[i], uzz[i]);
+      fprintf(fs, tipodat2, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	      uyz[i], uzx[i], uzy[i], uzz[i]);
     }
   
   for (i = 0; i < Oparams.parnum; i++)
@@ -1107,8 +1151,8 @@ void readAllCor(FILE* fs)
 	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	  exit(-1);
 	}
-      if (fscanf(fs, "%lf %lf %lf %lf %lf %lf\n", 
-		 &uxx[i], &uxy[i], &uxz[i], &uyy[i], &uyz[i], &uzz[i]) < 3)
+      if (fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
+		 &uxx[i], &uxy[i], &uxz[i], &uyx[i], &uyy[i], &uyz[i], &uzx[i], &uzy[i], &uzz[i]) < 3)
 	{
 	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	  exit(-1);
