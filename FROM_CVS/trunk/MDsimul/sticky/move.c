@@ -5,6 +5,7 @@
 #define MD_DEBUG10(x)  
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
+#define MD_DEBUG20(x) x
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -843,6 +844,36 @@ extern void free_matrix(double **M, int n);
 double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
 		double *vecgsup, int calcguess);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
+void core_bump(int i, int j, double *W, double sigSq)
+{
+  double rxij, ryij, rzij, factor;
+  double delvx, delvy, delvz;
+
+  rxij = rx[i] - rx[j];
+  if (fabs (rxij) > L2)
+    rxij = rxij - SignR(L, rxij);
+  ryij = ry[i] - ry[j];
+  if (fabs (ryij) > L2)
+    ryij = ryij - SignR(L, ryij);
+  rzij = rz[i] - rz[j];
+  if (fabs (rzij) > L2)
+    rzij = rzij - SignR(L, rzij);
+  factor = ( rxij * ( vx[i] - vx[j] ) +
+	     ryij * ( vy[i] - vy[j] ) +
+	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
+  /* Dissipation */
+  delvx = - factor * rxij;
+  delvy = - factor * ryij;
+  delvz = - factor * rzij;
+  vx[i] = vx[i] + delvx;
+  vx[j] = vx[j] - delvx;
+  vy[i] = vy[i] + delvy;
+  vy[j] = vy[j] - delvy;
+  vz[i] = vz[i] + delvz;
+  vz[j] = vz[j] - delvz;
+  /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
+  //*W = delvx * rxij + delvy * ryij + delvz * rzij;
+}
 
 void bump (int i, int j, int ata, int atb, double* W, int bt)
 {
@@ -885,17 +916,34 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
+  if (bt == MD_CORE_BARRIER)
+    {
+      /* do a normal collison between hard spheres 
+       * (or whatever kind of collision between core objects
+       * (ellipsoids as well...)*/
+      core_bump(i, j, W, Sqr(sigmai));
+      return;
+    }
+
   MD_DEBUG10(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   /* qui calcolo il punto di contatto */
   BuildAtomPosAt(i, ata, rA, RtA, ratA);
   BuildAtomPosAt(j, atb, rB, RtB, ratB);
   for (kk = 0; kk < 3; kk++)
     rAB[kk] = ratA[kk] - ratB[kk];
+  /* reduce to minimum image rAB[]!! */
+#if 1
+  for (a=0; a < 3; a++)
+    if (fabs (rAB[a]) > L2)
+      rAB[a] -= SignR(L, rAB[a]);
+#endif
+ 
   nrAB = calc_norm(rAB);
   for (kk = 0; kk < 3; kk++)
     rAB[kk] /= nrAB;
   /* controllare con cura la scelta dei parametri relativi ai diametri delle sferette
    * e alle larghezze delle buche dei potenziali a buca quadrata */
+  MD_DEBUG20(printf("coll code: %d\n", bt));
   rCx = rA[0] - rAB[0]*sigmai*0.5;
   rCy = rA[1] - rAB[1]*sigmai*0.5;
   rCz = rA[2] - rAB[2]*sigmai*0.5;
@@ -990,6 +1038,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 	} 
     }
 #endif
+#if 0
   if (vc < 0)// && fabs(vc) > 1E-10)
     {
       MD_DEBUG(printf("norm = (%f,%f,%f)\n", norm[0], norm[1],norm[2]));
@@ -999,6 +1048,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
       return;
     }
+#endif
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
 #ifdef MD_ASYM_ITENS 
   for (a=0; a < 3; a++)
@@ -2693,7 +2743,7 @@ void PredictEvent (int na, int nb)
 		       * di ellissoidi */
 		      if (OprogStatus.targetPhi > 0)
 			{
-			  sigSq = Sqr(max_ax(na)+max_ax(n));
+			  //sigSq = Sqr(max_ax(na)+max_ax(n));
 			}
 		      else
 			{
@@ -2702,7 +2752,7 @@ void PredictEvent (int na, int nb)
 			  else if (na >= parnumA && n >= parnumA)
 			    sigSq = Sqr(maxax[na]);
 			  else
-			    sigSq = Sqr((maxax[n]+maxax[na])*0.5);
+			    sigSq = Sqr((maxax[n]+maxax[na])*0.5+Oparams.sigmaSticky);
 			}
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 		      tInt = Oparams.time - atomTime[n];
@@ -2756,7 +2806,7 @@ void PredictEvent (int na, int nb)
 		      //t += Oparams.time; 
 		      t2 += Oparams.time;
 		      t1 += Oparams.time;
-		      /* calcola cmq l'urto fra le due sfere grandi */
+		      /* calcola cmq l'urto fra le due core spheres */
 		      if (na < parnumA && n < parnumA)
 			sigSq = Sqr(Oparams.sigma[0][0]);
 		      else if (na >= parnumA && n >= parnumA)
@@ -2790,19 +2840,24 @@ void PredictEvent (int na, int nb)
 			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
 			    } 
 			}
+		      ac = 0; 
+		      bc = 0;
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
-
+#if 1
 		      if (!locate_contact(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 			continue;
-
+#else
+		      if (collCode == MD_EVENT_NONE)
+			continue;
+#endif
 		      MD_DEBUG(printf("A x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)-B x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)",
 				      rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
 				      rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]));
 		      t = evtime;
 #if 1
-		      if (t < 0)
+		      if (t < Oparams.time)
 			{
 #if 1
 			  printf("time:%.15f tInt:%.15f\n", Oparams.time,
@@ -2814,11 +2869,11 @@ void PredictEvent (int na, int nb)
 			  printf("n:%d na:%d\n", n, na);
 			  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
 #endif
-			  t = 0;
+			  t = Oparams.time;
 			}
 #endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
-		      MD_DEBUG(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
+		      MD_DEBUG20(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
 		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 		      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
 		    }
@@ -3046,6 +3101,7 @@ void ProcessCollision(void)
   MD_DEBUG10(calc_energy("prima"));
   /* i primi due bit sono il tipo di event (uscita buca, entrata buca, collisione con core 
    * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */
+  //printf("evIdC: %d evIdD: %d\n", evIdC, evIdD);
   bump(evIdA, evIdB, evIdC, evIdD, &W, evIdE);
   MD_DEBUG10(calc_energy("dopo"));
   MD_DEBUG(store_bump(evIdA, evIdB));
