@@ -157,6 +157,11 @@ struct progStatus
   int iniFormat; /* 0 = binary 1 = ascii 2 = both */
   int endFormat; /* 0 = binary 1 = ascii 2 = both */
 
+#ifdef MD_BILOG
+  double basew;
+  int lastbilogsaved;
+#endif
+
   char endfile[NAME_LENGTH];
   /* stringa contenente il nome del file in cui
      si salvano le coordinate delle particelle alla fine della simulazione.
@@ -254,6 +259,10 @@ struct progStatus
   double nextcheckTime;
   double nextSumTime;
   double nextDt;
+  double nextStoreTime;
+  int KK;
+  int JJ;
+  double storerate;
   int numquench;
   int maxquench;
   double rhobh;
@@ -427,18 +436,22 @@ struct pascii opro_ascii[] =
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
   {"checkquenchTime",&OS(checkquenchTime),           1,  1,    "%.10G"},
   {"intervalSum"   ,&OS(intervalSum),               1,  1,    "%.10G"}, 
+  {"nextStoreTime", &OS(nextStoreTime),             1, 1,     "%.10G"},
+  {"storerate",     &OS(storerate),                 1, 1,     "%.10G"},
+  {"KK",            &OS(KK),                        1, 1,     "%d"},
+  {"JJ",            &OS(JJ),                        1, 1,     "%d"},
   {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
   {"nextSumTime"  ,&OS(nextSumTime),                1,  1,    "%.15G"},
   {"nextDt",       &OS(nextDt),                     1,  1,    "%.15G"},
   {"tmpPath",      OS(tmpPath),                     1,  NAME_LENGTH, "%s"},
   {"misPath",      OS(misPath),                     1,  NAME_LENGTH, "%s"},
   {"base",         &OS(base),                       1,  1, "%.6G"},
-  {"NN",           &OS(NN),                         1,  1,   "%d"},
 #ifdef MD_BILOG
-  {"logblockbase", &OprogStatus.logblockbase,  CT},
-  {"logblock",     &OprogStatus.logblock,      CT},
+  {"basew",        &OS(basew),                      1,  1, "%.6G"},
+  {"lastbilogsaved",&OS(lastbilogsaved),            1,  1, "%d"},
 #endif
-{"fstps",        &OS(fstps),                      1,  1,   "%.15G"},
+  {"NN",           &OS(NN),                         1,  1,   "%d"},
+  {"fstps",        &OS(fstps),                      1,  1,   "%.15G"},
   {"nRun",         OS(nRun),                        1,  32,   "%s"},
   {"ENmin",        &OS(ENmin),                      1,  1,  "%.6G"},
   {"ENmax",        &OS(ENmax),                      1,  1,  "%.6G"},
@@ -562,6 +575,7 @@ struct singlePar OsinglePar[] = {
   {"taptau",     &OprogStatus.taptau,         CT},
   {"quenchtol",  &OprogStatus.quenchtol,      CT},
   {"intervalSum", &OprogStatus.intervalSum,   CT},
+  {"storerate",     &OprogStatus.storerate,     CT},
   {"checkQuench", &OprogStatus.checkquenchTime, CT},
   {"rescaleTime", &OprogStatus.rescaleTime,   CT},
   {"scalevel",   &OprogStatus.scalevel,       INT},
@@ -606,6 +620,9 @@ struct singlePar OsinglePar[] = {
   {"tmpPath",    OprogStatus.tmpPath,        STR},
   {"misPath",    OprogStatus.misPath,       STR},
   {"base",       &OprogStatus.base,         CT},
+#ifdef MD_BILOG
+  {"basew",     &OprogStatus.basew,         CT},
+#endif
   {"NN",         &OprogStatus.NN,           INT},
   {"ENmin",      &OprogStatus.ENmin,        CT},
   {"ENmax",      &OprogStatus.ENmax,        CT},

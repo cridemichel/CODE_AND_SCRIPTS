@@ -471,7 +471,9 @@ void usrInitBef(void)
 
   V = 0.0;
   L = 9.4;
+#ifdef MD_GRAVITY
   Lz = 9.4;
+#endif
   Oparams.T = 2.0;
   Oparams.P = 1.0;
   Oparams.M = 5; /* cells in each direction for linked lists */
@@ -505,14 +507,18 @@ void usrInitBef(void)
   OprogStatus.nextSumTime = 0.0;
   OprogStatus.nextcheckTime = 0.0;
   OprogStatus.intervalSum = 1.0;
+  OprogStatus.storerate = 0.01;
+  OprogStatus.KK = 0;
+  OprogStatus.JJ = 0;
   OprogStatus.checkquenchTime = 1.0;
   OprogStatus.rescaleTime = 1.0;
   OprogStatus.brownian = 0;
   OprogStatus.numquench = 0;
   OprogStatus.maxquench = 0;
-  OprogStatus.rescaleTime = 0.0;
   OprogStatus.extraLz = 10.0;
   OprogStatus.rhobh = 0.0;
+  OprogStatus.brownian = 0;
+  Oparams.Dt = 0.01;
   OprogStatus.vztap = 10.0;
   /* Parameters relative to Ruocco AC force
      See: cond-mat/00001311, Ruocco et al. */
@@ -700,6 +706,8 @@ void usrInitAft(void)
 	atomTime[i] = 0.0;
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
+      if (OprogStatus.storerate > 0.0)
+	OprogStatus.nextStoreTime = OprogStatus.storerate;
       OprogStatus.nextDt += Oparams.Dt;
     }
   else
@@ -709,6 +717,8 @@ void usrInitAft(void)
     }
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+   if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 

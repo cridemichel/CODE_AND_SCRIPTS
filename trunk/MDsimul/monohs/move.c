@@ -936,6 +936,9 @@ void rebuildLinkedList(void);
 void move(void)
 {
   int ii, innerstep;
+  char fileop[1024], fileop2[1024], fileop3[1024];
+  FILE *bf;
+  const char sepStr[] = "@@@\n";
   double rzmax, zfact;
   /* Zero all components of pressure tensor */
 #if 0
@@ -992,6 +995,41 @@ void move(void)
 	  calcObserv();
 	  outputSummary(); 
 	}
+      else if (evIdB == ATOM_LIMIT + 8)
+	{
+	  sprintf(fileop2 ,"Store-%d-%d", 
+		  OprogStatus.KK, OprogStatus.JJ);
+	  /* store conf */
+	  strcpy(fileop, absTmpAsciiHD(fileop2));
+	  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+	    {
+	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+	      exit(-1);
+	    }
+	  UpdateSystem();
+	  writeAsciiPars(bf, opro_ascii);
+	  fprintf(bf, sepStr);
+	  writeAsciiPars(bf, opar_ascii);
+	  fprintf(bf, sepStr);
+	  writeAllCor(bf);
+	  fclose(bf);
+#ifdef MPI
+          sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+#else 
+          sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
+	  system(fileop3);
+	  OprogStatus.JJ++;
+	  if (OprogStatus.JJ == OprogStatus.NN)
+	    {
+	      OprogStatus.JJ = 0;
+	      OprogStatus.KK++;
+	    }
+          OprogStatus.nextStoreTime = OprogStatus.storerate *
+	    (pow(OprogStatus.base,OprogStatus.NN)*OprogStatus.KK+pow(OprogStatus.base,OprogStatus.JJ));
+	  ScheduleEvent(-1, ATOM_LIMIT + 8, OprogStatus.nextStoreTime);
+
+	}
       else if (evIdB == ATOM_LIMIT + 10)
 	{
 	  if (OprogStatus.brownian)
@@ -999,6 +1037,8 @@ void move(void)
 	      UpdateSystem();
 	      velsBrown(Oparams.T);
 	      rebuildCalendar();
+	      if (OprogStatus.storerate > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
@@ -1064,7 +1104,9 @@ void move(void)
 			   MD_DEBUG3(distanza(996, 798));
 			   rebuildCalendar();
 			   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-
+			   if (OprogStatus.storerate > 0.0)
+			     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+			   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 			 }
 		}
 	      else if ((OprogStatus.time - OprogStatus.quenchend)  < OprogStatus.taptau)
@@ -1078,6 +1120,9 @@ void move(void)
 		  rebuildLinkedList();
 		  rebuildCalendar();
 		  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      	  if (OprogStatus.storerate > 0.0)
+	    	    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+		  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 		}
 	      else
 		{
@@ -1085,8 +1130,8 @@ void move(void)
 		  OprogStatus.nextcheckTime += OprogStatus.checkquenchTime;
 		  OprogStatus.quenchend = -1;
 		}
-	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
-	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+	      if (OprogStatus.checkquenchTime > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
 	  else if (OprogStatus.scalevel)
 	    {
@@ -1096,6 +1141,8 @@ void move(void)
 	      scalevels(Oparams.T, K, Vz);
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      if (OprogStatus.storerate > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	    }
