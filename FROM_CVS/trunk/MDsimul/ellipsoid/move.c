@@ -273,6 +273,7 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
     }
   return distMin;
 }
+
 double calc_phi(void)
 {
   double N = 0;
@@ -348,9 +349,20 @@ void restore_values(void)
       invcSq[aa] = invcSqL[aa]; 
     }
 }
+void scale_coords(double sf)
+{
+  int i; 
+  L *= sf;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      rx[i] *= sf;
+      ry[i] *= sf;
+      rz[i] *= sf;
+    }
+}
 
 double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double rD[3], 
-		      double shift[3], double scalfact)
+		      double shift[3], double scalfact, double *factor)
 {
   int i, kk, a;
   double phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
@@ -386,8 +398,7 @@ double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double
       else
 	fact = fact1;
     }
-  printf("phi=%f fact1: %.8G fact2:%.8G scaling factor: %.8G\n", phi, fact1, fact2, fact);
-  //L *= fact;
+  //printf("phi=%f fact1: %.8G fact2:%.8G scaling factor: %.8G\n", phi, fact1, fact2, fact);
   Oparams.rcut *= fact;
   Oparams.a[0] *= fact;
   Oparams.b[0] *= fact;
@@ -413,7 +424,7 @@ double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double
       invbSq[a] = Sqr(1/Oparams.b[a]);
       invcSq[a] = Sqr(1/Oparams.c[a]);
     };
-
+  *factor = fact;
   return calc_phi();
 }
 void rebuild_linked_list(void)
@@ -449,7 +460,7 @@ void rebuild_linked_list(void)
 }
 double check_dist_min(char *msg)
 {
-  int imin, j, i;
+  int imin, j, i, jmin;
   double distMin=1E60, dist, rC[3], rD[3], shift[3];
   
   imin = -1;
@@ -458,21 +469,33 @@ double check_dist_min(char *msg)
       j = -1;
       dist = get_min_dist(i, &j, rC, rD, shift);
       if (dist < distMin)
-	distMin = dist;
+	{
+	  distMin = dist;
+	  imin = i;
+	  jmin = j;
+	}
     }
   if (msg)
     printf("[check_dist_min] %s distMin: %.12G\n", msg, distMin);
+
   return distMin;
 } 
 
 void scale_Phi(void)
 {
   int i, j, imin, jmin=-1, kk, n, its;
+  static int first = 1;
+  static double a0I;
   double dist, distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
-  double L2, shift[3], shiftmin[3], phi, scalfact;
+  double L2, shift[3], shiftmin[3], phi, scalfact, factorold, factor;
   if (OprogStatus.targetPhi <= 0)
     return;
     
+  if (first)
+    {
+      first = 0;
+      a0I = Oparams.a[0];
+    }
   //UpdateSystem();   
   L2 = 0.5 * L;
   /* get the minimum distance in the system */
@@ -506,31 +529,32 @@ void scale_Phi(void)
   rBmin[0] = rx[jmin];
   rBmin[1] = ry[jmin];
   rBmin[2] = rz[jmin];
-  scalfact = 0.5;
+  scalfact = OprogStatus.scalfact;
   store_values();
-  phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact);
+  if (distMin < 10*OprogStatus.epsdFast)
+    return;
+  if (distMin < 0)
+    {
+      printf("[scale_Phi] I can't scale axes, minimum distance is negative!");
+      return;
+    }
+  phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact, &factor);
   rebuild_linked_list();
   distMinT = check_dist_min(NULL);
   its = 0;
   while (distMinT < 0)
     {
       restore_values();
-      phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact);
+      phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact, &factor);
       rebuild_linked_list();
       distMinT = check_dist_min("Alla fine di calc_Phi()");
       //printf("t=%.8G cellsx: %d rcut: %.8G imin=%d jmin=%d distMinT= %.15G phi=%.8G\n", 
 	//     Oparams.time, cellsx, Oparams.rcut, imin, jmin, distMinT, phi);
-      scalfact *= 0.95;
+      scalfact *= OprogStatus.reducefact;
       its++;
     }
-#if 0
-  if (its == 20)
-    {
-      restore_values();
-      rebuild_linked_list();
-      return;
-    }
-#endif
+  
+  printf("Scaled axes succesfully phi=%.8G\n", phi);
   //check_dist_min("PRIMA");
   rebuildCalendar();
   //check_dist_min("DOPO");
@@ -540,7 +564,19 @@ void scale_Phi(void)
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
   if (fabs(phi - OprogStatus.targetPhi) < 0.001)
-    ENDSIM = 1;
+    {
+      ENDSIM = 1;
+      /* riduce gli ellissoidi alle dimensioni iniziali e comprime il volume */
+      factor = a0I/Oparams.a[0];
+      Oparams.rcut *= factor;
+      Oparams.a[0] *= factor;
+      Oparams.b[0] *= factor;
+      Oparams.c[0] *= factor;
+      Oparams.a[1] *= factor;
+      Oparams.b[1] *= factor;
+      Oparams.c[1] *= factor;
+      scale_coords(factor);
+    }
 }
 void outputSummary(void)
 {
@@ -3866,7 +3902,6 @@ no_core_bump:
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
-
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 		      	continue;
 		     			  
