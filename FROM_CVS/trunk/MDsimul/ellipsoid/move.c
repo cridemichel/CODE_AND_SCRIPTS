@@ -327,30 +327,31 @@ void check (int *overlap, double *K, double *V)
  *  Trasposta(R) * | 0 b 0 | * R  dove R = | -uyx  uyy uyz |
  *                 | 0 0 c |               | -uzx -uzy uzz | 
  * */
-void tRDiagR(int i, double M[3][3], double a, double b, double c)
+void tRDiagR(int i, double M[3][3], double a, double b, double c, 
+	     double uxxi, double uxyi, double uxzi, double uyyi, double uyzi, double uzzi)
 {
   int na;
   /* calcolo del tensore d'inerzia */ 
   na = (i < Oparams.parnumA)?0:1;
-  M[0][0] =  a*uxx[i];
-  M[0][1] =  a*uxy[i];
-  M[0][2] =  a*uxz[i];
-  M[1][0] = -b*uxy[i];
-  M[1][1] =  b*uyy[i];
-  M[1][2] =  b*uyz[i];
-  M[2][0] = -c*uxz[i];
-  M[2][1] = -c*uyz[i];
-  M[2][2] =  c*uzz[i]; 
+  M[0][0] =  a*uxxi;
+  M[0][1] =  a*uxyi;
+  M[0][2] =  a*uxzi;
+  M[1][0] = -b*uxyi;
+  M[1][1] =  b*uyyi;
+  M[1][2] =  b*uyzi;
+  M[2][0] = -c*uxzi;
+  M[2][1] = -c*uyzi;
+  M[2][2] =  c*uzzi; 
   
-  M[0][0] =  a*Sqr(uxx[i])+b*Sqr(uxy[i])+c*Sqr(uxz[i]);
-  M[0][1] =  a*uxx[i]*uxy[i]-b*uxy[i]*uyy[i]+c*uxz[i]*uyz[i];
-  M[0][2] =  a*uxx[i]*uxz[i]-b*uxy[i]*uyz[i]-c*uxz[i]*uzz[i];
-  M[1][0] =  a*uxy[i]*uxx[i]+b*uyy[i]*uxy[i]+c*uyz[i]*uxz[i];
-  M[1][1] =  a*Sqr(uxy[i])+b*Sqr(uyy[i])+c*Sqr(uyz[i]); 
-  M[1][2] =  a*uxy[i]*uxz[i]+b*uyy[i]*uyz[i]-c*uyz[i]*uzz[i];
-  M[2][0] =  a*uxz[i]*uxx[i]-b*uyz[i]*uxy[i]-c*uzz[i]*uxz[i];
-  M[2][1] =  a*uxz[i]*uxy[i]+b*uyz[i]*uyy[i]-c*uzz[i]*uyz[i];
-  M[2][2] =  a*Sqr(uxz[i])+b*Sqr(uyz[i])+c*Sqr(uzz[i]); 
+  M[0][0] =  a*Sqr(uxxi)+b*Sqr(uxyi)+c*Sqr(uxzi);
+  M[0][1] =  a*uxxi*uxyi-b*uxyi*uyyi+c*uxzi*uyzi;
+  M[0][2] =  a*uxxi*uxzi-b*uxyi*uyzi-c*uxzi*uzzi;
+  M[1][0] =  a*uxyi*uxxi+b*uyyi*uxyi+c*uyzi*uxzi;
+  M[1][1] =  a*Sqr(uxyi)+b*Sqr(uyyi)+c*Sqr(uyzi); 
+  M[1][2] =  a*uxyi*uxzi+b*uyyi*uyzi-c*uyzi*uzzi;
+  M[2][0] =  a*uxzi*uxxi-b*uyzi*uxyi-c*uzzi*uxzi;
+  M[2][1] =  a*uxzi*uxyi+b*uyzi*uyyi-c*uzzi*uyzi;
+  M[2][2] =  a*Sqr(uxzi)+b*Sqr(uyzi)+c*Sqr(uzzi); 
 }
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 void add_bond(int na, int n);
@@ -528,12 +529,16 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
  
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
-  tRDiagR(i, Xa, a[na], b[na], c[na]);
-  tRDiagR(i, Ia, Itens[na][0], Itens[na][1], Itens[na][2]);
+  tRDiagR(i, Xa, a[na], b[na], c[na], 
+	  uxx[i], uxy[i], uxz[i], uyy[i], uyz[i], uzz[i]);
+  tRDiagR(i, Ia, Itens[na][0], Itens[na][1], Itens[na][2],
+	  uxx[i], uxy[i], uxz[i], uyy[i], uyz[i], uzz[i]);
 
   na = (j < Oparams.parnumA)?0:1;
-  tRDiagR(j, Xb, a[na], b[na], c[na]);
-  tRDiagR(j, Ib, Itens[na][0], Itens[na][1], Itens[na][2]);
+  tRDiagR(j, Xb, a[na], b[na], c[na],
+	  uxx[j], uxy[j], uxz[j], uyy[j], uyz[j], uzz[j]);
+  tRDiagR(j, Ib, Itens[na][0], Itens[na][1], Itens[na][2],
+	  uxx[j], uxy[j], uxz[j], uyy[j], uyz[j], uzz[j]);
  
   /* calcola le matrici inverse del tensore d'inerzia */
   InvMatrix(Ia, invIa, 3);
@@ -974,23 +979,111 @@ int bound(int na, int n)
   return 0;
 }
 #endif
+UpdateOrient(int i, double ti, double *uxxn, double *uxyt, double *uxzt, 
+	     double uyyt, double *uyzt, double uzzt)
+{ 
+  double wSq, w, Omega[3][3], OmegaSq[3][3];
+  double sinw, cosw;
+  double uxxn, uxyn, uxzn, uyyn, uyzn, uzzn;
+
+  wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
+  w = sqrt(wSq);
+  if (w != 0.0) 
+    {
+      sinw = sin(w*ti);
+      cosw = (1.0 - cos(w*ti))/wSq;
+      Omega[0][0] = 0;
+      Omega[0][1] = wz[i];
+      Omega[0][2] = -wy[i];
+      Omega[1][0] = -wz[i];
+      Omega[1][1] = 0;
+      Omega[1][2] = wx[i];
+      Omega[2][0] = wy[i];
+      Omega[2][1] = -wx[i];
+      Omega[2][2] = 0;
+      OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
+      OmegaSq[0][1] = wx[i]*wy[i];
+      OmegaSq[0][2] = wx[i]*wz[i];
+      OmegaSq[1][0] = wx[i]*wy[i];
+      OmegaSq[1][1] = -Sqr(wx[i]) - Sqr(wz[i]);
+      OmegaSq[1][2] = wy[i]*wz[i];
+      OmegaSq[2][0] = wx[i]*wz[i];
+      OmegaSq[2][1] = wy[i]*wz[i];
+      OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
+      uxxn = uxx[i] + sinw*(Omega[0][0]*uxx[i]-Omega[0][1]*uxy[i]-Omega[0][2]*uxz[i]) + 
+	cosw*(OmegaSq[0][0]*uxx[i]-OmegaSq[0][1]*uxy[i]-OmegaSq[0][2]*uxz[i]);
+      uxyn = uxy[i] + sinw*(Omega[0][0]*uxy[i]+Omega[0][1]*uyy[i]-Omega[0][2]*uyz[i]) + 
+	cosw*(OmegaSq[0][0]*uxy[i]+OmegaSq[0][1]*uyy[i]-OmegaSq[0][2]*uyz[i]);
+      uxzn = uxz[i] + sinw*(Omega[0][0]*uxz[i]+Omega[0][1]*uyz[i]+Omega[0][2]*uzz[i]) + 
+	cosw*(OmegaSq[0][0]*uxz[i]+OmegaSq[0][1]*uyz[i]+OmegaSq[0][2]*uzz[i]);
+      
+      uyyn += sinw*(Omega[1][0]*uxy[i]+Omega[1][1]*uyy[i]-Omega[1][2]*uyz[i]) + 
+	cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyy[i]-OmegaSq[1][2]*uyz[i]);
+      uyzn += sinw*(Omega[1][0]*uxz[i]+Omega[1][1]*uyz[i]+Omega[1][2]*uzz[i]) + 
+	cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyz[i]+OmegaSq[1][2]*uzz[i]);
+      uzzn += sinw*(Omega[2][0]*uxz[i]+Omega[2][1]*uyz[i]+Omega[2][2]*uzz[i]) + 
+	cosw*(OmegaSq[2][0]*uxz[i]+OmegaSq[2][1]*uyz[i]+OmegaSq[2][2]*uzz[i]);
+      *uxxt = uxxn;
+      *uxyt = uxyn;
+      *uxzt = uxzn;
+      *uyyt = uyyn;
+      *uyzt = uyzn;
+      *uzzt = uzzn;
+    }
+  else
+    {
+      *uxxt = uxx[i];
+      *uxyt = uxy[i];
+      *uxzt = uxz[i];
+      *uyyt = uyy[i];
+      *uyzt = uyz[i];
+      *uzzt = uzz[i];
+    }
+}
 void funcs2beZeroed(int n, double x[], double fvec[], double gradvecA[], double gradvecB[], 
 		    int i, int j)
 {
   int na; 
-  double  Xa[3][3], Xb[3][3];
-
-  /* x = (x, alpha, t) */ 
+  double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti;
+  double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
+  /* x = (r, alpha, t) */ 
+  
+  ti = x[4] - atomTime[i];
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  /* ...and now orientations */
+  UpdateOrient(i, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt);
   na = (i < Oparams.parnumA)?0:1;
-  tRDiagR(i, Xa, a[na], b[na], c[na]);
+  tRDiagR(i, Xa, a[na], b[na], c[na],
+	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
+
+  ti = x[4] - atomTime[j];
+  rB[0] = rx[j] + vx[j]*ti;
+  rB[1] = ry[j] + vy[j]*ti;
+  rB[2] = rz[j] + vz[j]*ti;
+  UpdateOrient(j, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt);
   na = (j < Oparams.parnumA)?0:1;
-  tRDiagR(j, Xb, a[na], b[na], c[na]);
+  tRDiagR(j, Xb, a[na], b[na], c[na],
+	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
 
   for (k1 = 0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      fvec[k1] = Xa[k1][k2]*(x[k2]- rA);
-  fvec[3] = ;
-  fvec[4] = ;
+    {
+      fvec[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fvec[k1] += -Xa[k1][k2]*(x[k2] - rA[k2]) - Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
+    }
+  fvec[3] = 1.0;
+  fvec[4] = 1.0;
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fvec[3] += -(x[k1]-rA[k1])*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  fvec[4] += -(x[k1]-rB[k1])*Xb[k1][k2]*(x[k2]-rB[k2]);
+	}
+    }
 }
 void rebuildCalendar(void);
 void PredictEvent (int na, int nb) 
@@ -1386,7 +1479,8 @@ no_core_bump:
 			      /* come guess per x possiamo usare il punto di contatto 
 			       * fra i centroidi */
 			      /* vecg è un guess per il vettore a 5 dimensioni (x, alpha ,t) */
-			      newt(vecg, 5, &check, funcs2beZeroed()); 
+			      /* NOTA: qui va calcolato il vettore guess vecg */
+			      newt(vecg, 5, &check, funcs2beZeroed); 
 			      if (t < 0)
 				{
 #if 1
