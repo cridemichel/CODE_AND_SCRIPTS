@@ -963,7 +963,7 @@ void checkNebrRebuildNPT(void)
 }
 const double inv4pieps0=1.43999;
 /* ============================ >>> force <<< ==============================*/
-#ifdef MD_RESPA_SWITCH
+#ifdef MD_RESPA
 void calcEnePot(int Nm, double rcut)
 {
   /* ======================== >>>LOCAL VARIABLES <<< ====================== */
@@ -996,10 +996,10 @@ void calcEnePot(int Nm, double rcut)
   V = 0.0; /* potential energy */
   Vc = 0.0;
   /*printf("nebrTabLen:%d\n", nebrTabLen);*/
-  for (n=0; n < nebrTabLen; n++)
+  for (n=0; n < nebrTabLenLong; n++)
     {
-      nebrTab0 = nebrTab[0][n]; 
-      nebrTab1 = nebrTab[1][n];
+      nebrTab0 = nebrTabLong[0][n]; 
+      nebrTab1 = nebrTabLong[1][n];
 
       i = nebrTab0 / NA;
       a = nebrTab0 % NA;

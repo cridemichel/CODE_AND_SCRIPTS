@@ -2750,6 +2750,7 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
 #endif
 #ifdef MD_RESPA
+extern double gauss(void);
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -2757,13 +2758,35 @@ void move(void)
      Move the particles by one step */
   const int n = OprogStatus.nrespa;
   double distance;
-  /* distanza fra i 3 atomi le cui coordinate evolvono nel tempo
-   * Notare che i 3 atomi formano un triangolo equiliatero quindi
-   * le 3 distanze sono uguali */
-  double dt = Oparams.steplength;
+  double VcTot, VTot;
+#ifdef MD_RESPA_FILTER
+  static double dtconst[3];
+  static int counter = -1;
+  static double dt0 = -1;
+#endif
+  double dt = Oparams.steplength, c1, c2;
   double VcR;
   int a, i;
   distance = Oparams.d;
+#ifdef MD_RESPA_FILTER
+  if (dt0==-1)
+    dt0 = Oparams.steplength;
+  
+  if (counter == 3 || counter == -1)
+    {
+      dtconst[1] = 0.4*gauss() + 1.0;
+      if (dtconst[1]<0.1)
+	dtconst[1] = 0.1;
+      if (dtconst[1]>1.9)
+	dtconst[1] = 1.9;
+      c1 = 2.0 - dtconst[1];
+      dtconst[0] = c1/2.0;  
+      dtconst[2] = c1/2.0; 
+      counter = 0;
+   }
+  dt = Oparams.steplength = dt0 * dtconst[counter];  
+  counter++;
+#endif
   /* calc predicted coords*/
   Mtot = 0;
   for (a = 0; a < NA; a++)
@@ -2792,6 +2815,7 @@ void move(void)
       movea(Oparams.steplength/n, 0.000000000001, 150, NA-1, distance, Oparams.m, 
 	    Oparams.parnum);        
 #endif
+         
       /* buildAtomsPositions();*/
       if (nebrNow)
 	{
@@ -2831,12 +2855,11 @@ void move(void)
 	    }
 	}
 #endif 
-      
       LJForce(Oparams.parnum, OprogStatus.rcutInner);
 #ifdef MD_FENE
       FENEForce();
 #endif
-            /* kinet(Oparams.parnum, vx, vy, vz, Vol1); */
+      /* kinet(Oparams.parnum, vx, vy, vz, Vol1); */
 #ifdef MD_RESPA_NPT
       /* NVE ensemble o Dinamica Browniana */
       movebRespa(Oparams.steplength/n, 0.00000000001, 150, NA-1, Oparams.m, distance, 
@@ -2913,10 +2936,12 @@ void move(void)
 #endif
 #endif
   calcPressTens();
+#ifdef MD_RESPA_NPT
   kinetRespaNPT(Oparams.parnum, px, py, pz);
   /* Calculate the kinetic energy */
-  //kinet(Oparams.parnum, vx, vy, vz, Vol1);
-
+#else
+  kinet(Oparams.parnum, vx, vy, vz, Vol1);
+#endif
   if ( (OprogStatus.Nose == 1) || (OprogStatus.Nose == 2))
     {
       /*scalCor(Oparams.parnum);*/
