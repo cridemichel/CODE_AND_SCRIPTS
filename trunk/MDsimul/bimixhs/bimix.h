@@ -54,6 +54,7 @@
 /* ========================================================================= */
 
 /* ====================== >>> SIMULATION DEFINES <<< ========================*/
+enum {MD_CORE_BARRIER,MD_INOUT_BARRIER,MD_OUTIN_BARRIER};
 
 #define C_T COORD_TYPE
 #define NK 10000
@@ -162,9 +163,12 @@
 #define treeCircBR tree[6]
 #define treeIdA    tree[7]
 #define treeIdB    tree[8]
+#define treeIdC    tree[9]
 #endif
 #define ATOM_LIMIT 10000000
-
+#ifdef MD_BARRIER
+#define ATOM_SUBLIMIT 2000000
+#endif
 /* ======================== >>> struct progStatus <<< =======================*/
 struct progStatus
 {
@@ -358,8 +362,9 @@ struct params
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
 
-#ifdef MD_INFBARRIER
+#ifdef MD_BARRIER
   double delta; /* ampiezza della buca */
+  double bheight;
 #endif
 #ifdef MD_GRAVITY
   double ggrav;
@@ -492,8 +497,9 @@ struct pascii opar_ascii[]=
 #endif
   {"M",                 &OP(M),                           1,   1,   "%d"},
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
-#ifdef MD_INFBARRIER
+#ifdef MD_BARRIER
   {"delta",             &OP(delta),                       1,   1, "%.15G"},
+  {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -602,8 +608,9 @@ struct singlePar OsinglePar[] = {
   {"W",          &OprogStatus.W,              CT},
   {"P",          &Oparams.P,                  CT},
   {"L",          &L,                        CT},
-#ifdef MD_INFBARRIER
+#ifdef MD_BARRIER
   {"delta",      &Oparams.delta,            CT},
+  {"bheight",    &Oparams.bheight,          CT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
