@@ -741,6 +741,7 @@ extern int MB[NUMV];
 /* ============= >>> PUT HERE MEASURING FUNCTION PROTOTYPES <<< ============*/
 
 void energy(void);
+void calcV(void);
 void transDiff(void);
 void temperat(void);
 void structFacts(void);
@@ -776,7 +777,7 @@ struct measure Omeasure[NUM_MISURE]=
   {&press,  sizeof(COORD_TYPE),       NULL        },
   {Ptens,   sizeof(COORD_TYPE)*3,     Ptensor     },
   {DQtens,  sizeof(COORD_TYPE)*3,     DQtensor    },
-  {&V,       sizeof(double),           NULL       },
+  {&V,       sizeof(double),          calcV       },
   /* ======================================================================= */
   {NULL, 0, NULL}                   /* End of list don't touch this */
 };
