@@ -594,7 +594,7 @@ void newt(double x[], int n, int *check,
   
 }
 #undef MD_GLOBALNRD
-#define MAXITS3 30
+#define MAXITS3 20
 void newtDist(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
