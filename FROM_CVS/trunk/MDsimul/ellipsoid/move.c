@@ -1755,7 +1755,7 @@ int bound(int na, int n)
 #endif
 void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 { 
-  double wSq, w, OmegaSq[3][3], M[3][3];
+  double wSq, w, OmegaSq[3][3], M[3][3], Rtmp[3][3], Rtmp2[3][3];
   double sinw, cosw;
   int k1, k2, k3;
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
@@ -1801,13 +1801,26 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 	    {
 	      //Omega[k1][k2] = -Omega[k1][k2];
 	      M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+#ifdef MD_USE_CBLAS
+	      Rtmp2[k1][k2] = Rtmp[k1][k2] = R[i][k1][k2];
+#endif
 #if 0
 	      if (k1==k2)
 	      	M[k1][k1] += 1.0;
 #endif
 	    }
 	}
-      
+#ifdef MD_USE_CBLAS
+      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
+		  3, 3, 3, 1.0, &Rtmp[0][0],
+		  3, &M[0][0], 3,
+	 	  1.0, &Rtmp2[0][0], 3);
+#if 1
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  Ro[k1][k2] = Rtmp2[k1][k2];
+#endif
+#else 
       for (k1 = 0; k1 < 3; k1++)
 	for (k2 = 0; k2 < 3; k2++)
 	  {
@@ -1816,7 +1829,8 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 	      //Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
 	        Ro[k1][k2] += R[i][k1][k3]*M[k3][k2];
 	  }
-      adjust_norm(Ro);
+#endif
+      //adjust_norm(Ro);
     }
   else
     {
@@ -2297,7 +2311,20 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
   int na; 
   double fx[3], gx[3], rD[3], A[3][3], b[3], c[3];
   int k1, k2, k3;
-
+#ifdef MD_USE_CBLAS
+  double XaL[3][3], XbL[3][3];
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	XaL[k1][k2] = Xa[k1][k2];
+	XbL[k1][k2] = Xb[k1][k2];
+	A[k1][k2] = 2.0*Xb[k1][k2]*Sqr(x[3]);
+      }
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
+	      3, 3, 3, 4.0*Sqr(x[3])*x[4], &XaL[0][0],
+	      3, &XbL[0][0], 3,
+	      1.0, &A[0][0], 3);
+#else
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
@@ -2309,7 +2336,7 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
 	  A[k1][k2] += 2.0*Xb[k1][k2]*Sqr(x[3]);
 	}
     }	
-  
+#endif
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)

@@ -11,7 +11,9 @@
 
 #define MDSIMUL "/home/demichel/shared/simul/mdsimul"
 /* this is the executable, you must change this to your directory */
-
+#ifdef MD_USE_CBLAS
+#include <cblas.h>
+#endif
 #define XTERM   "/usr/X11R6/bin/nxterm"
 #undef UPDATE_SYSTEM
 #define UPDATE_SYSTEM UpdateSystem();
