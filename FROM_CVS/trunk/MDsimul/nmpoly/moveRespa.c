@@ -2311,7 +2311,7 @@ void movelongRespaNPTBef(double dt)
   //  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
 #endif
 
-#if 1
+#if 0
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   if (OprogStatus.rcutInner != Oparams.rcut)
     shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 1E-12, px, py, pz);
