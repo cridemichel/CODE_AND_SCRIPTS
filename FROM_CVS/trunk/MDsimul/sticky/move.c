@@ -1097,7 +1097,7 @@ double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2,
      		double *vecgsup, int calcguess);
 double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin);
 
-void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
+void bump (int i, int j, int ata, int atb, double* W, int bt)
 {
   /*
    *******************************************************************
@@ -1109,14 +1109,14 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
    */
   double rxij, ryij, rzij, factor, invmi, invmj;
   double delpx, delpy, delpz, sigSq, wrx, wry, wrz, rACn[3], rBCn[3], rnI[3];
-  double rAC[3], rBC[3], vCA[3], vCB[3], vc;
-  double norm[3], norm2[3];
-  double modn, denom;
+  double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
+  double ratA[3], ratB[3], norm[3], norm2[3];
+  double modn, denom, rCx, rCy, rCz, nrAB;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
 #endif
   double shift[3];
-  int na, a, b;
+  int na, a, b, kk;
 #if 0
   if (i < parnumA && j < parnumA)
     {
@@ -1139,6 +1139,19 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   //MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
   MD_DEBUG10(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
+  /* qui calcolo il punto di contatto */
+  BuildAtomPosAt(i, ata, rA, RtA, ratA);
+  BuildAtomPosAt(j, atb, rB, RtB, ratB);
+  for (kk = 0; kk < 3; kk++)
+    rAB[kk] = ratA[kk] - ratB[kk];
+  nrAB = calc_norm(rAB);
+  for (kk = 0; kk < 3; kk++)
+    rAB[kk] /= nrAB;
+  /* controllare con cura la scelta dei parametri relativi ai diametri delle sferette
+   * e alle larghezze delle buche dei potenziali a buca quadrata */
+  rCx = rA[0] - rAB[0]*Oparams.sig[ata]*0.5;
+  rCy = rA[1] - rAB[1]*Oparams.sig[ata]*0.5;
+  rCz = rA[2] - rAB[2]*Oparams.sig[ata]*0.5;
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
@@ -1150,16 +1163,6 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   rBC[0] = rx[j] - rCx;
   rBC[1] = ry[j] - rCy;
   rBC[2] = rz[j] - rCz;
-#if 0
-    {
-      double shift[3], r1[3], r2[3], alpha, vecgd[8], r12[3];
-      shift[0] = L*rint((rx[i]-rx[j])/L);
-      shift[1] = L*rint((ry[i]-ry[j])/L);
-      shift[2] = L*rint((rz[i]-rz[j])/L);
-      printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]):
-      printf("[bump] distance between %d-%d: %.15f\n", i, j, calcDistNeg(Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
-    }
-#endif 
   for (a=0; a < 3; a++)
     {
       MD_DEBUG(printf("P rBC[%d]:%.15f ", a, rBC[a]));
@@ -1172,11 +1175,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   na = (i < Oparams.parnumA)?0:1;
   if (OprogStatus.targetPhi > 0)
     {
-      invaSq[na] = 1/Sqr(axa[i]);
-      invbSq[na] = 1/Sqr(axb[i]);
-      invcSq[na] = 1/Sqr(axc[i]);
+      /* scalare tutti i raggi qui */
     }
-   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
 #ifdef MD_ASYM_ITENS
   RDiagtR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[i]);
 #else
@@ -1185,11 +1185,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   na = (j < Oparams.parnumA)?0:1;
   if (OprogStatus.targetPhi > 0)
     {
-      invaSq[na] = 1/Sqr(axa[j]);
-      invbSq[na] = 1/Sqr(axb[j]);
-      invcSq[na] = 1/Sqr(axc[j]);
+      /* scalare tutti i raggi qui */
     }
-  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
 #ifdef MD_ASYM_ITENS
   RDiagtR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
 #else
@@ -1309,21 +1306,53 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   for (a = 0; a < 3; a++)
     denom += invIb*Sqr(rBCn[a]);
 #endif
-#ifdef MD_GRAVITY
-  factor =2.0*vc/denom;
-  /* Dissipation */
-#if 0
-  /* se si vuole avere una dissipazione nell'urto questo va sistemato!!! */
-  if (!((Oparams.time - lastcol[i] < OprogStatus.tc)||
-  	(Oparams.time - lastcol[j] < OprogStatus.tc)))
-    factor *= mredl*(1+Oparams.partDiss);
-#endif
-#else
   /* Nel caso di gravita' e' intuile implementare il TC-model di Luding
    * per evitare il collasso inelastico.
    * Gli urti in tale caso sono tutti elastici. */ 
   /* SQUARE WELL: modify here */
-  factor =2.0*vc/denom;
+  //factor =2.0*vc/denom;
+  switch (bt)
+    {
+    /* N.B.
+     * Notare che Oparams.bheight è la profondità della buca ed 
+     * è una quantità positiva!!*/
+    /* b = vc*r ma ora b -> vc riscrivere correttamente le seguenti equazioni!! */
+    case MD_CORE_BARRIER:
+      factor = -2.0*vc;
+      factor *= mredl;
+      break;
+    case MD_INOUT_BARRIER:
+#ifdef MD_INFBARRIER
+      factor = -2.0*vc;
+#elif defined(MD_SQWELL)
+      if (Sqr(vc) < 2.0*sigDeltaSq*Oparams.bheight/mredl)
+	{
+	  factor = -2.0*vc;
+	}
+      else
+	{
+	  factor = -b + sqrt(Sqr(b) - 2.0*sigDeltaSq*Oparams.bheight/mredl);
+	  remove_bond(i, j, ata, atb);
+	  remove_bond(j, i, ata, atb);
+	}
+      factor *= mredl / sigDeltaSq;
+#if 0
+      if (fabs(distSq - sigDeltaSq)>1E-12)    
+	printf("[bump]dist:%.20f\n",sqrt(distSq));
+#endif
+      break;
+    case MD_OUTIN_BARRIER:
+#ifdef MD_INFBARRIER
+      factor = -2.0*b;
+#elif defined(MD_SQWELL)
+      add_bond(i, j, ata, atb);
+      add_bond(j, i, ata, atb);
+      factor = -b - sqrt(Sqr(b) + 2.0*sigDeltaSq*Oparams.bheight/mredl);
+#endif
+      factor *= mredl / sigDeltaSq;
+      break;
+    }
+ 
   MD_DEBUG(printf("factor=%f denom=%f\n", factor, denom));
 #endif
   delpx = - factor * norm[0];
@@ -1359,52 +1388,6 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   wy[j] -= factorinvIb*rBCn[1];
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
-#endif
-#if 0
-#if MD_DEBUG(x)==x
-  for (a=0; a < 3; a++)
-    {
-      norm2[a] = 0;
-      for (b = 0; b < 3; b++)
-	{
-	  norm2[a] += -Xb[a][b]*rBC[b];
-	}
-    }
-  modn = 0.0;
-  for (a = 0; a < 3; a++)
-    modn += Sqr(norm2[a]);
-  modn = sqrt(modn);
-  for (a=0; a < 3; a++)
-    norm2[a] /= modn;
-  modn = 0;
-  for (a=0; a < 3; a++)
-    modn += norm2[a]*norm[a];
-  printf("norm.norm2=%.15G\n", modn);
-  vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
-  vCA[0] = vx[i] + wrx;
-  vCA[1] = vy[i] + wry;
-  vCA[2] = vz[i] + wrz;
-  vectProd(wx[j], wy[j], wz[j], -rBC[0], -rBC[1], -rBC[2], &wrx, &wry, &wrz);
-  vCB[0] = vx[j] + wrx;
-  vCB[1] = vy[j] + wry;
-  vCB[2] = vz[j] + wrz;
-  vc = 0;
-  for (a=0; a < 3; a++)
-    vc += (vCA[a]-vCB[a])*norm[a];
-  printf("[bump] after bump vc=%.15G\n", vc); 
-  //Oparams.time += 1.0; 
-  //UpdateAtom(0);
-  //UpdateAtom(1);
-    {
-      double shift[3], r1[3], r2[3], alpha, vecgd[8], r12[3];
-      shift[0] = L*rint((rx[i]-rx[j])/L);
-      shift[1] = L*rint((ry[i]-ry[j])/L);
-      shift[2] = L*rint((rz[i]-rz[j])/L);
-      printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]);
-      printf("[bump] distance between %d-%d: %.15f\n", i, j, calcDistNeg(Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
-    }
-//exit(-1); 
-#endif
 #endif
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
@@ -1766,46 +1749,83 @@ void UpdateSystem(void)
 }
 
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-void remove_bond(int na, int n)
+void remove_bond(int na, int n, int a, int b)
 {
-  int i, nb, ii;
+  int i, nb, ii, jj, aa, bb;
   nb = numbonds[na];
   if (!nb)
     return;
   ii = 0;
   memcpy(bondscache, bonds[na], sizeof(int)*numbonds[na]);
+  /* bonds[i] = j*(NA*NA) + a * NA + b 
+   * dove b è l'atomo di j */
   for (i = 0; i < nb; i++)
-    if (bondscache[i] != n)
-      {
-	bonds[na][ii++] = bondscache[i];
-      } 
-    else
-      numbonds[na]--;
+    {
+      jj = bondscache[i] / (NA*NA);
+      aa = j / NA;
+      bb = j % NA;
+      if (jj != n && aa != a && bb != b)
+	{
+	  bonds[na][ii++] = bondscache[i];
+	} 
+      else
+	numbonds[na]--;
+    }
   if (nb==numbonds[na])
     printf("nessun bond rimosso fra %d,%d\n", n, na);
 }
 int bound(int na, int n);
 
-void add_bond(int na, int n)
+void add_bond(int na, int n, int a, int b)
 {
   if (bound(na, n))
     {
       printf("il bond %d,%d eiste già!\n", na, n);
       return;
     }
-  bonds[na][numbonds[na]] = n;
+  bonds[na][numbonds[na]] = n*(NA*NA)+a*NA+b;
   numbonds[na]++;
 }
 
-int bound(int na, int n)
+int bound(int na, int n, int a, int b)
 {
   int i;
   for (i = 0; i < numbonds[na]; i++)
-    if (bonds[na][i] == n)
+    if (bonds[na][i] == n*(NA*NA)+a*NA+b)
       return 1;
   return 0;
 }
 #endif
+/* array con le posizioni degli atomi nel riferimento del corpo rigido 
+ * nel caso dell'acqua i siti idrogeno ed elettroni sono disposti su 
+ * di un tetraedro */
+double rat_body[NA][3] = {{0,0,0},{-1,-1,0},{1,-1,0},{0,1,0},{0,0,1}};
+void body2lab(int i, double xp[], double x[], double *rO, double **R);
+void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[])
+{
+  /* calcola le coordinate nel laboratorio di uno specifico atomo */
+  int kk, a;
+  /* l'atomo zero si suppone nell'origine */
+  if (ata == 0)
+    {
+      for (kk = 0; kk < 3; kk++)
+	rat[kk] = rO[kk]
+    }
+  else
+    {
+      body2lab(i, rat_body[a], rat, rO, R);
+    }
+}
+void BuildAtomPos(int i, double *rO, double **R, double rat[][])
+{
+  /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
+  int kk, a;
+  /* l'atomo zero si suppone nell'origine */
+  for (kk = 0; kk < 3; kk++)
+    rat[0][kk] = rO[kk]
+  for (a=1; a < 5; a++)
+    body2lab(i, rat_body[a], rat[a], rO, R);
+}
 void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 { 
   double wSq, w, OmegaSq[3][3], M[3][3], Rtmp[3][3], Rtmp2[3][3];
@@ -1969,7 +1989,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
 {
   double vecg[8], rC[3], rD[3], rDC[3], r12[3], fx[3], vecgcg[6];
   double ti, segno, distSqmin, distSq;
-  double ratA[5][3], ratB[5][3], dist, sigmaSq[NA][NA];
+  double ratA[NA][3], ratB[NA][3], dist, sigmaSq[NA][NA];
   int a, b, firsdist = 1;
   double Omega[3][3];
   int k1, k2, na;
@@ -2322,12 +2342,12 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
-int interpol(int i, int j, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3], int bracketing)
+int interpol(int i, int j, double t, double delt, double d1, double d2, double *troot, double* amin, double *bmin, double shift[3], int bracketing)
 {
   int nb;
   double d3, Delta, t1, t2;
   double r1[3], r2[3], alpha, xb1[2], xb2[2];
-  d3 = calcDistNeg(t+delt*0.5, i, j, shift, r1, r2, &alpha, vecg, 0);
+  d3 = calcDistNeg(t+delt*0.5, i, j, shift, amin, bmin);
 #if 0
   if (d1 > OprogStatus.epsd)
     {
@@ -2386,14 +2406,14 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
       printf("distfunc(t+delt*0.5)=%.10G\n", distfunc(t+delt*0.5));
       return 1;
     }
-  calcDistNeg(*troot, i, j, shift, r1, r2, &alpha, vecg, 0);
+  calcDistNeg(*troot, i, j, shift, amin, bmin);
   //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
   return 0;
 }
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
-  double h, d, dold, dold2, d1Neg, d1Pos, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
-  double vd, normddot, ddot[3], maxddot, delt, told, troot, vecgroot[8];
+  double h, d, dold, dold2, d1Neg, d1Pos, t, r1[3], r2[3]; 
+  double vd, normddot, ddot[3], maxddot, delt, told, troot;
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax; 
   double d2old;
@@ -2558,123 +2578,6 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 }
 
 #define EPS 1e-4
-int locate_contact_notworking(int i, int j, double shift[3], double t1, double t2, double vecg[8])
-{
-  double h, d, dold, told=0, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
-  double normddot, ddot[3], maxddot, delt;
-  const double epsd = 0.0001; 
-  int foundrc, retcheck, kk;
-  t = t1;
-  MD_DEBUG10(printf("[locate_contact] t1=%f t2=%f shift=(%f,%f,%f)\n", t1, t2, shift[0], shift[1], shift[2]));
-  dold = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgdold, 1);
-  MD_DEBUG10(printf("i=%d j=%d dold all'inizio = %.15G\n", i, j, dold));
-  maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
-	 + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
-  if (maxddot==0)
-    return 0;
-  MD_DEBUG(printf(">>>>dold:%f\n", dold));
-  h = EPS;//*(t2-t1);
-  foundrc = 0;
-  while (dold < 0)
-    {
-      t+=h;
-      if (t > t2)
-	return 0;
-      dold = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgdold, 0);
-      told = t;
-      MD_DEBUG(printf("POSPOS>>>>dold:%f\n", dold));
-    }
-
-  MD_DEBUG10(printf("dold all'inizio dopo correzione = %.15G\n", dold));
-  
-  while (t < t2)
-    {
-      delt = 10.0;//dold / maxddot;
-      if ((delt < h)||(dold<10*epsd))
-	{
-	  while (t < t2 || dold < 10*epsd)
-	    {
-	      normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
-	      if (normddot!=0)
-		{
-		  t += epsd/normddot;
-		  //MD_DEBUG10(printf("normddot: %f delta t: %.15G\n", normddot,epsd/normddot));
-		}
-	      else
-		t += h;
-	      if (t > t2)
-		return 0;
-	      d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgdold, 0);
-	      MD_DEBUG(printf(">>>> t = %f d:%f dold:%f\n", t, d, dold));
-	      if (d < 0 || dold < 0)
-		{
-#if 0
-		  for (kk = 0; kk < 3; kk++)
-		    {
-		      vecg[kk] = (vecgd[kk]+vecgd[kk+3])*0.5; 
-		    }
-		  vecg[3] = vecgd[6];
-		  vecg[4] = t;
-		  newt(vecg, 5, &retcheck, funcs2beZeroed, i, j, shift); 
-		  if (retcheck==2 || vecg[4] < Oparams.time ||
-		      fabs(vecg[4] - Oparams.time)<1E-12 )
-		    {
-		      /* se l'urto è nel passato chiaramente va scartato
-		       * tuttavia se t è minore di zero per errori di roundoff? */
-		      /* Notare che i centroidi si possono overlappare e quindi t può
-		       * essere tranquillamente negativo */
-		      MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
-				      vecg[4], Oparams.time));
-		      continue;
-		    }
-		  else
-		    return 1; 
-#endif
-		  if (refine_contact(i, j, told, vecgdold, shift, vecg))
-		    {
-		      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-		      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
-		      if (vecg[4]>t2 || vecg[4]< t1 || 
-			  (lastbump[i] == j && lastbump[j]==i && fabs(t - lastcol[i])<1E-8))
-			return 0;
-		      else
-			return 1;
-		    }
-		  else 
-		    {
-		      MD_DEBUG10(printf("[locate_contact] can't find contact point!\n"));
-		      if (d < 0)
-			{
-			  MD_DEBUG10(printf("d2 < 0 and I did not find contact point, boh...\n"));
-			  return 0;
-			  //exit(-1);
-			}
-		    }
-		}
-	      dold = d;
-	      told = t;
-	      //for (kk = 0; kk < 8; kk++)
-	      //vecgdold[kk] = vecgd[kk];
-	    }
-	}
-      else
-	{
-	  t += delt;
-	  if (t > t2)
-	    return 0;
-	  dold = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgdold, 1);
-	  if (dold < 0)
-	    {
-	      printf("dold = %.15G dold < 0 dove dovrebbe essere > 0, boh...\n", dold);
-	      exit(-1);
-	    }
-	  told = t;
-	  MD_DEBUG(printf("<<<<>>>> maxddot:%.15G delt:%.15G t = %f d:%f dold:%f\n", maxddot, delt, t, d, dold));
-	}
-    }
-  return foundrc;
-}
 #if 1
 double estimate_tmin(double t, int na, int nb)
 {
@@ -3590,7 +3493,7 @@ void ProcessCollision(void)
     }
   MD_DEBUG10(calc_energy("prima"));
 #if defined(MD_SQWELL)||defined(MD_INFBARRIER)
-  /* i primi due bit sono il tipo di event (uscit buca, entrata buca, collisione con core 
+  /* i primi due bit sono il tipo di event (uscita buca, entrata buca, collisione con core 
    * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */
   bump(evIdA, evIdB, &W, evIdC);
 #else
