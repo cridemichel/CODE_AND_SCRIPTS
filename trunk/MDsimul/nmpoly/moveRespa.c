@@ -1616,9 +1616,9 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 	  pxi[a] = rx[a][i];
 	  pyi[a] = ry[a][i];
 	  pzi[a] = rz[a][i];
-	  vxi[a][i] = px[a][i]/m[a];
-	  vyi[a][i] = py[a][i]/m[a];
-	  vzi[a][i] = pz[a][i]/m[a];
+	  vxi[a] = px[a][i]/m[a];
+	  vyi[a] = py[a][i]/m[a];
+	  vzi[a] = pz[a][i]/m[a];
 	  moving[a] = 0;
 	  moved[a]  = 1;
 	}
