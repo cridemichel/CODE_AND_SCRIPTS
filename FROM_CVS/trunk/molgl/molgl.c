@@ -380,7 +380,7 @@ void displayAtom(int nf, int nm, int na)
       glMultMatrixf(rotm);
       CreateSuperEllipse(atom->supellips.n1, 
 			 atom->supellips.n2, atom->supellips.a, 
-			 atom->supellips.b, atom->supellips.c, 100, 1);
+			 atom->supellips.b, atom->supellips.c, 20, 1);
     }
  /*ss = gluNewQuadric();
     gluSphere(ss, sig[na], 12, 12);
