@@ -2698,7 +2698,7 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
-  const double minh = 1E-12;
+  const double minh = 1E-14;
   double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS],
 	 distsOld2[MD_PBONDS], deltth; 
   double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
