@@ -836,7 +836,7 @@ void updImpNose(double dt, double c)
 	py[a][i] += Fy[a][i] * cdt;
 	pz[a][i] += Fz[a][i] * cdt;
       }
-#ifndef MD_FENE
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
 #endif
 }
@@ -863,7 +863,7 @@ void updImpNoseAft(double dt, double c)
 	pz[a][i] = pz[a][i]*expdt[a];
       }
 #if 0
-#ifndef MD_FENE
+#if !defined(MD_FENE) && !defined(MD_RAPACONST)
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
 #endif
 #endif
@@ -895,7 +895,7 @@ void updImpLongNoseSym(double dt, double c)
 	pz[a][i] += FzLong[a][i] * cdt2;
 
       }
-#ifndef MD_FENE
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
@@ -935,7 +935,7 @@ void updImpLongNoseAft(double dt, double c)
 	pz[a][i] = pz[a][i]*expdt[a];
       }
 #if 0
-#ifndef MD_FENE
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
@@ -974,7 +974,7 @@ void updImpLongNose(double dt, double c)
 	py[a][i] += FyLong[a][i] * cdt;
 	pz[a][i] += FzLong[a][i] * cdt;
       }
-#ifndef MD_FENE
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
@@ -1088,7 +1088,7 @@ void updImpNoseAndAft(double dt, double c)
     }
 #endif
 #if 0
-#ifndef MD_FENE  
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
 		   0.0000000000001, px, py, pz);
 #endif
@@ -1259,7 +1259,7 @@ void updImpNoseAnd(double dt, double c)
 	} 
     }
 #if 1
-#ifndef MD_FENE  
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
 		   0.000000001, px, py, pz);
 #endif
@@ -1825,7 +1825,12 @@ void movelongRespaNPTBef(double dt)
 {
 #ifdef MD_RESPA_NOSELONG
   if (OprogStatus.Nose == 0)
-    updImpLong(dt, 0.5);
+    {
+      updImpLong(dt, 0.5);
+#ifdef MD_RAPACONSTR
+      updImpRapa(dt, 0.5);
+#endif
+    }
   else
     {
       /*printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
@@ -1834,13 +1839,19 @@ void movelongRespaNPTBef(double dt)
       if (OprogStatus.Nose==1)
 	updPvLong(dt, 0.5);
       /*printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
+#ifdef MD_RAPACONSTR
+      updImpRapa(dt, 0.5);
+#endif
     }
 #else
    updImpLong(dt, 0.5);
    if (OprogStatus.Nose==1)
      updPvLong(dt, 0.5);
 #if 1
-#ifndef MD_FENE
+#ifdef MD_RAPACONSTR
+      updImpRapa(dt, 0.5);
+#endif
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   if (OprogStatus.rcutInner != Oparams.rcut)
     shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
 #ifdef ATPRESS 
@@ -1964,6 +1975,10 @@ void movelongRespaNPTAft(double dt)
     {
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
       updImpLong(dt, 0.5);
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(0);
+      updImpRapa(dt, 0.5);
+#endif
     }
   else
     {
@@ -1972,6 +1987,10 @@ void movelongRespaNPTAft(double dt)
 	updPvLong(dt, 0.5);
       updImpLongNoseAft(dt, 0.5);
       updLsAft(dt, 0.5);
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(0);
+      updImpRapa(dt, 0.5);
+#endif
       /*printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 #else
@@ -1979,8 +1998,12 @@ void movelongRespaNPTAft(double dt)
   if (OprogStatus.Nose==1)
     updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
-#if 1
-#ifndef MD_FENE
+#ifdef MD_RAPACONSTR
+  ComputeConstraints(0);
+  updImpRapa(dt, 0.5);
+#endif
+ #if 1
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR) 
   if (OprogStatus.rcutInner != Oparams.rcut)
     shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
 #ifdef ATPRESS 
@@ -2018,7 +2041,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   printf("tol=%.20f\n", tol);
   printf("L=%f Vol=%.f dt=%f\n", L, Vol, dt);
 #endif
-#ifndef MD_FENE
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
@@ -2030,6 +2053,10 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 #ifdef MD_RESPA_NOSELONG
   if (OprogStatus.Nose == 1)
     {
+#ifdef MD_RAPACONSTR
+      updImpRapa(dt, 0.5);
+      /*RAPA<<<<<<<<<<<<<<<< */
+#endif
       updImpNoseAnd(dt, 0.5);
       updPv(dt, 0.5);
       updVol(dt, 0.5);
@@ -2079,14 +2106,14 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   else
     {
       updImp(dt, 0.5);
-#ifndef MD_FENE  
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
       shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
     		       0.000000001, px, py, pz);
 #endif
       updPositions(dt, 1.0);
     }
 
-#if !defined(MD_FENE)
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 0.000000001, 150, NA-1, Oparams.d,
 		Oparams.m, Oparams.parnum);
 #endif
@@ -2145,14 +2172,14 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
     {
       updImp(dt, 0.5);
 #if 0
-#ifndef MD_FENE  
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
       shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
 	  	       0.000000000001, px, py, pz);
 #endif
 #endif
     } 
 #if 0
-#ifndef MD_FENE  
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
 		   0.000000000001, px, py, pz);
 #endif
@@ -2189,7 +2216,7 @@ void move(void)
       	vy[a][i] += 0.5 * dt * FyLong[a][i]/Oparams.m[a];
 	vz[a][i] += 0.5 * dt * FzLong[a][i]/Oparams.m[a];
       }
-#ifndef MD_FENE
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
 #endif
 #endif
@@ -2246,6 +2273,10 @@ void move(void)
       LJForce(Oparams.parnum, OprogStatus.rcutInner);
 #ifdef MD_FENE
       FENEForce();
+#else
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(1);
+#endif
 #endif
             /* kinet(Oparams.parnum, vx, vy, vz, Vol1); */
 #ifdef MD_RESPA_NPT
@@ -2319,7 +2350,7 @@ void move(void)
       	vy[a][i] += 0.5 * dt * FyLong[a][i]/Oparams.m[a];
 	vz[a][i] += 0.5 * dt * FzLong[a][i]/Oparams.m[a];
       }
-#ifndef MD_FENE  
+#if !defined(MD_FENE) && !defined(MD_RAPACONSTR)  
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
 #endif
 #endif
