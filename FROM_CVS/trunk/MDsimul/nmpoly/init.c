@@ -1420,10 +1420,10 @@ void writeAllCor(FILE* fs)
 void readAllCor(FILE* fs)
 {
   int i, a;
-
+  printf("kfe: %f R0: %f\n", Oparams.kfe, Oparams.R0);
   for (i = 0; i < Oparams.parnum; i++)
     {
-      for (a = 0;  a < 3; a++)
+      for (a = 0;  a < NA; a++)
     	{
 	  if (fscanf(fs, "%lf %lf %lf\n", &rx[a][i], &ry[a][i], &rz[a][i]) < 3)
 	    {
@@ -1462,7 +1462,6 @@ void readAllCor(FILE* fs)
       mdPrintf(STD, "ERROR[extra] reading ascii file\n", NULL);
       exit(-1);
     }
-  
   if (fscanf(fs, "%lf %lf %lf %lf %lf",  &s, &s1, &s2, &s1o1, &s1o2) < 5)
     {
       mdPrintf(STD, "ERROR[extra] reading ascii file\n", NULL);

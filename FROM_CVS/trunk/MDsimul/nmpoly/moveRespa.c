@@ -35,6 +35,7 @@ extern void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z,
 	 COORD_TYPE* r3x, COORD_TYPE* r3y, COORD_TYPE* r3z);
 extern void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, 
 		  COORD_TYPE** velz, COORD_TYPE VOL1);
+int nrs;
 #ifdef MD_RAPACONSTR
 int *doshake;
 #endif
@@ -761,8 +762,9 @@ void  AnlzConstraintDevs (void)
 	}
       
     }
-  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-10, 150, NA-1, Oparams.d,
-		    Oparams.m, Oparams.parnum);
+  //if ((Oparams.curStep*OprogStatus.nrespa + nrs) % 4 == 0)
+    shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 1E-10, 150, NA-1, Oparams.d,
+		  Oparams.m, Oparams.parnum);
   
   if (numshake && sumsteps/numshake < 2)
     {
@@ -1528,7 +1530,7 @@ void updImpNoseAndAft(double dt, double c)
 	}
      }
 #endif
-#if 1
+#if 0
 #ifdef MD_RAPACONSTR
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
  		    1E-9, px, py, pz);
@@ -2731,10 +2733,11 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
 #endif
     }
-#if 0
+#if 1
 #if defined(MD_RAPACONSTR)
+  //if ((Oparams.curStep*OprogStatus.nrespa + nrs) % 4 == 0)
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
-		   1E-9, px, py, pz);
+		   1E-10, px, py, pz);
 #endif
 #endif
 #if 0
@@ -2759,7 +2762,7 @@ void move(void)
    * le 3 distanze sono uguali */
   double dt = Oparams.steplength;
   double VcR;
-  int a, i, kk;
+  int a, i;
   distance = Oparams.d;
   /* calc predicted coords*/
   Mtot = 0;
@@ -2779,7 +2782,7 @@ void move(void)
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
 #endif
 #endif
-  for (kk=0; kk < n; kk++)
+  for (nrs=0; nrs < n; nrs++)
     {
 
 #ifdef MD_RESPA_NPT
