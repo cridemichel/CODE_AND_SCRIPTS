@@ -2934,8 +2934,8 @@ retry:
   newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift); 
 #elif defined MD_DISTCG
   retcheck = 0;
-  vecg[6]=0.1;
-  vecg[7]=0.1;
+  vecg[6]=10000.0;
+  vecg[7]=10000.0;
   distconjgrad(i, j, shift, vecg); 
 #else
   newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift); 
@@ -3009,6 +3009,9 @@ retry:
 #endif
 #endif
 #if 1
+  printf("dist=%.15f\n",calc_norm(r12));
+  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+  exit(-1);
   if (segno > 0)
     return calc_norm(r12);
   else
@@ -5339,7 +5342,7 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 0
+#if 1
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
