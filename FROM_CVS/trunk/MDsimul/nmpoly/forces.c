@@ -1204,7 +1204,9 @@ void LJForce(int Nm, double rcut)
   WmyyShort = Wmyy;
   WmzzShort = Wmzz;
   WmShort = Wm;
+  printf("[LJForce] >>>>>>>>>> WmShort: %f\n", WmShort);
 #else
+  WShort = W;
   WxyShort = Wxy;
   WyzShort = Wyz;
   WzxShort = Wzx;
@@ -1458,6 +1460,7 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
   /* MULTIPLY FOR ENERGY FACTORS */
 #ifdef MOLPTENS
   WmLong = WmxxLong + WmyyLong + WmzzLong;
+  printf(">>>>>>>> WmLong: %f\n", WmLong);
 #endif
   /* NOTA: controllare se questo va effettivamente commentato!!!
      Wmxy = (Wmxy + Wmyx)/2.0;
