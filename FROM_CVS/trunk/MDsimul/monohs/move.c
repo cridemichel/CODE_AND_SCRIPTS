@@ -258,7 +258,7 @@ double scale_radius(int i, int j, double rA[3], double rB[3], double shift[3], d
 
   L2 = 0.5 * L;
   phi = calc_phi();
-  phi0 =((double)Oparams.parnum)*(Oparams.sigma*0.5);
+  phi0 =((double)Oparams.parnum)*Sqr(Oparams.sigma*0.5)*(Oparams.sigma*0.5);
   phi0 *= 4.0*pi/3.0;
   phi0 /= L*L*Lz;
   C = cbrt(OprogStatus.targetPhi/phi0);
