@@ -574,7 +574,8 @@ void angvel(void)
     {
       /* N.B. ora i tre vettori ux uy e uz non sono altro che le coordinate
        * di due hydrogen sites e 1 electron sites. Quindi vanno 
-       * scelti in modo da stare su tre spigoli di un tetraedro regolare. */ 
+       * scelti in modo da stare su tre spigoli di un tetraedro regolare.
+       * In particolare formeranno un triangolo equilatero.*/ 
       uxx[i] = 1.0;
       uyx[i] = 0.0;
       uzx[i] = 0.0;
