@@ -3618,7 +3618,7 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
 }
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
-  double h, d1, d2, d1Neg, d1Pos, alpha, vecgd1old[8], vecgd1[8], vecgd2[8], vecgd3[8], t, r1[3], r2[3]; 
+  double h, d, dold, dold2, d1Neg, d1Pos, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double vd, normddot, ddot[3], maxddot, delt, told, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax, firstafterfast; 
@@ -3680,7 +3680,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #else
   //d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
 
-  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast, r1, r2))
+  if (search_contact_faster(i, j, shift, &t, t2, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0;  
   timesS++;
   firstafterfast = 1;
@@ -3710,24 +3710,24 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   if (lastbump[j]==i && lastbump[i]==j)
     {
       MD_DEBUG10(printf("last collision was between (%d-%d)\n", i, j));
-      while (d1 < 0)
+      while (d < 0)
 	{
 	  t += h*t;
 	  if (t > t2)
 	    return 0;
-	  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, firstafterfast);
+	  d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, firstafterfast);
 	  firstafterfast = 0;
 	}
     }
-  else if (d1<0&&fabs(d1)>1E-7)
+  else if (d<0&&fabs(d)>1E-7)
     {
-      printf("[WARNING] t=%.10G d1=%.15G < 0 i=%d j=%d\n",t, d1, i, j);
+      printf("[WARNING] t=%.10G d=%.15G < 0 i=%d j=%d\n",t, d, i, j);
       printf("[WARNING] Some collision has been missed, ellipsoid may overlap!\n");
       store_bump(i, j);
       return 0;
     }
 #endif
-  MD_DEBUG(printf(">>>>d1:%f\n", d1));
+  MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
 #if 0
   if (d1 < 0)
@@ -3749,7 +3749,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     }
 #endif
   for (kk = 0; kk < 8; kk++)
-    vecgd2[kk] = vecgd1[kk];
+    vecgdold[kk] = vecgd[kk];
   its = 0;
   while (t < t2)
     {
@@ -3760,15 +3760,15 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
       else
 	delt = h*t;
-      if (d1 < epsd)
+      if (d < epsd)
 	delt = epsd / maxddot;
       t += delt;
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       for (kk = 0; kk < 8; kk++)
-	vecgd1old[kk] = vecgd1[kk];
-      d2old = d1;
-      d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, firstafterfast);
-      if (fabs(d2-d2old) > epsdMax)
+	vecgdold2[kk] = vecgd[kk];
+      dold2 = d;
+      d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, firstafterfast);
+      if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
 	   * cerca di correggere il passo per ottenere un valore
@@ -3782,24 +3782,24 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1old, firstafterfast);
+	  d = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgdold2, firstafterfast);
 	  for (kk = 0; kk < 8; kk++)
-	    vecgd1[kk] = vecgd1old[kk];
+	    vecgd[kk] = vecgdold2[kk];
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
 #if 1
       firstafterfast = 0;
-      if (d2 > epsdFastR)
+      if (d > epsdFastR)
 	{
-	  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast, r1, r2))
+	  if (search_contact_faster(i, j, shift, &t, t2, vecgd, epsd, &d, epsdFast, r1, r2))
 	    {
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
 	    }
 	  firstafterfast = 1;
 	  for (kk = 0; kk < 8; kk++)
-	    vecgd2[kk] = vecgd1[kk];
-	  d1 = d2;
+	    vecgdold[kk] = vecgd[kk];
+	  dold = d;
 	  its++;
 	  itsS++;
 	  continue;
@@ -3807,7 +3807,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f d1-d2:%.15G\n", t, d1, d2, fabs(d1-d2)));
       dorefine = 0;      
-      if (d1 > 0 && d2 < 0)
+      if (dold > 0 && d < 0)
 	{
 #if 0
 	  if (d2 <0)
@@ -3817,25 +3817,25 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	    }
 #endif
        	  for (kk=0; kk < 8; kk++)
-	    vecgroot[kk] = vecgd1[kk];
+	    vecgroot[kk] = vecgd[kk];
 #ifndef MD_NOINTERPOL  
-	 if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift, 0))
+	 if (interpol(i, j, t-delt, delt, dold, d, &troot, vecgroot, shift, 0))
 #endif
 	    {
 	      /* vecgd2 è vecgd al tempo t-delt */
 	      for (kk=0; kk < 8; kk++)
-		vecgroot[kk] = vecgd2[kk];
+		vecgroot[kk] = vecgdold[kk];
 	      troot = t - delt;
 	    }
 	  dorefine = 1;
 	}
-      else if (d1 < OprogStatus.epsd && d2 < OprogStatus.epsd)
+      else if (dold < OprogStatus.epsd && d < OprogStatus.epsd)
 	{
 #ifndef MD_NOINTERPOL
 	  for (kk=0; kk < 8; kk++)
-	    vecgroot[kk] = vecgd1[kk];
+	    vecgroot[kk] = vecgd[kk];
 	  
-	  if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift, 1))
+	  if (interpol(i, j, t-delt, delt, dold, d, &troot, vecgroot, shift, 1))
 	    dorefine = 0;
 	  else 
 	    dorefine = 1;
@@ -3857,7 +3857,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  else 
 	    {
 	      MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
-	      if (d2 < 0)
+	      if (d < 0)
 		{
 		  MD_DEBUG10(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
 		  MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
@@ -3869,15 +3869,15 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 		}
 	      else
 		{
-		  printf("d1: %.15G d2: %.15G\n", d1, d2); 
+		  printf("d: %.15G dold: %.15G\n", d, dold); 
 		}
 		//continue;
 	      
 	    }
 	}
-      d1 = d2;
+      dold = d;
       for (kk = 0; kk < 8; kk++)
-	vecgd2[kk] = vecgd1[kk];
+	vecgdold[kk] = vecgd[kk];
       its++;
       itsS++;
     }
