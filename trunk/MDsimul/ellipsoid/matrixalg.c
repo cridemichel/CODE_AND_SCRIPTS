@@ -43,7 +43,19 @@ void free_matrix(double **M, int n)
     }
   free(M);
 }
+extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
+extern void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double shift[3]);
+extern void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3]);
+extern void funcs2beZeroedDistNeg5(int n, double x[], double fvec[], int i, int j, double shift[3]);
+extern void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
+		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
+extern void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
+extern void fdjacDist(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
 
+void calc_grad(double *rC, double *rA, double **Xa, double *grad);
+double calc_norm(double *vec);
 void (*nrdfun)(double [], double []);
 /* =========================== >>> min <<< =============================== */
 double min(double a, double b)
@@ -527,7 +539,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
   const double GOLD=1.618034;
   double r1[3], r1A[3], sf, s1, s2;
   double A, B, C, Delta, sol;
-  sf = 0.5;
+  sf = 1.0;
   while (!done)
     {
       for (kk=0; kk < 3; kk++)
@@ -551,7 +563,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
       B *= 2.0;
       C -= 1.0;
       Delta = Sqr(B) - 4.0*A*C;
-      if (Delta < 0 || fabs(A) < 1E-12)
+      if (Delta < 0 || A==0.0)
 	{
 	  sf /= GOLD;
 	  continue;
@@ -576,24 +588,13 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 	    }
 	}
       Q -= 1.0;
-      if (isnan(sol) ||isnan(A))
-	{
-	  printf("A=%.15G B=%.15G C=%.15G Delta=%.15G\n", A, B, C, Delta);
-	  printf("gradf=%f %f %f \n", gradf[0], gradf[1], gradf[2]);
-	  printf("ri=%f %f %f dr=%f %f %f\n", ri[0], ri[1], ri[2], dr[0], dr[1], dr[2]);
-	  for (k1=0; k1 < 3; k1++)
-	    for (k2=0; k2 < 3; k2++)
-	      printf("Xa[%d][%d]:%.15G\n", k1, k2, Xa[k1][k2]);
-	
-	  exit(-1);
-	}
       printf("should be zero: %.15G sf:%.15G\n", Q, sf);
     }
   printf("done! sol=%.15G\n", sol);
 #endif
   for (kk = 0; kk < 3; kk++)
     {
-      dr[kk] = sol*gradf[kk] + sf*dr[kk]; 
+      dr[kk] = OprogStatus.lambda2*sol*gradf[kk] + sf*dr[kk]; 
     }
 }
 void projectgrad(double *p, double *xi)
@@ -619,17 +620,12 @@ void projectgrad(double *p, double *xi)
     }
 #endif
   calc_grad(p, rA, Xa, gradf);
-  for (kk=0; kk < 3; kk++)
-    pp[kk] = p[kk+3];
-  calc_grad(pp, rB, Xb, gradg);
+  calc_grad(&p[3], rB, Xb, gradg);
 
   projonto(r1, xi, rA, Xa, gradf);
-  for (kk=0; kk < 3; kk++)
-    pp[kk] = xi[kk+3];
-  projonto(r2, pp, rB, Xb, gradg);
-  for (kk=0; kk < 3; kk++)
-    xi[kk+3] = pp[kk];
+  projonto(r2, &xi[3], rB, Xb, gradg);
 }
+
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -637,53 +633,61 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
    * (the number of iterations that were performed), and fret (the minimum value of the function).
    * The routine linmin is called to perform line minimizations. */
 { 
-  int j,its;
+  int j,its,kk;
   const int ITMAXFR = 200;
-  const double EPSFR=1E-10, INITSTEP=1E-4;
-  double gg,gam,fp,dgg,norm1, norm2;
-  double g[6],h[6],xi[6];
-  printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
+  const double EPSFR=1E-10, INITSTEP=0.000000001;
+  double gg,gam,fp,dgg,norm1, norm2, sp;
+  double g[6],h[6],xi[6], dx[3], fx[3], gx[3];
+  //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
   fp=(*func)(p); /*Initializations.*/
   (*dfunc)(p,xi); 
-  projectgrad(p, xi);  
-  
-  norm1 = calc_norm(xi);
-  norm2 = calc_norm(&xi[3]); 
-  printf("$$$$$$$$$$$$$$ norm2=%.15G\n", norm2);
+  sp = 0;
+  for (kk = 0; kk < 6; kk++)
+    sp += Sqr(xi[kk]);
+  //printf("sp=%.15G\n", sp);
+  if (sqrt(sp) < OprogStatus.cgtol)
+    return;
+  // printf("$$$$$$$$$$$$$$ norm1=%.15G norm2=%.15G\n", norm1, norm2);
   for (j=0;j<n;j++)
     { 
-      g[j] = -xi[j]; 
-      if (j < 3)
-	{
-	  g[j] /= norm1;
-	  g[j] *= minaxicg*INITSTEP;   
-	}
-      else
-	{
-	  g[j] /= norm2;
-	  g[j] *= minaxjcg*INITSTEP;
-	}
-      xi[j]=h[j]=g[j];
+      g[j] = -OprogStatus.lambda2*xi[j]; 
     }
-  printf("g=%f %f %f %f %f %f\n");
-  for (its=1;its<=ITMAXFR;its++, g[0], g[1], g[2], g[3], g[4], g[5]);
-    { /* Loop over iterations.*/
+  projectgrad(p, g);  
+  //printf("g=%f %f %f %f %f %f\n", g[0], g[1], g[2], g[3], g[4], g[5]);
+  for (its=1;its<=ITMAXFR;its++)
+    { 
+      /* Loop over iterations.*/
       *iter=its;
+#if 0
       printf("prima xi=%.15G %.15G %.15G %.15G %.15G %.15G\n", xi[0],xi[1],xi[2],xi[3],xi[4],xi[5]);
       printf("prima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
+#endif
       for (j=0; j < n; j++)
-	p[j] += xi[j];
+	p[j] += g[j];
       *fret = (*func)(p);
       //linmin(p,xi,n,fret,func); /* Next statement is the normal return: */
-      printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
+      //printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
+#if 0
       if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
 	{ 
 	  return;
-	} 
+	}
+#endif
       fp= *fret; 
       
       (*dfunc)(p,xi);
-      projectgrad(p, xi);
+      sp = 0;
+      for (kk = 0; kk < 6; kk++)
+	sp += Sqr(xi[kk]);
+      if (sqrt(sp) < OprogStatus.cgtol)
+	return;
+for (j=0;j<n;j++)
+	{ 
+	  g[j] = -OprogStatus.lambda2*xi[j]; 
+	}
+      projectgrad(p, g);
+  	  
+#if 0
       printf("dopo xi=%.15G %.15G %.15G %.15G %.15G %.15G\n", xi[0],xi[1],xi[2],xi[3],xi[4],xi[5]);
       printf("dopo p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
       dgg=gg=0.0;
@@ -703,6 +707,8 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	  g[j] = -xi[j]; 
 	  xi[j]=h[j]=g[j]+gam*h[j]; 
 	} 
+      projectgrad(p, xi);
+#endif
     } 
   nrerror("Too many iterations in frprmn");
   
@@ -876,14 +882,24 @@ double  cgfunc(double *vec)
 void gradcgfuncRyck(double *vec, double *grad)
 {
   int kk, k1, k2; 
-  double fx[3], gx[3], fx2[3];
-  double Q1, Q2, A;
+  double nf, ng, fx2[3], fx[3], gx[3];
+  double Q1, Q2, A, gradfx, gradgx;
   for (k1 = 0; k1 < 3; k1++)
     {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(vec[k2] - rA[k2]);
       fx2[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	fx2[k1] += 2.0*Xa[k1][k2]*(vec[k2+3] - rA[k2]);
     }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(vec[k2+3] - rB[k2]);
+    }
+
   A = 0.0;
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -891,13 +907,33 @@ void gradcgfuncRyck(double *vec, double *grad)
     }
   A = 0.5*A - 1.0;
   if (A>=0)
-    A = 1.0;
+    A = OprogStatus.lambda1;
   else
-    A = -1.0;
+    A = -OprogStatus.lambda1;
   for (kk=0; kk < 3; kk++)
     {
       grad[kk]= -2.0*(vec[kk+3]-vec[kk])*A;
       grad[kk+3]= 2.0*(vec[kk+3]-vec[kk])*A;
+    }
+  nf = calc_norm(fx);
+  ng = calc_norm(gx);
+  for (k1=0; k1 < 3; k1++)
+    {
+      fx[k1] /= nf;
+      gx[k1] /= ng;
+    }
+  gradfx = 0;
+  gradgx = 0;
+  for (k1=0; k1 < 3; k1++)
+    {
+      gradfx += grad[k1]*fx[k1]; 
+      gradgx += grad[k1+3]*gx[k1];
+    }
+  
+  for (kk=0; kk < 3; kk++)
+    {
+      grad[kk] -= gradfx*fx[kk];
+      grad[kk+3] -= gradgx*gx[kk];
     }
 }
 /* =========================== >>> forces <<< ======================= */
@@ -915,21 +951,20 @@ double  cgfuncRyck(double *vec)
   A = 0.0;
   for (k1 = 0; k1 < 3; k1++)
     {
-      Q1 += (vec[k1]-rA[k1])*fx[k1];
-      Q2 += (vec[k1+3]-rB[k1])*gx[k1];
+      //Q1 += (vec[k1]-rA[k1])*fx[k1];
+      //Q2 += (vec[k1+3]-rB[k1])*gx[k1];
       A += (vec[k1+3]-rA[k1])*fx2[k1];
     }
   A = 0.5*A - 1.0;
   if (A>=0)
-    A = 1.0;
+    A = OprogStatus.lambda1;
   else
-    A = -1.0;
+    A = -OprogStatus.lambda1;
 
   F = 0.0;
   for (kk=0; kk < 3; kk++)
     F += A*Sqr(vec[kk]-vec[kk+3]);
-  printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
-  printf("Q1=%.15G Q2=%.15G\n",  Q1, Q2);
+  //printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
   return F;
 }
 
@@ -1524,8 +1559,6 @@ void (*nrfuncvD)(int n, double v[], double fvec[], int i, int j, double shift[3]
 
 
 extern void fdjac(int n, double x[], double fvec[], double **fjac, 
-		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j, double shift[3]), int iA, int iB, double shift[3]); 
-extern void fdjacDist(int n, double x[], double fvec[], double **fjac, 
 		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j, double shift[3]), int iA, int iB, double shift[3]); 
 double fmin(double x[], int iA, int iB, double shift[3]);
 double fminD(double x[], int iA, int iB, double shift[3]);
