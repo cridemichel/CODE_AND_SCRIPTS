@@ -811,7 +811,7 @@ void usrInitAft(void)
       {
 	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
       }
-
+#ifndef MD_INFBARRIER
     if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);
@@ -822,6 +822,7 @@ void usrInitAft(void)
  	  exit(1);      
   	}
     }
+#endif
 #if 0
   for (i= 0; i < Oparams.parnum; i++)
     {
