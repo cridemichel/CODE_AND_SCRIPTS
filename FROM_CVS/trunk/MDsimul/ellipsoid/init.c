@@ -569,6 +569,28 @@ void angvel(void)
     }
   
 }
+void wrap_initCoord(void)
+{
+  rx[0] = 2.0;
+  ry[0] = 0.0;
+  rz[0] = 0.0;
+  vx[0] = -2.0;
+  vy[0] = 0.0;
+  vz[0] = 0.0;
+  wx[0] = 0.0;
+  wy[0] = 0.0;
+  wz[0] = 0.0;
+
+  rx[1] = -2.0;
+  ry[1] = 0.0;
+  rz[1] = 0.0;
+  vx[1] = 2.0;
+  vy[1] = 0.0;
+  vz[1] = 0.0;
+  wx[1] = 0.0;
+  wy[1] = 0.0;
+  wz[1] = 0.0;
+}
 /* =========================== >>> initCoord <<< ============================*/
 void initCoord(void)
 {
@@ -599,6 +621,7 @@ void initCoord(void)
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
   angvel(); 
+  wrap_initCoord();
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
@@ -1148,7 +1171,7 @@ void writeAllCor(FILE* fs)
       fprintf(fs, tipodat2,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 	      uyz[i], uzx[i], uzy[i], uzz[i]);
     }
-  
+#ifndef MD_STOREMGL 
   for (i = 0; i < Oparams.parnum; i++)
     {
       fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
@@ -1157,6 +1180,7 @@ void writeAllCor(FILE* fs)
   fprintf(fs, "%.15G %.15G\n", L, Lz);
 #else
   fprintf(fs, "%.15G\n", L);
+#endif
 #endif
 }
 
