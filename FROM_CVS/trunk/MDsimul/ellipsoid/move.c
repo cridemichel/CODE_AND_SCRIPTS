@@ -6,12 +6,13 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
+extern double **Xa, **Xb, **Ia, **Ib, **invIa, **invIb;
 extern double maxax[2];
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
 void SolveLineq (double **a, double *x, int n);
-void InvMatrix(double a[3][3], double b[3][3], int NB);
+void InvMatrix(double **a, double **b, int NB);
 extern double invaSq[2], invbSq[2], invcSq[2];
 double rxC, ryC, rzC;
 #ifdef MD_GRAVITY
@@ -273,7 +274,7 @@ extern double WLJ;
 #if 1
 void check (int *overlap, double *K, double *V)
 {
-
+  *overlap = 0;
 }
 #else
 void check (int *overlap, double *K, double *V)
@@ -497,8 +498,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double rxij, ryij, rzij, factor, invmi, invmj;
   double delpx, delpy, delpz, sigSq, wrx, wry, wrz, rACn[3], rBCn[3], rnI[3];
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
-  double norm[3], **Ia, **Ib, **invIa, **invIb;
-  double  Xa[3][3], Xb[3][3];
+  double norm[3];
   double modn, denom;
   int na, a, b;
 #if 0
@@ -540,10 +540,6 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   rBC[1] = ry[j] - rCy;
   rBC[2] = rz[j] - rCz;
  
-  Ia = matrix(3, 3);
-  Ib = matrix(3, 3);
-  invIa = matrix(3, 3);
-  invIb = matrix(3, 3);
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], 
@@ -657,10 +653,6 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       wz[i] += factor*invIa[2][a]*rACn[a];
       wz[j] -= factor*invIb[2][a]*rBCn[a];
     }
-  free_matrix(Ia, 3);
-  free_matrix(Ib, 3);
-  free_matrix(invIa, 3);
-  free_matrix(invIb, 3);
 /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
 #if 0
   *W = delpx * rxij + delpy * ryij + delpz * rzij;
@@ -1065,7 +1057,7 @@ UpdateOrient(int i, double ti, double *uxxt, double *uxyt, double *uxzt,
 #ifndef MD_APPROX_JACOB
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
-void calcFxtFt(double x[3], double X[3][3],
+void calcFxtFt(double x[3], double **X,
 	       double D[3][3], double Omega[3][3], double R[3][3], 
 	       double pos[3], double vel[3],
 	       double Fxt[3], double *Ft)
@@ -1143,11 +1135,13 @@ void fdjac(int n, double x[], double fvec[], double **df,
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 {
   int na; 
-  double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
+  double  **Xa, **Xb, rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
   double DA[3][3], DB[3][3], RA[3][3], RB[3][3];
   double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
   double Fxt[3], Gxt[3], Ft, Gt;
   int k1, k2, k3;
+  Xa = matrix(3,3);
+  Xb = matrix(3,3);
   ti = x[4] - atomTime[iA];
   rA[0] = rx[iA] + vx[iA]*ti;
   rA[1] = ry[iA] + vy[iA]*ti;
@@ -1234,13 +1228,14 @@ void fdjac(int n, double x[], double fvec[], double **df,
     } 
  df[3][4] = Ft;
  df[4][4] = Gt;
-
+ free_matrix(Xa, 3);
+ free_matrix(Xb, 3);
 }
 #endif
 void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
   int na, k1, k2; 
-  double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti;
+  double  rA[3], rB[3], ti;
   double Omega[3][3];
   double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
   /* x = (r, alpha, t) */ 

@@ -31,6 +31,8 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
+double **Xa, **Xb, **Ia, **Ib, **invIa, **invIb;
+extern double **matrix(int n, int m);
 int poolSize;
 int parnumA, parnumB;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
@@ -812,7 +814,12 @@ void usrInitAft(void)
     treeRxC  = malloc(sizeof(double)*poolSize);
     treeRyC  = malloc(sizeof(double)*poolSize);
     treeRzC  = malloc(sizeof(double)*poolSize);
-
+    Xa = matrix(3, 3);
+    Xb = matrix(3, 3);
+    Ia = matrix(3, 3);
+    Ib = matrix(3, 3);
+    invIa = matrix(3, 3);
+    invIb = matrix(3, 3);
     if (OprogStatus.CMreset==-1)
       {
 	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
