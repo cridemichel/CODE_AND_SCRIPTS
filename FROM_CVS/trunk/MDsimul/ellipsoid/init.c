@@ -902,7 +902,51 @@ void R2u(void)
       uzz[i] = R[i][2][2];
     }
 }
+#define SIGN(X) ((X>0)?1.0:(-1.0)) 
+typedef struct {
+	double x,y,z;
+} XYZ;
+typedef struct {
+	XYZ point;
+	XYZ grad;
+} MESHXYZ;
 
+MESHXYZ **ellips_mesh[2];
+void EvalSuperEllipse(double t1,double t2, double a, double b, double c, MESHXYZ *pm)
+{
+   double ct1,ct2,st1,st2;
+
+   ct1 = cos(t1);
+   ct2 = cos(t2);
+   st1 = sin(t1);
+   st2 = sin(t2);
+   pm->point.x = a * ct1 * ct2;
+   pm->point.y = b * ct1 * st2;
+   pm->point.z = c * st1;
+   pm->grad.x = 2.0*pm->point.x/Sqr(a);
+   pm->grad.y = 2.0*pm->point.y/Sqr(b);
+   pm->grad.z = 2.0*pm->point.z/Sqr(c);
+}
+void build_mesh(MESHXYZ** mesh, double a, double b, double c)
+{
+  int i,j, n1, n2;
+  double theta, phi;
+  XYZ p;
+  const double TWOPI=2.0*pi, PID2=pi/2.0;
+  /* n1 = stacks
+   * n2 = slides */
+  n1 = OprogStatus.n1;
+  n2 = OprogStatus.n2;
+  for (j=0;j<n1/2;j++)
+    {
+      phi = j * TWOPI / (double)n1 - PID2;
+      for (i=0;i<n2;i++) 
+	{
+	  theta = i * TWOPI / n2;
+	  EvalSuperEllipse(theta,phi,a,b,c,&mesh[i][j]);
+	}
+    }
+}
 double calc_phi(void);
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
@@ -1013,6 +1057,15 @@ void usrInitAft(void)
     invIb = matrix(3, 3);
 #endif
     powdirs = matrix(6,6);
+    ellips_mesh[0]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1);
+    ellips_mesh[1]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1);
+    for (i = 0; i < OprogStatus.n1; i++)
+      {
+	ellips_mesh[0][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2);
+	ellips_mesh[1][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2);
+      }
+    build_mesh(ellips_mesh[0], Oparams.a[0], Oparams.b[0], Oparams.c[0]);
+    build_mesh(ellips_mesh[1], Oparams.a[1], Oparams.b[1], Oparams.c[1]);
     RA = matrix(3, 3);
     RB = matrix(3, 3);
     Rt = matrix(3, 3);

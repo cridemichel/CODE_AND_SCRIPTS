@@ -2073,6 +2073,44 @@ void estimate_lambda(double *vec)
   vec[6] = fabs(vec[6]);
   vec[7] = fabs(vec[7]);
 }
+void findminMesh(double *vec)
+{
+
+}
+void guessdistByMesh(int i, int j, double shift[3], double *vecg)
+{
+  int kk;
+  double Fret;
+  int iter;
+  double vec[8];
+  icg = i;
+  jcg = j;
+  if (i < Oparams.parnumA)
+    minaxicg = min3(Oparams.a[0],Oparams.b[0],Oparams.c[0]);
+  else 
+    minaxicg = min3(Oparams.a[1],Oparams.b[1],Oparams.c[1]);
+  if (j < Oparams.parnumA)
+    minaxjcg = min3(Oparams.a[0],Oparams.b[0],Oparams.c[0]);
+  else 
+    minaxjcg = min3(Oparams.a[1],Oparams.b[1],Oparams.c[1]);
+
+  for (kk=0; kk < 3; kk++)
+    {
+      shiftcg[kk] = shift[kk];
+    }
+  for (kk=0; kk < 6; kk++)
+    {
+      vec[kk] = vecg[kk];
+    }
+ 
+  findminMesh(vec);
+  //frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+  for (kk=0; kk < 6; kk++)
+    {
+      vecg[kk] = vec[kk];
+    }
+}
+
 void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring)
 {
   int kk;
