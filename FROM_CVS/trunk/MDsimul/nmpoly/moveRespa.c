@@ -749,7 +749,7 @@ void  AnlzConstraintDevs (void)
 	  dr1[2] = rz[i + 1][n] - rz[i][n];
   	  dr1[2] = dr1[2] - L*rint(dr1[2]/L);
 	  curBondLenSq[i] = Sqr (dr1[0]) + Sqr (dr1[1]) + Sqr (dr1[2]);
-	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d)/Oparams.d > 1E-6)
+	  if (fabs(sqrt(curBondLenSq[i]) - Oparams.d)/Oparams.d > OprogStatus.rapatol)
 	    {
 	      sumsteps = sumsteps + OprogStatus.nrespa*(Oparams.curStep - laststep[n]);
 	      numshake=numshake+1.0;

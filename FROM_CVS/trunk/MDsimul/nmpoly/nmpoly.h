@@ -286,7 +286,10 @@ struct progStatus
   int nrespa;                    /* numero di iterazioni del reference system */
   double rcutInner;
   double lambda;
-  int keepInvMat;
+  //int keepInvMat;
+#endif
+#ifdef MD_RAPACONSTR
+  double rapatol;
 #endif
   int nebrTabFac;                /* How much storage sould be provided for 
                                    the neighbour list (see Rapaport pag.53
@@ -545,6 +548,9 @@ struct singlePar OsinglePar[] = {
   {"rNebrShellLong", &OprogStatus.rNebrShellLong,     CT},
   {"nebrTabFacLong", &OprogStatus.nebrTabFacLong,     INT},
 #endif
+#ifdef MD_RAPACONSTR
+  {"rapatol",       &OprogStatus.rapatol,     CT},
+#endif
   {"W",          &OprogStatus.W,              CT},
   {"P",          &Oparams.P,                  CT},
 #if 0
@@ -590,7 +596,7 @@ struct singlePar OsinglePar[] = {
   {"rcutInner",  &OprogStatus.rcutInner,            CT},
   {"nrespa",     &OprogStatus.nrespa,      INT},
   {"lambda",     &OprogStatus.lambda,      CT},
-  {"keepInvMat", &OprogStatus.keepInvMat,  INT},
+  //{"keepInvMat", &OprogStatus.keepInvMat,  INT},
 #endif
 #if 0
   {"atomsDist",  &Oparams.d,                CT},
@@ -678,7 +684,10 @@ struct pascii opro_ascii[] =
   {"lambda",           &OS(lambda),                         1,   1, "%.10G"},
   {"nrespa",           &OS(nrespa),                         1,   1,  "%d"},
   {"rcutInner",        &OS(rcutInner),                      1,   1, "%.10G"},
-  {"keepInvMat",       &OS(keepInvMat),                     1,   1,  "%d"},
+  //{"keepInvMat",       &OS(keepInvMat),                     1,   1,  "%d"},
+#endif
+#ifdef MD_RAPACONSTR
+  {"rapatol",     &OS(rapatol),                      1,  1, "%.15G"},
 #endif
   {"noLinkedList", &OS(noLinkedList),               1,   1,  "%d"},
   {"avVol",          &OS(avVol),                    1,   1, "%.8G"},
