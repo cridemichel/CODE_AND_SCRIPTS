@@ -3168,7 +3168,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #ifdef MD_INTERPOL
 		  if (!tocheck[nn])
 #endif
-		  printf("[locate_contact] can't find contact point!\n");
+		  mdPrintf(ALL,"[locate_contact] can't find contact point!\n",NULL);
 		  /* Se refine_contact fallisce deve cmq continuare a cercare 
 		   * non ha senso smettere...almeno credo */
 		  //gotcoll = -1;
