@@ -155,6 +155,7 @@ struct progStatus
 				restore files, if '0' don't use Tape */ 
 
   int xvaSteps;     /* steps between two tape file savings */
+  int mdseed;
   int bakSteps;    /* steps between two savings of restore files on HD*/
 
   int bakStepsAscii; 
@@ -300,7 +301,9 @@ struct params
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
-
+#ifdef SOFT_SPHERE
+  int PP; 
+#endif
   COORD_TYPE tol;               /* Tolerance of the shake algoritm used 
 				   by RATTLE */
   /*======================================================================= */
@@ -408,6 +411,9 @@ struct pascii opar_ascii[]=
   {"P",                 &OP(P),                           1,   1, "%.6G"},
   {"T",                 &OP(T),                           1,   1, "%.6G"},
   {"m",                 &OP(m),                           1,   1, "%.6G"},
+#ifdef SOFT_SPHERE
+  {"PP",                &OP(PP),                          1,   1,  "%d"},
+#endif
   {"rcut",              &OP(rcut),                        1,   1, "%.8G"},
   {"sigma",             &OP(sigma),                       1,   1, "%.8G"},
   {"epsilon",           &OP(epsilon),                     1,   1, "%.8G"},
@@ -516,6 +522,9 @@ struct singlePar OsinglePar[] = {
   {"tolT",       &OprogStatus.tolT,           CT},
   {"avVol",      &OprogStatus.avVol,          CT},
   {"avs",        &OprogStatus.avs,            CT},
+#ifdef SOFT_SPHERE
+  {"PP",         &Oparams.PP,               INT},
+#endif 
   {"tolVol",     &OprogStatus.tolVol,         CT},
   {"tols",       &OprogStatus.tols,           CT},
   {"tolVol1",    &OprogStatus.tolVol1,        CT},

@@ -30,6 +30,9 @@ void info(void)
 	 Oparams.totStep, Oparams.steplength);
   printf("mass: %f sigma:%f epsilon:%f\n", Oparams.m, Oparams.sigma, Oparams.epsilon);
   printf("Linked Cell M = %d\n", Oparams.M);
+#ifdef SOFT_SPHERE
+  printf("SOFT SPHERE PP=%d\n", Oparams.PP);
+#endif
 }
 
 /* ============================== >>> main <<< ============================= */
