@@ -662,22 +662,19 @@ void save_image(void)
 void display (void)
 {
   int nf;
-  static int counter = 0;
 #ifndef MGL_USELIST
   int i, j;
 #endif
   /*
    * double fadeFact;
    */
-  if (globset.saveandquit && counter == 0)
+#if 0
+  if (globset.saveandquit)
     {
       glutHideWindow();
     }
-  glDisable (GL_SCISSOR_TEST);
-
-
+#endif
   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  //glEnable (GL_SCISSOR_TEST);
  
   if (globset.setvp)
     {
@@ -735,19 +732,8 @@ void display (void)
   glutSwapBuffers();
   if (globset.saveandquit==1)
     {
-#if 1
       save_image();
       exit(0);
-#else
-      if (counter == MGL_REDBEFQUIT-1)
-	{
-	  save_image();
-	  exit(0);
-	}
-      else
-	counter++;
-      printf("counter = %d\n", counter);
-#endif
     }
 }
 
@@ -1868,7 +1854,6 @@ void key(unsigned char k, int x, int y)
  */
 int main(int argc, char** argv)
 {
-  int i;
   default_pars();
   args(argc, argv);
 
@@ -1882,23 +1867,11 @@ int main(int argc, char** argv)
 #ifdef MGL_USELIST
   buildAtomsList();
 #endif
-#if 0
-  if (globset.saveandquit)
-    {
-      for (i=0; i < MGL_REDBEFQUIT; i++)
-	{
-	  printf("i=%d\n", i);
-	  display(); 
-	  glutPostRedisplay();
-	  //glFlush();
-	}
-    }
-#endif
   glutDisplayFunc(display);
   glutReshapeFunc(myReshape);
   glutKeyboardFunc(key);
   glutSpecialFunc(special);
-  /*  glutVisibilityFunc(visible);*/
+  /*glutVisibilityFunc(visible);*/
   glutPostRedisplay();
   glutMainLoop();
   return 0;             /* ANSI C requires main to return int. */
