@@ -1,7 +1,7 @@
 #include<mdsimul.h>
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
-#define MD_DEBUG(x) 
+#define MD_DEBUG(x) x
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -1580,11 +1580,12 @@ void PredictEvent (int na, int nb)
 		      /* maxax[...] è il diametro dei centroidi dei due tipi
 		       * di ellissoidi */
 		      if (na < parnumA && n < parnumA)
-			sigSq = 4.0*Sqr(maxax[0]);
+			sigSq = Sqr(maxax[0]);
 		      else if (na >= parnumA && n >= parnumA)
-			sigSq = 4.0*Sqr(maxax[1]);
+			sigSq = Sqr(maxax[1]);
 		      else
-			sigSq = Sqr(maxax[0]+maxax[1]);
+			sigSq = Sqr((maxax[0]+maxax[1])*0.5);
+		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 #endif
 		      tInt = Oparams.time - atomTime[n];
 		      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
@@ -1690,6 +1691,7 @@ no_core_bump:
     			  if (d >= 0.) 
 			    {
 			      t = - (sqrt (d) + b) / vv;
+			      MD_DEBUG(printf("t=%f curtime: %f\n", t, Oparams.time));
 			      t += Oparams.time; 
 			      /* t è il guess per il newton-raphson */
 			      /* come guess per x possiamo usare il punto di contatto 
@@ -1706,13 +1708,16 @@ no_core_bump:
 			      ncong=0.0;
 			      for (kk=0; kk < 3; kk++)
 				ncong +=  Sqr(cong[kk]);
+			      ncong = sqrt(ncong);
 			      for (kk=0; kk < 3; kk++)
 				{
 				  cong[kk] /= ncong;
-				  pos[kk] =  rx[na] + vx[na] * (t-atomTime[na]);
 				}
+			      pos[0] =  rx[na] + vx[na] * (t-atomTime[na]);
+			      pos[1] =  ry[na] + vy[na] * (t-atomTime[na]);
+			      pos[2] =  rz[na] + vz[na] * (t-atomTime[na]);
 			      for (kk=0; kk < 3; kk++)
-				vecg[kk] = pos[kk] - cong[kk]*maxax[na<Oparams.parnumA?0:1];
+				vecg[kk] = pos[kk] - 0.5*cong[kk]*maxax[na<Oparams.parnumA?0:1];
 			      MD_DEBUG(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
 			      MD_DEBUG(printf("r[%d](%f,%f,%f)-r[%d](%f,%f,%f)\n",
 					      na, rx[na], ry[na], rz[na], n, rx[n], ry[n], rz[n]));
