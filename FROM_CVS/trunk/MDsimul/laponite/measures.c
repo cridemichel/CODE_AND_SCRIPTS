@@ -192,6 +192,7 @@ void transDiff(void)
       Drx = rxCM - OprogStatus.rxCMi[i]; 
       Dry = ryCM - OprogStatus.ryCMi[i];
       Drz = rzCM - OprogStatus.rzCMi[i];
+      /*printf("step: %d DR: (%f,%f,%f)\n", Oparams.curStep, Drx, Dry, Drz);*/
       if (OprogStatus.ipart == i)
 	{
 	  printf("i = %d\n", i);
