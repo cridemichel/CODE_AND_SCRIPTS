@@ -1661,7 +1661,7 @@ void move(void)
 	  if (OprogStatus.brownian)
 	    {
 #ifdef MD_HSVISCO
-	      double taus;
+	      double taus, Vol;
 	      if (OprogStatus.lastcoll!=-1)
 		{
 		  /* notare che nel caso di dinamica browniana
@@ -1674,7 +1674,11 @@ void move(void)
 		  OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
 		  OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
 		  OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
-		  //printf("DQ= %f %f %f\n", OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
+		  Vol = L*L*L;
+		  OprogStatus.DQxy /= Vol;
+		  OprogStatus.DQyz /= Vol;
+		  OprogStatus.DQzx /= Vol;
+	      	  //printf("DQ= %f %f %f\n", OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
 		  OprogStatus.lastcoll = Oparams.time;
 		}
 #endif
@@ -1688,6 +1692,20 @@ void move(void)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
+#ifdef MD_HSVISCO
+	  else
+	    {
+	      double Vol;
+    	      OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
+	      OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
+	      OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+	      Vol = L*L*L;
+	      OprogStatus.DQxy /= Vol;
+	      OprogStatus.DQyz /= Vol;
+	      OprogStatus.DQzx /= Vol;
+	      //printf("STEP #%d DQ= %f %f %f\n", Oparams.curStep, OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
+	    }
+#endif
 	  OprogStatus.nextDt += Oparams.Dt;
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	  break;
