@@ -779,8 +779,8 @@ void calcPtensAt(int Nm, COORD_TYPE VOL1)
   Patyz /= Vol;
   Patzx /= Vol;
 }
-const double ittol = 1E-13;
-const double ittolNPT = 1E-11;
+const double ittol = 1E-14;
+const double ittolNPT = 1E-14;
 #if 0
 void movebBrownAnd(double dt, double tol, int maxIt, int NB, double m[3], double d, 
 		    int Nm) 
