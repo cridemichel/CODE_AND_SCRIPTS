@@ -900,9 +900,6 @@ void Newsimul (char *argom)
 #endif
   OprogStatus.savedXva = -1;
   OprogStatus.fstps = 1;
-#ifdef MD_BILOG
-  OprogStatus.logblock = 1;
-#endif
   logBlock = (int) pow(OprogStatus.base, (double) OprogStatus.NN);
   printf("logBlock: %d base:%f NN:%d\n", logBlock, OprogStatus.base, OprogStatus.NN);
   /* La prima volta che va in saveXva savedXva diventa 0 e cosi'
@@ -1181,6 +1178,10 @@ void initBefore(void)
   OprogStatus.xvaSteps = 0;    /* steps between two tape file savings, 0 means
 				 no tape file */ 
   OprogStatus.fstps = 1;
+#ifdef MD_BILOG
+  OprogStatus.basew = 1.3;
+  OprogStatus.lastbilogsaved = 0;
+#endif
   OprogStatus.xvaSaveMode = 0; /* default is linear mode */
   OprogStatus.bakSaveMode = 0; /* default is linear mode */
   OprogStatus.bakStepsAscii = 0;

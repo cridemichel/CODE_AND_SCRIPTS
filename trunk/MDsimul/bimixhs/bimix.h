@@ -188,6 +188,7 @@ struct progStatus
 
 #ifdef MD_BILOG
   double basew;
+  int lastbilogsaved;
 #endif
   char endfile[NAME_LENGTH];
   /* stringa contenente il nome del file in cui
@@ -320,10 +321,6 @@ struct progStatus
   char misPath[NAME_LENGTH];
   /* =================================================== */
   /* questi servono per il salvataggio bilog */
-#ifdef MD_BILOG
-  double logblockbase;
-  double logblock;
-#endif
   double base;    /* We save at base^^NN step */
   int NN;         /* Logatithmic block length */
   double fstps;         /* There are KK block each base^NN long */
@@ -481,11 +478,11 @@ struct pascii opro_ascii[] =
   {"intervalSum"   ,&OS(intervalSum),               1,  1,    "%.10G"}, 
   {"tmpPath",      OS(tmpPath),                     1,  NAME_LENGTH, "%s"},
   {"misPath",      OS(misPath),                     1,  NAME_LENGTH, "%s"},
-#ifdef MD_BILOG
-  {"logblockbase", &OS(logblockbase),               1,  1, "%.6G"},
-  {"logblock",     &OS(logblock),                   1,  1, "%.15G"},
-#endif
   {"base",         &OS(base),                       1,  1, "%.6G"},
+#ifdef MD_BILOG
+  {"basew",        &OS(basew),                      1,  1, "%.6G"},
+  {"lastbilogsaved",&OS(lastbilogsaved),            1,  1, "%d"},
+#endif
   {"NN",           &OS(NN),                         1,  1,   "%d"},
   {"fstps",        &OS(fstps),                      1,  1,   "%.15G"},
   {"nRun",         OS(nRun),                        1,  32,   "%s"},
@@ -679,8 +676,7 @@ struct singlePar OsinglePar[] = {
   {"base",       &OprogStatus.base,         CT},
   {"NN",         &OprogStatus.NN,           INT},
 #ifdef MD_BILOG
-  {"logblockbase", &OprogStatus.logblockbase,  CT},
-  {"logblock",     &OprogStatus.logblock,      CT},
+  {"basew",     &OprogStatus.basew,         CT},
 #endif
   {"ENmin",      &OprogStatus.ENmin,        CT},
   {"ENmax",      &OprogStatus.ENmax,        CT},
