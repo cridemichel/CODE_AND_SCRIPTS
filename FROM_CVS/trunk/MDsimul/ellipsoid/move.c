@@ -662,7 +662,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     {
       printf("[ERROR] maybe second collision has been wrongly predicted\n");
       printf("relative velocity (vc=%.15G) at contact point is negative! Aborting simulation...\n", vc);
-      exit(-1);
+      //exit(-1);
     }
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
   
@@ -1216,40 +1216,16 @@ void calcFxtFt(double x[3], double **X,
 	 }
      }
 }
+#undef MD_GLOBALNR
+#undef MD_GLOBALNR2
+double rA[3], rB[3];
 void fdjacGuess(int n, double x[], double fvec[], double **df, 
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 {
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
-  int na; 
-  double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
-  double DA[3][3], DB[3][3], fx[3], gx[3];
+  double fx[3], gx[3], tmp;
   double Fxt[3], Gxt[3], Ft, Gt;
   int k1, k2, k3;
-  ti = x[4] - atomTime[iA];
-  rA[0] = rx[iA] + vx[iA]*ti;
-  rA[1] = ry[iA] + vy[iA]*ti;
-  rA[2] = rz[iA] + vz[iA]*ti;
-  vA[0] = vx[iA];
-  vA[1] = vy[iA];
-  vA[2] = vz[iA];
-  /* ...and now orientations */
-  UpdateOrient(iA, ti, RA, OmegaA);
-  MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
-  MD_DEBUG2(print_matrix(RA, 3));
-  na = (iA < Oparams.parnumA)?0:1;
-  tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
-  MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
-  MD_DEBUG2(print_matrix(Xa, 3));
-  ti = x[4] - atomTime[iB];
-  rB[0] = rx[iB] + vx[iB]*ti + shift[0];
-  rB[1] = ry[iB] + vy[iB]*ti + shift[1];
-  rB[2] = rz[iB] + vz[iB]*ti + shift[2];
-  vB[0] = vx[iB];
-  vB[1] = vy[iB];
-  vB[2] = vz[iB];
-  UpdateOrient(iB, ti, RB, OmegaB);
-  na = (iB < Oparams.parnumA)?0:1;
-  tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
 
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -1280,6 +1256,20 @@ void fdjacGuess(int n, double x[], double fvec[], double **df,
     } 
 
   df[3][3] = 0.0;
+#ifndef MD_GLOBALNR2
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+  fvec[3] = 0.0;
+  tmp = 0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      tmp += (x[k1]-rB[k1])*gx[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0 - (0.5*tmp-1.0);
+#endif
 }
 
 /* funzione che calcola lo Jacobiano */
@@ -1386,9 +1376,25 @@ void fdjac(int n, double x[], double fvec[], double **df,
     } 
  df[3][4] = Ft;
  df[4][4] = Gt;
+#ifndef MD_GLOBALNR
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1]-rB[k1])*gx[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+ fvec[4] = 0.5*fvec[4]-1.0;
+ MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+#endif
 }
 #endif
-double rA[3], rB[3];
 void upd2tGuess(int i, int j, double shift[3], double tGuess)
 {
   double ti;
