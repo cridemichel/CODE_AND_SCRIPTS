@@ -594,7 +594,7 @@ COORD_TYPE BodeTerm(COORD_TYPE dt, COORD_TYPE* fi)
 /* ============================ >>> updateQ <<< =========================== */
 void updateDQ(COORD_TYPE dt)
 {
-  /* Intgerate the pressure tensor using Bode's rule
+  /* Integrate the pressure tensor using Bode's rule
      WARNING: the minimum effective update  for DQ(t) is 4 steps, because
      Bode rule needs 5 points at least */ 
   int curStep = Oparams.curStep, i1;
