@@ -68,6 +68,8 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define NA 5 /* number of atoms for each molecule (particle) */
 
 #define MD_PBONDS 4
+#define MD_DIST_ELECTSITES 0.45
+#define MD_DIST_HYDROSITES 0.5
 #define MAXPAR 3000      /* maximum number of simulated particles */
 
 #define NUM_PAR 2000   /* Number of particles for the simulation */
