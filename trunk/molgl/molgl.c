@@ -1787,6 +1787,12 @@ void key(unsigned char k, int x, int y)
  {
    switch(k) 
      {
+     case '1':
+       globset.degz += globset.deginc;
+       break;
+     case '2':
+       globset.degz -= globset.deginc;
+     break;
      case '+':
        if (globset.deginc > 179.0) break;/* Maximu increment is 180.0 degrees */
        globset.deginc += 1.0; 
