@@ -23,10 +23,10 @@ extern double maxax[2];
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
-void SolveLineq (double **a, double *x, int n);
 void InvMatrix(double **a, double **b, int NB);
 extern double invaSq[2], invbSq[2], invcSq[2];
 double rxC, ryC, rzC;
+extern int SolveLineq (double **a, double *x, int n); 
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
 void print_matrix(double **M, int n)
@@ -3515,10 +3515,55 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
   MD_DEBUG10(printf("max iterations %d iterations reached t=%f t2=%f\n", its, *t, t2));
   return 0;
 }
+extern double **Aip;
+int interpol(int i, int j, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3])
+{
+  double d3, Delta, t1, t2, bip[3];
+  double r1[3], r2[3], alpha;
+  d3 = calcDistNeg(t+delt/2, i, j, shift, r1, r2, &alpha, vecg, 0);
+  Aip[0][0] = Sqr(t);
+  Aip[0][1] = t;
+  Aip[0][2] = 1;
+  bip[0] = d1;
+  Aip[1][0] = Sqr(t+delt);
+  Aip[1][1] = t+delt;
+  Aip[1][2] = 1;
+  bip[1] = d2;
+  Aip[2][0] = Sqr(t+delt*0.5);
+  Aip[2][1] = t+delt*0.5;
+  Aip[2][2] = 1;
+  bip[2] = d3;
+  //printf("(%.8f,%.8f) (%.8f,%.8f) (%.8f,%.8f)\n", t, d1, t+delt, d2, t+delt*0.5, d3);
+  //printf("{%.8f %.8f %.8f}\n", bip[0], bip[1], bip[2]);
+  //print_matrix(Aip, 3);
+  if (SolveLineq(Aip, bip, 3))
+    {
+      return 1;
+    }
+
+  //printf("Solved %.8f %.8f %.8f\n", bip[0], bip[1], bip[2]);
+  //printf(">>> %.10f\n", Sqr(t)*bip[0]+t*bip[1]+bip[2]-d1);
+  Delta = Sqr(bip[1]) - 4.0*bip[0]*bip[2];
+  if (Delta<0 || bip[0]==0.0)
+    {
+      //printf("*troot=%.8G t=%.8G delt=%.8G\n", *troot, t, delt);
+      return 1;
+    }
+  t1 =  (-bip[1] + sqrt(Delta))/(2.0*bip[0]);
+  t2 =  (-bip[1] - sqrt(Delta))/(2.0*bip[0]); 
+  //printf("t1= %.10f t2= %.10f\n", t1, t2);
+  if (t1 < t2)
+    *troot = t1;
+  else
+    *troot = t2;
+  calcDistNeg(*troot, i, j, shift, r1, r2, &alpha, vecg, 0);
+  //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
+  return 0;
+}
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
   double h, d1, d2, d1Neg, d1Pos, alpha, vecgd1old[8], vecgd1[8], vecgd2[8], vecgd3[8], t, r1[3], r2[3]; 
-  double vd, normddot, ddot[3], maxddot, delt, told;
+  double vd, normddot, ddot[3], maxddot, delt, told, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax; 
   double d2old;
@@ -3707,7 +3752,18 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
 	    }
 #endif
-	  if (refine_contact(i, j, t-delt, vecgd2, shift, vecg))
+#if 1
+       	  for (kk=0; kk < 8; kk++)
+	    vecgroot[kk] = vecgd1[kk];
+	    
+	  //if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift))
+	    //{
+	  for (kk=0; kk < 8; kk++)
+    	    vecgroot[kk] = vecgd2[kk];
+	  troot = t - delt;
+	  // }
+#endif
+	  if (refine_contact(i, j, troot, vecgroot, shift, vecg))
 	    {
 	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
