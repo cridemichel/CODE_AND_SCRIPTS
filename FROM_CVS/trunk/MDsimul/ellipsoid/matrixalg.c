@@ -2134,16 +2134,18 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
   cth1 = *th1;
   cphi1 = *phi1;
   cth2 = *th2;
-  cphi2 = *th2;
+  cphi2 = *phi2;
   mA = (icg<Oparams.parnumA)?0:1;
   mB = (jcg<Oparams.parnumA)?0:1;
   //printf("maxstA=%.15G maxstB=%.15G\n", maxstA, maxstB);
   for (kk=0; kk < 6; kk++)
     vecini[kk] = vec[kk];
-  for (k1=-1; k1 <= 1; k1+=2)
+  for (k1=-1; k1 <= 1; k1+=1)
     {
-      for (k2=-1; k2 <= 1; k2+=2)
+      for (k2=-1; k2 <= 1; k2+=1)
 	{
+	  if ((k1 == 0 && k2 == 0) || (k1 != 0 && k2 != 0))
+	      continue;
 	  nth1 = *th1 + k1;
 	  if (nth1 == OprogStatus.n1)
 	    nth1 = 0;
@@ -2154,6 +2156,15 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 	    nphi1 = 0;
 	  if (nphi1 == -1)
 	    nphi1 = OprogStatus.n2-1;
+	  if (*th1 == 0 && nth1 == 0)
+	    nth1 = 1;
+	  if (*th2 == 0 && nth2 == 0)
+	    nth2 = 1;
+	   if (*th1 == OprogStatus.n1/2 && nth1 == OprogStatus.n1/2)
+	    nth1 = OprogStatus.n1/2+1;
+	  if (*th2 == OprogStatus.n1/2 && nth2 == OprogStatus.n1/2)
+	    nth2 = OprogStatus.n1/2+1;
+	    
 	  for (kk=0; kk < 3; kk++) 
 	    {
 	      xmeshP[kk] = ellips_mesh[mA][nth1][nphi1].point[kk];
@@ -2340,7 +2351,7 @@ void findminMesh(double *vec)
     }
   if (S < 0)
     calc_sign=1;
-  printf(">>> distSq: %.15G\n", sqrt(distSq));
+  //printf(">>> distSq: %.15G\n", sqrt(distSq));
   its = 0;
   while (1)
     {
@@ -2356,17 +2367,17 @@ void findminMesh(double *vec)
       			   maxstA, maxstB, vec, calc_sign))
 	{
 #if 1
-	    angs[0] = th1*TWOPI/OprogStatus.n1;
-	    angs[1] = phi1*TWOPI/OprogStatus.n2;
-	    angs[2] = th2*TWOPI/OprogStatus.n1;
-	    angs[3] = phi2*TWOPI/OprogStatus.n2;
 	    /* we're done here! */
-	    angs2coord(angs, vecP);
+	    for (kk=0; kk < 3; kk++)
+	      {
+		vecP[kk] = ellips_mesh[mA][th1][phi1].point[kk];
+		vecP[kk+3] = ellips_mesh[mB][th2][phi2].point[kk];
+	      }
 	    /* torno nel riferimento del laboratorio */
 	    body2lab(icg, vecP, vec, rA, RtA);
 	    body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
 #endif
-	    printf("BOH distSq=%.15G\n", distSq);
+	    printf("BOH distSq=%.15G\n", sqrt(distSq));
 	    distSq = 0;
 	    for (kk = 0; kk < 3; kk++)
 	      {
