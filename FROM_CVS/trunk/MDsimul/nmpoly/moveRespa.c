@@ -1742,6 +1742,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 #else
   if (OprogStatus.Nose == 1)
     {
+#ifdef MD_FENE
       updPv(dt, 0.5);
       updImpNoseAnd(dt, 0.5);
       updPs(dt, 0.5);
@@ -1750,14 +1751,32 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
       updPositionsNPT(dt, 1.0);
       upds(dt, 0.5);
       updVol(dt, 0.5);
+#else
+      updPv(dt, 0.5);
+      updPs(dt, 0.5);
+      updImpNoseAnd(dt, 0.5);
+      updVol(dt, 0.5);
+      upds(dt, 0.5);
+      updPositionsNPT(dt, 1.0);
+      upds(dt, 0.5);
+      updVol(dt, 0.5);
+#endif
     }
   else if (OprogStatus.Nose == 2)
     {
+#ifdef MD_FENE
       updImpNose(dt, 0.5);
       updPs(dt, 0.5);
       upds(dt, 0.5);
       updPositions(dt, 1.0);
       upds(dt, 0.5);
+#else
+      updPs(dt, 0.5);
+      updImpNose(dt, 0.5);
+      upds(dt, 0.5);
+      updPositions(dt, 1.0);
+      upds(dt, 0.5);
+#endif
     }
 #endif
   else
@@ -1804,14 +1823,25 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #else
   if (OprogStatus.Nose == 1)
     {
+#ifdef MD_FENE
       updPsAft(dt, 0.5);
       updImpNoseAndAft(dt, 0.5);
       updPvAft(dt, 0.5);
+#else
+      updImpNoseAndAft(dt, 0.5);
+      updPsAft(dt, 0.5);
+      updPvAft(dt, 0.5);
+#endif
     }
   else if (OprogStatus.Nose == 2)
     {
+#ifdef MD_FENE
       updPsAft(dt, 0.5);
       updImpNoseAft(dt, 0.5);
+#else
+      updImpNoseAft(dt, 0.5);
+      updPsAft(dt, 0.5);
+#endif
     }
 #endif
   else
