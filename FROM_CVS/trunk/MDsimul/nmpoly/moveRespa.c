@@ -80,99 +80,145 @@ extern COORD_TYPE  *Rmx, *Rmy, *Rmz;
 extern void check_distances(char* str);
 extern double *atcharge;
 #ifdef MD_RAPACONSTR
-void SolveLineq (double *a, double *x, int n) 
+#define N_MAX 1000
+/* Routines for LU decomposition from Numerical Recipe online */
+#define TINY 1E-20
+#define MD_NCMAX 200
+void ludcmp(double a[NA][NA], int* indx, double* d)
 {
-  double vMaxI[N_MAX], v, vMax;
-  int ptrMax[N_MAX], i, ij, ik, ir, j, k, kj, kk, kr,
-      r, rj, rk;
-  if (n >= N_MAX)
-    {
-      printf("matrix too large");
-      exit(-1);
-    }
-  for (i = 0; i < n; i ++) 
-    {
-      vMax = 0.;    ij = i;
-      for (j = 0; j < n; j ++) 
+  /* A[i][j] = Aij 
+   * A x = b  
+   * per semplicità nel seguito si assume che l'ordine della matrice è 3 */
+  int i,imax=0,j,k;
+  int n = NA;
+  double big,dum,sum,temp; 
+  double vv[NA]; /* vv stores the implicit scaling of each row.*/
+  
+  /*vv = vector(1,n);*/
+  *d=1.0; /* No row interchanges yet. */
+  for (i=0;i<n;i++) 
+    { 
+      /* Loop over rows to get the implicit scaling information.*/ 
+      big=0.0; 
+      for (j=0;j<n;j++) 
+	if ((temp=fabs(a[i][j])) > big) big=temp; 
+      if (big == 0.0)
 	{
-	  v = fabs (a[ij]);    if (v > vMax) vMax = v;
-	  ij = ij + n;
+	  printf("ERROR: Singular matrix in routine ludcmp\n"); 
+	  exit(-1);
 	}
-      vMaxI[i] = 1. / vMax;
-    }
-  for (r = 0; r < n; r ++)
-    {
-      vMax = 0.;    ir = r * (n + 1) - n;
-      for (i = r; i < n; i ++) 
-	{
-	  v = a[ir];    ik = i;    kr = (r - 1) * n + 1;
-	  for (k = 0; k <= r - 1; k ++) 
-	    {
-	      v = v - a[ik] * a[kr];
-	      ik = ik + n;    kr = kr + 1;
-	    }
-	  a[ir] = v;    v = fabs (a[ir]) * vMaxI[i];
-	  if (v > vMax)
-	    {
-	      vMax = v;    ptrMax[r] = i;
-	    }
-	  ir = ir + 1;
-	}
-      if (r != ptrMax[r]) 
-	{
-	  kk = 0;
-	  for (k = 1; k <= n ; k ++) 
-	    {
-	      v = a[kk + r];    a[kk + r] = a[kk + ptrMax[r]];
-	      a[kk + ptrMax[r]] = v;    kk = kk + n;
-	    }
-	  vMaxI[ptrMax[r]] = vMaxI[r];
-	}
-      rj = r * (n + 1);
-      for (j = r + 1; j <= n; j ++) 
-	{
-	  v = a[rj];
-	  rk = r;    kj = (j - 1) * n + 1;
-	  for (k = 1; k <= r - 1; k ++) 
-	    {
-	      v = v - a[rk] * a[kj];
-	      rk = rk + n;    kj = kj + 1;
-	    }
-	  a[rj] = v / a[rk];    rj = rj + n;
-	}
-    }
-  for (i = 1; i <= n; i ++)
-    {
-      v = x[ptrMax[i]];    x[ptrMax[i]] = x[i];    ij = i;
-      for (j = 1; j <= i - 1; j ++)
-	{
-	  v = v - a[ij] * x[j];    ij = ij + n;
-	}
-      x[i] = v / a[ij];
-    }
-  for (i = n - 1; i >= 1; i --) 
-    {
-      v = x[i];    ij = i * (n + 1);
-      for (j = i + 1; j <= n; j ++) 
-	{
-	  v = v - a[ij] * x[j];    ij = ij + n;
-	}
-      x[i] = v;
-    }
+      /* No nonzero largest element. */
+      vv[i]=1.0/big; /* Save the scaling.*/
+    } 
+  for (j=0;j<n;j++) 
+    { /* This is the loop over columns of Crout s method.*/
+      for (i=0;i<j;i++) 
+	{ 
+	  /* This is equation (2.3.12) except for i = j. */
+	  sum=a[i][j]; 
+	  for (k=0;k<i;k++) 
+	    sum -= a[i][k]*a[k][j]; 
+	  a[i][j]=sum; 
+	} 
+      big=0.0; /* Initialize for the search for largest pivot element. */ 
+      for (i=j;i<n;i++) 
+	{ 
+	  /* This is i = j of equation (2.3.12) and i = j+1. . .N of equation (2.3.13).*/
+	  sum=a[i][j]; 
+	  for (k=0;k<j;k++)
+	    sum -= a[i][k]*a[k][j]; 
+	    a[i][j]=sum; 
+	    if ( (dum=vv[i]*fabs(sum)) >= big) 
+	      { 
+		/* Is the  gure of merit for the pivot better than the best so far? */
+		big=dum; imax=i; 
+	      } 
+	} 
+      if (j != imax) 
+	{ 
+	  /* Do we need to interchange rows? */
+	  for (k=0;k<n;k++) 
+	    { 
+	      /* Yes, do so...*/ 
+	      dum=a[imax][k]; 
+	      a[imax][k]=a[j][k]; 
+	      a[j][k]=dum; 
+	    } 
+	  *d = -(*d); 
+	  /* ...and change the parity of d. */ 
+	  vv[imax]=vv[j]; 
+	  /* Also interchange the scale factor.*/ 
+	} 
+      indx[j]=imax; 
+      if (a[j][j] == 0.0) 
+	a[j][j]=TINY; 
+      /* If the pivot element is zero the matrix is singular 
+       * (at least to the precision of the algorithm). 
+       * For some applications on singular matrices, 
+       * it is desirable to substitute TINY for zero. */ 
+      if (j != n) 
+	{ 
+	  /* Now,  nally, divide by the pivot element.*/
+	  dum=1.0/(a[j][j]); 
+	  for (i=j+1;i<n;i++) a[i][j] *= dum; 
+	} 
+    } 
+  /* Go back for the next column in the reduction.*/
+  /*free_vector(vv,1,n); */
+}
+
+void lubksb(double a[NA][NA], int* indx, double b[NA])
+{ 
+  int i,ii=0,ip,j; 
+  double sum; 
+  const int n=NA;
+  for (i=0;i<n;i++) 
+    { 
+      /* When ii is set to a positive value, it will become the index of the  
+       * rst nonvanishing element of b. Wenow do the forward substitution,
+       * equation (2.3.6). The only new wrinkle is to unscramble the permutation as we go. */
+      ip=indx[i];
+      sum=b[ip];
+      b[ip]=b[i]; 
+      if (ii) 
+	for (j=ii;j<=i-1;j++) 
+	  sum -= a[i][j]*b[j]; 
+      else if (sum) 
+	ii=i; 
+      /* A nonzero element was encountered, so from now on we will have to do 
+       * the sums in the loop above. */ 
+      b[i]=sum; 
+    } 
+  for (i=n-1;i>=0;i--) 
+    { 
+      /* Now we do the backsubstitution, equation (2.3.7).*/
+      sum=b[i]; 
+      for (j=i+1;j<n;j++) 
+	sum -= a[i][j]*b[j]; b[i]=sum/a[i][i]; 
+      /* Store a component of the solution vector X. */ 
+    } /* All done! */
+}
+void SolveLineq (double a[NA][NA], double x[NA], int n) 
+{
+  int indx[NA];
+  double dd;
+  ludcmp(a, indx, &dd);
+  lubksb(a, indx, x);
 }
 void BuildConstraintMatrix (void) 
 {
-  int i, m;
-  for (i = 0; i < NA * (NA-1); i ++) 
-    cMat[i] = 0.;
+  int i, m, j;
+  for (i = 0; i < NA; i ++) 
+    for (j = 0; j < NA; j++)
+      cMat[i][j] = 0.;
   for (i = 0; i < NA; i ++) 
     {
       m = i - 1;
       if (m >= 0) 
-	cMat[m  * NA + i] = 2;
+	cMat[m][i] = 2;
       m = m + 1;
       if (m < NA-1) 
-	cMat[m  * NA + i] = -2;
+	cMat[m][i] = -2;
     }
   for (m = 0; m < NA-1; m ++) 
     {
@@ -181,6 +227,9 @@ void BuildConstraintMatrix (void)
       cAtom2[m] = m + 1;
     }
 }
+double cvMat[NA][NA], cDistSq[NA], vVec[NA], curBondLenSq[NA]; 
+int cMat[NA][NA]; 
+int cAtom1[NA], cAtom2[NA];
 void ComputeConstraints(int RefSys)
 {
   /* RefSys=1 allora calcola le forze del ref system */
@@ -225,16 +274,13 @@ void ComputeConstraints(int RefSys)
 	    cVec[k][m] = cVec[k][m] - L*rint (cVec[k][m]/L);
 	  } 
       }
-    m = 0;
     for (m1 = 0; m1 < NB; m1 ++) 
       {
   	for (m2 = 0; m2 < NB; m2 ++) 
 	  {
-	    m = m + 1;
-	    mDif = cMat[m1 * NA + cAtom1[m2]] -
-	      cMat[m1 * NA + cAtom2[m2]];
-	    cvMat[m] = 0.;
-	    if (mDif != 0) cvMat[m] = mDif * (cVec[0][m1] * cVec[0][m2] +
+	    mDif = cMat[m1][cAtom1[m2]]/Oparams.m[m1] - cMat[m1][cAtom2[m2]]/Oparams.m[m2];
+	    cvMat[m1][m2] = 0.;
+	    if (mDif != 0) cvMat[m1][m2] = mDif * (cVec[0][m1] * cVec[0][m2] +
 			       		      cVec[1][m1] * cVec[1][m2] + cVec[2][m1] * cVec[2][m2]);
 	  } 
       }
@@ -298,6 +344,10 @@ void  AnlzConstraintDevs (void)
 	}
     }
   constraintDevL = sqrt (sumL / (Oparams.parnum * (NA-1))) - Oparams.d;
+  if (constraintDevL > 1E-6)
+    {
+      /* do Shake!! */
+    }
 }
 #endif
 #ifdef MD_RESPA_NPT
