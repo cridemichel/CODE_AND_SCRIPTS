@@ -1017,7 +1017,7 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   COORD_TYPE FxNose, FyNose, FzNose, dlns; 
   COORD_TYPE s1i;
   COORD_TYPE DT, A, dt2; 
-  int i, a, k, numok;
+  int i, a, k, numok, dof;
   const int MAXNUMIT = 40;
   /* ******************************************************************* */
   dt2 = dt * 0.5;
@@ -1055,7 +1055,10 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	}
     }
   s1i = s1;    /* s1i = s1(t+dt/2) */
-#if !defined(MD_FENE)
+#if defined(MD_FENE)
+  dof = 3*NA;
+#else
+  dof = 2*NA + 1;
   shakeVel(Nm, dt, m, maxIt, NB, d, tol, vx, vy, vz);
 #endif
   //printf("Vol1: %f Vol1o1: %f Vol1o2: %f Vol1t:%f\n", 
@@ -1064,7 +1067,7 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
     {
       kinet(Nm, vx, vy, vz, 0.0);  /* K(t+dt) */
 
-      DT = s * (2.0 * K - ((2.0 * NA + 1) * Nm - 3.0) * Oparams.T) / 
+      DT = s * (2.0 * K - (dof * Nm - 3.0) * Oparams.T) / 
 	OprogStatus.Q;
 #if 0
       printf("K guess: %.20f s1=%.15f s2=%.15f Oparams.T=%f DT=%f\n", K, s1, s2, Oparams.T, DT);
@@ -1199,7 +1202,7 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
     dlnVSq; 
   COORD_TYPE Vol1g, s1i, Vol1i;
   COORD_TYPE DT, A, B, DP, dt2; 
-  int i, a, k, numok;
+  int i, a, k, numok, dof;
   const int MAXNUMIT = 20;
 
   /* ******************************************************************* */
@@ -1247,14 +1250,17 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   /* Vol1 = 2.0 * Vol1t - Vol1o1; *//* Verlet */  
   
   Vol1 = 5.0 * Vol1t / 2.0 - 2.0 * Vol1o1 + Vol1o2 / 2.0;  
-#if !defined(MD_FENE)
+#if defined(MD_FENE)
+  dof = 3 * NA;
+#else
+  dof = 2 * NA + 1;
   shakeVel(Nm, dt, m, maxIt, NB, d, tol, vx, vy, vz);
 #endif
   for(k=0; k < MAXNUMIT; k++) /* Loop to convergence (NUMIT ~ 5 is enough)*/
     {
       kinet(Nm, vx, vy, vz, Vol1);  /* K(t+dt) */
 
-      DT = s * (2.0 * K - ((2.0 * NA + 1)* Nm - 3.0) * Oparams.T) / 
+      DT = s * (2.0 * K - (dof * Nm - 3.0) * Oparams.T) / 
 	OprogStatus.Q;
       A = s1i + 0.5 * dt * DT;
       /* s1(t+dt) */
