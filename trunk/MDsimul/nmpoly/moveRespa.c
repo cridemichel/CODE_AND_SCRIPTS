@@ -477,7 +477,7 @@ void updLs(double dt, double c)
   DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
   printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);
   Ps += DT * cdt2;
-  Ps = Ps / (1 - Ps*cdt*s/OprogStatus.Q);
+  Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
   Ps += DT * cdt2;
   s = s / (1 - s*Ps*cdt2/OprogStatus.Q);
 }
@@ -547,7 +547,7 @@ void updPv(double dt, double c)
 #else
   press = calcT1diagAtRespa(Nm) + (WShort + WLong + WCShort + WCLong) / Vol; /* press(t+dt) */
 #endif
-  printf(">>>>>>>>> press: %f DP: %f\n", press, DP);
+  printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);
   DP = press - Oparams.P;
   Pv += DP  * cdt2;
   Pv *= exp(-cdt*Ps*s/OprogStatus.Q);
