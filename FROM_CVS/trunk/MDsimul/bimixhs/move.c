@@ -1420,7 +1420,7 @@ void rebuildLinkedList(void);
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
-  char fileop[1024], fileop2[1024];
+  char fileop[1024], fileop2[1024], fileop3[1024];
   FILE *bf;
   const char sepStr[] = "@@@\n";
   int i, innerstep=0;
@@ -1487,9 +1487,9 @@ void move(void)
       else if (evIdB == ATOM_LIMIT + 8)
 	{ 
 	  sprintf(fileop2 ,"Store-%d-%d", 
-		  OprogStatus.KK, OprogStatus.JJ);
-	  strcpy(fileop, absTmpAsciiHD(fileop2));
+		OprogStatus.KK, OprogStatus.JJ);
 	  /* store conf */
+	  strcpy(fileop, absTmpAsciiHD(fileop2));
 	  if ( (bf = fopenMPI(fileop, "w")) == NULL)
 	    {
 	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
@@ -1503,18 +1503,18 @@ void move(void)
 	  writeAllCor(bf);
 	  fclose(bf);
 #ifdef MPI
-          sprintf(fileName, "/bin/gzip %s_R%d", fileop, my_rank);
-#else
+          sprintf(fileop3, "/bin/gzip %s_R%d", fileop, my_rank);
+#else 
           sprintf(fileop3, "/bin/gzip %s", fileop);
 #endif
-          system(fileop3);
+	  system(fileop3);
 	  OprogStatus.JJ++;
 	  if (OprogStatus.JJ == OprogStatus.NN)
 	    {
 	      OprogStatus.JJ = 0;
 	      OprogStatus.KK++;
 	    }
-	  OprogStatus.nextStoreTime = OprogStatus.storerate *
+          OprogStatus.nextStoreTime = OprogStatus.storerate *
 	    (pow(OprogStatus.base,OprogStatus.NN)*OprogStatus.KK+pow(OprogStatus.base,OprogStatus.JJ));
 	  ScheduleEvent(-1, ATOM_LIMIT + 7, OprogStatus.nextStoreTime);
 	}
