@@ -14,7 +14,8 @@ extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 void setToZero(COORD_TYPE* ptr, ...);
 double maxax[2];
-
+extern int *lastbump;
+extern double *lastcol;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
  in the move function and in the measuring functions, note that the variables 
@@ -585,9 +586,9 @@ void wrap_initCoord(void)
   vx[0] = 0.1;
   vy[0] = 0;
   vz[0] = 0;
-  wx[0] = 1.0;
-  wy[0] = -1.0;
-  wz[0] = 0.5;
+  wx[0] = .003;
+  wy[0] = -1.5;
+  wz[0] = -0.5;
 #if 0
   uxx[0] = 0.707;
   uyx[0] = -0.707;
@@ -600,13 +601,13 @@ void wrap_initCoord(void)
   uyz[0] = 0.0;
   uzz[0] = 1.0;
   rx[1] = 2.0;
-  ry[1] = 0.0;
-  rz[1] = 0;
+  ry[1] = 1.0;
+  rz[1] = 0.5;
   vx[1] = -0.1;
   vy[1] = 0;
   vz[1] = 0;
-  wx[1] =-2;
-  wy[1] = -1;
+  wx[1] =-1;
+  wy[1] = -0.3;
   wz[1] = 0.1;
 }
 
@@ -893,8 +894,10 @@ void usrInitAft(void)
   /*    
      ** CHECK FOR PARTICLE OVERLAPS **
      ** CALCULATE ENERGY            ** */
-    /*lastcol= malloc(sizeof(double)*Oparams.parnum);*/
+    lastcol= malloc(sizeof(double)*Oparams.parnum);
     atomTime = malloc(sizeof(double)*Oparams.parnum);
+    lastbump = malloc(sizeof(int)*Oparams.parnum);
+    
     cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
     inCell[0] = malloc(sizeof(int)*Oparams.parnum);
     inCell[1]= malloc(sizeof(int)*Oparams.parnum);
@@ -932,6 +935,8 @@ void usrInitAft(void)
     for (i=0; i < Oparams.parnum; i++)
       {
 	R[i] = matrix(3, 3);
+	lastbump[i] = -1;
+	lastcol[i] = 0.0;
       }
     u2R();
     if (OprogStatus.CMreset==-1)

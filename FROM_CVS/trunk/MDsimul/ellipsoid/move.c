@@ -13,7 +13,7 @@ double **Ia, **Ib, **invIa, **invIb;
 #else
 double Ia, Ib, invIa, invIb;
 #endif
-int lastbump[2]={-1,-1};
+int *lastbump;
 extern double maxax[2];
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
@@ -111,7 +111,7 @@ const double timbig = 1E12;
 #ifdef MD_GRAVITY
 extern double g2, mgA, mgB;
 #endif
-/* double *lastcol;*/
+double *lastcol;
 double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
@@ -646,9 +646,6 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   MD_DEBUG(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
-  lastbump[0]=i;
-  lastbump[1]=j;
-
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
@@ -1718,8 +1715,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
 double tdist;
 double rA[3], rB[3];
 #undef MD_GLOBALNRD
-/* funzione che calcola lo Jacobiano */
-void fdjacDist(int n, double x[], double fvec[], double **df, 
+void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 {
   int na; 
@@ -1812,8 +1808,154 @@ void fdjacDist(int n, double x[], double fvec[], double **df,
    * essere anche negativa! */
   for (k1=0; k1 < 3; k1++)
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
-  MD_DEBUG(printf("F2BZdist fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+  MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
+}
+
+/* funzione che calcola lo Jacobiano */
+void fdjacDist(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
+{
+  int na; 
+  double fx[3], gx[3];
+  int k1, k2, k3;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*Xa[k1][k2];
+	  df[k1][k2+3] = 2.0*Sqr(x[6])*Xb[k1][k2];
+	}
+    }
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
+	}
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  for (k1 = 0; k1 < 5; k1++)
+    {
+      df[3][k1+3] = 0;
+    } 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = 0;
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1+3] = gx[k1];
+    } 
+  df[4][6] = df[4][7] = 0;
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][6] = 2.0*x[6]*gx[k1];
+      df[k1][7] = 0.0;
+    } 
+
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2] = 1 + 2.0*Sqr(x[7])*Xa[k1][k2];
+	  else 
+	    df[k1+5][k2] = 2.0*Sqr(x[7])*Xa[k1][k2];
+	}
+    }
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2+3] = -1;
+	  else 
+	    df[k1+5][k2+3] = 0;
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][6] = 0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][7] = 2.0*x[7]*fx[k1];
+#ifndef MD_GLOBALNRD
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+ fvec[4] = 0.5*fvec[4]-1.0;
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*Sqr(x[7]); 
+  MD_DEBUG(printf("F2BZdist fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+#endif
+}
+void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3])
+{
+  int k1, k2; 
+  double fx[3], gx[3];
+  /* x = (r, alpha, t) */ 
+  
+#if 0
+  printf("Xa=\n");
+  print_matrix(Xa, 3);
+  printf("Xb=\n");
+  print_matrix(Xb, 3);
+#endif
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3] - rB[k2]);
+    }
+
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
+
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
+  MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+  MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 }
 
 void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double shift[3])
@@ -1859,9 +2001,9 @@ void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double s
   /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
    * essere anche negativa! */
   for (k1=0; k1 < 3; k1++)
-    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
+    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*Sqr(x[7]); 
   MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
-  MD_DEBUG(printf("fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+  MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 }
 void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
@@ -1938,6 +2080,103 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
+double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
+     		double *vecgsup, int calcguess)
+{
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3];
+  double ti, segno;
+  int retcheck;
+  double Omega[3][3], nf, ng, gradf[3], gradg[3];
+  int k1, k2, na;
+  MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+  ti = t - atomTime[i];
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
+  /* ...and now orientations */
+  UpdateOrient(i, ti, Rt, Omega);
+  na = (i < Oparams.parnumA)?0:1;
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
+
+  ti = t - atomTime[j];
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+  UpdateOrient(j, ti, Rt, Omega);
+  na = (j < Oparams.parnumA)?0:1;
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+  if (calcguess)
+    {
+      calc_intersec(rB, rA, Xa, rC);
+      calc_intersec(rA, rB, Xb, rD);
+      MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
+		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
+      calc_grad(rC, rA, Xa, gradf);
+      calc_grad(rD, rB, Xb, gradg);
+      MD_DEBUG(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
+		      gradf[0], gradf[1], gradf[2], gradg[0], gradg[1], gradg[2]));
+      nf = calc_norm(gradf);
+      ng = calc_norm(gradg);
+      
+      vecg[6] = sqrt(nf/ng);
+      for (k1=0; k1 < 3; k1++)
+	{
+	  vecg[k1] = rC[k1];
+	  vecg[k1+3] = rD[k1];
+	  rDC[k1] = rD[k1] - rC[k1];
+	}
+      vecg[7] = sqrt(calc_norm(rDC)/nf);  
+    }
+  else
+    {
+      for (k1 = 0; k1 < 8; k1++)
+	vecg[k1] = vecgsup[k1];
+    }
+  MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
+  newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift); 
+  if (retcheck != 0)
+    {
+      printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      Oparams.time = t;
+      store_bump(i, j);
+      exit(-1);
+    }
+  for (k1 = 0; k1 < 8; k1++)
+    {
+      vecgsup[k1] = vecg[k1]; 
+    }  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      r1[k1] = vecg[k1];
+      r2[k1] = vecg[k1+3];
+      r12[k1] = r1[k1] - r2[k1];
+    }
+  *alpha = vecg[6];
+  segno = -1;
+  /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++) 
+      segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
+#if 1
+  if (segno > 0)
+    return calc_norm(r12);
+  else
+    return -calc_norm(r12);
+#else
+#if MD_DEBUG(x) == x
+  for (k1 = 0; k1 < 3; k1++)
+    rDC[k1] = r1[k1] - r2[k1];
+    {
+      FILE *f;
+      f =fopen("distNeg.dat","a");
+      fprintf(f,"%.15f %.15f\n", Oparams.time, (segno>0)?calc_norm(rDC):-calc_norm(rDC));  
+      fclose(f);
+    }
+  return calc_norm(rDC);
+#endif
+#endif
+}
 double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -1995,9 +2234,10 @@ double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2,
   newtDist(vecg, 8, &retcheck, funcs2beZeroedDist, i, j, shift); 
   if (retcheck != 0)
     {
-      printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      printf("[calcDist] I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      Oparams.time = t;
       store_bump(i, j);
-      exit(-1);
+      //exit(-1);
     }
   for (k1 = 0; k1 < 8; k1++)
     {
@@ -2010,16 +2250,21 @@ double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2,
       r12[k1] = r1[k1] - r2[k1];
     }
   *alpha = vecg[6];
+#if 0
   segno = -1;
   /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++) 
       segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
+#endif
 #if 1
+  return calc_norm(r12);
+#if 0
   if (segno > 0)
     return calc_norm(r12);
   else
     return -calc_norm(r12);
+#endif
 #else
 #if MD_DEBUG(x) == x
   for (k1 = 0; k1 < 3; k1++)
@@ -2206,38 +2451,91 @@ int refine_contact(int i, int j, double t, double vecgd[8], double shift[3],doub
        * tuttavia se t è minore di zero per errori di roundoff? */
       /* Notare che i centroidi si possono overlappare e quindi t può
        * essere tranquillamente negativo */
-      MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
-		      vecg[4], Oparams.time));
+      MD_DEBUG(printf("i=%d j=%d <<< vecg[4]=%.15f time:%.15f\n",
+		      i, j, vecg[4], Oparams.time));
       return 0;
     }
   else
     {
+#if 0
+      if (!vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
+	{
+	  MD_DEBUG(printf("vc is positive!\n"));
+	  MD_DEBUG(printf("t=%.15f collision predicted %d-%d\n",
+			  Oparams.time, i, j));
+	  return 0;
+	}
+#endif
       return 1; 
     }
 }
 int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
-  double h, d1, d2, alpha, vecgd[8], t, r1[3], r2[3]; 
+  double h, d1, d2, d1Neg, d1Pos, alpha, vecgd[8], t, r1[3], r2[3]; 
   double vd, normddot, ddot[3], maxddot, delt;
   const double epsd = 0.001; 
   int foundrc, retcheck, kk;
   t = t1;
   MD_DEBUG(printf("[locate_contact] t1=%f t2=%f shift=(%f,%f,%f)\n", t1, t2, shift[0], shift[1], shift[2]));
-  MD_DEBUG(printf(">>>>d1:%f\n", d1));
   h = 0.01;//EPS*(t2-t1);
+  if (lastbump[i]==j && lastbump[j]==i)
+    {
+      t += h;
+      MD_DEBUG(printf("last collision was between %d-%d\n",i,j));
+      MD_DEBUG(printf("atomTime[%d]:%.15G atomTime[%d]:%.15G\n", i, atomTime[i], j, atomTime[j])); 
+    }
+  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  MD_DEBUG(printf("distances d1=%.12G", d1));
+#if 1
+  d1Pos = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  MD_DEBUG(printf("distances d1=%.12G d1Neg: %.12G t1=%.15G curtime=%.15G\n", d1Pos, d1,
+		  t1, Oparams.time));
+  
+  if (fabs(d1-d1Pos)>1E-3)
+    {
+      printf("distances differ d1=%f d1Neg: %f\n", d1Pos, d1);
+      //exit(-1);
+    }
+#endif
+#if 1
   if ((lastbump[0]==i || lastbump[0]==j) &&
       (lastbump[1]==i || lastbump[1]==j))
     {
       MD_DEBUG(printf("last collision was between (%d-%d)\n", i, j));
-      t += h;
+      while (d1 < 0)
+	{
+	  t += h;
+	  d1 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
+	}
     }
-  d1 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+#endif
+  MD_DEBUG(printf(">>>>d1:%f\n", d1));
   foundrc = 0;
-  if (d1  < 0)
+#if 0
+  if (d1 < 0)
+    {
+      return 0;
+    }
+#endif
+#if 0
+  if (d1 < 0)
     {
       if (refine_contact(i, j, t, vecgd, shift, vecg))
-	return 1;
+	{
+	  MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
+	  return 1;
+	}
+      else 
+	{
+	  MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+	  if (d2 < 0)
+	    {
+	      MD_DEBUG(printf("d2 < 0 and I did not find contact point, boh...\n"));
+	      return 0;
+	    }
+	}
     }
+#endif
   while (t < t2)
     {
 #if 0
@@ -2247,20 +2545,47 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
       
 #endif
       t += h;
-      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
+      d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f\n", t, d1, d2));
       if (d1 > 0 && d2 < 0)
 	{
+#if 0
+	  if (d2 <0)
+	    {
+	      t -= h;
+	      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
+	    }
+#endif
 	  if (refine_contact(i, j, t, vecgd, shift, vecg))
 	    {
 	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-	      return 1;
+	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
+	      if (vecg[4]>t2 || vecg[4]< t1 || 
+		  (lastbump[i] == j && lastbump[j]==i && fabs(t - lastcol[i])<1E-12))
+		return 0;
+	      else
+		return 1;
 	    }
 	  else 
-	    continue;
+	    {
+	      MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+	      if (d2 < 0)
+		{
+		  MD_DEBUG(printf("d2 < 0 and I did not find contact point, boh...\n"));
+		  return 0;
+		  //exit(-1);
+		}
+	      else
+		continue;
+	      
+	    }
 	}
       d1 = d2;
     }
+  MD_DEBUG(  
+  if (foundrc==0)
+    printf("%d-%d t=%.12G > t2=%.12G I did not find any contact point!\n", i, j, t, t2);
+  )
   return foundrc;
 }
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[8])
@@ -2709,7 +3034,6 @@ no_core_bump:
 
 #else
 		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
-			  
 		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
 	    	      d = Sqr (b) - vv * (distSq - sigSq);
 		
@@ -2801,6 +3125,7 @@ no_core_bump:
 		      //exit(-1);
 		      if (!locate_contact_trivial(na, n, shift, t1, t2, vecg))
 			continue;
+		     			  
 #if 0
 	    	      gd = (d2 - d1)/h; 
     		      if (fabs(gd) > 1E-12)
@@ -3154,6 +3479,10 @@ void ProcessCollision(void)
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+#else
+  lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+  lastbump[evIdA]=evIdB;
+  lastbump[evIdB]=evIdA;
 #endif
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
@@ -3535,10 +3864,11 @@ void move(void)
 	  R2u();
 #if 0
 	    {
-	      static double shift[3] = {0,0,0}, vecg[8];
+	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double r1[3], r2[3], alpha;
 	      static int first = 1;
 	      calcDist(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecg, first);
+	      calcDistNeg(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecgNeg, first);
 	      if (first == 1)
 		first = 0;
 	    }
