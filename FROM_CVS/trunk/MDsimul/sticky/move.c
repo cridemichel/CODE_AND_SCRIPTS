@@ -1683,6 +1683,55 @@ extern int check_point(char* msg, double *p, double *rc, double **XX);
 extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
 extern int maxitsRyck;
 extern double sigmaSqSticky;
+double calcDistNegOne(double t, int i, int j, int nn, double shift[3])
+{
+  double distmin, distSq, ti;
+  double ratA[NA][3], ratB[NA][3], dist;
+  int a, b, firstdist = 1, nn, kk;
+  double Omega[3][3];
+  int k1, k2, na;
+  MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+  ti = t - atomTime[i];
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
+  /* ...and now orientations */
+  UpdateOrient(i, ti, RtA, Omega);
+  /* calcola le posizioni nel laboratorio degli atomi della molecola */
+  BuildAtomPos(i, rA, RtA, ratA);
+  na = (i < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      /* qui deve scalare i raggi degli atomi che compongono la molecola */
+    }
+  ti = t - atomTime[j];
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+  UpdateOrient(j, ti, RtB, Omega);
+  na = (j < Oparams.parnumA)?0:1;
+  BuildAtomPos(j, rB, RtB, ratB);
+  if (OprogStatus.targetPhi > 0)
+    {
+      /* qui deve scalare i raggi degli atomi che compongono la molecola */
+    }
+  /* calcola sigmaSq[][]!!! */
+  distSq = 0;
+  for (kk=0; kk < 3; kk++)
+    distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+  return sqrt(distSq) - Oparams.sigmaSticky;
+#if 0
+  if (firstdist || fabs(dist) < fabs(distmin))
+    {
+      firstdist = 0;
+      distmin = dist;
+      *amin = mapbondsa[nn];
+      *bmin = mapbondsb[nn];
+    }
+#endif
+}
+
 /* N.B. per la silica tale routine va cambiata! */
 double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double dists[MD_PBONDS])
@@ -2079,7 +2128,7 @@ double distfunc(double x)
   return y;
 }
 
-int interpol(int i, int j, int a, int b, 
+int interpol(int i, int j, int nn, 
 	     double t, double delt, double d1, double d2,
 	     double *troot, double shift[3], int bracketing)
 {
@@ -2087,7 +2136,7 @@ int interpol(int i, int j, int a, int b,
   double d3, Delta, t1, t2;
   double r1[3], r2[3], alpha, xb1[2], xb2[2], dists[MD_PBONDS];
   /* NOTA: dists di seguito può non essere usata? controllare!*/
-  d3 = calcDistNegOne(t+delt*0.5, i, j, a, b, shift);
+  d3 = calcDistNegOne(t+delt*0.5, i, j, nn, shift);
 #if 0
   if (d1 > OprogStatus.epsd)
     {
@@ -2283,7 +2332,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  if (crossed[nn]!=MD_EVENT_NONE)
 	    {
 #ifndef MD_NOINTERPOL  
-	      if (interpol(i, j, mapbondsa[nn], mapbondsb[nn], 
+	      if (interpol(i, j, nn, 
 			   t-delt, delt, distsOld[nn], dists[nn], &troot, shift, 0))
 #endif
 		{
@@ -2304,7 +2353,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #ifndef MD_NOINTERPOL
 	  if (tocheck[nn])
 	    {
-	      if (interpol(i, j, mapbondsa[nn], mapbondsb[nn], t-delt, delt, distsOld[nn], dists[nn], 
+	      if (interpol(i, j, nn, t-delt, delt, distsOld[nn], dists[nn], 
 			   &troot, shift, 1))
 		dorefine[nn] = MD_EVENT_NONE;
 	      else 

@@ -413,6 +413,7 @@ void linminConstr(double p[], double xi[], int n, double *fret, double (*func)(d
   //free_vector(xicom,1,n); free_vector(pcom,1,n);
 }
 #endif
+#if 0
 void linmin(double p[], double xi[], int n, double *fret, double (*func)(double []))
 /*Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and 
  * resets p to where the function func(p) takes on a minimum along the direction xi from p,
@@ -453,6 +454,7 @@ void linmin(double p[], double xi[], int n, double *fret, double (*func)(double 
     } 
   //free_vector(xicom,1,n); free_vector(pcom,1,n);
 }
+#endif
 #define MOV3(a,b,c,d,e,f) (a)=(d);(b)=(e);(c)=(f);
 double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)(double), double tol, double *xmin) 
   /* Given a function f and its derivative function df, and given a bracketing triplet of abscissas ax, bx, cx
@@ -1036,6 +1038,7 @@ double calc_dist(double *p)
   D = sqrt(D);
   return D;
 }
+#if 0
 void updateByRot(double p[], double xi[])
 {
   int kk, k1, k2;
@@ -1144,6 +1147,7 @@ void updateByRot(double p[], double xi[])
   //if (scp < 0)
     //printf("scp=%.15G distini=%.15G distfine=%.15G phiA=%.15G phiB=%.15G\n", scp, distini, distfine, phiA,phiB);
 }
+#endif
 double  cgfuncRyck(double *vec);
 double zbrentRyck(double (*func)(double), double x1, double x2, double tol);
 double get_sign(double *vec);
