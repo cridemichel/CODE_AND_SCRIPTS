@@ -1085,7 +1085,7 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
 	      mols[*nf][*i].bond[nb-1].thickness = atof(s3);
 	      mols[*nf][*i].bond[nb-1].color     = parsecol(s4);
 	      defbondthick = atoi(s3);
-	      defbondcolor = atoi(s4);
+	      defbondcolor = parsecol(s4);
 	    }
 	  else if (sscanf(ns, "[%[^,],%[^]]",s1,s2)==2)
 	    {
