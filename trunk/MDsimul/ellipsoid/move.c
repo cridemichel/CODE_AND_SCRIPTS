@@ -486,6 +486,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double delpx, delpy, delpz, sigSq, wrx, wry, wrz, rACn[3], rBCn[3], rnI[3];
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double norm[3], Ia[3][3], Ib[3][3], invIa[3][3], invIb[3][3];
+  double  Xa[3][3], Xb[3][3];
   double modn, denom;
   int na, a, b;
   if (i < parnumA && j < parnumA)
@@ -973,6 +974,24 @@ int bound(int na, int n)
   return 0;
 }
 #endif
+void funcs2beZeroed(int n, double x[], double fvec[], double gradvecA[], double gradvecB[], 
+		    int i, int j)
+{
+  int na; 
+  double  Xa[3][3], Xb[3][3];
+
+  /* x = (x, alpha, t) */ 
+  na = (i < Oparams.parnumA)?0:1;
+  tRDiagR(i, Xa, a[na], b[na], c[na]);
+  na = (j < Oparams.parnumA)?0:1;
+  tRDiagR(j, Xb, a[na], b[na], c[na]);
+
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      fvec[k1] = Xa[k1][k2]*(x[k2]- rA);
+  fvec[3] = ;
+  fvec[4] = ;
+}
 void rebuildCalendar(void);
 void PredictEvent (int na, int nb) 
 {
@@ -984,6 +1003,7 @@ void PredictEvent (int na, int nb)
    *      */
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
   b, d, t, tInt, vv;
+  int et;
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
   double Lzx, h1, h2, sig, hh1;
@@ -1361,7 +1381,12 @@ no_core_bump:
     			  if (d >= 0.) 
 			    {
 			      t = - (sqrt (d) + b) / vv;
+			     
 			      /* t è il guess per il newton-raphson */
+			      /* come guess per x possiamo usare il punto di contatto 
+			       * fra i centroidi */
+			      /* vecg è un guess per il vettore a 5 dimensioni (x, alpha ,t) */
+			      newt(vecg, 5, &check, funcs2beZeroed()); 
 			      if (t < 0)
 				{
 #if 1
