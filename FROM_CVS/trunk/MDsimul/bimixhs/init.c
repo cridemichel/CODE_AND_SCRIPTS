@@ -1137,7 +1137,7 @@ void usrInitAft(void)
       OprogStatus.lastcoll = -1;
       calcT();
 #endif
-            OprogStatus.DQxy = 0.0;
+      OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
       OprogStatus.DQzx = 0.0;
 #ifdef MD_GRAVITY
