@@ -124,8 +124,12 @@ const double timbig = 1E12;
 /* used by linked list routines */
 double *lastcol;
 double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
-int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
-    cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
+int  **tree, cellRange[2*NDIM], initUcellx, initUcelly, initUcellz;
+#ifdef MD_SILICA
+int *inCell[2][3], *cellList[2][2], cellsx[2][2], cellsy[2][2], cellsz[2][2];
+#else
+int *inCell[3], *cellList, cellsx, cellsy, cellsz;
+#endif
 int evIdA, evIdB, parnumB, parnumA, evIdD, evIdE;
 int evIdC;
 extern int *bondscache, *numbonds, **bonds;
@@ -404,8 +408,8 @@ void rebuild_linked_list()
 #endif
 	  j = (inCell[iB][2][n]*cellsy[iA][iB] + inCell[iB][1][n])*cellsx[iA][iB] + 
 	    inCell[iB][0][n] + Oparams.parnum;
-	  cellList[iB][n] = cellList[iB][j];
-	  cellList[iB][j] = n;
+	  cellList[iA][iB][n] = cellList[iA][iB][j];
+	  cellList[iA][iB][j] = n;
 	}
     }
 }
@@ -3593,7 +3597,7 @@ void PredictEvent (int na, int nb)
 
   for (iB = 0; iB < 2; iB++)
     {
-      for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[iB][k];
+      for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
       for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
 	{
 	  jZ = inCell[iB][2][na] + iZ;    
@@ -3610,7 +3614,7 @@ void PredictEvent (int na, int nb)
 	      jZ = 0;    
 	      shift[2] = L;
 	    }
-	  for (iY = cellRange[iB][2]; iY <= cellRange[iB][3]; iY ++) 
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
 	    {
 	      jY = inCell[iB][1][na] + iY;    
 	      shift[1] = 0.0;
@@ -3624,7 +3628,7 @@ void PredictEvent (int na, int nb)
 		  jY = 0;    
 		  shift[1] = L;
 		}
-	      for (iX = cellRange[iB][0]; iX <= cellRange[iB][1]; iX ++) 
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
 		{
 		  jX = inCell[iB][0][na] + iX;    
 		  shift[0] = 0.0;
@@ -4405,6 +4409,46 @@ void ProcessCollision(void)
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
 }
+#ifdef MD_SILICA
+void docellcross(int k, double velk, double *rkptr, int cellsk, int iB)
+{
+#if 0
+  if (inCell[0][evIdA]+1> cellsx ||inCell[1][evIdA]+1> cellsy||inCell[2][evIdA]+1> cellsz) 
+    {printf("PRIMAin cell cross ?!?\n");
+      printf("velk: %f (%d,%d,%d) (%d,%d,%d) k=%d cellsk:%d\n",velk,  cellsx , cellsy,cellsz,
+	     inCell[0][evIdA],inCell[1][evIdA], inCell[2][evIdA], k, cellsk );}
+#endif
+      if (velk > 0.0)
+	{
+	  inCell[iB][k][evIdA] = inCell[iB][k][evIdA] + 1;
+	  cellRange[2 * k] = 1;
+	  if (inCell[iB][k][evIdA] == cellsk) 
+	    {
+	      inCell[iB][k][evIdA] = 0;
+	      *rkptr = -L2;
+	      OprogStatus.DR[evIdA][k]++;
+	    }
+
+	}
+      else
+	{ 
+	  cellRange[2 * k + 1] = -1;
+	  inCell[iB][k][evIdA] = inCell[iB][k][evIdA] - 1;
+	  if (inCell[iB][k][evIdA] == -1) 
+	    {
+	      inCell[iB][k][evIdA] = cellsk - 1;
+	      *rkptr = L2;
+	      OprogStatus.DR[evIdA][k]--;
+	    }
+	}
+#if 0
+      if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
+	{printf("in cell cross ?!?\n");
+	  printf("velk: %f(%d,%d,%d) (%d,%d,%d) k=%d cellsk:%d\n",  velk,cellsx , cellsy,cellsz,
+		 inCell[0][evIdA],inCell[1][evIdA], inCell[2][evIdA], k, cellsk );}
+#endif
+}
+#else
 void docellcross(int k, double velk, double *rkptr, int cellsk)
 {
 #if 0
@@ -4443,6 +4487,88 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 		 inCell[0][evIdA],inCell[1][evIdA], inCell[2][evIdA], k, cellsk );}
 #endif
 }
+#endif
+#ifdef MD_SILICA
+void ProcessCellCrossing(int iB)
+{
+  int k, n, int iA;
+
+  UpdateAtom(evIdA);
+  
+  iA = (evIdA < Oparams.parnumA)?0:1;
+  /* NOTA: cellList[i] con 0 < i < Oparams.parnum è la cella in cui si trova la particella
+   * i-esima mentre cellList[j] con 
+   * Oparams.parnum <= j < cellsx*cellsy*cellsz+Oparams.parnum
+   * è la prima particella che si trova nella cella j-esima
+   */
+  n = (inCell[iB][2][evIdA] * cellsy[iA][iB] + inCell[iB][1][evIdA] )*cellsx[iA][iB] + 
+    inCell[iB][0][evIdA]
+    + Oparams.parnum;
+
+  while (cellList[iA][iB][n] != evIdA) 
+    n = cellList[iA][iB][n];
+  /* Eliminazione di evIdA dalla lista della cella n-esima */
+  cellList[iA][iB][n] = cellList[iA][iB][evIdA];
+  for (k = 0; k < NDIM; k++)
+    { 
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+#ifdef MD_GRAVITY
+  j = evIdB - ATOM_LIMIT;
+  if (j >= 100)
+    {
+      k = (j - 100) % 3;
+      iB = (j - 100) / 3;
+      switch (k)
+	{
+	case 0: 
+	  docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[iA][iB], iB);
+	  break;
+	case 1: 
+	  docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[iA][iB], iB);
+	  break;
+	case 2:
+	  docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[iA][iB], iB);
+	  break;
+	}
+    }
+  else
+    {
+      k = j / 2;
+      cellRange[j] = 0;
+      ProcessCollWall();
+    }
+#else
+  k = evIdB - 100 - ATOM_LIMIT; 
+  /* trattandosi di due specie qui c'è un due */
+  iB = k / 3;
+  k = k % 3;
+#if 0
+  if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
+    printf("Cells(%d,%d,%d)\n", inCell[0][evIdA],inCell[1][evIdA],inCell[2][evIdA]);
+#endif
+  switch (k)
+    {
+    case 0: 
+      docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[iA][iB], iB);
+      break;
+    case 1: 
+      docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[iA][iB], iB);
+      break;
+    case 2:
+      docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[iA][iB], iB);
+      break;
+    }
+#endif
+  PredictEvent(evIdA, evIdB);
+  n = (inCell[iB][2][evIdA] * cellsy[iA][iB] + inCell[iB][1][evIdA])*cellsx[iA][iB] + 
+    inCell[iB][0][evIdA] + Oparams.parnum;
+  /* Inserimento di evIdA nella nuova cella (head) */
+  cellList[iA][iB][evIdA] = cellList[iA][iB][n];
+  cellList[iA][iB][n] = evIdA;
+}
+#else
 void ProcessCellCrossing(void)
 {
   int k, n;
@@ -4515,11 +4641,12 @@ void ProcessCellCrossing(void)
   cellList[evIdA] = cellList[n];
   cellList[n] = evIdA;
 }
+#endif
 void velsBrown(double T)
 {
   comvel_brown(T, Oparams.m); 
 }
-
+#if 0
 void rebuildLinkedList(void)
 {
   int j, n;
@@ -4542,6 +4669,25 @@ void rebuildLinkedList(void)
       cellList[j] = n;
     }
 }
+#endif
+#ifdef MD_SILICA
+void rebuildCalendar(void)
+{
+  int k, n;
+
+  InitEventList();
+  for (k = 0;  k < 3; k++)
+    {
+      for (iB = 0; iB < 2; iB++)
+	{
+	  cellRange[iB][2*k]   = - 1;
+	  cellRange[iB][2*k+1] =   1;
+	}
+    }
+  for (n = 0; n < Oparams.parnum; n++)
+    PredictEvent(n, -2); 
+}
+#else
 void rebuildCalendar(void)
 {
   int k, n;
@@ -4555,6 +4701,7 @@ void rebuildCalendar(void)
   for (n = 0; n < Oparams.parnum; n++)
     PredictEvent(n, -2); 
 }
+#endif
 void distanza(int ia, int ib)
 {
   double dx, dy, dz;
@@ -4565,7 +4712,7 @@ void distanza(int ia, int ib)
   dy = dx - L*rint(dy/L);
   printf("dist(%d,%d): %f\n", ia, ib, sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz)));
 }
-void rebuildLinkedList(void);
+//void rebuildLinkedList(void);
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
