@@ -2853,6 +2853,8 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
+extern int check_point(char* msg, double *p, double *rc, double **XX);
+
 double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -2904,9 +2906,11 @@ retry:
 	  vecgcg[k1] = rC[k1];
 	  vecgcg[k1+3] = rD[k1];
 	}
+      //check_point("calcDistNeg", &vecgcg[3], rB, Xb);
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
       //printf("PRIMA dist=%.15f\n",calc_norm(r12));
+
       distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda1, 1); 
       //distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda2, 1);
       for (k1=0; k1 < 3; k1++)
