@@ -7,7 +7,7 @@ SDHDR4=bimix4.h
 
 UTIL = wtdutil heteroutil bixva 
 
-bimix:  md2asciiBM measures.o forces.o move.o init.o conjgrad.o corutil cri2fra fsk mediafsk basinsSerial calcdrsq calcpress calcSkAB calcSkAA calcSkBB calcSkAAallk#basins$(UTIL)
+bimix:  md2asciiBM measures.o forces.o move.o init.o conjgrad.o corutil cri2fra fsk fk mediafsk basinsSerial calcdrsq calcpress calcSk calcSkAB calcSkAA calcSkBB calcSkAAallk#basins$(UTIL)
 
 link: 
 	simuln.sh $(PERC)/bimix/$(SDHDR) 0 
@@ -37,6 +37,9 @@ basinsSerial: basinsSerial.o forces.o $(COMM)/mdarrayMIX.o init.o
 fsk: Fsk.o $(COMM)/mdarrayMIX.o init.o $(COMM)/mdio.o
 	$(CC) $(INCLUDES) $(LDFLAGS) Fsk.o $(COMM)/mdarrayMIX.o init.o -o $(BIN)/buildfsk -lm
 
+fk: Fk.o $(COMM)/mdarrayMIX.o init.o $(COMM)/mdio.o
+	$(CC) $(INCLUDES) $(LDFLAGS) Fk.o $(COMM)/mdarrayMIX.o init.o -o $(BIN)/buildfk -lm
+
 mediafsk: mediafsk.o 
 	$(CC) $(LDFLAGS) -o $(BIN)/mediafsk mediafsk.o -lm
 
@@ -45,6 +48,8 @@ calcdrsq: calcdrsq.o forces.o $(COMM)/mdarrayMIX.o init.o
 
 calcpress: calcpress.o forces.o $(COMM)/mdarrayMIX.o init.o 
 	$(CC) -g $(LDFLAGS)  calcpress.o init.o forces.o $(COMM)/mdarrayMIX.o -o $(BIN)/calcpress -lm 
+calcSk: calcSk.o forces.o $(COMM)/mdarrayMIX.o init.o 
+	$(CC) $(LDFLAGS)  calcSk.o init.o forces.o $(COMM)/mdarrayMIX.o -o $(BIN)/calcSk -lm 
 calcSkAB: calcSkAB.o forces.o $(COMM)/mdarrayMIX.o init.o 
 	$(CC) $(LDFLAGS)  calcSkAB.o init.o forces.o $(COMM)/mdarrayMIX.o -o $(BIN)/calcSkAB -lm 
 calcSkBB: calcSkBB.o forces.o $(COMM)/mdarrayMIX.o init.o 
@@ -91,6 +96,8 @@ calcdrsq.o: calcdrsq.c $(COMM)/mdarrayMIX.c init.c $(SDHDR) $(COMM)/mdsimul.h
 
 calcpress.o: calcpress.c $(COMM)/mdarrayMIX.c init.c $(SDHDR) $(COMM)/mdsimul.h 
 	$(CC) $(CFLAGS) $(MACROS)   -c $(INCLUDES) -o calcpress.o calcpress.c
+calcSk.o: calcSk.c $(COMM)/mdarrayMIX.c init.c $(SDHDR) $(COMM)/mdsimul.h 
+	$(CC) $(CFLAGS) $(MACROS)   -c $(INCLUDES) -o calcSk.o calcSk.c
 
 calcSkAB.o: calcSkAB.c $(COMM)/mdarrayMIX.c init.c $(SDHDR) $(COMM)/mdsimul.h 
 	$(CC) $(CFLAGS) $(MACROS)   -c $(INCLUDES) -o calcSkAB.o calcSkAB.c
@@ -104,6 +111,9 @@ calcSkAAallk.o: calcSkAAallk.c $(COMM)/mdarrayMIX.c init.c $(SDHDR) $(COMM)/mdsi
 
 Fsk.o: Fsk.c $(COMM)/mdarrayMIX.c $(SDHDR) $(COMM)/mdsimul.h init.c $(COMM)/mdio.c
 	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o Fsk.o Fsk.c
+
+Fk.o: Fk.c $(COMM)/mdarrayMIX.c $(SDHDR) $(COMM)/mdsimul.h init.c $(COMM)/mdio.c
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o Fk.o Fk.c
 	
 mediafsk.o: mediafsk.c 
 	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o mediafsk.o mediafsk.c
