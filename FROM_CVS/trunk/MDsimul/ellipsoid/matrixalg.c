@@ -533,6 +533,28 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
 }
 #endif
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3];
+int check_point(char* msg, double *p, double *rc, double **XX)
+{
+  int k1, k2;
+  double Q;
+  Q=0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  Q += (p[k1]-rc[k1])*XX[k1][k2]*(p[k2]-rc[k2]);  
+	}
+    }
+  Q -= 1.0;
+  if (msg)
+    printf("[%s] should be zero: %.15G\n",msg, Q);
+  else
+    printf("[check_point] should be zero: %.15G\n", Q);
+  if (fabs(Q)>1E-8)
+    return 0;
+  else
+    return 1;
+}
 void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 {
   int kk, done=0, k1, k2;
@@ -542,6 +564,11 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
   sf = 1.0;
   while (!done)
     {
+      printf("sf*dr=%.15G %.15G %.15G dr=%.15G\n", dr[0], dr[1], dr[2], calc_norm(dr));
+      if (!check_point("inside loop", ri, rA, Xa))
+	{
+	  exit(-1);
+	}
       for (kk=0; kk < 3; kk++)
 	{
 	  r1[kk] = ri[kk] + dr[kk]*sf; 
@@ -554,8 +581,8 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 	{
 	  for (k2=0; k2 < 3; k2++)
 	    {
-	      A += gradf[k1]*Xa[k1][k2]*gradf[k2];
-	      B += r1A[k1]*Xa[k1][k2]*gradf[k2];
+	      A += Sqr(OprogStatus.lambda2)*gradf[k1]*Xa[k1][k2]*gradf[k2];
+	      B += OprogStatus.lambda2*r1A[k1]*Xa[k1][k2]*gradf[k2];
 	      //  printf("riA[%d]=%f Xa[%d][%d]=%f\n", r1A[k1], Xa[k1][k2]);
 	      C += r1A[k1]*Xa[k1][k2]*r1A[k2];
 	    }
@@ -584,7 +611,8 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf)
 	{
 	  for (k2 = 0; k2 < 3; k2++)
 	    {
-	      Q += (ri[k1]+sf*dr[k1]+sol*gradf[k1]-rA[k1])*Xa[k1][k2]*(ri[k2]+sf*dr[k2]+sol*gradf[k2]-rA[k2]);  
+	      Q += (ri[k1]+sf*dr[k1]+OprogStatus.lambda2*sol*gradf[k1]-rA[k1])*Xa[k1][k2]*
+		(ri[k2]+ sf*dr[k2]+OprogStatus.lambda2*sol*gradf[k2]-rA[k2]);  
 	    }
 	}
       Q -= 1.0;
@@ -603,12 +631,12 @@ void projectgrad(double *p, double *xi)
   double r1[3], r2[3], rIf[3], rIg[3], pp[3];
   double r1A[3], r2B[3], A1, B1, C1, Delta1, A2, B2, C2, Delta2; 
   double gradf[3], gradg[3];
+#if 0
   for (kk=0; kk < 3; kk++)
     {
       r1[kk] = p[kk]+xi[kk];
       r2[kk] = p[kk+3]+xi[kk+3];
     }
-#if 0
   calc_intersec(r1, rA, Xa, rIf);
   calc_intersec(r2, rB, Xb, rIg);
   for (kk=0; kk < 3; kk++)
@@ -619,11 +647,12 @@ void projectgrad(double *p, double *xi)
       xi[kk+3] = r2[kk] - p[kk+3];
     }
 #endif
+  //check_point("frprmnRyckA", p, rA, Xa);
+  //check_point("frprmnRyckB", &p[3], rB, Xb);
   calc_grad(p, rA, Xa, gradf);
   calc_grad(&p[3], rB, Xb, gradg);
-
-  projonto(r1, xi, rA, Xa, gradf);
-  projonto(r2, &xi[3], rB, Xb, gradg);
+  projonto(p, xi, rA, Xa, gradf);
+  projonto(&p[3], &xi[3], rB, Xb, gradg);
 }
 
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
@@ -634,7 +663,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
    * The routine linmin is called to perform line minimizations. */
 { 
   int j,its,kk;
-  const int ITMAXFR = 200;
+  const int ITMAXFR = 2000;
   const double EPSFR=1E-10, INITSTEP=0.000000001;
   double gg,gam,fp,dgg,norm1, norm2, sp;
   double g[6],h[6],xi[6], dx[3], fx[3], gx[3];
@@ -664,6 +693,9 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 #endif
       for (j=0; j < n; j++)
 	p[j] += g[j];
+      check_point("frprmnRyckA", p, rA, Xa);
+      check_point("frprmnRyckB", &p[3], rB, Xb);
+   
       *fret = (*func)(p);
       //linmin(p,xi,n,fret,func); /* Next statement is the normal return: */
       //printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
@@ -679,9 +711,10 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       sp = 0;
       for (kk = 0; kk < 6; kk++)
 	sp += Sqr(xi[kk]);
+      printf("sp=%.15G\n", sp);
       if (sqrt(sp) < OprogStatus.cgtol)
 	return;
-for (j=0;j<n;j++)
+      for (j=0;j<n;j++)
 	{ 
 	  g[j] = -OprogStatus.lambda2*xi[j]; 
 	}
