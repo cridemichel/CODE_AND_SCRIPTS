@@ -42,7 +42,98 @@ extern int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
 extern void vectProd(double r1x, double r1y, COORD_TYPE r1z, 
 	 double r2x, double r2y, COORD_TYPE r2z, 
 	 double* r3x, double* r3y, COORD_TYPE* r3z);
+#ifdef MD_SQWELL
+extern int *inCell[3], cellsx, cellsy, cellsz;
+extern int *cellList;
+extern int bound(int na, int n);
+int *numbonds;
+double calcpotene(void)
+{
+  double shift[NDIM], Epot; 
+  int cellRangeEne[2 * NDIM], signDir[NDIM], evCode,
+      iX, iY, iZ, jX, jY, jZ, k, n, na;
+  Epot = 0;
+#if 0
+  for (k = 0; k < NDIM; k++)
+    { 
+      cellRangeEne[2*k]   = - 1;
+      cellRangeEne[2*k+1] =   1;
+    }
+  for (na = 0; na < Oparams.parnum; na++)
+    {
+      for (iZ = cellRangeEne[4]; iZ <= cellRangeEne[5]; iZ++) 
+	{
+	  jZ = inCell[2][na] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      jZ = cellsz - 1;    
+	      shift[2] = - L;
+	    } 
+	  else if (jZ == cellsz) 
+	    {
+	      jZ = 0;    
+	      shift[2] = L;
+	    }
+	  for (iY = cellRangeEne[2]; iY <= cellRangeEne[3]; iY ++) 
+	    {
+	      jY = inCell[1][na] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsy - 1;    
+		  shift[1] = -L;
+		} 
+	      else if (jY == cellsy) 
+		{
+		  jY = 0;    
+		  shift[1] = L;
+		}
+	      for (iX = cellRangeEne[0]; iX <= cellRangeEne[1]; iX ++) 
+		{
+		  jX = inCell[0][na] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsx - 1;    
+		      shift[0] = - L;
+		    } 
+		  else if (jX == cellsx) 
+		    {
+		      jX = 0;   
+		      shift[0] = L;
+		    }
+		  n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 
+		  for (n = cellList[n]; n > -1; n = cellList[n]) 
+		    {
+		      if (n < na) 
+			{
+			  if (bound(n,na))
+			    Epot -= Oparams.bheight;
+			}
+		    }
+		}
+	    }
+	}
+    }
+#else
+ for (na = 0; na < Oparams.parnum; na++)
+    Epot -= numbonds[na];
+#endif
+ return 0.5*Epot;
+}
+#endif
+void calcV(void)
+{
+#ifdef MD_SQWELL
+  V = calcpotene();
+#else
+  V = 0;
+#endif
+}
 /* ============================== >>> Energy <<< ============================*/
 void energy(void)
 {
@@ -52,6 +143,7 @@ void energy(void)
   int mol, Nm, i;
   double px, py, pz;
   double invL;
+
 #if 0  
   FILE* mf;
 #endif
@@ -67,6 +159,10 @@ void energy(void)
   E = K + V;
 #else
   E = K;
+#endif
+#ifdef MD_SQWELL
+  V = calcpotene();
+  E = K + V;
 #endif
   /* So now E is the extended hamiltonian that should be an integral of 
      motion */
@@ -105,8 +201,13 @@ void energy(void)
   sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G) Vz=%f\n", Oparams.time,
 	  E, Px, Py, Pz, Vz);
 #else
+#ifdef MD_SQWELL
+  sprintf(TXTA[1], "t=%f E=%.15f V=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time,
+	  E, V, Px, Py, Pz);
+#else
    sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time,
 	  E, Px, Py, Pz);
+#endif
 #endif
   RCMx = 0.0;
   RCMy = 0.0;
@@ -134,7 +235,6 @@ void energy(void)
   fclose(mf);
 #endif
 }
-
 /* ========================== >>> transDiff <<< =============================*/
 void transDiff(void)
 {
