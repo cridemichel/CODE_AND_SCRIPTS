@@ -1088,7 +1088,6 @@ void PredictEvent (int na, int nb)
      		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
 #if defined(MD_SQWELL)|| defined(MD_INFBARRIER)
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
-      		      s = 0;
 		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
 		      collCode = MD_EVENT_NONE;
 		      if (!bound(n, na))
@@ -1102,8 +1101,8 @@ void PredictEvent (int na, int nb)
 			      if (d > 0.0)
 				{
 				  t = (-sqrt (d) - b) / vv;
-				  //if (t > 0)
-				  collCode = MD_OUTIN_BARRIER;
+				  if (t > 0 || (t < 0 && distSq < sigDeltaSq))
+				    collCode = MD_OUTIN_BARRIER;
 				}
 			    }
 			}
@@ -1115,8 +1114,8 @@ void PredictEvent (int na, int nb)
 			      if (d > 0.0)
 				{
 				  t = (-sqrt (d) - b) / vv;
-				  //if (t > 0)
-				  collCode = MD_CORE_BARRIER;
+				  if (t > 0 || (t < 0 && distSq < sigSq))
+				    collCode = MD_CORE_BARRIER;
 				}
 			    }
 			  if (collCode == MD_EVENT_NONE)
@@ -1125,12 +1124,12 @@ void PredictEvent (int na, int nb)
 			      if (d > 0.0)
 				{
 				  t = ( sqrt (d) - b) / vv;
-				  //if (t > 0 || (t < 0 && distSq > sigDeltaSq))
-				  collCode = MD_INOUT_BARRIER;
+				  if (t > 0 || (t < 0 && distSq > sigDeltaSq))
+				    collCode = MD_INOUT_BARRIER;
 				}
 			    }
 			}
-		      if (t < 0)
+		      if (t < 0 && collCode!= MD_EVENT_NONE)
 			{
 #if 1
 			  printf("time:%.15f tInt:%.15f t:%.20f\n", Oparams.time,
@@ -1141,6 +1140,7 @@ void PredictEvent (int na, int nb)
 			  printf("atomTime: %.10f \n", atomTime[n]);
 			  printf("n:%d na:%d\n", n, na);
 			  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
+			  printf("collCode: %d\n", collCode);
 			  //exit(-1);
 #endif
 			  t = 0;

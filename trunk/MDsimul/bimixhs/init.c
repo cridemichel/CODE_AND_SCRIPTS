@@ -781,7 +781,6 @@ void usrInitAft(void)
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = Oparams.time;
     }
-  StartRun(); 
 
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   for (i=0; i < Oparams.parnum; i++)
@@ -805,16 +804,17 @@ void usrInitAft(void)
 	drx = rx[i] - rx[j];
 	dry = ry[i] - ry[j];
 	drz = rz[i] - rz[j];
-	drx = drx - L * rint(drx / L );
-	dry = dry - L * rint(dry / L );
-	drz = drz - L * rint(drz / L );
-	if (Sqr(drx)+Sqr(dry)+Sqr(drz) < sigDeltaSq)
+	drx = drx - L * rint(drx / L);
+	dry = dry - L * rint(dry / L);
+	drz = drz - L * rint(drz / L);
+	if (Sqr(drx)+Sqr(dry)+Sqr(drz) < sigDeltaSq) 
 	  {
 	    add_bond(i, j);
 	    add_bond(j, i);
 	  }
       }
 #endif
+  StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
