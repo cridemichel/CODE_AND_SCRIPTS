@@ -247,6 +247,43 @@ void ScheduleEvent (int idA, int idB, double tEvent)
   treeUp[idNew] = id;
 }
 #endif
+void delete_events(int evIdA)
+{
+  int id, idd;
+  
+  id = evIdA + 1;
+  DeleteEvent (id);
+  for (idd = treeCircAL[id]; idd != id; idd = treeCircAL[idd]) 
+    {
+      /* il successivo (R) del precedente (L) diviene il successivo 
+       * del nodo corrente poiché il nodo corrente è stato eliminato */
+      treeCircBR[treeCircBL[idd]] = treeCircBR[idd];
+      /* il precedente del successivo diviene il precedente del nodo
+       * corrente */
+      treeCircBL[treeCircBR[idd]] = treeCircBL[idd];
+      DeleteEvent (idd);
+    }
+  /* treeIdA[0] punta al primo nodo della lista dei nodi liberi 
+   * nel pool, quindi qui inserisce la lista di nodi appena liberati fra i nodi 
+   * non utilizzati del pool */
+  treeCircAR[treeCircAL[id]] = treeIdA[0];
+  treeIdA[0] = treeCircAR[id];
+  /* tutte le liste circolari vengono svuotate */
+  treeCircAL[id] = treeCircAR[id] = id;
+  for (idd = treeCircBL[id]; idd != id; idd = treeCircBL[idd]) 
+    {
+      /* vedere sopra infatti è lo stesso solo per la lista in cui
+       * la particella è la prima della coppia (A) */
+      treeCircAR[treeCircAL[idd]] = treeCircAR[idd];
+      treeCircAL[treeCircAR[idd]] = treeCircAL[idd];
+      DeleteEvent (idd);
+      treeCircAR[idd] = treeIdA[0];    
+      treeIdA[0] = idd;
+    }
+  treeCircBL[id] = treeCircBR[id] = id;
+
+
+}
 void NextEvent (void) 
 {
   int id, idAx, idBx, idd, idNow, idtx;

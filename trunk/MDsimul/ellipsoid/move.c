@@ -4,6 +4,7 @@
 #define MD_DEBUG(x) 
 #define MD_DEBUG10(x)  
 #define MD_DEBUG11(x) 
+#define MD_DEBUG15(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -3121,12 +3122,12 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
   double alpha;
   int its=0; 
     
-  timesF++;
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i<Oparams.parnumA?0:1]
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j<Oparams.parnumA?0:1];
   *d1 = calcDistNeg(*t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
   while (*d1 > epsdFast && its < MAXOPTITS)
@@ -3191,7 +3192,6 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
    *   sfiorano per poi allontanrsi. 
    */
   int its, foundrc, retcheck, kk;
-  timesS++;
   t = t1;
 
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
@@ -3199,7 +3199,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j<Oparams.parnumA?0:1];
  
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
-  h = 0.0001; /* last resort time increment */
+  h = 1E-7; /* last resort time increment */
 #if 0
   if (lastbump[i]==j && lastbump[j]==i)
     {
@@ -3235,6 +3235,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 
   if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast, r1, r2))
     return 0;  
+  timesS++;
 #if 0
   if (refine_contact(i, j, t, vecgd1, shift, vecg))
   {
@@ -3263,7 +3264,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       MD_DEBUG10(printf("last collision was between (%d-%d)\n", i, j));
       while (d1 < 0)
 	{
-	  t += h;
+	  t += h*t;
 	  if (t > t2)
 	    return 0;
 	  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 0);
@@ -3309,7 +3310,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	delt = epsd/normddot;
 #endif
       else
-	delt = h;
+	delt = h*t;
       t += delt;
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       for (kk = 0; kk < 8; kk++)
@@ -3323,7 +3324,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	   * più vicino a epsd*/
 	  //printf("P delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt, fabs(d2-d2old), d2, d2old);
 	  t -= delt;
-	  t += d2old/maxddot; 
+	  delt = d2old / maxddot;
+	  if (delt < t*h)
+	    delt = t*h;
+	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
 	  d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1old, 0);
@@ -3356,7 +3360,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
 	    }
 #endif
-	  if (refine_contact(i, j, normddot!=0?(t-epsd/normddot):(t-h), vecgd2, shift, vecg))
+	  if (refine_contact(i, j, t-delt, vecgd2, shift, vecg))
 	    {
 	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
@@ -3521,6 +3525,85 @@ int locate_contact_notworking(int i, int j, double shift[3], double t1, double t
     }
   return foundrc;
 }
+#if 1
+double estimate_tmin(double t, int na, int nb)
+{
+  int cellRangeT[2 * NDIM];
+  int iX, iY, iZ, jX, jY, jZ, k, n;
+  double te, d, tmin=-1, shiftd[3], shift[3], r1[3], r2[3], alpha, vecg[8], maxddot;
+
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCell[2][na] + iZ;    
+      shift[2] = 0.;
+#ifndef MD_GRAVITY
+      /* apply periodico boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  jZ = cellsz - 1;    
+	  shift[2] = - L;
+	} 
+      else if (jZ == cellsz) 
+	{
+	  jZ = 0;    
+	  shift[2] = L;
+	}
+#endif
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCell[1][na] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsy - 1;    
+	      shift[1] = -L;
+	    } 
+	  else if (jY == cellsy) 
+	    {
+	      jY = 0;    
+	      shift[1] = L;
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCell[0][na] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsx - 1;    
+		  shift[0] = - L;
+		} 
+	      else if (jX == cellsx) 
+		{
+		  jX = 0;   
+		  shift[0] = L;
+		}
+	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+	      for (n = cellList[n]; n > -1; n = cellList[n]) 
+		{
+		  if (n != na && n != nb && (nb >= -1 || n < na)) 
+		    {
+		      d = calcDistNeg(t, na, n, shift, r1, r2, &alpha, vecg, 1);
+		      maxddot = sqrt(Sqr(vx[na]-vx[n])+Sqr(vy[na]-vy[n])+Sqr(vz[na]-vz[n])) +
+			sqrt(Sqr(wx[na])+Sqr(wy[na])+Sqr(wz[na]))*maxax[na<Oparams.parnumA?0:1]
+			+ sqrt(Sqr(wx[n])+Sqr(wy[n])+Sqr(wz[n]))*maxax[n<Oparams.parnumA?0:1];
+ 
+		      if (d>0)// && n!=lastbump[na] && lastbump[n]!=na)
+			{
+			  te = t + d / maxddot;
+			  if (tmin==-1 ||t < tmin)
+			    tmin = te;
+			}
+		    }
+		} 
+	    }
+	}
+    }
+  return tmin;
+}
+#endif
 void PredictEvent (int na, int nb) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -3707,8 +3790,10 @@ void PredictEvent (int na, int nb)
       MD_DEBUG2(printf("wall!!! (evIdA: %d)\n", na));
     }
 #endif
-  MD_DEBUG(printf("schedule event [WallCrossing](%d,%d)\n", na, ATOM_LIMIT+evCode));
+  MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
+		    na, ATOM_LIMIT+evCode, k, tm[k]));
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 #ifdef MD_GRAVITY
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
@@ -4341,9 +4426,11 @@ void store_bump(int i, int j)
   fclose(bf);
 
 }
+
+extern void delete_events(int evIdA);
 void ProcessCollision(void)
 {
-  int k;
+  int k, i;
   UpdateAtom(evIdA);
   UpdateAtom(evIdB);
   for (k = 0;  k < NDIM; k++)
