@@ -298,7 +298,7 @@ extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, 
 extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
 
 extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
-#undef MD_GLOBALNR
+#define MD_GLOBALNR
 #undef MD_GLOBALNR2
 #ifdef MD_GLOBALNR2
 double fmin2(double x[], int iA, int iB, double shift[3]);
@@ -345,7 +345,7 @@ void newt(double x[], int n, int *check,
   for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
       /* Stabilization */
-#if 1
+#if 0
       MD_DEBUG(printf("its=%d time = %.15f\n",its, x[4]));
       upd2tGuess(iA, iB, shift, x[4]);
 #ifdef MD_GLOBALNR2
