@@ -685,7 +685,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	sol = s2;
 #if 1
       ng = calc_norm(gradf);
-      if (fabs(sol)*ng > dist*OprogStatus.tolSD)
+      if (fabs(sol)*ng > dist*OprogStatus.tolSD/2.0)
 	{
 	  sf /= GOLD;
 	  its++;
@@ -1097,8 +1097,12 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     A = 1.0;
   else
     A = -1.0;
-  normdd =calc_norm(dd);
-   
+  normdd = calc_norm(dd);
+  if (normdd==0)
+    {
+      doneryck = 1;
+      return;
+    }
   /* la norma dei gradienti è sempre stepSDA e stepSDB*/ 
   K1= icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
   K2= jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
@@ -1127,10 +1131,9 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
       grad[kk] -= gradfx*fx[kk];
       grad[kk+3] -= gradgx*gx[kk];
     }
-#if 0
-  if (calc_norm(grad)/gradfx < OprogStatus.tolSD &&
-      
-      calc_norm(&grad[kk+3])/gradgx < OprogStatus.tolSD)
+#if 1
+  if (calc_norm(grad)*(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB)< 
+      OprogStatus.tolSD*normdd)
     {
       doneryck = 1;
       return;
