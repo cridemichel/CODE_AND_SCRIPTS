@@ -1233,7 +1233,9 @@ void ScaleCoords(void)
 	}
     }
 }
-
+#ifdef MD_RESPA
+extern double WmShort, WShort, WCShort;
+#endif
 /* ========================= >>> moveb <<< =========================== */
 void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	      COORD_TYPE m[NA], COORD_TYPE d, int Nm)
@@ -1326,11 +1328,19 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
       /* Calculate pressure, calcT1diagMol is a term proportional to the 
 	 translational kinetic energy, see Ferrario and Ryckaert */
 #ifdef MOLPTENS
+#ifdef MD_RESPA
+      press_m = calcT1diagMol(Nm, Vol1) + (WmLong + WmShort) / 3.0 / Vol; /* press(t+dt) */
+#else
       press_m = calcT1diagMol(Nm, Vol1) + Wm / 3.0 / Vol; /* press(t+dt) */
+#endif
       /* Volume acceleration */
       DP = Sqr(s) * (press_m - Oparams.P) / OprogStatus.W;
 #else
+#ifdef MD_RESPA
+      press_at = calcT1diagAt(Nm, Vol1) + (WLong + WCLong + WShort + WCShort) / Vol; /* press(t+dt) */
+#else
       press_at = calcT1diagAt(Nm, Vol1) + (W + WC) / Vol; /* press(t+dt) */
+#endif
       /* Volume acceleration */
       DP = Sqr(s) * (press_at - Oparams.P) / OprogStatus.W;
 #endif
