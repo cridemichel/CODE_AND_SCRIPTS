@@ -174,7 +174,7 @@ void ludcmpR(double **a, int* indx, double* d, int n)
 
 void lubksbR(double **a, int* indx, double *b, int n)
 { 
-  int i,ii=0,ip,j; 
+  int i,ii=-1,ip,j; 
   double sum; 
   for (i=0;i<n;i++) 
     { 
@@ -184,7 +184,7 @@ void lubksbR(double **a, int* indx, double *b, int n)
       ip=indx[i];
       sum=b[ip];
       b[ip]=b[i]; 
-      if (ii) 
+      if (ii>-1) 
 	for (j=ii;j<=i-1;j++) 
 	  sum -= a[i][j]*b[j]; 
       else if (sum) 
@@ -568,6 +568,8 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 			     FzI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[2][m];
       }
     /* qui bisogna trovare l'inversa della matrice cvMat !!!*/
+    if (i==0)
+      printMat("cvMat", cvMat, 1);
     if (!OprogStatus.keepInvMat)
       InvMatrix (cvMat, cvMatInv, NA-1);
     else if (OprogStatus.keepInvMat && after && RefSys)
@@ -586,7 +588,6 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
     if (i==0)
      {
 	printMat("cvMatInv", cvMatInv, 1);
-	printMat("cvMat", cvMat, 1);
      }
 /* ============================================== */
 #if 0
@@ -2267,10 +2268,6 @@ void movelongRespaNPTAft(double dt)
     {
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
       updImpLong(dt, 0.5);
-#ifdef MD_RAPACONSTR
-      ComputeConstraints(0);
-      updImpRapa(dt, 0.5);
-#endif
     }
   else
     {
@@ -2279,10 +2276,6 @@ void movelongRespaNPTAft(double dt)
 	updPvLong(dt, 0.5);
       updImpLongNoseAft(dt, 0.5);
       updLsAft(dt, 0.5);
-#ifdef MD_RAPACONSTR
-      ComputeConstraints(0);
-      updImpRapa(dt, 0.5);
-#endif
       /*printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 #else
