@@ -2647,7 +2647,7 @@ int use_min_delt(int *negpairs, double *dists, int bondpair)
     }
   return (sum > 0)?1:0;
 }
-int delt_is_too_big(int i, int j, int bondpair, double *dists)
+int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld)
 {
   int nn, retval=0;
   for (nn=0; nn < MD_PBONDS; nn++)
@@ -2657,9 +2657,9 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists)
       if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
 	&& lastbump[j].at == mapbondsb[nn]))
 	continue;
-      if (dists[nn] > 0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+      if (distsOld[nn] > 0.0  && dists[nn] > 0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	return 1;
-      if (dists[nn] < 0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+      if (distsOld[nn] < 0.0 && dists[nn] < 0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	return 1;
     }
   return 0;
@@ -2672,7 +2672,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	 distsOld2[MD_PBONDS], deltth; 
   double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
-  int bondpair;
+  int bondpair, itstb;
   const int MAXITS = 100;
   int its, foundrc, goback;
   double epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
@@ -2881,7 +2881,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	{
 	  delt = 1E-15;
 	  //printf("delt=%.15G t=%.15G h=%.15G\n", delt, t, h);
-	  firstaftsf = 0;
+	  //firstaftsf = 0;
 	}
 #endif
 #if 0
@@ -2896,12 +2896,24 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
       MD_DEBUG30(printf("delt: %f epsd/maxddot:%f h*t:%f maxddot:%f\n", delt, epsd/maxddot,h*t,maxddot));
       ///delt = h;///
+      tini = t;
       t += delt;
       //printf("normddot= %.15G t=%.15G delt=%.15G maxddot: %.15G t*h=%.15G\n", 
         //   normddot, t, delt, maxddot, t*h);
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       //dold2 = dold;
       d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+      itstb = 0;
+      while (!firstaftsf && delt_is_too_big(i, j, bondpair, dists, distsOld) && 
+	     delt > sh)
+	{
+	  delt /= GOLD; 
+	  t = tini + delt;
+	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	  itstb++;
+	}
+      if (firstaftsf)
+	firstaftsf = 0;
       deldist = get_max_deldist(distsOld, dists, bondpair);
       if (deldist > epsdMax)
 	{
