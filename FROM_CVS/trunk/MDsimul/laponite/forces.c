@@ -204,7 +204,6 @@ void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut)
 
   L = cbrt(Vol);
   invL = 1.0  / L;
-  
   for (i = 0; i < Oparams.parnum; i++)
     for (a = 0; a < Oparams.nsites; a++)
       {
