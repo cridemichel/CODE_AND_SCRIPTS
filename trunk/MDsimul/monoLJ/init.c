@@ -504,7 +504,7 @@ void usrInitAft(void)
   int Nm, i, sct;
   COORD_TYPE vcmx, vcmy, vcmz;
   COORD_TYPE m;
-  
+  char msgs[1024];
   //COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;
 
   /* initialize global varibales */
@@ -569,7 +569,15 @@ void usrInitAft(void)
      positions, so wwe must initialize them! */  
   if (newSim == 1)
     {
-
+#if defined(SOFT_SPHERE)
+#if defined(MD_STATIC_PP36)
+      Oparams.PP = 36;
+      mdPrintf(ALL, "WARNING: MD_STATIC_PP36 defined!\n", NULL);
+#else
+      sprintf(msgs, "WARNING: DYNAMIC PP=%d\n", Oparams.PP);
+      mdPrintf(ALL, msgs, NULL);
+#endif
+#endif
       if (OprogStatus.Nose == 0)
 	{
 	  /* If we begin a new simulation and we don't use Nose-Andersen method

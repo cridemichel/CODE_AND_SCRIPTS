@@ -632,10 +632,13 @@ void LJForce(int Nm, COORD_TYPE epsilon,
   int ncut;
   COORD_TYPE sigmaSq, epsilon4, epsilon24;
   COORD_TYPE rxij, ryij, rzij, rijSq, fxij, fyij, fzij;
-  COORD_TYPE srij2, srij6, srij12, fij, vij, wij;
+  COORD_TYPE srij2, srij4, srij8, srij6, srij12, fij, vij, wij;
   COORD_TYPE Fxi, Fyi, Fzi, rxi, ryi, rzi;
   COORD_TYPE vCut, rcutSig, rcutSq;
   COORD_TYPE dvdr, fict;
+#ifdef SOFT_SPHERE
+  int PP;
+#endif
   /* Local variables to implement linked list */
   int  n, nebrTab0, nebrTab1;
 
@@ -654,10 +657,16 @@ void LJForce(int Nm, COORD_TYPE epsilon,
   srij2   = sigma / rcutSq;
   srij6   = srij2 * srij2 * srij2;
   srij12  = Sqr(srij6);
+#ifdef SOFT_SPHERE
+  dvdr = 0;
+#else
   dvdr = epsilon24 * (srij6 - 2.0 * srij12) / rcutSig;
-  
+#endif
   /* initialize ab-variables */
   ncut = 0;
+#ifdef SOFT_SPHERE
+  PP = Oparams.PP;
+#endif
   L = cbrt(Vol);
   invL = 1.0  / L;
   VLJ = 0.0; /* potential energy */
@@ -691,6 +700,30 @@ void LJForce(int Nm, COORD_TYPE epsilon,
       if ( rijSq < rcutSq )/* 'rcut' is the cutoff for V */
 	{
 	  //rab   = sqrt(rabSq);
+#ifdef SOFT_SPHERE
+	  srij2   = sigmaSq / rijSq;
+#if defined(MD_STATIC_PP36)
+	  srij4=srij2*srij2;
+          srij8=srij4*srij4;
+          vij = srij8*srij8*srij2;
+	  vij= vij*vij;
+          wij = 36.0*vij;
+#else
+	  vij = pow(srij2, ((double)PP) / 2.0);
+	  wij = ((double) PP) * vij;
+#endif
+	  VLJ = VLJ + vij;
+	  /* total potential between all a-b atoms pairs */
+	  WLJ = WLJ + wij; 
+
+	  /* NOTE: If you will use a shifted-force potential then 
+	     calculate the force using that potential */
+	  fij   = wij / rijSq;
+	  /* force between two atoms */
+	  fxij  = fij * rxij * epsilon24;         
+	  fyij  = fij * ryij * epsilon24;
+	  fzij  = fij * rzij * epsilon24;
+#else
 	  srij2   = sigmaSq / rijSq;
 	  srij6   = srij2 * srij2 * srij2;
 	  srij12  = Sqr(srij6);
@@ -711,7 +744,7 @@ void LJForce(int Nm, COORD_TYPE epsilon,
 	  fxij  = fij * rxij * epsilon24;         
 	  fyij  = fij * ryij * epsilon24;
 	  fzij  = fij * rzij * epsilon24;
-	  
+#endif
 	  /* Virial off-diagonal terms of atomic pressure tensor */
 	  Wxy += rxij * fyij;
 	  Wyz += ryij * fzij;
@@ -742,6 +775,14 @@ void LJForce(int Nm, COORD_TYPE epsilon,
      shifted potential, for each atoms within rcut 
      subtracts Vcut = V(rcut) 
      (see pag 145 A.T.) */
+#ifdef SOFT_SPHERE
+  srij2 = sigmaSq / rcutSq;
+  vCut = pow(srij2, ((double)PP) / 2.0);
+  Vc = VLJ - ncut * vCut;
+  VLJ  = VLJ * epsilon4;
+  Vc = Vc * epsilon4;
+  WLJ  = WLJ * epsilon4 / 3.0;
+#else
   srij2 = sigmaSq / rcutSq;
   srij6 = srij2 * srij2 * srij2;
   srij12 = srij6 * srij6;
@@ -750,5 +791,5 @@ void LJForce(int Nm, COORD_TYPE epsilon,
   VLJ  = VLJ * epsilon4;
   Vc = Vc * epsilon4;
   WLJ  = WLJ * epsilon24 / 3.0;
-
+#endif
 }  
