@@ -10,6 +10,8 @@
 int mesh[100][150][3];
 int ntripl[100];
 #endif
+void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, COORD_TYPE** velz,
+	   COORD_TYPE VOL1);
 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 void forceCoeff(void);
@@ -823,6 +825,7 @@ void angvel (int Nm, COORD_TYPE temp, COORD_TYPE m[NA], COORD_TYPE d)
       
     }
 } 
+void setToZeroPoly(COORD_TYPE** ptr, ...);
 
 /* =========================== >>> initCoord <<< ============================*/
 void initCoord(void)
@@ -988,6 +991,12 @@ int check_sigmas(void)
     }
   return 1;
 }
+extern void v2p(void);
+extern void BuildNebrListNoLinkedLong(int Nm, double rCut);
+extern void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut);
+extern void LJForceLong(int Nm, double rcutI, double rcutO);
+extern void LJForce(int Nm, double rcut);
+
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
 {
