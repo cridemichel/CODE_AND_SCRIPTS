@@ -387,7 +387,7 @@ void radDens(void)
 #else
   Vol = L*L*L;
 #endif 
-  DELR = (REND - RBEG) / MAXBIN;
+  DELR = (L/2.0 - RBEG) / MAXBIN;
 
   hist = OprogStatus.hist;
   
