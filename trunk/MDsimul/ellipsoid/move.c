@@ -3378,6 +3378,7 @@ retry:
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++) 
       segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
+#if 0
 #ifndef MD_DIST5
   if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
     {
@@ -3391,6 +3392,7 @@ retry:
       //return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
       //exit(-1);
     }
+#endif
 #endif
 #if 1
 #ifdef MD_DIST5
