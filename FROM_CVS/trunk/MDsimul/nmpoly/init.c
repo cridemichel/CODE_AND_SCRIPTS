@@ -29,9 +29,10 @@ double **rx_oldLong, **ry_oldLong, **rz_oldLong;
 #endif
 #ifdef MD_RAPACONSTR
 extern double **cvMat, **cvMatInv, ***cvMatInvS, 
-       *cDistSq, *vVec, *curBondLenSq, *cVec[3]; 
+       *cDistSq, *vVec, *vVecLong, *curBondLenSq, *cVec[3]; 
 extern int **cMat; 
 extern int *cAtom1, *cAtom2;
+extern int *laststep;
 #endif
 double *Fcoeff[3]; 
 /* coefficienti delle forze dovute agli atomi senza massa
@@ -1133,6 +1134,7 @@ void usrInitAft(void)
   cDistSq = malloc(sizeof(double)*NB);
   curBondLenSq = malloc(sizeof(double)*NB);
   vVec = malloc(sizeof(double)*NB);
+  vVecLong = malloc(sizeof(double)*NB);
   cAtom1 = malloc(sizeof(int)*NB);
   cAtom2 = malloc(sizeof(int)*NB);
 #endif
@@ -1152,9 +1154,13 @@ void usrInitAft(void)
   cVec[1] = malloc(sizeof(double)*NB);
   cVec[2] = malloc(sizeof(double)*NB);
   cMat    = malloc(sizeof(int*)*NB);
+  laststep = malloc(sizeof(int)*Oparams.parnum);
   doshake = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
-    doshake[i] = 0;
+    {
+      doshake[i] = 0;
+      laststep[i] = 0;
+    }
   for (a = 0; a < NB; a++)
     {
       cvMatInvS[a] = malloc(sizeof(double*)*NB);
