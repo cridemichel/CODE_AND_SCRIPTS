@@ -295,6 +295,20 @@ void build_ref_axes(int i, double u1[3], double u2[3], double u3[3])
   vectProd(u1[0], u1[1], u1[2], u2[0], u2[1], u2[2], &u3[0], &u3[1], &u3[2]);  
 
 }
+void lab2body(double u1[3], double u2[3], double u3[3], double vx, double vy, double vz,
+	      double *vxp, double *vyp, double *vzp)
+{
+  *vxp = vx*u1[0]+vy*u1[1]+vz*u1[2];
+  *vyp = vx*u2[0]+vy*u2[1]+vz*u2[2];
+  *vzp = vx*u3[0]+vy*u3[1]+vz*u3[2];
+}
+void body2lab(double u1[3], double u2[3], double u3[3], double vxp, double vyp, double vzp,
+	      double *vx, double *vy, double *vz)
+{
+  *vx = vxp*u1[0]+vyp*u2[0]+vzp*u3[0];
+  *vy = vxp*u1[1]+vyp*u2[1]+vzp*u3[1];
+  *vz = vxp*u1[2]+vyp*u2[2]+vzp*u3[2];
+}
 /* ========================== >>> movea <<< =============================== */
 void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
 	   COORD_TYPE m[NA], int Nm)
@@ -312,6 +326,7 @@ void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE
   double echsidtP, e2chsidtP, chsiP, chsidtP, crvP, echsidtN, e2chsidtN, chsiN, chsidtN, crvN;
   double c0N, c1N, c2N, c1mc2N, c0P, c1P, c2P, c1mc2P;
   double u1[3], u2[3], u3[3];
+  double vxp, vyp, vzp, axp, ayp, azp, rxp, ryp, rzp;
   int i, a, b, it;
   const COORD_TYPE rptol = 1.0E-6;
 
@@ -363,7 +378,6 @@ void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE
   sigmavP = sqrt(kTm * ( 1.0 - e2chsidtP ) );
   crvP = dt * kTm * Sqr( 1.0 - echsidtP) / chsidtP / sigmarP / sigmavP;
 
-
   /* ===== LOOP OVER MOLECULES ===== */
   for (i=0; i < Nm; i++)
     {
@@ -387,22 +401,20 @@ void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE
 	  lab2body(u1, u2, u3, axia, ayia, azia, &axp, &ayp, &azp);
 	  lab2body(u1, u2, u3, vx[a][i], vy[a][i], vz[a][i], &vxp, &vyp, &vzp);
 
-	  pxi[a] = rx[a][i] + c1P * dt * vx[a][i] + c2P * dtSq * axia + drx;
-	  pyi[a] = ry[a][i] + c1P * dt * vy[a][i] + c2P * dtSq * ayia + dry;
-	  pzi[a] = rz[a][i] + c1N * dt * vz[a][i] + c2N * dtSq * azia + drz;
+	  rxp = rxp + c1P * dt * vxp + c2P * dtSq * axp + drx;
+	  ryp = ryp + c1P * dt * vyp + c2P * dtSq * ayp + dry;
+	  rzp = rzp + c1N * dt * vzp + c2N * dtSq * azp + drz;
 	  
 	  vxt[a][i] = vx[a][i]; /* v(t) */
 	  vyt[a][i] = vy[a][i];
 	  vzt[a][i] = vz[a][i];
 	  
-	  vxi[a] = c0P*vx[a][i] + c1mc2P * dt * axia + dvx;
-	  vyi[a] = c0P*vy[a][i] + c1mc2P * dt * ayia + dvy;
-	  vzi[a] = c0N*vz[a][i] + c1mc2N * dt * azia + dvz;
+	  vxp = c0P*vx[a][i] + c1mc2P * dt * axia + dvx;
+	  vyp = c0P*vy[a][i] + c1mc2P * dt * ayia + dvy;
+	  vzp = c0N*vz[a][i] + c1mc2N * dt * azia + dvz;
 
-	  lab2body(u1, u2, u3, rxi[a], ryi[a], rzi[a], &rxp, &ryp, &rzp);
-	  lab2body(u1, u2, u3, axia, ayia, azia, &axp, &ayp, &azp);
-	  lab2body(u1, u2, u3, vx[a][i], vy[a][i], vz[a][i], &vxp, &vyp, &vzp);
-
+	  lab2body(u1, u2, u3, rxp, ryp, rzp, &pxi[a], &pyi[a], &pzi[a]);
+	  lab2body(u1, u2, u3, vxp, vyp, vzp, &vxi[a], &vyi[a], &vzi[a]);
 
 	  moving[a] = 0;
 	  moved[a]  = 1;
@@ -1040,6 +1052,245 @@ void calcPtensAt(int Nm, COORD_TYPE VOL1)
 }
 
 const double ittol = 1E-20;
+#ifdef MD_BROWN_BETTER
+void movebBrownAnd(double dt, double tol, int maxIt, int NB, double m[3], double d, 
+		    int Nm) 
+{
+  /* NTP fatto con dinamica browniana e pistone meccanico alla Andersen */ 
+  COORD_TYPE FxNose, FyNose, FzNose, FxAnd, FyAnd, FzAnd, cfAnd, dlns, dlnV,
+    dlnVSq; 
+  COORD_TYPE Vol1g, s1i, Vol1i;
+  COORD_TYPE DT, A, B, DP, c0N, c1N, c2N, chsiN, c0P, c1P, c2P, chsiP; 
+  double vxp, vyp, vzp, Fxp, Fyp, Fzp;
+  double u1[3], u2[3], u3[3];
+  int i, a, k, numok;
+  const int MAXNUMIT = 20;
+
+  /* ******************************************************************* */
+  chsiP = Oparams.chsiP;
+  chsiN = Oparams.chsiN;
+  c0N = exp(-chsiN*dt);
+  c1N = (1-c0N)/(chsiN*dt);
+  c2N = (1-c1N)/(chsiN*dt);
+  c0P = exp(-chsiP*dt);
+  c1P = (1-c0P)/(chsiP*dt);
+  c2P = (1-c1P)/(chsiP*dt);
+
+  for(i=0; i < Nm; i++)
+    {
+      CoM(i, &Rx[i], &Ry[i], &Rz[i]);
+      for(a=0; a < NA; a++)
+	{
+	  vxt2[a][i] = vx[a][i]; /* v*t2 = v*(t+dt/2) */
+	  vyt2[a][i] = vy[a][i];
+	  vzt2[a][i] = vz[a][i];
+
+	  FxLJ[a][i] = Fx[a][i];
+	  FyLJ[a][i] = Fy[a][i];
+	  FzLJ[a][i] = Fz[a][i];
+	
+	  /* predicted values of velocities at time t+dt */
+	  /*vx[a][i] = 13.0 * vxt[a][i] / 6.0 - 4.0 * vxo1[a][i] / 3.0 + 
+	    vxo2[a][i] / 6.0;
+	    vy[a][i] = 13.0 * vyt[a][i] / 6.0 - 4.0 * vyo1[a][i] / 3.0 + 
+	    vyo2[a][i] / 6.0;
+	    vz[a][i] = 13.0 * vzt[a][i] / 6.0 - 4.0 * vzo1[a][i] / 3.0 + 
+	    vzo2[a][i] / 6.0;
+	  */
+	  /*vx[a][i] = 2.0 * vxt[a][i] - vxo1[a][i]; */ /* Verlet */
+	  /*vy[a][i] = 2.0 * vyt[a][i] - vyo1[a][i];
+	    vz[a][i] = 2.0 * vzt[a][i] - vzo1[a][i];*/
+
+	  vx[a][i] = 5.0 * vxt[a][i] / 2.0 - 2.0 * vxo1[a][i] + 
+	    vxo2[a][i] / 2.0;
+	  vy[a][i] = 5.0 * vyt[a][i] / 2.0 - 2.0 * vyo1[a][i] + 
+	    vyo2[a][i] / 2.0;
+	  vz[a][i] = 5.0 * vzt[a][i] / 2.0 - 2.0 * vzo1[a][i] + 
+	    vzo2[a][i] / 2.0;
+	}
+    }
+#if 0
+  s1i = s1;    /* s1i = s1(t+dt/2) */
+#endif
+  Vol1i = Vol1;/* Vol1i = Vol1(t+dt/2)*/
+
+  /* Initial guess for Vol1 */
+  /* Vol1 = 13.0*Vol1t/6.0 - 4.0*Vol1o1/3.0 + Vol1o2 / 6.0; */ /* Vol1(t+dt) */
+  
+  /* Vol1 = 2.0 * Vol1t - Vol1o1; *//* Verlet */  
+  
+  Vol1 = 5.0 * Vol1t / 2.0 - 2.0 * Vol1o1 + Vol1o2 / 2.0;  
+
+  shakeVel(Nm, dt, m, maxIt, NB, d, tol, vx, vy, vz);
+  for(k=0; k < MAXNUMIT; k++) /* Loop to convergence (NUMIT ~ 5 is enough)*/
+    {
+#if 0
+      kinet(Nm, vx, vy, vz, Vol1);  /* K(t+dt) */
+
+      DT = s * (2.0 * K - (5.0 * Nm - 3.0) * Oparams.T) / 
+	OprogStatus.Q;
+      A = s1i + 0.5 * dt * DT;
+      /* s1(t+dt) */
+      s1 = A + 0.5 * Sqr(A) * dt / s + Sqr(dt) * 0.5 * Sqr(A) * A / Sqr(s);
+      dlns = s1 / s ; 
+      s2 = Sqr(s1) / s + DT; /* s2(t+dt) */
+#endif 
+      /* Calculate pressure, calcT1diagMol is a term proportional to the 
+	 translational kinetic energy, see Ferrario and Ryckaert */
+#ifdef MOLPTENS
+      press_m = calcT1diagMol(Nm, Vol1) + Wm / 3.0 / Vol; /* press(t+dt) */
+      
+      /* Volume acceleration */
+      DP = Sqr(s) * (press_m - Oparams.P) / OprogStatus.W;
+#else
+      press_at = calcT1diagAt(Nm, Vol1) + (W + WC) / Vol; /* press(t+dt) */
+      /* Volume acceleration */
+      DP = Sqr(s) * (press_at - Oparams.P) / OprogStatus.W;
+#endif
+      B = Vol1i + 0.5 * dt * DP;
+      Vol1 = B / (1.0 - 0.5 * dt * s1 / s); /* Vol1(t+dt) */
+      Vol2 = DP + s1 * Vol1 / s;            /* Vol2(t+dt) */
+      
+      /* Calculate the Andersen forces */
+      dlnV   = Vol1 / Vol; 
+      dlnVSq = Sqr(dlnV);
+      cfAnd  = - 2.0 * dlnVSq / 9.0;
+      cfAnd += Vol2 / Vol / 3.0;
+#if 0
+      cfAnd += dlns * dlnV / 3.0;
+#endif	 
+      for(i=0; i < Nm; i++)
+	{
+	  build_ref_axes(i, u1, u2, u3);
+	  for(a=0; a < NA; a++)
+	    {
+	      /* Calculate center of mass position for molecule to which
+		 belong atom (a, i) */
+	      /* The forces due to interactions don't change inside this 
+		 loop */
+	    
+	      FxAnd  = cfAnd * Rx[i] * m[a];
+	      FyAnd  = cfAnd * Ry[i] * m[a];
+	      FzAnd  = cfAnd * Rz[i] * m[a];
+	      Fx[a][i] = FxLJ[a][i] + FxAnd;
+	      Fy[a][i] = FyLJ[a][i] + FyAnd;
+	      Fz[a][i] = FzLJ[a][i] + FzAnd;
+	      /* vt2 = v(t+dt/2) */
+	      vxold[a][i] = vx[a][i];
+	      vyold[a][i] = vy[a][i];
+	      vzold[a][i] = vz[a][i];
+	      lab2body(u1, u2, u3, vxt2[a][i], vyt2[a][i], vzt2[a][i],
+		       &vxp, &vyp, &vzp);
+	      lab2body(u1, u2, u3, Fx[a][i], Fy[a][i], Fx[a][i],
+		       &Fxp, &Fyp, &Fzp);
+	      vxp = vxp + c2P * dt * Fxp / m[a];
+	      vyp = vyp + c2P * dt * Fyp / m[a];
+	      vzp = vzp + c2N * dt * Fzp / m[a];
+	      body2lab(u1, u2, u3, vxp, vyp, vzp, &vx[a][i], &vy[a][i], &vz[a][i]);
+#if 0
+	      vx[a][i] /= 1.0 + 0.5 * dt * dlns;
+	      vy[a][i] /= 1.0 + 0.5 * dt * dlns;
+	      vz[a][i] /= 1.0 + 0.5 * dt * dlns;
+	      /* Velocity calculated with contribution of Andersen and Nose 
+		 Forces */
+	      FxNose = - dlns * vx[a][i] * m[a];
+	      FyNose = - dlns * vy[a][i] * m[a];
+	      FzNose = - dlns * vz[a][i] * m[a];
+	      /* F = Flennard-jones + Fnose + Fandersen */
+	      Fx[a][i] = Fx[a][i] + FxNose;
+	      Fy[a][i] = Fy[a][i] + FyNose;
+	      Fz[a][i] = Fz[a][i] + FzNose;
+#endif
+	    } 
+	}
+      shakeVel(Nm, dt, m, maxIt, NB, d, tol, vx, vy, vz);
+      /* Zero the velocity along bond and calculate the constraint virial, this
+	 should be as before because the Andersen Forces don't act along 
+	 bond.*/
+      numok = 0;
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  for (a = 0; a < NA; a++)
+	    {
+	      /* F = Flennard-jones + Fnose + Fandersen */
+	      if (fabs(vx[a][i]- vxold[a][i]) < ittol &&
+		  fabs(vy[a][i]- vyold[a][i]) < ittol &&
+		  fabs(vz[a][i]- vzold[a][i]) < ittol)
+		numok++;
+	    }
+	}
+      if (numok == NA*Oparams.parnum)
+	{
+	  /* for all atoms diff between current velocities and prev vels is below tol! */ 
+	  /*printf("Done %d iterations instead of %d\n", k, NUMIT);
+	  */
+	  break;
+	}
+
+
+    }
+
+  /* Calculate kinetic energy */
+  kinet(Nm, vx, vy, vz, Vol1);/* K(t+dt) */
+  //printf("K exact: %.20f\n", K);
+
+#ifdef MOLPTENS
+  /* Calculate all components of molecular pressure tensor */
+  calcPtensMol(Nm, Vol1);
+  press_m = (Pmxx + Pmyy + Pmzz) / 3.0; /* press(t+dt) */
+#endif
+
+#if !defined(MOLPTENS) || defined(ATPTENS)
+  /* Calculate all components of atomic pressure tensor */
+  calcPtensAt(Nm, Vol1);
+  press_at = (Patxx + Patyy + Patzz) / 3.0;
+#endif 
+
+#if !defined(MOLPTENS) && !defined(ATPTENS) && defined(ATPRESS)
+  /* NOTE: Calculate Pressure (Eliminate in the future NOT USED only output)*/
+  press_at = calcT1diagAt(Nm, Vol1) + (W + WC) / Vol;
+  /* NOTE: Nm*5/3 = (6Nm - Nm) / 3.0 */ 
+#endif
+
+#ifdef MOLPTENS
+  /* Atomic pressure */
+  press = press_m;
+  Pxy = Pmxy;
+  Pyz = Pmyz;
+  Pzx = Pmzx;
+#else
+  press = press_at;
+  Pxy = Patxy;
+  Pyz = Patyz;
+  Pzx = Patzx;
+#endif
+
+  /* These are the values of velocities at t-dt and at t-2*dt, used to 
+     estimate the temperature at time t+dt at begin of this procedure */
+  Vol1o2 = Vol1o1;
+#if 0
+  s1o2  = s1o1;
+#endif
+  Vol1o1 = Vol1t;
+#if 0
+  s1o1 = s1t;
+#endif
+  for(i=0; i < Nm; i++)
+    {
+      for(a=0; a < NA; a++)
+	{
+	  vxo2[a][i] = vxo1[a][i]; /* vo2(t+dt) = v(t-dt) */
+	  vyo2[a][i] = vyo1[a][i];
+	  vzo2[a][i] = vzo1[a][i];
+	  vxo1[a][i] = vxt[a][i];  /* vo1(t+dt) = v(t) */
+	  vyo1[a][i] = vyt[a][i];
+	  vzo1[a][i] = vzt[a][i];
+	}
+    }
+  /* END OF ITERATION LOOP TO IMPROVE ANDERSEN-NOSE FORCE ESTIMATION */
+
+}
+#else
 void movebBrownAnd(double dt, double tol, int maxIt, int NB, double m[3], double d, 
 		    int Nm) 
 {
@@ -1266,7 +1517,7 @@ void movebBrownAnd(double dt, double tol, int maxIt, int NB, double m[3], double
   /* END OF ITERATION LOOP TO IMPROVE ANDERSEN-NOSE FORCE ESTIMATION */
 
 }
-
+#endif
 /* ========================= >>> moveb <<< =========================== */
 void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	      COORD_TYPE m[3], COORD_TYPE d, int Nm)
@@ -1444,7 +1695,6 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
     }
   /* END OF ITERATION LOOP TO IMPROVE ANDERSEN-NOSE FORCE ESTIMATION */
 }
-
 
 /* ========================= >>> moveb <<< =========================== */
 void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
@@ -1659,9 +1909,307 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
     }
   /* END OF ITERATION LOOP TO IMPROVE ANDERSEN-NOSE FORCE ESTIMATION */
 }
+#ifdef MD_BROWN_BETTER
+/* ========================= >>> moveb <<< =========================== */
+void moveb(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
+	   COORD_TYPE m[NA], COORD_TYPE d, int Nm)
+{
+  /* *******************************************************************
+     ** SECOND PART OF VELOCITY VERLET WITH CONSTRAINTS               **
+     ******************************************************************* */
+  int done;
+  int moving[NA], moved[NA];
+  COORD_TYPE Ka[NA], Mtot, vmx, vmy, vmz;
+  COORD_TYPE rxab, ryab, rzab, rvab, gab, dSq;
+  double vxp, vyp, vzp, Fxp, Fyp, Fzp;
+  COORD_TYPE vxab, vyab, vzab;
+  COORD_TYPE dx, dy, dz, dt2, rma, rmb, c2dtP, c2dtN, c2dt;
+  COORD_TYPE rxi[NA], ryi[NA], rzi[NA], vxi[NA], vyi[NA], vzi[NA];
+  double c0P, c1P, c2P, chsiP, c0, c1, chsi; 
+  double c0N, c1N, c2N, chsiN;
+  double u1[3], u2[3], u3[3];
+  int i, a, b, it;
 
+  
+  /* ******************************************************************* */
+  dt2 = dt*0.5;
+  if (OprogStatus.Nose == -1)
+    {
+      chsiP = Oparams.chsiP;
+      c0P = exp(-chsiP*dt);
+      c1P = (1-c0P)/(chsiP*dt);
+      c2P = (1-c1P)/(chsiP*dt);
+      c2dtP = dt * c2P;
+      chsiN = Oparams.chsiN;
+      c0N = exp(-chsiP*dt);
+      c1N = (1-c0N)/(chsiN*dt);
+      c2N = (1-c1N)/(chsiN*dt);
+      c2dtN = dt * c2N;
+    }
+  else
+    {
+      c2dt= dt / 2.0;
+    }
+  K = 0.0;
+  L = cbrt(Vol);
+  invL = 1.0 / L;
+  Mtot = 0.0;
+  for(a=0; a < NA; a++)
+    {
+      Mtot += m[a];
+      Ka[a] = 0.0;
+    }
 
+  WC = 0.0;
+#if !defined(MOLPTENS) || defined(ATPTENS)
+  WCxy = 0.0; /* Constraints-virial off-diagonal terms of pressure tensor */
+  WCyz = 0.0;
+  WCzx = 0.0;
 
+  WCxx = 0.0; /* Constraints-virial off-diagonal terms of pressure tensor */
+  WCyy = 0.0;
+  WCzz = 0.0;
+  T1xy = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
+  T1yz = 0.0;
+  T1zx = 0.0;
+  T1xx = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
+  T1yy = 0.0;
+  T1zz = 0.0;
+#endif
+
+#ifdef MOLPTENS
+  T1mxy = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
+  T1myz = 0.0;
+  T1mzx = 0.0;
+  T1mxx = 0.0; /* Kinetic off-diagonal terms of pressure tensor */
+  T1myy = 0.0;
+  T1mzz = 0.0;
+#endif
+
+  dSq = Sqr(d);
+  /* LOOP OVER ALL MOLECULES */
+  for(i=0; i < Nm; i++)
+    {
+      if (OprogStatus.Nose == -1)
+	build_ref_axes(i, u1, u2, u3);
+      /* VELOCITY VERLET ALGORITHM PART B */
+      for(a=0; a < NA; a++)
+	{
+	  rxi[a] = rx[a][i];
+	  ryi[a] = ry[a][i];
+	  rzi[a] = rz[a][i];
+	  if (OprogStatus.Nose == -1)
+	    {
+	      lab2body(u1, u2, u3, vx[a][i], vy[a][i], vz[a][i], &vxp, &vyp, &vzp);
+	      lab2body(u1, u2, u3, Fx[a][i], Fy[a][i], Fz[a][i], &Fxp, &Fyp, &Fzp);
+	      vxp = vxp + c2dtP * Fxp / m[a];
+	      vyp = vyp + c2dtP * Fyp / m[a];
+	      vzp = vzp + c2dtN * Fzp / m[a];
+	      body2lab(u1, u2, u3, vxp, vyp, vzp, &vxi[a], &vyi[a], &vzi[a]);
+	    }
+	  else
+	    {
+	      vxi[a] = vx[a][i] + c2dt * Fx[a][i] / m[a];
+	      vyi[a] = vy[a][i] + c2dt * Fy[a][i] / m[a];
+	      vzi[a] = vz[a][i] + c2dt * Fz[a][i] / m[a];
+	    }
+	  moving[a] = 0;
+	  moved[a] = 1;
+	}
+
+      /* START OF ITERATIVE LOOP */
+      it = 0;
+      done = 0;
+      while ((done == 0 ) && ( it <= maxIt ))
+	{
+	  done = 1;
+	  for(a=0; a < NB; a++)
+	    {
+	      b = a + 1;
+	      if (b >= NA) b = 0;
+
+	      if ( (moved[a] == 1) || (moved[b] == 1) ) 
+		{
+		  vxab = vxi[a] - vxi[b];
+		  vyab = vyi[a] - vyi[b];
+		  vzab = vzi[a] - vzi[b];
+		  rxab = rxi[a] - rxi[b];
+		  ryab = ryi[a] - ryi[b];
+		  rzab = rzi[a] - rzi[b];
+		  rxab = rxab - L*rint(invL*rxab);
+		  ryab = ryab - L*rint(invL*ryab);
+		  rzab = rzab - L*rint(invL*rzab);
+		  rvab = rxab * vxab + ryab * vyab + rzab * vzab;
+		  rma  = 1.0 / m[a];
+		  rmb  = 1.0 / m[b];
+		  gab  = (-rvab) / ( ( rma + rmb ) * dSq );
+		  
+		  if ( fabs(gab) > tol )
+		    {
+		      WC = WC + gab * dSq;
+		      dx = rxab * gab;
+		      dy = ryab * gab;
+		      dz = rzab * gab;
+		      
+		      /* Non-diagonal terms of stress tensor 
+			 NOTE: gab * (rxab, ryab, rzab) = F * (dt/2) */
+#if !defined(MOLPTENS) || defined(ATPTENS)
+			  WCxx += rxab * dx;
+			  WCyy += ryab * dy;
+			  WCzz += rzab * dz;
+			  WCxy = WCxy + rxab * dy;
+			  WCyz = WCyz + ryab * dz;
+			  WCzx = WCzx + rzab * dx;
+			 
+#endif 
+
+		      /* =================================== */
+		      
+		      vxi[a] = vxi[a] + rma * dx;
+		      vyi[a] = vyi[a] + rma * dy;
+		      vzi[a] = vzi[a] + rma * dz;
+		      vxi[b] = vxi[b] - rmb * dx;
+		      vyi[b] = vyi[b] - rmb * dy;
+		      vzi[b] = vzi[b] - rmb * dz;
+		      moving[a] = 1;
+		      moving[b] = 1;
+		      done = 0;
+		    }
+		}
+	    }
+	  for(a=0; a < NA; a++)
+	    {
+	      moved[a]  = moving[a];
+	      moving[a] = 0;
+	    }
+	  it = it + 1;
+	 } 
+      /* END OF ITERATIVE LOOP */
+      if (done == 0)
+	{
+	  sprintf(msgStrA, "MOLECULE N. %d", i);
+	  mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,
+		"TOO MANY CONSTRAINT ITERATIONS IN MOVEB",
+		msgStrA,
+		NULL);
+	  exit(-1);
+	  
+	}
+#ifdef MOLPTENS
+    vmx = vmy = vmz = 0.0;  /* Velocity of center of mass of molecule i */
+#endif
+    for(a=0; a < NA;  a++)
+	{
+	  vx[a][i] = vxi[a];
+	  vy[a][i] = vyi[a];
+	  vz[a][i] = vzi[a];
+#ifdef MOLPTENS
+	  vmx += vxi[a] * m[a];
+	  vmy += vyi[a] * m[a];
+	  vmz += vzi[a] * m[a];
+#endif
+#if !defined(MOLPTENS) || defined(ATPTENS)
+	  /* Kinetic terms of the pressure-tensor */
+	  T1xy += vx[a][i] * vy[a][i] * m[a]; 
+	  T1yz += vy[a][i] * vz[a][i] * m[a];
+	  T1zx += vz[a][i] * vx[a][i] * m[a];
+	  T1xx += vx[a][i] * vx[a][i] * m[a]; 
+	  T1yy += vy[a][i] * vy[a][i] * m[a];
+	  T1zz += vz[a][i] * vz[a][i] * m[a];
+#endif
+	  Ka[a] = Ka[a] + Sqr(vxi[a]) + Sqr(vyi[a]) + Sqr(vzi[a]);
+	}
+#ifdef MOLPTENS
+    /* Kinetic component of pressure tensor (all terms) */
+    T1mxy += vmx * vmy / Mtot; 
+    T1myz += vmy * vmz / Mtot;
+    T1mzx += vmz * vmx / Mtot;
+    T1mxx += vmx * vmx / Mtot;
+    T1myy += vmy * vmy / Mtot;
+    T1mzz += vmz * vmz / Mtot;
+#endif    
+    }
+  /* END OF LOOP OVER MOLECULES */
+  
+  for(i=0; i < Nm; i++)
+    {
+      for(a=0; a < NA; a++)
+	{
+	  vxo2[a][i] = vxo1[a][i]; /* vo2(t+dt) = v(t-dt) */
+	  vyo2[a][i] = vyo1[a][i];
+	  vzo2[a][i] = vzo1[a][i];
+	  vxo1[a][i] = vxt[a][i];  /* vo1(t+dt) = v(t) */
+	  vyo1[a][i] = vyt[a][i];
+	  vzo1[a][i] = vzt[a][i];
+	}
+    }
+
+  for(a=0; a < NA; a++)
+    {
+      K  = K + Ka[a] * m[a] * 0.5;
+    }
+     
+  WC = WC / dt2 / 3.0;
+
+#if !defined(MOLPTENS) || defined(ATPTENS)
+  WCxy = WCxy / dt2; /* WCxy, ... are not exactly virial terms and the 3.0
+			is not present */
+  WCyz = WCyz / dt2;
+  WCzx = WCzx / dt2;
+#endif
+
+  /* !!!!!##$$%%^^*/
+#ifdef MOLPTENS
+  /* Calculate molecular pressure */
+  press_m =  T1mxx + T1myy + T1mzz + Wm;
+  press_m /= Vol * 3.0;
+
+#endif  
+  
+#if !defined(MOLPTENS) || defined(ATPTENS)
+  /* Calculate the other element (off-diagonal) of the pressure tensor */
+  Patxy = T1xy + Wxy + WCxy;
+  Patyz = T1yz + Wyz + WCyz;
+  Patzx = T1zx + Wzx + WCzx;  
+  Patxy /= Vol;
+  Patyz /= Vol;
+  Patzx /= Vol;
+  press_at = (T1xx + T1yy + T1zz)/3.0 + WC + W;
+  press_at /= Vol;
+#elif defined(ATPRESS)
+  /* NOTE: Calculate Pressure (Eliminate in the future NOT USED only output)*/
+  press_at = calcT1diagAt(Nm, 0.0) + (W + WC) / Vol;
+  /* NOTE: Nm*5/3 = (6Nm - Nm) / 3.0 */ 
+#endif
+
+#ifdef MOLPTENS
+   /* Calculate the other element (off-diagonal) of the molecular 
+      pressure tensor */
+  Pmxy = T1mxy + Wmxy;
+  Pmyz = T1myz + Wmyz;
+  Pmzx = T1mzx + Wmzx;  
+  Pmxy /= Vol;
+  Pmyz /= Vol;
+  Pmzx /= Vol;
+  /* Calculate molecular pressure */
+  press_m =  T1mxx + T1myy + T1mzz + Wm;
+  press_m /= Vol * 3.0;
+#endif
+
+#ifdef MOLPTENS
+  Pxy = Pmxy;
+  Pyz = Pmyz;
+  Pzx = Pmzx;
+  press = press_m;
+#else
+  Pxy = Patxy;
+  Pyz = Patyz;
+  Pzx = Patzx;
+  press = press_at;
+#endif
+  /* ===================================================*/
+}
+#else
 /* ========================= >>> moveb <<< =========================== */
 void moveb(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	   COORD_TYPE m[NA], COORD_TYPE d, int Nm)
@@ -1940,7 +2488,7 @@ void moveb(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
   /* ===================================================*/
 }
-
+#endif
 /* DESCRIPTION:
    From Allen-Tildesley: 
    "When a molecule leaves the box by crossing one of the boundaries, 
