@@ -141,7 +141,132 @@ void vectProd(double r1x, double r1y, double r1z,
   *r3y = r1z * r2x - r1x * r2z;
   *r3z = r1x * r2y - r1y * r2x;
 }
+/*
+   Create a superellipse
+   "method" is 0 for quads, 1 for triangles
+      (quads look nicer in wireframe mode)/
+   This is a "unit" ellipsoid (-1 to 1) at the origin,
+      glTranslate() and glScale() as required.
+*/
+void EvalSuperEllipse(double t1,double t2,double p1,double p2,
+		      double a, double b, double c, XYZ *p);
+void Normalise(XYZ *p)
+{
+   double length;
 
+   length = p->x * p->x + p->y * p->y + p->z * p->z;
+   if (length > 0) 
+     {
+       length = sqrt(length);
+       p->x /= length;
+       p->y /= length;
+       p->z /= length;
+     }
+   else
+     {
+       p->x = 0;
+       p->y = 0;
+       p->z = 0;
+     }	
+}
+
+XYZ CalcNormal(XYZ p, XYZ p1, XYZ p2)
+{
+  XYZ n,pa,pb;
+
+   pa.x = p1.x - p.x;
+   pa.y = p1.y - p.y;
+   pa.z = p1.z - p.z;
+   pb.x = p2.x - p.x;
+   pb.y = p2.y - p.y;
+   pb.z = p2.z - p.z;
+   n.x = pa.y * pb.z - pa.z * pb.y;
+   n.y = pa.z * pb.x - pa.x * pb.z;
+   n.z = pa.x * pb.y - pa.y * pb.x;
+   Normalise(&n);
+
+   return(n);
+}
+
+void CreateSuperEllipse(double power1,double power2, double a, double b, double c,
+			int n, int method)
+{
+   int i,j;
+   double theta1,theta2,theta3;
+   XYZ p,p1,p2,en;
+   double delta;
+
+   /* Shall we just draw a point? */
+   if (n < 4) {
+      glBegin(GL_POINTS);
+      glVertex3f(0.0,0.0,0.0);
+      glEnd();
+      return;
+   }
+
+   /* Shall we just draw a plus */
+   if (power1 > 10 && power2 > 10) {
+      glBegin(GL_LINES);
+      glVertex3f(-1.0, 0.0, 0.0);
+      glVertex3f( 1.0, 0.0, 0.0);
+      glVertex3f( 0.0,-1.0, 0.0);
+      glVertex3f( 0.0, 1.0, 0.0);
+      glVertex3f( 0.0, 0.0,-1.0);
+      glVertex3f( 0.0, 0.0, 1.0);
+      glEnd();
+      return;
+   }
+
+   delta = 0.01 * TWOPI / n;
+   for (j=0;j<n/2;j++) {
+      theta1 = j * TWOPI / (double)n - PID2;
+      theta2 = (j + 1) * TWOPI / (double)n - PID2;
+
+      if (method == 0)
+         glBegin(GL_QUAD_STRIP);
+      else
+         glBegin(GL_TRIANGLE_STRIP);
+      for (i=0;i<=n;i++) {
+         if (i == 0 || i == n)
+            theta3 = 0;
+         else
+            theta3 = i * TWOPI / n;
+
+         EvalSuperEllipse(theta2,theta3,power1,power2,a,b,c,&p);
+         EvalSuperEllipse(theta2+delta,theta3,power1,power2,a,b,c,&p1);
+         EvalSuperEllipse(theta2,theta3+delta,power1,power2,a,b,b,&p2);
+         en = CalcNormal(p1,p,p2);
+         glNormal3f(en.x,en.y,en.z);
+         glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
+         glVertex3f(p.x,p.y,p.z);
+
+         EvalSuperEllipse(theta1,theta3,power1,power2,a,b,c,&p);
+         EvalSuperEllipse(theta1+delta,theta3,power1,power2,a,b,c,&p1);
+         EvalSuperEllipse(theta1,theta3+delta,power1,power2,a,b,c,&p2);
+         en = CalcNormal(p1,p,p2);
+         glNormal3f(en.x,en.y,en.z);
+         glTexCoord2f(i/(double)n,2*j/(double)n);
+         glVertex3f(p.x,p.y,p.z);
+      }
+      glEnd();
+   }
+}
+void EvalSuperEllipse(double t1,double t2,double p1,double p2,
+		      double a, double b, double c, XYZ *p)
+{
+   double tmp;
+   double ct1,ct2,st1,st2;
+
+   ct1 = cos(t1);
+   ct2 = cos(t2);
+   st1 = sin(t1);
+   st2 = sin(t2);
+
+   tmp  = SIGN(ct1) * pow(fabs(ct1),p1);
+   p->x = a * tmp * SIGN(ct2) * pow(fabs(ct2),p2);
+   p->y = b * SIGN(st1) * pow(fabs(st1),p1);
+   p->z = c * tmp * SIGN(st2) * pow(fabs(st2),p2);
+}
 
 /* ========================== >>> displayMol <<< ===========================*/
 void displayAtom(int nf, int nm, int na)
@@ -222,11 +347,24 @@ void displayAtom(int nf, int nm, int na)
     }
   else if (atom->common.type==MGL_ATOM_CYLINDER)
     {
+      /* orienta il cilindro */
       ss = gluNewQuadric();
+      vectProd(0,0,1,atom->disk.nx, atom->disk.ny, atom->disk.nz,
+	       &rax, &ray, &raz);
+      normra = sqrt(Sqr(rax)+Sqr(ray)+Sqr(raz));
+      normn = sqrt(Sqr(atom->disk.nx)+Sqr(atom->disk.ny)+Sqr(atom->disk.nz));
+      rotangle = 180.0*acos(atom->disk.nz/normn)/Pi; 	
+      glRotatef(rotangle, rax, ray, raz);
       gluCylinder(ss, atom->cylinder.toprad, 
 		      atom->cylinder.botrad, 
 		      atom->cylinder.height, 
 		      STACKS, SLIDES);
+    }
+  else if (atom->common.type==MGL_ATOM_SUPELLIPS)
+    {
+      CreateSuperEllipse(atom->supellips.n1, 
+			 atom->supellips.n2, atom->supellips.a, 
+			 atom->supellips.b, atom->supellips.c, 100, 1);
     }
  /*ss = gluNewQuadric();
     gluSphere(ss, sig[na], 12, 12);
@@ -747,10 +885,65 @@ int parsecol(char *str)
 void assignAtom(int nf, int i, int a, const char* L)
 {
   char s1[128], s2[128], s3[128], s4[128], s5[128], s6[128], s7[128], s8[128], s9[128];
+  char s10[128], s11[128], s12[128], s13[128], s14[128], s15[128], s16[128];
   atom_s *at;
 
   at = &mols[nf][i].atom[a];
-  if (sscanf(L,"%s %s %s %s %s %s @ %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9) == 9)
+  if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16) == 16)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	     atoi(s5),i, j);*/
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SUPELLIPS;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->supellips.R[0][0] = atof(s4);
+      at->supellips.R[0][1] = atof(s5);
+      at->supellips.R[0][2] = atof(s6);
+      at->supellips.R[1][0] = atof(s7);
+      at->supellips.R[1][1] = atof(s8);
+      at->supellips.R[1][2] = atof(s9);
+      at->supellips.R[2][0] = atof(s10);
+      at->supellips.R[2][1] = atof(s11);
+      at->supellips.R[2][2] = atof(s12);
+      at->supellips.a = atof(s13);
+      at->supellips.b = atof(s14);
+      at->supellips.c = atof(s15);
+      at->supellips.n1 = 1.0;
+      at->supellips.n2 = 1.0;
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = parsecol(s16);
+    }
+  else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15) == 15)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	     atoi(s5),i, j);*/
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SUPELLIPS;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->supellips.R[0][0] = atof(s4);
+      at->supellips.R[0][1] = atof(s5);
+      at->supellips.R[0][2] = atof(s6);
+      at->supellips.R[1][0] = atof(s7);
+      at->supellips.R[1][1] = atof(s8);
+      at->supellips.R[1][2] = atof(s9);
+      at->supellips.R[2][0] = atof(s10);
+      at->supellips.R[2][1] = atof(s11);
+      at->supellips.R[2][2] = atof(s12);
+      at->supellips.a = atof(s13);
+      at->supellips.b = atof(s14);
+      at->supellips.c = atof(s15);
+      at->supellips.n1 = 1.0;
+      at->supellips.n2 = 1.0;
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = -1;
+    }
+  else if (sscanf(L,"%s %s %s %s %s %s @ %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9) == 9)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
