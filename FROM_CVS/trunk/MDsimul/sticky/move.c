@@ -924,11 +924,21 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       core_bump(i, j, W, Sqr(sigmai));
       return;
     }
-
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+  rB[0] = rx[j];
+  rB[1] = ry[j];
+  rB[2] = rz[j];
   MD_DEBUG10(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   /* qui calcolo il punto di contatto */
-  BuildAtomPosAt(i, ata, rA, RtA, ratA);
-  BuildAtomPosAt(j, atb, rB, RtB, ratB);
+  MD_DEBUG20(printf("ata: %d atb: %d\n", ata, atb));
+  MD_DEBUG20(printf("rA %f %f %f\n", rA[0], rA[1], rA[2]));
+  MD_DEBUG20(printf("rB %f %f %f\n", rB[0], rB[1], rB[2]));
+  BuildAtomPosAt(i, ata, rA, R[i], ratA);
+  BuildAtomPosAt(j, atb, rB, R[j], ratB);
+  MD_DEBUG20(printf("ratA %f %f %f\n", ratA[0], ratA[1], ratA[2]));
+  MD_DEBUG20(printf("ratB %f %f %f\n", ratB[0], ratB[1], ratB[2]));
   for (kk = 0; kk < 3; kk++)
     rAB[kk] = ratA[kk] - ratB[kk];
   /* reduce to minimum image rAB[]!! */
@@ -1000,7 +1010,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 #else
   invIa = 1/Ia;
   invIb = 1/Ib;
-  MD_DEBUG(printf("Ia=%f Ib=%f\n", Ia, Ib));
+  MD_DEBUG20(printf("Ia=%f Ib=%f\n", Ia, Ib));
 #endif
   for (a=0; a < 3; a++)
     norm[a] = rAB[a];
@@ -1023,7 +1033,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   vc = 0;
   for (a=0; a < 3; a++)
     vc += (vCA[a]-vCB[a])*norm[a];
-  MD_DEBUG(printf("[bump] before bump vc=%.15G\n", vc));
+  MD_DEBUG20(printf("[bump] before bump vc=%.15G\n", vc));
 #if 0
     {
       double sp=0;
@@ -1156,6 +1166,11 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   wy[j] -= factorinvIb*rBCn[1];
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
+  if (isnan(wx[i]))
+    {
+      printf("factor: %f denom: %f vc: %f invIa: %f\n", factor, denom, vc, invIa);
+      exit(-1);
+    }
 #endif
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
