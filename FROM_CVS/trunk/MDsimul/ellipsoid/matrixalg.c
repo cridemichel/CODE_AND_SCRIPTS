@@ -278,13 +278,22 @@ void free_matrix(double **M, int n)
     }
   free(M);
 }
-int nn, nn2; /* Global variables to communicate with fmin.*/
+int nn, nn2, nnD; /* Global variables to communicate with fmin.*/
 double *fvec, *fvecG; 
+#ifdef MD_GLOBALNR2
+#define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
+free_vector(fvec);free_vector(xold);free_vector(g2); free_vector(xold2); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);free_vector(fvecG);return;}
+#else
 #define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
 free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);free_vector(fvecG);return;}
+#endif
+#define FREERETURND {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
+free_vector(fvecD);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);return;}
 
 void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[3]);
 void (*nrfuncv2)(int n, double v[], double fvec[], int i, int j, double shift[3]);
+void (*nrfuncvD)(int n, double v[], double fvec[], int i, int j, double shift[3]);
+
 
 extern void fdjac(int n, double x[], double fvec[], double **fjac, 
 		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j, double shift[3]), int iA, int iB, double shift[3]); 
@@ -309,6 +318,7 @@ void newt(double x[], int n, int *check,
 {
   int ii, i,its, its2,j,*indx;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold, alphaold; 
+  double r1[3], r2[3], alpha;
 #ifdef MD_GLOBALNR2
   int check2;
   double f2, stpmax2, fold2, *xold2, *g2;
@@ -345,7 +355,7 @@ void newt(double x[], int n, int *check,
   for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
       /* Stabilization */
-#if 1
+#if 0
       MD_DEBUG(printf("its=%d time = %.15f\n",its, x[4]));
       upd2tGuess(iA, iB, shift, x[4]);
 #ifdef MD_GLOBALNR2
@@ -577,6 +587,138 @@ void newt(double x[], int n, int *check,
   nrerror("MAXITS exceeded in newt"); 
   
 }
+#define MD_GLOBALNRD
+#define MAXITS3 20
+void newtDist(double x[], int n, int *check, 
+	  void (*vecfunc)(int, double [], double [], int, int, double []),
+	  int iA, int iB, double shift[3])
+{
+  int ii, i,its, its2,j,*indx;
+  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold, alphaold; 
+  indx=ivector(n); 
+  fjac=matrix(n, n);
+  g=vector(n);
+  p=vector(n); 
+  xold=vector(n); 
+  fvecD=vector(n); 
+  /*Define global variables.*/
+  nnD=n; 
+  nrfuncvD=vecfunc; 
+  f=fminD(x,iA,iB,shift); /*fvec is also computed by this call.*/
+  test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
+  for (i=0;i<n;i++) 
+    if (fabs(fvec[i]) > test)
+      test=fabs(fvec[i]); 
+  if (test < 0.01*TOLF)
+    {
+      *check=0; 
+      FREERETURND;
+    }
+  for (sum=0.0,i=0;i<n;i++) 
+    sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
+  stpmax=STPMX*FMAX(sqrt(sum),(double)n);
+  for (its=0;its<MAXITS3;its++)
+    { /* Start of iteration loop. */
+       /* ============ */
+       fdjacFD(n,x,fvecD,fjac,vecfunc, iA, iB, shift); 
+       /* If analytic Jacobian is available, you can 
+	  replace the routine fdjac below with your own routine.*/
+#ifdef MD_GLOBALNRD
+       for (i=0;i<n;i++) { /* Compute  f for the line search.*/
+	 for (sum=0.0,j=0;j<n;j++)
+	  sum += fjac[j][i]*fvecD[j]; 
+	g[i]=sum; 
+      } 
+      for (i=0;i<n;i++) 
+	xold[i]=x[i]; /* Store x,*/ 
+      fold=f; /* and f. */
+#else
+      test=0.0; /* Test for convergence on function values.*/
+      for (i=0;i<n;i++) 
+	test +=fabs(fvecD[i]); 
+      if (test < TOLF)
+	{
+	  *check = 0;
+	  MD_DEBUG(printf(" test < TOLF\n"));
+	  FREERETURND;
+	}
+#endif 
+      for (i=0;i<n;i++) 
+	p[i] = -fvecD[i]; /* Right-hand side for linear equations.*/
+      ludcmp(fjac,n,indx,&d); /* Solve linear equations by LU decomposition.*/
+      lubksb(fjac,n,indx,p);
+      
+      /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
+#ifdef MD_GLOBALNRD
+      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift); 
+      MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
+      test=0.0; /* Test for convergence on function values.*/
+      for (i=0;i<n;i++) 
+	if (fabs(fvecD[i]) > test) 
+	  test=fabs(fvecD[i]); 
+      if (test < TOLF) 
+	{ 
+	  *check=0; 
+	  MD_DEBUG(printf("test < TOLF\n"));
+	  FREERETURND
+	}
+      if (*check) 
+	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
+	  test=0.0; 
+	  den=FMAX(f,0.5*n);
+	  for (i=0;i<n;i++)
+	    {
+	      temp=fabs(g[i])*FMAX(fabs(x[i]),1.0)/den;
+	      if (temp > test) 
+		test=temp; 
+	    } 
+	  *check=(test < TOLMIN ? 2 : 0);
+	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
+  	  //FREERETURND 
+	} 
+      test=0.0; /* Test for convergence on x. */
+      for (i=0;i<n;i++) 
+	{
+	  temp=(fabs(x[i]-xold[i]))/FMAX(fabs(x[i]),1.0); 
+	  if (temp > test) 
+	    test=temp; 
+	} 
+      if (test < TOLX) 
+	{
+	  MD_DEBUG(printf("test<TOLX test=%.15f\n", test));
+	  FREERETURND;
+	}
+#if 1
+      if (*check==2)
+	{
+	  MD_DEBUG(printf("spurious convergence\n"));
+	  FREERETURND;
+	}
+#endif
+#else
+      test = 0;
+      for (i=0;i<n;i++) 
+	{ 
+      	  test += fabs(p[i]);
+	  x[i] += p[i];
+	}
+      MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
+      //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
+      if (test < TOLX) 
+	{ 
+	  *check = 0;
+	  MD_DEBUG(printf("test < TOLX\n"));
+	  FREERETURND; 
+	}
+#endif
+    } 
+  MD_DEBUG(printf("maxits!!!\n"));
+  *check = 2;
+  return;
+  nrerror("MAXITS exceeded in newt"); 
+  
+}
+
 
 #define EPS 1e-7//1.0E-4 /* Approximate square root of the machine precision.*/
 void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
@@ -600,7 +742,7 @@ void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int,
   free_vector(f); 
 }
 extern int nn, nn2; 
-extern double *fvec, *fvecG;
+extern double *fvec, *fvecG, *fvecD;
 extern void (*nrfuncv)(int n, double v[], double f[], int iA, int iB, double shift[3]); 
 extern void (*nrfuncv2)(int n, double v[], double f[], int iA, int iB, double shift[3]); 
 double fmin(double x[], int iA, int iB, double shift[3]) 
@@ -628,6 +770,21 @@ the calling program.*/
   (*nrfuncv2)(nn2,x,fvecG,iA,iB,shift);
   for (sum=0.0,i=0;i<nn2;i++)
     sum += Sqr(fvecG[i]); 
+    return 0.5*sum; 
+}
+#endif
+#ifdef MD_GLOBALNRD
+double fminD(double x[], int iA, int iB, double shift[3]) 
+/* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
+vector of functions at x. It is set to point to a user-supplied routine in the 
+calling program. Global variables also communicate the function values back to 
+the calling program.*/
+{
+  int i;
+  double sum;
+  (*nrfuncvD)(nnD,x,fvecD,iA,iB,shift);
+  for (sum=0.0,i=0;i<nn2;i++)
+    sum += Sqr(fvecD[i]); 
     return 0.5*sum; 
 }
 #endif
