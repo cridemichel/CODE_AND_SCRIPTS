@@ -799,12 +799,12 @@ void FENEForce(void)
   double ff, invff;
   double rabSq, L, drx, dry, drz, R0Sq, fx, fy, fz;
   L = cbrt(Vol);
-  Vfe = Wfe = 0;
+  Vfe = WC = 0;
 #ifdef ATPTENS
-  Wfexy = 0.0; /* virial off-diagonal terms of pressure tensor */
-  Wfeyz = 0.0;
-  Wfezx = 0.0;
-  Wfexx = Wfeyy = Wfezz = 0.0;
+  WCxy = 0.0; /* virial off-diagonal terms of pressure tensor */
+  WCyz = 0.0;
+  WCzx = 0.0;
+  WCxx = WCyy = WCzz = 0.0;
 #endif
   R0Sq = Sqr(Oparams.R0);
   for (i=0; i < Oparams.parnum; i++)
@@ -818,6 +818,17 @@ void FENEForce(void)
 	  dry = dry - L * rint(dry/L);
 	  drz = drz - L * rint(drz/L);
 	  rabSq = Sqr(drx) + Sqr(dry) + Sqr(drz); 
+	  if (rabSq > R0Sq)
+	    {
+	      if (OprogStatus.grow)
+		{}
+	      else
+		{
+		  printf("FENE bond broken, exiting...\n");
+		  printf("(%d,%d)-(%d,%d) dist: %.15G\n", a, i, a+1, i, sqrt(rabSq));
+		  exit(-1);
+		}
+	    }
 	  ff = 1 - rabSq / R0Sq;
 	  invff = -Oparams.kfe / ff;
 	  fx = drx * invff;
@@ -831,12 +842,12 @@ void FENEForce(void)
 	  Fz[a+1][i] -= fz;
 #ifdef ATPTENS
 	  /* Virial off-diagonal terms of atomic pressure tensor */
-	  WCxy += dx * fy;
-	  WCyz += dy * fz;
-	  WCzx += dz * fx;
-	  WCxx += dx * fx;
-	  WCyy += dy * fy;
-	  WCzz += dz * fz;
+	  WCxy += drx * fy;
+	  WCyz += dry * fz;
+	  WCzx += drz * fx;
+	  WCxx += drx * fx;
+	  WCyy += dry * fy;
+	  WCzz += drz * fz;
 #endif
 	  WC += rabSq * invff; 
 	  Vfe += -0.5 * Oparams.kfe * R0Sq * log(ff);
