@@ -231,7 +231,6 @@ double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)
 	    { /*If the minimum step in the downhill direction takes us uphill, then we are done.*/
 	      *xmin=x;
 	      return fx;
-
 	    }
 	}
       du=(*df)(u); /*Now all the housekeeping, sigh.*/
@@ -299,7 +298,7 @@ void dlinmin(double p[], double xi[], int n, double *fret, double (*func)(double
 { 
   double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)(double), double tol,
 		double *xmin);
-  const double TOLLINMIN = 1E-7;
+  const double TOLLINMIN = 1E-10;
   double f1dim(double x); 
   double df1dim(double x); 
   void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, double (*func)(double));
@@ -349,9 +348,8 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
   for (its=1;its<=ITMAXFR;its++)
     { /* Loop over iterations.*/
       *iter=its;
-      
       dlinmin(p,xi,n,fret,func,dfunc); /* Next statement is the normal return: */
-      printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR) );
+      //printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
       if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
 	{ 
 	  return;
@@ -362,7 +360,7 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
       for (j=0;j<n;j++) 
 	{
 	  gg += g[j]*g[j]; 
-	  /* dgg += xi[j]*xi[j]; */ /* This statement for Fletcher-Reeves.*/
+	   //dgg += xi[j]*xi[j];  /* This statement for Fletcher-Reeves.*/
 	  dgg += (xi[j]+g[j])*xi[j]; /*This statement for Polak-Ribiere.*/
 	} 
       if (gg == 0.0) 
@@ -418,8 +416,10 @@ void gradcgfunc(double *vec, double *grad)
     {
       //grad[kk]=-2.0*(vec[kk+3]-vec[kk])*A + vec[6]*fx[kk];
       //grad[kk+3]=2.0*(vec[kk+3]-vec[kk])*A + vec[7]*gx[kk];
-      grad[kk]=-2.0*(vec[kk+3]-vec[kk])*A + 2.0*10000*fx[kk]*Q1;
-      grad[kk+3]=2.0*(vec[kk+3]-vec[kk])*A + 2.0*10000*gx[kk]*Q2;
+      grad[kk]=-2.0*(vec[kk+3]-vec[kk])*A + 2.0*OprogStatus.lambda1*fx[kk]*Q1;
+      grad[kk+3]=2.0*(vec[kk+3]-vec[kk])*A + 2.0*OprogStatus.lambda2*gx[kk]*Q2;
+      grad[kk] = -grad[kk];
+      grad[kk+3] = -grad[kk];
     }
   //grad[6] = Sqr(Q1);
   //grad[7] = Sqr(Q2);
@@ -467,12 +467,12 @@ double  cgfunc(double *vec)
   F = 0.0;
   for (kk=0; kk < 3; kk++)
     F += A*Sqr(vec[kk]-vec[kk+3]);
-  F += 10000*Sqr(Q1);
-  F += 10000*Sqr(Q2);
+  F += OprogStatus.lambda1*Sqr(Q1);
+  F += OprogStatus.lambda2*Sqr(Q2);
   //F += vec[6]*Q1;
   //F += vec[7]*Q2;
-  printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
-  printf("vec[6]:%.15G vec[7]: %.15G Q1=%.15G Q2=%.15G\n", vec[6], vec[7], Q1, Q2);
+  //printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
+  //printf("vec[6]:%.15G vec[7]: %.15G Q1=%.15G Q2=%.15G\n", vec[6], vec[7], Q1, Q2);
   return F;
 }
 
@@ -481,19 +481,19 @@ void distconjgrad(int i, int j, double shift[3], double *vecg)
   int kk;
   double Fret;
   int iter;
-  double vec[8];
+  double vec[6];
   icg = i;
   jcg = j;
   for (kk=0; kk < 3; kk++)
     {
       shiftcg[kk] = shift[kk];
     }
-  for (kk=0; kk < 8; kk++)
+  for (kk=0; kk < 6; kk++)
     {
       vec[kk] = vecg[kk];
     }
-  printf(">>> vec[6]: %f vec[7]:%f\n", vec[6], vec[7]);
-  frprmn(vec, 6, 1E-5, &iter, &Fret, cgfunc, gradcgfunc);
+  //printf(">>> vec[6]: %f vec[7]:%f\n", vec[6], vec[7]);
+  frprmn(vec, 6, 1E-8, &iter, &Fret, cgfunc, gradcgfunc);
   for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];
