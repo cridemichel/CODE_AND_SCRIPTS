@@ -2432,6 +2432,22 @@ void updLv(double dt, double c)
 {
 
 }
+/* =========================== >>> kinet <<< ============================== */
+void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz,
+	   COORD_TYPE VOL1)
+{
+  int i, a;
+  K = 0.0;
+  for(i=0; i < Nm; i++)
+    {
+      for(a=0; a < NA; a++)
+	{
+	  K = K + (Sqr(px) + Sqr(py) + Sqr(pz))/m[a];
+	}
+    }
+  K *= 0.5;
+}
+
 void movelongRespaNPT(double dt)
 {
   updImpLong(dt, 0.25);
