@@ -2851,7 +2851,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #if 1
 		  || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i])<1E-14))
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i])<1E-12))
 #endif
 		    {
 		      //gotcoll = -1;

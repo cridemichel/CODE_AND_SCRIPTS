@@ -1198,7 +1198,7 @@ void save_init_conf(void)
 }
 void check_all_bonds(void)
 {
-  int nn, amin, bmin, i, j, aa, bb, nb, wnn, wj;
+  int nn, warn, amin, bmin, i, j, aa, bb, nb, wnn, wj;
   double wdist,drx, dry, drz, shift[3], dist, rat[5][3], dists[MD_PBONDS], ri[3];
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
@@ -1211,8 +1211,11 @@ void check_all_bonds(void)
   
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 
+  warn = 0;
   for ( i = 0; i < Oparams.parnum; i++)
     {
+      if (warn)
+	break;
       nb = 0;
       for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
 	{
@@ -1277,8 +1280,11 @@ void check_all_bonds(void)
 		      dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists);
 		      for (nn=0; nn < MD_PBONDS; nn++)
 			{
-			  if (dists[nn]<0.0)// && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
+			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
+			      && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
 			    {
+			      warn=1;
 #if 0
 			      aa = mapbondsa[nn];
 			      bb = mapbondsb[nn];
@@ -1286,18 +1292,25 @@ void check_all_bonds(void)
 			      wnn = nn;
 			      wj = j;
 #endif
-			      nb++;
+			      //nb++;
+			    }
+			  else if (dists[nn]>0.0 && 
+				   fabs(dists[nn])> OprogStatus.epsd && 
+				   bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+			    {
+			      warn = 1;
 			    }
   			}
 		    }
 		}
 	    }
 	}
-      if (numbonds[i]!=nb)
+      if (warn)
 	{
-	  printf("[WARNING] Number of bonds for molcule %d incorrect\n", i);
-	  printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
-		 numbonds[i], nb);
+	  mdPrintf(ALL, "[WARNING] wrong number of bonds\n", NULL);
+	  printf("[WARNING] Number of bonds for molecules %d incorrect\n", i);
+	  //printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
+	//	 numbonds[i], nb);
 	  printf("I've adjusted the number of bonds\n");
 	  //printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
 	  //store_bump(i,j);
