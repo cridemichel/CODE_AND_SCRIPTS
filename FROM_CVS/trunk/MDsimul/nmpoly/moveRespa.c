@@ -352,6 +352,50 @@ void updImpNoseAft(double dt, double c)
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
 #endif
 }
+
+void updImpLongNoseSym(double dt, double c)
+{
+  int i, a;
+  double cdt, expdt[NA], cost[NA], dlns, cdt2;
+  cdt = c*dt;
+  cdt2 = cdt / 2.0;
+  dlns = s*Ps / OprogStatus.Q ;
+  for (a = 0; a < NA; a++)
+    {
+      expdt[a] = exp(-dlns * cdt);
+      /*cost[a] = (expdt[a] - 1.0) / dlns;*/
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    for (a=0; a < NA; a++)
+      {
+	px[a][i] += FxLong[a][i] * cdt2;
+	py[a][i] += FyLong[a][i] * cdt2;
+	pz[a][i] += FzLong[a][i] * cdt2;
+	px[a][i] = px[a][i]*expdt[a];
+      	py[a][i] = py[a][i]*expdt[a];
+	pz[a][i] = pz[a][i]*expdt[a];
+	px[a][i] += FxLong[a][i] * cdt2;
+	py[a][i] += FyLong[a][i] * cdt2;
+	pz[a][i] += FzLong[a][i] * cdt2;
+
+      }
+#ifndef MD_FENE
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
+#ifdef ATPRESS 
+  WCLong = WC;
+#endif
+#ifdef ATPTENS  
+  WCxxLong = WCxx;
+  WCyyLong = WCyy;
+  WCzzLong = WCzz;
+  WCxyLong = WCxy;
+  WCzxLong = WCzx;
+  WCyzLong = WCyz;
+#endif 
+#endif
+}
+
+
 void updImpLongNoseAft(double dt, double c)
 {
   int i, a;
@@ -990,7 +1034,7 @@ void movelongRespaNPTBefAlt(double dt)
       Ps += DT * cdt2;
       Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
       Ps += DT * cdt2;
-      updImpLongNose(dt, 0.5);
+      updImpLongNoseSym(dt, 0.5);
       s = s / (1 - s*Ps*cdt/OprogStatus.Q);
     }
 #else
@@ -1018,7 +1062,7 @@ void movelongRespaNPTAftAlt(double dt)
       Nm = Oparams.parnum;
       cdt2 = cdt / 2.0;
       s = s / (1 - s*Ps*cdt/OprogStatus.Q);
-      updImpLongNose(dt, 0.5);
+      updImpLongNoseSym(dt, 0.5);
       Kin = 0;
       for (i = 0; i < Oparams.parnum; i++)
     	for (a = 0; a < NA; a++)
@@ -1434,7 +1478,7 @@ void move(void)
   for (a = 0; a < NA; a++)
     Mtot += Oparams.m[a];
 #ifdef MD_RESPA_NPT
-  movelongRespaNPTBef(Oparams.steplength);
+  movelongRespaNPTBefAlt(Oparams.steplength);
 #else
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
@@ -1540,7 +1584,7 @@ void move(void)
   //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
   //LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcut);
 #ifdef MD_RESPA_NPT
-  movelongRespaNPTAft(Oparams.steplength);
+  movelongRespaNPTAftAlt(Oparams.steplength);
   p2v();
 #else
   for (i=0; i < Oparams.parnum; i++)
