@@ -1504,8 +1504,8 @@ void remove_bond(int na, int n, int a, int b)
     }
   if (nb==numbonds[na])
     printf("nessun bond rimosso fra %d,%d\n", n, na);
-  if (abs(nb - numbonds)==2)
-    printf("rimossi due bond boh...\n")
+  if (abs(nb - numbonds[na])==2)
+    printf("rimossi due bond boh...\n");
 }
 
 void add_bond(int na, int n, int a, int b)
