@@ -499,6 +499,7 @@ void scale_Phi(void)
   //UpdateSystem();   
   L2 = 0.5 * L;
   /* get the minimum distance in the system */
+  phi = calc_phi();
   for (kk = 0;  kk < 3; kk++)
     {
       cellRange[2*kk]   = - 1;
@@ -3516,46 +3517,40 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
   return 0;
 }
 extern double **Aip;
+extern void polint(double xa[], double ya[], int n, double x, double *y, double *dy);
+double zbrent(double (*func)(double), double x1, double x2, double tol);
+int polinterr;
+double xa[3], ya[3];
+double distfunc(double x)
+{
+  double dy, y;
+  polint(xa, ya, 3, x, &y, &dy);
+  if (dy > OprogStatus.epsd)
+    polinterr = 1;
+  else 
+    polinterr = 0;
+  return y;
+}
 int interpol(int i, int j, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3])
 {
-  double d3, Delta, t1, t2, bip[3];
+  double d3, Delta, t1, t2;
   double r1[3], r2[3], alpha;
   d3 = calcDistNeg(t+delt/2, i, j, shift, r1, r2, &alpha, vecg, 0);
-  Aip[0][0] = Sqr(t);
-  Aip[0][1] = t;
-  Aip[0][2] = 1;
-  bip[0] = d1;
-  Aip[1][0] = Sqr(t+delt);
-  Aip[1][1] = t+delt;
-  Aip[1][2] = 1;
-  bip[1] = d2;
-  Aip[2][0] = Sqr(t+delt*0.5);
-  Aip[2][1] = t+delt*0.5;
-  Aip[2][2] = 1;
-  bip[2] = d3;
+  xa[0] = t;
+  ya[0] = d1;
+  xa[1] = t+delt*0.5;
+  ya[1] = d3;
+  xa[2] = t+delt;
+  ya[2] = d2;
   //printf("(%.8f,%.8f) (%.8f,%.8f) (%.8f,%.8f)\n", t, d1, t+delt, d2, t+delt*0.5, d3);
   //printf("{%.8f %.8f %.8f}\n", bip[0], bip[1], bip[2]);
   //print_matrix(Aip, 3);
-  if (SolveLineq(Aip, bip, 3))
-    {
-      return 1;
-    }
 
-  //printf("Solved %.8f %.8f %.8f\n", bip[0], bip[1], bip[2]);
-  //printf(">>> %.10f\n", Sqr(t)*bip[0]+t*bip[1]+bip[2]-d1);
-  Delta = Sqr(bip[1]) - 4.0*bip[0]*bip[2];
-  if (Delta<0 || bip[0]==0.0)
-    {
-      //printf("*troot=%.8G t=%.8G delt=%.8G\n", *troot, t, delt);
-      return 1;
-    }
-  t1 =  (-bip[1] + sqrt(Delta))/(2.0*bip[0]);
-  t2 =  (-bip[1] - sqrt(Delta))/(2.0*bip[0]); 
-  //printf("t1= %.10f t2= %.10f\n", t1, t2);
-  if (t1 < t2)
-    *troot = t1;
-  else
-    *troot = t2;
+  printf("d1:%.10f d2: %.10f\n", d1, d2); 
+  printf("polint1: %.10f polint2: %.10f\n",distfunc(t), distfunc(t+delt));
+  *troot=zbrent(distfunc, t, t+delt, OprogStatus.epsd/100);
+  if (polinterr)
+    return 1;
   calcDistNeg(*troot, i, j, shift, r1, r2, &alpha, vecg, 0);
   //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
   return 0;
@@ -3756,12 +3751,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
        	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd1[kk];
 	    
-	  //if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift))
-	    //{
-	  for (kk=0; kk < 8; kk++)
-    	    vecgroot[kk] = vecgd2[kk];
-	  troot = t - delt;
-	  // }
+	  if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift))
+	    {
+	      for (kk=0; kk < 8; kk++)
+		vecgroot[kk] = vecgd2[kk];
+	      troot = t - delt;
+	    }
 #endif
 	  if (refine_contact(i, j, troot, vecgroot, shift, vecg))
 	    {
