@@ -540,7 +540,7 @@ void updImpLong(double dt, double c)
 	pz[a][i] += cdt * FzLong[a][i];
       }
 #ifndef MD_FENE
-  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
 #endif
@@ -718,7 +718,7 @@ void updImpLongNose(double dt, double c)
 	pz[a][i] += FzLong[a][i] * cdt;
       }
 #ifndef MD_FENE
-  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
 #ifdef ATPRESS 
   WCLong = WC;
 #endif
@@ -998,7 +998,7 @@ void updImpNoseAnd(double dt, double c)
     }
 #ifndef MD_FENE  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
-		   0.000000000001, px, py, pz);
+		   0.0000000000001, px, py, pz);
 #endif
 
 }
@@ -1790,7 +1790,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
     }
 
 #if !defined(MD_FENE)
-  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 0.00000000001, 150, NA-1, Oparams.d,
+  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 0.0000000000001, 150, NA-1, Oparams.d,
 		Oparams.m, Oparams.parnum);
 #endif
 
