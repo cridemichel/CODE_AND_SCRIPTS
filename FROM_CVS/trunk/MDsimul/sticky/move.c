@@ -2349,7 +2349,7 @@ double eval_maxddist(int i, int j, int bondpair, double t1)
 {
   double ti, rA[3], rB[3], Omega[3][3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
 	 r12i[3], r12j[3], maxddotOpt[MD_PBONDS];
-  double maxddot;
+  double maxddot, nr12i, nr12j;
   int nn, kk;
   ti = t1 - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
@@ -2369,9 +2369,16 @@ double eval_maxddist(int i, int j, int bondpair, double t1)
     {
       for (kk = 0; kk < 3; kk++)
 	{
-	  r12i[kk] = ratA[mapbondsa[nn]][kk]-rA[kk];
-  	  r12j[kk] = ratB[mapbondsb[nn]][kk]-rB[kk];	  
+	  r12i[kk] = (ratA[mapbondsa[nn]][kk]-rA[kk]);
+  	  r12j[kk] = (ratB[mapbondsb[nn]][kk]-rB[kk])*1.01;	  
 	}
+      nr12i = calc_norm(r12i);
+      nr12j = calc_norm(r12j);
+      for (kk = 0; kk < 3; kk++)
+	{
+	  r12i[kk] *= (nr12i+OprogStatus.epsd)/nr12i;
+	  r12j[kk] *= (nr12j+OprogStatus.epsd)/nr12j;
+	}	  
       vectProd(wx[i], wy[i], wz[i], r12i[0], r12i[1], r12i[2], &wri[0], &wri[1], &wri[2]);
       nwri = calc_norm(wri);
       vectProd(wx[j], wy[j], wz[j], r12j[0], r12j[1], r12j[2], &wrj[0], &wrj[1], &wrj[2]);
