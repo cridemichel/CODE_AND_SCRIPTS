@@ -712,14 +712,8 @@ void usrInitBef(void)
 
     V = 0.0;
     L = 9.4;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
     Oparams.bheight = 0.0;
     OprogStatus.maxbonds = 20;
-#endif
-#ifdef MD_GRAVITY
-    Lz = 9.4;
-#endif
     Oparams.T = 2.0;
     Oparams.P = 1.0;
     Oparams.M = 5; /* cells in each direction for linked lists */
@@ -742,22 +736,6 @@ void usrInitBef(void)
     OprogStatus.endtime = 0;
     OprogStatus.rescaleTime = 1.0;
     OprogStatus.brownian = 0;
-#ifdef MD_GRAVITY
-    OprogStatus.taptau = 0.0;
-    OprogStatus.rzup = 0.0;
-    OprogStatus.expandFact= 1.0;
-    OprogStatus.quenchend = 0.0;
-    OprogStatus.tc = 1E-5;
-    OprogStatus.accrcmz = 0.0;
-    OprogStatus.wallcollCount = 0;
-    OprogStatus.checkquenchTime = 1.0;
-    OprogStatus.numquench = 0;
-    OprogStatus.maxquench = 0;
-    OprogStatus.rescaleTime = 0.0;
-    OprogStatus.extraLz = 10.0;
-    OprogStatus.rhobh = 0.0;
-    OprogStatus.vztap = 10.0;
-#endif
 #ifndef MD_ASYM_ITENS
     for (i = 0; i < 2; i++)
       Oparams.I[i] = 1.0;
@@ -773,15 +751,6 @@ void usrInitBef(void)
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
     OprogStatus.epsdMax = 0.001;
-    OprogStatus.guessDistOpt = 0;
-    OprogStatus.tolSD = 0.01;
-    OprogStatus.tolSDlong = 0.01;
-    OprogStatus.tolSDconstr= 0.1;
-    OprogStatus.tolSDgrad = 0.0;
-    OprogStatus.springkSD = -1.0;
-    OprogStatus.stepSDA = 1.0;
-    OprogStatus.stepSDB = 1.0;
-    OprogStatus.maxitsSD=200;
     OprogStatus.zbrakn = 100;
     OprogStatus.zbrentTol = 0.00001;
     OprogStatus.forceguess = 1;
@@ -1037,7 +1006,7 @@ void usrInitAft(void)
     int Nm, i, sct, overlap, amin, bmin;
     COORD_TYPE vcmx, vcmy, vcmz;
     COORD_TYPE *m;
-    double sigDeltaSq, drx, dry, drz;
+    double sigDeltaSq, drx, dry, drz, shift[3];
     int j;
     int a;
     /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
@@ -1055,8 +1024,8 @@ void usrInitAft(void)
     poolSize = OprogStatus.eventMult*Oparams.parnum;
     m = Oparams.m;
     Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
-    Oparams.sigmaA[2] = Oparams.sigmaA[1];
-    Oparams.sigmaA[4] = Oparams.sigmaA[3];
+    Oparams.sigma[1][1] = Oparams.sigma[0][0];
+    Oparams.sigma[0][1] = Oparams.sigma[1][0] = Oparams.sigma[0][0];
     invmA = 1.0/Oparams.m[0];
     invmB = 1.0/Oparams.m[1];
     /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
@@ -1154,8 +1123,7 @@ void usrInitAft(void)
       scdone[i] = 0;
       for (a = 0; a < NA; a++)
 	{
-	  radat[i][a] = Oparams.sigmaA[a];
-	  deltat[i][a] = Oparams.deltaA[a];
+	  radat[i][a] = Oparams.sigma[0][0];
 	}
     }
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
@@ -1163,11 +1131,9 @@ void usrInitAft(void)
       scdone[i] = 0;
       for (a = 0; a < NA; a++)
 	{
-	  radat[i][a] = Oparams.sigmaB[a];
-	  deltat[i][a] = Oparams.deltaB[a];
+	  radat[i][a] = Oparams.sigma[1][1];
 	}
     }
-  printf(">>>> phi=%.12G L=%f (%f,%f,%f)\n", calc_phi(), L, Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
   /* evaluation of principal inertia moments*/ 
   for (a = 0; a < 2; a++)
     {
@@ -1186,11 +1152,11 @@ void usrInitAft(void)
       /* scegliere rigorosamente a seconda del modello!!*/
       if (i < Oparams.parnumA)
 	{
-	  maxax[i] = Oparams.sigmaA[0]*1.2;
+	  maxax[i] = Oparams.sigma[0][0]*1.2;
 	}
       else
 	{
-	  maxax[i] = Oparams.sigmaB[0]*1.2;
+	  maxax[i] = Oparams.sigma[1][1]*1.2;
 	}
     }
 #endif
@@ -1201,21 +1167,19 @@ void usrInitAft(void)
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
-	drx = rx[i] - rx[j] 
+	drx = rx[i] - rx[j];
 	shift[0] = -L*rint(drx/L);
-	dry = ry[i] - ry[j] 
+	dry = ry[i] - ry[j];
 	shift[1] = -L*rint(dry/L);
-	drz = rz[i] - rz[j] 
+	drz = rz[i] - rz[j]; 
 	shift[2] = -L*rint(drz/L);
 	dist = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin);
 	if (i < Oparams.parnumA && j < Oparams.parnumA)
-	  sigDeltaSq = 0.5*(Oparams.sigmaA[amin]+Oparams.sigmaA[bmin]);
+	  sigDeltaSq = Sqr(Oparams.sigma[0][0]);
 	else if (i > Oparams.parnumA && j > Oparams.parnumA)
-	  sigDeltaSq = 0.5*(Oparams.sigmaB[amin]+Oparams.sigmaB[bmin]);
-	else if (i < Oparams.parnumA && j > Oparams.parnumA)
-	  sigDeltaSq = 0.5*(Oparams.sigmaA[amin]+Oparams.sigmaB[bmin]); 
-	else
-	  sigDeltaSq = 0.5*(Oparams.sigmaB[amin]+Oparams.sigmaA[bmin]);
+	  sigDeltaSq = Sqr(Oparams.sigma[1][1]);
+	else 
+	  sigDeltaSq = Sqr(Oparams.sigma[0][1]); 
 	if (Sqr(dist) < sigDeltaSq)
 	  {
 	    add_bond(i, j, amin, bmin);

@@ -319,25 +319,7 @@ struct progStatus
   int KK;
   int JJ;
   double storerate;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   int maxbonds;
-#endif
-#ifdef MD_GRAVITY
-  int numquench;
-  int maxquench;
-  double quenchtol;
-  double rhobh;
-  double extraLz;
-  double vztap;
-  double rzup;
-  double expandFact;
-  double quenchend;
-  double tc;
-  double lastV;
-  double accV;
-  int wallcollCount;
-  double accrcmz;
-#endif
   double intervalSum;
   int eventMult;
   /* ADD 13/4/2000 
@@ -397,7 +379,7 @@ struct params
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
   COORD_TYPE m[2];             /* atoms masses */
-  double sigma[2];
+  double sigma[2][2];
   double sigmaSticky;
   double rcut;
   int equilibrat;               /* != 0 if equilibrating */
@@ -548,7 +530,7 @@ struct pascii opar_ascii[]=
   {"P",                 &OP(P),                           1,   1, "%.6G"},
   {"T",                 &OP(T),                           1,   1, "%.6G"},
   {"m",                OP(m),                            2,   1, "%.10G"},
-  {"sigma",           OP(sigma),                        2,   1, "%.10G"},
+  {"sigma",           OP(sigma),                        2,   2, "%.10G"},
   {"sigmaSticky",     &OP(sigmaSticky),                  1,   1, "%.10G"},
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
@@ -670,9 +652,9 @@ struct singlePar OsinglePar[] = {
   {"L",          &L,                          CT},
 #ifdef MD_SILICA
 #else
-  /* sigmaA[0] = atomo grande sigmaA[1,2] = hydrogen sites sigmaA[3,4] = electron sites 
+  /* sigma[0][0] = atomo grande  
    * bheight = barriere dell'interazione a buca quadrata tra H e Elettrone */
-  {"sigma",      &Oparams.sigma[0],          CT},
+  {"sigma",      &Oparams.sigma[0][0],          CT},
   {"sigmaSticky",&Oparams.sigmaSticky,        CT},
   {"bheight",    &Oparams.bheight,            CT},
 #endif

@@ -64,8 +64,7 @@ int check_node(char* str, int id, int idNew, int idUp)
     }
   return 0;
 }
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-void ScheduleEventBarr (int idA, int idB, int idata, int atb, int idcollcode, double tEvent) 
+void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent) 
 {
   int id, idNew, more;
   id = 0;
@@ -156,9 +155,9 @@ void ScheduleEventBarr (int idA, int idB, int idata, int atb, int idcollcode, do
 }
 void ScheduleEvent(int IdA, int IdB, double tEvent)
 {
-  ScheduleEventBarr(IdA, IdB, MD_EVENT_NONE, tEvent);
+  ScheduleEventBarr(IdA, IdB, 0, 0, MD_EVENT_NONE, tEvent);
 }
-#else
+#if 0
 void ScheduleEvent (int idA, int idB, double tEvent) 
 {
   int id, idNew, more;
