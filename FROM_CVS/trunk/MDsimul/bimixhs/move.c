@@ -331,6 +331,9 @@ void bump (int i, int j, double* W, int bt)
    ** THE ROUTINE ALSO COMPUTES COLLISIONAL VIRIAL W.               **
    *******************************************************************
    */
+#ifdef MD_HSVISCO
+  double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold;
+#endif
   double rxij, ryij, rzij, factor, invmi, invmj;
   double delpx, delpy, delpz;
   double mredl, ene;
@@ -433,12 +436,12 @@ void bump (int i, int j, double* W, int bt)
 	Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
 #endif
 #ifdef MD_HSVISCO
-  OprogStatus.Txy += delpx*delpy*invmi + vx[i]*delpy + delpx*vy[i];
-  OprogStatus.Txy += delpx*delpy*invmj + vx[j]*delpy + delpx*vy[j]; 
-  OprogStatus.Tyz += delpy*delpz*invmi + vy[i]*delpz + delpy*vz[i];
-  OprogStatus.Tyz += delpy*delpz*invmj + vy[j]*delpz + delpy*vz[j];
-  OprogStatus.Tzx += delpz*delpx*invmi + vz[i]*delpx + delpz*vx[i];
-  OprogStatus.Tzx += delpz*delpx*invmj + vz[j]*delpx + delpz*vx[j];
+  DTxy = delpx*delpy*invmi + vx[i]*delpy + delpx*vy[i];
+  DTxy += delpx*delpy*invmj - vx[j]*delpy - delpx*vy[j]; 
+  DTyz = delpy*delpz*invmi + vy[i]*delpz + delpy*vz[i];
+  DTyz += delpy*delpz*invmj - vy[j]*delpz - delpy*vz[j];
+  DTzx = delpz*delpx*invmi + vz[i]*delpx + delpz*vx[i];
+  DTzx += delpz*delpx*invmj - vz[j]*delpx - delpz*vx[j];
 #endif
   vx[i] = vx[i] + delpx*invmi;
   vx[j] = vx[j] - delpx*invmj;
@@ -446,6 +449,7 @@ void bump (int i, int j, double* W, int bt)
   vy[j] = vy[j] - delpy*invmj;
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
+  //calcT();
 #ifdef MD_HSVISCO 
   if (OprogStatus.lastcoll!=-1)
     {
@@ -460,6 +464,21 @@ void bump (int i, int j, double* W, int bt)
       OprogStatus.DQWzx += rzij*delpx;
       //printf("DQW= %f %f %f\n", OprogStatus.DQWxy, OprogStatus.DQWyz, OprogStatus.DQWzx);
     }
+#if 0
+  Txyold = OprogStatus.Txy;
+  Tyzold = OprogStatus.Tyz;
+  Tzxold = OprogStatus.Tzx;
+#endif
+  OprogStatus.Txy += DTxy; 
+  OprogStatus.Tyz += DTyz;
+  OprogStatus.Tzx += DTzx;
+#if 0
+  printf("P STEP #%d T= %f %f %f\n", Oparams.curStep, OprogStatus.Txy, OprogStatus.Tyz, OprogStatus.Tzx);
+  printf("P STEP #%d DT=%f %f %f\n", Oparams.curStep, DTxy, DTyz, DTzx);
+  calcT();
+  printf("D STEP #%d T= %f %f %f\n", Oparams.curStep, OprogStatus.Txy, OprogStatus.Tyz, OprogStatus.Tzx);
+  printf("DT STEP #%d T= %f %f %f\n", Oparams.curStep, OprogStatus.Txy-Txyold, OprogStatus.Tyz-Tyzold, OprogStatus.Tzx-Tzxold);
+#endif
 #endif
 #if 0
   *W = delpx * rxij + delpy * ryij + delpz * rzij;
