@@ -1113,6 +1113,7 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 		  fabs(vy[a][i]- vyold[a][i]) < ittol &&
 		  fabs(vz[a][i]- vzold[a][i]) < ittol)
 		numok++;
+	      /*printf("[%d][%d] %f,%f,%f\n", a, i, vx[a][i], vy[a][i], vz[a][i]);*/
 	    }
 	}
       if (numok == NA*Oparams.parnum)

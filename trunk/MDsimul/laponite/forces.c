@@ -448,7 +448,9 @@ void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, COORD_TYPE** velz,
      of the temperature (i.e. the predicted one) */
   int i, a;
   COORD_TYPE dlnV, px, py, pz;
-
+#if 0
+  double vmed;
+#endif
   /* NOTE: K is not shared so this loop is done by father and child */
   K = 0.0;
   L = cbrt(Vol);
@@ -456,7 +458,9 @@ void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, COORD_TYPE** velz,
 
   dlnV = VOL1 / Vol;
   dlnV /= 3.0;
- 
+#if 0
+  vmed = 0;
+#endif
   for(i=0; i < Nm; i++)
     {
       for(a=0; a < NA; a++)
@@ -466,8 +470,15 @@ void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, COORD_TYPE** velz,
 	  pz = velz[a][i] - dlnV * Rz[i];
 	  K = K + Oparams.m[a] * (Sqr(px) + Sqr(py) + Sqr(pz));
 	}
+#if 0
+      vmed = vmed + sqrt(Sqr((velx[0][i]+velx[1][i]+velx[2][i])/3.0) + 
+			 Sqr(Sqr((vely[0][i]+vely[1][i]+vely[2][i])/3.0)) + 
+			 Sqr(Sqr((velz[0][i]+velz[1][i]+velz[2][i])/3.0)) );
+#endif
     }
-
+#if 0
+  printf("steplength: %f vmed=%f\n", Oparams.steplength, vmed / Oparams.parnum);
+#endif
   /* Kp is the kinetic energy calculated using 'predicted' velocities at time
      t (v(t)) */
   K *= 0.5;
