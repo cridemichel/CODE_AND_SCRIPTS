@@ -935,6 +935,7 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
   double theta, phi;
   XYZ p;
   const double TWOPI=2.0*pi, PID2=pi/2.0;
+  double dtheta = TWOPI / (n1+1);
   /* n1 = stacks
    * n2 = slides */
   n1 = OprogStatus.n1;
@@ -944,7 +945,7 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
       phi = j * TWOPI / (double)n2;
       for (i=0;i<n1;i++) 
 	{
-	  theta = i * TWOPI / n1;
+	  theta = i * dtheta + dtheta / 2;
 	  EvalSuperEllipse(theta,phi,a,b,c,&mesh[i][j]);
 	}
     }
