@@ -576,12 +576,12 @@ void wrap_initCoord(void)
   rx[0] = -1.0;
   ry[0] =  0 ;
   rz[0] =  0;
-  vx[0] = 1.0;
+  vx[0] = 1;
   vy[0] = 0;
   vz[0] = 0;
-  wx[0] = 0.0;
-  wy[0] = 0.0;
-  wz[0] = 0.0;
+  wx[0] = 0.5;
+  wy[0] = -0.7;
+  wz[0] = 0.9;
 #if 0
   uxx[0] = 0.707;
   uyx[0] = -0.707;
@@ -596,13 +596,15 @@ void wrap_initCoord(void)
   rx[1] = 1.0;
   ry[1] = 1.75;
   rz[1] = 0;
-  vx[1] = -1.0;
+  vx[1] = -1;
   vy[1] = 0;
   vz[1] = 0;
-  wx[1] = 0.0;
-  wy[1] = 0.0;
-  wz[1] = 0.0;
+  wx[1] = -0.5;
+  wy[1] = 0.2;
+  wz[1] = 0.6;
 }
+
+void adjust_norm(double **R);
 /* =========================== >>> initCoord <<< ============================*/
 void initCoord(void)
 {
@@ -633,7 +635,7 @@ void initCoord(void)
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
   angvel(); 
-  //wrap_initCoord();
+  wrap_initCoord();
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
@@ -920,7 +922,6 @@ void usrInitAft(void)
 	R[i] = matrix(3, 3);
       }
     u2R();
-
     if (OprogStatus.CMreset==-1)
       {
 	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
