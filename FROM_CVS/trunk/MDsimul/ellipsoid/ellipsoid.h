@@ -289,9 +289,6 @@ struct progStatus
   int savedXva; 
   int CMreset;
   int mdseed;
-  int nebrTabFac;                /* How much storage sould be provided for 
-                                   the neighbour list (see Rapaport pag.53
-				   for details )*/
 #ifdef MD_NNL
   double rNebrShell;   /* Dr of shell of neighbour list shell see Rapaport pag. 53 */
   int nebrTabFac;
@@ -705,7 +702,6 @@ struct singlePar OsinglePar[] = {
   {"nebrTabFac", &OprogStatus.nebrTabFac,     INT},
 #endif
   {"overlaptol", &OprogStatus.overlaptol,     CT},
-  {"nebrTabFac", &OprogStatus.nebrTabFac,     INT},
   {"intervalSum", &OprogStatus.intervalSum,   CT},
   {"rescaleTime", &OprogStatus.rescaleTime,   CT},
   {"storerate",     &OprogStatus.storerate,     CT},
