@@ -268,7 +268,7 @@ void displayBonds(int nf, int i)
       from = mols[nf][i].bond[nb].from;
       to   = mols[nf][i].bond[nb].to;
       if (from < 0 || from >= mols[nf][i].numat ||
-	  to < 0 || to <= mols[nf][i].numat)
+	  to < 0 || to >= mols[nf][i].numat)
 	{
 	  fprintf(stderr,
 		  "WARNING: Bond %d-%d of Molecule N. %i in frame %d refers to non-existant atom\n", 
@@ -1032,27 +1032,29 @@ int parseLine(const char* Line, int* nf, int* i, int alloc)
     {
       ns = strtok(parVal, ",");
       nb = 0;
+      printf("qui\n");
       defbondthick = globset.defbondthick;
       defbondcolor = globset.defbondcol;
       while(ns)
 	{
 	  nb++;
 	  mols[*nf][*i].numbonds = nb;
-	  mols[*nf][*i].bond = realloc(mols[*nf][*i].bond, sizeof(bond_s)*nb);
-	  /*printf("nb:%d nf:%d i:%d\n", nb, *nf, *i);*/
+	  printf("ns: %s nb:%d nf:%d i:%d mols:%d\n", ns, nb, *nf, *i, mols[*nf][*i].bond[0].from);
+	  if (alloc)
+	    mols[*nf][*i].bond = realloc(mols[*nf][*i].bond, sizeof(bond_s)*nb);
 	  if (sscanf(ns, "[%s,%s]",s1,s2)==2)
 	    {
 	      /* [spessore,colore] */
 	      defbondthick = atoi(s1);
 	      defbondcolor = atoi(s2);
 	    }
-	  else if (sscanf(ns, "%s-%s", s1, s2))
+	  else if (sscanf(ns, "%s-%s", s1, s2)==2)
 	    {
 	      /* atomo-atomo */ 
 	      mols[*nf][*i].bond[nb-1].from = atoi(s1);
 	      mols[*nf][*i].bond[nb-1].to   = atoi(s2);
 	     }
-	  else if (sscanf(ns, "%s-%s[%s,%s]", s1, s2, s3, s4)) 
+	  else if (sscanf(ns, "%s-%s[%s,%s]", s1, s2, s3, s4)==4) 
 	    {
 	      /* atomo-atomo[spessore,colore] */
 	      mols[*nf][*i].bond[nb-1].from = atoi(s1);
