@@ -685,7 +685,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	sol = s2;
 #if 1
       ng = calc_norm(gradf);
-      if (fabs(sol)*ng > dist*OprogStatus.tolSD/2.0)
+      if (fabs(sol)*ng > dist*sqrt(OprogStatus.tolSD)/2.0)
 	{
 	  sf /= GOLD;
 	  its++;
@@ -769,6 +769,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   const double EPSFR=1E-10;
   double normxi,gg,gam,fp,dgg,norm1, norm2, sp, fpold, gradf[3], gradg[3];
   double distini, distfin, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3];
+  double pm[6], fpm;
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
   
   sfA = icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
@@ -814,7 +815,12 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	}
 #endif
       for (j=0; j < n; j++)
-	p[j] += xi[j];
+	{
+	  p[j] += xi[j];
+	  pm[j] += xi[j]/2.0;
+	}
+
+ 
       //printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
 #if 0
       if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
@@ -824,7 +830,15 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 #endif
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradfG, gradgG);
-      //printf("its=%d fpold=%.15G ,fp=%.15G\n", its, fpold, fp);
+#if 0
+      fpm = (*func)(pm);
+      if (fpm < fp && fpm < fpold)
+	{
+	  for (j=0; j < n; j++)
+	    xi[j] /= 4.0;
+	}
+#endif
+     //printf("its=%d fpold=%.15G ,fp=%.15G\n", its, fpold, fp);
       //fp=(*func)(p);
 #if 0
        for (kk = 0; kk < 3; kk++)
@@ -875,13 +889,19 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 
   //linminConstr(p,xi,n,fret,func); /* Next statement is the normal return: */
 #if 0
+    {
+    double ng=0;
   distfin = 0;
   for (kk = 0; kk < 3; kk++)
     {
+      ng += Sqr(xi[kk]);
       distfin += Sqr(p[kk+3]-p[kk]);
     }
   distfin = sqrt(distfin);
+  ng =sqrt(ng);
   printf(">>> distini=%.15G distfin=%.15G sfA: %.15G sfB:%.15G\n", distini, distfin, sfA, sfB);
+  printf(">>> fpold=%.15G fp=%.15G normgrad=%.15G\n", fpold, fp, ng);
+    }
 #endif
 
   return; 
@@ -2089,7 +2109,7 @@ void newt(double x[], int n, int *check,
   nrerror("MAXITS exceeded in newt"); 
   
 }
-#undef MD_GLOBALNRD
+#define MD_GLOBALNRD
 #define MAXITS3 200
 void newtDistNeg(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
