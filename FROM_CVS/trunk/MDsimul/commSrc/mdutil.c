@@ -443,7 +443,7 @@ int chkBakAsciiSteps(void)
 #else
     /* OprogStatus.fstps viene usata per memorizzare l'indice nell'array bilog_arr
      * del prossimo step a cui si salvare */
-    if (Oparams.curStep == bilog_arr[OprogStatus.lastbilogsaved])
+    if (bilog_arr[OprogStatus.lastbilogsaved] && Oparams.curStep == bilog_arr[OprogStatus.lastbilogsaved])
       {
 	OprogStatus.lastbilogsaved++;
 	return 1;
@@ -526,7 +526,15 @@ int chkXvaSteps(void)
     printf("add necessary fields to OprogStatus struct and define macro MD_BILOG!!!\n");
     exit(-1);
 #else
-    
+    /* OprogStatus.fstps viene usata per memorizzare l'indice nell'array bilog_arr
+     * del prossimo step a cui si salvare */
+    if (bilog_arr[OprogStatus.lastbilogsaved] && Oparams.curStep == bilog_arr[OprogStatus.lastbilogsaved])
+      {
+	OprogStatus.lastbilogsaved++;
+	return 1;
+      }
+    return 0;
+
 #endif
     break;
   default:
