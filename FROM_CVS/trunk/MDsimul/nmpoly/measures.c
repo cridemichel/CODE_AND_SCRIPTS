@@ -51,6 +51,7 @@ extern COORD_TYPE  *Rmx, *Rmy, *Rmz;
 extern void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z, 
 	 COORD_TYPE r2x, COORD_TYPE r2y, COORD_TYPE r2z, 
 	 COORD_TYPE* r3x, COORD_TYPE* r3y, COORD_TYPE* r3z);
+extern void calcEnePot(int Nm, double rcut);
 
 /* ============================== >>> Energy <<< ============================*/
 void energy(void)
@@ -64,6 +65,7 @@ void energy(void)
   COORD_TYPE L, invL;
 
   Nm = Oparams.parnum;
+  //calcEnePot(Oparams.parnum, Oparams.rcut);
   mdShow("SHIFTED POTENTIAL ENERGY: %.10f", Vc);
   mdShow("POTENTIAL ENERGY: %.10f", V);
   printf("KINETIC ENERGY: %.10f\n", K);
@@ -100,7 +102,7 @@ void energy(void)
 #endif
   printf("TOTAL ENERGY: %.10f\n", E);
   printf("Elrc:: %.6f Plrc: %.6f\n", Elrc, Plrc);
-#if 1
+#if 0
   mol = 0;
   dist = sqrt( Sqr(rx[0][mol] - rx[1][mol]) + Sqr(ry[0][mol] - ry[1][mol]) + 
 	       Sqr(rz[0][mol] - rz[1][mol]) );
