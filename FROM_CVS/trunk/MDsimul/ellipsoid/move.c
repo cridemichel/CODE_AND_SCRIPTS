@@ -588,6 +588,7 @@ void scale_Phi(void)
   printf("Scaled successfully %d/%d ellipsoids \n", done, Oparams.parnum);
   if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
     {
+      R2u();
       ENDSIM = 1;
       /* riduce gli ellissoidi alle dimensioni iniziali e comprime il volume */
       factor = a0I/axa[0];
