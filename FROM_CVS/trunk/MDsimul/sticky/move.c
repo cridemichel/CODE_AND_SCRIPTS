@@ -1437,12 +1437,14 @@ void calcObserv(void)
       ENDSIM = OprogStatus.equilibrated;
 #endif
     }
+#if 0
   if (Oparams.time>0)
     {
       f = fopenMPI(MD_HD_MIS "D.dat", "a");
       fprintf(f, "%.15f %.15f\n", Oparams.time,  Dtrans);
       fclose(f);
     }
+#endif
 }
 extern double *treeTime;
 void adjust_norm(double **R)

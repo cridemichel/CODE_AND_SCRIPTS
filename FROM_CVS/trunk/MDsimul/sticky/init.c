@@ -1542,9 +1542,16 @@ void usrInitAft(void)
     {
       FILE *f;
       /* truncate file to zero lenght */
-      f = fopenMPI(MD_HD_MIS "T.dat", "w");
+      f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
-      f = fopenMPI(MD_HD_MIS "D.dat", "w");
+      f = fopenMPI(absMisHD("msdA.dat"), "w+");
+      fclose(f);
+      if (Oparams.parnum > Oparams.parnumA)
+	{
+	  f = fopenMPI(absMisHD("msdB.dat"), "w+");
+	  fclose(f);
+	}
+      f = fopenMPI(absMisHD("temp.dat"), "w+");
       fclose(f);
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;

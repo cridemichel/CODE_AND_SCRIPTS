@@ -46,6 +46,7 @@ extern int *inCell[3], cellsx, cellsy, cellsz;
 extern int *cellList;
 extern int bound(int na, int n);
 int *numbonds;
+FILE* mf;
 double calcpotene(void)
 {
   double shift[NDIM], Epot; 
@@ -126,7 +127,12 @@ double calcpotene(void)
 }
 void calcV(void)
 {
-  V = calcpotene();
+ V = calcpotene();
+#if 1
+ mf = fopenMPI(absMisHD("energy.dat"),"a");
+ fprintf(mf, "%15G %.15G\n", Oparams.time, V);
+ fclose(mf);
+#endif
 }
 void calc_energy(char *msg);
 
@@ -140,9 +146,6 @@ void energy(void)
   double px, py, pz;
   double invL;
 
-#if 0  
-  FILE* mf;
-#endif
   Nm = Oparams.parnum;
   sprintf(TXTA[0],"STEP %lld [MEASURE]\n  L: %.10f\n", 
 	  (long long int)Oparams.curStep, L);
@@ -203,11 +206,6 @@ void energy(void)
   //printf("RANK: %d STEP: %d\n", my_rank, Oparams.curStep);
   //fflush(stdout);
   mdPrintf(ALL, TXTA[0], TXTA[1], TXTA[2], NULL);
-#if 0
-  mf = fopen(absMisHD("V.a"),"a");
-  fprintf(mf, "%d %.15G\n", Oparams.curStep, V);
-  fclose(mf);
-#endif
 }
 /* ========================== >>> transDiff <<< =============================*/
 void transDiff(void)
@@ -217,7 +215,6 @@ void transDiff(void)
      coefficent */
   double Drx, Dry, Drz, Dr4;
   int i;
-  
   DrSqTot = 0.0;
   Dr4 = 0.0;
 
@@ -241,12 +238,36 @@ void transDiff(void)
  
   Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time) *
 		       ((double) Oparams.parnumA ) );   
-  printf("Dtr: %f\n", Dtrans);
+  //printf("Dtr: %f\n", Dtrans);
   Aa = ((double) Oparams.parnumA ) * 3.0 * 
     Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
   
   DrSqTot /= ((double) Oparams.parnumA);
-  
+#if 1
+  mf = fopenMPI(absMisHD("msdA.dat"),"a");
+  fprintf(mf, "%15G %.15G\n", Oparams.time, DrSqTot / ((double)Oparams.parnumA));
+  fclose(mf);
+  if (Oparams.parnum > Oparams.parnumA)
+    {
+      for(i=Oparams.parnumA; i < Oparams.parnum; i++)
+	{
+	  Drx = rx[i] - OprogStatus.rxCMi[i] + L*OprogStatus.DR[i][0]; 
+	  Dry = ry[i] - OprogStatus.ryCMi[i] + L*OprogStatus.DR[i][1];
+	  Drz = rz[i] - OprogStatus.rzCMi[i] + L*OprogStatus.DR[i][2];
+	  if (OprogStatus.ipart == i)
+	    {
+	      //sprintf(TXT,"i = %d\n", i);
+	      //mdPrintf(STD, TXT, NULL);
+	      /* Motion of the OprogStatus.ipart particle */
+	      sqrtdr2 = sqrt(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
+	    }
+	  DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
+	}
+      mf = fopenMPI(absMisHD("msdB.dat"),"a");
+      fprintf(mf, "%15G %.15G\n", Oparams.time, DrSqTot / ((double)(Oparams.parnum-Oparams.parnumA)));
+      fclose(mf);
+    }
+#endif
 }
 
 /* ============================ >>> temperat <<< =========================== */
@@ -287,6 +308,11 @@ void temperat(void)
       OprogStatus.sumPress += press;
       press = OprogStatus.sumPress / NUMCALCS;
     }
+#if 1
+  mf = fopenMPI(absMisHD("temp.dat"),"a");
+  fprintf(mf, "%15G %.15G\n", Oparams.time, temp);
+  fclose(mf);
+#endif
 #if 0
   sprintf(TXT, "P:%.10f T:%.10f W: %10f\n", press, temp, W);
   mdMsg(STD,NOSYS, NULL, "NOTICE", NULL,  TXT, NULL);
