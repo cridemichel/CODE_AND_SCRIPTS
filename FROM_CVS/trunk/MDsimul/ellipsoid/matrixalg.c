@@ -227,28 +227,68 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
       alam=FMAX(tmplam,0.1*alam); /* lambda >= 0.1 lambda_1.*/
     }/* Try again.*/
 }
-
+int *ivector(int n)
+{
+  return calloc(n, sizeof(int)); 
+}
+double *vector(int n)
+{
+  return calloc(n, sizeof(double)); 
+}
+double **matrix(int n, int m)
+{
+  double **M;
+  int i, j;
+  M = malloc(sizeof(double*)*n);
+  for (i=0; i < n; i++)
+    M[i] = calloc(m, sizeof(double));
+  return M;
+}
+void free_vector(double *vec)
+{
+  free(vec);
+}
+void free_ivector(int *vec)
+{
+  free(vec);
+}
+void free_matrix(double **M, int n)
+{
+  int i;
+  for (i=0; i < n; i++)
+    {
+      free(M[i]);
+    }
+  free(M);
+}
+void nrerror(char *msg)
+{
+  printf(msg);
+  exit(-1);
+}
 int nn; /* Global variables to communicate with fmin.*/
 double *fvec; 
-void (*nrfuncv)(int n, double v[], double f[]); 
-#define FREERETURN {free_vector(fvec,1,n);free_vector(xold,1,n);\ free_vector(p,1,n);\
- free_vector(g,1,n);free_matrix(fjac,1,n,1,n);\ free_ivector(indx,1,n);\
+void (*nrfuncv)(int n, double v[], double fvec[], int i, int j); 
+#define FREERETURN {free_vector(fvec);free_vector(xold);\ free_vector(p);\
+ free_vector(g);free_matrix(fjac,n);\ free_ivector(indx);\
  return;}
+extern void fdjac(int n,double x[], fvec[], **fjac, 
+		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j)); 
 double fmin(double x[]);
+void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, 
+	    double stpmax, int *check, double (*func)(double []));
+void lubksb(double **a, int n, int *indx, double b[]); 
+void ludcmp(double **a, int n, int *indx, double *d); 
 void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double []))
 {
-  void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, 
- 	      double stpmax, int *check, double (*func)(double []));
-  void lubksb(double **a, int n, int *indx, double b[]); 
-  void ludcmp(double **a, int n, int *indx, double *d); 
   int i,its,j,*indx;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
-  indx=ivector(1,n); 
-  fjac=matrix(1,n,1,n);
-  g=vector(1,n);
-  p=vector(1,n); 
-  xold=vector(1,n); 
-  fvec=vector(1,n); 
+  indx=ivector(n); 
+  fjac=matrix(n, n);
+  g=vector(n);
+  p=vector(n); 
+  xold=vector(n); 
+  fvec=vector(n); 
   /*Define global variables.*/
   nn=n; 
   nrfuncv=vecfunc; 
@@ -320,7 +360,7 @@ void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double 
 
 #define EPS 1.0e-4 /* Approximate square root of the machine precision.*/
 #ifdef MD_APPROX_JACOB
-void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []))
+void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []), int iA, int iB)
 { int i,j; 
   double h,temp,*f; 
   f=vector(1,n); 
@@ -333,17 +373,12 @@ void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, d
       x[j]=temp+h; 
       /* Trick to reduce  nite precision error.*/
       h=x[j]-temp; 
-      (*vecfunc)(n,x,f); 
+      (*vecfunc)(n,x,f, iA, iB); 
       x[j]=temp;
       for (i=1;i<=n;i++)
       df[i][j]=(f[i]-fvec[i])/h; /* Forward difference*/
     }
   free_vector(f,1,n); 
-}
-#else
-void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []))
-{
-  /* evaluate Jacobian here! */
 }
 #endif
 extern int nn; 

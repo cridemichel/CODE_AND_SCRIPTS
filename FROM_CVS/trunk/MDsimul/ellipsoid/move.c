@@ -12,6 +12,7 @@ void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
 void SolveLineq (double **a, double *x, int n);
 void InvMatrix(double **a, double **b, int NB);
+extern double invaSq[2], invbSq[2], invcSq[2];
 #ifdef MD_GRAVITY
 int checkz(char *msg)
 {
@@ -529,13 +530,13 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
  
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
-  tRDiagR(i, Xa, a[na], b[na], c[na], 
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], 
 	  uxx[i], uxy[i], uxz[i], uyy[i], uyz[i], uzz[i]);
   tRDiagR(i, Ia, Itens[na][0], Itens[na][1], Itens[na][2],
 	  uxx[i], uxy[i], uxz[i], uyy[i], uyz[i], uzz[i]);
 
   na = (j < Oparams.parnumA)?0:1;
-  tRDiagR(j, Xb, a[na], b[na], c[na],
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na],
 	  uxx[j], uxy[j], uxz[j], uyy[j], uyz[j], uzz[j]);
   tRDiagR(j, Ib, Itens[na][0], Itens[na][1], Itens[na][2],
 	  uxx[j], uxy[j], uxz[j], uyy[j], uyz[j], uzz[j]);
@@ -1040,10 +1041,79 @@ UpdateOrient(int i, double ti, double *uxxn, double *uxyt, double *uxzt,
       *uzzt = uzz[i];
     }
 }
-void funcs2beZeroed(int n, double x[], double fvec[], double gradvecA[], double gradvecB[], 
-		    int i, int j)
+#ifndef MD_APPROX_JACOB
+/* funzione che calcola lo Jacobiano */
+void fdjac(int n, double x[], double fvec[], double **df, 
+	   void (*vecfunc)(int, double [], double []), int iA, int iB)
 {
   int na; 
+  double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti, vA[3], vB[3];
+  double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
+  int k1, k2;
+  ti = x[4] - atomTime[i];
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  vA[0] = vx[i];
+  vA[1] = vy[i];
+  vA[2] = vz[i];
+  /* ...and now orientations */
+  UpdateOrient(i, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt);
+  na = (i < Oparams.parnumA)?0:1;
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na],
+	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
+
+  ti = x[4] - atomTime[j];
+  rB[0] = rx[j] + vx[j]*ti;
+  rB[1] = ry[j] + vy[j]*ti;
+  rB[2] = rz[j] + vz[j]*ti;
+  vB[0] = vx[j];
+  vB[1] = vy[j];
+  vB[2] = vz[j];
+
+  UpdateOrient(j, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt);
+  na = (j < Oparams.parnumA)?0:1;
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na],
+	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][k2] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = Xa[k1][k2] + Sqr(x[3])*Xb[k1][k2];
+	}
+    }
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	df[3][k1] += Xa[k1][k2]*(x[k2]-rA[k2]); 
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][3] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	df[k1][3] += 2.0*x[3]*Xb[k1][k2]*(x[k2]-rB[k2]); 
+    } 
+  df[3][3] = 0.0;
+  df[4][3] = 0.0;
+ 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][4] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	df[k1][4] +=  + Sqr(x[3])*Xa[k1][k2]*vA[k2]; 
+    } 
+
+
+}
+#endif
+void funcs2beZeroed(int n, double x[], double fvec[], int i, int j)
+{
+  int na, k1, k2; 
   double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti;
   double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
   /* x = (r, alpha, t) */ 
@@ -1055,7 +1125,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], double gradvecA[], double 
   /* ...and now orientations */
   UpdateOrient(i, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt);
   na = (i < Oparams.parnumA)?0:1;
-  tRDiagR(i, Xa, a[na], b[na], c[na],
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na],
 	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
 
   ti = x[4] - atomTime[j];
@@ -1064,7 +1134,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], double gradvecA[], double 
   rB[2] = rz[j] + vz[j]*ti;
   UpdateOrient(j, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt);
   na = (j < Oparams.parnumA)?0:1;
-  tRDiagR(j, Xb, a[na], b[na], c[na],
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na],
 	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
 
   for (k1 = 0; k1 < 3; k1++)
