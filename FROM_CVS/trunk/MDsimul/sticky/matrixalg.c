@@ -1922,7 +1922,7 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
   if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 
     {
       polinterr = 1;
-      printf("bohbohboh\n");
+      //printf("bohbohboh\n");
       return 0.0;
       //nrerror("Root must be bracketed in zbrent");
     }
