@@ -244,6 +244,7 @@ struct progStatus
   double stepSDB;
   int maxitsSD;
   double tolSD;
+  double tolSDgrad;
   /* Accumulator for the radial distribution function */
   int hist[MAXBIN];
   int equilibrated;
@@ -498,6 +499,7 @@ struct pascii opro_ascii[] =
   {"stepSDB",       &OS(stepSDB),                1,   1, "%.12G"},
   {"maxitsSD",     &OS(maxitsSD),              1,   1, "%d"},
   {"tolSD",        &OS(tolSD),                 1,   1, "%.15G"},         
+  {"tolSDgrad",    &OS(tolSDgrad),             1,   1, "%.15G"},
   {"forceguess",   &OS(forceguess),            1,   1, "%d"},
   {"zbrakn",       &OS(zbrakn),              1,   1,  "%d"},
   {"zbrentTol",    &OS(zbrentTol),           1,   1,  ".15G"},
@@ -681,6 +683,7 @@ struct singlePar OsinglePar[] = {
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
   {"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
   {"tolSD",      &OprogStatus.tolSD,          CT},
+  {"tolSDgrad",  &OprogStatus.tolSDgrad,      CT},
   {"forceguess", &OprogStatus.forceguess,     INT},
   {"springkSD",  &OprogStatus.springkSD,    CT},
   {"stepSDA",     &OprogStatus.stepSDA,         CT},

@@ -685,7 +685,8 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	sol = s2;
 #if 1
       ng = calc_norm(gradf);
-      if (fabs(sol)*ng > dist*sqrt(OprogStatus.tolSD)/2.0)
+
+      if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSD*dist/2.0)
 	{
 	  sf /= GOLD;
 	  its++;
@@ -699,6 +700,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
   if (!done)
     {
       printf("maximum number of iterations reached in projont! Aborting...\n");
+      printf("sol=%.15G norm(dr)=%.15G sf=%.15G\n", sol, calc_norm(dr), sf);
       exit(-1);
     }
 #if 0
@@ -791,7 +793,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 #endif
 
   //printf("g=%f %f %f %f %f %f\n", g[0], g[1], g[2], g[3], g[4], g[5]);
-  if (doneryck)
+  if (doneryck==2)
     {
       callsok++;
       return;
@@ -867,22 +869,33 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	 }
 #endif
 #if 1
-       if (doneryck)
+
+       if (doneryck==2)
 	 {
 	   callsok++;
 	   return;
 	 }
        projectgrad(p, xi, gradfG, gradgG);
        
+#if 0
        normxi=0.0;
        for (kk = 0; kk < 6; kk++)
 	 {
 	   normxi += Sqr(xi[kk]);
 	 }
+#endif
        //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
 	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
        itsfrprmn++;      
-       if ( (0 && fp < 1E-5) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 0 && sqrt(normxi) < (fp+EPSFR)*ftol) )
+       if (1 || (fp > 0 && sqrt(fp) > 1E-8)) 
+	 {
+	   if (2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
+	     {
+	       callsok++;
+	       return;
+	     }
+	 }
+       else if (doneryck)
 	 {
 	   callsok++;
 	   return;
@@ -1101,7 +1114,7 @@ double  cgfunc(double *vec)
 double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
 {
   int kk, k1, k2; 
-  double K1, K2, F, nf, ng, fx2[3], dd[3], normdd;
+  double K1, K2, F, nf, ng, fx2[3], dd[3], normdd, ngA, ngB;
   double Q1, Q2, A, gradfx, gradgx, normgA, normgB, fact;
   doneryck = 0;
   for (k1 = 0; k1 < 3; k1++)
@@ -1134,8 +1147,8 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
   normdd = calc_norm(dd);
   if (normdd==0)
     {
-      doneryck = 1;
-      return;
+      doneryck = 2;
+      return 0;
     }
   /* la norma dei gradienti è sempre stepSDA e stepSDB*/ 
   K1= icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
@@ -1160,17 +1173,19 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
       gradfx += grad[k1]*fx[k1]; 
       gradgx += grad[k1+3]*gx[k1];
     }
+  ngA = ngB = 0;  
   for (kk=0; kk < 3; kk++)
     {
       grad[kk] -= gradfx*fx[kk];
       grad[kk+3] -= gradgx*gx[kk];
+      ngA += Sqr(grad[kk]);
+      ngB += Sqr(grad[kk+3]); 
     }
 #if 1
-  if (calc_norm(grad)*(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB)< 
-      OprogStatus.tolSD*normdd)
+  if (sqrt(ngA) < OprogStatus.tolSDgrad*(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB)
+      && sqrt(ngB) < OprogStatus.tolSDgrad*(jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB))
     {
       doneryck = 1;
-      return;
     }
 #endif
 #if 0
