@@ -152,18 +152,19 @@ void InvMatrix(double **a, double **b, int NB)
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
 #define TOLX 1.0E-12//1.0e-7 /* Convergence criterion on  x.*/ 
 #define TOLX2 1.E-6
-#define TOLXD 1.0E-4
+#define TOLXD 1.0E-6
 #define MAXITS 30 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define MAXITS2 20
 #define TOLF 1.0e-10// 1.0e-4
 #define TOLF2 1.0E-4
-#define TOLFD 1.0E-3
+#define TOLFD 1.0E-4
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
 	    double *f, double stpmax, int *check, 
-	    double (*func)(double [], int, int, double[]), int iA, int iB, double shift[3])
+	    double (*func)(double [], int, int, double[]), int iA, int iB, double shift[3],
+	    double tolx)
 /*
    Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
    fold and g[1..n], and a direction p[1..n], finds a new point x[1..n] along the direction p
@@ -198,7 +199,7 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
       if (temp > test) 
 	test=temp; 
     } 
-  alamin=TOLX/test; alam=1.0;
+  alamin=tolx/test; alam=1.0;
   for (;;) 
     { 
       for (i=0;i<n;i++) 
@@ -299,10 +300,13 @@ void (*nrfuncvD)(int n, double v[], double fvec[], int i, int j, double shift[3]
 
 extern void fdjac(int n, double x[], double fvec[], double **fjac, 
 		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j, double shift[3]), int iA, int iB, double shift[3]); 
+extern void fdjacDist(int n, double x[], double fvec[], double **fjac, 
+		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j, double shift[3]), int iA, int iB, double shift[3]); 
 double fmin(double x[], int iA, int iB, double shift[3]);
+double fminD(double x[], int iA, int iB, double shift[3]);
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, 
 	    double stpmax, int *check, double (*func)(double [], int, int, double []),
-	    int iA, int iB, double shift[3]);
+	    int iA, int iB, double shift[3], double tolx);
 void lubksb(double **a, int n, int *indx, double b[]); 
 void ludcmp(double **a, int n, int *indx, double *d); 
 extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double shift[3]);
@@ -521,7 +525,7 @@ void newt(double x[], int n, int *check,
       
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNR
-      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift); 
+      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift, TOLX); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
@@ -589,7 +593,7 @@ void newt(double x[], int n, int *check,
   nrerror("MAXITS exceeded in newt"); 
   
 }
-#define MD_GLOBALNRD
+#undef MD_GLOBALNRD
 #define MAXITS3 20
 void newtDist(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
@@ -622,7 +626,8 @@ void newtDist(double x[], int n, int *check,
   for (its=0;its<MAXITS3;its++)
     { /* Start of iteration loop. */
        /* ============ */
-       fdjacFD(n,x,fvecD,fjac,vecfunc, iA, iB, shift); 
+       //fdjacFD(n,x,fvecD,fjac,vecfunc, iA, iB, shift); 
+      fdjacDist(n,x,fvecD,fjac,vecfunc, iA, iB, shift);
        /* If analytic Jacobian is available, you can 
 	  replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNRD
@@ -652,7 +657,7 @@ void newtDist(double x[], int n, int *check,
       
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNRD
-      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift); 
+      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift, TOLXD); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
@@ -725,7 +730,7 @@ void newtDist(double x[], int n, int *check,
 }
 
 
-#define EPS 1.0E-4 /* Approximate square root of the machine precision.*/
+#define EPS 3.0E-8 /* Approximate square root of the machine precision.*/
 void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 { int i,j; 
   double h,temp,*f; 
@@ -777,7 +782,6 @@ the calling program.*/
     return 0.5*sum; 
 }
 #endif
-#ifdef MD_GLOBALNRD
 double fminD(double x[], int iA, int iB, double shift[]) 
 /* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
@@ -787,8 +791,7 @@ the calling program.*/
   int i;
   double sum;
   (*nrfuncvD)(nnD,x,fvecD,iA,iB,shift);
-  for (sum=0.0,i=0;i<nn2;i++)
+  for (sum=0.0,i=0;i<nnD;i++)
     sum += Sqr(fvecD[i]); 
-    return 0.5*sum; 
+  return 0.5*sum; 
 }
-#endif
