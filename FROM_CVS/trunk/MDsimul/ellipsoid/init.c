@@ -13,7 +13,7 @@ extern char TXT[MSG_LEN];
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 void setToZero(COORD_TYPE* ptr, ...);
-double maxax[2];
+double *maxax;
 extern int *lastbump;
 extern double *lastcol;
 double *axa, *axb, *axc;
@@ -1066,6 +1066,7 @@ void usrInitAft(void)
   axa = malloc(sizeof(double)*Oparams.parnum);
   axb = malloc(sizeof(double)*Oparams.parnum);
   axc = malloc(sizeof(double)*Oparams.parnum);
+  maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnumA; i++)
     {
@@ -1096,16 +1097,17 @@ void usrInitAft(void)
     };
  
   /* maxax è il diametro del centroide */
-  for (a = 0; a < 2; a++)
+  for (i = 0; i < Oparams.parnum; i++)
     {
-      maxax[a] = 0.0;
-      if (Oparams.a[a] > maxax[a])
-	maxax[a] = Oparams.a[a];
-      if (Oparams.b[a] > maxax[a])
-	maxax[a] = Oparams.b[a];
-      if (Oparams.c[a] > maxax[a])
-	maxax[a] = Oparams.c[a];
-      maxax[a] *= 2.0;
+      maxax[i] = 0.0;
+      a=(i<Oparams.parnumA)?0:1;
+      if (Oparams.a[a] > maxax[i])
+	maxax[i] = Oparams.a[a];
+      if (Oparams.b[a] > maxax[i])
+	maxax[i] = Oparams.b[a];
+      if (Oparams.c[a] > maxax[i])
+	maxax[i] = Oparams.c[a];
+      maxax[i] *= 2.0;
     }
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   for (i=0; i < Oparams.parnum; i++)

@@ -19,7 +19,7 @@ double Ia, Ib, invIa, invIb;
 int *lastbump;
 extern double *axa, *axb, *axc;
 extern int *scdone;
-extern double maxax[2];
+extern double *maxax;
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
@@ -27,6 +27,7 @@ void InvMatrix(double **a, double **b, int NB);
 extern double invaSq[2], invbSq[2], invcSq[2];
 double rxC, ryC, rzC;
 extern int SolveLineq (double **a, double *x, int n); 
+int calcdist_retcheck;
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
 extern long long int itsfrprmn, callsfrprmn;
@@ -206,6 +207,7 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
    * in cui la forza di gravità è diretta lungo z negativo */ 
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 
+  calcdist_retcheck = 0;
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
       jZ = inCell[2][na] + iZ;    
@@ -256,6 +258,8 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
 		  if (n!=na) 
 		    {
 		      dist = calcDistNeg(Oparams.time, na, n, shift, r1, r2, &alpha, vecg, 1);
+		      if (calcdist_retcheck)
+			continue;
 #if 0
 		      if ((na==125||na==15) && (n==15||n==125))
 			printf("$$$$ dist: %.12G\n", dist);
@@ -415,6 +419,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   axa[i] *= fact;
   axb[i] *= fact;
   axc[i] *= fact;
+  maxax[i] *= fact;
   *factor = fact;
   if (2.0*max_ax(i) > Oparams.rcut)
     Oparams.rcut = 2.0*max_ax(i)*1.01;
@@ -496,7 +501,10 @@ void scale_Phi(void)
   if (first)
     {
       first = 0;
-      a0I = Oparams.a[0];
+      if (i < Oparams.parnumA)
+	a0I = Oparams.a[0];
+      else
+	a0I = Oparams.a[1];
       target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
   //UpdateSystem();   
@@ -518,6 +526,8 @@ void scale_Phi(void)
 	  continue;
 	}
       distMin = get_min_dist(i, &j, rC, rD, shift);
+      if (calcdist_retcheck)
+	continue;
       if (j == -1)
 	continue;
       //printf("i=%d j=%d distmin=%.10G\n", i, j, distMin);
@@ -529,11 +539,17 @@ void scale_Phi(void)
       rBmin[2] = rz[j];
       scalfact = OprogStatus.scalfact;
       store_values(i);
-      if (distMin < 10*OprogStatus.epsdFast)
+      if (distMin < OprogStatus.epsd/10.0)
 	continue;
       phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor);
       rebuild_linked_list();
       distMinT = check_dist_min(i, NULL);
+      if (calcdist_retcheck)
+	{
+	  restore_values(i);
+	  rebuild_linked_list();
+	  continue;
+	}
       its = 0;
       while (distMinT < 0)
 	{
@@ -2974,6 +2990,11 @@ retry:
 #endif
   if (retcheck != 0)
     {
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck=1;
+	  return 0.0;
+	}
       printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
       if (calcguess==0)
 	{
@@ -3026,6 +3047,11 @@ retry:
 #ifdef MD_DIST5
   if (segno*vecg[4]<0 && fabs(segno*vecg[4])>3E-8)
     {
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck = 1;
+	  return 0.0;
+	}
       printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[4]);
       return calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1);
       //exit(-1);
@@ -3034,6 +3060,11 @@ retry:
 #else
   if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
     {
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck = 1;
+	  return 0.0;
+	}
       printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[7]);
       return calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1);
       //exit(-1);
@@ -3536,8 +3567,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
     
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i<Oparams.parnumA?0:1]
-    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j<Oparams.parnumA?0:1];
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
+    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
   *d1 = calcDistNeg(*t, i, j, shift, r1, r2, &alpha, vecgd, 1);
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
@@ -3596,7 +3627,8 @@ double distfunc(double x)
     return 0.0;
   if (dy > OprogStatus.epsd)
     {
-      printf("dy=%.15G\n", dy);
+      if (OprogStatus.phitol <= 0)
+	printf("dy=%.15G\n", dy);
       polinterr = 1;
     }
   else 
@@ -3697,8 +3729,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   t = t1;
 
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i<Oparams.parnumA?0:1]
-    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j<Oparams.parnumA?0:1];
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
+    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
  
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = 1E-7; /* last resort time increment */
@@ -3712,8 +3744,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
 #if 0
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i<Oparams.parnumA?0:1]
-    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j<Oparams.parnumA?0:1];
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
+    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
   d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
   MD_DEBUG(printf("Pri distances between %d-%d d1=%.12G", i, j, d1));
   told = t;
@@ -3954,8 +3986,8 @@ int locate_contact_notworking(int i, int j, double shift[3], double t1, double t
   dold = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgdold, 1);
   MD_DEBUG10(printf("i=%d j=%d dold all'inizio = %.15G\n", i, j, dold));
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i<Oparams.parnumA?0:1]
-	 + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j<Oparams.parnumA?0:1];
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
+	 + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
   if (maxddot==0)
     return 0;
   MD_DEBUG(printf(">>>>dold:%f\n", dold));
@@ -4122,8 +4154,8 @@ double estimate_tmin(double t, int na, int nb)
 		    {
 		      d = calcDistNeg(t, na, n, shift, r1, r2, &alpha, vecg, 1);
 		      maxddot = sqrt(Sqr(vx[na]-vx[n])+Sqr(vy[na]-vy[n])+Sqr(vz[na]-vz[n])) +
-			sqrt(Sqr(wx[na])+Sqr(wy[na])+Sqr(wz[na]))*maxax[na<Oparams.parnumA?0:1]
-			+ sqrt(Sqr(wx[n])+Sqr(wy[n])+Sqr(wz[n]))*maxax[n<Oparams.parnumA?0:1];
+			sqrt(Sqr(wx[na])+Sqr(wy[na])+Sqr(wz[na]))*maxax[na]
+			+ sqrt(Sqr(wx[n])+Sqr(wy[n])+Sqr(wz[n]))*maxax[n];
  
 		      if (d>0)// && n!=lastbump[na] && lastbump[n]!=na)
 			{
@@ -4428,11 +4460,11 @@ void PredictEvent (int na, int nb)
 		      else
 		       {
 			 if (na < parnumA && n < parnumA)
-			   sigSq = Sqr(maxax[0]);
+			   sigSq = Sqr(maxax[na]);
 			 else if (na >= parnumA && n >= parnumA)
-			   sigSq = Sqr(maxax[1]);
+			   sigSq = Sqr(maxax[na]);
 			 else
-			   sigSq = Sqr((maxax[0]+maxax[1])*0.5);
+			   sigSq = Sqr((maxax[n]+maxax[na])*0.5);
 		       }
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 #endif
