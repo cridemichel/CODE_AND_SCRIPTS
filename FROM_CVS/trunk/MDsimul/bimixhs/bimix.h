@@ -54,7 +54,7 @@
 /* ========================================================================= */
 
 /* ====================== >>> SIMULATION DEFINES <<< ========================*/
-enum {MD_CORE_BARRIER,MD_INOUT_BARRIER,MD_OUTIN_BARRIER};
+enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 
 #define C_T COORD_TYPE
 #define NK 10000
@@ -106,14 +106,15 @@ enum {MD_CORE_BARRIER,MD_INOUT_BARRIER,MD_OUTIN_BARRIER};
 /* Reduced list of variables to save on xva file (tape file) */ 
 #ifdef MD_GRAVITY
 #define XVA_LIST rx, ry, rz, vx, vy, vz, lastcol
+#define XVA_NUM 7 /* this is the number of vars in XVA_LIST <--- SET THIS!!!*/
 #else
 #define XVA_LIST rx, ry, rz, vx, vy, vz
-#endif
 #define XVA_NUM 6 /* this is the number of vars in XVA_LIST <--- SET THIS!!!*/
+#endif
 
 #ifdef MD_GRAVITY
 #define XVA_ALST &rx, &ry, &rz, &vx, &vy, &vz, &lastcol
-#define XVA_DLST *rx, *ry, *rz, *vx, *vy, *vz, &lastcol
+#define XVA_DLST *rx, *ry, *rz, *vx, *vy, *vz, *lastcol
 #else
 #define XVA_ALST &rx, &ry, &rz, &vx, &vy, &vz
 #define XVA_DLST *rx, *ry, *rz, *vx, *vy, *vz
@@ -166,9 +167,6 @@ enum {MD_CORE_BARRIER,MD_INOUT_BARRIER,MD_OUTIN_BARRIER};
 #define treeIdC    tree[9]
 #endif
 #define ATOM_LIMIT 10000000
-#if defined(MD_SQWELL)|| defined(MD_INFBARRIER)
-#define ATOM_SUBLIMIT 2000000
-#endif
 /* ======================== >>> struct progStatus <<< =======================*/
 struct progStatus
 {
@@ -282,6 +280,9 @@ struct progStatus
 #endif
   double nextcheckTime;
   double nextSumTime;
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+  int maxbonds;
+#endif
 #ifdef MD_GRAVITY
   int numquench;
   int maxquench;
