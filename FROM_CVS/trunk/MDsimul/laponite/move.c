@@ -409,12 +409,12 @@ void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE
 	  vyt[a][i] = vy[a][i];
 	  vzt[a][i] = vz[a][i];
 	  
-	  vxp = c0P*vx[a][i] + c1mc2P * dt * axia + dvx;
-	  vyp = c0P*vy[a][i] + c1mc2P * dt * ayia + dvy;
-	  vzp = c0N*vz[a][i] + c1mc2N * dt * azia + dvz;
+	  vxp = c0P*vxp + c1mc2P * dt * axp + dvx;
+	  vyp = c0P*vyp + c1mc2P * dt * ayp + dvy;
+	  vzp = c0N*vzp + c1mc2N * dt * azp + dvz;
 
-	  lab2body(u1[i], u2[i], u3[i], rxp, ryp, rzp, &pxi[a], &pyi[a], &pzi[a]);
-	  lab2body(u1[i], u2[i], u3[i], vxp, vyp, vzp, &vxi[a], &vyi[a], &vzi[a]);
+	  body2lab(u1[i], u2[i], u3[i], rxp, ryp, rzp, &pxi[a], &pyi[a], &pzi[a]);
+	  body2lab(u1[i], u2[i], u3[i], vxp, vyp, vzp, &vxi[a], &vyi[a], &vzi[a]);
 
 	  moving[a] = 0;
 	  moved[a]  = 1;
