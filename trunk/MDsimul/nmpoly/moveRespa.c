@@ -198,9 +198,10 @@ void lubksb(double a[NA][NA], int* indx, double b[NA])
       /* Store a component of the solution vector X. */ 
     } /* All done! */
 }
+double a1[NA][NA];
 void SolveLineq (double a[NA][NA], double x[NA], int n) 
 {
-  int m1, m2, indx[NA], al[NA][NA];
+  int m1, m2, indx[NA];
   double dd;
   for (m1 = 0; m1 < NA; m1++)
     {
@@ -209,6 +210,22 @@ void SolveLineq (double a[NA][NA], double x[NA], int n)
     }
   ludcmp(al, indx, &dd);
   lubksb(al, indx, x);
+}
+
+void InvMatrix(double a[NA][NA], double b[NA][NA])
+{
+  int m1, m2, indx[NA], col[NA];
+  double dd;
+  ludcmp(a, indx, &d); 
+  for(m2=0;m2<NA;m2++) 
+    { 
+      for(m1=0;m1<NA;m1++) 
+	col[m1]=0.0; 
+      col[m2]=1.0; 
+      lubksb(a, indx, col); 
+      for(m1=0;m1<NA;m1++) 
+	 b[m1][m2]=col[m1]; 
+    }
 }
 void BuildConstraintMatrix (void) 
 {
@@ -233,43 +250,44 @@ void BuildConstraintMatrix (void)
     }
 }
 
-double cvMat[NA][NA], cvMatInv[NA][NA], identMat[NA][NA], cDistSq[NA], vVec[NA], curBondLenSq[NA]; 
+double cvMat[NA][NA], cvMatInv[NA][NA], *cvMatInvS[NA][NA], 
+       cDistSq[NA], vVec[NA], curBondLenSq[NA]; 
 int cMat[NA][NA]; 
 int cAtom1[NA], cAtom2[NA], unitVec[NA];
-void ComputeConstraints(int RefSys)
+void ComputeConstraints(double dt, double c, int RefSys, int after)
 {
   /* RefSys=1 allora calcola le forze del ref system */
-  double **FxI,**FyI, **FzI, **FxO, **FyO, **FzO; 
-  double dv, w;
+  double **FxI,**FyI, **FzI; 
+#if 0
+  double **FxO, **FyO, **FzO; 
+#endif
+  double dv, w, cdt;
   int NB = NA-1;
   double rp1[3], rp2[3];
   int i, k, m, mm, mDif, m1, m2, a;
-  
+ 
+  cdt = dt * c;
   if (RefSys)
     {
        FxI = Fx;
        FyI = Fy;
        FzI = Fz;
+#if 0
        FxO = FxC;
        FyO = FyC;
        FzO = FzC;
+#endif
     }
   else
     {
       FxI = FxLong;
       FyI = FyLong;
       FzI = FzLong;
+#if 0
       FxO = FxCL;
       FyO = FyCL;
       FzO = FzCL;
-    }
-  for (m = 0; m < NA; m++)
-    {
-      for (mm = 0; mm < NA; mm++)
-	if (m==mm)
-	  identMat[m][mm] = 1;
-	else
-	  identMat[m][mm] = 0;
+#endif
     }
   for (i = 0; i < Oparams.parnum; i++)
     {
@@ -289,16 +307,19 @@ void ComputeConstraints(int RefSys)
 	    cVec[k][m] = cVec[k][m] - L*rint (cVec[k][m]/L);
 	  } 
       }
-    for (m1 = 0; m1 < NB; m1 ++) 
+    if (OprogStatus.keepInvMat && RefSys && after)
       {
-  	for (m2 = 0; m2 < NB; m2 ++) 
+	for (m1 = 0; m1 < NB; m1 ++) 
 	  {
-	    mDif = cMat[m1][cAtom1[m2]]/Oparams.m[m1] - cMat[m1][cAtom2[m2]]/Oparams.m[m2];
-	    cvMat[m1][m2] = 0.;
-	    if (mDif != 0) 
-	      cvMat[m1][m2] = mDif * (cVec[0][m1] * cVec[0][m2] +
-				      cVec[1][m1] * cVec[1][m2] + cVec[2][m1] * cVec[2][m2]);
-	  } 
+	    for (m2 = 0; m2 < NB; m2 ++) 
+	      {
+		mDif = cMat[m1][cAtom1[m2]]/Oparams.m[m1] - cMat[m1][cAtom2[m2]]/Oparams.m[m2];
+		cvMat[m1][m2] = 0.;
+		if (mDif != 0) 
+		  cvMat[m1][m2] = mDif * (cVec[0][m1] * cVec[0][m2] +
+			    		  cVec[1][m1] * cVec[1][m2] + cVec[2][m1] * cVec[2][m2]);
+	      } 
+	  }
       }
     for (m = 0; m < NB; m ++) 
       {
@@ -329,18 +350,30 @@ void ComputeConstraints(int RefSys)
 			     FzI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[k][m];
       }
     /* qui bisogna trovare l'inversa della matrice cvMat !!!*/
-    for (mm = 0; mm < NB; mm++)
-      SolveLineq (cvMat, identMat[mm], NB);
-    for (m1 = 0; m1 < NA; m1++)
-      for (m2 = 0; m2 < NA; m2++)
-	cvMatInv[m1][m2] = identMat[m1][m2];
-    /* ============================================== */
+    if (!OprogStatus.keepInvMat)
+      InvMatrix (cvMat, cvMatInv);
+    else if (OprogStatus.keepInvMat && after && RefSys)
+      {
+	InvMatrix (cvMat, cvMatInv);
+	for (m1=0; m1 < NA; m1++)
+	  for (m2=0; m2 < NA; m2++)
+	    cvMatInvS[m1][m2][i] = cvMatInv[m1][m2];
+      }
+    else
+      {
+	for (m1=0; m1 < NA; m1++)
+	  for (m2=0;m2 < NA; m2++)
+	    cvMatInv[m1][m2] = cvMatInvS[m1][m2][i];
+      }
+/* ============================================== */
+#if 0
     for (a = 0; a < NA; a++)
       {
 	FxO[a][i] = 0;
 	FyO[a][i] = 0;
 	FzO[a][i] = 0;
       }
+#endif
     for (m = 0; m < NB; m ++)
       {
 	for (a = 0; a < NA; a++) 
@@ -355,9 +388,15 @@ void ComputeConstraints(int RefSys)
 		    /* qui si è assunto che cvMatInv è l'inversa di cvMat calcolata all'inizio */
 		    b += cvMatInv[m][mm]*vVec[mm];
 		  }
-		px[a][i] += w * b * cVec[0][m];
-		py[a][i] += w * b * cVec[1][m];
-		pz[a][i] += w * b * cVec[1][m];
+		px[a][i] += cdt * w * b * cVec[0][m];
+		py[a][i] += cdt * w * b * cVec[1][m];
+		pz[a][i] += cdt * w * b * cVec[1][m];
+		if (RefSys)
+		  {
+		    /* Qui bisogna considerare il contributo del termine in v^2 */
+		  
+		  
+		  }
 #if 0
 		FxO[a][i] += w * b * cVec[0][m];
 		FyO[a][i] += w * b * cVec[1][m];
