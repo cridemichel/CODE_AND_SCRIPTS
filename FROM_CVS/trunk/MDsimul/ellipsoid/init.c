@@ -773,8 +773,8 @@ void usrInitBef(void)
     OprogStatus.collCount = 0;
     OprogStatus.crossCount = 0;
     OprogStatus.epsd = 0.0005;
-    OprogStatus.epsdSD = 1.0;
-    OprogStatus.h = 1E-7;
+    OprogStatus.epsdSD = -1.0;
+    OprogStatus.h = 1E-10;
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
     OprogStatus.epsdMax = 0.001;
@@ -1098,8 +1098,10 @@ void usrInitAft(void)
     mgA = Oparams.m[0]*Oparams.ggrav; 
     mgB = Oparams.m[1]*Oparams.ggrav;
 #endif
-   
-  /*    
+  
+    if (OprogStatus.epsdSD < 0.0)
+      OprogStatus.epsdSD = OprogStatus.epsd;
+    /*    
      ** CHECK FOR PARTICLE OVERLAPS **
      ** CALCULATE ENERGY            ** */
     lastcol= malloc(sizeof(double)*Oparams.parnum);

@@ -3118,7 +3118,7 @@ void guess_dist(int i, int j,
 {
   double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
   int k1, n;
-  double saA[3], saB[3];
+  double saA[3], saB[3], gAn, gBn;
 
   saA[0] = axa[i];
   saA[1] = axb[i];
@@ -3138,18 +3138,27 @@ void guess_dist(int i, int j,
       gradaxB[n] = 0;
       for (k1 = 0; k1 < 3; k1++) 
 	{
-	  gradaxA[n] += gradA[k1]*RA[n][k1];
-	  gradaxB[n] += gradB[k1]*RB[n][k1];
+	  gradaxA[n] += gradA[k1]*RA[k1][n];
+	  gradaxB[n] += gradB[k1]*RB[k1][n];
 	}
     }
+#if 0 
+  gAn = calc_norm(gradaxA);
+  gBn = calc_norm(gradaxB);
+  for (n = 0; n < 3; n++)
+    {
+      gradaxA[n] /= gAn;
+      gradaxB[n] /= gBn;
+    }
+#endif
   for (k1=0; k1 < 3; k1++)
     {
       dA[k1] = rA[k1];
       dB[k1] = rB[k1];
       for (n=0; n < 3;n++)
 	{
-	  dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
-	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
+	  dA[k1] += gradaxA[n]*RA[k1][n]*saA[n]/2.0; 
+	  dB[k1] += gradaxB[n]*RB[k1][n]*saB[n]/2.0;
 	}
     }
   calc_intersec(dA, rA, Xa, rC);
@@ -3369,6 +3378,20 @@ retry:
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++) 
       segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
+#ifndef MD_DIST5
+  if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
+    {
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck = 1;
+	  return 0.0;
+	}
+      printf("segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[4], calc_norm(r12));
+      exit(-1);
+      //return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
+      //exit(-1);
+    }
+#endif
 #if 1
 #ifdef MD_DIST5
   if (segno*vecg[4]<0 && fabs(segno*vecg[4])>3E-8)
@@ -4317,6 +4340,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   if (lastbump[j]==i && lastbump[i]==j)
     {
       MD_DEBUG10(printf("last collision was between (%d-%d)\n", i, j));
+#if 0
       while (d < 0)
 	{
 	  t += h;
@@ -4324,6 +4348,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	    return 0;
 	  d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
 	}
+#endif
     }
   else if (d<0&&fabs(d)>1E-7)
     {
@@ -4438,7 +4463,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      if (vecg[4]>t2 || vecg[4]<t1 || 
-		  (lastbump[i] == j && lastbump[j]==i && fabs(vecg[4] - lastcol[i])<1E-14))
+		  (lastbump[i] == j && lastbump[j]==i && fabs(vecg[4] - lastcol[i])<1E-10))
+		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
 		return 0;
 	      else
 		return 1;
