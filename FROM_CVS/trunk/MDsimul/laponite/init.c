@@ -838,6 +838,7 @@ void usrInitBef(void)
   OprogStatus.avngTemp  = 0;
   OprogStatus.avngEta   = 0;
   OprogStatus.snapSteps = 0;
+  OprogStatus.snapmode = 0;
   for (i=0; i<NA; ++i)
     {
       Oparams.m[i] = 1.0;

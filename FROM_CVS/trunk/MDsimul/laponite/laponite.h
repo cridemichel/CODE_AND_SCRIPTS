@@ -267,6 +267,7 @@ struct progStatus
   COORD_TYPE tols;
   COORD_TYPE tolVol1;
   int snapSteps;
+  int snapmode;
   int HNBOX;
   int avngS;
   int avnggr;
@@ -496,6 +497,7 @@ struct singlePar OsinglePar[] = {
   {"Nose",       &OprogStatus.Nose,           INT},
   {"sResetSteps",&OprogStatus.sResetSteps,    INT},
   {"snapSteps",  &OprogStatus.snapSteps,      INT},
+  {"snapmode",   &OprogStatus.snapmode,       INT},
   {"CMreset",    &OprogStatus.CMreset,        INT},
   {"noLinkedList",&OprogStatus.noLinkedList,  INT},
   {"rNebrShell", &OprogStatus.rNebrShell,     CT},
