@@ -5665,8 +5665,9 @@ void updAllNNL()
 void BuildNNL(int na) 
 {
   double shift[NDIM];
+  const double distBuf = 0.1;
   int kk, i1, i2;
-  double vecg[5], r1[3], r2[3], dist, alpha, maxddot, factori, Omega[3][3];
+  double vecg[5], r1[3], r2[3], dist, alpha, DelDist, maxddot, factori, Omega[3][3];
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cels[NDIM];*/
   int nb, cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
@@ -5674,11 +5675,15 @@ void BuildNNL(int na)
   nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];
   nebrTab[na].axb = OprogStatus.rNebrShell*axb[na];
   nebrTab[na].axc = OprogStatus.rNebrShell*axc[na];
+  DelDist = max3(nebrTab[na].axa,nebrTab[na].axb,nebrTab[na].axc) -
+    max3(axa[na],axb[na],axc[na]);
 #else
   nebrTab[na].axa = OprogStatus.rNebrShell+axa[na];
   nebrTab[na].axb = OprogStatus.rNebrShell+axb[na];
   nebrTab[na].axc = OprogStatus.rNebrShell+axc[na];
+  DelDist = OprogStatus.rNebrShell;
 #endif
+  DelDist += distBuf;
   nebrTab[na].r[0] = rx[na];
   nebrTab[na].r[1] = ry[na];
   nebrTab[na].r[2] = rz[na];
@@ -5757,7 +5762,7 @@ void BuildNNL(int na)
       		      dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
 		       * in OprogStatus */
-		      if (dist < OprogStatus.rNebrShell + 0.1)
+		      if (dist < DelDist)
 			{
 			  printf("Adding ellipsoid N. %d to NNL of %d\n", n, na);
 			  nebrTab[na].list[nebrTab[na].len] = n;
