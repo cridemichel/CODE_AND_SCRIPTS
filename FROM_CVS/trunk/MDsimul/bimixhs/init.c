@@ -536,222 +536,224 @@ void initCoord(void)
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
-void usrInitBef(void)
-{
-  int i;
-  /* DESCRIPTION:
-     This function is called before any other initialization, put here 
-     yours, for example initialize accumulators ! 
-     NOTE: You should supply parameters value in parameters file, so this 
-           initilization are quite fictitiuos for parameters, anyway 
-	   accumulators initialization is crucial */
-  
-  /* ===================== >>> INIT PARAMETERS <<< ======================== 
-   All the values set here for Oparams structure are taken as defaults if you
-   don't specify corresponding parameters in the parameters file  */
-  Dtrans = 0.0; /* DtransOld should become a field of OprogStatus */
+  void usrInitBef(void)
+  {
+    int i;
+    /* DESCRIPTION:
+       This function is called before any other initialization, put here 
+       yours, for example initialize accumulators ! 
+       NOTE: You should supply parameters value in parameters file, so this 
+	     initilization are quite fictitiuos for parameters, anyway 
+	     accumulators initialization is crucial */
+    
+    /* ===================== >>> INIT PARAMETERS <<< ======================== 
+     All the values set here for Oparams structure are taken as defaults if you
+     don't specify corresponding parameters in the parameters file  */
+    Dtrans = 0.0; /* DtransOld should become a field of OprogStatus */
 
-  V = 0.0;
-  L = 9.4;
+    V = 0.0;
+    L = 9.4;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
-  Oparams.bheight = 0.0;
-  OprogStatus.maxbonds = 20;
+    Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
+    Oparams.bheight = 0.0;
+    OprogStatus.maxbonds = 20;
 #endif
 #ifdef MD_GRAVITY
-  Lz = 9.4;
+    Lz = 9.4;
 #endif
-  Oparams.T = 2.0;
-  Oparams.P = 1.0;
-  Oparams.M = 5; /* cells in each direction for linked lists */
-  
-  Oparams.time = 0.0;
-  OprogStatus.tolT = 0.0;
-  OprogStatus.nebrTabFac = 150;
-  OprogStatus.rNebrShell = 0.4;
-  /* If 1 the program calculate of the corrisponding variable a mean from
-     the begin of the run and not the instanteaneous value */
-  OprogStatus.avnggr    = 0;
-  OprogStatus.avngS     = 0;
-  OprogStatus.avngPress = 0;
-  OprogStatus.avngTemp  = 0;
-  OprogStatus.scalevel = 0;
-  OprogStatus.endtime = 0;
-  OprogStatus.rescaleTime = 1.0;
+    Oparams.T = 2.0;
+    Oparams.P = 1.0;
+    Oparams.M = 5; /* cells in each direction for linked lists */
+    
+    Oparams.time = 0.0;
+    OprogStatus.tolT = 0.0;
+    OprogStatus.nebrTabFac = 150;
+    OprogStatus.rNebrShell = 0.4;
+    /* If 1 the program calculate of the corrisponding variable a mean from
+       the begin of the run and not the instanteaneous value */
+    OprogStatus.avnggr    = 0;
+    Oparams.Dt = 0.01;
+    OprogStatus.avngS     = 0;
+    OprogStatus.avngPress = 0;
+    OprogStatus.avngTemp  = 0;
+    OprogStatus.scalevel = 0;
+    OprogStatus.endtime = 0;
+    OprogStatus.rescaleTime = 1.0;
+    OprogStatus.brownian = 0;
 #ifdef MD_GRAVITY
-  OprogStatus.taptau = 0.0;
-  OprogStatus.rzup = 0.0;
-  OprogStatus.expandFact= 1.0;
-  OprogStatus.quenchend = 0.0;
-  OprogStatus.tc = 1E-5;
-  OprogStatus.accrcmz = 0.0;
-  OprogStatus.wallcollCount = 0;
-  OprogStatus.checkquenchTime = 1.0;
-  OprogStatus.numquench = 0;
-  OprogStatus.maxquench = 0;
-  OprogStatus.rescaleTime = 0.0;
-  OprogStatus.extraLz = 10.0;
-  OprogStatus.rhobh = 0.0;
-  OprogStatus.vztap = 10.0;
+    OprogStatus.taptau = 0.0;
+    OprogStatus.rzup = 0.0;
+    OprogStatus.expandFact= 1.0;
+    OprogStatus.quenchend = 0.0;
+    OprogStatus.tc = 1E-5;
+    OprogStatus.accrcmz = 0.0;
+    OprogStatus.wallcollCount = 0;
+    OprogStatus.checkquenchTime = 1.0;
+    OprogStatus.numquench = 0;
+    OprogStatus.maxquench = 0;
+    OprogStatus.rescaleTime = 0.0;
+    OprogStatus.extraLz = 10.0;
+    OprogStatus.rhobh = 0.0;
+    OprogStatus.vztap = 10.0;
 #endif
-  OprogStatus.eventMult = 100;
-  OprogStatus.overlaptol = 0.0001;
-  /* Il promo step inizia con un tapping a temperatura T */
-  Oparams.m[0] = Oparams.m[1] = 1.0;
-  Oparams.sigma[0][0] = Oparams.sigma[1][1] = Oparams.sigma[1][0]= Oparams.sigma[0][1]=1.0;
-  OprogStatus.collCount = 0;
-  OprogStatus.crossCount = 0;
-  OprogStatus.nextSumTime = 0.0;
-  OprogStatus.nextcheckTime = 0.0;
-  OprogStatus.intervalSum = 1.0;
-  /* Parameters relative to Ruocco AC force
-     See: cond-mat/00001311, Ruocco et al. */
-  OprogStatus.rNebrShell = 2.7; /* the radius of neighbour list shell */
-  for (i = 0; i < PE_POINTS; i++)
-    OprogStatus.PE[i] = 0;
-  /* ======================================================================= */
-}
-extern void check (int *overlap, double *K, double *V);
-double *atomTime, *treeTime;
-int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
-extern void PredictEvent(int, int);
-extern void InitEventList(void);
-void StartRun(void)
-{
-  int j, k, n;
+    OprogStatus.eventMult = 100;
+    OprogStatus.overlaptol = 0.0001;
+    /* Il promo step inizia con un tapping a temperatura T */
+    Oparams.m[0] = Oparams.m[1] = 1.0;
+    Oparams.sigma[0][0] = Oparams.sigma[1][1] = Oparams.sigma[1][0]= Oparams.sigma[0][1]=1.0;
+    OprogStatus.collCount = 0;
+    OprogStatus.crossCount = 0;
+    OprogStatus.nextSumTime = 0.0;
+    OprogStatus.nextcheckTime = 0.0;
+    OprogStatus.intervalSum = 1.0;
+    /* Parameters relative to Ruocco AC force
+       See: cond-mat/00001311, Ruocco et al. */
+    OprogStatus.rNebrShell = 2.7; /* the radius of neighbour list shell */
+    for (i = 0; i < PE_POINTS; i++)
+      OprogStatus.PE[i] = 0;
+    /* ======================================================================= */
+  }
+  extern void check (int *overlap, double *K, double *V);
+  double *atomTime, *treeTime;
+  int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
+  extern void PredictEvent(int, int);
+  extern void InitEventList(void);
+  void StartRun(void)
+  {
+    int j, k, n;
 
-  for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
-    cellList[j] = -1;
-  /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
-  for (n = 0; n < Oparams.parnum; n++)
-    {
-      atomTime[n] = Oparams.time;
-      inCell[0][n] =  (rx[n] + L2) * cellsx / L;
-      inCell[1][n] =  (ry[n] + L2) * cellsy / L;
+    for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
+      cellList[j] = -1;
+    /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
+    for (n = 0; n < Oparams.parnum; n++)
+      {
+	atomTime[n] = Oparams.time;
+	inCell[0][n] =  (rx[n] + L2) * cellsx / L;
+	inCell[1][n] =  (ry[n] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
-      inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+	inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
 #else
-      inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+	inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
 #endif
 #if 0
-      if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
-	{
-	  printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
-	  printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
-		 inCell[0][n],inCell[1][n], inCell[2][n]);
-	}
+	if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
+	  {
+	    printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
+	    printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
+		   inCell[0][n],inCell[1][n], inCell[2][n]);
+	  }
 #endif	  
-      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
-	inCell[0][n] + Oparams.parnum;
-      cellList[n] = cellList[j];
-      cellList[j] = n;
-    }
-  InitEventList();
-  for (k = 0;  k < NDIM; k++)
-    {
-      cellRange[2*k]   = - 1;
-      cellRange[2*k+1] =   1;
-    }
-  for (n = 0; n < Oparams.parnum; n++)
-    PredictEvent(n, -2); 
-}
+	j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+	  inCell[0][n] + Oparams.parnum;
+	cellList[n] = cellList[j];
+	cellList[j] = n;
+      }
+    InitEventList();
+    for (k = 0;  k < NDIM; k++)
+      {
+	cellRange[2*k]   = - 1;
+	cellRange[2*k+1] =   1;
+      }
+    for (n = 0; n < Oparams.parnum; n++)
+      PredictEvent(n, -2); 
+  }
 
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-extern void add_bond(int na, int n);
-extern void remove_bond(int na, int n);
+  extern void add_bond(int na, int n);
+  extern void remove_bond(int na, int n);
 #endif
-/* ======================== >>> usrInitAft <<< ==============================*/
-void usrInitAft(void)
-{
-  /* DESCRIPTION:
-     This function is called after the parameters were read from disk, put
-     here all initialization that depends upon such parameters, and call 
-     all your function for initialization, like maps() in this case */
+  /* ======================== >>> usrInitAft <<< ==============================*/
+  void usrInitAft(void)
+  {
+    /* DESCRIPTION:
+       This function is called after the parameters were read from disk, put
+       here all initialization that depends upon such parameters, and call 
+       all your function for initialization, like maps() in this case */
 
-  int Nm, i, sct, overlap;
-  COORD_TYPE vcmx, vcmy, vcmz;
-  COORD_TYPE *m;
+    int Nm, i, sct, overlap;
+    COORD_TYPE vcmx, vcmy, vcmz;
+    COORD_TYPE *m;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  double sigDeltaSq, drx, dry, drz;
-  int j;
+    double sigDeltaSq, drx, dry, drz;
+    int j;
 #endif
-  /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
+    /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
-  /* initialize global varibales */
-  pi = 2.0 * acos(0);
-  
-  Nm = Oparams.parnumA;
-  parnumA = Oparams.parnumA;
-  parnumB = Oparams.parnum - Oparams.parnumA;
-  sct = sizeof(COORD_TYPE);
+    /* initialize global varibales */
+    pi = 2.0 * acos(0);
+    
+    Nm = Oparams.parnumA;
+    parnumA = Oparams.parnumA;
+    parnumB = Oparams.parnum - Oparams.parnumA;
+    sct = sizeof(COORD_TYPE);
 
-  invL = 1.0/L;
-  L2 = 0.5*L;
+    invL = 1.0/L;
+    L2 = 0.5*L;
 #ifdef MD_GRAVITY
-  rcmz = -Lz*0.5;
-  Lz2 = Lz*0.5;
+    rcmz = -Lz*0.5;
+    Lz2 = Lz*0.5;
 #endif
-  poolSize = OprogStatus.eventMult*Oparams.parnum;
-  m = Oparams.m;
-  Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
-  invmA = 1.0/Oparams.m[0];
-  invmB = 1.0/Oparams.m[1];
-  Oparams.sigma[1][0] = Oparams.sigma[0][1];
+    poolSize = OprogStatus.eventMult*Oparams.parnum;
+    m = Oparams.m;
+    Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
+    invmA = 1.0/Oparams.m[0];
+    invmB = 1.0/Oparams.m[1];
+    Oparams.sigma[1][0] = Oparams.sigma[0][1];
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  Oparams.delta[1][0] = Oparams.delta[0][1];
+    Oparams.delta[1][0] = Oparams.delta[0][1];
 #endif
-  Mred[0][0] = Mred[1][1] = 0.5;
-  Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
-  /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
-   * le particelle */
-  if (Oparams.rcut <= 0.0)
-    Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
-  cellsx = L / Oparams.rcut;
-  cellsy = L / Oparams.rcut;
+    Mred[0][0] = Mred[1][1] = 0.5;
+    Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
+    /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
+     * le particelle */
+    if (Oparams.rcut <= 0.0)
+      Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+    cellsx = L / Oparams.rcut;
+    cellsy = L / Oparams.rcut;
 #ifdef MD_GRAVITY
-  cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
+    cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
 #else
-  cellsz = L / Oparams.rcut;
+    cellsz = L / Oparams.rcut;
 #endif 
-  printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
-	 cellsx, cellsy, cellsz);
-  printf("massA: %f massB: %f sigmaA:%f sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1],
-       Oparams.sigma[0][0], Oparams.sigma[1][1], Oparams.sigma[0][1]);
+    printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
+	   cellsx, cellsy, cellsz);
+    printf("massA: %f massB: %f sigmaA:%f sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1],
+	 Oparams.sigma[0][0], Oparams.sigma[1][1], Oparams.sigma[0][1]);
 #if defined(MD_GRAVITY)
-  g2 = 0.5*Oparams.ggrav;
-  mgA = Oparams.m[0]*Oparams.ggrav; 
-  mgB = Oparams.m[1]*Oparams.ggrav;
+    g2 = 0.5*Oparams.ggrav;
+    mgA = Oparams.m[0]*Oparams.ggrav; 
+    mgB = Oparams.m[1]*Oparams.ggrav;
 #endif
- 
-/*    
-   ** CHECK FOR PARTICLE OVERLAPS **
-   ** CALCULATE ENERGY            ** */
-  /*lastcol= malloc(sizeof(double)*Oparams.parnum);*/
-  atomTime = malloc(sizeof(double)*Oparams.parnum);
-  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
-  inCell[0] = malloc(sizeof(int)*Oparams.parnum);
-  inCell[1]= malloc(sizeof(int)*Oparams.parnum);
-  inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+   
+  /*    
+     ** CHECK FOR PARTICLE OVERLAPS **
+     ** CALCULATE ENERGY            ** */
+    /*lastcol= malloc(sizeof(double)*Oparams.parnum);*/
+    atomTime = malloc(sizeof(double)*Oparams.parnum);
+    cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+    inCell[0] = malloc(sizeof(int)*Oparams.parnum);
+    inCell[1]= malloc(sizeof(int)*Oparams.parnum);
+    inCell[2] = malloc(sizeof(int)*Oparams.parnum);
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  tree = AllocMatI(10, poolSize);
-  bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
-  numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
-  bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
+    tree = AllocMatI(10, poolSize);
+    bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+    numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+    bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
 #else
-  tree = AllocMatI(9, poolSize);
+    tree = AllocMatI(9, poolSize);
 #endif
-  treeTime = malloc(sizeof(double)*poolSize);
-  if (OprogStatus.CMreset==-1)
-    {
-      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-      resetCM(1);
-    }
-  else if (OprogStatus.CMreset==-2)
-    {
-      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-    }
+    treeTime = malloc(sizeof(double)*poolSize);
+    if (OprogStatus.CMreset==-1)
+      {
+	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+	resetCM(1);
+      }
+    else if (OprogStatus.CMreset==-2)
+      {
+	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+      }
 
-  if (Oparams.curStep == 1)
+    if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);
      
@@ -768,6 +770,7 @@ void usrInitAft(void)
       lastcol[i] = 0.0;
     }
 #endif
+ 
   if (newSim)
     {
       Oparams.time=0.0;
@@ -775,6 +778,7 @@ void usrInitAft(void)
 	atomTime[i] = 0.0;
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
+      OprogStatus.nextDt += Oparams.Dt;
     }
   else
     {
@@ -817,6 +821,7 @@ void usrInitAft(void)
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)

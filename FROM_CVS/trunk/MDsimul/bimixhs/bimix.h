@@ -277,6 +277,7 @@ struct progStatus
   int scalevel;
   double endtime;
   double scaleVolTime;
+  int brownian;
 #ifdef MD_GRAVITY
   double taptau;
   int tapampl;
@@ -284,6 +285,7 @@ struct progStatus
 #endif
   double nextcheckTime;
   double nextSumTime;
+  double nextDt;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   int maxbonds;
 #endif
@@ -356,6 +358,7 @@ struct params
 				   must do */
   MDINT curStep;	/* current step of simulation */
   double time;
+  double Dt;
   /* ======================================================================= */
  
   /* ==================== >>> PUT HERE YOUR PARAMS <<< ===================== */
@@ -456,10 +459,14 @@ struct pascii opro_ascii[] =
   {"equilibrated", &OS(equilibrated),          1,   1, "%d"},
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
   {"endtime",      &OS(endtime),                    1,  1,    "%.15G"},
+  {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
+  {"nextSumTime"  ,&OS(nextSumTime),                1,  1,    "%.15G"},
+  {"nextDt",       &OS(nextDt),                     1,  1,    "%.15G"},
   {"eqlevel",     &OS(eqlevel),                    1,  1,    "%.12G"},
   {"eventMult",    &OS(eventMult),                  1,   1,  "%d"},  
   {"overlaptol"   ,&OS(overlaptol),                 1,   1, "%f"},
   {"ipart",        &OS(ipart),                      1,   1, "%d"},
+  {"brownian",     &OS(brownian),                   1,   1, "%d"},
   {"HNBOX",        &OS(HNBOX),                      1,   1,  "%d"},
   {"avngTemp",     &OS(avngTemp),                   1,   1,  "%d"},
   {"avngPress",    &OS(avngPress),                  1,   1,  "%d"},
@@ -503,6 +510,7 @@ struct pascii opar_ascii[]=
   {"sigma",             OP(sigma),                        2,   2, "%.8G"},
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
+  {"Dt",           ,    &OP(Dt),                          1,   1, "%.15G"},
 #ifdef MD_GRAVITY
   {"wallDiss",          &OP(wallDiss),                    1,   1,   "%f"},
   {"partDiss",          &OP(partDiss),                    1,   1,   "%f"},
@@ -575,6 +583,7 @@ struct singlePar OsinglePar[] = {
   {"DtrCalc",    &OprogStatus.measCalc[1],    LLINT}, /* steps between measure
 						       calculation */
   {"DtrName",    &OprogStatus.dataFiles[1],   STR},
+  {"brownian",   &OprogStatus.brownian,       INT},
   {"tempSteps",  &OprogStatus.measSteps[2],   LLINT},
   {"tempCalc",   &OprogStatus.measCalc[2],    LLINT},
   {"tempName",   &OprogStatus.dataFiles[2],   STR},
@@ -607,6 +616,7 @@ struct singlePar OsinglePar[] = {
   {"rescaleTime", &OprogStatus.rescaleTime,   CT},
   {"scalevel",   &OprogStatus.scalevel,       INT},
   {"endtime",    &OprogStatus.endtime,        CT},
+  {"Dt",         &Oparams.Dt,                 CT},
 #ifdef MD_GRAVITY
   {"taptau",     &OprogStatus.taptau,         CT},
   {"quenchtol",  &OprogStatus.quenchtol,      CT},
