@@ -31,7 +31,8 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
 extern COORD_TYPE dispHi;
 extern const double timbig;
 int poolSize;
-
+double *radii;
+int *scdone;
 /* ================================= */
 
 /* ========================================================================= */
@@ -499,6 +500,9 @@ void usrInitBef(void)
   OprogStatus.tolT = 0.0;
   OprogStatus.nebrTabFac = 150;
   OprogStatus.rNebrShell = 0.4;
+  OprogStatus.targetPhi = 0.0;
+  OprogStatus.phitol = 1E-12;
+  OprogStatus.axestol = 1E-8;
   OprogStatus.accrcmz = 0.0;
   /* If 1 the program calculate of the corrisponding variable a mean from
      the begin of the run and not the instanteaneous value */
@@ -707,6 +711,14 @@ void usrInitAft(void)
   rhoz = malloc(sizeof(double)*(jZmax+1));
   tree = AllocMatI(9, poolSize);
   treeTime = malloc(sizeof(double)*poolSize);
+  radii = malloc(sizeof(double)*Oparams.parnum);
+  scdone = malloc(sizeof(int)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      scdone[i] = 0;
+      radii[i] = Oparams.sigma;
+    }
+
   if (Oparams.curStep == 1)
     {
       check ( Oparams.sigma, &overlap, &K, &V);

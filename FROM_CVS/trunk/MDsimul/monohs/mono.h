@@ -57,7 +57,7 @@
 #define NK 10000
 #define NA 1 /* number of atoms for each molecule (particle) */
 
-#define MAXPAR 3000      /* maximum number of simulated particles */
+#define MAXPAR 10000      /* maximum number of simulated particles */
 
 #define NUM_PAR 500   /* Number of particles for the simulation */
 #define NUMK 99    /* number of k-points in which we must  calculate the 
@@ -267,6 +267,9 @@ struct progStatus
   int tapampl;
   int scalevel;
   int brownian;
+  double targetPhi;
+  double phitol;
+  double axestol;
   double checkquenchTime;
   double rescaleTime;
   double nextcheckTime;
@@ -434,6 +437,8 @@ struct pascii opro_ascii[] =
   {"numquench",    &OS(numquench),             1,   1, "%d"},
   {"maxquench",    &OS(maxquench),             1,   1, "%d"},
   {"scalevel",     &OS(scalevel),              1,   1, "%d"},
+  {"phitol",       &OS(phitol),                     1,  1,    "%.14G"},
+  {"axestol",      &OS(axestol),                    1,  1,    "%.14G"},
   {"extraLz",      &OS(extraLz),                    1,   1, "%.15G"},
   {"eventMult",    &OS(eventMult),                  1,   1,  "%d"},  
   {"overlaptol"   ,&OS(overlaptol),                 1,   1, "%f"},
@@ -615,6 +620,9 @@ struct singlePar OsinglePar[] = {
   {"ggrav",      &Oparams.ggrav,            CT},
 #endif
   {"mass",       &Oparams.m,                CT},
+  {"targetPhi", &OprogStatus.targetPhi, CT},
+  {"phitol",      &OprogStatus.phitol,        CT},
+  {"axestol",     &OprogStatus.axestol,       CT},
   {"wallDiss",   &Oparams.wallDiss,         CT},
   {"partDiss",   &Oparams.partDiss,         CT},
   {"quenchend",  &OprogStatus.quenchend,    CT},
