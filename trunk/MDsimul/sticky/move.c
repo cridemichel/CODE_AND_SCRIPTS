@@ -2630,17 +2630,55 @@ int get_bonded(int i, int j)
   return -1; 
 
 }
+
+int use_min_delt(int *negpairs, double *dists, int bondpair)
+{
+  int nn, sum;
+  sum = 0;
+  for (nn = 0; nn < MD_PBONDS; nn++)
+    {
+      if (bondpair != -1 && bondpair != nn)
+	continue;
+      if (negpairs[nn]==1 && dists[nn] < 0.0)
+	negpairs[nn] = 0;
+      else if (negpairs[nn]==2 && dists[nn] > 0.0)
+	negpairs[nn] = 0;
+      sum += negpairs[nn];
+    }
+  return (sum > 0)?1:0;
+}
+int delt_is_too_big(int i, int j, int bondpair, double *dists)
+{
+  int nn, retval=0;
+  for (nn=0; nn < MD_PBONDS; nn++)
+    {
+      if (bondpair != -1 && bondpair != nn)
+	continue;
+      if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
+	&& lastbump[j].at == mapbondsb[nn]))
+	continue;
+      if (dists[nn] > 0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	return 1;
+      if (dists[nn] < 0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	return 1;
+    }
+  return 0;
+}
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
+  const double sh = 1E-12;
   double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS],
 	 distsOld2[MD_PBONDS], deltth; 
-  double normddot, maxddot, delt, troot, tmin; //distsOld2[MD_PBONDS];
+  double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
   int bondpair;
+  const int MAXITS = 100;
+  int its, foundrc, goback;
   double epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
   int kk,tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
-      crossed[MD_PBONDS], firstaftsf;
+      crossed[MD_PBONDS], firstaftsf, negpairs[MD_PBONDS];
+  const double GOLD= 1.618034;
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
@@ -2658,7 +2696,6 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
    *   che rallentano moltissimo. Infatti tale ricerca veloce serve solo nel caso in cui due ellissoidi si 
    *   sfiorano per poi allontanrsi. 
    */
-  int its, foundrc, goback;
   t = 0;//t1;
   bondpair = get_bonded(i, j);
 #ifdef MD_OPTDDIST
@@ -2683,6 +2720,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   df = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
   for (nn=0; nn < MD_PBONDS; nn++)
     {
+      negpairs[nn] = 0;
       if (bondpair != -1 && bondpair != nn)
 	continue;
       if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
@@ -2690,25 +2728,39 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	continue;
       if (dists[nn] > 0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	{
+	  negpairs[nn] = 1;
+#if 0
+	  its = 0;
 	  df = dists[nn];
-	  while (df > 0)
+	  while (df > 0 && its < MAXITS)
 	    {
-	      t += h;
+	      t += sh;
+#if 0
+	      if (its > 0)
+		printf("QUI its = %d\n", its);
+#endif
+	      its++;
 	      if (t + t1 > t2)
 		return 0;
 	      df = calcDistNegOne(t, t1, i, j, nn, shift);
 	    }
+#endif
 	}
       if (dists[nn] < 0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	{
+	  negpairs[nn] = 2;
+#if 0
+	  its = 0;
 	  df = dists[nn];
-	  while (df < 0)
+	  while (df < 0 && its < MAXITS)
 	    {
-	      t += h;
+	      t += sh;
+	      its++;
 	      if (t + t1 > t2)
 		return 0;
 	      df = calcDistNegOne(t, t1, i, j, nn, shift);
 	    }
+#endif
 	}
     }
 #endif
@@ -2831,7 +2883,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  firstaftsf = 0;
 	}
 #endif
-
+#if 1
+      /* se all'inizio c'erano sticky spots che si overlappavano finché le distanze non sono corrette
+       * usa il passo minimo (dell'ordine della precisione di macchina) */
+      if (use_min_delt(negpairs, distsOld, bondpair))
+	{
+	  delt = sh;
+	}
+#endif
       MD_DEBUG30(printf("delt: %f epsd/maxddot:%f h*t:%f maxddot:%f\n", delt, epsd/maxddot,h*t,maxddot));
       ///delt = h;///
       t += delt;
