@@ -290,6 +290,7 @@ struct progStatus
   int CMreset;
   int mdseed;
 #ifdef MD_NNL
+  double lastcoll;
   double rNebrShell;   /* Dr of shell of neighbour list shell see Rapaport pag. 53 */
   int nebrTabFac;
 #endif
