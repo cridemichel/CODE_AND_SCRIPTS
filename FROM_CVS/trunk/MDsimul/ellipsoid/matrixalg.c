@@ -3407,6 +3407,7 @@ void newtNeigh(double x[], int n, int *check,
 	}
       if (*check) 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
+#if 0
 	  test=0.0; 
 	  den=FMAX(f,0.5*n);
 	  for (i=0;i<n;i++)
@@ -3416,6 +3417,15 @@ void newtNeigh(double x[], int n, int *check,
 		test=temp; 
 	    } 
 	  *check=(test < TOLMIN ? 2 : 0);
+#endif
+	  /* se c'è anche il sospetto di un minimo locale allora fai
+	   * un newton-raphson semplice */
+	  for (i=0; i < n; i++)
+	    {
+	      x[i] = xold[i];
+	      x[i] += p[i]; 
+	    }
+	  *check = 0;
 	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
   	  //FREERETURN 
 	} 
@@ -3848,6 +3858,7 @@ void newtDistNeg(double x[], int n, int *check,
 	}
       if (*check) 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
+#if 0
 	  test=0.0; 
 	  den=FMAX(f,0.5*n);
 	  for (i=0;i<n;i++)
@@ -3857,7 +3868,16 @@ void newtDistNeg(double x[], int n, int *check,
 		test=temp; 
 	    } 
 	  *check=(test < TOLMIN ? 2 : 0);
-	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
+#endif
+	  /* se c'è anche il sospetto di un minimo locale allora fai
+	   * un newton-raphson semplice */
+	  for (i=0; i < n; i++)
+	    {
+	      x[i] = xold[i];
+	      x[i] += p[i]; 
+	    }
+	  *check = 0;
+ 	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
   	  //FREERETURND 
 	} 
       test=0.0; /* Test for convergence on x. */
