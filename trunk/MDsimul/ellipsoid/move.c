@@ -2716,7 +2716,7 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
 void fdjacDistNegNew(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 {
-  double fx[3], gx[3], nf, nfSq;
+  double fx[3], gx[3], nf, nfSq, Xj[3];
   int k1, k2;
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -2765,15 +2765,22 @@ void fdjacDistNegNew(int n, double x[], double fvec[], double **df,
       df[k1][6] = 2.0*x[6]*gx[k1];
       df[k1][7] = 0.0;
     } 
-
+  for (k1=0; k1<3; k1++)
+    {
+      Xj[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  Xj[k1] += Xa[k2][k1];
+	}
+    } 
   for (k1=0; k1<3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
 	  if (k1==k2)
-	    df[k1+5][k2] = 1 + 2.0*x[7]*Xa[k1][k2]/nf - x[7]*fx[k1]*fx[k2]/nfSq;
+	    df[k1+5][k2] = 1 + 2.0*x[7]*Xa[k1][k2]/nf - 2.0*x[7]*fx[k1]*Xj[k2]/nfSq/nf;
 	  else 
-	    df[k1+5][k2] = 2.0*x[7]*Xa[k1][k2]/nf - x[7]*fx[k1]*fx[k2]/nfSq;
+	    df[k1+5][k2] = 2.0*x[7]*Xa[k1][k2]/nf - 2.0*x[7]*fx[k1]*Xj[k2]/nfSq/nf;
 	}
     }
   for (k1=0; k1<3; k1++)
@@ -3343,36 +3350,6 @@ extern int maxitsRyck;
 extern double min(double a, double b);
 extern double min3(double a, double b, double c);
 extern double scalProd(double *A, double *B);
-#if 0
-void adjustBeta(double *rC, double *rD, double *Beta)
-{
-  double g2, g1, nrDC, rDC[3], nf, gradf[3], vecnf[3], nvecnf, SP;
-  int k1;
-  calc_grad(rC, rA, Xa, gradf);
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      rDC[k1] = rD[k1] - rC[k1];
-    }
-  nf = calc_norm(gradf);
-  g1 = calc_norm(rDC)/nf;
-  nrDC = calc_norm(rDC);
-  SP = scalProd(rDC,gradf)/nf;
-  for (k1=0; k1 < 3; k1++)
-    {
-      vecnf[k1] = rDC[k1] - SP*gradf[k1]; 
-    }
-  nvecnf = calc_norm(vecnf);
-  if ( nvecnf > 0.0)
-    g2 = OprogStatus.epsdGDO*1.0/calc_norm(vecnf); 
-  else 
-    g2 = g1;
-  //printf("*BetaPRIMA: %.15f\n", *Beta);
-  //if (scalProd(gradf, rDC) < 0.0)
-  if (*Beta > 0.0)
-    *Beta = min(g1, g2);
-  //printf("*BetaDOPO: %.15f\n", *Beta);
-}
-#endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -3531,10 +3508,12 @@ retry:
 	}
 #else
       if (OprogStatus.springkSD>0)
-	if (scalProd(gradf, rDC) < 0.0)
-	  vecg[7] = 0.0;
-	else
-	  vecg[7] = calc_norm(rDC)/nf;  
+	{
+	  if (scalProd(gradf, rDC) < 0.0)
+	    vecg[7] = 0.0;
+	  else
+	    vecg[7] = calc_norm(rDC)/nf;  
+	}
       else
 	{
 	  if (OprogStatus.epsdGDO > 0.0)
