@@ -3542,7 +3542,7 @@ void PredictEvent (int na, int nb, int nl)
   int iA, iB, nl_ignore, nc;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
-  int collCode;
+  int collCode, ignorecross[3];
   int cellRangeT[2 * NDIM], signDir[NDIM], evCode, iX, iY, iZ, jX, jY, jZ, k, n;
 
   MD_DEBUG29(printf("PredictEvent: %d,%d\n", na, nb));
@@ -3561,28 +3561,30 @@ void PredictEvent (int na, int nb, int nl)
 	 nl, nc, na, inCell[nc][0][na], inCell[nc][1][na], inCell[nc][2][na],
 	 cellsx[nl], cellsy[nl], cellsz[nl]);
   
+  ignorecross[0] = ignorecross[1] = ignorecross[2] = 1;
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
 	{
 	  signDir[2] = 0;/* direzione positiva */
-	  if (inCell[nc][2][na]==cellsz[nl]-2)
-	    ignorecross = 1;
+	  if (nc==1 && inCell[nc][2][na]==cellsz[nl]-1)
+	    ignorecross[2] = 1;
 	  else
-	    ignorecross = 0;
+	    ignorecross[2] = 0;
 	}
       else 
 	{
 	  signDir[2] = 1;/* direzione negativa */
-	  if (inCell[nc][2][na]==cellsz[nl]-2)
-	    ignorecross = 1;
+	  if (nc==1 && inCell[nc][2][na]==0)
+	    ignorecross[2] = 1;
 	  else
-	    ignorecross = 0;}
-	  if (ignorecross)
-	    tm[2] = timbig;
-	    else
-	  tm[2] = ((inCell[nc][2][na] + 1 - signDir[2]) * L /
-	       cellsz[nl] - rz[na] - L2) / vz[na];
+	    ignorecross[2] = 0;
+	}
+      if (ignorecross[2])
+	tm[2] = timbig;
+      else
+	tm[2] = ((inCell[nc][2][na] + 1 - signDir[2]) * L /
+  		 cellsz[nl] - rz[na] - L2) / vz[na];
     } 
   else 
     tm[2] = timbig;
@@ -3591,12 +3593,26 @@ void PredictEvent (int na, int nb, int nl)
   if (vx[na] != 0.0) 
     {
       if (vx[na] > 0.0) 
-	signDir[0] = 0;/* direzione positiva */
-      else 
-	signDir[0] = 1;/* direzione negativa */
-      
-      tm[0] = ((inCell[nc][0][na] + 1 - signDir[0]) * L /
-	       cellsx[nl] - rx[na] - L2) / vx[na];
+	{
+	  if (nc==1 && inCell[nc][0][na]==cellsx[nl]-1)
+	    ignorecross[0] = 1;
+	  else
+	    ignorecross[0] = 0;
+	  signDir[0] = 0;/* direzione positiva */
+	}
+      else
+	{
+	  if (nc==1 && inCell[nc][0][na]==0)
+	    ignorecross[0] = 1;
+	  else
+	    ignorecross[0] = 0;
+	  signDir[0] = 1;/* direzione negativa */
+	}
+      if (ignorecross[0])
+	tm[0] = timbig;
+      else
+	tm[0] = ((inCell[nc][0][na] + 1 - signDir[0]) * L /
+	      	 cellsx[nl] - rx[na] - L2) / vx[na];
     } 
   else 
     tm[0] = timbig;
@@ -3604,11 +3620,26 @@ void PredictEvent (int na, int nb, int nl)
   if (vy[na] != 0.) 
     {
       if (vy[na] > 0.) 
-	signDir[1] = 0;
-      else 
-	signDir[1] = 1;
-      tm[1] = ((inCell[nc][1][na] + 1 - signDir[1]) * L /
-	       cellsy[nl] - ry[na] - L2) / vy[na];
+	{
+	  if (nc==1 && inCell[nc][1][na]==cellsy[nl]-1)
+	    ignorecross[1] = 1;
+	  else
+	    ignorecross[1] = 0;
+	  signDir[1] = 0;
+	}
+      else
+	{
+	  if (nc==1 && inCell[nc][1][na]==0)
+	    ignorecross[1] = 1;
+	  else
+	    ignorecross[1] = 0;
+	  signDir[1] = 1;
+	}
+      if (ignorecross[1])
+	tm[1] = timbig;
+      else
+	tm[1] = ((inCell[nc][1][na] + 1 - signDir[1]) * L /
+	      	 cellsy[nl] - ry[na] - L2) / vy[na];
     } 
   else 
     tm[1] = timbig;
@@ -3655,7 +3686,9 @@ void PredictEvent (int na, int nb, int nl)
    * se lungo z e rz = -L/2 => urto con parete */ 
   MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
-  ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+
+  if (!ignorecross[k])
+    ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
   printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.16G\n", 
 	 na, ATOM_LIMIT+evCode, k, tm[k]);
   /* NOTA: le linked list sono tre:
@@ -4515,8 +4548,9 @@ void ProcessCollision(void)
 #endif
 }
 #ifdef MD_SILICA
-void docellcross(int k, double velk, double *rkptr, int cellsk, int nc, int cellsk2)
+int docellcross(int k, double velk, double *rkptr, int cellsk, int nc, int cellsk2)
 {
+  int boxwall=0;
   int nc2;
 #if 0
   if (inCell[0][evIdA]+1> cellsx ||inCell[1][evIdA]+1> cellsy||inCell[2][evIdA]+1> cellsz) 
@@ -4534,6 +4568,7 @@ void docellcross(int k, double velk, double *rkptr, int cellsk, int nc, int cell
 	      nc2 = (~nc)&1;
 	      inCell[nc2][k][evIdA] = 0;
 	      *rkptr = -L2;
+	      boxwall = 1;
 	      OprogStatus.DR[evIdA][k]++;
 	    }
 
@@ -4547,6 +4582,7 @@ void docellcross(int k, double velk, double *rkptr, int cellsk, int nc, int cell
 	      inCell[nc][k][evIdA] = cellsk - 1;
 	      nc2 = (~nc)&1;
 	      inCell[nc2][k][evIdA] = cellsk2 - 1;
+	      boxwall = 1;
 	      *rkptr = L2;
 	      OprogStatus.DR[evIdA][k]--;
 	    }
@@ -4557,6 +4593,7 @@ void docellcross(int k, double velk, double *rkptr, int cellsk, int nc, int cell
 	  printf("velk: %f(%d,%d,%d) (%d,%d,%d) k=%d cellsk:%d\n",  velk,cellsx , cellsy,cellsz,
 		 inCell[0][evIdA],inCell[1][evIdA], inCell[2][evIdA], k, cellsk );}
 #endif
+	  return boxwall;
 }
 #else
 void docellcross(int k, double velk, double *rkptr, int cellsk)
@@ -4602,7 +4639,8 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 void ProcessCellCrossing(void)
 {
   int kk, n, iA, k;
-  int nc, nl;
+  int nc, nl, boxwall;
+  int nc2, nl2;
 
   UpdateAtom(evIdA);
   k = evIdB - 100 - ATOM_LIMIT; 
@@ -4613,13 +4651,30 @@ void ProcessCellCrossing(void)
   printf("time=%.15G Proc CellCrossing nc=%d k=%d evIdA=%d\n", Oparams.time, nc, k, evIdA);
   iA = (evIdA < Oparams.parnumA)?0:1;
   if (iA == 0 && nc == 0)
-    nl = 0;
+    {
+      nl = 0;
+      nl2 = 3;
+      nc2 = 1;
+    }
   else if (iA == 1 && nc == 0)
-    nl = 1;
+    { 
+      nl = 1;
+      nl2 = 2;
+      nc2 = 1; 
+    }
   else if (iA == 0 && nc == 1)
-    nl = 3;
+    {
+      nl = 3;
+      nl2 = 0;
+      nc2 = 0;
+    }
   else
-    nl = 2;
+    {
+      nl = 2;
+      nl2 = 1;
+      nc2 = 0;
+    }
+  
   //printf("ProcellCellCross nl=%d nc=%d k=%d\n", nl, nc, k);
   /* NOTA: cellList[i] con 0 < i < Oparams.parnum è la cella in cui si trova la particella
    * i-esima mentre cellList[j] con 
@@ -4647,13 +4702,13 @@ void ProcessCellCrossing(void)
       switch (k)
 	{
 	case 0: 
-	  docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl]);
+	  boxwall = docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl]);
 	  break;
 	case 1: 
-	  docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc, cellsy[nl]);
+	  boxwall = docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc, cellsy[nl]);
 	  break;
 	case 2:
-	  docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl]);
+	  boxwall = docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl]);
 	  break;
 	}
       PredictEvent(evIdA, evIdB);
@@ -4680,14 +4735,23 @@ void ProcessCellCrossing(void)
   switch (kk)
     {
     case 0: 
-      docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl]);
+      boxwall = docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl2]);
       break;
     case 1: 
-      docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc, cellsy[nl]);
+      boxwall = docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc, cellsy[nl2]);
       break;
     case 2:
-      docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl]);
+      boxwall = docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl2]);
       break;
+    }
+  if (boxwall)
+    {
+      PredictEvent(evIdA, evIdB, nl2);
+      n = (inCell[nc2][2][evIdA] * cellsy[nl] + inCell[nc2][1][evIdA])*cellsx[nl2] + 
+	inCell[nc2][0][evIdA] + Oparams.parnum;
+      /* Inserimento di evIdA nella nuova cella (head) */
+      cellList[nl2][evIdA] = cellList[nl2][n];
+      cellList[nl2][n] = evIdA;
     }
   PredictEvent(evIdA, evIdB, nl);
   n = (inCell[nc][2][evIdA] * cellsy[nl] + inCell[nc][1][evIdA])*cellsx[nl] + 
