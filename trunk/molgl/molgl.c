@@ -928,6 +928,7 @@ void add_mol(int cf, int curmol)
   mols[cf] = realloc(mols[cf], sizeof(struct molecule)*(curmol+1));
   mols[cf][curmol].atom = NULL;
   mols[cf][curmol].bond = NULL;
+  mols[cf][curmol].numbonds = 0;
   mols[cf][curmol].numat = 0;
 }
 
