@@ -2983,12 +2983,20 @@ retry:
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++) 
       segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
-#if 0
-  if (segno*vecg[7]<0)
+#if 1
+#ifdef MD_DIST5
+  if (segno*vecg[4]<0 && fabs(segno*vecg[4])>3E-8)
+    {
+      printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[4]);
+      exit(-1);
+    }
+#else
+  if (segno*vecg[7]<0 && fabs(segno*vecg[4])>3E-8)
     {
       printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[7]);
       exit(-1);
     }
+#endif
 #endif
 #if 1
   if (segno > 0)
@@ -3556,11 +3564,13 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   double d3, Delta, t1, t2;
   double r1[3], r2[3], alpha, xb1[2], xb2[2];
   d3 = calcDistNeg(t+delt*0.5, i, j, shift, r1, r2, &alpha, vecg, 0);
+#if 0
   if (d1 > OprogStatus.epsd)
     {
       printf("d1=%.15G t=%.15G\n", d1, t);
       exit(-1);
     }
+#endif
   xa[0] = t;
   ya[0] = d1;
   xa[1] = t+delt*0.5;
