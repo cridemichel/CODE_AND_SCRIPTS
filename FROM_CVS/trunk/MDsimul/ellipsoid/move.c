@@ -2907,7 +2907,7 @@ retry:
       calc_intersec(rB, rA, Xa, rC);
       calc_intersec(rA, rB, Xb, rD);
 #if 1
-      if (OprogStatus.lambda1>0 && OprogStatus.lambda2>0)
+      if (OprogStatus.springkSD>0 && OprogStatus.stepSD>0)
 	{
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -2921,7 +2921,7 @@ retry:
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
 	  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
-	  distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda1, 1); 
+	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1); 
 	  for (k1=0; k1 < 3; k1++)
 	    {
 	      rC[k1] = vecgcg[k1];
