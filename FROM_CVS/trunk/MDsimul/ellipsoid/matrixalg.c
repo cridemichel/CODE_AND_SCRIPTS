@@ -19,6 +19,7 @@ double *vector(int n)
 }
 void projectgrad(double *p, double *xi, double *gradf, double *gradg);
 void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, double *sfA, double dist);
+void polint(double xain[], double yain[], int n, double x, double *y, double *dy);
 
 double **matrix(int n, int m)
 {
@@ -777,6 +778,124 @@ double polintfuncRyck(double x)
     polinterr = 0;
   return y;
 }
+void vectProdVec(double *A, double *B, double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
+}
+double OmegaSqAsd[3][3], OmegaAsd[3][3], OmegaBsd[3][3], OmegaSqBsd[3][3];
+extern void calc_intersec(double *rB, double *rA, double **Xa, double* rI);
+double f1dimPhi(double phi)
+{
+  int kk, k1, k2;
+  double sinw, cosw;
+  double dd[3], dist, dphi, MA[3][3], MB[3][3], pn[6];
+  sinw = sin(phi);
+  cosw = (1.0 - cos(phi));
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  MA[k1][k2] = -sinw*OmegaAsd[k1][k2]+cosw*OmegaSqAsd[k1][k2];
+	  MB[k1][k2] = -sinw*OmegaBsd[k1][k2]+cosw*OmegaSqBsd[k1][k2];
+	}
+    }
+   for (k1 = 0; k1 < 3; k1++)
+     {
+       pn[k1] = 0;
+       pn[k1+3] = 0;
+       for (k2 = 0; k2 < 3; k2++)
+	 {
+	   pn[k1] += MA[k1][k2]*pcom[k1];
+	   pn[k1+3] += MB[k1][k2]*pcom[k1+3]; 
+	 }
+     }	
+   calc_intersec(pn, rA, Xa, pn);
+   calc_intersec(&pn[3], rB, Xb, &pn[3]);
+   for (kk=0; kk < 3; kk++)
+     dd[kk] = pn[kk+3] - pn[kk];
+   dist = calc_norm(dd);
+   return dist;
+}
+void linminRyck(double p[], double xi[], double *fret)
+/*Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and 
+ * resets p to where the function func(p) takes on a minimum along the direction xi from p,
+ * and replaces xi by the actual vector displacement that p was moved. Also returns as fret 
+ * the value of func at the returned location p. This is actually all accomplished by calling
+ * the routines mnbrak and brent. */
+{ 
+  const double TOLLM=1.0E-2;
+  double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
+  double f1dimPhi(double x); 
+  void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, 
+	      double (*func)(double));
+  int j, kk; 
+  double xx,xmin,fx,fb,fa,bx,ax, omA[3], omB[3], nA, nB;
+ 
+  for (j=0;j<6;j++)
+    { 
+      pcom[j]=p[j];
+      xicom[j]=xi[j];
+    } 
+  vectProdVec(pcom, xicom, omA);
+  vectProdVec(&pcom[3], &xicom[3], omB);
+  nA = calc_norm(omA);
+  nB = calc_norm(omB);
+  for (kk=0; kk < 3; kk++)
+    { 
+      omA[kk] /= nA;
+      omB[kk] /= nB;
+    }
+  OmegaAsd[0][0] = 0;
+  OmegaAsd[0][1] = -omA[2];
+  OmegaAsd[0][2] = omA[1];
+  OmegaAsd[1][0] = omA[2];
+  OmegaAsd[1][1] = 0;
+  OmegaAsd[1][2] = -omA[0];
+  OmegaAsd[2][0] = -omA[1];
+  OmegaAsd[2][1] = omA[0];
+  OmegaAsd[2][2] = 0;
+  OmegaSqAsd[0][0] = -Sqr(omA[1]) - Sqr(omA[2]);
+  OmegaSqAsd[0][1] = omA[0]*omA[1];
+  OmegaSqAsd[0][2] = omA[0]*omA[2];
+  OmegaSqAsd[1][0] = omA[0]*omA[1];
+  OmegaSqAsd[1][1] = -Sqr(omA[0]) - Sqr(omA[2]);
+  OmegaSqAsd[1][2] = omA[1]*omA[2];
+  OmegaSqAsd[2][0] = omA[0]*omA[2];
+  OmegaSqAsd[2][1] = omA[1]*omA[2];
+  OmegaSqAsd[2][2] = -Sqr(omA[0]) - Sqr(omA[1]);
+  OmegaBsd[0][0] = 0;
+  OmegaBsd[0][1] = -omB[2];
+  OmegaBsd[0][2] = omB[1];
+  OmegaBsd[1][0] = omB[2];
+  OmegaBsd[1][1] = 0;
+  OmegaBsd[1][2] = -omB[0];
+  OmegaBsd[2][0] = -omB[1];
+  OmegaBsd[2][1] = omB[0];
+  OmegaBsd[2][2] = 0;
+  OmegaSqBsd[0][0] = -Sqr(omB[1]) - Sqr(omB[2]);
+  OmegaSqBsd[0][1] = omB[0]*omB[1];
+  OmegaSqBsd[0][2] = omB[0]*omB[2];
+  OmegaSqBsd[1][0] = omB[0]*omB[1];
+  OmegaSqBsd[1][1] = -Sqr(omB[0]) - Sqr(omB[2]);
+  OmegaSqBsd[1][2] = omB[1]*omB[2];
+  OmegaSqBsd[2][0] = omB[0]*omB[2];
+  OmegaSqBsd[2][1] = omB[1]*omB[2];
+  OmegaSqBsd[2][2] = -Sqr(omB[0]) - Sqr(omB[1]);
+
+  ax=0.0; /*Initial guess for brackets.*/
+  xx=1.0; 
+  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimPhi); 
+  *fret=brent(ax,xx,bx,f1dimPhi,TOLLM,&xmin);
+  for (j=0;j<6;j++)
+    { /*Construct the vector results to return. */
+      xi[j] *= xmin;
+      p[j] += xi[j]; 
+    } 
+}
+
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -788,7 +907,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   const int ITMAXFR = OprogStatus.maxitsSD;
   const double EPSFR=1E-10, GOLD=1.618034;
   double normxi,gg,gam,fp,dgg,norm1, norm2, sp, fpold, gradf[3], gradg[3], signA, signB;
-  double distini, distfin, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3], xiold[6];
+  double distini, distfin, dist, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3], xiold[6];
   double pm[6], fpm, signAold, signBold;
   double xmin, xim[6];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
@@ -800,6 +919,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   //fp=(*func)(p); 
   /*Initializations.*/
   fp = (*dfunc)(p,xi,gradfG,gradgG, &signA, &signB); 
+  linminRyck(p, xi, &dist);
 #if 0
   distini = 0;
   for (kk = 0; kk < 3; kk++)
@@ -822,6 +942,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
     { 
        itsfrprmn++;      
       *iter=its;
+      linminRyck(p, xi, &dist);
 #if 0
       printf("prima xi=%.15G %.15G %.15G %.15G %.15G %.15G\n", xi[0],xi[1],xi[2],xi[3],xi[4],xi[5]);
       printf("prima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
@@ -837,11 +958,12 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	  printf("its = %d distanza = %.15G\n", its, calc_norm(dd));
 	}
 #endif
+#if 0
       for (j=0; j < n; j++)
 	{
 	  p[j] += xi[j];
 	}
-
+#endif
  
       //if (its > 30)
 	//printf("sfA=%.15G sfB=%.15G its=%d fp=%.15G fpold: %.15G\n",sfA, sfB, its, fp,fpold );
@@ -886,14 +1008,8 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	}
       else
 #endif
-   if (fp > fpold)
-	{
-#if 0
-	  for (j=0; j < n; j++)
-	    {
-	      xi[j] /= 4.0;
-	    }
-#endif
+       	if (fp > fpold)
+  	  {
 #if 0
 	  for (j=0; j < 3; j++)
 	    xim[j] = xi[j]/2.0;
@@ -926,11 +1042,10 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	      for (j=0; j < 3; j++)
 		xi[j+3] = 0;
 	    }
-	  else
 #endif
-          sfA /= GOLD;
+	  sfA /= GOLD;
 	  sfB /= GOLD;
-	}
+	  }
      //printf("its=%d fpold=%.15G ,fp=%.15G\n", its, fpold, fp);
       //fp=(*func)(p);
 #if 1
@@ -1179,7 +1294,7 @@ void gradcgfunc(double *vec, double *grad)
 {
   int kk, k1, k2; 
   double fx[3], gx[3], fx2[3], gx2[3];
-  double S, Q1, Q2, A, B;
+  double S=1.0, Q1, Q2, A, B;
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
@@ -1227,7 +1342,8 @@ void gradcgfunc(double *vec, double *grad)
       else
 	S = OprogStatus.springkSD;
     }
-  
+  else
+    S= OprogStatus.springkSD;
   for (kk=0; kk < 3; kk++)
     {
       //grad[kk]=-2.0*(vec[kk+3]-vec[kk])*A + vec[6]*fx[kk];
@@ -1279,7 +1395,8 @@ double  cgfunc(double *vec)
       else
 	A = OprogStatus.springkSD;
     }
- 
+  else
+    A= OprogStatus.springkSD;
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
@@ -1320,7 +1437,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double 
 {
   int kk, k1, k2; 
   double K1, K2, F, nf, ng, nf2, ng2, gx2[3], fx2[3], dd[3], normdd, ngA, ngB;
-  double Q1, Q2, S, A=1.0, B, gradfx, gradgx, normgA, normgB, fact;
+  double Q1, Q2, S=1.0, A=1.0, B, gradfx, gradgx, normgA, normgB, fact;
   const double FACT=100;
   doneryck = 0;
   for (k1 = 0; k1 < 3; k1++)
@@ -1362,7 +1479,6 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double 
       else
 	S = 1.0;
     }
-  
   normdd = calc_norm(dd);
   if (normdd==0)
     {
@@ -1500,6 +1616,8 @@ double  cgfuncRyck(double *vec)
       else
 	A = OprogStatus.springkSD;
     }
+  else
+    A = OprogStatus.springkSD;
  
   F = 0.0;
   for (kk=0; kk < 3; kk++)
@@ -1557,7 +1675,6 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
   double vec[8];
   icg = i;
   jcg = j;
-  
   if (i < Oparams.parnumA)
     minaxicg = min3(Oparams.a[0],Oparams.b[0],Oparams.c[0]);
   else 
@@ -1773,7 +1890,7 @@ void gaussj(double **a, int n, double *bb)
 { 
   const int m=1;
   int *indxc,*indxr,*ipiv;
-  int i,icol,irow,j,k,l,ll; 
+  int i,icol=0,irow=0,j,k,l,ll; 
   double **b,big,dum,pivinv,temp; 
   b = matrix(n,1);
   for (i=0; i < n; i++)
