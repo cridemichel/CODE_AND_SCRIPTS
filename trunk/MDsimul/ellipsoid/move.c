@@ -3016,7 +3016,7 @@ retry:
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
 	  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
-	  distconjgrad(i, j, shift, vecgcg, 1000, 1); 
+	  //distconjgrad(i, j, shift, vecgcg, 100, 1); 
 	  //distconjgrad(i, j, shift, vecgcg, 1/OprogStatus.tolSD, 1);
 	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
 #if 0
@@ -3708,7 +3708,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
 extern double **Aip;
 extern void polint(double xa[], double ya[], int n, double x, double *y, double *dy);
 double zbrent(double (*func)(double), double x1, double x2, double tol);
-int polinterr;
+int polinterr, polinterrRyck;
 double xa[3], ya[3];
 double distfunc(double x)
 {
