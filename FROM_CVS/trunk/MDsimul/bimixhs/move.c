@@ -1275,6 +1275,8 @@ void ProcessCellCrossing(void)
 #ifdef BROWNIAN
 void velsBrown(double T)
 {
+  /*printf("time: %f step: %d velsBrown \n", Oparams.time, Oparams.curStep);
+  */
   comvel(Oparams.parnum, T, Oparams.m, 0); 
 }
 #endif
@@ -1328,9 +1330,10 @@ void rebuildLinkedList(void);
 #ifdef BROWNIAN
 void move(void)
 {
-  int i;
+  int i, innerstep=0;;
   while (1)
     {
+      innerstep++;
       /* get next event */
       NextEvent();
       /* Descrizione Eventi:
@@ -1406,6 +1409,7 @@ void move(void)
 	ENDSIM = 1;
 #endif
     }
+  /*printf("innersteps: %d\n", innerstep);*/
 }
 #else
 /* ============================ >>> move<<< =================================*/
