@@ -2990,13 +2990,15 @@ retry:
   if (segno*vecg[4]<0 && fabs(segno*vecg[4])>3E-8)
     {
       printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[4]);
-      exit(-1);
+      return calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1);
+      //exit(-1);
     }
 #else
   if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
     {
       printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[7]);
-      exit(-1);
+      return calcDist(i, j, shift, r1, r2, alpha, vecgsup, 1);
+      //exit(-1);
     }
 #endif
 #endif
@@ -3810,7 +3812,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	    vecgdold[kk] = vecgd[kk];
 	  dold = d;
 	  its++;
-	  itsS++;
+	  //itsS++;
 	  continue;
 	}
 #endif
