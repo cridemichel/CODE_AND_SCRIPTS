@@ -2716,7 +2716,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   delt = h;
   MD_DEBUG(printf("QUIIII collCode=%d\n", *collCode));
   //printf("t1= %f t2 = %f\n", t1, t2);
-#if 1
+#if 0
   df = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
   for (nn=0; nn < MD_PBONDS; nn++)
     {
@@ -2884,7 +2884,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  firstaftsf = 0;
 	}
 #endif
-#if 1
+#if 0
       /* se all'inizio c'erano sticky spots che si overlappavano finché le distanze non sono corrette
        * usa il passo minimo (dell'ordine della precisione di macchina) 
        * NOTA: evita di fare più di MAXITS passi "minimi" */
