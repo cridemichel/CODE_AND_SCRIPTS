@@ -660,12 +660,12 @@ void usrInitBef(void)
       OprogStatus.PE[i] = 0;
     /* ======================================================================= */
   }
-  extern void check (int *overlap, double *K, double *V);
-  double *atomTime, *treeTime;
-  int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
-  extern void PredictEvent(int, int);
-  extern void InitEventList(void);
-  void StartRun(void)
+extern void check (int *overlap, double *K, double *V);
+double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
+int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
+extern void PredictEvent(int, int);
+extern void InitEventList(void);
+void StartRun(void)
   {
     int j, k, n;
 
@@ -804,6 +804,10 @@ void usrInitAft(void)
     tree = AllocMatI(9, poolSize);
 #endif
     treeTime = malloc(sizeof(double)*poolSize);
+    treeRxC  = malloc(sizeof(double)*poolSize);
+    treeRyC  = malloc(sizeof(double)*poolSize);
+    treeRzC  = malloc(sizeof(double)*poolSize);
+
     if (OprogStatus.CMreset==-1)
       {
 	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
