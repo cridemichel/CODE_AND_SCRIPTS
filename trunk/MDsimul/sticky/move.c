@@ -1722,7 +1722,6 @@ void UpdateSystem(void)
     }
 }
 
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 void remove_bond(int na, int n, int a, int b)
 {
   int i, nb, ii, jj, aa, bb;
@@ -1769,7 +1768,6 @@ int bound(int na, int n, int a, int b)
       return 1;
   return 0;
 }
-#endif
 /* array con le posizioni degli atomi nel riferimento del corpo rigido 
  * nel caso dell'acqua i siti idrogeno ed elettroni sono disposti su 
  * di un tetraedro */
@@ -2421,19 +2419,14 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
   return 0;
 }
-int bound()
-{
-  int i;
-  for (i = 0; i < numbonds[na]; i++)
-    if (bonds[na][i] == n)
-      return 1;
-  return 0;
-}
 
 int valid_collision(int i, int j, int ata, int atb, int collCode)
 {
-  
-
+  if ((collCode==MD_INOUT_BARRIER && !bound(i, j, ata, atb)) ||
+      (collCode==MD_OUTIN_BARRIER && bound(i, j, ata, atb)) ) 
+    return 0; 
+  else
+    return 1;
 }
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double tbigat,
 		   double *evtime, int *ata, int *atb, int *collCode)
@@ -3608,20 +3601,11 @@ void move(void)
 	  ProcessCollision();
 	  OprogStatus.collCount++;
 	}
-
-#ifdef MD_GRAVITY
-      else if (evIdB >= ATOM_LIMIT + 100 || evIdB < ATOM_LIMIT + NDIM * 2)
-	{
-	  ProcessCellCrossing();
-	  OprogStatus.crossCount++;
-	}
-#else
       else if ( evIdB >= ATOM_LIMIT + 100 )
 	{
 	  ProcessCellCrossing();
 	  OprogStatus.crossCount++;
 	}
-#endif
       /* ATOM_LIMIT +6 <= evIdB < ATOM_LIMIT+100 eventi che si possono usare 
        * liberamente */
       else if (evIdB == ATOM_LIMIT + 7)
@@ -3629,88 +3613,11 @@ void move(void)
 	  UpdateSystem();
 	  OprogStatus.nextSumTime += OprogStatus.intervalSum;
 	  ScheduleEvent(-1, ATOM_LIMIT + 7, OprogStatus.nextSumTime);
-#if defined(MD_SQWELL) && defined(MD_BONDCORR)
-	    {
-	      FILE *ppf;
-	      sprintf(fileop2 ,"population.dat");
-	      /* store conf */
-	      strcpy(fileop, absTmpAsciiHD(fileop2));
-	      if ( (ppf = fopenMPI(fileop, "w")) == NULL)
-		{
-		  mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-		  exit(-1);
-		}
-	      fprintf(ppf,"%d %d %d\n", bondhist[0], bondhist[1], bondhist[2]);
-	      fclose(ppf); 
-	    }
-#endif
 	  /*calcObserv();*/
 	  outputSummary(); 
 	}
       else if (evIdB == ATOM_LIMIT + 8)
 	{
-#if defined(MD_BONDCORR) && defined(MD_SQWELL)  
-	  cb = 0;
-	  corr1 = corr2 = corr3 = 0;
-	  for (i=0; i < Oparams.parnum; i++)
-	    {
-	      for (j=0; j < numbonds0[i]; j++)
-		{
-		  if (bound(i,bonds0[i][j]))
-		    cb++;
-		}
-	      cc = 0;
-    	      for (j=0; j < numbonds0[i]; j++)
-		{
-		  if (bound(i,bonds0[i][j]))
-		    cc++;
-		}
-	      if (cc > 0)
-		{
-		  if (numbonds0[i]==2)
-	      	    corr2++;
-		  if (numbonds0[i]==3)
-		    corr3++;
-		}
-	      if (numbonds0[i]==1 && numbonds0[bonds0[i][0]]==1)
-		{
-		  if (numbonds[i]==1)	
-		    corr1++;
-		}	
-	    }
-	  sprintf(fileop2 ,"BondCorrFuncB2.dat");
-	  /* store conf */
-	  strcpy(fileop, absTmpAsciiHD(fileop2));
-	  if ( (bof = fopenMPI(fileop, "a")) == NULL)
-	    {
-	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-	      exit(-1);
-	    }
-	  fprintf(bof,"%.15f %.15f\n", Oparams.time, corr2/corrini2);
-	  fclose(bof);
-	  sprintf(fileop2 ,"BondCorrFuncB3.dat");
-	  /* store conf */
-	  strcpy(fileop, absTmpAsciiHD(fileop2));
-	  if ( (bof = fopenMPI(fileop, "a")) == NULL)
-	    {
-	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-	      exit(-1);
-	    }
-	  fprintf(bof,"%.15f %.15f\n", Oparams.time, corr3/corrini3);
-	  fclose(bof);
-  
-	  sprintf(fileop2 ,"bondcorr.dat");
-	  /* store conf */
-	  strcpy(fileop, absTmpAsciiHD(fileop2));
-	  if ( (bf = fopenMPI(fileop, "a")) == NULL)
-	    {
-	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-	      exit(-1);
-	    }
-	  if (corrnorm)
-	    fprintf(bf, "%.15f %.8f\n", Oparams.time, cb/corrnorm);
-	  fclose(bf);
-#else
 	  sprintf(fileop2 ,"Store-%d-%d", 
 		  OprogStatus.KK, OprogStatus.JJ);
 	  /* store conf */
@@ -3744,7 +3651,6 @@ void move(void)
           sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
 	  system(fileop3);
-#endif
 #endif
 	  OprogStatus.JJ++;
 	  if (OprogStatus.JJ == OprogStatus.NN)
@@ -3803,115 +3709,6 @@ void move(void)
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	  break;
 	}
-#ifdef MD_GRAVITY
-      else if (evIdB == ATOM_LIMIT + 9)
-	{
-	  UpdateSystem();
-	  if (OprogStatus.taptau > 0.0)
-	    {
-	      if (OprogStatus.quenchend < 0.0)
-		{
-#if 0
-		  if ((V - Vold)/V < OprogStatus.quenchtol)
-		    {
-		      printf("QUENCH DONE! %d\n", Oparams.curStep);
-		      /* se l'energia potenziale è ormai stabile considera il quench finito */
-		      OprogStatus.quenchend = Oparams.curStep;
-		    }
-#else
-		  calcKVz();
-		  OprogStatus.nextcheckTime += OprogStatus.checkquenchTime;
-		  if ( (2.0*K/(3.0*((double)Oparams.parnum)-3.0)) < 
-		       OprogStatus.quenchtol)
-		    {
-#endif
-		      printf("QUENCH DONE! %lld\n", (long long int) Oparams.curStep);
-		      OprogStatus.numquench++;
-		      /* calcola e salva le misure quando finisce il quench */
-		      calcRho();
-		      save_rho();
-		      calccmz();
-		      save_rzcm();
-		      OprogStatus.quenchend = Oparams.time;
-		      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-#if 1
-		      calcKVz();
-		      scalevels(Oparams.T, K, Vz);
-#endif
-		      MD_DEBUG3(printf("rzmax:%f\n", rzmax));
-		      rzmax = -Lz2;
-		      for (ii=0; ii < Oparams.parnum; ii++)
-			{
-			  if (rz[ii] > rzmax)
-			    rzmax = rz[ii];
-			}
-		      if (Lz / (rzmax+Lz2) < OprogStatus.expandFact)
-			zfact = Lz/(rzmax+Lz2);
-		      else
-			zfact = OprogStatus.expandFact;
-		      for (ii=0; ii < Oparams.parnum; ii++)
-			{
-			  rz[ii] = zfact*(rz[ii]+Lz2)-Lz2;
-			  rz[ii] += OprogStatus.rzup;
-			  vz[ii] += OprogStatus.vztap; 
-			}
-		      rebuildLinkedList();
-		      MD_DEBUG3(distanza(996, 798));
-		      rebuildCalendar();
-		      if (OprogStatus.storerate > 0.0)
-			ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-		      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-		      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-		    }
-		}
-	      else if ((Oparams.time - OprogStatus.quenchend)  < OprogStatus.taptau)
-		{
-		  /* se scalevelsteps = 0 allora scala ogni passo se si sta facendo il 
-		     tapping */
-		  OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
-		  calcKVz();
-		  MD_DEBUG4(printf("SCALVEL #%lld Vz: %.15f\n", (long long int) Oparams.curStep,Vz));
-		  scalevels(Oparams.T, K, Vz);
-		  rebuildLinkedList();
-		  rebuildCalendar();
-		  if (OprogStatus.storerate > 0.0)
-		    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-		  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-		  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-		}
-	      else
-		{
-		  /* start quench (-1  significa che il quench è iniziato) */
-		  OprogStatus.nextcheckTime += OprogStatus.checkquenchTime;
-		  OprogStatus.quenchend = -1;
-		}
-	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
-	    }
-	  else if (OprogStatus.scalevel)
-	    {
-	      OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
-	      calcKVz();
-	      MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%lld Vz: %.15f\n", (long long int)Oparams.curStep,Vz));
-	      scalevels(Oparams.T, K, Vz);
-	      rebuildCalendar();
-	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-	      if (OprogStatus.storerate > 0.0)
-		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
-	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-	    }
-#if 0
-	  else if (2.0*K/(3.0*Oparams.parnum-3.0)>Oparams.T)
-	    {
-	      UpdateSystem();
-	      calcKVz();
-	      scalevels(Oparams.T, K, Vz);
-	    }
-#endif
-	}
-      if (OprogStatus.maxquench && OprogStatus.numquench == OprogStatus.maxquench)
-	ENDSIM = 1;
-#else
       else if (evIdB == ATOM_LIMIT + 9)
 	{
 	  if (OprogStatus.scalevel)
@@ -3942,101 +3739,8 @@ void move(void)
 		OprogStatus.scalevel = 0;
 	    }
 	}
-#endif
       if (OprogStatus.endtime > 0 && Oparams.time > OprogStatus.endtime)
 	ENDSIM = 1;
-#if 1 && defined(MD_SQWELL) && defined(MD_BONDCORR)
-      corr3 = corr1 = corr2 = 0;
-      for (i=0; i < Oparams.parnum; i++)
-	{
-	  if (numbonds0[i]==2)
-	    {
-	      cc = 0;
-	      for (j=0; j < numbonds0[i]; j++)
-		    {
-		      if (bound(i,bonds0[i][j]))
-			cc++;
-		    }
-	      if (cc>0)
-		{
-		  corr2++;
-    		}
-	      if (cc==0 && lastbreak1[i]>0.0)
-		{
-		  if (lastbreak1[i]>0.0 
-		      && Oparams.time - lastbreak1[i] <
-		      10.0*Sqr(Oparams.delta[0][0])/(Oparams.T*Oparams.Dt)) 
-		    {
-		      bondhist[1]++;
-		    }
-		  else
-		    bondhist[0]+=2;
-		  lastbreak1[i]=-1.0;
-		}
-	      if (cc==1 && lastbreak1[i] != -1.0)
-		{
-		  lastbreak1[i]=Oparams.time;
-		}
-	    }
-	  if (numbonds[i]==3)
-	    {
-	      cc = 0;
-	      for (j=0; j < numbonds0[i]; j++)
-		    {
-		      if (bound(i,bonds0[i][j]))
-			cc++;
-		    }
-	      if (cc==0 && lastbreak2[i]>0.0)
-		{
-		  if (lastbreak2[i]>0.0 
-		      && Oparams.time - lastbreak2[i] >
-		      2.0*exp(2/Oparams.T)*Sqr(Oparams.delta[0][0])/(Oparams.T*Oparams.Dt)) 
-		    {
-		      bondhist[2]++;
-		    }
-		  else
-		    bondhist[0]+=3;
-		  lastbreak2[i]=-1.0;
-		}
-	      if (cc>0)
-		{
-		  corr3++;
-		}
-	      
-	      if (cc==2 && lastbreak2[i] != -1.0)
-		{
-		  lastbreak2[i]=Oparams.time;
-		}
-	    }
-	  if (numbonds0[i]==1 && numbonds0[bonds0[i][0]]==1)
-	    {
-	      if (numbonds[i]==1)	
-		corr1++;
-	    }	
-	}
-#if 0
-      sprintf(fileop2 ,"BondCorrFuncB1.dat");
-      /* store conf */
-      strcpy(fileop, absTmpAsciiHD(fileop2));
-      if ( (bof = fopenMPI(fileop, "a")) == NULL)
-	{
-	  mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-	  exit(-1);
-	}
-      fprintf(bof,"%.15f %.15f\n", Oparams.time, corr1);
-      fclose(bof);
-      sprintf(fileop2 ,"BondCorrFuncB2.dat");
-      /* store conf */
-      strcpy(fileop, absTmpAsciiHD(fileop2));
-      if ( (bof = fopenMPI(fileop, "a")) == NULL)
-	{
-	  mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-	  exit(-1);
-	}
-      fprintf(bof,"%.15f %.15f\n", Oparams.time, corr2);
-      fclose(bof);
-#endif
-#endif
 #if 0
       if (Oparams.curStep == Oparams.totStep)
 	{
