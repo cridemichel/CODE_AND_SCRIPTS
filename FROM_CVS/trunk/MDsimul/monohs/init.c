@@ -507,6 +507,7 @@ void usrInitBef(void)
   OprogStatus.intervalSum = 1.0;
   OprogStatus.checkquenchTime = 1.0;
   OprogStatus.rescaleTime = 1.0;
+  OprogStatus.brownian = 0;
   OprogStatus.numquench = 0;
   OprogStatus.maxquench = 0;
   OprogStatus.rescaleTime = 0.0;
@@ -697,6 +698,9 @@ void usrInitAft(void)
     {
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = 0.0;
+      OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
+      OprogStatus.nextSumTime += OprogStatus.intervalSum;
+      OprogStatus.nextDt += Oparams.Dt;
     }
   else
     {
@@ -706,6 +710,8 @@ void usrInitAft(void)
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)

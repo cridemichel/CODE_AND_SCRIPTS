@@ -437,7 +437,7 @@ struct pascii opro_ascii[] =
   //{"sumVz",        OS(sumVz),                    MAXPAR,  1, "%.10f"},
   {"W",            &OS(W),                          1,              1, "%.6G"},
   {"savedXva",     &OS(savedXva),                   1,   1,   "%d"},
-  {"Cmreset",      &OS(CMreset),                    1,   1,  "%d"},
+  {"CMreset",      &OS(CMreset),                    1,   1,  "%d"},
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
   {"rNebrShell",   &OS(rNebrShell),                 1,   1, "%.6G"},
   {"tolT",         &OS(tolT),                       1,   1, "%.8G"},
@@ -510,7 +510,7 @@ struct pascii opar_ascii[]=
   {"sigma",             OP(sigma),                        2,   2, "%.8G"},
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
-  {"Dt",           ,    &OP(Dt),                          1,   1, "%.15G"},
+  {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
 #ifdef MD_GRAVITY
   {"wallDiss",          &OP(wallDiss),                    1,   1,   "%f"},
   {"partDiss",          &OP(partDiss),                    1,   1,   "%f"},

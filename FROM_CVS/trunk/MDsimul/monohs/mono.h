@@ -253,6 +253,7 @@ struct progStatus
   double rescaleTime;
   double nextcheckTime;
   double nextSumTime;
+  double nextDt;
   int numquench;
   int maxquench;
   double rhobh;
@@ -276,7 +277,10 @@ struct progStatus
   char tmpPath[NAME_LENGTH];
   char misPath[NAME_LENGTH];
   /* =================================================== */
-
+#ifdef MD_BILOG
+  double logblockbase;
+  double logblock;
+#endif
   double base;    /* We save at base^^NN step */
   int NN;         /* Logatithmic block length */
   double fstps;         /* There are KK block each base^NN long */
@@ -315,6 +319,7 @@ struct params
   int parnum;        	/* particles number */
   int totStep;	/* temporal step number that simulation 
 				   must do */
+  double Dt;
   int curStep;	/* current step of simulation */
   /* ======================================================================= */
  
@@ -420,13 +425,20 @@ struct pascii opro_ascii[] =
   {"xvaSavedMode", &OS(xvaSaveMode),                1,  1,    "%d"},
   {"bakSavedMode", &OS(bakSaveMode),                1,  1,    "%d"},
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
-  {"checkquechTime",&OS(checkquenchTime),           1,  1,    "%.10G"},
+  {"checkquenchTime",&OS(checkquenchTime),           1,  1,    "%.10G"},
   {"intervalSum"   ,&OS(intervalSum),               1,  1,    "%.10G"}, 
+  {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
+  {"nextSumTime"  ,&OS(nextSumTime),                1,  1,    "%.15G"},
+  {"nextDt",       &OS(nextDt),                     1,  1,    "%.15G"},
   {"tmpPath",      OS(tmpPath),                     1,  NAME_LENGTH, "%s"},
   {"misPath",      OS(misPath),                     1,  NAME_LENGTH, "%s"},
   {"base",         &OS(base),                       1,  1, "%.6G"},
   {"NN",           &OS(NN),                         1,  1,   "%d"},
-  {"fstps",        &OS(fstps),                      1,  1,   "%.15G"},
+#ifdef MD_BILOG
+  {"logblockbase", &OprogStatus.logblockbase,  CT},
+  {"logblock",     &OprogStatus.logblock,      CT},
+#endif
+{"fstps",        &OS(fstps),                      1,  1,   "%.15G"},
   {"nRun",         OS(nRun),                        1,  32,   "%s"},
   {"ENmin",        &OS(ENmin),                      1,  1,  "%.6G"},
   {"ENmax",        &OS(ENmax),                      1,  1,  "%.6G"},
@@ -457,7 +469,8 @@ struct pascii opar_ascii[]=
 #endif
   {"M",                 &OP(M),                           1,   1,   "%d"},
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
-  {"", NULL, 0, 0, ""}
+  {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
+{"", NULL, 0, 0, ""}
 };
 #else
 extern struct pascii opar_ascii[];
@@ -517,6 +530,7 @@ struct singlePar OsinglePar[] = {
   {"DtrCalc",    &OprogStatus.measCalc[1],    INT}, /* steps between measure
 						       calculation */
   {"DtrName",    &OprogStatus.dataFiles[1],   STR},
+  {"brownian",   &OprogStatus.brownian,       INT},
   {"tempSteps",  &OprogStatus.measSteps[2],   INT},
   {"tempCalc",   &OprogStatus.measCalc[2],    INT},
   {"tempName",   &OprogStatus.dataFiles[2],   STR},
@@ -551,6 +565,7 @@ struct singlePar OsinglePar[] = {
   {"checkQuench", &OprogStatus.checkquenchTime, CT},
   {"rescaleTime", &OprogStatus.rescaleTime,   CT},
   {"scalevel",   &OprogStatus.scalevel,       INT},
+  {"Dt",         &Oparams.Dt,                 CT},
   {"W",          &OprogStatus.W,              CT},
   {"P",          &Oparams.P,                  CT},
   {"L",          &L,                        CT},

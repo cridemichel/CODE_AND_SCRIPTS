@@ -536,7 +536,7 @@ void initCoord(void)
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
-  void usrInitBef(void)
+void usrInitBef(void)
   {
     int i;
     /* DESCRIPTION:
@@ -663,7 +663,7 @@ void initCoord(void)
   extern void remove_bond(int na, int n);
 #endif
   /* ======================== >>> usrInitAft <<< ==============================*/
-  void usrInitAft(void)
+void usrInitAft(void)
   {
     /* DESCRIPTION:
        This function is called after the parameters were read from disk, put
