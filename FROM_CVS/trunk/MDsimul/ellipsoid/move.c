@@ -1120,7 +1120,7 @@ void calcFxtFt(double x[3], double X[3][3],
 }
 /* funzione che calcola lo Jacobiano */
 void fdjac(int n, double x[], double fvec[], double **df, 
-	   void (*vecfunc)(int, double [], double []), int iA, int iB)
+	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 {
   int na; 
   double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
@@ -1155,9 +1155,9 @@ void fdjac(int n, double x[], double fvec[], double **df,
   RA[2][2] = uzz[i];
 
   ti = x[4] - atomTime[j];
-  rB[0] = rx[j] + vx[j]*ti;
-  rB[1] = ry[j] + vy[j]*ti;
-  rB[2] = rz[j] + vz[j]*ti;
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
   vB[0] = vx[j];
   vB[1] = vy[j];
   vB[2] = vz[j];
@@ -1217,7 +1217,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
 
 }
 #endif
-void funcs2beZeroed(int n, double x[], double fvec[], int i, int j)
+void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
   int na, k1, k2; 
   double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti;
@@ -1236,9 +1236,9 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j)
 	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
 
   ti = x[4] - atomTime[j];
-  rB[0] = rx[j] + vx[j]*ti;
-  rB[1] = ry[j] + vy[j]*ti;
-  rB[2] = rz[j] + vz[j]*ti;
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
   UpdateOrient(j, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, Omega);
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na],
@@ -1273,7 +1273,8 @@ void PredictEvent (int na, int nb)
    *      */
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
   b, d, t, tInt, vv;
-  int et;
+  int et, kk;
+  double ncong, cong[3], pos[3];
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
   double Lzx, h1, h2, sig, hh1;
@@ -1541,11 +1542,11 @@ void PredictEvent (int na, int nb)
 		      /* maxax[...] è il diametro dei centroidi dei due tipi
 		       * di ellissoidi */
 		      if (na < parnumA && n < parnumA)
-			sigSq = Sqr(maxax[0]);
+			sigSq = 4.0*Sqr(maxax[0]);
 		      else if (na >= parnumA && n >= parnumA)
-			sigSq = Sqr(maxax[1]);
+			sigSq = 4.0*Sqr(maxax[1]);
 		      else
-			sigSq = Sqr(0.5*(maxax[0]+maxax[1]));
+			sigSq = Sqr(maxax[0]+maxax[1]);
 #endif
 		      tInt = Oparams.time - atomTime[n];
 		      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
@@ -1656,8 +1657,29 @@ no_core_bump:
 			      /* come guess per x possiamo usare il punto di contatto 
 			       * fra i centroidi */
 			      /* vecg è un guess per il vettore a 5 dimensioni (x, alpha ,t) */
-			      /* NOTA: qui va calcolato il vettore guess vecg */
-			      newt(vecg, 5, &check, funcs2beZeroed); 
+			      /* NOTA: qui va calcolato il vettore guess vecg 
+			       * che è il punto di contatto dei due centroidi */
+			      cong[0] = rx[na] + vx[na] * (t-atomTime[na]) 
+				 - (rx[n] + vx[n] * (t-atomTime[n])) - shift[0];
+			      cong[1] = ry[na] + vy[na] * (t-atomTime[na]) 
+				- (ry[n] + vy[n] * (t-atomTime[n])) - shift[1];
+			      cong[2] = rz[na] + vz[na] * (t-atomTime[na]) 
+				- (rz[n] + vz[n] * (t-atomTime[n])) - shift[2];
+			      ncong=0.0;
+			      for (kk=0; kk < 3; kk++)
+				ncong +=  Sqr(cong[kk]);
+			      for (kk=0; kk < 3; kk++)
+				{
+				  cong[kk] /= ncong;
+				  pos[kk] =  rx[na] + vx[na] * (t-atomTime[na]);
+				}
+			      for (kk=0; kk < 3; kk++)
+				vecg[kk] = pos[kk] - cong[kk]*maxax[na<Oparams.parnumA?0:1];
+
+			      vecg[3] = 1.0; /* questa stima di alpha andrebbe fatta meglio!*/
+			      vecg[4] = t;
+			      
+			      newt(vecg, 5, &check, funcs2beZeroed, na, n, shift); 
 			      if (t < 0)
 				{
 #if 1
