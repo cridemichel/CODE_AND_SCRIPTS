@@ -1226,6 +1226,7 @@ void usrInitAft(void)
 	  }
       }
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
+  //exit(-1);
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
