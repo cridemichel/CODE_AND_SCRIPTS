@@ -383,6 +383,9 @@ struct params
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
 
+#ifndef MD_ASYM_ITENS
+  double I[2];
+#endif
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   double delta[2][2]; /* ampiezza della buca */
   double bheight;
@@ -526,6 +529,9 @@ struct pascii opar_ascii[]=
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
+#ifndef MD_ASYM_ITENS
+  {"I",                 OP(I),                             2,   1, "%.8G"},
+#endif
 #ifdef MD_GRAVITY
   {"wallDiss",          &OP(wallDiss),                    1,   1,   "%f"},
   {"partDiss",          &OP(partDiss),                    1,   1,   "%f"},
@@ -667,6 +673,10 @@ struct singlePar OsinglePar[] = {
   {"B1",      &Oparams.b[1],      CT},
   {"C0",      &Oparams.c[0],      CT},
   {"C1",      &Oparams.c[1],      CT},
+#ifndef MD_ASYM_ITENS
+  {"Ia",      &Oparams.I[0],      CT},
+  {"Ib",      &Oparams.I[1],      CT},
+#endif
 #ifdef MD_GRAVITY
   {"ggrav",      &Oparams.ggrav,            CT},
 #endif

@@ -7,7 +7,13 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
-extern double **Xa, **Xb, **Ia, **Ib, **invIa, **invIb, **RA, **RB, ***R, **Rt;
+extern double **Xa, **Xb, **RA, **RB, ***R, **Rt;
+#ifdef MD_ASYM_ITENS
+double **Ia, **Ib, **invIa, **invIb;
+#else
+double Ia, Ib, invIa, invIb;
+#endif
+int lastbump[2]={-1,-1};
 extern double maxax[2];
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
@@ -614,6 +620,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double norm[3];
   double modn, denom;
+#ifndef MD_ASYM_ITENS
+  double factorinvIa, factorinvIb;
+#endif
   double shift[3];
   int na, a, b;
 #if 0
@@ -637,6 +646,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   MD_DEBUG(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
+  lastbump[0]=i;
+  lastbump[1]=j;
+
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
@@ -661,20 +673,31 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
+#ifdef MD_ASYM_ITENS
   RDiagtR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[i]);
-
+#else
+  Ia = Oparams.I[na];
+#endif
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
+#ifdef MD_ASYM_ITENS
   RDiagtR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
- 
+#else
+  Ib = Oparams.I[na];
+#endif
   //MD_DEBUG(calc_energy("dentro bump2"));
   MD_DEBUG(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
   
   //MD_DEBUG(calc_energy("dentro bump3"));
   /* calcola le matrici inverse del tensore d'inerzia */
+#ifdef MD_ASYM_ITENS
   InvMatrix(Ia, invIa, 3);
   InvMatrix(Ib, invIb, 3);
-
+#else
+  invIa = 1/Ia;
+  invIb = 1/Ib;
+  MD_DEBUG(printf("Ia=%f Ib=%f\n", Ia, Ib));
+#endif
   for (a=0; a < 3; a++)
     {
       norm[a] = 0;
@@ -716,7 +739,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       return;
     }
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
-  
+#ifdef MD_ASYM_ITENS 
   for (a=0; a < 3; a++)
     {
       rnI[a] = 0;
@@ -727,9 +750,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     }
   for (a = 0; a < 3; a++)
     denom += rnI[a]*rACn[a];
-   
+#else
+  for (a = 0; a < 3; a++)
+    denom += invIa*Sqr(rACn[a]);
+#endif
   vectProd(rBC[0], rBC[1], rBC[2], norm[0], norm[1], norm[2], &rBCn[0], &rBCn[1], &rBCn[2]);
-  
+#ifdef MD_ASYM_ITENS  
   for (a=0; a < 3; a++)
     {
       rnI[a] = 0;
@@ -740,9 +766,11 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     }
   for (a = 0; a < 3; a++)
     denom += rnI[a]*rBCn[a];
-   
+#else
+  for (a = 0; a < 3; a++)
+    denom += invIb*Sqr(rBCn[a]);
+#endif
 #ifdef MD_GRAVITY
-  
   factor = 2.0*vc/denom;
   /* Dissipation */
 #if 0
@@ -772,6 +800,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
   MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
+#ifdef MD_ASYM_ITENS
   for (a=0; a < 3; a++)
     {
       wx[i] += factor*invIa[0][a]*rACn[a];
@@ -781,6 +810,16 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       wz[i] += factor*invIa[2][a]*rACn[a];
       wz[j] -= factor*invIb[2][a]*rBCn[a];
     }
+#else
+  factorinvIa = factor*invIa;
+  factorinvIb = factor*invIb;
+  wx[i] += factorinvIa*rACn[0];
+  wx[j] -= factorinvIb*rBCn[0];
+  wy[i] += factorinvIa*rACn[1];
+  wy[j] -= factorinvIb*rBCn[1];
+  wz[i] += factorinvIa*rACn[2];
+  wz[j] -= factorinvIb*rBCn[2];
+#endif
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
@@ -2179,14 +2218,20 @@ int refine_contact(int i, int j, double t, double vecgd[8], double shift[3],doub
 int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
   double h, d1, d2, alpha, vecgd[8], t, r1[3], r2[3]; 
-  double normddot, ddot[3], maxddot, delt;
+  double vd, normddot, ddot[3], maxddot, delt;
   const double epsd = 0.001; 
   int foundrc, retcheck, kk;
   t = t1;
   MD_DEBUG(printf("[locate_contact] t1=%f t2=%f shift=(%f,%f,%f)\n", t1, t2, shift[0], shift[1], shift[2]));
-  d1 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
   MD_DEBUG(printf(">>>>d1:%f\n", d1));
   h = 0.01;//EPS*(t2-t1);
+  if ((lastbump[0]==i || lastbump[0]==j) &&
+      (lastbump[1]==i || lastbump[1]==j))
+    {
+      MD_DEBUG(printf("last collision was between (%d-%d)\n", i, j));
+      t += h;
+    }
+  d1 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
   foundrc = 0;
   if (d1  < 0)
     {
@@ -2207,7 +2252,10 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
       if (d1 > 0 && d2 < 0)
 	{
 	  if (refine_contact(i, j, t, vecgd, shift, vecg))
-	    return 1;
+	    {
+	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
+	      return 1;
+	    }
 	  else 
 	    continue;
 	}
@@ -2879,9 +2927,13 @@ void calc_energynew(char *msg)
 {
   int i, k1, k2;
   double wt[3];
+#ifdef MD_ASYM_ITENS
   double **Ia, **Ib;
   Ia = matrix(3,3); 
   Ib = matrix(3,3);
+#else
+  double Ia, Ib;
+#endif
   K = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -2894,7 +2946,11 @@ void calc_energynew(char *msg)
 	  wt[2] = wz[i];
 	  for (k1=0; k1 < 3; k1++)
 	    {
+#ifdef MD_ASYM_ITENS
       	      K += wt[k1]*ItensD[0][k1]*wt[k1];
+#else
+	      K += Oparams.I[0]*Sqr(wt[k1]);
+#endif
 	    }
 	}
       else
@@ -2905,53 +2961,79 @@ void calc_energynew(char *msg)
 	  wt[2] = wz[i];
 	  for (k1=0; k1 < 3; k1++)
 	    {
+#ifdef MD_ASYM_ITENS
       	      K += wt[k1]*ItensD[1][k1]*wt[k1];
+#else
+      	      K += Oparams.I[1]*Sqr(wt[k1]);
+#endif
 	    }
 	}
     }
   K *= 0.5;
+#ifdef MD_ASYM_ITENS
   free_matrix(Ia,3);
   free_matrix(Ib,3);
+#endif
   printf("[%s] Kinetic Energy: %f\n", msg, K);
 }
 void calc_energy_i(char *msg, int i)
 {
   int k1, k2;
   double wt[3];
+#ifdef MD_ASYM_ITENS
   double **Ia, **Ib;
   Ia = matrix(3,3); 
   Ib = matrix(3,3);
+#else
+  double Ia, Ib;
+#endif
   K = 0;
   if (i<Oparams.parnumA)
     {
       /* calcola tensore d'inerzia e le matrici delle due quadriche */
+#ifdef MD_ASYM_ITENS
       RDiagtR(i, Ia, ItensD[0][0], ItensD[0][1], ItensD[0][2], R[i]);
+#endif
       K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
       wt[0] = wx[i];
       wt[1] = wy[i];
       wt[2] = wz[i];
+#ifdef MD_ASYM_ITENS
       for (k1=0; k1 < 3; k1++)
 	for (k2=0; k2 < 3; k2++)
 	  {
 	    K += wt[k1]*Ia[k1][k2]*wt[k2];
 	  }
+#else
+      for (k1=0; k1 < 3; k1++)
+	K += Sqr(wt[k1])*Oparams.I[0];
+#endif
     }
   else
     {
+#ifdef MD_ASYM_ITENS
       RDiagtR(i, Ib, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+#endif
       K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
       wt[0] = wx[i];
       wt[1] = wy[i];
       wt[2] = wz[i];
+#ifdef MD_ASYM_ITENS
       for (k1=0; k1 < 3; k1++)
 	for (k2=0; k2 < 3; k2++)
 	  {
 	    K += wt[k1]*Ib[k1][k2]*wt[k2];
 	  }
+#else
+      for (k1=0; k1 < 3; k1++)
+	K += Sqr(wt[k1])*Oparams.I[1];
+#endif
     }
   K *= 0.5;
+#ifdef MD_ASYM_ITENS
   free_matrix(Ia,3);
   free_matrix(Ib,3);
+#endif
   printf("[%s] Kinetic Energy of %d: %f\n", msg, i, K);
   
 }
@@ -2959,43 +3041,64 @@ void calc_energy(char *msg)
 {
   int i, k1, k2;
   double wt[3];
+#ifdef MD_ASYM_ITENS
   double **Ia, **Ib;
   Ia = matrix(3,3); 
   Ib = matrix(3,3);
+#else
+  double Ia, Ib;
+#endif
+
   K = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
       if (i<Oparams.parnumA)
 	{
 	  /* calcola tensore d'inerzia e le matrici delle due quadriche */
+#ifdef MD_ASYM_ITENS
 	  RDiagtR(i, Ia, ItensD[0][0], ItensD[0][1], ItensD[0][2], R[i]);
+#endif
 	  K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 	  wt[0] = wx[i];
 	  wt[1] = wy[i];
 	  wt[2] = wz[i];
+#ifdef MD_ASYM_ITENS
 	  for (k1=0; k1 < 3; k1++)
 	    for (k2=0; k2 < 3; k2++)
 	      {
 		K += wt[k1]*Ia[k1][k2]*wt[k2];
 	      }
+#else
+	  for (k1=0; k1 < 3; k1++)
+	    K += Sqr(wt[k1])*Oparams.I[0];
+#endif
 	}
       else
 	{
+#ifdef MD_ASYM_ITENS
 	  RDiagtR(i, Ib, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+#endif
 	  K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 	  wt[0] = wx[i];
 	  wt[1] = wy[i];
 	  wt[2] = wz[i];
+#ifdef MD_ASYM_ITENS
 	  for (k1=0; k1 < 3; k1++)
 	    for (k2=0; k2 < 3; k2++)
 	      {
 		K += wt[k1]*Ib[k1][k2]*wt[k2];
 	      }
+#else
+	  for (k1=0; k1 < 3; k1++)
+	    K += Sqr(wt[k1])*Oparams.I[1];
+#endif
 	}
     }
   K *= 0.5;
+#ifdef MD_ASYM_ITENS
   free_matrix(Ia,3);
   free_matrix(Ib,3);
+#endif
   printf("[%s] Kinetic Energy: %f\n", msg, K);
 }
 void store_bump(int i, int j)
