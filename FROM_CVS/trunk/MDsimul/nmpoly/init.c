@@ -1420,7 +1420,6 @@ void writeAllCor(FILE* fs)
 void readAllCor(FILE* fs)
 {
   int i, a;
-  printf("kfe: %f R0: %f\n", Oparams.kfe, Oparams.R0);
   for (i = 0; i < Oparams.parnum; i++)
     {
       for (a = 0;  a < NA; a++)
