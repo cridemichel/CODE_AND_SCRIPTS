@@ -31,6 +31,7 @@ int calcdist_retcheck;
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
+extern double accngA, accngB;
 void print_matrix(double **M, int n)
 {
   int k1, k2;
@@ -660,6 +661,7 @@ void outputSummary(void)
     {
       printf("percentage of convergence in frprmn: %.6G\%\n", ((double) callsok)*100.0/callsfrprmn);
       printf("avg its in frprmn: %.10G\n", ((double) itsfrprmn)/callsfrprmn);
+      printf("avg percentage of gradient: %.10G\n", (accngA+accngB)/callsfrprmn/2.0);
     }
   if (callsprojonto>0)
     printf("Average iterations in projonto: %.8G\n", ((double) itsprojonto)/callsprojonto);
