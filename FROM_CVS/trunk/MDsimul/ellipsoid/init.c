@@ -1058,7 +1058,6 @@ void usrInitAft(void)
   axb = malloc(sizeof(double)*Oparams.parnum);
   axc = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
-
   for (i=0; i < Oparams.parnumA; i++)
     {
       scdone[i] = 0;
