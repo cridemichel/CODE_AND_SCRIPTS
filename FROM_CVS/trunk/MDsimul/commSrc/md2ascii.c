@@ -5,7 +5,8 @@
 #define MD2ASCII
 #include<mdsimul.h>
 
-COORD_TYPE Vol = 1000.0;
+double rbeg=RBEG, rend=REND;
+COORD_TYPE Vol = -1.0;
 /* ========================== >>> CONVERTERS <<< =============================
  >>> ACTUALLY ( see TODO below for future plannings ): 
  - writeFp()
@@ -126,10 +127,11 @@ void writeg(FILE* afs, MDINT step, int size)
 {
   COORD_TYPE r, DELR;
   int i;
-  DELR = (REND - RBEG) / MAXBIN;
+  rend = cbrt(Vol) / 2.0;
+  DELR = (rend - rbeg) / MAXBIN;
   for (i=0; i < size / sizeof(COORD_TYPE); ++i)
     {
-      r = RBEG + ((COORD_TYPE) i) * DELR; 
+      r = rbeg + ((COORD_TYPE) i) * DELR; 
       fprintf(afs, sum("%.", precision, "f ", "%.", precision, "f ", NULL),
 	      r, ((COORD_TYPE *) mis)[i]);
       fprintf(afs,"\n");
@@ -223,7 +225,7 @@ void args(int argc,char **argv)
 	    }
 	  strcpy(precision, argv[i]);
 	}
-      else if (!strcmp(argv[i], "-Vol:"))
+      else if (!strcmp(argv[i], "-Vol"))
 	{
 	  if ( ++i  == (argc - 1) )   /* see above */
 	    {
@@ -231,7 +233,14 @@ void args(int argc,char **argv)
 	    }
 	  Vol=strtod(argv[i], NULL);
 	}
-
+      else if (!strcmp(argv[i], "-rbeg"))
+	{
+	  if ( ++i  == (argc - 1) )   /* see above */
+	    {
+	      invalArg(); 
+	    }
+	  rbeg=strtod(argv[i], NULL);
+	}
       else                            /* option not existant */ 
 	{
 	  invalArg();

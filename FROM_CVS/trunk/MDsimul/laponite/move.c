@@ -2093,6 +2093,7 @@ void savesnap(void)
   int i, a;
   FILE *f;
   char fileop2[1024], fileop[1024];
+  double L, rrx, rry, rrz, RCMx, RCMy, RCMz;
 #ifdef MDLLINT
   sprintf(fileop2 ,"SnaT%.6G_%s_%lld", 
 	  Oparams.T, 
@@ -2109,12 +2110,17 @@ void savesnap(void)
       mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
       exit(-1);
     }
+  L = cbrt(Vol);
   fprintf(f, ".Vol: %f\n", Vol);
   for (i=0; i < Oparams.parnum; i++)
     {
+      CoM(i, &RCMx, &RCMy, &RCMz);
       for (a = 0; a < Oparams.nsites; a++)    
 	{
-	   fprintf(f, "%.15G %.15G %.15G\n", rallx[a][i], rally[a][i], rallz[a][i]); 
+	   rrx = rallx[a][i] - L * rint( RCMx / L); 
+	   rry = rally[a][i] - L * rint( RCMy / L);
+	   rrz = rallz[a][i] - L * rint( RCMz / L);
+	   fprintf(f, "%.15G %.15G %.15G\n", rrx, rry, rrz); 
 	}
     }
   fclose(f);
@@ -2136,7 +2142,7 @@ void buildAtomsPositions(void)
   invsr3D = invsRoot3 * invquartD;
   sr3D = quartD * sRoot3;
 #if 0
-  if (Oparams.curStep==500)
+  if (Oparams.curStep==1)
     f=fopen("lapo.pos","w");
 #endif
   rhexagx = malloc(sizeof(double)*Oparams.nsites);
@@ -2177,7 +2183,10 @@ void buildAtomsPositions(void)
 	  ip = (a*2+1)*spe;
 	  tmpx = rhexagx[ip];
 	  tmpy = rhexagy[ip];
-	  /*fprintf(f, "%.15f %.15f %.15f\n", rhexagx[1+a*spe], rhexagy[1+a*spe], 0.0);*/
+#if 0
+	  if (Oparams.curStep==1)
+  	    fprintf(f, "%.15f %.15f %.15f\n", rhexagx[1+a*spe], rhexagy[1+a*spe], 0.0);
+#endif
 	  rhexagx[ip] = rhexagx[a];
 	  rhexagy[ip] = rhexagy[a];
 	  rhexagx[a] = tmpx;
@@ -2188,8 +2197,8 @@ void buildAtomsPositions(void)
       rally[Oparams.nsites-1][i] = RCMy;
       rallz[Oparams.nsites-1][i] = RCMz;
 #if 0
-      if (Oparams.curStep==500)
-      fprintf(f,"%.15f %.15f %.15f\n", RCMx, RCMy, RCMz);
+      if (Oparams.curStep==1)
+	fprintf(f,"%.15f %.15f %.15f\n", 0.0, 0.0, 0.0);
 #endif
 #if 0
       for (a = 0; a < 3; a++)
@@ -2207,15 +2216,22 @@ void buildAtomsPositions(void)
 	  rally[a][i] = RCMy + e1y*rhexagx[a] + e2y*rhexagy[a];
 	  rallz[a][i] = RCMz + e1z*rhexagx[a] + e2z*rhexagy[a];
 #if 0
-	  if (Oparams.curStep==500)
-	  fprintf(f, "%.15f %.15f %.15f\n", rallx[a][i], rally[a][i], rallz[a][i]);
+	  if (Oparams.curStep==1)
+	    {
+	      if (a < 3)
+		fprintf(f, "%.15f %.15f %.15f C[blue]\n", rhexagx[a], rhexagy[a], 0.0);
+	      else if (a < 6*(Oparams.invsp / 2)) 
+		fprintf(f, "%.15f %.15f %.15f C[green]\n", rhexagx[a], rhexagy[a], 0.0);
+	      else
+		fprintf(f, "%.15f %.15f %.15f\n", rhexagx[a], rhexagy[a], 0.0);
+	    }
 #endif
 	  /*fprintf(f, "%.15f %.15f %.15f\n", rhexagx[a], rhexagy[a], 0.0);*/
 	}
     }
 #if 0
-  if (Oparams.curStep==500)
-  fclose(f);
+  if (Oparams.curStep==1)
+    fclose(f);
 #endif
   free(rhexagx);
   free(rhexagy);
