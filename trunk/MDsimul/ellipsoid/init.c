@@ -824,6 +824,19 @@ void StartRun(void)
       }
     for (n = 0; n < Oparams.parnum; n++)
       PredictEvent(n, -2); 
+#if 0
+    {
+      double dist, rC[3], rD[3], shift[3];
+      int i, j;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      j=-1;
+      dist = get_min_dist(i, &j, rC, rD, shift);
+      printf("dist %d:%.8G\n", i, dist);
+    }
+    }
+#endif
+
   }
 
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
