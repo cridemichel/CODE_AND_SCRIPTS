@@ -145,7 +145,8 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLMIN 1.0e-6 
 #define TOLX 1.0e-7 
 #define STPMX 100.0
-void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, double stpmax, int *check, double (*func)(double []))
+#define FMAX(A,B) (A)>(B)?(A):(B)
+void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, double stpmax, int *check, double (*func)(double [], int, int, double[]), int iA, int iB, shift)
 /*
    Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
    fold and g[1..n], and a direction p[1..n],  nds a new point x[1..n] along the direction p
@@ -184,7 +185,7 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
     { 
       for (i=1;i<=n;i++) 
 	x[i]=xold[i]+alam*p[i]; 
-      *f=(*func)(x); 
+      *f=(*func)(x,iA,iB,shift); 
       if (alam < alamin) 
 	{ /* Convergence on  x. For zero  nding, the calling program 
 	     should verify the convergence.*/ 
@@ -268,18 +269,19 @@ void nrerror(char *msg)
 }
 int nn; /* Global variables to communicate with fmin.*/
 double *fvec; 
-void (*nrfuncv)(int n, double v[], double fvec[], int i, int j); 
+void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[]); 
 #define FREERETURN {free_vector(fvec);free_vector(xold);\ free_vector(p);\
  free_vector(g);free_matrix(fjac,n);\ free_ivector(indx);\
  return;}
 extern void fdjac(int n,double x[], fvec[], **fjac, 
 		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j)); 
-double fmin(double x[]);
+double fmin(double x[], int iA, int iB, double shift[3]);
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, 
-	    double stpmax, int *check, double (*func)(double []));
+	    double stpmax, int *check, double (*func)(double [], int, int, double []));
 void lubksb(double **a, int n, int *indx, double b[]); 
 void ludcmp(double **a, int n, int *indx, double *d); 
-void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double []))
+void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double [], int, int),
+	  int iA, int iB, double shift[3])
 {
   int i,its,j,*indx;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
@@ -292,7 +294,7 @@ void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double 
   /*Define global variables.*/
   nn=n; 
   nrfuncv=vecfunc; 
-  f=fmin(x); /*fvec is also computed by this call.*/
+  f=fmin(x,iA,iB,shift); /*fvec is also computed by this call.*/
   test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
   for (i=1;i<=n;i++) 
     if (fabs(fvec[i]) > test)
@@ -384,7 +386,7 @@ void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, d
 extern int nn; 
 extern double *fvec;
 extern void (*nrfuncv)(int n, double v[], double f[]); 
-double fmin(double x[]) 
+double fmin(double x[], int iA, int iB, double shift[3]) 
 /* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
 calling program. Global variables also communicate the function values back to 
@@ -392,7 +394,7 @@ the calling program.*/
 {
   int i;
   double sum;
-  (*nrfuncv)(nn,x,fvec);
+  (*nrfuncv)(nn,x,fvec,iA,iB,shift);
   for (sum=0.0,i=1;i<=nn;i++)
     sum += SQR(fvec[i]); 
     return 0.5*sum; 
