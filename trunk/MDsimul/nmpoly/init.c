@@ -24,6 +24,7 @@ double **rallx, **rally, **rallz, **Fallx, **Fally, **Fallz,
 #endif
 double **rx_old, **ry_old, **rz_old, **vxold, **vyold, **vzold, **sigmag;
 #ifdef MD_RESPA
+double *rxi[NA], *ryi[NA], *rzi[NA];
 double **rx_oldLong, **ry_oldLong, **rz_oldLong;
 #endif
 double *Fcoeff[3]; 
@@ -1130,6 +1131,9 @@ void usrInitAft(void)
       rx_oldLong[a] = malloc(sizeof(double)*Oparams.parnum);
       ry_oldLong[a] = malloc(sizeof(double)*Oparams.parnum);
       rz_oldLong[a] = malloc(sizeof(double)*Oparams.parnum);
+      rxi[a] = malloc(sizeof(double)*Oparams.parnum);
+      ryi[a] = malloc(sizeof(double)*Oparams.parnum);
+      rzi[a] = malloc(sizeof(double)*Oparams.parnum);
 #endif
       vxold[a] = malloc(sizeof(double)*Oparams.parnum);
       vyold[a] = malloc(sizeof(double)*Oparams.parnum);

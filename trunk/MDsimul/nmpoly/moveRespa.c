@@ -17,6 +17,7 @@ extern double **rallx, **rally, **rallz, **Fallx, **Fally, **Fallz,
 extern double **vxold, **vyold, **vzold, **rx_old, **ry_old, **rz_old;
 #ifdef MD_RESPA
 extern double  **rx_oldLong, **ry_oldLong, **rz_oldLong;
+extern double *rxi[NA], *ryi[NA], *rzi[NA];
 #endif
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
@@ -234,6 +235,30 @@ void shakeVelRespaNPT(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB
 }
 #endif
 #if defined(MD_RESPA)
+void updVol1Long(double dt, double c)
+{
+  double press, cdt, cdt2, DP, Nm;
+  Nm = Oparams.parnum;
+  cdt = c * dt;
+  cdt2 = c * dt / 2.0;
+  return;
+#ifdef MOLPTENS
+  DP = Sqr(s) * (WmLong  / 3.0 / Vol) / OprogStatus.W; /* press(t+dt) */
+#else
+  DP = Sqr(s) * ( WLong + WCLong) / Vol / OprogStatus.W; /* press(t+dt) */
+#endif
+#if 0
+    {
+    FILE *f;
+    f = fopen("press.dat", "a");
+    fprintf(f, "%d %f\n", Oparams.curStep, press);
+    fclose(f);
+    }
+#endif
+  /*printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);*/
+  Vol1 += DP  * cdt;
+}
+
 void calcPressTens(void)
 {
   Wm = Wm + WmLong;
@@ -1055,7 +1080,7 @@ void updPs(double dt, double c)
 #ifdef MD_FENE
   dof = 3*NA*Oparams.parnum;
 #else
-  dof = (2*NA - 1)*Oparams.parnum;
+  dof = (2*NA + 1)*Oparams.parnum;
 #endif
   /*printf("temp= %f\n", 2*Kin/dof);*/
   DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
@@ -1083,7 +1108,7 @@ void updPsAft(double dt, double c)
 #ifdef MD_FENE
   dof = 3*NA*Oparams.parnum;
 #else
-  dof = (2*NA - 1)*Oparams.parnum;
+  dof = (2*NA + 1)*Oparams.parnum;
 #endif
   /*printf("temp= %f\n", 2*Kin/dof);*/
   DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
@@ -1117,7 +1142,7 @@ void updLs(double dt, double c)
 #ifdef MD_FENE
   dof = 3*NA*Oparams.parnum;
 #else
-  dof = (2*NA - 1)*Oparams.parnum;
+  dof = (2*NA + 1)*Oparams.parnum;
 #endif
   /*printf("temp= %f\n", 2*Kin/dof);*/
   DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
@@ -1146,7 +1171,7 @@ void updLsAft(double dt, double c)
 #ifdef MD_FENE
   dof = 3*NA*Oparams.parnum;
 #else
-  dof = (2*NA - 1)*Oparams.parnum;
+  dof = (2*NA + 1)*Oparams.parnum;
 #endif
   /*printf("temp= %f\n", 2*Kin/dof);*/
   DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
@@ -1432,7 +1457,7 @@ void movelongRespaNPTBefAlt(double dt)
 #ifdef MD_FENE
       dof = 3*NA*Oparams.parnum;
 #else
-      dof = (2*NA - 1)*Oparams.parnum;
+      dof = (2*NA + 1)*Oparams.parnum;
 #endif
       /*printf("temp= %f\n", 2*Kin/dof);*/
       DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
@@ -1485,7 +1510,7 @@ void movelongRespaNPTAftAlt(double dt)
 #ifdef MD_FENE
       dof = 3*NA*Oparams.parnum;
 #else
-      dof = (2*NA - 1)*Oparams.parnum;
+      dof = (2*NA + 1)*Oparams.parnum;
 #endif
       /*printf("temp= %f\n", 2*Kin/dof);*/
       DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
@@ -1538,7 +1563,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   COORD_TYPE  rabSq, diffSq, rxab, ryab, rzab, rpab, gab;
   COORD_TYPE  dx, dy, dz, rma, rmb;
   COORD_TYPE  axia, ayia, azia;
-  COORD_TYPE  rxi[NA], ryi[NA], rzi[NA], vxi[NA], vyi[NA], vzi[NA], pxi[NA], pyi[NA], pzi[NA];
+  COORD_TYPE  vxi[NA], vyi[NA], vzi[NA], pxi[NA], pyi[NA], pzi[NA];
   int i, a, b, it;
   const COORD_TYPE rptol = 1.0E-6;
   double RCMx, RCMy, RCMz;
@@ -1565,9 +1590,9 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
-	rxi[a] = rx[a][i];
-	ryi[a] = ry[a][i];
-	rzi[a] = rz[a][i];
+	rxi[a][i] = rx[a][i];
+	ryi[a][i] = ry[a][i];
+	rzi[a][i] = rz[a][i];
       }	 
 #endif
 #ifdef MD_RESPA_NOSELONG
@@ -1608,6 +1633,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 
 #if !defined(MD_FENE)
   /* ===== LOOP OVER MOLECULES ===== */
+  L = cbrt(Vol);
   for (i=0; i < Nm; i++)
     {
       /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
@@ -1652,9 +1678,9 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 #endif
 		  if ( fabs(diffSq) > ( rabSq * tol2 ) ) 
 		    {
-		      rxab = rxi[a] - rxi[b];
-		      ryab = ryi[a] - ryi[b];
-		      rzab = rzi[a] - rzi[b];
+		      rxab = rxi[a][i] - rxi[b][i];
+		      ryab = ryi[a][i] - ryi[b][i];
+		      rzab = rzi[a][i] - rzi[b][i];
 		      rxab = rxab - L * rint(invL * rxab);
 		      ryab = ryab - L * rint(invL * ryab);
 		      rzab = rzab - L * rint(invL * rzab);
@@ -1674,7 +1700,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 			   printf("[%d-%d] v=(%f,%f,%f) a=(%f,%f,%f) pr=(%f,%f,%f) r=(%f,%f,%f)\n", a, i, 
 				  vx[a][i], vy[a][i], vz[a][i],
 				  axia, ayia, azia, pxi[a], pyi[a], pzi[a],
-				  rxi[a], ryi[a], rzi[a]);
+				  rxi[a][i], ryi[a][i], rzi[a][i]);
 
 			  exit(-1);
 			}
@@ -1827,6 +1853,11 @@ void move(void)
 #ifndef MD_FENE
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
 #endif
+  /* Notare updVol1Long aggiorna Vol1 tenendo conto del contributo a lungo raggio delle forze.
+   * Questo è necessario poichè se considerassimo questo contributo nel reference system
+   * dovremmo calcolare, a rigore, ad ogni passo di quest'ultimo le forze long! */
+  if (OprogStatus.Nose == 1)
+    updVol1Long(Oparams.steplength, 0.5);
 #endif
   for (kk=0; kk < n; kk++)
     {
@@ -1891,7 +1922,7 @@ void move(void)
       /* correct the coords */
       if (OprogStatus.Nose == 1)
 	{  
-      /* NPT ensemble */
+	  /* NPT ensemble */
 	  movebNPT(Oparams.steplength/n, 0.00000000001, 150, NA-1, Oparams.m, distance, 
 		   Oparams.parnum);             
 	}
@@ -1956,6 +1987,8 @@ void move(void)
 #ifndef MD_FENE  
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
 #endif
+  if (OprogStatus.Nose == 1)
+    updVol1Long(Oparams.steplength, 0.5);
 #endif
   calcPressTens();
   /* Calculate the kinetic energy */

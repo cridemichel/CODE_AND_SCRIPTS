@@ -1312,7 +1312,7 @@ void LJForce(int Nm, double rcut)
 #ifdef MOLPTENS
   Wm = Wmxx + Wmyy + Wmzz;
 #endif
-#ifdef MD_RESPA_NPT
+#ifdef MD_RESPA
   WShort = W;
   VShort = V;
   VcShort = Vc;
