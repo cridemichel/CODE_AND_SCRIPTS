@@ -716,7 +716,7 @@ void usrInitAft(void)
   for (i=0; i < Oparams.parnum; i++)
     {
       scdone[i] = 0;
-      radii[i] = Oparams.sigma;
+      radii[i] = Oparams.sigma*0.5;
     }
 
   if (Oparams.curStep == 1)
