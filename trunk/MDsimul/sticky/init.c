@@ -1486,7 +1486,7 @@ void usrInitAft(void)
 	  /* nella silica l'unica interazione bonded è quella Si-O! */
 	  maxax[i] = Oparams.sigma[0][0];
 #else
-	  maxax[i] =(Oparams.sigma[0][0] + Oparams.sigmaSticky);
+	  maxax[i] =(Oparams.sigma[0][0] + Oparams.sigmaSticky + OprogStatus.epsd);
 #endif
 	}
       else
