@@ -11,11 +11,36 @@ void nrerror(char *msg)
   printf(msg);
   exit(-1);
 }
+#define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
+
 #define ITMAXZB 100 
-#define SIGN(x,y) ((x>0?y:-y))
 /* Maximum allowed number of iterations.*/
 #define EPSP 3.0e-8 /* Machine floating-point precision.*/
 extern int polinterr;
+void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], double xb2[], 
+	   int *nb)
+/* Given a function fx defined on the interval from x1-x2 subdivide the interval into n equally
+ * spaced segments, and search for zero crossings of the function. nb is input as the maximum 
+ * number of roots sought, and is reset to the number of bracketing pairs xb
+ * 1[1..nb], xb2[1..nb] that are found. */
+{
+  int nbb,i; 
+  double x,fp,fc,dx; 
+  nbb=0; dx=(x2-x1)/n;
+  /* Determine the spacing appropriate to the mesh.*/
+  fp=(*fx)(x=x1); 
+  for (i=0;i<n;i++) { /* Loop over all intervals*/
+    fc=(*fx)(x += dx); 
+    if (fp >= 0 && fc <= 0.0) 
+      { /* If a sign change occurs then record values for the bounds.*/
+	xb1[++nbb]=x-dx; xb2[nbb]=x;
+	if(*nb == nbb) 
+	  return;
+      } 
+    //fp=fc;
+  } 
+  *nb = nbb;
+}
 double zbrent(double (*func)(double), double x1, double x2, double tol)
 /* Using Brent s method, find the root of a function func known to lie between x1 and x2. 
  * The root, returned as zbrent, will be refined until its accuracy is tol.*/
@@ -24,7 +49,11 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
   double a=x1,b=x2,c=x2,d,e,min1,min2; 
   double fa=(*func)(a),fb=(*func)(b),fc,p,q,r,s,tol1,xm; 
   if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 
-    nrerror("Root must be bracketed in zbrent");
+    {
+      polinterr = 1;
+      return 0.0;
+      //nrerror("Root must be bracketed in zbrent");
+    }
   fc=fb;
   for (iter=0;iter<ITMAXZB;iter++) 
     { 
@@ -94,7 +123,7 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
 void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
 /* Given arrays xa[1..n] and ya[1..n], and given a value x, this routine returns a value y, and an error estimate dy. If P(x) is the polynomial of degree N   1 such that P(xai) = yai, i = 1, . . . , n, then the returned value y = P(x).*/
 { 
-  int i,m,ns=1; 
+  int i,m,ns=0; 
   double den,dif,dift,ho,hp,w;
   double *c,*d; 
   dif=fabs(x-xa[0]); 
@@ -117,7 +146,7 @@ void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
   for (m=0;m<n-1;m++) 
     { 
       /* For each column of the tableau,*/
-      for (i=0;i<n-m;i++)
+      for (i=0;i<n-m-1;i++)
 	{
 	  /* we loop over the current c s and d s and update them.*/
 	  ho=xa[i]-x; 
@@ -134,7 +163,7 @@ void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
 	  /*Here the c s and d s are updated. */
 	  c[i]=ho*den; 
 	} 
-      *y += (*dy=(2*ns < (n-m) ? c[ns+1] : d[ns--])); 
+      *y += (*dy=(2*(ns+1) < (n-m)-1 ? c[ns+1] : d[ns--])); 
       /* After each column in the tableau is completed, we decide which correction, 
        * c or d, we want to add to our accumulating value of y, i.e., which path to take through the tableau 
        * forking up or down. We do this in such a way as to take the most  straight line  route through the 
