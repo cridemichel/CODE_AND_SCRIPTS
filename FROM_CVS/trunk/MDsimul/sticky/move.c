@@ -7,7 +7,7 @@
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x) 
 #define MD_DEBUG29(x) 
-#define MD_DEBUG30(x) 
+#define MD_DEBUG30(x) x
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -120,7 +120,7 @@ double *lastcol;
 double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 int  **tree, cellRange[2*NDIM], initUcellx, initUcelly, initUcellz;
 #ifdef MD_SILICA
-int *inCell[2][3], *cellList[3], cellsx[3], cellsy[3], cellsz[3];
+int *inCell[2][3], *cellList[4], cellsx[4], cellsy[4], cellsz[4];
 #else
 int *inCell[3], *cellList, cellsx, cellsy, cellsz;
 #endif
@@ -980,14 +980,14 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
-  //printf("BUMP %d-%d bt=%d time=%.15G\n", i, j,bt, Oparams.time);
+  printf("BUMP %d-%d btnone=%d  bthc=%d time=%.15G\n", i, j,bt==MD_EVENT_NONE, bt==MD_CORE_BARRIER, Oparams.time);
 #if 1
   if (bt == MD_CORE_BARRIER)
     {
       /* do a normal collison between hard spheres 
        * (or whatever kind of collision between core objects
        * (ellipsoids as well...)*/
-      //printf("time=%.15G HARD CORE BUMP\n", Oparams.time);
+      printf("time=%.15G HARD CORE BUMP\n", Oparams.time);
       core_bump(i, j, W, Sqr(sigmai));
       //check_all_bonds();
       MD_DEBUG10(printf(">>>>>>>>>>collCode: %d\n", bt));
@@ -3706,7 +3706,18 @@ void PredictEvent (int na, int nb, int nl)
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
 		      collCode = MD_EVENT_NONE;
-		      if (nl==2)
+		      tInt = Oparams.time - atomTime[n];
+	    	      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+    		      dv[0] = vx[na] - vx[n];
+		      dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+		      dv[1] = vy[na] - vy[n];
+		      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+		      dv[2] = vz[na] - vz[n];
+		      
+	    	      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+    		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+    		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+		      if (nl==2||nl==3)
 			{
 			  /* maxax[...] è il diametro dei centroidi dei due tipi
 			   * di ellissoidi */
@@ -3724,18 +3735,7 @@ void PredictEvent (int na, int nb, int nl)
 				sigSq = Sqr((maxax[n]+maxax[na])*0.5+Oparams.sigmaSticky+OprogStatus.epsd);
 			    }
 			  MD_DEBUG2(printf("sigSq: %f\n", sigSq));
-			  tInt = Oparams.time - atomTime[n];
-			  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
-			  dv[0] = vx[na] - vx[n];
-			  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
-			  dv[1] = vy[na] - vy[n];
-			  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
-			  dv[2] = vz[na] - vz[n];
-
-			  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
-			  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
-			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-			  d = Sqr (b) - vv * (distSq - sigSq);
+ 			  d = Sqr (b) - vv * (distSq - sigSq);
 
 			  collCode = MD_EVENT_NONE;
 			  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
@@ -3814,6 +3814,7 @@ void PredictEvent (int na, int nb, int nl)
 			      collCode = MD_CORE_BARRIER;
 			      evtime = Oparams.time + t;
 			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
+			      printf("============>CORE COLLISION vv=%f d=%f evtime=%.15G\n", vv, d, evtime);
 			    } 
 			}
 		      collCodeOld = collCode;
@@ -3826,7 +3827,7 @@ void PredictEvent (int na, int nb, int nl)
 		      //exit(-1);
 #if 1
 		      /* gli sticky spots esistono solo nell'interazione AB */
-		      if (nl == 2)
+		      if (nl == 2||nl==3)
 			{
 			  if (!locate_contact(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 			    {
@@ -3834,6 +3835,8 @@ void PredictEvent (int na, int nb, int nl)
 				continue;
 			    }
 			}
+		      else if (collCode == MD_EVENT_NONE)
+			continue;
 #else
 		      if (collCode == MD_EVENT_NONE)
 			continue;
@@ -4448,7 +4451,7 @@ void ProcessCollision(void)
 {
   int k;
 #ifdef MD_SILICA
-  int nl;
+  int nl, nl_ignore, iA, iB;
 #endif
   UpdateAtom(evIdA);
   UpdateAtom(evIdB);
@@ -4475,15 +4478,22 @@ void ProcessCollision(void)
   lastbump[evIdA].type = evIdE;
   lastbump[evIdB].type = evIdE;
 #ifdef MD_SILICA
-  if ((evIdA<Oparams.parnumA)&&(evIdB<Oparams.parnumA))
-    nl = 0;
-  else if ((evIdA>=Oparams.parnumA)&&(evIdB>=Oparams.parnumA))
-    nl = 1;
-  else 
-    nl = 2;
-  PredictEvent(evIdA, -1, nl);
-  PredictEvent(evIdB, evIdA, nl);
-
+  iA = (evIdA<Oparams.parnumA)?0:1;
+  nl_ignore = (evIdA<Oparams.parnumA)?1:0;
+  for (nl = 0; nl < 4; nl++)
+    {
+      if (nl==nl_ignore || nl==iA+2)
+	continue;
+      PredictEvent(evIdA, -1, nl);
+    }
+  iB = (evIdB<Oparams.parnumA)?0:1;
+  nl_ignore = (evIdB<Oparams.parnumA)?1:0;
+  for (nl = 0; nl < 4; nl++)
+    {
+      if (nl==nl_ignore || nl==iB+2)
+	continue;
+      PredictEvent(evIdB, evIdA, nl);
+    }
 #else
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
@@ -4506,7 +4516,10 @@ void docellcross(int k, double velk, double *rkptr, int cellsk, int nc)
 	    {
 	      inCell[nc][k][evIdA] = 0;
 	      *rkptr = -L2;
-	      OprogStatus.DR[evIdA][k]++;
+	      if (nc==0)
+		{
+		  OprogStatus.DR[evIdA][k]++;
+		}
 	    }
 
 	}
@@ -4518,7 +4531,10 @@ void docellcross(int k, double velk, double *rkptr, int cellsk, int nc)
 	    {
 	      inCell[nc][k][evIdA] = cellsk - 1;
 	      *rkptr = L2;
-	      OprogStatus.DR[evIdA][k]--;
+	      if (nc == 0)
+		{
+		  OprogStatus.DR[evIdA][k]--;
+		}
 	    }
 	}
 #if 0
@@ -4571,14 +4587,14 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 #ifdef MD_SILICA
 void ProcessCellCrossing(void)
 {
-  int k, n, iA;
+  int kk, n, iA, k;
   int nc, nl;
 
   UpdateAtom(evIdA);
   k = evIdB - 100 - ATOM_LIMIT; 
   /* trattandosi di due specie qui c'è un due */
   nc = k / 3;
-  k = k % 3;
+  kk = k % 3;
  
   printf("time=%.15G Proc CellCrossing nc=%d k=%d evIdA=%d\n", Oparams.time, nc, k, evIdA);
   iA = (evIdA < Oparams.parnumA)?0:1;
@@ -4586,7 +4602,9 @@ void ProcessCellCrossing(void)
     nl = 0;
   else if (iA == 1 && nc == 0)
     nl = 1;
-  else 
+  else if (iA == 0 && nc == 1)
+    nl = 3;
+  else
     nl = 2;
   //printf("ProcellCellCross nl=%d nc=%d k=%d\n", nl, nc, k);
   /* NOTA: cellList[i] con 0 < i < Oparams.parnum è la cella in cui si trova la particella
@@ -4597,7 +4615,6 @@ void ProcessCellCrossing(void)
   n = (inCell[nc][2][evIdA] * cellsy[nl] + inCell[nc][1][evIdA])*cellsx[nl] + 
     inCell[nc][0][evIdA]
     + Oparams.parnum;
-
   while (cellList[nl][n] != evIdA) 
     n = cellList[nl][n];
   /* Eliminazione di evIdA dalla lista della cella n-esima */
@@ -4646,7 +4663,7 @@ void ProcessCellCrossing(void)
   if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
     printf("Cells(%d,%d,%d)\n", inCell[0][evIdA],inCell[1][evIdA],inCell[2][evIdA]);
 #endif
-  switch (k)
+  switch (kk)
     {
     case 0: 
       docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc);
@@ -4771,7 +4788,7 @@ void rebuildLinkedList(void)
 #ifdef MD_SILICA
 void rebuildCalendar(void)
 {
-  int k, n, nl, nl_ignore;
+  int k, n, nl, nl_ignore, iA;
 
   InitEventList();
   for (k = 0;  k < 3; k++)
@@ -4781,10 +4798,11 @@ void rebuildCalendar(void)
     }
   for (n = 0; n < Oparams.parnum; n++)
     {
-      nl_ignore = (n < Oparams.parnumA)?1:0;
-      for (nl = 0; nl < 3; nl++)
+      iA = (n<Oparams.parnumA)?0:1;
+      nl_ignore = (n<Oparams.parnumA)?1:0;
+      for (nl = 0; nl < 4; nl++)
 	{
-	  if (nl == nl_ignore)
+	  if (nl == nl_ignore || nl == iA + 2)
 	    continue;
 	  PredictEvent(n, -2, nl); 
 	}
