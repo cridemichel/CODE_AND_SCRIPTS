@@ -24,6 +24,7 @@ extern double *maxax;
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
 void InvMatrix(double **a, double **b, int NB);
+double zbrent(double (*func)(double), double x1, double x2, double tol);
 extern double invaSq[2], invbSq[2], invcSq[2];
 double rxC, ryC, rzC;
 extern int SolveLineq (double **a, double *x, int n); 
@@ -34,6 +35,7 @@ int mapbondsb[MD_PBONDS]={3,4,3,4};
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
+void ScheduleEventBarr (int idA, int idB, int idata, int atb, int idcollcode, double tEvent);
 double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double dists[MD_PBONDS]);
 int bound(int na, int n, int a, int b);
@@ -76,69 +78,40 @@ void print_matrixArr(double M[3][3])
     }
   printf("}\n");
 }
-#ifdef MD_GRAVITY
-int checkz(char *msg)
-{
-  int ii;
-  double sig;
-  for (ii=0; ii < Oparams.parnum; ii++)
-    {
-      if (ii < Oparams.parnumA)
-	sig = Oparams.sigma[0][0];
-      else
-        sig = Oparams.sigma[1][1];
-      if ((rz[ii]+Lz*0.5-sig/2.0)<0. &&  
-	fabs(rz[ii]+Lz*0.5-sig/2.0) > 0.1)
-	{
-	  printf("[%s]ii=%d diff:%.15f\n", msg,
-		 ii, rz[ii]+Lz*0.5-sig/2.0);
-	  printf("sotto more in checkz!!!\n");
-	  return 1;
-	}
-    }
-  return 0;
-}
-#endif
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 extern char TXT[MSG_LEN];
 extern void resetCM(int Nm);
 extern void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z, 
-	 COORD_TYPE r2x, COORD_TYPE r2y, COORD_TYPE r2z, 
-	 COORD_TYPE* r3x, COORD_TYPE* r3y, COORD_TYPE* r3z);
+		     COORD_TYPE r2x, COORD_TYPE r2y, COORD_TYPE r2z, 
+		     COORD_TYPE* r3x, COORD_TYPE* r3y, COORD_TYPE* r3z);
 extern void kinet(int Nm, COORD_TYPE* velx, COORD_TYPE* vely, 
 		  COORD_TYPE* velz, COORD_TYPE VOL1);
 extern void ScheduleEvent (int idA, int idB, double tEvent);
 extern void NextEvent (void);
 void distanza(int ia, int ib);
 double pi, invL, L2, Vz;   
-#ifdef MD_GRAVITY
-double Lz2;
-#endif
 double W, K, T1xx, T1yy, T1zz,
-  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
-  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;
+       T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
+       Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;
 /*  Patxy, Patyz, Patzx, Patxx, Patyy, Patzz,
     T1myz, T1mzx, T1mxx, T1myy, T1mzz;  */
 double DrSq = 0.0; 
 const double timbig = 1E12;
 /* used by linked list routines */
-#ifdef MD_GRAVITY
-extern double g2, mgA, mgB;
-#endif
 double *lastcol;
 double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
-  cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
-int evIdA, evIdB, parnumB, parnumA;
+    cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
+int evIdA, evIdB, parnumB, parnumA, evIdD, evIdE;
 int evIdC;
 extern int *bondscache, *numbonds, **bonds;
 void newtDist(double x[], int n, int *check, 
-	  void (*vecfunc)(int, double [], double [], int, int, double []),
-	  int iA, int iB, double shift[3]);
+	      void (*vecfunc)(int, double [], double [], int, int, double []),
+	      int iA, int iB, double shift[3]);
 void newtDistNeg(double x[], int n, int *check, 
-	  void (*vecfunc)(int, double [], double [], int, int, double []),
-	  int iA, int iB, double shift[3]);
+		 void (*vecfunc)(int, double [], double [], int, int, double []),
+		 int iA, int iB, double shift[3]);
 void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], double xb2[], 
 	   int *nb);
 void newt(double x[], int n, int *check, 
@@ -153,7 +126,7 @@ void scalCor(int Nm)
 { 
   int i;
   double DRx, DRy, DRz, invL;
-  
+
   invL = 1.0 / L;
   /* Reduced particles to first box */
   for(i=0; i < Oparams.parnum; i++)
@@ -168,40 +141,7 @@ void scalCor(int Nm)
       rz[i] += DRz;
     }
 }
-#ifdef MD_GRAVITY
-void calcKVz(void)
-{
-  int i;
-  double dd;
-  Vz = 0.0;
-  for (i = 0; i < Oparams.parnumA; i++)
-    {
-      Vz += vz[i];
-    }
-  Vz *= Oparams.m[0];
-  dd = 0.0;
-  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
-    {
-      dd += vz[i];
-    }
-  dd *= Oparams.m[1];
-  Vz += dd;
-  Vz /= Mtot;
-  K = 0.0;
-  for (i=0; i < Oparams.parnumA; i++)
-    {
-      K += Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]-Vz);
-    }
-  K *= Oparams.m[0]*0.5;
-  dd = 0.0;
-  for (i=Oparams.parnumA; i < Oparams.parnum; i++)
-    {
-      dd += Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]-Vz);
-    }
-  dd *= Oparams.m[1]*0.5;
-  K += dd;
-}
-#endif
+
 #if 0
 double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
 {
@@ -218,7 +158,7 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
   const double EPSILON = 1E-10;
   double mredl;
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
- /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 
@@ -312,40 +252,6 @@ double calc_phi(void)
 }
 #endif
 double calc_norm(double *vec);
-void calc_ellips_norms(double *rAC, double *rBD, double *norm, double *norm2)
-{ 
-  int a, b;
-  double modn;
-  for (a=0; a < 3; a++)
-    {
-      norm[a] = 0;
-      for (b = 0; b < 3; b++)
-	{
-	  norm[a] += -Xa[a][b]*rAC[b];
-	}
-    }
-  modn = 0.0;
-  for (a = 0; a < 3; a++)
-    modn += Sqr(norm[a]);
-  modn = sqrt(modn);
-  for (a=0; a < 3; a++)
-    norm[a] /= modn;
-
-  for (a=0; a < 3; a++)
-    {
-      norm2[a] = 0;
-      for (b = 0; b < 3; b++)
-	{
-	  norm2[a] += -Xb[a][b]*rBD[b];
-	}
-    }
-  modn = 0.0;
-  for (a = 0; a < 3; a++)
-    modn += Sqr(norm2[a]);
-  modn = sqrt(modn);
-  for (a=0; a < 3; a++)
-    norm2[a] /= modn;
-}
 
 double rcutL, aL, bL, cL;
 void store_values(int i)
@@ -389,7 +295,7 @@ void scale_coords(double sf)
 }
 #if 0
 double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], double rD[3], 
-		      double shift[3], double scalfact, double *factor)
+		  double shift[3], double scalfact, double *factor)
 {
   int kk, a;
   double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
@@ -447,7 +353,7 @@ void rebuild_linked_list()
   double L2;
   int j, n;
   L2 = 0.5 * L;
-   cellsx = L / Oparams.rcut;
+  cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
 #ifdef MD_GRAVITY
   cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
@@ -456,7 +362,7 @@ void rebuild_linked_list()
 #endif 
   for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
     cellList[j] = -1;
-  
+
   /* rebuild event calendar */
   for (n = 0; n < Oparams.parnum; n++)
     {
@@ -478,10 +384,10 @@ double check_dist_min(int i, char *msg)
 {
   int imin, j;
   double distMin=1E60, dist, rC[3], rD[3], shift[3];
-  
+
   j = -1;
   distMin = get_min_dist(i, &j, rC, rD, shift);
-    
+
   if (msg)
     printf("[check_dist_min] %s distMin: %.12G\n", msg, distMin);
 
@@ -502,7 +408,7 @@ double check_alldist_min(char *msg)
   if (msg)
     printf("[dist all] %s: %.10G\n", msg, distMin);
   return distMin;
-  
+
 }
 void scale_Phi(void)
 {
@@ -576,7 +482,7 @@ void scale_Phi(void)
 	  scalfact *= OprogStatus.reducefact;
 	  its++;
 	}
-  
+
 
 #if 0
       if (dist < distMin)
@@ -604,7 +510,7 @@ void scale_Phi(void)
 	    break;
 	  continue;
 	}
-     
+
     }
 
   //check_alldist_min("DOPO");
@@ -668,7 +574,7 @@ void outputSummary(void)
   if (callsprojonto>0)
     printf("Average iterations in projonto: %.8G\n", ((double) itsprojonto)/callsprojonto);
   printf("Number of collisions: %lld\n", numcoll);
-  
+
   //scale_Phi();
 #ifdef MD_GRAVITY
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
@@ -688,67 +594,13 @@ void outputSummary(void)
     fprintf(f, "%.15f %.15f\n", Oparams.time, (2.0*K/(3.0*Oparams.parnum-3.0)));
   fclose(f);
 #endif
-#ifdef MD_GRAVITY
-  f = fopenMPI(MD_HD_MIS "Vz2.dat", "a");
-  fprintf(f, "%.15f %.15f\n", Oparams.time, Sqr(Vz));
-  fclose(f);
-#endif
 }
-#ifdef MD_GRAVITY
-void scalevels(double temp, double K, double Vz)
-{
-  int i; 
-  double sf, VVx, VVy, VVz, ddx, ddy, ddz;
-  sf = sqrt( ( (3.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
 
-  VVx = VVy = VVz = 0.0;
-  for (i = 0; i < Oparams.parnumA; i++)
-    {
-      vx[i] *= sf;
-      vy[i] *= sf;
-      vz[i] = (vz[i] - Vz)*sf + Vz;
-      VVx += vx[i];
-      VVy += vy[i];
-      VVz += vz[i];
-      /* scala anche i tempi di collisione! */
-    } 
-  VVx *= Oparams.m[0];
-  VVy *= Oparams.m[0];
-  VVz *= Oparams.m[0];
-  ddx = ddy = ddz = 0.0;
-  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
-    {
-      vx[i] *= sf;
-      vy[i] *= sf;
-      vz[i] = (vz[i] - Vz)*sf + Vz;
-      ddx += vx[i];
-      ddy += vy[i];
-      ddz += vz[i];
-      /* scala anche i tempi di collisione! */
-    } 
-  ddx *= Oparams.m[1];
-  ddy *= Oparams.m[1];
-  ddz *= Oparams.m[1];
-  VVx += ddx;
-  VVy += ddy;
-  VVz += ddz;
-  VVx = VVx / Mtot;
-  VVy = VVy / Mtot;
-  VVz = VVz / Mtot;
-  for (i = 0; i < Oparams.parnum; i++)
-    {
-      vx[i] -= VVx;
-      vy[i] -= VVy;
-      vz[i] = vz[i] - VVz + Vz;
-    }
-  MD_DEBUG2(printf("sf: %.15f temp: %f K: %f Vz: %.15f minvz:%.15G\n", sf, temp, K, Vz));
-}
-#else
 void scalevels(double temp, double K)
 {
   int i; 
   double sf;
-    
+
   sf = sqrt( ( (3.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
   for (i = 0; i < Oparams.parnumA; i++)
     {
@@ -766,7 +618,6 @@ void scalevels(double temp, double K)
     } 
   MD_DEBUG2(printf("sf: %.15f temp: %f K: %f Vz: %.15f minvz:%.15G\n", sf, temp, K, Vz));
 }
-#endif
 /* ============================ >>> updateQ <<< =========================== */
 void updateDQ(COORD_TYPE dt)
 {
@@ -776,13 +627,13 @@ void updateDQ(COORD_TYPE dt)
   OprogStatus.DQzx += dt*Pzx;
 
   /*         _ t
-	    |
-    DQab =  |  Pab dt
-            |
-	   - 0
-	   
-    con a, b = x,y,z 
-  */
+	     |
+	     DQab =  |  Pab dt
+	     |
+	     - 0
+
+	     con a, b = x,y,z 
+	     */
 }
 
 /* ============================= >>> updatePE <<< ========================= */
@@ -790,7 +641,7 @@ void updatePE(int Nm)
 {
   int iE;
   double ENmin, ENmax;
-  
+
   ENmin = OprogStatus.ENmin;
   ENmax = OprogStatus.ENmax;
   iE = (int) ((V - ((double) Nm)*ENmin) / 
@@ -819,52 +670,52 @@ void check (int *overlap, double *K, double *V)
    ** TESTS FOR PAIR OVERLAPS AND CALCULATES KINETIC ENERGY.        **
    *******************************************************************
    */
-   int  i, j;
-   double rxi, ryi, rzi, rxij, ryij, rzij, rijSq, sigSq, rij;
-   double tol=OprogStatus.overlaptol;
-   
-   printf("overlaptol: %f\n", OprogStatus.overlaptol);
-   *overlap = 0;
-   *V = 0.0;
-   *K = 0.0;   
-   for (i = 0; i < Oparams.parnum-1; i++)
-     {     
-       rxi = rx[i];
-       ryi = ry[i];
-       rzi = rz[i];
-       for (j = i+1; j < Oparams.parnum; j++)
-	 {
-	   rxij = rxi - rx[j];
-	   ryij = ryi - ry[j];
-	   rzij = rzi - rz[j];
-	   rxij = rxij - L*rint(invL*rxij);
-	   ryij = ryij - L*rint(invL*ryij);
+  int  i, j;
+  double rxi, ryi, rzi, rxij, ryij, rzij, rijSq, sigSq, rij;
+  double tol=OprogStatus.overlaptol;
+
+  printf("overlaptol: %f\n", OprogStatus.overlaptol);
+  *overlap = 0;
+  *V = 0.0;
+  *K = 0.0;   
+  for (i = 0; i < Oparams.parnum-1; i++)
+    {     
+      rxi = rx[i];
+      ryi = ry[i];
+      rzi = rz[i];
+      for (j = i+1; j < Oparams.parnum; j++)
+	{
+	  rxij = rxi - rx[j];
+	  ryij = ryi - ry[j];
+	  rzij = rzi - rz[j];
+	  rxij = rxij - L*rint(invL*rxij);
+	  ryij = ryij - L*rint(invL*ryij);
 #if !defined(MD_GRAVITY)
-	   rzij = rzij - L*rint(invL*rzij);
+	  rzij = rzij - L*rint(invL*rzij);
 #endif
-	   rijSq = Sqr(rxij) + Sqr(ryij) + Sqr(rzij);
-	   if (i < parnumA && j < parnumA)
-	     sigSq = Sqr(Oparams.sigma[0][0]);
-	   else if (i >= parnumA && j >= parnumA)
-	     sigSq = Sqr(Oparams.sigma[1][1]);
-	   else
-	     sigSq = Sqr(Oparams.sigma[0][1]);
-	   if ( rijSq < sigSq ) 
-	     {
-	       rij = sqrt(rijSq / sigSq);
-	       if ( ( 1.0 - rij ) > tol ) 
-		 {
-		   *overlap = 1;
+	  rijSq = Sqr(rxij) + Sqr(ryij) + Sqr(rzij);
+	  if (i < parnumA && j < parnumA)
+	    sigSq = Sqr(Oparams.sigma[0][0]);
+	  else if (i >= parnumA && j >= parnumA)
+	    sigSq = Sqr(Oparams.sigma[1][1]);
+	  else
+	    sigSq = Sqr(Oparams.sigma[0][1]);
+	  if ( rijSq < sigSq ) 
+	    {
+	      rij = sqrt(rijSq / sigSq);
+	      if ( ( 1.0 - rij ) > tol ) 
+		{
+		  *overlap = 1;
 #if 1
-    		   printf("#%d,#%d,rij/sigma =%f15.8 | ", i, j, rij);
-    		   printf("(%f,%f,%f)-(%f,%f,%f)\n", rxi, ryi, rzi, 
-			  rx[j], ry[j], rz[j]);
+		  printf("#%d,#%d,rij/sigma =%f15.8 | ", i, j, rij);
+		  printf("(%f,%f,%f)-(%f,%f,%f)\n", rxi, ryi, rzi, 
+			 rx[j], ry[j], rz[j]);
 #endif
 
-		 }
-	     }
-         }
-     }
+		}
+	    }
+	}
+    }
 }
 #endif
 /* effettua la seguente moltiplicazione tra matrici:
@@ -956,126 +807,6 @@ void RDiagtR(int i, double **M, double a, double b, double c, double **Ri)
       }
 }
 
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-void add_bond(int na, int n);
-void remove_bond(int na, int n);
-void bump (int i, int j, double* W, int bt)
-{
-  /*
-   *******************************************************************
-   ** COMPUTES COLLISION DYNAMICS FOR PARTICLES I AND J.            **
-   **                                                               **
-   ** IT IS ASSUMED THAT I AND J ARE IN CONTACT.                    **
-   ** THE ROUTINE ALSO COMPUTES COLLISIONAL VIRIAL W.               **
-   *******************************************************************
-   */
-  double rxij, ryij, rzij, factor, invmi, invmj;
-  double delpx, delpy, delpz;
-  double mredl, ene;
-  double sigSq, sigDeltaSq, intdistSq;
-  double distSq;
-  double vxij, vyij, vzij, b;
-
-  if (i < parnumA && j < parnumA)
-    {
-      sigSq = Sqr(Oparams.sigma[0][0]);
-      sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
-      mredl = Mred[0][0];
-    }
-  else if (i >= parnumA && j >= parnumA)
-    {
-      sigSq = Sqr(Oparams.sigma[1][1]);
-      sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
-      mredl = Mred[1][1];
-    }
-  else
-    {
-      sigSq = Sqr(Oparams.sigma[0][1]);
-      sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
-      mredl = Mred[0][1]; 
-    }
-  vxij = vx[i] - vx[j];
-  vyij = vy[i] - vy[j];
-  vzij = vz[i] - vz[j];
-  /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
-  /*printf("mredl: %f\n", mredl);*/
-  rxij = rx[i] - rx[j];
-  if (fabs (rxij) > L2)
-    rxij = rxij - SignR(L, rxij);
-  ryij = ry[i] - ry[j];
-  if (fabs (ryij) > L2)
-    ryij = ryij - SignR(L, ryij);
-  rzij = rz[i] - rz[j];
-  if (fabs (rzij) > L2)
-    rzij = rzij - SignR(L, rzij);
-  /* Nel caso di gravita' e' intuile implementare il TC-model di Luding
-   * per evitare il collasso inelastico.
-   * Gli urti in tale caso sono tutti elastici. */ 
-  /* SQUARE WELL: modify here */
-  distSq = Sqr(rxij)+Sqr(ryij)+Sqr(rzij);
-  /*printf("distSq:%.20f\n",distSq);*/
-  b = rxij * vxij + ryij * vyij + rzij * vzij;
-  invmi = (i<Oparams.parnumA)?invmA:invmB;
-  invmj = (j<Oparams.parnumA)?invmA:invmB;
-  factor = 0.0;
-  //printf("bump(%d,%d):%d distSq: %.20f b:%f\n", i, j, bt, distSq, b);
-  switch (bt)
-    {
-    /* N.B.
-     * Notare che Oparams.bheight è la profondità della buca ed 
-     * è una quantità positiva!!*/
-    case MD_CORE_BARRIER:
-      factor = -2.0*b;
-      factor *= mredl / sigSq;
-      break;
-    case MD_INOUT_BARRIER:
-#ifdef MD_INFBARRIER
-      factor = -2.0*b;
-#elif defined(MD_SQWELL)
-      if (Sqr(b) < 2.0*sigDeltaSq*Oparams.bheight/mredl)
-	{
-	  factor = -2.0*b;
-	}
-      else
-	{
-	  factor = -b + sqrt(Sqr(b) - 2.0*sigDeltaSq*Oparams.bheight/mredl);
-	  remove_bond(i, j);
-	  remove_bond(j, i);
-	}
-#endif
-      factor *= mredl / sigDeltaSq;
-#if 0
-      if (fabs(distSq - sigDeltaSq)>1E-12)    
-	printf("[bump]dist:%.20f\n",sqrt(distSq));
-#endif
-      break;
-    case MD_OUTIN_BARRIER:
-#ifdef MD_INFBARRIER
-      factor = -2.0*b;
-#elif defined(MD_SQWELL)
-      add_bond(i, j);
-      add_bond(j, i);
-      factor = -b - sqrt(Sqr(b) + 2.0*sigDeltaSq*Oparams.bheight/mredl);
-#endif
-      factor *= mredl / sigDeltaSq;
-      break;
-    }
-  
-  delpx = factor * rxij;
-  delpy = factor * ryij;
-  delpz = factor * rzij;
-#if 0
-  ene= (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
-	Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
-#endif
-  vx[i] = vx[i] + delpx*invmi;
-  vx[j] = vx[j] - delpx*invmj;
-  vy[i] = vy[i] + delpy*invmi;
-  vy[j] = vy[j] - delpy*invmj;
-  vz[i] = vz[i] + delpz*invmi;
-  vz[j] = vz[j] - delpz*invmj;
-}
-#else
 void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *rBC)
 {
   int k1, k2;
@@ -1091,12 +822,12 @@ void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *
       } 
   MD_DEBUG(printf("f(rC)=%.15G g(rC)=%.15G\n", f, g));
   //if (fabs(f) > 1E-5||fabs(g) > 1E-5)
-   // exit(-1);
+  // exit(-1);
 }
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-     		double *vecgsup, int calcguess);
+		double *vecgsup, int calcguess);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
 
 void bump (int i, int j, int ata, int atb, double* W, int bt)
@@ -1120,15 +851,19 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   double shift[3];
   int na, a, b, kk;
 #if 1
-  if (i < Oparams.parnumA)
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
     {
       /* qui si assume che ci possano essere due specie e che i diametri degli atomi
        * componenti la molecola possano avere diametri diversi */ 
-      sigmai = Oparams.sigma[0];
+      sigmai = Oparams.sigma[0][0];
     }
-  else if (i >= parnumA)
+  else if (i >= parnumA &&  j >= Oparams.parnumA)
     {
-      sigmai = Oparams.sigma[1];
+      sigmai = Oparams.sigma[1][1];
+    }
+  else
+    {
+      sigmai = Oparams.sigma[0][1];
     }
 #endif
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
@@ -1193,7 +928,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 #endif
   //MD_DEBUG(calc_energy("dentro bump2"));
   MD_DEBUG(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
-  
+
   //MD_DEBUG(calc_energy("dentro bump3"));
   /* calcola le matrici inverse del tensore d'inerzia */
 #ifdef MD_ASYM_ITENS
@@ -1206,7 +941,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 #endif
   for (a=0; a < 3; a++)
     norm[a] = rAB[a];
-    
+
   MD_DEBUG(printf("CYL %f %f %f %f %f %f\n", rCx, rCy, rCz, norm[0], norm[1], norm[2]));
   /* calcola le velocità nel punto di contatto */
   vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
@@ -1217,10 +952,10 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   vCB[0] = vx[j] + wrx;
   vCB[1] = vy[j] + wry;
   vCB[2] = vz[j] + wrz;
- 
+
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
-  
+
   denom = invmi + invmj; 
   vc = 0;
   for (a=0; a < 3; a++)
@@ -1289,18 +1024,15 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   mredl = -1 / denom;
   switch (bt)
     {
-    /* N.B.
-     * Notare che Oparams.bheight è la profondità della buca ed 
-     * è una quantità positiva!!*/
-    /* b = vc*r ma ora b -> vc riscrivere correttamente le seguenti equazioni!! */
+      /* N.B.
+       * Notare che Oparams.bheight è la profondità della buca ed 
+       * è una quantità positiva!!*/
+      /* b = vc*r ma ora b -> vc riscrivere correttamente le seguenti equazioni!! */
     case MD_CORE_BARRIER:
       factor = -2.0*vc;
       factor *= mredl;
       break;
     case MD_INOUT_BARRIER:
-#ifdef MD_INFBARRIER
-      factor = -2.0*vc;
-#elif defined(MD_SQWELL)
       if (Sqr(vc) < 2.0*Oparams.bheight/mredl)
 	{
 	  factor = -2.0*vc;
@@ -1318,25 +1050,20 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 #endif
       break;
     case MD_OUTIN_BARRIER:
-#ifdef MD_INFBARRIER
-      factor = -2.0*vc;
-#elif defined(MD_SQWELL)
       add_bond(i, j, ata, atb);
       add_bond(j, i, atb, ata);
       factor = -vc - sqrt(Sqr(vc) + 2.0*Oparams.bheight/mredl);
-#endif
       factor *= mredl;
       break;
     }
- 
+
   MD_DEBUG(printf("factor=%f denom=%f\n", factor, denom));
-#endif
   delpx = - factor * norm[0];
   delpy = - factor * norm[1];
   delpz = - factor * norm[2];
 #if 0
   ene= (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
-	    Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
+	Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
 #endif
   vx[i] = vx[i] + delpx*invmi;
   vx[j] = vx[j] - delpx*invmj;
@@ -1368,21 +1095,20 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
-		  
 		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
-/* TO CHECK: il viriale ha senso solo se non c'è la gravità */
+  /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
 #if 0
   *W = delpx * rxij + delpy * ryij + delpz * rzij;
 #endif
 }
-#endif
+
 #ifdef MD_GRAVITY
 void calccmz(void)
 {
   int i;
   double dd;
   rcmz = 0.0;
-  
+
   for(i = 0; i < Oparams.parnumA; i++)
     {
       rcmz += rz[i];
@@ -1509,7 +1235,7 @@ void calcObserv(void)
 #ifdef MPI
   int equilib, sumeq;
 #endif
-  
+
   DrSqTot = 0.0;
   K = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
@@ -1527,12 +1253,12 @@ void calcObserv(void)
       Dry = ry[i] - OprogStatus.ryCMi[i] + L*OprogStatus.DR[i][1];
       Drz = rz[i] - OprogStatus.rzCMi[i] + L*OprogStatus.DR[i][2];
       DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
-   }
+    }
   /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
      because DrSq is zero! */
   if (Oparams.time>0)
     Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time) *
-		   	 ((double) Oparams.parnumA ) );   
+			 ((double) Oparams.parnumA ) );   
   else 
     Dtrans = 0;
 
@@ -1558,7 +1284,7 @@ void calcObserv(void)
 	}
 #else
       mdPrintf(ALL, "All systems reached equilibrium, simulation completed",
-	   NULL);
+	       NULL);
       ENDSIM = OprogStatus.equilibrated;
 #endif
     }
@@ -1589,7 +1315,6 @@ void adjust_norm(double **R)
 	    R[k2][k1] /= n[k1];
 	}
     }
-  
 }
 
 void UpdateAtom(int i)
@@ -1600,7 +1325,7 @@ void UpdateAtom(int i)
   double w1[3],w2[3];
   int k1, k2, k3;
   ti = Oparams.time - atomTime[i];
-  
+
   rx[i] += vx[i]*ti;
   ry[i] += vy[i]*ti;
 #if defined(MD_GRAVITY)
@@ -1641,10 +1366,10 @@ void UpdateAtom(int i)
       OmegaSq[2][0] = wx[i]*wz[i];
       OmegaSq[2][1] = wy[i]*wz[i];
       OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
-      
+
       for (k1 = 0; k1 < 3; k1++)
 	{
-	  
+
 	  for (k2 = 0; k2 < 3; k2++)
 	    {
 	      Omega[k1][k2] = -Omega[k1][k2];
@@ -1668,7 +1393,7 @@ void UpdateAtom(int i)
 	    {
 	      w2[k1] += (sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2])*w1[k2];   
 	    }	 
-	   
+
 	}
       if (fabs(w2[0])>1E-12 || fabs(w2[1])>1E-12
 	  || fabs(w2[2])>1E-12)
@@ -1683,8 +1408,8 @@ void UpdateAtom(int i)
 	    R[i][k1][k2] = 0.0;
 #endif
 	    for (k3 = 0; k3 < 3; k3++)
-	    //  R[i][k1][k2] += M[k1][k3]*Rtmp[k3][k2];
-	        R[i][k1][k2] += Rtmp[k1][k3]*M[k3][k2];
+	      //  R[i][k1][k2] += M[k1][k3]*Rtmp[k3][k2];
+	      R[i][k1][k2] += Rtmp[k1][k3]*M[k3][k2];
 	  }
       adjust_norm(R[i]);
 #if 0
@@ -1699,7 +1424,7 @@ void UpdateAtom(int i)
 	  printf("*******************************************************************\n");
 	  if (vz[i] < 0 && evIdA != i && evIdB != ATOM_LIMIT +4)
 	    {
- 
+
 	      exit(-1);
 	    }
 	}
@@ -1737,8 +1462,8 @@ void remove_bond(int na, int n, int a, int b)
   for (i = 0; i < nb; i++)
     {
       jj = bondscache[i] / (NA*NA);
-      aa = j / NA;
-      bb = j % NA;
+      aa = jj / NA;
+      bb = jj % NA;
       if (jj != n && aa != a && bb != b)
 	{
 	  bonds[na][ii++] = bondscache[i];
@@ -1817,7 +1542,7 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
       else 
 	{
 	  sinw = sin(w*ti)/w;
-    	  cosw = (1.0 - cos(w*ti))/wSq;
+	  cosw = (1.0 - cos(w*ti))/wSq;
 	}
 #endif
       sinw = sin(w*ti)/w;
@@ -1840,7 +1565,7 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
       OmegaSq[2][0] = wx[i]*wz[i];
       OmegaSq[2][1] = wy[i]*wz[i];
       OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
- 
+
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  for (k2 = 0; k2 < 3; k2++)
@@ -1852,7 +1577,7 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 #endif
 #if 0
 	      if (k1==k2)
-	      	M[k1][k1] += 1.0;
+		M[k1][k1] += 1.0;
 #endif
 	    }
 	}
@@ -1860,7 +1585,7 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
       cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
 		  3, 3, 3, 1.0, &Rtmp[0][0],
 		  3, &M[0][0], 3,
-	 	  1.0, &Rtmp2[0][0], 3);
+		  1.0, &Rtmp2[0][0], 3);
 #if 1
       for (k1 = 0; k1 < 3; k1++)
 	for (k2 = 0; k2 < 3; k2++)
@@ -1873,7 +1598,7 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 	    Ro[k1][k2] = R[i][k1][k2];
 	    for (k3 = 0; k3 < 3; k3++)
 	      //Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
-	        Ro[k1][k2] += R[i][k1][k3]*M[k3][k2];
+	      Ro[k1][k2] += R[i][k1][k3]*M[k3][k2];
 	  }
 #endif
       //adjust_norm(Ro);
@@ -1901,14 +1626,14 @@ extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 int ibr, jbr, atabr, atbbr; 
 double shiftbr[3];
-void funcs2beZeroed(double x, int i, int j, int ata, int atb, double shift[3])
+double funcs2beZeroed(double x, int i, int j, int ata, int atb, double shift[3])
 {
   int na, k1, k2; 
   double  rA[3], rB[3], ti;
   double fx[3], gx[3];
   double Omega[3][3];
   /* x = (r, alpha, t) */ 
-  
+
   ti = x - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -1939,9 +1664,9 @@ void funcs2beZeroed(double x, int i, int j, int ata, int atb, double shift[3])
     }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 }
-void funcs2beZeroedBrent(double x)
+double  funcs2beZeroedBrent(double x)
 {
-  funcs2beZeroed(x, ibr, jbr, atabr, atbbr, shiftbr); 
+  return funcs2beZeroed(x, ibr, jbr, atabr, atbbr, shiftbr); 
 }
 double tdist;
 double rA[3], rB[3];
@@ -1964,7 +1689,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
 {
   double distmin, distSq, ti;
   double ratA[NA][3], ratB[NA][3], dist;
-  int a, b, firstdist = 1, nn;
+  int a, b, firstdist = 1, nn, kk;
   double Omega[3][3];
   int k1, k2, na;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
@@ -2014,7 +1739,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
 
 void rebuildCalendar(void);
 int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
-	       double t)
+	      double t)
 { 
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double norm[3], wrx, wry, wrz, OmegaA[3][3], OmegaB[3][3];
@@ -2045,7 +1770,7 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
 #endif 
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
-  
+
   UpdateOrient(i, t-atomTime[i], RA, OmegaA);
   if (OprogStatus.targetPhi > 0)
     {
@@ -2053,7 +1778,7 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
-  
+
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
 
   na = (j < Oparams.parnumA)?0:1;
@@ -2094,6 +1819,7 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   MD_DEBUG(printf("VCPOS vc=%.15f\n", vc));
   return (vc > 0);
 }
+
 void evolveVec(int i, double ti, double *vecout, double *vecin)
 {
   double wSq, w, OmegaSq[3][3], M[3][3], Omega[3][3];
@@ -2123,7 +1849,7 @@ void evolveVec(int i, double ti, double *vecout, double *vecin)
       OmegaSq[2][0] = wx[i]*wz[i];
       OmegaSq[2][1] = wy[i]*wz[i];
       OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
- 
+
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  for (k2 = 0; k2 < 3; k2++)
@@ -2132,10 +1858,10 @@ void evolveVec(int i, double ti, double *vecout, double *vecin)
 	      M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
 	    }
 	}
-      
+
       for (k1 = 0; k1 < 3; k1++)
 	{
-      	  vecout[k1] = vecin[k1];
+	  vecout[k1] = vecin[k1];
 	  for (k2 = 0; k2 < 3; k2++)
 	    vecout[k1] += M[k1][k2]*vecin[k1];
 	}
@@ -2144,7 +1870,7 @@ void evolveVec(int i, double ti, double *vecout, double *vecin)
     {
       for (k1 = 0; k1 < 3; k1++)
 	{
-      	  vecout[k1] = vecin[k1];
+	  vecout[k1] = vecin[k1];
 	}
     }
 
@@ -2180,7 +1906,7 @@ double calcvecF(int i, int j, double t, double *r1, double *r2, double* ddot, do
   for (kk=0; kk < 3; kk++)
     normrcd += Sqr(r12[kk]);
   normrcd = sqrt(normrcd);
- 
+
   for (kk=0; kk < 3; kk++)
     r12[kk] /= normrcd;
   sp = 0;
@@ -2250,6 +1976,7 @@ int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS],
     }
   return retcross;
 }
+
 int get_dists_tocheck(double distsOld[], double dists[], int tocheck[])
 {
   int nn;
@@ -2269,6 +1996,7 @@ void assign_dists(double a[], double b[])
 {
   memcpy(b, a, MD_PBONDS*sizeof(double));
 }
+
 int search_contact_faster(int i, int j, double *shift, double *t, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS])
 {
   /* NOTA: 
@@ -2293,7 +2021,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
       normddot = calcvecF(i, j, *t, r1, r2, ddot, shift);
       //printf("normddot: %.15G\n", epsd/normddot);
       /* check for convergence */
-     
+
       if (normddot!=0 && delt < (epsd / normddot))
 	{
 	  MD_DEBUG10(printf("convergence reached in %d iterations\n", its));
@@ -2332,7 +2060,6 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
 }
 extern double **Aip;
 extern void polint(double xa[], double ya[], int n, double x, double *y, double *dy);
-double zbrent(double (*func)(double), double x1, double x2, double tol);
 int polinterr, polinterrRyck;
 double xa[3], ya[3];
 double distfunc(double x)
@@ -2351,6 +2078,7 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
+
 int interpol(int i, int j, int a, int b, 
 	     double t, double delt, double d1, double d2,
 	     double *troot, double shift[3], int bracketing)
@@ -2418,7 +2146,7 @@ int interpol(int i, int j, int a, int b,
       printf("distfunc(t+delt*0.5)=%.10G\n", distfunc(t+delt*0.5));
       return 1;
     }
-  calcDistNeg(*troot, i, j, shift, amin, bmin, dists);
+  calcDistNeg(*troot, i, j, shift, &amin, &bmin, dists);
   //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
   return 0;
 }
@@ -2431,7 +2159,8 @@ int valid_collision(int i, int j, int ata, int atb, int collCode)
   else
     return 1;
 }
-int locate_contact(int i, int j, double shift[3], double t1, double t2, double tbigat,
+
+int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
   double h, d, dold, dold2, d1Neg, d1Pos, t, r1[3], r2[3], dists[MD_PBONDS], distsOld[MD_PBONDS]; 
@@ -2439,7 +2168,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax; 
   double d2old;
-  int dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin, crossed[MD_PBONDS];
+  int tocheck[MD_PBONDS],
+      dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin, crossed[MD_PBONDS];
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
@@ -2460,7 +2190,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
- 
+
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = 1E-7; /* last resort time increment */
   if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast, dists))
@@ -2556,17 +2286,17 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 	      if (interpol(i, j, mapbondsa[nn], mapbondsb[nn], 
 			   t-delt, delt, distsOld[nn], dists[nn], &troot, shift, 0))
 #endif
-    		{
-    		  /* vecgd2 è vecgd al tempo t-delt */
-    		  troot = t - delt;
-    		}
+		{
+		  /* vecgd2 è vecgd al tempo t-delt */
+		  troot = t - delt;
+		}
 	      /* se dorefine è 2 vuol dire che due superfici si sono
 	       * attraversate */
 	      if (valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
 		dorefine[nn] = crossed[nn];
 	    }
 	}
-      ntc = get_dists_tocheck(tocheck);
+      ntc = get_dists_tocheck(distsOld, dists, tocheck);
       for (nn = 0; nn < ntc; nn++)
 	{
 	  /* se dorefine è 1 vuol dire che il polinomio interpolante 
@@ -2717,7 +2447,7 @@ double estimate_tmin(double t, int na, int nb)
 		      maxddot = sqrt(Sqr(vx[na]-vx[n])+Sqr(vy[na]-vy[n])+Sqr(vz[na]-vz[n])) +
 			sqrt(Sqr(wx[na])+Sqr(wy[na])+Sqr(wz[na]))*maxax[na]
 			+ sqrt(Sqr(wx[n])+Sqr(wy[n])+Sqr(wz[n]))*maxax[n];
- 
+
 		      if (d>0)// && n!=lastbump[na] && lastbump[n]!=na)
 			{
 			  te = t + d / maxddot;
@@ -2746,98 +2476,18 @@ void PredictEvent (int na, int nb)
   double ncong, cong[3], pos[3], vecg[5], pos2[3], r1[3], r2[3];
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
-#ifdef MD_GRAVITY
-  double Lzx, h1, h2, sig, hh1;
-#endif
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER) 
   int collCode;
-  double sigDeltaSq, intdistSq, distSq, s;
+  double sigDeltaSq, intdistSq, s;
   const double EPSILON = 1E-10;
   double mredl;
-#endif
   int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
-  iX, iY, iZ, jX, jY, jZ, k, n;
+      iX, iY, iZ, jX, jY, jZ, k, n;
 
   MD_DEBUG(printf("PredictEvent: %d,%d\n", na, nb));
   MD_DEBUG(calc_energy("PredEv"));
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
-#ifdef MD_GRAVITY
-  Lzx = OprogStatus.extraLz + Lz;
-  if (na < parnumA)
-    sig = Oparams.sigma[0][0];
-  else
-    sig = Oparams.sigma[1][1];
-  /* NOTA: Il muro inferiore è posto a Lz / 2 cioè sul fondo del box,
-   * in questo modo la base di ogni sfera poggia esattamente 
-   * sul fondo della scatola */
-  if (inCell[2][na] == 0)
-    {
-      hh1 =  vz[na] * vz[na] + 2.0 * Oparams.ggrav *
-	(rz[na] + Lz2);
-      h1 = hh1 -  Oparams.ggrav * sig;
-    }
-  else
-    h1 = hh1 = vz[na] * vz[na] + 2.0 * Oparams.ggrav *
-      (rz[na] + Lz2 - inCell[2][na] * (Lzx) / cellsz);
-#if 0
-  if (evIdB < ATOM_LIMIT)
-    {
-  if (rx[na] < inCell[0][na]*L/cellsx - L2 || rx[na] > (inCell[0][na]+1)*L/cellsx-L2)
-    {
-      printf("ERRORE nelle CELLE LUNGO X!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-      printf("na=%d (%f,%f,%f) cells(%d,%d,%d)\n",
-	     na, rx[na], ry[na], rz[na], inCell[0][na], inCell[1][na], inCell[2][na]);
-      exit(-1);
-    }
-   else if (ry[na] < inCell[1][na]*L/cellsy -L2 || ry[na] > (inCell[1][na]+1)*L/cellsy-L2)
-     {
-       printf("ERRORE nelle CELLE LUNGO Y!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-       printf("na=%d (%f,%f,%f) cells(%d,%d,%d)\n",
- 	      na, rx[na], ry[na], rz[na], inCell[0][na], inCell[1][na], inCell[2][na]);
-       exit(-1);
-     }
-   else if (rz[na] < inCell[2][na]*(Lz+OprogStatus.extraLz)/cellsz - Lz2 || rz[na] > (inCell[2][na]+1)*(Lz+OprogStatus.extraLz)/cellsz -Lz2) 
-     {
-       printf("ERRORE nelle CELLE LUNGO Z!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-       printf("na=%d (%f,%f,%f) cells(%d,%d,%d)\n",
-	      na, rx[na], ry[na], rz[na], inCell[0][na], inCell[1][na], inCell[2][na]);
-       printf("cellz0: %f cellz1: %f\n", 
-	      inCell[2][na]*(Lz+OprogStatus.extraLz)/cellsz -Lz2,
-	     (inCell[2][na]+1)*(Lz+OprogStatus.extraLz)/cellsz -Lz2 );
-       printf("evIdA: %d evIdB: %d\n", evIdA, evIdB);
-       printf("vz[na]:%f\n", vz[na]);
-       exit(-1);
-     } } 
-#endif
-  if (vz[na] > 0.0) 
-    {
-      /* h1 è il Discriminante dell'intersezione con la faccia 
-       * inferiore della cella lungo z, h2 di quella superiore,
-       * per cui se vz > 0 e h2 > 0 allora si la particella attraverserà
-       * la faccia superiore poiché h2 < h1 => t_h2 < t_h1
-       * (si noti che la soluzione con tempo positivo se vz > 0 è quella
-       * con il + nella formula per la risoluz. di un'eq. di secondo grado */
-      h2 = hh1 - 2.0 * Oparams.ggrav * Lzx  / cellsz;
-      if (h2 > 0.0) 
-	{
-	  tm[2] =  (vz[na] - sqrt (h2)) / Oparams.ggrav;
-	  signDir[2] = 0;/* signDir = 0 vuol dire che la direzione è
-	  		    positiva (faccia superiore in questo caso) */
-	} 
-      else 
-	{
-	  tm[2] =  (vz[na] + sqrt (h1)) / Oparams.ggrav;
-	  signDir[2] = 1;/* direzione negativa (faccia inferiore in questo caso) */
-	}
-    } 
-  else 
-    {
-      tm[2] =  (vz[na] + sqrt (h1)) / Oparams.ggrav;
-      signDir[2] = 1;
-    }
-#else
-   if (vz[na] != 0.0) 
+  if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
 	signDir[2] = 0;/* direzione positiva */
@@ -2848,9 +2498,8 @@ void PredictEvent (int na, int nb)
     } 
   else 
     tm[2] = timbig;
-#endif
   /* end forcefield[k] != 0*/
-  
+
   if (vx[na] != 0.0) 
     {
       if (vx[na] > 0.0) 
@@ -2862,7 +2511,7 @@ void PredictEvent (int na, int nb)
     } 
   else 
     tm[0] = timbig;
-  
+
   if (vy[na] != 0.) 
     {
       if (vy[na] > 0.) 
@@ -2877,13 +2526,18 @@ void PredictEvent (int na, int nb)
   /* ====== */
   /* Find minimum time */
   k = -1; /* giusto per dare un valore ed evitare una warning */
-  if (tm[1] <= tm[2]) {
-    if (tm[0] <= tm[1]) k = 0;
-    else k = 1;
-  } else {
-    if (tm[0] <= tm[2]) k = 0;
-    else k = 2;
-  }
+  if (tm[1] <= tm[2]) 
+    {
+      if (tm[0] <= tm[1]) k = 0;
+      else k = 1;
+    } 
+  else
+    {
+      if (tm[0] <= tm[2]) 
+	k = 0;
+      else 
+	k = 2;
+    }
   /* Se un errore numerico fa si che tm[k] < 0 allora lo poniamo uguale a 0
    * (ved. articolo Lubachevsky) */
 #if 1
@@ -2914,7 +2568,7 @@ void PredictEvent (int na, int nb)
   if (k == 2 && inCell[2][na] == 0 && signDir[2] == 1) 
     {
       evCode = 4;/* sarebbe 2*k con k=2 (z) e per me vuol dire urto con parete in basso
-  		    che è anche l'unica nel presente caso */
+		    che è anche l'unica nel presente caso */
       MD_DEBUG2(printf("wall!!! (evIdA: %d)\n", na));
     }
 #endif
@@ -2923,17 +2577,11 @@ void PredictEvent (int na, int nb)
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
-#ifdef MD_GRAVITY
-  /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
-  if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
-  if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
-#endif
 
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
       jZ = inCell[2][na] + iZ;    
       shift[2] = 0.;
-#ifndef MD_GRAVITY
       /* apply periodico boundary condition along z if gravitational
        * fiels is not present */
       if (jZ == -1) 
@@ -2946,7 +2594,6 @@ void PredictEvent (int na, int nb)
 	  jZ = 0;    
 	  shift[2] = L;
 	}
-#endif
       for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
 	{
 	  jY = inCell[1][na] + iY;    
@@ -2987,14 +2634,14 @@ void PredictEvent (int na, int nb)
 			  sigSq = Sqr(max_ax(na)+max_ax(n));
 			}
 		      else
-		       {
-			 if (na < parnumA && n < parnumA)
-			   sigSq = Sqr(maxax[na]);
-			 else if (na >= parnumA && n >= parnumA)
-			   sigSq = Sqr(maxax[na]);
-			 else
-			   sigSq = Sqr((maxax[n]+maxax[na])*0.5);
-		       }
+			{
+			  if (na < parnumA && n < parnumA)
+			    sigSq = Sqr(maxax[na]);
+			  else if (na >= parnumA && n >= parnumA)
+			    sigSq = Sqr(maxax[na]);
+			  else
+			    sigSq = Sqr((maxax[n]+maxax[na])*0.5);
+			}
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 		      tInt = Oparams.time - atomTime[n];
 		      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
@@ -3004,11 +2651,11 @@ void PredictEvent (int na, int nb)
 		      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
 		      dv[2] = vz[na] - vz[n];
 
-     		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
 		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
 		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-	    	      d = Sqr (b) - vv * (distSq - sigSq);
-		
+		      d = Sqr (b) - vv * (distSq - sigSq);
+
 		      collCode = MD_EVENT_NONE;
 		      if (d < 0 || (b > 0.0 && distSq > sigSq)) 
 			{
@@ -3021,8 +2668,8 @@ void PredictEvent (int na, int nb)
 			{
 			  if (distSq >= sigSq)
 			    continue;
-			    /* la vel relativa è zero e i centroidi non si overlappano quindi
-			     * non si possono urtare! */
+			  /* la vel relativa è zero e i centroidi non si overlappano quindi
+			   * non si possono urtare! */
 			  t1 = t = 0;
 			  t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
 				       urtare ruotando */
@@ -3059,7 +2706,7 @@ void PredictEvent (int na, int nb)
 			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
 			  d = Sqr (b) - vv * 
 			    (Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]) - sigSq);
-    			  if (d >= 0.) 
+			  if (d >= 0.) 
 			    {
 			      t = - (sqrt (d) + b) / vv;
 			      if (t < 0)
@@ -3068,7 +2715,7 @@ void PredictEvent (int na, int nb)
 				  printf("time:%.15f tInt:%.15f\n", Oparams.time,
 					 tInt);
 				  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-					 Sqr(dr[2]))-1.0 );
+							      Sqr(dr[2]))-1.0 );
 				  printf("STEP: %lld\n", (long long int)Oparams.curStep);
 				  printf("atomTime: %.10f \n", atomTime[n]);
 				  printf("n:%d na:%d\n", n, na);
@@ -3086,8 +2733,8 @@ void PredictEvent (int na, int nb)
 		      //exit(-1);
 
 		      if (!locate_contact(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
-		      	continue;
-	      
+			continue;
+
 		      MD_DEBUG(printf("A x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)-B x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)",
 				      rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
 				      rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]));
@@ -3099,7 +2746,7 @@ void PredictEvent (int na, int nb)
 			  printf("time:%.15f tInt:%.15f\n", Oparams.time,
 				 tInt);
 			  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-	     					      Sqr(dr[2]))-1.0 );
+						      Sqr(dr[2]))-1.0 );
 			  printf("STEP: %lld\n", (long long int)Oparams.curStep);
 			  printf("atomTime: %.10f \n", atomTime[n]);
 			  printf("n:%d na:%d\n", n, na);
@@ -3119,27 +2766,6 @@ void PredictEvent (int na, int nb)
     }
 }
 
-#ifdef MD_GRAVITY
-void ProcessCollWall(void)
-{
-  /* Dissipation */
-  MD_DEBUG2(printf("Collision with wall evIdA: %d vz: %.15f\n", evIdA, vz[evIdA]));
-#if 0
-  printf("timeNow-lastcol[%d]:%.15f\n", evIdA, Oparams.time - lastcol[evIdA]);
-  printf("walldiss:%.15f vz:%.10f\n", Oparams.wallDiss, vz[evIdA]);
-  printf("timeNow:%.10f lastcol:%.10f\n", Oparams.time, lastcol[evIdA]);
-#endif
-  if (Oparams.time - lastcol[evIdA] < OprogStatus.tc)
-    {
-      vz[evIdA] = -vz[evIdA];
-    }
-  else
-    {
-      vz[evIdA] = -Oparams.wallDiss*vz[evIdA];
-    }	 
-  lastcol[evIdA] = Oparams.time;
-}
-#endif
 void calc_energynew(char *msg)
 {
   int i, k1, k2;
@@ -3164,7 +2790,7 @@ void calc_energynew(char *msg)
 	  for (k1=0; k1 < 3; k1++)
 	    {
 #ifdef MD_ASYM_ITENS
-      	      K += wt[k1]*ItensD[0][k1]*wt[k1];
+	      K += wt[k1]*ItensD[0][k1]*wt[k1];
 #else
 	      K += Oparams.I[0]*Sqr(wt[k1]);
 #endif
@@ -3179,9 +2805,9 @@ void calc_energynew(char *msg)
 	  for (k1=0; k1 < 3; k1++)
 	    {
 #ifdef MD_ASYM_ITENS
-      	      K += wt[k1]*ItensD[1][k1]*wt[k1];
+	      K += wt[k1]*ItensD[1][k1]*wt[k1];
 #else
-      	      K += Oparams.I[1]*Sqr(wt[k1]);
+	      K += Oparams.I[1]*Sqr(wt[k1]);
 #endif
 	    }
 	}
@@ -3252,8 +2878,9 @@ void calc_energy_i(char *msg, int i)
   free_matrix(Ib,3);
 #endif
   printf("[%s] Kinetic Energy of %d: %f\n", msg, i, K);
-  
+
 }
+
 void calc_energy(char *msg)
 {
   int i, k1, k2;
@@ -3269,7 +2896,7 @@ void calc_energy(char *msg)
   K = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
-      if (i<Oparams.parnumA)
+      if (i < Oparams.parnumA)
 	{
 	  /* calcola tensore d'inerzia e le matrici delle due quadriche */
 #ifdef MD_ASYM_ITENS
@@ -3318,6 +2945,7 @@ void calc_energy(char *msg)
 #endif
   printf("[%s] Kinetic Energy: %f\n", msg, K);
 }
+
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
@@ -3373,7 +3001,7 @@ void ProcessCollision(void)
   lastbump[evIdB].mol = evIdA;
   lastbump[evIdA].at = evIdC;
   lastbump[evIdB].at = evIdD;
-  
+
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
 }
@@ -3382,46 +3010,46 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 #if 0
   if (inCell[0][evIdA]+1> cellsx ||inCell[1][evIdA]+1> cellsy||inCell[2][evIdA]+1> cellsz) 
     {printf("PRIMAin cell cross ?!?\n");
-    printf("velk: %f (%d,%d,%d) (%d,%d,%d) k=%d cellsk:%d\n",velk,  cellsx , cellsy,cellsz,
-    inCell[0][evIdA],inCell[1][evIdA], inCell[2][evIdA], k, cellsk );}
+      printf("velk: %f (%d,%d,%d) (%d,%d,%d) k=%d cellsk:%d\n",velk,  cellsx , cellsy,cellsz,
+	     inCell[0][evIdA],inCell[1][evIdA], inCell[2][evIdA], k, cellsk );}
 #endif
-    if (velk > 0.0)
-    {
-      inCell[k][evIdA] = inCell[k][evIdA] + 1;
-      cellRange[2 * k] = 1;
-      if (inCell[k][evIdA] == cellsk) 
+      if (velk > 0.0)
 	{
-	  inCell[k][evIdA] = 0;
-#ifdef MD_GRAVITY
-	  if (k==2)
+	  inCell[k][evIdA] = inCell[k][evIdA] + 1;
+	  cellRange[2 * k] = 1;
+	  if (inCell[k][evIdA] == cellsk) 
 	    {
-	      printf("Un particella ha superato la massima altezza consentita (%.15f)\n",
-		     Lz2 + OprogStatus.extraLz);
-	      printf("Aumentare il parametro extraLz e rilanciare la simulazione\n");
-	      exit(-1);
-	    }
+	      inCell[k][evIdA] = 0;
+#ifdef MD_GRAVITY
+	      if (k==2)
+		{
+		  printf("Un particella ha superato la massima altezza consentita (%.15f)\n",
+			 Lz2 + OprogStatus.extraLz);
+		  printf("Aumentare il parametro extraLz e rilanciare la simulazione\n");
+		  exit(-1);
+		}
 #endif
-	  *rkptr = -L2;
-	  OprogStatus.DR[evIdA][k]++;
-	}
+	      *rkptr = -L2;
+	      OprogStatus.DR[evIdA][k]++;
+	    }
 
-   }
-  else
-    { 
-      cellRange[2 * k + 1] = -1;
-      inCell[k][evIdA] = inCell[k][evIdA] - 1;
-      if (inCell[k][evIdA] == -1) 
-	{
-	  inCell[k][evIdA] = cellsk - 1;
-	  *rkptr = L2;
-	  OprogStatus.DR[evIdA][k]--;
 	}
-    }
+      else
+	{ 
+	  cellRange[2 * k + 1] = -1;
+	  inCell[k][evIdA] = inCell[k][evIdA] - 1;
+	  if (inCell[k][evIdA] == -1) 
+	    {
+	      inCell[k][evIdA] = cellsk - 1;
+	      *rkptr = L2;
+	      OprogStatus.DR[evIdA][k]--;
+	    }
+	}
 #if 0
-  if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
-    {printf("in cell cross ?!?\n");
-    printf("velk: %f(%d,%d,%d) (%d,%d,%d) k=%d cellsk:%d\n",  velk,cellsx , cellsy,cellsz,
-    inCell[0][evIdA],inCell[1][evIdA], inCell[2][evIdA], k, cellsk );}
+      if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
+	{printf("in cell cross ?!?\n");
+	  printf("velk: %f(%d,%d,%d) (%d,%d,%d) k=%d cellsk:%d\n",  velk,cellsx , cellsy,cellsz,
+		 inCell[0][evIdA],inCell[1][evIdA], inCell[2][evIdA], k, cellsk );}
 #endif
 }
 void ProcessCellCrossing(void)
@@ -3436,10 +3064,10 @@ void ProcessCellCrossing(void)
    * i-esima mentre cellList[j] con 
    * Oparams.parnum <= j < cellsx*cellsy*cellsz+Oparams.parnum
    * è la prima particella che si trova nella cella j-esima
-    */
+   */
   n = (inCell[2][evIdA] * cellsy + inCell[1][evIdA] )*cellsx + inCell[0][evIdA]
     + Oparams.parnum;
-  
+
   while (cellList[n] != evIdA) 
     n = cellList[n];
   /* Eliminazione di evIdA dalla lista della cella n-esima */
@@ -3477,7 +3105,7 @@ void ProcessCellCrossing(void)
   k = evIdB - 100 - ATOM_LIMIT; 
 #if 0
   if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
-  printf("Cells(%d,%d,%d)\n", inCell[0][evIdA],inCell[1][evIdA],inCell[2][evIdA]);
+    printf("Cells(%d,%d,%d)\n", inCell[0][evIdA],inCell[1][evIdA],inCell[2][evIdA]);
 #endif
   switch (k)
     {
@@ -3529,7 +3157,7 @@ void rebuildLinkedList(void)
 void rebuildCalendar(void)
 {
   int k, n;
-  
+
   InitEventList();
   for (k = 0;  k < 3; k++)
     {
@@ -3550,28 +3178,13 @@ void distanza(int ia, int ib)
   printf("dist(%d,%d): %f\n", ia, ib, sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz)));
 }
 void rebuildLinkedList(void);
-#if defined(MD_SQWELL) && defined(MD_BONDCORR)
-extern int **bonds0, *numbonds0; 
-int bondhist[3]={0,0,0};
-extern double corrnorm, corrini3, corrini1, corrini2, *lastbreak1, *lastbreak2;
-#endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
   char fileop[1024], fileop2[1024], fileop3[1024];
   FILE *bf;
-#if defined(MD_SQWELL) && defined(MD_BONDCORR)
-  FILE *bof;
-  int j, cc;
-  double cb, corr1, corr2, corr3;
-#endif
   const char sepStr[] = "@@@\n";
   int db, i, innerstep=0;
-#ifdef MD_GRAVITY
-  int ii;
-  double rzmax, zfact;
-#endif
-
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;
@@ -3649,9 +3262,9 @@ void move(void)
 	  fclose(bf);
 #ifndef MD_STOREMGL
 #ifdef MPI
-          sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+	  sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
 #else 
-          sprintf(fileop3, "/bin/gzip -f %s", fileop);
+	  sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
 	  system(fileop3);
 #endif
@@ -3661,7 +3274,7 @@ void move(void)
 	      OprogStatus.JJ = 0;
 	      OprogStatus.KK++;
 	    }
-          OprogStatus.nextStoreTime = OprogStatus.storerate *
+	  OprogStatus.nextStoreTime = OprogStatus.storerate *
 	    (pow(OprogStatus.base,OprogStatus.NN)*OprogStatus.KK+pow(OprogStatus.base,OprogStatus.JJ));
 	  ScheduleEvent(-1, ATOM_LIMIT + 8, OprogStatus.nextStoreTime);
 	}
