@@ -1114,17 +1114,14 @@ double  cgfunc(double *vec)
 double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
 {
   int kk, k1, k2; 
-  double K1, K2, F, nf, ng, fx2[3], dd[3], normdd, ngA, ngB;
-  double Q1, Q2, A, gradfx, gradgx, normgA, normgB, fact;
+  double K1, K2, F, nf, ng, gx2[3], fx2[3], dd[3], normdd, ngA, ngB;
+  double Q1, Q2, A=1.0, B, gradfx, gradgx, normgA, normgB, fact;
   doneryck = 0;
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	fx[k1] += 2.0*Xa[k1][k2]*(vec[k2] - rA[k2]);
-      fx2[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	fx2[k1] += 2.0*Xa[k1][k2]*(vec[k2+3] - rA[k2]);
     }
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -1134,16 +1131,31 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
       dd[k1] = vec[k1+3]-vec[k1];
     }
 
-  A = 0.0;
-  for (k1 = 0; k1 < 3; k1++)
+  if (OprogStatus.forceguess)
     {
-      A += (vec[k1+3]-rA[k1])*fx2[k1];
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  gx2[k1] = 0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    gx2[k1] += 2.0*Xb[k1][k2]*(vec[k2] - rB[k2]);
+       	  fx2[k1] = 0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    fx2[k1] += 2.0*Xa[k1][k2]*(vec[k2+3] - rA[k2]);
+	}
+      A = B = 0.0;
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  A += (vec[k1+3]-rA[k1])*fx2[k1];
+	  B += (vec[k1]-rB[k1])*gx2[k1];
+	}
+      A = 0.5*A - 1.0;
+      B = 0.5*A - 1.0;
+      if (A<0 && B<0)
+	A = -1.0;
+      else
+	A = 1.0;
     }
-  A = 0.5*A - 1.0;
-  if (A>=0)
-    A = 1.0;
-  else
-    A = -1.0;
+  
   normdd = calc_norm(dd);
   if (normdd==0)
     {
@@ -1153,6 +1165,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
   /* la norma dei gradienti è sempre stepSDA e stepSDB*/ 
   K1= icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
   K2= jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
+    
   for (kk=0; kk < 3; kk++)
     {
       grad[kk]= A*dd[kk]/normdd;
@@ -1173,19 +1186,26 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
       gradfx += grad[k1]*fx[k1]; 
       gradgx += grad[k1+3]*gx[k1];
     }
-  ngA = ngB = 0;  
   for (kk=0; kk < 3; kk++)
     {
       grad[kk] -= gradfx*fx[kk];
       grad[kk+3] -= gradgx*gx[kk];
-      ngA += Sqr(grad[kk]);
-      ngB += Sqr(grad[kk+3]); 
     }
 #if 1
-  if (sqrt(ngA) < OprogStatus.tolSDgrad*(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB)
-      && sqrt(ngB) < OprogStatus.tolSDgrad*(jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB))
+  if (OprogStatus.tolSDgrad > 0.0)
     {
-      doneryck = 1;
+      ngA = ngB = 0;  
+      for (kk=0; kk < 3; kk++)
+	{
+	  ngA += Sqr(grad[kk]);
+	  ngB += Sqr(grad[kk+3]); 
+
+	}
+      if (sqrt(ngA) < OprogStatus.tolSDgrad*(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB)
+	  && sqrt(ngB) < OprogStatus.tolSDgrad*(jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB))
+	{
+	  doneryck = 1;
+	}
     }
 #endif
 #if 0
