@@ -92,7 +92,7 @@ void outputSummary(void)
 {
   FILE *f;
   /* mettere qualcosa qui */
-#if 1
+#if 0
   printf("time=%.15f\n", OprogStatus.time);
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
 	 (2.0*K/(3.0*Oparams.parnum-3.0)), Vz);
@@ -192,7 +192,10 @@ void check ( double sigma, int *overlap, double *K, double *V)
    *******************************************************************
    */
    int  i, j;
-   double mg, rxi, ryi, rzi, rxij, ryij, rzij, rijSq, sigSq, rij;
+#ifdef MD_GRAVITY
+   double mg; 
+#endif
+   double rxi, ryi, rzi, rxij, ryij, rzij, rijSq, sigSq, rij;
    double tol=OprogStatus.overlaptol;
    
    printf("overlaptol: %f\n", OprogStatus.overlaptol);
@@ -457,8 +460,11 @@ void PredictEvent (int na, int nb)
    *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
-  double Lzx, sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], cells[NDIM],
-  b, d, t, tInt, vv, h1, h2, hh1;
+  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], b, d, t, tInt, vv;
+#ifdef MD_GRAVITY
+  double Lzx, cells[NDIM]; 
+  double h1, h2, hh1;
+#endif
   int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
 
@@ -594,8 +600,8 @@ void PredictEvent (int na, int nb)
       printf("tm[%d]<0 step %d na=%d\n", k, Oparams.curStep, na);
 #ifdef MD_GRAVITY
       printf("rz:%f diff:%f\n", rz[na], rz[na]+Lz2);
-#endif
       printf("h1:%f hh1:%f vz:%f cellz:%d\n", h1, hh1, vz[na], inCell[2][na]);
+#endif
       printf("Cells(%d,%d,%d)\n", inCell[0][na], inCell[1][na], inCell[2][na]);
       printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
 	     signDir[2]);
@@ -874,6 +880,12 @@ void ProcessCellCrossing(void)
   cellList[evIdA] = cellList[n];
   cellList[n] = evIdA;
 }
+
+void velsBrown(double T)
+{
+  comvel(Oparams.parnum, T, Oparams.m, 0); 
+}
+
 void rebuildLinkedList(void)
 {
   int j, n;
@@ -921,6 +933,59 @@ void distanza(int ia, int ib)
 }
 void rebuildLinkedList(void);
 /* ============================ >>> move<<< =================================*/
+#ifdef BROWNIAN
+void move(void)
+{
+  /* get next event */
+  while (1)
+    {
+      NextEvent();
+      /* Descrizione Eventi: see below */
+      /* PROCESS EVENTS */ 
+      if (evIdB < ATOM_LIMIT)
+	{
+	  MD_DEBUG(printf("collision (evIdA: %d evIdB:%d)\n", evIdA, evIdB));
+	  ProcessCollision();
+	  OprogStatus.collCount++;
+	}
+
+#ifdef MD_GRAVITY
+      else if (evIdB >= ATOM_LIMIT + 100 || evIdB < ATOM_LIMIT + NDIM * 2)
+	{
+	  ProcessCellCrossing();
+	  OprogStatus.crossCount++;
+	}
+#else
+      else if ( evIdB >= ATOM_LIMIT + 100 )
+	{
+	  ProcessCellCrossing();
+	  OprogStatus.crossCount++;
+	}
+#endif
+      /* ATOM_LIMIT +6 <= evIdB < ATOM_LIMIT+100 eventi che si possono usare 
+       * liberamente */
+      else if (evIdB == ATOM_LIMIT + 7)
+	{
+	  UpdateSystem();
+	  OprogStatus.nextSumTime += OprogStatus.intervalSum;
+	  ScheduleEvent(-1, ATOM_LIMIT + 7, OprogStatus.nextSumTime);
+	  calcObserv();
+	  outputSummary(); 
+	}
+      else if (evIdB == ATOM_LIMIT + 9)
+	{
+	  UpdateSystem();
+      	  OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
+	  MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%d Vz: %.15f\n", Oparams.curStep,Vz));
+	  velsBrown(Oparams.T);
+	  rebuildCalendar();
+	  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	  break; /* \Delta tau = 1 step */
+	}
+    }
+}
+#else
 void move(void)
 {
   int ii;
@@ -933,7 +998,6 @@ void move(void)
   Wxx = Wyy = Wzz = 0.0;
 #endif
   /* get next event */
- 
   NextEvent();
   /* Descrizione Eventi:
    * 0 <= evIdB < ATOM_LIMIT: 
@@ -982,6 +1046,7 @@ void move(void)
   else if (evIdB == ATOM_LIMIT + 9)
     {
       UpdateSystem();
+      
       if (OprogStatus.taptau > 0.0)
 	{
 	  if (OprogStatus.quenchend < 0.0)
@@ -1118,3 +1183,4 @@ void move(void)
   updatePE(Oparams.parnum);
 #endif
 }
+#endif

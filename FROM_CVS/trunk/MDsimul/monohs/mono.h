@@ -248,6 +248,7 @@ struct progStatus
   double taptau;
   int tapampl;
   int scalevel;
+  int brownian;
   double checkquenchTime;
   double rescaleTime;
   double nextcheckTime;
