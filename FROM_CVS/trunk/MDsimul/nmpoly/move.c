@@ -2361,6 +2361,88 @@ void checkdists(char *str)
     }   
 }
 #if defined(MD_RESPA)
+#ifdef MD_RESPA_NPT
+void p2v(void)
+{ 
+  int i, a;
+  double Rxl, Ryl, Rzl;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      CoM(i, &Rxl, &Ryl, &Rzl);
+      for (a=0; a < NA; a++)
+	{
+	  vx[a][i] = px[a][i]/Oparams.m[a] + (Vol1 / Vol / 3.0)*Rxl;
+	  vy[a][i] = py[a][i]/Oparams.m[a] + (Vol1 / Vol / 3.0)*Ryl;
+	  vz[a][i] = pz[a][i]/Oparams.m[a] + (Vol1 / Vol / 3.0)*Rzl;
+	}
+    }
+}
+void v2p(void)
+{
+  int i, a;
+  double Rxl, Ryl, Rzl;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      CoM(i, &Rxl, &Ryl, &Rzl);
+      for (a=0; a < NA; a++)
+	{
+	  px[a][i] = Oparams.m[a]*(px[a][i] - (Vol1 / Vol / 3.0)*Rxl);
+	  py[a][i] = Oparams.m[a]*(py[a][i] - (Vol1 / Vol / 3.0)*Ryl);
+	  pz[a][i] = Oparams.m[a]*(pz[a][i] - (Vol1 / Vol / 3.0)*Rzl);
+	}
+    }
+}
+void updImpLong(double dt, double c)
+{
+  int i, a;
+  double cdt;
+  cdt = c*dt;
+  for (i=0; i < Oparams.parnum; i++)
+    for (a=0; a < NA; a++)
+      {
+	px[a][i] += cdt * FxLong[a][i];
+      	py[a][i] += cdt * FyLong[a][i];
+	pz[a][i] += cdt * FzLong[a][i];
+      }
+#ifndef MD_FENE
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
+#endif
+}
+void updNoseAnd(double dt, double c)
+{
+  int i, a;
+  double cdt;
+  double dlns, dlnV;
+  cdt = c*dt;
+  dlns = s1 / s ;
+  dlnV = Vol / Vol2 / 3.0;
+  for (i=0; i < Oparams.parnum; i++)
+    for (a=0; a < NA; a++)
+      {
+	px[a][i] *= exp(-(dlns + dlnV) * cdt);
+       	py[a][i] *= exp(-(dlns + dlnV) * cdt);
+	pz[a][i] *= exp(-(dlns + dlnV) * cdt);
+      }
+}
+void updLs(double dt, double c)
+{
+
+}
+void updLv(double dt, double c)
+{
+
+}
+void movelongRespaNPT(double dt)
+{
+  updImpLong(dt, 0.25);
+  updNoseAnd(dt, 0.25)
+  updLv(dt, 0.25);
+  updLs(dt, 0.5);
+  updLv(dt, 0.25);
+  updNoseAnd(dt, 0.25)
+  updImpLong(dt, 0.25);
+}
+#endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -2381,6 +2463,9 @@ void move(void)
       BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcut);
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
     } 
+#ifdef MD_RESPA_NPT
+  movelongRespaNPT();
+#else
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
@@ -2390,6 +2475,7 @@ void move(void)
       }
 #ifndef MD_FENE
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
+#endif
 #endif
   for (kk=0; kk < n; kk++)
     {
@@ -2498,6 +2584,9 @@ void move(void)
    
   //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
   LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcut);
+#ifdef MD_RESPA_NPT
+  movelongRespaNPT();
+#else
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
@@ -2508,10 +2597,11 @@ void move(void)
 #ifndef MD_FENE  
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
 #endif
+#endif
   /* Calculate the kinetic energy */
   kinet(Oparams.parnum, vx, vy, vz, Vol1);
 
-   if ( (OprogStatus.Nose == 1) || (OprogStatus.Nose == 2))
+  if ( (OprogStatus.Nose == 1) || (OprogStatus.Nose == 2))
     {
       /*scalCor(Oparams.parnum);*/
       if ( ( (OprogStatus.sResetSteps > 0) &&
