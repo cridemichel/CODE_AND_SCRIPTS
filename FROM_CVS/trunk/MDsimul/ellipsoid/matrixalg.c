@@ -1000,7 +1000,13 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	  its++;
 	  continue;
 	}
-    
+#if 0
+      else if (fabs(sol)*ng < OprogStatus.tolSDconstr*dist/100.0) 
+      	{
+	  sf *= GOLD;
+	  its++;
+	}
+#endif
       done = 1;
     
     }
@@ -1032,7 +1038,10 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
     {
       dr[kk] = sol*gradf[kk] + sf*dr[kk]; 
     }
-  *sfA = sf;
+  /* commentando questa riga il valore di sf usato per rimanere "aderenti" alla superficie
+   * non viene mantenuto.
+   * In tal modo il passo non puo' decrescere in maniera irreversibile se non intorno al minimo. */
+  //*sfA = sf;
 }
 void projectgrad(double *p, double *xi, double *gradf, double *gradg)
 {
@@ -1401,7 +1410,7 @@ int check_done(double fp, double fpold, double minax)
   const double EPSFR=1E-10;
   if (OprogStatus.tolSDgrad > 0)
     {
-      if (fp > Sqr(OprogStatus.epsd)) 
+      if (fp > OprogStatus.epsdSD)//Sqr(OprogStatus.epsd)) 
 	{
 	  if (doneryck == 1 || 
 	      2.0*fabs(fpold-fp) < OprogStatus.tolSDlong*(fabs(fpold)+fabs(fp)+EPSFR))
@@ -1416,7 +1425,7 @@ int check_done(double fp, double fpold, double minax)
     }
   else
     {
-      if (fp < Sqr(OprogStatus.epsd))
+      if (fp < OprogStatus.epsdSD)//Sqr(OprogStatus.epsd))
 	{
 	  if (2.0*fabs(fpold-fp) < OprogStatus.tolSD*(fabs(fpold)+fabs(fp)+EPSFR))
 	    return 1;
@@ -3730,6 +3739,8 @@ void newtDistNeg(double x[], int n, int *check,
 	  int iA, int iB, double shift[3])
 {
   int i,its=0, j, *indx, ok;
+  int kk;
+  double distnew, distold, r12[3];
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
   indx=ivector(n); 
   fjac=matrix(n, n);

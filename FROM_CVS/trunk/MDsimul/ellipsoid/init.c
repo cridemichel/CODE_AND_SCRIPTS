@@ -773,6 +773,7 @@ void usrInitBef(void)
     OprogStatus.collCount = 0;
     OprogStatus.crossCount = 0;
     OprogStatus.epsd = 0.0005;
+    OprogStatus.epsdSD = 1.0;
     OprogStatus.h = 1E-7;
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
