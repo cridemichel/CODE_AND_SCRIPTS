@@ -1,5 +1,5 @@
 #define TINY 1E-20
-#define MD_NBMAX 5 
+#define MD_NBMAX 8 
 #include<mdsimul.h>
 #include<math.h>
 #include<stdio.h>
@@ -276,7 +276,7 @@ void free_matrix(double **M, int n)
 }
 int nn; /* Global variables to communicate with fmin.*/
 double *fvec, *fvecGuess; 
-#define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
+#define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], x[5], test, its, *check));\
 free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);return;}
 
 void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[3]);
@@ -407,8 +407,8 @@ void newt(double x[], int n, int *check,
   
 }
 
-#define EPS 1.0e-8//1.0E-4 /* Approximate square root of the machine precision.*/
-void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
+#define EPS 1.0e-7//1.0E-4 /* Approximate square root of the machine precision.*/
+void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 { int i,j; 
   double h,temp,*f; 
   f=vector(n); 
