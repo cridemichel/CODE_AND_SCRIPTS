@@ -190,7 +190,7 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
    *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
-  double distMin=1E60,dist,vecg[8], alpha, shift[3], d;
+  double distMin=1E10,dist,vecg[8], alpha, shift[3], d;
   /*double cells[NDIM];*/
   int collCode, j, kk;
   double s, r1[3], r2[3];
@@ -281,7 +281,7 @@ double calc_norm(double *vec);
 double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double rD[3], 
 		      double shift[3])
 {
-  int i, kk;
+  int i, kk, a;
   double phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
 
   L2 = 0.5 * L;
@@ -295,14 +295,19 @@ double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double
     {
       for (kk=0; kk < 3; kk++)
 	{
-	  rAC[kk] = rA[kk] - rC[kk] - shift[kk];
+	  rAC[kk] = rA[kk] - rC[kk];
+	  if (fabs (rAC[kk]) > L2)
+	    rAC[kk] -= SignR(L, rAC[kk]);
 	}
       for (kk=0; kk < 3; kk++)
 	{
-	  rBD[kk] = rB[kk] - rD[kk] - shift[kk];
+	  rBD[kk] = rB[kk] - rD[kk];
+	  if (fabs (rBD[kk]) > L2)
+	    rBD[kk] -= SignR(L, rBD[kk]);
 	}
       /* 0.99 serve per evitare che si tocchino */
       fact1 = 1 + 0.99*(d / (calc_norm(rAC)+calc_norm(rBD)));
+      printf("norm(rAC): %.8G norm(rBD): %.8G\n", calc_norm(rAC), calc_norm(rBD));
       fact2 = cbrt(OprogStatus.targetPhi/phi);
       if (fact2 < fact1)
 	{
@@ -320,20 +325,39 @@ double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double
   Oparams.a[1] *= fact;
   Oparams.b[1] *= fact;
   Oparams.c[1] *= fact;
-    
+  /* maxax è il diametro del centroide */
+  for (a = 0; a < 2; a++)
+    {
+      maxax[a] = 0.0;
+      if (Oparams.a[a] > maxax[a])
+	maxax[a] = Oparams.a[a];
+      if (Oparams.b[a] > maxax[a])
+	maxax[a] = Oparams.b[a];
+      if (Oparams.c[a] > maxax[a])
+	maxax[a] = Oparams.c[a];
+      maxax[a] *= 2.0;
+    }
+  for (a = 0; a < 2; a++)
+    {
+      invaSq[a] = Sqr(1/Oparams.a[a]);
+      invbSq[a] = Sqr(1/Oparams.b[a]);
+      invcSq[a] = Sqr(1/Oparams.c[a]);
+    };
+
   return calc_phi();
 }
 void scale_Phi(void)
 {
-  int i, j, jmin=-1, kk, n;
+  int i, j, imin, jmin=-1, kk, n;
   double dist, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
   double L2, shift[3], shiftmin[3], phi;
   if (OprogStatus.targetPhi <= 0)
     return;
     
-  UpdateSystem();   
+  //UpdateSystem();   
   L2 = 0.5 * L;
   /* get the minimum distance in the system */
+  imin == -1;
   for (i = 0; i < Oparams.parnum; i++)
     {
       j = -1;
@@ -342,6 +366,7 @@ void scale_Phi(void)
 	{
 	  distMin = dist;
 	  jmin = j;
+	  imin = i;
 	  for (kk=0; kk < 3; kk++)
 	    {
 	      rCmin[kk] = rC[kk];
@@ -350,12 +375,34 @@ void scale_Phi(void)
 	    }
 	}
     }
-  rAmin[0] = rx[jmin];
-  rAmin[1] = ry[jmin];
-  rAmin[2] = rz[jmin];
+  rAmin[0] = rx[imin];
+  rAmin[1] = ry[imin];
+  rAmin[2] = rz[imin];
+  rBmin[0] = rx[jmin];
+  rBmin[1] = ry[jmin];
+  rBmin[2] = rz[jmin];
   phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shift);
   printf("distMin= %.15G phi=%.8G\n", distMin, phi);
- 
+  imin == -1;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      j = -1;
+      dist = get_min_dist(i, &j, rC, rD, shift);
+      if (dist < distMin)
+	{
+	  distMin = dist;
+	  jmin = j;
+	  imin = i;
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      rCmin[kk] = rC[kk];
+	      rDmin[kk] = rD[kk];
+	      shiftmin[kk] = shift[kk];
+	    }
+	}
+    }
+  printf("[dopo scale_all_axes] distMin= %.15G\n", distMin);
+  
   L2 = 0.5 * L;
   cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
@@ -2475,6 +2522,13 @@ double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++) 
       segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
+#if 0
+  if (segno*vecg[7]<0)
+    {
+      printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[7]);
+      exit(-1);
+    }
+#endif
 #if 1
   if (segno > 0)
     return calc_norm(r12);
@@ -4421,7 +4475,12 @@ void move(void)
 	  printf("qui\n");
 #endif
 	  MD_DEBUG(printf("[Store event]: %.15G JJ=%d KK=%d\n", Oparams.time, OprogStatus.JJ, OprogStatus.KK));
+#ifdef MD_STOREMGL
 	  fprintf(bf, ".Vol: %f\n", L*L*L);
+	  fprintf(bf, ".semiAxes: %f %f %f, %f %f %f\n",
+		  Oparams.a[0], Oparams.b[0], Oparams.c[0],
+		  Oparams.a[1], Oparams.b[1], Oparams.c[1]);
+#endif
 	  writeAllCor(bf);
 	  fclose(bf);
 #ifndef MD_STOREMGL
