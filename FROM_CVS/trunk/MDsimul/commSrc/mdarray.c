@@ -46,7 +46,7 @@ void AllocCoordPoly(int size, COORD_TYPE** pointer, ...)
     { 
       num[i] = va_arg(ap, int);
       totBytes += size*num[i]; /* total bytes to allocate */
-      offs[i] = offs[i-1] + size*num[i];
+      offs[i] = offs[i-1] + size*num[i-1];
       //printf("offs[%d]:%d\n",i , offs[i]);
     }
   //printf("i=%d ptrs[i]=%p\n", i, ptrs[i]);

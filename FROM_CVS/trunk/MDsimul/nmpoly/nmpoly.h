@@ -117,7 +117,8 @@
                     &vxo1[0], NA, &vyo1[0], NA, &vzo1[0], NA,\
                     &vxo2[0], NA, &vyo2[0], NA, &vzo2[0], NA,\
 		    &vxg[0], NA,  &vyg[0], NA,  &vzg[0], NA,\
-		    &vxt2[0], NA,  &vyt2[0], NA,  &vzt2[0], NA
+		    &vxt2[0], NA,  &vyt2[0], NA,  &vzt2[0], NA,\
+		    &Rx, 1, &Ry, 1, &Rz, 1
 
 /* this is used to declare the particle variables ( see below ) 
    NOTE: rx[0][2] means the x-coordinate of the first atoms in the second 

@@ -1094,10 +1094,11 @@ void usrInitAft(void)
   ry_old = malloc(sizeof(double*)*NA);
   rz_old= malloc(sizeof(double*)*NA);
   sigmag = malloc(sizeof(double*)*NA);
+#if 0
   Rx = malloc(sizeof(double)*Oparams.parnum);
   Ry = malloc(sizeof(double)*Oparams.parnum);
   Rz = malloc(sizeof(double)*Oparams.parnum);
-
+#endif
 #if 0
   Fcoeff[0] = malloc(sizeof(double)*NA);
   Fcoeff[1] = malloc(sizeof(double)*NA);
