@@ -32,6 +32,9 @@ extern COORD_TYPE dispHi;
 extern const double timbig;
 int poolSize;
 int parnumA, parnumB;
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+int *bondscache, *numbonds, **bonds;
+#endif
 /* ================================= */
 
 /* ========================================================================= */
@@ -553,6 +556,7 @@ void usrInitBef(void)
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
   Oparams.bheight = 0.0;
+  OprogStatus.maxbonds = 20;
 #endif
 #ifdef MD_GRAVITY
   Lz = 9.4;
@@ -651,6 +655,11 @@ void StartRun(void)
   for (n = 0; n < Oparams.parnum; n++)
     PredictEvent(n, -2); 
 }
+
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+extern void add_bond(int na, int n);
+extern void remove_bond(int na, int n);
+#endif
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
 {
@@ -662,7 +671,10 @@ void usrInitAft(void)
   int Nm, i, sct, overlap;
   COORD_TYPE vcmx, vcmy, vcmz;
   COORD_TYPE *m;
-  
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+  double sigDeltaSq, drx, dry, drz;
+  int j;
+#endif
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
   /* initialize global varibales */
@@ -722,6 +734,9 @@ void usrInitAft(void)
   inCell[2] = malloc(sizeof(int)*Oparams.parnum);
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   tree = AllocMatI(10, poolSize);
+  bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+  numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+  bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
 #else
   tree = AllocMatI(9, poolSize);
 #endif
@@ -767,6 +782,39 @@ void usrInitAft(void)
 	atomTime[i] = Oparams.time;
     }
   StartRun(); 
+
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+  for (i = 0; i < Oparams.parnum; i++)
+    numbonds[i] = 0;
+
+  for ( i = 0; i < Oparams.parnum-1; i++)
+    for ( j = i + 1; j < Oparams.parnum; j++)
+      {
+	if (i < parnumA && j < parnumA)
+	  {
+	    sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
+	  }
+	else if (i >= parnumA && j >= parnumA)
+	  {
+	    sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
+	  }
+       	else
+	  {
+	    sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
+	  }
+	drx = rx[i] - rx[j];
+	dry = ry[i] - ry[j];
+	drz = rz[i] - rz[j];
+	drx = drx - L * rint(drx / L );
+	dry = dry - L * rint(dry / L );
+	drz = drz - L * rint(drz / L );
+	if (Sqr(drx)+Sqr(dry)+Sqr(drz) < sigDeltaSq)
+	  {
+	    add_bond(i, j);
+	    add_bond(j, i);
+	  }
+      }
+#endif
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
