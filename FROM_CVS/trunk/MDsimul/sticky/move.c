@@ -1959,12 +1959,12 @@ double calc_norm(double *vec)
 extern int check_point(char* msg, double *p, double *rc, double **XX);
 extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
 extern int maxitsRyck;
+extern double sigmaSqSticky;
 /* N.B. per la silica tale routine va cambiata! */
 double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin)
 {
-  double vecg[8], rC[3], rD[3], rDC[3], r12[3], fx[3], vecgcg[6];
-  double ti, segno, distmin, distSq;
-  double ratA[NA][3], ratB[NA][3], dist, sigmaSq[NA][NA];
+  double distmin, distSq;
+  double ratA[NA][3], ratB[NA][3], dist;
   int a, b, firsdist = 1;
   double Omega[3][3];
   int k1, k2, na;
@@ -1994,7 +1994,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
     {
       /* qui deve scalare i raggi degli atomi che compongono la molecola */
     }
-  /* calcolca sigmaSq[][]!!! */
+  /* calcola sigmaSq[][]!!! */
   distmin = 0;
   for (a = 0; a < NA; a++)
     {
@@ -2005,20 +2005,18 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
 	   * 3,4 = electon sites */
 	  /* in tale modello non c'è interazione fra due
 	   * hydrogen sites o due electron sites */
-	  if ( (a==1 && b==1) || (a==2 && b == 2) ||
-	       (a==3 && b==3) || (a==4 && b == 4) )
+	  if ( ((a==1|| a==2) && (b==1 || b==2)) ||
+	       ((a==3|| a==4) && (b==3 || b==4)) )
 	    continue;
-	  if ((a == 0 && b != 0) || (a != 0 && b == 0))
+	  /* N.B. l'urto 0-0 è tra due sfere dure nei primitive model 
+	   * dell'acqua e della silica, quindi lo tratto a parte.
+	   * Inoltre non c'è interazione tra un atomo grosso e un atomo sticky. */
+	  if (a == 0 || b == 0)
 	    continue;
 	  distSq = 0;
 	  for (kk=0; kk < 3; kk++)
 	    distSq += Sqr(ratA[a][kk]-ratB[b][kk]);
-	  if (a==0)
-	    dist = sqrt(distSq)-Oparams.sigmaA[0];
-	  else if (a==1)
-	    dist = sqrt(distSq)-Oparams.sigmaA[1];
-	  else
-	    dist = sqrt(distSq)-Oparams.sigmaA[2];
+	  dist = sqrt(distSq) - Oparams.sigmaSticky;
 	  if (firstdist || fabs(dist) < fabs(distmin))
 	    {
 	      firstdist = 0;
@@ -2029,7 +2027,6 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
 	}
     }
   return distmin;
-  /* qui deve calcolare la distanza!!*/
 }
 
 void rebuildCalendar(void);
@@ -2390,7 +2387,8 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
   return 0;
 }
-int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
+int locate_contact(int i, int j, double shift[3], double t1, double t2, double tbigat, 
+		   double vecg[5])
 {
   double h, d, dold, dold2, d1Neg, d1Pos, t, r1[3], r2[3]; 
   double vd, normddot, ddot[3], maxddot, delt, told, troot;
@@ -3102,7 +3100,7 @@ no_core_bump:
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
-		      if (!locate_contact(na, n, shift, t1, t2, vecg))
+		      if (!locate_contact(na, n, shift, t1, t2, tbigat, vecg))
 		      	continue;
 	      
 		      rxC = vecg[0];
