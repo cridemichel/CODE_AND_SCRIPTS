@@ -615,9 +615,9 @@ void wrap_initCoord(void)
   uyz[0] = 0.0;
   uzz[0] = 1.0;
   rx[1] = 2.0;
-  ry[1] = 1.0;
+  ry[1] = 0.0;
   
-  rz[1] = 0.5;
+  rz[1] = 0.0;
   vx[1] = -0.1;
   vy[1] = 0;
   vz[1] = 0;
@@ -691,7 +691,7 @@ void initCoord(void)
 #endif
     }
 #endif
-  //wrap_initCoord();
+  wrap_initCoord();
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */

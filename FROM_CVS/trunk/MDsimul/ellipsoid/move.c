@@ -2932,6 +2932,11 @@ retry:
   MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
 #ifdef MD_DIST5
   newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift); 
+#elif defined MD_DISTCG
+  retcheck = 0;
+  vecg[6]=0.1;
+  vecg[7]=0.1;
+  distconjgrad(i, j, shift, vecg); 
 #else
   newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift); 
 #endif
@@ -2993,11 +2998,12 @@ retry:
       return calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1);
       //exit(-1);
     }
+#elif defined(MD_DISTCG)
 #else
   if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
     {
       printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[7]);
-      return calcDist(i, j, shift, r1, r2, alpha, vecgsup, 1);
+      return calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1);
       //exit(-1);
     }
 #endif
@@ -4586,7 +4592,7 @@ no_core_bump:
 #endif		      
 #endif
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
-		      //continue;
+		      continue;
 		      //exit(-1);
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 		      	continue;
@@ -5333,7 +5339,7 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 0
+#if 1
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
@@ -5344,7 +5350,7 @@ void move(void)
 	      shift[2] = L*rint((rz[0]-rz[1])/L);
 	      MD_DEBUG(printf("[EVENT10] shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]));
 #if 1
-	      d=calcDist(Oparams.time, 201, 118, shift, r1, r2, &alpha, vecg, 1);
+	      d=calcDist(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecg, 1);
 	      if (first)
 		f = fopen("distPos.dat","w");
 	      else
@@ -5352,7 +5358,7 @@ void move(void)
 	      fprintf(f,"%.15G %.15G %.15G %.15G %.15G %.15G\n", Oparams.time, d,vecg[0],vecg[1],vecg[2],vecg[4]);
 	      fclose(f);
 #endif
-	      d=calcDistNeg(Oparams.time, 201, 118, shift, r1, r2, &alpha, vecgNeg, 1);
+	      d=calcDistNeg(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecgNeg, 1);
 	      if (first)
 		f = fopen("distNeg.dat","w");
 	      else
