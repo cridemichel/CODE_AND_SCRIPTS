@@ -274,20 +274,14 @@ void v2p(void)
 void updImpLong(double dt, double c)
 {
   int i, a;
-  double cdt, expdt[NA], cost[NA], dlns;
+  double cdt;
   cdt = c*dt;
-  dlns = s*Ps / OprogStatus.Q ;
-  for (a = 0; a < NA; a++)
-    {
-      expdt[a] = exp(-dlns * cdt);
-      cost[a] = (expdt[a] - 1.0) / dlns;
-    }
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
-	px[a][i] += cost[a] * FxLong[a][i] + px[a][i]*expdt[a];
-      	py[a][i] += cost[a] * FyLong[a][i] + py[a][i]*expdt[a];
-	pz[a][i] += cost[a] * FzLong[a][i] + pz[a][i]*expdt[a];
+	px[a][i] += cdt * FxLong[a][i];
+      	py[a][i] += cdt * FyLong[a][i];
+	pz[a][i] += cdt * FzLong[a][i];
       }
 #ifndef MD_FENE
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
@@ -547,8 +541,8 @@ void updPv(double dt, double c)
 #else
   press = calcT1diagAtRespa(Nm) + (WShort + WLong + WCShort + WCLong) / Vol; /* press(t+dt) */
 #endif
-  printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);
   DP = press - Oparams.P;
+  printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);
   Pv += DP  * cdt2;
   Pv *= exp(-cdt*Ps*s/OprogStatus.Q);
   Pv += DP  * cdt2;
@@ -570,19 +564,29 @@ void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz)
 
 void movelongRespaNPTBef(double dt)
 {
-  updImpLongNose(dt, 0.5);
-  printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updLs(dt, 0.5);
-  printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
+  if (OprogStatus.Nose == 0)
+    updImpLong(dt, 0.5);
+  else
+    {
+      updImpLongNose(dt, 0.5);
+      printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
+      updLs(dt, 0.5);
+      printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
+    }
 }
 
 void movelongRespaNPTAft(double dt)
 {
-  updLs(dt, 0.5);
-  printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-  updImpLongNose(dt, 0.5);
-  printf("A2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
+  if (OprogStatus.Nose == 0)
+    updImpLong(dt, 0.5);
+  else
+    {
+      updLs(dt, 0.5);
+      printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
+      LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+      updImpLongNose(dt, 0.5);
+      printf("A2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
+    }
 }
 /* ========================== >>> movea <<< =============================== */
 void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
@@ -632,12 +636,13 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
       updImpAnd(dt, 0.5);
       updPv(dt, 0.5);
       updVol(dt, 0.5);
-      updPositionsNPT(dt, 0.5);
+      updPositionsNPT(dt, 1.0);
+      updVol(dt, 0.5);
     }
   else
     {
-      updImpAnd(dt, 0.5);
-      updPositions(dt, 0.5);
+      updImp(dt, 0.5);
+      updPositions(dt, 1.0);
     }
 
 #if !defined(MD_FENE)
@@ -780,7 +785,11 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
 	}
     }
 #endif
-  updVol(dt, 0.5);
+
+#if 0
+  if (OprogStatus.Nose == 1)
+    updVol(dt, 0.5);
+#endif
 }
 
 /* ========================= >>> moveb <<< =========================== */
@@ -901,8 +910,7 @@ void move(void)
     } 
 #ifdef MD_RESPA_NPT
   v2p();
-  if (OprogStatus.Nose == 1 || OprogStatus.Nose == 2)
-    movelongRespaNPTBef(Oparams.steplength);
+  movelongRespaNPTBef(Oparams.steplength);
 #else
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
@@ -1043,8 +1051,7 @@ void move(void)
   //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
   //LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcut);
 #ifdef MD_RESPA_NPT
-  if (OprogStatus.Nose == 1 || OprogStatus.Nose == 2)
-    movelongRespaNPTAft(Oparams.steplength);
+  movelongRespaNPTAft(Oparams.steplength);
   p2v();
 #else
   for (i=0; i < Oparams.parnum; i++)

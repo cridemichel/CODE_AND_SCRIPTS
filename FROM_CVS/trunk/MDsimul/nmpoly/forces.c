@@ -1067,8 +1067,6 @@ void LJForce(int Nm, double rcut)
       rzab = rzab - L * rint(invL * rzab);
       
       rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
-      if (sqrt(rabSq)<0.5)
-	printf("(%d,%d)-(%d,%d):%f\n", a, i, b, j, sqrt(rabSq));
       if (rabSq < rcutabSq )/* 'rcut' is the cutoff for V */
 	{
 	  /*rab   = sqrt(rabSq);*/
