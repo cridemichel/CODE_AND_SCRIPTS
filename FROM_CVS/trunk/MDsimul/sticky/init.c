@@ -18,6 +18,19 @@ extern struct LastBumpS *lastbump;
 extern double *lastcol;
 double *axa, *axb, *axc;
 double **Aip;
+#ifdef MD_SILICA
+extern int mapbondsaSiSi[MD_PBONDS_SiSi];
+extern int mapbondsbSiSi[MD_PBONDS_SiSi];
+extern int mapbondsaOO[MD_PBONDS_OO];
+extern int mapbondsbOO[MD_PBONDS_OO];
+extern int mapbondsaSiO[MD_PBONDS_SiO];
+extern int mapbondsbSiO[MD_PBONDS_SiO];
+extern int *mapsbondsa;
+extern int *mapsbondsb;
+#else
+extern int mapbondsa[MD_PBONDS];
+extern int mapbondsb[MD_PBONDS];
+#endif
 int *scdone;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
@@ -46,7 +59,8 @@ int poolSize;
 int parnumA, parnumB;
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 double invaSq[2], invbSq[2], invcSq[2];
-double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin);
+double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, 
+		   double dists[MD_PBONDS]);
 
 /* ================================= */
 
@@ -566,31 +580,45 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
     }
   /* Now the center of mass of the box is in the origin */
 }
+#ifdef MD_SILICA
+/* nella silica l'ossigeno ha solo due sticky points quindi l'inizializzazione
+ * è diversa */
+#else
 void angvel(void)
 {
   int i;
-
+  const double Kl = sqrt(8/3), Kdh = 1/3, Ktr = sqrt(8)/6;
+  double radius; 
   for (i=0; i < Oparams.parnum; i++)
     {
       /* N.B. ora i tre vettori ux uy e uz non sono altro che le coordinate
        * di due hydrogen sites e 1 electron sites. Quindi vanno 
        * scelti in modo da stare su tre spigoli di un tetraedro regolare.
-       * In particolare formeranno un triangolo equilatero.*/ 
-      uxx[i] = 1.0;
-      uyx[i] = 0.0;
-      uzx[i] = 0.0;
-      uxy[i] = 0.0;
-      uyy[i] = 1.0;
-      uzy[i] = 0.0;
+       * In particolare formeranno un triangolo equilatero.
+       * Qui il terzo vettore uXz è un electron site. */ 
+      if (i < Oparams.parnumA)
+	radius = Oparams.sigma[0][0]/2.0;
+      else
+	radius = Oparams.sigma[1][1]/2.0;
+      uxx[i] = Kl * radius / 2.0;
+      uyx[i] = -Ktr * radius;
+      uzx[i] = -Kdh * radius;
+      
+      uxy[i] = -Kl * radius / 2.0;
+      uyy[i] = -Ktr * radius;
+      uzy[i] = -Kdh * radius;
+
       uxz[i] = 0.0;
-      uyz[i] = 0.0;
-      uzz[i] = 1.0;
+      uyz[i] = Ktr * 2.0 * radius * (MD_DIST_ELECTSITES * 2.0);
+      uzz[i] = -Kdh * radius * (MD_DIST_ELECTSITES * 2.0);
+
       wx[i] = 0;
       wy[i] = 0;
       wz[i] = 0;
     }
   
 }
+#endif
 void wrap_initCoord(void)
 {
   /* A x(-0.603750000000000,4.226250000000000,-0.805000000000000) v(-0.099616130522196,-1.839280599669232,0.357754947051492f)-B x(-2.616250000000000,2.213750000000000,-0.805000000000000) v(1.011838511395152,0.876050550528104,-0.426995365917961)
@@ -995,110 +1023,113 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
     }
 }
 double calc_phi(void);
+#ifdef MD_SILICA
+extern void assign_bond_mapping(int i, int j);
+#endif
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
-  {
-    /* DESCRIPTION:
-       This function is called after the parameters were read from disk, put
-       here all initialization that depends upon such parameters, and call 
-       all your function for initialization, like maps() in this case */
-    char fileop[1024], fileop2[1024], fileop3[1024];
-    FILE *bof;
-    double dist;
-    int Nm, i, sct, overlap, amin, bmin;
-    COORD_TYPE vcmx, vcmy, vcmz;
-    COORD_TYPE *m;
-    double sigDeltaSq, drx, dry, drz, shift[3];
-    int j;
-    int a;
-    /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
+{
+  /* DESCRIPTION:
+     This function is called after the parameters were read from disk, put
+     here all initialization that depends upon such parameters, and call 
+     all your function for initialization, like maps() in this case */
+  char fileop[1024], fileop2[1024], fileop3[1024];
+  FILE *bof;
+  double dist;
+  int nn, aa, bb, Nm, i, sct, overlap, amin, bmin;
+  COORD_TYPE vcmx, vcmy, vcmz;
+  COORD_TYPE *m;
+  double sigDeltaSq, drx, dry, drz, shift[3], dists[MD_PBONDS];
+  int j;
+  int a;
+  /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
-    /* initialize global varibales */
-    pi = 2.0 * acos(0);
-    
-    Nm = Oparams.parnumA;
-    parnumA = Oparams.parnumA;
-    parnumB = Oparams.parnum - Oparams.parnumA;
-    sct = sizeof(COORD_TYPE);
+  /* initialize global varibales */
+  pi = 2.0 * acos(0);
 
-    invL = 1.0/L;
-    L2 = 0.5*L;
-    poolSize = OprogStatus.eventMult*Oparams.parnum;
-    m = Oparams.m;
-    Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
-    Oparams.sigma[1][1] = Oparams.sigma[0][0];
-    Oparams.sigma[0][1] = Oparams.sigma[1][0] = Oparams.sigma[0][0];
-    invmA = 1.0/Oparams.m[0];
-    invmB = 1.0/Oparams.m[1];
-    /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
-     * le particelle */
-    if (Oparams.rcut <= 0.0)
-      Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
-    cellsx = L / Oparams.rcut;
-    cellsy = L / Oparams.rcut;
-    cellsz = L / Oparams.rcut;
-    printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
-	   cellsx, cellsy, cellsz);
-    lastcol= malloc(sizeof(double)*Oparams.parnum);
-    atomTime = malloc(sizeof(double)*Oparams.parnum);
-    lastbump = malloc(sizeof(struct LastBumpS)*Oparams.parnum);
-   
-    cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
-    inCell[0] = malloc(sizeof(int)*Oparams.parnum);
-    inCell[1]= malloc(sizeof(int)*Oparams.parnum);
-    inCell[2] = malloc(sizeof(int)*Oparams.parnum);
-    tree = AllocMatI(12, poolSize);
-    bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
-    bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
-    numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
-    numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
-    bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
-    treeTime = malloc(sizeof(double)*poolSize);
+  Nm = Oparams.parnumA;
+  parnumA = Oparams.parnumA;
+  parnumB = Oparams.parnum - Oparams.parnumA;
+  sct = sizeof(COORD_TYPE);
+
+  invL = 1.0/L;
+  L2 = 0.5*L;
+  poolSize = OprogStatus.eventMult*Oparams.parnum;
+  m = Oparams.m;
+  Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
+  Oparams.sigma[1][1] = Oparams.sigma[0][0];
+  Oparams.sigma[0][1] = Oparams.sigma[1][0] = Oparams.sigma[0][0];
+  invmA = 1.0/Oparams.m[0];
+  invmB = 1.0/Oparams.m[1];
+  /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
+   * le particelle */
+  if (Oparams.rcut <= 0.0)
+    Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+  cellsx = L / Oparams.rcut;
+  cellsy = L / Oparams.rcut;
+  cellsz = L / Oparams.rcut;
+  printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
+	 cellsx, cellsy, cellsz);
+  lastcol= malloc(sizeof(double)*Oparams.parnum);
+  atomTime = malloc(sizeof(double)*Oparams.parnum);
+  lastbump = malloc(sizeof(struct LastBumpS)*Oparams.parnum);
+
+  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  inCell[0] = malloc(sizeof(int)*Oparams.parnum);
+  inCell[1]= malloc(sizeof(int)*Oparams.parnum);
+  inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+  tree = AllocMatI(12, poolSize);
+  bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+  bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+  numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+  numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
+  bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
+  treeTime = malloc(sizeof(double)*poolSize);
 #if 0
-    treeRxC  = malloc(sizeof(double)*poolSize);
-    treeRyC  = malloc(sizeof(double)*poolSize);
-    treeRzC  = malloc(sizeof(double)*poolSize);
+  treeRxC  = malloc(sizeof(double)*poolSize);
+  treeRyC  = malloc(sizeof(double)*poolSize);
+  treeRzC  = malloc(sizeof(double)*poolSize);
 #endif
 #ifdef MD_ASYM_ITENS
-    Ia = matrix(3, 3);
-    Ib = matrix(3, 3);
-    invIa = matrix(3, 3);
-    invIb = matrix(3, 3);
+  Ia = matrix(3, 3);
+  Ib = matrix(3, 3);
+  invIa = matrix(3, 3);
+  invIb = matrix(3, 3);
 #endif
-    RA = matrix(3, 3);
-    RB = matrix(3, 3);
-    Rt = matrix(3, 3);
-    RtA = matrix(3, 3);
-    RtB = matrix(3, 3);
-    Aip = matrix(3,3);
-    R = malloc(sizeof(double**)*Oparams.parnum);
-    for (i=0; i < Oparams.parnum; i++)
-      {
-	R[i] = matrix(3, 3);
-	lastbump[i].mol = -1;
-	lastbump[i].at = -1;
-	lastcol[i] = 0.0;
-      }
-    u2R();
-    if (OprogStatus.CMreset==-1)
-      {
-	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-	resetCM(1);
-      }
-    else if (OprogStatus.CMreset==-2)
-      {
-	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-      }
+  RA = matrix(3, 3);
+  RB = matrix(3, 3);
+  Rt = matrix(3, 3);
+  RtA = matrix(3, 3);
+  RtB = matrix(3, 3);
+  Aip = matrix(3,3);
+  R = malloc(sizeof(double**)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      R[i] = matrix(3, 3);
+      lastbump[i].mol = -1;
+      lastbump[i].at = -1;
+      lastcol[i] = 0.0;
+    }
+  u2R();
+  if (OprogStatus.CMreset==-1)
+    {
+      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+      resetCM(1);
+    }
+  else if (OprogStatus.CMreset==-2)
+    {
+      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+    }
 
-    if (Oparams.curStep == 1)
+  if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);
-     
+
       if ( overlap ) 
-     	{
- 	  printf("ERROR: Particle overlap in initial configuration\n");
- 	  exit(1);      
-  	}
+	{
+	  printf("ERROR: Particle overlap in initial configuration\n");
+	  exit(1);      
+	}
     }
   if (newSim)
     {
@@ -1108,7 +1139,7 @@ void usrInitAft(void)
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
       if (OprogStatus.storerate > 0.0)
-      	OprogStatus.nextStoreTime = OprogStatus.storerate;
+	OprogStatus.nextStoreTime = OprogStatus.storerate;
       OprogStatus.nextDt += Oparams.Dt;
     }
   else
@@ -1175,17 +1206,19 @@ void usrInitAft(void)
 	shift[1] = -L*rint(dry/L);
 	drz = rz[i] - rz[j]; 
 	shift[2] = -L*rint(drz/L);
-	dist = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin);
-	if (i < Oparams.parnumA && j < Oparams.parnumA)
-	  sigDeltaSq = Sqr(Oparams.sigma[0][0]);
-	else if (i > Oparams.parnumA && j > Oparams.parnumA)
-	  sigDeltaSq = Sqr(Oparams.sigma[1][1]);
-	else 
-	  sigDeltaSq = Sqr(Oparams.sigma[0][1]); 
-	if (Sqr(dist) < sigDeltaSq)
+#ifdef MD_SILICA
+	assign_bond_mapping(i, j); 
+#endif
+	dist = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin, dists);
+	for (nn=0; nn < MD_PBONDS; nn++)
 	  {
-	    add_bond(i, j, amin, bmin);
-	    add_bond(j, i, bmin, amin);
+	    if (dists[nn]<Oparams.sigmaSticky)
+	      {
+		aa = mapbondsa[nn];
+		bb = mapbondsb[nn];
+		add_bond(i, j, aa, bb);
+		add_bond(j, i, bb, aa);
+	      }
 	  }
       }
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
@@ -1219,22 +1252,22 @@ void usrInitAft(void)
 	  vcmx = vx[i];
 	  vcmy = vy[i];
 	  vcmz = vz[i];
-	
+
 	  OprogStatus.vcmx0[i] = vcmx;
 	  OprogStatus.vcmy0[i] = vcmy;
 	  OprogStatus.vcmz0[i] = vcmz;
-	  
+
 	}
-      
+
       OprogStatus.sumEta   = 0.0;
       OprogStatus.sumTemp  = 0.0;
       OprogStatus.sumPress = 0.0;
-      
+
       for(i = 0; i < NUMK; i++) 
 	{
 	  OprogStatus.sumS[i] = 0.0;
 	}
-      
+
       for(i = 0; i < MAXBIN; i++)
 	{
 	  OprogStatus.hist[i] = 0;
@@ -1243,6 +1276,7 @@ void usrInitAft(void)
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 }
 
+extern void BuildAtomPos(int i, double *rO, double **R, double rat[]);
 
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs)
@@ -1250,22 +1284,29 @@ void writeAllCor(FILE* fs)
   int i;
   const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
-   
+#ifdef MD_STOREMGL
+  double rat[5], rO[3];
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      rO[0] = rx[i];
+      rO[1] = ry[i];
+      rO[2] = rz[i];
+      BuildAtomPos(int i, rO, R[i], rat);
+      /* write coords */
+    }
+#else
   for (i = 0; i < Oparams.parnum; i++)
     {
       fprintf(fs, tipodat2,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 	      uyz[i], uzx[i], uzy[i], uzz[i]);
     }
+#endif
 #ifndef MD_STOREMGL 
   for (i = 0; i < Oparams.parnum; i++)
     {
       fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
     }
-#ifdef MD_GRAVITY
-  fprintf(fs, "%.15G %.15G\n", L, Lz);
-#else
   fprintf(fs, "%.15G\n", L);
-#endif
 #endif
 }
 

@@ -6,10 +6,7 @@
    published by Cambridge University Press (1995).
 *********************************************************************/
 #include <mdsimul.h>
-extern int **tree, evIdA, evIdB;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-extern int evIdC;
-#endif
+extern int **tree, evIdA, evIdB, evIdC, evIdD, evIdE;
 extern double *treeTime, *treeRxC, *treeRyC, *treeRzC;
 void DeleteEvent(int );
 void NextEvent(void);
@@ -297,14 +294,16 @@ void NextEvent (void)
   while (treeLeft[idNow] > -1) 
     idNow = treeLeft[idNow];
   Oparams.time = treeTime[idNow];   
+#if 0
   rxC = treeRxC[idNow];
   ryC = treeRyC[idNow];
   rzC = treeRzC[idNow];
+#endif
   evIdA = treeIdA[idNow];    
   evIdB = treeIdB[idNow];
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   evIdC = treeIdC[idNow];
-#endif
+  evIdD = treeIdD[idNow];
+  evIdE = treeIdE[idNow];
   MD_DEBUG2(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
   MD_DEBUG(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 

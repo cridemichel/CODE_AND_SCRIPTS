@@ -31,8 +31,19 @@ extern int SolveLineq (double **a, double *x, int n);
 int calcdist_retcheck;
 double rA[3], rB[3];
 int polinterr, polinterrRyck;
+#ifdef MD_SILICA
+extern int mapbondsaSiSi[MD_PBONDS_SiSi];
+extern int mapbondsbSiSi[MD_PBONDS_SiSi];
+extern int mapbondsaOO[MD_PBONDS_OO];
+extern int mapbondsbOO[MD_PBONDS_OO];
+extern int mapbondsaSiO[MD_PBONDS_SiO];
+extern int mapbondsbSiO[MD_PBONDS_SiO];
+extern int *mapsbondsa;
+extern int *mapsbondsb;
+#else
 int mapbondsa[MD_PBONDS]={1,1,2,2};
 int mapbondsb[MD_PBONDS]={3,4,3,4};
+#endif
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
@@ -1551,15 +1562,46 @@ extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 int ibr, jbr, nnbr; 
 double shiftbr[3];
+#ifdef MD_SILICA
+void assign_bond_mapping(int i, int j)
+{
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    {
+      mapbondsa = mapbondsaSiSi;
+      mapbondsb = mapbondsbSiSi;
+    }
+  else if (i > Oparams.parnumA && Oparams.parnumA > j)
+    {
+      mapbondsa = mapbondsaOO;
+      mapbondsb = mapbondsbOO;
+    }
+  else
+    {
+      /* 0...(parnumA-1) -> Si
+       * parnumA...(parnum-1) -> O */
+      if (i < Oparams.parnumA)
+	mapbondsa = mapbondsaSiO;
+      else
+	mapbondsa = mapbondsbSiO;
+      if (j < Oparams.parnumA)
+	mapbondsb = mapbondsaSiO;
+      else
+	mapbondsb = mapbondsbSiO;
+    }
+
+}
+#endif
 double funcs2beZeroed(double x, int i, int j, int nn, double shift[3])
 {
   int na, ata, atb; 
   double  rA[3], rB[3], ti;
   double Omega[3][3];
   /* x = (r, alpha, t) */ 
-
-  ata = mapbondsa[nnbr];
-  atb = mapbondsb[nnbr];
+#ifdef MD_SILICA
+  assign_bond_mapping(i, j);
+#endif
+  ata = mapbondsa[nn];
+  atb = mapbondsb[nn];
   ti = x - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -1569,11 +1611,9 @@ double funcs2beZeroed(double x, int i, int j, int nn, double shift[3])
   na = (i < Oparams.parnumA)?0:1;
   if (OprogStatus.targetPhi > 0)
     {
-      invaSq[na] = 1/Sqr(axa[i]);
-      invbSq[na] = 1/Sqr(axb[i]);
-      invcSq[na] = 1/Sqr(axc[i]);
+      /* per ora la crescita nei primitive models non è implementata */
     }
-  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
+  //tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = x - atomTime[j];
   MD_DEBUG(printf("x[4]:%.15f atomTime[%d]:%.15f\n",x[4], j, atomTime[j]));
@@ -1584,11 +1624,9 @@ double funcs2beZeroed(double x, int i, int j, int nn, double shift[3])
   na = (j < Oparams.parnumA)?0:1;
   if (OprogStatus.targetPhi > 0)
     {
-      invaSq[na] = 1/Sqr(axa[j]);
-      invbSq[na] = 1/Sqr(axb[j]);
-      invcSq[na] = 1/Sqr(axc[j]);
+      /* per ora la crescita nei primitive models non è implementata */
     }
-  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+  //tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   return calcDistNegOne(x, i, j, nn, shift);
 }
@@ -1618,6 +1656,9 @@ double calcDistNegOne(double t, int i, int j, int nn, double shift[3])
   int kk;
   double Omega[3][3];
   int na;
+#ifdef MD_SILICA
+  assign_bond_mapping(i, j);
+#endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
@@ -2165,6 +2206,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
   epsdMax = OprogStatus.epsdMax;
+#ifdef MD_SILICA
+  assign_bond_mapping(i, j);
+#endif
   /* NOTA: 
    * - epsd è di quanto varia d ad ogni iterazione e quindi determina il grado di accuratezza
    * con cui viene individuato il punto di contatto. In generale se due ellissoidi si "spizzicano"
@@ -3213,9 +3257,6 @@ void move(void)
 	  MD_DEBUG(printf("[Store event]: %.15G JJ=%d KK=%d\n", Oparams.time, OprogStatus.JJ, OprogStatus.KK));
 #ifdef MD_STOREMGL
 	  fprintf(bf, ".Vol: %f\n", L*L*L);
-	  fprintf(bf, ".semiAxes: %f %f %f, %f %f %f\n",
-		  Oparams.a[0], Oparams.b[0], Oparams.c[0],
-		  Oparams.a[1], Oparams.b[1], Oparams.c[1]);
 #endif
 	  writeAllCor(bf);
 	  fclose(bf);
