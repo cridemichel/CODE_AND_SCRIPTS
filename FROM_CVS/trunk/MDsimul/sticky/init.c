@@ -13,7 +13,7 @@ extern char TXT[MSG_LEN];
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 void setToZero(COORD_TYPE* ptr, ...);
-double *maxax;
+double **radat, **deltat, *maxax;
 extern int *lastbump;
 extern double *lastcol;
 double *axa, *axb, *axc;
@@ -48,6 +48,7 @@ int parnumA, parnumB;
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 #endif
 double invaSq[2], invbSq[2], invcSq[2];
+double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin);
 
 /* ================================= */
 
@@ -1032,17 +1033,14 @@ void usrInitAft(void)
        This function is called after the parameters were read from disk, put
        here all initialization that depends upon such parameters, and call 
        all your function for initialization, like maps() in this case */
-#if defined(MD_SQWELL) && defined(MD_BONDCORR) 
     char fileop[1024], fileop2[1024], fileop3[1024];
     FILE *bof;
-#endif    
-    int Nm, i, sct, overlap;
+    double dist;
+    int Nm, i, sct, overlap, amin, bmin;
     COORD_TYPE vcmx, vcmy, vcmz;
     COORD_TYPE *m;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
     double sigDeltaSq, drx, dry, drz;
     int j;
-#endif
     int a;
     /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
@@ -1056,49 +1054,24 @@ void usrInitAft(void)
 
     invL = 1.0/L;
     L2 = 0.5*L;
-#ifdef MD_GRAVITY
-    rcmz = -Lz*0.5;
-    Lz2 = Lz*0.5;
-#endif
     poolSize = OprogStatus.eventMult*Oparams.parnum;
     m = Oparams.m;
     Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
+    Oparams.sigmaA[2] = Oparams.sigmaA[1];
+    Oparams.sigmaA[4] = Oparams.sigmaA[3];
+    Oparams.deltaA[2] = Oparams.deltaA[1];
+    Oparams.deltaA[4] = Oparams.deltaA[3];
     invmA = 1.0/Oparams.m[0];
     invmB = 1.0/Oparams.m[1];
-#if 0
-    Oparams.sigma[1][0] = Oparams.sigma[0][1];
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    Oparams.delta[1][0] = Oparams.delta[0][1];
-#endif
-#endif
-    Mred[0][0] = Mred[1][1] = 0.5;
-    Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
-    /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
+    /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
      * le particelle */
     if (Oparams.rcut <= 0.0)
       Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
     cellsx = L / Oparams.rcut;
     cellsy = L / Oparams.rcut;
-#ifdef MD_GRAVITY
-    cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
-#else
     cellsz = L / Oparams.rcut;
-#endif 
     printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
 	   cellsx, cellsy, cellsz);
-#if 0
-    printf("massA: %f massB: %f sigmaA:%f sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1],
-	 Oparams.sigma[0][0], Oparams.sigma[1][1], Oparams.sigma[0][1]);
-#endif
-#if defined(MD_GRAVITY)
-    g2 = 0.5*Oparams.ggrav;
-    mgA = Oparams.m[0]*Oparams.ggrav; 
-    mgB = Oparams.m[1]*Oparams.ggrav;
-#endif
-   
-  /*    
-     ** CHECK FOR PARTICLE OVERLAPS **
-     ** CALCULATE ENERGY            ** */
     lastcol= malloc(sizeof(double)*Oparams.parnum);
     atomTime = malloc(sizeof(double)*Oparams.parnum);
     lastbump = malloc(sizeof(int)*Oparams.parnum);
@@ -1107,42 +1080,24 @@ void usrInitAft(void)
     inCell[0] = malloc(sizeof(int)*Oparams.parnum);
     inCell[1]= malloc(sizeof(int)*Oparams.parnum);
     inCell[2] = malloc(sizeof(int)*Oparams.parnum);
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
     tree = AllocMatI(10, poolSize);
     bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
     bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
     numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
     numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
-#ifdef MD_BONDCORR
-    lastbreak1=(double*)malloc(Oparams.parnum*sizeof(double));
-    lastbreak2=(double*)malloc(Oparams.parnum*sizeof(double));
-#endif
     bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
-#else
-    tree = AllocMatI(9, poolSize);
-#endif
     treeTime = malloc(sizeof(double)*poolSize);
+#if 0
     treeRxC  = malloc(sizeof(double)*poolSize);
     treeRyC  = malloc(sizeof(double)*poolSize);
     treeRzC  = malloc(sizeof(double)*poolSize);
-    Xa = matrix(3, 3);
-    Xb = matrix(3, 3);
+#endif
 #ifdef MD_ASYM_ITENS
     Ia = matrix(3, 3);
     Ib = matrix(3, 3);
     invIa = matrix(3, 3);
     invIb = matrix(3, 3);
 #endif
-    powdirs = matrix(6,6);
-    ellips_mesh[0]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
-    ellips_mesh[1]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
-    for (i = 0; i < OprogStatus.n1; i++)
-      {
-	ellips_mesh[0][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
-	ellips_mesh[1][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
-      }
-    build_mesh(ellips_mesh[0], Oparams.a[0], Oparams.b[0], Oparams.c[0]);
-    build_mesh(ellips_mesh[1], Oparams.a[1], Oparams.b[1], Oparams.c[1]);
     RA = matrix(3, 3);
     RB = matrix(3, 3);
     Rt = matrix(3, 3);
@@ -1177,13 +1132,6 @@ void usrInitAft(void)
  	  exit(1);      
   	}
     }
-#if 0
-  for (i= 0; i < Oparams.parnum; i++)
-    {
-      /*printf("i=%d v(%.15G,%.15G,%.15G)\n", i, vx[i], vy[i], vz[i]);*/
-      lastcol[i] = 0.0;
-    }
-#endif
   if (newSim)
     {
       Oparams.time=0.0;
@@ -1200,158 +1148,84 @@ void usrInitAft(void)
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = Oparams.time;
     }
-  axa = malloc(sizeof(double)*Oparams.parnum);
-  axb = malloc(sizeof(double)*Oparams.parnum);
-  axc = malloc(sizeof(double)*Oparams.parnum);
+  radat = matrix(Oparams.parnum,NA);
+  deltat = matrix(Oparams.parnum,NA);
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnumA; i++)
     {
       scdone[i] = 0;
-      axa[i] = Oparams.a[0];
-      axb[i] = Oparams.b[0];
-      axc[i] = Oparams.c[0];
+      for (a = 0; a < NA; a++)
+	{
+	  radat[i][a] = Oparams.sigmaA[a];
+	  deltat[i][a] = Oparams.deltaA[a];
+	}
     }
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
     {
       scdone[i] = 0;
-      axa[i] = Oparams.a[1];
-      axb[i] = Oparams.b[1];
-      axc[i] = Oparams.c[1];
+      for (a = 0; a < NA; a++)
+	{
+	  radat[i][a] = Oparams.sigmaB[a];
+	  deltat[i][a] = Oparams.deltaB[a];
+	}
     }
   printf(">>>> phi=%.12G L=%f (%f,%f,%f)\n", calc_phi(), L, Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
   /* evaluation of principal inertia moments*/ 
   for (a = 0; a < 2; a++)
     {
-      invaSq[a] = Sqr(1/Oparams.a[a]);
-      invbSq[a] = Sqr(1/Oparams.b[a]);
-      invcSq[a] = Sqr(1/Oparams.c[a]);
 #ifdef MD_ASYM_ITENS
       ItensD[a][0] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.b[a])+Sqr(Oparams.c[a]));
       ItensD[a][1] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.c[a]));
       ItensD[a][2] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.b[a]));
 #endif
     };
- 
+#ifdef MD_SILICA
+  /* write code for silica here!! */
+#else
   /* maxax è il diametro del centroide */
   for (i = 0; i < Oparams.parnum; i++)
     {
-      maxax[i] = 0.0;
-      a=(i<Oparams.parnumA)?0:1;
-      if (Oparams.a[a] > maxax[i])
-	maxax[i] = Oparams.a[a];
-      if (Oparams.b[a] > maxax[i])
-	maxax[i] = Oparams.b[a];
-      if (Oparams.c[a] > maxax[i])
-	maxax[i] = Oparams.c[a];
-      maxax[i] *= 2.0;
+      /* scegliere rigorosamente a seconda del modello!!*/
+      if (i < Oparams.parnumA)
+	{
+	  maxax[i] = Oparams.sigmaA[0]*1.2;
+	}
+      else
+	{
+	  maxax[i] = Oparams.sigmaB[0]*1.2;
+	}
     }
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+#endif
   for (i=0; i < Oparams.parnum; i++)
     {
       numbonds[i] = 0;
-#ifdef MD_BONDCORR
-      lastbreak1[i] = 0.0;
-      lastbreak2[i] = 0.0;
-#endif
     }
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
-	if (i < parnumA && j < parnumA)
+	drx = rx[i] - rx[j] 
+	shift[0] = -L*rint(drx/L);
+	dry = ry[i] - ry[j] 
+	shift[1] = -L*rint(dry/L);
+	drz = rz[i] - rz[j] 
+	shift[2] = -L*rint(drz/L);
+	dist = calcDistNeg(Oparams.time, i, j, shift, &amin, &bmin);
+	if (i < Oparams.parnumA && j < Oparams.parnumA)
+	  sigDeltaSq = 0.5*(Oparams.sigmaA[amin]+Oparams.sigmaA[bmin]);
+	else if (i > Oparams.parnumA && j > Oparams.parnumA)
+	  sigDeltaSq = 0.5*(Oparams.sigmaB[amin]+Oparams.sigmaB[bmin]);
+	else if (i < Oparams.parnumA && j > Oparams.parnumA)
+	  sigDeltaSq = 0.5*(Oparams.sigmaA[amin]+Oparams.sigmaB[bmin]); 
+	else
+	  sigDeltaSq = 0.5*(Oparams.sigmaB[amin]+Oparams.sigmaA[bmin]);
+	if (Sqr(dist) < sigDeltaSq)
 	  {
-	    sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
-	  }
-	else if (i >= parnumA && j >= parnumA)
-	  {
-	    sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
-	  }
-       	else
-	  {
-	    sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
-	  }
-	drx = rx[i] - rx[j];
-	dry = ry[i] - ry[j];
-	drz = rz[i] - rz[j];
-	drx = drx - L * rint(drx / L);
-	dry = dry - L * rint(dry / L);
-	drz = drz - L * rint(drz / L);
-	if (Sqr(drx)+Sqr(dry)+Sqr(drz) < sigDeltaSq) 
-	  {
-	    add_bond(i, j);
-	    add_bond(j, i);
+	    add_bond(i, j, amin, bmin);
+	    add_bond(j, i, bmin, amin);
 	  }
       }
-#ifdef MD_BONDCORR
-  corrnorm=0;
-  for (i=0; i < Oparams.parnum; i++)
-    { 
-      numbonds0[i]=numbonds[i];
-      corrnorm+=numbonds[i];
-      for (j=0; j < numbonds0[i]; j++)
-	bonds0[i][j]=bonds[i][j];
-    }
-  corrini3 = 0;
-  corrini2 = 0;
-  corrini1 = 0;
-  corrini0 = 0;
-  for (i=0; i < Oparams.parnum; i++)
-    {
-      if (numbonds0[i]==2)
-	{
-	  corrini2++;
-	}
-      if (numbonds0[i]==1 && numbonds0[bonds0[i][0]]==1)
-	{
-	  corrini1++;
-	}
-      if (numbonds0[i]==0)
-	{
-	  corrini0++;
-	}
-      if (numbonds0[i]==3)
-	{
-	  corrini3++;
-	}
-    }
-  printf("------------> corrini0: %f\n", corrini0);
-  printf("------------> corrini1: %f\n", corrini1);
-  printf("------------> corrini2: %f\n", corrini2);
-  printf("------------> corrini3: %f\n", corrini3);
-  printf("------------> corrnorm: %f\n", corrnorm);
-  sprintf(fileop2 ,"bondcorr.dat");
-  strcpy(fileop, absTmpAsciiHD(fileop2));
-  if ( (bof = fopenMPI(fileop, "w")) == NULL)
-    {
-      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-      exit(-1);
-    }
-  fclose(bof);
-#if 1
- sprintf(fileop2 ,"BondCorrFuncB2.dat");
-  /* store conf */
-  strcpy(fileop, absTmpAsciiHD(fileop2));
-  if ( (bof = fopenMPI(fileop, "w")) == NULL)
-    {
-      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-      exit(-1);
-    }
-  //fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini1);
-  fclose(bof);
-  sprintf(fileop2 ,"BondCorrFuncB3.dat");
-  /* store conf */
-  strcpy(fileop, absTmpAsciiHD(fileop2));
-  if ( (bof = fopenMPI(fileop, "w")) == NULL)
-    {
-      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-      exit(-1);
-    }
-  //fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini2);
-  fclose(bof);
-#endif
-#endif
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
-#endif
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
@@ -1364,35 +1238,13 @@ void usrInitAft(void)
     {
       FILE *f;
       /* truncate file to zero lenght */
-#ifdef MD_GRAVITY
-      f = fopenMPI(MD_HD_MIS "T.dat", "w");
-      fclose(f);
-      f = fopenMPI(MD_HD_MIS "Vz2.dat", "w");
-      fclose(f);
-      f = fopenMPI(MD_HD_MIS "rcmz.dat", "w");
-      fclose(f);
-      f = fopenMPI(MD_HD_MIS "rho.dat", "w");
-      fclose(f);
-#else
       f = fopenMPI(MD_HD_MIS "T.dat", "w");
       fclose(f);
       f = fopenMPI(MD_HD_MIS "D.dat", "w");
       fclose(f);
-#endif
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
       OprogStatus.DQzx = 0.0;
-#ifdef MD_GRAVITY
-      if (!strcmp(OprogStatus.inifile,"*"))
-	{
-	  for (i= 0; i < Oparams.parnum; i++)
-	    {
-	      /*printf("i=%d v(%.15G,%.15G,%.15G)\n", i, vx[i], vy[i], vz[i]);*/
-	      lastcol[i] = 0.0;
-	    }
-	}
-#endif
-  
       for(i = 0; i < Oparams.parnum; i++)
 	{
 	  /* store the initial positions of particles */

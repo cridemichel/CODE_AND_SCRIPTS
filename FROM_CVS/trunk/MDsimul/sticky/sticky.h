@@ -239,14 +239,6 @@ struct progStatus
   COORD_TYPE PxyArr[5];
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
-  double springkSD;
-  double stepSDA;
-  double stepSDB;
-  int maxitsSD;
-  double tolSD;
-  double tolSDlong;
-  double tolSDconstr;
-  double tolSDgrad;
   /* Accumulator for the radial distribution function */
   int hist[MAXBIN];
   int equilibrated;
@@ -300,7 +292,6 @@ struct progStatus
   double epsdFast;
   double epsdFastR;
   double epsdMax;
-  int guessDistOpt;
   double forceguess;
   double targetPhi;
   double scalfact;
@@ -397,28 +388,21 @@ struct params
   double partDiss;             /*dissipazione negli urti fra particelle */
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
-  COORD_TYPE m[2];             /* atoms masses */
-  
-  double a[2];
-  double b[2];
-  double c[2];
+  COORD_TYPE mA[NA];             /* atoms masses */
+  COORD_TYPE mB[NA];  
+  double sigmaA[NA];
+  double sigmaB[NA];
+  double deltaA[NA]; /* larghezza delle buche */
+  double deltaB[NA];
   double rcut;
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
 
+  double bheight;
 #ifndef MD_ASYM_ITENS
   double I[2];
 #endif
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  double delta[2][2]; /* ampiezza della buca */
-  double bheight;
-#endif
-#ifdef MD_GRAVITY
-  double ggrav;
-#endif
-  COORD_TYPE tol;               /* Tolerance of the shake algoritm used 
-				   by RATTLE */
   /*======================================================================= */
 };
 
@@ -498,14 +482,6 @@ struct pascii opro_ascii[] =
   {"epsdFastR",    &OS(epsdFastR),             1,   1, "%.12G"},
   {"epsdMax",      &OS(epsdMax),               1,   1, "%.12G"},
   {"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
-  {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
-  {"stepSDA",       &OS(stepSDA),                1,   1, "%.12G"},
-  {"stepSDB",       &OS(stepSDB),                1,   1, "%.12G"},
-  {"maxitsSD",     &OS(maxitsSD),              1,   1, "%d"},
-  {"tolSD",        &OS(tolSD),                 1,   1, "%.15G"},         
-  {"tolSDlong",    &OS(tolSDlong),             1,   1, "%.15G"},
-  {"tolSDconstr",  &OS(tolSDconstr),           1,   1, "%.15G"},
-  {"tolSDgrad",    &OS(tolSDgrad),             1,   1, "%.15G"},
   {"forceguess",   &OS(forceguess),            1,   1, "%d"},
   {"zbrakn",       &OS(zbrakn),              1,   1,  "%d"},
   {"zbrentTol",    &OS(zbrentTol),           1,   1,  ".15G"},
@@ -566,27 +542,20 @@ struct pascii opar_ascii[]=
   {"curStep",           &OP(curStep),                     1,   1,  MDINTFMT},
   {"P",                 &OP(P),                           1,   1, "%.6G"},
   {"T",                 &OP(T),                           1,   1, "%.6G"},
-  {"m",                 OP(m),                            2,   1, "%.6G"},
-  {"a",                 OP(a),                             2,   1, "%.8G"},
-  {"b",                 OP(b),                             2,   1, "%.8G"},
-  {"c",                 OP(c),                             2,   1, "%.8G"},
+  {"mA",                OP(mA),                            NA,   1, "%.10G"},
+  {"mB",                OP(mB),                            NA,   1, "%.10G"},
+  {"sigmaA",           OP(sigmaA),                         NA,   1, "%.10G"},
+  {"sigmaB",           OP(sigmaB),                         NA,   1, "%.10G"},
+  {"deltaA",           OP(deltaA),                         NA,   1, "%.10G"},
+  {"deltaB",           OP(deltaB),                         NA,   1, "%.10G"},
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
 #ifndef MD_ASYM_ITENS
   {"I",                 OP(I),                             2,   1, "%.8G"},
 #endif
-#ifdef MD_GRAVITY
-  {"wallDiss",          &OP(wallDiss),                    1,   1,   "%f"},
-  {"partDiss",          &OP(partDiss),                    1,   1,   "%f"},
-  {"ggrav",             &OP(ggrav),                       1,   1,   "%f"},
-#endif
   {"M",                 &OP(M),                           1,   1,   "%d"},
-  {"tol",               &OP(tol),                         1,   1, "%.15G"},
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  {"delta",             &OP(delta),                       2,   2, "%.15G"},
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
-#endif
   {"", NULL, 0, 0, ""}
 };
 #else
@@ -688,40 +657,25 @@ struct singlePar OsinglePar[] = {
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
   {"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
-  {"tolSD",      &OprogStatus.tolSD,          CT},
-  {"tolSDlong",  &OprogStatus.tolSDlong,      CT},
-  {"tolSDconstr",&OprogStatus.tolSDconstr,    CT},
-  {"tolSDgrad",  &OprogStatus.tolSDgrad,      CT},
-  {"forceguess", &OprogStatus.forceguess,     INT},
-  {"springkSD",  &OprogStatus.springkSD,    CT},
-  {"stepSDA",     &OprogStatus.stepSDA,         CT},
-  {"stepSDB",     &OprogStatus.stepSDB,         CT},
-  {"maxitsSD",   &OprogStatus.maxitsSD,       INT},
   {"zbrakn",     &OprogStatus.zbrakn,         INT},
   {"zbrentTol",  &OprogStatus.zbrentTol,      CT},
   {"scalfact",   &OprogStatus.scalfact,       CT},
   {"reducefact", &OprogStatus.reducefact,     CT},
   {"phitol",      &OprogStatus.phitol,        CT},
   {"axestol",     &OprogStatus.axestol,       CT},
-#ifdef MD_GRAVITY
-  {"taptau",     &OprogStatus.taptau,         CT},
-  {"quenchtol",  &OprogStatus.quenchtol,      CT},
-  {"checkQuench", &OprogStatus.checkquenchTime, CT},
-  {"Lz",         &Lz,                       CT},
-  {"extraLz",    &OprogStatus.extraLz,      CT},
-  {"vztap",      &OprogStatus.vztap,        CT},
-  {"rzup",       &OprogStatus.rzup,         CT},
-  {"rhobh",      &OprogStatus.rhobh,        CT},
-  {"expandFact",  &OprogStatus.expandFact,   CT},
-#endif
   {"W",          &OprogStatus.W,              CT},
   {"P",          &Oparams.P,                  CT},
-  {"L",          &L,                        CT},
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  {"deltaAA",    &Oparams.delta[0][0],            CT},
-  {"deltaBB",    &Oparams.delta[1][1],            CT},
-  {"deltaAB",    &Oparams.delta[0][1],            CT},
-  {"bheight",    &Oparams.bheight,          CT},
+  {"L",          &L,                          CT},
+#ifdef MD_SILICA
+#else
+  /* sigmaA[0] = atomo grande sigmaA[1,2] = hydrogen sites sigmaA[3,4] = electron sites 
+   * bheight = barriere dell'interazione a buca quadrata tra H e Elettrone */
+  {"deltaH",     &Oparams.deltaA[1],        CT},
+  {"deltaEl",    &Oparams.deltaA[3],            CT},
+  {"sigma",      &Oparams.sigmaA[0],          CT},
+  {"sigmaH",     &Oparams.sigmaA[1],         CT},
+  {"sigmaEl",    &Oparams.sigmaA[3],         CT},    
+  {"bheight",    &Oparams.bheight,            CT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
