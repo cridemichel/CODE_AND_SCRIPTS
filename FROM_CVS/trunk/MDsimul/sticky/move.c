@@ -2479,9 +2479,15 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
   assign_dists(dists, distsOld);
   dold = d;
   its = 0;
+  /* il primo delt è semplicemente un valore ragionevolmente
+   * piccolo, poi si adatta */
+  delt = h*t;
+  t += delt;
+  d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
   while (t < t2)
     {
-      normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
+      //normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
+      normddot = fabs(d - dold)/delt;
       if (normddot!=0)
 	delt = epsd/normddot;
       else
@@ -2564,7 +2570,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 #endif
       tmin = 0;
       gotcoll = 0;
-      for (nn = 0; nn < 8; nn++)
+      for (nn = 0; nn < MD_PBONDS; nn++)
 	{
 	  if (dorefine[nn])
 	    {
@@ -2573,6 +2579,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 		  MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 		  MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
 		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+		  /* se il legame già c'è e con l'urto si forma tale legame allora
+		   * scarta tale urto */
 		  if (troot > t2 || troot < t1 || 
 		      (lastbump[i].i == j && lastbump[j].j==i && lastbump[i].a == mapbondsa[nn]
 		       && lastbump[j].b == mapbondsb[nn] && fabs(troot - lastcol[i])<1E-8))
@@ -3045,7 +3053,7 @@ void PredictEvent (int na, int nb)
 		  	    
 			  if (b < 0.0)
 			    { 
-		      	      d= Sqr (b) - vv * (distSq - sigSq);
+		      	      d= Sqr(b) - vv * (distSq - sigSq);
 	      		      if (d > 0.0)
       				{
 				  t = (-sqrt (d) - b) / vv;
