@@ -283,6 +283,10 @@ struct progStatus
   double endtime;
   double scaleVolTime;
   int brownian;
+  double epsd;
+  double epsdFast;
+  double epsdFastR;
+  double epsdMax;
 #ifdef MD_GRAVITY
   double taptau;
   int tapampl;
@@ -469,6 +473,10 @@ struct pascii opro_ascii[] =
 #endif
   {"scalevel",     &OS(scalevel),              1,   1, "%d"},
   {"equilibrated", &OS(equilibrated),          1,   1, "%d"},
+  {"epsd",         &OS(epsd),                  1,   1, ".12G"},
+  {"epsdFast",     &OS(epsdFast),              1,   1, ".12G"},
+  {"epsdFastR",    &OS(epsdFastR),             1,   1, ".12G"},
+  {"epsdMax",      &OS(epsdMax),               1,   1, ".12G"},
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
   {"endtime",      &OS(endtime),                    1,  1,    "%.15G"},
   {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
@@ -639,6 +647,10 @@ struct singlePar OsinglePar[] = {
   {"scalevel",   &OprogStatus.scalevel,       INT},
   {"endtime",    &OprogStatus.endtime,        CT},
   {"Dt",         &Oparams.Dt,                 CT},
+  {"epsd",       &OprogStatus.epsd,           CT},
+  {"epsdFast",   &OprogStatus.epsdFast,       CT},
+  {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
+  {"epsdMax",    &OprogStatus.epsdMax,        CT},
 #ifdef MD_GRAVITY
   {"taptau",     &OprogStatus.taptau,         CT},
   {"quenchtol",  &OprogStatus.quenchtol,      CT},
