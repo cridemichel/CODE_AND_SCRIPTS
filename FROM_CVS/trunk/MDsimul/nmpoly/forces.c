@@ -16,6 +16,9 @@ extern double **rallx, **rally, **rallz, **Fallx, **Fally, **Fallz,
   **rallx_old, **rally_old, **rallz_old, *atcharge; 
 #endif
 extern double **rx_old, **ry_old, **rz_old, **sigmag;
+#ifdef MD_RESPA
+extern double **rx_oldLong, **ry_oldLong, **rz_oldLong;
+#endif
 extern double *Fcoeff[3];
 
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
@@ -30,14 +33,24 @@ extern COORD_TYPE W, K, WC, T1xx, T1yy, T1zz,
   Wmxy, Wmyz, Wmzx, Pmxx, Pmyy, Pmzz, Pmxy, Pmyz, Pmzx, T1mxy, 
   Patxy, Patyz, Patzx, Patxx, Patyy, Patzz,
   T1myz, T1mzx, T1mxx, T1myy, T1mzz;  
+#ifdef MD_RESPA
+extern double WLong, WxxLong, WyyLong, WzzLong,
+  WxyLong, WyzLong, WzxLong, WmLong, WmxxLong, WmyyLong, WmzzLong, 
+  WmxyLong, WmyzLong, WmzxLong;
+#endif
 extern COORD_TYPE Mtot;
 /* used by linked list routines */
 extern int *head, *list, *map;  /* arrays of integer */
 extern int NCell, mapSize, M;
-
+#ifdef MD_RESPA
+extern double VololdLong;
+#endif
 /* neighbour list method variables */
 extern double dispHi,Volold;
 extern int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
+#ifdef MD_RESPA
+extern int **nebrTabLong, nebrNowLong, nebrTabLenLong, nebrTabMaxLong;
+#endif
 /* ================================= */
 
 extern COORD_TYPE *ox, *oy, *oz; /* Angular velocities of each particle */
@@ -194,6 +207,236 @@ void  links(int Nm, COORD_TYPE rcut)
 	}
     }
 }
+#if defined(MD_RESPA)
+/* ====================== >>> BuildNebrListNoLinked <<< ==================== */
+void BuildNebrListNoLinkedLong(int Nm, double rCut) 
+{
+  int a, b, i, j;
+  COORD_TYPE rcutab, rcutabSq; 
+  COORD_TYPE rrNebr;
+  COORD_TYPE rxa, rya, rza, rabSq, rxab, ryab, rzab;
+  L = cbrt(Vol);
+  invL = 1.0  / L;
+
+  for (i = 0; i < Oparams.parnum; i++)
+    for (a = 0; a < NA; a++)
+      {
+	rx_oldLong[a][i] = rx[a][i];
+	ry_oldLong[a][i] = ry[a][i];
+	rz_oldLong[a][i] = rz[a][i];
+      }
+  VololdLong = Vol;
+  /* useful ab-constants inside OUTER LOOP below */
+  rcutab = rCut * Oparams.sigma;
+  rcutabSq = Sqr(rcutab);
+  rrNebr = Sqr(rcutab + OprogStatus.rNebrShellLong);
+  if (rrNebr > Sqr(L / 2.0))
+    {
+      printf("(rcutoff + rNebrShell)=%f is  too large, it exceeds L/2 = %f\n",
+	     sqrt(rrNebr), L/2.0);
+      exit(-1);
+    }
+
+  nebrTabLenLong = 0;
+  for(i=0; i < Nm; i++)
+    {
+      for(a=0; a < NA; a++)
+	{
+	  rxa = rx[a][i];
+	  rya = ry[a][i];
+	  rza = rz[a][i];
+	  /* INNER LOOP BEGINS */
+	  for(j = i; j < Nm; j++) 
+	    {
+      	      for(b=0; b < NA; b++)  /* b >= a because of symmetry */
+		/* + 2 because you must remeber that really the all indices 
+		   (a, b, i, j) start from 0 ... */
+		/*   i > j because of 3rd law */
+		{
+#if defined(MD_FENE)
+		  if (i==j && b <= a)
+		    continue;
+#else
+		  if (i==j && b < a+2)
+		    continue;
+#endif
+		  rxab = rxa - rx[b][j]; /* distance between two atomes */
+		  ryab = rya - ry[b][j];
+		  rzab = rza - rz[b][j];
+		  rxab = rxab - L * rint(rxab * invL);      /* minimum image */
+		  ryab = ryab - L * rint(ryab * invL);
+		  rzab = rzab - L * rint(rzab * invL);
+		  rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
+		  /*printf("rabSq: %f rrNebr: %f\n", rabSq, rrNebr);*/		  
+		  if (rabSq < rrNebr)/* 'rcut' is the cutoff for V */
+		    {
+		      if (nebrTabLenLong >= nebrTabMaxLong)
+			{
+			  printf("nebrTabMax: %d nebrTabLen: %d\n", nebrTabMaxLong, 
+				 nebrTabLenLong);
+			  printf("particles: (%d,%d)-(%d,%d)\n",i,a,j,b);
+			  printf("ERROR: Neighbourlist overflow!\n");
+			  exit(-1);
+			}
+		      nebrTabLong[0][nebrTabLenLong] = NA*i + a;
+		      nebrTabLong[1][nebrTabLenLong] = NA*j + b;
+		      ++nebrTabLenLong; /* Increment table element counter */
+		    }
+		}
+	      /* INNER LOOP ENDS */
+	    }
+	}
+    }
+  printf("step N. %d: nebrTabLen: %d\n", Oparams.curStep, nebrTabLenLong);
+}
+/* ======================== >>> BuildNebrList <<< ========================== */
+void BuildNebrListLong(int Nm, COORD_TYPE rCut) 
+{
+  int a, b, i, j;
+  COORD_TYPE rcutab, rcutabSq; 
+  COORD_TYPE rrNebr;
+  int  iCell, jCell0, jCell, nabor, hd, lst;
+  COORD_TYPE rxa, rya, rza, rabSq, rxab, ryab, rzab;
+  
+  for (i = 0; i < Oparams.parnum; i++)
+    for (a = 0; a < NA; a++)
+      {
+	rx_oldLong[a][i] = rx[a][i];
+	ry_oldLong[a][i] = ry[a][i];
+	rz_oldLong[a][i] = rz[a][i];
+      }
+  /* useful ab-constants inside OUTER LOOP below */
+  rcutab = rCut * Oparams.sigma;
+  rcutabSq = Sqr(rcutab);
+  rrNebr = Sqr(rcutab + OprogStatus.rNebrShell);
+
+  L = cbrt(Vol);
+  invL = 1.0  / L;
+  nebrTabLen = 0;
+  /* Every process build its own neighbour list */
+  for(iCell=0; iCell < NCell; iCell++)
+    {
+      /* LOOP OVER ALL MOLECULES IN THE CELL */
+      hd = head[iCell]; 
+
+      while(hd > -1)
+	{
+	  i = hd / NA;
+	  a = hd % NA;
+	  rxa = rx[a][i];
+	  rya = ry[a][i];
+	  rza = rz[a][i];
+	  
+	  /* LOOP OVER ALL MOLECULES BELOW I IN THE CURRENT CELL */
+	  lst = list[hd]; 
+				
+	  while(lst > -1)
+	    /* Atoms in the same molecule don't interact */
+	    { 
+	      j = lst / NA;
+	      b = lst % NA;
+#if defined(MD_FENE)
+	      if (j == i && b <= a)
+		/* atoms in the same molecule don't interact */
+		{
+		  lst = list[lst];
+		  continue;
+		}
+#else
+    	      if (j == i && b < a+2)
+		/* atoms in the same molecule don't interact */
+		{
+		  lst = list[lst];
+		  continue;
+		}
+#endif
+	      rxab = rxa - rx[b][j]; /* distance between two atomes */
+	      ryab = rya - ry[b][j];
+	      rzab = rza - rz[b][j];
+	      
+	      rxab = rxab - L * rint(invL * rxab);      /* minimum image */
+	      ryab = ryab - L * rint(invL * ryab);
+	      rzab = rzab - L * rint(invL * rzab);
+	      
+	      rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
+	     
+	      if ( rabSq < rrNebr && abs(b - a) > 1) /* 'rcut' is the cutoff for V */
+		{
+		  if (nebrTabLenLong >= nebrTabMaxLong)
+		    {
+		      printf("nebrTabMax: %d nebrTabLen: %d\n", nebrTabMaxLong, 
+			     nebrTabLenLong);
+		      printf("particles: (%d,%d)-(%d,%d)\n",i,a,j,b);
+		      printf("ERROR: Neighbourlist overflow!\n");
+		      exit(-1);
+		    }
+		  nebrTabLong[0][nebrTabLenLong] = NA*i + a;
+		  nebrTabLong[1][nebrTabLenLong] = NA*j + b;
+		  ++nebrTabLenLong; /* Increment table element counter */
+		}
+	      
+	      lst = list[lst]; /* next atom in the list */
+	    }
+	  /* LOOP OVER NEIGHBOURING CELLS */
+	  jCell0 = 13 * iCell;
+	  for(nabor=0; nabor < 13; nabor++)
+	    {
+	      jCell = map[jCell0 + nabor];
+	      lst = head[jCell];
+	      while(lst != -1) 
+		{
+		  j = lst / NA;
+		  b = lst % NA;
+#if defined(MD_FENE)
+		  if (j == i && b <= a)
+    		    /* atoms in the same molecule don't interact */
+    		    {
+    		      lst = list[lst];
+    		      continue;
+    		    }
+
+#else
+    		  if (j == i && b < a+2)
+    		    /* atoms in the same molecule don't interact */
+    		    {
+    		      lst = list[lst];
+    		      continue;
+    		    }
+#endif
+		  rxab = rxa - rx[b][j]; /* distance between two atomes */
+		  ryab = rya - ry[b][j];
+		  rzab = rza - rz[b][j];
+		  
+		  rxab = rxab - L * rint(invL * rxab);    /* minimum image */
+		  ryab = ryab - L * rint(invL * ryab);
+		  rzab = rzab - L * rint(invL * rzab);
+		  rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
+		  
+		  if ( rabSq < rrNebr && abs(b - a) > 1)/* 'rcut' is the cutoff for V */
+		    {
+		      if (nebrTabLenLong >= nebrTabMaxLong)
+			{
+			  printf("nebrTabMax: %d nebrTabLen: %d\n", nebrTabMaxLong,
+				 nebrTabLenLong);
+			  printf("ERROR: Neighbourlist overflow!\n");
+			  printf("particles: (%d,%d)-(%d,%d)\n",i,a,j,b);
+			  exit(-1);
+			}
+		      nebrTabLong[0][nebrTabLenLong] = NA*i + a;
+		      nebrTabLong[1][nebrTabLenLong] = NA*j + b;
+		      ++nebrTabLenLong;
+		    }
+		  
+		  lst = list[lst];  /* next atom*/
+		
+		}
+	    }
+	  hd = list[hd]; /* next atom */
+	}
+    }
+  /* OUTER LOOP ENDS */
+}
+#endif
 
 /* ====================== >>> BuildNebrListNoLinked <<< ==================== */
 void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut) 
@@ -275,7 +518,6 @@ void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut)
     }
   printf("step N. %d: nebrTabLen: %d\n", Oparams.curStep, nebrTabLen);
 }
-
 /* ======================== >>> BuildNebrList <<< ========================== */
 void BuildNebrList(int Nm, COORD_TYPE rCut) 
 {
@@ -519,6 +761,68 @@ void kinet(int Nm, COORD_TYPE** velx, COORD_TYPE** vely, COORD_TYPE** velz,
      t (v(t)) */
   K *= 0.5;
 }
+#ifdef MD_RESPA
+inline double SwitchFunc(double r)
+{
+  double R;
+  if (r < Oparams.rcut - OprogStatus.lambda)
+    return 1; 
+  else if (r > Oparams.rcut)
+    return 0;
+  else
+    {
+      R = (r - (Oparams.rcut - OprogStatus.lambda))/OprogStatus.lambda ;
+      return 1.0 + Sqr(R)*(2.0*R - 3.0);
+    }    
+}
+void checkNebrRebuildLong(void)
+{
+  int i, a, Nm = Oparams.parnum;
+  double rNebrShellSq;
+#if 0
+  double norm, vv, vvMax = 0.0;
+#endif
+  /*double RCMx, RCMy, RCMz, VCMx, VCMy, VCMz;*/
+  rNebrShellSq = Sqr(0.5*OprogStatus.rNebrShellLong);
+  for(i=0; i < Nm && !nebrNowLong ; i++)
+    {
+      /*CoM(i, &RCMx, &RCMy, &RCMz);
+	CoMV(i, &VCMx, &VCMy, &VCMz);*/
+      for(a=0; a < NA; a++)
+	{
+	  /* usando la velocità angolare calcolata sopra, 
+	   * vengono calcolate le velocità di tutti gli atomi */
+	  /* vectProd(omegax, omegay, omegaz, rx[a][i], ry[a][i], rz[a][i],
+	     &vax, &vay, &vaz); */
+#if 1
+	  if (Sqr(rx[a][i]-rx_oldLong[a][i])+Sqr(ry[a][i]-ry_oldLong[a][i])+
+	      Sqr(rz[a][i]-rz_oldLong[a][i]) > rNebrShellSq)
+	    {
+	      printf("STEP N. %d rebuilding neghbourlists!\n", Oparams.curStep);
+	      printf("(%f,%f,%f)-(%f,%f,%f)\n", rx[a][i], ry[a][i],rz[a][i],
+		     rx_oldLong[a][i], ry_oldLong[a][i],rz_oldLong[a][i]);
+	      nebrNowLong=1;
+	      break;
+	    } 
+#endif
+#if 0
+	  vv = Sqr(vx[a][i]) + Sqr(vy[a][i]) + Sqr(vz[a][i]);
+	  if (vv > vvMax) 
+	    vvMax = vv;
+#endif
+	}
+    }
+#if 0
+  dispHi = dispHi + sqrt(vvMax) * Oparams.steplength + cbrt(fabs(Vol1)*Oparams.steplength);
+  /* If the maximum displacement is too high rebuild Neighbour List
+     see Rapaport pag .54 */
+
+  if (dispHi > 0.5 * OprogStatus.rNebrShell)
+    nebrNow = 1;
+#endif
+}
+
+#endif
 void checkNebrRebuild(void)
 {
   int i, a, Nm = Oparams.parnum;
@@ -565,7 +869,43 @@ void checkNebrRebuild(void)
     nebrNow = 1;
 #endif
 }
-
+#ifdef MD_RESPA
+void checkNebrRebuildNPTLong(void)
+{
+  int i, a, Nm = Oparams.parnum;
+  double rNebrShellSq;
+#if 0
+  double norm, vv, vvMax = 0.0;
+#endif
+  /*double RCMx, RCMy, RCMz, VCMx, VCMy, VCMz;*/
+  double L, Lold, DL;
+  rNebrShellSq = Sqr(0.5*OprogStatus.rNebrShellLong);
+  Lold = cbrt(VololdLong);
+  L = cbrt(Vol);
+  DL = fabs(L-Lold);
+  for(i=0; i < Nm && !nebrNowLong ; i++)
+    {
+      /*CoM(i, &RCMx, &RCMy, &RCMz);
+	CoMV(i, &VCMx, &VCMy, &VCMz);*/
+      for(a=0; a < NA; a++)
+	{
+	  /* usando la velocità angolare calcolata sopra, 
+	   * vengono calcolate le velocità di tutti gli atomi */
+	  /* vectProd(omegax, omegay, omegaz, rx[a][i], ry[a][i], rz[a][i],
+	     &vax, &vay, &vaz); */
+	  if (Sqr(DL+fabs(rx[a][i]-rx_oldLong[a][i]))+Sqr(DL+fabs(ry[a][i]-ry_oldLong[a][i]))+
+	      Sqr(DL+fabs(rz[a][i]-rz_oldLong[a][i])) > rNebrShellSq)
+	    {
+	      printf("STEP N. %d rebuilding neghbourlists!\n", Oparams.curStep);
+	      printf("(%f,%f,%f)-(%f,%f,%f)\n", rx[a][i], ry[a][i],rz[a][i],
+		     rx_oldLong[a][i], ry_oldLong[a][i],rz_oldLong[a][i]);
+	      nebrNowLong=1;
+	      break;
+	    } 
+	}
+    }
+}
+#endif
 void checkNebrRebuildNPT(void)
 {
   int i, a, Nm = Oparams.parnum;
@@ -634,6 +974,9 @@ void LJForce(int Nm, double rcut)
   /* Local variables to implement linked list */
   int  n, nebrTab0, nebrTab1;
   COORD_TYPE Wmyx, Wmzy, Wmxz, kD;
+#ifdef MD_RESPA_SWITCH
+  double SwFact;
+#endif
 #ifdef NM_SPHERE
   double vabNN, vabMM;
 #endif
@@ -726,7 +1069,7 @@ void LJForce(int Nm, double rcut)
 	{
 	  /*rab   = sqrt(rabSq);*/
 	  if (OprogStatus.grow)
-	    srab2 = Sqr(sigmag[a][i])/rabSq; 
+	    srab2 = Sqr((sigmag[a][i]+sigmag[b][j])/2.0)/rabSq; 
 	  else
 	    srab2 = sigmaSq / rabSq;
 #if defined(SOFT_SPHERE)
@@ -758,11 +1101,9 @@ void LJForce(int Nm, double rcut)
 	  if (OprogStatus.grow && fabs(fab) > 1000)
 	    fab = 1000;
 #endif
-	  /* force between two atoms */
 	  fxab  = fab * rxab;         
 	  fyab  = fab * ryab;
 	  fzab  = fab * rzab;
-	  /*printf("(%f,%f,%f)\n",fxab,fyab,fzab);*/
 #ifdef ATPTENS
 	  /* Virial off-diagonal terms of atomic pressure tensor */
 	  Wxy += rxab * fyab;
@@ -796,6 +1137,12 @@ void LJForce(int Nm, double rcut)
 	      Wmyz += DRmy * fzab;
 	      Wmzx += DRmz * fxab;
 	    }
+#endif
+#ifdef MD_RESPA_SWITCH
+	  SwFact = SwitchFunc(sqrt(rabSq));
+	  fxab *= SwFact;
+	  fyab *= SwFact;
+	  fzab *= SwFact;
 #endif
 	  Fxa   = Fxa + fxab;     /* total force acting on atom (a,i)*/
 	  Fya   = Fya + fyab;
@@ -836,6 +1183,9 @@ void LJForce(int Nm, double rcut)
   W = epsab4 * W / 3.0;
   Vc = epsab4 * (V - Vcab); 
   V = epsab4 * V;
+#ifdef MD_RESPA
+  V = Vc;
+#endif
   /* MULTIPLY FOR ENERGY FACTORS */
 #ifdef MOLPTENS
   Wm = Wmxx + Wmyy + Wmzz;
@@ -847,6 +1197,253 @@ void LJForce(int Nm, double rcut)
      */
 } 
 
+#ifdef MD_RESPA
+/* ============================ >>> force <<< ==============================*/
+void LJForceLong(int Nm, double rcutI, double rcutO)
+{
+  /* ======================== >>>LOCAL VARIABLES <<< ====================== */
+  int a, b, i, j, ncut, ncutI, grow;
+  /*int ncut[NA][NA];*/
+  COORD_TYPE rcutabI, rcutabSqI, rcutabO, rcutabSqO, epsab4, sigmaSq; 
+  COORD_TYPE rxab, ryab, rzab, rabSq, rabSqI, fxab, fyab, fzab, rab, rabI;
+  COORD_TYPE srab2, srab2I, srab6, srab12, fab, vabhc, wab, vabyu, vab;
+  COORD_TYPE Fxa, Fya, Fza, rxa, rya, rza;
+  COORD_TYPE vabCut, vabCutI, Vcab, VcabI;
+  COORD_TYPE Vab, Wab, dvdr;
+  COORD_TYPE rho, DRmx, DRmy, DRmz;
+  /* Local variables to implement linked list */
+  int  n, nebrTab0, nebrTab1;
+  COORD_TYPE Wmyx, Wmzy, Wmxz, kD;
+#ifdef MD_RESPA_SWITCH
+  double SwFact;
+#endif
+#ifdef NM_SPHERE
+  double vabNN, vabMM;
+#endif
+  /* ======================================================================= */
+  /*calculate useful quantities
+   NOTE: We refer to "ab-quantities" for all bidimensional arrays 
+         that depend upon atoms pair(e.g. 'Vab[a][b]' is a 'ab'-variable, 
+	 instead 'sigab[a][b]' is an ab-constant */
+
+  rcutabI = rcutI * Oparams.sigma;
+  rcutabSqI = Sqr(rcutabI);
+  rcutabO = rcutO * Oparams.sigma;
+  rcutabSqO = Sqr(rcutabO);
+  sigmaSq = Sqr(Oparams.sigma);
+  epsab4 = 4.0 * Oparams.epsilon;
+  Vab = 0.0;
+  Wab = 0.0;
+  L = cbrt(Vol);
+  invL = 1.0  / L;
+  ncut = 0;
+  ncutI = 0;
+  /* initialize forces vector */
+#ifdef MOLPTENS      
+  for (i=0;i < Nm; i++) 
+    {
+      CoM(i, &Rmx[i], &Rmy[i], &Rmz[i]);
+    }
+#endif
+  VLong = 0.0; /* potential energy */
+  WLong = 0.0; /* virial function */
+#ifdef ATPTENS
+  WxyLong = 0.0; /* virial off-diagonal terms of pressure tensor */
+  WyzLong = 0.0;
+  WzxLong = 0.0;
+  WxxLong = WyyLong = WzzLong = 0.0;
+#endif
+#ifdef MOLPTENS
+  WmLong = 0.0;
+  WmxxLong = WmyyLong = WmzzLong = 0.0;
+  WmxyLong = WmyzLong = WmzxLong = 0.0;
+  WmyxLong = WmzyLong = WmxzLong = 0.0;
+#endif
+  for (a = 0; a < NA; a++)
+    {
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  FxLong[a][i] = 0.0;
+	  FyLong[a][i] = 0.0;
+	  FzLong[a][i] = 0.0;
+	}
+    }
+
+  /* Loop over cells */
+  VcLong = 0.0;
+  /*printf("nebrTabLen:%d\n", nebrTabLen);*/
+  for (n=0; n < nebrTabLenLong; n++)
+    {
+      nebrTab0 = nebrTabLong[0][n]; 
+      nebrTab1 = nebrTabLong[1][n];
+
+      i = nebrTab0 / NA;
+      a = nebrTab0 % NA;
+      j = nebrTab1 / NA;
+      b = nebrTab1 % NA;
+      rxa = rx[a][i];
+      rya = ry[a][i];
+      rza = rz[a][i];
+	  
+      Fxa = FxLong[a][i];
+      Fya = FyLong[a][i];
+      Fza = FzLong[a][i];
+      
+      rxab = rxa - rx[b][j]; /* distance between two atomes */
+      ryab = rya - ry[b][j];
+      rzab = rza - rz[b][j];
+      
+      rxab = rxab - L * rint(invL * rxab);      /* minimum image */
+      ryab = ryab - L * rint(invL * ryab);
+      rzab = rzab - L * rint(invL * rzab);
+      
+      rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
+      if (rabSq < rcutabSqI)
+	{
+	  ncutI++;
+	  ncut++;
+	}
+      else if (rabSq < rcutabSqO )/* 'rcut' is the cutoff for V */
+	{
+	  /*rab   = sqrt(rabSq);*/
+	  if (OprogStatus.grow)
+	    srab2 = Sqr((sigmag[a][i]+sigmag[b][j])/2.0)/rabSq; 
+	  else
+	    srab2 = sigmaSq / rabSq;
+#if defined(SOFT_SPHERE)
+	  vab = pow(srab2, ((double)Oparams.NN)/2.0);
+  	  wab = ((double)Oparams.NN)*vab;
+#elif defined(NM_SPHERE)
+	  vabNN = pow(srab2, ((double)Oparams.NN)/2.0);
+	  vabMM = -pow(srab2, ((double)Oparams.MM)/2.0);
+	  vab = vabNN + vabMM;
+  	  wab = ((double)Oparams.NN)*vabNN - ((double)Oparams.MM)*vabMM ;
+#else
+	  /* Lennard-Jones */
+	  srab6   = srab2 * srab2 * srab2;
+	  srab12  = Sqr(srab6);
+	  vab     = srab12 - srab6;
+	  /*vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);*/
+	  wab     = 6.0*(vab + srab12);
+#endif
+#if 0
+	  vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);
+#endif
+	  VLong = VLong + vab;
+	  /* total potential between all a-b atoms pairs */
+	  WLong = WLong + wab; 
+	  /* NOTE: If you will use a shifted-force potential then 
+	     calculate the force using that potential */
+	  fab   = epsab4 * wab / rabSq;
+#if 0
+	  if (OprogStatus.grow && fabs(fab) > 1000)
+	    fab = 1000;
+#endif
+	  /* force between two atoms */
+	  fxab  = fab * rxab;         
+	  fyab  = fab * ryab;
+	  fzab  = fab * rzab;
+
+	  /*printf("(%f,%f,%f)\n",fxab,fyab,fzab);*/
+#ifdef ATPTENS
+	  /* Virial off-diagonal terms of atomic pressure tensor */
+	  WxyLong += rxab * fyab;
+	  WyzLong += ryab * fzab;
+	  WzxLong += rzab * fxab;
+	  WxxLong += rxab * fxab;
+	  WyyLong += ryab * fyab;
+	  WzzLong += rzab * fzab;
+#endif
+	  /* Calculate all terms of molecular
+	     pressure tensor */
+#ifdef MOLPTENS	  
+	  if ( i != j )
+	    {
+	      DRmx = (Rmx[i] - Rmx[j]);
+	      DRmx = DRmx - L * rint(invL * DRmx);
+	      DRmy = (Rmy[i] - Rmy[j]);
+	      DRmy = DRmy - L * rint(invL * DRmy);
+	      DRmz = (Rmz[i] - Rmz[j]);
+	      DRmz = DRmz - L * rint(invL * DRmz);
+	      
+	      WmxxLong += DRmx * fxab;
+	      WmyyLong += DRmy * fyab;
+	      WmzzLong += DRmz * fzab;
+	      
+	      WmyxLong += DRmy * fxab;
+	      WmzyLong += DRmz * fyab;
+	      WmxzLong += DRmx * fzab;
+	      
+	      WmxyLong += DRmx * fyab;
+	      WmyzLong += DRmy * fzab;
+	      WmzxLong += DRmz * fxab;
+	    }
+#endif
+#ifdef MD_RESPA_SWITCH
+	  SwFact = 1.0 - SwitchFunc(sqrt(rabSq));
+	  fxab *= SwFact;
+	  fyab *= SwFact;
+	  fzab *= SwFact;
+#endif
+	  Fxa   = Fxa + fxab;     /* total force acting on atom (a,i)*/
+	  Fya   = Fya + fyab;
+	  Fza   = Fza + fzab;
+	  
+	  FxLong[b][j] = FxLong[b][j] - fxab;  /* -fxab = fxba (3rd law) */
+	  FyLong[b][j] = FyLong[b][j] - fyab;
+	  FzLong[b][j] = FzLong[b][j] - fzab;
+	  ++ncut;
+	}
+    
+      FxLong[a][i] = Fxa;
+      FyLong[a][i] = Fya;
+      FzLong[a][i] = Fza;
+    }
+  /* CALCULATE SHIFTED POTENTIAL
+     shifted potential, for each atoms within rcut 
+     subtracts Vcut = V(rcut) 
+     (see pag 145 A.T.) */
+  rab   = rcutO*Oparams.sigma;
+  rabI  = rcutI*Oparams.sigma; 
+  rabSq = Sqr(rab);
+  rabSqI = Sqr(rabI);
+  srab2   = sigmaSq / rabSq;
+  srab2I  = sigmaSq / rabSqI;
+#if defined(SOFT_SPHERE)
+  vabCut = pow(srab2, Oparams.NN/2.0);
+  vabCutI= pow(srab2I, Oparams.NN/2.0);
+  //printf("NN: %d srab2:%f rab:%f vabCut: %f\n", Oparams.NN, srab2, rab, vabCut);
+#elif defined(NM_SPHERE)
+  vabCut = pow(srab2, Oparams.NN/2.0)-pow(srab2,Oparams.MM/2.0);
+  vabCutI= pow(srab2I,Oparams.NN/2.0)-pow(srab2I,Oparams.MM/2.0);
+#else
+  srab6 = srab2 * srab2 * srab2;
+  srab12 = srab6 * srab6;
+  vabCut = srab12 - srab6;
+  srab6 = srab2I * srab2I * srab2I;
+  srab12 = srab6 * srab6;
+  vabCutI = srab12 - srab6;
+#endif
+  /*vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);*/
+  Vcab = ((double)ncut) * vabCut;
+  VcabI = ((double)ncutI) * vabCutI;
+  /*printf("ncut[%d][%d]:%d\n Vcab:%f\n",a,b, ncut[a][b], vabCut);*/
+  /* ncut[a][b] is the number of atoms pairs a-b within 
+     rcutab[a][b] */ 
+  WLong = epsab4 * WLong / 3.0;
+  VcLong = epsab4 * (VLong - Vcab + VcabI); 
+  VLong = epsab4 * (VLong + VcabI);
+  /* MULTIPLY FOR ENERGY FACTORS */
+#ifdef MOLPTENS
+  WmLong = WmxxLong + WmyyLong + WmzzLong;
+#endif
+  /* NOTA: controllare se questo va effettivamente commentato!!!
+     Wmxy = (Wmxy + Wmyx)/2.0;
+     Wmyz = (Wmyz + Wmzy)/2.0;
+     Wmzx = (Wmzx + Wmxz)/2.0;
+     */
+} 
+#endif
 #ifdef MD_FENE
 void FENEForce(void)
 {

@@ -78,11 +78,20 @@
 	 - Implement doubly dimensioned array as a definition apart.
 */
 #define MD_ALLOC_POLY
+#ifdef MD_RESPA
+#define SAVE_LIST rx, NA, ry, NA, rz, NA,\
+                  vx, NA, vy, NA, vz, NA,\
+                  Fx, NA, Fy, NA, Fz, NA,\
+		  FxLong, NA, FyLong, NA, FzLong, NA,\
+                  vxo1, NA, vyo1, NA, vzo1, NA,\
+                  vxo2, NA, vyo2, NA, vzo2, NA 
+#else
 #define SAVE_LIST rx, NA, ry, NA, rz, NA,\
                   vx, NA, vy, NA, vz, NA,\
                   Fx, NA, Fy, NA, Fz, NA,\
                   vxo1, NA, vyo1, NA, vzo1, NA,\
                   vxo2, NA, vyo2, NA, vzo2, NA 
+#endif
 #undef  EXT_SLST
 #define EXT_SLST  &s, &s1, &s2, &Vol, &Vol1, &Vol2, &Vol1o1, &s1o1, &Vol1o2,\
                   &s1o2
@@ -109,6 +118,19 @@
    arrays (to see how AllocCoord() works see AllocCoord() code in 
    mdarray.c file).
 */
+#ifdef MD_RESPA
+#define ALLOC_LIST  &rx[0], NA, &ry[0], NA, &rz[0], NA,\
+                    &vx[0], NA, &vy[0], NA, &vz[0], NA,\
+                    &Fx[0], NA, &Fy[0], NA, &Fz[0], NA,\
+		    &FxLong[0], NA, &FyLong[0], NA, &FzLong[0], NA,\
+                    &vxt[0], NA, &vyt[0], NA, &vzt[0], NA,\
+                    &FxLJ[0], NA, &FyLJ[0], NA, &FzLJ[0], NA,\
+                    &vxo1[0], NA, &vyo1[0], NA, &vzo1[0], NA,\
+                    &vxo2[0], NA, &vyo2[0], NA, &vzo2[0], NA,\
+		    &vxg[0], NA,  &vyg[0], NA,  &vzg[0], NA,\
+		    &vxt2[0], NA,  &vyt2[0], NA,  &vzt2[0], NA,\
+		    &Rx, 1, &Ry, 1, &Rz, 1
+#else
 #define ALLOC_LIST  &rx[0], NA, &ry[0], NA, &rz[0], NA,\
                     &vx[0], NA, &vy[0], NA, &vz[0], NA,\
                     &Fx[0], NA, &Fy[0], NA, &Fz[0], NA,\
@@ -119,7 +141,7 @@
 		    &vxg[0], NA,  &vyg[0], NA,  &vzg[0], NA,\
 		    &vxt2[0], NA,  &vyt2[0], NA,  &vzt2[0], NA,\
 		    &Rx, 1, &Ry, 1, &Rz, 1
-
+#endif
 /* this is used to declare the particle variables ( see below ) 
    NOTE: rx[0][2] means the x-coordinate of the first atoms in the second 
    molecules (particle).
@@ -127,6 +149,19 @@
    from right to left, first we choose the molucule, then the atom and 
    finally the coordinate, for example consider the position: 
    coordinate(rx, ry, rz) <- atom <- molecule*/
+#ifdef MD_RESPA
+#define DECL_LIST   *rx[NA], *ry[NA], *rz[NA],\
+                    *vx[NA], *vy[NA], *vz[NA],\
+                    *vxt[NA], *vyt[NA], *vzt[NA],\
+                    *Fx[NA], *Fy[NA], *Fz[NA],\
+		    *FxLong[NA], *FyLong[NA], *FzLong[NA],\
+                    *FxLJ[NA], *FyLJ[NA], *FzLJ[NA],\
+                    *vxo1[NA], *vyo1[NA], *vzo1[NA],\
+                    *vxg[NA], *vyg[NA], *vzg[NA],\
+                    *vxt2[NA], *vyt2[NA], *vzt2[NA],\
+                    *vxo2[NA], *vyo2[NA], *vzo2[NA],\
+                    *Rx, *Ry, *Rz        
+#else
 #define DECL_LIST   *rx[NA], *ry[NA], *rz[NA],\
                     *vx[NA], *vy[NA], *vz[NA],\
                     *vxt[NA], *vyt[NA], *vzt[NA],\
@@ -137,7 +172,7 @@
                     *vxt2[NA], *vyt2[NA], *vzt2[NA],\
                     *vxo2[NA], *vyo2[NA], *vzo2[NA],\
                     *Rx, *Ry, *Rz        
-				   
+#endif				   
 #undef EXT_DLST
 #define EXT_DLST    s, s1, s2, Vol, Vol1, Vol2, Vol1o1, s1o1, Vol1o2, s1o2
 
@@ -242,6 +277,14 @@ struct progStatus
   int sResetSteps; /* Steps at which reset s to 1 */
   int savedXva;
   int CMreset;
+#ifdef MD_RESPA
+  int nebrTabFacLong;                /* How much storage sould be provided for 
+     					the neighbour list (see Rapaport pag.53
+     					for details )*/
+  COORD_TYPE rNebrShellLong;         /* = Dr see Rapaport pag. 53 */
+  int nrespa;                    /* numero di iterazioni del reference system */
+  double lambda;
+#endif
   int nebrTabFac;                /* How much storage sould be provided for 
                                    the neighbour list (see Rapaport pag.53
 				   for details )*/
@@ -315,6 +358,9 @@ struct params
   COORD_TYPE m[NA];                 /* atom mass */
   int nsites;
   COORD_TYPE rcut;              /* cutoff for the pair potential */ 
+#ifdef MD_RESPA
+  double rcutO;
+#endif
   int NN;
   int MM;
   double epsilon;               /* dieletric constant */
@@ -489,8 +535,16 @@ struct singlePar OsinglePar[] = {
   {"snapmode",   &OprogStatus.snapmode,       INT},
   {"CMreset",    &OprogStatus.CMreset,        INT},
   {"noLinkedList",&OprogStatus.noLinkedList,  INT},
+#ifdef MD_RESPA
+  {"rNebrShellLong", &OprogStatus.rNebrShellLong,     CT},
+  {"nebrTabFacLong", &OprogStatus.nebrTabFacLong,     INT},
+#endif
   {"rNebrShell", &OprogStatus.rNebrShell,     CT},
   {"nebrTabFac", &OprogStatus.nebrTabFac,     INT},
+#ifdef MD_RESPA
+  {"rNebrShellLong", &OprogStatus.rNebrShellLong,     CT},
+  {"nebrTabFacLong", &OprogStatus.nebrTabFacLong,     INT},
+#endif
   {"W",          &OprogStatus.W,              CT},
   {"P",          &Oparams.P,                  CT},
 #if 0
@@ -532,6 +586,11 @@ struct singlePar OsinglePar[] = {
   {"sigma",      &Oparams.sigma,        CT},
   {"d",          &Oparams.d,            CT},
   {"rcut",       &Oparams.rcut,             CT},
+#ifdef MD_RESPA
+  {"rcutO",      &Oparams.rcutO,            CT},
+  {"nrespa",     &OprogStatus.nrespa,      INT},
+  {"lambda",     &OprogStatus.lambda,      CT},
+#endif
 #if 0
   {"atomsDist",  &Oparams.d,                CT},
 #endif
@@ -612,6 +671,10 @@ struct pascii opro_ascii[] =
   {"Cmreset",      &OS(CMreset),                    1,   1,  "%d"},
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
   {"rNebrShell",   &OS(rNebrShell),                 1,   1, "%.6G"},
+#ifdef MD_RESPA
+  {"nebrTabFacLong",   &OS(nebrTabFacLong),                 1,   1,   "%d"},
+  {"rNebrShellLong",   &OS(rNebrShellLong),                 1,   1, "%.6G"},
+#endif
   {"noLinkedList", &OS(noLinkedList),               1,   1,  "%d"},
   {"avVol",          &OS(avVol),                    1,   1, "%.8G"},
   {"avVol1",         &OS(avVol1),                   1,   1, "%.8G"},
@@ -700,6 +763,9 @@ extern struct pascii opar_ascii[];
 		       perform a mean */
 
 #ifdef MAIN
+#ifdef MD_RESPA
+double VLong, VcLong;
+#endif
 COORD_TYPE Vfe, Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], invs, press,
   gr23[MAXBIN], gr33[MAXBIN], press_m, press_at;
 COORD_TYPE Ptens[3], DQtens[3], C1c, C2c, C3c, C4c, velc, Gs[GSPOINT], 
@@ -709,6 +775,9 @@ int MB[NUMV];
 COORD_TYPE *Dphix, *Dphiy, *Dphiz;/* Time integrals of angulars velocity
 				     components */
 #else 
+#ifdef MD_RESPA
+extern double VLong, VcLong;
+#endif
 extern COORD_TYPE Vfe, Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], 
   gr23[MAXBIN], gr33[MAXBIN], invs,
   press, press_m, press_at, C1c, C2c, C3c, C4c, velc, psi1c, psi2c, 
