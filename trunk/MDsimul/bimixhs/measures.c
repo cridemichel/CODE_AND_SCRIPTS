@@ -277,7 +277,7 @@ void structFacts(void)
 #include "../bimix/kmesh.dat"
   int ntripl[]=
 #include "../bimix/ntripl.dat"
-
+  const int numk = 98;
   /* useful quantities */
   sumS = OprogStatus.sumS;
   invL = 1.0 / L;
@@ -294,7 +294,7 @@ void structFacts(void)
   NmA = Oparams.parnumA;
   invNmA = 1.0 / NmA;
 
-  for(n = 0; n < NUMK; n++)
+  for(n = 0; n < numk; n++)
     {
       sumRho = 0.0;
       //printf("nummp:%d\n", ntripl[n]);      
@@ -325,7 +325,7 @@ void structFacts(void)
     }
   if (OprogStatus.avngS == 1)
     {
-      for(n=0; n < NUMK; n++)
+      for(n=0; n < numk; n++)
 	{
 	  sumS[n] += S[n];
 	  //if (n == 10) printf("somma di S:%f\n", sumS[n]);
