@@ -444,7 +444,10 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 	 sumz = sumz + vz[i]*Oparams.m[1];
 	 //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
        }
-     
+ 
+  if (OprogStatus.brownian == 1)
+    return;
+
   sumx = sumx / Mtot; 
   sumy = sumy / Mtot;
   sumz = sumz / Mtot;
