@@ -3010,7 +3010,7 @@ retry:
 	      vecgcg[k1+3] = rD[k1];
 	    }
 	  //check_point("calcDistNeg", &vecgcg[3], rB, Xb);
-#if 1
+#if 0
 	  for(k1=0; k1 < 3; k1++)
 	    r12[k1] = rC[k1]-rD[k1]; 
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
@@ -3030,7 +3030,7 @@ retry:
 	    }	 
 #endif
 	}
-#if 1
+#if 0
 	{
 	  double dist, distVera;
 	  for(k1=0; k1 < 3; k1++)
@@ -3163,7 +3163,7 @@ retry:
 #endif
 #endif
 #if 1
-  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
   //exit(-1);
   if (segno > 0)
     return calc_norm(r12);
