@@ -2315,7 +2315,7 @@ double tdist;
 double rA[3], rB[3];
 #undef MD_GLOBALNRD
 void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
-		   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
+		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 {
   int na; 
   double fx[3], gx[3], rD[3], A[3][3], b[3], c[3];
@@ -2437,7 +2437,7 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
 
 
 void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
-    	       void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 {
   int na; 
   double fx[3], gx[3];
@@ -2535,7 +2535,7 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
 
 /* funzione che calcola lo Jacobiano */
 void fdjacDist(int n, double x[], double fvec[], double **df, 
-    	       void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 {
   int na; 
   double fx[3], gx[3];
@@ -2906,7 +2906,7 @@ retry:
 	}
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
-      printf("PRIMA dist=%.15f\n",calc_norm(r12));
+      //printf("PRIMA dist=%.15f\n",calc_norm(r12));
       distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda1, 1); 
       //distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda2, 1);
       for (k1=0; k1 < 3; k1++)
@@ -2917,7 +2917,7 @@ retry:
 #else
 
 #endif
-#if 1
+#if 0
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
       printf("dist=%.15f\n",calc_norm(r12));
@@ -3029,8 +3029,8 @@ retry:
 #endif
 #endif
 #if 1
-  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
-  exit(-1);
+  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+  //exit(-1);
   if (segno > 0)
     return calc_norm(r12);
   else
