@@ -17,6 +17,7 @@ double maxax[2];
 extern int *lastbump;
 extern double *lastcol;
 double *axa, *axb, *axc;
+int *scdone;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
  in the move function and in the measuring functions, note that the variables 
@@ -771,6 +772,8 @@ void usrInitBef(void)
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
     OprogStatus.epsdMax = 0.001;
+    OprogStatus.phitol = 1E-12;
+    OprogStatus.axestol = 1E-8;
     OprogStatus.nextSumTime = 0.0;
     OprogStatus.nextcheckTime = 0.0;
     OprogStatus.intervalSum = 1.0;
@@ -1054,19 +1057,23 @@ void usrInitAft(void)
   axa = malloc(sizeof(double)*Oparams.parnum);
   axb = malloc(sizeof(double)*Oparams.parnum);
   axc = malloc(sizeof(double)*Oparams.parnum);
+  scdone = malloc(sizeof(int)*Oparams.parnum);
+
   for (i=0; i < Oparams.parnumA; i++)
     {
+      scdone[i] = 0;
       axa[i] = Oparams.a[0];
       axb[i] = Oparams.b[0];
       axc[i] = Oparams.c[0];
     }
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
     {
+      scdone[i] = 0;
       axa[i] = Oparams.a[1];
       axb[i] = Oparams.b[1];
       axc[i] = Oparams.c[1];
     }
-  printf(">>>> phi=%.12G\n", calc_phi()); 
+  printf(">>>> phi=%.12G L=%f (%f,%f,%f)\n", calc_phi(), L, Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
   /* evaluation of principal inertia moments*/ 
   for (a = 0; a < 2; a++)
     {
