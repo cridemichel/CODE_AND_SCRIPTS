@@ -3500,7 +3500,7 @@ void PredictEvent (int na, int nb)
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], 
 	 b, d, t, tInt, vv, distSq, t1, t2, evtime=0, evtimeHC;
   int overlap, ac, bc, acHC, bcHC, collCodeOld;
-  int iA, iB;
+  int iA, iB, nl_ignore;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
   int collCode;
@@ -3512,6 +3512,7 @@ void PredictEvent (int na, int nb)
    * in cui la forza di gravità è diretta lungo z negativo */ 
 
   iA = (na < Oparams.parnumA)?0:1;
+  nl_ignore = (iA==0)?1:0;
   /* iB indica la specie con cui puo' interagire na e per ogni specie abbiamo 
    * differenti celle */
   for (iB = 0; iB < 2; iB++)
@@ -3595,55 +3596,77 @@ void PredictEvent (int na, int nb)
       ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
     }
 
-  for (iB = 0; iB < 2; iB++)
+  for (nl = 0; nl < 3; nl++)
     {
+      if (nl == nl_ignore)
+	continue;
+    
+      /* NOTA: le linked list sono tre:
+       *  0 = lista dell'interazione AA
+       *  1 = lista dell'interazione BB
+       *  2 = lista dell'interazione AB 
+       *  inoltre inCell[ncel][dir][na] contiene 
+       *  la cella a cui appartiene la particella A 
+       *  Per ogni particella ci sono due insiemi di celle
+       *  ncel = 0 celle relative all'interazione della particella na
+       *  con particelle della stessa specie.
+       *  ncel = 1 celle relative all'interazione della particella na 
+       *  con particelle della stessa specie. */
+      if (nl < 2)
+	{
+	  nc = 0;
+	}
+      else
+	{
+	  nc = 1;
+	}
       for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
       for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
 	{
-	  jZ = inCell[iB][2][na] + iZ;    
+	  jZ = inCell[nc][2][na] + iZ;    
 	  shift[2] = 0.;
 	  /* apply periodico boundary condition along z if gravitational
 	   * fiels is not present */
 	  if (jZ == -1) 
 	    {
-	      jZ = cellsz - 1;    
+	      jZ = cellsz[nl] - 1;    
 	      shift[2] = - L;
 	    } 
-	  else if (jZ == cellsz) 
+	  else if (jZ == cellsz[nl]) 
 	    {
 	      jZ = 0;    
 	      shift[2] = L;
 	    }
 	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
 	    {
-	      jY = inCell[iB][1][na] + iY;    
+	      jY = inCell[nc][1][na] + iY;    
 	      shift[1] = 0.0;
 	      if (jY == -1) 
 		{
-		  jY = cellsy - 1;    
+		  jY = cellsy[nl] - 1;    
 		  shift[1] = -L;
 		} 
-	      else if (jY == cellsy) 
+	      else if (jY == cellsy[nl]) 
 		{
 		  jY = 0;    
 		  shift[1] = L;
 		}
 	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
 		{
-		  jX = inCell[iB][0][na] + iX;    
+		  jX = inCell[nc][0][na] + iX;    
 		  shift[0] = 0.0;
 		  if (jX == -1) 
 		    {
-		      jX = cellsx - 1;    
+		      jX = cellsx[nl] - 1;    
 		      shift[0] = - L;
 		    } 
-		  else if (jX == cellsx) 
+		  else if (jX == cellsx[nl]) 
 		    {
 		      jX = 0;   
 		      shift[0] = L;
 		    }
-		  n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
-		  for (n = cellList[iB][n]; n > -1; n = cellList[iB][n]) 
+		  n = (jZ *cellsy[nl] + jY) * cellsx[nl] + jX + Oparams.parnum;
+		  for (n = cellList[nl][n]; n > -1; n = cellList[nl][n]) 
 		    {
 		      if (n != na && n != nb && (nb >= -1 || n < na)) 
 			{
