@@ -62,6 +62,9 @@ extern int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
 extern int **nebrTabLong, nebrNowLong, nebrTabLenLong, nebrTabMaxLong;
 #endif
 /* ================================= */
+#ifdef MD_RAPACONSTR
+extern int *doshake;
+#endif
 
 extern COORD_TYPE *ox, *oy, *oz; /* Angular velocities of each particle */
 
@@ -1149,6 +1152,9 @@ void usrInitAft(void)
   cVec[1] = malloc(sizeof(double)*NB);
   cVec[2] = malloc(sizeof(double)*NB);
   cMat    = malloc(sizeof(int*)*NB);
+  doshake = malloc(sizeof(int)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    doshake[i] = 0;
   for (a = 0; a < NB; a++)
     {
       cvMatInvS[a] = malloc(sizeof(double*)*NB);
