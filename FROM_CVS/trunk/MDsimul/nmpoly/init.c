@@ -975,7 +975,7 @@ void usrInitAft(void)
   int Nm, i, sct;
   COORD_TYPE invMtot, d, dSq;
   COORD_TYPE vcmx, vcmy, vcmz;
-  COORD_TYPE* m;
+  COORD_TYPE* m, invrcut3, rcut;
   int a, b, n;
   /* le masse dei tre atomi "di base" sono uguali */
   
@@ -1127,7 +1127,18 @@ void usrInitAft(void)
   Dphix = malloc(sct*Nm);
   Dphiy = malloc(sct*Nm);
   Dphiz = malloc(sct*Nm);
-
+  rcut = Oparams.sigma*Oparams.rcut;
+  invrcut3 = 1.0/(rcut*rcut*rcut);
+  /* correzione alla pressione */
+#if defined(SOFT_SPHERE)
+  Plrc = 0;
+#elif defined(NM_SPHERE)
+  Plrc = 0;
+#else
+  Plrc = 16. * pi * invrcut3 * Sqr(Oparams.parnum * NA) * 
+    (2. * Sqr(invrcut3) / 3. - 1.) / 3. / Sqr(Vol);
+  printf("Plrc: %f\n", Plrc, Vol);
+#endif
   ox = malloc(sct*Nm);
   oy = malloc(sct*Nm);
   oz = malloc(sct*Nm);
