@@ -454,7 +454,7 @@ void bump (int i, int j, double* W, int bt)
       OprogStatus.DQTyz +=  OprogStatus.Tyz*taus;
       OprogStatus.DQTzx +=  OprogStatus.Tzx*taus;
       //taus = Oparams.time - OprogStatus.lastcoll;
-      OprogStatus.DQxy += Oprogstatus.DQTxy + rxij*delpy;
+      OprogStatus.DQxy += OprogStatus.DQTxy + rxij*delpy;
       OprogStatus.DQyz += OprogStatus.DQTyz + ryij*delpz;
       OprogStatus.DQzx += OprogStatus.DQTzx + rzij*delpx;
     }
