@@ -309,12 +309,12 @@ void updImpConstrVsq(double dt, double c, int i, double **cVec)
 	      	  px[a][i] *= exp(costx2*px[b][i]/Oparams.m[a]*Oparams.m[b]);    
     		  py[a][i] *= exp(costy2*py[b][i]/Oparams.m[a]*Oparams.m[b]);
 		  pz[a][i] *= exp(costz2*pz[b][i]/Oparams.m[a]*Oparams.m[b]);
-		  px[a][i] -= costx2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  px[a][i] -= costx2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  py[a][i] -= costy2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  py[a][i] -= costy2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  pz[a][i] -= costz2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  pz[a][i] -= costz2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  px[a][i] += costx2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  px[a][i] += costx2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  py[a][i] += costy2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  py[a][i] += costy2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  pz[a][i] += costz2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  pz[a][i] += costz2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
 
 		  pm = Sqr(px[b][i]/Oparams.m[b]) +  
 		    Sqr(py[b][i]/Oparams.m[b]) +
@@ -367,12 +367,12 @@ void updImpConstrVsqAft(double dt, double c, int i, double **cVec)
     		  py[a][i] -= costy * pm;
 		  pz[a][i] -= costz * pm;
 	
-		  pz[a][i] -= costz2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  pz[a][i] -= costz2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  py[a][i] -= costy2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  py[a][i] -= costy2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  px[a][i] -= costx2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  px[a][i] -= costx2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  pz[a][i] += costz2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  pz[a][i] += costz2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  py[a][i] += costy2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  py[a][i] += costy2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  px[a][i] += costx2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  px[a][i] += costx2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
 	      	  px[a][i] *= exp(costx2*px[b][i]/Oparams.m[a]*Oparams.m[b]);    
     		  py[a][i] *= exp(costy2*py[b][i]/Oparams.m[a]*Oparams.m[b]);
 		  pz[a][i] *= exp(costz2*pz[b][i]/Oparams.m[a]*Oparams.m[b]);
@@ -613,8 +613,10 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 			     FzI[cAtom2[m]][i]/Oparams.m[cAtom2[m]]) * cVec[2][m];
       }
     /* qui bisogna trovare l'inversa della matrice cvMat !!!*/
+#if 0
     if (i==0)
       printMat("cvMat", cvMat, 1);
+#endif
     if (!OprogStatus.keepInvMat)
       {
 	InvMatrix (cvMat, cvMatInv, NA-1);
@@ -633,10 +635,12 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	    cvMatInv[m1][m2] = cvMatInvS[m1][m2][i];
       }
     checkInvMat();
+#if 0
     if (i==0)
      {
        printMat("cvMatInv", cvMatInv, 1);
      }
+#endif
 /* ============================================== */
 #if 0
     for (a = 0; a < NA; a++)
@@ -667,6 +671,9 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
     }
   checkNan("ComputeConstraints");
 }
+void shakePosRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
+	   COORD_TYPE m[NA], int Nm);
+
 double constraintDevL;
 void  AnlzConstraintDevs (void) 
 {
@@ -691,6 +698,8 @@ void  AnlzConstraintDevs (void)
   if (constraintDevL > 1E-6)
     {
       /* do Shake!! */
+      //shakePosRespa(Oparams.steplength, 0.001, 150, NA-1, Oparams.d,
+    	//	    Oparams.m, Oparams.parnum);
     }
 }
 #endif
@@ -2332,6 +2341,7 @@ void movelongRespaNPTAft(double dt)
   updImpLong(dt, 0.5);
 #ifdef MD_RAPACONSTR
   ComputeConstraints(dt, 0.5, 0, 1);
+  AnlzConstraintDevs();
 #endif
 #if 1
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR) 
