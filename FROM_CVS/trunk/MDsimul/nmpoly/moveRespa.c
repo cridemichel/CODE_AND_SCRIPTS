@@ -50,7 +50,8 @@ extern COORD_TYPE W, K, WC, T1xx, T1yy, T1zz,
 #ifdef MD_RESPA
 extern COORD_TYPE WLong, WxxLong, WyyLong, WzzLong,
   WxyLong, WyzLong, WzxLong, WmLong, WmxxLong, WmyyLong, WmzzLong, 
-  WmxyLong, WmyzLong, WmzxLong, WmyxLong, WmzyLong, WmxzLong;
+  WmxyLong, WmyzLong, WmzxLong, WmyxLong, WmzyLong, WmxzLong,
+  WCxxLong, WCyyLong, WCzzLong, WCxyLomg, WCyzLong, WCzxLong;
 #endif
 extern double DrSq,  Mtot;
 /* used by linked list routines */
@@ -266,36 +267,53 @@ void v2p(void)
   Ps = OprogStatus.Q * s1 / Sqr(s);
   Pv = OprogStatus.W * Vol1 / Sqr(s);
 }
+
 void updImpLong(double dt, double c)
 {
   int i, a;
-  double cdt;
+  double cdt, expdt[NA], cost[NA], dlns;
   cdt = c*dt;
+  dlns = s*Ps / OprogStatus.Q ;
+  for (a = 0; a < NA; a++)
+    {
+      expdt[a] = exp(-dlns * cdt);
+      cost[a] = (expdt[a] - 1.0) / dlns;
+    }
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
-	px[a][i] += cdt * FxLong[a][i];
-      	py[a][i] += cdt * FyLong[a][i];
-	pz[a][i] += cdt * FzLong[a][i];
+	px[a][i] += cost[a] * FxLong[a][i] + px[a][i]*expdt[a];
+      	py[a][i] += cost[a] * FyLong[a][i] + py[a][i]*expdt[a];
+	pz[a][i] += cost[a] * FzLong[a][i] + pz[a][i]*expdt[a];
       }
 #ifndef MD_FENE
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
+#ifdef ATPRESS 
+  WCLong = WC;
+#endif
+#ifdef ATPTENS  
+  WCxxLong = WCxx;
+  WCyyLong = WCyy;
+  WCzzLong = WCzz;
+  WCxyLong = WCxy;
+  WCzxLong = WCzx;
+  WCyzLong = WCyz;
+#endif 
 #endif
 }
-void updNoseAnd(double dt, double c)
+void updImpAnd(double dt, double c)
 {
   int i, a;
   double cdt, expdt[NA], mM[NA], cost[NA];
-  double dlns, dlnV;
+  double dlnV;
   double PCMx, PCMy, PCMz;
   cdt = c*dt;
-  dlns = s*Ps / OprogStatus.Q ;
   dlnV = Pv*Sqr(s)/OprogStatus.W/3.0/Vol; 
   for (a = 0; a < NA; a++)
     {
       mM[a] = Oparams.m[a] / Mtot;
-      expdt[a] = exp(-(dlns + dlnV * mM[a]) * cdt);
-      cost[a] = (expdt[a] - 1.0) * dlnV * mM[a] / (dlns + dlnV*mM[a]);
+      expdt[a] = exp(-(dlnV * mM[a]) * cdt);
+      cost[a] = (expdt[a] - 1.0) / dlnV*mM[a];
     }
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -310,13 +328,13 @@ void updNoseAnd(double dt, double c)
 	}
       for (a=0; a < NA; a++)
 	{
-	  px[a][i] = cost[a]*(PCMx - px[a][i]) + px[a][i]*expdt[a];
-	  py[a][i] = cost[a]*(PCMy - py[a][i]) + py[a][i]*expdt[a];
-	  pz[a][i] = cost[a]*(PCMz - pz[a][i]) + pz[a][i]*expdt[a];
+	  px[a][i] = cost[a]*(-Fx[a][i] + PCMx - px[a][i]) + px[a][i]*expdt[a];
+	  py[a][i] = cost[a]*(-Fx[a][i] + PCMy - py[a][i]) + py[a][i]*expdt[a];
+	  pz[a][i] = cost[a]*(-Fx[a][i] + PCMz - pz[a][i]) + pz[a][i]*expdt[a];
 	}
     }
 }
-void updNoseAndRef(double dt, double c)
+void updPositions(double dt, double c)
 {
   int i, a;
   double cdt, expdt[NA], mM[NA];
@@ -421,14 +439,17 @@ COORD_TYPE  calcT1diagAtRespa(int Nm)
   kin /= 3.0 * Vol;
   return kin;
 }
-
-void updLv(double dt, double c)
+void updVol(double dt, double c)
+{
+  double cdt = c*dt;
+  Vol += cdt*Sqr(s)*Pv/OprogStatus.W;
+}
+void updPv(double dt, double c)
 {
   double press, cdt, cdt2, DP, Nm;
   Nm = Oparams.parnum;
   cdt = c * dt;
   cdt2 = c * dt / 2.0;
-  Vol += cdt2*Sqr(s)*Pv/OprogStatus.W;
 #ifdef MOLPTENS
   press = calcT1diagMolRespa(Nm) + Wm / 3.0 / Vol; /* press(t+dt) */
 #else
@@ -437,9 +458,8 @@ void updLv(double dt, double c)
   printf("press: %f\n", press);
   DP = press - Oparams.P;
   Pv += DP  * cdt2;
-  Pv *= exp(-Ps*s/OprogStatus.Q);
+  Pv *= exp(-cdt*Ps*s/OprogStatus.Q);
   Pv += DP  * cdt2;
-  Vol += cdt2*Sqr(s)*Pv/OprogStatus.W;
 }
 /* =========================== >>> kinet <<< ============================== */
 void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz)
@@ -458,42 +478,19 @@ void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz)
 
 void movelongRespaNPTBef(double dt)
 {
-  updImpLong(dt, 0.25);
+  updImpLongNose(dt, 0.5);
   printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updNoseAnd(dt, 0.25);
-  printf("2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updLv(dt, 0.25);
-  printf("3) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   updLs(dt, 0.5);
-  printf("4) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updLv(dt, 0.25);
-  printf("5) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updNoseAnd(dt, 0.25);
-  printf("6) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcut);
-  updImpLong(dt, 0.25);
-  updNoseAndRef(dt, 0.5); 
   printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
 }
 
 void movelongRespaNPTAft(double dt)
 {
-  updNoseAndRef(dt, 0.5); 
+  updLs(dt, 0.5);
   printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
   LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcut);
-  updImpLong(dt, 0.25);
+  updImpLong(dt, 0.5);
   printf("A2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updNoseAnd(dt, 0.25);
-  printf("A3) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updLv(dt, 0.25);
-  printf("A4) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updLs(dt, 0.5);
-  printf("A5) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updLv(dt, 0.25);
-  printf("A6) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updNoseAnd(dt, 0.25);
-  printf("A7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
-  updImpLong(dt, 0.25);
 }
 /* ========================== >>> movea <<< =============================== */
 void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
@@ -532,19 +529,6 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   dt2    = dt / 2.0;
   dtSq2  = dt * dt2;
   dSq = Sqr(d); /* In general you must supply a vector of bond lengths */
-  for (a = 0; a < NA; a++)
-    {
-      mM[a] = Oparams.m[a] / Mtot;
-      expdt[a] = exp(Pv*Sqr(s)*mM[a]*dt/(3.0*Vol*OprogStatus.W));
-      cost[a] = (expdt[a] - 1.0);
-    }
-#ifdef MOLPTENS
-  press = calcT1diagMolRespa(Nm) + (WmLong + WmShort) / 3.0 / Vol; /* press(t+dt) */
-#else
-  press = calcT1diagAtRespa(Nm) + (WLong + WShort + WC) / Vol; /* press(t+dt) */
-#endif
-  DP = press - Oparams.P;
-  Pv += DP  * dt2;
   
   /* ===== LOOP OVER MOLECULES ===== */
   for (i=0; i < Nm; i++)
