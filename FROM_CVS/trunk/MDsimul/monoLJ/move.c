@@ -145,7 +145,7 @@ void calcPtensAt(int Nm, COORD_TYPE VOL1)
   T1zz = 0.0;
 
   dlnV = VOL1 / Vol / 3.0;
-  loop(i, 1, Nm)
+  for(i=0; i < Nm; i++)
     {
       px = vx[i] - dlnV * rx[i];
       py = vy[i] - dlnV * ry[i];
@@ -153,18 +153,11 @@ void calcPtensAt(int Nm, COORD_TYPE VOL1)
       /* Kinetic component of pressure tensor (all terms) */
       T1xy += px * py * m; 
       T1yz += py * pz * m;
-      T1zx += pz * px * m ;
+      T1zx += pz * px * m;
       T1xx += px * px * m;
       T1yy += py * py * m;
       T1zz += pz * pz * m;
     }
-  pool;
-  /*
-    #ifndef NO_PARALLEL_CODE  
-    sumAllProcMA(&T1xx, &T1yy, &T1zz, 
-    &T1xy, &T1yz, &T1zx, NULL);
-    #endif
-  */
   
   /* Calculate the other element (off-diagonal) of the molecular 
      pressure tensor */
@@ -174,8 +167,8 @@ void calcPtensAt(int Nm, COORD_TYPE VOL1)
   Patxx = T1xx + Wxx;
   Patyy = T1yy + Wyy;
   Patzz = T1zz + Wzz;
-  //printf("Wxx:%f WCxx:%f Wyy: %f WCyy: %f Wzz: %f WCzz: %f\n",
-	//Wxx, WCxx, Wyy, WCyy, Wzz, WCzz);
+  /*printf("Wxx:%f WCxx:%f Wyy: %f WCyy: %f Wzz: %f WCzz: %f\n",
+    Wxx, WCxx, Wyy, WCyy, Wzz, WCzz);*/
   Patxx /= Vol;
   Patyy /= Vol;
   Patzz /= Vol;
@@ -488,7 +481,7 @@ void moveb(COORD_TYPE dt, COORD_TYPE m, int Nm)
   T1zz = 0.0;
 
   /* LOOP OVER ALL MOLECULES */
-  loop(i, 1, Nm)
+  for(i=0; i < Nm; i++)
     {
       FxLJ[i] = Fx[i];
       FyLJ[i] = Fy[i];
@@ -507,10 +500,9 @@ void moveb(COORD_TYPE dt, COORD_TYPE m, int Nm)
       T1zz += vz[i] * vz[i] * m;
       K = K + Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]);
     }
-  pool;
   /* END OF LOOP OVER MOLECULES */
   
-  loop(i, 1, Nm)
+  for(i=0; i < Nm; i++)
     {
       vxo2[i] = vxo1[i]; /* vo2(t+dt) = v(t-dt) */
       vyo2[i] = vyo1[i];
@@ -523,18 +515,6 @@ void moveb(COORD_TYPE dt, COORD_TYPE m, int Nm)
   
   K  = K * m * 0.5;
          
-  ProcSync0();
-
-  /* 
-     #ifndef NO_PARALLEL_CODE
-     sumAllProcMA(&T1xy, &T1yz, &T1zx, &T1xx, &T1yy, &T1zz, NULL);
-     #endif
-     
-     #ifndef NO_PARALLEL_CODE  
-     sumAllProcMA(&K, NULL);
-     #endif
-  */
-
   Patxy = T1xy + Wxy;
   Patyz = T1yz + Wyz;
   Patzx = T1zx + Wzx;  
@@ -644,8 +624,7 @@ void updateDQ(COORD_TYPE dt)
       PyzArr[i1] = Pyz;
       PzxArr[i1] = Pzx;
     }
-
-  if (i1 == 0)
+  else /*if (i1 == 0)*/
     {
       /* Last point of previuos set is the first point of the actual set */
       PxyArr[0] = PxyArr[4];
