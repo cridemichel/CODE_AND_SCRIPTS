@@ -42,7 +42,7 @@ extern int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
 extern void vectProd(double r1x, double r1y, COORD_TYPE r1z, 
 	 double r2x, double r2y, COORD_TYPE r2z, 
 	 double* r3x, double* r3y, COORD_TYPE* r3z);
-#ifdef MD_SQWELL
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER) 
 extern int *inCell[3], cellsx, cellsy, cellsz;
 extern int *cellList;
 extern int bound(int na, int n);
