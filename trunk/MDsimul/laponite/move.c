@@ -263,7 +263,272 @@ void movea(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   Vol1 = Vol1 + dt2 * Vol2;
  
 }
+#ifdef MD_BROWN_BETTER
+double calc_norm(double *v)
+{
+  int a;
+  double norm=0;
+  for (a = 0; a < 3; a++)
+   norm += Sqr(v[a]);
+  return sqrt(norm); 
+}
+void build_ref_axes(int i, double u1[3], double u2[3], double u3[3])
+{
+  int a;
+  double n;
+  u1[0] = rx[1][i] - rx[0][i];
+  u1[1] = ry[1][i] - ry[0][i];
+  u1[2] = rz[1][i] - rz[0][i];
+  n = calc_norm(u1);
+  for (a = 0; a < 3; a++)
+    u1[a] /= n;
+  for (a=0; a < 3; a++)
+    
+  u2[0] = 2.0*rx[2][i]-(rx[0][i] + rx[1][i]);
+  u2[1] = 2.0*ry[2][i]-(ry[0][i] + ry[1][i]);
+  u2[2] = 2.0*rz[2][i]-(rz[0][i] + rz[1][i]);
+  
+  n = calc_norm(u2);
+  for (a = 0; a < 3; a++)
+    u2[a] /= n;
+    
+  vectProd(u1[0], u1[1], u1[2], u2[0], u2[1], u2[2], &u3[0], &u3[1], &u3[2]);  
 
+}
+/* ========================== >>> movea <<< =============================== */
+void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
+	   COORD_TYPE m[NA], int Nm)
+{  
+  COORD_TYPE dSq;
+  int      done;
+  int      moving[NA], moved[NA];
+  COORD_TYPE  tol2, pxab, pyab, pzab, pabSq, dtSq, dtSq2, dt2;
+  COORD_TYPE  rabSq, diffSq, rxab, ryab, rzab, rpab, gab;
+  COORD_TYPE  dx, dy, dz, rma, rmb;
+  COORD_TYPE  axia, ayia, azia, sigmarN, sigmavN, sigmarP, sigmavP;
+  COORD_TYPE  rxi[NA], ryi[NA], rzi[NA], pxi[NA], pyi[NA], pzi[NA],
+    vxi[NA], vyi[NA], vzi[NA];
+  double drx, dry, drz, dvx, dvy, dvz, kTm; 
+  double echsidtP, e2chsidtP, chsiP, chsidtP, crvP, echsidtN, e2chsidtN, chsiN, chsidtN, crvN;
+  double c0N, c1N, c2N, c1mc2N, c0P, c1P, c2P, c1mc2P;
+  double u1[3], u2[3], u3[3];
+  int i, a, b, it;
+  const COORD_TYPE rptol = 1.0E-6;
+
+  if ( ( NB != NA ) && ( NB != NA-1 ) ) 
+    {
+      mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,  
+	    "NB IN ERROR", 
+	    NULL);
+      exit(-1);
+    }
+        
+  L = cbrt(Vol);
+  invL = 1.0 / L;
+
+  tol2   = 2.0 * tol;
+  dtSq  = dt * dt;
+  dt2 = dt / 2.0;
+  dtSq2 = dt * dt2;
+ 
+  dSq = Sqr(d); /* In general you must supply a vector of bond lengths */
+
+  kTm = Oparams.T / Oparams.m[0];
+  chsidtN = Oparams.chsiN * Oparams.steplength;
+  echsidtN  = exp(-Oparams.chsiN*Oparams.steplength);
+  e2chsidtN = exp(-2.0*Oparams.chsiN*Oparams.steplength);
+  dt = Oparams.steplength;
+  chsiN = Oparams.chsiN;
+  c0N = exp(-chsiN*dt);
+  c1N = (1-c0N)/(chsiN*dt);
+  c2N = (1-c1N)/(chsiN*dt);
+  c1mc2N = c1N - c2N;
+  /* qui si assume che le masse di tutti gli atomi del disco sono uguali! */
+  sigmarN = sqrt( dt * (kTm / chsiN) *
+		(2.0 -  ( 3.0 - 4.0 * echsidtN + e2chsidtN) / chsidtN) );
+  sigmavN = sqrt(kTm * ( 1.0 - e2chsidtN ) );
+  crvN = dt * kTm * Sqr( 1.0 - echsidtN) / chsidtN / sigmarN / sigmavN;
+  
+  chsidtP = Oparams.chsiP * Oparams.steplength;
+  echsidtP  = exp(-Oparams.chsiP*Oparams.steplength);
+  e2chsidtP = exp(-2.0*Oparams.chsiP*Oparams.steplength);
+  chsiP = Oparams.chsiP;
+  c0P = exp(-chsiP*dt);
+  c1P = (1-c0P)/(chsiP*dt);
+  c2P = (1-c1P)/(chsiP*dt);
+  c1mc2P = c1P - c2P;
+  /* qui si assume che le masse di tutti gli atomi del disco sono uguali! */
+  sigmarP = sqrt( dt * (kTm / chsiP) *
+		(2.0 -  ( 3.0 - 4.0 * echsidtP + e2chsidtP) / chsidtP) );
+  sigmavP = sqrt(kTm * ( 1.0 - e2chsidtP ) );
+  crvP = dt * kTm * Sqr( 1.0 - echsidtP) / chsidtP / sigmarP / sigmavP;
+
+
+  /* ===== LOOP OVER MOLECULES ===== */
+  for (i=0; i < Nm; i++)
+    {
+      build_ref_axes(i, u1, u2, u3);
+      /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
+      for(a=0; a < NA; a++)
+	{
+	  axia = Fx[a][i] / m[a];
+	  ayia = Fy[a][i] / m[a];
+	  azia = Fz[a][i] / m[a];
+
+	  bigauss(sigmarP, sigmavP, crvP, &drx, &dvx);
+          bigauss(sigmarP, sigmavP, crvP, &dry, &dvy);
+          bigauss(sigmarN, sigmavN, crvN, &drz, &dvz);
+
+	  rxi[a] = rx[a][i];
+	  ryi[a] = ry[a][i];
+	  rzi[a] = rz[a][i];
+
+	  lab2body(u1, u2, u3, rxi[a], ryi[a], rzi[a], &rxp, &ryp, &rzp);
+	  lab2body(u1, u2, u3, axia, ayia, azia, &axp, &ayp, &azp);
+	  lab2body(u1, u2, u3, vx[a][i], vy[a][i], vz[a][i], &vxp, &vyp, &vzp);
+
+	  pxi[a] = rx[a][i] + c1P * dt * vx[a][i] + c2P * dtSq * axia + drx;
+	  pyi[a] = ry[a][i] + c1P * dt * vy[a][i] + c2P * dtSq * ayia + dry;
+	  pzi[a] = rz[a][i] + c1N * dt * vz[a][i] + c2N * dtSq * azia + drz;
+	  
+	  vxt[a][i] = vx[a][i]; /* v(t) */
+	  vyt[a][i] = vy[a][i];
+	  vzt[a][i] = vz[a][i];
+	  
+	  vxi[a] = c0P*vx[a][i] + c1mc2P * dt * axia + dvx;
+	  vyi[a] = c0P*vy[a][i] + c1mc2P * dt * ayia + dvy;
+	  vzi[a] = c0N*vz[a][i] + c1mc2N * dt * azia + dvz;
+
+	  lab2body(u1, u2, u3, rxi[a], ryi[a], rzi[a], &rxp, &ryp, &rzp);
+	  lab2body(u1, u2, u3, axia, ayia, azia, &axp, &ayp, &azp);
+	  lab2body(u1, u2, u3, vx[a][i], vy[a][i], vz[a][i], &vxp, &vyp, &vzp);
+
+
+	  moving[a] = 0;
+	  moved[a]  = 1;
+	}
+
+      it = 0;
+      done = 0;
+
+      /* START OF ITERATIVE LOOP */
+      while ( (done == 0) && (it <= maxIt) )
+	{
+	  done = 1;
+
+	  for(a=0; a < NB; a++)
+	    {
+	      b = a + 1;
+	      if (b >= NA) b = 0;
+		   
+	      if ( (moved[a]==1) || (moved[b] == 1)) 
+		{
+		  pxab = pxi[a] - pxi[b];
+		  pyab = pyi[a] - pyi[b];
+		  pzab = pzi[a] - pzi[b];
+		  pxab = pxab - L * rint(invL * pxab);
+		  pyab = pyab - L * rint(invL * pyab);
+		  pzab = pzab - L * rint(invL * pzab);
+ 		       
+		  pabSq = Sqr(pxab) + Sqr(pyab) + Sqr(pzab);
+		  rabSq = dSq;
+		  diffSq = rabSq - pabSq;
+		  
+		  if ( fabs(diffSq) > ( rabSq * tol2 ) ) 
+		    {
+		      rxab = rxi[a] - rxi[b];
+		      ryab = ryi[a] - ryi[b];
+		      rzab = rzi[a] - rzi[b];
+		      rxab = rxab - L * rint(invL * rxab);
+		      ryab = ryab - L * rint(invL * ryab);
+		      rzab = rzab - L * rint(invL * rzab);
+		      rpab = rxab * pxab + ryab * pyab + rzab * pzab;
+		      
+		      if ( rpab < (rabSq * rptol) )
+			{
+			
+			  mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,
+				"CONSTRAINT FAILURE IN MOVEA",
+				NULL);
+			  exit(-1);
+			}
+			   
+		      rma = 1.0 / m[a];
+		      rmb = 1.0 / m[b];
+		      gab = diffSq / ( 2.0 * ( rma + rmb ) * rpab );
+		      dx  = rxab * gab;
+		      dy  = ryab * gab;
+		      dz  = rzab * gab;
+			   
+		      pxi[a] = pxi[a] + rma * dx;
+		      pyi[a] = pyi[a] + rma * dy;
+		      pzi[a] = pzi[a] + rma * dz;
+		      pxi[b] = pxi[b] - rmb * dx;
+		      pyi[b] = pyi[b] - rmb * dy;
+		      pzi[b] = pzi[b] - rmb * dz;
+			   
+		      dx = dx / dt;
+		      dy = dy / dt;
+		      dz = dz / dt;
+		      
+		      vxi[a] = vxi[a] + rma * dx;
+		      vyi[a] = vyi[a] + rma * dy;
+		      vzi[a] = vzi[a] + rma * dz;
+		      vxi[b] = vxi[b] - rmb * dx;
+		      vyi[b] = vyi[b] - rmb * dy;
+		      vzi[b] = vzi[b] - rmb * dz;
+			   
+		      moving[a] = 1;
+		      moving[b] = 1;
+		      done = 0;
+			   
+		    }
+		       
+		}
+		   
+	    }
+	       
+	  for(a=0; a < NA; a++)
+	    {
+	      moved[a]  = moving[a];
+	      moving[a] = 0;
+	    }
+	  it = it + 1;
+	}
+      /* END OF ITERATIVE LOOP */
+      if  (done == 0) 
+	{
+	  sprintf(msgStrA, "MOLECULE N. %d", i);
+	  mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,
+		"TOO MANY CONSTRAINT ITERATIONS IN MOVEA",
+		msgStrA,
+		NULL);
+	  exit(-1);
+	}
+      /* STORE AWAY NEW VALUES */
+
+      for(a=0; a < NA; a++)
+	{
+	  rx[a][i] = pxi[a];
+	  ry[a][i] = pyi[a];
+	  rz[a][i] = pzi[a];
+
+	  vx[a][i] = vxi[a];
+	  vy[a][i] = vyi[a];
+	  vz[a][i] = vzi[a];
+	}
+      
+    }
+  /* END OF LOOP OVER MOLECULES */
+
+  /* -1 = Brownian dyanmics  -2 = Brownian dynamics + Andersen */
+  if (OprogStatus.Nose == -1) return;
+  Vol = Vol + dt * Vol1 + dtSq2 * Vol2;
+  Vol1t = Vol1;   /* Vol1(t) */
+  Vol1 = Vol1 + dt2 * Vol2;
+ 
+}
+#else
 /* ========================== >>> movea <<< =============================== */
 void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
 	   COORD_TYPE m[NA], int Nm)
@@ -469,7 +734,7 @@ void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE
   Vol1 = Vol1 + dt2 * Vol2;
  
 }
-
+#endif
 
 /* ============================ >>> shakeVel <<< ========================== */
 void shakeVel(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB, 
