@@ -5,7 +5,7 @@
 #define MD_DEBUG10(x)  
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
-#define MD_DEBUG20(x) x
+#define MD_DEBUG20(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -1365,9 +1365,9 @@ void UpdateAtom(int i)
 #endif
 	    for (k3 = 0; k3 < 3; k3++)
 	      //  R[i][k1][k2] += M[k1][k3]*Rtmp[k3][k2];
-	      R[i][k1][k2] += Rtmp[k1][k3]*M[k3][k2];
+	      R[i][k1][k2] += M[k1][k3]*Rtmp[k3][k2];
 	  }
-      adjust_norm(R[i]);
+      //adjust_norm(R[i]);
 #if 0
       if (rz[i]+Lz*0.5-Oparams.sigma/2.0 < 0. && OprogStatus.quenchend > 0.0)
 	{
@@ -1734,7 +1734,7 @@ double calcDistNegOne(double t, int i, int j, int nn, double shift[3])
   assign_bond_mapping(i, j);
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
-  printf("BRENT nn=%d\n", nn);
+  MD_DEBUG20(printf("BRENT nn=%d\n", nn));
   ti = t - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -1764,7 +1764,7 @@ double calcDistNegOne(double t, int i, int j, int nn, double shift[3])
   distSq = 0;
   for (kk=0; kk < 3; kk++)
     distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
-  printf("dist= %.15G\n", sqrt(distSq)-Oparams.sigmaSticky);
+  MD_DEBUG20(printf("dist= %.15G\n", sqrt(distSq)-Oparams.sigmaSticky));
   return sqrt(distSq) - Oparams.sigmaSticky;
 #if 0
   if (firstdist || fabs(dist) < fabs(distmin))
@@ -2310,6 +2310,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = 1E-7; /* last resort time increment */
+  MD_DEBUG(printf("QUIIII collCode=%d\n", *collCode));
   if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast, dists))
     return 0;  
   timesS++;
@@ -2356,7 +2357,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       if (dold < epsd)
 	delt = epsd / maxddot;
       t += delt;
-      //printf("t=%.15G delt=%.15G\n", t, delt);
+      //printf("t=%.15G delt=%.15G maxddot: %.15G t*h=%.15G\n", t, delt, maxddot, t*h);
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       dold2 = dold;
       //assign_dists(distsOld,  distsOld2);
@@ -2866,7 +2867,10 @@ void PredictEvent (int na, int nb)
 		      //exit(-1);
 #if 1
 		      if (!locate_contact(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
-			continue;
+			{
+			  if (collCode == MD_EVENT_NONE)
+			    continue;
+			}
 #else
 		      if (collCode == MD_EVENT_NONE)
 			continue;
@@ -2892,6 +2896,7 @@ void PredictEvent (int na, int nb)
 			}
 #endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
+		      MD_DEBUG20(printf("EVENT TIME=%.15G\n",evtime));
 		      MD_DEBUG20(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
 		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 		      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
