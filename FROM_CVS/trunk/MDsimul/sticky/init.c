@@ -1301,6 +1301,7 @@ void check_all_bonds(void)
 				   bound(i,j,mapbondsa[nn], mapbondsb[nn]))
 			    {
 			      warn = 2;
+			      //printf("wrong number of bonds between %d and %d\n", i, j);
 			      if (OprogStatus.checkGrazing==1)
 				{
 				  remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
