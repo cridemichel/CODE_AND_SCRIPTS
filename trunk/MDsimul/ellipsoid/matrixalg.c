@@ -2102,39 +2102,73 @@ double get_sign(double *vec)
   
   return S;
 }
+typedef struct {
+	double point[3];
+	double grad[3];
+} MESHXYZ;
+
 MESHXYZ **ellips_mesh[2];
 
-int choose_neighbour(double *grad, double *th1, double *phi1, double *th2, double *phi2,
+int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 		     double *distSq, double *S, double maxstA, double maxstB, double *vec, 
 		     int calc_sign)
 {
-  int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB;
+  int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB, distSqold;
+  int nphi1, nth1, nphi2, nth2;
   double sp, spmaxA=0.0, spmaxB=0.0, dx[3], dxA, dxB;
  
+  cth1 = *th1;
+  cphi1 = *phi1;
+  cth2 = *th2;
+  cphi2 = *th2;
   mA = (icg<Oparams.parnumA)?0:1;
   mB = (jcg<Oparams.parnumA)?0:1;
   for (k1=-1; k1 <= 1; k1+=2)
     {
       for (k2=-1; k2 <= 1; k2+=2)
 	{
+	  nth1 = *th1 + k1;
+	  if (nth1 == OprogStatus.n1)
+	    nth1 = 0;
+	  if (nth1 == -1)
+	    nth1 = OprogStatus.n1-1;
+	  nphi1 = *phi1 + k2;
+	  if (nphi1 == OprogStatus.n2)
+	    nphi1 = 0;
+	  if (nphi1 == -1)
+	    nphi1 = OprogStatus.n2-1;
+
+
 	  for (kk=0; kk < 3; kk++) 
-	    dx[kk] = ellips_mesh[mA][*th1+k1][*phi1+k2].point[kk] -
+	    dx[kk] = ellips_mesh[mA][nth1][nphi1].point[kk] -
 	      ellips_mesh[mA][*th1][*phi1].point[kk];
 	  sp = fabs(scalProd(grad, dx));
 	  if (sp > spmaxA)
 	    {
-	      cth1 = *th1+k1;
-	      cphi1 = *phi1+k2;
+	      cth1 = nth1;
+	      cphi1 = nphi1;
 	      spmaxA = sp;
 	    }
+	  
+	  nth2 = *th2 + k1;
+	  if (nth2 == OprogStatus.n1)
+	    nth1 = 0;
+	  if (nth2 == -1)
+	    nth2 = OprogStatus.n1-1;
+	  nphi2 = *phi2 + k2;
+	  if (nphi2 == OprogStatus.n2)
+	    nphi1 = 0;
+	  if (nphi2 == -1)
+	    nphi2 = OprogStatus.n2-1;
+
 	  for (kk=0; kk < 3; kk++) 
-	    dx[kk] = ellips_mesh[mB][*th2+k1][*phi2+k2].point[kk] -
+	    dx[kk] = ellips_mesh[mB][nth2][nphi2].point[kk] -
 	      ellips_mesh[mB][*th2][*phi2].point[kk];
 	  sp = fabs(scalProd(grad, dx));
 	  if (sp > spmaxB)
 	    {
-	      cth2 = *th2+k1;
-	      cphi2 = *phi2+k2;
+	      cth2 = nth2;
+	      cphi2 = nphi2;
 	      spmaxB = sp;
 	    }
 	}
@@ -2159,13 +2193,13 @@ int choose_neighbour(double *grad, double *th1, double *phi1, double *th2, doubl
     return 1;
   if (calc_sign)
     {
-      S = get_sign(vec);
-      distSq *= S;
+      *S = get_sign(vec);
+      *distSq *= *S;
     }
   for (kk = 0; kk < 3; kk++)
     {
-      grad[kk] = S*(vec[kk+3]-vec[kk]);
-      grad[kk+3] = -S*(vec[kk+3]-vec[kk]);
+      grad[kk] = *S*(vec[kk+3]-vec[kk]);
+      grad[kk+3] = -*S*(vec[kk+3]-vec[kk]);
     }
   *th1 = cth1;
   *phi1 = cphi1;
@@ -2173,10 +2207,12 @@ int choose_neighbour(double *grad, double *th1, double *phi1, double *th2, doubl
   *phi2 = cphi2;
   return 0;	
 }
+extern double *maxax;
+
 void findminMesh(double *vec)
 {
   int kk, th1, th2, phi1, phi2, calc_sign=0;
-  double angs[4], vecP[6], sinth, grad[6], maxstA, maxstB, distSq;
+  double S, angs[4], vecP[6], sinth, grad[6], maxstA, maxstB, distSq;
   const double TWOPI = 2.0*pi;
   lab2body(icg, vec, vecP, rA, RtA);
   lab2body(jcg, &vec[3], &vecP[3], rB, RtB);
@@ -2198,14 +2234,14 @@ void findminMesh(double *vec)
 
   /* maggiorazione degli step sui due ellissoidi */
   if (OprogStatus.n1 > OprogStatus.n2)
-    maxstA = maxax[icg]*TWOPI/Oparams.n2;
+    maxstA = maxax[icg]*TWOPI/OprogStatus.n2;
   else
-    maxstA = maxax[icg]*TWOPI/Oparams.n1;
+    maxstA = maxax[icg]*TWOPI/OprogStatus.n1;
 
   if (OprogStatus.n1 > OprogStatus.n2)
-    maxstB = maxax[jcg]*TWOPI/Oparams.n2;
+    maxstB = maxax[jcg]*TWOPI/OprogStatus.n2;
   else
-    maxstB = maxax[jcg]*TWOPI/Oparams.n2;
+    maxstB = maxax[jcg]*TWOPI/OprogStatus.n2;
   /* search begin */
   S = get_sign(vec); 
   distSq = 0;
@@ -2312,8 +2348,9 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
 #endif
   //frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
   //powellmethodPenalty(vec);
-  frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+  //frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
   //powellmethod(vec);
+  findminMesh(vec);
   for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];
