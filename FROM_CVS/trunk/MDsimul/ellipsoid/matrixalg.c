@@ -150,13 +150,13 @@ void InvMatrix(double **a, double **b, int NB)
 }
 
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
-#define TOLX 1.0E-6//1.0e-7 /* Convergence criterion on  x.*/ 
-#define TOLX2 1.E-8
+#define TOLX 1.0E-10//1.0e-7 /* Convergence criterion on  x.*/ 
+#define TOLX2 1.E-10
 #define MAXITS 50 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define MAXITS2 50
-#define TOLF 1.0e-4 // 1.0e-4
-#define TOLF2 1.0E-6
-#define TOLMIN 1.0E-7//1.0e-6 
+#define TOLF 1.0e-7 // 1.0e-4
+#define TOLF2 1.0E-7
+#define TOLMIN 1.0E-6//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
@@ -298,8 +298,9 @@ extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, 
 extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
 
 extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
-#define MD_GLOBALNR
-#ifdef MD_GLOBALNR
+#undef MD_GLOBALNR
+#undef MD_GLOBALNR2
+#ifdef MD_GLOBALNR2
 double fmin2(double x[], int iA, int iB, double shift[3]);
 #endif
 void newt(double x[], int n, int *check, 
@@ -308,7 +309,7 @@ void newt(double x[], int n, int *check,
 {
   int ii, i,its, its2,j,*indx;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
-#ifdef MD_GLOBALNR
+#ifdef MD_GLOBALNR2
   int check2;
   double f2, stpmax2, fold2, *xold2, *g2;
   xold2 = vector(n);
@@ -338,17 +339,17 @@ void newt(double x[], int n, int *check,
   for (sum=0.0,i=0;i<n;i++) 
     sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
   stpmax=STPMX*FMAX(sqrt(sum),(double)n);
-#ifndef MD_GLOBALNR
+#ifndef MD_GLOBALNR2
   funcs2beZeroed(n,x,fvec,iA,iB,shift);
 #endif
   for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
       /* Stabilization */
-#if 0
+#if 1
       MD_DEBUG(printf("its=%d time = %.15f\n",its, x[4]));
       upd2tGuess(iA, iB, shift, x[4]);
-#ifdef MD_GLOBALNR
-      nn2=n; 
+#ifdef MD_GLOBALNR2
+      nn2=n-1; 
       nrfuncv2=funcs2beZeroedGuess; 
       f2=fmin2(x,iA,iB,shift); /*fvec is also computed by this call.*/
       test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
@@ -363,7 +364,7 @@ void newt(double x[], int n, int *check,
 #endif
       for (its2=0; its2 <MAXITS2 ; its2++)
 	{
-#ifdef MD_GLOBALNR
+#ifdef MD_GLOBALNR2
 	  if (its2=0 && test < 0.01*TOLF)
 	    {
 	      check2=0; 
@@ -371,8 +372,8 @@ void newt(double x[], int n, int *check,
 	    }
 #endif
 	  MD_DEBUG(printf("Guessing ist2=%d x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", its2, x[0], x[1], x[2], x[3],x[4]));
-	  fdjacFD(n-1,x,fvecG,fjac,funcs2beZeroedGuess, iA, iB, shift); 
-#ifdef MD_GLOBALNR
+	  fdjacGuess(n-1,x,fvecG,fjac,funcs2beZeroedGuess, iA, iB, shift); 
+#ifdef MD_GLOBALNR2
 	  for (i=0;i<n-1;i++) 
 	    { /* Compute  f for the line search.*/
 	      for (sum=0.0,j=0;j<n-1;j++)
@@ -399,7 +400,7 @@ void newt(double x[], int n, int *check,
 	    p[i] = -fvecG[i]; /* Right-hand side for linear equations.*/
 	  ludcmp(fjac,n-1,indx,&d); /* Solve linear equations by LU decomposition.*/
 	  lubksb(fjac,n-1,indx,p);
-#ifdef MD_GLOBALNR
+#ifdef MD_GLOBALNR2
 	  lnsrch(n-1,xold2,fold2,g2,p,x,&f2,stpmax2,&check2,fmin2,iA,iB,shift); 
 	  test=0.0; /* Test for convergence on function values.*/
 	  for (i=0;i<n;i++) 
@@ -459,7 +460,7 @@ void newt(double x[], int n, int *check,
 	    }
 #endif
 	}
-#ifdef MD_GLOBALNR
+#ifdef MD_GLOBALNR2
       if (its2 == MAXITS2 || check2==2)
 	{
 	  *check = 2;
@@ -477,7 +478,7 @@ void newt(double x[], int n, int *check,
 #endif
 #endif
       /* ============ */
-      fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
+     fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
       /* If analytic Jacobian is available, you can 
 	 replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNR
@@ -506,7 +507,7 @@ void newt(double x[], int n, int *check,
       lubksb(fjac,n,indx,p);
       
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
-#ifdef GLOBAL_NR
+#ifdef MD_GLOBALNR
       lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift); 
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
@@ -611,6 +612,7 @@ the calling program.*/
     sum += Sqr(fvec[i]); 
     return 0.5*sum; 
 }
+#ifdef MD_GLOBALNR2
 double fmin2(double x[], int iA, int iB, double shift[3]) 
 /* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
@@ -619,8 +621,9 @@ the calling program.*/
 {
   int i;
   double sum;
-  (*nrfuncv2)(nn,x,fvecG,iA,iB,shift);
+  (*nrfuncv2)(nn2,x,fvecG,iA,iB,shift);
   for (sum=0.0,i=0;i<nn2;i++)
     sum += Sqr(fvecG[i]); 
     return 0.5*sum; 
 }
+#endif
