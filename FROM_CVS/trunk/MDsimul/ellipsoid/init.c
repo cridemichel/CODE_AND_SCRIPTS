@@ -1101,7 +1101,7 @@ void usrInitAft(void)
 #endif
   
     if (OprogStatus.epsdSD < 0.0)
-      OprogStatus.epsdSD = OprogStatus.epsd;
+      OprogStatus.epsdSD = Sqr(OprogStatus.epsd);
     /*    
      ** CHECK FOR PARTICLE OVERLAPS **
      ** CALCULATE ENERGY            ** */
