@@ -363,7 +363,7 @@ int copy(char *src, char* dest) /* src and dest must be absolute */
 /* =========================== >>> chkBakAsciiSteps <<< ==================*/
 int chkBakAsciiSteps(void)
 {
-  double base; 
+  double base, logblockbase; 
 #ifdef MDLLINT
   long long int oldfstps, retval, oldlogblock;// *timeout; 
   long long int cslb;
@@ -372,7 +372,9 @@ int chkBakAsciiSteps(void)
   int cslb;
 #endif
   base = OprogStatus.base;
+#ifdef MD_BILOG
   logblockbase = OprogStatus.logblockbase;
+#endif
   //timeout = &OprogStatus.timeout;
   switch (OprogStatus.bakSaveMode){ 
   case 0:
