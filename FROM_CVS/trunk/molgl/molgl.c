@@ -275,7 +275,7 @@ void EvalSuperEllipse(double t1,double t2,double p1,double p2,
 void displayAtom(int nf, int nm, int na)
 {
   float fadeFact;
-  float rotm[16], M[16];
+  float rotm[16];
   GLUquadricObj *ss, *ss2, *ss3;
   atom_s *atom;
   int k1, k2;
@@ -381,25 +381,9 @@ void displayAtom(int nf, int nm, int na)
 	      rotm[k1*4+k2] = 0.0;
 	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
 	  }
-      for (k1=0; k1 < 16; k1++)
-	M[k1] = 0;
-      M[1]=1.0;
-      M[4]=1.0;
-      M[10]=1.0;
-      M[15]=1.0;
-      /*     | 0  1  0  0 | 
-       *     | 1  0  0  0 | 
-       * M = | 0  0  1  0 |
-       *     | 0  0  0  1 |
-       *     
-       * la matrice di rotazione rotm è riferita ad un sistema di coordinate
-       * destrorso dunque per applicarla dobbiamo prima passare ad un sistema
-       * destrorso applicando M (che scambia x e y) e quindi tornare indietro nel sistema
-       * di coordinate opengl applicando di nuovo M.
-       * R -> Trasposta(M)*R*M */
-      glMultMatrixf(M);
-      glMultMatrixf(rotm);
-      glMultMatrixf(M);
+      /* notare che x' = R x quindi:
+       * x = Inversa(R) x' = Trasposta(R) x'*/
+      glMultTransposeMatrixf(rotm);
       CreateSuperEllipse(atom->supellips.n1, 
 			 atom->supellips.n2, atom->supellips.a, 
 			 atom->supellips.b, atom->supellips.c, globset.stacks, 
