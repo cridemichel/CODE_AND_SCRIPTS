@@ -1168,7 +1168,8 @@ void calcFxtFt(double x[3], double **X,
      {
        Fxt[k1] = 0;
        for (k2 = 0; k2 < 3; k2++)
-	 Fxt[k1] += 2.0*DtX[k1][k2]*(x[k2]-pos[k2]) - 2.0*Sqr(x[3])*X[k1][k2]*vel[k2]; 
+	 Fxt[k1] += DtX[k1][k2]*(x[k2]-pos[k2]) - Sqr(x[3])*X[k1][k2]*vel[k2]; 
+       Fxt[k1] *= 2.0;
      } 
    *Ft = 0;
    for (k1 = 0; k1 < 3; k1++)
@@ -1229,7 +1230,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
     {
       for (k2 = 0; k2 < 3; k2++)
        	{
-	  df[k1][k2] = Xa[k1][k2] + Sqr(x[3])*Xb[k1][k2];
+	  df[k1][k2] = 2.0*(Xa[k1][k2] + Sqr(x[3])*Xb[k1][k2]);
 	}
     }
   
@@ -1237,14 +1238,21 @@ void fdjac(int n, double x[], double fvec[], double **df,
     {
       df[3][k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
-	df[3][k1] += Xa[k1][k2]*(x[k2]-rA[k2]); 
+	df[3][k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]); 
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	df[4][k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]); 
     } 
 
   for (k1 = 0; k1 < 3; k1++)
     {
       df[k1][3] = 0;
       for (k2 = 0; k2 < 3; k2++)
-	df[k1][3] += 2.0*x[3]*Xb[k1][k2]*(x[k2]-rB[k2]); 
+	df[k1][3] += 4.0*x[3]*Xb[k1][k2]*(x[k2]-rB[k2]); 
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
