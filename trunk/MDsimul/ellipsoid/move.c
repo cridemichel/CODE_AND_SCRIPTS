@@ -2903,9 +2903,9 @@ retry:
 	  vecgcg[k1] = rC[k1];
 	  vecgcg[k1+3] = rD[k1];
 	}
-      //for(k1=0; k1 < 3; k1++)
-	//r12[k1] = rC[k1]-rD[k1]; 
-      //printf("PRIMA dist=%.15f\n",calc_norm(r12));
+      for(k1=0; k1 < 3; k1++)
+	r12[k1] = rC[k1]-rD[k1]; 
+      printf("PRIMA dist=%.15f\n",calc_norm(r12));
       distconjgrad(i, j, shift, vecgcg); 
       for (k1=0; k1 < 3; k1++)
 	{
@@ -2919,7 +2919,7 @@ retry:
 #endif
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
-      //printf("dist=%.15f\n",calc_norm(r12));
+      printf("dist=%.15f\n",calc_norm(r12));
       MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
       calc_grad(rC, rA, Xa, gradf);
@@ -3027,7 +3027,7 @@ retry:
 #endif
 #endif
 #if 1
-  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
   //exit(-1);
   if (segno > 0)
     return calc_norm(r12);
@@ -5359,7 +5359,7 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 1
+#if 0
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
