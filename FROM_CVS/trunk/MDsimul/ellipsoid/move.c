@@ -603,7 +603,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     rzij = rzij - SignR(L, rzij);
 #endif
 #endif
-  MD_DEBUG(printf("[bump] contact point: %f,%f,%f \n", rxC, ryC, rzC));
+  MD_DEBUG(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
@@ -953,13 +953,13 @@ void UpdateAtom(int i)
       sinw = sin(w*ti)/w;
       cosw = (1.0 - cos(w*ti))/wSq;
       Omega[0][0] = 0;
-      Omega[0][1] = wz[i];
-      Omega[0][2] = -wy[i];
-      Omega[1][0] = -wz[i];
+      Omega[0][1] = -wz[i];
+      Omega[0][2] = wy[i];
+      Omega[1][0] = wz[i];
       Omega[1][1] = 0;
-      Omega[1][2] = wx[i];
-      Omega[2][0] = wy[i];
-      Omega[2][1] = -wx[i];
+      Omega[1][2] = -wx[i];
+      Omega[2][0] = -wy[i];
+      Omega[2][1] = wx[i];
       Omega[2][2] = 0;
       OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
       OmegaSq[0][1] = wx[i]*wy[i];
@@ -1080,13 +1080,13 @@ UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
       sinw = sin(w*ti)/w;
       cosw = (1.0 - cos(w*ti))/wSq;
       Omega[0][0] = 0;
-      Omega[0][1] = wz[i];
-      Omega[0][2] = -wy[i];
-      Omega[1][0] = -wz[i];
+      Omega[0][1] = -wz[i];
+      Omega[0][2] = wy[i];
+      Omega[1][0] = wz[i];
       Omega[1][1] = 0;
-      Omega[1][2] = wx[i];
-      Omega[2][0] = wy[i];
-      Omega[2][1] = -wx[i];
+      Omega[1][2] = -wx[i];
+      Omega[2][0] = -wy[i];
+      Omega[2][1] = wx[i];
       Omega[2][2] = 0;
       OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
       OmegaSq[0][1] = wx[i]*wy[i];
@@ -1119,6 +1119,15 @@ UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
     }
   else
     {
+      Omega[0][0] = 0;
+      Omega[0][1] = 0;
+      Omega[0][2] = 0;
+      Omega[1][0] = 0;
+      Omega[1][1] = 0;
+      Omega[1][2] = 0;
+      Omega[2][0] = 0;
+      Omega[2][1] = 0;
+      Omega[2][2] = 0;
       for (k1 = 0; k1 < 3; k1++)
 	for (k2 = 0; k2 < 3; k2++)
 	  {
@@ -1158,7 +1167,7 @@ void calcFxtFt(double x[3], double **X,
 	  tOmegaD[k1][k2] = 0;
 	  for (k3 = 0; k3 < 3; k3++)
 	    {
-	      if (D[k3][k1] == 0.0 || Omega[k3][k1] == 0.0)
+	      if (D[k3][k2] == 0.0 || Omega[k3][k1] == 0.0)
 		continue;
 	      tOmegaD[k1][k2] += Omega[k3][k1]*D[k3][k2]; 
 	    }
@@ -1806,7 +1815,7 @@ no_core_bump:
 			      pos[2] =  rz[na] + vz[na] * (t-atomTime[na]);
 			      for (kk=0; kk < 3; kk++)
 				vecg[kk] = pos[kk] - 0.5*cong[kk]*maxax[na<Oparams.parnumA?0:1];
-			      MD_DEBUG2(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
+			      MD_DEBUG(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
 			      MD_DEBUG2(printf("r[%d](%f,%f,%f)-r[%d](%f,%f,%f)\n",
 					      na, rx[na], ry[na], rz[na], n, rx[n], ry[n], rz[n]));
 			      
@@ -1822,7 +1831,10 @@ no_core_bump:
 				  exit(-1);
 				}
 			      else if (retcheck==2)
-				continue;
+				{
+				  printf("qui\n");
+				  continue;
+				}
 			      rxC = vecg[0];
 			      ryC = vecg[1];
 			      rzC = vecg[2];
@@ -2309,7 +2321,7 @@ void move(void)
 	  fprintf(bf, sepStr);
 	  printf("qui\n");
 #endif
-	  MD_DEBUG(printf("[Store event]: %.15G\n", Oparams.time));
+	  MD_DEBUG(printf("[Store event]: %.15G JJ=%d KK=%d\n", Oparams.time, OprogStatus.JJ, OprogStatus.KK));
 	  writeAllCor(bf);
 	  fclose(bf);
 #ifndef MD_STOREMGL
