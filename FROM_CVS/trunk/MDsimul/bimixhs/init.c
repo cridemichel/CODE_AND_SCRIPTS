@@ -784,7 +784,7 @@ void usrInitAft(void)
   StartRun(); 
 
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  for (i = 0; i < Oparams.parnum; i++)
+  for (i=0; i < Oparams.parnum; i++)
     numbonds[i] = 0;
 
   for ( i = 0; i < Oparams.parnum-1; i++)
