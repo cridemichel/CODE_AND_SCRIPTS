@@ -100,7 +100,7 @@ void energy(void)
 #endif
   printf("TOTAL ENERGY: %.10f\n", E);
   printf("Elrc:: %.6f Plrc: %.6f\n", Elrc, Plrc);
-#if 0
+#if 1
   mol = 0;
   dist = sqrt( Sqr(rx[0][mol] - rx[1][mol]) + Sqr(ry[0][mol] - ry[1][mol]) + 
 	       Sqr(rz[0][mol] - rz[1][mol]) );
