@@ -375,7 +375,7 @@ void displayAtom(int nf, int nm, int na)
 	      rotm[15] = 1.0;
 	    else
 	      rotm[k1*4+k2] = 0.0;
-	    printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
+	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
 	  }
       glMultMatrixf(rotm);
       CreateSuperEllipse(atom->supellips.n1, 
@@ -809,10 +809,23 @@ void args(int argc, char* argv[])
 	      globset.setdiameter = 1;
 	      if (i == argc)
 		{
-		  fprintf(stderr, "ERROR: You must supply the viewpoint (x,y,z)!\n");
+		  fprintf(stderr, "ERROR: You must supply the diameter!\n");
 		  exit(-1);
 		}
 	      globset.diameter = atof(argv[i]);
+	      globset.NA = 1;
+	    }
+	  else if (!strcmp(argv[i],"--semiax")|| !strcmp(argv[i],"-sa"))
+	    {
+      	      i++;
+	      globset.setsemiax = 1;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply three semi-axes (a,b,c)!\n");
+		  exit(-1);
+		}
+	      sscanf(argv[i], "(%lf,%lf,%lf)", &globset.sa, &globset.sb, &globset.sc);
+	      globset.NA = 1;
 	    }
 	  else if (!strcmp(argv[i],"--bondthickness")|| !strcmp(argv[i],"-bt"))
 	    {
@@ -954,6 +967,42 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.a = atof(s13);
       at->supellips.b = atof(s14);
       at->supellips.c = atof(s15);
+      at->supellips.n1 = 1.0;
+      at->supellips.n2 = 1.0;
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = -1;
+    }
+  else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12) == 12)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	     atoi(s5),i, j);*/
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SUPELLIPS;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->supellips.R[0][0] = atof(s4);
+      at->supellips.R[0][1] = atof(s5);
+      at->supellips.R[0][2] = atof(s6);
+      at->supellips.R[1][0] = atof(s7);
+      at->supellips.R[1][1] = atof(s8);
+      at->supellips.R[1][2] = atof(s9);
+      at->supellips.R[2][0] = atof(s10);
+      at->supellips.R[2][1] = atof(s11);
+      at->supellips.R[2][2] = atof(s12);
+      if (globset.NA)
+	{
+    	  at->supellips.a = globset.a[a];
+	  at->supellips.b = globset.b[a];
+	  at->supellips.c = globset.c[a];
+	}
+      else
+	{
+	  at->supellips.a = 1.0;
+	  at->supellips.b = 1.0;
+	  at->supellips.c = 0.5;
+	}
       at->supellips.n1 = 1.0;
       at->supellips.n2 = 1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
@@ -1268,6 +1317,52 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
       //printf("---->%f %f\n", sig[0], sig[1]);
       return 1;
     }
+  if (!strcmp(parName, ".semiAxes"))
+    {
+      /* Build a string of this type: "%f , %f , ..." with NA '%f' */
+      //strcpy(s1, strtok(parVal, ","));
+      //printf("radius[0]: %s\n", s1);
+      //printf("parVal: %s\n", parVal);
+      ns = strtok(parVal, " ");
+      a = 0;
+      if (globset.a)
+	{
+	  free(globset.a);
+	  free(globset.b);
+	  free(globset.c);
+	}
+      while(ns)
+	{
+	  //strcpy(s1, strtok(NULL, ","));
+	  globset.a = realloc(globset.a,a+1);
+	  globset.b = realloc(globset.b,a+1);
+	  globset.c = realloc(globset.c,a+1);
+	  globset.a[a] = atof(ns);
+	  //printf("a: %f\n", globset.a[a]);
+	  ns = strtok(NULL, " ");
+	  if (!ns)
+	    {
+	      printf("You have to supply three semi-axes!\n");
+	      exit(-1);
+	    }
+	  globset.b[a] = atof(ns);
+	  //printf("b: %f\n", globset.b[a]);
+	  ns = strtok(NULL, " ");
+	  if (!ns)
+	    {
+	      printf("You have to supply three semi-axes!\n");
+	      exit(-1);
+	    }
+	  globset.c[a] = atof(ns);
+	  //printf("c: %f\n", globset.c[a]);
+	  ns = strtok(NULL, ",");
+	  a++;
+	}
+      globset.NA = a;
+      //printf("NA: %d\n", globset.NA);
+      //printf("---->%f %f\n", sig[0], sig[1]);
+      return 1;
+    }
   if (!strcmp(parName, ".Vol"))
     {
       globset.L = atof(parVal);
@@ -1401,6 +1496,19 @@ void setdefaults_after_fakeread(void)
 	  globset.sig[a] = globset.diameter;
 	} 
     }
+  if (globset.setsemiax && globset.NA)
+    {
+      globset.a = malloc(sizeof(double)*globset.NA);
+      globset.b = malloc(sizeof(double)*globset.NA);
+      globset.c = malloc(sizeof(double)*globset.NA);
+      for (a = 0; a < globset.NA; ++a)
+	{
+	  globset.a[a] = globset.sa;
+	  globset.b[a] = globset.sb;
+	  globset.c[a] = globset.sc;
+	} 
+    }
+
 
 }
 /* ========================== >>> loadAtomPos <<< ===========================*/
@@ -1534,6 +1642,7 @@ void default_pars(void)
   globset.sig = NULL;
   /*globset.height = NULL;*/
   globset.setdiameter = 0;
+  globset.setsemiax = 0;
   globset.setheight = 0;
   globset.numAt = 0; /* atomi per molecola 0=illimitati a meno che non si usi .newmol*/
   globset.setheight = 0;
