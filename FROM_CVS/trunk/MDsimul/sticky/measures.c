@@ -273,7 +273,7 @@ void temperat(void)
     temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
 #endif
   calc_energy(NULL);
-  temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
+  temp = 2.0 * K / (6.0 * Oparams.parnum - 3.0);
 
   if (OprogStatus.avngTemp == 1)
     {

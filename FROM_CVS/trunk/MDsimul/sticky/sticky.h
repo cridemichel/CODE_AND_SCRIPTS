@@ -73,7 +73,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define MD_PBONDS_OO 2
 #define MD_PBONDS_SiO 2
 #else
-#define MD_PBONDS 4 
+#define MD_PBONDS 8
 #endif
 #define MD_DIST_ELECTSITES 0.45
 #define MD_DIST_HYDROSITES 0.5
@@ -189,6 +189,7 @@ struct LastBumpS
 {
   int mol;
   int at;
+  int type;
 };
 #define ATOM_LIMIT 10000000
 /* ======================== >>> struct progStatus <<< =======================*/
@@ -305,6 +306,8 @@ struct progStatus
   double endtime;
   double scaleVolTime;
   int brownian;
+  int checkGrazing;
+  double h;
   double epsd;
   double epsdFast;
   double epsdFastR;
@@ -474,6 +477,7 @@ struct pascii opro_ascii[] =
   {"scalevel",     &OS(scalevel),              1,   1, "%d"},
   {"equilibrated", &OS(equilibrated),          1,   1, "%d"},
   {"epsd",         &OS(epsd),                  1,   1, "%.12G"},
+  {"h",            &OS(h),                     1,   1, "%.15G"}, 
   {"epsdFast",     &OS(epsdFast),              1,   1, "%.12G"},
   {"epsdFastR",    &OS(epsdFastR),             1,   1, "%.12G"},
   {"epsdMax",      &OS(epsdMax),               1,   1, "%.12G"},
@@ -495,6 +499,7 @@ struct pascii opro_ascii[] =
   {"overlaptol"   ,&OS(overlaptol),                 1,   1, "%f"},
   {"ipart",        &OS(ipart),                      1,   1, "%d"},
   {"brownian",     &OS(brownian),                   1,   1, "%d"},
+  {"checkGrazing", &OS(checkGrazing),               1,   1, "%d"},
   {"HNBOX",        &OS(HNBOX),                      1,   1,  "%d"},
   {"avngTemp",     &OS(avngTemp),                   1,   1,  "%d"},
   {"avngPress",    &OS(avngPress),                  1,   1,  "%d"},
@@ -611,6 +616,7 @@ struct singlePar OsinglePar[] = {
 						       calculation */
   {"DtrName",    &OprogStatus.dataFiles[1],   STR},
   {"brownian",   &OprogStatus.brownian,       INT},
+  {"checkGrazing",  &OprogStatus.checkGrazing, INT},
   {"tempSteps",  &OprogStatus.measSteps[2],   LLINT},
   {"tempCalc",   &OprogStatus.measCalc[2],    LLINT},
   {"tempName",   &OprogStatus.dataFiles[2],   STR},
@@ -646,6 +652,7 @@ struct singlePar OsinglePar[] = {
   {"endtime",    &OprogStatus.endtime,        CT},
   {"Dt",         &Oparams.Dt,                 CT},
   {"epsd",       &OprogStatus.epsd,           CT},
+  {"h"   ,     &OprogStatus.h,              CT},
   {"epsdFast",   &OprogStatus.epsdFast,       CT},
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
   {"epsdMax",    &OprogStatus.epsdMax,        CT},

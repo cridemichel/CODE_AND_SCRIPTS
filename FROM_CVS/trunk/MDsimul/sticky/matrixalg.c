@@ -1772,7 +1772,35 @@ void findminMesh(double *vec)
 	  } 
     }
 }
-
+#define ZBFACTOR 1.6
+#define ZBNTRY 50 
+int zbrac(double (*func)(double), double *x1, double *x2) 
+/* Given a function func and an initial guessed range x1 to x2, the routine expands the range 
+ * geometrically until a root is bracketed by the returned values x1 and x2 (in which case 
+ * zbrac returns 1) or until the range becomes unacceptably large (in which case zbrac returns 0).
+ */
+{ 
+ //void nrerror(char error_text[]); 
+ int j; 
+ double f1,f2; 
+ if (*x1 == *x2) 
+   {
+     return 0;
+   }
+ //nrerror("Bad initial range in zbrac"); 
+ f1=(*func)(*x1); 
+ f2=(*func)(*x2); 
+ for (j=1;j<=ZBNTRY;j++)
+   { 
+     if (f1*f2 < 0.0) 
+       return 1; 
+     if (fabs(f1) < fabs(f2)) 
+       f1=(*func)(*x1 += ZBFACTOR*(*x1-*x2)); 
+     else
+       f2=(*func)(*x2 += ZBFACTOR*(*x2-*x1)); 
+   } 
+ return 0;
+}
 #define ITMAXZB 100 
 /* Maximum allowed number of iterations.*/
 #define EPSP 3.0e-8 /* Machine floating-point precision.*/
