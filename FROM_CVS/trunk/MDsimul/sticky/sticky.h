@@ -312,6 +312,7 @@ struct progStatus
   double epsdFast;
   double epsdFastR;
   double epsdMax;
+  int assumeOneBond;
   double forceguess;
   double targetPhi;
   double scalfact;
@@ -476,6 +477,7 @@ struct pascii opro_ascii[] =
 #endif
   {"scalevel",     &OS(scalevel),              1,   1, "%d"},
   {"equilibrated", &OS(equilibrated),          1,   1, "%d"},
+  {"assumeOneBond",&OS(assumeOneBond),         1,   1, "%d"},
   {"epsd",         &OS(epsd),                  1,   1, "%.12G"},
   {"h",            &OS(h),                     1,   1, "%.15G"}, 
   {"epsdFast",     &OS(epsdFast),              1,   1, "%.12G"},
@@ -658,6 +660,7 @@ struct singlePar OsinglePar[] = {
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
   //{"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
   {"zbrakn",     &OprogStatus.zbrakn,         INT},
+  {"assumeOneBond", &OprogStatus.assumeOneBond, INT},
   {"zbrentTol",  &OprogStatus.zbrentTol,      CT},
   {"scalfact",   &OprogStatus.scalfact,       CT},
   {"reducefact", &OprogStatus.reducefact,     CT},
