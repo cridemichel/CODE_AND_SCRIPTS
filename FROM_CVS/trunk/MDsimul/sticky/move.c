@@ -1063,7 +1063,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
     }
 	
 #endif
-     for (kk = 0; kk < 3; kk++)
+  for (kk = 0; kk < 3; kk++)
     rAB[kk] /= nrAB;
   /* controllare con cura la scelta dei parametri relativi ai diametri delle sferette
    * e alle larghezze delle buche dei potenziali a buca quadrata */
@@ -3539,7 +3539,7 @@ void PredictEvent (int na, int nb, int nl)
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], 
 	 b, d, t, tInt, vv, distSq, t1, t2, evtime=0, evtimeHC;
   int overlap, ac, bc, acHC, bcHC, collCodeOld;
-  int iA, iB, nl_ignore, nl, nc;
+  int iA, iB, nl_ignore, nc;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
   int collCode;
@@ -3557,7 +3557,10 @@ void PredictEvent (int na, int nb, int nl)
     nc = 0;
   else
     nc = 1;
-
+  printf("[PredictEvent ]nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
+	 nl, nc, na, inCell[nc][0][na], inCell[nc][1][na], inCell[nc][2][na],
+	 cellsx[nl], cellsy[nl], cellsz[nl]);
+  
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -3612,7 +3615,7 @@ void PredictEvent (int na, int nb, int nl)
   /* Se un errore numerico fa si che tm[k] < 0 allora lo poniamo uguale a 0
    * (ved. articolo Lubachevsky) */
 #if 1
-  if (tm[k]<0)
+  if (tm[k]<0.0)
     {
       printf("tm[%d]: %.15G\n", k, tm[k]);
       tm[k] = 0.0;
@@ -3638,7 +3641,8 @@ void PredictEvent (int na, int nb, int nl)
   MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
-
+  printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.16G\n", 
+	 na, ATOM_LIMIT+evCode, k, tm[k]);
   /* NOTA: le linked list sono tre:
    *  0 = lista dell'interazione AA
    *  1 = lista dell'interazione BB
@@ -3701,79 +3705,83 @@ void PredictEvent (int na, int nb, int nl)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
-		      /* maxax[...] è il diametro dei centroidi dei due tipi
-		       * di ellissoidi */
-		      if (OprogStatus.targetPhi > 0)
-			{
-			  //sigSq = Sqr(max_ax(na)+max_ax(n));
-			}
-		      else
-			{
-			  if (na < parnumA && n < parnumA)
-			    sigSq = Sqr(maxax[na]);
-			  else if (na >= parnumA && n >= parnumA)
-			    sigSq = Sqr(maxax[na]);
-			  else
-			    sigSq = Sqr((maxax[n]+maxax[na])*0.5+Oparams.sigmaSticky+OprogStatus.epsd);
-			}
-		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
-		      tInt = Oparams.time - atomTime[n];
-		      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
-		      dv[0] = vx[na] - vx[n];
-		      dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
-		      dv[1] = vy[na] - vy[n];
-		      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
-		      dv[2] = vz[na] - vz[n];
-
-		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
-		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
-		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-		      d = Sqr (b) - vv * (distSq - sigSq);
-
 		      collCode = MD_EVENT_NONE;
-		      if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+		      if (nl==2)
 			{
-			  /* i centroidi non collidono per cui non ci può essere
-			   * nessun urto sotto tali condizioni */
-			  continue;
+			  /* maxax[...] è il diametro dei centroidi dei due tipi
+			   * di ellissoidi */
+			  if (OprogStatus.targetPhi > 0)
+			    {
+			      //sigSq = Sqr(max_ax(na)+max_ax(n));
+			    }
+			  else
+			    {
+			      if (na < parnumA && n < parnumA)
+				sigSq = Sqr(maxax[na]);
+			      else if (na >= parnumA && n >= parnumA)
+				sigSq = Sqr(maxax[na]);
+			      else
+				sigSq = Sqr((maxax[n]+maxax[na])*0.5+Oparams.sigmaSticky+OprogStatus.epsd);
+			    }
+			  MD_DEBUG2(printf("sigSq: %f\n", sigSq));
+			  tInt = Oparams.time - atomTime[n];
+			  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+			  dv[0] = vx[na] - vx[n];
+			  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+			  dv[1] = vy[na] - vy[n];
+			  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+			  dv[2] = vz[na] - vz[n];
+
+			  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+			  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+			  d = Sqr (b) - vv * (distSq - sigSq);
+
+			  collCode = MD_EVENT_NONE;
+			  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+			    {
+			      /* i centroidi non collidono per cui non ci può essere
+			       * nessun urto sotto tali condizioni */
+			      continue;
+			    }
+			  MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
+			  if (vv==0.0)
+			    {
+			      if (distSq >= sigSq)
+				continue;
+			      /* la vel relativa è zero e i centroidi non si overlappano quindi
+			       * non si possono urtare! */
+			      t1 = t = 0;
+			      t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+					   urtare ruotando */
+			    }
+			  else if (distSq >= sigSq)
+			    {
+			      t = t1 = - (sqrt (d) + b) / vv;
+			      t2 = (sqrt (d) - b) / vv;
+			      MD_DEBUG29(printf("NOT OVERLAP t1=%.15G t2=%.15G\n", t1, t2));
+			      overlap = 0;
+			    }
+			  else 
+			    {
+			      MD_DEBUG29(printf("Centroids overlap!\n"));
+			      t2 = t = (sqrt (d) - b) / vv;
+			      t1 = 0;//-OprogStatus.h;
+			      overlap = 1;
+			      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+			      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+			    }
+			  //printf("na=%d j=%d type=%d t1=%.15G\n", na, lastbump[na].mol,
+			  //     lastbump[na].type, 
+			  //   t1);
+			  MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
+			  MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
+			  //t += Oparams.time; 
+			  t2 += Oparams.time;
+			  t1 += Oparams.time;
+			  //printf("t1=%.15G t2=%.15G\n",t1,t2);
+			  /* calcola cmq l'urto fra le due core spheres */
 			}
-		      MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
-		      if (vv==0.0)
-			{
-			  if (distSq >= sigSq)
-			    continue;
-			  /* la vel relativa è zero e i centroidi non si overlappano quindi
-			   * non si possono urtare! */
-			  t1 = t = 0;
-			  t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
-				       urtare ruotando */
-			}
-		      else if (distSq >= sigSq)
-			{
-			  t = t1 = - (sqrt (d) + b) / vv;
-			  t2 = (sqrt (d) - b) / vv;
-			  MD_DEBUG29(printf("NOT OVERLAP t1=%.15G t2=%.15G\n", t1, t2));
-			  overlap = 0;
-			}
-		      else 
-			{
-			  MD_DEBUG29(printf("Centroids overlap!\n"));
-			  t2 = t = (sqrt (d) - b) / vv;
-			  t1 = 0;//-OprogStatus.h;
-			  overlap = 1;
-			  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
-			  MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
-			}
-		      //printf("na=%d j=%d type=%d t1=%.15G\n", na, lastbump[na].mol,
-		      //     lastbump[na].type, 
-		      //   t1);
-		      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
-		      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
-		      //t += Oparams.time; 
-		      t2 += Oparams.time;
-		      t1 += Oparams.time;
-		      //printf("t1=%.15G t2=%.15G\n",t1,t2);
-		      /* calcola cmq l'urto fra le due core spheres */
 		      if (na < parnumA && n < parnumA)
 			sigSq = Sqr(Oparams.sigma[0][0]);
 		      else if (na >= parnumA && n >= parnumA)
@@ -4467,11 +4475,15 @@ void ProcessCollision(void)
   lastbump[evIdA].type = evIdE;
   lastbump[evIdB].type = evIdE;
 #ifdef MD_SILICA
-  for (nl = 0; nl < 3; nl++)
-    {
-      PredictEvent(evIdA, -1, nl);
-      PredictEvent(evIdB, evIdA, nl);
-    }
+  if ((evIdA<Oparams.parnumA)&&(evIdB<Oparams.parnumA))
+    nl = 0;
+  else if ((evIdA>=Oparams.parnumA)&&(evIdB>=Oparams.parnumA))
+    nl = 1;
+  else 
+    nl = 2;
+  PredictEvent(evIdA, -1, nl);
+  PredictEvent(evIdB, evIdA, nl);
+
 #else
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
@@ -4568,7 +4580,7 @@ void ProcessCellCrossing(void)
   nc = k / 3;
   k = k % 3;
  
-  printf("Proc CellCrossing nc=%d k=%d evIdA=%d\n", nc, k, evIdA);
+  printf("time=%.15G Proc CellCrossing nc=%d k=%d evIdA=%d\n", Oparams.time, nc, k, evIdA);
   iA = (evIdA < Oparams.parnumA)?0:1;
   if (iA == 0 && nc == 0)
     nl = 0;
@@ -4759,7 +4771,7 @@ void rebuildLinkedList(void)
 #ifdef MD_SILICA
 void rebuildCalendar(void)
 {
-  int k, n, nl;
+  int k, n, nl, nl_ignore;
 
   InitEventList();
   for (k = 0;  k < 3; k++)
@@ -4769,8 +4781,13 @@ void rebuildCalendar(void)
     }
   for (n = 0; n < Oparams.parnum; n++)
     {
+      nl_ignore = (n < Oparams.parnumA)?1:0;
       for (nl = 0; nl < 3; nl++)
-	PredictEvent(n, -2, nl); 
+	{
+	  if (nl == nl_ignore)
+	    continue;
+	  PredictEvent(n, -2, nl); 
+	}
     }
 }
 #else
