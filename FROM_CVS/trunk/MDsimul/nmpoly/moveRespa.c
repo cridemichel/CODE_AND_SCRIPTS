@@ -235,30 +235,6 @@ void shakeVelRespaNPT(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB
 }
 #endif
 #if defined(MD_RESPA)
-void updVol1Long(double dt, double c)
-{
-  double press, cdt, cdt2, DP, Nm;
-  Nm = Oparams.parnum;
-  cdt = c * dt;
-  cdt2 = c * dt / 2.0;
-  return;
-#ifdef MOLPTENS
-  DP = Sqr(s) * (WmLong  / 3.0 / Vol) / OprogStatus.W; /* press(t+dt) */
-#else
-  DP = Sqr(s) * ( WLong + WCLong) / Vol / OprogStatus.W; /* press(t+dt) */
-#endif
-#if 0
-    {
-    FILE *f;
-    f = fopen("press.dat", "a");
-    fprintf(f, "%d %f\n", Oparams.curStep, press);
-    fclose(f);
-    }
-#endif
-  /*printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);*/
-  Vol1 += DP  * cdt;
-}
-
 void calcPressTens(void)
 {
   Wm = Wm + WmLong;
@@ -1853,11 +1829,6 @@ void move(void)
 #ifndef MD_FENE
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
 #endif
-  /* Notare updVol1Long aggiorna Vol1 tenendo conto del contributo a lungo raggio delle forze.
-   * Questo è necessario poichè se considerassimo questo contributo nel reference system
-   * dovremmo calcolare, a rigore, ad ogni passo di quest'ultimo le forze long! */
-  if (OprogStatus.Nose == 1)
-    updVol1Long(Oparams.steplength, 0.5);
 #endif
   for (kk=0; kk < n; kk++)
     {
@@ -1987,8 +1958,6 @@ void move(void)
 #ifndef MD_FENE  
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
 #endif
-  if (OprogStatus.Nose == 1)
-    updVol1Long(Oparams.steplength, 0.5);
 #endif
   calcPressTens();
   /* Calculate the kinetic energy */
