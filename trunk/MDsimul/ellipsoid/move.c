@@ -3018,7 +3018,8 @@ retry:
 #endif
 	  //distconjgrad(i, j, shift, vecgcg, 100, 1); 
 	  //distconjgrad(i, j, shift, vecgcg, 1/OprogStatus.tolSD, 1);
-	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+	  guessdistByMesh(i, j, shift, vecgcg);
+	  //distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
 #if 0
 	  if (maxitsRyck)
 	    printf("distVera=%.15G\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
