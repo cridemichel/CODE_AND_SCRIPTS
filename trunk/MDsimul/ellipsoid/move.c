@@ -3797,6 +3797,167 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
   return 0;
 }
+#ifdef MD_NNL
+int locate_contact_neigh(int i, double vecg[5])
+{
+  double h, d, dold, dold2, d1Neg, d1Pos, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
+  double vd, normddot, ddot[3], t1, t2, maxddot, delt, told, troot, vecgroot[8];
+  //const int MAXOPTITS = 4;
+  double epsd, epsdFast, epsdFastR, epsdMax; 
+  double d2old;
+  int dorefine;
+  epsd = OprogStatus.epsd;
+  epsdFast = OprogStatus.epsdFast;
+  epsdFastR= OprogStatus.epsdFastR;
+  epsdMax = OprogStatus.epsdMax;
+  int its, foundrc, retcheck, kk;
+  /* NOTA: implementare le varie funzioni _neigh (search_contact_faster_neigh, ecc.)
+   * in tali funzioni la particella j non è altro che un ellissoide più grande di i
+   * con lo stesso centro e immobile */
+  t = Oparams.time;
+  t1 = t;	
+  t2 = timbig;
+  maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i];
+  h = 1E-7; /* last resort time increment */
+  if (search_contact_faster_neigh(i, &t, t2, vecgd, epsd, &d, epsdFast, r1, r2))
+    return 0;  
+  MD_DEBUG(printf(">>>>d:%f\n", d));
+  foundrc = 0;
+  for (kk = 0; kk < 8; kk++)
+    vecgdold[kk] = vecgd[kk];
+  dold = d;
+  its = 0;
+  while (t < t2)
+    {
+#if 1
+      normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
+      if (normddot!=0)
+	delt = epsd/normddot;
+#endif
+      else
+	delt = h*t;
+      if (dold < epsd)
+	delt = epsd / maxddot;
+      t += delt;
+      //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
+      for (kk = 0; kk < 8; kk++)
+	vecgdold2[kk] = vecgd[kk];
+      dold2 = dold;
+      d = calcDistNegNeigh(t, i, vecgd, 0);
+      if (fabs(d-dold2) > epsdMax)
+	{
+	  /* se la variazione di d è eccessiva 
+	   * cerca di correggere il passo per ottenere un valore
+	   * più vicino a epsd*/
+	  //printf("P delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt, fabs(d2-d2old), d2, d2old);
+	  t -= delt;
+	  //delt = d2old / maxddot;
+	  delt = epsd /maxddot;
+	  if (delt < t*h)
+	    delt = t*h;
+	  t += delt; 
+	  //t += delt*epsd/fabs(d2-d2old);
+	  itsS++;
+	  d = calcDistNegNeigh(t, i, vecgdold2, 0);
+	  for (kk = 0; kk < 8; kk++)
+	    vecgd[kk] = vecgdold2[kk];
+	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
+	}
+#if 1
+      if (d > epsdFastR)
+	{
+	  if (search_contact_faster_neigh(i, &t, vecgd, epsd, &d, epsdFast, r1, r2))
+	    {
+	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+	      return 0;
+	    }
+	  for (kk = 0; kk < 8; kk++)
+	    vecgdold[kk] = vecgd[kk];
+	  dold = d;
+	  its++;
+	  //itsS++;
+	  continue;
+	}
+#endif
+      MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f d1-d2:%.15G\n", t, d1, d2, fabs(d1-d2)));
+      dorefine = 0;      
+      if (dold > 0 && d < 0)
+	{
+       	  for (kk=0; kk < 8; kk++)
+	    vecgroot[kk] = vecgd[kk];
+#ifndef MD_NOINTERPOL  
+	 if (interpol(i, j, t-delt, delt, dold, d, &troot, vecgroot, shift, 0))
+#endif
+	    {
+	      /* vecgd2 è vecgd al tempo t-delt */
+	      for (kk=0; kk < 8; kk++)
+		vecgroot[kk] = vecgdold[kk];
+	      troot = t - delt;
+	    }
+	  dorefine = 1;
+	}
+      else if (dold < OprogStatus.epsd && d < OprogStatus.epsd)
+	{
+#ifndef MD_NOINTERPOL
+	  for (kk=0; kk < 8; kk++)
+	    vecgroot[kk] = vecgd[kk];
+	  
+	  if (interpol(i, j, t-delt, delt, dold, d, &troot, vecgroot, shift, 1))
+	    dorefine = 0;
+	  else 
+	    dorefine = 1;
+#endif
+	}
+      if (dorefine)
+	{
+	  if (refine_contact_neigh(i, j, troot, vecgroot, shift, vecg))
+	    {
+	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
+	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
+	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+	      if (vecg[4]>t2 || vecg[4]< t1)
+		return 0;
+	      else
+		return 1;
+	    }
+	  else 
+	    {
+	      MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+	      if (d < 0)
+		{
+		  MD_DEBUG10(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
+		  MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
+		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+		  return 0;
+		  //if (lastbump[i] == j && lastbump[j]==i )
+		   // return 0;
+		  //exit(-1);
+		}
+	      else
+		{
+		  printf("d: %.15G dold: %.15G\n", d, dold); 
+		}
+		//continue;
+	      
+	    }
+	}
+      dold = d;
+      for (kk = 0; kk < 8; kk++)
+	vecgdold[kk] = vecgd[kk];
+      its++;
+      itsS++;
+    }
+  MD_DEBUG(  
+  if (foundrc==0)
+    printf("%d-%d t=%.12G > t2=%.12G I did not find any contact point!\n", i, j, t, t2);
+  );
+
+  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+  return foundrc;
+}
+
+#endif
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
   double h, d, dold, dold2, d1Neg, d1Pos, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
@@ -4263,6 +4424,173 @@ double estimate_tmin(double t, int na, int nb)
 	}
     }
   return tmin;
+}
+#endif
+#ifdef MD_NNL
+void PredictEventNNL(int na, int nb) 
+{
+  int i, cellRangeT[2 * NDIM], signDir[NDIM], evCode,
+  double *shift, t1, t2, rxC, ryC, rzC, t;
+  if (vz[na] != 0.0) 
+    {
+      if (vz[na] > 0.0) 
+	signDir[2] = 0;/* direzione positiva */
+      else 
+	signDir[2] = 1;/* direzione negativa */
+      tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
+	       cellsz - rz[na] - L2) / vz[na];
+    } 
+  else 
+    tm[2] = timbig;
+  if (vx[na] != 0.0) 
+    {
+      if (vx[na] > 0.0) 
+	signDir[0] = 0;/* direzione positiva */
+      else 
+	signDir[0] = 1;/* direzione negativa */
+      tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L /
+	       cellsx - rx[na] - L2) / vx[na];
+    } 
+  else 
+    tm[0] = timbig;
+  
+  if (vy[na] != 0.) 
+    {
+      if (vy[na] > 0.) 
+	signDir[1] = 0;
+      else 
+	signDir[1] = 1;
+      tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L /
+	       cellsy - ry[na] - L2) / vy[na];
+    } 
+  else 
+    tm[1] = timbig;
+  /* ====== */
+  /* Find minimum time */
+  k = -1; /* giusto per dare un valore ed evitare una warning */
+  if (tm[1] <= tm[2]) {
+    if (tm[0] <= tm[1]) k = 0;
+    else k = 1;
+  } else {
+    if (tm[0] <= tm[2]) k = 0;
+    else k = 2;
+  }
+#if 1
+  if (tm[k]<0)
+    {
+      tm[k] = 0.0;
+#if 1
+      printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
+      printf("Cells(%d,%d,%d)\n", inCell[0][na], inCell[1][na], inCell[2][na]);
+      printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
+	     signDir[2]);
+#endif
+    }
+#endif
+  /* 100+0 = attraversamento cella lungo x
+   * 100+1 =       "           "     "   y
+   * 100+2 =       "           "     "   z */
+  evCode = 100 + k;
+  /* urto con le pareti, il che vuol dire:
+   * se lungo z e rz = -L/2 => urto con parete */ 
+  ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+  for (i=0; i <  nebrTab[na].len; i++)
+    {
+      n = nebrTab[na].list[i]; 
+      shift = nebrTab[na].shift[i];
+      t1 = Oparams.time;
+      t2 = nebrTab[na].nexttime;
+      if (!locate_contact(na, n, shift, t1, t2, vecg))
+	continue;
+      rxC = vecg[0];
+      ryC = vecg[1];
+      rzC = vecg[2];
+      t = vecg[4];
+      ScheduleEvent (na, n, t);
+    }
+}
+void BuildNNL(int na) 
+{
+  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], vecgd[8],
+	 b, d, t, tInt, vv, distSq, t1, t2;
+  int et, kk, ii, overlap, mm, retcheck;
+  double ncong, cong[3], pos[3], vecg[5], pos2[3], r1[3], r2[3];
+  /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
+  /*double cells[NDIM];*/
+  int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
+  iX, iY, iZ, jX, jY, jZ, k, n;
+
+  for (kk=0; kk < 3; kk++)
+    shift[kk] = 0;
+  if (!locate_contact_neigh(na, vecg))
+    nebrTab[na].nexttime = timbig;
+  else
+    nebrTab[na].nexttime = vecg[4];
+  ScheduleEvent(na, ATOM_LIMIT + 11, vecg[4]); 
+  
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCell[2][na] + iZ;    
+      shift[2] = 0.;
+      /* apply periodico boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  jZ = cellsz - 1;    
+	  shift[2] = - L;
+	} 
+      else if (jZ == cellsz) 
+	{
+	  jZ = 0;    
+	  shift[2] = L;
+	}
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCell[1][na] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsy - 1;    
+	      shift[1] = -L;
+	    } 
+	  else if (jY == cellsy) 
+	    {
+	      jY = 0;    
+	      shift[1] = L;
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCell[0][na] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsx - 1;    
+		  shift[0] = - L;
+		} 
+	      else if (jX == cellsx) 
+		{
+		  jX = 0;   
+		  shift[0] = L;
+		}
+	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+	      for (n = cellList[n]; n > -1; n = cellList[n]) 
+		{
+		  if (n != na && n != nb && (nb >= -1 || n < na)) 
+		    {
+      		      dist = calcDistNeg(Oparams.time, na, n, shift, r1, r2, &alpha, vecg, 1);
+		      if (dist < OprogStatus.distNNL)
+			{
+			  nebrTab[na].list[nebrTab[na].len] = n;
+			  for (kk=0; kk < 3; kk++)
+			    nebrTab[na].shift[kk] = shift[kk];
+			  nebrTab[na].len++;
+			}
+		    }
+		} 
+	    }
+	}
+    }
 }
 #endif
 void PredictEvent (int na, int nb) 
@@ -5118,8 +5446,13 @@ void ProcessCollision(void)
   lastbump[evIdA]=evIdB;
   lastbump[evIdB]=evIdA;
 #endif
+#ifdef MD_NNL
+  PredictEventNNL(evIdA, -1);
+  PredictEventNNL(evIdB, evIdA);
+#else
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
+#endif
 }
 void docellcross(int k, double velk, double *rkptr, int cellsk)
 {
@@ -5236,7 +5569,11 @@ void ProcessCellCrossing(void)
       break;
     }
 #endif
+#ifdef MD_NNL
+  PredictEventNNL(evIdA, evIdB);
+#else
   PredictEvent(evIdA, evIdB);
+#endif
   n = (inCell[2][evIdA] * cellsy + inCell[1][evIdA])*cellsx + 
     inCell[0][evIdA] + Oparams.parnum;
   /* Inserimento di evIdA nella nuova cella (head) */
@@ -5543,6 +5880,12 @@ void move(void)
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	  break;
 	}
+#ifdef MD_NNL
+      else if (evIdB == ATOM_LIMIT + 11)
+	{
+	  buildNNL(evIdA);	  
+	}
+#endif
 #ifdef MD_GRAVITY
       else if (evIdB == ATOM_LIMIT + 9)
 	{
