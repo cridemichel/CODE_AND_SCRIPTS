@@ -831,6 +831,8 @@ void StartRun(void)
 #else
 	inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
 #endif
+	//printf("inCell: %d, %d, %d\n", inCell[0][n], inCell[1][n], inCell[2][n]);
+	//printf("n=%d(%f,%f,%f)\n",n,rx[n], ry[n], rz[n]);
 #if 0
 	if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
 	  {
