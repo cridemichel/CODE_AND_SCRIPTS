@@ -934,7 +934,7 @@ void update_sigmas(void)
 	      continue;
 	    }
 	  sig = mindist(a,i);
-	  if (sig > Oparams.sigma*0.7)
+	  if (sig > Oparams.sigma*OprogStatus.growth)
 	    {
 	      sigmag[a][i] = Oparams.sigma;
 	    }
