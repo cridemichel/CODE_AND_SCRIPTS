@@ -1360,12 +1360,10 @@ void ProcessCellCrossing(void)
   cellList[evIdA] = cellList[n];
   cellList[n] = evIdA;
 }
-#ifdef BROWNIAN
 void velsBrown(double T)
 {
   comvel(Oparams.parnum, T, Oparams.m, 0); 
 }
-#endif
 
 void rebuildLinkedList(void)
 {
@@ -1413,14 +1411,26 @@ void distanza(int ia, int ib)
   printf("dist(%d,%d): %f\n", ia, ib, sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz)));
 }
 void rebuildLinkedList(void);
-#ifdef BROWNIAN
+
+/* ============================ >>> move<<< =================================*/
 void move(void)
 {
   int i, innerstep=0;
+#ifdef MD_GRAVITY
+  int ii;
+  double rzmax, zfact;
+#endif
+  /* Zero all components of pressure tensor */
+#if 0
+  Wxy = 0.0;
+  Wyz = 0.0;
+  Wzx = 0.0;
+  Wxx = Wyy = Wzz = 0.0;
+#endif
+  /* get next event */
   while (1)
     {
       innerstep++;
-      /* get next event */
       NextEvent();
       /* Descrizione Eventi:
        * 0 <= evIdB < ATOM_LIMIT: 
@@ -1466,277 +1476,179 @@ void move(void)
 	  calcObserv();
 	  outputSummary(); 
 	}
+      else if (evIdB == ATOM_LIMIT + 10)
+	{
+	  if (OprogStatus.brownian)
+	    {
+	      UpdateSystem();
+	      velsBrown(Oparams.T);
+	      rebuildCalendar();
+	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	    }
+	  OprogStatus.nextDt += Oparams.Dt;
+	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+	  break;
+	}
+#ifdef MD_GRAVITY
       else if (evIdB == ATOM_LIMIT + 9)
 	{
 	  UpdateSystem();
-	  OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
-	  MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%lld Vz: %.15f\n", 
-			   (long long int)Oparams.curStep,Vz));
-#if 0
-	  K = 0.0;
-	  for (i = 0; i < Oparams.parnumA; i++)
+	  if (OprogStatus.taptau > 0.0)
 	    {
-	      K += Oparams.m[0]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
-	    }
-	  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
-	    {
-	      K += Oparams.m[1]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
-	    }
-	  K *= 0.5;
-#endif
-	  velsBrown(Oparams.T);
-	  rebuildCalendar();
-	  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-	  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
-	  break;
-	}
+	      if (OprogStatus.quenchend < 0.0)
+		{
 #if 0
-      if (OprogStatus.endtime > 0 && Oparams.time > OprogStatus.endtime)
-	ENDSIM = 1;
-#endif
-    }
-  /*printf("innersteps: %d\n", innerstep);*/
-}
-#else
-/* ============================ >>> move<<< =================================*/
-void move(void)
-{
-  int i;
-#ifdef MD_GRAVITY
-  int ii;
-  double rzmax, zfact;
-#endif
-  /* Zero all components of pressure tensor */
-#if 0
-  Wxy = 0.0;
-  Wyz = 0.0;
-  Wzx = 0.0;
-  Wxx = Wyy = Wzz = 0.0;
-#endif
-  /* get next event */
-  NextEvent();
-  /* Descrizione Eventi:
-   * 0 <= evIdB < ATOM_LIMIT: 
-   *        urto fra evIdA e evIdB 
-   *
-   * ATOM_LIMIT <= evIdB <= ATOM_LIMIT + 5:
-   *        ATOM_LIMIT   -> urto con parete lungo x nella direzione negativa
-   *        ATOM_LIMIT+1 -> urto con parete lungo x nella direzione positiva
-   *
-   * ATOM_LIMIT + 5 < evIdB < ATOM_LIMT + 100:
-   *        eventi per usi vari (misure, output e altro)
-   *
-   * evIdB >= ATOM_LIMIT+100: 
-   *        attraversamento della cella (cell-crossing) */        
-  /* PROCESS EVENTS */ 
-  if (evIdB < ATOM_LIMIT)
-    {
-      MD_DEBUG(printf("collision (evIdA: %d evIdB:%d)\n", evIdA, evIdB));
-      ProcessCollision();
-      OprogStatus.collCount++;
-    }
-    
-#ifdef MD_GRAVITY
-  else if (evIdB >= ATOM_LIMIT + 100 || evIdB < ATOM_LIMIT + NDIM * 2)
-    {
-      ProcessCellCrossing();
-      OprogStatus.crossCount++;
-    }
-#else
-  else if ( evIdB >= ATOM_LIMIT + 100 )
-    {
-      ProcessCellCrossing();
-      OprogStatus.crossCount++;
-    }
-#endif
-  /* ATOM_LIMIT +6 <= evIdB < ATOM_LIMIT+100 eventi che si possono usare 
-   * liberamente */
-  else if (evIdB == ATOM_LIMIT + 7)
-    {
-      UpdateSystem();
-      OprogStatus.nextSumTime += OprogStatus.intervalSum;
-      ScheduleEvent(-1, ATOM_LIMIT + 7, OprogStatus.nextSumTime);
-      calcObserv();
-      outputSummary(); 
-    }
-#ifdef MD_GRAVITY
-  else if (evIdB == ATOM_LIMIT + 9)
-    {
-      UpdateSystem();
-      if (OprogStatus.taptau > 0.0)
-	{
-	  if (OprogStatus.quenchend < 0.0)
-	    {
-#if 0
-    	      if ((V - Vold)/V < OprogStatus.quenchtol)
-    		{
-    		  printf("QUENCH DONE! %d\n", Oparams.curStep);
-    		  /* se l'energia potenziale è ormai stabile considera il quench finito */
-    		  OprogStatus.quenchend = Oparams.curStep;
-		}
-#else
-	      calcKVz();
-	      OprogStatus.nextcheckTime += OprogStatus.checkquenchTime;
-    	      if ( (2.0*K/(3.0*((double)Oparams.parnum)-3.0)) < 
-    		   OprogStatus.quenchtol)
-    		{
-#endif
-    		  printf("QUENCH DONE! %lld\n", (long long int) Oparams.curStep);
-		  OprogStatus.numquench++;
-		  /* calcola e salva le misure quando finisce il quench */
-		  calcRho();
-		  save_rho();
-		  calccmz();
-		  save_rzcm();
-    		  OprogStatus.quenchend = Oparams.time;
-    		  comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-#if 1
-		  calcKVz();
-    		  scalevels(Oparams.T, K, Vz);
-#endif
-		  MD_DEBUG3(printf("rzmax:%f\n", rzmax));
-		  rzmax = -Lz2;
-		  for (ii=0; ii < Oparams.parnum; ii++)
+		  if ((V - Vold)/V < OprogStatus.quenchtol)
 		    {
-		      if (rz[ii] > rzmax)
-			rzmax = rz[ii];
+		      printf("QUENCH DONE! %d\n", Oparams.curStep);
+		      /* se l'energia potenziale è ormai stabile considera il quench finito */
+		      OprogStatus.quenchend = Oparams.curStep;
 		    }
-		  if (Lz / (rzmax+Lz2) < OprogStatus.expandFact)
-		    zfact = Lz/(rzmax+Lz2);
-		  else
-		    zfact = OprogStatus.expandFact;
-		  for (ii=0; ii < Oparams.parnum; ii++)
-    		    {
-		      rz[ii] = zfact*(rz[ii]+Lz2)-Lz2;
-		      rz[ii] += OprogStatus.rzup;
-		      vz[ii] += OprogStatus.vztap; 
+#else
+		  calcKVz();
+		  OprogStatus.nextcheckTime += OprogStatus.checkquenchTime;
+		  if ( (2.0*K/(3.0*((double)Oparams.parnum)-3.0)) < 
+		       OprogStatus.quenchtol)
+		    {
+#endif
+		      printf("QUENCH DONE! %lld\n", (long long int) Oparams.curStep);
+		      OprogStatus.numquench++;
+		      /* calcola e salva le misure quando finisce il quench */
+		      calcRho();
+		      save_rho();
+		      calccmz();
+		      save_rzcm();
+		      OprogStatus.quenchend = Oparams.time;
+		      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+#if 1
+		      calcKVz();
+		      scalevels(Oparams.T, K, Vz);
+#endif
+		      MD_DEBUG3(printf("rzmax:%f\n", rzmax));
+		      rzmax = -Lz2;
+		      for (ii=0; ii < Oparams.parnum; ii++)
+			{
+			  if (rz[ii] > rzmax)
+			    rzmax = rz[ii];
+			}
+		      if (Lz / (rzmax+Lz2) < OprogStatus.expandFact)
+			zfact = Lz/(rzmax+Lz2);
+		      else
+			zfact = OprogStatus.expandFact;
+		      for (ii=0; ii < Oparams.parnum; ii++)
+			{
+			  rz[ii] = zfact*(rz[ii]+Lz2)-Lz2;
+			  rz[ii] += OprogStatus.rzup;
+			  vz[ii] += OprogStatus.vztap; 
+			}
+		      rebuildLinkedList();
+		      MD_DEBUG3(distanza(996, 798));
+		      rebuildCalendar();
+		      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+
 		    }
-		  rebuildLinkedList();
-		  MD_DEBUG3(distanza(996, 798));
-    		  rebuildCalendar();
-   		  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-		  
 		}
- 	    }
-	  else if ((Oparams.time - OprogStatus.quenchend)  < OprogStatus.taptau)
-    	    {
-	      /* se scalevelsteps = 0 allora scala ogni passo se si sta facendo il 
-    		 tapping */
+	      else if ((Oparams.time - OprogStatus.quenchend)  < OprogStatus.taptau)
+		{
+		  /* se scalevelsteps = 0 allora scala ogni passo se si sta facendo il 
+		     tapping */
+		  OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
+		  calcKVz();
+		  MD_DEBUG4(printf("SCALVEL #%lld Vz: %.15f\n", (long long int) Oparams.curStep,Vz));
+		  scalevels(Oparams.T, K, Vz);
+		  rebuildLinkedList();
+		  rebuildCalendar();
+		  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+		}
+	      else
+		{
+		  /* start quench (-1  significa che il quench è iniziato) */
+		  OprogStatus.nextcheckTime += OprogStatus.checkquenchTime;
+		  OprogStatus.quenchend = -1;
+		}
+	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+	    }
+	  else if (OprogStatus.scalevel)
+	    {
 	      OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
 	      calcKVz();
-	      MD_DEBUG4(printf("SCALVEL #%lld Vz: %.15f\n", (long long int) Oparams.curStep,Vz));
+	      MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%lld Vz: %.15f\n", (long long int)Oparams.curStep,Vz));
 	      scalevels(Oparams.T, K, Vz);
-	      rebuildLinkedList();
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	    }
-	  else
-	    {
-	      /* start quench (-1  significa che il quench è iniziato) */
-	      OprogStatus.nextcheckTime += OprogStatus.checkquenchTime;
-	      OprogStatus.quenchend = -1;
-	    }
-	  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
-	}
-      else if (OprogStatus.scalevel)
-	{
-	  OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
-	  calcKVz();
-	  MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%lld Vz: %.15f\n", (long long int)Oparams.curStep,Vz));
-	  scalevels(Oparams.T, K, Vz);
-	  rebuildCalendar();
-	  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-	  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
-	}
 #if 0
-      else if (2.0*K/(3.0*Oparams.parnum-3.0)>Oparams.T)
-	{
-	  UpdateSystem();
-	  calcKVz();
-	  scalevels(Oparams.T, K, Vz);
-	}
-#endif
-#if 0 
-	  for (ii= 0; ii < Oparams.parnum; ii++)
+	  else if (2.0*K/(3.0*Oparams.parnum-3.0)>Oparams.T)
 	    {
-	      if (rz[ii]+Lz*0.5 < 0.0)
-		{
-		  printf("*******************************************************************\n");
-		  printf("STEP: %d\n", Oparams.curStep);
-		  printf("evIdA=%d SOTTO MURO PT rz+Lz*0.5=%.30f\n", ii, rz[ii]+Lz*0.5);
-		  printf("*******************************************************************\n");
-		}
+	      UpdateSystem();
+	      calcKVz();
+	      scalevels(Oparams.T, K, Vz);
 	    }
 #endif
-    }
-  if (OprogStatus.maxquench && OprogStatus.numquench == OprogStatus.maxquench)
-    ENDSIM = 1;
+	}
+      if (OprogStatus.maxquench && OprogStatus.numquench == OprogStatus.maxquench)
+	ENDSIM = 1;
 #else
-  else if (evIdB == ATOM_LIMIT + 9)
-    {
-      if (OprogStatus.scalevel)
+      else if (evIdB == ATOM_LIMIT + 9)
 	{
+	  if (OprogStatus.scalevel)
+	    {
+	      UpdateSystem();
+	      OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
+	      MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%lld Vz: %.15f\n", 
+			       (long long int)Oparams.curStep,Vz));
+	      K = 0.0;
+	      for (i = 0; i < Oparams.parnumA; i++)
+		{
+		  K += Oparams.m[0]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
+		}
+	      for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+		{
+		  K += Oparams.m[1]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
+		}
+	      K *= 0.5;
+	      scalevels(Oparams.T, K);
+	      rebuildCalendar();
+	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      if (OprogStatus.rescaleTime > 0)
+		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	      else
+		OprogStatus.scalevel = 0;
+	    }
+	}
+#endif
+      if (OprogStatus.endtime > 0 && Oparams.time > OprogStatus.endtime)
+	ENDSIM = 1;
+#if 0
+      if (Oparams.curStep == Oparams.totStep)
+	{
+	  printf(" **** end of dynamics **** \n");
+	  printf(" final colliding pair (%d,%d)\n", i, j);
+	  /* ** CHECK FOR PARTICLE OVERLAPS ** */
 	  UpdateSystem();
-	  OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
-	  MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%lld Vz: %.15f\n", 
-			   (long long int)Oparams.curStep,Vz));
-	  K = 0.0;
-	  for (i = 0; i < Oparams.parnumA; i++)
+	  /*check (Oparams.sigma, &overlap, &K, &V);*/
+	  if ( overlap ) 
 	    {
-	      K += Oparams.m[0]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
+	      printf(" particle overlap in final configuration\n");
 	    }
-	  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
-	    {
-	      K += Oparams.m[1]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
-	    }
-	  K *= 0.5;
-	  scalevels(Oparams.T, K);
-	  rebuildCalendar();
-	  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-	  if (OprogStatus.rescaleTime > 0)
-	    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
-	  else
-	    OprogStatus.scalevel = 0;
 	}
-    }
-#endif
-  if (OprogStatus.endtime > 0 && Oparams.time > OprogStatus.endtime)
-    ENDSIM = 1;
-#if 0
-  if (Oparams.curStep == Oparams.totStep)
-    {
-      printf(" **** end of dynamics **** \n");
-      printf(" final colliding pair (%d,%d)\n", i, j);
-      /* ** CHECK FOR PARTICLE OVERLAPS ** */
-      UpdateSystem();
-      /*check (Oparams.sigma, &overlap, &K, &V);*/
-      if ( overlap ) 
-	{
-	  printf(" particle overlap in final configuration\n");
-	}
-    }
-#endif
-#if 0 
-  if (evIdA > -1 && rz[evIdA] + Lz*0.5 < - 0.5)
-    { 
-      printf("*******************************************************************\n");
-      printf("STEP: %d\n", Oparams.curStep);
-      printf("evIdA=%d SOTTO MURO PT rz+Lz*0.5=%.30f\n", evIdA, rz[evIdA]+Lz*0.5);
-      printf("*******************************************************************\n");
-    }
 #endif
 #if 0
-  if ( ( (OprogStatus.CMreset > 0) &&
-	 /* 24/3/99 CHG:((Oparams.curStep % OprogStatus.CMreset) == 0)) */
-       (Oparams.curStep == OprogStatus.CMreset) )
-    || ( (OprogStatus.CMreset < 0) &&
-	 /* 24/3/99 CHG:((Oparams.curStep % OprogStatus.CMreset) == 0)) */
-      (Oparams.curStep % (-OprogStatus.CMreset) == 0) )  ) 
-      resetCM(Oparams.parnum);
+      if ( ( (OprogStatus.CMreset > 0) &&
+	     /* 24/3/99 CHG:((Oparams.curStep % OprogStatus.CMreset) == 0)) */
+	   (Oparams.curStep == OprogStatus.CMreset) )
+	|| ( (OprogStatus.CMreset < 0) &&
+	     /* 24/3/99 CHG:((Oparams.curStep % OprogStatus.CMreset) == 0)) */
+	  (Oparams.curStep % (-OprogStatus.CMreset) == 0) )  ) 
+	  resetCM(Oparams.parnum);
 
-  /* Update the integral of the pressure tensor */
-  updateDQ(tij);
-  updatePE(Oparams.parnum);
+      /* Update the integral of the pressure tensor */
+      updateDQ(tij);
+      updatePE(Oparams.parnum);
 #endif
+    }
 }
-#endif
