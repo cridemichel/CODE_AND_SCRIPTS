@@ -491,7 +491,7 @@ void scale_Phi(void)
   double L2, shift[3], shiftmin[3], phi, scalfact, factorold, factor;
   if (OprogStatus.targetPhi <= 0)
     return;
-    
+
   phi=calc_phi();
   if (first)
     {

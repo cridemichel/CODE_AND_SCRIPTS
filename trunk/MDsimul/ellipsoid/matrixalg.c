@@ -715,7 +715,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradf, gradg);
       //fp=(*func)(p);
-#if 1
+#if 0
        for (kk = 0; kk < 3; kk++)
 	 {
 	   dd[kk] = p[kk+3]-p[kk];
@@ -937,6 +937,10 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     A = OprogStatus.springkSD;
   else
     A = -OprogStatus.springkSD;
+  //normdd =calc_norm(dd);
+   
+  //if (normdd < OprogStatus.epsd)
+    //A*=1/OprogStatus.epsd;
   for (kk=0; kk < 3; kk++)
     {
       grad[kk]= 2.0*(vec[kk+3]-vec[kk])*A;
@@ -970,11 +974,8 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     }
   normg=sqrt(normg);
 #endif
-  normdd =calc_norm(dd);
-  if (normdd > OprogStatus.epsd)
-    fact = OprogStatus.stepSD*normdd;
-  else
-    fact = OprogStatus.stepSD*normdd/(normdd+0.02);
+  fact = OprogStatus.stepSD;
+  //fact = OprogStatus.stepSD/(normdd+OprogStatus.epsd);
   //fact = OprogStatus.stepSD*normdd;
   for (kk=0; kk < 6; kk++)
     {
