@@ -1091,6 +1091,7 @@ void LJForce(int Nm, double rcut)
   COORD_TYPE vabCut, Vcab;
   COORD_TYPE Vab, Wab, dvdr;
   COORD_TYPE rho, DRmx, DRmy, DRmz;
+  double sigmaFactorSq;
   /* Local variables to implement linked list */
   int  n, nebrTab0, nebrTab1;
   COORD_TYPE Wmyx, Wmzy, Wmxz, kD;
@@ -1109,9 +1110,11 @@ void LJForce(int Nm, double rcut)
   rcutabSq = Sqr(rcutab);
 #ifdef NM_SPHERE
   factor = pow(2.0,1.0/6.0);
-  sigmaSq = Sqr(Oparams.sigma*factor);
+  sigmaSq = Sqr(Oparams.sigma);
+  sigmaFactorSq = Sqr(Oparams.sigma*factor);
 #else
   sigmaSq = Sqr(Oparams.sigma);
+  sigmaFactorSq = Sqr(Oparams.sigma);
 #endif
   epsab4 = 4.0 * Oparams.epsilon;
 #ifdef NM_SPHERE
@@ -1204,7 +1207,7 @@ void LJForce(int Nm, double rcut)
 #endif
 	    }
 	  else
-	    srab2 = sigmaSq / rabSq;
+	    srab2 = sigmaFactorSq / rabSq;
 #if defined(SOFT_SPHERE)
 	  vab = pow(srab2, ((double)Oparams.NN)/2.0);
   	  wab = ((double)Oparams.NN)*vab;
@@ -1212,7 +1215,7 @@ void LJForce(int Nm, double rcut)
 	  vabNN = ((double)Oparams.MM)*pow(srab2, ((double)Oparams.NN)/2.0);
 	  vabMM = -((double)Oparams.NN)*pow(srab2, ((double)Oparams.MM)/2.0);
 	  vab = vabNN + vabMM;
-  	  wab = ((double)Oparams.NN)*vabNN - ((double)Oparams.MM)*vabMM ;
+  	  wab = ((double)Oparams.NN)*vabNN + ((double)Oparams.MM)*vabMM ;
 #else
 	  /* Lennard-Jones */
 	  srab6   = srab2 * srab2 * srab2;
@@ -1304,7 +1307,7 @@ void LJForce(int Nm, double rcut)
      (see pag 145 A.T.) */
   rab   = rcut*Oparams.sigma;
   rabSq = Sqr(rab);
-  srab2   = sigmaSq / rabSq;
+  srab2   = sigmaFactorSq / rabSq;
 #if defined(SOFT_SPHERE)
   vabCut = pow(srab2, Oparams.NN/2.0);
   //printf("NN: %d srab2:%f rab:%f vabCut: %f\n", Oparams.NN, srab2, rab, vabCut);
@@ -1386,6 +1389,7 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
   /* Local variables to implement linked list */
   int  n, nebrTab0, nebrTab1;
   COORD_TYPE Wmyx, Wmzy, Wmxz, kD;
+  double sigmaFactorSq;
 #ifdef MD_RESPA_SWITCH
   double SwFact;
 #endif
@@ -1408,9 +1412,11 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
   rcutabSqO = Sqr(rcutabO);
 #ifdef NM_SPHERE
   factor = pow(2.0,1.0/6.0);
-  sigmaSq = Sqr(Oparams.sigma*factor);
+  sigmaSq = Sqr(Oparams.sigma);
+  sigmaFactorSq = Sqr(Oparams.sigma*factor);
 #else
   sigmaSq = Sqr(Oparams.sigma);
+  sigmaFactorSq = Sqr(Oparams.sigma);
 #endif
 #ifdef NM_SPHERE
   epsabnm = Oparams.epsilon / (((double) Oparams.NN) - ((double)Oparams.MM));
@@ -1498,7 +1504,7 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
 #endif
 	    }
 	  else
-	    srab2 = sigmaSq / rabSq;
+	    srab2 = sigmaFactorSq / rabSq;
 #if defined(SOFT_SPHERE)
 	  vab = pow(srab2, ((double)Oparams.NN)/2.0);
   	  wab = ((double)Oparams.NN)*vab;
@@ -1506,7 +1512,7 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
 	  vabNN = ((double)Oparams.MM)*pow(srab2, ((double)Oparams.NN)/2.0);
 	  vabMM = -((double)Oparams.NN)*pow(srab2, ((double)Oparams.MM)/2.0);
 	  vab = vabNN + vabMM;
-  	  wab = ((double)Oparams.NN)*vabNN - ((double)Oparams.MM)*vabMM ;
+  	  wab = ((double)Oparams.NN)*vabNN + ((double)Oparams.MM)*vabMM ;
 #else
 	  /* Lennard-Jones */
 	  srab6   = srab2 * srab2 * srab2;
@@ -1615,8 +1621,8 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
   rabI  = rcutI*Oparams.sigma; 
   rabSq = Sqr(rab);
   rabSqI = Sqr(rabI);
-  srab2   = sigmaSq / rabSq;
-  srab2I  = sigmaSq / rabSqI;
+  srab2   = sigmaFactorSq / rabSq;
+  srab2I  = sigmaFactorSq / rabSqI;
 #if defined(SOFT_SPHERE)
   vabCut = pow(srab2, Oparams.NN/2.0);
   vabCutI= pow(srab2I, Oparams.NN/2.0);
