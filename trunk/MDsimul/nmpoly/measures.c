@@ -100,6 +100,7 @@ void energy(void)
   dist = ((rx[0][mol] - rx[1][mol]) * (vx[0][mol] - vx[1][mol]) + 
     (ry[0][mol] - ry[1][mol]) * (vy[0][mol] - vy[1][mol]) + 
     (rz[0][mol] - rz[1][mol]) * (vz[0][mol] - vz[1][mol]))/dist;
+  dist = 0.0;
   printf("Molecule relative velocity along bond: %.15f\n", dist); 
 
   Px = 0.0;
@@ -463,22 +464,25 @@ void viscosity(void)
 /* =========================== >>> radDens <<< ============================= */
 void radDens(void)
 {
-  int bin, Nm, i, j;
+  int bin, Nm, a, i, j;
   int* hist;
   COORD_TYPE rij, rxij, ryij, rzij, rijSq, rxCMi, ryCMi, rzCMi, rxCMj, ryCMj,
-    rzCMj;
+    rzCMj, *m;
   COORD_TYPE rlower, rupper, cost, nIdeal; 
-  COORD_TYPE rhoAv, m0, m1, m2, invMtot, DELR;
+  COORD_TYPE rhoAv, invMtot, DELR, Mtot;
   double rend, rbeg;
   L = cbrt(Vol);
   invL = 1.0 / L;
   Nm = Oparams.parnum;
   rhoAv = (COORD_TYPE) Nm;
-  m0 = Oparams.m[0];
-  m1 = Oparams.m[1];
-  m2 = Oparams.m[2];
+  m = Oparams.m;
+ 
+
+  Mtot = 0.0;
+  for (a = 0; a < NA; a++)
+    Mtot += m[a];
   
-  invMtot = 1.0 / (m0 + m1 + m2);
+  invMtot = 1.0 / Mtot;
   
   rbeg = 0.2;
   rend = L * 0.5;
@@ -498,12 +502,23 @@ void radDens(void)
     {
       for(j=i+1; j < Nm; j++)
 	{
-	  rxCMi = (m0*rx[0][i] + m1*rx[1][i] + m2*rx[2][i]) * invMtot;
-	  ryCMi = (m0*ry[0][i] + m1*ry[1][i] + m2*ry[2][i]) * invMtot;
-	  rzCMi = (m0*rz[0][i] + m1*rz[1][i] + m2*rz[2][i]) * invMtot;
-	  rxCMj = (m0*rx[0][j] + m1*rx[1][j] + m2*rx[2][j]) * invMtot;
-	  ryCMj = (m0*ry[0][j] + m1*ry[1][j] + m2*ry[2][j]) * invMtot;
-	  rzCMj = (m0*rz[0][j] + m1*rz[1][j] + m2*rz[2][j]) * invMtot;
+	  rxCMi = ryCMi = rzCMi = 0;
+	  rxCMj = ryCMj = rzCMj = 0;
+	  for (a=0; a < NA; a++)
+	    {
+	      rxCMi += m[a]*rx[a][i];
+	      ryCMi += m[a]*ry[a][i];
+	      rzCMi += m[a]*rz[a][i];
+	      rxCMj += m[a]*rx[a][j];
+	      ryCMj += m[a]*ry[a][j];
+	      rzCMj += m[a]*rz[a][j];
+	    }
+	  rxCMi *= invMtot;
+	  ryCMi *= invMtot;
+	  rzCMi *= invMtot;
+	  rxCMj *= invMtot;
+	  ryCMj *= invMtot;
+	  rzCMj *= invMtot;
 	  rxij = rxCMi - rxCMj;
 	  ryij = ryCMi - ryCMj;
 	  rzij = rzCMi - rzCMj;

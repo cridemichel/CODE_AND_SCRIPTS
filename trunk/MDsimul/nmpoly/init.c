@@ -247,12 +247,13 @@ void FCC(int Nm, COORD_TYPE D, COORD_TYPE* m)
 		  ryCm = by[iref] + Cell * ((COORD_TYPE) iy);
 		  rzCm = bz[iref] + Cell * ((COORD_TYPE) iz);
 		  mid = NA/2;
-		  printf("mid:%d NA:%d\n", mid, NA);
+		  /*printf("mid:%d NA:%d\n", mid, NA);*/
 		  rx[mid][ii+iref] = rxCm;
 		  ry[mid][ii+iref] = ryCm;
 		  rz[mid][ii+iref] = rzCm;
 		  for (n = mid+1; n < NA; n++)
 		    {
+		      printf("qui1 n=%d\n", n);
 		      notdone = maxit;
 		      while (notdone)
 			{
@@ -271,8 +272,9 @@ void FCC(int Nm, COORD_TYPE D, COORD_TYPE* m)
 			    }
 			}
 		    }
-		   for (n = mid; n>=0; n--)
+		   for (n = mid-1; n>=0; n--)
 		    {
+		      printf("qui2 n=%d\n", n);
 		      notdone = maxit;
 		      while (notdone)
 			{
