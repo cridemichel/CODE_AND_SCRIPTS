@@ -151,11 +151,11 @@ void InvMatrix(double **a, double **b, int NB)
 
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
 #define TOLX 1.0E-12//1.0e-7 /* Convergence criterion on  x.*/ 
-#define TOLX2 1.E-9
-#define MAXITS 200 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
-#define MAXITS2 200
+#define TOLX2 1.E-6
+#define MAXITS 30 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
+#define MAXITS2 20
 #define TOLF 1.0e-10// 1.0e-4
-#define TOLF2 1.0E-6
+#define TOLF2 1.0E-4
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
@@ -308,7 +308,7 @@ void newt(double x[], int n, int *check,
 	  int iA, int iB, double shift[3])
 {
   int ii, i,its, its2,j,*indx;
-  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
+  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold, alphaold; 
 #ifdef MD_GLOBALNR2
   int check2;
   double f2, stpmax2, fold2, *xold2, *g2;
@@ -362,7 +362,7 @@ void newt(double x[], int n, int *check,
 #else
       funcs2beZeroedGuess(n-1,x,fvecG,iA,iB,shift);
 #endif
-      for (its2=0; its2 <MAXITS2 ; its2++)
+      for (its2=0; its2 < MAXITS2 ; its2++)
 	{
 #ifdef MD_GLOBALNR2
 	  if (its2=0 && test < 0.01*TOLF)
@@ -371,7 +371,7 @@ void newt(double x[], int n, int *check,
 	      break;
 	    }
 #endif
-	  MD_DEBUG(printf("Guessing ist2=%d x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", its2, x[0], x[1], x[2], x[3],x[4]));
+	  MD_DEBUG(printf("Guessing its2=%d x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", its2, x[0], x[1], x[2], x[3],x[4]));
 	  fdjacGuess(n-1,x,fvecG,fjac,funcs2beZeroedGuess, iA, iB, shift); 
 #ifdef MD_GLOBALNR2
 	  for (i=0;i<n-1;i++) 
@@ -463,7 +463,7 @@ void newt(double x[], int n, int *check,
 #ifdef MD_GLOBALNR2
       if (its2 == MAXITS2 || check2==2)
 	{
-	  //*check = 2;
+	  *check = 2;
 	  MD_DEBUG(printf("MAXITS2!!\n"));
 	  FREERETURN;
 	}
