@@ -304,6 +304,8 @@ void NextEvent (void)
   evIdC = treeIdC[idNow];
   evIdD = treeIdD[idNow];
   evIdE = treeIdE[idNow];
+  printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
+		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time);
   MD_DEBUG2(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
   MD_DEBUG(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
