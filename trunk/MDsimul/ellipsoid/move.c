@@ -1224,8 +1224,8 @@ void fdjac(int n, double x[], double fvec[], double **df,
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
-  calcFxt(x, Xa, DA, OmegaA, RA, rA, vA, Fxt, &Ft);
-  calcFxt(x, Xb, DB, OmegaB, RB, rB, vB, Gxt, &Gt);
+  calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, Fxt, &Ft);
+  calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, Gxt, &Gt);
   for (k1 = 0; k1 < 3; k1++)
     {
       df[k1][4] = 0;
