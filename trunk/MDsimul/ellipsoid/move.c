@@ -2872,13 +2872,13 @@ int refine_contact(int i, int j, double t, double vecgd[8], double shift[3],doub
       return 1; 
     }
 }
-int search_contact_faster(int i, int j, double *shift, double *t, double t2, double *vecgd, double epsd, double *d1, double epsdFast)
+int search_contact_faster(int i, int j, double *shift, double *t, double t2, double *vecgd, double epsd, double *d1, double epsdFast, double *r1, double *r2)
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
   double maxddot, told, delt, normddot, ddot[3];
   const int MAXOPTITS = 500;
-  double r1[3], r2[3], alpha;
+  double alpha;
   int its=0; 
     
   timesF++;
@@ -2992,7 +2992,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     }
 #else
   //d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
-  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast))
+  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast, r1, r2))
     return 0;  
 #if 0
   if (refine_contact(i, j, t, vecgd1, shift, vecg))
@@ -3091,7 +3091,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #if 1
       if (d2 > epsdFastR)
 	{
-	  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast))
+	  if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast, r1, r2))
 	    {
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
@@ -4472,7 +4472,6 @@ void move(void)
 	  fprintf(bf, sepStr);
 	  writeAsciiPars(bf, opar_ascii);
 	  fprintf(bf, sepStr);
-	  printf("qui\n");
 #endif
 	  MD_DEBUG(printf("[Store event]: %.15G JJ=%d KK=%d\n", Oparams.time, OprogStatus.JJ, OprogStatus.KK));
 #ifdef MD_STOREMGL
