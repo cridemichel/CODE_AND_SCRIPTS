@@ -655,6 +655,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   vc = 0;
   for (a=0; a < 3; a++)
     vc += (vCA[a]-vCB[a])*norm[a];
+  if (vc < 0 && fabs(vc) > 1E-5)
+    {
+      printf("[ERROR] maybe second collision has been wrongly predicted\n");
+      printf("relative velocity at contact point is negative! Aborting simulation...\n");
+      exit(-1);
+    }
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
   
   for (a=0; a < 3; a++)
@@ -1920,6 +1926,7 @@ void store_bump(int i, int j)
       exit(-1);
     }
   UpdateSystem();
+  R2u();
   MD_DEBUG(printf("[Store bump]: %.15G\n", Oparams.time));
   writeAllCor(bf);
   fclose(bf);
@@ -2293,6 +2300,7 @@ void move(void)
 	      exit(-1);
 	    }
 	  UpdateSystem();
+	  R2u();
 #ifndef MD_STOREMGL
 	  writeAsciiPars(bf, opro_ascii);
 	  fprintf(bf, sepStr);
