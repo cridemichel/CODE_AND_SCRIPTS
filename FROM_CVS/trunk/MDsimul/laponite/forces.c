@@ -616,7 +616,12 @@ void LJForce(int Nm, double rcut)
 	  vabhc = Oparams.crep * srab6;
 	  vabyu = inv4pieps0*atcharge[a]*atcharge[b]*exp(-rab*kD)/(rab*Oparams.epsilon);
 #if 0
-	  printf("(%d,%d)-(%d,%d) vabhc:%.15f vabyu:%.15f\n", i, a, j, b, vabhc, vabyu);
+	  if (rab< 0.96)
+          printf("inv4pieps0:%f atcharge[a]:%f atcharge[b]:%f epsilon:%f 1/kD:%f crep:%f rab:%f (%d:%d)-(%d:%d)\n", 
+		 inv4pieps0, atcharge[a],
+		 atcharge[b], Oparams.epsilon, 1/kD, Oparams.crep, rab,
+		 i,a,j,b);
+//	  printf("(%d,%d)-(%d,%d) vabhc:%.15f vabyu:%.15f\n", i, a, j, b, vabhc, vabyu);
 #endif
 	  /* 0.1902 per avere eV */
 	  /*vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);*/
