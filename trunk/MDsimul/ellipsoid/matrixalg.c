@@ -151,11 +151,11 @@ void InvMatrix(double **a, double **b, int NB)
 
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
 #define TOLX 1.0E-6//1.0e-7 /* Convergence criterion on  x.*/ 
-#define TOLX2 1.E-6
-#define MAXITS 100 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
-#define MAXITS2 100
+#define TOLX2 1.E-8
+#define MAXITS 50 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
+#define MAXITS2 50
 #define TOLF 1.0e-4 // 1.0e-4
-#define TOLF2 1.0E-4
+#define TOLF2 1.0E-6
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
 #define FMAX(A,B) ((A)>(B)?(A):(B))
@@ -344,6 +344,7 @@ void newt(double x[], int n, int *check,
   for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
       /* Stabilization */
+#if 0
       MD_DEBUG(printf("its=%d time = %.15f\n",its, x[4]));
       upd2tGuess(iA, iB, shift, x[4]);
 #ifdef MD_GLOBALNR
@@ -354,11 +355,6 @@ void newt(double x[], int n, int *check,
       for (i=0;i<n-1;i++) 
 	if (fabs(fvec[i]) > test)
 	  test=fabs(fvec[i]); 
-      if (test < 0.01*TOLF)
-	{
-	  check2=0; 
-	  break;
-	}
       for (sum=0.0,i=0;i<n-1;i++) 
 	sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
       stpmax2=STPMX*FMAX(sqrt(sum),(double)(n-1));
@@ -367,6 +363,13 @@ void newt(double x[], int n, int *check,
 #endif
       for (its2=0; its2 <MAXITS2 ; its2++)
 	{
+#ifdef MD_GLOBALNR
+	  if (its2=0 && test < 0.01*TOLF)
+	    {
+	      check2=0; 
+	      break;
+	    }
+#endif
 	  MD_DEBUG(printf("Guessing ist2=%d x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", its2, x[0], x[1], x[2], x[3],x[4]));
 	  fdjacFD(n-1,x,fvecG,fjac,funcs2beZeroedGuess, iA, iB, shift); 
 #ifdef MD_GLOBALNR
@@ -411,7 +414,7 @@ void newt(double x[], int n, int *check,
 	  if (check2) 
 	    { /* Check for gradient of f zero, i.e., spurious convergence.*/
 	      test=0.0; 
-	      den=FMAX(f,0.5*n);
+	      den=FMAX(f,0.5*(n-1));
 	      for (i=0;i<n;i++)
 		{
 		  temp=fabs(g2[i])*FMAX(fabs(x[i]),1.0)/den;
@@ -431,6 +434,7 @@ void newt(double x[], int n, int *check,
 	    } 
 	  if (test < TOLX2) 
 	    {
+	      check2 = 0;
 	      MD_DEBUG(printf("test<TOLX test=%.15f\n", test));
 	      break;
 	    }
@@ -450,19 +454,30 @@ void newt(double x[], int n, int *check,
 	  MD_DEBUG(printf("GUESSED x = (%.15f, %.15f, %.15f, %.15f\n", x[0], x[1], x[2], x[3]));
 	  if (test < TOLX2) 
 	    { 
-	      MD_DEBUG(printf("GUESS test < TOLF\n"));
+	      MD_DEBUG(printf("GUESS test < TOLX\n"));
 	      break;
 	    }
 #endif
 	}
+#ifdef MD_GLOBALNR
       if (its2 == MAXITS2 || check2==2)
 	{
 	  *check = 2;
 	  MD_DEBUG(printf("MAXITS2!!\n"));
 	  FREERETURN;
 	}
+#else
+       if (its2 == MAXITS2)
+	{
+	  *check = 2;
+	  MD_DEBUG(printf("MAXITS2!!\n"));
+	  FREERETURN;
+	}
+
+#endif
+#endif
       /* ============ */
-      fdjacFD(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
+      fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
       /* If analytic Jacobian is available, you can 
 	 replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNR
@@ -482,7 +497,7 @@ void newt(double x[], int n, int *check,
 	{
 	  *check = 0;
 	  MD_DEBUG(printf(" test < TOLF\n"));
-	  break;
+	  FREERETURN;
 	}
 #endif 
       for (i=0;i<n;i++) 
@@ -547,7 +562,7 @@ void newt(double x[], int n, int *check,
 	{ 
 	  *check = 0;
 	  MD_DEBUG(printf("test < TOLX\n"));
-	  //FREERETURN; 
+	  FREERETURN; 
 	}
 #endif
     } 
