@@ -995,7 +995,11 @@ int *inCell[2][3], *cellList[3], cellsx[3], cellsy[3], cellsz[3];
 int *inCell[3], *cellList, cellsx, cellsy, cellsz;
 #endif
 int **tree, cellRange[2*NDIM];
+#ifdef MD_SILICA
+extern void PredictEvent(int na, int nb, int nl);
+#else
 extern void PredictEvent(int, int);
+#endif
 extern void InitEventList(void);
 #ifdef MD_SILICA
 void StartRun(void)
@@ -1049,7 +1053,8 @@ void StartRun(void)
     }
   for (n = 0; n < Oparams.parnum; n++)
     {
-      PredictEvent(n, -2); 
+      for (nl = 0; nl < 3; nl++)
+	PredictEvent(n, -2, nl); 
     }
   //exit(-1);
 #if 0
