@@ -177,7 +177,8 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
   double a,alam,alam2=0.0,alamin,b,disc,f2=0.0,rhs1,rhs2,slope,sum,temp, test,tmplam; 
   *check=0; 
   for (sum=0.0,i=0;i<n;i++) 
-    sum += p[i]*p[i]; sum=sqrt(sum); 
+    sum += p[i]*p[i]; 
+  sum=sqrt(sum); 
   if (sum > stpmax) 
     for (i=0;i<n;i++) 
       p[i] *= stpmax/sum; /*Scale if attempted step is too big.*/ 
