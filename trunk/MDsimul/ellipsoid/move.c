@@ -3242,6 +3242,7 @@ retry:
 	  calc_intersec(rA, rB, Xb, rD);
 	}
 #if 1
+
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
 
@@ -3307,9 +3308,11 @@ retry:
 	  rDC[k1] = rD[k1] - rC[k1];
 	}
 #ifdef MD_DIST5
-      vecg[4] = calc_norm(rDC)/nf;  
+      //vecg[4] = calc_norm(rDC)/nf;  
+      vecg[4] = 0.0;
 #else
-      vecg[7] = calc_norm(rDC)/nf;  
+      //vecg[7] = calc_norm(rDC)/nf;  
+      vecg[7] = 0.0;
 #endif
     }
   else
@@ -4388,8 +4391,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #else
   //d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
 
-  if (search_contact_faster(i, j, shift, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
-    return 0;  
+   
   timesS++;
 #if 0
   if (refine_contact(i, j, t, vecgd1, shift, vecg))
@@ -4414,10 +4416,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
   MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d));
 #if 1
+  d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
   if (lastbump[j]==i && lastbump[i]==j)
     {
       MD_DEBUG10(printf("last collision was between (%d-%d)\n", i, j));
-#if 0
+#if 1
       while (d < 0)
 	{
 	  t += h;
@@ -4435,6 +4438,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       return 0;
     }
 #endif
+  if (search_contact_faster(i, j, shift, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
+    return 0; 
   MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
 #if 0
