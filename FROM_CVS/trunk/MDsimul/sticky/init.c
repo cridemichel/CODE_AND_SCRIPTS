@@ -990,7 +990,7 @@ void usrInitBef(void)
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
 #ifdef MD_SILICA
-int *inCell[2][3], *cellList[3], cellsx[3], cellsy[3], cellsz[3];
+int *inCell[2][3], *cellList[4], cellsx[4], cellsy[4], cellsz[4];
 #else
 int *inCell[3], *cellList, cellsx, cellsy, cellsz;
 #endif
@@ -1006,7 +1006,7 @@ void StartRun(void)
 {
   int j, k, n, nl, nc, iA, nl_ignore;
 
-  for (nl=0; nl < 3; nl++)
+  for (nl=0; nl < 4; nl++)
     {
       for (j = 0; j < cellsx[nl]*cellsy[nl]*cellsz[nl] + Oparams.parnum; j++)
 	cellList[nl][j] = -1;
@@ -1021,6 +1021,8 @@ void StartRun(void)
 	    nl = 0;
 	  else if (iA == 1 && nc == 0)
 	    nl = 1;
+	  else if (iA == 0 && nc == 1)
+	    nl = 3;
 	  else
 	    nl = 2;
 	  atomTime[n] = Oparams.time;
@@ -1056,10 +1058,13 @@ void StartRun(void)
     }
   for (n = 0; n < Oparams.parnum; n++)
     {
+      iA = (n<Oparams.parnumA)?0:1;
       nl_ignore = (n<Oparams.parnumA)?1:0;
-      for (nl = 0; nl < 3; nl++)
+      for (nl = 0; nl < 4; nl++)
 	{
-	  if (nl==nl_ignore)
+	  /* iA+2 è la lista Si-O (interazione fra specie diverse)
+	   * ma con tutte e sole le molecole iA */
+	  if (nl==nl_ignore || nl==iA+2)
 	    continue;
 	  printf("======>qui nl=%d\n", nl);
 	  PredictEvent(n, -2, nl); 
@@ -1653,12 +1658,17 @@ void usrInitAft(void)
   Oparams.sigma[1][1] = Oparams.sigma[0][0];
 #endif
   Oparams.sigma[1][0] = Oparams.sigma[0][1];
+#ifdef MD_SILICA
+  /* NOTA: nella lista nl=2 con rcut=rcutSiO ci sono tutte e sole le molecole O
+   * mentre nella lista nl=3 con rcut=rcutSiO ci sono tutte e sole le molecole Si */
+  Oparams.rcut[3] = Oparams.rcut[2];
+#endif
   invmA = 1.0/Oparams.m[0];
   invmB = 1.0/Oparams.m[1];
   /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
 #ifdef MD_SILICA
-  for (nl = 0; nl < 3; nl++)
+  for (nl = 0; nl < 4; nl++)
     {
       if (Oparams.rcut[nl] <= 0.0)
 	Oparams.rcut[nl] = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
@@ -1682,7 +1692,7 @@ void usrInitAft(void)
   atomTime = malloc(sizeof(double)*Oparams.parnum);
   lastbump = malloc(sizeof(struct LastBumpS)*Oparams.parnum);
 #ifdef MD_SILICA
-  for (nl = 0; nl < 3; nl++)
+  for (nl = 0; nl < 4; nl++)
     cellList[nl] = malloc(sizeof(int)*
   			  (cellsx[nl]*cellsy[nl]*cellsz[nl]+Oparams.parnum));
   for (nc = 0; nc < 2; nc++)
