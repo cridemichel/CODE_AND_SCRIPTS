@@ -7,6 +7,147 @@ extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
 
+/* Routines for LU decomposition from Numerical Recipe online */
+#define TINY 1E-20
+#define MD_NBMAX 3
+void ludcmpR(double **a, int* indx, double* d, int n)
+{
+  /* A[i][j] = Aij 
+   * A x = b  
+   * per semplicità nel seguito si assume che l'ordine della matrice è 3 */
+  int i,imax=-1,j,k;
+  double big,dum,sum,temp; 
+  double vv[MD_NBMAX]; /* vv stores the implicit scaling of each row.*/
+  /*vv = vector(1,n);*/
+  *d=1.0; /* No row interchanges yet. */
+  for (i=0;i<n;i++) 
+    { 
+      /* Loop over rows to get the implicit scaling information.*/ 
+      big=0.0; 
+      for (j=0;j<n;j++)
+	{
+	  if ((temp=fabs(a[i][j])) > big) big=temp; 
+	}
+      if (big == 0.0)
+	{
+	  printf("ERROR: Singular matrix in routine ludcmp\n"); 
+	  exit(-1);
+	}
+      /* No nonzero largest element. */
+      vv[i]=1.0/big; /* Save the scaling.*/
+    } 
+  for (j=0;j<n;j++) 
+    { /* This is the loop over columns of Crout s method.*/
+      for (i=0;i<j;i++) 
+	{ 
+	  /* This is equation (2.3.12) except for i = j. */
+	  sum=a[i][j]; 
+	  for (k=0;k<i;k++) 
+	    sum -= a[i][k]*a[k][j]; 
+	  a[i][j]=sum; 
+	} 
+      big=0.0; /* Initialize for the search for largest pivot element. */ 
+      for (i=j;i<n;i++) 
+	{ 
+	  /* This is i = j of equation (2.3.12) and i = j+1. . .N of equation (2.3.13).*/
+	  sum=a[i][j]; 
+	  for (k=0;k<j;k++)
+	    sum -= a[i][k]*a[k][j]; 
+	    a[i][j]=sum; 
+	    if ( (dum=vv[i]*fabs(sum)) >= big) 
+	      { 
+		/* Is the  gure of merit for the pivot better than the best so far? */
+		big=dum; imax=i; 
+	      } 
+	} 
+      if (j != imax) 
+	{ 
+	  /* Do we need to interchange rows? */
+	  for (k=0;k<n;k++) 
+	    { 
+	      /* Yes, do so...*/ 
+	      dum=a[imax][k]; 
+	      a[imax][k]=a[j][k]; 
+	      a[j][k]=dum; 
+	    } 
+	  *d = -(*d); 
+	  /* ...and change the parity of d. */ 
+	  vv[imax]=vv[j]; 
+	  /* Also interchange the scale factor.*/ 
+	} 
+      indx[j]=imax; 
+      if (a[j][j] == 0.0) 
+	a[j][j]=TINY; 
+      /* If the pivot element is zero the matrix is singular 
+       * (at least to the precision of the algorithm). 
+       * For some applications on singular matrices, 
+       * it is desirable to substitute TINY for zero. */ 
+      if (j != n) 
+	{ 
+	  /* Now,  nally, divide by the pivot element.*/
+	  dum=1.0/(a[j][j]); 
+	  for (i=j+1;i<n;i++) a[i][j] *= dum; 
+	} 
+    } 
+  /* Go back for the next column in the reduction.*/
+  /*free_vector(vv,1,n); */
+}
+
+void lubksbR(double **a, int* indx, double *b, int n)
+{ 
+  int i,ii=0,ip,j; 
+  double sum; 
+  for (i=0;i<n;i++) 
+    { 
+      /* When ii is set to a positive value, it will become the index of the  
+       * rst nonvanishing element of b. Wenow do the forward substitution,
+       * equation (2.3.6). The only new wrinkle is to unscramble the permutation as we go. */
+      ip=indx[i];
+      sum=b[ip];
+      b[ip]=b[i]; 
+      if (ii>-1) 
+	for (j=ii;j<=i-1;j++) 
+	  sum -= a[i][j]*b[j]; 
+      else if (sum) 
+	ii=i; 
+      /* A nonzero element was encountered, so from now on we will have to do 
+       * the sums in the loop above. */ 
+      b[i]=sum; 
+    } 
+  for (i=n-1;i>=0;i--) 
+    { 
+      /* Now we do the backsubstitution, equation (2.3.7).*/
+      sum=b[i]; 
+      for (j=i+1;j<n;j++) 
+	sum -= a[i][j]*b[j]; b[i]=sum/a[i][i]; 
+      /* Store a component of the solution vector X. */ 
+    } /* All done! */
+}
+void SolveLineq (double **a, double *x, int n) 
+{
+  int indx[MD_NBMAX];
+  double dd;
+  ludcmpR(a, indx, &dd, n);
+  lubksbR(a, indx, x, n);
+}
+
+void InvMatrix(double **a, double **b, int NB)
+{
+  int m1, m2, indx[MD_NBMAX]; 
+  double col[MD_NBMAX];
+  double d;
+  ludcmpR(a, indx, &d, NB); 
+  for(m2=0;m2<NB;m2++) 
+    { 
+      for(m1=0;m1<NB;m1++) 
+	col[m1]=0.0; 
+      col[m2]=1.0; 
+      lubksbR(a, indx, col, NB);
+      for(m1=0;m1<NB;m1++) 
+	 b[m1][m2]=col[m1]; 
+    }
+}
+
 #ifdef MD_GRAVITY
 int checkz(char *msg)
 {
@@ -316,6 +457,37 @@ void check (int *overlap, double *K, double *V)
          }
      }
 }
+/* effettua la seguente moltiplicazione tra matrici:
+ * 
+ *                 | a 0 0 |               |  uxx  uxy uxz | 
+ *  Trasposta(R) * | 0 b 0 | * R  dove R = | -uyx  uyy uyz |
+ *                 | 0 0 c |               | -uzx -uzy uzz | 
+ * */
+void tRDiagR(int i, double M[3][3], double a, double b, double c)
+{
+  int na;
+  /* calcolo del tensore d'inerzia */ 
+  na = (i < Oparams.parnumA)?0:1;
+  M[0][0] =  a*uxx[i];
+  M[0][1] =  a*uxy[i];
+  M[0][2] =  a*uxz[i];
+  M[1][0] = -b*uxy[i];
+  M[1][1] =  b*uyy[i];
+  M[1][2] =  b*uyz[i];
+  M[2][0] = -c*uxz[i];
+  M[2][1] = -c*uyz[i];
+  M[2][2] =  c*uzz[i]; 
+  
+  M[0][0] =  a*Sqr(uxx[i])+b*Sqr(uxy[i])+c*Sqr(uxz[i]);
+  M[0][1] =  a*uxx[i]*uxy[i]-b*uxy[i]*uyy[i]+c*uxz[i]*uyz[i];
+  M[0][2] =  a*uxx[i]*uxz[i]-b*uxy[i]*uyz[i]-c*uxz[i]*uzz[i];
+  M[1][0] =  a*uxy[i]*uxx[i]+b*uyy[i]*uxy[i]+c*uyz[i]*uxz[i];
+  M[1][1] =  a*Sqr(uxy[i])+b*Sqr(uyy[i])+c*Sqr(uyz[i]); 
+  M[1][2] =  a*uxy[i]*uxz[i]+b*uyy[i]*uyz[i]-c*uyz[i]*uzz[i];
+  M[2][0] =  a*uxz[i]*uxx[i]-b*uyz[i]*uxy[i]-c*uzz[i]*uxz[i];
+  M[2][1] =  a*uxz[i]*uxy[i]+b*uyz[i]*uyy[i]-c*uzz[i]*uyz[i];
+  M[2][2] =  a*Sqr(uxz[i])+b*Sqr(uyz[i])+c*Sqr(uzz[i]); 
+}
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 void add_bond(int na, int n);
 void remove_bond(int na, int n);
@@ -436,7 +608,7 @@ void bump (int i, int j, double* W, int bt)
   vz[j] = vz[j] - delpz*invmj;
 }
 #else
-void bump (int i, int j, double* W)
+void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
   /*
    *******************************************************************
@@ -447,8 +619,11 @@ void bump (int i, int j, double* W)
    *******************************************************************
    */
   double rxij, ryij, rzij, factor, invmi, invmj;
-  double delpx, delpy, delpz, sigSq;
-  double mredl, ene;
+  double delpx, delpy, delpz, sigSq, wrx, wry, wrz, rACn[3], rBCn[3], rnI[3];
+  double rAC[3], rBC[3], vCA[3], vCB[3], vc;
+  double norm[3], Ia[3][3], Ib[3][3], invIa[3][3], invIb[3][3];
+  double mredl, ene, modn, denom;
+  int na, a, b;
   if (i < parnumA && j < parnumA)
     {
       sigSq = Sqr(Oparams.sigma[0][0]);
@@ -477,37 +652,122 @@ void bump (int i, int j, double* W)
   if (fabs (rzij) > L2)
     rzij = rzij - SignR(L, rzij);
 #endif
+  rAC[0] = rx[i] - rCx;
+  rAC[1] = ry[i] - rCy;
+  rAC[2] = rz[i] - rCz;
+  rBC[0] = rx[j] - rCx;
+  rBC[1] = ry[j] - rCy;
+  rBC[2] = rz[j] - rCz;
+ 
+  /* calcola tensore d'inerzia e le matrici delle due quadriche */
+  na = (i < Oparams.parnumA)?0:1;
+  tRDiagR(i, Xa, a[na], b[na], c[na]);
+  tRDiagR(i, Ia, Itens[na][0], Itens[na][1], Itens[na][2]);
+
+  na = (j < Oparams.parnumA)?0:1;
+  tRDiagR(j, Xb, a[na], b[na], c[na]);
+  tRDiagR(j, Ib, Itens[na][0], Itens[na][1], Itens[na][2]);
+ 
+  /* calcola le matrici inverse del tensore d'inerzia */
+  InvMatrix(Ia, invIa, 3);
+  InvMatrix(Ib, invIb, 3);
+
+  modn = 0.0;
+  for (a=0; a < 3; a++)
+    {
+      norm[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  norm[a] += -Xa[a][b]*rAC[b];
+	  modn += Sqr(norma[a]);
+	}
+    }
+  modn = sqrt(modn);
+  for (a=0; a < 3; a++)
+    norma[a] /= modn;
+  /* calcola le velocità nel punto di contatto */
+  vectProd(wx[i], wy[i], wz[i], rCA[0], rCA[1], rCA[2], &wrx, &wry, &wrz);
+  vCA[0] = vx[i] + wrx;
+  vCA[1] = vy[i] + wry;
+  vCA[2] = vz[i] + wrz;
+  vectProd(wx[j], wy[j], wz[j], rCB[0], rCB[1], rCB[2], &wrx, &wry, &wrz);
+  vCB[0] = vx[j] + wrx;
+  vCB[1] = vy[j] + wry;
+  vCB[2] = vz[j] + wrz;
+ 
+  invmi = (i<Oparams.parnumA)?invmA:invmB;
+  invmj = (j<Oparams.parnumA)?invmA:invmB;
+  
+  denom = invi + invmj; 
+  vc = 0;
+  for (a=0; a < 3; a++)
+    vc += (vCA[a]-vCB[a])*norm[a];
+  vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
+  
+  for (a=0; a < 3; a++)
+    {
+      rnI[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  rnI[a] += invIa[a][b]*rACn[b]; 
+	}
+    }
+  for (a = 0; a < 3; a++)
+    denom += rnI[a]*rn[a];
+   
+  vectProd(rBC[0], rBC[1], rBC[2], norm[0], norm[1], norm[2], &rBCn[0], &rBCn[1], &rBCn[2]);
+  
+  for (a=0; a < 3; a++)
+    {
+      rnI[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  rnI[a] += invIb[a][b]*rBCn[b]; 
+	}
+    }
+  for (a = 0; a < 3; a++)
+    denom += rnI[a]*rn[a];
+   
 #ifdef MD_GRAVITY
-  factor = ( rxij * ( vx[i] - vx[j] ) +
-	     ryij * ( vy[i] - vy[j] ) +
-	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
+  
+  factor = 2.0*vc/denom;
   /* Dissipation */
+#if 0
+  /* se si vuole avere una dissipazione nell'urto questo va sistemato!!! */
   if (!((Oparams.time - lastcol[i] < OprogStatus.tc)||
   	(Oparams.time - lastcol[j] < OprogStatus.tc)))
     factor *= mredl*(1+Oparams.partDiss);
+#endif
 #else
   /* Nel caso di gravita' e' intuile implementare il TC-model di Luding
    * per evitare il collasso inelastico.
    * Gli urti in tale caso sono tutti elastici. */ 
   /* SQUARE WELL: modify here */
-  factor = ( rxij * ( vx[i] - vx[j] ) +
-	     ryij * ( vy[i] - vy[j] ) +
-	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
-  factor *= mredl*2; /*(1+Oparams.partDiss);*/
+  factor = 2.0*vc/denom;
 #endif
-  delpx = - factor * rxij;
-  delpy = - factor * ryij;
-  delpz = - factor * rzij;
-  invmi = (i<Oparams.parnumA)?invmA:invmB;
-  invmj = (j<Oparams.parnumA)?invmA:invmB;
+  delpx = - factor * norm[0];
+  delpy = - factor * norm[1];
+  delpz = - factor * norm[2];
+#if 0
   ene= (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
 	    Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
+#endif
   vx[i] = vx[i] + delpx*invmi;
   vx[j] = vx[j] - delpx*invmj;
   vy[i] = vy[i] + delpy*invmi;
   vy[j] = vy[j] - delpy*invmj;
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
+
+  for (a=0; a < 3; a++)
+    {
+      wx[i] += factor*invIa[0][a]*rACn[a];
+      wx[j] -= factor*invIb[0][a]*rBCn[a];
+      wy[i] += factor*invIa[1][a]*rACn[a];
+      wy[j] -= factor*invIb[1][a]*rBCn[a];
+      wz[i] += factor*invIa[2][a]*rACn[a];
+      wz[j] -= factor*invIb[2][a]*rBCn[a];
+    }
 /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
 #if 0
   *W = delpx * rxij + delpy * ryij + delpz * rzij;
