@@ -4,6 +4,7 @@
 #include<math.h>
 #include<stdio.h>
 #include<stdlib.h>
+#define MD_DEBUG(X) X
 void nrerror(char *msg)
 {
   printf(msg);
@@ -354,6 +355,7 @@ void newt(double x[], int n, int *check,
 		test=temp; 
 	    } 
 	  *check=(test < TOLMIN ? 1 : 0);
+	  MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], test, its, *check));
 	  FREERETURN 
 	} 
       test=0.0; /* Test for convergence on ´x. */
@@ -366,7 +368,10 @@ void newt(double x[], int n, int *check,
       if (test < TOLX) 
 	FREERETURN 
     } 
+  *check = 2;
+  return;
   nrerror("MAXITS exceeded in newt"); 
+  
 }
 
 #define EPS 1.0e-4 /* Approximate square root of the machine precision.*/
