@@ -181,14 +181,17 @@ double get_min_dist (int na, int *jmin, double *shiftmin)
 		      r2[2] = rz[n] + vz[n]*ti;
 		      dist = 0.0;
 		      for (kk = 0; kk < 3; kk++)
-			dist += r1[kk] - r2[kk];		      
+			dist += Sqr(r1[kk]-r2[kk]);		      
 		      dist = sqrt(dist);
+		      //printf(">>>> dist (%d-%d) = %.15G\n", na, n, dist);
 		      dist -= radii[na] + radii[n];
+		      //printf("radii[%d]:%f radii[%d]: %f\n", na, radii[na],n, radii[n]);
 		      //if (calcdist_retcheck)
 			//continue;
 		      if (*jmin == -1 || dist<distMin)
 			{
 			  distMin = dist;
+			  //printf("distmin = %.15G\n", distMin);
 			  for (kk = 0; kk < 3; kk++)
 			    {
 			      //rCmin[kk] = r1[kk];
@@ -273,6 +276,7 @@ double scale_radius(int i, int j, double rA[3], double rB[3], double shift[3], d
     {
       fact1 = (nrAB-radii[j])/radii[i];
       fact2 = F;
+      //printf("fact1: %15G fact2: %.15G\n", fact1, fact2);
       if (fact2 < fact1)
 	fact = fact2;
       else
@@ -402,6 +406,11 @@ void scale_Phi(void)
       phi = scale_radius(i, j, rAmin, rBmin, shift, &factor);
       rebuild_linked_list();
       distMinT = check_dist_min(i, NULL);
+      if (distMinT  < 0 && fabs(distMinT) > 1E-10)
+	{
+	  printf("[scale_Phi] distanza minima < 0!\n");
+	  exit(-1);
+	}
 #if 0
       if (calcdist_retcheck)
 	{
@@ -410,6 +419,7 @@ void scale_Phi(void)
 	  continue;
 	}
 #endif
+#if 0
       its = 0;
       while (distMinT < 0)
 	{
@@ -419,8 +429,10 @@ void scale_Phi(void)
 	  distMinT = check_dist_min(i, "Alla fine di calc_Phi()");
 	  its++;
 	}
-
+#endif
       radai = Oparams.sigma*0.5;
+      //printf("radai: %.15G radii[i]: %.15G radai/radii=%.15G target: %.15G\n",
+	//     radai, radii[i], radii[i]/radai, target);
       if (fabs(radii[i] / radai - target) < OprogStatus.axestol)
 	{
 	  done++;
@@ -439,7 +451,7 @@ void scale_Phi(void)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-  printf("Scaled successfully %d/%d ellipsoids \n", done, Oparams.parnum);
+  printf("Scaled successfully %d/%d spheres \n", done, Oparams.parnum);
   if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
     {
       ENDSIM = 1;
