@@ -662,6 +662,9 @@ void save_image(void)
 void display (void)
 {
   int nf;
+#ifndef MGL_USELIST
+  int i, j;
+#endif
   /*
    * double fadeFact;
    */
@@ -700,9 +703,16 @@ void display (void)
 	{
 	  glDepthMask(GL_FALSE);
 	}
-      
+#ifdef MGL_USELIST
       glCallList(atomsList[nf]);
-	
+#else
+      for(i = 0; i < globset.NumMols[nf]; ++i)
+	{
+	  for (j=0; j < mols[nf][i].numat; j++)
+	    displayAtom(nf, i, j);
+	  displayBonds(nf, i);
+	}
+#endif
     }
   glPopMatrix ();
   
@@ -1841,7 +1851,9 @@ int main(int argc, char** argv)
   glutCreateWindow("MOLGL by Cristiano De Michele (C) 1998-2004");
   myinit();
   loadAtomPos();
+#ifdef MGL_USELIST
   buildAtomsList();
+#endif
   glutDisplayFunc(display);
   glutReshapeFunc(myReshape);
   glutKeyboardFunc(key);
