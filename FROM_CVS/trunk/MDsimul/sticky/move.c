@@ -1597,6 +1597,7 @@ void assign_bond_mapping(int i, int j)
 #endif
 double funcs2beZeroed(double x, int i, int j, int nn, double shift[3])
 {
+#if 0
   int na, ata, atb; 
   double  rA[3], rB[3], ti;
   double Omega[3][3];
@@ -1620,7 +1621,7 @@ double funcs2beZeroed(double x, int i, int j, int nn, double shift[3])
   //tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = x - atomTime[j];
-  MD_DEBUG(printf("x[4]:%.15f atomTime[%d]:%.15f\n",x[4], j, atomTime[j]));
+  MD_DEBUG(printf("atomTime[%d]:%.15f\n", j, atomTime[j]));
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
@@ -1631,7 +1632,7 @@ double funcs2beZeroed(double x, int i, int j, int nn, double shift[3])
       /* per ora la crescita nei primitive models non è implementata */
     }
   //tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
-
+#endif
   return calcDistNegOne(x, i, j, nn, shift);
 }
 double  funcs2beZeroedBrent(double x)
@@ -1693,6 +1694,7 @@ double calcDistNegOne(double t, int i, int j, int nn, double shift[3])
   distSq = 0;
   for (kk=0; kk < 3; kk++)
     distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+  printf("dist= %.15G\n", sqrt(distSq)-Oparams.sigmaSticky);
   return sqrt(distSq) - Oparams.sigmaSticky;
 #if 0
   if (firstdist || fabs(dist) < fabs(distmin))
@@ -2315,7 +2317,6 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  continue;
 	}
 #endif
-      MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f d1-d2:%.15G\n", t, d1, d2, fabs(d1-d2)));
       ncr=check_cross(distsOld, dists, crossed);
       /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
        * sticky */
@@ -2369,6 +2370,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	    {
 	      if (refine_contact(i, j, nn, t-delt, t, shift, &troot))
 		{
+		  printf("[locate_contact] Adding collision between %d-%d\n", i, j);
 		  MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
@@ -2396,6 +2398,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      else 
 		{
 		  MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+		  printf("[locate_contact] can't find contact point!\n");
+		  gotcoll = -1;
+		  continue;
+#if 0
 		  if (dorefine[nn] == 2)
 		    {
 		      MD_DEBUG10(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
@@ -2406,8 +2412,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		    }
 		  else
 		    {
+		      printf("dorefine[%d]:%d\n", nn, dorefine[nn]);
 		      printf("d: %.15G dold: %.15G\n", d, dold); 
 		    }
+#endif
 		}
 	    }
 	}
