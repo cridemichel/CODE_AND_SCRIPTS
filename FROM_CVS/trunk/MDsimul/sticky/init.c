@@ -821,7 +821,7 @@ void StartRun(void)
       }
     for (n = 0; n < Oparams.parnum; n++)
       PredictEvent(n, -2); 
-    exit(-1);
+    //exit(-1);
 #if 0
     {
       double dist, rC[3], rD[3], shift[3];
