@@ -2093,7 +2093,8 @@ void savesnap(void)
   int i, a;
   FILE *f;
   char fileop2[1024], fileop[1024];
-  double L, rrx, rry, rrz, RCMx, RCMy, RCMz;
+  double L, rrx, rry, rrz, RCMx, RCMy, RCMz, nx, ny, nz;
+  double d1x, d1y, d1z, d2x, d2y, d2z;
 #ifdef MDLLINT
   sprintf(fileop2 ,"SnaT%.6G_%s_%lld", 
 	  Oparams.T, 
@@ -2115,12 +2116,30 @@ void savesnap(void)
   for (i=0; i < Oparams.parnum; i++)
     {
       CoM(i, &RCMx, &RCMy, &RCMz);
-      for (a = 0; a < Oparams.nsites; a++)    
+      if (OprogStatus.snapmode==1)
 	{
-	   rrx = rallx[a][i] - L * rint( RCMx / L); 
-	   rry = rally[a][i] - L * rint( RCMy / L);
-	   rrz = rallz[a][i] - L * rint( RCMz / L);
-	   fprintf(f, "%.15G %.15G %.15G\n", rrx, rry, rrz); 
+	  RCMx = RCMx -  L * rint( RCMx / L);
+	  RCMy = RCMy -  L * rint( RCMy / L);
+	  RCMz = RCMz -  L * rint( RCMz / L);
+	  d1x = rx[0][i] - rx[1][i];
+	  d1y = ry[0][i] - ry[1][i];
+	  d1z = rz[0][i] - rz[1][i];
+	  d2x = rx[1][i] - rx[2][i];
+	  d2y = ry[1][i] - ry[2][i];
+	  d2z = rz[1][i] - rz[2][i];
+	  vectProd(d1x, d1y, d1z, d2x, d2y, d2z, &nx, &ny, &nz);
+	  fprintf(f, "%.15G %.15G %.15G %.15G %.15G %.15G @ %f %f\n", 
+		  RCMx, RCMy, RCMz, nx, ny, nz, Oparams.Diam/2.0, 1.0); 
+	}
+      else
+	{
+	  for (a=0; a < Oparams.nsites; a++)
+	    {
+	      rrx = rallx[a][i] - L * rint( RCMx / L); 
+	      rry = rally[a][i] - L * rint( RCMy / L);
+	      rrz = rallz[a][i] - L * rint( RCMz / L);
+	      fprintf(f, "%.15G %.15G %.15G\n", rrx, rry, rrz); 
+	    }
 	}
     }
   fclose(f);
