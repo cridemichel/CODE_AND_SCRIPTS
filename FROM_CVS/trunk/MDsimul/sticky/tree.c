@@ -65,7 +65,7 @@ int check_node(char* str, int id, int idNew, int idUp)
   return 0;
 }
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-void ScheduleEventBarr (int idA, int idB, int idC, double tEvent) 
+void ScheduleEventBarr (int idA, int idB, int idata, int atb, int idcollcode, double tEvent) 
 {
   int id, idNew, more;
   id = 0;
@@ -148,7 +148,9 @@ void ScheduleEventBarr (int idA, int idB, int idC, double tEvent)
   treeTime[idNew] = tEvent;
   treeIdA[idNew] = idA;    
   treeIdB[idNew] = idB;
-  treeIdC[idNew] = idC;
+  treeIdC[idNew] = idata;
+  treeIdD[idNew] = idatb;
+  treeIdE[idNew] = idcollcode;
   treeLeft[idNew] = treeRight[idNew] = -1;
   treeUp[idNew] = id;
 }

@@ -2243,10 +2243,13 @@ int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS],
   int retcross = 0;
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
-      crossed[nn] = 0;
+      crossed[nn] = MD_EVENT_NONE;
       if (dists[nn]*distsOld[nn] < 0)
 	{
-      	  crossed[nn] = 1; 
+	  if (distsOld[nn] > 0)
+	    crossed[nn] = MD_OUTIN_BARRIER; 
+	  else
+	    crossed[nn] = MD_INOUT_BARRIER;
 	  retcross = 1;
 	}
     }
@@ -2418,8 +2421,22 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
   return 0;
 }
-int locate_contact(int i, int j, double shift[3], double t1, double t2, double tbigat, 
-		   double vecg[5])
+int bound()
+{
+  int i;
+  for (i = 0; i < numbonds[na]; i++)
+    if (bonds[na][i] == n)
+      return 1;
+  return 0;
+}
+
+int valid_collision(int i, int j, int ata, int atb, int collCode)
+{
+  
+
+}
+int locate_contact(int i, int j, double shift[3], double t1, double t2, double tbigat,
+		   double *evtime, int *ata, int *atb, int *collCode)
 {
   double h, d, dold, dold2, d1Neg, d1Pos, t, r1[3], r2[3], dists[NA][NA], distsOld[NA][NA]; 
   double vd, normddot, ddot[3], maxddot, delt, told, troot, tmin;
@@ -2536,8 +2553,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
        * sticky */
       for (nn = 0; nn < ncr; nn++)
 	{
-	  dorefine[nn] = 0;
-	  if (crossed[nn])
+	  dorefine[nn] = MD_EVENT_NONE;
+	  if (crossed[nn]!=MD_EVENT_NONE)
 	    {
 #ifndef MD_NOINTERPOL  
 	      if (interpol(i, j, mapbondsa[nn], mapbondsb[nn], 
@@ -2549,7 +2566,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
     		}
 	      /* se dorefine è 2 vuol dire che due superfici si sono
 	       * attraversate */
-    	      dorefine[nn] = 2;
+	      if (valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
+		dorefine[nn] = crossed[nn];
 	    }
 	}
       ntc = get_dists_tocheck(tocheck);
@@ -2562,9 +2580,16 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 	    {
 	      if (interpol(i, j, mapbondsa[nn], mapbondsb[nn], t-delt, delt, distsOld[nn], dists[nn], 
 			   &troot, shift, 1))
-		dorefine[nn] = 0;
+		dorefine[nn] = MD_EVENT_NONE;
 	      else 
-		dorefine[nn] = 1;
+		{
+		  if (distsOld[nn] > 0)
+		    dorefine[nn] = MD_OUTIN_BARRIER;
+		  else
+		    dorefine[nn] = MD_INOUT_BARRIER;
+		  if (!valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
+		    dorefine[nn] = MD_EVENT_NONE;
+		}
 	    }
 	}
 #endif
@@ -2572,12 +2597,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
       gotcoll = 0;
       for (nn = 0; nn < MD_PBONDS; nn++)
 	{
-	  if (dorefine[nn])
+	  if (dorefine[nn]!=MD_EVENT_NONE)
 	    {
 	      if (refine_contact(i, j, mapbondsa[nn], mapbondsb[nn], t-delt, t, shift, &troot))
 		{
 		  MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-		  MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
 		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
 		   * scarta tale urto */
@@ -2591,11 +2615,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 		  else
 		    {
 		      gotcoll = 1;
-		      if (troot < tmin && troot < tbigat)
+		      if (*collCode == MD_EVENT_NONE || troot < *evtime)
 			{
-			  tmin = troot;
-			  imin = i;
-			  jmin = j;
+			  *ata = mapbondsa[nn];
+			  *atb = mapbondsb[nn];
+			  *evtime = troot;
+			  *collCode = dorefine[nn]; 
 			}
 		      continue;
 		    }
@@ -2719,9 +2744,9 @@ void PredictEvent (int na, int nb)
    *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
-  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], vecgd[8],
-	 b, d, t, tInt, vv, distSq, t1, t2, tbigat;
-  int et, kk, ii, overlap, mm, retcheck;
+  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], 
+	 b, d, t, tInt, vv, distSq, t1, t2, evtime;
+  int et, kk, ii, overlap, mm, retcheck, ac, bc;
   double ncong, cong[3], pos[3], vecg[5], pos2[3], r1[3], r2[3];
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
@@ -2959,38 +2984,6 @@ void PredictEvent (int na, int nb)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-		      if (na < parnumA && n < parnumA)
-			{
-			  sigSq = Sqr(Oarams.sigma[0][0]);
-			  sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
-			  mredl = Mred[0][0];
-#if 0
-			  inthreshold =  Sqr(Oparams.sigma[0][0]-Oparams.delta[0][0]/2.0);
-		          outthreshold = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]/2.0);	
-#endif
-			}
-		      else if (na >= parnumA && n >= parnumA)
-			{
-			  sigSq = Sqr(Oparams.sigma[1][1]);
-			  sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
-			  mredl = Mred[1][1]; 
-#if 0
-			  inthreshold =  Sqr(Oparams.sigma[1][1]-Oparams.delta[1][1]/2.0);
-		          outthreshold = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]/2.0);
-#endif
-			}
-		      else
-			{
-			  sigSq = Sqr(Oparams.sigma[0][1]);
-			  sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
-			  mredl = Mred[0][1]; 
-#if 0
-			  inthreshold =  Sqr(Oparams.sigma[0][1]-Oparams.delta[0][1]/2.0);
-		          outthreshold = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]/2.0);
-#endif
-			}
-#else
 		      /* maxax[...] è il diametro dei centroidi dei due tipi
 		       * di ellissoidi */
 		      if (OprogStatus.targetPhi > 0)
@@ -3007,102 +3000,20 @@ void PredictEvent (int na, int nb)
 			   sigSq = Sqr((maxax[n]+maxax[na])*0.5);
 		       }
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
-#endif
 		      tInt = Oparams.time - atomTime[n];
 		      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
 		      dv[0] = vx[na] - vx[n];
 		      dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
 		      dv[1] = vy[na] - vy[n];
-#ifdef MD_GRAVITY
-		      dr[2] = rz[na] - 
-			(rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
-		      dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
-#else
 		      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
 		      dv[2] = vz[na] - vz[n];
 
-#endif
      		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
-#if defined(MD_SQWELL)|| defined(MD_INFBARRIER)
-		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
-		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-		      collCode = MD_EVENT_NONE;
-		      if (!bound(n, na))
-			{
-			  if ( b < 0.0 ) 
-			    {
-			      /* la piccola correzione serve poichè a causa
-			       * di errori numerici dopo l'evento la particella
-			       * potrebbe essere ancora fuori dalla buca (distSq > sigDeltaSq)*/
-			      d = Sqr (b) - vv * (distSq - sigDeltaSq);
-			      if (d > 0.0)
-				{
-				  t = (-sqrt (d) - b) / vv;
-				  if (t > 0 || (t < 0 && distSq < sigDeltaSq))
-				    collCode = MD_OUTIN_BARRIER;
-				}
-			    }
-			}
-		      else
-			{
-#ifdef MD_INFBARRIER
-			  if (sigDeltaSq == 0)
-			    goto no_core_bump;
-			  
-#endif
-		  	    
-			  if (b < 0.0)
-			    { 
-		      	      d= Sqr(b) - vv * (distSq - sigSq);
-	      		      if (d > 0.0)
-      				{
-				  t = (-sqrt (d) - b) / vv;
-				  if (t > 0 || (t < 0 && distSq < sigSq))
-				    collCode = MD_CORE_BARRIER;
-				}
-			    }
-#ifdef MD_INFBARRIER
-no_core_bump:
-#endif
-			  if (collCode == MD_EVENT_NONE)
-			    {
-			      d = Sqr (b) - vv * (distSq - sigDeltaSq);
-			      if (d > 0.0)
-				{
-				  t = ( sqrt (d) - b) / vv;
-				  if (t > 0 || (t < 0 && distSq > sigDeltaSq))
-				    collCode = MD_INOUT_BARRIER;
-				}
-			    }
-			}
-		      if (t < 0 && collCode!= MD_EVENT_NONE)
-			{
-#if 1
-			  printf("time:%.15f tInt:%.15f t:%.20f\n", Oparams.time,
-				 tInt, t);
-			  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-	     					      Sqr(dr[2])));
-			  printf("STEP: %lld\n", (long long int)Oparams.curStep);
-			  printf("atomTime: %.10f \n", atomTime[n]);
-			  printf("n:%d na:%d\n", n, na);
-			  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
-			  printf("collCode: %d\n", collCode);
-			  //exit(-1);
-#endif
-			  t = 0;
-			}
-
-		      if (collCode != MD_EVENT_NONE)
-			{
-			  ScheduleEventBarr (na, n, collCode, Oparams.time + t);
-			  MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
-		      	} 
-
-#else
 		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
 		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
 	    	      d = Sqr (b) - vv * (distSq - sigSq);
 		
+		      collCode = MD_EVENT_NONE;
 		      if (d < 0 || (b > 0.0 && distSq > sigSq)) 
 			{
 			  /* i centroidi non collidono per cui non ci può essere
@@ -3169,23 +3080,22 @@ no_core_bump:
 #endif
 				  t = 0;
 				}
-			      tbigat = Oparams.time + t;
+			      collCode = MD_CORE_BARRIER;
+			      evtime = Oparams.time + t;
 			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
 			    } 
 			}
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
-		      if (!locate_contact(na, n, shift, t1, t2, tbigat, vecg))
+
+		      if (!locate_contact(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 		      	continue;
 	      
-		      rxC = vecg[0];
-		      ryC = vecg[1];
-		      rzC = vecg[2];
 		      MD_DEBUG(printf("A x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)-B x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)",
 				      rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
 				      rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]));
-		      t = vecg[4];
+		      t = evtime;
 #if 1
 		      if (t < 0)
 			{
@@ -3204,9 +3114,8 @@ no_core_bump:
 #endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
 		      MD_DEBUG(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
-		      ScheduleEvent (na, n, t);
+		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 		      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
-#endif
 		    }
 		} 
 	    }
@@ -3455,24 +3364,20 @@ void ProcessCollision(void)
       cellRange[2*k+1] =   1;
     }
   MD_DEBUG10(calc_energy("prima"));
-#if defined(MD_SQWELL)||defined(MD_INFBARRIER)
   /* i primi due bit sono il tipo di event (uscita buca, entrata buca, collisione con core 
    * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */
-  bump(evIdA, evIdB, &W, evIdC);
-#else
-  bump(evIdA, evIdB, rxC, ryC, rzC, &W);
-#endif
+  bump(evIdA, evIdB, evIdC, evIdD, &W, evIdE);
   MD_DEBUG10(calc_energy("dopo"));
   MD_DEBUG(store_bump(evIdA, evIdB));
   //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
-#ifdef MD_GRAVITY
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
-#else
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
-  lastbump[evIdA]=evIdB;
-  lastbump[evIdB]=evIdA;
-#endif
+  lastbump[evIdA].i = evIdB;
+  lastbump[evIdB].j = evIdA;
+  lastbump[evIdA].a = evIdC;
+  lastbump[evIdA].b = evIdD;
+  
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
 }

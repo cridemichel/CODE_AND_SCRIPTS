@@ -172,6 +172,8 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeIdA    tree[7]
 #define treeIdB    tree[8]
 #define treeIdC    tree[9]
+#define treeIdD    tree[10]
+#define treeIdE    tree[11]
 #endif
 #define ATOM_LIMIT 10000000
 /* ======================== >>> struct progStatus <<< =======================*/
