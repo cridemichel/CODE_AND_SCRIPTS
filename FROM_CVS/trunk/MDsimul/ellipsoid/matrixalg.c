@@ -1,5 +1,6 @@
 #define TINY 1E-20
 #define MD_NBMAX 3
+#include<mdsimul.h>
 #include<math.h>
 #include<stdio.h>
 #include<stdlib.h>
@@ -8,7 +9,7 @@ void nrerror(char *msg)
   printf(msg);
   exit(-1);
 }
-void ludcmpR(double **a, int* indx, double* d, int n)
+void ludcmp(double **a, int n,  int* indx, double* d)
 {
   /* A[i][j] = Aij 
    * A x = b  
@@ -91,7 +92,7 @@ void ludcmpR(double **a, int* indx, double* d, int n)
   /*free_vector(vv,1,n); */
 }
 
-void lubksbR(double **a, int* indx, double *b, int n)
+void lubksb(double **a, int n, int* indx, double *b)
 { 
   int i,ii=0,ip,j; 
   double sum; 
@@ -125,8 +126,8 @@ void SolveLineq (double **a, double *x, int n)
 {
   int indx[MD_NBMAX];
   double dd;
-  ludcmpR(a, indx, &dd, n);
-  lubksbR(a, indx, x, n);
+  ludcmp(a, n, indx, &dd);
+  lubksb(a, n, indx, x);
 }
 
 void InvMatrix(double **a, double **b, int NB)
@@ -134,13 +135,13 @@ void InvMatrix(double **a, double **b, int NB)
   int m1, m2, indx[MD_NBMAX]; 
   double col[MD_NBMAX];
   double d;
-  ludcmpR(a, indx, &d, NB); 
+  ludcmp(a, NB, indx, &d); 
   for(m2=0;m2<NB;m2++) 
     { 
       for(m1=0;m1<NB;m1++) 
 	col[m1]=0.0; 
       col[m2]=1.0; 
-      lubksbR(a, indx, col, NB);
+      lubksb(a, NB, indx, col);
       for(m1=0;m1<NB;m1++) 
 	 b[m1][m2]=col[m1]; 
     }
@@ -172,19 +173,19 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
    double precision in this routine.*/
 {
   int i; 
-  double a,alam,alam2,alamin,b,disc,f2,rhs1,rhs2,slope,sum,temp, test,tmplam; 
+  double a,alam,alam2=0.0,alamin,b,disc,f2=0.0,rhs1,rhs2,slope,sum,temp, test,tmplam; 
   *check=0; 
-  for (sum=0.0,i=1;i<=n;i++) 
+  for (sum=0.0,i=0;i<n;i++) 
     sum += p[i]*p[i]; sum=sqrt(sum); 
   if (sum > stpmax) 
-    for (i=1;i<=n;i++) 
+    for (i=0;i<n;i++) 
       p[i] *= stpmax/sum; /*Scale if attempted step is too big.*/ 
-  for (slope=0.0,i=1;i<=n;i++) 
+  for (slope=0.0,i=0;i<n;i++) 
     slope += g[i]*p[i]; 
   if (slope >= 0.0) 
     nrerror("Roundoff problem in lnsrch."); 
   test=0.0; /*Compute lambda_min.*/
-  for (i=1;i<=n;i++) 
+  for (i=0;i<n;i++) 
     {
       temp=fabs(p[i])/FMAX(fabs(xold[i]),1.0); 
       if (temp > test) 
@@ -193,13 +194,13 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
   alamin=TOLX/test; alam=1.0;
   for (;;) 
     { 
-      for (i=1;i<=n;i++) 
+      for (i=0;i<n;i++) 
 	x[i]=xold[i]+alam*p[i]; 
       *f=(*func)(x,iA,iB,shift); 
       if (alam < alamin) 
 	{ /* Convergence on  x. For zero  nding, the calling program 
 	     should verify the convergence.*/ 
-	  for (i=1;i<=n;i++) 
+	  for (i=0;i<n;i++) 
 	    x[i]=xold[i]; 
 	  *check=1; 
 	  return;
@@ -274,18 +275,20 @@ void free_matrix(double **M, int n)
 }
 int nn; /* Global variables to communicate with fmin.*/
 double *fvec; 
-void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[]); 
-#define FREERETURN {free_vector(fvec);free_vector(xold);\ free_vector(p);\
- free_vector(g);free_matrix(fjac,n);\ free_ivector(indx); return;}
+#define FREERETURN {free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);return;}
 
-extern void fdjac(int n, double x[], fvec[], **fjac, 
-		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j)); 
+void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[3]);
+
+extern void fdjac(int n, double x[], double fvec[], double **fjac, 
+		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j, double shift[3]), int iA, int iB, double shift[3]); 
 double fmin(double x[], int iA, int iB, double shift[3]);
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, 
-	    double stpmax, int *check, double (*func)(double [], int, int, double []));
+	    double stpmax, int *check, double (*func)(double [], int, int, double []),
+	    int iA, int iB, double shift[3]);
 void lubksb(double **a, int n, int *indx, double b[]); 
 void ludcmp(double **a, int n, int *indx, double *d); 
-void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double [], int, int),
+void newt(double x[], int n, int *check, 
+	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
   int i,its,j,*indx;
@@ -301,7 +304,7 @@ void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double 
   nrfuncv=vecfunc; 
   f=fmin(x,iA,iB,shift); /*fvec is also computed by this call.*/
   test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
-  for (i=1;i<=n;i++) 
+  for (i=0;i<n;i++) 
     if (fabs(fvec[i]) > test)
       test=fabs(fvec[i]); 
   if (test < 0.01*TOLF)
@@ -309,29 +312,30 @@ void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double 
       *check=0; 
       FREERETURN;
     }
-  for (sum=0.0,i=1;i<=n;i++) 
-    sum += SQR(x[i]); /* Calculate stpmax for line searches.*/
+  for (sum=0.0,i=0;i<n;i++) 
+    sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
   stpmax=STPMX*FMAX(sqrt(sum),(double)n);
-  for (its=1;its<=MAXITS;its++)
+  for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
-      fdjac(n,x,fvec,fjac,vecfunc); /* If analytic Jacobian is available, you can 
-				       replace the routine fdjac below with your own routine.*/
-      for (i=1;i<=n;i++) { /* Compute  f for the line search.*/
-	for (sum=0.0,j=1;j<=n;j++)
+      fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
+      /* If analytic Jacobian is available, you can 
+	 replace the routine fdjac below with your own routine.*/
+      for (i=0;i<n;i++) { /* Compute  f for the line search.*/
+	for (sum=0.0,j=0;j<n;j++)
 	  sum += fjac[j][i]*fvec[j]; 
 	g[i]=sum; 
       } 
-      for (i=1;i<=n;i++) 
+      for (i=0;i<n;i++) 
 	xold[i]=x[i]; /* Store x,*/ 
       fold=f; /* and f. */
-      for (i=1;i<=n;i++) 
+      for (i=0;i<n;i++) 
 	p[i] = -fvec[i]; /* Right-hand side for linear equations.*/
       ludcmp(fjac,n,indx,&d); /* Solve linear equations by LU decomposition.*/
       lubksb(fjac,n,indx,p);
-      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin); 
+      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift); 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
       test=0.0; /* Test for convergence on function values.*/
-      for (i=1;i<=n;i++) 
+      for (i=0;i<n;i++) 
 	if (fabs(fvec[i]) > test) 
 	  test=fabs(fvec[i]); 
       if (test < TOLF) 
@@ -343,7 +347,7 @@ void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
 	  test=0.0; 
 	  den=FMAX(f,0.5*n);
-	  for (i=1;i<=n;i++)
+	  for (i=0;i<n;i++)
 	    {
 	      temp=fabs(g[i])*FMAX(fabs(x[i]),1.0)/den;
 	      if (temp > test) 
@@ -353,7 +357,7 @@ void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double 
 	  FREERETURN 
 	} 
       test=0.0; /* Test for convergence on ´x. */
-      for (i=1;i<=n;i++) 
+      for (i=0;i<n;i++) 
 	{
 	  temp=(fabs(x[i]-xold[i]))/FMAX(fabs(x[i]),1.0); 
 	  if (temp > test) 
@@ -367,11 +371,11 @@ void newt(double x[], int n, int *check, void (*vecfunc)(int, double [], double 
 
 #define EPS 1.0e-4 /* Approximate square root of the machine precision.*/
 #ifdef MD_APPROX_JACOB
-void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []), int iA, int iB)
+void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 { int i,j; 
   double h,temp,*f; 
-  f=vector(1,n); 
-  for (j=1;j<=n;j++) 
+  f=vector(n); 
+  for (j=0;j<n;j++) 
     {
       temp=x[j]; 
       h=EPS*fabs(temp);
@@ -380,17 +384,17 @@ void fdjac(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, d
       x[j]=temp+h; 
       /* Trick to reduce  nite precision error.*/
       h=x[j]-temp; 
-      (*vecfunc)(n,x,f, iA, iB); 
+      (*vecfunc)(n,x,f, iA, iB, shift); 
       x[j]=temp;
-      for (i=1;i<=n;i++)
+      for (i=0;i<n;i++)
       df[i][j]=(f[i]-fvec[i])/h; /* Forward difference*/
     }
-  free_vector(f,1,n); 
+  free_vector(f); 
 }
 #endif
 extern int nn; 
 extern double *fvec;
-extern void (*nrfuncv)(int n, double v[], double f[]); 
+extern void (*nrfuncv)(int n, double v[], double f[], int iA, int iB, double shift[3]); 
 double fmin(double x[], int iA, int iB, double shift[3]) 
 /* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
@@ -400,7 +404,7 @@ the calling program.*/
   int i;
   double sum;
   (*nrfuncv)(nn,x,fvec,iA,iB,shift);
-  for (sum=0.0,i=1;i<=nn;i++)
-    sum += SQR(fvec[i]); 
+  for (sum=0.0,i=0;i<nn;i++)
+    sum += Sqr(fvec[i]); 
     return 0.5*sum; 
 }
