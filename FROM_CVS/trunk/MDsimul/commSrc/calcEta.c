@@ -17,7 +17,7 @@ void xvaParsing(char stringA[NAME_LENGTH], char stringB[NAME_LENGTH])
   char msgStrA[512];
   /* check if 'stra', read from the params file, is one of the strings in the 
      singlePar array, if N => ERROR */ 
-  for  (i=0; OxvaPar[i].ptr != NULL; ++i) /* parname=NULL menas END */
+  for  (i=0; OxvaPar[i].ptr != NULL; ++i) /* parname=NULL means END */
     {
       if (!strcmp(OxvaPar[i].parName, stringA))
 	{
