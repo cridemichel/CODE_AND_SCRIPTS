@@ -369,6 +369,47 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   return calc_phi();
 }
 #endif
+#ifdef MD_SILICA
+void rebuild_linked_list()
+{
+  double L2;
+  int j, n, iA, iB;
+  L2 = 0.5 * L;
+  cellsx[iA][iB] = L / Oparams.rcut[iA][iB];
+  cellsy[iA][iB] = L / Oparams.rcut[iA][iB];
+#ifdef MD_GRAVITY
+  cellsz[iA][iB] = (Lz+OprogStatus.extraLz) / Oparams.rcut[iA][iB];
+#else
+  cellsz[iA][iB] = L / Oparams.rcut[iA][iB];
+#endif 
+  for (iA = 0; iA < 2; iA++)
+    for (iB = 0; iB < 2; iB++)
+      {
+	for (j = 0; j < cellsx[iA][iB]*cellsy[iA][iB]*cellsz[iA][iB] + Oparams.parnum; j++)
+	  cellList[iA][iB][j] = -1;
+      }
+
+  for (iB = 0; iB < 2; iB++)
+    {
+      /* rebuild event calendar */
+      for (n = 0; n < Oparams.parnum; n++)
+	{
+	  iA = (n < Oparams.parnumA)?0:1;
+	  inCell[iB][0][n] =  (rx[n] + L2) * cellsx[iA][iB] / L;
+	  inCell[iB][1][n] =  (ry[n] + L2) * cellsy[iA][iB] / L;
+#ifdef MD_GRAVITY
+	  inCell[iB][2][n] =  (rz[n] + Lz2) * cellsz[iA][iB] / (Lz+OprogStatus.extraLz);
+#else
+	  inCell[iB][2][n] =  (rz[n] + L2)  * cellsz[iA][iB] / L;
+#endif
+	  j = (inCell[iB][2][n]*cellsy[iA][iB] + inCell[iB][1][n])*cellsx[iA][iB] + 
+	    inCell[iB][0][n] + Oparams.parnum;
+	  cellList[iB][n] = cellList[iB][j];
+	  cellList[iB][j] = n;
+	}
+    }
+}
+#else
 void rebuild_linked_list()
 {
   double L2;
@@ -400,6 +441,7 @@ void rebuild_linked_list()
       cellList[j] = n;
     }
 }
+#endif
 #if 0
 double check_dist_min(int i, char *msg)
 {
@@ -2890,6 +2932,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
   //printf(">>>>>>>>>>>>>>bondpair=%d\n", bondpair);
   MD_DEBUG30(printf("[BEFORE SEARCH CONTACT FASTER]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
+#ifdef MD_NEGPAIRS
+  sumnegpairs = check_negpairs(negpairs, distsOld, bondpair, i, j); 
+#endif
   if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot))
     {
       return 0;  
@@ -2934,10 +2979,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #else
   dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
 #endif
-#ifdef MD_NEGPAIRS
-  sumnegpairs = check_negpairs(negpairs, distsOld, bondpair, i, j); 
-#endif
-  firstaftsf = 1;
+ firstaftsf = 1;
 #endif
   its = 0;
   while (t+t1 < t2)
@@ -3454,6 +3496,7 @@ void PredictEvent (int na, int nb)
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], 
 	 b, d, t, tInt, vv, distSq, t1, t2, evtime=0, evtimeHC;
   int overlap, ac, bc, acHC, bcHC, collCodeOld;
+  int iA, iB;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
   int collCode;
@@ -3463,299 +3506,309 @@ void PredictEvent (int na, int nb)
   MD_DEBUG(calc_energy("PredEv"));
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
-  if (vz[na] != 0.0) 
-    {
-      if (vz[na] > 0.0) 
-	signDir[2] = 0;/* direzione positiva */
-      else 
-	signDir[2] = 1;/* direzione negativa */
-      tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
-	       cellsz - rz[na] - L2) / vz[na];
-    } 
-  else 
-    tm[2] = timbig;
-  /* end forcefield[k] != 0*/
 
-  if (vx[na] != 0.0) 
+  iA = (na < Oparams.parnumA)?0:1;
+  /* iB indica la specie con cui puo' interagire na e per ogni specie abbiamo 
+   * differenti celle */
+  for (iB = 0; iB < 2; iB++)
     {
-      if (vx[na] > 0.0) 
-	signDir[0] = 0;/* direzione positiva */
-      else 
-	signDir[0] = 1;/* direzione negativa */
-      tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L /
-	       cellsx - rx[na] - L2) / vx[na];
-    } 
-  else 
-    tm[0] = timbig;
-
-  if (vy[na] != 0.) 
-    {
-      if (vy[na] > 0.) 
-	signDir[1] = 0;
-      else 
-	signDir[1] = 1;
-      tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L /
-	       cellsy - ry[na] - L2) / vy[na];
-    } 
-  else 
-    tm[1] = timbig;
-  /* ====== */
-  /* Find minimum time */
-  k = -1; /* giusto per dare un valore ed evitare una warning */
-  if (tm[1] <= tm[2]) 
-    {
-      if (tm[0] <= tm[1]) k = 0;
-      else k = 1;
-    } 
-  else
-    {
-      if (tm[0] <= tm[2]) 
-	k = 0;
-      else 
-	k = 2;
-    }
-  /* Se un errore numerico fa si che tm[k] < 0 allora lo poniamo uguale a 0
-   * (ved. articolo Lubachevsky) */
-#if 1
-  if (tm[k]<0)
-    {
-      tm[k] = 0.0;
-#if 1
-      printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
-      printf("Cells(%d,%d,%d)\n", inCell[0][na], inCell[1][na], inCell[2][na]);
-      printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
-	     signDir[2]);
-      /*exit(-1);*/
-      /*tm[k] = 0.0;*/
-#endif
-    }
-#endif
-  /* 100+0 = attraversamento cella lungo x
-   * 100+1 =       "           "     "   y
-   * 100+2 =       "           "     "   z */
-  evCode = 100 + k;
-  /* urto con le pareti, il che vuol dire:
-   * se lungo z e rz = -L/2 => urto con parete */ 
-  MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
-		    na, ATOM_LIMIT+evCode, k, tm[k]));
-  ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
-
-  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
-
-  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
-    {
-      jZ = inCell[2][na] + iZ;    
-      shift[2] = 0.;
-      /* apply periodico boundary condition along z if gravitational
-       * fiels is not present */
-      if (jZ == -1) 
+      if (vz[na] != 0.0) 
 	{
-	  jZ = cellsz - 1;    
-	  shift[2] = - L;
+	  if (vz[na] > 0.0) 
+	    signDir[2] = 0;/* direzione positiva */
+	  else 
+	    signDir[2] = 1;/* direzione negativa */
+	  tm[2] = ((inCell[iB][2][na] + 1 - signDir[2]) * L /
+		   cellsz - rz[na] - L2) / vz[na];
 	} 
-      else if (jZ == cellsz) 
+      else 
+	tm[2] = timbig;
+      /* end forcefield[k] != 0*/
+
+      if (vx[na] != 0.0) 
 	{
-	  jZ = 0;    
-	  shift[2] = L;
+	  if (vx[na] > 0.0) 
+	    signDir[0] = 0;/* direzione positiva */
+	  else 
+	    signDir[0] = 1;/* direzione negativa */
+	  tm[0] = ((inCell[iB][0][na] + 1 - signDir[0]) * L /
+		   cellsx - rx[na] - L2) / vx[na];
+	} 
+      else 
+	tm[0] = timbig;
+
+      if (vy[na] != 0.) 
+	{
+	  if (vy[na] > 0.) 
+	    signDir[1] = 0;
+	  else 
+	    signDir[1] = 1;
+	  tm[1] = ((inCell[iB][1][na] + 1 - signDir[1]) * L /
+		   cellsy - ry[na] - L2) / vy[na];
+	} 
+      else 
+	tm[1] = timbig;
+      /* ====== */
+      /* Find minimum time */
+      k = -1; /* giusto per dare un valore ed evitare una warning */
+      if (tm[1] <= tm[2]) 
+	{
+	  if (tm[0] <= tm[1]) k = 0;
+	  else k = 1;
+	} 
+      else
+	{
+	  if (tm[0] <= tm[2]) 
+	    k = 0;
+	  else 
+	    k = 2;
 	}
-      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
-	{
-	  jY = inCell[1][na] + iY;    
-	  shift[1] = 0.0;
-	  if (jY == -1) 
-	    {
-	      jY = cellsy - 1;    
-	      shift[1] = -L;
-	    } 
-	  else if (jY == cellsy) 
-	    {
-	      jY = 0;    
-	      shift[1] = L;
-	    }
-	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
-	    {
-	      jX = inCell[0][na] + iX;    
-	      shift[0] = 0.0;
-	      if (jX == -1) 
-		{
-		  jX = cellsx - 1;    
-		  shift[0] = - L;
-		} 
-	      else if (jX == cellsx) 
-		{
-		  jX = 0;   
-		  shift[0] = L;
-		}
-	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
-	      for (n = cellList[n]; n > -1; n = cellList[n]) 
-		{
-		  if (n != na && n != nb && (nb >= -1 || n < na)) 
-		    {
-		      /* maxax[...] è il diametro dei centroidi dei due tipi
-		       * di ellissoidi */
-		      if (OprogStatus.targetPhi > 0)
-			{
-			  //sigSq = Sqr(max_ax(na)+max_ax(n));
-			}
-		      else
-			{
-			  if (na < parnumA && n < parnumA)
-			    sigSq = Sqr(maxax[na]);
-			  else if (na >= parnumA && n >= parnumA)
-			    sigSq = Sqr(maxax[na]);
-			  else
-			    sigSq = Sqr((maxax[n]+maxax[na])*0.5+Oparams.sigmaSticky+OprogStatus.epsd);
-			}
-		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
-		      tInt = Oparams.time - atomTime[n];
-		      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
-		      dv[0] = vx[na] - vx[n];
-		      dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
-		      dv[1] = vy[na] - vy[n];
-		      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
-		      dv[2] = vz[na] - vz[n];
-
-		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
-		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
-		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-		      d = Sqr (b) - vv * (distSq - sigSq);
-
-		      collCode = MD_EVENT_NONE;
-		      if (d < 0 || (b > 0.0 && distSq > sigSq)) 
-			{
-			  /* i centroidi non collidono per cui non ci può essere
-			   * nessun urto sotto tali condizioni */
-			  continue;
-			}
-		      MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
-		      if (vv==0.0)
-			{
-			  if (distSq >= sigSq)
-			    continue;
-			  /* la vel relativa è zero e i centroidi non si overlappano quindi
-			   * non si possono urtare! */
-			  t1 = t = 0;
-			  t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
-				       urtare ruotando */
-			}
-		      else if (distSq >= sigSq)
-			{
-			  t = t1 = - (sqrt (d) + b) / vv;
-			  t2 = (sqrt (d) - b) / vv;
-			  MD_DEBUG29(printf("NOT OVERLAP t1=%.15G t2=%.15G\n", t1, t2));
-			  overlap = 0;
-			}
-		      else 
-			{
-			  MD_DEBUG29(printf("Centroids overlap!\n"));
-			  t2 = t = (sqrt (d) - b) / vv;
-			  t1 = 0;//-OprogStatus.h;
-			  overlap = 1;
-			  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
-			  MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
-			}
-		      //printf("na=%d j=%d type=%d t1=%.15G\n", na, lastbump[na].mol,
-			//     lastbump[na].type, 
-			  //   t1);
-		      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
-		      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
-		      //t += Oparams.time; 
-		      t2 += Oparams.time;
-		      t1 += Oparams.time;
-		      //printf("t1=%.15G t2=%.15G\n",t1,t2);
-		      /* calcola cmq l'urto fra le due core spheres */
-		      if (na < parnumA && n < parnumA)
-			sigSq = Sqr(Oparams.sigma[0][0]);
-		      else if (na >= parnumA && n >= parnumA)
-			sigSq = Sqr(Oparams.sigma[1][1]);
-		      else
-			sigSq = Sqr(Oparams.sigma[0][1]);
-		      if (b < 0.0) 
-			{
-			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-			  d = Sqr (b) - vv * 
-			    (Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]) - sigSq);
-			  if (d >= 0.) 
-			    {
-			      t = - (sqrt (d) + b) / vv;
-			      if (t < 0)
-				{
-#if 0
-				  printf("time:%.15f tInt:%.15f\n", Oparams.time,
-					 tInt);
-				  printf("t = %.15G\n", t);
-				  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-							      Sqr(dr[2]))-1.0 );
-				  printf("STEP: %lld\n", (long long int)Oparams.curStep);
-				  printf("atomTime: %.10f \n", atomTime[n]);
-				  printf("n:%d na:%d\n", n, na);
-				  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
-#endif
-				  t = 0;
-				}
-			      collCode = MD_CORE_BARRIER;
-			      evtime = Oparams.time + t;
-			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
-			    } 
-			}
-		      collCodeOld = collCode;
-		      evtimeHC = evtime;
-		      //printf("))))))))))evtime=%f collCode:%d\n", evtime, collCode);
-		      acHC = ac = 0; 
-		      acHC = bc = 0;
-		      //calcDist(Oparams.time, na, n, shift, r1, r2);
-		      //continue;
-		      //exit(-1);
+      /* Se un errore numerico fa si che tm[k] < 0 allora lo poniamo uguale a 0
+       * (ved. articolo Lubachevsky) */
 #if 1
-		      if (!locate_contact(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+      if (tm[k]<0)
+	{
+	  tm[k] = 0.0;
+#if 1
+	  printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
+	  printf("Cells(%d,%d,%d)\n", inCell[iB][0][na], inCell[iB][1][na], 
+		 inCell[iB][2][na]);
+	  printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
+		 signDir[2]);
+	  /*exit(-1);*/
+	  /*tm[k] = 0.0;*/
+#endif
+	}
+#endif
+      /* 100+0 = attraversamento cella lungo x
+       * 100+1 =       "           "     "   y
+       * 100+2 =       "           "     "   z */
+      evCode = 100 + k + 3*iB;
+      /* urto con le pareti, il che vuol dire:
+       * se lungo z e rz = -L/2 => urto con parete */ 
+      MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
+			na, ATOM_LIMIT+evCode, k, tm[k]));
+      ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+    }
+
+  for (iB = 0; iB < 2; iB++)
+    {
+      for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[iB][k];
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	{
+	  jZ = inCell[iB][2][na] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      jZ = cellsz - 1;    
+	      shift[2] = - L;
+	    } 
+	  else if (jZ == cellsz) 
+	    {
+	      jZ = 0;    
+	      shift[2] = L;
+	    }
+	  for (iY = cellRange[iB][2]; iY <= cellRange[iB][3]; iY ++) 
+	    {
+	      jY = inCell[iB][1][na] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsy - 1;    
+		  shift[1] = -L;
+		} 
+	      else if (jY == cellsy) 
+		{
+		  jY = 0;    
+		  shift[1] = L;
+		}
+	      for (iX = cellRange[iB][0]; iX <= cellRange[iB][1]; iX ++) 
+		{
+		  jX = inCell[iB][0][na] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsx - 1;    
+		      shift[0] = - L;
+		    } 
+		  else if (jX == cellsx) 
+		    {
+		      jX = 0;   
+		      shift[0] = L;
+		    }
+		  n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+		  for (n = cellList[iB][n]; n > -1; n = cellList[iB][n]) 
+		    {
+		      if (n != na && n != nb && (nb >= -1 || n < na)) 
 			{
+			  /* maxax[...] è il diametro dei centroidi dei due tipi
+			   * di ellissoidi */
+			  if (OprogStatus.targetPhi > 0)
+			    {
+			      //sigSq = Sqr(max_ax(na)+max_ax(n));
+			    }
+			  else
+			    {
+			      if (na < parnumA && n < parnumA)
+				sigSq = Sqr(maxax[na]);
+			      else if (na >= parnumA && n >= parnumA)
+				sigSq = Sqr(maxax[na]);
+			      else
+				sigSq = Sqr((maxax[n]+maxax[na])*0.5+Oparams.sigmaSticky+OprogStatus.epsd);
+			    }
+			  MD_DEBUG2(printf("sigSq: %f\n", sigSq));
+			  tInt = Oparams.time - atomTime[n];
+			  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+			  dv[0] = vx[na] - vx[n];
+			  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+			  dv[1] = vy[na] - vy[n];
+			  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+			  dv[2] = vz[na] - vz[n];
+
+			  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+			  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+			  d = Sqr (b) - vv * (distSq - sigSq);
+
+			  collCode = MD_EVENT_NONE;
+			  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+			    {
+			      /* i centroidi non collidono per cui non ci può essere
+			       * nessun urto sotto tali condizioni */
+			      continue;
+			    }
+			  MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
+			  if (vv==0.0)
+			    {
+			      if (distSq >= sigSq)
+				continue;
+			      /* la vel relativa è zero e i centroidi non si overlappano quindi
+			       * non si possono urtare! */
+			      t1 = t = 0;
+			      t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+					   urtare ruotando */
+			    }
+			  else if (distSq >= sigSq)
+			    {
+			      t = t1 = - (sqrt (d) + b) / vv;
+			      t2 = (sqrt (d) - b) / vv;
+			      MD_DEBUG29(printf("NOT OVERLAP t1=%.15G t2=%.15G\n", t1, t2));
+			      overlap = 0;
+			    }
+			  else 
+			    {
+			      MD_DEBUG29(printf("Centroids overlap!\n"));
+			      t2 = t = (sqrt (d) - b) / vv;
+			      t1 = 0;//-OprogStatus.h;
+			      overlap = 1;
+			      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+			      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+			    }
+			  //printf("na=%d j=%d type=%d t1=%.15G\n", na, lastbump[na].mol,
+			  //     lastbump[na].type, 
+			  //   t1);
+			  MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
+			  MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
+			  //t += Oparams.time; 
+			  t2 += Oparams.time;
+			  t1 += Oparams.time;
+			  //printf("t1=%.15G t2=%.15G\n",t1,t2);
+			  /* calcola cmq l'urto fra le due core spheres */
+			  if (na < parnumA && n < parnumA)
+			    sigSq = Sqr(Oparams.sigma[0][0]);
+			  else if (na >= parnumA && n >= parnumA)
+			    sigSq = Sqr(Oparams.sigma[1][1]);
+			  else
+			    sigSq = Sqr(Oparams.sigma[0][1]);
+			  if (b < 0.0) 
+			    {
+			      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+			      d = Sqr (b) - vv * 
+				(Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]) - sigSq);
+			      if (d >= 0.) 
+				{
+				  t = - (sqrt (d) + b) / vv;
+				  if (t < 0)
+				    {
+#if 0
+				      printf("time:%.15f tInt:%.15f\n", Oparams.time,
+					     tInt);
+				      printf("t = %.15G\n", t);
+				      printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+								  Sqr(dr[2]))-1.0 );
+				      printf("STEP: %lld\n", (long long int)Oparams.curStep);
+				      printf("atomTime: %.10f \n", atomTime[n]);
+				      printf("n:%d na:%d\n", n, na);
+				      printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
+#endif
+				      t = 0;
+				    }
+				  collCode = MD_CORE_BARRIER;
+				  evtime = Oparams.time + t;
+				  MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
+				} 
+			    }
+			  collCodeOld = collCode;
+			  evtimeHC = evtime;
+			  //printf("))))))))))evtime=%f collCode:%d\n", evtime, collCode);
+			  acHC = ac = 0; 
+			  acHC = bc = 0;
+			  //calcDist(Oparams.time, na, n, shift, r1, r2);
+			  //continue;
+			  //exit(-1);
+#if 1
+			  if (!locate_contact(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+			    {
+			      if (collCode == MD_EVENT_NONE)
+				continue;
+			    }
+#else
 			  if (collCode == MD_EVENT_NONE)
 			    continue;
-			}
-#else
-		      if (collCode == MD_EVENT_NONE)
-			continue;
 #endif
-		      MD_DEBUG29(printf("evtime=%.15G evtimeHC=%.15G\n",evtime,evtimeHC));
+			  MD_DEBUG29(printf("evtime=%.15G evtimeHC=%.15G\n",evtime,evtimeHC));
 #if 0
-		      if (collCode!=MD_CORE_BARRIER && collCodeOld==MD_CORE_BARRIER &&
-			  fabs(evtime - evtimeHC)<1E-5)
-			{
-			  ac = bc = 0;
-			  evtime = evtimeHC;
-			  collCode = collCodeOld;
-			}
+			  if (collCode!=MD_CORE_BARRIER && collCodeOld==MD_CORE_BARRIER &&
+			      fabs(evtime - evtimeHC)<1E-5)
+			    {
+			      ac = bc = 0;
+			      evtime = evtimeHC;
+			      collCode = collCodeOld;
+			    }
 #endif
-		      MD_DEBUG(printf("A x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)-B x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)",
-				      rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
-				      rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]));
-		      t = evtime;
+			  MD_DEBUG(printf("A x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)-B x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)",
+					  rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
+					  rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]));
+			  t = evtime;
 #if 1
-		      if (t < Oparams.time)
-			{
+			  if (t < Oparams.time)
+			    {
 #if 0
-			  printf("time:%.15f tInt:%.15f\n", Oparams.time,
-				 tInt);
-			  printf("t = %.15G\n", t);
-			  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-						      Sqr(dr[2]))-1.0 );
-			  printf("STEP: %lld\n", (long long int)Oparams.curStep);
-			  printf("atomTime: %.10f \n", atomTime[n]);
-			  printf("n:%d na:%d\n", n, na);
-			  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
+			      printf("time:%.15f tInt:%.15f\n", Oparams.time,
+				     tInt);
+			      printf("t = %.15G\n", t);
+			      printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+							  Sqr(dr[2]))-1.0 );
+			      printf("STEP: %lld\n", (long long int)Oparams.curStep);
+			      printf("atomTime: %.10f \n", atomTime[n]);
+			      printf("n:%d na:%d\n", n, na);
+			      printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
 #endif
-			  t = Oparams.time;
+			      t = Oparams.time;
+			    }
+#endif
+			  /* il tempo restituito da newt() è già un tempo assoluto */
+			  MD_DEBUG30(printf("EVENT TIME=%.15G\n",evtime));
+			  MD_DEBUG30(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
+			  MD_DEBUG30(printf("t=%.15G %d-%d %d-%d ac=%d bc=%d type=%d\n",
+					    t, na,n,n,na,ac,bc, collCode));
+			  ScheduleEventBarr (na, n,  ac, bc, collCode, t);
+			  MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
 			}
-#endif
-		      /* il tempo restituito da newt() è già un tempo assoluto */
-		      MD_DEBUG30(printf("EVENT TIME=%.15G\n",evtime));
-		      MD_DEBUG30(printf("time: %f Adding collision %d-%d\n", Oparams.time, na, n));
-		      MD_DEBUG30(printf("t=%.15G %d-%d %d-%d ac=%d bc=%d type=%d\n",
-					t, na,n,n,na,ac,bc, collCode));
-		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
-		      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
-		    }
-		} 
+		    } 
+		}
 	    }
 	}
     }
