@@ -1854,8 +1854,14 @@ void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
     C +=  rA[k1]*XarA[k1];
   C = C - 1.0;
   D = Sqr(B) - 4.0*A*C;
+  if (D < 0 || A == 0)
+    {
+      printf("[calc_intersec] Serious problem guessing distance, aborting...\n");
+      printf("tt = %f D=%f A=%f B=%f C=%f\n", tt, D, A, B, C);
+      printf("distance: %f\n", sqrt(Sqr(rBA[0])+Sqr(rBA[1])+Sqr(rBA[2])));
+      exit(-1);
+    }
   tt = (-B + sqrt(D))/(2.0*A); 
-  MD_DEBUG(printf("tt = %f\n", tt));
   for (k1 = 0; k1 < 3; k1++)
     {
       rI[k1] = rA[k1] + tt*rBA[k1];  
@@ -1955,7 +1961,7 @@ double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2,
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++) 
       segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
-#if 0
+#if 1
   if (segno > 0)
     return calc_norm(r12);
   else
@@ -2127,16 +2133,17 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 {
   double h, d1, d2, alpha, vecgd[8], t, r1[3], r2[3]; 
   double normddot, ddot[3], maxddot, delt;
-  const double epsd = 0.1; 
-  int foundrc, retcheck;
+  const double epsd = 0.001; 
+  int foundrc, retcheck, kk;
   t = t1;
+  MD_DEBUG(printf("[locate_contact] t1=%f t2=%f shift=(%f,%f,%f)\n", t1, t2, shift[0], shift[1], shift[2]));
   d1 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i<Oparams.parnumA?0:1]
 	 + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j<Oparams.parnumA?0:1];
   if (maxddot==0)
     return 0;
-  MD_DEBUG(printf("d1:%f\n", d1));
+  MD_DEBUG(printf(">>>>d1:%f\n", d1));
   h = EPS*(t2-t1);
   foundrc = 0;
   
@@ -2153,9 +2160,15 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      else
 		t += h;
 	      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
-	      
+	      MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f\n", t, d1, d2));
 	      if (d1 > 0 && d2 < 0)
 		{
+		  for (kk = 0; kk < 3; kk++)
+		    {
+		      vecg[kk] = (vecgd[kk]+vecgd[kk+3])*0.5; 
+		    }
+		  vecg[3] = vecgd[6];
+		  vecg[4] = t;
 		  newt(vecg, 5, &retcheck, funcs2beZeroed, i, j, shift); 
 		  if (retcheck==2 || vecg[4] < Oparams.time ||
 		      fabs(vecg[4] - Oparams.time)<1E-12 )
@@ -2561,7 +2574,6 @@ no_core_bump:
 		      	} 
 
 #else
-		      continue;
 		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
 			  
 		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
@@ -3331,7 +3343,7 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 1
+#if 0
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8];
 	      double r1[3], r2[3], alpha;

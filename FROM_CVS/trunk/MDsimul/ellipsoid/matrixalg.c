@@ -594,7 +594,7 @@ void newt(double x[], int n, int *check,
   
 }
 #undef MD_GLOBALNRD
-#define MAXITS3 20
+#define MAXITS3 30
 void newtDist(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
@@ -626,7 +626,7 @@ void newtDist(double x[], int n, int *check,
   for (its=0;its<MAXITS3;its++)
     { /* Start of iteration loop. */
        /* ============ */
-       //fdjacFD(n,x,fvecD,fjac,vecfunc, iA, iB, shift); 
+      //fdjacFD(n,x,fvecD,fjac,vecfunc, iA, iB, shift); 
       fdjacDist(n,x,fvecD,fjac,vecfunc, iA, iB, shift);
        /* If analytic Jacobian is available, you can 
 	  replace the routine fdjac below with your own routine.*/
