@@ -1187,6 +1187,7 @@ void calcFxtFt(double x[3], double **X,
 void fdjac(int n, double x[], double fvec[], double **df, 
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 {
+  /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
   int na; 
   double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
   double DA[3][3], DB[3][3];
