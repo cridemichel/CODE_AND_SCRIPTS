@@ -20,6 +20,9 @@ int *lastbump;
 extern double *axa, *axb, *axc;
 extern int *scdone;
 extern double *maxax;
+#ifdef MD_NNL
+extern double *lastupdNNL, *totDistDispl;
+#endif
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
@@ -152,6 +155,27 @@ void rebuildCalendar(void);
 void R2u(void);
 void store_bump(int i, int j);
 
+#ifdef MD_NNL
+void rebuildNNL(void)
+{
+  int i;
+  double nltime=timbig;
+  UpdateSystem();
+  printf("Rebulding NNL t=%.15G\n", Oparams.time);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      //if (i==1)
+	//exit(0);
+      BuildNNL(i);
+      //lastupdNNL[i] = Oparams.time;
+      //totDistDispl[i] = 0;
+      if (i==0 || nebrTab[i].nexttime < nltime)
+	nltime = nebrTab[i].nexttime;
+    }
+  /* next complete update */
+  ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
+}
+#endif
 /* ========================== >>> scalCor <<< ============================= */
 void scalCor(int Nm)
 { 
@@ -1281,7 +1305,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       MD_DEBUG(printf("norm = (%f,%f,%f)\n", norm[0], norm[1],norm[2]));
       MD_DEBUG(printf("vel  = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
       MD_DEBUG(printf("i=%d r = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]));
-      printf("[ERROR] maybe second collision has been wrongly predicted\n");
+      printf("[ERROR] maybe second collision has been wrongly predicted %d-%d\n",i,j);
       printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
       return;
     }
@@ -2085,9 +2109,9 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   rB[0] = rx[iA];
   rB[1] = ry[iA];
   rB[2] = rz[iA];
-  vB[0] = vx[iA];
-  vB[1] = vy[iA];
-  vB[2] = vz[iA];
+  vB[0] = 0.0;//vx[iA];
+  vB[1] = 0.0;//vy[iA];
+  vB[2] = 0.0;//vz[iA];
   UpdateOrient(iA, ti, RB, OmegaB);
   na = (iA < Oparams.parnumA)?0:1;
 #if 1
@@ -3603,12 +3627,13 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
   int k1, na;
   MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t-atomTime[i],i));
+  MD_DEBUG20(printf("v = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
   ti = t + (t1 - atomTime[i]);
   //printf("t1-atomTime[%d]:%.15G\n", i, t1-atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
-  MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
+  MD_DEBUG20(printf("AAAA ti= %.15G rA (%.15G,%.15G,%.15G)\n", ti, rA[0], rA[1], rA[2]));
   /* ...and now orientations */
   UpdateOrient(i, ti, RtA, Omega);
   na = (i < Oparams.parnumA)?0:1;
@@ -3624,6 +3649,7 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   rB[1] = ry[i];// + vy[j]*ti;
   rB[2] = rz[i];// + vz[j]*ti;
   UpdateOrient(i, ti, RtB, Omega);
+  MD_DEBUG20(printf("BBBB ti= %.15G rB (%.15G,%.15G,%.15G)\n", ti, rB[0], rB[1], rB[2]));
   if ((Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]))==0.0 || (rA[0]==rB[0] && rA[1]==rB[1] && rA[2]==rB[2]))
     return OprogStatus.rNebrShell;
   na = (i < Oparams.parnumA)?0:1;
@@ -3663,14 +3689,13 @@ retry:
 	      rCA[kk] = rC[kk] - rA[kk];
 	      rDB[kk] = rD[kk] - rB[kk];
 	    }
-	  printf("rC = (%f,%f,%f) norm(rCA)=%f rD = (%f, %f, %f) norm(rDB)=%f scalprod: %f\n"
+	  printf("rC = (%.12f,%.12f,%.12f) norm(rCA)=%f rD = (%.12f, %.12f, %.12f) norm(rDB)=%.14f scalprod: %f\n"
 	     , rC[0]-rA[0], rC[1]-rA[1], rC[2]-rA[2], calc_norm(rCA),  
 	     rD[0]-rB[0], rD[1]-rB[1], rD[2]-rB[2], calc_norm(rDB), scalProd(rCA, rDB));
 	}
 #endif
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
-
       if (OprogStatus.springkSD>0 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
 	{
 	  for (k1=0; k1 < 3; k1++)
@@ -4828,24 +4853,26 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
   int its=0; 
    
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
- 
+
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
   *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
   timesF++;
-  MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
+  MD_DEBUG20(printf("Pri distances between %d d1=%.12G epsd*epsdTimes:%f\n", i, *d1, epsdFast));
+  printf("[SEARCH_CONTACT_FASTER] t=%.15G ellips N. %d d=%.15G\n", *t, i, *d1); 
   told = *t;
   while (*d1 > epsdFast && its < MAXOPTITS)
     {
-      delt = *d1 / maxddot;
+      delt = *d1 / maxddot / 2.0;
+      MD_DEBUG20(printf("SEARCH_CONTACT_FASTER delt=%.15G maxddot: %.15G\n", delt, maxddot));
       normddot = calcvecFNeigh(i, *t, t1, ddot, r1);
       //printf("normddot: %.15G\n", epsd/normddot);
       /* check for convergence */
      
       if (normddot!=0 && delt < (epsd / normddot))
 	{
-	  MD_DEBUG10(printf("convergence reached in %d iterations\n", its));
+	  MD_DEBUG20(printf("convergence reached in %d iterations\n", its));
 	  return 0;
 	}
       *t += delt;
@@ -4853,18 +4880,19 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
       if (*t + t1 > t2)
 	{
 	  *t = told;
-	  MD_DEBUG10(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG10(printf("convergence t>t2\n"));
+	  MD_DEBUG20(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG20(printf("convergence t>t2\n"));
 	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
 	  return 1;
 	}
 #endif
       *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
+      printf("LOOP SEARCH CONTACT FASTER i=%d *d1=%.15G *t=%.15G\n", i, *d1, *t+t1);
       if (*d1 < 0)
 	{
 	  /* go back! */
-	  MD_DEBUG10(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG10(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
+	  MD_DEBUG20(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG20(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
 	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
 	  return 0;
@@ -4874,7 +4902,7 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
       itsF++;
     }
 
-  MD_DEBUG10(printf("max iterations %d iterations reached t=%f t2=%f\n", its, *t, t2));
+  MD_DEBUG20(printf("max iterations %d iterations reached t=%f t2=%f\n", its, *t, t2));
   return 0;
 
 }
@@ -4923,6 +4951,7 @@ int locate_contact_neigh(int i, double vecg[5])
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
   h = OprogStatus.h; /* last resort time increment */
+  //t += h;
   if (search_contact_faster_neigh(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0;  
   MD_DEBUG(printf(">>>>d:%f\n", d));
@@ -4935,7 +4964,7 @@ int locate_contact_neigh(int i, double vecg[5])
     {
       normddot = calcvecFNeigh(i, t, t1, ddot, r1);
       if (normddot!=0)
-	delt = epsd/normddot;
+	delt = epsd / normddot;
       else
 	delt = h;
       if (dold < epsd)
@@ -4946,6 +4975,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;
       d = calcDistNegNeigh(t, t1, i, r1, r2, vecgd, 0);
+      printf("[LOCATE_CONTACT] t=%.15G ellips N. %d d=%.15G dold=%.15G its=%lld\n", t, i, d, dold, itsS); 
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -4954,7 +4984,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	  //printf("P delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt, fabs(d2-d2old), d2, d2old);
 	  t -= delt;
 	  //delt = d2old / maxddot;
-	  delt = epsd /maxddot;
+	  delt = epsd / maxddot;
 	  if (delt < h)
 	    delt = h;
 	  t += delt; 
@@ -4985,6 +5015,7 @@ int locate_contact_neigh(int i, double vecg[5])
       dorefine = 0;      
       if (dold > 0 && d < 0)
 	{
+	  printf(">>>>>>>>>QUI\n");
        	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
 #ifndef MD_NOINTERPOL  
@@ -5012,7 +5043,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	}
       if (dorefine)
 	{
-	  //printf("REFINING CONTACT t=%.15G\n", t);
+	  printf("REFINING CONTACT t=%.15G\n", t);
 	  if (refine_contact_neigh(i, t1, troot, vecgroot, vecg))
 	    {
 	      MD_DEBUG20(printf("[locate_contact] Adding collision between %d\n", i));
@@ -5166,7 +5197,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     }
   else if (d<0&&fabs(d)>OprogStatus.epsd)
     {
-      printf("[WARNING] t=%.10G d=%.15G < 0 i=%d j=%d\n",t, d, i, j);
+      printf("[WARNING] t=%.10G d=%.15G < 0 i=%d j=%d\n",t+t1, d, i, j);
       printf("[WARNING] Some collision has been missed, ellipsoid may overlap!\n");
       store_bump(i, j);
       return 0;
@@ -5422,10 +5453,13 @@ double estimate_tmin(double t, int na, int nb)
 }
 #endif
 #ifdef MD_NNL
+extern double max(double a, double b);
 void PredictEventNNL(int na, int nb) 
 {
   int i, cellRangeT[2 * NDIM], signDir[NDIM], evCode, k, n, kk;
-  double vecg[5], *shift, t1, t2, rxC, ryC, rzC, t, tm[NDIM];
+  double vecg[5], shift[3], t1, t2, rxC, ryC, rzC, t, tm[NDIM];
+  double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
+  int overlap;
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -5489,19 +5523,97 @@ void PredictEventNNL(int na, int nb)
   /* urto con le pareti, il che vuol dire:
    * se lungo z e rz = -L/2 => urto con parete */ 
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+  printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len);
   for (i=0; i <  nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
+      if (!(n != na && n!=nb && (nb >= -1 || n < na)))
+	continue;
       for (kk=0; kk < 3; kk++)
 	shift[kk] = nebrTab[na].shift[kk];
-      t1 = Oparams.time;
-      t2 = nebrTab[na].nexttime;
+      /* maxax[...] è il diametro dei centroidi dei due tipi
+       * di ellissoidi */
+      if (OprogStatus.targetPhi > 0)
+	{
+	  sigSq = Sqr(max_ax(na)+max_ax(n)+OprogStatus.epsd);
+	}
+      else
+	{
+	  if (na < parnumA && n < parnumA)
+	    sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+	  else if (na >= parnumA && n >= parnumA)
+	    sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+	  else
+	    sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+	}
+      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
+      tInt = Oparams.time - atomTime[n];
+      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+      dv[0] = vx[na] - vx[n];
+      dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+      dv[1] = vy[na] - vy[n];
+#ifdef MD_GRAVITY
+      dr[2] = rz[na] - 
+	(rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
+      dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
+#else
+      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+      dv[2] = vz[na] - vz[n];
+#endif
+      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+      d = Sqr (b) - vv * (distSq - sigSq);
+      if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+	{
+	  /* i centroidi non collidono per cui non ci può essere
+	   * nessun urto sotto tali condizioni */
+	  continue;
+	}
+      MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
+      if (vv==0.0)
+	{
+	  if (distSq >= sigSq)
+	    continue;
+	  /* la vel relativa è zero e i centroidi non si overlappano quindi
+	   * non si possono urtare! */
+	  t1 = t = 0;
+	  t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+		       urtare ruotando */
+	}
+      else if (distSq >= sigSq)
+	{
+	  t = t1 = - (sqrt (d) + b) / vv;
+	  t2 = (sqrt (d) - b) / vv;
+	  overlap = 0;
+	}
+      else 
+	{
+	  MD_DEBUG(printf("Centroids overlap!\n"));
+	  t2 = t = (sqrt (d) - b) / vv;
+	  t1 = 0.0; 
+	  overlap = 1;
+	  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+	  MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+	}
+      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
+      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
+      //t += Oparams.time; 
+      t2 += Oparams.time;
+      t1 += Oparams.time;
+      
+     // t1 = Oparams.time;
+     // t2 = nebrTab[na].nexttime;//,nebrTab[n].nexttime);
+
+      printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime);
+      printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2);
       if (!locate_contact(na, n, shift, t1, t2, vecg))
 	continue;
       rxC = vecg[0];
       ryC = vecg[1];
       rzC = vecg[2];
       t = vecg[4];
+      printf("Scheduling collision between %d and %d at t=%.15G\n", na, n, t);
       ScheduleEvent (na, n, t);
     }
 }
@@ -5509,7 +5621,7 @@ void BuildNNL(int na)
 {
   double shift[NDIM];
   int kk;
-  double vecg[5], r1[3], r2[3], dist, alpha;
+  double vecg[5], r1[3], r2[3], dist, alpha, maxddot, factori;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cels[NDIM];*/
   int nb, cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
@@ -5517,12 +5629,20 @@ void BuildNNL(int na)
   for (kk=0; kk < 3; kk++)
     shift[kk] = 0;
   /* calcola il tempo a cui si deve ricostruire la NNL */
+#if 1
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
   else
     nebrTab[na].nexttime = vecg[4];
+#endif
+#if 0
+  factori = 0.5*maxax[na];
+  maxddot = sqrt(Sqr(vx[na])+Sqr(vy[na])+Sqr(vz[na])) +
+    sqrt(Sqr(wx[na])+Sqr(wy[na])+Sqr(wz[na]))*factori;
+  nebrTab[na].nexttime = Oparams.time+0.5*OprogStatus.rNebrShell/maxddot;
   //ScheduleEvent(na, ATOM_LIMIT + 11, vecg[4]); 
-  
+#endif
+  nebrTab[na].len=0;
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
@@ -5576,8 +5696,9 @@ void BuildNNL(int na)
       		      dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
 		       * in OprogStatus */
-		      if (dist < 2.0*OprogStatus.rNebrShell + 0.1)
+		      if (dist < OprogStatus.rNebrShell + 0.1)
 			{
+			  printf("Adding ellipsoid N. %d to NNL of %d\n", n, na);
 			  nebrTab[na].list[nebrTab[na].len] = n;
 			  for (kk=0; kk < 3; kk++)
 			    nebrTab[na].shift[kk] = shift[kk];
@@ -6420,6 +6541,7 @@ void ProcessCollision(void)
       cellRange[2*k+1] =   1;
     }
   MD_DEBUG10(calc_energy("prima"));
+
 #if defined(MD_SQWELL)||defined(MD_INFBARRIER)
   /* i primi due bit sono il tipo di event (uscit buca, entrata buca, collisione con core 
    * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */
@@ -6439,6 +6561,7 @@ void ProcessCollision(void)
   lastbump[evIdB]=evIdA;
 #endif
 #ifdef MD_NNL
+  ////updrebuildNNL(evIdA, evIdB);
   PredictEventNNL(evIdA, -1);
   PredictEventNNL(evIdB, evIdA);
 #else
@@ -6499,7 +6622,6 @@ void ProcessCellCrossing(void)
   int j; 
 #endif
   int k, n;
-
   UpdateAtom(evIdA);
   /* NOTA: cellList[i] con 0 < i < Oparams.parnum è la cella in cui si trova la particella
    * i-esima mentre cellList[j] con 
@@ -6610,7 +6732,9 @@ void rebuildCalendar(void)
       cellRange[2*k+1] =   1;
     }
   for (n = 0; n < Oparams.parnum; n++)
-    PredictEvent(n, -2); 
+    {
+      PredictEvent(n, -2); 
+    }
 }
 void distanza(int ia, int ib)
 {
@@ -6872,7 +6996,7 @@ void move(void)
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	  break;
 	}
-#ifdef MD_NNL
+#if defined(MD_NNL)
       else if (evIdB == ATOM_LIMIT + 11)
 	{
 	  UpdateSystem();
@@ -6882,6 +7006,7 @@ void move(void)
 	      if (i==0 || nebrTab[i].nexttime < nltime)
 		nltime = nebrTab[i].nexttime;
 	    }
+	  printf("rebuilt NNL next time=%.15G\n", nltime);
 	  /* next complete update */
 	  ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 	  //ScheduleEvent(evIdA, ATOM_LIMIT+11,nebrTab[i].nexttime);
