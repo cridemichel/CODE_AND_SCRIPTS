@@ -10,10 +10,11 @@ extern int **tree, evIdA, evIdB;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 extern int evIdC;
 #endif
-extern double *treeTime;
+extern double *treeTime, *treeRxC, *treeRyC, *treeRzC;
 void DeleteEvent(int );
 void NextEvent(void);
 extern int poolSize;
+extern double rxC, ryC, rzC;
 #if 0
 #define treeLeft   tree[0]
 #define treeRight  tree[1]
@@ -237,6 +238,9 @@ void ScheduleEvent (int idA, int idB, double tEvent)
       treeCircBR[idB + 1] = idNew;
     }
   treeTime[idNew] = tEvent;
+  treeRxC[idNew] = rxC;
+  treeRyC[idNew] = ryC;
+  treeRzC[idNew] = rzC;
   treeIdA[idNew] = idA;    
   treeIdB[idNew] = idB;
   treeLeft[idNew] = treeRight[idNew] = -1;
@@ -255,6 +259,9 @@ void NextEvent (void)
   while (treeLeft[idNow] > -1) 
     idNow = treeLeft[idNow];
   Oparams.time = treeTime[idNow];   
+  rxC = treeRxC[idNow];
+  ryC = treeRyC[idNow];
+  rzC = treeRzC[idNow];
   evIdA = treeIdA[idNow];    
   evIdB = treeIdB[idNow];
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
