@@ -131,13 +131,27 @@ double  calcFadeFact(int mode, int nf)
 
   return ff;
 }
+void vectProd(double r1x, double r1y, double r1z, 
+	 double r2x, double r2y, double r2z, 
+	 double* r3x, double* r3y, double* r3z)
+{
+  /* DESCRIPTIOM:
+     r3 = [ r1, r2 ] where [ , ] the vectorial product */
+  *r3x = r1y * r2z - r1z * r2y; 
+  *r3y = r1z * r2x - r1x * r2z;
+  *r3z = r1x * r2y - r1y * r2x;
+}
+
+
 /* ========================== >>> displayMol <<< ===========================*/
 void displayAtom(int nf, int nm, int na)
 {
   float fadeFact;
-  GLUquadricObj* ss;
+  GLUquadricObj *ss, *ss2, *ss3;
   atom_s *atom;
+  double rax, ray, raz, rotangle, normra, normn, Pi;
   glPushMatrix();
+  Pi = 2.0*acos(0);
   atom = &mols[nf][nm].atom[na];
   glTranslatef(atom->common.rx,atom->common.ry,atom->common.rz);/* 1st atom */ 
   
@@ -177,11 +191,34 @@ void displayAtom(int nf, int nm, int na)
     }
   else if (atom->common.type==MGL_ATOM_DISK)
     {
+#if 0
+      printf("qui radius=%f height=%f\n",  atom->disk.radius,atom->disk.height );
+#endif
       ss = gluNewQuadric();
+      ss2 =  gluNewQuadric();
+      ss3 =  gluNewQuadric();
+      vectProd(0,0,1,atom->disk.nx, atom->disk.ny, atom->disk.nz,
+	       &rax, &ray, &raz);
+      normra = sqrt(Sqr(rax)+Sqr(ray)+Sqr(raz));
+      normn = sqrt(Sqr(atom->disk.nx)+Sqr(atom->disk.ny)+Sqr(atom->disk.nz));
+      rotangle = 180.0*acos(atom->disk.nz/normn)/Pi; 	       
+#if 0
+      printf("Rotation Angle: %f around (%f,%f,%f) n(%f,%f,%f)\n", 
+	     rotangle, rax, ray, raz,atom->disk.nx, atom->disk.ny,acos(atom->disk.nz/normn)/Pi );
+#endif
+      glRotatef(rotangle, rax, ray, raz);
+      glPushMatrix();
+      glTranslatef(0, 0, atom->disk.height);
+      gluDisk(ss2, 0, atom->disk.radius, STACKS, SLIDES);
+      glPopMatrix();
       gluCylinder(ss, atom->disk.radius, 
 		      atom->disk.radius, 
 		      atom->disk.height, 
 		      STACKS, SLIDES);
+      glPushMatrix();
+      gluQuadricOrientation(ss3, GLU_INSIDE);
+      gluDisk(ss3, 0, atom->disk.radius, STACKS, SLIDES);
+      glPopMatrix();
     }
   else if (atom->common.type==MGL_ATOM_CYLINDER)
     {
@@ -208,10 +245,10 @@ void buildAtomsList()
     {
       atomsList[nf] = glGenLists(1);
       glNewList(atomsList[nf], GL_COMPILE);
-      printf("numols[%d]:%d\n", nf, globset.NumMols[nf]);
+     /* printf("numols[%d]:%d\n", nf, globset.NumMols[nf]);*/
       for(i = 0; i < globset.NumMols[nf]; ++i)
 	{
-	  printf("mols[%d][%d].numat:%d\n", nf, i, mols[nf][i].numat);
+	  /*printf("mols[%d][%d].numat:%d\n", nf, i, mols[nf][i].numat);*/
 	  for (j=0; j < mols[nf][i].numat; j++)
 	    displayAtom(nf, i, j);
 	}
@@ -607,11 +644,11 @@ int parsecol(char *str)
 /* ========================== >>> assignAtom <<< ===========================*/
 void assignAtom(int nf, int i, int a, const char* L)
 {
-  char s1[128], s2[128], s3[128], s4[128], s5[128], s6[128], s7[128], s8[128];
+  char s1[128], s2[128], s3[128], s4[128], s5[128], s6[128], s7[128], s8[128], s9[128];
   atom_s *at;
 
   at = &mols[nf][i].atom[a];
-  if (sscanf(L,"%s %s %s %s %s %s", s1, s2, s3, s4, s5, s6) == 6)
+  if (sscanf(L,"%s %s %s %s %s %s @ %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9) == 9)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
@@ -619,6 +656,44 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.rx = atof(s1);
       at->common.ry = atof(s2);
       at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_DISK;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->disk.nx = atof(s4);
+      at->disk.ny = atof(s5);
+      at->disk.nz = atof(s6);
+      at->disk.radius = atof(s7);
+      at->disk.height = atof(s8);
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = parsecol(s9);
+    }
+  else if (sscanf(L,"%s %s %s %s %s %s @ %s %s", s1, s2, s3, s4, s5, s6, s7, s8) == 8)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	     atoi(s5),i, j);*/
+      printf("disk con raggio e altezza specificati\n");
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_DISK;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->disk.nx = atof(s4);
+      at->disk.ny = atof(s5);
+      at->disk.nz = atof(s6);
+      at->disk.radius = atof(s7);
+      at->disk.height = atof(s8);
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = -1;
+    }
+  else if (sscanf(L,"%s %s %s %s %s %s", s1, s2, s3, s4, s5, s6) == 6)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	     atoi(s5),i, j);*/
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_DISK;
       /* nx, ny, nz sono le componenti del vettore normale al dischetto */
       at->disk.nx = atof(s4);
       at->disk.ny = atof(s5);
@@ -636,22 +711,6 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
     }
-  else if (sscanf(L,"%s %s %s %s %s %s @ %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8) == 8)
-    {
-      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
-      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
-	     atoi(s5),i, j);*/
-      at->common.rx = atof(s1);
-      at->common.ry = atof(s2);
-      at->common.rz = atof(s3);
-      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
-      at->disk.nx = atof(s4);
-      at->disk.ny = atof(s5);
-      at->disk.nz = atof(s6);
-      at->disk.radius = atof(s7);
-      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = parsecol(s8);
-    }
   else if (sscanf(L,"%s %s %s @ %s $ %s ", s1, s2, s3, s4, s5) == 5 )
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
@@ -660,23 +719,12 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.rx = atof(s1);
       at->common.ry = atof(s2);
       at->common.rz= atof(s3);
+      at->common.type = MGL_ATOM_SPHERE;
       /*greylLvl[j][i] = colIdxBW[j];*/
       /* default value of grey level*/
       at->sphere.radius = atof(s4);
       at->common.greyLvl = atoi(s5);
       at->common.atcol  = -1;
-    }
-  if (sscanf(L,"%s %s %s C[%[^]]", s1, s2, s3, s4) == 4 )
-    {
-      at->common.rx = atof(s1);
-      at->common.ry = atof(s2);
-      at->common.rz = atof(s3);
-      if (globset.NA)
-	at->sphere.radius = globset.sig[a];
-      else
-	at->sphere.radius = globset.diameter/2.0;
-      at->common.greyLvl = 0;
-      at->common.atcol = parsecol(s4);
     }
   else if (sscanf(L,"%s %s %s @ %s C[%[^]]", s1, s2, s3, s4, s5) == 5)
     {
@@ -685,15 +733,30 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.rx = atof(s1);
       at->common.ry = atof(s2);
       at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SPHERE;
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
       at->sphere.radius = atof(s4);
       at->common.greyLvl = 0;
       at->common.atcol = parsecol(s5);
     }
-  else if (sscanf(L,"%s %s %s @ %s ", s1, s2, s3, s4) == 4 )
+  else if (sscanf(L,"%s %s %s C[%[^]]", s1, s2, s3, s4) == 4 )
+    {
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SPHERE;
+      if (globset.NA)
+	at->sphere.radius = globset.sig[a];
+      else
+	at->sphere.radius = globset.diameter/2.0;
+      at->common.greyLvl = 0;
+      at->common.atcol = parsecol(s4);
+    }
+    else if (sscanf(L,"%s %s %s @ %s ", s1, s2, s3, s4) == 4 )
     {
       /* printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       */
+      at->common.type = MGL_ATOM_SPHERE;
       at->common.rx = atof(s1);
       at->common.ry = atof(s2);
       at->common.rz = atof(s3);
@@ -708,6 +771,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.ry = atof(s2);
       at->common.rz = atof(s3);
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
+      at->common.type = MGL_ATOM_SPHERE;
       if (globset.NA)
 	at->sphere.radius = globset.sig[a];
       else
