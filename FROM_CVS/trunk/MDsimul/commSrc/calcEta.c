@@ -387,6 +387,7 @@ void main(int argc, char** argv)
 	  DQxy0 = DQxy[t0];
 	  DQyz0 = DQyz[t0];
 	  DQzx0 = DQzx[t0];
+	  //printf("t0=%d DQ=(%f,%f,%f)\n", t0, DQxy[t0], DQyz[t0], DQzx[t0]);
 	  //fprintf(stderr, "%f %f %f %f\n", xvadt*t0, 
 	  //  DQxy0/((double)t0)/xvadt, DQyz0/((double)t0)/xvadt, 
 	  //  DQzx0/((double)t0)/xvadt);
