@@ -2073,9 +2073,174 @@ void estimate_lambda(double *vec)
   vec[6] = fabs(vec[6]);
   vec[7] = fabs(vec[7]);
 }
+double get_sign(double *vec)
+{
+  int k1, k2;
+  double A, B, S, fx2[3], gx2[3];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx2[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx2[k1] += 2.0*Xb[k1][k2]*(vec[k2] - rB[k2]);
+      fx2[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx2[k1] += 2.0*Xa[k1][k2]*(vec[k2+3] - rA[k2]);
+	}
+  A = B = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      A += (vec[k1+3]-rA[k1])*fx2[k1];
+      B += (vec[k1]-rB[k1])*gx2[k1];
+    }
+  A = 0.5*A - 1.0;
+  B = 0.5*B - 1.0;
+  
+  if (A<0 && B<0)
+    S = -1.0;
+  else
+    S = 1.0;
+  
+  return S;
+}
+MESHXYZ **ellips_mesh[2];
+
+int choose_neighbour(double *grad, double *th1, double *phi1, double *th2, double *phi2,
+		     double *distSq, double *S, double maxstA, double maxstB, double *vec, 
+		     int calc_sign)
+{
+  int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB;
+  double sp, spmaxA=0.0, spmaxB=0.0, dx[3], dxA, dxB;
+ 
+  mA = (icg<Oparams.parnumA)?0:1;
+  mB = (jcg<Oparams.parnumA)?0:1;
+  for (k1=-1; k1 <= 1; k1+=2)
+    {
+      for (k2=-1; k2 <= 1; k2+=2)
+	{
+	  for (kk=0; kk < 3; kk++) 
+	    dx[kk] = ellips_mesh[mA][*th1+k1][*phi1+k2].point[kk] -
+	      ellips_mesh[mA][*th1][*phi1].point[kk];
+	  sp = fabs(scalProd(grad, dx));
+	  if (sp > spmaxA)
+	    {
+	      cth1 = *th1+k1;
+	      cphi1 = *phi1+k2;
+	      spmaxA = sp;
+	    }
+	  for (kk=0; kk < 3; kk++) 
+	    dx[kk] = ellips_mesh[mB][*th2+k1][*phi2+k2].point[kk] -
+	      ellips_mesh[mB][*th2][*phi2].point[kk];
+	  sp = fabs(scalProd(grad, dx));
+	  if (sp > spmaxB)
+	    {
+	      cth2 = *th2+k1;
+	      cphi2 = *phi2+k2;
+	      spmaxB = sp;
+	    }
+	}
+    }
+  /* calcola la nuova distanza, il nuovo gradiente e le nuove coordinate del punto */
+  for (kk = 0; kk < 3; kk++)
+    {
+      dxA = ellips_mesh[mA][cth1][cphi1].point[kk] -
+	ellips_mesh[mA][*th1][*phi1].point[kk];
+      vec[kk] += dxA;
+      dxB = ellips_mesh[mB][cth2][cphi2].point[kk] -
+	ellips_mesh[mB][*th2][*phi2].point[kk];
+      vec[kk+3] += dxB;
+    }
+  distSqold = *distSq;
+  *distSq = 0;
+  for (kk = 0; kk < 3; kk++)
+    {
+      *distSq += Sqr(vec[kk+3]-vec[kk]);
+    }
+  if (*distSq > distSqold)
+    return 1;
+  if (calc_sign)
+    {
+      S = get_sign(vec);
+      distSq *= S;
+    }
+  for (kk = 0; kk < 3; kk++)
+    {
+      grad[kk] = S*(vec[kk+3]-vec[kk]);
+      grad[kk+3] = -S*(vec[kk+3]-vec[kk]);
+    }
+  *th1 = cth1;
+  *phi1 = cphi1;
+  *th2 = cth2;
+  *phi2 = cphi2;
+  return 0;	
+}
 void findminMesh(double *vec)
 {
+  int kk, th1, th2, phi1, phi2, calc_sign=0;
+  double angs[4], vecP[6], sinth, grad[6], maxstA, maxstB, distSq;
+  const double TWOPI = 2.0*pi;
+  lab2body(icg, vec, vecP, rA, RtA);
+  lab2body(jcg, &vec[3], &vecP[3], rB, RtB);
+  angs[1] = acos(vecP[2]/axc[icg]);
+  angs[0] = acos(vecP[0]/axa[icg]/sin(angs[1]));
+  sinth = vecP[1]/axb[icg]/sin(angs[1]);
+  if (sinth < 0)
+    angs[0] = 2.0*pi-angs[0];
+  angs[3] = acos(vecP[5]/axc[jcg]);
+  angs[2] = acos(vecP[3]/axa[jcg]/sin(angs[3]));
+  sinth = vecP[4]/axb[jcg]/sin(angs[3]);
+  if (sinth < 0)
+    angs[2] = 2.0*pi-angs[2];
+  /* determino lo starting point sulla mesh */	
+  th1 = rint(OprogStatus.n1*angs[0]/TWOPI); 
+  phi1 = rint(OprogStatus.n2*angs[1]/TWOPI);
+  th2 = rint(OprogStatus.n1*angs[2]/TWOPI); 
+  phi2 = rint(OprogStatus.n2*angs[3]/TWOPI);
 
+  /* maggiorazione degli step sui due ellissoidi */
+  if (OprogStatus.n1 > OprogStatus.n2)
+    maxstA = maxax[icg]*TWOPI/Oparams.n2;
+  else
+    maxstA = maxax[icg]*TWOPI/Oparams.n1;
+
+  if (OprogStatus.n1 > OprogStatus.n2)
+    maxstB = maxax[jcg]*TWOPI/Oparams.n2;
+  else
+    maxstB = maxax[jcg]*TWOPI/Oparams.n2;
+  /* search begin */
+  S = get_sign(vec); 
+  distSq = 0;
+  for (kk = 0; kk < 3; kk++)
+    {
+      grad[kk] = S*(vec[kk+3]-vec[kk]);
+      grad[kk+3] = -S*(vec[kk+3]-vec[kk]); 
+      distSq += S*Sqr(vec[kk+3]-vec[kk]);
+    }
+  
+  while (1)
+    {
+      /* calcola il segno se necessario */
+      if (!calc_sign && distSq < Sqr(maxstA+maxstB))
+	{
+	  S = get_sign(vec);
+	  calc_sign = 1;
+	}
+      if (choose_neighbour(grad, &th1, &phi1, &th2, &phi2, &distSq, &S, 
+      			   maxstA, maxstB, vec, calc_sign))
+	{
+#if 0
+	    angs[0] = th1*TWOPI/OprogStatus.n1;
+	    angs[1] = phi1*TWOPI/OprogStatus.n2;
+	    angs[2] = th2*TWOPI/OprogStatus.n1;
+	    angs[3] = phi2*TWOPI/OprogStatus.n2;
+	    /* we're done here! */
+	    angs2coord(angs, vecP);
+	    /* torno nel riferimento del laboratorio */
+	    body2lab(icg, vecP, vec, rA, RtA);
+	    body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
+#endif
+	    break;
+	  } 
+    }
 }
 void guessdistByMesh(int i, int j, double shift[3], double *vecg)
 {

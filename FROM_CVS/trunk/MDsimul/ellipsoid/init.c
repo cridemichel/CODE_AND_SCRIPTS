@@ -907,8 +907,8 @@ typedef struct {
 	double x,y,z;
 } XYZ;
 typedef struct {
-	XYZ point;
-	XYZ grad;
+	double point[3];
+	doublw grad[3];
 } MESHXYZ;
 
 MESHXYZ **ellips_mesh[2];
@@ -920,12 +920,12 @@ void EvalSuperEllipse(double t1,double t2, double a, double b, double c, MESHXYZ
    ct2 = cos(t2);
    st1 = sin(t1);
    st2 = sin(t2);
-   pm->point.x = a * ct1 * ct2;
-   pm->point.y = b * ct1 * st2;
-   pm->point.z = c * st1;
-   pm->grad.x = 2.0*pm->point.x/Sqr(a);
-   pm->grad.y = 2.0*pm->point.y/Sqr(b);
-   pm->grad.z = 2.0*pm->point.z/Sqr(c);
+   pm->point[0] = a * ct1 * ct2;
+   pm->point[1] = b * ct1 * st2;
+   pm->point[2] = c * st1;
+   pm->grad[0] = 2.0*pm->point.x/Sqr(a);
+   pm->grad[1] = 2.0*pm->point.y/Sqr(b);
+   pm->grad[2] = 2.0*pm->point.z/Sqr(c);
 }
 void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 {
@@ -937,12 +937,12 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
    * n2 = slides */
   n1 = OprogStatus.n1;
   n2 = OprogStatus.n2;
-  for (j=0;j<n1/2;j++)
+  for (j=0;j<n2/2;j++)
     {
-      phi = j * TWOPI / (double)n1 - PID2;
-      for (i=0;i<n2;i++) 
+      phi = j * TWOPI / (double)n2 - PID2;
+      for (i=0;i<n1;i++) 
 	{
-	  theta = i * TWOPI / n2;
+	  theta = i * TWOPI / n1;
 	  EvalSuperEllipse(theta,phi,a,b,c,&mesh[i][j]);
 	}
     }
