@@ -60,6 +60,99 @@ int check_node(char* str, int id, int idNew, int idUp)
     }
   return 0;
 }
+#ifdef MD_BARRIER
+void ScheduleEventBarr (int idA, int idB, int idC, double tEvent) 
+{
+  int id, idNew, more;
+  id = 0;
+
+  MD_DEBUG2(printf("#%lld ScheduleEvent() idA:%d idB:%d evtime:%.15f\n", 
+		   (long long int)Oparams.curStep, idA, idB,
+		  tEvent));
+  if ((idB < ATOM_LIMIT ||
+      idB >= ATOM_LIMIT + 2 * NDIM) && idB < ATOM_LIMIT + 100)
+    {
+      /* urto con altra particella o altro evento (misura o output)*/
+      if (treeIdA[0] == -1)
+	ErrExit ("empty event pool");
+      /* treeIdA[0] è un puntatore ad un nodo utilizzabile nel pool */
+      idNew = treeIdA[0];
+      MD_DEBUG2(
+      if (idB >= ATOM_LIMIT + 2 * NDIM)
+	printf("idNew: %d tEvent: %.15f\n", idNew, tEvent));
+      /* all'inizio treeCircAR[treeIdA[0]] = treeIdA[0]+1 quindi è un nodo 
+       * non utilizzato nel pool */
+      treeIdA[0] = treeCircAR[treeIdA[0]];
+    }
+  else 
+    idNew = idA + 1;
+  /* Se qui vuol dire che si tratta di un cell-crossing o 
+     di un urto con parete
+     NOTA: urto con parete e cell-crossing sono esclusivi, per cui basta un nodo 
+     inoltre c'è sempre un evento di tale tipo associato con ogni particella 
+     */
+  
+  /* treeRight[id] == -1 => il calendario è vuoto */
+  if (treeRight[id] == -1) 
+    treeRight[id] = idNew;
+  else 
+    {
+      /* Cerca la giusta collocazione nell'albero per l'evento da
+       * schedulare */
+      more = 1; 
+      id = treeRight[id];
+      while (more) 
+	{
+	  if (tEvent <= treeTime[id]) 
+	    {
+	      if (treeLeft[id] > -1) 
+		id = treeLeft[id];
+	      else 
+		{
+		  more = 0;    
+		  treeLeft[id] = idNew;
+		}
+	    } 
+	  else
+	    {
+	      if (treeRight[id] > -1) 
+		id = treeRight[id];
+	      else 
+		{
+		  more = 0;    
+		  treeRight[id] = idNew;
+		} 
+	    }
+	} 
+    }
+    
+  if (idB < ATOM_LIMIT) 
+    {
+      /* Chiaramente ad idNew sono associate le particelle idA e idB
+       * relative all'evento che si sta schedulando */
+      /* inserisce idNew nella circular list della particelle idA */
+      treeCircAR[idNew] = treeCircAR[idA + 1];
+      treeCircAL[idNew] = idA + 1;
+      treeCircAL[treeCircAR[idA + 1]] = idNew;
+      treeCircAR[idA + 1] = idNew;
+      /* inserisce idNew nella circular list di idB */
+      treeCircBR[idNew] = treeCircBR[idB + 1];
+      treeCircBL[idNew] = idB + 1;
+      treeCircBL[treeCircBR[idB + 1]] = idNew;
+      treeCircBR[idB + 1] = idNew;
+    }
+  treeTime[idNew] = tEvent;
+  treeIdA[idNew] = idA;    
+  treeIdB[idNew] = idB;
+  treeIdC[idNew] = idC;
+  treeLeft[idNew] = treeRight[idNew] = -1;
+  treeUp[idNew] = id;
+}
+void ScheduleEvent(int IdA, int IdB, double tEvent)
+{
+  ScheduleEventBarr(IdA, IdB, -1, tEvent);
+}
+#else
 void ScheduleEvent (int idA, int idB, double tEvent) 
 {
   int id, idNew, more;
@@ -146,7 +239,7 @@ void ScheduleEvent (int idA, int idB, double tEvent)
   treeLeft[idNew] = treeRight[idNew] = -1;
   treeUp[idNew] = id;
 }
-
+#endif
 void NextEvent (void) 
 {
   int id, idAx, idBx, idd, idNow, idtx;
