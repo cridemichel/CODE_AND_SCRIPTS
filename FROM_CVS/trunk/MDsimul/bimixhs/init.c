@@ -709,7 +709,8 @@ extern void remove_bond(int na, int n);
 extern double calcpotene(void);
 #endif
 #if defined(MD_SQWELL) && defined(MD_BONDCORR) 
-double corrini;
+double corrini0, corrini1, corrini2;
+double *firstbreak;
 #endif
   /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
@@ -792,6 +793,9 @@ void usrInitAft(void)
     bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
     numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
     numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
+#ifdef MD_BONDCORR
+    firstbreak=(double*)malloc(Oparams.parnum*sizeof(double));
+#endif
     bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
 #else
     tree = AllocMatI(9, poolSize);
@@ -843,8 +847,12 @@ void usrInitAft(void)
 
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   for (i=0; i < Oparams.parnum; i++)
-    numbonds[i] = 0;
-
+    {
+      numbonds[i] = 0;
+#ifdef MD_BONDCORR
+      firstbreak[i] = 0.0;
+#endif
+    }
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
@@ -879,15 +887,27 @@ void usrInitAft(void)
       for (j=0; j < numbonds0[i]; j++)
 	bonds0[i][j]=bonds[i][j];
     }
-  corrini = 0;
+  corrini2 = 0;
+  corrini1 = 0;
+  corrini0 = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
       if (numbonds0[i]==2)
 	{
-	  corrini++;
+	  corrini2++;
 	}
+      if (numbonds0[i]==1 && numbonds0[bonds0[i][0]]==1)
+	{
+	  corrini1++;
+	}
+      if (numbonds0[i]==0)
+	{
+	  corrini0++;
+	}
+
     }
-  sprintf(fileop2 ,"BondCorrFunc.dat");
+  printf("------------> corrini0: %f\n", corrini0);
+  sprintf(fileop2 ,"BondCorrFuncB1.dat");
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
   if ( (bof = fopenMPI(fileop, "w")) == NULL)
@@ -895,7 +915,17 @@ void usrInitAft(void)
       mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
       exit(-1);
     }
-  fprintf(bof,"%.15f %.15f\n", Oparams.time, 1.0);
+  fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini1);
+  fclose(bof);
+  sprintf(fileop2 ,"BondCorrFuncB2.dat");
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bof = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+      exit(-1);
+    }
+  fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini2);
   fclose(bof);
 #endif
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
