@@ -48,7 +48,7 @@ COORD_TYPE DrSq = 0.0, Mtot;
 /* used by linked list routines */
 int *head, *list, *map;  /* arrays of integer */
 int NCell, mapSize, M;
-
+double Volo1, Volo2, Volot;
 /* neighbour list method variables */
 COORD_TYPE dispHi;
 int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
@@ -263,6 +263,7 @@ void movea(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   
   if (OprogStatus.Nose == 2) return;
   Vol = Vol + dt * Vol1 + dtSq2 * Vol2;
+  Volot = Vol;
   Vol1t = Vol1;   /* Vol1(t) */
   Vol1 = Vol1 + dt2 * Vol2;
  
@@ -770,7 +771,7 @@ void calcPtensAt(int Nm, COORD_TYPE VOL1)
   Patyy = T1yy + Wyy + WCyy;
   Patzz = T1zz + Wzz + WCzz;
   //printf("Wxx:%f WCxx:%f Wyy: %f WCyy: %f Wzz: %f WCzz: %f\n",
-	//Wxx, WCxx, Wyy, WCyy, Wzz, WCzz);
+//	Wxx, WCxx, Wyy, WCyy, Wzz, WCzz);
   Patxx /= Vol;
   Patyy /= Vol;
   Patzz /= Vol;
@@ -778,7 +779,8 @@ void calcPtensAt(int Nm, COORD_TYPE VOL1)
   Patyz /= Vol;
   Patzx /= Vol;
 }
-const double ittol = 1E-20;
+const double ittol = 1E-13;
+const double ittolNPT = 1E-11;
 #if 0
 void movebBrownAnd(double dt, double tol, int maxIt, int NB, double m[3], double d, 
 		    int Nm) 
@@ -1203,14 +1205,19 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   COORD_TYPE Vol1g, s1i, Vol1i;
   COORD_TYPE DT, A, B, DP, dt2; 
   int i, a, k, numok, dof;
-  const int MAXNUMIT = 150;
-  double L;
+  const int MAXNUMIT = 40;
+  double L, s1old, Vol1old;
   /* ******************************************************************* */
   dt2 = dt / 2.0;
   L = cbrt(Vol);
   for(i=0; i < Nm; i++)
     {
       CoM(i, &Rx[i], &Ry[i], &Rz[i]);
+#if 0
+      Rx[i] -=  L * rint(invL * Rx[i]);
+      Ry[i] -=  L * rint(invL * Ry[i]);
+      Rz[i] -=  L * rint(invL * Rz[i]);
+#endif
       for(a=0; a < NA; a++)
 	{
 #if 0
@@ -1263,6 +1270,8 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
   for(k=0; k < MAXNUMIT; k++) /* Loop to convergence (NUMIT ~ 5 is enough)*/
     {
+      s1old = s1;
+      Vol1old = Vol1;
       kinet(Nm, vx, vy, vz, Vol1);  /* K(t+dt) */
 
       DT = s * (2.0 * K - (dof * Nm - 3.0) * Oparams.T) / 
@@ -1345,13 +1354,13 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	  for (a = 0; a < NA; a++)
 	    {
 	      /* F = Flennard-jones + Fnose + Fandersen */
-	      if (fabs(vx[a][i]- vxold[a][i]) < ittol &&
-		  fabs(vy[a][i]- vyold[a][i]) < ittol &&
-		  fabs(vz[a][i]- vzold[a][i]) < ittol)
+	      if (fabs(vx[a][i]- vxold[a][i]) < ittolNPT &&
+		  fabs(vy[a][i]- vyold[a][i]) < ittolNPT &&
+		  fabs(vz[a][i]- vzold[a][i]) < ittolNPT )
 		numok++;
 	    }
 	}
-      if (numok == NA*Oparams.parnum)
+      if (numok == NA*Oparams.parnum && fabs(s1-s1old) < ittolNPT && fabs(Vol1-Vol1old) < ittolNPT )
 	{
 	  /* for all atoms diff between current velocities and prev vels is below tol! */ 
 	  /*printf("Done %d iterations instead of %d\n", k, NUMIT);
@@ -1359,7 +1368,11 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	  break;
 	}
     }
-
+  //printf("kkk=%d\n", k);
+  if (k == MAXNUMIT)
+    printf("[movebNPT] maximum number of iterations to convergens reached!\n");
+  if (k > 6)
+    printf("[movebNPT] many iterations done...it may look strange\n");
   /* Calculate kinetic energy */
   kinet(Nm, vx, vy, vz, Vol1);/* K(t+dt) */
   //printf("K exact: %.20f\n", K);
@@ -1397,6 +1410,8 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 
   /* These are the values of velocities at t-dt and at t-2*dt, used to 
      estimate the temperature at time t+dt at begin of this procedure */
+  Volo2 = Volo1;
+  Volo1 = Volot;
   Vol1o2 = Vol1o1;
   s1o2  = s1o1;
   Vol1o1 = Vol1t;
@@ -2316,8 +2331,8 @@ void move(void)
   checkdists("prima movea");
   check_distances("prima movea");
 #endif
-  if (OprogStatus.Nose == 1)
-    scalCor(Oparams.parnum);
+  //if (OprogStatus.Nose == 1)
+    //scalCor(Oparams.parnum);
   movea(Oparams.steplength, 0.000000000001, 150, NA-1, distance, Oparams.m, 
 	Oparams.parnum);        
     /* buildAtomsPositions();*/
