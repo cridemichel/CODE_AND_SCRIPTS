@@ -165,13 +165,13 @@ void rebuildNNL(void)
   printf("Rebulding NNL t=%.15G\n", Oparams.time);
   for (i=0; i < Oparams.parnum; i++)
     {
-      //if (i==1)
-	//exit(0);
-      BuildNNL(i);
-      //lastupdNNL[i] = Oparams.time;
-      //totDistDispl[i] = 0;
+      nextNNLupdate(i);
       if (i==0 || nebrTab[i].nexttime < nltime)
 	nltime = nebrTab[i].nexttime;
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      BuildNNL(i);
     }
   /* next complete update */
   nextNNLrebuild = nltime;
@@ -3866,7 +3866,7 @@ double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3],
   invcSq = 1/Sqr(nebrTab[j].axc);
     
   tRDiagR(j, Xb, invaSq, invbSq, invcSq, nebrTab[j].R);
-retry:
+retryoverlap:
   if (OprogStatus.forceguess)
     calcguess = 1;
   if (calcguess)
@@ -4030,7 +4030,7 @@ retry:
       if (calcguess==0)
 	{
 	  calcguess=2;
-	  goto retry;
+	  goto retryoverlap;
 	} 
       Oparams.time = t + t1;
       store_bump(i, j);
@@ -4118,28 +4118,10 @@ retry:
     }
 #endif
 #endif
-#if 1
-  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
-  //exit(-1);
   if (segno > 0)
     return calc_norm(r12);
   else
     return -calc_norm(r12);
-#else
-#if 0
-#if MD_DEBUG(x) == x
-  for (k1 = 0; k1 < 3; k1++)
-    rDC[k1] = r1[k1] - r2[k1];
-    {
-      FILE *f;
-      f =fopen("distNeg.dat","a");
-      fprintf(f,"%.15f %.15f\n", Oparams.time, (segno>0)?calc_norm(rDC):-calc_norm(rDC));  
-      fclose(f);
-    }
-  return calc_norm(rDC);
-#endif
-#endif
-#endif
 }
 #endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
@@ -5168,9 +5150,9 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
   timesF++;
   MD_DEBUG20(printf("Pri distances between %d d1=%.12G epsd*epsdTimes:%f\n", i, *d1, epsdFast));
   printf("[SEARCH_CONTACT_FASTER] t=%.15G ellips N. %d d=%.15G\n", *t, i, *d1); 
-  told = *t;
   while (*d1 > epsdFast && its < MAXOPTITS)
     {
+      told = *t;
       delt = *d1 / maxddot;
       MD_DEBUG20(printf("SEARCH_CONTACT_FASTER delt=%.15G maxddot: %.15G\n", delt, maxddot));
       normddot = calcvecFNeigh(i, *t, t1, ddot, r1);
@@ -5210,6 +5192,7 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
 	  delt /= GOLD;
 	  *t = told + delt;
 	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed);
+	  printf("itsf=%d BUBU SEARCH_CONTACT_FASTER_NEIGH *d1=%.15G\n",itsf,*d1);
 	  itsf++;	
 	  if (itsf > 100)
 	    {
@@ -5989,15 +5972,12 @@ void updAllNNL()
   for (i=0; i < Oparams.parnum; i++)
     updrebuildNNL(i);
 }
-void BuildNNL(int na) 
+void nextNNLupdate(int na)
 {
-  double shift[NDIM];
+  int i1, i2, kk;
+  double DelDist;
   const double distBuf = 0.1;
-  int kk, i1, i2;
-  double vecg[5], r1[3], r2[3], dist, alpha, DelDist, maxddot, factori, Omega[3][3];
-  /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
-  /*double cels[NDIM];*/
-  int nb, cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  double Omega[3][3], vecg[5];
 #if 1
   nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];
   nebrTab[na].axb = OprogStatus.rNebrShell*axb[na];
@@ -6019,8 +5999,6 @@ void BuildNNL(int na)
   for (i1 = 0; i1 < 3; i1++)
     for (i2 = 0; i2 < 3; i2++)
       nebrTab[na].R[i1][i2] = RtB[i1][i2];
-  for (kk=0; kk < 3; kk++)
-    shift[kk] = 0;
   /* calcola il tempo a cui si deve ricostruire la NNL */
   printf("BUILDING NNL FOR i=%d\n",na);
 #if 1
@@ -6054,11 +6032,26 @@ void BuildNNL(int na)
 #endif
   nebrTab[na].len=0;
   nebrTab[na].time = Oparams.time;
+  
+
+}
+void BuildNNL(int na) 
+{
+  double shift[NDIM];
+  const double distBuf = 0.1;
+  int kk, i1, i2;
+  double vecg[8], r1[3], r2[3], dist, alpha, DelDist, maxddot, factori;
+  /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
+  /*double cels[NDIM];*/
+  int nb, cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
+  for (kk=0; kk < 3; kk++)
+    shift[kk] = 0;
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
@@ -6109,10 +6102,11 @@ void BuildNNL(int na)
 		{
 		  if (n != na)// && n != nb && (nb >= -1 || n < na)) 
 		    {
-      		      dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
+      		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
+		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1); 
 		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
 		       * in OprogStatus */
-		      if (dist < DelDist)
+		      if (dist < 0)
 			{
 			  printf("Adding ellipsoid N. %d to NNL of %d\n", n, na);
 			  nebrTab[na].list[nebrTab[na].len] = n;
