@@ -772,6 +772,9 @@ COORD_TYPE Vfe, Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], i
 COORD_TYPE Ptens[3], DQtens[3], C1c, C2c, C3c, C4c, velc, Gs[GSPOINT], 
   psi1c, psi2c, sqrtdr2, Aa, DrSqTot, DphiSq, GsAng[GSANGPOINT], Fs[FSPOINT],
   GsGsg[GSPOINT], temp_transl;
+#ifdef MD_RESPA_NPT
+double Ps, Pv;
+#endif
 int MB[NUMV];
 COORD_TYPE *Dphix, *Dphiy, *Dphiz;/* Time integrals of angulars velocity
 				     components */
@@ -784,6 +787,9 @@ extern COORD_TYPE Vfe, Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAX
   press, press_m, press_at, C1c, C2c, C3c, C4c, velc, psi1c, psi2c, 
   Gs[GSPOINT], 
   GsAng[GSANGPOINT], Fs[FSPOINT], GsGsg[GSPOINT], temp_transl;
+#ifdef MD_RESPA_NPT
+extern double Ps, Pv;
+#endif
 extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, Aa, DrSqTot,
   DphiSq;
 extern int MB[NUMV];
