@@ -1211,7 +1211,9 @@ void LJForce(int Nm, double rcut)
 #endif
 	  V = V + vab;
 	  /* total potential between all a-b atoms pairs */
+#ifndef MD_RESPA_SWITCH
 	  W = W + wab; 
+#endif
 	  /* NOTE: If you will use a shifted-force potential then 
 	     calculate the force using that potential */
 	  fab   = epsab4 * wab / rabSq;
@@ -1222,6 +1224,13 @@ void LJForce(int Nm, double rcut)
 	  fxab  = fab * rxab;         
 	  fyab  = fab * ryab;
 	  fzab  = fab * rzab;
+#ifdef MD_RESPA_SWITCH
+	  SwFact = SwitchFunc(sqrt(rabSq));
+	  fxab *= SwFact;
+	  fyab *= SwFact;
+	  fzab *= SwFact;
+	  W = W + wab * SwFact;
+#endif
 #ifdef ATPTENS
 	  /* Virial off-diagonal terms of atomic pressure tensor */
 	  Wxy += rxab * fyab;
@@ -1255,12 +1264,6 @@ void LJForce(int Nm, double rcut)
 	      Wmyz += DRmy * fzab;
 	      Wmzx += DRmz * fxab;
 	    }
-#endif
-#ifdef MD_RESPA_SWITCH
-	  SwFact = SwitchFunc(sqrt(rabSq));
-	  fxab *= SwFact;
-	  fyab *= SwFact;
-	  fzab *= SwFact;
 #endif
 	  Fxa   = Fxa + fxab;     /* total force acting on atom (a,i)*/
 	  Fya   = Fya + fyab;
@@ -1477,69 +1480,37 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
 	  vab     = vab -  dvdr[a][b] * (rab - rcutab[a][b]);
 #endif
 	  fab   = epsab4 * wab / rabSq;
-#ifdef MD_RESPA_SWITCH
-	  /* se la distanza è minore di rc allora non bisogna calcolare di nuovo
-	   * l'energia potenziale, viriale ecc. poiché è già stato stimato in LJForce */
 	  fxab  = fab * rxab;         
       	  fyab  = fab * ryab;
 	  fzab  = fab * rzab;
+	
+#ifdef MD_RESPA_SWITCH
+	  SwFact = 1.0 - SwitchFunc(sqrt(rabSq));
+	  fxab *= SwFact;
+	  fyab *= SwFact;
+	  fzab *= SwFact;
+#endif
+#ifdef MD_RESPA_SWITCH
+	  /* se la distanza è minore di rc allora non bisogna calcolare di nuovo
+	   * l'energia potenziale, viriale ecc. poiché è già stato stimato in LJForce */
+	  WLong = WLong + SwFact*wab; 
 	  if (rabSq >= rabSqI)
 	    {
 	      VLong = VLong + vab;
-	      WLong = WLong + wab; 
-	      /* force between two atoms */
-	      #ifdef ATPTENS
-	      WxyLong += rxab * fyab;
-	      WyzLong += ryab * fzab;
-	      WzxLong += rzab * fxab;
-	      WxxLong += rxab * fxab;
-	      WyyLong += ryab * fyab;
-	      WzzLong += rzab * fzab;
-#endif
-    	      /* Calculate all terms of molecular
-    		 pressure tensor */
-#ifdef MOLPTENS	  
-    	      if ( i != j )
-    		{
-    		  DRmx = (Rmx[i] - Rmx[j]);
-    		  DRmx = DRmx - L * rint(invL * DRmx);
-    		  DRmy = (Rmy[i] - Rmy[j]);
-    		  DRmy = DRmy - L * rint(invL * DRmy);
-    		  DRmz = (Rmz[i] - Rmz[j]);
-    		  DRmz = DRmz - L * rint(invL * DRmz);
-    		  
-    		  WmxxLong += DRmx * fxab;
-    		  WmyyLong += DRmy * fyab;
-    		  WmzzLong += DRmz * fzab;
-    		  
-    		  WmyxLong += DRmy * fxab;
-    		  WmzyLong += DRmz * fyab;
-    		  WmxzLong += DRmx * fzab;
-    		  
-    		  WmxyLong += DRmx * fyab;
-    		  WmyzLong += DRmy * fzab;
-    		  WmzxLong += DRmz * fxab;
-    		}
-#endif
-	      
 	    } 
 	  else 
 	    ncutI++;
-#else 
+#else
 	  VLong = VLong + vab;
 	  /* total potential between all a-b atoms pairs */
 	  WLong = WLong + wab; 
+#endif
 	  /* NOTE: If you will use a shifted-force potential then 
 	     calculate the force using that potential */
 #if 0
 	  if (OprogStatus.grow && fabs(fab) > 1000)
 	    fab = 1000;
 #endif
-	  /* force between two atoms */
-	  fxab  = fab * rxab;         
-	  fyab  = fab * ryab;
-	  fzab  = fab * rzab;
-
 	  /*printf("(%f,%f,%f)\n",fxab,fyab,fzab);*/
 #ifdef ATPTENS
 	  /* Virial off-diagonal terms of atomic pressure tensor */
@@ -1574,13 +1545,6 @@ void LJForceLong(int Nm, double rcutI, double rcutO)
 	      WmyzLong += DRmy * fzab;
 	      WmzxLong += DRmz * fxab;
 	    }
-#endif
-#endif
-#ifdef MD_RESPA_SWITCH
-	  SwFact = 1.0 - SwitchFunc(sqrt(rabSq));
-	  fxab *= SwFact;
-	  fyab *= SwFact;
-	  fzab *= SwFact;
 #endif
 	  Fxa   = Fxa + fxab;     /* total force acting on atom (a,i)*/
 	  Fya   = Fya + fyab;

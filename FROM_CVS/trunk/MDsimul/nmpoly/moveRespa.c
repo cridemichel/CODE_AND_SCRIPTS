@@ -1009,6 +1009,28 @@ void updVol(double dt, double c)
   double cdt = c*dt;
   Vol += cdt*Sqr(s)*Pv/OprogStatus.W;
 }
+void updPvLong(double dt, double c)
+{
+  double press, cdt, cdt2, DP, Nm;
+  Nm = Oparams.parnum;
+  cdt = c * dt;
+  cdt2 = c * dt / 2.0;
+#ifdef MOLPTENS
+  DP = WmLong  / 3.0 / Vol; /* press(t+dt) */
+#else
+  DP = ( WLong + WCLong) / Vol; /* press(t+dt) */
+#endif
+#if 0
+    {
+    FILE *f;
+    f = fopen("press.dat", "a");
+    fprintf(f, "%d %f\n", Oparams.curStep, press);
+    fclose(f);
+    }
+#endif
+  /*printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);*/
+  Pv += DP  * cdt;
+}
 void updPv(double dt, double c)
 {
   double press, cdt, cdt2, DP, Nm;
@@ -1016,9 +1038,9 @@ void updPv(double dt, double c)
   cdt = c * dt;
   cdt2 = c * dt / 2.0;
 #ifdef MOLPTENS
-  press = calcT1diagMolRespa(Nm) + (WmShort + WmLong ) / 3.0 / Vol; /* press(t+dt) */
+  press = calcT1diagMolRespa(Nm) + WmShort / 3.0 / Vol; /* press(t+dt) */
 #else
-  press = calcT1diagAtRespa(Nm) + (WShort + WLong + WCShort + WCLong) / Vol; /* press(t+dt) */
+  press = calcT1diagAtRespa(Nm) + (WShort + WCShort ) / Vol; /* press(t+dt) */
 #endif
   DP = press - Oparams.P;
 #if 0
@@ -1041,9 +1063,9 @@ void updPvAft(double dt, double c)
   cdt = c * dt;
   cdt2 = c * dt / 2.0;
 #ifdef MOLPTENS
-  press = calcT1diagMolRespa(Nm) + (WmShort + WmLong ) / 3.0 / Vol; /* press(t+dt) */
+  press = calcT1diagMolRespa(Nm) + (WmShort) / 3.0 / Vol; /* press(t+dt) */
 #else
-  press = calcT1diagAtRespa(Nm) + (WShort + WLong + WCShort + WCLong) / Vol; /* press(t+dt) */
+  press = calcT1diagAtRespa(Nm) + (WShort + WCShort) / Vol; /* press(t+dt) */
 #endif
   DP = press - Oparams.P;
 #if 0
@@ -1083,12 +1105,12 @@ void movelongRespaNPTBef(double dt)
       /*printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
       updLs(dt, 0.5);
       updImpLongNose(dt, 0.5);
-      updPv(dt, 0.5);
+      updPvLong(dt, 0.5);
       /*printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 #else
    updImpLong(dt, 0.5);
-   updPv(dt, 0.5);
+   updPvLong(dt, 0.5);
 #endif
 }
 
@@ -1128,12 +1150,12 @@ void movelongRespaNPTBefAlt(double dt)
       Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
       //Ps += DT * cdt2;
       updImpLongNoseSym(dt, 0.5);
-      updPv(dt, 0.5);
+      updPvLong(dt, 0.5);
       s = s / (1 - s*Ps*cdt/OprogStatus.Q);
     }
 #else
   updImpLong(dt, 0.5);
-  updPv(dt, 0.5);
+  updPvLong(dt, 0.5);
 #endif
 }
 
@@ -1157,7 +1179,7 @@ void movelongRespaNPTAftAlt(double dt)
       Nm = Oparams.parnum;
       cdt2 = cdt / 2.0;
       s = s / (1 - s*Ps*cdt/OprogStatus.Q);
-      updPvAft(dt, 0.5);
+      updPvLong(dt, 0.5);
       updImpLongNoseSym(dt, 0.5);
       Kin = 0;
       for (i = 0; i < Oparams.parnum; i++)
@@ -1181,6 +1203,7 @@ void movelongRespaNPTAftAlt(double dt)
     }
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
+  updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
 #endif   
 }
@@ -1196,14 +1219,14 @@ void movelongRespaNPTAft(double dt)
   else
     {
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-      updPvAft(dt, 0.5);
+      updPvLong(dt, 0.5);
       updImpLongNoseAft(dt, 0.5);
       updLsAft(dt, 0.5);
       /*printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-  updPvAft(dt, 0.5);
+  updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
 #endif
 }
@@ -1254,7 +1277,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   if (OprogStatus.Nose == 1)
     {
       updImpAnd(dt, 0.5);
-      //updPv(dt, 0.5);
+      updPv(dt, 0.5);
       updVol(dt, 0.5);
       updPositionsNPT(dt, 1.0);
       updVol(dt, 0.5);
@@ -1263,7 +1286,7 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   if (OprogStatus.Nose == 1)
     {
       updImpNoseAnd(dt, 0.5);
-      //updPv(dt, 0.5);
+      updPv(dt, 0.5);
       updPs(dt, 0.5);
       upds(dt, 0.5);
       updVol(dt, 0.5);
@@ -1450,14 +1473,14 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #ifdef MD_RESPA_NOSELONG
   if (OprogStatus.Nose == 1)
     {
-      //updPv(dt, 0.5);
+      updPvAft(dt, 0.5);
       updImpAnd(dt, 0.5);
     }
 #else
   if (OprogStatus.Nose == 1)
     {
       updPsAft(dt, 0.5);
-      //updPvAft(dt, 0.5);
+      updPvAft(dt, 0.5);
       updImpNoseAndAft(dt, 0.5);
     }
   else if (OprogStatus.Nose == 2)
