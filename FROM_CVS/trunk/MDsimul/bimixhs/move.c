@@ -6,7 +6,9 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
-
+#ifdef MD_HSVISCO
+void calcT(void);
+#endif
 #ifdef MD_GRAVITY
 int checkz(char *msg)
 {
@@ -448,9 +450,13 @@ void bump (int i, int j, double* W, int bt)
   if (OprogStatus.lastcoll!=-1)
     {
       taus = Oparams.time - OprogStatus.lastcoll;
-      OprogStatus.DQxy += OprogStatus.Txy*taus + rxij*delpy;
-      OprogStatus.DQyz += OprogStatus.Tyz*taus + ryij*delpz;
-      OprogStatus.DQzx += OprogStatus.Tzx*taus + rzij*delpx;
+      OprogStatus.DQTxy +=  OprogStatus.Txy*taus;
+      OprogStatus.DQTyz +=  OprogStatus.Tyz*taus;
+      OprogStatus.DQTzx +=  OprogStatus.Tzx*taus;
+      //taus = Oparams.time - OprogStatus.lastcoll;
+      OprogStatus.DQxy += Oprogstatus.DQTxy + rxij*delpy;
+      OprogStatus.DQyz += OprogStatus.DQTyz + ryij*delpz;
+      OprogStatus.DQzx += OprogStatus.DQTzx + rzij*delpx;
     }
 #endif
 #if 0
@@ -1652,7 +1658,20 @@ void move(void)
 	  UpdateSystem();
 	  if (OprogStatus.brownian)
 	    {
+	      double taus;
+	      if (OprogStatus.lastcoll!=-1)
+		{
+		  /* notare che nel caso di dinamica browniana
+		   * lastcoll è in generale l'ultima collisione o tra due particelle
+		   * o tra le particelle e il fluido (reset delle velocità)*/
+		  taus = Oparams.time - OprogStatus.lastcoll; 
+		  OprogStatus.DQTxy += taus * OprogStatus.Txy;
+		  OprogStatus.DQTyz += taus * OprogStatus.Tyz;
+		  OprogStatus.DQTzx += taus * OprogStatus.Tzx;
+		  OprogStatus.lastcoll = Oparams.time;
+		}
 	      velsBrown(Oparams.T);
+	      calcT();
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)

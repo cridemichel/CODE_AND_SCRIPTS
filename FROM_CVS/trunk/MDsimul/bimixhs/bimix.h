@@ -234,6 +234,9 @@ struct progStatus
   COORD_TYPE DQyz;
   COORD_TYPE DQzx;
 #ifdef MD_HSVISCO
+  double DQTxy;
+  double DQTyz;
+  double DQTzx;
   double Txy;
   double Tyz;
   double Tzx;

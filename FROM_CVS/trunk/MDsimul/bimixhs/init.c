@@ -545,6 +545,26 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
   /* Now the center of mass of the box is in the origin */
 }
 
+#ifdef MD_HSVISCO
+void calcT(void)
+{
+  double mass;
+  int i;
+  OprogStatus.Txy = 0.0;
+  OprogStatus.Tyz = 0.0;
+  OprogStatus.Tzx = 0.0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (i < Oparams.parnumA)
+	mass = Oparams.m[0];
+      else 
+	mass = Oparams.m[1];
+      OprogStatus.Txy += mass*vx[i]*vy[i];
+      OprogStatus.Tyz += mass*vy[i]*vz[i];
+      OprogStatus.Tzx += mass*vz[i]*vx[i];
+    }
+} 
+#endif
 /* =========================== >>> initCoord <<< ============================*/
 void initCoord(void)
 {
@@ -849,9 +869,6 @@ void usrInitAft(void)
     double sigDeltaSq, drx, dry, drz;
     int j, nbonds;
 #endif
-#ifdef MD_HSVISCO
-    double mass;
-#endif
  /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
     /* initialize global varibales */
@@ -1109,20 +1126,11 @@ void usrInitAft(void)
       fclose(f);
 #endif
 #ifdef MD_HSVISCO
+      OprogStatus.DQTxy = 0.0;
+      OprogStatus.DQTyz = 0.0;
+      OprogStatus.DQTzx = 0.0;
       OprogStatus.lastcoll = -1;
-      OprogStatus.Txy = 0.0;
-      OprogStatus.Tyz = 0.0;
-      OprogStatus.Tzx = 0.0;
-      for (i=0; i < Oparams.parnum; i++)
-	{
-	  if (i < Oparams.parnumA)
-	    mass = Oparams.m[0];
-	  else 
-	    mass = Oparams.m[1];
-	  OprogStatus.Txy += mass*vx[i]*vy[i];
-	  OprogStatus.Tyz += mass*vy[i]*vz[i];
-	  OprogStatus.Tzx += mass*vz[i]*vx[i];
-	}
+      calcT();
 #endif
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
