@@ -130,7 +130,7 @@ void calcV(void)
  V = calcpotene();
 #if 1
  mf = fopenMPI(absMisHD("energy.dat"),"a");
- fprintf(mf, "%15G %.15G\n", Oparams.time, V);
+ fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
  fclose(mf);
 #endif
 }
