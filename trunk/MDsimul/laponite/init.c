@@ -1041,6 +1041,7 @@ void usrInitBef(void)
   /* ======================================================================= */
 }
 
+double **u1, **u2, **u3;
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
 {
@@ -1197,6 +1198,11 @@ void usrInitAft(void)
   vxold = malloc(sizeof(double*)*NA);
   vyold = malloc(sizeof(double*)*NA);
   vzold= malloc(sizeof(double*)*NA);
+#ifdef MD_BROWN_BETTER
+  u1 = malloc(sizeof(double*)*Oparams.parnum);
+  u2 = malloc(sizeof(double*)*Oparams.parnum);
+  u3 = malloc(sizeof(double*)*Oparams.parnum);
+#endif
   rallx_old = malloc(sizeof(double*)*Oparams.nsites);
   rally_old = malloc(sizeof(double*)*Oparams.nsites);
   rallz_old = malloc(sizeof(double*)*Oparams.nsites);
@@ -1206,6 +1212,14 @@ void usrInitAft(void)
 
   ncut = malloc(sizeof(int*)*Oparams.nsites);
   atcharge = malloc(sizeof(double)*Oparams.nsites);
+#ifdef MD_BROWN_BETTER
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      u1[i] = malloc(sizeof(double)*3);
+      u2[i] = malloc(sizeof(double)*3);
+      u3[i] = malloc(sizeof(double)*3);
+    }
+#endif
   for (a = 0; a < NA; a++)
     {
       vxold[a] = malloc(sizeof(double)*Oparams.parnum);

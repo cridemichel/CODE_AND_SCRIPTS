@@ -309,6 +309,7 @@ void body2lab(double u1[3], double u2[3], double u3[3], double vxp, double vyp, 
   *vy = vxp*u1[1]+vyp*u2[1]+vzp*u3[1];
   *vz = vxp*u1[2]+vyp*u2[2]+vzp*u3[2];
 }
+extern double **u1, **u2, **u3;
 /* ========================== >>> movea <<< =============================== */
 void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
 	   COORD_TYPE m[NA], int Nm)
@@ -325,7 +326,6 @@ void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE
   double drx, dry, drz, dvx, dvy, dvz, kTm; 
   double echsidtP, e2chsidtP, chsiP, chsidtP, crvP, echsidtN, e2chsidtN, chsiN, chsidtN, crvN;
   double c0N, c1N, c2N, c1mc2N, c0P, c1P, c2P, c1mc2P;
-  double u1[3], u2[3], u3[3];
   double vxp, vyp, vzp, axp, ayp, azp, rxp, ryp, rzp;
   int i, a, b, it;
   const COORD_TYPE rptol = 1.0E-6;
@@ -381,7 +381,7 @@ void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE
   /* ===== LOOP OVER MOLECULES ===== */
   for (i=0; i < Nm; i++)
     {
-      build_ref_axes(i, u1, u2, u3);
+      build_ref_axes(i, u1[i], u2[i], u3[i]);
       /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
       for(a=0; a < NA; a++)
 	{
@@ -397,9 +397,9 @@ void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE
 	  ryi[a] = ry[a][i];
 	  rzi[a] = rz[a][i];
 
-	  lab2body(u1, u2, u3, rxi[a], ryi[a], rzi[a], &rxp, &ryp, &rzp);
-	  lab2body(u1, u2, u3, axia, ayia, azia, &axp, &ayp, &azp);
-	  lab2body(u1, u2, u3, vx[a][i], vy[a][i], vz[a][i], &vxp, &vyp, &vzp);
+	  lab2body(u1[i], u2[i], u3[i], rxi[a], ryi[a], rzi[a], &rxp, &ryp, &rzp);
+	  lab2body(u1[i], u2[i], u3[i], axia, ayia, azia, &axp, &ayp, &azp);
+	  lab2body(u1[i], u2[i], u3[i], vx[a][i], vy[a][i], vz[a][i], &vxp, &vyp, &vzp);
 
 	  rxp = rxp + c1P * dt * vxp + c2P * dtSq * axp + drx;
 	  ryp = ryp + c1P * dt * vyp + c2P * dtSq * ayp + dry;
@@ -413,8 +413,8 @@ void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE
 	  vyp = c0P*vy[a][i] + c1mc2P * dt * ayia + dvy;
 	  vzp = c0N*vz[a][i] + c1mc2N * dt * azia + dvz;
 
-	  lab2body(u1, u2, u3, rxp, ryp, rzp, &pxi[a], &pyi[a], &pzi[a]);
-	  lab2body(u1, u2, u3, vxp, vyp, vzp, &vxi[a], &vyi[a], &vzi[a]);
+	  lab2body(u1[i], u2[i], u3[i], rxp, ryp, rzp, &pxi[a], &pyi[a], &pzi[a]);
+	  lab2body(u1[i], u2[i], u3[i], vxp, vyp, vzp, &vxi[a], &vyi[a], &vzi[a]);
 
 	  moving[a] = 0;
 	  moved[a]  = 1;
@@ -1927,7 +1927,6 @@ void moveb(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   COORD_TYPE rxi[NA], ryi[NA], rzi[NA], vxi[NA], vyi[NA], vzi[NA];
   double c0P, c1P, c2P, chsiP, c0, c1, chsi; 
   double c0N, c1N, c2N, chsiN;
-  double u1[3], u2[3], u3[3];
   int i, a, b, it;
 
   
@@ -1990,8 +1989,6 @@ void moveb(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
   /* LOOP OVER ALL MOLECULES */
   for(i=0; i < Nm; i++)
     {
-      if (OprogStatus.Nose == -1)
-	build_ref_axes(i, u1, u2, u3);
       /* VELOCITY VERLET ALGORITHM PART B */
       for(a=0; a < NA; a++)
 	{
@@ -2000,12 +1997,12 @@ void moveb(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	  rzi[a] = rz[a][i];
 	  if (OprogStatus.Nose == -1)
 	    {
-	      lab2body(u1, u2, u3, vx[a][i], vy[a][i], vz[a][i], &vxp, &vyp, &vzp);
-	      lab2body(u1, u2, u3, Fx[a][i], Fy[a][i], Fz[a][i], &Fxp, &Fyp, &Fzp);
+	      lab2body(u1[i], u2[i], u3[i], vx[a][i], vy[a][i], vz[a][i], &vxp, &vyp, &vzp);
+	      lab2body(u1[i], u2[i], u3[i], Fx[a][i], Fy[a][i], Fz[a][i], &Fxp, &Fyp, &Fzp);
 	      vxp = vxp + c2dtP * Fxp / m[a];
 	      vyp = vyp + c2dtP * Fyp / m[a];
 	      vzp = vzp + c2dtN * Fzp / m[a];
-	      body2lab(u1, u2, u3, vxp, vyp, vzp, &vxi[a], &vyi[a], &vzi[a]);
+	      body2lab(u1[i], u2[i], u3[i], vxp, vyp, vzp, &vxi[a], &vyi[a], &vzi[a]);
 	    }
 	  else
 	    {
