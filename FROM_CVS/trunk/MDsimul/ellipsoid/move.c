@@ -29,6 +29,7 @@ double rxC, ryC, rzC;
 extern int SolveLineq (double **a, double *x, int n); 
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
+extern long long int itsfrprmn, callsfrprmn;
 void print_matrix(double **M, int n)
 {
   int k1, k2;
@@ -621,7 +622,9 @@ void outputSummary(void)
   /* mettere qualcosa qui */
   printf("Average iterations in locate_contact: %.6G\n", ((double)itsS)/timesS);
   printf("Average iterations in search_contact_faster: %.6G\n",  ((double)itsF)/timesF);
+  printf("Average iterations in frprmn: %.6G\n", ((double) itsfrprmn)/callsfrprmn);
   printf("Number of collisions: %lld\n", numcoll);
+  
   scale_Phi();
 #ifdef MD_GRAVITY
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
@@ -5365,7 +5368,7 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 1
+#if 0
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
