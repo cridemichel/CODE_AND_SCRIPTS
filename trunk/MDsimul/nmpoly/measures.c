@@ -71,6 +71,7 @@ void energy(void)
   E = K + Vc;
   /* And now add the contribute due to the thermal bath */
 #ifdef MD_FENE
+  printf("FENE energy Vfe:%f\n", Vfe);
   E += Vfe;
   dof = 3.0*NA;
 #else
