@@ -2291,6 +2291,115 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
 double tdist;
 double rA[3], rB[3];
 #undef MD_GLOBALNRD
+void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
+		   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
+{
+  int na; 
+  double fx[3], gx[3], rD[3], A[3][3], b[3], c[3];
+  int k1, k2, k3;
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  A[k1][k2] = 0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    A[k1][k2] += Xb[k1][k3]*Xa[k3][k2];
+	  A[k1][k2] *= 4.0*Sqr(x[3])*x[4];
+	  A[k1][k2] += 2.0*Xb[k1][k2]*Sqr(x[3]);
+	}
+    }	
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*Xa[k1][k2] + A[k1][k2];
+	}
+    }
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	}
+      rD[k1] = x[k1] + fx[k1]*x[4];
+    } 
+  //printf("rC: %f %f %f rD: %f %f %f\n", x[0], x[1], x[2], rD[0], rD[1], rD[2]);
+  //printf("fx: %f %f %f x[4]: %f\n", fx[0], fx[1], fx[2], x[4]);
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  gx[k1] += 2.0*Xb[k1][k2]*(rD[k2]-rB[k2]);
+	}
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      b[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  b[k1] += Xb[k1][k2]*fx[k2];
+	}
+      b[k1] *= 2.0*Sqr(x[3]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      c[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  c[k1] += gx[k2]*Xa[k2][k1];
+	}
+      c[k1] *= 2.0*x[4];
+      c[k1] += gx[k1];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  df[3][3] = 0.0;
+  df[3][4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = c[k1];
+    } 
+  df[4][3] = 0.0;
+  df[4][4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[4][4] += gx[k1]*fx[k1];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][3] = 2.0*x[3]*gx[k1];
+      df[k1][4] = b[k1];
+    } 
+
+#ifndef MD_GLOBALNRD
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (rD[k1]-rB[k1])*gx[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+ fvec[4] = 0.5*fvec[4]-1.0;
+ //print_matrix(df, 5);
+ //printf("fx: %f %f %f gx: %f %f %f\n", fx[0]/calc_norm(fx), fx[1]/calc_norm(fx), 
+//	fx[2]/calc_norm(fx), gx[0]/calc_norm(gx), gx[1]/calc_norm(gx), gx[2]/calc_norm(gx));
+ //printf("F2BZdistNeg5 fvec (%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]);
+#endif
+}
+
+
 void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 {
@@ -2535,7 +2644,55 @@ void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, doubl
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
+void funcs2beZeroedDistNeg5(int n, double x[], double fvec[], int i, int j, double shift[3])
+{
+  int k1, k2; 
+  double fx[3], gx[3], rD[3];
+  /* x = (r, alpha, t) */ 
+  
+#if 0
+  printf("Xa=\n");
+  print_matrix(Xa, 3);
+  printf("Xb=\n");
+  print_matrix(Xb, 3);
+#endif
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+	}
+      rD[k1] = x[k1] + fx[k1]*x[4];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(rD[k2] - rB[k2]);
+    }
 
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (rD[k1]-rB[k1])*gx[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
+
+#if 0
+  MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+  MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+#endif
+}
 void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
   int k1, k2; 
@@ -2661,6 +2818,153 @@ double calc_norm(double *vec)
   return sqrt(norm);
 }
 double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
+     		double *vecgsup, int calcguess)
+{
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], fx[3];
+  double ti, segno;
+  int retcheck;
+  double Omega[3][3], nf, ng, gradf[3], gradg[3];
+  int k1, k2, na;
+  MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+  ti = t - atomTime[i];
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
+  /* ...and now orientations */
+  UpdateOrient(i, ti, Rt, Omega);
+  na = (i < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
+
+  ti = t - atomTime[j];
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+  UpdateOrient(j, ti, Rt, Omega);
+  na = (j < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+  if (calcguess)
+    {
+      calc_intersec(rB, rA, Xa, rC);
+      calc_intersec(rA, rB, Xb, rD);
+      MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
+		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
+      calc_grad(rC, rA, Xa, gradf);
+      calc_grad(rD, rB, Xb, gradg);
+      MD_DEBUG(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
+		      gradf[0], gradf[1], gradf[2], gradg[0], gradg[1], gradg[2]));
+      nf = calc_norm(gradf);
+      ng = calc_norm(gradg);
+#ifdef MD_DIST5 
+      vecg[3] = sqrt(nf/ng);
+#else
+      vecg[6] = sqrt(nf/ng);
+#endif
+      for (k1=0; k1 < 3; k1++)
+	{
+	  vecg[k1] = rC[k1];
+#ifndef MD_DIST5
+	  vecg[k1+3] = rD[k1];
+#endif
+	  rDC[k1] = rD[k1] - rC[k1];
+	}
+#ifdef MD_DIST5
+      vecg[4] = calc_norm(rDC)/nf;  
+#else
+      vecg[7] = calc_norm(rDC)/nf;  
+#endif
+    }
+  else
+    {
+      for (k1 = 0; k1 < 8; k1++)
+	vecg[k1] = vecgsup[k1];
+    }
+  MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
+#ifdef MD_DIST5
+  newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift); 
+#else
+  newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift); 
+#endif
+  if (retcheck != 0)
+    {
+      printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      Oparams.time = t;
+      store_bump(i, j);
+      exit(-1);
+    }
+  for (k1 = 0; k1 < 8; k1++)
+    {
+      vecgsup[k1] = vecg[k1]; 
+    }  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      r1[k1] = vecg[k1];
+#ifndef MD_DIST5
+      r2[k1] = vecg[k1+3];
+#endif
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#ifdef MD_DIST5
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(r1[k2]-rA[k2]);
+	}
+      r2[k1] = r1[k1] + fx[k1]*vecg[4];
+      vecgsup[k1+5] = r2[k1];
+#endif
+      r12[k1] = r1[k1] - r2[k1];
+    } 
+  
+  *alpha = vecg[3];
+  segno = -1;
+  /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++) 
+      segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
+#if 0
+  if (segno*vecg[7]<0)
+    {
+      printf("segno: %.8G vecg[7]: %.8G\n", segno, vecg[7]);
+      exit(-1);
+    }
+#endif
+#if 1
+  if (segno > 0)
+    return calc_norm(r12);
+  else
+    return -calc_norm(r12);
+#else
+#if 0
+#if MD_DEBUG(x) == x
+  for (k1 = 0; k1 < 3; k1++)
+    rDC[k1] = r1[k1] - r2[k1];
+    {
+      FILE *f;
+      f =fopen("distNeg.dat","a");
+      fprintf(f,"%.15f %.15f\n", Oparams.time, (segno>0)?calc_norm(rDC):-calc_norm(rDC));  
+      fclose(f);
+    }
+  return calc_norm(rDC);
+#endif
+#endif
+#endif
+}
+
+double calcDistNegOLD(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
   double vecg[8], rC[3], rD[3], rDC[3], r12[3];
@@ -2824,7 +3128,7 @@ double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2,
 	  vecg[k1+3] = rD[k1];
 	  rDC[k1] = rD[k1] - rC[k1];
 	}
-      vecg[7] = calc_norm(rDC)/nf;  
+      vecg[7] = sqrt(calc_norm(rDC)/nf);  
     }
   else
     {
@@ -3076,9 +3380,17 @@ int refine_contact(int i, int j, double t, double vecgd[8], double shift[3],doub
 
   for (kk = 0; kk < 3; kk++)
     {
+#ifdef MD_DIST5
+      vecg[kk] = (vecgd[kk]+vecgd[kk+5])*0.5; 
+#else
       vecg[kk] = (vecgd[kk]+vecgd[kk+3])*0.5; 
+#endif
     }
+#ifdef MD_DIST5
+  vecg[3] = vecgd[3];
+#else
   vecg[3] = vecgd[6];
+#endif
   vecg[4] = t;
   newt(vecg, 5, &retcheck, funcs2beZeroed, i, j, shift); 
   if (retcheck==2)
@@ -4839,7 +5151,7 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 0
+#if 1
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
@@ -4849,19 +5161,21 @@ void move(void)
 	      shift[1] = L*rint((ry[0]-ry[1])/L);
 	      shift[2] = L*rint((rz[0]-rz[1])/L);
 	      MD_DEBUG(printf("[EVENT10] shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]));
-	      d=calcDist(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecg, 1);
+#if 1
+	      d=calcDist(Oparams.time, 201, 118, shift, r1, r2, &alpha, vecg, 1);
 	      if (first)
 		f = fopen("distPos.dat","w");
 	      else
 		f = fopen("distPos.dat","a");
-	      fprintf(f,"%.15G %.15G\n", Oparams.time, d);
+	      fprintf(f,"%.15G %.15G %.15G %.15G %.15G %.15G\n", Oparams.time, d,vecg[0],vecg[1],vecg[2],vecg[4]);
 	      fclose(f);
-	      d=calcDistNeg(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecgNeg, 1);
+#endif
+	      d=calcDistNeg(Oparams.time, 201, 118, shift, r1, r2, &alpha, vecgNeg, 1);
 	      if (first)
 		f = fopen("distNeg.dat","w");
 	      else
 		f = fopen("distNeg.dat","a");
-	      fprintf(f,"%.15G %.15G\n", Oparams.time, d);
+	      fprintf(f,"%.15G %.15G %.15G %.15G %.15G %.15G\n", Oparams.time, d,vecgNeg[0],vecgNeg[1],vecgNeg[2],vecgNeg[4]);
 	      fclose(f);
 	      if (first == 1)
 		first = 0;
