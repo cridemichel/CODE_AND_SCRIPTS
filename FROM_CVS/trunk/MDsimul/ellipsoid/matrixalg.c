@@ -966,7 +966,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
       grad[kk] -= gradfx*fx[kk];
       grad[kk+3] -= gradgx*gx[kk];
     }
-#if 0
+#if 1
   normg = 0.0;
   for (kk=0; kk < 6; kk++)
     {
@@ -974,7 +974,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     }
   normg=sqrt(normg);
 #endif
-  fact = OprogStatus.stepSD;
+  fact = OprogStatus.stepSD/normg;
   //fact = OprogStatus.stepSD/(normdd+OprogStatus.epsd);
   //fact = OprogStatus.stepSD*normdd;
   for (kk=0; kk < 6; kk++)
