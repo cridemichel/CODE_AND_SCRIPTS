@@ -66,8 +66,15 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define C_T COORD_TYPE
 #define NK 10000
 #define NA 5 /* number of atoms for each molecule (particle) */
-
-#define MD_PBONDS 4
+#ifdef MD_SILICA
+#define MD_PBONDS 8 /* questo è il max num di bonds possibili fra due molecole */
+/* chiedere a Francesco!! */
+#define MD_PBONDS_SiSi 4
+#define MD_PBONDS_OO 2
+#define MD_PBONDS_SiO 2
+#else
+#define MD_PBONDS 4 
+#endif
 #define MD_DIST_ELECTSITES 0.45
 #define MD_DIST_HYDROSITES 0.5
 #define MAXPAR 3000      /* maximum number of simulated particles */
@@ -653,13 +660,24 @@ struct singlePar OsinglePar[] = {
   {"P",          &Oparams.P,                  CT},
   {"L",          &L,                          CT},
 #ifdef MD_SILICA
+  {"sigmaSi", &Oparams.sigma[0][0], CT},
+  {"sigmaO",  &Oparams.sigma[1][0], CT},
+  {"sigmaSiO", &Oparams.sigma[0][1], CT},
+  {"massSi",   &Oparams.m[0], CT},
+  {"massO",    &Oparams.m[1], CT},
+#ifndef MD_ASYM_ITENS
+  {"ISi",      &Oparams.I[0],      CT},
+  {"IO",       &Oparams.I[1],      CT},
+#endif
 #else
   /* sigma[0][0] = atomo grande  
    * bheight = barriere dell'interazione a buca quadrata tra H e Elettrone */
-  {"sigma",      &Oparams.sigma[0][0],          CT},
-  {"sigmaSticky",&Oparams.sigmaSticky,        CT},
-  {"bheight",    &Oparams.bheight,            CT},
+  {"sigma",    &Oparams.sigma[0][0],          CT},
+  {"mass",     &Oparams.m[0], CT},
+  {"bheight",  &Oparams.bheight,            CT},
+  {"I",        &Oparams.I[0],      CT},
 #endif
+  {"sigmaSticky",&Oparams.sigmaSticky,        CT},
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
   {"avngS",      &OprogStatus.avngS,          INT},
@@ -669,22 +687,6 @@ struct singlePar OsinglePar[] = {
  
   /* ==================== >>> PUT HERE YOUR PARAMS <<< ===================== */
   {"targetPhi", &OprogStatus.targetPhi, CT},
-#ifndef MD_ASYM_ITENS
-  {"Ia",      &Oparams.I[0],      CT},
-  {"Ib",      &Oparams.I[1],      CT},
-#endif
-#ifdef MD_GRAVITY
-  {"ggrav",      &Oparams.ggrav,            CT},
-#endif
-  {"mass0",       &Oparams.m[0],                CT},
-  {"mass1",       &Oparams.m[1],                CT},
-#ifdef MD_GRAVITY
-  {"wallDiss",   &Oparams.wallDiss,         CT},
-  {"partDiss",   &Oparams.partDiss,         CT},
-  {"quenchend",  &OprogStatus.quenchend,    CT},
-  {"maxquench",  &OprogStatus.maxquench,    INT},
-  {"tc",         &OprogStatus.tc,           CT},
-#endif
   {"eventMult",  &OprogStatus.eventMult,    INT},
   {"rcut",       &Oparams.rcut,             CT},
   {"equilibrat", &Oparams.equilibrat,       INT},
