@@ -1422,8 +1422,8 @@ void distanza(int ia, int ib)
 void rebuildLinkedList(void);
 #if defined(MD_SQWELL) && defined(MD_BONDCORR)
 extern int **bonds0, *numbonds0; 
-int bondhist[2]={0,0};
-extern double corrnorm, corrini1, corrini2, *firstbreak;
+int bondhist[3]={0,0,0};
+extern double corrnorm, corrini3, corrini1, corrini2, *lastbreak1, *lastbreak2;
 #endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
@@ -1433,7 +1433,7 @@ void move(void)
 #if defined(MD_SQWELL) && defined(MD_BONDCORR)
   FILE *bof;
   int j, cc;
-  double cb, corr1, corr2;
+  double cb, corr1, corr2, corr3;
 #endif
   const char sepStr[] = "@@@\n";
   int db, i, innerstep=0;
@@ -1506,7 +1506,7 @@ void move(void)
 		  mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
 		  exit(-1);
 		}
-	      fprintf(ppf,"%d %d\n", bondhist[0], bondhist[1]);
+	      fprintf(ppf,"%d %d %d\n", bondhist[0], bondhist[1], bondhist[2]);
 	      fclose(ppf); 
 	    }
 #endif
@@ -1517,6 +1517,7 @@ void move(void)
 	{
 #if defined(MD_BONDCORR) && defined(MD_SQWELL)  
 	  cb = 0;
+	  corr1 = corr2 = corr3 = 0;
 	  for (i=0; i < Oparams.parnum; i++)
 	    {
 	      for (j=0; j < numbonds0[i]; j++)
@@ -1524,8 +1525,46 @@ void move(void)
 		  if (bound(i,bonds0[i][j]))
 		    cb++;
 		}
-	      
+	      cc = 0;
+    	      for (j=0; j < numbonds0[i]; j++)
+		{
+		  if (bound(i,bonds0[i][j]))
+		    cc++;
+		}
+	      if (cc > 0)
+		{
+		  if (numbonds0[i]==2)
+	      	    corr2++;
+		  if (numbonds0[i]==3)
+		    corr3++;
+		}
+	      if (numbonds0[i]==1 && numbonds0[bonds0[i][0]]==1)
+		{
+		  if (numbonds[i]==1)	
+		    corr1++;
+		}	
 	    }
+	  sprintf(fileop2 ,"BondCorrFuncB2.dat");
+	  /* store conf */
+	  strcpy(fileop, absTmpAsciiHD(fileop2));
+	  if ( (bof = fopenMPI(fileop, "a")) == NULL)
+	    {
+	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+	      exit(-1);
+	    }
+	  fprintf(bof,"%.15f %.15f\n", Oparams.time, corr2/corrini2);
+	  fclose(bof);
+	  sprintf(fileop2 ,"BondCorrFuncB3.dat");
+	  /* store conf */
+	  strcpy(fileop, absTmpAsciiHD(fileop2));
+	  if ( (bof = fopenMPI(fileop, "a")) == NULL)
+	    {
+	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+	      exit(-1);
+	    }
+	  fprintf(bof,"%.15f %.15f\n", Oparams.time, corr3/corrini3);
+	  fclose(bof);
+  
 	  sprintf(fileop2 ,"bondcorr.dat");
 	  /* store conf */
 	  strcpy(fileop, absTmpAsciiHD(fileop2));
@@ -1729,8 +1768,8 @@ void move(void)
 #endif
       if (OprogStatus.endtime > 0 && Oparams.time > OprogStatus.endtime)
 	ENDSIM = 1;
-#if 0 && defined(MD_SQWELL) && defined(MD_BONDCORR)
-      corr1 = corr2 = 0;
+#if 1 && defined(MD_SQWELL) && defined(MD_BONDCORR)
+      corr3 = corr1 = corr2 = 0;
       for (i=0; i < Oparams.parnum; i++)
 	{
 	  if (numbonds0[i]==2)
@@ -1745,21 +1784,51 @@ void move(void)
 		{
 		  corr2++;
     		}
-	      if (cc==0 && firstbreak[i]>0.0)
+	      if (cc==0 && lastbreak1[i]>0.0)
 		{
-		  if (firstbreak[i]>0.0 
-		      && Oparams.time - firstbreak[i] <
-		      Sqr(Oparams.delta[0][0])/(Oparams.T*Oparams.Dt)) 
+		  if (lastbreak1[i]>0.0 
+		      && Oparams.time - lastbreak1[i] <
+		      10.0*Sqr(Oparams.delta[0][0])/(Oparams.T*Oparams.Dt)) 
 		    {
 		      bondhist[1]++;
 		    }
 		  else
-		    bondhist[0]+=1;
-		  firstbreak[i]=-1.0;
+		    bondhist[0]+=2;
+		  lastbreak1[i]=-1.0;
 		}
-	      if (cc==1)
+	      if (cc==1 && lastbreak1[i] != -1.0)
 		{
-		  firstbreak[i]=Oparams.time;
+		  lastbreak1[i]=Oparams.time;
+		}
+	    }
+	  if (numbonds[i]==3)
+	    {
+	      cc = 0;
+	      for (j=0; j < numbonds0[i]; j++)
+		    {
+		      if (bound(i,bonds0[i][j]))
+			cc++;
+		    }
+	      if (cc==0 && lastbreak2[i]>0.0)
+		{
+		  if (lastbreak2[i]>0.0 
+		      && Oparams.time - lastbreak2[i] >
+		      2.0*exp(2/Oparams.T)*Sqr(Oparams.delta[0][0])/(Oparams.T*Oparams.Dt)) 
+		    {
+		      bondhist[2]++;
+		    }
+		  else
+		    bondhist[0]+=3;
+		  lastbreak2[i]=-1.0;
+		}
+	      if (cc>0)
+		{
+		  corr3++;
+		}
+	      
+	      if (cc==2 && lastbreak2[i] != -1.0)
+		{
+		  lastbreak2[i]=Oparams.time;
 		}
 	    }
 	  if (numbonds0[i]==1 && numbonds0[bonds0[i][0]]==1)
@@ -1768,6 +1837,7 @@ void move(void)
 		corr1++;
 	    }	
 	}
+#if 0
       sprintf(fileop2 ,"BondCorrFuncB1.dat");
       /* store conf */
       strcpy(fileop, absTmpAsciiHD(fileop2));
@@ -1788,6 +1858,7 @@ void move(void)
 	}
       fprintf(bof,"%.15f %.15f\n", Oparams.time, corr2);
       fclose(bof);
+#endif
 #endif
 #if 0
       if (Oparams.curStep == Oparams.totStep)
