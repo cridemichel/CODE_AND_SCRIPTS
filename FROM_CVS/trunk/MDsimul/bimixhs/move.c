@@ -1440,7 +1440,7 @@ void move(void)
   char fileop[1024], fileop2[1024], fileop3[1024];
   FILE *bf;
   const char sepStr[] = "@@@\n";
-  int i, innerstep=0;
+  int db, i, innerstep=0;
 #ifdef MD_GRAVITY
   int ii;
   double rzmax, zfact;
@@ -1456,7 +1456,7 @@ void move(void)
 #if defined(MD_SQWELL) && defined(MD_BONDHIST)
   for (i=0; i < Oparams.parnum; i++)
     { 
-      brokenbonds[i]=0;
+      brokenbonds[i]=numbonds[i];
     }
 #endif
   while (1)
@@ -1480,10 +1480,6 @@ void move(void)
       if (evIdB < ATOM_LIMIT)
 	{
 	  MD_DEBUG(printf("collision (evIdA: %d evIdB:%d)\n", evIdA, evIdB));
-#if defined(MD_SQWELL) && defined(MD_BONDHIST)
-	  brokenbonds[evIdA]++;
-	  brokenbonds[evIdB]++;
-#endif
 	  ProcessCollision();
 	  OprogStatus.collCount++;
 	}
@@ -1734,8 +1730,9 @@ void move(void)
 #if defined(MD_SQWELL) && defined(MD_BONDHIST)
   for (i=0; i < Oparams.parnum; i++)
     {
-      if (brokenbonds[i] <= 5 && brokenbonds[i] > 0)   
-	bondhist[brokenbonds[i]-1]++;
+      db = brokenbonds[i]-numbonds[i];
+      if (db > 0 && db < 5)   
+	bondhist[db-1]++;
     }
 #endif
 }
