@@ -2915,9 +2915,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
     	      //else
 		//delt = t*h;
 	    }
-	  if (sumnegpairs)
-	    delt = h;
-	  else if (fabs(dold) < epsd)
+	  if (fabs(dold) < epsd)
     	    {
     	      delt = epsd / maxddot;
     	    }
