@@ -25,7 +25,49 @@ extern void writeAllCor(FILE* );
 extern void readAllCor(FILE* );
 
 const char sepStr[] = "@@@\n";
+#ifdef MD_ALLOC_POLY
+/* ============================ >>> AllocCoord <<< ==========================*/
+void AllocCoordPoly(int size, COORD_TYPE** pointer, ...)
+{
+  /* Allocate contigously memmory */
+  va_list ap;
+  COORD_TYPE** ptrs[MAXVARS];
+  COORD_TYPE* sa;
+  int offs[MAXVARS];
+  int totBytes, totArr; 
+  int i, j, num[MAXVARS];
+  va_start(ap, pointer);
+  
+  ptrs[0] = pointer;
+  num[0] = va_arg(ap, int); 
+  offs[0] = 0;
+  totBytes = size*num[0];
+  for (i=1; (ptrs[i] = va_arg(ap, COORD_TYPE**)) != NULL; ++i)
+    { 
+      num[i] = va_arg(ap, int);
+      totBytes += size*num[i]; /* total bytes to allocate */
+      offs[i] = offs[i-1] + size*num[i];
+      //printf("offs[%d]:%d\n",i , offs[i]);
+    }
+  //printf("i=%d ptrs[i]=%p\n", i, ptrs[i]);
+  totArr = i; /* total number of arrays to allocate */
+  
+  sa = (COORD_TYPE*)malloc(totBytes);
+  //intf("totBytes = %d size: %d\n", totBytes, size);
+  for (i = 0; i < totArr; ++i)
+    {
+      for (j = 0; j < num[i]; j++)
+	{
+	  ptrs[i][j] =(COORD_TYPE*)(((char*) sa) + offs[i] + size*j);  
+	  //printf("pointer value ptrs[%d]:%p, ptrs[%d][%d]:%d\n", i, ptrs[i],i, j,(int)ptrs[i][j]);
+	  //printf("*sptr relative %d\n\n",(int) *ptrs[i] - (int)*ptrs[0]);
+	  //printf("totArr: %d num[%d]:%d offs[i]:%d\n", totArr, i, num[i], offs[i]);
+	}
+   }	
+  va_end(ap);
+}
 
+#endif
 /* ============================ >>> AllocCoord <<< ==========================*/
 void AllocCoord(int size, COORD_TYPE** pointer, ...)
 {
@@ -232,7 +274,34 @@ void FreeMatI(int** v)
   free(v[0]);
   free(v);
 }
+#ifdef MD_ALLOC_POLY
+/* =========================== >>> setToZero <<< ========================== */
+void setToZeroPoly(COORD_TYPE** ptr, ...)
+{
+  /* DESCRIPTION:
+     This procedure set to zero all the coordinates, passed as arguments */
+  va_list ap;
+  COORD_TYPE** sptr;
+  int i, num, n;
+  
+  va_start(ap, ptr);
+  num = va_arg(ap, int);
+ 
+  for (n = 0; n < num; n++)
+    for(i=0; i<Oparams.parnum; ++i)
+      ptr[n][i]=0.0;
+  while ( (sptr = va_arg(ap, COORD_TYPE**)) != NULL)
+    {
+      printf("qui sptr: %p\n", sptr);
+      num = va_arg(ap, int);
+      for (n = 0; n < num; n++)
+       for(i=0; i<Oparams.parnum; ++i) 
+	 sptr[n][i]=0.0;
+    }
+  va_end(ap);
+}
 
+#endif
 /* =========================== >>> setToZero <<< ========================== */
 void setToZero(COORD_TYPE* ptr, ...)
 {
@@ -272,14 +341,22 @@ int readCoord(int cfd)
   /* ALLOC_LIST is a macro defined in mdsimul.h and contains a list of 
      all addresses of the coordinates declared in the simulaiton
      (see that file) */
+#ifdef MD_ALLOC_POLY
+  AllocCoordPoly(SEGSIZE, ALLOC_LIST, NULL);
+  /* loads all arrays from the file associated with the fdes descriptor */
+  rerr |= -readSegsPoly(cfd, "Init", "Error reading coordinates", CONT,
+		    SEGSIZE, SAVE_LIST,
+		    NULL);    /* NULL means: 'no more pointers to load' */
+#else
   AllocCoord(SEGSIZE, ALLOC_LIST,
 	     NULL);
-
-  /* loads all arrays from the file associated with the fdes descriptor */
+ /* loads all arrays from the file associated with the fdes descriptor */
   rerr |= -readSegs(cfd, "Init", "Error reading coordinates", CONT,
 		    SEGSIZE, SAVE_LIST,
 		    NULL);    /* NULL means: 'no more pointers to load' */
-#ifdef EXT_SLST 
+#endif
+ 
+ #ifdef EXT_SLST 
   rerr |= -readSegs(cfd, "Init", "Error reading extra coordinates", CONT,
 		    sizeof(COORD_TYPE), EXT_SLST,
 		    NULL);    /* NULL means: 'no more pointers to load' */
@@ -306,11 +383,17 @@ void saveCoord(char* fileName)
   mdWrite(cfd, NULL, 
 	  "Error writing the params struct.", EXIT,
 	  sizeof(struct params), &Oparams);
-  
+#ifdef MD_ALLOC_POLY
+  /* writes all arrays to the disk physically making a sync() */
+  writeSegsPoly(cfd, "End", "Error writing final coordinates", EXIT,
+	    SEGSIZE, SAVE_LIST,
+	    NULL);
+#else
   /* writes all arrays to the disk physically making a sync() */
   writeSegs(cfd, "End", "Error writing final coordinates", EXIT,
 	    SEGSIZE, SAVE_LIST,
 	    NULL);
+#endif
 #ifdef EXT_SLST 
   /* NOTE:
      Actually the EXT_SLST should be a list of COORD_TYPE variables to save */
@@ -359,9 +442,12 @@ int readBak(int bfd)
      all addresses of the coordinates declared in the simulaiton
      (see that file) */
 
+#ifdef MD_ALLOC_POLY
+  AllocCoordPoly(SEGSIZE, ALLOC_LIST, NULL);
+#else
   AllocCoord(SEGSIZE, ALLOC_LIST,
 	     NULL);
-  
+#endif  
   /* reads filenames structure ( see TECH_INFO for details) */
   br = mdRead(bfd, "Restore",  "Error reading the program status.", CONT, 
 	      sizeof(struct progStatus), &OprogStatus);
@@ -372,10 +458,15 @@ int readBak(int bfd)
     }
  
  /* loads all arrays from the file associated with the fdes descriptor */
-  
+#ifdef MD_ALLOC_POLY
+ rerr |= -readSegsPoly(bfd, "Restore", "Error reading restore file", CONT, 
+		   SEGSIZE, SAVE_LIST,
+		   NULL);   /* NULL means: 'no more pointers to load' */
+#else
  rerr |= -readSegs(bfd, "Restore", "Error reading restore file", CONT, 
 		   SEGSIZE, SAVE_LIST,
 		   NULL);   /* NULL means: 'no more pointers to load' */
+#endif
 #ifdef EXT_SLST
  rerr |= -readSegs(bfd, "Restore", 
 		   "Error reading extra coords from restore file", 
@@ -656,8 +747,11 @@ void readCorAscii(char *fn)
   /* ALLOC_LIST is a macro defined in mdsimul.h and contains a list of 
      all addresses of the coordinates declared in the simulaiton
      (see that file) */
+#ifdef MD_ALLOC_POLY
+  AllocCoordPoly(SEGSIZE, ALLOC_LIST, NULL);
+#else
   AllocCoord(SEGSIZE, ALLOC_LIST, NULL);
-
+#endif
   readAllCor(fs);
   
   fclose(fs);
@@ -687,8 +781,11 @@ void readBakAscii(char* fn)
   /* ALLOC_LIST is a macro defined in mdsimul.h and contains a list of 
      all addresses of the coordinates declared in the simulaiton
      (see that file) */
+#ifdef MD_ALLOC_POLY
+  AllocCoordPoly(SEGSIZE, ALLOC_LIST, NULL);
+#else
   AllocCoord(SEGSIZE, ALLOC_LIST, NULL);
-  
+#endif
   readAllCor(fs);
 
   fclose(fs);
@@ -781,9 +878,15 @@ void saveBak(char *fileName)
 	  sizeof (struct progStatus), &OprogStatus);
   
   /* writes all arrays to the disk physically making a sync() */
+#ifdef MD_ALLOC_POLY
+  writeSegsPoly(bf, NULL, "Error writing coordinates array on restore file", EXIT,
+	    SEGSIZE, SAVE_LIST,
+	    NULL);             /* NULL means: 'no more pointers to load' */  
+#else
   writeSegs(bf, NULL, "Error writing coordinates array on restore file", EXIT,
 	    SEGSIZE, SAVE_LIST,
 	    NULL);             /* NULL means: 'no more pointers to load' */  
+#endif
 #ifdef EXT_SLST 
   /* NOTE:
      Actually the EXT_SLST should be a list of COORD_TYPE variables to save */
@@ -1123,9 +1226,15 @@ void saveOneXva(char* fileName)
   //printf("xva size: %d\n", OxvaHead.size);
   //printf("scritti %d bytes\n", OxvaHead.size);
   /* if an error occurs exit (see writeSegs proc) */
+#ifdef MD_ALLOC_POLY
+  writeSegsPoly(xvafd, NULL, "Error saving coordinates on tape file", EXIT,
+	    SEGSIZE, XVA_LIST,  
+	    NULL); 
+#else
   writeSegs(xvafd, NULL, "Error saving coordinates on tape file", EXIT,
 	    SEGSIZE, XVA_LIST,  
 	    NULL); 
+#endif
   /* XVA_LIST is the reduced list of coordinates to save on tape file 
      (xva file) */
   

@@ -15,8 +15,8 @@ export MPIDIR =/usr/include/lam
 	  -frerun-cse-after-loop -fstrength-reduce -fexpensive-optimizations\
           -felide-constructors -malign-loops=2 -malign-jumps=2\
 	  -malign-functions=2
-#export CFLAGS  = -Wall -O3  -mcpu=athlon-xp -march=athlon-xp#-g
-export CFLAGS  =-Wall -O3 -msse2 -mfpmath=sse -march=pentium4 -mcpu=pentium4 
+export CFLAGS  = -Wall -O3  -mcpu=athlon-xp -march=athlon-xp -g
+#export CFLAGS  =-Wall -O3 -msse2 -mfpmath=sse -march=pentium4 -mcpu=pentium4 
 #export CFLAGS  =-Wall -O3  -march=pentium4 -mcpu=pentium4 
 #export CFLAGS=  -B -tp p6 -fast#ottimizzazioni per beowulf
 #export CFLAGS= -Wall -O3 -mcpu=i686 -march=i686
@@ -25,7 +25,7 @@ export CFLAGS  =-Wall -O3 -msse2 -mfpmath=sse -march=pentium4 -mcpu=pentium4
 #export CFLAGS  = -qarch=pwr4 -qtune=pwr4  -O3 -bmaxdata:0x70000000 -qcpluscmt #-I$(TURBOMP)/POWER4/include#per SP4
 #export CFLAGS= -g -Wall 
 # MACROS passed to the pre-processor
-export MACROS= -DMD_BILOG -DMD_LOADMESH -DXDISP -DATPTENS -UMOLPTENS -UATPRESS -DMD_SQWELL# -DSOFT_SPHERE  -DMD_STATIC_PP36 #-DMPI##-DMD_TSHAPED# -DSOFT_SPHERE  -DMD_STATIC_PP6#-DMDLLINT#-DMPI##-DMC_SIMUL -DSOFT_SPHERE #-DMPI -DMD_GRAVITY -DPRINTER_PROC -DTAPPING -DMD_LOADMESH
+export MACROS=  -DMD_LOADMESH -DXDISP -DATPTENS -UMOLPTENS -UATPRESS #-DMD_SQWELL -DSOFT_SPHERE  -DMD_STATIC_PP8 # -DMD_BONDHIST -DMD_BILOG -DMPI##-DMD_TSHAPED# -DSOFT_SPHERE  -DMD_STATIC_PP6#-DMDLLINT#-DMPI##-DMC_SIMUL -DSOFT_SPHERE #-DMPI -DMD_GRAVITY -DPRINTER_PROC -DTAPPING -DMD_LOADMESH
 #export MACROS= -DMD_LOADMESH -DSOFT_SPHERE -DMD_STATIC_PP18 -DXDISP  -DATPTENS -UMOLPTENS -UATPRESS -DORIGIN -DMPI #-DPRINTER_PROC -DTAPPING -DMD_LOADMESH #per SP4
 export LDFLAGS=#-L /usr/lib/lam/lib -llamf77mpi -lmpi -llam -lnsl -lutil -lpmpi -llammpio
 #export LDFLAGS= #-L$(TURBOMP)/POWER4/lib -lxlf90#per SP4
@@ -52,6 +52,10 @@ COMMOBJ_DPT = $(COMM)/mdsimul_PT.o $(COMM)/mdinit_DPT.o $(COMM)/mdarray_DPT.o $(
 
 LAPO=$(PERC)/laponite
 LAPOOBJS= $(LAPO)/move.o $(LAPO)/measures.o $(LAPO)/init.o $(LAPO)/forces.o
+
+NMPOLY=$(PERC)/nmpoly
+NMPOLYOBJS= $(NMPOLY)/move.o $(NMPOLY)/measures.o $(NMPOLY)/init.o $(NMPOLY)/forces.o
+
 
 # dependencies for all simulation codes
 # rigid AB dumbell interacting by LJ12-6 potential
@@ -128,6 +132,10 @@ bimixLMC: bimixLMC_link commonMIX bimixLMCObjs
 laponite: lapo_link common lapoObjs
 	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJ) $(LAPOOBJS) -o $(BIN)/laponite -lm 
 
+nmpoly: nmpoly_link common nmpolyObjs
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJ) $(NMPOLYOBJS) -o $(BIN)/nmpoly -lm 
+
+
 monoLJ: monoLJ_link common monoLJObjs
 	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJ) $(MONOOBJS) -o $(BIN)/monoLJ -lm 
 
@@ -166,6 +174,9 @@ bimixLMCObjs:
 
 lapoObjs:
 	cd $(PERC)/laponite && $(MAKE) 
+
+nmpolyObjs:
+	cd $(PERC)/nmpoly && $(MAKE) 
 
 monoLMCObjs:
 	cd $(PERC)/monoLMC && $(MAKE) 
@@ -232,6 +243,10 @@ bimixLMC_link:
 lapo_link:
 	cd $(PERC)/laponite && $(MAKE) link
 
+nmpoly_link:
+	cd $(PERC)/nmpoly && $(MAKE) link
+
+
 monoLMC_link:
 	cd $(PERC)/monoLMC && $(MAKE) link
 
@@ -279,3 +294,5 @@ clean:
 	cd monoLJ_DPT && $(MAKE) clean	
 	cd monoLMC && $(MAKE) clean
 	cd laponite && $(MAKE) clean
+	cd nmpoly && $(MAKE) clean
+

@@ -314,7 +314,49 @@ int mdClose(int fd, char* when, char* errMsg, int mode)
     }
   return ret; /* 0 = OK, -1 = ERROR (the same as close system call) */
 }
+#ifdef MD_ALLOC_POLY
+/* ======================== >>> loadSegs  <<< ===============================*/
+int readSegsPoly(int fdes, char* when, char *errMsg, int mode,
+	     int size, void** pointer, ...)
+{
+  /* Put in each segments pointed by pointers (*pointer) passed as arguments 
+     'size' bytes read from the file, whose descriptor is fdes.
+     The list of pointer must end with a NULL and you must supply at least one
+     pointer.
+     - 'errMsg' is an extra message to print on error and 'when' could be 
+     NULL or a string, if NULL => print current step , if a string print it. 
+     This procedure is very usefule to load coordinates arrays.*/
+  void* sptr;
+  int i, num;
+  unsigned char rerr=0;
+  va_list ap;
+  va_start(ap, pointer);
+  
+  if (pointer == NULL) return -rerr; 
+  /* If the first pointer read is NULl then read nothing */
+  num =  va_arg(ap, int);
+  /* Load first pointerof the list */
+  for ( i = 0; i < num; i++)
+    {
+      rerr |= -mdRead(fdes, when, errMsg, mode, size, ((COORD_TYPE**)pointer)[i]);
+    }
+  /* if sptr = NULL => end of pointer list */ 
+  while ( (sptr = va_arg(ap, void*)) != NULL )
+    {
+      /* if mode == EXIT the if an error occurs, it exits */
+      num =  va_arg(ap, int);
+      for ( i = 0; i < num; i++)
+    	{
+	  rerr |= -mdRead(fdes, when, errMsg, mode, size, ((COORD_TYPE**)sptr)[i]);
+	  /* mdRead = -1 = ERROR or
+	     "    =  0 = OK then rerr = 1 => at least one error occurred */
+	}
+    }
+  va_end(ap);
+  return -rerr; /* -1 = ERROR , 0 = OK */
+}
 
+#endif
 /* ======================== >>> loadSegs  <<< ===============================*/
 int readSegs(int fdes, char* when, char *errMsg, int mode,
 	     int size, void* pointer, ...)
@@ -348,7 +390,53 @@ int readSegs(int fdes, char* when, char *errMsg, int mode,
   va_end(ap);
   return -rerr; /* -1 = ERROR , 0 = OK */
 }
+#ifdef MD_ALLOC_POLY
+/* ======================== >>> saveSegs  <<< ===============================*/
+void writeSegsPoly(int fdes, char* when, char* errMsg, int mode, int size,
+	       void* pointer, ...)
+{
+  /* Put each segments 'size' bytes long and pointed by pointers 
+     (*pointer) passed as arguments into the file, whose descriptor is fdes.
+     The list of pointer must end with a NULL and you must supply at least one
+     pointer.
+     This procedure is very usefule to save coordinates arrays.
+     For explanation of 'errMsg' and 'when' see 'mdWrite' or 'mdRead' */
+ 
+  /* DEBUG: int kk=0; */
+  void* sptr;
+  va_list ap;
+  int i, num;
+  va_start(ap, pointer);
+  if (pointer == NULL) return; 
+  /* writes nothing if the first pointer read is NULL */
 
+  //printf("writing %d\n", fdes);
+  num =  va_arg(ap, int);
+  /* Load first pointerof the list */
+  for ( i = 0; i < num; i++)
+    {
+      mdWrite(fdes, when, errMsg, mode, size, ((double**)pointer)[i]); 
+    }
+  /* at least one pointer should be present */
+  
+  /* if sptr = NULL => end of pointer list */ 
+  while ( (sptr = va_arg(ap, void*)) != NULL )
+    {
+      /* if mode == EXIT if an error occurs then exit */
+      num =  va_arg(ap, int);
+      for ( i = 0; i < num; i++)
+	{
+  	  mdWrite(fdes, when, errMsg, mode, size, ((double**)sptr)[i]);
+	}
+    }
+  /* DEBUG:
+     printf("N. %d scritture, scritti %d bytes \n",kk+1,kk*4000+4000);
+     printf("Size of params %d\n",sizeof(struct params)); */
+  va_end(ap);
+}
+
+
+#endif
 
 /* ======================== >>> saveSegs  <<< ===============================*/
 void writeSegs(int fdes, char* when, char* errMsg, int mode, int size,

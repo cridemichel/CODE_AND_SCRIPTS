@@ -610,6 +610,16 @@ void scanFile(char* argom)
 		 NULL);
 #endif
 #else
+#ifdef MD_ALLOC_POLY
+      SEGSIZE = sizeof(COORD_TYPE) * Oparams.parnum;
+      /* SEGSIZE is the size in bytes of an array of coordinates */
+      
+      /* ALLOC_LIST is a macro defined in mdsimul.h and contains a list of 
+	 all addresses of the coordinates declared in the simulaiton
+	 (see that file) */
+      AllocCoordPoly(SEGSIZE, ALLOC_LIST,
+		 NULL);
+#else
       SEGSIZE = sizeof(COORD_TYPE) * Oparams.parnum;
       /* SEGSIZE is the size in bytes of an array of coordinates */
       
@@ -618,6 +628,7 @@ void scanFile(char* argom)
 	 (see that file) */
       AllocCoord(SEGSIZE, ALLOC_LIST,
 		 NULL);
+#endif
 #endif      
       initYN = 1; /* Yes, initialize coordinates after reading 
 		     all parameters */
