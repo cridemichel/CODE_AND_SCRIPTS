@@ -1801,9 +1801,9 @@ int zbrac(double (*func)(double), double *x1, double *x2)
    } 
  return 0;
 }
-#define ITMAXZB 100 
+#define ITMAXZB 1000 
 /* Maximum allowed number of iterations.*/
-#define EPSP 3.0e-8 /* Machine floating-point precision.*/
+#define EPSP 1.0E-16/* Machine floating-point precision.*/
 void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], double xb2[], 
 	   int *nb)
 /* Given a function fx defined on the interval from x1-x2 subdivide the interval into n equally
