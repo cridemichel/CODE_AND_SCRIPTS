@@ -2197,7 +2197,7 @@ int refine_contact(int i, int j, double t1, double t2, int nn, double shift[3], 
   nnbr = nn;
   for (kk=0; kk < 3; kk++)
     shiftbr[kk] = shift[kk];
-  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-15);
+  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-16);
   if (polinterr==1)
     {
       MD_DEBUG10(printf("newt did not find any contact point!\n"));
@@ -2531,28 +2531,27 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      t += h*t;
 	      if (t > t2)
 		return 0;
-	      df = calcDistNegOne(t, i, j, nn, shift);
+	    \  df = calcDistNegOne(t, i, j, nn, shift);
 	    }
 	}
     }
 #endif
-    
+#if 0
   d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
   goback = 0;
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
-      if (!(lastbump[i].mol == j && lastbump[j].mol == i && 
-	    lastbump[i].at == mapbondsa[nn] && lastbump[j].at == mapbondsb[nn] && 
-	    (lastbump[i].type == MD_INOUT_BARRIER || lastbump[i].type == MD_OUTIN_BARRIER))
-	  && dists[nn] >=0.0 && bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+      if (dists[nn] >=0.0 && bound(i,j,mapbondsa[nn], mapbondsb[nn]))
 	{
 	  goback = 1;
-	  //printf("i=%d j=%d nn=%d dist=%.15G\n", i, j, nn, dists[nn]);
+	  //printf("i=%d j=%d nn=%d dist=%.15G dti=%.15G dtj=%.15G\n", i, j, nn, dists[nn], Oparams.time-lastcol[i],
+	  //	 Oparams.time-lastcol[j]);
+	  break;
 	}
     }
   if (goback)
     {
-      while (d >= 0.0)
+      while (dists[nn] >= 0.0)
 	{
 	  if (t == 0.0)
 	    t -= h;
@@ -2560,7 +2559,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	    t -= t*h;
 	  d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
 	}
-    } 
+    }
+#endif
   if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast, dists))
     {
       return 0;  
@@ -3519,7 +3519,6 @@ void ProcessCollision(void)
   lastbump[evIdB].at = evIdD;
   lastbump[evIdA].type = evIdE;
   lastbump[evIdB].type = evIdE;
-
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
 }
