@@ -3554,11 +3554,11 @@ void PredictEvent (int na, int nb)
   nl_ignore = (iA==0)?1:0;
   /* iB indica la specie con cui puo' interagire na e per ogni specie abbiamo 
    * differenti celle */
-  for (iB = 0; iB < 2; iB++)
+  for (nc = 0; nc < 2; nc++)
     {
-      if (iA==0 && iB == 0)
+      if (iA==0 && nc == 0)
 	nl = 0;
-      else if (iA == 1 && iB == 1)
+      else if (iA == 1 && nc == 0)
 	nl = 1;
       else
 	nl = 2;
@@ -3569,7 +3569,7 @@ void PredictEvent (int na, int nb)
 	    signDir[2] = 0;/* direzione positiva */
 	  else 
 	    signDir[2] = 1;/* direzione negativa */
-	  tm[2] = ((inCell[iB][2][na] + 1 - signDir[2]) * L /
+	  tm[2] = ((inCell[nc][2][na] + 1 - signDir[2]) * L /
 		   cellsz[nl] - rz[na] - L2) / vz[na];
 	} 
       else 
@@ -3582,7 +3582,7 @@ void PredictEvent (int na, int nb)
 	    signDir[0] = 0;/* direzione positiva */
 	  else 
 	    signDir[0] = 1;/* direzione negativa */
-	  tm[0] = ((inCell[iB][0][na] + 1 - signDir[0]) * L /
+	  tm[0] = ((inCell[nc][0][na] + 1 - signDir[0]) * L /
 		   cellsx[nl] - rx[na] - L2) / vx[na];
 	} 
       else 
@@ -3594,7 +3594,7 @@ void PredictEvent (int na, int nb)
 	    signDir[1] = 0;
 	  else 
 	    signDir[1] = 1;
-	  tm[1] = ((inCell[iB][1][na] + 1 - signDir[1]) * L /
+	  tm[1] = ((inCell[nc][1][na] + 1 - signDir[1]) * L /
 		   cellsy[nl] - ry[na] - L2) / vy[na];
 	} 
       else 
@@ -3619,11 +3619,14 @@ void PredictEvent (int na, int nb)
 #if 1
       if (tm[k]<0)
 	{
+	  printf("tm[%d]: %.15G\n", k, tm[k]);
 	  tm[k] = 0.0;
 #if 1
+	  printf("nc=%d na=%d nl=%d\n",nc,na,nl);
 	  printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
-	  printf("Cells(%d,%d,%d)\n", inCell[iB][0][na], inCell[iB][1][na], 
-		 inCell[iB][2][na]);
+	  printf("Cells(%d,%d,%d)\n", inCell[nc][0][na], inCell[nc][1][na], 
+		 inCell[nc][2][na]);
+	  printf("cells= (%d,%d,%d)\n", cellsx[nl], cellsy[nl], cellsz[nl]);
 	  printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
 		 signDir[2]);
 	  /*exit(-1);*/
@@ -3634,7 +3637,7 @@ void PredictEvent (int na, int nb)
       /* 100+0 = attraversamento cella lungo x
        * 100+1 =       "           "     "   y
        * 100+2 =       "           "     "   z */
-      evCode = 100 + k + 3*iB;
+      evCode = 100 + k + 3*nc;
       /* urto con le pareti, il che vuol dire:
        * se lungo z e rz = -L/2 => urto con parete */ 
       MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
@@ -4568,7 +4571,11 @@ void ProcessCellCrossing(void)
   int nc, nl;
 
   UpdateAtom(evIdA);
-  
+  k = evIdB - 100 - ATOM_LIMIT; 
+  /* trattandosi di due specie qui c'è un due */
+  nc = k / 3;
+  k = k % 3;
+ 
   iA = (evIdA < Oparams.parnumA)?0:1;
   if (iA == 0 && nc == 0)
     nl = 0;
@@ -4576,6 +4583,7 @@ void ProcessCellCrossing(void)
     nl = 1;
   else 
     nl = 2;
+  //printf("ProcellCellCross nl=%d nc=%d k=%d\n", nl, nc, k);
   /* NOTA: cellList[i] con 0 < i < Oparams.parnum è la cella in cui si trova la particella
    * i-esima mentre cellList[j] con 
    * Oparams.parnum <= j < cellsx*cellsy*cellsz+Oparams.parnum
@@ -4629,10 +4637,6 @@ void ProcessCellCrossing(void)
        * cambia la propria cella */
     }
 #else
-  k = evIdB - 100 - ATOM_LIMIT; 
-  /* trattandosi di due specie qui c'è un due */
-  nc = k / 3;
-  k = k % 3;
 #if 0
   if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
     printf("Cells(%d,%d,%d)\n", inCell[0][evIdA],inCell[1][evIdA],inCell[2][evIdA]);
