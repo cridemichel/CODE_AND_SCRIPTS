@@ -75,6 +75,7 @@ void myinit (void)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     glEnable(GL_CULL_FACE);
+    //glDisable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     
 #if 0
@@ -218,8 +219,8 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
    }
    delta = 0.01 * TWOPI / n;
    for (j=0;j<n/2;j++) {
-      theta1 = j * TWOPI / (double)n - PID2;
-      theta2 = (j + 1) * TWOPI / (double)n - PID2;
+      theta1 = (j+1) * TWOPI / (double)n - PID2;
+      theta2 = j * TWOPI / (double)n - PID2;
 
       if (method == 0)
          glBegin(GL_QUAD_STRIP);
@@ -234,17 +235,17 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
          EvalSuperEllipse(theta2,theta3,power1,power2,a,b,c,&p);
          EvalSuperEllipse(theta2+delta,theta3,power1,power2,a,b,c,&p1);
          EvalSuperEllipse(theta2,theta3+delta,power1,power2,a,b,c,&p2);
-         en = CalcNormal(p1,p,p2);
+         en = CalcNormal(p,p1,p2);
          glNormal3f(en.x,en.y,en.z);
-         glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
+         //glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
          glVertex3f(p.x,p.y,p.z);
 
          EvalSuperEllipse(theta1,theta3,power1,power2,a,b,c,&p);
-         EvalSuperEllipse(theta1+delta,theta3,power1,power2,a,b,c,&p1);
-         EvalSuperEllipse(theta1,theta3+delta,power1,power2,a,b,c,&p2);
-         en = CalcNormal(p1,p,p2);
+         EvalSuperEllipse(theta1-delta,theta3,power1,power2,a,b,c,&p1);
+         EvalSuperEllipse(theta1,theta3-delta,power1,power2,a,b,c,&p2);
+         en = CalcNormal(p,p1,p2);
          glNormal3f(en.x,en.y,en.z);
-         glTexCoord2f(i/(double)n,2*j/(double)n);
+         //glTexCoord2f(i/(double)n,2*j/(double)n);
          glVertex3f(p.x,p.y,p.z);
       }
       glEnd();
@@ -380,7 +381,7 @@ void displayAtom(int nf, int nm, int na)
       glMultMatrixf(rotm);
       CreateSuperEllipse(atom->supellips.n1, 
 			 atom->supellips.n2, atom->supellips.a, 
-			 atom->supellips.b, atom->supellips.c, 20, 1);
+			 atom->supellips.b, atom->supellips.c, 50, 1);
     }
  /*ss = gluNewQuadric();
     gluSphere(ss, sig[na], 12, 12);
