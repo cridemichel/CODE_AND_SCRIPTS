@@ -2372,7 +2372,7 @@ double eval_maxddist(int i, int j, int bondpair, double t1)
       for (kk = 0; kk < 3; kk++)
 	{
 	  r12i[kk] = (ratA[mapbondsa[nn]][kk]-rA[kk]);
-  	  r12j[kk] = (ratB[mapbondsb[nn]][kk]-rB[kk])*1.01;	  
+  	  r12j[kk] = (ratB[mapbondsb[nn]][kk]-rB[kk]);	  
 	}
       nr12i = calc_norm(r12i);
       nr12j = calc_norm(r12j);
