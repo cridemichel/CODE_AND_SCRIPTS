@@ -489,7 +489,161 @@ void movea_Brownian(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE
  
 }
 #endif
+#ifdef MD_RESPA_NPT
+void shakeVelRespaNPT(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB, 
+		      COORD_TYPE d, COORD_TYPE tol, COORD_TYPE **p2sx, 
+		      COORD_TYPE** p2sy, COORD_TYPE** p2sz )
+{
+  COORD_TYPE DRx, DRy, DRz;
+  COORD_TYPE rxi[NA], ryi[NA], rzi[NA], vxi[NA], vyi[NA], vzi[NA];
+  COORD_TYPE rxab, ryab, rzab, rvab, gab, dSq;
+  COORD_TYPE vxab, vyab, vzab;
+  COORD_TYPE dx, dy, dz, dt2, rma, rmb;
+  int i, a, b, it;
+  int done;
+  int moving[NA], moved[NA];
+  
+  dSq = Sqr(d);
 
+  WC = 0.0;
+#if !defined(MOLPTENS) || defined(ATPTENS)  
+  WCxy = 0.0; /* Constraints-virial off-diagonal terms of pressure tensor */
+  WCyz = 0.0;
+  WCzx = 0.0;
+  WCxx = 0.0; /* Constraints-virial off-diagonal terms of pressure tensor */
+  WCyy = 0.0;
+  WCzz = 0.0;
+#endif
+  dt2 = dt * 0.5;
+  for (i=0; i < Nm; i++)
+    {
+      /* VELOCITY VERLET ALGORITHM PART B */
+      for(a=0; a < NA; a++)
+	{
+	  rxi[a] = rx[a][i];
+	  ryi[a] = ry[a][i];
+	  rzi[a] = rz[a][i];
+
+	  vxi[a] = p2sx[a][i]/Oparms.m[a];
+	  vyi[a] = p2sy[a][i]/Oparms.m[a];
+	  vzi[a] = p2sz[a][i]/Oparms.m[a];
+	  
+	  moving[a] = 0;
+	  moved[a] = 1;
+	}
+      
+      /* START OF ITERATIVE LOOP */
+          it = 0;
+	  done = 0;
+	  while ((done == 0 ) && ( it <= maxIt ))
+	    {
+	      done = 1;
+	      for(a=0; a < NB; a++)
+		{
+		  b = a + 1;
+		  /* la catena è aperta */
+		  /*if (b >= NA-1) b = 0;
+		  */
+		  if ( (moved[a] == 1) || (moved[b] == 1) ) 
+		    {
+		      rxab = rxi[a] - rxi[b];
+		      ryab = ryi[a] - ryi[b];
+		      rzab = rzi[a] - rzi[b];
+		      
+		      /* (DRx, DRy, DRz) is the change in the distance to
+			 employ minimum image conventions, note that also 
+			 relative velocity change, because the velocity is 
+			 dependent upon position */
+		      DRx = - L * rint(invL*rxab);
+		      DRy = - L * rint(invL*ryab);
+		      DRz = - L * rint(invL*rzab);
+		      
+		      rxab = rxab + DRx;
+		      ryab = ryab + DRy;
+		      rzab = rzab + DRz;
+		      
+		      vxab = vxi[a] - vxi[b];// + DRx * dlnV;
+		      vyab = vyi[a] - vyi[b];// + DRy * dlnV;
+		      vzab = vzi[a] - vzi[b];// + DRz * dlnV;
+		      
+		      rvab = rxab * vxab + ryab * vyab + rzab * vzab;
+		      //printf("rvab:%f\n", rvab);
+		      rma  = 1.0 / m[a];
+		      rmb  = 1.0 / m[b];
+		      gab  = (-rvab) / ( ( rma + rmb ) * dSq );
+		      if ( fabs(gab) > tol )
+			{
+			  WC = WC + gab * dSq;
+
+			  dx = rxab * gab;
+			  dy = ryab * gab;
+			  dz = rzab * gab;
+			  
+			  /* Non-diagonal terms of stress tensor 
+			     NOTE: gab * (rxab, ryab, rzab) = F * (dt/2) */
+#if !defined(MOLPTENS) || defined(ATPTENS)
+			  WCxx += rxab * dx;
+			  WCyy += ryab * dy;
+			  WCzz += rzab * dz;
+			  WCxy = WCxy + rxab * dy;
+			  WCyz = WCyz + ryab * dz;
+			  WCzx = WCzx + rzab * dx;
+#endif 
+			  vxi[a] = vxi[a] + rma * dx;
+			  vyi[a] = vyi[a] + rma * dy;
+			  vzi[a] = vzi[a] + rma * dz;
+			  vxi[b] = vxi[b] - rmb * dx;
+			  vyi[b] = vyi[b] - rmb * dy;
+			  vzi[b] = vzi[b] - rmb * dz;
+			  moving[a] = 1;
+			  moving[b] = 1;
+			  done = 0;
+			}
+		    }
+		}
+	      for(a=0; a < NA; a++)
+		{
+		  moved[a]  = moving[a];
+		  moving[a] = 0;
+		}
+	      it = it + 1;
+	    } 
+	  
+	  /* END OF ITERATIVE LOOP */
+	  
+	  if (done == 0)
+	    {
+	      sprintf(msgStrA, "MOLECULE N. %d", i);
+	      mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,
+		    "TOO MANY CONSTRAINT ITERATIONS IN MOVEB",
+		    msgStrA,
+		    NULL);
+	      exit(-1);
+	      
+	    }
+	  
+	  for(a=0; a < NA; a++)
+	    {
+	      p2sx[a][i] = vxi[a]*Oparams.m[a];
+	      p2sy[a][i] = vyi[a]*Oparams.m[a];
+	      p2sz[a][i] = vzi[a]*Oparams.m[a];
+	    }
+    }
+  /* END OF LOOP OVER MOLECULES */
+
+  WC = WC / dt2 / 3.0;
+#if !defined(MOLPTENS) || defined(ATPTENS)
+  WCxy = WCxy / dt2; /* WCxy, ... are not exactly virial terms and the 3.0
+			is not present */
+  WCyz = WCyz / dt2;
+  WCzx = WCzx / dt2;
+
+  WCxx = WCxx / dt2;
+  WCyy = WCyy / dt2;
+  WCzz = WCzz / dt2;
+#endif
+}
+#endif
 /* ============================ >>> shakeVel <<< ========================== */
 void shakeVel(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB, 
 	      COORD_TYPE d, COORD_TYPE tol, COORD_TYPE **v2sx, 
@@ -2376,6 +2530,8 @@ void p2v(void)
 	  vz[a][i] = pz[a][i]/Oparams.m[a] + (Vol1 / Vol / 3.0)*Rzl;
 	}
     }
+  Vol1 = Pv * Sqr(s) / OprogStatus.W;
+  s1   = Ps * Sqr(s) / OprogStatus.Q;  
 }
 void v2p(void)
 {
@@ -2391,6 +2547,8 @@ void v2p(void)
 	  pz[a][i] = Oparams.m[a]*(pz[a][i] - (Vol1 / Vol / 3.0)*Rzl);
 	}
     }
+  Ps = OprogStatus.Q * s1 / Sqr(s);
+  Pv = OprogStatus.W * Vol1 / Sqr(s);
 }
 void updImpLong(double dt, double c)
 {
@@ -2411,26 +2569,155 @@ void updImpLong(double dt, double c)
 void updNoseAnd(double dt, double c)
 {
   int i, a;
-  double cdt;
+  double cdt, expdt[NA], nM[NA], cost[NA];
   double dlns, dlnV;
+  double PCMx, PCMy, PCMz;
   cdt = c*dt;
   dlns = s1 / s ;
-  dlnV = Vol / Vol2 / 3.0;
+  dlnV = Vol / Vol2 / 3.0 ; 
+  for (a = 0; a < NA; a++)
+    {
+      nM[a] = Oparams.m[a] / Mtot;
+      expdt[a] = exp(-(dlns + dlnV * mM[a]) * cdt);
+      cost[a] = (expdt[a] - 1.0) * dlnV * mM[a] / (dlns + dlnV*mM[a]);
+    }
   for (i=0; i < Oparams.parnum; i++)
-    for (a=0; a < NA; a++)
-      {
-	px[a][i] *= exp(-(dlns + dlnV) * cdt);
-       	py[a][i] *= exp(-(dlns + dlnV) * cdt);
-	pz[a][i] *= exp(-(dlns + dlnV) * cdt);
-      }
+    {
+      PCMx = 0.0;
+      PCMy = 0.0;
+      PCMz = 0.0;
+      for (a = 0; a < NA; a++)
+	{
+	  PCMx += px[a][i];
+	  PCMy += py[a][i];
+	  PCMz += pz[a][i];
+	}
+      for (a=0; a < NA; a++)
+	{
+	  px[a][i] = costa[a]*(PCMx - px[a][i]) + px[a][i]*expdt[a];
+	  py[a][i] = costa[a]*(PCMy - py[a][i]) + py[a][i]*expdt[a];
+	  pz[a][i] = costa[a]*(PCMz - pz[a][i]) + pz[a][i]*expdt[a];
+	}
+    }
 }
+void updNoseAndRef(double dt, double c)
+{
+  int i, a;
+  double cdt, expdt[NA], nM[NA];
+  double cost[NA];
+  double RCMx, RCMy, RCMz;
+  cdt = c*dt;
+  for (a = 0; a < NA; a++)
+    {
+      nM[a] = Oparams.m[a] / Mtot;
+      expdt[a] = exp(Pv*Sqr(s)*mM[a]*cdt/(3.0*Vol*OprogStatus.W));
+      cost[a] = (expdt[a] - 1.0);
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      CoM(&RCMx, &RCMy, &RCMz);
+      for (a=0; a < NA; a++)
+	{
+	  rx[a][i] = cost[a]*(RCMx - rx[a][i]*mM[a]) + rx[a][i]*expdt[a];
+	  ry[a][i] = cost[a]*(PCMy - ry[a][i]*mM[a]) + ry[a][i]*expdt[a];
+	  rz[a][i] = cost[a]*(PCMz - rz[a][i]*mM[a]) + rz[a][i]*expdt[a];
+	}
+    }
+
+} 
 void updLs(double dt, double c)
 {
+  double cdt, cdt2;
+  double dof;
+  double DT, Kin, Tist;
+  int i, a;
+  cdt = c*dt;
+  cdt2 = cdt / 2.0;
+  s = s / (1 - Ps*cdt2/OprogStatus.Q);
+  Kin = 0;
+  for (i = 0; i < Oparams.parnum; i++)
+    for (a = 0; a < NA; a++)
+      {
+	Kin += Sqr(px[a][i])+Sqr(py[a][y])+Sqr(pz[a][i]);  
+      }
+#ifdef MD_FENE
+  dof = 3*NA*Oparams.parnum;
+#else
+  dof = (2*NA - 1)*Oparams.parnum;
+#endif
+  DT =  (2.0 * Kin - (dof * Nm - 3.0) * Oparams.T)/s;
+  Ps += DT * cdt2;
+  Ps = Ps / (1 - Ps*cdt*s/OprogStatus.Q);
+  Ps += DT * cdt2;
+  s = s / (1 - Ps*cdt2/OprogStatus.Q);
+}
+
+/* ======================= >>> calcT1diagMol <<< =========================== */
+COORD_TYPE  calcT1diagMolRespa(int Nm)
+{
+  /* calculate (T1mxx+T1myy+T1mzz) / 3.0, that is the average of diagonal
+     terms of the kinetic part of molecular pressure tensor */
+  int i, a;
+  COORD_TYPE kin;
+  COORD_TYPE Px, Py, Pz;
+
+  kin = 0.0;
+  for(i=0; i < Nm; i++)
+    {
+      Px = 0.0;
+      Py = 0.0;
+      Pz = 0.0;
+      for (a=0; a < NA; a++)
+	{
+	  Px += px[a][i];
+	  Py += py[a][i];
+	  Pz += pz[a][i];
+	}
+      kin +=  Sqr(Px) + Sqr(Py) + Sqr(Pz);
+    }
+  kin /= 3.0 * Vol * 2.0 * Mtot;
+  return kin;
 
 }
+/* ======================= >>> calcT1diagMol <<< =========================== */
+COORD_TYPE  calcT1diagAtRespa(int Nm)
+{
+  /* calculate (T1mxx+T1myy+T1mzz) / 3.0, that is the average of diagonal
+     terms of the kinetic part of atomic pressure tensor */
+  int i, a;
+  COORD_TYPE kin, kina, *m;
+  m = Oparams.m;
+  kin = 0.0;
+  for(i=0; i < Nm; i++)
+    {
+      kina = 0.0;
+      for(a=0; a < NA; a++)
+	{
+	  kina +=  Sqr(px[a][i]) + Sqr(py[a][i]) + Sqr(pz[a][i]);
+	}
+      kina /= m[a];
+      kin += kina;
+    }
+  kin /= 3.0 * Vol;
+  return kin;
+}
+
 void updLv(double dt, double c)
 {
-
+  double press, cdt, cdt2, DP;
+  cdt = c * dt;
+  cdt2 = c * dt / 2.0;
+  Vol += cdt2*Sqr(s)*Pv/OprogStatus.W;
+#ifdef MOLPTENS
+  press = calcT1diagMolRespa(Nm) + Wm / 3.0 / Vol; /* press(t+dt) */
+#else
+  press = calcT1diagAtRespa(Nm) + (W + WC) / Vol; /* press(t+dt) */
+#endif
+  DP = press - Oparams.P;
+  Pv += DP  * cdt2;
+  Pv *= exp(-Ps*s/OprogStatus.Q);
+  Pv += DP  * cdt2;
+  Vol += cdt2*Sqr(s)*Pv/OprogStatus.W;
 }
 /* =========================== >>> kinet <<< ============================== */
 void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz,
@@ -2448,8 +2735,21 @@ void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz,
   K *= 0.5;
 }
 
-void movelongRespaNPT(double dt)
+void movelongRespaNPTBef(double dt)
 {
+  updImpLong(dt, 0.25);
+  updNoseAnd(dt, 0.25)
+  updLv(dt, 0.25);
+  updLs(dt, 0.5);
+  updLv(dt, 0.25);
+  updNoseAnd(dt, 0.25)
+  updImpLong(dt, 0.25);
+  updNoseAndRef(dt, 0.5); 
+}
+
+void movelongRespaNPTAft(double dt)
+{
+  updNoseAndRef(dt, 0.5); 
   updImpLong(dt, 0.25);
   updNoseAnd(dt, 0.25)
   updLv(dt, 0.25);
@@ -2480,7 +2780,8 @@ void move(void)
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
     } 
 #ifdef MD_RESPA_NPT
-  movelongRespaNPT();
+  v2p();
+  movelongRespaNPT(Oparams.steplength);
 #else
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
@@ -2493,6 +2794,16 @@ void move(void)
   shakeVel(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, vx, vy, vz);
 #endif
 #endif
+#ifdef MD_RESPA_NPT
+  for (i = 0; i < Oparams.parnum; i++)
+    for (a = 0; a < NA; a++)
+      {
+	vx[a][i] = px[a][i] / Oparams.m[a];
+	vy[a][i] = py[a][i] / Oparams.m[a];
+	vz[a][i] = pz[a][i] / Oparams.m[a];
+      }
+#endif
+  
   for (kk=0; kk < n; kk++)
     {
       movea(Oparams.steplength/n, 0.000000000001, 150, NA-1, distance, Oparams.m, 
@@ -2546,7 +2857,11 @@ void move(void)
       V += VLong;
       W += WLong;
       kinet(Oparams.parnum, vx, vy, vz, Vol1);
-
+#ifdef MD_RESPA_NPT
+      /* NVE ensemble o Dinamica Browniana */
+      moveb(Oparams.steplength/n, 0.00000000001, 150, NA-1, Oparams.m, distance, 
+	    Oparams.parnum); 
+#else
       /* correct the coords */
       if (OprogStatus.Nose == 1)
 	{  
@@ -2569,6 +2884,7 @@ void move(void)
 	  moveb(Oparams.steplength/n, 0.00000000001, 150, NA-1, Oparams.m, distance, 
 	    Oparams.parnum);             
 	}
+#endif
       if (OprogStatus.Nose==1)
 	{
 	  checkNebrRebuildNPT();
@@ -2580,7 +2896,17 @@ void move(void)
 	  checkNebrRebuildLong();
 	}
     }
-
+  
+#ifdef MD_RESPA_NPT
+  for (i = 0; i < Oparams.parnum; i++)
+    for (a = 0; a < NA; a++)
+      {
+	px[a][i] = vx[a][i] * Oparams.m[a];
+	py[a][i] = vy[a][i] * Oparams.m[a];
+	pz[a][i] = vz[a][i] * Oparams.m[a];
+      }
+#endif
+ 
   if (nebrNowLong)
     {
       nebrNowLong = 0;
@@ -2601,7 +2927,8 @@ void move(void)
   //printf("Steps: %d VcR: %f VcL: %f\n",  Oparams.curStep, VcR, VcLong);
   LJForceLong(Oparams.parnum, Oparams.rcut, Oparams.rcut);
 #ifdef MD_RESPA_NPT
-  movelongRespaNPT();
+  movelongRespaNPTAft(Oparams.steplength);
+  p2v();
 #else
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
