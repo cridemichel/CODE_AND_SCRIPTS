@@ -2240,30 +2240,44 @@ int refine_contact(int i, int j, double t1, double t2, int ata, int atb,
       return 1; 
     }
 }
-int check_cross(distsOld[NA][NA], dists[NA][NA])
+int check_cross(double distsOld[NA][NA], double dists[NA][NA], int crossed[NA][NA])
 {
   int a, b;
+  int retcross = 0;
   for (a = 0; a < NA; a++)
     for (b = 0; b < NA; b++)
       {
-      
+	crossed[a][b] = 0;
+	if ( ((a==1 || a==2) && (b==1 || b==2)) ||
+	     ((a==3 || a==4) && (b==3 || b==4)) )
+	  continue;
+	if (a == 0 || b == 0)
+	  continue;
+	if (dists[a][b]*distsOld[a][b] < 0)
+	  {
+	    crossed[a][b] = 1; 
+	    retcross = 1;
+	  }
       }
+  return retcross;
 }
-
-int search_contact_faster(int i, int j, double *shift, double *t, double t2, double epsd, double *d1, double epsdFast)
+void assign_dists(double a[][], double b[][])
+{
+  memcpy(b, a, NA*NA*sizeof(double));
+}
+int search_contact_faster(int i, int j, double *shift, double *t, double t2, double epsd, double *d1, double epsdFast, double dists[][])
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
-  double maxddot, told, delt, normddot, ddot[3];
+  double maxddot, told, delt, normddot, ddot[3], distsOld[NA][NA];
   const int MAXOPTITS = 500;
   double alpha;
-  int its=0, amin, bmin; 
-    
+  int its=0, amin, bmin, crossed[NA][NA]; 
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j];
-  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin);
+  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, distsOld);
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
@@ -2286,21 +2300,22 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
 	  *t = told;
 	  MD_DEBUG10(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG10(printf("convergence t>t2\n"));
-	  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin);
+	  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, dists);
 	  return 1;
 	}
 #endif
-      *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin);
-      if (*d1 < 0)
+      *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, dists);
+      if (check_cross(distsOld, dists, crossed))
 	{
 	  /* go back! */
 	  MD_DEBUG10(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG10(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
-	  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin);
+	  *d1 = calcDistNeg(*t, i, j, shift, &amin, &bmin, dists);
 	  return 0;
 	}
       told = *t;
+      assign_dists(dists, distsOld);
       its++;
       itsF++;
     }
@@ -2400,7 +2415,7 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double tbigat, 
 		   double vecg[5])
 {
-  double h, d, dold, dold2, d1Neg, d1Pos, t, r1[3], r2[3]; 
+  double h, d, dold, dold2, d1Neg, d1Pos, t, r1[3], r2[3], dists[NA][NA], distsOld[NA][NA]; 
   double vd, normddot, ddot[3], maxddot, delt, told, troot;
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax; 
@@ -2429,7 +2444,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
  
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = 1E-7; /* last resort time increment */
-  if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast))
+  if (search_contact_faster(i, j, shift, &t, t2, epsd, &d, epsdFast, dists))
     return 0;  
   timesS++;
   MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d));
@@ -2442,7 +2457,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 	  t += h*t;
 	  if (t > t2)
 	    return 0;
-	  d = calcDistNeg(t, i, j, shift, &amin, &bmin);
+	  d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
 	}
     }
   else if (d<0&&fabs(d)>1E-7)
