@@ -312,20 +312,84 @@ void updImpNose(double dt, double c)
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
-        px[a][i] += Fx[a][i] * cdt2;
-	py[a][i] += Fy[a][i] * cdt2;
-	pz[a][i] += Fz[a][i] * cdt2;
+  //      px[a][i] += Fx[a][i] * cdt2;
+//	py[a][i] += Fy[a][i] * cdt2;
+//	pz[a][i] += Fz[a][i] * cdt2;
 	px[a][i] = px[a][i]*expdt[a];
       	py[a][i] = py[a][i]*expdt[a];
 	pz[a][i] = pz[a][i]*expdt[a];
-	px[a][i] += Fx[a][i] * cdt2;
-	py[a][i] += Fy[a][i] * cdt2;
-	pz[a][i] += Fz[a][i] * cdt2;
+	px[a][i] += Fx[a][i] * cdt;
+	py[a][i] += Fy[a][i] * cdt;
+	pz[a][i] += Fz[a][i] * cdt;
       }
 #ifndef MD_FENE
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
 #endif
 }
+void updImpNoseAft(double dt, double c)
+{
+  int i, a;
+  double cdt, expdt[NA], cost[NA], dlns, cdt2;
+  cdt = c*dt;
+  cdt2 = cdt / 2.0;
+  dlns = s*Ps / OprogStatus.Q ;
+  for (a = 0; a < NA; a++)
+    {
+      expdt[a] = exp(-dlns * cdt);
+      /*cost[a] = (expdt[a] - 1.0) / dlns;*/
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    for (a=0; a < NA; a++)
+      {
+        px[a][i] += Fx[a][i] * cdt;
+	py[a][i] += Fy[a][i] * cdt;
+	pz[a][i] += Fz[a][i] * cdt;
+	px[a][i] = px[a][i]*expdt[a];
+      	py[a][i] = py[a][i]*expdt[a];
+	pz[a][i] = pz[a][i]*expdt[a];
+      }
+#ifndef MD_FENE
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
+#endif
+}
+void updImpLongNoseAft(double dt, double c)
+{
+  int i, a;
+  double cdt, expdt[NA], cost[NA], dlns, cdt2;
+  cdt = c*dt;
+  cdt2 = cdt / 2.0;
+  dlns = s*Ps / OprogStatus.Q ;
+  for (a = 0; a < NA; a++)
+    {
+      expdt[a] = exp(-dlns * cdt);
+      /*cost[a] = (expdt[a] - 1.0) / dlns;*/
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    for (a=0; a < NA; a++)
+      {
+	px[a][i] += FxLong[a][i] * cdt;
+	py[a][i] += FyLong[a][i] * cdt;
+	pz[a][i] += FzLong[a][i] * cdt;
+	px[a][i] = px[a][i]*expdt[a];
+      	py[a][i] = py[a][i]*expdt[a];
+	pz[a][i] = pz[a][i]*expdt[a];
+      }
+#ifndef MD_FENE
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
+#ifdef ATPRESS 
+  WCLong = WC;
+#endif
+#ifdef ATPTENS  
+  WCxxLong = WCxx;
+  WCyyLong = WCyy;
+  WCzzLong = WCzz;
+  WCxyLong = WCxy;
+  WCzxLong = WCzx;
+  WCyzLong = WCyz;
+#endif 
+#endif
+}
+
 void updImpLongNose(double dt, double c)
 {
   int i, a;
@@ -341,15 +405,12 @@ void updImpLongNose(double dt, double c)
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
       {
-        px[a][i] += FxLong[a][i] * cdt2;
-	py[a][i] += FyLong[a][i] * cdt2;
-	pz[a][i] += FzLong[a][i] * cdt2;
 	px[a][i] = px[a][i]*expdt[a];
       	py[a][i] = py[a][i]*expdt[a];
 	pz[a][i] = pz[a][i]*expdt[a];
-	px[a][i] += FxLong[a][i] * cdt2;
-	py[a][i] += FyLong[a][i] * cdt2;
-	pz[a][i] += FzLong[a][i] * cdt2;
+	px[a][i] += FxLong[a][i] * cdt;
+	py[a][i] += FyLong[a][i] * cdt;
+	pz[a][i] += FzLong[a][i] * cdt;
       }
 #ifndef MD_FENE
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
@@ -379,6 +440,45 @@ void updImp(double dt, double c)
 	  py[a][i] = cdt*Fy[a][i] + py[a][i];
 	  pz[a][i] = cdt*Fz[a][i] + pz[a][i];
 	}
+    }
+}
+void updImpNoseAndAft(double dt, double c)
+{
+  int i, a;
+  double cdt, expdt[NA], mM[NA], cost[NA], dlnVmM[NA];
+  double dlnV, dlns;
+  double PCMx, PCMy, PCMz, cdt2;
+  cdt = c*dt;
+  cdt2 = cdt/2.0;
+  dlnV = Pv*Sqr(s)/OprogStatus.W/3.0/Vol;
+  dlns = s*Ps / OprogStatus.Q;
+  for (a = 0; a < NA; a++)
+    {
+      mM[a] = Oparams.m[a] / Mtot;
+      dlnVmM[a] = mM[a] * dlnV;
+      expdt[a] = exp(-(dlnVmM[a] + dlns) * cdt);
+      /*cost[a] = (expdt[a] - 1.0) / dlnVmM[a];*/
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      PCMx = 0.0;
+      PCMy = 0.0;
+      PCMz = 0.0;
+      for (a = 0; a < NA; a++)
+	{
+	  PCMx += px[a][i];
+	  PCMy += py[a][i];
+	  PCMz += pz[a][i];
+	}
+      for (a=0; a < NA; a++)
+	{
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt;
+	  px[a][i] = px[a][i]*expdt[a];
+	  py[a][i] = py[a][i]*expdt[a];
+	  pz[a][i] = pz[a][i]*expdt[a];
+	} 
     }
 }
 void updImpNoseAnd(double dt, double c)
@@ -411,15 +511,12 @@ void updImpNoseAnd(double dt, double c)
 	}
       for (a=0; a < NA; a++)
 	{
-	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt2;
-	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt2;
-	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt2;
 	  px[a][i] = px[a][i]*expdt[a];
 	  py[a][i] = py[a][i]*expdt[a];
 	  pz[a][i] = pz[a][i]*expdt[a];
-	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt2;
-	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt2;
-	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt2;
+	  px[a][i] += (Fx[a][i]-dlnVmM[a]*(PCMx-px[a][i]))*cdt;
+	  py[a][i] += (Fy[a][i]-dlnVmM[a]*(PCMy-py[a][i]))*cdt;
+	  pz[a][i] += (Fz[a][i]-dlnVmM[a]*(PCMz-pz[a][i]))*cdt;
 	} 
     }
 }
@@ -538,9 +635,37 @@ void updPs(double dt, double c)
   /*printf("temp= %f\n", 2*Kin/dof);*/
   DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
   /*printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);*/
-  Ps += DT * cdt2;
+  Ps += DT * cdt;
   Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
-  Ps += DT * cdt2;
+  //Ps += DT * cdt2;
+}
+void updPsAft(double dt, double c)
+{
+  double cdt, cdt2;
+  double dof, Nm;
+  double DT, Kin;
+  int i, a;
+  cdt = c*dt;
+  Nm = Oparams.parnum;
+  cdt2 = cdt / 2.0;
+  Kin = 0;
+  for (i = 0; i < Oparams.parnum; i++)
+    for (a = 0; a < NA; a++)
+      {
+	Kin += (Sqr(px[a][i])+Sqr(py[a][i])+Sqr(pz[a][i]))/Oparams.m[a];  
+      }
+  Kin *= 0.5;
+#ifdef MD_FENE
+  dof = 3*NA*Oparams.parnum;
+#else
+  dof = (2*NA - 1)*Oparams.parnum;
+#endif
+  /*printf("temp= %f\n", 2*Kin/dof);*/
+  DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
+  /*printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);*/
+  Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
+  Ps += DT * cdt;
+  //Ps += DT * cdt2;
 }
 void upds(double dt, double c)
 {
@@ -557,7 +682,6 @@ void updLs(double dt, double c)
   cdt = c*dt;
   Nm = Oparams.parnum;
   cdt2 = cdt / 2.0;
-  s = s / (1 - s*Ps*cdt2/OprogStatus.Q);
   Kin = 0;
   for (i = 0; i < Oparams.parnum; i++)
     for (a = 0; a < NA; a++)
@@ -573,10 +697,37 @@ void updLs(double dt, double c)
   /*printf("temp= %f\n", 2*Kin/dof);*/
   DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
   /*printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);*/
-  Ps += DT * cdt2;
   Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
-  Ps += DT * cdt2;
-  s = s / (1 - s*Ps*cdt2/OprogStatus.Q);
+  Ps += DT * cdt;
+  s = s / (1 - s*Ps*cdt/OprogStatus.Q);
+}
+void updLsAft(double dt, double c)
+{
+  double cdt, cdt2;
+  double dof, Nm;
+  double DT, Kin;
+  int i, a;
+  cdt = c*dt;
+  Nm = Oparams.parnum;
+  cdt2 = cdt / 2.0;
+  s = s / (1 - s*Ps*cdt/OprogStatus.Q);
+  Kin = 0;
+  for (i = 0; i < Oparams.parnum; i++)
+    for (a = 0; a < NA; a++)
+      {
+	Kin += (Sqr(px[a][i])+Sqr(py[a][i])+Sqr(pz[a][i]))/Oparams.m[a];  
+      }
+  Kin *= 0.5;
+#ifdef MD_FENE
+  dof = 3*NA*Oparams.parnum;
+#else
+  dof = (2*NA - 1)*Oparams.parnum;
+#endif
+  /*printf("temp= %f\n", 2*Kin/dof);*/
+  DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
+  /*printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);*/
+  Ps += DT * cdt;
+  Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
 }
 /*========================== >>> calcPtensMol <<< ===========================*/
 void calcPtensMolRespa(int Nm)
@@ -744,9 +895,34 @@ void updPv(double dt, double c)
     }
 #endif
   /*printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);*/
-  Pv += DP  * cdt2;
+  Pv += DP  * cdt;
   Pv *= exp(-cdt*Ps*s/OprogStatus.Q);
-  Pv += DP  * cdt2;
+  ///Pv += DP  * cdt2;
+}
+void updPvAft(double dt, double c)
+{
+  double press, cdt, cdt2, DP, Nm;
+  Nm = Oparams.parnum;
+  cdt = c * dt;
+  cdt2 = c * dt / 2.0;
+#ifdef MOLPTENS
+  press = calcT1diagMolRespa(Nm) + (WmShort + WmLong ) / 3.0 / Vol; /* press(t+dt) */
+#else
+  press = calcT1diagAtRespa(Nm) + (WShort + WLong + WCShort + WCLong) / Vol; /* press(t+dt) */
+#endif
+  DP = press - Oparams.P;
+#if 0
+    {
+    FILE *f;
+    f = fopen("press.dat", "a");
+    fprintf(f, "%d %f\n", Oparams.curStep, press);
+    fclose(f);
+    }
+#endif
+  /*printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);*/
+  Pv *= exp(-cdt*Ps*s/OprogStatus.Q);
+  Pv += DP  * cdt;
+  ///Pv += DP  * cdt2;
 }
 /* =========================== >>> kinet <<< ============================== */
 void kinetRespaNPT(int Nm, COORD_TYPE** px, COORD_TYPE** py, COORD_TYPE** pz)
@@ -769,10 +945,9 @@ void movelongRespaNPTBef(double dt)
     updImpLong(dt, 0.5);
   else
     {
-      updImpLongNose(dt, 0.25);
       /*printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
       updLs(dt, 0.5);
-      updImpLongNose(dt, 0.25);
+      updImpLongNose(dt, 0.5);
       /*printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 #else
@@ -881,11 +1056,9 @@ void movelongRespaNPTAft(double dt)
   else
     {
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-      updImpLongNose(dt, 0.25);
-      updLs(dt, 0.5);
+      updImpLongNoseAft(dt, 0.5);
+      updLsAft(dt, 0.5);
       /*printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
-      updImpLongNose(dt, 0.25);
-      /*printf("A2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
@@ -1223,14 +1396,14 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #else
   if (OprogStatus.Nose == 1)
     {
-      updPs(dt, 0.5);
-      updPv(dt, 0.5);
-      updImpNoseAnd(dt, 0.5);
+      updPsAft(dt, 0.5);
+      updPvAft(dt, 0.5);
+      updImpNoseAndAft(dt, 0.5);
     }
-  if (OprogStatus.Nose == 2)
+  else if (OprogStatus.Nose == 2)
     {
-      updPs(dt, 0.5);
-      updImpNose(dt, 0.5);
+      updPsAft(dt, 0.5);
+      updImpNoseAft(dt, 0.5);
     }
 #endif
   else
@@ -1260,15 +1433,7 @@ void move(void)
   Mtot = 0;
   for (a = 0; a < NA; a++)
     Mtot += Oparams.m[a];
-  if (Oparams.curStep == 1)  
-    {
-      BuildNebrListNoLinkedLong(Oparams.parnum, Oparams.rcut);
-      BuildNebrListNoLinked(Oparams.parnum, OprogStatus.rcutInner);
-      LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
-      LJForce(Oparams.parnum, OprogStatus.rcutInner);
-    } 
 #ifdef MD_RESPA_NPT
-  v2p();
   movelongRespaNPTBef(Oparams.steplength);
 #else
   for (i=0; i < Oparams.parnum; i++)
