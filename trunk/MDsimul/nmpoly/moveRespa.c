@@ -1020,17 +1020,6 @@ void move(void)
 	  checkNebrRebuildLong();
 	}
     }
-  
-#ifdef MD_RESPA_NPT
-  for (i = 0; i < Oparams.parnum; i++)
-    for (a = 0; a < NA; a++)
-      {
-	px[a][i] = vx[a][i] * Oparams.m[a];
-	py[a][i] = vy[a][i] * Oparams.m[a];
-	pz[a][i] = vz[a][i] * Oparams.m[a];
-      }
-#endif
- 
   if (nebrNowLong)
     {
       nebrNowLong = 0;
