@@ -976,17 +976,17 @@ void PredictEvent (int na, int nb)
 		      if (na < parnumA && n < parnumA)
 			{
 			  sigSq = Sqr(Oparams.sigma[0][0]);
-			  sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta);
+			  sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
 			}
 		      else if (na >= parnumA && n >= parnumA)
 			{
 			  sigSq = Sqr(Oparams.sigma[1][1]);
-			  sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta);
+			  sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
 			}
 		      else
 			{
 			  sigSq = Sqr(Oparams.sigma[0][1]);
-			  sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta);
+			  sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
 			}
 #else
 		      if (na < parnumA && n < parnumA)
