@@ -572,7 +572,7 @@ void angvel(void)
 void wrap_initCoord(void)
 {
   rx[0] = 2.0;
-  ry[0] = 0.0;
+  ry[0] = 1.0;
   rz[0] = 0.0;
   vx[0] = -2.0;
   vy[0] = 0.0;
@@ -582,7 +582,7 @@ void wrap_initCoord(void)
   wz[0] = 0.0;
 
   rx[1] = -2.0;
-  ry[1] = 0.0;
+  ry[1] = 1.0;
   rz[1] = 0.0;
   vx[1] = 2.0;
   vy[1] = 0.0;

@@ -1,7 +1,7 @@
 #include<mdsimul.h>
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
-#define MD_DEBUG(x) 
+#define MD_DEBUG(x) x 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -588,6 +588,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     rzij = rzij - SignR(L, rzij);
 #endif
 #endif
+  MD_DEBUG(printf("[bump] contact point: %f,%f,%f \n", rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
@@ -925,52 +926,52 @@ void UpdateAtom(int i)
   /* ...and now orientations */
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
   w = sqrt(wSq);
-  if (w == 0.0) 
-    return;
-  sinw = sin(w*ti)/w;
-  cosw = (1.0 - cos(w*ti))/wSq;
-  Omega[0][0] = 0;
-  Omega[0][1] = wz[i];
-  Omega[0][2] = -wy[i];
-  Omega[1][0] = -wz[i];
-  Omega[1][1] = 0;
-  Omega[1][2] = wx[i];
-  Omega[2][0] = wy[i];
-  Omega[2][1] = -wx[i];
-  Omega[2][2] = 0;
-  OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
-  OmegaSq[0][1] = wx[i]*wy[i];
-  OmegaSq[0][2] = wx[i]*wz[i];
-  OmegaSq[1][0] = wx[i]*wy[i];
-  OmegaSq[1][1] = -Sqr(wx[i]) - Sqr(wz[i]);
-  OmegaSq[1][2] = wy[i]*wz[i];
-  OmegaSq[2][0] = wx[i]*wz[i];
-  OmegaSq[2][1] = wy[i]*wz[i];
-  OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
- 
-  for (k1 = 0; k1 < 3; k1++)
+  if (w != 0.0) 
     {
+      sinw = sin(w*ti)/w;
+      cosw = (1.0 - cos(w*ti))/wSq;
+      Omega[0][0] = 0;
+      Omega[0][1] = wz[i];
+      Omega[0][2] = -wy[i];
+      Omega[1][0] = -wz[i];
+      Omega[1][1] = 0;
+      Omega[1][2] = wx[i];
+      Omega[2][0] = wy[i];
+      Omega[2][1] = -wx[i];
+      Omega[2][2] = 0;
+      OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
+      OmegaSq[0][1] = wx[i]*wy[i];
+      OmegaSq[0][2] = wx[i]*wz[i];
+      OmegaSq[1][0] = wx[i]*wy[i];
+      OmegaSq[1][1] = -Sqr(wx[i]) - Sqr(wz[i]);
+      OmegaSq[1][2] = wy[i]*wz[i];
+      OmegaSq[2][0] = wx[i]*wz[i];
+      OmegaSq[2][1] = wy[i]*wz[i];
+      OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
       
-      for (k2 = 0; k2 < 3; k2++)
+      for (k1 = 0; k1 < 3; k1++)
 	{
-	  Rtmp[k1][k2] = R[i][k1][k2];
-	  M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
-	  if (k1==k2)
-	    M[k1][k1] += 1.0;
+	  
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      Rtmp[k1][k2] = R[i][k1][k2];
+	      M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	      if (k1==k2)
+		M[k1][k1] += 1.0;
+	    }
 	}
-    }
-
-  for (k1 = 0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      {
-	R[i][k1][k2] = 0.0;
-	for (k3 = 0; k3 < 3; k3++)
-	  R[i][k1][k2] += M[k1][k3]*Rtmp[k3][k2];
-      }
+      
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    R[i][k1][k2] = 0.0;
+	    for (k3 = 0; k3 < 3; k3++)
+	      R[i][k1][k2] += M[k1][k3]*Rtmp[k3][k2];
+	  }
 #if 0
-  if (rz[i]+Lz*0.5-Oparams.sigma/2.0 < 0. && OprogStatus.quenchend > 0.0)
-    {
-      int no;
+      if (rz[i]+Lz*0.5-Oparams.sigma/2.0 < 0. && OprogStatus.quenchend > 0.0)
+	{
+	  int no;
 	  printf("rz[i](t-ti):%.15f rz[i]:%.15f ti:%.15f", 
 		 rz[i] - vz[i]*ti + g2*Sqr(ti), rz[i],
 		 ti);
@@ -982,8 +983,9 @@ void UpdateAtom(int i)
  
 	      exit(-1);
 	    }
-    }
+	}
 #endif
+    }
   atomTime[i] = Oparams.time;
 }
 void UpdateSystem(void)
@@ -1281,7 +1283,12 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   UpdateOrient(j, ti, Rt, Omega);
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
-
+#if 0
+  printf("Xa=\n");
+  print_matrix(Xa, 3);
+  printf("Xb=\n");
+  print_matrix(Xb, 3);
+#endif
   for (k1 = 0; k1 < 3; k1++)
     {
       fvec[k1] = 0;
@@ -1718,18 +1725,23 @@ no_core_bump:
 			      pos[2] =  rz[na] + vz[na] * (t-atomTime[na]);
 			      for (kk=0; kk < 3; kk++)
 				vecg[kk] = pos[kk] - 0.5*cong[kk]*maxax[na<Oparams.parnumA?0:1];
-			      MD_DEBUG(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
-			      MD_DEBUG(printf("r[%d](%f,%f,%f)-r[%d](%f,%f,%f)\n",
+			      MD_DEBUG2(printf("shift (%f, %f, %f) vecg (%f, %f, %f)\n", shift[0], shift[1], shift[2], vecg[0], vecg[1], vecg[2]));
+			      MD_DEBUG2(printf("r[%d](%f,%f,%f)-r[%d](%f,%f,%f)\n",
 					      na, rx[na], ry[na], rz[na], n, rx[n], ry[n], rz[n]));
+			      
+			      
 			      vecg[3] = 1.0; /* questa stima di alpha andrebbe fatta meglio!*/
 			      vecg[4] = t;
-			      
+			      MD_DEBUG(printf("vecguess: %f,%f,%f alpha=%f t=%f\n", vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
 			      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
-			      if (retcheck)
+			      
+			      if (retcheck==1)
 				{
 				  printf("[ERROR] newton-raphson failed to converge!\n");
 				  exit(-1);
 				}
+			      else if (retcheck==2)
+				continue;
 			      rxC = vecg[0];
 			      ryC = vecg[1];
 			      rzC = vecg[2];
@@ -2156,6 +2168,7 @@ void move(void)
 	  fprintf(bf, sepStr);
 	  printf("qui\n");
 #endif
+	  MD_DEBUG(printf("[Store event]: %.15G\n", Oparams.time));
 	  writeAllCor(bf);
 	  fclose(bf);
 #ifndef MD_STOREMGL
