@@ -3773,22 +3773,21 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
 	    }
 #endif
-#if 1
        	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd1[kk];
-	    
-	  if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift, 0))
+#ifndef MD_NOINTERPOL  
+	 if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift, 0))
+#endif
 	    {
 	      for (kk=0; kk < 8; kk++)
 		vecgroot[kk] = vecgd2[kk];
 	      troot = t - delt;
 	    }
-#endif
 	  dorefine = 1;
 	}
       else if (d1 < OprogStatus.epsd && d2 < OprogStatus.epsd)
 	{
-#if 1
+#ifndef MD_NOINTERPOL
 	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd1[kk];
 	  
