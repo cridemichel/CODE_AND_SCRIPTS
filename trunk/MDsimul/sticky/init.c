@@ -1513,8 +1513,13 @@ void usrInitAft(void)
 	dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists);
 	for (nn=0; nn < MD_PBONDS; nn++)
 	  {
+#if 0
+	    if (i==0) 
+	      printf("i=0 j=%d dists[%d-%d]:%.15G\n", j, mapbondsa[nn], mapbondsb[nn], dists[nn]+Oparams.sigmaSticky);
+#endif
 	    if (dists[nn]<0.0)
 	      {
+		//printf("(%d,%d)-(%d,%d)\n", i, mapbondsa[nn], j, mapbondsb[nn]);
 		aa = mapbondsa[nn];
 		bb = mapbondsb[nn];
 		add_bond(i, j, aa, bb);

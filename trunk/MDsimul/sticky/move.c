@@ -1678,12 +1678,13 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
 {
   /* calcola le coordinate nel laboratorio di uno specifico atomo */
   int kk;
-  double r1[3], r2[3], r3[3], nr;
+  double r1[3], r2[3], r3[3], nr, fact;
   /* l'atomo zero si suppone nell'origine 
    * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
    * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
    * a partire da questi. */
- 
+
+  fact = MD_DIST_HYDROSITES/MD_DIST_ELECTSITES;
   if (ata == 0)
     {
       for (kk = 0; kk < 3; kk++)
@@ -1703,7 +1704,7 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
       for (kk = 0; kk < 3; kk++)
 	{
 	  r1[kk] = R[kk][1]-R[kk][0];
-	  r2[kk] = R[kk][2]-R[kk][0];
+	  r2[kk] = fact*R[kk][2]-R[kk][0];
 	}
       vectProdVec(r1, r2, r3);
       nr = calc_norm(r3);
