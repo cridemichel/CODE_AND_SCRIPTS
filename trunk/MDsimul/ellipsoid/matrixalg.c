@@ -6,13 +6,487 @@
 #include<stdlib.h>
 #define MD_DEBUG(X) 
 #define MD_DEBUG10(X) 
+#define MD_DEBUG18(X) X
+int ncom;
+double (*nrfunc)(double []); 
+int *ivector(int n)
+{
+  return calloc(n, sizeof(int)); 
+}
+double *vector(int n)
+{
+  return calloc(n, sizeof(double)); 
+}
+double **matrix(int n, int m)
+{
+  double **M;
+  int i, j;
+  M = malloc(sizeof(double*)*n);
+  for (i=0; i < n; i++)
+    M[i] = calloc(m, sizeof(double));
+  return M;
+}
+void free_vector(double *vec)
+{
+  free(vec);
+}
+void free_ivector(int *vec)
+{
+  free(vec);
+}
+void free_matrix(double **M, int n)
+{
+  int i;
+  for (i=0; i < n; i++)
+    {
+      free(M[i]);
+    }
+  free(M);
+}
+
+void (*nrdfun)(double [], double []);
+/* =========================== >>> min <<< =============================== */
+double min(double a, double b)
+{
+  if (a >= b)
+    {
+      return b;
+    }
+  else
+    {
+      return a;
+    }
+}
+static float maxarg1,maxarg2;
+#define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
+        (maxarg1) : (maxarg2))
+
+/* =========================== >>> max <<< ================================= */
+double max(double a, double b)
+{
+  if (a >= b)
+    {
+      return a;
+    }
+  else
+    {
+      return b;
+    }
+}
+
+
 void nrerror(char *msg)
 {
   printf(msg);
   exit(-1);
 }
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
+#define DABS fabs
+double xicom[8], pcom[8], xi[8], G[8], H[8], grad[8], vec[8];
+double Ftol, Epoten, Emin, fnorm;
+int icg, jcg;
+double shiftcg[3];
+/* ============================ >>> brent <<< ============================ */
+void  conjgradfunc(void);
 
+#define SHFT(a,b,c,d) (a)=(b);(b)=(c);(c)=(d); 
+/*Here GOLD is the default ratio by which successive intervals are magnified; GLIMIT is the maximum
+ * magnification allowed for a parabolic-fit step.*/
+void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, double (*func)(double))
+  /*Given a function func, and given distinct initial points ax and bx, this routine searches in the downhill
+   * direction (defined by the function as evaluated at the initial points) and returns new points ax, bx, cx
+   * that bracket a minimum of the function. Also returned are the function values at the three points, fa, fb,
+   * and fc.*/
+{
+  const double GOLD= 1.618034, GLIMIT=100.0;
+  double ulim,u,r,q,fu,dum; 
+  *fa=(*func)(*ax); 
+  *fb=(*func)(*bx);
+  if (*fb > *fa) 
+    { /*Switch roles of a and b so that we can go downhill in the direction from a to b. */
+      SHFT(dum,*ax,*bx,dum); 
+      SHFT(dum,*fb,*fa,dum); 
+    } 
+  *cx=(*bx)+GOLD*(*bx-*ax); /*First guess for c.*/
+  *fc=(*func)(*cx);
+  while (*fb > *fc) 
+    { /*Keep returning here until we bracket.*/
+      r=(*bx-*ax)*(*fb-*fc); /*Compute u by parabolic extrapolation from a, b, c. TINY is used to
+			       prevent any possible division by zero.*/
+      q=(*bx-*cx)*(*fb-*fa); 
+      u=(*bx)-((*bx-*cx)*q-(*bx-*ax)*r)/
+	(2.0*SIGN(FMAX(fabs(q-r),TINY),q-r)); 
+      ulim=(*bx)+GLIMIT*(*cx-*bx); /*We won t go farther than this. Test various possibilities: */
+      if ((*bx-u)*(u-*cx) > 0.0) 
+	{ /*Parabolic u is between b and c: try it.*/
+	  fu=(*func)(u);
+	  if (fu < *fc) 
+	    { /*Got a minimum between b and c. */
+	      *ax=(*bx); *bx=u; *fa=(*fb); *fb=fu;
+	      return;
+	    } 
+	  else if (fu > *fb) 
+	    { /*Got a minimum between between a and u.*/
+	      *cx=u; *fc=fu;
+	      return;
+	    } 
+	  u=(*cx)+GOLD*(*cx-*bx);/* Parabolic fit was no use. Use default magnification.*/
+	  fu=(*func)(u); 
+	} 
+      else if ((*cx-u)*(u-ulim) > 0.0) 
+	{ /*Parabolic fit is between c and its allowed limit.*/
+	  fu=(*func)(u); 
+	  if (fu < *fc) 
+	    {
+	      SHFT(*bx,*cx,u,*cx+GOLD*(*cx-*bx));
+	      SHFT(*fb,*fc,fu,(*func)(u));
+	    } 
+	}
+      else if ((u-ulim)*(ulim-*cx) >= 0.0) 
+	{ /*Limit parabolic u to maximum allowed value.*/
+	  u=ulim; fu=(*func)(u); 
+	} 
+      else
+	{ /*Reject parabolic u, use default magnification.*/
+	  u=(*cx)+GOLD*(*cx-*bx); fu=(*func)(u); 
+	} 
+      SHFT(*ax,*bx,*cx,u);  /*Eliminate oldest point and continue.*/
+      SHFT(*fa,*fb,*fc,fu);
+    }
+}
+#define MOV3(a,b,c, d,e,f) (a)=(d);(b)=(e);(c)=(f);
+double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)(double), double tol, double *xmin) 
+  /* Given a function f and its derivative function df, and given a bracketing triplet of abscissas ax, bx, cx
+   * [such that bx is between ax and cx, and f(bx) is less than both f(ax) and f(cx)], this routine isolates the
+   * minimum to a fractional precision of about tol using a modi cation of Brent s method that uses derivatives.
+   * The abscissa of the minimum is returned as xmin, and 
+   the minimum function value is returned as dbrent, the returned function value. */
+{ 
+  const double ZEPSDBR = 1E-10;
+  const int ITMAXDBR=100; 
+  int iter,ok1,ok2; /*Will be used as  ags for whether proposed steps are acceptable or not.*/
+  double a,b,d,d1,d2,du,dv,dw,dx,e=0.0; double fu,fv,fw,fx,olde,tol1,tol2,u,u1,u2,v,w,x,xm; 
+  a=(ax < cx ? ax : cx); b=(ax > cx ? ax : cx); x=w=v=bx; fw=fv=fx=(*f)(x); dw=dv=dx=(*df)(x); 
+  /*All our housekeeping chores are doubled by the necessity of moving derivative values around as well 
+   * as function values. */
+  for (iter=1;iter<=ITMAXDBR;iter++)
+    { 
+      xm=0.5*(a+b); 
+      tol1=tol*fabs(x)+ZEPSDBR; tol2=2.0*tol1; 
+      if (fabs(x-xm) <= (tol2-0.5*(b-a))) 
+	{ 
+	  *xmin=x; return fx; 
+	} 
+      if (fabs(e) > tol1)
+	{ 
+	  d1=2.0*(b-a); /*Initialize these d s to an out-of-bracket value.*/
+	  d2=d1; 
+	  if (dw != dx)
+	    d1=(w-x)*dx/(dx-dw); /*Secant method with one point.*/
+	  if (dv != dx)
+	    d2=(v-x)*dx/(dx-dv); /*And the other. Which of these two estimates of d shall we take?
+				   We will insist that they be within the bracket, and on the side
+				   pointed to by the derivative at x: */
+	  u1=x+d1; u2=x+d2; 
+	  ok1 = (a-u1)*(u1-b) > 0.0 && dx*d1 <= 0.0; 
+	  ok2 = (a-u2)*(u2-b) > 0.0 && dx*d2 <= 0.0; olde=e; 
+	  /*Movement on the step before last.*/
+	  e=d; 
+	  if (ok1 || ok2) 
+	    {
+	      /* both are acceptable, then take the smallest one. */
+	      if (ok1 && ok2) 
+		d=(fabs(d1) < fabs(d2) ? d1 : d2); 
+	      else if (ok1) 
+		d=d1; 
+	      else d=d2; 
+	      if (fabs(d) <= fabs(0.5*olde)) 
+		{ 
+		  u=x+d; 
+		  if (u-a < tol2 || b-u < tol2)
+		    d=SIGN(tol1,xm-x); 
+		} else 
+		{ /* Bisect, not golden section.*/
+		  d=0.5*(e=(dx >= 0.0 ? a-x : b-x)); /*Decide which segment by the sign of the derivative.*/
+		} 
+	    } 
+	  else
+	    {
+	      d=0.5*(e=(dx >= 0.0 ? a-x : b-x));
+	    } 
+	} 
+      else
+	{ 
+	  d=0.5*(e=(dx >= 0.0 ? a-x : b-x));
+	} 
+      if (fabs(d) >= tol1) 
+	{ 
+	  u=x+d; fu=(*f)(u);
+	} 
+      else
+	{ 
+	  u=x+SIGN(tol1,d); 
+	  fu=(*f)(u);
+	  if (fu > fx) 
+	    { /*If the minimum step in the downhill direction takes us uphill, then we are done.*/
+	      *xmin=x;
+	      return fx;
+
+	    }
+	}
+      du=(*df)(u); /*Now all the housekeeping, sigh.*/
+      if (fu <= fx) 
+	{ 
+	  if (u >= x) a=x;
+	  else
+	    b=x;
+	  MOV3(v,fv,dv, w,fw,dw); 
+	  MOV3(w,fw,dw, x,fx,dx); 
+	  MOV3(x,fx,dx, u,fu,du);
+	} 
+      else
+	{
+	  if (u < x)
+	    a=u; 
+	  else
+	    b=u; 
+	  if (fu <= fw || w == x)
+	    { 
+	      MOV3(v,fv,dv, w,fw,dw); 
+	      MOV3(w,fw,dw, u,fu,du); }
+	  else if (fu < fv || v == x || v == w)
+	    {
+	      MOV3(v,fv,dv, u,fu,du); 
+	    }
+	}
+    } 
+  nrerror("Too many iterations in routine dbrent"); 
+  return 0.0; /*Never get here.*/
+}
+
+double f1dim(double x) 
+  /*Must accompany linmin.*/
+{
+  int j; double f, xt[8];
+  // xt=vector(1,ncom);
+  for (j=0;j<ncom;j++) 
+    xt[j]=pcom[j]+x*xicom[j]; 
+  f=(*nrfunc)(xt); 
+  // free_vector(xt,1,ncom); 
+  return f;
+}
+double df1dim(double x) 
+{ 
+  int j;
+  double df1=0.0; 
+  double xt[8], df[8];
+  //xt=vector(1,ncom); df=vector(1,ncom);
+  for (j=0;j<ncom;j++) 
+    xt[j]=pcom[j]+x*xicom[j]; 
+  (*nrdfun)(xt,df); 
+  for (j=0;j<ncom;j++) 
+  df1 += df[j]*xicom[j]; 
+  //free_vector(df,1,ncom); free_vector(xt,1,ncom); 
+  return df1;
+}
+void dlinmin(double p[], double xi[], int n, double *fret, double (*func)(double []),
+	     void (*dfunc)(double [], double [])) 
+  /*Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and resets p to where 
+   * the function func(p) takes on a minimum along the direction xi from p, and replaces xi by the actual vector
+   * displacement that p was moved. Also returns as fret the value of func at the returned location p.
+   * This is actually all accomplished by calling the routines mnbrak and dbrent. */
+{ 
+  double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)(double), double tol,
+		double *xmin);
+  const double TOLLINMIN = 1E-7;
+  double f1dim(double x); 
+  double df1dim(double x); 
+  void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, double (*func)(double));
+  int j; 
+  double xx,xmin,fx,fb,fa,bx,ax; 
+  ncom=n; /*Define the global variables.*/
+ // pcom=vector(1,n);
+ // xicom=vector(1,n); 
+  nrfunc=func; nrdfun=dfunc;
+  for (j=0;j<n;j++) 
+    { 
+      pcom[j]=p[j];
+      xicom[j]=xi[j]; 
+    } 
+  ax=0.0; /*Initial guess for brackets.*/
+  xx=1.0; 
+  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dim);
+  *fret=dbrent(ax,xx,bx,f1dim,df1dim,TOLLINMIN,&xmin);
+  for (j=0;j<n;j++) 
+    { /* Construct the vector results to return. */
+      xi[j] *= xmin; p[j] += xi[j]; 
+    } 
+  //free_vector(xicom,1,n); free_vector(pcom,1,n); 
+}
+void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
+  /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
+   * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
+   * input as ftol. Returned quantities are p (the location of the minimum), iter
+   * (the number of iterations that were performed), and fret (the minimum value of the function).
+   * The routine linmin is called to perform line minimizations. */
+{ 
+  void dlinmin(double p[], double xi[], int n, double *fret, double (*func)(double []),
+	       void (*dfunc)(double [], double [])); 
+  int j,its;
+  const int ITMAXFR = 200;
+  const double EPSFR=1E-10;
+  double gg,gam,fp,dgg;
+  double g[8],h[8],xi[8];
+  fp=(*func)(p); /*Initializations.*/
+  (*dfunc)(p,xi); 
+  for (j=0;j<n;j++)
+    { 
+      g[j] = -xi[j]; 
+      xi[j]=h[j]=g[j];
+    }
+  for (its=1;its<=ITMAXFR;its++)
+    { /* Loop over iterations.*/
+      *iter=its;
+      dlinmin(p,xi,n,fret,func,dfunc); /* Next statement is the normal return: */
+      if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
+	{ 
+	  return;
+	} 
+      fp= *fret; 
+      (*dfunc)(p,xi);
+      dgg=gg=0.0;
+      for (j=0;j<n;j++) 
+	{
+	  gg += g[j]*g[j]; 
+	  /* dgg += xi[j]*xi[j]; */ /* This statement for Fletcher-Reeves.*/
+	  dgg += (xi[j]+g[j])*xi[j]; /*This statement for Polak-Ribiere.*/
+	} 
+      if (gg == 0.0) 
+	{ /* Unlikely. If gradient is exactly zero then we are already done.*/
+	  return; 
+	} 
+      gam=dgg/gg; 
+      for (j=0;j<n;j++) 
+	{ 
+	  g[j] = -xi[j]; xi[j]=h[j]=g[j]+gam*h[j]; 
+	} 
+    } 
+  nrerror("Too many iterations in frprmn");
+}
+extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3];
+void gradcgfunc(double *vec, double *grad)
+{
+  int kk, k1, k2; 
+  double fx[3], gx[3], fx2[3];
+  double Q1, Q2, A;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(vec[k2] - rA[k2]);
+      fx2[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx2[k1] += 2.0*Xa[k1][k2]*(vec[k2+3] - rA[k2]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(vec[k2+3] - rB[k2]);
+    }
+  Q1 = 0.0;
+  Q2 = 0.0;
+  A = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      Q1 += (vec[k1]-rA[k1])*fx[k1];
+      Q2 += (vec[k1+3]-rB[k1])*gx[k1];
+      A += (vec[k1+3]-rA[k1])*fx2[k1];
+    }
+  Q1 = 0.5*Q1 - 1.0;
+  Q2 = 0.5*Q2 - 1.0;
+  A = 0.5*A - 1.0;
+  if (A>=0)
+    A = 1.0;
+  else
+    A = 1.0;
+  for (kk=0; kk < 3; kk++)
+    {
+      grad[kk]=2.0*(vec[kk+3]-vec[kk])*A - vec[6]*fx[kk];
+      grad[kk+3]=-2.0*(vec[kk+3]-vec[kk])*A - vec[7]*gx[kk];
+    }
+  grad[6] = -Q1;
+  grad[7] = -Q2;
+}
+/* =========================== >>> forces <<< ======================= */
+void  cgfunc(double *vec)
+{
+  int kk, k1, k2, k3;
+  double fx[3], gx[3], fx2[3];
+  double Q1, Q2, A, F;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(vec[k2] - rA[k2]);
+      fx2[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx2[k1] += 2.0*Xa[k1][k2]*(vec[k2+3] - rA[k2]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(vec[k2+3] - rB[k2]);
+    }
+  Q1 = 0.0;
+  Q2 = 0.0;
+  A = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      Q1 += (vec[k1]-rA[k1])*fx[k1];
+      Q2 += (vec[k1+3]-rB[k1])*gx[k1];
+      A += (vec[k1+3]-rA[k1])*fx2[k1];
+    }
+  Q1 = 0.5*Q1 - 1.0;
+  Q2 = 0.5*Q2 - 1.0;
+  A = 0.5*A - 1.0;
+  if (A>=0)
+    A = 1.0;
+  else
+    A = 1.0;
+
+  F = 0.0;
+  for (kk=0; kk < 3; kk++)
+    F += A*Sqr(vec[kk]-vec[kk+3]);
+  F += vec[6]*Q1;
+  F += vec[7]*Q2;
+  return F;
+  printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], Epoten);
+  printf("vec[6]:%.15G vec[7]: %.15G Q1=%.15G Q2=%.15G\n", vec[6], vec[7], Q1, Q2);
+}
+
+void distconjgrad(int i, int j, double shift[3], double *vecg)
+{
+  int kk;
+  double Fret;
+  int iter;
+  icg = i;
+  jcg = j;
+  for (kk=0; kk < 3; kk++)
+    {
+      shiftcg[kk] = shift[kk];
+    }
+  for (kk=0; kk < 8; kk++)
+    {
+      vec[kk] = vecg[kk];
+    }
+  frprmn(vec, 8, 1E-8, &iter, &Fret, cgfunc, gradcgfunc);
+  for (kk=0; kk < 8; kk++)
+    {
+      vecg[kk] = vec[kk];
+    }
+}
 #define ITMAXZB 100 
 /* Maximum allowed number of iterations.*/
 #define EPSP 3.0e-8 /* Machine floating-point precision.*/
@@ -540,40 +1014,6 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
       alam=FMAX(tmplam,0.1*alam); /* lambda >= 0.1 lambda_1.*/
     }/* Try again.*/
 }
-int *ivector(int n)
-{
-  return calloc(n, sizeof(int)); 
-}
-double *vector(int n)
-{
-  return calloc(n, sizeof(double)); 
-}
-double **matrix(int n, int m)
-{
-  double **M;
-  int i, j;
-  M = malloc(sizeof(double*)*n);
-  for (i=0; i < n; i++)
-    M[i] = calloc(m, sizeof(double));
-  return M;
-}
-void free_vector(double *vec)
-{
-  free(vec);
-}
-void free_ivector(int *vec)
-{
-  free(vec);
-}
-void free_matrix(double **M, int n)
-{
-  int i;
-  for (i=0; i < n; i++)
-    {
-      free(M[i]);
-    }
-  free(M);
-}
 int nn, nn2, nnD; /* Global variables to communicate with fmin.*/
 double *fvec, *fvecG, *fvecD; 
 #ifdef MD_GLOBALNR2
@@ -1038,7 +1478,7 @@ void newtDistNeg(double x[], int n, int *check,
 	}
 #endif
     } 
-  MD_DEBUG(printf("maxits!!!\n"));
+  MD_DEBUG18(printf("maxits!!!\n"));
   *check = 2;
   FREERETURND;
   return;
