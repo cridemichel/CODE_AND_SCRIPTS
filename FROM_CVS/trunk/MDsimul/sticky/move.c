@@ -2484,7 +2484,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
       t += delt;
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       dold2 = dold;
-      d = calcDistNeg(t, i, j, shift, &amin, &bmin);
+      d = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
