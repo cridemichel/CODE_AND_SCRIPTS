@@ -1433,7 +1433,7 @@ void move(void)
 #if defined(MD_SQWELL) && defined(MD_BONDCORR)
   FILE *bof;
   int j, cc;
-  double corr1, corr2;
+  double cb, corr1, corr2;
 #endif
   const char sepStr[] = "@@@\n";
   int db, i, innerstep=0;
@@ -1516,13 +1516,13 @@ void move(void)
       else if (evIdB == ATOM_LIMIT + 8)
 	{
 #if defined(MD_BONDCORR) && defined(MD_SQWELL)  
-	  cc = 0;
+	  cb = 0;
 	  for (i=0; i < Oparams.parnum; i++)
 	    {
 	      for (j=0; j < numbonds0[i]; j++)
 		{
 		  if (bound(i,bonds0[i][j]))
-		    cc++;
+		    cb++;
 		}
 	      
 	    }
@@ -1534,7 +1534,8 @@ void move(void)
 	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
 	      exit(-1);
 	    }
-	  fprintf(bf, "%.15f %d\n", Oparams.time, cc/corrnorm);
+	  if (corrnorm)
+	    fprintf(bf, "%.15f %.8f\n", Oparams.time, cb/corrnorm);
 	  fclose(bf);
 #else
 	  sprintf(fileop2 ,"Store-%d-%d", 

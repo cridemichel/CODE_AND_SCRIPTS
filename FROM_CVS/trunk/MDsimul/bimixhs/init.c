@@ -916,6 +916,7 @@ void usrInitAft(void)
   printf("------------> corrini1: %f\n", corrini1);
   printf("------------> corrini2: %f\n", corrini2);
   printf("------------> corrini3: %f\n", corrini3);
+  printf("------------> corrnorm: %f\n", corrnorm);
   sprintf(fileop2 ,"bondcorr.dat");
   strcpy(fileop, absTmpAsciiHD(fileop2));
   if ( (bof = fopenMPI(fileop, "w")) == NULL)
