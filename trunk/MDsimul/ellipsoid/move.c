@@ -1827,6 +1827,11 @@ double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2,
 	}
       vecg[7] = sqrt(calc_norm(rDC)/nf);  
     }
+  else
+    {
+      for (k1 = 0; k1 < 8; k1++)
+	vecg[k1] = vecgsup[k1];
+    }
   MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
   newtDist(vecg, 8, &retcheck, funcs2beZeroedDist, i, j, shift); 
   if (retcheck != 0)
@@ -2490,6 +2495,8 @@ no_core_bump:
 		      //exit(-1);
 		      t = t1;
 		      d1 = calcDist(t, na, n, shift, r1, r2, &alpha, vecgd, 1);
+		      MD_DEBUG(printf("d1:%f\n", d1));
+		      exit(-1);
 		      h = EPS*(t2-t1);
 		      foundrc = 0;
 		      while (t < t2)
