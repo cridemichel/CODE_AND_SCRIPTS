@@ -440,6 +440,35 @@ void checkNan(char *s)
 	}
     }
 }
+void printMat(char* s, double** a, int ovrw)
+{
+  int m1, m2;
+  char name[512];
+  FILE* f;
+  sprintf(name, "%s.dat", s);
+  if (ovrw)
+    f = fopen(name, "w");
+  else
+    f = fopen(name, "a");
+  fprintf(f,"Matrix %s:\n", s);
+  fprintf(f,"{");
+  for (m1 = 0; m1 < NA-1; m1++)
+    {
+      fprintf(f,"{");
+      for (m2 = 0; m2 < NA-1; m2++)
+       	{
+  	  fprintf(f,"%.15G", a[m1][m2]);
+	  if (m2 < NA-2)
+	    fprintf(f,",");
+	}
+      
+      fprintf(f,"}");
+      if (m1 < NA-2)
+	fprintf(f,",\n");
+    }
+  fprintf(f,"}\n");
+  fclose(f);
+}
 void ComputeConstraints(double dt, double c, int RefSys, int after)
 {
   /* RefSys=1 allora calcola le forze del ref system */
@@ -554,6 +583,11 @@ void ComputeConstraints(double dt, double c, int RefSys, int after)
 	  for (m2=0;m2 < NB; m2++)
 	    cvMatInv[m1][m2] = cvMatInvS[m1][m2][i];
       }
+    if (i==0)
+     {
+	printMat("cvMatInv", cvMatInv, 1);
+	printMat("cvMat", cvMat, 1);
+     }
 /* ============================================== */
 #if 0
     for (a = 0; a < NA; a++)
