@@ -3554,7 +3554,6 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
     {
       t1 = t;
       t2 = t+delt*0.5;
-      
     }
   else
     {
@@ -3572,6 +3571,11 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
   if (polinterr)
     return 1;
+  if (*troot < t || *troot > t+delt)
+    {
+      printf("*troot: %.10G t=%.10G t+delt:%.10G\n", *troot, t, t+delt);
+      return 1;
+    }
   calcDistNeg(*troot, i, j, shift, r1, r2, &alpha, vecg, 0);
   //printf("t=%.8G t+delt=%.8G troot=%.8G\n", t, t+delt, *troot);
   return 0;
@@ -3784,11 +3788,15 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	}
       else if (d1 < OprogStatus.epsd && d2 < OprogStatus.epsd)
 	{
+#if 1
 	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd1[kk];
 	  
 	  if (interpol(i, j, t-delt, delt, d1, d2, &troot, vecgroot, shift, 1))
 	    dorefine = 0;
+	  else 
+	    dorefine = 1;
+#endif
 	}
       if (dorefine)
 	{
