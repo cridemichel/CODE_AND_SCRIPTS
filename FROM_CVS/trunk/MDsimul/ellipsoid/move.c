@@ -1957,6 +1957,7 @@ double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2,
   if (retcheck != 0)
     {
       printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      store_bump(i, j);
       exit(-1);
     }
   for (k1 = 0; k1 < 8; k1++)
@@ -2142,6 +2143,77 @@ double BodeTerm(double dt, double* fi)
 {
   return dt * (bc1 * fi[0] + bc2 * fi[1] + bc3 * fi[2] + bc2 * fi[3] +
 	       bc1 * fi[4]);
+}
+int refine_contact(int i, int j, double t, double vecgd[8], double shift[3],double  vecg[5])
+{
+  int kk, retcheck;
+
+  for (kk = 0; kk < 3; kk++)
+    {
+      vecg[kk] = (vecgd[kk]+vecgd[kk+3])*0.5; 
+    }
+  vecg[3] = vecgd[6];
+  vecg[4] = t;
+  newt(vecg, 5, &retcheck, funcs2beZeroed, i, j, shift); 
+  if (retcheck==2)
+    {
+      MD_DEBUG(printf("newt did not find any contact point!\n"));
+      return 0;
+    }
+  else if (vecg[4] < Oparams.time ||
+	   fabs(vecg[4] - Oparams.time)<1E-12 )
+    {
+      /* se l'urto è nel passato chiaramente va scartato
+       * tuttavia se t è minore di zero per errori di roundoff? */
+      /* Notare che i centroidi si possono overlappare e quindi t può
+       * essere tranquillamente negativo */
+      MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
+		      vecg[4], Oparams.time));
+      return 0;
+    }
+  else
+    {
+      return 1; 
+    }
+}
+int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, double vecg[5])
+{
+  double h, d1, d2, alpha, vecgd[8], t, r1[3], r2[3]; 
+  double normddot, ddot[3], maxddot, delt;
+  const double epsd = 0.001; 
+  int foundrc, retcheck, kk;
+  t = t1;
+  MD_DEBUG(printf("[locate_contact] t1=%f t2=%f shift=(%f,%f,%f)\n", t1, t2, shift[0], shift[1], shift[2]));
+  d1 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  MD_DEBUG(printf(">>>>d1:%f\n", d1));
+  h = 0.01;//EPS*(t2-t1);
+  foundrc = 0;
+  if (d1  < 0)
+    {
+      if (refine_contact(i, j, t, vecgd, shift, vecg))
+	return 1;
+    }
+  while (t < t2)
+    {
+#if 0
+      normddot = calcvecF(i, j, t1, t, r1, r2, ddot);
+      if (normddot!=0)
+	t += epsd/normddot;
+      
+#endif
+      t += h;
+      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
+      MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f\n", t, d1, d2));
+      if (d1 > 0 && d2 < 0)
+	{
+	  if (refine_contact(i, j, t, vecgd, shift, vecg))
+	    return 1;
+	  else 
+	    continue;
+	}
+      d1 = d2;
+    }
+  return foundrc;
 }
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[8])
 {
@@ -2621,9 +2693,10 @@ no_core_bump:
 			{
 			  MD_DEBUG(printf("Centroids overlap!\n"));
 			  t2 = t = (sqrt (d) - b) / vv;
-			  t1 = 0; 
+			  t1 = 0.0; 
 			  overlap = 1;
 			  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+			  MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
 			}
 		      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
 		      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
@@ -2678,7 +2751,7 @@ no_core_bump:
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
-		      if (!locate_contact(na, n, shift, t1, t2, vecg))
+		      if (!locate_contact_trivial(na, n, shift, t1, t2, vecg))
 			continue;
 #if 0
 	    	      gd = (d2 - d1)/h; 
