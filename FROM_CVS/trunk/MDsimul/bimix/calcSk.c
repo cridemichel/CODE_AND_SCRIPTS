@@ -134,7 +134,7 @@ int mesh[][150][3]=
 int ntripl[]=
 #include "./ntripl.dat"
 int numk = 98;
-
+int begk = 0;
 /* ========================== >>> readStart <<< ============================ */
 void readRestart(char filewalter[132])
 {
@@ -166,7 +166,7 @@ void calcSk(void)
   kbeg = 0.0; /*pi2 * invL;*/
   scalFact = pi2 * invL;
   invNa = 1.0 / Na;
-  for(n = 0; n < numk; n++)
+  for(n = begk; n < numk; n++)
     {
       sumRho = 0.0;
       for(mp = 0; mp < ntripl[n]; mp++)
@@ -257,7 +257,11 @@ int main(int argc, char **argv)
     {
       numk = atoi(argv[2]);
     }
-
+  else if (argc==4)
+    {
+      begk = atoi(argv[2]);
+      numk = atoi(argv[3]);
+    } 
   njob = 0;
       
   /* NOTA:
