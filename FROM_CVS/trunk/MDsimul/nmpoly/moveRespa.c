@@ -351,9 +351,9 @@ void updImpConstrVsqAft(double dt, double c, int i, double **cVec)
 			Sqr(py[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - py[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]) + 
 			Sqr(pz[cAtom1[mm]][i]/Oparams.m[cAtom1[mm]] - pz[cAtom2[mm]][i]/Oparams.m[cAtom2[mm]]); 
 		      cost =- cvMatInv[m][mm]*dvSq;
-		      px[a][i] += w * cdt * cost * dx;
-		      py[a][i] += w * cdt * cost * dy;
 		      pz[a][i] += w * cdt * cost * dz;
+		      py[a][i] += w * cdt * cost * dy;
+		      px[a][i] += w * cdt * cost * dx;
 		      
 		      continue;
 		    }
@@ -376,25 +376,25 @@ void updImpConstrVsqAft(double dt, double c, int i, double **cVec)
 		  pz[a][i] -= costz * pm;
     		  py[a][i] -= costy * pm;
 	      	  px[a][i] -= costx * pm;
-		  pz[a][i] += costz2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
 		  pz[a][i] += costz2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  py[a][i] += costy2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  pz[a][i] += costz2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
 		  py[a][i] += costy2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
-		  px[a][i] += costx2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
+		  py[a][i] += costy2 * px[a][i]*px[b][i]/(Oparams.m[a]*Oparams.m[b]);
 		  px[a][i] += costx2 * pz[a][i]*pz[b][i]/(Oparams.m[a]*Oparams.m[b]);
-	      	  px[a][i] *= exp(costx2*px[b][i]/(Oparams.m[a]*Oparams.m[b]));    
-    		  py[a][i] *= exp(costy2*py[b][i]/(Oparams.m[a]*Oparams.m[b]));
+		  px[a][i] += costx2 * py[a][i]*py[b][i]/(Oparams.m[a]*Oparams.m[b]);
 		  pz[a][i] *= exp(costz2*pz[b][i]/(Oparams.m[a]*Oparams.m[b]));
+    		  py[a][i] *= exp(costy2*py[b][i]/(Oparams.m[a]*Oparams.m[b]));
+	      	  px[a][i] *= exp(costx2*px[b][i]/(Oparams.m[a]*Oparams.m[b]));    
 
-		  pz[a][i] -= costz * Sqr(px[a][i]/Oparams.m[a]);
 		  pz[a][i] -= costz * Sqr(py[a][i]/Oparams.m[a]);
-		  py[a][i] -= costy * Sqr(px[a][i]/Oparams.m[a]);
+		  pz[a][i] -= costz * Sqr(px[a][i]/Oparams.m[a]);
 		  py[a][i] -= costy * Sqr(pz[a][i]/Oparams.m[a]);
-		  px[a][i] -= costx * Sqr(py[a][i]/Oparams.m[a]);
+		  py[a][i] -= costy * Sqr(px[a][i]/Oparams.m[a]);
 		  px[a][i] -= costx * Sqr(pz[a][i]/Oparams.m[a]);
-		  px[a][i] /= (1 + costx*px[a][i]/Oparams.m[a]);
-		  py[a][i] /= (1 + costy*py[a][i]/Oparams.m[a]);
+		  px[a][i] -= costx * Sqr(py[a][i]/Oparams.m[a]);
 		  pz[a][i] /= (1 + costz*pz[a][i]/Oparams.m[a]);
+		  py[a][i] /= (1 + costy*py[a][i]/Oparams.m[a]);
+		  px[a][i] /= (1 + costx*px[a][i]/Oparams.m[a]);
 		}
 	    }
 	}
