@@ -450,13 +450,15 @@ void bump (int i, int j, double* W, int bt)
   if (OprogStatus.lastcoll!=-1)
     {
       taus = Oparams.time - OprogStatus.lastcoll;
-      OprogStatus.DQTxy +=  OprogStatus.Txy*taus;
-      OprogStatus.DQTyz +=  OprogStatus.Tyz*taus;
-      OprogStatus.DQTzx +=  OprogStatus.Tzx*taus;
+      OprogStatus.DQTxy += OprogStatus.Txy*taus; 
+      OprogStatus.DQTyz += OprogStatus.Tyz*taus;
+      OprogStatus.DQTzx += OprogStatus.Tzx*taus;
       //taus = Oparams.time - OprogStatus.lastcoll;
-      OprogStatus.DQxy += OprogStatus.DQTxy + rxij*delpy;
-      OprogStatus.DQyz += OprogStatus.DQTyz + ryij*delpz;
-      OprogStatus.DQzx += OprogStatus.DQTzx + rzij*delpx;
+      //printf("DQT= %f %f %f\n", OprogStatus.DQTxy, OprogStatus.DQTyz, OprogStatus.DQTzx);
+      OprogStatus.DQWxy += rxij*delpy;
+      OprogStatus.DQWyz += ryij*delpz;
+      OprogStatus.DQWzx += rzij*delpx;
+      //printf("DQW= %f %f %f\n", OprogStatus.DQWxy, OprogStatus.DQWyz, OprogStatus.DQWzx);
     }
 #endif
 #if 0
@@ -1669,6 +1671,10 @@ void move(void)
 		  OprogStatus.DQTxy += taus * OprogStatus.Txy;
 		  OprogStatus.DQTyz += taus * OprogStatus.Tyz;
 		  OprogStatus.DQTzx += taus * OprogStatus.Tzx;
+		  OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
+		  OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
+		  OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+		  //printf("DQ= %f %f %f\n", OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
 		  OprogStatus.lastcoll = Oparams.time;
 		}
 #endif
