@@ -539,20 +539,6 @@ void updImpLong(double dt, double c)
       	py[a][i] += cdt * FyLong[a][i];
 	pz[a][i] += cdt * FzLong[a][i];
       }
-#ifndef MD_FENE
-  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
-#ifdef ATPRESS 
-  WCLong = WC;
-#endif
-#ifdef ATPTENS  
-  WCxxLong = WCxx;
-  WCyyLong = WCyy;
-  WCzzLong = WCzz;
-  WCxyLong = WCxy;
-  WCzxLong = WCzx;
-  WCyzLong = WCyz;
-#endif 
-#endif
 }
 void updImpNose(double dt, double c)
 {
@@ -830,7 +816,12 @@ void updImpNoseAndAft(double dt, double c)
 	 }
     }
 #endif
-
+#if 0
+#ifndef MD_FENE  
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
+		   0.0000000000001, px, py, pz);
+#endif
+#endif
 }
 #if 0
 void updImpNoseAndSym(double dt, double c)
@@ -996,11 +987,12 @@ void updImpNoseAnd(double dt, double c)
 	  PCMz += pz[a][i] - pzo;
 	} 
     }
+#if 1
 #ifndef MD_FENE  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
 		   0.0000000000001, px, py, pz);
 #endif
-
+#endif
 }
 
 void updImpAnd(double dt, double c)
@@ -1576,6 +1568,22 @@ void movelongRespaNPTBef(double dt)
    updImpLong(dt, 0.5);
    if (OprogStatus.Nose==1)
      updPvLong(dt, 0.5);
+#if 1
+#ifndef MD_FENE
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
+#ifdef ATPRESS 
+  WCLong = WC;
+#endif
+#ifdef ATPTENS  
+  WCxxLong = WCxx;
+  WCyyLong = WCyy;
+  WCzzLong = WCzz;
+  WCxyLong = WCxy;
+  WCzxLong = WCzx;
+  WCyzLong = WCyz;
+#endif 
+#endif
+#endif
 #endif
 }
 
@@ -1699,6 +1707,22 @@ void movelongRespaNPTAft(double dt)
   if (OprogStatus.Nose==1)
     updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
+#if 0
+#ifndef MD_FENE
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.0000000000001, px, py, pz);
+#ifdef ATPRESS 
+  WCLong = WC;
+#endif
+#ifdef ATPTENS  
+  WCxxLong = WCxx;
+  WCyyLong = WCyy;
+  WCzzLong = WCzz;
+  WCxyLong = WCxy;
+  WCzxLong = WCzx;
+  WCyzLong = WCyz;
+#endif 
+#endif
+#endif
 #endif
 }
 /* ========================== >>> movea <<< =============================== */
