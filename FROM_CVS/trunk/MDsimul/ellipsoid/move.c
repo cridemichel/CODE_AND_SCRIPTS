@@ -31,6 +31,9 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
 void InitEventList (void);
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
+#ifdef MD_NNL
+extern struct nebrTabStruct *nebrTab;
+#endif
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
@@ -2821,7 +2824,103 @@ void fdjacDistNegNew(int n, double x[], double fvec[], double **df,
 #endif
 }
 
+#ifdef MD_NNL
+void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA)
+{
+  double fx[3], gx[3];
+  int k1, k2;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*Xa[k1][k2];
+	  df[k1][k2+3] = -2.0*Sqr(x[6])*Xb[k1][k2];
+	}
+    }
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
+	}
+    } 
 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  for (k1 = 0; k1 < 5; k1++)
+    {
+      df[3][k1+3] = 0;
+    } 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = 0;
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1+3] = gx[k1];
+    } 
+  df[4][6] = df[4][7] = 0;
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][6] = -2.0*x[6]*gx[k1];
+      df[k1][7] = 0.0;
+    } 
+
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2] = 1 + 2.0*x[7]*Xa[k1][k2];
+	  else 
+	    df[k1+5][k2] = 2.0*x[7]*Xa[k1][k2];
+	}
+    }
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2+3] = -1;
+	  else 
+	    df[k1+5][k2+3] = 0;
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][6] = 0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][7] = fx[k1];
+#ifndef MD_GLOBALNRD
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[6])*gx[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+ fvec[4] = 0.5*fvec[4]-1.0;
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
+  //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+#endif
+}
+#endif
 
 void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
@@ -3068,7 +3167,58 @@ void funcs2beZeroedDistNegNew(int n, double x[], double fvec[], int i, int j, do
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
+#ifdef MD_NNL
+void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
+{
+  int k1, k2; 
+  double fx[3], gx[3];
+  /* x = (r, alpha, t) */ 
 
+#if 0
+  printf("Xa=\n");
+  print_matrix(Xa, 3);
+  printf("Xb=\n");
+  print_matrix(Xb, 3);
+#endif
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3] - rB[k2]);
+    }
+
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[6])*gx[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
+
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
+#if 0
+  MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+  MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+#endif
+}
+#endif
 void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
   int k1, k2; 
@@ -3274,13 +3424,69 @@ void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
       rI[k1] = rA[k1] + tt*rBA[k1];  
     }
 }
+#ifdef MD_NNL
+void guess_distNeigh(int i, 
+		double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
+		double **RA, double **RB)
+{
+  double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
+  int k1, n;
+  double saA[3], saB[3], scalfact[3];
+
+  saA[0] = axa[i];
+  saA[1] = axb[i];
+  saA[2] = axc[i];
+  scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[i]);
+  scalfact[1] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axb[i]);
+  scalfact[2] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axc[i]);
+  saB[0] = axa[i]*scalfact[0];
+  saB[1] = axb[i]*scalfact[1];
+  saB[2] = axb[i]*scalfact[2];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gradA[k1] =  (rB[k1]-rA[k1]);
+      gradB[k1] = -(rB[k1]-rA[k1]);
+    }
+  for (n = 0; n < 3; n++)
+    {
+      gradaxA[n] = 0;
+      gradaxB[n] = 0;
+      for (k1 = 0; k1 < 3; k1++) 
+	{
+	  gradaxA[n] += gradA[k1]*RA[n][k1];
+	  gradaxB[n] += gradB[k1]*RB[n][k1];
+	}
+    }
+#if 0 
+  gAn = calc_norm(gradaxA);
+  gBn = calc_norm(gradaxB);
+  for (n = 0; n < 3; n++)
+    {
+      gradaxA[n] /= gAn;
+      gradaxB[n] /= gBn;
+    }
+#endif
+  for (k1=0; k1 < 3; k1++)
+    {
+      dA[k1] = rA[k1];
+      dB[k1] = rB[k1];
+      for (n=0; n < 3;n++)
+	{
+	  dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
+	}
+    }
+  calc_intersec(dA, rA, Xa, rC);
+  calc_intersec(dB, rB, Xb, rD);
+}
+#endif
 void guess_dist(int i, int j, 
 		double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
 		double **RA, double **RB)
 {
   double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
   int k1, n;
-  double saA[3], saB[3], gAn, gBn;
+  double saA[3], saB[3];
 
   saA[0] = axa[i];
   saA[1] = axb[i];
@@ -3354,12 +3560,13 @@ extern double scalProd(double *A, double *B);
 #ifdef MD_NNL
 double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess)
 {
-  double vecg[8], rC[3], rD[3], rDC[3], r12[3], fx[3], vecgcg[6];
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6];
+  double shift[3] = {0.0, 0.0, 0.0};
   double ti, segno;
-  double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
+  double scalfact[3];
   int retcheck;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
-  int k1, k2, na;
+  int k1, na;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
@@ -3378,9 +3585,9 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
 
   ti = 0.0;//t + (t1 - atomTime[i]);
-  rB[0] = rx[i] + vx[j]*ti;
-  rB[1] = ry[i] + vy[j]*ti;
-  rB[2] = rz[i] + vz[j]*ti;
+  rB[0] = rx[i];// + vx[j]*ti;
+  rB[1] = ry[i];// + vy[j]*ti;
+  rB[2] = rz[i];// + vz[j]*ti;
   UpdateOrient(i, ti, RtB, Omega);
   na = (i < Oparams.parnumA)?0:1;
   scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[i]);
@@ -3389,15 +3596,14 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   invaSq[na] = 1.0/Sqr(axa[i]*scalfact[0]);
   invbSq[na] = 1.0/Sqr(axb[i]*scalfact[1]);
   invcSq[na] = 1.0/Sqr(axc[i]*scalfact[2]);
-  
-  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
+  tRDiagR(i, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
 retry:
   if (OprogStatus.forceguess)
     calcguess = 1;
   if (calcguess)
     {
       if (OprogStatus.guessDistOpt==1)
-	guess_dist(i, j, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
+	guess_distNeigh(i, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
       else
 	{
 	  calc_intersec(rB, rA, Xa, rC);
@@ -3413,10 +3619,7 @@ retry:
 	      vecgcg[k1] = rC[k1];
 	      vecgcg[k1+3] = rD[k1];
 	    }
-	  //distconjgrad(i, j, shift, vecgcg, 100, 1); 
-	  //distconjgrad(i, j, shift, vecgcg, 1/OprogStatus.tolSD, 1);
-	  //guessdistByMesh(i, j, shift, vecgcg);
-	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+	  distconjgrad(i, i, shift, vecgcg, OprogStatus.springkSD, 1);
 	  for (k1=0; k1 < 3; k1++)
 	    {
 	      rC[k1] = vecgcg[k1];
@@ -3438,6 +3641,7 @@ retry:
 	  vecg[k1+3] = rD[k1];
 	  rDC[k1] = rD[k1] - rC[k1];
 	}
+#if 0
       if (OprogStatus.epsdGDO > 0.0)
 	{
 	  g1 = calc_norm(rDC)/nf;
@@ -3453,6 +3657,7 @@ retry:
 	  else 
 	    g2 = g1;
 	}	  
+#endif
       if (OprogStatus.springkSD>0)
 	{
 	  if (scalProd(gradf, rDC) < 0.0)
@@ -3462,6 +3667,7 @@ retry:
 	}
       else
 	{
+#if 0	
 	  if (OprogStatus.epsdGDO > 0.0)
 	    {
 	      if (scalProd(gradf, rDC) < 0.0)
@@ -3469,8 +3675,8 @@ retry:
 	      else
 		vecg[7] = min(g1,g2);
 	    }
-	  else
-	    vecg[7] = 0.0;
+#endif
+	  vecg[7] = 0.0;
 	}
     }
   else
@@ -3479,7 +3685,7 @@ retry:
 	vecg[k1] = vecgsup[k1];
     }
   MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
-  newtDistNeigh(vecg, 8, &retcheck, funcs2beZeroedDistNeigh, i, j, shift); 
+  newtDistNegNeigh(vecg, 8, &retcheck, funcs2beZeroedDistNegNeigh, i); 
   if (retcheck != 0)
     {
       if (OprogStatus.targetPhi>0)
@@ -3487,14 +3693,14 @@ retry:
 	  calcdist_retcheck=1;
 	  return 0.0;
 	}
-      printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      printf("[NNL] I couldn't calculate distance between %d and %d\n, exiting....\n", i, i);
       if (calcguess==0)
 	{
 	  calcguess=2;
 	  goto retry;
 	} 
       Oparams.time = t + t1;
-      store_bump(i, j);
+      //store_bump(i, j);
       exit(-1);
     }
   for (k1 = 0; k1 < 8; k1++)
@@ -3510,13 +3716,16 @@ retry:
     {
       r12[k1] = r1[k1] - r2[k1];
     } 
-  
-  *alpha = vecg[3];
+  //*alpha = vecg[3];
+  segno = vecg[7];
+#if 0
   segno = -1;
   /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++) 
-      segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
+      segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]);
+#endif
+#if 0
   if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
     {
 #if 0
@@ -3530,6 +3739,7 @@ retry:
       exit(-1);
       //return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
     }
+#endif
   if (segno > 0)
     return calc_norm(r12);
   else
@@ -3540,7 +3750,7 @@ retry:
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
-  double vecg[8], rC[3], rD[3], rDC[3], r12[3], fx[3], vecgcg[6];
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6];
   double ti, segno;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck;
@@ -4397,6 +4607,63 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
+#ifdef MD_NNL
+int interpolNeigh(int i, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, int bracketing)
+{
+  int nb;
+  double d3, t1, t2;
+  double r1[3], r2[3], xb1[2], xb2[2];
+  d3 = calcDistNegNeigh(t+delt*0.5, tref, i, r1, r2, vecg, 0);
+  xa[0] = t;
+  ya[0] = d1;
+  xa[1] = t+delt*0.5;
+  ya[1] = d3;
+  xa[2] = t+delt;
+  ya[2] = d2;
+  polinterr = 0;
+  if (!bracketing)
+    {
+      t1 = t;
+      t2 = t+delt;
+    }
+  else
+    {
+      t1 = t;
+      t2 = t+delt;
+      nb = 1;
+      zbrak(distfunc, t1, t2, OprogStatus.zbrakn, xb1, xb2, &nb);
+      if (nb==0 || polinterr==1)
+	{
+	  return 1;
+	}
+      t1 = xb1[0];
+      t2 = xb2[0];
+    }
+  if (polinterr)
+    return 1;
+  *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
+  if (polinterr)
+    {
+      printf("bracketing: %d polinterr=%d t1=%.15G t2=%.15G\n", bracketing,polinterr, t1, t2);
+      printf("d: %.15G,%.15G,%.15G\n", d1, d3, d2);
+      printf("t: %.15G,%.15G,%.15G\n", t, t+delt*0.5, t+delt);
+      printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
+      return 1;
+    }
+  if ((*troot < t && fabs(*troot-t)>3E-8) || (*troot > t+delt && fabs(*troot - (t+delt))>3E-8))
+    {
+      printf("brack: %d xb1: %.10G xb2: %.10G\n", bracketing, xb1[0], xb2[0]);
+      printf("*troot: %.15G t=%.15G t+delt:%.15G\n", *troot, t, t+delt);
+      printf("d1=%.10G d2=%.10G d3:%.10G\n", d1, d2, d3);
+      printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
+      printf("distfunc(t+delt*0.5)=%.10G\n", distfunc(t+delt*0.5));
+      return 1;
+    }
+  calcDistNegNeigh(*troot, tref, i, r1, r2, vecg, 0);
+  *troot += tref;
+  return 0;
+}
+#endif
 int interpol(int i, int j, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3], int bracketing)
 {
   int nb;
@@ -4484,7 +4751,7 @@ double calcvecFNeigh(int i, double t, double t1, double* ddot, double *r1)
   return calc_norm(ddot);
 }
 
-int search_contact_faster_neigh(int i, int j, double *shift, double *t, double t1, double t2, 
+int search_contact_faster_neigh(int i, double *t, double t1, double t2, 
 				double *vecgd, double epsd, double *d1, double epsdFast,
 				double *r1, double *r2)
 {
@@ -4492,7 +4759,7 @@ int search_contact_faster_neigh(int i, int j, double *shift, double *t, double t
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
   double maxddot, told, delt, normddot, ddot[3];
   const int MAXOPTITS = 500;
-  double alpha, factori;
+  double factori;
   int its=0; 
    
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
@@ -4500,7 +4767,7 @@ int search_contact_faster_neigh(int i, int j, double *shift, double *t, double t
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
-  *d1 = calcDistNegNeigh(*t, t1, i, vecgd, 1);
+  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
@@ -4523,18 +4790,18 @@ int search_contact_faster_neigh(int i, int j, double *shift, double *t, double t
 	  *t = told;
 	  MD_DEBUG10(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG10(printf("convergence t>t2\n"));
-	  *d1 = calcDistNegNeigh(*t, t1, i, vecgd, 1);
+	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
 	  return 1;
 	}
 #endif
-      *d1 = calcDistNegNeigh(*t, t1, i, vecgd, 1);
+      *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
       if (*d1 < 0)
 	{
 	  /* go back! */
 	  MD_DEBUG10(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG10(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
-	  *d1 = calcDistNegNeigh(*t, t1, i, vecgd, 1);
+	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
 	  return 0;
 	}
       told = *t;
@@ -4546,7 +4813,7 @@ int search_contact_faster_neigh(int i, int j, double *shift, double *t, double t
   return 0;
 
 }
-int refine_contact_neigh(int i, int j, double t1, double t, double vecgd[8], double shift[3],double  vecg[5])
+int refine_contact_neigh(int i, double t1, double t, double vecgd[8], double  vecg[5])
 {
   int kk, retcheck;
 
@@ -4565,7 +4832,7 @@ int refine_contact_neigh(int i, int j, double t1, double t, double vecgd[8], dou
 #endif
   vecg[4] = t-t1;
   trefG = t1;
-  newtNeigh(vecg, 5, &retcheck, funcs2beZeroedNeigh, i, j, shift); 
+  newtNeigh(vecg, 5, &retcheck, funcs2beZeroedNeigh, i); 
   vecg[4] += t1;
   if (retcheck==2)
     {
@@ -4579,17 +4846,16 @@ int refine_contact_neigh(int i, int j, double t1, double t, double vecgd[8], dou
 }
 int locate_contact_neigh(int i, double vecg[5])
 {
-  double h, d, dold, dold2, d1Neg, d1Pos, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
-  double vd, normddot, ddot[3], t1, t2, maxddot, delt, told, troot, vecgroot[8];
+  double h, d, dold, dold2, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
+  double normddot, ddot[3], t1, t2, maxddot, delt, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax, factori; 
-  double d2old;
   int dorefine;
+  int its, foundrc, retcheck, kk;
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
   epsdMax = OprogStatus.epsdMax;
-  int its, foundrc, retcheck, kk;
   /* NOTA: implementare le varie funzioni _neigh (search_contact_faster_neigh, ecc.)
    * in tali funzioni la particella j non è altro che un ellissoide più grande di i
    * con lo stesso centro e immobile */
@@ -4601,7 +4867,7 @@ int locate_contact_neigh(int i, double vecg[5])
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
   h = OprogStatus.h; /* last resort time increment */
-  if (search_contact_faster_neigh(i, &t, t1, vecgd, epsd, &d, epsdFast, r1, r2))
+  if (search_contact_faster_neigh(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0;  
   MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
@@ -4623,7 +4889,7 @@ int locate_contact_neigh(int i, double vecg[5])
       for (kk = 0; kk < 8; kk++)
 	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;
-      d = calcDistNegNeigh(t, t1, i, vecgd, 0);
+      d = calcDistNegNeigh(t, t1, i, r1, r2, vecgd, 0);
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -4638,7 +4904,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d = calcDistNegNeigh(t, t1, i, vecgdold2, 0);
+	  d = calcDistNegNeigh(t, t1, i, r1, r2, vecgdold2, 0);
 	  for (kk = 0; kk < 8; kk++)
 	    vecgd[kk] = vecgdold2[kk];
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
@@ -4646,7 +4912,7 @@ int locate_contact_neigh(int i, double vecg[5])
 #if 1
       if (d > epsdFastR)
 	{
-	  if (search_contact_faster_neigh(i, &t, t1, vecgd, epsd, &d, epsdFast, r1, r2))
+	  if (search_contact_faster_neigh(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
 	    {
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
@@ -4666,7 +4932,7 @@ int locate_contact_neigh(int i, double vecg[5])
        	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
 #ifndef MD_NOINTERPOL  
-	 if (interpol(i, j, t1, t-delt, delt, dold, d, &troot, vecgroot, shift, 0))
+	 if (interpolNeigh(i, t1, t-delt, delt, dold, d, &troot, vecgroot, 0))
 #endif
 	    {
 	      /* vecgd2 è vecgd al tempo t-delt */
@@ -4682,7 +4948,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
 	  
-	  if (interpol(i, j, t1, t-delt, delt, dold, d, &troot, vecgroot, shift, 1))
+	  if (interpolNeigh(i, t1, t-delt, delt, dold, d, &troot, vecgroot, 1))
 	    dorefine = 0;
 	  else 
 	    dorefine = 1;
@@ -4690,7 +4956,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	}
       if (dorefine)
 	{
-	  if (refine_contact_neigh(i, j, t1, troot, vecgroot, shift, vecg))
+	  if (refine_contact_neigh(i, t1, troot, vecgroot, vecg))
 	    {
 	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
@@ -5101,8 +5367,8 @@ double estimate_tmin(double t, int na, int nb)
 #ifdef MD_NNL
 void PredictEventNNL(int na, int nb) 
 {
-  int i, cellRangeT[2 * NDIM], signDir[NDIM], evCode,
-  double *shift, t1, t2, rxC, ryC, rzC, t;
+  int i, cellRangeT[2 * NDIM], signDir[NDIM], evCode, k, n, kk;
+  double vecg[5], *shift, t1, t2, rxC, ryC, rzC, t, tm[NDIM];
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -5169,7 +5435,8 @@ void PredictEventNNL(int na, int nb)
   for (i=0; i <  nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
-      shift = nebrTab[na].shift[i];
+      for (kk=0; kk < 3; kk++)
+	shift[kk] = nebrTab[na].shift[kk];
       t1 = Oparams.time;
       t2 = nebrTab[na].nexttime;
       if (!locate_contact(na, n, shift, t1, t2, vecg))
@@ -5183,14 +5450,12 @@ void PredictEventNNL(int na, int nb)
 }
 void BuildNNL(int na) 
 {
-  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], vecgd[8],
-	 b, d, t, tInt, vv, distSq, t1, t2;
-  int et, kk, ii, overlap, mm, retcheck;
-  double ncong, cong[3], pos[3], vecg[5], pos2[3], r1[3], r2[3];
+  double shift[NDIM];
+  int kk;
+  double vecg[5], r1[3], r2[3], dist, alpha;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cels[NDIM];*/
-  int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
-  iX, iY, iZ, jX, jY, jZ, k, n;
+  int nb, cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
 
   for (kk=0; kk < 3; kk++)
     shift[kk] = 0;
@@ -5249,7 +5514,7 @@ void BuildNNL(int na)
 	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 	      for (n = cellList[n]; n > -1; n = cellList[n]) 
 		{
-		  if (n != na && n != nb && (nb >= -1 || n < na)) 
+		  if (n != na)// && n != nb && (nb >= -1 || n < na)) 
 		    {
       		      dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 		      if (dist < 2.0*OprogStatus.rNebrShell + 1.0E-6)
