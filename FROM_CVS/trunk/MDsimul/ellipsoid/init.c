@@ -205,7 +205,7 @@ void FCC(int Nm, COORD_TYPE *m)
 #else
       rz[i] = rz[i] - 0.5 * L;
 #endif
-      printf("%d = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]);
+      //printf("%d = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]);
     }
   return;
 }

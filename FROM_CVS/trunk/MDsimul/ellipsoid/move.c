@@ -3425,6 +3425,35 @@ void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
     }
 }
 #ifdef MD_NNL
+void calc_intersec_neigh(double *rB, double *rA, double **Xa, double* rI, double alpha)
+{
+  double A, B=0.0, C=0.0, D=0.0, tt=0.0;
+  double rBA[3];
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    rBA[k1] = rB[k1] - rA[k1];
+  MD_DEBUG(printf("rBA=(%f,%f,%f)\n", rBA[0], rBA[1], rBA[2])); 
+  MD_DEBUG(printf("rB= (%f,%f,%f)\n", rB[0], rB[1], rB[2]));
+  A = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      A += rBA[k1]*Xa[k1][k2]*rBA[k2];
+ 
+  if (A <= 0)
+    {
+      printf("[calc_intersec] Serious problem guessing distance, aborting...\n");
+      printf("tt = %f D=%f A=%f B=%f C=%f\n", tt, D, A, B, C);
+      printf("distance: %f\n", sqrt(Sqr(rBA[0])+Sqr(rBA[1])+Sqr(rBA[2])));
+      print_matrix(Xa,3);
+      print_matrix(Xb,3);
+      exit(-1);
+    }
+  tt = sqrt(1 / A); 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      rI[k1] = rA[k1] + alpha*tt*rBA[k1];  
+    }
+}
 void guess_distNeigh(int i, 
 		double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
 		double **RA, double **RB)
@@ -3569,6 +3598,7 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   int k1, na;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t + (t1 - atomTime[i]);
+  //printf("t1-atomTime[%d]:%.15G\n", i, t1-atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
@@ -3578,13 +3608,13 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   na = (i < Oparams.parnumA)?0:1;
   if (OprogStatus.targetPhi > 0)
     {
-      invaSq[na] = 1/Sqr(axa[i]);
-      invbSq[na] = 1/Sqr(axb[i]);
-      invcSq[na] = 1/Sqr(axc[i]);
+      invaSq[na] = 1.0/Sqr(axa[i]);
+      invbSq[na] = 1.0/Sqr(axb[i]);
+      invcSq[na] = 1.0/Sqr(axc[i]);
     }
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
 
-  printf("ti= %.15G\n", ti);
+  //printf("ti= %.15G rNebrShell: %f\n", ti, OprogStatus.rNebrShell);
   ti = 0.0;//t + (t1 - atomTime[i]);
   rB[0] = rx[i];// + vx[j]*ti;
   rB[1] = ry[i];// + vy[j]*ti;
@@ -3593,9 +3623,11 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   if ((Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]))==0.0 || (rA[0]==rB[0] && rA[1]==rB[1] && rA[2]==rB[2]))
     return OprogStatus.rNebrShell;
   na = (i < Oparams.parnumA)?0:1;
-  scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[i]);
-  scalfact[1] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axb[i]);
-  scalfact[2] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axc[i]);
+  scalfact[0] = (OprogStatus.rNebrShell+axa[i])/axa[i];
+  scalfact[1] = (OprogStatus.rNebrShell+axb[i])/axb[i];
+  scalfact[2] = (OprogStatus.rNebrShell+axc[i])/axc[i];
+  printf("semi-axes: (%f,%f,%f)\n",axa[i]*scalfact[0], axb[i]*scalfact[1],
+	 axc[i]*scalfact[2]);
   invaSq[na] = 1.0/Sqr(axa[i]*scalfact[0]);
   invbSq[na] = 1.0/Sqr(axb[i]*scalfact[1]);
   invcSq[na] = 1.0/Sqr(axc[i]*scalfact[2]);
@@ -3605,16 +3637,27 @@ retry:
     calcguess = 1;
   if (calcguess)
     {
-      if (OprogStatus.guessDistOpt==1)
+      if (0 && OprogStatus.guessDistOpt==1)
 	guess_distNeigh(i, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
       else
 	{
-	  calc_intersec(rB, rA, Xa, rC);
-	  calc_intersec(rA, rB, Xb, rD);
+	  calc_intersec_neigh(rB, rA, Xa, rC, -1);
+	  calc_intersec_neigh(rA, rB, Xb, rD, 1);
 	}
-      printf("rC = (%f,%f,%f) rD = (%f, %f, %f) \n"
-	     , rC[0]-rA[0], rC[1]-rA[1], rC[2]-rA[2],  
-	     rD[0]-rB[0], rD[1]-rB[1], rD[2]-rB[2]);
+#if 0
+	{
+	  int kk;
+	  double rCA[3], rDB[3];
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      rCA[kk] = rC[kk] - rA[kk];
+	      rDB[kk] = rD[kk] - rB[kk];
+	    }
+	  printf("rC = (%f,%f,%f) norm(rCA)=%f rD = (%f, %f, %f) norm(rDB)=%f scalprod: %f\n"
+	     , rC[0]-rA[0], rC[1]-rA[1], rC[2]-rA[2], calc_norm(rCA),  
+	     rD[0]-rB[0], rD[1]-rB[1], rD[2]-rB[2], calc_norm(rDB), scalProd(rCA, rDB));
+	}
+#endif
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
 
@@ -3747,9 +3790,15 @@ retry:
     }
 #endif
   if (segno > 0)
-    return calc_norm(r12);
+    {
+      printf("distanza: %.15G\n", calc_norm(r12));
+      return calc_norm(r12);
+    }
   else
-    return -calc_norm(r12);
+    {
+      printf("distanza: %.15G\n", -calc_norm(r12));
+      return -calc_norm(r12);
+    }
 }
 #endif
 
