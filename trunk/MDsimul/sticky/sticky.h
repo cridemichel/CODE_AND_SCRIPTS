@@ -69,9 +69,6 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #ifdef MD_SILICA
 #define MD_PBONDS 8 /* questo è il max num di bonds possibili fra due molecole */
 /* chiedere a Francesco!! */
-#define MD_PBONDS_SiSi 4
-#define MD_PBONDS_OO 2
-#define MD_PBONDS_SiO 2
 #else
 #define MD_PBONDS 8
 #endif
@@ -394,7 +391,11 @@ struct params
   COORD_TYPE m[2];             /* atoms masses */
   double sigma[2][2];
   double sigmaSticky;
+#ifdef MD_SILICA
+  double rcut[3];
+#else
   double rcut;
+#endif
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
@@ -548,7 +549,11 @@ struct pascii opar_ascii[]=
   {"m",                OP(m),                            2,   1, "%.10G"},
   {"sigma",           OP(sigma),                        2,   2, "%.10G"},
   {"sigmaSticky",     &OP(sigmaSticky),                  1,   1, "%.10G"},
+#ifdef MD_SILICA
+  {"rcut",              OP(rcut),                        1,   3, "%.10G"},
+#else
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
+#endif
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
 #ifndef MD_ASYM_ITENS
@@ -698,7 +703,13 @@ struct singlePar OsinglePar[] = {
   /* ==================== >>> PUT HERE YOUR PARAMS <<< ===================== */
   {"targetPhi", &OprogStatus.targetPhi, CT},
   {"eventMult",  &OprogStatus.eventMult,    INT},
+#ifdef MD_SILICA
+  {"rcutOO",       &Oparams.rcut[0],             CT},
+  {"rcutSiSi",     &Oparams.rcut[1],             CT},
+  {"rcutSiO",      &Oparams.rcut[2],             CT},
+#else
   {"rcut",       &Oparams.rcut,             CT},
+#endif
   {"equilibrat", &Oparams.equilibrat,       INT},
   {"eqlevel",    &OprogStatus.eqlevel,       CT},
   {"temperat",   &Oparams.T,                CT},
