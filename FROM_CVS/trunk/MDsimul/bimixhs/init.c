@@ -710,7 +710,7 @@ extern double calcpotene(void);
 #endif
 #if defined(MD_SQWELL) && defined(MD_BONDCORR) 
 double corrini3, corrini0, corrini1, corrini2, corrnorm;
-double *firstbreak;
+double *lastbreak1, *lastbreak2;
 #endif
   /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
@@ -794,7 +794,8 @@ void usrInitAft(void)
     numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
     numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
 #ifdef MD_BONDCORR
-    firstbreak=(double*)malloc(Oparams.parnum*sizeof(double));
+    lastbreak1=(double*)malloc(Oparams.parnum*sizeof(double));
+    lastbreak2=(double*)malloc(Oparams.parnum*sizeof(double));
 #endif
     bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
 #else
@@ -850,7 +851,8 @@ void usrInitAft(void)
     {
       numbonds[i] = 0;
 #ifdef MD_BONDCORR
-      firstbreak[i] = 0.0;
+      lastbreak1[i] = 0.0;
+      lastbreak2[i] = 0.0;
 #endif
     }
   for ( i = 0; i < Oparams.parnum-1; i++)
@@ -925,8 +927,8 @@ void usrInitAft(void)
       exit(-1);
     }
   fclose(bof);
-#if 0
- sprintf(fileop2 ,"BondCorrFuncB1.dat");
+#if 1
+ sprintf(fileop2 ,"BondCorrFuncB2.dat");
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
   if ( (bof = fopenMPI(fileop, "w")) == NULL)
@@ -934,9 +936,9 @@ void usrInitAft(void)
       mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
       exit(-1);
     }
-  fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini1);
+  //fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini1);
   fclose(bof);
-  sprintf(fileop2 ,"BondCorrFuncB2.dat");
+  sprintf(fileop2 ,"BondCorrFuncB3.dat");
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
   if ( (bof = fopenMPI(fileop, "w")) == NULL)
@@ -944,7 +946,7 @@ void usrInitAft(void)
       mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
       exit(-1);
     }
-  fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini2);
+  //fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini2);
   fclose(bof);
 #endif
 #endif
