@@ -1096,7 +1096,8 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
    * Gli urti in tale caso sono tutti elastici. */ 
   /* SQUARE WELL: modify here */
   //factor =2.0*vc/denom;
-  mredl = -1 / denom;
+  /* NOTA + o -????*/
+  mredl = 1 / denom;
   switch (bt)
     {
       /* N.B.
@@ -1128,14 +1129,16 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       add_bond(i, j, ata, atb);
       add_bond(j, i, atb, ata);
       factor = -vc - sqrt(Sqr(vc) + 2.0*Oparams.bheight/mredl);
+      printf("delta= %f height: %f mredl=%f\n", 
+	     Sqr(vc) + 2.0*Oparams.bheight/mredl, Oparams.bheight, mredl );
       factor *= mredl;
       break;
     }
 
   MD_DEBUG(printf("factor=%f denom=%f\n", factor, denom));
-  delpx = - factor * norm[0];
-  delpy = - factor * norm[1];
-  delpz = - factor * norm[2];
+  delpx = factor * norm[0];
+  delpy = factor * norm[1];
+  delpz = factor * norm[2];
 #if 0
   ene= (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
 	Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
@@ -1169,6 +1172,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   if (isnan(wx[i]))
     {
       printf("factor: %f denom: %f vc: %f invIa: %f\n", factor, denom, vc, invIa);
+      printf("bt: %d\n", bt);
       exit(-1);
     }
 #endif
