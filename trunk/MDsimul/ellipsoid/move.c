@@ -37,6 +37,7 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
 #ifdef MD_NNL
 extern struct nebrTabStruct *nebrTab;
+double nextNNLrebuild;
 #endif
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
@@ -173,7 +174,8 @@ void rebuildNNL(void)
 	nltime = nebrTab[i].nexttime;
     }
   /* next complete update */
-  ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
+  nextNNLrebuild = nltime;
+  //ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 }
 #endif
 /* ========================== >>> scalCor <<< ============================= */
@@ -650,6 +652,9 @@ void scale_Phi(void)
 #endif
   //check_dist_min("PRIMA");
   rebuild_linked_list();
+#ifdef MD_NNL
+  rebuildNNL();
+#endif
   rebuildCalendar();
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
@@ -2078,8 +2083,8 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
   int na; 
   double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
-  double DA[3][3], DB[3][3], fx[3], gx[3], invaSqN[2], invbSqN[2], invcSqN[2];
-  double Fxt[3], Gxt[3], Ft, Gt, scalfact[3];
+  double DA[3][3], DB[3][3], fx[3], gx[3], invaSqN, invbSqN, invcSqN;
+  double Fxt[3], Gxt[3], Ft, Gt;
   int k1, k2;
   ti = x[4] + (trefG - atomTime[iA]);
   rA[0] = rx[iA] + vx[iA]*ti;
@@ -2092,46 +2097,35 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   UpdateOrient(iA, ti, RA, OmegaA);
   MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
   MD_DEBUG2(print_matrix(RA, 3));
-  na = (iA < Oparams.parnumA)?0:1;
-  invaSqN[na] = 1/Sqr(axa[iA]);
-  invbSqN[na] = 1/Sqr(axb[iA]);
-  invcSqN[na] = 1/Sqr(axc[iA]);
+  invaSqN = 1/Sqr(axa[iA]);
+  invbSqN = 1/Sqr(axb[iA]);
+  invcSqN = 1/Sqr(axc[iA]);
 
-  tRDiagR(iA, Xa, invaSqN[na], invbSqN[na], invcSqN[na], RA);
-  MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
+  tRDiagR(iA, Xa, invaSqN, invbSqN, invcSqN, RA);
+  MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq, invbSq, invcSq));
   MD_DEBUG2(print_matrix(Xa, 3));
   DA[0][1] = DA[0][2] = DA[1][0] = DA[1][2] = DA[2][0] = DA[2][1] = 0.0;
-  DA[0][0] = invaSqN[na];
-  DA[1][1] = invbSqN[na];
-  DA[2][2] = invcSqN[na];
-  /*N.B. l'ellissoide B in tale caso non evolve! */
-  ti = 0.0;//x[4] + (trefG - atomTime[iB]);
-  rB[0] = rx[iA];
-  rB[1] = ry[iA];
-  rB[2] = rz[iA];
-  vB[0] = 0.0;//vx[iA];
-  vB[1] = 0.0;//vy[iA];
-  vB[2] = 0.0;//vz[iA];
-  UpdateOrient(iA, ti, RB, OmegaB);
-  na = (iA < Oparams.parnumA)?0:1;
-#if 1
-  scalfact[0] = (OprogStatus.rNebrShell+axa[iA])/axa[iA];
-  scalfact[1] = (OprogStatus.rNebrShell+axb[iA])/axb[iA];
-  scalfact[2] = (OprogStatus.rNebrShell+axc[iA])/axc[iA];
-#else
-  scalfact[0] = axa[iA]*OprogStatus.rNebrShell;
-  scalfact[1] = axb[iA]*OprogStatus.rNebrShell;
-  scalfact[2] = axc[iA]*OprogStatus.rNebrShell; 
-#endif
-  invaSqN[na] = 1.0/Sqr(axa[iA]*scalfact[0]);
-  invbSqN[na] = 1.0/Sqr(axb[iA]*scalfact[1]);
-  invcSqN[na] = 1.0/Sqr(axc[iA]*scalfact[2]);
+  DA[0][0] = invaSqN;
+  DA[1][1] = invbSqN;
+  DA[2][2] = invcSqN;
 
-  tRDiagR(iA, Xb, invaSqN[na], invbSqN[na], invcSqN[na], RB);
+  /*N.B. l'ellissoide B in tale caso non evolve! */
+  rB[0] = nebrTab[iA].r[0];
+  rB[1] = nebrTab[iA].r[1];
+  rB[2] = nebrTab[iA].r[2];
+  vB[0] = 0.0;
+  vB[1] = 0.0;
+  vB[2] = 0.0;
+  
+  invaSqN = 1.0/Sqr(nebrTab[iA].axa);
+  invbSqN = 1.0/Sqr(nebrTab[iA].axb);
+  invcSqN = 1.0/Sqr(nebrTab[iA].axc);
+
+  tRDiagR(iA, Xb, invaSqN, invbSqN, invcSqN, nebrTab[iA].R);
   DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
-  DB[0][0] = invaSqN[na];
-  DB[1][1] = invbSqN[na];
-  DB[2][2] = invcSqN[na];
+  DB[0][0] = invaSqN;
+  DB[1][1] = invbSqN;
+  DB[2][2] = invcSqN;
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
@@ -2192,7 +2186,7 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
     } 
  df[3][4] = Ft;
  df[4][4] = Gt;
-#ifndef MD_GLOBALNR
+#ifndef MD_GLOBALNRNL
  /* and now evaluate fvec */
  for (k1 = 0; k1 < 3; k1++)
     {
@@ -2432,7 +2426,7 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   int na, k1, k2; 
   double  rA[3], rB[3], ti;
   double fx[3], gx[3];
-  double Omega[3][3], scalfact[3], invaSqN[2], invbSqN[2], invcSqN[2];
+  double Omega[3][3], invaSqN, invbSqN, invcSqN;
   /* x = (r, alpha, t) */ 
   ti = x[4] + (trefG - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
@@ -2441,34 +2435,21 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   /* ...and now orientations */
   UpdateOrient(i, ti, Rt, Omega);
   na = (i < Oparams.parnumA)?0:1;
-  invaSqN[na] = 1.0/Sqr(axa[i]);
-  invbSqN[na] = 1.0/Sqr(axb[i]);
-  invcSqN[na] = 1.0/Sqr(axc[i]);
-  tRDiagR(i, Xa, invaSqN[na], invbSqN[na], invcSqN[na], Rt);
+  invaSqN = 1.0/Sqr(axa[i]);
+  invbSqN = 1.0/Sqr(axb[i]);
+  invcSqN = 1.0/Sqr(axc[i]);
+  tRDiagR(i, Xa, invaSqN, invbSqN, invcSqN, Rt);
 
-  //ti = trefG - atomTime[j];
   /* il secondo ellissoide resta fermo al tempo iniziale */
-  ti = 0.0;
   MD_DEBUG(printf("x[4]:%.15f atomTime[%d]:%.15f\n",x[4], j, atomTime[j]));
   /* il secondo ellissoide non deve evolvere nel tempo */
-  rB[0] = rx[i];
-  rB[1] = ry[i];
-  rB[2] = rz[i];
-  UpdateOrient(i, ti, Rt, Omega);
-  na = (i < Oparams.parnumA)?0:1;
-#if 1
-  scalfact[0] = (OprogStatus.rNebrShell+axa[i])/axa[i];
-  scalfact[1] = (OprogStatus.rNebrShell+axb[i])/axb[i];
-  scalfact[2] = (OprogStatus.rNebrShell+axc[i])/axc[i];
-#else
-  scalfact[0] = axa[i]*OprogStatus.rNebrShell;
-  scalfact[1] = axb[i]*OprogStatus.rNebrShell;
-  scalfact[2] = axc[i]*OprogStatus.rNebrShell; 
-#endif
-  invaSqN[na] = 1.0/Sqr(axa[i]*scalfact[0]);
-  invbSqN[na] = 1.0/Sqr(axb[i]*scalfact[1]);
-  invcSqN[na] = 1.0/Sqr(axc[i]*scalfact[2]);
-  tRDiagR(i, Xb, invaSqN[na], invbSqN[na], invcSqN[na], Rt);
+  rB[0] = nebrTab[i].r[0];
+  rB[1] = nebrTab[i].r[1];
+  rB[2] = nebrTab[i].r[2];
+  invaSqN = 1.0/Sqr(nebrTab[i].axa);
+  invbSqN = 1.0/Sqr(nebrTab[i].axb);
+  invcSqN = 1.0/Sqr(nebrTab[i].axc);
+  tRDiagR(i, Xb, invaSqN, invbSqN, invcSqN, nebrTab[i].R);
   
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -2928,7 +2909,7 @@ void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df,
     df[k1+5][6] = 0;
   for (k1 = 0; k1 < 3; k1++)
     df[k1+5][7] = fx[k1];
-#ifndef MD_GLOBALNRD
+#ifndef MD_GLOBALNRDNL
  /* and now evaluate fvec */
  for (k1 = 0; k1 < 3; k1++)
     {
@@ -3490,17 +3471,15 @@ void guess_distNeigh(int i,
 {
   double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
   int k1, n;
-  double saA[3], saB[3], scalfact[3];
+  double saA[3], saB[3];
 
+  //printf("===============>SONO QUI\n");
   saA[0] = axa[i];
   saA[1] = axb[i];
   saA[2] = axc[i];
-  scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[i]);
-  scalfact[1] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axb[i]);
-  scalfact[2] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axc[i]);
-  saB[0] = axa[i]*scalfact[0];
-  saB[1] = axb[i]*scalfact[1];
-  saB[2] = axb[i]*scalfact[2];
+  saB[0] = nebrTab[i].axa;
+  saB[1] = nebrTab[i].axb;
+  saB[2] = nebrTab[i].axb;
   for (k1 = 0; k1 < 3; k1++)
     {
       gradA[k1] =  (rB[k1]-rA[k1]);
@@ -3535,8 +3514,8 @@ void guess_distNeigh(int i,
 	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
 	}
     }
-  calc_intersec(dA, rA, Xa, rC);
-  calc_intersec(dB, rB, Xb, rD);
+  calc_intersec_neigh(dA, rA, Xa, rC, -1);
+  calc_intersec_neigh(dB, rB, Xb, rD, 1);
 }
 #endif
 void guess_dist(int i, int j, 
@@ -3615,19 +3594,21 @@ extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lam
 extern int maxitsRyck;
 extern double min(double a, double b);
 extern double min3(double a, double b, double c);
+extern double max3(double a, double b, double c);
 extern double scalProd(double *A, double *B);
 #ifdef MD_NNL
-double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess)
+double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int ignorefail, int *err)
+
 {
-  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], invaSqN[2], invbSqN[2], invcSqN[2];
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], invaSqN, invbSqN, invcSqN;
   double shift[3] = {0.0, 0.0, 0.0};
   double ti, segno;
-  double scalfact[3];
-  int retcheck;
+  int retcheck, firstDist = 0;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
   int k1, na;
   MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t-atomTime[i],i));
   MD_DEBUG20(printf("v = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
+  *err = 0;
   ti = t + (t1 - atomTime[i]);
   //printf("t1-atomTime[%d]:%.15G\n", i, t1-atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
@@ -3636,44 +3617,45 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   MD_DEBUG20(printf("AAAA ti= %.15G rA (%.15G,%.15G,%.15G)\n", ti, rA[0], rA[1], rA[2]));
   /* ...and now orientations */
   UpdateOrient(i, ti, RtA, Omega);
-  na = (i < Oparams.parnumA)?0:1;
-  invaSqN[na] = 1.0/Sqr(axa[i]);
-  invbSqN[na] = 1.0/Sqr(axb[i]);
-  invcSqN[na] = 1.0/Sqr(axc[i]);
+  invaSqN = 1.0/Sqr(axa[i]);
+  invbSqN = 1.0/Sqr(axb[i]);
+  invcSqN = 1.0/Sqr(axc[i]);
 
-  tRDiagR(i, Xa, invaSqN[na], invbSqN[na], invcSqN[na], RtA);
-
+  tRDiagR(i, Xa, invaSqN, invbSqN, invcSqN, RtA);
   //printf("ti= %.15G rNebrShell: %f\n", ti, OprogStatus.rNebrShell);
-  ti = 0.0;//t + (t1 - atomTime[i]);
-  rB[0] = rx[i];// + vx[j]*ti;
-  rB[1] = ry[i];// + vy[j]*ti;
-  rB[2] = rz[i];// + vz[j]*ti;
-  UpdateOrient(i, ti, RtB, Omega);
+  ti = 0.0;
+  rB[0] = rx[i];
+  rB[1] = ry[i];
+  rB[2] = rz[i];
   MD_DEBUG20(printf("BBBB ti= %.15G rB (%.15G,%.15G,%.15G)\n", ti, rB[0], rB[1], rB[2]));
+  /* NOTA: dato l'ellissoide e la sua neighbour list a t=0 bisognerebbe stimare con esattezza 
+   * la loro distanza e restituirla di seguito */
+
   if ((Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]))==0.0 || (rA[0]==rB[0] && rA[1]==rB[1] && rA[2]==rB[2]))
-    return OprogStatus.rNebrShell;
-  na = (i < Oparams.parnumA)?0:1;
-#if 1
-  scalfact[0] = (OprogStatus.rNebrShell+axa[i])/axa[i];
-  scalfact[1] = (OprogStatus.rNebrShell+axb[i])/axb[i];
-  scalfact[2] = (OprogStatus.rNebrShell+axc[i])/axc[i];
-#else
-  scalfact[0] = axa[i]*OprogStatus.rNebrShell;
-  scalfact[1] = axb[i]*OprogStatus.rNebrShell;
-  scalfact[2] = axc[i]*OprogStatus.rNebrShell; 
-#endif
-  printf("semi-axes: (%f,%f,%f)\n",axa[i]*scalfact[0], axb[i]*scalfact[1],
-	 axc[i]*scalfact[2]);
-  invaSqN[na] = 1.0/Sqr(axa[i]*scalfact[0]);
-  invbSqN[na] = 1.0/Sqr(axb[i]*scalfact[1]);
-  invcSqN[na] = 1.0/Sqr(axc[i]*scalfact[2]);
-  tRDiagR(i, Xb, invaSqN[na], invbSqN[na], invcSqN[na], RtB);
-retry:
+    {
+      //firstDist = 1;
+      return OprogStatus.rNebrShell*(min3(axa[i],axb[i],axc[i])/max3(axa[i],axb[i],axc[i]));
+    }
+  invaSqN = 1.0/Sqr(nebrTab[i].axa);
+  invbSqN = 1.0/Sqr(nebrTab[i].axb);
+  invcSqN = 1.0/Sqr(nebrTab[i].axc);
+  tRDiagR(i, Xb, invaSqN, invbSqN, invcSqN, nebrTab[i].R);
+retryneigh:
+  //printf("<<<<<<<CALCGUESS=%d forceguess=%d>>>>>>>>\n", calcguess, OprogStatus.forceguess);
   if (OprogStatus.forceguess)
     calcguess = 1;
   if (calcguess)
     {
-      if (0 && OprogStatus.guessDistOpt==1)
+#if 0
+      if (firstDist)
+	{
+	  double rBtmp[3]={1.0,0.0,0.0}, rAtmp[3]={-1.0,0.0,0.0};
+	  calc_intersec_neigh(rBtmp, rAtmp, Xa, rC, -1);
+	  calc_intersec_neigh(rAtmp, rBtmp, Xb, rD, 1);
+	}
+      else
+#endif
+      if (OprogStatus.guessDistOpt==1)
 	guess_distNeigh(i, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
       else
 	{
@@ -3777,15 +3759,21 @@ retry:
 	  calcdist_retcheck=1;
 	  return 0.0;
 	}
-      printf("[NNL] I couldn't calculate distance between %d and %d\n, exiting....\n", i, i);
+      printf("[NNL] I couldn't calculate distance between %d and its NL, calcguess=%d, exiting....\n", i, calcguess);
       if (calcguess==0)
 	{
 	  calcguess=2;
-	  goto retry;
+	  goto retryneigh;
 	} 
       Oparams.time = t + t1;
       //store_bump(i, j);
-      exit(-1);
+      if (ignorefail)
+	{
+	  *err = 1;
+	  return 0.0;
+	}
+      else
+	exit(-1);
     }
   for (k1 = 0; k1 < 8; k1++)
     {
@@ -3800,7 +3788,6 @@ retry:
     {
       r12[k1] = r1[k1] - r2[k1];
     } 
-  //*alpha = vecg[3];
   segno = vecg[7];
 #if 0
   segno = -1;
@@ -4700,10 +4687,10 @@ double distfunc(double x)
 #ifdef MD_NNL
 int interpolNeigh(int i, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, int bracketing)
 {
-  int nb;
+  int nb, distfail;
   double d3, t1, t2;
   double r1[3], r2[3], xb1[2], xb2[2];
-  d3 = calcDistNegNeigh(t+delt*0.5, tref, i, r1, r2, vecg, 0);
+  d3 = calcDistNegNeigh(t+delt*0.5, tref, i, r1, r2, vecg, 0, 0, &distfail);
   xa[0] = t;
   ya[0] = d1;
   xa[1] = t+delt*0.5;
@@ -4749,7 +4736,7 @@ int interpolNeigh(int i, double tref, double t, double delt, double d1, double d
       printf("distfunc(t+delt*0.5)=%.10G\n", distfunc(t+delt*0.5));
       return 1;
     }
-  calcDistNegNeigh(*troot, tref, i, r1, r2, vecg, 0);
+  calcDistNegNeigh(*troot, tref, i, r1, r2, vecg, 0, 0, &distfail);
   *troot += tref;
   return 0;
 }
@@ -4850,21 +4837,21 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
   double maxddot, told, delt, normddot, ddot[3];
   const int MAXOPTITS = 500;
   double factori;
-  int its=0; 
-   
+  int its=0, distfailed; 
+  const double GOLD= 1.618034;  
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
-  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
+  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed);
   timesF++;
   MD_DEBUG20(printf("Pri distances between %d d1=%.12G epsd*epsdTimes:%f\n", i, *d1, epsdFast));
   printf("[SEARCH_CONTACT_FASTER] t=%.15G ellips N. %d d=%.15G\n", *t, i, *d1); 
   told = *t;
   while (*d1 > epsdFast && its < MAXOPTITS)
     {
-      delt = *d1 / maxddot / 2.0;
+      delt = *d1 / maxddot;
       MD_DEBUG20(printf("SEARCH_CONTACT_FASTER delt=%.15G maxddot: %.15G\n", delt, maxddot));
       normddot = calcvecFNeigh(i, *t, t1, ddot, r1);
       //printf("normddot: %.15G\n", epsd/normddot);
@@ -4882,21 +4869,38 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
 	  *t = told;
 	  MD_DEBUG20(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG20(printf("convergence t>t2\n"));
-	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
+	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed);
 	  return 1;
 	}
 #endif
-      *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
+      *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed);
       printf("LOOP SEARCH CONTACT FASTER i=%d *d1=%.15G *t=%.15G\n", i, *d1, *t+t1);
+      /* NOTA: nel caso di urto di un ellissoide con la sua neighbour list 
+       * a t=0 i due ellissoidi hanno stesso centro e assi principali paralleli
+       * e questo implica che ci possono essere più soluzioni possibili per le eq.
+       * che definiscono la distanza.
+       * Questo implica che la distanza che ottengo è una sovrastima di quella vera e quindi 
+       * con il loop che segue compenso questo problema riducendo il passo fino a che 
+       * non arrivo ad una distanza positiva con il passo veloce */
+#if 1
+      while (*d1 < 0 || distfailed)
+	{
+	  /* reduce step size */
+	  delt /= GOLD;
+	  *t = told + delt;
+	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed);
+	}
+#else
       if (*d1 < 0)
 	{
 	  /* go back! */
 	  MD_DEBUG20(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG20(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
-	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1);
+	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed);
 	  return 0;
 	}
+#endif
       told = *t;
       its++;
       itsF++;
@@ -4934,7 +4938,7 @@ int locate_contact_neigh(int i, double vecg[5])
   double normddot, ddot[3], t1, t2, maxddot, delt, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax, factori; 
-  int dorefine;
+  int dorefine, distfail;
   int its, foundrc, retcheck, kk;
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
@@ -4951,7 +4955,7 @@ int locate_contact_neigh(int i, double vecg[5])
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
   h = OprogStatus.h; /* last resort time increment */
-  //t += h;
+  t += h;
   if (search_contact_faster_neigh(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0;  
   MD_DEBUG(printf(">>>>d:%f\n", d));
@@ -4974,7 +4978,8 @@ int locate_contact_neigh(int i, double vecg[5])
       for (kk = 0; kk < 8; kk++)
 	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;
-      d = calcDistNegNeigh(t, t1, i, r1, r2, vecgd, 0);
+      printf("[LOCATE_CONTACT] >>>>>>>>>>>><<<<<<<<<<\n"); 
+      d = calcDistNegNeigh(t, t1, i, r1, r2, vecgd, 0, 0, &distfail);
       printf("[LOCATE_CONTACT] t=%.15G ellips N. %d d=%.15G dold=%.15G its=%lld\n", t, i, d, dold, itsS); 
       if (fabs(d-dold2) > epsdMax)
 	{
@@ -4990,7 +4995,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d = calcDistNegNeigh(t, t1, i, r1, r2, vecgdold2, 0);
+	  d = calcDistNegNeigh(t, t1, i, r1, r2, vecgdold2, 0, 0, &distfail);
 	  for (kk = 0; kk < 8; kk++)
 	    vecgd[kk] = vecgdold2[kk];
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
@@ -5617,15 +5622,49 @@ void PredictEventNNL(int na, int nb)
       ScheduleEvent (na, n, t);
     }
 }
+
+void updrebuildNNL(int na)
+{
+  /* qui ricalcola solo il tempo di collisione dell'ellisoide na-esimo con 
+   * la sua neighbour list */
+  double vecg[5];
+  if (!locate_contact_neigh(na, vecg))
+    nebrTab[na].nexttime = timbig;
+  else
+    nebrTab[na].nexttime = vecg[4];
+  if (nebrTab[na].nexttime < nextNNLrebuild)
+    nextNNLrebuild = nebrTab[na].nexttime;
+}
+void updAllNNL()
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    updrebuildNNL(i);
+}
 void BuildNNL(int na) 
 {
   double shift[NDIM];
-  int kk;
-  double vecg[5], r1[3], r2[3], dist, alpha, maxddot, factori;
+  int kk, i1, i2;
+  double vecg[5], r1[3], r2[3], dist, alpha, maxddot, factori, Omega[3][3];
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cels[NDIM];*/
   int nb, cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
-
+#if 0
+  nebrTab[na].axa = 1.5*axa[na];
+  nebrTab[na].axb = 1.5*axb[na];
+  nebrTab[na].axc = 1.5*axc[na];
+#else
+  nebrTab[na].axa = OprogStatus.rNebrShell+axa[na];
+  nebrTab[na].axb = OprogStatus.rNebrShell+axb[na];
+  nebrTab[na].axc = OprogStatus.rNebrShell+axc[na];
+#endif
+  nebrTab[na].r[0] = rx[na];
+  nebrTab[na].r[1] = ry[na];
+  nebrTab[na].r[2] = rz[na];
+  UpdateOrient(na, 0, RtB, Omega);
+  for (i1 = 0; i1 < 3; i1++)
+    for (i2 = 0; i2 < 3; i2++)
+      nebrTab[na].R[i1][i2] = RtB[i1][i2];
   for (kk=0; kk < 3; kk++)
     shift[kk] = 0;
   /* calcola il tempo a cui si deve ricostruire la NNL */
@@ -6561,7 +6600,9 @@ void ProcessCollision(void)
   lastbump[evIdB]=evIdA;
 #endif
 #ifdef MD_NNL
-  ////updrebuildNNL(evIdA, evIdB);
+  /* ricalcola i tempi di collisione con la NL */
+  updrebuildNNL(evIdA);
+  updrebuildNNL(evIdB);
   PredictEventNNL(evIdA, -1);
   PredictEventNNL(evIdB, evIdA);
 #else
@@ -6733,7 +6774,11 @@ void rebuildCalendar(void)
     }
   for (n = 0; n < Oparams.parnum; n++)
     {
+#ifdef MD_NNL
+      PredictEventNNL(n, -2); 
+#else
       PredictEvent(n, -2); 
+#endif
     }
 }
 void distanza(int ia, int ib)
@@ -6781,6 +6826,24 @@ void move(void)
     {
       innerstep++;
       NextEvent();
+      /* l'evento di ricostruzione della NNL è mantenuto fuori dal calendario degli eventi per
+       * semplicità */
+#ifdef MD_NNL
+      if (Oparams.time > nextNNLrebuild)
+	{
+	  rebuildNNL();
+	  rebuildCalendar();
+	  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+      	  if (OprogStatus.storerate > 0.0)
+	    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+	  if (OprogStatus.rescaleTime > 0)
+	    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	  else
+	    OprogStatus.scalevel = 0;
+	  NextEvent();
+	}
+#endif
       /* Descrizione Eventi:
        * 0 <= evIdB < ATOM_LIMIT: 
        *        urto fra evIdA e evIdB 
@@ -6986,6 +7049,9 @@ void move(void)
 	  if (OprogStatus.brownian)
 	    {
 	      velsBrown(Oparams.T);
+#ifdef MD_NNL
+	      rebuildNNL();
+#endif
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
@@ -6996,7 +7062,7 @@ void move(void)
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	  break;
 	}
-#if defined(MD_NNL)
+#if 0 && defined(MD_NNL)
       else if (evIdB == ATOM_LIMIT + 11)
 	{
 	  UpdateSystem();
@@ -7009,7 +7075,6 @@ void move(void)
 	  printf("rebuilt NNL next time=%.15G\n", nltime);
 	  /* next complete update */
 	  ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
-	  //ScheduleEvent(evIdA, ATOM_LIMIT+11,nebrTab[i].nexttime);
 	}
 #endif
 #ifdef MD_GRAVITY
@@ -7066,6 +7131,9 @@ void move(void)
 			}
 		      rebuildLinkedList();
 		      MD_DEBUG3(distanza(996, 798));
+#ifdef MD_NNL
+		      rebuildNNL();
+#endif
 		      rebuildCalendar();
 		      if (OprogStatus.storerate > 0.0)
 			ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
@@ -7082,6 +7150,9 @@ void move(void)
 		  MD_DEBUG4(printf("SCALVEL #%lld Vz: %.15f\n", (long long int) Oparams.curStep,Vz));
 		  scalevels(Oparams.T, K, Vz);
 		  rebuildLinkedList();
+#ifdef MD_NNL
+		  rebuildNNL();
+#endif
 		  rebuildCalendar();
 		  if (OprogStatus.storerate > 0.0)
 		    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
@@ -7102,6 +7173,9 @@ void move(void)
 	      calcKVz();
 	      MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%lld Vz: %.15f\n", (long long int)Oparams.curStep,Vz));
 	      scalevels(Oparams.T, K, Vz);
+#ifdef MD_NNL
+	      updAllNNL();
+#endif
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
@@ -7140,6 +7214,9 @@ void move(void)
 		}
 	      K *= 0.5;
 	      scalevels(Oparams.T, K);
+#ifdef MD_NNL
+	      updAllNNL();
+#endif
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
