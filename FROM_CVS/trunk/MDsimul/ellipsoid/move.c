@@ -2882,6 +2882,7 @@ double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *
       invcSq[na] = 1/Sqr(axc[j]);
     }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+retry:
   if (calcguess)
     {
       calc_intersec(rB, rA, Xa, rC);
@@ -2927,6 +2928,11 @@ double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *
   if (retcheck != 0)
     {
       printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      if (calcguess==0)
+	{
+	  calcguess=2;
+	  goto retry;
+	} 
       Oparams.time = t;
       store_bump(i, j);
       exit(-1);
