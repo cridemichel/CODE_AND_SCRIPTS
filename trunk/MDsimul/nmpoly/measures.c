@@ -58,7 +58,7 @@ void energy(void)
   /* DESCRIPTION:
      This measuring function calculate the total energy of the system */
   COORD_TYPE dist, Px, Py, Pz, cost, Rx, Ry, Rz, RCMx, RCMy, RCMz, Mtot;
-  int n, mol, Nm, i, a;
+  int n, mol, Nm, i, a, dof;
   COORD_TYPE px, py, pz, lx, ly, lz, Lx, Ly, Lz;
   COORD_TYPE Rx_scal, Ry_scal, Rz_scal;
   COORD_TYPE L, invL;
@@ -70,12 +70,19 @@ void energy(void)
   printf("s: %.10f s1: %.10f Vol: %.10f Vol1: %.10f\n", s, s1, Vol, Vol1);
   E = K + Vc;
   /* And now add the contribute due to the thermal bath */
+#ifdef MD_FENE
+  E += Vfe;
+  dof = 3.0*NA;
+#else
+  dof = 2.0*NA+1;
+#endif
+  
   if (OprogStatus.Nose > 0)
     {
       if (OprogStatus.Nose == 2 || OprogStatus.Nose == 1)
 	{
 	  E = E + 0.5 * Sqr(s1) * OprogStatus.Q / Sqr(s) + 
-	    ( (2.0*NA+1) * ((COORD_TYPE) Nm) - 3.0) * Oparams.T * log(s);
+	    ( dof * ((COORD_TYPE) Nm) - 3.0) * Oparams.T * log(s);
 	}
       if (OprogStatus.Nose == 1)
 	E = E + 
@@ -235,10 +242,17 @@ void temperat(void)
      This the calculation of the instantaneous temperature */
   int i;
   COORD_TYPE invMtot,Mtot, Ktransl, vxCM, vyCM, vzCM, m0, m1, m2;
+  int dof;
+
+#ifdef MD_FENE
+  dof = 3*NA;
+#else
+  dof = (NA*2.0+1); 
+#endif
   if (OprogStatus.Nose >= 0)
-    temp = 2.0 * K / ((NA*2.0+1) * Oparams.parnum - 3.0);
+    temp = 2.0 * K / (dof * Oparams.parnum - 3.0);
   else
-    temp = 2.0 * K / ((NA*2.0+1) * Oparams.parnum);
+    temp = 2.0 * K / (dof * Oparams.parnum);
   
   Ktransl = 0.0;
   m0 = Oparams.m[0];

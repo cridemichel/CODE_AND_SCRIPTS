@@ -78,6 +78,7 @@ EXT_SLST	nmpoly.h	86;"	d
 EXT_SLST	nmpoly.h	87;"	d
 Elrc	move.c	/^COORD_TYPE pi, s1t, Vol1t, L, invL, s1p, Elrc, Plrc;   $/;"	v
 FCC	init.c	/^void FCC(int Nm, COORD_TYPE D, COORD_TYPE* m)$/;"	f
+FENEForce	forces.c	/^void FENEForce(void)$/;"	f
 FSKMAX	nmpoly.h	64;"	d
 FSPOINT	nmpoly.h	62;"	d
 Fcoeff	init.c	/^double *Fcoeff[3]; $/;"	v
@@ -99,7 +100,7 @@ GselfFile	xvautil.h	/^  AalphaFile[128], GselfFile[128], GsGsgaussFile[128], Fse
 GselfFlag	xvautil.h	/^  ddtdrFlag = 1, ddtdphiFlag = 1, AalphaFlag = 1, GselfFlag = 1,$/;"	v
 Gsnr	xvautil.h	/^int tCor, printEvery, nTeta, tBeg, Gsnr; $/;"	v
 GsrMax	xvautil.h	/^COORD_TYPE m0, m1, d, Vol, GsrMax, wtdRmax, kMax;$/;"	v
-HALFSQRT3	move.c	2065;"	d	file:
+HALFSQRT3	move.c	2071;"	d	file:
 HNBOX	nmpoly.h	/^  int HNBOX;$/;"	m	struct:progStatus
 HNBOX	nmpoly.h	690;"	d
 HP	move.c	/^static double HP[6][2] = {{-0.5,HALFSQRT3},{0.5,HALFSQRT3},{1.0,0.0},$/;"	v	file:
@@ -149,8 +150,8 @@ Nm	jumps.h	/^int Nm; \/* Number of points for which calculate the time correlati
 Nm	wtd.h	/^int Nm; \/* Number of points for which calculate the time correlation$/;"	v
 Nm	xvautil.h	/^int Nm; \/* Number of points for which calculate the time correlation$/;"	v
 Nose	nmpoly.h	/^  int Nose; \/* if Nose=1 use Nose method, otherwise not *\/$/;"	m	struct:progStatus
-OP	nmpoly.h	549;"	d
-OS	nmpoly.h	548;"	d
+OP	nmpoly.h	551;"	d
+OS	nmpoly.h	550;"	d
 OconvStruct	nmpoly.h	/^struct convStruct OconvStruct[]=$/;"	v
 OmeasHead	nmpoly.h	/^struct measHead OmeasHead[NUM_MISURE];$/;"	v
 Omeasure	nmpoly.h	/^struct measure Omeasure[NUM_MISURE]=$/;"	v
@@ -229,7 +230,7 @@ T1yz	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, WCxy, WCyz, WCzx, $/;"	v
 T1zx	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, WCxy, WCyz, WCzx, $/;"	v
 T1zz	move.c	/^  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, WCxy, WCyz, WCzx, $/;"	v
 T1zz	move.c	/^COORD_TYPE W, K, WC, T1xx, T1yy, T1zz,$/;"	v
-TINY	move.c	1750;"	d	file:
+TINY	move.c	1756;"	d	file:
 TXT	measures.c	/^char TXT[MSG_LEN], TXTA[10][MSG_LEN];$/;"	v
 TXTA	measures.c	/^char TXT[MSG_LEN], TXTA[10][MSG_LEN];$/;"	v
 V	nmpoly.h	/^COORD_TYPE Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], invs, press,$/;"	v
@@ -399,6 +400,7 @@ gr23	nmpoly.h	/^  gr23[MAXBIN], gr33[MAXBIN], press_m, press_at;$/;"	v
 gr33	nmpoly.h	/^  gr23[MAXBIN], gr33[MAXBIN], press_m, press_at;$/;"	v
 greyLevel	hetero.h	/^int greyLevel = 20, printEvery, tRun, DtTra, DtAng, DtTra_mean = 0, DtAng_mean = 0; $/;"	v
 grow	nmpoly.h	/^  int grow;$/;"	m	struct:progStatus
+growth	nmpoly.h	/^  double growth;$/;"	m	struct:progStatus
 head	move.c	/^int *head, *list, *map;  \/* arrays of integer *\/$/;"	v
 heteroAngFile	hetero.h	/^char heteroAngFile[128], heteroTraFile[128];$/;"	v
 heteroAngFlag	hetero.h	/^int heteroTraFlag = 1, heteroAngFlag = 1, mathFlag = 0;$/;"	v
