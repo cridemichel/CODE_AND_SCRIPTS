@@ -831,14 +831,14 @@ void FENEForce(void)
 	  Fz[a+1][i] -= fz;
 #ifdef ATPTENS
 	  /* Virial off-diagonal terms of atomic pressure tensor */
-	  Wfexy += dx * fy;
-	  Wfeyz += dy * fz;
-	  Wfezx += dz * fx;
-	  Wfexx += dx * fx;
-	  Wfeyy += dy * fy;
-	  Wfezz += dz * fz;
+	  WCxy += dx * fy;
+	  WCyz += dy * fz;
+	  WCzx += dz * fx;
+	  WCxx += dx * fx;
+	  WCyy += dy * fy;
+	  WCzz += dz * fz;
 #endif
-	  Wfe += rabSq * invff; 
+	  WC += rabSq * invff; 
 	  Vfe += -0.5 * Oparams.kfe * R0Sq * log(ff);
 	}
     }

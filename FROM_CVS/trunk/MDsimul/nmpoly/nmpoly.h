@@ -692,7 +692,7 @@ extern struct pascii opar_ascii[];
 		       perform a mean */
 
 #ifdef MAIN
-COORD_TYPE Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], invs, press,
+COORD_TYPE Vfe, Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], invs, press,
   gr23[MAXBIN], gr33[MAXBIN], press_m, press_at;
 COORD_TYPE Ptens[3], DQtens[3], C1c, C2c, C3c, C4c, velc, Gs[GSPOINT], 
   psi1c, psi2c, sqrtdr2, Aa, DrSqTot, DphiSq, GsAng[GSANGPOINT], Fs[FSPOINT],
@@ -701,7 +701,7 @@ int MB[NUMV];
 COORD_TYPE *Dphix, *Dphiy, *Dphiz;/* Time integrals of angulars velocity
 				     components */
 #else 
-extern COORD_TYPE Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], 
+extern COORD_TYPE Vfe, Vc, V, E, Dtrans, temp, S[NUMK], dummy, eta, Drot, gr[MAXBIN], 
   gr23[MAXBIN], gr33[MAXBIN], invs,
   press, press_m, press_at, C1c, C2c, C3c, C4c, velc, psi1c, psi2c, 
   Gs[GSPOINT], 

@@ -1137,7 +1137,7 @@ void usrInitAft(void)
 #else
   Plrc = 16. * pi * invrcut3 * Sqr(Oparams.parnum * NA) * 
     (2. * Sqr(invrcut3) / 3. - 1.) / 3. / Sqr(Vol);
-  printf("Plrc: %f\n", Plrc, Vol);
+  printf("Plrc: %f\n", Plrc);
 #endif
   ox = malloc(sct*Nm);
   oy = malloc(sct*Nm);
