@@ -280,7 +280,7 @@ void free_matrix(double **M, int n)
 }
 int nn, nn2; /* Global variables to communicate with fmin.*/
 double *fvec, *fvecG; 
-#define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], x[5], test, its, *check));\
+#define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
 free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);free_vector(fvecG);return;}
 
 void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[3]);
@@ -298,7 +298,7 @@ extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, 
 extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
 
 extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
-#define MD_GLOBALNR
+#undef MD_GLOBALNR
 #undef MD_GLOBALNR2
 #ifdef MD_GLOBALNR2
 double fmin2(double x[], int iA, int iB, double shift[3]);
@@ -463,9 +463,9 @@ void newt(double x[], int n, int *check,
 #ifdef MD_GLOBALNR2
       if (its2 == MAXITS2 || check2==2)
 	{
-	  *check = 2;
+	  //*check = 2;
 	  MD_DEBUG(printf("MAXITS2!!\n"));
-	  FREERETURN;
+	  //FREERETURN;
 	}
 #else
        if (its2 == MAXITS2)
@@ -478,8 +478,8 @@ void newt(double x[], int n, int *check,
 #endif
 #endif
        /* ============ */
-       //funcs2beZeroed(n,x,fvec,iA,iB,shift);
-       fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
+       funcs2beZeroed(n,x,fvec,iA,iB,shift);
+       fdjacFD(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
        /* If analytic Jacobian is available, you can 
 	  replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNR
@@ -510,6 +510,7 @@ void newt(double x[], int n, int *check,
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNR
       lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift); 
+      MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	if (fabs(fvec[i]) > test) 
@@ -530,7 +531,7 @@ void newt(double x[], int n, int *check,
 	      if (temp > test) 
 		test=temp; 
 	    } 
-	  *check=(test < TOLMIN ? 1 : 0);
+	  *check=(test < TOLMIN ? 2 : 0);
 	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
   	  FREERETURN 
 	} 
@@ -575,7 +576,7 @@ void newt(double x[], int n, int *check,
   
 }
 
-#define EPS 1e-12//1.0E-4 /* Approximate square root of the machine precision.*/
+#define EPS 1e-8//1.0E-4 /* Approximate square root of the machine precision.*/
 void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
 { int i,j; 
   double h,temp,*f; 
