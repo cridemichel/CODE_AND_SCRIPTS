@@ -712,6 +712,16 @@ void usrInitAft(void)
   rhoz = malloc(sizeof(double)*(jZmax+1));
   tree = AllocMatI(9, poolSize);
   treeTime = malloc(sizeof(double)*poolSize);
+  if (OprogStatus.CMreset==-1)
+    {
+      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+      resetCM(1);
+    }
+  else if (OprogStatus.CMreset==-2)
+    {
+      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+    }
+
   radii = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
