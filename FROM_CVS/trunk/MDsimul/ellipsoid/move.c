@@ -6,7 +6,7 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
-
+extern double maxax[2];
 /* Routines for LU decomposition from Numerical Recipe online */
 #define TINY 1E-20
 #define MD_NBMAX 3
@@ -622,17 +622,17 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double delpx, delpy, delpz, sigSq, wrx, wry, wrz, rACn[3], rBCn[3], rnI[3];
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double norm[3], Ia[3][3], Ib[3][3], invIa[3][3], invIb[3][3];
-  double mredl, ene, modn, denom;
+  double modn, denom;
   int na, a, b;
   if (i < parnumA && j < parnumA)
     {
       sigSq = Sqr(Oparams.sigma[0][0]);
-      mredl = Mred[0][0];
+      //mredl = Mred[0][0];
     }
   else if (i >= parnumA && j >= parnumA)
     {
       sigSq = Sqr(Oparams.sigma[1][1]);
-      mredl = Mred[1][1];
+      //mredl = Mred[1][1];
     }
   else
     {
@@ -641,6 +641,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     }
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
   /*printf("mredl: %f\n", mredl);*/
+#if 0
   rxij = rx[i] - rx[j];
   if (fabs (rxij) > L2)
     rxij = rxij - SignR(L, rxij);
@@ -651,6 +652,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #if !defined(MD_GRAVITY)
   if (fabs (rzij) > L2)
     rzij = rzij - SignR(L, rzij);
+#endif
 #endif
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
@@ -1353,7 +1355,7 @@ void PredictEvent (int na, int nb)
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 		      if (na < parnumA && n < parnumA)
 			{
-			  sigSq = Sqr(Oparams.sigma[0][0]);
+			  sigSq = Sqr(Oarams.sigma[0][0]);
 			  sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
 			  mredl = Mred[0][0];
 #if 0
@@ -1382,12 +1384,14 @@ void PredictEvent (int na, int nb)
 #endif
 			}
 #else
+		      /* maxax[...] è il diametro dei centroidi dei due tipi
+		       * di ellissoidi */
 		      if (na < parnumA && n < parnumA)
-			sigSq = Sqr(Oparams.sigma[0][0]);
+			sigSq = Sqr(maxax[0]);
 		      else if (na >= parnumA && n >= parnumA)
-			sigSq = Sqr(Oparams.sigma[1][1]);
+			sigSq = Sqr(maxax[1]);
 		      else
-			sigSq = Sqr(Oparams.sigma[0][1]);
+			sigSq = Sqr(0.5*(maxax[0]+maxax[1]));
 #endif
 		      tInt = Oparams.time - atomTime[n];
 		      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
@@ -1493,6 +1497,7 @@ no_core_bump:
     			  if (d >= 0.) 
 			    {
 			      t = - (sqrt (d) + b) / vv;
+			      /* t è il guess per il newton-raphson */
 			      if (t < 0)
 				{
 #if 1

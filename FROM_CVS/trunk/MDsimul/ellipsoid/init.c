@@ -13,6 +13,7 @@ extern char TXT[MSG_LEN];
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 void setToZero(COORD_TYPE* ptr, ...);
+double maxax[2];
 
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
@@ -853,6 +854,19 @@ void usrInitAft(void)
       ItensD[a][1] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.c[a]));
       ItensD[a][2] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.b[a]));
     };
+ 
+  /* maxax è il diametro del centroide */
+  for (a = 0; a < 2; a++)
+    {
+      maxax[a] = 0.0;
+      if (Oparams.a[a] > maxax[a])
+	maxax[a] = Oparams.a[a];
+      if (Oparams.b[a] > maxax[a])
+	maxax[a] = Oparams.b[a];
+      if (Oparams.c[a] > maxax[a])
+	maxax[a] = Oparams.c[a];
+      maxax[a] *= 2.0;
+    }
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   for (i=0; i < Oparams.parnum; i++)
     {
