@@ -1406,7 +1406,7 @@ void move(void)
   Wxx = Wyy = Wzz = 0.0;
 #endif
   /* get next event */
-  while (1)
+  while (!ENDSIM)
     {
       innerstep++;
       NextEvent();
