@@ -30,7 +30,7 @@ double **rx_oldLong, **ry_oldLong, **rz_oldLong;
 #ifdef MD_RAPACONSTR
 extern double **cvMat, **cvMatInv, ***cvMatInvS, 
        *cDistSq, *vVec, *curBondLenSq, *cVec[3]; 
-extern int *cMat[NA]; 
+extern int **cMat; 
 extern int *cAtom1, *cAtom2;
 #endif
 double *Fcoeff[3]; 
@@ -1148,11 +1148,16 @@ void usrInitAft(void)
   cVec[0] = malloc(sizeof(double)*NB);
   cVec[1] = malloc(sizeof(double)*NB);
   cVec[2] = malloc(sizeof(double)*NB);
+  cMat    = malloc(sizeof(int*)*NB);
   for (a = 0; a < NB; a++)
     {
       cvMatInvS[a] = malloc(sizeof(double*)*NB);
       cvMatInv[a] = malloc(sizeof(double)*NB);
       cvMat[a] = malloc(sizeof(double)*NB);
+#ifdef MD_RAPACONSTR
+      cMat[a] = malloc(sizeof(int)*NA);
+#endif
+      
       if (OprogStatus.keepInvMat)
 	{
 	  for (b = 0; b < NB; b++)
@@ -1172,9 +1177,6 @@ void usrInitAft(void)
       rxi[a] = malloc(sizeof(double)*Oparams.parnum);
       ryi[a] = malloc(sizeof(double)*Oparams.parnum);
       rzi[a] = malloc(sizeof(double)*Oparams.parnum);
-#endif
-#ifdef MD_RAPACONSTR
-      cMat[a] = malloc(sizeof(int)*NB);
 #endif
       vxold[a] = malloc(sizeof(double)*Oparams.parnum);
       vyold[a] = malloc(sizeof(double)*Oparams.parnum);
