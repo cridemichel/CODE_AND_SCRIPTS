@@ -1105,7 +1105,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.greyLvl = 0;
       at->common.atcol  = -1;
     }
-  else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12) == 12)
+  else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s ", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12) == 12)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
@@ -1141,7 +1141,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
     }
-  else if (sscanf(L,"%s %s %s %s %s %s", s1, s2, s3, s4, s5, s6) == 6)
+  else if (sscanf(L,"%s %s %s %s %s %s ", s1, s2, s3, s4, s5, s6) == 6)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
@@ -1374,6 +1374,7 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
 	  free(globset.a);
 	  free(globset.b);
 	  free(globset.c);
+	  globset.a = globset.b = globset.c = NULL;
 	}
       while(ns)
 	{
@@ -1540,6 +1541,7 @@ void setdefaults_after_fakeread(void)
 	  globset.sig[a] = globset.diameter;
 	} 
     }
+
   if (globset.setsemiax && globset.NA)
     {
       globset.a = malloc(sizeof(double)*globset.NA);
@@ -1552,8 +1554,6 @@ void setdefaults_after_fakeread(void)
 	  globset.c[a] = globset.sc;
 	} 
     }
-
-
 }
 /* ========================== >>> loadAtomPos <<< ===========================*/
 void loadAtomPos(void)
@@ -1685,6 +1685,9 @@ void default_pars(void)
   globset.drawcube = 1;
   globset.sig = NULL;
   /*globset.height = NULL;*/
+  globset.a = NULL;
+  globset.b = NULL;
+  globset.c = NULL;
   globset.setdiameter = 0;
   globset.setsemiax = 0;
   globset.setheight = 0;
