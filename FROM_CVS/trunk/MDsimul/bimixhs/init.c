@@ -712,7 +712,136 @@ extern double calcpotene(void);
 double corrini3, corrini0, corrini1, corrini2, corrnorm;
 double *lastbreak1, *lastbreak2;
 #endif
-  /* ======================== >>> usrInitAft <<< ==============================*/
+#ifdef MD_INFBARRIER
+void add_bonds (int na) 
+{
+  /* na = atomo da esaminare 0 < na < Oparams.parnum 
+   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
+   *      -2 = controlla solo cell crossing e urti con pareti 
+   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
+   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
+   *      */
+  double sigSq, dr[NDIM], shift[NDIM], d;
+  /*double cells[NDIM];*/
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER) 
+  int collCode;
+  double sigDeltaSq, intdistSq, distSq, s;
+  const double EPSILON = 1E-10;
+  double mredl;
+#endif
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+
+  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCell[2][na] + iZ;    
+      shift[2] = 0.;
+      /* apply periodico boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  jZ = cellsz - 1;    
+	  shift[2] = - L;
+	} 
+      else if (jZ == cellsz) 
+	{
+	  jZ = 0;    
+	  shift[2] = L;
+	}
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCell[1][na] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsy - 1;    
+	      shift[1] = -L;
+	    } 
+	  else if (jY == cellsy) 
+	    {
+	      jY = 0;    
+	      shift[1] = L;
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCell[0][na] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsx - 1;    
+		  shift[0] = - L;
+		} 
+	      else if (jX == cellsx) 
+		{
+		  jX = 0;   
+		  shift[0] = L;
+		}
+	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+	      for (n = cellList[n]; n > -1; n = cellList[n]) 
+		{
+		  if (n < na) 
+		    {
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+		      if (na < parnumA && n < parnumA)
+			{
+			  sigSq = Sqr(Oparams.sigma[0][0]);
+			  sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
+			  mredl = Mred[0][0];
+#if 0
+			  inthreshold =  Sqr(Oparams.sigma[0][0]-Oparams.delta[0][0]/2.0);
+		          outthreshold = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]/2.0);	
+#endif
+			}
+		      else if (na >= parnumA && n >= parnumA)
+			{
+			  sigSq = Sqr(Oparams.sigma[1][1]);
+			  sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
+			  mredl = Mred[1][1]; 
+#if 0
+			  inthreshold =  Sqr(Oparams.sigma[1][1]-Oparams.delta[1][1]/2.0);
+		          outthreshold = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]/2.0);
+#endif
+			}
+		      else
+			{
+			  sigSq = Sqr(Oparams.sigma[0][1]);
+			  sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
+			  mredl = Mred[0][1]; 
+#if 0
+			  inthreshold =  Sqr(Oparams.sigma[0][1]-Oparams.delta[0][1]/2.0);
+		          outthreshold = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]/2.0);
+#endif
+			}
+#else
+		      if (na < parnumA && n < parnumA)
+			sigSq = Sqr(Oparams.sigma[0][0]);
+		      else if (na >= parnumA && n >= parnumA)
+			sigSq = Sqr(Oparams.sigma[1][1]);
+		      else
+			sigSq = Sqr(Oparams.sigma[0][1]);
+#endif
+		      dr[0] = rx[na] - rx[n] - shift[0];	  
+		      dr[1] = ry[na] - ry[n] - shift[1];
+		      dr[2] = rz[na] - rz[n] - shift[2];
+#if defined(MD_SQWELL)|| defined(MD_INFBARRIER)
+		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
+		      if (distSq < sigDeltaSq)
+			{
+			  add_bond(n, na);
+			  add_bond(na, n);
+			}
+		    }
+		} 
+	    }
+	}
+    }
+#endif
+}
+#endif
+/* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
   {
     /* DESCRIPTION:
@@ -857,6 +986,10 @@ void usrInitAft(void)
       lastbreak2[i] = 0.0;
 #endif
     }
+#ifdef MD_INFBARRIER
+  for (i = 0; i < Oparams.parnum; i++)
+    add_bonds(i);
+#else
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
@@ -884,6 +1017,7 @@ void usrInitAft(void)
 	    add_bond(j, i);
 	  }
       }
+#endif
 #ifdef MD_BONDCORR
   corrnorm=0;
   for (i=0; i < Oparams.parnum; i++)
@@ -930,7 +1064,7 @@ void usrInitAft(void)
     }
   fclose(bof);
 #if 1
- sprintf(fileop2 ,"BondCorrFuncB2.dat");
+  sprintf(fileop2 ,"BondCorrFuncB2.dat");
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
   if ( (bof = fopenMPI(fileop, "w")) == NULL)
