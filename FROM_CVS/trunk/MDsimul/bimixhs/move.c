@@ -1367,7 +1367,7 @@ void ProcessCellCrossing(void)
 }
 void velsBrown(double T)
 {
-  comvel(Oparams.parnum, T, Oparams.m, 0); 
+  comvel_brown(T, Oparams.m); 
 }
 
 void rebuildLinkedList(void)

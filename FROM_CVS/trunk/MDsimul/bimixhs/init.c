@@ -340,6 +340,49 @@ void resetCM(int onlyz)
 	}
     }
 }
+void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
+{
+  COORD_TYPE rTemp[2] ;
+  /*COORD_TYPE Px, Py, Pz;*/
+  int i;
+  rTemp[0] = sqrt(temp / m[0]);  
+  rTemp[1] = sqrt(temp / m[1]);
+  /* variance of the velocities distribution function, we assume k = 1 */ 
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      /* Set the velocities of both atoms to the center of mass velocities,
+         the exact velocities will be set in the angvel() routine, where we 
+         will set:
+	 Atom 1: v1  = Vcm + W^(d21 * m2/(m2+m1))
+	 Atom 2: v2  = Vcm - W^(d21 * m1/(m1+m2))
+	 where Vcm is the center of mass velocity (that is the actual 
+	 velocity of both atoms), W is the angular velocity of the molecule,
+	 d21 is the vector joining the two atoms (from 2 to 1) and 
+	 m1 and m2 are the masses of two atoms 
+      */
+      
+      vx[i] = rTemp[0] * gauss(); 
+      vy[i] = rTemp[0] * gauss();
+      vz[i] = rTemp[0] * gauss();
+      /* gauss() is a gaussian variable with mean = 0 and variance = 1, that is
+                               2
+	     1                X
+        ----------- * exp( - --- )         
+	 sqrt(2*PI)           2     */
+    }
+  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      vx[i] = rTemp[1] * gauss(); 
+      vy[i] = rTemp[1] * gauss();
+      vz[i] = rTemp[1] * gauss();
+      /* gauss() is a gaussian variable with mean = 0 and variance = 1, that is
+                               2
+	     1                X
+        ----------- * exp( - --- )         
+	 sqrt(2*PI)           2     */
+    }
+ 
+}
 
 /* ========================== >>> comvel <<< =============================== */
 void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
@@ -422,7 +465,6 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
       K = K + 0.5 * Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));
     }
  
-
   /* Remove net momentum, to have a total momentum equals to zero */
   sumx = 0.0;
   sumy = 0.0;
@@ -445,9 +487,6 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 	 //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
        }
  
-  if (OprogStatus.brownian == 1)
-    return;
-
   sumx = sumx / Mtot; 
   sumy = sumy / Mtot;
   sumz = sumz / Mtot;
