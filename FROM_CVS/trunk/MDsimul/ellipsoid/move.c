@@ -1839,6 +1839,7 @@ void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
     for (k2 = 0; k2 < 3; k2++)
       A += rBA[k1]*Xa[k1][k2]*rBA[k2];
  
+#if 0
   for (k1 = 0; k1 < 3; k1++)
     {   
       XarA[k1] = 0.0;
@@ -1859,9 +1860,22 @@ void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
       printf("[calc_intersec] Serious problem guessing distance, aborting...\n");
       printf("tt = %f D=%f A=%f B=%f C=%f\n", tt, D, A, B, C);
       printf("distance: %f\n", sqrt(Sqr(rBA[0])+Sqr(rBA[1])+Sqr(rBA[2])));
+      print_matrix(Xa,3);
+      print_matrix(Xb,3);
       exit(-1);
     }
   tt = (-B + sqrt(D))/(2.0*A); 
+#endif
+  if (A <= 0)
+    {
+      printf("[calc_intersec] Serious problem guessing distance, aborting...\n");
+      printf("tt = %f D=%f A=%f B=%f C=%f\n", tt, D, A, B, C);
+      printf("distance: %f\n", sqrt(Sqr(rBA[0])+Sqr(rBA[1])+Sqr(rBA[2])));
+      print_matrix(Xa,3);
+      print_matrix(Xb,3);
+      exit(-1);
+    }
+  tt = sqrt(1 / A); 
   for (k1 = 0; k1 < 3; k1++)
     {
       rI[k1] = rA[k1] + tt*rBA[k1];  
