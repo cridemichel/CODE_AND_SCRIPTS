@@ -30,7 +30,7 @@ extern int SolveLineq (double **a, double *x, int n);
 int calcdist_retcheck;
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
-extern long long int itsfrprmn, callsfrprmn, callsok;
+extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 void print_matrix(double **M, int n)
 {
   int k1, k2;
@@ -661,6 +661,8 @@ void outputSummary(void)
       printf("percentage of convergence in frprmn: %.6G\%\n", ((double) callsok)*100.0/callsfrprmn);
       printf("avg its in frprmn: %.10G\n", ((double) itsfrprmn)/callsfrprmn);
     }
+  if (callsprojonto>0)
+    printf("Average iterations in projonto: %.8G\n", ((double) itsprojonto)/callsprojonto);
   printf("Number of collisions: %lld\n", numcoll);
   
   scale_Phi();
@@ -2876,7 +2878,6 @@ void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
       rI[k1] = rA[k1] + tt*rBA[k1];  
     }
 }
-#undef MD_ELLGRID
 void guess_dist(int i, int j, 
 		double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
 		double **RA, double **RB)
@@ -2985,18 +2986,18 @@ retry:
     calcguess = 1;
   if (calcguess)
     {
-#ifdef MD_ELLGRID
-      guess_dist(i, j, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
-#else
+      if (OprogStatus.guessDistOpt==1)
+	guess_dist(i, j, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
 #if 0
 	  for(k1=0; k1 < 3; k1++)
 	    r12[k1] = rC[k1]-rD[k1]; 
 	  printf("PRIMA PRIMA dist=%.15f\n",calc_norm(r12));
 #endif
-	
-      calc_intersec(rB, rA, Xa, rC);
-      calc_intersec(rA, rB, Xb, rD);
-#endif
+      else
+	{
+	  calc_intersec(rB, rA, Xa, rC);
+	  calc_intersec(rA, rB, Xb, rD);
+	}
 #if 1
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 

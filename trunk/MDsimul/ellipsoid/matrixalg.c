@@ -97,6 +97,7 @@ void nrerror(char *msg)
 }
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 #define DABS fabs
+long long int itsfrprmn=0, callsfrprmn=0,callsok=0, callsprojonto=0, itsprojonto=0;
 double xicom[6], pcom[6], xi[6], G[6], H[6], grad[6];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
 int cghalfspring, icg, jcg, minaxicg, minaxjcg, doneryck;
@@ -629,15 +630,17 @@ int check_point(char* msg, double *p, double *rc, double **XX)
 
 void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, double *sfA, double dist)
 {
-  int kk, its, done=0, k1, k2, MAXITS=100;
+  int kk, its, done=0, k1, k2, MAXITS=50;
   const double GOLD=1.618034;
   double r1[3], r1A[3], sf, s1, s2;
   double A, B, C, Delta, sol=0.0, ng;
   sf = *sfA;
   its = 0;
-  
+ 
+  callsprojonto++;
   while (!done && its <= MAXITS)
     {
+      itsprojonto++;
       //printf("sf*dr=%.15G %.15G %.15G dr=%.15G\n", dr[0], dr[1], dr[2], calc_norm(dr));
 #if 0
       if (!check_point("inside loop", ri, rA, Xa))
@@ -752,7 +755,6 @@ void projectgrad(double *p, double *xi, double *gradf, double *gradg)
   projonto(p, xi, rA, Xa, gradf, &sfA, dist);
   projonto(&p[3], &xi[3], rB, Xb, gradg, &sfB, dist);
 }
-long long int itsfrprmn=0, callsfrprmn=0,callsok=0;
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double []))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -764,15 +766,25 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   const int ITMAXFR = OprogStatus.maxitsSD;
   const double EPSFR=1E-10;
   double normxi,gg,gam,fp,dgg,norm1, norm2, sp, fpold, gradf[3], gradg[3];
-  double g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3];
+  double distini, distfin, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
   
   sfA = OprogStatus.stepSD;
   sfB = OprogStatus.stepSD;
+  //sfB = 0.4;//OprogStatus.stepSD;
   callsfrprmn++;
   //fp=(*func)(p); 
   /*Initializations.*/
   fp = (*dfunc)(p,xi,gradfG,gradgG); 
+#if 0
+  distini = 0;
+  for (kk = 0; kk < 3; kk++)
+    {
+      distini += Sqr(p[kk+3]-p[kk]);
+    }
+  distini = sqrt(distini);
+#endif
+
   //printf("g=%f %f %f %f %f %f\n", g[0], g[1], g[2], g[3], g[4], g[5]);
   if (doneryck)
     {
@@ -841,7 +853,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
        //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
 	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
        itsfrprmn++;      
-       if ( (0 && fp < Sqr(OprogStatus.epsd)) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 1 && sqrt(normxi) < (fp+EPSFR)*ftol) )
+       if ( (1 && fp < Sqr(OprogStatus.epsd*2.0)) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 1 && sqrt(normxi) < (fp+EPSFR)*ftol) )
 	 {
 	   callsok++;
 	   return;
@@ -860,6 +872,16 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
     } 
 
   //linminConstr(p,xi,n,fret,func); /* Next statement is the normal return: */
+#if 0
+  distfin = 0;
+  for (kk = 0; kk < 3; kk++)
+    {
+      distfin += Sqr(p[kk+3]-p[kk]);
+    }
+  distfin = sqrt(distfin);
+  printf(">>> distini=%.15G distfin=%.15G sfA: %.15G sfB:%.15G\n", distini, distfin, sfA, sfB);
+#endif
+
   return; 
   nrerror("Too many iterations in frprmn");
   
