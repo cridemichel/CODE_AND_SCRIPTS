@@ -718,11 +718,11 @@ void LJForce(int Nm, COORD_TYPE epsilon,
 
 	  /* NOTE: If you will use a shifted-force potential then 
 	     calculate the force using that potential */
-	  fij   = wij / rijSq;
+	  fij   = epsilon4 * wij / rijSq;
 	  /* force between two atoms */
-	  fxij  = fij * rxij * epsilon24;         
-	  fyij  = fij * ryij * epsilon24;
-	  fzij  = fij * rzij * epsilon24;
+	  fxij  = fij * rxij;          
+	  fyij  = fij * ryij;
+	  fzij  = fij * rzij;
 #else
 	  srij2   = sigmaSq / rijSq;
 	  srij6   = srij2 * srij2 * srij2;

@@ -189,7 +189,7 @@ void movebNTV(COORD_TYPE dt, COORD_TYPE m, int Nm)
   COORD_TYPE s1i;
   COORD_TYPE DT, A, dt2; 
   int i, k;
-  const int NUMIT = 4;
+  const int NUMIT = 8;
 
   /* ******************************************************************* */
   dt2 = dt * 0.5;
