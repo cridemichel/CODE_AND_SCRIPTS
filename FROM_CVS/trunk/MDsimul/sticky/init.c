@@ -14,7 +14,7 @@ extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 void setToZero(COORD_TYPE* ptr, ...);
 double **radat, **deltat, *maxax;
-extern int *lastbump;
+extern struct LastBumpS *lastbump;
 extern double *lastcol;
 double *axa, *axb, *axc;
 double **Aip;
@@ -1072,7 +1072,7 @@ void usrInitAft(void)
 	   cellsx, cellsy, cellsz);
     lastcol= malloc(sizeof(double)*Oparams.parnum);
     atomTime = malloc(sizeof(double)*Oparams.parnum);
-    lastbump = malloc(sizeof(int)*Oparams.parnum);
+    lastbump = malloc(sizeof(struct LastBumpS)*Oparams.parnum);
    
     cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
     inCell[0] = malloc(sizeof(int)*Oparams.parnum);
@@ -1106,7 +1106,8 @@ void usrInitAft(void)
     for (i=0; i < Oparams.parnum; i++)
       {
 	R[i] = matrix(3, 3);
-	lastbump[i] = -1;
+	lastbump[i].mol = -1;
+	lastbump[i].at = -1;
 	lastcol[i] = 0.0;
       }
     u2R();

@@ -16,7 +16,7 @@ double **Ia, **Ib, **invIa, **invIb;
 #else
 double Ia, Ib, invIa, invIb;
 #endif
-int *lastbump;
+struct LastBumpS *lastbump;
 extern double *axa, *axb, *axc;
 extern int *scdone;
 extern double *maxax;
@@ -387,7 +387,7 @@ void scale_coords(double sf)
       rz[i] *= sf;
     }
 }
-
+#if 0
 double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], double rD[3], 
 		      double shift[3], double scalfact, double *factor)
 {
@@ -441,7 +441,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
     Oparams.rcut = 2.0*max_ax(i)*1.01;
   return calc_phi();
 }
-
+#endif
 void rebuild_linked_list()
 {
   double L2;
@@ -2599,8 +2599,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
 		   * scarta tale urto */
 		  if (troot > t2 || troot < t1 || 
-		      (lastbump[i].i == j && lastbump[j].j==i && lastbump[i].a == mapbondsa[nn]
-		       && lastbump[j].b == mapbondsb[nn] && fabs(troot - lastcol[i])<1E-8))
+		      (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i])<1E-8))
 		    {
 		      gotcoll = -1;
 		      continue;
@@ -3366,10 +3366,10 @@ void ProcessCollision(void)
   /*printf("qui time: %.15f\n", Oparams.time);*/
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
-  lastbump[evIdA].i = evIdB;
-  lastbump[evIdB].j = evIdA;
-  lastbump[evIdA].a = evIdC;
-  lastbump[evIdA].b = evIdD;
+  lastbump[evIdA].mol = evIdB;
+  lastbump[evIdB].mol = evIdA;
+  lastbump[evIdA].at = evIdC;
+  lastbump[evIdB].at = evIdD;
   
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
