@@ -27,8 +27,7 @@ void info(void)
   printf("Nm = %d; P = %f; T= %f\n",
 	 Oparams.parnum, Oparams.P, Oparams.T);
   printf("Total number of steps: %lld \n", (long long int)Oparams.totStep);
-  printf("massA: %f massB: %f sigmaA:%f  sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1],
-	 Oparams.sigma[0][0], Oparams.sigma[1][1], Oparams.sigma[0][1]);
+  printf("massA: %f massB: %f sigmaA:%f  sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1]);
   printf("Linked Cell M = %d\n", Oparams.M);
 }
 

@@ -644,7 +644,7 @@ void usrInitBef(void)
     OprogStatus.overlaptol = 0.0001;
     /* Il promo step inizia con un tapping a temperatura T */
     Oparams.m[0] = Oparams.m[1] = 1.0;
-    Oparams.sigma[0][0] = Oparams.sigma[1][1] = Oparams.sigma[1][0]= Oparams.sigma[0][1]=1.0;
+    //Oparams.sigma[0][0] = Oparams.sigma[1][1] = Oparams.sigma[1][0]= Oparams.sigma[0][1]=1.0;
     OprogStatus.collCount = 0;
     OprogStatus.crossCount = 0;
     OprogStatus.nextSumTime = 0.0;
@@ -732,6 +732,7 @@ void usrInitAft(void)
     double sigDeltaSq, drx, dry, drz;
     int j;
 #endif
+    int a;
     /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
     /* initialize global varibales */
@@ -753,9 +754,11 @@ void usrInitAft(void)
     Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
     invmA = 1.0/Oparams.m[0];
     invmB = 1.0/Oparams.m[1];
+#if 0
     Oparams.sigma[1][0] = Oparams.sigma[0][1];
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
     Oparams.delta[1][0] = Oparams.delta[0][1];
+#endif
 #endif
     Mred[0][0] = Mred[1][1] = 0.5;
     Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
@@ -772,8 +775,10 @@ void usrInitAft(void)
 #endif 
     printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
 	   cellsx, cellsy, cellsz);
+#if 0
     printf("massA: %f massB: %f sigmaA:%f sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1],
 	 Oparams.sigma[0][0], Oparams.sigma[1][1], Oparams.sigma[0][1]);
+#endif
 #if defined(MD_GRAVITY)
     g2 = 0.5*Oparams.ggrav;
     mgA = Oparams.m[0]*Oparams.ggrav; 
@@ -1063,10 +1068,11 @@ void writeAllCor(FILE* fs)
 {
   int i;
   const char tipodat[] = "%.15G %.15G %.15G\n";
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   for (i = 0; i < Oparams.parnum; i++)
     {
       fprintf(fs, tipodat, rx[i], ry[i], rz[i]);
-      fprintf(fs, tipodat, ux[i], uy[i], uz[i]);
+      fprintf(fs, tipodat2, uxx[i], uxy[i], uxz[i], uyy[i], uyz[i], uzz[i]);
     }
   
   for (i = 0; i < Oparams.parnum; i++)
@@ -1094,7 +1100,8 @@ void readAllCor(FILE* fs)
 	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	  exit(-1);
 	}
-      if (fscanf(fs, "%lf %lf %lf\n", &ux[i], &uy[i], &uz[i]) < 3)
+      if (fscanf(fs, "%lf %lf %lf %lf %lf %lf\n", 
+		 &uxx[i], &uxy[i], &uxz[i], &uyy[i], &uyz[i], &uzz[i]) < 3)
 	{
 	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	  exit(-1);

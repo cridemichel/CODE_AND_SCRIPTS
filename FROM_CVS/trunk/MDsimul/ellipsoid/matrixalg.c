@@ -121,7 +121,7 @@ void SolveLineq (double **a, double *x, int n)
   lubksbR(a, indx, x, n);
 }
 
-void InvMatrix(double **a, double **b, int NB)
+void InvMatrix(double a[3][3], double b[3][3], int NB)
 {
   int m1, m2, indx[MD_NBMAX]; 
   double col[MD_NBMAX];

@@ -11,7 +11,7 @@ extern double maxax[2];
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
 void SolveLineq (double **a, double *x, int n);
-void InvMatrix(double **a, double **b, int NB);
+void InvMatrix(double a[3][3], double b[3][3], int NB);
 extern double invaSq[2], invbSq[2], invcSq[2];
 double rxC, ryC, rzC;
 #ifdef MD_GRAVITY
@@ -270,6 +270,12 @@ void updatePE(int Nm)
 }
 
 extern double WLJ;
+#if 1
+void check (int *overlap, double *K, double *V)
+{
+
+}
+#else
 void check (int *overlap, double *K, double *V)
 {
   /* *******************************************************************
@@ -323,6 +329,7 @@ void check (int *overlap, double *K, double *V)
          }
      }
 }
+#endif
 /* effettua la seguente moltiplicazione tra matrici:
  * 
  *                 | a 0 0 |               |  uxx  uxy uxz | 
@@ -492,6 +499,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double  Xa[3][3], Xb[3][3];
   double modn, denom;
   int na, a, b;
+#if 0
   if (i < parnumA && j < parnumA)
     {
       sigSq = Sqr(Oparams.sigma[0][0]);
@@ -507,6 +515,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       sigSq = Sqr(Oparams.sigma[0][1]);
       mredl = Mred[0][1]; 
     }
+#endif
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
   /*printf("mredl: %f\n", mredl);*/
 #if 0
@@ -533,13 +542,13 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], 
 	  uxx[i], uxy[i], uxz[i], uyy[i], uyz[i], uzz[i]);
-  tRDiagR(i, Ia, Itens[na][0], Itens[na][1], Itens[na][2],
+  tRDiagR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2],
 	  uxx[i], uxy[i], uxz[i], uyy[i], uyz[i], uzz[i]);
 
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na],
 	  uxx[j], uxy[j], uxz[j], uyy[j], uyz[j], uzz[j]);
-  tRDiagR(j, Ib, Itens[na][0], Itens[na][1], Itens[na][2],
+  tRDiagR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2],
 	  uxx[j], uxy[j], uxz[j], uyy[j], uyz[j], uzz[j]);
  
   /* calcola le matrici inverse del tensore d'inerzia */
@@ -553,18 +562,18 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       for (b = 0; b < 3; b++)
 	{
 	  norm[a] += -Xa[a][b]*rAC[b];
-	  modn += Sqr(norma[a]);
+	  modn += Sqr(norm[a]);
 	}
     }
   modn = sqrt(modn);
   for (a=0; a < 3; a++)
-    norma[a] /= modn;
+    norm[a] /= modn;
   /* calcola le velocità nel punto di contatto */
-  vectProd(wx[i], wy[i], wz[i], rCA[0], rCA[1], rCA[2], &wrx, &wry, &wrz);
+  vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
   vCA[0] = vx[i] + wrx;
   vCA[1] = vy[i] + wry;
   vCA[2] = vz[i] + wrz;
-  vectProd(wx[j], wy[j], wz[j], rCB[0], rCB[1], rCB[2], &wrx, &wry, &wrz);
+  vectProd(wx[j], wy[j], wz[j], -rBC[0], -rBC[1], -rBC[2], &wrx, &wry, &wrz);
   vCB[0] = vx[j] + wrx;
   vCB[1] = vy[j] + wry;
   vCB[2] = vz[j] + wrz;
@@ -572,7 +581,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
   
-  denom = invi + invmj; 
+  denom = invmi + invmj; 
   vc = 0;
   for (a=0; a < 3; a++)
     vc += (vCA[a]-vCB[a])*norm[a];
@@ -587,7 +596,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 	}
     }
   for (a = 0; a < 3; a++)
-    denom += rnI[a]*rn[a];
+    denom += rnI[a]*rACn[a];
    
   vectProd(rBC[0], rBC[1], rBC[2], norm[0], norm[1], norm[2], &rBCn[0], &rBCn[1], &rBCn[2]);
   
@@ -600,7 +609,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 	}
     }
   for (a = 0; a < 3; a++)
-    denom += rnI[a]*rn[a];
+    denom += rnI[a]*rBCn[a];
    
 #ifdef MD_GRAVITY
   
@@ -812,7 +821,7 @@ void calcObserv(void)
   if (OprogStatus.eqlevel > 0.0)
     {
       if (!OprogStatus.equilibrated)
-	OprogStatus.equilibrated = (DrSqTot>OprogStatus.eqlevel*Oparams.sigma[0][0]?1:0);
+	OprogStatus.equilibrated = (DrSqTot>OprogStatus.eqlevel*(2.0*maxax[0])?1:0);
 #ifdef MPI
       equilib = OprogStatus.equilibrated;
       MPI_Allgather(&equilib, 1, MPI_INT, 
@@ -891,11 +900,11 @@ void UpdateAtom(int i)
   uxzn = uxz[i] + sinw*(Omega[0][0]*uxz[i]+Omega[0][1]*uyz[i]+Omega[0][2]*uzz[i]) + 
     cosw*(OmegaSq[0][0]*uxz[i]+OmegaSq[0][1]*uyz[i]+OmegaSq[0][2]*uzz[i]);
 
-  uyyn += sinw*(Omega[1][0]*uxy[i]+Omega[1][1]*uyy[i]-Omega[1][2]*uyz[i]) + 
+  uyyn = uyy[i] + sinw*(Omega[1][0]*uxy[i]+Omega[1][1]*uyy[i]-Omega[1][2]*uyz[i]) + 
     cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyy[i]-OmegaSq[1][2]*uyz[i]);
-  uyzn += sinw*(Omega[1][0]*uxz[i]+Omega[1][1]*uyz[i]+Omega[1][2]*uzz[i]) + 
+  uyzn = uyz[i] + sinw*(Omega[1][0]*uxz[i]+Omega[1][1]*uyz[i]+Omega[1][2]*uzz[i]) + 
     cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyz[i]+OmegaSq[1][2]*uzz[i]);
-  uzzn += sinw*(Omega[2][0]*uxz[i]+Omega[2][1]*uyz[i]+Omega[2][2]*uzz[i]) + 
+  uzzn = uzz[i] + sinw*(Omega[2][0]*uxz[i]+Omega[2][1]*uyz[i]+Omega[2][2]*uzz[i]) + 
     cosw*(OmegaSq[2][0]*uxz[i]+OmegaSq[2][1]*uyz[i]+OmegaSq[2][2]*uzz[i]);
 
   uxx[i] = uxxn;
@@ -981,8 +990,8 @@ int bound(int na, int n)
   return 0;
 }
 #endif
-UpdateOrient(int i, double ti, double *uxxn, double *uxyt, double *uxzt, 
-	     double uyyt, double *uyzt, double uzzt, double Omega[][])
+UpdateOrient(int i, double ti, double *uxxt, double *uxyt, double *uxzt, 
+	     double *uyyt, double *uyzt, double *uzzt, double Omega[3][3])
 { 
   double wSq, w, OmegaSq[3][3];
   double sinw, cosw;
@@ -1019,11 +1028,11 @@ UpdateOrient(int i, double ti, double *uxxn, double *uxyt, double *uxzt,
       uxzn = uxz[i] + sinw*(Omega[0][0]*uxz[i]+Omega[0][1]*uyz[i]+Omega[0][2]*uzz[i]) + 
 	cosw*(OmegaSq[0][0]*uxz[i]+OmegaSq[0][1]*uyz[i]+OmegaSq[0][2]*uzz[i]);
       
-      uyyn += sinw*(Omega[1][0]*uxy[i]+Omega[1][1]*uyy[i]-Omega[1][2]*uyz[i]) + 
+      uyyn = uyy[i] + sinw*(Omega[1][0]*uxy[i]+Omega[1][1]*uyy[i]-Omega[1][2]*uyz[i]) + 
 	cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyy[i]-OmegaSq[1][2]*uyz[i]);
-      uyzn += sinw*(Omega[1][0]*uxz[i]+Omega[1][1]*uyz[i]+Omega[1][2]*uzz[i]) + 
+      uyzn = uyz[i] + sinw*(Omega[1][0]*uxz[i]+Omega[1][1]*uyz[i]+Omega[1][2]*uzz[i]) + 
 	cosw*(OmegaSq[1][0]*uxy[i]+OmegaSq[1][1]*uyz[i]+OmegaSq[1][2]*uzz[i]);
-      uzzn += sinw*(Omega[2][0]*uxz[i]+Omega[2][1]*uyz[i]+Omega[2][2]*uzz[i]) + 
+      uzzn = uzz[i] + sinw*(Omega[2][0]*uxz[i]+Omega[2][1]*uyz[i]+Omega[2][2]*uzz[i]) + 
 	cosw*(OmegaSq[2][0]*uxz[i]+OmegaSq[2][1]*uyz[i]+OmegaSq[2][2]*uzz[i]);
       *uxxt = uxxn;
       *uxyt = uxyn;
@@ -1127,58 +1136,58 @@ void fdjac(int n, double x[], double fvec[], double **df,
   double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
   double DA[3][3], DB[3][3], RA[3][3], RB[3][3];
   double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
-  double Fxt[3][3], Gxt[3][3], Ft, Gt;
+  double Fxt[3], Gxt[3], Ft, Gt;
   int k1, k2, k3;
-  ti = x[4] - atomTime[i];
-  rA[0] = rx[i] + vx[i]*ti;
-  rA[1] = ry[i] + vy[i]*ti;
-  rA[2] = rz[i] + vz[i]*ti;
-  vA[0] = vx[i];
-  vA[1] = vy[i];
-  vA[2] = vz[i];
+  ti = x[4] - atomTime[iA];
+  rA[0] = rx[iA] + vx[iA]*ti;
+  rA[1] = ry[iA] + vy[iA]*ti;
+  rA[2] = rz[iA] + vz[iA]*ti;
+  vA[0] = vx[iA];
+  vA[1] = vy[iA];
+  vA[2] = vz[iA];
   /* ...and now orientations */
-  UpdateOrient(i, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, OmegaA);
-  na = (i < Oparams.parnumA)?0:1;
-  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na],
-	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt, OmegaA);
+  UpdateOrient(iA, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, OmegaA);
+  na = (iA < Oparams.parnumA)?0:1;
+  tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na],
+	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
   DA[0][1] = DA[0][2] = DA[1][0] = DA[1][2] = DA[2][0] = DA[2][1] = 0.0;
   DA[0][0] = invaSq[na];
   DA[1][1] = invbSq[na];
   DA[2][2] = invcSq[na];
-  RA[0][0] = uxx[i];
-  RA[0][1] = uxy[i];
-  RA[0][2] = uxz[i];
-  RA[1][0] = -uxy[i];
-  RA[1][1] = uyy[i];
-  RA[1][2] = uyz[i];
-  RA[2][0] = -uxz[i];
-  RA[2][1] = -uyz[i];
-  RA[2][2] = uzz[i];
+  RA[0][0] = uxx[iA];
+  RA[0][1] = uxy[iA];
+  RA[0][2] = uxz[iA];
+  RA[1][0] = -uxy[iA];
+  RA[1][1] = uyy[iA];
+  RA[1][2] = uyz[iA];
+  RA[2][0] = -uxz[iA];
+  RA[2][1] = -uyz[iA];
+  RA[2][2] = uzz[iA];
 
-  ti = x[4] - atomTime[j];
-  rB[0] = rx[j] + vx[j]*ti + shift[0];
-  rB[1] = ry[j] + vy[j]*ti + shift[1];
-  rB[2] = rz[j] + vz[j]*ti + shift[2];
-  vB[0] = vx[j];
-  vB[1] = vy[j];
-  vB[2] = vz[j];
-  UpdateOrient(j, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, OmegaB);
-  na = (j < Oparams.parnumA)?0:1;
-  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na],
+  ti = x[4] - atomTime[iB];
+  rB[0] = rx[iB] + vx[iB]*ti + shift[0];
+  rB[1] = ry[iB] + vy[iB]*ti + shift[1];
+  rB[2] = rz[iB] + vz[iB]*ti + shift[2];
+  vB[0] = vx[iB];
+  vB[1] = vy[iB];
+  vB[2] = vz[iB];
+  UpdateOrient(iB, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, OmegaB);
+  na = (iB < Oparams.parnumA)?0:1;
+  tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na],
 	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
   DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
   DB[0][0] = invaSq[na];
   DB[1][1] = invbSq[na];
   DB[2][2] = invcSq[na];
-  RB[0][0] = uxx[j];
-  RB[0][1] = uxy[j];
-  RB[0][2] = uxz[j];
-  RB[1][0] = -uxy[j];
-  RB[1][1] = uyy[j];
-  RB[1][2] = uyz[j];
-  RB[2][0] = -uxz[j];
-  RB[2][1] = -uyz[j];
-  RB[2][2] = uzz[j];
+  RB[0][0] = uxx[iB];
+  RB[0][1] = uxy[iB];
+  RB[0][2] = uxz[iB];
+  RB[1][0] = -uxy[iB];
+  RB[1][1] = uyy[iB];
+  RB[1][2] = uyz[iB];
+  RB[2][0] = -uxz[iB];
+  RB[2][1] = -uyz[iB];
+  RB[2][2] = uzz[iB];
   
 
   for (k1 = 0; k1 < 3; k1++)
@@ -1275,7 +1284,7 @@ void PredictEvent (int na, int nb)
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
   b, d, t, tInt, vv;
   int et, kk;
-  double ncong, cong[3], pos[3];
+  double ncong, cong[3], pos[3], vecg[5];
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
   double Lzx, h1, h2, sig, hh1;
@@ -1749,7 +1758,7 @@ void ProcessCollision(void)
    * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */
   bump(evIdA, evIdB, &W, evIdC);
 #else
-  bump(evIdA, evIdB, &W);
+  bump(evIdA, evIdB, rxC, ryC, rzC, &W);
 #endif
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_GRAVITY
