@@ -467,9 +467,9 @@ void updLs(double dt, double c)
 #else
   dof = (2*NA - 1)*Oparams.parnum;
 #endif
-  //printf("temp= %f\n", 2*Kin/dof);
+  /*printf("temp= %f\n", 2*Kin/dof);*/
   DT =  (2.0 * Kin - (dof - 3.0) * Oparams.T)/s;
-  printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);
+  /*printf("DT: %f T: %f Oparams.T: %f s:%f\n", DT, 2.0*Kin/dof, Oparams.T, s);*/
   Ps += DT * cdt2;
   Ps = Ps / (1 + Ps*cdt*s/OprogStatus.Q);
   Ps += DT * cdt2;
@@ -542,7 +542,7 @@ void updPv(double dt, double c)
   press = calcT1diagAtRespa(Nm) + (WShort + WLong + WCShort + WCLong) / Vol; /* press(t+dt) */
 #endif
   DP = press - Oparams.P;
-  printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);
+  /*printf(">>>>>>>>> press: %f DP: %f WmShort: %f WmLong: %f\n", press, DP, WmShort, WmLong);*/
   Pv += DP  * cdt2;
   Pv *= exp(-cdt*Ps*s/OprogStatus.Q);
   Pv += DP  * cdt2;
@@ -569,9 +569,9 @@ void movelongRespaNPTBef(double dt)
   else
     {
       updImpLongNose(dt, 0.5);
-      printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
+      /*printf("1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
       updLs(dt, 0.5);
-      printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
+      /*printf("7) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 }
 
@@ -582,10 +582,10 @@ void movelongRespaNPTAft(double dt)
   else
     {
       updLs(dt, 0.5);
-      printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
+      /*printf("A1) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
       LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
       updImpLongNose(dt, 0.5);
-      printf("A2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);
+      /*printf("A2) Pv: %f Ps: %f s: %f Vol: %f\n", Pv, Ps, s, Vol);*/
     }
 }
 /* ========================== >>> movea <<< =============================== */
