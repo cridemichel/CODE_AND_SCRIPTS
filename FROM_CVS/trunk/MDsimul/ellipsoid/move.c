@@ -1779,10 +1779,10 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
-void calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha)
+double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha)
 {
-  double vecg[8], rC[3], rD[3], rDC[3];
-  double ti;
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3];
+  double ti, segno;
   int retcheck;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
   int k1, na;
@@ -1834,8 +1834,18 @@ void calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, d
     {
       r1[k1] = vecg[k1];
       r2[k1] = vecg[k1+3];
+      r12[k1] = r1[k1] - r2[k1];
     }
   *alpha = vecg[6];
+  segno = -1;
+  /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++) 
+      segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
+  if (segno > 0)
+    return calc_norm(r12);
+  else
+    return -calc_norm(r12);
 #if 0
 #if MD_DEBUG(x) == x
   for (k1 = 0; k1 < 3; k1++)
@@ -1918,6 +1928,87 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   MD_DEBUG(printf("VCPOS vc=%.15f\n", vc));
   return (vc > 0);
 }
+#define EPS 1e-7
+void evolveVec(double ti, double *vecout, double *vecni)
+{
+  double wSq, w, OmegaSq[3][3], M[3][3];
+  double sinw, cosw;
+  int k1, k2;
+  wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
+  w = sqrt(wSq);
+  if (w != 0.0) 
+    {
+      sinw = sin(w*ti)/w;
+      cosw = (1.0 - cos(w*ti))/wSq;
+      Omega[0][0] = 0;
+      Omega[0][1] = -wz[i];
+      Omega[0][2] = wy[i];
+      Omega[1][0] = wz[i];
+      Omega[1][1] = 0;
+      Omega[1][2] = -wx[i];
+      Omega[2][0] = -wy[i];
+      Omega[2][1] = wx[i];
+      Omega[2][2] = 0;
+      OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
+      OmegaSq[0][1] = wx[i]*wy[i];
+      OmegaSq[0][2] = wx[i]*wz[i];
+      OmegaSq[1][0] = wx[i]*wy[i];
+      OmegaSq[1][1] = -Sqr(wx[i]) - Sqr(wz[i]);
+      OmegaSq[1][2] = wy[i]*wz[i];
+      OmegaSq[2][0] = wx[i]*wz[i];
+      OmegaSq[2][1] = wy[i]*wz[i];
+      OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
+ 
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      Omega[k1][k2] = -Omega[k1][k2];
+	      M[k1][k2] = sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	    }
+	}
+      
+      for (k1 = 0; k1 < 3; k1++)
+	{
+      	  vecout[k1] = vecin[k1];
+	  for (k2 = 0; k2 < 3; k2++)
+	    vecout[k1] += M[k1][k2]*vecin[k1];
+	}
+    }
+  else
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	{
+      	  vecout[k1] = vecin[k1];
+	}
+    }
+
+}
+void calcvecF(int i, int j, double t1, double t, double *r1, double *r2, double* d)
+{
+  int kk;
+  double rcat[3], rdbt[3], wra[3], wrb[3];
+  evolveVec(t-t1, rcat, r1);
+  evolveVec(t-t1, rdbt, r2);
+  d[0] = vx[i] - vx[j];
+  d[1] = vy[i] - vy[j];
+  d[2] = vx[i] - vz[j];
+  vectProd(wx[i], wy[i], wz[i], rcat[0], rcat[1], rcat[2], &wra[0], &wra[1], &wra[2]);
+  vectProd(wx[j], wy[j], wz[j], rdbt[0], rdbt[1], rdbt[2], &wrb[0], &wrb[1], &wrb[2]);
+  for (kk=0; kk < 3; kk++)
+    d[kk] += wra[kk] - wrb[kk];
+}
+}
+
+const COORD_TYPE bc1 = 14.0/45.0, bc2 = 64.0/45.0, bc3 = 24.0/45.0;
+/* =========================== >>> BodeTerm <<< ============================*/
+double BodeTerm(double dt, double* fi)
+{
+  return dt * (bc1 * fi[0] + bc2 * fi[1] + bc3 * fi[2] + bc2 * fi[3] +
+	       bc1 * fi[4]);
+}
+
+
 void PredictEvent (int na, int nb) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -1927,9 +2018,11 @@ void PredictEvent (int na, int nb)
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
-	 b, d, t, tInt, vv, distSq, t1, t2, tmp;
+	 b, d, t, tInt, vv, distSq, t1, t2, tmp, alpha, d1, d2, h, gd, delt, d1o, d2o;
   int et, kk, retcheck, ii, overlap, mm;
   double ncong, cong[3], pos[3], vecg[5], pos2[3], vecgold[5], vecgf[5], r1[3], r2[3];
+  const double epsd = 0.1; 
+  /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
   double Lzx, h1, h2, sig, hh1;
@@ -2311,23 +2404,33 @@ no_core_bump:
 		      MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
 		      if (vv==0.0)
 			{
-			  t = 0;
+			  if (distSq >= sigSq)
+			    continue;
+			    /* la vel relativa è zero e i centroidi non si overlappano quindi
+			     * non si possono urtare! */
+			  t1 = t = 0;
+			  t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+				       urtare ruotando */
 			}
 		      else if (distSq >= sigSq)
 			{
-			  t = - (sqrt (d) + b) / vv;
+			  t = t1 = - (sqrt (d) + b) / vv;
+			  t2 = (sqrt (d) - b) / vv;
 			  overlap = 0;
 			}
 		      else 
 			{
 			  MD_DEBUG(printf("Centroids overlap!\n"));
-			  t = (sqrt (d) - b) / vv;
+			  t2 = t = (sqrt (d) - b) / vv;
+			  t1 = 0; 
 			  overlap = 1;
 			  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
 			}
 		      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
 		      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
-		      t += Oparams.time; 
+		      //t += Oparams.time; 
+		      t2 += Oparams.time;
+		      t1 += Oparams.time;
 #if 0
 		      /* t è il guess per il newton-raphson */
 		      /* come guess per x possiamo usare il punto di contatto 
@@ -2376,7 +2479,37 @@ no_core_bump:
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
-		      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
+		      t = t1;
+		      d1 = calcDist(t, na, n, shift, r1, r2, &alpha);
+		      h = EPS*(t2-t1);
+		      while (t < t2)
+			{
+			  d2 += ;
+			  if (d1 > 0 && d2 < 0)
+			    {
+			      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
+			      if (retcheck==2 || vecg[4] < Oparams.time ||
+				  fabs(vecg[4] - Oparams.time)<1E-12 )
+				{
+				  /* se l'urto è nel passato chiaramente va scartato
+				   * tuttavia se t è minore di zero per errori di roundoff? */
+				  /* Notare che i centroidi si possono overlappare e quindi t può
+				   * essere tranquillamente negativo */
+				  MD_DEBUG(printf("<<< vecg[4]=%.15f time:%.15f\n",
+						  vecg[4], Oparams.time));
+				  continue;
+				}
+			      else
+				{
+				  break;
+				}
+			    }
+			  gd = (d2 - d1)/h; 
+			  if (fabs(gd) > 1E-12)
+			    delt = (epsd*(maxax[0]+maxax[1])*0.5)/gd;
+			  d1o = d1;
+			  d2o = d2;
+			}
 #if 0
 		      for (kk=0; kk < 5; kk++)
 		      	vecgold[kk] = vecg[kk];
@@ -2423,6 +2556,7 @@ no_core_bump:
 			  printf("OK maybe got contact point mm=%d\n", mm);
 			}
 #endif
+#if 0
 		      if (retcheck==2 || vecg[4] < Oparams.time ||
 	    		  fabs(vecg[4] - Oparams.time)<1E-12 )
     			{
@@ -2434,7 +2568,7 @@ no_core_bump:
 					  vecg[4], Oparams.time));
 			  continue;
 			}
-		      
+#endif		      
 		      rxC = vecg[0];
 		      ryC = vecg[1];
 		      rzC = vecg[2];
