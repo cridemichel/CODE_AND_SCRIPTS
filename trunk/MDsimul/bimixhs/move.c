@@ -397,8 +397,10 @@ void bump (int i, int j, double* W, int bt)
 	}
 #endif
       factor *= mredl / sigDeltaSq;
+#if 0
       if (fabs(distSq - sigDeltaSq)>1E-12)    
 	printf("[bump]dist:%.20f\n",sqrt(distSq));
+#endif
       break;
     case MD_OUTIN_BARRIER:
 #ifdef MD_INFBARRIER
