@@ -584,18 +584,13 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 /* nella silica l'ossigeno ha solo due sticky points quindi l'inizializzazione
  * è diversa */
 #else
-void angvel(void)
+void buildTetrahedras(void)
 {
   int i;
-  const double Kl = sqrt(8/3), Kdh = 1/3, Ktr = sqrt(8)/6;
+  const double Kl = sqrt(8.0/3.0), Kdh = 1.0/3.0, Ktr = sqrt(8.0)/6.0;
   double radius; 
   for (i=0; i < Oparams.parnum; i++)
     {
-      /* N.B. ora i tre vettori ux uy e uz non sono altro che le coordinate
-       * di due hydrogen sites e 1 electron sites. Quindi vanno 
-       * scelti in modo da stare su tre spigoli di un tetraedro regolare.
-       * In particolare formeranno un triangolo equilatero.
-       * Qui il terzo vettore uXz è un electron site. */ 
       if (i < Oparams.parnumA)
 	radius = Oparams.sigma[0][0]/2.0;
       else
@@ -603,15 +598,27 @@ void angvel(void)
       uxx[i] = Kl * radius / 2.0;
       uyx[i] = -Ktr * radius;
       uzx[i] = -Kdh * radius;
-      
+      //printf("%f %f %f @ 0.075 C[red]\n", uxx[i], uyx[i], uzx[i]);
       uxy[i] = -Kl * radius / 2.0;
       uyy[i] = -Ktr * radius;
       uzy[i] = -Kdh * radius;
-
+      //printf("%f %f %f @ 0.075 C[red]\n", uxy[i], uyy[i], uzy[i]);
       uxz[i] = 0.0;
       uyz[i] = Ktr * 2.0 * radius * (MD_DIST_ELECTSITES * 2.0);
       uzz[i] = -Kdh * radius * (MD_DIST_ELECTSITES * 2.0);
-
+      //printf("%f %f %f @ 0.075 C[green]\n", uxz[i], uyz[i], uzz[i]);
+    }
+}
+void angvel(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* N.B. ora i tre vettori ux uy e uz non sono altro che le coordinate
+       * di due hydrogen sites e 1 electron sites. Quindi vanno 
+       * scelti in modo da stare su tre spigoli di un tetraedro regolare.
+       * In particolare formeranno un triangolo equilatero.
+       * Qui il terzo vettore uXz è un electron site. */ 
       wx[i] = 0;
       wy[i] = 0;
       wz[i] = 0;
@@ -690,39 +697,7 @@ void initCoord(void)
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
   angvel(); 
-#if MD_DEBUG(x) == x
-    {
-     const char sepStr[] = "@@@\n";
-     FILE *bf;
-     char fileop[512],fileop2[512], fileop3[512];
-     sprintf(fileop2 ,"Store-Init");
-     /* store conf */
-     strcpy(fileop, absTmpAsciiHD(fileop2));
-     if ( (bf = fopenMPI(fileop, "w")) == NULL)
-       {
-	 mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-	 exit(-1);
-       }
-#ifndef MD_STOREMGL
-	  writeAsciiPars(bf, opro_ascii);
-	  fprintf(bf, sepStr);
-	  writeAsciiPars(bf, opar_ascii);
-	  fprintf(bf, sepStr);
-	  printf("qui\n");
-#endif
-	  fprintf(bf, ".Vol: %f\n", L*L*L);
-	  writeAllCor(bf);
-	  fclose(bf);
-#ifndef MD_STOREMGL
-#ifdef MPI
-          sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
-#else 
-          sprintf(fileop3, "/bin/gzip -f %s", fileop);
-#endif
-	  system(fileop3);
-#endif
-    }
-#endif
+  buildTetrahedras();
   //wrap_initCoord();
 }
 
@@ -1026,6 +1001,39 @@ double calc_phi(void);
 #ifdef MD_SILICA
 extern void assign_bond_mapping(int i, int j);
 #endif
+void save_init_conf(void)
+{
+  const char sepStr[] = "@@@\n";
+  FILE *bf;
+  char fileop[512],fileop2[512], fileop3[512];
+  sprintf(fileop2 ,"Store-Init");
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+      exit(-1);
+    }
+#ifndef MD_STOREMGL
+  writeAsciiPars(bf, opro_ascii);
+  fprintf(bf, sepStr);
+  writeAsciiPars(bf, opar_ascii);
+  fprintf(bf, sepStr);
+  printf("qui\n");
+#endif
+  fprintf(bf, ".Vol: %f\n", L*L*L);
+  writeAllCor(bf);
+  fclose(bf);
+#ifndef MD_STOREMGL
+#ifdef MPI
+  sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+#else 
+  sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
+  system(fileop3);
+#endif
+}
+
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
 {
@@ -1111,6 +1119,7 @@ void usrInitAft(void)
       lastcol[i] = 0.0;
     }
   u2R();
+  save_init_conf();
   if (OprogStatus.CMreset==-1)
     {
       comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
@@ -1276,7 +1285,7 @@ void usrInitAft(void)
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 }
 
-extern void BuildAtomPos(int i, double *rO, double **R, double rat[]);
+extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][]);
 
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs)
@@ -1285,15 +1294,49 @@ void writeAllCor(FILE* fs)
   const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
 #ifdef MD_STOREMGL
-  double rat[5], rO[3];
+#ifdef MD_SILICA
+#else
+  int a;
+  double rat[5][3], rO[3], **Rl;
+  Rl = matrix(3,3);
   for (i = 0; i < Oparams.parnum; i++)
     {
       rO[0] = rx[i];
       rO[1] = ry[i];
       rO[2] = rz[i];
-      BuildAtomPos(int i, rO, R[i], rat);
+
+      Rl[0][0] = uxx[i];
+      Rl[0][1] = uxy[i];
+      Rl[0][2] = uxz[i];
+      Rl[1][0] = uyx[i];
+      Rl[1][1] = uyy[i];
+      Rl[1][2] = uyz[i];
+      Rl[2][0] = uzx[i];
+      Rl[2][1] = uzy[i];
+      Rl[2][2] = uzz[i];
+ 
+      BuildAtomPos(i, rO, Rl, rat);
       /* write coords */
+      for (a = 0; a < 5; a++)
+	{
+	  if (a == 0)
+	    {
+	      fprintf(fs, "%.15G %.15G %.15G @ %f C[red]\n", rat[a][0], rat[a][1], rat[a][2],
+		      Oparams.sigma[0][0]/2.0);
+	    }
+	  else if (a < 3)
+	    {
+	      fprintf(fs, "%.15G %.15G %.15G @ %f C[blue]\n", rat[a][0], rat[a][1], rat[a][2],
+		      Oparams.sigmaSticky/2.0);
+	    }
+	  else if (a < 5)
+	    {
+	      fprintf(fs, "%.15G %.15G %.15G @ %f C[green]\n", rat[a][0], rat[a][1], rat[a][2],
+		      Oparams.sigmaSticky/2.0);
+	    }
+	}
     }
+#endif
 #else
   for (i = 0; i < Oparams.parnum; i++)
     {
@@ -1308,6 +1351,7 @@ void writeAllCor(FILE* fs)
     }
   fprintf(fs, "%.15G\n", L);
 #endif
+  free_matrix(Rl, 3);
 }
 
 
