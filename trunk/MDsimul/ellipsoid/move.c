@@ -2938,10 +2938,17 @@ retry:
       store_bump(i, j);
       exit(-1);
     }
+#ifndef MD_DIST5
   for (k1 = 0; k1 < 8; k1++)
     {
       vecgsup[k1] = vecg[k1]; 
     }  
+#else
+   for (k1 = 0; k1 < 5; k1++)
+    {
+      vecgsup[k1] = vecg[k1]; 
+    }  
+#endif
   for (k1 = 0; k1 < 3; k1++)
     {
       r1[k1] = vecg[k1];
@@ -3525,6 +3532,8 @@ double distfunc(double x)
 {
   double dy, y;
   polint(xa, ya, 3, x, &y, &dy);
+  if (polinterr==1)
+    return 0.0;
   if (dy > OprogStatus.epsd)
     polinterr = 1;
   else 
@@ -3561,7 +3570,7 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
       t2 = t+delt;
       nb = 1;
       zbrak(distfunc, t1, t2, OprogStatus.zbrakn, xb1, xb2, &nb);
-      if (nb==0)
+      if (nb==0 || polinterr==1)
 	return 1;
       t1 = xb1[0];
       t2 = xb2[0];
