@@ -705,11 +705,11 @@ void PredictEvent (int na, int nb)
 			  d = Sqr (b) - vv * 
 			    (Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]) - sigSq);
 #if 0
-		      if (OprogStatus.quenchend > 0.0 && Oparams.curStep > 700000)
+			  if (OprogStatus.quenchend > 0.0 && Oparams.curStep > 700000)
 			    printf("dist:%.15G\n", 
 				   (Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2])) - sigSq );
 #endif
-		      if (d >= 0.) 
+			  if (d >= 0.) 
 			    {
 			      t = - (sqrt (d) + b) / vv;
 			      if (t < 0)
@@ -717,7 +717,7 @@ void PredictEvent (int na, int nb)
 				  printf("time:%.15f tInt:%.15f\n", OprogStatus.time,
 					 tInt);
 				  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-					 Sqr(dr[2]))-1.0 );
+							      Sqr(dr[2]))-1.0 );
 				  printf("STEP: %d\n", Oparams.curStep);
 				  printf("atomTime: %.10f \n", atomTime[n]);
 				  printf("n:%d na:%d\n", n, na);
