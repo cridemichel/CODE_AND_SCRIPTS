@@ -318,22 +318,42 @@ void bump (int i, int j, double* W)
   double rxij, ryij, rzij, factor, invmi, invmj;
   double delpx, delpy, delpz, sigSq;
   double mredl, ene;
-  
+#ifdef MD_INFBARRIER
+  double sigDeltaSq, intdistSq, sigDelta2Sq, distSq;
+  double vxij, vyij, vzij, b;
+#endif
   if (i < parnumA && j < parnumA)
     {
       sigSq = Sqr(Oparams.sigma[0][0]);
       mredl = Mred[0][0];
+#ifdef MD_INFBARRIER
+      sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta);
+      sigDelta2Sq = Sqr(Oparams.sigma[0][0]+Oparams.delta/2.0);
+#endif
     }
   else if (i >= parnumA && j >= parnumA)
     {
       sigSq = Sqr(Oparams.sigma[1][1]);
       mredl = Mred[1][1];
+#ifdef MD_INFBARRIER
+      sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta);
+      sigDelta2Sq = Sqr(Oparams.sigma[1][1]+Oparams.delta/2.0);
+#endif
     }
   else
     {
       sigSq = Sqr(Oparams.sigma[0][1]);
+#ifdef MD_INFBARRIER
+      sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta);
+      sigDelta2Sq = Sqr(Oparams.sigma[0][1]+Oparams.delta/2.0);
+#endif
       mredl = Mred[0][1]; 
     }
+#ifdef MD_INFBARRIER
+  vxij = vx[i] - vx[j];
+  vyij = vy[i] - vy[j];
+  vzij = vz[i] - vz[j];
+#endif
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
   /*printf("mredl: %f\n", mredl);*/
   rxij = rx[i] - rx[j];
@@ -353,17 +373,35 @@ void bump (int i, int j, double* W)
 	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
   /* Dissipation */
   if (!((Oparams.time - lastcol[i] < OprogStatus.tc)||
-      (Oparams.time - lastcol[j] < OprogStatus.tc)))
+  	(Oparams.time - lastcol[j] < OprogStatus.tc)))
     factor *= mredl*(1+Oparams.partDiss);
 #else
   /* Nel caso di gravita' e' intuile implementare il TC-model di Luding
    * per evitare il collasso inelastico.
    * Gli urti in tale caso sono tutti elastici. */ 
   /* SQUARE WELL: modify here */
+#ifdef MD_INFBARRIER
+  distSq = Sqr(rxij)+Sqr(ryij)+Sqr(rzij);
+  b = rxij * vxij + ryij * vyij + rzij * vzij;
+  if (distSq > sigDelta2Sq && b < 0.0)
+    intdistSq = sigDeltaSq;
+  else
+    {
+      if (b < 0.0)
+      	intdistSq = sigSq;
+      else
+	intdistSq = sigDeltaSq;
+    }
+  factor = ( rxij * vxij +
+	     ryij * vyij +
+	     rzij * vzij ) / intdistSq;
+  factor *= mredl*2; /*(1+Oparams.partDiss);*/
+#else
   factor = ( rxij * ( vx[i] - vx[j] ) +
 	     ryij * ( vy[i] - vy[j] ) +
 	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
   factor *= mredl*2; /*(1+Oparams.partDiss);*/
+#endif
 #endif
   delpx = - factor * rxij;
   delpy = - factor * ryij;
@@ -654,7 +692,7 @@ void PredictEvent (int na, int nb)
   double Lzx, h1, h2, sig, hh1;
 #endif
 #ifdef MD_INFBARRIER
-  double sigDeltaSq, intdistSq;
+  double sigDeltaSq, intdistSq, distSq;
 #endif
   int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
