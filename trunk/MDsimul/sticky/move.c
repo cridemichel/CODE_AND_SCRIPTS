@@ -1827,6 +1827,9 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3], int bondpai
 #else 
       for (k2 = 0; k2 < 3; k2++)
 	{
+	  /* se bondpair = 4 ci servono tutte e tre gli altri atomi per costruirlo
+	   * quindi dobbiamo ruotarli tutti e 3! 
+	   * NOTA: quindi bondpair = sticky point (bondpair={1,2,3,4}) */
 	  if (bondpair != -1 && bondpair != 4 && (k2+1 != bondpair))
 	    {
 	      //printf("qui in UpdateOrient\n");
@@ -2326,14 +2329,14 @@ int get_dists_tocheck(double distsOld[], double dists[], int tocheck[], int dore
     }
   return rettochk;
 }
-double get_max_deldist(double distsOld[MD_PBONDS], double dists[MD_PBONDS])
+double get_max_deldist(double distsOld[MD_PBONDS], double dists[MD_PBONDS], int bondpair)
 {
   int nn, first = 1;
   double maxdd=0.0, dd;
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
       dd = fabs(dists[nn]-distsOld[nn]);
-      if (first || dd > maxdd)
+      if ((first || dd > maxdd) && (bondpair == -1 || bondpair == nn))
 	{
 	  first = 0;
 	  maxdd = dd;
@@ -2638,7 +2641,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   double epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
   int kk,tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
       crossed[MD_PBONDS], firstaftsf;
- epsd = OprogStatus.epsd;
+  epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
   epsdMax = OprogStatus.epsdMax;
@@ -2676,19 +2679,24 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   delt = h;
   MD_DEBUG(printf("QUIIII collCode=%d\n", *collCode));
   //printf("t1= %f t2 = %f\n", t1, t2);
-#if 0
-  df = calcDistNeg(t, i, j, shift, &amin, &bmin, dists);
+#if 1
+  df = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
   for (nn=0; nn < MD_PBONDS; nn++)
     {
+      if (bondpair != -1 && bondpair != nn)
+	continue;
+      if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
+		       && lastbump[j].at == mapbondsb[nn]))
+	continue;
       if (dists[nn] > 0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	{
 	  df = dists[nn];
 	  while (df > 0)
 	    {
-	      t += h*t;
-	      if (t > t2)
+	      t += h;
+	      if (t + t1 > t2)
 		return 0;
-	      df = calcDistNegOne(t, i, j, nn, shift);
+	      df = calcDistNegOne(t, t1, i, j, nn, shift);
 	    }
 	}
       if (dists[nn] < 0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
@@ -2696,10 +2704,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  df = dists[nn];
 	  while (df < 0)
 	    {
-	      t += h*t;
-	      if (t > t2)
+	      t += h;
+	      if (t + t1 > t2)
 		return 0;
-	    \  df = calcDistNegOne(t, i, j, nn, shift);
+	      df = calcDistNegOne(t, t1, i, j, nn, shift);
 	    }
 	}
     }
@@ -2797,7 +2805,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #else
       if (!firstaftsf)
 	{
-	  deldist = get_max_deldist(distsOld2, distsOld);
+	  deldist = get_max_deldist(distsOld2, distsOld, bondpair);
 	  normddot = fabs(deldist)/delt;
 	  /* NOTA: forse qui si potrebbe anche usare sempre delt = epsd/maxddot */
 	  if (normddot!=0)
@@ -2832,7 +2840,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       //dold2 = dold;
       d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-      deldist = get_max_deldist(distsOld, dists);
+      deldist = get_max_deldist(distsOld, dists, bondpair);
       if (deldist > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
