@@ -358,6 +358,9 @@ struct params
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
 
+#ifdef MD_INFBARRIER
+  double delta; /* ampiezza della buca */
+#endif
 #ifdef MD_GRAVITY
   double ggrav;
 #endif
@@ -489,6 +492,9 @@ struct pascii opar_ascii[]=
 #endif
   {"M",                 &OP(M),                           1,   1,   "%d"},
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
+#ifdef MD_INFBARRIER
+  {"delta",             &OP(delta),                       1,   1, "%.15G"},
+#endif
   {"", NULL, 0, 0, ""}
 };
 #else
@@ -596,6 +602,9 @@ struct singlePar OsinglePar[] = {
   {"W",          &OprogStatus.W,              CT},
   {"P",          &Oparams.P,                  CT},
   {"L",          &L,                        CT},
+#ifdef MD_INFBARRIER
+  {"delta",      &Oparams.delta,            CT},
+#endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
   {"avngS",      &OprogStatus.avngS,          INT},

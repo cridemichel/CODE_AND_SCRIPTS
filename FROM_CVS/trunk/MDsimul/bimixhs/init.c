@@ -550,6 +550,9 @@ void usrInitBef(void)
 
   V = 0.0;
   L = 9.4;
+#ifdef MD_INFBARRIER
+  Oparams.delta = 0.0;
+#endif
 #ifdef MD_GRAVITY
   Lz = 9.4;
 #endif
