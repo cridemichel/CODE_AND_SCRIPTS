@@ -3919,13 +3919,16 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
   double maxddot, told, delt, normddot, ddot[3];
   const int MAXOPTITS = 500;
-  double alpha;
+  double alpha, factori, factorj;
   int its=0; 
     
   /* estimate of maximum rate of change for d */
+  
+  factori = sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factorj = sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5
-    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j]*0.5;
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori
+    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
   *d1 = calcDistNeg(*t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
@@ -4333,8 +4336,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   double h, d, dold, dold2, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double normddot, ddot[3], maxddot, delt, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
-  double epsd, epsdFast, epsdFastR, epsdMax; 
+  double epsd, epsdFast, epsdFastR, epsdMax, factori, factorj; 
   int dorefine;
+  int its, foundrc, kk;
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
@@ -4349,12 +4353,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
    *   che rallentano moltissimo. Infatti tale ricerca veloce serve solo nel caso in cui due ellissoidi si 
    *   sfiorano per poi allontanrsi. 
    */
-  int its, foundrc, kk;
   t = 0;//t1;
 
+  factori = sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factorj = sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5
-    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j]*0.5;
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori
+    + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
  
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = OprogStatus.h; /* last resort time increment */
