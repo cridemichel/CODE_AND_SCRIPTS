@@ -776,7 +776,9 @@ void usrInitBef(void)
     OprogStatus.epsdMax = 0.001;
     OprogStatus.guessDistOpt = 0;
     OprogStatus.tolSD = 0.01;
-    OprogStatus.tolSDgrad = 0.1;
+    OprogStatus.tolSDlong = 0.01;
+    OprogStatus.tolSDconstr= 0.1;
+    OprogStatus.tolSDgrad = 0.0;
     OprogStatus.springkSD = -1.0;
     OprogStatus.stepSDA = 1.0;
     OprogStatus.stepSDB = 1.0;
@@ -929,7 +931,7 @@ void EvalSuperEllipse(double theta,double phi, double a, double b, double c, MES
    pm->point[0] = a * cphi * sth;
    pm->point[1] = b * sphi * sth;
    pm->point[2] = c * cth;
-#if 1
+#if 0
      {
        FILE* f;
        f = fopen("mesh.dat", "a");
@@ -1132,6 +1134,7 @@ void usrInitAft(void)
     invIb = matrix(3, 3);
 #endif
     powdirs = matrix(6,6);
+#if 0
     ellips_mesh[0]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
     ellips_mesh[1]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
     for (i = 0; i < OprogStatus.n1; i++)
@@ -1141,6 +1144,7 @@ void usrInitAft(void)
       }
     build_mesh(ellips_mesh[0], Oparams.a[0], Oparams.b[0], Oparams.c[0]);
     build_mesh(ellips_mesh[1], Oparams.a[1], Oparams.b[1], Oparams.c[1]);
+#endif
     RA = matrix(3, 3);
     RB = matrix(3, 3);
     Rt = matrix(3, 3);
