@@ -129,7 +129,7 @@
                     &vxo2[0], NA, &vyo2[0], NA, &vzo2[0], NA,\
 		    &vxg[0], NA,  &vyg[0], NA,  &vzg[0], NA,\
 		    &vxt2[0], NA,  &vyt2[0], NA,  &vzt2[0], NA,\
-		    &Rx, 1, &Ry, 1, &Rz, 1
+		    &Rx, 1, &Ry, 1, &Rz, 1, &px[0], NA, &py[0], NA, &pz[0], NA
 #else
 #define ALLOC_LIST  &rx[0], NA, &ry[0], NA, &rz[0], NA,\
                     &vx[0], NA, &vy[0], NA, &vz[0], NA,\
@@ -160,7 +160,7 @@
                     *vxg[NA], *vyg[NA], *vzg[NA],\
                     *vxt2[NA], *vyt2[NA], *vzt2[NA],\
                     *vxo2[NA], *vyo2[NA], *vzo2[NA],\
-                    *Rx, *Ry, *Rz        
+                    *Rx, *Ry, *Rz, *px[NA], *py[NA], *pz[NA]         
 #else
 #define DECL_LIST   *rx[NA], *ry[NA], *rz[NA],\
                     *vx[NA], *vy[NA], *vz[NA],\
