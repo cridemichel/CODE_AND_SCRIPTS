@@ -291,6 +291,7 @@ struct progStatus
   double epsdFast;
   double epsdFastR;
   double epsdMax;
+  double forceguess;
   double targetPhi;
   double scalfact;
   double reducefact;
@@ -486,6 +487,7 @@ struct pascii opro_ascii[] =
   {"epsdFast",     &OS(epsdFast),              1,   1, ".12G"},
   {"epsdFastR",    &OS(epsdFastR),             1,   1, ".12G"},
   {"epsdMax",      &OS(epsdMax),               1,   1, ".12G"},
+  {"forceguess",   &OS(forceguess),            1,   1, "%d"},
   {"zbrakn",       &OS(zbrakn),              1,   1,  "%d"},
   {"zbrentTol",    &OS(zbrentTol),           1,   1,  ".15G"},
   {"scalfact",     &OS(scalfact),              1,   1, ".12G"},
@@ -666,6 +668,7 @@ struct singlePar OsinglePar[] = {
   {"epsdFast",   &OprogStatus.epsdFast,       CT},
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
+  {"forceguess", &OprogStatus.forceguess,     INT},
   {"zbrakn",     &OprogStatus.zbrakn,         INT},
   {"zbrentTol",  &OprogStatus.zbrentTol,      CT},
   {"scalfact",   &OprogStatus.scalfact,       CT},

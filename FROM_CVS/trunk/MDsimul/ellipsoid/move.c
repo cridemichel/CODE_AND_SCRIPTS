@@ -2891,6 +2891,8 @@ double calcDistNeg(double t, int i, int j, double shift[3], double *r1, double *
     }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 retry:
+  if (OprogStatus.forceguess)
+    calcguess = 1;
   if (calcguess)
     {
       calc_intersec(rB, rA, Xa, rC);
