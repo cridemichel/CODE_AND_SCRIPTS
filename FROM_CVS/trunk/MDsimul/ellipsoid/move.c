@@ -2898,6 +2898,7 @@ retry:
     {
       calc_intersec(rB, rA, Xa, rC);
       calc_intersec(rA, rB, Xb, rD);
+#if 0
       for (k1=0; k1 < 3; k1++)
 	{
 	  vecgcg[k1] = rC[k1];
@@ -2906,20 +2907,21 @@ retry:
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
       printf("PRIMA dist=%.15f\n",calc_norm(r12));
-      distconjgrad(i, j, shift, vecgcg); 
+      distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda1, 1); 
+      //distconjgrad(i, j, shift, vecgcg, OprogStatus.lambda2, 1);
       for (k1=0; k1 < 3; k1++)
 	{
 	  rC[k1] = vecgcg[k1];
-	}	  
-#ifndef MD_DIST5
-      for (k1=0; k1 < 3; k1++)
-	{
-	  rD[k1+3] = vecgcg[k1+3];
-	}	
+	  rD[k1] = vecgcg[k1+3];
+	}	 
+#else
+
 #endif
+#if 0
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
       printf("dist=%.15f\n",calc_norm(r12));
+#endif
       MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
       calc_grad(rC, rA, Xa, gradf);
@@ -3027,7 +3029,7 @@ retry:
 #endif
 #endif
 #if 1
-  printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
+  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
   //exit(-1);
   if (segno > 0)
     return calc_norm(r12);
@@ -3534,6 +3536,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t2, dou
       normddot = calcvecF(i, j, *t, r1, r2, ddot, shift);
       //printf("normddot: %.15G\n", epsd/normddot);
       /* check for convergence */
+     
       if (normddot!=0 && delt < (epsd / normddot))
 	{
 	  MD_DEBUG10(printf("convergence reached in %d iterations\n", its));
