@@ -671,7 +671,6 @@ void assignAtom(int nf, int i, int a, const char* L)
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
       printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
 	     atoi(s5),i, j);*/
-      printf("disk con raggio e altezza specificati\n");
       at->common.rx = atof(s1);
       at->common.ry = atof(s2);
       at->common.rz = atof(s3);
