@@ -770,8 +770,8 @@ void shakePosRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE 
 #ifdef MD_RAPACONSTR
       if (!doshake[i])
 	continue;
-      else 
-	doshake[i]=0;
+      //else 
+	//doshake[i]=0;
 #endif
       /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
       for(a=0; a < NA; a++)
@@ -2581,7 +2581,7 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
 #endif
     }
-#if 0
+#if 1
 #if defined(MD_RAPACONSTR)  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
   		      1E-7, px, py, pz);
