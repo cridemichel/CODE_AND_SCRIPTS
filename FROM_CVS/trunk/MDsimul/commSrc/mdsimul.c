@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.4 2004-05-17 14:08:16 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.5 2004-05-17 14:14:29 demichel Exp $     */
 #ifndef lint
-static char vcid[] = "$Id: mdsimul.c,v 1.4 2004-05-17 14:08:16 demichel Exp $";
+static char vcid[] = "$Id: mdsimul.c,v 1.5 2004-05-17 14:14:29 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -377,15 +377,16 @@ void build_bilog_arr(void)
       nptstw++;
       if ((MD_INT) rint(fstpsw) >= tots)
 	end=1;
-      printf("tots: %d nptstw: %d nptst:%d npts: %d fstpw: %f fstps: %f\n",tots, nptstw, nptst, npts, fstpsw, fstps);
+      /*printf("tots: %d nptstw: %d nptst:%d npts: %d fstpw: %f fstps: %f\n",tots, nptstw, nptst, npts, fstpsw, fstps);*/
     }
   qsort((void*)bilog_arr, npts, sizeof(MD_INT), compare_int);
-
+#if 0
   for (i=0; i < npts; i++)
     {
       printf("bilog_arr[%d]=" MD_INTSTR "\n", i, bilog_arr[i]);
     }
   exit(-1);
+#endif
 }
 #endif
 /* =============================== >>> MAIN <<< ============================*/
