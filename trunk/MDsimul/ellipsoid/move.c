@@ -981,9 +981,9 @@ int bound(int na, int n)
 }
 #endif
 UpdateOrient(int i, double ti, double *uxxn, double *uxyt, double *uxzt, 
-	     double uyyt, double *uyzt, double uzzt)
+	     double uyyt, double *uyzt, double uzzt, double Omega[][])
 { 
-  double wSq, w, Omega[3][3], OmegaSq[3][3];
+  double wSq, w, OmegaSq[3][3];
   double sinw, cosw;
   double uxxn, uxyn, uxzn, uyyn, uyzn, uzzn;
 
@@ -1041,15 +1041,83 @@ UpdateOrient(int i, double ti, double *uxxn, double *uxyt, double *uxzt,
       *uzzt = uzz[i];
     }
 }
+
 #ifndef MD_APPROX_JACOB
+extern double **matrix(int n, int m);
+extern void free_matrix(double **M, int n);
+void calcFxt(double x[3], double X[3][3],
+	     double D[3][3], double Omega[3][3], double R[3][3], 
+	     double pos[3], double vel[3],
+	     double Fxt[3])
+{
+  double tOmegaD[3][3], DOmega[3][3];
+  double sumDOmega[3][3], Mtmp[3][3], DtX[3][3];
+  int k1, k2, k3;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  DOmega[k1][k2] = 0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    {
+	      if (D[k1][k3] == 0.0 || Omega[k3][k2] == 0.0)
+		continue;
+	      DOmega[k1][k2] += D[k1][k3]*Omega[k3][k2];
+	    }
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  tOmegaD[k1][k2] = 0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    {
+	      if (D[k3][k1] == 0.0 || Omega[k3][k1] == 0.0)
+		continue;
+	      tOmegaD[k1][k2] += Omega[k3][k1]*D[k3][k2]; 
+	    }
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      sumDOmega[k1][k2] = tOmegaD[k1][k2] + DOmega[k1][k2];
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  Mtmp[k1][k2] = 0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    Mtmp[k1][k2] += sumDOmega[k1][k3]*R[k3][k2]; 
+	}
+    }
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  DtX[k1][k2] = 0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    DtX[k1][k2] += R[k3][k1]*Mtmp[k3][k2]; 
+	}
+    }
+   for (k1 = 0; k1 < 3; k1++)
+     {
+       Fxt[k1] = 0;
+       for (k2 = 0; k2 < 3; k2++)
+	 Fxt[k1] += 2.0*DtX[k1][k2]*(x[k2]-pos[k2]) - 2.0*Sqr(x[3])*X[k1][k2]*vel[k2]; 
+     } 
+}
 /* funzione che calcola lo Jacobiano */
 void fdjac(int n, double x[], double fvec[], double **df, 
 	   void (*vecfunc)(int, double [], double []), int iA, int iB)
 {
   int na; 
-  double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti, vA[3], vB[3];
+  double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
+  double DA[3][3], DB[3][3], RA[3][3], RB[3][3];
   double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
-  int k1, k2;
+  double Fxt[3][3], Gxt[3][3];
+  int k1, k2, k3;
   ti = x[4] - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -1058,10 +1126,23 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vA[1] = vy[i];
   vA[2] = vz[i];
   /* ...and now orientations */
-  UpdateOrient(i, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt);
+  UpdateOrient(i, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, OmegaA);
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na],
-	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
+	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt, OmegaA);
+  DA[0][1] = DA[0][2] = DA[1][0] = DA[1][2] = DA[2][0] = DA[2][1] = 0.0;
+  DA[0][0] = invaSq[na];
+  DA[1][1] = invbSq[na];
+  DA[2][2] = invcSq[na];
+  RA[0][0] = uxx[i];
+  RA[0][1] = uxy[i];
+  RA[0][2] = uxz[i];
+  RA[1][0] = -uxy[i];
+  RA[1][1] = uyy[i];
+  RA[1][2] = uyz[i];
+  RA[2][0] = -uxz[i];
+  RA[2][1] = -uyz[i];
+  RA[2][2] = uzz[i];
 
   ti = x[4] - atomTime[j];
   rB[0] = rx[j] + vx[j]*ti;
@@ -1070,11 +1151,24 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vB[0] = vx[j];
   vB[1] = vy[j];
   vB[2] = vz[j];
-
-  UpdateOrient(j, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt);
+  UpdateOrient(j, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, OmegaB);
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na],
 	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
+  DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
+  DB[0][0] = invaSq[na];
+  DB[1][1] = invbSq[na];
+  DB[2][2] = invcSq[na];
+  RB[0][0] = uxx[j];
+  RB[0][1] = uxy[j];
+  RB[0][2] = uxz[j];
+  RB[1][0] = -uxy[j];
+  RB[1][1] = uyy[j];
+  RB[1][2] = uyz[j];
+  RB[2][0] = -uxz[j];
+  RB[2][1] = -uyz[j];
+  RB[2][2] = uzz[j];
+  
 
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -1100,12 +1194,14 @@ void fdjac(int n, double x[], double fvec[], double **df,
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
- 
+  calcFxt(x, Xa, DA, OmegaA, RA, rA, vA, Fxt);
+  calcFxt(x, Xb, DB, OmegaB, RB, rB, vB, Gxt);
+
   for (k1 = 0; k1 < 3; k1++)
     {
       df[k1][4] = 0;
       for (k2 = 0; k2 < 3; k2++)
-	df[k1][4] +=  + Sqr(x[3])*Xa[k1][k2]*vA[k2]; 
+	df[k1][4] += Fxt[k1]+Sqr(x[3])*Gxt[k1]; 
     } 
 
 
@@ -1115,6 +1211,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j)
 {
   int na, k1, k2; 
   double  Xa[3][3], Xb[3][3], rA[3], rB[3], ti;
+  double Omega[3][3];
   double  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt;
   /* x = (r, alpha, t) */ 
   
@@ -1123,7 +1220,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j)
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
   /* ...and now orientations */
-  UpdateOrient(i, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt);
+  UpdateOrient(i, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, Omega);
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na],
 	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
@@ -1132,7 +1229,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j)
   rB[0] = rx[j] + vx[j]*ti;
   rB[1] = ry[j] + vy[j]*ti;
   rB[2] = rz[j] + vz[j]*ti;
-  UpdateOrient(j, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt);
+  UpdateOrient(j, ti, &uxxt, &uxyt, &uxzt, &uyyt, &uyzt, &uzzt, Omega);
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na],
 	  uxxt, uxyt, uxzt, uyyt, uyzt, uzzt);
@@ -1141,7 +1238,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j)
     {
       fvec[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
-	fvec[k1] += -Xa[k1][k2]*(x[k2] - rA[k2]) - Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
+	fvec[k1] += -2.0*Xa[k1][k2]*(x[k2] - rA[k2]) - 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
     }
   fvec[3] = 1.0;
   fvec[4] = 1.0;
