@@ -874,6 +874,8 @@ void core_bump(int i, int j, double *W, double sigSq)
   /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
   //*W = delvx * rxij + delvy * ryij + delvz * rzij;
 }
+double calcpotene(void);
+void calc_energy(char *msg);
 
 void bump (int i, int j, int ata, int atb, double* W, int bt)
 {
@@ -950,10 +952,15 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   for (kk = 0; kk < 3; kk++)
     rAB[kk] = ratA[kk] - ratB[kk];
   /* reduce to minimum image rAB[]!! */
-
+#if 0
+  calc_energy(NULL); 
+  V = calcpotene();
+  E = K + V;
+  printf("E PRIMA= %.15f\n", E);
+#endif
   nrAB = calc_norm(rAB);
   MD_DEBUG(printf("sigmaSticky= %.15G norm rAB: %.15G\n", Oparams.sigmaSticky, calc_norm(rAB)));
-#if 1
+#if 0
   if (fabs(nrAB - Oparams.sigmaSticky)> 1E-4)
     {
       printf("distance (%d,%d)-(%d,%d): %.15G)between sticky point is wrong!", 
@@ -962,10 +969,10 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
     }
   for (kk=0; kk < 3; kk++)
     r12[kk] = rA[kk]-rB[kk];
-  if (fabs(calc_norm(r12) - (Oparams.sigma[0][0]+Oparams.sigmaSticky))> 1E-4)
+  if (fabs(calc_norm(r12) - (Oparams.sigma[0][0]+Oparams.sigmaSticky))> Oparams.sigmaSticky)
     {
-      printf("distance (%d,%d)-(%d,%d): %.15G between oxygens molecules is wrong!\n", 
-	     i, j, ata, atb, calc_norm(r12));
+      printf("distance (%d,%d)-(%d,%d): %.15G sigma+sigsticky=%.15G between oxygens molecules is wrong!\n", 
+	     i, j, ata, atb, calc_norm(r12), Oparams.sigma[0][0]+Oparams.sigmaSticky);
       for (kk=0; kk < 3; kk++)
 	r12[kk] = ratA[kk]-rA[kk];
       printf("dist atA-A:%.15G\n", calc_norm(r12));
@@ -1191,14 +1198,15 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       wz[j] -= factor*invIb[2][a]*rBCn[a];
     }
 #else
-  factorinvIa = factor*invIa;
-  factorinvIb = factor*invIb;
+  factorinvIa = -factor*invIa;
+  factorinvIb = -factor*invIb;
   wx[i] += factorinvIa*rACn[0];
   wx[j] -= factorinvIb*rBCn[0];
   wy[i] += factorinvIa*rACn[1];
   wy[j] -= factorinvIb*rBCn[1];
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
+#if 0
   if (isnan(wx[i]))
     {
       printf("factor: %f denom: %f vc: %f invIa: %f\n", factor, denom, vc, invIa);
@@ -1206,10 +1214,18 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       exit(-1);
     }
 #endif
+#endif
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
+#if 0
+  calc_energy(NULL); 
+  V = calcpotene();
+  E = K + V;
+  printf("E DOPO= %.15f\n", E);
+#endif
+
   /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
 #if 0
   *W = delpx * rxij + delpy * ryij + delpz * rzij;
@@ -3112,7 +3128,8 @@ void calc_energy(char *msg)
   free_matrix(Ia,3);
   free_matrix(Ib,3);
 #endif
-  printf("[%s] Kinetic Energy: %f\n", msg, K);
+  if (msg)
+    printf("[%s] Kinetic Energy: %f\n", msg, K);
 }
 
 void store_bump(int i, int j)
