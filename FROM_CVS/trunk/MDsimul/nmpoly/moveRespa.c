@@ -1745,7 +1745,11 @@ void updPositions(double dt, double c)
   double cdt, *m;
   cdt = c*dt;
   m = Oparams.m;
-  for (i=0; i < Oparams.parnum; i++)
+#ifdef MD_RAPACONSTR
+  ComputeConstraints(dt, 1.0, 1, 0); 
+  /*RAPA<<<<<<<<<<<<<<<< */
+#endif
+   for (i=0; i < Oparams.parnum; i++)
     {
       for (a=0; a < NA; a++)
 	{
@@ -1831,6 +1835,11 @@ void updPositionsNPT(double dt, double c)
   RCMy = RCMy + (-ryo + ry[a][i])*mM[a];
   RCMz = RCMz + (-rzo + rz[a][i])*mM[a];
 #endif
+#ifdef MD_RAPACONSTR
+      ComputeConstraints(dt, 1.0, 1, 0); 
+      /*RAPA<<<<<<<<<<<<<<<< */
+#endif
+ 
   for (i=0; i < Oparams.parnum; i++)
     {
       for (a=0; a < NA; a++)
@@ -2248,7 +2257,7 @@ void movelongRespaNPTBef(double dt)
      updPvLong(dt, 0.5);
 #ifdef MD_RAPACONSTR
   //printf("MOVE LONG BEF\n");
-  ComputeConstraints(dt, 0.5, 0, 0); 
+  ComputeConstraints(dt, 1.0, 0, 0); 
   /*RAPA<<<<<<<<<<<<<<<< */
 #endif
 #if 1
@@ -2390,13 +2399,13 @@ void movelongRespaNPTAft(double dt)
 #else
   LJForceLong(Oparams.parnum, OprogStatus.rcutInner, Oparams.rcut);
 #ifdef MD_RAPACONSTR
-  ComputeConstraints(dt, 0.5, 0, 1);
+  //ComputeConstraints(dt, 0.5, 0, 1);
 #endif
 
   if (OprogStatus.Nose==1)
     updPvLong(dt, 0.5);
   updImpLong(dt, 0.5);
-  #if 1
+#if 0
 #if !defined(MD_FENE) && !defined(MD_RAPACONSTR) 
   if (OprogStatus.rcutInner != Oparams.rcut)
     shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000001, px, py, pz);
@@ -2469,10 +2478,6 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
       updPv(dt, 0.5);
       updPs(dt, 0.5);
       updImpNoseAnd(dt, 0.5);
-#ifdef MD_RAPACONSTR
-      ComputeConstraints(dt, 0.5, 1, 0); 
-      /*RAPA<<<<<<<<<<<<<<<< */
-#endif
       updVol(dt, 0.5);
       upds(dt, 0.5);
       updPositionsNPT(dt, 1.0);
@@ -2548,10 +2553,6 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
       updImpNoseAndAft(dt, 0.5);
       updPvAft(dt, 0.5);
 #else
-#ifdef MD_RAPACONSTR
-      ComputeConstraints(dt, 0.5, 1, 1); 
-      /*RAPA<<<<<<<<<<<<<<<< */
-#endif
       updImpNoseAndAft(dt, 0.5);
       updPsAft(dt, 0.5);
       updPvAft(dt, 0.5);
@@ -2578,7 +2579,7 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 #endif
 #endif
     }
-#if 1
+#if 0
 #if !defined(MD_FENE) //&& !defined(MD_RAPACONSTR)  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
   		      1E-6, px, py, pz);
