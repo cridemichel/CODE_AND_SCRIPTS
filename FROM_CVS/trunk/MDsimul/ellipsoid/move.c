@@ -493,7 +493,7 @@ void scale_Phi(void)
   static int first = 1;
   static double a0I, target;
   double dist, distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
-  double L2, shift[3], shiftmin[3], phi, scalfact, factorold, factor;
+  double L2, shift[3], shiftmin[3], phi, scalfact, factorold, factor, axai;
   if (OprogStatus.targetPhi <= 0)
     return;
 
@@ -501,6 +501,7 @@ void scale_Phi(void)
   if (first)
     {
       first = 0;
+      a0I = Oparams.a[0];
       target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
   //UpdateSystem();   
@@ -575,10 +576,10 @@ void scale_Phi(void)
 	}
 #endif
       if (i < Oparams.parnumA)
-	a0I = Oparams.a[0];
+	axai = Oparams.a[0];
       else
-	a0I = Oparams.a[1];
-      if (fabs(axa[i] / a0I - target) < OprogStatus.axestol)
+	axai = Oparams.a[1];
+      if (fabs(axa[i] / axai - target) < OprogStatus.axestol)
 	{
 	  done++;
 	  scdone[i] = 1;
