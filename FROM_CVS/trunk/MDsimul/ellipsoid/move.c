@@ -623,7 +623,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double rxij, ryij, rzij, factor, invmi, invmj;
   double delpx, delpy, delpz, sigSq, wrx, wry, wrz, rACn[3], rBCn[3], rnI[3];
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
-  double norm[3];
+  double norm[3], norm2[3];
   double modn, denom;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
@@ -724,6 +724,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   modn = sqrt(modn);
   for (a=0; a < 3; a++)
     norm[a] /= modn;
+  MD_DEBUG(printf("CYL %f %f %f %f %f %f\n", rCx, rCy, rCz, norm[0], norm[1], norm[2]));
   /* calcola le velocità nel punto di contatto */
   vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
   vCA[0] = vx[i] + wrx;
@@ -741,6 +742,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   vc = 0;
   for (a=0; a < 3; a++)
     vc += (vCA[a]-vCB[a])*norm[a];
+  MD_DEBUG(printf("[bump] before bump vc=%.15G\n", vc));
   if (vc < 0)// && fabs(vc) > 1E-10)
     {
       MD_DEBUG(printf("norm = (%f,%f,%f)\n", norm[0], norm[1],norm[2]));
@@ -783,7 +785,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     denom += invIb*Sqr(rBCn[a]);
 #endif
 #ifdef MD_GRAVITY
-  factor = 2.0*vc/denom;
+  factor =2.0*vc/denom;
   /* Dissipation */
 #if 0
   /* se si vuole avere una dissipazione nell'urto questo va sistemato!!! */
@@ -796,7 +798,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
    * per evitare il collasso inelastico.
    * Gli urti in tale caso sono tutti elastici. */ 
   /* SQUARE WELL: modify here */
-  factor = 2.0*vc/denom;
+  factor =2.0*vc/denom;
+  MD_DEBUG(printf("factor=%f denom=%f\n", factor, denom));
 #endif
   delpx = - factor * norm[0];
   delpy = - factor * norm[1];
@@ -831,6 +834,50 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   wy[j] -= factorinvIb*rBCn[1];
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
+#endif
+#if MD_DEBUG(x) == x
+  for (a=0; a < 3; a++)
+    {
+      norm2[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  norm2[a] += -Xb[a][b]*rBC[b];
+	}
+    }
+  modn = 0.0;
+  for (a = 0; a < 3; a++)
+    modn += Sqr(norm2[a]);
+  modn = sqrt(modn);
+  for (a=0; a < 3; a++)
+    norm2[a] /= modn;
+  modn = 0;
+  for (a=0; a < 3; a++)
+    modn += norm2[a]*norm[a];
+  printf("norm.norm2=%.15G\n", modn);
+  vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
+  vCA[0] = vx[i] + wrx;
+  vCA[1] = vy[i] + wry;
+  vCA[2] = vz[i] + wrz;
+  vectProd(wx[j], wy[j], wz[j], -rBC[0], -rBC[1], -rBC[2], &wrx, &wry, &wrz);
+  vCB[0] = vx[j] + wrx;
+  vCB[1] = vy[j] + wry;
+  vCB[2] = vz[j] + wrz;
+  vc = 0;
+  for (a=0; a < 3; a++)
+    vc += (vCA[a]-vCB[a])*norm[a];
+  printf("[bump] after bump vc=%.15G\n", vc); 
+  //Oparams.time += 1.0; 
+  //UpdateAtom(0);
+  //UpdateAtom(1);
+    {
+      double shift[3], r1[3], r2[3], alpha, vecgd[8], r12[3];
+      shift[0] = L*rint((rx[i]-rx[j])/L);
+      shift[1] = L*rint((ry[i]-ry[j])/L);
+      shift[2] = L*rint((rz[i]-rz[j])/L);
+      printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]);
+      printf("[bump] distance between %d-%d: %.15f\n", i, j, calcDistNeg(Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
+    }
+//exit(-1); 
 #endif
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
@@ -1091,7 +1138,6 @@ void UpdateAtom(int i)
 #endif
       sinw = sin(w*ti)/w;
       cosw = (1.0 - cos(w*ti))/wSq;
-	
       Omega[0][0] = 0;
       Omega[0][1] = -wz[i];
       Omega[0][2] = wy[i];
@@ -1110,7 +1156,6 @@ void UpdateAtom(int i)
       OmegaSq[2][0] = wx[i]*wz[i];
       OmegaSq[2][1] = wy[i]*wz[i];
       OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
-      
       
       for (k1 = 0; k1 < 3; k1++)
 	{
@@ -1823,7 +1868,7 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
    * essere anche negativa! */
   for (k1=0; k1 < 3; k1++)
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
-  MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
 }
 
@@ -1968,9 +2013,11 @@ void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, doubl
    * essere anche negativa! */
   for (k1=0; k1 < 3; k1++)
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
+#if 0
   MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
   MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+#endif
 }
 
 void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double shift[3])
@@ -2017,9 +2064,11 @@ void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double s
    * essere anche negativa! */
   for (k1=0; k1 < 3; k1++)
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*Sqr(x[7]); 
+#if 0
   MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
   MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+#endif
 }
 void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
 {
@@ -2250,8 +2299,8 @@ double calcDist(double t, int i, int j, double shift[3], double *r1, double *r2,
   if (retcheck != 0)
     {
       printf("[calcDist] I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
-      Oparams.time = t;
-      store_bump(i, j);
+      //Oparams.time = t;
+      //store_bump(i, j);
       //exit(-1);
     }
   for (k1 = 0; k1 < 8; k1++)
@@ -2486,7 +2535,7 @@ int refine_contact(int i, int j, double t, double vecgd[8], double shift[3],doub
 }
 int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
-  double h, d1, d2, d1Neg, d1Pos, alpha, vecgd1[8], vecgd2[8], t, r1[3], r2[3]; 
+  double h, d1, d2, d1Neg, d1Pos, alpha, vecgd1[8], vecgd2[8], vecgd3[8], t, r1[3], r2[3]; 
   double vd, normddot, ddot[3], maxddot, delt;
   const double epsd = 0.001; 
   int foundrc, retcheck, kk;
@@ -2501,13 +2550,8 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
     }
   d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
   MD_DEBUG(printf("distances d1=%.12G", d1));
-  if (d1<0&&fabs(d1)>1E-2)
-    {
-      printf("d1 < 0 i=%d j=%d\n",i, j);
-      exit(-1);
-    }
-#if 1
-  d1Pos = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
+ #if 1
+  d1Pos = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd3, 1);
   MD_DEBUG(printf("distances d1=%.12G d1Neg: %.12G t1=%.15G curtime=%.15G\n", d1Pos, d1,
 		  t1, Oparams.time));
   
@@ -2517,7 +2561,7 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
       //exit(-1);
     }
 #endif
-#if 0
+#if 1
   if ((lastbump[0]==i || lastbump[0]==j) &&
       (lastbump[1]==i || lastbump[1]==j))
     {
@@ -2525,8 +2569,15 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
       while (d1 < 0)
 	{
 	  t += h;
-	  d1 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
+	  if (t > t2)
+	    return 0;
+	  d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 0);
 	}
+    }
+  else if (d1<0&&fabs(d1)>1E-2)
+    {
+      printf("d1 < 0 i=%d j=%d\n",i, j);
+      return 0;
     }
 #endif
   MD_DEBUG(printf(">>>>d1:%f\n", d1));
@@ -2565,7 +2616,7 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
       
 #endif
       t += h;
-      d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
+      d2 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 0);
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f\n", t, d1, d2));
       if (d1 > 0 && d2 < 0)
 	{
@@ -2576,7 +2627,7 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
 	      d2 = calcDist(t, i, j, shift, r1, r2, &alpha, vecgd, 0);
 	    }
 #endif
-	  if (refine_contact(i, j, t-h, vecgd1, shift, vecg))
+	  if (refine_contact(i, j, t-h, vecgd2, shift, vecg))
 	    {
 	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
@@ -2602,7 +2653,7 @@ int locate_contact_trivial(int i, int j, double shift[3], double t1, double t2, 
 	}
       d1 = d2;
       for (kk = 0; kk < 8; kk++)
-	vecgd1[kk] = vecgd2[kk];
+	vecgd2[kk] = vecgd1[kk];
     }
   MD_DEBUG(  
   if (foundrc==0)
@@ -3884,13 +3935,30 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 0
+#if 1
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
-	      double r1[3], r2[3], alpha;
+	      double d,r1[3], r2[3], alpha;
+	      FILE* f;
 	      static int first = 1;
-	      calcDist(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecg, first);
-	      calcDistNeg(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecgNeg, first);
+	      shift[0] = L*rint((rx[0]-rx[1])/L);
+	      shift[1] = L*rint((ry[0]-ry[1])/L);
+	      shift[2] = L*rint((rz[0]-rz[1])/L);
+	      MD_DEBUG(printf("[EVENT10] shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]));
+	      d=calcDist(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecg, 1);
+	      if (first)
+		f = fopen("distPos.dat","w");
+	      else
+		f = fopen("distPos.dat","a");
+	      fprintf(f,"%.15G %.15G\n", Oparams.time, d);
+	      fclose(f);
+	      d=calcDistNeg(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecgNeg, 1);
+	      if (first)
+		f = fopen("distNeg.dat","w");
+	      else
+		f = fopen("distNeg.dat","a");
+	      fprintf(f,"%.15G %.15G\n", Oparams.time, d);
+	      fclose(f);
 	      if (first == 1)
 		first = 0;
 	    }

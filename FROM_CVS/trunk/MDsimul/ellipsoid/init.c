@@ -62,7 +62,16 @@ void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z,
 }
 
 void ScheduleEvent (int idA, int idB, double tEvent); 
-
+void check_coord(void)
+{
+  int i;
+  for (i = 0; i < Oparams.parnum; i++)
+    if (fabs(rx[i]) > L*0.5 || fabs(ry[i])>L*0.5 || fabs(rz[i]) > L*0.5)
+      {
+	printf("%d is out of box!\n", i);
+	exit(-1);
+      }
+}
 /* ============================= >>> FCC <<< ================================*/
 void FCC(int Nm, COORD_TYPE *m)
 {
@@ -83,13 +92,12 @@ void FCC(int Nm, COORD_TYPE *m)
        COORD_TYPE    rRoot3               1.0 / sqrt ( 3.0 ) */
   int Nc, Ncz;
   double rRoot3; /* = 0.5773503; */
-  double Cell, Cell2;
+  double Lold, Cell, Cell2;
 #ifdef MD_GRAVITY
   double Cellz, Cell2z;
 #endif
   int i, ix, iy, iz, iref, ii;
   double bx[4], by[4], bz[4]; /* base vectors for FCC lattice */
-  
 #ifdef MD_GRAVITY
   /* NOTA:
      Ncz è tanto più grande quanto maggiore è Lz  rispetto a L,
@@ -189,6 +197,7 @@ void FCC(int Nm, COORD_TYPE *m)
 #else
       rz[i] = rz[i] - 0.5 * L;
 #endif
+      printf("%d = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]);
     }
   return;
 }
@@ -586,9 +595,11 @@ void wrap_initCoord(void)
   vx[0] = 0.1;
   vy[0] = 0;
   vz[0] = 0;
-  wx[0] = .003;
-  wy[0] = -1.5;
-  wz[0] = -0.5;
+  /* -0.285316712824933 -0.182347469854598 -0.530547025349427*/
+
+  wx[0] = -0.285312;// .003;
+  wy[0] = -0.1823475;// -1.5;
+  wz[0] = -0.530547;// -0.5;
 #if 0
   uxx[0] = 0.707;
   uyx[0] = -0.707;
@@ -602,13 +613,15 @@ void wrap_initCoord(void)
   uzz[0] = 1.0;
   rx[1] = 2.0;
   ry[1] = 1.0;
+  
   rz[1] = 0.5;
   vx[1] = -0.1;
   vy[1] = 0;
   vz[1] = 0;
-  wx[1] =-1;
-  wy[1] = -0.3;
-  wz[1] = 0.1;
+  /* -0.102514772783053 -0.439677384690882 0.330913950385712*/
+  wx[1] =-0.102415;//-1;
+  wy[1] =-0.43968;//-0.3;
+  wz[1] =0.330914;// 0.1;
 }
 
 void adjust_norm(double **R);
@@ -624,7 +637,7 @@ void initCoord(void)
      their orientations */  
   
   /* set both atoms velocity to the center of mass velocity */
-  comvel(Oparams.parnum, Oparams.T, Oparams.m, 1); 
+  comvel(Oparams.parnum, Oparams.T, Oparams.m, 0); 
 #if 1
   K = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
@@ -642,6 +655,39 @@ void initCoord(void)
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
   angvel(); 
+#if MD_DEBUG(x) == x
+    {
+     const char sepStr[] = "@@@\n";
+  FILE *bf;
+      char fileop[512],fileop2[512], fileop3[512];
+      sprintf(fileop2 ,"Store-Init");
+	  /* store conf */
+	  strcpy(fileop, absTmpAsciiHD(fileop2));
+	  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+	    {
+	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+	      exit(-1);
+	    }
+#ifndef MD_STOREMGL
+	  writeAsciiPars(bf, opro_ascii);
+	  fprintf(bf, sepStr);
+	  writeAsciiPars(bf, opar_ascii);
+	  fprintf(bf, sepStr);
+	  printf("qui\n");
+#endif
+	  fprintf(bf, ".Vol: %f\n", L*L*L);
+	  writeAllCor(bf);
+	  fclose(bf);
+#ifndef MD_STOREMGL
+#ifdef MPI
+          sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+#else 
+          sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
+	  system(fileop3);
+#endif
+    }
+#endif
   //wrap_initCoord();
 }
 
