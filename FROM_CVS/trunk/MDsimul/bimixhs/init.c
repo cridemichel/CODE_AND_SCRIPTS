@@ -706,6 +706,7 @@ void usrInitBef(void)
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   extern void add_bond(int na, int n);
   extern void remove_bond(int na, int n);
+  extern double calcpotene(void);
 #endif
   /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
@@ -864,6 +865,7 @@ void usrInitAft(void)
 	  }
       }
 #endif
+  printf("Energia all'inizio: %.15f\n", calcpotene());
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
