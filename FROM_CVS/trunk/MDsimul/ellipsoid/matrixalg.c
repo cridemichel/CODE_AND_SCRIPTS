@@ -757,6 +757,7 @@ void projectgrad(double *p, double *xi, double *gradf, double *gradg)
   projonto(p, xi, rA, Xa, gradf, &sfA, dist);
   projonto(&p[3], &xi[3], rB, Xb, gradg, &sfB, dist);
 }
+int maxitsRyck;
 void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double []))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -766,9 +767,9 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 { 
   int j,its,kk;
   const int ITMAXFR = OprogStatus.maxitsSD;
-  const double EPSFR=1E-10;
+  const double EPSFR=1E-10, GOLD=1.618034;
   double normxi,gg,gam,fp,dgg,norm1, norm2, sp, fpold, gradf[3], gradg[3];
-  double distini, distfin, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3];
+  double distini, distfin, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3], xiold[6];
   double pm[6], fpm;
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
   
@@ -786,6 +787,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       distini += Sqr(p[kk+3]-p[kk]);
     }
   distini = sqrt(distini);
+  maxitsRyck = 0;
 #endif
 
   //printf("g=%f %f %f %f %f %f\n", g[0], g[1], g[2], g[3], g[4], g[5]);
@@ -817,11 +819,11 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       for (j=0; j < n; j++)
 	{
 	  p[j] += xi[j];
-	  pm[j] += xi[j]/2.0;
 	}
 
  
-      //printf("its=%d 2.0*fabs(*fret-fp):%.15G rs: %.15G fp=%.15G fret: %.15G\n",its, 2.0*fabs(*fret-fp),ftol*(fabs(*fret)+fabs(fp)+EPSFR),fp,*fret );
+      //if (its > 30)
+	//printf("sfA=%.15G sfB=%.15G its=%d fp=%.15G fpold: %.15G\n",sfA, sfB, its, fp,fpold );
 #if 0
       if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPSFR)) 
 	{ 
@@ -830,6 +832,17 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 #endif
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradfG, gradgG);
+      if (fp > fpold)
+	{
+#if 0
+	  for (j=0; j < n; j++)
+	    {
+	      xi[j] /= 4.0;
+	    }
+#endif
+	  sfA /= GOLD;
+	  sfB /= GOLD;
+	}
 #if 0
       fpm = (*func)(pm);
       if (fpm < fp && fpm < fpold)
@@ -869,7 +882,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
        //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
 	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
        itsfrprmn++;      
-       if ( (0 && fp < Sqr(OprogStatus.epsd*2.0)) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 0 && sqrt(normxi) < (fp+EPSFR)*ftol) )
+       if ( (0 && fp < 1E-5) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 0 && sqrt(normxi) < (fp+EPSFR)*ftol) )
 	 {
 	   callsok++;
 	   return;
@@ -901,6 +914,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   ng =sqrt(ng);
   printf(">>> distini=%.15G distfin=%.15G sfA: %.15G sfB:%.15G\n", distini, distfin, sfA, sfB);
   printf(">>> fpold=%.15G fp=%.15G normgrad=%.15G\n", fpold, fp, ng);
+  maxitsRyck=1;
     }
 #endif
 
