@@ -101,8 +101,8 @@ void nrerror(char *msg)
 long long int itsfrprmn=0, callsfrprmn=0,callsok=0, callsprojonto=0, itsprojonto=0;
 double xicom[8], pcom[8], pcom2[8], xi[8], G[8], H[8], grad[8];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
-int cghalfspring, icg, jcg, minaxicg, minaxjcg, doneryck;
-double shiftcg[3], lambdacg;
+int cghalfspring, icg, jcg, doneryck;
+double shiftcg[3], lambdacg, minaxicg, minaxjcg;
 double gradfG[3], gradgG[3], dxG[6];
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3], **RtA, **RtB;
 extern int polinterr;
@@ -580,7 +580,7 @@ void linminPow(double p[], double xi[], int n, double *fret, double (*func)(doub
       xicom[j]=xi[j];
     } 
   ax=0.0; /*Initial guess for brackets.*/
-  xx=1.0; 
+  xx=0.01; 
   mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimPow); 
   *fret=brent(ax,xx,bx,f1dimPow,TOLLM,&xmin);
   for (j=0;j<n;j++)
@@ -691,10 +691,10 @@ void body2lab(int i, double xp[], double x[], double *rO, double **R)
       x[k1] += rO[k1];
     }
 }
+
 void angs2coord(double angs[], double p[])
 {
   double sin1, sin3;
-
   sin1 = sin(angs[1]);
   p[0] = axa[icg]*cos(angs[0])*sin1;
   p[1] = axb[icg]*sin(angs[0])*sin1;
@@ -742,13 +742,13 @@ double funcPowell(double angs[])
     F += S*Sqr(vec[k1+3]-vec[k1]);
   return F;
 }
-extern double pi;
+extern double pi, **powdirs;
 double powdirsI[4][4]={{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
 void powellmethod(double *vec)
 {
-  double Fret, **powdirs, r1p[3], r2p[3], vecP[6], angs[4], sinth;
+  double Fret, r1p[3], r2p[3], vecP[6], angs[4], sinth;
   int iter, k1, k2;
-  powdirs = matrix(4,4);
+  //powdirs = matrix(4,4);
   powmeth = 1;
   for (k1=0; k1 < 4; k1++)
     for (k2=0; k2 < 4; k2++)
@@ -770,7 +770,7 @@ void powellmethod(double *vec)
   sinth = vecP[4]/axb[jcg]/sin(angs[3]);
   if (sinth < 0)
     angs[2] = 2.0*pi-angs[2];
-  powell(angs, powdirs, 4, OprogStatus.tolSD, &iter, &Fret, funcPowell);
+   powell(angs, powdirs, 4, OprogStatus.tolSD, &iter, &Fret, funcPowell);
 
   /* trovo le coordinate cartesiane dei punti trovati */
   angs2coord(angs, vecP);
@@ -778,7 +778,7 @@ void powellmethod(double *vec)
   /* torno nel riferimento del laboratorio */
   body2lab(icg, vecP, vec, rA, RtA);
   body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
-  free_matrix(powdirs, 4);
+  //free_matrix(powdirs, 4);
   powmeth = 0;
 }
 int check_point(char* msg, double *p, double *rc, double **XX)
@@ -960,33 +960,41 @@ void vectProdVec(double *A, double *B, double *C)
 }
 double Asd, Bsd, OmegaSqAsd[3][3], OmegaAsd[3][3], OmegaBsd[3][3], OmegaSqBsd[3][3];
 extern void calc_intersec(double *rB, double *rA, double **Xa, double* rI);
-double f1dimPhiA(double phi)
+double funcPowellRyck(double phi[])
 {
   int kk, k1, k2;
-  double sinw, cosw;
-  double MA[3][3], pn[6];
-  double gx2[3];
+  double sinwA, sinwB, coswA, coswB;
+  double MA[3][3], pn[6], MB[3][3], A, B;
+  double gx2[3], fx2[3];
   double F, S;
-  sinw = sin(phi);
-  cosw = (1.0 - cos(phi));
-  
+  sinwA = sin(phi[0]);
+  coswA = (1.0 - cos(phi[0]));
+  sinwB = sin(phi[1]);
+  coswB = (1.0 - cos(phi[1]));
+
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  MA[k1][k2] = sinw*OmegaAsd[k1][k2]+cosw*OmegaSqAsd[k1][k2];
+	  MA[k1][k2] = sinwA*OmegaAsd[k1][k2]+coswA*OmegaSqAsd[k1][k2];
+	  MB[k1][k2] = sinwB*OmegaBsd[k1][k2]+coswB*OmegaSqBsd[k1][k2];
 	}
     }
    for (k1 = 0; k1 < 3; k1++)
      {
        pn[k1] = pcom[k1]-rA[k1];
+       pn[k1+3] = pcom[k1+3]-rB[k1];
+
        for (k2 = 0; k2 < 3; k2++)
 	 {
 	   pn[k1] += MA[k1][k2]*(pcom[k2]-rA[k2]);
+	   pn[k1+3] += MB[k1][k2]*(pcom[k2+3]-rB[k2]); 
 	 }
        pn[k1] += rA[k1];
+       pn[k1+3] += rB[k1];
      }	
    calc_intersec(pn, rA, Xa, pcom2);
+   calc_intersec(&pn[3], rB, Xb, &pcom2[3]);
    if (OprogStatus.forceguess)
      {
        for (k1 = 0; k1 < 3; k1++)
@@ -995,74 +1003,29 @@ double f1dimPhiA(double phi)
  	   for (k2 = 0; k2 < 3; k2++)
  	     gx2[k1] += 2.0*Xb[k1][k2]*(pcom2[k2] - rB[k2]);
  	 }
-       Bsd = 0.0;
+       B = 0.0;
        for (k1 = 0; k1 < 3; k1++)
  	 {
- 	   Bsd += (pcom2[k1]-rB[k1])*gx2[k1];
+ 	   B += (pcom2[k1]-rB[k1])*gx2[k1];
  	 }
-       Bsd = 0.5*Bsd - 1.0;
-      
-      if (Asd<0 && Bsd<0)
-	S = - OprogStatus.springkSD;
-      else
-	S = OprogStatus.springkSD;
-     }
-  else
-    S = OprogStatus.springkSD;
- 
-  F = 0.0;
-  for (kk=0; kk < 3; kk++)
-    F += S*Sqr(pcom2[kk]-pcom[kk+3]);
-  //printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
-  return F;
-}
-
-double f1dimPhiB(double phi)
-{
-  int kk, k1, k2;
-  double sinw, cosw;
-  double MB[3][3], pn[6];
-  double fx2[3];
-  double S, F;
-  sinw = sin(phi);
-  cosw = (1.0 - cos(phi));
-  
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  MB[k1][k2] = sinw*OmegaBsd[k1][k2]+cosw*OmegaSqBsd[k1][k2];
-	}
-    }
-   for (k1 = 0; k1 < 3; k1++)
-     {
-       pn[k1+3] = pcom[k1+3]-rB[k1];
-       for (k2 = 0; k2 < 3; k2++)
-	 {
-	   pn[k1+3] += MB[k1][k2]*(pcom[k2+3]-rB[k2]); 
-	 }
-       pn[k1+3] += rB[k1];
-     }	
-   calc_intersec(&pn[3], rB, Xb, &pcom2[3]);
-   if (OprogStatus.forceguess)
-     {
+       B = 0.5*B - 1.0;
        for (k1 = 0; k1 < 3; k1++)
  	 {
   	   fx2[k1] = 0;
  	   for (k2 = 0; k2 < 3; k2++)
  	     fx2[k1] += 2.0*Xa[k1][k2]*(pcom2[k2+3] - rA[k2]);
  	 }
-       Asd = 0.0;
+       A = 0.0;
        for (k1 = 0; k1 < 3; k1++)
  	 {
- 	   Asd += (pcom2[k1+3]-rA[k1])*fx2[k1];
+ 	   A += (pcom2[k1+3]-rA[k1])*fx2[k1];
  	 }
-       Asd = 0.5*Asd - 1.0;
-      
-      if (Asd<0 && Bsd<0)
-	S = - OprogStatus.springkSD;
-      else
-	S = OprogStatus.springkSD;
+       A = 0.5*A - 1.0;
+       
+       if (A<0 && B<0)
+	 S = - OprogStatus.springkSD;
+       else
+	 S = OprogStatus.springkSD;
      }
   else
     S = OprogStatus.springkSD;
@@ -1070,10 +1033,20 @@ double f1dimPhiB(double phi)
   F = 0.0;
   for (kk=0; kk < 3; kk++)
     F += S*Sqr(pcom2[kk]-pcom2[kk+3]);
-  //printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
+  printf("S=%f vec: %f %f dist: %.15G\n",S, phi[0], phi[1], sqrt(fabs(F)));
   return F;
 }
+double powdirsIRyck[2][2]={{1,0},{0,1}};
 
+void powellmethodRyck(double *fret)
+{
+  int k1, k2, iter;
+  double angs[2]={0,0};
+  for (k1=0; k1 < 2; k1++)
+    for (k2=0; k2 < 2; k2++)
+      powdirs[k1][k2] = powdirsIRyck[k1][k2];
+  powell(angs, powdirs, 2, OprogStatus.tolSD, &iter, fret, funcPowellRyck);
+}
 void linminRyck(double p[], double xi[], double *fret)
 /*Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and 
  * resets p to where the function func(p) takes on a minimum along the direction xi from p,
@@ -1088,7 +1061,7 @@ void linminRyck(double p[], double xi[], double *fret)
 	      double (*func)(double));
   int j, kk; 
   int k1, k2; 
-  double fx2[3];
+  double fx2[3], r1[3], r2[3];
   double xx,xminA, xminB,fx,fb,fa,bx,ax, omA[3], omB[3], nA, nB;
  
 #if 1
@@ -1098,8 +1071,13 @@ void linminRyck(double p[], double xi[], double *fret)
       xicom[j]=xi[j];
     }
 #endif
-  vectProdVec(p, xi, omA);
-  vectProdVec(&p[3], &xi[3], omB);
+  for (kk =0; kk < 3; kk++)
+    {
+      r1[kk] = p[kk] - rA[kk];
+      r2[kk] = p[kk+3] - rB[kk];
+    }
+  vectProdVec(r1, xi, omA);
+  vectProdVec(r2, &xi[3], omB);
   nA = calc_norm(omA);
   nB = calc_norm(omB);
   for (kk=0; kk < 3; kk++)
@@ -1143,42 +1121,7 @@ void linminRyck(double p[], double xi[], double *fret)
   OmegaSqBsd[2][0] = omB[0]*omB[2];
   OmegaSqBsd[2][1] = omB[1]*omB[2];
   OmegaSqBsd[2][2] = -Sqr(omB[0]) - Sqr(omB[1]);
-  if (OprogStatus.forceguess)
-    {
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  fx2[k1] = 0;
-	  for (k2 = 0; k2 < 3; k2++)
-	    fx2[k1] += 2.0*Xa[k1][k2]*(pcom[k2+3] - rA[k2]);
-	}
-      Asd = 0.0;
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  Asd += (pcom[k1+3]-rA[k1])*fx2[k1];
-	}
-       Asd = 0.5*Asd - 1.0;
-    }
- 
-  ax=0.0; /*Initial guess for brackets.*/
-  xx=1.0; 
-  //printf("dist0=%.15G\n", f1dimPhiA(0));
-  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimPhiA); 
-  //printf("ax=%f xx=%f bx=%f\n", ax, xx, bx);
-  *fret=brent(ax,xx,bx,f1dimPhiA,TOLLM,&xminA);
-  ax=0.0; /*Initial guess for brackets.*/
-  xx=1.0;
-  
-  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dimPhiB); 
-#if 0
-  printf("dist1A=%.15G\n", f1dimPhiA(xminA));
-  printf("dist1B=%.15G\n", *fret);
-  printf("dist1C=%.15G\n",  f1dimPhiB(0));
-#endif
-  *fret=brent(ax,xx,bx,f1dimPhiB,TOLLM,&xminB);
-  //printf("i=%d j=%d dist2=%.15G\n", icg, jcg, *fret);
-  //printf("dist2B=%.15G\n", f1dimPhiB(xminB));
-  //f1dimPhiA(xminA);
-  //f1dimPhiB(xminB);
+  powellmethodRyck(fret);
   for (j=0;j<6;j++)
     p[j] = pcom2[j]; 
   //printf("xminA=%f xminB=%f dist=%.15G\n", xminA, xminB, *fret);
@@ -1194,7 +1137,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   int j,its,kk;
   const int ITMAXFR = OprogStatus.maxitsSD;
   const double EPSFR=1E-10, GOLD=1.618034;
-  double normxi,gg,gam,fp,dgg,norm1, norm2, sp, fpold, gradf[3], gradg[3], signA, signB;
+  double normxi,gg,gam,fp,dgg,norm1,norm2, sp, fpold, gradf[3], gradg[3], signA, signB;
   double minax, distini, distfin, dist, g[6],h[6],xi[6], dx[3], fx[3], gx[3], dd[3], xiold[6];
   double pm[6], fpm, signAold, signBold;
   double xmin, xim[6];
@@ -1211,16 +1154,19 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       callsok++;
       return;
     }
-  projectgrad(p,xi,gradfG,gradgG);  
-  
+  //projectgrad(p,xi,gradfG,gradgG);  
   for (its=1;its<=ITMAXFR;its++)
     { 
       itsfrprmn++;      
       *iter=its;
+#if 1
+      linminRyck(p, xi, &fp);  
+#else
       for (j=0; j < n; j++)
 	{
 	  p[j] += xi[j];
 	}
+#endif
       signAold = signA;
       signBold = signB;
       fpold = fp; 
@@ -1257,17 +1203,17 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	   callsok++;
 	   return;
 	 }
-       projectgrad(p, xi, gradfG, gradgG);
+       //projectgrad(p, xi, gradfG, gradgG);
        
        if (OprogStatus.tolSDgrad <=0  || (fp > 0 && sqrt(fp) > 1E-8)) 
 	 {
-	   if (fp > OprogStatus.springkSD*Sqr(OprogStatus.epsd) &&
+	   if (fp > ftol*OprogStatus.springkSD*Sqr(minax) &&
 	       2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) 
 	     {
 	       callsok++;
 	       return;
 	     }
-	   else if ( fp < OprogStatus.springkSD*Sqr(OprogStatus.epsd) 
+	   else if ( fp < ftol*OprogStatus.springkSD*Sqr(minax) 
 		     && fabs(fpold-fp) < ftol*Sqr(minax) )
 	     {
 	       callsok++;
@@ -1868,8 +1814,8 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
   printf(">>> vec[6]:%.15G vec[7]: %.15G\n", vec[6], vec[7]);
 #endif
   //frprmn(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfunc2, gradcgfunc2);
-  frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
-  //powellmethod(vec);
+  //frprmnRyck(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyck, gradcgfuncRyck);
+  powellmethod(vec);
   for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];

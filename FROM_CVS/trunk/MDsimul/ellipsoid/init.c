@@ -35,7 +35,7 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
-double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdirs;
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
 #else
@@ -48,6 +48,7 @@ int parnumA, parnumB;
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 #endif
 double invaSq[2], invbSq[2], invcSq[2];
+
 /* ================================= */
 
 /* ========================================================================= */
@@ -980,7 +981,7 @@ void usrInitAft(void)
     lastcol= malloc(sizeof(double)*Oparams.parnum);
     atomTime = malloc(sizeof(double)*Oparams.parnum);
     lastbump = malloc(sizeof(int)*Oparams.parnum);
-    
+   
     cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
     inCell[0] = malloc(sizeof(int)*Oparams.parnum);
     inCell[1]= malloc(sizeof(int)*Oparams.parnum);
@@ -1011,6 +1012,7 @@ void usrInitAft(void)
     invIa = matrix(3, 3);
     invIb = matrix(3, 3);
 #endif
+    powdirs = matrix(4,4);
     RA = matrix(3, 3);
     RB = matrix(3, 3);
     Rt = matrix(3, 3);
