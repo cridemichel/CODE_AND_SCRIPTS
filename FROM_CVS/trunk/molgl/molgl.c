@@ -216,7 +216,6 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
       glEnd();
       return;
    }
-
    delta = 0.01 * TWOPI / n;
    for (j=0;j<n/2;j++) {
       theta1 = j * TWOPI / (double)n - PID2;
@@ -234,7 +233,7 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
 
          EvalSuperEllipse(theta2,theta3,power1,power2,a,b,c,&p);
          EvalSuperEllipse(theta2+delta,theta3,power1,power2,a,b,c,&p1);
-         EvalSuperEllipse(theta2,theta3+delta,power1,power2,a,b,b,&p2);
+         EvalSuperEllipse(theta2,theta3+delta,power1,power2,a,b,c,&p2);
          en = CalcNormal(p1,p,p2);
          glNormal3f(en.x,en.y,en.z);
          glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
@@ -272,8 +271,10 @@ void EvalSuperEllipse(double t1,double t2,double p1,double p2,
 void displayAtom(int nf, int nm, int na)
 {
   float fadeFact;
+  float rotm[16];
   GLUquadricObj *ss, *ss2, *ss3;
   atom_s *atom;
+  int k1, k2;
   double rax, ray, raz, rotangle, normra, normn, Pi;
   glPushMatrix();
   Pi = 2.0*acos(0);
@@ -362,6 +363,21 @@ void displayAtom(int nf, int nm, int na)
     }
   else if (atom->common.type==MGL_ATOM_SUPELLIPS)
     {
+      /* qui si deve orientare il superellissoide */
+      for (k1 = 0; k1 < 4; k1++)
+	for (k2 = 0; k2 < 4; k2++)
+	  {
+	    if (k1 < 3 && k2 < 3)
+	      {
+		rotm[k1*4+k2]=atom->supellips.R[k2][k1];
+	      }
+	    else if (k1==3 && k2 ==3)
+	      rotm[15] = 1.0;
+	    else
+	      rotm[k1*4+k2] = 0.0;
+	    printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
+	  }
+      glMultMatrixf(rotm);
       CreateSuperEllipse(atom->supellips.n1, 
 			 atom->supellips.n2, atom->supellips.a, 
 			 atom->supellips.b, atom->supellips.c, 100, 1);
