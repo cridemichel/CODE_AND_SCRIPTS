@@ -520,6 +520,77 @@ void powell(double p[], double **xi, int n, double ftol, int *iter, double *fret
   /*Back for another iteration.*/
 }
 #endif
+extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3];
+void projonto(double* ri, double *dr, double* rA, double *Xa, double *gradf)
+{
+  int kk, done=0;
+  const double GOLD=1.618034;
+  double r1[3], sf, s1, s2;
+  double A, B, C, Delta, sol;
+  sf = 1.0;
+  while (!done)
+    {
+      for (kk=0; kk < 3; kk++)
+	{
+	  r1[kk] = ri[kk] + gradi[kk]*sf; 
+	  r1A[kk] = r1[kk] - rA[kk];
+	}
+      A=0;
+      B=0;
+      C=0;
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    A += gradf[k1]*Xa[k1][k2]*gradf[k2];
+	    B += r1A[k1]*Xa[k1][k2]*gradf[k2];
+	    C += r1A[k1]*Xa*[k1][k2]*r1A[k2];
+	  }
+      B *= 2.0;
+      C -= 1.0;
+      Delta = Sqr(B) - 4.0*A*C;
+      if (Delta < 0 || fabs(A) < 1E-12)
+	{
+	  sf /= GOLD;
+	  continue;
+	}	
+      s1 = (-B + sqrt(Delta))/(2.0*A);
+      s2 = (-B - sqrt(Delta))/(2.0*A);
+      if (s1 < s2) 
+	sol = s1;
+      else
+	sol = s2;
+      done = 1;
+    }
+  for (kk = 0; kk < 3; kk++)
+    {
+      dr[kk] += sol*gradf[kk]; 
+    }
+}
+void projectgrad(double *p, double *xi)
+{
+  int kk, k1, k2, k3;
+  double r1[3], r2[3], rIf[3], rIg[3];
+  double r1A[3], r2B[3], A1, B1, C1, Delta1, A2, B2, C2, Delta2; 
+  double gradf[3], gradg[3];
+  for (kk=0; kk < 3; kk++)
+    {
+      r1[kk] = p[kk]+xi[kk];
+      r2[kk] = p[kk+3]+xi[kk+3];
+    }
+  //calc_intersec(r1, rA, Xa, rIf);
+  //calc_intersec(r2, rB, Xb, rIg);
+  for (kk=0; kk < 3; kk++)
+    {
+      r1[kk] += rIf[kk] - r1[kk];
+      r2[kk] += rIg[kk] - r2[kk];
+      xi[kk] = r1[kk] - p[kk];
+      xi[kk+3] = r2[kk] - p[kk+3];
+    }
+  calc_grad(r1, rA, Xa, gradf);
+  calc_grad(r2, rB, Xb, gradg);
+  projonto(r1, xi, rA, Xa, gradf);
+  projonto(r2, &xi[3], rB, Xb, gradg);
+}
 void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -536,7 +607,7 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
   double g[6],h[6],xi[6];
   fp=(*func)(p); /*Initializations.*/
   (*dfunc)(p,xi); 
-  
+  projectgrad(p, xi);  
   for (j=0;j<n;j++)
     { 
       g[j] = -xi[j]; 
@@ -569,10 +640,10 @@ void frprmn(double p[], int n, double ftol, int *iter, double *fret, double (*fu
 	{ 
 	  g[j] = -xi[j]; xi[j]=h[j]=g[j]+gam*h[j]; 
 	} 
+      projectgrad(p, xi);
     } 
   nrerror("Too many iterations in frprmn");
 }
-extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3];
 void gradcgfunc(double *vec, double *grad)
 {
   int kk, k1, k2; 
@@ -580,30 +651,34 @@ void gradcgfunc(double *vec, double *grad)
   double Q1, Q2, A;
   for (k1 = 0; k1 < 3; k1++)
     {
+#if 0
       fx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	fx[k1] += 2.0*Xa[k1][k2]*(vec[k2] - rA[k2]);
+#endif
       fx2[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	fx2[k1] += 2.0*Xa[k1][k2]*(vec[k2+3] - rA[k2]);
     }
+#if 0
   for (k1 = 0; k1 < 3; k1++)
     {
       gx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	gx[k1] += 2.0*Xb[k1][k2]*(vec[k2+3] - rB[k2]);
     }
-  Q1 = 0.0;
-  Q2 = 0.0;
+#endif
+  //Q1 = 0.0;
+  //Q2 = 0.0;
   A = 0.0;
   for (k1 = 0; k1 < 3; k1++)
     {
-      Q1 += (vec[k1]-rA[k1])*fx[k1];
-      Q2 += (vec[k1+3]-rB[k1])*gx[k1];
+      //Q1 += (vec[k1]-rA[k1])*fx[k1];
+      //Q2 += (vec[k1+3]-rB[k1])*gx[k1];
       A += (vec[k1+3]-rA[k1])*fx2[k1];
     }
-  Q1 = 0.5*Q1 - 1.0;
-  Q2 = 0.5*Q2 - 1.0;
+  //Q1 = 0.5*Q1 - 1.0;
+  //Q2 = 0.5*Q2 - 1.0;
   A = 0.5*A - 1.0;
   if (A>=0)
     A = 1.0;
@@ -613,10 +688,8 @@ void gradcgfunc(double *vec, double *grad)
     {
       //grad[kk]=-2.0*(vec[kk+3]-vec[kk])*A + vec[6]*fx[kk];
       //grad[kk+3]=2.0*(vec[kk+3]-vec[kk])*A + vec[7]*gx[kk];
-      grad[kk]=-2.0*(vec[kk+3]-vec[kk])*A + 2.0*OprogStatus.lambda1*fx[kk]*Q1;
-      grad[kk+3]=2.0*(vec[kk+3]-vec[kk])*A + 2.0*OprogStatus.lambda2*gx[kk]*Q2;
-      grad[kk] = -grad[kk];
-      grad[kk+3] = -grad[kk+3];
+      grad[kk]=-2.0*(vec[kk+3]-vec[kk])*A; //+ 2.0*OprogStatus.lambda1*fx[kk]*Q1;
+      grad[kk+3]=2.0*(vec[kk+3]-vec[kk])*A;// + 2.0*OprogStatus.lambda2*gx[kk]*Q2;
     }
   //grad[6] = Sqr(Q1);
   //grad[7] = Sqr(Q2);
@@ -631,30 +704,34 @@ double  cgfunc(double *vec)
   double Q1, Q2, A, F;
   for (k1 = 0; k1 < 3; k1++)
     {
+#if 0
       fx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	fx[k1] += 2.0*Xa[k1][k2]*(vec[k2] - rA[k2]);
+#endif
       fx2[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	fx2[k1] += 2.0*Xa[k1][k2]*(vec[k2+3] - rA[k2]);
     }
+#if 0
   for (k1 = 0; k1 < 3; k1++)
     {
       gx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	gx[k1] += 2.0*Xb[k1][k2]*(vec[k2+3] - rB[k2]);
     }
-  Q1 = 0.0;
-  Q2 = 0.0;
+#endif
+  //Q1 = 0.0;
+  //Q2 = 0.0;
   A = 0.0;
   for (k1 = 0; k1 < 3; k1++)
     {
-      Q1 += (vec[k1]-rA[k1])*fx[k1];
-      Q2 += (vec[k1+3]-rB[k1])*gx[k1];
+      //Q1 += (vec[k1]-rA[k1])*fx[k1];
+      //Q2 += (vec[k1+3]-rB[k1])*gx[k1];
       A += (vec[k1+3]-rA[k1])*fx2[k1];
     }
-  Q1 = 0.5*Q1 - 1.0;
-  Q2 = 0.5*Q2 - 1.0;
+  //Q1 = 0.5*Q1 - 1.0;
+  //Q2 = 0.5*Q2 - 1.0;
   A = 0.5*A - 1.0;
   if (A>=0)
     A = 1.0;
@@ -664,12 +741,14 @@ double  cgfunc(double *vec)
   F = 0.0;
   for (kk=0; kk < 3; kk++)
     F += A*Sqr(vec[kk]-vec[kk+3]);
+#if 0
   F += OprogStatus.lambda1*Sqr(Q1);
   F += OprogStatus.lambda2*Sqr(Q2);
+#endif
   //F += vec[6]*Q1;
   //F += vec[7]*Q2;
-  printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
-  printf("Q1=%.15G Q2=%.15G\n",  Q1, Q2);
+  //printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
+  //printf("Q1=%.15G Q2=%.15G\n",  Q1, Q2);
   return F;
 }
 
@@ -690,8 +769,8 @@ void distconjgrad(int i, int j, double shift[3], double *vecg)
       vec[kk] = vecg[kk];
     }
   //printf(">>> vec[6]: %f vec[7]:%f\n", vec[6], vec[7]);
-  //frprmn(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc, gradcgfunc);
-  powell(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc);
+  frprmn(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc, gradcgfunc);
+  //powell(vec, 6, OprogStatus.cgtol, &iter, &Fret, cgfunc);
   for (kk=0; kk < 6; kk++)
     {
       vecg[kk] = vec[kk];
