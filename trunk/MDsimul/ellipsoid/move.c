@@ -1412,12 +1412,12 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 
 }
-void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double shift[3])
+void funcs2beZeroedGuess(int n, double x[], double fvecG[], int i, int j, double shift[3])
 {
   int na, k1, k2; 
   double fx[3], gx[3], tmp;
   /* x = (r, alpha, t) */ 
- #if 0
+#if 0
   printf("Xa=\n");
   print_matrix(Xa, 3);
   printf("Xb=\n");
@@ -1438,7 +1438,7 @@ void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double 
 
    for (k1 = 0; k1 < 3; k1++)
     {
-      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+      fvecG[k1] = fx[k1] + Sqr(x[3])*gx[k1];
     }
 #if 0
   fvec[3] = -1.0;
@@ -1448,14 +1448,14 @@ void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double 
   MD_DEBUG(printf("fx+Sqr(alpha)*gx=(%f,%f,%f) fx=(%f,%f,%f) gx=(%f,%f,%f)\n", fvec[0], fvec[1], fvec[2],
 	 fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
 #endif
-  fvec[3] = 0.0;
+  fvecG[3] = 0.0;
   tmp = 0;
   for (k1 = 0; k1 < 3; k1++)
     {
-      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvecG[3] += (x[k1]-rA[k1])*fx[k1];
       tmp += (x[k1]-rB[k1])*gx[k1];
     }
-  fvec[3] = 0.5*fvec[3]-1.0 - (0.5*tmp-1.0);
+  fvecG[3] = 0.5*fvecG[3]-1.0 - (0.5*tmp-1.0);
 }
 void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
@@ -1537,7 +1537,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
     }
   fvec[3] = 0.5*fvec[3]-1.0;
   fvec[4] = 0.5*fvec[4]-1.0;
-  MD_DEBUG(printf("fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+  MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 }
 
 double tdist;
