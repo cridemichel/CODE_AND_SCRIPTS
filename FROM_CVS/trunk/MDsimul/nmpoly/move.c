@@ -50,7 +50,7 @@ COORD_TYPE W, K, WC, T1xx, T1yy, T1zz,
 #ifdef MD_RESPA
 COORD_TYPE WLong, WxxLong, WyyLong, WzzLong,
   WxyLong, WyzLong, WzxLong, WmLong, WmxxLong, WmyyLong, WmzzLong, 
-  WmxyLong, WmyzLong, WmzxLong;
+  WmxyLong, WmyzLong, WmzxLong, WmyxLong, WmzyLong, WmxzLong;
 #endif
 COORD_TYPE DrSq = 0.0, Mtot;
 /* used by linked list routines */
@@ -1329,7 +1329,6 @@ void movebNPT(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
 	 translational kinetic energy, see Ferrario and Ryckaert */
 #ifdef MOLPTENS
       press_m = calcT1diagMol(Nm, Vol1) + Wm / 3.0 / Vol; /* press(t+dt) */
-      
       /* Volume acceleration */
       DP = Sqr(s) * (press_m - Oparams.P) / OprogStatus.W;
 #else
@@ -2439,6 +2438,7 @@ void move(void)
       VcR = Vc;
       Vc += VcLong;
       V += VLong;
+      W += WLong;
       kinet(Oparams.parnum, vx, vy, vz, Vol1);
 
       /* correct the coords */

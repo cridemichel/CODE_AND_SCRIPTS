@@ -36,7 +36,7 @@ extern COORD_TYPE W, K, WC, T1xx, T1yy, T1zz,
 #ifdef MD_RESPA
 extern double WLong, WxxLong, WyyLong, WzzLong,
   WxyLong, WyzLong, WzxLong, WmLong, WmxxLong, WmyyLong, WmzzLong, 
-  WmxyLong, WmyzLong, WmzxLong;
+  WmxyLong, WmyzLong, WmzxLong, WmyxLong, WmzyLong, WmxzLong;
 #endif
 extern COORD_TYPE Mtot;
 /* used by linked list routines */
@@ -1509,5 +1509,6 @@ void FENEForce(void)
 	  Vfe += -0.5 * Oparams.kfe * R0Sq * log(ff);
 	}
     }
+  WC /=3.0;
 }
 #endif
