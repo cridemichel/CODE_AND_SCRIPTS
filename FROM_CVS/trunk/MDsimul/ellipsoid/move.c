@@ -3650,6 +3650,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
       else
 	delt = h*t;
+      if (d1 < epsd)
+	delt = epsd / maxddot;
       t += delt;
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       for (kk = 0; kk < 8; kk++)
