@@ -3559,7 +3559,7 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   //printf("d1:%.10f d2: %.10f\n", d1, d2); 
   //printf("polint1: %.10f polint2: %.10f\n",distfunc(t), distfunc(t+delt));
   polinterr = 0;
-  if (bracketing)
+  if (!bracketing)
     {
       t1 = t;
       t2 = t+delt*0.5;
@@ -3571,7 +3571,9 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
       nb = 1;
       zbrak(distfunc, t1, t2, OprogStatus.zbrakn, xb1, xb2, &nb);
       if (nb==0 || polinterr==1)
-	return 1;
+	{
+	  return 1;
+	}
       t1 = xb1[0];
       t2 = xb2[0];
     }
@@ -3579,10 +3581,19 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
     return 1;
   *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
   if (polinterr)
-    return 1;
-  if (*troot < t || *troot > t+delt)
     {
-      printf("*troot: %.10G t=%.10G t+delt:%.10G\n", *troot, t, t+delt);
+      printf("bracketing: %d polinterr=%d t1=%.15G t2=%.15G\n", bracketing,polinterr, t1, t2);
+      printf("d1=%.10G d2=%.10G d3:%.10G\n", d1, d2, d3);
+      printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
+      return 1;
+    }
+  if ((*troot < t && fabs(*troot-t)>3E-8) || (*troot > t+delt && fabs(*troot - (t+delt))>3E-8))
+    {
+      printf("brack: %d xb1: %.10G xb2: %.10G\n", bracketing, xb1[0], xb2[0]);
+      printf("*troot: %.15G t=%.15G t+delt:%.15G\n", *troot, t, t+delt);
+      printf("d1=%.10G d2=%.10G d3:%.10G\n", d1, d2, d3);
+      printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
+      printf("distfunc(t+delt*0.5)=%.10G\n", distfunc(t+delt*0.5));
       return 1;
     }
   calcDistNeg(*troot, i, j, shift, r1, r2, &alpha, vecg, 0);
