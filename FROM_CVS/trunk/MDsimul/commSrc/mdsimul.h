@@ -116,7 +116,7 @@ int newSim; /* if 0 => new continuing */
 int NUMCALCS; /* Before calling a measuring function this variable is set
 		 to the number of calculations performed for that measure, 
 		 this is usefule for doind averaging */
-int mdseed;
+int mdseed=0;
 #else 
 extern int* i_;
 extern int newSim; /* if 1 => new simulation */
