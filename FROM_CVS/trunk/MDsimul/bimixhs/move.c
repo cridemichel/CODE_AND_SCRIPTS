@@ -62,7 +62,7 @@ double *treetime, *atomTime;
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 int evIdA, evIdB, parnumB, parnumA;
-#ifdef MD_BARRIER
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 int evIdC;
 #endif
 /* ========================== >>> scalCor <<< ============================= */
@@ -308,7 +308,7 @@ void check (int *overlap, double *K, double *V)
          }
      }
 }
-#ifdef MD_BARRIER
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 void bump (int i, int j, double* W, int bt)
 {
   /*
@@ -378,13 +378,21 @@ void bump (int i, int j, double* W, int bt)
       factor = -2.0*b;
       break;
     case MD_INOUT_BARRIER:
+#ifdef MD_INFBARRIER
+      factor = -2.0*b;
+#elif defined(MD_SQWELL)
       if (Sqr(b) < 2.0*distSq*Oparams.bheight/mredl)
 	factor = -2.0*b;
       else
 	factor = -b + sqrt(Sqr(b) - 2.0*distSq*Oparams.bheight/mredl);
+#endif
       break;
     case MD_OUTIN_BARRIER:
+#ifdef MD_INFBARRIER
+      factor = -2.0*b;
+#elif defined(MD_SQWELL)
       factor = -b - sqrt(Sqr(b) + 2.0*distSq*Oparams.bheight/mredl);
+#endif
       break;
     }
   
@@ -737,7 +745,7 @@ void PredictEvent (int na, int nb)
 #ifdef MD_GRAVITY
   double Lzx, h1, h2, sig, hh1;
 #endif
-#ifdef MD_BARRIER
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER) 
   int collCode;
   const double EPSILON = 1E-13;
   double sigDeltaSq, intdistSq, distSq, s;
@@ -964,7 +972,7 @@ void PredictEvent (int na, int nb)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
-#ifdef MD_BARRIER
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 		      if (na < parnumA && n < parnumA)
 			{
 			  sigSq = Sqr(Oparams.sigma[0][0]);
@@ -1003,7 +1011,7 @@ void PredictEvent (int na, int nb)
 
 #endif
      		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
-#ifdef MD_BARRIER
+#if defined(MD_SQWELL)|| defined(MD_INFBARRIER)
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
       		      s = 0;
 		      /* EPSILON è necessaria a causa degli errori di numerici */
@@ -1130,7 +1138,7 @@ void ProcessCollision(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
-#ifdef MD_BARRIER
+#if defined(MD_SQWELL)||defined(MD_INFBARRIER)
   bump(evIdA, evIdB, &W, evIdC);
 #else
   bump(evIdA, evIdB, &W);

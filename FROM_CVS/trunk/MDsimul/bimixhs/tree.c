@@ -7,7 +7,7 @@
 *********************************************************************/
 #include <mdsimul.h>
 extern int **tree, evIdA, evIdB;
-#ifdef MD_BARRIER
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 extern int evIdC;
 #endif
 extern double *treeTime;
@@ -63,7 +63,7 @@ int check_node(char* str, int id, int idNew, int idUp)
     }
   return 0;
 }
-#ifdef MD_BARRIER
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 void ScheduleEventBarr (int idA, int idB, int idC, double tEvent) 
 {
   int id, idNew, more;
@@ -257,7 +257,7 @@ void NextEvent (void)
   Oparams.time = treeTime[idNow];   
   evIdA = treeIdA[idNow];    
   evIdB = treeIdB[idNow];
-#ifdef MD_BARRIER
+#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   evIdC = treeIdC[idNow];
 #endif
   MD_DEBUG2(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
