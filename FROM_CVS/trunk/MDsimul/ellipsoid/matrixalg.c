@@ -99,7 +99,7 @@ void nrerror(char *msg)
 #define DABS fabs
 double xicom[6], pcom[6], xi[6], G[6], H[6], grad[6];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
-int cghalfspring, icg, jcg, minaxicg, minaxjcg;
+int cghalfspring, icg, jcg, minaxicg, minaxjcg, doneryck;
 double shiftcg[3], lambdacg, cgstep;
 double gradfG[3], gradgG[3], dxG[6];
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3];
@@ -774,7 +774,13 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   /*Initializations.*/
   fp = (*dfunc)(p,xi,gradfG,gradgG); 
   //printf("g=%f %f %f %f %f %f\n", g[0], g[1], g[2], g[3], g[4], g[5]);
+  if (doneryck)
+    {
+      callsok++;
+      return;
+    }
   projectgrad(p,xi,gradfG,gradgG);  
+  
   for (its=1;its<=ITMAXFR;its++)
     { 
       *iter=its;
@@ -820,6 +826,11 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	 }
 #endif
 #if 1
+       if (doneryck)
+	 {
+	   callsok++;
+	   return;
+	 }
        projectgrad(p, xi, gradfG, gradgG);
        
        normxi=0.0;
@@ -830,7 +841,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
        //if ( fp < Sqr(OprogStatus.epsd) || sqrt(normxi) < fp*ftol||
 	 //  2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR))
        itsfrprmn++;      
-       if ( (0 && fp < Sqr(OprogStatus.epsd)) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 0 && sqrt(normxi) < (fp+EPSFR)*ftol) )
+       if ( (0 && fp < Sqr(OprogStatus.epsd)) ||  (1 && 2.0*fabs(fpold-fp) <= ftol*(fabs(fpold)+fabs(fp)+EPSFR)) || ( 1 && sqrt(normxi) < (fp+EPSFR)*ftol) )
 	 {
 	   callsok++;
 	   return;
@@ -1034,6 +1045,7 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
   int kk, k1, k2; 
   double F, nf, ng, fx2[3], dd[3], normdd;
   double Q1, Q2, A, gradfx, gradgx, normgA, normgB, fact;
+  doneryck = 0;
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
@@ -1061,13 +1073,13 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
     A = OprogStatus.springkSD;
   else
     A = -OprogStatus.springkSD;
-  //normdd =calc_norm(dd);
+  normdd =calc_norm(dd);
    
   //if (normdd < OprogStatus.epsd)
     //A*=1/OprogStatus.epsd;
   for (kk=0; kk < 3; kk++)
     {
-      grad[kk]= 2.0*dd[kk]*A;
+      grad[kk]= OprogStatus.stepSD*2.0*dd[kk]*A/normdd;
       grad[kk+3]= -grad[kk];
     }
   nf = calc_norm(fx);
@@ -1084,12 +1096,20 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx)
       gradfx += grad[k1]*fx[k1]; 
       gradgx += grad[k1+3]*gx[k1];
     }
-  
   for (kk=0; kk < 3; kk++)
     {
       grad[kk] -= gradfx*fx[kk];
       grad[kk+3] -= gradgx*gx[kk];
     }
+#if 0
+  if (calc_norm(grad)/gradfx < OprogStatus.tolSD &&
+      
+      calc_norm(&grad[kk+3])/gradgx < OprogStatus.tolSD)
+    {
+      doneryck = 1;
+      return;
+    }
+#endif
 #if 0
   normgA = normgB = 0.0;
   for (kk=0; kk < 3; kk++)
