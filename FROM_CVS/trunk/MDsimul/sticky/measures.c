@@ -126,11 +126,7 @@ double calcpotene(void)
 }
 void calcV(void)
 {
-#ifdef MD_SQWELL
   V = calcpotene();
-#else
-  V = 0;
-#endif
 }
 void calc_energy(char *msg);
 
@@ -148,23 +144,11 @@ void energy(void)
   FILE* mf;
 #endif
   Nm = Oparams.parnum;
-#ifdef MD_GRAVITY
-  sprintf(TXTA[0],"STEP %lld [MEASURE]\n  L: %.10f Lz: %.10f\n", 
-	  (long long int)Oparams.curStep, L, Lz);
-#else
   sprintf(TXTA[0],"STEP %lld [MEASURE]\n  L: %.10f\n", 
 	  (long long int)Oparams.curStep, L);
-#endif
   calc_energy("[MEASURES]"); 
-#ifdef MD_GRAVITY
-  E = K + V;
-#else
-  E = K;
-#endif
-#ifdef MD_SQWELL
   V = calcpotene();
   E = K + V;
-#endif
   /* So now E is the extended hamiltonian that should be an integral of 
      motion */
   mol = 10;
@@ -197,19 +181,8 @@ void energy(void)
       Py += py;
       Pz += pz;
     }
-#ifdef MD_GRAVITY
-  calcKVz();
-  sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G) Vz=%f\n", Oparams.time,
-	  E, Px, Py, Pz, Vz);
-#else
-#ifdef MD_SQWELL
   sprintf(TXTA[1], "t=%f E=%.15f V=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time,
 	  E, V, Px, Py, Pz);
-#else
-   sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time,
-	  E, Px, Py, Pz);
-#endif
-#endif
   RCMx = 0.0;
   RCMy = 0.0;
   RCMz = 0.0;
@@ -327,11 +300,7 @@ void structFacts_OLD(void)
   sumS = OprogStatus.sumS;
   DELR = (REND - RBEG) / MAXBIN;
   pi4 = pi * 4.0;
-#if defined(MD_GRAVITY)
-  Vol = Lz*Sqr(L);
-#else
   Vol = L*L*L;  
-#endif
   rhoAv = (double) Oparams.parnum / Vol; /* V = 1 here !!!!!!!!!!!!*/ 
   scalFact = (KEND - KBEG) / NUMK;
   
@@ -496,11 +465,7 @@ void radDens(void)
   Nm = Oparams.parnumA;
   rhoAv = (double) Nm;
   m = Oparams.m[0];
-#ifdef MD_GRAVITY
-  Vol = Sqr(L)*Lz;
-#else
   Vol = L*L*L;
-#endif 
   DELR = (L/2.0 - RBEG) / MAXBIN;
 
   hist = OprogStatus.hist;
@@ -522,9 +487,6 @@ void radDens(void)
 	  rzij = rz[i] - rz[j];
 	  rxij = rxij - L * rint(invL * rxij);
 	  ryij = ryij - L * rint(invL * ryij);
-#if !defined(MD_GRAVITY)
-	  rzij = rzij - L * rint(invL * rzij);
-#endif
 	  rijSq = Sqr(rxij) + Sqr(ryij) + Sqr(rzij);
 	  rij =  sqrt(rijSq);
 	  bin = ( (int) ( (rij - RBEG) / DELR) );
