@@ -80,6 +80,86 @@ extern COORD_TYPE  *Rmx, *Rmy, *Rmz;
 extern void check_distances(char* str);
 extern double *atcharge;
 #ifdef MD_RAPACONSTR
+void SolveLineq (double *a, double *x, int n) 
+{
+  double vMaxI[N_MAX], v, vMax;
+  int ptrMax[N_MAX], i, ij, ik, ir, j, k, kj, kk, kr,
+      r, rj, rk;
+  if (n >= N_MAX)
+    {
+      printf("matrix too large");
+      exit(-1);
+    }
+  for (i = 0; i < n; i ++) 
+    {
+      vMax = 0.;    ij = i;
+      for (j = 0; j < n; j ++) 
+	{
+	  v = fabs (a[ij]);    if (v > vMax) vMax = v;
+	  ij = ij + n;
+	}
+      vMaxI[i] = 1. / vMax;
+    }
+  for (r = 0; r < n; r ++)
+    {
+      vMax = 0.;    ir = r * (n + 1) - n;
+      for (i = r; i < n; i ++) 
+	{
+	  v = a[ir];    ik = i;    kr = (r - 1) * n + 1;
+	  for (k = 0; k <= r - 1; k ++) 
+	    {
+	      v = v - a[ik] * a[kr];
+	      ik = ik + n;    kr = kr + 1;
+	    }
+	  a[ir] = v;    v = fabs (a[ir]) * vMaxI[i];
+	  if (v > vMax)
+	    {
+	      vMax = v;    ptrMax[r] = i;
+	    }
+	  ir = ir + 1;
+	}
+      if (r != ptrMax[r]) 
+	{
+	  kk = 0;
+	  for (k = 1; k <= n ; k ++) 
+	    {
+	      v = a[kk + r];    a[kk + r] = a[kk + ptrMax[r]];
+	      a[kk + ptrMax[r]] = v;    kk = kk + n;
+	    }
+	  vMaxI[ptrMax[r]] = vMaxI[r];
+	}
+      rj = r * (n + 1);
+      for (j = r + 1; j <= n; j ++) 
+	{
+	  v = a[rj];
+	  rk = r;    kj = (j - 1) * n + 1;
+	  for (k = 1; k <= r - 1; k ++) 
+	    {
+	      v = v - a[rk] * a[kj];
+	      rk = rk + n;    kj = kj + 1;
+	    }
+	  a[rj] = v / a[rk];    rj = rj + n;
+	}
+    }
+  for (i = 1; i <= n; i ++)
+    {
+      v = x[ptrMax[i]];    x[ptrMax[i]] = x[i];    ij = i;
+      for (j = 1; j <= i - 1; j ++)
+	{
+	  v = v - a[ij] * x[j];    ij = ij + n;
+	}
+      x[i] = v / a[ij];
+    }
+  for (i = n - 1; i >= 1; i --) 
+    {
+      v = x[i];    ij = i * (n + 1);
+      for (j = i + 1; j <= n; j ++) 
+	{
+	  v = v - a[ij] * x[j];    ij = ij + n;
+	}
+      x[i] = v;
+    }
+}
 void BuildConstraintMatrix (void) 
 {
   int i, m;
@@ -101,7 +181,7 @@ void BuildConstraintMatrix (void)
       cAtom2[m] = m + 1;
     }
 }
-void ComputeConstraintsShort(int RefSys, double **FxI, double **FyI, double **FzI, double **FxO, double **FyO, double **FzO )
+void ComputeConstraints(int RefSys)
 {
   /* RefSys=1 allora calcola le forze del ref system */
   double **FxI,**FyI, **FzI, **FxO, **FyO, **FzO; 
@@ -200,25 +280,24 @@ void ComputeConstraintsShort(int RefSys, double **FxI, double **FyI, double **Fz
 
 void  AnlzConstraintDevs (void) 
 {
-  real dr1[NDIM + 1], sumL;
+  double dr1[3], sumL;
   int i, k, n, ni;
   sumL = 0.;
-  for (n = 1; n <= nChain; n ++) 
+  for (n = 0; n < Oparams.parnum; n ++) 
     {
-      for (i = 1; i <= chainLen - 1; i ++) 
+      for (i = 0; i < NA - 1; i ++) 
 	{
-	  ni = (n - 1) * chainLen + i;
-	  for (k = 1; k <= NDIM; k ++)
-	    {
-	      dr1[k] = r[k][ni + 1] - r[k][ni];
-	      if (fabs (dr1[k]) > regionH[k])
-		dr1[k] = dr1[k] - SignR (region[k], dr1[k]);
-	    }
-	  curBondLenSq[i] = Sqr (dr1[1]) + Sqr (dr1[2]) + Sqr (dr1[3]);
+	  dr1[0] = rx[i + 1][n] - rx[i][n];
+  	  dr1[0] = dr1[0] - L*rint(dr1[0]/L);
+	  dr1[1] = ry[i + 1][n] - ry[i][n];
+  	  dr1[1] = dr1[1] - L*rint(dr1[1]/L);
+	  dr1[2] = rz[i + 1][n] - rz[i][n];
+  	  dr1[2] = dr1[2] - L*rint(dr1[2]/L);
+	  curBondLenSq[i] = Sqr (dr1[0]) + Sqr (dr1[1]) + Sqr (dr1[2]);
 	  sumL = sumL + curBondLenSq[i];
 	}
     }
-  constraintDevL = sqrt (sumL / (nChain * (chainLen - 1))) - bondLen;
+  constraintDevL = sqrt (sumL / (Oparams.parnum * (NA-1))) - Oparams.d;
 }
 #endif
 #ifdef MD_RESPA_NPT
