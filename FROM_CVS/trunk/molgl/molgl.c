@@ -190,15 +190,17 @@ XYZ CalcNormal(XYZ p, XYZ p1, XYZ p2)
 }
 
 void CreateSuperEllipse(double power1,double power2, double a, double b, double c,
-			int n, int method)
+			int n1, int n2, int method)
 {
    int i,j;
    double theta1,theta2,theta3;
    XYZ p,p1,p2,en;
-   double delta;
+   double delta1, delta2;
+   /* n1 = stacks
+    * n2 = slides */
 
    /* Shall we just draw a point? */
-   if (n < 4) {
+   if (n1 < 4 && n2 < 4) {
       glBegin(GL_POINTS);
       glVertex3f(0.0,0.0,0.0);
       glEnd();
@@ -217,32 +219,33 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
       glEnd();
       return;
    }
-   delta = 0.01 * TWOPI / n;
-   for (j=0;j<n/2;j++) {
-      theta1 = (j+1) * TWOPI / (double)n - PID2;
-      theta2 = j * TWOPI / (double)n - PID2;
+   delta1 = 0.01 * TWOPI / n1;
+   delta2 = 0.01 * TWOPI / n2;
+   for (j=0;j<n1/2;j++) {
+      theta1 = (j+1) * TWOPI / (double)n1 - PID2;
+      theta2 = j * TWOPI / (double)n1 - PID2;
 
       if (method == 0)
          glBegin(GL_QUAD_STRIP);
       else
          glBegin(GL_TRIANGLE_STRIP);
-      for (i=0;i<=n;i++) {
-         if (i == 0 || i == n)
+      for (i=0;i<=n2;i++) {
+         if (i == 0 || i == n2)
             theta3 = 0;
          else
-            theta3 = i * TWOPI / n;
+            theta3 = i * TWOPI / n2;
 
          EvalSuperEllipse(theta2,theta3,power1,power2,a,b,c,&p);
-         EvalSuperEllipse(theta2+delta,theta3,power1,power2,a,b,c,&p1);
-         EvalSuperEllipse(theta2,theta3+delta,power1,power2,a,b,c,&p2);
+         EvalSuperEllipse(theta2+delta1,theta3,power1,power2,a,b,c,&p1);
+         EvalSuperEllipse(theta2,theta3+delta2,power1,power2,a,b,c,&p2);
          en = CalcNormal(p,p1,p2);
          glNormal3f(en.x,en.y,en.z);
          //glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
          glVertex3f(p.x,p.y,p.z);
 
          EvalSuperEllipse(theta1,theta3,power1,power2,a,b,c,&p);
-         EvalSuperEllipse(theta1-delta,theta3,power1,power2,a,b,c,&p1);
-         EvalSuperEllipse(theta1,theta3-delta,power1,power2,a,b,c,&p2);
+         EvalSuperEllipse(theta1-delta1,theta3,power1,power2,a,b,c,&p1);
+         EvalSuperEllipse(theta1,theta3-delta2,power1,power2,a,b,c,&p2);
          en = CalcNormal(p,p1,p2);
          glNormal3f(en.x,en.y,en.z);
          //glTexCoord2f(i/(double)n,2*j/(double)n);
@@ -272,7 +275,7 @@ void EvalSuperEllipse(double t1,double t2,double p1,double p2,
 void displayAtom(int nf, int nm, int na)
 {
   float fadeFact;
-  float rotm[16];
+  float rotm[16], M[16];
   GLUquadricObj *ss, *ss2, *ss3;
   atom_s *atom;
   int k1, k2;
@@ -314,7 +317,7 @@ void displayAtom(int nf, int nm, int na)
     }
   if (atom->common.type==MGL_ATOM_SPHERE)
     {
-      glutSolidSphere (atom->sphere.radius, STACKS, SLIDES);
+      glutSolidSphere (atom->sphere.radius, globset.stacks, globset.slides);
     }
   else if (atom->common.type==MGL_ATOM_DISK)
     {
@@ -336,15 +339,15 @@ void displayAtom(int nf, int nm, int na)
       glRotatef(rotangle, rax, ray, raz);
       glPushMatrix();
       glTranslatef(0, 0, atom->disk.height);
-      gluDisk(ss2, 0, atom->disk.radius, MGL_DISK_STACKS, MGL_DISK_SLIDES);
+      gluDisk(ss2, 0, atom->disk.radius, globset.stacks, globset.slides);
       glPopMatrix();
       gluCylinder(ss, atom->disk.radius, 
 		      atom->disk.radius, 
 		      atom->disk.height, 
-		      MGL_DISK_STACKS, MGL_DISK_SLIDES);
+		      globset.stacks, globset.slides);
       glPushMatrix();
       gluQuadricOrientation(ss3, GLU_INSIDE);
-      gluDisk(ss3, 0, atom->disk.radius, MGL_DISK_STACKS, MGL_DISK_SLIDES);
+      gluDisk(ss3, 0, atom->disk.radius, globset.stacks, globset.slides);
       glPopMatrix();
     }
   else if (atom->common.type==MGL_ATOM_CYLINDER)
@@ -360,7 +363,7 @@ void displayAtom(int nf, int nm, int na)
       gluCylinder(ss, atom->cylinder.toprad, 
 		      atom->cylinder.botrad, 
 		      atom->cylinder.height, 
-		      STACKS, SLIDES);
+		      globset.stacks, globset.slides);
     }
   else if (atom->common.type==MGL_ATOM_SUPELLIPS)
     {
@@ -378,10 +381,29 @@ void displayAtom(int nf, int nm, int na)
 	      rotm[k1*4+k2] = 0.0;
 	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
 	  }
+      for (k1=0; k1 < 16; k1++)
+	M[k1] = 0;
+      M[1]=1.0;
+      M[4]=1.0;
+      M[10]=1.0;
+      M[15]=1.0;
+      /*     | 0  1  0  0 | 
+       *     | 1  0  0  0 | 
+       * M = | 0  0  1  0 |
+       *     | 0  0  0  1 |
+       *     
+       * la matrice di rotazione rotm è riferita ad un sistema di coordinate
+       * destrorso dunque per applicarla dobbiamo prima passare ad un sistema
+       * destrorso applicando M (che scambia x e y) e quindi tornare indietro nel sistema
+       * di coordinate opengl applicando di nuovo M.
+       * R -> Trasposta(M)*R*M */
+      glMultMatrixf(M);
       glMultMatrixf(rotm);
+      glMultMatrixf(M);
       CreateSuperEllipse(atom->supellips.n1, 
 			 atom->supellips.n2, atom->supellips.a, 
-			 atom->supellips.b, atom->supellips.c, 50, 1);
+			 atom->supellips.b, atom->supellips.c, globset.stacks, 
+			 globset.slides, 1);
     }
  /*ss = gluNewQuadric();
     gluSphere(ss, sig[na], 12, 12);
@@ -808,6 +830,36 @@ void args(int argc, char* argv[])
 		}
 	      sscanf(argv[i], "(%lf,%lf,%lf)", &globset.ivpx, &globset.ivpy, &globset.ivpz);
 	      globset.setvp = 1;
+	    }
+	  else if (!strcmp(argv[i],"--stacks")|| !strcmp(argv[i],"-st"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the number of stacks!\n");
+		  exit(-1);
+		}
+	      globset.stacks = atoi(argv[i]);
+	      if (globset.stacks > 1000 || globset.stacks < 1)
+		{
+		  printf("stacks is better between 1 and 100!\n");
+		  exit(-1);
+		}
+	    }
+	  else if (!strcmp(argv[i],"--slides")|| !strcmp(argv[i],"-sl"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the number of slides!\n");
+		  exit(-1);
+		}
+	      globset.slides = atoi(argv[i]);
+	      if (globset.slides > 1000 || globset.slides < 1)
+		{
+		  printf("stacks is better between 1 and 100!\n");
+		  exit(-1);
+		}
 	    }
 	  else if (!strcmp(argv[i],"--diameter")|| !strcmp(argv[i],"-d"))
 	    {
@@ -1656,6 +1708,8 @@ void default_pars(void)
   globset.NumMols = NULL;
   globset.Width = 500;
   globset.Height = 500;
+  globset.stacks = STACKS;
+  globset.slides = SLIDES;
   globset.infos = 1;
   globset.frameNo = 1;
   globset.fadeMode = 2;
