@@ -347,7 +347,6 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE m, int resetCM)
   
   rTemp = sqrt(temp / Oparams.m);  
   /* variance of the velocities distribution function, we assume k = 1 */ 
-
   for (i = 0; i < Nm; i++)
     {
       /* Set the velocities of both atoms to the center of mass velocities,
@@ -371,7 +370,6 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE m, int resetCM)
         ----------- * exp( - --- )         
 	 sqrt(2*PI)           2     */
     }
- 
   /* Remove net momentum, to have a total momentum equals to zero */
   sumx = 0.0;
   sumy = 0.0;
