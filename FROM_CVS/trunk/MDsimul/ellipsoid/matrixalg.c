@@ -138,4 +138,225 @@ void InvMatrix(double **a, double **b, int NB)
     }
 }
 
+#define ALF 1.0e-4 /* Ensures su cient decrease in function value.*/
+#define TOLX 1.0e-7 /* Convergence criterion on  x.*/ 
+#define MAXITS 200 
+#define TOLF 1.0e-4 
+#define TOLMIN 1.0e-6 
+#define TOLX 1.0e-7 
+#define STPMX 100.0
+void lnsrch(int n, float xold[], float fold, float g[], float p[], float x[], float *f, float stpmax, int *check, float (*func)(float []))
+/*
+Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
+fold and g[1..n], and a direction p[1..n],  nds a new point x[1..n] along the direction p
+from xold where the function func has decreased  "sufficiently".  The new function value is 
+returned in f. stpmax is an input quantity that limits the length of the steps so that 
+you do not try to evaluate the function in regions where it is unde ned or subject to overflow.
+p is usually the Newton direction. The output quantity check is false (0) on a normal exit. 
+It is true (1) when x is too close to xold. In a minimization algorithm, this usually signals 
+convergence and can be ignored. However, in a zero-finding algorithm the calling program 
+should check whether the convergence is spurious. Some  difficult  problems may require 
+double precision in this routine.*/
+{
+  int i; 
+  float a,alam,alam2,alamin,b,disc,f2,rhs1,rhs2,slope,sum,temp, test,tmplam; 
+  *check=0; 
+  for (sum=0.0,i=1;i<=n;i++) 
+    sum += p[i]*p[i]; sum=sqrt(sum); 
+  if (sum > stpmax) 
+    for (i=1;i<=n;i++) 
+      p[i] *= stpmax/sum; /*Scale if attempted step is too big.*/ 
+  for (slope=0.0,i=1;i<=n;i++) 
+    slope += g[i]*p[i]; 
+  if (slope >= 0.0) 
+    nrerror("Roundoff problem in lnsrch."); 
+  test=0.0; /*Compute lambda_min.*/
+  for (i=1;i<=n;i++) 
+    {
+      temp=fabs(p[i])/FMAX(fabs(xold[i]),1.0); 
+      if (temp > test) 
+	test=temp; 
+    } 
+  alamin=TOLX/test; alam=1.0;
+  for (;;) 
+    { 
+      for (i=1;i<=n;i++) 
+	x[i]=xold[i]+alam*p[i]; 
+      *f=(*func)(x); 
+      if (alam < alamin) 
+	{ /* Convergence on  x. For zero  nding, the calling program 
+	     should verify the convergence.*/ 
+	  for (i=1;i<=n;i++) 
+	    x[i]=xold[i]; 
+	  *check=1; 
+	  return;
+	}
+      else if (*f <= fold+ALF*alam*slope) 
+	return; 
+	/* Su cient function decrease.*/
+      else 
+	{ /* Backtrack. */
+	  if (alam == 1.0) 
+	    tmplam = -slope/(2.0*(*f-fold-slope));/* First time.*/
+	  else
+	    { /* Subsequent backtracks.*/
+	      rhs1 = *f-fold-alam*slope;
+	      rhs2=f2-fold-alam2*slope;
+	      a=(rhs1/(alam*alam)-rhs2/(alam2*alam2))/(alam-alam2);
+	      b=(-alam2*rhs1/(alam*alam)+alam*rhs2/(alam2*alam2))/(alam-alam2); 
+	      if (a == 0.0) 
+		tmplam = -slope/(2.0*b); 
+	      else 
+		{
+		  disc=b*b-3.0*a*slope; 
+		  if (disc < 0.0) 
+		    tmplam=0.5*alam; 
+		  else if (b <= 0.0) 
+		    tmplam=(-b+sqrt(disc))/(3.0*a); 
+		  else 
+		    tmplam=-slope/(b+sqrt(disc)); 
+		} 
+	      if (tmplam > 0.5*alam) 
+		tmplam=0.5*alam; /* lambda <= 0.5 lambda_1.*/
+	    } 
+	}
+      alam2=alam;
+      f2 = *f; 
+      alam=FMAX(tmplam,0.1*alam); /* lambda >= 0.1 lambda_1.*/
+    }/* Try again.*/
+}
 
+int nn; /* Global variables to communicate with fmin.*/
+float *fvec; 
+void (*nrfuncv)(int n, float v[], float f[]); 
+#define FREERETURN {free_vector(fvec,1,n);free_vector(xold,1,n);\ free_vector(p,1,n);\
+ free_vector(g,1,n);free_matrix(fjac,1,n,1,n);\ free_ivector(indx,1,n);\
+ return;}
+double fmin(float x[]);
+void newt(float x[], int n, int *check, void (*vecfunc)(int, double [], double []))
+{
+  void lnsrch(int n, float xold[], float fold, float g[], float p[], float x[], float *f, 
+ 	      float stpmax, int *check, float (*func)(float []));
+  void lubksb(float **a, int n, int *indx, float b[]); 
+  void ludcmp(float **a, int n, int *indx, float *d); 
+  int i,its,j,*indx;
+  float d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
+  indx=ivector(1,n); 
+  fjac=matrix(1,n,1,n);
+  g=vector(1,n);
+  p=vector(1,n); 
+  xold=vector(1,n); 
+  fvec=vector(1,n); 
+  /*Define global variables.*/
+  nn=n; 
+  nrfuncv=vecfunc; 
+  f=fmin(x); /*fvec is also computed by this call.*/
+  test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
+  for (i=1;i<=n;i++) 
+    if (fabs(fvec[i]) > test)
+      test=fabs(fvec[i]); 
+  if (test < 0.01*TOLF)
+    {
+      *check=0; 
+      FREERETURN;
+    }
+  for (sum=0.0,i=1;i<=n;i++) 
+    sum += SQR(x[i]); /* Calculate stpmax for line searches.*/
+  stpmax=STPMX*FMAX(sqrt(sum),(float)n);
+  for (its=1;its<=MAXITS;its++)
+    { /* Start of iteration loop. */
+      fdjac(n,x,fvec,fjac,vecfunc); /* If analytic Jacobian is available, you can 
+				       replace the routine fdjac below with your own routine.*/
+      for (i=1;i<=n;i++) { /* Compute  f for the line search.*/
+	for (sum=0.0,j=1;j<=n;j++)
+	  sum += fjac[j][i]*fvec[j]; 
+	g[i]=sum; 
+      } 
+      for (i=1;i<=n;i++) 
+	xold[i]=x[i]; /* Store x,*/ 
+      fold=f; /* and f. */
+      for (i=1;i<=n;i++) 
+	p[i] = -fvec[i]; /* Right-hand side for linear equations.*/
+      ludcmp(fjac,n,indx,&d); /* Solve linear equations by LU decomposition.*/
+      lubksb(fjac,n,indx,p);
+      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin); 
+      /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
+      test=0.0; /* Test for convergence on function values.*/
+      for (i=1;i<=n;i++) 
+	if (fabs(fvec[i]) > test) 
+	  test=fabs(fvec[i]); 
+      if (test < TOLF) 
+	{ 
+	  *check=0; 
+	  FREERETURN
+	} 
+      if (*check) 
+	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
+	  test=0.0; 
+	  den=FMAX(f,0.5*n);
+	  for (i=1;i<=n;i++)
+	    {
+	      temp=fabs(g[i])*FMAX(fabs(x[i]),1.0)/den;
+	      if (temp > test) 
+		test=temp; 
+	    } 
+	  *check=(test < TOLMIN ? 1 : 0);
+	  FREERETURN 
+	} 
+      test=0.0; /* Test for convergence on ´x. */
+      for (i=1;i<=n;i++) 
+	{
+	  temp=(fabs(x[i]-xold[i]))/FMAX(fabs(x[i]),1.0); 
+	  if (temp > test) 
+	    test=temp; 
+	} 
+      if (test < TOLX) 
+	FREERETURN 
+    } 
+  nrerror("MAXITS exceeded in newt"); 
+}
+
+#define EPS 1.0e-4 /* Approximate square root of the machine precision.*/
+#ifdef MD_APPROX_JACOB
+void fdjac(int n, float x[], float fvec[], float **df, void (*vecfunc)(int, float [], float []))
+{ int i,j; 
+  float h,temp,*f; 
+  f=vector(1,n); 
+  for (j=1;j<=n;j++) 
+    {
+      temp=x[j]; 
+      h=EPS*fabs(temp);
+      if (h == 0.0)
+	h=EPS; 
+      x[j]=temp+h; 
+      /* Trick to reduce  nite precision error.*/
+      h=x[j]-temp; 
+      (*vecfunc)(n,x,f); 
+      x[j]=temp;
+      for (i=1;i<=n;i++)
+      df[i][j]=(f[i]-fvec[i])/h; /* Forward difference*/
+    }
+  free_vector(f,1,n); 
+}
+#else
+void fdjac(int n, float x[], float fvec[], float **df, void (*vecfunc)(int, float [], float []))
+{
+  /* evaluate Jacobian here! */
+}
+#endif
+extern int nn; 
+extern float *fvec;
+extern void (*nrfuncv)(int n, float v[], float f[]); 
+float fmin(float x[]) 
+/* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
+vector of functions at x. It is set to point to a user-supplied routine in the 
+calling program. Global variables also communicate the function values back to 
+the calling program.*/
+{
+  int i;
+  float sum;
+  (*nrfuncv)(nn,x,fvec);
+  for (sum=0.0,i=1;i<=nn;i++)
+    sum += SQR(fvec[i]); 
+    return 0.5*sum; 
+}
