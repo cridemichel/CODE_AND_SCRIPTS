@@ -1723,13 +1723,68 @@ void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double s
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*Sqr(x[7]); 
   MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
   MD_DEBUG(printf("fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
-  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 }
-double calcDist(double t, int i, int j, double shift[3])
+void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
 {
-  double vecg[8];
-  double retcheck, ti;
-  double Omega[3][3];
+  double A, B, C, D, tt;
+  double rBA[3], XarA[3];
+  int k1, k2, k3;
+  for (k1=0; k1 < 3; k1++)
+    rBA[k1] = rB[k1] - rA[k1];
+  MD_DEBUG(printf("rBA=(%f,%f,%f)\n", rBA[0], rBA[1], rBA[2])); 
+  MD_DEBUG(printf("rB= (%f,%f,%f)\n", rB[0], rB[1], rB[2]));
+  A = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      A += rBA[k1]*Xa[k1][k2]*rBA[k2];
+ 
+  for (k1 = 0; k1 < 3; k1++)
+    {   
+      XarA[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	XarA[k1] += Xa[k1][k2]*rA[k2];
+    }
+  B = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    B += rBA[k1]*XarA[k1];
+  B *= 2.0;
+  C = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    C +=  rA[k1]*XarA[k1];
+  C = C - 1.0;
+  D = Sqr(B) - 4.0*A*C;
+  tt = (-B + sqrt(D))/(2.0*A); 
+  MD_DEBUG(printf("tt = %f\n", tt));
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      rI[k1] = rA[k1] + tt*rBA[k1];  
+    }
+}
+void calc_grad(double *rC, double *rA, double **Xa, double *grad)
+{
+  int k1, k2;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      grad[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	grad[k1] += 2.0*Xa[k1][k2]*(rC[k2]-rA[k2]); 
+    }
+}
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
+void calcDist(double t, int i, int j, double shift[3], double *r1, double *r2, double *alpha)
+{
+  double vecg[8], rC[3], rD[3], rDC[3];
+  double ti;
+  int retcheck;
+  double Omega[3][3], nf, ng, gradf[3], gradg[3];
   int k1, na;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t - atomTime[i];
@@ -1749,18 +1804,50 @@ double calcDist(double t, int i, int j, double shift[3])
   UpdateOrient(j, ti, Rt, Omega);
   na = (j < Oparams.parnumA)?0:1;
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
-
-#if 0
+  calc_intersec(rB, rA, Xa, rC);
+  calc_intersec(rA, rB, Xb, rD);
+  MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
+		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
+  calc_grad(rC, rA, Xa, gradf);
+  calc_grad(rD, rB, Xb, gradg);
+  MD_DEBUG(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
+		  gradf[0], gradf[1], gradf[2], gradg[0], gradg[1], gradg[2]));
+  nf = calc_norm(gradf);
+  ng = calc_norm(gradg);
+  
+  vecg[6] = sqrt(nf/ng);
+  for (k1=0; k1 < 3; k1++)
+    {
+      vecg[k1] = rC[k1];
+      vecg[k1+3] = rD[k1];
+      rDC[k1] = rD[k1] - rC[k1];
+    }
+  vecg[7] = sqrt(calc_norm(rDC)/nf);  
+  MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
+  newtDist(vecg, 8, &retcheck, funcs2beZeroedDist, i, j, shift); 
+  if (retcheck != 0)
+    {
+      printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      exit(-1);
+    }
   for (k1 = 0; k1 < 3; k1++)
     {
-      rAB[k1] = rA[k1] - rB[k1];
+      r1[k1] = vecg[k1];
+      r2[k1] = vecg[k1+3];
+    }
+  *alpha = vecg[6];
+#if 0
+#if MD_DEBUG(x) == x
+  for (k1 = 0; k1 < 3; k1++)
+    rDC[k1] = r1[k1] - r2[k1];
+    {
+      FILE *f;
+      f =fopen("dist.dat","a");
+      fprintf(f,"%.15f %.15f\n", Oparams.time, calc_norm(rDC));  
+      fclose(f);
     }
 #endif
-  vecg[0] -= 0.01;
-  vecg[3] += 0.01;
-  vecg[6] = 1;
-  vecg[7] = 1;
-  newt(vecg, 8, &retcheck, funcs2beZeroedDist, i, j, shift); 
+#endif
 }
 void rebuildCalendar(void);
 int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
@@ -1842,7 +1929,7 @@ void PredictEvent (int na, int nb)
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],
 	 b, d, t, tInt, vv, distSq, t1, t2, tmp;
   int et, kk, retcheck, ii, overlap, mm;
-  double ncong, cong[3], pos[3], vecg[5], pos2[3], vecgold[5], vecgf[5];
+  double ncong, cong[3], pos[3], vecg[5], pos2[3], vecgold[5], vecgf[5], r1[3], r2[3];
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
   double Lzx, h1, h2, sig, hh1;
@@ -2241,6 +2328,7 @@ no_core_bump:
 		      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
 		      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
 		      t += Oparams.time; 
+#if 0
 		      /* t è il guess per il newton-raphson */
 		      /* come guess per x possiamo usare il punto di contatto 
 		       * fra i centroidi */
@@ -2284,8 +2372,9 @@ no_core_bump:
 		      
 		      MD_DEBUG(printf("time=%.15f vecguess: %f,%f,%f alpha=%f t=%f\n",Oparams.time, vecg[0], vecg[1], vecg[2], vecg[3],vecg[4]));
 #endif
-		      
-		      //calcDist(Oparams.time, na, n, shift);
+#endif		      
+		      //calcDist(Oparams.time, na, n, shift, r1, r2);
+		      //continue;
 		      //exit(-1);
 		      newt(vecg, 5, &retcheck, funcs2beZeroed, na, n, shift); 
 #if 0
@@ -2957,6 +3046,13 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
+#if 0
+	    {
+	      double shift[3] = {0,0,0};;
+	      double r1[3], r2[3], alpha;
+	      calcDist(Oparams.time, 0, 1, shift, r1, r2, &alpha);
+	    }
+#endif
 	  if (OprogStatus.brownian)
 	    {
 	      velsBrown(Oparams.T);
