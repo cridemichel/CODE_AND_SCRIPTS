@@ -363,11 +363,12 @@ void bump (int i, int j, double* W, int bt)
    * Gli urti in tale caso sono tutti elastici. */ 
   /* SQUARE WELL: modify here */
   distSq = Sqr(rxij)+Sqr(ryij)+Sqr(rzij);
+  /*printf("distSq:%.20f\n",distSq);*/
   b = rxij * vxij + ryij * vyij + rzij * vzij;
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
   factor = 0.0;
-  printf("bump(%d,%d):%d distSq: %f b:%f\n", i, j, bt, distSq, b);
+  //printf("bump(%d,%d):%d distSq: %.20f b:%f\n", i, j, bt, distSq, b);
   switch (bt)
     {
     /* N.B.
@@ -738,6 +739,7 @@ void PredictEvent (int na, int nb)
 #endif
 #ifdef MD_BARRIER
   int collCode;
+  const double EPSILON = 1E-13;
   double sigDeltaSq, intdistSq, distSq, s;
 #endif
   int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
@@ -1004,17 +1006,22 @@ void PredictEvent (int na, int nb)
 #ifdef MD_BARRIER
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
       		      s = 0;
-		      if (distSq > sigDeltaSq && b < 0.0) 
+		      /* EPSILON è necessaria a causa degli errori di numerici */
+		      if (distSq >= sigDeltaSq && b < 0.0) 
 			{
 			  collCode = MD_OUTIN_BARRIER;
 		      	  s = -1.0;
-	    		  intdistSq = sigDeltaSq;
+			  /* la piccola correzione serve poichè a causa
+			   * di errori numerici dopo l'evento la particella
+			   * potrebbe essere ancora fuori dalla buca (distSq > sigDeltaSq)*/
+	    		  intdistSq = sigDeltaSq - EPSILON;
 			}
-		      else if (distSq < sigDeltaSq && b > 0.0)
+		      else if (distSq <= sigDeltaSq && b > 0.0)
 			{ 
 			  collCode = MD_INOUT_BARRIER;
 			  s = 1.0;
-			  intdistSq = sigDeltaSq;
+			  /* ved. sopra riguardo a EPSILON */
+			  intdistSq = sigDeltaSq + EPSILON;
 			}
 		      else if (b < 0.0)
 			{
