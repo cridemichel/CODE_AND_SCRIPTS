@@ -3278,7 +3278,7 @@ void PredictEvent (int na, int nb)
 			  else if (na >= parnumA && n >= parnumA)
 			    sigSq = Sqr(maxax[na]);
 			  else
-			    sigSq = Sqr((maxax[n]+maxax[na])*0.5+Oparams.sigmaSticky);
+			    sigSq = Sqr((maxax[n]+maxax[na])*0.5+Oparams.sigmaSticky+OprogStatus.epsd);
 			}
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 		      tInt = Oparams.time - atomTime[n];
