@@ -36,6 +36,7 @@ int parnumA, parnumB;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 #endif
+double invaSq[2], invbSq[2], invcSq[2];
 /* ================================= */
 
 /* ========================================================================= */
@@ -850,6 +851,9 @@ void usrInitAft(void)
   /* evaluation of principal inertia moments*/ 
   for (a = 0; a < 2; a++)
     {
+      invaSq[a] = Sqr(1/Oparams.a[a]);
+      invbSq[a] = Sqr(1/Oparams.b[a]);
+      invcSq[a] = Sqr(1/Oparams.c[a]);
       ItensD[a][0] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.b[a])+Sqr(Oparams.c[a]));
       ItensD[a][1] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.c[a]));
       ItensD[a][2] = (1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.b[a]));
