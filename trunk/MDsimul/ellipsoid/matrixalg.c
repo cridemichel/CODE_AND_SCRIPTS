@@ -150,7 +150,7 @@ void InvMatrix(double **a, double **b, int NB)
 
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
 #define TOLX 1.0E-8//1.0e-7 /* Convergence criterion on  x.*/ 
-#define MAXITS 40 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
+#define MAXITS 200 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define TOLF 1.0e-5 // 1.0e-4
 #define TOLMIN 1.0E-7//1.0e-6 
 #define STPMX 100.0
@@ -275,7 +275,7 @@ void free_matrix(double **M, int n)
   free(M);
 }
 int nn; /* Global variables to communicate with fmin.*/
-double *fvec; 
+double *fvec, *fvecGuess; 
 #define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
 free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);return;}
 
@@ -289,11 +289,12 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
 	    int iA, int iB, double shift[3]);
 void lubksb(double **a, int n, int *indx, double b[]); 
 void ludcmp(double **a, int n, int *indx, double *d); 
+extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, double shift[3]);
 void newt(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int i,its,j,*indx;
+  int ii, i,its,j,*indx;
   double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
   indx=ivector(n); 
   fjac=matrix(n, n);
@@ -319,6 +320,19 @@ void newt(double x[], int n, int *check,
   stpmax=STPMX*FMAX(sqrt(sum),(double)n);
   for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
+      /* Stabilization */
+#if 0
+      for (ii = 0; ii < 5; ii++)
+	{
+	  printf("Guessing\n");
+	  fdjacGuess(n-1,x,fvec,fjac,funcs2beZeroedGuess, iA, iB, shift);
+	  ludcmp(fjac,n-1,indx,&d); /* Solve linear equations by LU decomposition.*/
+	  lubksb(fjac,n-1,indx,p);
+	  for (i=0; i < n-1; i++)
+	    x[i] = p[i];	
+	}
+#endif
+      /* ============ */
       fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
       /* If analytic Jacobian is available, you can 
 	 replace the routine fdjac below with your own routine.*/
