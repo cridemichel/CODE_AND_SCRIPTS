@@ -1486,12 +1486,6 @@ void move(void)
 	}
       else if (evIdB == ATOM_LIMIT + 8)
 	{ 
-	  OprogStatus.JJ++;
-	  if (OprogStatus.JJ == OprogStatus.NN)
-	    {
-	      OprogStatus.JJ = 0;
-	      OprogStatus.KK++;
-	    }
 	  sprintf(fileop2 ,"Store-%d-%d", 
 		  OprogStatus.KK, OprogStatus.JJ);
 	  strcpy(fileop, absTmpAsciiHD(fileop2));
@@ -1506,6 +1500,12 @@ void move(void)
 	  fprintf(bf, sepStr);
 	  writeAsciiPars(bf, opar_ascii);
 	  fprintf(bf, sepStr);
+	  OprogStatus.JJ++;
+	  if (OprogStatus.JJ == OprogStatus.NN)
+	    {
+	      OprogStatus.JJ = 0;
+	      OprogStatus.KK++;
+	    }
 	  OprogStatus.nextStoreTime = OprogStatus.storerate *
 	    (pow(OprogStatus.base,OprogStatus.NN)*OprogStatus.KK+pow(OprogStatus.base,OprogStatus.JJ));
 	  ScheduleEvent(-1, ATOM_LIMIT + 7, OprogStatus.nextStoreTime);
