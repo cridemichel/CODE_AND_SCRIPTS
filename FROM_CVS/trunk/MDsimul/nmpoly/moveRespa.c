@@ -80,6 +80,170 @@ extern COORD_TYPE  *Rmx, *Rmy, *Rmz;
 extern void check_distances(char* str);
 extern double *atcharge;
 #ifdef MD_RESPA_NPT
+void shakePosRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
+	   COORD_TYPE m[NA], int Nm)
+{
+  COORD_TYPE dSq;
+  int      done;
+  int      moving[NA], moved[NA];
+  COORD_TYPE  tol2, pxab, pyab, pzab, pabSq, dt2, dtSq2;
+  COORD_TYPE  rabSq, diffSq, rxab, ryab, rzab, rpab, gab;
+  COORD_TYPE  dx, dy, dz, rma, rmb;
+  COORD_TYPE  axia, ayia, azia;
+  COORD_TYPE  vxi[NA], vyi[NA], vzi[NA], pxi[NA], pyi[NA], pzi[NA];
+  int i, a, b, it;
+  const COORD_TYPE rptol = 1.0E-6;
+  double RCMx, RCMy, RCMz;
+
+  tol2   = 2.0 * tol;
+  dt2    = dt / 2.0;
+  dtSq2  = dt * dt2;
+  dSq = Sqr(d); /* In general you must supply a vector of bond lengths */
+ /* ===== LOOP OVER MOLECULES ===== */
+  L = cbrt(Vol);
+  for (i=0; i < Nm; i++)
+    {
+      /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
+      for(a=0; a < NA; a++)
+	{
+	  //rxi[a][i] = rx[a][i];
+  	  //ryi[a][i] = ry[a][i];
+  	  //rzi[a][i] = rz[a][i];
+
+	  pxi[a] = rx[a][i];
+	  pyi[a] = ry[a][i];
+	  pzi[a] = rz[a][i];
+	  vxi[a] = px[a][i]/m[a];
+	  vyi[a] = py[a][i]/m[a];
+	  vzi[a] = pz[a][i]/m[a];
+	  moving[a] = 0;
+	  moved[a]  = 1;
+	}
+      it = 0;
+      done = 0;
+      /* START OF ITERATIVE LOOP */
+      while ( (done == 0) && (it <= maxIt) )
+	{
+	  done = 1;
+
+	  for(a=0; a < NB; a++)
+	    {
+	      b = a + 1;
+	      /* la catena deve essere aperta */
+	      if ( (moved[a]==1) || (moved[b] == 1)) 
+		{
+		  pxab = pxi[a] - pxi[b];
+		  pyab = pyi[a] - pyi[b];
+		  pzab = pzi[a] - pzi[b];
+		  pxab = pxab - L * rint(invL * pxab);
+		  pyab = pyab - L * rint(invL * pyab);
+		  pzab = pzab - L * rint(invL * pzab);
+		  pabSq = Sqr(pxab) + Sqr(pyab) + Sqr(pzab);
+		  rabSq = dSq;
+		  diffSq = rabSq - pabSq;
+#if 0
+		  printf("pabSq: %.15G diffSq: %.15G i=%d (%d-%d) rabSq:%.15G d:%.15G (%.15G, %.15G, %.15G)\n", pabSq, diffSq,i, a, b, sqrt(rabSq), d, vx[a][i], vy[a][i], vz[a][i]);
+		  printf("a=%d b=%d rabSq: %f pabSq: %f\n", a, b, rabSq, pabSq);
+		  printf("a=%d (%f,%f,%f) b=%d (%f,%f,%f)\n", a, pxi[a], pyi[a], pzi[a],
+			 b, pxi[b], pyi[b], pzi[b]);
+#endif
+		  if ( fabs(diffSq) > ( rabSq * tol2 ) ) 
+		    {
+		      rxab = rxi[a][i] - rxi[b][i];
+		      ryab = ryi[a][i] - ryi[b][i];
+		      rzab = rzi[a][i] - rzi[b][i];
+		      rxab = rxab - L * rint(invL * rxab);
+		      ryab = ryab - L * rint(invL * ryab);
+		      rzab = rzab - L * rint(invL * rzab);
+		      rpab = rxab * pxab + ryab * pyab + rzab * pzab;
+		      
+		      if ( rpab < (rabSq * rptol) )
+			{
+			
+			  mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,
+				"CONSTRAINT FAILURE IN MOVEA",
+				NULL);
+			  printf("i=%d between %d and %d pab=%f rab=%f\n", i, a, b, pabSq,
+				 sqrt(Sqr(rxab)+Sqr(ryab)+Sqr(rzab)));
+			  printf("rpab=%.15f\n", rpab);
+			  printf("rab(%f,%f,%f) pab(%f,%f,%f)\n", rxab, ryab, rzab,
+				 pxab, pyab, pzab);
+			   printf("[%d-%d] v=(%f,%f,%f) a=(%f,%f,%f) pr=(%f,%f,%f) r=(%f,%f,%f)\n", a, i, 
+				  vx[a][i], vy[a][i], vz[a][i],
+				  axia, ayia, azia, pxi[a], pyi[a], pzi[a],
+				  rxi[a][i], ryi[a][i], rzi[a][i]);
+
+			  exit(-1);
+			}
+			   
+		      rma = 1.0 / m[a];
+		      rmb = 1.0 / m[b];
+		      gab = diffSq / ( 2.0 * ( rma + rmb ) * rpab );
+		      dx  = rxab * gab;
+		      dy  = ryab * gab;
+		      dz  = rzab * gab;
+		      pxi[a] = pxi[a] + rma * dx;
+		      pyi[a] = pyi[a] + rma * dy;
+		      pzi[a] = pzi[a] + rma * dz;
+		      pxi[b] = pxi[b] - rmb * dx;
+		      pyi[b] = pyi[b] - rmb * dy;
+		      pzi[b] = pzi[b] - rmb * dz;
+			   
+#if 1
+		      dx = dx / dt;
+		      dy = dy / dt;
+		      dz = dz / dt;
+		      vxi[a] = vxi[a] + rma * dx;
+		      vyi[a] = vyi[a] + rma * dy;
+		      vzi[a] = vzi[a] + rma * dz;
+		      vxi[b] = vxi[b] - rmb * dx;
+		      vyi[b] = vyi[b] - rmb * dy;
+		      vzi[b] = vzi[b] - rmb * dz;
+#endif			   
+		      moving[a] = 1;
+		      moving[b] = 1;
+		      done = 0;
+			   
+		    }
+		       
+		}
+		   
+	    }
+	       
+	  for(a=0; a < NA; a++)
+	    {
+	      moved[a]  = moving[a];
+	      moving[a] = 0;
+	    }
+	  it = it + 1;
+	}
+      /* END OF ITERATIVE LOOP */
+      if  (done == 0) 
+	{
+	  sprintf(msgStrA, "MOLECULE N. %d", i);
+	  mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,
+		"TOO MANY CONSTRAINT ITERATIONS IN MOVEA",
+		msgStrA,
+		NULL);
+	  exit(-1);
+	}
+      /* STORE AWAY NEW VALUES */
+      for(a=0; a < NA; a++)
+	{
+	  rx[a][i] = pxi[a];
+	  ry[a][i] = pyi[a];
+	  rz[a][i] = pzi[a];
+#if 1
+	  px[a][i] = vxi[a]*m[a];
+	  py[a][i] = vyi[a]*m[a];
+	  pz[a][i] = vzi[a]*m[a];
+#endif
+	  //printf("v(%f,%f,%f) F(%f,%f,%f)\n", vx[a][i], vy[a][i], vz[a][i],
+	//	 Fx[a][i], Fy[a][i], Fz[a][i]);
+	}
+    }
+
+}
 void shakeVelRespaNPT(int Nm, COORD_TYPE dt, COORD_TYPE m[NA], int maxIt, int NB, 
 		      COORD_TYPE d, COORD_TYPE tol, COORD_TYPE **p2sx, 
 		      COORD_TYPE** p2sy, COORD_TYPE** p2sz )
@@ -441,8 +605,10 @@ void updImpNoseAft(double dt, double c)
       	py[a][i] = py[a][i]*expdt[a];
 	pz[a][i] = pz[a][i]*expdt[a];
       }
+#if 0
 #ifndef MD_FENE
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
+#endif
 #endif
 }
 
@@ -511,6 +677,7 @@ void updImpLongNoseAft(double dt, double c)
       	py[a][i] = py[a][i]*expdt[a];
 	pz[a][i] = pz[a][i]*expdt[a];
       }
+#if 0
 #ifndef MD_FENE
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 0.000000000001, px, py, pz);
 #ifdef ATPRESS 
@@ -524,6 +691,7 @@ void updImpLongNoseAft(double dt, double c)
   WCzxLong = WCzx;
   WCyzLong = WCyz;
 #endif 
+#endif
 #endif
 }
 
@@ -828,6 +996,11 @@ void updImpNoseAnd(double dt, double c)
 	  PCMz += pz[a][i] - pzo;
 	} 
     }
+#ifndef MD_FENE  
+  shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
+		   0.000000000001, px, py, pz);
+#endif
+
 }
 
 void updImpAnd(double dt, double c)
@@ -1531,19 +1704,9 @@ void movelongRespaNPTAft(double dt)
 /* ========================== >>> movea <<< =============================== */
 void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d, 
 	   COORD_TYPE m[NA], int Nm)
-{  
-  COORD_TYPE dSq;
-  int      done;
-  int      moving[NA], moved[NA];
-  COORD_TYPE  tol2, pxab, pyab, pzab, pabSq, dt2, dtSq2;
-  COORD_TYPE  rabSq, diffSq, rxab, ryab, rzab, rpab, gab;
-  COORD_TYPE  dx, dy, dz, rma, rmb;
-  COORD_TYPE  axia, ayia, azia;
-  COORD_TYPE  vxi[NA], vyi[NA], vzi[NA], pxi[NA], pyi[NA], pzi[NA];
-  int i, a, b, it;
-  const COORD_TYPE rptol = 1.0E-6;
-  double RCMx, RCMy, RCMz;
-
+{   
+  int i, a;
+  
   if ( ( NB != NA ) && ( NB != NA-1 ) ) 
     {
       mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,  
@@ -1558,10 +1721,6 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   printf("tol=%.20f\n", tol);
   printf("L=%f Vol=%.f dt=%f\n", L, Vol, dt);
 #endif
-  tol2   = 2.0 * tol;
-  dt2    = dt / 2.0;
-  dtSq2  = dt * dt2;
-  dSq = Sqr(d); /* In general you must supply a vector of bond lengths */
 #ifndef MD_FENE
   for (i=0; i < Oparams.parnum; i++)
     for (a=0; a < NA; a++)
@@ -1604,149 +1763,16 @@ void moveaRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   else
     {
       updImp(dt, 0.5);
+#ifndef MD_FENE  
+      shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
+    		       0.000000000001, px, py, pz);
+#endif
       updPositions(dt, 1.0);
     }
 
 #if !defined(MD_FENE)
-  /* ===== LOOP OVER MOLECULES ===== */
-  L = cbrt(Vol);
-  for (i=0; i < Nm; i++)
-    {
-      /* ====== >>>> VELOCITY VERLET ALGORITHM PART A <<< ======= */
-      for(a=0; a < NA; a++)
-	{
-	  pxi[a] = rx[a][i];
-	  pyi[a] = ry[a][i];
-	  pzi[a] = rz[a][i];
-	  vxi[a] = px[a][i]/m[a];
-	  vyi[a] = py[a][i]/m[a];
-	  vzi[a] = pz[a][i]/m[a];
-	  moving[a] = 0;
-	  moved[a]  = 1;
-	}
-      it = 0;
-      done = 0;
-      /* START OF ITERATIVE LOOP */
-      while ( (done == 0) && (it <= maxIt) )
-	{
-	  done = 1;
-
-	  for(a=0; a < NB; a++)
-	    {
-	      b = a + 1;
-	      /* la catena deve essere aperta */
-	      if ( (moved[a]==1) || (moved[b] == 1)) 
-		{
-		  pxab = pxi[a] - pxi[b];
-		  pyab = pyi[a] - pyi[b];
-		  pzab = pzi[a] - pzi[b];
-		  pxab = pxab - L * rint(invL * pxab);
-		  pyab = pyab - L * rint(invL * pyab);
-		  pzab = pzab - L * rint(invL * pzab);
-		  pabSq = Sqr(pxab) + Sqr(pyab) + Sqr(pzab);
-		  rabSq = dSq;
-		  diffSq = rabSq - pabSq;
-#if 0
-		  printf("pabSq: %.15G diffSq: %.15G i=%d (%d-%d) rabSq:%.15G d:%.15G (%.15G, %.15G, %.15G)\n", pabSq, diffSq,i, a, b, sqrt(rabSq), d, vx[a][i], vy[a][i], vz[a][i]);
-		  printf("a=%d b=%d rabSq: %f pabSq: %f\n", a, b, rabSq, pabSq);
-		  printf("a=%d (%f,%f,%f) b=%d (%f,%f,%f)\n", a, pxi[a], pyi[a], pzi[a],
-			 b, pxi[b], pyi[b], pzi[b]);
-#endif
-		  if ( fabs(diffSq) > ( rabSq * tol2 ) ) 
-		    {
-		      rxab = rxi[a][i] - rxi[b][i];
-		      ryab = ryi[a][i] - ryi[b][i];
-		      rzab = rzi[a][i] - rzi[b][i];
-		      rxab = rxab - L * rint(invL * rxab);
-		      ryab = ryab - L * rint(invL * ryab);
-		      rzab = rzab - L * rint(invL * rzab);
-		      rpab = rxab * pxab + ryab * pyab + rzab * pzab;
-		      
-		      if ( rpab < (rabSq * rptol) )
-			{
-			
-			  mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,
-				"CONSTRAINT FAILURE IN MOVEA",
-				NULL);
-			  printf("i=%d between %d and %d pab=%f rab=%f\n", i, a, b, pabSq,
-				 sqrt(Sqr(rxab)+Sqr(ryab)+Sqr(rzab)));
-			  printf("rpab=%.15f\n", rpab);
-			  printf("rab(%f,%f,%f) pab(%f,%f,%f)\n", rxab, ryab, rzab,
-				 pxab, pyab, pzab);
-			   printf("[%d-%d] v=(%f,%f,%f) a=(%f,%f,%f) pr=(%f,%f,%f) r=(%f,%f,%f)\n", a, i, 
-				  vx[a][i], vy[a][i], vz[a][i],
-				  axia, ayia, azia, pxi[a], pyi[a], pzi[a],
-				  rxi[a][i], ryi[a][i], rzi[a][i]);
-
-			  exit(-1);
-			}
-			   
-		      rma = 1.0 / m[a];
-		      rmb = 1.0 / m[b];
-		      gab = diffSq / ( 2.0 * ( rma + rmb ) * rpab );
-		      dx  = rxab * gab;
-		      dy  = ryab * gab;
-		      dz  = rzab * gab;
-		        
-		      pxi[a] = pxi[a] + rma * dx;
-		      pyi[a] = pyi[a] + rma * dy;
-		      pzi[a] = pzi[a] + rma * dz;
-		      pxi[b] = pxi[b] - rmb * dx;
-		      pyi[b] = pyi[b] - rmb * dy;
-		      pzi[b] = pzi[b] - rmb * dz;
-			   
-		      dx = dx / dt;
-		      dy = dy / dt;
-		      dz = dz / dt;
-		      
-		      vxi[a] = vxi[a] + rma * dx;
-		      vyi[a] = vyi[a] + rma * dy;
-		      vzi[a] = vzi[a] + rma * dz;
-		      vxi[b] = vxi[b] - rmb * dx;
-		      vyi[b] = vyi[b] - rmb * dy;
-		      vzi[b] = vzi[b] - rmb * dz;
-			   
-		      moving[a] = 1;
-		      moving[b] = 1;
-		      done = 0;
-			   
-		    }
-		       
-		}
-		   
-	    }
-	       
-	  for(a=0; a < NA; a++)
-	    {
-	      moved[a]  = moving[a];
-	      moving[a] = 0;
-	    }
-	  it = it + 1;
-	}
-      /* END OF ITERATIVE LOOP */
-      if  (done == 0) 
-	{
-	  sprintf(msgStrA, "MOLECULE N. %d", i);
-	  mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,
-		"TOO MANY CONSTRAINT ITERATIONS IN MOVEA",
-		msgStrA,
-		NULL);
-	  exit(-1);
-	}
-      /* STORE AWAY NEW VALUES */
-      for(a=0; a < NA; a++)
-	{
-	  rx[a][i] = pxi[a];
-	  ry[a][i] = pyi[a];
-	  rz[a][i] = pzi[a];
-
-	  px[a][i] = vxi[a]*m[a];
-	  py[a][i] = vyi[a]*m[a];
-	  pz[a][i] = vzi[a]*m[a];
-	  //printf("v(%f,%f,%f) F(%f,%f,%f)\n", vx[a][i], vy[a][i], vz[a][i],
-	//	 Fx[a][i], Fy[a][i], Fz[a][i]);
-	}
-    }
+  shakePosRespa(Oparams.steplength/OprogStatus.nrespa, 0.00000000001, 150, NA-1, Oparams.d,
+		Oparams.m, Oparams.parnum);
 #endif
 
 #if 0
@@ -1789,10 +1815,20 @@ void movebRespa(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB,
     }
 #endif
   else
-    updImp(dt, 0.5);
+    {
+      updImp(dt, 0.5);
+#if 0
+#ifndef MD_FENE  
+      shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
+	  	       0.000000000001, px, py, pz);
+#endif
+#endif
+    } 
+#if 0
 #ifndef MD_FENE  
   shakeVelRespaNPT(Oparams.parnum, Oparams.steplength, Oparams.m, 150, NA-1, Oparams.d, 
 		   0.000000000001, px, py, pz);
+#endif
 #endif
 }
 #endif
