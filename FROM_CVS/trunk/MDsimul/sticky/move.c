@@ -2631,7 +2631,7 @@ int get_bonded(int i, int j)
 
 }
 
-int use_min_delt(int *negpairs, double *dists, int bondpair)
+int check_negpairs(int *negpairs, double *dists, int bondpair, int i, int j)
 {
   int nn, sum;
   sum = 0;
@@ -2639,35 +2639,44 @@ int use_min_delt(int *negpairs, double *dists, int bondpair)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
-      if (negpairs[nn]==1 && dists[nn] < 0.0)
-	negpairs[nn] = 0;
-      else if (negpairs[nn]==2 && dists[nn] > 0.0)
-	negpairs[nn] = 0;
+      if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
+	&& lastbump[j].at == mapbondsb[nn]))
+	continue;
+      if (bound(i, j, mapbondsa[nn], mapbondsb[nn]) && dists[nn] > 0.0)
+	negpairs[nn] = 1;
+      else if (!bound(i, j, mapbondsa[nn], mapbondsb[nn]) && dists[nn] < 0.0)
+	negpairs[nn] = 1;
       sum += negpairs[nn];
     }
   return (sum > 0)?1:0;
 }
-int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld)
+int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
+		    int *negpairs)
 {
   int nn, retval=0;
   for (nn=0; nn < MD_PBONDS; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
+      if (!negpairs[nn])
+	continue;
+#if 0
       if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
 	&& lastbump[j].at == mapbondsb[nn]))
 	continue;
-      if (distsOld[nn] > 0.0  && dists[nn] > 0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+#endif
+      if (distsOld[nn] > 0.0 && dists[nn] > 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	return 1;
-      if (distsOld[nn] < 0.0 && dists[nn] < 0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+      if (distsOld[nn] < 0.0 && dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	return 1;
     }
   return 0;
 }
+#define MD_NEGPAIRS
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
-  const double sh = 1E-12;
+  const double minh = 1E-12;
   double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS],
 	 distsOld2[MD_PBONDS], deltth; 
   double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
@@ -2677,7 +2686,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   int its, foundrc, goback;
   double epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
   int kk,tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
-      crossed[MD_PBONDS], firstaftsf, negpairs[MD_PBONDS];
+      crossed[MD_PBONDS], firstaftsf;
+#ifdef MD_NEGPAIRS
+ int negpairs[MD_PBONDS], sumnegpairs;
+#endif
   const double GOLD= 1.618034;
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
@@ -2835,6 +2847,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   //assign_dists(dists, distsOld);
   //dold = d;
   dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
+#ifdef MD_NEGPAIRS
+  sumnegpairs = check_negpairs(negpairs, distsOld, bondpair, i, j); 
+#endif
   firstaftsf = 1;
 #endif
   its = 0;
@@ -2903,15 +2918,24 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       //dold2 = dold;
       d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+#ifdef MD_NEGPAIRS
       itstb = 0;
-      while (!firstaftsf && delt_is_too_big(i, j, bondpair, dists, distsOld) && 
-	     delt > sh)
+      /* NOTA: se la distanza tra due sticky spheres è positiva a t (per errori numerici 
+       * accade spesso) e t+delt allora delt è troppo grande e qui lo riduce fino ad un 
+       * valore accettabile. */
+      if (sumnegpairs && !firstaftsf)
 	{
-	  delt /= GOLD; 
-	  t = tini + delt;
-	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-	  itstb++;
+	  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
+		 delt > minh)
+	    {
+	      delt /= GOLD; 
+	      t = tini + delt;
+	      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	      itstb++;
+	    }
+	  sumnegpairs = 0;
 	}
+#endif
       if (firstaftsf)
 	firstaftsf = 0;
       deldist = get_max_deldist(distsOld, dists, bondpair);
