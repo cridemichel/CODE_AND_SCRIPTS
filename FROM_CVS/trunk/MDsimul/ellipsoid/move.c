@@ -200,6 +200,7 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
       jZ = inCell[2][na] + iZ;    
@@ -250,6 +251,10 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
 		  if (n < na) 
 		    {
 		      dist = calcDistNeg(Oparams.time, na, n, shift, r1, r2, &alpha, vecg, 1);
+#if 0
+		      if ((na==125||na==15) && (n==15||n==125))
+			printf("$$$$ dist: %.12G\n", dist);
+#endif
 		      if (*jmin == -1 || dist<distMin)
 			{
 			  distMin = dist;
@@ -277,9 +282,75 @@ double calc_phi(void)
   return N / (L*L*L);
 }
 double calc_norm(double *vec);
+void calc_ellips_norms(double *rAC, double *rBD, double *norm, double *norm2)
+{ 
+  int a, b;
+  double modn;
+  for (a=0; a < 3; a++)
+    {
+      norm[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  norm[a] += -Xa[a][b]*rAC[b];
+	}
+    }
+  modn = 0.0;
+  for (a = 0; a < 3; a++)
+    modn += Sqr(norm[a]);
+  modn = sqrt(modn);
+  for (a=0; a < 3; a++)
+    norm[a] /= modn;
+
+  for (a=0; a < 3; a++)
+    {
+      norm2[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  norm2[a] += -Xb[a][b]*rBD[b];
+	}
+    }
+  modn = 0.0;
+  for (a = 0; a < 3; a++)
+    modn += Sqr(norm2[a]);
+  modn = sqrt(modn);
+  for (a=0; a < 3; a++)
+    norm2[a] /= modn;
+}
+
+double rcutL, aL[2], bL[2], cL[2], maxaxL[2], invaSqL[2], invbSqL[2], invcSqL[2];
+void store_values(void)
+{
+  int aa;
+  rcutL = Oparams.rcut;
+  for (aa = 0; aa < 2; aa++)
+    {
+      maxaxL[aa] = maxax[aa];
+      aL[aa] = Oparams.a[aa];
+      bL[aa] = Oparams.b[aa];
+      cL[aa] = Oparams.c[aa];
+      invaSqL[aa] = invaSq[aa];
+      invbSqL[aa] = invbSq[aa];
+      invcSqL[aa] = invcSq[aa]; 
+    }
+}
+void restore_values(void)
+{
+  int aa;
+  Oparams.rcut = rcutL;
+  for (aa = 0; aa < 2; aa++)
+    {
+      maxax[aa] = maxaxL[aa];
+      Oparams.a[aa] = aL[aa];
+      Oparams.b[aa] = bL[aa];
+      Oparams.c[aa] = cL[aa];
+      invaSq[aa] = invaSqL[aa];
+      invbSq[aa] = invbSqL[aa];
+      invcSq[aa] = invcSqL[aa]; 
+    }
+}
 
 double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double rD[3], 
-		      double shift[3])
+		      double shift[3], double scalfact)
 {
   int i, kk, a;
   double phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
@@ -306,8 +377,7 @@ double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double
 	    rBD[kk] -= SignR(L, rBD[kk]);
 	}
       /* 0.99 serve per evitare che si tocchino */
-      fact1 = 1 + 0.99*(d / (calc_norm(rAC)+calc_norm(rBD)));
-      printf("norm(rAC): %.8G norm(rBD): %.8G\n", calc_norm(rAC), calc_norm(rBD));
+      fact1 = 1 + scalfact*(d / (calc_norm(rAC)+calc_norm(rBD)));
       fact2 = cbrt(OprogStatus.targetPhi/phi);
       if (fact2 < fact1)
 	{
@@ -346,63 +416,10 @@ double scale_all_axes(double d, double rA[3], double rC[3], double rB[3], double
 
   return calc_phi();
 }
-void scale_Phi(void)
+void rebuild_linked_list(void)
 {
-  int i, j, imin, jmin=-1, kk, n;
-  double dist, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
-  double L2, shift[3], shiftmin[3], phi;
-  if (OprogStatus.targetPhi <= 0)
-    return;
-    
-  //UpdateSystem();   
-  L2 = 0.5 * L;
-  /* get the minimum distance in the system */
-  imin == -1;
-  for (i = 0; i < Oparams.parnum; i++)
-    {
-      j = -1;
-      dist = get_min_dist(i, &j, rC, rD, shift);
-      if (dist < distMin)
-	{
-	  distMin = dist;
-	  jmin = j;
-	  imin = i;
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      rCmin[kk] = rC[kk];
-	      rDmin[kk] = rD[kk];
-	      shiftmin[kk] = shift[kk];
-	    }
-	}
-    }
-  rAmin[0] = rx[imin];
-  rAmin[1] = ry[imin];
-  rAmin[2] = rz[imin];
-  rBmin[0] = rx[jmin];
-  rBmin[1] = ry[jmin];
-  rBmin[2] = rz[jmin];
-  phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shift);
-  printf("distMin= %.15G phi=%.8G\n", distMin, phi);
-  imin == -1;
-  for (i = 0; i < Oparams.parnum; i++)
-    {
-      j = -1;
-      dist = get_min_dist(i, &j, rC, rD, shift);
-      if (dist < distMin)
-	{
-	  distMin = dist;
-	  jmin = j;
-	  imin = i;
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      rCmin[kk] = rC[kk];
-	      rDmin[kk] = rD[kk];
-	      shiftmin[kk] = shift[kk];
-	    }
-	}
-    }
-  printf("[dopo scale_all_axes] distMin= %.15G\n", distMin);
-  
+  double L2;
+  int j, n;
   L2 = 0.5 * L;
   cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
@@ -413,7 +430,7 @@ void scale_Phi(void)
 #endif 
   for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
     cellList[j] = -1;
-
+  
   /* rebuild event calendar */
   for (n = 0; n < Oparams.parnum; n++)
     {
@@ -429,7 +446,94 @@ void scale_Phi(void)
       cellList[n] = cellList[j];
       cellList[j] = n;
     }
+}
+double check_dist_min(char *msg)
+{
+  int imin, j, i;
+  double distMin=1E60, dist, rC[3], rD[3], shift[3];
+  
+  imin = -1;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      j = -1;
+      dist = get_min_dist(i, &j, rC, rD, shift);
+      if (dist < distMin)
+	distMin = dist;
+    }
+  if (msg)
+    printf("[check_dist_min] %s distMin: %.12G\n", msg, distMin);
+  return distMin;
+} 
+
+void scale_Phi(void)
+{
+  int i, j, imin, jmin=-1, kk, n, its;
+  double dist, distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
+  double L2, shift[3], shiftmin[3], phi, scalfact;
+  if (OprogStatus.targetPhi <= 0)
+    return;
+    
+  //UpdateSystem();   
+  L2 = 0.5 * L;
+  /* get the minimum distance in the system */
+  imin = -1;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      j = -1;
+      dist = get_min_dist(i, &j, rC, rD, shift);
+      if (dist < distMin)
+	{
+	  distMin = dist;
+	  jmin = j;
+	  imin = i;
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      rCmin[kk] = rC[kk];
+	      rDmin[kk] = rD[kk];
+	      shiftmin[kk] = shift[kk];
+	    }
+	}
+    }
+  for (kk = 0;  kk < 3; kk++)
+    {
+      cellRange[2*kk]   = - 1;
+      cellRange[2*kk+1] =   1;
+    }
+ 
+  rAmin[0] = rx[imin];
+  rAmin[1] = ry[imin];
+  rAmin[2] = rz[imin];
+  rBmin[0] = rx[jmin];
+  rBmin[1] = ry[jmin];
+  rBmin[2] = rz[jmin];
+  scalfact = 0.5;
+  store_values();
+  phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact);
+  rebuild_linked_list();
+  distMinT = check_dist_min(NULL);
+  its = 0;
+  while (distMinT < 0)
+    {
+      restore_values();
+      phi = scale_all_axes(distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact);
+      rebuild_linked_list();
+      distMinT = check_dist_min("Alla fine di calc_Phi()");
+      //printf("t=%.8G cellsx: %d rcut: %.8G imin=%d jmin=%d distMinT= %.15G phi=%.8G\n", 
+	//     Oparams.time, cellsx, Oparams.rcut, imin, jmin, distMinT, phi);
+      scalfact *= 0.95;
+      its++;
+    }
+#if 0
+  if (its == 20)
+    {
+      restore_values();
+      rebuild_linked_list();
+      return;
+    }
+#endif
+  //check_dist_min("PRIMA");
   rebuildCalendar();
+  //check_dist_min("DOPO");
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
@@ -1574,7 +1678,7 @@ int bound(int na, int n)
   return 0;
 }
 #endif
-UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
+void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 { 
   double wSq, w, OmegaSq[3][3], M[3][3];
   double sinw, cosw;
@@ -2992,6 +3096,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     }
 #else
   //d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
+
   if (search_contact_faster(i, j, shift, &t, t2, vecgd1, epsd, &d1, epsdFast, r1, r2))
     return 0;  
 #if 0
@@ -3030,7 +3135,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     }
   else if (d1<0&&fabs(d1)>1E-7)
     {
-      printf("[WARNING] d1=%.15G < 0 i=%d j=%d\n",d1, i, j);
+      printf("[WARNING] t=%.10G d1=%.15G < 0 i=%d j=%d\n",t, d1, i, j);
       printf("[WARNING] Some collision has been missed, ellipsoid may overlap!\n");
       store_bump(i, j);
       return 0;
@@ -4280,7 +4385,7 @@ void rebuildCalendar(void)
   int k, n;
   
   InitEventList();
-  for (k = 0;  k < NDIM; k++)
+  for (k = 0;  k < 3; k++)
     {
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
