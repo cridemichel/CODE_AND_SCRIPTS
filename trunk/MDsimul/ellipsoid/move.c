@@ -7203,7 +7203,9 @@ void move(void)
   while (!ENDSIM)
     {
       innerstep++;
+#ifdef MD_NNL
       timeold = Oparams.time;
+#endif
       NextEvent();
       /* l'evento di ricostruzione della NNL è mantenuto fuori dal calendario degli eventi per
        * semplicità */
