@@ -490,6 +490,7 @@ void scale_Phi(void)
   if (OprogStatus.targetPhi <= 0)
     return;
     
+  phi=calc_phi();
   if (first)
     {
       first = 0;
@@ -571,6 +572,12 @@ void scale_Phi(void)
     }
 
   //check_alldist_min("DOPO");
+  if (phi > 0.7)
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	if (axa[i]>3.0||axb[i]>3.0||axc[i]>3.0)
+	  printf("%d-(%f,%f,%f) ", i, axa[i], axb[i], axc[i]);
+    }
   printf("Scaled axes succesfully phi=%.8G\n", phi);
 #if 0
   if (fabs(phi - OprogStatus.targetPhi)<1E-8)
@@ -3545,7 +3552,7 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   int nb;
   double d3, Delta, t1, t2;
   double r1[3], r2[3], alpha, xb1[2], xb2[2];
-  d3 = calcDistNeg(t+delt/2, i, j, shift, r1, r2, &alpha, vecg, 0);
+  d3 = calcDistNeg(t+delt*0.5, i, j, shift, r1, r2, &alpha, vecg, 0);
   xa[0] = t;
   ya[0] = d1;
   xa[1] = t+delt*0.5;
@@ -3562,7 +3569,7 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   if (!bracketing)
     {
       t1 = t;
-      t2 = t+delt*0.5;
+      t2 = t+delt;
     }
   else
     {
@@ -3583,7 +3590,8 @@ int interpol(int i, int j, double t, double delt, double d1, double d2, double *
   if (polinterr)
     {
       printf("bracketing: %d polinterr=%d t1=%.15G t2=%.15G\n", bracketing,polinterr, t1, t2);
-      printf("d1=%.10G d2=%.10G d3:%.10G\n", d1, d2, d3);
+      printf("d: %.15G,%.15G,%.15G\n", d1, d3, d2);
+      printf("t: %.15G,%.15G,%.15G\n", t, t+delt*0.5, t+delt);
       printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
       return 1;
     }
