@@ -2080,23 +2080,23 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   DA[2][2] = invcSq[na];
   /*N.B. l'ellissoide B in tale caso non evolve! */
   ti = 0.0;//x[4] + (trefG - atomTime[iB]);
-  rB[0] = rx[iB];
-  rB[1] = ry[iB];
-  rB[2] = rz[iB];
-  vB[0] = vx[iB];
-  vB[1] = vy[iB];
-  vB[2] = vz[iB];
-  UpdateOrient(iB, ti, RB, OmegaB);
-  na = (iB < Oparams.parnumA)?0:1;
+  rB[0] = rx[iA];
+  rB[1] = ry[iA];
+  rB[2] = rz[iA];
+  vB[0] = vx[iA];
+  vB[1] = vy[iA];
+  vB[2] = vz[iA];
+  UpdateOrient(iA, ti, RB, OmegaB);
+  na = (iA < Oparams.parnumA)?0:1;
 
-  scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[i]);
-  scalfact[1] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axb[i]);
-  scalfact[2] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axc[i]);
-  invaSq[na] = 1.0/Sqr(axa[i]*scalfact[0]);
-  invbSq[na] = 1.0/Sqr(axb[i]*scalfact[1]);
-  invcSq[na] = 1.0/Sqr(axc[i]*scalfact[2]);
+  scalfact[0] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axa[iA]);
+  scalfact[1] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axb[iA]);
+  scalfact[2] = 1.0+OprogStatus.rNebrShell/(OprogStatus.rNebrShell+axc[iA]);
+  invaSq[na] = 1.0/Sqr(axa[iA]*scalfact[0]);
+  invbSq[na] = 1.0/Sqr(axb[iA]*scalfact[1]);
+  invcSq[na] = 1.0/Sqr(axc[iA]*scalfact[2]);
 
-  tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
+  tRDiagR(iA, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
   DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
   DB[0][0] = invaSq[na];
   DB[1][1] = invbSq[na];
@@ -4640,7 +4640,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
   MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d));
 #if 1
-  d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
+  d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
   if (lastbump[j]==i && lastbump[i]==j)
     {
       MD_DEBUG10(printf("last collision was between (%d-%d)\n", i, j));
@@ -4650,7 +4650,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  t += h;
 	  if (t + t1 > t2)
 	    return 0;
-	  d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
+	  d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
 	}
 #endif
     }
@@ -4745,7 +4745,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      /* vecgd2 è vecgd al tempo t-delt */
 	      for (kk=0; kk < 8; kk++)
 		vecgroot[kk] = vecgdold[kk];
-	      troot = t + t1 - delt;
+	      /* forse è meglio scegliere il valore di t più grande per ridurre il rischio
+	       * di eventi coincidenti! */
+	      /* VECCHIA SOLUZIONE: troot = t + t1 - delt;*/
+	      troot = t + t1;
 	    }
 	  dorefine = 1;
 	}
@@ -5009,7 +5012,7 @@ void BuildNNL(int na)
     nebrTab[na].nexttime = timbig;
   else
     nebrTab[na].nexttime = vecg[4];
-  ScheduleEvent(na, ATOM_LIMIT + 11, vecg[4]); 
+  //ScheduleEvent(na, ATOM_LIMIT + 11, vecg[4]); 
   
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
@@ -6130,7 +6133,7 @@ void move(void)
   int ii;
   double rzmax, zfact;
 #endif
-
+  double nltime = timbig;
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;
@@ -6361,7 +6364,14 @@ void move(void)
 #ifdef MD_NNL
       else if (evIdB == ATOM_LIMIT + 11)
 	{
-	  BuildNNL(evIdA);	  
+	  for (i=0; i < Oparams.parnum; i++)
+	    {
+	      BuildNNL(i);
+	      if (i==0 || nebrTab[i].nexttime < nltime)
+		nltime = nebrTab[i].nexttime;
+	    }
+	  /* next complete update */
+	  ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 	  //ScheduleEvent(evIdA, ATOM_LIMIT+11,nebrTab[i].nexttime);
 	}
 #endif

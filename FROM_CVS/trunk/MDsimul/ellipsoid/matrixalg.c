@@ -2616,7 +2616,7 @@ void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, in
 }
 #define ITMAXZB 100 
 /* Maximum allowed number of iterations.*/
-#define EPSP 3.0e-8 /* Machine floating-point precision.*/
+#define EPSP 1.0e-15 /* Machine floating-point precision.*/
 void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], double xb2[], 
 	   int *nb)
 /* Given a function fx defined on the interval from x1-x2 subdivide the interval into n equally
@@ -3312,7 +3312,7 @@ extern void funcs2beZeroedGuess(int n, double x[], double fvec[], int i, int j, 
 extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3]);
 
 extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
-#define MD_GLOBALNR
+//#define MD_GLOBALNR
 #undef MD_GLOBALNR2
 #ifdef MD_GLOBALNR2
 double fmin2(double x[], int iA, int iB, double shift[3]);
