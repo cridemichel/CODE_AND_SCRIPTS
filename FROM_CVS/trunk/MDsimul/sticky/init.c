@@ -1022,9 +1022,9 @@ void StartRun(void)
 	  else if (iA == 1 && nc == 0)
 	    nl = 1;
 	  else if (iA == 0 && nc == 1)
-	    nl = 3;
-	  else
 	    nl = 2;
+	  else
+	    nl = 3;
 	  atomTime[n] = Oparams.time;
 	  inCell[nc][0][n] =  (rx[n] + L2) * cellsx[nl] / L;
 	  inCell[nc][1][n] =  (ry[n] + L2) * cellsy[nl] / L;
