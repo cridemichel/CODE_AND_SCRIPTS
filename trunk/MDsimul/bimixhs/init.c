@@ -837,7 +837,8 @@ void usrInitAft(void)
 	atomTime[i] = 0.0;
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
-      OprogStatus.nextStoreTime = OprogStatus.storerate;
+      if (OprogStatus.storerate > 0.0)
+      	OprogStatus.nextStoreTime = OprogStatus.storerate;
       OprogStatus.nextDt += Oparams.Dt;
     }
   else
