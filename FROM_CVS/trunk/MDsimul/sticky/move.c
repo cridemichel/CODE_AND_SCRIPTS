@@ -2688,10 +2688,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	    }
 	  else
 	    {
-	      if (fabs(t)<1E-15)
-    		delt = h;
-    	      else
-		delt = t*h;
+	      //if (fabs(t)<1E-15)
+	      delt = h;
+    	      //else
+		//delt = t*h;
 	    }
 	  if (fabs(dold) < epsd)
     	    {
@@ -2729,10 +2729,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #if 0
 	  deltth = h;
 #else
-	  if (fabs(t) < 1E-15)
-	    deltth = h;
-	  else
-	    deltth = t*h;
+	  //if (fabs(t) < 1E-15)
+	  deltth = h;
+	  //else
+	    //deltth = t*h;
 #endif	  
 	  if (delt < deltth)
 	    {
