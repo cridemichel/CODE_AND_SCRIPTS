@@ -1411,31 +1411,34 @@ double get_sign(double *vec);
 int check_done(double fp, double fpold, double minax)
 {
   const double EPSFR=1E-10;
+  double dold, d;
+  dold = sqrt(fpold);
+  d = sqrt(fp);
   if (OprogStatus.tolSDgrad > 0)
     {
-      if (fp > OprogStatus.epsdSD)//Sqr(OprogStatus.epsd)) 
+      if (fp > Sqr(OprogStatus.epsdSD))//Sqr(OprogStatus.epsd)) 
 	{
 	  if (doneryck == 1 || 
-	      2.0*fabs(fpold-fp) < OprogStatus.tolSDlong*(fabs(fpold)+fabs(fp)+EPSFR))
+	      2.0*fabs(dold-d) < OprogStatus.tolSDlong*(fabs(dold)+fabs(d)+EPSFR))
 	  //fabs(fpold-fp) < OprogStatus.tolSDlong*Sqr(minax*2))
 	    return 1;
 	}
       else 
 	{
-	  if (2.0*fabs(fpold-fp) < OprogStatus.tolSD*(fabs(fpold)+fabs(fp)+EPSFR))
+	  if (2.0*fabs(dold-d) < OprogStatus.tolSD*(fabs(dold)+fabs(d)+EPSFR))
 	    return 1;
 	}
     }
   else
     {
-      if (fp < OprogStatus.epsdSD)//Sqr(OprogStatus.epsd))
+      if (fp < Sqr(OprogStatus.epsdSD))//Sqr(OprogStatus.epsd))
 	{
-	  if (2.0*fabs(fpold-fp) < OprogStatus.tolSD*(fabs(fpold)+fabs(fp)+EPSFR))
+	  if (2.0*fabs(dold-d) < OprogStatus.tolSD*(fabs(dold)+fabs(d)+EPSFR))
 	    return 1;
 	}
       else
 	{
-	  if (2.0*fabs(fpold-fp) < OprogStatus.tolSDlong*(fabs(fpold)+fabs(fp)+EPSFR))
+	  if (2.0*fabs(dold-d) < OprogStatus.tolSDlong*(fabs(dold)+fabs(d)+EPSFR))
 	    return 1;
 	  //if (fabs(fpold-fp) < OprogStatus.tolSDlong*Sqr(minax*2))
 	    //return 1;
