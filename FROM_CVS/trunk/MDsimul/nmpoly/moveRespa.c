@@ -239,6 +239,8 @@ void p2v(void)
 { 
   int i, a;
   double Rxl, Ryl, Rzl;
+  Vol1 = Pv * Sqr(s) / OprogStatus.W;
+  s1   = Ps * Sqr(s) / OprogStatus.Q; 
   for (i=0; i < Oparams.parnum; i++)
     {
       CoM(i, &Rxl, &Ryl, &Rzl);
@@ -249,8 +251,7 @@ void p2v(void)
 	  vz[a][i] = pz[a][i]/Oparams.m[a] + (Vol1 / Vol / 3.0)*Rzl;
 	}
     }
-  Vol1 = Pv * Sqr(s) / OprogStatus.W;
-  s1   = Ps * Sqr(s) / OprogStatus.Q;  
+   
 }
 void v2p(void)
 {
@@ -546,6 +547,7 @@ void updPv(double dt, double c)
 #else
   press = calcT1diagAtRespa(Nm) + (WShort + WLong + WCShort + WCLong) / Vol; /* press(t+dt) */
 #endif
+  printf(">>>>>>>>> press: %f DP: %f\n", press, DP);
   DP = press - Oparams.P;
   Pv += DP  * cdt2;
   Pv *= exp(-cdt*Ps*s/OprogStatus.Q);
