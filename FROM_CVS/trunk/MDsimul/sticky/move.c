@@ -1961,7 +1961,8 @@ extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lam
 extern int maxitsRyck;
 extern double sigmaSqSticky;
 /* N.B. per la silica tale routine va cambiata! */
-double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, double dists[NA][NA])
+double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin, 
+		   double dists[MD_PBONDS])
 {
   double distmin, distSq;
   double ratA[NA][3], ratB[NA][3], dist;
@@ -1996,34 +1997,18 @@ double calcDistNeg(double t, int i, int j, double shift[3], int *amin, int *bmin
     }
   /* calcola sigmaSq[][]!!! */
   distmin = 0;
-  for (a = 0; a < NA; a++)
+  for (nn = 0; nn < MD_PBONDS; nn++)
     {
-      for (b = 0; b < NA; b++)
+      distSq = 0;
+      for (kk=0; kk < 3; kk++)
+	distSq += Sqr(ratA[mapbondsba[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+      dists[nn] = dist = sqrt(distSq) - Oparams.sigmaSticky;
+      if (firstdist || fabs(dist) < fabs(distmin))
 	{
-	  /* 0 = atomo grosso 
-	   * 1,2 = hydrogen sites
-	   * 3,4 = electon sites */
-	  /* in tale modello non c'è interazione fra due
-	   * hydrogen sites o due electron sites */
-	  if ( ((a==1|| a==2) && (b==1 || b==2)) ||
-	       ((a==3|| a==4) && (b==3 || b==4)) )
-	    continue;
-	  /* N.B. l'urto 0-0 è tra due sfere dure nei primitive model 
-	   * dell'acqua e della silica, quindi lo tratto a parte.
-	   * Inoltre non c'è interazione tra un atomo grosso e un atomo sticky. */
-	  if (a == 0 || b == 0)
-	    continue;
-	  distSq = 0;
-	  for (kk=0; kk < 3; kk++)
-	    distSq += Sqr(ratA[a][kk]-ratB[b][kk]);
-	  dists[a][b] = dist = sqrt(distSq) - Oparams.sigmaSticky;
-	  if (firstdist || fabs(dist) < fabs(distmin))
-	    {
-	      firstdist = 0;
-	      distmin = dist;
-	      *amin = a;
-	      *bmin = b;
-	    }
+	  firstdist = 0;
+	  distmin = dist;
+	  *amin = mapbondsa[nn];
+	  *bmin = mapbondsb[nn];
 	}
     }
   return distmin;
@@ -2240,51 +2225,51 @@ int refine_contact(int i, int j, double t1, double t2, int ata, int atb,
       return 1; 
     }
 }
-int check_cross(double distsOld[NA][NA], double dists[NA][NA], int crossed[NA][NA])
+#define MD_PBONDS 4
+int mapbondsa[MD_PBONDS]={1,1,2,2};
+int mapbondsb[MD_PBONDS]={3,4,3,4};
+/* 0 = atomo grosso 
+ * 1,2 = hydrogen sites
+ * 3,4 = electon sites */
+/* in tale modello non c'è interazione fra due
+ * hydrogen sites o due electron sites */
+/* N.B. l'urto 0-0 è tra due sfere dure nei primitive model 
+ * dell'acqua e della silica, quindi lo tratto a parte.
+ * Inoltre non c'è interazione tra un atomo grosso e un atomo sticky. */
+int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS], 
+		int crossed[MD_PBONDS])
 {
-  int a, b;
+  int nn;
   int retcross = 0;
-  for (a = 0; a < NA; a++)
-    for (b = 0; b < NA; b++)
-      {
-	crossed[a][b] = 0;
-	if ( ((a==1 || a==2) && (b==1 || b==2)) ||
-	     ((a==3 || a==4) && (b==3 || b==4)) )
-	  continue;
-	if (a == 0 || b == 0)
-	  continue;
-	if (dists[a][b]*distsOld[a][b] < 0)
-	  {
-	    crossed[a][b] = 1; 
-	    retcross = 1;
-	  }
-      }
+  for (nn = 0; nn < MD_PBONDS; nn++)
+    {
+      crossed[nn] = 0;
+      if (dists[nn]*distsOld[nn] < 0)
+	{
+      	  crossed[nn] = 1; 
+	  retcross = 1;
+	}
+    }
   return retcross;
 }
 int get_dists_tocheck(double distsOld[NA][NA], double dists[NA][NA], int tocheck[NA][NA])
 {
-  int a, b;
+  int nn;
   int rettochk = 0;
-  for (a = 0; a < NA; a++)
-    for (b = 0; b < NA; b++)
-      {
-	tocheck[a][b] = 0;
-	if ( ((a==1 || a==2) && (b==1 || b==2)) ||
-	     ((a==3 || a==4) && (b==3 || b==4)) )
-	  continue;
-	if (a == 0 || b == 0)
-	  continue;
-	if (dists[a][b] < OprogStatus.epsd && distsOld[a][b] < OprogStatus.epsd)
-	  {
-	    tocheck[a][b] = 1; 
-	    rettochk++;
-	  }
-      }
+  for (nn = 0; nn < MD_PBONDS; nn++)
+    {
+      tocheck[nn] = 0;
+      if (dists[nn] < OprogStatus.epsd && distsOld[nn] < OprogStatus.epsd)
+	{
+	  tocheck[nn] = 1; 
+	  rettochk++;
+	}
+    }
   return rettochk;
 }
-void assign_dists(double a[][], double b[][])
+void assign_dists(double a[], double b[])
 {
-  memcpy(b, a, NA*NA*sizeof(double));
+  memcpy(b, a, MD_PBONDS*sizeof(double));
 }
 int search_contact_faster(int i, int j, double *shift, double *t, double t2, double epsd, double *d1, double epsdFast, double dists[][])
 {
@@ -2491,6 +2476,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 #endif
   MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
+  assign_dists(dists, distsOld);
   dold = d;
   its = 0;
   while (t < t2)
@@ -2531,6 +2517,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
 	    }
+	  assign_dists(dists, distsOld);
 	  dold = d;
 	  its++;
 	  //itsS++;
@@ -2547,23 +2534,27 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 	  if (crossed[nn])
 	    {
 #ifndef MD_NOINTERPOL  
-	      if (interpol(i, j, mapbonds[nn].a, mapbonds[nn].b, 
+	      if (interpol(i, j, mapbondsa[nn], mapbondsb[nn], 
 			   t-delt, delt, distsOld[nn], dists[nn], &troot, shift, 0))
 #endif
     		{
     		  /* vecgd2 è vecgd al tempo t-delt */
     		  troot = t - delt;
     		}
-    	      dorefine[nn] = 1;
+	      /* se dorefine è 2 vuol dire che due superfici si sono
+	       * attraversate */
+    	      dorefine[nn] = 2;
 	    }
 	}
       ntc = get_dists_tocheck(tocheck);
       for (nn = 0; nn < ntc; nn++)
 	{
+	  /* se dorefine è 1 vuol dire che il polinomio interpolante 
+	   * è passato per 0 */
 #ifndef MD_NOINTERPOL
 	  if (tocheck[nn])
 	    {
-	      if (interpol(i, j, mapbonds[nn].a, mapbonds[nn].b, t-delt, delt, distsOld[nn], dists[nn], 
+	      if (interpol(i, j, mapbondsa[nn], mapbondsb[nn], t-delt, delt, distsOld[nn], dists[nn], 
 			   &troot, shift, 1))
 		dorefine[nn] = 0;
 	      else 
@@ -2577,15 +2568,18 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 	{
 	  if (dorefine[nn])
 	    {
-	      if (refine_contact(i, j, mapbonds[nn].a, mapbonds[nn].b, t-delt, t, shift, &troot))
+	      if (refine_contact(i, j, mapbondsa[nn], mapbondsb[nn], t-delt, t, shift, &troot))
 		{
 		  MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 		  MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
 		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 		  if (troot > t2 || troot < t1 || 
-		      (lastbump[i].i == j && lastbump[j].j==i && lastbump[i].a == mapbonds[nn].a &&
-		       lastbump[j].b == mapbonds[nn].b && fabs(troot - lastcol[i])<1E-8))
-		    continue;
+		      (lastbump[i].i == j && lastbump[j].j==i && lastbump[i].a == mapbondsa[nn]
+		       && lastbump[j].b == mapbondsb[nn] && fabs(troot - lastcol[i])<1E-8))
+		    {
+		      gotcoll = -1;
+		      continue;
+		    }
 		  else
 		    {
 		      gotcoll = 1;
@@ -2601,7 +2595,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 	      else 
 		{
 		  MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
-		  if (d < 0)
+		  if (dorefine[nn] == 2)
 		    {
 		      MD_DEBUG10(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
 		      MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
@@ -2616,21 +2610,17 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double t
 		}
 	    }
 	}
-      if (gotcoll)
+      if (gotcoll == 1)
 	return 1;
       else if (gotcoll == -1)
 	return 0;
       dold = d;
+      assign_dists(dists, distsOld);
       its++;
       itsS++;
     }
-  MD_DEBUG(  
-  if (foundrc==0)
-    printf("%d-%d t=%.12G > t2=%.12G I did not find any contact point!\n", i, j, t, t2);
-  );
-
   MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
-  return foundrc;
+  return 0;
 }
 
 #define EPS 1e-4
