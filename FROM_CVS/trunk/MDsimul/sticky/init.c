@@ -1004,7 +1004,7 @@ extern void InitEventList(void);
 #ifdef MD_SILICA
 void StartRun(void)
 {
-  int j, k, n, nl, nc, iA;
+  int j, k, n, nl, nc, iA, nl_ignore;
 
   for (nl=0; nl < 3; nl++)
     {
@@ -1031,6 +1031,9 @@ void StartRun(void)
 #else
 	  inCell[nc][2][n] =  (rz[n] + L2)  * cellsz[nl] / L;
 #endif
+	  printf("nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
+		 nl, nc, n, inCell[nc][0][n], inCell[nc][1][n], inCell[nc][2][n],
+		 cellsx[nl], cellsy[nl], cellsz[nl]);
 #if 0
 	  if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
 	    {
@@ -1053,8 +1056,14 @@ void StartRun(void)
     }
   for (n = 0; n < Oparams.parnum; n++)
     {
+      nl_ignore = (n<Oparams.parnumA)?1:0;
       for (nl = 0; nl < 3; nl++)
-	PredictEvent(n, -2, nl); 
+	{
+	  if (nl==nl_ignore)
+	    continue;
+	  printf("======>qui nl=%d\n", nl);
+	  PredictEvent(n, -2, nl); 
+	}
     }
   //exit(-1);
 #if 0
