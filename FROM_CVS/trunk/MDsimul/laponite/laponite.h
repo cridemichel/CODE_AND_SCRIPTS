@@ -52,7 +52,7 @@
 #define NUM_PAR 500   /* Number of particles for the simulation */
 #define NUMK 100    /* number of k-points in which we must  calculate the 
 		       structure factor */ 
-#define MAXBIN 300  /* Number of radius in which calculate the radial 
+#define MAXBIN 150  /* Number of radius in which calculate the radial 
 		       distribution function */
 #define NUMV 150
 #define GSRMAX 2.0 /* Maximum r for which we calculate the van Hove function*/

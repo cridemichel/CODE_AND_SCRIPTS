@@ -453,11 +453,11 @@ void radDens(void)
 {
   int bin, Nm, i, j;
   int* hist;
-
   COORD_TYPE rij, rxij, ryij, rzij, rijSq, rxCMi, ryCMi, rzCMi, rxCMj, ryCMj,
     rzCMj;
   COORD_TYPE rlower, rupper, cost, nIdeal; 
   COORD_TYPE rhoAv, m0, m1, m2, invMtot, DELR;
+  double rend, rbeg;
   L = cbrt(Vol);
   invL = 1.0 / L;
   Nm = Oparams.parnum;
@@ -468,7 +468,9 @@ void radDens(void)
   
   invMtot = 1.0 / (m0 + m1 + m2);
   
-  DELR = (REND - RBEG) / MAXBIN;
+  rbeg = 0.2;
+  rend = L * 0.5;
+  DELR = (rend - rbeg) / MAXBIN;
 
   hist = OprogStatus.hist;
   
@@ -498,7 +500,7 @@ void radDens(void)
 	  rzij = rzij - L * rint(invL * rzij);
 	  rijSq = Sqr(rxij) + Sqr(ryij) + Sqr(rzij);
 	  rij =  sqrt(rijSq);
-	  bin = ( (int) ( (rij - RBEG) / DELR) );
+	  bin = ( (int) ( (rij - rbeg) / DELR) );
 	  if ( (bin < MAXBIN) && (bin >= 0) )
 	    {
 	      hist[bin] = hist[bin] + 2;
@@ -509,7 +511,7 @@ void radDens(void)
   cost = 4.0 * pi * Nm / 3.0 / Vol;
   for(bin=0; bin < MAXBIN; bin++)
     {
-      rlower = RBEG + ( (COORD_TYPE) bin) * DELR;
+      rlower = rbeg + ( (COORD_TYPE) bin) * DELR;
       rupper = rlower + DELR;
       nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower);
       gr[bin] = ((COORD_TYPE) hist[bin]) / ((COORD_TYPE) Nm) / nIdeal;
