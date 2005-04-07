@@ -3545,6 +3545,10 @@ void PredictCellCross(int na, int nc)
     nl = 1;
   else
     nl = 3;
+  printf("[PredictCellCross ]time=%f nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
+	 Oparams.time, nl, nc, na, inCell[nc][0][na], inCell[nc][1][na], inCell[nc][2][na],
+	 cellsx[nl], cellsy[nl], cellsz[nl]);
+  
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -3725,7 +3729,21 @@ void PredictColl (int na, int nb, int nl)
    *  con particelle della stessa specie.
    *  ncel = 1 celle relative all'interazione della particella na 
    *  con particelle della stessa specie. */
-  
+ 
+#if 1
+  {
+      int ii,nn,np;    
+      for (np=0; np < Oparams.parnum; np++) 
+	{
+	  nn = (inCell[0][2][np] *cellsy[1] + inCell[0][1][np]) * cellsx[1] + inCell[0][0][np] + Oparams.parnum;
+	  if (cellList[1][nn]!=-1)
+	    { printf("lista nl=1 non vuota per n=%d\n",n); exit(-1);}
+	  nn = (inCell[1][2][np] *cellsy[3] + inCell[1][1][np]) * cellsx[3] + inCell[1][0][np] + Oparams.parnum;
+	  if (cellList[3][nn]!=-1)
+	    {printf("lista nl=3 non vuota per n=%d\n",n); exit(-1);}
+	}
+  }
+#endif
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
@@ -3774,7 +3792,7 @@ void PredictColl (int na, int nb, int nl)
 	      n = (jZ *cellsy[nl] + jY) * cellsx[nl] + jX + Oparams.parnum;
 	      for (n = cellList[nl][n]; n > -1; n = cellList[nl][n]) 
 		{
-		  printf("nl=%d cellList[nl=%d][n=%d]:%d na=%d\n", nl, nl, n, cellList[nl][n], na);
+		  //printf("nl=%d cellList[nl=%d][n=%d]:%d na=%d\n", nl, nl, n, cellList[nl][n], na);
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
 		      collCode = MD_EVENT_NONE;
@@ -4689,7 +4707,7 @@ int check_boxwall(int k, int nc, int nl)
 void ProcessCellCrossing(void)
 {
   int kk, n, iA, k;
-  int nc, nl, boxwall;
+  int nc, nl, boxwall, nlcoll, nlcross, nc_bw, nlcross_bw, nlcoll_bw;
   int nc2, nl2;
 
   UpdateAtom(evIdA);
@@ -4701,30 +4719,38 @@ void ProcessCellCrossing(void)
   iA = (evIdA < Oparams.parnumA)?0:1;
   if (iA == 0 && nc == 0)
     {
-      nl = 0;
-      nl2 = 2;
-      nc2 = 1;
+      nlcoll = 0;
+      nlcross = 0;
+      nlcoll_bw = 3;
+      nlcross_bw = 2;
+      nc_bw = 1;
     }
   else if (iA == 1 && nc == 0)
     { 
-      nl = 1;
-      nl2 = 3;
-      nc2 = 1; 
+      nlcoll = 1;
+      nlcross = 1;
+      nlcoll_bw = 2;
+      nlcross_bw = 3;
+      nc_bw = 1; 
     }
   else if (iA == 0 && nc == 1)
     {
-      nl = 2;
-      nl2 = 0;
-      nc2 = 0;
+      nlcoll = 3;
+      nlcross = 2;
+      nlcoll_bw = 0;
+      nlcross_bw = 0;
+      nc_bw = 0;
     }
-  else
+  else /* iA == 1 && nc == 1 */
     {
-      nl = 3;
-      nl2 = 1;
-      nc2 = 0;
+      nlcoll = 2;
+      nlcross = 3;
+      nlcoll_bw = 1;
+      nlcross_bw = 1;
+      nc_bw = 0;
     }
   
-  boxwall = check_boxwall(kk, nc, nl);
+  boxwall = check_boxwall(kk, nc, nlcross);
   if (nc==1 && boxwall)
     return;
   
@@ -4734,15 +4760,15 @@ void ProcessCellCrossing(void)
    * Oparams.parnum <= j < cellsx*cellsy*cellsz+Oparams.parnum
    * è la prima particella che si trova nella cella j-esima
    */
-  n = (inCell[nc][2][evIdA] * cellsy[nl] + inCell[nc][1][evIdA])*cellsx[nl] + 
+  n = (inCell[nc][2][evIdA] * cellsy[nlcross] + inCell[nc][1][evIdA])*cellsx[nlcross] + 
     inCell[nc][0][evIdA]
     + Oparams.parnum;
-  printf("nc=%d n=%d cellList[%d][%d]:%d\n",nc, n, nl, n, cellList[nl][n]);
+  printf("nc=%d n=%d cellList[%d][%d]:%d\n",nc, n, nlcross, n, cellList[nlcross][n]);
   printf("vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
-  while (cellList[nl][n] != evIdA) 
-    n = cellList[nl][n];
+  while (cellList[nlcross][n] != evIdA) 
+    n = cellList[nlcross][n];
   /* Eliminazione di evIdA dalla lista della cella n-esima */
-  cellList[nl][n] = cellList[nl][evIdA];
+  cellList[nlcross][n] = cellList[nlcross][evIdA];
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
@@ -4752,33 +4778,33 @@ void ProcessCellCrossing(void)
   if (boxwall)
     {
       printf("BOXWALL nc=%d nc2=%d nl=%d nl2=%d evIdA=%d time=%.15G\n", nc, nc2, nl, nl2, evIdA, Oparams.time);
-      n = (inCell[nc2][2][evIdA] * cellsy[nl2] + inCell[nc2][1][evIdA])*cellsx[nl2] + 
-	inCell[nc2][0][evIdA]
+      n = (inCell[nc_bw][2][evIdA] * cellsy[nlcross_bw] + inCell[nc_bw][1][evIdA])*cellsx[nlcross_bw] + 
+	inCell[nc_bw][0][evIdA]
 	+ Oparams.parnum;
-      while (cellList[nl2][n] != evIdA) 
-	n = cellList[nl2][n];
+      while (cellList[nlcross_bw][n] != evIdA) 
+	n = cellList[nlcross_bw][n];
       /* Eliminazione di evIdA dalla lista della cella n-esima della lista nl2 */
-      cellList[nl2][n] = cellList[nl2][evIdA];
+      cellList[nlcross_bw][n] = cellList[nlcross_bw][evIdA];
     }
   switch (kk)
     {
     case 0: 
-      docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc);
+      docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nlcross], nc);
       break;
     case 1: 
-      docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc);
+      docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nlcross], nc);
       break;
     case 2:
-      docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc);
+      docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nlcross], nc);
       break;
     }
   PredictCellCross(evIdA, nc);
-  PredictColl(evIdA, evIdB, nl);
-  n = (inCell[nc][2][evIdA] * cellsy[nl] + inCell[nc][1][evIdA])*cellsx[nl] + 
+  PredictColl(evIdA, evIdB, nlcoll);
+  n = (inCell[nc][2][evIdA] * cellsy[nlcross] + inCell[nc][1][evIdA])*cellsx[nlcross] + 
     inCell[nc][0][evIdA] + Oparams.parnum;
   /* Inserimento di evIdA nella nuova cella (head) */
-  cellList[nl][evIdA] = cellList[nl][n];
-  cellList[nl][n] = evIdA;
+  cellList[nlcross][evIdA] = cellList[nlcross][n];
+  cellList[nlcross][n] = evIdA;
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
@@ -4789,22 +4815,22 @@ void ProcessCellCrossing(void)
       switch (kk)
 	{
 	case 0: 
-	  docellcross2(0, vx[evIdA], cellsx[nl2], nc2);
+	  docellcross2(0, vx[evIdA], cellsx[nlcross_bw], nc_bw);
 	  break;
 	case 1: 
-	  docellcross2(1, vy[evIdA], cellsy[nl2], nc2);
+	  docellcross2(1, vy[evIdA], cellsy[nlcross_bw], nc_bw);
 	  break;
       	case 2:
-	  docellcross2(2, vz[evIdA], cellsz[nl2], nc2);
+	  docellcross2(2, vz[evIdA], cellsz[nlcross_bw], nc_bw);
 	  break;
 	}
-      PredictCellCross(evIdA, nc2);
-      PredictColl(evIdA, evIdB, nl2);
-      n = (inCell[nc2][2][evIdA] * cellsy[nl2] + inCell[nc2][1][evIdA])*cellsx[nl2] + 
-	inCell[nc2][0][evIdA] + Oparams.parnum;
+      PredictCellCross(evIdA, nc_bw);
+      PredictColl(evIdA, evIdB, nlcoll_bw);
+      n = (inCell[nc_bw][2][evIdA] * cellsy[nlcross_bw] + inCell[nc_bw][1][evIdA])*cellsx[nlcross_bw] + 
+	inCell[nc_bw][0][evIdA] + Oparams.parnum;
       /* Inserimento di evIdA nella nuova cella (head) */
-      cellList[nl2][evIdA] = cellList[nl2][n];
-      cellList[nl2][n] = evIdA;
+      cellList[nlcross_bw][evIdA] = cellList[nlcross_bw][n];
+      cellList[nlcross_bw][n] = evIdA;
     }
 }
 #else
