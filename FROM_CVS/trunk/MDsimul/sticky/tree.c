@@ -94,13 +94,7 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
          NOTA: urto con parete e cell-crossing sono esclusivi, per cui basta un nodo 
          inoltre c'è sempre un evento di tale tipo associato con ogni particella 
 	 */
-      if (idata == 0) 
-       	idNew = idA + 1;
-      else
-	{
-	  idNew = treeIdA[0];
-	  treeIdA[0] = treeCircAR[treeIdA[0]];
-	}
+       	idNew = 1 + (Oparams.parnum*idata + idA);
     }
   /* treeRight[id] == -1 => il calendario è vuoto */
   if (treeRight[id] == -1) 
@@ -470,7 +464,7 @@ void NextEvent (void)
       DeleteEvent (idNow);
       /* se evIdC == 1 vuol dire che si tratta di un cell crossing ma nc=1 */
 #ifdef MD_SILICA
-      if ((evIdB >= ATOM_LIMIT+100 && evIdC == 1) || evIdB < ATOM_LIMIT + 100) 
+      if (evIdB < ATOM_LIMIT + 100) 
 	{
 	  treeCircAR[idNow] = treeIdA[0];
 	  treeIdA[0] = idNow;
@@ -540,7 +534,23 @@ void DeleteEvent (int id)
 		   treeUp[idp], treeLeft[id], treeRight[id],
 		   treeLeft[treeUp[idp]], treeRight[treeUp[idp]]));
 }
-
+#ifdef MD_SILICA
+void InitEventList (void) 
+{
+  int id;
+  treeLeft[0] = treeRight[0] = -1;
+  treeIdA[0] = 2*Oparams.parnum + 1;
+  /* i nodi da 2*Oparams.parnum + 1 (compreso) in poi sono il pool (cioè quelli dinamici) */
+  for (id = treeIdA[0]; id <= poolSize - 2; id++) 
+    treeCircAR[id] = id + 1;
+  treeCircAR[poolSize-1] = -1;
+  for (id = 1; id <= Oparams.parnum*2; id++) 
+    {
+      treeCircAL[id] = treeCircBL[id] = id;
+      treeCircAR[id] = treeCircBR[id] = id;
+    }
+}
+#else
 void InitEventList (void) 
 {
   int id;
@@ -556,3 +566,4 @@ void InitEventList (void)
       treeCircAR[id] = treeCircBR[id] = id;
     }
 }
+#endif
