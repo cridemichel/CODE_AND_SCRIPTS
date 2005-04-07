@@ -996,7 +996,8 @@ int *inCell[3], *cellList, cellsx, cellsy, cellsz;
 #endif
 int **tree, cellRange[2*NDIM];
 #ifdef MD_SILICA
-extern void PredictEvent(int na, int nb, int nl);
+extern void PredictColl(int na, int nb, int nl);
+extern void PredictCellCross(int na, int nc);
 #else
 extern void PredictEvent(int, int);
 #endif
@@ -1060,6 +1061,10 @@ void StartRun(void)
     {
       iA = (n<Oparams.parnumA)?0:1;
       nl_ignore = (n<Oparams.parnumA)?1:0;
+      for (nc = 0; nc < 2; nc++)
+	{
+	  PredictCellCross(n, nc);
+	}
       for (nl = 0; nl < 4; nl++)
 	{
 	  /* iA+2 è la lista Si-O (interazione fra specie diverse)
@@ -1070,7 +1075,7 @@ void StartRun(void)
 	  //if (nl==3)
 	    //continue;
 	  printf("======>qui nl=%d\n", nl);
-	  PredictEvent(n, -2, nl); 
+	  PredictColl(n, -2, nl); 
 	}
     }
   //exit(-1);
