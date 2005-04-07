@@ -3530,44 +3530,21 @@ double estimate_tmin(double t, int na, int nb)
 }
 #endif
 #ifdef MD_SILICA
-void PredictEvent (int na, int nb, int nl) 
+void PredictCellCross(int na, int nc)
 {
-  /* na = atomo da esaminare 0 < na < Oparams.parnum 
-   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
-   *      -2 = controlla solo cell crossing e urti con pareti 
-   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
-   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
-   *      */
-  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], 
-	 b, d, t, tInt, vv, distSq, t1, t2, evtime=0, evtimeHC;
-  int overlap, ac, bc, acHC, bcHC, collCodeOld;
-  int iA, iB, nl_ignore, nc;
-  /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
-  /*double cells[NDIM];*/
-  int collCode, ignorecross[3];
-  int cellRangeT[2 * NDIM], signDir[NDIM], evCode, iX, iY, iZ, jX, jY, jZ, k, n;
-
-  MD_DEBUG29(printf("PredictEvent: %d,%d\n", na, nb));
-  MD_DEBUG(calc_energy("PredEv"));
-  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
-   * in cui la forza di gravità è diretta lungo z negativo */ 
+  int ignorecross[3], k, evCode, signDir[NDIM], iA, nl;
+  double tm[3];
 
   iA = (na < Oparams.parnumA)?0:1;
-  /* iB indica la specie con cui puo' interagire na e per ogni specie abbiamo 
-   * differenti celle */
-  if (nl < 2)
-    {
-      nc = 0;
-    }
-  else
-    {
-      nc = 1;
-    }
-  printf("[PredictEvent ]nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
-	 nl, nc, na, inCell[nc][0][na], inCell[nc][1][na], inCell[nc][2][na],
-	 cellsx[nl], cellsy[nl], cellsz[nl]);
-  
   ignorecross[0] = ignorecross[1] = ignorecross[2] = 1;
+  if (iA == 0 && nc == 0)
+    nl = 0;
+  else if (iA == 0 && nc == 1)
+    nl = 2;
+  else if (iA == 1 && nc == 0)
+    nl = 1;
+  else
+    nl = 3;
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -3671,6 +3648,8 @@ void PredictEvent (int na, int nb, int nl)
     {
       printf("tm[%d]: %.15G\n", k, tm[k]);
       tm[k] = 0.0;
+      printf("real cells: %d %d %d\n", (int)((rx[na] + L2) * cellsx[nl] / L),
+	     (int)((ry[na] + L2) * cellsy[nl] / L), (int)((rz[na] + L2)  * cellsz[nl] / L));
 #if 1
       printf("nc=%d na=%d nl=%d\n",nc,na,nl);
       printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
@@ -3700,7 +3679,42 @@ void PredictEvent (int na, int nb, int nl)
     }
   printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.16G time=%.15G evCode:%d\n", 
 	 na, ATOM_LIMIT+evCode, k, tm[k], tm[k]+Oparams.time, evCode);
-  /* NOTA: le linked list sono tre:
+
+}
+void PredictColl (int na, int nb, int nl) 
+{
+  /* na = atomo da esaminare 0 < na < Oparams.parnum 
+   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
+   *      -2 = controlla solo cell crossing e urti con pareti 
+   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
+   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
+   *      */
+  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM],  
+	 b, d, t, tInt, vv, distSq, t1, t2, evtime=0, evtimeHC;
+  int overlap, ac, bc, acHC, bcHC, collCodeOld, nc;
+  /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
+  /*double cells[NDIM];*/
+  int collCode;
+  int cellRangeT[2 * NDIM], evCode, iX, iY, iZ, jX, jY, jZ, k, n;
+
+  MD_DEBUG29(printf("PredictEvent: %d,%d\n", na, nb));
+  MD_DEBUG(calc_energy("PredEv"));
+  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+
+  if (nl < 2)
+    {
+      nc = 0;
+    }
+  else
+    {
+      nc = 1;
+    }
+  printf("[PredictEvent ]nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
+	 nl, nc, na, inCell[nc][0][na], inCell[nc][1][na], inCell[nc][2][na],
+	 cellsx[nl], cellsy[nl], cellsz[nl]);
+  
+    /* NOTA: le linked list sono tre:
    *  0 = lista dell'interazione AA
    *  1 = lista dell'interazione BB
    *  2 = lista dell'interazione AB 
@@ -4509,7 +4523,7 @@ void ProcessCollision(void)
 {
   int k;
 #ifdef MD_SILICA
-  int nl, nl_ignore, iA, iB;
+  int nl, nl_ignore, iA, iB, nc;
 #endif
   UpdateAtom(evIdA);
   UpdateAtom(evIdB);
@@ -4538,12 +4552,16 @@ void ProcessCollision(void)
 #ifdef MD_SILICA
   iA = (evIdA<Oparams.parnumA)?0:1;
   nl_ignore = (evIdA<Oparams.parnumA)?1:0;
+  for (nc = 0; nc < 2; nc++)
+    {
+      PredictCellCross(evIdA, nc);
+      PredictCellCross(evIdB, nc);
+    }
   for (nl = 0; nl < 4; nl++)
     {
       if (nl==nl_ignore || nl==iA+2)
 	continue;
-      //if (nl==0)
-	PredictEvent(evIdA, -1, nl);
+      PredictColl(evIdA, -1, nl);
     }
   iB = (evIdB<Oparams.parnumA)?0:1;
   nl_ignore = (evIdB<Oparams.parnumA)?1:0;
@@ -4551,8 +4569,7 @@ void ProcessCollision(void)
     {
       if (nl==nl_ignore || nl==iB+2)
 	continue;
-      //if (nl==0)
-	PredictEvent(evIdB, evIdA, nl);
+      PredictColl(evIdB, evIdA, nl);
     }
 #else
   PredictEvent(evIdA, -1);
@@ -4731,44 +4748,7 @@ void ProcessCellCrossing(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
-#ifdef MD_GRAVITY
-  j = evIdB - ATOM_LIMIT;
-  if (j >= 100)
-    {
-      switch (kk)
-	{
-	case 0: 
-	  docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nl], nc, cellsx[nl]);
-	  break;
-	case 1: 
-	  docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nl], nc, cellsy[nl]);
-	  break;
-	case 2:
-	  docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc, cellsz[nl]);
-	  break;
-	}
-      PredictEvent(evIdA, evIdB);
-      n = (inCell[nc][2][evIdA] * cellsy[nl] + inCell[nc][1][evIdA])*cellsx[nl] + 
-	inCell[nc][0][evIdA] + Oparams.parnum;
-      /* Inserimento di evIdA nella nuova cella (head) */
-      cellList[nl][evIdA] = cellList[nl][n];
-      cellList[nl][n] = evIdA;
-    }
-  else
-    {
-      kk = j / 2;
-      cellRange[j] = 0;
-      ProcessCollWall();
-      PredictEvent(evIdA, evIdB);
-      /* in seguito ad un urto con la parete la particella non 
-       * cambia la propria cella */
-    }
-#else
-#if 0
-  if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
-    printf("Cells(%d,%d,%d)\n", inCell[0][evIdA],inCell[1][evIdA],inCell[2][evIdA]);
-#endif
-    
+
   if (boxwall)
     {
       printf("BOXWALL nc=%d nc2=%d nl=%d nl2=%d evIdA=%d time=%.15G\n", nc, nc2, nl, nl2, evIdA, Oparams.time);
@@ -4792,7 +4772,8 @@ void ProcessCellCrossing(void)
       docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nl], nc);
       break;
     }
-  PredictEvent(evIdA, evIdB, nl);
+  PredictCellCross(evIdA, nc);
+  PredictColl(evIdA, evIdB, nl);
   n = (inCell[nc][2][evIdA] * cellsy[nl] + inCell[nc][1][evIdA])*cellsx[nl] + 
     inCell[nc][0][evIdA] + Oparams.parnum;
   /* Inserimento di evIdA nella nuova cella (head) */
@@ -4817,14 +4798,14 @@ void ProcessCellCrossing(void)
 	  docellcross2(2, vz[evIdA], cellsz[nl2], nc2);
 	  break;
 	}
-       PredictEvent(evIdA, evIdB, nl2);
-       n = (inCell[nc2][2][evIdA] * cellsy[nl2] + inCell[nc2][1][evIdA])*cellsx[nl2] + 
+      PredictCellCross(evIdA, nc2);
+      PredictColl(evIdA, evIdB, nl2);
+      n = (inCell[nc2][2][evIdA] * cellsy[nl2] + inCell[nc2][1][evIdA])*cellsx[nl2] + 
 	inCell[nc2][0][evIdA] + Oparams.parnum;
-       /* Inserimento di evIdA nella nuova cella (head) */
-       cellList[nl2][evIdA] = cellList[nl2][n];
-       cellList[nl2][n] = evIdA;
+      /* Inserimento di evIdA nella nuova cella (head) */
+      cellList[nl2][evIdA] = cellList[nl2][n];
+      cellList[nl2][n] = evIdA;
     }
-#endif
 }
 #else
 void ProcessCellCrossing(void)
@@ -4931,7 +4912,7 @@ void rebuildLinkedList(void)
 #ifdef MD_SILICA
 void rebuildCalendar(void)
 {
-  int k, n, nl, nl_ignore, iA;
+  int k, n, nl, nl_ignore, iA, nc;
 
   InitEventList();
   for (k = 0;  k < 3; k++)
@@ -4943,11 +4924,13 @@ void rebuildCalendar(void)
     {
       iA = (n<Oparams.parnumA)?0:1;
       nl_ignore = (n<Oparams.parnumA)?1:0;
+      for (nc = 0; nc < 2; nc++)
+	PredictCellCross(n, nc);
       for (nl = 0; nl < 4; nl++)
 	{
 	  if (nl == nl_ignore || nl == iA + 2)
 	    continue;
-	  PredictEvent(n, -2, nl); 
+	  PredictColl(n, -2, nl); 
 	}
     }
 }
