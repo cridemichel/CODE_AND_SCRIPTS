@@ -11,6 +11,9 @@ extern double *treeTime, *treeRxC, *treeRyC, *treeRzC;
 void DeleteEvent(int );
 void NextEvent(void);
 extern int poolSize;
+#ifdef MD_SILICA
+extern int *crossevtodel;
+#endif
 extern double rxC, ryC, rzC;
 #if 0
 #define treeLeft   tree[0]
@@ -95,6 +98,8 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
          inoltre c'è sempre un evento di tale tipo associato con ogni particella 
 	 */
        	idNew = 1 + (Oparams.parnum*idata + idA);
+	if (idata)
+	  crossevtodel[idA] = idNew;  
     }
   /* treeRight[id] == -1 => il calendario è vuoto */
   if (treeRight[id] == -1) 
@@ -428,6 +433,7 @@ void NextEvent (void)
       for (id = idAx; id <= idBx; id += idtx) 
 	{
 	  DeleteEvent (id);
+	  DeleteEvent (id+Oparams.parnum);
 	  for (idd = treeCircAL[id]; idd != id; idd = treeCircAL[idd]) 
 	    {
 	      /* il successivo (R) del precedente (L) diviene il successivo 
@@ -469,6 +475,8 @@ void NextEvent (void)
 	  treeCircAR[idNow] = treeIdA[0];
 	  treeIdA[0] = idNow;
 	} 
+      if (evIdC==1)
+	crossevtodel[evIdA] = -1;
 #else
       if (evIdB < ATOM_LIMIT + 100) 
 	{
@@ -548,6 +556,16 @@ void InitEventList (void)
     {
       treeCircAL[id] = treeCircBL[id] = id;
       treeCircAR[id] = treeCircBR[id] = id;
+#if 0
+      treeCircAR[id + Oparams.parnum] = treeCircAR[id];
+      treeCircAL[id+Oparams.parnum] = id;
+      treeCircAL[treeCircAR[id]] = id + Oparams.parnum;
+      treeCircAR[id] = id + Oparams.parnum ;
+      treeCircBR[id+Oparams.parnum] = treeCircBR[id];
+      treeCircBL[id+Oparams.parnum] = id;
+      treeCircBL[treeCircBR[id]] = id + Oparams.parnum;
+      treeCircBR[id] = id+Oparams.parnum;
+#endif
     }
 }
 #else
