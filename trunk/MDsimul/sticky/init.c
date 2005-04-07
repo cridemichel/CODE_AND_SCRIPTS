@@ -23,6 +23,7 @@ extern int mapbondsaSiO[MD_PBONDS];
 extern int mapbondsbSiO[MD_PBONDS];
 extern int *mapbondsa;
 extern int *mapbondsb;
+int *crossevtodel;
 #else
 extern int mapbondsa[MD_PBONDS];
 extern int mapbondsb[MD_PBONDS];
@@ -1703,6 +1704,7 @@ void usrInitAft(void)
   for (nl = 0; nl < 4; nl++)
     cellList[nl] = malloc(sizeof(int)*
   			  (cellsx[nl]*cellsy[nl]*cellsz[nl]+Oparams.parnum));
+  crossevtodel = malloc(sizeof(int)*Oparams.parnum);
   for (nc = 0; nc < 2; nc++)
     {
       inCell[nc][0] = malloc(sizeof(int)*Oparams.parnum);
@@ -1742,6 +1744,9 @@ void usrInitAft(void)
   R = malloc(sizeof(double**)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
     {
+#ifdef MD_SILICA
+      crossevtodel[i] = -1;
+#endif
       R[i] = matrix(3, 3);
       lastbump[i].mol = -1;
       lastbump[i].at = -1;

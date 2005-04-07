@@ -39,6 +39,7 @@ int mapbondsaSiO[MD_PBONDS]={1,1,2,2,3,3,4,4};
 int mapbondsbSiO[MD_PBONDS]={1,2,1,2,1,2,1,2};
 int *mapbondsa;
 int *mapbondsb;
+extern int *crossevtodel;
 #else
 int mapbondsa[MD_PBONDS]={1,1,2,2,3,3,4,4};
 int mapbondsb[MD_PBONDS]={3,4,3,4,1,2,1,2};
@@ -3700,12 +3701,10 @@ void PredictColl (int na, int nb, int nl)
   /*double cells[NDIM];*/
   int collCode;
   int cellRangeT[2 * NDIM], evCode, iX, iY, iZ, jX, jY, jZ, k, n;
-
   MD_DEBUG29(printf("PredictEvent: %d,%d\n", na, nb));
   MD_DEBUG(calc_energy("PredEv"));
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
-
   if (nl < 2)
     {
       nc = 0;
@@ -4823,6 +4822,11 @@ void ProcessCellCrossing(void)
       	case 2:
 	  docellcross2(2, vz[evIdA], cellsz[nlcross_bw], nc_bw);
 	  break;
+	}
+      if (crossevtodel[evIdA]!=-1)
+	{
+	  printf("DELETING CROSS EVENT evIdA=%d\n", evIdA);
+	  DeleteEvent(crossevtodel[evIdA]);
 	}
       PredictCellCross(evIdA, nc_bw);
       PredictColl(evIdA, evIdB, nlcoll_bw);
