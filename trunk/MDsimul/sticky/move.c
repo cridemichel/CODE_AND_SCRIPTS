@@ -4750,6 +4750,8 @@ void ProcessCellCrossing(void)
     }
   
   boxwall = check_boxwall(kk, nc, nlcross);
+  /* questa condizione non si dovrebbe *mai* verificare, quindi 
+   * in linea di principio le due linee che seguono potrebbero anche essere eliminate */
   if (nc==1 && boxwall)
     return;
   
@@ -4762,8 +4764,8 @@ void ProcessCellCrossing(void)
   n = (inCell[nc][2][evIdA] * cellsy[nlcross] + inCell[nc][1][evIdA])*cellsx[nlcross] + 
     inCell[nc][0][evIdA]
     + Oparams.parnum;
-  printf("nc=%d n=%d cellList[%d][%d]:%d\n",nc, n, nlcross, n, cellList[nlcross][n]);
-  printf("vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
+  /*printf("nc=%d n=%d cellList[%d][%d]:%d\n",nc, n, nlcross, n, cellList[nlcross][n]);
+    printf("vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);*/
   while (cellList[nlcross][n] != evIdA) 
     n = cellList[nlcross][n];
   /* Eliminazione di evIdA dalla lista della cella n-esima */
