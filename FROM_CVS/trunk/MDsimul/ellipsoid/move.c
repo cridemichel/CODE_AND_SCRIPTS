@@ -3615,7 +3615,7 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   double ti, segno;
   int retcheck, firstDist = 0;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
-  int k1, na;
+  int k1, na, k2;
   MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i],i));
   MD_DEBUG20(printf("v = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
   *err = 0;
@@ -3635,9 +3635,9 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   tRDiagR(i, Xa, invaSqN, invbSqN, invcSqN, RtA);
   //printf("ti= %.15G rNebrShell: %f\n", ti, OprogStatus.rNebrShell);
   ti = 0.0;
-  rB[0] = rx[i];
-  rB[1] = ry[i];
-  rB[2] = rz[i];
+  rB[0] = nebrTab[i].r[0];
+  rB[1] = nebrTab[i].r[1];
+  rB[2] = nebrTab[i].r[2];
   MD_DEBUG20(printf("BBBB ti= %.15G rB (%.15G,%.15G,%.15G)\n", ti, rB[0], rB[1], rB[2]));
   /* NOTA: dato l'ellissoide e la sua neighbour list a t=0 bisognerebbe stimare con esattezza 
    * la loro distanza e restituirla di seguito */
@@ -3673,21 +3673,7 @@ retryneigh:
 	  calc_intersec_neigh(rB, rA, Xa, rC, -1);
 	  calc_intersec_neigh(rA, rB, Xb, rD, 1);
 	}
-#if 1
-	{
-	  int kk;
-	  double rCA[3], rDB[3];
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      rCA[kk] = rC[kk] - rA[kk];
-	      rDB[kk] = rD[kk] - rB[kk];
-	    }
-	  printf("rC = (%.12f,%.12f,%.12f) norm(rCA)=%f rD = (%.12f, %.12f, %.12f) norm(rDB)=%.14f scalprod: %f\n"
-	     , rC[0]-rA[0], rC[1]-rA[1], rC[2]-rA[2], calc_norm(rCA),  
-	     rD[0]-rB[0], rD[1]-rB[1], rD[2]-rB[2], calc_norm(rDB), scalProd(rCA, rDB));
-	}
-#endif
-      for(k1=0; k1 < 3; k1++)
+     for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
       if (OprogStatus.springkSD>0 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
 	{
@@ -3800,6 +3786,23 @@ retryneigh:
       r12[k1] = r1[k1] - r2[k1];
     } 
   segno = vecg[7];
+#if 1
+    {
+      int kk;
+      double rCA[3], rDB[3], grA[3], grB[3];
+      for (kk=0; kk < 3; kk++)
+	{
+	  rCA[kk] = rC[kk] - rA[kk];
+	  rDB[kk] = rD[kk] - rB[kk];
+	}
+      calc_grad(r1, rA, Xa, grA);
+      calc_grad(r2, rB, Xb, grB);
+      printf("rC = (%.12f,%.12f,%.12f) norm(rCA)=%f rD = (%.12f, %.12f, %.12f) norm(rDB)=%.14f scalprod: %f\n"
+	     , rC[0]-rA[0], rC[1]-rA[1], rC[2]-rA[2], calc_norm(rCA),  
+	     rD[0]-rB[0], rD[1]-rB[1], rD[2]-rB[2], calc_norm(rDB), scalProd(grA, grB));
+    }
+#endif
+ 
 #if 0
   segno = -1;
   /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
@@ -3807,6 +3810,23 @@ retryneigh:
     for (k2 = 0; k2 < 3; k2++) 
       segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]);
 #endif
+#if 1
+  printf("=====> r1=%f %f %f r2=%f %f %f segno=%.15G\n", r1[0], r1[1], r1[2], r2[0],
+	 r2[1], r2[2], segno);
+  if (t+t1 > 30.0)//(fabs(segno) > 0.5 && segno < 0.0)
+    {
+      double check;
+      Oparams.time = t+t1;
+      store_bump_neigh(i, r1, r2);
+      check = -1;
+      /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++) 
+	  check += (r2[k1]-rB[k1])*Xb[k1][k2]*(r2[k2]-rB[k2]);
+      printf("===>check=%.15G\n", check);
+      //exit(-1);	
+#endif
+ }
 #if 0
   if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
     {
@@ -6611,9 +6631,10 @@ no_core_bump:
 		      //calcDist(Oparams.time, na, n, shift, r1, r2);
 		      //continue;
 		      //exit(-1);
+#if 1
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 		      	continue;
-		     			  
+#endif		     			  
 #if 0
 	    	      gd = (d2 - d1)/h; 
     		      if (fabs(gd) > 1E-12)
@@ -6908,6 +6929,45 @@ void calc_energy(char *msg)
 #endif
   printf("[%s] Kinetic Energy: %f\n", msg, K);
 }
+void store_bump_neigh(int i, double *r1, double *r2)
+{
+  char fileop2[512], fileop[512];
+  int ii;
+  FILE *bf;
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
+  sprintf(fileop2 ,"StoreBumpNeigh-%d-t%.8f", i, Oparams.time);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+      exit(-1);
+    }
+  UpdateSystem();
+  R2u();
+  fprintf(bf, ".Vol: %f\n", L*L*L);
+  MD_DEBUG(printf("[Store bump]: %.15G\n", Oparams.time));
+  for (ii = 0; ii < Oparams.parnum; ii++)
+    {
+      if (ii==i)
+	{
+	  fprintf(bf, tipodat2,rx[ii], ry[ii], rz[ii], uxx[ii], uxy[ii], uxz[ii], uyx[ii], uyy[ii], 
+	  	  uyz[ii], uzx[ii], uzy[ii], uzz[ii], axa[i], axb[i], axc[i], "red");
+	  fprintf(bf, tipodat2,nebrTab[i].r[0], nebrTab[i].r[1], nebrTab[i].r[2], nebrTab[i].R[0][0], nebrTab[i].R[0][1], 
+		  nebrTab[i].R[0][2], nebrTab[i].R[1][0], nebrTab[i].R[1][1], nebrTab[i].R[1][2], 
+	  	  nebrTab[i].R[2][0], nebrTab[i].R[2][1], nebrTab[i].R[2][2], 
+		  nebrTab[i].axa, nebrTab[i].axb, 
+		  nebrTab[i].axc, "green");
+
+
+	}
+    }
+  //writeAllCor(bf);
+  fprintf(bf,"%.15f %.15f %.15f @ 0.2 C[blue]\n", r1[0], r1[1], r1[2]);
+  fprintf(bf,"%.15f %.15f %.15f @ 0.2 C[blue]\n", r2[0], r2[1], r2[2]);
+  fclose(bf);
+
+}
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
@@ -7184,6 +7244,7 @@ void move(void)
   double rzmax, zfact;
 #endif
 #ifdef MD_NNL
+  int k, n;
   double timeold, nltime = timbig;
 #endif
   /* Zero all components of pressure tensor */
@@ -7207,8 +7268,22 @@ void move(void)
       if (Oparams.time >= nextNNLrebuild)
 	{
 	  Oparams.time = timeold;
+	  InitEventList();
 	  rebuildNNL();
-	  rebuildCalendar();
+	  for (k = 0;  k < 3; k++)
+	    {
+	      cellRange[2*k]   = - 1;
+	      cellRange[2*k+1] =   1;
+	    }
+	  for (n = 0; n < Oparams.parnum; n++)
+	    {
+#ifdef MD_NNL
+	      PredictEventNNL(n, -2); 
+#else
+	      PredictEvent(n, -2); 
+#endif
+	    }
+	  //rebuildCalendar();
 	  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
       	  if (OprogStatus.storerate > 0.0)
 	    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
@@ -7218,6 +7293,11 @@ void move(void)
 	  else
 	    OprogStatus.scalevel = 0;
 	  NextEvent();
+	  if (Oparams.time >= nextNNLrebuild)
+	    {
+	      printf("Le NNL devono essere aggiornat troppo frequentemente!\n");
+	      exit(-1);
+	    }
 	}
 #endif
       /* Descrizione Eventi:
