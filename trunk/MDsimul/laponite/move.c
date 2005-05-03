@@ -3134,57 +3134,87 @@ void move(void)
 {
   /* DESCRIPTION:
      Move the particles by one step */
-  double distance;
-  int i; 
+  double distance, sumpot;
+  int i, phiI, thetaI, phi2I, theta2I, chsi2I; 
   FILE* f;
-  double dist;
+  double PI;
+  double dist, phi, theta, phi2, theta2, chsi2;
+  double dtheta, dphi, dtheta2, dphi2, dchsi2;
+  int nthetaI = 5, nphiI = 10, nphi2I = 10, ntheta2I = 5, nchsi2I = 10;
   f = fopen("Veff.dat", "w");
+  PI = 2.0*acos(0);
+  dphi = 2.0*PI/((double)nphiI);
+  dtheta = PI/((double)nthetaI);
+  dphi2 = 2.0*PI/((double)nphi2I);
+  dtheta2 = PI/((double)ntheta2I);
+  dchsi2 = 2.0*PI/((double)nchsi2I);
   for (i=1; i < 2000; i++)
     {
-      nebrNow=1;
       dist =0.1 + 0.002 * i;
-      FCC3(Oparams.parnum, Oparams.Diam, Oparams.m, dist);
-      /* distanza fra i 3 atomi le cui coordinate evolvono nel tempo
-       * Notare che i 3 atomi formano un triangolo equiliatero quindi
-       * le 3 distanze sono uguali */
-      distance = sqrt(3)*0.5*Oparams.Diam;
-      /* calc predicted coords*/
-      /* -1 = brownian dynamics NTV 
-       * -2 = brownian dynamics at fixed pressure NTP */
-      buildAtomsPositions();
-      if (nebrNow)
+      /* loop over all angles we're dealing with */
+      sumpot = 0.0;
+      for (phiI=0; phiI < nphiI; phiI++)
 	{
-	  nebrNow = 0;
-	  dispHi = 0.0;
-	  /* build up linked list on predicted 
-	     coordinates (only father do it)*/
-	  if (OprogStatus.noLinkedList)
+	  phi = phiI * dphi;  
+	  for (thetaI=0; thetaI < nthetaI; thetaI++)
 	    {
-	      BuildNebrListNoLinked(Oparams.parnum, Oparams.rcut);
-	    }
-	  else
-	    {
-	      links(Oparams.parnum, Oparams.rcut);
-	      /* Build up neighbour list */  
-	      BuildNebrList(Oparams.parnum, Oparams.rcut);
+	      theta = thetaI * dtheta;
+	      for (phi2I=0; phi2I < nphi2I; phi2I++)
+		{
+		  phi2 = phi2I * dphi2;
+		  for (theta2I=0; theta2I < ntheta2I; theta2I++)
+		    {
+		      theta2 = theta2I * dtheta2;
+		      for (chsi2I=0; chsi2I < nchsi2I; chsi2I++)
+			{
+			  chsi2 =  chsi2I * dchsi2;
+			  setpos(Oparams.parnum, Oparams.Diam, Oparams.m, dist, phi, theta, 
+				 phi2, theta2, chsi2);
+			  /* distanza fra i 3 atomi le cui coordinate evolvono nel tempo
+			   * Notare che i 3 atomi formano un triangolo equiliatero quindi
+			   * le 3 distanze sono uguali */
+			  distance = sqrt(3)*0.5*Oparams.Diam;
+			  /* calc predicted coords*/
+			  /* -1 = brownian dynamics NTV 
+			   * -2 = brownian dynamics at fixed pressure NTP */
+			  buildAtomsPositions();
+			  nebrNow=1;
+			  if (nebrNow)
+			    {
+			      nebrNow = 0;
+			      dispHi = 0.0;
+			      /* build up linked list on predicted 
+				 coordinates (only father do it)*/
+			      if (OprogStatus.noLinkedList)
+				{
+				  BuildNebrListNoLinked(Oparams.parnum, Oparams.rcut);
+				}
+			      else
+				{
+				  links(Oparams.parnum, Oparams.rcut);
+				  /* Build up neighbour list */  
+				  BuildNebrList(Oparams.parnum, Oparams.rcut);
+				}
+			    }
+			  LJForce(Oparams.parnum, Oparams.rcut);
+			  /* considera tutti i contributi alle forza agente sugli atomi "di base"
+			   * ossia somma anche le forze dovute agli atomi senza massa moltiplicate
+			   * per gli opportuni coefficienti "vincolari" 
+			   * */
+			  sumpot += exp(-Vc/Oparams.T)*sin(theta2)*sin(theta)*
+			    dtheta*dphi*dtheta2*dphi2*dchsi2; 
+			  //ForceOn123();
+			  //checkNebrRebuild();
+			
+			}
+		    }
+		}
 	    }
 	}
-
-      LJForce(Oparams.parnum, Oparams.rcut);
-
-      /* considera tutti i contributi alle forza agente sugli atomi "di base"
-       * ossia somma anche le forze dovute agli atomi senza massa moltiplicate
-       * per gli opportuni coefficienti "vincolari" 
-       * */
-      ForceOn123();
-      checkNebrRebuild();
-#if 0
-      if (  ( OprogStatus.snapSteps < 0 && (abs(OprogStatus.snapSteps) == Oparams.curStep) ) || 
-	    ( OprogStatus.snapSteps > 0 && (Oparams.curStep % OprogStatus.snapSteps == 0) )  )
-	savesnap();
-#endif
+      
       /* Update accumulators for calculating the angular diffusion coefficent */
-      fprintf(f, "%f %f\n", dist, V);
+      fprintf(f, "%f %f\n", dist, (-Oparams.T)*log(sumpot));
+
     }
   /* printf("boh dist 0-1: %f\n", sqrt(Sqr(rallx[4][0]-rallx[5][0])+
      Sqr(rally[4][0]-rally[5][0])+Sqr(rallz[4][0]-rallz[5][0])) );
