@@ -3607,6 +3607,148 @@ extern double min3(double a, double b, double c);
 extern double max3(double a, double b, double c);
 extern double scalProd(double *A, double *B);
 #ifdef MD_NNL
+#ifdef MD_NNLPLANES
+double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int ignorefail, int *err)
+
+{
+  /* NOTA: nplane = {0...7} e indica il piano rispetto al quale dobbiamo calcolare la distanza */
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], invaSqN, invbSqN, invcSqN;
+  double shift[3] = {0.0, 0.0, 0.0};
+  double ti, segno;
+  int retcheck, firstDist = 0;
+  double Omega[3][3], nf, ng, gradf[3], gradg[3];
+  int k1, na, k2, npl;
+  MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i],i));
+  MD_DEBUG20(printf("v = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
+  *err = 0;
+  ti = t + (t1 - atomTime[i]);
+  //printf("t1-atomTime[%d]:%.15G\n", i, t1-atomTime[i]);
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  MD_DEBUG20(printf("AAAA ti= %.15G rA (%.15G,%.15G,%.15G)\n", ti, rA[0], rA[1], rA[2]));
+  MD_DEBUG20(printf("AAAA t1=%.15G atomTime[%d]=%.15G\n",t1,i,atomTime[i]));
+  /* ...and now orientations */
+  UpdateOrient(i, ti, RtA, Omega);
+  invaSqN = 1.0/Sqr(axa[i]);
+  invbSqN = 1.0/Sqr(axb[i]);
+  invcSqN = 1.0/Sqr(axc[i]);
+
+  tRDiagR(i, Xa, invaSqN, invbSqN, invcSqN, RtA);
+  //printf("ti= %.15G rNebrShell: %f\n", ti, OprogStatus.rNebrShell);
+  ti = 0.0;
+  rB[0] = nebrTab[i].r[0];
+  rB[1] = nebrTab[i].r[1];
+  rB[2] = nebrTab[i].r[2];
+  MD_DEBUG20(printf("BBBB ti= %.15G rB (%.15G,%.15G,%.15G)\n", ti, rB[0], rB[1], rB[2]));
+  /* NOTA: dato l'ellissoide e la sua neighbour list a t=0 bisognerebbe stimare con esattezza 
+   * la loro distanza e restituirla di seguito */
+  invaSqN = 1.0/Sqr(nebrTab[i].axa);
+  invbSqN = 1.0/Sqr(nebrTab[i].axb);
+  invcSqN = 1.0/Sqr(nebrTab[i].axc);
+  tRDiagR(i, Xb, invaSqN, invbSqN, invcSqN, nebrTab[i].R);
+  if (OprogStatus.guessDistOpt==1)
+    guess_distNeigh(i, rA, rB, Xa, Xb, rC, rD, RtA, nebrTab[i].R);
+  else
+    {
+      calc_intersec_neigh(rB, rA, Xa, rC, -1);
+      calc_intersec_neigh(rA, rB, Xb, rD, 1);
+    }
+  for(k1=0; k1 < 3; k1++)
+    r12[k1] = rC[k1]-rD[k1]; 
+  if (OprogStatus.springkSD>0 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
+    {
+      for (k1=0; k1 < 3; k1++)
+	{
+	  vecgcg[k1] = rC[k1];
+	  vecgcg[k1+3] = rD[k1];
+	}
+      distconjgrad(i, i, shift, vecgcg, OprogStatus.springkSD, 1);
+      for (k1=0; k1 < 3; k1++)
+	{
+	  rC[k1] = vecgcg[k1];
+	  rD[k1] = vecgcg[k1+3];
+	}	 
+    }
+  MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
+		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
+  calc_grad(rC, rA, Xa, gradf);
+  calc_grad(rD, rB, Xb, gradg);
+  MD_DEBUG(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
+		  gradf[0], gradf[1], gradf[2], gradg[0], gradg[1], gradg[2]));
+  nf = calc_norm(gradf);
+  ng = calc_norm(gradg);
+  vecg[6] = sqrt(nf/ng);
+  for (k1=0; k1 < 3; k1++)
+    {
+      vecg[k1] = rC[k1];
+      vecg[k1+3] = rD[k1];
+      rDC[k1] = rD[k1] - rC[k1];
+    }
+  if (OprogStatus.springkSD>0)
+    {
+      if (scalProd(gradf, rDC) < 0.0)
+	vecg[7] = 0.0;
+      else
+	vecg[7] = calc_norm(rDC)/nf;  
+    }
+  else
+    {
+     vecg[7] = 0.0;
+    }
+
+  MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
+  newtDistNegNeigh(vecg, 8, &retcheck, funcs2beZeroedDistNegNeigh, i); 
+  if (retcheck != 0)
+    {
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck=1;
+	  return 0.0;
+	}
+      printf("[NNL] I couldn't calculate distance between %d and its NL, calcguess=%d, exiting....\n", i, calcguess);
+      if (calcguess==0)
+	{
+	  calcguess=2;
+	  goto retryneigh;
+	} 
+      Oparams.time = t + t1;
+      //store_bump(i, j);
+      if (ignorefail)
+	{
+	  *err = 1;
+	  return 0.0;
+	}
+      else
+	exit(-1);
+    }
+  for (k1 = 0; k1 < 8; k1++)
+    {
+      vecgsup[k1] = vecg[k1]; 
+    }  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      r1[k1] = vecg[k1];
+      r2[k1] = vecg[k1+3];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      r12[k1] = r1[k1] - r2[k1];
+    } 
+  segno = vecg[7];
+
+  if (segno > 0)
+    {
+      printf("t=%.15G distanza: %.15G\n", t, calc_norm(r12));
+      return calc_norm(r12);
+    }
+  else
+    {
+      printf("t=%.15G distanza: %.15G\n", t, -calc_norm(r12));
+      return -calc_norm(r12);
+    }
+}
+#else
 double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int ignorefail, int *err)
 
 {
@@ -3853,6 +3995,7 @@ retryneigh:
       return -calc_norm(r12);
     }
 }
+#endif
 #endif
 #ifdef MD_NNL
 double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
