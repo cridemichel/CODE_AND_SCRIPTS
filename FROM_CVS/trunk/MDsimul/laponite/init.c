@@ -276,11 +276,27 @@ void FCC2(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol)
   exit(1);
 }
 #elif defined(MD_EFFPOT)
-/* ============================= >>> FCC <<< ================================*/
-void FCC3(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol, double R1[3][3], 
-	  double R2[3][3])
+void euler2rotmat(double phi, double theta, double chsi, double R[3][3])
 {
-  /* NOTA: R1 ed R2 sono le matrici che definiscono l'orientazione dei due dischetti */
+  /* build rotational matrix from euler angles. Get rotational matrix from MathWorld
+   * or Gray-Gubbins */
+  R[0][0] = 1;
+  R[0][1] = 1;
+  R[0][2] = 1;
+  R[1][0] = 1;
+  R[1][1] = 1;
+  R[1][2] = 1;
+  R[2][0] = 1;
+  R[2][1] = 1;
+  R[2][2] = 1;
+}
+/* ============================= >>> FCC <<< ================================*/
+void setpos(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol, double phi, double theta,
+     	    double phi2, double theta2, double chsi2)
+{
+  /* NOTA:   
+   * theta e phi sono gli angoli che individuano la direzione del vettore distanza fra 
+   * i due dischetti il cui modulo è distmol. */
   /*   DESCRIPTION:
        Sets up the alpha fcc lattice for n linear molecules.   
        The simulation box is a unit cube centred at the origin.
@@ -297,6 +313,11 @@ void FCC3(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol, double R1[3][3],
                                           in a molecule 
        COORD_TYPE    rRoot3               1.0 / sqrt ( 3.0 ) */
   int Nc;
+  double R2[3][3]; 
+  /* R2 è la matrice che definisce l'orientazione del secondo dischetto, notare
+   * che l'orientazione del primo è fissa in quanto si può scegliere arbitriamente 
+   * l'orientazione del sistema di riferimento. 
+   */
   COORD_TYPE dist, norm, d0x, d0y, d0z, d1x, d1y, d1z, d2x, d2y, d2z;
   COORD_TYPE iRoot3, sRoot3; // = 0.5773503;
   COORD_TYPE  Cell, Cell2, rxCm, ryCm, rzCm, Mtot, fact, fact2;
@@ -307,9 +328,9 @@ void FCC3(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol, double R1[3][3],
   COORD_TYPE e2x[4], e2y[4], e2z[4]; /* orientations of each molecule in the 
 				     primitive cell */
   
-
   /*COORD_TYPE d0x, d0y, d0z, d1x, d1y, d1z, d2z, d2y, d2z;*/
 
+  euler2rotmat(phi2, theta2, chsi2, R2);
   /*printf("FCC Vol: %f\n", Vol);*/
   L = cbrt(Vol);
   Nc = ceil(  pow( ((COORD_TYPE)Nm)/4.0, 1.0/3.0 )  );
@@ -328,27 +349,30 @@ void FCC3(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol, double R1[3][3],
   bx[0] =  0.0;
   by[0] =  0.0;
   bz[0] =  0.0;
-  ex[0] =  0.0;
-  ey[0] =  1.0;
+  ex[0] =  1.0;
+  ey[0] =  0.0;
   ez[0] =  0.0;
   
   /* questa è una direzione ortogonale per fissare l'orientazione
    * dei dischi di laponite */
-  e2x[0] = 1.0;
-  e2y[0] = 0.0;
+  e2x[0] = 0.0;
+  e2y[0] = 1.0;
   e2z[0] = 0.0;
    
   /*  Sublattice B */
-  bx[1] =  0.0;
-  by[1] =  0.0;
-  bz[1] =  Cell;
-  ex[1] =  0.0;
-  ey[1] =  1.0;
-  ez[1] =  0.0;
+  /* NOTE: second laponite disk is at distance distmol but position on spherical surface
+   * is fixed by angles theta and phi */
+  bx[1] = distmol*sin(theta)*cos(phi);
+  by[1] = distmol*sin(theta)*sin(phi);
+  bz[1] = distmol*cos(theta);
+  /* here I make use of column vectors: check!!! */
+  ex[1] = R2[0][0];
+  ey[1] = R2[1][0];
+  ez[1] = R2[2][0];
   /* e2 è ortogonale a e */
-  e2x[1] = 0.0;
-  e2y[1] = 0.0;
-  e2z[1] = 1.0;
+  e2x[1] = R2[0][1];
+  e2y[1] = R2[1][1];
+  e2z[1] = R2[2][1];
 
   /* Center of Mass of the actual molecule (m + iref) */
   rxCm = bx[0];
