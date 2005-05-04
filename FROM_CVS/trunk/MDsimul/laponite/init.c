@@ -280,15 +280,15 @@ void euler2rotmat(double phi, double theta, double chsi, double R[3][3])
 {
   /* build rotational matrix from euler angles. Get rotational matrix from MathWorld
    * or Gray-Gubbins */
-  R[0][0] = 1;
-  R[0][1] = 1;
-  R[0][2] = 1;
-  R[1][0] = 1;
-  R[1][1] = 1;
-  R[1][2] = 1;
-  R[2][0] = 1;
-  R[2][1] = 1;
-  R[2][2] = 1;
+  R[0][0] = cos(chsi)*cos(phi) - cos(theta)*sin(chsi)*sin(phi);
+  R[0][1] = cos(phi)*cos(theta)*sin(chsi) + cos(chsi)*sin(phi);
+  R[0][2] = sin(chsi)*sin(theta);
+  R[1][0] = cos(phi)*sin(chsi) - cos(chsi)*cos(theta)*sin(phi);
+  R[1][1] = cos(chsi)*cos(phi)*cos(theta) - sin(chsi)*sin(phi);
+  R[1][2] = cos(chsi)*sin(theta);
+  R[2][0] = sin(phi)*sin(theta);
+  R[2][1] = -cos(phi)*sin(theta);
+  R[2][2] = cos(theta);
 }
 void setpos(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol, double phi, double theta,
      	    double phi2, double theta2, double chsi2)
