@@ -290,7 +290,6 @@ void euler2rotmat(double phi, double theta, double chsi, double R[3][3])
   R[2][1] = 1;
   R[2][2] = 1;
 }
-/* ============================= >>> FCC <<< ================================*/
 void setpos(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol, double phi, double theta,
      	    double phi2, double theta2, double chsi2)
 {
