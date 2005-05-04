@@ -216,13 +216,19 @@ void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut)
   rcutab = rCut * Oparams.lambdaD;
   rcutabSq = Sqr(rcutab);
   rrNebr = Sqr(rcutab + OprogStatus.rNebrShell);
+#ifndef MD_EFFPOT
   if (rrNebr > Sqr(L / 2.0))
     {
       printf("(rcutoff + rNebrShell)=%f is  too large, it exceeds L/2 = %f\n",
 	     sqrt(rrNebr), L/2.0);
       exit(-1);
     }
-
+#endif
+#ifdef MD_EFFPOT
+  rcutab = rCut * Oparams.lambdaD *100.0;
+  rcutabSq = Sqr(rcutab);
+  rrNebr = Sqr(rcutab + OprogStatus.rNebrShell);
+#endif
   nebrTabLen = 0;
   for(i=0; i < Nm - 1; i++)
     {
@@ -267,7 +273,7 @@ void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut)
 	    }
 	}
     }
-  printf("step N. %d: nebrTabLen: %d\n", Oparams.curStep, nebrTabLen);
+  //printf("step N. %d: nebrTabLen: %d\n", Oparams.curStep, nebrTabLen);
 }
 
 /* ======================== >>> BuildNebrList <<< ========================== */

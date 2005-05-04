@@ -3138,9 +3138,10 @@ void move(void)
   int i, phiI, thetaI, phi2I, theta2I, chsi2I; 
   FILE* f;
   double PI;
+  const double V0 = 0.0;
   double dist, phi, theta, phi2, theta2, chsi2;
   double dtheta, dphi, dtheta2, dphi2, dchsi2;
-  int nthetaI = 5, nphiI = 10, nphi2I = 10, ntheta2I = 5, nchsi2I = 10;
+  int nthetaI = 4, nphiI = 1, nphi2I = 8, ntheta2I = 4, nchsi2I = 8;
   f = fopen("Veff.dat", "w");
   PI = 2.0*acos(0);
   dphi = 2.0*PI/((double)nphiI);
@@ -3148,16 +3149,31 @@ void move(void)
   dphi2 = 2.0*PI/((double)nphi2I);
   dtheta2 = PI/((double)ntheta2I);
   dchsi2 = 2.0*PI/((double)nchsi2I);
-  for (i=1; i < 2000; i++)
+  /* build up linked list on predicted 
+     coordinates (only father do it)*/
+  if (OprogStatus.noLinkedList)
     {
-      dist =0.1 + 0.002 * i;
+      BuildNebrListNoLinked(Oparams.parnum, Oparams.rcut);
+    }
+  else
+    {
+      links(Oparams.parnum, Oparams.rcut);
+      /* Build up neighbour list */  
+      BuildNebrList(Oparams.parnum, Oparams.rcut);
+    }
+
+  for (i=1; i < 60; i++)
+    {
+      dist =22.0 + 0.5 * i;
       /* loop over all angles we're dealing with */
       sumpot = 0.0;
+      printf("dist=%.15G\n", dist);
       for (phiI=0; phiI < nphiI; phiI++)
 	{
 	  phi = phiI * dphi;  
 	  for (thetaI=0; thetaI < nthetaI; thetaI++)
 	    {
+	      printf("phiI=%d thetaI=%d\n", phiI, thetaI);
 	      theta = thetaI * dtheta;
 	      for (phi2I=0; phi2I < nphi2I; phi2I++)
 		{
@@ -3178,30 +3194,14 @@ void move(void)
 			  /* -1 = brownian dynamics NTV 
 			   * -2 = brownian dynamics at fixed pressure NTP */
 			  buildAtomsPositions();
-			  nebrNow=1;
-			  if (nebrNow)
-			    {
-			      nebrNow = 0;
-			      dispHi = 0.0;
-			      /* build up linked list on predicted 
-				 coordinates (only father do it)*/
-			      if (OprogStatus.noLinkedList)
-				{
-				  BuildNebrListNoLinked(Oparams.parnum, Oparams.rcut);
-				}
-			      else
-				{
-				  links(Oparams.parnum, Oparams.rcut);
-				  /* Build up neighbour list */  
-				  BuildNebrList(Oparams.parnum, Oparams.rcut);
-				}
-			    }
-			  LJForce(Oparams.parnum, Oparams.rcut);
+ 			  LJForce(Oparams.parnum, Oparams.rcut);
 			  /* considera tutti i contributi alle forza agente sugli atomi "di base"
 			   * ossia somma anche le forze dovute agli atomi senza massa moltiplicate
 			   * per gli opportuni coefficienti "vincolari" 
 			   * */
-			  sumpot += exp(-Vc/Oparams.T)*sin(theta2)*sin(theta)*
+
+			  //printf("Vc:%.15G T:%.15G\n", Vc, Oparams.T);
+			  sumpot += exp(-(Vc-V0)/Oparams.T)*sin(theta2)*sin(theta)*
 			    dtheta*dphi*dtheta2*dphi2*dchsi2; 
 			  //ForceOn123();
 			  //checkNebrRebuild();
@@ -3213,8 +3213,8 @@ void move(void)
 	}
       
       /* Update accumulators for calculating the angular diffusion coefficent */
-      fprintf(f, "%f %f\n", dist, (-Oparams.T)*log(sumpot));
-
+      fprintf(f, "%.15G %.15G\n", dist, V0-log(sumpot));
+      sync();
     }
   /* printf("boh dist 0-1: %f\n", sqrt(Sqr(rallx[4][0]-rallx[5][0])+
      Sqr(rally[4][0]-rally[5][0])+Sqr(rallz[4][0]-rallz[5][0])) );
