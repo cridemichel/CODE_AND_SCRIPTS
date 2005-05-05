@@ -3142,7 +3142,7 @@ void move(void)
   const double V0 = 0.0;
   double rend, rini, dr, dist, phi, theta, phi2, theta2, chsi2;
   double dtheta, dphi, dtheta2, dphi2, dchsi2;
-  int nthetaI = 4, nphiI = 1, nphi2I = 8, ntheta2I = 4, nchsi2I = 8;
+  int nthetaI = 5, nphiI = 5, nphi2I = 10, ntheta2I = 10, nchsi2I = 10;
   f = fopen("Veff.dat", "w");
   PI = 2.0*acos(0);
   dphi = 2.0*PI/((double)nphiI);
