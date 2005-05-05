@@ -3138,8 +3138,9 @@ void move(void)
   int i, phiI, thetaI, phi2I, theta2I, chsi2I; 
   FILE* f;
   double PI;
+  const int nr = 20;
   const double V0 = 0.0;
-  double dist, phi, theta, phi2, theta2, chsi2;
+  double rend, rini, dr, dist, phi, theta, phi2, theta2, chsi2;
   double dtheta, dphi, dtheta2, dphi2, dchsi2;
   int nthetaI = 4, nphiI = 1, nphi2I = 8, ntheta2I = 4, nchsi2I = 8;
   f = fopen("Veff.dat", "w");
@@ -3161,10 +3162,12 @@ void move(void)
       /* Build up neighbour list */  
       BuildNebrList(Oparams.parnum, Oparams.rcut);
     }
-
-  for (i=1; i < 60; i++)
+  rini = Oparams.Diam - 2.0;
+  rend = (Oparams.rcut + 5.0) * Oparams.lambdaD;
+  dr = (rend - rini) / nr; 
+  for (i=1; i < nr; i++)
     {
-      dist =22.0 + 0.5 * i;
+      dist = rini + i * dr;
       /* loop over all angles we're dealing with */
       sumpot = 0.0;
       printf("dist=%.15G\n", dist);
@@ -3214,7 +3217,6 @@ void move(void)
       
       /* Update accumulators for calculating the angular diffusion coefficent */
       fprintf(f, "%.15G %.15G\n", dist, V0-log(sumpot));
-      sync();
     }
   /* printf("boh dist 0-1: %f\n", sqrt(Sqr(rallx[4][0]-rallx[5][0])+
      Sqr(rally[4][0]-rally[5][0])+Sqr(rallz[4][0]-rallz[5][0])) );
