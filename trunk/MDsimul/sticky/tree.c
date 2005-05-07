@@ -36,11 +36,6 @@ void ErrExit(char *str)
 int check_node(char* str, int id, int idNew, int idUp)
 {
   int idd;
-  if (Oparams.curStep==1266)
-    {
-      printf("(id:%d,u:%dr:%d,l:%d) ",
-	     id, treeUp[id], treeRight[id], treeLeft[id]);
-    }
   if (treeUp[id] != idUp && idUp != 0)
     {
       printf("[%s] ERRORE\n", str);
@@ -99,7 +94,9 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
 	 */
        	idNew = 1 + (Oparams.parnum*idata + idA);
 	if (idata)
-	  crossevtodel[idA] = idNew;  
+	  {
+	    crossevtodel[idA] = idNew;  
+	  }
     }
   /* treeRight[id] == -1 => il calendario è vuoto */
   if (treeRight[id] == -1) 
@@ -404,8 +401,10 @@ void NextEvent (void)
   evIdC = treeIdC[idNow];
   evIdD = treeIdD[idNow];
   evIdE = treeIdE[idNow];
-  printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
-		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time);
+  /*
+     printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
+     (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time);
+  */
   MD_DEBUG2(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
   MD_DEBUG(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
