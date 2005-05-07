@@ -1035,9 +1035,10 @@ void StartRun(void)
 #else
 	  inCell[nc][2][n] =  (rz[n] + L2)  * cellsz[nl] / L;
 #endif
-	  printf("nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
+	  /*printf("nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
 		 nl, nc, n, inCell[nc][0][n], inCell[nc][1][n], inCell[nc][2][n],
 		 cellsx[nl], cellsy[nl], cellsz[nl]);
+		 */
 #if 0
 	  if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
 	    {
@@ -1075,7 +1076,7 @@ void StartRun(void)
 	  /*TO BE REMOVED*/
 	  //if (nl==3)
 	    //continue;
-	  printf("======>qui nl=%d\n", nl);
+	  //printf("======>qui nl=%d\n", nl);
 	  PredictColl(n, -2, nl); 
 	}
     }
