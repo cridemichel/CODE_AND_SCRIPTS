@@ -7,7 +7,7 @@
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x) 
 #define MD_DEBUG29(x) 
-#define MD_DEBUG30(x) x
+#define MD_DEBUG30(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -786,7 +786,7 @@ void check (int *overlap, double *K, double *V)
 	      if ( ( 1.0 - rij ) > tol ) 
 		{
 		  *overlap = 1;
-#if 1
+#if 0
 		  printf("#%d,#%d,rij/sigma =%f15.8 | ", i, j, rij);
 		  printf("(%f,%f,%f)-(%f,%f,%f)\n", rxi, ryi, rzi, 
 			 rx[j], ry[j], rz[j]);
@@ -983,14 +983,14 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
-  printf("BUMP %d-%d btnone=%d  bthc=%d time=%.15G\n", i, j,bt==MD_EVENT_NONE, bt==MD_CORE_BARRIER, Oparams.time);
+  //printf("BUMP %d-%d btnone=%d  bthc=%d time=%.15G\n", i, j,bt==MD_EVENT_NONE, bt==MD_CORE_BARRIER, Oparams.time);
 #if 1
   if (bt == MD_CORE_BARRIER)
     {
       /* do a normal collison between hard spheres 
        * (or whatever kind of collision between core objects
        * (ellipsoids as well...)*/
-      printf("time=%.15G HARD CORE BUMP\n", Oparams.time);
+      //printf("time=%.15G HARD CORE BUMP\n", Oparams.time);
       core_bump(i, j, W, Sqr(sigmai));
       //check_all_bonds();
       MD_DEBUG10(printf(">>>>>>>>>>collCode: %d\n", bt));
@@ -3220,7 +3220,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		      && lastbump[i].at == ata && lastbump[j].at==atb// && bound(i, j, ata, atb) 
 		      && fabs(lastcol[i]-t)< 1E-14) 
 		    {
-		      printf("qui\n");
+		      //printf("qui\n");
 		      
 		    }
 		  else
@@ -3682,8 +3682,9 @@ void PredictCellCross(int na, int nc)
       printf("<<< NOT IGNORE >>> evIdA=%d nc=%d time=%.15G k=%d\n", na, nc, Oparams.time+tm[k],k);
       ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, Oparams.time + tm[k]);
     }
-  printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.16G time=%.15G evCode:%d\n", 
-	 na, ATOM_LIMIT+evCode, k, tm[k], tm[k]+Oparams.time, evCode);
+  printf("===>crossevtodel[%d]:%d\n", na, crossevtodel[na]);
+  //printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.16G time=%.15G evCode:%d\n", 
+//	 na, ATOM_LIMIT+evCode, k, tm[k], tm[k]+Oparams.time, evCode);
 
 }
 void PredictColl (int na, int nb, int nl) 
@@ -3713,10 +3714,11 @@ void PredictColl (int na, int nb, int nl)
     {
       nc = 1;
     }
+  /*
   printf("[PredictEvent ]nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
 	 nl, nc, na, inCell[nc][0][na], inCell[nc][1][na], inCell[nc][2][na],
 	 cellsx[nl], cellsy[nl], cellsz[nl]);
-  
+  */
     /* NOTA: le linked list sono tre:
    *  0 = lista dell'interazione AA
    *  1 = lista dell'interazione BB
@@ -3729,7 +3731,7 @@ void PredictColl (int na, int nb, int nl)
    *  ncel = 1 celle relative all'interazione della particella na 
    *  con particelle della stessa specie. */
  
-#if 1
+#if 0
   {
       int ii,nn,np;    
       for (np=0; np < Oparams.parnum; np++) 
@@ -3903,7 +3905,7 @@ void PredictColl (int na, int nb, int nl)
 			      collCode = MD_CORE_BARRIER;
 			      evtime = Oparams.time + t;
 			      MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
-			      printf("============>CORE COLLISION vv=%f d=%f evtime=%.15G\n", vv, d, evtime);
+			      //printf("============>CORE COLLISION vv=%f d=%f evtime=%.15G\n", vv, d, evtime);
 			    } 
 			}
 		      collCodeOld = collCode;
@@ -4053,7 +4055,7 @@ void PredictEvent (int na, int nb)
   if (tm[k]<0)
     {
       tm[k] = 0.0;
-#if 1
+#if 0
       printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
       printf("Cells(%d,%d,%d)\n", inCell[0][na], inCell[1][na], inCell[2][na]);
       printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
@@ -4343,7 +4345,7 @@ void calc_energynew(char *msg)
   free_matrix(Ia,3);
   free_matrix(Ib,3);
 #endif
-  printf("[%s] Kinetic Energy: %f\n", msg, K);
+  //printf("[%s] Kinetic Energy: %f\n", msg, K);
 }
 void calc_energy_i(char *msg, int i)
 {
@@ -4401,7 +4403,7 @@ void calc_energy_i(char *msg, int i)
   free_matrix(Ia,3);
   free_matrix(Ib,3);
 #endif
-  printf("[%s] Kinetic Energy of %d: %f\n", msg, i, K);
+  //printf("[%s] Kinetic Energy of %d: %f\n", msg, i, K);
 
 }
 
@@ -4753,8 +4755,10 @@ void ProcessCellCrossing(void)
   /* questa condizione non si dovrebbe *mai* verificare, quindi 
    * in linea di principio le due linee che seguono potrebbero anche essere eliminate */
   if (nc==1 && boxwall)
-    return;
-  
+    {
+      printf("nc=1 and boxwall!!!! <===!!!\n");
+      return;
+    }
   //printf("ProcellCellCross nl=%d nc=%d k=%d\n", nl, nc, k);
   /* NOTA: cellList[i] con 0 < i < Oparams.parnum è la cella in cui si trova la particella
    * i-esima mentre cellList[j] con 
@@ -4762,10 +4766,9 @@ void ProcessCellCrossing(void)
    * è la prima particella che si trova nella cella j-esima
    */
   n = (inCell[nc][2][evIdA] * cellsy[nlcross] + inCell[nc][1][evIdA])*cellsx[nlcross] + 
-    inCell[nc][0][evIdA]
-    + Oparams.parnum;
-  /*printf("nc=%d n=%d cellList[%d][%d]:%d\n",nc, n, nlcross, n, cellList[nlcross][n]);
-    printf("vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);*/
+    inCell[nc][0][evIdA] + Oparams.parnum;
+  printf("nc=%d n=%d cellList[%d][%d]:%d\n",nc, n, nlcross, n, cellList[nlcross][n]);
+  printf("vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
   while (cellList[nlcross][n] != evIdA) 
     n = cellList[nlcross][n];
   /* Eliminazione di evIdA dalla lista della cella n-esima */
@@ -4811,6 +4814,9 @@ void ProcessCellCrossing(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
+  printf("DOPO boxwall=%d nc=%d n=%d cellList[%d][%d]:%d\n",boxwall, nc, n, nlcross, n, cellList[nlcross][n]);
+  printf("DOPO vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
+ 
   if (boxwall)
     {
       switch (kk)
@@ -4829,6 +4835,7 @@ void ProcessCellCrossing(void)
 	{
 	  printf("DELETING CROSS EVENT evIdA=%d\n", evIdA);
 	  DeleteEvent(crossevtodel[evIdA]);
+	  crossevtodel[evIdA] = -1;
 	}
       PredictCellCross(evIdA, nc_bw);
       PredictColl(evIdA, evIdB, nlcoll_bw);
@@ -4989,7 +4996,7 @@ void distanza(int ia, int ib)
   dz = rz[ia]-rz[ib];
   dx = dx - L*rint(dx/L);
   dy = dx - L*rint(dy/L);
-  printf("dist(%d,%d): %f\n", ia, ib, sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz)));
+  //printf("dist(%d,%d): %f\n", ia, ib, sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz)));
 }
 //void rebuildLinkedList(void);
 /* ============================ >>> move<<< =================================*/
