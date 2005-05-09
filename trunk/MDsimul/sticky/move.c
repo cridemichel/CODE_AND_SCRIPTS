@@ -912,8 +912,13 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
 void core_bump(int i, int j, double *W, double sigSq)
 {
   double rxij, ryij, rzij, factor;
-  double delvx, delvy, delvz;
+  double delvx, delvy, delvz, invmi, invmj, denom;
 
+  invmi = (i<Oparams.parnumA)?invmA:invmB;
+  invmj = (j<Oparams.parnumA)?invmA:invmB;
+
+  denom = invmi + invmj; 
+  
   rxij = rx[i] - rx[j];
   if (fabs (rxij) > L2)
     rxij = rxij - SignR(L, rxij);
@@ -926,16 +931,17 @@ void core_bump(int i, int j, double *W, double sigSq)
   factor = ( rxij * ( vx[i] - vx[j] ) +
 	     ryij * ( vy[i] - vy[j] ) +
 	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
+  factor *= 2.0 / denom;
   /* Dissipation */
   delvx = - factor * rxij;
   delvy = - factor * ryij;
   delvz = - factor * rzij;
-  vx[i] = vx[i] + delvx;
-  vx[j] = vx[j] - delvx;
-  vy[i] = vy[i] + delvy;
-  vy[j] = vy[j] - delvy;
-  vz[i] = vz[i] + delvz;
-  vz[j] = vz[j] - delvz;
+  vx[i] = vx[i] + delvx*invmi;
+  vx[j] = vx[j] - delvx*invmj;
+  vy[i] = vy[i] + delvy*invmi;
+  vy[j] = vy[j] - delvy*invmj;
+  vz[i] = vz[i] + delvz*invmi;
+  vz[j] = vz[j] - delvz*invmj;
   /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
   //*W = delvx * rxij + delvy * ryij + delvz * rzij;
 }
@@ -983,18 +989,28 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
-  //printf("BUMP %d-%d btnone=%d  bthc=%d time=%.15G\n", i, j,bt==MD_EVENT_NONE, bt==MD_CORE_BARRIER, Oparams.time);
+  //printf("BUMP %d-%d btnone=%d  bthc=%d bt=%d time=%.15G\n", i, j,bt==MD_EVENT_NONE, bt==MD_CORE_BARRIER, bt, Oparams.time);
 #if 1
+#if 0
+  calc_energy(NULL);
+  printf("ene prima=%.10G enepot=%f K=%f\n", calcpotene()+K, calcpotene(), K);
+#endif
   if (bt == MD_CORE_BARRIER)
     {
       /* do a normal collison between hard spheres 
        * (or whatever kind of collision between core objects
        * (ellipsoids as well...)*/
       //printf("time=%.15G HARD CORE BUMP\n", Oparams.time);
+      //printf("HC ene prima=%.10G enepot=%f K=%f\n", calcpotene()+K, calcpotene(), K);
       core_bump(i, j, W, Sqr(sigmai));
+      //printf("HC ene dopo=%.10G enepot=%f K=%f\n", calcpotene()+K, calcpotene(), K);
       //check_all_bonds();
       MD_DEBUG10(printf(">>>>>>>>>>collCode: %d\n", bt));
       MD_DEBUG30(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
+#if 0
+      calc_energy(NULL);
+      printf("ene dopo=%.10G enepot=%f K=%f\n", calcpotene()+K, calcpotene(), K);
+#endif 
       return;
     }
 #endif
@@ -1158,6 +1174,8 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
 
   //MD_DEBUG(calc_energy("dentro bump3"));
+  //calc_energy(NULL);
+  //printf("ene prima=%.10G enepot=%f K=%f\n", calcpotene()+K, calcpotene(), K);
   /* calcola le matrici inverse del tensore d'inerzia */
 #ifdef MD_ASYM_ITENS
   InvMatrix(Ia, invIa, 3);
@@ -1357,6 +1375,8 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
   //printf("rC-ratA: %f\n", sqrt(Sqr(ratA[0]-rCx)+Sqr(ratA[1]-rCy)+Sqr(ratA[2]-rCz)));
   //printf("rC-ratB: %f\n", sqrt(Sqr(ratB[0]-rCx)+Sqr(ratB[1]-rCy)+Sqr(ratB[2]-rCz)));
+  //calc_energy(NULL);
+  //printf("ene dopo=%.10G enepot=%f K=%f\n", calcpotene()+K, calcpotene(), K);
 #if 0
   calc_energy(NULL); 
   V = calcpotene();
@@ -1386,7 +1406,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       printf("dist atA-atB:%.15G\n", calc_norm(r12));
       printf("E-Eold= %.15G bt=%d\n", E-Eold,  bt);
       printf("bound:%d oldbond:%d\n", bound(i, j, ata, atb), oldbond);
-      exit(-1);
+      //exit(-1);
     }
 #endif
  //check_bonds("CHECKING", i, j, ata, atb, 0);
@@ -4598,6 +4618,7 @@ void ProcessCollision(void)
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
 #endif
+  
 }
 #ifdef MD_SILICA
 void docellcross2(int k, double velk, int cellsk, int nc)
