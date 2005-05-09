@@ -128,11 +128,16 @@ double calcpotene(void)
 void calcV(void)
 {
  V = calcpotene();
-#if 1
  mf = fopenMPI(absMisHD("energy.dat"),"a");
+#ifdef MD_SILICA
+ if (Oparams.parnumA < Oparams.parnum)
+   fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum-Oparams.parnumA));
+ else
+   fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
+#else
  fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
- fclose(mf);
 #endif
+ fclose(mf);
 }
 void calc_energy(char *msg);
 
