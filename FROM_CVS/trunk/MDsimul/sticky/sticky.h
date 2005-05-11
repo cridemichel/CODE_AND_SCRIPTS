@@ -310,7 +310,7 @@ struct progStatus
   double epsdFastR;
   double epsdMax;
   int assumeOneBond;
-  double forceguess;
+  int forceguess;
   double targetPhi;
   double scalfact;
   double reducefact;
@@ -529,6 +529,12 @@ struct pascii opro_ascii[] =
   {"ENmin",        &OS(ENmin),                      1,  1,  "%.6G"},
   {"ENmax",        &OS(ENmax),                      1,  1,  "%.6G"},
   {"PE",           OS(PE),                 PE_POINTS,    1,  "%d"},
+  {"targetPhi",   &OS(targetPhi),        1, 1, "%.15G"},
+  {"maxbonds",      &OS(maxbonds),       1, 1, "%d"},
+  {"eventCount",    &OS(eventCount),     1, 1, "%d"},
+  {"collCount",     &OS(collCount),      1, 1, "%d"},
+  {"crossCount",    &OS(crossCount),     1, 1, "%d"},
+  {"scaleVolTime",  &OS(scaleVolTime),   1, 1, "%.15G"},
   {"", NULL, 0, 0, ""}
 };
 #else
@@ -550,7 +556,7 @@ struct pascii opar_ascii[]=
   {"sigma",           OP(sigma),                        2,   2, "%.10G"},
   {"sigmaSticky",     &OP(sigmaSticky),                  1,   1, "%.10G"},
 #ifdef MD_SILICA
-  {"rcut",              OP(rcut),                        1,   3, "%.10G"},
+  {"rcut",              OP(rcut),                        3,   1, "%.10G"},
 #else
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
 #endif
