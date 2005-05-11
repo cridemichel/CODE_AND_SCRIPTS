@@ -443,8 +443,10 @@ void NextEvent (void)
 	  /* qui elimina anche gli eventi relativi al cell crossing con le altre liste.
 	   * Notare che se si hanno più di due specie si devono eliminare *tutti* gli eventi 
 	   * di cell-crossing magari con un loop */
+#ifdef MD_SILICA
 	  if (crossevtodel[id-1]!=-1)
 	    DeleteEvent (id+Oparams.parnum);
+	  
 	  /* notare che la condizione crossevtodel[id-1]!=-1 è necessaria in quanto 
 	   * in quanto se una particella attraversa le pareti del box l'evento con nc==1
 	   * non viene schedulato visto che ProcessCellCrossing si occupa di entrambi gli eventi
@@ -452,6 +454,7 @@ void NextEvent (void)
 	  /* Serve assolutamente porre crossevtodel a -1  per evitare che ProcessCellCross 
 	   * tenti di rimuovere un evento già rimosso. */
 	  crossevtodel[id-1] = -1;
+#endif
 	  for (idd = treeCircAL[id]; idd != id; idd = treeCircAL[idd]) 
 	    {
 	      /* il successivo (R) del precedente (L) diviene il successivo 
