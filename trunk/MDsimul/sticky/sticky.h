@@ -449,6 +449,12 @@ struct pascii opro_ascii[] =
   {"PzxArr",       OS(PzxArr),                      5,              1, "%.10G"},
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
+#if 1
+  {"DR",           OS(DR),                     -MAXPAR,              3, "%.10G"},
+  {"rxCMi",        OS(rxCMi),                  -MAXPAR,              1, "%.10G"},
+  {"ryCMi",        OS(ryCMi),                  -MAXPAR,              1, "%.10G"},
+  {"rzCMi",        OS(rzCMi),                  -MAXPAR,              1, "%.10G"},
+#endif
   {"histMB",       OS(histMB),                  NUMV,               1, "%d"},
   {"sumTemp",      &OS(sumTemp),                    1,              1, "%.6G"},
   {"sumPress",     &OS(sumPress),                   1,              1, "%.6G"},
