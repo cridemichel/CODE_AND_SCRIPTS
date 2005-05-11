@@ -639,8 +639,11 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[])
 	  || strchr(strutt[i].type, 'G'))
 	{
 	  bd = (double *) strutt[i].ptr;
-			
-	  for (n = 0; n < strutt[i].qty; n++)
+	/* N.B. se nel .h si mette -MAXPAR come qty (vedi struct pascii)
+	 * allora vengono salvati solo Oparams.parnum elementi risparmiando disco.*/
+	if (strutt[i].qty == -MAXPAR)		
+	  strutt[i].qty = Oparams.parnum;
+	for (n = 0; n < strutt[i].qty; n++)
 	    {
 	      for (e = 0; e < strutt[i].block_length; e++)
 		{
