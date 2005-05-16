@@ -220,16 +220,26 @@ void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut, COORD_TYPE sigma)
   COORD_TYPE rcut, rcutSq; 
   COORD_TYPE rrNebr;
   COORD_TYPE rxi, ryi, rzi, rijSq, rxij, ryij, rzij;
-
+#ifdef MD_DOUBLE_YUKAWA
+  double rcut0, rcut1;
+#endif
   ProcSync0();
 
   L = cbrt(Vol);
   invL = 1.0  / L;
   invLH = invL * 2.0;
   /* useful ab-constants inside OUTER LOOP below */
+#ifdef MD_DOUBLE_YUKAWA
+  rcut0 = Oparams.rcut*Oparams.chsi0;
+  rcut1 = Oparams.rcut*Oparams.chsi1;
+  rcut = (rcut1>rcut0)?rcut1:rcut0;
+  rcutSq = Sqr(rcut);
+  rrNebr = Sqr(rcut + OprogStatus.rNebrShell);
+#else
   rcut = rCut * sigma;
   rcutSq = Sqr(rcut);
   rrNebr = Sqr(rcut + OprogStatus.rNebrShell);
+#endif
   if (rrNebr > Sqr(L / 2.0))
     {
       sprintf(TXT, "(rcutoff + rNebrShell)=%f is  too large, it exceeds L/2 = %f\n",
@@ -673,7 +683,7 @@ void LJForce(int Nm, COORD_TYPE epsilon,
   COORD_TYPE vCut, rcutSig, rcutSq;
   COORD_TYPE dvdr, fict;
 #ifdef MD_DOUBLE_YUKAWA
-  double rij, v0, v1;
+  double rij, v0, v1, rcut0, rcut1;
 #endif
   /* Local variables to implement linked list */
   int  n, nebrTab0, nebrTab1;
@@ -685,6 +695,12 @@ void LJForce(int Nm, COORD_TYPE epsilon,
 	 instead 'sigab[a][b]' is an ab-constant */
 
   /* useful ab-constants inside OUTER LOOP below */
+#ifdef MD_DOUBLE_YUKAWA
+  rcut0 = Oparams.rcut*Oparams.chsi0;
+  rcut1 = Oparams.rcut*Oparams.chsi1;
+  rcut = (rcut1>rcut0)?rcut1:rcut0;
+  rcutSq = Sqr(rcut);
+#else
   rcutSig = rcut * sigma;
   rcutSq = Sqr(rcutSig);
   sigmaSq= Sqr(sigma);
@@ -694,7 +710,7 @@ void LJForce(int Nm, COORD_TYPE epsilon,
   srij6   = srij2 * srij2 * srij2;
   srij12  = Sqr(srij6);
   dvdr = epsilon24 * (srij6 - 2.0 * srij12) / rcutSig;
-  
+#endif
   /* initialize ab-variables */
   ncut = 0;
   L = cbrt(Vol);
@@ -808,10 +824,21 @@ void LJForce(int Nm, COORD_TYPE epsilon,
   srij12 = srij6 * srij6;
   vCut = srij12 - srij6;
 #endif
+#ifdef MD_DOUBLE_YUKAWA
+  rij = rcut;
+  v0 = Oparams.A0*exp(-rij/Oparams.chsi0)/rij;
+  v1 = Oparams.A1*exp(-rij/Oparams.chsi1)/rij;
+  vij = v0+v1;
+  vCut = v0+v1; 
+  Vc = VLJ - ncut * vCut;
+  VLJ  = VLJ;/* * epsilon4;*/
+  Vc = Vc;/* * epsilon4;*/
+  WLJ  = WLJ / 3.0;
+#else
   vCut = exp(-rcutSq); 
   Vc = VLJ - ncut * vCut;
   VLJ  = VLJ;/* * epsilon4;*/
   Vc = Vc;/* * epsilon4;*/
   WLJ  = WLJ / 3.0;
-
+#endif
 }  
