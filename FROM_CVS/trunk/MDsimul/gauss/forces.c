@@ -672,6 +672,9 @@ void LJForce(int Nm, COORD_TYPE epsilon,
   COORD_TYPE Fxi, Fyi, Fzi, rxi, ryi, rzi;
   COORD_TYPE vCut, rcutSig, rcutSq;
   COORD_TYPE dvdr, fict;
+#ifdef MD_DOUBLE_YUKAWA
+  double rij, v0, v1;
+#endif
   /* Local variables to implement linked list */
   int  n, nebrTab0, nebrTab1;
 
@@ -741,9 +744,16 @@ void LJForce(int Nm, COORD_TYPE epsilon,
 	  //vij     = vij -  dvdr * (rij - rcut);
 	  wij     = vij + srij12;
 #endif
+#ifdef MD_DOUBLE_YUKAWA
+	  rij = sqrt(rijSq);
+	  v0 = Oparams.A0*exp(-rij/Oparams.chsi0)/rij;
+	  v1 = Oparams.A1*exp(-rij/Oparams.chsi1)/rij;
+	  vij = v0+v1;
+	  wij = (v0+v1)/rij  + (v0/Oparams.chsi0+v1/Oparams.chsi1);
+#else
 	  vij = exp(-rijSq);
 	  wij = 2.0 * rijSq * vij;
- 
+#endif 
 	  VLJ = VLJ + vij;
 	  
 	  /* total potential between all a-b atoms pairs */
@@ -751,7 +761,11 @@ void LJForce(int Nm, COORD_TYPE epsilon,
 
 	  /* NOTE: If you will use a shifted-force potential then 
 	     calculate the force using that potential */
+#if MD_DOUBLE_YUKAWA
+	  fij = wij/rijSq;
+#else
 	  fij   = 2.0 * vij;/* wij / rijSq;*/
+#endif
 	  /* force between two atoms */
 	  fxij  = fij * rxij;/* * epsilon24; */        
 	  fyij  = fij * ryij;/* * epsilon24; */
