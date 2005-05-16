@@ -260,6 +260,7 @@ struct progStatus
   COORD_TYPE tols;
   COORD_TYPE tolVol1;
   COORD_TYPE tolT;
+  int mdseed;
   int ipart;
   int HNBOX;
   int avngS;
@@ -317,6 +318,12 @@ struct params
  
   /* ==================== >>> PUT HERE YOUR PARAMS <<< ===================== */
 
+#ifdef MD_DOUBLE_YUKAWA
+  double A0;
+  double A1;
+  double chsi0;
+  double chsi1;
+#endif
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
   COORD_TYPE m;             /* atoms masses */
@@ -587,6 +594,7 @@ struct singlePar OsinglePar[] = {
   {"ENmin",      &OprogStatus.ENmin,        CT},
   {"ENmax",      &OprogStatus.ENmax,        CT},
   {"nRun",       &OprogStatus.nRun,         STR},
+  {"seed",       &OprogStatus.mdseed,                   INT},
   /* ======================================================================= */
 
   {"", NULL, 0} /* end of list, don't touch this !!! */
