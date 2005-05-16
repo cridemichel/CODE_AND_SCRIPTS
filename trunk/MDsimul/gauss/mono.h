@@ -13,11 +13,15 @@
 
 #define XTERM   "/usr/X11R6/bin/nxterm"
 
-#define MD_HD_TMP "/home/demichel/simdat/mdtmp/"
+#define MD_HD_TMP "./"
 /* directory to store temporary files */ 
 
-#define MD_HD_MIS "/home/demichel/simdat/measures/" 
+#define MD_HD_MIS "./" 
 /* directory to store measures files */
+#ifdef MD_LOADMESH
+#define MD_MESHDIR MD_HOME "./"
+#endif
+
 
 #define MD_TAPE_TMP "/iomega/mdtmp/"
 /* directory on Tape to store some temporary files (restore files and 
@@ -583,6 +587,12 @@ struct singlePar OsinglePar[] = {
   {"equilibrat", &Oparams.equilibrat,       INT},
   {"temperat",   &Oparams.T,                CT},
   {"tol",        &Oparams.tol,              CT},
+#ifdef MD_DOUBLE_YUKAWA
+  {"A0",       &Oparams.A0,             CT},
+  {"A1",       &Oparams.A1,             CT},
+  {"chsi0",    &Oparams.chsi0,          CT},
+  {"chsi1",    &Oparams.chsi1,          CT},
+#endif
   /* parametri per scegliere il tipo di salvataggio del file xva
      (lineare o semilog) */
   {"xvaSaveMode",&OprogStatus.xvaSaveMode,  INT},
