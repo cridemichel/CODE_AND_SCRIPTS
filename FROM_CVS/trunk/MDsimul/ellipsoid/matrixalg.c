@@ -113,7 +113,6 @@ extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3], **RtA, **RtB;
 extern int polinterr, polinterrRyck;
 /* ============================ >>> brent <<< ============================ */
 void  conjgradfunc(void);
-
 #define SHFT(a,b,c,d) (a)=(b);(b)=(c);(c)=(d); 
 /*Here GOLD is the default ratio by which successive intervals are magnified; GLIMIT is the maximum
  * magnification allowed for a parabolic-fit step.*/
@@ -3859,6 +3858,163 @@ void newt(double x[], int n, int *check,
 //#define MD_GLOBALNRD
 #define MAXITS3 200
 #ifdef MD_NNL
+void newtDistNegNeighPlane(double x[], int n, int *check, 
+	  void (*vecfunc)(int, double [], double [], int),
+	  int iA)
+{
+  int i,its=0, j, *indx, ok;
+  int kk;
+  double distnew, distold, r12[3];
+  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
+  indx=ivector(n); 
+  fjac=matrix(n, n);
+  g=vector(n);
+  p=vector(n); 
+  xold=vector(n); 
+  fvecD=vector(n); 
+  /*Define global variables.*/
+  nnD=n; 
+  nrfuncvDNeigh=vecfunc; 
+#ifdef MD_GLOBALNRDNL
+  f=fminDNeigh(x,iA); /*fvec is also computed by this call.*/
+#else
+  funcs2beZeroedDistNegNeigh(n,x,fvecD,iA);
+#endif
+  test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
+  for (i=0;i<n;i++) 
+    if (fabs(fvecD[i]) > test)
+      test=fabs(fvecD[i]); 
+  if (test < 0.01*TOLFD)
+    {
+      *check=0; 
+      FREERETURND;
+    }
+  for (sum=0.0,i=0;i<n;i++) 
+    sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
+  stpmax=STPMX*FMAX(sqrt(sum),(double)n);
+  for (its=0;its<MAXITS3;its++)
+    { /* Start of iteration loop. */
+       /* ============ */
+      fdjacDistNegNeigh(n,x,fvecD,fjac,vecfunc, iA);
+      /* If analytic Jacobian is available, you can 
+	  replace the routine fdjac below with your own routine.*/
+#ifdef MD_GLOBALNRDNL
+       for (i=0;i<n;i++) { /* Compute  f for the line search.*/
+	 for (sum=0.0,j=0;j<n;j++)
+	  sum += fjac[j][i]*fvecD[j]; 
+	g[i]=sum; 
+      } 
+      for (i=0;i<n;i++) 
+	xold[i]=x[i]; /* Store x,*/ 
+      fold=f; /* and f. */
+#else
+      test=0.0; /* Test for convergence on function values.*/
+      for (i=0;i<n;i++) 
+	test +=fabs(fvecD[i]); 
+      if (test < TOLFD)
+	{
+	  *check = 0;
+	  MD_DEBUG(printf(" test < TOLF\n"));
+	  FREERETURND;
+	}
+#endif 
+      for (i=0;i<n;i++) 
+	p[i] = -fvecD[i]; /* Right-hand side for linear equations.*/
+#ifdef MD_USE_LAPACK
+      SolveLineq(fjac,p,n);
+#else
+#if 1
+      ludcmp(fjac,n,indx,&d, &ok); /* Solve linear equations by LU decomposition.*/
+      lubksb(fjac,n,indx,p);
+#else
+      gaussj(fjac,n,p);
+#endif
+#endif 
+      /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
+#ifdef MD_GLOBALNRDNL
+      lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fminDNeigh,iA, TOLXD); 
+      MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
+      test=0.0; /* Test for convergence on function values.*/
+      for (i=0;i<n;i++) 
+	if (fabs(fvecD[i]) > test) 
+	  test=fabs(fvecD[i]); 
+      if (test < TOLFD) 
+	{ 
+	  *check=0; 
+	  MD_DEBUG(printf("test < TOLF\n"));
+	  FREERETURND
+	}
+      if (*check) 
+	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
+#if 0
+	  test=0.0; 
+	  den=FMAX(f,0.5*n);
+	  for (i=0;i<n;i++)
+	    {
+	      temp=fabs(g[i])*FMAX(fabs(x[i]),1.0)/den;
+	      if (temp > test) 
+		test=temp; 
+	    } 
+	  *check=(test < TOLMIN ? 2 : 0);
+#endif
+	  /* se c'è anche il sospetto di un minimo locale allora fai
+	   * un newton-raphson semplice */
+	  for (i=0; i < n; i++)
+	    {
+	      x[i] = xold[i];
+	      x[i] += p[i]; 
+	    }
+	  *check = 0;
+ 	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
+  	  //FREERETURND 
+	} 
+      test=0.0; /* Test for convergence on x. */
+      for (i=0;i<n;i++) 
+	{
+	  temp=(fabs(x[i]-xold[i]))/FMAX(fabs(x[i]),1.0); 
+	  if (temp > test) 
+	    test=temp; 
+	} 
+      if (test < TOLXD) 
+	{
+	  MD_DEBUG(printf("test<TOLXD test=%.15f\n", test));
+	  MD_DEBUG(printf("fvec: (%f,%f,%f,%f,%f,%f,%f,%f)\n",
+			  fvecD[0], fvecD[1], fvecD[2], fvecD[2], fvecD[3], 
+			  fvecD[4], fvecD[5], fvecD[6], fvecD[7]));
+	  FREERETURND;
+	}
+#if 1
+      if (*check==2)
+	{
+	  MD_DEBUG(printf("spurious convergence\n"));
+	  FREERETURND;
+	}
+#endif
+#else
+      test = 0;
+      for (i=0;i<n;i++) 
+	{ 
+      	  test += fabs(p[i]);
+	  x[i] += p[i];
+	}
+      MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
+      //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
+      if (test < TOLXD) 
+	{ 
+	  *check = 0;
+	  MD_DEBUG(printf("test < TOLX\n"));
+	  FREERETURND; 
+	}
+#endif
+    } 
+  MD_DEBUG18(printf("maxits!!!\n"));
+  *check = 2;
+  FREERETURND;
+  return;
+  nrerror("MAXITS exceeded in newt"); 
+  
+}
+
 void newtDistNegNeigh(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
