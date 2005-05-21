@@ -117,31 +117,32 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
   OmegaB[2][1] = 0;
   OmegaB[2][2] = 0;
    
+#if 0
   invaSqN = 1.0/Sqr(nebrTab[iA].axa);
   invbSqN = 1.0/Sqr(nebrTab[iA].axb);
   invcSqN = 1.0/Sqr(nebrTab[iA].axc);
-
   tRDiagR(iA, Xb, invaSqN, invbSqN, invcSqN, nebrTab[iA].R);
   DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
   DB[0][0] = invaSqN;
   DB[1][1] = invbSqN;
   DB[2][2] = invcSqN;
+#endif
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
        	{
-	  df[k1][k2] = 2.0*(Xa[k1][k2] - Sqr(x[3])*Xb[k1][k2]);
+	  df[k1][k2] = 2.0*Xa[k1][k2];// - Sqr(x[3])*Xb[k1][k2]);
 	}
     }
   /* calc fx e gx */
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
-      gx[k1] = 0;
+      //gx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	{
 	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
-	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]);
+	  //gx[k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]);
 	}
     } 
 
@@ -162,7 +163,7 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
       for (k2 = 0; k2 < 3; k2++)
 	df[4][k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]); 
 #endif
-      df[4][k1] = gx[k1];
+      df[4][k1] = gradplane[k1];
     } 
 
   for (k1 = 0; k1 < 3; k1++)
@@ -172,39 +173,38 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
       for (k2 = 0; k2 < 3; k2++)
 	df[k1][3] += 4.0*x[3]*Xb[k1][k2]*(x[k2]-rB[k2]); 
 #endif
-      df[k1][3] = -2.0*x[3]*gx[k1];
+      df[k1][3] = -2.0*x[3]*gradplane[k1];
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
   calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
-  calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
+  //calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
   for (k1 = 0; k1 < 3; k1++)
     {
       //df[k1][4] = 0;
       //for (k2 = 0; k2 < 3; k2++)
-      df[k1][4] = Fxt[k1]-Sqr(x[3])*Gxt[k1]; 
+      df[k1][4] = Fxt[k1];//-Sqr(x[3])*Gxt[k1]; 
     } 
  df[3][4] = Ft;
- df[4][4] = Gt;
+ df[4][4] = 0.0;//Gt;
 #ifndef MD_GLOBALNRNL
  /* and now evaluate fvec */
  for (k1 = 0; k1 < 3; k1++)
     {
-      fvec[k1] = fx[k1] - Sqr(x[3])*gx[k1];
+      fvec[k1] = fx[k1] - Sqr(x[3])*gradplane[k1];
     }
  fvec[3] = 0.0;
  fvec[4] = 0.0;
  for (k1 = 0; k1 < 3; k1++)
    {
       fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      fvec[4] += (x[k1]-rB[k1])*gx[k1];
+      fvec[4] += (x[k1]-rB[k1])*gradplane[k1];
    }
  fvec[3] = 0.5*fvec[3]-1.0;
- fvec[4] = 0.5*fvec[4]-1.0;
+ //fvec[4] = 0.5*fvec[4]-1.0;
  MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 #endif
 }
-
 /* funzione che calcola lo Jacobiano */
 /* N.B. In tale caso l'ellissoide B è semplicemente l'ellissoide A riscalato di un opportuno 
  * fattore */
@@ -317,15 +317,15 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   df[3][3] = 0.0;
   df[4][3] = 0.0;
   calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
-  calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
+  //calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
   for (k1 = 0; k1 < 3; k1++)
     {
       //df[k1][4] = 0;
       //for (k2 = 0; k2 < 3; k2++)
-      df[k1][4] = Fxt[k1]-Sqr(x[3])*Gxt[k1]; 
+      df[k1][4] = Fxt[k1];//-Sqr(x[3])*Gxt[k1]; 
     } 
  df[3][4] = Ft;
- df[4][4] = Gt;
+ df[4][4] = 0.0;//Gt;
 #ifndef MD_GLOBALNRNL
  /* and now evaluate fvec */
  for (k1 = 0; k1 < 3; k1++)
@@ -368,6 +368,7 @@ void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
   /* il secondo ellissoide resta fermo al tempo iniziale */
   MD_DEBUG(printf("x[4]:%.15f atomTime[%d]:%.15f\n",x[4], j, atomTime[j]));
   /* il secondo ellissoide non deve evolvere nel tempo */
+#if 0
   rB[0] = nebrTab[i].r[0];
   rB[1] = nebrTab[i].r[1];
   rB[2] = nebrTab[i].r[2];
@@ -375,7 +376,7 @@ void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
   invbSqN = 1.0/Sqr(nebrTab[i].axb);
   invcSqN = 1.0/Sqr(nebrTab[i].axc);
   tRDiagR(i, Xb, invaSqN, invbSqN, invcSqN, nebrTab[i].R);
-  
+#endif
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
@@ -384,6 +385,7 @@ void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
       MD_DEBUG(printf("[FUNC2BEZ]x[%d]:%.15f rA[%d]:%f fx:%.15f\n", k1, x[k1], k1, rA[k1],fx[k1]));
       
    }
+#if 0
   for (k1 = 0; k1 < 3; k1++)
     {
       gx[k1] = 0;
@@ -391,7 +393,7 @@ void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
 	gx[k1] += 2.0*Xb[k1][k2]*(x[k2] - rB[k2]);
       MD_DEBUG(printf("[FUNC2BEZ]x[%d]:%.15f rB[%d]:%f gx:%.15f\n", k1, x[k1], k1, rB[k1],gx[k1]));
     }
-
+#endif
   MD_DEBUG(print_matrix(Xb,3));
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -400,7 +402,7 @@ void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
       for (k2 = 0; k2 < 3; k2++)
 	fvec[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]) + 2.0*Sqr(x[3])*Xb[k1][k2]*(x[k2] - rB[k2]);
 #endif
-      fvec[k1] = fx[k1] - Sqr(x[3])*gx[k1];
+      fvec[k1] = fx[k1] - Sqr(x[3])*gradplane[k1];
     }
 #if 0
   fvec[3] = -1.0;
@@ -423,11 +425,11 @@ void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
 #endif
 #if 1
       fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      fvec[4] += (x[k1]-rB[k1])*gx[k1];
+      fvec[4] += (x[k1]-rB[k1])*gradplane[k1];
 #endif
     }
   fvec[3] = 0.5*fvec[3]-1.0;
-  fvec[4] = 0.5*fvec[4]-1.0;
+  //fvec[4] = 0.5*fvec[4]-1.0;
   MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 }
 void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
@@ -516,7 +518,9 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
 }
 #endif
 #ifdef MD_NNL
-void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df, 
+#ifdef MD_NNLPLANES
+extern double gradplane[3];
+void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA)
 {
   double fx[3], gx[3];
@@ -526,18 +530,18 @@ void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df,
       for (k2 = 0; k2 < 3; k2++)
        	{
 	  df[k1][k2] = 2.0*Xa[k1][k2];
-	  df[k1][k2+3] = -2.0*Sqr(x[6])*Xb[k1][k2];
+	  df[k1][k2+3] = 0;
 	}
     }
   /* calc fx e gx */
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
-      gx[k1] = 0;
+      //gx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	{
 	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
-	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
+	  //gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
 	}
     } 
 
@@ -555,13 +559,13 @@ void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df,
     }
   for (k1 = 0; k1 < 3; k1++)
     {
-      df[4][k1+3] = gx[k1];
+      df[4][k1+3] = gradplane[k1];
     } 
   df[4][6] = df[4][7] = 0;
 
   for (k1 = 0; k1 < 3; k1++)
     {
-      df[k1][6] = -2.0*x[6]*gx[k1];
+      df[k1][6] = -2.0*x[6]*gradplane[k1];
       df[k1][7] = 0.0;
     } 
 
@@ -593,24 +597,25 @@ void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df,
  /* and now evaluate fvec */
  for (k1 = 0; k1 < 3; k1++)
     {
-      fvec[k1] = fx[k1] - Sqr(x[6])*gx[k1];
+      fvec[k1] = fx[k1] - Sqr(x[6])*gradplane[k1];
     }
  fvec[3] = 0.0;
  fvec[4] = 0.0;
  for (k1 = 0; k1 < 3; k1++)
    {
       fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
    }
  fvec[3] = 0.5*fvec[3]-1.0;
- fvec[4] = 0.5*fvec[4]-1.0;
-  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+ //fvec[4] = 0.5*fvec[4]-1.0;
+ /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
    * essere anche negativa! */
   for (k1=0; k1 < 3; k1++)
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
   //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
 }
+#else
 void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA)
 {
@@ -707,8 +712,10 @@ void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df,
 #endif
 }
 #endif
+#endif
 #ifdef MD_NNL
-void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[], int i)
+#ifdef MD_NNLPLANES
+void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
 {
   int k1, k2; 
   double fx[3], gx[3];
@@ -727,26 +734,27 @@ void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[], int i)
       for (k2 = 0; k2 < 3; k2++)
 	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
     }
+#if 0
   for (k1 = 0; k1 < 3; k1++)
     {
       gx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3] - rB[k2]);
     }
-
+#endif
    for (k1 = 0; k1 < 3; k1++)
     {
-      fvec[k1] = fx[k1] - Sqr(x[6])*gx[k1];
+      fvec[k1] = fx[k1] - Sqr(x[6])*gradplane[k1];
     }
   fvec[3] = 0.0;
   fvec[4] = 0.0;
   for (k1 = 0; k1 < 3; k1++)
     {
       fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
     }
   fvec[3] = 0.5*fvec[3]-1.0;
-  fvec[4] = 0.5*fvec[4]-1.0;
+  //fvec[4] = 0.5*fvec[4]-1.0;
 
   /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
    * essere anche negativa! */
@@ -758,6 +766,7 @@ void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[], int i)
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
+#else
 void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
 {
   int k1, k2; 
@@ -783,8 +792,7 @@ void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
       for (k2 = 0; k2 < 3; k2++)
 	gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3] - rB[k2]);
     }
-
-   for (k1 = 0; k1 < 3; k1++)
+  for (k1 = 0; k1 < 3; k1++)
     {
       fvec[k1] = fx[k1] - Sqr(x[6])*gx[k1];
     }
@@ -808,6 +816,7 @@ void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
+#endif
 #endif
 #ifdef MD_NNL
 void calc_intersec_neigh_plane(double *rB, double *rA, double **Xa, double* rI, double alpha)
@@ -1022,6 +1031,7 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
       /* NOTA: controllare che non si debbano scambiare kk e nplane/2 */ 
       gradg[kk] = gradplane[kk] = nebrTab[kk].R[kk][nplane/2];
     }
+  
   if (OprogStatus.guessDistOpt==1)
     {
       guess_distNeigh_plane(i, rA, rB, Xa, Xb, rC, rD, RtA, nebrTab[i].R);
@@ -1844,9 +1854,11 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
   return 0;
 
 }
-int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], double  vecg[5])
+int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], double  vecg[5],
+			       int nplane)
 {
   int kk, retcheck;
+  double segno;
 
   for (kk = 0; kk < 3; kk++)
     vecg[kk] = (vecgd[kk]+vecgd[kk+3])*0.5; 
@@ -1854,7 +1866,34 @@ int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], doub
   vecg[3] = vecgd[6];
   vecg[4] = t-t1;
   trefG = t1;
-  newtNeigh(vecg, 5, &retcheck, funcs2beZeroedNeigh, i); 
+  for (kk=0; kk < 3; kk++)
+    {
+      /* NOTA: controllare che non si debbano scambiare kk e nplane/2 */ 
+      gradplane[kk] = nebrTab[i].R[kk][nplane/2];
+    }
+  switch (nplane/2)
+    {
+    case 0:
+      del = nebrTab[i].axa;	
+      break;
+    case 1:
+      del = nebrTab[i].axb;	
+      break;
+    case 2:
+      del = nebrTab[i].axc;	
+      break;
+    }
+      
+  for (kk=0; kk < 3; kk++)
+    {
+      if (nplane < 3)
+	segno = 1;
+      else
+	segno = -1;
+      gradplane[kk] *= segno;
+      rB[kk] = nebrTab[i].r[kk] + del*gradplane[kk]; 
+    }
+  newtNeigh(vecg, 5, &retcheck, funcs2beZeroedNeighPlane, i); 
   vecg[4] += t1;
   if (retcheck==2)
     {
