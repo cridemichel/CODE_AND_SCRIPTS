@@ -3452,11 +3452,19 @@ void newtNeigh(double x[], int n, int *check,
   for (sum=0.0,i=0;i<n;i++) 
     sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
   stpmax=STPMX*FMAX(sqrt(sum),(double)n);
+#ifdef MD_NNLPLANES
+  funcs2beZeroedNeighPlane(n,x,fvec,iA);
+#else
   funcs2beZeroedNeigh(n,x,fvec,iA);
+#endif
   for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
        //funcs2beZeroed(n,x,fvec,iA,iB,shift);
+#ifdef MD_NNLPLANES
+       fdjacNeighPlane(n,x,fvec,fjac,vecfunc, iA); 
+#else
        fdjacNeigh(n,x,fvec,fjac,vecfunc, iA); 
+#endif
        /* If analytic Jacobian is available, you can 
 	  replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNRNL
