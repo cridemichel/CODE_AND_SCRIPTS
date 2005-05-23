@@ -59,6 +59,8 @@ extern void calcFxtFt(double x[3], double **X,
 	       double Fxt[3], double *Ft);
 extern double calc_norm(double *vec);
 extern void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3]);
+extern void funcs2beZeroedDistNeg5(int n, double x[], double fvec[], int i, int j, double shift[3]);
+
 extern void calc_intersec_neigh(double *rB, double *rA, double **Xa, double* rI, double alpha);
 extern double scalProd(double *A, double *B);
 extern double distfunc(double x);
@@ -103,7 +105,7 @@ extern void newtDistNegNeighPlane(double x[], int n, int *check,
 void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {
   int kk;
-  double del, segno;
+  double del=0.0, segno;
   for (kk=0; kk < 3; kk++)
     {
       /* NOTA: controllare che non si debbano scambiare kk e nplane/2 */ 
@@ -132,7 +134,7 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       /* rB[] (i.e. nebrTab[i].R[]) è un punto appartenente al piano */
       point[kk] = nebrTab[i].r[kk] + del*grad[kk]; 
     }
-
+}
 void rebuildNNL(void)
 {
   int i;
@@ -1055,12 +1057,11 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
 
 {
   /* NOTA: nplane = {0...7} e indica il piano rispetto al quale dobbiamo calcolare la distanza */
-  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], invaSqN, invbSqN, invcSqN;
-  double shift[3] = {0.0, 0.0, 0.0};
-  double ti, segno, del=0.0;
-  int retcheck, firstDist = 0;
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], invaSqN, invbSqN, invcSqN;
+  double ti, segno;
+  int retcheck;
   double Omega[3][3], nf, ng, gradf[3];
-  int k1, na, k2, npl, kk;
+  int k1;
   MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i],i));
   MD_DEBUG20(printf("v = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
   *err = 0;
@@ -1622,7 +1623,7 @@ double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3],
 
      		double *vecgsup, int calcguess)
 {
-  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6];
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], fx[3];
   double ti, segno;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck;
@@ -2128,7 +2129,6 @@ int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], doub
 			       int nplane)
 {
   int kk, retcheck;
-  double segno, del=0;
 
   for (kk = 0; kk < 3; kk++)
     vecg[kk] = (vecgd[kk]+vecgd[kk+3])*0.5; 
@@ -2189,7 +2189,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
    * con lo stesso centro e immobile */
   t = 0.0;//Oparams.time;
   calc_grad_and_point_plane(i, gradplane, rB, nplane);
-  if (!bracket_neigh(&t1, &t2))
+  if (!bracket_neigh(i, &t1, &t2, nplane))
     {
       return 0;
     }
@@ -2202,7 +2202,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
   h = OprogStatus.h; /* last resort time increment */
   t += h;
-  if (search_contact_faster_neigh(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
+  if (search_contact_faster_neigh_plane(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2, nplane))
     return 0;  
   MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
@@ -2249,7 +2249,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 #if 1
       if (d > epsdFastR)
 	{
-	  if (search_contact_faster_neigh_plane(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
+	  if (search_contact_faster_neigh_plane(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2, nplane))
 	    {
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
@@ -2270,7 +2270,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
        	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
 #ifndef MD_NOINTERPOL  
-	 if (interpolNeigh(i, t1, t-delt, delt, dold, d, &troot, vecgroot, 0))
+	 if (interpolNeighPlane(i, t1, t-delt, delt, dold, d, &troot, vecgroot, 0, nplane))
 #endif
 	    {
 	      /* vecgd2 è vecgd al tempo t-delt */
@@ -2286,7 +2286,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
 	  
-	  if (interpolNeighPlane(i, t1, t-delt, delt, dold, d, &troot, vecgroot, 1))
+	  if (interpolNeighPlane(i, t1, t-delt, delt, dold, d, &troot, vecgroot, 1, nplane))
 	    dorefine = 0;
 	  else 
 	    dorefine = 1;
@@ -2295,7 +2295,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       if (dorefine)
 	{
 	  printf("REFINING CONTACT t=%.15G\n", t);
-	  if (refine_contact_neigh_plane(i, t1, troot, vecgroot, vecg))
+	  if (refine_contact_neigh_plane(i, t1, troot, vecgroot, vecg, nplane))
 	    {
 	      MD_DEBUG20(printf("[locate_contact] Adding collision between %d\n", i));
 	      MD_DEBUG20(printf("collision will occur at time %.15G\n", vecg[4])); 
@@ -2788,6 +2788,8 @@ void updrebuildNNL(int na)
   /* qui ricalcola solo il tempo di collisione dell'ellisoide na-esimo con 
    * la sua neighbour list */
   double vecg[5];
+  double tsup;
+  int ip;
 #ifdef MD_NNLPLANES
   tsup = timbig;
   for (ip = 0; ip < 6; ip++)
@@ -2832,7 +2834,7 @@ void updAllNNL()
 }
 void nextNNLupdate(int na)
 {
-  int i1, i2;
+  int i1, i2, ip;
   double DelDist, tsup;
   const double distBuf = 0.1;
   double Omega[3][3], vecg[5];
@@ -2906,7 +2908,7 @@ void BuildNNL(int na)
 {
   double shift[NDIM];
   int kk;
-  double vecg[8], r1[3], r2[3], dist, alpha;
+  double r1[3], r2[3], dist;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cels[NDIM];*/
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
@@ -2970,7 +2972,7 @@ void BuildNNL(int na)
 		    {
       		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 #ifdef MD_NNLPLANES
-		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1); 
+		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift); 
 #else
 		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift); 
 #endif
