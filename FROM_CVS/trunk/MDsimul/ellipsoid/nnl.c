@@ -29,10 +29,8 @@ extern int *scdone;
 extern double *maxax;
 extern double xa[3], ya[3];
 extern int polinterr, polinterrRyck;
-#ifdef MD_NNL
 extern double *lastupdNNL, *totDistDispl;
 double gradplane[3];
-#endif
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
@@ -45,16 +43,12 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
 void InitEventList (void);
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
-#ifdef MD_NNL
 extern struct nebrTabStruct *nebrTab;
 double nextNNLrebuild;
-#endif
 extern void UpdateSystem(void);
 extern void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3]);
-#ifdef MD_NNL
 extern void nextNNLupdate(int na);
 extern void BuildNNL(int na);
-#endif
 extern long long int itsF, timesF, itsS, timesS, numcoll;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
@@ -106,8 +100,39 @@ extern void newtNeigh(double x[], int n, int *check,
 extern void newtDistNegNeighPlane(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA);
+void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
+{
+  int kk;
+  double del, segno;
+  for (kk=0; kk < 3; kk++)
+    {
+      /* NOTA: controllare che non si debbano scambiare kk e nplane/2 */ 
+      grad[kk] = nebrTab[kk].R[nplane/2][kk];
+    }
+  switch (nplane/2)
+    {
+    case 0:
+      del = nebrTab[i].axa;	
+      break;
+    case 1:
+      del = nebrTab[i].axb;	
+      break;
+    case 2:
+      del = nebrTab[i].axc;	
+      break;
+    }
+      
+  for (kk=0; kk < 3; kk++)
+    {
+      if (nplane < 3)
+	segno = 1;
+      else
+	segno = -1;
+      grad[kk] *= segno;
+      /* rB[] (i.e. nebrTab[i].R[]) è un punto appartenente al piano */
+      point[kk] = nebrTab[i].r[kk] + del*grad[kk]; 
+    }
 
-#ifdef MD_NNL
 void rebuildNNL(void)
 {
   int i;
@@ -129,8 +154,6 @@ void rebuildNNL(void)
   printf("nextNNLrebuild=%.15G\n", nextNNLrebuild);
   //ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 }
-#endif
-#ifdef MD_NNL
 void fdjacNeighPlane(int n, double x[], double fvec[], double **df, 
 		     void (*vecfunc)(int, double [], double []), int iA)
 {
@@ -405,8 +428,6 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
  MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 #endif
 }
-#endif
-#ifdef MD_NNL
 void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
 {
   int na, k1, k2; 
@@ -577,11 +598,8 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   fvec[4] = 0.5*fvec[4]-1.0;
   MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 }
-#endif
-#ifdef MD_NNL
-#ifdef MD_NNLPLANES
 extern double gradplane[3];
-void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df, 
+void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA)
 {
   double fx[3], gx[3];
@@ -676,7 +694,6 @@ void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df,
   //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
 }
-#else
 void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA)
 {
@@ -772,11 +789,7 @@ void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df,
   //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
 }
-#endif
-#endif
-#ifdef MD_NNL
-#ifdef MD_NNLPLANES
-void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
+void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[], int i)
 {
   int k1, k2; 
   double fx[3], gx[3];
@@ -827,7 +840,6 @@ void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
-#else
 void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
 {
   int k1, k2; 
@@ -877,9 +889,6 @@ void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
-#endif
-#endif
-#ifdef MD_NNL
 void calc_intersec_neigh_plane(double *rB, double *rA, double **Xa, double *grad, double* rC, double* rD)
 {
   double A, B=0.0, C=0.0, D=0.0, tt=0.0;
@@ -1042,17 +1051,15 @@ void guess_distNeigh(int i,
   calc_intersec_neigh(dA, rA, Xa, rC, -1);
   calc_intersec_neigh(dB, rB, Xb, rD, 1);
 }
-#endif
-#ifdef MD_NNL
-double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int ignorefail, int *err, int nplane)
+double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane)
 
 {
   /* NOTA: nplane = {0...7} e indica il piano rispetto al quale dobbiamo calcolare la distanza */
   double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], invaSqN, invbSqN, invcSqN;
   double shift[3] = {0.0, 0.0, 0.0};
-  double ti, segno;
+  double ti, segno, del=0.0;
   int retcheck, firstDist = 0;
-  double Omega[3][3], nf, ng, gradf[3], gradg[3];
+  double Omega[3][3], nf, ng, gradf[3];
   int k1, na, k2, npl, kk;
   MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i],i));
   MD_DEBUG20(printf("v = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
@@ -1076,35 +1083,9 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   MD_DEBUG20(printf("BBBB ti= %.15G rB (%.15G,%.15G,%.15G)\n", ti, rB[0], rB[1], rB[2]));
   /* NOTA: dato l'ellissoide e la sua neighbour list a t=0 bisognerebbe stimare con esattezza 
    * la loro distanza e restituirla di seguito */
-  for (kk=0; kk < 3; kk++)
-    {
-      /* NOTA: controllare che non si debbano scambiare kk e nplane/2 */ 
-      gradg[kk] = gradplane[kk] = nebrTab[kk].R[nplane/2][kk];
-    }
-  switch (nplane/2)
-    {
-    case 0:
-      del = nebrTab[i].axa;	
-      break;
-    case 1:
-      del = nebrTab[i].axb;	
-      break;
-    case 2:
-      del = nebrTab[i].axc;	
-      break;
-    }
-      
-  for (kk=0; kk < 3; kk++)
-    {
-      if (nplane < 3)
-	segno = 1;
-      else
-	segno = -1;
-      gradplane[kk] *= segno;
-      /* rB[] (i.e. nebrTab[i].R[]) è un punto appartenente al piano */
-      rB[kk] = nebrTab[i].r[kk] + del*gradplane[kk]; 
-    }
-
+  if (calcgradandpoint)
+    calc_grad_and_point_plane(i, gradplane, rB, nplane);
+  
   if (OprogStatus.guessDistOpt==1)
     {
       guess_distNeigh_plane(i, rA, rB, Xa, Xb, rC, rD, RtA, nebrTab[i].R);
@@ -1134,11 +1115,10 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
   calc_grad(rC, rA, Xa, gradf);
-  //calc_grad(rD, rB, Xb, gradg);
-  MD_DEBUG(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
-		  gradf[0], gradf[1], gradf[2], gradg[0], gradg[1], gradg[2]));
+  MD_DEBUG(printf("gradf=(%f,%f,%f) gradplane=(%f,%f,%f)\n",
+		  gradf[0], gradf[1], gradf[2], gradplane[0], gradplane[1], gradplane[2]));
   nf = calc_norm(gradf);
-  ng = calc_norm(gradg);
+  ng = calc_norm(gradplane);
   vecg[6] = sqrt(nf/ng);
   for (k1=0; k1 < 3; k1++)
     {
@@ -1463,14 +1443,11 @@ retryneigh:
       return -calc_norm(r12);
     }
 }
-#endif
-#ifdef MD_NNL
-#ifdef MD_NNLPLANES
-double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3])
+double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3])
 {
   double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
   double AA[3][3], BB[3][3], EA[3], EB[3];
-  int k1, k2, existsParallPair = 0;
+  int k1, k2, existsParallelPair = 0;
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
   rA[0] = rx[i];
@@ -1503,7 +1480,7 @@ double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3])
       cij[0][k1] =  scalProd(AA[0], BB[k1]);
       fabscij[0][k1] = fabs(cij[0][k1]);
       if ( fabscij[0][i] == 1.0 )
-	existsParallPair = 1;
+	existsParallelPair = 1;
     }
   AD[0] = scalProd(AA[0],DD);
   RR = fabs(AD[0]);
@@ -1521,7 +1498,7 @@ double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3])
     }
   AD[1] = scalProd(AA[1],DD);
   RR = fabs(AD[1]);
-  R1 = EB[0]*fabscij[1][0]+EB[1]*fabscij[1][1]+EB[2]*fabcij[1][2];
+  R1 = EB[0]*fabscij[1][0]+EB[1]*fabscij[1][1]+EB[2]*fabscij[1][2];
   R01 = EA[1] + R1;
   if ( RR > R01 )
     return 1.0;
@@ -1540,28 +1517,28 @@ double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3])
   if ( RR > R01 )
     return 1.0;
   /* axis C0+s*B0 */
-  RR = fabs(BB[0],DD);
+  RR = fabs(scalProd(BB[0],DD));
   R0 = EA[0]*fabscij[0][0]+EA[1]*fabscij[1][0]+EA[2]*fabscij[2][0];
   R01 = R0 + EB[0];
   if ( RR > R01 )
     return 1.0;
 
   /* axis C0+s*B1 */
-  RR = fabs(BB[1],DD);
+  RR = fabs(scalProd(BB[1],DD));
   R0 = EA[0]*fabscij[0][1]+EA[1]*fabscij[1][1]+EA[2]*fabscij[2][1];
   R01 = R0 + EB[1];
   if ( RR > R01 )
     return 1.0;
   
   /* axis C0+s*B2 */
-  RR = fabs(BB[2],DD);
+  RR = fabs(scalProd(BB[2],DD));
   R0 = EA[0]*fabscij[0][2]+EA[1]*fabscij[1][2]+EA[2]*fabscij[2][2];
   R01 = R0 + EB[2];
   if ( RR > R01 )
     return 1.0;
 
-  /* At least one pair of box axes was parallel, so the separation is
-   * effectively in 2D where checking the "edge" normals is sufficient for
+  /* At least one pair of box axes was parallel, therefore the separation is
+   * effectively in 2D, i.e. checking the "edge" normals is sufficient for
    * the separation of the boxes. 
    */
   if ( existsParallelPair )
@@ -1571,79 +1548,76 @@ double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3])
   RR = fabs(AD[2]*cij[1][0]-AD[1]*cij[2][0]);
   R0 = EA[1]*fabscij[2][0] + EA[2]*fabscij[1][0];
   R1 = EB[1]*fabscij[0][2] + EB[2]*fabscij[0][1];
-  R01 = fR0 + fR1;
-  if ( fR > fR01 )
-    return false;
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
 
-  // axis C0+t*A0xB1
-  fR = Math<Real>::FAbs(afAD[2]*aafC[1][1]-afAD[1]*aafC[2][1]);
-  fR0 = afEA[1]*aafAbsC[2][1] + afEA[2]*aafAbsC[1][1];
-  fR1 = afEB[0]*aafAbsC[0][2] + afEB[2]*aafAbsC[0][0];
-  fR01 = fR0 + fR1;
-  if ( fR > fR01 )
-    return false;
+  /* axis C0+s*A0xB1 */
+  RR = fabs(AD[2]*cij[1][1]-AD[1]*cij[2][1]);
+  R0 = EA[1]*fabscij[2][1] + EA[2]*fabscij[1][1];
+  R1 = EB[0]*fabscij[0][2] + EB[2]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
 
-  // axis C0+t*A0xB2
-  fR = Math<Real>::FAbs(afAD[2]*aafC[1][2]-afAD[1]*aafC[2][2]);
-  fR0 = afEA[1]*aafAbsC[2][2] + afEA[2]*aafAbsC[1][2];
-  fR1 = afEB[0]*aafAbsC[0][1] + afEB[1]*aafAbsC[0][0];
-  fR01 = fR0 + fR1;
-  if ( fR > fR01 )
-    return false;
+  /* axis C0+s*A0xB2 */
+  RR = fabs(AD[2]*cij[1][2]-AD[1]*cij[2][2]);
+  R0 = EA[1]*fabscij[2][2] + EA[2]*fabscij[1][2];
+  R1 = EB[0]*fabscij[0][1] + EB[1]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
 
-  // axis C0+t*A1xB0
-  fR = Math<Real>::FAbs(afAD[0]*aafC[2][0]-afAD[2]*aafC[0][0]);
-  fR0 = afEA[0]*aafAbsC[2][0] + afEA[2]*aafAbsC[0][0];
-  fR1 = afEB[1]*aafAbsC[1][2] + afEB[2]*aafAbsC[1][1];
-  fR01 = fR0 + fR1;
-  if ( fR > fR01 )
-    return false;
+  /* axis C0+s*A1xB0 */
+  RR = fabs(AD[0]*cij[2][0]-AD[2]*cij[0][0]);
+  R0 = EA[0]*fabscij[2][0] + EA[2]*fabscij[0][0];
+  R1 = EB[1]*fabscij[1][2] + EB[2]*fabscij[1][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
 
-  // axis C0+t*A1xB1
-  fR = Math<Real>::FAbs(afAD[0]*aafC[2][1]-afAD[2]*aafC[0][1]);
-  fR0 = afEA[0]*aafAbsC[2][1] + afEA[2]*aafAbsC[0][1];
-  fR1 = afEB[0]*aafAbsC[1][2] + afEB[2]*aafAbsC[1][0];
-  fR01 = fR0 + fR1;
-  if ( fR > fR01 )
-    return false;
+  /* axis C0+s*A1xB1 */
+  RR = fabs(AD[0]*cij[2][1]-AD[2]*cij[0][1]);
+  R0 = EA[0]*fabscij[2][1] + EA[2]*fabscij[0][1];
+  R1 = EB[0]*fabscij[1][2] + EB[2]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
 
-  // axis C0+t*A1xB2
-  fR = Math<Real>::FAbs(afAD[0]*aafC[2][2]-afAD[2]*aafC[0][2]);
-  fR0 = afEA[0]*aafAbsC[2][2] + afEA[2]*aafAbsC[0][2];
-  fR1 = afEB[0]*aafAbsC[1][1] + afEB[1]*aafAbsC[1][0];
-  fR01 = fR0 + fR1;
-  if ( fR > fR01 )
-    return false;
+  /* axis C0+s*A1xB2 */
+  RR = fabs(AD[0]*cij[2][2]-AD[2]*cij[0][2]);
+  R0 = EA[0]*fabscij[2][2] + EA[2]*fabscij[0][2];
+  R1 = EB[0]*fabscij[1][1] + EB[1]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
 
-  // axis C0+t*A2xB0
-  fR = Math<Real>::FAbs(afAD[1]*aafC[0][0]-afAD[0]*aafC[1][0]);
-  fR0 = afEA[0]*aafAbsC[1][0] + afEA[1]*aafAbsC[0][0];
-  fR1 = afEB[1]*aafAbsC[2][2] + afEB[2]*aafAbsC[2][1];
-  fR01 = fR0 + fR1;
-  if ( fR > fR01 )
-    return false;
+  /* axis C0+s*A2xB0 */
+  RR = fabs(AD[1]*cij[0][0]-AD[0]*cij[1][0]);
+  R0 = EA[0]*fabscij[1][0] + EA[1]*fabscij[0][0];
+  R1 = EB[1]*fabscij[2][2] + EB[2]*fabscij[2][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
 
-  // axis C0+t*A2xB1
-  fR = Math<Real>::FAbs(afAD[1]*aafC[0][1]-afAD[0]*aafC[1][1]);
-  fR0 = afEA[0]*aafAbsC[1][1] + afEA[1]*aafAbsC[0][1];
-  fR1 = afEB[0]*aafAbsC[2][2] + afEB[2]*aafAbsC[2][0];
-  fR01 = fR0 + fR1;
-  if ( fR > fR01 )
-    return false;
+  /* axis C0+s*A2xB1 */
+  RR = fabs(AD[1]*cij[0][1]-AD[0]*cij[1][1]);
+  R0 = EA[0]*fabscij[1][1] + EA[1]*fabscij[0][1];
+  R1 = EB[0]*fabscij[2][2] + EB[2]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
 
-  // axis C0+t*A2xB2
-  fR = Math<Real>::FAbs(afAD[1]*aafC[0][2]-afAD[0]*aafC[1][2]);
-  fR0 = afEA[0]*aafAbsC[1][2] + afEA[1]*aafAbsC[0][2];
-  fR1 = afEB[0]*aafAbsC[2][1] + afEB[1]*aafAbsC[2][0];
-  fR01 = fR0 + fR1;
-  if ( fR > fR01 )
-    return false;
+  /* axis C0+s*A2xB2 */
+  RR = fabs(AD[1]*cij[0][2]-AD[0]*cij[1][2]);
+  R0 = EA[0]*fabscij[1][2] + EA[1]*fabscij[0][2];
+  R1 = EB[0]*fabscij[2][1] + EB[1]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
 
   return -1.0;
-
-
 }
-#else
 double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
 
      		double *vecgsup, int calcguess)
@@ -1932,9 +1906,6 @@ retryoverlap:
   else
     return -calc_norm(r12);
 }
-#endif
-#endif
-#ifdef MD_NNL
 int interpolNeighPlane(int i, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, int bracketing, int nplane)
 {
   int nb, distfail;
@@ -1986,7 +1957,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
       printf("distfunc(t+delt*0.5)=%.10G\n", distfunc(t+delt*0.5));
       return 1;
     }
-  calcDistNegNeigh(*troot, tref, i, r1, r2, vecg, 0, 0, &distfail);
+  calcDistNegNeighPlane(*troot, tref, i, r1, r2, vecg, 0, 0, &distfail, nplane);
   *troot += tref;
   return 0;
 }
@@ -2045,8 +2016,6 @@ int interpolNeigh(int i, double tref, double t, double delt, double d1, double d
   *troot += tref;
   return 0;
 }
-#endif
-#ifdef MD_NNL
 double calcvecFNeigh(int i, double t, double t1, double* ddot, double *r1)
 {
   int kk;
@@ -2066,7 +2035,7 @@ double calcvecFNeigh(int i, double t, double t1, double* ddot, double *r1)
 
 int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2, 
 				double *vecgd, double epsd, double *d1, double epsdFast,
-				double *r1, double *r2)
+				double *r1, double *r2, int nplane)
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
@@ -2080,7 +2049,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
-  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed);
+  *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed, nplane);
   timesF++;
   MD_DEBUG20(printf("Pri distances between %d d1=%.12G epsd*epsdTimes:%f\n", i, *d1, epsdFast));
   printf("[SEARCH_CONTACT_FASTER] t=%.15G ellips N. %d d=%.15G\n", *t, i, *d1); 
@@ -2105,11 +2074,11 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
 	  *t = told;
 	  MD_DEBUG20(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG20(printf("convergence t>t2\n"));
-	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed);
+	  *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed, nplane);
 	  return 1;
 	}
 #endif
-      *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed);
+      *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed, nplane);
       printf("LOOP SEARCH CONTACT FASTER i=%d *d1=%.15G *t=%.15G\n", i, *d1, *t+t1);
       /* NOTA: nel caso di urto di un ellissoide con la sua neighbour list 
        * a t=0 i due ellissoidi hanno stesso centro e assi principali paralleli
@@ -2125,7 +2094,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
 	  /* reduce step size */
 	  delt /= GOLD;
 	  *t = told + delt;
-	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed);
+	  *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed, nplane);
 	  printf("itsf=%d BUBU SEARCH_CONTACT_FASTER_NEIGH *d1=%.15G\n",itsf,*d1);
 	  itsf++;	
 	  if (itsf > 100)
@@ -2142,7 +2111,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
 	  MD_DEBUG20(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG20(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
-	  *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed);
+	  *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed, nplane);
 	  return 0;
 	}
 #endif
@@ -2167,34 +2136,6 @@ int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], doub
   vecg[3] = vecgd[6];
   vecg[4] = t-t1;
   trefG = t1;
-  for (kk=0; kk < 3; kk++)
-    {
-      /* NOTA: controllare che non si debbano scambiare kk e nplane/2 */ 
-      gradplane[kk] = nebrTab[i].R[nplane/2][kk];
-    }
-  
-  switch (nplane/2)
-    {
-    case 0:
-      del = nebrTab[i].axa;	
-      break;
-    case 1:
-      del = nebrTab[i].axb;	
-      break;
-    case 2:
-      del = nebrTab[i].axc;	
-      break;
-    }
-      
-  for (kk=0; kk < 3; kk++)
-    {
-      if (nplane < 3)
-	segno = 1;
-      else
-	segno = -1;
-      gradplane[kk] *= segno;
-      rB[kk] = nebrTab[i].r[kk] + del*gradplane[kk]; 
-    }
   newtNeigh(vecg, 5, &retcheck, funcs2beZeroedNeighPlane, i); 
   vecg[4] += t1;
   if (retcheck==2)
@@ -2207,7 +2148,31 @@ int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], doub
       return 1; 
     }
 }
-int locate_contact_neigh_plane(int i, double vecg[5])
+int bracket_neigh(int i, double *t1, double *t2, int nplane)
+{
+  double dd, veln, vel[3], r1[3], dr[3];
+  int kk;
+  vel[0] = vx[i];
+  vel[1] = vy[i];
+  vel[2] = vz[i];
+  veln = scalProd(vel, gradplane);
+  
+  r1[0] = rx[i];
+  r1[1] = ry[i];
+  r1[2] = rz[i];
+  for (kk=0; kk < 3; kk++)
+    dr[kk] = r1[kk] - rB[kk]; 
+  dd = fabs(scalProd(dr, gradplane));
+  if (veln < 0 && dd > maxax[i])
+    return 0;
+  if (dd > maxax[i])
+    *t1 = (dd - maxax[i]) / veln;
+  else
+    *t1 = Oparams.time;
+  *t2 = (dd + maxax[i]) / veln;
+  return 1;
+}
+int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 {
   double h, d, dold, dold2, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double normddot, ddot[3], t1, t2, maxddot, delt, troot, vecgroot[8];
@@ -2223,8 +2188,14 @@ int locate_contact_neigh_plane(int i, double vecg[5])
    * in tali funzioni la particella j non è altro che un ellissoide più grande di i
    * con lo stesso centro e immobile */
   t = 0.0;//Oparams.time;
-  t1 = Oparams.time;	
-  t2 = timbig;
+  calc_grad_and_point_plane(i, gradplane, rB, nplane);
+  if (!bracket_neigh(&t1, &t2))
+    {
+      return 0;
+    }
+  //t1 = Oparams.time;	
+  if (tsup < t2)
+    t2 = tsup;
   
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
@@ -2254,7 +2225,7 @@ int locate_contact_neigh_plane(int i, double vecg[5])
 	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;
       printf("[LOCATE_CONTACT] >>>>>>>>>>>><<<<<<<<<<\n"); 
-      d = calcDistNegNeigh(t, t1, i, r1, r2, vecgd, 0, 0, &distfail);
+      d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
       printf("[LOCATE_CONTACT] t=%.15G ellips N. %d d=%.15G dold=%.15G its=%lld\n", t, i, d, dold, itsS); 
       if (fabs(d-dold2) > epsdMax)
 	{
@@ -2270,7 +2241,7 @@ int locate_contact_neigh_plane(int i, double vecg[5])
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
-	  d = calcDistNegNeigh(t, t1, i, r1, r2, vecgdold2, 0, 0, &distfail);
+	  d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgdold2, 0, 0, &distfail, nplane);
 	  for (kk = 0; kk < 8; kk++)
 	    vecgd[kk] = vecgdold2[kk];
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
@@ -2278,7 +2249,7 @@ int locate_contact_neigh_plane(int i, double vecg[5])
 #if 1
       if (d > epsdFastR)
 	{
-	  if (search_contact_faster_neigh(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
+	  if (search_contact_faster_neigh_plane(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
 	    {
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
@@ -2315,7 +2286,7 @@ int locate_contact_neigh_plane(int i, double vecg[5])
 	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
 	  
-	  if (interpolNeigh(i, t1, t-delt, delt, dold, d, &troot, vecgroot, 1))
+	  if (interpolNeighPlane(i, t1, t-delt, delt, dold, d, &troot, vecgroot, 1))
 	    dorefine = 0;
 	  else 
 	    dorefine = 1;
@@ -2324,7 +2295,7 @@ int locate_contact_neigh_plane(int i, double vecg[5])
       if (dorefine)
 	{
 	  printf("REFINING CONTACT t=%.15G\n", t);
-	  if (refine_contact_neigh(i, t1, troot, vecgroot, vecg))
+	  if (refine_contact_neigh_plane(i, t1, troot, vecgroot, vecg))
 	    {
 	      MD_DEBUG20(printf("[locate_contact] Adding collision between %d\n", i));
 	      MD_DEBUG20(printf("collision will occur at time %.15G\n", vecg[4])); 
@@ -2645,8 +2616,6 @@ int locate_contact_neigh(int i, double vecg[5])
   MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
   return foundrc;
 }
-#endif
-#ifdef MD_NNL
 extern double max(double a, double b);
 void PredictEventNNL(int na, int nb) 
 {
@@ -2819,10 +2788,23 @@ void updrebuildNNL(int na)
   /* qui ricalcola solo il tempo di collisione dell'ellisoide na-esimo con 
    * la sua neighbour list */
   double vecg[5];
+#ifdef MD_NNLPLANES
+  tsup = timbig;
+  for (ip = 0; ip < 6; ip++)
+    {
+      if (!locate_contact_neigh_plane(na, vecg, ip, tsup))
+	nebrTab[na].nexttime = timbig;
+      else
+	nebrTab[na].nexttime = vecg[4];
+      if (nebrTab[na].nexttime < tsup)
+	tsup = nebrTab[na].nexttime;
+    }
+#else
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
   else
     nebrTab[na].nexttime = vecg[4];
+#endif
 #if 1
     {
       double gradA[3], gradB[3], sp;
@@ -2851,10 +2833,10 @@ void updAllNNL()
 void nextNNLupdate(int na)
 {
   int i1, i2;
-  double DelDist;
+  double DelDist, tsup;
   const double distBuf = 0.1;
   double Omega[3][3], vecg[5];
-#if 1
+#if 0
   nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];
   nebrTab[na].axb = OprogStatus.rNebrShell*axb[na];
   nebrTab[na].axc = OprogStatus.rNebrShell*axc[na];
@@ -2877,13 +2859,24 @@ void nextNNLupdate(int na)
       nebrTab[na].R[i1][i2] = RtB[i1][i2];
   /* calcola il tempo a cui si deve ricostruire la NNL */
   printf("BUILDING NNL FOR i=%d\n",na);
-#if 1
+#if MD_NNLPLANES
+  tsup = timbig;
+  for (ip = 0; ip < 6; ip++)
+    {
+      if (!locate_contact_neigh_plane(na, vecg, ip, tsup))
+	nebrTab[na].nexttime = timbig;
+      else
+	nebrTab[na].nexttime = vecg[4];
+      if (nebrTab[na].nexttime < tsup)
+	tsup = nebrTab[na].nexttime;
+    }
+#else
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
   else
     nebrTab[na].nexttime = vecg[4];
 #endif
-#if 1
+#if 0
     {
       double gradA[3], gradB[3], sp;
       calc_grad(vecg, rA, Xa, gradA);
@@ -2899,7 +2892,7 @@ void nextNNLupdate(int na)
     }
 #endif
   
- #if 0
+#if 0
   factori = 0.5*maxax[na];
   maxddot = sqrt(Sqr(vx[na])+Sqr(vy[na])+Sqr(vz[na])) +
     sqrt(Sqr(wx[na])+Sqr(wy[na])+Sqr(wz[na]))*factori;
@@ -2908,8 +2901,6 @@ void nextNNLupdate(int na)
 #endif
   nebrTab[na].len=0;
   nebrTab[na].time = Oparams.time;
-  
-
 }
 void BuildNNL(int na) 
 {
@@ -2979,7 +2970,7 @@ void BuildNNL(int na)
 		    {
       		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 #ifdef MD_NNLPLANES
-		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1); 
+		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1); 
 #else
 		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift); 
 #endif
@@ -2999,4 +2990,3 @@ void BuildNNL(int na)
 	}
     }
 }
-#endif
