@@ -1073,25 +1073,38 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   tRDiagR(i, Xa, invaSqN, invbSqN, invcSqN, RtA);
   //printf("ti= %.15G rNebrShell: %f\n", ti, OprogStatus.rNebrShell);
   ti = 0.0;
-  /* rB[] (i.e. nebrTab[i].r[]) è un punto appartenente al piano */
-  rB[0] = nebrTab[i].r[0];
-  rB[1] = nebrTab[i].r[1];
-  rB[2] = nebrTab[i].r[2];
   MD_DEBUG20(printf("BBBB ti= %.15G rB (%.15G,%.15G,%.15G)\n", ti, rB[0], rB[1], rB[2]));
   /* NOTA: dato l'ellissoide e la sua neighbour list a t=0 bisognerebbe stimare con esattezza 
    * la loro distanza e restituirla di seguito */
-#if 0
-  invaSqN = 1.0/Sqr(nebrTab[i].axa);
-  invbSqN = 1.0/Sqr(nebrTab[i].axb);
-  invcSqN = 1.0/Sqr(nebrTab[i].axc);
-  tRDiagR(i, Xb, invaSqN, invbSqN, invcSqN, nebrTab[i].R);
-#endif
   for (kk=0; kk < 3; kk++)
     {
       /* NOTA: controllare che non si debbano scambiare kk e nplane/2 */ 
-      gradg[kk] = gradplane[kk] = nebrTab[kk].R[kk][nplane/2];
+      gradg[kk] = gradplane[kk] = nebrTab[kk].R[nplane/2][kk];
     }
-  
+  switch (nplane/2)
+    {
+    case 0:
+      del = nebrTab[i].axa;	
+      break;
+    case 1:
+      del = nebrTab[i].axb;	
+      break;
+    case 2:
+      del = nebrTab[i].axc;	
+      break;
+    }
+      
+  for (kk=0; kk < 3; kk++)
+    {
+      if (nplane < 3)
+	segno = 1;
+      else
+	segno = -1;
+      gradplane[kk] *= segno;
+      /* rB[] (i.e. nebrTab[i].R[]) è un punto appartenente al piano */
+      rB[kk] = nebrTab[i].r[kk] + del*gradplane[kk]; 
+    }
+
   if (OprogStatus.guessDistOpt==1)
     {
       guess_distNeigh_plane(i, rA, rB, Xa, Xb, rC, rD, RtA, nebrTab[i].R);
@@ -1453,12 +1466,182 @@ retryneigh:
 #endif
 #ifdef MD_NNL
 #ifdef MD_NNLPLANES
-double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-
-     		double *vecgsup, int calcguess)
+double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3])
 {
+  double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
+  double AA[3][3], BB[3][3], EA[3], EB[3];
+  int k1, k2, existsParallPair = 0;
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+  rB[0] = rx[j] + shift[0];
+  rB[1] = ry[j] + shift[1];
+  rB[2] = rz[j] + shift[2];
+ 
+  EA[0] = nebrTab[i].axa;
+  EA[1] = nebrTab[i].axb;
+  EA[2] = nebrTab[i].axc;
+  EB[0] = nebrTab[j].axa;
+  EB[1] = nebrTab[j].axb;
+  EB[2] = nebrTab[j].axc;
+
+  /* verificare che AA e BB sono effettivamente gli assi principali degli ellissoidi */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2 ++)
+	{
+	  AA[k1][k2] = nebrTab[i].R[k1][k2];
+	  BB[k1][k2] = nebrTab[j].R[k1][k2];
+	}
+    	DD[k1] = rA[k1] - rB[k2];
+    }
+  /* axis C0+s*A0 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[0][k1] =  scalProd(AA[0], BB[k1]);
+      fabscij[0][k1] = fabs(cij[0][k1]);
+      if ( fabscij[0][i] == 1.0 )
+	existsParallPair = 1;
+    }
+  AD[0] = scalProd(AA[0],DD);
+  RR = fabs(AD[0]);
+  R1 = EB[0]*fabscij[0][0]+EB[1]*fabscij[0][1]+EB[2]*fabscij[0][2];
+  R01 = EA[0] + R1;
+  if ( RR > R01 )
+    return 1.0; /* non si intersecano */
+  /* axis C0+s*A1 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[1][k1] = scalProd(AA[1],BB[i]);
+      fabscij[1][i] = fabs(cij[1][i]);
+      if ( fabscij[1][i] == 1.0  )
+	existsParallelPair = 1;
+    }
+  AD[1] = scalProd(AA[1],DD);
+  RR = fabs(AD[1]);
+  R1 = EB[0]*fabscij[1][0]+EB[1]*fabscij[1][1]+EB[2]*fabcij[1][2];
+  R01 = EA[1] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*A2 */
+  for (i = 0; i < 3; i++)
+    {
+      cij[2][i] = scalProd(AA[2], BB[i]);
+      fabscij[2][i] = fabs(cij[2][i]);
+      if ( fabscij[2][i] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[2] = scalProd(AA[2],DD);
+  RR = fabs(AD[2]);
+  R1 = EB[0]*fabscij[2][0]+EB[1]*fabscij[2][1]+EB[2]*fabscij[2][2];
+  R01 = EA[2] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*B0 */
+  RR = fabs(BB[0],DD);
+  R0 = EA[0]*fabscij[0][0]+EA[1]*fabscij[1][0]+EA[2]*fabscij[2][0];
+  R01 = R0 + EB[0];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*B1 */
+  RR = fabs(BB[1],DD);
+  R0 = EA[0]*fabscij[0][1]+EA[1]*fabscij[1][1]+EA[2]*fabscij[2][1];
+  R01 = R0 + EB[1];
+  if ( RR > R01 )
+    return 1.0;
+  
+  /* axis C0+s*B2 */
+  RR = fabs(BB[2],DD);
+  R0 = EA[0]*fabscij[0][2]+EA[1]*fabscij[1][2]+EA[2]*fabscij[2][2];
+  R01 = R0 + EB[2];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* At least one pair of box axes was parallel, so the separation is
+   * effectively in 2D where checking the "edge" normals is sufficient for
+   * the separation of the boxes. 
+   */
+  if ( existsParallelPair )
+    return -1.0;
+
+  /* axis C0+s*A0xB0 */
+  RR = fabs(AD[2]*cij[1][0]-AD[1]*cij[2][0]);
+  R0 = EA[1]*fabscij[2][0] + EA[2]*fabscij[1][0];
+  R1 = EB[1]*fabscij[0][2] + EB[2]*fabscij[0][1];
+  R01 = fR0 + fR1;
+  if ( fR > fR01 )
+    return false;
+
+  // axis C0+t*A0xB1
+  fR = Math<Real>::FAbs(afAD[2]*aafC[1][1]-afAD[1]*aafC[2][1]);
+  fR0 = afEA[1]*aafAbsC[2][1] + afEA[2]*aafAbsC[1][1];
+  fR1 = afEB[0]*aafAbsC[0][2] + afEB[2]*aafAbsC[0][0];
+  fR01 = fR0 + fR1;
+  if ( fR > fR01 )
+    return false;
+
+  // axis C0+t*A0xB2
+  fR = Math<Real>::FAbs(afAD[2]*aafC[1][2]-afAD[1]*aafC[2][2]);
+  fR0 = afEA[1]*aafAbsC[2][2] + afEA[2]*aafAbsC[1][2];
+  fR1 = afEB[0]*aafAbsC[0][1] + afEB[1]*aafAbsC[0][0];
+  fR01 = fR0 + fR1;
+  if ( fR > fR01 )
+    return false;
+
+  // axis C0+t*A1xB0
+  fR = Math<Real>::FAbs(afAD[0]*aafC[2][0]-afAD[2]*aafC[0][0]);
+  fR0 = afEA[0]*aafAbsC[2][0] + afEA[2]*aafAbsC[0][0];
+  fR1 = afEB[1]*aafAbsC[1][2] + afEB[2]*aafAbsC[1][1];
+  fR01 = fR0 + fR1;
+  if ( fR > fR01 )
+    return false;
+
+  // axis C0+t*A1xB1
+  fR = Math<Real>::FAbs(afAD[0]*aafC[2][1]-afAD[2]*aafC[0][1]);
+  fR0 = afEA[0]*aafAbsC[2][1] + afEA[2]*aafAbsC[0][1];
+  fR1 = afEB[0]*aafAbsC[1][2] + afEB[2]*aafAbsC[1][0];
+  fR01 = fR0 + fR1;
+  if ( fR > fR01 )
+    return false;
+
+  // axis C0+t*A1xB2
+  fR = Math<Real>::FAbs(afAD[0]*aafC[2][2]-afAD[2]*aafC[0][2]);
+  fR0 = afEA[0]*aafAbsC[2][2] + afEA[2]*aafAbsC[0][2];
+  fR1 = afEB[0]*aafAbsC[1][1] + afEB[1]*aafAbsC[1][0];
+  fR01 = fR0 + fR1;
+  if ( fR > fR01 )
+    return false;
+
+  // axis C0+t*A2xB0
+  fR = Math<Real>::FAbs(afAD[1]*aafC[0][0]-afAD[0]*aafC[1][0]);
+  fR0 = afEA[0]*aafAbsC[1][0] + afEA[1]*aafAbsC[0][0];
+  fR1 = afEB[1]*aafAbsC[2][2] + afEB[2]*aafAbsC[2][1];
+  fR01 = fR0 + fR1;
+  if ( fR > fR01 )
+    return false;
+
+  // axis C0+t*A2xB1
+  fR = Math<Real>::FAbs(afAD[1]*aafC[0][1]-afAD[0]*aafC[1][1]);
+  fR0 = afEA[0]*aafAbsC[1][1] + afEA[1]*aafAbsC[0][1];
+  fR1 = afEB[0]*aafAbsC[2][2] + afEB[2]*aafAbsC[2][0];
+  fR01 = fR0 + fR1;
+  if ( fR > fR01 )
+    return false;
+
+  // axis C0+t*A2xB2
+  fR = Math<Real>::FAbs(afAD[1]*aafC[0][2]-afAD[0]*aafC[1][2]);
+  fR0 = afEA[0]*aafAbsC[1][2] + afEA[1]*aafAbsC[0][2];
+  fR1 = afEB[0]*aafAbsC[2][1] + afEB[1]*aafAbsC[2][0];
+  fR01 = fR0 + fR1;
+  if ( fR > fR01 )
+    return false;
+
+  return -1.0;
+
+
 }
 #else
 double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
@@ -1987,7 +2170,7 @@ int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], doub
   for (kk=0; kk < 3; kk++)
     {
       /* NOTA: controllare che non si debbano scambiare kk e nplane/2 */ 
-      gradplane[kk] = nebrTab[i].R[kk][nplane/2];
+      gradplane[kk] = nebrTab[i].R[nplane/2][kk];
     }
   
   switch (nplane/2)
@@ -2795,8 +2978,12 @@ void BuildNNL(int na)
 		  if (n != na)// && n != nb && (nb >= -1 || n < na)) 
 		    {
       		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
+#ifdef MD_NNLPLANES
 		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1); 
-		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
+#else
+		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift); 
+#endif
+		   /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
 		       * in OprogStatus */
 		      if (dist < 0)
 			{
