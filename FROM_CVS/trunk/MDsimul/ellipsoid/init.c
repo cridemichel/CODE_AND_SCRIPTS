@@ -1395,9 +1395,10 @@ void usrInitAft(void)
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 #ifdef MD_NNL
   rebuildNNL();
+  exit(-1);
   MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
-  //exit(-1);
 #endif
+  exit(-1);
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)

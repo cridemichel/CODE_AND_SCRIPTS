@@ -894,10 +894,11 @@ void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
 void calc_intersec_neigh_plane(double *rB, double *rA, double **Xa, double *grad, double* rC, double* rD)
 {
   double A, B=0.0, C=0.0, D=0.0, tt=0.0;
-  double rBA[3];
+  double rBA[3], rBAgrad;
   int k1, k2;
+  /* la direzione è quella perpendicolare al piano */
   for (k1=0; k1 < 3; k1++)
-    rBA[k1] = rB[k1] - rA[k1];
+    rBA[k1] = grad[k1];
   MD_DEBUG(printf("rBA=(%f,%f,%f)\n", rBA[0], rBA[1], rBA[2])); 
   MD_DEBUG(printf("rB= (%f,%f,%f)\n", rB[0], rB[1], rB[2]));
   A = 0.0;
@@ -919,14 +920,21 @@ void calc_intersec_neigh_plane(double *rB, double *rA, double **Xa, double *grad
     {
       rC[k1] = rA[k1] + tt*rBA[k1];  
     }
+
+  /* ...e ora calcoliamo rD (guess sul piano) */
+  for (k1=0; k1 < 3; k1++)
+    rBA[k1] = rB[k1] - rA[k1];
+  rBAgrad = scalProd(rBA, grad);
+  for (k1=0; k1 < 3; k1++)
+    rD[k1] = rA[k1] + rBAgrad*grad[k1];
 }
 void guess_distNeigh_plane(int i, 
-		double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
-		double **RA, double **RB)
+		double *rA, double *rB, double **Xa, double *grad, double *rC, double *rD,
+		double **RA)
 {
   double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
   int k1, n;
-  double saA[3], saB[3];
+  double saA[3], saB[3], sp;
 
   //printf("===============>SONO QUI\n");
   saA[0] = axa[i];
@@ -936,41 +944,25 @@ void guess_distNeigh_plane(int i,
   saB[1] = nebrTab[i].axb;
   saB[2] = nebrTab[i].axb;
   for (k1 = 0; k1 < 3; k1++)
-    {
-      gradA[k1] =  (rB[k1]-rA[k1]);
-      gradB[k1] = -(rB[k1]-rA[k1]);
-    }
+    gradA[k1] =  grad[k1];
   for (n = 0; n < 3; n++)
     {
       gradaxA[n] = 0;
-      gradaxB[n] = 0;
       for (k1 = 0; k1 < 3; k1++) 
-	{
-	  gradaxA[n] += gradA[k1]*RA[n][k1];
-	  gradaxB[n] += gradB[k1]*RB[n][k1];
-	}
+	gradaxA[n] += gradA[k1]*RA[n][k1];
     }
-#if 0 
-  gAn = calc_norm(gradaxA);
-  gBn = calc_norm(gradaxB);
-  for (n = 0; n < 3; n++)
-    {
-      gradaxA[n] /= gAn;
-      gradaxB[n] /= gBn;
-    }
-#endif
   for (k1=0; k1 < 3; k1++)
     {
       dA[k1] = rA[k1];
-      dB[k1] = rB[k1];
       for (n=0; n < 3;n++)
-	{
-	  dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
-	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
-	}
+	dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
     }
-  calc_intersec_neigh(dA, rA, Xa, rC, -1);
-  calc_intersec_neigh(dB, rB, Xb, rD, 1);
+  calc_intersec_neigh(dA, rA, Xa, rC, 1);
+  for (k1=0; k1 < 3; k1++)
+    dB[k1] = rB[k1] - rC[k1];
+  sp = scalProd(dB, grad);
+  for (k1=0; k1 < 3; k1++)
+    rD[k1] = rC[k1] + sp*grad[k1];
 }
 void calc_intersec_neigh(double *rB, double *rA, double **Xa, double* rI, double alpha)
 {
@@ -1089,7 +1081,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   
   if (OprogStatus.guessDistOpt==1)
     {
-      guess_distNeigh_plane(i, rA, rB, Xa, Xb, rC, rD, RtA, nebrTab[i].R);
+      guess_distNeigh_plane(i, rA, rB, Xa, gradplane, rC, rD, RtA);
     }
   else
     {
