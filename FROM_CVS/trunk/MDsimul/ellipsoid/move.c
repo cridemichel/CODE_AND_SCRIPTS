@@ -5210,6 +5210,7 @@ void calc_energy(char *msg)
 #endif
   printf("[%s] Kinetic Energy: %f\n", msg, K);
 }
+#ifdef MD_NNL
 void store_bump_neigh(int i, double *r1, double *r2)
 {
   char fileop2[512], fileop[512];
@@ -5249,6 +5250,7 @@ void store_bump_neigh(int i, double *r1, double *r2)
   fclose(bf);
 
 }
+#endif
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
