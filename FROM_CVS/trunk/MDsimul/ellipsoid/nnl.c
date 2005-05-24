@@ -5,6 +5,7 @@
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x) 
+#define MD_DEBUG31(x) x
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -15,9 +16,9 @@ extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 extern double rA[3], rB[3];
 extern double pi, invL, L2, Vz; 
 #ifdef MD_ASYM_ITENS
-double **Ia, **Ib, **invIa, **invIb;
+extern double **Ia, **Ib, **invIa, **invIb;
 #else
-double Ia, Ib, invIa, invIb;
+extern double Ia, Ib, invIa, invIb;
 #endif
 extern double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 extern int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
@@ -36,9 +37,9 @@ void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
 void InvMatrix(double **a, double **b, int NB);
 extern double invaSq[2], invbSq[2], invcSq[2];
-double rxC, ryC, rzC, trefG;
+extern double rxC, ryC, rzC, trefG;
 extern int SolveLineq (double **a, double *x, int n); 
-int calcdist_retcheck;
+extern int calcdist_retcheck;
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
 void InitEventList (void);
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
@@ -102,6 +103,7 @@ extern void newtNeigh(double x[], int n, int *check,
 extern void newtDistNegNeighPlane(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA);
+#ifdef MD_NNL
 void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {
   int kk;
@@ -109,7 +111,7 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
   for (kk=0; kk < 3; kk++)
     {
       /* NOTA: controllare che non si debbano scambiare kk e nplane/2 */ 
-      grad[kk] = nebrTab[kk].R[nplane/2][kk];
+      grad[kk] = nebrTab[i].R[nplane/2][kk];
     }
   switch (nplane/2)
     {
@@ -131,7 +133,7 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       else
 	segno = -1;
       grad[kk] *= segno;
-      /* rB[] (i.e. nebrTab[i].R[]) è un punto appartenente al piano */
+      /* rB[] (i.e. nebrTab[i].r[]) è un punto appartenente al piano */
       point[kk] = nebrTab[i].r[kk] + del*grad[kk]; 
     }
 }
@@ -160,7 +162,7 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
 		     void (*vecfunc)(int, double [], double []), int iA)
 {
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
-  double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
+  double  rA[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
   double DA[3][3], fx[3], invaSqN, invbSqN, invcSqN;
   double Fxt[3], Ft;
   int k1, k2;
@@ -188,9 +190,10 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
   DA[2][2] = invcSqN;
 
   /*N.B. l'ellissoide B in tale caso non evolve! */
-  rB[0] = nebrTab[iA].r[0];
-  rB[1] = nebrTab[iA].r[1];
-  rB[2] = nebrTab[iA].r[2];
+  //rB[0] = nebrTab[iA].r[0];
+  //rB[1] = nebrTab[iA].r[1];
+  //rB[2] = nebrTab[iA].r[2];
+
   vB[0] = 0.0;
   vB[1] = 0.0;
   vB[2] = 0.0;
@@ -433,7 +436,7 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
 void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
 {
   int na, k1, k2; 
-  double  rA[3], rB[3], ti;
+  double  rA[3], ti;
   double fx[3];
   double Omega[3][3], invaSqN, invbSqN, invcSqN;
   /* x = (r, alpha, t) */ 
@@ -891,7 +894,7 @@ void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
-void calc_intersec_neigh_plane(double *rB, double *rA, double **Xa, double *grad, double* rC, double* rD)
+void calc_intersec_neigh_plane(double *rA, double *rB, double **Xa, double *grad, double* rC, double* rD)
 {
   double A, B=0.0, C=0.0, D=0.0, tt=0.0;
   double rBA[3], rBAgrad;
@@ -908,8 +911,9 @@ void calc_intersec_neigh_plane(double *rB, double *rA, double **Xa, double *grad
  
   if (A <= 0)
     {
-      printf("[calc_intersec] Serious problem guessing distance, aborting...\n");
+      printf("NNL [calc_intersec] Serious problem guessing distance, aborting...\n");
       printf("tt = %f D=%f A=%f B=%f C=%f\n", tt, D, A, B, C);
+      printf("grad = (%.10f, %.10f, %.10f\n", grad[0], grad[1], grad[2]);
       printf("distance: %f\n", sqrt(Sqr(rBA[0])+Sqr(rBA[1])+Sqr(rBA[2])));
       print_matrix(Xa,3);
       print_matrix(Xb,3);
@@ -1135,7 +1139,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   vecg[7] = 0.0;
 
   MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
-  newtDistNegNeighPlane(vecg, 8, &retcheck, funcs2beZeroedDistNegNeigh, i); 
+  newtDistNegNeighPlane(vecg, 8, &retcheck, funcs2beZeroedDistNegNeighPlane, i); 
   if (retcheck != 0)
     {
       if (OprogStatus.targetPhi>0)
@@ -1181,12 +1185,12 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
 
   if (segno > 0)
     {
-      printf("t=%.15G distanza: %.15G\n", t, calc_norm(r12));
+      //printf("t=%.15G distanza: %.15G\n", t, calc_norm(r12));
       return calc_norm(r12);
     }
   else
     {
-      printf("t=%.15G distanza: %.15G\n", t, -calc_norm(r12));
+      //printf("t=%.15G distanza: %.15G\n", t, -calc_norm(r12));
       return -calc_norm(r12);
     }
 }
@@ -2023,7 +2027,15 @@ double calcvecFNeigh(int i, double t, double t1, double* ddot, double *r1)
   vectProd(wx[i], wy[i], wz[i], rcat[0], rcat[1], rcat[2], &wra[0], &wra[1], &wra[2]);
   for (kk=0; kk < 3; kk++)
     ddot[kk] += wra[kk];
+  //printf("^^^ sp = %.15G norm= %.15G\n", fabs(scalProd(ddot, gradplane)), calc_norm(ddot));
+#if 0
   return calc_norm(ddot);
+#else
+  /* WARNING:  quella che conta è la velocità rispetto alla perpendicolare al piano, 
+   * poiché la distanza tra piano ed ellisse è sempre perpendicolare al piano...tuttavia
+   * verificare e testare tale maggiorazione !!! */
+  return fabs(scalProd(ddot, gradplane));
+#endif
 }
 
 int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2, 
@@ -2040,12 +2052,20 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 
   /* estimate of maximum rate of change for d */
+#if 0
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+#else
+  /* WARNING: questa maggiorazione si applica al caso specifico dell'urto di un ellissoide con un piano,
+   * è molto migliore della precedente ma va testata accuratamente! */
+  maxddot = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+#endif
+  //printf("SCALPROD = %.15G\n", vx[0]*gradplane[0]+vy[1]*gradplane[1]+vz[2]*gradplane[2]);
   *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed, nplane);
   timesF++;
   MD_DEBUG20(printf("Pri distances between %d d1=%.12G epsd*epsdTimes:%f\n", i, *d1, epsdFast));
-  printf("[SEARCH_CONTACT_FASTER] t=%.15G ellips N. %d d=%.15G\n", *t, i, *d1); 
+  //printf("[SEARCH_CONTACT_FASTER] t=%.15G ellips N. %d d=%.15G\n", *t, i, *d1); 
   while (*d1 > epsdFast && its < MAXOPTITS)
     {
       told = *t;
@@ -2072,7 +2092,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
 	}
 #endif
       *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed, nplane);
-      printf("LOOP SEARCH CONTACT FASTER i=%d *d1=%.15G *t=%.15G\n", i, *d1, *t+t1);
+      //printf("NNL LOOP SEARCH CONTACT FASTER i=%d *d1=%.15G *t=%.15G\n", i, *d1, *t+t1);
       /* NOTA: nel caso di urto di un ellissoide con la sua neighbour list 
        * a t=0 i due ellissoidi hanno stesso centro e assi principali paralleli
        * e questo implica che ci possono essere più soluzioni possibili per le eq.
@@ -2080,7 +2100,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
        * Questo implica che la distanza che ottengo è una sovrastima di quella vera e quindi 
        * con il loop che segue compenso questo problema riducendo il passo fino a che 
        * non arrivo ad una distanza positiva con il passo veloce */
-#if 1
+#if 0
       itsf = 0;
       while (*d1 < 0 || distfailed)
 	{
@@ -2088,7 +2108,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
 	  delt /= GOLD;
 	  *t = told + delt;
 	  *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed, nplane);
-	  printf("itsf=%d BUBU SEARCH_CONTACT_FASTER_NEIGH *d1=%.15G\n",itsf,*d1);
+	  //printf("itsf=%d BUBU SEARCH_CONTACT_FASTER_NEIGH *d1=%.15G\n",itsf,*d1);
 	  itsf++;	
 	  if (itsf > 100)
 	    {
@@ -2155,12 +2175,14 @@ int bracket_neigh(int i, double *t1, double *t2, int nplane)
   for (kk=0; kk < 3; kk++)
     dr[kk] = r1[kk] - rB[kk]; 
   dd = fabs(scalProd(dr, gradplane));
+  if (veln == 0.0)
+    return 0;
   if (veln < 0 && dd > maxax[i])
     return 0;
   if (dd > maxax[i])
     *t1 = (dd - maxax[i]) / veln;
   else
-    *t1 = Oparams.time;
+    *t1 = 0.0;
   *t2 = (dd + maxax[i]) / veln;
   return 1;
 }
@@ -2183,17 +2205,28 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   calc_grad_and_point_plane(i, gradplane, rB, nplane);
   if (!bracket_neigh(i, &t1, &t2, nplane))
     {
+      //printf("NOT BRACK NEIGH\n");
       return 0;
     }
-  //t1 = Oparams.time;	
+  t1 += Oparams.time;	
   if (tsup < t2)
     t2 = tsup;
-  
+  else
+    t2 += Oparams.time;
+  //printf("LOCATE_CONTACT_NNL nplane=%d grad=%.8f %.8f %.8f  rB=%.8f %.8f %.8f t1=%.8f t2=%.8f tsup=%.8f maxax[%d]=%f\n", nplane, 
+  //	 gradplane[0], gradplane[1], gradplane[2], rB[0], rB[1], rB[2], t1, t2, tsup, i, maxax[i]);
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+#if 0
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+#else
+  /* WARNING: questa maggiorazione si applica al caso specifico dell'urto di un ellissoide con un piano,
+   * è molto migliore della precedente ma va testata accuratamente! */
+  maxddot = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+#endif
   h = OprogStatus.h; /* last resort time increment */
-  t += h;
+  //t += h;
   if (search_contact_faster_neigh_plane(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2, nplane))
     return 0;  
   MD_DEBUG(printf(">>>>d:%f\n", d));
@@ -2204,6 +2237,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   its = 0;
   while (t + t1 < t2)
     {
+      printf("LOC CONT rB = %.15G %.15G %.15G\n", rB[0], rB[1], rB[2]);
       normddot = calcvecFNeigh(i, t, t1, ddot, r1);
       if (normddot!=0)
 	delt = epsd / normddot;
@@ -2216,9 +2250,9 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       for (kk = 0; kk < 8; kk++)
 	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;
-      printf("[LOCATE_CONTACT] >>>>>>>>>>>><<<<<<<<<<\n"); 
+      //printf("NNL [LOCATE_CONTACT] >>>>>>>>>>>><<<<<<<<<<\n"); 
       d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
-      printf("[LOCATE_CONTACT] t=%.15G ellips N. %d d=%.15G dold=%.15G its=%lld\n", t, i, d, dold, itsS); 
+      printf("NNL [LOCATE_CONTACT] delt=%.15G (%.15G,maxddot=%.10G,normddot=%.15G) t=%.15G ellips N. %d d=%.15G dold=%.15G its=%d\n", delt, epsd/maxddot, maxddot, normddot, t, i, d, dold, its); 
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -2258,7 +2292,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       dorefine = 0;      
       if (dold > 0 && d < 0)
 	{
-	  printf(">>>>>>>>>QUI\n");
+	  //printf(">>>>>>>>>QUI\n");
        	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
 #ifndef MD_NOINTERPOL  
@@ -2286,12 +2320,12 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	}
       if (dorefine)
 	{
-	  printf("REFINING CONTACT t=%.15G\n", t);
+	  printf("NNL REFINING CONTACT t=%.15G troot=%.15G t1=%.15G\n", t, troot, t1);
 	  if (refine_contact_neigh_plane(i, t1, troot, vecgroot, vecg, nplane))
 	    {
-	      MD_DEBUG20(printf("[locate_contact] Adding collision between %d\n", i));
-	      MD_DEBUG20(printf("collision will occur at time %.15G\n", vecg[4])); 
-	      MD_DEBUG20(printf("[locate_contact] its: %d\n", its));
+	      MD_DEBUG31(printf("[locate_contact] Adding collision between %d\n", i));
+	      MD_DEBUG31(printf("collision will occur at time %.15G\n", vecg[4])); 
+	      MD_DEBUG31(printf("[locate_contact] its: %d\n", its));
 	      if (vecg[4]>t2 || vecg[4]<t1)
 		return 0;
 	      else
@@ -2379,7 +2413,7 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
 	}
 #endif
       *d1 = calcDistNegNeigh(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed);
-      printf("LOOP SEARCH CONTACT FASTER i=%d *d1=%.15G *t=%.15G\n", i, *d1, *t+t1);
+      //printf("NNL LOOP SEARCH CONTACT FASTER i=%d *d1=%.15G *t=%.15G\n", i, *d1, *t+t1);
       /* NOTA: nel caso di urto di un ellissoide con la sua neighbour list 
        * a t=0 i due ellissoidi hanno stesso centro e assi principali paralleli
        * e questo implica che ci possono essere più soluzioni possibili per le eq.
@@ -2799,7 +2833,7 @@ void updrebuildNNL(int na)
   else
     nebrTab[na].nexttime = vecg[4];
 #endif
-#if 1
+#if 0
     {
       double gradA[3], gradB[3], sp;
       calc_grad(vecg, rA, Xa, gradA);
@@ -2853,7 +2887,7 @@ void nextNNLupdate(int na)
       nebrTab[na].R[i1][i2] = RtB[i1][i2];
   /* calcola il tempo a cui si deve ricostruire la NNL */
   printf("BUILDING NNL FOR i=%d\n",na);
-#if MD_NNLPLANES
+#ifdef MD_NNLPLANES
   tsup = timbig;
   for (ip = 0; ip < 6; ip++)
     {
@@ -2864,6 +2898,7 @@ void nextNNLupdate(int na)
       if (nebrTab[na].nexttime < tsup)
 	tsup = nebrTab[na].nexttime;
     }
+  printf(">> nexttime=%.15G\n", nebrTab[na].nexttime);
 #else
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
@@ -2984,3 +3019,4 @@ void BuildNNL(int na)
 	}
     }
 }
+#endif
