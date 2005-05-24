@@ -4,7 +4,7 @@
 #define MD_DEBUG10(x)  
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
-#define MD_DEBUG20(x) x
+#define MD_DEBUG20(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -3165,7 +3165,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
       invcSq[na] = 1/Sqr(axc[j]);
     }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
-  printf(">>>>>>> BOHHHHHHHHHHHHHHHHH\n");
+  //printf(">>>>>>> BOHHHHHHHHHHHHHHHHH\n");
 retry:
   if (OprogStatus.forceguess)
     calcguess = 1;
@@ -3313,7 +3313,7 @@ retry:
 	vecg[k1] = vecgsup[k1];
     }
   MD_DEBUG(printf(">>>>>>> alpha: %f beta: %f\n", vecg[6], vecg[7]));
-  printf(">>>>>>> MAHHH alpha: %f beta: %f\n", vecg[6], vecg[7]);
+  //printf(">>>>>>> MAHHH alpha: %f beta: %f\n", vecg[6], vecg[7]);
 #ifdef MD_DIST5
   newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift); 
 #else
