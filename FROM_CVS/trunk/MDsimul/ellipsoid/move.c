@@ -2,7 +2,7 @@
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG10(x)  
-#define MD_DEBUG11(x) 
+#define MD_DEBUG11(x) x
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x) 
 #if defined(MPI)
@@ -3930,7 +3930,6 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
     {
       delt = *d1 / maxddot;
       normddot = calcvecF(i, j, *t, t1, r1, r2, ddot, shift);
-      //printf("normddot: %.15G\n", epsd/normddot);
       /* check for convergence */
      
       if (normddot!=0 && delt < (epsd / normddot))
@@ -4211,7 +4210,6 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       if (dold < epsd)
 	delt = epsd / maxddot;
       t += delt;
-      //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       for (kk = 0; kk < 8; kk++)
 	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;

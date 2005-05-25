@@ -58,6 +58,7 @@ extern void calcFxtFt(double x[3], double **X,
 	       double D[3][3], double Omega[3][3], double **R, 
 	       double pos[3], double vel[3], double gradf[3],
 	       double Fxt[3], double *Ft);
+double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3]);
 extern double calc_norm(double *vec);
 extern void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void funcs2beZeroedDistNeg5(int n, double x[], double fvec[], int i, int j, double shift[3]);
@@ -142,7 +143,7 @@ void rebuildNNL(void)
   int i;
   double nltime=timbig;
   UpdateSystem();
-  printf("Rebulding NNL t=%.15G\n", Oparams.time);
+  printf("Rebuilding NNL t=%.15G\n", Oparams.time);
   for (i=0; i < Oparams.parnum; i++)
     {
       nextNNLupdate(i);
@@ -1464,7 +1465,7 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
   /* verificare che AA e BB sono effettivamente gli assi principali degli ellissoidi */
   for (k1 = 0; k1 < 3; k1++)
     {
-      for (k2 = 0; k2 < 3; k2 ++)
+      for (k2 = 0; k2 < 3; k2++)
 	{
 	  AA[k1][k2] = nebrTab[i].R[k1][k2];
 	  BB[k1][k2] = nebrTab[j].R[k1][k2];
@@ -1488,9 +1489,9 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
   /* axis C0+s*A1 */
   for (k1 = 0; k1 < 3; k1++)
     {
-      cij[1][k1] = scalProd(AA[1],BB[i]);
-      fabscij[1][i] = fabs(cij[1][i]);
-      if ( fabscij[1][i] == 1.0  )
+      cij[1][k1] = scalProd(AA[1],BB[k1]);
+      fabscij[1][k1] = fabs(cij[1][k1]);
+      if ( fabscij[1][k1] == 1.0  )
 	existsParallelPair = 1;
     }
   AD[1] = scalProd(AA[1],DD);
@@ -1500,11 +1501,11 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
   if ( RR > R01 )
     return 1.0;
   /* axis C0+s*A2 */
-  for (i = 0; i < 3; i++)
+  for (k1= 0; k1 < 3; k1++)
     {
-      cij[2][i] = scalProd(AA[2], BB[i]);
-      fabscij[2][i] = fabs(cij[2][i]);
-      if ( fabscij[2][i] == 1.0 )
+      cij[2][k1] = scalProd(AA[2], BB[k1]);
+      fabscij[2][k1] = fabs(cij[2][k1]);
+      if ( fabscij[2][k1] == 1.0 )
 	existsParallelPair = 1;
     }
   AD[2] = scalProd(AA[2],DD);
@@ -2329,7 +2330,9 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	      if (vecg[4]>t2 || vecg[4]<t1)
 		return 0;
 	      else
-		return 1;
+		{
+		  return 1;
+		}
 	    }
 	  else 
 	    {
@@ -2799,7 +2802,9 @@ void PredictEventNNL(int na, int nb)
       printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime);
       printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2);
       if (!locate_contact(na, n, shift, t1, t2, vecg))
-	continue;
+	{
+	  continue;
+	}
       rxC = vecg[0];
       ryC = vecg[1];
       rzC = vecg[2];
@@ -2817,15 +2822,13 @@ void updrebuildNNL(int na)
   double tsup;
   int ip;
 #ifdef MD_NNLPLANES
-  tsup = timbig;
+  nebrTab[na].nexttime = timbig;
   for (ip = 0; ip < 6; ip++)
     {
-      if (!locate_contact_neigh_plane(na, vecg, ip, tsup))
-	nebrTab[na].nexttime = timbig;
-      else
+      if (!locate_contact_neigh_plane(na, vecg, ip, nebrTab[na].nexttime))
+	continue;
+      if (vecg[4] < nebrTab[na].nexttime)
 	nebrTab[na].nexttime = vecg[4];
-      if (nebrTab[na].nexttime < tsup)
-	tsup = nebrTab[na].nexttime;
     }
 #else
   if (!locate_contact_neigh(na, vecg))
@@ -2888,17 +2891,15 @@ void nextNNLupdate(int na)
   /* calcola il tempo a cui si deve ricostruire la NNL */
   printf("BUILDING NNL FOR i=%d\n",na);
 #ifdef MD_NNLPLANES
-  tsup = timbig;
+  nebrTab[na].nexttime = timbig;
   for (ip = 0; ip < 6; ip++)
     {
-      if (!locate_contact_neigh_plane(na, vecg, ip, tsup))
-	nebrTab[na].nexttime = timbig;
-      else
+      if (!locate_contact_neigh_plane(na, vecg, ip, nebrTab[na].nexttime))
+      	continue;
+      if (vecg[4] < nebrTab[na].nexttime)
 	nebrTab[na].nexttime = vecg[4];
-      if (nebrTab[na].nexttime < tsup)
-	tsup = nebrTab[na].nexttime;
     }
-  printf(">> nexttime=%.15G\n", nebrTab[na].nexttime);
+  //printf(">> nexttime=%.15G\n", nebrTab[na].nexttime);
 #else
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
@@ -2939,7 +2940,7 @@ void BuildNNL(int na)
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cels[NDIM];*/
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
-  
+  nebrTab[na].len = 0;
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
@@ -3003,7 +3004,7 @@ void BuildNNL(int na)
 #else
 		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift); 
 #endif
-		   /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
+		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
 		       * in OprogStatus */
 		      if (dist < 0)
 			{
