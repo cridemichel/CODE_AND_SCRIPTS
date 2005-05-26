@@ -1099,7 +1099,7 @@ void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *
 	f += rAC[k1]*Xa[k1][k2]*rAC[k2];
 	g += rBC[k1]*Xb[k1][k2]*rBC[k2];
       } 
-  MD_DEBUG(printf("f(rC)=%.15G g(rC)=%.15G\n", f, g));
+  MD_DEBUG11(printf("f(rC)=%.15G g(rC)=%.15G\n", f, g));
   //if (fabs(f) > 1E-5||fabs(g) > 1E-5)
    // exit(-1);
 }
@@ -1150,7 +1150,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
-  MD_DEBUG10(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
+  MD_DEBUG11(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
@@ -1208,7 +1208,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   Ib = Oparams.I[na];
 #endif
   //MD_DEBUG(calc_energy("dentro bump2"));
-  MD_DEBUG(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
+  MD_DEBUG11(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
   
   //MD_DEBUG(calc_energy("dentro bump3"));
   /* calcola le matrici inverse del tensore d'inerzia */
@@ -1290,6 +1290,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       MD_DEBUG(printf("i=%d r = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]));
       printf("[ERROR] maybe second collision has been wrongly predicted %d-%d\n",i,j);
       printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
+      store_bump(i,j);
+      exit(-1);
       return;
     }
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
@@ -4151,7 +4153,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
   if (lastbump[j]==i && lastbump[i]==j)
     {
-      MD_DEBUG10(printf("last collision was between (%d-%d)\n", i, j));
+      MD_DEBUG11(printf("last collision was between (%d-%d) d=%.15G\n", i, j, d));
 #if 1
       while (d < 0)
 	{
@@ -5724,9 +5726,9 @@ void move(void)
 	  MD_DEBUG(printf("[Store event]: %.15G JJ=%d KK=%d\n", Oparams.time, OprogStatus.JJ, OprogStatus.KK));
 #ifdef MD_STOREMGL
 	  fprintf(bf, ".Vol: %f\n", L*L*L);
-	  fprintf(bf, ".semiAxes: %f %f %f, %f %f %f\n",
-		  Oparams.a[0], Oparams.b[0], Oparams.c[0],
-		  Oparams.a[1], Oparams.b[1], Oparams.c[1]);
+	  //fprintf(bf, ".semiAxes: %f %f %f, %f %f %f\n",
+	//	  Oparams.a[0], Oparams.b[0], Oparams.c[0],
+		//  Oparams.a[1], Oparams.b[1], Oparams.c[1]);
 #endif
 	  writeAllCor(bf);
 	  fclose(bf);
