@@ -14,6 +14,7 @@ extern int *equilibrated;
 extern const double timbig;
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 extern double rA[3], rB[3];
+extern double rxC, ryC, rzC;
 extern double pi, invL, L2, Vz; 
 #ifdef MD_ASYM_ITENS
 extern double **Ia, **Ib, **invIa, **invIb;
@@ -1444,16 +1445,16 @@ retryneigh:
 double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3])
 {
   double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
-  double AA[3][3], BB[3][3], EA[3], EB[3];
+  double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
   int k1, k2, existsParallelPair = 0;
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
-  rA[0] = rx[i];
-  rA[1] = ry[i];
-  rA[2] = rz[i];
-  rB[0] = rx[j] + shift[0];
-  rB[1] = ry[j] + shift[1];
-  rB[2] = rz[j] + shift[2];
+  rA[0] = nebrTab[i].r[0];
+  rA[1] = nebrTab[i].r[1];
+  rA[2] = nebrTab[i].r[2];
+  rB[0] = nebrTab[j].r[0] + shift[0];
+  rB[1] = nebrTab[j].r[1] + shift[1];
+  rB[2] = nebrTab[j].r[2] + shift[2];
  
   EA[0] = nebrTab[i].axa;
   EA[1] = nebrTab[i].axb;
@@ -2071,7 +2072,6 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
     {
       told = *t;
       delt = *d1 / maxddot;
-      MD_DEBUG20(printf("SEARCH_CONTACT_FASTER delt=%.15G maxddot: %.15G\n", delt, maxddot));
       normddot = calcvecFNeigh(i, *t, t1, ddot, r1);
       //printf("normddot: %.15G\n", epsd/normddot);
       /* check for convergence */
@@ -2101,12 +2101,16 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
        * Questo implica che la distanza che ottengo è una sovrastima di quella vera e quindi 
        * con il loop che segue compenso questo problema riducendo il passo fino a che 
        * non arrivo ad una distanza positiva con il passo veloce */
-#if 0
+#if 1
       itsf = 0;
       while (*d1 < 0 || distfailed)
 	{
 	  /* reduce step size */
-	  delt /= GOLD;
+	  if (itsf == 0 && delt - OprogStatus.h > 0)
+	    delt -= OprogStatus.h;
+	  else
+	    delt /= GOLD;
+	  
 	  *t = told + delt;
 	  *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed, nplane);
 	  //printf("itsf=%d BUBU SEARCH_CONTACT_FASTER_NEIGH *d1=%.15G\n",itsf,*d1);
@@ -2122,8 +2126,8 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
       if (*d1 < 0)
 	{
 	  /* go back! */
-	  MD_DEBUG20(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG20(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
+	  MD_DEBUG31(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG31(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
 	  *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed, nplane);
 	  return 0;
@@ -2253,7 +2257,8 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       dold2 = dold;
       //printf("NNL [LOCATE_CONTACT] >>>>>>>>>>>><<<<<<<<<<\n"); 
       d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
-      printf("NNL [LOCATE_CONTACT] delt=%.15G (%.15G,maxddot=%.10G,normddot=%.15G) t=%.15G ellips N. %d d=%.15G dold=%.15G its=%d\n", delt, epsd/maxddot, maxddot, normddot, t, i, d, dold, its); 
+      printf("NNL [LOCATE_CONTACT] delt=%.15G (%.15G,maxddot=%.10G,normddot=%.15G) t=%.15G ellips N. %d d=%.15G dold=%.15G its=%d t1=%.15G t2=%.15G vparall=%.15G\n", 
+      delt, epsd/maxddot, maxddot, normddot, t, i, d, dold, its, t1, t2, fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])); 
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -2649,7 +2654,7 @@ extern double max(double a, double b);
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM], evCode, k, n, kk;
-  double vecg[5], shift[3], t1, t2, rxC, ryC, rzC, t, tm[NDIM];
+  double vecg[5], shift[3], t1, t2, t, tm[NDIM];
   double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
   int overlap;
   if (vz[na] != 0.0) 
@@ -2719,9 +2724,10 @@ void PredictEventNNL(int na, int nb)
   for (i=0; i <  nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
+      //if (na==106 || na==132)
+	//printf("[PredictEventNNL] na=%d n=%d\n",na,  n);
       if (!(n != na && n!=nb && (nb >= -1 || n < na)))
 	continue;
-      
       for (kk=0; kk < 3; kk++)
 	shift[kk] = nebrTab[na].shift[i][kk];
       
@@ -2768,7 +2774,9 @@ void PredictEventNNL(int na, int nb)
       if (vv==0.0)
 	{
 	  if (distSq >= sigSq)
-	    continue;
+	    {
+	      continue;
+	    }
 	  /* la vel relativa è zero e i centroidi non si overlappano quindi
 	   * non si possono urtare! */
 	  t1 = t = 0;
@@ -2867,7 +2875,7 @@ void nextNNLupdate(int na)
   double DelDist, tsup;
   const double distBuf = 0.1;
   double Omega[3][3], vecg[5];
-#if 0
+#ifndef MD_NNLPLANES
   nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];
   nebrTab[na].axb = OprogStatus.rNebrShell*axb[na];
   nebrTab[na].axc = OprogStatus.rNebrShell*axc[na];
@@ -2937,6 +2945,9 @@ void BuildNNL(int na)
   double shift[NDIM];
   int kk;
   double r1[3], r2[3], dist;
+#ifndef MD_NNLPLANES
+  double vecgsup[8], alpha;
+#endif
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cels[NDIM];*/
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
@@ -3002,13 +3013,22 @@ void BuildNNL(int na)
 #ifdef MD_NNLPLANES
 		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift); 
 #else
-		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift); 
+		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift,
+						   r1, r2, &alpha, vecgsup, 1); 
 #endif
 		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
 		       * in OprogStatus */
+		      if (n==132 && na==106)
+			printf("beccato!! dist=%f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 132, 106, shift));
 		      if (dist < 0)
 			{
 			  printf("Adding ellipsoid N. %d to NNL of %d\n", n, na);
+			  if (n==132 && na==106)
+			    { printf("bahbah (106-132): %f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 106, 132, shift)); 
+
+			      printf("bahbah (132-106): %f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 132, 106, shift)); 
+			      printf("shift= (%f,%f,%f)\n", shift[0], shift[1], shift[2]);
+}
 			  nebrTab[na].list[nebrTab[na].len] = n;
 			  for (kk=0; kk < 3; kk++)
 			    nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
