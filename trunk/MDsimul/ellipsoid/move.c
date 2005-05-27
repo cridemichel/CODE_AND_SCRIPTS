@@ -5,6 +5,7 @@
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x) 
+#define MD_DEBUG31(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -21,6 +22,8 @@ extern double *axa, *axb, *axc;
 extern int *scdone;
 extern double *maxax;
 #ifdef MD_NNL
+extern double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane);
+
 extern double *lastupdNNL, *totDistDispl;
 #endif
 /* Routines for LU decomposition from Numerical Recipe online */
@@ -1150,7 +1153,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
-  MD_DEBUG11(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
+  MD_DEBUG31(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
@@ -4168,7 +4171,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     {
       printf("[WARNING] t=%.10G d=%.15G < 0 i=%d j=%d\n",t+t1, d, i, j);
       printf("[WARNING] Some collision has been missed, ellipsoid may overlap!\n");
-      //store_bump(i, j);
+      store_bump(i, j);
       return 0;
     }
 #endif
@@ -5348,6 +5351,9 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 	    }
 #endif
 	  *rkptr = -L2;
+#ifdef MD_NNL
+	  nebrTab[evIdA].r[k] -= L;
+#endif
 	  OprogStatus.DR[evIdA][k]++;
 	}
 
@@ -5359,6 +5365,9 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
       if (inCell[k][evIdA] == -1) 
 	{
 	  inCell[k][evIdA] = cellsk - 1;
+#ifdef MD_NNL
+	  nebrTab[evIdA].r[k] += L;
+#endif
 	  *rkptr = L2;
 	  OprogStatus.DR[evIdA][k]--;
 	}
@@ -5758,17 +5767,18 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 0
+#if 1
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
+	      int distfail;
 	      FILE* f;
 	      static int first = 1;
 	      shift[0] = L*rint((rx[0]-rx[1])/L);
 	      shift[1] = L*rint((ry[0]-ry[1])/L);
 	      shift[2] = L*rint((rz[0]-rz[1])/L);
 	      MD_DEBUG(printf("[EVENT10] shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]));
-#if 1
+#if 0
 	      d=calcDist(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecg, 1);
 	      if (first)
 		f = fopen("distPos.dat","w");
@@ -5777,7 +5787,8 @@ void move(void)
 	      fprintf(f,"%.15G %.15G %.15G %.15G %.15G %.15G\n", Oparams.time, d,vecg[0],vecg[1],vecg[2],vecg[4]);
 	      fclose(f);
 #endif
-	      d=calcDistNeg(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecgNeg, 1);
+	      //d=calcDistNeg(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecgNeg, 1);
+	      d=calcDistNegNeighPlane(0, Oparams.time, 2, r1, r2, vecgNeg, 0, 1, &distfail, 2);
 	      if (first)
 		f = fopen("distNeg.dat","w");
 	      else

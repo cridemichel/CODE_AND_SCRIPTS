@@ -1472,14 +1472,14 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
 	  AA[k1][k2] = nebrTab[i].R[k1][k2];
 	  BB[k1][k2] = nebrTab[j].R[k1][k2];
 	}
-    	DD[k1] = rA[k1] - rB[k2];
+    	DD[k1] = rA[k1] - rB[k1];
     }
   /* axis C0+s*A0 */
   for (k1 = 0; k1 < 3; k1++)
     {
       cij[0][k1] =  scalProd(AA[0], BB[k1]);
       fabscij[0][k1] = fabs(cij[0][k1]);
-      if ( fabscij[0][i] == 1.0 )
+      if ( fabscij[0][k1] == 1.0 )
 	existsParallelPair = 1;
     }
   AD[0] = scalProd(AA[0],DD);
@@ -2168,7 +2168,7 @@ int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], doub
 }
 int bracket_neigh(int i, double *t1, double *t2, int nplane)
 {
-  double dd, veln, vel[3], r1[3], dr[3];
+  double dd, veln, vel[3], r1[3], dr[3], fabsveln;
   int kk;
   vel[0] = vx[i];
   vel[1] = vy[i];
@@ -2185,17 +2185,23 @@ int bracket_neigh(int i, double *t1, double *t2, int nplane)
     return 0;
   if (veln < 0 && dd > maxax[i])
     return 0;
+  fabsveln = fabs(veln);
   if (dd > maxax[i])
-    *t1 = (dd - maxax[i]) / veln;
+    *t1 = (dd - maxax[i]) / fabsveln;
   else
     *t1 = 0.0;
-  *t2 = (dd + maxax[i]) / veln;
+  *t2 = (dd + maxax[i]) / fabsveln;
+  if (*t2 < *t1)
+    {
+      printf("problema nel bracketing per i=%d, t1=%.15G t2=%.15G\n", i, *t1, *t2);
+      exit(-1);
+    }
   return 1;
 }
 int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 {
   double h, d, dold, dold2, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
-  double normddot, ddot[3], t1, t2, maxddot, delt, troot, vecgroot[8];
+  double dtmp, normddot, ddot[3], t1, t2, maxddot, delt, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax, factori; 
   int dorefine, distfail;
@@ -2209,16 +2215,37 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
    * con lo stesso centro e immobile */
   t = 0.0;//Oparams.time;
   calc_grad_and_point_plane(i, gradplane, rB, nplane);
+  dtmp = calcDistNegNeighPlane(t, Oparams.time, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
+#if 0
+  if (i==2)
+    {
+      printf("i==2 dist(%.15G)=%.15G\n",3.235497,
+	     calcDistNegNeighPlane(0, 3.235497, i, r1, r2, vecgd, 0, 0, &distfail, nplane));
+    }
+#endif
+  if (dtmp < 0)
+    {
+      printf("La distanza fra l'ellissoide N. %d e il piano %d è negativa d=%.15G\n", i, nplane, dtmp);
+      printf("nexttime[%d]: %.15G\n", i, nebrTab[i].nexttime);
+      exit(-1);
+    }
   if (!bracket_neigh(i, &t1, &t2, nplane))
     {
       //printf("NOT BRACK NEIGH\n");
       return 0;
     }
+  
   t1 += Oparams.time;	
   if (tsup < t2)
     t2 = tsup;
   else
     t2 += Oparams.time;
+#if 0
+  if (i==2)
+    {
+      printf("[i=2] nplane=%d t1=%.15G t2=%.15G tsup=%.15G\n", nplane, t1, t2, tsup);
+    }
+#endif
   //printf("LOCATE_CONTACT_NNL nplane=%d grad=%.8f %.8f %.8f  rB=%.8f %.8f %.8f t1=%.8f t2=%.8f tsup=%.8f maxax[%d]=%f\n", nplane, 
   //	 gradplane[0], gradplane[1], gradplane[2], rB[0], rB[1], rB[2], t1, t2, tsup, i, maxax[i]);
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
@@ -2258,6 +2285,10 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       dold2 = dold;
       //printf("NNL [LOCATE_CONTACT] >>>>>>>>>>>><<<<<<<<<<\n"); 
       d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
+#if 0
+      if (i==2)
+	printf("[i==2] time=%.15G d=%.15G\n", t+t1, d);
+#endif
       MD_DEBUG31(printf("NNL [LOCATE_CONTACT] delt=%.15G (%.15G,maxddot=%.10G,normddot=%.15G) t=%.15G ellips N. %d d=%.15G dold=%.15G its=%d t1=%.15G t2=%.15G vparall=%.15G\n", 
       delt, epsd/maxddot, maxddot, normddot, t, i, d, dold, its, t1, t2, fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2]))); 
       if (fabs(d-dold2) > epsdMax)
@@ -2337,6 +2368,11 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 		return 0;
 	      else
 		{
+#if 0
+		  if (i==2)
+		    printf("[i=2] nexttime = %.15G\n", vecg[4]);
+#endif		    
+		      
 		  return 1;
 		}
 	    }
