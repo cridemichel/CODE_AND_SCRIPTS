@@ -2198,6 +2198,338 @@ int bracket_neigh(int i, double *t1, double *t2, int nplane)
     }
   return 1;
 }
+int check_cross(double distsOld[6], double dists[6], int crossed[6])
+{
+  int nn;
+  int retcross = 0;
+  for (nn = 0; nn < 6; nn++)
+    {
+      crossed[nn] = 0;
+      if (dists[nn]*distsOld[nn] < 0)
+	{
+	  crossed[nn] = 1;
+	  retcross = 1;
+	}
+    }
+  return retcross;
+}
+double get_max_deldist(double distsOld[6], double dists[6])
+{
+  int nn, first = 1;
+  double maxdd=0.0, dd;
+  for (nn = 0; nn < 6; nn++)
+    {
+      dd = fabs(dists[nn]-distsOld[nn]);
+      if (first || dd > maxdd)
+	{
+	  first = 0;
+	  maxdd = dd;
+	}
+    }
+  return maxdd;
+}
+
+void assign_dists(double a[], double b[])
+{
+  memcpy(b, a, MD_PBONDS*sizeof(double));
+}
+int get_dists_tocheck(double distsOld[6], double dists[6], int tocheck[6], int dorefine[6])
+{
+  int nn;
+  int rettochk = 0;
+  for (nn = 0; nn < 6; nn++)
+    {
+      tocheck[nn] = 0;
+      if (dists[nn] < OprogStatus.epsd && distsOld[nn] < OprogStatus.epsd &&
+	  dorefine[nn] == 0)
+	{
+	  tocheck[nn] = 1; 
+	  rettochk++;
+	}
+    }
+  return rettochk;
+}
+double calcDistNegNeighPlaneAll(double t, double tref, int i, double dists[6], double vecgd[6][8])
+{
+  int nn, err. kk;
+  double r1[3], r2[3]
+  for (nn = 0; nn < 6; nn++)
+    {
+      for (kk = 0; kk < 3; kk++)
+	{
+	  gradplane[kk] = gradplane_all[nn][kk];
+	  rB[kk] = rBall[nn][kk];
+	}
+      dists[nn] = calcDistNegNeighPlane(t, tref, i, r1, r2, vecgd[nn], 1, 0, &err, nn);
+    }
+}
+
+
+int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2, double epsd, 
+					  double *d1, double epsdFast, 
+					  double dists[6], double maxddot)
+{
+  double told, delt, distsOld[6];
+  const int MAXOPTITS = 500;
+  int nn, its=0, amin, bmin, crossed[6]; 
+  *d1 = calcDistNegNeighPlaneAll(*t, t1, i, distsOld);
+  timesF++;
+  told = *t;
+  if (fabs(*d1) < epsdFast)
+    {
+      assign_dists(distsOld, dists);
+      return 0;
+    }
+  while (fabs(*d1) > epsdFast && its < MAXOPTITS)
+    {
+      delt = fabs(*d1) / maxddot;
+     *t += delt;
+     *d1 = calcDistNegNeighPlaneAll(*t, t1, i, dists);
+     if (check_cross(distsOld, dists, crossed, bondpair))
+       {
+	 /* go back! */
+	 MD_DEBUG30(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	 MD_DEBUG30(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
+	 *t = told;	  
+	 *d1 = calcDistNegNeighPlaneAll(*t, t1, i, dists);
+	 return 0;
+       }
+      if (*t+t1 > t2)
+	{
+	  *t = told;
+	  MD_DEBUG30(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG30(printf("convergence t>t2\n"));
+	  *d1 = calcDistNegNeighPlaneAll(*t, t1, i, dists);
+	  return 1;
+	}
+      told = *t;
+      assign_dists(dists, distsOld);
+      its++;
+      itsF++;
+    }
+  return 0;
+}
+void assign_vecg(double vecsource[6][8], double vecdest[6][8])
+{
+  int nn, kk;
+  for (nn = 0; nn < 6; nn++)
+    for (kk = 0; kk < 8; kk++)
+      {
+	vecdest[nn][kk] = vecsource[nn][kk];
+      }
+}
+int locate_contact_neigh_plane_parall(int i, double vecg[5], double tsup, double *evtime)
+{
+  const double minh = 1E-14;
+  double h, d, dold, dold2, t2arr[6], t, dists[6], distsOld[6], 
+	 vecgroot[6][8], vecgd[6][8], vecgdold2[6][8], vecdold[6][8]
+	 distsOld2[6], deltth, factori; 
+  double normddot, maxddot, delt, troot, tmin, tini, maxddoti;
+  int itstb, firstev;
+  const int MAXITS = 100;
+  int itsRef;
+  int its, foundrc, goback;
+  double epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
+  int kk,tocheck[6], dorefine[6], ntc, ncr, nn, gotcoll, crossed[6], firstaftsf;
+  const double GOLD= 1.618034;
+  epsd = OprogStatus.epsd;
+  epsdFast = OprogStatus.epsdFast;
+  epsdFastR= OprogStatus.epsdFastR;
+  epsdMax = OprogStatus.epsdMax;
+  t = 0;//t1;
+  calc_grad_and_point_plane_all(i, gradplane_all, rBall);
+  factori = 0.5*maxax[i]+OprogStatus.epsd;
+ 
+  maxddot = 0.0;
+  for (nn = 0; nn < 6; nn++)
+    {
+      maxddoti = fabs(vx[i]*gradplane_all[nn][0]+vy[i]*gradplane_all[nn][1]+vz[i]*gradplane_all[nn][2])+
+	sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+      if (maxddoti > maxddot)
+	maxddot = maxddoti;
+    }
+  h = OprogStatus.h; /* last resort time increment */
+  delt = h;
+  if (search_contact_faster_neigh_plane_parall(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, 
+					       dists, maxddot))
+    {
+      return 0;  
+    }
+  assign_vecg(vecgd, vecgdold);/* assegna a vecgdold vecgd */
+  timesS++;
+  foundrc = 0;
+  assign_dists(dists, distsOld);
+  dold = d;
+  firstaftsf = 1;
+  its = 0;
+  while (t+t1 < t2)
+    {
+      //normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
+      if (!firstaftsf)
+	{
+	  deldist = get_max_deldist(distsOld2, distsOld);
+	  normddot = fabs(deldist)/delt;
+	  /* NOTA: forse qui si potrebbe anche usare sempre delt = epsd/maxddot */
+	  if (normddot!=0)
+	    delt = epsd/normddot;
+	  else
+	    delt = h;
+	  if (fabs(dold) < epsd)
+	    delt = epsd / maxddot;
+	}
+      else
+	{
+	  delt = h;
+	  firstaftsf = 0;
+	  dold2 = calcDistNegNeighPlaneAll(t-delt, t1, i, distsOld2, vecgdold2);
+	  continue;
+	}
+      tini = t;
+      t += delt;
+      d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd);
+
+      deldist = get_max_deldist(distsOld, dists);
+      if (deldist > epsdMax)
+	{
+	  /* se la variazione di d è eccessiva 
+	   * cerca di correggere il passo per ottenere un valore
+	   * più vicino a epsd*/
+	  t -= delt;
+	  delt = epsd/maxddot;
+	  /* NOTE: prob. la seguente condizione si puo' rimuovere 
+	   * o cambiare in > */
+	  deltth = h;
+	  if (delt < deltth)
+	    {
+	      delt = deltth;
+	    }
+	  t += delt; 
+	  itsS++;
+	  d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgold2);
+	  assign_vec(vecgold2, vecgd);
+	}
+      for (nn=0; nn < 6; nn++)
+	dorefine[nn] = 0;
+      ncr=check_cross(i, j, distsOld, dists, crossed);
+      for (nn = 0; nn < 6; nn++)
+	{
+	  t2arr[nn] = t; 
+	  dorefine[nn] = 0;
+	  if (crossed[nn]!=0)
+	    {
+	      if (distsOld[nn] > 0 && dists[nn] < 0)
+		{
+		  dorefine[nn] = 1;
+		}
+	    }
+	}
+      ntc = get_dists_tocheck(distsOld, dists, tocheck, dorefine);
+		
+      assign_vec(vecgd, vecgroot);
+      for (nn = 0; nn < MD_PBONDS; nn++)
+	{
+	  if (tocheck[nn])
+	    {
+	      for (kk=0; kk < 8; kk++)
+    		vecgroot[nn][kk] = vecgd[nn][kk];
+	      if (interpolNeighPlane(i, t1, t-delt, delt, distsOld[nn], dists[nn], 
+				     &troot, vecgroot[nn],  1, nn))
+		{
+		  dorefine[nn] = 0;
+		}
+	      else 
+		{
+	       	  dorefine[nn] = 1;
+      		  t2arr[nn] = troot;
+		}
+	    }
+	  else
+	    {
+  	      for (kk=0; kk < 8; kk++)
+		vecgroot[nn][kk] = vecgd[nn][kk];
+	      if (interpolNeighPlane(i, t1, t-delt, delt, distsOld[nn], dists[nn], 
+				     &troot, vecgroot[nn],  0, nn))
+		{
+		  for (kk=0; kk < 8; kk++)
+    		    vecgroot[nn][kk] = vecgdold[nn][kk];
+    		  t2arr[nn] = t1 + t - delt;
+		}
+	      else
+		t2arr[nn] = troot;
+	    }
+	}
+
+      gotcoll = 0;
+      firstev = 1;
+      for (nn = 0; nn < 6; nn++)
+	{
+	  if (dorefine[nn]!=0)
+	    {
+   	      if (refine_contact_neigh_plane(i, t1, t2arr[nn], vecgroot[nn], vecg, nn))
+		{
+		  //printf("[locate_contact] Adding collision between %d-%d\n", i, j);
+		  MD_DEBUG30(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
+		  MD_DEBUG30(printf("[locate_contact] t=%.15G nn=%d\n", t, nn));
+		  MD_DEBUG(printf("[locate_contact] its: %d\n", its));
+		  /* se il legame già c'è e con l'urto si forma tale legame allora
+		   * scarta tale urto */
+		  if (vecg[4] > t2 || vecg[4] < t1)
+		    {
+		      continue;
+		    }
+		  else
+		    {
+		      gotcoll = 1;
+		      if (firstev || vecg[4] < *evtime)
+			{
+			  firstev = 0;
+			  *evtime = vecg[4];
+			}
+		      continue;
+		    }
+		}
+	      else 
+		{
+		  MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+#ifdef MD_INTERPOL
+		  if (!tocheck[nn])
+#endif
+		  mdPrintf(ALL,"[locate_contact] can't find contact point!\n",NULL);
+		  /* Se refine_contact fallisce deve cmq continuare a cercare 
+		   * non ha senso smettere...almeno credo */
+		  //gotcoll = -1;
+		  continue;
+		}
+	    }
+	}
+      if (gotcoll == 1)
+	return 1;
+      if (fabs(d) > epsdFastR)
+	{
+	  if (search_contact_faster_neigh_plane_parall(i, &t, t1, t2, epsd, &d, epsdFast, 
+						       dists, maxddot))
+	    {
+	      MD_DEBUG30(printf("[search contact faster locate_contact] d: %.15G\n", d));
+	      return 0;
+	    }
+	  dold = d;
+	  assign_dists(dists, distsOld);
+	  assign_vec(vecgd, vecgdold);
+	  firstaftsf = 1;
+	  its++;
+	  continue;
+	}
+      dold = d;
+      assign_vec(vecgd, vecgdold);
+      assign_dists(distsOld,  distsOld2);
+      assign_dists(dists, distsOld);
+      its++;
+      itsS++;
+    }
+  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+  return 0;
+}
+
 int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 {
   double h, d, dold, dold2, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
@@ -2234,6 +2566,9 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       //printf("NOT BRACK NEIGH\n");
       return 0;
     }
+    if (i==87)
+      printf("t1=%.15G t2=%.15G rA = (%f,%f,%f) rNNL=(%f,%f,%f) d=%.15G\n", t1, t2,rA[0], rA[1], rA[2], nebrTab[i].r[0], nebrTab[i].r[1],
+	   nebrTab[i].r[2], dtmp);
   
   t1 += Oparams.time;	
   if (tsup < t2)
@@ -2285,6 +2620,10 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       dold2 = dold;
       //printf("NNL [LOCATE_CONTACT] >>>>>>>>>>>><<<<<<<<<<\n"); 
       d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
+      if (i==87)
+	printf(">> t=%.15G its=%d rA = (%f,%f,%f) rNNL=(%f,%f,%f) d=%.15G\n", t+t1,its, rA[0], rA[1], rA[2], nebrTab[i].r[0], nebrTab[i].r[1],
+	   nebrTab[i].r[2], d);
+  
 #if 0
       if (i==2)
 	printf("[i==2] time=%.15G d=%.15G\n", t+t1, d);
@@ -2411,7 +2750,6 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
   return foundrc;
 }
-
 int search_contact_faster_neigh(int i, double *t, double t1, double t2, 
 				double *vecgd, double epsd, double *d1, double epsdFast,
 				double *r1, double *r2)
