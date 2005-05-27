@@ -2,7 +2,7 @@
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG10(x)  
-#define MD_DEBUG11(x) x
+#define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x) 
 #if defined(MPI)
@@ -4168,7 +4168,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     {
       printf("[WARNING] t=%.10G d=%.15G < 0 i=%d j=%d\n",t+t1, d, i, j);
       printf("[WARNING] Some collision has been missed, ellipsoid may overlap!\n");
-      store_bump(i, j);
+      //store_bump(i, j);
       return 0;
     }
 #endif
@@ -5438,6 +5438,9 @@ void ProcessCellCrossing(void)
     }
 #endif
 #ifdef MD_NNL
+  /* NOTA: ogni cella delle linked list deve poter contenere il parallelepipedo delle NNL
+   * ed inoltre tali celle servono solo per costruire le NNL e non più per predire gli 
+   * urti fra gli ellissoidi. */
   PredictEventNNL(evIdA, evIdB);
 #else
   PredictEvent(evIdA, evIdB);
