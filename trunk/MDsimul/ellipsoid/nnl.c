@@ -5,7 +5,7 @@
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x) 
-#define MD_DEBUG31(x) x
+#define MD_DEBUG31(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -55,6 +55,7 @@ extern long long int itsF, timesF, itsS, timesS, numcoll;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
+extern double min(double a, double b);
 extern void calcFxtFt(double x[3], double **X,
 	       double D[3][3], double Omega[3][3], double **R, 
 	       double pos[3], double vel[3], double gradf[3],
@@ -1399,7 +1400,7 @@ retryneigh:
     for (k2 = 0; k2 < 3; k2++) 
       segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]);
 #endif
-#if 1
+#if 0
   printf("=====> r1=%f %f %f r2=%f %f %f segno=%.15G\n", r1[0], r1[1], r1[2], r2[0],
 	 r2[1], r2[2], segno);
   if (t+t1 > 30.0)//(fabs(segno) > 0.5 && segno < 0.0)
@@ -1414,8 +1415,8 @@ retryneigh:
 	  check += (r2[k1]-rB[k1])*Xb[k1][k2]*(r2[k2]-rB[k2]);
       printf("===>check=%.15G\n", check);
       //exit(-1);	
+    }
 #endif
- }
 #if 0
   if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
     {
@@ -2242,7 +2243,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   its = 0;
   while (t + t1 < t2)
     {
-      printf("LOC CONT rB = %.15G %.15G %.15G\n", rB[0], rB[1], rB[2]);
+      MD_DEBUG31(printf("LOC CONT rB = %.15G %.15G %.15G\n", rB[0], rB[1], rB[2]));
       normddot = calcvecFNeigh(i, t, t1, ddot, r1);
       if (normddot!=0)
 	delt = epsd / normddot;
@@ -2257,8 +2258,8 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       dold2 = dold;
       //printf("NNL [LOCATE_CONTACT] >>>>>>>>>>>><<<<<<<<<<\n"); 
       d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
-      printf("NNL [LOCATE_CONTACT] delt=%.15G (%.15G,maxddot=%.10G,normddot=%.15G) t=%.15G ellips N. %d d=%.15G dold=%.15G its=%d t1=%.15G t2=%.15G vparall=%.15G\n", 
-      delt, epsd/maxddot, maxddot, normddot, t, i, d, dold, its, t1, t2, fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])); 
+      MD_DEBUG31(printf("NNL [LOCATE_CONTACT] delt=%.15G (%.15G,maxddot=%.10G,normddot=%.15G) t=%.15G ellips N. %d d=%.15G dold=%.15G its=%d t1=%.15G t2=%.15G vparall=%.15G\n", 
+      delt, epsd/maxddot, maxddot, normddot, t, i, d, dold, its, t1, t2, fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2]))); 
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -2326,7 +2327,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	}
       if (dorefine)
 	{
-	  printf("NNL REFINING CONTACT t=%.15G troot=%.15G t1=%.15G\n", t, troot, t1);
+	  MD_DEBUG31(printf("NNL REFINING CONTACT t=%.15G troot=%.15G t1=%.15G\n", t, troot, t1));
 	  if (refine_contact_neigh_plane(i, t1, troot, vecgroot, vecg, nplane))
 	    {
 	      MD_DEBUG31(printf("[locate_contact] Adding collision between %d\n", i));
@@ -2654,7 +2655,7 @@ extern double max(double a, double b);
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM], evCode, k, n, kk;
-  double vecg[5], shift[3], t1, t2, t, tm[NDIM];
+  double vecg[5], shift[3], t1, t2, t, tm[NDIM], tnnl;
   double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
   int overlap;
   if (vz[na] != 0.0) 
@@ -2720,8 +2721,11 @@ void PredictEventNNL(int na, int nb)
   /* urto con le pareti, il che vuol dire:
    * se lungo z e rz = -L/2 => urto con parete */ 
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
-  printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len);
-  for (i=0; i <  nebrTab[na].len; i++)
+  /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni */
+  if (nb >= ATOM_LIMIT)
+    return;
+  MD_DEBUG31(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
+  for (i=0; i < nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
       //if (na==106 || na==132)
@@ -2803,12 +2807,15 @@ void PredictEventNNL(int na, int nb)
       //t += Oparams.time; 
       t2 += Oparams.time;
       t1 += Oparams.time;
-      
-     // t1 = Oparams.time;
-     // t2 = nebrTab[na].nexttime;//,nebrTab[n].nexttime);
+     
+      tnnl = min(nebrTab[na].nexttime,nebrTab[n].nexttime);
+      if (tnnl < t2)
+	t2 = tnnl;
+      // t1 = Oparams.time;
+      // t2 = nebrTab[na].nexttime;//,nebrTab[n].nexttime);
 
-      printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime);
-      printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2);
+      MD_DEBUG31(printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime));
+      MD_DEBUG31(printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2));
       if (!locate_contact(na, n, shift, t1, t2, vecg))
 	{
 	  continue;
@@ -2817,7 +2824,7 @@ void PredictEventNNL(int na, int nb)
       ryC = vecg[1];
       rzC = vecg[2];
       t = vecg[4];
-      printf("Scheduling collision between %d and %d at t=%.15G\n", na, n, t);
+      MD_DEBUG31(printf("Scheduling collision between %d and %d at t=%.15G\n", na, n, t));
       ScheduleEvent (na, n, t);
     }
 }
@@ -2888,7 +2895,7 @@ void nextNNLupdate(int na)
   DelDist = OprogStatus.rNebrShell;
 #endif
   DelDist += distBuf;
-  printf("DelDist=%.15G\n", DelDist);
+  MD_DEBUG31(printf("DelDist=%.15G\n", DelDist));
   nebrTab[na].r[0] = rx[na];
   nebrTab[na].r[1] = ry[na];
   nebrTab[na].r[2] = rz[na];
@@ -2897,7 +2904,7 @@ void nextNNLupdate(int na)
     for (i2 = 0; i2 < 3; i2++)
       nebrTab[na].R[i1][i2] = RtB[i1][i2];
   /* calcola il tempo a cui si deve ricostruire la NNL */
-  printf("BUILDING NNL FOR i=%d\n",na);
+  MD_DEBUG31(printf("BUILDING NNL FOR i=%d\n",na));
 #ifdef MD_NNLPLANES
   nebrTab[na].nexttime = timbig;
   for (ip = 0; ip < 6; ip++)
@@ -3018,17 +3025,21 @@ void BuildNNL(int na)
 #endif
 		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
 		       * in OprogStatus */
+#if 0
 		      if (n==132 && na==106)
 			printf("beccato!! dist=%f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 132, 106, shift));
+#endif
 		      if (dist < 0)
 			{
-			  printf("Adding ellipsoid N. %d to NNL of %d\n", n, na);
+			  MD_DEBUG31(printf("Adding ellipsoid N. %d to NNL of %d\n", n, na));
+#if 0
 			  if (n==132 && na==106)
 			    { printf("bahbah (106-132): %f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 106, 132, shift)); 
 
 			      printf("bahbah (132-106): %f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 132, 106, shift)); 
 			      printf("shift= (%f,%f,%f)\n", shift[0], shift[1], shift[2]);
 }
+#endif
 			  nebrTab[na].list[nebrTab[na].len] = n;
 			  for (kk=0; kk < 3; kk++)
 			    nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
