@@ -1,5 +1,6 @@
 #define TINY 1E-20
 #define MD_NBMAX 8 
+#define MD_NNLPLANES
 #include<mdsimul.h>
 #include<math.h>
 #include<stdio.h>
@@ -3205,7 +3206,6 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLFD 1.0E-10
 #define TOLMIN 1.0E-12//1.0e-6 
 #define STPMX 100.0
-#ifdef MD_NNL
 void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], double x[], 
 	    double *f, double stpmax, int *check, 
 	    double (*func)(double [], int), int iA, 
@@ -3292,7 +3292,6 @@ void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], doub
       alam=FMAX(tmplam,0.1*alam); /* lambda >= 0.1 lambda_1.*/
     }/* Try again.*/
 }
-#endif
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
 	    double *f, double stpmax, int *check, 
 	    double (*func)(double [], int, int, double[]), int iA, int iB, double shift[3],
@@ -3394,18 +3393,14 @@ free_vector(fvecD);free_vector(xold); free_vector(p); free_vector(g);free_matrix
 void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[3]);
 void (*nrfuncv2)(int n, double v[], double fvec[], int i, int j, double shift[3]);
 void (*nrfuncvD)(int n, double v[], double fvec[], int i, int j, double shift[3]);
-#ifdef MD_NNL
 void (*nrfuncvNeigh)(int n, double v[], double f[], int iA); 
 void (*nrfuncvDNeigh)(int n, double v[], double f[], int iA);
-#endif
 
 extern void fdjac(int n, double x[], double fvec[], double **fjac, 
 		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j, double shift[3]), int iA, int iB, double shift[3]); 
 double fmin(double x[], int iA, int iB, double shift[3]);
-#ifdef MD_NNL
 double fminNeigh(double x[], int iA);
 double fminDNeigh(double x[], int iA);
-#endif
 double fminD(double x[], int iA, int iB, double shift[3]);
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, 
 	    double stpmax, int *check, double (*func)(double [], int, int, double []),
@@ -3421,7 +3416,6 @@ extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
 #ifdef MD_GLOBALNR2
 double fmin2(double x[], int iA, int iB, double shift[3]);
 #endif
-#ifdef MD_NNL
 void newtNeigh(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
@@ -3574,7 +3568,6 @@ void newtNeigh(double x[], int n, int *check,
   return;
   nrerror("MAXITS exceeded in newt"); 
 }
-#endif
 void newt(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
@@ -3865,7 +3858,6 @@ void newt(double x[], int n, int *check,
 }
 //#define MD_GLOBALNRD
 #define MAXITS3 200
-#ifdef MD_NNL
 void newtDistNegNeighPlane(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
@@ -4180,7 +4172,6 @@ void newtDistNegNeigh(double x[], int n, int *check,
   
 }
 
-#endif
 void newtDistNeg(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
@@ -4524,7 +4515,6 @@ void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int,
 extern int nn, nn2; 
 extern void (*nrfuncv)(int n, double v[], double f[], int iA, int iB, double shift[3]); 
 extern void (*nrfuncv2)(int n, double v[], double f[], int iA, int iB, double shift[3]); 
-#ifdef MD_NNL
 //extern void (*nrfuncvNeigh)(int n, double v[], double f[], int iA); 
 //extern void (*nrfuncvDNeigh)(int n, double v[], double f[], int iA);
 double fminNeigh(double x[], int iA)
@@ -4549,7 +4539,6 @@ the calling program.*/
     sum += Sqr(fvecD[i]); 
   return 0.5*sum; 
 }
-#endif
 double fmin(double x[], int iA, int iB, double shift[3]) 
 /* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
