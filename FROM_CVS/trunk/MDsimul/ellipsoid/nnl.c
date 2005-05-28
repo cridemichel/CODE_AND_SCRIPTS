@@ -7,6 +7,7 @@
 #define MD_DEBUG20(x) 
 #define MD_DEBUG30(x)
 #define MD_DEBUG31(x) 
+#define MD_DEBUG32(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -1449,6 +1450,8 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
   double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
   double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
   int k1, k2, existsParallelPair = 0;
+  double distBuf;
+  distBuf = OprogStatus.epsd;
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
   rA[0] = nebrTab[i].r[0];
@@ -1464,7 +1467,11 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
   EB[0] = nebrTab[j].axa;
   EB[1] = nebrTab[j].axb;
   EB[2] = nebrTab[j].axc;
-
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      EA[k1] += distBuf;
+      EB[k1] += distBuf;
+    }
   /* verificare che AA e BB sono effettivamente gli assi principali degli ellissoidi */
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -2328,6 +2335,12 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
 #endif
       *t += delt;
       *d1 = calcDistNegNeighPlaneAll(*t, t1, i, dists, vecgd, 1);
+#if 0
+      if (its > 100 && its%10 == 0)
+	{
+	  printf("NNL SEARCH CONTACT FASTER t=%.15G its=%d\n", *t+t1, its);
+	}
+#endif
       //printf("d=%.15G t=%.15G\n", *d1, *t+t1);
 #if 1
       itsf = 0;
@@ -2439,7 +2452,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
   while (t+t1 < t2)
     {
 #if 0
-      if (its > 100 && its%10 == 0)
+      if (its > 500 && its%10 == 0)
 	printf("[LOCATE_CONTACT NNL] i=%d its=%d t=%.15G d=%.15G\n", i, its, t+t1, d);
 #endif
       //normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
@@ -3186,17 +3199,22 @@ void PredictEventNNL(int na, int nb)
   /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni */
   if (nb >= ATOM_LIMIT)
     return;
-  MD_DEBUG31(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
+  MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
   for (i=0; i < nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
-      //if (na==106 || na==132)
-	//printf("[PredictEventNNL] na=%d n=%d\n",na,  n);
+#if 0
+      if (na==35 || na==16)
+	printf("[PredictEventNNL] na=%d n=%d nb=%d\n",na,  n, nb);
+#endif
       if (!(n != na && n!=nb && (nb >= -1 || n < na)))
 	continue;
-      for (kk=0; kk < 3; kk++)
-	shift[kk] = nebrTab[na].shift[i][kk];
-      
+     // for (kk=0; kk < 3; kk++)
+     //	shift[kk] = nebrTab[na].shift[i][kk];
+      shift[0] = L*rint((rx[na]-rx[n])/L);
+      shift[1] = L*rint((ry[na]-ry[n])/L);
+      shift[2] = L*rint((rz[na]-rz[n])/L);
+
       /* maxax[...] è il diametro dei centroidi dei due tipi
        * di ellissoidi */
       if (OprogStatus.targetPhi > 0)
@@ -3236,7 +3254,7 @@ void PredictEventNNL(int na, int nb)
 	   * nessun urto sotto tali condizioni */
 	  continue;
 	}
-      MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
+      MD_DEBUG32(printf("PREDICTING na=%d n=%d\n", na , n));
       if (vv==0.0)
 	{
 	  if (distSq >= sigSq)
@@ -3270,14 +3288,16 @@ void PredictEventNNL(int na, int nb)
       t2 += Oparams.time;
       t1 += Oparams.time;
      
+#if 1
       tnnl = min(nebrTab[na].nexttime,nebrTab[n].nexttime);
       if (tnnl < t2)
 	t2 = tnnl;
+#endif
       // t1 = Oparams.time;
       // t2 = nebrTab[na].nexttime;//,nebrTab[n].nexttime);
 
-      MD_DEBUG31(printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime));
-      MD_DEBUG31(printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2));
+      MD_DEBUG32(printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime));
+      MD_DEBUG32(printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2));
       if (!locate_contact(na, n, shift, t1, t2, vecg))
 	{
 	  continue;
@@ -3286,7 +3306,7 @@ void PredictEventNNL(int na, int nb)
       ryC = vecg[1];
       rzC = vecg[2];
       t = vecg[4];
-      MD_DEBUG31(printf("Scheduling collision between %d and %d at t=%.15G\n", na, n, t));
+      MD_DEBUG32(printf("Scheduling collision between %d and %d at t=%.15G\n", na, n, t));
       ScheduleEvent (na, n, t);
     }
 }
@@ -3509,7 +3529,7 @@ void BuildNNL(int na)
 #endif
 		      if (dist < 0)
 			{
-			  MD_DEBUG31(printf("Adding ellipsoid N. %d to NNL of %d\n", n, na));
+			  MD_DEBUG32(printf("Adding ellipsoid N. %d to NNL of %d\n", n, na));
 #if 0
 			  if (n==132 && na==106)
 			    { printf("bahbah (106-132): %f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 106, 132, shift)); 
@@ -3519,8 +3539,8 @@ void BuildNNL(int na)
 }
 #endif
 			  nebrTab[na].list[nebrTab[na].len] = n;
-			  for (kk=0; kk < 3; kk++)
-			    nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
+			  //for (kk=0; kk < 3; kk++)
+			    //nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
 			  nebrTab[na].len++;
 			}
 		    }
