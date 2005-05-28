@@ -6,6 +6,7 @@
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x) 
 #define MD_DEBUG31(x) 
+#define MD_DEBUG32(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -1158,7 +1159,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
-  MD_DEBUG31(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
+  MD_DEBUG32(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
@@ -4162,9 +4163,15 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   if (lastbump[j]==i && lastbump[i]==j)
     {
       MD_DEBUG11(printf("last collision was between (%d-%d) d=%.15G\n", i, j, d));
+      if (d < 0 && fabs(d) > epsd)
+	{
+	  printf("i=%d j=%d BOH d=%.15G\n", i, j, d);
+	  exit(-1);
+	}
 #if 1
       while (d < 0)
 	{
+	  //printf("===> d=%.15G\n", d);
 	  t += h;
 	  if (t + t1 > t2)
 	    return 0;
@@ -4224,6 +4231,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;
       d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
+      
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -5333,6 +5341,7 @@ void ProcessCollision(void)
 }
 void docellcross(int k, double velk, double *rkptr, int cellsk)
 {
+  int i;
 #if 0
   if (inCell[0][evIdA]+1> cellsx ||inCell[1][evIdA]+1> cellsy||inCell[2][evIdA]+1> cellsz) 
     {printf("PRIMAin cell cross ?!?\n");
@@ -5455,6 +5464,7 @@ void ProcessCellCrossing(void)
   /* NOTA: ogni cella delle linked list deve poter contenere il parallelepipedo delle NNL
    * ed inoltre tali celle servono solo per costruire le NNL e non più per predire gli 
    * urti fra gli ellissoidi. */
+  MD_DEBUG32(printf("i=%d PROCESS CELL CROSSING\n", evIdA));
   PredictEventNNL(evIdA, evIdB);
 #else
   PredictEvent(evIdA, evIdB);
@@ -5772,16 +5782,16 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 0
+#if 1
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
 	      int distfail;
 	      FILE* f;
 	      static int first = 1;
-	      shift[0] = L*rint((rx[0]-rx[1])/L);
-	      shift[1] = L*rint((ry[0]-ry[1])/L);
-	      shift[2] = L*rint((rz[0]-rz[1])/L);
+	      shift[0] = L*rint((rx[35]-rx[16])/L);
+	      shift[1] = L*rint((ry[35]-ry[16])/L);
+	      shift[2] = L*rint((rz[35]-rz[16])/L);
 	      MD_DEBUG(printf("[EVENT10] shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]));
 #if 0
 	      d=calcDist(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecg, 1);
@@ -5792,8 +5802,8 @@ void move(void)
 	      fprintf(f,"%.15G %.15G %.15G %.15G %.15G %.15G\n", Oparams.time, d,vecg[0],vecg[1],vecg[2],vecg[4]);
 	      fclose(f);
 #endif
-	      //d=calcDistNeg(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecgNeg, 1);
-	      d=calcDistNegNeighPlane(0, Oparams.time, 2, r1, r2, vecgNeg, 0, 1, &distfail, 2);
+	      d=calcDistNeg(Oparams.time, 0, 35, 16, shift, r1, r2, &alpha, vecgNeg, 1);
+	      //d=calcDistNegNeighPlane(0, Oparams.time, 2, r1, r2, vecgNeg, 0, 1, &distfail, 2);
 	      if (first)
 		f = fopen("distNeg.dat","w");
 	      else
