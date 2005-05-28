@@ -22,11 +22,9 @@ int *lastbump;
 extern double *axa, *axb, *axc;
 extern int *scdone;
 extern double *maxax;
-#ifdef MD_NNL
 extern double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane);
 
 extern double *lastupdNNL, *totDistDispl;
-#endif
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
@@ -39,10 +37,8 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
 void InitEventList (void);
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
-#ifdef MD_NNL
 extern struct nebrTabStruct *nebrTab;
 double nextNNLrebuild;
-#endif
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0, itsFNL=0, timesFNL=0, 
      timesSNL=0, itsSNL=0;
@@ -635,9 +631,8 @@ void scale_Phi(void)
 #endif
   //check_dist_min("PRIMA");
   rebuild_linked_list();
-#ifdef MD_NNL
-  rebuildNNL();
-#endif
+  if (OprogStatus.useNNL)
+    rebuildNNL();
   rebuildCalendar();
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
@@ -5226,7 +5221,6 @@ void calc_energy(char *msg)
 #endif
   printf("[%s] Kinetic Energy: %f\n", msg, K);
 }
-#ifdef MD_NNL
 void store_bump_neigh(int i, double *r1, double *r2)
 {
   char fileop2[512], fileop[512];
@@ -5266,7 +5260,6 @@ void store_bump_neigh(int i, double *r1, double *r2)
   fclose(bf);
 
 }
-#endif
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
@@ -5328,16 +5321,19 @@ void ProcessCollision(void)
   lastbump[evIdA]=evIdB;
   lastbump[evIdB]=evIdA;
 #endif
-#ifdef MD_NNL
-  /* ricalcola i tempi di collisione con la NL */
-  updrebuildNNL(evIdA);
-  updrebuildNNL(evIdB);
-  PredictEventNNL(evIdA, -1);
-  PredictEventNNL(evIdB, evIdA);
-#else
-  PredictEvent(evIdA, -1);
-  PredictEvent(evIdB, evIdA);
-#endif
+  if (OprogStatus.useNNL)
+    {
+      /* ricalcola i tempi di collisione con la NL */
+      updrebuildNNL(evIdA);
+      updrebuildNNL(evIdB);
+      PredictEventNNL(evIdA, -1);
+      PredictEventNNL(evIdB, evIdA);
+    }
+  else
+    {
+      PredictEvent(evIdA, -1);
+      PredictEvent(evIdB, evIdA);
+    }
 }
 void docellcross(int k, double velk, double *rkptr, int cellsk)
 {
@@ -5365,9 +5361,8 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 	    }
 #endif
 	  *rkptr = -L2;
-#ifdef MD_NNL
-	  nebrTab[evIdA].r[k] -= L;
-#endif
+	  if (OprogStatus.useNNL)
+	    nebrTab[evIdA].r[k] -= L;
 	  OprogStatus.DR[evIdA][k]++;
 	}
 
@@ -5379,9 +5374,8 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
       if (inCell[k][evIdA] == -1) 
 	{
 	  inCell[k][evIdA] = cellsk - 1;
-#ifdef MD_NNL
-	  nebrTab[evIdA].r[k] += L;
-#endif
+	  if (OprogStatus.useNNL)
+	    nebrTab[evIdA].r[k] += L;
 	  *rkptr = L2;
 	  OprogStatus.DR[evIdA][k]--;
 	}
@@ -5460,15 +5454,14 @@ void ProcessCellCrossing(void)
       break;
     }
 #endif
-#ifdef MD_NNL
   /* NOTA: ogni cella delle linked list deve poter contenere il parallelepipedo delle NNL
    * ed inoltre tali celle servono solo per costruire le NNL e non più per predire gli 
    * urti fra gli ellissoidi. */
   MD_DEBUG32(printf("i=%d PROCESS CELL CROSSING\n", evIdA));
-  PredictEventNNL(evIdA, evIdB);
-#else
-  PredictEvent(evIdA, evIdB);
-#endif
+  if (OprogStatus.useNNL)
+    PredictEventNNL(evIdA, evIdB);
+  else
+    PredictEvent(evIdA, evIdB);
   n = (inCell[2][evIdA] * cellsy + inCell[1][evIdA])*cellsx + 
     inCell[0][evIdA] + Oparams.parnum;
   /* Inserimento di evIdA nella nuova cella (head) */
@@ -5514,11 +5507,10 @@ void rebuildCalendar(void)
     }
   for (n = 0; n < Oparams.parnum; n++)
     {
-#ifdef MD_NNL
-      PredictEventNNL(n, -2); 
-#else
-      PredictEvent(n, -2); 
-#endif
+      if (OprogStatus.useNNL)
+	PredictEventNNL(n, -2); 
+      else
+	PredictEvent(n, -2); 
     }
 }
 void distanza(int ia, int ib)
@@ -5553,10 +5545,8 @@ void move(void)
   int ii;
   double rzmax, zfact;
 #endif
-#ifdef MD_NNL
   int k, n;
   double timeold, nltime = timbig;
-#endif
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;
@@ -5568,48 +5558,44 @@ void move(void)
   while (!ENDSIM)
     {
       innerstep++;
-#ifdef MD_NNL
-      timeold = Oparams.time;
-#endif
+      if (OprogStatus.useNNL)
+	timeold = Oparams.time;
       NextEvent();
       /* l'evento di ricostruzione della NNL è mantenuto fuori dal calendario degli eventi per
        * semplicità */
-#ifdef MD_NNL
-      if (Oparams.time >= nextNNLrebuild)
+      if (OprogStatus.useNNL)
 	{
-	  Oparams.time = timeold;
-	  InitEventList();
-	  rebuildNNL();
-	  for (k = 0;  k < 3; k++)
-	    {
-	      cellRange[2*k]   = - 1;
-	      cellRange[2*k+1] =   1;
-	    }
-	  for (n = 0; n < Oparams.parnum; n++)
-	    {
-#ifdef MD_NNL
-	      PredictEventNNL(n, -2); 
-#else
-	      PredictEvent(n, -2); 
-#endif
-	    }
-	  //rebuildCalendar();
-	  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-      	  if (OprogStatus.storerate > 0.0)
-	    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-	  if (OprogStatus.rescaleTime > 0)
-	    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
-	  else
-	    OprogStatus.scalevel = 0;
-	  NextEvent();
 	  if (Oparams.time >= nextNNLrebuild)
 	    {
-	      printf("Le NNL devono essere aggiornat troppo frequentemente!\n");
-	      exit(-1);
+	      Oparams.time = timeold;
+	      InitEventList();
+	      rebuildNNL();
+	      for (k = 0;  k < 3; k++)
+		{
+		  cellRange[2*k]   = - 1;
+		  cellRange[2*k+1] =   1;
+		}
+	      for (n = 0; n < Oparams.parnum; n++)
+		{
+		  PredictEventNNL(n, -2); 
+		}
+	      //rebuildCalendar();
+	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      if (OprogStatus.storerate > 0.0)
+	    	ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+	      if (OprogStatus.rescaleTime > 0)
+		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	      else
+		OprogStatus.scalevel = 0;
+	      NextEvent();
+	      if (Oparams.time >= nextNNLrebuild)
+		{
+		  printf("Le NNL devono essere aggiornat troppo frequentemente!\n");
+		  exit(-1);
+		}
 	    }
 	}
-#endif
       /* Descrizione Eventi:
        * 0 <= evIdB < ATOM_LIMIT: 
        *        urto fra evIdA e evIdB 
@@ -5782,7 +5768,7 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
-#if 1
+#if 0
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
@@ -5817,9 +5803,8 @@ void move(void)
 	  if (OprogStatus.brownian)
 	    {
 	      velsBrown(Oparams.T);
-#ifdef MD_NNL
-	      rebuildNNL();
-#endif
+	      if (OprogStatus.useNNL)
+		rebuildNNL();
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
@@ -5899,9 +5884,8 @@ void move(void)
 			}
 		      rebuildLinkedList();
 		      MD_DEBUG3(distanza(996, 798));
-#ifdef MD_NNL
-		      rebuildNNL();
-#endif
+		      if (OprogStatus.useNNL)
+			rebuildNNL();
 		      rebuildCalendar();
 		      if (OprogStatus.storerate > 0.0)
 			ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
@@ -5918,9 +5902,8 @@ void move(void)
 		  MD_DEBUG4(printf("SCALVEL #%lld Vz: %.15f\n", (long long int) Oparams.curStep,Vz));
 		  scalevels(Oparams.T, K, Vz);
 		  rebuildLinkedList();
-#ifdef MD_NNL
-		  rebuildNNL();
-#endif
+		  if (OprogStatus.useNNL)
+		    rebuildNNL();
 		  rebuildCalendar();
 		  if (OprogStatus.storerate > 0.0)
 		    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
@@ -5941,9 +5924,8 @@ void move(void)
 	      calcKVz();
 	      MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%lld Vz: %.15f\n", (long long int)Oparams.curStep,Vz));
 	      scalevels(Oparams.T, K, Vz);
-#ifdef MD_NNL
-	      updAllNNL();
-#endif
+	      if (OprogStatus.useNNL)
+		updAllNNL();
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
@@ -5982,9 +5964,8 @@ void move(void)
 		}
 	      K *= 0.5;
 	      scalevels(Oparams.T, K);
-#ifdef MD_NNL
-	      updAllNNL();
-#endif
+	      if (OprogStatus.useNNL)
+		updAllNNL();
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)

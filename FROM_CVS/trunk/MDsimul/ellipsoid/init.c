@@ -50,9 +50,7 @@ int parnumA, parnumB;
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 #endif
 double invaSq[2], invbSq[2], invcSq[2];
-#ifdef MD_NNL
 struct nebrTabStruct *nebrTab;
-#endif
 /* ================================= */
 
 /* ========================================================================= */
@@ -734,10 +732,10 @@ void usrInitBef(void)
     OprogStatus.targetPhi = 0.0;
     OprogStatus.scalfact = 0.8;
     OprogStatus.reducefact = 0.9;
-#ifdef MD_NNL
     OprogStatus.nebrTabFac = 200;
     OprogStatus.rNebrShell = 1.0;
-#endif
+    OprogStatus.useNNL = 0;
+    OprogStatus.paralNNL = 1;
     /* If 1 the program calculate of the corrisponding variable a mean from
        the begin of the run and not the instanteaneous value */
     OprogStatus.avnggr    = 0;
@@ -1015,9 +1013,7 @@ void add_neighbours(MESHXYZ** mesh, int i, int j)
       mesh[i][j].neigh[3].j = j;
     }
 }
-#ifdef MD_NNL
 extern void rebuildNNL(void);
-#endif
 void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 {
   int i,j, n1, n2;
@@ -1050,9 +1046,7 @@ void usrInitAft(void)
     char fileop[1024], fileop2[1024], fileop3[1024];
     FILE *bof;
 #endif    
-#ifdef MD_NNL
     double nltime;
-#endif
     int Nm, i, sct, overlap;
     COORD_TYPE vcmx, vcmy, vcmz;
     COORD_TYPE *m;
@@ -1226,17 +1220,17 @@ void usrInitAft(void)
   axc = malloc(sizeof(double)*Oparams.parnum);
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
-#ifdef MD_NNL
-  nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
-#endif
+  if (OprogStatus.useNNL)
+    nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
   for (i=0; i < Oparams.parnumA; i++)
     {
-#ifdef MD_NNL
-      nebrTab[i].len = 0;
-      nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
-      nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
-      nebrTab[i].R = matrix(3, 3);
-#endif
+      if (OprogStatus.useNNL)
+	{
+	  nebrTab[i].len = 0;
+	  nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+	  nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
+	  nebrTab[i].R = matrix(3, 3);
+	}
       scdone[i] = 0;
       axa[i] = Oparams.a[0];
       axb[i] = Oparams.b[0];
@@ -1244,11 +1238,12 @@ void usrInitAft(void)
     }
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
     {
-#ifdef MD_NNL
-      nebrTab[i].len = 0;
-      nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
-      nebrTab[i].R = matrix(3, 3);
-#endif
+      if (OprogStatus.useNNL)
+	{
+	  nebrTab[i].len = 0;
+	  nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+	  nebrTab[i].R = matrix(3, 3);
+	}
       scdone[i] = 0;
       axa[i] = Oparams.a[1];
       axb[i] = Oparams.b[1];
@@ -1393,11 +1388,10 @@ void usrInitAft(void)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-#ifdef MD_NNL
-  rebuildNNL();
+  if (OprogStatus.useNNL)
+    rebuildNNL();
   //exit(-1);
   MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
-#endif
   //exit(-1);
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
