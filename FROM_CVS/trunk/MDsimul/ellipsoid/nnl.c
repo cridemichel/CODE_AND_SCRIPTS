@@ -1932,7 +1932,8 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
   int nb, distfail;
   double d3, t1, t2;
   double r1[3], r2[3], xb1[2], xb2[2];
-  assign_plane(nplane);
+  if (OprogStatus.paralNNL)
+    assign_plane(nplane);
   d3 = calcDistNegNeighPlane(t+delt*0.5, tref, i, r1, r2, vecg, 0, 0, &distfail, nplane);
   xa[0] = t;
   ya[0] = d1;
@@ -2530,7 +2531,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
 #endif
 	}
       assign_vec(vecgd, vecgroot);
-#if 0
+#if 1
       ntc = get_dists_tocheck(distsOld, dists, tocheck, dorefine);
 		
       //assign_vec(vecgd, vecgroot);
