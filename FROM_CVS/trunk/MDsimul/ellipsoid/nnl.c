@@ -132,7 +132,7 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       
   for (kk=0; kk < 3; kk++)
     {
-      if (nplane < 3)
+      if (nplane % 2 == 0)
 	segno = 1;
       else
 	segno = -1;
@@ -2289,11 +2289,23 @@ double calcDistNegNeighPlaneAll(double t, double tref, int i, double dists[6], d
   return dmin; 
 }
 
-
+void calc_delt(double maxddoti[6], double *delt, double dists[6])
+{
+  int nn;
+  double dt;
+  for (nn = 0; nn < 6; nn++)
+    {
+      dt = fabs(dists[nn]) / maxddoti[nn];
+      //printf("nn=%d dt=%.15G delt=%.15G dists=%.15G maxddoti=%15G\n", nn, dt, *delt, dists[nn], maxddoti[nn]);
+      if (nn==0 || dt < (*delt))
+	*delt = dt;
+    }
+  //printf("I chose dt=%.15G\n", *delt);
+}
 int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2, 
 					  double vecgd[6][8], double epsd, 
 					  double *d1, double epsdFast, 
-					  double dists[6], double maxddot)
+					  double dists[6], double maxddoti[6], double maxddot)
 {
   double told, delt, distsOld[6];
   const double GOLD= 1.618034;
@@ -2309,7 +2321,11 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
     }
   while (fabs(*d1) > epsdFast && its < MAXOPTITS)
     {
+#if 1
+      calc_delt(maxddoti, &delt, distsOld);
+#else
       delt = fabs(*d1) / maxddot;
+#endif
       *t += delt;
       *d1 = calcDistNegNeighPlaneAll(*t, t1, i, dists, vecgd, 1);
       //printf("d=%.15G t=%.15G\n", *d1, *t+t1);
@@ -2381,7 +2397,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
   double h, d, dold, dold2, t2arr[6], t, dists[6], distsOld[6], 
 	 vecg[5], vecgroot[6][8], vecgd[6][8], vecgdold2[6][8], vecgdold[6][8],
 	 distsOld2[6], deltth, factori; 
-  double normddot, maxddot, delt, troot, tmin, tini, maxddoti;
+  double normddot, maxddot, delt, troot, tmin, tini, maxddoti[6];
   int itstb, firstev;
   const int MAXITS = 100;
   int itsRef;
@@ -2397,19 +2413,19 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
   t2 = timbig;
   calc_grad_and_point_plane_all(i, gradplane_all, rBall);
   factori = 0.5*maxax[i]+OprogStatus.epsd;
- 
   maxddot = 0.0;
   for (nn = 0; nn < 6; nn++)
     {
-      maxddoti = fabs(vx[i]*gradplane_all[nn][0]+vy[i]*gradplane_all[nn][1]+vz[i]*gradplane_all[nn][2])+
+      maxddoti[nn] = fabs(vx[i]*gradplane_all[nn][0]+vy[i]*gradplane_all[nn][1]+vz[i]*gradplane_all[nn][2])+
 	sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
-      if (maxddoti > maxddot)
-	maxddot = maxddoti;
+      if (nn==0 || maxddoti[nn] > maxddot)
+	maxddot = maxddoti[nn];
+      //printf("nn=%d maxddoti=%.15G\n", nn, maxddoti);
     }
   h = OprogStatus.h; /* last resort time increment */
   delt = h;
   if (search_contact_faster_neigh_plane_all(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, 
-					       dists, maxddot))
+					       dists, maxddoti, maxddot))
     {
       return 0;  
     }
@@ -2588,7 +2604,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
       if (fabs(d) > epsdFastR)
 	{
 	  if (search_contact_faster_neigh_plane_all(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, 
-						       dists, maxddot))
+						       dists, maxddoti, maxddot))
 	    {
 	      MD_DEBUG30(printf("[search contact faster locate_contact] d: %.15G\n", d));
 	      return 0;
