@@ -174,7 +174,6 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeIdC    tree[9]
 #endif
 #define ATOM_LIMIT 10000000
-#ifdef MD_NNL
 struct nebrTabStruct 
 {
   int *list;       /* ellissoidi nella NNL */
@@ -188,7 +187,6 @@ struct nebrTabStruct
   double axb;
   double axc;
 };
-#endif
 /* ======================== >>> struct progStatus <<< =======================*/
 struct progStatus
 {
@@ -294,11 +292,11 @@ struct progStatus
   int savedXva; 
   int CMreset;
   int mdseed;
-#ifdef MD_NNL
   double lastcoll;
   double rNebrShell;   /* Dr of shell of neighbour list shell see Rapaport pag. 53 */
   int nebrTabFac;
-#endif
+  int useNNL;
+  int paralNNL;
   COORD_TYPE tolT;
   int ipart;
   int HNBOX;
@@ -492,13 +490,11 @@ struct pascii opro_ascii[] =
   {"W",            &OS(W),                          1,              1, "%.6G"},
   {"savedXva",     &OS(savedXva),                   1,   1,   "%d"},
   {"CMreset",      &OS(CMreset),                    1,   1,  "%d"},
-#ifdef MD_NNL
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
-#ifdef MD_NNL
-  {"rNebrShell",   &OS(rNebrShell),                 1,   1, "%.6G"},
-#endif
+  {"rNebrShell",   &OS(rNebrShell),                 1,   1, "%.14G"},
   {"tolT",         &OS(tolT),                       1,   1, "%.8G"},
-#endif
+  {"useNNL",       &OS(useNNL),                     1,   1, "%d"},
+  {"paralNNL",     &OS(paralNNL),                   1,   1, "%d"},
 #ifdef MD_GRAVITY
   {"tc",           &OS(tc),                          1,              1, "%.15G"},
   {"quenchtol",    &OS(quenchtol),                  1,   1, "%.10G"},
@@ -539,10 +535,6 @@ struct pascii opro_ascii[] =
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
   {"phitol",       &OS(phitol),                     1,  1,    "%.14G"},
   {"axestol",      &OS(axestol),                    1,  1,    "%.14G"},
-#ifdef MD_NNL
-  {"rNebrShell",      &OS(rNebrShell),             1,  1,    "%.14G"},
-  {"nebrTabFac",      &OS(nebrTabFac),             1,  1,    "%d"},        
-#endif
   {"endtime",      &OS(endtime),                    1,  1,    "%.15G"},
   {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
   {"nextSumTime"  ,&OS(nextSumTime),                1,  1,    "%.15G"},
@@ -703,10 +695,10 @@ struct singlePar OsinglePar[] = {
   {"VCalc",   &OprogStatus.measCalc[9],    LLINT},   
   {"VName",   &OprogStatus.dataFiles[9],   STR},
   {"CMreset",    &OprogStatus.CMreset,        INT},
-#ifdef MD_NNL
   {"rNebrShell", &OprogStatus.rNebrShell,     CT},
   {"nebrTabFac", &OprogStatus.nebrTabFac,     INT},
-#endif
+  {"useNNL"    , &OprogStatus.useNNL,         INT},
+  {"paralNNL",   &OprogStatus.paralNNL,       INT},
   {"overlaptol", &OprogStatus.overlaptol,     CT},
   {"intervalSum", &OprogStatus.intervalSum,   CT},
   {"rescaleTime", &OprogStatus.rescaleTime,   CT},

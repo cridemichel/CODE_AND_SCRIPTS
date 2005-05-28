@@ -1,4 +1,5 @@
 #include<mdsimul.h>
+#define MD_NNLPLANES
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG10(x)  
@@ -108,7 +109,6 @@ extern void newtNeigh(double x[], int n, int *check,
 extern void newtDistNegNeighPlane(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA);
-#ifdef MD_NNL
 void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {
   int kk;
@@ -1085,6 +1085,8 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   MD_DEBUG20(printf("BBBB ti= %.15G rB (%.15G,%.15G,%.15G)\n", ti, rB[0], rB[1], rB[2]));
   /* NOTA: dato l'ellissoide e la sua neighbour list a t=0 bisognerebbe stimare con esattezza 
    * la loro distanza e restituirla di seguito */
+  /* NOTA2: per ora fa in ogni caso il guess ma si potrebbe facilmente fare in modo
+   * di usare il vecchio vecg. */
   if (calcgradandpoint)
     calc_grad_and_point_plane(i, gradplane, rB, nplane);
   
@@ -1914,11 +1916,23 @@ retryoverlap:
   else
     return -calc_norm(r12);
 }
+
+double gradplane_all[6][3], rBall[6][3];
+void assign_plane(int nn)
+{
+  int kk;
+  for (kk = 0; kk < 3; kk++)
+    {
+      gradplane[kk] = gradplane_all[nn][kk];
+      rB[kk] = rBall[nn][kk];
+    }
+}
 int interpolNeighPlane(int i, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, int bracketing, int nplane)
 {
   int nb, distfail;
   double d3, t1, t2;
   double r1[3], r2[3], xb1[2], xb2[2];
+  assign_plane(nplane);
   d3 = calcDistNegNeighPlane(t+delt*0.5, tref, i, r1, r2, vecg, 0, 0, &distfail, nplane);
   xa[0] = t;
   ya[0] = d1;
@@ -1952,7 +1966,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
     {
       printf("bracketing: %d polinterr=%d t1=%.15G t2=%.15G\n", bracketing,polinterr, t1, t2);
       printf("d: %.15G,%.15G,%.15G\n", d1, d3, d2);
-      printf("t: %.15G,%.15G,%.15G\n", t, t+delt*0.5, t+delt);
+      printf("tref=%.15G t: %.15G,%.15G,%.15G\n", tref, t, t+delt*0.5, t+delt);
       printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
       return 1;
     }
@@ -2276,7 +2290,6 @@ int get_dists_tocheck(double distsOld[6], double dists[6], int tocheck[6], int d
     }
   return rettochk;
 }
-double gradplane_all[6][3], rBall[6][3];
 double calcDistNegNeighPlaneAll(double t, double tref, int i, double dists[6], double vecgd[6][8], int calcguess)
 {
   int nn, err, kk;
@@ -2396,6 +2409,7 @@ void assign_vec(double vecsource[6][8], double vecdest[6][8])
 	vecdest[nn][kk] = vecsource[nn][kk];
       }
 }
+   	   
 void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBALL[6][3])
 {
   int nn;
@@ -2537,7 +2551,6 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
       		  t2arr[nn] = troot;
 		}
 	    }
-#if 1
 	  else if (dorefine[nn])
 	    {
   	      for (kk=0; kk < 8; kk++)
@@ -2545,17 +2558,15 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
 	      if (interpolNeighPlane(i, t1, t-delt, delt, distsOld[nn], dists[nn], 
 				     &troot, vecgroot[nn],  0, nn))
 		{
-  		  t2arr[nn] = troot;
+		  for (kk=0; kk < 8; kk++)
+		    vecgroot[nn][kk] = vecgdold[nn][kk];
+		  t2arr[nn] = t1 + t - delt;
 		}
 	      else
 		{
-		  for (kk=0; kk < 8; kk++)
-    		    vecgroot[nn][kk] = vecgdold[nn][kk];
-    		  t2arr[nn] = t1 + t - delt;
-
+  		  t2arr[nn] = troot;
 		}
 	    }
-#endif
 	}
 #endif
       gotcoll = 0;
@@ -2564,12 +2575,8 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
 	{
 	  if (dorefine[nn]!=0)
 	    {
-	      for (kk = 0; kk < 3; kk++)
-		{
-		  gradplane[kk] = gradplane_all[nn][kk];
-		  rB[kk] = rBall[nn][kk];
-		}
-   	      if (refine_contact_neigh_plane(i, t1, t2arr[nn], vecgroot[nn], vecg, nn))
+	      assign_plane(nn);
+	      if (refine_contact_neigh_plane(i, t1, t2arr[nn], vecgroot[nn], vecg, nn))
 		{
 		  //printf("[locate_contact] Adding collision for ellips. N. %d t=%.15G t1=%.15G t2=%.15G\n", i,
 		//	 vecg[4], t1 , t2);
@@ -3320,21 +3327,24 @@ void updrebuildNNL(int na)
   int ip;
 #ifdef MD_NNLPLANES
   nebrTab[na].nexttime = timbig;
-#if 1
-  if (!locate_contact_neigh_plane_parall(na, &(nebrTab[na].nexttime)))
+  if (OprogStatus.paralNNL)
     {
-      printf("[ERROR] failed to find escape time for ellipsoid N. %d\n", na);
-      exit(-1);
+      if (!locate_contact_neigh_plane_parall(na, &(nebrTab[na].nexttime)))
+	{
+	  printf("[ERROR] failed to find escape time for ellipsoid N. %d\n", na);
+	  exit(-1);
+	}
     }
-#else
-   for (ip = 0; ip < 6; ip++)
-    {
-     if (!locate_contact_neigh_plane(na, vecg, ip, nebrTab[na].nexttime))
-	continue;
-      if (vecg[4] < nebrTab[na].nexttime)
-	nebrTab[na].nexttime = vecg[4];
-    }
-#endif
+ else
+   {
+     for (ip = 0; ip < 6; ip++)
+       {
+	 if (!locate_contact_neigh_plane(na, vecg, ip, nebrTab[na].nexttime))
+	   continue;
+	 if (vecg[4] < nebrTab[na].nexttime)
+	   nebrTab[na].nexttime = vecg[4];
+       }
+   }
 #else
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
@@ -3397,21 +3407,24 @@ void nextNNLupdate(int na)
   MD_DEBUG31(printf("BUILDING NNL FOR i=%d\n",na));
 #ifdef MD_NNLPLANES
   nebrTab[na].nexttime = timbig;
-#if 1
-  if (!locate_contact_neigh_plane_parall(na, &(nebrTab[na].nexttime)))
+  if (OprogStatus.paralNNL)
     {
-      printf("[ERROR] failed to find escape time for ellipsoid N. %d\n", na);
-      exit(-1);
+      if (!locate_contact_neigh_plane_parall(na, &(nebrTab[na].nexttime)))
+	{
+	  printf("[ERROR] failed to find escape time for ellipsoid N. %d\n", na);
+	  exit(-1);
+	}
     }
-#else
-  for (ip = 0; ip < 6; ip++)
+  else
     {
-      if (!locate_contact_neigh_plane(na, vecg, ip, nebrTab[na].nexttime))
-      	continue;
-      if (vecg[4] < nebrTab[na].nexttime)
-	nebrTab[na].nexttime = vecg[4];
+      for (ip = 0; ip < 6; ip++)
+       	{
+ 	  if (!locate_contact_neigh_plane(na, vecg, ip, nebrTab[na].nexttime))
+ 	    continue;
+ 	  if (vecg[4] < nebrTab[na].nexttime)
+ 	    nebrTab[na].nexttime = vecg[4];
+  	}
     }
-#endif
   //printf(">> nexttime=%.15G\n", nebrTab[na].nexttime);
 #else
   if (!locate_contact_neigh(na, vecg))
@@ -3549,4 +3562,3 @@ void BuildNNL(int na)
 	}
     }
 }
-#endif
