@@ -130,7 +130,10 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       del = nebrTab[i].axc;	
       break;
     }
-      
+
+  /* NOTA: epsd viene usato come buffer per evitare problemi numerici 
+   * nell'update delle NNL. */
+  del -= OprogStatus.epsd;
   for (kk=0; kk < 3; kk++)
     {
       if (nplane % 2 == 0)
@@ -1452,8 +1455,10 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
   double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
   double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
   int k1, k2, existsParallelPair = 0;
+#if 0
   double distBuf;
   distBuf = OprogStatus.epsd;
+#endif
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
   rA[0] = nebrTab[i].r[0];
@@ -1469,11 +1474,13 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
   EB[0] = nebrTab[j].axa;
   EB[1] = nebrTab[j].axb;
   EB[2] = nebrTab[j].axc;
+#if 0
   for (k1 = 0; k1 < 3; k1++)
     {
       EA[k1] += distBuf;
       EB[k1] += distBuf;
     }
+#endif
   /* verificare che AA e BB sono effettivamente gli assi principali degli ellissoidi */
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -2659,7 +2666,7 @@ int dist_too_big(int i, double t, double t1)
     {
       DR[kk] = rA[kk] - rB[kk];
     }
-  if (calc_norm(DR) > maxax[i])
+  if (calc_norm(DR) > 0.5*maxax[i])
     return 1;
   else 
     return 0;
