@@ -3477,7 +3477,8 @@ void updrebuildNNL(int na)
 	printf("sp > 0!!!!!!!!!\n");
     }
 #endif
-  
+ 
+  //printf("updneigh REBUILD i=%d t=%.15G\n", na, nebrTab[na].nexttime);
   if (nebrTab[na].nexttime < nextNNLrebuild)
     nextNNLrebuild = nebrTab[na].nexttime;
 }

@@ -401,7 +401,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 {
   int kk;
   double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
-
+  double boxdiag;
   L2 = 0.5 * L;
   phi = calc_phi();
   phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
@@ -445,8 +445,21 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   axc[i] *= fact;
   maxax[i] *= fact;
   *factor = fact;
-  if (2.0*max_ax(i) > Oparams.rcut)
-    Oparams.rcut = 2.0*max_ax(i)*1.01;
+  if (!OprogStatus.useNNL)
+    {
+      if (2.0*max_ax(i) > Oparams.rcut)
+	{
+	  Oparams.rcut = 2.0*max_ax(i)*1.01;
+	}
+    }
+  else
+    {
+      boxdiag = 2.0*sqrt(Sqr(axa[i]+OprogStatus.rNebrShell)+
+			 Sqr(axb[i]+OprogStatus.rNebrShell)+
+			 Sqr(axc[i]+OprogStatus.rNebrShell)); 
+      if ( boxdiag > Oparams.rcut)
+	Oparams.rcut = 1.01*boxdiag;
+    }
   return calc_phi();
 }
 
@@ -511,6 +524,7 @@ double check_alldist_min(char *msg)
   return distMin;
   
 }
+double rcutIni;
 void scale_Phi(void)
 {
   int i, j, imin, kk, its, done=0;
@@ -526,6 +540,7 @@ void scale_Phi(void)
     {
       first = 0;
       a0I = Oparams.a[0];
+      rcutIni = Oparams.rcut;
       target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
   //UpdateSystem();   
@@ -637,7 +652,8 @@ void scale_Phi(void)
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  if (OprogStatus.scalevel)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
   printf("Scaled successfully %d/%d ellipsoids \n", done, Oparams.parnum);
   if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
@@ -646,7 +662,7 @@ void scale_Phi(void)
       ENDSIM = 1;
       /* riduce gli ellissoidi alle dimensioni iniziali e comprime il volume */
       factor = a0I/axa[0];
-      Oparams.rcut *= factor;
+      Oparams.rcut = rcutIni;
 #if 0
       Oparams.a[0] *= factor;
       Oparams.b[0] *= factor;
@@ -5552,7 +5568,7 @@ void move(void)
 	{
 	  if (Oparams.time >= nextNNLrebuild)
 	    {
-	      Oparams.time = timeold;
+	      Oparams.time = nextNNLrebuild;
 	      InitEventList();
 	      rebuildNNL();
 	      for (k = 0;  k < 3; k++)
@@ -5569,16 +5585,17 @@ void move(void)
 	      if (OprogStatus.storerate > 0.0)
 	    	ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-	      if (OprogStatus.rescaleTime > 0)
+	      if (OprogStatus.scalevel)
 		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
-	      else
-		OprogStatus.scalevel = 0;
+	      continue;
+#if 0
 	      NextEvent();
 	      if (Oparams.time >= nextNNLrebuild)
 		{
 		  printf("Le NNL devono essere aggiornat troppo frequentemente!\n");
 		  exit(-1);
 		}
+#endif
 	    }
 	}
       /* Descrizione Eventi:
@@ -5794,7 +5811,8 @@ void move(void)
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	      if (OprogStatus.scalevel)
+		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
 	  OprogStatus.nextDt += Oparams.Dt;
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
