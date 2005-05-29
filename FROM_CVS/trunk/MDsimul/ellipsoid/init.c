@@ -735,6 +735,8 @@ void usrInitBef(void)
     OprogStatus.nebrTabFac = 200;
     OprogStatus.rNebrShell = 1.0;
     OprogStatus.useNNL = 0;
+    OprogStatus.dist5 = 0;
+    OprogStatus.dist5NL = 0;
     OprogStatus.paralNNL = 1;
     /* If 1 the program calculate of the corrisponding variable a mean from
        the begin of the run and not the instanteaneous value */
