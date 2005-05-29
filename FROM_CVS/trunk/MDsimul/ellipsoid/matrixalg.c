@@ -3878,7 +3878,11 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 #ifdef MD_GLOBALNRDNL
   f=fminDNeigh(x,iA); /*fvec is also computed by this call.*/
 #else
+#ifdef MD_DIST5NL
+  funcs2beZeroedDistNegNeighPlane5(n,x,fvecD,iA);
+#else
   funcs2beZeroedDistNegNeighPlane(n,x,fvecD,iA);
+#endif
 #endif
   test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
   for (i=0;i<n;i++) 
@@ -3895,7 +3899,11 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
   for (its=0;its<MAXITS3;its++)
     { /* Start of iteration loop. */
        /* ============ */
+#ifdef MD_DIST5NL
+      fdjacDistNegNeighPlane5(n,x,fvecD,fjac,vecfunc, iA);
+#else
       fdjacDistNegNeighPlane(n,x,fvecD,fjac,vecfunc, iA);
+#endif
       /* If analytic Jacobian is available, you can 
 	  replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNRDNL
