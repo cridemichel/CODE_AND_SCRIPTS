@@ -296,6 +296,8 @@ struct progStatus
   double rNebrShell;   /* Dr of shell of neighbour list shell see Rapaport pag. 53 */
   int nebrTabFac;
   int useNNL;
+  int dist5;
+  int dist5NL;
   int paralNNL;
   COORD_TYPE tolT;
   int ipart;
@@ -498,6 +500,8 @@ struct pascii opro_ascii[] =
   {"rNebrShell",   &OS(rNebrShell),                 1,   1, "%.14G"},
   {"tolT",         &OS(tolT),                       1,   1, "%.8G"},
   {"useNNL",       &OS(useNNL),                     1,   1, "%d"},
+  {"dist5",        &OS(dist5),                      1,   1, "%d"},
+  {"dist5NL",      &OS(dist5NL),                    1,   1, "%d"},
   {"paralNNL",     &OS(paralNNL),                   1,   1, "%d"},
 #ifdef MD_GRAVITY
   {"tc",           &OS(tc),                          1,              1, "%.15G"},
@@ -706,6 +710,8 @@ struct singlePar OsinglePar[] = {
   {"rNebrShell", &OprogStatus.rNebrShell,     CT},
   {"nebrTabFac", &OprogStatus.nebrTabFac,     INT},
   {"useNNL"    , &OprogStatus.useNNL,         INT},
+  {"dist5",    &OprogStatus.dist5,          INT},
+  {"dist5NL",    &OprogStatus.dist5NL,        INT},
   {"paralNNL",   &OprogStatus.paralNNL,       INT},
   {"overlaptol", &OprogStatus.overlaptol,     CT},
   {"intervalSum", &OprogStatus.intervalSum,   CT},
