@@ -316,6 +316,10 @@ struct progStatus
   double epsdFast;
   double epsdFastR;
   double epsdMax;
+  double epsdNL;
+  double epsdFastNL;
+  double epsdFastRNL;
+  double epsdMaxNL;
   int guessDistOpt;
   int forceguess;
   double targetPhi;
@@ -512,12 +516,16 @@ struct pascii opro_ascii[] =
   {"scalevel",     &OS(scalevel),              1,   1, "%d"},
   {"equilibrated", &OS(equilibrated),          1,   1, "%d"},
   {"epsd",         &OS(epsd),                  1,   1, "%.12G"},
+  {"epsdNL",       &OS(epsdNL),                1,   1, "%.12G"},
   {"epsdSD",       &OS(epsdSD),                1,   1, "%.12G"},
   {"epsdGDO",      &OS(epsdGDO),               1,   1, "%.12G"},
   {"h",            &OS(h),                     1,   1, "%.15G"},
   {"epsdFast",     &OS(epsdFast),              1,   1, "%.12G"},
   {"epsdFastR",    &OS(epsdFastR),             1,   1, "%.12G"},
   {"epsdMax",      &OS(epsdMax),               1,   1, "%.12G"},
+  {"epsdFastNL",     &OS(epsdFastNL),              1,   1, "%.12G"},
+  {"epsdFastRNL",    &OS(epsdFastRNL),             1,   1, "%.12G"},
+  {"epsdMaxNL",      &OS(epsdMaxNL),               1,   1, "%.12G"},
   {"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
   {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
   {"stepSDA",       &OS(stepSDA),                1,   1, "%.12G"},
@@ -707,12 +715,16 @@ struct singlePar OsinglePar[] = {
   {"endtime",    &OprogStatus.endtime,        CT},
   {"Dt",         &Oparams.Dt,                 CT},
   {"epsd",       &OprogStatus.epsd,           CT},
+  {"epsdNL",     &OprogStatus.epsdNL,         CT},
   {"epsdSD",     &OprogStatus.epsdSD,         CT},
   {"epsdGDO",    &OprogStatus.epsdGDO,        CT},
   {"h",          &OprogStatus.h,              CT},
   {"epsdFast",   &OprogStatus.epsdFast,       CT},
   {"epsdFastR",  &OprogStatus.epsdFastR,      CT},
   {"epsdMax",    &OprogStatus.epsdMax,        CT},
+  {"epsdFastNL",   &OprogStatus.epsdFastNL,       CT},
+  {"epsdFastRNL",  &OprogStatus.epsdFastRNL,      CT},
+  {"epsdMaxNL",    &OprogStatus.epsdMaxNL,        CT},
   {"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
   {"tolSD",      &OprogStatus.tolSD,          CT},
   {"tolSDlong",  &OprogStatus.tolSDlong,      CT},
