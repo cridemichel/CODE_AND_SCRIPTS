@@ -2027,6 +2027,7 @@ void assign_plane(int nn)
       rB[kk] = rBall[nn][kk];
     }
 }
+extern double sogliaErr_zbrent;
 int interpolNeighPlane(int i, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, int bracketing, int nplane)
 {
   int nb, distfail;
@@ -2034,6 +2035,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
   double r1[3], r2[3], xb1[2], xb2[2];
   if (OprogStatus.paralNNL)
     assign_plane(nplane);
+  sogliaErr_zbrent = OprogStatus.epsdNL;
   d3 = calcDistNegNeighPlane(t+delt*0.5, tref, i, r1, r2, vecg, 0, 0, &distfail, nplane);
   xa[0] = t;
   ya[0] = d1;
@@ -2065,7 +2067,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
   *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
   if (polinterr)
     {
-      printf("bracketing: %d polinterr=%d t1=%.15G t2=%.15G\n", bracketing,polinterr, t1, t2);
+      printf("[interpol_neigh] bracketing: %d polinterr=%d t1=%.15G t2=%.15G\n", bracketing,polinterr, t1, t2);
       printf("d: %.15G,%.15G,%.15G\n", d1, d3, d2);
       printf("tref=%.15G t: %.15G,%.15G,%.15G\n", tref, t, t+delt*0.5, t+delt);
       printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
@@ -2073,7 +2075,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
     }
   if ((*troot < t && fabs(*troot-t)>3E-8) || (*troot > t+delt && fabs(*troot - (t+delt))>3E-8))
     {
-      printf("brack: %d xb1: %.10G xb2: %.10G\n", bracketing, xb1[0], xb2[0]);
+      printf("[interpol neigh] brack: %d xb1: %.10G xb2: %.10G\n", bracketing, xb1[0], xb2[0]);
       printf("*troot: %.15G t=%.15G t+delt:%.15G\n", *troot, t, t+delt);
       printf("d1=%.10G d2=%.10G d3:%.10G\n", d1, d2, d3);
       printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
@@ -2090,6 +2092,7 @@ int interpolNeigh(int i, double tref, double t, double delt, double d1, double d
   double d3, t1, t2;
   double r1[3], r2[3], xb1[2], xb2[2];
   d3 = calcDistNegNeigh(t+delt*0.5, tref, i, r1, r2, vecg, 0, 0, &distfail);
+  sogliaErr_zbrent = OprogStatus.epsdNL;
   xa[0] = t;
   ya[0] = d1;
   xa[1] = t+delt*0.5;
