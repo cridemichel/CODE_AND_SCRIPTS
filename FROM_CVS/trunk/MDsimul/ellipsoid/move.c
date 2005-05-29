@@ -3960,13 +3960,14 @@ extern void polint(double xa[], double ya[], int n, double x, double *y, double 
 double zbrent(double (*func)(double), double x1, double x2, double tol);
 int polinterr, polinterrRyck;
 double xa[3], ya[3];
+double sogliaErr_zbrent;
 double distfunc(double x)
 {
   double dy, y;
   polint(xa, ya, 3, x, &y, &dy);
   if (polinterr==1)
     return 0.0;
-  if (dy > OprogStatus.epsd)
+  if (dy > sogliaErr_zbrent)
     {
       if (OprogStatus.phitol <= 0)
 	printf("dy=%.15G\n", dy);
@@ -4002,6 +4003,7 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
   //printf("d1:%.10f d2: %.10f\n", d1, d2); 
   //printf("polint1: %.10f polint2: %.10f\n",distfunc(t), distfunc(t+delt));
   polinterr = 0;
+  sogliaErr_zbrent = OprogStatus.epsd;
   if (!bracketing)
     {
       t1 = t;
@@ -4025,7 +4027,7 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
   *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
   if (polinterr)
     {
-      printf("bracketing: %d polinterr=%d t1=%.15G t2=%.15G\n", bracketing,polinterr, t1, t2);
+      printf("[interpol] bracketing: %d polinterr=%d t1=%.15G t2=%.15G\n", bracketing,polinterr, t1, t2);
       printf("d: %.15G,%.15G,%.15G\n", d1, d3, d2);
       printf("t: %.15G,%.15G,%.15G\n", t, t+delt*0.5, t+delt);
       printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
@@ -4033,7 +4035,7 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
     }
   if ((*troot < t && fabs(*troot-t)>3E-8) || (*troot > t+delt && fabs(*troot - (t+delt))>3E-8))
     {
-      printf("brack: %d xb1: %.10G xb2: %.10G\n", bracketing, xb1[0], xb2[0]);
+      printf("[interpol] brack: %d xb1: %.10G xb2: %.10G\n", bracketing, xb1[0], xb2[0]);
       printf("*troot: %.15G t=%.15G t+delt:%.15G\n", *troot, t, t+delt);
       printf("d1=%.10G d2=%.10G d3:%.10G\n", d1, d2, d3);
       printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
