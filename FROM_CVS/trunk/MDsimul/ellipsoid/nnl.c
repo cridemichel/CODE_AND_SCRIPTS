@@ -133,7 +133,7 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 
   /* NOTA: epsd viene usato come buffer per evitare problemi numerici 
    * nell'update delle NNL. */
-  del -= OprogStatus.epsd;
+  del -= OprogStatus.epsdNL;
   for (kk=0; kk < 3; kk++)
     {
       if (nplane % 2 == 0)
@@ -2082,7 +2082,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
   double factori;
   int its=0, distfailed, itsf=0; 
   const double GOLD= 1.618034;  
-  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+OprogStatus.epsdNL;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 
   /* estimate of maximum rate of change for d */
 #if 0
@@ -2289,7 +2289,7 @@ int get_dists_tocheck(double distsOld[6], double dists[6], int tocheck[6], int d
   for (nn = 0; nn < 6; nn++)
     {
       tocheck[nn] = 0;
-      if (dists[nn] < OprogStatus.epsd && distsOld[nn] < OprogStatus.epsd &&
+      if (dists[nn] < OprogStatus.epsdNL && distsOld[nn] < OprogStatus.epsdNL &&
 	  dorefine[nn] == 0)
 	{
 	  tocheck[nn] = 1; 
@@ -2439,15 +2439,15 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
   int its, foundrc, goback;
   double t1, t2, epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
   int kk,tocheck[6], dorefine[6], ntc, ncr, nn, gotcoll, crossed[6], firstaftsf;
-  epsd = OprogStatus.epsd;
-  epsdFast = OprogStatus.epsdFast;
-  epsdFastR= OprogStatus.epsdFastR;
-  epsdMax = OprogStatus.epsdMax;
+  epsd = OprogStatus.epsdNL;
+  epsdFast = OprogStatus.epsdFastNL;
+  epsdFastR= OprogStatus.epsdFastRNL;
+  epsdMax = OprogStatus.epsdMaxNL;
   t = 0;//t1;
   t1 = Oparams.time;
   t2 = timbig;
   calc_grad_and_point_plane_all(i, gradplane_all, rBall);
-  factori = 0.5*maxax[i]+OprogStatus.epsd;
+  factori = 0.5*maxax[i]+OprogStatus.epsdNL;
   maxddot = 0.0;
   for (nn = 0; nn < 6; nn++)
     {
@@ -2679,10 +2679,10 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   double epsd, epsdFast, epsdFastR, epsdMax, factori; 
   int dorefine, distfail;
   int its, foundrc, kk;
-  epsd = OprogStatus.epsd;
-  epsdFast = OprogStatus.epsdFast;
-  epsdFastR= OprogStatus.epsdFastR;
-  epsdMax = OprogStatus.epsdMax;
+  epsd = OprogStatus.epsdNL;
+  epsdFast = OprogStatus.epsdFastNL;
+  epsdFastR= OprogStatus.epsdFastRNL;
+  epsdMax = OprogStatus.epsdMaxNL;
   /* NOTA: implementare le varie funzioni _neigh (search_contact_faster_neigh, ecc.)
    * in tali funzioni la particella j non è altro che un ellissoide più grande di i
    * con lo stesso centro e immobile */
@@ -2708,7 +2708,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
     t2 += Oparams.time;
   //printf("LOCATE_CONTACT_NNL nplane=%d grad=%.8f %.8f %.8f  rB=%.8f %.8f %.8f t1=%.8f t2=%.8f tsup=%.8f maxax[%d]=%f\n", nplane, 
   //	 gradplane[0], gradplane[1], gradplane[2], rB[0], rB[1], rB[2], t1, t2, tsup, i, maxax[i]);
-  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+OprogStatus.epsdNL;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 #if 0
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
@@ -2799,7 +2799,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	    }
 	  dorefine = 1;
 	}
-      else if (dold < OprogStatus.epsd && d < OprogStatus.epsd)
+      else if (dold < OprogStatus.epsdNL && d < OprogStatus.epsdNL)
 	{
 #ifndef MD_NOINTERPOL
 	  for (kk=0; kk < 8; kk++)
@@ -2877,7 +2877,7 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
   double factori;
   int its=0, distfailed, itsf=0; 
   const double GOLD= 1.618034;  
-  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+OprogStatus.epsdNL;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
@@ -2987,10 +2987,10 @@ int locate_contact_neigh(int i, double vecg[5])
   double epsd, epsdFast, epsdFastR, epsdMax, factori; 
   int dorefine, distfail;
   int its, foundrc, kk;
-  epsd = OprogStatus.epsd;
-  epsdFast = OprogStatus.epsdFast;
-  epsdFastR= OprogStatus.epsdFastR;
-  epsdMax = OprogStatus.epsdMax;
+  epsd = OprogStatus.epsdNL;
+  epsdFast = OprogStatus.epsdFastNL;
+  epsdFastR= OprogStatus.epsdFastRNL;
+  epsdMax = OprogStatus.epsdMaxNL;
   /* NOTA: implementare le varie funzioni _neigh (search_contact_faster_neigh, ecc.)
    * in tali funzioni la particella j non è altro che un ellissoide più grande di i
    * con lo stesso centro e immobile */
@@ -2998,7 +2998,7 @@ int locate_contact_neigh(int i, double vecg[5])
   t1 = Oparams.time;	
   t2 = timbig;
   
-  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+OprogStatus.epsdNL;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
   h = OprogStatus.h; /* last resort time increment */
@@ -3081,7 +3081,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	    }
 	  dorefine = 1;
 	}
-      else if (dold < OprogStatus.epsd && d < OprogStatus.epsd)
+      else if (dold < OprogStatus.epsdNL && d < OprogStatus.epsdNL)
 	{
 #ifndef MD_NOINTERPOL
 	  for (kk=0; kk < 8; kk++)

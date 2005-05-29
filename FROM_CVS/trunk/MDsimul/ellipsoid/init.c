@@ -775,12 +775,21 @@ void usrInitBef(void)
     OprogStatus.collCount = 0;
     OprogStatus.crossCount = 0;
     OprogStatus.epsd = 0.0005;
+    OprogStatus.epsdNL = -1.0;
     OprogStatus.epsdSD = -1.0;
     OprogStatus.epsdGDO = -1.0;
     OprogStatus.h = 1E-10;
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
     OprogStatus.epsdMax = 0.001;
+    OprogStatus.epsdFastNL = -1.0;
+    OprogStatus.epsdFastRNL = -1.0;
+    OprogStatus.epsdMaxNL = -1.0;
+    /* NOTA: gli epsd NL sono settati a -1.0 poiché
+     * se tale valore resta vuol dire che non vengono settati nel file di parametri
+     * e dunque assumeranno i valori degli epsd degli ellissoidi altrimenti
+     * vengono usati i valori forniti dall'utente (ved. anche usrInitAft() */
+
     OprogStatus.guessDistOpt = 0;
     OprogStatus.tolSD = 0.01;
     OprogStatus.tolSDlong = 0.01;
@@ -1063,6 +1072,14 @@ void usrInitAft(void)
     Nm = Oparams.parnumA;
     parnumA = Oparams.parnumA;
     parnumB = Oparams.parnum - Oparams.parnumA;
+    if (OprogStatus.epsdNL == -1.0)
+      OprogStatus.epsdNL = OprogStatus.epsd;
+    if (OprogStatus.epsdFastNL == -1.0)
+      OprogStatus.epsdFastNL = OprogStatus.epsdFast;
+    if (OprogStatus.epsdMaxNL == -1.0)
+      OprogStatus.epsdMaxNL = OprogStatus.epsdMaxNL;
+    if (OprogStatus.epsdFastRNL == -1.0)
+      OprogStatus.epsdFastRNL = OprogStatus.epsdFastR;
     sct = sizeof(COORD_TYPE);
 
     invL = 1.0/L;
