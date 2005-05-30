@@ -37,7 +37,7 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
-double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdirs;
+double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdirs;
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
 #else
@@ -1159,6 +1159,7 @@ void usrInitAft(void)
     treeRzC  = malloc(sizeof(double)*poolSize);
     Xa = matrix(3, 3);
     Xb = matrix(3, 3);
+    XbXa = matrix(3, 3);
 #ifdef MD_ASYM_ITENS
     Ia = matrix(3, 3);
     Ib = matrix(3, 3);
