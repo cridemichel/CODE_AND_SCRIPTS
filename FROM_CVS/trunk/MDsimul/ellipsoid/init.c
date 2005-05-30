@@ -869,9 +869,14 @@ void StartRun(void)
 	cellRange[2*k]   = - 1;
 	cellRange[2*k+1] =   1;
       }
+    if (OprogStatus.useNNL)
+      rebuildNNL();
     for (n = 0; n < Oparams.parnum; n++)
       {
-	PredictEvent(n, -2);
+	if (OprogStatus.useNNL)
+	  PredictEventNNL(n, -2);
+	else
+	  PredictEvent(n, -2);
       }
 #if 0
     {
@@ -1423,9 +1428,7 @@ void usrInitAft(void)
   if (OprogStatus.scalevel)
     ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-  if (OprogStatus.useNNL)
-    rebuildNNL();
-  //exit(-1);
+    //exit(-1);
   MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
   //exit(-1);
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
