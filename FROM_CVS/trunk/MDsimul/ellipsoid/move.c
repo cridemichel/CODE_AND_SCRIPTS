@@ -12,7 +12,7 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
-extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
 #else
@@ -2415,9 +2415,13 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
     {
       for (k2 = 0; k2 < 3; k2++)
        	{
+#if 0
 	  A[k1][k2] = 0;
 	  for (k3 = 0; k3 < 3; k3++)
 	    A[k1][k2] += Xb[k1][k3]*Xa[k3][k2];
+#else
+	  A[k1][k2] = XbXa[k1][k2];
+#endif
 	  A[k1][k2] *= 4.0*Sqr(x[3])*x[4];
 	  A[k1][k2] += 2.0*Xb[k1][k2]*Sqr(x[3]);
 	}
@@ -3156,7 +3160,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
-  int k1, k2, na;
+  int k1, k2, na, k3;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
@@ -3187,6 +3191,18 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
       invcSq[na] = 1/Sqr(axc[j]);
     }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
+  if (OprogStatus.dist5)
+    {
+      for (k1 = 0; k1 < 3; k1++)
+    	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      XbXa[k1][k2] = 0;
+	      for (k3 = 0; k3 < 3; k3++)
+		XbXa[k1][k2] += Xb[k1][k3]*Xa[k3][k2];
+	    }
+	}
+    }
   //printf(">>>>>>> BOHHHHHHHHHHHHHHHHH\n");
 retry:
   if (OprogStatus.forceguess)
