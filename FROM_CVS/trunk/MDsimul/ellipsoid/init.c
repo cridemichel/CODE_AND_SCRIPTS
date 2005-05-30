@@ -44,12 +44,18 @@ double **Ia, **Ib, **invIa, **invIb;
 double Ia, Ib, invIa, invIb;
 #endif
 extern double **matrix(int n, int m);
+extern int *ivector(int n);
+extern double *vector(int n);
 int poolSize;
 int parnumA, parnumB;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 #endif
 double invaSq[2], invbSq[2], invcSq[2];
+extern double *fvec, *fvecG, *fvecD;
+extern double **fjac,*g,*p,*xold;
+extern int *indx;
+
 struct nebrTabStruct *nebrTab;
 /* ================================= */
 
@@ -1160,6 +1166,14 @@ void usrInitAft(void)
     Xa = matrix(3, 3);
     Xb = matrix(3, 3);
     XbXa = matrix(3, 3);
+    indx=ivector(8); 
+    fjac=matrix(8, 8);
+    g=vector(8);
+    p=vector(8); 
+    xold=vector(8); 
+    fvec=vector(8); 
+    fvecD=vector(8);
+    fvecG=vector(8);
 #ifdef MD_ASYM_ITENS
     Ia = matrix(3, 3);
     Ib = matrix(3, 3);

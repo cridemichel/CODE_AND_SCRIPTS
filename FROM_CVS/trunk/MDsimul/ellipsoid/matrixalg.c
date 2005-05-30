@@ -3379,17 +3379,18 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
     }/* Try again.*/
 }
 int nn, nn2, nnD; /* Global variables to communicate with fmin.*/
-double *fvec, *fvecG, *fvecD; 
-#ifdef MD_GLOBALNR2
-#define FREERETURN {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
-free_vector(fvec);free_vector(xold);free_vector(g2); free_vector(xold2); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);free_vector(fvecG);return;}
-#else
+double *fvec, *fvecG, *fvecD;
+double **fjac,*g,*p,*xold;
+int *indx;
+#if 0
 #define FREERETURN {MD_DEBUG10(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d fvec=(%.15G,%.15G,%.15G,%.15G,%.15G)\n", x[0], x[1], x[2], x[3], x[4], test, its, *check, fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));\
 free_vector(fvec);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);free_vector(fvecG);return;}
-#endif
 #define FREERETURND {MD_DEBUG(printf("x=(%f,%f,%f,%f,%f) test: %f its: %d check:%d\n", x[0], x[1], x[2], x[3], x[4], test, its, *check));\
 free_vector(fvecD);free_vector(xold); free_vector(p); free_vector(g);free_matrix(fjac,n);free_ivector(indx);return;}
-
+#else
+#define FREERETURND return;
+#define FREERETURN  return;
+#endif
 void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[3]);
 void (*nrfuncv2)(int n, double v[], double fvec[], int i, int j, double shift[3]);
 void (*nrfuncvD)(int n, double v[], double fvec[], int i, int j, double shift[3]);
@@ -3412,16 +3413,15 @@ extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, doubl
 
 extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
 //#define MD_GLOBALNR
-#undef MD_GLOBALNR2
-#ifdef MD_GLOBALNR2
-double fmin2(double x[], int iA, int iB, double shift[3]);
-#endif
 void newtNeigh(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
 {
-  int i,its, j, *indx, ok;
-  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
+  int i,its, j, ok;
+  double d,den,f,fold,stpmax,sum,temp,test; 
+#if 0
+  int *indx;
+  double **fjac,*g,*p,*xold;
   indx=ivector(n); 
   fjac=matrix(n, n);
   g=vector(n);
@@ -3429,6 +3429,7 @@ void newtNeigh(double x[], int n, int *check,
   xold=vector(n); 
   fvec=vector(n); 
   fvecG=vector(n);
+#endif
   /*Define global variables.*/
   nn=n; 
   nn2=n-1;
@@ -3572,14 +3573,11 @@ void newt(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int i,its, j, *indx, ok;
-  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
-#ifdef MD_GLOBALNR2
-  int check2;
-  double f2, stpmax2, fold2, *xold2, *g2;
-  xold2 = vector(n);
-  g2 = vector(n);
-#endif
+  int i,its, j, ok;
+  double d,den,f,fold,stpmax,sum,temp,test; 
+#if 0
+  int *indx;
+  double **fjac,*g,*p,*xold;
   indx=ivector(n); 
   fjac=matrix(n, n);
   g=vector(n);
@@ -3587,6 +3585,7 @@ void newt(double x[], int n, int *check,
   xold=vector(n); 
   fvec=vector(n); 
   fvecG=vector(n);
+#endif
   /*Define global variables.*/
   nn=n; 
   nn2=n-1;
@@ -3604,144 +3603,10 @@ void newt(double x[], int n, int *check,
   for (sum=0.0,i=0;i<n;i++) 
     sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
   stpmax=STPMX*FMAX(sqrt(sum),(double)n);
-#ifndef MD_GLOBALNR2
   funcs2beZeroed(n,x,fvec,iA,iB,shift);
-#endif
   for (its=0;its<MAXITS;its++)
     { /* Start of iteration loop. */
       /* Stabilization */
-#if 0
-      MD_DEBUG(printf("its=%d time = %.15f\n",its, x[4]));
-      upd2tGuess(iA, iB, shift, x[4]);
-#ifdef MD_GLOBALNR2
-      nn2=n-1; 
-      nrfuncv2=funcs2beZeroedGuess; 
-      f2=fmin2(x,iA,iB,shift); /*fvec is also computed by this call.*/
-      test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
-      for (i=0;i<n-1;i++) 
-	if (fabs(fvec[i]) > test)
-	  test=fabs(fvec[i]); 
-      for (sum=0.0,i=0;i<n-1;i++) 
-	sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
-      stpmax2=STPMX*FMAX(sqrt(sum),(double)(n-1));
-#else
-      funcs2beZeroedGuess(n-1,x,fvecG,iA,iB,shift);
-#endif
-      for (its2=0; its2 < MAXITS2 ; its2++)
-	{
-#ifdef MD_GLOBALNR2
-	  if (its2=0 && test < 0.01*TOLF)
-	    {
-	      check2=0; 
-	      break;
-	    }
-#endif
-	  MD_DEBUG(printf("Guessing its2=%d x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", its2, x[0], x[1], x[2], x[3],x[4]));
-	  fdjacGuess(n-1,x,fvecG,fjac,funcs2beZeroedGuess, iA, iB, shift); 
-#ifdef MD_GLOBALNR2
-	  for (i=0;i<n-1;i++) 
-	    { /* Compute  f for the line search.*/
-	      for (sum=0.0,j=0;j<n-1;j++)
-		sum += fjac[j][i]*fvecG[j]; 
-	      g2[i]=sum; 
-	    } 
-	  for (i=0;i<n-1;i++) 
-	    xold2[i]=x[i]; /* Store x,*/ 
-	  fold2=f2; /* and f. */
-#else
-	  MD_DEBUG(printf("Guessing fvecG = (%.15f, %.15f, %.15f, %.15f)\n", fvecG[0], fvecG[1], fvecG[2], fvecG[3]));
-	  test=0.0; /* Test for convergence on function values.*/
-	  for (i=0;i<(n-1);i++) 
-	    {
-	      test +=fabs(fvecG[i]); 
-	    }
-	  if (test < TOLF2)
-	    {
-	      MD_DEBUG(printf("test=%.15f GUESS test < TOLF\n", test));
-	      break;
-	    }
-#endif
-	  for (i=0;i<n-1;i++) 
-	    p[i] = -fvecG[i]; /* Right-hand side for linear equations.*/
-	  ludcmp(fjac,n-1,indx,&d); /* Solve linear equations by LU decomposition.*/
-	  lubksb(fjac,n-1,indx,p);
-#ifdef MD_GLOBALNR2
-	  lnsrch(n-1,xold2,fold2,g2,p,x,&f2,stpmax2,&check2,fmin2,iA,iB,shift); 
-	  test=0.0; /* Test for convergence on function values.*/
-	  for (i=0;i<n;i++) 
-	    if (fabs(fvecG[i]) > test) 
-	      test=fabs(fvecG[i]); 
-	  if (test < TOLF2) 
-	    { 
-	      check2=0; 
-	      MD_DEBUG(printf("test < TOLF\n"));
-	      break;
-	    }
-	  if (check2) 
-	    { /* Check for gradient of f zero, i.e., spurious convergence.*/
-	      test=0.0; 
-	      den=FMAX(f,0.5*(n-1));
-	      for (i=0;i<n;i++)
-		{
-		  temp=fabs(g2[i])*FMAX(fabs(x[i]),1.0)/den;
-		  if (temp > test) 
-		    test=temp; 
-		} 
-	      check2=(test < TOLMIN ? 2 : 0);
-	      MD_DEBUG(printf("*check2:%d test=%f\n", check2, test));
-	      break;
-	    } 
-	  test=0.0; /* Test for convergence on x. */
-	  for (i=0;i<n-1;i++) 
-	    {
-	      temp=(fabs(x[i]-xold2[i]))/FMAX(fabs(x[i]),1.0); 
-	      if (temp > test) 
-		test=temp; 
-	    } 
-	  if (test < TOLX2) 
-	    {
-	      check2 = 0;
-	      MD_DEBUG(printf("test<TOLX test=%.15f\n", test));
-	      break;
-	    }
-	  if (check2==2)
-	    {
-	      MD_DEBUG(printf("spurious convergence\n"));
-	      break;
-	    }
-#else
-	  test=0.0; /* Test for convergence on function values.*/
-	  for (i=0;i<n-1;i++) 
-	    { 
-	      test += fabs(p[i]);
-	      x[i] += p[i];
-	    }
-	  //MD_DEBUG(printf("iA: %d iB: %d test: %.15f\n",iA, iB,  test));
-	  MD_DEBUG(printf("GUESSED x = (%.15f, %.15f, %.15f, %.15f\n", x[0], x[1], x[2], x[3]));
-	  if (test < TOLX2) 
-	    { 
-	      MD_DEBUG(printf("GUESS test < TOLX\n"));
-	      break;
-	    }
-#endif
-	}
-#ifdef MD_GLOBALNR2
-      if (its2 == MAXITS2 || check2==2)
-	{
-	  *check = 2;
-	  MD_DEBUG(printf("MAXITS2!!\n"));
-	  FREERETURN;
-	}
-#else
-       if (its2 == MAXITS2)
-	{
-	  *check = 2;
-	  MD_DEBUG(printf("MAXITS2!!\n"));
-	  FREERETURN;
-	}
-
-#endif
-#endif
        /* ============ */
        //funcs2beZeroed(n,x,fvec,iA,iB,shift);
        fdjac(n,x,fvec,fjac,vecfunc, iA, iB, shift); 
@@ -3862,16 +3727,20 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
 {
-  int i,its=0, j, *indx, ok;
+  int i,its=0, j, ok;
   int kk;
   double distnew, distold, r12[3];
-  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
+  double d,den,f,fold,stpmax,sum,temp,test;
+#if 0
+  int * indx;
+  double **fjac,*g,*p,*xold; 
   indx=ivector(n); 
   fjac=matrix(n, n);
   g=vector(n);
   p=vector(n); 
   xold=vector(n); 
   fvecD=vector(n); 
+#endif
   /*Define global variables.*/
   nnD=n; 
   nrfuncvDNeigh=vecfunc; 
@@ -4025,16 +3894,20 @@ void newtDistNegNeigh(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
 {
-  int i,its=0, j, *indx, ok;
+  int i,its=0, j, ok;
   int kk;
   double distnew, distold, r12[3];
-  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
+  double d,den,f,fold,stpmax,sum,temp,test; 
+#if 0
+  int *indx;
+  double **fjac,*g,*p,*xold;
   indx=ivector(n); 
   fjac=matrix(n, n);
   g=vector(n);
   p=vector(n); 
   xold=vector(n); 
   fvecD=vector(n); 
+#endif
   /*Define global variables.*/
   nnD=n; 
   nrfuncvDNeigh=vecfunc; 
@@ -4182,16 +4055,20 @@ void newtDistNeg(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int i,its=0, j, *indx, ok;
+  int i,its=0, j, ok;
   int kk;
   double distnew, distold, r12[3];
-  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
+  double d,den,f,fold,stpmax,sum,temp,test; 
+#if 0
+  int *indx;
+  double **fjac,*g,*p,*xold;
   indx=ivector(n); 
   fjac=matrix(n, n);
   g=vector(n);
   p=vector(n); 
   xold=vector(n); 
-  fvecD=vector(n); 
+  fvecD=vector(n);
+#endif
   /*Define global variables.*/
   nnD=n; 
   nrfuncvD=vecfunc; 
@@ -4346,14 +4223,18 @@ void newtDist(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int i, its, j, *indx, ok;
-  double d,den,f,fold,stpmax,sum,temp,test,**fjac,*g,*p,*xold; 
+  int i, its, j, ok;
+  double d,den,f,fold,stpmax,sum,temp,test; 
+#if 0
+  int *indx;
+  double **fjac,*g,*p,*xold;
   indx=ivector(n); 
   fjac=matrix(n, n);
   g=vector(n);
   p=vector(n); 
   xold=vector(n); 
   fvecD=vector(n); 
+#endif
   /*Define global variables.*/
   nnD=n; 
   nrfuncvD=vecfunc; 
@@ -4556,21 +4437,6 @@ the calling program.*/
     sum += Sqr(fvec[i]); 
     return 0.5*sum; 
 }
-#ifdef MD_GLOBALNR2
-double fmin2(double x[], int iA, int iB, double shift[3]) 
-/* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
-vector of functions at x. It is set to point to a user-supplied routine in the 
-calling program. Global variables also communicate the function values back to 
-the calling program.*/
-{
-  int i;
-  double sum;
-  (*nrfuncv2)(nn2,x,fvecG,iA,iB,shift);
-  for (sum=0.0,i=0;i<nn2;i++)
-    sum += Sqr(fvecG[i]); 
-    return 0.5*sum; 
-}
-#endif
 double fminD(double x[], int iA, int iB, double shift[]) 
 /* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
