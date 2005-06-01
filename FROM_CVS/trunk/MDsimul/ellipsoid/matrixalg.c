@@ -937,7 +937,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 {
   int kk, its, done=0, k1, k2, MAXITS=50;
   const double GOLD=1.618034;
-  double r1[3], r1A[3], sf, s1, s2, sqrtDelta, A2;
+  double Xag[3], r1AXa[3], r1[3], r1A[3], sf, s1, s2, sqrtDelta, A2;
   double A, B, C, Delta, sol=0.0, ng;
   sf = *sfA;
   its = 0;
@@ -961,8 +961,22 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
       A=0;
       B=0;
       C=0;
+#if 0
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  Xag[k1] = 0.0;
+	  r1AXa[k1] = 0.0;
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      Xag[k1] += Xa[k1][k2]*gradf[k2];
+	      r1AXa[k1] += r1A[k2]*Xa[k2][k1]; 
+	    }
+	} 
+#endif
       for (k1=0; k1 < 3; k1++)
 	{
+
+#if 1
 	  for (k2=0; k2 < 3; k2++)
 	    {
 	      A += gradf[k1]*Xa[k1][k2]*gradf[k2];
@@ -970,6 +984,11 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	      //  printf("riA[%d]=%f Xa[%d][%d]=%f\n", r1A[k1], Xa[k1][k2]);
 	      C += r1A[k1]*Xa[k1][k2]*r1A[k2];
 	    }
+#else
+	  A += gradf[k1]*Xag[k1];
+	  B += r1AXa[k1]*gradf[k1];
+	  C += r1AXa[k1]*r1A[k1];
+#endif
 	}
       B *= 2.0;
       C -= 1.0;
