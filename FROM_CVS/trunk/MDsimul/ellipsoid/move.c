@@ -3303,6 +3303,7 @@ retry:
       //vecg[4] = calc_norm(rDC)/nf;  
       if (OprogStatus.dist5)
 	{
+#if 0
 	  if (OprogStatus.springkSD>0)
 	    if (scalProd(gradf, rDC) < 0.0)
 	      vecg[4] = 0.0;
@@ -3320,9 +3321,12 @@ retry:
 	      else
 		vecg[4] = 0.0;
 	    }
+#endif
+	  vecg[4] = 0.0;
 	}
       else
 	{
+#if 0
 	  if (OprogStatus.springkSD>0)
 	    {
 	      if (scalProd(gradf, rDC) < 0.0)
@@ -3343,7 +3347,8 @@ retry:
 		vecg[7] = 0.0;
 	    }
 	  //printf("i=%d j=%d g1=%f g2=%f\n", i, j, g1, g2);
-	  //vecg[7] = 0.0;
+#endif
+	  vecg[7] = 0.0;
 	}
     }
   else
