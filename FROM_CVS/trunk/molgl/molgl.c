@@ -430,7 +430,7 @@ void displayBonds(int nf, int i)
       glPushMatrix();
       from = mols[nf][i].bond[nb].from;
       to   = mols[nf][i].bond[nb].to;
-#if 1
+#if 0
       printf("nb: %d from:%d to:%d\n", nb, from, to);
 #endif
       if (from < 0 || from >= mols[nf][i].numat ||
@@ -455,7 +455,7 @@ void displayBonds(int nf, int i)
       vectProd(0,0,1, nx, ny, nz, &rax, &ray, &raz);
       normra = sqrt(Sqr(rax)+Sqr(ray)+Sqr(raz));
       normn = sqrt(Sqr(nx)+Sqr(ny)+Sqr(nz));
-      printf("normn:%f\n", normn);
+      //printf("normn:%f\n", normn);
       if (normn==0)
 	continue;
       rotangle = 180.0*acos(nz/normn)/Pi; 	       
@@ -1410,7 +1410,7 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
       while(ns)
 	{
 	  //strcpy(s1, strtok(NULL, ","));
-	  globset.sig = realloc(globset.sig,a+1);
+	  globset.sig = realloc(globset.sig,sizeof(double)*(a+1));
 	  globset.sig[a] = atof(ns);
 	  a++;
 	  ns = strtok(NULL, ",");
@@ -1425,42 +1425,34 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
       //strcpy(s1, strtok(parVal, ","));
       //printf("radius[0]: %s\n", s1);
       //printf("parVal: %s\n", parVal);
-      ns = strtok(parVal, " ");
       a = 0;
-      if (globset.a)
+      if (globset.a != NULL)
 	{
 	  free(globset.a);
 	  free(globset.b);
 	  free(globset.c);
 	  globset.a = globset.b = globset.c = NULL;
 	}
+   
+      
+      ns = strtok(parVal, ",");
       while(ns)
 	{
 	  //strcpy(s1, strtok(NULL, ","));
-	  globset.a = realloc(globset.a,a+1);
-	  globset.b = realloc(globset.b,a+1);
-	  globset.c = realloc(globset.c,a+1);
-	  globset.a[a] = atof(ns);
+	  globset.a = realloc(globset.a,(a+1)*sizeof(double));
+	  globset.b = realloc(globset.b,(a+1)*sizeof(double));
+	  globset.c = realloc(globset.c,(a+1)*sizeof(double));
+	  //globset.a[a] = atof(ns);
 	  //printf("a: %f\n", globset.a[a]);
-	  ns = strtok(NULL, " ");
-	  if (!ns)
+	  if (sscanf(ns, "%lf %lf %lf ", &(globset.a[a]), &(globset.b[a]), &(globset.c[a])) < 3)
 	    {
-	      printf("You have to supply three semi-axes!\n");
+	      printf("You must supply three axes!\n");
 	      exit(-1);
 	    }
-	  globset.b[a] = atof(ns);
-	  //printf("b: %f\n", globset.b[a]);
-	  ns = strtok(NULL, " ");
-	  if (!ns)
-	    {
-	      printf("You have to supply three semi-axes!\n");
-	      exit(-1);
-	    }
-	  globset.c[a] = atof(ns);
-	  //printf("c: %f\n", globset.c[a]);
 	  ns = strtok(NULL, ",");
 	  a++;
 	}
+
       globset.NA = a;
       //printf("NA: %d\n", globset.NA);
       //printf("---->%f %f\n", sig[0], sig[1]);
@@ -1534,7 +1526,7 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
       while(ns)
 	{
 	  strcpy(s1, ns);
-	  globset.colIdxCol = realloc(globset.colIdxCol, j+1);
+	  globset.colIdxCol = realloc(globset.colIdxCol, (j+1)*sizeof(int));
 	  assignCol(s1, j);
 	  ns = strtok(NULL, ",");
 	  j++;
@@ -1551,7 +1543,7 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
       a = 0;
       while (ns)
 	{
-	  globset.colIdxBw = realloc(globset.colIdxBw, a+1);
+	  globset.colIdxBw = realloc(globset.colIdxBw, (a+1)*sizeof(int));
 	  globset.colIdxBw[a] = atoi(ns);
 	  ns = strtok(NULL, ",");
 	  a++;
@@ -1677,6 +1669,7 @@ void loadAtomPos(void)
       printf("ERROR: Presumbly the input file you supplied is void!\n");
       exit(-1);
     }
+  
   setdefaults_after_fakeread();
   globset.NumMols[nf] = i+1;
   globset.frameNo = ++nf;
@@ -1746,7 +1739,8 @@ void default_pars(void)
   globset.a = NULL;
   globset.b = NULL;
   globset.c = NULL;
-  globset.setdiameter = 0;
+  globset.setdiameter = 1;
+  globset.diameter = 1;
   globset.setsemiax = 0;
   globset.setheight = 0;
   globset.numAt = 0; /* atomi per molecola 0=illimitati a meno che non si usi .newmol*/
