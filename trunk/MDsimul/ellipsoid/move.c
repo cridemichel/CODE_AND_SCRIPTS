@@ -1127,8 +1127,7 @@ extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 double calcDist(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess);
-double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-     		double *vecgsup, int calcguess);
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
 
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
