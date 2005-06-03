@@ -7,6 +7,9 @@
          the this quantity.
 */
 
+void UpdateSystem (void);
+void calcKVz (void);
+
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 
 #ifdef MPI
