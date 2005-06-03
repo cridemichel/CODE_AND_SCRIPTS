@@ -33,12 +33,14 @@ void ErrExit(char *str)
 }
 int check_node(char* str, int id, int idNew, int idUp)
 {
-  int idd;
+  /*int idd;*/
+#if 0
   if (Oparams.curStep==1266)
     {
       printf("(id:%d,u:%dr:%d,l:%d) ",
 	     id, treeUp[id], treeRight[id], treeLeft[id]);
     }
+#endif
   if (treeUp[id] != idUp && idUp != 0)
     {
       printf("[%s] ERRORE\n", str);

@@ -378,7 +378,7 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE m, int resetCM)
 	 m1 and m2 are the masses of two atoms 
       */
       
-      vx[i] = rTemp * gauss(); 
+      vx[i] = rTemp * gauss();
       vy[i] = rTemp * gauss();
       vz[i] = rTemp * gauss();
       //printf("rank[%d] vx[%d]: %f\n", my_rank, i, vx[i]);
@@ -541,6 +541,9 @@ void usrInitBef(void)
   OprogStatus.rhobh = 0.0;
   OprogStatus.brownian = 0;
   Oparams.Dt = 0.01;
+  #ifdef MD_FPBROWNIAN
+  Oparams.xi = 100;
+  #endif
   OprogStatus.vztap = 10.0;
   /* Parameters relative to Ruocco AC force
      See: cond-mat/00001311, Ruocco et al. */
@@ -758,9 +761,10 @@ void usrInitAft(void)
     }
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-   if (OprogStatus.storerate > 0.0)
+  if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  if (OprogStatus.scalevel) 
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
   printf(">>>> Volume fraction: %.15G\n", calc_phi());
 
