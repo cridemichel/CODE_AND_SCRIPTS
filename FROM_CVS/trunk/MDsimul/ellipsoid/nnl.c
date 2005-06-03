@@ -3406,10 +3406,14 @@ void PredictEventNNL(int na, int nb)
       t2 += Oparams.time;
       t1 += Oparams.time;
      
-#if 1
+#if 0
       tnnl = min(nebrTab[na].nexttime,nebrTab[n].nexttime);
       if (tnnl < t2)
 	t2 = tnnl;
+#else      
+      /* WARNING: valutare se introddurre un buffer qui */
+      if (nextNNLrebuild < t2)
+	t2 = nextNNLrebuild;
 #endif
       // t1 = Oparams.time;
       // t2 = nebrTab[na].nexttime;//,nebrTab[n].nexttime);
