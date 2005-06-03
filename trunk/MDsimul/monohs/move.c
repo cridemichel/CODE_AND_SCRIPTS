@@ -3,6 +3,14 @@
 #ifdef MD_HSVISCO
 void calcT(void);
 #endif
+void rebuildCalendar(void);
+extern void comvel (int, COORD_TYPE, COORD_TYPE, int);
+extern void InitEventList (void);
+extern void writeAllCor (FILE*);
+extern void writeAsciiPars (FILE*,struct pascii[]);
+#ifdef MD_FPBROWNIAN
+extern COORD_TYPE gauss (void);
+#endif
 
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 int checkz(char *msg)
@@ -348,7 +356,7 @@ double check_alldist_min(char *msg)
 {
   int j, i;
   double distMin=1E60, dist;
-  double rC[3], rD[3], shift[3];
+  double /*rC[3], rD[3],*/ shift[3];
   for (i=0; i < Oparams.parnum; i++)
     {
       j = -1;
@@ -363,11 +371,11 @@ double check_alldist_min(char *msg)
 }
 void scale_Phi(void)
 {
-  int i, j, imin, kk, its, done=0;
+  int i, j, imin, kk, /*its,*/ done=0;
   static int first = 1;
   static double rad0I, target;
-  double distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
-  double L2, shift[3], shiftmin[3], phi, factor, radai;
+  double distMinT, distMin=1E60, /*rCmin[3], rDmin[3],*/ rAmin[3], rBmin[3]/*, rC[3], rD[3]*/;
+  double L2, shift[3], /*shiftmin[3],*/ phi, factor, radai;
   if (OprogStatus.targetPhi <= 0.0)
     return;
 
@@ -459,7 +467,8 @@ void scale_Phi(void)
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  if (OprogStatus.scalevel)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
   printf("Scaled successfully %d/%d spheres \n", done, Oparams.parnum);
   if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
@@ -658,6 +667,11 @@ void bump (int i, int j, double* W)
 #endif
 #ifdef MD_HSVISCO
   double taus, invm, delpx, delpy, delpz;
+#endif
+#ifdef MD_FPBROWNIAN_DEBUG
+  double check;
+  check = sqrt(Sqr(vx[i]-vx[j]) + Sqr(vy[i]-vy[j]) + Sqr(vz[i]-vz[j]));
+  if (check<.5) printf ("bump: velocity difference %d,%d %.15G\n", i,j,check);
 #endif
   if (OprogStatus.targetPhi > 0.0)
     {
@@ -860,8 +874,31 @@ void calcObserv(void)
 extern double *treeTime;
 void UpdateAtom(int i)
 {
+#ifdef MD_FPBROWNIAN
+  double expt;
+#endif
   double ti;
   ti = OprogStatus.time - atomTime[i];
+  if (ti<0)
+    MD_DEBUG(printf("WARNING: UpdateAtom[%d] with negative ti\n",i));
+#ifdef MD_FPBROWNIAN
+  expt = exp(-Oparams.xi*ti);
+  if (OprogStatus.brownian) {
+    #ifdef MD_FPBROWNIAN_DEBUG
+    if (ti>0) {
+    #endif
+    rx[i] += vx[i]*(1-expt)/Oparams.xi;
+    ry[i] += vy[i]*(1-expt)/Oparams.xi;
+    rz[i] += vz[i]*(1-expt)/Oparams.xi;
+    vx[i] *= expt;
+    vy[i] *= expt;
+    vz[i] *= expt;
+    #ifdef MD_FPBROWNIAN_DEBUG
+      printf("velval %d %.15G %.15G\n", i, OprogStatus.time, sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])));
+    }
+    #endif
+  } else {
+#endif
   rx[i] += vx[i]*ti;
   ry[i] += vy[i]*ti;
 #if defined(MD_GRAVITY)
@@ -869,6 +906,9 @@ void UpdateAtom(int i)
   vz[i] += -Oparams.ggrav*ti;
 #else
   rz[i] += vz[i]*ti;
+#endif
+#ifdef MD_FPBROWNIAN
+  }
 #endif
 #if 0
   if (rz[i]+Lz*0.5-Oparams.sigma/2.0 < 0. && OprogStatus.quenchend > 0.0)
@@ -887,6 +927,7 @@ void UpdateAtom(int i)
 	}
     }
 #endif
+if (ti>0)
   atomTime[i] = OprogStatus.time;
 }
 void UpdateSystem(void)
@@ -904,7 +945,6 @@ void AdjustLastcol(void)
   for (i=0; i <  Oparams.parnum; i++)
     lastcol[i] -= OprogStatus.time;
 }
-void rebuildCalendar(void);
 void PredictEvent (int na, int nb) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -920,6 +960,10 @@ void PredictEvent (int na, int nb)
 #endif
   int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
       iX, iY, iZ, jX, jY, jZ, k, n;
+#ifdef MD_FPBROWNIAN
+  double expt, Ltmp;
+  expt=0;
+#endif
 
   MD_DEBUG(printf("PredictEvent: %d,%d\n", na, nb));
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
@@ -1005,8 +1049,13 @@ void PredictEvent (int na, int nb)
 	    signDir[2] = 0;/* direzione positiva */
 	  else 
 	    signDir[2] = 1;/* direzione negativa */
-	  tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
-		   cellsz - rz[na] - L2) / vz[na];
+#ifdef MD_FPBROWNIAN
+          Ltmp = ((inCell[2][na] + 1 - signDir[2]) * L / cellsz - rz[na] - L2);
+          Ltmp = 1 - Oparams.xi * Ltmp / vz[na];
+          tm[2] = ((Ltmp > 0 && Ltmp < 1) ? -log(Ltmp)/Oparams.xi : timbig);
+#else
+	  tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L / cellsz - rz[na] - L2) / vz[na];
+#endif
 	} 
       else 
 	tm[2] = timbig;
@@ -1020,8 +1069,13 @@ void PredictEvent (int na, int nb)
 	    signDir[0] = 0;/* direzione positiva */
 	  else 
 	    signDir[0] = 1;/* direzione negativa */
-	  tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L /
-		   cellsx - rx[na] - L2) / vx[na];
+#ifdef MD_FPBROWNIAN
+          Ltmp = ((inCell[0][na] + 1 - signDir[0]) * L / cellsx - rx[na] - L2);
+          Ltmp = 1 - Oparams.xi * Ltmp / vx[na];
+          tm[0] = ((Ltmp > 0 && Ltmp < 1) ? -log(Ltmp)/Oparams.xi : timbig);
+#else
+	  tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L / cellsx - rx[na] - L2) / vx[na];
+#endif
 	} 
       else 
 	tm[0] = timbig;
@@ -1032,8 +1086,13 @@ void PredictEvent (int na, int nb)
 	    signDir[1] = 0;
 	  else 
 	    signDir[1] = 1;
-	  tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L /
-		   cellsy - ry[na] - L2) / vy[na];
+#ifdef MD_FPBROWNIAN
+          Ltmp = ((inCell[1][na] + 1 - signDir[1]) * L / cellsy - ry[na] - L2);
+          Ltmp = 1 - Oparams.xi * Ltmp / vy[na];
+          tm[1] = ((Ltmp > 0 && Ltmp < 1) ? -log(Ltmp)/Oparams.xi : timbig);
+#else
+	  tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L / cellsy - ry[na] - L2) / vy[na];
+#endif
 	} 
       else 
 	tm[1] = timbig;
@@ -1146,6 +1205,17 @@ void PredictEvent (int na, int nb)
 			    }
 			  
 			  tInt = OprogStatus.time - atomTime[n];
+#ifdef MD_FPBROWNIAN
+                          if (OprogStatus.brownian) {
+                            expt = exp(-Oparams.xi*tInt);
+                            dr[0] = rx[na] - (rx[n] + vx[n] * (1-expt)/Oparams.xi) - shift[0];
+                            dv[0] = vx[na] - vx[n] * expt;
+                            dr[1] = ry[na] - (ry[n] + vy[n] * (1-expt)/Oparams.xi) - shift[1];
+                            dv[1] = vy[na] - vy[n] * expt;
+                            dr[2] = rz[na] - (rz[n] + vz[n] * (1-expt)/Oparams.xi) - shift[2];
+                            dv[2] = vz[na] - vz[n] * expt;
+                          } else {
+#endif
 			  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
 			  dv[0] = vx[na] - vx[n];
 			  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
@@ -1158,6 +1228,9 @@ void PredictEvent (int na, int nb)
 			  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
 			  dv[2] = vz[na] - vz[n];
 
+#endif
+#ifdef MD_FPBROWNIAN
+                          }
 #endif
 			  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
 			  if (b < 0.0) 
@@ -1172,8 +1245,25 @@ void PredictEvent (int na, int nb)
 #endif
 			      if (d >= 0.) 
 				{
+#ifdef MD_FPBROWNIAN
+                                  if (OprogStatus.brownian) {
+				    expt = 1.0 + Oparams.xi * (sqrt (d) + b) / vv;
+                                    t = (expt > 0. ? -log(expt)/Oparams.xi : 0);
+                                    #ifdef MD_FPBROWNIAN_DEBUG
+                                      printf("%.15G %d %d expt=%.15G t=%.15G tcoll=%.15G\n",
+                                      OprogStatus.time, n, na, expt, t, OprogStatus.time+t);
+                                      printf("velvol %d %.15G %.15G %.15G\n", na, OprogStatus.time,
+                                             sqrt(Sqr(vx[na])+Sqr(vy[na])+Sqr(vz[na])), atomTime[na]);
+                                    #endif
+                                  } else {
+#endif
 				  t = - (sqrt (d) + b) / vv;
+#ifdef MD_FPBROWNIAN
+                                  }
+                                  if (expt > 0 && t < 0)
+#else
 				  if (t < 0)
+#endif
 				    {
 				      printf("time:%.15f tInt:%.15f\n", OprogStatus.time,
 					     tInt);
@@ -1183,11 +1273,17 @@ void PredictEvent (int na, int nb)
 				      printf("atomTime: %.10f \n", atomTime[n]);
 				      printf("n:%d na:%d\n", n, na);
 				      printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
-				      /*exit(-1);*/
+				      exit(-1);
 				      t = 0;
 				    }
+#ifdef MD_FPBROWNIAN
+                                  if (expt > 0) {
+#endif
 				  ScheduleEvent (na, n, OprogStatus.time + t);
 				  MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
+#ifdef MD_FPBROWNIAN
+                                  }
+#endif
 				} 
 			    }
 			}
@@ -1351,6 +1447,60 @@ void velsBrown(double T)
   comvel(Oparams.parnum, T, Oparams.m, 0); 
 }
 
+#ifdef MD_FPBROWNIAN
+/* give all velocities random "kicks", with variance sqrt(2kT.xi), where kT.xi is given */
+void velsKick (double Txi)
+{
+  COORD_TYPE rTemp, sumx, sumy, sumz;
+  int i;
+  int Nm;
+  Nm = Oparams.parnum; /* since the code copied from comvel() uses Nm */
+
+  rTemp = sqrt (2*Txi);
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      vx[i] += rTemp * gauss();
+      vy[i] += rTemp * gauss();
+      vz[i] += rTemp * gauss();
+      #ifdef MD_FPBROWNIAN_DEBUG
+        printf("velvil %d %.15G %.15G\n", i, OprogStatus.time, sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])));
+      #endif
+    }
+
+  /* remove net momentum */
+  /* TODO: this is copied from init.c:comvel(), and should be a subroutine of its own */
+  sumx = 0.0;
+  sumy = 0.0;
+  sumz = 0.0;
+  
+  loop(i, 1, Nm)
+       {
+	 /* (sumx, sumy, sumz) is the total momentum */ 
+	 sumx = sumx + vx[i];
+	 sumy = sumy + vy[i];
+	 sumz = sumz + vz[i];
+	 //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
+       }
+     
+  sumx = sumx / ((COORD_TYPE) Nm ); 
+  sumy = sumy / ((COORD_TYPE) Nm );
+  sumz = sumz / ((COORD_TYPE) Nm );
+
+  //Px=0.0; Py=0.0; Pz=0.0;
+  /* Now (sumx, sumy, sumz) is the total momentum per atom (Ptot/(2*Nm)) */
+  loop(i, 1, Nm)
+    {
+      vx[i] = vx[i] - sumx;
+      vy[i] = vy[i] - sumy;
+      vz[i] = vz[i] - sumz;
+      /* In this way the total (net) momentum of the system of 
+	 molecules is zero */
+    }
+
+  /* TODO: do we need to move the center of mass to the origin? see comvel() routine */
+}
+#endif
+
 void rebuildLinkedList(void)
 {
   int j, n;
@@ -1400,11 +1550,11 @@ void rebuildLinkedList(void);
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
-  int ii, innerstep;
+  int /*ii,*/ innerstep;
   char fileop[1024], fileop2[1024], fileop3[1024];
   FILE *bf;
   const char sepStr[] = "@@@\n";
-  double rzmax, zfact;
+  /*double rzmax, zfact;*/
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;
@@ -1522,7 +1672,13 @@ void move(void)
 		  OprogStatus.lastcoll = OprogStatus.time;
 		}
 #endif
-	      velsBrown(Oparams.T);
+              #ifdef MD_FPBROWNIAN
+                /* in the FP-Brownian code, instead of re-randomizing velocities,
+                   we need to evolve the velocities and then give them a "kick" */
+                velsKick(Oparams.T*Oparams.xi);
+              #else
+	        velsBrown(Oparams.T);
+              #endif
 #ifdef MD_HSVISCO
 	      calcT();
 #endif
@@ -1530,7 +1686,8 @@ void move(void)
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	      if (OprogStatus.scalevel)
+	        ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
 #ifdef MD_HSVISCO
 	  else
@@ -1652,7 +1809,8 @@ void move(void)
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	      if (OprogStatus.scalevel)
+		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	    }
 #if 0

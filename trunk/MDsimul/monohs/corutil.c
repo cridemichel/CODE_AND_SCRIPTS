@@ -32,7 +32,7 @@ void info(void)
 }
 
 /* ============================== >>> main <<< ============================= */
-void main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
   /* DESCRIPTION:
      This program scales the velocities, contained in the coordinate file
@@ -167,4 +167,5 @@ void main(int argc, char* argv[])
   if (infoBool == 1)
     info();
 
+  return (0);
 }
