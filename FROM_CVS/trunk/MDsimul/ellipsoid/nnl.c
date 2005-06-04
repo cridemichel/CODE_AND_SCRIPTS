@@ -73,7 +73,7 @@ extern double scalProd(double *A, double *B);
 extern double distfunc(double x);
 extern double min3(double a, double b, double c);
 extern double max3(double a, double b, double c);
-extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
+extern void distSD(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
 extern void calc_grad(double *rC, double *rA, double **Xa, double *grad);
 extern void calc_intersec(double *rB, double *rA, double **Xa, double* rI);
 extern double min(double a, double b);
@@ -1206,7 +1206,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
 	  vecgcg[k1] = rC[k1];
 	  vecgcg[k1+3] = rD[k1];
 	}
-      distconjgrad(i, i, shift, vecgcg, OprogStatus.springkSD, 1);
+      distSD(i, i, shift, vecgcg, OprogStatus.springkSD, 1);
       for (k1=0; k1 < 3; k1++)
 	{
 	  rC[k1] = vecgcg[k1];
@@ -1374,7 +1374,7 @@ retryneigh:
 	      vecgcg[k1] = rC[k1];
 	      vecgcg[k1+3] = rD[k1];
 	    }
-	  distconjgrad(i, i, shift, vecgcg, OprogStatus.springkSD, 1);
+	  distSD(i, i, shift, vecgcg, OprogStatus.springkSD, 1);
 	  for (k1=0; k1 < 3; k1++)
 	    {
 	      rC[k1] = vecgcg[k1];
@@ -1792,10 +1792,10 @@ retryoverlap:
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
 	  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
-	  //distconjgrad(i, j, shift, vecgcg, 100, 1); 
-	  //distconjgrad(i, j, shift, vecgcg, 1/OprogStatus.tolSD, 1);
+	  //distSD(i, j, shift, vecgcg, 100, 1); 
+	  //distSD(i, j, shift, vecgcg, 1/OprogStatus.tolSD, 1);
 	  //guessdistByMesh(i, j, shift, vecgcg);
-	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+	  distSD(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
 #if 0
 	  if (maxitsRyck)
 	    printf("distVera=%.15G\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));

@@ -2598,8 +2598,188 @@ void guessdistByMesh(int i, int j, double shift[3], double *vecg)
       vecg[kk] = vec[kk];
     }
 }
+#ifdef MD_CONJGRAD
+void conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*));
+{
+  const int ITMAX=200;
+  const double EPS = 1.0E-14;
+  int j,its;
+  double gg,gam,fp,dgg, g[4],h[4],xi[4];
+  /* Initializations.*/
+  fp=(*func)(p); (*dfunc)(p,xi);
+  for (j=0; j < n; j++) 
+    {
+      g[j] = -xi[j];
+      xi[j] = h[j] = g[j];
+    }
+  for (its = 0; its < ITMAX; its++) 
+    { 
+      *iter=its;
+      linmin(p, xi, n, fret, func); /* Next statement is the normal return: */
+      if (2.0*fabs(*fret-fp) <= ftol*(fabs(*fret)+fabs(fp)+EPS)) 
+	{
+	  return 0;
+	}
+      fp= *fret;
+      (*dfunc)(p,xi);
+      dgg = gg = 0.0;
+      for (j = 0; j < n; j++)
+	{
+	  gg += g[j]*g[j];
+	  /* dgg += xi[j]*xi[j]; */ /* This statement for Fletcher-Reeves.*/
+	  dgg += (xi[j]+g[j])*xi[j]; /* This statement for Polak-Ribiere.*/
+	}
+      if (gg == 0.0) 
+	{ 
+	  /* Unlikely. If gradient is exactly zero then
+	     we are already done. */
+	  return 0;
+	}
+      gam=dgg/gg;
+      for (j = 0; j < n; j++) 
+	{
+	  g[j] = -xi[j];
+	  xi[j]=h[j]=g[j]+gam*h[j];
+	}
+    }
+  printf("ERROR: Too many iterations in frprmn");
+  return 1;
+}
+double cg_axes[2][3];
+void assign_axes(int i, double *ax, int sh)
+{
+  switch (sh)
+    {
+    case 0:
+      ax[0] = axa[i];
+      ax[1] = axb[i];
+      ax[2] = axc[i];
+      break;
+    case 1:
+      ax[0] = axc[i];
+      ax[1] = axa[i];
+      ax[2] = axb[i];
+     break;
+    case 2:
+      ax[0] = axc[i];
+      ax[1] = axa[i];
+      ax[2] = axb[i];
+     break;
+    }
+}
+void cartesian_to_stereographic(double *xc, double *uv)
+{
+  int k1, k2;
+  double xcp[6];
+  const shiftM[3][3][3] = {{{1,0,0},{0,1,0},{0,0,1}}, {{0,1,0},{0,0,1},{1,0,0}}, {{0,0,1},{1,0,0},{0,1,0}}};
+  shA = 0;
+  if (fabs(xcp[2]) < OprogStatus.epsd)
+    {
+      if (fabs(xcp[0]) > OprogStatus.epsd)
+	shA += 2;
+      else
+	shA += 1;
+    }
+  else
+    {
+      if (fabs(xcp[0]-axa[icg]) < OprogStatus.epsd)
+	shA += 1;
+      if (fabs(xcp[1]-axb[icg]) < OprogStatus.epsd)
+	shA += 1;
+    }
+  shB = 0
+  if (fabs(xcp[5]) < OprogStatus.epsd)
+    {
+      if (fabs(xcp[3]) > OprogStatus.epsd)
+	shB += 2;
+      else
+	shB += 1;
+    }
+  else
+    {
+      if (fabs(xcp[3]-axa[jcg]) < OprogStatus.epsd)
+	shB += 1;
+      if (fabs(xcp[4]-axb[jcg]) < OprogStatus.epsd)
+	shAB += 1;
+    }
+  assign_axes(icg, cg_axes[0], shA);
+  assign_axes(jcg, cg_axes[1], shB);
 
-void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring)
+  for (k1 = 0; k1 < 3; k1++)
+   {
+     for (k2 = 0; k2 < 3; k2++)
+       {
+	 cgRA[k1][k2] = 0.0;
+	 cgRB[k1][k2] = 0.0;
+	 for (k3 = 0; k3 < 3; k3++)
+	   {
+	     cgRA[k1][k2] = shiftM[k1][k3]*RA[k2][k3];
+	     cgRB[k1][k2] = shiftM[k1][k3]*RB[k2][k3];
+	   }
+       }
+   }
+  for (k1 = 0; k1 < 3; k1++)
+   {
+     xcp[k1] = 0.0;
+     xcp[k1+3] = 0.0;
+     for (k2 = 0; k2 < 3; k2++)
+       {
+	 xcp[k1] += cgRA[k1][k2]*(xc[k2]-rA[k2]);
+	 xcp[k1+3] += cgRA[k1][k2]*(xc[k2+3]-rB[k2]);
+       }
+   }
+  if (xcp[2] != 0.0)
+    {
+      if (xcp[2] > 0)
+	uv[1] = sqrt[(cg_axes[0][2]*xcp[1]/xcp[2]/cg_axes[0][1])*
+	  (1-xcp[0]/cg_axes[0][0])/(1 + xcp[0]/cg_axes[0][0])];
+      else
+	uv[1] = sqrt[(cg_axes[0][2]*xcp[1]/xcp[2]/cg_axes[0][1])*
+	  (1-xcp[0]/cg_axes[0][0])/(1 + xcp[0]/cg_axes[0][0])];
+      uv[0] =  (xcp[1]*cg_axes[0][2])/(xcp[2]*cg_axes[0][1]); 
+    }
+  else
+    {
+      uv[1] = 0.0; 
+      uv[0] = 0.0;
+    }
+  if (xcp[5] != 0.0)
+    {
+      if (xcp[5] > 0)
+	uv[3] = sqrt[(cg_axes[1][2]*xcp[4]/xcp[5]/cg_axes[1][1])*
+	  (1-xcp[3]/cg_axes[1][0])/(1 + xcp[3]/cg_axes[1][0])];
+      else
+	uv[3] = sqrt[(cg_axes[1][2]*xcp[4]/xcp[5]/cg_axes[1][1])*
+	  (1-xcp[0]/cg_axes[1][0])/(1 + xcp[3]/cg_axes[1][0])];
+      uv[2] =  (xcp[4]*cg_axes[1][2])/(xcp[5]*cg_axes[1][1]); 
+    }
+  else
+    {
+      uv[3] = 0.0; 
+      uv[2] = 0.0;
+    }
+}
+void stereographic_to_cartesian(double *uv, double *xc)
+{
+
+
+}
+void distconjgrad(int i, int j, double shift[3], double *vecg)
+{
+  int kk;
+  double vec[4];
+  icg = i;
+  jcg = j;
+  for (kk=0; kk < 3; kk++)
+    {
+      shiftcg[kk] = shift[kk];
+    }
+  cartesian_to_stereographic(vecg, vec);
+  conjgrad(vec, 4, OprogStatus.tolSD, &iter, &Fret, conjgrad_func, conjgrad_grad);
+  stereographic_to_cartesian(vec, vecg);
+}
+#endif
+void distSD(int i, int j, double shift[3], double *vecg, double lambda, int halfspring)
 {
   int kk;
   double Fret;
