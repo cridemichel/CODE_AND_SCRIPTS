@@ -1125,8 +1125,7 @@ void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *
 }
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
-double calcDist(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-     		double *vecgsup, int calcguess);
+double calcDist(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
 
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
@@ -3144,7 +3143,7 @@ double calc_norm(double *vec)
   return sqrt(norm);
 }
 extern int check_point(char* msg, double *p, double *rc, double **XX);
-extern void distconjgrad(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
+extern void distSD(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
 extern int maxitsRyck;
 extern double min(double a, double b);
 extern double min3(double a, double b, double c);
@@ -3157,7 +3156,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], fx[3];
   double ti, segno;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
-  int retcheck;
+  int retcheck, tryagain = 0;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
   int k1, k2, na, k3;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
@@ -3239,10 +3238,7 @@ retry:
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
 	  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
-	  //distconjgrad(i, j, shift, vecgcg, 100, 1); 
-	  //distconjgrad(i, j, shift, vecgcg, 1/OprogStatus.tolSD, 1);
-	  //guessdistByMesh(i, j, shift, vecgcg);
-	  distconjgrad(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+	  distSD(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
 #if 0
 	  if (maxitsRyck)
 	    printf("distVera=%.15G\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
@@ -3363,17 +3359,29 @@ retry:
     newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift); 
   if (retcheck != 0)
     {
-      if (OprogStatus.targetPhi>0)
+      if (tryagain && OprogStatus.targetPhi <= 0.0)
+	{
+	  printf("[ERROR] I'm sorry but I can't really calculate distance\n");
+	  exit(-1);
+     	}
+	 
+      if (!tryagain && OprogStatus.trySD && OprogStatus.springkSD < 0.0)
+	{
+	 OprogStatus.springkSD = 1.0;
+	  tryagain = 1; 
+	  goto retry;
+	}
+     if (OprogStatus.targetPhi > 0)
 	{
 	  calcdist_retcheck=1;
 	  return 0.0;
-	}
-      printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+	} 
       if (calcguess==0)
 	{
 	  calcguess=2;
 	  goto retry;
 	} 
+      printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
       Oparams.time = t + t1;
       store_bump(i, j);
       exit(-1);
@@ -3440,11 +3448,23 @@ retry:
     {
       if (segno*vecg[4]<0 && fabs(segno*vecg[4])>3E-8)
 	{
+	  
+	  if (tryagain && OprogStatus.targetPhi <= 0.0)
+    	    {
+	      printf("[ERROR] I'm sorry but I can't really calculate distance\n");
+	      exit(-1);
+	    }
+	  if (!tryagain && OprogStatus.trySD && OprogStatus.springkSD < 0.0)
+	    {
+  	      OprogStatus.springkSD = 1.0;
+	      tryagain = 1; 
+	      goto retry;
+	    }
 	  if (OprogStatus.targetPhi>0)
 	    {
 	      calcdist_retcheck = 1;
 	      return 0.0;
-	    }
+	    } 
 	  printf("segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[4], calc_norm(r12));
 	  return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
 	  //exit(-1);
@@ -3454,6 +3474,18 @@ retry:
     {
       if (segno*vecg[7]<0 && fabs(segno*vecg[7])>3E-8)
 	{
+	  
+      	  if (tryagain && OprogStatus.targetPhi <= 0)
+	    {
+	      printf("[ERROR] I'm sorry but I can't really calculate distance\n");
+	      exit(-1);
+	    } 
+	  if (!tryagain && OprogStatus.trySD && OprogStatus.springkSD < 0.0)
+	    {
+	      OprogStatus.springkSD = 1.0;
+	      tryagain = 1; 
+	      goto retry;
+	    }
 	  if (OprogStatus.targetPhi>0)
 	    {
 	      calcdist_retcheck = 1;
@@ -3463,6 +3495,8 @@ retry:
 	  return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
 	}
     }
+  if (OprogStatus.trySD && tryagain)
+    OprogStatus.springkSD = -1.0;
   if (segno > 0)
     return calc_norm(r12);
   else
@@ -3587,8 +3621,7 @@ double calcDistNegOLD(double t, double t1, int i, int j, double shift[3], double
 #endif
 #endif
 }
-double calcDist(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-     		double *vecgsup, int calcguess)
+double calcDist(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess)
 {
   double vecg[8], rC[3], rD[3], rDC[3], r12[3];
   double ti;
