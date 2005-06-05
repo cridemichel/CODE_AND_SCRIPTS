@@ -10,6 +10,8 @@
 #define MD_DEBUG18(X) 
 int ncom;
 double (*nrfunc)(double []); 
+double f1dim(double x);
+void linmin(double p[], double xi[], int n, double *fret, double (*func)(double []));
 void polintRyck(double xain[], double yain[], int n, double x, double *y, double *dy);
 int *ivector(int n)
 {
@@ -416,46 +418,6 @@ void linminConstr(double p[], double xi[], int n, double *fret, double (*func)(d
   //free_vector(xicom,1,n); free_vector(pcom,1,n);
 }
 
-void linmin(double p[], double xi[], int n, double *fret, double (*func)(double []))
-/*Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and 
- * resets p to where the function func(p) takes on a minimum along the direction xi from p,
- * and replaces xi by the actual vector displacement that p was moved. Also returns as fret 
- * the value of func at the returned location p. This is actually all accomplished by calling
- * the routines mnbrak and brent. */
-{ 
-  const double TOLLM=1.0E-10;
-  double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
-  double f1dim(double x); 
-  void mnbrak(double *ax, double *bx, double *cx, double *fa, double *fb, double *fc, 
-	      double (*func)(double));
-  int j; 
-  double xx,xmin,fx,fb,fa,bx,ax;
-  ncom=n; /*Define the global variables.*/
-  //pcom=vector(1,n);
-  //xicom=vector(1,n); 
-  nrfunc=func; 
-  for (j=0;j<n;j++)
-    { 
-      pcom[j]=p[j];
-      xicom[j]=xi[j];
-    } 
-  ax=0.0; /*Initial guess for brackets.*/
-  xx=1.0; 
-  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dim); 
-  //printf("ax=%.15G xx=%.15G bx=%.15G\n", ax, xx, bx);
-  *fret=brent(ax,xx,bx,f1dim,TOLLM,&xmin);
-  //printf("xmin: %.15G\n", xmin);
-  //printf("xi=%.15G %.15G %.15G %.15G %.15G %.15G \n",
-	// xi[0], xi[1], xi[2], xi[3], xi[4], xi[5]);
-  //printf("p=%.15G %.15G %.15G %.15G %.15G %.15G \n",
-	// p[0], p[1], p[2], p[3], p[4], p[5]);
-  for (j=0;j<n;j++)
-    { /*Construct the vector results to return. */
-      xi[j] *= xmin;
-      p[j] += xi[j]; 
-    } 
-  //free_vector(xicom,1,n); free_vector(pcom,1,n);
-}
 #define MOV3(a,b,c,d,e,f) (a)=(d);(b)=(e);(c)=(f);
 double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)(double), double tol, double *xmin) 
   /* Given a function f and its derivative function df, and given a bracketing triplet of abscissas ax, bx, cx
@@ -587,18 +549,6 @@ double f1dimConstr(double x)
   return f;
 }
 
-double f1dim(double x) 
-  /*Must accompany linmin.*/
-{
-  int j; 
-  double f, xt[8];
-  // xt=vector(1,ncom);
-  for (j=0;j<ncom;j++) 
-    xt[j]=pcom[j]+x*xicom[j]; 
-  f=(*nrfunc)(xt); 
-  // free_vector(xt,1,ncom); 
-  return f;
-}
 double df1dim(double x) 
 { 
   int j;
@@ -2598,15 +2548,127 @@ void guessdistByMesh(int i, int j, double shift[3], double *vecg)
       vecg[kk] = vec[kk];
     }
 }
+double f1dim(double x) 
+  /*Must accompany linmin.*/
+{
+  int j; 
+  double f, xt[8];
+  for (j=0;j<ncom;j++) 
+    xt[j]=pcom[j]+x*xicom[j]; 
+  f=(*nrfunc)(xt); 
+  return f;
+}
+void linmin(double p[], double xi[], int n, double *fret, double (*func)(double []))
+/* Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and 
+ * resets p to where the function func(p) takes on a minimum along the direction xi from p,
+ * and replaces xi by the actual vector displacement that p was moved. Also returns as fret 
+ * the value of func at the returned location p. This is actually all accomplished by calling
+ * the routines mnbrak and brent. */
+{ 
+  const double TOLLM=1.0E-10;
+  int j; 
+  double xx,xmin,fx,fb,fa,bx,ax;
+  ncom=n; /*Define the global variables.*/
+  nrfunc=func; 
+  for (j=0;j<n;j++)
+    { 
+      pcom[j]=p[j];
+      xicom[j]=xi[j];
+    } 
+  ax=0.0; /*Initial guess for brackets.*/
+  xx=1.0; 
+  mnbrak(&ax,&xx,&bx,&fa,&fx,&fb,f1dim); 
+  *fret=brent(ax,xx,bx,f1dim,TOLLM,&xmin);
+  for (j=0;j<n;j++)
+    { 
+      /*Construct the vector results to return. */
+      xi[j] *= xmin;
+      p[j] += xi[j]; 
+    } 
+}
 #ifdef MD_CONJGRAD
-void conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*));
+double conjgrad_func(double angs[4])
+{
+  double r1[3], r2[3], xp[6];
+  angs2coord(angs, xp);
+  lab2body(icg, xp, r1, rA, RtA);
+  lab2body(jcg, &xp[3], r2, rB, RtB);
+  return Sqr(r1[0]-r2[0])+Sqr(r1[1]-r2[1])+Sqr(r1[2]-r2[2]); 
+}
+void conjgrad_grad(double *angs, double *grad)
+{
+  double r1[3], r2[3], xp[6], dd[3], jac[6][4];
+  double sin0, sin1, cos0, cos1, sin2, sin3, cos2, cos3;
+  int kk, k1, k2;
+
+  sin0 = sin(angs[0]);
+  sin1 = sin(angs[1]);
+  cos0 = cos(angs[0]);
+  cos1 = cos(angs[1]);
+  sin2 = sin(angs[2]);
+  sin3 = sin(angs[3]);
+  cos2 = cos(angs[2]);
+  cos3 = cos(angs[3]);
+  xp[0] = axa[icg]*cos1*sin0;
+  xp[1] = axb[icg]*sin1*sin0;
+  xp[2] = axc[icg]*cos0;
+  xp[3] = axa[jcg]*cos3*sin2;
+  xp[4] = axb[jcg]*sin3*sin2;
+  xp[5] = axc[jcg]*cos2;
+
+  lab2body(icg, xp, r1, rA, RtA);
+  lab2body(jcg, &xp[3], r2, rB, RtB);
+
+  for (kk = 0; kk < 4; kk++)
+    dd[kk] = 2.0*(r2[kk] - r1[kk]);   
+  /* NOTA: jac[][] è lo jacobiano del cambio di coordinate 
+   * (theta1,phi1,theta2,phi2)->(x1,y1,z1,x2,y2,z2) cioè 
+   * \frac{\delta(x1,y1,z1,x2,y2,z2)}{\delta(theta1,phi1,theta2,phi2)}*/
+  jac[0][0] = -axa[icg]*sin0*sin1;
+  jac[0][1] = axa[icg]*cos0*cos1;
+  jac[0][2] = 0.0;
+  jac[0][3] = 0.0;
+  jac[1][0] = -axb[icg]*cos0*sin1;
+  jac[1][1] = axb[icg]*sin0*cos1; 
+  jac[1][2] = 0.0;
+  jac[1][3] = 0.0;
+  jac[2][0] = 0.0;
+  jac[2][1] = -axc[icg]*sin1; 
+  jac[2][2] = 0.0;
+  jac[2][3] = 0.0;
+  jac[3][0] = 0.0;
+  jac[3][1] = 0.0;
+  jac[3][2] = -axa[jcg]*sin2*sin3;
+  jac[3][3] = axa[jcg]*cos2*cos3;
+  jac[4][0] = 0.0;
+  jac[4][1] = 0.0;
+  jac[4][2] = -axb[jcg]*cos2*sin3;
+  jac[4][3] = axb[jcg]*sin2*cos3;
+  jac[4][0] = 0.0;
+  jac[4][1] = 0.0;
+  jac[4][2] = -axc[jcg]*sin3;
+  jac[4][3] = 0.0;
+
+  for (kk = 0; kk < 2; kk++)
+    {
+      grad[kk] = 0.0;
+      grad[kk+2] = 0.0;
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  grad[kk] += -dd[k1]*jac[k1][kk];
+	  grad[kk+2] += dd[k1]*jac[k1+3][kk+2];
+	}
+    }
+}
+int conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
 {
   const int ITMAX=200;
   const double EPS = 1.0E-14;
   int j,its;
   double gg,gam,fp,dgg, g[4],h[4],xi[4];
   /* Initializations.*/
-  fp=(*func)(p); (*dfunc)(p,xi);
+  fp=(*func)(p); 
+  (*dfunc)(p,xi);
   for (j=0; j < n; j++) 
     {
       g[j] = -xi[j];
@@ -2645,138 +2707,41 @@ void conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*
   printf("ERROR: Too many iterations in frprmn");
   return 1;
 }
-double cg_axes[2][3];
-void assign_axes(int i, double *ax, int sh)
-{
-  switch (sh)
-    {
-    case 0:
-      ax[0] = axa[i];
-      ax[1] = axb[i];
-      ax[2] = axc[i];
-      break;
-    case 1:
-      ax[0] = axc[i];
-      ax[1] = axa[i];
-      ax[2] = axb[i];
-     break;
-    case 2:
-      ax[0] = axc[i];
-      ax[1] = axa[i];
-      ax[2] = axb[i];
-     break;
-    }
-}
-void cartesian_to_stereographic(double *xc, double *uv)
-{
-  int k1, k2;
-  double xcp[6];
-  const shiftM[3][3][3] = {{{1,0,0},{0,1,0},{0,0,1}}, {{0,1,0},{0,0,1},{1,0,0}}, {{0,0,1},{1,0,0},{0,1,0}}};
-  shA = 0;
-  if (fabs(xcp[2]) < OprogStatus.epsd)
-    {
-      if (fabs(xcp[0]) > OprogStatus.epsd)
-	shA += 2;
-      else
-	shA += 1;
-    }
-  else
-    {
-      if (fabs(xcp[0]-axa[icg]) < OprogStatus.epsd)
-	shA += 1;
-      if (fabs(xcp[1]-axb[icg]) < OprogStatus.epsd)
-	shA += 1;
-    }
-  shB = 0
-  if (fabs(xcp[5]) < OprogStatus.epsd)
-    {
-      if (fabs(xcp[3]) > OprogStatus.epsd)
-	shB += 2;
-      else
-	shB += 1;
-    }
-  else
-    {
-      if (fabs(xcp[3]-axa[jcg]) < OprogStatus.epsd)
-	shB += 1;
-      if (fabs(xcp[4]-axb[jcg]) < OprogStatus.epsd)
-	shAB += 1;
-    }
-  assign_axes(icg, cg_axes[0], shA);
-  assign_axes(jcg, cg_axes[1], shB);
 
-  for (k1 = 0; k1 < 3; k1++)
-   {
-     for (k2 = 0; k2 < 3; k2++)
-       {
-	 cgRA[k1][k2] = 0.0;
-	 cgRB[k1][k2] = 0.0;
-	 for (k3 = 0; k3 < 3; k3++)
-	   {
-	     cgRA[k1][k2] = shiftM[k1][k3]*RA[k2][k3];
-	     cgRB[k1][k2] = shiftM[k1][k3]*RB[k2][k3];
-	   }
-       }
-   }
-  for (k1 = 0; k1 < 3; k1++)
-   {
-     xcp[k1] = 0.0;
-     xcp[k1+3] = 0.0;
-     for (k2 = 0; k2 < 3; k2++)
-       {
-	 xcp[k1] += cgRA[k1][k2]*(xc[k2]-rA[k2]);
-	 xcp[k1+3] += cgRA[k1][k2]*(xc[k2+3]-rB[k2]);
-       }
-   }
-  if (xcp[2] != 0.0)
-    {
-      if (xcp[2] > 0)
-	uv[1] = sqrt[(cg_axes[0][2]*xcp[1]/xcp[2]/cg_axes[0][1])*
-	  (1-xcp[0]/cg_axes[0][0])/(1 + xcp[0]/cg_axes[0][0])];
-      else
-	uv[1] = sqrt[(cg_axes[0][2]*xcp[1]/xcp[2]/cg_axes[0][1])*
-	  (1-xcp[0]/cg_axes[0][0])/(1 + xcp[0]/cg_axes[0][0])];
-      uv[0] =  (xcp[1]*cg_axes[0][2])/(xcp[2]*cg_axes[0][1]); 
-    }
-  else
-    {
-      uv[1] = 0.0; 
-      uv[0] = 0.0;
-    }
-  if (xcp[5] != 0.0)
-    {
-      if (xcp[5] > 0)
-	uv[3] = sqrt[(cg_axes[1][2]*xcp[4]/xcp[5]/cg_axes[1][1])*
-	  (1-xcp[3]/cg_axes[1][0])/(1 + xcp[3]/cg_axes[1][0])];
-      else
-	uv[3] = sqrt[(cg_axes[1][2]*xcp[4]/xcp[5]/cg_axes[1][1])*
-	  (1-xcp[0]/cg_axes[1][0])/(1 + xcp[3]/cg_axes[1][0])];
-      uv[2] =  (xcp[4]*cg_axes[1][2])/(xcp[5]*cg_axes[1][1]); 
-    }
-  else
-    {
-      uv[3] = 0.0; 
-      uv[2] = 0.0;
-    }
-}
-void stereographic_to_cartesian(double *uv, double *xc)
+void distconjgrad(int i, int j, double shift[3], double *vec)
 {
-
-
-}
-void distconjgrad(int i, int j, double shift[3], double *vecg)
-{
-  int kk;
-  double vec[4];
+  int kk, iter;
+  double Fret, vecP[6], angs[4], sinth;
   icg = i;
   jcg = j;
   for (kk=0; kk < 3; kk++)
     {
       shiftcg[kk] = shift[kk];
     }
-  cartesian_to_stereographic(vecg, vec);
-  conjgrad(vec, 4, OprogStatus.tolSD, &iter, &Fret, conjgrad_func, conjgrad_grad);
-  stereographic_to_cartesian(vec, vecg);
+  /* trovo le coordinate nel riferimento del corpo rigido (assi principali) */
+  lab2body(icg, vec, vecP, rA, RtA);
+  lab2body(jcg, &vec[3], &vecP[3], rB, RtB);
+  /* determino theta e phi per entrambi gli ellissoidi 
+   * angs[] = (thetaA,phiA,thetaB,phiB)
+   * 0 < theta < 2PI
+   * 0 < phi < PI */
+  angs[0] = acos(vecP[2]/axc[icg]);
+  angs[1] = acos(vecP[0]/axa[icg]/sin(angs[0]));
+  sinth = vecP[1]/axb[icg]/sin(angs[0]);
+  if (sinth < 0)
+    angs[1] = 2.0*pi-angs[1];
+  angs[2] = acos(vecP[5]/axc[jcg]);
+  angs[3] = acos(vecP[3]/axa[jcg]/sin(angs[2]));
+  sinth = vecP[4]/axb[jcg]/sin(angs[2]);
+  if (sinth < 0)
+    angs[3] = 2.0*pi-angs[3];
+
+  conjgrad(angs, 4, OprogStatus.tolSD, &iter, &Fret, conjgrad_func, conjgrad_grad);
+  angs2coord(angs, vecP);
+
+  /* torno nel riferimento del laboratorio */
+  body2lab(icg, vecP, vec, rA, RtA);
+  body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
 }
 #endif
 void distSD(int i, int j, double shift[3], double *vecg, double lambda, int halfspring)
