@@ -41,7 +41,7 @@ extern struct nebrTabStruct *nebrTab;
 double nextNNLrebuild;
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0, itsFNL=0, timesFNL=0, 
-     timesSNL=0, itsSNL=0;
+     timesSNL=0, itsSNL=0, numcalldist=0, numdisttryagain=0;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
 void print_matrix(double **M, int n)
@@ -697,6 +697,8 @@ void outputSummary(void)
     printf("Average iterations in locate_contact_neigh: %.6G\n", ((double)itsSNL)/timesSNL);
   if (callsprojonto>0)
     printf("Average iterations in projonto: %.8G\n", ((double) itsprojonto)/callsprojonto);
+  if (numcalldist)
+    printf("Percentage of failed dist=%.2f\%\n", 100.0*(((double) numdisttryagain) / numcalldist));
   printf("Number of collisions: %lld\n", numcoll);
   
   scale_Phi();
@@ -2589,7 +2591,6 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
 	  gx[k1] += 2.0*Xb[k1][k2]*(rD[k2]-rB[k2]);
 	}
     } 
-
   for (k1 = 0; k1 < 3; k1++)
     {
       b[k1] = 0.0;
@@ -3547,11 +3548,15 @@ retry:
 	vecg[k1] = vecgsup[k1];
     }
   
+  //printf(">>>>>>>>>>>> INIZIO NR\n");
   MD_DEBUG(printf(">>>>>>> alpha: %f beta: %f\n", vecg[6], vecg[7]));
   if (OprogStatus.dist5)
-    newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift); 
+    {
+      newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift); 
+    }
   else 
     newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift); 
+  numcalldist++;
   if (retcheck != 0)
     {
       if (tryagain && OprogStatus.targetPhi <= 0.0)
@@ -3562,7 +3567,8 @@ retry:
 	 
       if (!tryagain && OprogStatus.trySD && OprogStatus.springkSD < 0.0)
 	{
-	 OprogStatus.springkSD = 1.0;
+	  OprogStatus.springkSD = 1.0;
+	  numdisttryagain++;
 	  tryagain = 1; 
 	  goto retry;
 	}
@@ -3652,6 +3658,7 @@ retry:
 	  if (!tryagain && OprogStatus.trySD && OprogStatus.springkSD < 0.0)
 	    {
   	      OprogStatus.springkSD = 1.0;
+	      numdisttryagain++;
 	      tryagain = 1; 
 	      goto retry;
 	    }
@@ -3678,6 +3685,7 @@ retry:
 	  if (!tryagain && OprogStatus.trySD && OprogStatus.springkSD < 0.0)
 	    {
 	      OprogStatus.springkSD = 1.0;
+	      numdisttryagain++;
 	      tryagain = 1; 
 	      goto retry;
 	    }
