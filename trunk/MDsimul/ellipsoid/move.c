@@ -3355,7 +3355,7 @@ extern double scalProd(double *A, double *B);
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
-  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], fx[3];
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], vecgcg2[6], fx[3];
   double ti, segno;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck, tryagain = 0;
@@ -3440,30 +3440,24 @@ retry:
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
 	  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
-	  //distconjgrad(i, j, shift, vecgcg);
 	  distSD(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
-#if 0
-	  if (maxitsRyck)
-	    printf("distVera=%.15G\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
-#endif
 	  for (k1=0; k1 < 3; k1++)
 	    {
 	      rC[k1] = vecgcg[k1];
 	      rD[k1] = vecgcg[k1+3];
 	    }	 
 #endif
-	}
 #if 0
 	{
 	  double dist, distVera;
 	  for(k1=0; k1 < 3; k1++)
 	    r12[k1] = rC[k1]-rD[k1]; 
 	  dist = calc_norm(r12);
-	  printf("dist: %.15G\n", dist);
+	  printf("DOPO2 dist: %.15G\n", dist);
 	      //printf("dist=%.15f\n",calc_norm(r12));
 	}
 #endif
-      //exit(-1);
+	}
       MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
       calc_grad(rC, rA, Xa, gradf);
@@ -3498,7 +3492,6 @@ retry:
 	  else 
 	    g2 = g1;
 	}	  
-      //vecg[4] = calc_norm(rDC)/nf;  
       if (OprogStatus.dist5)
 	{
 #if 0
@@ -3520,7 +3513,7 @@ retry:
 		vecg[4] = 0.0;
 	    }
 #endif
-	  vecg[4] = 0.0;
+	   vecg[4] = 0.0;
 	}
       else
 	{
@@ -3544,7 +3537,6 @@ retry:
 	      else
 		vecg[7] = 0.0;
 	    }
-	  //printf("i=%d j=%d g1=%f g2=%f\n", i, j, g1, g2);
 #endif
 	  vecg[7] = 0.0;
 	}
@@ -3556,7 +3548,6 @@ retry:
     }
   
   MD_DEBUG(printf(">>>>>>> alpha: %f beta: %f\n", vecg[6], vecg[7]));
-  //printf(">>>>>>> MAHHH alpha: %f beta: %f\n", vecg[6], vecg[7]);
   if (OprogStatus.dist5)
     newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift); 
   else 
