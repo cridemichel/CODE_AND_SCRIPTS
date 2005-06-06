@@ -759,16 +759,16 @@ void body2lab(int i, double xp[], double x[], double *rO, double **R)
 
 void angs2coord(double angs[], double p[])
 {
-  double sin0, sin2;
-  sin0 = sin(angs[0]);
-  p[0] = axa[icg]*cos(angs[1])*sin0;
-  p[1] = axb[icg]*sin(angs[1])*sin0;
-  p[2] = axc[icg]*cos(angs[0]);
+  double sin1, sin3;
+  sin1 = sin(angs[1]);
+  p[0] = axa[icg]*cos(angs[0])*sin1;
+  p[1] = axb[icg]*sin(angs[0])*sin1;
+  p[2] = axc[icg]*cos(angs[1]);
   
-  sin2 = sin(angs[2]);
-  p[3] = axa[jcg]*cos(angs[3])*sin2;
-  p[4] = axb[jcg]*sin(angs[3])*sin2;
-  p[5] = axc[jcg]*cos(angs[2]);
+  sin3 = sin(angs[3]);
+  p[3] = axa[jcg]*cos(angs[2])*sin3;
+  p[4] = axb[jcg]*sin(angs[2])*sin3;
+  p[5] = axc[jcg]*cos(angs[3]);
 }
 double funcPowell(double angs[])
 {
@@ -2548,6 +2548,8 @@ void guessdistByMesh(int i, int j, double shift[3], double *vecg)
       vecg[kk] = vec[kk];
     }
 }
+double conjgrad_func(double angs[4]);
+
 double f1dim(double x) 
   /*Must accompany linmin.*/
 {
@@ -2589,11 +2591,13 @@ void linmin(double p[], double xi[], int n, double *fret, double (*func)(double 
 #ifdef MD_CONJGRAD
 double conjgrad_func(double angs[4])
 {
-  double r1[3], r2[3], xp[6];
+  double dist, r1[3], r2[3], xp[6];
   angs2coord(angs, xp);
-  lab2body(icg, xp, r1, rA, RtA);
-  lab2body(jcg, &xp[3], r2, rB, RtB);
-  return Sqr(r1[0]-r2[0])+Sqr(r1[1]-r2[1])+Sqr(r1[2]-r2[2]); 
+  body2lab(icg, xp, r1, rA, RtA);
+  body2lab(jcg, &xp[3], r2, rB, RtB);
+  printf("angs=(%.15G,%.15G,%.15G,%.15G)\n", angs[0], angs[1], angs[2], angs[3]);
+  dist = Sqr(r1[0]-r2[0])+Sqr(r1[1]-r2[1])+Sqr(r1[2]-r2[2]); 
+  return dist;
 }
 void conjgrad_grad(double *angs, double *grad)
 {
@@ -2609,18 +2613,19 @@ void conjgrad_grad(double *angs, double *grad)
   sin3 = sin(angs[3]);
   cos2 = cos(angs[2]);
   cos3 = cos(angs[3]);
-  xp[0] = axa[icg]*cos1*sin0;
-  xp[1] = axb[icg]*sin1*sin0;
-  xp[2] = axc[icg]*cos0;
-  xp[3] = axa[jcg]*cos3*sin2;
-  xp[4] = axb[jcg]*sin3*sin2;
-  xp[5] = axc[jcg]*cos2;
+  xp[0] = axa[icg]*cos0*sin1;
+  xp[1] = axb[icg]*sin0*sin1;
+  xp[2] = axc[icg]*cos1;
+  xp[3] = axa[jcg]*cos2*sin3;
+  xp[4] = axb[jcg]*sin2*sin3;
+  xp[5] = axc[jcg]*cos3;
 
-  lab2body(icg, xp, r1, rA, RtA);
-  lab2body(jcg, &xp[3], r2, rB, RtB);
+  body2lab(icg, xp, r1, rA, RtA);
+  body2lab(jcg, &xp[3], r2, rB, RtB);
 
-  for (kk = 0; kk < 4; kk++)
-    dd[kk] = 2.0*(r2[kk] - r1[kk]);   
+  for (kk = 0; kk < 3; kk++)
+    dd[kk] = -2.0*(r2[kk] - r1[kk]);   
+  printf("[CG grad] i=%d j=%d dist=%.15G\n", icg, jcg, calc_norm(dd)/2.0);
   /* NOTA: jac[][] è lo jacobiano del cambio di coordinate 
    * (theta1,phi1,theta2,phi2)->(x1,y1,z1,x2,y2,z2) cioè 
    * \frac{\delta(x1,y1,z1,x2,y2,z2)}{\delta(theta1,phi1,theta2,phi2)}*/
@@ -2628,7 +2633,7 @@ void conjgrad_grad(double *angs, double *grad)
   jac[0][1] = axa[icg]*cos0*cos1;
   jac[0][2] = 0.0;
   jac[0][3] = 0.0;
-  jac[1][0] = -axb[icg]*cos0*sin1;
+  jac[1][0] = axb[icg]*cos0*sin1;
   jac[1][1] = axb[icg]*sin0*cos1; 
   jac[1][2] = 0.0;
   jac[1][3] = 0.0;
@@ -2636,18 +2641,19 @@ void conjgrad_grad(double *angs, double *grad)
   jac[2][1] = -axc[icg]*sin1; 
   jac[2][2] = 0.0;
   jac[2][3] = 0.0;
+
   jac[3][0] = 0.0;
   jac[3][1] = 0.0;
   jac[3][2] = -axa[jcg]*sin2*sin3;
   jac[3][3] = axa[jcg]*cos2*cos3;
   jac[4][0] = 0.0;
   jac[4][1] = 0.0;
-  jac[4][2] = -axb[jcg]*cos2*sin3;
+  jac[4][2] = axb[jcg]*cos2*sin3;
   jac[4][3] = axb[jcg]*sin2*cos3;
-  jac[4][0] = 0.0;
-  jac[4][1] = 0.0;
-  jac[4][2] = -axc[jcg]*sin3;
-  jac[4][3] = 0.0;
+  jac[5][0] = 0.0;
+  jac[5][1] = 0.0;
+  jac[5][2] = 0.0;
+  jac[5][3] = -axc[jcg]*sin3;
 
   for (kk = 0; kk < 2; kk++)
     {
@@ -2659,16 +2665,28 @@ void conjgrad_grad(double *angs, double *grad)
 	  grad[kk+2] += dd[k1]*jac[k1+3][kk+2];
 	}
     }
+  if (angs[1]+grad[1] > pi)
+    grad[1] = 2.0*pi - grad[1];  
+  if (angs[1]+grad[1] < 0.0)
+    grad[1] = -grad[1];
+  if (angs[3]+grad[3] > pi)
+    grad[3] = 2.0*pi - grad[3];  
+  if (angs[3]+grad[3] < 0.0)
+    grad[3] = -grad[3];
+   //printf("grad=(%.15G,%.15G,%.15G,%.15G\n", grad[0], grad[1], grad[2], grad[3]);
 }
+double rDcg[3];
 int conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), void (*dfunc)(double [], double []))
 {
-  const int ITMAX=200;
-  const double EPS = 1.0E-14;
+  const int ITMAX=10;
+  const double EPS = 1.0E-12;
   int j,its;
-  double gg,gam,fp,dgg, g[4],h[4],xi[4];
+  double gg,gam,fp,dgg, g[8],h[8],xi[8], dist, distold;
   /* Initializations.*/
   fp=(*func)(p); 
   (*dfunc)(p,xi);
+  //distold = Sqr(rDcg[0]-p[0])+Sqr(rDcg[1]-p[1])+Sqr(rDcg[2]-p[2]);
+
   for (j=0; j < n; j++) 
     {
       g[j] = -xi[j];
@@ -2704,9 +2722,180 @@ int conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*f
 	  xi[j]=h[j]=g[j]+gam*h[j];
 	}
     }
-  printf("ERROR: Too many iterations in frprmn");
-  return 1;
+  //printf("ERROR: Too many iterations in frprmn *fret=%.15G\n", *fret);
+  //exit(-1);
+  return 0;
 }
+extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+double conjgrad_dist5(double x[])
+{
+  int k1, k2; 
+  double fx[3], gx[3], rD[3];
+  /* x = (r, alpha, t) */ 
+  double val, dtmp1, dtmp2;
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+	}
+      rDcg[k1] = rD[k1] = x[k1] + fx[k1]*x[4];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(rD[k2] - rB[k2]);
+    }
+  val = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      dtmp1 = fx[k1] + Sqr(x[3])*gx[k1];
+      val += Sqr(dtmp1);
+    }
+  dtmp1 = 0.0;
+  dtmp2 = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      dtmp1 += (x[k1]-rA[k1])*fx[k1];
+      dtmp2 += (rD[k1]-rB[k1])*gx[k1];
+    }
+  dtmp1 = 0.5*dtmp1-1.0;
+  dtmp2 = 0.5*dtmp2-1.0;
+  val += Sqr(dtmp1)+Sqr(dtmp2);
+  //printf("val=%.15G dtmp1:%.15G dtmp2=%.15G x=%.15G %.15G %.15G %.15G %.15G\n", val,
+//	 dtmp1, dtmp2,
+//	 x[0],x[1],x[2],x[3],x[4]);
+  //printf("val=%.15G\n", val);
+  //printf("BAHBOH dist=%.15G\n", sqrt(Sqr(x[0]-rD[0])+Sqr(x[1]-rD[1])+Sqr(x[2]-rD[2])));
+  return val;
+}
+void conjgrad_graddist5(double *x, double *xi)
+{
+  double fx[3], xit[5], gx[3], rD[3], A[3][3], b[3], c[3], f, g;
+  int k1, k2, k3;
+  double df[5][5], fgx[3];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  A[k1][k2] = XbXa[k1][k2];
+	  A[k1][k2] *= 4.0*Sqr(x[3])*x[4];
+	  A[k1][k2] += 2.0*Xb[k1][k2]*Sqr(x[3]);
+	}
+    }	
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*Xa[k1][k2] + A[k1][k2];
+	}
+    }
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	}
+      rD[k1] = x[k1] + fx[k1]*x[4];
+    } 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  gx[k1] += 2.0*Xb[k1][k2]*(rD[k2]-rB[k2]);
+	}
+    } 
+  f = 0.0;
+  g = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      f += (x[k1]-rA[k1])*fx[k1];
+      g += (rD[k1]-rB[k1])*gx[k1];
+    }
+  f = 0.5*f - 1.0;
+  g = 0.5*g - 1.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      b[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  b[k1] += Xb[k1][k2]*fx[k2];
+	}
+      b[k1] *= 2.0*Sqr(x[3]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      c[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  c[k1] += gx[k2]*Xa[k2][k1];
+	}
+      c[k1] *= 2.0*x[4];
+      c[k1] += gx[k1];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  df[3][3] = 0.0;
+  df[3][4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = c[k1];
+    } 
+  df[4][3] = 0.0;
+  df[4][4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[4][4] += gx[k1]*fx[k1];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][3] = 2.0*x[3]*gx[k1];
+      df[k1][4] = b[k1];
+    }
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      xit[k1] = fx[k1]+Sqr(x[3])*gx[k1];
+      xit[k1] *= 2.0;
+    }
+  xit[3] = 2.0*f;
+  xit[4] = 2.0*g;
+
+  for (k1 = 0; k1 < 5; k1++)
+    {
+      xi[k1] = 0.0;
+      for (k2 = 0; k2 < 5; k2++)
+	xi[k1] += xit[k2]*df[k2][k1];
+    }
+}
+double conjgrad_dist(double *vec)
+{
+  return 0.0;
+}
+void conjgrad_graddist(double *vec, double *xi)
+{
+
+}
+void preNR_conjgrad(int i, int j, double *vec)
+{
+  int iter;
+  double Fret;
+  icg = i;
+  jcg = j;
+  //printf("========= >>> INIZIO CONJ GRAD <<< =======\n");
+  if (OprogStatus.dist5)
+    conjgrad(vec, 5, 1E-12, &iter, &Fret, conjgrad_dist5, conjgrad_graddist5);
+  else
+    conjgrad(vec, 8, 1E-14, &iter, &Fret, conjgrad_dist, conjgrad_graddist);
+  //printf("[preNR CG] iter=%d\n", iter);
+}
+
 
 void distconjgrad(int i, int j, double shift[3], double *vec)
 {
@@ -2725,20 +2914,21 @@ void distconjgrad(int i, int j, double shift[3], double *vec)
    * angs[] = (thetaA,phiA,thetaB,phiB)
    * 0 < theta < 2PI
    * 0 < phi < PI */
-  angs[0] = acos(vecP[2]/axc[icg]);
-  angs[1] = acos(vecP[0]/axa[icg]/sin(angs[0]));
-  sinth = vecP[1]/axb[icg]/sin(angs[0]);
+  angs[1] = acos(vecP[2]/axc[icg]);
+  angs[0] = acos(vecP[0]/axa[icg]/sin(angs[1]));
+  sinth = vecP[1]/axb[icg]/sin(angs[1]);
+  if (sinth < 0.0)
+    angs[0] = 2.0*pi-angs[0];
+  angs[3] = acos(vecP[5]/axc[jcg]);
+  angs[2] = acos(vecP[3]/axa[jcg]/sin(angs[3]));
+  sinth = vecP[4]/axb[jcg]/sin(angs[3]);
   if (sinth < 0)
-    angs[1] = 2.0*pi-angs[1];
-  angs[2] = acos(vecP[5]/axc[jcg]);
-  angs[3] = acos(vecP[3]/axa[jcg]/sin(angs[2]));
-  sinth = vecP[4]/axb[jcg]/sin(angs[2]);
-  if (sinth < 0)
-    angs[3] = 2.0*pi-angs[3];
-
-  conjgrad(angs, 4, OprogStatus.tolSD, &iter, &Fret, conjgrad_func, conjgrad_grad);
+    angs[2] = 2.0*pi-angs[2];
+  printf("[CG] PRIMA dist: %.15G\n", sqrt(conjgrad_func(angs)));
+  printf("[CG] PRIMA angs=%f %f %f %f\n", angs[0], angs[1], angs[2], angs[3]);
+  conjgrad(angs, 4, 1E-14, &iter, &Fret, conjgrad_func, conjgrad_grad);
   angs2coord(angs, vecP);
-
+  printf("[CG] DOPO dist: %.15G iter=%d\n", sqrt(conjgrad_func(angs)), iter);
   /* torno nel riferimento del laboratorio */
   body2lab(icg, vecP, vec, rA, RtA);
   body2lab(jcg, &vecP[3], &vec[3], rB, RtB);
