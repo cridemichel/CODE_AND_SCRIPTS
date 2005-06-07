@@ -4404,6 +4404,34 @@ void newtDistNegNeigh(double x[], int n, int *check,
   nrerror("MAXITS exceeded in newt"); 
   
 }
+void adjust_step(double *x, double *dx)
+{
+  int k1, k2;
+  double fxHes[3], grad, Hes;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fxHes[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fxHes[k1] += 2.0*Xa[k1][k2]*dx[k2];
+	}
+      //rD[k1] = x[k1] + fx[k1]*x[4];
+    }
+  Hes = 0.0; 
+  grad = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      Hes += dx[k1]*fxHes[k1]; 
+      grad += (x[k1] - rA[k1])*fxHes[k1];
+    }
+  if (fabs(grad/Hes > 1E-7) && fabs(grad/Hes) < 1.0)
+    {
+      for (k1 = 0; k1 < 5; k1++)
+	dx[k1] *= 0.05;//fabs(grad/Hes);
+      printf("grad/Hes=%.15G\n", grad/Hes);
+    }
+    
+}
 extern int fdjac_disterr;
 void newtDistNeg(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
@@ -4555,11 +4583,13 @@ void newtDistNeg(double x[], int n, int *check,
 	}
 #endif
 #else
+      //adjust_step(x, p);
       test = 0;
       for (i=0;i<n;i++) 
 	{ 
-      	  test += fabs(p[i]);
+	  test += fabs(p[i]);
 	  x[i] += p[i];
+	    
 	}
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
