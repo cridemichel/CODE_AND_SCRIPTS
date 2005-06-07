@@ -3495,7 +3495,10 @@ retry:
 	}	  
       if (OprogStatus.dist5)
 	{
-#if 0
+	  /* N.B. se il guess dei due punti è abbastanza accurato, ossia se si è usato lo SD
+	   * è sicuramente meglio dare una stima di vecg[4] altrimenti settarlo a 0 
+	   * è un buon guess. */
+#if 1
 	  if (OprogStatus.springkSD>0)
 	    if (scalProd(gradf, rDC) < 0.0)
 	      vecg[4] = 0.0;
@@ -3514,11 +3517,11 @@ retry:
 		vecg[4] = 0.0;
 	    }
 #endif
-	   vecg[4] = 0.0;
+	//   vecg[4] = 0.0;
 	}
       else
 	{
-#if 0
+#if 1
 	  if (OprogStatus.springkSD>0)
 	    {
 	      if (scalProd(gradf, rDC) < 0.0)
@@ -3539,7 +3542,7 @@ retry:
 		vecg[7] = 0.0;
 	    }
 #endif
-	  vecg[7] = 0.0;
+	  //vecg[7] = 0.0;
 	}
     }
   else
