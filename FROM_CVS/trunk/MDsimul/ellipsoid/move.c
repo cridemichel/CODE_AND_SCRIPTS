@@ -13,6 +13,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+double minaxA, minaxB, minaxAB;
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
 #else
@@ -2398,9 +2399,9 @@ double rA[3], rB[3];
 int fdjac_disterr;
 
 void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
-		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
+		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx)
 {
-  double rBA[3], rDC[3], fx[3], gxrC[3], grC, gx[3], rD[3], A[3][3], b[3], c[3];
+  double rBA[3], rDC[3], gxrC[3], grC, gx[3], rD[3], A[3][3], b[3], c[3];
   int k1, k2, k3;
 #ifdef MD_USE_CBLAS
   double XaL[3][3], XbL[3][3];
@@ -2531,9 +2532,9 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
 #endif
 }
 void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
-    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3])
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx)
 {
-  double fx[3], gx[3], rDC[3];
+  double gx[3], rDC[3];
   int k1, k2;
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -3031,6 +3032,9 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   int k1, k2, na, k3;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t + (t1 - atomTime[i]);
+  minaxA = min3(axa[i],axb[i],axc[i]);
+  minaxB = min3(axa[j],axb[j],axc[j]);
+  minaxAB = min(minaxA,minaxB);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
