@@ -4404,10 +4404,10 @@ void newtDistNegNeigh(double x[], int n, int *check,
   nrerror("MAXITS exceeded in newt"); 
   
 }
-
+extern int fdjac_disterr;
 void newtDistNeg(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
-	  int iA, int iB, double shift[3])
+	  int iA, int iB, double shift[3], int tryagain)
 {
   int i,its=0, j, ok;
   int kk;
@@ -4450,12 +4450,18 @@ void newtDistNeg(double x[], int n, int *check,
     { /* Start of iteration loop. */
        /* ============ */
       //fdjacFD(n,x,fvecD,fjac,vecfunc, iA, iB, shift); 
+      fdjac_disterr = 0;
       if (OprogStatus.dist5)
 	fdjacDistNeg5(n,x,fvecD,fjac,vecfunc, iA, iB, shift);
       else
 	fdjacDistNeg(n,x,fvecD,fjac,vecfunc, iA, iB, shift);
+      if (fdjac_disterr && !tryagain)
+	{
+	  *check = 2;
+	  FREERETURND;
+	}
       /* If analytic Jacobian is available, you can 
-	  replace the routine fdjac below with your own routine.*/
+	 replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNRD
        for (i=0;i<n;i++) { /* Compute  f for the line search.*/
 	 for (sum=0.0,j=0;j<n;j++)
