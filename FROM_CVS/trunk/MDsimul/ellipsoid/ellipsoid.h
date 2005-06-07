@@ -254,6 +254,7 @@ struct progStatus
   COORD_TYPE PzxArr[5];
   double springkSD;
   int trySD;
+  double toldxNR;
   double stepSDA;
   double stepSDB;
   int maxitsSD;
@@ -535,6 +536,7 @@ struct pascii opro_ascii[] =
   {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
   {"stepSDA",       &OS(stepSDA),                1,   1, "%.12G"},
   {"trySD",         &OS(trySD),                  1,   1, "%d"},
+  {"toldxNR",       &OS(toldxNR),                1,   1, ".15G"}, 
   {"stepSDB",       &OS(stepSDB),                1,   1, "%.12G"},
   {"maxitsSD",     &OS(maxitsSD),              1,   1, "%d"},
   {"tolSD",        &OS(tolSD),                 1,   1, "%.15G"},         
@@ -741,6 +743,7 @@ struct singlePar OsinglePar[] = {
   {"forceguess", &OprogStatus.forceguess,     INT},
   {"springkSD",  &OprogStatus.springkSD,    CT},
   {"trySD",      &OprogStatus.trySD,    INT},
+  {"toldxNR",    &OprogStatus.toldxNR,  CT},
   {"stepSDA",     &OprogStatus.stepSDA,         CT},
   {"stepSDB",     &OprogStatus.stepSDB,         CT},
   {"maxitsSD",   &OprogStatus.maxitsSD,       INT},

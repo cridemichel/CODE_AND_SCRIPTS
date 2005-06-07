@@ -57,9 +57,9 @@ extern void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j
 extern void funcs2beZeroedDistNegNew(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void funcs2beZeroedDistNeg5(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
-		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
+		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx);
 extern void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
-    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx);
 extern void fdjacDistNegNew(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
 extern void fdjacDist(int n, double x[], double fvec[], double **df, 
@@ -113,6 +113,7 @@ int cghalfspring, icg, jcg, doneryck;
 double shiftcg[3], lambdacg, minaxicg, minaxjcg;
 double gradfG[3], gradgG[3], dxG[6];
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, rA[3], rB[3], **RtA, **RtB;
+extern double minaxA, minaxB, minaxAB;
 extern int polinterr, polinterrRyck;
 /* ============================ >>> brent <<< ============================ */
 void  conjgradfunc(void);
@@ -4404,33 +4405,35 @@ void newtDistNegNeigh(double x[], int n, int *check,
   nrerror("MAXITS exceeded in newt"); 
   
 }
-void adjust_step(double *x, double *dx)
+void adjust_step_dist5(double *x, double *dx, double *fx)
 {
   int k1, k2;
-  double fxHes[3], grad, Hes;
+  double norm, minst, vv[3];
+#if 0
+  norm = calc_norm(dx);
   for (k1 = 0; k1 < 3; k1++)
     {
-      fxHes[k1] = 0.0;
+      vv[k1] = 0.0;
       for (k2 = 0; k2 < 3; k2++)
-	{
-	  fxHes[k1] += 2.0*Xa[k1][k2]*dx[k2];
-	}
-      //rD[k1] = x[k1] + fx[k1]*x[4];
+	vv[k1] += Xa[k1][k2]*dx[k2];
+      vv[k1] *= 2.0;
     }
-  Hes = 0.0; 
-  grad = 0.0;
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      Hes += dx[k1]*fxHes[k1]; 
-      grad += (x[k1] - rA[k1])*fxHes[k1];
-    }
-  if (fabs(grad/Hes > 1E-7) && fabs(grad/Hes) < 1.0)
-    {
-      for (k1 = 0; k1 < 5; k1++)
-	dx[k1] *= 0.05;//fabs(grad/Hes);
-      printf("grad/Hes=%.15G\n", grad/Hes);
-    }
-    
+#endif
+  //minst = OprogStatus.toldxNR*min3(minaxA/norm,minaxAB/fabs(dx[4])/calc_norm(fx), minaxAB/fabs(x[4])/calc_norm(vv));
+  minst = OprogStatus.toldxNR*minaxAB/fabs(dx[4])/calc_norm(fx);
+  for (k1 = 0; k1 < 5; k1++)
+    dx[k1] *= min(1.0, minst);
+}
+void adjust_step_dist8(double *x, double *dx, double *fx)
+{
+  int k1;
+  double normA, normB, minst;
+  //normA = calc_norm(dx);
+  //normB = calc_norm(&dx[3]);
+  //minst = OprogStatus.toldxNR*min3(minaxA/normA, minaxA/normB, minaxAB/fabs(dx[7]));
+  minst = OprogStatus.toldxNR*minaxAB/fabs(dx[7])/calc_norm(fx);
+  for (k1 = 0; k1 < 8; k1++)
+    dx[k1]*= min(minst,1.0);
 }
 extern int fdjac_disterr;
 void newtDistNeg(double x[], int n, int *check, 
@@ -4439,7 +4442,7 @@ void newtDistNeg(double x[], int n, int *check,
 {
   int i,its=0, j, ok;
   int kk;
-  double distnew, distold, r12[3];
+  double distnew, distold, r12[3], fx[3];
   double d,den,f,fold,stpmax,sum,temp,test; 
 #if 0
   int *indx;
@@ -4480,9 +4483,9 @@ void newtDistNeg(double x[], int n, int *check,
       //fdjacFD(n,x,fvecD,fjac,vecfunc, iA, iB, shift); 
       fdjac_disterr = 0;
       if (OprogStatus.dist5)
-	fdjacDistNeg5(n,x,fvecD,fjac,vecfunc, iA, iB, shift);
+	fdjacDistNeg5(n,x,fvecD,fjac,vecfunc, iA, iB, shift, fx);
       else
-	fdjacDistNeg(n,x,fvecD,fjac,vecfunc, iA, iB, shift);
+	fdjacDistNeg(n,x,fvecD,fjac,vecfunc, iA, iB, shift, fx);
       if (fdjac_disterr && !tryagain)
 	{
 	  *check = 2;
@@ -4526,6 +4529,7 @@ void newtDistNeg(double x[], int n, int *check,
 #ifdef MD_GLOBALNRD
       lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift, TOLXD); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
+
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	if (fabs(fvecD[i]) > test) 
@@ -4583,13 +4587,18 @@ void newtDistNeg(double x[], int n, int *check,
 	}
 #endif
 #else
-      //adjust_step(x, p);
+      if (OprogStatus.toldxNR > 0.0)
+	{
+	  if (OprogStatus.dist5)
+	    adjust_step_dist5(x, p, fx);
+	  else
+	    adjust_step_dist8(x, p, fx);
+	}
       test = 0;
       for (i=0;i<n;i++) 
 	{ 
 	  test += fabs(p[i]);
 	  x[i] += p[i];
-	    
 	}
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
@@ -4600,7 +4609,7 @@ void newtDistNeg(double x[], int n, int *check,
 	  FREERETURND; 
 	}
 #endif
-    } 
+          } 
   MD_DEBUG18(printf("maxits!!!\n"));
   *check = 2;
   FREERETURND;
