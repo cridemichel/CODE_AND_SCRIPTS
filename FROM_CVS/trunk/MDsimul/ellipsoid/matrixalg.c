@@ -4408,19 +4408,13 @@ void newtDistNegNeigh(double x[], int n, int *check,
 void adjust_step_dist5(double *x, double *dx, double *fx)
 {
   int k1, k2;
-  double norm, minst, vv[3];
-#if 0
-  norm = calc_norm(dx);
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      vv[k1] = 0.0;
-      for (k2 = 0; k2 < 3; k2++)
-	vv[k1] += Xa[k1][k2]*dx[k2];
-      vv[k1] *= 2.0;
-    }
-#endif
-  //minst = OprogStatus.toldxNR*min3(minaxA/norm,minaxAB/fabs(dx[4])/calc_norm(fx), minaxAB/fabs(x[4])/calc_norm(vv));
+  double norm, minst;
+  //norm = calc_norm(dx);
+  //minst = OprogStatus.toldxNR*min3(minaxA/norm,minaxAB/fabs(dx[4])/calc_norm(fx), minaxAB/fabs(x[4])/calc_norm(fx));
   minst = OprogStatus.toldxNR*minaxAB/fabs(dx[4])/calc_norm(fx);
+  //if (minst < 1.0)
+    //printf("norm=%.15G grad=%.15G Hes=%.15G minst=%.15G dx=%.15G %.15G %.15G x-rA=%.15G %.15G %.15G\n",
+//	   norm, grad, Hes, minst, dx[0], dx[1], dx[2], x[0]-rA[0], x[1]-rA[1], x[2]-rA[2]);
   for (k1 = 0; k1 < 5; k1++)
     dx[k1] *= min(1.0, minst);
 }
@@ -4430,7 +4424,7 @@ void adjust_step_dist8(double *x, double *dx, double *fx)
   double normA, normB, minst;
   //normA = calc_norm(dx);
   //normB = calc_norm(&dx[3]);
-  //minst = OprogStatus.toldxNR*min3(minaxA/normA, minaxA/normB, minaxAB/fabs(dx[7]));
+  //minst = OprogStatus.toldxNR*min3(minaxA/normA, minaxA/normB, minaxAB/fabs(dx[7])/calc_norm(fx));
   minst = OprogStatus.toldxNR*minaxAB/fabs(dx[7])/calc_norm(fx);
   for (k1 = 0; k1 < 8; k1++)
     dx[k1]*= min(minst,1.0);
@@ -4527,7 +4521,13 @@ void newtDistNeg(double x[], int n, int *check,
 #endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNRD
-      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift, TOLXD); 
+      if (OprogStatus.toldxNR > 0.0)
+	{
+	  if (OprogStatus.dist5)
+	    adjust_step_dist5(x, p, fx);
+	  else
+	    adjust_step_dist8(x, p, fx);
+	} lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift, TOLXD); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
 
       test=0.0; /* Test for convergence on function values.*/
