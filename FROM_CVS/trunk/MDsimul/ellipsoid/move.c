@@ -2399,9 +2399,9 @@ double rA[3], rB[3];
 int fdjac_disterr;
 
 void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
-		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx)
+		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx, double *gx)
 {
-  double rBA[3], rDC[3], gxrC[3], grC, gx[3], rD[3], A[3][3], b[3], c[3];
+  double rBA[3], rDC[3], gxrC[3], grC, rD[3], A[3][3], b[3], c[3];
   int k1, k2, k3;
 #ifdef MD_USE_CBLAS
   double XaL[3][3], XbL[3][3];
@@ -2532,9 +2532,9 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
 #endif
 }
 void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
-    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx)
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx, double *gx)
 {
-  double gx[3], rDC[3];
+  double rDC[3];
   int k1, k2;
   for (k1 = 0; k1 < 3; k1++)
     {
