@@ -56,10 +56,9 @@ extern void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, d
 extern void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void funcs2beZeroedDistNegNew(int n, double x[], double fvec[], int i, int j, double shift[3]);
 extern void funcs2beZeroedDistNeg5(int n, double x[], double fvec[], int i, int j, double shift[3]);
-extern void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
-		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx);
+extern void fdjacDistNeg5(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx, double *gx);
 extern void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
-    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx);
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx, double *gx);
 extern void fdjacDistNegNew(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
 extern void fdjacDist(int n, double x[], double fvec[], double **df, 
@@ -4405,20 +4404,17 @@ void newtDistNegNeigh(double x[], int n, int *check,
   nrerror("MAXITS exceeded in newt"); 
   
 }
-void adjust_step_dist5(double *x, double *dx, double *fx)
+void adjust_step_dist5(double *x, double *dx, double *fx, double *gx)
 {
   int k1, k2;
-  double norm, minst;
+  double norm, minst, fxgx[3];
   //norm = calc_norm(dx);
   //minst = OprogStatus.toldxNR*min3(minaxA/norm,minaxAB/fabs(dx[4])/calc_norm(fx), minaxAB/fabs(x[4])/calc_norm(fx));
   minst = OprogStatus.toldxNR*minaxAB/fabs(dx[4])/calc_norm(fx);
-  //if (minst < 1.0)
-    //printf("norm=%.15G grad=%.15G Hes=%.15G minst=%.15G dx=%.15G %.15G %.15G x-rA=%.15G %.15G %.15G\n",
-//	   norm, grad, Hes, minst, dx[0], dx[1], dx[2], x[0]-rA[0], x[1]-rA[1], x[2]-rA[2]);
   for (k1 = 0; k1 < 5; k1++)
     dx[k1] *= min(1.0, minst);
 }
-void adjust_step_dist8(double *x, double *dx, double *fx)
+void adjust_step_dist8(double *x, double *dx, double *fx, double *gx)
 {
   int k1;
   double normA, normB, minst;
@@ -4436,7 +4432,7 @@ void newtDistNeg(double x[], int n, int *check,
 {
   int i,its=0, j, ok;
   int kk;
-  double distnew, distold, r12[3], fx[3];
+  double distnew, distold, r12[3], fx[3], gx[3];
   double d,den,f,fold,stpmax,sum,temp,test; 
 #if 0
   int *indx;
@@ -4477,9 +4473,9 @@ void newtDistNeg(double x[], int n, int *check,
       //fdjacFD(n,x,fvecD,fjac,vecfunc, iA, iB, shift); 
       fdjac_disterr = 0;
       if (OprogStatus.dist5)
-	fdjacDistNeg5(n,x,fvecD,fjac,vecfunc, iA, iB, shift, fx);
+	fdjacDistNeg5(n,x,fvecD,fjac,vecfunc, iA, iB, shift, fx, gx);
       else
-	fdjacDistNeg(n,x,fvecD,fjac,vecfunc, iA, iB, shift, fx);
+	fdjacDistNeg(n,x,fvecD,fjac,vecfunc, iA, iB, shift, fx, gx);
       if (fdjac_disterr && !tryagain)
 	{
 	  *check = 2;
@@ -4524,10 +4520,11 @@ void newtDistNeg(double x[], int n, int *check,
       if (OprogStatus.toldxNR > 0.0)
 	{
 	  if (OprogStatus.dist5)
-	    adjust_step_dist5(x, p, fx);
+	    adjust_step_dist5(x, p, fx, gx);
 	  else
-	    adjust_step_dist8(x, p, fx);
-	} lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift, TOLXD); 
+	    adjust_step_dist8(x, p, fx, gx);
+	} 
+      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift, TOLXD); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
 
       test=0.0; /* Test for convergence on function values.*/
@@ -4590,9 +4587,9 @@ void newtDistNeg(double x[], int n, int *check,
       if (OprogStatus.toldxNR > 0.0)
 	{
 	  if (OprogStatus.dist5)
-	    adjust_step_dist5(x, p, fx);
+	    adjust_step_dist5(x, p, fx, gx);
 	  else
-	    adjust_step_dist8(x, p, fx);
+	    adjust_step_dist8(x, p, fx, gx);
 	}
       test = 0;
       for (i=0;i<n;i++) 
