@@ -698,7 +698,7 @@ void outputSummary(void)
     printf("Average iterations in locate_contact_neigh: %.6G\n", ((double)itsSNL)/timesSNL);
   if (callsprojonto>0)
     printf("Average iterations in projonto: %.8G\n", ((double) itsprojonto)/callsprojonto);
-  if (numcalldist && OprogStatus.trySD)
+  if (numcalldist && OprogStatus.SDmethod)
     printf("Percentage of failed dist=%.2f\%\n", 100.0*(((double) numdisttryagain) / numcalldist));
   printf("Number of collisions: %lld\n", numcoll);
   
@@ -2461,7 +2461,7 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
 	}
     }
 #if 1
-  if (OprogStatus.trySD)
+  if (OprogStatus.SDmethod==2 || OprogStatus.SDmethod==3)
     {
       for (k1 = 0; k1 < 3; k1++)
 	rDC[k1] = rD[k1] - x[k1];
@@ -2556,7 +2556,7 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
 	}
     }
 #if 1
-  if (OprogStatus.trySD)
+  if (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 3)
     {
       for (k1 = 0; k1 < 3; k1++)
 	rDC[k1] = x[k1+3] - x[k1];
@@ -3098,7 +3098,7 @@ retry:
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
 
-      if (OprogStatus.springkSD>0 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
+      if (OprogStatus.SDmethod==1 || tryagain)
 	{
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -3170,11 +3170,13 @@ retry:
 	   * è sicuramente meglio dare una stima di vecg[4] altrimenti settarlo a 0 
 	   * è un buon guess. */
 #if 1
-	  if (OprogStatus.springkSD>0)
-	    if (scalProd(gradf, rDC) < 0.0)
-	      vecg[4] = 0.0;
-	    else
-	      vecg[4] = calc_norm(rDC)/nf;  
+	  if (OprogStatus.SDmethod==1 || tryagain)
+	    {
+	      if (scalProd(gradf, rDC) < 0.0)
+		vecg[4] = 0.0;
+	      else
+		vecg[4] = calc_norm(rDC)/nf;  
+	    }
 	  else
 	    {
 	      if (OprogStatus.epsdGDO > 0.0)
@@ -3193,7 +3195,7 @@ retry:
       else
 	{
 #if 1
-	  if (OprogStatus.springkSD>0)
+	  if (OprogStatus.SDmethod==1 || tryagain)
 	    {
 	      if (scalProd(gradf, rDC) < 0.0)
 		vecg[7] = 0.0;
@@ -3239,9 +3241,8 @@ retry:
 	  exit(-1);
      	}
 	 
-      if (!tryagain && OprogStatus.trySD && OprogStatus.springkSD < 0.0)
+      if (!tryagain && (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod==3))
 	{
-	  OprogStatus.springkSD = 1.0;
 	  numdisttryagain++;
 	  tryagain = 1; 
 	  goto retry;
@@ -3329,9 +3330,8 @@ retry:
 	      printf("[ERROR] I'm sorry but I can't really calculate distance\n");
 	      exit(-1);
 	    }
-	  if (!tryagain && OprogStatus.trySD && OprogStatus.springkSD < 0.0)
+	  if (!tryagain && (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod==3))
 	    {
-  	      OprogStatus.springkSD = 1.0;
 	      numdisttryagain++;
 	      tryagain = 1; 
 	      goto retry;
@@ -3356,9 +3356,8 @@ retry:
 	      printf("[ERROR] I'm sorry but I can't really calculate distance\n");
 	      exit(-1);
 	    } 
-	  if (!tryagain && OprogStatus.trySD && OprogStatus.springkSD < 0.0)
+	  if (!tryagain && ( OprogStatus.SDmethod==2 || OprogStatus.SDmethod==3 ))
 	    {
-	      OprogStatus.springkSD = 1.0;
 	      numdisttryagain++;
 	      tryagain = 1; 
 	      goto retry;
@@ -3372,8 +3371,6 @@ retry:
 	  return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
 	}
     }
-  if (OprogStatus.trySD && tryagain)
-    OprogStatus.springkSD = -1.0;
   if (segno > 0)
     return calc_norm(r12);
   else

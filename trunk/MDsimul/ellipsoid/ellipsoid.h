@@ -253,7 +253,7 @@ struct progStatus
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
   double springkSD;
-  int trySD;
+  int SDmethod;
   double toldxNR;
   double stepSDA;
   double stepSDB;
@@ -534,9 +534,9 @@ struct pascii opro_ascii[] =
   {"epsdMaxNL",      &OS(epsdMaxNL),               1,   1, "%.12G"},
   {"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
   {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
+  {"SDmethod",     &OS(SDmethod),               1,   1, "%d"},
   {"stepSDA",       &OS(stepSDA),                1,   1, "%.12G"},
-  {"trySD",         &OS(trySD),                  1,   1, "%d"},
-  {"toldxNR",       &OS(toldxNR),                1,   1, ".15G"}, 
+  {"toldxNR",       &OS(toldxNR),                1,   1, "%.15G"}, 
   {"stepSDB",       &OS(stepSDB),                1,   1, "%.12G"},
   {"maxitsSD",     &OS(maxitsSD),              1,   1, "%d"},
   {"tolSD",        &OS(tolSD),                 1,   1, "%.15G"},         
@@ -742,7 +742,7 @@ struct singlePar OsinglePar[] = {
   {"tolSDgrad",  &OprogStatus.tolSDgrad,      CT},
   {"forceguess", &OprogStatus.forceguess,     INT},
   {"springkSD",  &OprogStatus.springkSD,    CT},
-  {"trySD",      &OprogStatus.trySD,    INT},
+  {"SDmethod",    &OprogStatus.SDmethod,     INT},
   {"toldxNR",    &OprogStatus.toldxNR,  CT},
   {"stepSDA",     &OprogStatus.stepSDA,         CT},
   {"stepSDB",     &OprogStatus.stepSDB,         CT},
