@@ -131,9 +131,9 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       break;
     }
 
-  /* NOTA: epsd viene usato come buffer per evitare problemi numerici 
+  /* NOTA: epsdNL+epsd viene usato come buffer per evitare problemi numerici 
    * nell'update delle NNL. */
-  del -= OprogStatus.epsdNL;
+  del -= OprogStatus.epsdNL+OprogStatus.epsd;
   for (kk=0; kk < 3; kk++)
     {
       if (nplane % 2 == 0)
@@ -3395,9 +3395,9 @@ void PredictEventNNL(int na, int nb)
       if (tnnl < t2)
 	t2 = tnnl;
 #else      
-      /* WARNING: valutare se introddurre un buffer qui */
+      /* WARNING: OprogStatus.h è un buffer di sicurezza */
       if (nextNNLrebuild < t2)
-	t2 = nextNNLrebuild;
+	t2 = nextNNLrebuild + OprogStatus.h;
 #endif
       // t1 = Oparams.time;
       // t2 = nebrTab[na].nexttime;//,nebrTab[n].nexttime);
