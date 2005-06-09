@@ -888,7 +888,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 {
   int kk, its, done=0, k1, k2, MAXITS=50;
   const double GOLD=1.618034;
-  double dr1par, Xag[3], r1AXa[3], r1[3], r1A[3], sf, s1, s2, sqrtDelta, A2;
+  double factor, dr1par, Xag[3], r1AXa[3], r1[3], r1A[3], sf, s1, s2, sqrtDelta, A2;
   double A, B, C, Delta, sol=0.0, ng;
   sf = *sfA;
   its = 0;
@@ -906,7 +906,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
       A=0;
       B=0;
       C=0;
-#if 0
+#if 1
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  Xag[k1] = 0.0;
@@ -921,7 +921,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
       for (k1=0; k1 < 3; k1++)
 	{
 
-#if 1
+#if 0
 	  for (k2=0; k2 < 3; k2++)
 	    {
 	      A += gradf[k1]*Xa[k1][k2]*gradf[k2];
@@ -946,7 +946,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	}
       sqrtDelta = sqrt(Delta);
       A2 = 2.0*A;
-#if 1
+#if 0
       s1 = (-B - sqrtDelta)/A2;
       s2 = (-B + sqrtDelta)/A2;
       if (fabs(s1) < fabs(s2))
@@ -961,7 +961,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 #endif
       ng = calc_norm(gradf);
       //if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*sf*calc_norm(dr))
-      if (OprogStatus.SDmethod)
+      if (OprogStatus.SDmethod==1 || OprogStatus.SDmethod==3)
 	{
 	  if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*dist/2.0)
 	    {
@@ -970,10 +970,16 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	      continue;
 	    }
 	}
+#if 0
+      /* WARNING: APPARENTEMENTE NON CONVIENE RISCALARE sol e sf se stepSDA è abbastanza piccolo,
+       * ma verificare che questo è vero */
       else
 	{
-	  sol *= min(1.0, OprogStatus.tolSDconstr*dr1par/ng);
+	  factor = min(1.0, OprogStatus.tolSDconstr*dr1par/ng);
+	  sol *= factor;
+	  sf *= factor;
 	}
+#endif
      done = 1;
     }
  
