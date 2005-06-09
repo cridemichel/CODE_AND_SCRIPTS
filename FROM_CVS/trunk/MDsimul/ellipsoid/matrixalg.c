@@ -105,7 +105,7 @@ void nrerror(char *msg)
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 #define DABS fabs
 long long int itsfrprmn=0, callsfrprmn=0,callsok=0, callsprojonto=0, itsprojonto=0;
-double accngA=0, accngB=0;
+long long accngA=0, accngB=0;
 double xicom[8], pcomI[8], pcom[8], pcom2[8], xi[8], G[8], H[8], grad[8];//, vec[6];
 double Ftol, Epoten, Emin, fnorm;
 int cghalfspring, icg, jcg, doneryck;
@@ -980,7 +980,7 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 	  sol *= factor;
 	  sf *= factor;
 #endif
-	  if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*dr1par)
+	  if (fabs(sol)*ng > OprogStatus.tolSDconstr*dr1par)
 	    {
 	      sf /= GOLD;
 	      its++;
@@ -1354,21 +1354,40 @@ int check_done(double fp, double fpold, double minax)
 {
   const double EPSFR=1E-10;
   double dold, d;
-  dold = sqrt(fpold/OprogStatus.springkSD);
-  d = sqrt(fp/OprogStatus.springkSD);
+  if (OprogStatus.SDmethod != 2)
+    {
+      dold = sqrt(fpold/OprogStatus.springkSD);
+      d = sqrt(fp/OprogStatus.springkSD);
+    }
   if (OprogStatus.tolSDgrad > 0)
     {
-      if (fp > Sqr(OprogStatus.epsdSD))//Sqr(OprogStatus.epsd)) 
+      if (OprogStatus.SDmethod == 2)
 	{
-	  if (doneryck == 1 || 
-	      2.0*fabs(dold-d) < OprogStatus.tolSDlong*(fabs(dold)+fabs(d)+EPSFR))
-	  //fabs(fpold-fp) < OprogStatus.tolSDlong*Sqr(minax*2))
-	    return 1;
+	  if (doneryck == 1) 
+	      //|| 2.0*fabs(dold-d) < OprogStatus.tolSDlong*(fabs(dold)+fabs(d)+EPSFR))
+	    {
+	      accngA++;
+	      accngB++;
+	      return 1;
+	    }
 	}
-      else 
+      else
 	{
-	  if (2.0*fabs(dold-d) < OprogStatus.tolSD*(fabs(dold)+fabs(d)+EPSFR))
-	    return 1;
+	  if (fp > Sqr(OprogStatus.epsdSD))//Sqr(OprogStatus.epsd)) 
+	    {
+	      if (doneryck == 1 || 
+		  2.0*fabs(dold-d) < OprogStatus.tolSDlong*(fabs(dold)+fabs(d)+EPSFR))
+		{
+		  accngA++;
+		  accngB++;
+		  return 1;
+		}
+	    }
+	  else 
+	    {
+	      if (2.0*fabs(dold-d) < OprogStatus.tolSD*(fabs(dold)+fabs(d)+EPSFR))
+		return 1;
+	    }
 	}
     }
   else
@@ -1382,8 +1401,6 @@ int check_done(double fp, double fpold, double minax)
 	{
 	  if (2.0*fabs(dold-d) < OprogStatus.tolSDlong*(fabs(dold)+fabs(d)+EPSFR))
 	    return 1;
-	  //if (fabs(fpold-fp) < OprogStatus.tolSDlong*Sqr(minax*2))
-	    //return 1;
 	}
     }
   return 0;
@@ -1874,13 +1891,19 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double 
 	  if (sqrt(ngA) < OprogStatus.tolSDgrad*(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB)
 	      && sqrt(ngB) < OprogStatus.tolSDgrad*(jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB))
 	    {
+	      //accngA++;
+	      //accngB++;
 	      doneryck = 1;
 	    }
 	}
       else
 	{
 	  if (fabs(scalProd(fx,dd) > normdd*costolSDgrad && fabs(scalProd(gx,dd)) > normdd*costolSDgrad))
+	    {
+	      //accngA++;
+	      //accngB++;
 	      doneryck = 1;
+	    }
 	}
     }
   S *= OprogStatus.springkSD;
