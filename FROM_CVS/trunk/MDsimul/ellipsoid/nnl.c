@@ -1198,22 +1198,6 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
     }
   for(k1=0; k1 < 3; k1++)
     r12[k1] = rC[k1]-rD[k1]; 
-#if 0
-  if (OprogStatus.springkSD>0 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
-    {
-      for (k1=0; k1 < 3; k1++)
-	{
-	  vecgcg[k1] = rC[k1];
-	  vecgcg[k1+3] = rD[k1];
-	}
-      distSD(i, i, shift, vecgcg, OprogStatus.springkSD, 1);
-      for (k1=0; k1 < 3; k1++)
-	{
-	  rC[k1] = vecgcg[k1];
-	  rD[k1] = vecgcg[k1+3];
-	}	 
-    }
-#endif
   MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
   calc_grad(rC, rA, Xa, gradf);
@@ -1367,7 +1351,7 @@ retryneigh:
 	}
      for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
-      if (OprogStatus.springkSD>0 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
+      if (OprogStatus.SDmethod==1 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
 	{
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -1413,7 +1397,7 @@ retryneigh:
 	    g2 = g1;
 	}	  
 #endif
-      if (OprogStatus.springkSD>0)
+      if (OprogStatus.SDmethod==1)
 	{
 	  if (scalProd(gradf, rDC) < 0.0)
 	    vecg[7] = 0.0;
@@ -1778,7 +1762,7 @@ retryoverlap:
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
 
-      if (OprogStatus.springkSD>0 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
+      if (OprogStatus.SDmethod==1 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
 	{
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -1854,7 +1838,7 @@ retryoverlap:
 	}	  
       if (OprogStatus.dist5)
 	{
-	  if (OprogStatus.springkSD>0)
+	  if (OprogStatus.SDmethod==1)
 	    if (scalProd(gradf, rDC) < 0.0)
 	      vecg[4] = 0.0;
 	    else
@@ -1874,7 +1858,7 @@ retryoverlap:
 	}
       else
 	{
-	  if (OprogStatus.springkSD>0)
+	  if (OprogStatus.SDmethod==1)
 	    {
 	      if (scalProd(gradf, rDC) < 0.0)
 		vecg[7] = 0.0;

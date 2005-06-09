@@ -803,8 +803,8 @@ void usrInitBef(void)
     OprogStatus.tolSDlong = 0.01;
     OprogStatus.tolSDconstr= 0.1;
     OprogStatus.tolSDgrad = 0.0;
-    OprogStatus.springkSD = -1.0;
-    OprogStatus.trySD = 0;
+    OprogStatus.springkSD = 1.0;
+    OprogStatus.SDmethod = 0;
     OprogStatus.stepSDA = 1.0;
     OprogStatus.stepSDB = 1.0;
     OprogStatus.maxitsSD=200;
@@ -1058,6 +1058,8 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
     }
 }
 double calc_phi(void);
+double costolSDgrad;
+
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
 {
@@ -1096,6 +1098,7 @@ void usrInitAft(void)
       OprogStatus.epsdFastRNL = OprogStatus.epsdFastR;
     sct = sizeof(COORD_TYPE);
 
+    costolSDgrad = cos(OprogStatus.tolSDgrad);
     invL = 1.0/L;
     L2 = 0.5*L;
 #ifdef MD_GRAVITY
