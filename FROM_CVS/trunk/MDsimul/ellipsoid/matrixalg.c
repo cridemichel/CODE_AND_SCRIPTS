@@ -882,12 +882,13 @@ int check_point(char* msg, double *p, double *rc, double **XX)
   else
     return 1;
 }
+extern double costolsSDgrad;
 
 void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, double *sfA, double dist)
 {
   int kk, its, done=0, k1, k2, MAXITS=50;
   const double GOLD=1.618034;
-  double Xag[3], r1AXa[3], r1[3], r1A[3], sf, s1, s2, sqrtDelta, A2;
+  double dr1par, Xag[3], r1AXa[3], r1[3], r1A[3], sf, s1, s2, sqrtDelta, A2;
   double A, B, C, Delta, sol=0.0, ng;
   sf = *sfA;
   its = 0;
@@ -896,18 +897,12 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
   while (!done && its <= MAXITS)
     {
       itsprojonto++;
-      //printf("sf*dr=%.15G %.15G %.15G dr=%.15G\n", dr[0], dr[1], dr[2], calc_norm(dr));
-#if 0
-      if (!check_point("inside loop", ri, rA, Xa))
-	{
-	  exit(-1);
-	}
-#endif
       for (kk=0; kk < 3; kk++)
 	{
 	  r1[kk] = ri[kk] + dr[kk]*sf; 
 	  r1A[kk] = r1[kk] - rA[kk];
 	}
+      dr1par = sf*calc_norm(dr);
       A=0;
       B=0;
       C=0;
@@ -966,21 +961,20 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 #endif
       ng = calc_norm(gradf);
       //if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*sf*calc_norm(dr))
-      if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*dist/2.0)
+      if (OprogStatus.SDmethod)
 	{
-	  sf /= GOLD;
-	  its++;
-	  continue;
+	  if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*dist/2.0)
+	    {
+	      sf /= GOLD;
+	      its++;
+	      continue;
+	    }
 	}
-#if 0
-      else if (fabs(sol)*ng < OprogStatus.tolSDconstr*dist/100.0) 
-      	{
-	  sf *= GOLD;
-	  its++;
+      else
+	{
+	  sol *= min(1.0, OprogStatus.tolSDconstr*dr1par/ng);
 	}
-#endif
-      done = 1;
-    
+     done = 1;
     }
  
   if (!done)
@@ -989,23 +983,6 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
       printf("sol=%.15G norm(dr)=%.15G sf=%.15G\n", sol, calc_norm(dr), sf);
       exit(-1);
     }
-#if 0
-    {
-      double Q= 0;
-      int k1, k2;
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  for (k2 = 0; k2 < 3; k2++)
-	    {
-	      Q += (ri[k1]+sf*dr[k1]+OprogStatus.stepSD*sol*gradf[k1]-rA[k1])*Xa[k1][k2]*
-		(ri[k2]+ sf*dr[k2]+OprogStatus.stepSD*sol*gradf[k2]-rA[k2]);  
-	    }
-	}
-      Q -= 1.0;
-      printf("should be zero: %.15G sf:%.15G\n", Q, sf);
-    }
-  printf("done! sol=%.15G\n", sol);
-#endif
   for (kk = 0; kk < 3; kk++)
     {
       dr[kk] = sol*gradf[kk] + sf*dr[kk]; 
@@ -1013,31 +990,13 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
   /* commentando questa riga il valore di sf usato per rimanere "aderenti" alla superficie
    * non viene mantenuto.
    * In tal modo il passo non puo' decrescere in maniera irreversibile se non intorno al minimo. */
-  *sfA = sf;
+  if (OprogStatus.SDmethod == 1 || OprogStatus.SDmethod==3)
+    *sfA = sf;
 }
 void projectgrad(double *p, double *xi, double *gradf, double *gradg)
 {
   int kk;
   double dist;
-  //double gradf[3], gradg[3];
-#if 0
-  for (kk=0; kk < 3; kk++)
-    {
-      r1[kk] = p[kk]+xi[kk];
-      r2[kk] = p[kk+3]+xi[kk+3];
-    }
-  calc_intersec(r1, rA, Xa, rIf);
-  calc_intersec(r2, rB, Xb, rIg);
-  for (kk=0; kk < 3; kk++)
-    {
-      r1[kk] += rIf[kk] - r1[kk];
-      r2[kk] += rIg[kk] - r2[kk];
-      xi[kk] = r1[kk] - p[kk];
-      xi[kk+3] = r2[kk] - p[kk+3];
-    }
-  calc_grad(p, rA, Xa, gradf);
-  calc_grad(&p[3], rB, Xb, gradg);
-#endif
   dist = 0;
   for (kk=0; kk < 3; kk++)
     {
@@ -1447,23 +1406,18 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
     { 
       itsfrprmn++;      
       *iter=its;
-#if 0
-      linminRyck(p, xi, &fp);  
-      //updateByRot(p, xi);
-      //linminConstr(p, xi, 6, &fret, cgfuncRyck);
-#else
       for (j=0; j < n; j++)
 	{
 	  pold[j] = p[j];
 	  xiold[j] = xi[j];
 	  p[j] += xi[j];
 	}
-#endif
       signAold = signA;
       signBold = signB;
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
-      if (fp > fpold)
+      
+      if ((OprogStatus.SDmethod == 1 || OprogStatus.SDmethod == 3) && fp > fpold)
 	{
 	  sfA /= GOLD;
 	  sfB /= GOLD;
@@ -1479,30 +1433,6 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 	  callsok++;
 	  return;
 	}
-#if 0
-	if ((OprogStatus.tolSDgrad <=0|| 
-	    doneryck==1) 
-	   && (OprogStatus.tolSD <=0 || 
-	       2.0*fabs(fpold-fp) < ftol*(fabs(fpold)+fabs(fp)+EPSFR)))
-	 {
-#if 0
-	   double ngA, ngB;
-	   (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
-	   ngA = ngB = 0;  
-	   for (kk=0; kk < 3; kk++)
-	     {
-	       ngA += Sqr(xi[kk]);
-	       ngB += Sqr(xi[kk+3]); 
-	     }
-	   ngA = sqrt(ngA);
-	   ngB = sqrt(ngB);
-	   accngA += ngA/(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB);
-	   accngB += ngB/(jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB);
-#endif
-	   callsok++;
-	   return;
-	 }
-#endif
     } 
   return; 
   nrerror("Too many iterations in frprmn");
@@ -1823,7 +1753,7 @@ double  cgfunc(double *vec)
   //printf("Q1=%.15G Q2=%.15G\n",  Q1, Q2);
   return F;
 }
-
+extern double costolSDgrad;
 double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double *signA, double *signB)
 {
   int kk, k1, k2; 
@@ -1878,40 +1808,25 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double 
       return 0;
     }
   /* la norma dei gradienti è sempre stepSDA e stepSDB*/ 
-  K1= icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
-  K2= jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
-    
+  if (OprogStatus.SDmethod==1 || OprogStatus.SDmethod==3)
+    {
+      K1= icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
+      K2= jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
+    }
+  else
+    {
+      K1 = OprogStatus.springkSD;
+      K2 = OprogStatus.springkSD;
+    }
   for (kk=0; kk < 3; kk++)
     {
-      grad[kk]= S*dd[kk]/normdd;
+      if (OprogStatus.SDmethod == 1 || OprogStatus.SDmethod==3)
+	grad[kk] = S*dd[kk]/normdd;
+      else
+	grad[kk] = S*dd[kk];
       grad[kk+3]= -K1*grad[kk];
       grad[kk] *= K2;
     }
-
-#if 0
-  if (A < 0 || B < 0)
-    {
-      nf2 = calc_norm(fx2);
-      ng2 = calc_norm(gx2);
-      for (kk=0; kk < 3; kk++)
-	{
-	  fx2[kk] /= nf2;
-	  gx2[kk] /= ng2;
-	}	
-      for (kk=0; kk < 3; kk++)
-	{
-	  if (A > 0 && B < 0)
-	    grad[kk+3] -= FACT*fx2[kk];
-	  else if (A < 0 && B > 0)
-	    grad[kk] -= FACT*gx2[kk];
-	  else if (A < 0 && B < 0)
-	    {
-	      grad[kk] -= FACT*gx2[kk];
-	      grad[kk+3] -= FACT*fx2[kk];
-	    }
-	}
-    }
-#endif
   nf = calc_norm(fx);
   ng = calc_norm(gx);
   for (k1=0; k1 < 3; k1++)
@@ -1931,51 +1846,32 @@ double gradcgfuncRyck(double *vec, double *grad, double *fx, double *gx, double 
       grad[kk] -= gradfx*fx[kk];
       grad[kk+3] -= gradgx*gx[kk];
     }
-#if 1
   if (OprogStatus.tolSDgrad > 0.0)
     {
-      ngA = ngB = 0;  
-      for (kk=0; kk < 3; kk++)
+      if (OprogStatus.SDmethod==1 || OprogStatus.SDmethod==3)
 	{
-	  ngA += Sqr(grad[kk]);
-	  ngB += Sqr(grad[kk+3]); 
-
+	  ngA = ngB = 0;  
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      ngA += Sqr(grad[kk]);
+	      ngB += Sqr(grad[kk+3]); 
+	      
+	    }
+	  if (sqrt(ngA) < OprogStatus.tolSDgrad*(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB)
+	      && sqrt(ngB) < OprogStatus.tolSDgrad*(jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB))
+	    {
+	      doneryck = 1;
+	    }
 	}
-      if (sqrt(ngA) < OprogStatus.tolSDgrad*(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB)
-	  && sqrt(ngB) < OprogStatus.tolSDgrad*(jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB))
+      else
 	{
-	  doneryck = 1;
+	  if (fabs(scalProd(fx,dd) > normdd*costolSDgrad && fabs(scalProd(gx,dd)) > normdd*costolSDgrad))
+	      doneryck = 1;
 	}
     }
-#endif
-#if 0
-  normgA = normgB = 0.0;
-  for (kk=0; kk < 3; kk++)
-    {
-      normgA += Sqr(grad[kk]); 
-      normgB += Sqr(grad[kk+3]);
-    }
-  normgA=sqrt(normgA);
-  normgB=sqrt(normgB);
-  //fact = 1/normg;//cgstep;
-  //fact = OprogStatus.stepSD/(normdd+OprogStatus.epsd);
-  //fact = OprogStatus.stepSD*normdd;
-  for (kk=0; kk < 3; kk++)
-    {
-      grad[kk] /= normgA;
-    } 
-  for (kk=0; kk < 3; kk++)
-    {
-      grad[kk+3] /= normgB;
-    } 
-#endif
-  //F = 0.0;
   S *= OprogStatus.springkSD;
   F = S*Sqr(normdd);
-  /*
-  for (kk=0; kk < 3; kk++)
-    F += A*Sqr(dd[kk]);*/
- return F; 
+  return F; 
 }
 /* =========================== >>> forces <<< ======================= */
 double  cgfuncRyck(double *vec)
@@ -2014,7 +1910,6 @@ double  cgfuncRyck(double *vec)
   F = 0.0;
   for (kk=0; kk < 3; kk++)
     F += A*Sqr(vec[kk]-vec[kk+3]);
-  //printf("A=%f vec: %f %f %f, %f %f %f Epoten: %.15G\n", A,vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], F);
   return F;
 }
 double max3(double a, double b, double c)
