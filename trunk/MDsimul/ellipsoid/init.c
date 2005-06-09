@@ -800,7 +800,7 @@ void usrInitBef(void)
 
     OprogStatus.guessDistOpt = 0;
     OprogStatus.tolSD = 0.01;
-    OprogStatus.tolSDlong = 0.01;
+    OprogStatus.tolSDlong = -1.0;
     OprogStatus.tolSDconstr= 0.1;
     OprogStatus.tolSDgrad = 0.0;
     OprogStatus.springkSD = 1.0;
@@ -1143,6 +1143,8 @@ void usrInitAft(void)
   
     if (OprogStatus.epsdSD < 0.0)
       OprogStatus.epsdSD = Sqr(OprogStatus.epsd);
+    if (OprogStatus.tolSDlong < 0.0)
+      OprogStatus.tolSDlong = OprogStatus.tolSD;
     /*    
      ** CHECK FOR PARTICLE OVERLAPS **
      ** CALCULATE ENERGY            ** */
