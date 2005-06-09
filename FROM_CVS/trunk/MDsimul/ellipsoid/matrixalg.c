@@ -975,9 +975,17 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
        * ma verificare che questo è vero */
       else
 	{
+#if 0
 	  factor = min(1.0, OprogStatus.tolSDconstr*dr1par/ng);
 	  sol *= factor;
 	  sf *= factor;
+#endif
+	  if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*dr1par)
+	    {
+	      sf /= GOLD;
+	      its++;
+	      continue;
+	    }
 	}
 #endif
      done = 1;
@@ -1346,8 +1354,8 @@ int check_done(double fp, double fpold, double minax)
 {
   const double EPSFR=1E-10;
   double dold, d;
-  dold = sqrt(fpold);
-  d = sqrt(fp);
+  dold = sqrt(fpold/OprogStatus.springkSD);
+  d = sqrt(fp/OprogStatus.springkSD);
   if (OprogStatus.tolSDgrad > 0)
     {
       if (fp > Sqr(OprogStatus.epsdSD))//Sqr(OprogStatus.epsd)) 
