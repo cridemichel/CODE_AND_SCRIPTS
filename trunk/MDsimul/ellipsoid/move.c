@@ -3079,7 +3079,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 retry:
   if (OprogStatus.forceguess)
     calcguess = 1;
-  if (calcguess)
+  if (calcguess || tryagain)
     {
       if (OprogStatus.guessDistOpt==1)
 	guess_dist(i, j, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
