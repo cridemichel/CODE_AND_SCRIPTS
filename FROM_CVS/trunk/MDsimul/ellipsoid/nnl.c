@@ -2581,7 +2581,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
 	}
       else
 	{
-	  delt = EPS*fabs(t);
+	  delt = h;//EPS*fabs(t);
 	  firstaftsf = 0;
 	  dold2 = calcDistNegNeighPlaneAll(t-delt, t1, i, distsOld2, vecgdold2, 0);
 	  continue;
