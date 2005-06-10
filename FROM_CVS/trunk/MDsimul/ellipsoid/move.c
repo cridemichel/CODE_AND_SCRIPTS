@@ -3098,7 +3098,7 @@ retry:
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
 
-      if (OprogStatus.SDmethod==1 || tryagain)
+      if ((OprogStatus.SDmethod==1 || OprogStatus.SDmethod==4) || tryagain)
 	{
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -3170,7 +3170,7 @@ retry:
 	   * è sicuramente meglio dare una stima di vecg[4] altrimenti settarlo a 0 
 	   * è un buon guess. */
 #if 1
-	  if (OprogStatus.SDmethod==1 || tryagain)
+	  if ((OprogStatus.SDmethod==1||OprogStatus.SDmethod==4) || tryagain)
 	    {
 	      if (scalProd(gradf, rDC) < 0.0)
 		vecg[4] = 0.0;
@@ -3195,7 +3195,7 @@ retry:
       else
 	{
 #if 1
-	  if (OprogStatus.SDmethod==1 || tryagain)
+	  if ((OprogStatus.SDmethod==1 || OprogStatus.SDmethod==4) || tryagain)
 	    {
 	      if (scalProd(gradf, rDC) < 0.0)
 		vecg[7] = 0.0;

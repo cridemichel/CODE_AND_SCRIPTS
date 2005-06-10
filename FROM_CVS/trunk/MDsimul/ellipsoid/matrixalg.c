@@ -1354,14 +1354,14 @@ int check_done(double fp, double fpold, double minax)
 {
   const double EPSFR=1E-10;
   double dold, d;
-  if (OprogStatus.SDmethod != 2)
+  if (OprogStatus.SDmethod != 2 && OprogStatus.SDmethod != 4)
     {
       dold = sqrt(fpold/OprogStatus.springkSD);
       d = sqrt(fp/OprogStatus.springkSD);
     }
   if (OprogStatus.tolSDgrad > 0)
     {
-      if (OprogStatus.SDmethod == 2)
+      if (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod==4)
 	{
 	  if (doneryck == 1) 
 	      //|| 2.0*fabs(dold-d) < OprogStatus.tolSDlong*(fabs(dold)+fabs(d)+EPSFR))
@@ -4344,7 +4344,7 @@ void adjust_step_dist5(double *x, double *dx, double *fx, double *gx)
   //minst = OprogStatus.toldxNR*min3(minaxA/norm,minaxAB/fabs(dx[4])/calc_norm(fx), minaxAB/fabs(x[4])/calc_norm(fx));
   //minst = OprogStatus.toldxNR*minaxAB/fabs(dx[4])/calc_norm(fx);
   nfx = calc_norm(fx);
-#if 0
+#if 1
   minst = min3(sqrt(OprogStatus.toldxNR*nfx/calc_norm(gx)/Sqr(dx[3])), OprogStatus.toldxNR*minaxAB/fabs(dx[4])/nfx, OprogStatus.toldxNR*nfx/calc_norm(gx)/2.0/fabs(dx[3]));
 #else
   minst = min(minaxAB/fabs(dx[4])/nfx, nfx/calc_norm(gx)/2.0/fabs(dx[3]));
@@ -4356,13 +4356,19 @@ void adjust_step_dist5(double *x, double *dx, double *fx, double *gx)
 void adjust_step_dist8(double *x, double *dx, double *fx, double *gx)
 {
   int k1;
-  double normA, normB, minst, nfx;
+  double normA, normB, minst, nfx, dist;
   //normA = calc_norm(dx);
   //normB = calc_norm(&dx[3]);
   //minst = OprogStatus.toldxNR*min3(minaxA/normA, minaxA/normB, minaxAB/fabs(dx[7])/calc_norm(fx));
   nfx = calc_norm(fx);
+#if 1
+  minst = min3(OprogStatus.toldxNR*minaxAB/fabs(dx[7])/calc_norm(fx),
+	       OprogStatus.toldxNR*nfx/calc_norm(gx)/2.0/fabs(dx[6]),
+	       sqrt(OprogStatus.toldxNR*nfx/calc_norm(gx)/Sqr(dx[3])));
+#else
   minst = min(minaxAB/fabs(dx[7])/calc_norm(fx),nfx/calc_norm(gx)/2.0/fabs(dx[6]));
   minst *= OprogStatus.toldxNR;
+#endif
   for (k1 = 0; k1 < 8; k1++)
     dx[k1]*= min(minst,1.0);
 }

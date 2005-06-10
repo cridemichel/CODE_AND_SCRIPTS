@@ -1351,7 +1351,7 @@ retryneigh:
 	}
      for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
-      if (OprogStatus.SDmethod==1 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
+      if ((OprogStatus.SDmethod==1 || OprogStatus.SDmethod==4) && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
 	{
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -1397,7 +1397,7 @@ retryneigh:
 	    g2 = g1;
 	}	  
 #endif
-      if (OprogStatus.SDmethod==1)
+      if (OprogStatus.SDmethod==1 || OprogStatus.SDmethod==4)
 	{
 	  if (scalProd(gradf, rDC) < 0.0)
 	    vecg[7] = 0.0;
@@ -1762,7 +1762,7 @@ retryoverlap:
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
 
-      if (OprogStatus.SDmethod==1 && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
+      if ((OprogStatus.SDmethod==1||OprogStatus.SDmethod==4) && OprogStatus.stepSDA>0 && OprogStatus.stepSDB>0)
 	{
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -1838,7 +1838,7 @@ retryoverlap:
 	}	  
       if (OprogStatus.dist5)
 	{
-	  if (OprogStatus.SDmethod==1)
+	  if (OprogStatus.SDmethod==1||OprogStatus.SDmethod==4)
 	    if (scalProd(gradf, rDC) < 0.0)
 	      vecg[4] = 0.0;
 	    else
@@ -1858,7 +1858,7 @@ retryoverlap:
 	}
       else
 	{
-	  if (OprogStatus.SDmethod==1)
+	  if (OprogStatus.SDmethod==1||OprogStatus.SDmethod==4)
 	    {
 	      if (scalProd(gradf, rDC) < 0.0)
 		vecg[7] = 0.0;
