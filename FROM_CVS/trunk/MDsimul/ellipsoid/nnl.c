@@ -2522,6 +2522,8 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
   double normddot, maxddot, delt, troot, tmin, tini, maxddoti[6];
   int itstb, firstev;
   const int MAXITS = 100;
+  const double EPS=3E-8; 
+  /* per calcolare derivate numeriche questo è il magic number in doppia precisione (vedi Num. Rec.)*/
   int itsRef;
   int its, foundrc, goback;
   double t1, t2, epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
@@ -2579,7 +2581,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
 	}
       else
 	{
-	  delt = h;
+	  delt = EPS*fabs(t);
 	  firstaftsf = 0;
 	  dold2 = calcDistNegNeighPlaneAll(t-delt, t1, i, distsOld2, vecgdold2, 0);
 	  continue;
