@@ -255,6 +255,7 @@ struct progStatus
   double springkSD;
   int SDmethod;
   double toldxNR;
+  double tolAngNR;
   double stepSDA;
   double stepSDB;
   int maxitsSD;
@@ -537,6 +538,7 @@ struct pascii opro_ascii[] =
   {"SDmethod",     &OS(SDmethod),               1,   1, "%d"},
   {"stepSDA",       &OS(stepSDA),                1,   1, "%.12G"},
   {"toldxNR",       &OS(toldxNR),                1,   1, "%.15G"}, 
+  {"tolAngNR",      &OS(tolAngNR),               1,   1, "%.15G"},
   {"stepSDB",       &OS(stepSDB),                1,   1, "%.12G"},
   {"maxitsSD",     &OS(maxitsSD),              1,   1, "%d"},
   {"tolSD",        &OS(tolSD),                 1,   1, "%.15G"},         
@@ -744,6 +746,7 @@ struct singlePar OsinglePar[] = {
   {"springkSD",  &OprogStatus.springkSD,    CT},
   {"SDmethod",    &OprogStatus.SDmethod,     INT},
   {"toldxNR",    &OprogStatus.toldxNR,  CT},
+  {"tolAngNR",   &OprogStatus.tolAngNR, CT},
   {"stepSDA",     &OprogStatus.stepSDA,         CT},
   {"stepSDB",     &OprogStatus.stepSDB,         CT},
   {"maxitsSD",   &OprogStatus.maxitsSD,       INT},
