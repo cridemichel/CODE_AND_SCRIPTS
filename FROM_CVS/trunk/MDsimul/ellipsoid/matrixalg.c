@@ -4336,41 +4336,90 @@ void newtDistNegNeigh(double x[], int n, int *check,
   nrerror("MAXITS exceeded in newt"); 
   
 }
+double costhrNR;
 void adjust_step_dist5(double *x, double *dx, double *fx, double *gx)
 {
   int k1, k2;
-  double norm, minst, fxgx[3], nfx;
+  double fxfxold, gxgxold, norm, minst, fxgx[3], ngx, nfx, minst1, minst2;
+  static int first = 1;
+  static double fxold[3], gxold[3];
+  nfx = calc_norm(fx);
+  if (OprogStatus.tolAngNR > 0.0)
+    ngx = calc_norm(gx);
   //norm = calc_norm(dx);
   //minst = OprogStatus.toldxNR*min3(minaxA/norm,minaxAB/fabs(dx[4])/calc_norm(fx), minaxAB/fabs(x[4])/calc_norm(fx));
   //minst = OprogStatus.toldxNR*minaxAB/fabs(dx[4])/calc_norm(fx);
-  nfx = calc_norm(fx);
 #if 1
-  minst = min3(sqrt(OprogStatus.toldxNR*nfx/calc_norm(gx)/Sqr(dx[3])), OprogStatus.toldxNR*minaxAB/fabs(dx[4])/nfx, OprogStatus.toldxNR*nfx/calc_norm(gx)/2.0/fabs(dx[3]));
+  minst1 = min3(sqrt(OprogStatus.toldxNR*nfx/calc_norm(gx)/Sqr(dx[3])), OprogStatus.toldxNR*minaxAB/fabs(dx[4])/nfx, OprogStatus.toldxNR*nfx/calc_norm(gx)/2.0/fabs(dx[3]));
 #else
-  minst = min(minaxAB/fabs(dx[4])/nfx, nfx/calc_norm(gx)/2.0/fabs(dx[3]));
-  minst *= OprogStatus.toldxNR;
+  minst1 = min(minaxAB/fabs(dx[4])/nfx, nfx/calc_norm(gx)/2.0/fabs(dx[3]));
+  minst1 *= OprogStatus.toldxNR;
 #endif
+  if (!first && OprogStatus.tolAngNR > 0.0)
+    {
+      fxfxold = scalProd(fx,fxold)/nfx;
+      gxgxold = scalProd(gx,gxold)/ngx;
+      minst2 = min(fabs((costhrNR-1.0)/(fxfxold-1.0)),
+		   fabs((costhrNR-1.0)/(gxgxold-1.0)));
+      minst = min(minst1,minst2);
+    }
+  else
+    minst = minst1;
   for (k1 = 0; k1 < 5; k1++)
     dx[k1] *= min(1.0, minst);
+  if (OprogStatus.tolAngNR > 0.0)
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  fxold[k1] = fx[k1]/nfx;
+	  gxold[k1] = gx[k1]/ngx;
+	}
+    }
+  if (first)
+    first = 0;
 }
 void adjust_step_dist8(double *x, double *dx, double *fx, double *gx)
 {
   int k1;
-  double normA, normB, minst, nfx, dist;
-  //normA = calc_norm(dx);
+  double ngx, minst1, minst2, fxfxold, gxgxold, normA, normB, minst, nfx, dist;
+  static int first = 0;
+   static double fxold[3], gxold[3];
+   //normA = calc_norm(dx);
   //normB = calc_norm(&dx[3]);
   //minst = OprogStatus.toldxNR*min3(minaxA/normA, minaxA/normB, minaxAB/fabs(dx[7])/calc_norm(fx));
   nfx = calc_norm(fx);
+  if (OprogStatus.tolAngNR > 0.0)
+    ngx = calc_norm(gx);
 #if 1
-  minst = min3(OprogStatus.toldxNR*minaxAB/fabs(dx[7])/calc_norm(fx),
+  minst1 = min3(OprogStatus.toldxNR*minaxAB/fabs(dx[7])/calc_norm(fx),
 	       OprogStatus.toldxNR*nfx/calc_norm(gx)/2.0/fabs(dx[6]),
 	       sqrt(OprogStatus.toldxNR*nfx/calc_norm(gx)/Sqr(dx[3])));
 #else
-  minst = min(minaxAB/fabs(dx[7])/calc_norm(fx),nfx/calc_norm(gx)/2.0/fabs(dx[6]));
-  minst *= OprogStatus.toldxNR;
+  minst1 = min(minaxAB/fabs(dx[7])/calc_norm(fx),nfx/calc_norm(gx)/2.0/fabs(dx[6]));
+  minst1 *= OprogStatus.toldxNR;
 #endif
+  if (!first && OprogStatus.tolAngNR > 0.0)
+    {
+      fxfxold = scalProd(fx,fxold)/nfx;
+      gxgxold = scalProd(gx,gxold)/ngx;
+      minst2 = min(fabs((costhrNR-1.0)/(fxfxold-1.0)),
+		   fabs((costhrNR-1.0)/(gxgxold-1.0)));
+      minst = min(minst1,minst2);
+    }
+  else
+    minst = minst1;
   for (k1 = 0; k1 < 8; k1++)
     dx[k1]*= min(minst,1.0);
+  if (OprogStatus.tolAngNR > 0.0)
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  fxold[k1] = fx[k1]/nfx;
+	  gxold[k1] = gx[k1]/ngx;
+	}
+    }
+  if (first)
+    first = 0;
 }
 extern int fdjac_disterr;
 void newtDistNeg(double x[], int n, int *check, 
