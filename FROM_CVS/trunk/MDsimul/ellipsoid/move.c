@@ -3147,6 +3147,8 @@ retry:
 	  vecg[k1] = rC[k1];
 	  if (!OprogStatus.dist5)
 	    vecg[k1+3] = rD[k1];
+	  else
+	    vecg[k1+5] = rD[k1];
 	  rDC[k1] = rD[k1] - rC[k1];
 	}
       if (OprogStatus.epsdGDO > 0.0)
@@ -3228,6 +3230,27 @@ retry:
   MD_DEBUG(printf(">>>>>>> alpha: %f beta: %f\n", vecg[6], vecg[7]));
   if (OprogStatus.dist5)
     {
+      double vecg8[8];
+      if ((tryagain && OprogStatus.dist8stps > 0) || OprogStatus.dist8stps < 0)
+	{
+	  OprogStatus.dist5 = 0;
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      vecg8[k1] = vecg[k1];
+	      vecg8[k1+3] = vecg[k1+5];
+	    }
+	  vecg8[6] = vecg[3];
+	  vecg8[7] = vecg[4];
+	  newtDistNeg(vecg8, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift, 0); 
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	  vecg[k1] = vecg8[k1];
+	  vecg[k1+5] = vecg8[k1+3];
+	    }
+	  vecg[3] = vecg8[6];
+	  vecg[4] = vecg8[7];
+	  OprogStatus.dist5 = 1;
+	}
       newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift, tryagain); 
     }
   else 

@@ -742,6 +742,7 @@ void usrInitBef(void)
     OprogStatus.rNebrShell = 1.0;
     OprogStatus.useNNL = 0;
     OprogStatus.dist5 = 0;
+    OprogStatus.dist8stps = 0;
     OprogStatus.dist5NL = 0;
     OprogStatus.paralNNL = 1;
     /* If 1 the program calculate of the corrisponding variable a mean from
@@ -1102,6 +1103,8 @@ void usrInitAft(void)
 
     costolSDgrad = cos(OprogStatus.tolSDgrad);
     costhrNR = cos(OprogStatus.tolAngNR);
+    if (OprogStatus.dist5==0)
+      OprogStatus.dist8stps = 0;
     invL = 1.0/L;
     L2 = 0.5*L;
 #ifdef MD_GRAVITY
