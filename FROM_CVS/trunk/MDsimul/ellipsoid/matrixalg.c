@@ -1399,6 +1399,8 @@ int check_done(double fp, double fpold, double minax)
     {
       if (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod==4)
 	{
+	  if (OprogStatus.epsdSD > 0.0 && fp < Sqr(OprogStatus.epsdSD))
+	    return 1;
 	  if (doneryck == 1) 
 	      //|| 2.0*fabs(dold-d) < OprogStatus.tolSDlong*(fabs(dold)+fabs(d)+EPSFR))
 	    {
