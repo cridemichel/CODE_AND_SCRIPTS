@@ -804,6 +804,7 @@ void usrInitBef(void)
     OprogStatus.tolSDlong = -1.0;
     OprogStatus.tolSDconstr= 0.1;
     OprogStatus.tolSDgrad = 0.0;
+    OprogStatus.tolAngSD = 0.0;
     OprogStatus.springkSD = 1.0;
     OprogStatus.toldxNR = 0.0;
     OprogStatus.tolAngNR = 0.0;
@@ -1061,7 +1062,7 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
     }
 }
 double calc_phi(void);
-double costolSDgrad;
+double costolSDgrad, costolAngSD;
 extern double costhrNR;
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
@@ -1102,6 +1103,7 @@ void usrInitAft(void)
     sct = sizeof(COORD_TYPE);
 
     costolSDgrad = cos(OprogStatus.tolSDgrad);
+    costolAngSD =  fabs(cos(OprogStatus.tolAngSD) - 1.0);
     costhrNR = cos(OprogStatus.tolAngNR);
     if (OprogStatus.dist5==0)
       OprogStatus.dist8stps = 0;
