@@ -882,14 +882,13 @@ int check_point(char* msg, double *p, double *rc, double **XX)
   else
     return 1;
 }
-extern double costolsSDgrad;
-
+extern double costolAngSD;
 void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, double *sfA, double dist)
 {
   int kk, its, done=0, k1, k2, MAXITS=50;
   const double GOLD=1.618034;
   double factor, dr1par, Xag[3], r1AXa[3], r1[3], r1A[3], sf, s1, s2, sqrtDelta, A2;
-  double A, B, C, Delta, sol=0.0, ng;
+  double curv2, dh, A, B, C, Delta, sol=0.0, ng, curv, lambda;
   sf = *sfA;
   its = 0;
  
@@ -897,23 +896,61 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
   while (!done && its <= MAXITS)
     {
       itsprojonto++;
+      ng = calc_norm(gradf);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  Xag[k1] = 0.0;
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      Xag[k1] += Xa[k1][k2]*gradf[k2];
+	    }	      
+	}
+      if ((OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 4) && OprogStatus.tolAngSD > 0.0)
+	{
+	  curv = 0.0;
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      curv += dr[k1]*Xag[k1];
+	    }
+	  lambda = min(sf, Sqr(ng)*fabs(costolAngSD/curv));
+	  //printf("curv=%.15G lambda= %.15G\n", curv, lambda);
+	  sf = lambda;
+	}
+      if ((OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 4) && OprogStatus.tolSDconstr > 0.0)
+	{
+	  //dh = 0.0;
+	  curv2 = 0.0;
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      //dh += dr[k1]*gradf[k1];
+	      for (k2 = 0; k2 < 3; k2++)
+		{
+		  curv2 += dr[k1]*Xa[k1][k2]*dr[k2];
+		}	
+	    }
+	  curv2 /= 2.0;
+	  //dh /= 2.0;
+	  lambda = min(sf,sqrt(OprogStatus.tolSDconstr/fabs(curv2)));
+	  //printf("boh=%.15G\n",sqrt(OprogStatus.tolSDconstr/fabs(curv2)) );
+	  sf = lambda;
+	}
       for (kk=0; kk < 3; kk++)
 	{
 	  r1[kk] = ri[kk] + dr[kk]*sf; 
 	  r1A[kk] = r1[kk] - rA[kk];
 	}
-      dr1par = sf*calc_norm(dr);
+      //dr1par = sf*calc_norm(dr);
       A=0;
       B=0;
       C=0;
 #if 1
       for (k1 = 0; k1 < 3; k1++)
 	{
-	  Xag[k1] = 0.0;
+	  //Xag[k1] = 0.0;
 	  r1AXa[k1] = 0.0;
 	  for (k2=0; k2 < 3; k2++)
 	    {
-	      Xag[k1] += Xa[k1][k2]*gradf[k2];
+	      //Xag[k1] += Xa[k1][k2]*gradf[k2];
 	      r1AXa[k1] += r1A[k2]*Xa[k2][k1]; 
 	    }
 	} 
@@ -959,7 +996,6 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
       else
 	sol = (-B - sqrtDelta)/A2;
 #endif
-      ng = calc_norm(gradf);
       //if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*sf*calc_norm(dr))
       if (OprogStatus.SDmethod==1 || OprogStatus.SDmethod==3)
 	{
@@ -1353,7 +1389,7 @@ double get_sign(double *vec);
 int check_done(double fp, double fpold, double minax)
 {
   const double EPSFR=1E-10;
-  double dold, d;
+  double dold=0.0, d=0.0;
   if (OprogStatus.SDmethod != 2 && OprogStatus.SDmethod != 4)
     {
       dold = sqrt(fpold/OprogStatus.springkSD);
@@ -1416,7 +1452,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   int j,its;
   const int ITMAXFR = OprogStatus.maxitsSD;
   const double GOLD=1.618034;
-  double fp, fpold, signA, signB;
+  double fp, fpold=0.0, signA, signB;
   double minax, xi[6], xiold[6];
   double signAold, signBold, pold[6];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
@@ -1427,11 +1463,20 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
   callsfrprmn++;
   /*Initializations.*/
   fp = (*dfunc)(p,xi,gradfG,gradgG, &signA, &signB); 
+  
   if (doneryck==2)
     {
       callsok++;
       return;
     }
+#if 1
+  if ((OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 4) &&
+      check_done(fp, fpold, minax))
+    {
+      callsok++;
+      return;
+    }
+#endif
   projectgrad(p,xi,gradfG,gradgG);  
   for (its=1;its<=ITMAXFR;its++)
     { 
@@ -1447,7 +1492,7 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
       signBold = signB;
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
-      
+
       if ((OprogStatus.SDmethod == 1 || OprogStatus.SDmethod == 3) && fp > fpold)
 	{
 	  sfA /= GOLD;
@@ -4344,15 +4389,14 @@ void adjust_step_dist5(double *x, double *dx, double *fx, double *gx)
   static int first = 1;
   static double fxold[3], gxold[3];
   nfx = calc_norm(fx);
-  if (OprogStatus.tolAngNR > 0.0)
-    ngx = calc_norm(gx);
+  ngx = calc_norm(gx);
   //norm = calc_norm(dx);
   //minst = OprogStatus.toldxNR*min3(minaxA/norm,minaxAB/fabs(dx[4])/calc_norm(fx), minaxAB/fabs(x[4])/calc_norm(fx));
   //minst = OprogStatus.toldxNR*minaxAB/fabs(dx[4])/calc_norm(fx);
 #if 1
-  minst1 = min3(sqrt(OprogStatus.toldxNR*nfx/calc_norm(gx)/Sqr(dx[3])), OprogStatus.toldxNR*minaxAB/fabs(dx[4])/nfx, OprogStatus.toldxNR*nfx/calc_norm(gx)/2.0/fabs(dx[3]));
+  minst1 = min3(sqrt(OprogStatus.toldxNR*nfx/ngx/Sqr(dx[3])), OprogStatus.toldxNR*minaxAB/fabs(dx[4])/nfx, OprogStatus.toldxNR*nfx/ngx/2.0/fabs(dx[3]));
 #else
-  minst1 = min(minaxAB/fabs(dx[4])/nfx, nfx/calc_norm(gx)/2.0/fabs(dx[3]));
+  minst1 = min(minaxAB/fabs(dx[4])/nfx, nfx/ngx/2.0/fabs(dx[3]));
   minst1 *= OprogStatus.toldxNR;
 #endif
   if (!first && OprogStatus.tolAngNR > 0.0)
@@ -4383,19 +4427,18 @@ void adjust_step_dist8(double *x, double *dx, double *fx, double *gx)
   int k1;
   double ngx, minst1, minst2, fxfxold, gxgxold, normA, normB, minst, nfx, dist;
   static int first = 0;
-   static double fxold[3], gxold[3];
-   //normA = calc_norm(dx);
+  static double fxold[3], gxold[3];
+  //normA = calc_norm(dx);
   //normB = calc_norm(&dx[3]);
   //minst = OprogStatus.toldxNR*min3(minaxA/normA, minaxA/normB, minaxAB/fabs(dx[7])/calc_norm(fx));
   nfx = calc_norm(fx);
-  if (OprogStatus.tolAngNR > 0.0)
-    ngx = calc_norm(gx);
+  ngx = calc_norm(gx);
 #if 1
-  minst1 = min3(OprogStatus.toldxNR*minaxAB/fabs(dx[7])/calc_norm(fx),
-	       OprogStatus.toldxNR*nfx/calc_norm(gx)/2.0/fabs(dx[6]),
-	       sqrt(OprogStatus.toldxNR*nfx/calc_norm(gx)/Sqr(dx[3])));
+  minst1 = min3(OprogStatus.toldxNR*minaxAB/fabs(dx[7])/nfx,
+	       OprogStatus.toldxNR*nfx/ngx/2.0/fabs(dx[6]),
+	       sqrt(OprogStatus.toldxNR*nfx/ngx/Sqr(dx[3])));
 #else
-  minst1 = min(minaxAB/fabs(dx[7])/calc_norm(fx),nfx/calc_norm(gx)/2.0/fabs(dx[6]));
+  minst1 = min(minaxAB/fabs(dx[7])/nfx,nfx/ngx/2.0/fabs(dx[6]));
   minst1 *= OprogStatus.toldxNR;
 #endif
   if (!first && OprogStatus.tolAngNR > 0.0)
@@ -4421,6 +4464,7 @@ void adjust_step_dist8(double *x, double *dx, double *fx, double *gx)
   if (first)
     first = 0;
 }
+extern long long itsNRdist, callsdistNR;
 extern int fdjac_disterr;
 void newtDistNeg(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
@@ -4463,6 +4507,8 @@ void newtDistNeg(double x[], int n, int *check,
   for (sum=0.0,i=0;i<n;i++) 
     sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
   stpmax=STPMX*FMAX(sqrt(sum),(double)n);
+  callsdistNR++;
+  
   for (its=0;its<MAXITS3;its++)
     { /* Start of iteration loop. */
        /* ============ */
@@ -4607,7 +4653,8 @@ void newtDistNeg(double x[], int n, int *check,
 	  FREERETURND; 
 	}
 #endif
-          } 
+      itsNRdist++;
+    } 
   MD_DEBUG18(printf("maxits!!!\n"));
   *check = 2;
   FREERETURND;

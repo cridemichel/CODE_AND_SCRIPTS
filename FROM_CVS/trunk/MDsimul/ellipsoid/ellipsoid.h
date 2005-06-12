@@ -263,6 +263,7 @@ struct progStatus
   double tolSDlong;
   double tolSDconstr;
   double tolSDgrad;
+  double tolAngSD;
   double epsdSD;
   double epsdGDO;
   /* Accumulator for the radial distribution function */
@@ -547,6 +548,7 @@ struct pascii opro_ascii[] =
   {"tolSDlong",    &OS(tolSDlong),             1,   1, "%.15G"},
   {"tolSDconstr",  &OS(tolSDconstr),           1,   1, "%.15G"},
   {"tolSDgrad",    &OS(tolSDgrad),             1,   1, "%.15G"},
+  {"tolAngSD",     &OS(tolAngSD),              1,   1, "%.15G"},
   {"forceguess",   &OS(forceguess),            1,   1, "%d"},
   {"zbrakn",       &OS(zbrakn),              1,   1,  "%d"},
   {"zbrentTol",    &OS(zbrentTol),           1,   1,  ".15G"},
@@ -745,6 +747,7 @@ struct singlePar OsinglePar[] = {
   {"tolSDlong",  &OprogStatus.tolSDlong,      CT},
   {"tolSDconstr",&OprogStatus.tolSDconstr,    CT},
   {"tolSDgrad",  &OprogStatus.tolSDgrad,      CT},
+  {"tolAngSD",   &OprogStatus.tolAngSD,       CT},
   {"forceguess", &OprogStatus.forceguess,     INT},
   {"springkSD",  &OprogStatus.springkSD,    CT},
   {"SDmethod",    &OprogStatus.SDmethod,     INT},
