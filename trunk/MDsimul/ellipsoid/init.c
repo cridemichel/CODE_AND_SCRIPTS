@@ -11,6 +11,7 @@
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
 void scalevels(double temp, double K);
+extern void rebuildNNL(void);
 extern char TXT[MSG_LEN];
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
@@ -1040,7 +1041,6 @@ void add_neighbours(MESHXYZ** mesh, int i, int j)
       mesh[i][j].neigh[3].j = j;
     }
 }
-extern void rebuildNNL(void);
 void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 {
   int i,j, n1, n2;
