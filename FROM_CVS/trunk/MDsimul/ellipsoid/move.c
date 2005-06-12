@@ -675,6 +675,8 @@ void scale_Phi(void)
       scale_coords(factor);
     }
 }
+
+long long itsNRdist=0, callsdistNR=0;
 void outputSummary(void)
 {
 #if 0
@@ -682,6 +684,10 @@ void outputSummary(void)
   int i;
 #endif
   /* mettere qualcosa qui */
+
+  if (callsdistNR)
+    printf("Average iteration in Newton-Raphson for distance: %.6G\n", 
+	   ((double)itsNRdist)/callsdistNR);
   if (timesS>0)
     printf("Average iterations in locate_contact: %.6G\n", ((double)itsS)/timesS);
   if (timesF>0)
@@ -3244,8 +3250,8 @@ retry:
 	  newtDistNeg(vecg8, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift, 0); 
 	  for (k1 = 0; k1 < 3; k1++)
 	    {
-	  vecg[k1] = vecg8[k1];
-	  vecg[k1+5] = vecg8[k1+3];
+	      vecg[k1] = vecg8[k1];
+	      vecg[k1+5] = vecg8[k1+3];
 	    }
 	  vecg[3] = vecg8[6];
 	  vecg[4] = vecg8[7];
@@ -3304,10 +3310,14 @@ retry:
       r1[k1] = vecg[k1];
       if (!OprogStatus.dist5)
       	r2[k1] = vecg[k1+3];
+#if 0
+      if (OprogStatus.dist5 && tryagain)
+	r2[k1] = vecg[k1+5];
+#endif
     }
   for (k1 = 0; k1 < 3; k1++)
     {
-      if (OprogStatus.dist5)
+      if (OprogStatus.dist5)// && !tryagain)
 	{
     	  fx[k1] = 0;
 	  for (k2 = 0; k2 < 3; k2++)
