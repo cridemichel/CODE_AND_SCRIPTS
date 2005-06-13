@@ -3781,7 +3781,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	  return 1;
 	}
 #endif
-      delt = *d1 / maxddot;
+      delt = *d1  / maxddot;
       normddot = calcvecF(i, j, *t, t1, r1, r2, ddot, shift);
       /* check for convergence */
      
@@ -4005,7 +4005,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   MD_DEBUG20(printf("[LOCATE_CONTACT] INIZIO\n"));
   d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
 #if 1
-  if ((t2- t1)*maxddot < fabs(d) - OprogStatus.epsd)
+  if ((t2 - t1)*maxddot < fabs(d) - OprogStatus.epsd)
     {
       return 0;
     }
@@ -4037,7 +4037,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       return 0;
     }
 #endif
- MD_DEBUG20(printf("[LOCATE_CONTACT] prima search contact faster\n"));
+  MD_DEBUG20(printf("[LOCATE_CONTACT] prima search contact faster\n"));
   if (search_contact_faster(i, j, shift, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0; 
   MD_DEBUG20(printf("[LOCATE_CONTACT]>>>>d:%f t=%.15G\n", d,t));
