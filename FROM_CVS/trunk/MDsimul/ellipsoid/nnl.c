@@ -2427,6 +2427,10 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
   const int MAXOPTITS = 500;
   int nn, its=0, crossed[6], itsf; 
   *d1 = calcDistNegNeighPlaneAll(*t, t1, i, distsOld, vecgd, 1);
+#if 1
+  if ((t2-t1)*maxddot < *d1 - OprogStatus.epsd)
+    return 1;
+#endif
   timesFNL++;
   told = *t;
   if (fabs(*d1) < epsdFast)
@@ -2440,6 +2444,10 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
       calc_delt(maxddoti, &delt, distsOld);
 #else
       delt = fabs(*d1) / maxddot;
+#endif
+#if 1
+      if (*t + t1 < t2 && (t2 - (*t + t1))*maxddot < fabs(*d1) - OprogStatus.epsd)
+	return 1;
 #endif
       *t += delt;
       *d1 = calcDistNegNeighPlaneAll(*t, t1, i, dists, vecgd, 1);
@@ -2548,6 +2556,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
     }
   h = OprogStatus.h; /* last resort time increment */
   delt = h;
+  
   if (search_contact_faster_neigh_plane_all(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, 
 					       dists, maxddoti, maxddot))
     {
