@@ -2403,7 +2403,21 @@ double calcDistNegNeighPlaneAll(double t, double tref, int i, double dists[6], d
     }
   return dmin; 
 }
-
+int check_distance(double maxddoti[6], double dists[6], double t1, double t2, double t)
+{
+  int nn, cc;
+  cc = 0;
+  for (nn = 0; nn < 6; nn++)
+    {
+      if ((t2 - (t1 + t))*maxddoti[nn] <  dists[nn] - OprogStatus.epsd)
+	cc++;
+    }
+  if (cc == 6)
+    return 1;
+  else
+    return 0;
+  //printf("I chose dt=%.15G\n", *delt);
+}
 void calc_delt(double maxddoti[6], double *delt, double dists[6])
 {
   int nn;
@@ -2427,7 +2441,7 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
   const int MAXOPTITS = 500;
   int nn, its=0, crossed[6], itsf; 
   *d1 = calcDistNegNeighPlaneAll(*t, t1, i, distsOld, vecgd, 1);
-#if 1
+#if 0
   if ((t2-t1)*maxddot < *d1 - OprogStatus.epsd)
     return 1;
 #endif
@@ -2442,10 +2456,10 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
     {
 #if 1
       calc_delt(maxddoti, &delt, distsOld);
+      if (check_distance(maxddoti, dists, t1, t2, *t))
+	return 1;
 #else
       delt = fabs(*d1) / maxddot;
-#endif
-#if 1
       if (*t + t1 < t2 && (t2 - (*t + t1))*maxddot < fabs(*d1) - OprogStatus.epsd)
 	return 1;
 #endif
