@@ -29,6 +29,7 @@ extern double *maxax;
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
 void InvMatrix(double **a, double **b, int NB);
+double min(double a, double b);
 double zbrent(double (*func)(double), double x1, double x2, double tol);
 extern double invaSq[2], invbSq[2], invcSq[2];
 double rxC, ryC, rzC;
@@ -2590,6 +2591,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
     }
   while (fabs(*d1) > epsdFast && its < MAXOPTITS)
     {
+      if (maxddot*(t2-(t1+*t)) < fabs(*d1)-OprogStatus.epsd)
+	return 1;
       delt = fabs(*d1) / maxddot;
 #if 0
       /* CALCOLARE normddot usando la distanza vecchia come in locate_contact */
@@ -3767,7 +3770,7 @@ void PredictEvent (int na, int nb)
    *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
-  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], 
+  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],  
 	 b, d, t, tInt, vv, distSq, t1, t2, evtime=0, evtimeHC;
   int overlap, ac, bc, acHC, bcHC, collCodeOld;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
@@ -3854,8 +3857,8 @@ void PredictEvent (int na, int nb)
    * se lungo z e rz = -L/2 => urto con parete */ 
   MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
-  ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 
+  ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]); 
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
