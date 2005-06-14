@@ -2476,7 +2476,8 @@ int get_dists_tocheck(double distsOld[], double dists[], int tocheck[], int dore
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
       tocheck[nn] = 0;
-      if (dists[nn] < OprogStatus.epsd && distsOld[nn] < OprogStatus.epsd &&
+      if ( dists[nn]*distsOld[nn] > 0.0 &&
+	  fabs(dists[nn]) < OprogStatus.epsd && fabs(distsOld[nn]) < OprogStatus.epsd &&
 	  dorefine[nn] == MD_EVENT_NONE && (bondpair== -1 || bondpair == nn))
 	{
 	  tocheck[nn] = 1; 
@@ -3098,7 +3099,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		dorefine[nn] = MD_EVENT_NONE;
 	      else 
 		{
-		  if (distsOld[nn] > 0)
+		  if (distsOld[nn] > 0.0)
 		    dorefine[nn] = MD_OUTIN_BARRIER;
 		  else
 		    dorefine[nn] = MD_INOUT_BARRIER;
