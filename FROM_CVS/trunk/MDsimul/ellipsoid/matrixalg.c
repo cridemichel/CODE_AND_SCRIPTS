@@ -4515,7 +4515,7 @@ void newtDistNeg(double x[], int n, int *check,
     { /* Start of iteration loop. */
        /* ============ */
       //fdjacFD(n,x,fvecD,fjac,vecfunc, iA, iB, shift); 
-      if (n==8 && OprogStatus.dist8stps != 0 && its > abs(OprogStatus.dist8stps))
+      if (n==8 && OprogStatus.dist8stps != 0 && its >= abs(OprogStatus.dist8stps))
 	{
 	  *check = 0;
 	  FREERETURND;
