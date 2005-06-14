@@ -499,6 +499,7 @@ void outputSummary(void)
   f = fopenMPI(MD_HD_MIS "Vz2.dat", "a");
   fprintf(f, "%.15f %.15f\n", OprogStatus.time, Sqr(Vz));
   fclose(f);
+  printf("Number of collisions: %lld\n", OprogStatus.collCount);
   if (OprogStatus.numquench==0)
     {
       calcRho();

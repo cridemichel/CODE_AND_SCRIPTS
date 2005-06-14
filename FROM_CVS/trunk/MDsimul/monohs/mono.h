@@ -314,8 +314,8 @@ struct progStatus
   double accrcmz;
   double time;
   int eventCount;
-  int collCount;
-  int crossCount;
+  long long int collCount;
+  long long int crossCount;
   int wallcollCount;
   int PE[PE_POINTS];
   double ENmin;
