@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.6 2004-11-26 15:37:13 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.7 2005-06-15 09:03:44 demichel Exp $     */
 #ifndef lint
-static char vcid[] = "$Id: mdsimul.c,v 1.6 2004-11-26 15:37:13 demichel Exp $";
+static char vcid[] = "$Id: mdsimul.c,v 1.7 2005-06-15 09:03:44 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -416,7 +416,7 @@ void main(int argc, char *argv[])
 #endif
     // printf("PID CHILD: %d\n",pid);
   /* ------------------>>> function to call at exit <<<-------------- */ 
-#if !defined(CRAY) && !defined(ORIGIN) 
+#if !defined(CRAY) && !defined(ORIGIN) && !defined(MD_MAC)
   on_exit(endJob, NULL);
 #endif
   /* ---------------------------------------------------------------- */
