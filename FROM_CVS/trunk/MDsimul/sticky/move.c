@@ -2510,14 +2510,13 @@ void assign_dists(double a[], double b[])
   memcpy(b, a, MD_PBONDS*sizeof(double));
 }
 #define MD_OPTDDIST
-#ifdef MD_OPTDDIST
 /* NOTA: tale stima ottimizzata della maggiorazione per la velocità di variazione della distanza
  * sembra corretta, fare comunque dei test.*/
-double eval_maxddist(int i, int j, int bondpair, double t1)
+double eval_maxddist(int i, int j, int bondpair, double t1, double *maxddotOpt)
 {
   double ti, rA[3], rB[3], Omega[3][3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
-	 r12i[3], r12j[3], maxddotOpt[MD_PBONDS];
-  double maxddot, nr12i, nr12j;
+	 r12i[3], r12j[3];//, maxddotOpt[MD_PBONDS];
+  double maxddot=0.0, nr12i, nr12j;
   int nn, kk;
   ti = t1 - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
@@ -2566,9 +2565,23 @@ double eval_maxddist(int i, int j, int bondpair, double t1)
     }
   return maxddot;
 }
-#endif
+void calc_delt(double *maxddoti, double *delt, double *dists, int bondpair)
+{
+  int nn;
+  double dt;
+  for (nn = 0; nn < MD_PBONDS; nn++)
+    {
+      if (bondpair != -1 && bondpair != nn)
+	continue;
+      dt = fabs(dists[nn]) / maxddoti[nn];
+      //printf("nn=%d dt=%.15G delt=%.15G dists=%.15G maxddoti=%15G\n", nn, dt, *delt, dists[nn], maxddoti[nn]);
+      if (nn==0 || bondpair != -1 || dt < (*delt))
+	*delt = dt;
+    }
+  //printf("I chose dt=%.15G\n", *delt);
+}
 
-int search_contact_faster(int i, int j, double *shift, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS], int bondpair, double maxddot)
+int search_contact_faster(int i, int j, double *shift, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS], int bondpair, double maxddot, double *maxddoti)
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
@@ -2595,7 +2608,11 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
     {
       if (maxddot*(t2-(t1+*t)) < fabs(*d1)-OprogStatus.epsd)
 	return 1;
+#ifdef MD_OPTDDIST
+      calc_delt(maxddoti, &delt, distsOld, bondpair);
+#else
       delt = fabs(*d1) / maxddot;
+#endif
 #if 0
       /* CALCOLARE normddot usando la distanza vecchia come in locate_contact */
       normddot = calcvecF(i, j, *t, r1, r2, ddot, shift);
@@ -2829,7 +2846,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   const int MAXITS = 100;
   int itsRef;
   int its, foundrc, goback;
-  double epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
+  double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
   int kk,tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
       crossed[MD_PBONDS], firstaftsf;
 #ifdef MD_NEGPAIRS
@@ -2856,7 +2873,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   t = 0;
   bondpair = get_bonded(i, j);
 #ifdef MD_OPTDDIST
-  maxddot = eval_maxddist(i, j, bondpair, t1);
+  maxddot = eval_maxddist(i, j, bondpair, t1, maxddoti);
 #else
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5
@@ -2919,7 +2936,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #ifdef MD_NEGPAIRS
   sumnegpairs = check_negpairs(negpairs, distsOld, bondpair, i, j); 
 #endif
-  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot))
+  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot, maxddoti))
     {
       return 0;  
     }
@@ -3208,7 +3225,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       if (fabs(d) > epsdFastR)
 	{
 	  if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair,
-				    maxddot))
+				    maxddot, maxddoti))
 	    {
 	      MD_DEBUG30(printf("[search contact faster locate_contact] d: %.15G\n", d));
 	      return 0;
