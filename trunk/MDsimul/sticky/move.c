@@ -2509,8 +2509,10 @@ void assign_dists(double a[], double b[])
 {
   memcpy(b, a, MD_PBONDS*sizeof(double));
 }
-#undef MD_OPTDDIST
+#define MD_OPTDDIST
 #ifdef MD_OPTDDIST
+/* NOTA: tale stima ottimizzata della maggiorazione per la velocità di variazione della distanza
+ * sembra corretta, fare comunque dei test.*/
 double eval_maxddist(int i, int j, int bondpair, double t1)
 {
   double ti, rA[3], rB[3], Omega[3][3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
@@ -2606,6 +2608,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	  return 0;
 	}
 #endif
+      //printf("[SEARCH_CONTACT_FASTER] t=%.15G maxddot=%.15G\n", *t, eval_maxddist(i, j, bondpair, *t));
       *t += delt;
       *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
       if (check_cross(distsOld, dists, crossed, bondpair))
@@ -2860,6 +2863,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j]*0.5;
   //printf("wx:%f maxax: %f,%f\n", sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i])), maxax[i], maxax[j]);
 #endif
+
+  //printf("[LOCATE_CONTACT INIZIO] t=%.15G maxddot=%.15G\n", t1, eval_maxddist(i, j, bondpair, t1));
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = OprogStatus.h; /* last resort time increment */
   if (*collCode!=MD_EVENT_NONE)
