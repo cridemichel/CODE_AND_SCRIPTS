@@ -17,6 +17,7 @@ double *vector(int n)
 {
   return calloc(n, sizeof(double)); 
 }
+void polintRyck(double xain[], double yain[], int n, double x, double *y, double *dy);
 void projectgrad(double *p, double *xi, double *gradf, double *gradg);
 void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, double *sfA, double dist);
 void polint(double xain[], double yain[], int n, double x, double *y, double *dy);
@@ -2491,7 +2492,6 @@ void (*nrfuncvD)(int n, double v[], double fvec[], int i, int j, double shift[3]
 
 extern void fdjac(int n, double x[], double fvec[], double **fjac, 
 		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j, double shift[3]), int iA, int iB, double shift[3]); 
-double fmin(double x[], int iA, int iB, double shift[3]);
 double fminD(double x[], int iA, int iB, double shift[3]);
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], double *f, 
 	    double stpmax, int *check, double (*func)(double [], int, int, double []),
