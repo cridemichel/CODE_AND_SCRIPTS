@@ -2788,7 +2788,7 @@ int interpol(int i, int j, int nn,
       *tmin += tref;
       return 0;
     }
-#if 1
+#if 0
   if (OprogStatus.tryharder==0)
     return 1;
   if (*tmin > t + delt || *tmin < t) 
@@ -3027,7 +3027,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #ifdef MD_NEGPAIRS
   sumnegpairs = check_negpairs(negpairs, distsOld, bondpair, i, j); 
 #endif
-
+#if 0
 #ifdef MD_NEGPAIRS
   /* NOTA: inizia poco prima di t1 se l'ultimo urto tra le molecole è stata una collisione delle sfere dure 
    * per evitare problemi legati al fatto che il punto iniziale in tale caso puo' essere molto a ridosso 
@@ -3051,7 +3051,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	
     }
 #endif
-  
+#endif  
   if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot, maxddoti))
     {
       return 0;  
