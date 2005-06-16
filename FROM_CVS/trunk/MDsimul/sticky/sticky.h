@@ -304,6 +304,7 @@ struct progStatus
   double scaleVolTime;
   int brownian;
   int checkGrazing;
+  int tryharder;
   double h;
   double epsd;
   double epsdFast;
@@ -509,6 +510,7 @@ struct pascii opro_ascii[] =
   {"ipart",        &OS(ipart),                      1,   1, "%d"},
   {"brownian",     &OS(brownian),                   1,   1, "%d"},
   {"checkGrazing", &OS(checkGrazing),               1,   1, "%d"},
+  {"tryharder",    &OS(tryharder),                  1,   1, "%d"},
   {"HNBOX",        &OS(HNBOX),                      1,   1,  "%d"},
   {"avngTemp",     &OS(avngTemp),                   1,   1,  "%d"},
   {"avngPress",    &OS(avngPress),                  1,   1,  "%d"},
@@ -636,6 +638,7 @@ struct singlePar OsinglePar[] = {
   {"DtrName",    &OprogStatus.dataFiles[1],   STR},
   {"brownian",   &OprogStatus.brownian,       INT},
   {"checkGrazing",  &OprogStatus.checkGrazing, INT},
+  {"tryharder",     &OprogStatus.tryharder,    INT},
   {"tempSteps",  &OprogStatus.measSteps[2],   LLINT},
   {"tempCalc",   &OprogStatus.measCalc[2],    LLINT},
   {"tempName",   &OprogStatus.dataFiles[2],   STR},

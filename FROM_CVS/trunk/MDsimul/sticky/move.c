@@ -2684,13 +2684,91 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
+double choose_seg(int i, int j, double tref, int nn, double shift[3], double xa[3], double ya[3],
+		  double *tmin, double *dmin)
+{
+  double xal[3], yal[3], xar[3], yar[3], tminr, tminl, dminr, dminl;
+  double A, B, C;
+  xal[0] = xa[0];
+  yal[0] = ya[0];
+  xal[1] = (xal[0]+xal[1])*0.5;
+  yal[1] = calcDistNegOne(xal[1], tref, i, j, nn, shift);
+  xal[2] = xa[1];
+  yal[2] = ya[1];
+  A = xal[2]*(yal[0]-yal[1]);
+  B = xal[0]*(yal[1]-yal[2]);
+  C = xal[1]*(yal[2]-yal[0]);
+  tminl = (xal[2]*A+xal[0]*B+xal[1]*C)/(A+B+C)/2.0;
+  dminl = calcDistNegOne(tminl, tref, i, j, nn, shift);
+  xar[0] = xa[1];
+  yar[0] = ya[1];
+  xar[1] = (xal[1]+xal[2])*0.5;
+  yar[1] = calcDistNegOne(xar[1], tref, i, j, nn, shift);
+  xar[2] = xa[2];
+  yar[2] = ya[2];
+  A = xar[2]*(yar[0]-yar[1]);
+  B = xar[0]*(yar[1]-yar[2]);
+  C = xar[1]*(yar[2]-yar[0]);
+  tminr = (xar[2]*A+xar[0]*B+xar[1]*C)/(A+B+C)/2.0;
+  dminr = calcDistNegOne(tminr, tref, i, j, nn, shift);
+  if ((tminl < xal[0] || tminl > xal[2]) && (tminr < xar[0] || tminr > xar[2]))
+   return 1;
+  else if (tminl > xal[0] && tminl < xal[2])
+    {
+      xa[0] = xal[0];
+      ya[0] = yal[0];
+      xa[1] = xal[1];
+      ya[1] = yal[1];
+      xa[2] = xal[2];
+      ya[2] = yal[2];
+      *tmin = tminl;
+      *dmin = dminl;
+      return 0;
+    }
+  else
+    {
+      xa[0] = xar[0];
+      ya[0] = yar[0];
+      xa[1] = xar[1];
+      ya[1] = yar[1];
+      xa[2] = xar[2];
+      ya[2] = yar[2];
+      *tmin = tminr;
+      *dmin = dminr;
+      return 0;
+    }
+  if (fabs(dminl) < fabs(dminr))
+    {
+      xa[0] = xal[0];
+      ya[0] = yal[0];
+      xa[1] = xal[1];
+      ya[1] = yal[1];
+      xa[2] = xal[2];
+      ya[2] = yal[2];
+      *tmin = tminl;
+      *dmin = dminl;
+      return 0;
+    }
+  else
+    {
+      xa[0] = xar[0];
+      ya[0] = yar[0];
+      xa[1] = xar[1];
+      ya[1] = yar[1];
+      xa[2] = xar[2];
+      ya[2] = yar[2];
+      *tmin = tminr;
+      *dmin = dminr;
+      return 0;
+    }
+} 
 
 int interpol(int i, int j, int nn, 
 	     double tref, double t, double delt, double d1, double d2,
 	     double *tmin, double shift[3])
 {
-  int nb, amin, bmin;
-  double d3, A, B, C, dmin;
+  int its, nb, amin, bmin;
+  double d3, A, B, C, dmin, dminnew, tminnew;
   double dists[MD_PBONDS];
   /* NOTA: dists di seguito può non essere usata? controllare!*/
   d3 = calcDistNegOne(t+delt*0.5, tref, i, j, nn, shift);
@@ -2700,49 +2778,44 @@ int interpol(int i, int j, int nn,
   ya[1] = d3;
   xa[2] = t+delt;
   ya[2] = d2;
-#if 0
-  polinterr = 0;
-  if (!bracketing)
-    {
-      t1 = t;
-      t2 = t+delt;
-    }
-  else
-    {
-      t1 = t;
-      t2 = t+delt;
-      nb = 1;
-      zbrak(distfunc, t1, t2, OprogStatus.zbrakn, xb1, xb2, &nb);
-      if (nb==0 || polinterr==1)
-	{
-	  return 1;
-	}
-      /* NOTA: t1 resta fisso in zbrak */
-      //t1 = xb1[0];
-      *troot = xb2[0]+tref;
-    }
-  if (polinterr)
-    return 1;
-#endif
   A = xa[2]*(ya[0]-ya[1]);
   B = xa[0]*(ya[1]-ya[2]);
   C = xa[1]*(ya[2]-ya[0]);
   *tmin = (xa[2]*A+xa[0]*B+xa[1]*C)/(A+B+C)/2.0;
   dmin = calcDistNegOne(*tmin, tref, i, j, nn, shift);
-#if 0
-  if (d1*d3 < 0.0 && fabs(d1) > 1E-10)
-    {
-      printf("dmin=%.15G t=%.15G tmin=%.15G t+delt=%.15G\n", dmin, t, *tmin, t+delt);
-      printf("{x0->%.15G, y0->%.15G, x1->%.15G, y1->%.15G, x2->%.15G, y2->%.15G}\n",
-	 xa[0], ya[0], xa[1], ya[1], xa[2], ya[2]);
-    }
-#endif
   if (*tmin < t+delt && *tmin > t && d1*dmin < 0.0)
     {
-      //printf(">>>*tmin=%.15G dmin=%.15G\n", *tmin, dmin);
       *tmin += tref;
       return 0;
     }
+#if 1
+  if (OprogStatus.tryharder==0)
+    return 1;
+  if (*tmin > t + delt || *tmin < t) 
+    return 1;
+  /* inizia la dicotomia */
+  for (its = 0; its < OprogStatus.tryharder; its++)
+    {
+      xa[1] = *tmin;
+      ya[1] = dmin;
+      if (choose_seg(i, j, tref, nn, shift, xa, ya, &tminnew, &dminnew))
+	return 1;
+      if (fabs(dminnew) > fabs(dmin))
+	{
+ 	  if (dmin*d1 < 0.0)
+	    {
+	      if (its > 0)
+    		printf("beccato provando duramente :) its=%d\n", its);
+	      *tmin += tref;
+	      return 0;
+	    }
+	  return 1;
+	}
+      dmin = dminnew;
+      *tmin = tminnew;
+    }
+#endif
+   // printf("t=%.15G tmin=%.15G t+delt=%.15G dmin=%.15G d1=%.15G d2=%.15G d3=%.15G\n", t, *tmin, t+delt, dmin, d1, d3, d2);
   return 1;
 }
 
