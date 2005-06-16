@@ -1756,26 +1756,10 @@ void usrInitAft(void)
     }
   u2R();
   save_init_conf();
-  if (OprogStatus.CMreset==-1)
-    {
-      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-      angvel(); 
-      calc_energy(NULL);
-      scalevels(Oparams.T, K);
-      resetCM();
-    }
-  else if (OprogStatus.CMreset==-2)
-    {
-      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-      angvel(); 
-      calc_energy(NULL);
-      scalevels(Oparams.T, K);
-     }
-
   if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);
-
+      
       if ( overlap ) 
 	{
 	  printf("ERROR: Particle overlap in initial configuration\n");
@@ -1784,6 +1768,22 @@ void usrInitAft(void)
     }
   if (newSim)
     {
+      if (OprogStatus.CMreset==-1)
+	{
+	  comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+	  angvel(); 
+	  calc_energy(NULL);
+	  scalevels(Oparams.T, K);
+	  resetCM();
+	}
+      else if (OprogStatus.CMreset==-2)
+	{
+	  comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+	  angvel(); 
+	  calc_energy(NULL);
+	  scalevels(Oparams.T, K);
+	}
+      
       Oparams.time=0.0;
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = 0.0;
