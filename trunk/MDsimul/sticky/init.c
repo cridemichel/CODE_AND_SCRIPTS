@@ -948,6 +948,7 @@ void usrInitBef(void)
     OprogStatus.avngTemp  = 0;
     OprogStatus.scalevel = 0;
     OprogStatus.endtime = 0;
+    OprogStatus.tryharder = 0;
     OprogStatus.rescaleTime = 1.0;
     OprogStatus.brownian = 0;
     OprogStatus.checkGrazing = 0;
