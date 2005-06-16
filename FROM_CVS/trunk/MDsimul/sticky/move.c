@@ -2802,10 +2802,11 @@ int interpol(int i, int j, int nn,
 	return 1;
       if (fabs(dminnew) > fabs(dmin))
 	{
- 	  if (dmin*d1 < 0.0)
+ 	  if (dminnew*d1 < 0.0)
 	    {
 	      if (its > 0)
     		printf("beccato provando duramente :) its=%d\n", its);
+	      *tmin = tminnew;
 	      *tmin += tref;
 	      return 0;
 	    }
