@@ -2857,6 +2857,9 @@ int check_negpairs(int *negpairs, double *dists, int bondpair, int i, int j)
 {
   int nn, sum;
   sum = 0;
+//  if (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == 0 
+  //    && lastbump[j].at == 0)
+    //return 2;
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
       negpairs[nn] = 0;
@@ -2877,6 +2880,21 @@ int check_negpairs(int *negpairs, double *dists, int bondpair, int i, int j)
       //printf("bondpair: %d dists[%d]:%.15G\n", bondpair, nn, dists[nn]);
     }
   return (sum > 0)?1:0;
+}
+
+int delt_is_too_big_hc(int i, int j, int bondpair, double *dists, double *distsOld)
+{
+  int nn, retval=0;
+  for (nn=0; nn < MD_PBONDS; nn++)
+    {
+      if (bondpair != -1 && bondpair != nn)
+	continue;
+   if (dists[nn] > 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+      return 1;
+    if (dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+      return 1;
+    }
+  return 0;
 }
 int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 		    int *negpairs)
@@ -2918,11 +2936,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   const int MAXITS = 100;
   int itsRef;
   int its, foundrc, goback;
+  double t1ini, delthc;
   double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
   int kk,tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
       crossed[MD_PBONDS], firstaftsf;
 #ifdef MD_NEGPAIRS
- int negpairs[MD_PBONDS], sumnegpairs;
+  int negpairs[MD_PBONDS], sumnegpairs;
 #endif
   const double GOLD= 1.618034;
   epsd = OprogStatus.epsd;
@@ -2942,7 +2961,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
    *   che rallentano moltissimo. Infatti tale ricerca veloce serve solo nel caso in cui due ellissoidi si 
    *   sfiorano per poi allontanrsi. 
    */
-  t = 0;
+  t = 0.0;
   bondpair = get_bonded(i, j);
 #ifdef MD_OPTDDIST
   maxddot = eval_maxddist(i, j, bondpair, t1, maxddoti);
@@ -3008,6 +3027,31 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #ifdef MD_NEGPAIRS
   sumnegpairs = check_negpairs(negpairs, distsOld, bondpair, i, j); 
 #endif
+
+#ifdef MD_NEGPAIRS
+  /* NOTA: inizia poco prima di t1 se l'ultimo urto tra le molecole è stata una collisione delle sfere dure 
+   * per evitare problemi legati al fatto che il punto iniziale in tale caso puo' essere molto a ridosso 
+   * del crossing (ciò accade nella regione intorno all'intersezione della sticky spheres con la sfera dura. */
+  //d = calcDistNeg(0, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+  if (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == 0 
+      && lastbump[j].at == 0)// && fabs(d) < epsd)
+    {
+      delthc = epsdFast/maxddot + OprogStatus.h;
+      t1ini = t1;
+      t1 -= delthc;
+      //printf("INIZIO t1=%.15G delthc=%.15G tini=%.15G\n", t1, delthc, t1ini);
+      while (delt_is_too_big_hc(i, j, bondpair, dists, distsOld) && 
+	     delthc > minh)
+    	{
+	  delthc /= GOLD; 
+	  t1 = t1ini - delthc;
+	  d = calcDistNeg(0, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	  //printf("d=%.15G t1=%.15G delthc=%.15G tini=%.15G\n", d, t1, delthc, t1ini);
+	}
+	
+    }
+#endif
+  
   if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot, maxddoti))
     {
       return 0;  
@@ -3023,7 +3067,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #else
   dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
 #endif
- firstaftsf = 1;
+  firstaftsf = 1;
   its = 0;
   while (t+t1 < t2)
     {
