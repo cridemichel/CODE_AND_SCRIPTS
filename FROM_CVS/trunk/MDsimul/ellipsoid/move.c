@@ -708,7 +708,8 @@ void outputSummary(void)
     printf("Percentage of failed dist=%.6f%%\n", 100.0*(((double) numdisttryagain) / numcalldist));
   printf("Number of collisions: %lld\n", numcoll);
   
-  scale_Phi();
+  if (!ENDSIM)
+    scale_Phi();
 #ifdef MD_GRAVITY
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
 	 (2.0*K/(3.0*Oparams.parnum-3.0)), Vz);
@@ -4445,9 +4446,8 @@ void PredictEvent (int na, int nb)
 #if 1
   if (tm[k]<0)
     {
-      tm[k] = 0.0;
 #if 1
-      printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
+      printf("tm[%d]<0=%.15G step %lld na=%d\n", k, tm[k], (long long int)Oparams.curStep, na);
 #ifdef MD_GRAVITY
       printf("rz:%f diff:%f\n", rz[na], rz[na]+Lz2);
       printf("h1:%f hh1:%f vz:%f cellz:%d\n", h1, hh1, vz[na], inCell[2][na]);
@@ -4458,6 +4458,7 @@ void PredictEvent (int na, int nb)
       /*exit(-1);*/
       /*tm[k] = 0.0;*/
 #endif
+      tm[k] = 0.0;
     }
 #endif
   /* 100+0 = attraversamento cella lungo x
