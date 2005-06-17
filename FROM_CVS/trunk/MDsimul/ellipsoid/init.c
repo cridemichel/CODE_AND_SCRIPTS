@@ -85,6 +85,7 @@ void check_coord(void)
 	exit(-1);
       }
 }
+COORD_TYPE ranf(void);
 /* ============================= >>> FCC <<< ================================*/
 void FCC(int Nm, COORD_TYPE *m)
 {
@@ -200,15 +201,15 @@ void FCC(int Nm, COORD_TYPE *m)
   for(i = 0;i < Nm; i++)
     {
       /* Initial position values are between -0.5 and 0.5 */
-      rx[i] = rx[i] - 0.5 * L; 
-      ry[i] = ry[i] - 0.5 * L;
+      rx[i] = rx[i] - 0.5 * L + ranf()*1E-7; 
+      ry[i] = ry[i] - 0.5 * L + ranf()*1E-7;
 #ifdef MD_GRAVITY
       if (i < Oparams.parnumA)
 	rz[i] = rz[i] - 0.5 * Lz + Oparams.sigma[0][0]*0.5 + 0.1;
       else
 	rz[i] = rz[i] - 0.5 * Lz + Oparams.sigma[1][1]*0.5 + 0.1;
 #else
-      rz[i] = rz[i] - 0.5 * L;
+      rz[i] = rz[i] - 0.5 * L + ranf()*1E-7;
 #endif
       //printf("%d = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]);
     }
