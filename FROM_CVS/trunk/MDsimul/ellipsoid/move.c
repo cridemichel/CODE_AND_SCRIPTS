@@ -5624,6 +5624,11 @@ void move(void)
 	{
 	  UpdateSystem();
 	  R2u();
+	  if (Oparams.curStep == Oparams.totStep)
+	    {
+	      outputSummary();
+	    }
+
 #if 0
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
@@ -5837,6 +5842,11 @@ void move(void)
 #endif
       if (OprogStatus.endtime > 0 && Oparams.time > OprogStatus.endtime)
 	ENDSIM = 1;
+      if (ENDSIM)
+	{
+	  outputSummary();
+	}
+
 #if 1 && defined(MD_SQWELL) && defined(MD_BONDCORR)
       corr3 = corr1 = corr2 = 0;
       for (i=0; i < Oparams.parnum; i++)
