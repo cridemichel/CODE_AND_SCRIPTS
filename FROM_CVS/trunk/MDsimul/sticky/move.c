@@ -2386,7 +2386,7 @@ int refine_contact(int i, int j, double tref, double t1, double t2, int nn, doub
   trefbr = tref;
   for (kk=0; kk < 3; kk++)
     shiftbr[kk] = shift[kk];
-  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-16);
+  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-20);
   *troot += tref;
   if (polinterr==1)
     {
@@ -2853,7 +2853,7 @@ int get_bonded(int i, int j)
 
 }
 
-int check_negpairs(int *negpairs, double *dists, int bondpair, int i, int j)
+int check_negpairs(int *negpairs, int bondpair, int i, int j)
 {
   int nn, sum;
   sum = 0;
@@ -3025,7 +3025,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
   MD_DEBUG30(printf("[BEFORE SEARCH CONTACT FASTER]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
 #ifdef MD_NEGPAIRS
-  sumnegpairs = check_negpairs(negpairs, distsOld, bondpair, i, j); 
+  sumnegpairs = check_negpairs(negpairs, bondpair, i, j); 
 #endif
 #if 0
 #ifdef MD_NEGPAIRS
