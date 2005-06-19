@@ -2599,6 +2599,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
   timesF++;
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
+  delt = OprogStatus.h;
   if (fabs(*d1) < epsdFast)
     {
       assign_dists(distsOld, dists);
@@ -2684,6 +2685,7 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
+#if 0
 double choose_seg(int i, int j, double tref, int nn, double shift[3], double xa[3], double ya[3],
 		  double *tmin, double *dmin)
 {
@@ -2762,7 +2764,7 @@ double choose_seg(int i, int j, double tref, int nn, double shift[3], double xa[
       return 0;
     }
 } 
-
+#endif
 int interpol(int i, int j, int nn, 
 	     double tref, double t, double delt, double d1, double d2,
 	     double *tmin, double shift[3])
@@ -3102,6 +3104,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
     	      //else
 		//delt = t*h;
 	    }
+
 	  if (fabs(dold) < epsd)
     	    {
     	      delt = epsd / maxddot;
