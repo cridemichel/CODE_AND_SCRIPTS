@@ -1614,6 +1614,8 @@ void check_all_bonds(void)
 	  mdPrintf(ALL, "[WARNING] wrong number of bonds\n", NULL);
 	  sprintf(TXT,"[WARNING] Number of bonds for molecules %d incorrect\n", i);
 	  mdPrintf(ALL, TXT, NULL);
+	  sprintf(TXT,"Step N. %d time=%.15G\n", Oparams.curStep, Oparams.time);
+	  mdPrintf(ALL, TXT, NULL);
 	  if (warn==1)
 	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n",NULL);
 	  else
