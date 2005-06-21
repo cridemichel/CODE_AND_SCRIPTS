@@ -2386,7 +2386,7 @@ int refine_contact(int i, int j, double tref, double t1, double t2, int nn, doub
   trefbr = tref;
   for (kk=0; kk < 3; kk++)
     shiftbr[kk] = shift[kk];
-  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-20);
+  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-16);
   *troot += tref;
   if (polinterr==1)
     {
