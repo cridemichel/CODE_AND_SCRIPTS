@@ -51,8 +51,7 @@ long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
 void ScheduleEventBarr (int idA, int idB, int idata, int atb, int idcollcode, double tEvent);
-double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
-		   double dists[MD_PBONDS], int bondpair);
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double dists[MD_PBONDS], int bondpair);
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
 void remove_bond(int na, int n, int a, int b);
 void add_bond(int na, int n, int a, int b);
