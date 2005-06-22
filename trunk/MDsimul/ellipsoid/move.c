@@ -26,6 +26,7 @@ extern double *maxax;
 extern double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane);
 
 extern double *lastupdNNL, *totDistDispl;
+double rA[3], rB[3];
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
@@ -216,6 +217,52 @@ double
 calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
 	    double *vecgsup, int calcguess);
 
+double get_min_dist_NNL (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
+{
+  /* na = atomo da esaminare 0 < na < Oparams.parnum 
+   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
+   *      -2 = controlla solo cell crossing e urti con pareti 
+   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
+   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
+   *      */
+  double distMin=1E10,dist,vecg[8], alpha, shift[3];
+  /*double cells[NDIM];*/
+  int kk, i;
+  double r1[3], r2[3], rAB[3];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+ /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+  MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
+  calcdist_retcheck = 0;
+  for (i=0; i < nebrTab[na].len; i++)
+    {
+      n = nebrTab[na].list[i]; 
+      if (!(n != na))
+	continue;
+      shift[0] = L*rint((rx[na]-rx[n])/L);
+      shift[1] = L*rint((ry[na]-ry[n])/L);
+      shift[2] = L*rint((rz[na]-rz[n])/L);
+
+      if (n!=na) 
+	{
+	  dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
+	  if (calcdist_retcheck)
+	    continue;
+	  if (*jmin == -1 || dist<distMin)
+	    {
+	      distMin = dist;
+	      for (kk = 0; kk < 3; kk++)
+		{
+		  rCmin[kk] = r1[kk];
+		  rDmin[kk] = r2[kk];
+		  shiftmin[kk] = shift[kk];
+		}
+	      *jmin = n;
+	    }
+	}
+    } 
+  return distMin;
+}
 
 double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
 {
@@ -228,7 +275,7 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
   double distMin=1E10,dist,vecg[8], alpha, shift[3];
   /*double cells[NDIM];*/
   int kk;
-  double r1[3], r2[3];
+  double r1[3], r2[3], rAB[3];
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
@@ -396,13 +443,14 @@ void scale_coords(double sf)
       rz[i] *= sf;
     }
 }
+double max3(double a, double b, double c);
 
 double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], double rD[3], 
 		      double shift[3], double scalfact, double *factor)
 {
   int kk;
   double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
-  double boxdiag;
+  double boxdiag, maxaxNNL, maxaxStore;
   L2 = 0.5 * L;
   phi = calc_phi();
   phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
@@ -432,7 +480,15 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
     fact = F;
   else
     {
-      fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
+      if (OprogStatus.useNNL)
+	{
+	  maxaxNNL = 2.0*max3(nebrTab[i].axa, nebrTab[i].axb,nebrTab[i].axc);
+	  maxaxStore = 2.0*max3(aL,bL, cL);
+	}
+      if (OprogStatus.useNNL && maxax[i] / maxaxNNL > 1.0)
+	fact1 = 1.0 + scalfact*(maxaxNNL / maxaxStore - 1.0);
+      else
+	fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
       fact2 = F;
       if (fact2 < fact1)
 	fact = fact2;
@@ -501,8 +557,11 @@ double check_dist_min(int i, char *msg)
   double distMin=1E60, rC[3], rD[3], shift[3];
   
   j = -1;
-  distMin = get_min_dist(i, &j, rC, rD, shift);
-    
+  if (OprogStatus.useNNL)
+    distMin = get_min_dist_NNL(i, &j, rC, rD, shift);
+  else
+    distMin = get_min_dist(i, &j, rC, rD, shift);
+
   if (msg)
     printf("[check_dist_min] %s distMin: %.12G\n", msg, distMin);
 
@@ -516,7 +575,10 @@ double check_alldist_min(char *msg)
   for (i=0; i < Oparams.parnum; i++)
     {
       j = -1;
-      dist = get_min_dist(i, &j, rC, rD, shift);
+      if (OprogStatus.useNNL)
+	dist = get_min_dist_NNL(i, &j, rC, rD, shift);
+      else
+	dist = get_min_dist(i, &j, rC, rD, shift);
       if (j != -1 && dist < distMin)
 	distMin = dist;
     }
@@ -531,7 +593,7 @@ void scale_Phi(void)
   int i, j, imin, kk, its, done=0;
   static int first = 1;
   static double a0I, target;
-  double distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
+  double maxaxNNL, distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
   double L2, shift[3], shiftmin[3], phi, scalfact, factor, axai;
   if (OprogStatus.targetPhi <= 0)
     return;
@@ -562,7 +624,10 @@ void scale_Phi(void)
 	  done++;
 	  continue;
 	}
-      distMin = get_min_dist(i, &j, rC, rD, shift);
+      if (OprogStatus.useNNL)
+	distMin = get_min_dist_NNL(i, &j, rC, rD, shift);
+      else
+	distMin = get_min_dist(i, &j, rC, rD, shift);
       if (calcdist_retcheck)
 	continue;
       if (j == -1)
@@ -599,7 +664,6 @@ void scale_Phi(void)
 	  scalfact *= OprogStatus.reducefact;
 	  its++;
 	}
-  
 
 #if 0
       if (dist < distMin)
@@ -2028,7 +2092,6 @@ void calcFxtFt(double x[3], double **X,
 }
 //#define MD_GLOBALNR
 #undef MD_GLOBALNR2
-double rA[3], rB[3];
 void fdjacGuess(int n, double x[], double fvec[], double **df, 
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 {
