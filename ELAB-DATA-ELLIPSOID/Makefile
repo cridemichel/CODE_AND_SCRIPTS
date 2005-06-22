@@ -35,6 +35,9 @@ DEF_CORR_Y = -DNpart=256
 # defines for the CORR-SQY program 
 DEF_CORR_SQY = -DNpart=256
 
+# defines for the CORR-LEN program 
+DEF_CORR_LEN = -DNpart=256
+
 #defines for the ORDPAR program
 DEF_SHOW = -DNpart=256
 
@@ -56,6 +59,7 @@ default:
 	@echo "   make AVE-SQY : averages the files calculated with SQY.x"
 	@echo "   make CORR-Y  : correlation functions for Y10 and Y20"
 	@echo "   make CORR-SQY: correlation functions for SQY at a given Q-vector"
+	@echo "   make CORR-LEN: correlation lenght for 2nd Legendre polynomial"
 	@echo "   make ORDPAR  : nematic order parameter"
 	@echo "   make CLUSTER : processe a configuration for molgl" 
 	@echo "   make SHOW    : show infos about a configuration" 
@@ -67,7 +71,7 @@ default:
 
 # 
 #all: R2 SQY CORR-Y CORR-SQY CLUSTER
-all: COUPLES
+all: CORR-LEN
 
 
 # calculate R2
@@ -91,6 +95,9 @@ CORR-Y: $(Pread_crist)  $(Hread_crist) calc_corr_Y_cristiano.c
 CORR-SQY: $(Pread_crist)  $(Hread_crist) calc_corr_SQY_cristiano.c
 	$(CC) $(CFLAGS) $(ARCH) $(LIB) $(INCL) $(OPT) $(Pread_crist)  $(DEF_CORR_SQY) calc_corr_SQY_cristiano.c -o CORR-SQY.x
 
+# calculate correlation lenght from P2(theta)
+CORR-LEN: $(Pread_crist)  $(Hread_crist) calc_corr_LEN_cristiano.c
+	$(CC) $(CFLAGS) $(ARCH) $(LIB) $(INCL) $(OPT) $(Pread_crist)  $(DEF_CORR_LEN) calc_corr_LEN_cristiano.c -o CORR-LEN.x
 
 #nematic order parameter
 ORDPAR: $(Pread_crist)  $(Hread_crist) $(Pspher_harm) $(Protmatrix) calc_ordpar_cristiano.c
