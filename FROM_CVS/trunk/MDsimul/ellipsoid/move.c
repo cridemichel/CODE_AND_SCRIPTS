@@ -653,7 +653,9 @@ void scale_Phi(void)
 	  continue;
 	}
       its = 0;
-      while (distMinT < 0)
+      while ( distMinT < 0 || 
+	     (distMinT > distMin && factor > 1.0) ||
+	     (distMinT < distMin && factor < 1.0) )
 	{
 	  restore_values(i);
 	  phi = scale_axes(i, distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact, &factor);
