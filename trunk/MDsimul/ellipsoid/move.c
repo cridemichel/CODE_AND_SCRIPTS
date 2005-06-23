@@ -1203,7 +1203,16 @@ extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 double calcDist(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
-
+void update_MSDrot(int i)
+{
+  double ti;
+  ti = Oparams.time - lastcol[i];
+  /* sumox, sumoy e sumoz sono gli integrali nel tempo delle componenti della velocità
+   * angolare lungo gli assi dell'ellissoide */
+  OprogStatus.sumox[i] += (wx[i]*R[i][0][0]+wy[i]*R[i][0][1]+wz[i]*R[i][0][2])*ti;
+  OprogStatus.sumoy[i] += (wx[i]*R[i][1][0]+wy[i]*R[i][1][1]+wz[i]*R[i][1][2])*ti;
+  OprogStatus.sumoz[i] += (wx[i]*R[i][2][0]+wy[i]*R[i][2][1]+wz[i]*R[i][2][2])*ti;
+}
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
   /*
@@ -1451,6 +1460,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
   MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
+
+  update_MSDrot(i);
+  update_MSDrot(j);
 #ifdef MD_ASYM_ITENS
   for (a=0; a < 3; a++)
     {

@@ -67,7 +67,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define NK 10000
 #define NA 1 /* number of atoms for each molecule (particle) */
 
-#define MAXPAR 3000      /* maximum number of simulated particles */
+#define MAXPAR 5000      /* maximum number of simulated particles */
 
 #define NUM_PAR 2000   /* Number of particles for the simulation */
 #define NUMK 99    /* number of k-points in which we must  calculate the 
@@ -252,6 +252,10 @@ struct progStatus
   COORD_TYPE PxyArr[5];
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
+  double sumox[MAXPAR];
+  double sumoy[MAXPAR];
+  double sumoz[MAXPAR];
+
   double springkSD;
   int SDmethod;
   double toldxNR;
@@ -489,6 +493,9 @@ struct pascii opro_ascii[] =
   {"PxyArr",       OS(PxyArr),                      5,              1, "%.10G"},
   {"PyzArr",       OS(PyzArr),                      5,              1, "%.10G"},
   {"PzxArr",       OS(PzxArr),                      5,              1, "%.10G"},
+  {"sumox",        OS(sumox),                       -MAXPAR,        1, "%.15G"},
+  {"sumoy",        OS(sumoy),                       -MAXPAR,        1, "%.15G"},
+  {"sumoz",        OS(sumoz),                       -MAXPAR,        1, "%.15G"},
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
   {"histMB",       OS(histMB),                  NUMV,               1, "%d"},
@@ -716,6 +723,9 @@ struct singlePar OsinglePar[] = {
   {"VSteps",  &OprogStatus.measSteps[9],   LLINT},
   {"VCalc",   &OprogStatus.measCalc[9],    LLINT},   
   {"VName",   &OprogStatus.dataFiles[9],   STR},
+  {"rotMSDSteps",  &OprogStatus.measSteps[10],   LLINT},
+  {"rotMSDCalc",   &OprogStatus.measCalc[10],    LLINT},   
+  {"rotMSDName",   &OprogStatus.dataFiles[10],   STR},
   {"CMreset",    &OprogStatus.CMreset,        INT},
   {"rNebrShell", &OprogStatus.rNebrShell,     CT},
   {"nebrTabFac", &OprogStatus.nebrTabFac,     INT},
@@ -869,14 +879,13 @@ extern struct singlePar OsinglePar[];
 #ifdef MAIN
 COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,
   press_m, press_at, rcmz, rho, ItensD[2][3];
-COORD_TYPE Ptens[3], DQtens[3], 
-  sqrtdr2, Aa, V, DrSqTot, temp_transl;
+COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, Aa, V, DrSqTot, temp_transl, DphiSq;
 int MB[NUMV];
 #else 
 extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs,
   press, press_m, press_at, temp_transl, rcmz, rho;
 extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot,
-  DphiSq, ItensD[2][3];
+  DphiSq, ItensD[2][3], DphiSq;
 extern int MB[NUMV];
 #endif
 
@@ -896,7 +905,7 @@ void DQtensor(void);
 void vanHoveSelf(void);
 void intermScatt(void);
 void gaussapprox(void);
-
+void calcrotMSD(void);
 /* =========================================================================*/
 #ifdef MAIN
 struct measure Omeasure[NUM_MISURE]=
@@ -904,7 +913,7 @@ struct measure Omeasure[NUM_MISURE]=
   /* DESCRIPTION:
      {<1>, <2>, <3>} where:
      <1> = pointer to the single measure, that could a variable, an array, 
-     struct or whatevere you want. 
+     struct or whatever you want. 
      <2> = size of each measure ( variable, struct, array, etc.)
      <3> = pointer to the function that performs the calculation of the 
            measure ( NULL means that there is no need for this function )*/
@@ -919,7 +928,8 @@ struct measure Omeasure[NUM_MISURE]=
   {&press,  sizeof(COORD_TYPE),       NULL        },
   {Ptens,   sizeof(COORD_TYPE)*3,     Ptensor     },
   {DQtens,  sizeof(COORD_TYPE)*3,     DQtensor    },
-  {&V,       sizeof(double),          calcV       },
+  {&V,      sizeof(double),           calcV       },
+  {&DphiSq, sizeof(double),           calcrotMSD    },
   /* ======================================================================= */
   {NULL, 0, NULL}                   /* End of list don't touch this */
 };
