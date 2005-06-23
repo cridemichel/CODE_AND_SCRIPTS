@@ -778,6 +778,12 @@ void usrInitBef(void)
     for (i = 0; i < 2; i++)
       Oparams.I[i] = 1.0;
 #endif
+    for (i = 0; i < MAXPAR; i++)
+      {
+	OprogStatus.sumox[i] = 0.0;
+	OprogStatus.sumoy[i] = 0.0;
+	OprogStatus.sumoz[i] = 0.0;
+      }
     OprogStatus.eventMult = 100;
     OprogStatus.overlaptol = 0.0001;
     /* Il promo step inizia con un tapping a temperatura T */
@@ -1160,7 +1166,6 @@ void usrInitAft(void)
     lastcol= malloc(sizeof(double)*Oparams.parnum);
     atomTime = malloc(sizeof(double)*Oparams.parnum);
     lastbump = malloc(sizeof(int)*Oparams.parnum);
-   
     cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
     inCell[0] = malloc(sizeof(int)*Oparams.parnum);
     inCell[1]= malloc(sizeof(int)*Oparams.parnum);
@@ -1255,9 +1260,30 @@ void usrInitAft(void)
 #endif
   if (newSim)
     {
+      FILE *f;
       Oparams.time=0.0;
+      /* truncate file to zero lenght */
+      f = fopenMPI(absMisHD("MSDA.dat"), "w+");
+      fclose(f);
+      f = fopenMPI(absMisHD("rotMSDA.dat"), "w+");
+      fclose(f);
+      if (Oparams.parnum > Oparams.parnumA)
+	{
+	  f = fopenMPI(absMisHD("MSDB.dat"), "w+");
+	  fclose(f);
+      	  f = fopenMPI(absMisHD("rotMSDB.dat"), "w+");
+	  fclose(f);
+	}
+      f = fopenMPI(absMisHD("temp.dat"), "w+");
+      fclose(f);
+     
       for (i=0; i < Oparams.parnum; i++)
-	atomTime[i] = 0.0;
+	{
+	  atomTime[i] = 0.0;
+	  OprogStatus.sumox[i] = 0.0;
+	  OprogStatus.sumoy[i] = 0.0;
+	  OprogStatus.sumoz[i] = 0.0;
+	}
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
       if (OprogStatus.storerate > 0.0)
@@ -1269,6 +1295,7 @@ void usrInitAft(void)
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = Oparams.time;
     }
+
   axa = malloc(sizeof(double)*Oparams.parnum);
   axb = malloc(sizeof(double)*Oparams.parnum);
   axc = malloc(sizeof(double)*Oparams.parnum);

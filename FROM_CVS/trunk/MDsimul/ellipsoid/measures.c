@@ -17,6 +17,7 @@ extern char msgStrA[MSG_LEN];
 char TXTA[10][MSG_LEN];
 char TXT[MSG_LEN];
 extern double Vz;
+extern double ***R;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
  in the move function and in the measuring functions, note that the variables 
@@ -241,20 +242,21 @@ void energy(void)
 /* ========================== >>> transDiff <<< =============================*/
 void transDiff(void)
 {
+  FILE *f;
   /* DESCRIPTION:
      This mesuring functions calculates the Translational Diffusion 
      coefficent */
   double Drx, Dry, Drz, Dr4;
   int i;
-  
   DrSqTot = 0.0;
   Dr4 = 0.0;
-
+  f = fopen("MSDA.dat", "a");
   for(i=0; i < Oparams.parnumA; i++)
     {
       Drx = rx[i] - OprogStatus.rxCMi[i] + L*OprogStatus.DR[i][0]; 
       Dry = ry[i] - OprogStatus.ryCMi[i] + L*OprogStatus.DR[i][1];
       Drz = rz[i] - OprogStatus.rzCMi[i] + L*OprogStatus.DR[i][2];
+#if 0
       if (OprogStatus.ipart == i)
 	{
 	  //sprintf(TXT,"i = %d\n", i);
@@ -262,22 +264,100 @@ void transDiff(void)
 	  /* Motion of the OprogStatus.ipart particle */
 	  sqrtdr2 = sqrt(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
 	}
+#endif
       DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
-      Dr4 += Sqr(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
+      //Dr4 += Sqr(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
    }
+  fprintf(f, "%.15G %.15G\n", Oparams.time, DrSqTot / ((double) Oparams.parnumA));
+  fclose(f);
+  if (Oparams.parnumA < Oparams.parnum)
+    {
+      f = fopen("MSDB.dat", "a");
+      DrSqTot = 0.0;
+      for(i=Oparams.parnumA; i < Oparams.parnum; i++)
+	{
+	  Drx = rx[i] - OprogStatus.rxCMi[i] + L*OprogStatus.DR[i][0]; 
+	  Dry = ry[i] - OprogStatus.ryCMi[i] + L*OprogStatus.DR[i][1];
+	  Drz = rz[i] - OprogStatus.rzCMi[i] + L*OprogStatus.DR[i][2];
+	  DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
+	}
+      
+      fprintf(f, "%.15G %.15G\n", Oparams.time, DrSqTot / 
+	      ((double)Oparams.parnum - Oparams.parnumA));
+      fclose(f);
+    }
   /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
      because DrSq is zero! */
  
   Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time) *
 		       ((double) Oparams.parnumA ) );   
   printf("Dtr: %f\n", Dtrans);
+#if 0
   Aa = ((double) Oparams.parnumA ) * 3.0 * 
     Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
-  
+#endif
   DrSqTot /= ((double) Oparams.parnumA);
   
 }
+void calcrotMSD(void)
+{
+  FILE *fA, *fB;
+  int i, a;
+  double wparal[3], wperp[3], u[3], DphiA[3], DphiB[3], DphiSqA, DphiSqB;
+  DphiSqA = DphiSqB = 0.0;
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      DphiSqA += Sqr(OprogStatus.sumox[i])+Sqr(OprogStatus.sumoy[i])+
+	Sqr(OprogStatus.sumoz[i]);
+    }
+  DphiSqA /= ((double)Oparams.parnumA);
+  if (Oparams.parnumA < Oparams.parnum)
+    {
+      for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+	{
+	  DphiSqB += Sqr(OprogStatus.sumox[i])+Sqr(OprogStatus.sumoy[i])+
+	    Sqr(OprogStatus.sumoz[i]);
+	}
+      DphiSqB /= ((double)Oparams.parnum - Oparams.parnumA);
+    }
+  for (a = 0; a < 3; a++)
+    DphiA[a] = 0.0;
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      DphiA[0] += Sqr(OprogStatus.sumox[i]);
+      DphiA[1] += Sqr(OprogStatus.sumoy[i]);
+      DphiA[2] += Sqr(OprogStatus.sumoz[i]);
+    } 
+  for (a = 0; a < 3; a++)
+    DphiA[a] /= ((double) Oparams.parnumA);
+  if (Oparams.parnumA < Oparams.parnum)
+    {
+      for (a = 0; a < 3; a++)
+	DphiB[a] = 0.0;
+      for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+	{
+       	  DphiB[0] += Sqr(OprogStatus.sumox[i]);
+	  DphiB[1] += Sqr(OprogStatus.sumoy[i]);
+	  DphiB[2] += Sqr(OprogStatus.sumoz[i]);
+	} 
+      for (a = 0; a < 3; a++)
+	DphiB[a] /= ((double) Oparams.parnum-Oparams.parnumA);
+    }
+  DphiSq = DphiSqA;
+  fA = fopenMPI(absMisHD("rotMSDA.dat"),"a");
 
+  fprintf(fA,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, DphiSqA, 
+	  DphiA[0], DphiA[1], DphiA[2]); 
+  fclose(fA);
+  if (Oparams.parnum > Oparams.parnumA)
+    {
+      fB = fopenMPI(absMisHD("rotMSDB.dat"),"a");
+      
+      fprintf(fB,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, DphiSqB,
+	      DphiB[0], DphiB[1], DphiB[2]); 
+      fclose(fB);
+    }
+}
 /* ============================ >>> temperat <<< =========================== */
 void temperat(void)
 {
