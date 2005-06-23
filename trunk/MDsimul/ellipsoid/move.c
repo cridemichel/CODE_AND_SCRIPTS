@@ -861,16 +861,22 @@ void scalevels(double temp, double K)
       vx[i] *= sf;
       vy[i] *= sf;
       vz[i] *= sf;
-      /* scala anche i tempi di collisione! */
+      wx[i] *= sf;
+      wy[i] *= sf;
+      wz[i] *= sf;
+       /* scala anche i tempi di collisione! */
     } 
   for (i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
       vx[i] *= sf;
       vy[i] *= sf;
       vz[i] *= sf;
+      wx[i] *= sf;
+      wy[i] *= sf;
+      wz[i] *= sf;
       /* scala anche i tempi di collisione! */
     } 
-  MD_DEBUG2(printf("sf: %.15f temp: %f K: %f Vz: %.15f minvz:%.15G\n", sf, temp, K, Vz));
+   MD_DEBUG2(printf("sf: %.15f temp: %f K: %f Vz: %.15f minvz:%.15G\n", sf, temp, K, Vz));
 }
 #endif
 /* ============================ >>> updateQ <<< =========================== */
