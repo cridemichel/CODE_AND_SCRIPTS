@@ -855,7 +855,7 @@ void scalevels(double temp, double K)
   int i; 
   double sf;
     
-  sf = sqrt( ( (3.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
+  sf = sqrt( ( (5.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
   for (i = 0; i < Oparams.parnumA; i++)
     {
       vx[i] *= sf;
@@ -5158,7 +5158,8 @@ void calc_energy(char *msg)
   free_matrix(Ia,3);
   free_matrix(Ib,3);
 #endif
-  printf("[%s] Kinetic Energy: %f\n", msg, K);
+  if (msg)
+    printf("[%s] Kinetic Energy: %f\n", msg, K);
 }
 void store_bump_neigh(int i, double *r1, double *r2)
 {
@@ -5899,6 +5900,7 @@ void move(void)
 	      OprogStatus.nextcheckTime += OprogStatus.rescaleTime;
 	      MD_DEBUG2(printf("[TAPTAU < 0] SCALVEL #%lld Vz: %.15f\n", 
 			       (long long int)Oparams.curStep,Vz));
+#if 0
 	      K = 0.0;
 	      for (i = 0; i < Oparams.parnumA; i++)
 		{
@@ -5909,6 +5911,8 @@ void move(void)
 		  K += Oparams.m[1]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
 		}
 	      K *= 0.5;
+#endif
+	      calc_energy(NULL);
 	      scalevels(Oparams.T, K);
 	      if (OprogStatus.useNNL)
 		updAllNNL();

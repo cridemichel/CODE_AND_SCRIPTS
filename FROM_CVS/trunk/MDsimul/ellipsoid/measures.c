@@ -365,6 +365,7 @@ void temperat(void)
      This the calculation of the instantaneous temperature */
   int i;
   double m;
+#if 0
   K = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
     {
@@ -375,11 +376,12 @@ void temperat(void)
       K += Oparams.m[1]*(Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]));
     }
   K *= 0.5;
-  
+#endif
+  calc_energy(NULL);
   if (OprogStatus.brownian==1)
-    temp = 2.0 * K / (3.0 * Oparams.parnum);
+    temp = 2.0 * K / (5.0 * Oparams.parnum);
   else
-    temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
+    temp = 2.0 * K / (5.0 * Oparams.parnum - 3.0);
 
   if (OprogStatus.avngTemp == 1)
     {
