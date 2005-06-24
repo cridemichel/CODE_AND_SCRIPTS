@@ -1302,7 +1302,10 @@ void usrInitAft(void)
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
   if (OprogStatus.useNNL)
-    nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+    {
+      printf("I'm going to use NNL, good choice to go fast :)\n");
+      nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+    }
   for (i=0; i < Oparams.parnumA; i++)
     {
       if (OprogStatus.useNNL)

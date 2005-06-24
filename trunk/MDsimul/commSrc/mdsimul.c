@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.7 2005-06-15 09:03:44 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.8 2005-06-24 07:50:29 demichel Exp $     */
 #ifndef lint
-static char vcid[] = "$Id: mdsimul.c,v 1.7 2005-06-15 09:03:44 demichel Exp $";
+static char vcid[] = "$Id: mdsimul.c,v 1.8 2005-06-24 07:50:29 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -71,7 +71,7 @@ void commMD(void)
 #endif
 #ifdef MPI
   mdMsg(ALL, NOSYS, "Begin", "NOTICE", NULL,
-	    "Pharm MPI simulation",
+	    "Farm MPI simulation",
 	    NULL);
 #else
   mdMsg(ALL, NOSYS, "Begin", "NOTICE", NULL,

@@ -3485,7 +3485,7 @@ void lubksb(double **a, int n, int* indx, double *b)
 void wrap_dgesv(double **a, double *x, int n, int *ok)
 {
   double AT[MD_NBMAX*MD_NBMAX];
-  int i, j, c1, c2, ok, pivot[MD_NBMAX];
+  int i, j, c1, c2, pivot[MD_NBMAX];
   for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
     {				/* have to transform the matrix */
       for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
