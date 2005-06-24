@@ -291,7 +291,7 @@ void transDiff(void)
  
   Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time) *
 		       ((double) Oparams.parnumA ) );   
-  printf("Dtr: %f\n", Dtrans);
+  //printf("Dtr: %f\n", Dtrans);
 #if 0
   Aa = ((double) Oparams.parnumA ) * 3.0 * 
     Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
