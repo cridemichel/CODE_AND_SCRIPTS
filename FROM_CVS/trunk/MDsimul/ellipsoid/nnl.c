@@ -150,7 +150,8 @@ void rebuildNNL(void)
   int i;
   double nltime=timbig;
   UpdateSystem();
-  printf("Rebuilding NNL t=%.15G\n", Oparams.time);
+  if (OprogStatus.useNNL==2)
+    printf("Rebuilding NNL t=%.15G\n", Oparams.time);
   for (i=0; i < Oparams.parnum; i++)
     {
       nextNNLupdate(i);
@@ -163,7 +164,8 @@ void rebuildNNL(void)
     }
   /* next complete update */
   nextNNLrebuild = nltime;
-  printf("nextNNLrebuild=%.15G\n", nextNNLrebuild);
+  if (OprogStatus.useNNL==2)
+    printf("nextNNLrebuild=%.15G\n", nextNNLrebuild);
   //ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 }
 void fdjacNeighPlane(int n, double x[], double fvec[], double **df, 
