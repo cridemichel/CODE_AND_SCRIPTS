@@ -152,7 +152,7 @@ int main(int argc, char **argv){
   printf("dist5NL: %d\n",1);
   { 
     double elong = atof(El);
-    if((elong<=4.0)&&(elong>=0.25)) printf("dist5: %d\n",1);
+    if((elong<=3.0)&&(elong>=0.25)) printf("dist5: %d\n",1);
   }
       
 #ifdef _GROWTH
