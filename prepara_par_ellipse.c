@@ -103,8 +103,8 @@ int main(int argc, char **argv){
   printf("nRun: ell%s\n",El);
   //printf("seed: %d\n",0); /* 0 fixed, -1 random */
   printf("seed: %d\n",-1); /* 0 fixed,-1 random */
-  printf("rescaleTime: 0.001\n");
-  printf("scalevel: 0\n");
+  printf("rescaleTime: 0.1\n");
+  printf("scalevel: 1\n");
   printf("CMreset: 0\n");
   printf("tapeTimes: 0\n");
   if((stepnum/Nsave)>100) printf("energyCalc: %d\n",stepnum/Nsave);
@@ -113,8 +113,8 @@ int main(int argc, char **argv){
   printf("tempSteps: 10000\n");
   printf("tempName: temp-\n");
 
-  printf("DtrSteps: 10\n");
-  printf("DtrCalc: 10\n");
+  printf("DtrSteps: 0\n");
+  printf("DtrCalc: 1\n");
   printf("rotMSDCalc: 1\n");
   printf("rotMSDName: rotMSD-\n");
   printf("DtrName: D-\n");
