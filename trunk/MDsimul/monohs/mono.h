@@ -89,8 +89,11 @@
 	   filling each one ).
 	 - Implement doubly dimensioned array as a definition apart.
 */
+#ifdef MD_POLYDISP
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, radii, lastcol
+#else
 #define SAVE_LIST rx, ry, rz, vx, vy, vz, lastcol
-
+#endif
 #undef  EXT_SLST
 #define EXT_SLST  &L, &Lz
 
@@ -113,9 +116,11 @@
    arrays (to see how AllocCoord() works see AllocCoord() code in 
    mdarray.c file).
 */
+#ifdef MD_POLYDISP
+#define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz, &radii, &lastcol
+#else
 #define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz, &lastcol
-                   
-
+#endif
 /* this is used to declare the particle variables ( see below ) 
    NOTE: rx[0][2] means the x-coordinate of the first atoms in the second 
    molecules (particle).
@@ -123,8 +128,11 @@
    from right to left, first we choose the molucule, then the atom and 
    finally the coordinate, for example consider the position: 
    coordinate(rx, ry, rz) <- atom <- molecule*/
+#ifdef MD_POLYDISP
+#define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz, *radii, *lastcol
+#else
 #define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz, *lastcol
-  
+#endif
 				   
 #undef EXT_DLST
 #define EXT_DLST  L, Lz 
@@ -238,6 +246,7 @@ struct progStatus
   COORD_TYPE vcmx0[MAXPAR];
   COORD_TYPE vcmy0[MAXPAR];
   COORD_TYPE vcmz0[MAXPAR];
+  //double radii[MAXPAR];
   /*double lastcol[MAXPAR];
     double atomTime[MAXPAR];*/
 
@@ -268,6 +277,8 @@ struct progStatus
   int scalevel;
   int brownian;
   double targetPhi;
+  double polydisp;
+  double polycutoff;
   double phitol;
   double axestol;
   double scalfact;
@@ -426,6 +437,10 @@ struct pascii opro_ascii[] =
   //{"sumVy",        OS(sumVy),                    MAXPAR,  1, "%.10f"},
   //{"sumVz",        OS(sumVz),                    MAXPAR,  1, "%.10f"},
   {"W",            &OS(W),                          1,              1, "%.6G"},
+  //{"radii",        OS(radii),                      -MAXPAR,    1, "%.15G"},
+  {"targetPhi",    &OS(targetPhi),                 1,          1, "%.12G"},
+  {"polydisp",     &OS(polydisp),                  1,          1, "%.15G"}, 
+  {"polycutoff",   &OS(polycutoff),                1,          1, "%.8G"},
   {"savedXva",     &OS(savedXva),                   1,   1,   "%d"},
   {"Cmreset",      &OS(CMreset),                    1,   1,  "%d"},
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
@@ -632,6 +647,8 @@ struct singlePar OsinglePar[] = {
   {"xi",         &Oparams.xi,               CT},
 #endif
   {"targetPhi", &OprogStatus.targetPhi, CT},
+  {"polydisp",  &OprogStatus.polydisp, CT},  
+  {"polycutoff",&OprogStatus.polycutoff, CT},
   {"phitol",      &OprogStatus.phitol,        CT},
   {"scalfact",    &OprogStatus.scalfact,      CT},
   {"axestol",     &OprogStatus.axestol,       CT},

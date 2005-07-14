@@ -31,7 +31,9 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
 extern COORD_TYPE dispHi;
 extern const double timbig;
 int poolSize;
+#ifndef MD_POLYDISP
 double *radii;
+#endif
 int *scdone;
 /* ================================= */
 
@@ -501,6 +503,10 @@ void usrInitBef(void)
   OprogStatus.nebrTabFac = 150;
   OprogStatus.rNebrShell = 0.4;
   OprogStatus.targetPhi = 0.0;
+#ifdef MD_POLYDISP
+  OprogStatus.polydisp = 0.0;
+  OprogStatus.polycutoff = 5.0;
+#endif
   OprogStatus.phitol = 1E-12;
   OprogStatus.scalfact = 0.99;
   OprogStatus.axestol = 1E-8;
@@ -640,7 +646,16 @@ void usrInitAft(void)
   /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
   if (Oparams.rcut <= 0.0)
-    Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+    {
+#ifdef MD_POLYDISP
+      if (OprogStatus.polydisp > 0.0)
+	Oparams.rcut = 1.01*Oparams.sigma*(1.0 + OprogStatus.polydisp*OprogStatus.polycutoff);
+      else
+	Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+#else
+      Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+#endif
+    }
   cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
 #ifdef MD_GRAVITY
@@ -726,12 +741,30 @@ void usrInitAft(void)
       comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
     }
 
+#ifndef MD_POLYDISP
   radii = malloc(sizeof(double)*Oparams.parnum);
+#endif
   scdone = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
     {
       scdone[i] = 0;
+#ifdef MD_POLYDISP
+      if (newSim)
+	{
+	  if (OprogStatus.polydisp <= 0.0)
+	    radii[i] = Oparams.sigma*0.5;
+	  else
+	    {
+	      while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp))
+		{
+		  radii[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.sigma*0.5; 
+		}
+	      //printf("%.15G\n", radii[i]);
+	    }
+	}
+#else
       radii[i] = Oparams.sigma*0.5;
+#endif
     }
 
   if (Oparams.curStep == 1)
