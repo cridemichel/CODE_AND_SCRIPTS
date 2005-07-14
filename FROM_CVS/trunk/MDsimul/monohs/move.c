@@ -62,7 +62,9 @@ int *inCell[3], **tree, *cellList, cellRange[2*NDIM],
     cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 int evIdA, evIdB;
 extern int poolSize;
+#ifndef MD_POLYDISP
 extern double *radii;
+#endif
 extern int *scdone;
 double presst1=-1.0, presst2=-1.0;
 /* ========================== >>> scalCor <<< ============================= */
@@ -616,8 +618,12 @@ void check ( double sigma, int *overlap, double *K, double *V)
 	  rzij = rzij - L*rint(invL*rzij);
 #endif
 	  rijSq = Sqr(rxij) + Sqr(ryij) + Sqr(rzij);
+#ifdef MD_POLYDISP
+	  sigSq = Sqr(radii[i]+radii[j]);
+#else
 	  if (OprogStatus.targetPhi > 0.0)
 	    sigSq = Sqr(radii[i]+radii[j]);
+#endif
 	  if ( rijSq < sigSq ) 
 	    {
 	      rij = sqrt(rijSq / sigSq);
@@ -674,12 +680,16 @@ void bump (int i, int j, double* W)
   check = sqrt(Sqr(vx[i]-vx[j]) + Sqr(vy[i]-vy[j]) + Sqr(vz[i]-vz[j]));
   if (check<.5) printf ("bump: velocity difference %d,%d %.15G\n", i,j,check);
 #endif
+#ifdef MD_POLYDISP
+  sigSq = Sqr(radii[i]+radii[j]);
+#else
   if (OprogStatus.targetPhi > 0.0)
     {
       sigSq = Sqr(radii[i]+radii[j]);
     }
   else
     sigSq = Sqr(Oparams.sigma);
+#endif
   rxij = rx[i] - rx[j];
   if (fabs (rxij) > L2)
     rxij = rxij - SignR(L, rxij);
@@ -801,6 +811,10 @@ void calcRho(void)
 	  n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 	  for (n = cellList[n]; n > -1; n = cellList[n]) 
 	    {
+#ifdef MD_POLYDISP
+	      if (rz[n] + Lz2 + radii[n] < hhcp)
+    		npart++;
+#else
 	      if (OprogStatus.targetPhi > 0.0)
 		{
 		  if (rz[n] + Lz2 + radii[n] < hhcp)
@@ -811,6 +825,7 @@ void calcRho(void)
 		  if (rz[n] + Lz2 + Oparams.sigma*0.5 < hhcp)
 		    npart++;
 		}
+#endif
 	      if (jZ < jZmax)
 		rhoz[jZ/2]+= 1.0;
 	    }
@@ -979,14 +994,19 @@ void PredictEvent (int na, int nb)
     {
       hh1 =  vz[na] * vz[na] + 2.0 * Oparams.ggrav *
 	(rz[na] + Lz2);
+#ifdef MD_POLYDISP
+      h1 = hh1 -  Oparams.ggrav * 2.0 * radii[na];
+#else
       if (OprogStatus.targetPhi > 0.0)
 	h1 = hh1 -  Oparams.ggrav * 2.0 * radii[na];
       else
 	h1 = hh1 -  Oparams.ggrav * Oparams.sigma;
+#endif
     }
   else
     h1 = hh1 = vz[na] * vz[na] + 2.0 * Oparams.ggrav *
       (rz[na] + Lz2 - inCell[2][na] * (Lzx) / cellsz);
+
 #if 0
   if (evIdB < ATOM_LIMIT)
     {
@@ -1200,11 +1220,14 @@ void PredictEvent (int na, int nb)
 		    {
 		      if (n != na && n != nb && (nb >= -1 || n < na)) 
 			{
+#ifdef MD_POLYDISP
+			  sigSq = Sqr(radii[na]+radii[n]);
+#else
 		      	  if (OprogStatus.targetPhi > 0.0)
 			    {
 			      sigSq = Sqr(radii[na]+radii[n]);
 			    }
-			  
+#endif
 			  tInt = OprogStatus.time - atomTime[n];
 #ifdef MD_FPBROWNIAN
                           if (OprogStatus.brownian) {
