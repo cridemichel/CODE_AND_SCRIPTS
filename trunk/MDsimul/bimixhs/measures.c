@@ -17,6 +17,7 @@ extern char msgStrA[MSG_LEN];
 char TXTA[10][MSG_LEN];
 char TXT[MSG_LEN];
 extern double Vz;
+FILE* mf;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
  in the move function and in the measuring functions, note that the variables 
@@ -565,10 +566,13 @@ void Ptensor(void)
   /* DESCRIPTION:
      Store the three off-diagonal terms of the pressure tensor in an array 
      to save on disk like a single measure */
+  mf = fopenMPI(absMisHD("Ptens.dat"),"a");
+
   Ptens[0] = Pxy;
   Ptens[1] = Pyz;
   Ptens[2] = Pzx;
-
+  fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time, Pxy, Pyz, Pzx);
+  fclose(mf);
 }
 
 /* ========================== >>> DQtensor <<< ============================= */
