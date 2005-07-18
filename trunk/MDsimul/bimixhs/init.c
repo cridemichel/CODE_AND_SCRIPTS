@@ -917,7 +917,7 @@ void usrInitAft(void)
     mgB = Oparams.m[1]*Oparams.ggrav;
 #endif
    
-  /*    
+    /*    
      ** CHECK FOR PARTICLE OVERLAPS **
      ** CALCULATE ENERGY            ** */
     /*lastcol= malloc(sizeof(double)*Oparams.parnum);*/
