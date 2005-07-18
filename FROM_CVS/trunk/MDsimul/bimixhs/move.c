@@ -50,7 +50,7 @@ double Lz2;
 #endif
 double W, K, T1xx, T1yy, T1zz,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
-  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;
+  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB, DQxyOld, DQyzOld, DQzxOld;
 /*  Patxy, Patyz, Patzx, Patxx, Patyy, Patzz,
     T1myz, T1mzx, T1mxx, T1myy, T1mzz;  */
 double DrSq = 0.0; 
@@ -1690,9 +1690,19 @@ void move(void)
 		  OprogStatus.DQTxy += taus * OprogStatus.Txy;
 		  OprogStatus.DQTyz += taus * OprogStatus.Tyz;
 		  OprogStatus.DQTzx += taus * OprogStatus.Tzx;
+#if 1
+		  DQxyOld = OprogStatus.DQxy;
+		  DQyzOld = OprogStatus.DQyz;
+		  DQzxOld = OprogStatus.DQzx;
+#endif
 		  OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
 		  OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
 		  OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+#if 1
+		  Pxy = (OprogStatus.DQxy - DQxyOld)/Oparams.Dt;
+		  Pyz = (OprogStatus.DQyz - DQyzOld)/Oparams.Dt;
+		  Pzx = (OprogStatus.DQzx - DQzxOld)/Oparams.Dt;
+#endif
 		  Vol = L*L*L;
 		  OprogStatus.DQxy /= Vol;
 		  OprogStatus.DQyz /= Vol;
@@ -1715,9 +1725,19 @@ void move(void)
 	  else
 	    {
 	      double Vol;
+#if 1
+	      DQxyOld = OprogStatus.DQxy;
+	      DQyzOld = OprogStatus.DQyz;
+	      DQzxOld = OprogStatus.DQzx;
+#endif
     	      OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
 	      OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
 	      OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+#if 1
+    	      Pxy = (OprogStatus.DQxy - DQxyOld)/Oparams.Dt;
+	      Pyz = (OprogStatus.DQyz - DQyzOld)/Oparams.Dt;
+	      Pzx = (OprogStatus.DQzx - DQzxOld)/Oparams.Dt;
+#endif
 	      Vol = L*L*L;
 	      OprogStatus.DQxy /= Vol;
 	      OprogStatus.DQyz /= Vol;
