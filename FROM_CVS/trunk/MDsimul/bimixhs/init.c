@@ -988,7 +988,7 @@ void usrInitAft(void)
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = Oparams.time;
     }
-
+  
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -1128,6 +1128,8 @@ void usrInitAft(void)
       fclose(f);
 #endif
 #ifdef MD_HSVISCO
+      f = fopenMPI(absMisHD("Ptens.dat"), "w+");
+      fclose(f);
       OprogStatus.DQTxy = 0.0;
       OprogStatus.DQTyz = 0.0;
       OprogStatus.DQTzx = 0.0;
