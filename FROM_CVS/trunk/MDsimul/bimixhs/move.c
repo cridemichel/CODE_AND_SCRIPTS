@@ -1733,15 +1733,15 @@ void move(void)
     	      OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
 	      OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
 	      OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+	      Vol = L*L*L;
+	      OprogStatus.DQxy /= Vol;
+	      OprogStatus.DQyz /= Vol;
+	      OprogStatus.DQzx /= Vol;
 #if 1
     	      Pxy = (OprogStatus.DQxy - DQxyOld)/Oparams.Dt;
 	      Pyz = (OprogStatus.DQyz - DQyzOld)/Oparams.Dt;
 	      Pzx = (OprogStatus.DQzx - DQzxOld)/Oparams.Dt;
 #endif
-	      Vol = L*L*L;
-	      OprogStatus.DQxy /= Vol;
-	      OprogStatus.DQyz /= Vol;
-	      OprogStatus.DQzx /= Vol;
 	      //printf("STEP #%d DQ= %f %f %f\n", Oparams.curStep, OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
 	    }
 #endif
