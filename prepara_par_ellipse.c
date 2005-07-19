@@ -67,13 +67,16 @@ int main(int argc, char **argv){
   sprintf(tmpPath,"/home/scala/simdat/mdtmp/ellipsoid/Phi%s_%s/",Phi,El);
   sprintf(misPath,tmpPath);
 
-  A0=atof(El); while(A0<1.0) {A0*=2.0; B0*=2.0; C0*=2.0;}
+
+  if(atof(EL)<1.0) rNebrShell = 0.2; // better for oblate
+
+  A0=atof(El); 
+  while(A0<1.0) {A0*=2.0; B0*=2.0; C0*=2.0;}
 
   {
     double a0=A0+rNebrShell,b0=B0+rNebrShell,c0=C0+rNebrShell;
     diagNN = 2.0*sqrt(a0*a0+b0*b0+c0*c0);
   }
-
   /*  if(A0>B0) rcut=2.01*A0; else rcut=2.01*B0; */
   rcut = 1.01*diagNN; // If I don't use neighbour lists, change this!!
   
@@ -137,6 +140,9 @@ int main(int argc, char **argv){
   printf("tolSDconstr: 0.05\n");
   printf("maxitsSD:  500\n");
 #endif
+
+  if( (atof(EL)<0.3) || (atof(EL)>3.0) ) //damped newton raphson
+    printf("toldxNR: %g\n",0.40);
 
   printf("h: %g\n",1.0e-7); // minimum step
   printf("epsd: %g\n",epsd);
