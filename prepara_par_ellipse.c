@@ -68,7 +68,7 @@ int main(int argc, char **argv){
   sprintf(misPath,tmpPath);
 
 
-  if(atof(EL)<1.0) rNebrShell = 0.2; // better for oblate
+  if(atof(El)<1.0) rNebrShell = 0.2; // better for oblate
 
   A0=atof(El); 
   while(A0<1.0) {A0*=2.0; B0*=2.0; C0*=2.0;}
@@ -141,7 +141,7 @@ int main(int argc, char **argv){
   printf("maxitsSD:  500\n");
 #endif
 
-  if( (atof(EL)<0.3) || (atof(EL)>3.0) ) //damped newton raphson
+  if( (atof(El)<0.3) || (atof(El)>3.0) ) //damped newton raphson
     printf("toldxNR: %g\n",0.40);
 
   printf("h: %g\n",1.0e-7); // minimum step
