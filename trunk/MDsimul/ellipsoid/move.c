@@ -697,12 +697,14 @@ void scale_Phi(void)
     }
 
   //check_alldist_min("DOPO");
+#if 0
   if (phi > 0.7)
     {
       for (i=0; i < Oparams.parnum; i++)
 	if (axa[i]>3.0||axb[i]>3.0||axc[i]>3.0)
 	  printf("%d-(%f,%f,%f) ", i, axa[i], axb[i], axc[i]);
     }
+#endif
   printf("Scaled axes succesfully phi=%.8G\n", phi);
 #if 0
   if (fabs(phi - OprogStatus.targetPhi)<1E-8)
