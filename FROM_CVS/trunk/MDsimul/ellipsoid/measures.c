@@ -250,7 +250,7 @@ void transDiff(void)
   int i;
   DrSqTot = 0.0;
   Dr4 = 0.0;
-  f = fopen("MSDA.dat", "a");
+  f = fopen(absMisHD("MSDA.dat"), "a");
   for(i=0; i < Oparams.parnumA; i++)
     {
       Drx = rx[i] - OprogStatus.rxCMi[i] + L*OprogStatus.DR[i][0]; 
@@ -272,7 +272,7 @@ void transDiff(void)
   fclose(f);
   if (Oparams.parnumA < Oparams.parnum)
     {
-      f = fopen("MSDB.dat", "a");
+      f = fopen(absMisHD("MSDB.dat"), "a");
       DrSqTot = 0.0;
       for(i=Oparams.parnumA; i < Oparams.parnum; i++)
 	{
