@@ -68,18 +68,25 @@ int main(int argc, char **argv){
   sprintf(misPath,tmpPath);
 
 
-  if(atof(El)<1.0) rNebrShell = 0.2; // better for oblate
-
   A0=atof(El); 
   while(A0<1.0) {A0*=2.0; B0*=2.0; C0*=2.0;}
 
+  /*  if(A0>B0) rcut=2.01*A0; else rcut=2.01*B0; */
+
+#ifdef _NO_NL
+  rcut=A0;
+  if(B0>rcut) rcut = B0;
+  if(C0>rcut) rcut = C0;
+  rcut *= 2.02;
+#else
+  if(atof(El)<1.0) rNebrShell = 0.2; // better for oblate
   {
     double a0=A0+rNebrShell,b0=B0+rNebrShell,c0=C0+rNebrShell;
     diagNN = 2.0*sqrt(a0*a0+b0*b0+c0*c0);
   }
-  /*  if(A0>B0) rcut=2.01*A0; else rcut=2.01*B0; */
   rcut = 1.01*diagNN; // If I don't use neighbour lists, change this!!
-  
+#endif
+
   storerate=(stepnum*Dt)/(double)Nsave;
 
   printf("parnum: %d\n",parnum);
@@ -122,6 +129,10 @@ int main(int argc, char **argv){
   printf("rotMSDName: rotMSD-\n");
   printf("DtrName: D-\n");
 
+
+#ifdef _NO_NL
+  printf("useNNL: %d \n",0);
+#else
   //neighbour lists
   printf("rNebrShell: %lf\n",rNebrShell);
   printf("useNNL: %d \n",1);
@@ -130,6 +141,7 @@ int main(int argc, char **argv){
   printf("epsdFastRNL: %lf\n",2.1e3*epsd);
   printf("epsdMaxNL: %lf\n",2.0e3*epsd);
   printf("nebrTabFac: %d\n",500); //max number of n.n. in a n.n.l.
+#endif 
 
 #ifdef _STEEPDESC
   printf("springkSD: 1\n");
