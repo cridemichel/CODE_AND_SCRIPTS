@@ -250,7 +250,31 @@ struct progStatus
   COORD_TYPE DQxy;
   COORD_TYPE DQyz;
   COORD_TYPE DQzx;
-
+  
+#ifdef MD_HSVISCO
+  double DQxx;
+  double DQyy;
+  double DQzz;
+  double DQTxy;
+  double DQTyz;
+  double DQTzx;
+  double DQTxx;
+  double DQTyy;
+  double DQTzz;
+  double DQWxy;
+  double DQWyz;
+  double DQWzx;
+  double DQWxx;
+  double DQWyy;
+  double DQWzz;
+  double Txy;
+  double Tyz;
+  double Tzx;
+  double Txx;
+  double Tyy;
+  double Tzz;
+  double lastcoll;
+#endif
   COORD_TYPE PxyArr[5];
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
@@ -443,8 +467,32 @@ struct pascii opro_ascii[] =
   {"initStep",     OS(initStep),          NUM_MISURE,               1, MDINTFMT},
   {"sumEta",       &OS(sumEta),                     1,              1, "%.10G"},
   {"DQxy",         &OS(DQxy),                       1,              1, "%.10G"},
+  {"DQyz",         &OS(DQyz),                       1,              1, "%.10G"},
   {"DQzx",         &OS(DQzx),                       1,              1, "%.10G"},
-  {"DQzx",         &OS(DQzx),                       1,              1, "%.10G"},
+#ifdef MD_HSVISCO
+  {"DQxx",         &OS(DQxx),                       1,              1, "%.10G"},
+  {"DQyy",         &OS(DQyy),                       1,              1, "%.10G"},
+  {"DQzz",         &OS(DQzz),                       1,              1, "%.10G"},
+  {"DQTxy",        &OS(DQTxy),                       1,              1, "%.10G"},
+  {"DQTyz",        &OS(DQTyz),                       1,              1, "%.10G"},
+  {"DQTzx",        &OS(DQTzx),                       1,              1, "%.10G"},
+  {"DQTxx",        &OS(DQTxx),                       1,              1, "%.10G"},
+  {"DQTyy",        &OS(DQTyy),                       1,              1, "%.10G"},
+  {"DQTzz",        &OS(DQTzz),                       1,              1, "%.10G"},
+  {"DQWxy",        &OS(DQWxy),                       1,              1, "%.10G"},
+  {"DQWyz",        &OS(DQWyz),                       1,              1, "%.10G"},
+  {"DQWzx",        &OS(DQWzx),                       1,              1, "%.10G"},
+  {"DQWxx",        &OS(DQWxx),                       1,              1, "%.10G"},
+  {"DQWyy",        &OS(DQWyy),                       1,              1, "%.10G"},
+  {"DQWzz",        &OS(DQWzz),                       1,              1, "%.10G"},
+  {"Txy",          &OS(Txy),                       1,              1, "%.10G"},
+  {"Tyz",          &OS(Tyz),                       1,              1, "%.10G"},
+  {"Tzx",          &OS(Tzx),                       1,              1, "%.10G"},
+  {"Txx",          &OS(Txx),                       1,              1, "%.10G"},
+  {"Tyy",          &OS(Tyy),                       1,              1, "%.10G"},
+  {"Tzz",          &OS(Tzz),                       1,              1, "%.10G"},
+  {"lastcoll",     &OS(lastcoll),                   1,              1, "%.15G"},
+#endif
   {"PxyArr",       OS(PxyArr),                      5,              1, "%.10G"},
   {"PyzArr",       OS(PyzArr),                      5,              1, "%.10G"},
   {"PzxArr",       OS(PzxArr),                      5,              1, "%.10G"},
@@ -459,7 +507,7 @@ struct pascii opro_ascii[] =
   {"histMB",       OS(histMB),                  NUMV,               1, "%d"},
   {"sumTemp",      &OS(sumTemp),                    1,              1, "%.6G"},
   {"sumPress",     &OS(sumPress),                   1,              1, "%.6G"},
-  //  {"sumMedia",     &OS(sumMedia),                   1,   1, "%.6f"},
+  //{"sumMedia",     &OS(sumMedia),                   1,   1, "%.6f"},
   //{"sumVx",        OS(sumVx),                    MAXPAR,  1, "%.10f"},
   //{"sumVy",        OS(sumVy),                    MAXPAR,  1, "%.10f"},
   //{"sumVz",        OS(sumVz),                    MAXPAR,  1, "%.10f"},
@@ -807,6 +855,7 @@ void DQtensor(void);
 void vanHoveSelf(void);
 void intermScatt(void);
 void gaussapprox(void);
+void calcpress(void);
 
 /* =========================================================================*/
 #ifdef MAIN
@@ -827,7 +876,7 @@ struct measure Omeasure[NUM_MISURE]=
   {gr,      sizeof(COORD_TYPE)*MAXBIN,radDens     },
   {MB,      sizeof(int)*NUMV,         maxwell     },
   {S,       sizeof(COORD_TYPE)*NUMK,  structFacts },
-  {&press,  sizeof(COORD_TYPE),       NULL        },
+  {&press,  sizeof(COORD_TYPE),       calcpress   },
   {Ptens,   sizeof(COORD_TYPE)*3,     Ptensor     },
   {DQtens,  sizeof(COORD_TYPE)*3,     DQtensor    },
   {&V,       sizeof(double),          calcV       },

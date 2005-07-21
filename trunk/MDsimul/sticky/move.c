@@ -59,6 +59,9 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
 void InitEventList (void);
 int bound(int na, int n, int a, int b);
+#ifdef MD_HSVISCO
+void calcT(void);
+#endif
 void print_matrix(double **M, int n)
 {
   int k1, k2;
@@ -112,8 +115,9 @@ extern void NextEvent (void);
 void distanza(int ia, int ib);
 double pi, invL, L2, Vz;   
 double W, K, T1xx, T1yy, T1zz,
-       T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
-       Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;
+       T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz, 
+       Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB, DQxxOld, 
+       DQyyOld, DQzzOld, DQxyOld, DQyzOld, DQzxOld;
 /*  Patxy, Patyz, Patzx, Patxx, Patyy, Patzz,
     T1myz, T1mzx, T1mxx, T1myy, T1mzz;  */
 double DrSq = 0.0; 
@@ -965,6 +969,11 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3], r12[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
+#ifdef MD_HSVISCO
+  double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold, taus, 
+	  DTxx, DTyy, DTzz, Txxold, Tyyold, Tzzold;
+#endif
+
   double denom, rCx, rCy, rCz, nrAB, Dr, V, Eold, E, Vold, Kold;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
@@ -1333,12 +1342,57 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   ene= (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
 	Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
 #endif
+#ifdef MD_HSVISCO
+  DTxy = delpx*delpy*invmi + vx[i]*delpy + delpx*vy[i];
+  DTxy += delpx*delpy*invmj - vx[j]*delpy - delpx*vy[j]; 
+  DTyz = delpy*delpz*invmi + vy[i]*delpz + delpy*vz[i];
+  DTyz += delpy*delpz*invmj - vy[j]*delpz - delpy*vz[j];
+  DTzx = delpz*delpx*invmi + vz[i]*delpx + delpz*vx[i];
+  DTzx += delpz*delpx*invmj - vz[j]*delpx - delpz*vx[j];
+
+  DTxx = delpx*delpx*invmi + vx[i]*delpx + delpx*vx[i];
+  DTxx += delpx*delpx*invmj - vx[j]*delpx - delpx*vx[j]; 
+  DTyy = delpy*delpy*invmi + vy[i]*delpy + delpy*vy[i];
+  DTyy += delpy*delpy*invmj - vy[j]*delpy - delpy*vy[j];
+  DTzz = delpz*delpz*invmi + vz[i]*delpz + delpz*vz[i];
+  DTzz += delpz*delpz*invmj - vz[j]*delpz - delpz*vz[j];
+#endif
   vx[i] = vx[i] + delpx*invmi;
   vx[j] = vx[j] - delpx*invmj;
   vy[i] = vy[i] + delpy*invmi;
   vy[j] = vy[j] - delpy*invmj;
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
+#ifdef MD_HSVISCO 
+  if (OprogStatus.lastcoll!=-1)
+    {
+      taus = Oparams.time - OprogStatus.lastcoll;
+      OprogStatus.DQTxy += OprogStatus.Txy*taus; 
+      OprogStatus.DQTyz += OprogStatus.Tyz*taus;
+      OprogStatus.DQTzx += OprogStatus.Tzx*taus;
+
+      OprogStatus.DQTxx += OprogStatus.Txx*taus; 
+      OprogStatus.DQTyy += OprogStatus.Tyy*taus;
+      OprogStatus.DQTzz += OprogStatus.Tzz*taus;
+      //taus = Oparams.time - OprogStatus.lastcoll;
+      //printf("DQT= %f %f %f\n", OprogStatus.DQTxy, OprogStatus.DQTyz, OprogStatus.DQTzx);
+      OprogStatus.DQWxy += (rA[0]-rB[0])*delpy;
+      OprogStatus.DQWyz += (rA[1]-rB[1])*delpz;
+      OprogStatus.DQWzx += (rA[2]-rB[2])*delpx;
+
+      OprogStatus.DQWxx += (rA[0]-rB[0])*delpy;
+      OprogStatus.DQWyy += (rA[1]-rB[1])*delpy;
+      OprogStatus.DQWzz += (rA[2]-rB[2])*delpz;
+      //printf("DQW= %f %f %f\n", OprogStatus.DQWxy, OprogStatus.DQWyz, OprogStatus.DQWzx);
+    }
+  OprogStatus.Txy += DTxy; 
+  OprogStatus.Tyz += DTyz;
+  OprogStatus.Tzx += DTzx;
+  OprogStatus.Txx += DTxx; 
+  OprogStatus.Tyy += DTyy;
+  OprogStatus.Tzz += DTzz;
+#endif
+
   MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
 #ifdef MD_ASYM_ITENS
   for (a=0; a < 3; a++)
@@ -1447,9 +1501,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 	}
     }
 #endif
-
 }
-
 
 void calcObserv(void)
 {
@@ -4492,6 +4544,9 @@ void ProcessCollision(void)
   lastbump[evIdB].at = evIdD;
   lastbump[evIdA].type = evIdE;
   lastbump[evIdB].type = evIdE;
+#ifdef MD_HSVISCO
+  OprogStatus.lastcoll = Oparams.time;
+#endif
 #ifdef MD_SILICA
   iA = (evIdA<Oparams.parnumA)?0:1;
   nl_ignore = (evIdA<Oparams.parnumA)?1:0;
@@ -5074,13 +5129,97 @@ void move(void)
 #endif
 	  if (OprogStatus.brownian)
 	    {
+#ifdef MD_HSVISCO
+	      double taus, Vol;
+	      if (OprogStatus.lastcoll!=-1)
+		{
+		  /* notare che nel caso di dinamica browniana
+		   * lastcoll è in generale l'ultima collisione o tra due particelle
+		   * o tra le particelle e il fluido (reset delle velocità)*/
+		  taus = Oparams.time - OprogStatus.lastcoll; 
+		  OprogStatus.DQTxy += taus * OprogStatus.Txy;
+		  OprogStatus.DQTyz += taus * OprogStatus.Tyz;
+		  OprogStatus.DQTzx += taus * OprogStatus.Tzx;
+		  OprogStatus.DQTxx += taus * OprogStatus.Txx;
+		  OprogStatus.DQTyy += taus * OprogStatus.Tyy;
+		  OprogStatus.DQTzz += taus * OprogStatus.Tzz;
+
+		  DQxyOld = OprogStatus.DQxy;
+		  DQyzOld = OprogStatus.DQyz;
+		  DQzxOld = OprogStatus.DQzx;
+		  DQxxOld = OprogStatus.DQxx;
+		  DQyyOld = OprogStatus.DQyy;
+		  DQzzOld = OprogStatus.DQzz;
+
+		  OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
+		  OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
+		  OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+		  OprogStatus.DQxx = OprogStatus.DQTxx + OprogStatus.DQWxx;
+		  OprogStatus.DQyy = OprogStatus.DQTyy + OprogStatus.DQWyy;
+		  OprogStatus.DQzz = OprogStatus.DQTzz + OprogStatus.DQWzz;
+		  Vol = L*L*L;
+		  OprogStatus.DQxy /= Vol;
+		  OprogStatus.DQyz /= Vol;
+		  OprogStatus.DQzx /= Vol;
+		  OprogStatus.DQxx /= Vol;
+		  OprogStatus.DQyy /= Vol;
+		  OprogStatus.DQzz /= Vol;
+
+		  Pxy = (OprogStatus.DQxy - DQxyOld)/Oparams.Dt;
+		  Pyz = (OprogStatus.DQyz - DQyzOld)/Oparams.Dt;
+		  Pzx = (OprogStatus.DQzx - DQzxOld)/Oparams.Dt;
+		  Pxx = (OprogStatus.DQxx - DQxxOld)/Oparams.Dt;
+		  Pyy = (OprogStatus.DQyy - DQyyOld)/Oparams.Dt;
+		  Pzz = (OprogStatus.DQzz - DQzzOld)/Oparams.Dt;
+		  press = (Pxx+Pyy+Pzz)/3.0;
+		  OprogStatus.lastcoll = Oparams.time;
+		}
+#endif
 	      velsBrown(Oparams.T);
+#ifdef MD_HSVISCO
+	      calcT();
+#endif
 	      rebuildCalendar();
 	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
+#ifdef MD_HSVISCO
+	  else
+	    {
+	      double Vol;
+	      DQxyOld = OprogStatus.DQxy;
+	      DQyzOld = OprogStatus.DQyz;
+	      DQzxOld = OprogStatus.DQzx;
+	      DQxxOld = OprogStatus.DQxx;
+	      DQyyOld = OprogStatus.DQyy;
+	      DQzzOld = OprogStatus.DQzz;
+    	      OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
+	      OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
+	      OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+	      OprogStatus.DQxx = OprogStatus.DQTxx + OprogStatus.DQWxx;
+	      OprogStatus.DQyy = OprogStatus.DQTyy + OprogStatus.DQWyy;
+	      OprogStatus.DQzz = OprogStatus.DQTzz + OprogStatus.DQWzz;
+
+	      Vol = L*L*L;
+	      OprogStatus.DQxy /= Vol;
+	      OprogStatus.DQyz /= Vol;
+	      OprogStatus.DQzx /= Vol;
+	      OprogStatus.DQxx /= Vol;
+	      OprogStatus.DQyy /= Vol;
+	      OprogStatus.DQzz /= Vol;
+
+    	      Pxy = (OprogStatus.DQxy - DQxyOld)/Oparams.Dt;
+	      Pyz = (OprogStatus.DQyz - DQyzOld)/Oparams.Dt;
+	      Pzx = (OprogStatus.DQzx - DQzxOld)/Oparams.Dt;
+	      Pxx = (OprogStatus.DQxy - DQxxOld)/Oparams.Dt;
+	      Pyy = (OprogStatus.DQyy - DQyyOld)/Oparams.Dt;
+	      Pzz = (OprogStatus.DQzz - DQzzOld)/Oparams.Dt;
+	      press = (Pxx+Pyy+Pzz)/3.0;
+	      //printf("STEP #%d DQ= %f %f %f\n", Oparams.curStep, OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
+	    }
+#endif
 	  OprogStatus.nextDt += Oparams.Dt;
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	  break;
