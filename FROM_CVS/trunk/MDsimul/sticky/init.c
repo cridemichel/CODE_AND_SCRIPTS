@@ -728,7 +728,7 @@ void wrap_initCoord(void)
   rx[0] = -0.501;
   ry[0] = 0.0;
   rz[0] =  0;
-  
+
   vx[0] = 0.0;
   vy[0] = 0;
   vz[0] = 0;
@@ -748,132 +748,157 @@ void wrap_initCoord(void)
   wx[1] =0.0;//-0.102415;//-1;
   wy[1] =0.0;//-0.43968;//-0.3;
   wz[1] =1.0;//0.330914;// 0.1;
-{ 
-  double Rt[3][3],Omega[3][3],wSq, w, Ro[3][3], OmegaSq[3][3], M[3][3];
-  double ti=4.5, sinw, cosw;
-  int k1, k2, k3,i=1;
-  wSq = 1.0;
-  w = sqrt(wSq);
-  if (w != 0.0) 
-    {
+    { 
+      double Rt[3][3],Omega[3][3],wSq, w, Ro[3][3], OmegaSq[3][3], M[3][3];
+      double ti=4.5, sinw, cosw;
+      int k1, k2, k3,i=1;
+      wSq = 1.0;
+      w = sqrt(wSq);
+      if (w != 0.0) 
+	{
 #if 0
-      if (fabs(w*ti) < 1E-8)
-	{
-	  sinw = ti*(1-Sqr(w*ti)/6.0);	  
-	  cosw = Sqr(ti)*(0.5 - Sqr(w*ti)/24.0);
-	}
-      else 
-	{
+	  if (fabs(w*ti) < 1E-8)
+	    {
+	      sinw = ti*(1-Sqr(w*ti)/6.0);	  
+	      cosw = Sqr(ti)*(0.5 - Sqr(w*ti)/24.0);
+	    }
+	  else 
+	    {
+	      sinw = sin(w*ti)/w;
+	      cosw = (1.0 - cos(w*ti))/wSq;
+	    }
+#endif
 	  sinw = sin(w*ti)/w;
 	  cosw = (1.0 - cos(w*ti))/wSq;
-	}
-#endif
-      sinw = sin(w*ti)/w;
-      cosw = (1.0 - cos(w*ti))/wSq;
-      Omega[0][0] = 0;
-      Omega[0][1] = -wz[i];
-      Omega[0][2] = wy[i];
-      Omega[1][0] = wz[i];
-      Omega[1][1] = 0;
-      Omega[1][2] = -wx[i];
-      Omega[2][0] = -wy[i];
-      Omega[2][1] = wx[i];
-      Omega[2][2] = 0;
-      OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
-      OmegaSq[0][1] = wx[i]*wy[i];
-      OmegaSq[0][2] = wx[i]*wz[i];
-      OmegaSq[1][0] = wx[i]*wy[i];
-      OmegaSq[1][1] = -Sqr(wx[i]) - Sqr(wz[i]);
-      OmegaSq[1][2] = wy[i]*wz[i];
-      OmegaSq[2][0] = wx[i]*wz[i];
-      OmegaSq[2][1] = wy[i]*wz[i];
-      OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
+	  Omega[0][0] = 0;
+	  Omega[0][1] = -wz[i];
+	  Omega[0][2] = wy[i];
+	  Omega[1][0] = wz[i];
+	  Omega[1][1] = 0;
+	  Omega[1][2] = -wx[i];
+	  Omega[2][0] = -wy[i];
+	  Omega[2][1] = wx[i];
+	  Omega[2][2] = 0;
+	  OmegaSq[0][0] = -Sqr(wy[i]) - Sqr(wz[i]);
+	  OmegaSq[0][1] = wx[i]*wy[i];
+	  OmegaSq[0][2] = wx[i]*wz[i];
+	  OmegaSq[1][0] = wx[i]*wy[i];
+	  OmegaSq[1][1] = -Sqr(wx[i]) - Sqr(wz[i]);
+	  OmegaSq[1][2] = wy[i]*wz[i];
+	  OmegaSq[2][0] = wx[i]*wz[i];
+	  OmegaSq[2][1] = wy[i]*wz[i];
+	  OmegaSq[2][2] = -Sqr(wx[i]) - Sqr(wy[i]);
 
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  for (k2 = 0; k2 < 3; k2++)
+	  for (k1 = 0; k1 < 3; k1++)
 	    {
-	      //Omega[k1][k2] = -Omega[k1][k2];
-	      M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	      for (k2 = 0; k2 < 3; k2++)
+		{
+		  //Omega[k1][k2] = -Omega[k1][k2];
+		  M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
 #ifdef MD_USE_CBLAS
-	      Rtmp2[k1][k2] = Rtmp[k1][k2] = R[i][k1][k2];
+		  Rtmp2[k1][k2] = Rtmp[k1][k2] = R[i][k1][k2];
 #endif
 #if 0
-	      if (k1==k2)
-		M[k1][k1] += 1.0;
+		  if (k1==k2)
+		    M[k1][k1] += 1.0;
 #endif
+		}
 	    }
-	}
 #ifdef MD_USE_CBLAS
-      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
-		  3, 3, 3, 1.0, &Rtmp[0][0],
-		  3, &M[0][0], 3,
-		  1.0, &Rtmp2[0][0], 3);
+	  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
+		      3, 3, 3, 1.0, &Rtmp[0][0],
+		      3, &M[0][0], 3,
+		      1.0, &Rtmp2[0][0], 3);
 #if 1
-      for (k1 = 0; k1 < 3; k1++)
-	for (k2 = 0; k2 < 3; k2++)
-	  Ro[k1][k2] = Rtmp2[k1][k2];
+	  for (k1 = 0; k1 < 3; k1++)
+	    for (k2 = 0; k2 < 3; k2++)
+	      Ro[k1][k2] = Rtmp2[k1][k2];
 #endif
 #else 
-      Ro[0][0] = uxx[i];
-      Ro[0][1] = uxy[i];
-      Ro[0][2] = uxz[i];
-      Ro[1][0] = uyx[i];
-      Ro[1][1] = uyy[i];
-      Ro[1][2] = uyz[i];
-      Ro[2][0] = uzx[i];
-      Ro[2][1] = uzy[i];
-      Ro[2][2] = uzz[i];
-      Rt[0][0] = uxx[i];
-      Rt[0][1] = uxy[i];
-      Rt[0][2] = uxz[i];
-      Rt[1][0] = uyx[i];
-      Rt[1][1] = uyy[i];
-      Rt[1][2] = uyz[i];
-      Rt[2][0] = uzx[i];
-      Rt[2][1] = uzy[i];
-      Rt[2][2] = uzz[i];
-      for (k1 = 0; k1 < 3; k1++)
-	for (k2 = 0; k2 < 3; k2++)
-	  {
-	    for (k3 = 0; k3 < 3; k3++)
-	      Ro[k1][k2] += M[k1][k3]*Rt[k3][k2];
-	      //Ro[k1][k2] += R[i][k1][k3]*M[k3][k2];
-	  }
+	  Ro[0][0] = uxx[i];
+	  Ro[0][1] = uxy[i];
+	  Ro[0][2] = uxz[i];
+	  Ro[1][0] = uyx[i];
+	  Ro[1][1] = uyy[i];
+	  Ro[1][2] = uyz[i];
+	  Ro[2][0] = uzx[i];
+	  Ro[2][1] = uzy[i];
+	  Ro[2][2] = uzz[i];
+	  Rt[0][0] = uxx[i];
+	  Rt[0][1] = uxy[i];
+	  Rt[0][2] = uxz[i];
+	  Rt[1][0] = uyx[i];
+	  Rt[1][1] = uyy[i];
+	  Rt[1][2] = uyz[i];
+	  Rt[2][0] = uzx[i];
+	  Rt[2][1] = uzy[i];
+	  Rt[2][2] = uzz[i];
+	  for (k1 = 0; k1 < 3; k1++)
+	    for (k2 = 0; k2 < 3; k2++)
+	      {
+		for (k3 = 0; k3 < 3; k3++)
+		  Ro[k1][k2] += M[k1][k3]*Rt[k3][k2];
+		//Ro[k1][k2] += R[i][k1][k3]*M[k3][k2];
+	      }
 #endif
-      uxx[i] = Ro[0][0];
-      uxy[i] = Ro[0][1];
-      uxz[i] = Ro[0][2];
-      uyx[i] = Ro[1][0];
-      uyy[i] = Ro[1][1];
-      uyz[i] = Ro[1][2];
-      uzx[i] = Ro[2][0];
-      uzy[i] = Ro[2][1];
-      uzz[i] = Ro[2][2];
+	  uxx[i] = Ro[0][0];
+	  uxy[i] = Ro[0][1];
+	  uxz[i] = Ro[0][2];
+	  uyx[i] = Ro[1][0];
+	  uyy[i] = Ro[1][1];
+	  uyz[i] = Ro[1][2];
+	  uzx[i] = Ro[2][0];
+	  uzy[i] = Ro[2][1];
+	  uzz[i] = Ro[2][2];
+	}
+      else
+	{
+	  Omega[0][0] = 0;
+	  Omega[0][1] = 0;
+	  Omega[0][2] = 0;
+	  Omega[1][0] = 0;
+	  Omega[1][1] = 0;
+	  Omega[1][2] = 0;
+	  Omega[2][0] = 0;
+	  Omega[2][1] = 0;
+	  Omega[2][2] = 0;
+	  for (k1 = 0; k1 < 3; k1++)
+	    for (k2 = 0; k2 < 3; k2++)
+	      {
+		Ro[k1][k2] = R[i][k1][k2];
+	      }
+	}
     }
-  else
-    {
-      Omega[0][0] = 0;
-      Omega[0][1] = 0;
-      Omega[0][2] = 0;
-      Omega[1][0] = 0;
-      Omega[1][1] = 0;
-      Omega[1][2] = 0;
-      Omega[2][0] = 0;
-      Omega[2][1] = 0;
-      Omega[2][2] = 0;
-      for (k1 = 0; k1 < 3; k1++)
-	for (k2 = 0; k2 < 3; k2++)
-	  {
-	    Ro[k1][k2] = R[i][k1][k2];
-	  }
-    }
-}
-
-
 }
 
 void adjust_norm(double **R);
+#ifdef MD_HSVISCO
+void calcT(void)
+{
+  double mass;
+  int i;
+  OprogStatus.Txy = 0.0;
+  OprogStatus.Tyz = 0.0;
+  OprogStatus.Tzx = 0.0;
+  OprogStatus.Txx = 0.0;
+  OprogStatus.Tyy = 0.0;
+  OprogStatus.Tzz = 0.0;
+
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (i < Oparams.parnumA)
+	mass = Oparams.m[0];
+      else 
+	mass = Oparams.m[1];
+      OprogStatus.Txy += mass*vx[i]*vy[i];
+      OprogStatus.Tyz += mass*vy[i]*vz[i];
+      OprogStatus.Tzx += mass*vz[i]*vx[i];
+      OprogStatus.Txx += mass*vx[i]*vx[i];
+      OprogStatus.Tyy += mass*vy[i]*vy[i];
+      OprogStatus.Tzz += mass*vz[i]*vz[i];
+    }
+} 
+#endif
 /* =========================== >>> initCoord <<< ============================*/
 void initCoord(void)
 {
@@ -1940,6 +1965,26 @@ void usrInitAft(void)
 	}
       f = fopenMPI(absMisHD("temp.dat"), "w+");
       fclose(f);
+#ifdef MD_HSVISCO
+      f = fopenMPI(absMisHD("Ptens.dat"), "w+");
+      fclose(f);
+      f = fopenMPI(absMisHD("press.dat"), "w+");
+      fclose(f);
+      OprogStatus.DQTxy = 0.0;
+      OprogStatus.DQTyz = 0.0;
+      OprogStatus.DQTzx = 0.0;
+      OprogStatus.DQTxx = 0.0;
+      OprogStatus.DQTyy = 0.0;
+      OprogStatus.DQTzz = 0.0;
+      OprogStatus.DQWxy = 0.0;
+      OprogStatus.DQWyz = 0.0;
+      OprogStatus.DQWzx = 0.0;
+      OprogStatus.DQWxx = 0.0;
+      OprogStatus.DQWyy = 0.0;
+      OprogStatus.DQWzz = 0.0;
+      OprogStatus.lastcoll = -1;
+      calcT();
+#endif
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
       OprogStatus.DQzx = 0.0;
@@ -1978,7 +2023,7 @@ void usrInitAft(void)
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 }
 
-extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][]);
+extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs)
