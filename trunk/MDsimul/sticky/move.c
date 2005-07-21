@@ -919,6 +919,10 @@ void core_bump(int i, int j, double *W, double sigSq)
 {
   double rxij, ryij, rzij, factor;
   double delvx, delvy, delvz, invmi, invmj, denom;
+#ifdef MD_HSVISCO
+  double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold, taus, 
+	  DTxx, DTyy, DTzz, Txxold, Tyyold, Tzzold;
+#endif
 
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
@@ -942,12 +946,58 @@ void core_bump(int i, int j, double *W, double sigSq)
   delvx = - factor * rxij;
   delvy = - factor * ryij;
   delvz = - factor * rzij;
+#ifdef MD_HSVISCO
+  DTxy = delvx*delvy*invmi + vx[i]*delvy + delvx*vy[i];
+  DTxy += delvx*delvy*invmj - vx[j]*delvy - delvx*vy[j]; 
+  DTyz = delvy*delvz*invmi + vy[i]*delvz + delvy*vz[i];
+  DTyz += delvy*delvz*invmj - vy[j]*delvz - delvy*vz[j];
+  DTzx = delvz*delvx*invmi + vz[i]*delvx + delvz*vx[i];
+  DTzx += delvz*delvx*invmj - vz[j]*delvx - delvz*vx[j];
+
+  DTxx = delvx*delvx*invmi + vx[i]*delvx + delvx*vx[i];
+  DTxx += delvx*delvx*invmj - vx[j]*delvx - delvx*vx[j]; 
+  DTyy = delvy*delvy*invmi + vy[i]*delvy + delvy*vy[i];
+  DTyy += delvy*delvy*invmj - vy[j]*delvy - delvy*vy[j];
+  DTzz = delvz*delvz*invmi + vz[i]*delvz + delvz*vz[i];
+  DTzz += delvz*delvz*invmj - vz[j]*delvz - delvz*vz[j];
+#endif
+
   vx[i] = vx[i] + delvx*invmi;
   vx[j] = vx[j] - delvx*invmj;
   vy[i] = vy[i] + delvy*invmi;
   vy[j] = vy[j] - delvy*invmj;
   vz[i] = vz[i] + delvz*invmi;
   vz[j] = vz[j] - delvz*invmj;
+#ifdef MD_HSVISCO 
+  if (OprogStatus.lastcoll!=-1)
+    {
+      taus = Oparams.time - OprogStatus.lastcoll;
+      OprogStatus.DQTxy += OprogStatus.Txy*taus; 
+      OprogStatus.DQTyz += OprogStatus.Tyz*taus;
+      OprogStatus.DQTzx += OprogStatus.Tzx*taus;
+
+      OprogStatus.DQTxx += OprogStatus.Txx*taus; 
+      OprogStatus.DQTyy += OprogStatus.Tyy*taus;
+      OprogStatus.DQTzz += OprogStatus.Tzz*taus;
+      //taus = Oparams.time - OprogStatus.lastcoll;
+      //printf("DQT= %f %f %f\n", OprogStatus.DQTxy, OprogStatus.DQTyz, OprogStatus.DQTzx);
+      OprogStatus.DQWxy += rxij*delvy;
+      OprogStatus.DQWyz += ryij*delvz;
+      OprogStatus.DQWzx += rzij*delvx;
+
+      OprogStatus.DQWxx += rxij*delvx;
+      OprogStatus.DQWyy += ryij*delvy;
+      OprogStatus.DQWzz += rzij*delvz;
+      //printf("DQW= %f %f %f\n", OprogStatus.DQWxy, OprogStatus.DQWyz, OprogStatus.DQWzx);
+    }
+  OprogStatus.Txy += DTxy; 
+  OprogStatus.Tyz += DTyz;
+  OprogStatus.Tzx += DTzx;
+  OprogStatus.Txx += DTxx; 
+  OprogStatus.Tyy += DTyy;
+  OprogStatus.Tzz += DTzz;
+#endif
+
   /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
   //*W = delvx * rxij + delvy * ryij + delvz * rzij;
 }
@@ -5201,7 +5251,7 @@ void move(void)
 	      OprogStatus.DQxx = OprogStatus.DQTxx + OprogStatus.DQWxx;
 	      OprogStatus.DQyy = OprogStatus.DQTyy + OprogStatus.DQWyy;
 	      OprogStatus.DQzz = OprogStatus.DQTzz + OprogStatus.DQWzz;
-
+	      //printf("DQTxx: %.15G DQWxx:%.15G\n", OprogStatus.DQTxx, OprogStatus.DQWxx);
 	      Vol = L*L*L;
 	      OprogStatus.DQxy /= Vol;
 	      OprogStatus.DQyz /= Vol;

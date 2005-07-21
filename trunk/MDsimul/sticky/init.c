@@ -1983,11 +1983,15 @@ void usrInitAft(void)
       OprogStatus.DQWyy = 0.0;
       OprogStatus.DQWzz = 0.0;
       OprogStatus.lastcoll = -1;
+      OprogStatus.DQxx = 0.0;
+      OprogStatus.DQyy = 0.0;
+      OprogStatus.DQzz = 0.0;
       calcT();
 #endif
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
       OprogStatus.DQzx = 0.0;
+   
       for(i = 0; i < Oparams.parnum; i++)
 	{
 	  /* store the initial positions of particles */
