@@ -1380,7 +1380,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       OprogStatus.DQWyz += (rA[1]-rB[1])*delpz;
       OprogStatus.DQWzx += (rA[2]-rB[2])*delpx;
 
-      OprogStatus.DQWxx += (rA[0]-rB[0])*delpy;
+      OprogStatus.DQWxx += (rA[0]-rB[0])*delpx;
       OprogStatus.DQWyy += (rA[1]-rB[1])*delpy;
       OprogStatus.DQWzz += (rA[2]-rB[2])*delpz;
       //printf("DQW= %f %f %f\n", OprogStatus.DQWxy, OprogStatus.DQWyz, OprogStatus.DQWzx);
@@ -5213,7 +5213,7 @@ void move(void)
     	      Pxy = (OprogStatus.DQxy - DQxyOld)/Oparams.Dt;
 	      Pyz = (OprogStatus.DQyz - DQyzOld)/Oparams.Dt;
 	      Pzx = (OprogStatus.DQzx - DQzxOld)/Oparams.Dt;
-	      Pxx = (OprogStatus.DQxy - DQxxOld)/Oparams.Dt;
+	      Pxx = (OprogStatus.DQxx - DQxxOld)/Oparams.Dt;
 	      Pyy = (OprogStatus.DQyy - DQyyOld)/Oparams.Dt;
 	      Pzz = (OprogStatus.DQzz - DQzzOld)/Oparams.Dt;
 	      press = (Pxx+Pyy+Pzz)/3.0;
