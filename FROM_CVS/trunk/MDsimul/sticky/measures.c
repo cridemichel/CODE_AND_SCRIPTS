@@ -554,7 +554,7 @@ void calcpress(void)
      to save on disk like a single measure */
 #ifdef MD_HSVISCO
   mf = fopenMPI(absMisHD("press.dat"),"a");
-  fprintf(mf, "%.15G %.15G\n", Oparams.time, press);
+  fprintf(mf, "%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, press, pressKin, pressHS, pressST);
   fclose(mf);
 #endif
 

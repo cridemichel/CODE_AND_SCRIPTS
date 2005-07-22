@@ -267,6 +267,12 @@ struct progStatus
   double DQWxx;
   double DQWyy;
   double DQWzz;
+  double DQWxxHS;
+  double DQWyyHS;
+  double DQWzzHS;
+  double DQWxxST;
+  double DQWyyST;
+  double DQWzzST;
   double Txy;
   double Tyz;
   double Tzx;
@@ -485,6 +491,12 @@ struct pascii opro_ascii[] =
   {"DQWxx",        &OS(DQWxx),                       1,              1, "%.10G"},
   {"DQWyy",        &OS(DQWyy),                       1,              1, "%.10G"},
   {"DQWzz",        &OS(DQWzz),                       1,              1, "%.10G"},
+  {"DQWxxHS",      &OS(DQWxxHS),                       1,              1, "%.10G"},
+  {"DQWyyHS",      &OS(DQWyyHS),                       1,              1, "%.10G"},
+  {"DQWzzHS",      &OS(DQWzzHS),                       1,              1, "%.10G"},
+  {"DQWxxST",      &OS(DQWxxST),                       1,              1, "%.10G"},
+  {"DQWyyST",      &OS(DQWyyST),                       1,              1, "%.10G"},
+  {"DQWzzST",      &OS(DQWzzST),                       1,              1, "%.10G"},
   {"Txy",          &OS(Txy),                       1,              1, "%.10G"},
   {"Tyz",          &OS(Tyz),                       1,              1, "%.10G"},
   {"Tzx",          &OS(Tzx),                       1,              1, "%.10G"},
@@ -827,13 +839,13 @@ extern struct singlePar OsinglePar[];
 
 #ifdef MAIN
 COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,
-  press_m, press_at, rcmz, rho, ItensD[2][3];
+  press_m, press_at, rcmz, rho, ItensD[2][3], pressST, pressHS, pressKin;
 COORD_TYPE Ptens[3], DQtens[3], 
   sqrtdr2, Aa, V, DrSqTot, temp_transl;
 int MB[NUMV];
 #else 
 extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs,
-  press, press_m, press_at, temp_transl, rcmz, rho;
+  press, press_m, press_at, temp_transl, rcmz, rho, pressST, pressHS, pressKin;
 extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot,
   DphiSq, ItensD[2][3];
 extern int MB[NUMV];

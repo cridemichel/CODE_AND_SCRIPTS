@@ -1982,6 +1982,12 @@ void usrInitAft(void)
       OprogStatus.DQWxx = 0.0;
       OprogStatus.DQWyy = 0.0;
       OprogStatus.DQWzz = 0.0;
+      OprogStatus.DQWxxHS = 0.0;
+      OprogStatus.DQWyyHS = 0.0;
+      OprogStatus.DQWzzHS = 0.0;
+      OprogStatus.DQWxxST = 0.0;
+      OprogStatus.DQWyyST = 0.0;
+      OprogStatus.DQWzzST = 0.0;
       OprogStatus.lastcoll = -1;
       OprogStatus.DQxx = 0.0;
       OprogStatus.DQyy = 0.0;
