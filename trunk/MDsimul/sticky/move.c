@@ -117,7 +117,9 @@ double pi, invL, L2, Vz;
 double W, K, T1xx, T1yy, T1zz,
        T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz, 
        Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB, DQxxOld, 
-       DQyyOld, DQzzOld, DQxyOld, DQyzOld, DQzxOld;
+       DQyyOld, DQzzOld, DQxyOld, DQyzOld, DQzxOld, DQxxOldKin, 
+       DQyyOldKin, DQzzOldKin, DQxxOldHS, DQyyOldHS, DQzzOldHS, DQxxOldST, DQyyOldST, DQzzOldST,
+       PxxKin, PyyKin, PzzKin, PxxHS, PyyHS, PzzHS, PxxST, PyyST, PzzST;
 /*  Patxy, Patyz, Patzx, Patxx, Patyy, Patzz,
     T1myz, T1mzx, T1mxx, T1myy, T1mzz;  */
 double DrSq = 0.0; 
@@ -988,6 +990,9 @@ void core_bump(int i, int j, double *W, double sigSq)
       OprogStatus.DQWxx += rxij*delvx;
       OprogStatus.DQWyy += ryij*delvy;
       OprogStatus.DQWzz += rzij*delvz;
+      OprogStatus.DQWxxHS += rxij*delvx;
+      OprogStatus.DQWyyHS += ryij*delvy;
+      OprogStatus.DQWzzHS += rzij*delvz;
       //printf("DQW= %f %f %f\n", OprogStatus.DQWxy, OprogStatus.DQWyz, OprogStatus.DQWzx);
     }
   OprogStatus.Txy += DTxy; 
@@ -1433,6 +1438,9 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       OprogStatus.DQWxx += (rA[0]-rB[0])*delpx;
       OprogStatus.DQWyy += (rA[1]-rB[1])*delpy;
       OprogStatus.DQWzz += (rA[2]-rB[2])*delpz;
+      OprogStatus.DQWxxST += (rA[0]-rB[0])*delpx;
+      OprogStatus.DQWyyST += (rA[1]-rB[1])*delpy;
+      OprogStatus.DQWzzST += (rA[2]-rB[2])*delpz;
       //printf("DQW= %f %f %f\n", OprogStatus.DQWxy, OprogStatus.DQWyz, OprogStatus.DQWzx);
     }
   OprogStatus.Txy += DTxy; 
@@ -5187,7 +5195,7 @@ void move(void)
 		   * lastcoll è in generale l'ultima collisione o tra due particelle
 		   * o tra le particelle e il fluido (reset delle velocità)*/
 		  taus = Oparams.time - OprogStatus.lastcoll; 
-		  OprogStatus.DQTxy += taus * OprogStatus.Txy;
+  		  OprogStatus.DQTxy += taus * OprogStatus.Txy;
 		  OprogStatus.DQTyz += taus * OprogStatus.Tyz;
 		  OprogStatus.DQTzx += taus * OprogStatus.Tzx;
 		  OprogStatus.DQTxx += taus * OprogStatus.Txx;
@@ -5200,7 +5208,6 @@ void move(void)
 		  DQxxOld = OprogStatus.DQxx;
 		  DQyyOld = OprogStatus.DQyy;
 		  DQzzOld = OprogStatus.DQzz;
-
 		  OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
 		  OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
 		  OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
@@ -5221,7 +5228,19 @@ void move(void)
 		  Pxx = (OprogStatus.DQxx - DQxxOld)/Oparams.Dt;
 		  Pyy = (OprogStatus.DQyy - DQyyOld)/Oparams.Dt;
 		  Pzz = (OprogStatus.DQzz - DQzzOld)/Oparams.Dt;
+		  PxxKin = (OprogStatus.DQTxx - DQxxOldKin)/Oparams.Dt;
+		  PyyKin = (OprogStatus.DQTyy - DQyyOldKin)/Oparams.Dt;
+		  PzzKin = (OprogStatus.DQTzz - DQzzOldKin)/Oparams.Dt;
+		  PxxHS = (OprogStatus.DQWxxHS - DQxxOldHS)/Oparams.Dt;
+		  PyyHS = (OprogStatus.DQWyyHS - DQyyOldHS)/Oparams.Dt;
+		  PzzHS = (OprogStatus.DQWzzHS - DQzzOldHS)/Oparams.Dt;
+		  PxxST = (OprogStatus.DQWxxST - DQxxOldST)/Oparams.Dt;
+		  PyyST = (OprogStatus.DQWyyST - DQyyOldST)/Oparams.Dt;
+		  PzzST = (OprogStatus.DQWzzST - DQzzOldST)/Oparams.Dt;
 		  press = (Pxx+Pyy+Pzz)/3.0;
+		  pressKin = (PxxKin+PyyKin+PzzKin)/3.0/Vol;
+		  pressHS  = (PxxHS+PyyHS+PzzHS)/3.0/Vol;
+		  pressST  = (PxxST+PyyST+PzzST)/3.0/Vol; 
 		  OprogStatus.lastcoll = Oparams.time;
 		}
 #endif
@@ -5245,7 +5264,8 @@ void move(void)
 	      DQxxOld = OprogStatus.DQxx;
 	      DQyyOld = OprogStatus.DQyy;
 	      DQzzOld = OprogStatus.DQzz;
-    	      OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
+	      
+	      OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
 	      OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
 	      OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
 	      OprogStatus.DQxx = OprogStatus.DQTxx + OprogStatus.DQWxx;
@@ -5266,9 +5286,30 @@ void move(void)
 	      Pxx = (OprogStatus.DQxx - DQxxOld)/Oparams.Dt;
 	      Pyy = (OprogStatus.DQyy - DQyyOld)/Oparams.Dt;
 	      Pzz = (OprogStatus.DQzz - DQzzOld)/Oparams.Dt;
+	      PxxKin = (OprogStatus.DQTxx - DQxxOldKin)/Oparams.Dt;
+    	      PyyKin = (OprogStatus.DQTyy - DQyyOldKin)/Oparams.Dt;
+	      PzzKin = (OprogStatus.DQTzz - DQzzOldKin)/Oparams.Dt;
+	      PxxHS = (OprogStatus.DQWxxHS - DQxxOldHS)/Oparams.Dt;
+	      PyyHS = (OprogStatus.DQWyyHS - DQyyOldHS)/Oparams.Dt;
+	      PzzHS = (OprogStatus.DQWzzHS - DQzzOldHS)/Oparams.Dt;
+	      PxxST = (OprogStatus.DQWxxST - DQxxOldST)/Oparams.Dt;
+	      PyyST = (OprogStatus.DQWyyST - DQyyOldST)/Oparams.Dt;
+	      PzzST = (OprogStatus.DQWzzST - DQzzOldST)/Oparams.Dt;
 	      press = (Pxx+Pyy+Pzz)/3.0;
+    	      pressKin = (PxxKin+PyyKin+PzzKin)/3.0/Vol;
+	      pressHS  = (PxxHS+PyyHS+PzzHS)/3.0/Vol;
+	      pressST  = (PxxST+PyyST+PzzST)/3.0/Vol; 
 	      //printf("STEP #%d DQ= %f %f %f\n", Oparams.curStep, OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
 	    }
+	  DQxxOldHS = OprogStatus.DQWxxHS;
+      	  DQyyOldHS = OprogStatus.DQWyyHS;
+	  DQzzOldHS = OprogStatus.DQWzzHS;
+	  DQxxOldST = OprogStatus.DQWxxST;
+	  DQyyOldST = OprogStatus.DQWyyST;
+	  DQzzOldST = OprogStatus.DQWzzST;
+	  DQxxOldKin = OprogStatus.DQTxx;
+      	  DQyyOldKin = OprogStatus.DQTyy;
+	  DQzzOldKin = OprogStatus.DQTzz;
 #endif
 	  OprogStatus.nextDt += Oparams.Dt;
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
