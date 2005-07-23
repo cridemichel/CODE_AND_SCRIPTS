@@ -89,10 +89,11 @@ c
 c   reads all data in a matrix  first l,m,n
 c
            do inp=1,npmax
-           read(10+ifn,*,iostat=irr) nfi,nkv1,(rho1(k,inp),k=1,nkv)
+           read(10+ifn,*,iostat=irr) ti,nkv1,(rho1(k,inp),k=1,nkv)
            if (irr.ne.0) goto 555
            if (nkv1.ne.nkv) print *,' error in # q-vectors',inp
-           time1(inp)=nfi
+           time1(inp)=ti
+c           print *,'time=',ti
            end do
  555       npt=inp-1
 c           print *,' NPT, rho1=',npt,rho1(1,1)
@@ -108,9 +109,9 @@ c
 c   reads all data in a matrix  now lp,mp
 c
            do inp=1,npt
-           read(10+ifn,*,iostat=irr) nfi,nkv1,(rho2(k,inp),k=1,nkv)
+           read(10+ifn,*,iostat=irr) ti,nkv1,(rho2(k,inp),k=1,nkv)
            if (nkv1.ne.nkv) print *,' error in # q-vectors'
-           if (nfi.ne.time1(inp)) print *,' errore in time'
+c           if (nfi.ne.time1(inp)) print *,' errore in time'
            if (irr.ne.0) print *,' some problems with file',ifn
            end do
 c
