@@ -18,6 +18,7 @@ char TXTA[10][MSG_LEN];
 char TXT[MSG_LEN];
 extern double Vz;
 extern double ***R;
+double DphiSqA=0.0, DphiSqB=0.0, DrSqTotA=0.0, DrSqTotB=0.0;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
  in the move function and in the measuring functions, note that the variables 
@@ -268,7 +269,8 @@ void transDiff(void)
       DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
       //Dr4 += Sqr(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
    }
-  fprintf(f, "%.15G %.15G\n", Oparams.time, DrSqTot / ((double) Oparams.parnumA));
+  DrSqTotA =  DrSqTot / ((double) Oparams.parnumA);
+  fprintf(f, "%.15G %.15G\n", Oparams.time, DrSqTotA);
   fclose(f);
   if (Oparams.parnumA < Oparams.parnum)
     {
@@ -282,8 +284,8 @@ void transDiff(void)
 	  DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
 	}
       
-      fprintf(f, "%.15G %.15G\n", Oparams.time, DrSqTot / 
-	      ((double)Oparams.parnum - Oparams.parnumA));
+      DrSqTotB = DrSqTot / ((double)Oparams.parnum - Oparams.parnumA);
+      fprintf(f, "%.15G %.15G\n", Oparams.time, DrSqTotB);
       fclose(f);
     }
   /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
@@ -296,14 +298,14 @@ void transDiff(void)
   Aa = ((double) Oparams.parnumA ) * 3.0 * 
     Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
 #endif
-  DrSqTot /= ((double) Oparams.parnumA);
+  DrSqTot = DrSqTotA;
   
 }
 void calcrotMSD(void)
 {
   FILE *fA, *fB;
   int i, a;
-  double wparal[3], wperp[3], u[3], DphiA[3], DphiB[3], DphiSqA, DphiSqB;
+  double wparal[3], wperp[3], u[3], DphiA[3], DphiB[3];
   DphiSqA = DphiSqB = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
     {
@@ -357,6 +359,7 @@ void calcrotMSD(void)
 	      DphiB[0], DphiB[1], DphiB[2]); 
       fclose(fB);
     }
+  
 }
 /* ============================ >>> temperat <<< =========================== */
 void temperat(void)

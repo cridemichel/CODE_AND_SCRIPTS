@@ -338,6 +338,8 @@ struct progStatus
   double reducefact;
   double phitol;
   double axestol;
+  double rmsd2end;
+  double tmsd2end;
 #ifdef MD_GRAVITY
   double taptau;
   int tapampl;
@@ -564,6 +566,8 @@ struct pascii opro_ascii[] =
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
   {"phitol",       &OS(phitol),                     1,  1,    "%.14G"},
   {"axestol",      &OS(axestol),                    1,  1,    "%.14G"},
+  {"rmsd2end",     &OS(rmsd2end),                   1,  1,    "%.6G"},
+  {"tmsd2end",     &OS(tmsd2end),                   1,  1,    "%.6G"},
   {"endtime",      &OS(endtime),                    1,  1,    "%.15G"},
   {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
   {"nextSumTime"  ,&OS(nextSumTime),                1,  1,    "%.15G"},
@@ -772,6 +776,8 @@ struct singlePar OsinglePar[] = {
   {"reducefact", &OprogStatus.reducefact,     CT},
   {"phitol",      &OprogStatus.phitol,        CT},
   {"axestol",     &OprogStatus.axestol,       CT},
+  {"tmsd2end",    &OprogStatus.tmsd2end,      CT},
+  {"rmsd2end",    &OprogStatus.rmsd2end,      CT},
 #ifdef MD_GRAVITY
   {"taptau",     &OprogStatus.taptau,         CT},
   {"quenchtol",  &OprogStatus.quenchtol,      CT},
