@@ -4438,7 +4438,7 @@ void adjust_step_dist8(double *x, double *dx, double *fx, double *gx)
 #if 1
   minst1 = min3(OprogStatus.toldxNR*minaxAB/fabs(dx[7])/nfx,
 	       OprogStatus.toldxNR*nfx/ngx/2.0/fabs(dx[6]),
-	       sqrt(OprogStatus.toldxNR*nfx/ngx/Sqr(dx[3])));
+	       sqrt(OprogStatus.toldxNR*nfx/ngx/Sqr(dx[6])));
 #else
   minst1 = min(minaxAB/fabs(dx[7])/nfx,nfx/ngx/2.0/fabs(dx[6]));
   minst1 *= OprogStatus.toldxNR;
