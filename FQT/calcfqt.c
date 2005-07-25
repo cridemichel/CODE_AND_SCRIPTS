@@ -25,7 +25,7 @@
 #define NUMQ 100
 char fname[1024]; 
 double time, Cav, rhoR0[MAXQ], rhoI0[MAXQ], cc[3][MAXPTS],C[3][MAXPTS], 
-       rhoR1[MAXQ], rhoI1[MAXQ], ti[MAXPTS], *Pt[MAXQ];
+       rhoR1[MAXQ], rhoI1[MAXQ], ti[MAXPTS], *rhoRt[MAXQ], *rhoIt[MAXQ];
 int NQarr[NUMQ];
 int points;
 int main(int argc, char **argv)
@@ -69,7 +69,8 @@ int main(int argc, char **argv)
       NQarr[nq] = NQ;
       for (i=0; i < NQ; i++)
 	{
-	  Pt[i] = malloc(sizeof(double)*c2);
+	  rhoRt[i] = malloc(sizeof(double)*c2);
+	  rhoIt[i] = malloc(sizeof(double)*c2);
 	}
       nlines = c2;
       fclose(f2);
@@ -105,7 +106,7 @@ int main(int argc, char **argv)
 		{
 		  rhoR1[i] = rhoRt[i][nr2];
 		  rhoI1[i] = rhoIt[i][nr2];
-		  C[i][nr2-nr1] += rhoR1[i]*rhoR0[i]-rhoI1[i]*rhoI0[i];
+		  C[i][nr2-nr1] += rhoR1[i]*rhoR0[i]+rhoI1[i]*rhoI0[i];
 		  cc[i][nr2-nr1] += 1.0;
 		  //printf("qui c3-c2=%d\n", c3-c2);
 		}
@@ -113,11 +114,12 @@ int main(int argc, char **argv)
 	}
       for (i=0; i < NQ; i++)
 	{
-	  free(Pt[i]);
+	  free(rhoIt[i]);
+	  free(rhoRt[i]);
 	}
 	  
     }
-  for (nq = 0; nq < NUMQ; n1++)
+  for (nq = 0; nq < NUMQ; nq++)
     {
       sprintf(fname, "sqt.%2d.k=%3d",ll*10+mm,nq);
       f = fopen(fname, "w+");
