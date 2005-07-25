@@ -13,6 +13,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
 double minaxA, minaxB, minaxAB;
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
@@ -6056,5 +6057,17 @@ void move(void)
       updateDQ(tij);
       updatePE(Oparams.parnum);
 #endif
+    }
+  if ((OprogStatus.rmsd2end > 0.0 && OprogStatus.tmsd2end > 0.0 &&
+       DphiSqA > Sqr(OprogStatus.rmsd2end) 
+       && DrSqTotA > Sqr(OprogStatus.tmsd2end)) 
+      || (OprogStatus.rmsd2end > 0.0  && OprogStatus.tmsd2end <= 0.0 
+	  && DphiSqA > Sqr(OprogStatus.rmsd2end))
+      || (OprogStatus.tmsd2end > 0.0  && OprogStatus.rmsd2end <= 0.0 
+	  && DrSqTotA > Sqr(OprogStatus.tmsd2end))
+      )
+    {
+      printf("MSD is enough, exiting...\n");
+      ENDSIM=1;
     }
 }
