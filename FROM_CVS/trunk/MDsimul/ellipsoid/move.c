@@ -6067,7 +6067,7 @@ void move(void)
 	  && DrSqTotA > Sqr(OprogStatus.tmsd2end))
       )
     {
-      printf("MSD is enough, exiting...\n");
+      printf("[MSDcheck] steps %d time %.15G\n", Oparams.curStep, Oparams.time);
       ENDSIM=1;
     }
 }
