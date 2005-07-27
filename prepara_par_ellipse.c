@@ -36,6 +36,10 @@ int main(int argc, char **argv){
   parnumA=_PARNUM;
 #endif
   
+#ifdef _DT
+  dt=_DT;
+#endif
+
   if(argc<3){
     fprintf(stderr,"\nTo use the program, I need Phi and El(ongation)\n\n");
     fprintf(stderr,"I can use also stepnum\n\n");
