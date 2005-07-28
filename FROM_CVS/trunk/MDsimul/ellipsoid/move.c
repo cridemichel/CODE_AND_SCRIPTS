@@ -1231,7 +1231,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 void update_MSDrot(int i)
 {
   double ti;
-  ti = Oparams.time - lastcol[i];
+  ti = Oparams.time - OprogStatus.lastcolltime[i];
   /* sumox, sumoy e sumoz sono gli integrali nel tempo delle componenti della velocità
    * angolare lungo gli assi dell'ellissoide */
   OprogStatus.sumox[i] += (wx[i]*R[i][0][0]+wy[i]*R[i][0][1]+wz[i]*R[i][0][2])*ti;
@@ -1895,6 +1895,7 @@ void UpdateAtom(int i)
     }
   atomTime[i] = Oparams.time;
 }
+
 void UpdateSystem(void)
 {
   int i;
@@ -5276,7 +5277,8 @@ void ProcessCollision(void)
 #ifdef MD_GRAVITY
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
 #else
-  lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+  OprogStatus.lastcolltime[evIdA] = OprogStatus.lastcolltime[evIdB] = 
+    lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
   lastbump[evIdA]=evIdB;
   lastbump[evIdB]=evIdA;
 #endif
