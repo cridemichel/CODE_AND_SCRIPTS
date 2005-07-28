@@ -3,16 +3,31 @@
 # $3 = elongazione
 # $4 = se < 0 non fa l'equilibratura, se = 0 usa il MSD per terminare l'equilibratura, se > 0 fa 
 #      $4 passi di equilibratura ( 0 = default ) 
-if [ $3 = "" ]
-then 
-echo "You have to supply an elongation!"
+if [ "$1" = "" ]
+then
+echo "Syntax: sim1statepnt <Volume_Fraction> <production_cycles> [elongation] [equilibration_steps]"
 exit 0
 fi
-if [ $4 = "" ]
+if [ "$2" = "" ]
+then
+echo "You have to supply the number of production cycles"
+exit 0
+fi
+if [ "$3" = "" ]
+then 
+CDIR=`pwd`
+DIR=`basename $CDIR`
+EL=`echo $DIR | awk -F _ '{print $2}'`
+#echo "You have to supply an elongation!"
+#echo "Elongazione: $EL"
+#exit 0
+else
+EL=$3
+fi
+if [ "$4" = "" ]
 then
 EQSTPS=0
 fi
-EL=$3
 PARFILE=ellips.par
 cp $PARFILE Phi$1
 cd Phi$1
@@ -24,7 +39,8 @@ SIMPR="ell${EL}PR$1"
 STORERATE="0.01"
 USENNL=1
 #N.B. it's supposed that we use NNL here!!
-if [ $EL -gt 1.0 ]
+PROL=`echo $EL | awk '{if ($0 >= 1.0) printf("1"); else printf("0");}'`
+if [ $PROL -eq 1 ]
 then
 A0=$EL
 B0=1.0
@@ -48,6 +64,8 @@ if [ $USENNL -eq 1 ]
 then
 RCUT=`echo "2.0*e(0.5*l(($A0+$RNNL)*($A0+$RNNL)+($B0+$RNNL)*($B0+$RNNL)+($C0+$RNNL)*($C0+$RNNL)))" | bc -l`
 fi
+echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
+exit 0
 #RANDOMIZZAZIONE INIZIALE
 cp $PARFILE rand_$PARFILE
 INIL=`echo "" | bc -l`
