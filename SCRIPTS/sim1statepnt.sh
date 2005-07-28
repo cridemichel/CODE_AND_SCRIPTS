@@ -65,7 +65,6 @@ then
 RCUT=`echo "2.0*e(0.5*l(($A0+$RNNL)*($A0+$RNNL)+($B0+$RNNL)*($B0+$RNNL)+($C0+$RNNL)*($C0+$RNNL)))" | bc -l`
 fi
 echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
-exit 0
 #RANDOMIZZAZIONE INIZIALE
 cp $PARFILE rand_$PARFILE
 INIL=`echo "" | bc -l`
