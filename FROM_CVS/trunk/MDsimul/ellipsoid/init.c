@@ -780,6 +780,7 @@ void usrInitBef(void)
 #endif
     for (i = 0; i < MAXPAR; i++)
       {
+	OprogStatus.lastcolltime[i] = 0.0;
 	OprogStatus.sumox[i] = 0.0;
 	OprogStatus.sumoy[i] = 0.0;
 	OprogStatus.sumoz[i] = 0.0;
