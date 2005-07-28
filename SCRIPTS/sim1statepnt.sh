@@ -38,6 +38,7 @@ SIMEQ="ell${EL}EQ$1"
 SIMPR="ell${EL}PR$1"
 STORERATE="0.01"
 USENNL=1
+PARNUM=512
 #N.B. it's supposed that we use NNL here!!
 PROL=`echo $EL | awk '{if ($0 >= 1.0) printf("1"); else printf("0");}'`
 if [ $PROL -eq 1 ]
@@ -46,6 +47,8 @@ A0=$EL
 B0=1.0
 C0=1.0
 RNNL=0.12
+INIL=`echo "5.0*e(1.0/3.0*l($PARNUM))*$A0" | bc -l`
+echo "qui INIL=" $INIL
 if [ $USENNL -eq 0 ]
 then
 RCUT=`echo "2.0*$A0*1.01" | bc -l` 
@@ -55,6 +58,7 @@ A0=1.0
 B0=`echo "1.0/$EL" | bc -l`
 C0=`echo "1.0/$EL" | bc -l`
 RNNL=0.2
+INIL=`echo "5.0*e(1.0/3.0*l($PARNUM))*$B0" | bc -l`
 if [ $USENNL -eq 0 ]
 then
 RCUT=`echo "2.0*$B0*1.01" | bc -l` 
@@ -67,18 +71,18 @@ fi
 echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
 #RANDOMIZZAZIONE INIZIALE
 cp $PARFILE rand_$PARFILE
-INIL=`echo "" | bc -l`
 echo "L:" $INIL >> rand_$PARFILE
 #>>> SET TEMPERATURE TO 1.0
-../set_params.sh rand_$PARFILE stepnum 10 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL inifile '*' endfile ${SIMRA}.cor
+../set_params.sh rand_$PARFILE stepnum 100 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM
 ln -sf $ELLEXE $SIMRA
 $SIMRA -f ./rand_${PARFILE} > screen_$SIMRA 
+#exit 
 #>>> EQUILIBRATE STARTING DENSITY (I.E. RANDOMIZE)
 ../set_params.sh rand_$PARFILE stepnum 1000 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 0 
 ln -sf $ELLEXE $SIMRA inifile ${SIMRA}.cor endfile ${SIMRA}.cor
 $SIMRA -f ./rand_${PARFILE} >> screen_$SIMRA 
 #CRESCITA
-../set_params.sh $PARFILE stepnum 1000000 targetPhi $1 storerate 0.0 intervalSum 0.02 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor
+../set_params.sh $PARFILE stepnum 1000000 targetPhi $1 storerate 0.0 intervalSum 0.02 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor parnum $PARNUM
 ln -sf $ELLEXE $SIMGR
 $SIMGR -f ./$PARFILE > screen_$SIMGR 
 #EQUILIBRATURA
