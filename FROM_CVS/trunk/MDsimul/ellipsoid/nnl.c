@@ -3516,10 +3516,24 @@ void nextNNLupdate(int na)
   DelDist = max3(nebrTab[na].axa,nebrTab[na].axb,nebrTab[na].axc) -
     max3(axa[na],axb[na],axc[na]);
 #else
-  nebrTab[na].axa = OprogStatus.rNebrShell+axa[na];
-  nebrTab[na].axb = OprogStatus.rNebrShell+axb[na];
-  nebrTab[na].axc = OprogStatus.rNebrShell+axc[na];
-  DelDist = OprogStatus.rNebrShell;
+#if 1
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      /* in tal modo fa si che il rapporto rNebrShell/<semiass all'inizio> venga preservato durante
+       * la crescita. */
+      nebrTab[na].axa = (1.0+OprogStatus.rNebrShell/Oparams.a[na<Oparams.parnumA?0:1])*axa[na];
+      nebrTab[na].axb = (1.0+OprogStatus.rNebrShell/Oparams.b[na<Oparams.parnumA?0:1])*axb[na];
+      nebrTab[na].axc = (1.0+OprogStatus.rNebrShell/Oparams.c[na<Oparams.parnumA?0:1])*axc[na];
+      DelDist = 0.0;
+    }
+  else
+#endif
+    {
+      nebrTab[na].axa = OprogStatus.rNebrShell+axa[na];
+      nebrTab[na].axb = OprogStatus.rNebrShell+axb[na];
+      nebrTab[na].axc = OprogStatus.rNebrShell+axc[na];
+      DelDist = OprogStatus.rNebrShell;
+    }
 #endif
   DelDist += distBuf;
   MD_DEBUG31(printf("DelDist=%.15G\n", DelDist));
