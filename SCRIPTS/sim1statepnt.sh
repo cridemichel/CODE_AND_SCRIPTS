@@ -109,7 +109,7 @@ if [ $2 -gt 0 ]
 then
 STCI=`cat screen_$SIMEQ | awk '{if ($1=="[MSDcheck]") print $3}'`
 STPS=`echo "$STCI*$2"| bc -l`
-NN=`echo "l($STCI/$STORERATE)/l(10.0)" | bc -l | awk 'printf("%d",$0)'`
+NN=`echo "l($STCI/$STORERATE)/l(10.0)" | bc -l | awk '{printf("%d",$0)}'`
 ../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 storerate $STORERATE intevalSum 5.0 rmsd2end -1.0 tmsd2end -1.0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
 ln -sf $ELLEXE $SIMPR
 $SIMPR -f ./$PARFILE > screen_$SIMPR 
