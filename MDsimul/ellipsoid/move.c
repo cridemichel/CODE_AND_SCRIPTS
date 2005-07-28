@@ -13,6 +13,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
 double minaxA, minaxB, minaxAB;
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
@@ -449,8 +450,8 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 		      double shift[3], double scalfact, double *factor)
 {
   int kk;
-  double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
-  double boxdiag, maxaxNNL, maxaxStore;
+  double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2, fact3;
+  double boxdiag, maxaxNNL=0.0, maxaxStore=1.0;
   L2 = 0.5 * L;
   phi = calc_phi();
   phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
@@ -483,12 +484,21 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
       if (OprogStatus.useNNL)
 	{
 	  maxaxNNL = 2.0*max3(nebrTab[i].axa, nebrTab[i].axb,nebrTab[i].axc);
-	  maxaxStore = 2.0*max3(aL,bL, cL);
+	  maxaxStore = 2.0*max3(aL,bL,cL);
 	}
-      if (OprogStatus.useNNL && maxax[i] / maxaxNNL > 1.0)
-	fact1 = 1.0 + scalfact*(maxaxNNL / maxaxStore - 1.0);
-      else
-	fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
+     /*
+	 if (OprogStatus.useNNL && maxax[i] / maxaxNNL > 1.0)
+	 fact1 = 1.0 + scalfact*(maxaxNNL / maxaxStore - 1.0);
+	 else
+	 */	 
+      fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
+      if (OprogStatus.useNNL)
+	{
+	  fact3 =  1.0 + 0.99*(maxaxNNL / maxaxStore - 1.0);
+	  /* nella crescita l'ellissoide non deve uscire dal suo NNL box */ 
+	  if (fact3 < fact1)
+	    fact1 = fact3;
+	}
       fact2 = F;
       if (fact2 < fact1)
 	fact = fact2;
@@ -511,9 +521,16 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
     }
   else
     {
+#if 0
       boxdiag = 2.0*sqrt(Sqr(axa[i]+OprogStatus.rNebrShell)+
 			 Sqr(axb[i]+OprogStatus.rNebrShell)+
 			 Sqr(axc[i]+OprogStatus.rNebrShell)); 
+#else
+      boxdiag = 2.0*sqrt(Sqr(axa[i]*(1.0+OprogStatus.rNebrShell/Oparams.a[(i<Oparams.parnumA)?0:1]))+
+			 Sqr(axb[i]*(1.0+OprogStatus.rNebrShell/Oparams.b[(i<Oparams.parnumA)?0:1]))+
+			 Sqr(axc[i]+(1.0+OprogStatus.rNebrShell/Oparams.c[(i<Oparams.parnumA)?0:1]))); 
+
+#endif
       if ( boxdiag > Oparams.rcut)
 	Oparams.rcut = 1.01*boxdiag;
     }
@@ -630,7 +647,7 @@ void scale_Phi(void)
 	distMin = get_min_dist(i, &j, rC, rD, shift);
       if (calcdist_retcheck)
 	continue;
-      if (j == -1)
+      if (j == -1 && !OprogStatus.useNNL)
 	continue;
       //printf("i=%d j=%d distmin=%.10G\n", i, j, distMin);
       rAmin[0] = rx[i];
@@ -641,8 +658,8 @@ void scale_Phi(void)
       rBmin[2] = rz[j];
       scalfact = OprogStatus.scalfact;
       store_values(i);
-      if (distMin < OprogStatus.epsd/10.0)
-	continue;
+      /*if (distMin < OprogStatus.epsd/10.0)
+	continue;*/
       phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor);
       rebuild_linked_list();
       distMinT = check_dist_min(i, NULL);
@@ -1214,7 +1231,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 void update_MSDrot(int i)
 {
   double ti;
-  ti = Oparams.time - lastcol[i];
+  ti = Oparams.time - OprogStatus.lastcolltime[i];
   /* sumox, sumoy e sumoz sono gli integrali nel tempo delle componenti della velocità
    * angolare lungo gli assi dell'ellissoide */
   OprogStatus.sumox[i] += (wx[i]*R[i][0][0]+wy[i]*R[i][0][1]+wz[i]*R[i][0][2])*ti;
@@ -1878,6 +1895,7 @@ void UpdateAtom(int i)
     }
   atomTime[i] = Oparams.time;
 }
+
 void UpdateSystem(void)
 {
   int i;
@@ -5259,7 +5277,8 @@ void ProcessCollision(void)
 #ifdef MD_GRAVITY
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
 #else
-  lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+  OprogStatus.lastcolltime[evIdA] = OprogStatus.lastcolltime[evIdB] = 
+    lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
   lastbump[evIdA]=evIdB;
   lastbump[evIdB]=evIdA;
 #endif
@@ -6056,5 +6075,17 @@ void move(void)
       updateDQ(tij);
       updatePE(Oparams.parnum);
 #endif
+    }
+  if ((OprogStatus.rmsd2end > 0.0 && OprogStatus.tmsd2end > 0.0 &&
+       DphiSqA > Sqr(OprogStatus.rmsd2end) 
+       && DrSqTotA > Sqr(OprogStatus.tmsd2end)) 
+      || (OprogStatus.rmsd2end > 0.0  && OprogStatus.tmsd2end <= 0.0 
+	  && DphiSqA > Sqr(OprogStatus.rmsd2end))
+      || (OprogStatus.tmsd2end > 0.0  && OprogStatus.rmsd2end <= 0.0 
+	  && DrSqTotA > Sqr(OprogStatus.tmsd2end))
+      )
+    {
+      printf("[MSDcheck] steps %d time %.15G\n", Oparams.curStep, Oparams.time);
+      ENDSIM=1;
     }
 }
