@@ -117,8 +117,14 @@ int main(int argc, char **argv){
   printf("nRun: ell%s\n",El);
   //printf("seed: %d\n",0); /* 0 fixed, -1 random */
   printf("seed: %d\n",-1); /* 0 fixed,-1 random */
+
+#ifdef _NEWCONF
   printf("rescaleTime: 0.1\n");
   printf("scalevel: 1\n");
+#else
+  printf("scalevel: 0\n");
+#endif
+
   printf("CMreset: 0\n");
   printf("tapeTimes: 0\n");
   if((stepnum/Nsave)>100) printf("energyCalc: %d\n",stepnum/Nsave);
