@@ -145,6 +145,20 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       point[kk] = nebrTab[i].r[kk] + del*grad[kk]; 
     }
 }
+void growth_rebuildNNL(int i)
+{
+  int ii, n;
+  nextNNLupdate(i);
+  BuildNNL(i);
+  if (nebrTab[i].nexttime < nextNNLrebuild)
+    nextNNLrebuild = nebrTab[i].nexttime;
+  for (ii=0; ii < nebrTab[i].len; ii++)
+    {
+      n = nebrTab[i].list[ii]; 
+      BuildNNL(n);
+    }
+}
+
 void rebuildNNL(void)
 {
   int i;
