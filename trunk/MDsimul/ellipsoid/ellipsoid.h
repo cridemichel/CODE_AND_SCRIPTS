@@ -255,7 +255,7 @@ struct progStatus
   double sumox[MAXPAR];
   double sumoy[MAXPAR];
   double sumoz[MAXPAR];
-
+  double lastcolltime[MAXPAR];
   double springkSD;
   int SDmethod;
   double toldxNR;
