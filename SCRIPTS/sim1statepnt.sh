@@ -40,6 +40,7 @@ SIMPR="ell${EL}PR$1"
 STORERATE="0.01"
 USENNL=1
 PARNUM=512
+DT="0.05"
 #N.B. it's supposed that we use NNL here!!
 PROL=`echo $EL | awk '{if ($0 >= 1.0) printf("1"); else printf("0");}'`
 if [ $PROL -eq 1 ]
@@ -109,7 +110,7 @@ if [ $2 -gt 0 ]
 then
 STCI=`cat screen_$SIMEQ | awk '{if ($1=="[MSDcheck]") print $3}'`
 STPS=`echo "$STCI*$2"| bc -l`
-NN=`echo "l($STCI/$STORERATE)/l(1.3)" | bc -l | awk '{printf("%d",$0)}'`
+NN=`echo "l($DT*$STCI/$STORERATE)/l(1.3)" | bc -l | awk '{printf("%d",$0)}'`
 ../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 storerate $STORERATE intevalSum 5.0 rmsd2end -1.0 tmsd2end -1.0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
 ln -sf $ELLEXE $SIMPR
 $SIMPR -f ./$PARFILE > screen_$SIMPR 
