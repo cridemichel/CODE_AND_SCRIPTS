@@ -3520,7 +3520,7 @@ void updAllNNL()
 void nextNNLupdate(int na)
 {
   int i1, i2, ip;
-  double DelDist, tsup;
+  double DelDist, tsup, nnlfact;
   const double distBuf = 0.1;
   double Omega[3][3], vecg[5];
 #ifndef MD_NNLPLANES
@@ -3530,18 +3530,15 @@ void nextNNLupdate(int na)
   DelDist = max3(nebrTab[na].axa,nebrTab[na].axb,nebrTab[na].axc) -
     max3(axa[na],axb[na],axc[na]);
 #else
-#if 1
   if (OprogStatus.targetPhi > 0.0)
     {
-      /* in tal modo fa si che il rapporto rNebrShell/<semiass all'inizio> venga preservato durante
-       * la crescita. */
-      nebrTab[na].axa = (1.0+OprogStatus.rNebrShell/Oparams.a[na<Oparams.parnumA?0:1])*axa[na];
-      nebrTab[na].axb = (1.0+OprogStatus.rNebrShell/Oparams.b[na<Oparams.parnumA?0:1])*axb[na];
-      nebrTab[na].axc = (1.0+OprogStatus.rNebrShell/Oparams.c[na<Oparams.parnumA?0:1])*axc[na];
-      DelDist = 0.0;
+      nnlfact = axa[na]/Oparams.a[na<Oparams.parnumA?0:1];
+      nebrTab[na].axa = nnlfact*OprogStatus.rNebrShell+axa[na];
+      nebrTab[na].axb = nnlfact*OprogStatus.rNebrShell+axb[na];
+      nebrTab[na].axc = nnlfact*OprogStatus.rNebrShell+axc[na];
+      DelDist = nnlfact*OprogStatus.rNebrShell;
     }
   else
-#endif
     {
       nebrTab[na].axa = OprogStatus.rNebrShell+axa[na];
       nebrTab[na].axb = OprogStatus.rNebrShell+axb[na];
