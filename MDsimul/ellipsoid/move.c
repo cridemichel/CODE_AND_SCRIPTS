@@ -450,6 +450,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 		      double shift[3], double scalfact, double *factor, int j)
 {
   int kk;
+  double nnlfact;
   double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2, fact3;
   double boxdiag, maxaxNNL=0.0, maxaxStore=1.0;
   L2 = 0.5 * L;
@@ -530,16 +531,10 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
     }
   else
     {
-#if 0
-      boxdiag = 2.0*sqrt(Sqr(axa[i]+OprogStatus.rNebrShell)+
-			 Sqr(axb[i]+OprogStatus.rNebrShell)+
-			 Sqr(axc[i]+OprogStatus.rNebrShell)); 
-#else
-      boxdiag = 2.0*sqrt(Sqr(axa[i]*(1.0+OprogStatus.rNebrShell/Oparams.a[(i<Oparams.parnumA)?0:1]))+
-			 Sqr(axb[i]*(1.0+OprogStatus.rNebrShell/Oparams.b[(i<Oparams.parnumA)?0:1]))+
-			 Sqr(axc[i]+(1.0+OprogStatus.rNebrShell/Oparams.c[(i<Oparams.parnumA)?0:1]))); 
-
-#endif
+      nnlfact = axa[i]/Oparams.a[i<Oparams.parnumA?0:1];
+      boxdiag = 2.0*sqrt(Sqr(axa[i]+OprogStatus.rNebrShell*nnlfact)+
+			 Sqr(axb[i]+OprogStatus.rNebrShell*nnlfact)+
+			 Sqr(axc[i]+OprogStatus.rNebrShell*nnlfact)); 
       if ( boxdiag > Oparams.rcut)
 	Oparams.rcut = 1.01*boxdiag;
     }
@@ -551,7 +546,7 @@ void rebuild_linked_list()
   double L2;
   int j, n;
   L2 = 0.5 * L;
-   cellsx = L / Oparams.rcut;
+  cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
 #ifdef MD_GRAVITY
   cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
