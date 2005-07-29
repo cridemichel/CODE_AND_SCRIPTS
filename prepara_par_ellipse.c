@@ -200,7 +200,11 @@ int main(int argc, char **argv){
   printf("mass0: 1.0\n");
   printf("rcut: %lf\n",rcut);
   printf("overlaptol: 0.01\n");
+#ifdef _GROWTH
+  printf("intervalSum: %lf\n",10.*Dt);
+#else
   printf("intervalSum: %lf\n",stepnum*Dt/10.); /* frequency of the output*/
+#endif
   printf("eventMult: 200\n");
   printf("bakSaveMode: 0\n");
   printf("storerate: %lf\n",storerate);
