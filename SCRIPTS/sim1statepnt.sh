@@ -75,16 +75,16 @@ echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
 cp $PARFILE rand_$PARFILE
 echo "L:" $INIL >> rand_$PARFILE
 #>>> SET TEMPERATURE TO 1.0
-../set_params.sh rand_$PARFILE stepnum 100 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM
+../set_params.sh rand_$PARFILE stepnum 100 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM A0 $A0 B0 $B0 C0 $C0
 ln -sf $ELLEXE $SIMRA
 $SIMRA -f ./rand_${PARFILE} > screen_$SIMRA 
 #exit 
 #>>> EQUILIBRATE STARTING DENSITY (I.E. RANDOMIZE)
-../set_params.sh rand_$PARFILE stepnum 1000 targetPhi 0.0 storerate 0.0 intervalSum 2.0 scalevel 0 inifile ${SIMRA}.cor endfile ${SIMRA}.cor
+../set_params.sh rand_$PARFILE stepnum 1000 targetPhi 0.0 storerate 0.0 intervalSum 2.0 scalevel 0 inifile ${SIMRA}.cor endfile ${SIMRA}.cor 
 ln -sf $ELLEXE $SIMRA 
 $SIMRA -f ./rand_${PARFILE} >> screen_$SIMRA 
 #CRESCITA
-../set_params.sh $PARFILE stepnum 1000000 targetPhi $1 storerate 0.0 intervalSum 0.05 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor parnum $PARNUM
+../set_params.sh $PARFILE stepnum 1000000 targetPhi $1 storerate 0.0 intervalSum 0.05 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor parnum $PARNUM A0 $A0 B0 $B0 C0 $C0
 ln -sf $ELLEXE $SIMGR
 $SIMGR -f ./$PARFILE > screen_$SIMGR 
 #exit 
