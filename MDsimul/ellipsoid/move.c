@@ -672,8 +672,8 @@ void scale_Phi(void)
 	}
       scalfact = OprogStatus.scalfact;
       store_values(i);
-      /*if (distMin < OprogStatus.epsd/10.0)
-	continue;*/
+      if (distMin < 0)//OprogStatus.epsd/10.0)
+	continue;
       //printf("===> j=%d rA=(%f,%f,%f) rC=(%f,%f,%f)\n", j, rA[0], rA[1], rA[2], rC[0], rC[1], rC[2]);
       phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor, j);
       rebuild_linked_list();
