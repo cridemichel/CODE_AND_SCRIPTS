@@ -94,7 +94,7 @@ then
 if [ $EQSTPS -eq 0 ]
 then
 STPS=10000000
-TMSD=`echo "2.0*e((1.0/3.0)*l($A0*$B0*$C0))" | bc -l`
+TMSD=`echo "4.0*e((1.0/3.0)*l($A0*$B0*$C0))" | bc -l`
 RMSD=3.14
 else
 STPS=$EQSTPS
