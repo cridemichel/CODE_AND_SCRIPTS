@@ -447,7 +447,7 @@ void scale_coords(double sf)
 double max3(double a, double b, double c);
 
 double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], double rD[3], 
-		      double shift[3], double scalfact, double *factor)
+		      double shift[3], double scalfact, double *factor, int j)
 {
   int kk;
   double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2, fact3;
@@ -464,17 +464,20 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   else
     Ccur = axa[i]/Oparams.a[1]; 
   F = C / Ccur;
-  for (kk=0; kk < 3; kk++)
+  if (j != -1)
     {
-      rAC[kk] = rA[kk] - rC[kk];
-      if (fabs (rAC[kk]) > L2)
-	rAC[kk] -= SignR(L, rAC[kk]);
-    }
-  for (kk=0; kk < 3; kk++)
-    {
-      rBD[kk] = rB[kk] - rD[kk];
-      if (fabs (rBD[kk]) > L2)
-	rBD[kk] -= SignR(L, rBD[kk]);
+      for (kk=0; kk < 3; kk++)
+	{
+	  rAC[kk] = rA[kk] - rC[kk];
+	  if (fabs (rAC[kk]) > L2)
+	    rAC[kk] -= SignR(L, rAC[kk]);
+	}
+      for (kk=0; kk < 3; kk++)
+	{
+	  rBD[kk] = rB[kk] - rD[kk];
+	  if (fabs (rBD[kk]) > L2)
+	    rBD[kk] -= SignR(L, rBD[kk]);
+	}
     }
   /* 0.99 serve per evitare che si tocchino */
   if (F < 1)
@@ -491,14 +494,20 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 	 fact1 = 1.0 + scalfact*(maxaxNNL / maxaxStore - 1.0);
 	 else
 	 */	 
-      fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
-      if (OprogStatus.useNNL)
+      if (j != -1)
 	{
-	  fact3 =  1.0 + 0.99*(maxaxNNL / maxaxStore - 1.0);
-	  /* nella crescita l'ellissoide non deve uscire dal suo NNL box */ 
-	  if (fact3 < fact1)
-	    fact1 = fact3;
+	  //printf("===> d=%.15G norm(rAC):%.15G scalfact=%.15G\n", d, calc_norm(rAC), scalfact);
+	  fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
+	  if (OprogStatus.useNNL)
+	    {
+	      fact3 =  1.0 + 0.99*(maxaxNNL / maxaxStore - 1.0);
+	      /* nella crescita l'ellissoide non deve uscire dal suo NNL box */ 
+	      if (fact3 < fact1)
+		fact1 = fact3;
+	    }
 	}
+      else
+	fact1 = 1.0 + 0.99*(maxaxNNL / maxaxStore - 1.0);
       fact2 = F;
       if (fact2 < fact1)
 	fact = fact2;
@@ -610,7 +619,8 @@ void scale_Phi(void)
   int i, j, imin, kk, its, done=0;
   static int first = 1;
   static double a0I, target;
-  double maxaxNNL, distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
+  double maxaxNNL, distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3]={0,0,0}, 
+	 rD[3]={0,0,0};
   double L2, shift[3], shiftmin[3], phi, scalfact, factor, axai;
   if (OprogStatus.targetPhi <= 0)
     return;
@@ -653,14 +663,24 @@ void scale_Phi(void)
       rAmin[0] = rx[i];
       rAmin[1] = ry[i];
       rAmin[2] = rz[i];
-      rBmin[0] = rx[j];
-      rBmin[1] = ry[j];
-      rBmin[2] = rz[j];
+      if (j>-1)
+	{
+	  rBmin[0] = rx[j];
+	  rBmin[1] = ry[j];
+	  rBmin[2] = rz[j];
+	}
+      else
+	{
+	  rBmin[0] = 0.0;
+	  rBmin[1] = 0.0;
+	  rBmin[2] = 0.0;
+	}
       scalfact = OprogStatus.scalfact;
       store_values(i);
       /*if (distMin < OprogStatus.epsd/10.0)
 	continue;*/
-      phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor);
+      //printf("===> j=%d rA=(%f,%f,%f) rC=(%f,%f,%f)\n", j, rA[0], rA[1], rA[2], rC[0], rC[1], rC[2]);
+      phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor, j);
       rebuild_linked_list();
       distMinT = check_dist_min(i, NULL);
       if (calcdist_retcheck)
@@ -670,12 +690,12 @@ void scale_Phi(void)
 	  continue;
 	}
       its = 0;
-      while ( distMinT < 0 || 
+      while ( j != -1 && (distMinT < 0 || 
 	     (distMinT > distMin && factor > 1.0) ||
-	     (distMinT < distMin && factor < 1.0) )
+	     (distMinT < distMin && factor < 1.0)) )
 	{
 	  restore_values(i);
-	  phi = scale_axes(i, distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact, &factor);
+	  phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor, j);
 	  rebuild_linked_list();
 	  distMinT = check_dist_min(i, "Alla fine di calc_Phi()");
 	  //printf("t=%.8G cellsx: %d rcut: %.8G imin=%d jmin=%d distMinT= %.15G phi=%.8G\n", 
