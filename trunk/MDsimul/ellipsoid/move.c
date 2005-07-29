@@ -26,6 +26,9 @@ extern int *scdone;
 extern double *maxax;
 extern double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane);
 
+extern double min3(double a, double b, double c);
+extern double min(double a, double b);
+extern double max3(double a, double b, double c);
 extern double *lastupdNNL, *totDistDispl;
 double rA[3], rB[3];
 /* Routines for LU decomposition from Numerical Recipe online */
@@ -3142,10 +3145,6 @@ extern int check_point(char* msg, double *p, double *rc, double **XX);
 extern void distSD(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
 extern void distconjgrad(int i, int j, double shift[3], double *vec);
 extern int maxitsRyck;
-extern double min(double a, double b);
-extern double min3(double a, double b, double c);
-extern double max3(double a, double b, double c);
-extern double min3(double a, double b, double c);
 extern double scalProd(double *A, double *B);
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
