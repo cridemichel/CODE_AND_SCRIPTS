@@ -452,7 +452,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   int kk;
   double nnlfact;
   double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2, fact3;
-  double boxdiag, maxaxNNL=0.0, maxaxStore=1.0;
+  double boxdiag, maxaxNNL=0.0, maxaxStore=1.0, factNNL=1.0;
   L2 = 0.5 * L;
   phi = calc_phi();
   phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
@@ -487,8 +487,9 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
     {
       if (OprogStatus.useNNL)
 	{
-	  maxaxNNL = 2.0*max3(nebrTab[i].axa, nebrTab[i].axb,nebrTab[i].axc);
-	  maxaxStore = 2.0*max3(aL,bL,cL);
+	  //maxaxNNL = 2.0*max3(nebrTab[i].axa, nebrTab[i].axb,nebrTab[i].axc);
+	  //maxaxStore = 2.0*max3(aL,bL,cL);
+	  factNNL = min3(nebrTab[i].axa/aL, nebrTab[i].axb/bL, nebrTab[i].axc/cL); 
 	}
      /*
 	 if (OprogStatus.useNNL && maxax[i] / maxaxNNL > 1.0)
@@ -501,14 +502,14 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 	  fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
 	  if (OprogStatus.useNNL)
 	    {
-	      fact3 =  1.0 + 0.99*(maxaxNNL / maxaxStore - 1.0);
+	      fact3 =  1.0 + 0.99*(factNNL - 1.0);
 	      /* nella crescita l'ellissoide non deve uscire dal suo NNL box */ 
 	      if (fact3 < fact1)
 		fact1 = fact3;
 	    }
 	}
       else
-	fact1 = 1.0 + 0.99*(maxaxNNL / maxaxStore - 1.0);
+	fact1 = 1.0 + 0.99*(factNNL - 1.0);
       fact2 = F;
       if (fact2 < fact1)
 	fact = fact2;
@@ -672,7 +673,7 @@ void scale_Phi(void)
 	}
       scalfact = OprogStatus.scalfact;
       store_values(i);
-      if (distMin < 0)//OprogStatus.epsd/10.0)
+      if (distMin < 0)// || fabs(distMin)<1E-10)//OprogStatus.epsd/10.0)
 	continue;
       //printf("===> j=%d rA=(%f,%f,%f) rC=(%f,%f,%f)\n", j, rA[0], rA[1], rA[2], rC[0], rC[1], rC[2]);
       phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor, j);
