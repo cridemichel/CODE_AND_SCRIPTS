@@ -37,7 +37,7 @@ int main(int argc, char **argv){
 #endif
   
 #ifdef _DT
-  dt=_DT;
+  Dt=_DT;
 #endif
 
   if(argc<3){
@@ -200,7 +200,7 @@ int main(int argc, char **argv){
   printf("mass0: 1.0\n");
   printf("rcut: %lf\n",rcut);
   printf("overlaptol: 0.01\n");
-  printf("intervalSum: 0.2\n");
+  printf("intervalSum: %lf\n",stepnum*Dt/10.); /* frequency of the output*/
   printf("eventMult: 200\n");
   printf("bakSaveMode: 0\n");
   printf("storerate: %lf\n",storerate);

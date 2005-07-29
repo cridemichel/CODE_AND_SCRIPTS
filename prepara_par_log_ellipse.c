@@ -135,7 +135,7 @@ int main(int argc, char **argv){
   printf("tapeTimes: 0\n");
   printf("energyCalc: 100\n");
   printf("energyName: energy-\n");
-  printf("tempSteps: 100\n");
+  printf("tempSteps: 10000\n");
   printf("tempName: temp-\n");
 
   printf("DtrSteps: 0\n");
@@ -205,7 +205,7 @@ int main(int argc, char **argv){
   printf("mass0: 1.0\n");
   printf("rcut: %lf\n",rcut);
   printf("overlaptol: 0.01\n");
-  printf("intervalSum: 0.2\n");
+  printf("intervalSum: %lf\n",Tau/10.); /* frequency of the output*/
   printf("eventMult: 200\n");
   printf("bakSaveMode: 0\n");
   printf("storerate: %lf\n",storerate);
