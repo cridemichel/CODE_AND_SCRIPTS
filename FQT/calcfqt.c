@@ -159,7 +159,7 @@ int main(int argc, char **argv)
       free(rhoRtp[i]);
     }
 	
-  for (nq = 0; nq < NUMQ; nq++)
+  for (nq = 2; nq < NUMQ; nq++)
     {
       sprintf(fname, "sqt.%02d.k=%03d",ll*10+mm,nq);
       f = fopen(fname, "w+");
