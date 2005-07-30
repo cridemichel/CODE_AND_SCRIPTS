@@ -3,7 +3,7 @@ c   calcola rho(l,m,k) per un fissato modulo - scrive i rho in files
 c
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       PARAMETER
-     *  (MOLS=2048, LMAXX=2,KMAX=50,MAXK=KMAX)
+     *  (MOLS=512, LMAXX=2,KMAX=50,MAXK=KMAX)
       DIMENSION TH(MOLS),PHI(MOLS),CAI(MOLS)
       COMPLEX*16 RHO(0:LMAXX,-LMAXX:LMAXX,1:KMAX)
       COMPLEX*16 IMAG,RCE,RCEK,DL,DLCONJ
@@ -116,7 +116,7 @@ c
           nconf=0          
 c
  11       read(8,'(a)',end=22) nomefileconf
-
+         
 c
 c  read 1 configuration  -- restituisce rm e vrot(i,3,3)
 c
@@ -355,7 +355,7 @@ c
 c
        SUBROUTINE READCONF(nomefile,ti)
        IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-       PARAMETER(MOLS=2048)
+       PARAMETER(MOLS=512)
        character*80 nomefile
        double precision ti
        common /sistema/  VROT(MOLS,3,3),CM(MOLS,3),BX
@@ -377,12 +377,12 @@ c       print *,' Number of ellipsoids=',nellips
           read(1,*) dummy
         end do
         read(1,11) time,ti
- 11     format(a5,d10.5)
+ 11     format(a5,D20.12)
         do i=1,14
           read(1,*) dummy
 c        print *,dummy
         end do
-         do i=1,nellips
+        do i=1,nellips
             read(1,*) cm(i,1),cm(i,2),cm(i,3),
      x          vrot(i,1,1),vrot(i,1,2),vrot(i,1,3),
      x          vrot(i,2,1),vrot(i,2,2),vrot(i,2,3),
