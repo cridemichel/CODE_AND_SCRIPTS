@@ -22,21 +22,21 @@ void readconf(char *fname, double *ti, int NP, double *r[3], double *w[3])
 	{
 	  for (i=0; i < NP; i++)
 	    {
-	      fscanf(f, " %lf ", w[0][i]); 
+	      fscanf(f, " %lf ", &w[0][i]); 
 	    }
 	}
       else if (!strcmp(parname,"sumoy"))
 	{
 	  for (i=0; i < NP; i++)
 	    {
-	      fscanf(f, " %lf ", w[1][i]); 
+	      fscanf(f, " %lf ", &w[1][i]); 
 	    }
 	}
       else if (!strcmp(parname,"sumoz"))
 	{
 	  for (i=0; i < NP; i++)
 	    {
-	      fscanf(f, " %lf ", w[2][i]); 
+	      fscanf(f, " %lf ", &w[2][i]); 
 	    }
 	}
       else if (!strcmp(parname, "time"))
@@ -54,7 +54,9 @@ void readconf(char *fname, double *ti, int NP, double *r[3], double *w[3])
       if (nat<2)
 	continue;
       for (i = 0; i < NP; i++) 
-	fscanf(f, "%lf %lf %lf %[^\n]\n", r[0][i], r[1][i], r[2][i], dummy); 
+	{
+	  fscanf(f, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+	}
       break;  
     }
   
@@ -68,7 +70,7 @@ int main(int argc, char **argv)
   int NP, NN, fine, JJ, nat;
   if (argc <= 1)
     {
-      printf("Usage: calcmsd <listafile>\n");
+      printf("Usage: calcmsd <listafile> [number of points]\n");
       //printf("where NN il the lenght of the logarithmic block\n");
       exit(-1);
     }
@@ -79,6 +81,7 @@ int main(int argc, char **argv)
       MSD[ii] = 0.0;
     }
   f2 = fopen(argv[1], "r");
+  c2 = 0;
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname[c2]);
@@ -111,6 +114,12 @@ int main(int argc, char **argv)
 	NN = atoi(parval);
     }
   fclose(f);
+  if (argc == 3)
+    points=atoi(argv[2]);
+  else
+    points=NN;
+ 
+  printf("points=%d files=%d NP = %d L=%.15G NN=%d\n", points, nfiles, NP, L, NN);
   for (a=0; a < 3; a++)
     {
       r0[a] = malloc(sizeof(double)*NP);
@@ -120,16 +129,6 @@ int main(int argc, char **argv)
       wt[a] = malloc(sizeof(double)*NP);
       
     }
-  printf("NP = %d\n", NP);
-  if (c2 < MAXPTS && ti[c2] == -1.0)
-    {
-      ti[c2] = time;
-      //printf("c2=%d time=%.15G\n", c2, ti[c2]);
-    }
-  //printf("%d fname: %s %.15G %.15G %.15G\n", c2, fname, P0[0], P0[1], P0[2]);
-  c2++;
-  fclose(f2);
-  //c2 = 0;
 
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
     {	
@@ -144,7 +143,7 @@ int main(int argc, char **argv)
 	{
 	  for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
 	    {
-	      if (nr2 == nlines || nr2 - nr1 >= points)
+	      if (nr2 >= nfiles || nr2 - nr1 >= points)
 		{
 		  fine = 1;
 		  break;
@@ -157,6 +156,8 @@ int main(int argc, char **argv)
 		      rtold[a][i] = rt[a][i];
 		}
 	      readconf(fname[nr2], &time, NP, rt, wt);
+	      if (nr2 == nr1)
+		continue;
 	      for (i = 0; i < NP; i++)
 		for (a = 0; a < 3; a++)
 		  {
