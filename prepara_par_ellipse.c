@@ -201,7 +201,7 @@ int main(int argc, char **argv){
   printf("rcut: %lf\n",rcut);
   printf("overlaptol: 0.01\n");
 #ifdef _GROWTH
-  printf("intervalSum: %lf\n",10.*Dt);
+  printf("intervalSum: %lf\n",0.05);
 #else
   printf("intervalSum: %lf\n",stepnum*Dt/10.); /* frequency of the output*/
 #endif
