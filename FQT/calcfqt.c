@@ -167,7 +167,7 @@ int main(int argc, char **argv)
 	    }
 	  Cav /= ((double)NQarr[nq]);
 	  if (ti[ii] > -1.0)
-	    fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], Cav, cc[0][ii]);
+	    fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], Cav, cc[0][ii]*NQarr[nq]);
 	}
       fclose(f);
     }
