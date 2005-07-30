@@ -24,7 +24,7 @@
 #define MAXQ 50
 #define NUMQ 100
 char fname[1024]; 
-double time, Cav, rhoR0[MAXQ], rhoI0[MAXQ], cc[MAXQ][MAXPTS],C[MAXQ][MAXPTS], 
+double time, Cav0, Cav, rhoR0[MAXQ], rhoI0[MAXQ], cc[MAXQ][MAXPTS],C[MAXQ][MAXPTS], 
        rhoR1[MAXQ], rhoI1[MAXQ], ti[MAXPTS], *rhoRt[MAXQ], *rhoIt[MAXQ],
        *rhoRtp[MAXQ], *rhoItp[MAXQ];
 int NQarr[NUMQ];
@@ -157,6 +157,16 @@ int main(int argc, char **argv)
 	}
       sprintf(fname, "sqt.%02d.k=%03d",ll*10+mm,nq);
       f = fopen(fname, "w+");
+      sprintf(fname, "N-sqt.%02d.k=%03d",ll*10+mm,nq);
+      f2 = fopen(fname, "w+");
+      Cav0 = 0.0;
+      for (i = 0; i < NQarr[nq]; i++)
+	{
+	  if (cc[i][0] > 0)
+	    Cav0 += C[i][0]/cc[i][0];
+	}
+      Cav0 /= ((double)NQarr[nq]);
+      
       for (ii=1; ii < points; ii++)
 	{
 	  Cav = 0.0;
@@ -167,9 +177,13 @@ int main(int argc, char **argv)
 	    }
 	  Cav /= ((double)NQarr[nq]);
 	  if (ti[ii] > -1.0)
-	    fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], Cav, cc[0][ii]*NQarr[nq]);
+	    {
+	      fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], Cav, cc[0][ii]*NQarr[nq]);
+	      fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], Cav/Cav0, cc[0][ii]*NQarr[nq]);
+	    }
 	}
       fclose(f);
+      fclose(f2);
     }
   for (i=0; i < MAXQ; i++)
     {
