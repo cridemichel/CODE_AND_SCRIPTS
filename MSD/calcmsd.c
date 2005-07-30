@@ -139,7 +139,7 @@ int main(int argc, char **argv)
       wt[a] = malloc(sizeof(double)*NP);
       adjDr[a] = malloc(sizeof(double)*NP); 
     }
- for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
+  for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
     {	
       for (i=0; i < NP; i++)
 	for (a=0; a < 3; a++)
