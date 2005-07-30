@@ -88,6 +88,7 @@ int main(int argc, char **argv)
       ti[ii] = -1.0;
       rotMSD[ii] = 0.0;
       MSD[ii] = 0.0;
+      cc[ii]=0.0;
     }
   f2 = fopen(argv[1], "r");
   c2 = 0;
@@ -138,11 +139,12 @@ int main(int argc, char **argv)
       wt[a] = malloc(sizeof(double)*NP);
       adjDr[a] = malloc(sizeof(double)*NP); 
     }
-  for (i=0; i < NP; i++)
-    for (a=0; a < 3; a++)
-      adjDr[a][i] = 0.0;
-  for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
+ for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
     {	
+      for (i=0; i < NP; i++)
+	for (a=0; a < 3; a++)
+	  adjDr[a][i] = 0.0;
+
       readconf(fname[nr1], &time, NP, r0, w0);
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
@@ -154,8 +156,14 @@ int main(int argc, char **argv)
 		  fine = 1;
 		  break;
 		}
-	      
-	      if (nr2 > nr1)
+		
+	      if (nr2==nr1)
+		{
+		  for (i=0; i < NP; i++)
+		    for (a=0; a < 3; a++)
+		      rtold[a][i] = r0[a][i];
+		}
+	      else
 		{
 		  for (i=0; i < NP; i++)
 		    for (a=0; a < 3; a++)
@@ -181,6 +189,7 @@ int main(int argc, char **argv)
 			adjDr[a][i] -= L;
 		      else
 			adjDr[a][i] += L;
+		    //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
 		    MSD[nr2-nr1] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 		    rotMSD[nr2-nr1] += Dw*Dw;
 		  }
