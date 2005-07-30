@@ -137,7 +137,7 @@ int main(int argc, char **argv)
 	    {
 	      for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
 		{
-		  if (nr2 == nlines || nr2 - nr1 >= points)
+		  if (nr2 >= nlines || nr2 - nr1 >= points)
 		    {
 		      fine = 1;
 		      break;
