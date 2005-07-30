@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <math.h>
 #define MAXPTS 10000
 #define MAXFILES 5000
 char fname[MAXFILES][256]; 
