@@ -13,59 +13,68 @@ int points;
 void readconf(char *fname, double *ti, int NP, double *r[3], double *w[3])
 {
   FILE *f;
-  int nat=0, i;
+  int nat=0, i, cpos;
   f = fopen(fname, "r");
   while (!feof(f) && nat < 2) 
     {
-      fscanf(f, "%[^:]:", parname);
-      if (!strcmp(parname,"sumox"))
-	{
-	  for (i=0; i < NP; i++)
-	    {
-	      fscanf(f, " %lf ", &w[0][i]); 
-	    }
-	}
-      else if (!strcmp(parname,"sumoy"))
-	{
-	  for (i=0; i < NP; i++)
-	    {
-	      fscanf(f, " %lf ", &w[1][i]); 
-	    }
-	}
-      else if (!strcmp(parname,"sumoz"))
-	{
-	  for (i=0; i < NP; i++)
-	    {
-	      fscanf(f, " %lf ", &w[2][i]); 
-	    }
-	}
-      else if (!strcmp(parname, "time"))
-	{
-	  fscanf(f, "%[^\n]\n", parval);
-	  *ti = atof(parval);
-	}	
-      else
-	fscanf(f, "%[^\n]\n", parval);
+      cpos = ftell(f);
+      //printf("cpos=%d\n", cpos);
+      fscanf(f, "%[^\n]\n",line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
-	  continue;
 	}
-      if (nat<2)
-	continue;
-      for (i = 0; i < NP; i++) 
+      if (nat < 2)
 	{
-	  fscanf(f, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+	  fseek(f, cpos, SEEK_SET);
+	  fscanf(f, "%[^:]:", parname);
+	  //printf("[%s] parname=%s\n", fname, parname);
+	  if (!strcmp(parname,"sumox"))
+	    {
+	      for (i=0; i < NP; i++)
+		{
+		  fscanf(f, " %lf ", &w[0][i]); 
+		}
+	    }
+	  else if (!strcmp(parname,"sumoy"))
+	    {
+	      for (i=0; i < NP; i++)
+		{
+		  fscanf(f, " %lf ", &w[1][i]); 
+		}
+	    }
+	  else if (!strcmp(parname,"sumoz"))
+	    {
+	      for (i=0; i < NP; i++)
+		{
+		  fscanf(f, " %lf ", &w[2][i]); 
+		}
+	    }
+	  else if (!strcmp(parname, "time"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      *ti = atof(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }	
+	  else
+	    fscanf(f, " %[^\n]\n", parval);
 	}
-      break;  
+      else
+	{
+	  for (i = 0; i < NP; i++) 
+	    {
+	      fscanf(f, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+	    }
+	  break; 
+	}
+
     }
-  
   fclose(f);
 }
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
-  double Dr, Dw, A1, A2, A3, dr;
+  double *adjDr[3], Dr, Dw, A1, A2, A3, dr;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int NP, NN, fine, JJ, nat;
   if (argc <= 1)
@@ -127,17 +136,14 @@ int main(int argc, char **argv)
       rt[a] = malloc(sizeof(double)*NP);
       rtold[a] = malloc(sizeof(double)*NP);
       wt[a] = malloc(sizeof(double)*NP);
-      
+      adjDr[a] = malloc(sizeof(double)*NP); 
     }
-
+  for (i=0; i < NP; i++)
+    for (a=0; a < 3; a++)
+      adjDr[a][i] = 0.0;
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
     {	
       readconf(fname[nr1], &time, NP, r0, w0);
-      if (nr1 < MAXPTS && ti[nr1] == -1.0)
-	{
-	  ti[nr1] = time;
-	  //printf("c2=%d time=%.15G\n", c2, ti[c2]);
-	}
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
 	{
@@ -156,6 +162,12 @@ int main(int argc, char **argv)
 		      rtold[a][i] = rt[a][i];
 		}
 	      readconf(fname[nr2], &time, NP, rt, wt);
+	      if (nr2 < MAXPTS && ti[nr2] == -1.0)
+		{
+		  ti[nr2] = time;
+		  printf("nr1=%d time=%.15G\n", nr2, ti[nr2]);
+		}
+  
 	      if (nr2 == nr1)
 		continue;
 	      for (i = 0; i < NP; i++)
@@ -165,23 +177,28 @@ int main(int argc, char **argv)
 		    Dr = rt[a][i] - r0[a][i];
 		    dr = rt[a][i] - rtold[a][i];
 		    if (nr2 > nr1 && fabs(dr) > L*0.5)
-		      Dr -= L;
-		    MSD[nr2-nr1] += Dr*Dr;
+		      if (dr > 0.0)
+			adjDr[a][i] -= L;
+		      else
+			adjDr[a][i] += L;
+		    MSD[nr2-nr1] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 		    rotMSD[nr2-nr1] += Dw*Dw;
 		  }
 	      cc[nr2-nr1] += 1.0;
+	      //printf("cc[%d]:%f\n", nr2-nr1, cc[nr2-nr1]);
 	    }
 	}
     }
-  f = fopen("MSD.dat", "w+");
-  f2 = fopen("rotMSD.dat", "w+");
+  f = fopen("MSDcnf.dat", "w+");
+  f2 = fopen("rotMSDcnf.dat", "w+");
 
   for (ii=1; ii < points; ii++)
     {
+      printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
       if (cc[ii] > 0 && ti[ii] > -1.0)
 	{
-	  fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], MSD[ii]/cc[ii], cc[ii]);
-	  fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSD[ii]/cc[ii], cc[ii]);
+	  fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], MSD[ii]/cc[ii]/((double)NP), cc[ii]);
+	  fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSD[ii]/cc[ii]/((double)NP), cc[ii]);
 	}
     }
   fclose(f);
