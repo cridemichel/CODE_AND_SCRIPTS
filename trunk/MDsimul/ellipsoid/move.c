@@ -5708,6 +5708,11 @@ void move(void)
 	      exit(-1);
 	    }
 	  UpdateSystem();
+	  for (i=0; i < Oparams.parnum; i++)
+	    {
+	      update_MSDrot(i);
+	      OprogStatus.lastcolltime[i] = Oparams.time;
+	    }
 	  R2u();
 #ifndef MD_STOREMGL
 	  writeAsciiPars(bf, opro_ascii);
@@ -5784,6 +5789,11 @@ void move(void)
 		first = 0;
 	    }
 #endif
+	  for (i=0; i < Oparams.parnum; i++)
+	    {
+	      update_MSDrot(i);
+	      OprogStatus.lastcolltime[i] = Oparams.time;
+	    }
 	  if (OprogStatus.brownian)
 	    {
 	      velsBrown(Oparams.T);
