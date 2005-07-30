@@ -155,9 +155,9 @@ int main(int argc, char **argv)
 		}
 	    }
 	}
-      sprintf(fname, "sqt.%02d.k=%03d",ll*10+mm,nq);
+      sprintf(fname, "sqt.%02d%02d.k=%03d",ll*10+mm,llp*10+mmp,nq);
       f = fopen(fname, "w+");
-      sprintf(fname, "N-sqt.%02d.k=%03d",ll*10+mm,nq);
+      sprintf(fname, "N-sqt.%02d%02d.k=%03d",ll*10+mm,llp*10+mmp,nq);
       f2 = fopen(fname, "w+");
       Cav0 = 0.0;
       for (i = 0; i < NQarr[nq]; i++)
