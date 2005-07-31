@@ -6,6 +6,7 @@ then
 cd ..
 continue
 fi
+touch IN_PROGRESS
 PR=$HOME/ELLIPSOIDS/MSD/calcmsd
 if [ "$1" == "" ]
 then
@@ -63,6 +64,7 @@ $PR 2 -2  2 -2 $NN
 $PR 2  1  2  1 $NN
 $PR 2  2  2  2 $NN
 rm -f RHOTMP/ro.*
+rm IN_PROGRESS
 touch ALL_DONE
 cd ..
 done
