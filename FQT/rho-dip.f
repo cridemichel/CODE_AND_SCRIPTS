@@ -248,7 +248,7 @@ c
 c
 c   save data in files named according to the harmonics 
 c
-      print *,'nconf', nconf 
+c      print *,'nconf', nconf 
       if (nconf.eq.1) then
         write(label3,'(i3)') kmod
         call empty
