@@ -58,7 +58,7 @@ int main(int argc, char **argv)
   while (!feof(f2))
     {
       fscanf(f2, "%lf %d ", &time, &NQ);
-      printf("time=%f nq=%d\n", time, NQ);
+      //printf("time=%f nq=%d\n", time, NQ);
       for (i = 0; i < NQ; i++)
 	fscanf(f2, "(%lf,%lf) ", &A1, &A2);
       c2++;
