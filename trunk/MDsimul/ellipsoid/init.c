@@ -826,6 +826,7 @@ void usrInitBef(void)
     OprogStatus.forceguess = 1;
     OprogStatus.phitol = 1E-12;
     OprogStatus.axestol = 1E-8;
+    OprogStatus.minDist = 4E-8;
     OprogStatus.tmsd2end = -1.0;
     OprogStatus.rmsd2end = -1.0;
     OprogStatus.nextSumTime = 0.0;
