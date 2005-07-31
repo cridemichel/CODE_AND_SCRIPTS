@@ -14,7 +14,7 @@ NN=`cat Store-0-0.gz | gunzip -c | awk -F : '{if ($1=="NN") print $2}'`
 else
 NN=$1
 fi
-NN=`echo "$NN*5"| bc`
+NN=`echo "$NN*30"| bc`
 gunzip Store*gz
 ls Store* | sort -t - -k 2 -k 3 -n > listamsd
 $PR listamsd $NN 
