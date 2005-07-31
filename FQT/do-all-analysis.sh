@@ -1,6 +1,11 @@
 for f in Phi*
 do
 cd $f
+if [ -e ALL_DONE ]
+then 
+cd ..
+continue
+fi
 PR=$HOME/ELLIPSOIDS/MSD/calcmsd
 if [ "$1" == "" ]
 then
@@ -58,5 +63,6 @@ $PR 2 -2  2 -2 $NN
 $PR 2  1  2  1 $NN
 $PR 2  2  2  2 $NN
 rm -f RHOTMP/ro.*
+touch ALL_DONE
 cd ..
 done
