@@ -30,7 +30,7 @@ gzip Store*
 PERC=$HOME/ELLIPSOIDS/FQT/
 ls Cnf* | sort -t - -k 2 -k 3 -n > listaconf
 q=2
-while [ $q -lt 100 ]
+WHILE [ $q -lt 100 ]
 do
 $PERC/rho-dip << !
 $q
@@ -42,6 +42,7 @@ $PERC/sq-statico-1k << !
 2
 99
 !
+$PERC/dosqlmlpmp.sh
 PR=$HOME/ELLIPSOIDS/FQT/calcfqt
 if [ "$1" == "" ]
 then
