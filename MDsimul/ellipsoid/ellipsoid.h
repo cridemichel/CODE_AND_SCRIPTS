@@ -338,6 +338,7 @@ struct progStatus
   double reducefact;
   double phitol;
   double axestol;
+  double minDist;
   double rmsd2end;
   double tmsd2end;
 #ifdef MD_GRAVITY
@@ -566,6 +567,7 @@ struct pascii opro_ascii[] =
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
   {"phitol",       &OS(phitol),                     1,  1,    "%.14G"},
   {"axestol",      &OS(axestol),                    1,  1,    "%.14G"},
+  {"minDist",      &OS(minDist),                    1,  1,    "%.14G"},
   {"rmsd2end",     &OS(rmsd2end),                   1,  1,    "%.6G"},
   {"tmsd2end",     &OS(tmsd2end),                   1,  1,    "%.6G"},
   {"endtime",      &OS(endtime),                    1,  1,    "%.15G"},
@@ -776,6 +778,7 @@ struct singlePar OsinglePar[] = {
   {"reducefact", &OprogStatus.reducefact,     CT},
   {"phitol",      &OprogStatus.phitol,        CT},
   {"axestol",     &OprogStatus.axestol,       CT},
+  {"minDist",     &OprogStatus.minDist,       CT},
   {"tmsd2end",    &OprogStatus.tmsd2end,      CT},
   {"rmsd2end",    &OprogStatus.rmsd2end,      CT},
 #ifdef MD_GRAVITY

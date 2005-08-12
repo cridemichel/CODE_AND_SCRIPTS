@@ -109,6 +109,8 @@ extern void newtNeigh(double x[], int n, int *check,
 extern void newtDistNegNeighPlane(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA);
+extern double max(double a, double b);
+
 void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {
   int kk;
@@ -2234,7 +2236,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
 	{
 	  /* reduce step size */
 	  if (itsf == 0 && delt - OprogStatus.h > 0)
-	    delt -= OprogStatus.h;
+	    delt -= max(OprogStatus.h,delt*OprogStatus.h);
 	  else
 	    delt /= GOLD;
 	  
@@ -2494,7 +2496,7 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
 	{
 	  /* reduce step size */
 	  if (itsf == 0 && delt - OprogStatus.h > 0)
-	    delt -= OprogStatus.h;
+	    delt -= max(OprogStatus.h, OprogStatus.h*delt);
 	  else
 	    delt /= GOLD;
 	  *t = told + delt;
