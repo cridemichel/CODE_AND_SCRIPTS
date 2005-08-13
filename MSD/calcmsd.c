@@ -173,7 +173,7 @@ int main(int argc, char **argv)
 	      if (nr2 < MAXPTS && ti[nr2] == -1.0)
 		{
 		  ti[nr2] = time;
-		  printf("nr1=%d time=%.15G\n", nr2, ti[nr2]);
+		  //printf("nr1=%d time=%.15G\n", nr2, ti[nr2]);
 		}
   
 	      if (nr2 == nr1)
@@ -203,7 +203,7 @@ int main(int argc, char **argv)
 
   for (ii=1; ii < points; ii++)
     {
-      printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
+      //printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
       if (cc[ii] > 0 && ti[ii] > -1.0)
 	{
 	  fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], MSD[ii]/cc[ii]/((double)NP), cc[ii]);
