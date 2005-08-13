@@ -9,4 +9,4 @@ EL=$1
 fi
 SCRLNK=do-analysis-X0_${EL}.sh
 ln -sf $SCR $SCRLNK
-$SCRLNK > screen_$SCRLNK 2>&1
+sh $SCRLNK > screen_$SCRLNK 2>&1 &

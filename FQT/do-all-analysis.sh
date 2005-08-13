@@ -1,6 +1,11 @@
 for f in Phi*
 do
 cd $f
+if [ -e IGNORE_THIS ]
+then 
+cd ..
+continue
+fi
 if [ -e ALL_DONE ]
 then 
 cd ..
