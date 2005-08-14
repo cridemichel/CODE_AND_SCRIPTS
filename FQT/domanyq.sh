@@ -1,4 +1,4 @@
-PERC=$HOME/ELLIPSOIDS/FQT/
+PERC=$HOME/postdoc/hardellipsoid/hardellSVN/CODE/FQT/
 ls Cnf* | sort -t - -k 2 -k 3 -n > listaconf
 q=2
 while [ $q -lt 100 ]

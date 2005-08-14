@@ -73,7 +73,7 @@ c
         do l=lmin,lmax
          do m=-l,l
           do n=-l,l
-          ifn=l*100+m*10+n
+          ifn=l*10+m
           write(label3,'(i3)') ifn
           call empty
           open(unit=1000+ifn,
@@ -85,17 +85,17 @@ c
 c
         do l=lmin,lmax
          do m=-l,l
-          do n=-l,l
+c          do n=-l,l
           ifn=l*100+m*10+n
 c         print *,' generalized harmonic = ',ifn
 c
 c   reads all data in a matrix  first l,m,n
 c
            do inp=1,npmax
-           read(1000+ifn,iostat=irr) nfi,nkv1,(rho1(k,inp),k=1,nkv)
+           read(1000+ifn,iostat=irr) ti,nkv1,(rho1(k,inp),k=1,nkv)
            if (irr.ne.0) goto 555
            if (nkv1.ne.nkv) print *,' error in # q-vectors'
-           time1(inp)=nfi
+           time1(inp)=ti
            end do
  555       npt=inp-1
            rewind(1000+ifn)
@@ -105,17 +105,17 @@ c
                      
          do lp=l,l
           do mp=m,m
-           do np=-lp,lp
-             ifn=lp*100+mp*10+np
+c           do np=-lp,lp
+             ifn=lp*10+mp
 c            write(5,5555) ' doing',l,m,n,lp,mp,np
  5555         format(a6,6i4)
 c
 c   reads all data in a matrix  now lp,mp,np
 c
            do inp=1,npt
-           read(1000+ifn,iostat=irr) nfi,nkv1,(rho2(k,inp),k=1,nkv)
+           read(1000+ifn,iostat=irr) ti,nkv1,(rho2(k,inp),k=1,nkv)
            if (nkv1.ne.nkv) print *,' error in # q-vectors'
-           if (nfi.ne.time1(inp)) print *,' errore in time'
+c           if (nfi.ne.time1(inp)) print *,' errore in time'
            if (irr.ne.0) print *,' some problems with file',ifn
            end do
            rewind(1000+ifn)
@@ -214,11 +214,11 @@ c
 c
 c       now.... next l,m,n,lp,mp,np
 c
-          end do
+c          end do
          end do
         end do
 c
-          end do
+c          end do
          end do
         end do
 

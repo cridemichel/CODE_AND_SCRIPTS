@@ -44,7 +44,7 @@ c         kmod=2
         print *,' leggo dal file ','qvector.'//label3
         qmod=0.0d0
         open(unit=1,
-     *    file='/home/demichel/ELLIPSOIDS/FQT/QVECTOR/qvector.'//label3,
+     *    file='QVECTOR/qvector.'//label3,
      *             status='unknown')
         do i=1,maxk
          read(1,*,iostat=irr) kx(i),ky(i),kz(i)
