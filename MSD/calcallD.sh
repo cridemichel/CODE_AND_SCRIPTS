@@ -8,12 +8,25 @@ EL=$1
 fi
 FNT="allDtra-X0_${EL}.dat"
 FNR="allDrot-X0_${EL}.dat"
-echo "" > $FNT
-echo "" > $FNR
+echo -n "" > $FNT
+echo -n "" > $FNR
 for f in Phi* 
 do
 cd $f
+if [ ! -e rotMSDcnf.dat ]
+then
+echo "The file rotMSDcnf.dat does not exist, skipping..."
+cd ..
+continue
+fi
+if [ ! -e MSDcnf.dat ]
+then
+echo "The file MSDcnf.dat does not exist, skipping..."
+cd ..
+continue
+fi
 PHI=`echo $f | awk -F Phi '{print $2}'`
+echo "Processing Phi=" $PHI
 STA=`tail -n 50 screen_ell${EL}EQ${PHI} | awk '{if ($1=="[MSDcheck]") print $5}'` 
 ST=`echo "$STA*10.0" | bc -l`
 echo "fit [$ST:] a*x+b 'MSDcnf.dat' via a,b" > fit.tmp
