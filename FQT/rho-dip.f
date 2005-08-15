@@ -3,7 +3,7 @@ c   calcola rho(l,m,k) per un fissato modulo - scrive i rho in files
 c
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       PARAMETER
-     *  (MOLS=512, LMAXX=2,KMAX=50,MAXK=KMAX)
+     *  (MOLS=512, LMAXX=2,KMAX=200,MAXK=KMAX)
       DIMENSION TH(MOLS),PHI(MOLS),CAI(MOLS)
       COMPLEX*16 RHO(0:LMAXX,-LMAXX:LMAXX,1:KMAX)
       COMPLEX*16 IMAG,RCE,RCEK,DL,DLCONJ
