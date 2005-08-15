@@ -3,7 +3,7 @@ c   calcola rho(l,m,k) per un fissato modulo - scrive i rho in files
 c
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       PARAMETER
-     *  (MOLS=512, LMAXX=2,KMAX=200,MAXK=KMAX)
+     *  (MOLS=512, LMAXX=2,KMAX=50,MAXK=KMAX)
       DIMENSION TH(MOLS),PHI(MOLS),CAI(MOLS)
       COMPLEX*16 RHO(0:LMAXX,-LMAXX:LMAXX,1:KMAX)
       COMPLEX*16 IMAG,RCE,RCEK,DL,DLCONJ
@@ -44,7 +44,7 @@ c         kmod=2
         print *,' leggo dal file ','qvector.'//label3
         qmod=0.0d0
         open(unit=1,
-     *    file='QVECTOR/qvector.'//label3,
+     *    file='../../FQT/QVECTOR/qvector.'//label3,
      *             status='unknown')
         do i=1,maxk
          read(1,*,iostat=irr) kx(i),ky(i),kz(i)
