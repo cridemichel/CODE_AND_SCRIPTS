@@ -4,7 +4,7 @@ c                 in files
 
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       PARAMETER
-     *   (MOLS=256,LMAXX=1,KMAX=50,MAXK=KMAX,NPMAX=4000)
+     *   (MOLS=512,LMAXX=1,KMAX=50,MAXK=KMAX,NPMAX=4000)
       DIMENSION TIME1(NPMAX)
 c      DIMENSION SQLMN(0:LMAXX,0:LMAXX,0:LMAXX,1:KMAX)
       COMPLEX*16 RHO(0:LMAXX,-LMAXX:LMAXX,-LMAXX:LMAXX,1:KMAX)
@@ -47,7 +47,7 @@ c
         qmod=0.0d0
 
         open(unit=1,
-     *    file='QVECTOR/qvector.'//label3,
+     *    file='../../FQT/QVECTOR/qvector.'//label3,
      *             status='unknown')
 
         do i=1,maxk
@@ -142,6 +142,7 @@ c        print *,'nacc,mols',nacc,mols
         adiv=float(nacc*mols)
 c        print *,' adiv=',adiv
 c
+c        print *,'nacc=', nacc,' npt=',npt,' nkv=',nkv
              write(90,5555) l,m,lp,mp,
      *            kmod, real(sqlmn)/adiv, aimag(sqlmn)/adiv
 5555             format(4i2,1x,i4,2e20.12)
