@@ -24,7 +24,7 @@ char line[4096], dummy[4096];
 int main(int argc, char **argv)
 {
   FILE *f;
-  int cc, pnts, first;
+  int maxxi, cc, pnts, first;
   double maxy, maxx;
   if (argc==1)
     {
@@ -59,7 +59,8 @@ int main(int argc, char **argv)
 	  maxx = func[0][cc];
 	}
     }
-  printf("%.0f\n", rint(maxx));
+  maxxi = rint(maxx);
+  printf("%003d\n", maxxi);
   return 0;
 }
 
