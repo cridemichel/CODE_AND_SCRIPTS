@@ -15,13 +15,13 @@ do
 cd $f
 if [ ! -e rotMSDcnf.dat ]
 then
-echo "The file rotMSDcnf.dat does not exist, skipping..."
+echo "Phi=" $PHI " The file rotMSDcnf.dat does not exist, skipping..."
 cd ..
 continue
 fi
 if [ ! -e MSDcnf.dat ]
 then
-echo "The file MSDcnf.dat does not exist, skipping..."
+echo "Phi=" $PHI " The file MSDcnf.dat does not exist, skipping..."
 cd ..
 continue
 fi
