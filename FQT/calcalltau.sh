@@ -14,22 +14,25 @@ echo -n "" > $FNR
 for f in Phi*
 do 
 cd $f
+PHI=`echo $f | awk -F Phi '{print $2}'`
 if [ ! -e ALL_DONE ]
 then
+echo "Phi=" $PHI "analysis not done, skipping..." 
 cd ..
 continue
 fi
-PHI=`echo $f | awk -F Phi '{print $2}'`
 echo "Processing Phi=" $PHI
 MAXQ=`$PERC/findmax sq0000.dat`
-#echo "MAXQ TRA=" $MAXQ
+echo "Phi=" $PHI "Trasl Qmax=" $MAXQ
 TAU=`cat N-sqt.0000.k=$MAXQ | gawk 'BEGIN {xo=0.0; yo=0.0; K=1.0/exp(1.0);} {if ($2 < K) {m=($2-yo)/($1-xo); q=yo-m*xo; tau=(K-q)/m; printf("%f\n",tau); exit;} xo=$1; yo=$2; }'`
 echo $EL $PHI $TAU >> ../$FNT
+#echo $PHI $TAU >> ../$FNT
 #echo "TAUT=" $TAU
 MAXQ=`$PERC/findmax sq2020.dat`
-#echo "MAXQ ROT=" $MAXQ
+echo "Phi=" $PHI "Rot Qmax=" $MAXQ
 TAU=`cat N-sqt.2020.k=$MAXQ | gawk 'BEGIN {xo=0.0; yo=0.0; K=1.0/exp(1.0);} {  if ($2 < K) {m=($2-yo)/($1-xo); q=yo-m*xo; tau=(K-q)/m; printf("%f\n",tau); exit;} xo=$1; yo=$2; }'`
 echo $EL $PHI $TAU >> ../$FNR
+#echo $PHI $TAU >> ../$FNR
 #echo "TAUR=" $TAU
 cd ..
 done
