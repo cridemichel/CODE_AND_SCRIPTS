@@ -32,5 +32,4 @@ TAU=`cat N-sqt.2020.k=$MAXQ | gawk 'BEGIN {xo=0.0; yo=0.0; K=1.0/exp(1.0);} {  i
 echo $EL $PHI $TAU >> $FNR
 #echo "TAUR=" $TAU
 cd ..
-exit
 done
