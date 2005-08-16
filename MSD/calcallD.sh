@@ -13,6 +13,7 @@ echo -n "" > $FNR
 for f in Phi* 
 do
 cd $f
+PHI=`echo $f | awk -F Phi '{print $2}'`
 if [ ! -e rotMSDcnf.dat ]
 then
 echo "Phi=" $PHI " The file rotMSDcnf.dat does not exist, skipping..."
@@ -25,7 +26,6 @@ echo "Phi=" $PHI " The file MSDcnf.dat does not exist, skipping..."
 cd ..
 continue
 fi
-PHI=`echo $f | awk -F Phi '{print $2}'`
 echo "Processing Phi=" $PHI
 STA=`tail -n 50 screen_ell${EL}EQ${PHI} | awk '{if ($1=="[MSDcheck]") print $5}'` 
 ST=`echo "$STA*10.0" | bc -l`
