@@ -1,1 +1,1 @@
-python ../set_params.py $@
+python ../../set_params.py $@
