@@ -24,13 +24,13 @@ fi
 echo "Processing Phi=" $PHI
 MAXQ=`$PERC/findmax sq0000.dat`
 echo "Phi=" $PHI "Trasl Qmax=" $MAXQ
-TAU=`cat N-sqt.0000.k=$MAXQ | gawk 'BEGIN {xo=0.0; yo=0.0; K=1.0/exp(1.0);} {if ($2 < K) {m=($2-yo)/($1-xo); q=yo-m*xo; tau=(K-q)/m; printf("%f\n",tau); exit;} xo=$1; yo=$2; }'`
+TAU=`cat N-sqt.0000.k=$MAXQ | gawk 'BEGIN {xo=0.0; yo=0.0; done=0; K=1.0/exp(1.0);} {if ($2 < K) {m=($2-yo)/($1-xo); q=yo-m*xo; tau=(K-q)/m; printf("%f\n",tau); done=1; exit;} xo=$1; yo=$2; } END { m=($2-yo)/($1-xo); q=yo-m*xo; tau=(K-q)/m; if (!done) printf("%f\n",tau);}'`
 echo $EL $PHI $TAU >> ../$FNT
 #echo $PHI $TAU >> ../$FNT
 #echo "TAUT=" $TAU
-MAXQ=`$PERC/findmax sq2020.dat`
+MAXQ=`$PERC/findmax sq2020.dat 0`
 echo "Phi=" $PHI "Rot Qmax=" $MAXQ
-TAU=`cat N-sqt.2020.k=$MAXQ | gawk 'BEGIN {xo=0.0; yo=0.0; K=1.0/exp(1.0);} {  if ($2 < K) {m=($2-yo)/($1-xo); q=yo-m*xo; tau=(K-q)/m; printf("%f\n",tau); exit;} xo=$1; yo=$2; }'`
+TAU=`cat N-sqt.2020.k=$MAXQ | gawk 'BEGIN {xo=0.0; yo=0.0; done=0; K=1.0/exp(1.0);} {  if ($2 < K) {m=($2-yo)/($1-xo); q=yo-m*xo; tau=(K-q)/m; printf("%f\n",tau); done=1; exit;} xo=$1; yo=$2; } END { m=($2-yo)/($1-xo); q=yo-m*xo; tau=(K-q)/m; if (!done) printf("%f\n",tau);}'`
 echo $EL $PHI $TAU >> ../$FNR
 #echo $PHI $TAU >> ../$FNR
 #echo "TAUR=" $TAU
