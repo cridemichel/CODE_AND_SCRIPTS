@@ -39,7 +39,7 @@ else
 NN=$2
 fi
 echo "NN"=$NN
-PNTS=`echo $NN*20 | bc`
+PNTS=`echo "$NN*20" | bc`
 $PR 0  0  0  0 $NN $PNTS
 $PR 2  0  2  0 $NN $PNTS
 $PR 0  0  1  0 $NN $PNTS
