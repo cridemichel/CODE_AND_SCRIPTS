@@ -38,7 +38,7 @@ NN=`cat Store-0-0.gz | gunzip -c | awk -F : '{if ($1=="NN") print $2}'`
 else
 NN=$2
 fi
-echo "NN"=$NN
+echo "NN=" $NN
 PNTS=`echo "$NN*20" | bc`
 $PR 0  0  0  0 $NN $PNTS
 $PR 2  0  2  0 $NN $PNTS
