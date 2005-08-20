@@ -39,19 +39,20 @@ else
 NN=$1
 fi
 echo "NN"=$NN
-$PR 0  0  0  0 $NN 20 
-$PR 2  0  2  0 $NN 20
-$PR 0  0  1  0 $NN 20
-$PR 0  0  2  0 $NN 20
-$PR 1 -1  1 -1 $NN 20
-$PR 1 -1  2 -1 $NN 20
-$PR 1  0  1  0 $NN 20
-$PR 1  0  2  0 $NN 20
-$PR 1  1  1  1 $NN 20
-$PR 2  1  1  1 $NN 20
-$PR 2 -2  2 -2 $NN 20
-$PR 2  1  2  1 $NN 20
-$PR 2  2  2  2 $NN 20
+PNTS=`echo $NN*20 | bc`
+$PR 0  0  0  0 $NN $PNTS
+$PR 2  0  2  0 $NN $PNTS
+$PR 0  0  1  0 $NN $PNTS
+$PR 0  0  2  0 $NN $PNTS
+$PR 1 -1  1 -1 $NN $PNTS
+$PR 1 -1  2 -1 $NN $PNTS
+$PR 1  0  1  0 $NN $PNTS
+$PR 1  0  2  0 $NN $PNTS
+$PR 1  1  1  1 $NN $PNTS
+$PR 2  1  1  1 $NN $PNTS
+$PR 2 -2  2 -2 $NN $PNTS
+$PR 2  1  2  1 $NN $PNTS
+$PR 2  2  2  2 $NN $PNTS
 rm -f RHOTMP/ro.*
 rm IN_PROGRESS
 touch ALL_DONE
