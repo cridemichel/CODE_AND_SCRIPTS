@@ -27,6 +27,8 @@ fi
 if [ "$4" = "" ]
 then
 EQSTPS=0
+else
+EQSTPS=$4
 fi
 PARFILE=ellips.par
 cp $PARFILE Phi$1
@@ -95,8 +97,8 @@ then
 if [ $EQSTPS -eq 0 ]
 then
 STPS=10000000
-TMSD=`echo "2.0*e((1.0/3.0)*l($A0*$B0*$C0))" | bc -l`
-RMSD=1.57
+TMSD=`echo "4.0*e((1.0/3.0)*l($A0*$B0*$C0))" | bc -l`
+RMSD=3.14
 else
 STPS=$EQSTPS
 TMSD="-1.0"
@@ -109,8 +111,14 @@ fi
 #PRODUZIONE
 if [ $2 -gt 0 ]
 then
+if [ $EQSTPS -gt 0 ]
+then
+STCI=$EQSTPS
+STPS=`echo "$STCI*$2"| bc -l`
+else
 STCI=`cat screen_$SIMEQ | awk '{if ($1=="[MSDcheck]") print $3}'`
 STPS=`echo "$STCI*$2"| bc -l`
+fi
 NN=`echo "l($DT*$STCI/$STORERATE)/l(1.3)" | bc -l | awk '{printf("%d",$0)}'`
 ../../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 storerate $STORERATE intevalSum 5.0 rmsd2end -1.0 tmsd2end -1.0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
 ln -sf $ELLEXE $SIMPR
