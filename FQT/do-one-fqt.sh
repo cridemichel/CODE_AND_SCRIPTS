@@ -32,11 +32,11 @@ q=$[$q+1]
 done
 rm -f CnfStore* 
 PR=$HOME/ELLIPSOIDS/FQT/calcfqt
-if [ "$1" == "" ]
+if [ "$2" == "" ]
 then
 NN=`cat Store-0-0.gz | gunzip -c | awk -F : '{if ($1=="NN") print $2}'` 
 else
-NN=$1
+NN=$2
 fi
 echo "NN"=$NN
 PNTS=`echo $NN*20 | bc`
