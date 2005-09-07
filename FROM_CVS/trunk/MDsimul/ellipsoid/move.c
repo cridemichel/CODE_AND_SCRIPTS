@@ -3874,6 +3874,19 @@ int refine_contact(int i, int j, double t1, double t, double vecgd[8], double sh
       return 1; 
     }
 }
+double calcopt_maxddot(int i, int j, double *r1 , double *r2, double factori, double factorj)
+{
+  int kk;
+  double dd[3], ndd;
+  for (kk=0; kk < 3; kk++)
+    dd[kk] = r2[kk] - r1[kk];
+  ndd = calc_norm(dd);
+  for (kk=0; kk < 3; kk++)
+    dd[kk] /= ndd;
+  return (vx[i]-vx[j])*dd[0]+(vy[i]-vy[j])*dd[1]+(vz[i]-vz[j])*dd[2] +
+	sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori
+	+ sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
+}
 int search_contact_faster(int i, int j, double *shift, double *t, double t1, double t2, double *vecgd, double epsd, double *d1, double epsdFast, double *r1, double *r2)
 {
   /* NOTA: 
@@ -3902,6 +3915,11 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	  return 1;
 	}
 #endif
+#if 0
+      maxddot = calcopt_maxddot(i, j, r1, r2, factori, factorj);
+      if (maxddot < 0)
+	return 1;
+#endif 
       delt = *d1  / maxddot;
       normddot = calcvecF(i, j, *t, t1, r1, r2, ddot, shift);
       /* check for convergence */
@@ -4126,6 +4144,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   MD_DEBUG20(printf("[LOCATE_CONTACT] INIZIO\n"));
   d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
 #if 1
+#if 0
+  maxddot = calcopt_maxddot(i, j, r1, r2, factori, factorj);
+  if (maxddot < 0)
+    return 0;
+#endif
   if ((t2 - t1)*maxddot < fabs(d) - OprogStatus.epsd)
     {
       return 0;
