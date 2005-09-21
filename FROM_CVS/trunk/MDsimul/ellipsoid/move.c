@@ -1979,21 +1979,34 @@ int bound(int na, int n)
 }
 #endif
 #ifdef MD_ASYM_ITENS
-void calc_euler_angles(int i, double *M, *double phi, *double theta, *double psi)
+extern double pi;
+void calc_euler_angles(int i, double **M, double *phi, double *theta, double *psi)
 {
-  
-
+  double sintheta;
+  *theta = acos(M[2][2]);
+  if (*theta == 0.0)
+    {
+      *phi = *psi = 0;
+      return;
+    }
+  sintheta = sin(*theta);
+  *phi = acos(-M[2][1]/sintheta);
+  if (M[2][0]/sintheta < 0)
+    *phi = 2.0*pi - *phi;
+  *psi = acos(-M[1][2]/sintheta);
+  if (M[0][2]/sintheta < 0)
+    *psi = 2.0*pi - *psi;
 }
 /* matrice di eulero 
- * a_(11)	=	cos(psi)cos(phi)-cos(theta)sin(phi)sin(psi)	(6)
- * a_(12)	=	cos(psi)sin(phi)+cos(theta)cos(phi)sin(psi)	(7)
- * a_(13)	=	sin(psi)sin(theta)	(8)
- * a_(21)	=	-sin(psi)cos(phi)-cos(theta)sin(phi)cos(psi)	(9)
- * a_(22)	=	-sin(psi)sin(phi)+cos(theta)cos(phi)cos(psi)	(10)
- * a_(23)	=	cos(psi)sin(theta)	(11)
- * a_(31)	=	sin(theta)sin(phi)	(12)
- * a_(32)	=	-sin(theta)cos(phi)	(13)
- * a_(33)	=	cos(theta)	(14)
+ * a_(00)	=	cos(psi)cos(phi)-cos(theta)sin(phi)sin(psi)	(6)
+ * a_(01)	=	cos(psi)sin(phi)+cos(theta)cos(phi)sin(psi)	(7)
+ * a_(02)	=	sin(psi)sin(theta)	(8)
+ * a_(10)	=	-sin(psi)cos(phi)-cos(theta)sin(phi)cos(psi)	(9)
+ * a_(11)	=	-sin(psi)sin(phi)+cos(theta)cos(phi)cos(psi)	(10)
+ * a_(12)	=	cos(psi)sin(theta)	(11)
+ * a_(20)	=	sin(theta)sin(phi)	(12)
+ * a_(21)	=	-sin(theta)cos(phi)	(13)
+ * a_(22)	=	cos(theta)	(14)
  * */
 
 void build_euler_matrix(double cosphi, double sinphi, double costheta, double sintheta,
