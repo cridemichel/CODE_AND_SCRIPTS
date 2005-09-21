@@ -443,6 +443,8 @@ struct params
 
 #ifndef MD_ASYM_ITENS
   double I[2];
+#else
+  double I[2][3];
 #endif
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   double delta[2][2]; /* ampiezza della buca */
