@@ -44,6 +44,9 @@ double **Ia, **Ib, **invIa, **invIb;
 #else
 double Ia, Ib, invIa, invIb;
 #endif
+#ifdef MD_ASYM_ITENS
+double *phi0, *psi0, *costheta0, *sintheta0, **REt, *angM, **RM;
+#endif
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
 extern double *vector(int n);
@@ -1208,6 +1211,14 @@ void usrInitAft(void)
     Ib = matrix(3, 3);
     invIa = matrix(3, 3);
     invIb = matrix(3, 3);
+    angM = malloc(sizeof(double)*Oparams.parnum);
+    phi0 = malloc(sizeof(double)*Oparams.parnum);
+    psi0 = malloc(sizeof(double)*Oparams.parnum);
+    costheta0 = malloc(sizeof(double)*Oparams.parnum);
+    sintheta0 = malloc(sizeof(double)*Oparams.parnum);
+    REt = matrix(3,3);
+    for (i=0; i < Oparams.parnum; i++) 
+      RM[i] = matrix(3, 3);
 #endif
     powdirs = matrix(6,6);
 #if 0
