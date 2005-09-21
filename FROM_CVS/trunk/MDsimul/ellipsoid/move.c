@@ -1975,6 +1975,14 @@ int bound(int na, int n)
   return 0;
 }
 #endif
+#ifdef MD_SYMTOP
+void symtop_evolve_orient(int i, double ti, double **Ro, double Omega[3][3])
+{
+  phi0[i];
+  theta0[i];
+  psi0[i];
+}
+#endif
 void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 { 
   double wSq, w, OmegaSq[3][3], M[3][3];
