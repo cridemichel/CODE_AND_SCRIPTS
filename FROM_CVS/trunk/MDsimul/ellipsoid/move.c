@@ -20,6 +20,9 @@ double **Ia, **Ib, **invIa, **invIb;
 #else
 double Ia, Ib, invIa, invIb;
 #endif
+#ifdef MD_ASYM_ITENS
+double *phi0, *psi0, *costheta0, *sintheta0;
+#endif
 int *lastbump;
 extern double *axa, *axb, *axc;
 extern int *scdone;
@@ -1975,12 +1978,82 @@ int bound(int na, int n)
   return 0;
 }
 #endif
-#ifdef MD_SYMTOP
+#ifdef MD_ASYM_ITENS
+void calc_euler_angles(int i, double *M, *double phi, *double theta, *double psi)
+{
+  
+
+}
+/* matrice di eulero 
+ * a_(11)	=	cos(psi)cos(phi)-cos(theta)sin(phi)sin(psi)	(6)
+ * a_(12)	=	cos(psi)sin(phi)+cos(theta)cos(phi)sin(psi)	(7)
+ * a_(13)	=	sin(psi)sin(theta)	(8)
+ * a_(21)	=	-sin(psi)cos(phi)-cos(theta)sin(phi)cos(psi)	(9)
+ * a_(22)	=	-sin(psi)sin(phi)+cos(theta)cos(phi)cos(psi)	(10)
+ * a_(23)	=	cos(psi)sin(theta)	(11)
+ * a_(31)	=	sin(theta)sin(phi)	(12)
+ * a_(32)	=	-sin(theta)cos(phi)	(13)
+ * a_(33)	=	cos(theta)	(14)
+ * */
+
+void build_euler_matrix(double cosphi, double sinphi, double costheta, double sintheta,
+			double cospsi, double sinpsi, double **Reul)
+{
+  Reul[0][0] = cospsi*cosphi-costheta*sinphi*sinpsi;
+  Reul[0][1] = cospsi*sinphi+costheta*cosphi*sinpsi;
+  Reul[0][2] = sinpsi*sintheta;
+  Reul[1][0] = -sinpsi*cosphi-costheta*sinphi*cospsi;
+  Reul[1][1] = -sinpsi*sinphi+costheta*cosphi*cospsi;
+  Reul[1][2] = cospsi*sintheta;
+  Reul[2][0] = sintheta*sinphi;
+  Reul[2][1] = -sintheta*cosphi;
+  Reul[2][2] = costheta;
+}
+void evolve_euler_angles_symtop(int i, double ti, double *phi, double *psi)
+{
+  /* N.B. per la trottola simmetrica theta è costante */
+  double I1, I3, invI1;
+  I1 = (i < Oparams.parnumA) ? Oparams.I[0][0]:Oparams.I[1][0];
+  I3 = (i < Oparams.parnumA) ? Oparams.I[0][2]:Oparams.I[1][2]; 
+  invI1 = 1.0/I1;
+  /* see Landau - Mechanics */
+  *phi = invI1 * angM[i] * ti + phi0[i];
+  *psi = ti * angM[i] * costheta0[i] * (I1 - I3) / (I3*I1) + psi0[i];
+}
 void symtop_evolve_orient(int i, double ti, double **Ro, double Omega[3][3])
 {
-  phi0[i];
-  theta0[i];
-  psi0[i];
+  double wSq, w, phi, psi;
+  int k1, k2, k3;
+  wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
+  if (ti == 0.0 || wSq == 0.0)
+    {
+      Omega[0][0] = 0;
+      Omega[0][1] = 0;
+      Omega[0][2] = 0;
+      Omega[1][0] = 0;
+      Omega[1][1] = 0;
+      Omega[1][2] = 0;
+      Omega[2][0] = 0;
+      Omega[2][1] = 0;
+      Omega[2][2] = 0;
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    Ro[k1][k2] = R[i][k1][k2];
+	  }
+ 
+      return;
+    }
+  evolve_euler_angles(i, ti, &phi, &psi);
+  build_euler_matrix(cos(phi), sin(phi), costheta0[i], sintheta0[i],
+		     cos(psi), sin(psi), REt);
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Ro [k1][k2] = 0.0;
+	for (k3 = 0; k3 < 3; k3++)
+	  Ro[k1][k2] += REt[k1][k3]*RM[k3][k2];
+      }
 }
 #endif
 void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
@@ -3211,6 +3284,27 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 	}
     }
   //printf(">>>>>>> BOHHHHHHHHHHHHHHHHH\n");
+#ifdef MC_SIMUL
+  /* N.B. se si fa un Monte Carlo di ellissoidi queste condizioni evitano problemi nel calcolo 
+   * della distanza qualora ci sia un overlap tale che il centro dell'ellissoide A sia all'interno
+   * di B o viceversa. 
+   * In tale caso infatti la mossa monte carlo va rigettata e quindi opportunamente la routine ritorna
+   * una distanza negativa. */
+  segno = -1;
+  /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++) 
+      segno += (rB[k1]-rA[k1])*Xa[k1][k2]*(rB[k2]-rA[k2]); 
+  if (segno < 0)
+    return -1.0;
+  segno = -1;
+  /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++) 
+      segno += (rA[k1]-rB[k1])*Xb[k1][k2]*(rA[k2]-rB[k2]); 
+  if (segno < 0)
+    return -1.0;
+#endif
 retry:
   if (OprogStatus.forceguess)
     calcguess = 1;
