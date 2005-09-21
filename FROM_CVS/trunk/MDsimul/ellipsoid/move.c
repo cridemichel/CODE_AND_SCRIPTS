@@ -21,7 +21,7 @@ double **Ia, **Ib, **invIa, **invIb;
 double Ia, Ib, invIa, invIb;
 #endif
 #ifdef MD_ASYM_ITENS
-double *phi0, *psi0, *costheta0, *sintheta0;
+double *phi0, *psi0, *costheta0, *sintheta0, **REt, *angM, ***RM;
 #endif
 int *lastbump;
 extern double *axa, *axb, *axc;
