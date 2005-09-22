@@ -45,7 +45,7 @@ double **Ia, **Ib, **invIa, **invIb;
 double Ia, Ib, invIa, invIb;
 #endif
 #ifdef MD_ASYM_ITENS
-double *phi0, *psi0, *costheta0, *sintheta0, **REt, **REtA, **REtB, *angM, **RM, **RE0;
+double *phi0, *psi0, *costheta0, *sintheta0, **REt, **REtA, **REtB, *angM, **RM, **RE0, **Rdot;
 #endif
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
@@ -1291,6 +1291,7 @@ void usrInitAft(void)
     REtA = matrix(3,3);
     REtB = matrix(3,3);
     RE0 = matrix(3,3);
+    Rdot = matrix(3,3);
     for (i=0; i < Oparams.parnum; i++) 
       RM[i] = matrix(3, 3);
 #endif
