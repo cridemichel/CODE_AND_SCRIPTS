@@ -21,7 +21,7 @@ double **Ia, **Ib, **invIa, **invIb;
 double Ia, Ib, invIa, invIb;
 #endif
 #ifdef MD_ASYM_ITENS
-double *phi0, *psi0, *costheta0, *sintheta0, **REt, *angM, ***RM;
+double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtB;
 #endif
 int *lastbump;
 extern double *axa, *axb, *axc;
@@ -1262,6 +1262,9 @@ void update_MSDrot(int i)
   OprogStatus.sumoy[i] += (wx[i]*R[i][1][0]+wy[i]*R[i][1][1]+wz[i]*R[i][1][2])*ti;
   OprogStatus.sumoz[i] += (wx[i]*R[i][2][0]+wy[i]*R[i][2][1]+wz[i]*R[i][2][2])*ti;
 }
+#ifdef MD_ASYM_ITENS
+extern void upd_refsysM(int i);
+#endif
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
   /*
@@ -1340,7 +1343,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
-   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
 #ifdef MD_ASYM_ITENS
   RDiagtR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[i]);
 #else
@@ -1531,6 +1534,10 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   wy[j] -= factorinvIb*rBCn[1];
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
+#endif
+#ifdef MD_ASYM_ITENS
+  upd_refsysM(i, Ia);
+  upd_refsysM(j, Ib);
 #endif
 #if 0
 #if MD_DEBUG(x)==x
@@ -2033,7 +2040,7 @@ void evolve_euler_angles_symtop(int i, double ti, double *phi, double *psi)
   *phi = invI1 * angM[i] * ti + phi0[i];
   *psi = ti * angM[i] * costheta0[i] * (I1 - I3) / (I3*I1) + psi0[i];
 }
-void symtop_evolve_orient(int i, double ti, double **Ro, double Omega[3][3])
+void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double Omega[3][3])
 {
   double wSq, w, phi, psi;
   int k1, k2, k3;
@@ -2170,6 +2177,85 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 #ifndef MD_APPROX_JACOB
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
+#ifdef MD_ASYM_ITENS
+/* N.B. questa va riscritta per la trottola simmetrica! */
+void calcFxtFt(int i, double ti, double x[3], double **X,
+	       double D[3][3], double Omega[3][3], double **R, 
+	       double pos[3], double vel[3], double gradf[3],
+	       double Fxt[3], double *Ft)
+{
+  double OmegaX[3][3], XOmega[3][3]; 
+  double DtX[3][3], dx[3];
+  int k1, k2, k3;
+  calc_Rdot(i, ti);
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  XOmega[k1][k2] = 0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    {
+	      if (X[k1][k3] == 0.0 || Omega[k3][k2] == 0.0)
+		continue;
+	      XOmega[k1][k2] += X[k1][k3]*Omega[k3][k2];
+	    }
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  OmegaX[k1][k2] = 0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    {
+	      if (X[k3][k2] == 0.0 || Omega[k3][k1] == 0.0)
+		continue;
+	      OmegaX[k1][k2] += Omega[k1][k3]*X[k3][k2]; 
+	    }
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      DtX[k1][k2] = OmegaX[k1][k2] - XOmega[k1][k2];
+#if 0
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  Mtmp[k1][k2] = 0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    Mtmp[k1][k2] += sumDOmega[k1][k3]*R[k3][k2]; 
+	}
+    }
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  DtX[k1][k2] = 0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    DtX[k1][k2] += R[k3][k1]*Mtmp[k3][k2]; 
+	}
+    }
+#endif
+   for (k1 = 0; k1 < 3; k1++)
+     {
+       Fxt[k1] = 0;
+       for (k2 = 0; k2 < 3; k2++)
+	 Fxt[k1] += DtX[k1][k2]*(x[k2]-pos[k2]) - X[k1][k2]*vel[k2]; 
+       Fxt[k1] *= 2.0;
+     } 
+   *Ft = 0;
+   for (k1 = 0; k1 < 3; k1++)
+     dx[k1] = x[k1]-pos[k1];
+   for (k1 = 0; k1 < 3; k1++)
+     {
+       for (k2 = 0; k2 < 3; k2++)
+	 {
+	   *Ft += -vel[k1]*X[k1][k2]*dx[k2]+dx[k1]*DtX[k1][k2]*dx[k2]-dx[k1]*X[k1][k2]*vel[k2];
+	 }
+     }
+}
+#else
 void calcFxtFt(double x[3], double **X,
 	       double D[3][3], double Omega[3][3], double **R, 
 	       double pos[3], double vel[3], double gradf[3],
@@ -2245,6 +2331,7 @@ void calcFxtFt(double x[3], double **X,
 	 }
      }
 }
+#endif
 //#define MD_GLOBALNR
 #undef MD_GLOBALNR2
 void fdjacGuess(int n, double x[], double fvec[], double **df, 
