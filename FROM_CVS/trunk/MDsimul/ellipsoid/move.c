@@ -21,7 +21,7 @@ double **Ia, **Ib, **invIa, **invIb;
 double Ia, Ib, invIa, invIb;
 #endif
 #ifdef MD_ASYM_ITENS
-double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtBi, **Rdot;
+double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtBi, **Rdot, **REtA, **REtB;
 double cosEulAng[2][3], sinEulAng[2][3];
 #endif
 int *lastbump;
@@ -1264,7 +1264,7 @@ void update_MSDrot(int i)
   OprogStatus.sumoz[i] += (wx[i]*R[i][2][0]+wy[i]*R[i][2][1]+wz[i]*R[i][2][2])*ti;
 }
 #ifdef MD_ASYM_ITENS
-extern void upd_refsysM(int i);
+extern void upd_refsysM(int i, double **I);
 #endif
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
@@ -1283,6 +1283,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double modn, denom;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
+#endif
+#ifdef MD_ASYM_ITENS
+  double rnI[3];
 #endif
   int na, a, b;
 #if 0
@@ -2057,9 +2060,9 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
  
       return;
     }
-  evolve_euler_angles(i, ti, &phi, &psi);
+  evolve_euler_angles_symtop(i, ti, &phi, &psi);
   cosphi = cos(phi);
-  sinphi = sin(phi)
+  sinphi = sin(phi);
   cospsi = cos(psi);
   sinpsi = sin(psi);
   cosea[0] = cosphi;
@@ -2075,7 +2078,7 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
       {
 	Ro [k1][k2] = 0.0;
 	for (k3 = 0; k3 < 3; k3++)
-	  Ro[k1][k2] += REt[k1][k3]*RM[k3][k2];
+	  Ro[k1][k2] += REt[k1][k3]*RM[i][k3][k2];
       }
 }
 #endif
@@ -2183,20 +2186,37 @@ extern void free_matrix(double **M, int n);
 #ifdef MD_ASYM_ITENS
 void calc_Rdot(int i, double cosea[3], double sinea[3], double **Ro)
 {
-  double A, B, I1, I3;
+  /* cosea[] = {0:cos(phi),1:cos(theta),2:cos(psi)}
+   * sinea[] = {0:sin(phi),1:sin(theta),2:sin(psi)}*/
+  /* here we assume d/dt[theta(t)] = 0 */
+  double A, B, C, I1, I3;
+  double costh, sinth, cospsi, sinphi, cosphi, sinpsi;
+  double sinphisinpsi, cosphicospsi, sinphicospsi, cosphisinpsi;
+  double cosphisinth;
+  cosphi = cosea[0];
+  sinphi = sinea[0];
+  costh = cosea[1];
+  sinth = sinea[1];
+  cospsi = cosea[2];
+  sinpsi = sinea[2];
+  sinphisinpsi = sinphi*sinpsi;
+  cosphicospsi = cosphi*cospsi;
+  sinphicospsi = sinphi*cospsi;
+  cosphisinpsi = cosphi*sinpsi;
+  cosphisinth = cosphi*sinth;
   I1 = Oparams.I[i<Oparams.parnumA?0:1][0];
   I3 = Oparams.I[i<Oparams.parnumA?0:1][2];
   A = angM[i]/I1;
   B = angM[i]*cosea[1]*(I1 - I3)/(I1*I3);
-  Ro[0][0] = -sinpsi*cosphi -cospsi*sinphi - costheta*(cosphi*sinpsi - sinphi*cospsi);
-  Ro[0][1] = ;
-  Ro[0][2] = ;
-  Ro[1][0] = ;
-  Ro[1][1] = ;
-  Ro[1][2] = ;
-  Ro[2][0] = ;
-  Ro[2][1] = ;
-  Ro[2][2] = ;
+  Ro[0][0] = -B*cosphisinpsi - A*sinphicospsi - costh*( A*cosphisinpsi + B*sinphicospsi);
+  Ro[0][1] = -B*sinphisinpsi + A*cosphicospsi + costh*( B*cosphicospsi - A*sinphisinpsi);
+  Ro[0][2] =  B*cospsi*sinth;
+  Ro[1][0] = -B*cosphicospsi + A*sinphisinpsi - costh*( A*cosphicospsi - B*sinphicospsi);
+  Ro[1][1] = -B*sinphicospsi - A*cosphisinpsi + costh*(-A*sinphicospsi - B*cosphisinpsi);
+  Ro[1][2] = -B*sinpsi*costh;
+  Ro[2][0] =  A*cosphi*sinth;
+  Ro[2][1] =  A*sinphi*sinth;
+  Ro[2][2] =  0;
 }
 /* N.B. questa va riscritta per la trottola simmetrica! */
 void calcFxtFt(int i, double x[3], double **RM, double cosea[3], double sinea[3], double **X,
@@ -2204,7 +2224,7 @@ void calcFxtFt(int i, double x[3], double **RM, double cosea[3], double sinea[3]
 	       double pos[3], double vel[3], double gradf[3],
 	       double Fxt[3], double *Ft)
 {
-  double OmegaX[3][3], XOmega[3][3]; 
+  double tRDRdot[3][3], tRdotDR[3][3], DR[3][3]; 
   double DtX[3][3], dx[3];
   int k1, k2, k3;
   calc_Rdot(i, cosea, sinea, Rdot);
@@ -2212,12 +2232,19 @@ void calcFxtFt(int i, double x[3], double **RM, double cosea[3], double sinea[3]
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  XOmega[k1][k2] = 0;
+	  DR[k1][k2] = D[k1][k1]*R[k1][k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  tRDRdot[k1][k2] = 0.0;
 	  for (k3 = 0; k3 < 3; k3++)
 	    {
-	      if (X[k1][k3] == 0.0 || Omega[k3][k2] == 0.0)
+	      if (DR[k3][k1] == 0.0 || Rdot[k3][k2] == 0.0)
 		continue;
-	      XOmega[k1][k2] += X[k1][k3]*Omega[k3][k2];
+	      tRDRdot[k1][k2] += DR[k3][k1]*Rdot[k3][k2]; 
 	    }
 	}
     }
@@ -2225,44 +2252,24 @@ void calcFxtFt(int i, double x[3], double **RM, double cosea[3], double sinea[3]
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  OmegaX[k1][k2] = 0;
+	  tRdotDR[k1][k2] = 0.0;
 	  for (k3 = 0; k3 < 3; k3++)
 	    {
-	      if (X[k3][k2] == 0.0 || Omega[k3][k1] == 0.0)
+	      if (Rdot[k3][k1] == 0.0 || DR[k3][k2] == 0.0)
 		continue;
-	      OmegaX[k1][k2] += Omega[k1][k3]*X[k3][k2]; 
+	      tRdotDR[k1][k2] += Rdot[k3][k1]*DR[k3][k2]; 
 	    }
 	}
     }
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
-      DtX[k1][k2] = OmegaX[k1][k2] - XOmega[k1][k2];
-#if 0
+      DtX[k1][k2] = tRdotDR[k1][k2] - tRDRdot[k1][k2];
   for (k1 = 0; k1 < 3; k1++)
     {
+      Fxt[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
-	{
-	  Mtmp[k1][k2] = 0;
-	  for (k3 = 0; k3 < 3; k3++)
-	    Mtmp[k1][k2] += sumDOmega[k1][k3]*R[k3][k2]; 
-	}
-    }
-   for (k1 = 0; k1 < 3; k1++)
-    {
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  DtX[k1][k2] = 0;
-	  for (k3 = 0; k3 < 3; k3++)
-	    DtX[k1][k2] += R[k3][k1]*Mtmp[k3][k2]; 
-	}
-    }
-#endif
-   for (k1 = 0; k1 < 3; k1++)
-     {
-       Fxt[k1] = 0;
-       for (k2 = 0; k2 < 3; k2++)
-	 Fxt[k1] += DtX[k1][k2]*(x[k2]-pos[k2]) - X[k1][k2]*vel[k2]; 
-       Fxt[k1] *= 2.0;
+	Fxt[k1] += DtX[k1][k2]*(x[k2]-pos[k2]) - X[k1][k2]*vel[k2]; 
+      Fxt[k1] *= 2.0;
      } 
    *Ft = 0;
    for (k1 = 0; k1 < 3; k1++)
