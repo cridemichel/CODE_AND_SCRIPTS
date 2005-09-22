@@ -45,7 +45,7 @@ double **Ia, **Ib, **invIa, **invIb;
 double Ia, Ib, invIa, invIb;
 #endif
 #ifdef MD_ASYM_ITENS
-double *phi0, *psi0, *costheta0, *sintheta0, **REt, *angM, **RM;
+double *phi0, *psi0, *costheta0, *sintheta0, **REt, **REtA, **REtB, *angM, **RM, **RE0;
 #endif
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
@@ -1078,6 +1078,77 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 double calc_phi(void);
 double costolSDgrad, costolAngSD;
 extern double costhrNR;
+#ifdef MD_ASYM_ITENS
+extern void calc_euler_angles(int i, double **M, double *phi, double *theta, double *psi);
+extern double scalProd(double *A, double *B);
+void calc_angmom(int i, double **I)
+{
+  double wv[3], Mvec[3], th, costh, sinth, phi, cosphi, sinphi, VP[3], Mu[3];
+  int k1, k2;
+
+  wv[0] = wx[i];
+  wv[1] = wy[i];
+  wv[2] = wz[i];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      Mvec[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	Mvec[k1] += Ia[k1][k2]*wv[k2];
+    }
+  angM[i] = calc_norm(Mvec);
+  /* calcolo il prodotto vettore tra M e l'asse z */
+  for (k1 = 0; k1 < 3; k1++)
+    Mu[k1] = Mvec[k1]/angM[i];
+
+  VP[0] = Mu[1];
+  VP[1] = -Mu[0];
+  VP[2] = 0.0;
+  /* e ora calcolo RM */
+
+  th = acos(Mvec[2]/angM[i]);
+  costh = cos(th);
+  sinth = sin(th);
+  if (sinth=0.0)
+    {
+      RM[i][0][0] = 1.0;
+      RM[i][0][1] = 0.0;
+      RM[i][0][2] = 0.0;
+      RM[i][1][0] = 0.0;
+      RM[i][1][1] = 1.0;
+      RM[i][1][2] = 0.0;
+      RM[i][2][0] = 0.0;
+      RM[i][2][1] = 0.0;
+      RM[i][2][2] = 1.0;
+    }
+  phi = acos(VP[0]/sinth); 
+  if (VP[1]/sinth < 0.0)
+    phi = 2*pi - phi;
+  cosphi = cos(phi);
+  sinphi = sin(phi);
+  RM[i][0][0] = cosphi;
+  RM[i][0][1] = sinphi;
+  RM[i][0][2] = 0.0;
+  RM[i][1][0] = -costh*sinphi;
+  RM[i][1][1] =  costh*cosphi;
+  RM[i][1][2] = sinth;
+  RM[i][2][0] = sinth*sinphi;
+  RM[i][2][1] = -sinth*cosphi;
+  RM[i][2][2] = costh;
+}
+void upd_refsysM(int i, double **I)
+{
+  int k1, k2, k3;
+  calc_angmom(i, I); 
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	RM[i][k1][k2] = 0.0;
+	for (k3 = 0; k3 < 3; k3++)
+	  RE0[k1][k2] += R[i][k1][k3]*RM[i][k3][k2];
+      }
+  calc_euler_angles(i, RE0[i], &phi0[i], &theta0[i], &psi0[i]);
+}
+#endif 
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
 {
@@ -1217,6 +1288,9 @@ void usrInitAft(void)
     costheta0 = malloc(sizeof(double)*Oparams.parnum);
     sintheta0 = malloc(sizeof(double)*Oparams.parnum);
     REt = matrix(3,3);
+    REtA = matrix(3,3);
+    REtB = matrix(3,3);
+    RE0 = matrix(3,3);
     for (i=0; i < Oparams.parnum; i++) 
       RM[i] = matrix(3, 3);
 #endif
@@ -1480,6 +1554,16 @@ void usrInitAft(void)
 #endif
 #endif
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
+#endif
+#ifdef MD_ASYM_ITENS
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (i < Oparams.parnumA)
+	RDiagtR(i, Ia, ItensD[0][0], ItensD[0][1], ItensD[0][2], R[i]);
+      else
+	RDiagtR(i, Ia, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+      upd_refsysM(i, Ia);
+    }
 #endif
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
