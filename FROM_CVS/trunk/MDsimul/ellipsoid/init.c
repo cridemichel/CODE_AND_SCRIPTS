@@ -45,7 +45,7 @@ double **Ia, **Ib, **invIa, **invIb;
 double Ia, Ib, invIa, invIb;
 #endif
 #ifdef MD_ASYM_ITENS
-double *phi0, *psi0, *costheta0, *sintheta0, **REt, **REtA, **REtB, *angM, **RM, **RE0, **Rdot;
+double *theta0, *phi0, *psi0, *costheta0, *sintheta0, **REt, **REtA, **REtB, *angM, ***RM, **RE0, **Rdot;
 #endif
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
@@ -642,6 +642,7 @@ void wrap_initCoord(void)
 }
 
 void adjust_norm(double **R);
+void PredictEventNNL(int na, int nb);
 /* =========================== >>> initCoord <<< ============================*/
 void initCoord(void)
 {
@@ -1081,6 +1082,7 @@ extern double costhrNR;
 #ifdef MD_ASYM_ITENS
 extern void calc_euler_angles(int i, double **M, double *phi, double *theta, double *psi);
 extern double scalProd(double *A, double *B);
+double calc_norm(double *vec);
 void calc_angmom(int i, double **I)
 {
   double wv[3], Mvec[3], th, costh, sinth, phi, cosphi, sinphi, VP[3], Mu[3];
@@ -1108,7 +1110,7 @@ void calc_angmom(int i, double **I)
   th = acos(Mvec[2]/angM[i]);
   costh = cos(th);
   sinth = sin(th);
-  if (sinth=0.0)
+  if (sinth==0.0)
     {
       RM[i][0][0] = 1.0;
       RM[i][0][1] = 0.0;
@@ -1146,10 +1148,11 @@ void upd_refsysM(int i, double **I)
 	for (k3 = 0; k3 < 3; k3++)
 	  RE0[k1][k2] += R[i][k1][k3]*RM[i][k3][k2];
       }
-  calc_euler_angles(i, RE0[i], &phi0[i], &theta0[i], &psi0[i]);
+  calc_euler_angles(i, RE0, &phi0[i], &theta0[i], &psi0[i]);
 }
 #endif 
 /* ======================== >>> usrInitAft <<< ==============================*/
+void RDiagtR(int i, double **M, double a, double b, double c, double **Ri);
 void usrInitAft(void)
 {
     /* DESCRIPTION:
@@ -1160,7 +1163,6 @@ void usrInitAft(void)
     char fileop[1024], fileop2[1024], fileop3[1024];
     FILE *bof;
 #endif    
-    double nltime;
     int Nm, i, sct, overlap;
     COORD_TYPE vcmx, vcmy, vcmz;
     COORD_TYPE *m;
