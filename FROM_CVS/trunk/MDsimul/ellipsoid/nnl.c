@@ -37,6 +37,12 @@ extern int polinterr, polinterrRyck;
 extern double *lastupdNNL, *totDistDispl;
 double gradplane[3];
 /* Routines for LU decomposition from Numerical Recipe online */
+#ifdef MD_ASYM_ITENS
+extern double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtBi, **Rdot, **REtA, **REtB;
+extern double cosEulAng[2][3], sinEulAng[2][3];
+#endif
+
+
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
 void InvMatrix(double **a, double **b, int NB);
@@ -59,10 +65,17 @@ extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto
 extern double accngA, accngB;
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
 extern double min(double a, double b);
+#ifdef MD_ASYM_ITENS
+extern void calcFxtFt(int i, double x[3], double **RM, double cosea[3], double sinea[3], double **X,
+	       double D[3][3], double **R, 
+	       double pos[3], double vel[3], double gradf[3],
+	       double Fxt[3], double *Ft);
+#else
 extern void calcFxtFt(double x[3], double **X,
 	       double D[3][3], double Omega[3][3], double **R, 
 	       double pos[3], double vel[3], double gradf[3],
 	       double Fxt[3], double *Ft);
+#endif
 double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3]);
 extern double calc_norm(double *vec);
 extern void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3]);
@@ -184,6 +197,7 @@ void rebuildNNL(void)
     printf("nextNNLrebuild=%.15G\n", nextNNLrebuild);
   //ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 }
+
 void fdjacNeighPlane(int n, double x[], double fvec[], double **df, 
 		     void (*vecfunc)(int, double [], double [], int), int iA)
 {
@@ -293,7 +307,11 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
+#ifdef MD_ASYM_ITENS
+  calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
+#else
   calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+#endif
   //calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -431,7 +449,11 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
+#ifdef MD_ASYM_ITENS
+  calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
+#else
   calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+#endif
   //calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
   for (k1 = 0; k1 < 3; k1++)
     {

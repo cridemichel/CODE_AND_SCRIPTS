@@ -633,6 +633,8 @@ struct pascii opar_ascii[]=
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
 #ifndef MD_ASYM_ITENS
   {"I",                 OP(I),                             2,   1, "%.8G"},
+#else
+  {"I",                 OP(I),                             2,   3, "%.8G"},
 #endif
 #ifdef MD_GRAVITY
   {"wallDiss",          &OP(wallDiss),                    1,   1,   "%f"},
@@ -821,6 +823,11 @@ struct singlePar OsinglePar[] = {
 #ifndef MD_ASYM_ITENS
   {"Ia",      &Oparams.I[0],      CT},
   {"Ib",      &Oparams.I[1],      CT},
+#else
+  {"I1a",      &Oparams.I[0][0],      CT},
+  {"I3a",      &Oparams.I[1][1],      CT},
+  {"I1b",      &Oparams.I[0][0],      CT},
+  {"I3b",      &Oparams.I[1][1],      CT},
 #endif
 #ifdef MD_GRAVITY
   {"ggrav",      &Oparams.ggrav,            CT},

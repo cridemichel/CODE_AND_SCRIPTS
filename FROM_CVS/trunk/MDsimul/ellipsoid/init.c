@@ -46,6 +46,7 @@ double Ia, Ib, invIa, invIb;
 #endif
 #ifdef MD_ASYM_ITENS
 double *theta0, *phi0, *psi0, *costheta0, *sintheta0, **REt, **REtA, **REtB, *angM, ***RM, **RE0, **Rdot;
+double cosEulAng[2][3], sinEulAng[2][3];
 #endif
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
@@ -711,9 +712,12 @@ void initCoord(void)
 
 /* =========================== >>> usrInitBef <<< ========================== */
 void usrInitBef(void)
-  {
-    int i;
-    /* DESCRIPTION:
+{
+  int i;
+#ifdef MD_ASYM_ITENS
+  int n;
+#endif
+ /* DESCRIPTION:
        This function is called before any other initialization, put here 
        yours, for example initialize accumulators ! 
        NOTE: You should supply parameters value in parameters file, so this 
@@ -781,6 +785,10 @@ void usrInitBef(void)
 #ifndef MD_ASYM_ITENS
     for (i = 0; i < 2; i++)
       Oparams.I[i] = 1.0;
+#else
+    for (i = 0; i < 2; i++)
+      for (n = 0; n < 3; n++)
+	Oparams.I[i][n] = 1.0;
 #endif
     for (i = 0; i < MAXPAR; i++)
       {
@@ -1101,7 +1109,6 @@ void calc_angmom(int i, double **I)
   /* calcolo il prodotto vettore tra M e l'asse z */
   for (k1 = 0; k1 < 3; k1++)
     Mu[k1] = Mvec[k1]/angM[i];
-
   VP[0] = Mu[1];
   VP[1] = -Mu[0];
   VP[2] = 0.0;
@@ -1121,6 +1128,7 @@ void calc_angmom(int i, double **I)
       RM[i][2][0] = 0.0;
       RM[i][2][1] = 0.0;
       RM[i][2][2] = 1.0;
+      return;
     }
   phi = acos(VP[0]/sinth); 
   if (VP[1]/sinth < 0.0)
@@ -1144,11 +1152,13 @@ void upd_refsysM(int i, double **I)
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       {
-	RM[i][k1][k2] = 0.0;
+	RE0[k1][k2] = 0.0;
 	for (k3 = 0; k3 < 3; k3++)
 	  RE0[k1][k2] += R[i][k1][k3]*RM[i][k3][k2];
       }
   calc_euler_angles(i, RE0, &phi0[i], &theta0[i], &psi0[i]);
+  costheta0[i] = cos(theta0[i]);
+  sintheta0[i] = sin(theta0[i]);
 }
 #endif 
 /* ======================== >>> usrInitAft <<< ==============================*/
@@ -1280,6 +1290,8 @@ void usrInitAft(void)
     fvecD=vector(8);
     fvecG=vector(8);
 #ifdef MD_ASYM_ITENS
+    Oparams.I[0][2] = Oparams.I[0][1];
+    Oparams.I[1][2] = Oparams.I[1][1];
     Ia = matrix(3, 3);
     Ib = matrix(3, 3);
     invIa = matrix(3, 3);
@@ -1289,11 +1301,16 @@ void usrInitAft(void)
     psi0 = malloc(sizeof(double)*Oparams.parnum);
     costheta0 = malloc(sizeof(double)*Oparams.parnum);
     sintheta0 = malloc(sizeof(double)*Oparams.parnum);
+    theta0 =    malloc(sizeof(double)*Oparams.parnum);
+    psi0   =    malloc(sizeof(double)*Oparams.parnum);
+    phi0   =    malloc(sizeof(double)*Oparams.parnum);
+    angM   =    malloc(sizeof(double)*Oparams.parnum);
     REt = matrix(3,3);
     REtA = matrix(3,3);
     REtB = matrix(3,3);
     RE0 = matrix(3,3);
     Rdot = matrix(3,3);
+    RM = malloc(sizeof(double**)*Oparams.parnum);
     for (i=0; i < Oparams.parnum; i++) 
       RM[i] = matrix(3, 3);
 #endif
