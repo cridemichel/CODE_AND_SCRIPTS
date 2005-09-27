@@ -36,7 +36,6 @@ extern void funcs2beZeroedDistNegNeighPlane5(int n, double x[], double fvec[], i
 extern void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[], int i);
 extern void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i);
 void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int), int iA);
-
 double **matrix(int n, int m)
 {
   double **M;

@@ -1,7 +1,7 @@
 #include<mdsimul.h>
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
-#define MD_DEBUG10(x)  
+#define MD_DEBUG10(x) 
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x) 
@@ -21,8 +21,8 @@ double **Ia, **Ib, **invIa, **invIb;
 double Ia, Ib, invIa, invIb;
 #endif
 #ifdef MD_ASYM_ITENS
-double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtBi, **Rdot, **REtA, **REtB;
-double cosEulAng[2][3], sinEulAng[2][3];
+extern double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtBi, **Rdot, **REtA, **REtB;
+extern double cosEulAng[2][3], sinEulAng[2][3];
 #endif
 int *lastbump;
 extern double *axa, *axb, *axc;
@@ -2009,6 +2009,7 @@ void calc_euler_angles(int i, double **M, double *phi, double *theta, double *ps
   if (M[2][0]/sintheta < 0)
     *phi = 2.0*pi - *phi;
   *psi = acos(-M[1][2]/sintheta);
+  //printf("psi0: %.15G sintheta: %.15G M[1][2]:%.15G\n", psi0[i], sintheta, M[1][2]);
   if (M[0][2]/sintheta < 0)
     *psi = 2.0*pi - *psi;
 }
@@ -2047,6 +2048,8 @@ void evolve_euler_angles_symtop(int i, double ti, double *phi, double *psi)
   /* see Landau - Mechanics */
   *phi = invI1 * angM[i] * ti + phi0[i];
   *psi = ti * angM[i] * costheta0[i] * (I1 - I3) / (I3*I1) + psi0[i];
+  //printf("*phi=%.15G *psi=%.15G ti=%.15G angM[%d]:%.15G I1: %.15G I2:%.15G\n", *phi, *psi, ti, i, angM[i], I1, I3);
+  //printf("costheta0[]:%.15G psi0[]:%.15G\n", costheta0[i], psi0[i]);
 }
 void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
 			  double cosea[3], double sinea[3])
@@ -2065,6 +2068,13 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
       return;
     }
   evolve_euler_angles_symtop(i, ti, &phi, &psi);
+#if 0
+  if (isnan(phi) || isnan(psi))
+    {
+      printf("NAN\n");
+      exit(-1);
+    }
+#endif 
   cosphi = cos(phi);
   sinphi = sin(phi);
   cospsi = cos(psi);
@@ -2072,9 +2082,11 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
   cosea[0] = cosphi;
   cosea[1] = costheta0[i];
   cosea[2] = cospsi;
-  sinea[0] = cosphi;
+  sinea[0] = sinphi;
   sinea[1] = sintheta0[i];
-  sinea[2] = cospsi;
+  sinea[2] = sinpsi;
+  //printf("costheta: %.15G sintheta: %.15G\n", costheta0[i], sintheta0[i]);
+  //printf("cosphi: %.15G sinphi: %.15G cospsi: %.15G sinpsi:%.15G\n", cosphi, sinphi, cospsi, sinpsi);
   build_euler_matrix(cosphi, sinphi, costheta0[i], sintheta0[i],
 		     cospsi, sinpsi, REt);
   for (k1 = 0; k1 < 3; k1++)
@@ -4581,7 +4593,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      if (d < 0)
 		{
 		  MD_DEBUG10(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
-		  MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
+		  //MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
 		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 		  return 0;
 		  //if (lastbump[i] == j && lastbump[j]==i )
