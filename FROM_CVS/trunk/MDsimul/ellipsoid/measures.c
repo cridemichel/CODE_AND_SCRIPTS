@@ -18,6 +18,7 @@ char TXTA[10][MSG_LEN];
 char TXT[MSG_LEN];
 extern double Vz;
 extern double ***R;
+extern void UpdateSystem(void);
 double DphiSqA=0.0, DphiSqB=0.0, DrSqTotA=0.0, DrSqTotB=0.0;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
@@ -305,7 +306,7 @@ void calcrotMSD(void)
 {
   FILE *fA, *fB;
   int i, a;
-  double wparal[3], wperp[3], u[3], DphiA[3], DphiB[3];
+  double DphiA[3], DphiB[3];
   DphiSqA = DphiSqB = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
     {
@@ -366,8 +367,6 @@ void temperat(void)
 {
   /* DESCRIPTION:
      This the calculation of the instantaneous temperature */
-  int i;
-  double m;
 #if 0
   K = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
@@ -539,7 +538,7 @@ void structFacts(void)
 /* ============================= >>> maxwell <<< =========================== */
 void maxwell(void)
 {
-  int n, i, Nm;
+  int n, i;
   int* histMB;
   double vMod, vSq;
 

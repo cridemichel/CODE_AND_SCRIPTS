@@ -185,7 +185,7 @@ void rebuildNNL(void)
   //ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 }
 void fdjacNeighPlane(int n, double x[], double fvec[], double **df, 
-		     void (*vecfunc)(int, double [], double []), int iA)
+		     void (*vecfunc)(int, double [], double [], int), int iA)
 {
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
   double  rA[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
@@ -325,7 +325,7 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
 /* N.B. In tale caso l'ellissoide B è semplicemente l'ellissoide A riscalato di un opportuno 
  * fattore */
 void fdjacNeigh(int n, double x[], double fvec[], double **df, 
-		void (*vecfunc)(int, double [], double []), int iA)
+		void (*vecfunc)(int, double [], double [], int), int iA)
 {
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
   double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
@@ -633,7 +633,7 @@ extern double gradplane[3];
 void funcs2beZeroedDistNegNeighPlane5(int n, double x[], double fvec[], int i)
 {
   int k1, k2; 
-  double fx[3], gx[3], rD[3];
+  double fx[3], rD[3];
   /* x = (r, alpha, t) */ 
   
   for (k1 = 0; k1 < 3; k1++)
@@ -667,8 +667,8 @@ void funcs2beZeroedDistNegNeighPlane5(int n, double x[], double fvec[], int i)
 void fdjacDistNegNeighPlane5(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int), int iA)
 {
-  double fx[3], gx[3], rD[3], A[3][3], b[3], c[3];
-  int k1, k2, k3;
+  double fx[3], rD[3];
+  int k1, k2;
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
@@ -726,9 +726,9 @@ void fdjacDistNegNeighPlane5(int n, double x[], double fvec[], double **df,
 }
 
 void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df, 
-    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA)
+    	       void (*vecfunc)(int, double [], double [], int), int iA)
 {
-  double fx[3], gx[3];
+  double fx[3];
   int k1, k2;
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -821,7 +821,7 @@ void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df,
 #endif
 }
 void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df, 
-    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA)
+    	       void (*vecfunc)(int, double [], double [], int), int iA)
 {
   double fx[3], gx[3];
   int k1, k2;
@@ -918,7 +918,7 @@ void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df,
 void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[], int i)
 {
   int k1, k2; 
-  double fx[3], gx[3];
+  double fx[3];
   /* x = (r, alpha, t) */ 
 
 #if 0
@@ -1057,7 +1057,7 @@ void guess_distNeigh_plane(int i,
 		double *rA, double *rB, double **Xa, double *grad, double *rC, double *rD,
 		double **RA)
 {
-  double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
+  double gradA[3], gradaxA[3], dA[3], dB[3];
   int k1, n;
   double saA[3], saB[3], sp;
 
@@ -1309,7 +1309,7 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   double ti, segno;
   int retcheck;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
-  int k1, k2;
+  int k1;
   MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i],i));
   MD_DEBUG20(printf("v = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
   *err = 0;
@@ -2454,10 +2454,10 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
 					  double *d1, double epsdFast, 
 					  double dists[6], double maxddoti[6], double maxddot)
 {
-  double told, delt, distsOld[6];
+  double told, delt=1E-15, distsOld[6];
   const double GOLD= 1.618034;
   const int MAXOPTITS = 500;
-  int nn, its=0, crossed[6], itsf; 
+  int its=0, crossed[6], itsf; 
   *d1 = calcDistNegNeighPlaneAll(*t, t1, i, distsOld, vecgd, 1);
 #if 0
   if ((t2-t1)*maxddot < *d1 - OprogStatus.epsd)
@@ -2555,18 +2555,18 @@ void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBAL
 }
 int locate_contact_neigh_plane_parall(int i, double *evtime)
 {
-  const double minh = 1E-14;
+  /* const double minh = 1E-14;*/
   double h, d, dold, dold2, t2arr[6], t, dists[6], distsOld[6], 
 	 vecg[5], vecgroot[6][8], vecgd[6][8], vecgdold2[6][8], vecgdold[6][8],
 	 distsOld2[6], deltth, factori; 
-  double normddot, maxddot, delt, troot, tmin, tini, maxddoti[6];
-  int itstb, firstev;
+  double normddot, maxddot, delt, troot, tini, maxddoti[6];
+  int firstev;
+  /*
   const int MAXITS = 100;
-  const double EPS=3E-8; 
+  const double EPS=3E-8;*/ 
   /* per calcolare derivate numeriche questo è il magic number in doppia precisione (vedi Num. Rec.)*/
-  int itsRef;
-  int its, foundrc, goback;
-  double t1, t2, epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
+  int its, foundrc;
+  double t1, t2, epsd, epsdFast, epsdFastR, epsdMax, deldist; 
   int kk,tocheck[6], dorefine[6], ntc, ncr, nn, gotcoll, crossed[6], firstaftsf;
   epsd = OprogStatus.epsdNL;
   epsdFast = OprogStatus.epsdFastNL;
@@ -3274,8 +3274,8 @@ int locate_contact_neigh(int i, double vecg[5])
 extern double max(double a, double b);
 void PredictEventNNL(int na, int nb) 
 {
-  int i, signDir[NDIM], evCode, k, n, kk;
-  double vecg[5], shift[3], t1, t2, t, tm[NDIM], tnnl;
+  int i, signDir[NDIM]={0,0,0}, evCode, k, n;
+  double vecg[5], shift[3], t1, t2, t, tm[NDIM];
   double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
   int overlap;
   if (vz[na] != 0.0) 
@@ -3465,7 +3465,6 @@ void updrebuildNNL(int na)
   /* qui ricalcola solo il tempo di collisione dell'ellisoide na-esimo con 
    * la sua neighbour list */
   double vecg[5];
-  double tsup;
   int ip;
 #ifdef MD_NNLPLANES
   nebrTab[na].nexttime = timbig;
@@ -3522,7 +3521,7 @@ void updAllNNL()
 void nextNNLupdate(int na)
 {
   int i1, i2, ip;
-  double DelDist, tsup, nnlfact;
+  double DelDist, nnlfact;
   const double distBuf = 0.1;
   double Omega[3][3], vecg[5];
 #ifndef MD_NNLPLANES
@@ -3616,7 +3615,7 @@ void BuildNNL(int na)
 {
   double shift[NDIM];
   int kk;
-  double r1[3], r2[3], dist;
+  double dist;
 #ifndef MD_NNLPLANES
   double vecgsup[8], alpha;
 #endif

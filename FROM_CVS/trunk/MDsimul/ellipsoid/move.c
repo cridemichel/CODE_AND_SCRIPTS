@@ -49,6 +49,10 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
 extern struct nebrTabStruct *nebrTab;
 double nextNNLrebuild;
+extern void rebuildNNL(void);
+extern void updrebuildNNL(int na);
+extern void PredictEventNNL(int na, int nb);
+extern void updAllNNL();
 
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0, itsFNL=0, timesFNL=0, 
      timesSNL=0, itsSNL=0, numcalldist=0, numdisttryagain=0;
@@ -236,8 +240,8 @@ double get_min_dist_NNL (int na, int *jmin, double *rCmin, double *rDmin, double
   double distMin=1E10,dist,vecg[8], alpha, shift[3];
   /*double cells[NDIM];*/
   int kk, i;
-  double r1[3], r2[3], rAB[3];
-  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  double r1[3], r2[3];
+  int n;
  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
   MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
@@ -283,7 +287,7 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
   double distMin=1E10,dist,vecg[8], alpha, shift[3];
   /*double cells[NDIM];*/
   int kk;
-  double r1[3], r2[3], rAB[3];
+  double r1[3], r2[3];
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
@@ -459,7 +463,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   int kk;
   double nnlfact;
   double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2, fact3;
-  double boxdiag, maxaxNNL=0.0, maxaxStore=1.0, factNNL=1.0;
+  double boxdiag, factNNL=1.0;
   L2 = 0.5 * L;
   phi = calc_phi();
   phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
@@ -622,9 +626,9 @@ void scale_Phi(void)
   int i, j, imin, kk, its, done=0;
   static int first = 1;
   static double a0I, target;
-  double maxaxNNL, distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3]={0,0,0}, 
+  double distMinT, distMin=1E60, rAmin[3], rBmin[3], rC[3]={0,0,0}, 
 	 rD[3]={0,0,0};
-  double L2, shift[3], shiftmin[3], phi, scalfact, factor, axai;
+  double L2, shift[3], phi, scalfact, factor, axai;
   if (OprogStatus.targetPhi <= 0)
     return;
   
@@ -2527,8 +2531,8 @@ void fdjac(int n, double x[], double fvec[], double **df,
   df[3][3] = 0.0;
   df[4][3] = 0.0;
 #ifdef MD_ASYM_ITENS
-  calcFxtFt(x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
-  calcFxtFt(x, RM[iB], cosEulAng[1], sinEulAng[1], Xb, DB, RB, rB, vB, gx, Gxt, &Gt);
+  calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
+  calcFxtFt(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], Xb, DB, RB, rB, vB, gx, Gxt, &Gt);
 #else
   calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
   calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
@@ -2775,8 +2779,8 @@ int fdjac_disterr;
 void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx, double *gx)
 {
-  double rBA[3], rDC[3], gxrC[3], grC, rD[3], A[3][3], b[3], c[3];
-  int k1, k2, k3;
+  double rDC[3], rD[3], A[3][3], b[3], c[3];
+  int k1, k2;
 #ifdef MD_USE_CBLAS
   double XaL[3][3], XbL[3][3];
   for (k1 = 0; k1 < 3; k1++)
@@ -3394,7 +3398,7 @@ extern double scalProd(double *A, double *B);
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
-  double rBA[3], vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], vecgcg2[6], fx[3];
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], fx[3];
   double ti, segno;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck, tryagain = 0;
@@ -4728,7 +4732,7 @@ void PredictEvent (int na, int nb)
   const double EPSILON = 1E-10;
   double mredl;
 #endif
-  int cellRangeT[2 * NDIM], signDir[NDIM], evCode,
+  int cellRangeT[2 * NDIM], signDir[NDIM]={0,0,0}, evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
 
   MD_DEBUG(printf("PredictEvent: %d,%d\n", na, nb));
@@ -5378,6 +5382,7 @@ void calc_energy_i(char *msg, int i)
   double wt[3];
 #ifdef MD_ASYM_ITENS
   double **Ia, **Ib;
+  int k2;
   Ia = matrix(3,3); 
   Ib = matrix(3,3);
 #endif
@@ -5436,6 +5441,7 @@ void calc_energy(char *msg)
   int i, k1;
   double wt[3];
 #ifdef MD_ASYM_ITENS
+  int k2;
   double **Ia, **Ib;
   Ia = matrix(3,3); 
   Ib = matrix(3,3);
@@ -5611,7 +5617,6 @@ void ProcessCollision(void)
 }
 void docellcross(int k, double velk, double *rkptr, int cellsk)
 {
-  int i;
 #if 0
   if (inCell[0][evIdA]+1> cellsx ||inCell[1][evIdA]+1> cellsy||inCell[2][evIdA]+1> cellsz) 
     {printf("PRIMAin cell cross ?!?\n");
@@ -5820,7 +5825,7 @@ void move(void)
   double rzmax, zfact;
 #endif
   int k, n;
-  double timeold, nltime = timbig;
+  double timeold;
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;

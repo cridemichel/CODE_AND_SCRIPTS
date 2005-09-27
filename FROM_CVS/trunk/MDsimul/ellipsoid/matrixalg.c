@@ -12,7 +12,15 @@ int ncom;
 double (*nrfunc)(double []); 
 double f1dim(double x);
 void linmin(double p[], double xi[], int n, double *fret, double (*func)(double []));
+double fminMD(double x[], int iA, int iB, double shift[3]);
 void polintRyck(double xain[], double yain[], int n, double x, double *y, double *dy);
+extern void fdjacDistNegNeighPlane5(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int), int iA);
+extern void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int), int iA);
+extern void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i);
+extern void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i);
+extern void fdjacNeighPlane(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int), int iA);
+
 int *ivector(int n)
 {
   return calloc(n, sizeof(int)); 
@@ -24,6 +32,10 @@ double *vector(int n)
 void projectgrad(double *p, double *xi, double *gradf, double *gradg);
 void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, double *sfA, double dist);
 void polint(double xain[], double yain[], int n, double x, double *y, double *dy);
+extern void funcs2beZeroedDistNegNeighPlane5(int n, double x[], double fvec[], int i);
+extern void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[], int i);
+extern void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i);
+void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int), int iA);
 
 double **matrix(int n, int m)
 {
@@ -887,8 +899,8 @@ void projonto(double* ri, double *dr, double* rA, double **Xa, double *gradf, do
 {
   int kk, its, done=0, k1, k2, MAXITS=50;
   const double GOLD=1.618034;
-  double factor, dr1par, Xag[3], r1AXa[3], r1[3], r1A[3], sf, s1, s2, sqrtDelta, A2;
-  double curv2, dh, A, B, C, Delta, sol=0.0, ng, curv, lambda;
+  double Xag[3], r1AXa[3], r1[3], r1A[3], sf, sqrtDelta, A2;
+  double curv2, A, B, C, Delta, sol=0.0, ng, curv, lambda;
   sf = *sfA;
   its = 0;
  
@@ -1061,7 +1073,7 @@ int maxitsRyck;
 double xaRyck[3], yaRyck[3];
 double polintfuncRyck(double x)
 {
-  double dy, y;
+  double dy=0.0, y;
   polintRyck(xaRyck, yaRyck, 3, x, &y, &dy);
   if (polinterrRyck==1)
     return 0.0;
@@ -3732,7 +3744,6 @@ void (*nrfuncvDNeigh)(int n, double v[], double f[], int iA);
 
 extern void fdjac(int n, double x[], double fvec[], double **fjac, 
 		  void (*vecfunc)(int n, double v[], double fvec[], int i, int j, double shift[3]), int iA, int iB, double shift[3]); 
-double fmin(double x[], int iA, int iB, double shift[3]);
 double fminNeigh(double x[], int iA);
 double fminDNeigh(double x[], int iA);
 double fminD(double x[], int iA, int iB, double shift[3]);
@@ -3750,8 +3761,8 @@ void newtNeigh(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
 {
-  int i,its, j, ok;
-  double d,den,f,fold,stpmax,sum,temp,test; 
+  int i,its,ok;
+  double d,f,stpmax,sum,test; 
 #if 0
   int *indx;
   double **fjac,*g,*p,*xold;
@@ -3906,8 +3917,8 @@ void newt(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int i,its, j, ok;
-  double d,den,f,fold,stpmax,sum,temp,test; 
+  int i,its,ok;
+  double d,f,stpmax,sum,test; 
 #if 0
   int *indx;
   double **fjac,*g,*p,*xold;
@@ -3923,7 +3934,7 @@ void newt(double x[], int n, int *check,
   nn=n; 
   nn2=n-1;
   nrfuncv=vecfunc; 
-  f=fmin(x,iA,iB,shift); /*fvec is also computed by this call.*/
+  f=fminMD(x,iA,iB,shift); /*fvec is also computed by this call.*/
   test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
   for (i=0;i<n;i++) 
     if (fabs(fvec[i]) > test)
@@ -3975,7 +3986,7 @@ void newt(double x[], int n, int *check,
 #endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNR
-      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fmin,iA,iB,shift, TOLX); 
+      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminMD,iA,iB,shift, TOLX); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
@@ -4060,10 +4071,8 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
 {
-  int i,its=0, j, ok;
-  int kk;
-  double distnew, distold, r12[3];
-  double d,den,f,fold,stpmax,sum,temp,test;
+  int i,its=0,ok;
+  double d,stpmax,sum,test;
 #if 0
   int * indx;
   double **fjac,*g,*p,*xold; 
@@ -4227,10 +4236,8 @@ void newtDistNegNeigh(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
 {
-  int i,its=0, j, ok;
-  int kk;
-  double distnew, distold, r12[3];
-  double d,den,f,fold,stpmax,sum,temp,test; 
+  int i,its=0,ok;
+  double d,stpmax,sum,test; 
 #if 0
   int *indx;
   double **fjac,*g,*p,*xold;
@@ -4386,8 +4393,8 @@ void newtDistNegNeigh(double x[], int n, int *check,
 double costhrNR;
 void adjust_step_dist5(double *x, double *dx, double *fx, double *gx)
 {
-  int k1, k2;
-  double fxfxold, gxgxold, norm, minst, fxgx[3], ngx, nfx, minst1, minst2;
+  int k1;
+  double fxfxold, gxgxold, minst, ngx, nfx, minst1, minst2;
   static int first = 1;
   static double fxold[3], gxold[3];
   nfx = calc_norm(fx);
@@ -4427,7 +4434,7 @@ void adjust_step_dist5(double *x, double *dx, double *fx, double *gx)
 void adjust_step_dist8(double *x, double *dx, double *fx, double *gx)
 {
   int k1;
-  double ngx, minst1, minst2, fxfxold, gxgxold, normA, normB, minst, nfx, dist;
+  double ngx, minst1, minst2, fxfxold, gxgxold, minst, nfx;
   static int first = 0;
   static double fxold[3], gxold[3];
   //normA = calc_norm(dx);
@@ -4472,10 +4479,9 @@ void newtDistNeg(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3], int tryagain)
 {
-  int i,its=0, j, ok;
-  int kk;
-  double distnew, distold, r12[3], fx[3], gx[3];
-  double d,den,f,fold,stpmax,sum,temp,test; 
+  int i,its=0,ok;
+  double fx[3], gx[3];
+  double d,stpmax,sum,test; 
 #if 0
   int *indx;
   double **fjac,*g,*p,*xold;
@@ -4669,8 +4675,8 @@ void newtDist(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int i, its, j, ok;
-  double d,den,f,fold,stpmax,sum,temp,test; 
+  int i, its,ok;
+  double d,stpmax,sum,test; 
 #if 0
   int *indx;
   double **fjac,*g,*p,*xold;
@@ -4870,7 +4876,7 @@ the calling program.*/
     sum += Sqr(fvecD[i]); 
   return 0.5*sum; 
 }
-double fmin(double x[], int iA, int iB, double shift[3]) 
+double fminMD(double x[], int iA, int iB, double shift[3]) 
 /* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
 calling program. Global variables also communicate the function values back to 
