@@ -1170,8 +1170,9 @@ void calc_angmom(int i, double **I)
     }
   for (k1 = 0; k1 < 3; k1++)
     RM[i][0][k1] /= norm;
-  vectProdVec(RM[i][0],RM[i][2],RM[i][1]); 
+  vectProdVec(RM[i][2],RM[i][0],RM[i][1]); 
 #if 1
+  //printf("1 scal 2: %.15G\n",  scalProd(RM[i][0], RM[i][2]));
   for (k1=0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       if (isnan(RM[i][k1][k2]))
@@ -1262,14 +1263,17 @@ void upd_refsysM(int i, double **I)
       {
 	RE0[k1][k2] = 0.0;
 	for (k3 = 0; k3 < 3; k3++)
-	  RE0[k1][k2] += R[i][k1][k3]*RM[i][k3][k2];
+	  RE0[k1][k2] += R[i][k1][k3]*RM[i][k2][k3];
 #if 0
 	if (isnan(RM[i][k1][k2]))
 	  {printf("RM[%d][%d][%d]:%.15G\n", i, k1, k2, RM[i][k1][k2]);
 	  exit(-1);}
 #endif
      }
+  printf("RE0[%d]=\n",i);
+  print_matrix(RE0, 3);
   calc_euler_angles(i, RE0, &phi0[i], &theta0[i], &psi0[i]);
+  printf("RE0[2][2]: %.15G costheta=%.15G\n", RE0[2][2], cos(theta0[i]));
   costheta0[i] = cos(theta0[i]);
   sintheta0[i] = sin(theta0[i]);
 }

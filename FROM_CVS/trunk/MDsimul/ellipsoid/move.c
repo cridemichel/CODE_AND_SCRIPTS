@@ -1270,6 +1270,290 @@ void update_MSDrot(int i)
 #ifdef MD_ASYM_ITENS
 extern void upd_refsysM(int i, double **I);
 #endif
+void bumpNEW (int i, int j, double rCx, double rCy, double rCz, double* W)
+{
+  /*
+   *******************************************************************
+   ** COMPUTES COLLISION DYNAMICS FOR PARTICLES I AND J.            **
+   **                                                               **
+   ** IT IS ASSUMED THAT I AND J ARE IN CONTACT.                    **
+   ** THE ROUTINE ALSO COMPUTES COLLISIONAL VIRIAL W.               **
+   *******************************************************************
+   */
+  double factor, invmi, invmj;
+  double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3];
+  double rAC[3], rBC[3], vCA[3], vCB[3], vc;
+  double norm[3];
+  double **IaM, modn, denom;
+  double invIa, invIb, Ia, Ib, factorinvIa, factorinvIb;
+  int na, a, b;
+#if 0
+  if (i < parnumA && j < parnumA)
+    {
+      sigSq = Sqr(Oparams.sigma[0][0]);
+      //mredl = Mred[0][0];
+    }
+  else if (i >= parnumA && j >= parnumA)
+    {
+      sigSq = Sqr(Oparams.sigma[1][1]);
+      //mredl = Mred[1][1];
+    }
+  else
+    {
+      sigSq = Sqr(Oparams.sigma[0][1]);
+      mredl = Mred[0][1]; 
+    }
+#endif
+  /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
+  /*printf("mredl: %f\n", mredl);*/
+  //MD_DEBUG(calc_energy("dentro bump1"));
+  numcoll++;
+  MD_DEBUG32(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
+  rAC[0] = rx[i] - rCx;
+  rAC[1] = ry[i] - rCy;
+  rAC[2] = rz[i] - rCz;
+#if 1
+  for (a=0; a < 3; a++)
+    if (fabs (rAC[a]) > L2)
+      rAC[a] -= SignR(L, rAC[a]);
+#endif
+  rBC[0] = rx[j] - rCx;
+  rBC[1] = ry[j] - rCy;
+  rBC[2] = rz[j] - rCz;
+#if 0
+    {
+      double shift[3], r1[3], r2[3], alpha, vecgd[8], r12[3];
+      shift[0] = L*rint((rx[i]-rx[j])/L);
+      shift[1] = L*rint((ry[i]-ry[j])/L);
+      shift[2] = L*rint((rz[i]-rz[j])/L);
+      printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]):
+      printf("[bump] distance between %d-%d: %.15f\n", i, j, calcDistNeg(Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
+    }
+#endif 
+  for (a=0; a < 3; a++)
+    {
+      MD_DEBUG(printf("P rBC[%d]:%.15f ", a, rBC[a]));
+      if (fabs (rBC[a]) > L2)
+	rBC[a] -= SignR(L, rBC[a]);
+      MD_DEBUG(printf("D rBC[%d]:%.15f ", a, rBC[a]));
+    }
+  MD_DEBUG(printf("\n"));
+  /* calcola tensore d'inerzia e le matrici delle due quadriche */
+  na = (i < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
+  Ia = Oparams.I[na][0];
+  na = (j < Oparams.parnumA)?0:1;
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
+  Ib = Oparams.I[na][0];
+  //MD_DEBUG(calc_energy("dentro bump2"));
+  MD_DEBUG11(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
+  
+  //MD_DEBUG(calc_energy("dentro bump3"));
+  /* calcola le matrici inverse del tensore d'inerzia */
+  invIa = 1/Ia;
+  invIb = 1/Ib;
+  MD_DEBUG(printf("Ia=%f Ib=%f\n", Ia, Ib));
+  for (a=0; a < 3; a++)
+    {
+      norm[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  norm[a] += -Xa[a][b]*rAC[b];
+	}
+    }
+  modn = 0.0;
+  for (a = 0; a < 3; a++)
+    modn += Sqr(norm[a]);
+  modn = sqrt(modn);
+  for (a=0; a < 3; a++)
+    norm[a] /= modn;
+#if 0 
+  for (a=0; a < 3; a++)
+    {
+      norm2[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  norm2[a] += -Xb[a][b]*rBC[b];
+	}
+    }
+  modn = 0.0;
+  for (a = 0; a < 3; a++)
+    modn += Sqr(norm2[a]);
+  modn = sqrt(modn);
+  for (a=0; a < 3; a++)
+    norm2[a] /= modn;
+#endif
+  MD_DEBUG(printf("CYL %f %f %f %f %f %f\n", rCx, rCy, rCz, norm[0], norm[1], norm[2]));
+  /* calcola le velocità nel punto di contatto */
+  vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
+  vCA[0] = vx[i] + wrx;
+  vCA[1] = vy[i] + wry;
+  vCA[2] = vz[i] + wrz;
+  vectProd(wx[j], wy[j], wz[j], -rBC[0], -rBC[1], -rBC[2], &wrx, &wry, &wrz);
+  vCB[0] = vx[j] + wrx;
+  vCB[1] = vy[j] + wry;
+  vCB[2] = vz[j] + wrz;
+ 
+  invmi = (i<Oparams.parnumA)?invmA:invmB;
+  invmj = (j<Oparams.parnumA)?invmA:invmB;
+  
+  denom = invmi + invmj; 
+  vc = 0;
+  for (a=0; a < 3; a++)
+    vc += (vCA[a]-vCB[a])*norm[a];
+  MD_DEBUG(printf("[bump] before bump vc=%.15G\n", vc));
+#if 0
+    {
+      double sp=0;
+      for (a=0; a < 3; a++)
+	{
+	  sp += -rAC[a]*norm[a];	  
+	} 
+      sp = 0;
+      for (a=0; a < 3; a++)
+	{
+	  sp += -rBC[a]*norm2[a];	  
+	} 
+    }
+#endif
+  if (vc < 0)// && fabs(vc) > 1E-10)
+    {
+      MD_DEBUG(printf("norm = (%f,%f,%f)\n", norm[0], norm[1],norm[2]));
+      MD_DEBUG(printf("vel  = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
+      MD_DEBUG(printf("i=%d r = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]));
+      printf("[ERROR] maybe second collision has been wrongly predicted %d-%d\n",i,j);
+      printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
+      store_bump(i,j);
+      exit(-1);
+      return;
+    }
+  vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
+  for (a = 0; a < 3; a++)
+    denom += invIa*Sqr(rACn[a]);
+  vectProd(rBC[0], rBC[1], rBC[2], norm[0], norm[1], norm[2], &rBCn[0], &rBCn[1], &rBCn[2]);
+  for (a = 0; a < 3; a++)
+    denom += invIb*Sqr(rBCn[a]);
+#ifdef MD_GRAVITY
+  factor =2.0*vc/denom;
+  /* Dissipation */
+#if 0
+  /* se si vuole avere una dissipazione nell'urto questo va sistemato!!! */
+  if (!((Oparams.time - lastcol[i] < OprogStatus.tc)||
+  	(Oparams.time - lastcol[j] < OprogStatus.tc)))
+    factor *= mredl*(1+Oparams.partDiss);
+#endif
+#else
+  /* Nel caso di gravita' e' intuile implementare il TC-model di Luding
+   * per evitare il collasso inelastico.
+   * Gli urti in tale caso sono tutti elastici. */ 
+  /* SQUARE WELL: modify here */
+  factor =2.0*vc/denom;
+  MD_DEBUG(printf("factor=%f denom=%f\n", factor, denom));
+#endif
+  delpx = - factor * norm[0];
+  delpy = - factor * norm[1];
+  delpz = - factor * norm[2];
+#if 0
+  ene= (Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])+
+	    Sqr(vx[j])+Sqr(vy[j])+Sqr(vz[j])); 
+#endif
+  vx[i] = vx[i] + delpx*invmi;
+  vx[j] = vx[j] - delpx*invmj;
+  vy[i] = vy[i] + delpy*invmi;
+  vy[j] = vy[j] - delpy*invmj;
+  vz[i] = vz[i] + delpz*invmi;
+  vz[j] = vz[j] - delpz*invmj;
+  MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
+
+  update_MSDrot(i);
+  update_MSDrot(j);
+  factorinvIa = factor*invIa;
+  factorinvIb = factor*invIb;
+  wx[i] += factorinvIa*rACn[0];
+  wx[j] -= factorinvIb*rBCn[0];
+  wy[i] += factorinvIa*rACn[1];
+  wy[j] -= factorinvIb*rBCn[1];
+  wz[i] += factorinvIa*rACn[2];
+  wz[j] -= factorinvIb*rBCn[2];
+#ifdef MD_ASYM_ITENS
+  IaM = matrix(3,3);
+  IaM[0][0] = Ia;
+  IaM[1][1] = Ia;
+  IaM[2][2] = Ia;
+  IaM[0][1] = IaM[0][2] = IaM[1][0] = IaM[1][2] = IaM[2][0] = IaM[2][1] = 0.0; 
+  upd_refsysM(i, IaM);
+  upd_refsysM(j, IaM);
+  free_matrix(IaM,3);
+#endif
+#if 0
+#if MD_DEBUG(x)==x
+  for (a=0; a < 3; a++)
+    {
+      norm2[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  norm2[a] += -Xb[a][b]*rBC[b];
+	}
+    }
+  modn = 0.0;
+  for (a = 0; a < 3; a++)
+    modn += Sqr(norm2[a]);
+  modn = sqrt(modn);
+  for (a=0; a < 3; a++)
+    norm2[a] /= modn;
+  modn = 0;
+  for (a=0; a < 3; a++)
+    modn += norm2[a]*norm[a];
+  printf("norm.norm2=%.15G\n", modn);
+  vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
+  vCA[0] = vx[i] + wrx;
+  vCA[1] = vy[i] + wry;
+  vCA[2] = vz[i] + wrz;
+  vectProd(wx[j], wy[j], wz[j], -rBC[0], -rBC[1], -rBC[2], &wrx, &wry, &wrz);
+  vCB[0] = vx[j] + wrx;
+  vCB[1] = vy[j] + wry;
+  vCB[2] = vz[j] + wrz;
+  vc = 0;
+  for (a=0; a < 3; a++)
+    vc += (vCA[a]-vCB[a])*norm[a];
+  printf("[bump] after bump vc=%.15G\n", vc); 
+  //Oparams.time += 1.0; 
+  //UpdateAtom(0);
+  //UpdateAtom(1);
+    {
+      double shift[3], r1[3], r2[3], alpha, vecgd[8], r12[3];
+      shift[0] = L*rint((rx[i]-rx[j])/L);
+      shift[1] = L*rint((ry[i]-ry[j])/L);
+      shift[2] = L*rint((rz[i]-rz[j])/L);
+      printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]);
+      printf("[bump] distance between %d-%d: %.15f\n", i, j, calcDistNeg(Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
+    }
+//exit(-1); 
+#endif
+#endif
+  MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
+		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
+  MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
+		  
+		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
+/* TO CHECK: il viriale ha senso solo se non c'è la gravità */
+#if 0
+  *W = delpx * rxij + delpy * ryij + delpz * rzij;
+#endif
+}
+
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
   /*
@@ -1312,6 +1596,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
   /*printf("mredl: %f\n", mredl);*/
   //MD_DEBUG(calc_energy("dentro bump1"));
+  printf("1) R[%d]=\n",i);
+  print_matrix(R[i],3);
+  printf("   R[%d]=\n",j);
+  print_matrix(R[j],3);
+  
+
   numcoll++;
   MD_DEBUG32(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
@@ -1551,7 +1841,62 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
 #ifdef MD_ASYM_ITENS
   upd_refsysM(i, Ia);
+    {
+      int k1,k2,k3;
+      double **Rtmp, **Rtmp2;
+      Rtmp = matrix(3,3);
+      Rtmp2 = matrix(3,3);
+      printf(">>>>> cos(theta0[%d])=%.15G\n", i, costheta0[i]);
+      build_euler_matrix(cos(phi0[i]),sin(phi0[i]),costheta0[i], sintheta0[i],
+			 cos(psi0[i]),sin(psi0[i]), Rtmp2);
+      for (k1=0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Rtmp[k1][k2] = 0.0;
+	for (k3 =0; k3 < 3; k3++)
+	  {
+	    Rtmp[k1][k2] += Rtmp2[k1][k3]*RM[i][k3][k2];
+	  }
+      }
+      printf("2) R[%d]=\n", i);
+      print_matrix(Rtmp,3);
+      printf("RE0[%d]=\n",i);
+      print_matrix(RE0,3);
+      printf("Rtmp2[%d]=\n",i);
+      print_matrix(Rtmp2,3);
+ for (k1=0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Rtmp[k1][k2] = 0.0;
+	for (k3 =0; k3 < 3; k3++)
+	  {
+	    Rtmp[k1][k2] += RE0[k1][k3]*RM[i][k3][k2];
+	  }
+      }
+ printf("*** R[%d]=\n",i);
+      print_matrix(Rtmp,3);
+
+  free_matrix(Rtmp, 3);
+  free_matrix(Rtmp2,3);
+    }
   upd_refsysM(j, Ib);
+{
+      int k1, k2,k3;
+      double **Rtmp;
+      Rtmp = matrix(3,3);
+      for (k1=0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Rtmp[k1][k2] = 0.0;
+	for (k3 =0; k3 < 3; k3++)
+	  {
+	    Rtmp[k1][k2] += RE0[k1][k3]*RM[j][k3][k2];
+	  }
+      }
+      printf("R[%d]=\n", j);
+      print_matrix(Rtmp,3);
+  free_matrix(Rtmp, 3);
+    }
 #endif
 #if 0
 #if MD_DEBUG(x)==x
@@ -2049,9 +2394,13 @@ void calc_euler_angles(int i, double **M, double *phi, double *theta, double *ps
     }
   else
     {
+#if 1
+      *phi = atan2(M[2][0],-M[2][1]);
+#else
       *phi = atan(-M[2][0]/M[2][1]);
-      if (M[2][1]/sintheta < 0.0)
+      if (M[2][1]/sintheta > 0.0)
 	*phi = pi + *phi;
+#endif
     }
   //*psi = acos(-M[1][2]/sintheta);
   if (M[1][2] == 0.0)
@@ -2063,9 +2412,13 @@ void calc_euler_angles(int i, double **M, double *phi, double *theta, double *ps
     }
   else
     {
+#if 1
+      *psi = atan2(M[0][2],M[1][2]);
+#else
       *psi = atan(M[0][2]/M[1][2]);
       if (M[1][2]/sintheta < 0.0)
 	*psi = pi + *psi;
+#endif
     }
 #if 0
   printf("*psi: %.15G psi0: %.15G sintheta: %.15G M[1][2]:%.15G\n", *psi, psi0[i], sintheta, M[1][2]);
