@@ -1353,7 +1353,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     }
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
 #ifdef MD_ASYM_ITENS
-  RDiagtR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[i]);
+  RDiagtR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
 #else
   Ia = Oparams.I[na];
 #endif
@@ -1366,7 +1366,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     }
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
 #ifdef MD_ASYM_ITENS
-  RDiagtR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
+  RDiagtR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
 #else
   Ib = Oparams.I[na];
 #endif
@@ -1819,7 +1819,30 @@ void adjust_norm(double **R)
     }
   
 }
-
+#ifdef MD_ASYM_ITENS
+extern void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3]);
+void UpdateAtom(int i)
+{
+  double ti;
+  int k1, k2;
+  ti = Oparams.time - atomTime[i];
+  
+  rx[i] += vx[i]*ti;
+  ry[i] += vy[i]*ti;
+#if defined(MD_GRAVITY)
+  rz[i] += vz[i]*ti - g2*Sqr(ti);
+  vz[i] += -Oparams.ggrav*ti;
+#else
+  rz[i] += vz[i]*ti;
+#endif
+  symtop_evolve_orient(i, ti, RA, REtA, cosEulAng[0], sinEulAng[0]);
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      R[i][k1][k2] = RA[k1][k2];
+  adjust_norm(R[i]);
+  atomTime[i] = Oparams.time;
+}
+#else
 void UpdateAtom(int i)
 {
   double ti;
@@ -1934,7 +1957,7 @@ void UpdateAtom(int i)
     }
   atomTime[i] = Oparams.time;
 }
-
+#endif
 void UpdateSystem(void)
 {
   int i;
@@ -2064,7 +2087,12 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
 	  {
 	    Ro[k1][k2] = R[i][k1][k2];
 	  }
- 
+      cosea[0] = cos(phi0[i]);
+      cosea[1] = costheta0[i];
+      cosea[2] = cos(psi0[i]);
+      sinea[0] = sin(phi0[i]);
+      sinea[1] = sintheta0[i];
+      sinea[2] = sin(psi0[i]);
       return;
     }
   evolve_euler_angles_symtop(i, ti, &phi, &psi);
@@ -5359,7 +5387,7 @@ void calc_energynew(char *msg)
 	  for (k1=0; k1 < 3; k1++)
 	    {
 #ifdef MD_ASYM_ITENS
-      	      K += wt[k1]*ItensD[0][k1]*wt[k1];
+      	      K += wt[k1]*Oparams.I[0][k1]*wt[k1];
 #else
 	      K += Oparams.I[0]*Sqr(wt[k1]);
 #endif
@@ -5374,7 +5402,7 @@ void calc_energynew(char *msg)
 	  for (k1=0; k1 < 3; k1++)
 	    {
 #ifdef MD_ASYM_ITENS
-      	      K += wt[k1]*ItensD[1][k1]*wt[k1];
+      	      K += wt[k1]*Oparams.I[1][k1]*wt[k1];
 #else
       	      K += Oparams.I[1]*Sqr(wt[k1]);
 #endif
@@ -5403,7 +5431,7 @@ void calc_energy_i(char *msg, int i)
     {
       /* calcola tensore d'inerzia e le matrici delle due quadriche */
 #ifdef MD_ASYM_ITENS
-      RDiagtR(i, Ia, ItensD[0][0], ItensD[0][1], ItensD[0][2], R[i]);
+      RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
 #endif
       K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
       wt[0] = wx[i];
@@ -5423,7 +5451,7 @@ void calc_energy_i(char *msg, int i)
   else
     {
 #ifdef MD_ASYM_ITENS
-      RDiagtR(i, Ib, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+      RDiagtR(i, Ib, Oparams.I[1][0], Oparams.I[1][1], Oparams.I[1][2], R[i]);
 #endif
       K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
       wt[0] = wx[i];
@@ -5466,7 +5494,7 @@ void calc_energy(char *msg)
 	{
 	  /* calcola tensore d'inerzia e le matrici delle due quadriche */
 #ifdef MD_ASYM_ITENS
-	  RDiagtR(i, Ia, ItensD[0][0], ItensD[0][1], ItensD[0][2], R[i]);
+	  RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
 #endif
 	  K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 	  wt[0] = wx[i];
@@ -5486,7 +5514,7 @@ void calc_energy(char *msg)
       else
 	{
 #ifdef MD_ASYM_ITENS
-	  RDiagtR(i, Ib, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+	  RDiagtR(i, Ib, Oparams.I[1][0], Oparams.I[1][1], Oparams.I[1][2], R[i]);
 #endif
 	  K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 	  wt[0] = wx[i];
