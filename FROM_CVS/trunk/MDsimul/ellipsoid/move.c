@@ -1740,6 +1740,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   for (a=0; a < 3; a++)
     vc += (vCA[a]-vCB[a])*norm[a];
   MD_DEBUG(printf("[bump] before bump vc=%.15G\n", vc));
+  printf("[bump] before bump vc=%.15G\n", vc);
 #if 0
     {
       double sp=0;
@@ -1928,6 +1929,19 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     
   calc_energy("2) dentro bump2");
 #endif
+  vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
+  vCA[0] = vx[i] + wrx;
+  vCA[1] = vy[i] + wry;
+  vCA[2] = vz[i] + wrz;
+  vectProd(wx[j], wy[j], wz[j], -rBC[0], -rBC[1], -rBC[2], &wrx, &wry, &wrz);
+  vCB[0] = vx[j] + wrx;
+  vCB[1] = vy[j] + wry;
+  vCB[2] = vz[j] + wrz;
+  vc = 0;
+  for (a=0; a < 3; a++)
+    vc += (vCA[a]-vCB[a])*norm[a];
+  printf("[bump] after bump vc=%.15G\n", vc); 
+ 
 #if 0
 #if MD_DEBUG(x)==x
   for (a=0; a < 3; a++)
@@ -2180,6 +2194,27 @@ void calcObserv(void)
 }
 #endif
 extern double *treeTime;
+#ifdef MD_ASYM_ITENS
+void adjust_norm(double **R)
+{
+  int k1, k2; 
+  double n[3];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      n[k1]=0;
+      for(k2 = 0; k2 < 3; k2++)
+	n[k1] += Sqr(R[k1][k2]);
+      n[k1] = sqrt(n[k1]);
+      if (fabs((n[k1])-1.0)>1E-10)
+	{
+	  MD_DEBUG(printf("Adjusting norm of orientations time=%.15f\n", Oparams.time));
+	  MD_DEBUG(printf("delta = %.15f\n", fabs(n[k1]-1.0)));
+	  for(k2 = 0; k2 < 3; k2++)
+	    R[k1][k2] /= n[k1];
+	}
+    }
+}
+#else
 void adjust_norm(double **R)
 {
   int k1, k2; 
@@ -2198,8 +2233,8 @@ void adjust_norm(double **R)
 	    R[k2][k1] /= n[k1];
 	}
     }
-  
 }
+#endif
 #ifdef MD_ASYM_ITENS
 void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3], double *phi, double *psi);
 void UpdateAtom(int i)
@@ -5945,7 +5980,7 @@ void calc_energy(char *msg)
 	  //printf("calcnorm wt: %.15G wtp:%.15G\n", calc_norm(wt), calc_norm(wtp));
 	  for (k1=0; k1 < 3; k1++)
 	    {
-	      K += Sqr(wt[k1])*Oparams.I[0][k1];
+	      K += Sqr(wtp[k1])*Oparams.I[0][k1];
 	      //printf("I[%d][%d]=%.15G wt[%d]:%.15G wtp[%d]:%.15G\n", 0, k1, Oparams.I[0][k1],
 		//     k1, wt[k1], k1, wtp[k1]);
 	    }

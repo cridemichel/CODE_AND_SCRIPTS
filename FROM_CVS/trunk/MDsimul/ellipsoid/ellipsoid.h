@@ -825,9 +825,9 @@ struct singlePar OsinglePar[] = {
   {"Ib",      &Oparams.I[1],      CT},
 #else
   {"I1a",      &Oparams.I[0][0],      CT},
-  {"I3a",      &Oparams.I[0][1],      CT},
+  {"I3a",      &Oparams.I[0][2],      CT},
   {"I1b",      &Oparams.I[1][0],      CT},
-  {"I3b",      &Oparams.I[1][1],      CT},
+  {"I3b",      &Oparams.I[1][2],      CT},
 #endif
 #ifdef MD_GRAVITY
   {"ggrav",      &Oparams.ggrav,            CT},
