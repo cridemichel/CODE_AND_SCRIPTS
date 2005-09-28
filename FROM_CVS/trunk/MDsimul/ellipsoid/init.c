@@ -1407,8 +1407,8 @@ void usrInitAft(void)
     fvecD=vector(8);
     fvecG=vector(8);
 #ifdef MD_ASYM_ITENS
-    Oparams.I[0][2] = Oparams.I[0][1];
-    Oparams.I[1][2] = Oparams.I[1][1];
+    Oparams.I[0][1] = Oparams.I[0][0];
+    Oparams.I[1][1] = Oparams.I[1][0];
     Ia = matrix(3, 3);
     Ib = matrix(3, 3);
     Iatmp = matrix(3,3);
