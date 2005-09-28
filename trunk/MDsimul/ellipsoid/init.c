@@ -1091,9 +1091,61 @@ extern double costhrNR;
 extern void calc_euler_angles(int i, double **M, double *phi, double *theta, double *psi);
 extern double scalProd(double *A, double *B);
 double calc_norm(double *vec);
+extern void vectProdVec(double *A, double *B, double *C);
 void calc_angmom(int i, double **I)
 {
-  double wv[3], Mvec[3], th, costh, sinth, phi, cosphi, sinphi, VP[3], Mu[3];
+  double wv[3], Mvec[3], norm;
+  int k1, k2;
+  wv[0] = wx[i];
+  wv[1] = wy[i];
+  wv[2] = wz[i];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      Mvec[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  Mvec[k1] += I[k1][k2]*wv[k2];
+	}
+    }
+  angM[i] = calc_norm(Mvec);
+  /* calcolo il prodotto vettore tra M e l'asse z */
+  if (angM[i]==0.0)
+    {
+      RM[i][0][0] = 1.0;
+      RM[i][0][1] = 0.0;
+      RM[i][0][2] = 0.0;
+      RM[i][1][0] = 0.0;
+      RM[i][1][1] = 1.0;
+      RM[i][1][2] = 0.0;
+      RM[i][2][0] = 0.0;
+      RM[i][2][1] = 0.0;
+      RM[i][2][2] = 1.0;
+      return;
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    RM[i][2][k1] = Mvec[k1]/angM[i];
+  RM[i][0][0] = RM[i][2][1];
+  RM[i][0][1] = -RM[i][2][0];
+  RM[i][0][2] = 0.0;
+  norm = calc_norm(RM[i][0]);
+  for (k1 = 0; k1 < 3; k1++)
+    RM[i][0][k1] /= norm;
+  vectProdVec(RM[i][0],RM[i][2],RM[i][1]); 
+#if 0
+  for (k1=0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      if (isnan(RM[i][k1][k2]))
+	{
+	  printf("angM routine RM[%d][%d][%d]:%.15G\n", i, k1,k2, RM[i][k1][k2]);
+	  printf("angM[%d]:%.15G\n", i, angM[i]);
+	  exit(-1);
+	}
+#endif
+}
+#if 0
+void calc_angmom(int i, double **I)
+{
+  double wv[3], Mvec[3], th, costh, sinth, phi, cosphi, sinphi, VP[3], Mu[3], VPN;
   int k1, k2;
 
   wv[0] = wx[i];
@@ -1103,7 +1155,9 @@ void calc_angmom(int i, double **I)
     {
       Mvec[k1] = 0.0;
       for (k2 = 0; k2 < 3; k2++)
-	Mvec[k1] += Ia[k1][k2]*wv[k2];
+	{
+	  Mvec[k1] += I[k1][k2]*wv[k2];
+	}
     }
   angM[i] = calc_norm(Mvec);
   /* calcolo il prodotto vettore tra M e l'asse z */
@@ -1113,8 +1167,10 @@ void calc_angmom(int i, double **I)
   VP[1] = -Mu[0];
   VP[2] = 0.0;
   /* e ora calcolo RM */
-
-  th = acos(Mvec[2]/angM[i]);
+  VPN = calc_norm(VP);
+  for (k1 = 0; k1 < 3; k1++)
+    VP[k1] = VP[k1]/VPN;
+  th = acos(Mu[2]);//acos(Mvec[2]/angM[i]);
   costh = cos(th);
   sinth = sin(th);
   if (sinth==0.0)
@@ -1130,8 +1186,8 @@ void calc_angmom(int i, double **I)
       RM[i][2][2] = 1.0;
       return;
     }
-  phi = acos(VP[0]/sinth); 
-  if (VP[1]/sinth < 0.0)
+  phi = acos(VP[0]); 
+  if (VP[1] < 0.0)
     phi = 2*pi - phi;
   cosphi = cos(phi);
   sinphi = sin(phi);
@@ -1144,7 +1200,18 @@ void calc_angmom(int i, double **I)
   RM[i][2][0] = sinth*sinphi;
   RM[i][2][1] = -sinth*cosphi;
   RM[i][2][2] = costh;
+  for (k1=0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      if (isnan(RM[i][k1][k2]))
+	{
+	  printf("angM routine RM[%d][%d][%d]:%.15G\n", i, k1,k2, RM[i][k1][k2]);
+	  printf("sinth:%.15G cosphi: %.15G sinphi: %.15G costh: %.15G\n", sinth, cosphi,
+		 sinphi, costh);
+	  printf("VP=(%f,%f,%f) \n", VP[0], VP[1], VP[2]);
+	  exit(-1);
+	}
 }
+#endif
 void upd_refsysM(int i, double **I)
 {
   int k1, k2, k3;
@@ -1155,7 +1222,12 @@ void upd_refsysM(int i, double **I)
 	RE0[k1][k2] = 0.0;
 	for (k3 = 0; k3 < 3; k3++)
 	  RE0[k1][k2] += R[i][k1][k3]*RM[i][k3][k2];
-      }
+#if 0
+	if (isnan(RM[i][k1][k2]))
+	  {printf("RM[%d][%d][%d]:%.15G\n", i, k1, k2, RM[i][k1][k2]);
+	  exit(-1);}
+#endif
+     }
   calc_euler_angles(i, RE0, &phi0[i], &theta0[i], &psi0[i]);
   costheta0[i] = cos(theta0[i]);
   sintheta0[i] = sin(theta0[i]);
