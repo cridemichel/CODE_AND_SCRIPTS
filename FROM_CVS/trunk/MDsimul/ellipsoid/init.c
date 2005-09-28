@@ -40,7 +40,7 @@ extern COORD_TYPE dispHi;
 extern const double timbig;
 double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdirs;
 #ifdef MD_ASYM_ITENS
-double **Ia, **Ib, **invIa, **invIb;
+double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
 #else
 double Ia, Ib, invIa, invIb;
 #endif
@@ -1411,6 +1411,8 @@ void usrInitAft(void)
     Oparams.I[1][2] = Oparams.I[1][1];
     Ia = matrix(3, 3);
     Ib = matrix(3, 3);
+    Iatmp = matrix(3,3);
+    Ibtmp = matrix(3,3);
     invIa = matrix(3, 3);
     invIb = matrix(3, 3);
     angM = malloc(sizeof(double)*Oparams.parnum);

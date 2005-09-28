@@ -16,7 +16,7 @@ extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
 double minaxA, minaxB, minaxAB;
 #ifdef MD_ASYM_ITENS
-double **Ia, **Ib, **invIa, **invIb;
+double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
 #else
 double Ia, Ib, invIa, invIb;
 #endif
@@ -29,6 +29,7 @@ extern double *axa, *axb, *axc;
 extern int *scdone;
 extern double *maxax;
 extern double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane);
+void calc_energy(char *msg);
 
 extern double min3(double a, double b, double c);
 extern double min(double a, double b);
@@ -1554,6 +1555,8 @@ void bumpPROVA (int i, int j, double rCx, double rCy, double rCz, double* W)
   *W = delpx * rxij + delpy * ryij + delpz * rzij;
 #endif
 }
+void ludcmp(double **a, int n,  int* indx, double* d, int *ok);
+void lubksb(double **a, int n, int* indx, double *b);
 
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
@@ -1574,6 +1577,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double factorinvIa, factorinvIb;
 #endif
 #ifdef MD_ASYM_ITENS
+  int k1,k2,k3;
   double rnI[3];
 #endif
   int na, a, b;
@@ -1674,8 +1678,14 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   //MD_DEBUG(calc_energy("dentro bump3"));
   /* calcola le matrici inverse del tensore d'inerzia */
 #ifdef MD_ASYM_ITENS
-  InvMatrix(Ia, invIa, 3);
-  InvMatrix(Ib, invIb, 3);
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Iatmp[k1][k2] = Ia[k1][k2];
+	Ibtmp[k1][k2] = Ib[k1][k2];
+      } 
+  InvMatrix(Iatmp, invIa, 3);
+  InvMatrix(Ibtmp, invIb, 3);
 #else
   invIa = 1/Ia;
   invIb = 1/Ib;
@@ -1845,9 +1855,25 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   upd_refsysM(i, Ia);
     {
       int k1,k2,k3;
+      int indx[3];
+      double d, col[3];
+      int ok;
       double **Rtmp, **Rtmp2;
       Rtmp = matrix(3,3);
       Rtmp2 = matrix(3,3);
+      for (k1=0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    Rtmp[k1][k2] = 0.0;
+	    for (k3 =0; k3 < 3; k3++)
+	      Rtmp[k1][k2] += invIa[k1][k3]*Ia[k3][k2];
+	      
+	  }
+      printf("I=%f %f %f\n",Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2]);
+      printf("Ia=\n");
+      print_matrix(Ia, 3);
+      printf("invIa*Ia=\n");
+      print_matrix(Rtmp,3);
       printf(">>>>> cos(theta0[%d])=%.15G\n", i, costheta0[i]);
       build_euler_matrix(cos(phi0[i]),sin(phi0[i]),costheta0[i], sintheta0[i],
 			 cos(psi0[i]),sin(psi0[i]), Rtmp2);
@@ -5891,7 +5917,7 @@ void calc_energy(char *msg)
 #ifdef MD_ASYM_ITENS
   double wtp[3];
   int k2;
-  double **Ia, **Ib;
+  //double **Ia, **Ib;
   //Ia = matrix(3,3); 
   //Ib = matrix(3,3);
 #endif
