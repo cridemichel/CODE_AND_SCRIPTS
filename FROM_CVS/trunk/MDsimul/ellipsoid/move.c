@@ -1367,6 +1367,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
 #ifdef MD_ASYM_ITENS
   RDiagtR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
+#if 0
+  printf("Ia = ");
+  print_matrix(Ib, 3);
+  printf("IDiag=%f,%f,%f\n", Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2]);
+  exit(-1);
+#endif
 #else
   Ib = Oparams.I[na];
 #endif
@@ -1820,11 +1826,12 @@ void adjust_norm(double **R)
   
 }
 #ifdef MD_ASYM_ITENS
-extern void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3]);
+void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3], double *phi, double *psi);
 void UpdateAtom(int i)
 {
-  double ti;
+  double ti, phi, psi;
   int k1, k2;
+  
   ti = Oparams.time - atomTime[i];
   
   rx[i] += vx[i]*ti;
@@ -1835,11 +1842,13 @@ void UpdateAtom(int i)
 #else
   rz[i] += vz[i]*ti;
 #endif
-  symtop_evolve_orient(i, ti, RA, REtA, cosEulAng[0], sinEulAng[0]);
+  symtop_evolve_orient(i, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       R[i][k1][k2] = RA[k1][k2];
-  adjust_norm(R[i]);
+  phi0[i] = phi;
+  psi0[i] = psi;
+  //adjust_norm(R[i]);
   atomTime[i] = Oparams.time;
 }
 #else
@@ -2028,13 +2037,41 @@ void calc_euler_angles(int i, double **M, double *phi, double *theta, double *ps
       return;
     }
   sintheta = sin(*theta);
-  *phi = acos(-M[2][1]/sintheta);
-  if (M[2][0]/sintheta < 0)
-    *phi = 2.0*pi - *phi;
-  *psi = acos(-M[1][2]/sintheta);
-  //printf("psi0: %.15G sintheta: %.15G M[1][2]:%.15G\n", psi0[i], sintheta, M[1][2]);
-  if (M[0][2]/sintheta < 0)
-    *psi = 2.0*pi - *psi;
+  /*
+   *phi = acos(-M[2][1]/sintheta);
+   */
+  if (M[2][1] == 0.0)
+    {
+      if (M[2][0]/sintheta < 0.0)
+	*phi = 1.5*pi;
+      else
+	*phi = 0.5*pi;
+    }
+  else
+    {
+      *phi = atan(-M[2][0]/M[2][1]);
+      if (M[2][1]/sintheta < 0.0)
+	*phi = pi + *phi;
+    }
+  //*psi = acos(-M[1][2]/sintheta);
+  if (M[1][2] == 0.0)
+    {
+      if (M[0][2]/sintheta < 0.0)
+	*psi = 1.5*pi;
+      else
+	*psi = 0.5*pi;
+    }
+  else
+    {
+      *psi = atan(M[0][2]/M[1][2]);
+      if (M[1][2]/sintheta < 0.0)
+	*psi = pi + *psi;
+    }
+#if 0
+  printf("*psi: %.15G psi0: %.15G sintheta: %.15G M[1][2]:%.15G\n", *psi, psi0[i], sintheta, M[1][2]);
+  printf("M[1][2]:%.15G sintheta:%.15G\n", M[1][2], sintheta);
+  printf("M[1][2]/sintheta=%.15G", -M[1][2]/sintheta);
+#endif
 }
 /* matrice di eulero 
  * a_(00)	=	cos(psi)cos(phi)-cos(theta)sin(phi)sin(psi)	(6)
@@ -2071,11 +2108,13 @@ void evolve_euler_angles_symtop(int i, double ti, double *phi, double *psi)
   /* see Landau - Mechanics */
   *phi = invI1 * angM[i] * ti + phi0[i];
   *psi = ti * angM[i] * costheta0[i] * (I1 - I3) / (I3*I1) + psi0[i];
-  //printf("*phi=%.15G *psi=%.15G ti=%.15G angM[%d]:%.15G I1: %.15G I2:%.15G\n", *phi, *psi, ti, i, angM[i], I1, I3);
-  //printf("costheta0[]:%.15G psi0[]:%.15G\n", costheta0[i], psi0[i]);
+#if 0
+  printf("*phi=%.15G *psi=%.15G ti=%.15G angM[%d]:%.15G I1: %.15G I2:%.15G\n", *phi, *psi, ti, i, angM[i], I1, I3);
+  printf("costheta0[]:%.15G psi0[]:%.15G phi0[]=%.15G Delta=%.15G\n", costheta0[i], psi0[i], phi0[i], invI1*angM[i]*ti);
+#endif
 }
 void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
-			  double cosea[3], double sinea[3])
+			  double cosea[3], double sinea[3], double *phir, double *psir)
 {
   double wSq, w, phi, psi, cospsi, sinpsi, cosphi, sinphi;
   int k1, k2, k3;
@@ -2093,6 +2132,8 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
       sinea[0] = sin(phi0[i]);
       sinea[1] = sintheta0[i];
       sinea[2] = sin(psi0[i]);
+      *psir = psi0[i];
+      *phir = phi0[i];
       return;
     }
   evolve_euler_angles_symtop(i, ti, &phi, &psi);
@@ -2124,6 +2165,9 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
 	for (k3 = 0; k3 < 3; k3++)
 	  Ro[k1][k2] += REt[k1][k3]*RM[i][k3][k2];
       }
+  adjust_norm(Ro);
+  *psir = psi;
+  *phir = phi;
 }
 #endif
 void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
@@ -2466,6 +2510,9 @@ void fdjac(int n, double x[], double fvec[], double **df,
   double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
   double DA[3][3], DB[3][3], fx[3], gx[3];
   double Fxt[3], Gxt[3], Ft, Gt;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
   int k1, k2;
   ti = x[4] + (trefG - atomTime[iA]);
   rA[0] = rx[iA] + vx[iA]*ti;
@@ -2476,7 +2523,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vA[2] = vz[iA];
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0]);
+  symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
   UpdateOrient(iA, ti, RA, OmegaA);
 #endif
@@ -2504,7 +2551,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vB[1] = vy[iB];
   vB[2] = vz[iB];
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(iB, ti, RB, REtB, cosEulAng[1], sinEulAng[1]);
+  symtop_evolve_orient(iB, ti, RB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
   UpdateOrient(iB, ti, RB, OmegaB);
 #endif
@@ -2610,7 +2657,7 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   int na;
   double Omega[3][3];
 #ifdef MD_ASYM_ITENS
-  double cosea[3], sinea[3];
+  double cosea[3], sinea[3], phi, psi;
 #endif
   ti = tGuess - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
@@ -2618,7 +2665,7 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   rA[2] = rz[i] + vz[i]*ti;
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(i, ti, Rt, REt, cosea, sinea);
+  symtop_evolve_orient(i, ti, Rt, REt, cosea, sinea, &phi, &psi);
 #else
   UpdateOrient(i, ti, Rt, Omega);
 #endif
@@ -2637,7 +2684,7 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(i, ti, Rt, REt, cosea, sinea);
+  symtop_evolve_orient(i, ti, Rt, REt, cosea, sinea, &phi, &psi);
 #else
   UpdateOrient(j, ti, Rt, Omega);
 #endif
@@ -2704,7 +2751,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   double fx[3], gx[3];
   double Omega[3][3];
 #ifdef MD_ASYM_ITENS
-  double cosea[3], sinea[3];
+  double cosea[3], sinea[3], phi, psi;
 #endif
   /* x = (r, alpha, t) */ 
   
@@ -2714,7 +2761,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   rA[2] = rz[i] + vz[i]*ti;
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(i, ti, Rt, REt, cosea, sinea);
+  symtop_evolve_orient(i, ti, Rt, REt, cosea, sinea, &phi, &psi);
 #else
   UpdateOrient(i, ti, Rt, Omega);
 #endif
@@ -2733,7 +2780,7 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(j, ti, Rt, REt, cosea, sinea);
+  symtop_evolve_orient(j, ti, Rt, REt, cosea, sinea, &phi, &psi);
 #else
   UpdateOrient(j, ti, Rt, Omega);
 #endif
@@ -3444,6 +3491,9 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   int retcheck, tryagain = 0;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
   int k1, k2, na, k3;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t + (t1 - atomTime[i]);
   minaxA = min3(axa[i],axb[i],axc[i]);
@@ -3456,7 +3506,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   /* ...and now orientations */
 
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0]);
+  symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
   UpdateOrient(i, ti, RtA, Omega);
 #endif
@@ -3474,7 +3524,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1]);
+  symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
   UpdateOrient(j, ti, RtB, Omega);
 #endif
@@ -4482,7 +4532,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #if 1
       while (d < 0)
 	{
-	  //printf("===> d=%.15G\n", d);
+	  printf("===> d=%.15G\n", d);
 	  t += h;
 	  if (t + t1 > t2)
 	    return 0;
@@ -6098,16 +6148,16 @@ void move(void)
 	      outputSummary();
 	    }
 
-#if 0
+#if 1
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
 	      int distfail;
 	      FILE* f;
 	      static int first = 1;
-	      shift[0] = L*rint((rx[35]-rx[16])/L);
-	      shift[1] = L*rint((ry[35]-ry[16])/L);
-	      shift[2] = L*rint((rz[35]-rz[16])/L);
+	      shift[0] = L*rint((rx[0]-rx[1])/L);
+	      shift[1] = L*rint((ry[0]-ry[1])/L);
+	      shift[2] = L*rint((rz[0]-rz[1])/L);
 	      MD_DEBUG(printf("[EVENT10] shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]));
 #if 0
 	      d=calcDist(Oparams.time, 0, 1, shift, r1, r2, &alpha, vecg, 1);
@@ -6118,7 +6168,7 @@ void move(void)
 	      fprintf(f,"%.15G %.15G %.15G %.15G %.15G %.15G\n", Oparams.time, d,vecg[0],vecg[1],vecg[2],vecg[4]);
 	      fclose(f);
 #endif
-	      d=calcDistNeg(Oparams.time, 0, 35, 16, shift, r1, r2, &alpha, vecgNeg, 1);
+	      d=calcDistNeg(Oparams.time, 0, 0, 1, shift, r1, r2, &alpha, vecgNeg, 1);
 	      //d=calcDistNegNeighPlane(0, Oparams.time, 2, r1, r2, vecgNeg, 0, 1, &distfail, 2);
 	      if (first)
 		f = fopen("distNeg.dat","w");
