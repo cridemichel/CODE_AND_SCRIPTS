@@ -4328,6 +4328,25 @@ int refine_contact(int i, int j, double t1, double t, double vecgd[8], double sh
       return 1; 
     }
 }
+#ifdef MD_ASYM_ITENS
+double calcopt_maxddot(int i, int j, double *r1 , double *r2, double factori, double factorj)
+{
+  int kk, na;
+  double Iamin, Ibmin;
+  double dd[3], ndd;
+  for (kk=0; kk < 3; kk++)
+    dd[kk] = r2[kk] - r1[kk];
+  ndd = calc_norm(dd);
+  na = i<Oparams.parnumA?0:1;
+  Iamin = min(Oparams.I[na][0],Oparams.I[na][2]);
+  na = j<Oparams.parnumA?0:1;
+  Ibmin = min(Oparams.I[na][0],Oparams.I[na][2]);
+  for (kk=0; kk < 3; kk++)
+    dd[kk] /= ndd;
+  return (vx[i]-vx[j])*dd[0]+(vy[i]-vy[j])*dd[1]+(vz[i]-vz[j])*dd[2] +
+	angM[i]*factori/Iamin + angM[j]*factorj/Ibmin;
+}
+#else
 double calcopt_maxddot(int i, int j, double *r1 , double *r2, double factori, double factorj)
 {
   int kk;
@@ -4341,6 +4360,7 @@ double calcopt_maxddot(int i, int j, double *r1 , double *r2, double factori, do
 	sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori
 	+ sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
 }
+#endif
 #ifdef MD_ASYM_ITENS
 double calc_maxddot(int i, int j);
 #endif
@@ -4376,6 +4396,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	}
 #endif
 #if 0
+      factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+      factorj = 0.5*maxax[j]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
       maxddot = calcopt_maxddot(i, j, r1, r2, factori, factorj);
       if (maxddot < 0)
 	return 1;
