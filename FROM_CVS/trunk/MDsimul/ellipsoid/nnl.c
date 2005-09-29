@@ -42,7 +42,6 @@ extern double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, 
 extern double cosEulAng[2][3], sinEulAng[2][3];
 #endif
 
-
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
 void InvMatrix(double **a, double **b, int NB);
@@ -123,6 +122,19 @@ extern void newtDistNegNeighPlane(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA);
 extern double max(double a, double b);
+#ifdef MD_ASYM_ITENS
+double calc_maxddot_nnl(int i, double *gradplane)
+{
+  int na;
+  double Iamin;
+  double factori;
+  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  na = i<Oparams.parnumA?0:1;
+  Iamin = min(Oparams.I[na][0],Oparams.I[na][2]);
+  return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
+     angM[i]*factori/Iamin;
+}
+#endif
 
 void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {
@@ -2211,8 +2223,12 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
 #else
   /* WARNING: questa maggiorazione si applica al caso specifico dell'urto di un ellissoide con un piano,
    * è molto migliore della precedente ma va testata accuratamente! */
+#ifdef MD_ASYM_ITENS
+  maxddot = calc_maxddot_nnl(i, gradplane);
+#else
   maxddot = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+#endif
 #endif
   //printf("SCALPROD = %.15G\n", vx[0]*gradplane[0]+vy[1]*gradplane[1]+vz[2]*gradplane[2]);
   *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed, nplane);
@@ -2602,8 +2618,12 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
   maxddot = 0.0;
   for (nn = 0; nn < 6; nn++)
     {
+#ifdef MD_ASYM_ITENS
+      maxddoti[nn] = calc_maxddot_nnl(i, gradplane_all[nn]);
+#else
       maxddoti[nn] = fabs(vx[i]*gradplane_all[nn][0]+vy[i]*gradplane_all[nn][1]+vz[i]*gradplane_all[nn][2])+
 	sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+#endif
       if (nn==0 || maxddoti[nn] > maxddot)
 	maxddot = maxddoti[nn];
       //printf("nn=%d maxddoti=%.15G\n", nn, maxddoti);
