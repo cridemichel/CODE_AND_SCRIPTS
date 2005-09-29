@@ -40,6 +40,7 @@ double gradplane[3];
 #ifdef MD_ASYM_ITENS
 extern double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtBi, **Rdot, **REtA, **REtB;
 extern double cosEulAng[2][3], sinEulAng[2][3];
+void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3], double *phir, double *psir);
 #endif
 
 void ludcmpR(double **a, int* indx, double* d, int n);
@@ -217,6 +218,9 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
   double  rA[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
   double DA[3][3], fx[3], invaSqN, invbSqN, invcSqN;
   double Fxt[3], Ft;
+#ifdef MD_ASYM_ITENS
+  double psi, phi;
+#endif
   int k1, k2;
   ti = x[4] + (trefG - atomTime[iA]);
   rA[0] = rx[iA] + vx[iA]*ti;
@@ -226,7 +230,11 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
   vA[1] = vy[iA];
   vA[2] = vz[iA];
   /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
   UpdateOrient(iA, ti, RA, OmegaA);
+#endif
   MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
   MD_DEBUG2(print_matrix(RA, 3));
   invaSqN = 1/Sqr(axa[iA]);
@@ -362,6 +370,9 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   double DA[3][3], DB[3][3], fx[3], gx[3], invaSqN, invbSqN, invcSqN;
   double Fxt[3], Ft;
   int k1, k2;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
   ti = x[4] + (trefG - atomTime[iA]);
   rA[0] = rx[iA] + vx[iA]*ti;
   rA[1] = ry[iA] + vy[iA]*ti;
@@ -370,7 +381,11 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   vA[1] = vy[iA];
   vA[2] = vz[iA];
   /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
   UpdateOrient(iA, ti, RA, OmegaA);
+#endif
   MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
   MD_DEBUG2(print_matrix(RA, 3));
   invaSqN = 1/Sqr(axa[iA]);
@@ -499,13 +514,20 @@ void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
   double  rA[3], ti;
   double fx[3];
   double Omega[3][3], invaSqN, invbSqN, invcSqN;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
   /* x = (r, alpha, t) */ 
   ti = x[4] + (trefG - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
   /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(i, ti, Rt, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
   UpdateOrient(i, ti, Rt, Omega);
+#endif
   na = (i < Oparams.parnumA)?0:1;
   invaSqN = 1.0/Sqr(axa[i]);
   invbSqN = 1.0/Sqr(axb[i]);
@@ -585,13 +607,20 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   double  rA[3], rB[3], ti;
   double fx[3], gx[3];
   double Omega[3][3], invaSqN, invbSqN, invcSqN;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
   /* x = (r, alpha, t) */ 
   ti = x[4] + (trefG - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
   /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(i, ti, Rt, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
   UpdateOrient(i, ti, Rt, Omega);
+#endif
   na = (i < Oparams.parnumA)?0:1;
   invaSqN = 1.0/Sqr(axa[i]);
   invbSqN = 1.0/Sqr(axb[i]);
@@ -1212,6 +1241,9 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   double ti, segno;
   int retcheck;
   double Omega[3][3], nf, ng, gradf[3];
+#ifdef MD_ASYM_ITENS
+  double psi, phi;
+#endif
   int k1;
   MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i],i));
   MD_DEBUG20(printf("v = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
@@ -1224,7 +1256,11 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   MD_DEBUG20(printf("AAAA ti= %.15G rA (%.15G,%.15G,%.15G)\n", ti, rA[0], rA[1], rA[2]));
   MD_DEBUG20(printf("AAAA t1=%.15G atomTime[%d]=%.15G\n",t1,i,atomTime[i]));
   /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
   UpdateOrient(i, ti, RtA, Omega);
+#endif
   invaSqN = 1.0/Sqr(axa[i]);
   invbSqN = 1.0/Sqr(axb[i]);
   invcSqN = 1.0/Sqr(axc[i]);
@@ -1343,6 +1379,9 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   double ti, segno;
   int retcheck;
   double Omega[3][3], nf, ng, gradf[3], gradg[3];
+#ifdef MD_ASYM_ITENS
+  double psi, phi;
+#endif
   int k1;
   MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i],i));
   MD_DEBUG20(printf("v = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
@@ -1355,7 +1394,11 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   MD_DEBUG20(printf("AAAA ti= %.15G rA (%.15G,%.15G,%.15G)\n", ti, rA[0], rA[1], rA[2]));
   MD_DEBUG20(printf("AAAA t1=%.15G atomTime[%d]=%.15G\n",t1,i,atomTime[i]));
   /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
   UpdateOrient(i, ti, RtA, Omega);
+#endif
   invaSqN = 1.0/Sqr(axa[i]);
   invbSqN = 1.0/Sqr(axb[i]);
   invcSqN = 1.0/Sqr(axc[i]);
@@ -2756,6 +2799,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
 	  if (dorefine[nn]!=0)
 	    {
 	      assign_plane(nn);
+	      //printf("nn=%d dists[%d]: %.15G distsOld[%d]:%.15G\n", nn, nn, dists[nn], nn, distsOld[nn])
 	      if (refine_contact_neigh_plane(i, t1, t2arr[nn], vecgroot[nn], vecg, nn))
 		{
 		  //printf("[locate_contact] Adding collision for ellips. N. %d t=%.15G t1=%.15G t2=%.15G\n", i,
@@ -2791,7 +2835,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
 #ifdef MD_INTERPOL
 		  if (!tocheck[nn])
 #endif
-		  mdPrintf(ALL,"[locate_contact] can't find contact point!\n",NULL);
+		  mdPrintf(ALL,"[locate_contact_nnl] can't find contact point!\n",NULL);
 		  /* Se refine_contact fallisce deve cmq continuare a cercare 
 		   * non ha senso smettere...almeno credo */
 		  //gotcoll = -1;
@@ -3566,6 +3610,9 @@ void nextNNLupdate(int na)
   double DelDist, nnlfact;
   const double distBuf = 0.1;
   double Omega[3][3], vecg[5];
+#ifdef MD_ASYM_ITENS
+  double psi, phi;
+#endif
 #ifndef MD_NNLPLANES
   nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];
   nebrTab[na].axb = OprogStatus.rNebrShell*axb[na];
@@ -3594,7 +3641,11 @@ void nextNNLupdate(int na)
   nebrTab[na].r[0] = rx[na];
   nebrTab[na].r[1] = ry[na];
   nebrTab[na].r[2] = rz[na];
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(na, 0, RtB, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
   UpdateOrient(na, 0, RtB, Omega);
+#endif
   for (i1 = 0; i1 < 3; i1++)
     for (i2 = 0; i2 < 3; i2++)
       nebrTab[na].R[i1][i2] = RtB[i1][i2];
