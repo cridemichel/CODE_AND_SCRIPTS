@@ -1120,6 +1120,17 @@ void calc_angmom(int i, double **I)
 	}
     }
   angM[i] = calc_norm(Mvec);
+  Mx[i] = Mvec[0];
+  My[i] = Mvec[1];
+  Mz[i] = Mvec[2];
+}
+void calc_RM(int i)
+{
+  double norm, Mvec[3];
+  int k1, k2;
+  Mvec[0] = Mx[i];
+  Mvec[1] = My[i];
+  Mvec[2] = Mz[i];
   /* calcolo il prodotto vettore tra M e l'asse z */
   if (angM[i]==0.0)
     {
@@ -1171,7 +1182,7 @@ void calc_angmom(int i, double **I)
   for (k1 = 0; k1 < 3; k1++)
     RM[i][0][k1] /= norm;
   vectProdVec(RM[i][2],RM[i][0],RM[i][1]); 
-#if 1
+#if 0
   //printf("1 scal 2: %.15G\n",  scalProd(RM[i][0], RM[i][2]));
   for (k1=0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
@@ -1255,10 +1266,10 @@ void calc_angmom(int i, double **I)
 }
 #endif
 void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
-void upd_refsysM(int i, double **I)
+void upd_refsysM(int i)
 {
   int k1, k2, k3;
-  calc_angmom(i, I); 
+  calc_RM(i); 
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       {
@@ -1700,11 +1711,14 @@ void usrInitAft(void)
 #ifdef MD_ASYM_ITENS
   for (i=0; i < Oparams.parnum; i++)
     {
+#if 0
       if (i < Oparams.parnumA)
 	tRDiagR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
       else
 	tRDiagR(i, Ia, Oparams.I[1][0], Oparams.I[1][1], Oparams.I[1][2], R[i]);
-      upd_refsysM(i, Ia);
+#endif
+      angM[i] = sqrt(Sqr(Mx[i])+Sqr(My[i])+Sqr(Mz[i]));
+      upd_refsysM(i);
     }
 #endif
   StartRun(); 

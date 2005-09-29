@@ -138,7 +138,7 @@ void calcV(void)
 #endif
 }
 void calc_energy(char *msg);
-
+extern double *angM;
 /* ============================== >>> Energy <<< ============================*/
 void energy(void)
 {
@@ -161,6 +161,7 @@ void energy(void)
 	  (long long int)Oparams.curStep, L);
 #endif
   calc_energy("[MEASURES]"); 
+  //printf("angM[0]:%.15G angM[10]:%.15G\n", angM[0], angM[10]);
 #ifdef MD_GRAVITY
   E = K + V;
 #else
