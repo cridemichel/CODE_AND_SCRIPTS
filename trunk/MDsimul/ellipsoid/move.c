@@ -1269,7 +1269,8 @@ void update_MSDrot(int i)
   OprogStatus.sumoz[i] += (wx[i]*R[i][2][0]+wy[i]*R[i][2][1]+wz[i]*R[i][2][2])*ti;
 }
 #ifdef MD_ASYM_ITENS
-extern void upd_refsysM(int i, double **I);
+extern void calc_angmom(int i, double **I);
+extern void upd_refsysM(int i);
 #endif
 
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
@@ -1293,6 +1294,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #ifdef MD_ASYM_ITENS
   int k1,k2,k3;
   double rnI[3];
+  double Mvec[3], omega[3];
 #endif
   int na, a, b;
 #if 0
@@ -1382,6 +1384,30 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       } 
   InvMatrix(Iatmp, invIa, 3);
   InvMatrix(Ibtmp, invIb, 3);
+  Mvec[0] = Mx[i];
+  Mvec[1] = My[i];
+  Mvec[2] = Mz[i];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      omega[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+    }
+  wx[i] = omega[0];
+  wy[i] = omega[1];
+  wz[i] = omega[2];
+  Mvec[0] = Mx[j];
+  Mvec[1] = My[j];
+  Mvec[2] = Mz[j];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      omega[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	omega[k1] += invIb[k1][k2]*Mvec[k2]; 
+    }
+  wx[j] = omega[0];
+  wy[j] = omega[1];
+  wz[j] = omega[2];
 #else
   invIa = 1/Ia;
   invIb = 1/Ib;
@@ -1528,7 +1554,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   wz[j] -= factorinvIb*rBCn[2];
 #endif
 #ifdef MD_ASYM_ITENS
-  upd_refsysM(i, Ia);
+  calc_angmom(i, Ia);
+  upd_refsysM(i);
 #if 0
     {
       int k1,k2,k3;
@@ -1585,7 +1612,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   free_matrix(Rtmp2,3);
     }
 #endif
-  upd_refsysM(j, Ib);
+ calc_angmom(j, Ib);
+ upd_refsysM(j);
 #if 0
 {
       int k1, k2,k3;
@@ -1874,7 +1902,7 @@ void UpdateAtom(int i)
 {
   double ti, phi, psi;
   int k1, k2;
-  
+  double omega[3];
   ti = Oparams.time - atomTime[i];
   
   rx[i] += vx[i]*ti;
@@ -2169,8 +2197,8 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
 {
   double wSq, w, phi, psi, cospsi, sinpsi, cosphi, sinphi;
   int k1, k2, k3;
-  wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
-  if (ti == 0.0 || wSq == 0.0)
+  //wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
+  if (ti == 0.0 || angM[i] == 0.0)
     {
       for (k1 = 0; k1 < 3; k1++)
 	for (k2 = 0; k2 < 3; k2++)
@@ -5609,7 +5637,32 @@ void calc_energy_i(char *msg, int i)
   printf("[%s] Kinetic Energy of %d: %f\n", msg, i, K);
   
 }
+#ifdef MD_ASYM_ITENS
+extern double **Ia, **invIa;
+void calc_omega(int i)
+{
+  double Mvec[3], omega[3];
+  int k1, k2, na;
 
+  na = (i < Oparams.parnumA)?0:1;
+  tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
+  
+  InvMatrix(Ia, invIa, 3);
+
+  Mvec[0] = Mx[i];
+  Mvec[1] = My[i];
+  Mvec[2] = Mz[i];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      omega[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+    }
+  wx[i] = omega[0];
+  wy[i] = omega[1];
+  wz[i] = omega[2];
+}
+#endif
 void calc_energy(char *msg)
 {
   int i, k1;
@@ -5632,6 +5685,9 @@ void calc_energy(char *msg)
 	  //RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
 #endif
 	  K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+#ifdef MD_ASYM_ITENS
+	  calc_omega(i);
+#endif
 	  wt[0] = wx[i];
 	  wt[1] = wy[i];
 	  wt[2] = wz[i];
@@ -5660,6 +5716,9 @@ void calc_energy(char *msg)
 	  //RDiagtR(i, Ib, Oparams.I[1][0], Oparams.I[1][1], Oparams.I[1][2], R[i]);
 #endif
 	  K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+#ifdef MD_ASYM_ITENS
+	  calc_omega(i);
+#endif
 	  wt[0] = wx[i];
 	  wt[1] = wy[i];
 	  wt[2] = wz[i];
