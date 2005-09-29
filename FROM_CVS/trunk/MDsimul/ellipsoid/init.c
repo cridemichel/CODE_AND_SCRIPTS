@@ -615,13 +615,13 @@ void wrap_initCoord(void)
   vz[0] = 0;
   /* -0.285316712824933 -0.182347469854598 -0.530547025349427*/
 
-#if 1
+#if 0
   wx[0] = -0.285312;// .003;
   wy[0] = -0.1823475;// -1.5;
   wz[0] = -0.530547;// -0.5;
 #else
-  wx[0] = 0.0;
-  wy[0] = 0.43;
+  wx[0] = -0.3;
+  wy[0] = -0.8;
   wz[0] = 0.0;
 #endif
 #if 0
@@ -631,25 +631,25 @@ void wrap_initCoord(void)
   uxy[0] = 0.707;
   uyy[0] = 0.707;
   uzy[0] = 0.0;
-#endif
   uxz[0] = 0.0;
   uyz[0] = 0.0;
   uzz[0] = 1.0;
+#endif
   rx[1] = 3.2;
   ry[1] = 0.0;
   
-  rz[1] = 0.0;//0.2;
+  rz[1] = 0.2;
   vx[1] = -0.5;
-  vy[1] = 0;
+  vy[1] = 0.0;
   vz[1] = 0;
   /* -0.102514772783053 -0.439677384690882 0.330913950385712*/
-#if 1
-  wx[1] =-0.102415;//-1;
+#if 0
+  wx[1] -0.102415;//-1;
   wy[1] =-0.43968;//-0.3;
   wz[1] =0.330914;// 0.1;
 #else
-  wx[1] = 0.0;
-  wy[1] = -0.43;
+  wx[1] = 0.3;
+  wy[1] = 0.43;
   wz[1] = 0.0;
 #endif
   }
@@ -719,7 +719,7 @@ void initCoord(void)
 #endif
     }
 #endif
-  wrap_initCoord();
+  //wrap_initCoord();
 }
 
 /* =========================== >>> usrInitBef <<< ========================== */
@@ -1254,6 +1254,7 @@ void calc_angmom(int i, double **I)
 	}
 }
 #endif
+void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
 void upd_refsysM(int i, double **I)
 {
   int k1, k2, k3;
@@ -1270,10 +1271,12 @@ void upd_refsysM(int i, double **I)
 	  exit(-1);}
 #endif
      }
+#if 0
   printf("RE0[%d]=\n",i);
   print_matrix(RE0, 3);
+#endif
   calc_euler_angles(i, RE0, &phi0[i], &theta0[i], &psi0[i]);
-  printf("RE0[2][2]: %.15G costheta=%.15G\n", RE0[2][2], cos(theta0[i]));
+  //printf("RE0[2][2]: %.15G costheta=%.15G\n", RE0[2][2], cos(theta0[i]));
   costheta0[i] = cos(theta0[i]);
   sintheta0[i] = sin(theta0[i]);
 }
