@@ -1701,9 +1701,9 @@ void usrInitAft(void)
   for (i=0; i < Oparams.parnum; i++)
     {
       if (i < Oparams.parnumA)
-	tRDiagR(i, Ia, ItensD[0][0], ItensD[0][1], ItensD[0][2], R[i]);
+	tRDiagR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
       else
-	tRDiagR(i, Ia, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
+	tRDiagR(i, Ia, Oparams.I[1][0], Oparams.I[1][1], Oparams.I[1][2], R[i]);
       upd_refsysM(i, Ia);
     }
 #endif
