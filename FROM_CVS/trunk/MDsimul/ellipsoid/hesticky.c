@@ -124,10 +124,14 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold, taus, 
 	  DTxx, DTyy, DTzz, Txxold, Tyyold, Tzzold;
 #endif
-
   double denom, rCx, rCy, rCz, nrAB, Dr, V, Eold, E, Vold, Kold;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
+#endif
+#ifdef MD_ASYM_ITENS
+  int k1,k2,k3;
+  double rnI[3];
+  double Mvec[3], omega[3];
 #endif
   int na, a, kk, oldbond=-1;
 #if 1
@@ -165,7 +169,6 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       Dr = rA[a]-rB[a];
       if (fabs(Dr) > L2)
 	{
-	  
 	  rB[a] += SignR(L, Dr);
 	}
     }
@@ -206,7 +209,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       /* scalare tutti i raggi qui */
     }
 #ifdef MD_ASYM_ITENS
-  RDiagtR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[i]);
+  tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparasm.I[na][2], R[i]);
 #else
   Ia = Oparams.I[na];
 #endif
@@ -216,15 +219,45 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       /* scalare tutti i raggi qui */
     }
 #ifdef MD_ASYM_ITENS
-  RDiagtR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
+  tRDiagR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
 #else
   Ib = Oparams.I[na];
 #endif
   MD_DEBUG(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
   /* calcola le matrici inverse del tensore d'inerzia */
 #ifdef MD_ASYM_ITENS
-  InvMatrix(Ia, invIa, 3);
-  InvMatrix(Ib, invIb, 3);
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Iatmp[k1][k2] = Ia[k1][k2];
+	Ibtmp[k1][k2] = Ib[k1][k2];
+      } 
+  InvMatrix(Iatmp, invIa, 3);
+  InvMatrix(Ibtmp, invIb, 3);
+  Mvec[0] = Mx[i];
+  Mvec[1] = My[i];
+  Mvec[2] = Mz[i];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      omega[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+    }
+  wx[i] = omega[0];
+  wy[i] = omega[1];
+  wz[i] = omega[2];
+  Mvec[0] = Mx[j];
+  Mvec[1] = My[j];
+  Mvec[2] = Mz[j];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      omega[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	omega[k1] += invIb[k1][k2]*Mvec[k2]; 
+    }
+  wx[j] = omega[0];
+  wy[j] = omega[1];
+  wz[j] = omega[2];
 #else
   invIa = 1/Ia;
   invIb = 1/Ib;
@@ -348,6 +381,8 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   vy[j] = vy[j] - delpy*invmj;
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
+  update_MSDrot(i);
+  update_MSDrot(j);
 #ifdef MD_HSVISCO 
   if (OprogStatus.lastcoll!=-1)
     {
@@ -398,7 +433,12 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   wy[j] -= factorinvIb*rBCn[1];
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
-
+#endif
+#ifdef MD_ASYM_ITENS
+  calc_angmom(i, Ia);
+  upd_refsysM(i);
+  calc_angmom(j, Ib);
+  upd_refsysM(j);
 #endif
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
