@@ -46,6 +46,9 @@ extern int SolveLineq (double **a, double *x, int n);
 int calcdist_retcheck;
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
 void InitEventList (void);
+#ifdef MD_HSVISCO
+void calcT(void);
+#endif
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
 extern struct nebrTabStruct *nebrTab;
@@ -140,6 +143,11 @@ double Lz2;
 double W, K, T1xx, T1yy, T1zz,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB;
+#ifdef MD_HSVISCO
+double  DQxxOld, DQyyOld, DQzzOld, DQxyOld, DQyzOld, DQzxOld, DQxxOldKin, 
+       DQyyOldKin, DQzzOldKin, DQxxOldHS, DQyyOldHS, DQzzOldHS, DQxxOldST, DQyyOldST, DQzzOldST,
+       PxxKin, PyyKin, PzzKin, PxxHS, PyyHS, PzzHS, PxxST, PyyST, PzzST;
+#endif
 /*  Patxy, Patyz, Patzx, Patxx, Patyy, Patzz,
     T1myz, T1mzx, T1mxx, T1myy, T1mzz;  */
 double DrSq = 0.0; 
@@ -1288,6 +1296,11 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double norm[3];
   double modn, denom;
+#ifdef MD_HSVISCO
+  double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold, taus, 
+	  DTxx, DTyy, DTzz, Txxold, Tyyold, Tzzold;
+  double rxij, ryij, rzij, Dr;
+#endif
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
 #endif
@@ -1297,15 +1310,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double Mvec[3], omega[3];
 #endif
   int na, a, b;
-#if 0
   MD_DEBUG(calc_energy("dentro bump1"));
-  calc_energy("1) dentro bump1");
-  printf("1) R[%d]=\n",i);
-  print_matrix(R[i],3);
-  printf("   R[%d]=\n",j);
-  print_matrix(R[j],3);
-#endif
-
   numcoll++;
   MD_DEBUG32(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
@@ -1361,19 +1366,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
 #ifdef MD_ASYM_ITENS
   tRDiagR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
-#if 0
-  printf("Ia = ");
-  print_matrix(Ib, 3);
-  printf("IDiag=%f,%f,%f\n", Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2]);
-  exit(-1);
-#endif
 #else
   Ib = Oparams.I[na];
 #endif
   //MD_DEBUG(calc_energy("dentro bump2"));
   MD_DEBUG11(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
-  
-  //MD_DEBUG(calc_energy("dentro bump3"));
+  MD_DEBUG(calc_energy("dentro bump3"));
   /* calcola le matrici inverse del tensore d'inerzia */
 #ifdef MD_ASYM_ITENS
   for (k1 = 0; k1 < 3; k1++)
@@ -1523,6 +1521,21 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   delpx = - factor * norm[0];
   delpy = - factor * norm[1];
   delpz = - factor * norm[2];
+#ifdef MD_HSVISCO
+  DTxy = delpx*delpy*invmi + vx[i]*delpy + delpx*vy[i];
+  DTxy += delpx*delpy*invmj - vx[j]*delpy - delpx*vy[j]; 
+  DTyz = delpy*delpz*invmi + vy[i]*delpz + delpy*vz[i];
+  DTyz += delpy*delpz*invmj - vy[j]*delpz - delpy*vz[j];
+  DTzx = delpz*delpx*invmi + vz[i]*delpx + delpz*vx[i];
+  DTzx += delpz*delpx*invmj - vz[j]*delpx - delpz*vx[j];
+
+  DTxx = delpx*delpx*invmi + vx[i]*delpx + delpx*vx[i];
+  DTxx += delpx*delpx*invmj - vx[j]*delpx - delpx*vx[j]; 
+  DTyy = delpy*delpy*invmi + vy[i]*delpy + delpy*vy[i];
+  DTyy += delpy*delpy*invmj - vy[j]*delpy - delpy*vy[j];
+  DTzz = delpz*delpz*invmi + vz[i]*delpz + delpz*vz[i];
+  DTzz += delpz*delpz*invmj - vz[j]*delpz - delpz*vz[j];
+#endif
   vx[i] = vx[i] + delpx*invmi;
   vx[j] = vx[j] - delpx*invmj;
   vy[i] = vy[i] + delpy*invmi;
@@ -1556,107 +1569,48 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #ifdef MD_ASYM_ITENS
   calc_angmom(i, Ia);
   upd_refsysM(i);
-#if 0
-    {
-      int k1,k2,k3;
-      int indx[3];
-      double d, col[3];
-      int ok;
-      double **Rtmp, **Rtmp2;
-      Rtmp = matrix(3,3);
-      Rtmp2 = matrix(3,3);
-      for (k1=0; k1 < 3; k1++)
-	for (k2 = 0; k2 < 3; k2++)
-	  {
-	    Rtmp[k1][k2] = 0.0;
-	    for (k3 =0; k3 < 3; k3++)
-	      Rtmp[k1][k2] += invIa[k1][k3]*Ia[k3][k2];
-	      
-	  }
-      printf("I=%f %f %f\n",Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2]);
-      printf("Ia=\n");
-      print_matrix(Ia, 3);
-      printf("invIa*Ia=\n");
-      print_matrix(Rtmp,3);
-      printf(">>>>> cos(theta0[%d])=%.15G\n", i, costheta0[i]);
-      build_euler_matrix(cos(phi0[i]),sin(phi0[i]),costheta0[i], sintheta0[i],
-			 cos(psi0[i]),sin(psi0[i]), Rtmp2);
-      for (k1=0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      {
-	Rtmp[k1][k2] = 0.0;
-	for (k3 =0; k3 < 3; k3++)
-	  {
-	    Rtmp[k1][k2] += Rtmp2[k1][k3]*RM[i][k3][k2];
-	  }
-      }
-      printf("2) R[%d]=\n", i);
-      print_matrix(Rtmp,3);
-      printf("RE0[%d]=\n",i);
-      print_matrix(RE0,3);
-      printf("Rtmp2[%d]=\n",i);
-      print_matrix(Rtmp2,3);
- for (k1=0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      {
-	Rtmp[k1][k2] = 0.0;
-	for (k3 =0; k3 < 3; k3++)
-	  {
-	    Rtmp[k1][k2] += RE0[k1][k3]*RM[i][k3][k2];
-	  }
-      }
- printf("*** R[%d]=\n",i);
-      print_matrix(Rtmp,3);
-
-  free_matrix(Rtmp, 3);
-  free_matrix(Rtmp2,3);
-    }
+  calc_angmom(j, Ib);
+  upd_refsysM(j);
 #endif
- calc_angmom(j, Ib);
- upd_refsysM(j);
-#if 0
-{
-      int k1, k2,k3;
-      double **Rtmp;
-      Rtmp = matrix(3,3);
-      for (k1=0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      {
-	Rtmp[k1][k2] = 0.0;
-	for (k3 =0; k3 < 3; k3++)
-	  {
-	    Rtmp[k1][k2] += RE0[k1][k3]*RM[j][k3][k2];
-	  }
-      }
-      printf("R[%d]=\n", j);
-      print_matrix(Rtmp,3);
-  free_matrix(Rtmp, 3);
-    }
-    
-  calc_energy("2) dentro bump2");
-#endif
-#endif
-  vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
-  vCA[0] = vx[i] + wrx;
-  vCA[1] = vy[i] + wry;
-  vCA[2] = vz[i] + wrz;
-  vectProd(wx[j], wy[j], wz[j], -rBC[0], -rBC[1], -rBC[2], &wrx, &wry, &wrz);
-  vCB[0] = vx[j] + wrx;
-  vCB[1] = vy[j] + wry;
-  vCB[2] = vz[j] + wrz;
-  vc = 0;
-  for (a=0; a < 3; a++)
-    vc += (vCA[a]-vCB[a])*norm[a];
-  //printf("[bump] after bump vc=%.15G\n", vc); 
- 
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  
 		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
-/* TO CHECK: il viriale ha senso solo se non c'è la gravità */
-#if 0
-  *W = delpx * rxij + delpy * ryij + delpz * rzij;
+#ifdef MD_HSVISCO 
+  if (OprogStatus.lastcoll!=-1)
+    {
+      taus = Oparams.time - OprogStatus.lastcoll;
+      OprogStatus.DQTxy += OprogStatus.Txy*taus; 
+      OprogStatus.DQTyz += OprogStatus.Tyz*taus;
+      OprogStatus.DQTzx += OprogStatus.Tzx*taus;
+      OprogStatus.DQTxx += OprogStatus.Txx*taus; 
+      OprogStatus.DQTyy += OprogStatus.Tyy*taus;
+      OprogStatus.DQTzz += OprogStatus.Tzz*taus;
+      //taus = Oparams.time - OprogStatus.lastcoll;
+      Dr = L*rint((rx[i]-rx[j])/L);
+      rxij = (rx[i]-rx[j]) - Dr;
+      Dr = L*rint((ry[i]-ry[j])/L);
+      ryij = (ry[i]-ry[j]) - Dr;
+      Dr = L*rint((rz[i]-rz[j])/L);
+      rzij = (rz[i]-rz[j]) - Dr;
+      OprogStatus.DQWxy += rxij*delpy;
+      OprogStatus.DQWyz += ryij*delpz;
+      OprogStatus.DQWzx += rzij*delpx;
+
+      OprogStatus.DQWxx += rxij*delpx;
+      OprogStatus.DQWyy += ryij*delpy;
+      OprogStatus.DQWzz += rzij*delpz;
+      OprogStatus.DQWxxHS += rxij*delpx;
+      OprogStatus.DQWyyHS += ryij*delpy;
+      OprogStatus.DQWzzHS += rzij*delpz;
+    }
+  OprogStatus.Txy += DTxy; 
+  OprogStatus.Tyz += DTyz;
+  OprogStatus.Tzx += DTzx;
+  OprogStatus.Txx += DTxx; 
+  OprogStatus.Tyy += DTyy;
+  OprogStatus.Tzz += DTzz;
 #endif
 }
 #endif
@@ -5868,6 +5822,9 @@ void ProcessCollision(void)
   lastbump[evIdA]=evIdB;
   lastbump[evIdB]=evIdA;
 #endif
+#ifdef MD_HSVISCO
+  OprogStatus.lastcoll = Oparams.time;
+#endif
   if (OprogStatus.useNNL)
     {
       /* ricalcola i tempi di collisione con la NL */
@@ -6325,7 +6282,7 @@ void move(void)
 	      outputSummary();
 	    }
 
-#if 1
+#if 0
 	    {
 	      static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
 	      double d,r1[3], r2[3], alpha;
@@ -6364,7 +6321,66 @@ void move(void)
 	    }
 	  if (OprogStatus.brownian)
 	    {
+#ifdef MD_HSVISCO
+	      double taus, Vol;
+	      if (OprogStatus.lastcoll!=-1)
+		{
+		  /* notare che nel caso di dinamica browniana
+		   * lastcoll è in generale l'ultima collisione o tra due particelle
+		   * o tra le particelle e il fluido (reset delle velocità)*/
+		  taus = Oparams.time - OprogStatus.lastcoll; 
+  		  OprogStatus.DQTxy += taus * OprogStatus.Txy;
+		  OprogStatus.DQTyz += taus * OprogStatus.Tyz;
+		  OprogStatus.DQTzx += taus * OprogStatus.Tzx;
+		  OprogStatus.DQTxx += taus * OprogStatus.Txx;
+		  OprogStatus.DQTyy += taus * OprogStatus.Tyy;
+		  OprogStatus.DQTzz += taus * OprogStatus.Tzz;
+		  DQxyOld = OprogStatus.DQxy;
+		  DQyzOld = OprogStatus.DQyz;
+		  DQzxOld = OprogStatus.DQzx;
+		  DQxxOld = OprogStatus.DQxx;
+		  DQyyOld = OprogStatus.DQyy;
+		  DQzzOld = OprogStatus.DQzz;
+		  OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
+		  OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
+		  OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+		  OprogStatus.DQxx = OprogStatus.DQTxx + OprogStatus.DQWxx;
+		  OprogStatus.DQyy = OprogStatus.DQTyy + OprogStatus.DQWyy;
+		  OprogStatus.DQzz = OprogStatus.DQTzz + OprogStatus.DQWzz;
+		  Vol = L*L*L;
+		  OprogStatus.DQxy /= Vol;
+		  OprogStatus.DQyz /= Vol;
+		  OprogStatus.DQzx /= Vol;
+		  OprogStatus.DQxx /= Vol;
+		  OprogStatus.DQyy /= Vol;
+		  OprogStatus.DQzz /= Vol;
+
+		  Pxy = (OprogStatus.DQxy - DQxyOld)/Oparams.Dt;
+		  Pyz = (OprogStatus.DQyz - DQyzOld)/Oparams.Dt;
+		  Pzx = (OprogStatus.DQzx - DQzxOld)/Oparams.Dt;
+		  Pxx = (OprogStatus.DQxx - DQxxOld)/Oparams.Dt;
+		  Pyy = (OprogStatus.DQyy - DQyyOld)/Oparams.Dt;
+		  Pzz = (OprogStatus.DQzz - DQzzOld)/Oparams.Dt;
+		  PxxKin = (OprogStatus.DQTxx - DQxxOldKin)/Oparams.Dt;
+		  PyyKin = (OprogStatus.DQTyy - DQyyOldKin)/Oparams.Dt;
+		  PzzKin = (OprogStatus.DQTzz - DQzzOldKin)/Oparams.Dt;
+		  PxxHS = (OprogStatus.DQWxxHS - DQxxOldHS)/Oparams.Dt;
+		  PyyHS = (OprogStatus.DQWyyHS - DQyyOldHS)/Oparams.Dt;
+		  PzzHS = (OprogStatus.DQWzzHS - DQzzOldHS)/Oparams.Dt;
+		  PxxST = (OprogStatus.DQWxxST - DQxxOldST)/Oparams.Dt;
+		  PyyST = (OprogStatus.DQWyyST - DQyyOldST)/Oparams.Dt;
+		  PzzST = (OprogStatus.DQWzzST - DQzzOldST)/Oparams.Dt;
+		  press = (Pxx+Pyy+Pzz)/3.0;
+		  pressKin = (PxxKin+PyyKin+PzzKin)/3.0/Vol;
+		  pressHS  = (PxxHS+PyyHS+PzzHS)/3.0/Vol;
+		  pressST  = (PxxST+PyyST+PzzST)/3.0/Vol; 
+		  OprogStatus.lastcoll = Oparams.time;
+		}
+#endif
 	      velsBrown(Oparams.T);
+#ifdef MD_HSVISCO
+	      calcT();
+#endif
 	      if (OprogStatus.useNNL)
 		rebuildNNL();
 	      rebuildCalendar();
@@ -6374,6 +6390,63 @@ void move(void)
 	      if (OprogStatus.scalevel)
 		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
+#ifdef MD_HSVISCO
+	  else
+	    {
+	      double Vol;
+	      DQxyOld = OprogStatus.DQxy;
+	      DQyzOld = OprogStatus.DQyz;
+	      DQzxOld = OprogStatus.DQzx;
+	      DQxxOld = OprogStatus.DQxx;
+	      DQyyOld = OprogStatus.DQyy;
+	      DQzzOld = OprogStatus.DQzz;
+	      
+	      OprogStatus.DQxy = OprogStatus.DQTxy + OprogStatus.DQWxy;
+	      OprogStatus.DQyz = OprogStatus.DQTyz + OprogStatus.DQWyz;
+	      OprogStatus.DQzx = OprogStatus.DQTzx + OprogStatus.DQWzx;
+	      OprogStatus.DQxx = OprogStatus.DQTxx + OprogStatus.DQWxx;
+	      OprogStatus.DQyy = OprogStatus.DQTyy + OprogStatus.DQWyy;
+	      OprogStatus.DQzz = OprogStatus.DQTzz + OprogStatus.DQWzz;
+	      //printf("DQTxx: %.15G DQWxx:%.15G\n", OprogStatus.DQTxx, OprogStatus.DQWxx);
+	      Vol = L*L*L;
+	      OprogStatus.DQxy /= Vol;
+	      OprogStatus.DQyz /= Vol;
+	      OprogStatus.DQzx /= Vol;
+	      OprogStatus.DQxx /= Vol;
+	      OprogStatus.DQyy /= Vol;
+	      OprogStatus.DQzz /= Vol;
+
+    	      Pxy = (OprogStatus.DQxy - DQxyOld)/Oparams.Dt;
+	      Pyz = (OprogStatus.DQyz - DQyzOld)/Oparams.Dt;
+	      Pzx = (OprogStatus.DQzx - DQzxOld)/Oparams.Dt;
+	      Pxx = (OprogStatus.DQxx - DQxxOld)/Oparams.Dt;
+	      Pyy = (OprogStatus.DQyy - DQyyOld)/Oparams.Dt;
+	      Pzz = (OprogStatus.DQzz - DQzzOld)/Oparams.Dt;
+	      PxxKin = (OprogStatus.DQTxx - DQxxOldKin)/Oparams.Dt;
+    	      PyyKin = (OprogStatus.DQTyy - DQyyOldKin)/Oparams.Dt;
+	      PzzKin = (OprogStatus.DQTzz - DQzzOldKin)/Oparams.Dt;
+	      PxxHS = (OprogStatus.DQWxxHS - DQxxOldHS)/Oparams.Dt;
+	      PyyHS = (OprogStatus.DQWyyHS - DQyyOldHS)/Oparams.Dt;
+	      PzzHS = (OprogStatus.DQWzzHS - DQzzOldHS)/Oparams.Dt;
+	      PxxST = (OprogStatus.DQWxxST - DQxxOldST)/Oparams.Dt;
+	      PyyST = (OprogStatus.DQWyyST - DQyyOldST)/Oparams.Dt;
+	      PzzST = (OprogStatus.DQWzzST - DQzzOldST)/Oparams.Dt;
+	      press = (Pxx+Pyy+Pzz)/3.0;
+    	      pressKin = (PxxKin+PyyKin+PzzKin)/3.0/Vol;
+	      pressHS  = (PxxHS+PyyHS+PzzHS)/3.0/Vol;
+	      pressST  = (PxxST+PyyST+PzzST)/3.0/Vol; 
+	      //printf("STEP #%d DQ= %f %f %f\n", Oparams.curStep, OprogStatus.DQxy, OprogStatus.DQyz, OprogStatus.DQzx);
+	    }
+	  DQxxOldHS = OprogStatus.DQWxxHS;
+      	  DQyyOldHS = OprogStatus.DQWyyHS;
+	  DQzzOldHS = OprogStatus.DQWzzHS;
+	  DQxxOldST = OprogStatus.DQWxxST;
+	  DQyyOldST = OprogStatus.DQWyyST;
+	  DQzzOldST = OprogStatus.DQWzzST;
+	  DQxxOldKin = OprogStatus.DQTxx;
+      	  DQyyOldKin = OprogStatus.DQTyy;
+	  DQzzOldKin = OprogStatus.DQTzz;
+#endif
 	  OprogStatus.nextDt += Oparams.Dt;
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	  break;

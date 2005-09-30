@@ -602,6 +602,34 @@ void angvel(void)
     }
   
 }
+#ifdef MD_HSVISCO
+void calcT(void)
+{
+  double mass;
+  int i;
+  OprogStatus.Txy = 0.0;
+  OprogStatus.Tyz = 0.0;
+  OprogStatus.Tzx = 0.0;
+  OprogStatus.Txx = 0.0;
+  OprogStatus.Tyy = 0.0;
+  OprogStatus.Tzz = 0.0;
+
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (i < Oparams.parnumA)
+	mass = Oparams.m[0];
+      else 
+	mass = Oparams.m[1];
+      OprogStatus.Txy += mass*vx[i]*vy[i];
+      OprogStatus.Tyz += mass*vy[i]*vz[i];
+      OprogStatus.Tzx += mass*vz[i]*vx[i];
+      OprogStatus.Txx += mass*vx[i]*vx[i];
+      OprogStatus.Tyy += mass*vy[i]*vy[i];
+      OprogStatus.Tzz += mass*vz[i]*vz[i];
+    }
+} 
+#endif
+
 void wrap_initCoord(void)
 {
   /* A x(-0.603750000000000,4.226250000000000,-0.805000000000000) v(-0.099616130522196,-1.839280599669232,0.357754947051492f)-B x(-2.616250000000000,2.213750000000000,-0.805000000000000) v(1.011838511395152,0.876050550528104,-0.426995365917961)
@@ -1518,7 +1546,38 @@ void usrInitAft(void)
 	}
       f = fopenMPI(absMisHD("temp.dat"), "w+");
       fclose(f);
-     
+#ifdef MD_HSVISCO
+      f = fopenMPI(absMisHD("Ptens.dat"), "w+");
+      fclose(f);
+      f = fopenMPI(absMisHD("press.dat"), "w+");
+      fclose(f);
+      OprogStatus.DQTxy = 0.0;
+      OprogStatus.DQTyz = 0.0;
+      OprogStatus.DQTzx = 0.0;
+      OprogStatus.DQTxx = 0.0;
+      OprogStatus.DQTyy = 0.0;
+      OprogStatus.DQTzz = 0.0;
+      OprogStatus.DQWxy = 0.0;
+      OprogStatus.DQWyz = 0.0;
+      OprogStatus.DQWzx = 0.0;
+      OprogStatus.DQWxx = 0.0;
+      OprogStatus.DQWyy = 0.0;
+      OprogStatus.DQWzz = 0.0;
+      OprogStatus.DQWxxHS = 0.0;
+      OprogStatus.DQWyyHS = 0.0;
+      OprogStatus.DQWzzHS = 0.0;
+      OprogStatus.DQWxxST = 0.0;
+      OprogStatus.DQWyyST = 0.0;
+      OprogStatus.DQWzzST = 0.0;
+      OprogStatus.lastcoll = -1;
+      OprogStatus.DQxx = 0.0;
+      OprogStatus.DQyy = 0.0;
+      OprogStatus.DQzz = 0.0;
+      calcT();
+#endif
+      OprogStatus.DQxy = 0.0;
+      OprogStatus.DQyz = 0.0;
+      OprogStatus.DQzx = 0.0;
       for (i=0; i < Oparams.parnum; i++)
 	{
 	  atomTime[i] = 0.0;

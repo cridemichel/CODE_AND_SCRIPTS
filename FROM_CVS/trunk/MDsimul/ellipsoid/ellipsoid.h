@@ -267,6 +267,35 @@ struct progStatus
   COORD_TYPE sumEta; /* accumulators for obtaining the mean value of eta */
   
   /* Accumulators for the integral of angular velocity */
+#ifdef MD_HSVISCO
+  double DQxx;
+  double DQyy;
+  double DQzz;
+  double DQTxy;
+  double DQTyz;
+  double DQTzx;
+  double DQTxx;
+  double DQTyy;
+  double DQTzz;
+  double DQWxy;
+  double DQWyz;
+  double DQWzx;
+  double DQWxx;
+  double DQWyy;
+  double DQWzz;
+  double DQWxxHS;
+  double DQWyyHS;
+  double DQWzzHS;
+  double DQWxxST;
+  double DQWyyST;
+  double DQWzzST;
+  double Txy;
+  double Tyz;
+  double Tzx;
+  double Txx;
+  double Tyy;
+  double Tzz;
+#endif
   COORD_TYPE DQxy;
   COORD_TYPE DQyz;
   COORD_TYPE DQzx;
@@ -517,6 +546,36 @@ struct pascii opro_ascii[] =
   {"DQxy",         &OS(DQxy),                       1,              1, "%.10G"},
   {"DQzx",         &OS(DQzx),                       1,              1, "%.10G"},
   {"DQzx",         &OS(DQzx),                       1,              1, "%.10G"},
+#ifdef MD_HSVISCO
+  {"DQxx",         &OS(DQxx),                       1,              1, "%.10G"},
+  {"DQyy",         &OS(DQyy),                       1,              1, "%.10G"},
+  {"DQzz",         &OS(DQzz),                       1,              1, "%.10G"},
+  {"DQTxy",        &OS(DQTxy),                       1,              1, "%.10G"},
+  {"DQTyz",        &OS(DQTyz),                       1,              1, "%.10G"},
+  {"DQTzx",        &OS(DQTzx),                       1,              1, "%.10G"},
+  {"DQTxx",        &OS(DQTxx),                       1,              1, "%.10G"},
+  {"DQTyy",        &OS(DQTyy),                       1,              1, "%.10G"},
+  {"DQTzz",        &OS(DQTzz),                       1,              1, "%.10G"},
+  {"DQWxy",        &OS(DQWxy),                       1,              1, "%.10G"},
+  {"DQWyz",        &OS(DQWyz),                       1,              1, "%.10G"},
+  {"DQWzx",        &OS(DQWzx),                       1,              1, "%.10G"},
+  {"DQWxx",        &OS(DQWxx),                       1,              1, "%.10G"},
+  {"DQWyy",        &OS(DQWyy),                       1,              1, "%.10G"},
+  {"DQWzz",        &OS(DQWzz),                       1,              1, "%.10G"},
+  {"DQWxxHS",      &OS(DQWxxHS),                       1,              1, "%.10G"},
+  {"DQWyyHS",      &OS(DQWyyHS),                       1,              1, "%.10G"},
+  {"DQWzzHS",      &OS(DQWzzHS),                       1,              1, "%.10G"},
+  {"DQWxxST",      &OS(DQWxxST),                       1,              1, "%.10G"},
+  {"DQWyyST",      &OS(DQWyyST),                       1,              1, "%.10G"},
+  {"DQWzzST",      &OS(DQWzzST),                       1,              1, "%.10G"},
+  {"Txy",          &OS(Txy),                       1,              1, "%.10G"},
+  {"Tyz",          &OS(Tyz),                       1,              1, "%.10G"},
+  {"Tzx",          &OS(Tzx),                       1,              1, "%.10G"},
+  {"Txx",          &OS(Txx),                       1,              1, "%.10G"},
+  {"Tyy",          &OS(Tyy),                       1,              1, "%.10G"},
+  {"Tzz",          &OS(Tzz),                       1,              1, "%.10G"},
+  {"lastcoll",     &OS(lastcoll),                   1,              1, "%.15G"},
+#endif
   {"PxyArr",       OS(PxyArr),                      5,              1, "%.10G"},
   {"PyzArr",       OS(PyzArr),                      5,              1, "%.10G"},
   {"PzxArr",       OS(PzxArr),                      5,              1, "%.10G"},
@@ -918,14 +977,14 @@ extern struct singlePar OsinglePar[];
 
 #ifdef MAIN
 COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,
-  press_m, press_at, rcmz, rho, ItensD[2][3];
+  press_m, press_at, rcmz, rho, ItensD[2][3], pressST, pressHS, pressKin;
 COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, Aa, V, DrSqTot, temp_transl, DphiSq;
 int MB[NUMV];
 #else 
 extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs,
   press, press_m, press_at, temp_transl, rcmz, rho;
 extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot,
-  DphiSq, ItensD[2][3], DphiSq;
+  DphiSq, ItensD[2][3], DphiSq, pressST, pressHS, pressKin;
 extern int MB[NUMV];
 #endif
 
