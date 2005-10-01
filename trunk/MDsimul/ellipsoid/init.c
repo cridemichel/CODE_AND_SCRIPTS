@@ -53,8 +53,9 @@ extern int *ivector(int n);
 extern double *vector(int n);
 int poolSize;
 int parnumA, parnumB;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+#ifdef MD_PATCHY_HE
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
+double *treeRxC, *treeRyC, *treeRzC;
 #endif
 double invaSq[2], invbSq[2], invcSq[2];
 extern double *fvec, *fvecG, *fvecD;
@@ -749,7 +750,9 @@ void initCoord(void)
 #endif
   //wrap_initCoord();
 }
-
+#ifdef MD_ASYM_ITENS
+void calc_omega(int i);
+#endif
 /* =========================== >>> usrInitBef <<< ========================== */
 void usrInitBef(void)
 {
@@ -771,8 +774,8 @@ void usrInitBef(void)
 
     V = 0.0;
     L = 9.4;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
+#ifdef MD_PATCHY_HE
+    Oparams.sigmaSticky = 1.0;
     Oparams.bheight = 0.0;
     OprogStatus.maxbonds = 20;
 #endif
@@ -962,14 +965,10 @@ void StartRun(void)
 
   }
 
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+#ifdef MD_PATCHY_HE
 extern void add_bond(int na, int n);
 extern void remove_bond(int na, int n);
 extern double calcpotene(void);
-#endif
-#if defined(MD_SQWELL) && defined(MD_BONDCORR) 
-double corrini3, corrini0, corrini1, corrini2, corrnorm;
-double *lastbreak1, *lastbreak2;
 #endif
 extern void print_matrix(double **M, int n);
 
@@ -1324,23 +1323,19 @@ void upd_refsysM(int i)
 void RDiagtR(int i, double **M, double a, double b, double c, double **Ri);
 void usrInitAft(void)
 {
-    /* DESCRIPTION:
-       This function is called after the parameters were read from disk, put
-       here all initialization that depends upon such parameters, and call 
-       all your function for initialization, like maps() in this case */
-#if defined(MD_SQWELL) && defined(MD_BONDCORR) 
-    char fileop[1024], fileop2[1024], fileop3[1024];
-    FILE *bof;
-#endif    
-    int Nm, i, sct, overlap;
-    COORD_TYPE vcmx, vcmy, vcmz;
-    COORD_TYPE *m;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    double sigDeltaSq, drx, dry, drz;
-    int j;
+  /* DESCRIPTION:
+     This function is called after the parameters were read from disk, put
+     here all initialization that depends upon such parameters, and call 
+     all your function for initialization, like maps() in this case */
+  int Nm, i, sct, overlap;
+  COORD_TYPE vcmx, vcmy, vcmz;
+  COORD_TYPE *m;
+#ifdef MD_PATCHY_HE
+  double sigDeltaSq, drx, dry, drz;
+  int j;
 #endif
-    int a;
-    /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
+  int a;
+  /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
     /* initialize global varibales */
     pi = 2.0 * acos(0);
@@ -1374,12 +1369,6 @@ void usrInitAft(void)
     Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
     invmA = 1.0/Oparams.m[0];
     invmB = 1.0/Oparams.m[1];
-#if 0
-    Oparams.sigma[1][0] = Oparams.sigma[0][1];
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    Oparams.delta[1][0] = Oparams.delta[0][1];
-#endif
-#endif
     Mred[0][0] = Mred[1][1] = 0.5;
     Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
     /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
@@ -1419,16 +1408,12 @@ void usrInitAft(void)
     inCell[0] = malloc(sizeof(int)*Oparams.parnum);
     inCell[1]= malloc(sizeof(int)*Oparams.parnum);
     inCell[2] = malloc(sizeof(int)*Oparams.parnum);
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    tree = AllocMatI(10, poolSize);
+#ifdef MD_PATCHY_HE
+    tree = AllocMatI(12, poolSize);
     bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
     bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
     numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
     numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
-#ifdef MD_BONDCORR
-    lastbreak1=(double*)malloc(Oparams.parnum*sizeof(double));
-    lastbreak2=(double*)malloc(Oparams.parnum*sizeof(double));
-#endif
     bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
 #else
     tree = AllocMatI(9, poolSize);
@@ -1661,121 +1646,39 @@ void usrInitAft(void)
 	maxax[i] = Oparams.c[a];
       maxax[i] *= 2.0;
     }
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+#ifdef MD_PATCHY_HE
   for (i=0; i < Oparams.parnum; i++)
     {
       numbonds[i] = 0;
-#ifdef MD_BONDCORR
-      lastbreak1[i] = 0.0;
-      lastbreak2[i] = 0.0;
-#endif
     }
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
-	if (i < parnumA && j < parnumA)
-	  {
-	    sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
-	  }
-	else if (i >= parnumA && j >= parnumA)
-	  {
-	    sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
-	  }
-       	else
-	  {
-	    sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
-	  }
 	drx = rx[i] - rx[j];
+	shift[0] = L*rint(drx/L);
 	dry = ry[i] - ry[j];
-	drz = rz[i] - rz[j];
-	drx = drx - L * rint(drx / L);
-	dry = dry - L * rint(dry / L);
-	drz = drz - L * rint(drz / L);
-	if (Sqr(drx)+Sqr(dry)+Sqr(drz) < sigDeltaSq) 
+	shift[1] = L*rint(dry/L);
+	drz = rz[i] - rz[j]; 
+	shift[2] = L*rint(drz/L);
+	dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+	for (nn=0; nn < MD_PBONDS; nn++)
 	  {
-	    add_bond(i, j);
-	    add_bond(j, i);
+	    if (dists[nn]<0.0)
+	      {
+		//printf("(%d,%d)-(%d,%d)\n", i, mapbondsa[nn], j, mapbondsb[nn]);
+		aa = mapbondsa[nn];
+		bb = mapbondsb[nn];
+		add_bond(i, j, aa, bb);
+		add_bond(j, i, bb, aa);
+	      }
 	  }
       }
-#ifdef MD_BONDCORR
-  corrnorm=0;
-  for (i=0; i < Oparams.parnum; i++)
-    { 
-      numbonds0[i]=numbonds[i];
-      corrnorm+=numbonds[i];
-      for (j=0; j < numbonds0[i]; j++)
-	bonds0[i][j]=bonds[i][j];
-    }
-  corrini3 = 0;
-  corrini2 = 0;
-  corrini1 = 0;
-  corrini0 = 0;
-  for (i=0; i < Oparams.parnum; i++)
-    {
-      if (numbonds0[i]==2)
-	{
-	  corrini2++;
-	}
-      if (numbonds0[i]==1 && numbonds0[bonds0[i][0]]==1)
-	{
-	  corrini1++;
-	}
-      if (numbonds0[i]==0)
-	{
-	  corrini0++;
-	}
-      if (numbonds0[i]==3)
-	{
-	  corrini3++;
-	}
-    }
-  printf("------------> corrini0: %f\n", corrini0);
-  printf("------------> corrini1: %f\n", corrini1);
-  printf("------------> corrini2: %f\n", corrini2);
-  printf("------------> corrini3: %f\n", corrini3);
-  printf("------------> corrnorm: %f\n", corrnorm);
-  sprintf(fileop2 ,"bondcorr.dat");
-  strcpy(fileop, absTmpAsciiHD(fileop2));
-  if ( (bof = fopenMPI(fileop, "w")) == NULL)
-    {
-      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-      exit(-1);
-    }
-  fclose(bof);
-#if 1
-  sprintf(fileop2 ,"BondCorrFuncB2.dat");
-  /* store conf */
-  strcpy(fileop, absTmpAsciiHD(fileop2));
-  if ( (bof = fopenMPI(fileop, "w")) == NULL)
-    {
-      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-      exit(-1);
-    }
-  //fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini1);
-  fclose(bof);
-  sprintf(fileop2 ,"BondCorrFuncB3.dat");
-  /* store conf */
-  strcpy(fileop, absTmpAsciiHD(fileop2));
-  if ( (bof = fopenMPI(fileop, "w")) == NULL)
-    {
-      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-      exit(-1);
-    }
-  //fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini2);
-  fclose(bof);
-#endif
-#endif
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
 #endif
 #ifdef MD_ASYM_ITENS
   for (i=0; i < Oparams.parnum; i++)
     {
-#if 0
-      if (i < Oparams.parnumA)
-	tRDiagR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
-      else
-	tRDiagR(i, Ia, Oparams.I[1][0], Oparams.I[1][1], Oparams.I[1][2], R[i]);
-#endif
+      //calc_omega(i);
       angM[i] = sqrt(Sqr(Mx[i])+Sqr(My[i])+Sqr(Mz[i]));
       upd_refsysM(i);
     }
