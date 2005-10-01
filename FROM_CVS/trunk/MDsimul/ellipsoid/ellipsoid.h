@@ -194,6 +194,11 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeIdA    tree[7]
 #define treeIdB    tree[8]
 #define treeIdC    tree[9]
+#ifdef MD_PATCHY_HE
+#define treeIdC    tree[7]
+#define treeIdD    tree[8]
+#define treeIdE    tree[9]
+#endif
 #endif
 #define ATOM_LIMIT 10000000
 struct nebrTabStruct 
@@ -497,8 +502,8 @@ struct params
 #else
   double I[2][3];
 #endif
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  double delta[2][2]; /* ampiezza della buca */
+#ifdef MD_PATCHY_HE
+  double sigmaSticky; /* ampiezza della buca */
   double bheight;
 #endif
 #ifdef MD_GRAVITY
@@ -724,8 +729,8 @@ struct pascii opar_ascii[]=
 #endif
   {"M",                 &OP(M),                           1,   1,   "%d"},
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  {"delta",             &OP(delta),                       2,   2, "%.15G"},
+#ifdef MD_PATCHY_HE
+  {"sigmaSticky",       &OP(delta),                       1,   1, "%.15G"},
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
 #endif
   {"", NULL, 0, 0, ""}
@@ -880,10 +885,8 @@ struct singlePar OsinglePar[] = {
   {"W",          &OprogStatus.W,              CT},
   {"P",          &Oparams.P,                  CT},
   {"L",          &L,                        CT},
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  {"deltaAA",    &Oparams.delta[0][0],            CT},
-  {"deltaBB",    &Oparams.delta[1][1],            CT},
-  {"deltaAB",    &Oparams.delta[0][1],            CT},
+#ifdef MD_PATCHY_HE
+  {"sigmaSticky", &Oparams.sigmaSticky,     CT},
   {"bheight",    &Oparams.bheight,          CT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
