@@ -1,3 +1,4 @@
+#ifdef MD_PATCHY_HE
 #include<mdsimul.h>
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
@@ -1369,5 +1370,5 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
   return 0;
 }
-
+#endif
 

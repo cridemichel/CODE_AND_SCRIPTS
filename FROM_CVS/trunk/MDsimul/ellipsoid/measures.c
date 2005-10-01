@@ -45,7 +45,7 @@ extern int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
 extern void vectProd(double r1x, double r1y, COORD_TYPE r1z, 
 	 double r2x, double r2y, COORD_TYPE r2z, 
 	 double* r3x, double* r3y, COORD_TYPE* r3z);
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER) 
+#ifdef MD_PATCHY_HE 
 extern int *inCell[3], cellsx, cellsy, cellsz;
 extern int *cellList;
 extern int bound(int na, int n);
@@ -131,7 +131,7 @@ double calcpotene(void)
 #endif
 void calcV(void)
 {
-#ifdef MD_SQWELL
+#ifdef MD_PATCHY_HE
   V = calcpotene();
 #else
   V = 0;
@@ -167,7 +167,7 @@ void energy(void)
 #else
   E = K;
 #endif
-#ifdef MD_SQWELL
+#ifdef MD_PATCHY_HE
   V = calcpotene();
   E = K + V;
 #endif
@@ -208,7 +208,7 @@ void energy(void)
   sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G) Vz=%f\n", Oparams.time,
 	  E, Px, Py, Pz, Vz);
 #else
-#ifdef MD_SQWELL
+#ifdef MD_PATCHY_HE
   sprintf(TXTA[1], "t=%f E=%.15f V=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time,
 	  E, V, Px, Py, Pz);
 #else
