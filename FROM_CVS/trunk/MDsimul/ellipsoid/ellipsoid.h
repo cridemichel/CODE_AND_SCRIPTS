@@ -68,7 +68,9 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define NA 1 /* number of atoms for each molecule (particle) */
 
 #define MAXPAR 5000      /* maximum number of simulated particles */
-
+#ifdef MD_PATCHY_HE
+#define MD_PBONDS_MAX 100
+#endif
 #define NUM_PAR 2000   /* Number of particles for the simulation */
 #define NUMK 99    /* number of k-points in which we must  calculate the 
 		       structure factor */ 
@@ -193,11 +195,10 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeCircBR tree[6]
 #define treeIdA    tree[7]
 #define treeIdB    tree[8]
-#define treeIdC    tree[9]
 #ifdef MD_PATCHY_HE
-#define treeIdC    tree[7]
-#define treeIdD    tree[8]
-#define treeIdE    tree[9]
+#define treeIdC    tree[9]
+#define treeIdD    tree[10]
+#define treeIdE    tree[11]
 #endif
 #endif
 #define ATOM_LIMIT 10000000
@@ -410,7 +411,7 @@ struct progStatus
   int KK;
   int JJ;
   double storerate;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+#ifdef MD_PATCHY_HE
   int maxbonds;
 #endif
 #ifdef MD_GRAVITY
@@ -505,6 +506,7 @@ struct params
 #ifdef MD_PATCHY_HE
   double sigmaSticky; /* ampiezza della buca */
   double bheight;
+  int npbonds[2][2];
 #endif
 #ifdef MD_GRAVITY
   double ggrav;
@@ -730,7 +732,7 @@ struct pascii opar_ascii[]=
   {"M",                 &OP(M),                           1,   1,   "%d"},
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
 #ifdef MD_PATCHY_HE
-  {"sigmaSticky",       &OP(delta),                       1,   1, "%.15G"},
+  {"sigmaSticky",       &OP(sigmaSticky),                       1,   1, "%.15G"},
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
 #endif
   {"", NULL, 0, 0, ""}

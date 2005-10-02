@@ -39,12 +39,13 @@ int calcdist_retcheck;
 double rA[3], rB[3];
 int polinterr, polinterrRyck;
 /* *** change here if you change the number sticky spots *** */
-int mapbondsaAA[MD_PBONDS]={1,1,2,2,3,3,4,4};
-int mapbondsbAA[MD_PBONDS]={1,2,1,2,1,2,1,2};
-int mapbondsaAB[MD_PBONDS]={1,1,2,2,3,3,4,4};
-int mapbondsbAB[MD_PBONDS]={1,2,1,2,1,2,1,2};
-int mapbondsaBB[MD_PBONDS]={1,1,2,2,3,3,4,4};
-int mapbondsbBB[MD_PBONDS]={1,2,1,2,1,2,1,2};
+const int MD_PBONDSAA=8, MD_PBONDSAB=8, MD_PBONDSBB=8;
+int mapbondsaAA[MD_PBONDSAA]={1,1,2,2,3,3,4,4};
+int mapbondsbAA[MD_PBONDSAA]={1,2,1,2,1,2,1,2};
+int mapbondsaAB[MD_PBONDSAB]={1,1,2,2,3,3,4,4};
+int mapbondsbAB[MD_PBONDSAB]={1,2,1,2,1,2,1,2};
+int mapbondsaBB[MD_PBONDSBB]={1,1,2,2,3,3,4,4};
+int mapbondsbBB[MD_PBONDSBB]={1,2,1,2,1,2,1,2};
 int *mapbondsa;
 int *mapbondsb;
 /* ------------------------------------------------------------ */
@@ -496,6 +497,32 @@ void remove_bond(int na, int n, int a, int b)
   if (abs(nb - numbonds[na])==2)
     printf("rimossi due bond boh...\n");
 #endif
+}
+void assign_bond_mapping(int i, int j)
+{
+  /* NOTA: l'interazione bonded è solo tra Si e O 
+   * i <  Oparams.parnumA => O
+   * i >=  Oparams.parnumA => Si */
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    {
+      mapbondsa = mapbondsaAA;
+      mapbondsb = mapbondsbAA;
+    }
+  else if (i >= Oparams.parnumA && j >= Oparams.parnumA)
+    {
+      mapbondsa = mapbondsaBB;
+      mapbondsb = mapbondsbBB;
+    }
+  else if (i < Oparams.parnumA && j >= Oparams.parnumA)
+    {
+      mapbondsa = mapbondsaAB;
+      mapbondsb = mapbondsbAB;
+    }
+  else
+    {
+      mapbondsa = mapbondsbAB;
+      mapbondsb = mapbondsaAB;
+    }
 }
 
 int bound(int na, int n, int a, int b);
@@ -1063,8 +1090,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
   const double minh = 1E-14;
-  double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS],
-	 distsOld2[MD_PBONDS], deltth; 
+  double h, d, dold, dold2, t2arr[MD_PBONDS_MAX], t, dists[MD_PBONDS_MAX], distsOld[MD_PBONDS_MAX],
+	 distsOld2[MD_PBONDS_MAX], deltth; 
   double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
   int bondpair, itstb;
