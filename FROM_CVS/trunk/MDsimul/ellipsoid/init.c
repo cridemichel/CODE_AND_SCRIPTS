@@ -966,9 +966,18 @@ void StartRun(void)
   }
 
 #ifdef MD_PATCHY_HE
-extern void add_bond(int na, int n);
-extern void remove_bond(int na, int n);
+extern void add_bond(int na, int n, int a, int b);
 extern double calcpotene(void);
+extern void assign_bond_mapping(int i, int j);
+int get_num_pbonds(int i, int j)
+{
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    return Oparams.npbonds[0][0];
+  else if (i >= Oparams.parnumA && j >= Oparams.parnumA)
+    return Oparams.npbonds[1][1];
+  else
+    return Oparams.npbonds[0][1];
+}
 #endif
 extern void print_matrix(double **M, int n);
 
@@ -1331,8 +1340,8 @@ void usrInitAft(void)
   COORD_TYPE vcmx, vcmy, vcmz;
   COORD_TYPE *m;
 #ifdef MD_PATCHY_HE
-  double sigDeltaSq, drx, dry, drz;
-  int j;
+  double shift[3], sigDeltaSq, drx, dry, drz, dist, dists[MD_PBONDS_MAX];
+  int j, amin, bmin, nn, aa, bb, NPB;
 #endif
   int a;
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
@@ -1660,10 +1669,12 @@ void usrInitAft(void)
 	shift[1] = L*rint(dry/L);
 	drz = rz[i] - rz[j]; 
 	shift[2] = L*rint(drz/L);
+	assign_bond_mapping(i, j);
 	dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-	for (nn=0; nn < MD_PBONDS; nn++)
+	NPB = get_num_pbonds(i, j);
+	for (nn=0; nn < NPB; nn++)
 	  {
-	    if (dists[nn]<0.0)
+	    if (dists[nn] < 0.0)
 	      {
 		//printf("(%d,%d)-(%d,%d)\n", i, mapbondsa[nn], j, mapbondsb[nn]);
 		aa = mapbondsa[nn];

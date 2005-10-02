@@ -22,6 +22,7 @@ double Ia, Ib, invIa, invIb;
 #endif
 #ifdef MD_PATCHY_HE
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt);
+extern void assign_bond_mapping(int i, int j);
 #endif
 #ifdef MD_ASYM_ITENS
 extern double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtB, **Rdot;
@@ -60,7 +61,12 @@ extern void rebuildNNL(void);
 extern void updrebuildNNL(int na);
 extern void PredictEventNNL(int na, int nb);
 extern void updAllNNL();
-
+#ifdef MD_PATCHY_HE
+extern int locate_contactSP(int i, int j, double shift[3], double t1, double t2, double *evtime, int *ata, int *atb, int *collCode);
+extern void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent);
+extern int *mapbondsa;
+extern int *mapbondsb;
+#endif
 long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0, itsFNL=0, timesFNL=0, 
      timesSNL=0, itsSNL=0, numcalldist=0, numdisttryagain=0;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
@@ -1189,7 +1195,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double factorinvIa, factorinvIb;
 #endif
 #ifdef MD_ASYM_ITENS
-  int k1,k2,k3;
+  int k1,k2;
   double rnI[3];
   double Mvec[3], omega[3];
 #endif
@@ -1739,7 +1745,6 @@ void UpdateAtom(int i)
 {
   double ti, phi, psi;
   int k1, k2;
-  double omega[3];
   ti = Oparams.time - atomTime[i];
   
   rx[i] += vx[i]*ti;
@@ -1991,7 +1996,7 @@ void evolve_euler_angles_symtop(int i, double ti, double *phi, double *psi)
 void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
 			  double cosea[3], double sinea[3], double *phir, double *psir)
 {
-  double wSq, w, phi, psi, cospsi, sinpsi, cosphi, sinphi;
+  double phi, psi, cospsi, sinpsi, cosphi, sinphi;
   int k1, k2, k3;
   //wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
   if (ti == 0.0 || angM[i] == 0.0)
@@ -2153,7 +2158,7 @@ void calc_Rdot(int i, double cosea[3], double sinea[3], double **Ro)
   /* cosea[] = {0:cos(phi),1:cos(theta),2:cos(psi)}
    * sinea[] = {0:sin(phi),1:sin(theta),2:sin(psi)}*/
   /* here we assume d/dt[theta(t)] = 0 */
-  double A, B, C, I1, I3;
+  double A, B, I1, I3;
   double costh, sinth, cospsi, sinphi, cosphi, sinpsi;
   double sinphisinpsi, cosphicospsi, sinphicospsi, cosphisinpsi;
   double cosphisinth;
@@ -2390,7 +2395,10 @@ void fdjac(int n, double x[], double fvec[], double **df,
 {
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
   int na; 
-  double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
+  double  rA[3], rB[3], ti, vA[3], vB[3];
+#ifndef MD_ASYM_ITENS
+  double OmegaA[3][3], OmegaB[3][3];
+#endif
   double DA[3][3], DB[3][3], fx[3], gx[3];
   double Fxt[3], Gxt[3], Ft, Gt;
 #ifdef MD_ASYM_ITENS
@@ -2538,7 +2546,9 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
 {
   double ti;
   int na;
+#ifndef MD_ASYM_ITENS
   double Omega[3][3];
+#endif
 #ifdef MD_ASYM_ITENS
   double cosea[3], sinea[3], phi, psi;
 #endif
@@ -2632,7 +2642,9 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   int na, k1, k2; 
   double  rA[3], rB[3], ti;
   double fx[3], gx[3];
+#ifndef MD_ASYM_ITENS
   double Omega[3][3];
+#endif
 #ifdef MD_ASYM_ITENS
   double cosea[3], sinea[3], phi, psi;
 #endif
@@ -3372,7 +3384,10 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double ti, segno;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck, tryagain = 0;
-  double Omega[3][3], nf, ng, gradf[3], gradg[3];
+#ifndef MD_ASYM_ITENS
+  double Omega[3][3];
+#endif
+  double nf, ng, gradf[3], gradg[3];
   int k1, k2, na, k3;
 #ifdef MD_ASYM_ITENS
   double phi, psi;
@@ -4166,7 +4181,10 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
   double maxddot, told, delt, normddot, ddot[3];
   const int MAXOPTITS = 500;
-  double alpha, factori, factorj;
+  double alpha;
+#ifndef MD_ASYM_ITENS
+  double factori, factorj;
+#endif
   int its=0; 
     
   /* estimate of maximum rate of change for d */
@@ -4349,13 +4367,17 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   double h, d, dold, dold2, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double normddot, ddot[3], maxddot, delt, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
-  double epsd, epsdFast, epsdFastR, epsdMax, factori, factorj; 
+  double epsd, epsdFast, epsdFastR, epsdMax;
+#ifndef MD_ASYM_ITENS
+  double factori, factorj; 
+#endif
   int dorefine;
   int its, foundrc, kk;
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
   epsdMax = OprogStatus.epsdMax;
+
   /* NOTA: 
    * - epsd è di quanto varia d ad ogni iterazione e quindi determina il grado di accuratezza
    * con cui viene individuato il punto di contatto. In generale se due ellissoidi si "spizzicano"
@@ -4740,18 +4762,14 @@ void PredictEvent (int na, int nb)
 	 b, d, t, tInt, vv, distSq, t1, t2;
   int overlap;
 #ifdef MD_PATCHY_HE
-  int ac, bc, collCode, collCodeOld, acHC, bcHC, evtimeHC;
+  int ac, bc, collCode, collCodeOld, acHC, bcHC;
+  double evtime, evtimeHC;
 #endif
   double vecg[5];
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
 #ifdef MD_GRAVITY
   double Lzx, h1, h2, sig, hh1;
-#endif
-#ifdef MD_PATCHY_HE
-  double sigDeltaSq, intdistSq, distSq, s;
-  const double EPSILON = 1E-10;
-  double mredl;
 #endif
   int cellRangeT[2 * NDIM], signDir[NDIM]={0,0,0}, evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
@@ -5070,11 +5088,12 @@ void PredictEvent (int na, int nb)
 		      evtimeHC = evtime;
 		      acHC = ac = 0;
 		      bcHC = bc = 0;
-		      if (!locate_contactSP(na, n, shift, t1, t2, &ac, &bc, &collCode))
+		      if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 			{
 			  if (collCode == MD_EVENT_NONE)
 			    continue;
 			}
+		      t = evtime;
 #else
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 		      	continue;
@@ -5087,6 +5106,23 @@ void PredictEvent (int na, int nb)
 		      t = vecg[4];
 
 #endif
+#ifdef MD_PATCHY_HE
+		      if (t < Oparams.time)
+			{
+#if 1
+			  printf("time:%.15f tInt:%.15f\n", Oparams.time,
+				 tInt);
+			  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+	     					      Sqr(dr[2]))-1.0 );
+			  printf("STEP: %lld\n", (long long int)Oparams.curStep);
+			  printf("atomTime: %.10f \n", atomTime[n]);
+			  printf("n:%d na:%d\n", n, na);
+			  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
+#endif
+			  t = Oparams.time;
+			}
+
+#else
 		      if (t < 0)
 			{
 #if 1
@@ -5101,6 +5137,7 @@ void PredictEvent (int na, int nb)
 #endif
 			  t = 0;
 			}
+#endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
 		      MD_DEBUG20(printf("time: %f Adding collision %d-%d\n", Oparams.time+t, na, n));
 #ifdef MD_PATCHY_HE
