@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.8 2005-06-24 07:50:29 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.9 2005-10-03 09:28:36 demichel Exp $     */
 #ifndef lint
-static char vcid[] = "$Id: mdsimul.c,v 1.8 2005-06-24 07:50:29 demichel Exp $";
+static char vcid[] = "$Id: mdsimul.c,v 1.9 2005-10-03 09:28:36 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -16,7 +16,6 @@ static char vcid[] = "$Id: mdsimul.c,v 1.8 2005-06-24 07:50:29 demichel Exp $";
 #ifdef MPI
 int *equilibrated;
 #endif
-
 struct simStat OsimStat;	     /* global istance of sim_status 
 					structure */
 /* ----------------------------------------------------------------------*/
@@ -192,7 +191,6 @@ void commMD(void)
       /* ADDED 09/04/2001: restart file in ascii format */
       if (chkBakAsciiSteps())
 	{
-	        
 	  UPDATE_SYSTEM;
 	  saveBakAscii(NULL);	
 	  /* save restore datas on Tape and on HD, BAK is the switch
