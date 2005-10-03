@@ -1332,6 +1332,9 @@ void upd_refsysM(int i)
 #endif 
 /* ======================== >>> usrInitAft <<< ==============================*/
 void RDiagtR(int i, double **M, double a, double b, double c, double **Ri);
+#ifdef MD_PATCHY_HE
+double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double dists[MD_PBONDS], int bondpair);
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -1675,6 +1678,10 @@ void usrInitAft(void)
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
+	/* l'interazione sticky è solo fra fra A e B! */
+	if (!((i < Oparams.parnumA && j >= Oparams.parnumA)|| 
+	    (i >= Oparams.parnumA && j < Oparams.parnumA)))
+	  continue;
 	drx = rx[i] - rx[j];
 	shift[0] = L*rint(drx/L);
 	dry = ry[i] - ry[j];
@@ -1682,7 +1689,7 @@ void usrInitAft(void)
 	drz = rz[i] - rz[j]; 
 	shift[2] = L*rint(drz/L);
 	assign_bond_mapping(i, j);
-	dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 	NPB = get_num_pbonds(i, j);
 	for (nn=0; nn < NPB; nn++)
 	  {
@@ -1706,6 +1713,7 @@ void usrInitAft(void)
       upd_refsysM(i);
     }
 #endif
+  //exit(-1);
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
@@ -1713,9 +1721,8 @@ void usrInitAft(void)
   if (OprogStatus.scalevel)
     ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-    //exit(-1);
-  MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
   //exit(-1);
+  MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)
