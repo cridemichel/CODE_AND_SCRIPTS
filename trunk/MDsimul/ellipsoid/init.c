@@ -1345,7 +1345,7 @@ void usrInitAft(void)
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
   int Nm, i, sct, overlap;
-  COORD_TYPE vcmx, vcmy, vcmz;
+  COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
   COORD_TYPE *m;
 #ifdef MD_PATCHY_HE
   double shift[3], sigDeltaSq, drx, dry, drz, dist, dists[MD_PBONDS];
@@ -1355,183 +1355,166 @@ void usrInitAft(void)
   int a;
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
-    /* initialize global varibales */
-    pi = 2.0 * acos(0);
-    
-    Nm = Oparams.parnumA;
-    parnumA = Oparams.parnumA;
-    parnumB = Oparams.parnum - Oparams.parnumA;
-    if (OprogStatus.epsdNL == -1.0)
-      OprogStatus.epsdNL = OprogStatus.epsd;
-    if (OprogStatus.epsdFastNL == -1.0)
-      OprogStatus.epsdFastNL = OprogStatus.epsdFast;
-    if (OprogStatus.epsdMaxNL == -1.0)
-      OprogStatus.epsdMaxNL = OprogStatus.epsdMaxNL;
-    if (OprogStatus.epsdFastRNL == -1.0)
-      OprogStatus.epsdFastRNL = OprogStatus.epsdFastR;
-    sct = sizeof(COORD_TYPE);
+  /* initialize global varibales */
+  pi = 2.0 * acos(0);
 
-    costolSDgrad = cos(OprogStatus.tolSDgrad);
-    costolAngSD =  fabs(cos(OprogStatus.tolAngSD) - 1.0);
-    costhrNR = cos(OprogStatus.tolAngNR);
-    if (OprogStatus.dist5==0)
-      OprogStatus.dist8stps = 0;
-    invL = 1.0/L;
-    L2 = 0.5*L;
+  Nm = Oparams.parnumA;
+  parnumA = Oparams.parnumA;
+  parnumB = Oparams.parnum - Oparams.parnumA;
+  if (OprogStatus.epsdNL == -1.0)
+    OprogStatus.epsdNL = OprogStatus.epsd;
+  if (OprogStatus.epsdFastNL == -1.0)
+    OprogStatus.epsdFastNL = OprogStatus.epsdFast;
+  if (OprogStatus.epsdMaxNL == -1.0)
+    OprogStatus.epsdMaxNL = OprogStatus.epsdMaxNL;
+  if (OprogStatus.epsdFastRNL == -1.0)
+    OprogStatus.epsdFastRNL = OprogStatus.epsdFastR;
+  sct = sizeof(COORD_TYPE);
+
+  costolSDgrad = cos(OprogStatus.tolSDgrad);
+  costolAngSD =  fabs(cos(OprogStatus.tolAngSD) - 1.0);
+  costhrNR = cos(OprogStatus.tolAngNR);
+  if (OprogStatus.dist5==0)
+    OprogStatus.dist8stps = 0;
+  invL = 1.0/L;
+  L2 = 0.5*L;
 #ifdef MD_GRAVITY
-    rcmz = -Lz*0.5;
-    Lz2 = Lz*0.5;
+  rcmz = -Lz*0.5;
+  Lz2 = Lz*0.5;
 #endif
-    poolSize = OprogStatus.eventMult*Oparams.parnum;
-    m = Oparams.m;
-    Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
-    invmA = 1.0/Oparams.m[0];
-    invmB = 1.0/Oparams.m[1];
-    Mred[0][0] = Mred[1][1] = 0.5;
-    Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
-    /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
-     * le particelle */
-    if (Oparams.rcut <= 0.0)
-      Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
-    cellsx = L / Oparams.rcut;
-    cellsy = L / Oparams.rcut;
-#ifdef MD_GRAVITY
-    cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
-#else
-    cellsz = L / Oparams.rcut;
-#endif 
-    printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
-	   cellsx, cellsy, cellsz);
+  poolSize = OprogStatus.eventMult*Oparams.parnum;
+  m = Oparams.m;
+  Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
+  invmA = 1.0/Oparams.m[0];
+  invmB = 1.0/Oparams.m[1];
+  Mred[0][0] = Mred[1][1] = 0.5;
+  Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
 #if 0
-    printf("massA: %f massB: %f sigmaA:%f sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1],
+  printf("massA: %f massB: %f sigmaA:%f sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1],
 	 Oparams.sigma[0][0], Oparams.sigma[1][1], Oparams.sigma[0][1]);
 #endif
 #if defined(MD_GRAVITY)
-    g2 = 0.5*Oparams.ggrav;
-    mgA = Oparams.m[0]*Oparams.ggrav; 
-    mgB = Oparams.m[1]*Oparams.ggrav;
+  g2 = 0.5*Oparams.ggrav;
+  mgA = Oparams.m[0]*Oparams.ggrav; 
+  mgB = Oparams.m[1]*Oparams.ggrav;
 #endif
-  
-    if (OprogStatus.epsdSD < 0.0)
-      OprogStatus.epsdSD = Sqr(OprogStatus.epsd);
-    if (OprogStatus.tolSDlong < 0.0)
-      OprogStatus.tolSDlong = OprogStatus.tolSD;
-    /*    
-     ** CHECK FOR PARTICLE OVERLAPS **
-     ** CALCULATE ENERGY            ** */
-    lastcol= malloc(sizeof(double)*Oparams.parnum);
-    atomTime = malloc(sizeof(double)*Oparams.parnum);
-#ifdef MD_PATCHY_HE
-    lastbump =  malloc(sizeof(struct LastBumpS)*Oparams.parnum);
-#else
-    lastbump = malloc(sizeof(int)*Oparams.parnum);
-#endif
-    cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
-    inCell[0] = malloc(sizeof(int)*Oparams.parnum);
-    inCell[1]= malloc(sizeof(int)*Oparams.parnum);
-    inCell[2] = malloc(sizeof(int)*Oparams.parnum);
-#ifdef MD_PATCHY_HE
-    tree = AllocMatI(12, poolSize);
-    bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
-    bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
-    numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
-    numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
-    bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
-#else
-    tree = AllocMatI(9, poolSize);
-#endif
-    treeTime = malloc(sizeof(double)*poolSize);
-    treeRxC  = malloc(sizeof(double)*poolSize);
-    treeRyC  = malloc(sizeof(double)*poolSize);
-    treeRzC  = malloc(sizeof(double)*poolSize);
-    Xa = matrix(3, 3);
-    Xb = matrix(3, 3);
-    XbXa = matrix(3, 3);
-    indx=ivector(8); 
-    fjac=matrix(8, 8);
-    g=vector(8);
-    p=vector(8); 
-    xold=vector(8); 
-    fvec=vector(8); 
-    fvecD=vector(8);
-    fvecG=vector(8);
-#ifdef MD_ASYM_ITENS
-    Oparams.I[0][1] = Oparams.I[0][0];
-    Oparams.I[1][1] = Oparams.I[1][0];
-    Ia = matrix(3, 3);
-    Ib = matrix(3, 3);
-    Iatmp = matrix(3,3);
-    Ibtmp = matrix(3,3);
-    invIa = matrix(3, 3);
-    invIb = matrix(3, 3);
-    angM = malloc(sizeof(double)*Oparams.parnum);
-    phi0 = malloc(sizeof(double)*Oparams.parnum);
-    psi0 = malloc(sizeof(double)*Oparams.parnum);
-    costheta0 = malloc(sizeof(double)*Oparams.parnum);
-    sintheta0 = malloc(sizeof(double)*Oparams.parnum);
-    theta0 =    malloc(sizeof(double)*Oparams.parnum);
-    psi0   =    malloc(sizeof(double)*Oparams.parnum);
-    phi0   =    malloc(sizeof(double)*Oparams.parnum);
-    angM   =    malloc(sizeof(double)*Oparams.parnum);
-    REt = matrix(3,3);
-    REtA = matrix(3,3);
-    REtB = matrix(3,3);
-    RE0 = matrix(3,3);
-    Rdot = matrix(3,3);
-    RM = malloc(sizeof(double**)*Oparams.parnum);
-    for (i=0; i < Oparams.parnum; i++) 
-      RM[i] = matrix(3, 3);
-#endif
-    powdirs = matrix(6,6);
-#if 0
-    ellips_mesh[0]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
-    ellips_mesh[1]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
-    for (i = 0; i < OprogStatus.n1; i++)
-      {
-	ellips_mesh[0][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
-	ellips_mesh[1][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
-      }
-    build_mesh(ellips_mesh[0], Oparams.a[0], Oparams.b[0], Oparams.c[0]);
-    build_mesh(ellips_mesh[1], Oparams.a[1], Oparams.b[1], Oparams.c[1]);
-#endif
-    RA = matrix(3, 3);
-    RB = matrix(3, 3);
-    Rt = matrix(3, 3);
-    RtA = matrix(3, 3);
-    RtB = matrix(3, 3);
-    Aip = matrix(3,3);
-    R = malloc(sizeof(double**)*Oparams.parnum);
-    for (i=0; i < Oparams.parnum; i++)
-      {
-	R[i] = matrix(3, 3);
-#ifdef MD_PATCHY_HE
-	lastbump[i].mol = -1;
-  	lastbump[i].at = -1;
-#else
-	lastbump[i] = -1;
-#endif
-	lastcol[i] = 0.0;
-      }
-    u2R();
-    if (OprogStatus.CMreset==-1)
-      {
-	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-	resetCM(1);
-      }
-    else if (OprogStatus.CMreset==-2)
-      {
-	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-      }
 
-    if (Oparams.curStep == 1)
+  if (OprogStatus.epsdSD < 0.0)
+    OprogStatus.epsdSD = Sqr(OprogStatus.epsd);
+  if (OprogStatus.tolSDlong < 0.0)
+    OprogStatus.tolSDlong = OprogStatus.tolSD;
+  /*    
+   ** CHECK FOR PARTICLE OVERLAPS **
+   ** CALCULATE ENERGY            ** */
+  lastcol= malloc(sizeof(double)*Oparams.parnum);
+  atomTime = malloc(sizeof(double)*Oparams.parnum);
+#ifdef MD_PATCHY_HE
+  lastbump =  malloc(sizeof(struct LastBumpS)*Oparams.parnum);
+#else
+  lastbump = malloc(sizeof(int)*Oparams.parnum);
+#endif
+#ifdef MD_PATCHY_HE
+  tree = AllocMatI(12, poolSize);
+  bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+  bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+  numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+  numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
+  bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
+#else
+  tree = AllocMatI(9, poolSize);
+#endif
+  treeTime = malloc(sizeof(double)*poolSize);
+  treeRxC  = malloc(sizeof(double)*poolSize);
+  treeRyC  = malloc(sizeof(double)*poolSize);
+  treeRzC  = malloc(sizeof(double)*poolSize);
+  Xa = matrix(3, 3);
+  Xb = matrix(3, 3);
+  XbXa = matrix(3, 3);
+  indx=ivector(8); 
+  fjac=matrix(8, 8);
+  g=vector(8);
+  p=vector(8); 
+  xold=vector(8); 
+  fvec=vector(8); 
+  fvecD=vector(8);
+  fvecG=vector(8);
+#ifdef MD_ASYM_ITENS
+  Oparams.I[0][1] = Oparams.I[0][0];
+  Oparams.I[1][1] = Oparams.I[1][0];
+  Ia = matrix(3, 3);
+  Ib = matrix(3, 3);
+  Iatmp = matrix(3,3);
+  Ibtmp = matrix(3,3);
+  invIa = matrix(3, 3);
+  invIb = matrix(3, 3);
+  angM = malloc(sizeof(double)*Oparams.parnum);
+  phi0 = malloc(sizeof(double)*Oparams.parnum);
+  psi0 = malloc(sizeof(double)*Oparams.parnum);
+  costheta0 = malloc(sizeof(double)*Oparams.parnum);
+  sintheta0 = malloc(sizeof(double)*Oparams.parnum);
+  theta0 =    malloc(sizeof(double)*Oparams.parnum);
+  psi0   =    malloc(sizeof(double)*Oparams.parnum);
+  phi0   =    malloc(sizeof(double)*Oparams.parnum);
+  angM   =    malloc(sizeof(double)*Oparams.parnum);
+  REt = matrix(3,3);
+  REtA = matrix(3,3);
+  REtB = matrix(3,3);
+  RE0 = matrix(3,3);
+  Rdot = matrix(3,3);
+  RM = malloc(sizeof(double**)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++) 
+    RM[i] = matrix(3, 3);
+#endif
+  powdirs = matrix(6,6);
+#if 0
+  ellips_mesh[0]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
+  ellips_mesh[1]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
+  for (i = 0; i < OprogStatus.n1; i++)
+    {
+      ellips_mesh[0][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
+      ellips_mesh[1][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
+    }
+  build_mesh(ellips_mesh[0], Oparams.a[0], Oparams.b[0], Oparams.c[0]);
+  build_mesh(ellips_mesh[1], Oparams.a[1], Oparams.b[1], Oparams.c[1]);
+#endif
+  RA = matrix(3, 3);
+  RB = matrix(3, 3);
+  Rt = matrix(3, 3);
+  RtA = matrix(3, 3);
+  RtB = matrix(3, 3);
+  Aip = matrix(3,3);
+  R = malloc(sizeof(double**)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      R[i] = matrix(3, 3);
+#ifdef MD_PATCHY_HE
+      lastbump[i].mol = -1;
+      lastbump[i].at = -1;
+#else
+      lastbump[i] = -1;
+#endif
+      lastcol[i] = 0.0;
+    }
+  u2R();
+  if (OprogStatus.CMreset==-1)
+    {
+      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+      resetCM(1);
+    }
+  else if (OprogStatus.CMreset==-2)
+    {
+      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+    }
+
+  if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);
-     
+
       if ( overlap ) 
-     	{
- 	  printf("ERROR: Particle overlap in initial configuration\n");
- 	  exit(1);      
-  	}
+	{
+	  printf("ERROR: Particle overlap in initial configuration\n");
+	  exit(1);      
+	}
     }
 #if 0
   for (i= 0; i < Oparams.parnum; i++)
@@ -1553,7 +1536,7 @@ void usrInitAft(void)
 	{
 	  f = fopenMPI(absMisHD("MSDB.dat"), "w+");
 	  fclose(f);
-      	  f = fopenMPI(absMisHD("rotMSDB.dat"), "w+");
+	  f = fopenMPI(absMisHD("rotMSDB.dat"), "w+");
 	  fclose(f);
 	}
       f = fopenMPI(absMisHD("temp.dat"), "w+");
@@ -1600,7 +1583,7 @@ void usrInitAft(void)
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
       if (OprogStatus.storerate > 0.0)
-      	OprogStatus.nextStoreTime = OprogStatus.storerate;
+	OprogStatus.nextStoreTime = OprogStatus.storerate;
       OprogStatus.nextDt += Oparams.Dt;
     }
   else
@@ -1659,8 +1642,9 @@ void usrInitAft(void)
       ItensD[a][2] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.b[a]));
 #endif
     };
- 
+
   /* maxax è il diametro del centroide */
+
 #ifdef MD_PATCHY_HE
   build_atom_positions();
   distSPA = 0.0;
@@ -1679,6 +1663,7 @@ void usrInitAft(void)
 	distSPB = dist;
     }
 #endif
+  MAXAX = 0.0;
   for (i = 0; i < Oparams.parnum; i++)
     {
       maxax[i] = 0.0;
@@ -1698,13 +1683,33 @@ void usrInitAft(void)
 	}
       else
 	{
-     	  if (distSPB > maxax[i])
+	  if (distSPB > maxax[i])
 	    maxax[i] = distSPB;
 	}
 #endif
       maxax[i] *= 2.0;
+      if (maxax[i] > MAXAX)
+	MAXAX = maxax[i];
       //printf("maxax aft[%d]: %.15G\n", i, maxax[i]);
     }
+  /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
+   * le particelle */
+  if (Oparams.rcut <= 0.0)
+    Oparams.rcut = MAXAX*1.01;
+  //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+  cellsx = L / Oparams.rcut;
+  cellsy = L / Oparams.rcut;
+#ifdef MD_GRAVITY
+  cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
+#else
+  cellsz = L / Oparams.rcut;
+#endif 
+  printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
+	 cellsx, cellsy, cellsz);
+  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  inCell[0] = malloc(sizeof(int)*Oparams.parnum);
+  inCell[1]= malloc(sizeof(int)*Oparams.parnum);
+  inCell[2] = malloc(sizeof(int)*Oparams.parnum);
 #ifdef MD_PATCHY_HE
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -1715,7 +1720,7 @@ void usrInitAft(void)
       {
 	/* l'interazione sticky è solo fra fra A e B! */
 	if (!((i < Oparams.parnumA && j >= Oparams.parnumA)|| 
-	    (i >= Oparams.parnumA && j < Oparams.parnumA)))
+	      (i >= Oparams.parnumA && j < Oparams.parnumA)))
 	  continue;
 	drx = rx[i] - rx[j];
 	shift[0] = L*rint(drx/L);
@@ -1791,7 +1796,7 @@ void usrInitAft(void)
 	    }
 	}
 #endif
-  
+
       for(i = 0; i < Oparams.parnum; i++)
 	{
 	  /* store the initial positions of particles */
@@ -1803,22 +1808,22 @@ void usrInitAft(void)
 	  vcmx = vx[i];
 	  vcmy = vy[i];
 	  vcmz = vz[i];
-	
+
 	  OprogStatus.vcmx0[i] = vcmx;
 	  OprogStatus.vcmy0[i] = vcmy;
 	  OprogStatus.vcmz0[i] = vcmz;
-	  
+
 	}
-      
+
       OprogStatus.sumEta   = 0.0;
       OprogStatus.sumTemp  = 0.0;
       OprogStatus.sumPress = 0.0;
-      
+
       for(i = 0; i < NUMK; i++) 
 	{
 	  OprogStatus.sumS[i] = 0.0;
 	}
-      
+
       for(i = 0; i < MAXBIN; i++)
 	{
 	  OprogStatus.hist[i] = 0;

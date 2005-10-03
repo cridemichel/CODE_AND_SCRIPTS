@@ -9,7 +9,7 @@
 #define MD_DEBUG20(x) 
 #define MD_DEBUG29(x) 
 #define MD_DEBUG30(x) 
-#define MD_DEBUG31(x) x
+#define MD_DEBUG31(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #if defined(MPI)
@@ -33,7 +33,7 @@ extern double *maxax;
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
 extern void update_MSDrot(int i);
-void InvMatrix(double **a, double **b, int NB);
+extern void InvMatrix(double **a, double **b, int NB);
 extern void calc_angmom(int i, double **I);
 double min(double a, double b);
 extern void upd_refsysM(int i);
@@ -171,6 +171,7 @@ void build_atom_positions(void)
 }
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
 extern void calc_energy(char *msg);
+extern void print_matrix(double **M, int n);
 
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
@@ -210,12 +211,12 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
 #endif
   numcoll++;
-  printf("collision code: %d\n", bt);
-  calc_energy("PRIMA");
+  //printf("collision code: %d (%d,%d)\n", bt, i, j);
+  //calc_energy("PRIMA");
   if (bt == MD_CORE_BARRIER)
     {
       bump(i, j, rxC, ryC, rzC, W);
-      calc_energy("DOPO HARD COLL");
+      //calc_energy("DOPO HARD COLL");
       MD_DEBUG10(printf(">>>>>>>>>>collCode: %d\n", bt));
       MD_DEBUG30(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
       return;
@@ -241,6 +242,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG20(printf("rB %f %f %f\n", rB[0], rB[1], rB[2]));
   BuildAtomPosAt(i, ata, rA, R[i], ratA);
   BuildAtomPosAt(j, atb, rB, R[j], ratB);
+  //printf("ata:%d atb:%d\n", ata, atb);
   MD_DEBUG20(printf("ratA %f %f %f\n", ratA[0], ratA[1], ratA[2]));
   MD_DEBUG20(printf("ratB %f %f %f\n", ratB[0], ratB[1], ratB[2]));
   for (kk = 0; kk < 3; kk++)
@@ -296,6 +298,8 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       } 
   InvMatrix(Iatmp, invIa, 3);
   InvMatrix(Ibtmp, invIb, 3);
+  //printf("invIa=\n");
+  //print_matrix(invIa, 3);
   Mvec[0] = Mx[i];
   Mvec[1] = My[i];
   Mvec[2] = Mz[i];
@@ -407,6 +411,10 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	  remove_bond(i, j, ata, atb);
 	  remove_bond(j, i, atb, ata);
 	}
+#if 0
+      printf("factor: %.15G mredl=%.15G vc=%.15G sqrt(XXX=%.15G) bheight: %.15G\n",
+		 factor, mredl, vc, sqrt(Sqr(vc) - 2.0*Oparams.bheight/mredl), Oparams.bheight);
+#endif	 
       factor *= mredl;
       break;
     case MD_OUTIN_BARRIER:
@@ -418,7 +426,6 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     }
-
   MD_DEBUG(printf("factor=%f denom=%f\n", factor, denom));
   delpx = factor * norm[0];
   delpy = factor * norm[1];
@@ -476,6 +483,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #endif
   MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
 #ifdef MD_ASYM_ITENS
+  factor = -factor;
   for (a=0; a < 3; a++)
     {
       wx[i] += factor*invIa[0][a]*rACn[a];
@@ -508,7 +516,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
 
-  calc_energy("DOPO");
+  //calc_energy("DOPO");
 }
 void check_bonds(char* msg, int i, int j, int ata, int atb, int yesexit)
 {
@@ -639,6 +647,8 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
 	  for (k2 = 0; k2 < 3; k2++)
 	    rat[k1] += R[k2][k1]*spXYZ[k2]; 
 	}
+      //printf("ata= %d rat= %f %f %f\n", ata, rat[0], rat[1], rat[2]);
+      //printf("rO = %f %f %f \n", rO[0], rO[1], rO[2]);
       //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
       //printf("ata=%d %f %f %f @ 0.075 C[blue]\n", ata, R[0][ata-1], R[1][ata-1], R[2][ata-1]);
     }
