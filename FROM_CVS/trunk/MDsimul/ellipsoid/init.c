@@ -1790,8 +1790,13 @@ void writeAllCor(FILE* fs)
 #ifndef MD_STOREMGL 
   for (i = 0; i < Oparams.parnum; i++)
     {
+#ifdef MD_ASYM_ITENS
+      fprintf(fs, tipodat, vx[i], vy[i], vz[i], Mx[i], My[i], Mz[i]);
+#else
       fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
+#endif
     }
+
 #ifdef MD_GRAVITY
   fprintf(fs, "%.15G %.15G\n", L, Lz);
 #else
@@ -1828,13 +1833,20 @@ void readAllCor(FILE* fs)
 	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
 	  exit(-1);
 	}
+#ifdef MD_ASYM_ITENS
+      if (fscanf(fs, "%lf %lf %lf\n", &Mx[i], &My[i], &Mz[i]) < 3)
+	{
+	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
+	  exit(-1);
+	}
+#else
       if (fscanf(fs, "%lf %lf %lf\n", &wx[i], &wy[i], &wz[i]) < 3)
 	{
 	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
 	  exit(-1);
 	}
+#endif
     }
-  
 
 #ifdef MD_GRAVITY
   if (fscanf(fs, "%lf %lf\n",  &L, &Lz) < 2)

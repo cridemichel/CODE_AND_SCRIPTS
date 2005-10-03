@@ -65,11 +65,11 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 
 #define C_T COORD_TYPE
 #define NK 10000
-#define NA 1 /* number of atoms for each molecule (particle) */
+#define NA 5 /* number of atoms for each molecule (particle) */
 
 #define MAXPAR 5000      /* maximum number of simulated particles */
 #ifdef MD_PATCHY_HE
-#define MD_PBONDS_MAX 100
+#define MD_PBONDS 10
 #endif
 #define NUM_PAR 2000   /* Number of particles for the simulation */
 #define NUMK 99    /* number of k-points in which we must  calculate the 
@@ -506,7 +506,6 @@ struct params
 #ifdef MD_PATCHY_HE
   double sigmaSticky; /* ampiezza della buca */
   double bheight;
-  int npbonds[2][2];
 #endif
 #ifdef MD_GRAVITY
   double ggrav;

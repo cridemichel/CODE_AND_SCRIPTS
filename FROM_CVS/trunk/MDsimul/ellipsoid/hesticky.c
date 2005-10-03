@@ -39,13 +39,8 @@ int calcdist_retcheck;
 double rA[3], rB[3];
 int polinterr, polinterrRyck;
 /* *** change here if you change the number sticky spots *** */
-const int MD_PBONDSAA=8, MD_PBONDSAB=8, MD_PBONDSBB=8;
-int mapbondsaAA[MD_PBONDSAA]={1,1,2,2,3,3,4,4};
-int mapbondsbAA[MD_PBONDSAA]={1,2,1,2,1,2,1,2};
-int mapbondsaAB[MD_PBONDSAB]={1,1,2,2,3,3,4,4};
-int mapbondsbAB[MD_PBONDSAB]={1,2,1,2,1,2,1,2};
-int mapbondsaBB[MD_PBONDSBB]={1,1,2,2,3,3,4,4};
-int mapbondsbBB[MD_PBONDSBB]={1,2,1,2,1,2,1,2};
+int mapbondsaAB[MD_PBONDS]={1,1,2,2,3,3,4,4,5,5};
+int mapbondsbAB[MD_PBONDS]={1,2,1,2,1,2,1,2,1,2};
 int *mapbondsa;
 int *mapbondsb;
 /* ------------------------------------------------------------ */
@@ -114,7 +109,21 @@ double calc_norm(double *vec);
 double rcutL, aL, bL, cL;
 extern double max_ax(int i);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
-
+#define MD_STSPOTS_A 5
+#define MD_STSPOTS_B 2
+double spApos[MD_STSPOTS_A] = {};
+double spBpos[MD_STSPOTS_B] = {};
+double spXYZ_A[MD_STSPOTS_A];
+double spXYZ_B[MD_STSPOTS_B];
+void build_atom_positions(void)
+{
+ /* N.B. le coordinate spXpos sono del tipo (Dr, theta, phi),
+  * dove se Dr=0 la sfera sticky viene posizionata esattamente in 
+  * maniera tangente e theta e phi sono angoli in coordinate sferiche.
+  * Tale routine converte le coordinate spXpos in coordinate cartesiane 
+  * riferite al riferimento del corpo rigido. */  
+  
+}
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
@@ -503,25 +512,15 @@ void assign_bond_mapping(int i, int j)
   /* NOTA: l'interazione bonded è solo tra Si e O 
    * i <  Oparams.parnumA => O
    * i >=  Oparams.parnumA => Si */
-  if (i < Oparams.parnumA && j < Oparams.parnumA)
-    {
-      mapbondsa = mapbondsaAA;
-      mapbondsb = mapbondsbAA;
-    }
-  else if (i >= Oparams.parnumA && j >= Oparams.parnumA)
-    {
-      mapbondsa = mapbondsaBB;
-      mapbondsb = mapbondsbBB;
-    }
-  else if (i < Oparams.parnumA && j >= Oparams.parnumA)
+  if (i < Oparams.parnumA)
     {
       mapbondsa = mapbondsaAB;
       mapbondsb = mapbondsbAB;
     }
-  else
+  else 
     {
-      mapbondsa = mapbondsbAB;
       mapbondsb = mapbondsaAB;
+      mapbondsa = mapbondsbAB;
     }
 }
 
@@ -560,78 +559,52 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
 {
   /* QUESTA VA RISCRITTA PER GLI ELLISSOIDI STICKY!!! */
   /* calcola le coordinate nel laboratorio di uno specifico atomo */
-  int kk;
-  double r1[3], r2[3], r3[3], nr, fact;
-  double radius; 
+  int k1, k2;
+  double r1[3], r2[3], r3[3], nr, fact, *spXYZ;
+  //double radius; 
   /* l'atomo zero si suppone nell'origine 
    * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
    * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
    * a partire da questi. */
 
-  radius = Oparams.sigma[0][1] / 2.0;
+  if (i < Oparams.parnumA)
+    spXYZ = spXYZ_A;
+  else
+    spXYZ = spXYZ_B;
+  //radius = Oparams.sigma[0][1] / 2.0;
   if (ata == 0)
     {
-      for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk];
+      for (k1 = 0; k1 < 3; k1++)
+	rat[k1] = rO[k1];
       //printf("%f %f %f @ 0.5 C[red]\n", rat[0], rat[1], rat[2]);
     }
-  else if (ata <= 3)
+  else 
     {
-      for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk] + R[kk][ata-1]; 
+      for (k1 = 0; k1 < 3; k1++)
+	{ 
+	  rat[k1] = rO[k1];
+	  for (k2 = 0; k2 < 3; k2++)
+	    rat[k1] += R[k2][k1]*spXYZ_A[k2]; 
+	}
       //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
       //printf("ata=%d %f %f %f @ 0.075 C[blue]\n", ata, R[0][ata-1], R[1][ata-1], R[2][ata-1]);
     }
-  else
-    {
-      /* l'atomo restante è un electron site */
-      for (kk = 0; kk < 3; kk++)
-	{
-	  r1[kk] = R[kk][1]-R[kk][0];
-	  r2[kk] = R[kk][2]-R[kk][0];
-	}
-      vectProdVec(r1, r2, r3);
-      nr = calc_norm(r3);
-      for (kk = 0; kk < 3; kk++)
-	r3[kk] *= radius/nr;
-      for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk] - r3[kk]; 
-      //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
-    }
+  
 }
 void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
-  int a;
+  int a, nsp;
   /* l'atomo zero si suppone nell'origine */
-  for (a=0; a < 5; a++)
-    BuildAtomPosAt(i, a, rO, R, rat[a]);
-}
-
-void assign_bond_mapping(int i, int j)
-{
-  /* NOTA: l'interazione bonded è solo tra Si e O 
-   * i <  Oparams.parnumA => O
-   * i >=  Oparams.parnumA => Si */
-  if (i < Oparams.parnumA && j < Oparams.parnumA)
+  if (i < Oparams.parnumA)
     {
-      mapbondsa = mapbondsbAA;
-      mapbondsb = mapbondsaAA;
-    }
-  else if (i > Oparams.parnumA && j > Oparams.parnumA) 
-    {
-      mapbondsa = mapbondsaBB;
-      mapbondsb = mapbondsbBB;
-    }
-  else if (i < Oparams.parnumA && j > Oparams.parnumA)
-    {
-      mapbondsa = mapbondsaAB;
-      mapbondsb = mapbondsbAB;
+      for (a=0; a < MD_STSPOTS_A; a++)
+	BuildAtomPosAt(i, a, rO, R, rat[a]);
     }
   else
-    { 
-      mapbondsa = mapbondsbAB;
-      mapbondsb = mapbondsaAB;
+    {
+      for (a=0; a < MD_STSPOTS_B; a++)
+	BuildAtomPosAt(i, a, rO, R, rat[a]);
     }
 }
 int ibr, jbr, nnbr; 
