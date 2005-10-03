@@ -28,7 +28,11 @@ extern void assign_bond_mapping(int i, int j);
 extern double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtB, **Rdot;
 extern double cosEulAng[2][3], sinEulAng[2][3];
 #endif
+#ifdef MD_PATCHY_HE
+struct LastBumpS *lastbump;
+#else
 int *lastbump;
+#endif
 extern double *axa, *axb, *axc;
 extern int *scdone;
 extern double *maxax;
@@ -1993,8 +1997,7 @@ void evolve_euler_angles_symtop(int i, double ti, double *phi, double *psi)
   printf("costheta0[]:%.15G psi0[]:%.15G phi0[]=%.15G Delta=%.15G\n", costheta0[i], psi0[i], phi0[i], invI1*angM[i]*ti);
 #endif
 }
-void symtop_evolve_orient(int i, double ti, double **Ro, double **REt,
-			  double cosea[3], double sinea[3], double *phir, double *psir)
+void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3], double *phir, double *psir)
 {
   double phi, psi, cospsi, sinpsi, cosphi, sinphi;
   int k1, k2, k3;
@@ -4472,7 +4475,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       return 0;
     }
 #endif
+#ifdef MD_PATCHY_HE
+  if (lastbump[j].mol==i && lastbump[j].at==0 && lastbump[i].mol==j && lastbump[i].at==0)
+#else
   if (lastbump[j]==i && lastbump[i]==j)
+#endif
     {
       MD_DEBUG11(printf("last collision was between (%d-%d) d=%.15G\n", i, j, d));
       if (d < 0 && fabs(d) > epsd)
@@ -4609,12 +4616,23 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+#ifdef MD_PATCHY_HE
+	      if (vecg[4]>t2 || vecg[4]<t1 || 
+		  (lastbump[i].mol==j && lastbump[i].at==0 && lastbump[j].mol==i && lastbump[j].at==0
+		   && fabs(vecg[4] - lastcol[i])<1E-10))
+		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
+		return 0;
+	      else
+		return 1;
+
+#else
 	      if (vecg[4]>t2 || vecg[4]<t1 || 
 		  (lastbump[i] == j && lastbump[j]==i && fabs(vecg[4] - lastcol[i])<1E-10))
 		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
 		return 0;
 	      else
 		return 1;
+#endif
 	    }
 	  else 
 	    {
@@ -5492,8 +5510,17 @@ void ProcessCollision(void)
 #else
   OprogStatus.lastcolltime[evIdA] = OprogStatus.lastcolltime[evIdB] = 
     lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+#ifdef MD_PATCHY_HE
+  lastbump[evIdA].mol=evIdB;
+  lastbump[evIdA].at = evIdC;
+  lastbump[evIdB].mol=evIdA;
+  lastbump[evIdB].at = evIdD;
+  lastbump[evIdA].type = evIdE;
+  lastbump[evIdB].type = evIdE;
+#else
   lastbump[evIdA]=evIdB;
   lastbump[evIdB]=evIdA;
+#endif
 #endif
 #ifdef MD_HSVISCO
   OprogStatus.lastcoll = Oparams.time;

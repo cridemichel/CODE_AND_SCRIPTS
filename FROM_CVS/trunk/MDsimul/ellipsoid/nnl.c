@@ -28,7 +28,6 @@ extern double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del 
 extern int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 extern int evIdA, evIdB, parnumB, parnumA;
-extern int *lastbump;
 extern double *axa, *axb, *axc;
 extern int *scdone;
 extern double *maxax;

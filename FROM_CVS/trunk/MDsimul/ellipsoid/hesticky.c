@@ -16,9 +16,11 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
-extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **REtA, **REtB;
+extern double cosEulAng[2][3], sinEulAng[2][3];
+
 #ifdef MD_ASYM_ITENS
-double **Ia, **Ib, **invIa, **invIb;
+double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
 #else
 double Ia, Ib, invIa, invIb;
 #endif
@@ -29,11 +31,14 @@ extern double *maxax;
 /* Routines for LU decomposition from Numerical Recipe online */
 void ludcmpR(double **a, int* indx, double* d, int n);
 void lubksbR(double **a, int* indx, double *b, int n);
+extern void update_MSDrot(int i);
 void InvMatrix(double **a, double **b, int NB);
+extern void calc_angmom(int i, double **I);
 double min(double a, double b);
+extern void upd_refsysM(int i);
 double zbrent(double (*func)(double), double x1, double x2, double tol);
 extern double invaSq[2], invbSq[2], invcSq[2];
-double rxC, ryC, rzC;
+extern double rxC, ryC, rzC;
 extern int SolveLineq (double **a, double *x, int n); 
 int calcdist_retcheck;
 double rA[3], rB[3];
@@ -44,18 +49,22 @@ int mapbondsbAB[MD_PBONDS]={1,2,1,2,1,2,1,2,1,2};
 int *mapbondsa;
 int *mapbondsb;
 /* ------------------------------------------------------------ */
+extern void bump (int i, int j, double rCx, double rCy, double rCz, double* W);
 extern int *crossevtodel;
-long long int itsF=0, timesF=0, itsS=0, timesS=0, numcoll=0;
+extern long long int itsF, timesF, itsS, timesS, numcoll;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
 void ScheduleEventBarr (int idA, int idB, int idata, int atb, int idcollcode, double tEvent);
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double dists[MD_PBONDS], int bondpair);
+extern void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3], double *phir, double *psir);
+
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
 void remove_bond(int na, int n, int a, int b);
 void add_bond(int na, int n, int a, int b);
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
 void InitEventList (void);
+extern void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3]);
 int bound(int na, int n, int a, int b);
 #ifdef MD_HSVISCO
 void calcT(void);
@@ -81,8 +90,8 @@ double W, K, T1xx, T1yy, T1zz,
        PxxKin, PyyKin, PzzKin, PxxHS, PyyHS, PzzHS, PxxST, PyyST, PzzST;
 /*  Patxy, Patyz, Patzx, Patxx, Patyy, Patzz,
     T1myz, T1mzx, T1mxx, T1myy, T1mzz;  */
-double DrSq = 0.0; 
-const double timbig = 1E12;
+//extern double DrSq = 0.0; 
+//extern const double timbig = 1E12;
 /* used by linked list routines */
 double *lastcol;
 double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
@@ -111,41 +120,71 @@ extern double max_ax(int i);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
 #define MD_STSPOTS_A 5
 #define MD_STSPOTS_B 2
-double spApos[MD_STSPOTS_A] = {};
-double spBpos[MD_STSPOTS_B] = {};
-double spXYZ_A[MD_STSPOTS_A];
-double spXYZ_B[MD_STSPOTS_B];
+double spApos[MD_STSPOTS_A][3] = {};
+double spBpos[MD_STSPOTS_B][3] = {};
+
+double spXYZ_A[MD_STSPOTS_A][3];
+double spXYZ_B[MD_STSPOTS_B][3];
 void build_atom_positions(void)
 {
  /* N.B. le coordinate spXpos sono del tipo (Dr, theta, phi),
   * dove se Dr=0 la sfera sticky viene posizionata esattamente in 
-  * maniera tangente e theta e phi sono angoli in coordinate sferiche.
+  * maniera tangente e theta (0 <= theta <= Pi) e phi (0 <= phi < 2Pi)
+  * sono gli angoli in coordinate sferiche che individuano il punto di contatto
+  * tra sticky sphere ed ellissoide.
   * Tale routine converte le coordinate spXpos in coordinate cartesiane 
   * riferite al riferimento del corpo rigido. */  
-  
+  int k1;
+  double x,y,z, grad[3];
+  for (k1 = 0; k1 < MD_STSPOTS_A; k1++)
+    {
+      x = Oparams.a[0]*cos(spApos[k1][2])*sin(spApos[k1][1]);
+      y = Oparams.b[0]*sin(spApos[k1][2])*sin(spApos[k1][1]);
+      z = Oparams.c[0]*cos(spApos[k1][1]);
+      grad[0] = 2.0 * x / Sqr(Oparams.a[0]);
+      grad[1] = 2.0 * y / Sqr(Oparams.b[0]);
+      grad[2] = 2.0 * z / Sqr(Oparams.c[0]);
+      spXYZ_A[k1][0] = x + grad[0]*Oparams.sigmaSticky*0.5;
+      spXYZ_A[k1][1] = y + grad[1]*Oparams.sigmaSticky*0.5;
+      spXYZ_A[k1][2] = z + grad[2]*Oparams.sigmaSticky*0.5;
+    }
+  for (k1 = 0; k1 < MD_STSPOTS_B; k1++)
+    {
+      x = Oparams.a[1]*cos(spBpos[k1][2])*sin(spBpos[k1][1]);
+      y = Oparams.b[1]*sin(spBpos[k1][2])*sin(spBpos[k1][1]);
+      z = Oparams.c[1]*cos(spBpos[k1][1]);
+      grad[0] = 2.0 * x / Sqr(Oparams.a[1]);
+      grad[1] = 2.0 * y / Sqr(Oparams.b[1]);
+      grad[2] = 2.0 * z / Sqr(Oparams.c[1]);
+      spXYZ_B[k1][0] = x + grad[0]*Oparams.sigmaSticky*0.5;
+      spXYZ_B[k1][1] = y + grad[1]*Oparams.sigmaSticky*0.5;
+      spXYZ_B[k1][2] = z + grad[2]*Oparams.sigmaSticky*0.5;
+    }
 }
+extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
+
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
-  double factor=0, invmi, invmj, sigmai, mredl, shift[3];
-  double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3], r12[3];
+  double factor=0, invmi, invmj, mredl;
+  double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
 #ifdef MD_HSVISCO
   double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold, taus, 
 	  DTxx, DTyy, DTzz, Txxold, Tyyold, Tzzold;
 #endif
-  double denom, rCx, rCy, rCz, nrAB, Dr, V, Eold, E, Vold, Kold;
+  double denom, rCx, rCy, rCz, nrAB, Dr;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
 #endif
 #ifdef MD_ASYM_ITENS
-  int k1,k2,k3;
+  int k1,k2;
   double rnI[3];
   double Mvec[3], omega[3];
 #endif
-  int na, a, kk, oldbond=-1;
-#if 1
+  int na, a, b, kk;
+#if 0
   if (i < Oparams.parnumA && j < Oparams.parnumA)
     {
       /* qui si assume che ci possano essere due specie e che i diametri degli atomi
@@ -164,7 +203,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   numcoll++;
   if (bt == MD_CORE_BARRIER)
     {
-      bump(i, j, W, Sqr(sigmai));
+      bump(i, j, rxC, ryC, rzC, W);
       MD_DEBUG10(printf(">>>>>>>>>>collCode: %d\n", bt));
       MD_DEBUG30(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
       return;
@@ -220,7 +259,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       /* scalare tutti i raggi qui */
     }
 #ifdef MD_ASYM_ITENS
-  tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparasm.I[na][2], R[i]);
+  tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
 #else
   Ia = Oparams.I[na];
 #endif
@@ -458,7 +497,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 }
 void check_bonds(char* msg, int i, int j, int ata, int atb, int yesexit)
 {
-  int a, b, B1, B2;
+  int a, b, B1;
   for (a = 0; a < numbonds[i]-1; a++)
     {
       B1 = bonds[i][a];
@@ -554,13 +593,12 @@ int bound(int na, int n, int a, int b)
 /* array con le posizioni degli atomi nel riferimento del corpo rigido 
  * nel caso dell'acqua i siti idrogeno ed elettroni sono disposti su 
  * di un tetraedro */
-double rat_body[NA][3] = {{0,0,0},{0,0,1},{1,-1,0},{0,1,0},{0,0,1}};
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
 {
   /* QUESTA VA RISCRITTA PER GLI ELLISSOIDI STICKY!!! */
   /* calcola le coordinate nel laboratorio di uno specifico atomo */
   int k1, k2;
-  double r1[3], r2[3], r3[3], nr, fact, *spXYZ;
+  double *spXYZ;
   //double radius; 
   /* l'atomo zero si suppone nell'origine 
    * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
@@ -568,9 +606,9 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
    * a partire da questi. */
 
   if (i < Oparams.parnumA)
-    spXYZ = spXYZ_A;
+    spXYZ = spXYZ_A[ata-1];
   else
-    spXYZ = spXYZ_B;
+    spXYZ = spXYZ_B[ata-1];
   //radius = Oparams.sigma[0][1] / 2.0;
   if (ata == 0)
     {
@@ -584,7 +622,7 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
 	{ 
 	  rat[k1] = rO[k1];
 	  for (k2 = 0; k2 < 3; k2++)
-	    rat[k1] += R[k2][k1]*spXYZ_A[k2]; 
+	    rat[k1] += R[k2][k1]*spXYZ[k2]; 
 	}
       //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
       //printf("ata=%d %f %f %f @ 0.075 C[blue]\n", ata, R[0][ata-1], R[1][ata-1], R[2][ata-1]);
@@ -594,7 +632,7 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
 void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
-  int a, nsp;
+  int a;
   /* l'atomo zero si suppone nell'origine */
   if (i < Oparams.parnumA)
     {
@@ -609,6 +647,7 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
 }
 int ibr, jbr, nnbr; 
 double shiftbr[3], trefbr;
+double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[3]);
 
 double funcs2beZeroedSP(double x, double tref, int i, int j, int nn, double shift[3])
 {
@@ -626,8 +665,13 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
   double distSq, ti;
   double ratA[NA][3], ratB[NA][3];
   int kk;
+#ifndef MD_ASYM_ITENS
   double Omega[3][3];
+#endif
   int na;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
   assign_bond_mapping(i, j);
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   MD_DEBUG20(printf("BRENT nn=%d\n", nn));
@@ -637,7 +681,11 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
   rA[2] = rz[i] + vz[i]*ti;
   MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
   UpdateOrient(i, ti, RtA, Omega, mapbondsa[nn]);
+#endif
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
   na = (i < Oparams.parnumA)?0:1;
@@ -645,7 +693,11 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
+#else
   UpdateOrient(j, ti, RtB, Omega, mapbondsb[nn]);
+#endif
   na = (j < Oparams.parnumA)?0:1;
   BuildAtomPos(j, rB, RtB, ratB);
   /* calcola sigmaSq[][]!!! */
@@ -663,8 +715,13 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   double distmin, distSq, ti;
   double ratA[NA][3], ratB[NA][3], dist;
   int firstdist = 1, nn, kk;
+#ifndef MD_ASYM_ITENS
   double Omega[3][3];
+#endif
   int na;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
@@ -672,7 +729,11 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   rA[2] = rz[i] + vz[i]*ti;
   MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
   UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
+#endif
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
   na = (i < Oparams.parnumA)?0:1;
@@ -680,8 +741,11 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
- 
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
+#else
   UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
+#endif
   na = (j < Oparams.parnumA)?0:1;
   BuildAtomPos(j, rB, RtB, ratB);
   /* calcola sigmaSq[][]!!! */
@@ -797,8 +861,14 @@ void assign_distsSP(double a[], double b[])
  * sembra corretta, fare comunque dei test.*/
 double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt)
 {
-  double ti, rA[3], rB[3], Omega[3][3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
+  double ti, rA[3], rB[3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
 	 r12i[3], r12j[3];//, maxddotOpt[MD_PBONDS];
+#ifndef MD_ASYM_ITENS
+  double Omega[3][3];
+#endif
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
   double maxddot=0.0, nr12i, nr12j;
   int nn, kk;
   ti = t1 - atomTime[i];
@@ -806,14 +876,22 @@ double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
   /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
   UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
+#endif
   BuildAtomPos(i, rA, RtA, ratA);
   ti = t1 - atomTime[j];
   rB[0] = rx[j] + vx[j]*ti;
   rB[1] = ry[j] + vy[j]*ti;
   rB[2] = rz[j] + vz[j]*ti;
   /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
+#else
   UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
+#endif
   BuildAtomPos(j, rB, RtB, ratB);
   for (nn = 0; nn < MD_PBONDS; nn++)
     {
@@ -870,7 +948,7 @@ int search_contact_fasterSP(int i, int j, double *shift, double *t, double t1, d
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
   double told, delt, distsOld[MD_PBONDS];
   const int MAXOPTITS = 500;
-  int nn, its=0, amin, bmin, crossed[MD_PBONDS]; 
+  int its=0, amin, bmin, crossed[MD_PBONDS]; 
   /* estimate of maximum rate of change for d */
 #if 0
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
@@ -948,11 +1026,9 @@ int interpolSP(int i, int j, int nn,
 	     double tref, double t, double delt, double d1, double d2,
 	     double *tmin, double shift[3])
 {
-  int its, nb, amin, bmin;
-  double d3, A, B, C, dmin, dminnew, tminnew;
-  double dists[MD_PBONDS];
+  double d3, A, B, C, dmin;
   /* NOTA: dists di seguito può non essere usata? controllare!*/
-  d3 = calcDistNegOne(t+delt*0.5, tref, i, j, nn, shift);
+  d3 = calcDistNegOneSP(t+delt*0.5, tref, i, j, nn, shift);
   xa[0] = t;
   ya[0] = d1;
   xa[1] = t+delt*0.5;
@@ -1030,7 +1106,7 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
 
 int delt_is_too_big_hc(int i, int j, int bondpair, double *dists, double *distsOld)
 {
-  int nn, retval=0;
+  int nn;
   for (nn=0; nn < MD_PBONDS; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
@@ -1045,7 +1121,7 @@ int delt_is_too_big_hc(int i, int j, int bondpair, double *dists, double *distsO
 int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 		    int *negpairs)
 {
-  int nn, retval=0;
+  int nn;
   for (nn=0; nn < MD_PBONDS; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
@@ -1063,17 +1139,14 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
   const double minh = 1E-14;
-  double h, d, dold, dold2, t2arr[MD_PBONDS_MAX], t, dists[MD_PBONDS_MAX], distsOld[MD_PBONDS_MAX],
-	 distsOld2[MD_PBONDS_MAX], deltth; 
+  double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS],
+	 distsOld2[MD_PBONDS], deltth; 
   double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
   int bondpair, itstb;
-  const int MAXITS = 100;
-  int itsRef;
-  int its, foundrc, goback;
-  double t1ini, delthc;
-  double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
-  int kk,tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
+  int its, foundrc;
+  double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax, deldist; 
+  int tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
       crossed[MD_PBONDS], firstaftsf;
 #ifdef MD_NEGPAIRS
   int negpairs[MD_PBONDS], sumnegpairs;
