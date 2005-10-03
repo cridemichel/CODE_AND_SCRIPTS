@@ -69,6 +69,8 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 
 #define MAXPAR 5000      /* maximum number of simulated particles */
 #ifdef MD_PATCHY_HE
+#define MD_STSPOTS_A 5
+#define MD_STSPOTS_B 2
 #define MD_PBONDS 10
 #endif
 #define NUM_PAR 2000   /* Number of particles for the simulation */
