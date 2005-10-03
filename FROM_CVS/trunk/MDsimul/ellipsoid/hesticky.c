@@ -9,6 +9,7 @@
 #define MD_DEBUG20(x) 
 #define MD_DEBUG29(x) 
 #define MD_DEBUG30(x) 
+#define MD_DEBUG31(x) x
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #if defined(MPI)
@@ -20,9 +21,9 @@ extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **REtA, **REtB;
 extern double cosEulAng[2][3], sinEulAng[2][3];
 
 #ifdef MD_ASYM_ITENS
-double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
+extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
 #else
-double Ia, Ib, invIa, invIb;
+extern double Ia, Ib, invIa, invIb;
 #endif
 struct LastBumpS *lastbump;
 extern double *axa, *axb, *axc;
@@ -36,6 +37,7 @@ void InvMatrix(double **a, double **b, int NB);
 extern void calc_angmom(int i, double **I);
 double min(double a, double b);
 extern void upd_refsysM(int i);
+extern double calc_maxddot(int i, int j);
 double zbrent(double (*func)(double), double x1, double x2, double tol);
 extern double invaSq[2], invbSq[2], invcSq[2];
 extern double rxC, ryC, rzC;
@@ -168,6 +170,7 @@ void build_atom_positions(void)
     }
 }
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
+extern void calc_energy(char *msg);
 
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
@@ -207,9 +210,12 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
 #endif
   numcoll++;
+  printf("collision code: %d\n", bt);
+  calc_energy("PRIMA");
   if (bt == MD_CORE_BARRIER)
     {
       bump(i, j, rxC, ryC, rzC, W);
+      calc_energy("DOPO HARD COLL");
       MD_DEBUG10(printf(">>>>>>>>>>collCode: %d\n", bt));
       MD_DEBUG30(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
       return;
@@ -333,8 +339,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   vCB[1] = vy[j] + wry;
   vCB[2] = vz[j] + wrz;
 
-  invmi = (i<Oparams.parnumA)?invmA:invmB;
-  invmj = (j<Oparams.parnumA)?invmA:invmB;
+  
+  invmi = (i<Oparams.parnumA)?1/Oparams.m[0]:1/Oparams.m[1];
+  invmj = (j<Oparams.parnumA)?1/Oparams.m[0]:1/Oparams.m[1];
 
   denom = invmi + invmj; 
   vc = 0;
@@ -387,14 +394,14 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     case MD_INOUT_BARRIER:
       if (Sqr(vc) < 2.0*Oparams.bheight/mredl)
 	{
-	  MD_DEBUG30(printf("t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n", Oparams.time,
+	  MD_DEBUG31(printf("t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n", Oparams.time,
 		 vc,  bt,
 		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 	  factor = -2.0*vc;
 	}
       else
 	{
-	  MD_DEBUG(printf("t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", Oparams.time, vc, bt,
+	  MD_DEBUG31(printf("t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", Oparams.time, vc, bt,
 		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 	  factor = -vc + sqrt(Sqr(vc) - 2.0*Oparams.bheight/mredl);
 	  remove_bond(i, j, ata, atb);
@@ -500,6 +507,8 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
+
+  calc_energy("DOPO");
 }
 void check_bonds(char* msg, int i, int j, int ata, int atb, int yesexit)
 {
@@ -635,19 +644,19 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
     }
   
 }
-void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
+void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
   int a;
   /* l'atomo zero si suppone nell'origine */
   if (i < Oparams.parnumA)
     {
-      for (a=0; a < MD_STSPOTS_A; a++)
+      for (a=0; a < MD_STSPOTS_A+1; a++)
 	BuildAtomPosAt(i, a, rO, R, rat[a]);
     }
   else
     {
-      for (a=0; a < MD_STSPOTS_B; a++)
+      for (a=0; a < MD_STSPOTS_B+1; a++)
 	BuildAtomPosAt(i, a, rO, R, rat[a]);
     }
 }
@@ -690,7 +699,8 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
-  UpdateOrient(i, ti, RtA, Omega, mapbondsa[nn]);
+  //UpdateOrient(i, ti, RtA, Omega, mapbondsa[nn]);
+  UpdateOrient(i, ti, RtA, Omega);
 #endif
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
@@ -702,7 +712,8 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
-  UpdateOrient(j, ti, RtB, Omega, mapbondsb[nn]);
+  //UpdateOrient(j, ti, RtB, Omega, mapbondsb[nn]);
+  UpdateOrient(j, ti, RtB, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
   BuildAtomPos(j, rB, RtB, ratB);
@@ -738,7 +749,8 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
-  UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
+  //UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
+  UpdateOrient(i, ti, RtA, Omega);
 #endif
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
@@ -750,7 +762,8 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
-  UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
+  //UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
+  UpdateOrient(j, ti, RtB, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
   BuildAtomPos(j, rB, RtB, ratB);
@@ -862,7 +875,7 @@ void assign_distsSP(double a[], double b[])
 {
   memcpy(b, a, MD_PBONDS*sizeof(double));
 }
-#define MD_OPTDDIST
+#undef MD_OPTDDIST
 /* NOTA: tale stima ottimizzata della maggiorazione per la velocità di variazione della distanza
  * sembra corretta, fare comunque dei test.*/
 double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt)
@@ -885,7 +898,8 @@ double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
-  UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
+  //UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
+  UpdateOrient(i, ti, RtA, Omega);
 #endif
   BuildAtomPos(i, rA, RtA, ratA);
   ti = t1 - atomTime[j];
@@ -896,7 +910,8 @@ double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
-  UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
+  //UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
+  UpdateOrient(j, ti, RtB, Omega);
 #endif
   BuildAtomPos(j, rB, RtB, ratB);
   for (nn = 0; nn < MD_PBONDS; nn++)
@@ -1167,9 +1182,13 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #ifdef MD_OPTDDIST
   maxddot = eval_maxddistSP(i, j, bondpair, t1, maxddoti);
 #else
+#ifdef MD_ASYM_ITENS
+  maxddot = calc_maxddot(i, j);
+#else
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j]*0.5;
+#endif
 #endif
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = OprogStatus.h; /* last resort time increment */
@@ -1404,11 +1423,11 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		}
 	      else 
 		{
-		  MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+		  MD_DEBUG(printf("[locate_contactSP] can't find contact point!\n"));
 #ifdef MD_INTERPOL
 		  if (!tocheck[nn])
 #endif
-		  mdPrintf(ALL,"[locate_contact] can't find contact point!\n",NULL);
+		  mdPrintf(ALL,"[locate_contactSP] can't find contact point!\n",NULL);
 		  /* Se refine_contact fallisce deve cmq continuare a cercare 
 		   * non ha senso smettere...almeno credo */
 		  //gotcoll = -1;
