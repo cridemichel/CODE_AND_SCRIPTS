@@ -5091,7 +5091,7 @@ void PredictEvent (int na, int nb)
 		      continue;
 		      exit(-1);
 #endif
-#if MD_PATCHY_HE
+#ifdef MD_PATCHY_HE
 		      collCode = MD_EVENT_NONE;
 		      rxC = ryC = rzC = 0.0;
 		      if (locate_contact(na, n, shift, t1, t2, vecg))
@@ -5330,6 +5330,9 @@ void calc_omega(int i)
   //printf("w[%d]=%.15G %.15G %.15G\n", i, wx[i], wy[i], wz[i]);
 }
 #endif
+#ifdef MD_PATCHY_HE
+extern double calcpotene(void);
+#endif
 void calc_energy(char *msg)
 {
   int i, k1;
@@ -5410,7 +5413,12 @@ void calc_energy(char *msg)
   //free_matrix(Ib,3);
 #endif
   if (msg)
-    printf("[%s] Kinetic Energy: %f\n", msg, K);
+    {
+      printf("[%s] Kinetic Energy: %.15G\n", msg, K);
+#ifdef MD_PATCHY_HE
+      printf("tot energy: %.15G\n", K+calcpotene());
+#endif
+    }
 }
 void store_bump_neigh(int i, double *r1, double *r2)
 {
