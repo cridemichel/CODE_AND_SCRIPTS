@@ -120,8 +120,9 @@ extern double max_ax(int i);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
 #define MD_STSPOTS_A 5
 #define MD_STSPOTS_B 2
-double spApos[MD_STSPOTS_A][3] = {};
-double spBpos[MD_STSPOTS_B][3] = {};
+double spApos[MD_STSPOTS_A][3] = {{0.0, 0.3, 0.0},{0.0, 0.3, 3.14159},{0.0, 5.98319,0.0},
+    {0.0, 5.98319, 3.14159},{0.0, 1.5708, 0.0}};
+double spBpos[MD_STSPOTS_B][3] = {{0.0, 0.0, 0.0},{0.0, 3.14159, 0.0}};
 
 double spXYZ_A[MD_STSPOTS_A][3];
 double spXYZ_B[MD_STSPOTS_B][3];
@@ -983,7 +984,7 @@ int search_contact_fasterSP(int i, int j, double *shift, double *t, double t1, d
 	  MD_DEBUG30(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG30(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
-	  *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	  *d1 = calcDistNegSP(*t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	  return 0;
 	}
       if (*t+t1 > t2)
@@ -1288,7 +1289,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    }
 	  t += delt; 
 	  itsS++;
-	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	}
 #ifdef MD_NEGPAIRS
       itstb = 0;
