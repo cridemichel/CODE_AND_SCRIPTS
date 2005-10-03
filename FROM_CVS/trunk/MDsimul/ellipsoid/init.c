@@ -17,6 +17,7 @@ extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 void setToZero(COORD_TYPE* ptr, ...);
 double *maxax;
+double calc_norm(double *vec);
 #ifdef MD_PATCHY_HE
 extern struct LastBumpS *lastbump;
 #else
@@ -1666,6 +1667,7 @@ void usrInitAft(void)
   for (aa = 0; aa < MD_STSPOTS_A; aa++)
     {
       dist = calc_norm(spXYZ_A[aa])+Oparams.sigmaSticky*0.5;
+      //printf("calc_norm[%d]:%.15G\n", aa, calc_norm(spXYZ_A[aa]));
       if (dist > distSPA)
 	distSPA = dist;
     }
