@@ -356,7 +356,7 @@ int readCoord(int cfd)
 		    NULL);    /* NULL means: 'no more pointers to load' */
 #endif
  
- #ifdef EXT_SLST 
+#ifdef EXT_SLST 
   rerr |= -readSegs(cfd, "Init", "Error reading extra coordinates", CONT,
 		    sizeof(COORD_TYPE), EXT_SLST,
 		    NULL);    /* NULL means: 'no more pointers to load' */
