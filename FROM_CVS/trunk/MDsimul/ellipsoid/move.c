@@ -5106,10 +5106,19 @@ void PredictEvent (int na, int nb)
 		      evtimeHC = evtime;
 		      acHC = ac = 0;
 		      bcHC = bc = 0;
-		      if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+		      if ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
+			   (na >= Oparams.parnumA && n < Oparams.parnumA))
 			{
-			  if (collCode == MD_EVENT_NONE)
-			    continue;
+			  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+			    {
+			      if (collCode == MD_EVENT_NONE)
+				continue;
+			    }
+			}
+		      else
+			{
+	    		  if (collCode == MD_EVENT_NONE)
+				continue;
 			}
 		      t = evtime;
 #else
