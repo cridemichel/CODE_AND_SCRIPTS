@@ -17,7 +17,11 @@ extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 void setToZero(COORD_TYPE* ptr, ...);
 double *maxax;
+#ifdef MD_PATCHY_HE
+extern struct LastBumpS *lastbump;
+#else
 extern int *lastbump;
+#endif
 extern double *lastcol;
 double *axa, *axb, *axc;
 double **Aip;
@@ -56,6 +60,8 @@ int parnumA, parnumB;
 #ifdef MD_PATCHY_HE
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 double *treeRxC, *treeRyC, *treeRzC;
+extern int *mapbondsa;
+extern int *mapbondsb;
 #endif
 double invaSq[2], invbSq[2], invcSq[2];
 extern double *fvec, *fvecG, *fvecD;
@@ -966,17 +972,13 @@ void StartRun(void)
   }
 
 #ifdef MD_PATCHY_HE
+extern void build_atom_positions(void);
 extern void add_bond(int na, int n, int a, int b);
 extern double calcpotene(void);
 extern void assign_bond_mapping(int i, int j);
 int get_num_pbonds(int i, int j)
 {
-  if (i < Oparams.parnumA && j < Oparams.parnumA)
-    return Oparams.npbonds[0][0];
-  else if (i >= Oparams.parnumA && j >= Oparams.parnumA)
-    return Oparams.npbonds[1][1];
-  else
-    return Oparams.npbonds[0][1];
+  return MD_PBONDS;
 }
 #endif
 extern void print_matrix(double **M, int n);
@@ -1340,7 +1342,7 @@ void usrInitAft(void)
   COORD_TYPE vcmx, vcmy, vcmz;
   COORD_TYPE *m;
 #ifdef MD_PATCHY_HE
-  double shift[3], sigDeltaSq, drx, dry, drz, dist, dists[MD_PBONDS_MAX];
+  double shift[3], sigDeltaSq, drx, dry, drz, dist, dists[MD_PBONDS];
   int j, amin, bmin, nn, aa, bb, NPB;
 #endif
   int a;
@@ -1412,7 +1414,11 @@ void usrInitAft(void)
      ** CALCULATE ENERGY            ** */
     lastcol= malloc(sizeof(double)*Oparams.parnum);
     atomTime = malloc(sizeof(double)*Oparams.parnum);
+#ifdef MD_PATCHY_HE
+    lastbump =  malloc(sizeof(struct LastBumpS)*Oparams.parnum);
+#else
     lastbump = malloc(sizeof(int)*Oparams.parnum);
+#endif
     cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
     inCell[0] = malloc(sizeof(int)*Oparams.parnum);
     inCell[1]= malloc(sizeof(int)*Oparams.parnum);
@@ -1491,7 +1497,12 @@ void usrInitAft(void)
     for (i=0; i < Oparams.parnum; i++)
       {
 	R[i] = matrix(3, 3);
+#ifdef MD_PATCHY_HE
+	lastbump[i].mol = -1;
+  	lastbump[i].at = -1;
+#else
 	lastbump[i] = -1;
+#endif
 	lastcol[i] = 0.0;
       }
     u2R();
@@ -1656,6 +1667,7 @@ void usrInitAft(void)
       maxax[i] *= 2.0;
     }
 #ifdef MD_PATCHY_HE
+  build_atom_positions();
   for (i=0; i < Oparams.parnum; i++)
     {
       numbonds[i] = 0;
