@@ -1334,6 +1334,8 @@ void upd_refsysM(int i)
 void RDiagtR(int i, double **M, double a, double b, double c, double **Ri);
 #ifdef MD_PATCHY_HE
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double dists[MD_PBONDS], int bondpair);
+extern double spXYZ_A[MD_STSPOTS_A][3];
+extern double spXYZ_B[MD_STSPOTS_B][3];
 #endif
 void usrInitAft(void)
 {
@@ -1347,6 +1349,7 @@ void usrInitAft(void)
 #ifdef MD_PATCHY_HE
   double shift[3], sigDeltaSq, drx, dry, drz, dist, dists[MD_PBONDS];
   int j, amin, bmin, nn, aa, bb, NPB;
+  double distSPA, distSPB;
 #endif
   int a;
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
@@ -1657,6 +1660,23 @@ void usrInitAft(void)
     };
  
   /* maxax è il diametro del centroide */
+#ifdef MD_PATCHY_HE
+  build_atom_positions();
+  distSPA = 0.0;
+  for (aa = 0; aa < MD_STSPOTS_A; aa++)
+    {
+      dist = calc_norm(spXYZ_A[aa])+Oparams.sigmaSticky*0.5;
+      if (dist > distSPA)
+	distSPA = dist;
+    }
+  distSPB = 0.0;
+  for (aa = 0; aa < MD_STSPOTS_B; aa++)
+    {
+      dist = calc_norm(spXYZ_B[aa])+Oparams.sigmaSticky*0.5;
+      if (dist > distSPB)
+	distSPB = dist;
+    }
+#endif
   for (i = 0; i < Oparams.parnum; i++)
     {
       maxax[i] = 0.0;
@@ -1667,10 +1687,23 @@ void usrInitAft(void)
 	maxax[i] = Oparams.b[a];
       if (Oparams.c[a] > maxax[i])
 	maxax[i] = Oparams.c[a];
+#ifdef MD_PATCHY_HE
+      //printf("maxax bef[%d]: %.15G\n", i, maxax[i]*2.0);
+      if (i < Oparams.parnumA)
+	{
+	  if (distSPA > maxax[i])
+	    maxax[i] = distSPA;
+	}
+      else
+	{
+     	  if (distSPB > maxax[i])
+	    maxax[i] = distSPB;
+	}
+#endif
       maxax[i] *= 2.0;
+      //printf("maxax aft[%d]: %.15G\n", i, maxax[i]);
     }
 #ifdef MD_PATCHY_HE
-  build_atom_positions();
   for (i=0; i < Oparams.parnum; i++)
     {
       numbonds[i] = 0;
@@ -1721,7 +1754,6 @@ void usrInitAft(void)
   if (OprogStatus.scalevel)
     ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-  //exit(-1);
   MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  

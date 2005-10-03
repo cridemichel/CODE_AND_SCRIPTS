@@ -40,6 +40,7 @@ double zbrent(double (*func)(double), double x1, double x2, double tol);
 extern double invaSq[2], invbSq[2], invcSq[2];
 extern double rxC, ryC, rzC;
 extern int SolveLineq (double **a, double *x, int n); 
+extern double calc_norm(double *vec);
 int calcdist_retcheck;
 double rA[3], rB[3];
 int polinterr, polinterrRyck;
@@ -114,12 +115,9 @@ void newt(double x[], int n, int *check,
 void rebuildCalendar(void);
 void R2u(void);
 void store_bump(int i, int j);
-double calc_norm(double *vec);
 double rcutL, aL, bL, cL;
 extern double max_ax(int i);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
-#define MD_STSPOTS_A 5
-#define MD_STSPOTS_B 2
 double spApos[MD_STSPOTS_A][3] = {{0.0, 0.3, 0.0},{0.0, 0.3, 3.14159},{0.0, 5.98319,0.0},
     {0.0, 5.98319, 3.14159},{0.0, 1.5708, 0.0}};
 double spBpos[MD_STSPOTS_B][3] = {{0.0, 0.0, 0.0},{0.0, 3.14159, 0.0}};
@@ -135,16 +133,20 @@ void build_atom_positions(void)
   * tra sticky sphere ed ellissoide.
   * Tale routine converte le coordinate spXpos in coordinate cartesiane 
   * riferite al riferimento del corpo rigido. */  
-  int k1;
-  double x,y,z, grad[3];
+  int k1, aa;
+  double x,y,z, grad[3], ng;
   for (k1 = 0; k1 < MD_STSPOTS_A; k1++)
     {
       x = Oparams.a[0]*cos(spApos[k1][2])*sin(spApos[k1][1]);
       y = Oparams.b[0]*sin(spApos[k1][2])*sin(spApos[k1][1]);
       z = Oparams.c[0]*cos(spApos[k1][1]);
+      //printf("xyz=%f %f %f\n", x, y, z);
       grad[0] = 2.0 * x / Sqr(Oparams.a[0]);
       grad[1] = 2.0 * y / Sqr(Oparams.b[0]);
       grad[2] = 2.0 * z / Sqr(Oparams.c[0]);
+      ng = calc_norm(grad);
+      for (aa = 0; aa < 3; aa++)
+	grad[aa] /= ng;
       spXYZ_A[k1][0] = x + grad[0]*Oparams.sigmaSticky*0.5;
       spXYZ_A[k1][1] = y + grad[1]*Oparams.sigmaSticky*0.5;
       spXYZ_A[k1][2] = z + grad[2]*Oparams.sigmaSticky*0.5;
@@ -157,6 +159,9 @@ void build_atom_positions(void)
       grad[0] = 2.0 * x / Sqr(Oparams.a[1]);
       grad[1] = 2.0 * y / Sqr(Oparams.b[1]);
       grad[2] = 2.0 * z / Sqr(Oparams.c[1]);
+      ng = calc_norm(grad);
+      for (aa = 0; aa < 3; aa++)
+	grad[aa] /= ng;
       spXYZ_B[k1][0] = x + grad[0]*Oparams.sigmaSticky*0.5;
       spXYZ_B[k1][1] = y + grad[1]*Oparams.sigmaSticky*0.5;
       spXYZ_B[k1][2] = z + grad[2]*Oparams.sigmaSticky*0.5;
