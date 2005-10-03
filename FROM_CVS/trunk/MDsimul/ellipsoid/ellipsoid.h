@@ -201,6 +201,14 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeIdE    tree[11]
 #endif
 #endif
+#ifdef MD_PATCHY_HE
+struct LastBumpS 
+{
+  int mol;
+  int at;
+  int type;
+};
+#endif
 #define ATOM_LIMIT 10000000
 struct nebrTabStruct 
 {
@@ -413,6 +421,7 @@ struct progStatus
   double storerate;
 #ifdef MD_PATCHY_HE
   int maxbonds;
+  int assumeOneBond;
 #endif
 #ifdef MD_GRAVITY
   int numquench;
@@ -688,6 +697,9 @@ struct pascii opro_ascii[] =
   {"basew",        &OS(basew),                      1,  1, "%.6G"},
   {"lastbilogsaved",&OS(lastbilogsaved),            1,  1, "%d"},
 #endif
+#ifdef MD_PATCHY_HE
+  {"assumeOneBond",     &OS(assumeOneBond),               1,   1, "%d"},
+#endif
   {"NN",           &OS(NN),                         1,  1,   "%d"},
   {"fstps",        &OS(fstps),                      1,  1,   "%.15G"},
   {"nRun",         OS(nRun),                        1,  32,   "%s"},
@@ -889,6 +901,7 @@ struct singlePar OsinglePar[] = {
 #ifdef MD_PATCHY_HE
   {"sigmaSticky", &Oparams.sigmaSticky,     CT},
   {"bheight",    &Oparams.bheight,          CT},
+  {"assumeOneBond", &OprogStatus.assumeOneBond, CT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
