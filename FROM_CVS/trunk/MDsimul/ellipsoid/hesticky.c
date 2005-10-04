@@ -2,7 +2,6 @@
 #include<mdsimul.h>
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
-#define MD_DEBUG(x) 
 #define MD_DEBUG10(x)  
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
@@ -12,6 +11,7 @@
 #define MD_DEBUG31(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
+#undef MD_OPTDDIST
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -21,7 +21,7 @@ extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **REtA, **REtB;
 extern double cosEulAng[2][3], sinEulAng[2][3];
 extern long long int itsFNL, timesFNL, timesSNL, itsSNL;
 #ifdef MD_ASYM_ITENS
-extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
+extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp, *angM;
 #else
 extern double Ia, Ib, invIa, invIb;
 #endif
@@ -191,7 +191,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double factorinvIa, factorinvIb;
 #endif
 #ifdef MD_ASYM_ITENS
-  int k1,k2;
+  int k1,k2, b;
   double rnI[3];
   double Mvec[3], omega[3];
 #endif
@@ -887,7 +887,6 @@ void assign_distsSP(double a[], double b[])
 {
   memcpy(b, a, MD_PBONDS*sizeof(double));
 }
-#undef MD_OPTDDIST
 /* NOTA: tale stima ottimizzata della maggiorazione per la velocità di variazione della distanza
  * sembra corretta, fare comunque dei test.*/
 double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt)
@@ -1168,6 +1167,84 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
     }
   return 0;
 }
+#ifdef MD_ASYM_ITENS
+double calc_maxddotSP(int i, int j, double *maxddoti)
+{
+  int na, kk;
+  double Iamin, Ibmin;
+  double factori, factorj, maxddot=0.0;
+
+  for (kk=0; kk < MD_PBONDS; kk++)
+    {
+      if (i < Oparams.parnumA)
+	factori = calc_norm(spXYZ_A[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+      else
+	factori = calc_norm(spXYZ_B[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+      if (j < Oparams.parnumA)
+	factorj = calc_norm(spXYZ_A[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+      else
+	factorj = calc_norm(spXYZ_B[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+#if 0
+	factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+	factorj = 0.5*maxax[j]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
+#endif
+	na = i<Oparams.parnumA?0:1;
+	Iamin = min(Oparams.I[na][0],Oparams.I[na][2]);
+	na = j<Oparams.parnumA?0:1;
+	Ibmin = min(Oparams.I[na][0],Oparams.I[na][2]);
+	maxddoti[kk] = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
+	  angM[i]*factori/Iamin + angM[j]*factorj/Ibmin;
+	if (kk==0 || maxddoti[kk] > maxddot)
+	  {
+	    maxddot = maxddoti[kk];
+	  }
+    }
+  return maxddot;
+}
+#else
+double calc_maxddotSP(int i, int j, double *maxddoti)
+{
+  int kk;
+  double maxddot=0.0;
+  double factori, factorj;
+
+  for (kk=0; kk < MD_PBONDS; kk++)
+    {
+#if 0
+      if (i < Oparams.parnumA)
+	printf("kk=%d mapbondsa[kk]=%d mapbondsb[kk]:%d norm: %.15G w = (%.15G, %.15G, %.15G)\n",kk, mapbondsa[kk], mapbondsb[kk],
+	       calc_norm(spXYZ_A[mapbondsa[kk]-1]), wx[i], wy[i], wz[i]);
+      else
+	printf("kk=%d mapbondsa[kk]=%d mapbondsb[kk]:%d norm: %.15G w = (%.15G, %.15G, %.15G)\n",
+	       kk, mapbondsa[kk], mapbondsb[kk],
+	       calc_norm(spXYZ_B[mapbondsa[kk]-1]), wx[i], wy[i], wz[i]);
+#endif
+      if (i < Oparams.parnumA)
+	factori = calc_norm(spXYZ_A[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+      else
+	factori = calc_norm(spXYZ_B[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+      if (j < Oparams.parnumA)
+	factorj = calc_norm(spXYZ_A[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+      else
+	factorj = calc_norm(spXYZ_B[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+#if 0
+      factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+      factorj = 0.5*maxax[j]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
+#endif
+      maxddoti[kk] = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j]))+
+	sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori + 
+	sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;  
+      
+      if (kk==0 || maxddoti[kk] > maxddot)
+	{
+	  maxddot = maxddoti[kk];
+	}
+      //printf("maxddot:%.15G maxddoti:%.15G\n", maxddot, maxddoti[kk]);
+    }
+  return maxddot;
+}
+#endif
+
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
@@ -1192,14 +1269,19 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   assign_bond_mapping(i, j);
   bondpair = get_bonded(i, j);
 #ifdef MD_OPTDDIST
+#ifndef MD_ASYM_ITENS
   maxddot = eval_maxddistSP(i, j, bondpair, t1, maxddoti);
 #else
-#ifdef MD_ASYM_ITENS
-  maxddot = calc_maxddot(i, j);
+  maxddot = calc_maxddotSP(i, j, maxddoti);
+#endif
 #else
+  //maxddot = calc_maxddotSP(i, j, maxddoti);
+#ifndef MD_ASYM_ITENS
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*maxax[i]*0.5
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j]*0.5;
+#else
+  maxddot = calc_maxddot(i, j);
 #endif
 #endif
   MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
@@ -1768,7 +1850,7 @@ double calcDistNegOneNNL_sp(double t, double t1, int i, int nn)
   /* calcola sigmaSq[][]!!! */
   dist = 0;
   for (kk=0; kk < 3; kk++)
-    dist += (ratA[nn][kk]-rB[kk])*gradplane[kk];
+    dist += (ratA[nn+1][kk]-rB[kk])*gradplane[kk];
   MD_DEBUG20(printf("dist= %.15G\n", sqrt(distSq)-Oparams.sigmaSticky));
   return dist - Oparams.sigmaSticky*0.5;
 }
@@ -1807,12 +1889,48 @@ int refine_contact_neigh_plane_sp(int i, double tref, double t1, double t2, doub
 extern const double timbig;
 extern void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBALL[6][3]);
 extern void assign_plane(int nn);
+#ifdef MD_ASYM_ITENS
+double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
+{
+  int na;
+  double Iamin;
+  double factori;
+#if 0
+  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+#else
+  if (i < Oparams.parnumA)
+    factori = calc_norm(spXYZ_A[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+  else
+    factori = calc_norm(spXYZ_B[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+#endif
+  na = i<Oparams.parnumA?0:1;
+  Iamin = min(Oparams.I[na][0],Oparams.I[na][2]);
+  return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
+     angM[i]*factori/Iamin;
+}
+#else
+double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
+{
+  double factori;
+#if 0
+  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+#else
+   if (i < Oparams.parnumA)
+    factori = calc_norm(spXYZ_A[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+  else
+    factori = calc_norm(spXYZ_B[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+#endif
+  return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+}
+#endif
+
 
 int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 {
   /* const double minh = 1E-14;*/
   double h, d, dold, dold2, t2arr[6][NA], t, dists[6][NA], distsOld[6][NA], 
-	 distsOld2[6][NA], deltth, factori; 
+	 distsOld2[6][NA], deltth; 
   double normddot, maxddot, delt, troot, tini, maxddoti[6][NA];
   int firstev, nn2;
   /*
@@ -1834,15 +1952,14 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
   else
     NSP = MD_STSPOTS_B;
   calc_grad_and_point_plane_all(i, gradplane_all, rBall);
-  factori = 0.5*maxax[i]+OprogStatus.epsdNL;
+  //factori = 0.5*maxax[i]+OprogStatus.epsdNL;
   maxddot = 0.0;
   for (nn = 0; nn < 6; nn++)
     {
       for (nn2 = 0; nn2 < NSP; nn2++)
 	{
-#ifdef MD_ASYM_ITENS
 	  maxddoti[nn][nn2] = calc_maxddot_nnl_sp(i, nn2, gradplane_all[nn]);
-#else
+#if 0
 	  maxddoti[nn][nn2] = fabs(vx[i]*gradplane_all[nn][0]+vy[i]*gradplane_all[nn][1]+vz[i]*gradplane_all[nn][2])+
 	    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 #endif
