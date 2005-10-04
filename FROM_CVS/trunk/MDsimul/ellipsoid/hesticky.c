@@ -153,8 +153,8 @@ void build_atom_positions(void)
       for (aa = 0; aa < 3; aa++)
 	grad[aa] /= ng;
       spXYZ_A[k1][0] = x + grad[0]*(Oparams.sigmaSticky*0.5 + spApos[k1][0]);
-      spXYZ_A[k1][1] = y + grad[1]*(Oparams.sigmaSticky*0.5 + spApos[k1][1]);
-      spXYZ_A[k1][2] = z + grad[2]*(Oparams.sigmaSticky*0.5 + spApos[k1][2]);
+      spXYZ_A[k1][1] = y + grad[1]*(Oparams.sigmaSticky*0.5 + spApos[k1][0]);
+      spXYZ_A[k1][2] = z + grad[2]*(Oparams.sigmaSticky*0.5 + spApos[k1][0]);
     }
   for (k1 = 0; k1 < MD_STSPOTS_B; k1++)
     {
@@ -168,8 +168,8 @@ void build_atom_positions(void)
       for (aa = 0; aa < 3; aa++)
 	grad[aa] /= ng;
       spXYZ_B[k1][0] = x + grad[0]*(Oparams.sigmaSticky*0.5 + spBpos[k1][0]);
-      spXYZ_B[k1][1] = y + grad[1]*(Oparams.sigmaSticky*0.5 + spBpos[k1][1]);
-      spXYZ_B[k1][2] = z + grad[2]*(Oparams.sigmaSticky*0.5 + spBpos[k1][2]) ;
+      spXYZ_B[k1][1] = y + grad[1]*(Oparams.sigmaSticky*0.5 + spBpos[k1][0]);
+      spXYZ_B[k1][2] = z + grad[2]*(Oparams.sigmaSticky*0.5 + spBpos[k1][0]) ;
     }
 }
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
