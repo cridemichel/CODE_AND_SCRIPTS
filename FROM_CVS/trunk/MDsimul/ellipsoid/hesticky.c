@@ -195,7 +195,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double rnI[3];
   double Mvec[3], omega[3];
 #endif
-  int na, a, b, kk;
+  int na, a, kk;
 #if 0
   if (i < Oparams.parnumA && j < Oparams.parnumA)
     {
@@ -1481,6 +1481,73 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   return 0;
 }
 /* -------- >>> neighbour list stuff <<< --------- */
+double get_max_deldist_sp(int nsp, double distsOld[6][NA], double dists[6][NA])
+{
+  int nn, nn2, first = 1;
+  double maxdd=0.0, dd;
+  for (nn = 0; nn < 6; nn++)
+    {
+      for (nn2 = 0; nn2 < nsp; nn2++)
+	{
+
+	  dd = fabs(dists[nn][nn2]-distsOld[nn][nn2]);
+	  if (first || dd > maxdd)
+	    {
+	      first = 0;
+	      maxdd = dd;
+	    }
+	}
+    }
+  return maxdd;
+}
+
+double calcDistNegOneNNL_sp(double t, double t1, int i, int nn);
+int interpolNeighPlane_sp(int i, double tref, double t, double delt, double d1, double d2, double *tmin, int nn, int nplane)
+{
+  double d3, A, B, C, dmin;
+  /* NOTA: dists di seguito può non essere usata? controllare!*/
+  d3 = calcDistNegOneNNL_sp(t+delt*0.5, tref, i, nn);
+  xa[0] = t;
+  ya[0] = d1;
+  xa[1] = t+delt*0.5;
+  ya[1] = d3;
+  xa[2] = t+delt;
+  ya[2] = d2;
+  A = xa[2]*(ya[0]-ya[1]);
+  B = xa[0]*(ya[1]-ya[2]);
+  C = xa[1]*(ya[2]-ya[0]);
+  *tmin = (xa[2]*A+xa[0]*B+xa[1]*C)/(A+B+C)/2.0;
+  dmin = calcDistNegOneNNL_sp(*tmin, tref, i, nn);
+  if (*tmin < t+delt && *tmin > t && d1*dmin < 0.0)
+    {
+      *tmin += tref;
+      return 0;
+    }
+  return 1;
+}
+
+int check_cross_sp(int nsp, double distsOld[6][NA], double dists[6][NA], int crossed[6][NA])
+{
+  int nn, nn2;
+  int retcross = 0;
+  for (nn = 0; nn < 6; nn++)
+    {
+      for (nn2 = 0; nn2 < 6; nn2++)
+	{
+
+	  crossed[nn][nn2] = 0;
+	  //printf("dists[%d]=%.15G distsOld[%d]:%.15G\n", nn, dists[nn], nn, distsOld[nn]);
+	  if (dists[nn][nn2] < 0.0  && distsOld[nn][nn2] > 0.0)
+	    {
+	      crossed[nn][nn2] = 1;
+	      //printf("CROSSED[%d]:%d\n", nn, crossed[nn]);
+	      retcross = 1;
+	    }
+	}
+    }
+  return retcross;
+}
+
 int check_cross_scf_sp(int NSP, double distsOld[6][NA], double dists[6][NA], int crossed[6][NA])
 {
   int nn, nn2;
@@ -1500,7 +1567,7 @@ int check_cross_scf_sp(int NSP, double distsOld[6][NA], double dists[6][NA], int
     }
   return retcross;
 }
-void assign_dists_sp(int nsp, double a[], double b[])
+void assign_dists_sp(int nsp, double a[6][NA], double b[6][NA])
 {
   memcpy(b, a, nsp*6*sizeof(double));
 }
@@ -1523,12 +1590,11 @@ int get_dists_tocheck_sp(int nsp, double distsOld[6][NA], double dists[6][NA], i
     }
   return rettochk;
 }
-double calcDistNegOneNNL_sp(double t, double t1, int i, int nn);
 
 double calcDistNegNeighPlaneAll_sp(int nsp, double t, double tref, int i, double dists[6][NA])
 {
-  int nn, err, kk, nn2;
-  double r1[3], r2[3], dmin=0.0;
+  int nn, kk, nn2;
+  double dmin=0.0;
   for (nn = 0; nn < 6; nn++)
     {
       for (nn2 = 0; nn2 < nsp; nn2++)
@@ -1580,6 +1646,7 @@ void calc_delt_sp(int nsp, double maxddoti[6][NA], double *delt, double dists[6]
     }
   //printf("I chose dt=%.15G\n", *delt);
 }
+extern double max(double a, double b);
 
 int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double t2, 
 					  double epsd, double *d1, double epsdFast, 
@@ -1636,7 +1703,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 	  else
 	    delt /= GOLD;
 	  *t = told + delt;
-	  *d1 = calcDistNegNeighPlaneAll_sp(*t, t1, i, dists);
+	  *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
 	  itsf++;	
 	  if (itsf > 100)
 	    {
@@ -1646,13 +1713,13 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 	    }
 	}
 #else
-     if (check_cross_sp(distsOld, dists, crossed))
+     if (check_cross_sp(NSP, distsOld, dists, crossed))
        {
 	 /* go back! */
 	 MD_DEBUG30(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	 MD_DEBUG30(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	 *t = told;	  
-	 *d1 = calcDistNegNeighPlaneAll_sp(*t, t1, i, dists);
+	 *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
 	 return 0;
        }
 #endif
@@ -1661,11 +1728,11 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 	  *t = told;
 	  MD_DEBUG30(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG30(printf("convergence t>t2\n"));
-	  *d1 = calcDistNegNeighPlaneAll_sp(*t, t1, i, dists);
+	  *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
 	  return 1;
 	}
       told = *t;
-      assign_dists_sp(dists, distsOld);
+      assign_dists_sp(NSP, dists, distsOld);
       its++;
       itsFNL++;
     }
@@ -1679,7 +1746,6 @@ double calcDistNegOneNNL_sp(double t, double t1, int i, int nn)
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
 #endif
-  int na;
 #ifdef MD_ASYM_ITENS
   double phi, psi;
 #endif
@@ -1717,11 +1783,9 @@ double  funcs2beZeroedBrentNNL_sp(double x)
   return funcs2beZeroedNNL_sp(x, trefbr, ibr, nnbr); 
 }
 
-int refine_contact_neigh_plane_sp(int i, double t1, double t, double vecgd[8], double *troot,
+int refine_contact_neigh_plane_sp(int i, double tref, double t1, double t2, double *troot,
 			       int nplane, int nsp)
 {
-  int kk, retcheck;
-
   polinterr=0;
   //newt(vecg, 5, &retcheck, funcs2beZeroed, i, j, shift); 
   ibr = i;
@@ -1740,6 +1804,9 @@ int refine_contact_neigh_plane_sp(int i, double t1, double t, double vecgd[8], d
     }
 
 }
+extern const double timbig;
+extern void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBALL[6][3]);
+extern void assign_plane(int nn);
 
 int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 {
@@ -1747,14 +1814,14 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
   double h, d, dold, dold2, t2arr[6][NA], t, dists[6][NA], distsOld[6][NA], 
 	 distsOld2[6][NA], deltth, factori; 
   double normddot, maxddot, delt, troot, tini, maxddoti[6][NA];
-  int firstev;
+  int firstev, nn2;
   /*
   const int MAXITS = 100;
   const double EPS=3E-8;*/ 
   /* per calcolare derivate numeriche questo è il magic number in doppia precisione (vedi Num. Rec.)*/
   int its, foundrc, NSP;
   double t1, t2, epsd, epsdFast, epsdFastR, epsdMax, deldist; 
-  int kk,tocheck[6][NA], dorefine[6][NA], ntc, ncr, nn, gotcoll, crossed[6][NS], firstaftsf;
+  int tocheck[6][NA], dorefine[6][NA], ntc, ncr, nn, gotcoll, crossed[6][NA], firstaftsf;
   epsd = OprogStatus.epsdNL;
   epsdFast = OprogStatus.epsdFastNL;
   epsdFastR= OprogStatus.epsdFastRNL;
@@ -1787,14 +1854,14 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
   h = OprogStatus.h; /* last resort time increment */
   delt = h;
   
-  if (search_contact_faster_neigh_plane_all_sp(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, 
+  if (search_contact_faster_neigh_plane_all_sp(i, &t, t1, t2, epsd, &d, epsdFast, 
 					       dists, maxddoti, maxddot))
     {
       return 0;  
     }
   timesSNL++;
   foundrc = 0;
-  assign_dists_sp(dists, distsOld);
+  assign_dists_sp(NSP, dists, distsOld);
   dold = d;
   firstaftsf = 1;
   its = 0;
@@ -1807,7 +1874,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
       //normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
       if (!firstaftsf)
 	{
-	  deldist = get_max_deldist_sp(distsOld2, distsOld);
+	  deldist = get_max_deldist_sp(NSP, distsOld2, distsOld);
 	  normddot = fabs(deldist)/delt;
 	  /* NOTA: forse qui si potrebbe anche usare sempre delt = epsd/maxddot */
 	  if (normddot!=0)
@@ -1821,13 +1888,13 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 	{
 	  delt = h;//EPS*fabs(t);
 	  firstaftsf = 0;
-	  dold2 = calcDistNegNeighPlaneAll_sp(t-delt, t1, i, distsOld2, vecgdold2, 0);
+	  dold2 = calcDistNegNeighPlaneAll_sp(NSP, t-delt, t1, i, distsOld2);
 	  continue;
 	}
       tini = t;
       t += delt;
-      d = calcDistNegNeighPlaneAll_sp(t, t1, i, dists, vecgd, 0);
-      deldist = get_max_deldist_sp(distsOld, dists);
+      d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+      deldist = get_max_deldist_sp(NSP, distsOld, dists);
       if (deldist > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -1844,13 +1911,13 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 	    }
 	  t += delt; 
 	  itsSNL++;
-	  d = calcDistNegNeighPlaneAll_sp(t, t1, i, dists, vecgdold2, 0);
+	  d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
 	  //assign_vec(vecgdold2, vecgd);
 	}
       for (nn=0; nn < 6; nn++)
 	for (nn2=0; nn2 < NSP; nn2++)
 	  dorefine[nn][nn2] = 0;
-      ncr=check_cross_sp(distsOld, dists, crossed);
+      ncr=check_cross_sp(NSP, distsOld, dists, crossed);
       for (nn = 0; nn < 6; nn++)
 	{
 	  for (nn2 = 0; nn2 < NSP; nn2++)
@@ -1877,7 +1944,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 	  if (tocheck[nn][nn2])
 	    {
 	      if (interpolNeighPlane_sp(i, t1, t-delt, delt, distsOld[nn][nn2], dists[nn][nn2], 
-				     &troot, 1, nn, nn2))
+				     &troot, nn, nn2))
 		{
 		  dorefine[nn][nn2] = 0;
 		}
@@ -1890,7 +1957,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 	  else if (dorefine[nn][nn2])
 	    {
 	      if (interpolNeighPlane_sp(i, t1, t-delt, delt, distsOld[nn][nn2], dists[nn][nn2], 
-				     &troot, 0, nn, nn2))
+				     &troot, nn, nn2))
 		{
 		  t2arr[nn][nn2] = t1 + t - delt;
 		}
@@ -1908,53 +1975,53 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 	{
 	  for (nn2 = 0; nn2 < NSP; nn2++)
 	    {
-	  if (dorefine[nn][nn2]!=0)
-	    {
-	      assign_plane(nn);
-	      //printf("nn=%d dists[%d]: %.15G distsOld[%d]:%.15G\n", nn, nn, dists[nn], nn, distsOld[nn])
-	      if (refine_contact_neigh_plane_sp(i, t1, t2arr[nn][nn2], nn, nn2, &troot))
+	      if (dorefine[nn][nn2]!=0)
 		{
-		  //printf("[locate_contact] Adding collision for ellips. N. %d t=%.15G t1=%.15G t2=%.15G\n", i,
-		//	 vecg[4], t1 , t2);
-		  MD_DEBUG30(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-		  MD_DEBUG30(printf("[locate_contact] t=%.15G nn=%d\n", t, nn));
-		  MD_DEBUG(printf("[locate_contact] its: %d\n", its));
-		  /* se il legame già c'è e con l'urto si forma tale legame allora
-		   * scarta tale urto */
-		  if (troot > t2 || troot < t1)
+		  assign_plane(nn);
+		  //printf("nn=%d dists[%d]: %.15G distsOld[%d]:%.15G\n", nn, nn, dists[nn], nn, distsOld[nn])
+		  if (refine_contact_neigh_plane_sp(i, t1, t1-delt, t2arr[nn][nn2], &troot, nn, nn2))
 		    {
+		      //printf("[locate_contact] Adding collision for ellips. N. %d t=%.15G t1=%.15G t2=%.15G\n", i,
+		      //	 vecg[4], t1 , t2);
+		      MD_DEBUG30(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
+		      MD_DEBUG30(printf("[locate_contact] t=%.15G nn=%d\n", t, nn));
+		      MD_DEBUG(printf("[locate_contact] its: %d\n", its));
+		      /* se il legame già c'è e con l'urto si forma tale legame allora
+		       * scarta tale urto */
+		      if (troot > t2 || troot < t1)
+			{
+			  continue;
+			}
+		      else
+			{
+			  gotcoll = 1;
+
+			  if (firstev || troot < *evtime)
+			    {
+			      firstev = 0;
+			      *evtime = troot;
+			    }
+			  //printf("QUI\n");
+			  if (nn==5)
+			    return 1;
+			  else
+			    continue;
+			}
+		    }
+		  else 
+		    {
+		      MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+#ifdef MD_INTERPOL
+		      if (!tocheck[nn][nn2])
+#endif
+			mdPrintf(ALL,"[locate_contact_nnl] can't find contact point!\n",NULL);
+		      /* Se refine_contact fallisce deve cmq continuare a cercare 
+		       * non ha senso smettere...almeno credo */
+		      //gotcoll = -1;
 		      continue;
 		    }
-		  else
-		    {
-		      gotcoll = 1;
-
-		      if (firstev || troot < *evtime)
-			{
-			  firstev = 0;
-			  *evtime = troot;
-			}
-		      //printf("QUI\n");
-		      if (nn==5)
-			return 1;
-		      else
-			continue;
-		    }
-		}
-	      else 
-		{
-		  MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
-#ifdef MD_INTERPOL
-		  if (!tocheck[nn][nn2])
-#endif
-		  mdPrintf(ALL,"[locate_contact_nnl] can't find contact point!\n",NULL);
-		  /* Se refine_contact fallisce deve cmq continuare a cercare 
-		   * non ha senso smettere...almeno credo */
-		  //gotcoll = -1;
-		  continue;
 		}
 	    }
-	}
 	}
       if (gotcoll == 1)
 	return 1;
