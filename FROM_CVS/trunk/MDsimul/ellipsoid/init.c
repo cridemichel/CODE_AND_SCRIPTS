@@ -1674,6 +1674,7 @@ void usrInitAft(void)
 	maxax[i] = Oparams.b[a];
       if (Oparams.c[a] > maxax[i])
 	maxax[i] = Oparams.c[a];
+      //printf("distSPA=%.15G distSPB=%.15G\n", distSPA, distSPB);
 #ifdef MD_PATCHY_HE
       //printf("maxax bef[%d]: %.15G\n", i, maxax[i]*2.0);
       if (i < Oparams.parnumA)

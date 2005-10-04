@@ -3746,7 +3746,6 @@ retry:
     {
       if (segno*vecg[4]<0 && fabs(segno*vecg[4])>3E-8)
 	{
-	  
 	  if (tryagain && OprogStatus.targetPhi <= 0.0)
     	    {
 	      printf("[ERROR] I'm sorry but I can't really calculate distance\n");
@@ -5532,6 +5531,7 @@ void ProcessCollision(void)
   lastbump[evIdA].at = evIdC;
   lastbump[evIdB].mol=evIdA;
   lastbump[evIdB].at = evIdD;
+  //printf("lastbump[%d].at=%d lastbump[%d].at=%d\n", evIdA, lastbump[evIdA].at, evIdB, lastbump[evIdB].at);
   lastbump[evIdA].type = evIdE;
   lastbump[evIdB].type = evIdE;
 #else
