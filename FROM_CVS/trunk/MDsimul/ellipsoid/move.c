@@ -5105,8 +5105,8 @@ void PredictEvent (int na, int nb)
 		      evtimeHC = evtime;
 		      acHC = ac = 0;
 		      bcHC = bc = 0;
-		      if ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
-			   (na >= Oparams.parnumA && n < Oparams.parnumA))
+		      if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
+			    (na >= Oparams.parnumA && n < Oparams.parnumA)))
 			{
 			  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 			    {
