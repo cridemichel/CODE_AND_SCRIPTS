@@ -1662,6 +1662,7 @@ void usrInitAft(void)
       if (dist > distSPB)
 	distSPB = dist;
     }
+  //printf("distSPA: %.15G distSPB: %.15G\n", distSPA, distSPB);
 #endif
   MAXAX = 0.0;
   for (i = 0; i < Oparams.parnum; i++)
