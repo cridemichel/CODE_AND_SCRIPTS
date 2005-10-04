@@ -122,9 +122,10 @@ void store_bump(int i, int j);
 double rcutL, aL, bL, cL;
 extern double max_ax(int i);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
-double spApos[MD_STSPOTS_A][3] = {{0.0, 0.3, 0.0},{0.0, 0.3, 3.14159},{0.0, 5.98319,0.0},
-    {0.0, 5.98319, 3.14159},{0.0, 1.5708, 0.0}};
-double spBpos[MD_STSPOTS_B][3] = {{0.0, 0.0, 0.0},{0.0, 3.14159, 0.0}};
+#define MD_SP_DELR 0.0
+double spApos[MD_STSPOTS_A][3] = {{MD_SP_DELR, 0.3, 0.0},{MD_SP_DELR, 0.3, 3.14159},{MD_SP_DELR, 5.98319,0.0},
+    {MD_SP_DELR, 5.98319, 3.14159},{MD_SP_DELR, 1.5708, 0.0}};
+double spBpos[MD_STSPOTS_B][3] = {{MD_SP_DELR, 0.0, 0.0},{MD_SP_DELR, 3.14159, 0.0}};
 
 double spXYZ_A[MD_STSPOTS_A][3];
 double spXYZ_B[MD_STSPOTS_B][3];
@@ -151,9 +152,9 @@ void build_atom_positions(void)
       ng = calc_norm(grad);
       for (aa = 0; aa < 3; aa++)
 	grad[aa] /= ng;
-      spXYZ_A[k1][0] = x + grad[0]*Oparams.sigmaSticky*0.5;
-      spXYZ_A[k1][1] = y + grad[1]*Oparams.sigmaSticky*0.5;
-      spXYZ_A[k1][2] = z + grad[2]*Oparams.sigmaSticky*0.5;
+      spXYZ_A[k1][0] = x + grad[0]*(Oparams.sigmaSticky*0.5 + spApos[k1][0]);
+      spXYZ_A[k1][1] = y + grad[1]*(Oparams.sigmaSticky*0.5 + spApos[k1][1]);
+      spXYZ_A[k1][2] = z + grad[2]*(Oparams.sigmaSticky*0.5 + spApos[k1][2]);
     }
   for (k1 = 0; k1 < MD_STSPOTS_B; k1++)
     {
@@ -166,9 +167,9 @@ void build_atom_positions(void)
       ng = calc_norm(grad);
       for (aa = 0; aa < 3; aa++)
 	grad[aa] /= ng;
-      spXYZ_B[k1][0] = x + grad[0]*Oparams.sigmaSticky*0.5;
-      spXYZ_B[k1][1] = y + grad[1]*Oparams.sigmaSticky*0.5;
-      spXYZ_B[k1][2] = z + grad[2]*Oparams.sigmaSticky*0.5;
+      spXYZ_B[k1][0] = x + grad[0]*(Oparams.sigmaSticky*0.5 + spBpos[k1][0]);
+      spXYZ_B[k1][1] = y + grad[1]*(Oparams.sigmaSticky*0.5 + spBpos[k1][1]);
+      spXYZ_B[k1][2] = z + grad[2]*(Oparams.sigmaSticky*0.5 + spBpos[k1][2]) ;
     }
 }
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
