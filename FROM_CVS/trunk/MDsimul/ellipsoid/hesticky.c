@@ -2133,36 +2133,26 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
       for (nn = 0; nn < 6; nn++)
 	{
 	  for (nn2 = 0; nn2 < NSP; nn2++)
-	  {
-	  if (tocheck[nn][nn2])
 	    {
-	      if (interpolNeighPlane_sp(i, t1, t-delt, delt, distsOld[nn][nn2], dists[nn][nn2], 
-				     &troot, nn, nn2))
+	      if (tocheck[nn][nn2])
 		{
-		  dorefine[nn][nn2] = 0;
+		  if (interpolNeighPlane_sp(i, t1, t-delt, delt, distsOld[nn][nn2], dists[nn][nn2], 
+					    &troot, nn, nn2))
+		    {
+		      dorefine[nn][nn2] = 0;
+		    }
+		  else 
+		    {
+		      MD_DEBUG32(printf("qui-1 t-delt=%.15G t=%.15G t2arr=%.15G\n", t-delt,t, troot));
+		      dorefine[nn][nn2] = 1;
+		      t2arr[nn][nn2] = troot-t1;
+		    }
 		}
-	      else 
+	      else if (dorefine[nn][nn2])
 		{
-		  MD_DEBUG32(printf("qui-1 t-delt=%.15G t=%.15G t2arr=%.15G\n", t-delt,t, troot));
-	       	  dorefine[nn][nn2] = 1;
-      		  t2arr[nn][nn2] = troot-t1;
-		}
-	    }
-	  else if (dorefine[nn][nn2])
-	    {
-	      if (interpolNeighPlane_sp(i, t1, t-delt, delt, distsOld[nn][nn2], dists[nn][nn2], 
-				     &troot, nn, nn2))
-		{
-		  MD_DEBUG30(printf("qui-2 t-delt=%.15G t=%.15G t2arr=%.15G\n", t-delt, t1, t));
 		  t2arr[nn][nn2] = t;
 		}
-	      else
-		{
-		  MD_DEBUG30(printf("qui-3 t-delt=%.15G t=%.15G t2arr=%.15G\n", t-delt, t, troot));
-  		  t2arr[nn][nn2] = troot-t1;
-		}
 	    }
-	}
 	}
 #endif
       gotcoll = 0;
@@ -2216,7 +2206,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 #endif
 			mdPrintf(ALL,"[locate_contact_nnl_sp] can't find contact point!\n",NULL);
 
-		      printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t-delt, t2arr[nn][nn2], delt, nn, nn2, dists[nn][nn2], nn, nn2, distsOld[nn][nn2]);
+		      MD_DEBUG32(printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t-delt, t2arr[nn][nn2], delt, nn, nn2, dists[nn][nn2], nn, nn2, distsOld[nn][nn2]));
 		      /* Se refine_contact fallisce deve cmq continuare a cercare 
 		       * non ha senso smettere...almeno credo */
 		      //gotcoll = -1;
