@@ -422,6 +422,7 @@ struct progStatus
   int JJ;
   double storerate;
 #ifdef MD_PATCHY_HE
+  int checkGrazing;
   int maxbonds;
   int assumeOneBond;
 #endif
@@ -701,6 +702,7 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef MD_PATCHY_HE
   {"assumeOneBond",     &OS(assumeOneBond),               1,   1, "%d"},
+  {"checkGrazing",      &OS(checkGrazing),                1,   1, "%d"},
 #endif
   {"NN",           &OS(NN),                         1,  1,   "%d"},
   {"fstps",        &OS(fstps),                      1,  1,   "%.15G"},
@@ -903,7 +905,8 @@ struct singlePar OsinglePar[] = {
 #ifdef MD_PATCHY_HE
   {"sigmaSticky", &Oparams.sigmaSticky,     CT},
   {"bheight",    &Oparams.bheight,          CT},
-  {"assumeOneBond", &OprogStatus.assumeOneBond, CT},
+  {"assumeOneBond", &OprogStatus.assumeOneBond, INT},
+  {"checkGrazing",  &OprogStatus.checkGrazing, INT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
