@@ -9,6 +9,7 @@
 #define MD_DEBUG29(x) 
 #define MD_DEBUG30(x)  //qui 
 #define MD_DEBUG31(x)  //qui 
+#define MD_DEBUG32(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #undef MD_OPTDDIST
@@ -639,17 +640,20 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
   /* QUESTA VA RISCRITTA PER GLI ELLISSOIDI STICKY!!! */
   /* calcola le coordinate nel laboratorio di uno specifico atomo */
   int k1, k2;
-  double *spXYZ;
+  double *spXYZ=NULL;
   //double radius; 
   /* l'atomo zero si suppone nell'origine 
    * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
    * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
    * a partire da questi. */
 
-  if (i < Oparams.parnumA)
-    spXYZ = spXYZ_A[ata-1];
-  else
-    spXYZ = spXYZ_B[ata-1];
+  if (ata > 0)
+    {
+      if (i < Oparams.parnumA)
+	spXYZ = spXYZ_A[ata-1];
+      else  
+	spXYZ = spXYZ_B[ata-1];
+    }
   //radius = Oparams.sigma[0][1] / 2.0;
   if (ata == 0)
     {
@@ -1613,7 +1617,7 @@ double get_max_deldist_sp(int nsp, double distsOld[6][NA], double dists[6][NA])
 }
 
 double calcDistNegOneNNL_sp(double t, double t1, int i, int nn);
-int interpolNeighPlane_sp(int i, double tref, double t, double delt, double d1, double d2, double *tmin, int nn, int nplane)
+int interpolNeighPlane_sp(int i, double tref, double t, double delt, double d1, double d2, double *tmin, int nplane, int nn)
 {
   double d3, A, B, C, dmin;
   /* NOTA: dists di seguito può non essere usata? controllare!*/
@@ -1680,7 +1684,11 @@ int check_cross_scf_sp(int NSP, double distsOld[6][NA], double dists[6][NA], int
 }
 void assign_dists_sp(int nsp, double a[6][NA], double b[6][NA])
 {
-  memcpy(b, a, nsp*6*sizeof(double));
+  int k1, k2;
+  //memcpy(b, a, nsp*6*sizeof(double));
+  for (k1=0; k1 < 6; k1++)
+    for (k2 = 0; k2 < nsp; k2++)
+      b[k1][k2] = a[k1][k2];
 }
 int get_dists_tocheck_sp(int nsp, double distsOld[6][NA], double dists[6][NA], int tocheck[6][NA], int dorefine[6][NA])
 {
@@ -1701,11 +1709,46 @@ int get_dists_tocheck_sp(int nsp, double distsOld[6][NA], double dists[6][NA], i
     }
   return rettochk;
 }
+double calcDistNegOneNNL_sp_norient(double t, double t1, int i, int nn, double ratA[NA][3])
+{
+  double dist;
+  int kk;
+  dist = 0;
+  for (kk=0; kk < 3; kk++)
+    dist += -(ratA[nn+1][kk]-rB[kk])*gradplane[kk];
+  MD_DEBUG32(printf("DIST NOORIENT nn=%d t=%.15G dist=%.15G\n", nn, t+t1, dist- Oparams.sigmaSticky*0.5));
+  return dist - Oparams.sigmaSticky*0.5;
+}
 
-double calcDistNegNeighPlaneAll_sp(int nsp, double t, double tref, int i, double dists[6][NA])
+double calcDistNegNeighPlaneAll_sp(int nsp, double t, double t1, int i, double dists[6][NA])
 {
   int nn, kk, nn2;
   double dmin=0.0;
+  double ti;
+  double ratA[NA][3];
+#ifndef MD_ASYM_ITENS
+  double Omega[3][3];
+#endif
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
+  MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+  MD_DEBUG20(printf("BRENT nn=%d\n", nn));
+  ti = t + (t1 - atomTime[i]);
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
+  /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
+  //UpdateOrient(i, ti, RtA, Omega, mapbondsa[nn]);
+  UpdateOrient(i, ti, RtA, Omega);
+#endif
+  /* calcola le posizioni nel laboratorio degli atomi della molecola */
+  BuildAtomPos(i, rA, RtA, ratA);
+
   for (nn = 0; nn < 6; nn++)
     {
       for (nn2 = 0; nn2 < nsp; nn2++)
@@ -1715,7 +1758,7 @@ double calcDistNegNeighPlaneAll_sp(int nsp, double t, double tref, int i, double
 	      gradplane[kk] = gradplane_all[nn][kk];
 	      rB[kk] = rBall[nn][kk];
 	    }
-	  dists[nn][nn2] = calcDistNegOneNNL_sp(t, tref, i, nn);
+	  dists[nn][nn2] = calcDistNegOneNNL_sp_norient(t, t1, i, nn2, ratA);
 	  //printf("dist[%d]:%.15G\n", nn, dists[nn]);
 	  if ((nn==0 && nn2==0) || dists[nn][nn2] < dmin)
 	    dmin = dists[nn][nn2];
@@ -1879,11 +1922,11 @@ double calcDistNegOneNNL_sp(double t, double t1, int i, int nn)
   /* calcola sigmaSq[][]!!! */
   dist = 0;
   for (kk=0; kk < 3; kk++)
-    dist += (ratA[nn+1][kk]-rB[kk])*gradplane[kk];
-  MD_DEBUG20(printf("dist= %.15G\n", sqrt(distSq)-Oparams.sigmaSticky));
+    dist += -(ratA[nn+1][kk]-rB[kk])*gradplane[kk];
+  MD_DEBUG32(printf("BRENT nn=%d t=%.15G dist= %.15G\n", nn,
+		    t1+t,  dist - Oparams.sigmaSticky*0.5));
   return dist - Oparams.sigmaSticky*0.5;
 }
-
 double funcs2beZeroedNNL_sp(double x, double tref, int i, int nn)
 {
   return calcDistNegOneNNL_sp(x, trefbr, i, nn);
@@ -1955,7 +1998,7 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
 #endif
 
 
-int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
+int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 {
   /* const double minh = 1E-14;*/
   double h, d, dold, dold2, t2arr[6][NA], t, dists[6][NA], distsOld[6][NA], 
@@ -1967,7 +2010,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
   const double EPS=3E-8;*/ 
   /* per calcolare derivate numeriche questo è il magic number in doppia precisione (vedi Num. Rec.)*/
   int its, foundrc, NSP;
-  double t1, t2, epsd, epsdFast, epsdFastR, epsdMax, deldist; 
+  double t1, epsd, epsdFast, epsdFastR, epsdMax, deldist; 
   int tocheck[6][NA], dorefine[6][NA], ntc, ncr, nn, gotcoll, crossed[6][NA], firstaftsf;
   epsd = OprogStatus.epsdNL;
   epsdFast = OprogStatus.epsdFastNL;
@@ -1975,7 +2018,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
   epsdMax = OprogStatus.epsdMaxNL;
   t = 0;//t1;
   t1 = Oparams.time;
-  t2 = timbig;
+  //t2 = timbig;
   if (i < Oparams.parnumA)
     NSP = MD_STSPOTS_A;
   else
@@ -1988,6 +2031,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
       for (nn2 = 0; nn2 < NSP; nn2++)
 	{
 	  maxddoti[nn][nn2] = calc_maxddot_nnl_sp(i, nn2, gradplane_all[nn]);
+	  //printf("maxddoti[%d][%d]=%.15G\n", nn, nn2, maxddoti[nn][nn2]);
 #if 0
 	  maxddoti[nn][nn2] = fabs(vx[i]*gradplane_all[nn][0]+vy[i]*gradplane_all[nn][1]+vz[i]*gradplane_all[nn][2])+
 	    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
@@ -2005,6 +2049,8 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
     {
       return 0;  
     }
+
+  MD_DEBUG30(printf("t=%.15G d=%.15G\n", t, d));
   timesSNL++;
   foundrc = 0;
   assign_dists_sp(NSP, dists, distsOld);
@@ -2040,6 +2086,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
       tini = t;
       t += delt;
       d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+      MD_DEBUG30(printf("t=%.15G d=%.15G\n", t, d));
       deldist = get_max_deldist_sp(NSP, distsOld, dists);
       if (deldist > epsdMax)
 	{
@@ -2096,8 +2143,9 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 		}
 	      else 
 		{
+		  MD_DEBUG32(printf("qui-1 t-delt=%.15G t=%.15G t2arr=%.15G\n", t-delt,t, troot));
 	       	  dorefine[nn][nn2] = 1;
-      		  t2arr[nn][nn2] = troot;
+      		  t2arr[nn][nn2] = troot-t1;
 		}
 	    }
 	  else if (dorefine[nn][nn2])
@@ -2105,11 +2153,13 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 	      if (interpolNeighPlane_sp(i, t1, t-delt, delt, distsOld[nn][nn2], dists[nn][nn2], 
 				     &troot, nn, nn2))
 		{
-		  t2arr[nn][nn2] = t1 + t - delt;
+		  MD_DEBUG30(printf("qui-2 t-delt=%.15G t=%.15G t2arr=%.15G\n", t-delt, t1, t));
+		  t2arr[nn][nn2] = t;
 		}
 	      else
 		{
-  		  t2arr[nn][nn2] = troot;
+		  MD_DEBUG30(printf("qui-3 t-delt=%.15G t=%.15G t2arr=%.15G\n", t-delt, t, troot));
+  		  t2arr[nn][nn2] = troot-t1;
 		}
 	    }
 	}
@@ -2124,8 +2174,12 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 	      if (dorefine[nn][nn2]!=0)
 		{
 		  assign_plane(nn);
-		  //printf("nn=%d dists[%d]: %.15G distsOld[%d]:%.15G\n", nn, nn, dists[nn], nn, distsOld[nn])
-		  if (refine_contact_neigh_plane_sp(i, t1, t1-delt, t2arr[nn][nn2], &troot, nn, nn2))
+		  MD_DEBUG32(printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t1+t-delt, t1+t2arr[nn][nn2], delt, nn, nn2, dists[nn][nn2], nn, nn2, distsOld[nn][nn2]));
+		  MD_DEBUG32(printf("d(%.15G)=%.15G d(%.15G)=%.15G\n",
+				    t-delt, calcDistNegOneNNL_sp(t-delt, t1, i, nn2),
+				    t2arr[nn][nn2], calcDistNegOneNNL_sp(t2arr[nn][nn2],
+									 t1, i, nn2)));
+		  if (refine_contact_neigh_plane_sp(i, t1, t-delt, t2arr[nn][nn2], &troot, nn, nn2))
 		    {
 		      //printf("[locate_contact] Adding collision for ellips. N. %d t=%.15G t1=%.15G t2=%.15G\n", i,
 		      //	 vecg[4], t1 , t2);
@@ -2156,11 +2210,11 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime)
 		    }
 		  else 
 		    {
-		      MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+		      MD_DEBUG(printf("[locate_contact_sp] can't find contact point!\n"));
 #ifdef MD_INTERPOL
 		      if (!tocheck[nn][nn2])
 #endif
-			mdPrintf(ALL,"[locate_contact_nnl] can't find contact point!\n",NULL);
+			mdPrintf(ALL,"[locate_contact_nnl_sp] can't find contact point!\n",NULL);
 		      /* Se refine_contact fallisce deve cmq continuare a cercare 
 		       * non ha senso smettere...almeno credo */
 		      //gotcoll = -1;

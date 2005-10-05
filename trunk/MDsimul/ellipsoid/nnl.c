@@ -3357,12 +3357,20 @@ int locate_contact_neigh(int i, double vecg[5])
   return foundrc;
 }
 extern double max(double a, double b);
+#ifdef MD_PATCHY_HE
+extern int locate_contactSP(int i, int j, double shift[3], double t1, double t2, double *evtime, int *ata, int *atb, int *collCode);
+extern void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent);
+#endif
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
   double vecg[5], shift[3], t1, t2, t, tm[NDIM];
   double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
   int overlap;
+#ifdef MD_PATCHY_HE
+  int ac, bc, collCode, collCodeOld, acHC, bcHC;
+  double evtime, evtimeHC;
+#endif
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -3532,6 +3540,40 @@ void PredictEventNNL(int na, int nb)
 
       MD_DEBUG32(printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime));
       MD_DEBUG32(printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2));
+#ifdef MD_PATCHY_HE
+      evtime = t2;
+      collCode = MD_EVENT_NONE;
+      rxC = ryC = rzC = 0.0;
+      MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
+      if (locate_contact(na, n, shift, t1, t2, vecg))
+	{
+	  collCode = MD_CORE_BARRIER;
+	  evtime = vecg[4];
+	  rxC = vecg[0];
+	  ryC = vecg[1];
+	  rzC = vecg[2];
+	}
+      collCodeOld = collCode;
+      evtimeHC = evtime;
+      acHC = ac = 0;
+      bcHC = bc = 0;
+      if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
+					(na >= Oparams.parnumA && n < Oparams.parnumA)))
+	{
+	  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+	    {
+	      if (collCode == MD_EVENT_NONE)
+		continue;
+	    }
+	}
+      else
+	{
+	  if (collCode == MD_EVENT_NONE)
+	    continue;
+	}
+      
+      t = evtime;
+#else
       if (!locate_contact(na, n, shift, t1, t2, vecg))
 	{
 	  continue;
@@ -3540,16 +3582,26 @@ void PredictEventNNL(int na, int nb)
       ryC = vecg[1];
       rzC = vecg[2];
       t = vecg[4];
+#endif
       MD_DEBUG32(printf("Scheduling collision between %d and %d at t=%.15G\n", na, n, t));
+#ifdef MD_PATCHY_HE
+      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
+#else
       ScheduleEvent (na, n, t);
+#endif
     }
 }
-
+#ifdef MD_PATCHY_HE
+extern int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2);
+#endif
 void updrebuildNNL(int na)
 {
   /* qui ricalcola solo il tempo di collisione dell'ellisoide na-esimo con 
    * la sua neighbour list */
   double vecg[5];
+#ifdef MD_PATCHY_HE
+  double sptime;
+#endif
   int ip;
 #ifdef MD_NNLPLANES
   nebrTab[na].nexttime = timbig;
@@ -3571,6 +3623,16 @@ void updrebuildNNL(int na)
 	   nebrTab[na].nexttime = vecg[4];
        }
    }
+#ifdef MD_PATCHY_HE
+ if (!locate_contact_neigh_plane_parall_sp(na, &sptime, nebrTab[na].nexttime+1E-7))
+   {
+     //printf("[ERROR] failed to find escape time for sticky spots\n");
+     //exit(-1);
+   }
+ MD_DEBUG32(printf("sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
+ if (sptime < nebrTab[na].nexttime)
+   nebrTab[na].nexttime = sptime;
+#endif
 #else
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
@@ -3609,6 +3671,9 @@ void nextNNLupdate(int na)
   double DelDist, nnlfact;
   const double distBuf = 0.1;
   double Omega[3][3], vecg[5];
+#ifdef MD_PATCHY_HE
+  double sptime;
+#endif
 #ifdef MD_ASYM_ITENS
   double psi, phi;
 #endif
@@ -3670,6 +3735,16 @@ void nextNNLupdate(int na)
  	    nebrTab[na].nexttime = vecg[4];
   	}
     }
+#ifdef MD_PATCHY_HE
+  if (!locate_contact_neigh_plane_parall_sp(na, &sptime, nebrTab[na].nexttime+1E-7))
+    {
+      //printf("[ERROR] failed to find escape time for sticky spots\n");
+      //exit(-1);
+    }
+  MD_DEBUG32(printf("[nextNNLupdate] sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
+  if (sptime < nebrTab[na].nexttime)
+    nebrTab[na].nexttime = sptime;
+#endif
   //printf(">> nexttime=%.15G\n", nebrTab[na].nexttime);
 #else
   if (!locate_contact_neigh(na, vecg))
