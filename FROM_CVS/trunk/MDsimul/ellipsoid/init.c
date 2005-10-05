@@ -39,7 +39,7 @@ extern double Lz2;
 extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB; 
-
+int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
@@ -63,12 +63,19 @@ int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 double *treeRxC, *treeRyC, *treeRzC;
 extern int *mapbondsa;
 extern int *mapbondsb;
+extern int bound(int na, int n, int a, int b);
+extern void remove_bond(int na, int n, int a, int b);
+extern void assign_bond_mapping(int i, int j);
 #endif
 double invaSq[2], invbSq[2], invcSq[2];
 extern double *fvec, *fvecG, *fvecD;
 extern double **fjac,*g,*p,*xold;
 extern int *indx;
-
+#ifdef MD_PATCHY_HE
+double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double dists[MD_PBONDS], int bondpair);
+extern double spXYZ_A[MD_STSPOTS_A][3];
+extern double spXYZ_B[MD_STSPOTS_B][3];
+#endif
 struct nebrTabStruct *nebrTab;
 /* ================================= */
 
@@ -85,7 +92,150 @@ void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z,
   *r3y = r1z * r2x - r1x * r2z;
   *r3z = r1x * r2y - r1y * r2x;
 }
+#ifdef MD_PATCHY_HE
+void check_all_bonds(void)
+{
+  int nn, warn, amin, bmin, i, j, aa, bb, nb, wnn, wj;
+  static int errtimes=0;
+  double wdist,drx, dry, drz, shift[3], dist, rat[5][3], dists[MD_PBONDS], ri[3];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 
+  warn = 0;
+  for ( i = 0; i < Oparams.parnum; i++)
+    {
+      if (warn)
+	break;
+      nb = 0;
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	{
+	  jZ = inCell[2][i] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      jZ = cellsz - 1;    
+	      shift[2] = - L;
+	    } 
+	  else if (jZ == cellsz) 
+	    {
+	      jZ = 0;    
+	      shift[2] = L;
+	    }
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	    {
+	      jY = inCell[1][i] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsy - 1;    
+		  shift[1] = -L;
+		} 
+	      else if (jY == cellsy) 
+		{
+		  jY = 0;    
+		  shift[1] = L;
+		}
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		{
+		  jX = inCell[0][i] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsx - 1;    
+		      shift[0] = - L;
+		    } 
+		  else if (jX == cellsx) 
+		    {
+		      jX = 0;   
+		      shift[0] = L;
+		    }
+		  j = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+		  for (j = cellList[j]; j > -1; j = cellList[j]) 
+		    {
+		      if (i == j)
+			continue;
+		      if (! ((i < Oparams.parnumA && j >= Oparams.parnumA)||
+			     (i >= Oparams.parnumA && j < Oparams.parnumA)))
+			  continue;
+#if 0 
+		      drx = rx[i] - rx[j];
+		      shift2[0] = L*rint(drx/L);
+		      dry = ry[i] - ry[j];
+		      shift2[1] = L*rint(dry/L);
+		      drz = rz[i] - rz[j]; 
+		      shift2[2] = L*rint(drz/L);
+#endif
+		      assign_bond_mapping(i,j);
+		      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+		      for (nn=0; nn < MD_PBONDS; nn++)
+			{
+			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
+			      && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
+			    {
+			      warn=1;
+#if 0
+			      aa = mapbondsa[nn];
+			      bb = mapbondsb[nn];
+			      wdist=dists[nn];
+			      wnn = nn;
+			      wj = j;
+#endif
+			      //nb++;
+			    }
+			  else if (dists[nn]>0.0 && 
+				   fabs(dists[nn])> OprogStatus.epsd && 
+				   bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+			    {
+			      warn = 2;
+			      printf("wrong number of bonds between %d and %d\n", i, j);
+			      if (OprogStatus.checkGrazing==1)
+				{
+				  remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
+				}
+			    }
+  			}
+		    }
+		}
+	    }
+	}
+      if (warn)
+	{
+	  mdPrintf(ALL, "[WARNING] wrong number of bonds\n", NULL);
+	  sprintf(TXT,"[WARNING] Number of bonds for molecules %d incorrect\n", i);
+	  mdPrintf(ALL, TXT, NULL);
+	  sprintf(TXT,"Step N. %d time=%.15G\n", Oparams.curStep, Oparams.time);
+	  mdPrintf(ALL, TXT, NULL);
+	  if (warn==1)
+	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n",NULL);
+	  else
+	    mdPrintf(ALL,"Distance > 0 but bonded, probably a collision has been missed\n", NULL);
+	  //printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
+	  //	 numbonds[i], nb);
+	  //printf("I've adjusted the number of bonds\n");
+	  //printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
+	  //store_bump(i,j);
+	  if (warn==2)
+	    {
+	      if (OprogStatus.checkGrazing==2)
+		exit(-1);
+	      else
+		mdPrintf(ALL,"I adjusted the number of bonds...energy won't conserve!", NULL);
+	    }
+	}
+    }
+}
+#endif
 void ScheduleEvent (int idA, int idB, double tEvent); 
 void check_coord(void)
 {
@@ -784,7 +934,9 @@ void usrInitBef(void)
 #ifdef MD_PATCHY_HE
     Oparams.sigmaSticky = 1.0;
     Oparams.bheight = 0.0;
-    OprogStatus.maxbonds = 20;
+    OprogStatus.assumeOneBond = 0;
+    OprogStatus.checkGrazing = 0;
+    OprogStatus.maxbonds = 100;
 #endif
 #ifdef MD_GRAVITY
     Lz = 9.4;
@@ -907,7 +1059,6 @@ void usrInitBef(void)
   }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
-int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
 extern void PredictEvent(int, int);
 extern void InitEventList(void);
 void StartRun(void)
@@ -976,7 +1127,6 @@ void StartRun(void)
 extern void build_atom_positions(void);
 extern void add_bond(int na, int n, int a, int b);
 extern double calcpotene(void);
-extern void assign_bond_mapping(int i, int j);
 int get_num_pbonds(int i, int j)
 {
   return MD_PBONDS;
@@ -1333,11 +1483,7 @@ void upd_refsysM(int i)
 #endif 
 /* ======================== >>> usrInitAft <<< ==============================*/
 void RDiagtR(int i, double **M, double a, double b, double c, double **Ri);
-#ifdef MD_PATCHY_HE
-double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double dists[MD_PBONDS], int bondpair);
-extern double spXYZ_A[MD_STSPOTS_A][3];
-extern double spXYZ_B[MD_STSPOTS_B][3];
-#endif
+
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -1630,6 +1776,8 @@ void usrInitAft(void)
       axc[i] = Oparams.c[1];
     }
   printf(">>>> phi=%.12G L=%f (%f,%f,%f)\n", calc_phi(), L, Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
+  if (Oparams.parnumA < Oparams.parnum)
+    printf("semi-axes of B (%f, %f ,%f)\n",Oparams.a[1], Oparams.b[1], Oparams.c[1]);
   /* evaluation of principal inertia moments*/ 
   for (a = 0; a < 2; a++)
     {
@@ -1717,6 +1865,8 @@ void usrInitAft(void)
     {
       numbonds[i] = 0;
     }
+  printf("L=%f parnum: %d parnumA: %d\n", L, Oparams.parnum, Oparams.parnumA);
+  printf("sigmaSticky=%.15G\n", Oparams.sigmaSticky);
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
@@ -1735,7 +1885,7 @@ void usrInitAft(void)
 	NPB = get_num_pbonds(i, j);
 	for (nn=0; nn < NPB; nn++)
 	  {
-	    if (dists[nn] < 0.0)
+   	    if (dists[nn] < 0.0)
 	      {
 		//printf("(%d,%d)-(%d,%d)\n", i, mapbondsa[nn], j, mapbondsb[nn]);
 		aa = mapbondsa[nn];

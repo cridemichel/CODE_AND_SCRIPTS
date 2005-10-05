@@ -844,7 +844,10 @@ void outputSummary(void)
   if (numcalldist && OprogStatus.SDmethod)
     printf("Percentage of failed dist=%.6f%%\n", 100.0*(((double) numdisttryagain) / numcalldist));
   printf("Number of collisions: %lld\n", numcoll);
-  
+#ifdef MD_PATCHY_HE 
+  if (OprogStatus.checkGrazing)
+    check_all_bonds();
+#endif
   if (!ENDSIM)
     scale_Phi();
 #ifdef MD_GRAVITY
@@ -3384,7 +3387,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
      		double *vecgsup, int calcguess)
 {
   double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], fx[3];
-  double ti, segno;
+  double ti, segno, segno2;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck, tryagain = 0;
 #ifndef MD_ASYM_ITENS
@@ -3792,6 +3795,34 @@ retry:
 	  return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
 	}
     }
+#if 0
+  segno2 = -1;
+  /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++) 
+      segno2 += (r1[k1]-rB[k1])*Xb[k1][k2]*(r1[k2]-rB[k2]); 
+  if (segno2*segno < 0.0 && fabs(segno*segno2) > 3E-8)
+    {
+      if (tryagain && OprogStatus.targetPhi <= 0)
+	{
+	  printf("[ERROR segno*segno2] I'm sorry but I can't really calculate distance\n");
+	  exit(-1);
+	} 
+      if (!tryagain && ( OprogStatus.SDmethod==2 || OprogStatus.SDmethod==3 ))
+	{
+	  numdisttryagain++;
+	  tryagain = 1; 
+	  goto retry;
+	}
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck = 1;
+	  return 0.0;
+	}
+      printf("segno: %.8G segno2: %.15G dist=%.15G\n", segno, segno2, calc_norm(r12));
+      return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
+    }
+#endif
   if (segno > 0)
     return calc_norm(r12);
   else
