@@ -94,6 +94,20 @@ void print_matrix(double **M, int n)
     }
   printf("}\n");
 }
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
+     		double *vecgsup, int calcguess);
+
+double calc_dist_ij(int i, int j, double t)
+{
+  static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
+  double d,r1[3], r2[3], alpha;
+  shift[0] = L*rint((rx[i]-rx[j])/L);
+  shift[1] = L*rint((ry[i]-ry[j])/L);
+  shift[2] = L*rint((rz[i]-rz[j])/L);
+  d=calcDistNeg(t, 0, i, j, shift, r1, r2, &alpha, vecgNeg, 1);
+  return d;
+}
+
 void print_matrixArr(double M[3][3])
 {
   int k1, k2;
@@ -1363,7 +1377,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       MD_DEBUG(printf("norm = (%f,%f,%f)\n", norm[0], norm[1],norm[2]));
       MD_DEBUG(printf("vel  = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
       MD_DEBUG(printf("i=%d r = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]));
-      printf("[ERROR] maybe second collision has been wrongly predicted %d-%d\n",i,j);
+      printf("[ERROR t=%.15G] maybe second collision has been wrongly predicted %d-%d\n",Oparams.time,i,j);
       printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
       store_bump(i,j);
       exit(-1);
@@ -2188,7 +2202,7 @@ void calc_Rdot(int i, double cosea[3], double sinea[3], double **Ro)
   REt[0][2] =  B*cospsi*sinth;
   REt[1][0] = -B*cosphicospsi + A*sinphisinpsi - costh*( A*cosphicospsi - B*sinphisinpsi);
   REt[1][1] = -B*sinphicospsi - A*cosphisinpsi + costh*(-A*sinphicospsi - B*cosphisinpsi);
-  REt[1][2] = -B*sinpsi*costh;
+  REt[1][2] = -B*sinpsi*sinth;
   REt[2][0] =  A*cosphi*sinth;
   REt[2][1] =  A*sinphi*sinth;
   REt[2][2] =  0;
@@ -3795,7 +3809,7 @@ retry:
 	  return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
 	}
     }
-#if 0
+#ifdef MD_PATCHY_HE
   segno2 = -1;
   /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
   for (k1 = 0; k1 < 3; k1++)
@@ -4142,7 +4156,7 @@ int refine_contact(int i, int j, double t1, double t, double vecgd[8], double sh
   vecg[4] += t1;
   if (retcheck==2)
     {
-      MD_DEBUG10(printf("newt did not find any contact point!\n"));
+      MD_DEBUG31(printf("newt did not find any contact point!\n"));
       return 0;
     }
 #if 0
@@ -4232,7 +4246,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 #endif
   *d1 = calcDistNeg(*t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
   timesF++;
-  MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
+  MD_DEBUG31(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
   while (*d1 > epsdFast && its < MAXOPTITS)
     {
@@ -4263,8 +4277,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
       if (*t + t1 > t2)
 	{
 	  *t = told;
-	  MD_DEBUG10(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG10(printf("convergence t>t2\n"));
+	  MD_DEBUG31(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG31(printf("convergence t>t2\n"));
 	  *d1 = calcDistNeg(*t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
 	  return 1;
 	}
@@ -4273,8 +4287,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
       if (*d1 < 0)
 	{
 	  /* go back! */
-	  MD_DEBUG10(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG10(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
+	  MD_DEBUG31(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG31(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
 	  *d1 = calcDistNeg(*t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
 	  return 0;
@@ -4284,7 +4298,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
       itsF++;
     }
 
-  MD_DEBUG10(printf("max iterations %d iterations reached t=%f t2=%f\n", its, *t, t2));
+  MD_DEBUG31(printf("max iterations %d iterations reached t=%f t2=%f\n", its, *t, t2));
   return 0;
 }
 extern double **Aip;
@@ -4536,10 +4550,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       return 0;
     }
 #endif
-  MD_DEBUG20(printf("[LOCATE_CONTACT] prima search contact faster\n"));
+  MD_DEBUG31(printf("[LOCATE_CONTACT] prima search contact faster\n"));
   if (search_contact_faster(i, j, shift, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0; 
-  MD_DEBUG20(printf("[LOCATE_CONTACT]>>>>d:%f t=%.15G\n", d,t));
+  MD_DEBUG31(printf("[LOCATE_CONTACT]>>>>d:%f t=%.15G\n", d,t));
   foundrc = 0;
 #if 0
   if (d1 < 0)
@@ -4643,9 +4657,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	{
 	  if (refine_contact(i, j, t1, troot, vecgroot, shift, vecg))
 	    {
-	      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-	      MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
-	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+	      MD_DEBUG31(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
+	      MD_DEBUG31(printf("collision will occur at time %.15G\n", vecg[4])); 
+	      MD_DEBUG31(printf("[locate_contact] its: %d\n", its));
 #ifdef MD_PATCHY_HE
 	      if (vecg[4]>t2 || vecg[4]<t1 || 
 		  (lastbump[i].mol==j && lastbump[i].at==0 && lastbump[j].mol==i && lastbump[j].at==0
@@ -4666,12 +4680,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	    }
 	  else 
 	    {
-	      MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+	      MD_DEBUG31(printf("[locate_contact] can't find contact point!\n"));
+	      MD_DEBUG31(printf("troot=%.15G t1=%.15G delt=%.15G t=%.15G troot-t=%.15G\n", troot, t1, delt, t, troot-t-t1));
 	      if (d < 0)
 		{
-		  MD_DEBUG10(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
+		  MD_DEBUG31(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
 		  //MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
-		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+		  MD_DEBUG31(printf("[locate_contact] its: %d d=%.15G\n", its, d));
+		  MD_DEBUG31(printf("dold=%.15G d=%.15G\n", dold, d));
 		  return 0;
 		  //if (lastbump[i] == j && lastbump[j]==i )
 		   // return 0;
@@ -5122,8 +5138,10 @@ void PredictEvent (int na, int nb)
 		      exit(-1);
 #endif
 #ifdef MD_PATCHY_HE
+		      evtime = t2;
 		      collCode = MD_EVENT_NONE;
 		      rxC = ryC = rzC = 0.0;
+		      MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
 		      if (locate_contact(na, n, shift, t1, t2, vecg))
 			{
 			  collCode = MD_CORE_BARRIER;
@@ -5143,14 +5161,19 @@ void PredictEvent (int na, int nb)
 			    {
 			      if (collCode == MD_EVENT_NONE)
 				continue;
-			    }
+      			    }
 			}
 		      else
 			{
 	    		  if (collCode == MD_EVENT_NONE)
 				continue;
 			}
+	
 		      t = evtime;
+		      MD_DEBUG31(printf("(%d,%d)-(%d,%d) troot=%.15G\n", na, ac, n, bc, evtime));
+		      MD_DEBUG31(printf("evtimeHC=%.15G",evtimeHC));
+		      MD_DEBUG31(printf("dist(t=%.15G,%d-%d):%.15G dist(t=%.15G)=%.15G\n", evtimeHC, na, n, 
+					calc_dist_ij(na, n, evtimeHC), evtime, calc_dist_ij(na, n, evtime)));
 #else
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 		      	continue;
@@ -5501,9 +5524,14 @@ void store_bump_neigh(int i, double *r1, double *r2)
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
-  int ii;
+  int ii, na;
   FILE *bf;
-  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
+#ifdef MD_PATCHY_HE
+  int nn;
+  double ratA[NA][3], ratB[NA][3];
+#endif
+  double Drx, Dry, Drz, RCMx, RCMy, RCMz;
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
   sprintf(fileop2 ,"StoreBump-%d-%d-t%.8f", i, j, Oparams.time);
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
@@ -5514,15 +5542,39 @@ void store_bump(int i, int j)
     }
   UpdateSystem();
   R2u();
-  fprintf(bf, ".Vol: %f\n", L*L*L);
+  fprintf(bf, ".Vol: %f\n", Oparams.rcut*Oparams.rcut*Oparams.rcut);
   MD_DEBUG(printf("[Store bump]: %.15G\n", Oparams.time));
-  for (ii = 0; ii < Oparams.parnum; ii++)
-    {
-      if (ii==i || ii==j)
-	fprintf(bf, tipodat2,rx[ii], ry[ii], rz[ii], uxx[ii], uxy[ii], uxz[ii], uyx[ii], uyy[ii], 
-		uyz[ii], uzx[ii], uzy[ii], uzz[ii]);
-    }
+  Drx = L*rint((rx[i]-rx[j])/L);
+  Dry = L*rint((ry[i]-ry[j])/L);
+  Drz = L*rint((rz[i]-rz[j])/L);
+
+  RCMx = (rx[i]+rx[j]+Drx)*0.5;
+  RCMy = (ry[i]+ry[j]+Dry)*0.5;
+  RCMz = (rz[i]+rz[j]+Drz)*0.5;
+  
+  na = (i < Oparams.parnumA)?0:1;
+  fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	  uyz[i], uzx[i], uzy[i], uzz[i], Oparams.a[na], Oparams.b[na], Oparams.c[na], "red");
+  na = (j < Oparams.parnumA)?0:1;
+  fprintf(bf, tipodat2,rx[j]+Drx-RCMx, ry[j]+Dry-RCMy, rz[j]+Drz-RCMz, uxx[j], uxy[j], uxz[j], uyx[j], uyy[j], 
+	  uyz[j], uzx[j], uzy[j], uzz[j], Oparams.a[na], Oparams.b[na], Oparams.c[na], "blue");
   //writeAllCor(bf);
+#ifdef MD_PATCHY_HE
+  rA[0] = rx[i]-RCMx;
+  rA[1] = ry[i]-RCMy;
+  rA[2] = rz[i]-RCMz;
+  BuildAtomPos(i, rA, R[i], ratA);
+  for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
+    fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+	    ratA[nn][0], ratA[nn][1], ratA[nn][2], Oparams.sigmaSticky*0.5);
+  rB[0] = rx[j]-RCMx+Drx;
+  rB[1] = ry[j]-RCMy+Dry;
+  rB[2] = rz[j]-RCMz+Drz;
+  BuildAtomPos(j, rB, R[j], ratB);
+  for (nn = 1; nn < ((j < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
+    fprintf(bf,"%.15f %.15f %.15f @ %.15G C[brown]\n",
+	    ratB[nn][0], ratB[nn][1], ratB[nn][2], Oparams.sigmaSticky*0.5);
+#endif
   fprintf(bf,"%.15f %.15f %.15f @ 0.1 C[green]\n", rxC, ryC, rzC);
   fclose(bf);
 
@@ -5541,6 +5593,7 @@ void ProcessCollision(void)
     }
   MD_DEBUG10(calc_energy("prima"));
   MD_DEBUG20(printf("[BUMP] t=%.15G i=%d j=%d\n", Oparams.time,evIdA,evIdB)); 
+
 #ifdef MD_PATCHY_HE
   /* i primi due bit sono il tipo di event (uscit buca, entrata buca, collisione con core 
    * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */

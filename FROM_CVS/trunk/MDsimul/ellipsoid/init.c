@@ -6,7 +6,7 @@
    NOTE: The box edge length is unity, so every length must be referred to 
          the this quantity.
 */
-
+#define MD_DEBUG31(x) 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
@@ -184,6 +184,12 @@ void check_all_bonds(void)
 			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
 			    {
 			      warn=1;
+			      MD_DEBUG31(
+			      printf("dists[1]:%.15G\n", dists[1]);
+			      printf("[dist<0]dists[%d]:%.15G\n", nn, dists[nn]);
+			      printf("i=%d j=%d %d %d\n", i, j, mapbondsa[nn], mapbondsb[nn]);
+			      printf("NA*NA*i+a*NA+b=%d\n", NA*NA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
+			      )
 #if 0
 			      aa = mapbondsa[nn];
 			      bb = mapbondsb[nn];
@@ -199,6 +205,7 @@ void check_all_bonds(void)
 			    {
 			      warn = 2;
 			      printf("wrong number of bonds between %d and %d\n", i, j);
+			      //printf("[dist>0]dists[%d]:%.15G\n", nn, dists[nn]);
 			      if (OprogStatus.checkGrazing==1)
 				{
 				  remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
@@ -216,6 +223,7 @@ void check_all_bonds(void)
 	  mdPrintf(ALL, TXT, NULL);
 	  sprintf(TXT,"Step N. %d time=%.15G\n", Oparams.curStep, Oparams.time);
 	  mdPrintf(ALL, TXT, NULL);
+	  printf("numbonds[%d]:%d bonds[][]:%d\n", i, numbonds[i], bonds[i][0]);
 	  if (warn==1)
 	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n",NULL);
 	  else
