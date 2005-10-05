@@ -3624,14 +3624,14 @@ void updrebuildNNL(int na)
        }
    }
 #ifdef MD_PATCHY_HE
- if (!locate_contact_neigh_plane_parall_sp(na, &sptime, nebrTab[na].nexttime+1E-7))
+ if (locate_contact_neigh_plane_parall_sp(na, &sptime, nebrTab[na].nexttime+1E-7))
    {
      //printf("[ERROR] failed to find escape time for sticky spots\n");
      //exit(-1);
-   }
+     if (sptime < nebrTab[na].nexttime)
+       nebrTab[na].nexttime = sptime;
+  }
  MD_DEBUG32(printf("sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
- if (sptime < nebrTab[na].nexttime)
-   nebrTab[na].nexttime = sptime;
 #endif
 #else
   if (!locate_contact_neigh(na, vecg))
@@ -3736,15 +3736,15 @@ void nextNNLupdate(int na)
   	}
     }
 #ifdef MD_PATCHY_HE
-  if (!locate_contact_neigh_plane_parall_sp(na, &sptime, nebrTab[na].nexttime+1E-7))
+  if (locate_contact_neigh_plane_parall_sp(na, &sptime, nebrTab[na].nexttime+1E-7))
     {
       //printf("[ERROR] failed to find escape time for sticky spots\n");
       //exit(-1);
-    }
+      if (sptime < nebrTab[na].nexttime)
+	nebrTab[na].nexttime = sptime;
+  }
   MD_DEBUG32(printf("[nextNNLupdate] sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
-  if (sptime < nebrTab[na].nexttime)
-    nebrTab[na].nexttime = sptime;
-#endif
+  #endif
   //printf(">> nexttime=%.15G\n", nebrTab[na].nexttime);
 #else
   if (!locate_contact_neigh(na, vecg))
