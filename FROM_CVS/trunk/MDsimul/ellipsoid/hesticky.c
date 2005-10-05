@@ -2115,7 +2115,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	{
 	  for (nn2 = 0; nn2 < NSP; nn2++)
 	    {
-	      t2arr[nn][nn2] = t + t1; 
+	      t2arr[nn][nn2] = t; 
 	      dorefine[nn][nn2] = crossed[nn][nn2];
 #if 0
 	      if (crossed[nn]!=0)
@@ -2215,6 +2215,8 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 		      if (!tocheck[nn][nn2])
 #endif
 			mdPrintf(ALL,"[locate_contact_nnl_sp] can't find contact point!\n",NULL);
+
+		      printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t-delt, t2arr[nn][nn2], delt, nn, nn2, dists[nn][nn2], nn, nn2, distsOld[nn][nn2]);
 		      /* Se refine_contact fallisce deve cmq continuare a cercare 
 		       * non ha senso smettere...almeno credo */
 		      //gotcoll = -1;

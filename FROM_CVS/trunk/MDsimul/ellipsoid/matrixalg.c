@@ -3087,6 +3087,7 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
   double fa=(*func)(a),fb=(*func)(b),fc,p,q,r,s,tol1,xm; 
   if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 
     {
+      printf("BRENT BAD BRACKETING fa(%.15G)=%.15G fb(%.15G)=%.15G\n", a, fa, b, fb);
       polinterr = 1;
       return 0.0;
       //nrerror("Root must be bracketed in zbrent");
@@ -3153,6 +3154,7 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
 	return 0.0;
     } 
 
+  printf("BRENT TOO MANY ITERATIONS\n");
   polinterr = 1;
   return 0.0;
   //nrerror("Maximum number of iterations exceeded in zbrent"); 
