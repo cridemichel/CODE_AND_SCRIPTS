@@ -30,6 +30,7 @@ extern double cosEulAng[2][3], sinEulAng[2][3];
 #endif
 #ifdef MD_PATCHY_HE
 struct LastBumpS *lastbump;
+extern void check_all_bonds(void);
 #else
 int *lastbump;
 #endif
@@ -5521,6 +5522,9 @@ void store_bump_neigh(int i, double *r1, double *r2)
   fclose(bf);
 
 }
+#ifdef MD_PATCHY_HE
+extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
+#endif
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];

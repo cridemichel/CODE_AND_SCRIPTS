@@ -703,6 +703,7 @@ struct pascii opro_ascii[] =
 #ifdef MD_PATCHY_HE
   {"assumeOneBond",     &OS(assumeOneBond),               1,   1, "%d"},
   {"checkGrazing",      &OS(checkGrazing),                1,   1, "%d"},
+  {"maxbonds",          &OS(maxbonds),                    1,   1, "%d"}, 
 #endif
   {"NN",           &OS(NN),                         1,  1,   "%d"},
   {"fstps",        &OS(fstps),                      1,  1,   "%.15G"},
@@ -907,6 +908,7 @@ struct singlePar OsinglePar[] = {
   {"bheight",    &Oparams.bheight,          CT},
   {"assumeOneBond", &OprogStatus.assumeOneBond, INT},
   {"checkGrazing",  &OprogStatus.checkGrazing, INT},
+  {"maxbonds",      &OprogStatus.maxbonds,     INT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
