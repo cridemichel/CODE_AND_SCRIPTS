@@ -95,10 +95,9 @@ void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z,
 #ifdef MD_PATCHY_HE
 void check_all_bonds(void)
 {
-  int nn, warn, amin, bmin, i, j, aa, bb, nb, wnn, wj;
-  static int errtimes=0;
-  double wdist,drx, dry, drz, shift[3], dist, rat[5][3], dists[MD_PBONDS], ri[3];
-  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  int nn, warn, amin, bmin, i, j, nb;
+  double shift[3], dist, dists[MD_PBONDS];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
   for (k = 0;  k < NDIM; k++)
@@ -1303,7 +1302,7 @@ double calc_norm(double *vec);
 extern void vectProdVec(double *A, double *B, double *C);
 void calc_angmom(int i, double **I)
 {
-  double wv[3], Mvec[3], norm;
+  double wv[3], Mvec[3];
   int k1, k2;
   wv[0] = wx[i];
   wv[1] = wy[i];
@@ -1324,7 +1323,7 @@ void calc_angmom(int i, double **I)
 void calc_RM(int i)
 {
   double norm, Mvec[3];
-  int k1, k2;
+  int k1;
   Mvec[0] = Mx[i];
   Mvec[1] = My[i];
   Mvec[2] = Mz[i];
@@ -1491,6 +1490,51 @@ void upd_refsysM(int i)
 #endif 
 /* ======================== >>> usrInitAft <<< ==============================*/
 void RDiagtR(int i, double **M, double a, double b, double c, double **Ri);
+extern double max(double a, double b);
+extern double max3(double a, double b, double c);
+double calc_shell(void)
+{
+#ifdef MD_PATCHY_HE
+  int aa, kk;
+  double v[3], norm, delta;
+#endif
+  double deltamax = 0.0;
+#ifdef MD_PATCHY_HE
+  for (aa = 0; aa < MD_STSPOTS_A; aa++)
+    {
+       norm = calc_norm(spXYZ_A[aa]);
+       for (kk=0; kk < 3; kk++)
+	 v[kk] = (norm + Oparams.sigmaSticky*0.5) * spXYZ_A[aa][kk] /  norm;
+       delta = max3(v[0]-Oparams.a[0],v[1]-Oparams.b[0],v[2]-Oparams.c[0]);
+       if (aa == 0 || delta > deltamax)
+	 deltamax  = delta;
+    }
+  for (aa = 0; aa < MD_STSPOTS_B; aa++)
+    {
+       norm = calc_norm(spXYZ_B[aa]);
+       for (kk=0; kk < 3; kk++)
+	 v[kk] = (norm + Oparams.sigmaSticky*0.5) * spXYZ_B[aa][kk] /  norm;
+       delta = max3(v[0]-Oparams.a[1],v[1]-Oparams.b[1],v[2]-Oparams.c[1]);
+       if (aa == 0 || delta > deltamax)
+	 deltamax  = delta;
+    }
+#else
+  deltamax = 0.0;
+#endif
+  //printf("deltamax=%.15G\n", deltamax);
+  return deltamax;
+}
+double calc_nnl_rcut(void)
+{
+  double rcutA, rcutB;
+  rcutA = 2.0*sqrt(Sqr(Oparams.a[0]+OprogStatus.rNebrShell)+
+		   Sqr(Oparams.b[0]+OprogStatus.rNebrShell)+
+		   Sqr(Oparams.c[0]+OprogStatus.rNebrShell));
+  rcutB = 2.0*sqrt(Sqr(Oparams.a[1]+OprogStatus.rNebrShell)+
+		   Sqr(Oparams.b[1]+OprogStatus.rNebrShell)+
+		   Sqr(Oparams.c[1]+OprogStatus.rNebrShell));
+  return 1.01*max(rcutA, rcutB);
+}
 
 void usrInitAft(void)
 {
@@ -1502,7 +1546,7 @@ void usrInitAft(void)
   COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
   COORD_TYPE *m;
 #ifdef MD_PATCHY_HE
-  double shift[3], sigDeltaSq, drx, dry, drz, dist, dists[MD_PBONDS];
+  double shift[3], drx, dry, drz, dist, dists[MD_PBONDS];
   int j, amin, bmin, nn, aa, bb, NPB;
   double distSPA, distSPB;
 #endif
@@ -1852,8 +1896,23 @@ void usrInitAft(void)
     }
   /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
-  if (Oparams.rcut <= 0.0)
-    Oparams.rcut = MAXAX*1.01;
+  if (OprogStatus.useNNL)
+    {
+      /* in questo modo rNebrShell è la "buccia" rispetto al minimo 
+       * parallelepipedo che include l'ellissoide più gli sticky spots */
+      OprogStatus.rNebrShell += calc_shell();
+      printf("[INFO] I've adjusted rNebrShell to %.15G\n", OprogStatus.rNebrShell);	  
+      if (Oparams.rcut <= 0.0)
+	{
+	  Oparams.rcut = calc_nnl_rcut();
+	  printf("[INFO] I've chosen rcut= %.15G\n", Oparams.rcut);
+	}
+    }
+  else
+    {
+      if (Oparams.rcut <= 0.0)
+	Oparams.rcut = MAXAX*1.01;
+    }
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
   cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
@@ -1991,20 +2050,56 @@ void usrInitAft(void)
     }
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 }
-
-
+extern double rA[3], rB[3];
+#ifdef MD_PATCHY_HE
+void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
+#endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs)
 {
   int i;
+#ifdef MD_STOREMGL
+  int nn;
+  double ratA[NA][3];
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
+  
+#else
   const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
-   
+#endif
+#ifdef MD_STOREMGL
   for (i = 0; i < Oparams.parnum; i++)
     {
-      fprintf(fs, tipodat2,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+      if (i < Oparams.parnumA)
+	{
+	  fprintf(fs, tipodat2,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	  	  uyz[i], uzx[i], uzy[i], uzz[i], Oparams.a[0], Oparams.b[0], Oparams.c[0],
+	  	  "red");
+	}
+      else
+	{
+	  fprintf(fs, tipodat2, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	  	  uyz[i], uzx[i], uzy[i], uzz[i],
+	  	  Oparams.a[1], Oparams.b[1], Oparams.c[1],
+	  	  "green");
+	}
+#ifdef MD_PATCHY_HE
+	  rA[0] = rx[i];
+	  rA[1] = ry[i];
+	  rA[2] = rz[i];
+	  BuildAtomPos(i, rA, R[i], ratA);
+	  for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
+	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+		    ratA[nn][0], ratA[nn][1], ratA[nn][2], Oparams.sigmaSticky*0.5);
+#endif
+    }
+#else
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      fprintf(fs, tipodat2, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 	      uyz[i], uzx[i], uzy[i], uzz[i]);
     }
+#endif
 #ifndef MD_STOREMGL 
   for (i = 0; i < Oparams.parnum; i++)
     {
@@ -2014,7 +2109,6 @@ void writeAllCor(FILE* fs)
       fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
 #endif
     }
-
 #ifdef MD_GRAVITY
   fprintf(fs, "%.15G %.15G\n", L, Lz);
 #else
