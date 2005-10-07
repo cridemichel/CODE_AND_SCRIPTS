@@ -129,10 +129,15 @@ double calc_maxddot_nnl(int i, double *gradplane)
   double Iamin;
   double factori;
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+#if 0
   na = i<Oparams.parnumA?0:1;
   Iamin = min(Oparams.I[na][0],Oparams.I[na][2]);
   return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
      angM[i]*factori/Iamin;
+#else
+  return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
+     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+#endif
 }
 #endif
 
@@ -2633,7 +2638,7 @@ void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBAL
       calc_grad_and_point_plane(i, gradplaneALL[nn], rBALL[nn], nn);
     }
 }
-int locate_contact_neigh_plane_parall(int i, double *evtime)
+int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 {
   /* const double minh = 1E-14;*/
   double h, d, dold, dold2, t2arr[6], t, dists[6], distsOld[6], 
@@ -2646,7 +2651,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
   const double EPS=3E-8;*/ 
   /* per calcolare derivate numeriche questo è il magic number in doppia precisione (vedi Num. Rec.)*/
   int its, foundrc;
-  double t1, t2, epsd, epsdFast, epsdFastR, epsdMax, deldist; 
+  double t1, epsd, epsdFast, epsdFastR, epsdMax, deldist; 
   int kk,tocheck[6], dorefine[6], ntc, ncr, nn, gotcoll, crossed[6], firstaftsf;
   epsd = OprogStatus.epsdNL;
   epsdFast = OprogStatus.epsdFastNL;
@@ -2654,7 +2659,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime)
   epsdMax = OprogStatus.epsdMaxNL;
   t = 0;//t1;
   t1 = Oparams.time;
-  t2 = timbig;
+  //t2 = timbig;
   calc_grad_and_point_plane_all(i, gradplane_all, rBall);
   factori = 0.5*maxax[i]+OprogStatus.epsdNL;
   maxddot = 0.0;
@@ -2923,13 +2928,10 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
     t2 += Oparams.time;
   //printf("LOCATE_CONTACT_NNL nplane=%d grad=%.8f %.8f %.8f  rB=%.8f %.8f %.8f t1=%.8f t2=%.8f tsup=%.8f maxax[%d]=%f\n", nplane, 
   //	 gradplane[0], gradplane[1], gradplane[2], rB[0], rB[1], rB[2], t1, t2, tsup, i, maxax[i]);
-  factori = 0.5*maxax[i]+OprogStatus.epsdNL;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
-#if 0
-  maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+#ifdef MD_ASYM_ITENS
+  maxddot = calc_maxddot_nnl(i, gradplane);
 #else
-  /* WARNING: questa maggiorazione si applica al caso specifico dell'urto di un ellissoide con un piano,
-   * è molto migliore della precedente ma va testata accuratamente! */
+  factori = 0.5*maxax[i]+OprogStatus.epsdNL;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
   maxddot = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 #endif
@@ -3545,14 +3547,6 @@ void PredictEventNNL(int na, int nb)
       collCode = MD_EVENT_NONE;
       rxC = ryC = rzC = 0.0;
       MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
-      if (locate_contact(na, n, shift, t1, t2, vecg))
-	{
-	  collCode = MD_CORE_BARRIER;
-	  evtime = vecg[4];
-	  rxC = vecg[0];
-	  ryC = vecg[1];
-	  rzC = vecg[2];
-	}
       collCodeOld = collCode;
       evtimeHC = evtime;
       acHC = ac = 0;
@@ -3562,8 +3556,20 @@ void PredictEventNNL(int na, int nb)
 	{
 	  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 	    {
-	      if (collCode == MD_EVENT_NONE)
-		continue;
+	      collCode == MD_EVENT_NONE;
+	    }
+	}
+      if (collCode!=MD_EVENT_NONE)
+	t2 = evtime+1E-7;
+      if (locate_contact(na, n, shift, t1, t2, vecg))
+	{
+	  if (collCode == MD_EVENT_NONE || (collCode!=MD_EVENT_NONE && vecg[4] <= evtime))
+	    {
+	      collCode = MD_CORE_BARRIER;
+	      evtime = vecg[4];
+	      rxC = vecg[0];
+	      ryC = vecg[1];
+	      rzC = vecg[2];
 	    }
 	}
       else
@@ -3571,7 +3577,7 @@ void PredictEventNNL(int na, int nb)
 	  if (collCode == MD_EVENT_NONE)
 	    continue;
 	}
-      
+
       t = evtime;
 #else
       if (!locate_contact(na, n, shift, t1, t2, vecg))
@@ -3599,40 +3605,42 @@ void updrebuildNNL(int na)
   /* qui ricalcola solo il tempo di collisione dell'ellisoide na-esimo con 
    * la sua neighbour list */
   double vecg[5];
-#ifdef MD_PATCHY_HE
-  double sptime;
-#endif
+  double nnltime1, nnltime2;
   int ip;
 #ifdef MD_NNLPLANES
-  nebrTab[na].nexttime = timbig;
+#ifdef MD_PATCHY_HE
+  if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
+    {
+      printf("[ERROR] failed to find escape time for sticky spots\n");
+      exit(-1);
+   }
+  MD_DEBUG32(printf("sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
+#else
+  nnltime1 = timbig;
+#endif
+  nnltime2 = timbig;
   if (OprogStatus.paralNNL)
     {
-      if (!locate_contact_neigh_plane_parall(na, &(nebrTab[na].nexttime)))
+      if (!locate_contact_neigh_plane_parall(na, &nnltime2, nnltime1))
 	{
+#ifndef MD_PATCHY_HE
 	  printf("[ERROR] failed to find escape time for ellipsoid N. %d\n", na);
 	  exit(-1);
+#endif
 	}
     }
  else
    {
+     nnltime2 = nnltime1;
      for (ip = 0; ip < 6; ip++)
        {
-	 if (!locate_contact_neigh_plane(na, vecg, ip, nebrTab[na].nexttime))
+	 if (!locate_contact_neigh_plane(na, vecg, ip, nnltime1))
 	   continue;
-	 if (vecg[4] < nebrTab[na].nexttime)
-	   nebrTab[na].nexttime = vecg[4];
+	 if (vecg[4] < nnltime2)
+	   nnltime2 = vecg[4];
        }
    }
-#ifdef MD_PATCHY_HE
- if (locate_contact_neigh_plane_parall_sp(na, &sptime, nebrTab[na].nexttime+1E-7))
-   {
-     //printf("[ERROR] failed to find escape time for sticky spots\n");
-     //exit(-1);
-     if (sptime < nebrTab[na].nexttime)
-       nebrTab[na].nexttime = sptime;
-  }
- MD_DEBUG32(printf("sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
-#endif
+ nebrTab[na].nexttime = min(nnltime1, nnltime2);
 #else
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
@@ -3671,9 +3679,7 @@ void nextNNLupdate(int na)
   double DelDist, nnlfact;
   const double distBuf = 0.1;
   double Omega[3][3], vecg[5];
-#ifdef MD_PATCHY_HE
-  double sptime;
-#endif
+  double nnltime1, nnltime2;
 #ifdef MD_ASYM_ITENS
   double psi, phi;
 #endif
@@ -3716,35 +3722,38 @@ void nextNNLupdate(int na)
   /* calcola il tempo a cui si deve ricostruire la NNL */
   MD_DEBUG31(printf("BUILDING NNL FOR i=%d\n",na));
 #ifdef MD_NNLPLANES
-  nebrTab[na].nexttime = timbig;
+#ifdef MD_PATCHY_HE
+  if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
+    {
+      printf("[ERROR] failed to find escape time for sticky spots\n");
+      exit(-1);
+  }
+  MD_DEBUG32(printf("[nextNNLupdate] sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
+#else
+  nnltime1 = timbig; 
+#endif
+  nnltime2 = timbig;
   if (OprogStatus.paralNNL)
     {
-      if (!locate_contact_neigh_plane_parall(na, &(nebrTab[na].nexttime)))
+      if (!locate_contact_neigh_plane_parall(na, &nnltime2, nnltime1))
 	{
+#ifndef MD_PATCHY_HE
 	  printf("[ERROR] failed to find escape time for ellipsoid N. %d\n", na);
 	  exit(-1);
+#endif
 	}
     }
   else
     {
       for (ip = 0; ip < 6; ip++)
        	{
- 	  if (!locate_contact_neigh_plane(na, vecg, ip, nebrTab[na].nexttime))
+ 	  if (!locate_contact_neigh_plane(na, vecg, ip, nnltime1))
  	    continue;
- 	  if (vecg[4] < nebrTab[na].nexttime)
- 	    nebrTab[na].nexttime = vecg[4];
+ 	  if (vecg[4] < nnltime2)
+ 	    nnltime2 = vecg[4];
   	}
     }
-#ifdef MD_PATCHY_HE
-  if (locate_contact_neigh_plane_parall_sp(na, &sptime, nebrTab[na].nexttime+1E-7))
-    {
-      //printf("[ERROR] failed to find escape time for sticky spots\n");
-      //exit(-1);
-      if (sptime < nebrTab[na].nexttime)
-	nebrTab[na].nexttime = sptime;
-  }
-  MD_DEBUG32(printf("[nextNNLupdate] sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
-  #endif
+  nebrTab[na].nexttime = min(nnltime1, nnltime2);
   //printf(">> nexttime=%.15G\n", nebrTab[na].nexttime);
 #else
   if (!locate_contact_neigh(na, vecg))
