@@ -889,6 +889,11 @@ void outputSummary(void)
   fclose(f);
 #endif
 }
+#ifdef MD_ASYM_ITENS
+void calc_omega(int i);
+void calc_angmom(int i, double **I);
+extern void upd_refsysM(int i);
+#endif
 #ifdef MD_GRAVITY
 void scalevels(double temp, double K, double Vz)
 {
@@ -943,7 +948,6 @@ void scalevels(double temp, double K)
 {
   int i; 
   double sf;
-    
   sf = sqrt( ( (5.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
   for (i = 0; i < Oparams.parnumA; i++)
     {
@@ -953,7 +957,15 @@ void scalevels(double temp, double K)
       wx[i] *= sf;
       wy[i] *= sf;
       wz[i] *= sf;
-       /* scala anche i tempi di collisione! */
+#ifdef MD_ASYM_ITENS
+      /* N.B. notare che il reference system con l'asse-z parallelo ad M non 
+       * cambia poiché la direzione di M non cambia! */
+      angM[i] *= sf;
+      Mx[i] *= sf;
+      My[i] *= sf;
+      Mz[i] *= sf;
+#endif
+      /* scala anche i tempi di collisione! */
     } 
   for (i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
@@ -963,6 +975,12 @@ void scalevels(double temp, double K)
       wx[i] *= sf;
       wy[i] *= sf;
       wz[i] *= sf;
+#ifdef MD_ASYM_ITENS
+      angM[i] *= sf;
+      Mx[i] *= sf;
+      My[i] *= sf;
+      Mz[i] *= sf;
+#endif
       /* scala anche i tempi di collisione! */
     } 
    MD_DEBUG2(printf("sf: %.15f temp: %f K: %f Vz: %.15f minvz:%.15G\n", sf, temp, K, Vz));
@@ -5381,7 +5399,6 @@ void calc_energy_i(char *msg, int i)
   
 }
 #ifdef MD_ASYM_ITENS
-extern double **Ia, **invIa;
 void calc_omega(int i)
 {
   double Mvec[3], omega[3];
@@ -5389,9 +5406,13 @@ void calc_omega(int i)
 
   na = (i < Oparams.parnumA)?0:1;
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
-  
-  InvMatrix(Ia, invIa, 3);
-
+ 
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Iatmp[k1][k2] = Ia[k1][k2];
+      }
+  InvMatrix(Iatmp, invIa, 3);
   Mvec[0] = Mx[i];
   Mvec[1] = My[i];
   Mvec[2] = Mz[i];
