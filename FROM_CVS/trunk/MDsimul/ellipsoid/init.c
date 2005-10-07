@@ -1967,7 +1967,7 @@ void usrInitAft(void)
 #ifdef MD_ASYM_ITENS
   for (i=0; i < Oparams.parnum; i++)
     {
-      //calc_omega(i);
+      calc_omega(i);
       angM[i] = sqrt(Sqr(Mx[i])+Sqr(My[i])+Sqr(Mz[i]));
       upd_refsysM(i);
     }
