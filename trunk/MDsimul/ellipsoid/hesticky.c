@@ -125,8 +125,8 @@ double rcutL, aL, bL, cL;
 extern double max_ax(int i);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
 #define MD_SP_DELR 0.0
-double spApos[MD_STSPOTS_A][3] = {{MD_SP_DELR, 0.3, 0.0},{MD_SP_DELR, 0.3, 3.14159},{MD_SP_DELR, 2.84159,0.0},
-    {MD_SP_DELR, 2.84159, 3.14159},{MD_SP_DELR, 1.5708, 0.0}};
+double spApos[MD_STSPOTS_A][3] = {{MD_SP_DELR, 0.54, 0.0},{MD_SP_DELR, 0.54, 3.14159},{MD_SP_DELR, 2.60159,0.0},
+    {MD_SP_DELR, 2.60159, 3.14159},{MD_SP_DELR, 1.5708, 0.0}};
 double spBpos[MD_STSPOTS_B][3] = {{MD_SP_DELR, 0.0, 0.0},{MD_SP_DELR, 3.14159, 0.0}};
 
 double spXYZ_A[MD_STSPOTS_A][3];
@@ -140,8 +140,8 @@ void build_atom_positions(void)
   * tra sticky sphere ed ellissoide.
   * Tale routine converte le coordinate spXpos in coordinate cartesiane 
   * riferite al riferimento del corpo rigido. */  
-  int k1, aa;
-  double x,y,z, grad[3], ng;
+  int kk, k1, aa;
+  double x,y,z, grad[3], ng, dd[3];
   for (k1 = 0; k1 < MD_STSPOTS_A; k1++)
     {
       x = Oparams.a[0]*cos(spApos[k1][2])*sin(spApos[k1][1]);
@@ -158,8 +158,15 @@ void build_atom_positions(void)
       spXYZ_A[k1][1] = y + grad[1]*(Oparams.sigmaSticky*0.5 + spApos[k1][0]);
       spXYZ_A[k1][2] = z + grad[2]*(Oparams.sigmaSticky*0.5 + spApos[k1][0]);
 	
-      //printf("k1=%d %f %f %f \n", k1,  spXYZ_A[k1][0] ,    spXYZ_A[k1][1] ,  spXYZ_A[k1][2]  );
+	      //printf("k1=%d %f %f %f \n", k1,  spXYZ_A[k1][0] ,    spXYZ_A[k1][1] ,  spXYZ_A[k1][2]  );
     }
+  for (kk=0; kk < 3; kk++)
+    dd[kk] = spXYZ_A[0][kk] - spXYZ_A[1][kk];
+  printf("Molecule A distance between Atoms 0 and 1: %.15G\n", calc_norm(dd));;
+  for (kk=0; kk < 3; kk++)
+    dd[kk] = spXYZ_A[2][kk] - spXYZ_A[3][kk];
+  printf("Molecule A distance between Atoms 2 and 3: %.15G\n", calc_norm(dd));;
+
   for (k1 = 0; k1 < MD_STSPOTS_B; k1++)
     {
       x = Oparams.a[1]*cos(spBpos[k1][2])*sin(spBpos[k1][1]);
