@@ -1726,6 +1726,10 @@ void usrInitAft(void)
       FILE *f;
       Oparams.time=0.0;
       /* truncate file to zero lenght */
+#ifdef MD_PATCHY_HE
+      f = fopenMPI(absMisHD("energy.dat"), "w+");
+      fclose(f);
+#endif
       f = fopenMPI(absMisHD("MSDA.dat"), "w+");
       fclose(f);
       f = fopenMPI(absMisHD("rotMSDA.dat"), "w+");
