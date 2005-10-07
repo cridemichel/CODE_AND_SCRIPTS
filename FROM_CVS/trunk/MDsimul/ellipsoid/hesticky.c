@@ -12,7 +12,7 @@
 #define MD_DEBUG32(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
-#undef MD_OPTDDIST
+#define MD_OPTDDIST
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -1213,12 +1213,19 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
 	factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 	factorj = 0.5*maxax[j]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
 #endif
+#if 0
 	na = i<Oparams.parnumA?0:1;
 	Iamin = min(Oparams.I[na][0],Oparams.I[na][2]);
 	na = j<Oparams.parnumA?0:1;
 	Ibmin = min(Oparams.I[na][0],Oparams.I[na][2]);
 	maxddoti[kk] = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
 	  angM[i]*factori/Iamin + angM[j]*factorj/Ibmin;
+#else
+	maxddoti[kk] = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
+	  sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori + 
+	  sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
+
+#endif
 	if (kk==0 || maxddoti[kk] > maxddot)
 	  {
 	    maxddot = maxddoti[kk];

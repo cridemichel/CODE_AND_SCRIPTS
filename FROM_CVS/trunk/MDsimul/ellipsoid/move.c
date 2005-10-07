@@ -4402,12 +4402,21 @@ double calc_maxddot(int i, int j)
   double factori, factorj;
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
   factorj = 0.5*maxax[j]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
+#if 0
+  /* N.B. nel caso della trottola simmetrica il modulo di w comunque non varia (anche 
+   * se w ruota, ossia precede, intorno al vettore momento angolare) nel 
+   * tempo per questo la maggiorazione rimane inalterata */
   na = i<Oparams.parnumA?0:1;
   Iamin = min(Oparams.I[na][0],Oparams.I[na][2]);
   na = j<Oparams.parnumA?0:1;
   Ibmin = min(Oparams.I[na][0],Oparams.I[na][2]);
   return sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
     angM[i]*factori/Iamin + angM[j]*factorj/Ibmin;
+#else
+  return sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori + 
+    sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
+#endif
 }
 #endif
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
@@ -5143,33 +5152,38 @@ void PredictEvent (int na, int nb)
 		      collCode = MD_EVENT_NONE;
 		      rxC = ryC = rzC = 0.0;
 		      MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
-		      if (locate_contact(na, n, shift, t1, t2, vecg))
-			{
-			  collCode = MD_CORE_BARRIER;
-			  evtime = vecg[4];
-			  rxC = vecg[0];
-			  ryC = vecg[1];
-			  rzC = vecg[2];
-			}
+		      MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
 		      collCodeOld = collCode;
 		      evtimeHC = evtime;
 		      acHC = ac = 0;
 		      bcHC = bc = 0;
 		      if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
-			    (na >= Oparams.parnumA && n < Oparams.parnumA)))
+							(na >= Oparams.parnumA && n < Oparams.parnumA)))
 			{
 			  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 			    {
-			      if (collCode == MD_EVENT_NONE)
-				continue;
-      			    }
+			      collCode == MD_EVENT_NONE;
+			    }
+			}
+		      if (collCode!=MD_EVENT_NONE)
+			t2 = evtime+1E-7;
+		      if (locate_contact(na, n, shift, t1, t2, vecg))
+			{
+			  if (collCode == MD_EVENT_NONE || (collCode!=MD_EVENT_NONE && vecg[4] <= evtime))
+			    {
+			      collCode = MD_CORE_BARRIER;
+			      evtime = vecg[4];
+			      rxC = vecg[0];
+			      ryC = vecg[1];
+			      rzC = vecg[2];
+			    }
 			}
 		      else
 			{
-	    		  if (collCode == MD_EVENT_NONE)
-				continue;
+			  if (collCode == MD_EVENT_NONE)
+			    continue;
 			}
-	
+
 		      t = evtime;
 		      MD_DEBUG31(printf("(%d,%d)-(%d,%d) troot=%.15G\n", na, ac, n, bc, evtime));
 		      MD_DEBUG31(printf("evtimeHC=%.15G",evtimeHC));
