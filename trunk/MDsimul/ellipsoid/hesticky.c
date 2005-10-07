@@ -157,9 +157,9 @@ void build_atom_positions(void)
       spXYZ_A[k1][0] = x + grad[0]*(Oparams.sigmaSticky*0.5 + spApos[k1][0]);
       spXYZ_A[k1][1] = y + grad[1]*(Oparams.sigmaSticky*0.5 + spApos[k1][0]);
       spXYZ_A[k1][2] = z + grad[2]*(Oparams.sigmaSticky*0.5 + spApos[k1][0]);
+	
       //printf("k1=%d %f %f %f \n", k1,  spXYZ_A[k1][0] ,    spXYZ_A[k1][1] ,  spXYZ_A[k1][2]  );
     }
-  //exit(-1);
   for (k1 = 0; k1 < MD_STSPOTS_B; k1++)
     {
       x = Oparams.a[1]*cos(spBpos[k1][2])*sin(spBpos[k1][1]);
