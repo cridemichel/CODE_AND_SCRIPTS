@@ -3556,7 +3556,7 @@ void PredictEventNNL(int na, int nb)
 	{
 	  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 	    {
-	      collCode == MD_EVENT_NONE;
+	      collCode = MD_EVENT_NONE;
 	    }
 	}
       if (collCode!=MD_EVENT_NONE)
