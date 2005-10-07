@@ -1982,10 +1982,15 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
   else
     factori = calc_norm(spXYZ_B[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
 #endif
+#if 0
   na = i<Oparams.parnumA?0:1;
   Iamin = min(Oparams.I[na][0],Oparams.I[na][2]);
   return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
      angM[i]*factori/Iamin;
+#else
+  return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
+    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+#endif
 }
 #else
 double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
