@@ -17,6 +17,7 @@ extern char msgStrA[MSG_LEN];
 char TXTA[10][MSG_LEN];
 char TXT[MSG_LEN];
 extern double Vz;
+FILE *mf;
 extern double ***R;
 extern void UpdateSystem(void);
 double DphiSqA=0.0, DphiSqB=0.0, DrSqTotA=0.0, DrSqTotB=0.0;
@@ -133,6 +134,16 @@ void calcV(void)
 {
 #ifdef MD_PATCHY_HE
   V = calcpotene();
+  mf = fopenMPI(absMisHD("energy.dat"),"a");
+#if 0
+  if (Oparams.parnumA < Oparams.parnum)
+    fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum-Oparams.parnumA));
+  else
+    fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
+#else
+  fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
+#endif
+ fclose(mf);
 #else
   V = 0;
 #endif
@@ -391,7 +402,9 @@ void temperat(void)
       OprogStatus.sumTemp += temp;
       temp = OprogStatus.sumTemp / NUMCALCS;
     }
-
+  mf = fopenMPI(absMisHD("temp.dat"),"a");
+  fprintf(mf, "%15G %.15G\n", Oparams.time, temp);
+  fclose(mf);
   /* pressure */
   if (OprogStatus.avngPress == 1)
     {
