@@ -3609,11 +3609,16 @@ void updrebuildNNL(int na)
   int ip;
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE
-  if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
+  if (OprogStatus.targetPhi <= 0.0)
     {
-      printf("[ERROR] failed to find escape time for sticky spots\n");
-      exit(-1);
-   }
+      if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
+	{
+	  printf("[ERROR] failed to find escape time for sticky spots\n");
+	  exit(-1);
+	}
+    }
+  else 
+    nnltime1 = timbig;
   MD_DEBUG32(printf("sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
 #else
   nnltime1 = timbig;
@@ -3723,11 +3728,16 @@ void nextNNLupdate(int na)
   MD_DEBUG31(printf("BUILDING NNL FOR i=%d\n",na));
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE
-  if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
+  if (OprogStatus.targetPhi <= 0.0)
     {
-      printf("[ERROR] failed to find escape time for sticky spots\n");
-      exit(-1);
-  }
+      if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
+	{
+	  printf("[ERROR] failed to find escape time for sticky spots\n");
+	  exit(-1);
+	}
+    }
+  else
+    nnltime1 = timbig;
   MD_DEBUG32(printf("[nextNNLupdate] sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
 #else
   nnltime1 = timbig; 
