@@ -1904,7 +1904,8 @@ void usrInitAft(void)
     {
       /* in questo modo rNebrShell è la "buccia" rispetto al minimo 
        * parallelepipedo che include l'ellissoide più gli sticky spots */
-      OprogStatus.rNebrShell += calc_shell();
+      if (OprogStatus.targetPhi <= 0.0)
+	OprogStatus.rNebrShell += calc_shell();
       printf("[INFO] I've adjusted rNebrShell to %.15G\n", OprogStatus.rNebrShell);	  
       if (Oparams.rcut <= 0.0)
 	{
