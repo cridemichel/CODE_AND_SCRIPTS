@@ -3797,6 +3797,7 @@ void nextNNLupdate(int na)
   nebrTab[na].len=0;
   nebrTab[na].time = Oparams.time;
 }
+extern void check_shift(int i, int j, double *shift);
 void BuildNNL(int na) 
 {
   double shift[NDIM];
@@ -3867,6 +3868,7 @@ void BuildNNL(int na)
 		  if (n != na)// && n != nb && (nb >= -1 || n < na)) 
 		    {
       		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
+		      check_shift(na, n, shift);
 #ifdef MD_NNLPLANES
 		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift); 
 #else
