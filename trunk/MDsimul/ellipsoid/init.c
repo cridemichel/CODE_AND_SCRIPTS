@@ -92,7 +92,9 @@ void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z,
   *r3y = r1z * r2x - r1x * r2z;
   *r3z = r1x * r2y - r1y * r2x;
 }
+
 #ifdef MD_PATCHY_HE
+extern void check_shift(int i, int j, double *shift);
 void check_all_bonds(void)
 {
   int nn, warn, amin, bmin, i, j, nb;
@@ -166,14 +168,7 @@ void check_all_bonds(void)
 		      if (! ((i < Oparams.parnumA && j >= Oparams.parnumA)||
 			     (i >= Oparams.parnumA && j < Oparams.parnumA)))
 			  continue;
-#if 0 
-		      drx = rx[i] - rx[j];
-		      shift2[0] = L*rint(drx/L);
-		      dry = ry[i] - ry[j];
-		      shift2[1] = L*rint(dry/L);
-		      drz = rz[i] - rz[j]; 
-		      shift2[2] = L*rint(drz/L);
-#endif
+		      check_shift(i, j, shift);
 		      assign_bond_mapping(i,j);
 		      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 		      for (nn=0; nn < MD_PBONDS; nn++)
@@ -184,7 +179,7 @@ void check_all_bonds(void)
 			    {
 			      warn=1;
 			      MD_DEBUG31(
-			      printf("dists[1]:%.15G\n", dists[1]);
+			      //printf("dists[1]:%.15G\n", dists[1]);
 			      printf("[dist<0]dists[%d]:%.15G\n", nn, dists[nn]);
 			      printf("i=%d j=%d %d %d\n", i, j, mapbondsa[nn], mapbondsb[nn]);
 			      printf("NA*NA*i+a*NA+b=%d\n", NA*NA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
