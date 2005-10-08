@@ -400,7 +400,6 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
 		{
 		  if (n!=na) 
 		    {
-		      check_shift(na, n, shift);
 		      dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 		      if (calcdist_retcheck)
 			continue;
@@ -4842,7 +4841,6 @@ double estimate_tmin(double t, int na, int nb)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
-		      check_shift(na, n, shift);
 		      d = calcDistNeg(t, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 		      maxddot = sqrt(Sqr(vx[na]-vx[n])+Sqr(vy[na]-vy[n])+Sqr(vz[na]-vz[n])) +
 			sqrt(Sqr(wx[na])+Sqr(wy[na])+Sqr(wz[na]))*maxax[na]
@@ -5109,7 +5107,6 @@ void PredictEvent (int na, int nb)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
-		      check_shift(na, n, shift);
 		      /* maxax[...] è il diametro dei centroidi dei due tipi
 		       * di ellissoidi */
 		      if (OprogStatus.targetPhi > 0)
