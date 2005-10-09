@@ -936,6 +936,8 @@ void usrInitBef(void)
 #ifdef MD_PATCHY_HE
     Oparams.sigmaSticky = 1.0;
     Oparams.bheight = 0.0;
+    Oparams.bhin = 0.0;
+    Oparams.bhout = 0.0;
     OprogStatus.assumeOneBond = 0;
     OprogStatus.checkGrazing = 0;
     OprogStatus.maxbonds = 100;

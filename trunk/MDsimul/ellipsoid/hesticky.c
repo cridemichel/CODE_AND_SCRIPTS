@@ -410,7 +410,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_INOUT_BARRIER:
-      if (Sqr(vc) < 2.0*Oparams.bheight/mredl)
+      if (Sqr(vc) < 2.0*(Oparams.bheight+Oparams.bhout)/mredl)
 	{
 	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
 			    Oparams.time, vc,  bt,
@@ -421,7 +421,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	{
 	  MD_DEBUG31(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
 		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
-	  factor = -vc + sqrt(Sqr(vc) - 2.0*Oparams.bheight/mredl);
+	  factor = -vc + sqrt(Sqr(vc) - 2.0*(Oparams.bheight+Oparams.bhout)/mredl);
 	  remove_bond(i, j, ata, atb);
 	  remove_bond(j, i, atb, ata);
 	}
@@ -432,10 +432,20 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_OUTIN_BARRIER:
-      add_bond(i, j, ata, atb);
-      add_bond(j, i, atb, ata);
-      factor = -vc - sqrt(Sqr(vc) + 2.0*Oparams.bheight/mredl);
-      MD_DEBUG31(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
+      if (Oparams.bhin >= 0.0 && Sqr(vc) < 2.0*Oparams.bhin/mredl)
+	{
+	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
+			    Oparams.time, vc,  bt,
+		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	  factor = -2.0*vc;
+	}
+      else
+	{
+	  add_bond(i, j, ata, atb);
+	  add_bond(j, i, atb, ata);
+	  factor = -vc - sqrt(Sqr(vc) + 2.0*Oparams.bheight/mredl);
+	}
+	MD_DEBUG31(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
 		      i, ata, j, atb, Sqr(vc) + 2.0*Oparams.bheight/mredl, Oparams.bheight, mredl));
 #if 0
 	{ double dist;
