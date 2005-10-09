@@ -518,6 +518,8 @@ struct params
 #ifdef MD_PATCHY_HE
   double sigmaSticky; /* ampiezza della buca */
   double bheight;
+  double bhin;
+  double bhout;
 #endif
 #ifdef MD_GRAVITY
   double ggrav;
@@ -750,6 +752,8 @@ struct pascii opar_ascii[]=
 #ifdef MD_PATCHY_HE
   {"sigmaSticky",       &OP(sigmaSticky),                       1,   1, "%.15G"},
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
+  {"bhin",               &OP(bhin),                         1,   1, "%.15G"},
+  {"bhout",              &OP(bhout),                         1,   1, "%.15G"},
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -906,6 +910,8 @@ struct singlePar OsinglePar[] = {
 #ifdef MD_PATCHY_HE
   {"sigmaSticky", &Oparams.sigmaSticky,     CT},
   {"bheight",    &Oparams.bheight,          CT},
+  {"bhin",         &Oparams.bhin,              CT},
+  {"bhout",       &Oparams.bhout,             CT},
   {"assumeOneBond", &OprogStatus.assumeOneBond, INT},
   {"checkGrazing",  &OprogStatus.checkGrazing, INT},
   {"maxbonds",      &OprogStatus.maxbonds,     INT},

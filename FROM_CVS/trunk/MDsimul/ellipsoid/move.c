@@ -6008,6 +6008,9 @@ void move(void)
 	  UpdateSystem();
 	  for (i=0; i < Oparams.parnum; i++)
 	    {
+#ifdef MD_ASYM_ITENS
+	      calc_omega(i);
+#endif
 	      update_MSDrot(i);
 	      OprogStatus.lastcolltime[i] = Oparams.time;
 	    }
