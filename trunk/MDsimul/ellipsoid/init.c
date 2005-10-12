@@ -1015,6 +1015,12 @@ void usrInitBef(void)
     OprogStatus.epsdSD = -1.0;
     OprogStatus.epsdGDO = -1.0;
     OprogStatus.h = 1E-10;
+#ifdef MD_PATCHY_HE
+    OprogStatus.epsdSP = -1.0;
+    OprogStatus.epsdFastSP = -1.0;
+    OprogStatus.epsdSPNL = -1.0;
+    OprogStatus.epsdFastSPNL = -1.0;
+#endif
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
     OprogStatus.epsdMax = 0.001;
@@ -1564,8 +1570,17 @@ void usrInitAft(void)
     OprogStatus.epsdMaxNL = OprogStatus.epsdMaxNL;
   if (OprogStatus.epsdFastRNL == -1.0)
     OprogStatus.epsdFastRNL = OprogStatus.epsdFastR;
+#ifdef MD_PATCHY_HE
+  if (OprogStatus.epsdSP == -1.0)
+    OprogStatus.epsdSP = OprogStatus.epsd;
+  if (OprogStatus.epsdFastSP == -1.0)
+    OprogStatus.epsdFastSP = OprogStatus.epsdFast;
+  if (OprogStatus.epsdSPNL == -1.0)
+    OprogStatus.epsdSPNL = OprogStatus.epsdNL;
+  if (OprogStatus.epsdFastSPNL == -1.0)
+    OprogStatus.epsdFastSPNL = OprogStatus.epsdFastNL;
+#endif
   sct = sizeof(COORD_TYPE);
-
   costolSDgrad = cos(OprogStatus.tolSDgrad);
   costolAngSD =  fabs(cos(OprogStatus.tolAngSD) - 1.0);
   costhrNR = cos(OprogStatus.tolAngNR);
