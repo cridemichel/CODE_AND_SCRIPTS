@@ -398,6 +398,12 @@ struct progStatus
   double epsdFastNL;
   double epsdFastRNL;
   double epsdMaxNL;
+#ifdef MD_PATCHY_HE
+  double epsdSP;
+  double epsdFastSP;
+  double epsdSPNL;
+  double epsdFastSPNL;
+#endif
   int guessDistOpt;
   int forceguess;
   double targetPhi;
@@ -602,6 +608,10 @@ struct pascii opro_ascii[] =
   {"sumox",        OS(sumox),                       -MAXPAR,        1, "%.15G"},
   {"sumoy",        OS(sumoy),                       -MAXPAR,        1, "%.15G"},
   {"sumoz",        OS(sumoz),                       -MAXPAR,        1, "%.15G"},
+  {"rxCMi",        OS(rxCMi),                       -MAXPAR,        1, "%.15G"},
+  {"ryCMi",        OS(ryCMi),                       -MAXPAR,        1, "%.15G"},
+  {"rzCMi",        OS(rzCMi),                       -MAXPAR,        1, "%.15G"},
+  {"DR",           OS(DR),                          -MAXPAR,        3, "%.15G"}, 
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
   {"histMB",       OS(histMB),                  NUMV,               1, "%d"},
@@ -649,6 +659,10 @@ struct pascii opro_ascii[] =
   {"epsdFastNL",     &OS(epsdFastNL),              1,   1, "%.12G"},
   {"epsdFastRNL",    &OS(epsdFastRNL),             1,   1, "%.12G"},
   {"epsdMaxNL",      &OS(epsdMaxNL),               1,   1, "%.12G"},
+  {"epsdSP",         &OS(epsdSP),                  1,   1, "%.12G"},
+  {"epsdFastSP",     &OS(epsdFastSP),              1,   1, "%.12G"},
+  {"epsdSPNL",       &OS(epsdSPNL),                1,   1, "%.12G"},
+  {"epsdFastSPNL",   &OS(epsdFastSPNL),            1,   1, "%.12G"},
   {"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
   {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
   {"SDmethod",     &OS(SDmethod),               1,   1, "%d"},
@@ -870,6 +884,10 @@ struct singlePar OsinglePar[] = {
   {"epsdFastNL",   &OprogStatus.epsdFastNL,       CT},
   {"epsdFastRNL",  &OprogStatus.epsdFastRNL,      CT},
   {"epsdMaxNL",    &OprogStatus.epsdMaxNL,        CT},
+  {"epsdSP",       &OprogStatus.epsdSP,           CT},
+  {"epsdFastSP",   &OprogStatus.epsdFastSP,       CT},
+  {"epsdSPNL",     &OprogStatus.epsdSPNL,         CT},
+  {"epsdFastSPNL", &OprogStatus.epsdFastSPNL,     CT},
   {"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
   {"tolSD",      &OprogStatus.tolSD,          CT},
   {"tolSDlong",  &OprogStatus.tolSDlong,      CT},

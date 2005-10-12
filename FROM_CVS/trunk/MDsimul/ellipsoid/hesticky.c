@@ -893,7 +893,7 @@ int get_dists_tocheckSP(double distsOld[], double dists[], int tocheck[], int do
     {
       tocheck[nn] = 0;
       if ( dists[nn]*distsOld[nn] > 0.0 &&
-	  fabs(dists[nn]) < OprogStatus.epsd && fabs(distsOld[nn]) < OprogStatus.epsd &&
+	  fabs(dists[nn]) < OprogStatus.epsdSP && fabs(distsOld[nn]) < OprogStatus.epsdSP &&
 	  dorefine[nn] == MD_EVENT_NONE && (bondpair== -1 || bondpair == nn))
 	{
 	  tocheck[nn] = 1; 
@@ -973,8 +973,8 @@ double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt
       nr12j = calc_norm(r12j);
       for (kk = 0; kk < 3; kk++)
 	{
-	  r12i[kk] *= (nr12i+OprogStatus.epsd)/nr12i;
-	  r12j[kk] *= (nr12j+OprogStatus.epsd)/nr12j;
+	  r12i[kk] *= (nr12i+OprogStatus.epsdSP)/nr12i;
+	  r12j[kk] *= (nr12j+OprogStatus.epsdSP)/nr12j;
 	}	  
       vectProd(wx[i], wy[i], wz[i], r12i[0], r12i[1], r12i[2], &wri[0], &wri[1], &wri[2]);
       nwri = calc_norm(wri);
@@ -1037,7 +1037,7 @@ int search_contact_fasterSP(int i, int j, double *shift, double *t, double t1, d
     }
   while (fabs(*d1) > epsdFast && its < MAXOPTITS)
     {
-      if (maxddot*(t2-(t1+*t)) < fabs(*d1)-OprogStatus.epsd)
+      if (maxddot*(t2-(t1+*t)) < fabs(*d1)-OprogStatus.epsdSP)
 	{
 	  MD_DEBUG30(printf("SP maxddot*(t2-(t1+*t)=%.15G fabs(*d1)=%.15G\n", maxddot*(t2-(t1+*t)),fabs(*d1)));
 	  MD_DEBUG30(printf("SP maxddot=%.15G t2-(t1+*t)=%.15G\n",maxddot, t2-(t1+*t)));
@@ -1086,7 +1086,7 @@ double distfuncSP(double x)
   polint(xa, ya, 3, x, &y, &dy);
   if (polinterr==1)
     return 0.0;
-  if (dy > OprogStatus.epsd)
+  if (dy > OprogStatus.epsdSP)
     {
       if (OprogStatus.phitol <= 0)
 	printf("dy=%.15G\n", dy);
@@ -1219,16 +1219,16 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
   for (kk=0; kk < MD_PBONDS; kk++)
     {
       if (i < Oparams.parnumA)
-	factori = calc_norm(spXYZ_A[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+	factori = calc_norm(spXYZ_A[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
       else
-	factori = calc_norm(spXYZ_B[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+	factori = calc_norm(spXYZ_B[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
       if (j < Oparams.parnumA)
-	factorj = calc_norm(spXYZ_A[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+	factorj = calc_norm(spXYZ_A[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
       else
-	factorj = calc_norm(spXYZ_B[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+	factorj = calc_norm(spXYZ_B[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
 #if 0
-	factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
-	factorj = 0.5*maxax[j]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
+	factori = 0.5*maxax[i]+OprogStatus.epsdSP;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+	factorj = 0.5*maxax[j]+OprogStatus.epsdSP;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
 #endif
 #if 0
 	na = i<Oparams.parnumA?0:1;
@@ -1269,16 +1269,16 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
 	       calc_norm(spXYZ_B[mapbondsa[kk]-1]), wx[i], wy[i], wz[i]);
 #endif
       if (i < Oparams.parnumA)
-	factori = calc_norm(spXYZ_A[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+	factori = calc_norm(spXYZ_A[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
       else
-	factori = calc_norm(spXYZ_B[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+	factori = calc_norm(spXYZ_B[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
       if (j < Oparams.parnumA)
-	factorj = calc_norm(spXYZ_A[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+	factorj = calc_norm(spXYZ_A[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
       else
-	factorj = calc_norm(spXYZ_B[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+	factorj = calc_norm(spXYZ_B[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
 #if 0
-      factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
-      factorj = 0.5*maxax[j]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
+      factori = 0.5*maxax[i]+OprogStatus.epsdSP;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+      factorj = 0.5*maxax[j]+OprogStatus.epsdSP;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
 #endif
       maxddoti[kk] = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j]))+
 	sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori + 
@@ -1311,10 +1311,10 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   int negpairs[MD_PBONDS], sumnegpairs;
 #endif
   const double GOLD= 1.618034;
-  epsd = OprogStatus.epsd;
-  epsdFast = OprogStatus.epsdFast;
-  epsdFastR= OprogStatus.epsdFastR;
-  epsdMax = OprogStatus.epsdMax;
+  epsd = OprogStatus.epsdSP;
+  epsdFast = OprogStatus.epsdFastSP;
+  epsdFastR= OprogStatus.epsdFastSP;
+  epsdMax = OprogStatus.epsdSP;
   assign_bond_mapping(i, j);
   bondpair = get_bonded(i, j);
   t = 0.0;
@@ -1723,7 +1723,7 @@ int get_dists_tocheck_sp(int nsp, double distsOld[6][NA], double dists[6][NA], i
       for (nn2 = 0; nn2 < nsp; nn2++)
 	{
 	  tocheck[nn][nn2] = 0;
-	  if (dists[nn][nn2] < OprogStatus.epsdNL && distsOld[nn][nn2] < OprogStatus.epsdNL &&
+	  if (dists[nn][nn2] < OprogStatus.epsdSPNL && distsOld[nn][nn2] < OprogStatus.epsdSPNL &&
 	      dorefine[nn][nn2] == 0)
 	    {
 	      tocheck[nn][nn2] = 1; 
@@ -1798,7 +1798,7 @@ int check_distance_sp(int nsp, double maxddoti[6][NA], double dists[6][NA], doub
     {
       for (nn2 = 0; nn2 < nsp; nn2++)
 	{
-	  if ((t2 - (t1 + t))*maxddoti[nn][nn2] <  dists[nn][nn2] - OprogStatus.epsd)
+	  if ((t2 - (t1 + t))*maxddoti[nn][nn2] <  dists[nn][nn2] - OprogStatus.epsdSPNL)
 	    cc++;
 	}
     }
@@ -1841,7 +1841,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
     NSP = MD_STSPOTS_B;
   *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, distsOld);
 #if 0
-  if ((t2-t1)*maxddot < *d1 - OprogStatus.epsd)
+  if ((t2-t1)*maxddot < *d1 - OprogStatus.epsdSPNL)
     return 1;
 #endif
   timesFNL++;
@@ -1859,7 +1859,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 	return 1;
 #else
       delt = fabs(*d1) / maxddot;
-      if (*t + t1 < t2 && (t2 - (*t + t1))*maxddot < fabs(*d1) - OprogStatus.epsd)
+      if (*t + t1 < t2 && (t2 - (*t + t1))*maxddot < fabs(*d1) - OprogStatus.epsdSPNL)
 	return 1;
 #endif
       *t += delt;
@@ -1992,12 +1992,12 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
   double Iamin;
   double factori;
 #if 0
-  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+OprogStatus.epsdSP;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 #else
   if (i < Oparams.parnumA)
-    factori = calc_norm(spXYZ_A[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+    factori = calc_norm(spXYZ_A[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
   else
-    factori = calc_norm(spXYZ_B[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+    factori = calc_norm(spXYZ_B[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
 #endif
 #if 0
   na = i<Oparams.parnumA?0:1;
@@ -2014,12 +2014,12 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
 {
   double factori;
 #if 0
-  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+OprogStatus.epsdSP;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 #else
    if (i < Oparams.parnumA)
-    factori = calc_norm(spXYZ_A[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+    factori = calc_norm(spXYZ_A[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
   else
-    factori = calc_norm(spXYZ_B[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsd;
+    factori = calc_norm(spXYZ_B[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
 #endif
   return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
@@ -2041,10 +2041,10 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   int its, foundrc, NSP;
   double t1, epsd, epsdFast, epsdFastR, epsdMax, deldist; 
   int tocheck[6][NA], dorefine[6][NA], ntc, ncr, nn, gotcoll, crossed[6][NA], firstaftsf;
-  epsd = OprogStatus.epsdNL;
-  epsdFast = OprogStatus.epsdFastNL;
-  epsdFastR= OprogStatus.epsdFastRNL;
-  epsdMax = OprogStatus.epsdMaxNL;
+  epsd = OprogStatus.epsdSPNL;
+  epsdFast = OprogStatus.epsdFastSPNL;
+  epsdFastR= OprogStatus.epsdFastSPNL;
+  epsdMax = OprogStatus.epsdSPNL;
   t = 0;//t1;
   t1 = Oparams.time;
   //t2 = timbig;
@@ -2053,7 +2053,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   else
     NSP = MD_STSPOTS_B;
   calc_grad_and_point_plane_all(i, gradplane_all, rBall);
-  //factori = 0.5*maxax[i]+OprogStatus.epsdNL;
+  //factori = 0.5*maxax[i]+OprogStatus.epsdSPNL;
   maxddot = 0.0;
   for (nn = 0; nn < 6; nn++)
     {
