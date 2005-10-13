@@ -5092,7 +5092,8 @@ void timeshift_calendar(void)
   /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
   for (id=1; id < poolSize; id++) 
     {
-      treeTime[id] -= OprogStatus.bigDt;
+      if (treeUp[id] != -1)
+	treeTime[id] -= OprogStatus.bigDt;
 #if 0
       if (treeTime[id] < 0.0)
 	treeTime[id] = 0.0;
