@@ -141,7 +141,11 @@ void calcV(void)
   else
     fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
 #else
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, V/((double)Oparams.parnum));
+#else
   fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
+#endif
 #endif
  fclose(mf);
 #else
@@ -159,7 +163,12 @@ void energy(void)
   int mol, Nm, i;
   double px, py, pz;
   double invL;
-
+  double tref;
+#ifdef MD_BIG_DT
+  tref = OprogStatus.refTime;
+#else
+  tref = 0.0;
+#endif
 #if 0  
   FILE* mf;
 #endif
@@ -216,14 +225,14 @@ void energy(void)
     }
 #ifdef MD_GRAVITY
   calcKVz();
-  sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G) Vz=%f\n", Oparams.time,
+  sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G) Vz=%f\n", Oparams.time + tref,
 	  E, Px, Py, Pz, Vz);
 #else
 #ifdef MD_PATCHY_HE
-  sprintf(TXTA[1], "t=%f E=%.15f V=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time,
+  sprintf(TXTA[1], "t=%f E=%.15f V=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time + tref,
 	  E, V, Px, Py, Pz);
 #else
-   sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time,
+   sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time + tref,
 	  E, Px, Py, Pz);
 #endif
 #endif
@@ -283,7 +292,11 @@ void transDiff(void)
       //Dr4 += Sqr(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
    }
   DrSqTotA =  DrSqTot / ((double) Oparams.parnumA);
+#ifdef MD_BIG_DT
+  fprintf(f, "%.15G %.15G\n", Oparams.time + OprogStatus.refTime, DrSqTotA);
+#else
   fprintf(f, "%.15G %.15G\n", Oparams.time, DrSqTotA);
+#endif
   fclose(f);
   if (Oparams.parnumA < Oparams.parnum)
     {
@@ -298,14 +311,22 @@ void transDiff(void)
 	}
       
       DrSqTotB = DrSqTot / ((double)Oparams.parnum - Oparams.parnumA);
+#ifdef MD_BIG_DT
+      fprintf(f, "%.15G %.15G\n", Oparams.time + OprogStatus.refTime, DrSqTotB);
+#else
       fprintf(f, "%.15G %.15G\n", Oparams.time, DrSqTotB);
+#endif
       fclose(f);
     }
   /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
      because DrSq is zero! */
- 
+#ifdef MD_BIG_DT
+  Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time + OprogStatus.refTime) *
+		       ((double) Oparams.parnumA ) );   
+#else
   Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time) *
 		       ((double) Oparams.parnumA ) );   
+#endif
   //printf("Dtr: %f\n", Dtrans);
 #if 0
   Aa = ((double) Oparams.parnumA ) * 3.0 * 
@@ -360,16 +381,25 @@ void calcrotMSD(void)
     }
   DphiSq = DphiSqA;
   fA = fopenMPI(absMisHD("rotMSDA.dat"),"a");
-
+#ifdef MD_BIG_DT
+  fprintf(fA,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, DphiSqA, 
+	  DphiA[0], DphiA[1], DphiA[2]); 
+#else
   fprintf(fA,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, DphiSqA, 
 	  DphiA[0], DphiA[1], DphiA[2]); 
+#endif
   fclose(fA);
   if (Oparams.parnum > Oparams.parnumA)
     {
       fB = fopenMPI(absMisHD("rotMSDB.dat"),"a");
       
+#ifdef MD_BIG_DT
+      fprintf(fB,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, DphiSqB,
+	      DphiB[0], DphiB[1], DphiB[2]); 
+#else
       fprintf(fB,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, DphiSqB,
 	      DphiB[0], DphiB[1], DphiB[2]); 
+#endif
       fclose(fB);
     }
   
@@ -403,7 +433,11 @@ void temperat(void)
       temp = OprogStatus.sumTemp / NUMCALCS;
     }
   mf = fopenMPI(absMisHD("temp.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, temp);
+#else
   fprintf(mf, "%15G %.15G\n", Oparams.time, temp);
+#endif
   fclose(mf);
   /* pressure */
   if (OprogStatus.avngPress == 1)
