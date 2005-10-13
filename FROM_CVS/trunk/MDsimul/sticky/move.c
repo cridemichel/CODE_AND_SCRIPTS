@@ -5074,7 +5074,8 @@ void timeshift_variables(void)
   OprogStatus.nextcheckTime -= OprogStatus.bigDt;
   OprogStatus.nextDt -= OprogStatus.bigDt;
   OprogStatus.nextSumTime -= OprogStatus.bigDt;
-  OprogStatus.nextStoreTime -= OprogStatus.bigDt;
+  //nextStoreTime viene calcolato opportunamente ogni volta quindi non va shiftato
+  //OprogStatus.nextStoreTime -= OprogStatus.bigDt;
   for (i = 0; i < Oparams.parnum; i++)
     {
       atomTime[i] -= OprogStatus.bigDt;
@@ -5091,8 +5092,11 @@ void timeshift_calendar(void)
   /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
   for (id=1; id < poolSize; id++) 
     {
-      if (treeUp[id] != -1)
-	treeTime[id] -= OprogStatus.bigDt;
+      treeTime[id] -= OprogStatus.bigDt;
+#if 0
+      if (treeTime[id] < 0.0)
+	treeTime[id] = 0.0;
+#endif
     } 
 }
 #endif
@@ -5191,6 +5195,9 @@ void move(void)
 	    }
 	  OprogStatus.nextStoreTime = OprogStatus.storerate *
 	    (pow(OprogStatus.base,OprogStatus.NN)*OprogStatus.KK+pow(OprogStatus.base,OprogStatus.JJ));
+#ifdef MD_BIG_DT
+	  OprogStatus.nextStoreTime -= OprogStatus.refTime;
+#endif
 	  ScheduleEvent(-1, ATOM_LIMIT + 8, OprogStatus.nextStoreTime);
 	}
       else if (evIdB == ATOM_LIMIT + 10)
@@ -5377,7 +5384,7 @@ void move(void)
 	  UpdateSystem();
 	  timeshift_calendar();
 	  timeshift_variables();
-	  Oparams.time = 0.0;
+	  Oparams.time -= OprogStatus.bigDt;
 	  OprogStatus.refTime += OprogStatus.bigDt;
        	  ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
 	}
