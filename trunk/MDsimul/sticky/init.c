@@ -977,6 +977,10 @@ void usrInitBef(void)
     OprogStatus.rescaleTime = 1.0;
     OprogStatus.brownian = 0;
     OprogStatus.checkGrazing = 0;
+#ifdef MD_BIG_DT
+    OprogStatus.refTime = 0.0;
+    OprogStatus.bigDt = -1.0;
+#endif
 #ifndef MD_ASYM_ITENS
     for (i = 0; i < 2; i++)
       Oparams.I[i] = 1.0;
@@ -1686,7 +1690,10 @@ void usrInitAft(void)
   parnumA = Oparams.parnumA;
   parnumB = Oparams.parnum - Oparams.parnumA;
   sct = sizeof(COORD_TYPE);
-
+#ifdef MD_BIG_DT
+  if (OprogStatus.bigDt <= 0.0)
+    OprogStatus.bigDt = 0.0;
+#endif
   invL = 1.0/L;
   L2 = 0.5*L;
   poolSize = OprogStatus.eventMult*Oparams.parnum;
@@ -1795,6 +1802,9 @@ void usrInitAft(void)
     }
   if (newSim)
     {
+#ifdef MD_BIG_DT
+      OprogStatus.refTime = 0.0;
+#endif
       if (OprogStatus.CMreset==-1)
 	{
 	  comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
@@ -1948,6 +1958,10 @@ void usrInitAft(void)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+#ifdef MD_BIG_DT
+  if (OprogStatus.bigDt > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT + 11, OprogStatus.bigDt);
+#endif
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)
