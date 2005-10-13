@@ -35,6 +35,7 @@ extern int NCell, mapSize, M;
 /* neighbour list method variables */
 extern double dispHi;
 extern int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
+extern void UpdateSystem(void);
 /* ================================= */
 
 /* ========================================================================= */
@@ -49,9 +50,13 @@ int *numbonds;
 FILE* mf;
 double calcpotene(void)
 {
-  double shift[NDIM], Epot; 
-  int cellRangeEne[2 * NDIM], signDir[NDIM], evCode,
-      iX, iY, iZ, jX, jY, jZ, k, n, na;
+  double Epot; 
+  int na;
+#if 0
+  double shift[NDIM];
+  int evCode, cellRangeEne[2*NDIM], signDir[NDIM];
+  int iX, iY, iZ, jX, jY, jZ, k, n;
+#endif
   Epot = 0;
 #if 0
   for (k = 0; k < NDIM; k++)
@@ -305,9 +310,9 @@ void temperat(void)
 {
   /* DESCRIPTION:
      This the calculation of the instantaneous temperature */
+#if 0
   int i;
   double m;
-#if 0
   K = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
     {
@@ -484,7 +489,7 @@ void structFacts(void)
 /* ============================= >>> maxwell <<< =========================== */
 void maxwell(void)
 {
-  int n, i, Nm;
+  int n, i;
   int* histMB;
   double vMod, vSq;
 

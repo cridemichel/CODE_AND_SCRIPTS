@@ -25,7 +25,7 @@ void polint(double xain[], double yain[], int n, double x, double *y, double *dy
 double **matrix(int n, int m)
 {
   double **M;
-  int i, j;
+  int i;
   M = malloc(sizeof(double*)*n);
   for (i=0; i < n; i++)
     M[i] = calloc(m, sizeof(double));
@@ -189,7 +189,7 @@ double brentRyck(double ax, double bx, double cx, double (*f)(double), double to
   int iter, ITMAXBR=100;
   const double CGOLD=0.3819660;
   const double ZEPSBR=1E-10;
-  double a,b,d,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
+  double a,b,d=0.0,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
   double e=0.0, fuold;
   /* This will be the distance moved on the step before last.*/
   a=(ax < cx ? ax : cx); /*a and b must be in ascending order, 
@@ -285,7 +285,7 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
   int iter, ITMAXBR=100;
   const double CGOLD=0.3819660;
   const double ZEPSBR=1E-10;
-  double a,b,d,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
+  double a,b,d=0.0,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
   double e=0.0, fuold;
   /* This will be the distance moved on the step before last.*/
   a=(ax < cx ? ax : cx); /*a and b must be in ascending order, 
@@ -1001,7 +1001,7 @@ int maxitsRyck;
 double xaRyck[3], yaRyck[3];
 double polintfuncRyck(double x)
 {
-  double dy, y;
+  double dy=0.0, y;
   polintRyck(xaRyck, yaRyck, 3, x, &y, &dy);
   if (polinterrRyck==1)
     return 0.0;
@@ -1371,7 +1371,7 @@ int choose_neighbour2(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 {
   int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB;
   int nphi1, nth1, nphi2, nth2, firstdist=1;
-  double distSqold, distSqT, normdx, dxN[3], distSqmin;
+  double distSqold, distSqT, distSqmin=0.0;
   double vecini[6], cxmesh[6],xmesh[6], xmeshP1[3], xmeshP2[3];
 
   cth1 = *th1;
@@ -1476,9 +1476,9 @@ int choose_neighbour(double *grad, int *th1, int *phi1, int *th2, int *phi2,
 		     double *distSq, double *S, double maxstA, double maxstB, double *vec, 
 		     int calc_sign)
 {
-  int k1, k2, kk, cth1, cphi1, cth2, cphi2, mA, mB;
+  int k1, kk, cth1, cphi1, cth2, cphi2, mA, mB;
   int nphi1, nth1, nphi2, nth2, firstspA=1, firstspB=1;
-  double sp, spmaxA=0.0, spmaxB=0.0, dx[3], dxP[3], cdxA[3], cdxB[3], dxA, dxB, distSqold, normdx, dxN[3];
+  double sp, spmaxA=0.0, spmaxB=0.0, dx[3], dxP[3], cdxA[3], cdxB[3], distSqold;
   double vecini[6], xmesh[3], xmeshP[3], xmeshA[3], xmeshB[3];
 
   cth1 = *th1;
@@ -1836,7 +1836,7 @@ double zbrentRyck(double (*func)(double), double x1, double x2, double tol)
  * The root, returned as zbrent, will be refined until its accuracy is tol.*/
 {
   int iter; 
-  double a=x1,b=x2,c=x2,d,e,min1,min2; 
+  double a=x1,b=x2,c=x2,d=0.0,e=0.0,min1,min2; 
   double fa=(*func)(a),fb=(*func)(b),fc,p,q,r,s,tol1,xm; 
   if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 
     {
@@ -1917,7 +1917,7 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
  * The root, returned as zbrent, will be refined until its accuracy is tol.*/
 {
   int iter; 
-  double a=x1,b=x2,c=x2,d,e,min1,min2; 
+  double a=x1,b=x2,c=x2,d=0.0,e=0.0,min1,min2; 
   double fa=(*func)(a),fb=(*func)(b),fc,p,q,r,s,tol1,xm; 
   MD_DEBUG(printf("==>>>a=%f b=%f fa: %f fb: %f\n",a, b, fa, fb));
   if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 

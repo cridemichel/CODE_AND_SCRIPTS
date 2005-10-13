@@ -8,7 +8,7 @@
 */
 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
-#define MD_DEBUG(x) x
+#define MD_DEBUG10(x) x
 extern char TXT[MSG_LEN];
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
@@ -106,7 +106,7 @@ void FCC(int Nm, COORD_TYPE *m)
        COORD_TYPE    rRoot3               1.0 / sqrt ( 3.0 ) */
   int Nc, Ncz;
   double rRoot3; /* = 0.5773503; */
-  double Lold, Cell, Cell2;
+  double Cell, Cell2;
 #ifdef MD_GRAVITY
   double Cellz, Cell2z;
 #endif
@@ -368,6 +368,7 @@ void resetCM(void)
       rz[i] -= RCMz;
     }
 }
+void angvel(void);
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
 {
   COORD_TYPE rTemp[2] ;
@@ -412,6 +413,7 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
  
   angvel();
 }
+void scalevels(double temp, double K);
 
 /* ========================== >>> comvel <<< =============================== */
 void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
@@ -671,7 +673,7 @@ void angvel(void)
 {
   int i;
   double inert;                 /* momentum of inertia of the molecule */
-  double norm, dot, osq, o, mean;
+  double norm, osq, o, mean;
   double  xisq, xi1, xi2, xi;
   double ox, oy, oz;
   //L = cbrt(Vol);
@@ -1322,7 +1324,6 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 {
   int i,j, n1, n2;
   double theta, phi;
-  XYZ p;
   const double TWOPI=2.0*pi;
   /* n1 = stacks
    * n2 = slides */
@@ -1343,11 +1344,18 @@ double calc_phi(void);
 #ifdef MD_SILICA
 extern void assign_bond_mapping(int i, int j);
 #endif
+extern void writeAllCor(FILE* fs);
+
 void save_init_conf(void)
 {
+#ifndef MD_STOREMGL
   const char sepStr[] = "@@@\n";
+#endif
   FILE *bf;
-  char fileop[512],fileop2[512], fileop3[512];
+  char fileop[512],fileop2[512];
+#ifndef MD_STOREMGL
+  char fileop3[512];
+#endif
   sprintf(fileop2 ,"Store-Init");
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
@@ -1375,13 +1383,13 @@ void save_init_conf(void)
   system(fileop3);
 #endif
 }
+extern int bound(int na, int n, int a, int b);
 #ifdef MD_SILICA
 void check_all_bonds(void)
 {
-  int nl, nn, warn, amin, bmin, i, j, aa, bb, nb, wnn, wj, iA, nc;
-  static int errtimes=0;
-  double wdist,drx, dry, drz, shift[3], dist, rat[5][3], dists[MD_PBONDS], ri[3];
-  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  int nl, nn, warn, amin, bmin, i, j, nb, iA, nc;
+  double shift[3], dist, dists[MD_PBONDS];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
   for (k = 0;  k < NDIM; k++)
@@ -1528,10 +1536,9 @@ void check_all_bonds(void)
 #else
 void check_all_bonds(void)
 {
-  int nn, warn, amin, bmin, i, j, aa, bb, nb, wnn, wj;
-  static int errtimes=0;
-  double wdist,drx, dry, drz, shift[3], dist, rat[5][3], dists[MD_PBONDS], ri[3];
-  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  int nn, warn, amin, bmin, i, j, nb;
+  double shift[3], dist, dists[MD_PBONDS];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
   for (k = 0;  k < NDIM; k++)
@@ -1666,21 +1673,26 @@ void check_all_bonds(void)
 }
 #endif
 /* ======================== >>> usrInitAft <<< ==============================*/
+extern void calc_energy(char *msg);
 void usrInitAft(void)
 {
   /* DESCRIPTION:
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
-  char fileop[1024], fileop2[1024], fileop3[1024];
-  FILE *bof;
+#ifndef MD_STOREMGL
+  char fileop3[1024];
+#endif
   double dist;
   int nn, aa, bb, Nm, i, sct, overlap, amin, bmin;
   COORD_TYPE vcmx, vcmy, vcmz;
   COORD_TYPE *m;
-  double sigDeltaSq, drx, dry, drz, shift[3], dists[MD_PBONDS];
+  double drx, dry, drz, shift[3], dists[MD_PBONDS];
   int j;
-  int a, nl, nc;
+#ifdef MD_SILICA
+  int nl, nc;
+#endif
+  int a;
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
   /* initialize global varibales */
@@ -2048,13 +2060,15 @@ void usrInitAft(void)
 }
 
 extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
-
+extern void free_matrix(double **M, int n);
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs)
 {
   int i;
+#ifndef MD_STOREMGL
   const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
+#endif
 #ifdef MD_STOREMGL
 #ifdef MD_SILICA
   int a;
