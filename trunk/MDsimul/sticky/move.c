@@ -1,7 +1,7 @@
 #include<mdsimul.h>
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
-#define MD_DEBUG(x) 
+#define MD_DEBUG09(x) 
 #define MD_DEBUG10(x)  
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
@@ -59,6 +59,7 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
 void InitEventList (void);
 int bound(int na, int n, int a, int b);
+extern void check_all_bonds(void);
 #ifdef MD_HSVISCO
 void calcT(void);
 #endif
@@ -922,8 +923,7 @@ void core_bump(int i, int j, double *W, double sigSq)
   double rxij, ryij, rzij, factor;
   double delvx, delvy, delvz, invmi, invmj, denom;
 #ifdef MD_HSVISCO
-  double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold, taus, 
-	  DTxx, DTyy, DTzz, Txxold, Tyyold, Tzzold;
+  double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
 
   invmi = (i<Oparams.parnumA)?invmA:invmB;
@@ -1020,21 +1020,20 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
    *******************************************************************
    */
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
-  double factor=0, invmi, invmj, sigmai, mredl, shift[3];
-  double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3], r12[3];
+  double factor=0, invmi, invmj, sigmai, mredl;
+  double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
 #ifdef MD_HSVISCO
-  double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold, taus, 
-	  DTxx, DTyy, DTzz, Txxold, Tyyold, Tzzold;
+  double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
 
-  double denom, rCx, rCy, rCz, nrAB, Dr, V, Eold, E, Vold, Kold;
+  double denom, rCx, rCy, rCz, nrAB, Dr;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
 #endif
   //double shift[3];
-  int na, a, kk, oldbond=-1;
+  int na, a, kk;
 #if 1
   if (i < Oparams.parnumA && j < Oparams.parnumA)
     {
@@ -1566,7 +1565,6 @@ void calcObserv(void)
   /* DESCRIPTION:
      This mesuring functions calculates the Translational Diffusion 
      coefficent */
-  FILE *f;
   double Drx, Dry, Drz;
   int i;
 #ifdef MPI
@@ -1789,7 +1787,7 @@ void UpdateSystem(void)
 }
 void check_bonds(char* msg, int i, int j, int ata, int atb, int yesexit)
 {
-  int a, b, B1, B2;
+  int a, b, B1;
   for (a = 0; a < numbonds[i]-1; a++)
     {
       B1 = bonds[i][a];
@@ -1870,13 +1868,14 @@ int bound(int na, int n, int a, int b)
  * nel caso dell'acqua i siti idrogeno ed elettroni sono disposti su 
  * di un tetraedro */
 double rat_body[NA][3] = {{0,0,0},{0,0,1},{1,-1,0},{0,1,0},{0,0,1}};
+extern void vectProdVec(double *A, double *B, double *C);
 #if 1
 #ifdef MD_SILICA
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
 {
   /* calcola le coordinate nel laboratorio di uno specifico atomo */
   int kk;
-  double r1[3], r2[3], r3[3], nr, fact;
+  double r1[3], r2[3], r3[3], nr;
   double radius; 
   /* l'atomo zero si suppone nell'origine 
    * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
@@ -2704,7 +2703,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
   double told, delt, distsOld[MD_PBONDS];
   const int MAXOPTITS = 500;
-  int nn, its=0, amin, bmin, crossed[MD_PBONDS]; 
+  int its=0, amin, bmin, crossed[MD_PBONDS]; 
   /* estimate of maximum rate of change for d */
 #if 0
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
@@ -2886,9 +2885,7 @@ int interpol(int i, int j, int nn,
 	     double tref, double t, double delt, double d1, double d2,
 	     double *tmin, double shift[3])
 {
-  int its, nb, amin, bmin;
-  double d3, A, B, C, dmin, dminnew, tminnew;
-  double dists[MD_PBONDS];
+  double d3, A, dmin;
   /* NOTA: dists di seguito può non essere usata? controllare!*/
   d3 = calcDistNegOne(t+delt*0.5, tref, i, j, nn, shift);
   xa[0] = 0;
@@ -3017,7 +3014,7 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
 
 int delt_is_too_big_hc(int i, int j, int bondpair, double *dists, double *distsOld)
 {
-  int nn, retval=0;
+  int nn;
   for (nn=0; nn < MD_PBONDS; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
@@ -3032,7 +3029,7 @@ int delt_is_too_big_hc(int i, int j, int bondpair, double *dists, double *distsO
 int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 		    int *negpairs)
 {
-  int nn, retval=0;
+  int nn;
   for (nn=0; nn < MD_PBONDS; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
@@ -3066,12 +3063,15 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
   int bondpair, itstb;
+  int its, foundrc;
+#if 0
   const int MAXITS = 100;
   int itsRef;
-  int its, foundrc, goback;
+  int goback;
   double t1ini, delthc;
-  double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax, deldist, df; 
-  int kk,tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
+#endif
+  double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax, deldist; 
+  int tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
       crossed[MD_PBONDS], firstaftsf;
 #ifdef MD_NEGPAIRS
   int negpairs[MD_PBONDS], sumnegpairs;
@@ -3586,7 +3586,7 @@ double estimate_tmin(double t, int na, int nb)
 #ifdef MD_SILICA
 void PredictCellCross(int na, int nc)
 {
-  int ignorecross[3], k, evCode, signDir[NDIM], iA, nl;
+  int ignorecross[3], k, evCode, signDir[NDIM]={0,0,0}, iA, nl;
   double tm[3];
 
   iA = (na < Oparams.parnumA)?0:1;
@@ -3754,11 +3754,14 @@ void PredictColl (int na, int nb, int nl)
    *      */
   double sigSq=0.0, dr[NDIM], dv[NDIM], shift[NDIM],  
 	 b, d, t, tInt, vv, distSq, t1=0.0, t2=0.0, evtime=0, evtimeHC;
-  int overlap, ac, bc, acHC, bcHC, collCodeOld, nc;
+  int overlap, ac, bc, acHC, collCodeOld, nc;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
   int collCode;
-  int cellRangeT[2 * NDIM], evCode, iX, iY, iZ, jX, jY, jZ, k, n;
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+#if 0
+  int evCode;
+#endif
   MD_DEBUG29(printf("PredictEvent: %d,%d\n", na, nb));
   MD_DEBUG(calc_energy("PredEv"));
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
@@ -4043,14 +4046,16 @@ void PredictEvent (int na, int nb)
    *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
-  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],  
+  double sigSq=0.0, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],  
 	 b, d, t, tInt, vv, distSq, t1, t2, evtime=0, evtimeHC;
-  int overlap, ac, bc, acHC, bcHC, collCodeOld;
+  int overlap, ac, bc, acHC, collCodeOld;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
   int collCode;
-  int cellRangeT[2 * NDIM], signDir[NDIM], evCode, iX, iY, iZ, jX, jY, jZ, k, n;
-
+  int cellRangeT[2 * NDIM], signDir[NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+#ifndef MD_SILICA
+  int evCode;
+#endif
   MD_DEBUG29(printf("PredictEvent: %d,%d\n", na, nb));
   MD_DEBUG(calc_energy("PredEv"));
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
@@ -4534,7 +4539,9 @@ void store_bump(int i, int j)
   int ii,a;
   FILE *bf;
   double rat[5][3], rO[3], **Rl;
+#if 0
   const char tipodat2[]= "%.15G %.15G %.15G\n";
+#endif
 #ifdef MD_BIG_DT
   sprintf(fileop2 ,"StoreBump-%d-%d-t%.8f", i, j, Oparams.time + OprogStatus.refTime);
 #else
@@ -4770,11 +4777,11 @@ int check_boxwall(int k, int nc, int nl)
   else 
     return 0;
 }
+extern void DeleteEvent(int id);
 void ProcessCellCrossing(void)
 {
   int kk, n, iA, k;
-  int nc, nl, boxwall, nlcoll, nlcross, nc_bw, nlcross_bw, nlcoll_bw;
-  int nc2, nl2;
+  int nc, boxwall, nlcoll, nlcross, nc_bw, nlcross_bw, nlcoll_bw;
 
   UpdateAtom(evIdA);
   kk = evIdB - 100 - ATOM_LIMIT; 
@@ -5087,7 +5094,7 @@ void timeshift_variables(void)
 }
 void timeshift_calendar(void)
 {
-  int idNow, poolSize, id;
+  int poolSize, id;
   poolSize = Oparams.parnum*OprogStatus.eventMult;
   /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
   for (id=1; id < poolSize; id++) 
@@ -5104,10 +5111,15 @@ void timeshift_calendar(void)
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
-  char fileop[1024], fileop2[1024], fileop3[1024];
+  char fileop[1024], fileop2[1024];
+#ifndef MD_STOREMGL
+  char fileop3[1024];
+#endif
   FILE *bf;
+#ifndef MD_STOREMGL
   const char sepStr[] = "@@@\n";
-  int i, innerstep=0;
+#endif
+  int innerstep=0;
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;

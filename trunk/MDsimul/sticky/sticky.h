@@ -15,6 +15,7 @@
 #include <cblas.h>
 #endif
 #define XTERM   "/usr/X11R6/bin/nxterm"
+extern void UpdateSystem(void);
 #undef UPDATE_SYSTEM
 #define UPDATE_SYSTEM UpdateSystem();
 #ifdef MD_GRAVITY
