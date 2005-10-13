@@ -377,8 +377,6 @@ void delete_events(int evIdA)
       treeIdA[0] = idd;
     }
   treeCircBL[id] = treeCircBR[id] = id;
-
-
 }
 void NextEvent (void) 
 {
