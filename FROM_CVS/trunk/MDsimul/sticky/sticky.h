@@ -355,6 +355,10 @@ struct progStatus
   double nextcheckTime;
   double nextSumTime;
   double nextDt;
+#ifdef MD_BIG_DT
+  double refTime;
+  double bigDt;
+#endif
   /* questi servono per salvare le conf usando la stessa formula di Giuseppe */
   double nextStoreTime;
   int KK;
@@ -564,6 +568,10 @@ struct pascii opro_ascii[] =
   {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
   {"nextSumTime"  ,&OS(nextSumTime),                1,  1,    "%.15G"},
   {"nextDt",       &OS(nextDt),                     1,  1,    "%.15G"},
+#ifdef MD_BIG_DT
+  {"refTime",      &OS(refTime),                    1,  1,    "%.15G"},
+  {"bigDt",        &OS(bigDt),                      1,  1,    "%.15G"},
+#endif
   {"eqlevel",     &OS(eqlevel),                    1,  1,    "%.12G"},
   {"eventMult",    &OS(eventMult),                  1,   1,  "%d"},  
   {"overlaptol"   ,&OS(overlaptol),                 1,   1, "%f"},
@@ -733,6 +741,9 @@ struct singlePar OsinglePar[] = {
   {"scalevel",   &OprogStatus.scalevel,       INT},
   {"endtime",    &OprogStatus.endtime,        CT},
   {"Dt",         &Oparams.Dt,                 CT},
+#ifdef MD_BIG_DT
+  {"bigDt",      &OprogStatus.bigDt,           CT},
+#endif
   {"epsd",       &OprogStatus.epsd,           CT},
   {"h"   ,     &OprogStatus.h,              CT},
   {"epsdFast",   &OprogStatus.epsdFast,       CT},

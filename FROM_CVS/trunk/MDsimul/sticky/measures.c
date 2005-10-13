@@ -127,15 +127,21 @@ double calcpotene(void)
 }
 void calcV(void)
 {
+  double tref;
  V = calcpotene();
  mf = fopenMPI(absMisHD("energy.dat"),"a");
+#ifdef MD_BIG_DT
+ tref = OprogStatus.refTime;
+#else
+ tref = 0.0;
+#endif
 #ifdef MD_SILICA
  if (Oparams.parnumA < Oparams.parnum)
-   fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum-Oparams.parnumA));
+   fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum-Oparams.parnumA));
  else
-   fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
+   fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum));
 #else
- fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
+ fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum));
 #endif
  fclose(mf);
 }
@@ -189,8 +195,13 @@ void energy(void)
       Py += py;
       Pz += pz;
     }
+#ifdef MD_BIG_DT
+  sprintf(TXTA[1], "t=%f E=%.15f V=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time + OprogStatus.refTime,
+	  E, V, Px, Py, Pz);
+#else
   sprintf(TXTA[1], "t=%f E=%.15f V=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time,
 	  E, V, Px, Py, Pz);
+#endif
   RCMx = 0.0;
   RCMy = 0.0;
   RCMz = 0.0;
@@ -240,9 +251,13 @@ void transDiff(void)
    }
   /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
      because DrSq is zero! */
- 
+#ifdef MD_BIG_DT
+  Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time + OprogStatus.refTime) *
+		       ((double) Oparams.parnumA ) );   
+#else
   Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time) *
 		       ((double) Oparams.parnumA ) );   
+#endif
   //printf("Dtr: %f\n", Dtrans);
   Aa = ((double) Oparams.parnumA ) * 3.0 * 
     Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
@@ -250,7 +265,11 @@ void transDiff(void)
   DrSqTot /= ((double) Oparams.parnumA);
 #if 1
   mf = fopenMPI(absMisHD("msdA.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, DrSqTot);
+#else
   fprintf(mf, "%15G %.15G\n", Oparams.time, DrSqTot);
+#endif
   fclose(mf);
   DrSqTot = 0.0;
   if (Oparams.parnum > Oparams.parnumA)
@@ -270,7 +289,12 @@ void transDiff(void)
 	  DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
 	}
       mf = fopenMPI(absMisHD("msdB.dat"),"a");
+#ifdef MD_BIG_DT
+      fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime,
+	      DrSqTot / ((double)(Oparams.parnum-Oparams.parnumA)));
+#else
       fprintf(mf, "%15G %.15G\n", Oparams.time, DrSqTot / ((double)(Oparams.parnum-Oparams.parnumA)));
+#endif
       fclose(mf);
     }
 #endif
@@ -316,7 +340,11 @@ void temperat(void)
     }
 #if 1
   mf = fopenMPI(absMisHD("temp.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, temp);
+#else
   fprintf(mf, "%15G %.15G\n", Oparams.time, temp);
+#endif
   fclose(mf);
 #endif
 #if 0
@@ -553,8 +581,14 @@ void calcpress(void)
      Store the three off-diagonal terms of the pressure tensor in an array 
      to save on disk like a single measure */
 #ifdef MD_HSVISCO
+
   mf = fopenMPI(absMisHD("press.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%.15G %.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime,
+	  press, pressKin, pressHS, pressST);
+#else
   fprintf(mf, "%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, press, pressKin, pressHS, pressST);
+#endif
   fclose(mf);
 #endif
 
@@ -574,7 +608,11 @@ void Ptensor(void)
   Ptens[1] = Pyz;
   Ptens[2] = Pzx;
 #ifdef MD_HSVISCO
+#ifdef MD_BIG_DT
+  fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, Pxy, Pyz, Pzx);
+#else
   fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time, Pxy, Pyz, Pzx);
+#endif
   fclose(mf);
 #endif
 
