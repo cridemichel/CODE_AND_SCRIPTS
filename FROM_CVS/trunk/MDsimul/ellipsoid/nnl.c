@@ -125,8 +125,10 @@ extern double max(double a, double b);
 #ifdef MD_ASYM_ITENS
 double calc_maxddot_nnl(int i, double *gradplane)
 {
+#if 0
   int na;
   double Iamin;
+#endif
   double factori;
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 #if 0
@@ -219,11 +221,13 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
 		     void (*vecfunc)(int, double [], double [], int), int iA)
 {
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
-  double  rA[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
+  double  rA[3], ti, vA[3], vB[3], OmegaB[3][3];
   double DA[3][3], fx[3], invaSqN, invbSqN, invcSqN;
   double Fxt[3], Ft;
 #ifdef MD_ASYM_ITENS
   double psi, phi;
+#else
+  double OmegaA[3][3];
 #endif
   int k1, k2;
   ti = x[4] + (trefG - atomTime[iA]);
@@ -370,12 +374,14 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
 		void (*vecfunc)(int, double [], double [], int), int iA)
 {
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
-  double  rA[3], rB[3], ti, vA[3], vB[3], OmegaA[3][3], OmegaB[3][3];
+  double  rA[3], rB[3], ti, vA[3], vB[3], OmegaB[3][3];
   double DA[3][3], DB[3][3], fx[3], gx[3], invaSqN, invbSqN, invcSqN;
   double Fxt[3], Ft;
   int k1, k2;
 #ifdef MD_ASYM_ITENS
   double phi, psi;
+#else
+  double OmegaA[3][3];
 #endif
   ti = x[4] + (trefG - atomTime[iA]);
   rA[0] = rx[iA] + vx[iA]*ti;
@@ -517,9 +523,11 @@ void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
   int na, k1, k2; 
   double  rA[3], ti;
   double fx[3];
-  double Omega[3][3], invaSqN, invbSqN, invcSqN;
+  double invaSqN, invbSqN, invcSqN;
 #ifdef MD_ASYM_ITENS
   double phi, psi;
+#else
+  double Omega[3][3];
 #endif
   /* x = (r, alpha, t) */ 
   ti = x[4] + (trefG - atomTime[i]);
@@ -610,9 +618,11 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   int na, k1, k2; 
   double  rA[3], rB[3], ti;
   double fx[3], gx[3];
-  double Omega[3][3], invaSqN, invbSqN, invcSqN;
+  double invaSqN, invbSqN, invcSqN;
 #ifdef MD_ASYM_ITENS
   double phi, psi;
+#else
+  double Omega[3][3];
 #endif
   /* x = (r, alpha, t) */ 
   ti = x[4] + (trefG - atomTime[i]);
@@ -1244,9 +1254,11 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   double vecg[8], rC[3], rD[3], rDC[3], r12[3], invaSqN, invbSqN, invcSqN;
   double ti, segno;
   int retcheck;
-  double Omega[3][3], nf, ng, gradf[3];
+  double nf, ng, gradf[3];
 #ifdef MD_ASYM_ITENS
   double psi, phi;
+#else
+  double Omega[3][3];
 #endif
   int k1;
   MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i],i));
@@ -1382,9 +1394,11 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
   double shift[3] = {0.0, 0.0, 0.0};
   double ti, segno;
   int retcheck;
-  double Omega[3][3], nf, ng, gradf[3], gradg[3];
+  double nf, ng, gradf[3], gradg[3];
 #ifdef MD_ASYM_ITENS
   double psi, phi;
+#else
+  double Omega[3][3]; 
 #endif
   int k1;
   MD_DEBUG20(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i],i));
@@ -2896,7 +2910,10 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   double h, d, dold, dold2, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double dtmp, normddot, ddot[3], t1, t2, maxddot, delt, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
-  double epsd, epsdFast, epsdFastR, epsdMax, factori; 
+#ifndef MD_ASYM_ITENS
+  double factori;
+#endif
+  double epsd, epsdFast, epsdFastR, epsdMax; 
   int dorefine, distfail;
   int its, foundrc, kk;
   epsd = OprogStatus.epsdNL;
@@ -3683,10 +3700,12 @@ void nextNNLupdate(int na)
   int i1, i2, ip;
   double DelDist, nnlfact;
   const double distBuf = 0.1;
-  double Omega[3][3], vecg[5];
+  double vecg[5];
   double nnltime1, nnltime2;
 #ifdef MD_ASYM_ITENS
   double psi, phi;
+#else
+  double Omega[3][3];
 #endif
 #ifndef MD_NNLPLANES
   nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];

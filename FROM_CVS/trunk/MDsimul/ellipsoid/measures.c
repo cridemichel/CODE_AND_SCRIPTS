@@ -53,10 +53,14 @@ extern int bound(int na, int n);
 int *numbonds;
 double calcpotene(void)
 {
-  double shift[NDIM], Epot; 
-  int cellRangeEne[2 * NDIM], signDir[NDIM], evCode,
-      iX, iY, iZ, jX, jY, jZ, k, n, na;
-  Epot = 0;
+  double Epot; 
+  int na;
+#if 0
+  double shift[NDIM];
+  int cellRangeEne[2 * NDIM];
+  int iX, iY, iZ, jX, jY, jZ, k, n, signDir[NDIM], evCode;
+#endif
+Epot = 0;
 #if 0
   for (k = 0; k < NDIM; k++)
     { 

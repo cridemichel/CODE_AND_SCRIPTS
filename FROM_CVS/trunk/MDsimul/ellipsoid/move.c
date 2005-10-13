@@ -100,7 +100,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 
 double calc_dist_ij(int i, int j, double t)
 {
-  static double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
+  static double shift[3] = {0,0,0}, vecgNeg[8];
   double d,r1[3], r2[3], alpha;
   shift[0] = L*rint((rx[i]-rx[j])/L);
   shift[1] = L*rint((ry[i]-ry[j])/L);
@@ -1250,8 +1250,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double norm[3];
   double modn, denom;
 #ifdef MD_HSVISCO
-  double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold, taus, 
-	  DTxx, DTyy, DTzz, Txxold, Tyyold, Tzzold;
+  double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz ;
   double rxij, ryij, rzij, Dr;
 #endif
 #ifndef MD_ASYM_ITENS
@@ -4449,8 +4448,10 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
 #ifdef MD_ASYM_ITENS
 double calc_maxddot(int i, int j)
 {
+#if 0
   int na;
   double Iamin, Ibmin;
+#endif
   double factori, factorj;
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
   factorj = 0.5*maxax[j]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
@@ -5601,7 +5602,7 @@ extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
-  int ii, na;
+  int na;
   FILE *bf;
 #ifdef MD_PATCHY_HE
   int nn;
@@ -5912,6 +5913,7 @@ void rebuildLinkedList(void);
 #ifdef MD_BIG_DT
 void timeshift_variables(void)
 {
+  int i;
   OprogStatus.nextcheckTime -= OprogStatus.bigDt;
   OprogStatus.nextDt -= OprogStatus.bigDt;
   OprogStatus.nextSumTime -= OprogStatus.bigDt;
@@ -5931,9 +5933,9 @@ void timeshift_variables(void)
 }
 void timeshift_calendar(void)
 {
-  int idNow, poolSize, id;
+  int poolSize, id;
   poolSize = Oparams.parnum*OprogStatus.eventMult;
-  /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */:w
+  /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
   for (id=1; id < poolSize; id++) 
     {
       if (treeUp[id] != -1)
@@ -5944,9 +5946,14 @@ void timeshift_calendar(void)
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
-  char fileop[1024], fileop2[1024], fileop3[1024];
+  char fileop[1024], fileop2[1024]; 
+#ifndef MD_STOREMGL
+  char fileop3[1024];
+#endif
   FILE *bf;
+#ifndef MD_STOREMGL
   const char sepStr[] = "@@@\n";
+#endif
   int i, innerstep=0;
 #ifdef MD_GRAVITY
   int ii;
