@@ -2890,18 +2890,21 @@ int interpol(int i, int j, int nn,
   ya[1] = d3;
   xa[2] = delt;
   ya[2] = d2;
-  if (ya[0]-ya[1]!=0.0)
+  if (ya[0]-ya[1] == 0.0)
     {
+      *tmin = t + delt*0.25;
+    }
+  else if (ya[2]-ya[0] ==0.0)
+    {
+      *tmin = t + delt*0.5;
+    }
+  else
+    {      
       A = (ya[2]-ya[0])/(ya[0]-ya[1]);
       *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
     }
-  else
-    {
-      A = (ya[0]-ya[1])/(ya[2]-ya[0]);
-      *tmin = t + 0.25*delt*((1.0 + A * 4.0)/( 1.0 + A * 2.0));
-    }
   dmin = calcDistNegOne(*tmin, tref, i, j, nn, shift);
-#if 0
+#if 1
   printf("delt=%.15G *tmin=%.15G *tmin+t=%.15G\n", delt, *tmin, t+*tmin);
   printf("A=%.15G B=%.15G C=%.15G\n", A, B, C);
   printf("{{%.15G,%.15G},{%.15G,%.15G},{%.15G,%.15G}} - *tmin=%.15G,%.15G\n", t, d1, t+delt*0.5,d3, t+delt, d2, *tmin, dmin);
