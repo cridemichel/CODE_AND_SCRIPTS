@@ -2652,6 +2652,7 @@ double eval_maxddist(int i, int j, int bondpair, double t1, double *maxddotOpt)
       nr12j = calc_norm(r12j);
       for (kk = 0; kk < 3; kk++)
 	{
+	  //printf("nr12i=%.15G nr12j=%.15G\n", nr12i, nr12j);
 	  r12i[kk] *= (nr12i+OprogStatus.epsd)/nr12i;
 	  r12j[kk] *= (nr12j+OprogStatus.epsd)/nr12j;
 	}	  
@@ -2883,17 +2884,28 @@ int interpol(int i, int j, int nn,
   double dists[MD_PBONDS];
   /* NOTA: dists di seguito può non essere usata? controllare!*/
   d3 = calcDistNegOne(t+delt*0.5, tref, i, j, nn, shift);
-  xa[0] = t;
+  xa[0] = 0;
   ya[0] = d1;
-  xa[1] = t+delt*0.5;
+  xa[1] = delt*0.5;
   ya[1] = d3;
-  xa[2] = t+delt;
+  xa[2] = delt;
   ya[2] = d2;
-  A = xa[2]*(ya[0]-ya[1]);
-  B = xa[0]*(ya[1]-ya[2]);
-  C = xa[1]*(ya[2]-ya[0]);
-  *tmin = (xa[2]*A+xa[0]*B+xa[1]*C)/(A+B+C)/2.0;
+  if (ya[0]-ya[1]!=0.0)
+    {
+      A = (ya[2]-ya[0])/(ya[0]-ya[1]);
+      *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
+    }
+  else
+    {
+      A = (ya[0]-ya[1])/(ya[2]-ya[0]);
+      *tmin = t + 0.25*delt*((1.0 + A * 4.0)/( 1.0 + A * 2.0));
+    }
   dmin = calcDistNegOne(*tmin, tref, i, j, nn, shift);
+#if 0
+  printf("delt=%.15G *tmin=%.15G *tmin+t=%.15G\n", delt, *tmin, t+*tmin);
+  printf("A=%.15G B=%.15G C=%.15G\n", A, B, C);
+  printf("{{%.15G,%.15G},{%.15G,%.15G},{%.15G,%.15G}} - *tmin=%.15G,%.15G\n", t, d1, t+delt*0.5,d3, t+delt, d2, *tmin, dmin);
+#endif
   if (*tmin < t+delt && *tmin > t && d1*dmin < 0.0)
     {
       *tmin += tref;
@@ -3359,7 +3371,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		  if (!valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
 		    dorefine[nn] = MD_EVENT_NONE;
 		  else
-		    t2arr[nn] = troot;
+		    t2arr[nn] = troot - t1;
 		}
 	    }
 	}
@@ -3371,6 +3383,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  if (dorefine[nn]!=MD_EVENT_NONE)
 	    {
 	      MD_DEBUG30(printf("REFINE dorefine[%d]:%d\n", nn, dorefine[nn]));
+	      MD_DEBUG30(printf("t-delt=%.15G t2arr[%d]=%.15G\n", t-delt, nn, t2arr[nn]));
 	      if (refine_contact(i, j, t1, t-delt, t2arr[nn], nn, shift, &troot))
 		{
 		  //printf("[locate_contact] Adding collision between %d-%d\n", i, j);
