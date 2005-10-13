@@ -1593,12 +1593,19 @@ void calcObserv(void)
     }
   /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
      because DrSq is zero! */
+#ifdef MD_BIG_DT
+  if (Oparams.time + OprogStatus.refTime > 0)
+    Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time + OprogStatus.refTime) *
+			 ((double) Oparams.parnumA ) );   
+  else 
+    Dtrans = 0;
+#else
   if (Oparams.time>0)
     Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time) *
 			 ((double) Oparams.parnumA ) );   
   else 
     Dtrans = 0;
-
+#endif
   DrSqTot /= ((double) Oparams.parnumA);
   if (OprogStatus.eqlevel > 0.0)
     {
@@ -4528,7 +4535,11 @@ void store_bump(int i, int j)
   FILE *bf;
   double rat[5][3], rO[3], **Rl;
   const char tipodat2[]= "%.15G %.15G %.15G\n";
+#ifdef MD_BIG_DT
+  sprintf(fileop2 ,"StoreBump-%d-%d-t%.8f", i, j, Oparams.time + OprogStatus.refTime);
+#else
   sprintf(fileop2 ,"StoreBump-%d-%d-t%.8f", i, j, Oparams.time);
+#endif
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
   if ( (bf = fopenMPI(fileop, "w")) == NULL)
@@ -5056,6 +5067,35 @@ void distanza(int ia, int ib)
   //printf("dist(%d,%d): %f\n", ia, ib, sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz)));
 }
 //void rebuildLinkedList(void);
+#ifdef MD_BIG_DT
+void timeshift_variables(void)
+{
+  int i;
+  OprogStatus.nextcheckTime -= OprogStatus.bigDt;
+  OprogStatus.nextDt -= OprogStatus.bigDt;
+  OprogStatus.nextSumTime -= OprogStatus.bigDt;
+  OprogStatus.nextStoreTime -= OprogStatus.bigDt;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      atomTime[i] -= OprogStatus.bigDt;
+      lastcol[i] -= OprogStatus.bigDt;
+#ifdef MD_HSVISCO
+      OprogStatus.lastcoll -= OprogStatus.bigDt;
+#endif
+    }
+}
+void timeshift_calendar(void)
+{
+  int idNow, poolSize, id;
+  poolSize = Oparams.parnum*OprogStatus.eventMult;
+  /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
+  for (id=1; id < poolSize; id++) 
+    {
+      if (treeUp[id] != -1)
+	treeTime[id] -= OprogStatus.bigDt;
+    } 
+}
+#endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -5331,6 +5371,17 @@ void move(void)
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	  break;
 	}
+#ifdef MD_BIG_DT
+      else if (evIdB == ATOM_LIMIT + 11)
+	{
+	  UpdateSystem();
+	  timeshift_calendar();
+	  timeshift_variables();
+	  Oparams.time = 0.0;
+	  OprogStatus.refTime += OprogStatus.bigDt;
+       	  ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
+	}
+#endif
       else if (evIdB == ATOM_LIMIT + 9)
 	{
 	  if (OprogStatus.scalevel)
@@ -5362,10 +5413,19 @@ void move(void)
 		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	      else
 		OprogStatus.scalevel = 0;
+#ifdef MD_BIG_DT
+	      if (OprogStatus.bigDt > 0.0)
+		ScheduleEvent(-1,ATOM_LIMIT + 11, OprogStatus.bigDt);
+#endif
 	    }
 	}
+#ifdef MD_BIG_DT
+      if (OprogStatus.endtime > 0 && Oparams.time + OprogStatus.refTime > OprogStatus.endtime)
+	ENDSIM = 1;
+#else
       if (OprogStatus.endtime > 0 && Oparams.time > OprogStatus.endtime)
 	ENDSIM = 1;
+#endif
 #if 0
       if (Oparams.curStep == Oparams.totStep)
 	{
