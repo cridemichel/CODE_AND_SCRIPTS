@@ -1115,15 +1115,18 @@ int interpolSP(int i, int j, int nn,
   C = xa[1]*(ya[2]-ya[0]);
   *tmin = (xa[2]*A+xa[0]*B+xa[1]*C)/(A+B+C)/2.0;
 #endif
-  if (ya[0]-ya[1]!=0.0)
+  if (ya[0]-ya[1] == 0.0)
     {
-      A = (ya[2]-ya[0])/(ya[0]-ya[1]);
-      *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
+      *tmin = t + delt*0.25;
+    }
+  else if (ya[2]-ya[0] ==0.0)
+    {
+      *tmin = t + delt*0.5;
     }
   else
     {
-      A = (ya[0]-ya[1])/(ya[2]-ya[0]);
-      *tmin = t + 0.25*delt*((1.0 + A * 4.0)/( 1.0 + A * 2.0));
+      A = (ya[2]-ya[0])/(ya[0]-ya[1]);
+      *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
     }
   dmin = calcDistNegOneSP(*tmin, tref, i, j, nn, shift);
   if (*tmin < t+delt && *tmin > t && d1*dmin < 0.0)
@@ -1676,15 +1679,18 @@ int interpolNeighPlane_sp(int i, double tref, double t, double delt, double d1, 
   ya[1] = d3;
   xa[2] = delt;
   ya[2] = d2;
-  if (ya[0]-ya[1]!=0.0)
+  if (ya[0]-ya[1] == 0.0)
+    {
+      *tmin = t + delt*0.25;
+    }
+  else if (ya[2]-ya[0] == 0.0)
+    {
+      *tmin = t + delt*0.5;
+    }
+  else 
     {
       A = (ya[2]-ya[0])/(ya[0]-ya[1]);
       *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
-    }
-  else
-    {
-      A = (ya[0]-ya[1])/(ya[2]-ya[0]);
-      *tmin = t + 0.25*delt*((1.0 + A * 4.0)/( 1.0 + A * 2.0));
     }
   dmin = calcDistNegOneNNL_sp(*tmin, tref, i, nn);
   if (*tmin < t+delt && *tmin > t && d1*dmin < 0.0)
