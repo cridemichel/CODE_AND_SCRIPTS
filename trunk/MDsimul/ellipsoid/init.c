@@ -1580,6 +1580,10 @@ void usrInitAft(void)
   if (OprogStatus.epsdFastSPNL == -1.0)
     OprogStatus.epsdFastSPNL = OprogStatus.epsdFastNL;
 #endif
+#ifdef MD_BIG_DT
+  if (OprogStatus.bigDt <= 0.0)
+    OprogStatus.bigDt = 0.0;
+#endif
   sct = sizeof(COORD_TYPE);
   costolSDgrad = cos(OprogStatus.tolSDgrad);
   costolAngSD =  fabs(cos(OprogStatus.tolAngSD) - 1.0);
@@ -1736,6 +1740,9 @@ void usrInitAft(void)
   if (newSim)
     {
       FILE *f;
+#ifdef MD_BIG_DT
+      OprogStatus.refTime = 0.0;
+#endif
       Oparams.time=0.0;
       /* truncate file to zero lenght */
 #ifdef MD_PATCHY_HE
@@ -1799,6 +1806,7 @@ void usrInitAft(void)
       if (OprogStatus.storerate > 0.0)
 	OprogStatus.nextStoreTime = OprogStatus.storerate;
       OprogStatus.nextDt += Oparams.Dt;
+      OprogStatus.nextBigDt += OprogStatus.bigDt;
     }
   else
     {
@@ -1997,6 +2005,10 @@ void usrInitAft(void)
   if (OprogStatus.scalevel)
     ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+#ifdef MD_BIG_DT
+  if (OprogStatus.bigDt > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+11,OprogStatus.bigDt);
+#endif
   MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
@@ -2022,6 +2034,10 @@ void usrInitAft(void)
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
       OprogStatus.DQzx = 0.0;
+#if MD_BIG_DT
+      OprogStatus.refTime = 0.0;
+      OprogStatus.bigDt = -1.0;
+#endif
 #ifdef MD_GRAVITY
       if (!strcmp(OprogStatus.inifile,"*"))
 	{
