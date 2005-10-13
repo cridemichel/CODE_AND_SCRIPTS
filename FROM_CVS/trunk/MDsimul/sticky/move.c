@@ -2904,7 +2904,7 @@ int interpol(int i, int j, int nn,
       *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
     }
   dmin = calcDistNegOne(*tmin, tref, i, j, nn, shift);
-#if 1
+#if 0
   printf("delt=%.15G *tmin=%.15G *tmin+t=%.15G\n", delt, *tmin, t+*tmin);
   printf("A=%.15G B=%.15G C=%.15G\n", A, B, C);
   printf("{{%.15G,%.15G},{%.15G,%.15G},{%.15G,%.15G}} - *tmin=%.15G,%.15G\n", t, d1, t+delt*0.5,d3, t+delt, d2, *tmin, dmin);
