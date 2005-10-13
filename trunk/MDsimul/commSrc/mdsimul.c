@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.9 2005-10-03 09:28:36 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.10 2005-10-13 21:06:47 demichel Exp $     */
 #ifndef lint
-static char vcid[] = "$Id: mdsimul.c,v 1.9 2005-10-03 09:28:36 demichel Exp $";
+static char vcid[] = "$Id: mdsimul.c,v 1.10 2005-10-13 21:06:47 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -26,8 +26,8 @@ int SEGSIZE;         /* arrays dimension in bytes
 unsigned char BAK, STA;       /* each is a switch (0/1) which determine 
 				 the next file to save to on HD 
 				 ("double unsigned") */
-char BAKT;           /* switch used for tape (analogous to BAK for 
-			Tape)*/ 
+unsigned char BAKT;           /* switch used for tape (analogous to BAK for 
+		 		 Tape)*/ 
 				 
 extern char TXT[MSG_LEN];
 /* shared array of two integers for active lock/unlock (semaphores) */
@@ -58,6 +58,11 @@ extern int numOfProcs; /* number of processeses in a communicator */
 #if !defined(CRAY) && !defined(ORIGIN)
 inline
 #endif
+extern void saveBakAscii(char *fn);
+extern void saveCorAscii(void);
+extern int chkBakAsciiSteps(void);
+extern void doubleSaveMeasure(int PN, int misNum, int* times, int tapeTimes);
+
 void commMD(void)
 {
   int i;   

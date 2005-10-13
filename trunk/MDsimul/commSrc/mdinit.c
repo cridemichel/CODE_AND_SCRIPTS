@@ -17,7 +17,7 @@ extern int logBlock;
 extern int pid;
 extern int SEGSIZE;
 /* ======================== >>> Structures <<< ============================= */
-
+extern void AllocCoord(int size, COORD_TYPE** pointer, ...);
 extern struct simStat OsimStat;
 extern char msgStrA[MSG_LEN], msgStrB[MSG_LEN], msgStrC[MSG_LEN];
 extern char paramFile[NAME_LENGTH];
