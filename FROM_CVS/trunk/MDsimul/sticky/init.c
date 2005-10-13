@@ -1345,6 +1345,7 @@ double calc_phi(void);
 extern void assign_bond_mapping(int i, int j);
 #endif
 extern void writeAllCor(FILE* fs);
+extern void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 
 void save_init_conf(void)
 {
@@ -1680,9 +1681,6 @@ void usrInitAft(void)
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
-#ifndef MD_STOREMGL
-  char fileop3[1024];
-#endif
   double dist;
   int nn, aa, bb, Nm, i, sct, overlap, amin, bmin;
   COORD_TYPE vcmx, vcmy, vcmz;
