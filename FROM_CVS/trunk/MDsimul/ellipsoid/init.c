@@ -1806,7 +1806,6 @@ void usrInitAft(void)
       if (OprogStatus.storerate > 0.0)
 	OprogStatus.nextStoreTime = OprogStatus.storerate;
       OprogStatus.nextDt += Oparams.Dt;
-      OprogStatus.nextBigDt += OprogStatus.bigDt;
     }
   else
     {

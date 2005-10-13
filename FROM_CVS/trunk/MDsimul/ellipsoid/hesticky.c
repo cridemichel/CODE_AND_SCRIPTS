@@ -195,8 +195,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
 #ifdef MD_HSVISCO
-  double  DTxy, DTyz, DTzx, Txyold, Tyzold, Tzxold, taus, 
-	  DTxx, DTyy, DTzz, Txxold, Tyyold, Tzzold;
+  double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
   double denom, rCx, rCy, rCz, nrAB, Dr;
 #ifndef MD_ASYM_ITENS
@@ -1100,7 +1099,7 @@ int interpolSP(int i, int j, int nn,
 	     double tref, double t, double delt, double d1, double d2,
 	     double *tmin, double shift[3])
 {
-  double d3, A, B, C, dmin;
+  double d3, A, dmin;
   /* NOTA: dists di seguito può non essere usata? controllare!*/
   d3 = calcDistNegOneSP(t+delt*0.5, tref, i, j, nn, shift);
   xa[0] = 0;
@@ -1227,8 +1226,11 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 #ifdef MD_ASYM_ITENS
 double calc_maxddotSP(int i, int j, double *maxddoti)
 {
-  int na, kk;
+  int kk;
+#if 0
+  int na;
   double Iamin, Ibmin;
+#endif
   double factori, factorj, maxddot=0.0;
 
   for (kk=0; kk < MD_PBONDS; kk++)
@@ -1658,7 +1660,7 @@ double get_max_deldist_sp(int nsp, double distsOld[6][NA], double dists[6][NA])
 double calcDistNegOneNNL_sp(double t, double t1, int i, int nn);
 int interpolNeighPlane_sp(int i, double tref, double t, double delt, double d1, double d2, double *tmin, int nplane, int nn)
 {
-  double d3, A, B, C, dmin;
+  double d3, A, dmin;
   /* NOTA: dists di seguito può non essere usata? controllare!*/
   d3 = calcDistNegOneNNL_sp(t+delt*0.5, tref, i, nn);
 #if 0
@@ -2024,8 +2026,10 @@ extern void assign_plane(int nn);
 #ifdef MD_ASYM_ITENS
 double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
 {
+#if 0
   int na;
   double Iamin;
+#endif
   double factori;
 #if 0
   factori = 0.5*maxax[i]+OprogStatus.epsdSP;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
