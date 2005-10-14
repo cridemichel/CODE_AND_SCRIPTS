@@ -2001,8 +2001,13 @@ void usrInitAft(void)
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+#ifdef MD_GRAVITY
+  if (OprogStatus.scalevel || OprogStatus.taptau > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+#else
   if (OprogStatus.scalevel)
     ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+#endif
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 #ifdef MD_BIG_DT
   if (OprogStatus.bigDt > 0.0)
