@@ -5331,7 +5331,7 @@ void move(void)
 		ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-	      if (OprogStatus.scalevel > 0.0)
+	      if (OprogStatus.scalevel)
 		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
 #ifdef MD_HSVISCO
@@ -5434,7 +5434,7 @@ void move(void)
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-	      if (OprogStatus.scalevel > 0)
+	      if (OprogStatus.scalevel)
 		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	      else
 		OprogStatus.scalevel = 0;
