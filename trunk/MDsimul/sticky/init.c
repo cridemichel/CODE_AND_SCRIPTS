@@ -1968,7 +1968,7 @@ void usrInitAft(void)
     ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-  if (OprogStatus.rescaleTime > 0.0)
+  if (OprogStatus.scalevel > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 #ifdef MD_BIG_DT
