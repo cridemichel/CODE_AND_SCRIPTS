@@ -5078,9 +5078,11 @@ void distanza(int ia, int ib)
 void timeshift_variables(void)
 {
   int i;
-  OprogStatus.nextcheckTime -= OprogStatus.bigDt;
+  if (OprogStatus.rescaleTime > 0.0)
+    OprogStatus.nextcheckTime -= OprogStatus.bigDt;
   OprogStatus.nextDt -= OprogStatus.bigDt;
-  OprogStatus.nextSumTime -= OprogStatus.bigDt;
+  if (OprogStatus.intervalSum > 0.0)
+    OprogStatus.nextSumTime -= OprogStatus.bigDt;
   //nextStoreTime viene calcolato opportunamente ogni volta quindi non va shiftato
   //OprogStatus.nextStoreTime -= OprogStatus.bigDt;
   for (i = 0; i < Oparams.parnum; i++)
@@ -5325,10 +5327,12 @@ void move(void)
 	      calcT();
 #endif
 	      rebuildCalendar();
-	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      if (OprogStatus.intervalSum > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	      if (OprogStatus.rescaleTime > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
 	    }
 #ifdef MD_HSVISCO
 	  else
@@ -5425,7 +5429,8 @@ void move(void)
 #endif
 	      scalevels(Oparams.T, K);
 	      rebuildCalendar();
-	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      if (OprogStatus.intervalSum > 0.0)	
+		ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
