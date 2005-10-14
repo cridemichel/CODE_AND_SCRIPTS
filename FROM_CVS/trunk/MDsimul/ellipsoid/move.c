@@ -821,7 +821,8 @@ void scale_Phi(void)
   if (OprogStatus.useNNL)
     rebuildNNL();
   rebuildCalendar();
-  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.intervalSum > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
   if (OprogStatus.scalevel)
@@ -5914,9 +5915,11 @@ void rebuildLinkedList(void);
 void timeshift_variables(void)
 {
   int i;
-  OprogStatus.nextcheckTime -= OprogStatus.bigDt;
+  if (OprogStatus.scalevel)
+    OprogStatus.nextcheckTime -= OprogStatus.bigDt;
   OprogStatus.nextDt -= OprogStatus.bigDt;
-  OprogStatus.nextSumTime -= OprogStatus.bigDt;
+  if (OprogStatus.intervalSum > 0.0)
+    OprogStatus.nextSumTime -= OprogStatus.bigDt;
   //nextStoreTime viene calcolato opportunamente ogni volta quindi non va shiftato
   //OprogStatus.nextStoreTime -= OprogStatus.bigDt;
   nextNNLrebuild -= OprogStatus.bigDt;
@@ -5994,7 +5997,8 @@ void move(void)
 		  PredictEventNNL(n, -2); 
 		}
 	      //rebuildCalendar();
-	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      if (OprogStatus.intervalSum > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
 	    	ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
@@ -6227,7 +6231,8 @@ void move(void)
 	      if (OprogStatus.useNNL)
 		rebuildNNL();
 	      rebuildCalendar();
-	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      if (OprogStatus.intervalSum > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      if (OprogStatus.scalevel)
@@ -6378,7 +6383,8 @@ void move(void)
 		      rebuildCalendar();
 		      if (OprogStatus.storerate > 0.0)
 			ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-		      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+		      if (OprogStatus.intervalSum > 0.0)
+			ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 		      ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 #ifdef MD_BIG_DT
 		      if (OprogStatus.bigDt > 0.0)
@@ -6400,7 +6406,8 @@ void move(void)
 		  rebuildCalendar();
 		  if (OprogStatus.storerate > 0.0)
 		    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-		  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+		  if (OprogStatus.intervalSum > 0.0)
+		    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 		  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 #ifdef MD_BIG_DT
 		  if (OprogStatus.bigDt > 0.0)
@@ -6424,7 +6431,8 @@ void move(void)
 	      if (OprogStatus.useNNL)
 		updAllNNL();
 	      rebuildCalendar();
-	      ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	      if (OprogStatus.intervalSum > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
