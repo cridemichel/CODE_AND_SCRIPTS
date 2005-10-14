@@ -556,6 +556,9 @@ void DeleteEvent (int id)
     treeLeft[idp] = idq;
   else 
     treeRight[idp] = idq;
+#ifdef MD_BIG_DT
+  treeUp[id] = -1;
+#endif
   MD_DEBUG2(printf("idq: %d idp: %d id:%d treeUp[idp]:%d Left[id]: %d Right[id]:%d LUp[idp]:%d RUp[idp]:%d\n", 
 		   idq, idp, id,
 		   treeUp[idp], treeLeft[id], treeRight[id],
@@ -570,6 +573,10 @@ void InitEventList (void)
   /* i nodi da 2*Oparams.parnum + 1 (compreso) in poi sono il pool (cioè quelli dinamici) */
   for (id = treeIdA[0]; id <= poolSize - 2; id++) 
     treeCircAR[id] = id + 1;
+#ifdef MD_BIG_DT
+  for (id = 1; id < poolSize; id++) 
+    treeUp[id] = -1;
+#endif
   treeCircAR[poolSize-1] = -1;
   for (id = 1; id <= Oparams.parnum*2; id++) 
     {
@@ -594,6 +601,10 @@ void InitEventList (void)
   treeLeft[0] = treeRight[0] = -1;
   treeIdA[0] = Oparams.parnum + 1;
   /* i nodi da Oparams.parnum + 1 (compreso) in poi sono il pool (cioè quelli dinamici) */
+#ifdef MD_BIG_DT
+  for (id = 1; id < poolSize; id++) 
+    treeUp[id] = -1;
+#endif
   for (id = treeIdA[0]; id <= poolSize - 2; id++) 
     treeCircAR[id] = id + 1;
   treeCircAR[poolSize-1] = -1;
