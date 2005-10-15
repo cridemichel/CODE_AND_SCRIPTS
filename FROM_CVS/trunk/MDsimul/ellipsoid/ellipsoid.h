@@ -663,10 +663,12 @@ struct pascii opro_ascii[] =
   {"epsdFastNL",     &OS(epsdFastNL),              1,   1, "%.12G"},
   {"epsdFastRNL",    &OS(epsdFastRNL),             1,   1, "%.12G"},
   {"epsdMaxNL",      &OS(epsdMaxNL),               1,   1, "%.12G"},
+#ifdef MD_PATCHY_HE
   {"epsdSP",         &OS(epsdSP),                  1,   1, "%.12G"},
   {"epsdFastSP",     &OS(epsdFastSP),              1,   1, "%.12G"},
   {"epsdSPNL",       &OS(epsdSPNL),                1,   1, "%.12G"},
   {"epsdFastSPNL",   &OS(epsdFastSPNL),            1,   1, "%.12G"},
+#endif
   {"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
   {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
   {"SDmethod",     &OS(SDmethod),               1,   1, "%d"},
@@ -895,10 +897,12 @@ struct singlePar OsinglePar[] = {
   {"epsdFastNL",   &OprogStatus.epsdFastNL,       CT},
   {"epsdFastRNL",  &OprogStatus.epsdFastRNL,      CT},
   {"epsdMaxNL",    &OprogStatus.epsdMaxNL,        CT},
+#ifdef MD_PATCHY_HE
   {"epsdSP",       &OprogStatus.epsdSP,           CT},
   {"epsdFastSP",   &OprogStatus.epsdFastSP,       CT},
   {"epsdSPNL",     &OprogStatus.epsdSPNL,         CT},
   {"epsdFastSPNL", &OprogStatus.epsdFastSPNL,     CT},
+#endif
   {"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
   {"tolSD",      &OprogStatus.tolSD,          CT},
   {"tolSDlong",  &OprogStatus.tolSDlong,      CT},
