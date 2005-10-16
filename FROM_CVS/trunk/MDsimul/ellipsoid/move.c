@@ -4379,8 +4379,9 @@ double distfunc(double x)
 int interpol(int i, int j, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3], int bracketing)
 {
   int nb;
-  double d3, t1, t2;
+  double d3, t1, t2, A;
   double r1[3], r2[3], alpha, xb1[2], xb2[2];
+  double tmin, dmin;
   d3 = calcDistNeg(t+delt*0.5, tref, i, j, shift, r1, r2, &alpha, vecg, 0);
 #if 0
   if (d1 > OprogStatus.epsd)
@@ -4410,16 +4411,52 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
     }
   else
     {
-      t1 = t;
-      t2 = t+delt;
-      nb = 1;
-      zbrak(distfunc, t1, t2, OprogStatus.zbrakn, xb1, xb2, &nb);
-      if (nb==0 || polinterr==1)
+      if (OprogStatus.zbrakn==0)
 	{
-	  return 1;
+	  if (ya[0]-ya[1] == 0.0)
+	    {
+	      tmin = t + delt*0.25;
+	    }
+	  else if (ya[2]-ya[0] ==0.0)
+	    {
+	      tmin = t + delt*0.5;
+	    }
+	  else
+	    {      
+	      A = (ya[2]-ya[0])/(ya[0]-ya[1]);
+	      tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
+	    }
+	  if (tmin < t+delt && tmin > t)
+	    {
+	      dmin = calcDistNeg(tmin, tref, i, j, shift, r1, r2, &alpha, vecg, 0);
+	      if (d1*dmin < 0.0)
+		{
+		  t2 = tmin;
+		  t1 = t;
+		}
+	      else
+		return 1;
+	    }
+	  else
+	    {
+	      return 1;
+	    }
 	}
-      t1 = xb1[0];
-      t2 = xb2[0];
+      else
+	{
+	  t1 = t;
+	  t2 = t+delt;
+	  nb = 1;
+	  zbrak(distfunc, t1, t2, OprogStatus.zbrakn, xb1, xb2, &nb);
+	  //printf("nb=%d t2=%.15G tmin=%.15G dmin=%.15G d1=%.15G\n", nb, t2, tmin, dmin, d1);
+	  //printf("(%.15G,%.15G)-(%.15G,%.15G)-(%.15G,%.15G)\n", t, d1, t+delt*0.5, d3, t+delt, d2);
+	  if (nb==0 || polinterr==1)
+	    {
+	      return 1;
+	    }
+	  t1 = xb1[0];
+	  t2 = xb2[0];
+	}
     }
   if (polinterr)
     return 1;
@@ -4434,7 +4471,8 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
     }
   if ((*troot < t && fabs(*troot-t)>3E-8) || (*troot > t+delt && fabs(*troot - (t+delt))>3E-8))
     {
-      printf("[interpol] brack: %d xb1: %.10G xb2: %.10G\n", bracketing, xb1[0], xb2[0]);
+      if (OprogStatus.zbrakn > 0)
+	printf("[interpol] brack: %d xb1: %.10G xb2: %.10G\n", bracketing, xb1[0], xb2[0]);
       printf("*troot: %.15G t=%.15G t+delt:%.15G\n", *troot, t, t+delt);
       printf("d1=%.10G d2=%.10G d3:%.10G\n", d1, d2, d3);
       printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
