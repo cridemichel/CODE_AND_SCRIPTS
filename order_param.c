@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 //#include <lapack.h>
 char line[100000], parname[124], parval[1024];
 int N;
@@ -63,7 +64,7 @@ int main(int argc, char** argv)
 {
   FILE *f, *f2;
   int nf, i, a, b;
-  double ev[3], ti, S;
+  double ev[3], ti, S, tref=0.0;
 #if 0
   if (argc == 1)
     {
@@ -80,6 +81,7 @@ int main(int argc, char** argv)
       //printf("fname=%s argv[2]=%s\n",fname, argv[2]);
       f = fopen(fname,"r");
       nf++;
+      tref=0.0;
       if (readCnf)
 	{
 	  do 
@@ -97,6 +99,8 @@ int main(int argc, char** argv)
 	    N = atoi(parval);
 	  if (!strcmp(parname,"time"))
 	    ti = atof(parval);
+	  if (!strcmp(parname,"refTime"))
+	    tref = atof(parval);
 	}
       while (strcmp(line,"@@@"));
 
@@ -129,7 +133,7 @@ int main(int argc, char** argv)
 	    for (b=0; b < 3; b++)
 	      Q[a][b] /= ((double)N); 
 	  diagonalize(Q, ev);
-	  printf("%.15G %.15G %.15G %.15G\n", ti, ev[0], ev[1], ev[2]); 
+	  printf("%.15G %.15G %.15G %.15G\n", ti+tref, ev[0], ev[1], ev[2]); 
 	}
 
       fclose(f);
