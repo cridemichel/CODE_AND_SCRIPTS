@@ -4460,6 +4460,11 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
     }
   if (polinterr)
     return 1;
+  if (OprogStatus.zbrentTol <= 0.0)
+    {
+      *troot = tref + (t1+t2)*0.5;
+      return 0;
+    }
   *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
   if (polinterr)
     {
