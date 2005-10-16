@@ -34,15 +34,14 @@ PARFILE=ellips.par
 cp $PARFILE Phi$1
 cd Phi$1
 rm -f COORD_TMP*
-rm -f Store-*
 ELLEXE="../../ellipsoid"
 SIMRA="ell${EL}RA$1"
 SIMGR="ell${EL}GR$1"
 SIMEQ="ell${EL}EQ$1"
 SIMPR="ell${EL}PR$1"
-STORERATE="0.01"
+STORERATE="0.1"
 USENNL=1
-PARNUM=512
+PARNUM=250
 DT="0.05"
 #N.B. it's supposed that we use NNL here!!
 PROL=`echo $EL | awk '{if ($0 >= 1.0) printf("1"); else printf("0");}'`
@@ -51,8 +50,8 @@ then
 A0=$EL
 B0=1.0
 C0=1.0
-RNNL=0.12
-INIL=`echo "5.0*e(1.0/3.0*l($PARNUM))*$A0" | bc -l`
+RNNL=0.15
+INIL=`echo "2.0*e(1.0/3.0*l($PARNUM))*$A0" | bc -l`
 #echo "qui INIL=" $INIL
 if [ $USENNL -eq 0 ]
 then
@@ -62,7 +61,7 @@ else
 A0=1.0
 B0=`echo "1.0/$EL" | bc -l`
 C0=`echo "1.0/$EL" | bc -l`
-RNNL=0.2
+RNNL=0.15
 INIL=`echo "5.0*e(1.0/3.0*l($PARNUM))*$B0" | bc -l`
 if [ $USENNL -eq 0 ]
 then
@@ -78,16 +77,16 @@ echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
 cp $PARFILE rand_$PARFILE
 echo "L:" $INIL >> rand_$PARFILE
 #>>> SET TEMPERATURE TO 1.0
-../../set_params.sh rand_$PARFILE stepnum 100 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM A0 $A0 B0 $B0 C0 $C0
+../set_params.sh rand_$PARFILE stepnum 50 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM
 ln -sf $ELLEXE $SIMRA
 $SIMRA -f ./rand_${PARFILE} > screen_$SIMRA 
 #exit 
 #>>> EQUILIBRATE STARTING DENSITY (I.E. RANDOMIZE)
-../../set_params.sh rand_$PARFILE stepnum 1000 targetPhi 0.0 storerate 0.0 intervalSum 2.0 scalevel 0 inifile ${SIMRA}.cor endfile ${SIMRA}.cor 
+../set_params.sh rand_$PARFILE stepnum 200 targetPhi 0.0 storerate 0.0 intervalSum 2.0 scalevel 0 inifile ${SIMRA}.cor endfile ${SIMRA}.cor
 ln -sf $ELLEXE $SIMRA 
 $SIMRA -f ./rand_${PARFILE} >> screen_$SIMRA 
 #CRESCITA
-../../set_params.sh $PARFILE stepnum 1000000 targetPhi $1 storerate 0.0 intervalSum 0.05 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor parnum $PARNUM A0 $A0 B0 $B0 C0 $C0
+../set_params.sh $PARFILE stepnum 1000000 targetPhi $1 storerate 0.0 intervalSum 0.05 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor parnum $PARNUM
 ln -sf $ELLEXE $SIMGR
 $SIMGR -f ./$PARFILE > screen_$SIMGR 
 #exit 
@@ -98,29 +97,35 @@ if [ $EQSTPS -eq 0 ]
 then
 STPS=10000000
 TMSD=`echo "2.0*e((1.0/3.0)*l($A0*$B0*$C0))" | bc -l`
-RMSD=1.57
+RMSD=-1.0#1.57
 else
 STPS=$EQSTPS
 TMSD="-1.0"
 RMSD="-1.0"
 fi
-../../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0  storerate 0.0 intervalSum 5.0 rmsd2end $RMSD tmsd2end $TMSD inifile ${SIMGR}.cor endfile ${SIMEQ}.cor
+../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0  storerate 0.0 intervalSum 5.0 rmsd2end $RMSD tmsd2end $TMSD inifile ${SIMGR}.cor endfile ${SIMEQ}.cor
 ln -sf $ELLEXE $SIMEQ 
 $SIMEQ -f ./$PARFILE > screen_$SIMEQ 
 fi
 #PRODUZIONE
 if [ $2 -gt 0 ]
 then
-if [ $EQSTPS -gt 0 ]
+if [ $EQSTPS -ge 0 ]
 then
-STCI=$EQSTPS
-STPS=`echo "$STCI*$2"| bc -l`
-else
+if [ $EQSTPS -eq 0 ]
+then
 STCI=`cat screen_$SIMEQ | awk '{if ($1=="[MSDcheck]") print $3}'`
 STPS=`echo "$STCI*$2"| bc -l`
+else
+STCI=$EQSTPS
+STPS=`echo "$STCI*$2"| bc -l`
 fi
-NN=`echo "l($DT*$STCI/$STORERATE)/l(1.3)" | bc -l | awk '{printf("%d",$0)}'`
-../../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 storerate $STORERATE intevalSum 5.0 rmsd2end -1.0 tmsd2end -1.0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
+else
+STCI=$2
+STPS=$2
+fi
+NN=`echo "1+l($DT*$STCI/$STORERATE)/l(1.3)" | bc -l | awk '{printf("%d",$0)}'`
+../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 storerate $STORERATE intevalSum 5.0 rmsd2end -1.0 tmsd2end -1.0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
 ln -sf $ELLEXE $SIMPR
 $SIMPR -f ./$PARFILE > screen_$SIMPR 
 fi
