@@ -3012,7 +3012,7 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
   return (sum > 0)?1:0;
 }
 
-int delt_is_too_big_hc(int i, int j, int bondpair, double *dists, double *distsOld)
+int delt_is_too_big_hc(int i, int j, int bondpair, double *dists)
 {
   int nn;
   for (nn=0; nn < MD_PBONDS; nn++)
@@ -3057,17 +3057,17 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
-  const double minh = 1E-14;
+  const double minh = 1E-15;
   double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS],
 	 distsOld2[MD_PBONDS], deltth; 
   double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
   int bondpair, itstb;
   int its, foundrc;
-#if 0
-  const int MAXITS = 100;
-  int itsRef;
-  int goback;
+#if 1
+  //const int MAXITS = 100;
+  //int itsRef;
+  //int goback;
   double t1ini, delthc;
 #endif
   double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax, deldist; 
@@ -3160,20 +3160,21 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #ifdef MD_NEGPAIRS
   sumnegpairs = check_negpairs(negpairs, bondpair, i, j); 
 #endif
-#if 0
+#if 1
 #ifdef MD_NEGPAIRS
   /* NOTA: inizia poco prima di t1 se l'ultimo urto tra le molecole è stata una collisione delle sfere dure 
    * per evitare problemi legati al fatto che il punto iniziale in tale caso puo' essere molto a ridosso 
    * del crossing (ciò accade nella regione intorno all'intersezione della sticky spheres con la sfera dura. */
-  //d = calcDistNeg(0, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+  d = calcDistNeg(0, t1, i, j, shift, &amin, &bmin, dists, bondpair);
   if (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == 0 
-      && lastbump[j].at == 0)// && fabs(d) < epsd)
+      && lastbump[j].at == 0 && fabs(d) < epsd)
     {
       delthc = epsdFast/maxddot + OprogStatus.h;
       t1ini = t1;
       t1 -= delthc;
       //printf("INIZIO t1=%.15G delthc=%.15G tini=%.15G\n", t1, delthc, t1ini);
-      while (delt_is_too_big_hc(i, j, bondpair, dists, distsOld) && 
+      d = calcDistNeg(0, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+      while (delt_is_too_big_hc(i, j, bondpair, dists) && 
 	     delthc > minh)
     	{
 	  delthc /= GOLD; 
