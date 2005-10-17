@@ -3062,7 +3062,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	 distsOld2[MD_PBONDS], deltth; 
   double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
-  int bondpair, itstb;
+  int bondpair, itstb, adjt1=0;
   int its, foundrc;
 #if 1
   //const int MAXITS = 100;
@@ -3166,10 +3166,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
    * per evitare problemi legati al fatto che il punto iniziale in tale caso puo' essere molto a ridosso 
    * del crossing (ciò accade nella regione intorno all'intersezione della sticky spheres con la sfera dura. */
   d = calcDistNeg(0, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+  adjt1 = 0;  
   if (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == 0 
       && lastbump[j].at == 0 && fabs(d) < epsd)
     {
       delthc = epsdFast/maxddot + OprogStatus.h;
+      adjt1 = 1;
       t1ini = t1;
       t1 -= delthc;
       //printf("INIZIO t1=%.15G delthc=%.15G tini=%.15G\n", t1, delthc, t1ini);
@@ -3403,7 +3405,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		  MD_DEBUG(printf("[locate_contact] its: %d\n", its));
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
 		   * scarta tale urto */
-		  if (troot > t2 || troot < t1
+		  if ((adjt1 && troot < Oparams.time) || troot > t2 || troot < t1
 #if 1
 		  || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && 
