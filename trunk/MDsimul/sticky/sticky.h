@@ -589,7 +589,7 @@ struct pascii opro_ascii[] =
   {"xvaSavedMode", &OS(xvaSaveMode),                1,  1,    "%d"},
   {"bakSavedMode", &OS(bakSaveMode),                1,  1,    "%d"},
   {"intervalSum"   ,&OS(intervalSum),               1,  1,    "%.10G"}, 
-  {"nextStoreTime", &OS(nextStoreTime),             1, 1,     "%.10G"},
+  {"nextStoreTime", &OS(nextStoreTime),             1, 1,     "%.15G"},
   {"storerate",     &OS(storerate),                 1, 1,     "%.10G"},
   {"KK",            &OS(KK),                        1, 1,     "%d"},
   {"JJ",            &OS(JJ),                        1, 1,     "%d"},
