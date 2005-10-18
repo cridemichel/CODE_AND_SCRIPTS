@@ -3054,6 +3054,8 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
     }
   return 0;
 }
+extern double max(double a, double b);
+
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
@@ -3170,11 +3172,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   if (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == 0 
       && lastbump[j].at == 0 && fabs(d) < epsd)
     {
-      delthc = epsdFast/maxddot + OprogStatus.h;
+      delthc = max(epsdFast/maxddot,OprogStatus.h);
+      //printf("INIZIO t1=%.18G delthc=%.18G d=%.20G\n", t1, delthc, d);
       adjt1 = 1;
       t1ini = t1;
       t1 -= delthc;
-      //printf("INIZIO t1=%.15G delthc=%.15G tini=%.15G\n", t1, delthc, t1ini);
       d = calcDistNeg(0, t1, i, j, shift, &amin, &bmin, dists, bondpair);
       while (delt_is_too_big_hc(i, j, bondpair, dists) && 
 	     delthc > minh)
@@ -5401,7 +5403,7 @@ void move(void)
 #ifdef MD_BIG_DT
       else if (evIdB == ATOM_LIMIT + 11)
 	{
-	  UpdateSystem();
+	  //UpdateSystem();
 	  timeshift_calendar();
 	  timeshift_variables();
 	  Oparams.time -= OprogStatus.bigDt;
