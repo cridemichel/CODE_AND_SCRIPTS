@@ -3055,24 +3055,26 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
   return 0;
 }
 extern double max(double a, double b);
-
+#define MD_BASIC_DT
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
   const double minh = 1E-15;
-  double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS],
-	 distsOld2[MD_PBONDS], deltth; 
-  double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
+  double h, d, dold, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS]; 
+  double maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
   int bondpair, itstb, adjt1=0;
   int its, foundrc;
-#if 1
+#if 0
   //const int MAXITS = 100;
   //int itsRef;
   //int goback;
   double t1ini, delthc;
 #endif
-  double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax, deldist; 
+#ifndef MD_BASIC_DT
+  double dold2, deltth, normddot, distsOld2[MD_PBONDS], deldist;
+#endif
+  double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax; 
   int tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
       crossed[MD_PBONDS], firstaftsf;
 #ifdef MD_NEGPAIRS
@@ -3209,17 +3211,23 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   its = 0;
   while (t+t1 < t2)
     {
+#ifdef MD_BASIC_DT
+      tini = t;
+      delt = epsd/maxddot;
+      t += delt;
+      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+#else
 #if 0
-       deldist = get_max_deldist(distsOld2, distsOld);
-       normddot = fabs(deldist)/delt;
-       /* NOTA: forse qui si potrebbe anche usare sempre delt = epsd/maxddot */
-       if (normddot!=0)
-	 {
-	   delt = epsd/normddot;
-	 }
-       else
-	 delt = h;
-       if (fabs(dold) < epsd)
+      deldist = get_max_deldist(distsOld2, distsOld);
+      normddot = fabs(deldist)/delt;
+      /* NOTA: forse qui si potrebbe anche usare sempre delt = epsd/maxddot */
+      if (normddot!=0)
+	{
+	  delt = epsd/normddot;
+	}
+      else
+	delt = h;
+      if (fabs(dold) < epsd)
 	{
 	  delt = epsd / maxddot;
 	}
@@ -3237,14 +3245,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	    {
 	      //if (fabs(t)<1E-15)
 	      delt = h;
-    	      //else
-		//delt = t*h;
+	      //else
+	      //delt = t*h;
 	    }
 
 	  if (fabs(dold) < epsd)
-    	    {
-    	      delt = epsd / maxddot;
-    	    }
+	    {
+	      delt = epsd / maxddot;
+	    }
 	}
       else
 	{
@@ -3277,7 +3285,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       tini = t;
       t += delt;
       //printf("normddot= %.15G t=%.15G delt=%.15G maxddot: %.15G t*h=%.15G\n", 
-        //   normddot, t, delt, maxddot, t*h);
+      //   normddot, t, delt, maxddot, t*h);
       //printf("normddot=%f dt=%.15G\n",normddot, epsd/normddot); 
       //dold2 = dold;
       d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
@@ -3304,6 +3312,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  itsS++;
 	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	}
+#endif
 #ifdef MD_NEGPAIRS
       itstb = 0;
       /* NOTA: se la distanza tra due sticky spheres è positiva a t (per errori numerici 
@@ -3349,14 +3358,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      if (valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
 		{
 		  MD_DEBUG30(printf("type: %d i=%d j=%d ata=%d atb=%d bound:%d\n", crossed[nn], i, j, mapbondsa[nn],
-			 mapbondsb[nn], bound(i, j, mapbondsa[nn], mapbondsb[nn])));
+				    mapbondsb[nn], bound(i, j, mapbondsa[nn], mapbondsb[nn])));
 #if 0
 		  if (collCode==MD_INOUT_BARRIER && lastbump[i].mol==j && lastbump[j].mol==i
 		      && lastbump[i].at == ata && lastbump[j].at==atb// && bound(i, j, ata, atb) 
 		      && fabs(lastcol[i]-t)< 1E-14) 
 		    {
 		      //printf("qui\n");
-		      
+
 		    }
 		  else
 #endif
@@ -3409,7 +3418,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		   * scarta tale urto */
 		  if ((adjt1 && troot < Oparams.time) || troot > t2 || troot < t1
 #if 1
-		  || 
+		      || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && 
 		       lastbump[i].at == mapbondsa[nn]
 		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-15))
@@ -3417,8 +3426,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		    {
 #if 0
 		      if (lastbump[i].mol == j && lastbump[j].mol==i && 
-		       lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 2E-15)
+			  lastbump[i].at == mapbondsa[nn]
+			  && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 2E-15)
 			{
 			  printf("dold[%d]:%.15G d[%d]:%.15G\n", nn, distsOld[nn], nn, dists[nn]);
 			  printf("state: %d collision type: %d\n", 
@@ -3451,7 +3460,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #ifdef MD_INTERPOL
 		  if (!tocheck[nn])
 #endif
-		  mdPrintf(ALL,"[locate_contact] can't find contact point!\n",NULL);
+		    mdPrintf(ALL,"[locate_contact] can't find contact point!\n",NULL);
 		  /* Se refine_contact fallisce deve cmq continuare a cercare 
 		   * non ha senso smettere...almeno credo */
 		  //gotcoll = -1;
@@ -3499,7 +3508,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	}
       dold = d;
       MD_DEBUG30(printf("==========>>>>> t=%.15G t2=%.15G\n", t, t2));
+#ifndef MD_BASIC_DT
       assign_dists(distsOld,  distsOld2);
+#endif
       assign_dists(dists, distsOld);
       its++;
       itsS++;
