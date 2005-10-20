@@ -29,6 +29,7 @@
 #define MD_HD_MIS MD_SIMDAT "" 
 /* directory to store measures files */
 
+#undef MD_BASIC_DT
 #define MD_TAPE_TMP "/iomega/mdtmp/"
 /* directory on Tape to store some temporary files (restore files and 
    measures files)*/

@@ -1315,13 +1315,15 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
   const double minh = 1E-14;
-  double h, d, dold, dold2, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS],
-	 distsOld2[MD_PBONDS], deltth; 
-  double normddot, maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
+  double h, d, dold, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS];
+  double maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
+#ifndef MD_BASIC_DT
+  double deldist, normddot, dold2, deltth, distsOld2[MD_PBONDS]; 
+#endif
   //const int MAXOPTITS = 4;
   int bondpair, itstb;
   int its, foundrc;
-  double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax, deldist; 
+  double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax; 
   int tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
       crossed[MD_PBONDS], firstaftsf;
 #ifdef MD_NEGPAIRS
@@ -1424,6 +1426,12 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   its = 0;
   while (t+t1 < t2)
     {
+#ifdef MD_BASIC_DT
+      delt = epsd/maxddot;
+      tini = t;
+      t += delt;
+      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+#else
       if (!firstaftsf)
 	{
 	  deldist = get_max_deldistSP(distsOld2, distsOld, bondpair);
@@ -1435,7 +1443,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    }
 	  else
 	    {
-	      delt = h;
+	      delt = epsd/maxddot;
+	      //delt = h;
 	    }
 
 	  if (fabs(dold) < epsd)
@@ -1467,15 +1476,18 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	  delt = epsd/maxddot;
 	  /* NOTE: prob. la seguente condizione si puo' rimuovere 
 	   * o cambiare in > */
+#if 0
 	  deltth = h;
 	  if (delt < deltth)
 	    {
 	      delt = deltth;
 	    }
+#endif
 	  t += delt; 
 	  itsS++;
 	  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	}
+#endif
 #ifdef MD_NEGPAIRS
       itstb = 0;
       /* NOTA: se la distanza tra due sticky spheres è positiva a t (per errori numerici 
@@ -1628,7 +1640,9 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	}
       dold = d;
       MD_DEBUG30(printf("SP ==========>>>>> t=%.15G t2=%.15G\n", t, t2));
+#ifndef MD_BASIC_DT
       assign_distsSP(distsOld,  distsOld2);
+#endif
       assign_distsSP(dists, distsOld);
       its++;
       itsS++;
@@ -2070,16 +2084,18 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
 int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 {
   /* const double minh = 1E-14;*/
-  double h, d, dold, dold2, t2arr[6][NA], t, dists[6][NA], distsOld[6][NA], 
-	 distsOld2[6][NA], deltth; 
-  double normddot, maxddot, delt, troot, tini, maxddoti[6][NA];
+  double h, d, dold, t2arr[6][NA], t, dists[6][NA], distsOld[6][NA]; 
+  double maxddot, delt, troot, tini, maxddoti[6][NA];
+#ifndef MD_BASIC_DT
+  double distsOld2[6][NA], dold2, normddot, deltth, deldist;
+#endif
   int firstev, nn2;
   /*
   const int MAXITS = 100;
   const double EPS=3E-8;*/ 
   /* per calcolare derivate numeriche questo è il magic number in doppia precisione (vedi Num. Rec.)*/
   int its, foundrc, NSP;
-  double t1, epsd, epsdFast, epsdFastR, epsdMax, deldist; 
+  double t1, epsd, epsdFast, epsdFastR, epsdMax; 
   int tocheck[6][NA], dorefine[6][NA], ntc, ncr, nn, gotcoll, crossed[6][NA], firstaftsf;
   epsd = OprogStatus.epsdSPNL;
   epsdFast = OprogStatus.epsdFastSPNL;
@@ -2133,6 +2149,12 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	printf("[LOCATE_CONTACT NNL] i=%d its=%d t=%.15G d=%.15G\n", i, its, t+t1, d);
 #endif
       //normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
+#ifdef MD_BASIC_DT
+      delt = epsd/maxddot;
+      tini = t;
+      t += delt;
+      d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+#else
       if (!firstaftsf)
 	{
 	  deldist = get_max_deldist_sp(NSP, distsOld2, distsOld);
@@ -2141,7 +2163,8 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	  if (normddot!=0)
 	    delt = epsd/normddot;
 	  else
-	    delt = h;
+	    delt = epsd/maxddot;
+	    //delt = h;
 	  if (fabs(dold) < epsd)
 	    delt = epsd / maxddot;
 	}
@@ -2166,16 +2189,19 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	  delt = epsd/maxddot;
 	  /* NOTE: prob. la seguente condizione si puo' rimuovere 
 	   * o cambiare in > */
+#if 0
 	  deltth = h;
 	  if (delt < deltth)
 	    {
 	      delt = deltth;
 	    }
+#endif
 	  t += delt; 
 	  itsSNL++;
 	  d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
 	  //assign_vec(vecgdold2, vecgd);
 	}
+#endif
       for (nn=0; nn < 6; nn++)
 	for (nn2=0; nn2 < NSP; nn2++)
 	  dorefine[nn][nn2] = 0;
@@ -2301,7 +2327,9 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	  continue;
 	}
       dold = d;
+#ifndef MD_BASIC_DT
       assign_dists_sp(NSP, distsOld,  distsOld2);
+#endif
       assign_dists_sp(NSP, dists, distsOld);
       its++;
       itsSNL++;
