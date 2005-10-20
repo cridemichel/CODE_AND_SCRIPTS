@@ -2655,17 +2655,19 @@ void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBAL
 int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 {
   /* const double minh = 1E-14;*/
-  double h, d, dold, dold2, t2arr[6], t, dists[6], distsOld[6], 
-	 vecg[5], vecgroot[6][8], vecgd[6][8], vecgdold2[6][8], vecgdold[6][8],
-	 distsOld2[6], deltth, factori; 
-  double normddot, maxddot, delt, troot, tini, maxddoti[6];
+  double h, d, dold, t2arr[6], t, dists[6], distsOld[6], 
+	 vecg[5], vecgroot[6][8], vecgd[6][8], vecgdold[6][8], factori; 
+#ifndef MD_BASIC_DT
+  double deltth, normddot, distsOld2[6], vecgdold2[6][8], dold2, deldist;
+#endif
+  double maxddot, delt, troot, tini, maxddoti[6];
   int firstev;
   /*
   const int MAXITS = 100;
   const double EPS=3E-8;*/ 
   /* per calcolare derivate numeriche questo è il magic number in doppia precisione (vedi Num. Rec.)*/
   int its, foundrc;
-  double t1, epsd, epsdFast, epsdFastR, epsdMax, deldist; 
+  double t1, epsd, epsdFast, epsdFastR, epsdMax; 
   int kk,tocheck[6], dorefine[6], ntc, ncr, nn, gotcoll, crossed[6], firstaftsf;
   epsd = OprogStatus.epsdNL;
   epsdFast = OprogStatus.epsdFastNL;
@@ -2711,6 +2713,12 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 	printf("[LOCATE_CONTACT NNL] i=%d its=%d t=%.15G d=%.15G\n", i, its, t+t1, d);
 #endif
       //normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
+#ifdef MD_BASIC_DT
+      delt = epsd/maxddot;
+      tini = t;
+      t += delt;
+      d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd, 0);
+#else
       if (!firstaftsf)
 	{
 	  deldist = get_max_deldist(distsOld2, distsOld);
@@ -2719,7 +2727,8 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 	  if (normddot!=0)
 	    delt = epsd/normddot;
 	  else
-	    delt = h;
+	    delt = epsd/maxddot;
+	  //  delt = h;
 	  if (fabs(dold) < epsd)
 	    delt = epsd / maxddot;
 	}
@@ -2743,16 +2752,19 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 	  delt = epsd/maxddot;
 	  /* NOTE: prob. la seguente condizione si puo' rimuovere 
 	   * o cambiare in > */
+#if 0
 	  deltth = h;
 	  if (delt < deltth)
 	    {
 	      delt = deltth;
 	    }
+#endif
 	  t += delt; 
 	  itsSNL++;
 	  d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgdold2, 0);
 	  assign_vec(vecgdold2, vecgd);
 	}
+#endif
       for (nn=0; nn < 6; nn++)
 	dorefine[nn] = 0;
       ncr=check_cross(distsOld, dists, crossed);
@@ -2880,7 +2892,9 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 	}
       dold = d;
       assign_vec(vecgd, vecgdold);
+#ifndef MD_BASIC_DT
       assign_dists(distsOld,  distsOld2);
+#endif
       assign_dists(dists, distsOld);
       its++;
       itsSNL++;
@@ -2907,9 +2921,12 @@ int dist_too_big(int i, double t, double t1)
 }
 int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 {
-  double h, d, dold, dold2, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
-  double dtmp, normddot, ddot[3], t1, t2, maxddot, delt, troot, vecgroot[8];
+  double h, d, dold, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
+  double dtmp, t1, t2, maxddot, delt, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
+#ifndef MD_BASIC_DT
+  double ddot[3], dold2, vecgdold2[8], normddot;
+#endif
 #ifndef MD_ASYM_ITENS
   double factori;
 #endif
@@ -2964,11 +2981,17 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   while (t + t1 < t2 || !dist_too_big(i,t,t1))
     {
       MD_DEBUG31(printf("LOC CONT rB = %.15G %.15G %.15G\n", rB[0], rB[1], rB[2]));
+#ifdef MD_BASIC_DT
+      delt = epsd / maxddot;
+      t += delt;
+      d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
+#else
       normddot = calcvecFNeigh(i, t, t1, ddot, r1);
       if (normddot!=0)
 	delt = epsd / normddot;
       else
-	delt = h;
+	delt = epsd / maxddot;
+	//delt = h;
       if (dold < epsd)
 	delt = epsd / maxddot;
       t += delt;
@@ -2989,8 +3012,10 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	  t -= delt;
 	  //delt = d2old / maxddot;
 	  delt = epsd / maxddot;
+#if 0
 	  if (delt < h)
 	    delt = h;
+#endif
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsSNL++;
@@ -2999,6 +3024,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	    vecgd[kk] = vecgdold2[kk];
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
+#endif
 #if 1
       if (d > epsdFastR)
 	{

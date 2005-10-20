@@ -4518,8 +4518,11 @@ double calc_maxddot(int i, int j)
 #endif
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
-  double h, d, dold, dold2, alpha, vecgdold2[8], vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
-  double normddot, ddot[3], maxddot, delt, troot, vecgroot[8];
+  double h, d, dold, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
+  double maxddot, delt, troot, vecgroot[8];
+#ifndef MD_BASIC_DT
+  double normddot, ddot[3], dold2, vecgdold2[8];
+#endif
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax;
 #ifndef MD_ASYM_ITENS
@@ -4687,13 +4690,19 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   its = 0;
   while (t + t1 < t2)
     {
+#ifdef MD_BASIC_DT
+      delt = epsd/maxddot;
+      t += delt;
+      d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
+#else
 #if 1
       normddot = calcvecF(i, j, t, t1, r1, r2, ddot, shift);
       if (normddot!=0)
 	delt = epsd/normddot;
 #endif
       else
-	delt = h;
+	delt = epsd / maxddot;
+	//delt = h;
       if (dold < epsd)
 	delt = epsd / maxddot;
       t += delt;
@@ -4701,7 +4710,6 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	vecgdold2[kk] = vecgd[kk];
       dold2 = dold;
       d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
-      
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -4711,8 +4719,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  t -= delt;
 	  //delt = d2old / maxddot;
 	  delt = epsd /maxddot;
+#if 0
 	  if (delt < h)
 	    delt = h;
+#endif
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsS++;
@@ -4721,6 +4731,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	    vecgd[kk] = vecgdold2[kk];
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
+#endif
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f d1-d2:%.15G\n", t, d1, d2, fabs(d1-d2)));
       dorefine = 0;      
       if (dold > 0 && d < 0)
