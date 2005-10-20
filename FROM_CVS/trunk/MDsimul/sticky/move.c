@@ -3055,7 +3055,7 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
   return 0;
 }
 extern double max(double a, double b);
-#define MD_BASIC_DT
+#undef MD_BASIC_DT
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
@@ -3244,7 +3244,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  else
 	    {
 	      //if (fabs(t)<1E-15)
-	      delt = h;
+	      delt = epsd/maxddot;
+	      //delt = h;
 	      //else
 	      //delt = t*h;
 	    }
@@ -3301,11 +3302,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  delt = epsd/maxddot;
 	  /* NOTE: prob. la seguente condizione si puo' rimuovere 
 	   * o cambiare in > */
+#if 0
 	  deltth = h;
 	  if (delt < deltth)
 	    {
 	      delt = deltth;
 	    }
+#endif
 	  ///delt = h;///
 	  t += delt; 
 	  //t += delt*epsd/fabs(d2-d2old);
