@@ -4642,9 +4642,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  exit(-1);
 	}
 #if 1
+      its = 0;
       while (d < 0)
 	{
-	  //printf("===> d=%.15G\n", d);
+	  //if (its > 10)
+	  //{  printf("[WARNING] TOO MANY ITERATIONS adjusting the distance after a collision!") 
+	  //printf("increase h=%.15G, its=%d ===> d=%.15G\n",OprogStatus.h, its, d);}
+	  its++;
 	  t += h;
 	  if (t + t1 > t2)
 	    return 0;
@@ -6356,7 +6360,7 @@ void move(void)
 #ifdef MD_BIG_DT
       else if (evIdB == ATOM_LIMIT + 11)
 	{
-	  UpdateSystem();
+	  //UpdateSystem();
 	  timeshift_calendar();
 	  timeshift_variables();
 	  OprogStatus.refTime += OprogStatus.bigDt;
