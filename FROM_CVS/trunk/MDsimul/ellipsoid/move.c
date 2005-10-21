@@ -4540,10 +4540,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
    * con cui viene individuato il punto di contatto. In generale se due ellissoidi si "spizzicano"
    * ad una distanza minore di epsd tali urti non vengono rilevati 
    * - epsdTimes*epsd è la soglia sotto la quale la ricerca veloce fatta in search_contact_faster termina 
-   * - epsdTimesIsteresi*epsd è la sogli al di sopra della quale viene di nuovo usata search_contact_faster
+   * - epsdTimesIsteresi*epsd è la soglia al di sopra della quale viene di nuovo usata search_contact_faster
    *   Tale valore è bene che sia abbastanza grande di modo che non faccia continue ricerche veloci e lente 
    *   che rallentano moltissimo. Infatti tale ricerca veloce serve solo nel caso in cui due ellissoidi si 
-   *   sfiorano per poi allontanrsi. 
+   *   sfiorano per poi allontanarsi. 
    */
   t = 0;//t1;
 
@@ -4590,29 +4590,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     }
 #else
   //d1 = calcDistNeg(t, i, j, shift, r1, r2, &alpha, vecgd1, 1);
-
-   
   timesS++;
-#if 0
-  if (refine_contact(i, j, t, vecgd1, shift, vecg))
-  {
-    MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-    MD_DEBUG(printf("collision will occur at time %.15G\n", vecg[4])); 
-    MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
-    if (vecg[4]>t2 || vecg[4]< t1 || 
-	(lastbump[i] == j && lastbump[j]==i && fabs(t - lastcol[i])<1E-8))
-      ;
-    else
-      {
-	if (vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
-	  return 1;
-	else
-	  printf("Vc is Negative!!\n");
-      }
-  }
-  else
-    printf("non ho convergiuto\n");
-#endif
 #endif
   MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d));
 #if 1
@@ -4642,14 +4620,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  exit(-1);
 	}
 #if 1
-      its = 0;
+      its = 0;	
       while (d < 0)
 	{
-	  //if (its > 10)
-	  //{  printf("[WARNING] TOO MANY ITERATIONS adjusting the distance after a collision!") 
-	  //printf("increase h=%.15G, its=%d ===> d=%.15G\n",OprogStatus.h, its, d);}
-	  its++;
+	  //printf("===>its=%d d=%.15G d=%.15G\n", its, fabs(d)/maxddot, d);
 	  t += h;
+	  its++;
 	  if (t + t1 > t2)
 	    return 0;
 	  d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
@@ -4722,7 +4698,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  //printf("P delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt, fabs(d2-d2old), d2, d2old);
 	  t -= delt;
 	  //delt = d2old / maxddot;
-	  delt = epsd /maxddot;
+	  delt = epsd / maxddot;
 #if 0
 	  if (delt < h)
 	    delt = h;
@@ -4785,7 +4761,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #ifdef MD_PATCHY_HE
 	      if (vecg[4]>t2 || vecg[4]<t1 || 
 		  (lastbump[i].mol==j && lastbump[i].at==0 && lastbump[j].mol==i && lastbump[j].at==0
-		   && fabs(vecg[4] - lastcol[i])<1E-10))
+		   && fabs(vecg[4] - lastcol[i])<1E-15))
 		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
 		return 0;
 	      else
@@ -4793,7 +4769,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 
 #else
 	      if (vecg[4]>t2 || vecg[4]<t1 || 
-		  (lastbump[i] == j && lastbump[j]==i && fabs(vecg[4] - lastcol[i])<1E-10))
+		  (lastbump[i] == j && lastbump[j]==i && fabs(vecg[4] - lastcol[i])<1E-15))
 		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
 		return 0;
 	      else
