@@ -7,8 +7,8 @@
 *********************************************************************/
 #include <mdsimul.h>
 extern int **tree, evIdA, evIdB;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-extern int evIdC;
+#ifdef MD_PATCHY_HE
+extern int evIdC, evIdD, evIdE;
 #endif
 extern double *treeTime, *treeRxC, *treeRyC, *treeRzC;
 void DeleteEvent(int );
@@ -64,8 +64,8 @@ int check_node(char* str, int id, int idNew, int idUp)
     }
   return 0;
 }
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-void ScheduleEventBarr (int idA, int idB, int idC, double tEvent) 
+#ifdef MD_PATCHY_HE
+void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent) 
 {
   int id, idNew, more;
   id = 0;
@@ -146,15 +146,20 @@ void ScheduleEventBarr (int idA, int idB, int idC, double tEvent)
       treeCircBR[idB + 1] = idNew;
     }
   treeTime[idNew] = tEvent;
+  treeRxC[idNew] = rxC;
+  treeRyC[idNew] = ryC;
+  treeRzC[idNew] = rzC;
   treeIdA[idNew] = idA;    
   treeIdB[idNew] = idB;
-  treeIdC[idNew] = idC;
+  treeIdC[idNew] = idata;
+  treeIdD[idNew] = idatb;
+  treeIdE[idNew] = idcollcode;
   treeLeft[idNew] = treeRight[idNew] = -1;
   treeUp[idNew] = id;
 }
 void ScheduleEvent(int IdA, int IdB, double tEvent)
 {
-  ScheduleEventBarr(IdA, IdB, MD_EVENT_NONE, tEvent);
+  ScheduleEventBarr(IdA, IdB, 0, 0, MD_EVENT_NONE, tEvent);
 }
 #else
 void ScheduleEvent (int idA, int idB, double tEvent) 
@@ -281,8 +286,6 @@ void delete_events(int evIdA)
       treeIdA[0] = idd;
     }
   treeCircBL[id] = treeCircBR[id] = id;
-
-
 }
 void NextEvent (void) 
 {
@@ -301,8 +304,10 @@ void NextEvent (void)
   rzC = treeRzC[idNow];
   evIdA = treeIdA[idNow];    
   evIdB = treeIdB[idNow];
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+#ifdef MD_PATCHY_HE
   evIdC = treeIdC[idNow];
+  evIdD = treeIdD[idNow];
+  evIdE = treeIdE[idNow];
 #endif
   MD_DEBUG2(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
@@ -423,6 +428,9 @@ void DeleteEvent (int id)
     treeLeft[idp] = idq;
   else 
     treeRight[idp] = idq;
+#ifdef MD_BIG_DT
+  treeUp[id] = -1;
+#endif
   MD_DEBUG2(printf("idq: %d idp: %d id:%d treeUp[idp]:%d Left[id]: %d Right[id]:%d LUp[idp]:%d RUp[idp]:%d\n", 
 		   idq, idp, id,
 		   treeUp[idp], treeLeft[id], treeRight[id],
@@ -437,6 +445,10 @@ void InitEventList (void)
   /* i nodi da Oparams.parnum + 1 (compreso) in poi sono il pool (cioè quelli dinamici) */
   for (id = treeIdA[0]; id <= poolSize - 2; id++) 
     treeCircAR[id] = id + 1;
+#ifdef MD_BIG_DT
+  for (id = 1; id < poolSize; id++) 
+    treeUp[id] = -1;
+#endif
   treeCircAR[poolSize-1] = -1;
   for (id = 1; id <= Oparams.parnum; id++) 
     {

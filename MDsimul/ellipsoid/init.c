@@ -6,7 +6,7 @@
    NOTE: The box edge length is unity, so every length must be referred to 
          the this quantity.
 */
-
+#define MD_DEBUG31(x) 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs);
@@ -17,7 +17,12 @@ extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 void setToZero(COORD_TYPE* ptr, ...);
 double *maxax;
+double calc_norm(double *vec);
+#ifdef MD_PATCHY_HE
+extern struct LastBumpS *lastbump;
+#else
 extern int *lastbump;
+#endif
 extern double *lastcol;
 double *axa, *axb, *axc;
 double **Aip;
@@ -34,29 +39,43 @@ extern double Lz2;
 extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB; 
-
+int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
 double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdirs;
 #ifdef MD_ASYM_ITENS
-double **Ia, **Ib, **invIa, **invIb;
+double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
 #else
 double Ia, Ib, invIa, invIb;
+#endif
+#ifdef MD_ASYM_ITENS
+double *theta0, *phi0, *psi0, *costheta0, *sintheta0, **REt, **REtA, **REtB, *angM, ***RM, **RE0, **Rdot;
+double cosEulAng[2][3], sinEulAng[2][3];
 #endif
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
 extern double *vector(int n);
 int poolSize;
 int parnumA, parnumB;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+#ifdef MD_PATCHY_HE
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
+double *treeRxC, *treeRyC, *treeRzC;
+extern int *mapbondsa;
+extern int *mapbondsb;
+extern int bound(int na, int n, int a, int b);
+extern void remove_bond(int na, int n, int a, int b);
+extern void assign_bond_mapping(int i, int j);
 #endif
 double invaSq[2], invbSq[2], invcSq[2];
 extern double *fvec, *fvecG, *fvecD;
 extern double **fjac,*g,*p,*xold;
 extern int *indx;
-
+#ifdef MD_PATCHY_HE
+double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double dists[MD_PBONDS], int bondpair);
+extern double spXYZ_A[MD_STSPOTS_A][3];
+extern double spXYZ_B[MD_STSPOTS_B][3];
+#endif
 struct nebrTabStruct *nebrTab;
 /* ================================= */
 
@@ -74,6 +93,151 @@ void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z,
   *r3z = r1x * r2y - r1y * r2x;
 }
 
+#ifdef MD_PATCHY_HE
+extern void check_shift(int i, int j, double *shift);
+void check_all_bonds(void)
+{
+  int nn, warn, amin, bmin, i, j, nb;
+  double shift[3], dist, dists[MD_PBONDS];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
+  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  warn = 0;
+  for ( i = 0; i < Oparams.parnum; i++)
+    {
+      if (warn)
+	break;
+      nb = 0;
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	{
+	  jZ = inCell[2][i] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      jZ = cellsz - 1;    
+	      shift[2] = - L;
+	    } 
+	  else if (jZ == cellsz) 
+	    {
+	      jZ = 0;    
+	      shift[2] = L;
+	    }
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	    {
+	      jY = inCell[1][i] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsy - 1;    
+		  shift[1] = -L;
+		} 
+	      else if (jY == cellsy) 
+		{
+		  jY = 0;    
+		  shift[1] = L;
+		}
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		{
+		  jX = inCell[0][i] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsx - 1;    
+		      shift[0] = - L;
+		    } 
+		  else if (jX == cellsx) 
+		    {
+		      jX = 0;   
+		      shift[0] = L;
+		    }
+		  j = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+		  for (j = cellList[j]; j > -1; j = cellList[j]) 
+		    {
+		      if (i == j)
+			continue;
+		      if (! ((i < Oparams.parnumA && j >= Oparams.parnumA)||
+			     (i >= Oparams.parnumA && j < Oparams.parnumA)))
+			  continue;
+		      check_shift(i, j, shift);
+		      assign_bond_mapping(i,j);
+		      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+		      for (nn=0; nn < MD_PBONDS; nn++)
+			{
+			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
+			      && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
+			    {
+			      warn=1;
+			      MD_DEBUG31(
+			      //printf("dists[1]:%.15G\n", dists[1]);
+			      printf("[dist<0]dists[%d]:%.15G\n", nn, dists[nn]);
+			      printf("i=%d j=%d %d %d\n", i, j, mapbondsa[nn], mapbondsb[nn]);
+			      printf("NA*NA*i+a*NA+b=%d\n", NA*NA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
+			      )
+#if 0
+			      aa = mapbondsa[nn];
+			      bb = mapbondsb[nn];
+			      wdist=dists[nn];
+			      wnn = nn;
+			      wj = j;
+#endif
+			      //nb++;
+			    }
+			  else if (dists[nn]>0.0 && 
+				   fabs(dists[nn])> OprogStatus.epsd && 
+				   bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+			    {
+			      warn = 2;
+			      printf("wrong number of bonds between %d and %d\n", i, j);
+			      //printf("[dist>0]dists[%d]:%.15G\n", nn, dists[nn]);
+			      if (OprogStatus.checkGrazing==1)
+				{
+				  remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
+				}
+			    }
+  			}
+		    }
+		}
+	    }
+	}
+      if (warn)
+	{
+	  mdPrintf(ALL, "[WARNING] wrong number of bonds\n", NULL);
+	  sprintf(TXT,"[WARNING] Number of bonds for molecules %d incorrect\n", i);
+	  mdPrintf(ALL, TXT, NULL);
+	  sprintf(TXT,"Step N. %d time=%.15G\n", Oparams.curStep, Oparams.time);
+	  mdPrintf(ALL, TXT, NULL);
+	  printf("numbonds[%d]:%d bonds[][]:%d\n", i, numbonds[i], bonds[i][0]);
+	  if (warn==1)
+	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n",NULL);
+	  else
+	    mdPrintf(ALL,"Distance > 0 but bonded, probably a collision has been missed\n", NULL);
+	  //printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
+	  //	 numbonds[i], nb);
+	  //printf("I've adjusted the number of bonds\n");
+	  //printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
+	  //store_bump(i,j);
+	  if (warn==2)
+	    {
+	      if (OprogStatus.checkGrazing==2)
+		exit(-1);
+	      else
+		mdPrintf(ALL,"I adjusted the number of bonds...energy won't conserve!", NULL);
+	    }
+	}
+    }
+}
+#endif
 void ScheduleEvent (int idA, int idB, double tEvent); 
 void check_coord(void)
 {
@@ -598,22 +762,56 @@ void angvel(void)
     }
   
 }
+#ifdef MD_HSVISCO
+void calcT(void)
+{
+  double mass;
+  int i;
+  OprogStatus.Txy = 0.0;
+  OprogStatus.Tyz = 0.0;
+  OprogStatus.Tzx = 0.0;
+  OprogStatus.Txx = 0.0;
+  OprogStatus.Tyy = 0.0;
+  OprogStatus.Tzz = 0.0;
+
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (i < Oparams.parnumA)
+	mass = Oparams.m[0];
+      else 
+	mass = Oparams.m[1];
+      OprogStatus.Txy += mass*vx[i]*vy[i];
+      OprogStatus.Tyz += mass*vy[i]*vz[i];
+      OprogStatus.Tzx += mass*vz[i]*vx[i];
+      OprogStatus.Txx += mass*vx[i]*vx[i];
+      OprogStatus.Tyy += mass*vy[i]*vy[i];
+      OprogStatus.Tzz += mass*vz[i]*vz[i];
+    }
+} 
+#endif
+
 void wrap_initCoord(void)
 {
   /* A x(-0.603750000000000,4.226250000000000,-0.805000000000000) v(-0.099616130522196,-1.839280599669232,0.357754947051492f)-B x(-2.616250000000000,2.213750000000000,-0.805000000000000) v(1.011838511395152,0.876050550528104,-0.426995365917961)
    * */
-  rx[0] = -2.2;
+  rx[0] = -3.2;
   ry[0] = 0.0;
   rz[0] =  0;
   
-  vx[0] = 0.1;
+  vx[0] = 0.5;
   vy[0] = 0;
   vz[0] = 0;
   /* -0.285316712824933 -0.182347469854598 -0.530547025349427*/
 
+#if 0
   wx[0] = -0.285312;// .003;
   wy[0] = -0.1823475;// -1.5;
   wz[0] = -0.530547;// -0.5;
+#else
+  wx[0] = -0.3;
+  wy[0] = -0.8;
+  wz[0] = 0.0;
+#endif
 #if 0
   uxx[0] = 0.707;
   uyx[0] = -0.707;
@@ -621,24 +819,31 @@ void wrap_initCoord(void)
   uxy[0] = 0.707;
   uyy[0] = 0.707;
   uzy[0] = 0.0;
-#endif
   uxz[0] = 0.0;
   uyz[0] = 0.0;
   uzz[0] = 1.0;
-  rx[1] = 2.0;
+#endif
+  rx[1] = 3.2;
   ry[1] = 0.0;
   
   rz[1] = 0.2;
-  vx[1] = -0.1;
-  vy[1] = 0;
+  vx[1] = -0.5;
+  vy[1] = 0.0;
   vz[1] = 0;
   /* -0.102514772783053 -0.439677384690882 0.330913950385712*/
-  wx[1] =-0.102415;//-1;
+#if 0
+  wx[1] -0.102415;//-1;
   wy[1] =-0.43968;//-0.3;
   wz[1] =0.330914;// 0.1;
-}
+#else
+  wx[1] = 0.3;
+  wy[1] = 0.43;
+  wz[1] = 0.0;
+#endif
+  }
 
 void adjust_norm(double **R);
+void PredictEventNNL(int na, int nb);
 /* =========================== >>> initCoord <<< ============================*/
 void initCoord(void)
 {
@@ -704,12 +909,17 @@ void initCoord(void)
 #endif
   //wrap_initCoord();
 }
-
+#ifdef MD_ASYM_ITENS
+void calc_omega(int i);
+#endif
 /* =========================== >>> usrInitBef <<< ========================== */
 void usrInitBef(void)
-  {
-    int i;
-    /* DESCRIPTION:
+{
+  int i;
+#ifdef MD_ASYM_ITENS
+  int n;
+#endif
+ /* DESCRIPTION:
        This function is called before any other initialization, put here 
        yours, for example initialize accumulators ! 
        NOTE: You should supply parameters value in parameters file, so this 
@@ -723,10 +933,14 @@ void usrInitBef(void)
 
     V = 0.0;
     L = 9.4;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
+#ifdef MD_PATCHY_HE
+    Oparams.sigmaSticky = 1.0;
     Oparams.bheight = 0.0;
-    OprogStatus.maxbonds = 20;
+    Oparams.bhin = 0.0;
+    Oparams.bhout = 0.0;
+    OprogStatus.assumeOneBond = 0;
+    OprogStatus.checkGrazing = 0;
+    OprogStatus.maxbonds = 100;
 #endif
 #ifdef MD_GRAVITY
     Lz = 9.4;
@@ -777,6 +991,10 @@ void usrInitBef(void)
 #ifndef MD_ASYM_ITENS
     for (i = 0; i < 2; i++)
       Oparams.I[i] = 1.0;
+#else
+    for (i = 0; i < 2; i++)
+      for (n = 0; n < 3; n++)
+	Oparams.I[i][n] = 1.0;
 #endif
     for (i = 0; i < MAXPAR; i++)
       {
@@ -797,6 +1015,12 @@ void usrInitBef(void)
     OprogStatus.epsdSD = -1.0;
     OprogStatus.epsdGDO = -1.0;
     OprogStatus.h = 1E-10;
+#ifdef MD_PATCHY_HE
+    OprogStatus.epsdSP = -1.0;
+    OprogStatus.epsdFastSP = -1.0;
+    OprogStatus.epsdSPNL = -1.0;
+    OprogStatus.epsdFastSPNL = -1.0;
+#endif
     OprogStatus.epsdFast = 0.002;
     OprogStatus.epsdFastR = 0.0025;
     OprogStatus.epsdMax = 0.001;
@@ -845,7 +1069,6 @@ void usrInitBef(void)
   }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
-int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
 extern void PredictEvent(int, int);
 extern void InitEventList(void);
 void StartRun(void)
@@ -910,14 +1133,14 @@ void StartRun(void)
 
   }
 
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-extern void add_bond(int na, int n);
-extern void remove_bond(int na, int n);
+#ifdef MD_PATCHY_HE
+extern void build_atom_positions(void);
+extern void add_bond(int na, int n, int a, int b);
 extern double calcpotene(void);
-#endif
-#if defined(MD_SQWELL) && defined(MD_BONDCORR) 
-double corrini3, corrini0, corrini1, corrini2, corrnorm;
-double *lastbreak1, *lastbreak2;
+int get_num_pbonds(int i, int j)
+{
+  return MD_PBONDS;
+}
 #endif
 extern void print_matrix(double **M, int n);
 
@@ -1075,185 +1298,437 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 double calc_phi(void);
 double costolSDgrad, costolAngSD;
 extern double costhrNR;
+#ifdef MD_ASYM_ITENS
+extern void calc_euler_angles(int i, double **M, double *phi, double *theta, double *psi);
+extern double scalProd(double *A, double *B);
+double calc_norm(double *vec);
+extern void vectProdVec(double *A, double *B, double *C);
+void calc_angmom(int i, double **I)
+{
+  double wv[3], Mvec[3];
+  int k1, k2;
+  wv[0] = wx[i];
+  wv[1] = wy[i];
+  wv[2] = wz[i];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      Mvec[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  Mvec[k1] += I[k1][k2]*wv[k2];
+	}
+    }
+  angM[i] = calc_norm(Mvec);
+  Mx[i] = Mvec[0];
+  My[i] = Mvec[1];
+  Mz[i] = Mvec[2];
+}
+void calc_RM(int i)
+{
+  double norm, Mvec[3];
+  int k1;
+  Mvec[0] = Mx[i];
+  Mvec[1] = My[i];
+  Mvec[2] = Mz[i];
+  /* calcolo il prodotto vettore tra M e l'asse z */
+  if (angM[i]==0.0)
+    {
+      RM[i][0][0] = 1.0;
+      RM[i][0][1] = 0.0;
+      RM[i][0][2] = 0.0;
+      RM[i][1][0] = 0.0;
+      RM[i][1][1] = 1.0;
+      RM[i][1][2] = 0.0;
+      RM[i][2][0] = 0.0;
+      RM[i][2][1] = 0.0;
+      RM[i][2][2] = 1.0;
+      return;
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    RM[i][2][k1] = Mvec[k1]/angM[i];
+  RM[i][0][0] = RM[i][2][1];
+  RM[i][0][1] = -RM[i][2][0];
+  RM[i][0][2] = 0.0;
+  norm = calc_norm(RM[i][0]);
+  if (norm == 0.0)
+    {
+      if (RM[i][2][2] >= 0.0)
+	{
+	  RM[i][0][0] = 1.0;
+	  RM[i][0][1] = 0.0;
+	  RM[i][0][2] = 0.0;
+	  RM[i][1][0] = 0.0;
+	  RM[i][1][1] = 1.0;
+	  RM[i][1][2] = 0.0;
+	  RM[i][2][0] = 0.0;
+	  RM[i][2][1] = 0.0;
+	  RM[i][2][2] = 1.0;
+	}
+      else
+	{
+  	  RM[i][0][0] = 1.0;
+	  RM[i][0][1] = 0.0;
+	  RM[i][0][2] = 0.0;
+	  RM[i][1][0] = 0.0;
+	  RM[i][1][1] = -1.0;
+	  RM[i][1][2] = 0.0;
+	  RM[i][2][0] = 0.0;
+	  RM[i][2][1] = 0.0;
+	  RM[i][2][2] = -1.0;
+	}
+      return;
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    RM[i][0][k1] /= norm;
+  vectProdVec(RM[i][2],RM[i][0],RM[i][1]); 
+#if 0
+  //printf("1 scal 2: %.15G\n",  scalProd(RM[i][0], RM[i][2]));
+  for (k1=0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      if (isnan(RM[i][k1][k2]))
+	{
+	  printf("angM routine RM[%d][%d][%d]:%.15G\n", i, k1,k2, RM[i][k1][k2]);
+	  printf("angM[%d]:%.15G\n", i, angM[i]);
+	  printf("Mvec=%f,%f,%f norm=%.15G\n", Mvec[0], Mvec[1], Mvec[2], norm);
+	  exit(-1);
+	}
+#endif
+}
+#if 0
+void calc_angmom(int i, double **I)
+{
+  double wv[3], Mvec[3], th, costh, sinth, phi, cosphi, sinphi, VP[3], Mu[3], VPN;
+  int k1, k2;
+
+  wv[0] = wx[i];
+  wv[1] = wy[i];
+  wv[2] = wz[i];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      Mvec[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  Mvec[k1] += I[k1][k2]*wv[k2];
+	}
+    }
+  angM[i] = calc_norm(Mvec);
+  /* calcolo il prodotto vettore tra M e l'asse z */
+  for (k1 = 0; k1 < 3; k1++)
+    Mu[k1] = Mvec[k1]/angM[i];
+  VP[0] = Mu[1];
+  VP[1] = -Mu[0];
+  VP[2] = 0.0;
+  /* e ora calcolo RM */
+  VPN = calc_norm(VP);
+  for (k1 = 0; k1 < 3; k1++)
+    VP[k1] = VP[k1]/VPN;
+  th = acos(Mu[2]);//acos(Mvec[2]/angM[i]);
+  costh = cos(th);
+  sinth = sin(th);
+  if (sinth==0.0)
+    {
+      RM[i][0][0] = 1.0;
+      RM[i][0][1] = 0.0;
+      RM[i][0][2] = 0.0;
+      RM[i][1][0] = 0.0;
+      RM[i][1][1] = 1.0;
+      RM[i][1][2] = 0.0;
+      RM[i][2][0] = 0.0;
+      RM[i][2][1] = 0.0;
+      RM[i][2][2] = 1.0;
+      return;
+    }
+  phi = acos(VP[0]); 
+  if (VP[1] < 0.0)
+    phi = 2*pi - phi;
+  cosphi = cos(phi);
+  sinphi = sin(phi);
+  RM[i][0][0] = cosphi;
+  RM[i][0][1] = sinphi;
+  RM[i][0][2] = 0.0;
+  RM[i][1][0] = -costh*sinphi;
+  RM[i][1][1] =  costh*cosphi;
+  RM[i][1][2] = sinth;
+  RM[i][2][0] = sinth*sinphi;
+  RM[i][2][1] = -sinth*cosphi;
+  RM[i][2][2] = costh;
+  for (k1=0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      if (isnan(RM[i][k1][k2]))
+	{
+	  printf("angM routine RM[%d][%d][%d]:%.15G\n", i, k1,k2, RM[i][k1][k2]);
+	  printf("sinth:%.15G cosphi: %.15G sinphi: %.15G costh: %.15G\n", sinth, cosphi,
+		 sinphi, costh);
+	  printf("VP=(%f,%f,%f) \n", VP[0], VP[1], VP[2]);
+	  exit(-1);
+	}
+}
+#endif
+void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
+void upd_refsysM(int i)
+{
+  int k1, k2, k3;
+  calc_RM(i); 
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	RE0[k1][k2] = 0.0;
+	for (k3 = 0; k3 < 3; k3++)
+	  RE0[k1][k2] += R[i][k1][k3]*RM[i][k2][k3];
+#if 0
+	if (isnan(RM[i][k1][k2]))
+	  {printf("RM[%d][%d][%d]:%.15G\n", i, k1, k2, RM[i][k1][k2]);
+	  exit(-1);}
+#endif
+     }
+#if 0
+  printf("RE0[%d]=\n",i);
+  print_matrix(RE0, 3);
+#endif
+  calc_euler_angles(i, RE0, &phi0[i], &theta0[i], &psi0[i]);
+  //printf("RE0[2][2]: %.15G costheta=%.15G\n", RE0[2][2], cos(theta0[i]));
+  costheta0[i] = cos(theta0[i]);
+  sintheta0[i] = sin(theta0[i]);
+}
+#endif 
 /* ======================== >>> usrInitAft <<< ==============================*/
+void RDiagtR(int i, double **M, double a, double b, double c, double **Ri);
+extern double max(double a, double b);
+extern double max3(double a, double b, double c);
+double calc_shell(void)
+{
+#ifdef MD_PATCHY_HE
+  int aa, kk;
+  double v[3], norm, delta;
+#endif
+  double deltamax = 0.0;
+#ifdef MD_PATCHY_HE
+  for (aa = 0; aa < MD_STSPOTS_A; aa++)
+    {
+       norm = calc_norm(spXYZ_A[aa]);
+       for (kk=0; kk < 3; kk++)
+	 v[kk] = (norm + Oparams.sigmaSticky*0.5) * spXYZ_A[aa][kk] /  norm;
+       delta = max3(v[0]-Oparams.a[0],v[1]-Oparams.b[0],v[2]-Oparams.c[0]);
+       if (aa == 0 || delta > deltamax)
+	 deltamax  = delta;
+    }
+  for (aa = 0; aa < MD_STSPOTS_B; aa++)
+    {
+       norm = calc_norm(spXYZ_B[aa]);
+       for (kk=0; kk < 3; kk++)
+	 v[kk] = (norm + Oparams.sigmaSticky*0.5) * spXYZ_B[aa][kk] /  norm;
+       delta = max3(v[0]-Oparams.a[1],v[1]-Oparams.b[1],v[2]-Oparams.c[1]);
+       if (aa == 0 || delta > deltamax)
+	 deltamax  = delta;
+    }
+#else
+  deltamax = 0.0;
+#endif
+  //printf("deltamax=%.15G\n", deltamax);
+  return deltamax;
+}
+double calc_nnl_rcut(void)
+{
+  double rcutA, rcutB;
+  rcutA = 2.0*sqrt(Sqr(Oparams.a[0]+OprogStatus.rNebrShell)+
+		   Sqr(Oparams.b[0]+OprogStatus.rNebrShell)+
+		   Sqr(Oparams.c[0]+OprogStatus.rNebrShell));
+  rcutB = 2.0*sqrt(Sqr(Oparams.a[1]+OprogStatus.rNebrShell)+
+		   Sqr(Oparams.b[1]+OprogStatus.rNebrShell)+
+		   Sqr(Oparams.c[1]+OprogStatus.rNebrShell));
+  return 1.01*max(rcutA, rcutB);
+}
+
 void usrInitAft(void)
 {
-    /* DESCRIPTION:
-       This function is called after the parameters were read from disk, put
-       here all initialization that depends upon such parameters, and call 
-       all your function for initialization, like maps() in this case */
-#if defined(MD_SQWELL) && defined(MD_BONDCORR) 
-    char fileop[1024], fileop2[1024], fileop3[1024];
-    FILE *bof;
-#endif    
-    double nltime;
-    int Nm, i, sct, overlap;
-    COORD_TYPE vcmx, vcmy, vcmz;
-    COORD_TYPE *m;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    double sigDeltaSq, drx, dry, drz;
-    int j;
+  /* DESCRIPTION:
+     This function is called after the parameters were read from disk, put
+     here all initialization that depends upon such parameters, and call 
+     all your function for initialization, like maps() in this case */
+  int Nm, i, sct, overlap;
+  COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
+  COORD_TYPE *m;
+#ifdef MD_PATCHY_HE
+  double shift[3], drx, dry, drz, dist, dists[MD_PBONDS];
+  int j, amin, bmin, nn, aa, bb, NPB;
+  double distSPA, distSPB;
 #endif
-    int a;
-    /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
+  int a;
+  /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
-    /* initialize global varibales */
-    pi = 2.0 * acos(0);
-    
-    Nm = Oparams.parnumA;
-    parnumA = Oparams.parnumA;
-    parnumB = Oparams.parnum - Oparams.parnumA;
-    if (OprogStatus.epsdNL == -1.0)
-      OprogStatus.epsdNL = OprogStatus.epsd;
-    if (OprogStatus.epsdFastNL == -1.0)
-      OprogStatus.epsdFastNL = OprogStatus.epsdFast;
-    if (OprogStatus.epsdMaxNL == -1.0)
-      OprogStatus.epsdMaxNL = OprogStatus.epsdMaxNL;
-    if (OprogStatus.epsdFastRNL == -1.0)
-      OprogStatus.epsdFastRNL = OprogStatus.epsdFastR;
-    sct = sizeof(COORD_TYPE);
+  /* initialize global varibales */
+  pi = 2.0 * acos(0);
 
-    costolSDgrad = cos(OprogStatus.tolSDgrad);
-    costolAngSD =  fabs(cos(OprogStatus.tolAngSD) - 1.0);
-    costhrNR = cos(OprogStatus.tolAngNR);
-    if (OprogStatus.dist5==0)
-      OprogStatus.dist8stps = 0;
-    invL = 1.0/L;
-    L2 = 0.5*L;
+  Nm = Oparams.parnumA;
+  parnumA = Oparams.parnumA;
+  parnumB = Oparams.parnum - Oparams.parnumA;
+  if (OprogStatus.epsdNL == -1.0)
+    OprogStatus.epsdNL = OprogStatus.epsd;
+  if (OprogStatus.epsdFastNL == -1.0)
+    OprogStatus.epsdFastNL = OprogStatus.epsdFast;
+  if (OprogStatus.epsdMaxNL == -1.0)
+    OprogStatus.epsdMaxNL = OprogStatus.epsdMaxNL;
+  if (OprogStatus.epsdFastRNL == -1.0)
+    OprogStatus.epsdFastRNL = OprogStatus.epsdFastR;
+#ifdef MD_PATCHY_HE
+  if (OprogStatus.epsdSP == -1.0)
+    OprogStatus.epsdSP = OprogStatus.epsd;
+  if (OprogStatus.epsdFastSP == -1.0)
+    OprogStatus.epsdFastSP = OprogStatus.epsdFast;
+  if (OprogStatus.epsdSPNL == -1.0)
+    OprogStatus.epsdSPNL = OprogStatus.epsdNL;
+  if (OprogStatus.epsdFastSPNL == -1.0)
+    OprogStatus.epsdFastSPNL = OprogStatus.epsdFastNL;
+#endif
+#ifdef MD_BIG_DT
+  if (OprogStatus.bigDt <= 0.0)
+    OprogStatus.bigDt = 0.0;
+#endif
+  sct = sizeof(COORD_TYPE);
+  costolSDgrad = cos(OprogStatus.tolSDgrad);
+  costolAngSD =  fabs(cos(OprogStatus.tolAngSD) - 1.0);
+  costhrNR = cos(OprogStatus.tolAngNR);
+  if (OprogStatus.dist5==0)
+    OprogStatus.dist8stps = 0;
+  invL = 1.0/L;
+  L2 = 0.5*L;
 #ifdef MD_GRAVITY
-    rcmz = -Lz*0.5;
-    Lz2 = Lz*0.5;
+  rcmz = -Lz*0.5;
+  Lz2 = Lz*0.5;
 #endif
-    poolSize = OprogStatus.eventMult*Oparams.parnum;
-    m = Oparams.m;
-    Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
-    invmA = 1.0/Oparams.m[0];
-    invmB = 1.0/Oparams.m[1];
+  poolSize = OprogStatus.eventMult*Oparams.parnum;
+  m = Oparams.m;
+  Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
+  invmA = 1.0/Oparams.m[0];
+  invmB = 1.0/Oparams.m[1];
+  Mred[0][0] = Mred[1][1] = 0.5;
+  Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
 #if 0
-    Oparams.sigma[1][0] = Oparams.sigma[0][1];
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    Oparams.delta[1][0] = Oparams.delta[0][1];
-#endif
-#endif
-    Mred[0][0] = Mred[1][1] = 0.5;
-    Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
-    /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
-     * le particelle */
-    if (Oparams.rcut <= 0.0)
-      Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
-    cellsx = L / Oparams.rcut;
-    cellsy = L / Oparams.rcut;
-#ifdef MD_GRAVITY
-    cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
-#else
-    cellsz = L / Oparams.rcut;
-#endif 
-    printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
-	   cellsx, cellsy, cellsz);
-#if 0
-    printf("massA: %f massB: %f sigmaA:%f sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1],
+  printf("massA: %f massB: %f sigmaA:%f sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1],
 	 Oparams.sigma[0][0], Oparams.sigma[1][1], Oparams.sigma[0][1]);
 #endif
 #if defined(MD_GRAVITY)
-    g2 = 0.5*Oparams.ggrav;
-    mgA = Oparams.m[0]*Oparams.ggrav; 
-    mgB = Oparams.m[1]*Oparams.ggrav;
+  g2 = 0.5*Oparams.ggrav;
+  mgA = Oparams.m[0]*Oparams.ggrav; 
+  mgB = Oparams.m[1]*Oparams.ggrav;
 #endif
-  
-    if (OprogStatus.epsdSD < 0.0)
-      OprogStatus.epsdSD = Sqr(OprogStatus.epsd);
-    if (OprogStatus.tolSDlong < 0.0)
-      OprogStatus.tolSDlong = OprogStatus.tolSD;
-    /*    
-     ** CHECK FOR PARTICLE OVERLAPS **
-     ** CALCULATE ENERGY            ** */
-    lastcol= malloc(sizeof(double)*Oparams.parnum);
-    atomTime = malloc(sizeof(double)*Oparams.parnum);
-    lastbump = malloc(sizeof(int)*Oparams.parnum);
-    cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
-    inCell[0] = malloc(sizeof(int)*Oparams.parnum);
-    inCell[1]= malloc(sizeof(int)*Oparams.parnum);
-    inCell[2] = malloc(sizeof(int)*Oparams.parnum);
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    tree = AllocMatI(10, poolSize);
-    bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
-    bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
-    numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
-    numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
-#ifdef MD_BONDCORR
-    lastbreak1=(double*)malloc(Oparams.parnum*sizeof(double));
-    lastbreak2=(double*)malloc(Oparams.parnum*sizeof(double));
-#endif
-    bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
-#else
-    tree = AllocMatI(9, poolSize);
-#endif
-    treeTime = malloc(sizeof(double)*poolSize);
-    treeRxC  = malloc(sizeof(double)*poolSize);
-    treeRyC  = malloc(sizeof(double)*poolSize);
-    treeRzC  = malloc(sizeof(double)*poolSize);
-    Xa = matrix(3, 3);
-    Xb = matrix(3, 3);
-    XbXa = matrix(3, 3);
-    indx=ivector(8); 
-    fjac=matrix(8, 8);
-    g=vector(8);
-    p=vector(8); 
-    xold=vector(8); 
-    fvec=vector(8); 
-    fvecD=vector(8);
-    fvecG=vector(8);
-#ifdef MD_ASYM_ITENS
-    Ia = matrix(3, 3);
-    Ib = matrix(3, 3);
-    invIa = matrix(3, 3);
-    invIb = matrix(3, 3);
-#endif
-    powdirs = matrix(6,6);
-#if 0
-    ellips_mesh[0]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
-    ellips_mesh[1]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
-    for (i = 0; i < OprogStatus.n1; i++)
-      {
-	ellips_mesh[0][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
-	ellips_mesh[1][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
-      }
-    build_mesh(ellips_mesh[0], Oparams.a[0], Oparams.b[0], Oparams.c[0]);
-    build_mesh(ellips_mesh[1], Oparams.a[1], Oparams.b[1], Oparams.c[1]);
-#endif
-    RA = matrix(3, 3);
-    RB = matrix(3, 3);
-    Rt = matrix(3, 3);
-    RtA = matrix(3, 3);
-    RtB = matrix(3, 3);
-    Aip = matrix(3,3);
-    R = malloc(sizeof(double**)*Oparams.parnum);
-    for (i=0; i < Oparams.parnum; i++)
-      {
-	R[i] = matrix(3, 3);
-	lastbump[i] = -1;
-	lastcol[i] = 0.0;
-      }
-    u2R();
-    if (OprogStatus.CMreset==-1)
-      {
-	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-	resetCM(1);
-      }
-    else if (OprogStatus.CMreset==-2)
-      {
-	comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
-      }
 
-    if (Oparams.curStep == 1)
+  if (OprogStatus.epsdSD < 0.0)
+    OprogStatus.epsdSD = Sqr(OprogStatus.epsd);
+  if (OprogStatus.tolSDlong < 0.0)
+    OprogStatus.tolSDlong = OprogStatus.tolSD;
+  /*    
+   ** CHECK FOR PARTICLE OVERLAPS **
+   ** CALCULATE ENERGY            ** */
+  lastcol= malloc(sizeof(double)*Oparams.parnum);
+  atomTime = malloc(sizeof(double)*Oparams.parnum);
+#ifdef MD_PATCHY_HE
+  lastbump =  malloc(sizeof(struct LastBumpS)*Oparams.parnum);
+#else
+  lastbump = malloc(sizeof(int)*Oparams.parnum);
+#endif
+#ifdef MD_PATCHY_HE
+  tree = AllocMatI(12, poolSize);
+  bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+  bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+  numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+  numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
+  bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
+#else
+  tree = AllocMatI(9, poolSize);
+#endif
+  treeTime = malloc(sizeof(double)*poolSize);
+  treeRxC  = malloc(sizeof(double)*poolSize);
+  treeRyC  = malloc(sizeof(double)*poolSize);
+  treeRzC  = malloc(sizeof(double)*poolSize);
+  Xa = matrix(3, 3);
+  Xb = matrix(3, 3);
+  XbXa = matrix(3, 3);
+  indx=ivector(8); 
+  fjac=matrix(8, 8);
+  g=vector(8);
+  p=vector(8); 
+  xold=vector(8); 
+  fvec=vector(8); 
+  fvecD=vector(8);
+  fvecG=vector(8);
+#ifdef MD_ASYM_ITENS
+  Oparams.I[0][1] = Oparams.I[0][0];
+  Oparams.I[1][1] = Oparams.I[1][0];
+  Ia = matrix(3, 3);
+  Ib = matrix(3, 3);
+  Iatmp = matrix(3,3);
+  Ibtmp = matrix(3,3);
+  invIa = matrix(3, 3);
+  invIb = matrix(3, 3);
+  angM = malloc(sizeof(double)*Oparams.parnum);
+  phi0 = malloc(sizeof(double)*Oparams.parnum);
+  psi0 = malloc(sizeof(double)*Oparams.parnum);
+  costheta0 = malloc(sizeof(double)*Oparams.parnum);
+  sintheta0 = malloc(sizeof(double)*Oparams.parnum);
+  theta0 =    malloc(sizeof(double)*Oparams.parnum);
+  psi0   =    malloc(sizeof(double)*Oparams.parnum);
+  phi0   =    malloc(sizeof(double)*Oparams.parnum);
+  angM   =    malloc(sizeof(double)*Oparams.parnum);
+  REt = matrix(3,3);
+  REtA = matrix(3,3);
+  REtB = matrix(3,3);
+  RE0 = matrix(3,3);
+  Rdot = matrix(3,3);
+  RM = malloc(sizeof(double**)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++) 
+    RM[i] = matrix(3, 3);
+#endif
+  powdirs = matrix(6,6);
+#if 0
+  ellips_mesh[0]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
+  ellips_mesh[1]=malloc(sizeof(MESHXYZ*)*OprogStatus.n1*3);
+  for (i = 0; i < OprogStatus.n1; i++)
+    {
+      ellips_mesh[0][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
+      ellips_mesh[1][i] = malloc(sizeof(MESHXYZ)*OprogStatus.n2*3);
+    }
+  build_mesh(ellips_mesh[0], Oparams.a[0], Oparams.b[0], Oparams.c[0]);
+  build_mesh(ellips_mesh[1], Oparams.a[1], Oparams.b[1], Oparams.c[1]);
+#endif
+  RA = matrix(3, 3);
+  RB = matrix(3, 3);
+  Rt = matrix(3, 3);
+  RtA = matrix(3, 3);
+  RtB = matrix(3, 3);
+  Aip = matrix(3,3);
+  R = malloc(sizeof(double**)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      R[i] = matrix(3, 3);
+#ifdef MD_PATCHY_HE
+      lastbump[i].mol = -1;
+      lastbump[i].at = -1;
+#else
+      lastbump[i] = -1;
+#endif
+      lastcol[i] = 0.0;
+    }
+  u2R();
+  if (OprogStatus.CMreset==-1)
+    {
+      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+      resetCM(1);
+    }
+  else if (OprogStatus.CMreset==-2)
+    {
+      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+    }
+
+  if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);
-     
+
       if ( overlap ) 
-     	{
- 	  printf("ERROR: Particle overlap in initial configuration\n");
- 	  exit(1);      
-  	}
+	{
+	  printf("ERROR: Particle overlap in initial configuration\n");
+	  exit(1);      
+	}
     }
 #if 0
   for (i= 0; i < Oparams.parnum; i++)
@@ -1265,8 +1740,15 @@ void usrInitAft(void)
   if (newSim)
     {
       FILE *f;
+#ifdef MD_BIG_DT
+      OprogStatus.refTime = 0.0;
+#endif
       Oparams.time=0.0;
       /* truncate file to zero lenght */
+#ifdef MD_PATCHY_HE
+      f = fopenMPI(absMisHD("energy.dat"), "w+");
+      fclose(f);
+#endif
       f = fopenMPI(absMisHD("MSDA.dat"), "w+");
       fclose(f);
       f = fopenMPI(absMisHD("rotMSDA.dat"), "w+");
@@ -1275,12 +1757,43 @@ void usrInitAft(void)
 	{
 	  f = fopenMPI(absMisHD("MSDB.dat"), "w+");
 	  fclose(f);
-      	  f = fopenMPI(absMisHD("rotMSDB.dat"), "w+");
+	  f = fopenMPI(absMisHD("rotMSDB.dat"), "w+");
 	  fclose(f);
 	}
       f = fopenMPI(absMisHD("temp.dat"), "w+");
       fclose(f);
-     
+#ifdef MD_HSVISCO
+      f = fopenMPI(absMisHD("Ptens.dat"), "w+");
+      fclose(f);
+      f = fopenMPI(absMisHD("press.dat"), "w+");
+      fclose(f);
+      OprogStatus.DQTxy = 0.0;
+      OprogStatus.DQTyz = 0.0;
+      OprogStatus.DQTzx = 0.0;
+      OprogStatus.DQTxx = 0.0;
+      OprogStatus.DQTyy = 0.0;
+      OprogStatus.DQTzz = 0.0;
+      OprogStatus.DQWxy = 0.0;
+      OprogStatus.DQWyz = 0.0;
+      OprogStatus.DQWzx = 0.0;
+      OprogStatus.DQWxx = 0.0;
+      OprogStatus.DQWyy = 0.0;
+      OprogStatus.DQWzz = 0.0;
+      OprogStatus.DQWxxHS = 0.0;
+      OprogStatus.DQWyyHS = 0.0;
+      OprogStatus.DQWzzHS = 0.0;
+      OprogStatus.DQWxxST = 0.0;
+      OprogStatus.DQWyyST = 0.0;
+      OprogStatus.DQWzzST = 0.0;
+      OprogStatus.lastcoll = -1;
+      OprogStatus.DQxx = 0.0;
+      OprogStatus.DQyy = 0.0;
+      OprogStatus.DQzz = 0.0;
+      calcT();
+#endif
+      OprogStatus.DQxy = 0.0;
+      OprogStatus.DQyz = 0.0;
+      OprogStatus.DQzx = 0.0;
       for (i=0; i < Oparams.parnum; i++)
 	{
 	  atomTime[i] = 0.0;
@@ -1291,7 +1804,7 @@ void usrInitAft(void)
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
       if (OprogStatus.storerate > 0.0)
-      	OprogStatus.nextStoreTime = OprogStatus.storerate;
+	OprogStatus.nextStoreTime = OprogStatus.storerate;
       OprogStatus.nextDt += Oparams.Dt;
     }
   else
@@ -1338,6 +1851,8 @@ void usrInitAft(void)
       axc[i] = Oparams.c[1];
     }
   printf(">>>> phi=%.12G L=%f (%f,%f,%f)\n", calc_phi(), L, Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
+  if (Oparams.parnumA < Oparams.parnum)
+    printf("semi-axes of B (%f, %f ,%f)\n",Oparams.a[1], Oparams.b[1], Oparams.c[1]);
   /* evaluation of principal inertia moments*/ 
   for (a = 0; a < 2; a++)
     {
@@ -1350,8 +1865,29 @@ void usrInitAft(void)
       ItensD[a][2] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.b[a]));
 #endif
     };
- 
+
   /* maxax è il diametro del centroide */
+
+#ifdef MD_PATCHY_HE
+  build_atom_positions();
+  distSPA = 0.0;
+  for (aa = 0; aa < MD_STSPOTS_A; aa++)
+    {
+      dist = calc_norm(spXYZ_A[aa])+Oparams.sigmaSticky*0.5;
+      //printf("calc_norm[%d]:%.15G\n", aa, calc_norm(spXYZ_A[aa]));
+      if (dist > distSPA)
+	distSPA = dist;
+    }
+  distSPB = 0.0;
+  for (aa = 0; aa < MD_STSPOTS_B; aa++)
+    {
+      dist = calc_norm(spXYZ_B[aa])+Oparams.sigmaSticky*0.5;
+      if (dist > distSPB)
+	distSPB = dist;
+    }
+  //printf("distSPA: %.15G distSPB: %.15G\n", distSPA, distSPB);
+#endif
+  MAXAX = 0.0;
   for (i = 0; i < Oparams.parnum; i++)
     {
       maxax[i] = 0.0;
@@ -1362,124 +1898,122 @@ void usrInitAft(void)
 	maxax[i] = Oparams.b[a];
       if (Oparams.c[a] > maxax[i])
 	maxax[i] = Oparams.c[a];
+      //printf("distSPA=%.15G distSPB=%.15G\n", distSPA, distSPB);
+#ifdef MD_PATCHY_HE
+      //printf("maxax bef[%d]: %.15G\n", i, maxax[i]*2.0);
+      if (i < Oparams.parnumA)
+	{
+	  if (distSPA > maxax[i])
+	    maxax[i] = distSPA;
+	}
+      else
+	{
+	  if (distSPB > maxax[i])
+	    maxax[i] = distSPB;
+	}
+#endif
       maxax[i] *= 2.0;
+      if (maxax[i] > MAXAX)
+	MAXAX = maxax[i];
+      //printf("maxax aft[%d]: %.15G\n", i, maxax[i]);
     }
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+  /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
+   * le particelle */
+  if (OprogStatus.useNNL)
+    {
+      /* in questo modo rNebrShell è la "buccia" rispetto al minimo 
+       * parallelepipedo che include l'ellissoide più gli sticky spots */
+      if (OprogStatus.targetPhi <= 0.0)
+	OprogStatus.rNebrShell += calc_shell();
+      printf("[INFO] I've adjusted rNebrShell to %.15G\n", OprogStatus.rNebrShell);	  
+      if (Oparams.rcut <= 0.0)
+	{
+	  Oparams.rcut = calc_nnl_rcut();
+	  printf("[INFO] I've chosen rcut= %.15G\n", Oparams.rcut);
+	}
+    }
+  else
+    {
+      if (Oparams.rcut <= 0.0)
+	Oparams.rcut = MAXAX*1.01;
+    }
+  //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+  cellsx = L / Oparams.rcut;
+  cellsy = L / Oparams.rcut;
+#ifdef MD_GRAVITY
+  cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
+#else
+  cellsz = L / Oparams.rcut;
+#endif 
+  printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
+	 cellsx, cellsy, cellsz);
+  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  inCell[0] = malloc(sizeof(int)*Oparams.parnum);
+  inCell[1]= malloc(sizeof(int)*Oparams.parnum);
+  inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MD_PATCHY_HE
   for (i=0; i < Oparams.parnum; i++)
     {
       numbonds[i] = 0;
-#ifdef MD_BONDCORR
-      lastbreak1[i] = 0.0;
-      lastbreak2[i] = 0.0;
-#endif
     }
+  printf("L=%f parnum: %d parnumA: %d\n", L, Oparams.parnum, Oparams.parnumA);
+  printf("sigmaSticky=%.15G\n", Oparams.sigmaSticky);
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
-	if (i < parnumA && j < parnumA)
-	  {
-	    sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
-	  }
-	else if (i >= parnumA && j >= parnumA)
-	  {
-	    sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
-	  }
-       	else
-	  {
-	    sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
-	  }
+	/* l'interazione sticky è solo fra fra A e B! */
+	if (!((i < Oparams.parnumA && j >= Oparams.parnumA)|| 
+	      (i >= Oparams.parnumA && j < Oparams.parnumA)))
+	  continue;
 	drx = rx[i] - rx[j];
+	shift[0] = L*rint(drx/L);
 	dry = ry[i] - ry[j];
-	drz = rz[i] - rz[j];
-	drx = drx - L * rint(drx / L);
-	dry = dry - L * rint(dry / L);
-	drz = drz - L * rint(drz / L);
-	if (Sqr(drx)+Sqr(dry)+Sqr(drz) < sigDeltaSq) 
+	shift[1] = L*rint(dry/L);
+	drz = rz[i] - rz[j]; 
+	shift[2] = L*rint(drz/L);
+	assign_bond_mapping(i, j);
+	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+	NPB = get_num_pbonds(i, j);
+	for (nn=0; nn < NPB; nn++)
 	  {
-	    add_bond(i, j);
-	    add_bond(j, i);
+   	    if (dists[nn] < 0.0)
+	      {
+		//printf("(%d,%d)-(%d,%d)\n", i, mapbondsa[nn], j, mapbondsb[nn]);
+		aa = mapbondsa[nn];
+		bb = mapbondsb[nn];
+		add_bond(i, j, aa, bb);
+		add_bond(j, i, bb, aa);
+	      }
 	  }
       }
-#ifdef MD_BONDCORR
-  corrnorm=0;
-  for (i=0; i < Oparams.parnum; i++)
-    { 
-      numbonds0[i]=numbonds[i];
-      corrnorm+=numbonds[i];
-      for (j=0; j < numbonds0[i]; j++)
-	bonds0[i][j]=bonds[i][j];
-    }
-  corrini3 = 0;
-  corrini2 = 0;
-  corrini1 = 0;
-  corrini0 = 0;
-  for (i=0; i < Oparams.parnum; i++)
-    {
-      if (numbonds0[i]==2)
-	{
-	  corrini2++;
-	}
-      if (numbonds0[i]==1 && numbonds0[bonds0[i][0]]==1)
-	{
-	  corrini1++;
-	}
-      if (numbonds0[i]==0)
-	{
-	  corrini0++;
-	}
-      if (numbonds0[i]==3)
-	{
-	  corrini3++;
-	}
-    }
-  printf("------------> corrini0: %f\n", corrini0);
-  printf("------------> corrini1: %f\n", corrini1);
-  printf("------------> corrini2: %f\n", corrini2);
-  printf("------------> corrini3: %f\n", corrini3);
-  printf("------------> corrnorm: %f\n", corrnorm);
-  sprintf(fileop2 ,"bondcorr.dat");
-  strcpy(fileop, absTmpAsciiHD(fileop2));
-  if ( (bof = fopenMPI(fileop, "w")) == NULL)
-    {
-      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-      exit(-1);
-    }
-  fclose(bof);
-#if 1
-  sprintf(fileop2 ,"BondCorrFuncB2.dat");
-  /* store conf */
-  strcpy(fileop, absTmpAsciiHD(fileop2));
-  if ( (bof = fopenMPI(fileop, "w")) == NULL)
-    {
-      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-      exit(-1);
-    }
-  //fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini1);
-  fclose(bof);
-  sprintf(fileop2 ,"BondCorrFuncB3.dat");
-  /* store conf */
-  strcpy(fileop, absTmpAsciiHD(fileop2));
-  if ( (bof = fopenMPI(fileop, "w")) == NULL)
-    {
-      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
-      exit(-1);
-    }
-  //fprintf(bof,"%.15f %.15f\n", Oparams.time+1E-5, corrini2);
-  fclose(bof);
-#endif
-#endif
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
 #endif
+#ifdef MD_ASYM_ITENS
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      calc_omega(i);
+      angM[i] = sqrt(Sqr(Mx[i])+Sqr(My[i])+Sqr(Mz[i]));
+      upd_refsysM(i);
+    }
+#endif
+  //exit(-1);
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+#ifdef MD_GRAVITY
+  if (OprogStatus.scalevel || OprogStatus.taptau > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+#else
   if (OprogStatus.scalevel)
     ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+#endif
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-    //exit(-1);
+#ifdef MD_BIG_DT
+  if (OprogStatus.bigDt > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+11,OprogStatus.bigDt);
+#endif
   MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
-  //exit(-1);
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)
@@ -1504,6 +2038,10 @@ void usrInitAft(void)
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
       OprogStatus.DQzx = 0.0;
+#if MD_BIG_DT
+      OprogStatus.refTime = 0.0;
+      OprogStatus.bigDt = -1.0;
+#endif
 #ifdef MD_GRAVITY
       if (!strcmp(OprogStatus.inifile,"*"))
 	{
@@ -1514,7 +2052,7 @@ void usrInitAft(void)
 	    }
 	}
 #endif
-  
+
       for(i = 0; i < Oparams.parnum; i++)
 	{
 	  /* store the initial positions of particles */
@@ -1526,22 +2064,22 @@ void usrInitAft(void)
 	  vcmx = vx[i];
 	  vcmy = vy[i];
 	  vcmz = vz[i];
-	
+
 	  OprogStatus.vcmx0[i] = vcmx;
 	  OprogStatus.vcmy0[i] = vcmy;
 	  OprogStatus.vcmz0[i] = vcmz;
-	  
+
 	}
-      
+
       OprogStatus.sumEta   = 0.0;
       OprogStatus.sumTemp  = 0.0;
       OprogStatus.sumPress = 0.0;
-      
+
       for(i = 0; i < NUMK; i++) 
 	{
 	  OprogStatus.sumS[i] = 0.0;
 	}
-      
+
       for(i = 0; i < MAXBIN; i++)
 	{
 	  OprogStatus.hist[i] = 0;
@@ -1549,24 +2087,64 @@ void usrInitAft(void)
     }
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 }
-
-
+extern double rA[3], rB[3];
+#ifdef MD_PATCHY_HE
+void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
+#endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs)
 {
   int i;
+#ifdef MD_STOREMGL
+  int nn;
+  double ratA[NA][3];
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
+  
+#else
   const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
-   
+#endif
+#ifdef MD_STOREMGL
   for (i = 0; i < Oparams.parnum; i++)
     {
-      fprintf(fs, tipodat2,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+      if (i < Oparams.parnumA)
+	{
+	  fprintf(fs, tipodat2,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	  	  uyz[i], uzx[i], uzy[i], uzz[i], Oparams.a[0], Oparams.b[0], Oparams.c[0],
+	  	  "red");
+	}
+      else
+	{
+	  fprintf(fs, tipodat2, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	  	  uyz[i], uzx[i], uzy[i], uzz[i],
+	  	  Oparams.a[1], Oparams.b[1], Oparams.c[1],
+	  	  "green");
+	}
+#ifdef MD_PATCHY_HE
+	  rA[0] = rx[i];
+	  rA[1] = ry[i];
+	  rA[2] = rz[i];
+	  BuildAtomPos(i, rA, R[i], ratA);
+	  for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
+	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+		    ratA[nn][0], ratA[nn][1], ratA[nn][2], Oparams.sigmaSticky*0.5);
+#endif
+    }
+#else
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      fprintf(fs, tipodat2, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 	      uyz[i], uzx[i], uzy[i], uzz[i]);
     }
+#endif
 #ifndef MD_STOREMGL 
   for (i = 0; i < Oparams.parnum; i++)
     {
+#ifdef MD_ASYM_ITENS
+      fprintf(fs, tipodat, vx[i], vy[i], vz[i], Mx[i], My[i], Mz[i]);
+#else
       fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
+#endif
     }
 #ifdef MD_GRAVITY
   fprintf(fs, "%.15G %.15G\n", L, Lz);
@@ -1604,13 +2182,20 @@ void readAllCor(FILE* fs)
 	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
 	  exit(-1);
 	}
+#ifdef MD_ASYM_ITENS
+      if (fscanf(fs, "%lf %lf %lf\n", &Mx[i], &My[i], &Mz[i]) < 3)
+	{
+	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
+	  exit(-1);
+	}
+#else
       if (fscanf(fs, "%lf %lf %lf\n", &wx[i], &wy[i], &wz[i]) < 3)
 	{
 	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
 	  exit(-1);
 	}
+#endif
     }
-  
 
 #ifdef MD_GRAVITY
   if (fscanf(fs, "%lf %lf\n",  &L, &Lz) < 2)

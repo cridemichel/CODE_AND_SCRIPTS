@@ -17,7 +17,9 @@ extern char msgStrA[MSG_LEN];
 char TXTA[10][MSG_LEN];
 char TXT[MSG_LEN];
 extern double Vz;
+FILE *mf;
 extern double ***R;
+extern void UpdateSystem(void);
 double DphiSqA=0.0, DphiSqB=0.0, DrSqTotA=0.0, DrSqTotB=0.0;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
@@ -44,17 +46,21 @@ extern int **nebrTab, nebrNow, nebrTabLen, nebrTabMax;
 extern void vectProd(double r1x, double r1y, COORD_TYPE r1z, 
 	 double r2x, double r2y, COORD_TYPE r2z, 
 	 double* r3x, double* r3y, COORD_TYPE* r3z);
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER) 
+#ifdef MD_PATCHY_HE 
 extern int *inCell[3], cellsx, cellsy, cellsz;
 extern int *cellList;
 extern int bound(int na, int n);
 int *numbonds;
 double calcpotene(void)
 {
-  double shift[NDIM], Epot; 
-  int cellRangeEne[2 * NDIM], signDir[NDIM], evCode,
-      iX, iY, iZ, jX, jY, jZ, k, n, na;
-  Epot = 0;
+  double Epot; 
+  int na;
+#if 0
+  double shift[NDIM];
+  int cellRangeEne[2 * NDIM];
+  int iX, iY, iZ, jX, jY, jZ, k, n, signDir[NDIM], evCode;
+#endif
+Epot = 0;
 #if 0
   for (k = 0; k < NDIM; k++)
     { 
@@ -130,14 +136,28 @@ double calcpotene(void)
 #endif
 void calcV(void)
 {
-#ifdef MD_SQWELL
+#ifdef MD_PATCHY_HE
   V = calcpotene();
+  mf = fopenMPI(absMisHD("energy.dat"),"a");
+#if 0
+  if (Oparams.parnumA < Oparams.parnum)
+    fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum-Oparams.parnumA));
+  else
+    fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
+#else
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, V/((double)Oparams.parnum));
+#else
+  fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
+#endif
+#endif
+ fclose(mf);
 #else
   V = 0;
 #endif
 }
 void calc_energy(char *msg);
-
+extern double *angM;
 /* ============================== >>> Energy <<< ============================*/
 void energy(void)
 {
@@ -147,7 +167,12 @@ void energy(void)
   int mol, Nm, i;
   double px, py, pz;
   double invL;
-
+  double tref;
+#ifdef MD_BIG_DT
+  tref = OprogStatus.refTime;
+#else
+  tref = 0.0;
+#endif
 #if 0  
   FILE* mf;
 #endif
@@ -160,12 +185,13 @@ void energy(void)
 	  (long long int)Oparams.curStep, L);
 #endif
   calc_energy("[MEASURES]"); 
+  //printf("angM[0]:%.15G angM[10]:%.15G\n", angM[0], angM[10]);
 #ifdef MD_GRAVITY
   E = K + V;
 #else
   E = K;
 #endif
-#ifdef MD_SQWELL
+#ifdef MD_PATCHY_HE
   V = calcpotene();
   E = K + V;
 #endif
@@ -203,14 +229,14 @@ void energy(void)
     }
 #ifdef MD_GRAVITY
   calcKVz();
-  sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G) Vz=%f\n", Oparams.time,
+  sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G) Vz=%f\n", Oparams.time + tref,
 	  E, Px, Py, Pz, Vz);
 #else
-#ifdef MD_SQWELL
-  sprintf(TXTA[1], "t=%f E=%.15f V=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time,
+#ifdef MD_PATCHY_HE
+  sprintf(TXTA[1], "t=%f E=%.15f V=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time + tref,
 	  E, V, Px, Py, Pz);
 #else
-   sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time,
+   sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time + tref,
 	  E, Px, Py, Pz);
 #endif
 #endif
@@ -270,7 +296,11 @@ void transDiff(void)
       //Dr4 += Sqr(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
    }
   DrSqTotA =  DrSqTot / ((double) Oparams.parnumA);
+#ifdef MD_BIG_DT
+  fprintf(f, "%.15G %.15G\n", Oparams.time + OprogStatus.refTime, DrSqTotA);
+#else
   fprintf(f, "%.15G %.15G\n", Oparams.time, DrSqTotA);
+#endif
   fclose(f);
   if (Oparams.parnumA < Oparams.parnum)
     {
@@ -285,14 +315,22 @@ void transDiff(void)
 	}
       
       DrSqTotB = DrSqTot / ((double)Oparams.parnum - Oparams.parnumA);
+#ifdef MD_BIG_DT
+      fprintf(f, "%.15G %.15G\n", Oparams.time + OprogStatus.refTime, DrSqTotB);
+#else
       fprintf(f, "%.15G %.15G\n", Oparams.time, DrSqTotB);
+#endif
       fclose(f);
     }
   /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
      because DrSq is zero! */
- 
+#ifdef MD_BIG_DT
+  Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time + OprogStatus.refTime) *
+		       ((double) Oparams.parnumA ) );   
+#else
   Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time) *
 		       ((double) Oparams.parnumA ) );   
+#endif
   //printf("Dtr: %f\n", Dtrans);
 #if 0
   Aa = ((double) Oparams.parnumA ) * 3.0 * 
@@ -305,7 +343,7 @@ void calcrotMSD(void)
 {
   FILE *fA, *fB;
   int i, a;
-  double wparal[3], wperp[3], u[3], DphiA[3], DphiB[3];
+  double DphiA[3], DphiB[3];
   DphiSqA = DphiSqB = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
     {
@@ -347,16 +385,25 @@ void calcrotMSD(void)
     }
   DphiSq = DphiSqA;
   fA = fopenMPI(absMisHD("rotMSDA.dat"),"a");
-
+#ifdef MD_BIG_DT
+  fprintf(fA,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, DphiSqA, 
+	  DphiA[0], DphiA[1], DphiA[2]); 
+#else
   fprintf(fA,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, DphiSqA, 
 	  DphiA[0], DphiA[1], DphiA[2]); 
+#endif
   fclose(fA);
   if (Oparams.parnum > Oparams.parnumA)
     {
       fB = fopenMPI(absMisHD("rotMSDB.dat"),"a");
       
+#ifdef MD_BIG_DT
+      fprintf(fB,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, DphiSqB,
+	      DphiB[0], DphiB[1], DphiB[2]); 
+#else
       fprintf(fB,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, DphiSqB,
 	      DphiB[0], DphiB[1], DphiB[2]); 
+#endif
       fclose(fB);
     }
   
@@ -366,8 +413,6 @@ void temperat(void)
 {
   /* DESCRIPTION:
      This the calculation of the instantaneous temperature */
-  int i;
-  double m;
 #if 0
   K = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
@@ -391,7 +436,13 @@ void temperat(void)
       OprogStatus.sumTemp += temp;
       temp = OprogStatus.sumTemp / NUMCALCS;
     }
-
+  mf = fopenMPI(absMisHD("temp.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, temp);
+#else
+  fprintf(mf, "%15G %.15G\n", Oparams.time, temp);
+#endif
+  fclose(mf);
   /* pressure */
   if (OprogStatus.avngPress == 1)
     {
@@ -539,7 +590,7 @@ void structFacts(void)
 /* ============================= >>> maxwell <<< =========================== */
 void maxwell(void)
 {
-  int n, i, Nm;
+  int n, i;
   int* histMB;
   double vMod, vSq;
 

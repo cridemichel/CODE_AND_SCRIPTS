@@ -29,6 +29,7 @@
 #define MD_HD_MIS MD_SIMDAT "" 
 /* directory to store measures files */
 
+#undef MD_BASIC_DT
 #define MD_TAPE_TMP "/iomega/mdtmp/"
 /* directory on Tape to store some temporary files (restore files and 
    measures files)*/
@@ -65,10 +66,14 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 
 #define C_T COORD_TYPE
 #define NK 10000
-#define NA 1 /* number of atoms for each molecule (particle) */
+#define NA 6 /* number of atoms for each molecule (particle) */
 
 #define MAXPAR 5000      /* maximum number of simulated particles */
-
+#ifdef MD_PATCHY_HE
+#define MD_STSPOTS_A 5
+#define MD_STSPOTS_B 2
+#define MD_PBONDS 10
+#endif
 #define NUM_PAR 2000   /* Number of particles for the simulation */
 #define NUMK 99    /* number of k-points in which we must  calculate the 
 		       structure factor */ 
@@ -99,10 +104,18 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 	   filling each one ).
 	 - Implement doubly dimensioned array as a definition apart.
 */
+#ifdef MD_ASYM_ITENS
+#ifdef MD_GRAVITY
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz, lastcol
+#else
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz
+#endif
+#else
 #ifdef MD_GRAVITY
 #define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, vx, vy, vz, wx, wy, wz, lastcol
 #else
 #define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, vx, vy, vz, wx, wy, wz
+#endif
 #endif
 #undef  EXT_SLST
 #ifdef MD_GRAVITY
@@ -136,12 +149,19 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
    arrays (to see how AllocCoord() works see AllocCoord() code in 
    mdarray.c file).
 */
+#ifdef MD_ASYM_ITENS
+#ifdef MD_GRAVITY
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &Mx, &My, &Mz, &lastcol
+#else
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &Mx, &My, &Mz 
+#endif
+#else
 #ifdef MD_GRAVITY
 #define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &lastcol
 #else
 #define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz 
 #endif
-
+#endif
 /* this is used to declare the particle variables ( see below ) 
    NOTE: rx[0][2] means the x-coordinate of the first atoms in the second 
    molecules (particle).
@@ -149,12 +169,19 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
    from right to left, first we choose the molucule, then the atom and 
    finally the coordinate, for example consider the position: 
    coordinate(rx, ry, rz) <- atom <- molecule*/
+#ifdef MD_ASYM_ITENS
+#ifdef MD_GRAVITY
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *Mx, *My, *Mz, *lastcol
+#else
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *Mx, *My, *Mz
+#endif
+#else
 #ifdef MD_GRAVITY
 #define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *lastcol
 #else
 #define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz
 #endif
-				   
+#endif				   
 #undef EXT_DLST
 #ifdef MD_GRAVITY
 #define EXT_DLST  L, Lz 
@@ -171,7 +198,19 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeCircBR tree[6]
 #define treeIdA    tree[7]
 #define treeIdB    tree[8]
+#ifdef MD_PATCHY_HE
 #define treeIdC    tree[9]
+#define treeIdD    tree[10]
+#define treeIdE    tree[11]
+#endif
+#endif
+#ifdef MD_PATCHY_HE
+struct LastBumpS 
+{
+  int mol;
+  int at;
+  int type;
+};
 #endif
 #define ATOM_LIMIT 10000000
 struct nebrTabStruct 
@@ -245,6 +284,35 @@ struct progStatus
   COORD_TYPE sumEta; /* accumulators for obtaining the mean value of eta */
   
   /* Accumulators for the integral of angular velocity */
+#ifdef MD_HSVISCO
+  double DQxx;
+  double DQyy;
+  double DQzz;
+  double DQTxy;
+  double DQTyz;
+  double DQTzx;
+  double DQTxx;
+  double DQTyy;
+  double DQTzz;
+  double DQWxy;
+  double DQWyz;
+  double DQWzx;
+  double DQWxx;
+  double DQWyy;
+  double DQWzz;
+  double DQWxxHS;
+  double DQWyyHS;
+  double DQWzzHS;
+  double DQWxxST;
+  double DQWyyST;
+  double DQWzzST;
+  double Txy;
+  double Tyz;
+  double Tzx;
+  double Txx;
+  double Tyy;
+  double Tzz;
+#endif
   COORD_TYPE DQxy;
   COORD_TYPE DQyz;
   COORD_TYPE DQzx;
@@ -331,6 +399,12 @@ struct progStatus
   double epsdFastNL;
   double epsdFastRNL;
   double epsdMaxNL;
+#ifdef MD_PATCHY_HE
+  double epsdSP;
+  double epsdFastSP;
+  double epsdSPNL;
+  double epsdFastSPNL;
+#endif
   int guessDistOpt;
   int forceguess;
   double targetPhi;
@@ -349,13 +423,19 @@ struct progStatus
   double nextcheckTime;
   double nextSumTime;
   double nextDt;
+#ifdef MD_BIG_DT
+  double refTime;
+  double bigDt;
+#endif
   /* questi servono per salvare le conf usando la stessa formula di Giuseppe */
   double nextStoreTime;
   int KK;
   int JJ;
   double storerate;
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+#ifdef MD_PATCHY_HE
+  int checkGrazing;
   int maxbonds;
+  int assumeOneBond;
 #endif
 #ifdef MD_GRAVITY
   int numquench;
@@ -443,10 +523,14 @@ struct params
 
 #ifndef MD_ASYM_ITENS
   double I[2];
+#else
+  double I[2][3];
 #endif
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  double delta[2][2]; /* ampiezza della buca */
+#ifdef MD_PATCHY_HE
+  double sigmaSticky; /* ampiezza della buca */
   double bheight;
+  double bhin;
+  double bhout;
 #endif
 #ifdef MD_GRAVITY
   double ggrav;
@@ -493,12 +577,46 @@ struct pascii opro_ascii[] =
   {"DQxy",         &OS(DQxy),                       1,              1, "%.10G"},
   {"DQzx",         &OS(DQzx),                       1,              1, "%.10G"},
   {"DQzx",         &OS(DQzx),                       1,              1, "%.10G"},
+#ifdef MD_HSVISCO
+  {"DQxx",         &OS(DQxx),                       1,              1, "%.10G"},
+  {"DQyy",         &OS(DQyy),                       1,              1, "%.10G"},
+  {"DQzz",         &OS(DQzz),                       1,              1, "%.10G"},
+  {"DQTxy",        &OS(DQTxy),                       1,              1, "%.10G"},
+  {"DQTyz",        &OS(DQTyz),                       1,              1, "%.10G"},
+  {"DQTzx",        &OS(DQTzx),                       1,              1, "%.10G"},
+  {"DQTxx",        &OS(DQTxx),                       1,              1, "%.10G"},
+  {"DQTyy",        &OS(DQTyy),                       1,              1, "%.10G"},
+  {"DQTzz",        &OS(DQTzz),                       1,              1, "%.10G"},
+  {"DQWxy",        &OS(DQWxy),                       1,              1, "%.10G"},
+  {"DQWyz",        &OS(DQWyz),                       1,              1, "%.10G"},
+  {"DQWzx",        &OS(DQWzx),                       1,              1, "%.10G"},
+  {"DQWxx",        &OS(DQWxx),                       1,              1, "%.10G"},
+  {"DQWyy",        &OS(DQWyy),                       1,              1, "%.10G"},
+  {"DQWzz",        &OS(DQWzz),                       1,              1, "%.10G"},
+  {"DQWxxHS",      &OS(DQWxxHS),                       1,              1, "%.10G"},
+  {"DQWyyHS",      &OS(DQWyyHS),                       1,              1, "%.10G"},
+  {"DQWzzHS",      &OS(DQWzzHS),                       1,              1, "%.10G"},
+  {"DQWxxST",      &OS(DQWxxST),                       1,              1, "%.10G"},
+  {"DQWyyST",      &OS(DQWyyST),                       1,              1, "%.10G"},
+  {"DQWzzST",      &OS(DQWzzST),                       1,              1, "%.10G"},
+  {"Txy",          &OS(Txy),                       1,              1, "%.10G"},
+  {"Tyz",          &OS(Tyz),                       1,              1, "%.10G"},
+  {"Tzx",          &OS(Tzx),                       1,              1, "%.10G"},
+  {"Txx",          &OS(Txx),                       1,              1, "%.10G"},
+  {"Tyy",          &OS(Tyy),                       1,              1, "%.10G"},
+  {"Tzz",          &OS(Tzz),                       1,              1, "%.10G"},
+  {"lastcoll",     &OS(lastcoll),                   1,              1, "%.15G"},
+#endif
   {"PxyArr",       OS(PxyArr),                      5,              1, "%.10G"},
   {"PyzArr",       OS(PyzArr),                      5,              1, "%.10G"},
   {"PzxArr",       OS(PzxArr),                      5,              1, "%.10G"},
   {"sumox",        OS(sumox),                       -MAXPAR,        1, "%.15G"},
   {"sumoy",        OS(sumoy),                       -MAXPAR,        1, "%.15G"},
   {"sumoz",        OS(sumoz),                       -MAXPAR,        1, "%.15G"},
+  {"rxCMi",        OS(rxCMi),                       -MAXPAR,        1, "%.15G"},
+  {"ryCMi",        OS(ryCMi),                       -MAXPAR,        1, "%.15G"},
+  {"rzCMi",        OS(rzCMi),                       -MAXPAR,        1, "%.15G"},
+  {"DR",           OS(DR),                          -MAXPAR,        3, "%.15G"}, 
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
   {"histMB",       OS(histMB),                  NUMV,               1, "%d"},
@@ -546,6 +664,12 @@ struct pascii opro_ascii[] =
   {"epsdFastNL",     &OS(epsdFastNL),              1,   1, "%.12G"},
   {"epsdFastRNL",    &OS(epsdFastRNL),             1,   1, "%.12G"},
   {"epsdMaxNL",      &OS(epsdMaxNL),               1,   1, "%.12G"},
+#ifdef MD_PATCHY_HE
+  {"epsdSP",         &OS(epsdSP),                  1,   1, "%.12G"},
+  {"epsdFastSP",     &OS(epsdFastSP),              1,   1, "%.12G"},
+  {"epsdSPNL",       &OS(epsdSPNL),                1,   1, "%.12G"},
+  {"epsdFastSPNL",   &OS(epsdFastSPNL),            1,   1, "%.12G"},
+#endif
   {"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
   {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
   {"SDmethod",     &OS(SDmethod),               1,   1, "%d"},
@@ -561,9 +685,9 @@ struct pascii opro_ascii[] =
   {"tolAngSD",     &OS(tolAngSD),              1,   1, "%.15G"},
   {"forceguess",   &OS(forceguess),            1,   1, "%d"},
   {"zbrakn",       &OS(zbrakn),              1,   1,  "%d"},
-  {"zbrentTol",    &OS(zbrentTol),           1,   1,  ".15G"},
-  {"scalfact",     &OS(scalfact),              1,   1, ".12G"},
-  {"reducefact",   &OS(reducefact),            1,   1, ".12G"},
+  {"zbrentTol",    &OS(zbrentTol),           1,   1,  "%.15G"},
+  {"scalfact",     &OS(scalfact),              1,   1, "%.12G"},
+  {"reducefact",   &OS(reducefact),            1,   1, "%.12G"},
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
   {"phitol",       &OS(phitol),                     1,  1,    "%.14G"},
   {"axestol",      &OS(axestol),                    1,  1,    "%.14G"},
@@ -574,6 +698,10 @@ struct pascii opro_ascii[] =
   {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
   {"nextSumTime"  ,&OS(nextSumTime),                1,  1,    "%.15G"},
   {"nextDt",       &OS(nextDt),                     1,  1,    "%.15G"},
+#ifdef MD_BIG_DT
+  {"refTime",      &OS(refTime),                    1,  1,    "%.15G"},
+  {"bigDt",        &OS(bigDt),                      1,  1,    "%.15G"},
+#endif
   {"eqlevel",     &OS(eqlevel),                    1,  1,    "%.12G"},
   {"eventMult",    &OS(eventMult),                  1,   1,  "%d"},  
   {"overlaptol"   ,&OS(overlaptol),                 1,   1, "%f"},
@@ -598,6 +726,11 @@ struct pascii opro_ascii[] =
 #ifdef MD_BILOG
   {"basew",        &OS(basew),                      1,  1, "%.6G"},
   {"lastbilogsaved",&OS(lastbilogsaved),            1,  1, "%d"},
+#endif
+#ifdef MD_PATCHY_HE
+  {"assumeOneBond",     &OS(assumeOneBond),               1,   1, "%d"},
+  {"checkGrazing",      &OS(checkGrazing),                1,   1, "%d"},
+  {"maxbonds",          &OS(maxbonds),                    1,   1, "%d"}, 
 #endif
   {"NN",           &OS(NN),                         1,  1,   "%d"},
   {"fstps",        &OS(fstps),                      1,  1,   "%.15G"},
@@ -631,6 +764,8 @@ struct pascii opar_ascii[]=
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
 #ifndef MD_ASYM_ITENS
   {"I",                 OP(I),                             2,   1, "%.8G"},
+#else
+  {"I",                 OP(I),                             2,   3, "%.8G"},
 #endif
 #ifdef MD_GRAVITY
   {"wallDiss",          &OP(wallDiss),                    1,   1,   "%f"},
@@ -639,9 +774,11 @@ struct pascii opar_ascii[]=
 #endif
   {"M",                 &OP(M),                           1,   1,   "%d"},
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  {"delta",             &OP(delta),                       2,   2, "%.15G"},
+#ifdef MD_PATCHY_HE
+  {"sigmaSticky",       &OP(sigmaSticky),                       1,   1, "%.15G"},
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
+  {"bhin",               &OP(bhin),                         1,   1, "%.15G"},
+  {"bhout",              &OP(bhout),                         1,   1, "%.15G"},
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -747,6 +884,9 @@ struct singlePar OsinglePar[] = {
   {"scalevel",   &OprogStatus.scalevel,       INT},
   {"endtime",    &OprogStatus.endtime,        CT},
   {"Dt",         &Oparams.Dt,                 CT},
+#ifdef MD_BIG_DT
+  {"bigDt",      &OprogStatus.bigDt,           CT},
+#endif
   {"epsd",       &OprogStatus.epsd,           CT},
   {"epsdNL",     &OprogStatus.epsdNL,         CT},
   {"epsdSD",     &OprogStatus.epsdSD,         CT},
@@ -758,6 +898,12 @@ struct singlePar OsinglePar[] = {
   {"epsdFastNL",   &OprogStatus.epsdFastNL,       CT},
   {"epsdFastRNL",  &OprogStatus.epsdFastRNL,      CT},
   {"epsdMaxNL",    &OprogStatus.epsdMaxNL,        CT},
+#ifdef MD_PATCHY_HE
+  {"epsdSP",       &OprogStatus.epsdSP,           CT},
+  {"epsdFastSP",   &OprogStatus.epsdFastSP,       CT},
+  {"epsdSPNL",     &OprogStatus.epsdSPNL,         CT},
+  {"epsdFastSPNL", &OprogStatus.epsdFastSPNL,     CT},
+#endif
   {"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
   {"tolSD",      &OprogStatus.tolSD,          CT},
   {"tolSDlong",  &OprogStatus.tolSDlong,      CT},
@@ -795,11 +941,14 @@ struct singlePar OsinglePar[] = {
   {"W",          &OprogStatus.W,              CT},
   {"P",          &Oparams.P,                  CT},
   {"L",          &L,                        CT},
-#if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-  {"deltaAA",    &Oparams.delta[0][0],            CT},
-  {"deltaBB",    &Oparams.delta[1][1],            CT},
-  {"deltaAB",    &Oparams.delta[0][1],            CT},
+#ifdef MD_PATCHY_HE
+  {"sigmaSticky", &Oparams.sigmaSticky,     CT},
   {"bheight",    &Oparams.bheight,          CT},
+  {"bhin",         &Oparams.bhin,              CT},
+  {"bhout",       &Oparams.bhout,             CT},
+  {"assumeOneBond", &OprogStatus.assumeOneBond, INT},
+  {"checkGrazing",  &OprogStatus.checkGrazing, INT},
+  {"maxbonds",      &OprogStatus.maxbonds,     INT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
@@ -819,6 +968,11 @@ struct singlePar OsinglePar[] = {
 #ifndef MD_ASYM_ITENS
   {"Ia",      &Oparams.I[0],      CT},
   {"Ib",      &Oparams.I[1],      CT},
+#else
+  {"I1a",      &Oparams.I[0][0],      CT},
+  {"I3a",      &Oparams.I[0][2],      CT},
+  {"I1b",      &Oparams.I[1][0],      CT},
+  {"I3b",      &Oparams.I[1][2],      CT},
 #endif
 #ifdef MD_GRAVITY
   {"ggrav",      &Oparams.ggrav,            CT},
@@ -887,14 +1041,14 @@ extern struct singlePar OsinglePar[];
 
 #ifdef MAIN
 COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,
-  press_m, press_at, rcmz, rho, ItensD[2][3];
+  press_m, press_at, rcmz, rho, ItensD[2][3], pressST, pressHS, pressKin;
 COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, Aa, V, DrSqTot, temp_transl, DphiSq;
 int MB[NUMV];
 #else 
 extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs,
   press, press_m, press_at, temp_transl, rcmz, rho;
 extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot,
-  DphiSq, ItensD[2][3], DphiSq;
+  DphiSq, ItensD[2][3], DphiSq, pressST, pressHS, pressKin;
 extern int MB[NUMV];
 #endif
 
