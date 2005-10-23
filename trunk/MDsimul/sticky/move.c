@@ -5103,7 +5103,8 @@ void timeshift_variables(void)
   if (OprogStatus.intervalSum > 0.0)
     OprogStatus.nextSumTime -= OprogStatus.bigDt;
   //nextStoreTime viene calcolato opportunamente ogni volta quindi non va shiftato
-  //OprogStatus.nextStoreTime -= OprogStatus.bigDt;
+  if (OprogStatus.storerate > 0.0)
+    OprogStatus.nextStoreTime -= OprogStatus.bigDt;
   for (i = 0; i < Oparams.parnum; i++)
     {
       atomTime[i] -= OprogStatus.bigDt;
