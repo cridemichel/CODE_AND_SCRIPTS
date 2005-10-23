@@ -6,13 +6,13 @@
 #define MAXFILES 5000
 char fname[MAXFILES][256]; 
 double L, time, ti[MAXPTS], rotMSD[MAXPTS], MSD[MAXPTS], cc[MAXPTS];
-double DR[MAXPTS][3];
+double DR[MAXPTS][3], DR0[MAXPTS][3];
 double *r0[3], *w0[3], *rt[3], *wt[3], *rtold[3];
 char parname[128], parval[256000], line[256000];
 char dummy[1024];
 int points, foundDRs=0;
 
-void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3])
+void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double DR[MAXPTS][3])
 {
   FILE *f;
   int nat=0, i, cpos;
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
 	for (a=0; a < 3; a++)
 	  adjDr[a][i] = 0.0;
 
-      readconf(fname[nr1], &time, &refTime, NP, r0, w0);
+      readconf(fname[nr1], &time, &refTime, NP, r0, w0, DR0);
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
 	{
@@ -186,7 +186,7 @@ int main(int argc, char **argv)
 		    for (a=0; a < 3; a++)
 		      rtold[a][i] = rt[a][i];
 		}
-	      readconf(fname[nr2], &time, &refTime, NP, rt, wt);
+	      readconf(fname[nr2], &time, &refTime, NP, rt, wt, DR);
 	      if (nr2 < MAXPTS && ti[nr2] == -1.0)
 		{
 		  ti[nr2] = time + refTime;
@@ -203,7 +203,8 @@ int main(int argc, char **argv)
 		    dr = rt[a][i] - rtold[a][i];
 		    if (foundDRs)
 		      {
-			adjDr[a][i] = DR[i][a]*L; 
+			adjDr[a][i] = L*(DR[i][a]-DR0[i][a]); 
+			
 		      }
 		    else
 		      {
