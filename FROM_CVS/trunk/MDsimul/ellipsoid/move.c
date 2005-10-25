@@ -6537,6 +6537,10 @@ void move(void)
       if (OprogStatus.endtime > 0 && Oparams.time > OprogStatus.endtime)
 	ENDSIM = 1;
 #endif
+#ifdef MD_STOREMGL
+      if (OprogStatus.endtime < 0.0)
+	ENDSIM=1;
+#endif
       if (ENDSIM)
 	{
 	  outputSummary();
