@@ -1341,7 +1341,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   double h, d, dold, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS];
   double maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
 #ifndef MD_BASIC_DT
-  double deldist, normddot, dold2, deltth, distsOld2[MD_PBONDS]; 
+  double deldist, normddot, dold2, distsOld2[MD_PBONDS]; 
 #endif
   //const int MAXOPTITS = 4;
   int bondpair, itstb;
@@ -2110,7 +2110,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   double h, d, dold, t2arr[6][NA], t, dists[6][NA], distsOld[6][NA]; 
   double maxddot, delt, troot, tini, maxddoti[6][NA];
 #ifndef MD_BASIC_DT
-  double distsOld2[6][NA], dold2, normddot, deltth, deldist;
+  double distsOld2[6][NA], dold2, normddot, deldist;
 #endif
   int firstev, nn2;
   /*
