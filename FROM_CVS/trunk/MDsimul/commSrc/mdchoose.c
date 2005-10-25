@@ -9,6 +9,7 @@ extern struct simStat OsimStat;
 extern int my_rank;
 extern unsigned char BAK, STA;
 extern unsigned char BAKT;            /* global switch for restore on tape*/
+extern int whichCorrupted(char* absFileName, int (*readFunc)(int), unsigned char* Pnewer);
 
 /* ========================== >>> chooseMeasure <<< =========================*/
 void chooseMeasure(char* absFile, int (*readFunc)(int))  /* file -> absolute */

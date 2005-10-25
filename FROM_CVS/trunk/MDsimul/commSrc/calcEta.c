@@ -294,11 +294,10 @@ void saveAcf(char* fileName, COORD_TYPE* acf, int beg, int end)
 }
 
 /* ============================= >>> MAIN <<< ===============================*/
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
-  int mfd, acfbytes, nmbytes;                /* measure file descriptor */
-  int i, t, t0, tt0, tt0Max;     
-  FILE *phifs;
+  int mfd, acfbytes;                /* measure file descriptor */
+  int t, t0, tt0, tt0Max;     
   COORD_TYPE dummy1, dummy2, dummy3;
 
   defaults();
@@ -536,6 +535,7 @@ void main(int argc, char** argv)
       /* close input file (xva file) */
       close(mfd);
     }
+  return 0;
 }
 
 

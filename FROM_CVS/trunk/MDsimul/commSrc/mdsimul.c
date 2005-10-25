@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.11 2005-10-25 19:53:10 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.12 2005-10-25 20:44:03 demichel Exp $     */
 #ifndef lint
-static char vcid[] = "$Id: mdsimul.c,v 1.11 2005-10-25 19:53:10 demichel Exp $";
+//static char vcid[] = "$Id: mdsimul.c,v 1.12 2005-10-25 20:44:03 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -66,7 +66,6 @@ extern void doubleSaveMeasure(int PN, int misNum, int* times, int tapeTimes);
 void commMD(void)
 {
   int i;   
-  int stato;            /* set by wait */
   time_t tempo;         /* returned by time(NULL) */
 #ifdef MDLLINT
   long long int msteps;
@@ -400,7 +399,7 @@ void build_bilog_arr(void)
 }
 #endif
 /* =============================== >>> MAIN <<< ============================*/
-void main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 #if defined(MPI)  
   int mpiStatus, i;
@@ -496,4 +495,5 @@ void main(int argc, char *argv[])
   //MPI_Barrier(MPI_COMM_WORLD);
   //MPI_Finalize();
 #endif 
+  return 0;
 }
