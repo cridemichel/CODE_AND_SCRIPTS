@@ -6124,8 +6124,6 @@ void move(void)
 	      fprintf(bf, sepStr);
 	    }	      
 	  MD_DEBUG(printf("[Store event]: %.15G JJ=%d KK=%d\n", Oparams.time, OprogStatus.JJ, OprogStatus.KK));
-	  if (mgl_mode)
-	    fprintf(bf, ".Vol: %f\n", L*L*L);
 	  //fprintf(bf, ".semiAxes: %f %f %f, %f %f %f\n",
 	  //	  Oparams.a[0], Oparams.b[0], Oparams.c[0],
   	  //  Oparams.a[1], Oparams.b[1], Oparams.c[1]);
@@ -6534,12 +6532,15 @@ void move(void)
       if (OprogStatus.endtime > 0 && Oparams.time > OprogStatus.endtime)
 	ENDSIM = 1;
 #endif
-      if (mgl_mode==2)
-	ENDSIM=1;
       if (ENDSIM)
 	{
 	  outputSummary();
 	}
+      if (mgl_mode==2)
+	{
+	  ENDSIM=1;
+	}
+
 #if 0
       if (Oparams.curStep == Oparams.totStep)
 	{
@@ -6580,4 +6581,6 @@ void move(void)
       printf("[MSDcheck] steps %d time %.15G\n", Oparams.curStep, Oparams.time);
       ENDSIM=1;
     }
+  if (ENDSIM)
+    R2u();
 }

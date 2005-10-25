@@ -2003,7 +2003,7 @@ void usrInitAft(void)
   //exit(-1);
   StartRun(); 
   ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
-  if (OprogStatus.storerate > 0.0)
+  if (OprogStatus.storerate > 0.0 && mgl_mode!=2)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 #ifdef MD_GRAVITY
   if (OprogStatus.scalevel || OprogStatus.taptau > 0.0)
@@ -2107,6 +2107,7 @@ void writeAllCor(FILE* fs)
 
   if (mgl_mode)
     {
+      fprintf(fs, ".Vol: %f\n", L*L*L);
       for (i = 0; i < Oparams.parnum; i++)
 	{
 	  if (i < Oparams.parnumA)
