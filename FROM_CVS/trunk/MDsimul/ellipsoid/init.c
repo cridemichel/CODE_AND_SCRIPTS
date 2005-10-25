@@ -1810,6 +1810,10 @@ void usrInitAft(void)
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
       if (OprogStatus.storerate > 0.0)
 	OprogStatus.nextStoreTime = OprogStatus.storerate;
+#ifdef MD_STOREMGL
+      if (OprogStatus.endtime < 0.0)
+	OprogStatus.nextStoreTime = 0.0;
+#endif
       OprogStatus.nextDt += Oparams.Dt;
     }
   else
