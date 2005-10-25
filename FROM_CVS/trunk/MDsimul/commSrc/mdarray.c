@@ -733,8 +733,6 @@ void saveCorAscii(void)
       writeAsciiPars(bf, opar_ascii);
       fprintf(bf, sepStr);
     }
-  else
-    fprintf(bf, ".Vol: %f\n", L*L*L);
   writeAllCor(bf);  
   
   fclose(bf);
@@ -869,8 +867,6 @@ void saveBakAscii(char *fn)
       writeAsciiPars(bf, opar_ascii);
       fprintf(bf, sepStr);
     }
-  else
-    fprintf(bf, ".Vol: %f\n", L*L*L);
 
   /* Questa deve essere definita nei file dipendenti dalla simulazione */  
   writeAllCor(bf);
