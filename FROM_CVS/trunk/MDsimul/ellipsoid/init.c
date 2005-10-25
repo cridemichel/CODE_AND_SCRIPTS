@@ -1810,10 +1810,6 @@ void usrInitAft(void)
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
       if (OprogStatus.storerate > 0.0)
 	OprogStatus.nextStoreTime = OprogStatus.storerate;
-#ifdef MD_STOREMGL
-      if (OprogStatus.endtime < 0.0)
-	OprogStatus.nextStoreTime = 0.0;
-#endif
       OprogStatus.nextDt += Oparams.Dt;
     }
   else
@@ -2103,31 +2099,29 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 void writeAllCor(FILE* fs)
 {
   int i;
-#ifdef MD_STOREMGL
   int nn;
   double ratA[NA][3];
-  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
-  
-#else
+  const char tipodat2_mgl[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
   const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
-#endif
-#ifdef MD_STOREMGL
-  for (i = 0; i < Oparams.parnum; i++)
+
+  if (mgl_mode)
     {
-      if (i < Oparams.parnumA)
+      for (i = 0; i < Oparams.parnum; i++)
 	{
-	  fprintf(fs, tipodat2,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
-	  	  uyz[i], uzx[i], uzy[i], uzz[i], Oparams.a[0], Oparams.b[0], Oparams.c[0],
-	  	  "red");
-	}
-      else
-	{
-	  fprintf(fs, tipodat2, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
-	  	  uyz[i], uzx[i], uzy[i], uzz[i],
-	  	  Oparams.a[1], Oparams.b[1], Oparams.c[1],
-	  	  "green");
-	}
+	  if (i < Oparams.parnumA)
+	    {
+	      fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+		      uyz[i], uzx[i], uzy[i], uzz[i], Oparams.a[0], Oparams.b[0], Oparams.c[0],
+		      "red");
+	    }
+	  else
+	    {
+	      fprintf(fs, tipodat2_mgl, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+		      uyz[i], uzx[i], uzy[i], uzz[i],
+		      Oparams.a[1], Oparams.b[1], Oparams.c[1],
+		      "green");
+	    }
 #ifdef MD_PATCHY_HE
 	  rA[0] = rx[i];
 	  rA[1] = ry[i];
@@ -2137,29 +2131,32 @@ void writeAllCor(FILE* fs)
 	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
 		    ratA[nn][0], ratA[nn][1], ratA[nn][2], Oparams.sigmaSticky*0.5);
 #endif
+	}
     }
-#else
-  for (i = 0; i < Oparams.parnum; i++)
+  else
     {
-      fprintf(fs, tipodat2, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
-	      uyz[i], uzx[i], uzy[i], uzz[i]);
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  fprintf(fs, tipodat2, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+		  uyz[i], uzx[i], uzy[i], uzz[i]);
+	}
     }
-#endif
-#ifndef MD_STOREMGL 
-  for (i = 0; i < Oparams.parnum; i++)
+  if (mgl_mode==0)
     {
+      for (i = 0; i < Oparams.parnum; i++)
+	{
 #ifdef MD_ASYM_ITENS
-      fprintf(fs, tipodat, vx[i], vy[i], vz[i], Mx[i], My[i], Mz[i]);
+	  fprintf(fs, tipodat, vx[i], vy[i], vz[i], Mx[i], My[i], Mz[i]);
 #else
-      fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
+	  fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
+#endif
+	}
+#ifdef MD_GRAVITY
+      fprintf(fs, "%.15G %.15G\n", L, Lz);
+#else
+      fprintf(fs, "%.15G\n", L);
 #endif
     }
-#ifdef MD_GRAVITY
-  fprintf(fs, "%.15G %.15G\n", L, Lz);
-#else
-  fprintf(fs, "%.15G\n", L);
-#endif
-#endif
 }
 
 
