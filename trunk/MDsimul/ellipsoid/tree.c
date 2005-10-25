@@ -35,7 +35,6 @@ void ErrExit(char *str)
 }
 int check_node(char* str, int id, int idNew, int idUp)
 {
-  int idd;
   if (Oparams.curStep==1266)
     {
       printf("(id:%d,u:%dr:%d,l:%d) ",

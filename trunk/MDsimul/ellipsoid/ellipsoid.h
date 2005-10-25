@@ -16,6 +16,7 @@
 #endif
 #define XTERM   "/usr/X11R6/bin/nxterm"
 #undef UPDATE_SYSTEM
+void UpdateSystem(void);
 #define UPDATE_SYSTEM UpdateSystem();
 #ifdef MD_GRAVITY
 #undef ADJUST_LASTCOL 
