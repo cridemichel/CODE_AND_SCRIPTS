@@ -2002,7 +2002,8 @@ void usrInitAft(void)
 #endif
   //exit(-1);
   StartRun(); 
-  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (mgl_mode != 2)
+    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0 && mgl_mode!=2)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 #ifdef MD_GRAVITY
@@ -2022,21 +2023,14 @@ void usrInitAft(void)
      positions, so wwe must initialize them! */  
   if (newSim == 1)
     {
-      FILE *f;
       /* truncate file to zero lenght */
 #ifdef MD_GRAVITY
-      f = fopenMPI(MD_HD_MIS "T.dat", "w");
-      fclose(f);
+      FILE *f;
       f = fopenMPI(MD_HD_MIS "Vz2.dat", "w");
       fclose(f);
       f = fopenMPI(MD_HD_MIS "rcmz.dat", "w");
       fclose(f);
       f = fopenMPI(MD_HD_MIS "rho.dat", "w");
-      fclose(f);
-#else
-      f = fopenMPI(MD_HD_MIS "T.dat", "w");
-      fclose(f);
-      f = fopenMPI(MD_HD_MIS "D.dat", "w");
       fclose(f);
 #endif
       OprogStatus.DQxy = 0.0;
