@@ -941,6 +941,11 @@ void usrInitBef(void)
     OprogStatus.assumeOneBond = 0;
     OprogStatus.checkGrazing = 0;
     OprogStatus.maxbonds = 100;
+    OprogStatus.dofA = 6.0;
+    OprogStatus.dofB = 5.0;
+#else
+    OprogStatus.dofA = 5.0;
+    OprogStatus.dofB = 5.0;
 #endif
 #ifdef MD_GRAVITY
     Lz = 9.4;
@@ -1867,7 +1872,6 @@ void usrInitAft(void)
     };
 
   /* maxax è il diametro del centroide */
-
 #ifdef MD_PATCHY_HE
   build_atom_positions();
   distSPA = 0.0;
