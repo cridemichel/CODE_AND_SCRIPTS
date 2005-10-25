@@ -95,6 +95,10 @@ void Continue(void)
 	  mdPrintfSpcWr(ALL, "Take restore files from Tape to restart");
 	  exit(-1);
 	}
+      if (BAK==0)
+	strcpy(inifile_for_mgl,"COORD_TMP1.mgl");
+      else
+	strcpy(inifile_for_mgl,"COORD_TMP0.mgl");
     }
   else if (iniBakFormat == 2)
     {
@@ -121,6 +125,8 @@ void Continue(void)
 	}
       fclose(il);
       readBakAscii(bakList[my_rank]);
+      strcpy(inifile_for_mgl, bakList[my_rank]);
+
 #if 0     
       for (i = 0; i < Oparams.PTM; i++)
 	{ 
@@ -139,7 +145,7 @@ void Continue(void)
      sprintf(iniBakFile, "%s_R%d", firest, my_rank);
 #endif
      readBakAscii(iniBakFile);
-
+     strcpy(inifile_for_mgl, iniBakFile);
     }
 
   /* readBak reads the restore file loading structure and coordinates into
@@ -585,6 +591,7 @@ void scanFile(char* argom)
       if (!strcmp(str1, "inifile"))
 	{
 	  strcpy(OprogStatus.inifile, str2);
+	  strcpy(inifile_for_mgl, str2);
 	}
     }
 
@@ -937,165 +944,202 @@ void Newsimul (char *argom)
 		sizeof(struct xvaHead), &OxvaHead);
   popSteps(&OxvaHead.saveSteps);
 }
- 
+void print_usage(void)
+{
+  printf("Syntax: mdsimul <option>\n");
+  printf("Where <option> is one of the following:\n");
+  printf("-c : continue a previuosly interrupted simulation\n");
+  printf("-ca <ascii_store_file : continue using the ascii file <ascii_store_file>\n");
+  printf("-f <file> : begin a new simulation using <file>\n");
+  printf("            to get simulation parameters\n");
+  printf("-fa <file>:  same as -f but starting from an ascii file\n");
+  printf("-del : delete all simulation temporary files\n");
+  printf("-dst : delete only status files\n");
+  printf("-list: list all valid parameters in file specified with -f\n");
+  printf("-creread <param_file>: continue re-reading the parameter file <param_file>\n");
+  printf("-mgl <mgl_mode>: <mgl_mode> = 0 -> save normal ascii file\n");
+  printf("                              1 -> save ascii files in mgl format\n");
+  printf("                              2 -> save ascii file in mgl format and exit\n");
+  exit (-1);
+}
 /* ========================= >>> args <<< =================================*/
 int argsMd(int argc, char** argv)  
 {
-  int car;
-  int i;
+  int car, ret=-1, i, cc=1;
   /* You must specify -c or -f <filename> as argument */ 
   if ( argc == 1 ) 
-	{
-	  sprintf(TXTA[0], "What should I do? (No Arguments)\n");
-	  sprintf(TXTA[1], "Try 'mdsimul -help' for valid arguments\n");
-	  mdPrintfR0(STD, TXTA[0], TXTA[1]);
-	  exit(-1);
-	}
-
-  if ((!strcmp(argv[1], "-continue")) ||
-      (!strcmp (argv[1], "-c")))
     {
-      iniBakFormat = 0; /* 0 = binary */
-      //strcpy(paramFile, argv[2]); /* set paramFile string to the name */
-				     
-      return 0;          /* 0 = continue a previuosly interrupted simulation */
-    }
-  /* ADDED 04/05/2001 */
-  else if ((!strcmp(argv[1], "-continue_ascii_list")) ||
-	   (!strcmp (argv[1], "-cal")))
-    {
-      if (argc == 2)
-	{
-	  sprintf(TXT, "ERROR: -cal needs a file name.\n");
-	  mdPrintfR0(STD, TXT, NULL);
-	  exit(-1);
-	}
-      iniBakFormat = 2; /* 2 = lista di ascii file */
-      strcpy(iniBakListFile, argv[2]); /* set iniBakFile string to the name */ 
-      return 0;         /* 0 = continue a previuosly interrupted simulation */
-    }
-  else if ((!strcmp(argv[1], "-continue_ascii")) ||
-      (!strcmp (argv[1], "-ca")))
-    {
-      if (argc == 2)
-	{
-	  sprintf(TXT, "ERROR: -ca needs a ascii restart file name.\n");
-	  mdPrintfR0(STD, TXT);
-	  exit(-1);
-	}
-      iniBakFormat = 1; /* 1 = ascii */
-      strcpy(iniBakFile, argv[2]); /* set iniBakFile string to the name */ 
-      return 0;          /* 0 = continue a previuosly interrupted simulation */
-    }
-  else if (!strcmp(argv[1], "-fa"))
-    {
-      if (argc == 2)
-	{
-	  sprintf(TXT, "ERROR: -fa needs an ascii coordinate file name.\n");
-	  mdPrintfR0(STD, TXT);
-	  exit(-1);
-	}
-      iniCorFormat = 1; /* 1 = ascii */
-      strcpy(paramFile, argv[2]); /* set paramFile string to the name 
-				     of the parameter file */
-      return 1;                   /* 1 = new simulation */
-    }
-
-  else if (!strcmp(argv[1], "-f"))
-    {
-      if (argc == 2)
-	{
-	  sprintf(TXT, "ERROR: -f needs a coordinate file name.\n");
-	  mdPrintfR0(STD, TXT);
-	  exit(-1);
-	}
-      iniCorFormat = 0; /* 0 = binary */
-      strcpy(paramFile, argv[2]); /* set paramFile string to the name 
-				     of the parameter file */
-      return 1;                   /* 1 = new simulation */
-    }
-  else if (!strcmp(argv[1], "-del"))
-    {
-      sprintf(TXT, "Delete all temporary files(restore,status,check)? [n] ");
-      mdPrintfR0(STD, TXT);
-      car = MPIgetchar();
-      if (car != 'y') exit(-1);
-      
-      delDoubleHD(BAK_FILE_NAME);
-      if (OprogStatus.tapeTimes != 0) delDoubleTape(BAK_FILE_NAME);
-      delDoubleHD(STATUS_FILE_NAME);
-      delTmpHD(CF);
-      delTmpHD(CHK_LOG);
-      delTmpHD(MDS_LOG);
-      /*  measure files not touched */
-      exit(-1); 
-    }
-  else if (!strcmp(argv[1], "-dsf"))
-    {
-      sprintf(TXT, "Delete status files? [n] ");
-      mdPrintfR0(STD, TXT);
-      car = MPIgetchar();
-      if (car != 'y') exit(-1);
-      delDoubleHD(STATUS_FILE_NAME);
+      sprintf(TXTA[0], "What should I do? (No Arguments)\n");
+      sprintf(TXTA[1], "Try 'mdsimul -help' for valid arguments\n");
+      mdPrintfR0(STD, TXTA[0], TXTA[1]);
       exit(-1);
     }
-  /* ADDED 22/03/2001: Rilegge i parametri */	
-  else if (!strcmp(argv[1], "-creread"))
+  while (cc < argc)
     {
-      if (argc == 2)
+      if ((!strcmp(argv[cc], "-continue")) ||
+	  (!strcmp (argv[cc], "-c")))
 	{
-	  sprintf(TXT, "ERROR: -creread needs a paramter file name.\n");
-	  mdPrintfR0(STD, TXT, NULL);
+	  iniBakFormat = 0; /* 0 = binary */
+	  //strcpy(paramFile, argv[2]); /* set paramFile string to the name */
+
+	  ret=0;          /* 0 = continue a previuosly interrupted simulation */
+	}
+      /* ADDED 04/05/2001 */
+      else if ((!strcmp(argv[cc], "-continue_ascii_list")) ||
+	       (!strcmp (argv[cc], "-cal")))
+	{
+	  cc++;
+	  if (cc == argc)
+	    {
+	      sprintf(TXT, "ERROR: -cal needs a file name.\n");
+	      mdPrintfR0(STD, TXT, NULL);
+	      exit(-1);
+	    }
+	  iniBakFormat = 2; /* 2 = lista di ascii file */
+	  strcpy(iniBakListFile, argv[cc]); /* set iniBakFile string to the name */ 
+	  ret=0;         /* 0 = continue a previuosly interrupted simulation */
+	}
+      else if ((!strcmp(argv[cc], "-mgl_mode")) ||
+	       (!strcmp (argv[cc], "-mgl")))
+	{
+	  printf("qui\n");
+	  cc++;
+	  if (cc==argc)
+	    {
+	      printf("You should supply the mgl mode (0,1,2)\n");
+	      printf("0 = Store files saved not in mgl format [Default].\n");
+	      printf("1 = Store files saved in mgl format.\n");
+	      printf("2 = save configuration in mgl format and exit\n");
+	      exit(-1);
+	    }
+	  mgl_mode = atoi(argv[cc]);
+	} 
+      else if ((!strcmp(argv[cc], "-continue_ascii")) ||
+	       (!strcmp (argv[cc], "-ca")))
+	{
+	  cc++;
+	  if (argc == cc)
+	    {
+	      sprintf(TXT, "ERROR: -ca needs a ascii restart file name.\n");
+	      mdPrintfR0(STD, TXT);
+	      exit(-1);
+	    }
+	  iniBakFormat = 1; /* 1 = ascii */
+	  strcpy(iniBakFile, argv[cc]); /* set iniBakFile string to the name */ 
+	  strcpy(inifile_for_mgl, argv[cc]);
+	  ret=0;          /* 0 = continue a previuosly interrupted simulation */
+	}
+      else if (!strcmp(argv[cc], "-fa"))
+	{
+	  cc++;
+	  if (argc == cc)
+	    {
+	      sprintf(TXT, "ERROR: -fa needs an ascii coordinate file name.\n");
+	      mdPrintfR0(STD, TXT);
+	      exit(-1);
+	    }
+	  iniCorFormat = 1; /* 1 = ascii */
+	  strcpy(paramFile, argv[cc]); /* set paramFile string to the name 
+					  of the parameter file */
+	  ret=1;                   /* 1 = new simulation */
+	}
+      else if (!strcmp(argv[cc], "-f"))
+	{
+	  cc++;
+	  if (argc == cc)
+	    {
+	      sprintf(TXT, "ERROR: -f needs a coordinate file name.\n");
+	      mdPrintfR0(STD, TXT);
+	      exit(-1);
+	    }
+	  iniCorFormat = 0; /* 0 = binary */
+	  strcpy(paramFile, argv[cc]); /* set paramFile string to the name 
+					  of the parameter file */
+	  ret = 1;                   /* 1 = new simulation */
+	}
+      else if (!strcmp(argv[cc], "-del"))
+	{
+	  sprintf(TXT, "Delete all temporary files(restore,status,check)? [n] ");
+	  mdPrintfR0(STD, TXT);
+	  car = MPIgetchar();
+	  if (car != 'y') exit(-1);
+
+	  delDoubleHD(BAK_FILE_NAME);
+	  if (OprogStatus.tapeTimes != 0) delDoubleTape(BAK_FILE_NAME);
+	  delDoubleHD(STATUS_FILE_NAME);
+	  delTmpHD(CF);
+	  delTmpHD(CHK_LOG);
+	  delTmpHD(MDS_LOG);
+	  /*  measure files not touched */
+	  exit(-1); 
+	}
+      else if (!strcmp(argv[cc], "-dsf"))
+	{
+	  sprintf(TXT, "Delete status files? [n] ");
+	  mdPrintfR0(STD, TXT);
+	  car = MPIgetchar();
+	  if (car != 'y') exit(-1);
+	  delDoubleHD(STATUS_FILE_NAME);
 	  exit(-1);
 	}
-      strcpy(paramFile, argv[2]);
-      mdPrintfR0(STD, "Re-reading parameter file...");
-      rereadbool = 1;
-      return 0; /* -reread = -c rileggi il file di parametri */
-    }
-  else if (!strcmp(argv[1], "-help"))   
-    {
-      sprintf(TXTA[0], "Syntax: mdsimul <option>\n");
-      sprintf(TXTA[1], "Where <option> is one of the following:\n");
-      sprintf(TXTA[2], "-c : continue a previuosly interrupted simulation\n");
-      sprintf(TXTA[3], "-f <file> : begin a new simulation using <file>\n");
-      sprintf(TXTA[4], "            to get simulation parameters (see SIMUL_INFO file)\n");
-      sprintf(TXTA[5], "-del : delete all simulation temporary files\n");
-      sprintf(TXTA[6], "-dst : delete only status files\n");
-      sprintf(TXTA[7], "-list: list all valid parameters in file specified with -f\n");
-      mdPrintfR0(STD, TXTA[0], TXTA[1], TXTA[2], TXTA[3], TXTA[4], TXTA[5],
-		 TXTA[6], TXTA[7]);
-      exit (-1);
-    }
-  else if (!strcmp(argv[1], "-list")) /* list all valid parameters in params 
-					 file */
-    {
-      mdPrintfR0(STD, "Valid parameters in file specified with -f option are:\n");
-      for (i=0; OsinglePar[i].ptr != NULL; ++i)
+      /* ADDED 22/03/2001: Rilegge i parametri */	
+      else if (!strcmp(argv[cc], "-creread"))
 	{
-	  sprintf(TXT, "%-15s ",OsinglePar[i].parName);
-	  mdPrintfR0(STD, TXT);
-	  if (  ( (i+1) % 4 ) == 0  ) 
+	  cc++;
+	  if (argc == cc)
 	    {
-	      /* every 4 params go to newline */
+	      sprintf(TXT, "ERROR: -creread needs a paramter file name.\n");
+	      mdPrintfR0(STD, TXT, NULL);
+	      exit(-1);
+	    }
+	  strcpy(paramFile, argv[cc]);
+	  mdPrintfR0(STD, "Re-reading parameter file...");
+	  rereadbool = 1;
+	  ret=0; /* -reread = -c rileggi il file di parametri */
+	}
+      else if (!strcmp(argv[cc], "-help"))   
+	{
+	  print_usage();	  
+	}
+      else if (!strcmp(argv[cc], "-list")) /* list all valid parameters in params 
+					      file */
+	{
+	  mdPrintfR0(STD, "Valid parameters in file specified with -f option are:\n");
+	  for (i=0; OsinglePar[i].ptr != NULL; ++i)
+	    {
+	      sprintf(TXT, "%-15s ",OsinglePar[i].parName);
+	      mdPrintfR0(STD, TXT);
+	      if (  ( (i+1) % 4 ) == 0  ) 
+		{
+		  /* every 4 params go to newline */
+		  mdPrintfR0(STD, "\n");
+		}
+	    }  
+	  if (  ( (i+1) % 4 ) != 0  ) /* If there isn't a return print it */
+	    {
 	      mdPrintfR0(STD, "\n");
 	    }
-	}  
-      if (  ( (i+1) % 4 ) != 0  ) /* If there isn't a return print it */
-	{
-	  mdPrintfR0(STD, "\n");
+	  exit(-1);
 	}
+      else if (cc == argc)
+	print_usage();
+      else 
+	{
+	  sprintf(TXTA[0], "ERROR: Invalid argument!\n");
+	  sprintf(TXTA[1], "Try mdsimul -help for valid arguments\n");
+	  mdPrintfR0(STD, TXTA[0], TXTA[1]);
+	  exit (-1);
+	}
+      cc++;
+    }
+  if (ret==-1)
+    {
+      printf("ERRORE: invalid arguments!\n");
+      printf("Try mdsimul -help for valid arguments\n");
       exit(-1);
     }
-  else 
-    {
-      sprintf(TXTA[0], "ERROR: Invalid argument!\n");
-      sprintf(TXTA[1], "Try mdsimul -help for valid arguments\n");
-      mdPrintfR0(STD, TXTA[0], TXTA[1]);
-      exit (-1);
-    }
-    
   fflush(stdout);		/* flush output buffer (printf) */
+  return ret;
 }
 extern int my_rank;
 /* =========================== >> SuspendFather <<< =========================*/

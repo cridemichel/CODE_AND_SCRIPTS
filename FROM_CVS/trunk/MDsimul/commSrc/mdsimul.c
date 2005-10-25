@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.10 2005-10-13 21:06:47 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.11 2005-10-25 19:53:10 demichel Exp $     */
 #ifndef lint
-static char vcid[] = "$Id: mdsimul.c,v 1.10 2005-10-13 21:06:47 demichel Exp $";
+static char vcid[] = "$Id: mdsimul.c,v 1.11 2005-10-25 19:53:10 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -241,18 +241,27 @@ void commMD(void)
 #endif
   /* <----------------------------------------------------- SAVE ENDFILE */
 
-  if (OprogStatus.endFormat == 0 || OprogStatus.endFormat == 2)
+  if (mgl_mode==2)
     {
-      UPDATE_SYSTEM;
-      ADJUST_LASTCOL;
-      saveCoord(absTmpHD(OprogStatus.endfile)); 
-    }
-  if (OprogStatus.endFormat == 1 || OprogStatus.endFormat == 2)
-    {
-      printf("salvo le coordinate in formato ascii");
       UPDATE_SYSTEM;
       ADJUST_LASTCOL;
       saveCorAscii(); 
+    }
+  else
+    {
+      if (OprogStatus.endFormat == 0 || OprogStatus.endFormat == 2)
+	{
+	  UPDATE_SYSTEM;
+	  ADJUST_LASTCOL;
+	  saveCoord(absTmpHD(OprogStatus.endfile)); 
+	}
+      if (OprogStatus.endFormat == 1 || OprogStatus.endFormat == 2)
+	{
+	  printf("salvo le coordinate in formato ascii");
+	  UPDATE_SYSTEM;
+	  ADJUST_LASTCOL;
+	  saveCorAscii(); 
+	}
     }
   /* take coords from restore files on HD and write them to the
 	 coordinate file specified as argument */	

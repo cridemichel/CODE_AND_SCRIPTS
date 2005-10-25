@@ -116,12 +116,19 @@ int newSim; /* if 0 => new continuing */
 int NUMCALCS; /* Before calling a measuring function this variable is set
 		 to the number of calculations performed for that measure, 
 		 this is usefule for doind averaging */
+int mgl_mode=0; /* 0=salva nel formato non-mgl 1=salva i file ascii nel formato mgl 
+		   2=salva nel formato mgl ed esce appena salvato al tempo iniziale senza 
+		   avanzare la simulazione (serve per convertire Store o file Cor in file 
+		   mgl.*/
+char inifile_for_mgl[NAME_LENGTH];
 int mdseed=0;
 #else 
 extern int* i_;
 extern int newSim; /* if 1 => new simulation */
 extern int NUMCALCS;
 extern int mdseed;
+extern int mgl_mode;
+extern char inifile_for_mgl[NAME_LENGTH];
 #endif
 
 /* ========================== >>> SHARED LOOP <<< ==========================*/

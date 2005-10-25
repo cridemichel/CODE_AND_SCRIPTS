@@ -701,15 +701,25 @@ void saveCorAscii(void)
   FILE *bf;
   char fn[NAME_LENGTH];
   sync();
+  if (mgl_mode==2)
+    { 
+      if (!strcmp(inifile_for_mgl,"*"))
+	sprintf(fn ,"initconf.mgl");
+      else		
+	sprintf(fn ,"%s.mgl", inifile_for_mgl);
+    }
+  else
+    {
 #ifdef MDLLINT 
-  sprintf(fn ,"CorT%.6G_%s_%lld", 
-	  Oparams.T, 
-	  OprogStatus.nRun, (long long int)Oparams.curStep);
+      sprintf(fn ,"CorT%.6G_%s_%lld", 
+	      Oparams.T, 
+	      OprogStatus.nRun, (long long int)Oparams.curStep);
 #else
-   sprintf(fn ,"CorT%.6G_%s_%d", 
-	  Oparams.T, 
-	  OprogStatus.nRun, Oparams.curStep);
+      sprintf(fn ,"CorT%.6G_%s_%d", 
+	      Oparams.T, 
+	      OprogStatus.nRun, Oparams.curStep);
 #endif
+    }
   if ( (bf = fopenMPI(absTmpAsciiHD(fn), "w")) == NULL )
     {
       sprintf(msgStrA, "Problem opening for writing cor file %s ", fn);
@@ -718,9 +728,13 @@ void saveCorAscii(void)
 	    NULL);
     }
 
-  writeAsciiPars(bf, opar_ascii);
-
-  fprintf(bf, sepStr);
+  if (mgl_mode==0)
+    {
+      writeAsciiPars(bf, opar_ascii);
+      fprintf(bf, sepStr);
+    }
+  else
+    fprintf(bf, ".Vol: %f\n", L*L*L);
   writeAllCor(bf);  
   
   fclose(bf);
@@ -810,26 +824,34 @@ void saveBakAscii(char *fn)
      Before saving the restore do a sync to update all the measure files!!!*/
   sync();
   
-
-  if (fn == NULL)
+  if (mgl_mode==2)
     {
-    
-#ifdef MDLLINT
-      sprintf(fileop2 ,"CnfT%.6G_%s_%lld", 
-	      Oparams.T, 
-	      OprogStatus.nRun, Oparams.curStep);
-#else
-      sprintf(fileop2 ,"CnfT%.6G_%s_%d", 
-	      Oparams.T, 
-	      OprogStatus.nRun, Oparams.curStep);
-#endif
-      strcpy(fileop, absTmpAsciiHD(fileop2));
+      if (!strcmp(inifile_for_mgl,"*"))
+	sprintf(fileop2 ,"initconf.mgl");
+      else		
+	sprintf(fileop2 ,"%s.mgl", inifile_for_mgl);
     }
   else
     {
-      strcpy(fileop, fn);
+      if (fn == NULL)
+	{
+
+#ifdef MDLLINT
+	  sprintf(fileop2 ,"CnfT%.6G_%s_%lld", 
+		  Oparams.T, 
+		  OprogStatus.nRun, Oparams.curStep);
+#else
+	  sprintf(fileop2 ,"CnfT%.6G_%s_%d", 
+		  Oparams.T, 
+		  OprogStatus.nRun, Oparams.curStep);
+#endif
+	  strcpy(fileop, absTmpAsciiHD(fileop2));
+	}
+      else
+	{
+	  strcpy(fileop, fn);
+	}
     }
-  
   if ( (bf = fopenMPI(fileop, "w")) == NULL)
     {
       mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
@@ -840,13 +862,15 @@ void saveBakAscii(char *fn)
     fprintf(bf, "%d %d %.5f %.5f\n", Oparams.curStep, Oparams.parnum, 
     Vol, Oparams.T);*/
 
-  
-  writeAsciiPars(bf, opro_ascii);
-  fprintf(bf, sepStr);
-  writeAsciiPars(bf, opar_ascii);
-  fprintf(bf, sepStr);
-
-  
+  if (mgl_mode == 0)
+    {
+      writeAsciiPars(bf, opro_ascii);
+      fprintf(bf, sepStr);
+      writeAsciiPars(bf, opar_ascii);
+      fprintf(bf, sepStr);
+    }
+  else
+    fprintf(bf, ".Vol: %f\n", L*L*L);
 
   /* Questa deve essere definita nei file dipendenti dalla simulazione */  
   writeAllCor(bf);
