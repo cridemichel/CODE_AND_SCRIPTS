@@ -971,8 +971,10 @@ void scalevels(double temp, double K, double Vz)
 void scalevels(double temp, double K)
 {
   int i; 
-  double sf;
-  sf = sqrt( ( (5.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
+  double sf, dof;
+  dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
+    OprogStatus.dofB*((double) (Oparams.parnum-Oparams.parnumA));
+  sf = sqrt( ( (dof - 3.0) * temp ) / (2.0*K) );
   for (i = 0; i < Oparams.parnumA; i++)
     {
       vx[i] *= sf;

@@ -405,6 +405,8 @@ struct progStatus
   double epsdSPNL;
   double epsdFastSPNL;
 #endif
+  int dofA;
+  int dofB;
   int guessDistOpt;
   int forceguess;
   double targetPhi;
@@ -993,6 +995,8 @@ struct singlePar OsinglePar[] = {
   {"temperat",   &Oparams.T,                CT},
   {"tol",        &Oparams.tol,              CT},
   {"seed",       &mdseed,                   INT},
+  {"dofA",       &OprogStatus.dofA,         INT},
+  {"dofB",       &OprogStatus.dofB,         INT},
   /* parametri per scegliere il tipo di salvataggio del file xva
      (lineare o semilog) */
   {"xvaSaveMode",&OprogStatus.xvaSaveMode,  INT},

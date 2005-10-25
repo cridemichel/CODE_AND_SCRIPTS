@@ -8,7 +8,6 @@
 */
 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
-
 #ifdef MPI
 extern int my_rank;
 #endif
@@ -411,6 +410,7 @@ void calcrotMSD(void)
 /* ============================ >>> temperat <<< =========================== */
 void temperat(void)
 {
+  double dof;
   /* DESCRIPTION:
      This the calculation of the instantaneous temperature */
 #if 0
@@ -426,11 +426,12 @@ void temperat(void)
   K *= 0.5;
 #endif
   calc_energy(NULL);
+  dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
+    OprogStatus.dofB*((double) (Oparams.parnum-Oparams.parnumA));
   if (OprogStatus.brownian==1)
-    temp = 2.0 * K / (5.0 * Oparams.parnum);
+    temp = 2.0 * K / dof;
   else
-    temp = 2.0 * K / (5.0 * Oparams.parnum - 3.0);
-
+    temp = 2.0 * K / (dof - 3.0);
   if (OprogStatus.avngTemp == 1)
     {
       OprogStatus.sumTemp += temp;

@@ -186,11 +186,26 @@ void build_atom_positions(void)
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
 extern void calc_energy(char *msg);
 extern void print_matrix(double **M, int n);
-int one_is_bonded(int i, int j)
+int getnumbonds(int np, int at)
 {
-  /* per ora è disbilitato */ù
-  return 0;
-  if (numbonds[i] > 0 || numbonds[j] > 0)
+  int kk, jj, jj2, aa, bb, nb;
+  nb=0;
+  for (kk = 0; kk < numbonds[np]; kk++)
+    {
+      jj = bonds[np][kk] / (NA*NA);
+      jj2 = bonds[np][kk] % (NA*NA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      if (aa == at)
+	nb++;
+    }
+  return nb;
+}
+int one_is_bonded(int i, int a, int j, int b)
+{
+  /* per ora è disbilitato */
+  //return 0;
+  if (getnumbonds(i,a) > 0 || getnumbonds(j,b) > 0)
     return 1;
   else
     return 0;
@@ -439,7 +454,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_OUTIN_BARRIER:
-      if (one_is_bonded(i,j) || (Oparams.bhin >= 0.0 && Sqr(vc) < 2.0*Oparams.bhin/mredl))
+      if (one_is_bonded(i, ata, j, atb) || (Oparams.bhin >= 0.0 && Sqr(vc) < 2.0*Oparams.bhin/mredl))
 	{
 	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
 			    Oparams.time, vc,  bt,
