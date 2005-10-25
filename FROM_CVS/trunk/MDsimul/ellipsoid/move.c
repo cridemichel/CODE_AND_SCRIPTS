@@ -4621,7 +4621,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  printf("i=%d j=%d BOH d=%.15G\n", i, j, d);
 	  exit(-1);
 	}
-#if 1
+#if 0
       its = 0;	
       while (d < 0)
 	{
