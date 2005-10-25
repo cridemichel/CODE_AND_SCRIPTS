@@ -723,6 +723,7 @@ void Newsimul (char *argom)
   int car;
   int i,ii;                            /* counters */
   
+  output = stdout;
   newSim = 1;
 #if !defined(MPI)
   getseed(argom);
@@ -953,7 +954,7 @@ void print_usage(void)
   printf("            to get simulation parameters\n");
   printf("-fa <file>:  same as -f but starting from an ascii file\n");
   printf("-del : delete all simulation temporary files\n");
-  printf("-dst : delete only status files\n");
+  printf("-dsf : delete only status files\n");
   printf("-list: list all valid parameters in file specified with -f\n");
   printf("-creread <param_file>: continue re-reading the parameter file <param_file>\n");
   printf("-mgl <mgl_mode>: <mgl_mode> = 0 -> save normal ascii file\n");
