@@ -327,7 +327,6 @@ void reread(char* argom)
   
   char str1[255],str2[255];            /* used to scan parameters file */
   FILE* pfs;
-  int cfd;
   int parNumYN = 0;
 #if 0  
   initYN = 0;
@@ -971,7 +970,7 @@ int argsMd(int argc, char** argv)
     {
       sprintf(TXTA[0], "What should I do? (No Arguments)\n");
       sprintf(TXTA[1], "Try 'mdsimul -help' for valid arguments\n");
-      mdPrintfR0(STD, TXTA[0], TXTA[1]);
+      mdPrintfR0(STD, TXTA[0], TXTA[1], NULL);
       exit(-1);
     }
   while (cc < argc)
@@ -1002,7 +1001,6 @@ int argsMd(int argc, char** argv)
       else if ((!strcmp(argv[cc], "-mgl_mode")) ||
 	       (!strcmp (argv[cc], "-mgl")))
 	{
-	  printf("qui\n");
 	  cc++;
 	  if (cc==argc)
 	    {
@@ -1021,7 +1019,7 @@ int argsMd(int argc, char** argv)
 	  if (argc == cc)
 	    {
 	      sprintf(TXT, "ERROR: -ca needs a ascii restart file name.\n");
-	      mdPrintfR0(STD, TXT);
+	      mdPrintfR0(STD, TXT, NULL);
 	      exit(-1);
 	    }
 	  iniBakFormat = 1; /* 1 = ascii */
@@ -1035,7 +1033,7 @@ int argsMd(int argc, char** argv)
 	  if (argc == cc)
 	    {
 	      sprintf(TXT, "ERROR: -fa needs an ascii coordinate file name.\n");
-	      mdPrintfR0(STD, TXT);
+	      mdPrintfR0(STD, TXT, NULL);
 	      exit(-1);
 	    }
 	  iniCorFormat = 1; /* 1 = ascii */
@@ -1049,7 +1047,7 @@ int argsMd(int argc, char** argv)
 	  if (argc == cc)
 	    {
 	      sprintf(TXT, "ERROR: -f needs a coordinate file name.\n");
-	      mdPrintfR0(STD, TXT);
+	      mdPrintfR0(STD, TXT, NULL);
 	      exit(-1);
 	    }
 	  iniCorFormat = 0; /* 0 = binary */
@@ -1060,7 +1058,7 @@ int argsMd(int argc, char** argv)
       else if (!strcmp(argv[cc], "-del"))
 	{
 	  sprintf(TXT, "Delete all temporary files(restore,status,check)? [n] ");
-	  mdPrintfR0(STD, TXT);
+	  mdPrintfR0(STD, TXT, NULL);
 	  car = MPIgetchar();
 	  if (car != 'y') exit(-1);
 
@@ -1076,7 +1074,7 @@ int argsMd(int argc, char** argv)
       else if (!strcmp(argv[cc], "-dsf"))
 	{
 	  sprintf(TXT, "Delete status files? [n] ");
-	  mdPrintfR0(STD, TXT);
+	  mdPrintfR0(STD, TXT, NULL);
 	  car = MPIgetchar();
 	  if (car != 'y') exit(-1);
 	  delDoubleHD(STATUS_FILE_NAME);
@@ -1093,7 +1091,7 @@ int argsMd(int argc, char** argv)
 	      exit(-1);
 	    }
 	  strcpy(paramFile, argv[cc]);
-	  mdPrintfR0(STD, "Re-reading parameter file...");
+	  mdPrintfR0(STD, "Re-reading parameter file...", NULL);
 	  rereadbool = 1;
 	  ret=0; /* -reread = -c rileggi il file di parametri */
 	}
@@ -1104,20 +1102,20 @@ int argsMd(int argc, char** argv)
       else if (!strcmp(argv[cc], "-list")) /* list all valid parameters in params 
 					      file */
 	{
-	  mdPrintfR0(STD, "Valid parameters in file specified with -f option are:\n");
+	  mdPrintfR0(STD, "Valid parameters in file specified with -f option are:\n", NULL);
 	  for (i=0; OsinglePar[i].ptr != NULL; ++i)
 	    {
 	      sprintf(TXT, "%-15s ",OsinglePar[i].parName);
-	      mdPrintfR0(STD, TXT);
+	      mdPrintfR0(STD, TXT, NULL);
 	      if (  ( (i+1) % 4 ) == 0  ) 
 		{
 		  /* every 4 params go to newline */
-		  mdPrintfR0(STD, "\n");
+		  mdPrintfR0(STD, "\n", NULL);
 		}
 	    }  
 	  if (  ( (i+1) % 4 ) != 0  ) /* If there isn't a return print it */
 	    {
-	      mdPrintfR0(STD, "\n");
+	      mdPrintfR0(STD, "\n", NULL);
 	    }
 	  exit(-1);
 	}
@@ -1127,7 +1125,7 @@ int argsMd(int argc, char** argv)
 	{
 	  sprintf(TXTA[0], "ERROR: Invalid argument!\n");
 	  sprintf(TXTA[1], "Try mdsimul -help for valid arguments\n");
-	  mdPrintfR0(STD, TXTA[0], TXTA[1]);
+	  mdPrintfR0(STD, TXTA[0], TXTA[1], NULL);
 	  exit (-1);
 	}
       cc++;
@@ -1196,7 +1194,7 @@ void initBefore(void)
      Initialize all program structure, that is :
      OsimStat, Oparams, OprogStatus.
       === >>> This procedure is called only by newsimul() <<< === */
-  int jj, i;
+  int jj;
   char tmpstr[NAME_LENGTH];
   /* =============== >>> Initialize Oparams structure <<< ===================
   */
