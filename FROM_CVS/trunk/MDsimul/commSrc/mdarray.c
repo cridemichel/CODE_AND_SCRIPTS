@@ -782,6 +782,7 @@ void readBakAscii(char* fn)
       mdMsg(ALL, NOSYS, "ReadBakAscii", "ERROR", NULL,
 	    msgStrA,
 	    NULL);
+      exit(-1);
     }
 
   readAsciiPars(fs, opro_ascii);
