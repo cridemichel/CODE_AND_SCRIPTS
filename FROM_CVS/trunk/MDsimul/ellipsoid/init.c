@@ -1021,6 +1021,9 @@ void usrInitBef(void)
     OprogStatus.epsdGDO = -1.0;
     OprogStatus.h = 1E-10;
 #ifdef MD_PATCHY_HE
+    Oparams.nmax = 1;
+    Oparams.Dr = 0.0;
+    Oparams.theta = 0.54;
     OprogStatus.epsdSP = -1.0;
     OprogStatus.epsdFastSP = -1.0;
     OprogStatus.epsdSPNL = -1.0;
