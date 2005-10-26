@@ -2658,7 +2658,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
   double h, d, dold, t2arr[6], t, dists[6], distsOld[6], 
 	 vecg[5], vecgroot[6][8], vecgd[6][8], vecgdold[6][8], factori; 
 #ifndef MD_BASIC_DT
-  double deltth, normddot, distsOld2[6], vecgdold2[6][8], dold2, deldist;
+  double normddot, distsOld2[6], vecgdold2[6][8], dold2, deldist;
 #endif
   double maxddot, delt, troot, tini, maxddoti[6];
   int firstev;

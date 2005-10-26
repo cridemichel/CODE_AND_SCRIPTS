@@ -16,6 +16,7 @@
 #endif
 #define XTERM   "/usr/X11R6/bin/nxterm"
 #undef UPDATE_SYSTEM
+void UpdateSystem(void);
 #define UPDATE_SYSTEM UpdateSystem();
 #ifdef MD_GRAVITY
 #undef ADJUST_LASTCOL 
@@ -405,6 +406,8 @@ struct progStatus
   double epsdSPNL;
   double epsdFastSPNL;
 #endif
+  int dofA;
+  int dofB;
   int guessDistOpt;
   int forceguess;
   double targetPhi;
@@ -993,6 +996,8 @@ struct singlePar OsinglePar[] = {
   {"temperat",   &Oparams.T,                CT},
   {"tol",        &Oparams.tol,              CT},
   {"seed",       &mdseed,                   INT},
+  {"dofA",       &OprogStatus.dofA,         INT},
+  {"dofB",       &OprogStatus.dofB,         INT},
   /* parametri per scegliere il tipo di salvataggio del file xva
      (lineare o semilog) */
   {"xvaSaveMode",&OprogStatus.xvaSaveMode,  INT},

@@ -971,8 +971,10 @@ void scalevels(double temp, double K, double Vz)
 void scalevels(double temp, double K)
 {
   int i; 
-  double sf;
-  sf = sqrt( ( (5.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
+  double sf, dof;
+  dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
+    OprogStatus.dofB*((double) (Oparams.parnum-Oparams.parnumA));
+  sf = sqrt( ( (dof - 3.0) * temp ) / (2.0*K) );
   for (i = 0; i < Oparams.parnumA; i++)
     {
       vx[i] *= sf;
@@ -4619,7 +4621,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  printf("i=%d j=%d BOH d=%.15G\n", i, j, d);
 	  exit(-1);
 	}
-#if 1
+#if 0
       its = 0;	
       while (d < 0)
 	{
@@ -5984,13 +5986,9 @@ void timeshift_calendar(void)
 void move(void)
 {
   char fileop[1024], fileop2[1024]; 
-#ifndef MD_STOREMGL
   char fileop3[1024];
-#endif
   FILE *bf;
-#ifndef MD_STOREMGL
   const char sepStr[] = "@@@\n";
-#endif
   int i, innerstep=0;
 #ifdef MD_GRAVITY
   int ii;
@@ -6100,7 +6098,7 @@ void move(void)
       else if (evIdB == ATOM_LIMIT + 8)
 	{
 	  sprintf(fileop2 ,"Store-%d-%d", 
-		  OprogStatus.KK, OprogStatus.JJ);
+      		  OprogStatus.KK, OprogStatus.JJ);
 	  /* store conf */
 	  strcpy(fileop, absTmpAsciiHD(fileop2));
 	  if ( (bf = fopenMPI(fileop, "w")) == NULL)
@@ -6118,29 +6116,28 @@ void move(void)
 	      OprogStatus.lastcolltime[i] = Oparams.time;
 	    }
 	  R2u();
-#ifndef MD_STOREMGL
-	  writeAsciiPars(bf, opro_ascii);
-	  fprintf(bf, sepStr);
-	  writeAsciiPars(bf, opar_ascii);
-	  fprintf(bf, sepStr);
-#endif
+	  if (mgl_mode==0)
+	    {
+	      writeAsciiPars(bf, opro_ascii);
+	      fprintf(bf, sepStr);
+	      writeAsciiPars(bf, opar_ascii);
+	      fprintf(bf, sepStr);
+	    }	      
 	  MD_DEBUG(printf("[Store event]: %.15G JJ=%d KK=%d\n", Oparams.time, OprogStatus.JJ, OprogStatus.KK));
-#ifdef MD_STOREMGL
-	  fprintf(bf, ".Vol: %f\n", L*L*L);
 	  //fprintf(bf, ".semiAxes: %f %f %f, %f %f %f\n",
-	//	  Oparams.a[0], Oparams.b[0], Oparams.c[0],
-		//  Oparams.a[1], Oparams.b[1], Oparams.c[1]);
-#endif
+	  //	  Oparams.a[0], Oparams.b[0], Oparams.c[0],
+  	  //  Oparams.a[1], Oparams.b[1], Oparams.c[1]);
 	  writeAllCor(bf);
 	  fclose(bf);
-#ifndef MD_STOREMGL
+	  if (mgl_mode==0)
+	    {
 #ifdef MPI
-          sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+	      sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
 #else 
-          sprintf(fileop3, "/bin/gzip -f %s", fileop);
+	      sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
-	  system(fileop3);
-#endif
+    	      system(fileop3);
+	    }
 	  OprogStatus.JJ++;
 	  if (OprogStatus.JJ == OprogStatus.NN)
 	    {
@@ -6539,6 +6536,11 @@ void move(void)
 	{
 	  outputSummary();
 	}
+      if (mgl_mode==2)
+	{
+	  ENDSIM=1;
+	}
+
 #if 0
       if (Oparams.curStep == Oparams.totStep)
 	{
@@ -6579,4 +6581,6 @@ void move(void)
       printf("[MSDcheck] steps %d time %.15G\n", Oparams.curStep, Oparams.time);
       ENDSIM=1;
     }
+  if (ENDSIM)
+    R2u();
 }
