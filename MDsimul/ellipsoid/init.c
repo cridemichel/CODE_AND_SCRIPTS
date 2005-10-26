@@ -1923,23 +1923,26 @@ void usrInitAft(void)
     }
   /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
-  if (OprogStatus.useNNL)
+  if (newSim)
     {
-      /* in questo modo rNebrShell è la "buccia" rispetto al minimo 
-       * parallelepipedo che include l'ellissoide più gli sticky spots */
-      if (OprogStatus.targetPhi <= 0.0)
-	OprogStatus.rNebrShell += calc_shell();
-      printf("[INFO] I've adjusted rNebrShell to %.15G\n", OprogStatus.rNebrShell);	  
-      if (Oparams.rcut <= 0.0)
+      if (OprogStatus.useNNL)
 	{
-	  Oparams.rcut = calc_nnl_rcut();
-	  printf("[INFO] I've chosen rcut= %.15G\n", Oparams.rcut);
+	  /* in questo modo rNebrShell è la "buccia" rispetto al minimo 
+	   * parallelepipedo che include l'ellissoide più gli sticky spots */
+	  if (OprogStatus.targetPhi <= 0.0)
+	    OprogStatus.rNebrShell += calc_shell();
+	  printf("[INFO] I've adjusted rNebrShell to %.15G\n", OprogStatus.rNebrShell);	  
+	  if (Oparams.rcut <= 0.0)
+	    {
+	      Oparams.rcut = calc_nnl_rcut();
+	      printf("[INFO] I've chosen rcut= %.15G\n", Oparams.rcut);
+	    }
 	}
-    }
-  else
-    {
-      if (Oparams.rcut <= 0.0)
-	Oparams.rcut = MAXAX*1.01;
+      else
+	{
+	  if (Oparams.rcut <= 0.0)
+	    Oparams.rcut = MAXAX*1.01;
+	}
     }
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
   cellsx = L / Oparams.rcut;
