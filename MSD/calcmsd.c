@@ -5,7 +5,7 @@
 #define MAXPTS 10000
 #define MAXFILES 5000
 char fname[MAXFILES][256]; 
-double L, time, ti[MAXPTS], rotMSD[MAXPTS], MSD[MAXPTS], cc[MAXPTS];
+double L, time, ti[MAXPTS], rotMSD[MAXPTS], MSD[MAXPTS], rotMSDA[MAXPTS], MSDA[MAXPTS], rotMSDB[MAXPTS], MSDB[MAXPTS], cc[MAXPTS];
 double DR[MAXPTS][3], DR0[MAXPTS][3];
 double *r0[3], *w0[3], *rt[3], *wt[3], *rtold[3];
 char parname[128], parval[256000], line[256000];
@@ -89,10 +89,10 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 }
 int main(int argc, char **argv)
 {
-  FILE *f, *f2, *f3;
+  FILE *f, *f2, *f3, *fA, *fB, *f2A, *f2B;
   double *adjDr[3], Dr, Dw, A1, A2, A3, dr;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int NP, NN, fine, JJ, nat;
+  int NP, NPA=-1, NN, fine, JJ, nat;
   double refTime;
   if (argc <= 1)
     {
@@ -105,6 +105,10 @@ int main(int argc, char **argv)
       ti[ii] = -1.0;
       rotMSD[ii] = 0.0;
       MSD[ii] = 0.0;
+      rotMSDA[ii] = 0.0;
+      MSDA[ii] = 0.0;
+      rotMSDB[ii] = 0.0;
+      MSDB[ii] = 0.0;
       cc[ii]=0.0;
     }
   f2 = fopen(argv[1], "r");
@@ -137,10 +141,14 @@ int main(int argc, char **argv)
       sscanf(line, "%[^:]:%[^\n]\n", parname, parval); 
       if (!strcmp(parname,"parnum"))
 	NP = atoi(parval);
+      if (!strcmp(parname,"parnumA"))
+	NPA = atoi(parval);
       if (!strcmp(parname,"NN"))
 	NN = atoi(parval);
     }
   fclose(f);
+  if (NPA == -1)
+    NPA = NP;
   if (argc == 3)
     points=atoi(argv[2]);
   else
@@ -215,8 +223,22 @@ int main(int argc, char **argv)
 			    adjDr[a][i] += L;
 		      }
 		    //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
+		    
 		    MSD[nr2-nr1] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 		    rotMSD[nr2-nr1] += Dw*Dw;
+		    if (NP != NPA)
+		      {
+			if (i < NP)
+			  {
+			    MSDA[nr2-nr1] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+			    rotMSDA[nr2-nr1] += Dw*Dw;
+			  }
+			else
+			  {
+		    	    MSDB[nr2-nr1] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+	    		    rotMSDB[nr2-nr1] += Dw*Dw;
+			  }
+		      }
 		  }
 	      cc[nr2-nr1] += 1.0;
 	      //printf("cc[%d]:%f\n", nr2-nr1, cc[nr2-nr1]);
@@ -225,7 +247,13 @@ int main(int argc, char **argv)
     }
   f = fopen("MSDcnf.dat", "w+");
   f2 = fopen("rotMSDcnf.dat", "w+");
-
+  if (NP != NPA)
+    {
+      fA = fopen("MSDAcnf.dat", "w+");
+      f2A = fopen("rotMSDAcnf.dat", "w+");
+      fB = fopen("MSDBcnf.dat", "w+");
+      f2B = fopen("rotMSDBcnf.dat", "w+");
+    }
   for (ii=1; ii < points; ii++)
     {
       //printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
@@ -234,9 +262,22 @@ int main(int argc, char **argv)
 	  fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], MSD[ii]/cc[ii]/((double)NP), cc[ii]);
 	  fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSD[ii]/cc[ii]/((double)NP), cc[ii]);
 	}
+      if (NP != NPA)
+	{
+	  fprintf(fA, "%.15G %.15G %f\n", ti[ii]-ti[0], MSDA[ii]/cc[ii]/((double)NPA), cc[ii]);
+	  fprintf(f2A, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSD[ii]/cc[ii]/((double)NPA), cc[ii]);
+	  fprintf(fB, "%.15G %.15G %f\n", ti[ii]-ti[0], MSDB[ii]/cc[ii]/((double)NP-NPA), cc[ii]);
+	  fprintf(f2B, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSDB[ii]/cc[ii]/((double)NP-NPA), cc[ii]);
+	}
     }
   fclose(f);
   fclose(f2);
-	
+  if (NP != NPA)
+    {
+      fclose(fA);
+      fclose(f2A);
+      fclose(fB);
+      fclose(f2B);
+    }
   return 0;
 }
