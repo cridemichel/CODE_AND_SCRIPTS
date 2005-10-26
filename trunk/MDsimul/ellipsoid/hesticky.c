@@ -145,9 +145,8 @@ void build_atom_positions(void)
 
   spApos[0][1] = Oparams.theta;
   spApos[1][1] = Oparams.theta;
-  
-  spApos[2][1] = 2.0*pi - Oparams.theta;
-  spApos[3][1] = 2.0*pi - Oparams.theta;
+  spApos[2][1] = pi - Oparams.theta;
+  spApos[3][1] = pi - Oparams.theta;
   spApos[0][0] = Oparams.Dr;
   spApos[1][0] = Oparams.Dr;
   spApos[2][0] = Oparams.Dr;
