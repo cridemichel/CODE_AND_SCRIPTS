@@ -443,7 +443,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	{
 	  MD_DEBUG31(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
 		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
-	  factor = -vc + sqrt(Sqr(vc) - 2.0*(Oparams.bheight+Oparams.bhout)/mredl);
+	  factor = -vc + sqrt(Sqr(vc) - 2.0*Oparams.bheight/mredl);
 	  remove_bond(i, j, ata, atb);
 	  remove_bond(j, i, atb, ata);
 	}
