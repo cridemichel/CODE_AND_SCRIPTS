@@ -725,6 +725,8 @@ struct pascii opro_ascii[] =
   {"JJ",            &OS(JJ),                        1, 1,     "%d"},
   {"tmpPath",      OS(tmpPath),                     1,  NAME_LENGTH, "%s"},
   {"misPath",      OS(misPath),                     1,  NAME_LENGTH, "%s"},
+  {"dofA",         &OS(dofA),                        1,  1, "%d"},
+  {"dofB",         &OS(dofB),                        1,  1, "%d"},
   {"base",         &OS(base),                       1,  1, "%.6G"},
 #ifdef MD_BILOG
   {"basew",        &OS(basew),                      1,  1, "%.6G"},
