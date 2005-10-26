@@ -48,7 +48,7 @@ extern double calc_norm(double *vec);
 int calcdist_retcheck;
 extern double rA[3], rB[3];
 extern double gradplane_all[6][3], rBall[6][3];
-int polinterr, polinterrRyck;
+extern int polinterr, polinterrRyck;
 /* *** change here if you change the number sticky spots *** */
 int mapbondsaAB[MD_PBONDS]={1,1,2,2,3,3,4,4,5,5};
 int mapbondsbAB[MD_PBONDS]={1,2,1,2,1,2,1,2,1,2};
@@ -88,8 +88,8 @@ extern void ScheduleEvent (int idA, int idB, double tEvent);
 extern void NextEvent (void);
 void distanza(int ia, int ib);
 double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[3]);
-double pi, invL, L2, Vz;   
-double W, K, T1xx, T1yy, T1zz,
+extern double pi, invL, L2, Vz;   
+extern double W, K, T1xx, T1yy, T1zz,
        T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz, 
        Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB, DQxxOld, 
        DQyyOld, DQzzOld, DQxyOld, DQyzOld, DQzxOld, DQxxOldKin, 
@@ -100,12 +100,12 @@ double W, K, T1xx, T1yy, T1zz,
 //extern double DrSq = 0.0; 
 //extern const double timbig = 1E12;
 /* used by linked list routines */
-double *lastcol;
-double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
-int  **tree, cellRange[2*NDIM], initUcellx, initUcelly, initUcellz;
-int *inCell[3], *cellList, cellsx, cellsy, cellsz;
-int evIdA, evIdB, parnumB, parnumA, evIdD, evIdE;
-int evIdC;
+extern double *lastcol;
+extern double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
+extern int  **tree, cellRange[2*NDIM], initUcellx, initUcelly, initUcellz;
+extern int *inCell[3], *cellList, cellsx, cellsy, cellsz;
+extern int evIdA, evIdB, parnumB, parnumA, evIdD, evIdE;
+extern int evIdC;
 extern int *bondscache, *numbonds, **bonds;
 void newtDist(double x[], int n, int *check, 
 	      void (*vecfunc)(int, double [], double [], int, int, double []),
@@ -142,6 +142,19 @@ void build_atom_positions(void)
   * riferite al riferimento del corpo rigido. */  
   int kk, k1, aa;
   double x,y,z, grad[3], ng, dd[3];
+
+  spApos[0][1] = Oparams.theta;
+  spApos[1][1] = Oparams.theta;
+  
+  spApos[2][1] = 2.0*pi - Oparams.theta;
+  spApos[3][1] = 2.0*pi - Oparams.theta;
+  spApos[0][0] = Oparams.Dr;
+  spApos[1][0] = Oparams.Dr;
+  spApos[2][0] = Oparams.Dr;
+  spApos[3][0] = Oparams.Dr;
+  spApos[4][0] = Oparams.Dr;
+  spBpos[0][0] = Oparams.Dr;
+  spBpos[1][0] = Oparams.Dr;
   for (k1 = 0; k1 < MD_STSPOTS_A; k1++)
     {
       x = Oparams.a[0]*cos(spApos[k1][2])*sin(spApos[k1][1]);
@@ -205,7 +218,7 @@ int one_is_bonded(int i, int a, int j, int b)
 {
   /* per ora è disbilitato */
   //return 0;
-  if (getnumbonds(i,a) > 0 || getnumbonds(j,b) > 0)
+  if (getnumbonds(i,a) >= Oparams.nmax || getnumbonds(j,b) >= Oparams.nmax)
     return 1;
   else
     return 0;
