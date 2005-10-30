@@ -72,7 +72,7 @@ echo "RCUT=" $RCUT " A0=" $A0 " B0=" $B0 " C0=" $C0 " RNNL=" $RNNL "EL=" $EL
 STCI=$EQSTPS
 STPS=$EQSTPS
 NN=`echo "1+l($DT*$STCI/$STORERATE)/l(1.3)" | bc -l | awk '{printf("%d",$0)}'`
-../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 storerate $STORERATE intevalSum 5.0 rmsd2end -1.0 tmsd2end -1.0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor inifile ellips.res
+../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 storerate $STORERATE intevalSum 5.0 rmsd2end -1.0 tmsd2end -1.0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor inifile ellips.res rcut $RCUT
 ln -sf $ELLEXE $SIMPR
 $SIMPR -fa ./$PARFILE > screen_$SIMPR 
 cd ..
