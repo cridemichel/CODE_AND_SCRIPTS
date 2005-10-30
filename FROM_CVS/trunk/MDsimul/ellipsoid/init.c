@@ -970,6 +970,9 @@ void usrInitBef(void)
        the begin of the run and not the instanteaneous value */
     OprogStatus.avnggr    = 0;
     Oparams.Dt = 0.01;
+#ifdef MD_BIG_DT
+    OprogStatus.bigDt = -1.0;
+#endif
     OprogStatus.avngS     = 0;
     OprogStatus.avngPress = 0;
     OprogStatus.avngTemp  = 0;
@@ -2042,10 +2045,6 @@ void usrInitAft(void)
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
       OprogStatus.DQzx = 0.0;
-#if MD_BIG_DT
-      OprogStatus.refTime = 0.0;
-      OprogStatus.bigDt = -1.0;
-#endif
 #ifdef MD_GRAVITY
       if (!strcmp(OprogStatus.inifile,"*"))
 	{
