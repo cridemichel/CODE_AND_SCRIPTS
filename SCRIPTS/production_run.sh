@@ -44,6 +44,8 @@ PARNUMA=512
 A0=`cat ellips.res | awk -F ':' '{if ($1=="a") print $2}' | awk '{print $1}'`
 B0=`cat ellips.res | awk -F ':' '{if ($1=="b") print $2}' | awk '{print $1}'`
 C0=`cat ellips.res | awk -F ':' '{if ($1=="c") print $2}' | awk '{print $1}'`
+PARNUM=`cat ellips.res | awk -F ':' '{if ($1=="parnum") print $2}'`
+PARNUMA=`cat ellips.res | awk -F ':' '{if ($1=="parnumA") print $2}'`
 DT="0.05"
 #N.B. it's supposed that we use NNL here!!
 PROL=`echo $EL | awk '{if ($0 >= 1.0) printf("1"); else printf("0");}'`
@@ -72,7 +74,7 @@ echo "RCUT=" $RCUT " A0=" $A0 " B0=" $B0 " C0=" $C0 " RNNL=" $RNNL "EL=" $EL
 STCI=$EQSTPS
 STPS=$EQSTPS
 NN=`echo "1+l($DT*$STCI/$STORERATE)/l(1.3)" | bc -l | awk '{printf("%d",$0)}'`
-../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 storerate $STORERATE intevalSum 5.0 rmsd2end -1.0 tmsd2end -1.0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor inifile ellips.res rcut $RCUT
+../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 storerate $STORERATE intevalSum 5.0 rmsd2end -1.0 tmsd2end -1.0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor inifile ellips.res rcut $RCUT A0 $A0 B0 $B0 C0 $C0 parnum $PARNUM parnumA $PARNUMA
 ln -sf $ELLEXE $SIMPR
 $SIMPR -fa ./$PARFILE > screen_$SIMPR 
 cd ..
