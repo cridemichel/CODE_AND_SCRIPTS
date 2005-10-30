@@ -15,8 +15,8 @@ export MPIDIR =/usr/include/lam
 	  -frerun-cse-after-loop -fstrength-reduce -fexpensive-optimizations\
           -felide-constructors -malign-loops=2 -malign-jumps=2\
 	  -malign-functions
-export CFLAGS  = -Wall -O3   -mcpu=athlon-xp -march=athlon-xp 
-#export CFLAGS  =-Wall -O4 -msse2 -mfpmath=sse -march=pentium4 -mcpu=pentium4 
+#export CFLAGS  = -Wall -O3   -mcpu=athlon-xp -march=athlon-xp 
+export CFLAGS  =-Wall -O3 -msse2 -mfpmath=sse -march=pentium4 -mtune=pentium4 -funroll-all-loops -malign-double# -ffast-math 
 #export CFLAGS  =-Wall -O3 -xN -tpp7# -ipo 
 #export CFLAGS  =-Wall -O3  -march=pentium4 -mcpu=pentium4 
 #export CFLAGS=  -B -tp p6 -fast#ottimizzazioni per beowulf
@@ -26,7 +26,7 @@ export CFLAGS  = -Wall -O3   -mcpu=athlon-xp -march=athlon-xp
 #export CFLAGS  = -qarch=pwr4 -qtune=pwr4  -O3 -bmaxdata:0x70000000 -qcpluscmt #-I$(TURBOMP)/POWER4/include#per SP4
 #export CFLAGS= -g -Wall 
 # MACROS passed to the pre-processor
-export MACROS=-DMD_DOUBLE_YUKAWA -DMD_EFFPOT -DMD_SILICA -DNM_SPHERE -DMD_NNL -UMD_NOINTERPOL -DMD_BROWN_BETTER -UMD_GLOBALNR -UMD_GLOBALNRD -UMD_GLOBALNRNL -DMD_GLOBALNRDNL -UMD_USE_CBLAS -UMD_DIST5 -UMD_USE_LAPACK -DMD_STOREMGL -UMD_INFBARRIER -UMD_SQWELL -UMD_HSVISCO -UMD_RESPA_FILTER -UMD_RAPACONSTR -UMD_RESPA_NOSELONG -DMD_RESPA_NPT -UMD_RESPA_SWITCH -DMD_FENE -DMD_RESPA -DMD_LOADMESH -DXDISP -UATPTENS -DMOLPTENS -UATPRESS #-DMD_INFBARRIER#-DMD_SQWELL# -DSOFT_SPHERE  -DMD_STATIC_PP8 # -DMD_BONDHIST -DMD_BILOG -DMPI##-DMD_TSHAPED# -DSOFT_SPHERE  -DMD_STATIC_PP6#-DMDLLINT#-DMPI##-DMC_SIMUL -DSOFT_SPHERE #-DMPI -DMD_GRAVITY -DPRINTER_PROC -DTAPPING -DMD_LOADMESH
+export MACROS=-DMD_BIG_DT -DMD_ASYM_ITENS -DMD_DOUBLE_YUKAWA -DMD_EFFPOT -DMD_SILICA -DNM_SPHERE -DMD_NNL -UMD_NOINTERPOL -DMD_BROWN_BETTER -UMD_GLOBALNR -UMD_GLOBALNRD -UMD_GLOBALNRNL -UMD_GLOBALNRDNL -UMD_USE_CBLAS -UMD_DIST5 -UMD_USE_LAPACK -DMD_STOREMGL -UMD_INFBARRIER -UMD_SQWELL -UMD_HSVISCO -UMD_RESPA_FILTER -UMD_RAPACONSTR -UMD_RESPA_NOSELONG -DMD_RESPA_NPT -UMD_RESPA_SWITCH -DMD_FENE -DMD_RESPA -DMD_LOADMESH -DXDISP -UATPTENS -DMOLPTENS -UATPRESS #-DMD_INFBARRIER#-DMD_SQWELL# -DSOFT_SPHERE  -DMD_STATIC_PP8 # -DMD_BONDHIST -DMD_BILOG -DMPI##-DMD_TSHAPED# -DSOFT_SPHERE  -DMD_STATIC_PP6#-DMDLLINT#-DMPI##-DMC_SIMUL -DSOFT_SPHERE #-DMPI -DMD_GRAVITY -DPRINTER_PROC -DTAPPING -DMD_LOADMESH
 #export MACROS= -DMD_LOADMESH -DSOFT_SPHERE -DMD_STATIC_PP18 -DXDISP  -DATPTENS -UMOLPTENS -UATPRESS -DORIGIN -DMPI #-DPRINTER_PROC -DTAPPING -DMD_LOADMESH #per SP4
 export LDFLAGS= #-L/usr/lib/sse2 -latlas -lcblas -llapack_atlas -lf77blas #-L /usr/lib/lam/lib -llamf77mpi -lmpi -llam -lnsl -lutil -lpmpi -llammpio
 #export LDFLAGS= #-L$(TURBOMP)/POWER4/lib -lxlf90#per SP4
@@ -99,7 +99,7 @@ BIMIXHSOBJS= $(BIMIXHS)/move.o $(BIMIXHS)/measures.o $(BIMIXHS)/init.o $(BIMIXHS
 
 #biatomic mixture of hard spheres
 ELLIPSOID= $(PERC)/ellipsoid
-ELLIPSOIDOBJS= $(ELLIPSOID)/move.o $(ELLIPSOID)/measures.o $(ELLIPSOID)/init.o $(ELLIPSOID)/tree.o $(ELLIPSOID)/matrixalg.o $(ELLIPSOID)/nnl.o
+ELLIPSOIDOBJS= $(ELLIPSOID)/move.o $(ELLIPSOID)/measures.o $(ELLIPSOID)/init.o $(ELLIPSOID)/tree.o $(ELLIPSOID)/matrixalg.o $(ELLIPSOID)/nnl.o $(ELLIPSOID)/hesticky.o
 
 #biatomic mixture of sticky rigid bodies
 STICKY= $(PERC)/sticky
