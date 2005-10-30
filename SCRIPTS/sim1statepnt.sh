@@ -34,6 +34,7 @@ PARFILE=ellips.par
 cp $PARFILE Phi$1
 cd Phi$1
 rm -f COORD_TMP*
+rm -f Store-*
 ELLEXE="../../ellipsoid"
 SIMRA="ell${EL}RA$1"
 SIMGR="ell${EL}GR$1"
@@ -41,15 +42,16 @@ SIMEQ="ell${EL}EQ$1"
 SIMPR="ell${EL}PR$1"
 STORERATE="0.1"
 USENNL=1
-PARNUM=250
+PARNUM=512
+PARNUMA=512
 DT="0.05"
 #N.B. it's supposed that we use NNL here!!
 PROL=`echo $EL | awk '{if ($0 >= 1.0) printf("1"); else printf("0");}'`
 if [ $PROL -eq 1 ]
 then
-A0=$EL
+A0=1.0
 B0=1.0
-C0=1.0
+C0=$EL
 RNNL=0.15
 INIL=`echo "2.0*e(1.0/3.0*l($PARNUM))*$A0" | bc -l`
 #echo "qui INIL=" $INIL
@@ -58,9 +60,9 @@ then
 RCUT=`echo "2.0*$A0*1.01" | bc -l` 
 fi
 else
-A0=1.0
+A0=`echo "1.0/$EL" | bc -l`
 B0=`echo "1.0/$EL" | bc -l`
-C0=`echo "1.0/$EL" | bc -l`
+C0=1.0
 RNNL=0.15
 INIL=`echo "5.0*e(1.0/3.0*l($PARNUM))*$B0" | bc -l`
 if [ $USENNL -eq 0 ]
@@ -77,7 +79,7 @@ echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
 cp $PARFILE rand_$PARFILE
 echo "L:" $INIL >> rand_$PARFILE
 #>>> SET TEMPERATURE TO 1.0
-../set_params.sh rand_$PARFILE stepnum 50 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM
+../set_params.sh rand_$PARFILE stepnum 50 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM parnumA $PARNUMA
 ln -sf $ELLEXE $SIMRA
 $SIMRA -f ./rand_${PARFILE} > screen_$SIMRA 
 #exit 
@@ -86,7 +88,7 @@ $SIMRA -f ./rand_${PARFILE} > screen_$SIMRA
 ln -sf $ELLEXE $SIMRA 
 $SIMRA -f ./rand_${PARFILE} >> screen_$SIMRA 
 #CRESCITA
-../set_params.sh $PARFILE stepnum 1000000 targetPhi $1 storerate 0.0 intervalSum 0.05 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor parnum $PARNUM
+../set_params.sh $PARFILE stepnum 1000000 targetPhi $1 storerate 0.0 intervalSum 0.05 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor parnum $PARNUM parnumA $PARNUMA
 ln -sf $ELLEXE $SIMGR
 $SIMGR -f ./$PARFILE > screen_$SIMGR 
 #exit 
