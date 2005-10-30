@@ -72,7 +72,7 @@ echo "RCUT=" $RCUT " A0=" $A0 " B0=" $B0 " C0=" $C0 " RNNL=" $RNNL "EL=" $EL
 #RANDOMIZZAZIONE INIZIALE
 #>>> SET TEMPERATURE TO 1.0
 STCI=$EQSTPS
-STPS=$EQSTPS
+STPS=`echo $EQSTPS*$2 | bc`
 NN=`echo "1+l($DT*$STCI/$STORERATE)/l(1.3)" | bc -l | awk '{printf("%d",$0)}'`
 ../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 storerate $STORERATE intevalSum 5.0 rmsd2end -1.0 tmsd2end -1.0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor inifile ellips.res rcut $RCUT A0 $A0 B0 $B0 C0 $C0 parnum $PARNUM parnumA $PARNUMA
 ln -sf $ELLEXE $SIMPR
