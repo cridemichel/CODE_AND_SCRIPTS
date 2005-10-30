@@ -59,7 +59,7 @@ double calcpotene(void)
   int cellRangeEne[2 * NDIM];
   int iX, iY, iZ, jX, jY, jZ, k, n, signDir[NDIM], evCode;
 #endif
-Epot = 0;
+  Epot = 0;
 #if 0
   for (k = 0; k < NDIM; k++)
     { 
