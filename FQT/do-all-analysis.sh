@@ -1,4 +1,10 @@
-for f in Phi*
+if [ "$1" == "" ]
+then
+PHIDIRS=`ls -d Phi*/`
+else
+PHIDIRS=`ls -d $1`
+fi
+for f in $PHIDIRS
 do
 cd $f
 if [ -e IGNORE_THIS ]
