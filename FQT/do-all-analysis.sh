@@ -2,7 +2,13 @@ if [ "$1" == "" ]
 then
 PHIDIRS=`ls -d Phi*/`
 else
-PHIDIRS=`ls -d $1`
+PHIDIRS=`ls -d $@`
+fi
+echo $PHIDIRS
+if [ "$PHIDIRS"  == "" ]
+then
+echo "Usage: do-all-analysis.sh [Dirs_to_anaylise]"
+exit 
 fi
 for f in $PHIDIRS
 do
