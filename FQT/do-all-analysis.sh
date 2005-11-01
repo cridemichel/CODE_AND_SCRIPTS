@@ -4,7 +4,6 @@ PHIDIRS=`ls -d Phi*/`
 else
 PHIDIRS=`ls -d $@`
 fi
-echo $PHIDIRS
 if [ "$PHIDIRS"  == "" ]
 then
 echo "Usage: do-all-analysis.sh [Dirs_to_anaylise]"
