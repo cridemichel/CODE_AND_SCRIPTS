@@ -24,12 +24,18 @@ continue
 fi
 touch IN_PROGRESS
 PR=$HOME/ELLIPSOIDS/MSD/calcmsd
-if [ "$1" == "" ]
+#if [ "$1" == "" ]
+#then
+ONESTORE=`ls Store-*-*gz| tail -1` 
+if [ "$ONESTORE" == "" ]
 then
-NN=`cat Store-0-0.gz | gunzip -c | awk -F : '{if ($1=="NN") print $2}'` 
-else
-NN=$1
+echo "[ERROR] No .gz store files found in" $f
+exit
 fi
+NN=`cat $ONESTORE | gunzip -c | awk -F : '{if ($1=="NN") print $2}'` 
+#else
+#NN=$1
+#fi
 NN=`echo "$NN*30"| bc`
 gunzip Store*gz
 ls Store* | sort -t - -k 2 -k 3 -n > listamsd
@@ -62,12 +68,12 @@ $PERC/sq-statico-1k << !
 !
 sh $PERC/dosqlmlpmp.sh
 PR=$HOME/ELLIPSOIDS/FQT/calcfqt
-if [ "$1" == "" ]
-then
-NN=`cat Store-0-0.gz | gunzip -c | awk -F : '{if ($1=="NN") print $2}'` 
-else
-NN=$1
-fi
+#if [ "$1" == "" ]
+#then
+NN=`cat $ONESTORE | gunzip -c | awk -F : '{if ($1=="NN") print $2}'` 
+#else
+#NN=$1
+#fi
 echo "NN"=$NN
 PNTS=`echo "$NN*20"| bc`
 $PR 0  0  0  0 $NN $PNTS 
