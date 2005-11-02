@@ -41,11 +41,11 @@ A0=1.0
 B0=1.0
 C0=$EL
 RNNL=0.15
-INIL=`echo "2.0*e(1.0/3.0*l($PARNUM))*$A0" | bc -l`
+INIL=`echo "2.0*e(1.0/3.0*l($PARNUM))*$C0" | bc -l`
 #echo "qui INIL=" $INIL
 if [ $USENNL -eq 0 ]
 then
-RCUT=`echo "2.0*$A0*1.01" | bc -l` 
+RCUT=`echo "2.0*$C0*1.01" | bc -l` 
 fi
 else
 A0=`echo "1.0/$EL" | bc -l`
@@ -86,8 +86,8 @@ then
 if [ $EQSTPS -eq 0 ]
 then
 STPS=10000000
-TMSD=`echo "2.0*e((1.0/3.0)*l($A0*$B0*$C0))" | bc -l`
-RMSD=-1.0#1.57
+TMSD=-1#`echo "2.0*e((1.0/3.0)*l($A0*$B0*$C0))" | bc -l`
+RMSD=6.28#1.57
 else
 STPS=$EQSTPS
 TMSD="-1.0"
