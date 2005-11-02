@@ -228,7 +228,7 @@ int main(int argc, char **argv)
 		    rotMSD[nr2-nr1] += Dw*Dw;
 		    if (NP != NPA)
 		      {
-			if (i < NP)
+			if (i < NPA)
 			  {
 			    MSDA[nr2-nr1] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 			    rotMSDA[nr2-nr1] += Dw*Dw;
