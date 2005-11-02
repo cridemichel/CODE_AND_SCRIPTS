@@ -1,6 +1,6 @@
 #MAIN Makefile
 # === >>> Put your PERC here !!! <<< ===
-export PERC=$(HOME)/MDsimul
+export PERC=$(PWD)
 # ======================================
 export COMM = $(PERC)/commSrc
 MPI_CC=mpicc
@@ -16,7 +16,7 @@ I386_CFLAGS= -Wall -O3 -mcpu=i686 -march=i686
 SP4_CFLAGS  = -qarch=pwr4 -qtune=pwr4  -O3 -bmaxdata:0x70000000 -qcpluscmt #-I$(TURBOMP)/POWER4/include#per SP4
 DEBUG_CFLAGS= -g -Wall 
 #Scegli un *_CFLAGS in base all'architettura 
-export CFLAGS=$(ATHLON_CFLAGS)
+export CFLAGS=$(X86_CFLAGS)
 # MACROS passed to the pre-processor
 #========== >>> ELLIPSOIDS <<< ===========
 ELLIPSOIDS_MACROS=-DMD_BIG_DT -DMD_ASYM_ITENS -UMD_GLOBALNR -UMD_GLOBALNRD -UMD_GLOBALNRNL -UMD_GLOBALNRDNL -UMD_USE_CBLAS -UMD_USE_LAPACK -DMD_STOREMGL -UMD_HSVISCO -DMD_LOADMESH -DXDISP -UATPTENS -DMOLPTENS -UATPRESS #-DMPI 
