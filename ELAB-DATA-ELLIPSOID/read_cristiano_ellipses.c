@@ -137,7 +137,7 @@ read_cristiano_ellipses( conf_t *conf, int allocate)
     exit(4);
   }
 
-
+  fclose(fp);
 }
 
 
