@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 //#include <lapack.h>
-char line[100000], parname[124], parval[1024];
+char line[100000], parname[124], parval[256000];
 int N;
 double x[3], R[3][3], Q[3][3];
 char fname[1024], inputfile[1024];
@@ -87,7 +87,9 @@ int main(int argc, char** argv)
 	  do 
 	    {
 	      fscanf(f,"%[^\n]\n",line);
-	      //sscanf(line, "%[^:\n ]:%[^\n]\n", parname, parval);
+	      sscanf(line, "%[^:\n ]:%[^\n]\n", parname, parval);
+	      if (!strcmp(parname,"refTime"))
+		tref = atof(parval);
 	    }
 	  while (strcmp(line,"@@@"));
 	}
@@ -99,9 +101,7 @@ int main(int argc, char** argv)
 	    N = atoi(parval);
 	  if (!strcmp(parname,"time"))
 	    ti = atof(parval);
-	  if (!strcmp(parname,"refTime"))
-	    tref = atof(parval);
-	}
+  	}
       while (strcmp(line,"@@@"));
 
       //printf("fname=%s %d ellipsoids...\n", fname, N);
