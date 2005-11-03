@@ -24,8 +24,8 @@
 #define MAXQ 50
 #define NUMQ 100
 char fname[1024]; 
-double time, Cav0, Cav, rhoR0[MAXQ], rhoI0[MAXQ], cc[MAXQ][MAXPTS],C[MAXQ][MAXPTS], 
-       rhoR1[MAXQ], rhoI1[MAXQ], ti[MAXPTS], *rhoRt[MAXQ], *rhoIt[MAXQ],
+double time, Cav0, Cav, rhoR0[MAXQ], rhoI0[MAXQ], *cc[MAXQ],*C[MAXQ], 
+       rhoR1[MAXQ], rhoI1[MAXQ], *ti, *rhoRt[MAXQ], *rhoIt[MAXQ],
        *rhoRtp[MAXQ], *rhoItp[MAXQ];
 int NQarr[NUMQ];
 int points;
@@ -50,8 +50,6 @@ int main(int argc, char **argv)
   mm = atoi(argv[2]);
   llp = atoi(argv[3]);
   mmp = atoi(argv[4]);
-  for (ii=0; ii < MAXPTS; ii++)
-    ti[ii] = -1.0;
   c2 = 0;
   sprintf(fname, "RHOTMP/ro.%02d.k=%03d", 0, 2);
   f2 = fopen(fname, "r");
@@ -63,6 +61,8 @@ int main(int argc, char **argv)
 	fscanf(f2, "(%lf,%lf) ", &A1, &A2);
       c2++;
     }	
+  if (points > c2)
+    points = c2;
   fprintf(stderr, "allocating %d items\n", c2);
   for (i=0; i < MAXQ; i++)
     {
@@ -71,6 +71,12 @@ int main(int argc, char **argv)
       rhoRtp[i] = malloc(sizeof(double)*c2);
       rhoItp[i] = malloc(sizeof(double)*c2);
     }
+  cc = malloc(sizeof(double)*c2);
+  ti = malloc(sizeof(double)*c2);
+  C  = malloc(sizeof(double)*c2);
+  for (ii=0; ii < points; ii++)
+    ti[ii] = -1.0;
+
   first = 0;
   nlines = c2;
   fclose(f2);
@@ -78,7 +84,7 @@ int main(int argc, char **argv)
   for (nq = 2; nq < NUMQ; nq++)
     {
       for (i=0; i < MAXQ; i++)
-	for (ii=0; ii < MAXPTS; ii++)
+	for (ii=0; ii < nlines; ii++)
 	  {
 	    C[i][ii] = 0.0;
 	    cc[i][ii] = 0;
@@ -98,7 +104,7 @@ int main(int argc, char **argv)
 	    {
 	      fscanf(f2, "(%lf,%lf) ", &(rhoRt[i][c2]), &(rhoIt[i][c2]));
 	    }
-	  if (c2 < MAXPTS && ti[c2] == -1.0)
+	  if (c2 < points && ti[c2] == -1.0)
 	    {
 	      ti[c2] = time;
 	      //printf("c2=%d time=%.15G\n", c2, ti[c2]);
