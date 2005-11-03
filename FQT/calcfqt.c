@@ -70,10 +70,10 @@ int main(int argc, char **argv)
       rhoIt[i] = malloc(sizeof(double)*c2);
       rhoRtp[i] = malloc(sizeof(double)*c2);
       rhoItp[i] = malloc(sizeof(double)*c2);
+      cc[i] = malloc(sizeof(double)*c2);
+      C[i]  = malloc(sizeof(double)*c2);
     }
-  cc = malloc(sizeof(double)*c2);
   ti = malloc(sizeof(double)*c2);
-  C  = malloc(sizeof(double)*c2);
   for (ii=0; ii < points; ii++)
     ti[ii] = -1.0;
 
