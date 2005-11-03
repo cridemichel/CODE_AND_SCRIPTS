@@ -70,6 +70,10 @@ void Continue(void)
     srand(((int)time(NULL)));
 #endif
 
+  
+  /* 30/10/2005: aggiunta l'inizializzazione anche quando si continua!
+   *             Verificare che funzioni! */  
+  initBefore();		/* initialize Oparams with default settings */
 
   /* <------------------------------------------------------- OPEN LOG FILE */
   openLog("a"); /* append: continue to write on previously created log file */
