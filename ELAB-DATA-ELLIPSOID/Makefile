@@ -9,6 +9,7 @@ LIB  = -lm
 OPT  = -g
 #OPT  = -O2
 
+
 # headers and routine to read cristiano's ellipsoids files
 Hread_crist = struct_conf_cristiano.h
 Pread_crist = io_cristiano_ellipses.c
@@ -94,6 +95,14 @@ CORR-Y: $(Pread_crist)  $(Hread_crist) calc_corr_Y_cristiano.c
 # calculate correlation in SQY for a given Q-vector
 CORR-SQY: $(Pread_crist)  $(Hread_crist) calc_corr_SQY_cristiano.c
 	$(CC) $(CFLAGS) $(ARCH) $(LIB) $(INCL) $(OPT) $(Pread_crist)  $(DEF_CORR_SQY) calc_corr_SQY_cristiano.c -o CORR-SQY.x
+
+# calculate correlation in SQY for a given Q-vector
+Y20Y20: $(Pread_crist)  $(Hread_crist) calc_Y20Y20_cristiano.c
+	$(CC) $(CFLAGS) $(ARCH) $(LIB) $(INCL) $(OPT) $(Pread_crist)  $(DEF_CORR_SQY) calc_Y20Y20_cristiano.c -o Y20Y20.x
+
+# calculate correlation in SQY for a given Q-vector
+Y20Y00: $(Pread_crist)  $(Hread_crist) calc_Y20Y00_cristiano.c
+	$(CC) $(CFLAGS) $(ARCH) $(LIB) $(INCL) $(OPT) $(Pread_crist)  $(DEF_CORR_SQY) calc_Y20Y00_cristiano.c -o Y20Y00.x
 
 # calculate correlation lenght from P2(theta)
 CORR-LEN: $(Pread_crist)  $(Hread_crist) calc_corr_LEN_cristiano.c
