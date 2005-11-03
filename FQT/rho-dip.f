@@ -160,12 +160,24 @@ c
        DO I=1,MOLS
 
         CTH   =VROT(I,3,3)
-        TH(I) = DACOS(CTH)
+        IF (CTH.EQ.-1.0) THEN 
+          TH(I) = 2.0*DACOS(0.0d0)
+        ELSE IF (CTH.EQ.1.0) THEN
+          TH(I) = 0.0
+        ELSE 
+          TH(I) = DACOS(CTH)
+        END IF
 c
 
         CCAI  =-VROT(I,1,3)/(1.0d0-CTH*CTH)**0.5   
 c
-        CAI(I)= DACOS(CCAI)
+        IF (CCAI.EQ.-1.0) THEN 
+          CAI(I) = 2.0*DACOS(0.0d0)
+        ELSE IF (CCAI.EQ.1.0) THEN
+          CAI(I) = 0.0
+        ELSE 
+          CAI(I)= DACOS(CCAI)
+        END IF
         IF (VROT(I,2,3).LT.0) CAI(I)=-CAI(I)
         IF (CAI(I).LT.0) CAI(I)=CAI(I)+TWOPI
 c        
@@ -176,7 +188,13 @@ c         print *,VROT(I,2,3), sin(th(i))*sin(cai(i))
 c         print *,VROT(I,1,3), -sin(th(i))*cos(cai(i))
 c
         CPHI  =VROT(I,3,1)/(1.0d0-CTH*CTH)**0.5 
-        PHI(I)= DACOS(CPHI)
+        IF (CPHI.EQ.-1.0) THEN 
+          PHI(I) = 2.0*DACOS(0.0d0)
+        ELSE IF (CPHI.EQ.1.0) THEN
+          PHI(I) = 0.0
+        ELSE 
+          PHI(I)= DACOS(CPHI)
+        END IF
         IF (VROT(I,3,2).LT.0) PHI(I)=-PHI(I)
         IF (PHI(I).LT.0) PHI(I)=PHI(I)+TWOPI 
 c        
