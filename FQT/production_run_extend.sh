@@ -45,6 +45,5 @@ STPS=`cat ellips.cnf | awk -F : '{ if ($1=="totStep") print $2}'`
 XSTPS=`echo "$STPS $2" | awk '{printf("%d",$1*$2)}'`
 cat ellips.cnf | awk -v ts=$XSTPS -F : '{if ($1=="totStep") printf("totStep: %d\n", ts); else print $0}' > junk
 mv junk ellips.cnf
-exit
 $SIMPR -ca ellips.cnf >> screen_$SIMPR 
 cd ..
