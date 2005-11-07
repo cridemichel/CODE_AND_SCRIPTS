@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 {
   FILE *f, *f2;
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
-  int NN, fine, JJ, maxl, nfiles, nat;
+  int NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
   if (argc <= 1)
     {
       printf("Usage: calcCn <lista_file> [points] \n");
@@ -138,8 +138,9 @@ int main(int argc, char **argv)
     points = atoi(argv[2]);
   else
     points = NN;
-  if (points > nfiles)
-    points = nfiles;
+  maxnp = NN + (nfiles-NN)/NN;
+  if (points > maxnp)
+    points = maxnp;
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
   else if ((B0 > A0 && B0 > C0) || (B0 < A0 && B0 < C0))
@@ -148,7 +149,7 @@ int main(int argc, char **argv)
     assez = 2;
   if (NPA == -1)
     NPA = NP;
-  fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d\n", points, NN, NP, nfiles);
+  fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
   for (a=0; a < 3; a++)
     {
       u0[a] = malloc(sizeof(double)*NP);
@@ -182,18 +183,20 @@ int main(int argc, char **argv)
 	{
 	  for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
 	    {
-	      if (nr2 >= nfiles || nr2 - nr1 >= points)
+	      /* N.B. considera NN punti in maniera logaritmica e poi calcola i punti in maniera lineare 
+	       * distanziati di NN punti. */
+              np = (JJ == 0)?nr2-nr1:NN-1+JJ;	      
+	      if (nr2 >= nfiles || np >= points)
 		{
 		  fine = 1;
 		  break;
 		}
-	      if (JJ > 0 && nr2- nr1 > 0)
+	      if (JJ > 0 && nr2 - nr1 > 0)
 		continue;
-	
 	      readconf(fname[nr2], &time, &refTime, NP, ut);
-	      if (nr2 < points && ti[nr2] == -1.0)
+	      if (np < points && ti[np] == -1.0)
 		{
-		  ti[nr2] = time + refTime;
+		  ti[np] = time + refTime;
 		  //printf("nr1=%d time=%.15G\n", nr2, ti[nr2]);
 		}
   
@@ -210,10 +213,10 @@ int main(int argc, char **argv)
 		  costh2 = costh2*costh2;
 		  costh4 = costh2*costh2;
 		  costh6 = costh4*costh2;
-		  C2[nr2-nr1] += costh2;
-		  C4[nr2-nr1] += costh4;
-		  C6[nr2-nr1] += costh6;
-		  cc[nr2-nr1] += 1.0;
+		  C2[np] += costh2;
+		  C4[np] += costh4;
+		  C6[np] += costh6;
+		  cc[np] += 1.0;
 		}
 	    }
 	}
