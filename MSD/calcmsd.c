@@ -93,7 +93,7 @@ int main(int argc, char **argv)
   FILE *f, *f2, *f3, *fA, *fB, *f2A, *f2B;
   double *adjDr[3], Dr, Dw, A1, A2, A3, dr;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int NP, NPA=-1, NN, fine, JJ, nat, maxl;
+  int NP, NPA=-1, NN, fine, JJ, nat, maxl, maxnp, np;
   double refTime;
   if (argc <= 1)
     {
@@ -152,8 +152,9 @@ int main(int argc, char **argv)
     points=atoi(argv[2]);
   else
     points=NN;
-  if (points > nfiles)
-    points = nfiles;
+  maxnp = NN + (nfiles-NN)/NN;
+  if (points > maxnp)
+    points = maxnp;
   ti = malloc(sizeof(double)*points);
   rotMSD = malloc(sizeof(double)*points);
   MSD = malloc(sizeof(double)*points);
@@ -206,12 +207,15 @@ int main(int argc, char **argv)
 	{
 	  for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
 	    {
-	      if (nr2 >= nfiles || nr2 - nr1 >= points)
+	      /* N.B. considera NN punti in maniera logaritmica e poi calcola i punti in maniera lineare 
+	       * distanziati di NN punti. */
+	      np = (JJ == 0)?nr2-nr1:NN-1+JJ;	      
+	      if (nr2 >= nfiles || np >= points)
 		{
 		  fine = 1;
 		  break;
 		}
-	      if (JJ > 0 && nr2 - nr1 > 0)
+	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
 		
 	      if (nr2==nr1)
@@ -227,9 +231,9 @@ int main(int argc, char **argv)
 		      rtold[a][i] = rt[a][i];
 		}
 	      readconf(fname[nr2], &time, &refTime, NP, rt, wt, DR);
-	      if (nr2 < points && ti[nr2] == -1.0)
+	      if (np < points && ti[np] == -1.0)
 		{
-		  ti[nr2] = time + refTime;
+		  ti[np] = time + refTime;
 		  //printf("nr1=%d time=%.15G\n", nr2, ti[nr2]);
 		}
   
@@ -256,26 +260,26 @@ int main(int argc, char **argv)
 		      }
 		    //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
 		    
-		    MSD[nr2-nr1] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+		    MSD[np] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 		    if (foundrot)
-		      rotMSD[nr2-nr1] += Dw*Dw;
+		      rotMSD[np] += Dw*Dw;
 		    if (NP != NPA)
 		      {
 			if (i < NPA)
 			  {
-			    MSDA[nr2-nr1] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+			    MSDA[np] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 			    if (foundrot)
-			      rotMSDA[nr2-nr1] += Dw*Dw;
+			      rotMSDA[np] += Dw*Dw;
 			  }
 			else
 			  {
-		    	    MSDB[nr2-nr1] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+		    	    MSDB[np] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 	    		    if (foundrot)
-			      rotMSDB[nr2-nr1] += Dw*Dw;
+			      rotMSDB[np] += Dw*Dw;
 			  }
 		      }
 		  }
-	      cc[nr2-nr1] += 1.0;
+	      cc[np] += 1.0;
 	      //printf("cc[%d]:%f\n", nr2-nr1, cc[nr2-nr1]);
 	    }
 	}
