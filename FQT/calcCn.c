@@ -191,13 +191,13 @@ int main(int argc, char **argv)
 		  fine = 1;
 		  break;
 		}
-	      if (JJ > 0 && nr2 - nr1 > 0)
+	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
 	      readconf(fname[nr2], &time, &refTime, NP, ut);
 	      if (np < points && ti[np] == -1.0)
 		{
 		  ti[np] = time + refTime;
-		  //printf("nr1=%d time=%.15G\n", nr2, ti[nr2]);
+		  //printf("np=%d time=%.15G\n", np, ti[np]);
 		}
   
 	      if (nr2 == nr1)
