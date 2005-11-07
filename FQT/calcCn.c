@@ -205,9 +205,9 @@ int main(int argc, char **argv)
   f = fopen("Cn.dat", "w+");
   for (ii=1; ii < points; ii++)
     {
-      C1 = C2[ii];
+      C1 = C2[ii]/cc[ii];
       C2[ii] = C2[ii]/cc[ii];
-      C2[ii] = 1.5*C2[ii] - 0.5;
+      C2[ii] = 1.5*C2[ii]*C2[ii] - 0.5;
       if (ti[ii] > -1.0)
 	{
 	  fprintf(f, "%.15G %.15G %.15G %f\n", ti[ii]-ti[0], C1, C2[ii], cc[ii]);
