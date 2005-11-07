@@ -64,7 +64,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *u[3])
 int main(int argc, char **argv)
 {
   FILE *f, *f2;
-  int first=1, firstp=1, c1, c2, c3, i, ii, nlines, nr1, nr2, a;
+  int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int NN, fine, JJ, maxl, nfiles, nat;
   if (argc <= 1)
     {
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
     assez = 2;
   if (NPA == -1)
     NPA = NP;
-  fprintf(stderr, "allocating %d items\n", c2);
+  fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d\n", points, NN, NP, nfiles);
   for (a=0; a < 3; a++)
     {
       u0[a] = malloc(sizeof(double)*NP);
@@ -168,8 +168,8 @@ int main(int argc, char **argv)
       cc[ii] = 0;
     }
   c2 = 0;
-
-  for (nr1 = 0; nr1 < nlines; nr1=nr1+NN)
+  JJ = 0;
+  for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
     {	
       readconf(fname[nr1], &time, &refTime, NP, u0);
       fine = 0;
@@ -177,7 +177,7 @@ int main(int argc, char **argv)
 	{
 	  for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
 	    {
-	      if (nr2 >= nlines || nr2 - nr1 >= points)
+	      if (nr2 >= nfiles || nr2 - nr1 >= points)
 		{
 		  fine = 1;
 		  break;
@@ -195,7 +195,7 @@ int main(int argc, char **argv)
 	      for (i=0; i < NP; i++) 
 		{
 		  for (a = 0; a < 3; a++)
-		    C2[nr2-nr1] += ut[i][a]*u0[i][a];
+		    C2[nr2-nr1] += ut[a][i]*u0[a][i];
 		  cc[nr2-nr1] += 1.0;
 		}
 	    }
