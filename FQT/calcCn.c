@@ -182,6 +182,8 @@ int main(int argc, char **argv)
 	{
 	  for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
 	    {
+	      if (JJ > 0 && nr2- nr1 > 0)
+		continue;
 	      if (nr2 >= nfiles || nr2 - nr1 >= points)
 		{
 		  fine = 1;
