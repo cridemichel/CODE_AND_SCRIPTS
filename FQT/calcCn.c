@@ -205,7 +205,7 @@ int main(int argc, char **argv)
 	             costh2 += ut[a][i]*u0[a][i];
 		   }
 		  costh2 = costh2*costh2;
-		  costh4 = costh4*costh4;
+		  costh4 = costh2*costh2;
 		  costh6 = costh4*costh2;
 		  C2[nr2-nr1] += costh2;
 		  C4[nr2-nr1] += costh4;
