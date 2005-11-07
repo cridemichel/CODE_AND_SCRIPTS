@@ -43,10 +43,13 @@ ONESTORE=`ls Store-*-*gz| tail -1`
 #fi
 NN=`cat $ONESTORE | gunzip -c | awk -F : '{if ($1=="NN") print $2}'` 
 fi
-NPTS=`echo "$NN*30"| bc`
+NPTS=`echo "$NN*60"| bc`
 gunzip Store*gz
 ls Store* | sort -t - -k 2 -k 3 -n > listamsd
 $PR listamsd $NPTS
+#calcola i correlatori P_n(cos(theta))
+PR=$HOME/ELLIPSOIDS/FQT/calcCn
+$PR listamsd $NPTS 
 #gzip Store*
 #gunzip Store*gz
 ls Store* > junk
