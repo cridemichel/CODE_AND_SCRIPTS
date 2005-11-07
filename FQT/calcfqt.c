@@ -26,7 +26,7 @@
 char fname[1024]; 
 double time, Cav0, Cav, rhoR0[MAXQ], rhoI0[MAXQ], *cc[MAXQ],*C[MAXQ], 
        rhoR1[MAXQ], rhoI1[MAXQ], *ti, *rhoRt[MAXQ], *rhoIt[MAXQ],
-       *rhoRtp[MAXQ], *rhoItp[MAXQ];
+       *rhoRtp[MAXQ], *rhoItp[MAXQ], *tiall;
 int NQarr[NUMQ];
 int points;
 int main(int argc, char **argv)
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
   FILE *f, *f2, *f3;
   double A1, A2, A3 ;
   int first=1, firstp=1, NQ, nq, c1, c2, c3, i, ii, nlines, nr1, nr2, ll, mm, llp, mmp;
-  int NN, fine, JJ;
+  int NN, fine, JJ, maxnp, np;
   if (argc <= 1)
     {
       printf("Usage: calcfqt <l> <m> <l'> <m'> <NN> [points] \n");
@@ -61,30 +61,33 @@ int main(int argc, char **argv)
 	fscanf(f2, "(%lf,%lf) ", &A1, &A2);
       c2++;
     }	
-  if (points > c2)
-    points = c2;
-  fprintf(stderr, "allocating %d items\n", c2);
+  maxnp = NN + (c2-NN)/NN;
+  nlines = c2;
+  if (points > maxnp)
+    points = maxnp;
+  fprintf(stderr, "allocating %d items\n", nlines);
   for (i=0; i < MAXQ; i++)
     {
-      rhoRt[i] = malloc(sizeof(double)*c2);
-      rhoIt[i] = malloc(sizeof(double)*c2);
-      rhoRtp[i] = malloc(sizeof(double)*c2);
-      rhoItp[i] = malloc(sizeof(double)*c2);
-      cc[i] = malloc(sizeof(double)*c2);
-      C[i]  = malloc(sizeof(double)*c2);
+      rhoRt[i] = malloc(sizeof(double)*nlines);
+      rhoIt[i] = malloc(sizeof(double)*nlines);
+      rhoRtp[i] = malloc(sizeof(double)*nlines);
+      rhoItp[i] = malloc(sizeof(double)*nlines);
+      cc[i] = malloc(sizeof(double)*points);
+      C[i]  = malloc(sizeof(double)*points);
     }
-  ti = malloc(sizeof(double)*c2);
+  ti = malloc(sizeof(double)*points);
+  tiall = malloc(sizeof(double)*nlines);
   for (ii=0; ii < points; ii++)
     ti[ii] = -1.0;
-
+  for (ii=0; ii < nlines; ii++)
+    tiall[ii] = -1.0;
   first = 0;
-  nlines = c2;
   fclose(f2);
 
   for (nq = 2; nq < NUMQ; nq++)
     {
       for (i=0; i < MAXQ; i++)
-	for (ii=0; ii < nlines; ii++)
+	for (ii=0; ii < points; ii++)
 	  {
 	    C[i][ii] = 0.0;
 	    cc[i][ii] = 0;
@@ -98,15 +101,16 @@ int main(int argc, char **argv)
 	{
 	  //printf("reading c2=%d\n", c2);
 	  fscanf(f2, "%lf %d ", &time, &NQ);
+	  
 	  if (c2==0)
 	    NQarr[nq] = NQ;
   	  for (i = 0; i < NQ; i++)
 	    {
 	      fscanf(f2, "(%lf,%lf) ", &(rhoRt[i][c2]), &(rhoIt[i][c2]));
 	    }
-	  if (c2 < points && ti[c2] == -1.0)
+	  if (tiall[c2] == -1.0)
 	    {
-	      ti[c2] = time;
+	      tiall[c2] = time;
 	      //printf("c2=%d time=%.15G\n", c2, ti[c2]);
 	    }
 	  //printf("%d fname: %s %.15G %.15G %.15G\n", c2, fname, P0[0], P0[1], P0[2]);
@@ -143,21 +147,30 @@ int main(int argc, char **argv)
 	    {
 	      for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
 		{
-		  if (nr2 >= nlines || nr2 - nr1 >= points)
+		  np = (JJ == 0)?nr2-nr1:NN-1+JJ;	      
+		  if (nr2 >= nlines || np >= points)
 		    {
 		      fine = 1;
 		      break;
 		    }
+		  if (JJ > 0 && (nr2 - nr1) % NN != 0)
+		    continue;
 		  for (i=0; i < NQ; i++) 
 		    {
 		      //printf("i=%d NQ=%d rhoRtp=%f rhoItp=%f\n", i, NQ, rhoRtp[i][nr2], rhoItp[i][nr2]);
 		      rhoR1[i] = rhoRtp[i][nr2];
 		      rhoI1[i] = rhoItp[i][nr2];
-		      C[i][nr2-nr1] += rhoR1[i]*rhoR0[i]+rhoI1[i]*rhoI0[i];
+		      C[i][np] += rhoR1[i]*rhoR0[i]+rhoI1[i]*rhoI0[i];
 		      //printf("C[%d][%d]: %.15G cc:%f\n", i, nr2-nr1, C[i][nr2-nr1], cc[i][nr2-nr1]);
-		      cc[i][nr2-nr1] += 1.0;
+		      cc[i][np] += 1.0;
 		      //printf("qui c3-c2=%d\n", c3-c2);
 		    }
+		  if (np < points && ti[np] == -1.0)
+		    {
+		      ti[np] = tiall[nr2];
+		      //printf("np=%d time=%.15G\n", np, ti[np]);
+		    }
+
 		}
 	    }
 	}
