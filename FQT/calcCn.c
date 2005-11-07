@@ -199,9 +199,10 @@ int main(int argc, char **argv)
 
 	      for (i=0; i < NP; i++) 
 		{
+		  costh2 = 0.0;
 		  for (a = 0; a < 3; a++)
 		   {
-	             costh2 = ut[a][i]*u0[a][i];
+	             costh2 += ut[a][i]*u0[a][i];
 		   }
 		  costh2 = costh2*costh2;
 		  costh4 = costh4*costh4;
