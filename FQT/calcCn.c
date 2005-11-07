@@ -207,9 +207,9 @@ int main(int argc, char **argv)
 		  costh2 = costh2*costh2;
 		  costh4 = costh4*costh4;
 		  costh6 = costh4*costh2;
-		  C2[ii] += costh2;
-		  C4[ii] += costh4;
-		  C6[ii] += costh6;
+		  C2[nr2-nr1] += costh2;
+		  C4[nr2-nr1] += costh4;
+		  C6[nr2-nr1] += costh6;
 		  cc[nr2-nr1] += 1.0;
 		}
 	    }
