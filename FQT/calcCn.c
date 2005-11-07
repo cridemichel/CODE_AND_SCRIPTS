@@ -3,7 +3,8 @@
 #include <string.h>
 #define MAXPTS 1000
 char **fname; 
-double time, *cc, *C2, C4, C6, costhSq, *ti, *u0[3], *ut[3], L, refTime;
+double time, *cc, *C2, *C4, *C6, C2m, C4m, C6m,
+       	costh2, costh4, costh6, *ti, *u0[3], *ut[3], L, refTime;
 int points, assez, NP, NPA;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
@@ -156,6 +157,8 @@ int main(int argc, char **argv)
 
   cc = malloc(sizeof(double)*points);
   C2 = malloc(sizeof(double)*points);
+  C4 = malloc(sizeof(double)*points);
+  C6 = malloc(sizeof(double)*points);
   ti = malloc(sizeof(double)*points);
   for (ii=0; ii < points; ii++)
     ti[ii] = -1.0;
@@ -165,6 +168,8 @@ int main(int argc, char **argv)
   for (ii=0; ii < points; ii++)
     {
       C2[ii] = 0.0;
+      C4[ii] = 0.0;
+      C6[ii] = 0.0;
       cc[ii] = 0;
     }
   c2 = 0;
@@ -195,7 +200,15 @@ int main(int argc, char **argv)
 	      for (i=0; i < NP; i++) 
 		{
 		  for (a = 0; a < 3; a++)
-		    C2[nr2-nr1] += ut[a][i]*u0[a][i];
+		   {
+	             costh2 = ut[a][i]*u0[a][i];
+		   }
+		  costh2 = costh2*costh2;
+		  costh4 = costh4*costh4;
+		  costh6 = costh4*costh2;
+		  C2[ii] += costh2;
+		  C4[ii] += costh4;
+		  C6[ii] += costh6;
 		  cc[nr2-nr1] += 1.0;
 		}
 	    }
@@ -205,14 +218,12 @@ int main(int argc, char **argv)
   f = fopen("Cn.dat", "w+");
   for (ii=1; ii < points; ii++)
     {
-      costhSq = C2[ii]/cc[ii];
-      costhSq = costhSq*costhSq;
-      C2[ii] = 1.5*costhSq - 0.5;
-      C4 = (35.0*costhSq*costhSq - 30.0*costhSq + 3.0) / 8.0;
-      C6 = (231.0*costhSq*costhSq*costhSq - 315.0*costhSq*costhSq + 105.0*costhSq - 5.0)/16.0;
+      C6m = (231.0*C6[ii]/cc[ii] - 315.0*C4[ii]/cc[ii] + 105.0*C2[ii]/cc[ii] - 5.0)/16.0;
+      C4m = (35.0*C4[ii]/cc[ii] - 30.0*C2[ii]/cc[ii] + 3.0) / 8.0;
+      C2m = (3.0*C2[ii]/cc[ii] - 1.0)/2.0;
       if (ti[ii] > -1.0)
 	{
-	  fprintf(f, "%.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C2[ii], C4, C6);
+	  fprintf(f, "%.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C2m, C4m, C6m);
 	}
     }
   fclose(f);
