@@ -68,15 +68,11 @@ int main(int argc, char **argv)
   int NN, fine, JJ, maxl, nfiles, nat;
   if (argc <= 1)
     {
-      printf("Usage: calcCn [points] \n");
+      printf("Usage: calcCn <lista_file> [points] \n");
       printf("where points is the number of points of the correlation function\n");
       exit(-1);
     }
-  NN =  atoi(argv[5]);
-  if (argc == 7)
-    points = atoi(argv[6]);
-  else
-    points = NN;
+ 
   c2 = 0;
   f2 = fopen(argv[1], "r");
   maxl = 0;
@@ -96,8 +92,6 @@ int main(int argc, char **argv)
       fscanf(f2, "%[^\n]\n", fname[ii]); 
     }
 
-  if (points > nfiles)
-    points = nfiles;
   f = fopen(fname[0], "r");
   nat = 0;
   while (!feof(f) && nat < 2) 
@@ -139,6 +133,12 @@ int main(int argc, char **argv)
 	}
     }
   fclose(f);
+  if (argc == 3)
+    points = atoi(argv[2]);
+  else
+    points = NN;
+  if (points > nfiles)
+    points = nfiles;
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
   else if ((B0 > A0 && B0 > C0) || (B0 < A0 && B0 < C0))
