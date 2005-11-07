@@ -3,7 +3,7 @@
 #include <string.h>
 #define MAXPTS 1000
 char **fname; 
-double time, *cc,*C2, C1, *ti, *u0[3], *ut[3], L, refTime;
+double time, *cc, *C2, C4, C6, costhSq, *ti, *u0[3], *ut[3], L, refTime;
 int points, assez, NP, NPA;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
@@ -205,12 +205,14 @@ int main(int argc, char **argv)
   f = fopen("Cn.dat", "w+");
   for (ii=1; ii < points; ii++)
     {
-      C1 = C2[ii]/cc[ii];
-      C2[ii] = C2[ii]/cc[ii];
-      C2[ii] = 1.5*C2[ii]*C2[ii] - 0.5;
+      costhSq = C2[ii]/cc[ii];
+      costhSq = costhSq*costhSq;
+      C2[ii] = 1.5*costhSq - 0.5;
+      C4 = (35.0*costhSq*costhSq - 30.0*costhSq + 3.0) / 8.0;
+      C6 = (231.0*costhSq*costhSq*costhSq - 315.0*costhSq*costhSq + 105.0*costhSq - 5.0)/16.0;
       if (ti[ii] > -1.0)
 	{
-	  fprintf(f, "%.15G %.15G %.15G %f\n", ti[ii]-ti[0], C1, C2[ii], cc[ii]);
+	  fprintf(f, "%.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C2[ii], C4, C6);
 	}
     }
   fclose(f);
