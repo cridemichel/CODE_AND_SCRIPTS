@@ -3406,26 +3406,22 @@ extern double max(double a, double b);
 extern int locate_contactSP(int i, int j, double shift[3], double t1, double t2, double *evtime, int *ata, int *atb, int *collCode);
 extern void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent);
 #endif
+#ifdef MD_HE_PARALL
+MPI_Datatype Particletype;
+MPI_Datatype Eventtype;
+#endif
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
   double vecg[5], shift[3], t1, t2, t, tm[NDIM];
   double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
   int overlap;
+#ifdef MD_HE_PARALL
+  int missing, num_work_request, njob, njob2i[512];
+#endif
 #ifdef MD_PATCHY_HE
   int ac, bc, collCode, collCodeOld, acHC, bcHC;
   double evtime, evtimeHC;
-#endif
-#ifdef MD_HE_PARALL
-  if (my_rank == 0)
-    {
-      /* send all data needed to other processes */
-    
-    }
-  else
-    {
-      /* receive data from root process */
-    }
 #endif
   if (vz[na] != 0.0) 
     {
@@ -3494,6 +3490,37 @@ void PredictEventNNL(int na, int nb)
   if (nb >= ATOM_LIMIT)
     return;
   MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    {
+      num_work_request = 0;
+      for (i=numOfProcs; i < nebrTab[na].len; i++)
+	{
+	  n = nebrTab[na].list[i]; 
+	  if (!(n != na && n!=nb && (nb >= -1 || n < na)))
+	    continue;
+	  njob2i[num_work_request] = i;
+	  num_work_request++; 
+	}	 
+      /* master process (rank=0) distributes jobs */
+      for (njob=0; njob < numOfProcs; njob++)
+	{
+	  n = nebrTab[na].list[njob2i[njob]]; 
+	  MPI_Send();
+	  njob++;
+	}    
+      for (njob=numOfProcs; njob < num_work_request; njob++)
+	 {
+	   n = nebrTab[na].list[njob2i[njob]]; 
+	   MPI_Receive();
+	   MPI_Send();
+	 }
+      for (missing = ndone; missing < num_work_request; missing++)
+	{
+	  MPI_Receive();
+	}
+    }
+#endif
   for (i=0; i < nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
@@ -3503,8 +3530,9 @@ void PredictEventNNL(int na, int nb)
 #endif
       if (!(n != na && n!=nb && (nb >= -1 || n < na)))
 	continue;
-     // for (kk=0; kk < 3; kk++)
-     //	shift[kk] = nebrTab[na].shift[i][kk];
+      //
+      // for (kk=0; kk < 3; kk++)
+      //	shift[kk] = nebrTab[na].shift[i][kk];
       shift[0] = L*rint((rx[na]-rx[n])/L);
       shift[1] = L*rint((ry[na]-ry[n])/L);
       shift[2] = L*rint((rz[na]-rz[n])/L);
@@ -3651,15 +3679,13 @@ void PredictEventNNL(int na, int nb)
 #endif
     }
 #ifdef MD_HE_PARALL
-  if (my_rank == 0)
+  for (i=0; i < nebrTab[na].len; i++)
     {
-      /* collect events from other processes */
-    
-    }
-  else
-    {
-      /* send predicted events to root process */
-
+      if ((i & numOfProcs) != my_rank)
+	{
+	  /* collect events from other processes */
+	  
+	}
     }
 #endif
 
