@@ -1572,13 +1572,15 @@ void mpi_define_structs(void)
   MPI_Address(parall_pair.vels, &displ_pair[1]);
   MPI_Address(parall_pair.axes, &displ_pair[2]);
   MPI_Address(parall_pair.celss, &displ_pair[3]);
-  MPI_Type_struct(4, blocklen_pair, displs_pair, type_pair, &parall_pair);
-
+  MPI_Type_struct(4, blocklen_pair, displs_pair, type_pair, &Particletype);
+  MPI_Type_commit(&Particletype);
+  
   MPI_Address(parall_ev, &displ_ev[0]);
   MPI_Address(parall_ev.rC, &displ_ev[1]);
   MPI_Address(parall_ev.a, &displ_ev[2]);
   MPI_Address(parall_ev.b, &displ_ev[3]);
-  MPI_Type_struct(4, blocklen_ev, displs_ev, type_ev, &parall_ev);
+  MPI_Type_struct(4, blocklen_ev, displs_ev, type_ev, &Eventtype);
+  MPI_Type_commit(&Eventtype);
 }
 void md_mpi_init(int *pargc, char***pargv)
 {
