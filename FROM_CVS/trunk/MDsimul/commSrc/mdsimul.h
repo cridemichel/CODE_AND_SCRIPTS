@@ -395,6 +395,8 @@ void sumAllProcMA(COORD_TYPE* addendum, ...);
 int chkXvaSteps(void);
 #define UPDATE_SYSTEM 
 #define ADJUST_LASTCOL
+#define MD_EXT_INIT
+#define MD_EXT_END
 /*===========================================================================*/
 
 /* ============================ >>> mdsimdep.h <<< ==========================*/
