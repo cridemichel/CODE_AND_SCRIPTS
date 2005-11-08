@@ -1557,11 +1557,35 @@ double calc_nnl_rcut(void)
   return 1.01*max(rcutA, rcutB);
 }
 #ifdef MD_HE_PARALL
+MPI_Datatype Particletype;
+MPI_Datatype Eventtype;
+
+void mpi_define_structs(void)
+{
+  MPI_Datatype type_pair[4]={MPI_DOUBLE,MPI_DOUBLE,MPI_DOUBLE,MPI_INT};
+  int blocklen_pair[4]={6,12,6,6};
+  MPI_Aint displs_pair[4];
+  MPI_Datatype type_ev[4]={MPI_DOUBLE,MPI_DOUBLE,MPI_INT,MPI_INT};
+  int blocklen_ev[4]={1,3,1,1};
+  MPI_Aint displs_ev[4];
+  MPI_Address(parall_pair, &displ_pair[0]);
+  MPI_Address(parall_pair.vels, &displ_pair[1]);
+  MPI_Address(parall_pair.axes, &displ_pair[2]);
+  MPI_Address(parall_pair.celss, &displ_pair[3]);
+  MPI_Type_struct(4, blocklen_pair, displs_pair, type_pair, &parall_pair);
+
+  MPI_Address(parall_ev, &displ_ev[0]);
+  MPI_Address(parall_ev.rC, &displ_ev[1]);
+  MPI_Address(parall_ev.a, &displ_ev[2]);
+  MPI_Address(parall_ev.b, &displ_ev[3]);
+  MPI_Type_struct(4, blocklen_ev, displs_ev, type_ev, &parall_ev);
+}
 void md_mpi_init(int *pargc, char***pargv)
 {
   MPI_Init(pargc, pargv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numOfProcs); 
+  mpi_define_structs();
 }
 void md_mpi_finalize()
 {
