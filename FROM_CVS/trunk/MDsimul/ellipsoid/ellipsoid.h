@@ -56,6 +56,21 @@ void UpdateSystem(void);
 #endif
 
 #ifdef MD_HE_PARALL
+struct 
+{
+  double pos[6];
+  double vels[12];
+  double axes[6];
+  int cells[6];
+} parall_pair;
+typedef struct 
+{
+  double t;
+  double rC[3];
+  int a;
+  int b;
+} parall_event;
+
 void md_mpi_init(int *argc, char***argv);
 void md_mpi_finalize(void);
 #undef MD_EXT_INIT
