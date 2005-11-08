@@ -53,6 +53,13 @@ double Ia, Ib, invIa, invIb;
 double *theta0, *phi0, *psi0, *costheta0, *sintheta0, **REt, **REtA, **REtB, *angM, ***RM, **RE0, **Rdot;
 double cosEulAng[2][3], sinEulAng[2][3];
 #endif
+#if defined(MD_HE_PARALL)
+int MPIpid;
+extern int my_rank;
+extern int numOfProcs; /* number of processeses in a communicator */
+#endif 
+
+
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
 extern double *vector(int n);
@@ -1549,7 +1556,18 @@ double calc_nnl_rcut(void)
 		   Sqr(Oparams.c[1]+OprogStatus.rNebrShell));
   return 1.01*max(rcutA, rcutB);
 }
-
+#ifdef MD_HE_PARALL
+void md_mpi_init(int *pargc, char***pargv)
+{
+  MPI_Init(pargc, pargv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numOfProcs); 
+}
+void md_mpi_finalize()
+{
+  MPI_Finalize();
+}
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:

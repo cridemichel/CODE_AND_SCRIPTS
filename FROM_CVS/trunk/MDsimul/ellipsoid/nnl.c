@@ -3416,6 +3416,17 @@ void PredictEventNNL(int na, int nb)
   int ac, bc, collCode, collCodeOld, acHC, bcHC;
   double evtime, evtimeHC;
 #endif
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    {
+      /* send all data needed to other processes */
+    
+    }
+  else
+    {
+      /* receive data from root process */
+    }
+#endif
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -3639,6 +3650,19 @@ void PredictEventNNL(int na, int nb)
       ScheduleEvent (na, n, t);
 #endif
     }
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    {
+      /* collect events from other processes */
+    
+    }
+  else
+    {
+      /* send predicted events to root process */
+
+    }
+#endif
+
 }
 #ifdef MD_PATCHY_HE
 extern int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2);
