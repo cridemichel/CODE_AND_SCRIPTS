@@ -18,12 +18,6 @@
 #undef UPDATE_SYSTEM
 void UpdateSystem(void);
 #define UPDATE_SYSTEM UpdateSystem();
-void md_mpi_init(int *argc, char***argv);
-void md_mpi_finalize(void);
-#undef MD_EXT_INIT
-#undef MD_EXT_END
-#define MD_EXT_INIT(X,Y) md_mpi_init(X,Y)
-#define MD_EXT_END() md_mpi_finalize()
 #ifdef MD_GRAVITY
 #undef ADJUST_LASTCOL 
 #define ADJUST_LASTCOL AdjustLastcol();
@@ -47,9 +41,7 @@ void md_mpi_finalize(void);
 /* 16/1/1998 ADD: <XVA defines> */
 #define MD_HD_XVA "/work2/xvafiles/"
 #define MD_TAPE_XVA "/iomega/xvafiles/"
-#ifdef MD_HE_PARALL
-#include <mpi.h>
-#endif
+
 
 #define NUM_MISURE 30         /* maximum number of
 				 measure done during simulation */
@@ -62,6 +54,13 @@ void md_mpi_finalize(void);
 #define MDINT int
 #define MDINTFMT "%d"
 #endif
+
+void md_mpi_init(int *argc, char***argv);
+void md_mpi_finalize(void);
+#undef MD_EXT_INIT
+#undef MD_EXT_END
+#define MD_EXT_INIT(X,Y) md_mpi_init(X,Y)
+#define MD_EXT_END() md_mpi_finalize()
 
 #define NDIM 3
 #define MD_DEBUG(X)  
@@ -538,9 +537,6 @@ struct params
   double I[2][3];
 #endif
 #ifdef MD_PATCHY_HE
-  int nmax;
-  double Dr;
-  double theta;  
   double sigmaSticky; /* ampiezza della buca */
   double bheight;
   double bhin;
@@ -795,9 +791,6 @@ struct pascii opar_ascii[]=
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
   {"bhin",               &OP(bhin),                         1,   1, "%.15G"},
   {"bhout",              &OP(bhout),                         1,   1, "%.15G"},
-  {"Dr",                 &OP(Dr),                            1,   1, "%.15G"},
-  {"theta",              &OP(theta),                         1,   1, "%.15G"},
-  {"nmax",               &OP(nmax),                          1,   1, "%d"},
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -968,9 +961,6 @@ struct singlePar OsinglePar[] = {
   {"assumeOneBond", &OprogStatus.assumeOneBond, INT},
   {"checkGrazing",  &OprogStatus.checkGrazing, INT},
   {"maxbonds",      &OprogStatus.maxbonds,     INT},
-  {"nmax",          &Oparams.nmax,         INT},
-  {"Dr",            &Oparams.Dr,           CT},
-  {"theta",         &Oparams.theta,        CT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
