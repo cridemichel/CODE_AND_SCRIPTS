@@ -18,6 +18,12 @@
 #undef UPDATE_SYSTEM
 void UpdateSystem(void);
 #define UPDATE_SYSTEM UpdateSystem();
+void md_mpi_init(int *argc, char***argv);
+void md_mpi_finalize(void);
+#undef MD_EXT_INIT
+#undef MD_EXT_END
+#define MD_EXT_INIT(X,Y) md_mpi_init(X,Y)
+#define MD_EXT_END() md_mpi_finalize()
 #ifdef MD_GRAVITY
 #undef ADJUST_LASTCOL 
 #define ADJUST_LASTCOL AdjustLastcol();
@@ -41,7 +47,9 @@ void UpdateSystem(void);
 /* 16/1/1998 ADD: <XVA defines> */
 #define MD_HD_XVA "/work2/xvafiles/"
 #define MD_TAPE_XVA "/iomega/xvafiles/"
-
+#ifdef MD_HE_PARALL
+#include <mpi.h>
+#endif
 
 #define NUM_MISURE 30         /* maximum number of
 				 measure done during simulation */
