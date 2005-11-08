@@ -55,13 +55,14 @@ void UpdateSystem(void);
 #define MDINTFMT "%d"
 #endif
 
+#ifdef MD_HE_PARALL
 void md_mpi_init(int *argc, char***argv);
 void md_mpi_finalize(void);
 #undef MD_EXT_INIT
 #undef MD_EXT_END
 #define MD_EXT_INIT(X,Y) md_mpi_init(X,Y)
 #define MD_EXT_END() md_mpi_finalize()
-
+#endif
 #define NDIM 3
 #define MD_DEBUG(X)  
 #define MD_DEBUG2(X)     
