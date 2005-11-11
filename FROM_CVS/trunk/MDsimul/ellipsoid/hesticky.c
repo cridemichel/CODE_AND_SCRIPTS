@@ -1824,7 +1824,7 @@ int check_cross_scf_sp(int NSP, double distsOld[6][NA], double dists[6][NA], int
 	{
 	  crossed[nn][nn2] = 0;
 	  //printf("dists[%d]=%.15G distsOld[%d]:%.15G\n", nn, dists[nn], nn, distsOld[nn]);
-	  if (fabs(dists[nn][nn2]) < 1E-14 && distsOld[nn][nn2] > 0.0)
+	  if (fabs(dists[nn][nn2]) < 1E-12 && distsOld[nn][nn2] > 0.0)
 	    {
 	      crossed[nn][nn2] = 1;
 	      retcross = 1;
