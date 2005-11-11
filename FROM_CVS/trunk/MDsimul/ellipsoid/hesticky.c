@@ -1552,8 +1552,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    	  t = tini + delt;
 	      	  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 		  itstb++;
-		  if (!interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
-				dists[sumnegpairs-1], &tmin, shift))
+		  if (!interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+				  dists[sumnegpairs-1], &tmin, shift))
 		    {
 		      tmin -= t1;
 		      delt = tmin - t;
@@ -1563,6 +1563,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		    }
 	       	}
 	    }
+	  sumnegpairs = 0;
+	}
 
 #endif
 #if 0
