@@ -3138,11 +3138,11 @@ void move(void)
   int i, phiI, thetaI, phi2I, theta2I, chsi2I; 
   FILE* f;
   double PI;
-  const int nr = 30;
+  const int nr = 20;
   const double V0 = 0.0;
   double rend, rini, dr, dist, phi, theta, phi2, theta2, chsi2;
   double dtheta, dphi, dtheta2, dphi2, dchsi2;
-  int nthetaI = 10, nphiI = 15, nphi2I = 20, ntheta2I = 20, nchsi2I = 20;
+  int nthetaI = 5, nphiI = 5, nphi2I = 10, ntheta2I = 10, nchsi2I = 10;
   f = fopen("Veff.dat", "w");
   PI = 2.0*acos(0);
   dphi = 2.0*PI/((double)nphiI);
@@ -3163,7 +3163,7 @@ void move(void)
       BuildNebrList(Oparams.parnum, Oparams.rcut);
     }
   rini = Oparams.Diam - 2.0;
-  rend = (Oparams.rcut/5 + 10) * Oparams.lambdaD;
+  rend = (Oparams.rcut + 5.0) * Oparams.lambdaD;
   dr = (rend - rini) / nr; 
   for (i=1; i < nr; i++)
     {
@@ -3216,7 +3216,7 @@ void move(void)
 	}
       
       /* Update accumulators for calculating the angular diffusion coefficent */
-      fprintf(f, "%.15G %.15G\n", dist, V0-log(1.0)-log(sumpot));
+      fprintf(f, "%.15G %.15G\n", dist, V0-log(sumpot));
     }
   /* printf("boh dist 0-1: %f\n", sqrt(Sqr(rallx[4][0]-rallx[5][0])+
      Sqr(rally[4][0]-rally[5][0])+Sqr(rallz[4][0]-rallz[5][0])) );
