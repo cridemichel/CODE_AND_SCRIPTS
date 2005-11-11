@@ -8,6 +8,7 @@
 #define MD_DEBUG20(x) 
 #define MD_DEBUG29(x) 
 #define MD_DEBUG30(x) 
+#define MD_DEBUG36(x)  
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #if defined(MPI)
@@ -1065,7 +1066,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       /* do a normal collison between hard spheres 
        * (or whatever kind of collision between core objects
        * (ellipsoids as well...)*/
-      //printf("time=%.15G HARD CORE BUMP\n", Oparams.time);
+      MD_DEBUG36(printf("i=%d j=%d time=%.15G HARD CORE BUMP\n", i, j, Oparams.time));
       //printf("HC ene prima=%.10G enepot=%f K=%f\n", calcpotene()+K, calcpotene(), K);
       core_bump(i, j, W, Sqr(sigmai));
       //printf("HC ene dopo=%.10G enepot=%f K=%f\n", calcpotene()+K, calcpotene(), K);
@@ -1350,7 +1351,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       if (Sqr(vc) < 2.0*Oparams.bheight/mredl)
 	{
 #if 1
-	  MD_DEBUG30(printf("t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n", Oparams.time,
+	  MD_DEBUG36(printf("t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n", Oparams.time,
 		 vc,  bt,
 		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 #endif
@@ -1359,7 +1360,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       else
 	{
 #if 1
-	  MD_DEBUG(printf("t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", Oparams.time, vc, bt,
+	  MD_DEBUG36(printf("t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", Oparams.time, vc, bt,
 		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 #endif
 	  factor = -vc + sqrt(Sqr(vc) - 2.0*Oparams.bheight/mredl);
@@ -1382,7 +1383,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       add_bond(i, j, ata, atb);
       add_bond(j, i, atb, ata);
       factor = -vc - sqrt(Sqr(vc) + 2.0*Oparams.bheight/mredl);
-      MD_DEBUG(printf("delta= %f height: %f mredl=%f\n", 
+      MD_DEBUG36(printf("delta= %f height: %f mredl=%f\n", 
 		      Sqr(vc) + 2.0*Oparams.bheight/mredl, Oparams.bheight, mredl));
       factor *= mredl;
       break;
@@ -2909,8 +2910,8 @@ int interpol(int i, int j, int nn,
     }
   dmin = calcDistNegOne(*tmin, tref, i, j, nn, shift);
 #if 0
-  printf("delt=%.15G *tmin=%.15G *tmin+t=%.15G\n", delt, *tmin, t+*tmin);
-  printf("A=%.15G B=%.15G C=%.15G\n", A, B, C);
+  printf("delt=%.15G *tmin=%.15G BAH=%.15G\n", delt, *tmin, 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5)));
+printf("A=%.15G\n", A);
   printf("{{%.15G,%.15G},{%.15G,%.15G},{%.15G,%.15G}} - *tmin=%.15G,%.15G\n", t, d1, t+delt*0.5,d3, t+delt, d2, *tmin, dmin);
 #endif
   if (*tmin < t+delt && *tmin > t && d1*dmin < 0.0)
@@ -2999,7 +3000,7 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
 	&& lastbump[j].at == mapbondsb[nn]))
 	continue;
       negpairs[nn] = 1;
-      sum += 1;
+      return nn+1;
 #if 0
       if (bound(i, j, mapbondsa[nn], mapbondsb[nn]) && dists[nn] > 0.0)
 	negpairs[nn] = 1;
@@ -3009,7 +3010,7 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
 #endif
       //printf("bondpair: %d dists[%d]:%.15G\n", bondpair, nn, dists[nn]);
     }
-  return (sum > 0)?1:0;
+  return 0;
 }
 
 int delt_is_too_big_hc(int i, int j, int bondpair, double *dists)
@@ -3191,7 +3192,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	
     }
 #endif
-#endif  
+#endif 
+#if 0
+  dold=calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
+  d=calcDistNeg(t+1E-20, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
+  printf("d-dold=%.30G\n", d-dold);
+#endif
   if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot, maxddoti))
     {
       return 0;  
@@ -3336,14 +3342,38 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	    }
 #endif
-	  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
-		 delt > minh)
+	  if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
+	      !interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+			dists[sumnegpairs-1], &tmin, shift))
 	    {
-	      delt /= GOLD; 
-	      t = tini + delt;
-	      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-	      itstb++;
+	      //printf("qui\n");
+	      tmin -= t1;
+	      delt = tmin - t;
+	      t = tmin;
+    	      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	    }
+#if 1
+	  else 
+	    {
+	      while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
+	  	     delt > minh)
+	    	{
+		  delt /= GOLD; 
+	    	  t = tini + delt;
+	      	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+		  itstb++;
+		  if (!interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+				dists[sumnegpairs-1], &tmin, shift))
+		    {
+		      tmin -= t1;
+		      delt = tmin - t;
+		      t = tmin;
+		      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+		      break;
+		    }
+	       	}
+	    }
+#endif
 	  sumnegpairs = 0;
 	}
 #endif
@@ -3452,6 +3482,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		  else
 		    {
 		      gotcoll = 1;
+		   
 		      if (*collCode == MD_EVENT_NONE || troot <= *evtime)
 			{
 			  *ata = mapbondsa[nn];
