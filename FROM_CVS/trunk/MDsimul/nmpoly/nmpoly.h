@@ -45,7 +45,7 @@
 
 /* ====================== >>> SIMULATION DEFINES <<< ========================*/
 
-#define NA 10 /* number of atoms for each molecule (particle) */
+#define NA 3 /* number of atoms for each molecule (particle) */
 
 #define MAXPAR 15000      /* maximum number of simulated particles */
 

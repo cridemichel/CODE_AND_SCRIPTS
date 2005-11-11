@@ -3047,9 +3047,9 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
       if (distsOld[nn] < 0.0 && dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	return 1;
 #endif
-    if (dists[nn] > 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
-      return 1;
-    if (dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+    if (dists[nn] >= 0.0 && distsOld[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]) )
+	return 1; 
+    if (dists[nn] <= 0.0 && distsOld[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
       return 1;
     }
   return 0;
