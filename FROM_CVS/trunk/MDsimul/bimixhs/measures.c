@@ -566,16 +566,13 @@ void Ptensor(void)
   /* DESCRIPTION:
      Store the three off-diagonal terms of the pressure tensor in an array 
      to save on disk like a single measure */
-#ifdef MD_HSVISCO
   mf = fopenMPI(absMisHD("Ptens.dat"),"a");
-#endif
+
   Ptens[0] = Pxy;
   Ptens[1] = Pyz;
   Ptens[2] = Pzx;
-#ifdef MD_HSVISCO
   fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time, Pxy, Pyz, Pzx);
   fclose(mf);
-#endif
 }
 
 /* ========================== >>> DQtensor <<< ============================= */
