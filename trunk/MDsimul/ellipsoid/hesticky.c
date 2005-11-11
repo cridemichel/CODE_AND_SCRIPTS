@@ -1222,9 +1222,11 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
 	&& lastbump[j].at == mapbondsb[nn]))
 	continue;
       negpairs[nn] = 1;
-      sum += 1;
+      return nn+1;
+      //sum += 1;
     }
-  return (sum > 0)?1:0;
+  return 0;
+  //return (sum > 0)?1:0;
 }
 
 int delt_is_too_big_hc(int i, int j, int bondpair, double *dists, double *distsOld)
@@ -1251,9 +1253,9 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 	continue;
       if (!negpairs[nn])
 	continue;
-    if (dists[nn] > 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+    if (dists[nn] >= 0.0 && distsOld[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
       return 1;
-    if (dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+    if (dists[nn] <= 0.0 && distsOld[nn] <= 0.0 !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
       return 1;
     }
   return 0;
@@ -1530,6 +1532,41 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
        * valore accettabile. */
       if (sumnegpairs)// && !firstaftsf)
 	{
+	   if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
+	      !interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+			  dists[sumnegpairs-1], &tmin, shift))
+	    {
+	      //printf("qui\n");
+	      tmin -= t1;
+	      delt = tmin - t;
+	      t = tmin;
+    	      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	    }
+#if 1
+	  else 
+	    {
+	      while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
+	  	     delt > minh)
+	    	{
+		  delt /= GOLD; 
+	    	  t = tini + delt;
+	      	  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+		  itstb++;
+		  if (!interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+				dists[sumnegpairs-1], &tmin, shift))
+		    {
+		      tmin -= t1;
+		      delt = tmin - t;
+		      t = tmin;
+		      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+		      break;
+		    }
+	       	}
+	    }
+
+#endif
+#if 0
+	  
 	  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 		 delt > minh)
 	    {
@@ -1540,6 +1577,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    }
 	  sumnegpairs = 0;
 	}
+#endif
 #endif
       MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
       for (nn=0; nn < MD_PBONDS; nn++)
