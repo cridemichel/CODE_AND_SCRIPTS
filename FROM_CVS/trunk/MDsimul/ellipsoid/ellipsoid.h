@@ -559,6 +559,9 @@ struct params
   double I[2][3];
 #endif
 #ifdef MD_PATCHY_HE
+  int nmax;
+  double Dr;
+  double theta;  
   double sigmaSticky; /* ampiezza della buca */
   double bheight;
   double bhin;
@@ -813,6 +816,9 @@ struct pascii opar_ascii[]=
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
   {"bhin",               &OP(bhin),                         1,   1, "%.15G"},
   {"bhout",              &OP(bhout),                         1,   1, "%.15G"},
+  {"Dr",                 &OP(Dr),                            1,   1, "%.15G"},
+  {"theta",              &OP(theta),                         1,   1, "%.15G"},
+  {"nmax",               &OP(nmax),                          1,   1, "%d"},
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -983,6 +989,9 @@ struct singlePar OsinglePar[] = {
   {"assumeOneBond", &OprogStatus.assumeOneBond, INT},
   {"checkGrazing",  &OprogStatus.checkGrazing, INT},
   {"maxbonds",      &OprogStatus.maxbonds,     INT},
+  {"nmax",          &Oparams.nmax,         INT},
+  {"Dr",            &Oparams.Dr,           CT},
+  {"theta",         &Oparams.theta,        CT},
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
