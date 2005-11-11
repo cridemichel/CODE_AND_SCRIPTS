@@ -3115,7 +3115,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   if (*collCode!=MD_EVENT_NONE)
     {
       if (t2 > *evtime)
-	t2 = *evtime+1E-7;
+	t2 = *evtime+1E-6;
     }
   delt = h;
   MD_DEBUG(printf("QUIIII collCode=%d\n", *collCode));
@@ -3198,7 +3198,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
     }
   timesS++;
   MD_DEBUG30(printf("[AFTER SEARCH CONTACT FASTER]Dopo distances between %d-%d d1=%.12G\n", i, j, d));
-
+#if 0
+  /* N.B. prova per vedere il minimo delt */
+  dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
+  d = calcDistNeg(t+1E-18, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
+  printf("d:%.15G dold: %.15G d-dold=%.15G\n", d, dold, d-dold);
+#endif
   MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
 #if 1
@@ -3424,7 +3429,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		      || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && 
 		       lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-15))
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-20))
 #endif
 		    {
 #if 0
