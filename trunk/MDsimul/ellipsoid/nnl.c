@@ -2440,7 +2440,7 @@ int check_cross_scf(double distsOld[6], double dists[6], int crossed[6])
     {
       crossed[nn] = 0;
       //printf("dists[%d]=%.15G distsOld[%d]:%.15G\n", nn, dists[nn], nn, distsOld[nn]);
-      if (fabs(dists[nn]) < 1E-14 && distsOld[nn] > 0.0)
+      if (fabs(dists[nn]) < 1E-12 && distsOld[nn] > 0.0)
 	{
 	  crossed[nn] = 1;
 	  retcross = 1;
@@ -3702,6 +3702,7 @@ void updrebuildNNL(int na)
   int ip;
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE
+  nnltime1 = timbig;
   if (OprogStatus.targetPhi <= 0.0)
     {
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
@@ -3823,6 +3824,7 @@ void nextNNLupdate(int na)
   MD_DEBUG31(printf("BUILDING NNL FOR i=%d\n",na));
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE
+  nnltime1 = timbig;
   if (OprogStatus.targetPhi <= 0.0)
     {
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
