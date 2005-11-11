@@ -1349,7 +1349,7 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
-  const double minh = 1E-14;
+  const double minh = 1E-20;
   double h, d, dold, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS];
   double maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
 #ifndef MD_BASIC_DT
@@ -1611,7 +1611,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		  || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && 
 		       lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-15))
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-16))
 #endif
 		    {
 		     MD_DEBUG31(printf("SP lastbump[%d].mol=%d lastbump[%d].at=%d lastbump[%d].mol=%d lastbump[%d].at=%d\n", i, lastbump[i].mol, i, lastbump[i].at, j, lastbump[j].mol, j, lastbump[j].at));
