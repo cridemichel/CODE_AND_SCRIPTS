@@ -1798,7 +1798,7 @@ int check_cross_sp(int nsp, double distsOld[6][NA], double dists[6][NA], int cro
   int retcross = 0;
   for (nn = 0; nn < 6; nn++)
     {
-      for (nn2 = 0; nn2 < 6; nn2++)
+      for (nn2 = 0; nn2 < nsp; nn2++)
 	{
 
 	  crossed[nn][nn2] = 0;
@@ -1824,7 +1824,7 @@ int check_cross_scf_sp(int NSP, double distsOld[6][NA], double dists[6][NA], int
 	{
 	  crossed[nn][nn2] = 0;
 	  //printf("dists[%d]=%.15G distsOld[%d]:%.15G\n", nn, dists[nn], nn, distsOld[nn]);
-	  if (fabs(dists[nn][nn2]) < 1E-12 && distsOld[nn][nn2] > 0.0)
+	  if ((fabs(dists[nn][nn2]) < 1E-15 || dists[nn][nn2] < 0.0) && distsOld[nn][nn2] > 0.0)
 	    {
 	      crossed[nn][nn2] = 1;
 	      retcross = 1;
@@ -1952,14 +1952,32 @@ void calc_delt_sp(int nsp, double maxddoti[6][NA], double *delt, double dists[6]
   //printf("I chose dt=%.15G\n", *delt);
 }
 extern double max(double a, double b);
+extern const double mddotfact;
+void adjust_maxddoti_sp(int i, int NSP, double *maxddot, double maxddotiLC[6][NA], double maxddoti[6][NA])
+{
+  double K = 1.0;
+  int a, b;
+#ifdef MD_ASYM_ITENS
+  if (Mx[i] == 0.0 && My[i] == 0.0 && Mz[i] == 0.0)
+    K = mddotfact;
+#else
+  if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
+    K = mddotfact;
+#endif
+  *maxddot *= K;
+  for (a = 0; a < 6; a++)
+    for (b = 0; b < NSP; b++)
+      maxddoti[a][b] = K*maxddotiLC[a][b];
 
+}
 int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double t2, 
 					  double epsd, double *d1, double epsdFast, 
-					  double dists[6][NA], double maxddoti[6][NA], double maxddot)
+					  double dists[6][NA], double maxddotiLC[6][NA], double maxddot)
 {
   double told, delt=1E-15, distsOld[6][NA];
   const double GOLD= 1.618034;
   const int MAXOPTITS = 500;
+  double maxddoti[6][NA];
   int its=0, crossed[6][NA], itsf, NSP; 
 
   if (i < Oparams.parnumA)
@@ -1978,6 +1996,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
       assign_dists_sp(NSP, distsOld, dists);
       return 0;
     }
+  adjust_maxddoti_sp(i, NSP, &maxddot, maxddotiLC, maxddoti);
   while (fabs(*d1) > epsdFast && its < MAXOPTITS)
     {
 #if 1
@@ -2000,7 +2019,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
       //printf("d=%.15G t=%.15G\n", *d1, *t+t1);
 #if 1
       itsf = 0;
-      while (check_cross_scf_sp(NSP, distsOld, dists, crossed))
+      while (check_cross_sp(NSP, distsOld, dists, crossed))
 	{
 	  /* reduce step size */
 	  if (itsf == 0 && delt - OprogStatus.h > 0)
