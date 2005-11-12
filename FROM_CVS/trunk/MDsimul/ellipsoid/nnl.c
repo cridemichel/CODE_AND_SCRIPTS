@@ -2263,6 +2263,7 @@ double calcvecFNeigh(int i, double t, double t1, double* ddot, double *r1)
   return fabs(scalProd(ddot, gradplane));
 #endif
 }
+void adjust_maxddot(int i, double *maxddot);
 
 int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2, 
 				double *vecgd, double epsd, double *d1, double epsdFast,
@@ -2291,6 +2292,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 #endif
 #endif
+  adjust_maxddot(i, &maxddot);
   //printf("SCALPROD = %.15G\n", vx[0]*gradplane[0]+vy[1]*gradplane[1]+vz[2]*gradplane[2]);
   *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed, nplane);
   timesFNL++;
@@ -2440,7 +2442,7 @@ int check_cross_scf(double distsOld[6], double dists[6], int crossed[6])
     {
       crossed[nn] = 0;
       //printf("dists[%d]=%.15G distsOld[%d]:%.15G\n", nn, dists[nn], nn, distsOld[nn]);
-      if (fabs(dists[nn]) < 1E-12 && distsOld[nn] > 0.0)
+      if ((fabs(dists[nn]) < 1E-15 || dists[nn] < 0.0)  && distsOld[nn] > 0.0)
 	{
 	  crossed[nn] = 1;
 	  retcross = 1;
@@ -2548,14 +2550,42 @@ void calc_delt(double maxddoti[6], double *delt, double dists[6])
     }
   //printf("I chose dt=%.15G\n", *delt);
 }
+const double mddotfact = 1.001;
+void adjust_maxddot(int i, double *maxddot)
+{
+  double K = 1.0;
+#ifdef MD_ASYM_ITENS
+  if (Mx[i] == 0.0 && My[i] == 0.0 && Mz[i] == 0.0)
+    K = mddotfact;
+#else
+  if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
+    K = mddotfact;
+#endif
+}
+void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddoti[6])
+{
+  double K = 1.0;
+  int a;
+#ifdef MD_ASYM_ITENS
+  if (Mx[i] == 0.0 && My[i] == 0.0 && Mz[i] == 0.0)
+    K = mddotfact;
+#else
+  if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
+    K = mddotfact;
+#endif
+  *maxddot *= K;
+  for (a = 0; a < 6; a++)
+    maxddoti[a] = K*maxddotiLC[a];
+}
 int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2, 
 					  double vecgd[6][8], double epsd, 
 					  double *d1, double epsdFast, 
-					  double dists[6], double maxddoti[6], double maxddot)
+					  double dists[6], double maxddotiLC[6], double maxddot)
 {
   double told, delt=1E-15, distsOld[6];
   const double GOLD= 1.618034;
   const int MAXOPTITS = 500;
+  double maxddoti[6];
   int its=0, crossed[6], itsf; 
   *d1 = calcDistNegNeighPlaneAll(*t, t1, i, distsOld, vecgd, 1);
 #if 0
@@ -2569,6 +2599,8 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
       assign_dists(distsOld, dists);
       return 0;
     }
+  adjust_maxddoti(i, &maxddot, maxddotiLC, maxddoti);
+
   while (fabs(*d1) > epsdFast && its < MAXOPTITS)
     {
 #if 1
@@ -2591,7 +2623,7 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
       //printf("d=%.15G t=%.15G\n", *d1, *t+t1);
 #if 1
       itsf = 0;
-      while (check_cross_scf(distsOld, dists, crossed))
+      while (check_cross(distsOld, dists, crossed))
 	{
 	  /* reduce step size */
 	  if (itsf == 0 && delt - OprogStatus.h > 0)
