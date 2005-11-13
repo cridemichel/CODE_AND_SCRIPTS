@@ -3442,11 +3442,156 @@ extern void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcol
 MPI_Datatype Particletype;
 MPI_Datatype Eventtype;
 #endif
+#ifdef MD_HE_PARALL
+void find_contact_parall(int na, int n)
+{
+  double shift[3];
+  double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
+  shift[0] = L*rint((rx[na]-rx[n])/L);
+  shift[1] = L*rint((ry[na]-ry[n])/L);
+  shift[2] = L*rint((rz[na]-rz[n])/L);
+
+  /* maxax[...] è il diametro dei centroidi dei due tipi
+   * di ellissoidi */
+  if (OprogStatus.targetPhi > 0)
+    {
+      sigSq = Sqr(max_ax(na)+max_ax(n)+OprogStatus.epsd);
+    }
+  else
+    {
+      if (na < parnumA && n < parnumA)
+	sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+      else if (na >= parnumA && n >= parnumA)
+	sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+      else
+	sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+    }
+  MD_DEBUG2(printf("sigSq: %f\n", sigSq));
+  tInt = Oparams.time - atomTime[n];
+  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+  dv[0] = vx[na] - vx[n];
+  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+  dv[1] = vy[na] - vy[n];
+#ifdef MD_GRAVITY
+  dr[2] = rz[na] - 
+    (rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
+  dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
+#else
+  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+  dv[2] = vz[na] - vz[n];
+#endif
+  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+  d = Sqr (b) - vv * (distSq - sigSq);
+  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+    {
+      /* i centroidi non collidono per cui non ci può essere
+       * nessun urto sotto tali condizioni */
+      continue;
+    }
+  MD_DEBUG32(printf("PREDICTING na=%d n=%d\n", na , n));
+  if (vv==0.0)
+    {
+      if (distSq >= sigSq)
+	{
+	  continue;
+	}
+      /* la vel relativa è zero e i centroidi non si overlappano quindi
+       * non si possono urtare! */
+      t1 = t = 0;
+      t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+		   urtare ruotando */
+    }
+  else if (distSq >= sigSq)
+    {
+      t = t1 = - (sqrt (d) + b) / vv;
+      t2 = (sqrt (d) - b) / vv;
+      overlap = 0;
+    }
+  else 
+    {
+      MD_DEBUG(printf("Centroids overlap!\n"));
+      t2 = t = (sqrt (d) - b) / vv;
+      t1 = 0.0; 
+      overlap = 1;
+      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+    }
+  MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
+  MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
+  //t += Oparams.time; 
+  t2 += Oparams.time;
+  t1 += Oparams.time;
+
+#if 0
+  tnnl = min(nebrTab[na].nexttime,nebrTab[n].nexttime);
+  if (tnnl < t2)
+    t2 = tnnl;
+#else      
+  /* WARNING: OprogStatus.h è un buffer di sicurezza */
+  if (nextNNLrebuild < t2)
+    t2 = nextNNLrebuild + OprogStatus.h;
+#endif
+  // t1 = Oparams.time;
+  // t2 = nebrTab[na].nexttime;//,nebrTab[n].nexttime);
+
+  MD_DEBUG32(printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime));
+  MD_DEBUG32(printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2));
+#ifdef MD_PATCHY_HE
+  evtime = t2;
+  collCode = MD_EVENT_NONE;
+  rxC = ryC = rzC = 0.0;
+  MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
+  collCodeOld = collCode;
+  evtimeHC = evtime;
+  acHC = ac = 0;
+  bcHC = bc = 0;
+  if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
+				    (na >= Oparams.parnumA && n < Oparams.parnumA)))
+    {
+      if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+	{
+	  collCode = MD_EVENT_NONE;
+	}
+    }
+  if (collCode!=MD_EVENT_NONE)
+    t2 = evtime+1E-7;
+  if (locate_contact(na, n, shift, t1, t2, vecg))
+    {
+      if (collCode == MD_EVENT_NONE || (collCode!=MD_EVENT_NONE && vecg[4] <= evtime))
+	{
+	  collCode = MD_CORE_BARRIER;
+	  evtime = vecg[4];
+	  rxC = vecg[0];
+	  ryC = vecg[1];
+	  rzC = vecg[2];
+	}
+    }
+  else
+    {
+      if (collCode == MD_EVENT_NONE)
+	continue;
+    }
+
+  t = evtime;
+#else
+  if (!locate_contact(na, n, shift, t1, t2, vecg))
+    {
+      continue;
+    }
+  rxC = vecg[0];
+  ryC = vecg[1];
+  rzC = vecg[2];
+  t = vecg[4];
+#endif
+
+}
+/* PredicEventNNL parallelizzata */
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
   double vecg[5], shift[3], t1, t2, t, tm[NDIM];
-  double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
   int overlap;
 #ifdef MD_HE_PARALL
   int missing, num_work_request, njob, njob2i[512];
@@ -3522,7 +3667,6 @@ void PredictEventNNL(int na, int nb)
   if (nb >= ATOM_LIMIT)
     return;
   MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
-#ifdef MD_HE_PARALL
   if (my_rank == 0)
     {
       num_work_request = 0;
@@ -3545,14 +3689,107 @@ void PredictEventNNL(int na, int nb)
 	 {
 	   n = nebrTab[na].list[njob2i[njob]]; 
 	   MPI_Receive();
+#ifdef MD_PATCHY_HE
+ 	   ScheduleEventBarr (na, n,  ac, bc, collCode, t);
+#else
+ 	   ScheduleEvent (na, n, t);
+#endif
 	   MPI_Send();
 	 }
       for (missing = ndone; missing < num_work_request; missing++)
 	{
 	  MPI_Receive();
+#ifdef MD_PATCHY_HE
+    	  ScheduleEventBarr (na, n,  ac, bc, collCode, t);
+#else
+	  ScheduleEvent (na, n, t);
+#endif
 	}
     }
+  else
+    {
+      /* slaves processes here */
+    }
+}
+#else
+void PredictEventNNL(int na, int nb) 
+{
+  int i, signDir[NDIM]={0,0,0}, evCode, k, n;
+  double vecg[5], shift[3], t1, t2, t, tm[NDIM];
+  double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
+  int overlap;
+#ifdef MD_PATCHY_HE
+  int ac, bc, collCode, collCodeOld, acHC, bcHC;
+  double evtime, evtimeHC;
 #endif
+  if (vz[na] != 0.0) 
+    {
+      if (vz[na] > 0.0) 
+	signDir[2] = 0;/* direzione positiva */
+      else 
+	signDir[2] = 1;/* direzione negativa */
+      tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
+	       cellsz - rz[na] - L2) / vz[na];
+    } 
+  else 
+    tm[2] = timbig;
+  if (vx[na] != 0.0) 
+    {
+      if (vx[na] > 0.0) 
+	signDir[0] = 0;/* direzione positiva */
+      else 
+	signDir[0] = 1;/* direzione negativa */
+      tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L /
+	       cellsx - rx[na] - L2) / vx[na];
+    } 
+  else 
+    tm[0] = timbig;
+  
+  if (vy[na] != 0.) 
+    {
+      if (vy[na] > 0.) 
+	signDir[1] = 0;
+      else 
+	signDir[1] = 1;
+      tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L /
+	       cellsy - ry[na] - L2) / vy[na];
+    } 
+  else 
+    tm[1] = timbig;
+  /* ====== */
+  /* Find minimum time */
+  k = -1; /* giusto per dare un valore ed evitare una warning */
+  if (tm[1] <= tm[2]) {
+    if (tm[0] <= tm[1]) k = 0;
+    else k = 1;
+  } else {
+    if (tm[0] <= tm[2]) k = 0;
+    else k = 2;
+  }
+#if 1
+  if (tm[k]<0)
+    {
+      tm[k] = 0.0;
+#if 1
+      printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
+      printf("Cells(%d,%d,%d)\n", inCell[0][na], inCell[1][na], inCell[2][na]);
+      printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
+	     signDir[2]);
+#endif
+    }
+#endif
+  /* 100+0 = attraversamento cella lungo x
+   * 100+1 =       "           "     "   y
+   * 100+2 =       "           "     "   z */
+  evCode = 100 + k;
+  /* urto con le pareti, il che vuol dire:
+   * se lungo z e rz = -L/2 => urto con parete */ 
+  ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+  /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni */
+  if (nb >= ATOM_LIMIT)
+    return;
+  MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
+
   for (i=0; i < nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
@@ -3710,18 +3947,8 @@ void PredictEventNNL(int na, int nb)
       ScheduleEvent (na, n, t);
 #endif
     }
-#ifdef MD_HE_PARALL
-  for (i=0; i < nebrTab[na].len; i++)
-    {
-      if ((i & numOfProcs) != my_rank)
-	{
-	  /* collect events from other processes */
-	  
-	}
-    }
-#endif
-
 }
+#endif
 #ifdef MD_PATCHY_HE
 extern int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2);
 #endif
