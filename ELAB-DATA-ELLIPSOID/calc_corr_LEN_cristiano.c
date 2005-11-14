@@ -14,13 +14,13 @@ main(){
 	
   conf_t conf;    // configuration
   int ibin; 
-  double hist[Nbins]; // histogram
+  double hist2[Nbins]; // histogram
+  double hist4[Nbins];
+  double hist6[Nbins];
+  double cos2theta, cos4theta;
   double norm[Nbins]; // bin normalization
   double rx,ry,rz,r,dr;
 
-  double histY22[Nbins]; // histogram
-  double Y2i,Y2j,Y22;
-  
   double box, unit_length, cosTheta;
   
 #ifndef Npart
@@ -41,7 +41,7 @@ main(){
   allocate = MY_TRUE;  // first conf must be allocated  
   
   /* initialize histograms */
-  for(ibin=0;ibin<Nbins;ibin++) hist[ibin]=norm[ibin]=0.0;
+  for(ibin=0;ibin<Nbins;ibin++) hist2[ibin]=hist4[ibin]=hist6[ibin]=norm[ibin]=0.0;
 	      
   for(iConf=0; iConf<(TotalConfs); iConf++){
   	
@@ -60,12 +60,17 @@ main(){
 	
 
     for(i=1;i<Npart;i++) for(j=0;j<i;j++){
+#ifdef Z_AXIS
+	cosTheta = conf.R[i][6] * conf.R[j][6] +
+	  	conf.R[i][7] * conf.R[j][7] +
+	  	conf.R[i][8] * conf.R[j][8];
 
+#else
       	cosTheta = 
 	  	conf.R[i][0] * conf.R[j][0] +
 	  	conf.R[i][1] * conf.R[j][1] +
 	  	conf.R[i][2] * conf.R[j][2];
-	  	
+#endif	  	
 	  	rx = conf.rx[i] - conf.rx[j];
 	  	ry = conf.ry[i] - conf.ry[j];
 	  	rz = conf.rz[i] - conf.rz[j];
@@ -73,21 +78,13 @@ main(){
 		rx=remainder(rx,box);	
 		ry=remainder(ry,box);
 		rz=remainder(rz,box);
-
-		Y22 = 0;
-		for (k = 0; k < 3; ++k) {
-			Y2i=conf.R[i][k];
-			Y2j=conf.R[j][k];
-			Y2i=(3.*Y2i*Y2i-1.)*0.5;
-			Y2j=(3.*Y2j*Y2j-1.)*0.5;
-			Y22 += Y2i*Y2j;
-		}
-		Y22 /=3.;
-	  
 		r=sqrt(rx*rx+ry*ry+rz*rz); ibin=r/dr;
 		if((ibin>0)&&(ibin<Nbins)) {
-			hist[ibin] += cosTheta*cosTheta;
-			histY22[ibin] += Y22; 
+			cos2theta = cosTheta*cosTheta;
+			cos4theta = cos2theta*cos2theta;
+			hist2[ibin] += cos2theta;
+			hist4[ibin] += cos4theta;
+			hist6[ibin] += cos2theta*cos4theta;
 			norm[ibin]++ ;
 		}
 		
@@ -101,17 +98,19 @@ main(){
     
   for(ibin=0;ibin<Nbins;ibin++) 
   	if(norm[ibin]>0.){
-  		hist[ibin]=(3.*hist[ibin]/norm[ibin]-1.)/2.;
-  		histY22[ibin]/=norm[ibin];
+		hist2[ibin] /= norm[ibin];
+		hist4[ibin] /= norm[ibin];
+		hist6[ibin] /= norm[ibin];
+		hist6[ibin]= (231.0*hist6[ibin] - 315.0*hist4[ibin] + 105.0*hist2[ibin] - 5.0)/16.0;
+		hist4[ibin]= (35.0*hist4[ibin] - 30.0*hist2[ibin] + 3.0)/8.0;
+  		hist2[ibin]=(3.*hist2[ibin]-1.)/2.;
   	}
-  	else
-  		histY22[ibin]=hist[ibin]=0.; 	
   
   
   for(ibin=0;ibin<Nbins;ibin++) { 
-  	r=(ibin+0.5)*dr; 
+  	r=(ibin+0.5)*dr; if(norm[ibin] > 0.0)
     printf("%lf %lf %lf %lf\n",r/unit_length,
-    	hist[ibin],histY22[ibin],norm[ibin]);
+    	hist2[ibin],hist4[ibin],hist6[ibin]);
   }
 	
 }
