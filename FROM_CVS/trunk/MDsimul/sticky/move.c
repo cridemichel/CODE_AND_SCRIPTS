@@ -3048,10 +3048,12 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
       if (distsOld[nn] < 0.0 && dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	return 1;
 #endif
-    if (dists[nn] >= 0.0 && distsOld[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]) )
+      /* N.B. distsOld[nn] non va controllato poiché dopo un urto cmq ci deve essere un estremo
+       * di distanza dmin t.c. dmin > 0 se !bound(i,j..) o dmin < 0 se bound(i,j...) */
+      if (dists[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	return 1; 
-    if (dists[nn] <= 0.0 && distsOld[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
-      return 1;
+      if (dists[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	return 1;
     }
   return 0;
 }
@@ -3204,6 +3206,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
     }
   timesS++;
   MD_DEBUG30(printf("[AFTER SEARCH CONTACT FASTER]Dopo distances between %d-%d d1=%.12G\n", i, j, d));
+   
 #if 0
   /* N.B. prova per vedere il minimo delt */
   dold = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
@@ -3459,13 +3462,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		      || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && 
 		       lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-20))
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-14))
 #endif
 		    {
 #if 0
 		      if (lastbump[i].mol == j && lastbump[j].mol==i && 
 			  lastbump[i].at == mapbondsa[nn]
-			  && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 2E-15)
+			  && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-16)
 			{
 			  printf("dold[%d]:%.15G d[%d]:%.15G\n", nn, distsOld[nn], nn, dists[nn]);
 			  printf("state: %d collision type: %d\n", 
