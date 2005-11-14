@@ -68,7 +68,28 @@ main(){
 
     }//end calculate parameters
     
-
+#ifdef Z_AXIS
+    Y20 = 0.0;
+    for(i=0;i<Npart;i++) {
+      cosTheta = conf.R[i][6]; 
+      Y20+=( 3.*cosTheta*cosTheta - 1.) / 2.;
+    }
+    Y20Y20 += Y20*Y20;
+      	
+    Y20 = 0.0;
+    for(i=0;i<Npart;i++) {
+      cosTheta = conf.R[i][7]; 
+      Y20+=( 3.*cosTheta*cosTheta - 1.) / 2.;
+    }
+    Y20Y20 += Y20*Y20;
+      	
+    Y20 = 0.0;
+    for(i=0;i<Npart;i++) {
+      cosTheta = conf.R[i][8]; 
+      Y20+=( 3.*cosTheta*cosTheta - 1.) / 2.;
+    }
+    Y20Y20 += Y20*Y20;
+#else
     Y20 = 0.0;
     for(i=0;i<Npart;i++) {
       cosTheta = conf.R[i][0]; 
@@ -88,9 +109,8 @@ main(){
       cosTheta = conf.R[i][2]; 
       Y20+=( 3.*cosTheta*cosTheta - 1.) / 2.;
     }
-
     Y20Y20 += Y20*Y20;
-      	
+#endif
     allocate = MY_FALSE; 
     
   }/* iConf - end of reading all */
@@ -105,7 +125,9 @@ main(){
 
   /* rho-rho prefactor */
   Y20Y20  *= 4.0 * M_PI;
-
+#ifdef FS_UNIT
+  Y20Y20 /= M_PI;
+#endif
   printf("%lf\n",Y20Y20 );
   
 

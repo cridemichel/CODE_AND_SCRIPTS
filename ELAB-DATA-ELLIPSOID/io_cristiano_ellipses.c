@@ -13,7 +13,7 @@ double*  dvector( int rows );
 read_cristiano_ellipses( conf_t *conf, int allocate)
 {
 
-  char  line[5000];
+  char  line[500000];
   char  prefix[100];
 
   FILE *fp;
@@ -26,7 +26,7 @@ read_cristiano_ellipses( conf_t *conf, int allocate)
    
   fp = fopen(conf->nomefile,"r");
   if (fp == NULL) {
-    fprintf(stderr, "%s\" open failure\n", conf->nomefile);
+    fprintf(stderr, "<%s> open failure\n", conf->nomefile);
     exit(1);
   }
 
