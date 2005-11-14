@@ -1253,10 +1253,12 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 	continue;
       if (!negpairs[nn])
 	continue;
-    if (dists[nn] >= 0.0 && distsOld[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
-      return 1;
-    if (dists[nn] <= 0.0 && distsOld[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
-      return 1;
+      /* N.B. distsOld[nn] non va controllato poiché dopo un urto cmq ci deve essere un estremo
+       * di distanza dmin t.c. dmin > 0 se !bound(i,j..) o dmin < 0 se bound(i,j...) */
+      if (dists[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	return 1;
+      if (dists[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	return 1;
     }
   return 0;
 }
@@ -1651,7 +1653,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		  || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && 
 		       lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-16))
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-14))
 #endif
 		    {
 		     MD_DEBUG31(printf("SP lastbump[%d].mol=%d lastbump[%d].at=%d lastbump[%d].mol=%d lastbump[%d].at=%d\n", i, lastbump[i].mol, i, lastbump[i].at, j, lastbump[j].mol, j, lastbump[j].at));

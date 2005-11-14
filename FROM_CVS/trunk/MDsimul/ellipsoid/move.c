@@ -4771,7 +4771,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 
 #else
 	      if (vecg[4]>t2 || vecg[4]<t1 || 
-		  (lastbump[i] == j && lastbump[j]==i && fabs(vecg[4] - lastcol[i])<1E-15))
+		  (lastbump[i] == j && lastbump[j]==i && fabs(vecg[4] - lastcol[i])<1E-14))
 		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
 		return 0;
 	      else
