@@ -3589,7 +3589,7 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
 #else
   if (!locate_contact(na, n, shift, t1, t2, vecg))
     {
-      parall_pair->t = -timbig;
+      parall_event->t = -timbig;
       return;
     }
   rxC = vecg[0];
@@ -3610,7 +3610,11 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
 #endif
 }
 MPI_Status parall_status;
+#ifdef MD_PATCHY_HE
 extern struct LastBumpS *lastbump;
+#else
+extern int *lastbump;
+#endif
 extern double *lastcol;
 int parall_slave_get_data(parall_pair_struct *parall_pair)
 {
@@ -3651,13 +3655,17 @@ int parall_slave_get_data(parall_pair_struct *parall_pair)
   inCell[0][j] = parall_pair->cells[3];
   inCell[1][j] = parall_pair->cells[4];
   inCell[2][j] = parall_pair->cells[5];
+#ifdef MD_PATCHY_HE
   lastbump[i].mol = parall_pair->lastbump[0];
   lastbump[i].at = parall_pair->lastbump[1];
   lastbump[i].type = parall_pair->lastbump[2];
   lastbump[j].mol = parall_pair->lastbump[3];
   lastbump[j].at = parall_pair->lastbump[4];
   lastbump[j].type = parall_pair->lastbump[5];
- 
+#else
+  lastbump[i] = parall_pair->lastbump[0];
+  lastbump[i] = parall_pair->lastbump[1];
+#endif
   Oparams.time = parall_pair->time[0];
   nextNNLrebuild = parall_pair->time[1];
   lastcol[i] = parall_pair->time[2];
@@ -3726,12 +3734,17 @@ void parall_set_data(int i, int j, parall_pair_struct *parall_pair)
   parall_pair->cells[3] = inCell[0][j];
   parall_pair->cells[4] = inCell[1][j];
   parall_pair->cells[5] = inCell[2][j];
+#ifdef MD_PATCHY_HE
   parall_pair->lastbump[0] = lastbump[i].mol;
   parall_pair->lastbump[1] = lastbump[i].at;
   parall_pair->lastbump[2] = lastbump[i].type;
   parall_pair->lastbump[3] = lastbump[j].mol;
   parall_pair->lastbump[4] = lastbump[j].at;
   parall_pair->lastbump[5] = lastbump[j].type;
+#else
+  parall_pair->lastbump[0] = lastbump[i];
+  parall_pair->lastbump[1] = lastbump[j];
+#endif
   parall_pair->time[0] = Oparams.time;
   parall_pair->time[1] = nextNNLrebuild;
   parall_pair->time[2] = lastcol[i];
