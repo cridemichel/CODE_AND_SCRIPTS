@@ -3345,41 +3345,43 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	    }
 #endif
-	  if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
-	      !interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
-			dists[sumnegpairs-1], &tmin, shift, 1))
+	  if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs))
 	    {
-	      //printf("qui\n");
-	      tmin -= t1;
-	      //printf("i=%d j=%d QUIIIIIIIIIIIIII delt=%.15G t1=%.15G\n", i,j,delt, t1);
-	      delt = tmin - tini;
-	      t = tmin;
-	      //printf(">>>> QUI delt=%.15G tmin=%.15G tini=%.15G tmin-t=%.15G\n", delt, tmin, tini, tmin-t);
-    	      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-	    }
+	      if (!interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+			    dists[sumnegpairs-1], &tmin, shift, 1))
+		{
+		  //printf("qui\n");
+		  tmin -= t1;
+		  //printf("i=%d j=%d QUIIIIIIIIIIIIII delt=%.15G t1=%.15G\n", i,j,delt, t1);
+		  delt = tmin - tini;
+		  t = tmin;
+		  //printf(">>>> QUI delt=%.15G tmin=%.15G tini=%.15G tmin-t=%.15G\n", delt, tmin, tini, tmin-t);
+		  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+		}
 #if 1
-	  else 
-	    {
-	      printf("[INFO] using old goldenfactor method to reduce delt\n");
-	      while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
-	  	     delt > minh)
-	    	{
-		  delt /= GOLD; 
-	    	  t = tini + delt;
-	      	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-		  itstb++;
-		  if (!interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
-				dists[sumnegpairs-1], &tmin, shift, 1))
+	      else 
+		{
+		  printf("[INFO] using old goldenfactor method to reduce delt\n");
+		  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
+			 delt > minh)
 		    {
-		      tmin -= t1;
-		      delt = tmin - tini;
-		      t = tmin;
+		      delt /= GOLD; 
+		      t = tini + delt;
 		      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-		      break;
+		      itstb++;
+		      if (!interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+				    dists[sumnegpairs-1], &tmin, shift, 1))
+			{
+			  tmin -= t1;
+			  delt = tmin - tini;
+			  t = tmin;
+			  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+			  break;
+			}
 		    }
-	       	}
-	    }
+		}
 #endif
+	    }
 	  sumnegpairs = 0;
 	}
 #endif
