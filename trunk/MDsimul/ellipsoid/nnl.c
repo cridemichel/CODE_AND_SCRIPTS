@@ -3443,8 +3443,8 @@ extern int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 extern void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent);
 #endif
 #ifdef MD_HE_PARALL
-MPI_Datatype Particletype;
-MPI_Datatype Eventtype;
+extern MPI_Datatype Particletype;
+extern MPI_Datatype Eventtype;
 #endif
 #ifdef MD_HE_PARALL
 void find_contact_parall(int na, int n, parall_event_struct *parall_event)
@@ -3615,6 +3615,8 @@ int parall_slave_get_data(parall_pair_struct *parall_pair)
   int i, j, a, b;
   i = parall_pair->p[0];
   j = parall_pair->p[1];
+  if (i == -2 && j == -2)
+    return 2;
   if (i == -1 && j == -1)
     return 1;
   rx[i] = parall_pair->pos[0];
@@ -3641,12 +3643,12 @@ int parall_slave_get_data(parall_pair_struct *parall_pair)
   axa[j] = parall_pair->axes[3];
   axb[j] = parall_pair->axes[4];
   axc[j] = parall_pair->axes[5];
-  inCell[i][0] = parall_pair->cells[0];
-  inCell[i][1] = parall_pair->cells[1];
-  inCell[i][2] = parall_pair->cells[2];
-  inCell[j][0] = parall_pair->cells[3];
-  inCell[j][1] = parall_pair->cells[4];
-  inCell[j][2] = parall_pair->cells[5];
+  inCell[0][i] = parall_pair->cells[0];
+  inCell[1][i] = parall_pair->cells[1];
+  inCell[2][i] = parall_pair->cells[2];
+  inCell[0][j] = parall_pair->cells[3];
+  inCell[1][j] = parall_pair->cells[4];
+  inCell[2][j] = parall_pair->cells[5];
   Oparams.time = parall_pair->time;
 #ifdef MD_ASYM_ITENS
   angM[i] = parall_pair->angM[0];
@@ -3683,7 +3685,7 @@ void parall_set_data(int i, int j, parall_pair_struct *parall_pair)
   parall_pair->pos[0] = rx[i];
   parall_pair->pos[1] = ry[i];
   parall_pair->pos[2] = rz[i];
-  parall_pair->pos[3] = rz[j];
+  parall_pair->pos[3] = rx[j];
   parall_pair->pos[4] = ry[j];
   parall_pair->pos[5] = rz[j];
   parall_pair->vels[0] = vx[i];
@@ -3704,12 +3706,12 @@ void parall_set_data(int i, int j, parall_pair_struct *parall_pair)
   parall_pair->axes[3] = axa[j];
   parall_pair->axes[4] = axb[j];
   parall_pair->axes[5] = axc[j];
-  parall_pair->cells[0] = inCell[i][0];
-  parall_pair->cells[1] = inCell[i][1];
-  parall_pair->cells[2] = inCell[i][2];
-  parall_pair->cells[3] = inCell[j][0];
-  parall_pair->cells[4] = inCell[j][1];
-  parall_pair->cells[5] = inCell[j][2];
+  parall_pair->cells[0] = inCell[0][i];
+  parall_pair->cells[1] = inCell[1][i];
+  parall_pair->cells[2] = inCell[2][i];
+  parall_pair->cells[3] = inCell[0][j];
+  parall_pair->cells[4] = inCell[1][j];
+  parall_pair->cells[5] = inCell[2][j];
   parall_pair->time = Oparams.time;
 #ifdef MD_ASYM_ITENS
   parall_pair->angM[0] = angM[i];
@@ -3730,6 +3732,7 @@ void parall_set_data(int i, int j, parall_pair_struct *parall_pair)
 	  parall_pair->RM[a*3+b+9] = RM[j][a][b]; 
 	}
     }
+
 #endif
 }
 void parall_get_data_and_schedule(parall_event_struct parall_event)
@@ -3763,7 +3766,7 @@ void PredictEventNNL(int na, int nb)
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
   double  tm[NDIM];
-  int  npr, iriceve, ndone=0;
+  int npr, iriceve, ndone=0;
 #ifdef MD_HE_PARALL
   int missing, num_work_request, njob, njob2i[512];
 #endif
@@ -3844,19 +3847,39 @@ void PredictEventNNL(int na, int nb)
 	    continue;
 	  njob2i[num_work_request] = i;
 	  num_work_request++; 
-	}	 
+	}	
+
+      if (num_work_request == 0)
+	{
+	  for(npr = 1; npr < numOfProcs; npr++)
+	    {
+	      parall_set_data_terminate(&parall_pair);
+	      //printf("sending termination to %d\n", npr);
+	      MPI_Send(&parall_pair, 1, Particletype, npr, iwtagPair, MPI_COMM_WORLD);
+	    }
+	  MPI_Barrier(MPI_COMM_WORLD);
+	  return;
+	}
       /* master process (rank=0) distributes jobs */
       for (njob=1; njob < numOfProcs; njob++)
 	{
-	  n = nebrTab[na].list[njob2i[njob]]; 
+	  if (njob > num_work_request)
+       	    break;
+	  n = nebrTab[na].list[njob2i[njob-1]]; 
+	  //printf(">>> num_work_request: %d numofproc:%d sending to %d\n", num_work_request, numOfProcs, njob);
 	  parall_set_data(na ,n, &parall_pair);
+	  //printf("sending to %d\n", njob);
 	  MPI_Send(&parall_pair, 1, Particletype, njob, iwtagPair, MPI_COMM_WORLD);
+	  //printf("sent!!!!\n");
 	}    
+      //printf("????????????????\n");
       for (njob=numOfProcs; njob <= num_work_request; njob++)
 	 {
+	   //printf("my_rank=%d njob = %d\n", my_rank, njob);
 	   n = nebrTab[na].list[njob2i[njob]]; 
 	   MPI_Recv(&parall_event, 1, Eventtype, MPI_ANY_SOURCE, iwtagEvent, MPI_COMM_WORLD, &parall_status);
 	   ndone++;
+	   //printf("§§§§§§ ndone=%d\n", ndone);
 	   iriceve = parall_status.MPI_SOURCE;
 	   parall_get_data_and_schedule(parall_event);
 	   parall_set_data(na, n, &parall_pair);
@@ -3864,32 +3887,22 @@ void PredictEventNNL(int na, int nb)
 	 }
       for (missing = ndone+1; missing <= num_work_request; missing++)
 	{
+	  //printf("my_rank=%d receiving missing = %d\n", my_rank, missing);
 	  MPI_Recv(&parall_event, 1, Eventtype, MPI_ANY_SOURCE, iwtagEvent, MPI_COMM_WORLD, &parall_status);
 	  iriceve = parall_status.MPI_SOURCE;
 	  parall_get_data_and_schedule(parall_event);
 	}
-      for(npr = 0; npr < numOfProcs; npr++)
+      //printf("mmm\n");
+      for(npr = 1; npr < numOfProcs; npr++)
 	{
+	  //printf("RANK0000 terminating process=%d\n", npr);
 	  parall_set_data_terminate(&parall_pair);
 	  MPI_Send(&parall_pair, 1, Particletype, npr, iwtagPair, MPI_COMM_WORLD);
 	}
     }
-  else
-    {
-      /* slaves processes here */
-      for(njob = 0; njob >= 0; njob++)
-	{
-	  MPI_Recv(&parall_pair, 1, Particletype, MPI_ANY_SOURCE, iwtagPair, MPI_COMM_WORLD, &parall_status);
-	  iriceve = parall_status.MPI_SOURCE;
-	  if (parall_slave_get_data(&parall_pair))
-	    break;
-	  find_contact_parall(parall_pair.p[0], parall_pair.p[1], &parall_event);
-	  MPI_Send(&parall_event, 1, Eventtype, 0, iwtagEvent, MPI_COMM_WORLD);
-	  /* predict collision here */
-	}
-
-    }
+      
   MPI_Barrier(MPI_COMM_WORLD);
+  //printf("FINISHED rank=%d\n", my_rank);
 }
 #else
 void PredictEventNNL(int na, int nb) 
