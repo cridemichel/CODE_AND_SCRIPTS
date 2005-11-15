@@ -55,8 +55,8 @@ double cosEulAng[2][3], sinEulAng[2][3];
 #endif
 #if defined(MD_HE_PARALL)
 int MPIpid;
-extern int my_rank;
-extern int numOfProcs; /* number of processeses in a communicator */
+int my_rank;
+int numOfProcs; /* number of processeses in a communicator */
 #endif 
 
 
@@ -1562,37 +1562,37 @@ MPI_Datatype Eventtype;
 
 void mpi_define_structs(void)
 {
-  MPI_Datatype type_pair[11]={MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_INT, MPI_DOUBLE, MPI_DOUBLE,
-    MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
-  int blocklen_pair[11]={2,6,12,6,6,1,2,2,2,2,2,9};
-  MPI_Aint displs_pair[11];
+  MPI_Datatype type_pair[12]={MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_INT, MPI_DOUBLE, MPI_DOUBLE,
+    MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
+  int blocklen_pair[12]={2,6,12,6,6,1,2,2,2,2,2,18};
+  MPI_Aint displ_pair[12];
   MPI_Datatype type_ev[5]={MPI_DOUBLE,MPI_DOUBLE,MPI_INT,MPI_INT, MPI_INT};
   int blocklen_ev[5]={1,3,1,1,3};
-  MPI_Aint displs_ev[5];
-  MPI_Address(parall_pair, &displ_pair[0]);
-  MPI_Address(parall_pair.pos, &displ_pair[1]);
-  MPI_Address(parall_pair.vels, &displ_pair[2]);
-  MPI_Address(parall_pair.axes, &displ_pair[3]);
-  MPI_Address(parall_pair.cells, &displ_pair[4]);
-  MPI_Address(parall_pair.time,  &displ_pair[5]);
+  MPI_Aint displ_ev[5];
+  MPI_Address(&parall_pair, &displ_pair[0]);
+  MPI_Address(&parall_pair.pos, &displ_pair[1]);
+  MPI_Address(&parall_pair.vels, &displ_pair[2]);
+  MPI_Address(&parall_pair.axes, &displ_pair[3]);
+  MPI_Address(&parall_pair.cells, &displ_pair[4]);
+  MPI_Address(&parall_pair.time,  &displ_pair[5]);
 #ifdef MD_ASYM_ITENS
-  MPI_Address(parall_pair.angM,  &displ_pair[6]);
-  MPI_Address(parall_pair.sintheta0, &displ_pair[7]);
-  MPI_Address(parall_pair.costheta0, &displ_pair[8]);
-  MPI_Address(parall_pair.phi0,      &displ_pair[9]);
-  MPI_Address(parall_pair.psi0,      &displ_pair[10]);
-  MPI_Address(parall_pair.RM,        &displ_pair[11]);
+  MPI_Address(&parall_pair.angM,  &displ_pair[6]);
+  MPI_Address(&parall_pair.sintheta0, &displ_pair[7]);
+  MPI_Address(&parall_pair.costheta0, &displ_pair[8]);
+  MPI_Address(&parall_pair.phi0,      &displ_pair[9]);
+  MPI_Address(&parall_pair.psi0,      &displ_pair[10]);
+  MPI_Address(&parall_pair.RM,        &displ_pair[11]);
 #endif
-  MPI_Type_struct(5, blocklen_pair, displs_pair, type_pair, &Particletype);
+  MPI_Type_struct(5, blocklen_pair, displ_pair, type_pair, &Particletype);
   MPI_Type_commit(&Particletype);
-  MPI_Address(parall_ev, &displ_ev[0]);
-  MPI_Address(parall_ev.rC, &displ_ev[1]);
-  MPI_Address(parall_ev.a, &displ_ev[2]);
-  MPI_Address(parall_ev.b, &displ_ev[3]);
+  MPI_Address(&parall_event, &displ_ev[0]);
+  MPI_Address(&parall_event.rC, &displ_ev[1]);
+  MPI_Address(&parall_event.a, &displ_ev[2]);
+  MPI_Address(&parall_event.b, &displ_ev[3]);
 #ifdef MD_PATCHY_HE
-  MPI_Address(parall_ev.sp, &displ_ev[4]);
+  MPI_Address(&parall_event.sp, &displ_ev[4]);
 #endif
-  MPI_Type_struct(4, blocklen_ev, displs_ev, type_ev, &Eventtype);
+  MPI_Type_struct(5, blocklen_ev, displ_ev, type_ev, &Eventtype);
   MPI_Type_commit(&Eventtype);
 }
 void md_mpi_init(int *pargc, char***pargv)

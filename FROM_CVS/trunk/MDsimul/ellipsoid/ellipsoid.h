@@ -8,7 +8,9 @@
 
 /* ================== >>> PROGRAM DEFINES(CUSTOMIZE!) <<< ===================*/
 #define MD_HARDSPHERES
-
+#ifdef MD_HE_PARALL
+#include <mpi.h>
+#endif
 #define MDSIMUL "/home/demichel/shared/simul/mdsimul"
 /* this is the executable, you must change this to your directory */
 #ifdef MD_USE_CBLAS
@@ -56,7 +58,6 @@ void UpdateSystem(void);
 #endif
 
 #ifdef MD_HE_PARALL
-#ifdef MAIN
 typedef struct 
 {
   int p[2];
@@ -71,9 +72,9 @@ typedef struct
   double costheta0[2];
   double phi0[2];
   double psi0[2];
+  double RM[18];
 #endif
 } parall_pair_struct;
-parall_pair_struct parall_pair;
 typedef struct 
 {
   double t;
@@ -84,6 +85,8 @@ typedef struct
   int sp[3];
 #endif
 } parall_event_struct;
+#ifdef MAIN
+parall_pair_struct parall_pair;
 parall_event_struct parall_event;
 #else
 extern parall_pair_struct parall_pair;
