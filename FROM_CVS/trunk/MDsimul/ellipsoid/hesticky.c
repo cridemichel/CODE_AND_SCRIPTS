@@ -1132,7 +1132,7 @@ double distfuncSP(double x)
 }
 int interpolSP(int i, int j, int nn, 
 	     double tref, double t, double delt, double d1, double d2,
-	     double *tmin, double shift[3])
+	     double *tmin, double shift[3], int ignoresignchg)
 {
   double d3, A, dmin;
   /* NOTA: dists di seguito può non essere usata? controllare!*/
@@ -1163,7 +1163,7 @@ int interpolSP(int i, int j, int nn,
       *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
     }
   dmin = calcDistNegOneSP(*tmin, tref, i, j, nn, shift);
-  if (*tmin < t+delt && *tmin > t && d1*dmin < 0.0)
+  if (*tmin < t+delt && *tmin > t && (d1*dmin < 0.0 || ignoresignchg) )
     {
       *tmin += tref;
       return 0;
@@ -1536,11 +1536,11 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	{
 	   if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 	      !interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
-			  dists[sumnegpairs-1], &tmin, shift))
+			  dists[sumnegpairs-1], &tmin, shift, 1))
 	    {
 	      //printf("qui\n");
 	      tmin -= t1;
-	      delt = tmin - t;
+	      delt = tmin - tini;
 	      t = tmin;
     	      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	    }
@@ -1555,10 +1555,10 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	      	  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 		  itstb++;
 		  if (!interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
-				  dists[sumnegpairs-1], &tmin, shift))
+				  dists[sumnegpairs-1], &tmin, shift, 1))
 		    {
 		      tmin -= t1;
-		      delt = tmin - t;
+		      delt = tmin - tini;
 		      t = tmin;
 		      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 		      break;
@@ -1616,7 +1616,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    {
 	      //printf("tocheck[%d]:%d\n", nn, tocheck[nn]);
 	      if (interpolSP(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
-			   &troot, shift))
+			   &troot, shift, 0))
 		dorefine[nn] = MD_EVENT_NONE;
 	      else 
 		{
