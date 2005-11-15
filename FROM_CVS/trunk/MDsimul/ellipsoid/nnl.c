@@ -3610,6 +3610,8 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
 #endif
 }
 MPI_Status parall_status;
+extern struct LastBumpS *lastbump;
+extern double *lastcol;
 int parall_slave_get_data(parall_pair_struct *parall_pair)
 {
   int i, j, a, b;
@@ -3649,7 +3651,19 @@ int parall_slave_get_data(parall_pair_struct *parall_pair)
   inCell[0][j] = parall_pair->cells[3];
   inCell[1][j] = parall_pair->cells[4];
   inCell[2][j] = parall_pair->cells[5];
-  Oparams.time = parall_pair->time;
+  lastbump[i].mol = parall_pair->lastbump[0];
+  lastbump[i].at = parall_pair->lastbump[1];
+  lastbump[i].type = parall_pair->lastbump[2];
+  lastbump[j].mol = parall_pair->lastbump[3];
+  lastbump[j].at = parall_pair->lastbump[4];
+  lastbump[j].type = parall_pair->lastbump[5];
+ 
+  Oparams.time = parall_pair->time[0];
+  nextNNLrebuild = parall_pair->time[1];
+  lastcol[i] = parall_pair->time[2];
+  lastcol[j] = parall_pair->time[3];
+  atomTime[i] = parall_pair->atomTime[0];
+  atomTime[j] = parall_pair->atomTime[1];
 #ifdef MD_ASYM_ITENS
   angM[i] = parall_pair->angM[0];
   angM[j] = parall_pair->angM[1];
@@ -3681,7 +3695,7 @@ void parall_set_data(int i, int j, parall_pair_struct *parall_pair)
 {
   int a, b;
   parall_pair->p[0] = i;
-  parall_pair->p[1] = j;;
+  parall_pair->p[1] = j;
   parall_pair->pos[0] = rx[i];
   parall_pair->pos[1] = ry[i];
   parall_pair->pos[2] = rz[i];
@@ -3712,7 +3726,18 @@ void parall_set_data(int i, int j, parall_pair_struct *parall_pair)
   parall_pair->cells[3] = inCell[0][j];
   parall_pair->cells[4] = inCell[1][j];
   parall_pair->cells[5] = inCell[2][j];
-  parall_pair->time = Oparams.time;
+  parall_pair->lastbump[0] = lastbump[i].mol;
+  parall_pair->lastbump[1] = lastbump[i].at;
+  parall_pair->lastbump[2] = lastbump[i].type;
+  parall_pair->lastbump[3] = lastbump[j].mol;
+  parall_pair->lastbump[4] = lastbump[j].at;
+  parall_pair->lastbump[5] = lastbump[j].type;
+  parall_pair->time[0] = Oparams.time;
+  parall_pair->time[1] = nextNNLrebuild;
+  parall_pair->time[2] = lastcol[i];
+  parall_pair->time[3] = lastcol[j];
+  parall_pair->atomTime[0] = atomTime[i];
+  parall_pair->atomTime[1] = atomTime[j];
 #ifdef MD_ASYM_ITENS
   parall_pair->angM[0] = angM[i];
   parall_pair->angM[1] = angM[j];

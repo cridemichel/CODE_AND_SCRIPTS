@@ -1562,10 +1562,10 @@ MPI_Datatype Eventtype;
 
 void mpi_define_structs(void)
 {
-  MPI_Datatype type_pair[12]={MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_INT, MPI_DOUBLE, MPI_DOUBLE,
-    MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
-  int blocklen_pair[12]={2,6,12,6,6,1,2,2,2,2,2,18}, a;
-  MPI_Aint displ_pair[12];
+  MPI_Datatype type_pair[14]={MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE,
+    MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
+  int blocklen_pair[14]={2,6,12,6,6,6,4,2,2,2,2,2,2,18}, a;
+  MPI_Aint displ_pair[14];
   MPI_Datatype type_ev[5]={MPI_DOUBLE,MPI_DOUBLE,MPI_INT,MPI_INT, MPI_INT};
   int blocklen_ev[5]={1,3,1,1,3};
   MPI_Aint displ_ev[5];
@@ -1574,21 +1574,23 @@ void mpi_define_structs(void)
   MPI_Address(parall_pair.vels, &displ_pair[2]);
   MPI_Address(parall_pair.axes, &displ_pair[3]);
   MPI_Address(parall_pair.cells, &displ_pair[4]);
-  MPI_Address(&parall_pair.time,  &displ_pair[5]);
+  MPI_Address(parall_pair.lastbump, &displ_pair[5]);
+  MPI_Address(parall_pair.time,  &displ_pair[6]);
+  MPI_Address(parall_pair.atomTime, &displ_pair[7]);
 #ifdef MD_ASYM_ITENS
-  MPI_Address(parall_pair.angM,  &displ_pair[6]);
-  MPI_Address(parall_pair.sintheta0, &displ_pair[7]);
-  MPI_Address(parall_pair.costheta0, &displ_pair[8]);
-  MPI_Address(parall_pair.phi0,      &displ_pair[9]);
-  MPI_Address(parall_pair.psi0,      &displ_pair[10]);
-  MPI_Address(parall_pair.RM,        &displ_pair[11]);
-  for (a = 11; a >= 0; a--)
+  MPI_Address(parall_pair.angM,  &displ_pair[8]);
+  MPI_Address(parall_pair.sintheta0, &displ_pair[9]);
+  MPI_Address(parall_pair.costheta0, &displ_pair[10]);
+  MPI_Address(parall_pair.phi0,      &displ_pair[11]);
+  MPI_Address(parall_pair.psi0,      &displ_pair[12]);
+  MPI_Address(parall_pair.RM,        &displ_pair[13]);
+  for (a = 13; a >= 0; a--)
     displ_pair[a] -= displ_pair[0];
-  MPI_Type_struct(12, blocklen_pair, displ_pair, type_pair, &Particletype);
+  MPI_Type_struct(14, blocklen_pair, displ_pair, type_pair, &Particletype);
 #else
-  for (a = 5; a >= 0; a--)
+  for (a = 7; a >= 0; a--)
     displ_pair[a] -= displ_pair[0];
-  MPI_Type_struct(6, blocklen_pair, displ_pair, type_pair, &Particletype);
+  MPI_Type_struct(8, blocklen_pair, displ_pair, type_pair, &Particletype);
 #endif
   MPI_Type_commit(&Particletype);
   MPI_Address(&parall_event, &displ_ev[0]);

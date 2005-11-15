@@ -65,7 +65,9 @@ typedef struct
   double vels[12];
   double axes[6];
   int cells[6];
-  double time;
+  int lastbump[6];
+  double time[4];
+  double atomTime[2];
 #ifdef MD_ASYM_ITENS
   double angM[2];
   double sintheta0[2];
