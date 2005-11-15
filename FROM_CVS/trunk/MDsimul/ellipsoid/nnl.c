@@ -3443,10 +3443,11 @@ MPI_Datatype Particletype;
 MPI_Datatype Eventtype;
 #endif
 #ifdef MD_HE_PARALL
-void find_contact_parall(int na, int n)
+void find_contact_parall(int na, int n, parall_event_struct *parall_event)
 {
   double shift[3];
-  double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
+  double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq, t;
+  double t1, t2;
   shift[0] = L*rint((rx[na]-rx[n])/L);
   shift[1] = L*rint((ry[na]-ry[n])/L);
   shift[2] = L*rint((rz[na]-rz[n])/L);
@@ -3585,27 +3586,140 @@ void find_contact_parall(int na, int n)
   rzC = vecg[2];
   t = vecg[4];
 #endif
-
+  parall_pair->t = t;
+  parall_pair->a = na;
+  parall_pair->b = n;
+  parall_pair->rC[0] = rxC;
+  parall_pair->rC[1] = ryC;
+  parall_pair->rC[2] = rzC;
+#ifdef MD_PATCHY_HE
+  parall_pair->sp[0] = ac;
+  parall_pair->sp[1] = bc;
+  parall_pair->sp[2] = collCode;
+#endif
 }
 MPI_status parall_status;
 int parall_slave_get_data(parall_pair_struct *parall_pair)
 {
-
-
+  int i, j;
+  i = parall_pair->p[0];
+  j = parall_pair->p[1];
+  if (i == -1 && j == -1)
+    return 1;
+  rx[i] = parall_pair->pos[0];
+  ry[i] = parall_pair->pos[1];
+  rz[i] = parall_pair->pos[2];
+  rx[j] = parall_pair->pos[3];
+  ry[j] = parall_pair->pos[4];
+  rz[j] = parall_pair->pos[5];
+  vx[i] = parall_pair->vels[0];
+  vy[i] = parall_pair->vels[1];
+  vz[i] = parall_pair->vels[2];
+  vx[j] = parall_pair->vels[3];
+  vy[j] = parall_pair->vels[4];
+  vz[j] = parall_pair->vels[5];
+  wx[i] = parall_pair->vels[6];
+  wy[i] = parall_pair->vels[7];
+  wz[i] = parall_pair->vels[8];
+  wx[j] = parall_pair->vels[9];
+  wy[j] = parall_pair->vels[10];
+  wz[j] = parall_pair->vels[11];
+  axa[i] = parall_pair->axes[0];
+  axb[i] = parall_pair->axes[1];
+  axc[i] = parall_pair->axes[2];
+  axa[j] = parall_pair->axes[3];
+  axb[j] = parall_pair->axes[4];
+  axc[j] = parall_pair->axes[5];
+  inCell[i][0] = parall_pair->cells[0];
+  inCell[i][1] = parall_pair->cells[1];
+  inCell[i][2] = parall_pair->cells[2];
+  inCell[j][0] = parall_pair->cells[3];
+  inCell[j][1] = parall_pair->cells[4];
+  inCell[j][2] = parall_pair->cells[5];
+  Oparams.time = parall_pair->time;
+#ifdef MD_ASYM_ITENS
+  angM[i] = parall_pair->angM[0];
+  angM[j] = parall_pair->angM[1];
+  sintheta0[i] = parall_pair->sintheta0[0];
+  sintheta0[j] = parall_pair->sintheta0[1];
+  costheta0[i] = parall_pair->costheta0[0];
+  costheta0[j] = parall_pair->costheta0[1];
+  phi0[i] = parall_pair->phi0[0];
+  phi0[j] = parall_pair->phi0[1];
+  psi0[i] = parall_pair->psi0[0];
+  psi0[j] = parall_pair->psi0[1];
+#endif
+  return 0;
 }
 void parall_set_data_terminate(parall_pair_struct *parall_pair)
 {
-
-
+  parall_pair->p[0] = -1;
+  parall_pair->p[1] = -1;
 }
-void parall_set_data(parall_pair_struct *parall_pair)
+void parall_set_data(int i, int j, parall_pair_struct *parall_pair)
 {
-
-
+  parall_pair->p[0] = i;
+  parall_pair->p[1] = j;;
+  parall_pair->pos[0] = rx[i];
+  parall_pair->pos[1] = ry[i];
+  parall_pair->pos[2] = rz[i];
+  parall_pair->pos[3] = rz[j];
+  parall_pair->pos[4] = ry[j];
+  parall_pair->pos[5] = rz[j];
+  parall_pair->vels[0] = vx[i];
+  parall_pair->vels[1] = vy[i];
+  parall_pair->vels[2] = vz[i];
+  parall_pair->vels[3] = vx[j];
+  parall_pair->vels[4] = vy[j];
+  parall_pair->vels[5] = vz[j];
+  parall_pair->vels[6] = wx[i];
+  parall_pair->vels[7] = wy[i];
+  parall_pair->vels[8] = wz[i];
+  parall_pair->vels[9] = wx[j];
+  parall_pair->vels[10] = wy[j];
+  parall_pair->vels[11] = wz[j];
+  parall_pair->axes[0] = axa[i];
+  parall_pair->axes[1] = axb[i];
+  parall_pair->axes[2] = axc[i];
+  parall_pair->axes[3] = axa[j];
+  parall_pair->axes[4] = axb[j];
+  parall_pair->axes[5] = axc[j];
+  parall_pair->cells[0] = inCell[i][0];
+  parall_pair->cells[1] = inCell[i][1];
+  parall_pair->cells[2] = inCell[i][2];
+  parall_pair->cells[3] = inCell[j][0];
+  parall_pair->cells[4] = inCell[j][1];
+  parall_pair->cells[5] = inCell[j][2];
+  parall_pair->time = Oparams.time;
+#ifdef MD_ASYM_ITENS
+  parall_pair->angM[0] = angM[i];
+  parall_pair->angM[1] = angM[j];
+  parall_pair->sintheta0[0] = sintheta0[i];
+  parall_pair->sintheta0[1] = sintheta0[j];
+  parall_pair->costheta0[0] = costheta0[i];
+  parall_pair->costheta0[1] = costheta0[j];
+  parall_pair->phi0[0] = phi0[i];
+  parall_pair->phi0[1] = phi0[j];
+  parall_pair->psi0[0] = psi0[i];
+  parall_pair->psi0[1] = psi0[j];
+#endif
 }
 void parall_get_data_and_schedule(parall_event_struct parall_pair)
 {
+  int na, n;
 #ifdef MD_PATCHY_HE
+  int collCode, ac, bc;
+#endif
+  double t;
+  na = parall_pair.a;
+  n = parall_pair.b;
+  rxC = parall_pair.rC[0];
+  ryC = parall_pair.rC[1];
+  rzC = parall_pair.rC[2];
+#ifdef MD_PATCHY_HE
+  ac = parall_pair.sp[0];
+  bc = parall_pair.sp[1];
+  collCode = parall_pair.sp[2];
   ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #else
   ScheduleEvent (na, n, t);
@@ -3742,7 +3856,7 @@ void PredictEventNNL(int na, int nb)
 	  iriceve = parall_status.MPI_SOURCE;
 	  if (parall_slave_get_data(parall_pair))
 	    break;
-	  find_contact_parall(parall_pair);
+	  find_contact_parall(parall_pair->p[0], parall_pair->p[1], &parall_event);
 	  MPI_Send(&parall_event, 1, Eventtype, 0, iwtagEvent, MPI_COMM_WORLD);
 	  /* predict collision here */
 	}
