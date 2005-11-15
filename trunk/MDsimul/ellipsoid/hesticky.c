@@ -1534,41 +1534,43 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
        * valore accettabile. */
       if (sumnegpairs)// && !firstaftsf)
 	{
-	   if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
-	      !interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
-			  dists[sumnegpairs-1], &tmin, shift, 1))
+	  if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs))
 	    {
-	      //printf("qui\n");
-	      tmin -= t1;
-	      delt = tmin - tini;
-	      t = tmin;
-    	      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-	    }
+	      if(!interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+			     dists[sumnegpairs-1], &tmin, shift, 1))
+		{
+		  //printf("qui\n");
+		  tmin -= t1;
+		  delt = tmin - tini;
+		  t = tmin;
+		  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+		}
 #if 1
-	  else 
-	    {
-	      while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
-	  	     delt > minh)
-	    	{
-		  delt /= GOLD; 
-	    	  t = tini + delt;
-	      	  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-		  itstb++;
-		  if (!interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
-				  dists[sumnegpairs-1], &tmin, shift, 1))
+	      else 
+		{
+		  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
+			 delt > minh)
 		    {
-		      tmin -= t1;
-		      delt = tmin - tini;
-		      t = tmin;
+		      delt /= GOLD; 
+		      t = tini + delt;
 		      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-		      break;
+		      itstb++;
+		      if (!interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+				      dists[sumnegpairs-1], &tmin, shift, 1))
+			{
+			  tmin -= t1;
+			  delt = tmin - tini;
+			  t = tmin;
+			  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+			  break;
+			}
 		    }
-	       	}
-	    }
+		}
+#endif
+	    } 
 	  sumnegpairs = 0;
 	}
 
-#endif
 #if 0
 	  
 	  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
