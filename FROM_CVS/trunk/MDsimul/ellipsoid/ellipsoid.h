@@ -64,6 +64,14 @@ typedef struct
   double vels[12];
   double axes[6];
   int cells[6];
+  double time;
+#ifdef MD_ASYM_ITENS
+  double angM[2];
+  double sintheta0[2];
+  double costheta0[2];
+  double phi0[2];
+  double psi0[2];
+#endif
 } parall_pair_struct;
 parall_pair_struct parall_pair;
 typedef struct 
@@ -72,6 +80,9 @@ typedef struct
   double rC[3];
   int a;
   int b;
+#ifdef MD_PATCHY_HE
+  int sp[3];
+#endif
 } parall_event_struct;
 parall_event_struct parall_event;
 #else
