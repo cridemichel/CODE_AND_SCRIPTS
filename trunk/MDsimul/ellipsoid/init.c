@@ -1562,17 +1562,18 @@ MPI_Datatype Eventtype;
 
 void mpi_define_structs(void)
 {
-  MPI_Datatype type_pair[4]={MPI_DOUBLE,MPI_DOUBLE,MPI_DOUBLE,MPI_INT};
-  int blocklen_pair[4]={6,12,6,6};
-  MPI_Aint displs_pair[4];
+  MPI_Datatype type_pair[5]={MPI_INT,MPI_DOUBLE,MPI_DOUBLE,MPI_DOUBLE,MPI_INT};
+  int blocklen_pair[5]={2,6,12,6,6};
+  MPI_Aint displs_pair[5];
   MPI_Datatype type_ev[4]={MPI_DOUBLE,MPI_DOUBLE,MPI_INT,MPI_INT};
   int blocklen_ev[4]={1,3,1,1};
   MPI_Aint displs_ev[4];
   MPI_Address(parall_pair, &displ_pair[0]);
-  MPI_Address(parall_pair.vels, &displ_pair[1]);
-  MPI_Address(parall_pair.axes, &displ_pair[2]);
-  MPI_Address(parall_pair.celss, &displ_pair[3]);
-  MPI_Type_struct(4, blocklen_pair, displs_pair, type_pair, &Particletype);
+  MPI_Address(parall_pair.pos, &displ_pair[1]);
+  MPI_Address(parall_pair.vels, &displ_pair[2]);
+  MPI_Address(parall_pair.axes, &displ_pair[3]);
+  MPI_Address(parall_pair.celss, &displ_pair[4]);
+  MPI_Type_struct(5, blocklen_pair, displs_pair, type_pair, &Particletype);
   MPI_Type_commit(&Particletype);
   
   MPI_Address(parall_ev, &displ_ev[0]);
