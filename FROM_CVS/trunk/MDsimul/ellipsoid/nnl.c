@@ -3587,12 +3587,38 @@ void find_contact_parall(int na, int n)
 #endif
 
 }
+MPI_status parall_status;
+int parall_slave_get_data(parall_pair_struct *parall_pair)
+{
+
+
+}
+void parall_set_data_terminate(parall_pair_struct *parall_pair)
+{
+
+
+}
+void parall_set_data(parall_pair_struct *parall_pair)
+{
+
+
+}
+void parall_get_data_and_schedule(parall_event_struct parall_pair)
+{
+#ifdef MD_PATCHY_HE
+  ScheduleEventBarr (na, n,  ac, bc, collCode, t);
+#else
+  ScheduleEvent (na, n, t);
+#endif
+}
 /* PredicEventNNL parallelizzata */
+const int iwtagEvent = 1, iwtagPair = 2;
+
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
   double vecg[5], shift[3], t1, t2, t, tm[NDIM];
-  int overlap;
+  int overlap, npr, iriceve, ndone=0;
 #ifdef MD_HE_PARALL
   int missing, num_work_request, njob, njob2i[512];
 #endif
@@ -3670,7 +3696,7 @@ void PredictEventNNL(int na, int nb)
   if (my_rank == 0)
     {
       num_work_request = 0;
-      for (i=numOfProcs; i < nebrTab[na].len; i++)
+      for (i=0; i < nebrTab[na].len; i++)
 	{
 	  n = nebrTab[na].list[i]; 
 	  if (!(n != na && n!=nb && (nb >= -1 || n < na)))
@@ -3679,31 +3705,32 @@ void PredictEventNNL(int na, int nb)
 	  num_work_request++; 
 	}	 
       /* master process (rank=0) distributes jobs */
-      for (njob=0; njob < numOfProcs; njob++)
+      for (njob=1; njob < numOfProcs; njob++)
 	{
 	  n = nebrTab[na].list[njob2i[njob]]; 
-	  MPI_Send();
-	  njob++;
+	  parall_set_data(na ,n, &parall_pair);
+	  MPI_Send(parall_pair, Particletype, njob, iwtagPair, MPI_COMM_WORLD);
 	}    
-      for (njob=numOfProcs; njob < num_work_request; njob++)
+      for (njob=numOfProcs; njob <= num_work_request; njob++)
 	 {
 	   n = nebrTab[na].list[njob2i[njob]]; 
-	   MPI_Receive();
-#ifdef MD_PATCHY_HE
- 	   ScheduleEventBarr (na, n,  ac, bc, collCode, t);
-#else
- 	   ScheduleEvent (na, n, t);
-#endif
-	   MPI_Send();
+	   MPI_Receive(&parall_event, 1, Eventtype, MPI_ANY_SOURCE, iwtagEvent, MPI_COMM_WORLD, &parall_status);
+	   ndone++;
+	   iriceve = parall_status.MPI_SOURCE;
+	   parall_get_data_and_schedule(parall_event, &iriceve);
+	   parall_set_data(na, n, &parall_pair);
+	   MPI_Send(parall_pair, Particletype, iriceve, iwtagPair, MPI_COMM_WORLD);
 	 }
-      for (missing = ndone; missing < num_work_request; missing++)
+      for (missing = ndone+1; missing <= num_work_request; missing++)
 	{
-	  MPI_Receive();
-#ifdef MD_PATCHY_HE
-    	  ScheduleEventBarr (na, n,  ac, bc, collCode, t);
-#else
-	  ScheduleEvent (na, n, t);
-#endif
+	  MPI_Receive(&parall_event, 1, Eventtype, MPI_ANY_SOURCE, iwtagEvent, MPI_COMM_WORLD, &parall_status);
+	  iriceve = parall_status.MPI_SOURCE;
+	  parall_get_data_and_schedule(parall_event);
+	}
+      for(npr = 0; npr < numOfProcs; npr++)
+	{
+	  parall_set_data_terminate(-1, -1, parall_pair);
+	  MPI_Send(parall_pair, Particletype, iriceve, iwtagPair, MPI_COMM_WORLD);
 	}
     }
   else
@@ -3711,9 +3738,12 @@ void PredictEventNNL(int na, int nb)
       /* slaves processes here */
       for(njob = 0; njob >= 0; njob++)
 	{
-	  MPI_Receive();
-	  if ()
+	  MPI_Receive(&parall_pair, 1, Particletype, MPI_ANY_SOURCE, iwtagPair, MPI_COMM_WORLD, &parall_status);
+	  iriceve = parall_status.MPI_SOURCE;
+	  if (parall_slave_get_data(parall_pair))
 	    break;
+	  find_contact_parall(parall_pair);
+	  MPI_Send(&parall_event, 1, Eventtype, 0, iwtagEvent, MPI_COMM_WORLD);
 	  /* predict collision here */
 	}
 

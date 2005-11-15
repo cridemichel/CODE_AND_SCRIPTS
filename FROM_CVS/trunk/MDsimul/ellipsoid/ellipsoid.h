@@ -59,6 +59,7 @@ void UpdateSystem(void);
 #ifdef MAIN
 typedef struct 
 {
+  int p[2];
   double pos[6];
   double vels[12];
   double axes[6];
