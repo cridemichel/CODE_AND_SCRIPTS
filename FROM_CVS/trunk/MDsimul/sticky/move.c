@@ -2884,7 +2884,7 @@ double choose_seg(int i, int j, double tref, int nn, double shift[3], double xa[
 #endif
 int interpol(int i, int j, int nn, 
 	     double tref, double t, double delt, double d1, double d2,
-	     double *tmin, double shift[3])
+	     double *tmin, double shift[3], int ignoresignchg)
 {
   double d3, A, dmin;
   /* NOTA: dists di seguito può non essere usata? controllare!*/
@@ -2914,7 +2914,7 @@ int interpol(int i, int j, int nn,
 printf("A=%.15G\n", A);
   printf("{{%.15G,%.15G},{%.15G,%.15G},{%.15G,%.15G}} - *tmin=%.15G,%.15G\n", t, d1, t+delt*0.5,d3, t+delt, d2, *tmin, dmin);
 #endif
-  if (*tmin < t+delt && *tmin > t && d1*dmin < 0.0)
+  if (*tmin < t+delt && *tmin > t && (d1*dmin < 0.0 || ignoresignchg))
     {
       *tmin += tref;
       return 0;
@@ -3347,17 +3347,20 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
 	  if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 	      !interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
-			dists[sumnegpairs-1], &tmin, shift))
+			dists[sumnegpairs-1], &tmin, shift, 1))
 	    {
 	      //printf("qui\n");
 	      tmin -= t1;
-	      delt = tmin - t;
+	      //printf("i=%d j=%d QUIIIIIIIIIIIIII delt=%.15G t1=%.15G\n", i,j,delt, t1);
+	      delt = tmin - tini;
 	      t = tmin;
+	      //printf(">>>> QUI delt=%.15G tmin=%.15G tini=%.15G tmin-t=%.15G\n", delt, tmin, tini, tmin-t);
     	      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 	    }
 #if 1
 	  else 
 	    {
+	      printf("[INFO] using old goldenfactor method to reduce delt\n");
 	      while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 	  	     delt > minh)
 	    	{
@@ -3366,10 +3369,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      	  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 		  itstb++;
 		  if (!interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
-				dists[sumnegpairs-1], &tmin, shift))
+				dists[sumnegpairs-1], &tmin, shift, 1))
 		    {
 		      tmin -= t1;
-		      delt = tmin - t;
+		      delt = tmin - tini;
 		      t = tmin;
 		      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 		      break;
@@ -3425,7 +3428,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	    {
 	      //printf("tocheck[%d]:%d\n", nn, tocheck[nn]);
 	      if (interpol(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
-			   &troot, shift))
+			   &troot, shift, 0))
 		dorefine[nn] = MD_EVENT_NONE;
 	      else 
 		{
@@ -3468,7 +3471,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #if 0
 		      if (lastbump[i].mol == j && lastbump[j].mol==i && 
 			  lastbump[i].at == mapbondsa[nn]
-			  && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-16)
+			  && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-14)
 			{
 			  printf("dold[%d]:%.15G d[%d]:%.15G\n", nn, distsOld[nn], nn, dists[nn]);
 			  printf("state: %d collision type: %d\n", 
