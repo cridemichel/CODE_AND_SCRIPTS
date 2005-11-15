@@ -3709,7 +3709,16 @@ void PredictEventNNL(int na, int nb)
   else
     {
       /* slaves processes here */
+      for(njob = 0; njob >= 0; njob++)
+	{
+	  MPI_Receive();
+	  if ()
+	    break;
+	  /* predict collision here */
+	}
+
     }
+  MPI_Barrier();
 }
 #else
 void PredictEventNNL(int na, int nb) 
