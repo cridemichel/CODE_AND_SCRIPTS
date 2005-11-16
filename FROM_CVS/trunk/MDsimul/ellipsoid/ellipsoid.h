@@ -64,7 +64,7 @@ typedef struct
   double pos[6];
   double R[18];
   double vels[12];
-  double axes[6];
+  double axes[8];
   int cells[6];
   int lastbump[6];
   double time[4];

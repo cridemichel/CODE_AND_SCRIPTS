@@ -1564,7 +1564,7 @@ void mpi_define_structs(void)
 {
   MPI_Datatype type_pair[15]={MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE,
     MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
-  int blocklen_pair[15]={2,6,18,12,6,6,6,4,2,2,2,2,2,2,18}, a;
+  int blocklen_pair[15]={2,6,18,12,8,6,6,4,2,2,2,2,2,2,18}, a;
   MPI_Aint displ_pair[15];
   MPI_Datatype type_ev[5]={MPI_DOUBLE,MPI_DOUBLE,MPI_INT,MPI_INT, MPI_INT};
   int blocklen_ev[5]={1,3,1,1,3};
