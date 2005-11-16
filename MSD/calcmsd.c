@@ -80,7 +80,11 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
-	      fscanf(f, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+	      fscanf(f, "%[^\n]\n", line); 
+	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
+		{
+		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+		}
 	    }
 	  break; 
 	}
@@ -94,7 +98,7 @@ int main(int argc, char **argv)
   double *adjDr[3], Dr, Dw, A1, A2, A3, dr;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int NP, NPA=-1, NN, fine, JJ, nat, maxl, maxnp, np;
-  double refTime;
+  double refTime=0.0;
   if (argc <= 1)
     {
       printf("Usage: calcmsd <listafile> [number of points]\n");
@@ -234,7 +238,7 @@ int main(int argc, char **argv)
 	      if (np < points && ti[np] == -1.0)
 		{
 		  ti[np] = time + refTime;
-		  //printf("nr1=%d time=%.15G\n", nr2, ti[nr2]);
+		  //printf("nr1=%d time=%.15G\n", np, ti[np]);
 		}
   
 	      if (nr2 == nr1)
@@ -248,7 +252,6 @@ int main(int argc, char **argv)
 		    if (foundDRs)
 		      {
 			adjDr[a][i] = L*(DR[i][a]-DR0[i][a]); 
-			
 		      }
 		    else
 		      {
