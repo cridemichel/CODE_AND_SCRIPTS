@@ -1562,35 +1562,36 @@ MPI_Datatype Eventtype;
 
 void mpi_define_structs(void)
 {
-  MPI_Datatype type_pair[14]={MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE,
+  MPI_Datatype type_pair[15]={MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE,
     MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
-  int blocklen_pair[14]={2,6,12,6,6,6,4,2,2,2,2,2,2,18}, a;
-  MPI_Aint displ_pair[14];
+  int blocklen_pair[15]={2,6,18,12,6,6,6,4,2,2,2,2,2,2,18}, a;
+  MPI_Aint displ_pair[15];
   MPI_Datatype type_ev[5]={MPI_DOUBLE,MPI_DOUBLE,MPI_INT,MPI_INT, MPI_INT};
   int blocklen_ev[5]={1,3,1,1,3};
   MPI_Aint displ_ev[5];
   MPI_Address(&parall_pair, &displ_pair[0]);
   MPI_Address(parall_pair.pos, &displ_pair[1]);
-  MPI_Address(parall_pair.vels, &displ_pair[2]);
-  MPI_Address(parall_pair.axes, &displ_pair[3]);
-  MPI_Address(parall_pair.cells, &displ_pair[4]);
-  MPI_Address(parall_pair.lastbump, &displ_pair[5]);
-  MPI_Address(parall_pair.time,  &displ_pair[6]);
-  MPI_Address(parall_pair.atomTime, &displ_pair[7]);
+  MPI_Address(parall_pair.R, &displ_pair[2]);
+  MPI_Address(parall_pair.vels, &displ_pair[3]);
+  MPI_Address(parall_pair.axes, &displ_pair[4]);
+  MPI_Address(parall_pair.cells, &displ_pair[5]);
+  MPI_Address(parall_pair.lastbump, &displ_pair[6]);
+  MPI_Address(parall_pair.time,  &displ_pair[7]);
+  MPI_Address(parall_pair.atomTime, &displ_pair[8]);
 #ifdef MD_ASYM_ITENS
-  MPI_Address(parall_pair.angM,  &displ_pair[8]);
-  MPI_Address(parall_pair.sintheta0, &displ_pair[9]);
-  MPI_Address(parall_pair.costheta0, &displ_pair[10]);
-  MPI_Address(parall_pair.phi0,      &displ_pair[11]);
-  MPI_Address(parall_pair.psi0,      &displ_pair[12]);
-  MPI_Address(parall_pair.RM,        &displ_pair[13]);
-  for (a = 13; a >= 0; a--)
+  MPI_Address(parall_pair.angM,  &displ_pair[9]);
+  MPI_Address(parall_pair.sintheta0, &displ_pair[10]);
+  MPI_Address(parall_pair.costheta0, &displ_pair[11]);
+  MPI_Address(parall_pair.phi0,      &displ_pair[12]);
+  MPI_Address(parall_pair.psi0,      &displ_pair[13]);
+  MPI_Address(parall_pair.RM,        &displ_pair[14]);
+  for (a = 14; a >= 0; a--)
     displ_pair[a] -= displ_pair[0];
-  MPI_Type_struct(14, blocklen_pair, displ_pair, type_pair, &Particletype);
+  MPI_Type_struct(15, blocklen_pair, displ_pair, type_pair, &Particletype);
 #else
-  for (a = 7; a >= 0; a--)
+  for (a = 8; a >= 0; a--)
     displ_pair[a] -= displ_pair[0];
-  MPI_Type_struct(8, blocklen_pair, displ_pair, type_pair, &Particletype);
+  MPI_Type_struct(9, blocklen_pair, displ_pair, type_pair, &Particletype);
 #endif
   MPI_Type_commit(&Particletype);
   MPI_Address(&parall_event, &displ_ev[0]);
@@ -1620,11 +1621,14 @@ extern const int iwtagEvent, iwtagPair;
 void md_mpi_finalize()
 {
   int npr;
+  char msgtype;
   for(npr = 1; npr < numOfProcs; npr++)
     {
-      parall_pair.p[0] = -2;
-      parall_pair.p[1] = -2;
-      MPI_Send(&parall_pair, 1, Particletype, npr, iwtagPair, MPI_COMM_WORLD);
+      //parall_pair.p[0] = -2;
+      //parall_pair.p[1] = -2;
+      msgtype = 'T';
+      MPI_Send(&msgtype, 1, MPI_CHAR, npr, iwtagPair, MPI_COMM_WORLD);
+      //MPI_Send(&parall_pair, 1, Particletype, npr, iwtagPair, MPI_COMM_WORLD);
     }
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -2103,32 +2107,33 @@ void usrInitAft(void)
   if (my_rank != 0)
     {
       int ret;
+      char msgtype;
       while(1)
 	{
 	  /* slaves processes here */
 	  for(njob = 0; njob >= 0; njob++)
 	    {
 	      //printf("receiving new job rank=%d\n", my_rank);
-	      MPI_Recv(&parall_pair, 1, Particletype, 0, iwtagPair, MPI_COMM_WORLD, &parall_status);
-	      iriceve = parall_status.MPI_SOURCE;
-	      //printf("received from %d rank=%d\n", iriceve, my_rank);
-	      ret = parall_slave_get_data(&parall_pair);
-	      if (ret == 1)
+	      MPI_Recv(&msgtype, 1, MPI_CHAR, 0, iwtagPair, MPI_COMM_WORLD, &parall_status);
+	      if (msgtype == 'D')
 		{
-		  //printf("terminating rank=%d\n", my_rank);
 		  break;
 		}
-	      else if (ret == 2)
+	      else if (msgtype == 'T')
 		{
 		  //printf("FINE rank=%d\n", my_rank);
 		  MPI_Barrier(MPI_COMM_WORLD);
 		  MPI_Finalize();
 		  exit(0);
 		}
+	      MPI_Recv(&parall_pair, 1, Particletype, 0, iwtagPair, MPI_COMM_WORLD, &parall_status);
+	      iriceve = parall_status.MPI_SOURCE;
+	      //printf("received from %d rank=%d\n", iriceve, my_rank);
+	      parall_slave_get_data(&parall_pair);
 	      //printf("FINDING CONTACT TIME....rank=%d\n", my_rank);
 	      find_contact_parall(parall_pair.p[0], parall_pair.p[1], &parall_event);
-	      printf("<<<<DONE my_rank=%d  i=%d j=%d\n", my_rank, parall_pair.p[0],
-		     parall_pair.p[1]);
+	      //printf("<<<<DONE my_rank=%d  i=%d j=%d\n", my_rank, parall_pair.p[0],
+		//     parall_pair.p[1]);
 	      MPI_Send(&parall_event, 1, Eventtype, 0, iwtagEvent, MPI_COMM_WORLD);
 	      //printf("mmmmmmaaa rank=%d\n", my_rank);
 	      /* predict collision here */

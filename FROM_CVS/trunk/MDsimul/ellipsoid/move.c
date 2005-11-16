@@ -4636,7 +4636,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     }
   else if (d<0&&fabs(d)>OprogStatus.epsd)
     {
-      printf("[WARNING] t=%.10G d=%.15G < 0 i=%d j=%d\n",t+t1, d, i, j);
+      printf("[WARNING] t=%.10G d=%.15G < 0 i=%d j=%d\n", t+t1, d, i, j);
       printf("[WARNING] Some collision has been missed, ellipsoid may overlap!\n");
       store_bump(i, j);
       return 0;
