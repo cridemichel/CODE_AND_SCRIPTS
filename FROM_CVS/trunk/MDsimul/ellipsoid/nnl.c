@@ -3810,8 +3810,6 @@ void parall_get_data_and_schedule(parall_event_struct parall_event)
   collCode = parall_event.sp[2];
   ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #else
-  printf("[recieving]t=%.15G na=%d n=%d rC=%.15G %.15G %.15G\n", 
-	 t, na, n, rxC, ryC, rzC);
   ScheduleEvent (na, n, t);
 #endif
 }
@@ -3912,7 +3910,6 @@ void PredictEventNNL(int na, int nb)
 	  njob2i[num_work_request] = i;
 	  num_work_request++; 
 	}	
-      printf("num_work_req:%d\n", num_work_request);
       if (numOfProcs == 1)
 	return;
       if (num_work_request == 0)
