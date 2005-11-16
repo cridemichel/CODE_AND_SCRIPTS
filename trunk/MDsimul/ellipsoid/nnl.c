@@ -1,4 +1,4 @@
-#include<mdsimul.h>
+ #include<mdsimul.h>
 #define MD_NNLPLANES
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
@@ -3453,10 +3453,10 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
   double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq, t, evtimeHC, vecg[5];
   double t1, t2;
   int overlap, ac, bc, acHC, bcHC, collCode, collCodeOld;
+  
   shift[0] = L*rint((rx[na]-rx[n])/L);
   shift[1] = L*rint((ry[na]-ry[n])/L);
   shift[2] = L*rint((rz[na]-rz[n])/L);
-
   /* maxax[...] è il diametro dei centroidi dei due tipi
    * di ellissoidi */
   if (OprogStatus.targetPhi > 0)
@@ -3603,6 +3603,8 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
   parall_event->rC[0] = rxC;
   parall_event->rC[1] = ryC;
   parall_event->rC[2] = rzC;
+  printf("scheduling t=%.15G na=%d n=%d rC=%.15G %.15G %.15G\n", 
+	 t, na, n, rxC, ryC, rzC);
 #ifdef MD_PATCHY_HE
   parall_event->sp[0] = ac;
   parall_event->sp[1] = bc;
@@ -3794,6 +3796,8 @@ void parall_get_data_and_schedule(parall_event_struct parall_event)
   collCode = parall_event.sp[2];
   ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #else
+  printf("[revieving]t=%.15G na=%d n=%d rC=%.15G %.15G %.15G\n", 
+	 t, na, n, rxC, ryC, rzC);
   ScheduleEvent (na, n, t);
 #endif
 }
@@ -3883,6 +3887,7 @@ void PredictEventNNL(int na, int nb)
 	  n = nebrTab[na].list[i]; 
 	  if (!(n != na && n!=nb && (nb >= -1 || n < na)))
 	    continue;
+	  printf("to locate: n=%d\n", n);
 	  njob2i[num_work_request] = i;
 	  num_work_request++; 
 	}	
@@ -3905,16 +3910,19 @@ void PredictEventNNL(int na, int nb)
        	    break;
 	  n = nebrTab[na].list[njob2i[njob-1]]; 
 	  //printf(">>> num_work_request: %d numofproc:%d sending to %d\n", num_work_request, numOfProcs, njob);
+	  printf("na=%d sending n=%d to %d\n",na, n, njob);
 	  parall_set_data(na ,n, &parall_pair);
 	  //printf("sending to %d\n", njob);
 	  MPI_Send(&parall_pair, 1, Particletype, njob, iwtagPair, MPI_COMM_WORLD);
 	  //printf("sent!!!!\n");
 	}    
       //printf("????????????????\n");
+      printf("num_work_request=%d numofproc=%d\n", num_work_request, numOfProcs);
       for (njob=numOfProcs; njob <= num_work_request; njob++)
 	 {
 	   //printf("my_rank=%d njob = %d\n", my_rank, njob);
-	   n = nebrTab[na].list[njob2i[njob]]; 
+	   n = nebrTab[na].list[njob2i[njob-1]]; 
+	   printf(">>>na=%d sending n=%d to %d\n",na, n, njob);
 	   MPI_Recv(&parall_event, 1, Eventtype, MPI_ANY_SOURCE, iwtagEvent, MPI_COMM_WORLD, &parall_status);
 	   ndone++;
 	   //printf("§§§§§§ ndone=%d\n", ndone);
