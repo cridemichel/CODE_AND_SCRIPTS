@@ -1562,7 +1562,8 @@ MPI_Datatype Eventtype;
 
 void mpi_define_structs(void)
 {
-  MPI_Datatype type_pair[15]={MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE,
+  MPI_Datatype type_pair[15]={MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, 
+    MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE,
     MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
   int blocklen_pair[15]={2,6,18,12,8,6,6,4,2,2,2,2,2,2,18}, a;
   MPI_Aint displ_pair[15];
@@ -1639,6 +1640,46 @@ void md_mpi_finalize()
 extern int parall_slave_get_data(parall_pair_struct *parall_pair);
 extern void find_contact_parall(int na, int n, parall_event_struct *parall_event);
 extern MPI_Status parall_status;
+void slave_task(void)
+{
+  int njob, iriceve;
+  char msgtype;
+
+  if (my_rank == 0)
+    return;
+  while(1)
+    {
+      /* slaves processes here */
+      for(njob = 0; njob >= 0; njob++)
+	{
+	  //printf("receiving new job rank=%d\n", my_rank);
+	  MPI_Recv(&msgtype, 1, MPI_CHAR, 0, iwtagPair, MPI_COMM_WORLD, &parall_status);
+	  if (msgtype == 'D')
+	    {
+	      break;
+	    }
+	  else if (msgtype == 'T')
+	    {
+	      //printf("FINE rank=%d\n", my_rank);
+	      MPI_Barrier(MPI_COMM_WORLD);
+	      MPI_Finalize();
+	      exit(0);
+	    }
+	  MPI_Recv(&parall_pair, 1, Particletype, 0, iwtagPair, MPI_COMM_WORLD, &parall_status);
+	  iriceve = parall_status.MPI_SOURCE;
+	  //printf("received from %d rank=%d\n", iriceve, my_rank);
+	  parall_slave_get_data(&parall_pair);
+	  //printf("FINDING CONTACT TIME....rank=%d\n", my_rank);
+	  find_contact_parall(parall_pair.p[0], parall_pair.p[1], &parall_event);
+	  //printf("<<<<DONE my_rank=%d  i=%d j=%d\n", my_rank, parall_pair.p[0],
+	  //     parall_pair.p[1]);
+	  MPI_Send(&parall_event, 1, Eventtype, 0, iwtagEvent, MPI_COMM_WORLD);
+	  //printf("mmmmmmaaa rank=%d\n", my_rank);
+	  /* predict collision here */
+	}
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+}
 #endif
 void usrInitAft(void)
 {
@@ -1655,10 +1696,7 @@ void usrInitAft(void)
   double distSPA, distSPB;
 #endif
   int a;
-#ifdef MD_HE_PARALL
-  int njob, iriceve;
-#endif
-  /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
+ /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
   /* initialize global varibales */
   pi = 2.0 * acos(0);
@@ -1732,19 +1770,39 @@ void usrInitAft(void)
   lastbump = malloc(sizeof(int)*Oparams.parnum);
 #endif
 #ifdef MD_PATCHY_HE
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    tree = AllocMatI(9, poolSize);
+#else
   tree = AllocMatI(12, poolSize);
+#endif
   bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
   numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
   bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
 #else
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    tree = AllocMatI(9, poolSize);
+#else
   tree = AllocMatI(9, poolSize);
 #endif
+#endif
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    {
+      treeTime = malloc(sizeof(double)*poolSize);
+      treeRxC  = malloc(sizeof(double)*poolSize);
+      treeRyC  = malloc(sizeof(double)*poolSize);
+      treeRzC  = malloc(sizeof(double)*poolSize);
+    }
+#else
   treeTime = malloc(sizeof(double)*poolSize);
   treeRxC  = malloc(sizeof(double)*poolSize);
   treeRyC  = malloc(sizeof(double)*poolSize);
   treeRzC  = malloc(sizeof(double)*poolSize);
+#endif
   Xa = matrix(3, 3);
   Xb = matrix(3, 3);
   XbXa = matrix(3, 3);
@@ -1925,10 +1983,24 @@ void usrInitAft(void)
   if (OprogStatus.useNNL)
     {
       printf("I'm going to use NNL, good choice to go fast :)\n");
+#ifdef MD_HE_PARALL
+      if (my_rank == 0)	
+ 	nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+#else
       nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+#endif
     }
   for (i=0; i < Oparams.parnumA; i++)
     {
+#ifdef MD_HE_PARALL
+      if (my_rank == 0 && OprogStatus.useNNL)	
+	{
+	  nebrTab[i].len = 0;
+	  nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+	  nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
+	  nebrTab[i].R = matrix(3, 3);
+	}
+#else
       if (OprogStatus.useNNL)
 	{
 	  nebrTab[i].len = 0;
@@ -1936,6 +2008,7 @@ void usrInitAft(void)
 	  nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
 	  nebrTab[i].R = matrix(3, 3);
 	}
+#endif
       scdone[i] = 0;
       axa[i] = Oparams.a[0];
       axb[i] = Oparams.b[0];
@@ -1943,12 +2016,21 @@ void usrInitAft(void)
     }
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
     {
+#ifdef MD_HE_PARALL
+      if (my_rank == 0 && OprogStatus.useNNL)
+	{
+	  nebrTab[i].len = 0;
+	  nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+	  nebrTab[i].R = matrix(3, 3);
+	}
+#else
       if (OprogStatus.useNNL)
 	{
 	  nebrTab[i].len = 0;
 	  nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
 	  nebrTab[i].R = matrix(3, 3);
 	}
+#endif
       scdone[i] = 0;
       axa[i] = Oparams.a[1];
       axb[i] = Oparams.b[1];
@@ -2104,45 +2186,8 @@ void usrInitAft(void)
 #endif
   //exit(-1);
 #ifdef MD_HE_PARALL
-  if (my_rank != 0)
-    {
-      int ret;
-      char msgtype;
-      while(1)
-	{
-	  /* slaves processes here */
-	  for(njob = 0; njob >= 0; njob++)
-	    {
-	      //printf("receiving new job rank=%d\n", my_rank);
-	      MPI_Recv(&msgtype, 1, MPI_CHAR, 0, iwtagPair, MPI_COMM_WORLD, &parall_status);
-	      if (msgtype == 'D')
-		{
-		  break;
-		}
-	      else if (msgtype == 'T')
-		{
-		  //printf("FINE rank=%d\n", my_rank);
-		  MPI_Barrier(MPI_COMM_WORLD);
-		  MPI_Finalize();
-		  exit(0);
-		}
-	      MPI_Recv(&parall_pair, 1, Particletype, 0, iwtagPair, MPI_COMM_WORLD, &parall_status);
-	      iriceve = parall_status.MPI_SOURCE;
-	      //printf("received from %d rank=%d\n", iriceve, my_rank);
-	      parall_slave_get_data(&parall_pair);
-	      //printf("FINDING CONTACT TIME....rank=%d\n", my_rank);
-	      find_contact_parall(parall_pair.p[0], parall_pair.p[1], &parall_event);
-	      //printf("<<<<DONE my_rank=%d  i=%d j=%d\n", my_rank, parall_pair.p[0],
-		//     parall_pair.p[1]);
-	      MPI_Send(&parall_event, 1, Eventtype, 0, iwtagEvent, MPI_COMM_WORLD);
-	      //printf("mmmmmmaaa rank=%d\n", my_rank);
-	      /* predict collision here */
-	    }
-	  MPI_Barrier(MPI_COMM_WORLD);
-	}
-    }
+  slave_task();
 #endif
-
   StartRun(); 
   if (mgl_mode != 2)
     ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
