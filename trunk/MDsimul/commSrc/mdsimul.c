@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.13 2005-11-08 10:18:13 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.14 2005-11-16 11:06:12 demichel Exp $     */
 #ifndef lint
-//static char vcid[] = "$Id: mdsimul.c,v 1.13 2005-11-08 10:18:13 demichel Exp $";
+//static char vcid[] = "$Id: mdsimul.c,v 1.14 2005-11-16 11:06:12 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -485,13 +485,15 @@ int main(int argc, char *argv[])
   
   commMD();
 
+#ifdef MD_HE_PARALL
+  MD_EXT_END();
+#endif
 #if defined(MPI)
 #if defined(PRINTER_PROC)
   MPI_Ssend("fine", 5, MPI_CHAR, 
 	   printerRank, MD_MPI_END, MPI_COMM_WORLD);
 
 #endif
-  MD_EXT_END();
   /* Termina regolarmente */
   exit(0);
   //MPI_Barrier(MPI_COMM_WORLD);
