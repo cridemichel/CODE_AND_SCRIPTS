@@ -3658,6 +3658,8 @@ void parall_slave_get_data(parall_pair_struct *parall_pair)
   axa[j] = parall_pair->axes[3];
   axb[j] = parall_pair->axes[4];
   axc[j] = parall_pair->axes[5];
+  maxax[i] = parall_pair->axes[6];
+  maxax[j] = parall_pair->axes[7];
   inCell[0][i] = parall_pair->cells[0];
   inCell[1][i] = parall_pair->cells[1];
   inCell[2][i] = parall_pair->cells[2];
@@ -3744,6 +3746,8 @@ void parall_set_data(int i, int j, parall_pair_struct *parall_pair)
   parall_pair->axes[3] = axa[j];
   parall_pair->axes[4] = axb[j];
   parall_pair->axes[5] = axc[j];
+  parall_pair->axes[6] = maxax[i];
+  parall_pair->axes[7] = maxax[j];
   parall_pair->cells[0] = inCell[0][i];
   parall_pair->cells[1] = inCell[1][i];
   parall_pair->cells[2] = inCell[2][i];
