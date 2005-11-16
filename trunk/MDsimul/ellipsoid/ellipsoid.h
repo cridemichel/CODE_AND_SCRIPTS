@@ -62,6 +62,7 @@ typedef struct
 {
   int p[2];
   double pos[6];
+  double R[18];
   double vels[12];
   double axes[6];
   int cells[6];
