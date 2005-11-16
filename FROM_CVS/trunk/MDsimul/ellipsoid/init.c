@@ -2127,7 +2127,8 @@ void usrInitAft(void)
 		}
 	      //printf("FINDING CONTACT TIME....rank=%d\n", my_rank);
 	      find_contact_parall(parall_pair.p[0], parall_pair.p[1], &parall_event);
-	      //printf("<<<<<<<<<BOH\n");
+	      printf("<<<<DONE my_rank=%d  i=%d j=%d\n", my_rank, parall_pair.p[0],
+		     parall_pair.p[1]);
 	      MPI_Send(&parall_event, 1, Eventtype, 0, iwtagEvent, MPI_COMM_WORLD);
 	      //printf("mmmmmmaaa rank=%d\n", my_rank);
 	      /* predict collision here */

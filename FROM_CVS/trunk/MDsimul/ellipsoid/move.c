@@ -4775,7 +4775,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
 		return 0;
 	      else
-		return 1;
+		{
+		  return 1;
+		}
 #endif
 	    }
 	  else 
