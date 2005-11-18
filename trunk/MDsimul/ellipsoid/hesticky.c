@@ -400,6 +400,19 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   for (a=0; a < 3; a++)
     vc += (vCA[a]-vCB[a])*norm[a];
   MD_DEBUG20(printf("[bump] before bump vc=%.15G\n", vc));
+#if 1
+  if ((vc > 0 && bt == MD_OUTIN_BARRIER) ||
+      (vc < 0 && bt == MD_INOUT_BARRIER))// && fabs(vc) > 1E-10)
+    {
+      MD_DEBUG(printf("norm = (%f,%f,%f)\n", norm[0], norm[1],norm[2]));
+      MD_DEBUG(printf("vel  = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
+      MD_DEBUG(printf("i=%d r = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]));
+      //printf("[WARNING] maybe second collision has been wrongly predicted\n");
+      //printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
+      return;
+    }
+#endif
+
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
 #ifdef MD_ASYM_ITENS 
   for (a=0; a < 3; a++)
@@ -1650,12 +1663,12 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		  MD_DEBUG(printf("[locate_contact_sp] its: %d\n", its));
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
 		   * scarta tale urto */
-		  if (troot > t2 || troot < t1
-#if 1
+		  if (troot > t2 || troot < t1)
+#if 0
 		  || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && 
 		       lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-14))
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-20))
 #endif
 		    {
 		     MD_DEBUG31(printf("SP lastbump[%d].mol=%d lastbump[%d].at=%d lastbump[%d].mol=%d lastbump[%d].at=%d\n", i, lastbump[i].mol, i, lastbump[i].at, j, lastbump[j].mol, j, lastbump[j].at));
