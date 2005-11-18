@@ -1287,13 +1287,14 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 	} 
     }
 #endif
-#if 0
-  if (vc < 0)// && fabs(vc) > 1E-10)
+#if 1
+  if ((vc > 0 && bt == MD_OUTIN_BARRIER) ||
+      (vc < 0 && bt == MD_INOUT_BARRIER))// && fabs(vc) > 1E-10)
     {
       MD_DEBUG(printf("norm = (%f,%f,%f)\n", norm[0], norm[1],norm[2]));
       MD_DEBUG(printf("vel  = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
       MD_DEBUG(printf("i=%d r = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]));
-      printf("[ERROR] maybe second collision has been wrongly predicted\n");
+      printf("[WARNING] maybe second collision has been wrongly predicted\n");
       printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
       return;
     }
@@ -3462,8 +3463,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		  MD_DEBUG(printf("[locate_contact] its: %d\n", its));
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
 		   * scarta tale urto */
-		  if ((adjt1 && troot < Oparams.time) || troot > t2 || troot < t1
-#if 1
+		  if ((adjt1 && troot < Oparams.time) || troot > t2 || troot < t1)
+#if 0
 		      || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && 
 		       lastbump[i].at == mapbondsa[nn]
