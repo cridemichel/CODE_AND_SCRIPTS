@@ -4378,11 +4378,11 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
-int interpolSNP(int i, int j, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3])
+int interpolSNP(int i, int j, double tref, double t, double delt, double d1, double d2, double *tmin, double* vecg, double shift[3])
 {
   double d3, A;
   double r1[3], r2[3], alpha;
-  double tmin, dmin;
+  double dmin;
   d3 = calcDistNeg(t+delt*0.5, tref, i, j, shift, r1, r2, &alpha, vecg, 0);
   xa[0] = 0;
   ya[0] = d1;
@@ -4392,21 +4392,21 @@ int interpolSNP(int i, int j, double tref, double t, double delt, double d1, dou
   ya[2] = d2;
   if (ya[0]-ya[1] == 0.0)
     {
-      tmin = t + delt*0.25;
+      *tmin = t + delt*0.25;
     }
   else if (ya[2]-ya[0] ==0.0)
     {
-      tmin = t + delt*0.5;
+      *tmin = t + delt*0.5;
     }
   else
     {      
       A = (ya[2]-ya[0])/(ya[0]-ya[1]);
-      tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
+      *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
     }
-  if (tmin < t+delt && tmin > t)
+  if (*tmin < t+delt && *tmin > t)
     {
-      dmin = calcDistNeg(tmin, tref, i, j, shift, r1, r2, &alpha, vecg, 0);
-      *troot += tref;
+      dmin = calcDistNeg(*tmin, tref, i, j, shift, r1, r2, &alpha, vecg, 0);
+      *tmin += tref;
       return 0;
     }
   return 1;
