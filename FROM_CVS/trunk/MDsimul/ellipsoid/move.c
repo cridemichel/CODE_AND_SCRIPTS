@@ -1423,8 +1423,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       MD_DEBUG(printf("i=%d r = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]));
       printf("[ERROR t=%.15G] maybe second collision has been wrongly predicted %d-%d\n",Oparams.time,i,j);
       printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
-      store_bump(i,j);
-      exit(-1);
+      MD_DEBUG(store_bump(i,j));
+      MD_DEBUG(exit(-1));
       return;
     }
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
@@ -4378,6 +4378,39 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
+int interpolSNP(int i, int j, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3])
+{
+  double d3, A;
+  double r1[3], r2[3], alpha;
+  double tmin, dmin;
+  d3 = calcDistNeg(t+delt*0.5, tref, i, j, shift, r1, r2, &alpha, vecg, 0);
+  xa[0] = 0;
+  ya[0] = d1;
+  xa[1] = delt*0.5;
+  ya[1] = d3;
+  xa[2] = delt;
+  ya[2] = d2;
+  if (ya[0]-ya[1] == 0.0)
+    {
+      tmin = t + delt*0.25;
+    }
+  else if (ya[2]-ya[0] ==0.0)
+    {
+      tmin = t + delt*0.5;
+    }
+  else
+    {      
+      A = (ya[2]-ya[0])/(ya[0]-ya[1]);
+      tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
+    }
+  if (tmin < t+delt && tmin > t)
+    {
+      dmin = calcDistNeg(tmin, tref, i, j, shift, r1, r2, &alpha, vecg, 0);
+      *troot += tref;
+      return 0;
+    }
+  return 1;
+}
 int interpol(int i, int j, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3], int bracketing)
 {
   int nb;
@@ -4521,7 +4554,7 @@ double calc_maxddot(int i, int j)
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
   double h, d, dold, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
-  double maxddot, delt, troot, vecgroot[8];
+  double maxddot, delt, troot, vecgroot[8], tini, tmin;
 #ifndef MD_BASIC_DT
   double normddot, ddot[3], dold2, vecgdold2[8];
 #endif
@@ -4530,7 +4563,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #ifndef MD_ASYM_ITENS
   double factori, factorj; 
 #endif
-  int dorefine;
+  int dorefine, sumnegpairs=0;
   int its, foundrc, kk;
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
@@ -4621,6 +4654,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  printf("i=%d j=%d BOH d=%.15G\n", i, j, d);
 	  exit(-1);
 	}
+      sumnegpairs = 1;
 #if 0
       its = 0;	
       while (d < 0)
@@ -4687,6 +4721,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	//delt = h;
       if (dold < epsd)
 	delt = epsd / maxddot;
+      tini = t;
       t += delt;
       for (kk = 0; kk < 8; kk++)
 	vecgdold2[kk] = vecgd[kk];
@@ -4715,6 +4750,22 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	}
 #endif
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f d1-d2:%.15G\n", t, d1, d2, fabs(d1-d2)));
+      if (sumnegpairs)
+	{
+	  MD_DEBUG(printf("sumnnegpairs d=%.15G\n", d));
+  	  if (d <= 0.0)
+	    {
+	      if(!interpolSNP(i, j, t1, tini, delt, dold, d, &tmin, vecgd, shift))
+		{
+		  tmin -= t1;
+		  delt = tmin - tini;
+		  t = tmin;
+		  d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
+		  MD_DEBUG(printf("qui tmin = %.15G d=%.15G delt=%.15G\n", tmin, d, delt));
+		}
+	    }
+	  sumnegpairs = 0;	  
+	}
       dorefine = 0;      
       if (dold > 0 && d < 0)
 	{
@@ -4761,19 +4812,25 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      MD_DEBUG31(printf("collision will occur at time %.15G\n", vecg[4])); 
 	      MD_DEBUG31(printf("[locate_contact] its: %d\n", its));
 #ifdef MD_PATCHY_HE
-	      if (vecg[4]>t2 || vecg[4]<t1 || 
+	      if (vecg[4]>t2 || vecg[4]<t1)
+#if 0
+		|| 
 		  (lastbump[i].mol==j && lastbump[i].at==0 && lastbump[j].mol==i && lastbump[j].at==0
 		   && fabs(vecg[4] - lastcol[i])<1E-15))
+#endif
 		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
 		return 0;
 	      else
 		return 1;
 
 #else
-	      if (vecg[4]>t2 || vecg[4]<t1 || 
+	      if (vecg[4]>t2 || vecg[4]<t1)
+#if 0
+		|| 
 		  (lastbump[i] == j && lastbump[j]==i && fabs(vecg[4] - lastcol[i])<1E-14))
 		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
-		return 0;
+#endif
+		  return 0;
 	      else
 		{
 		  return 1;
