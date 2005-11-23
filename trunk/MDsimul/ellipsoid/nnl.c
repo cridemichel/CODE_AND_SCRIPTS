@@ -2446,7 +2446,7 @@ int check_cross_scf(double distsOld[6], double dists[6], int crossed[6])
     {
       crossed[nn] = 0;
       //printf("dists[%d]=%.15G distsOld[%d]:%.15G\n", nn, dists[nn], nn, distsOld[nn]);
-      if ((fabs(dists[nn]) < 1E-15 || dists[nn] < 0.0)  && distsOld[nn] > 0.0)
+      if ((fabs(dists[nn]) < 1E-14 || dists[nn] < 0.0)  && distsOld[nn] > 0.0)
 	{
 	  crossed[nn] = 1;
 	  retcross = 1;
@@ -2565,6 +2565,17 @@ void adjust_maxddot(int i, double *maxddot)
   if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
     K = mddotfact;
 #endif
+  if (i < Oparams.parnumA)
+    {
+      if (Oparams.a[0] == Oparams.b[0] && Oparams.b[0] == Oparams.c[0])
+	K = mddotfact;
+    }
+  else
+    {
+      if (Oparams.a[1] == Oparams.b[1] && Oparams.b[1] == Oparams.c[1])
+	K = mddotfact;
+    } 
+  *maxddot *= K;
 }
 void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddoti[6])
 {
@@ -2577,6 +2588,16 @@ void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddo
   if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
     K = mddotfact;
 #endif
+  if (i < Oparams.parnumA)
+    {
+      if (Oparams.a[0] == Oparams.b[0] && Oparams.b[0] == Oparams.c[0])
+	K = mddotfact;
+    }
+  else
+    {
+      if (Oparams.a[1] == Oparams.b[1] && Oparams.b[1] == Oparams.c[1])
+	K = mddotfact;
+    }
   *maxddot *= K;
   for (a = 0; a < 6; a++)
     maxddoti[a] = K*maxddotiLC[a];
