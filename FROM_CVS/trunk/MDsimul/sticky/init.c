@@ -627,6 +627,7 @@ void buildTetrahedras(void)
       uzz[i] = -Kdh * radius;
       //printf("%f %f %f @ 0.075 C[green]\n", uxz[i], uyz[i], uzz[i]);
     }
+  //printf("dist=%.15G\n", sqrt( Sqr(uxx[i-1]-uxy[i-1]) + Sqr(uyx[i]-uyy[i]) + Sqr(uzx[i]-uzz[i])));
 }
 void angvel(void)
 {
@@ -1687,6 +1688,10 @@ void usrInitAft(void)
   COORD_TYPE *m;
   double drx, dry, drz, shift[3], dists[MD_PBONDS];
   int j;
+#ifdef MD_STORE_BONDS
+  FILE *fnb;
+  char fname[128];
+#endif
 #ifdef MD_SILICA
   int nl, nc;
 #endif
@@ -2027,6 +2032,11 @@ void usrInitAft(void)
    
       for(i = 0; i < Oparams.parnum; i++)
 	{
+#ifdef MD_STORE_BONDS
+	  sprintf(fname, "numbonds-%d", i);
+	  fnb = fopen(fname, "w+");
+	  fclose(fnb);	
+#endif
 	  /* store the initial positions of particles */
 	  OprogStatus.rxCMi[i] = rx[i];
 	  OprogStatus.ryCMi[i] = ry[i];

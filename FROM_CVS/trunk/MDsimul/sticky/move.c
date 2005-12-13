@@ -1009,7 +1009,40 @@ void core_bump(int i, int j, double *W, double sigSq)
 }
 double calcpotene(void);
 void calc_energy(char *msg);
-
+#ifdef MD_STORE_BONDS
+void save_all_bonds(int i, int oldnb)
+{
+  FILE *fnb;
+  char fname[128];
+  int save_all, ii;
+  sprintf(fname, "numbonds-%d", i);
+  fnb = fopen(fname, "a");
+  if (numbonds[i] == 0 || (numbonds[i] == 1 && oldnb == 0) )
+    save_all = 1;
+  else
+    save_all = 0;
+#ifdef MD_BIG_DT
+  fprintf(fnb, "%.15G %d %d\n", Oparams.time+OprogStatus.refTime, numbonds[i], save_all);
+#else
+  fprintf(fnb, "%.15G %d %d\n", Oparams.time, numbonds[i], save_all);
+#endif
+  if (save_all)
+    {
+      UpdateSystem();
+      for (ii = 0; ii < Oparams.parnum; ii++)
+	{
+	  fprintf(fnb, "%.15G %.15G %.15G\n", rx[ii]+L*OprogStatus.DR[ii][0], ry[ii]+L*OprogStatus.DR[ii][1],
+		  rz[ii]+L*OprogStatus.DR[ii][2]);
+	}
+    }
+  else
+    {
+      fprintf(fnb, "%.15G %.15G %.15G\n", rx[i]+L*OprogStatus.DR[i][0], ry[i]+L*OprogStatus.DR[i][1],
+	      rz[i]+L*OprogStatus.DR[i][2]);
+    }
+  fclose(fnb);
+}
+#endif
 void bump (int i, int j, int ata, int atb, double* W, int bt)
 {
   /*
@@ -1028,7 +1061,9 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 #ifdef MD_HSVISCO
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
-
+#ifdef MD_STORE_BONDS
+  int oldnbi, oldnbj;
+#endif
   double denom, rCx, rCy, rCz, nrAB, Dr;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
@@ -1337,6 +1372,10 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   /* SQUARE WELL: modify here */
   //factor =2.0*vc/denom;
   /* NOTA + o -????*/
+#ifdef MD_STORE_BONDS
+  oldnbi = numbonds[i];
+  oldnbj = numbonds[j];
+#endif
   mredl = 1.0 / denom;
   switch (bt)
     {
@@ -1369,6 +1408,10 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 	  //printf("qui\n");
 	  remove_bond(i, j, ata, atb);
 	  remove_bond(j, i, atb, ata);
+#ifdef MD_STORE_BONDS
+	  save_all_bonds(i, oldnbi);
+	  save_all_bonds(j, oldnbj);
+#endif
 	}
       factor *= mredl;
 #if 0
@@ -1383,6 +1426,10 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 #endif
       add_bond(i, j, ata, atb);
       add_bond(j, i, atb, ata);
+#ifdef MD_STORE_BONDS
+      save_all_bonds(i, oldnbi);
+      save_all_bonds(j, oldnbj);
+#endif
       factor = -vc - sqrt(Sqr(vc) + 2.0*Oparams.bheight/mredl);
       MD_DEBUG36(printf("delta= %f height: %f mredl=%f\n", 
 		      Sqr(vc) + 2.0*Oparams.bheight/mredl, Oparams.bheight, mredl));
@@ -1914,6 +1961,7 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
 	rat[kk] = rO[kk] - r3[kk]; 
       //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
     }
+
 }
 #else
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
@@ -1965,6 +2013,10 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
   /* l'atomo zero si suppone nell'origine */
   for (a=0; a < 5; a++)
     BuildAtomPosAt(i, a, rO, R, rat[a]);
+
+  //if (i==215)
+    //printf("dist=%.15G\n", sqrt( Sqr(rat[1][0]-rat[4][0]) + Sqr(rat[1][1]-rat[4][1]) + Sqr(rat[1][2]-rat[4][2])));
+
 }
 #else
 void body2lab(int i, double xp[], double x[], double *rO, double **R);
