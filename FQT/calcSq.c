@@ -3,11 +3,12 @@
 #include <stdio.h>
 #include <string.h>
 //#include <lapack.h>
+#define Sqr(x) ((x)*(x))
 char line[100000], parname[124], parval[256000];
 int N;
-double x[3], R[3][3], Q[3][3];
+double x[3], *r[3];
 char fname[1024], inputfile[1024];
-int timeEvol = 0;
+int readCnf = 0;
 #define KMODMAX 99
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
@@ -34,10 +35,10 @@ void parse_param(int argc, char** argv)
 	{
 	  print_usage();
 	}
-      else if (!strcmp(argv[cc],"--time") || !strcmp(argv[cc],"-t"))
+      else if (!strcmp(argv[cc],"--cnf") || !strcmp(argv[cc],"-c" ))
 	{
-	  timeEvol = 1;
-	}
+	  readCnf = 1;
+	} 
       else if (cc == argc)
 	print_usage();
       else
@@ -46,12 +47,13 @@ void parse_param(int argc, char** argv)
     }
 }
 double twopi;
+char dummy[2048];
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *of;
-  int nf, i, a, b, n;
+  int nf, i, a, b, n, mp;
   double ti, tref=0.0, kbeg=0.0;
-  double ;
+  int qmod, first = 1;
 #if 0
   if (argc == 1)
     {
@@ -63,7 +65,7 @@ int main(int argc, char** argv)
   parse_param(argc, argv);
   f2 = fopen(inputfile,"r");
   nf = 0;
-  for (qmod=0; qmod < QMAX; qmod++)
+  for (qmod=0; qmod < KMODMAX; qmod++)
     Sq[qmod] = 0.0;      
 
   while (!feof(f2))
@@ -95,7 +97,15 @@ int main(int argc, char** argv)
   	}
       while (strcmp(line,"@@@"));
       //printf("fname=%s %d ellipsoids...\n", fname, N);
-      
+
+      if (first)
+	{
+	  for (a = 0; a < 3; a++)
+	    {
+	      r[a] = malloc(sizeof(double)*N);
+	    }
+	  first = 0;
+	}
       for (i=0; i < N; i++)
 	{
 	   fscanf(f, "%[^\n]\n", line); 
@@ -104,7 +114,7 @@ int main(int argc, char** argv)
 	       sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
 	     }
 	   scalFact = twopi * invL;
-	   invNm = 1.0 / ((double)NP);
+	   invNm = 1.0 / ((double)N);
 
 	   for(n = 0; n < KMODMAX; n++)
 	     {
@@ -113,7 +123,7 @@ int main(int argc, char** argv)
 		 {
 		   reRho = 0.0;
 		   imRho = 0.0;
-		   for(i=0; i < Nm; i++)
+		   for(i=0; i < N; i++)
 		     {
 		       /* il passo della mesh e' 0.5*pi2/L */
 		       if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
@@ -141,7 +151,7 @@ int main(int argc, char** argv)
   of = fopen("Sq.dat", "w+");
   for (qmod = 0; qmod  < KMODMAX; qmod++)
     {
-      Sq[qmod] = Sq[qmod]  * invNm / ((COORD_TYPE) ntripl[qmod] / ((double)nf));  
+      Sq[qmod] = Sq[qmod]  * invNm / ((double) ntripl[qmod] / ((double)nf));  
       fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
     }
   fclose(of);
