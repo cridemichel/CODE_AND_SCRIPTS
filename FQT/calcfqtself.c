@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #define MAXPTS 1000
 char **fname; 
 double time, *ti, *r0[3], *r1[3], L, refTime;
@@ -61,21 +62,25 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
   fclose(f);
 }
 #define KMODMAX 99
-#define NKSHELL 50
+#define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double *sqRe[KMODMAX], *sqIm[KMODMAX];
 int *cc[KMODMAX];
+char fname2[512];
+int ntripl[]=
+#include "./ntripl.dat"
 int mesh[][NKSHELL][3]= 
 #include "./kmesh.dat"
- int ntripl[]=
-#include "./ntripl.dat"
+double twopi;
 int main(int argc, char **argv)
 {
   FILE *f, *f2;
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
-  int NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
+  int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
   int qmin = 5, qmax = 30, qmod; 
-  double rxdummy;
+  double invL, rxdummy, sumIm, sumRe;
+
+  twopi = acos(0)*4.0;	  
   if (argc <= 1)
     {
       printf("Usage: calcfqself <lista_file> [points] [qmin] [qmax]\n");
@@ -148,9 +153,9 @@ int main(int argc, char **argv)
   else
     points = NN;
   if (argc == 4)
-    qmin = atoi(argc[3]);
+    qmin = atoi(argv[3]);
   if (argc == 5)
-    qmax = atoi(argc[4]);
+    qmax = atoi(argv[4]);
 
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
@@ -228,7 +233,7 @@ int main(int argc, char **argv)
 
 	      for (qmod = qmin; qmod <= qmax; qmod++)
 		{
-		  for(iq=0; iq < ntripl[kmod]; iq++)
+		  for(iq=0; iq < ntripl[qmod]; iq++)
 		    {
 		      sumRe=0.0;
 		      sumIm=0.0;
@@ -260,8 +265,8 @@ int main(int argc, char **argv)
     }
   for (qmod = qmin; qmod < qmax; qmod++)
     {
-      sprintf(fname, "Fqs-%d",qmod);
-      f = fopen (fname, "w+");
+      sprintf(fname2, "Fqs-%d",qmod);
+      f = fopen (fname2, "w+");
       for (ii = 0; ii < points; ii++)
 	{
 	  if ((sqRe[qmod][ii]!=0.0 || sqIm[qmod][ii]!=0.0) && (ti[ii]> -1.0))
