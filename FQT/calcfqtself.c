@@ -49,13 +49,13 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
-	      fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
-		     &r[0][i], &r[1][i], &r[2][i], &R[0][0], &R[0][1], &R[0][2],
-		     &R[1][0], &R[1][1], &R[1][2], &R[2][0], &R[2][1], &R[2][2]); 
-	      //for (a = 0; a < 3; a++)
-		//u[a][i] = R[assez][a];
+	      fscanf(f, "%[^\n]\n", line); 
+	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
+		{
+		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+		}
 	    }
-  	  break; 
+ 	  break; 
 	}
 
     }
@@ -148,6 +148,7 @@ int main(int argc, char **argv)
 	}
     }
   fclose(f);
+  invL = 1.0/L;
   if (argc == 3)
     points = atoi(argv[2]);
   else
