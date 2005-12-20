@@ -212,6 +212,8 @@ int main(int argc, char **argv)
 
       if (nr2 == nr1)
 	continue;
+      MSD = 0.0;
+      rotMSD = 0.0;
       for (a = 0; a < 3; a++)
 	{
 	  Dw = wt[a][i] - w0[a][i];
@@ -231,12 +233,12 @@ int main(int argc, char **argv)
 	    }
 	  //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
 	  
-      	  MSD = (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+      	  MSD += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 	  if (foundrot)
-	    rotMSD = Dw*Dw;
+	    rotMSD += Dw*Dw;
 	}
       //printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
-      fprintf(f, "%.15G %.15G\n", ti-ti0, MSD);
+      fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", ti-ti0, MSD, rt[0][i]+L*DR[i][0], rt[1][i]+L*DR[i][1], rt[2][i]+L*DR[i][2]);
       if (foundrot)
 	fprintf(f2, "%.15G %.15G\n", ti-ti0, rotMSD);
       //printf("cc[%d]:%f\n", nr2-nr1, cc[nr2-nr1]);
