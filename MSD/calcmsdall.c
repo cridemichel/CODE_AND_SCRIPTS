@@ -171,14 +171,15 @@ int main(int argc, char **argv)
     }
     
   if (NPA != NP)
-    printf("[MIXTURE] points=%d files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, NPA, L, NN, maxl);
+    printf("[MIXTURE] files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", nfiles, NP, NPA, L, NN, maxl);
   else
-    printf("[MONODISPERE] points=%d files=%d NP = %d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, L, NN, maxl);
+    printf("[MONODISPERE] files=%d NP = %d L=%.15G NN=%d maxl=%d\n", nfiles, NP, L, NN, maxl);
   for (a=0; a < 3; a++)
     {
       r0[a] = malloc(sizeof(double)*NP);
       w0[a] = malloc(sizeof(double)*NP);
       rt[a] = malloc(sizeof(double)*NP);
+      rtold[a] = malloc(sizeof(double)*NP);
       wt[a] = malloc(sizeof(double)*NP);
       adjDr[a] = malloc(sizeof(double)*NP); 
     }
@@ -197,56 +198,51 @@ int main(int argc, char **argv)
   readconf(fname[nr1], &time, &refTime, NP, r0, w0, DR0);
   fine = 0;
   ti0 = 0.0;
+  i = np;
+  for (a=0; a < 3; a++)
+    rtold[a][i] = r0[a][i];
+ 
   for (nr2 = nr1+1; nr2 < nfiles; nr2++)
     {
       /* N.B. considera NN punti in maniera logaritmica e poi calcola i punti in maniera lineare 
        * distanziati di NN punti. */
+      
       readconf(fname[nr2], &time, &refTime, NP, rt, wt, DR);
-      if (ti == -1.0)
-	{
-	  ti = time + refTime;
-	  //printf("nr1=%d time=%.15G\n", np, ti[np]);
-	}
+      ti = time + refTime;
 
       if (nr2 == nr1)
 	continue;
-      for (i = 0; i < NP; i++)
+      for (a = 0; a < 3; a++)
 	{
-	  for (a = 0; a < 3; a++)
+	  Dw = wt[a][i] - w0[a][i];
+	  Dr = rt[a][i] - r0[a][i];
+	  dr = rt[a][i] - rtold[a][i];
+	  if (foundDRs)
 	    {
-	      Dw = wt[a][i] - w0[a][i];
-	      Dr = rt[a][i] - r0[a][i];
-	      dr = rt[a][i] - rtold[a][i];
-	      if (foundDRs)
-		{
-		  adjDr[a][i] = L*(DR[i][a]-DR0[i][a]); 
-		}
-	      else
-		{
-		  if (nr2 > nr1 && fabs(dr) > L*0.5)
-		    if (dr > 0.0)
-		      adjDr[a][i] -= L;
-		    else
-		      adjDr[a][i] += L;
-		}
-	      //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
-
-	      MSD = (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
-	      if (foundrot)
-		rotMSD = Dw*Dw;
+	      adjDr[a][i] = L*(DR[i][a]-DR0[i][a]); 
 	    }
-	}
-      for (ii=1; ii < points; ii++)
-	{
-	  //printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
-	  if (ti > -1.0)
+	  else
 	    {
-	      fprintf(f, "%.15G %.15G %f\n", ti-ti0, MSD);
-	      if (foundrot)
-		fprintf(f2, "%.15G %.15G %f\n", ti-ti0, rotMSD);
+	      if (nr2 > nr1 && fabs(dr) > L*0.5)
+		if (dr > 0.0)
+		  adjDr[a][i] -= L;
+		else
+		  adjDr[a][i] += L;
 	    }
+	  //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
+	  
+      	  MSD = (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+	  if (foundrot)
+	    rotMSD = Dw*Dw;
 	}
-           //printf("cc[%d]:%f\n", nr2-nr1, cc[nr2-nr1]);
+      //printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
+      fprintf(f, "%.15G %.15G\n", ti-ti0, MSD);
+      if (foundrot)
+	fprintf(f2, "%.15G %.15G\n", ti-ti0, rotMSD);
+      //printf("cc[%d]:%f\n", nr2-nr1, cc[nr2-nr1]);
+      for (a=0; a < 3; a++)
+	rtold[a][i] = rt[a][i];
+       
     }
   fclose(f);
   if (foundrot)
