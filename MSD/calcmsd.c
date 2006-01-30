@@ -111,7 +111,7 @@ int main(int argc, char **argv)
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", dummy); 
-      if (strlen(dummy) > maxl)
+      if (strlen(dummy)+1 > maxl)
 	maxl = strlen(dummy)+1;
       c2++;
     }	
