@@ -17,7 +17,7 @@ int ntripl[]=
 int mesh[][NKSHELL][3]= 
 #include "./kmesh.dat"
 double twopi;
-double Sq[KMODMAX], sumRho, reRho, imRho, rCMk, scalFact, invNm, invL;
+double Sq[KMODMAX], sumRho, reRho, imRho, rCMk, scalFact, invNm, invL, L;
 void print_usage(void)
 {
   printf("calcSq <confs_file>\n");
@@ -75,6 +75,35 @@ int main(int argc, char** argv)
       f = fopen(fname,"r");
       nf++;
       tref=0.0;
+      if (first)
+	{
+	  /* legge L */
+	  if (readCnf)
+	    {
+	      do 
+		{
+		  fscanf(f,"%[^\n]\n",line);
+		}
+	      while (strcmp(line,"@@@"));
+	    }
+	  do 
+	    {
+	      fscanf(f,"%[^\n]\n",line);
+	      sscanf(line, "%[^:\n ]:%[^\n]\n", parname, parval);
+	      if (!strcmp(parname,"parnum"))
+		N = atoi(parval);
+	    }
+	  while (strcmp(line,"@@@"));
+	  for (i=0; i < 2*N; i++)
+	    {
+	      fscanf(f, "%[^\n]\n", line); 
+	    }	
+	  fscanf(f, "%lf\n", &L);
+	  invL = 1.0/L;
+	}
+      //printf("L=%.15G\n", L);
+      /* -------- */
+      rewind(f);
       if (readCnf)
 	{
 	  do 
@@ -115,7 +144,7 @@ int main(int argc, char** argv)
 	     }
 	   scalFact = twopi * invL;
 	   invNm = 1.0 / ((double)N);
-
+	   printf("invL=%.15G invNm:%.15G\n", invL, invNm);
 	   for(n = 0; n < KMODMAX; n++)
 	     {
 	       sumRho = 0.0;
@@ -151,7 +180,7 @@ int main(int argc, char** argv)
   of = fopen("Sq.dat", "w+");
   for (qmod = 0; qmod  < KMODMAX; qmod++)
     {
-      Sq[qmod] = Sq[qmod]  * invNm / ((double) ntripl[qmod] / ((double)nf));  
+      Sq[qmod] = (Sq[qmod]  * invNm) / ((double) ntripl[qmod] / ((double)nf));  
       fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
     }
   fclose(of);
