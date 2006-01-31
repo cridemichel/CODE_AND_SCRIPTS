@@ -65,7 +65,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double *sqRe[KMODMAX], *sqIm[KMODMAX];
-int *cc[KMODMAX];
+double *cc[KMODMAX];
 char fname2[512];
 int ntripl[]=
 #include "./ntripl.dat"
@@ -194,6 +194,7 @@ int main(int argc, char **argv)
 	{
 	  sqRe[qmod][ii] = 0.0;
 	  sqIm[qmod][ii] = 0.0;
+	  cc[qmod][ii] = 0.0;
 	}
       for (iq=0; iq < ntripl[qmod]; iq++)
 	{
@@ -229,8 +230,8 @@ int main(int argc, char **argv)
 		  //printf("np=%d time=%.15G\n", np, ti[np]);
 		}
   
-	      if (nr2 == nr1)
-		continue;
+	      //if (nr2 == nr1)
+		//continue;
 
 	      for (qmod = qmin; qmod <= qmax; qmod++)
 		{
@@ -243,6 +244,7 @@ int main(int argc, char **argv)
 			  rxdummy = (r0[0][i]-r1[0][i])*mesh[qmod][iq][0]
 			    +(r0[1][i]-r1[1][i])*mesh[qmod][iq][1]
 			    +(r0[2][i]-r1[2][i])*mesh[qmod][iq][2];
+			  //printf("dummy:%.15G\n", rxdummy);
 			  sumRe += cos(rxdummy);
 			  sumIm += sin(rxdummy);	
 			}
@@ -252,6 +254,8 @@ int main(int argc, char **argv)
 		  sqRe[qmod][np] /= ((double)NP);
 		  sqIm[qmod][np] /= ((double)NP);
 		  cc[qmod][np] += 1.0;
+		  //printf("cc[%d][%d]=%.15G sqre=%.15G sqim=%.15G\n", qmod, np, cc[qmod][np],
+		//	 sqRe[qmod][np], sqIm[qmod][np]);
 		}
 	    }
 	}
@@ -260,8 +264,10 @@ int main(int argc, char **argv)
     {
       for (ii=0; ii < points; ii++)
 	{
-	  sqRe[qmod][ii] = sqRe[qmod][ii]/((double)cc[qmod][ii]);
-	  sqIm[qmod][ii] = sqIm[qmod][ii]/((double)cc[qmod][ii]);
+	  sqRe[qmod][ii] = sqRe[qmod][ii]/cc[qmod][ii];
+	  sqIm[qmod][ii] = sqIm[qmod][ii]/cc[qmod][ii];
+	 // printf("qmod=%d ii=%d sqre=%.15G sqIm=%.15G cc=%.15G\n",  qmod, ii, sqRe[qmod][ii], sqIm[qmod][ii],
+	//	 cc[qmod][ii]);
 	}
     }
   for (qmod = qmin; qmod < qmax; qmod++)
@@ -271,7 +277,7 @@ int main(int argc, char **argv)
       for (ii = 0; ii < points; ii++)
 	{
 	  if ((sqRe[qmod][ii]!=0.0 || sqIm[qmod][ii]!=0.0) && (ti[ii]> -1.0))
-	    fprintf(f, "%d %.8f %.8f\n", ti[ii]-ti[0], sqRe[qmod][ii], 
+	    fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqRe[qmod][ii]/sqRe[qmod][0], 
 		    sqIm[qmod][ii]);
 	}
     }
