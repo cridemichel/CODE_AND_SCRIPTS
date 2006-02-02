@@ -9,7 +9,7 @@ int N;
 double x[3], *r[3];
 char fname[1024], inputfile[1024];
 int readCnf = 0;
-#define KMODMAX 99
+#define KMODMAX 98
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 int ntripl[]=
@@ -142,37 +142,38 @@ int main(int argc, char** argv)
 	     {
 	       sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
 	     }
-	   scalFact = twopi * invL;
-	   invNm = 1.0 / ((double)N);
-	   printf("invL=%.15G invNm:%.15G\n", invL, invNm);
-	   for(n = 0; n < KMODMAX; n++)
-	     {
-	       sumRho = 0.0;
-	       for(mp = 0; mp < ntripl[n]; mp++)
-		 {
-		   reRho = 0.0;
-		   imRho = 0.0;
-		   for(i=0; i < N; i++)
-		     {
-		       /* il passo della mesh e' 0.5*pi2/L */
-		       if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
-			   mesh[n][mp][2] == 0)
-			 {
-			   printf("ERRORE nella MESH!!!!!!!! n=%d mp=%d ntripl[n]:%d\n", n,
-				  mp, ntripl[n]);
-			   exit(-1);
-			 }
-		       rCMk = kbeg + scalFact * 
-			 (r[0][i] * mesh[n][mp][0] + r[1][i] * mesh[n][mp][1] + 
-			  r[2][i] * mesh[n][mp][2]);
-		       reRho = reRho + cos(rCMk) ; 
-		       imRho = imRho + sin(rCMk);
-		       /* Imaginary part of exp(i*k*r) for the actual molecule*/
-		     }
-		   sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
-		 }
-	       Sq[n] += sumRho;  
-	     }
+	}
+      scalFact = twopi * invL;
+      invNm = 1.0 / ((double)N);
+      printf("nf=%d twopi=%.15G N=%d invL=%.15G invNm:%.15G\n", nf, twopi, N, invL, invNm);
+      for(n = 0; n < KMODMAX; n++)
+   	{
+	  sumRho = 0.0;
+	  for(mp = 0; mp < ntripl[n]; mp++)
+	    {
+	      reRho = 0.0;
+	      imRho = 0.0;
+	      for(i=0; i < N; i++)
+		{
+		  /* il passo della mesh e' 0.5*pi2/L */
+		  if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
+		      mesh[n][mp][2] == 0)
+		    {
+		      printf("ERRORE nella MESH!!!!!!!! n=%d mp=%d ntripl[n]:%d\n", n,
+			     mp, ntripl[n]);
+		      exit(-1);
+		    }
+		  rCMk = kbeg + scalFact * 
+		    (r[0][i] * mesh[n][mp][0] + r[1][i] * mesh[n][mp][1] + 
+		     r[2][i] * mesh[n][mp][2]);
+		  reRho = reRho + cos(rCMk); 
+		  imRho = imRho + sin(rCMk);
+		  /* Imaginary part of exp(i*k*r) for the actual molecule*/
+		}
+	      sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
+	    }
+	  Sq[n] += sumRho;  
+	  //printf("sumRho=%.15G Sq[%d]=%.15G\n", sumRho, n, Sq[n]);
 	}
       fclose(f);
     }
@@ -180,7 +181,8 @@ int main(int argc, char** argv)
   of = fopen("Sq.dat", "w+");
   for (qmod = 0; qmod  < KMODMAX; qmod++)
     {
-      Sq[qmod] = (Sq[qmod]  * invNm) / ((double) ntripl[qmod] / ((double)nf));  
+      Sq[qmod] = (Sq[qmod]  * invNm) / ((double) ntripl[qmod]) / ((double)nf);  
+      //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
     }
   fclose(of);
