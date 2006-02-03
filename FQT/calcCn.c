@@ -149,7 +149,7 @@ int main(int argc, char **argv)
     assez = 2;
   if (NPA == -1)
     NPA = NP;
-  fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
+  //fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
   for (a=0; a < 3; a++)
     {
       u0[a] = malloc(sizeof(double)*NP);
