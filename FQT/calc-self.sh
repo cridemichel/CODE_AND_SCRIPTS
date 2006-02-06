@@ -88,6 +88,10 @@ $PR listamsd $NPTS $QMIN $QMAX
 echo "DONE"
 fi
 # =====================================================
+if [ "$L" != "" ] 
+then
+gzip Store-*-*
+fi
 rm IN_PROGRESS
 touch ALL_DONE
 cd ..
