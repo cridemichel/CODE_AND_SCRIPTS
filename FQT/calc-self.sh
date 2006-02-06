@@ -1,9 +1,10 @@
+#!/bin/bash
 #normalmente se i file ci sono già non ricalcola le varie grandezze ma si puo' forzare il ricalcolo
 FORCE_MSD=0
 FORCE_FQSELF=0
 FORCE_SQ=0
 FORCE_CN=0
-EXE_PATH=$HOME/postdoc/hardellipsoid/hardellSVN/CODE
+EXE_PATH=$HOME/ELLIPSOIDS/FQT/
 QMIN=2
 QMAX=30
 if [ "$1" == "" ]
