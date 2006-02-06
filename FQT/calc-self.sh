@@ -56,7 +56,7 @@ fi
 NPTS=`echo "$NN*60"| bc`
 if [ "$L" != "" ]
 then
-gunzip Store*gz
+gunzip -f Store*gz
 fi
 ls Store* | sort -t - -k 2 -k 3 -n > listamsd
 if [ ! \( -e MSDcnf.dat \) -o \( $FORCE_MSD == "1" \) ]
@@ -91,7 +91,7 @@ fi
 # =====================================================
 if [ "$L" != "" ] 
 then
-gzip Store-*-*
+gzip -f Store-*-*
 fi
 rm IN_PROGRESS
 touch ALL_DONE
