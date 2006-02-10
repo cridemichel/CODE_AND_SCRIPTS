@@ -84,7 +84,7 @@ if [ "$L" != "" ]
 then
 gunzip -f Store*gz
 fi
-ls Store* | sort -t - -k 2 -k 3 -n > listamsd
+ls Store-*-* | sort -t - -k 2 -k 3 -n > listamsd
 if [ ! \( -e MSDcnf.dat \) -o \( $FORCE_MSD == "1" \) ]
 then
 echo "CALCOLO MSD..."
