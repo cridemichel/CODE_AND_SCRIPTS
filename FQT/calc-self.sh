@@ -4,6 +4,23 @@ FORCE_MSD=0
 FORCE_FQSELF=0
 FORCE_SQ=0
 FORCE_CN=0
+FORCE=0
+if [ $FORCE_FQSELF == "1" ]
+then 
+FORCE=1
+fi
+if [ $FORCE_MSD == "1" ]
+then 
+FORCE=1
+fi
+if [ $FORCE_SQ == "1" ]
+then 
+FORCE=1
+fi
+if [ $FORCE_CN == "1" ]
+then 
+FORCE=1
+fi
 EXE_PATH=$HOME/ELLIPSOIDS
 QMIN=2
 QMAX=30
@@ -21,16 +38,25 @@ fi
 for f in $PHIDIRS
 do
 cd $f
+if [ $FORCE == "0" ]
+then
+if [ \( -e Cn.dat  \) -a \( -e Sq.dat \) -a \( -e Fqs-10 \) -a \( -e MSDcnf.dat \) ]
+then
+echo "qui Phi=" $f
+cd ..
+continue
+fi
+fi
 if [ -e IGNORE_THIS ]
 then 
 cd ..
 continue
 fi
-if [ -e ALL_DONE_SELF ]
-then 
-cd ..
-continue
-fi
+#if [ -e ALL_DONE_SELF ]
+#then 
+#cd ..
+#continue
+#fi
 touch IN_PROGRESS
 PR=$EXE_PATH/MSD/calcmsd
 L=`ls Store-*-*gz 2> /dev/null`
@@ -94,6 +120,6 @@ then
 gzip -f Store-*-*
 fi
 rm IN_PROGRESS
-touch ALL_DONE
+#touch ALL_DONE
 cd ..
 done
