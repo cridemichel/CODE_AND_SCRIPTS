@@ -46,7 +46,8 @@ A1=`tail -1 gpout.tmp | awk '{print $1}'`
 B1=`tail -1 gpout.tmp | awk '{print $2}'`
 C1=`tail -1 gpout.tmp | awk '{print $3}'`
 #echo "A="$A "B="$B "C="$C
-TAUM=`echo "gamma(${C1})*${B1}/${C1}" | octave | awk '{if ($1=="ans") print $3}'`
+TAUM=`echo "gamma(1.0/${C1})*${B1}/${C1}" | octave | awk '{if ($1=="ans") print $3}'`
+ST=0.00001
 echo $EL $PHI $TAUM >> ../$FNT
 echo "a=$A2; b=$B2; c=$C2; fit [$ST:] a*exp(-(x/b)) \"Cn.dat\" via a,b; fit [$ST:(3*b)] a*exp(-((x/b)**c)) \"Cn.dat\" using 1:2 via a,b,c; print a, b, c " > fit.tmp
 gnuplot fit.tmp > gpout.tmp 2>&1
@@ -54,7 +55,7 @@ echo "Fit della C2"
 A2=`tail -1 gpout.tmp | awk '{print $1}'`
 B2=`tail -1 gpout.tmp | awk '{print $2}'`
 C2=`tail -1 gpout.tmp | awk '{print $3}'`
-TAUM=`echo "gamma(${C2})*${B2}/${C2}" | octave | awk '{if ($1=="ans") print $3}'`
+TAUM=`echo "gamma(1.0/${C2})*${B2}/${C2}" | octave | awk '{if ($1=="ans") print $3}'`
 rm gpout.tmp
 echo $EL $PHI $TAUM >> ../$FNR
 rm fit.tmp
