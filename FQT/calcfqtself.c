@@ -78,7 +78,7 @@ int main(int argc, char **argv)
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
   int qmin = 5, qmax = 30, qmod; 
-  double invL, rxdummy, sumIm, sumRe;
+  double invL, rxdummy, sumIm, sumRe, scalFact;
 
   twopi = acos(0)*4.0;	  
   if (argc <= 1)
@@ -157,7 +157,8 @@ int main(int argc, char **argv)
     qmin = atoi(argv[3]);
   if (argc == 5)
     qmax = atoi(argv[4]);
-
+  
+  scalFact = twopi * invL;
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
@@ -241,9 +242,9 @@ int main(int argc, char **argv)
 		      sumIm=0.0;
 		      for (i=0; i < NP; i++)
 			{
-			  rxdummy = (r0[0][i]-r1[0][i])*mesh[qmod][iq][0]
+			  rxdummy = scalFact*((r0[0][i]-r1[0][i])*mesh[qmod][iq][0]
 			    +(r0[1][i]-r1[1][i])*mesh[qmod][iq][1]
-			    +(r0[2][i]-r1[2][i])*mesh[qmod][iq][2];
+			    +(r0[2][i]-r1[2][i])*mesh[qmod][iq][2]);
 			  //printf("dummy:%.15G\n", rxdummy);
 			  sumRe += cos(rxdummy);
 			  sumIm += sin(rxdummy);	
