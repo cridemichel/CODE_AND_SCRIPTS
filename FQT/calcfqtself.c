@@ -149,11 +149,11 @@ int main(int argc, char **argv)
     }
   fclose(f);
   invL = 1.0/L;
-  if (argc == 3)
+  if (argc >= 3)
     points = atoi(argv[2]);
   else
     points = NN;
-  if (argc == 4)
+  if (argc >= 4)
     qmin = atoi(argv[3]);
   if (argc == 5)
     qmax = atoi(argv[4]);
@@ -162,6 +162,8 @@ int main(int argc, char **argv)
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
+
+  //printf("maxnp=%d points=%d\n",maxnp, points);
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
   else if ((B0 > A0 && B0 > C0) || (B0 < A0 && B0 < C0))
