@@ -27,15 +27,17 @@ cd ..
 continue
 fi
 echo "Processing Phi=" $PHI
-STA=`tail -1 MSDcnf.dat |LANG=C awk '{printf("%.8G",$1/10)}'`
-STB=`tail -1 MSDcnf.dat |LANG=C awk '{printf("%.8G",$1*(7/10))}'`
+STA=`tail -1 MSDcnf.dat |LANG=C awk '{printf("%.8G",4*$1/10)}'`
+STB=`tail -1 MSDcnf.dat |LANG=C awk '{printf("%.8G",$1)}'`
+#echo "TRA [$STA:$STB]"
 echo "fit [$STA:$STB] a*x+b 'MSDcnf.dat' via a,b" > fit.tmp
 gnuplot fit.tmp > gpout.tmp 2>&1  
 A=`cat gpout.tmp | awk 'BEGIN {pr=0} {if (pr==1 && $1=="a") {print $3; pr++;}; if ($1=="Final") pr=1;}'`
 Dt=`echo $A/6.0 | bc -l`
 echo $EL $PHI $Dt >> ../$FNT
-STA=`tail -1 rotMSDcnf.dat |LANG=C awk '{printf("%.8G",$1/10)}'`
-STB=`tail -1 rotMSDcnf.dat |LANG=C awk '{printf("%.8G",$1*(7/10))}'`
+STA=`tail -1 rotMSDcnf.dat |LANG=C awk '{printf("%.8G",4*$1/10)}'`
+STB=`tail -1 rotMSDcnf.dat |LANG=C awk '{printf("%.8G",$1)}'`
+#echo "ROT [$STA:$STB]"
 echo "fit [$STA:$STB] a*x+b 'rotMSDcnf.dat' via a,b" > fit.tmp
 gnuplot fit.tmp > gpout.tmp 2>&1
 A=`cat gpout.tmp | awk 'BEGIN {pr=0} {if (pr==1 && $1=="a") {print $3; pr++;}; if ($1=="Final") pr=1;}'`

@@ -37,9 +37,14 @@ echo "Processing Phi=" $PHI
 echo "Find Maximum of S(q)..."
 MAXQ=` $PERC/findmax Sq.dat 12 | awk '{if ($1 > 29) printf("29"); else printf("%d",$1)}'`
 #STA=`tail -n 50 screen_ell${EL}EQ${PHI} | awk '{if ($1=="[MSDcheck]") print $5}'` 
+#MAXQ=20
 echo "MAXQ="$MAXQ
 ST=0.00001
-echo "a=$A1; b=$B1; c=$C1; fit [$ST:] a*exp(-(x/b)) \"Fqs-$MAXQ\" via a,b; fit [$ST:] a*exp(-((x/b)**c)) \"Fqs-$MAXQ\" via a,b,c; print a, b, c" > fit.tmp
+STA=0.00001
+STB=`cat Fqs-$MAXQ | tail -1 | LANG=C awk '{print $1/5}'`
+#MAXQ=2
+echo "STA=" $STA "STB" $STB
+echo "a=$A1; b=$B1; c=$C1; fit [$STA:$STB] a*exp(-(x/b)) \"Fqs-$MAXQ\" via a,b; fit [$ST:(3*b)] a*exp(-((x/b)**c)) \"Fqs-$MAXQ\" via a,b,c; print a, b, c" > fit.tmp
 echo "Fit della Fself"
 gnuplot fit.tmp > gpout.tmp 2>&1  
 A1=`tail -1 gpout.tmp | awk '{print $1}'`
