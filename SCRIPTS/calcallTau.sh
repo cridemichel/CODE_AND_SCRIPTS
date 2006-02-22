@@ -35,7 +35,13 @@ continue
 fi
 echo "Processing Phi=" $PHI
 echo "Find Maximum of S(q)..."
-MAXQ=` $PERC/findmax Sq.dat 12 | awk '{if ($1 > 29) printf("29"); else printf("%d",$1)}'`
+MAXQ=` $PERC/findmax Sq.dat 2 | awk '{if ($1 > 29) printf("29"); else printf("%d",$1)}'`
+MAXQA=$[$MAXQ-10]
+MAXQB=$[$MAXQ+10]
+GPFILE="fitsq.tmp"
+echo "maxqa=$MAXQA; maxqb=$MAXQB; if (maxqa < 2) maxqa=2; else; a=1; b=1; c=1; fit [maxqa:maxqb] a*x*x+b*x+c \"Sq.dat\" via a,b,c; maxq=-b/(2*a); if (maxq-floor(maxq)>=0.5) print ceil(maxq); else print floor(maxq)" > $GPFILE
+gnuplot $GPFILE > gpoutsq.tmp 2>&1
+MAXQ=`tail -1 gpoutsq.tmp`
 #STA=`tail -n 50 screen_ell${EL}EQ${PHI} | awk '{if ($1=="[MSDcheck]") print $5}'` 
 #MAXQ=20
 echo "MAXQ="$MAXQ
