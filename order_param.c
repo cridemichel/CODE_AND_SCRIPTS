@@ -6,8 +6,21 @@
 char line[100000], parname[124], parval[256000];
 int N;
 double x[3], R[3][3], Q[3][3];
+double r1[3], r2[3], r3[3], u1[3], u2[3], u3[3], dt;
 char fname[1024], inputfile[1024];
-int readCnf = 0, timeEvol = 0, ordmatrix=0;
+int readCnf = 0, timeEvol = 0, ordmatrix=0, curStep, readLapo=0;
+#define Sqr(x) ((x)*(x))
+void vectProd(double r1x, double r1y, double r1z, 
+	 double r2x, double r2y, double r2z, 
+	 double* r3x, double* r3y, double* r3z)
+{
+  /* DESCRIPTIOM:
+     r3 = [ r1, r2 ] where [ , ] the vectorial product */
+  *r3x = r1y * r2z - r1z * r2y; 
+  *r3y = r1z * r2x - r1x * r2z;
+  *r3z = r1x * r2y - r1y * r2x;
+}
+
 void diagonalize(double M[3][3], double ev[3])
 {
   double a[9], work[45];
@@ -45,6 +58,10 @@ void parse_param(int argc, char** argv)
 	{
 	  readCnf = 1;
 	} 
+      else if (!strcmp(argv[cc],"--lapo") || !strcmp(argv[cc],"-l" ))
+	{
+	  readLapo = 1;
+	} 
       else if (!strcmp(argv[cc],"--time") || !strcmp(argv[cc],"-t"))
 	{
 	  timeEvol = 1;
@@ -60,6 +77,64 @@ void parse_param(int argc, char** argv)
       cc++;
     }
 }
+double calc_norm(double *v)
+{
+  int a;
+  double norm=0;
+  for (a = 0; a < 3; a++)
+   norm += Sqr(v[a]);
+  return sqrt(norm); 
+}
+void build_ref_axes2(double u1[3], double u2[3], double u3[3])
+{
+  int a;
+  double norm1, u1u2, norm2;
+  u1[0] = r2[0] - r1[0];
+  u1[1] = r2[1] - r1[1];
+  u1[2] = r2[2] - r1[2];
+  u2[0] = r3[0] - r1[0];
+  u2[1] = r3[1] - r1[1];
+  u2[2] = r3[2] - r1[2];
+  norm2 = calc_norm(u2);
+  for (a=0;  a < 3; a++)
+    u2[a] /= norm2;
+  u1u2 = u1[0]*u2[0] + u1[1]*u2[1] + u1[2]*u2[2];
+  for (a=0;  a < 3; a++)
+    {
+      u1[a] = u1[a] - u1u2*u2[a];
+    }
+  norm1 = calc_norm(u1);
+  for (a=0;  a < 3; a++)
+    {
+      u1[a] /= norm1;
+    }
+  vectProd(u1[0],u1[1],u1[2],u2[0],u2[1], u2[2],&u3[0], &u3[1], &u3[2]); 
+}
+
+void build_ref_axes(double u1[3], double u2[3], double u3[3])
+{
+  int a;
+  double n;
+  u1[0] = r2[0] - r1[0];
+  u1[1] = r2[1] - r1[1];
+  u1[2] = r2[2] - r1[2];
+  n = calc_norm(u1);
+  for (a = 0; a < 3; a++)
+    u1[a] /= n;
+  for (a=0; a < 3; a++)
+    
+  u2[0] = 2.0*r3[0]-(r1[0] + r2[0]);
+  u2[1] = 2.0*r3[1]-(r1[1] + r2[1]);
+  u2[2] = 2.0*r3[2]-(r1[2] + r2[2]);
+  
+  n = calc_norm(u2);
+  for (a = 0; a < 3; a++)
+    u2[a] /= n;
+    
+  vectProd(u1[0], u1[1], u1[2], u2[0], u2[1], u2[2], &u3[0], &u3[1], &u3[2]);  
+
+}
+
 int main(int argc, char** argv)
 {
   FILE *f, *f2;
@@ -101,6 +176,11 @@ int main(int argc, char** argv)
 	    N = atoi(parval);
 	  if (!strcmp(parname,"time"))
 	    ti = atof(parval);
+	  if (readLapo && !strcmp(parname,"curStep"))
+	    curStep = atoi(parval);
+	  if (readLapo && !strcmp(parname,"steplength"))
+	    dt = atof(parval);
+  
   	}
       while (strcmp(line,"@@@"));
 
@@ -113,16 +193,34 @@ int main(int argc, char** argv)
 	}
       for (i=0; i < N; i++)
 	{
-	  fscanf (f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf \n",
-		  &(x[0]), &(x[1]), &(x[2]), 
-		  &(R[0][0]), &(R[0][1]), &(R[0][2]), &(R[1][0]), &(R[1][1]), 
-		  &(R[1][2]), &(R[2][0]), &(R[2][1]), &(R[2][2]));
+	  if (readLapo)
+	    {
+	      fscanf (f, "%lf %lf %lf\n %lf %lf %lf\n %lf %lf %lf\n",
+	  	    &(r1[0]), &(r1[1]), &(r1[2]), 
+	  	    &(r2[0]), &(r2[1]), &(r2[2]), 
+		    &(r3[0]), &(r3[1]), &(r3[2]));
+	      build_ref_axes(u1, u2, u3);
+	      for (a=0; a < 3; a++)
+		{
+		  R[0][a] = u1[a];
+		  R[1][a] = u2[a];
+		  R[2][a] = u3[a];
+		}
+	    }
+	  else
+	    fscanf (f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf \n",
+	  	    &(x[0]), &(x[1]), &(x[2]), 
+	  	    &(R[0][0]), &(R[0][1]), &(R[0][2]), &(R[1][0]), &(R[1][1]), 
+	  	    &(R[1][2]), &(R[2][0]), &(R[2][1]), &(R[2][2]));
 
 	  //printf("R=%.15G %.15G %.15G\n", R[0][1], R[0][1], R[0][2]);
 	  for (a=0; a < 3; a++)
 	    for (b=0; b < 3; b++)
 	      {
-		Q[a][b] += 1.5 * R[0][a]*R[0][b];
+		if (readLapo)
+		  Q[a][b] += 1.5 * R[2][a]*R[2][b];
+		else
+		  Q[a][b] += 1.5 * R[0][a]*R[0][b];
 		if (a==b)
 		  Q[a][a] -= 0.5;
 	      }
@@ -133,7 +231,10 @@ int main(int argc, char** argv)
 	    for (b=0; b < 3; b++)
 	      Q[a][b] /= ((double)N); 
 	  diagonalize(Q, ev);
-	  printf("%.15G %.15G %.15G %.15G\n", ti+tref, ev[0], ev[1], ev[2]); 
+	  if (readLapo)
+	    printf("%.15G %.15G %.15G %.15G\n", curStep*dt, ev[0], ev[1], ev[2]); 
+	  else
+	    printf("%.15G %.15G %.15G %.15G\n", ti+tref, ev[0], ev[1], ev[2]); 
 	}
 
       fclose(f);
