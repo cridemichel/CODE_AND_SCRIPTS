@@ -232,6 +232,10 @@ struct progStatus
   COORD_TYPE sumox[MAXPAR];
   COORD_TYPE sumoy[MAXPAR];
   COORD_TYPE sumoz[MAXPAR];
+  COORD_TYPE sumdrx[MAXPAR];
+  COORD_TYPE sumdry[MAXPAR];
+  COORD_TYPE sumdrz[MAXPAR];
+  int switchForcesOff;
 #if 0 
   COORD_TYPE vcmx0[MAXPAR];
   COORD_TYPE vcmy0[MAXPAR];
@@ -552,6 +556,7 @@ struct singlePar OsinglePar[] = {
   {"cellNum",    &Oparams.M,                INT},
   {"epsilon",    &Oparams.epsilon,      CT},
   {"rcut",       &Oparams.rcut,             CT},
+  {"switchForcesOff",    &OprogStatus.switchForcesOff, INT},
 #if 0
   {"atomsDist",  &Oparams.d,                CT},
 #endif
@@ -609,9 +614,13 @@ struct pascii opro_ascii[] =
   {"sumTemp",      &OS(sumTemp),                    1,              1, "%.6G"},
   //mancano le rxi per i coeff. di diffusione!!!!
   {"sumPress",     &OS(sumPress),                   1,              1, "%.6G"},
-  {"sumox",        OS(sumox),          MAXPAR,               1, "%.15G"},
-  {"sumoy",        OS(sumoy),          MAXPAR,               1, "%.15G"},
-  {"sumoz",        OS(sumoz),          MAXPAR,               1, "%.15G"},
+  {"sumox",        OS(sumox),          -MAXPAR,               1, "%.15G"},
+  {"sumoy",        OS(sumoy),          -MAXPAR,               1, "%.15G"},
+  {"sumoz",        OS(sumoz),          -MAXPAR,               1, "%.15G"},
+  {"sumdrx",       OS(sumdrx),          -MAXPAR,               1, "%.15G"},
+  {"sumdrx",       OS(sumdry),          -MAXPAR,               1, "%.15G"},
+  {"sumdrx",       OS(sumdrz),          -MAXPAR,               1, "%.15G"},
+  {"switchForcesOff", &OS(switchForcesOff), 1, 1, "%d"},
   {"rxCMi",        OS(rxCMi),          MAXPAR,               1, "%.15G"},
   {"ryCMi",        OS(ryCMi),          MAXPAR,               1, "%.15G"},
   {"rzCMi",        OS(rzCMi),          MAXPAR,               1, "%.15G"},

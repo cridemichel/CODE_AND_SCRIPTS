@@ -263,7 +263,6 @@ void movea(COORD_TYPE dt, COORD_TYPE tol, int maxIt, int NB, COORD_TYPE d,
   Vol1 = Vol1 + dt2 * Vol2;
  
 }
-#ifdef MD_BROWN_BETTER
 double calc_norm(double *v)
 {
   int a;
@@ -272,6 +271,7 @@ double calc_norm(double *v)
    norm += Sqr(v[a]);
   return sqrt(norm); 
 }
+#ifdef MD_BROWN_BETTER
 void build_ref_axes(int i, double u1[3], double u2[3], double u3[3])
 {
   int a;
@@ -2668,15 +2668,18 @@ void lubksb(double a[3][3], int* indx, double *b)
       /* Store a component of the solution vector X. */ 
     } /* All done! */
 }
-
+extern void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z, 
+	 COORD_TYPE r2x, COORD_TYPE r2y, COORD_TYPE r2z, 
+	 COORD_TYPE* r3x, COORD_TYPE* r3y, COORD_TYPE* r3z);
 
 /* ========================== >>> updateAng <<< ============================ */
 void updateAng(int Nm)
 {
   int ok, i, a, b, indx[3];
-  double rcmx[3], rcmy[3], rcmz[3], 
-  vcmx[3], vcmy[3], vcmz[3], RCMx, RCMy, RCMz, VCMx, VCMy, VCMz, dt;
-  double L[3], rvx, rvy, rvz, Itens[3][3], d;
+  double rcmx[3], rcmy[3], rcmz[3], norm, 
+	 vcmx[3], vcmy[3], vcmz[3], RCMx, RCMy, RCMz, VCMx, VCMy, VCMz, dt;
+  double L[3], rvx, rvy, rvz, Itens[3][3], d, u1[3], u2[3], u3[3], omCM[3],
+	 omu3, norm1, norm2, u1u2, drCM[3];
 #if 0 
   Itens = malloc(sizeof(double*)*3);
   for (a=0; a < 3; a++)
@@ -2685,7 +2688,7 @@ void updateAng(int Nm)
   dt = Oparams.steplength;
   for(i=0; i < Oparams.parnum; i++)
     {
-      L[0] = L[1] = L[3] = 0;
+      L[0] = L[1] = L[2] = 0;
       for (a=0; a < 3; a++)
 	for (b=0; b < 3; b++)
 	  Itens[a][b] = 0.0;
@@ -2712,6 +2715,7 @@ void updateAng(int Nm)
 	  Itens[0][2] += -Oparams.m[a]*rcmx[a]*rcmz[a];
 	  Itens[1][2] += -Oparams.m[a]*rcmy[a]*rcmz[a];
 	}
+      //printf("L=%.15G %.15G %.15G\n", L[0], L[1], L[2]);
       Itens[1][0] = Itens[0][1];
       Itens[2][0] = Itens[0][2];
       Itens[2][1] = Itens[1][2];
@@ -2733,10 +2737,50 @@ void updateAng(int Nm)
        Itens[0][1] * (Itens[1][0]*Itens[2][2]-Itens[1][2]*Itens[2][1]) +
        Itens[0][2] * (Itens[1][0]*Itens[2][1] - Itens[1][1]*Itens[2][0]);
        */
-      OprogStatus.sumox[i] += ox[i] * dt; 
-      OprogStatus.sumoy[i] += oy[i] * dt;
-      OprogStatus.sumoz[i] += oz[i] * dt;
+      u1[0] = rx[1][i] - rx[0][i];
+      u1[1] = ry[1][i] - ry[0][i];
+      u1[2] = rz[1][i] - rz[0][i];
+      u2[0] = rx[2][i] - rx[0][i];
+      u2[1] = ry[2][i] - ry[0][i];
+      u2[2] = rz[2][i] - rz[0][i];
+      norm2 = calc_norm(u2);
+      for (a=0;  a < 3; a++)
+	u2[a] /= norm2;
+      u1u2 = u1[0]*u2[0] + u1[1]*u2[1] + u1[2]*u2[2];
+      for (a=0;  a < 3; a++)
+	{
+	  u1[a] = u1[a] - u1u2*u2[a];
+	}
+      norm1 = calc_norm(u1);
+      for (a=0;  a < 3; a++)
+	{
+	  u1[a] /= norm1;
+	}
+      vectProd(u1[0],u1[1],u1[2],u2[0],u2[1], u2[2],&u3[0], &u3[1], &u3[2]); 
+#if 0
+      printf("u1=%.15G %.15G %.15G\n", u1[0], u1[1], u1[2]);
+      printf("u2=%.15G %.15G %.15G\n", u2[0], u2[1], u2[2]);
+      printf("u3=%.15G %.15G %.15G\n", u3[0], u3[1], u3[2]);
+      printf("normu1=%.15G normu2=%.15G normu3=%.15G\n", calc_norm(u1), 
+	     calc_norm(u2), calc_norm(u3));
+      printf("u1*u2=%.15G\n",u1[0]*u2[0] + u1[1]*u2[1] + u1[2]*u2[2]);
+#endif
+ 
+      omu3 = u3[0]*ox[i] + u3[1]*oy[i] + u3[2]*oz[i];
+      omCM[0] = u1[0]*ox[i] + u1[1]*oy[i] + u1[2]*oz[i];
+      omCM[1] = u2[0]*ox[i] + u2[1]*oy[i] + u2[2]*oz[i];
+      omCM[2] = u3[0]*ox[i] + u3[1]*oy[i] + u3[2]*oz[i];
+      drCM[0] = u1[0]*VCMx + u1[1]*VCMy + u1[2]*VCMz;
+      drCM[1] = u2[0]*VCMx + u2[1]*VCMy + u2[2]*VCMz;
+      drCM[2] = u3[0]*VCMx + u3[1]*VCMy + u3[2]*VCMz;
+      OprogStatus.sumox[i] += omCM[0] * dt; 
+      OprogStatus.sumoy[i] += omCM[1] * dt;
+      OprogStatus.sumoz[i] += omCM[2] * dt;
       
+      OprogStatus.sumdrx[i] += drCM[0] * dt; 
+      OprogStatus.sumdry[i] += drCM[1] * dt;
+      OprogStatus.sumdrz[i] += drCM[2] * dt;
+
       /* Time integral of ang. vel. stored in xva variables */
       Dphix[i] = OprogStatus.sumox[i];
       Dphiy[i] = OprogStatus.sumoy[i];
@@ -3249,6 +3293,7 @@ void move(void)
 	    Oparams.parnum);        
     }
   buildAtomsPositions();
+
   if (nebrNow)
     {
       nebrNow = 0;
@@ -3267,13 +3312,16 @@ void move(void)
 	}
     }
     
-  LJForce(Oparams.parnum, Oparams.rcut);
-
-  /* considera tutti i contributi alle forza agente sugli atomi "di base"
-   * ossia somma anche le forze dovute agli atomi senza massa moltiplicate
-   * per gli opportuni coefficienti "vincolari" 
-   * */
-  ForceOn123();
+  if (OprogStatus.switchForcesOff==0)
+    {
+      LJForce(Oparams.parnum, Oparams.rcut);
+      
+      /* considera tutti i contributi alle forza agente sugli atomi "di base"
+       * ossia somma anche le forze dovute agli atomi senza massa moltiplicate
+       * per gli opportuni coefficienti "vincolari" 
+       * */
+      ForceOn123();
+    }
   kinet(Oparams.parnum, vx, vy, vz, Vol1);
 
   /* correct the coords */
@@ -3339,7 +3387,6 @@ void move(void)
       savesnap();
   /* Update accumulators for calculating the angular diffusion coefficent */
   updateAng(Oparams.parnum);  
-  
   /* Update the integral of the pressure tensor */
   updateDQ(Oparams.steplength);
   if ( (OprogStatus.CMreset != 0) &&

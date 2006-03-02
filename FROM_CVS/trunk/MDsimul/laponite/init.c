@@ -987,7 +987,7 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE m[NA])
 	}
     }
   kinet(Oparams.parnum, vx, vy, vz, 0);
-  printf("temp:%f energia cinetica:%f temp_meas:%f\n",temp, K, 2.0 * K / (6.0 * Oparams.parnum - 3.0));
+  //printf("temp:%f energia cinetica:%f temp_meas:%f\n",temp, K, 2.0 * K / (6.0 * Oparams.parnum - 3.0));
 
 ;
   /* Now the center of mass of the box is in the origin */
@@ -1228,6 +1228,7 @@ void usrInitBef(void)
   OprogStatus.avngEta   = 0;
   OprogStatus.snapSteps = 0;
   OprogStatus.snapmode = 0;
+  OprogStatus.switchForcesOff = 0;
   for (i=0; i<NA; ++i)
     {
       Oparams.m[i] = 1.0;
@@ -1246,13 +1247,12 @@ void usrInitAft(void)
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
+  FILE* f;
 #ifdef MD_LOADMESH
   int i1, i2;
-  FILE* f;
   const int numk = 98;
   const int numk2av = 150;
 #endif
-
   int Nm, i, sct;
   COORD_TYPE invMtot, m0, m1, m2, r01x, r01y, r01z, v01x, v01y, v01z, d, dSq;
   COORD_TYPE vcmx, vcmy, vcmz;
@@ -1568,6 +1568,13 @@ void usrInitAft(void)
 	  OprogStatus.sumox[i] = 0.0;
 	  OprogStatus.sumoy[i] = 0.0;
 	  OprogStatus.sumoz[i] = 0.0;
+	  OprogStatus.sumdrx[i] = 0.0;
+	  OprogStatus.sumdry[i] = 0.0;
+	  OprogStatus.sumdrz[i] = 0.0;
+	  f = fopenMPI(absMisHD("MSD.dat"), "w+");
+	  fclose(f);
+	  f = fopenMPI(absMisHD("rotMSD.dat"), "w+");
+	  fclose(f);
 #if 0 
 	  OprogStatus.ox0[i] = ox[i];
 	  OprogStatus.oy0[i] = oy[i];
