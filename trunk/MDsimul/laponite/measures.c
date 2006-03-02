@@ -64,8 +64,8 @@ void energy(void)
   COORD_TYPE L, invL;
 
   Nm = Oparams.parnum;
-  mdShow("SHIFTED POTENTIAL ENERGY: %.10f", Vc);
-  mdShow("POTENTIAL ENERGY: %.10f", V);
+  printf("SHIFTED POTENTIAL ENERGY: %.10f", Vc);
+  printf("POTENTIAL ENERGY: %.10f", V);
   printf("KINETIC ENERGY: %.10f\n", K);
   printf("s: %.10f s1: %.10f Vol: %.10f Vol1: %.10f\n", s, s1, Vol, Vol1);
   E = K + Vc;
@@ -166,6 +166,7 @@ void energy(void)
   RCMz /= (double)Oparams.parnum;
   printf("Box CoM RCMx: %.15f RCMy: %.15f RCMz: %.15f\n", RCMx, RCMy, RCMz);
 }
+extern double calc_norm(double *v);
 
 /* ========================== >>> transDiff <<< =============================*/
 void transDiff(void)
@@ -173,20 +174,21 @@ void transDiff(void)
   /* DESCRIPTION:
      This mesuring functions calculates the Translational Diffusion 
      coefficent */
-  COORD_TYPE Drx, Dry, Drz, Mtot, invMtot, Dr4;
+  COORD_TYPE sumdxSq, sumdySq, sumdzSq, Drx, Dry, Drz, Mtot, invMtot, Dr4;
   COORD_TYPE m0, m1, m2;
   COORD_TYPE rxCM, ryCM, rzCM; /* Center of mass position */
-  int i;
-  
+  int i, Nm;
+  FILE* f;
+
   m0 = Oparams.m[0];
   m1 = Oparams.m[1];
   m2 = Oparams.m[2];
   Mtot = m0 + m1 + m2;
   invMtot = 1.0 / Mtot;
- 
+  Nm = Oparams.parnum;
   DrSqTot = 0.0;
   Dr4 = 0.0;
-
+  sumdxSq = sumdySq = sumdzSq = 0.0;
   for(i=0; i < Oparams.parnum; i++)
     {
       rxCM = (m0 * rx[0][i] +  m1 * rx[1][i] + m2 * rx[2][i]) * invMtot;
@@ -198,16 +200,23 @@ void transDiff(void)
       /*printf("step: %d DR: (%f,%f,%f)\n", Oparams.curStep, Drx, Dry, Drz);*/
       if (OprogStatus.ipart == i)
 	{
-	  printf("i = %d\n", i);
+	  //printf("i = %d\n", i);
 	  /* Motion of the OprogStatus.ipart particle */
 	  sqrtdr2 = sqrt(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
 	}
       DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
       Dr4 += Sqr(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
+      sumdxSq += Sqr(OprogStatus.sumdrx[i]);
+      sumdySq += Sqr(OprogStatus.sumdry[i]);
+      sumdzSq += Sqr(OprogStatus.sumdrz[i]);
+
    }
   /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
      because DrSq is zero! */
- 
+  sumdxSq /= ((COORD_TYPE) Nm);
+  sumdySq /= ((COORD_TYPE) Nm);
+  sumdzSq /= ((COORD_TYPE) Nm);
+
   Dtrans = DrSqTot / ( 6.0 * ((COORD_TYPE) Oparams.steplength) *
 		       ((COORD_TYPE) Oparams.curStep) * 
 		       ((COORD_TYPE) Oparams.parnum ) );   
@@ -216,7 +225,11 @@ void transDiff(void)
   
   DrSqTot /= ((COORD_TYPE) Oparams.parnum);
   
-  printf("Diffusion coefficent: %.15f\n", Dtrans); 
+  //printf("Diffusion coefficent: %.15f\n", Dtrans); 
+  f = fopen(absMisHD("MSD.dat"), "a");
+  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", Oparams.curStep*Oparams.steplength, sumdxSq,
+	  sumdySq, sumdzSq, sumdxSq+sumdySq+sumdzSq);
+  fclose(f);
 }
 
 /* ============================ >>> temperat <<< =========================== */
@@ -405,12 +418,16 @@ void maxwell(void)
 void rotDiff(void)
 {
   int i, Nm;
-  COORD_TYPE DoSqTot, dt;
+  FILE *f;
+  COORD_TYPE DoSqTot, dt, sumoxSq, sumoySq, sumozSq;
   Nm = Oparams.parnum;
   dt = Oparams.steplength;
-  DoSqTot = 0.0;
+  DoSqTot = sumoxSq = sumoySq = sumozSq = 0.0;
   for(i=0; i < Nm; i++)
     {
+      sumoxSq += Sqr(OprogStatus.sumox[i]);
+      sumoySq += Sqr(OprogStatus.sumoy[i]);
+      sumozSq += Sqr(OprogStatus.sumoz[i]);
       DoSqTot = DoSqTot + Sqr(OprogStatus.sumox[i]) + 
 	Sqr(OprogStatus.sumoy[i]) + Sqr(OprogStatus.sumoz[i]);
     }
@@ -421,8 +438,16 @@ void rotDiff(void)
   Drot = DoSqTot / ( 6.0 * dt * ((COORD_TYPE) Oparams.curStep) * 
 			((COORD_TYPE) Nm) ); 
   DoSqTot /= ((COORD_TYPE) Nm);
+  sumoxSq /= ((COORD_TYPE) Nm);
+  sumoySq /= ((COORD_TYPE) Nm);
+  sumozSq /= ((COORD_TYPE) Nm);
   DphiSq = DoSqTot;
-  mdShow("Drot: %.15f", Drot);
+  //printf("Drot: %.15f", Drot);
+  f = fopen(absMisHD("rotMSD.dat"), "a");
+  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", Oparams.curStep*Oparams.steplength, sumoxSq,
+	  sumoySq, sumozSq, sumoxSq+sumoySq+sumozSq);
+  fclose(f);
+
 }
 
 /* ======================= >>> viscosity <<< ============================== */

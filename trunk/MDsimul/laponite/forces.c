@@ -211,7 +211,7 @@ void BuildNebrListNoLinked(int Nm, COORD_TYPE rCut)
 	rally_old[a][i] = rally[a][i];
 	rallz_old[a][i] = rallz[a][i];
       }
-
+ 
   /* useful ab-constants inside OUTER LOOP below */
   rcutab = rCut * Oparams.lambdaD;
   rcutabSq = Sqr(rcutab);
