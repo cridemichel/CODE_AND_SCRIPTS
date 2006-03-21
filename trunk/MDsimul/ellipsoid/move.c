@@ -1232,6 +1232,51 @@ void update_MSDrot(int i)
   OprogStatus.sumoy[i] += (wx[i]*R[i][1][0]+wy[i]*R[i][1][1]+wz[i]*R[i][1][2])*ti;
   OprogStatus.sumoz[i] += (wx[i]*R[i][2][0]+wy[i]*R[i][2][1]+wz[i]*R[i][2][2])*ti;
 }
+#ifdef MD_CALC_DPP
+extern double scalProd(double *A, double *B);
+extern void vectProdVec(double *A, double *B, double *C);
+
+void update_MSD(int i)
+{
+  int a;
+  double ti;
+  double lu[3],nw[3],un, normw, dsum[3], nvecu[3], vel[3];
+  ti = Oparams.time - OprogStatus.lastcolltime[i];
+  /* sumox, sumoy e sumoz sono gli integrali nel tempo delle componenti della velocità
+   * angolare lungo gli assi dell'ellissoide */
+  lu[0] = OprogStatus.lastux[i];
+  lu[1] = OprogStatus.lastuy[i];
+  lu[2] = OprogStatus.lastuz[i];
+  nw[0] = wx[i];
+  nw[1] = wy[i];
+  nw[2] = wz[i];
+  vel[0] = vx[i];
+  vel[1] = vy[i];
+  vel[2] = vz[i];
+  normw = calc_norm(nw);
+  if (normw==0.0)
+    {
+      for (a=0; a < 3; a++)
+       	dsum[a] = ti*lu[a]*vel[a];
+    }
+  else
+    {
+      for (a=0; a < 3; a++)
+	nw[a] /= normw; 
+      un = scalProd(lu, nw);
+      for (a=0; a < 3; a++)
+	dsum[a] = ti*un*nw[a];
+      vectProdVec(nw, lu, nvecu);
+      for (a=0; a < 3; a++)
+	dsum[a] += (sin(normw*ti)/normw)*(lu[a]-un*nw[a]) - ((cos(normw*ti)-1.0)/normw)*nvecu[a];
+      for (a=0; a < 3; a++)
+	dsum[a] *= vel[a];
+    }
+  OprogStatus.sumdx[i] += dsum[0];
+  OprogStatus.sumdy[i] += dsum[1];
+  OprogStatus.sumdz[i] += dsum[2];
+}
+#endif
 #ifdef MD_ASYM_ITENS
 extern void calc_angmom(int i, double **I);
 extern void upd_refsysM(int i);
