@@ -97,7 +97,18 @@ void print_matrix(double **M, int n)
 }
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess);
-
+void store_last_u(int i)
+{
+  OprogStatus.lastu1x[i] = R[i][0][0];
+  OprogStatus.lastu1y[i] = R[i][0][1];
+  OprogStatus.lastu1z[i] = R[i][0][2];
+  OprogStatus.lastu2x[i] = R[i][1][0];
+  OprogStatus.lastu2y[i] = R[i][1][1];
+  OprogStatus.lastu2z[i] = R[i][1][2];
+  OprogStatus.lastu3x[i] = R[i][2][0];
+  OprogStatus.lastu3y[i] = R[i][2][1];
+  OprogStatus.lastu3z[i] = R[i][2][2];
+}
 double calc_dist_ij(int i, int j, double t)
 {
   static double shift[3] = {0,0,0}, vecgNeg[8];
@@ -1240,13 +1251,19 @@ void update_MSD(int i)
 {
   int a;
   double ti;
-  double lu[3],nw[3],un, normw, dsum[3], nvecu[3], vel[3];
+  double lu[3][3], nw[3],un, normw, dsum[3], nvecu[3], vel[3];
   ti = Oparams.time - OprogStatus.lastcolltime[i];
   /* sumox, sumoy e sumoz sono gli integrali nel tempo delle componenti della velocità
    * angolare lungo gli assi dell'ellissoide */
-  lu[0] = OprogStatus.lastux[i];
-  lu[1] = OprogStatus.lastuy[i];
-  lu[2] = OprogStatus.lastuz[i];
+  lu[0][0] = OprogStatus.lastu1x[i];
+  lu[0][1] = OprogStatus.lastu1y[i];
+  lu[0][2] = OprogStatus.lastu1z[i];
+  lu[1][0] = OprogStatus.lastu2x[i];
+  lu[1][1] = OprogStatus.lastu2y[i];
+  lu[1][2] = OprogStatus.lastu2z[i];
+  lu[2][0] = OprogStatus.lastu3x[i];
+  lu[2][1] = OprogStatus.lastu3y[i];
+  lu[2][2] = OprogStatus.lastu3z[i];
   nw[0] = wx[i];
   nw[1] = wy[i];
   nw[2] = wz[i];
@@ -1256,25 +1273,26 @@ void update_MSD(int i)
   normw = calc_norm(nw);
   if (normw==0.0)
     {
-      for (a=0; a < 3; a++)
-       	dsum[a] = ti*lu[a]*vel[a];
+      for (b=0; b < 3; b++)
+	dsum[b] = ti*scalVec(lu[b]*vel);
     }
   else
     {
       for (a=0; a < 3; a++)
 	nw[a] /= normw; 
-      un = scalProd(lu, nw);
-      for (a=0; a < 3; a++)
-	dsum[a] = ti*un*nw[a];
-      vectProdVec(nw, lu, nvecu);
-      for (a=0; a < 3; a++)
-	dsum[a] += (sin(normw*ti)/normw)*(lu[a]-un*nw[a]) - ((cos(normw*ti)-1.0)/normw)*nvecu[a];
-      for (a=0; a < 3; a++)
-	dsum[a] *= vel[a];
+      for (b=0; b < 3; b++)
+	{
+	  un = scalProd(lu[b], nw);
+	  for (a=0; a < 3; a++)
+	    dsum[b] = ti*un*nw[a];
+	  vectProdVec(nw, lu[b], nvecu);
+	  for (a=0; a < 3; a++)
+	    dsum[b] += (sin(normw*ti)/normw)*(lu[b][a]-un*nw[a]) - ((cos(normw*ti)-1.0)/normw)*nvecu[a];
+	}
     }
-  OprogStatus.sumdx[i] += dsum[0];
-  OprogStatus.sumdy[i] += dsum[1];
-  OprogStatus.sumdz[i] += dsum[2];
+  OprogStatus.sumdx[i] += scalProd(dsum[b],vel);
+  OprogStatus.sumdy[i] += scalProd(dsum[b],vel);
+  OprogStatus.sumdz[i] += scalProd(dsum[b],vel);
 }
 #endif
 #ifdef MD_ASYM_ITENS
@@ -5833,6 +5851,10 @@ void ProcessCollision(void)
 #else
   OprogStatus.lastcolltime[evIdA] = OprogStatus.lastcolltime[evIdB] = 
     lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+#ifdef MD_CALC_DPP
+  store_last_u(evIdA);
+  store_last_u(evIdB);
+#endif
 #ifdef MD_PATCHY_HE
   lastbump[evIdA].mol=evIdB;
   lastbump[evIdA].at = evIdC;
@@ -6218,6 +6240,10 @@ void move(void)
 	      calc_omega(i);
 #endif
 	      update_MSDrot(i);
+#ifdef MD_CALC_DPP
+	      update_MSD(i);
+	      store_last_u(i);
+#endif
 	      OprogStatus.lastcolltime[i] = Oparams.time;
 	    }
 	  R2u();
@@ -6300,6 +6326,10 @@ void move(void)
 	  for (i=0; i < Oparams.parnum; i++)
 	    {
 	      update_MSDrot(i);
+#ifdef MD_CALC_DPP
+	      update_MSD(i);
+	      store_last_u(i);
+#endif
 	      OprogStatus.lastcolltime[i] = Oparams.time;
 	    }
 	  if (OprogStatus.brownian)
