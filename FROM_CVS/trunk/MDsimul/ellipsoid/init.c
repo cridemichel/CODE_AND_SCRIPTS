@@ -1017,6 +1017,14 @@ void usrInitBef(void)
 	OprogStatus.sumox[i] = 0.0;
 	OprogStatus.sumoy[i] = 0.0;
 	OprogStatus.sumoz[i] = 0.0;
+#ifdef MD_CALC_DPP
+	OprogStatus.sumdx[i] = 0.0;
+	OprogStatus.sumdy[i] = 0.0;
+	OprogStatus.sumdz[i] = 0.0;
+	OprogStatus.lastux[i] = 0.0;
+	OprogStatus.lastuy[i] = 0.0;
+	OprogStatus.lastuz[i] = 0.0;
+#endif
       }
     OprogStatus.eventMult = 100;
     OprogStatus.overlaptol = 0.0001;
@@ -1962,6 +1970,14 @@ void usrInitAft(void)
 	  OprogStatus.sumox[i] = 0.0;
 	  OprogStatus.sumoy[i] = 0.0;
 	  OprogStatus.sumoz[i] = 0.0;
+#ifdef MD_CALC_DPP
+  	  OprogStatus.sumdx[i] = 0.0;
+  	  OprogStatus.sumdy[i] = 0.0;
+  	  OprogStatus.sumdz[i] = 0.0;
+  	  OprogStatus.lastux[i] = 0.0;
+  	  OprogStatus.lastuy[i] = 0.0;
+  	  OprogStatus.lastuz[i] = 0.0;
+#endif
 	}
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
       OprogStatus.nextSumTime += OprogStatus.intervalSum;

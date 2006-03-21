@@ -371,6 +371,14 @@ struct progStatus
   double sumox[MAXPAR];
   double sumoy[MAXPAR];
   double sumoz[MAXPAR];
+#ifdef MD_CALC_DPP
+  double sumdx[MAXPAR];
+  double sumdy[MAXPAR];
+  double sumdz[MAXPAR];
+  double lastux[MAXPAR];
+  double lastuy[MAXPAR];
+  double lastuz[MAXPAR];
+#endif
   double lastcolltime[MAXPAR];
   double springkSD;
   int SDmethod;
@@ -666,6 +674,14 @@ struct pascii opro_ascii[] =
   {"sumox",        OS(sumox),                       -MAXPAR,        1, "%.15G"},
   {"sumoy",        OS(sumoy),                       -MAXPAR,        1, "%.15G"},
   {"sumoz",        OS(sumoz),                       -MAXPAR,        1, "%.15G"},
+#ifdef MD_CALC_DPP
+  {"sumdx",        OS(sumdx),                       -MAXPAR,        1, "%.15G"},
+  {"sumdy",        OS(sumdy),                       -MAXPAR,        1, "%.15G"},
+  {"sumdz",        OS(sumdz),                       -MAXPAR,        1, "%.15G"},
+  {"lastux",       OS(lastux),                      -MAXPAR,        1, "%.15G"},
+  {"lastuy",       OS(lastuy),                      -MAXPAR,        1, "%.15G"},
+  {"lastuz",       OS(lastuz),                      -MAXPAR,        1, "%.15G"},
+#endif
   {"rxCMi",        OS(rxCMi),                       -MAXPAR,        1, "%.15G"},
   {"ryCMi",        OS(ryCMi),                       -MAXPAR,        1, "%.15G"},
   {"rzCMi",        OS(rzCMi),                       -MAXPAR,        1, "%.15G"},
