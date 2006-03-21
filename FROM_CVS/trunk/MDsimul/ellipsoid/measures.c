@@ -272,6 +272,9 @@ void transDiff(void)
   /* DESCRIPTION:
      This mesuring functions calculates the Translational Diffusion 
      coefficent */
+#ifdef MD_CALC_DPP
+  double MSDx, MSDy, MSDz;
+#endif
   double Drx, Dry, Drz, Dr4;
   int i;
   DrSqTot = 0.0;
@@ -336,7 +339,44 @@ void transDiff(void)
     Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
 #endif
   DrSqTot = DrSqTotA;
-  
+#ifdef MD_CALC_DPP
+  f = fopen(absMisHD("MSDAxyz.dat"), "a");
+  MSDx = MSDy = MSDz = 0.0;
+  for(i=0; i < Oparams.parnumA; i++)
+    {
+      MSDx += Sqr(OprogStatus.sumdx[i]);
+      MSDy += Sqr(OprogStatus.sumdy[i]);
+      MSDz += Sqr(OprogStatus.sumdz[i]);
+    }
+  MSDx /= Oparams.parnumA;
+  MSDy /= Oparams.parnumA;
+  MSDz /= Oparams.parnumA;
+#ifdef MD_BIG_DT
+  fprintf(f, "%.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, MSDx, MSDy, MSDz);
+#else
+  fprintf(f, "%.15G %.15G %.15G %.15G\n", Oparams.time, MSDx, MSDy, MSDz);
+#endif
+  fclose(f);
+  if (Oparams.parnumA < Oparams.parnum)
+    {
+      f = fopen(absMisHD("MSDBxyz.dat"), "a");
+      for(i=Oparams.parnumA; i < Oparams.parnum; i++)
+	{
+	  MSDx += Sqr(OprogStatus.sumdx[i]);
+	  MSDy += Sqr(OprogStatus.sumdy[i]);
+	  MSDz += Sqr(OprogStatus.sumdz[i]);
+	}
+      MSDx /= (Oparams.parnum-Oparams.parnumA);
+      MSDy /= (Oparams.parnum-Oparams.parnumA);
+      MSDz /= (Oparams.parnum-Oparams.parnumA);
+#ifdef MD_BIG_DT
+      fprintf(f, "%.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, MSDx, MSDy, MSDz);
+#else
+      fprintf(f, "%.15G %.15G %.15G %.15G\n", Oparams.time, MSDx, MSDy, MSDz);
+#endif
+      fclose(f);
+    }
+#endif
 }
 void calcrotMSD(void)
 {
