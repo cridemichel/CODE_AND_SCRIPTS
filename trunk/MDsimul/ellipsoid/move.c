@@ -1283,7 +1283,7 @@ void update_MSD(int i)
 	nw[a] /= normw; 
       for (b=0; b < 3; b++)
 	{
-	  un = scalProd(lu[b], nw);
+	  un = scalProd(nw, lu[b]);
 	  for (a=0; a < 3; a++)
 	    dsum[b][a] = ti*un*nw[a];
 	  vectProdVec(nw, lu[b], nvecu);
