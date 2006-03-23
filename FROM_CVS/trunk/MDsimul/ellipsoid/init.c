@@ -1021,9 +1021,15 @@ void usrInitBef(void)
 	OprogStatus.sumdx[i] = 0.0;
 	OprogStatus.sumdy[i] = 0.0;
 	OprogStatus.sumdz[i] = 0.0;
-	OprogStatus.lastux[i] = 0.0;
-	OprogStatus.lastuy[i] = 0.0;
-	OprogStatus.lastuz[i] = 0.0;
+	OprogStatus.lastu1x[i] = 0.0;
+	OprogStatus.lastu1y[i] = 0.0;
+	OprogStatus.lastu1z[i] = 0.0;
+	OprogStatus.lastu2x[i] = 0.0;
+	OprogStatus.lastu2y[i] = 0.0;
+	OprogStatus.lastu2z[i] = 0.0;
+	OprogStatus.lastu3x[i] = 0.0;
+	OprogStatus.lastu3y[i] = 0.0;
+	OprogStatus.lastu3z[i] = 0.0;
 #endif
       }
     OprogStatus.eventMult = 100;
@@ -1974,9 +1980,15 @@ void usrInitAft(void)
   	  OprogStatus.sumdx[i] = 0.0;
   	  OprogStatus.sumdy[i] = 0.0;
   	  OprogStatus.sumdz[i] = 0.0;
-  	  OprogStatus.lastux[i] = 0.0;
-  	  OprogStatus.lastuy[i] = 0.0;
-  	  OprogStatus.lastuz[i] = 0.0;
+  	  OprogStatus.lastu1x[i] = 0.0;
+  	  OprogStatus.lastu1y[i] = 0.0;
+  	  OprogStatus.lastu1z[i] = 0.0;
+  	  OprogStatus.lastu2x[i] = 0.0;
+  	  OprogStatus.lastu2y[i] = 0.0;
+  	  OprogStatus.lastu2z[i] = 0.0;
+  	  OprogStatus.lastu3x[i] = 0.0;
+  	  OprogStatus.lastu3y[i] = 0.0;
+  	  OprogStatus.lastu3z[i] = 0.0;
 #endif
 	}
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);

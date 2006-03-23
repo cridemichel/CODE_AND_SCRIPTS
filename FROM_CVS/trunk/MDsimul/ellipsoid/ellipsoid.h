@@ -375,9 +375,15 @@ struct progStatus
   double sumdx[MAXPAR];
   double sumdy[MAXPAR];
   double sumdz[MAXPAR];
-  double lastux[MAXPAR];
-  double lastuy[MAXPAR];
-  double lastuz[MAXPAR];
+  double lastu1x[MAXPAR];
+  double lastu1y[MAXPAR];
+  double lastu1z[MAXPAR];
+  double lastu2x[MAXPAR];
+  double lastu2y[MAXPAR];
+  double lastu2z[MAXPAR];
+  double lastu3x[MAXPAR];
+  double lastu3y[MAXPAR];
+  double lastu3z[MAXPAR];
 #endif
   double lastcolltime[MAXPAR];
   double springkSD;
@@ -678,9 +684,15 @@ struct pascii opro_ascii[] =
   {"sumdx",        OS(sumdx),                       -MAXPAR,        1, "%.15G"},
   {"sumdy",        OS(sumdy),                       -MAXPAR,        1, "%.15G"},
   {"sumdz",        OS(sumdz),                       -MAXPAR,        1, "%.15G"},
-  {"lastux",       OS(lastux),                      -MAXPAR,        1, "%.15G"},
-  {"lastuy",       OS(lastuy),                      -MAXPAR,        1, "%.15G"},
-  {"lastuz",       OS(lastuz),                      -MAXPAR,        1, "%.15G"},
+  {"lastu1x",       OS(lastu1x),                      -MAXPAR,        1, "%.15G"},
+  {"lastu1y",       OS(lastu1y),                      -MAXPAR,        1, "%.15G"},
+  {"lastu1z",       OS(lastu1z),                      -MAXPAR,        1, "%.15G"},
+  {"lastu2x",       OS(lastu2x),                      -MAXPAR,        1, "%.15G"},
+  {"lastu2y",       OS(lastu2y),                      -MAXPAR,        1, "%.15G"},
+  {"lastu2z",       OS(lastu2z),                      -MAXPAR,        1, "%.15G"},
+  {"lastu3x",       OS(lastu3x),                      -MAXPAR,        1, "%.15G"},
+  {"lastu3y",       OS(lastu3y),                      -MAXPAR,        1, "%.15G"},
+  {"lastu3z",       OS(lastu3z),                      -MAXPAR,        1, "%.15G"},
 #endif
   {"rxCMi",        OS(rxCMi),                       -MAXPAR,        1, "%.15G"},
   {"ryCMi",        OS(ryCMi),                       -MAXPAR,        1, "%.15G"},
