@@ -1695,6 +1695,9 @@ void slave_task(void)
     }
 }
 #endif
+#ifdef MD_CALC_DPP
+extern void store_last_u(int i);
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -1989,6 +1992,8 @@ void usrInitAft(void)
   	  OprogStatus.sumdx[i] = 0.0;
   	  OprogStatus.sumdy[i] = 0.0;
   	  OprogStatus.sumdz[i] = 0.0;
+	  store_last_u(i);
+#if 0
   	  OprogStatus.lastu1x[i] = 0.0;
   	  OprogStatus.lastu1y[i] = 0.0;
   	  OprogStatus.lastu1z[i] = 0.0;
@@ -1998,6 +2003,7 @@ void usrInitAft(void)
   	  OprogStatus.lastu3x[i] = 0.0;
   	  OprogStatus.lastu3y[i] = 0.0;
   	  OprogStatus.lastu3z[i] = 0.0;
+#endif
 #endif
 	}
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);

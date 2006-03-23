@@ -352,9 +352,9 @@ void transDiff(void)
   MSDy /= Oparams.parnumA;
   MSDz /= Oparams.parnumA;
 #ifdef MD_BIG_DT
-  fprintf(f, "%.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, MSDx, MSDy, MSDz);
+  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, MSDx+MSDy+MSDz, MSDx, MSDy, MSDz);
 #else
-  fprintf(f, "%.15G %.15G %.15G %.15G\n", Oparams.time, MSDx, MSDy, MSDz);
+  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, MSDx+MSDy+MSDz, MSDx, MSDy, MSDz);
 #endif
   fclose(f);
   if (Oparams.parnumA < Oparams.parnum)
