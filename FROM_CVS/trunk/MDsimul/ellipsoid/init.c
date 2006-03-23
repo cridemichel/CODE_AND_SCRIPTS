@@ -1929,12 +1929,21 @@ void usrInitAft(void)
       fclose(f);
       f = fopenMPI(absMisHD("rotMSDA.dat"), "w+");
       fclose(f);
+#ifdef MD_CALC_DPP
+      f = fopenMPI(absMisHD("MSDAxyz.dat"), "w+");
+      fclose(f);
+#endif
       if (Oparams.parnum > Oparams.parnumA)
 	{
 	  f = fopenMPI(absMisHD("MSDB.dat"), "w+");
 	  fclose(f);
 	  f = fopenMPI(absMisHD("rotMSDB.dat"), "w+");
 	  fclose(f);
+#ifdef MD_CALC_DPP
+    	  f = fopenMPI(absMisHD("MSDBxyz.dat"), "w+");
+	  fclose(f);
+#endif
+ 
 	}
       f = fopenMPI(absMisHD("temp.dat"), "w+");
       fclose(f);
