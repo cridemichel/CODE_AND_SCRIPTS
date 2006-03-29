@@ -64,7 +64,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 #define KMODMAX 99
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
-double *sqRe[KMODMAX], *sqIm[KMODMAX];
+double *sqReA[KMODMAX], *sqImA[KMODMAX], *sqReB[KMODMAX], *sqImB[KMODMAX];
 double *cc[KMODMAX];
 char fname2[512];
 int ntripl[]=
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
   int qmin = 5, qmax = 30, qmod; 
-  double invL, rxdummy, sumIm, sumRe, scalFact;
+  double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
 
   twopi = acos(0)*4.0;	  
   if (argc <= 1)
@@ -175,9 +175,15 @@ int main(int argc, char **argv)
   //fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
   for (qmod = qmin; qmod <= qmax; qmod++)
     {
-      sqRe[qmod] = malloc(sizeof(double)*points);
-      sqIm[qmod] = malloc(sizeof(double)*points);
+      sqReA[qmod] = malloc(sizeof(double)*points);
+      sqImA[qmod] = malloc(sizeof(double)*points);
       cc[qmod] = malloc(sizeof(double)*points);
+      if (NPA < NP)
+	{
+	  sqReB[qmod] = malloc(sizeof(double)*points);
+	  sqImB[qmod] = malloc(sizeof(double)*points);
+       }
+      //ccB[qmod] = malloc(sizeof(double)*points);
     }
   ti = malloc(sizeof(double)*points);
   for (a=0; a < 3; a++)
@@ -195,9 +201,16 @@ int main(int argc, char **argv)
     {
       for (ii=0; ii < points; ii++)
 	{
-	  sqRe[qmod][ii] = 0.0;
-	  sqIm[qmod][ii] = 0.0;
+	  sqReA[qmod][ii] = 0.0;
+	  sqImA[qmod][ii] = 0.0;
 	  cc[qmod][ii] = 0.0;
+	  if (NPA < NP)
+	    {
+	      sqReB[qmod][ii] = 0.0;
+	      sqImB[qmod][ii] = 0.0;
+	    }
+	  //ccB[qmod][ii] = 0.0;
+
 	}
       for (iq=0; iq < ntripl[qmod]; iq++)
 	{
@@ -240,22 +253,38 @@ int main(int argc, char **argv)
 		{
 		  for(iq=0; iq < ntripl[qmod]; iq++)
 		    {
-		      sumRe=0.0;
-		      sumIm=0.0;
+		      sumReA=sumReB=0.0;
+		      sumImA=sumImB=0.0;
 		      for (i=0; i < NP; i++)
 			{
 			  rxdummy = scalFact*((r0[0][i]-r1[0][i])*mesh[qmod][iq][0]
 			    +(r0[1][i]-r1[1][i])*mesh[qmod][iq][1]
 			    +(r0[2][i]-r1[2][i])*mesh[qmod][iq][2]);
 			  //printf("dummy:%.15G\n", rxdummy);
-			  sumRe += cos(rxdummy);
-			  sumIm += sin(rxdummy);	
+			  if (i < NPA)
+			    {
+			      sumReA += cos(rxdummy);
+			      sumImA += sin(rxdummy);
+			    }
+			  else
+			    {
+			      sumReB += cos(rxdummy);
+			      sumImB += sin(rxdummy);
+			    }  
 			}
-		      sqRe[qmod][np] += sumRe;
-		      sqIm[qmod][np] += sumIm;
+	    	      sqReA[qmod][np] += sumReA;
+    		      sqImA[qmod][np] += sumImA;
+		      sqReB[qmod][np] += sumReB;
+		      sqImB[qmod][np] += sumImB;
 		    }
-		  sqRe[qmod][np] /= ((double)NP);
-		  sqIm[qmod][np] /= ((double)NP);
+
+		  sqReA[qmod][np] /= ((double)NPA);
+		  sqImA[qmod][np] /= ((double)NPA);
+		  if (NPA < NP)
+		    {
+		      sqReB[qmod][np] /= ((double)NP-NPA);
+		      sqImB[qmod][np] /= ((double)NP-NPA);
+		    }
 		  cc[qmod][np] += 1.0;
 		  //printf("cc[%d][%d]=%.15G sqre=%.15G sqim=%.15G\n", qmod, np, cc[qmod][np],
 		//	 sqRe[qmod][np], sqIm[qmod][np]);
@@ -267,8 +296,13 @@ int main(int argc, char **argv)
     {
       for (ii=0; ii < points; ii++)
 	{
-	  sqRe[qmod][ii] = sqRe[qmod][ii]/cc[qmod][ii];
-	  sqIm[qmod][ii] = sqIm[qmod][ii]/cc[qmod][ii];
+	  sqReA[qmod][ii] = sqReA[qmod][ii]/cc[qmod][ii];
+	  sqImA[qmod][ii] = sqImA[qmod][ii]/cc[qmod][ii];
+	  if (NPA  < NP)
+	    {
+	      sqReB[qmod][ii] = sqReB[qmod][ii]/cc[qmod][ii];
+	      sqImB[qmod][ii] = sqImB[qmod][ii]/cc[qmod][ii];
+	    }
 	 // printf("qmod=%d ii=%d sqre=%.15G sqIm=%.15G cc=%.15G\n",  qmod, ii, sqRe[qmod][ii], sqIm[qmod][ii],
 	//	 cc[qmod][ii]);
 	}
@@ -279,9 +313,20 @@ int main(int argc, char **argv)
       f = fopen (fname2, "w+");
       for (ii = 0; ii < points; ii++)
 	{
-	  if ((sqRe[qmod][ii]!=0.0 || sqIm[qmod][ii]!=0.0) && (ti[ii]> -1.0))
-	    fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqRe[qmod][ii]/sqRe[qmod][0], 
-		    sqIm[qmod][ii]);
+	  if (NPA == NP)
+	    {
+	      if ((sqReA[qmod][ii]!=0.0 || sqImA[qmod][ii]!=0.0) && (ti[ii]> -1.0))
+		fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqReA[qmod][ii]/sqReA[qmod][0],
+			sqImA[qmod][ii]);
+	    }
+	  else
+	    {
+	      if ((sqReA[qmod][ii]!=0.0 || sqImA[qmod][ii]!=0.0) && (ti[ii]> -1.0))
+		fprintf(f, "%15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], sqReA[qmod][ii]/sqReA[qmod][0],
+			sqReB[qmod][ii]/sqReB[qmod][0], 
+			(sqReA[qmod][ii]+sqReB[qmod][ii])/(sqReA[qmod][0]+sqReB[qmod][0]), 
+			sqImA[qmod][ii]+sqImB[qmod][ii]);
+	    }
 	}
     }
   fclose(f);
