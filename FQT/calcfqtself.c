@@ -311,7 +311,7 @@ int main(int argc, char **argv)
     {
       sprintf(fname2, "Fqs-%d",qmod);
       f = fopen (fname2, "w+");
-      for (ii = 0; ii < points; ii++)
+      for (ii = 1; ii < points; ii++)
 	{
 	  if (NPA == NP)
 	    {
