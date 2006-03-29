@@ -3,8 +3,9 @@
 #include <string.h>
 #define MAXPTS 1000
 char **fname; 
-double time, *cc, *C2, *C4, *C6, C2m, C4m, C6m,
-       	costh2, costh4, costh6, *ti, *u0[3], *ut[3], L, refTime;
+double time, *ccA, *ccB, *C1A, *C2A, *C4A, *C6A, *C1B, *C2B, *C4B, *C6B, C1m, C2m, C4m, C6m,
+       C1mA, C2mA, C4mA, C6mA, C1mB, C2mB, C4mB, C6mB,
+       costh2, costh4, costh6, *ti, *u0[3], *ut[3], L, refTime;
 int points, assez, NP, NPA;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
@@ -64,7 +65,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *u[3])
 
 int main(int argc, char **argv)
 {
-  FILE *f, *f2;
+  FILE *f, *f2, *fA, *fB;
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
   if (argc <= 1)
@@ -80,7 +81,7 @@ int main(int argc, char **argv)
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", dummy); 
-      if (strlen(dummy) > maxl)
+      if (strlen(dummy)+1 > maxl)
 	maxl = strlen(dummy)+1;
       c2++;
     }	
@@ -141,6 +142,8 @@ int main(int argc, char **argv)
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
+  if (nfiles < NN)
+    points = nfiles;
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
   else if ((B0 > A0 && B0 > C0) || (B0 < A0 && B0 < C0))
@@ -149,17 +152,27 @@ int main(int argc, char **argv)
     assez = 2;
   if (NPA == -1)
     NPA = NP;
-  //fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
+  fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d assez=%d maxl=%d\n", points, NN, NP, nfiles, maxnp, assez, maxl);
+  if (NPA < NP)
+    {
+      printf("NPA=%d\n", NPA);
+    }
   for (a=0; a < 3; a++)
     {
       u0[a] = malloc(sizeof(double)*NP);
       ut[a] = malloc(sizeof(double)*NP);
     }
 
-  cc = malloc(sizeof(double)*points);
-  C2 = malloc(sizeof(double)*points);
-  C4 = malloc(sizeof(double)*points);
-  C6 = malloc(sizeof(double)*points);
+  ccA = malloc(sizeof(double)*points);
+  ccB = malloc(sizeof(double)*points);
+  C1A = malloc(sizeof(double)*points);
+  C2A = malloc(sizeof(double)*points);
+  C4A = malloc(sizeof(double)*points);
+  C6A = malloc(sizeof(double)*points);
+  C1B = malloc(sizeof(double)*points);
+  C2B = malloc(sizeof(double)*points);
+  C4B = malloc(sizeof(double)*points);
+  C6B = malloc(sizeof(double)*points);
   ti = malloc(sizeof(double)*points);
   for (ii=0; ii < points; ii++)
     ti[ii] = -1.0;
@@ -168,10 +181,15 @@ int main(int argc, char **argv)
   fclose(f2);
   for (ii=0; ii < points; ii++)
     {
-      C2[ii] = 0.0;
-      C4[ii] = 0.0;
-      C6[ii] = 0.0;
-      cc[ii] = 0;
+      C1A[ii] = 0.0;
+      C2A[ii] = 0.0;
+      C4A[ii] = 0.0;
+      C6A[ii] = 0.0;
+      C1B[ii] = 0.0;
+      C2B[ii] = 0.0;
+      C4B[ii] = 0.0;
+      C6B[ii] = 0.0;
+      ccA[ii] = ccB[ii] = 0;
     }
   c2 = 0;
   JJ = 0;
@@ -210,29 +228,76 @@ int main(int argc, char **argv)
 		   {
 	             costh2 += ut[a][i]*u0[a][i];
 		   }
+		  if (i < NPA)
+		    C1A[np] += costh2;
+		  else
+		    C1B[np] += costh2;
+
 		  costh2 = costh2*costh2;
 		  costh4 = costh2*costh2;
 		  costh6 = costh4*costh2;
-		  C2[np] += costh2;
-		  C4[np] += costh4;
-		  C6[np] += costh6;
-		  cc[np] += 1.0;
+		  if (i < NPA)
+		    {
+		      C2A[np] += costh2;
+		      C4A[np] += costh4;
+		      C6A[np] += costh6;
+		      ccA[np] += 1.0;
+		    }
+		  else
+		    {
+		      C2B[np] += costh2;
+		      C4B[np] += costh4;
+		      C6B[np] += costh6;
+		      ccB[np] += 1.0;
+		    }
 		}
 	    }
 	}
     }
-
+  if (NPA < NP)
+    {
+      fA = fopen("CnA.dat", "w+");
+      fB = fopen("CnB.dat", "w+");
+    }
+  
   f = fopen("Cn.dat", "w+");
   for (ii=1; ii < points; ii++)
     {
-      C6m = (231.0*C6[ii]/cc[ii] - 315.0*C4[ii]/cc[ii] + 105.0*C2[ii]/cc[ii] - 5.0)/16.0;
-      C4m = (35.0*C4[ii]/cc[ii] - 30.0*C2[ii]/cc[ii] + 3.0) / 8.0;
-      C2m = (3.0*C2[ii]/cc[ii] - 1.0)/2.0;
+      C6m = (231.0*(C6A[ii]+C6B[ii])/(ccA[ii]+ccB[ii]) - 
+	     315.0*(C4A[ii]+C4B[ii])/(ccA[ii]+ccB[ii]) + 105.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) -
+	     5.0)/16.0;
+      C4m = (35.0*(C4A[ii]+C4B[ii])/(ccA[ii]+ccB[ii]) - 30.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) 
+	     + 3.0) / 8.0;
+      C2m = (3.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) - 1.0)/2.0;
+      C1m = (C1A[ii] + C1B[ii]) / (ccA[ii]+ccB[ii]);
+
+      if (NPA < NP)
+	{
+	  C6mA = (231.0*C6A[ii]/ccA[ii] - 315.0*C4A[ii]/ccA[ii] + 105.0*C2A[ii]/ccA[ii] - 5.0)/16.0;
+	  C4mA = (35.0*C4A[ii]/ccA[ii] - 30.0*C2A[ii]/ccA[ii] + 3.0) / 8.0;
+	  C2mA = (3.0*C2A[ii]/ccA[ii] - 1.0)/2.0;
+	  C1mA = C1A[ii]/ccA[ii];
+	  C6mB = (231.0*C6B[ii]/ccB[ii] - 315.0*C4B[ii]/ccB[ii] + 105.0*C2B[ii]/ccB[ii] - 5.0)/16.0;
+	  C4mB = (35.0*C4B[ii]/ccB[ii] - 30.0*C2B[ii]/ccB[ii] + 3.0) / 8.0;
+	  C2mB = (3.0*C2B[ii]/ccB[ii] - 1.0)/2.0;
+	  C1mB = C1B[ii]/ccB[ii];
+	}
+
       if (ti[ii] > -1.0)
 	{
-	  fprintf(f, "%.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C2m, C4m, C6m);
+	  if (NPA < NP)
+	    {
+	      fprintf(fA, "%.15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C1mA, C2mA, C4mA, C6mA);
+	      fprintf(fB, "%.15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C1mB, C2mB, C4mB, C6mB); 
+	    }
+	  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C1m, C2m, C4m, C6m);
 	}
     }
   fclose(f);
+  if (NPA < NP)
+    {
+      fclose(fA);
+      fclose(fB);
+    }
   return 0;
 }
