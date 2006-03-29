@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #define MAXPTS 1000
 char **fname; 
-double time, *ti, *r0[3], *r1[3], L, refTime;
+double time, *ccA, *ccB, *C1A, *C2A, *C4A, *C6A, *C1B, *C2B, *C4B, *C6B, C1m, C2m, C4m, C6m,
+       C1mA, C2mA, C4mA, C6mA, C1mB, C2mB, C4mB, C6mB,
+       costh2, costh4, costh6, *ti, *u0[3], *ut[3], L, refTime;
 int points, assez, NP, NPA;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 double A0, A1, B0, B1, C0, C1;
 
-void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
+void readconf(char *fname, double *ti, double *refTime, int NP, double *u[3])
 {
   FILE *f;
   double r0, r1, r2, R[3][3];
@@ -49,41 +50,27 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
-	      fscanf(f, "%[^\n]\n", line); 
-	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
-		{
-		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
-		}
+	      fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
+		     &r0, &r1, &r2, &R[0][0], &R[0][1], &R[0][2],
+		     &R[1][0], &R[1][1], &R[1][2], &R[2][0], &R[2][1], &R[2][2]); 
+	      for (a = 0; a < 3; a++)
+		u[a][i] = R[assez][a];
 	    }
- 	  break; 
+  	  break; 
 	}
 
     }
   fclose(f);
 }
-#define KMODMAX 99
-#define NKSHELL 150
-double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
-double *sqReA[KMODMAX], *sqImA[KMODMAX], *sqReB[KMODMAX], *sqImB[KMODMAX];
-double *cc[KMODMAX];
-char fname2[512];
-int ntripl[]=
-#include "./ntripl.dat"
-int mesh[][NKSHELL][3]= 
-#include "./kmesh.dat"
-double twopi;
+
 int main(int argc, char **argv)
 {
-  FILE *f, *f2;
+  FILE *f, *f2, *fA, *fB;
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
-  int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
-  int qmin = 5, qmax = 30, qmod; 
-  double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
-
-  twopi = acos(0)*4.0;	  
+  int NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
   if (argc <= 1)
     {
-      printf("Usage: calcfqself <lista_file> [points] [qmin] [qmax]\n");
+      printf("Usage: calcCn <lista_file> [points] \n");
       printf("where points is the number of points of the correlation function\n");
       exit(-1);
     }
@@ -94,7 +81,7 @@ int main(int argc, char **argv)
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", dummy); 
-      if (strlen(dummy) + 1 > maxl)
+      if (strlen(dummy)+1 > maxl)
 	maxl = strlen(dummy)+1;
       c2++;
     }	
@@ -148,22 +135,15 @@ int main(int argc, char **argv)
 	}
     }
   fclose(f);
-  invL = 1.0/L;
-  if (argc >= 3)
+  if (argc == 3)
     points = atoi(argv[2]);
   else
     points = NN;
-  if (argc >= 4)
-    qmin = atoi(argv[3]);
-  if (argc == 5)
-    qmax = atoi(argv[4]);
-  
-  scalFact = twopi * invL;
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
-
-  //printf("maxnp=%d points=%d\n",maxnp, points);
+  if (nfiles < NN)
+    points = nfiles;
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
   else if ((B0 > A0 && B0 > C0) || (B0 < A0 && B0 < C0))
@@ -172,58 +152,57 @@ int main(int argc, char **argv)
     assez = 2;
   if (NPA == -1)
     NPA = NP;
-  //fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
-  for (qmod = qmin; qmod <= qmax; qmod++)
+  fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d assez=%d maxl=%d\n", points, NN, NP, nfiles, maxnp, assez, maxl);
+  if (NPA < NP)
     {
-      sqReA[qmod] = malloc(sizeof(double)*points);
-      sqImA[qmod] = malloc(sizeof(double)*points);
-      cc[qmod] = malloc(sizeof(double)*points);
-      if (NPA < NP)
-	{
-	  sqReB[qmod] = malloc(sizeof(double)*points);
-	  sqImB[qmod] = malloc(sizeof(double)*points);
-       }
-      //ccB[qmod] = malloc(sizeof(double)*points);
+      printf("NPA=%d\n", NPA);
     }
-  ti = malloc(sizeof(double)*points);
   for (a=0; a < 3; a++)
     {
-      r0[a] = malloc(sizeof(double)*NP);
-      r1[a] = malloc(sizeof(double)*NP);
+      u0[a] = malloc(sizeof(double)*NP);
+      ut[a] = malloc(sizeof(double)*NP);
     }
 
+  ccA = malloc(sizeof(double)*points);
+  C1A = malloc(sizeof(double)*points);
+  C2A = malloc(sizeof(double)*points);
+  C4A = malloc(sizeof(double)*points);
+  C6A = malloc(sizeof(double)*points);
+  if (NPA < NP)
+    {
+      C1B = malloc(sizeof(double)*points);
+      C2B = malloc(sizeof(double)*points);
+      C4B = malloc(sizeof(double)*points);
+      C6B = malloc(sizeof(double)*points);
+      ccB = malloc(sizeof(double)*points);
+    }
+  ti = malloc(sizeof(double)*points);
   for (ii=0; ii < points; ii++)
     ti[ii] = -1.0;
 
   first = 0;
   fclose(f2);
-  for (qmod = qmin; qmod <= qmax; qmod++)
+  for (ii=0; ii < points; ii++)
     {
-      for (ii=0; ii < points; ii++)
+      C1A[ii] = 0.0;
+      C2A[ii] = 0.0;
+      C4A[ii] = 0.0;
+      C6A[ii] = 0.0;
+      ccA[ii] = 0;
+      if (NPA < NP)
 	{
-	  sqReA[qmod][ii] = 0.0;
-	  sqImA[qmod][ii] = 0.0;
-	  cc[qmod][ii] = 0.0;
-	  if (NPA < NP)
-	    {
-	      sqReB[qmod][ii] = 0.0;
-	      sqImB[qmod][ii] = 0.0;
-	    }
-	  //ccB[qmod][ii] = 0.0;
-
-	}
-      for (iq=0; iq < ntripl[qmod]; iq++)
-	{
-	  qx[qmod][iq]=invL*twopi*mesh[qmod][iq][0];
-	  qy[qmod][iq]=invL*twopi*mesh[qmod][iq][1];
-	  qz[qmod][iq]=invL*twopi*mesh[qmod][iq][2];
+	  C1B[ii] = 0.0;
+	  C2B[ii] = 0.0;
+	  C4B[ii] = 0.0;
+	  C6B[ii] = 0.0;
+	  ccB[ii] = 0;
 	}
     }
   c2 = 0;
   JJ = 0;
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
     {	
-      readconf(fname[nr1], &time, &refTime, NP, r0);
+      readconf(fname[nr1], &time, &refTime, NP, u0);
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
 	{
@@ -239,96 +218,93 @@ int main(int argc, char **argv)
 		}
 	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
-	      readconf(fname[nr2], &time, &refTime, NP, r1);
+	      readconf(fname[nr2], &time, &refTime, NP, ut);
 	      if (np < points && ti[np] == -1.0)
 		{
 		  ti[np] = time + refTime;
 		  //printf("np=%d time=%.15G\n", np, ti[np]);
 		}
   
-	      //if (nr2 == nr1)
-		//continue;
+	      if (nr2 == nr1)
+		continue;
 
-	      for (qmod = qmin; qmod <= qmax; qmod++)
+	      for (i=0; i < NP; i++) 
 		{
-		  for(iq=0; iq < ntripl[qmod]; iq++)
-		    {
-		      sumReA=sumReB=0.0;
-		      sumImA=sumImB=0.0;
-		      for (i=0; i < NP; i++)
-			{
-			  rxdummy = scalFact*((r0[0][i]-r1[0][i])*mesh[qmod][iq][0]
-			    +(r0[1][i]-r1[1][i])*mesh[qmod][iq][1]
-			    +(r0[2][i]-r1[2][i])*mesh[qmod][iq][2]);
-			  //printf("dummy:%.15G\n", rxdummy);
-			  if (i < NPA)
-			    {
-			      sumReA += cos(rxdummy);
-			      sumImA += sin(rxdummy);
-			    }
-			  else
-			    {
-			      sumReB += cos(rxdummy);
-			      sumImB += sin(rxdummy);
-			    }  
-			}
-	    	      sqReA[qmod][np] += sumReA;
-    		      sqImA[qmod][np] += sumImA;
-		      sqReB[qmod][np] += sumReB;
-		      sqImB[qmod][np] += sumImB;
-		    }
+		  costh2 = 0.0;
+		  for (a = 0; a < 3; a++)
+		   {
+	             costh2 += ut[a][i]*u0[a][i];
+		   }
+		  if (i < NPA)
+		    C1A[np] += costh2;
+		  else
+		    C1B[np] += costh2;
 
-		  sqReA[qmod][np] /= ((double)NPA);
-		  sqImA[qmod][np] /= ((double)NPA);
-		  if (NPA < NP)
+		  costh2 = costh2*costh2;
+		  costh4 = costh2*costh2;
+		  costh6 = costh4*costh2;
+		  if (i < NPA)
 		    {
-		      sqReB[qmod][np] /= ((double)NP-NPA);
-		      sqImB[qmod][np] /= ((double)NP-NPA);
+		      C2A[np] += costh2;
+		      C4A[np] += costh4;
+		      C6A[np] += costh6;
+		      ccA[np] += 1.0;
 		    }
-		  cc[qmod][np] += 1.0;
-		  //printf("cc[%d][%d]=%.15G sqre=%.15G sqim=%.15G\n", qmod, np, cc[qmod][np],
-		//	 sqRe[qmod][np], sqIm[qmod][np]);
+		  else
+		    {
+		      C2B[np] += costh2;
+		      C4B[np] += costh4;
+		      C6B[np] += costh6;
+		      ccB[np] += 1.0;
+		    }
 		}
 	    }
 	}
     }
-  for (qmod = qmin; qmod <= qmax; qmod++)
+  if (NPA < NP)
     {
-      for (ii=0; ii < points; ii++)
-	{
-	  sqReA[qmod][ii] = sqReA[qmod][ii]/cc[qmod][ii];
-	  sqImA[qmod][ii] = sqImA[qmod][ii]/cc[qmod][ii];
-	  if (NPA  < NP)
-	    {
-	      sqReB[qmod][ii] = sqReB[qmod][ii]/cc[qmod][ii];
-	      sqImB[qmod][ii] = sqImB[qmod][ii]/cc[qmod][ii];
-	    }
-	 // printf("qmod=%d ii=%d sqre=%.15G sqIm=%.15G cc=%.15G\n",  qmod, ii, sqRe[qmod][ii], sqIm[qmod][ii],
-	//	 cc[qmod][ii]);
-	}
+      fA = fopen("CnA.dat", "w+");
+      fB = fopen("CnB.dat", "w+");
     }
-  for (qmod = qmin; qmod < qmax; qmod++)
+  
+  f = fopen("Cn.dat", "w+");
+  for (ii=1; ii < points; ii++)
     {
-      sprintf(fname2, "Fqs-%d",qmod);
-      f = fopen (fname2, "w+");
-      for (ii = 0; ii < points; ii++)
+      C6m = (231.0*(C6A[ii]+C6B[ii])/(ccA[ii]+ccB[ii]) - 
+	     315.0*(C4A[ii]+C4B[ii])/(ccA[ii]+ccB[ii]) + 105.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) -
+	     5.0)/16.0;
+      C4m = (35.0*(C4A[ii]+C4B[ii])/(ccA[ii]+ccB[ii]) - 30.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) 
+	     + 3.0) / 8.0;
+      C2m = (3.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) - 1.0)/2.0;
+      C1m = (C1A[ii] + C1B[ii]) / (ccA[ii]+ccB[ii]);
+
+      if (NPA < NP)
 	{
-	  if (NPA == NP)
+	  C6mA = (231.0*C6A[ii]/ccA[ii] - 315.0*C4A[ii]/ccA[ii] + 105.0*C2A[ii]/ccA[ii] - 5.0)/16.0;
+	  C4mA = (35.0*C4A[ii]/ccA[ii] - 30.0*C2A[ii]/ccA[ii] + 3.0) / 8.0;
+	  C2mA = (3.0*C2A[ii]/ccA[ii] - 1.0)/2.0;
+	  C1mA = C1A[ii]/ccA[ii];
+	  C6mB = (231.0*C6B[ii]/ccB[ii] - 315.0*C4B[ii]/ccB[ii] + 105.0*C2B[ii]/ccB[ii] - 5.0)/16.0;
+	  C4mB = (35.0*C4B[ii]/ccB[ii] - 30.0*C2B[ii]/ccB[ii] + 3.0) / 8.0;
+	  C2mB = (3.0*C2B[ii]/ccB[ii] - 1.0)/2.0;
+	  C1mB = C1B[ii]/ccB[ii];
+	}
+
+      if (ti[ii] > -1.0)
+	{
+	  if (NPA < NP)
 	    {
-	      if ((sqReA[qmod][ii]!=0.0 || sqImA[qmod][ii]!=0.0) && (ti[ii]> -1.0))
-		fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqReA[qmod][ii]/sqReA[qmod][0],
-			sqImA[qmod][ii]);
+	      fprintf(fA, "%.15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C1mA, C2mA, C4mA, C6mA);
+	      fprintf(fB, "%.15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C1mB, C2mB, C4mB, C6mB); 
 	    }
-	  else
-	    {
-	      if ((sqReA[qmod][ii]!=0.0 || sqImA[qmod][ii]!=0.0) && (ti[ii]> -1.0))
-		fprintf(f, "%15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], sqReA[qmod][ii]/sqReA[qmod][0],
-			sqReB[qmod][ii]/sqReB[qmod][0], 
-			(sqReA[qmod][ii]+sqReB[qmod][ii])/(sqReA[qmod][0]+sqReB[qmod][0]), 
-			sqImA[qmod][ii]+sqImB[qmod][ii]);
-	    }
+	  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C1m, C2m, C4m, C6m);
 	}
     }
   fclose(f);
+  if (NPA < NP)
+    {
+      fclose(fA);
+      fclose(fB);
+    }
   return 0;
 }
