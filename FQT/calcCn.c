@@ -164,15 +164,18 @@ int main(int argc, char **argv)
     }
 
   ccA = malloc(sizeof(double)*points);
-  ccB = malloc(sizeof(double)*points);
   C1A = malloc(sizeof(double)*points);
   C2A = malloc(sizeof(double)*points);
   C4A = malloc(sizeof(double)*points);
   C6A = malloc(sizeof(double)*points);
-  C1B = malloc(sizeof(double)*points);
-  C2B = malloc(sizeof(double)*points);
-  C4B = malloc(sizeof(double)*points);
-  C6B = malloc(sizeof(double)*points);
+  if (NPA < NP)
+    {
+      C1B = malloc(sizeof(double)*points);
+      C2B = malloc(sizeof(double)*points);
+      C4B = malloc(sizeof(double)*points);
+      C6B = malloc(sizeof(double)*points);
+      ccB = malloc(sizeof(double)*points);
+    }
   ti = malloc(sizeof(double)*points);
   for (ii=0; ii < points; ii++)
     ti[ii] = -1.0;
@@ -185,11 +188,15 @@ int main(int argc, char **argv)
       C2A[ii] = 0.0;
       C4A[ii] = 0.0;
       C6A[ii] = 0.0;
-      C1B[ii] = 0.0;
-      C2B[ii] = 0.0;
-      C4B[ii] = 0.0;
-      C6B[ii] = 0.0;
-      ccA[ii] = ccB[ii] = 0;
+      ccA[ii] = 0;
+      if (NPA < NP)
+	{
+	  C1B[ii] = 0.0;
+	  C2B[ii] = 0.0;
+	  C4B[ii] = 0.0;
+	  C6B[ii] = 0.0;
+	  ccB[ii] = 0;
+	}
     }
   c2 = 0;
   JJ = 0;
