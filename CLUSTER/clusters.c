@@ -8,9 +8,10 @@
 char **fname; 
 double L, time, *ti, *R[3][3], *cc, *r0, r0L[3], RL[3][3];
 double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky;
-char parname[128], parval[256000], line[256000], rat[NA][3];
+char parname[128], parval[256000], line[256000], ratL[NA][3], *rat[NA][3];
 char dummy[2048];
-int points, foundDRs=0, foundrot=0;
+int NP, NPA=-1;
+int points, foundDRs=0, foundrot=0, *color, *clsdim, *clsdimsort, *clssizedst, *clssizedstAVG;
 
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double **DR, double *R[3][3])
 {
@@ -212,7 +213,7 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
   int a;
   /* l'atomo zero si suppone nell'origine */
-  if (i < Oparams.parnumA)
+  if (i < NP)
     {
       for (a=0; a < MD_STSPOTS_A+1; a++)
 	BuildAtomPosAt(i, a, rO, R, rat[a]);
@@ -223,13 +224,75 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
 	BuildAtomPosAt(i, a, rO, R, rat[a]);
     }
 }
+#define Sqr(x) ((x)*(x))
+double distance(int i, int j)
+{
+  int a, b;
 
+  for (a = 0; a < MD_STSPOTS_A; a++)
+    {
+      for (b = 0; b < MD_STSPOTS_B; b++)
+	{
+	  if (Sqr(rat[a][0][i]-rat[a][0][j])+Sqr(rat[a][1][i]-rat[a][1][j])
+	      +Sqr(rat[a][2][i]-rat[a][2][j]) < Sqr(sigmaSticky))	  
+		return -1;
+	}
+    }
+  return 1;
+}
+
+int bond_found(int i, int j)
+{
+  if (distance(i, j) < 0.0)
+    return 1;
+  else
+    return 0;
+}
+void change_all_colors(int colorsrc, int colordst)
+{
+  int ii;
+  for (ii = 0; ii < NP; ii++)
+    {
+      if (color[ii] == colorsrc)
+	color[ii] = colordst;
+    }
+}
+char fncls[1024];
+int findmaxColor(int color *)
+{
+  int i, maxc=-1;
+  for (i = 0; i < NP; i++) 
+    {
+      if (color[i] > maxc)
+	maxc = color[i];
+    }
+}
+struct { 
+  int dim;
+  int color;
+} *cluster_sort_struct;
+
+int compare_func (const struct cluster_sort_struct *a, const struct cluster_sort_struct *b)
+{
+  int ai; bi;
+  int temp;
+  ai = a->dim;
+  bi = b->dim;
+  temp = ai - bi;
+  if (temp < 0)
+    return 1;
+  else if (temp > 0)
+    return -1;
+  else
+    return 0;
+}
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int NP, NPA=-1, NN, fine, JJ, nat, maxl, maxnp, np;
+  int  NN, fine, JJ, nat, maxl, maxnp, np, nc;
   double refTime=0.0, ti;
+  int curcolor, ncls;
   if (argc <= 1)
     {
       printf("Usage: clusters <listafile>\n");
@@ -305,11 +368,26 @@ int main(int argc, char **argv)
   ti = malloc(sizeof(double)*points);
   cc = malloc(sizeof(double)*points);
   r0 = malloc(sizeof(double)*NP);
-  for (a = 0; a < 3; a++)
-    for (b = 0; b < 3; b++)
-      {
-	R[a][b] = malloc(sizeof(double)*NP);
-      }
+  color = malloc(sizeof(int)*NP);
+  clsdim = malloc(sizeof(int)*NP);
+  cluster_sort = malloc(sizeof(cluster_sort_struct)*NP);
+  clssizedst = malloc(sizeof(int)*NP);
+  clssizedstAVG = malloc(sizeof(int)*NP);
+  for (i = 0; i < NP; i++)
+    {
+      clssizedstAVG[i] = 0;
+      clssizedst[i] = 0; 
+    }
+  for
+  (a = 0; a < 3; a++)
+    {
+      for (b = 0; b < NA; b++)
+	rat[b][a] = malloc(sizeof(double)*NP);
+      for (b = 0; b < 3; b++)
+	{
+	  R[a][b] = malloc(sizeof(double)*NP);
+	}
+    }
   for (ii=0; ii < points; ii++)
     {
       ti[ii] = -1.0;
@@ -335,12 +413,88 @@ int main(int argc, char **argv)
 	      for (b = 0; b < 3; b++)
 		RL[a][b] = R[a][b][i];
 	    }
-	  BuildAtomPos(i, r0, R, rat);
+	  BuildAtomPos(i, r0, R, ratL);
+	  for (a = 0; a < NA; a++)
+	    for (b = 0; b < 3; b++)
+	      rat[a][b][i] = ratL[a][b];
 	}
-      cc[np] += 1.0;
+      for (i = 0; i < NP; i++)
+	{
+	  color[i] = -1;	  
+	  clssizedst[i] = 0;
+	}
+      curcolor = 0;
+      for (i = 0; i < NPA; i++)
+	{
+	  color[i] = curcolor;
+	  for (j = NPA; j < NP; j++)
+	    {
+	      if (bond_found(i, j))
+		{
+		  if (color[j] == -1)
+		    color[j] = color[i];
+		  else
+		    {
+		      if (color[i] < color[j])
+			change_all_colors(color[j], color[i]);
+		      else if (color[i] > color[j])
+			change_all_colors(color[i], color[j]);
+		    }
+		}
+	    }
+	  curcolor = findmaxColor(color)+1;
+	}	  
+      sprintf(fncls, "%s.clusters", fname[nr1]);
+      f = fopen(fncls, "w+");
+      ncls = curcolor;
+      for (nc = 0; nc < ncls; nc++)
+	{
+	  for (a = 0; a < NP; a++)
+	    if (color[a] == nc)
+	      clsdim[color[a]]++;
+	}
+      for (nc = 0; nc < ncls; nc++)
+	{
+	  cluster_sort[nc].dim = clsdim[nc];
+	  cluster_sort[nc].color = nc;
+	}
+      qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
+      for (nc = 0; nc < ncls; nc++)
+	{
+	  if (percola(cluster_sort[nc].color))
+	    fprintf(fncls, "1 ");
+	  else
+	    fprintf(fncls, "0 ");
+	      
+	  for (i = 0; i < NP; i++)
+	    {
+	      if (color[i]==cluster_sort[nc].color)
+		{
+		  fprintf(fncls, "%d ", i);
+		}
+	    }
+	  fprintf(fncls, "\n");
+	}
+      fclose(f);
+      for (nc = 0; nc < ncls; nc++)
+	{
+	  clssizedst[clsdim[nc]]++;
+	  clssizedstAVG[clsdim[nc]]++;
+	}
+      sprintf(fncls, "%s.clsdst", fname[nr1]);
+      f = fopen(fncls, "w+");
+      for (i = 2; i < NP; i++)
+	{
+	  if (clssizedst[i] != 0)
+	    fprintf(f, "%d %d\n", i, clssizedst[i]);
+	}
+      fclose(f);
     }
-  for (ii=1; ii < points; ii++)
+  f = fopen("avg_cluster_size_distr.dat", "w+");
+  for (i = 2; i < NP; i++)
     {
+      if (clssizedstAVG[i] != 0)
+	fprintf(f, "%d %d\n", i, clssizedstAVG[i]/nfiles);
     }
   fclose(f);
   return 0;
