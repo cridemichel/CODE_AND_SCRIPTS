@@ -11,7 +11,7 @@ double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky;
 char parname[128], parval[256000], line[256000], ratL[NA][3], *rat[NA][3];
 char dummy[2048];
 int NP, NPA=-1;
-int points, foundDRs=0, foundrot=0, *color, *clsdim, *clsdimsort, *clssizedst, *clssizedstAVG;
+int points, foundDRs=0, foundrot=0, *color, *clsdim, *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
 
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double **DR, double *R[3][3])
 {
@@ -225,7 +225,7 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
     }
 }
 #define Sqr(x) ((x)*(x))
-double distance(int i, int j)
+double distance(int i, int j, int img)
 {
   int a, b;
 
@@ -233,17 +233,17 @@ double distance(int i, int j)
     {
       for (b = 0; b < MD_STSPOTS_B; b++)
 	{
-	  if (Sqr(rat[a][0][i]-rat[a][0][j])+Sqr(rat[a][1][i]-rat[a][1][j])
-	      +Sqr(rat[a][2][i]-rat[a][2][j]) < Sqr(sigmaSticky))	  
+	  if (Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
+	      +Sqr(rat[a][2][i] + img*L -rat[a][2][j]) < Sqr(sigmaSticky))	  
 		return -1;
 	}
     }
   return 1;
 }
 
-int bond_found(int i, int j)
+int bond_found(int i, int j, int img)
 {
-  if (distance(i, j) < 0.0)
+  if (distance(i, j, img) < 0.0)
     return 1;
   else
     return 0;
@@ -286,6 +286,7 @@ int compare_func (const struct cluster_sort_struct *a, const struct cluster_sort
   else
     return 0;
 }
+
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
@@ -373,13 +374,14 @@ int main(int argc, char **argv)
   cluster_sort = malloc(sizeof(cluster_sort_struct)*NP);
   clssizedst = malloc(sizeof(int)*NP);
   clssizedstAVG = malloc(sizeof(int)*NP);
+  percola = malloc(sizeof(int)*NP);
   for (i = 0; i < NP; i++)
     {
       clssizedstAVG[i] = 0;
       clssizedst[i] = 0; 
+      percola[i] = 0; 
     }
-  for
-  (a = 0; a < 3; a++)
+  for (a = 0; a < 3; a++)
     {
       for (b = 0; b < NA; b++)
 	rat[b][a] = malloc(sizeof(double)*NP);
@@ -429,7 +431,7 @@ int main(int argc, char **argv)
 	  color[i] = curcolor;
 	  for (j = NPA; j < NP; j++)
 	    {
-	      if (bond_found(i, j))
+      	      if (bond_found(i, j, 0))
 		{
 		  if (color[j] == -1)
 		    color[j] = color[i];
@@ -441,6 +443,9 @@ int main(int argc, char **argv)
 			change_all_colors(color[i], color[j]);
 		    }
 		}
+	      if (bond_found(i, j, -1) || bond_found(i, j, +1))
+		percola[color[i]] = 1;
+
 	    }
 	  curcolor = findmaxColor(color)+1;
 	}	  
@@ -461,7 +466,7 @@ int main(int argc, char **argv)
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
       for (nc = 0; nc < ncls; nc++)
 	{
-	  if (percola(cluster_sort[nc].color))
+	  if (percola[cluster_sort[nc].color])
 	    fprintf(fncls, "1 ");
 	  else
 	    fprintf(fncls, "0 ");
