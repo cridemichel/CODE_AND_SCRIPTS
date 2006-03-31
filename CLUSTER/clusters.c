@@ -5,15 +5,26 @@
 #define MAXPTS 10000
 #define MAXFILES 5000
 #define NA 6
+#define MD_STSPOTS_A 5
+#define MD_STSPOTS_B 2
+#define MD_PBONDS 10
+#define Sqr(x) ((x)*(x))
 char **fname; 
-double L, time, *ti, *R[3][3], *cc, *r0, r0L[3], RL[3][3];
-double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky;
-char parname[128], parval[256000], line[256000], ratL[NA][3], *rat[NA][3];
+double L, time, *ti, *R[3][3], *cc, *r0[3], r0L[3], RL[3][3], *DR0[3];
+double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3];
+char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1;
 int points, foundDRs=0, foundrot=0, *color, *clsdim, *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
-
-void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double **DR, double *R[3][3])
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
+void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *DR[3], double *R[3][3])
 {
   FILE *f;
   int nat=0, i, cpos;
@@ -36,7 +47,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	    {
 	      for (i=0; i < NP; i++)
 		{
-		  fscanf(f, " %lf %lf %lf ", &DR[i][0], &DR[i][1], &DR[i][2]);
+		  fscanf(f, " %lf %lf %lf ", &DR[0][i], &DR[1][i], &DR[2][i]);
 		}
 	      foundDRs = 1;
 	    }
@@ -97,6 +108,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
     }
   fclose(f);
 }
+#define MD_SP_DELR 0.0
 
 
 double spApos[MD_STSPOTS_A][3] = {{MD_SP_DELR, 0.54, 0.0},{MD_SP_DELR, 0.54, 3.14159},{MD_SP_DELR, 2.60159,0.0},
@@ -186,7 +198,7 @@ void BuildAtomPosAt(int i, int ata, double rO[3], double R[3][3], double rat[3])
 
   if (ata > 0)
     {
-      if (i < Oparams.parnumA)
+      if (i < NPA)
 	spXYZ = spXYZ_A[ata-1];
       else  
 	spXYZ = spXYZ_B[ata-1];
@@ -258,7 +270,7 @@ void change_all_colors(int colorsrc, int colordst)
     }
 }
 char fncls[1024];
-int findmaxColor(int color *)
+int findmaxColor(int *color)
 {
   int i, maxc=-1;
   for (i = 0; i < NP; i++) 
@@ -267,15 +279,19 @@ int findmaxColor(int color *)
 	maxc = color[i];
     }
 }
-struct { 
+
+struct cluster_sort_struct { 
   int dim;
   int color;
-} *cluster_sort_struct;
-
-int compare_func (const struct cluster_sort_struct *a, const struct cluster_sort_struct *b)
+};
+struct cluster_sort_struct *cluster_sort;
+int compare_func (const void *aa, const void *bb)
 {
-  int ai; bi;
+  int ai, bi;
   int temp;
+  struct cluster_sort_struct *a, *b;
+  a = (struct cluster_sort_struct*) aa;
+  b = (struct cluster_sort_struct*) bb;
   ai = a->dim;
   bi = b->dim;
   temp = ai - bi;
@@ -293,7 +309,8 @@ int main(int argc, char **argv)
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int  NN, fine, JJ, nat, maxl, maxnp, np, nc;
   double refTime=0.0, ti;
-  int curcolor, ncls;
+  int curcolor, ncls, b, j;
+  pi = acos(0.0)*2.0;
   if (argc <= 1)
     {
       printf("Usage: clusters <listafile>\n");
@@ -344,17 +361,17 @@ int main(int argc, char **argv)
       else if (nat == 1 && !strcmp(parname,"NN"))
 	NN = atoi(parval);
       else if (nat==1 && !strcmp(parname,"a"))
-	sscanf(parval, "%lf %lf\n", &a[0], &a[1]);	
+	sscanf(parval, "%lf %lf\n", &sa[0], &sa[1]);	
       else if (nat==1 && !strcmp(parname,"b"))
-	sscanf(parval, "%lf %lf\n", &b[0], &b[1]);	
+	sscanf(parval, "%lf %lf\n", &sb[0], &sb[1]);	
       else if (nat==1 && !strcmp(parname,"c"))
-	sscanf(parval, "%lf %lf\n", &c[0], &c[1]);	
+	sscanf(parval, "%lf %lf\n", &sc[0], &sc[1]);	
       else if (nat==1 && !strcmp(parname,"sigmaSticky"))
 	sigmaSticky = atof(parval);
       else if (nat==1 && !strcmp(parname,"theta"))
 	theta = atof(parval);
       else if (nat==1 && !strcmp(parname,"Dr"))
-	Dr = atof(Dr);
+	Dr = atof(parval);
     }
   fclose(f);
   if (NPA == -1)
@@ -366,12 +383,11 @@ int main(int argc, char **argv)
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
-  ti = malloc(sizeof(double)*points);
+  //ti = malloc(sizeof(double)*points);
   cc = malloc(sizeof(double)*points);
-  r0 = malloc(sizeof(double)*NP);
   color = malloc(sizeof(int)*NP);
   clsdim = malloc(sizeof(int)*NP);
-  cluster_sort = malloc(sizeof(cluster_sort_struct)*NP);
+  cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NP);
   clssizedst = malloc(sizeof(int)*NP);
   clssizedstAVG = malloc(sizeof(int)*NP);
   percola = malloc(sizeof(int)*NP);
@@ -385,6 +401,8 @@ int main(int argc, char **argv)
     {
       for (b = 0; b < NA; b++)
 	rat[b][a] = malloc(sizeof(double)*NP);
+      r0[a] = malloc(sizeof(double)*NP);
+      DR0[a] = malloc(sizeof(double)*NP);
       for (b = 0; b < 3; b++)
 	{
 	  R[a][b] = malloc(sizeof(double)*NP);
@@ -392,15 +410,14 @@ int main(int argc, char **argv)
     }
   for (ii=0; ii < points; ii++)
     {
-      ti[ii] = -1.0;
       cc[ii]=0.0;
     }
   build_atom_positions();
 
   if (NPA != NP)
-    printf("[MIXTURE] points=%d files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, NPA, L, NN, maxl);
+    printf("[MIXTURE] files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", nfiles, NP, NPA, L, NN, maxl);
   else
-    printf("[MONODISPERE] points=%d files=%d NP = %d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, L, NN, maxl);
+    printf("[MONODISPERE] files=%d NP = %d L=%.15G NN=%d maxl=%d\n", nfiles, NP, L, NN, maxl);
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
@@ -415,7 +432,7 @@ int main(int argc, char **argv)
 	      for (b = 0; b < 3; b++)
 		RL[a][b] = R[a][b][i];
 	    }
-	  BuildAtomPos(i, r0, R, ratL);
+	  BuildAtomPos(i, r0L, RL, ratL);
 	  for (a = 0; a < NA; a++)
 	    for (b = 0; b < 3; b++)
 	      rat[a][b][i] = ratL[a][b];
@@ -467,18 +484,18 @@ int main(int argc, char **argv)
       for (nc = 0; nc < ncls; nc++)
 	{
 	  if (percola[cluster_sort[nc].color])
-	    fprintf(fncls, "1 ");
+	    fprintf(f, "1 ");
 	  else
-	    fprintf(fncls, "0 ");
+	    fprintf(f, "0 ");
 	      
 	  for (i = 0; i < NP; i++)
 	    {
 	      if (color[i]==cluster_sort[nc].color)
 		{
-		  fprintf(fncls, "%d ", i);
+		  fprintf(f, "%d ", i);
 		}
 	    }
-	  fprintf(fncls, "\n");
+	  fprintf(f, "\n");
 	}
       fclose(f);
       for (nc = 0; nc < ncls; nc++)
