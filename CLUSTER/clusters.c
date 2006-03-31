@@ -467,10 +467,15 @@ int main(int argc, char **argv)
 		}
 	      if (bond_found(i, j, -1) || bond_found(i, j, +1))
 		percola[color[i]] = 1;
-
 	    }
 	  curcolor = findmaxColor(color)+1;
-	}	  
+	}	
+      for (i = NPA; i < NP; i++)
+	{
+	  if (color[i]==-1)
+	    color[i] = curcolor;
+	  curcolor++;
+	}  
       //printf("curcolor:%d\n", curcolor);
       sprintf(fncls, "%s.clusters", fname[nr1]);
       f = fopen(fncls, "w+");
