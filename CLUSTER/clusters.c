@@ -490,11 +490,8 @@ int main(int argc, char **argv)
       almenouno = 0;
       for (nc = 0; nc < ncls; nc++)
 	{
-	  if (cluster_sort[nc].dim<=1)
-	    {
-	      continue;
-	    }
-	  almenouno = 1;
+	  //if (cluster_sort[nc].dim >= 2)
+	    //almenouno = 1;
 	  if (percola[cluster_sort[nc].color])
 	    fprintf(f, "1 ");
 	  else
@@ -509,8 +506,8 @@ int main(int argc, char **argv)
 	    }
 	  fprintf(f, "\n");
 	}
-      if (almenouno==0)
-	fprintf(f, "WARNING: No clusters found!\n");
+      //if (almenouno==0)
+	//fprintf(f, "WARNING: No clusters found!\n");
       fclose(f);
       for (nc = 0; nc < ncls; nc++)
 	{
@@ -519,7 +516,7 @@ int main(int argc, char **argv)
 	}
       sprintf(fncls, "%s.clsdst", fname[nr1]);
       f = fopen(fncls, "w+");
-      for (i = 2; i < NP; i++)
+      for (i = 1; i < NP; i++)
 	{
 	  if (clssizedst[i] != 0)
 	    fprintf(f, "%d %d\n", i, clssizedst[i]);
@@ -527,7 +524,7 @@ int main(int argc, char **argv)
       fclose(f);
     }
   f = fopen("avg_cluster_size_distr.dat", "w+");
-  for (i = 2; i < NP; i++)
+  for (i = 1; i < NP; i++)
     {
       if (clssizedstAVG[i] != 0)
 	fprintf(f, "%d %d\n", i, clssizedstAVG[i]/nfiles);
