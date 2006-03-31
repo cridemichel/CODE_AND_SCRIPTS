@@ -309,7 +309,7 @@ int main(int argc, char **argv)
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int  NN, fine, JJ, nat, maxl, maxnp, np, nc;
   double refTime=0.0, ti;
-  int curcolor, ncls, b, j;
+  int curcolor, ncls, b, j, almenouno;
   pi = acos(0.0)*2.0;
   if (argc <= 1)
     {
@@ -358,7 +358,7 @@ int main(int argc, char **argv)
 	NP = atoi(parval);
       else if (!strcmp(parname,"parnumA"))
 	NPA = atoi(parval);
-      else if (nat == 1 && !strcmp(parname,"NN"))
+      else if (nat == 0 && !strcmp(parname,"NN"))
 	NN = atoi(parval);
       else if (nat==1 && !strcmp(parname,"a"))
 	sscanf(parval, "%lf %lf\n", &sa[0], &sa[1]);	
@@ -481,8 +481,14 @@ int main(int argc, char **argv)
 	  cluster_sort[nc].color = nc;
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
+      almenouno = 0;
       for (nc = 0; nc < ncls; nc++)
 	{
+	  if (cluster_sort[nc].dim<=1)
+	    {
+	      continue;
+	    }
+	  almenouno = 1;
 	  if (percola[cluster_sort[nc].color])
 	    fprintf(f, "1 ");
 	  else
@@ -497,6 +503,8 @@ int main(int argc, char **argv)
 	    }
 	  fprintf(f, "\n");
 	}
+      if (almenouno==0)
+	fprintf(f, "WARNING: No clusters found!\n");
       fclose(f);
       for (nc = 0; nc < ncls; nc++)
 	{
