@@ -95,12 +95,12 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  for (i = 0; i < NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
-	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
-		{
-		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], 
-			 &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
-			 &R[2][0][i], &R[2][1][i], &R[2][2][i]); 
-		}
+	      sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %[^\n]\n", 
+    		     &r[0][i], &r[1][i], &r[2][i], 
+		     &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
+		     &R[2][0][i], &R[2][1][i], &R[2][2][i]); 
+	      //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
+	    
 	    }
 	  break; 
 	}
@@ -140,6 +140,8 @@ void build_atom_positions(void)
   spApos[4][0] = Dr;
   spBpos[0][0] = Dr;
   spBpos[1][0] = Dr;
+  //printf("Dr: %.15G theta: %.15G pi=%.15G a=%.15G b=%.15G c=%.15G\n",
+  //	 Dr, theta, pi, sa[1], sb[1], sc[1]);
   for (k1 = 0; k1 < MD_STSPOTS_A; k1++)
     {
       x = sa[0]*cos(spApos[k1][2])*sin(spApos[k1][1]);
@@ -245,8 +247,10 @@ double distance(int i, int j, int img)
     {
       for (b = 0; b < MD_STSPOTS_B; b++)
 	{
-	  if (Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
-	      +Sqr(rat[a][2][i] + img*L -rat[a][2][j]) < Sqr(sigmaSticky))	  
+	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
+	    //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
+	  if (Sqr(rat[a][0][i] + img*L -rat[b][0][j])+Sqr(rat[a][1][i] + img*L -rat[b][1][j])
+	      +Sqr(rat[a][2][i] + img*L -rat[b][2][j]) < Sqr(sigmaSticky))	  
 		return -1;
 	}
     }
@@ -278,6 +282,7 @@ int findmaxColor(int *color)
       if (color[i] > maxc)
 	maxc = color[i];
     }
+  return maxc;
 }
 
 struct cluster_sort_struct { 
@@ -466,6 +471,7 @@ int main(int argc, char **argv)
 	    }
 	  curcolor = findmaxColor(color)+1;
 	}	  
+      //printf("curcolor:%d\n", curcolor);
       sprintf(fncls, "%s.clusters", fname[nr1]);
       f = fopen(fncls, "w+");
       ncls = curcolor;
