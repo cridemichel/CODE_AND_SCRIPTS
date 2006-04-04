@@ -15,6 +15,7 @@ double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3]
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1;
+int check_percolation = 1;
 int points, foundDRs=0, foundrot=0, *color, *clsdim, *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
 double calc_norm(double *vec)
 {
@@ -239,7 +240,7 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
     }
 }
 #define Sqr(x) ((x)*(x))
-double distance(int i, int j, int img)
+double distance(int i, int j, int imgx, int imgy, int imgz)
 {
   int a, b;
 
@@ -249,17 +250,17 @@ double distance(int i, int j, int img)
 	{
 	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
 	    //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
-	  if (Sqr(rat[a][0][i] + img*L -rat[b][0][j])+Sqr(rat[a][1][i] + img*L -rat[b][1][j])
-	      +Sqr(rat[a][2][i] + img*L -rat[b][2][j]) < Sqr(sigmaSticky))	  
+	  if (Sqr(rat[a][0][i] + imgx*L -rat[b][0][j])+Sqr(rat[a][1][i] + imgy*L -rat[b][1][j])
+	      +Sqr(rat[a][2][i] + imgz*L -rat[b][2][j]) < Sqr(sigmaSticky))	  
 		return -1;
 	}
     }
   return 1;
 }
 
-int bond_found(int i, int j, int img)
+int bond_found(int i, int j, int imgx, int imgy, int imgz)
 {
-  if (distance(i, j, img) < 0.0)
+  if (distance(i, j, imgx, imgy, imgz) < 0.0)
     return 1;
   else
     return 0;
@@ -453,7 +454,7 @@ int main(int argc, char **argv)
 	  color[i] = curcolor;
 	  for (j = NPA; j < NP; j++)
 	    {
-      	      if (bond_found(i, j, 0))
+      	      if (bond_found(i, j, 0, 0, 0))
 		{
 		  if (color[j] == -1)
 		    color[j] = color[i];
@@ -465,10 +466,21 @@ int main(int argc, char **argv)
 			change_all_colors(color[i], color[j]);
 		    }
 		}
-	      if (bond_found(i, j, -1) || bond_found(i, j, +1))
-		percola[color[i]] = 1;
 	    }
 	  curcolor = findmaxColor(color)+1;
+	}
+      if (check_percolation)
+	{
+	  for (i = 0; i < NPA; i++)
+	    {
+	      for (j = NPA; j < NP; j++)
+		{
+		  if (color[i]==color[j] && (bond_found(i, j, -1, 0, 0) || bond_found(i, j, +1, 0, 0) ||
+					     bond_found(i, j, 0, -1, 0) || bond_found(i, j, 0, +1, 0) ||
+					     bond_found(i, j, 0, 0, -1) || bond_found(i, j, 0, 0, +1) ))
+		    percola[color[i]] = 1;
+		}
+	    }
 	}	
       for (i = NPA; i < NP; i++)
 	{
@@ -480,6 +492,10 @@ int main(int argc, char **argv)
       sprintf(fncls, "%s.clusters", fname[nr1]);
       f = fopen(fncls, "w+");
       ncls = curcolor;
+      for (nc = 0; nc < ncls; nc++)
+	{
+	  clsdim[nc] = 0; 
+	}
       for (nc = 0; nc < ncls; nc++)
 	{
 	  for (a = 0; a < NP; a++)
