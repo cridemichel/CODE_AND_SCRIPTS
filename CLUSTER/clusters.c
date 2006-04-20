@@ -11,11 +11,11 @@
 #define Sqr(x) ((x)*(x))
 char **fname; 
 double L, time, *ti, *R[3][3], *cc, *r0[3], r0L[3], RL[3][3], *DR0[3];
-double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3];
+double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], *dupcluster;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1;
-int check_percolation = 1;
+int check_percolation = 1, *nspots;
 int points, foundDRs=0, foundrot=0, *color, *clsdim, *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
 double calc_norm(double *vec)
 {
@@ -308,14 +308,38 @@ int compare_func (const void *aa, const void *bb)
   else
     return 0;
 }
-
+void choose_image(int img, int *dix, int *diy, int *diz, int di)
+{
+  switch (img)
+    {
+    case 1:
+      *dix += di;
+      break;
+    case 2:
+      *dix -= di;
+      break;
+    case 3:
+      *diy += di;
+      break;
+    case 4:
+      *diy -= di;
+      break;
+    case 5:
+      *diz += di;
+      break;
+    case 6:
+      *diz -= di;
+      break;
+    }
+}
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int  NN, fine, JJ, nat, maxl, maxnp, np, nc;
+  int  NN, fine, JJ, nat, maxl, maxnp, np, nc, dix, diy, diz;
   double refTime=0.0, ti;
-  int curcolor, ncls, b, j, almenouno;
+  const int NUMREP = 7;
+  int curcolor, ncls, b, j, almenouno, na, c, i2, j2;
   pi = acos(0.0)*2.0;
   if (argc <= 1)
     {
@@ -391,11 +415,13 @@ int main(int argc, char **argv)
     points = maxnp;
   //ti = malloc(sizeof(double)*points);
   cc = malloc(sizeof(double)*points);
-  color = malloc(sizeof(int)*NP);
+  color = malloc(sizeof(int)*NP*6);
+  nspots = malloc(sizeof(int)*NP);
   clsdim = malloc(sizeof(int)*NP);
   cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NP);
   clssizedst = malloc(sizeof(int)*NP);
   clssizedstAVG = malloc(sizeof(int)*NP);
+  dupcluster = malloc(sizeof(int)*NP*6); 
   percola = malloc(sizeof(int)*NP);
   for (i = 0; i < NP; i++)
     {
@@ -454,7 +480,13 @@ int main(int argc, char **argv)
 	  color[i] = curcolor;
 	  for (j = NPA; j < NP; j++)
 	    {
-      	      if (bond_found(i, j, 0, 0, 0))
+      	      if (bond_found(i, j, 0, 0, 0) || 
+		  bond_found(i, j, -1, 0, 0) || 
+		  bond_found(i, j, +1, 0, 0) ||
+		  bond_found(i, j, 0, -1, 0) || 
+		  bond_found(i, j, 0, +1, 0) ||
+		  bond_found(i, j, 0, 0, -1) || 
+		  bond_found(i, j, 0, 0, +1) )
 		{
 		  if (color[j] == -1)
 		    color[j] = color[i];
@@ -469,19 +501,7 @@ int main(int argc, char **argv)
 	    }
 	  curcolor = findmaxColor(color)+1;
 	}
-      if (check_percolation)
-	{
-	  for (i = 0; i < NPA; i++)
-	    {
-	      for (j = NPA; j < NP; j++)
-		{
-		  if (color[i]==color[j] && (bond_found(i, j, -1, 0, 0) || bond_found(i, j, +1, 0, 0) ||
-					     bond_found(i, j, 0, -1, 0) || bond_found(i, j, 0, +1, 0) ||
-					     bond_found(i, j, 0, 0, -1) || bond_found(i, j, 0, 0, +1) ))
-		    percola[color[i]] = 1;
-		}
-	    }
-	}	
+      ncls = curcolor;
       for (i = NPA; i < NP; i++)
 	{
 	  if (color[i]==-1)
@@ -491,7 +511,6 @@ int main(int argc, char **argv)
       //printf("curcolor:%d\n", curcolor);
       sprintf(fncls, "%s.clusters", fname[nr1]);
       f = fopen(fncls, "w+");
-      ncls = curcolor;
       for (nc = 0; nc < ncls; nc++)
 	{
 	  clsdim[nc] = 0; 
@@ -508,6 +527,74 @@ int main(int argc, char **argv)
 	  cluster_sort[nc].color = nc;
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
+      /* ============== >>> PERCOLATION <<< ================== */
+      if (check_percolation)
+	{
+	  for (i=0; i < NP; i++)
+	    {
+    	      if (i < NPA)
+		nspots[i] = MD_STSPOTS_A;
+	      else
+		nspots[i] = MD_STSPOTS_B;		
+	    }	
+	  for (nc = 0; nc < ncls; nc++)
+	    {
+	      if (clsdim[nc]==1)
+		continue;
+	      /* N.B per verificare la percolazione ogni cluster va "duplicato"
+	       * in tutte le direzioni e se alla fine risulta comunque un unico 
+	       * cluster allora tale cluster è percolante.*/
+	      na = 0;
+	      for (i=0; i < NP; i++)
+		{
+		  if (color[i]==cluster_sort[nc].color)
+		    {
+		      for (c = 0; c < NUMREP; c++)
+			{
+			  dupcluster[c*clsdim[nc]+na] = i;
+			}
+		      na++;
+		    }
+		}
+	      curcolor = 0;
+	      for (i2 = 0; i2 < na*NUMREP; i2++)
+		{
+		  color[i2] = -1;	  
+		}
+	      for (i2 = 0; i2 < na*NUMREP; i2++)
+		{
+		  color[i2] = curcolor;
+		  for (j2 = 0; j2 < na*NUMREP; j2++)
+		    {
+		      i = dupcluster[i2];
+		      j = dupcluster[j2];
+		      if ((nspots[i]==MD_STSPOTS_A && nspots[j]==MD_STSPOTS_A) ||
+			  (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
+		      	continue;
+		      dix = diy = diz = 0;
+		      choose_image(i2 % na, &dix, &diy, &diz, +1);
+		      choose_image(j2 % na, &dix, &diy, &diz, -1);
+		      if (bond_found(i, j, dix, diy, diz))
+			{
+			  if (color[j2] == -1)
+			    color[j2] = color[i2];
+			  else
+			    {
+			      if (color[i2] < color[j2])
+				change_all_colors(color[j2], color[i2]);
+			      else if (color[i2] > color[j2])
+				change_all_colors(color[i2], color[j2]);
+			    }
+			}
+		    }
+		  curcolor = findmaxColor(color)+1;
+		}
+	      ncls = curcolor;
+	      if (ncls < 7)
+		percola[nc] = 1;
+	    }
+	}
+
       almenouno = 0;
       for (nc = 0; nc < ncls; nc++)
 	{
