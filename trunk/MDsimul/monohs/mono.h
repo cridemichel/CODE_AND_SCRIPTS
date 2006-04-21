@@ -253,6 +253,8 @@ struct progStatus
   COORD_TYPE rxCMi[MAXPAR]; /* initial coordinates of center of mass */
   COORD_TYPE ryCMi[MAXPAR]; /* MAXPAR is the maximum number of particles */
   COORD_TYPE rzCMi[MAXPAR];
+  COORD_TYPE DR[MAXPAR][3];
+
   COORD_TYPE W;
 
   int savedXva; 

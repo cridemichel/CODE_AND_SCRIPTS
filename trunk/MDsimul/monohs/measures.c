@@ -124,11 +124,11 @@ void transDiff(void)
   DrSqTot = 0.0;
   Dr4 = 0.0;
 
-  loop(i, 1, Oparams.parnum)
+  for(i=0; i < Oparams.parnum; i++)
     {
-      Drx = rx[i] - OprogStatus.rxCMi[i]; 
-      Dry = ry[i] - OprogStatus.ryCMi[i];
-      Drz = rz[i] - OprogStatus.rzCMi[i];
+      Drx = rx[i] - OprogStatus.rxCMi[i] + L*OprogStatus.DR[i][0]; 
+      Dry = ry[i] - OprogStatus.ryCMi[i] + L*OprogStatus.DR[i][1];
+      Drz = rz[i] - OprogStatus.rzCMi[i] + L*OprogStatus.DR[i][2];
       if (OprogStatus.ipart == i)
 	{
 	  //sprintf(TXT,"i = %d\n", i);
