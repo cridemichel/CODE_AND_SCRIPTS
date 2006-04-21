@@ -28,7 +28,9 @@ extern double Ia, Ib, invIa, invIb;
 #endif
 extern double gradplane[3];
 struct LastBumpS *lastbump;
+#ifndef MD_POLYDISP
 extern double *axa, *axb, *axc;
+#endif
 extern int *scdone;
 extern double *maxax;
 /* Routines for LU decomposition from Numerical Recipe online */
