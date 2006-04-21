@@ -24,7 +24,9 @@ extern struct LastBumpS *lastbump;
 extern int *lastbump;
 #endif
 extern double *lastcol;
+#ifndef MD_POLYDISP
 double *axa, *axb, *axc;
+#endif
 double **Aip;
 int *scdone;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
@@ -964,6 +966,10 @@ void usrInitBef(void)
     Oparams.time = 0.0;
     OprogStatus.tolT = 0.0;
     OprogStatus.targetPhi = 0.0;
+#ifdef MD_POLYDISP
+    OprogStatus.polydisp = 0.0;
+    OprogStatus.polycutoff = 5.0;
+#endif
     OprogStatus.scalfact = 0.8;
     OprogStatus.reducefact = 0.9;
     OprogStatus.nebrTabFac = 200;
@@ -2018,9 +2024,11 @@ void usrInitAft(void)
 	atomTime[i] = Oparams.time;
     }
 
+#ifndef MD_POLYDISP
   axa = malloc(sizeof(double)*Oparams.parnum);
   axb = malloc(sizeof(double)*Oparams.parnum);
   axc = malloc(sizeof(double)*Oparams.parnum);
+#endif
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
   if (OprogStatus.useNNL)
@@ -2053,9 +2061,32 @@ void usrInitAft(void)
 	}
 #endif
       scdone[i] = 0;
+#ifdef MD_POLYDISP
+      /* assegna i semiassi usando una gaussiana con deviazione standard fissata da OprogStatus.polydisp (%) */
+      if (newSim)
+	{
+	  if (OprogStatus.polydisp <= 0.0)
+	    {
+	      axa[i] = Oparams.a[0];
+	      axb[i] = Oparams.b[0];
+	      axc[i] = Oparams.c[0];
+	    }
+	  else
+	    {
+	      while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp))
+		{
+		  axa[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.a[0]; 
+		  axb[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.b[0];
+		  axc[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.c[0];
+		}
+	      //printf("%.15G\n", radii[i]);
+	    }
+	}
+#else
       axa[i] = Oparams.a[0];
       axb[i] = Oparams.b[0];
       axc[i] = Oparams.c[0];
+#endif
     }
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
     {
@@ -2158,14 +2189,31 @@ void usrInitAft(void)
 	  printf("[INFO] I've adjusted rNebrShell to %.15G\n", OprogStatus.rNebrShell);	  
 	  if (Oparams.rcut <= 0.0)
 	    {
+#ifdef MD_POLYDISP
+	      if (OprogStatus.polydisp > 0.0)
+		Oparams.rcut = 1.01*calc_nnl_rcut()*(1.0+OprogStatus.polydisp*OprogStatus.polycutoff);
+	      else
+		Oparams.rcut = calc_nnl_rcut();
+#else
 	      Oparams.rcut = calc_nnl_rcut();
+#endif
 	      printf("[INFO] I've chosen rcut= %.15G\n", Oparams.rcut);
 	    }
 	}
       else
 	{
+#ifdef MD_POLYDISP
 	  if (Oparams.rcut <= 0.0)
-	    Oparams.rcut = MAXAX*1.01;
+	    {
+	      if (OprogStatus.polydisp > 0.0)
+	       	Oparams.rcut = MAXAX*1.01*(1.0 + OprogStatus.polydisp*OprogStatus.polycutoff);
+	      else
+		Oparams.rcut = MAXAX*1.01;
+	    }
+#else
+	  if (Oparams.rcut <= 0.0)
+	      Oparams.rcut = MAXAX*1.01;
+#endif
 	}
     }
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 

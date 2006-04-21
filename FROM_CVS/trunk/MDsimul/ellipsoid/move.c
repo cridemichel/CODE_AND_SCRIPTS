@@ -34,7 +34,9 @@ extern void check_all_bonds(void);
 #else
 int *lastbump;
 #endif
+#ifndef MD_POLYDISP
 extern double *axa, *axb, *axc;
+#endif
 extern int *scdone;
 extern double *maxax;
 extern double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane);

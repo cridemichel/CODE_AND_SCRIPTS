@@ -32,7 +32,9 @@ extern double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del 
 extern int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 extern int evIdA, evIdB, parnumB, parnumA;
+#ifndef MD_POLYDISP
 extern double *axa, *axb, *axc;
+#endif
 extern int *scdone;
 extern double *maxax;
 extern double xa[3], ya[3];
