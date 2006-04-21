@@ -497,7 +497,8 @@ void usrInitBef(void)
   Oparams.T = 2.0;
   Oparams.P = 1.0;
   Oparams.M = 5; /* cells in each direction for linked lists */
-  
+  Oparams.wallDiss = 1.0;
+  Oparams.partDiss = 1.0;
   OprogStatus.time = 0.0;
   OprogStatus.tolT = 0.0;
   OprogStatus.nebrTabFac = 150;

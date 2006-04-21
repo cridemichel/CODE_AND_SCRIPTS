@@ -1289,6 +1289,7 @@ void PredictEvent (int na, int nb)
 				  if (t < 0)
 #endif
 				    {
+#if 1
 				      printf("time:%.15f tInt:%.15f\n", OprogStatus.time,
 					     tInt);
 				      printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
@@ -1298,6 +1299,7 @@ void PredictEvent (int na, int nb)
 				      printf("n:%d na:%d\n", n, na);
 				      printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
 				      exit(-1);
+#endif
 				      t = 0;
 				    }
 #ifdef MD_FPBROWNIAN
@@ -1380,8 +1382,8 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 #endif
 	  inCell[k][evIdA] = 0;
 	  *rkptr = -L2;
+	  OprogStatus.DR[evIdA][k]++;
 	}
-
     }
   else
     { 
@@ -1391,6 +1393,7 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 	{
 	  inCell[k][evIdA] = cellsk - 1;
 	  *rkptr = L2;
+	  OprogStatus.DR[evIdA][k]--;
 	}
     }
 }
