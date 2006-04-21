@@ -609,8 +609,9 @@ void dlinmin(double p[], double xi[], int n, double *fret, double (*func)(double
   //free_vector(xicom,1,n); free_vector(pcom,1,n); 
 }
 #if 1
+#ifndef MD_POLYDISP
 extern double *axa, *axb, *axc;
-
+#endif
 double f1dimPow(double x) 
   /*Must accompany linmin.*/
 {
