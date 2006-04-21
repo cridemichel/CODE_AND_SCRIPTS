@@ -2073,12 +2073,17 @@ void usrInitAft(void)
 	    }
 	  else
 	    {
-	      while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp))
-		{
-		  axa[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.a[0]; 
-		  axb[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.b[0];
-		  axc[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.c[0];
-		}
+	      /* notare che le seguenti condizioni non dipendono dai semiassi ma solo dal valore restituito
+	       * da gauss() quindi basta controllare solo uno dei tre semiassi. */
+	     do
+	       {
+       		 axa[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.a[0]; 
+		 axb[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.b[0];
+		 axc[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.c[0];
+	       }
+	     while ( axa[i] < Oparams.a[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) ||
+		    axa[i] > Oparams.a[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp) )
+	      //
 	      //printf("%.15G\n", radii[i]);
 	    }
 	}
