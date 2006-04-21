@@ -24,9 +24,7 @@ extern struct LastBumpS *lastbump;
 extern int *lastbump;
 #endif
 extern double *lastcol;
-#ifndef MD_POLYDISP
 double *axa, *axb, *axc;
-#endif
 double **Aip;
 int *scdone;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
@@ -2024,11 +2022,9 @@ void usrInitAft(void)
 	atomTime[i] = Oparams.time;
     }
 
-#ifndef MD_POLYDISP
   axa = malloc(sizeof(double)*Oparams.parnum);
   axb = malloc(sizeof(double)*Oparams.parnum);
   axc = malloc(sizeof(double)*Oparams.parnum);
-#endif
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
   if (OprogStatus.useNNL)
@@ -2067,9 +2063,9 @@ void usrInitAft(void)
 	{
 	  if (OprogStatus.polydisp <= 0.0)
 	    {
-	      axa[i] = Oparams.a[0];
-	      axb[i] = Oparams.b[0];
-	      axc[i] = Oparams.c[0];
+	      axaP[i] = Oparams.a[0];
+	      axbP[i] = Oparams.b[0];
+	      axcP[i] = Oparams.c[0];
 	    }
 	  else
 	    {
@@ -2077,12 +2073,12 @@ void usrInitAft(void)
 	       * da gauss() quindi basta controllare solo uno dei tre semiassi. */
 	     do
 	       {
-       		 axa[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.a[0]; 
-		 axb[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.b[0];
-		 axc[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.c[0];
+       		 axaP[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.a[0]; 
+		 axbP[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.b[0];
+		 axcP[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.c[0];
 	       }
-	     while ( axa[i] < Oparams.a[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) ||
-		    axa[i] > Oparams.a[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp) )
+	     while ( axaP[i] < Oparams.a[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) ||
+		    axaP[i] > Oparams.a[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp) )
 	      //
 	      //printf("%.15G\n", radii[i]);
 	    }

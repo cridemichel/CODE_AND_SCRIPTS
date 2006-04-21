@@ -34,9 +34,7 @@ extern void check_all_bonds(void);
 #else
 int *lastbump;
 #endif
-#ifndef MD_POLYDISP
 extern double *axa, *axb, *axc;
-#endif
 extern int *scdone;
 extern double *maxax;
 extern double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane);
@@ -530,21 +528,31 @@ double max3(double a, double b, double c);
 double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], double rD[3], 
 		      double shift[3], double scalfact, double *factor, int j)
 {
-  int kk;
+  int kk, ii;
   double nnlfact;
   double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2, fact3;
   double boxdiag, factNNL=1.0;
   L2 = 0.5 * L;
   phi = calc_phi();
+#ifdef MD_POLYDISP
+  phi0 = 0.0;
+  for (ii = 0; ii < Oparams.parnum; ii++)
+    phi0 += axaP[ii]*axbP[ii]*axcP[ii];
+#else
   phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
   phi0 +=((double)Oparams.parnum-Oparams.parnumA)*Oparams.a[1]*Oparams.b[1]*Oparams.c[1];
+#endif
   phi0 *= 4.0*pi/3.0;
   phi0 /= L*L*L;
   C = cbrt(OprogStatus.targetPhi/phi0);
+#ifdef MD_POLYDISP
+  Ccur = axa[i] / axaP[i];
+#else
   if (i < Oparams.parnumA)
     Ccur = axa[i]/Oparams.a[0]; 
   else
     Ccur = axa[i]/Oparams.a[1]; 
+#endif
   F = C / Ccur;
   if (j != -1)
     {
@@ -613,7 +621,11 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
     }
   else
     {
+#ifdef MD_POLYDISP
+      nnlfact = axa[i]/axaP[i];
+#else
       nnlfact = axa[i]/Oparams.a[i<Oparams.parnumA?0:1];
+#endif
       boxdiag = 2.0*sqrt(Sqr(axa[i]+OprogStatus.rNebrShell*nnlfact)+
 			 Sqr(axb[i]+OprogStatus.rNebrShell*nnlfact)+
 			 Sqr(axc[i]+OprogStatus.rNebrShell*nnlfact)); 
@@ -708,7 +720,11 @@ void scale_Phi(void)
   if (first)
     {
       first = 0;
+#ifdef MD_POLYDISP
+      a0I = axaP[0];
+#else
       a0I = Oparams.a[0];
+#endif
       rcutIni = Oparams.rcut;
       target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
@@ -797,10 +813,14 @@ void scale_Phi(void)
 	    }
 	}
 #endif
+#ifdef MD_POLYDISP
+      axai = axaP[i];
+#else
       if (i < Oparams.parnumA)
 	axai = Oparams.a[0];
       else
 	axai = Oparams.a[1];
+#endif
       if (fabs(axa[i] / axai - target) < OprogStatus.axestol)
 	{
 	  done++;
@@ -5796,12 +5816,19 @@ void store_bump(int i, int j)
   RCMy = (ry[i]+ry[j]+Dry)*0.5;
   RCMz = (rz[i]+rz[j]+Drz)*0.5;
   
+#ifdef MD_POLYDISP
+  fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	  uyz[i], uzx[i], uzy[i], uzz[i], axaP[na], axbP[na], axcP[na], "red");
+  fprintf(bf, tipodat2,rx[j]+Drx-RCMx, ry[j]+Dry-RCMy, rz[j]+Drz-RCMz, uxx[j], uxy[j], uxz[j], uyx[j], uyy[j], 
+	  uyz[j], uzx[j], uzy[j], uzz[j], axaP[na], axbP[na], axcP[na], "blue");
+#else
   na = (i < Oparams.parnumA)?0:1;
   fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 	  uyz[i], uzx[i], uzy[i], uzz[i], Oparams.a[na], Oparams.b[na], Oparams.c[na], "red");
   na = (j < Oparams.parnumA)?0:1;
   fprintf(bf, tipodat2,rx[j]+Drx-RCMx, ry[j]+Dry-RCMy, rz[j]+Drz-RCMz, uxx[j], uxy[j], uxz[j], uyx[j], uyy[j], 
 	  uyz[j], uzx[j], uzy[j], uzz[j], Oparams.a[na], Oparams.b[na], Oparams.c[na], "blue");
+#endif
   //writeAllCor(bf);
 #ifdef MD_PATCHY_HE
   rA[0] = rx[i]-RCMx;

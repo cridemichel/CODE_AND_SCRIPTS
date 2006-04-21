@@ -153,9 +153,9 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 	 - Implement doubly dimensioned array as a definition apart.
 */
 #ifdef MD_POLYDISP
-#define MD_SAVE_AXES , axa, axb, axc
-#define MD_ALLOC_AXES , &axa, &axb, &axb
-#define MD_DECL_AXES  , *axa, *axb,  *axc
+#define MD_SAVE_AXES , axaP, axbP, axcP
+#define MD_ALLOC_AXES , &axaP, &axbP, &axcP
+#define MD_DECL_AXES  , *axaP, *axbP,  *axcP
 #else
 #define MD_SAVE_AXES
 #define MD_ALLOC_AXES
