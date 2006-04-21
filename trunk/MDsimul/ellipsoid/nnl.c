@@ -32,9 +32,7 @@ extern double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del 
 extern int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 extern int evIdA, evIdB, parnumB, parnumA;
-#ifndef MD_POLYDISP
 extern double *axa, *axb, *axc;
-#endif
 extern int *scdone;
 extern double *maxax;
 extern double xa[3], ya[3];
@@ -2567,6 +2565,10 @@ void adjust_maxddot(int i, double *maxddot)
   if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
     K = mddotfact;
 #endif
+#ifdef MD_POLYDISP
+  if (axaP[i] == axbP[i] == axcP[i])
+    K = mddotfact;
+#else
   if (i < Oparams.parnumA)
     {
       if (Oparams.a[0] == Oparams.b[0] && Oparams.b[0] == Oparams.c[0])
@@ -2576,7 +2578,8 @@ void adjust_maxddot(int i, double *maxddot)
     {
       if (Oparams.a[1] == Oparams.b[1] && Oparams.b[1] == Oparams.c[1])
 	K = mddotfact;
-    } 
+    }
+#endif
   *maxddot *= K;
 }
 void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddoti[6])
@@ -2590,6 +2593,10 @@ void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddo
   if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
     K = mddotfact;
 #endif
+#ifdef MD_POLYDISP
+  if (axaP[i] == axbP[i] == axcP[i])
+    K = mddotfact;
+#else
   if (i < Oparams.parnumA)
     {
       if (Oparams.a[0] == Oparams.b[0] && Oparams.b[0] == Oparams.c[0])
@@ -2600,6 +2607,7 @@ void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddo
       if (Oparams.a[1] == Oparams.b[1] && Oparams.b[1] == Oparams.c[1])
 	K = mddotfact;
     }
+#endif
   *maxddot *= K;
   for (a = 0; a < 6; a++)
     maxddoti[a] = K*maxddotiLC[a];
