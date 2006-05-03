@@ -2088,7 +2088,7 @@ void usrInitAft(void)
 	    {
 	      /* notare che le seguenti condizioni non dipendono dai semiassi ma solo dal valore restituito
 	       * da gauss() quindi basta controllare solo uno dei tre semiassi. */
-#if 0
+#if 1
 	     do
 	       {
 		 /* N.B. i semiassi vengono scalati di un fattore casuale ma in maniera
