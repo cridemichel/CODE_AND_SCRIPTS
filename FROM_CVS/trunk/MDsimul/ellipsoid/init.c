@@ -1566,6 +1566,19 @@ double calc_shell(void)
 double calc_nnl_rcut(void)
 {
   double rcutA, rcutB;
+#ifdef MD_POLYDISP
+  int i;
+  double rcutMax=0.0;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      rcutA = 2.0*sqrt(Sqr(axaP[i]+OprogStatus.rNebrShell)+
+		   Sqr(axbP[i]+OprogStatus.rNebrShell)+
+		   Sqr(axcP[i]+OprogStatus.rNebrShell));
+      if  (rcutA  > rcutMax)
+	rcutMax = rcutA;
+    }
+  return 1.01*rcutMax;
+#else
   rcutA = 2.0*sqrt(Sqr(Oparams.a[0]+OprogStatus.rNebrShell)+
 		   Sqr(Oparams.b[0]+OprogStatus.rNebrShell)+
 		   Sqr(Oparams.c[0]+OprogStatus.rNebrShell));
@@ -1573,6 +1586,7 @@ double calc_nnl_rcut(void)
 		   Sqr(Oparams.b[1]+OprogStatus.rNebrShell)+
 		   Sqr(Oparams.c[1]+OprogStatus.rNebrShell));
   return 1.01*max(rcutA, rcutB);
+#endif
 }
 #ifdef MD_HE_PARALL
 MPI_Datatype Particletype;
@@ -1716,6 +1730,9 @@ void usrInitAft(void)
   int j, amin, bmin, nn, aa, bb, NPB;
   double distSPA, distSPB;
 #endif
+#ifdef MD_POLYDISP
+  double stocvar;
+#endif
   int a;
  /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
@@ -1775,7 +1792,13 @@ void usrInitAft(void)
   mgA = Oparams.m[0]*Oparams.ggrav; 
   mgB = Oparams.m[1]*Oparams.ggrav;
 #endif
-
+#ifdef MD_POLYDISP
+  if (Oparams.parnumA < Oparams.parnum)
+    {
+      printf("ERROR: Oparams.parnum has to be equal to Oparams.parnumA with polydispersity!\n");
+      exit(-1);
+    }
+#endif
   if (OprogStatus.epsdSD < 0.0)
     OprogStatus.epsdSD = Sqr(OprogStatus.epsd);
   if (OprogStatus.tolSDlong < 0.0)
@@ -2061,28 +2084,57 @@ void usrInitAft(void)
       /* assegna i semiassi usando una gaussiana con deviazione standard fissata da OprogStatus.polydisp (%) */
       if (newSim)
 	{
-	  if (OprogStatus.polydisp <= 0.0)
-	    {
-	      axaP[i] = Oparams.a[0];
-	      axbP[i] = Oparams.b[0];
-	      axcP[i] = Oparams.c[0];
-	    }
-	  else
+	  if (OprogStatus.polydisp > 0.0)
 	    {
 	      /* notare che le seguenti condizioni non dipendono dai semiassi ma solo dal valore restituito
 	       * da gauss() quindi basta controllare solo uno dei tre semiassi. */
+#if 0
 	     do
 	       {
-       		 axaP[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.a[0]; 
-		 axbP[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.b[0];
-		 axcP[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.c[0];
+		 /* N.B. i semiassi vengono scalati di un fattore casuale ma in maniera
+		  * isotropa. */
+		 stocvar = gauss();
+       		 axaP[i] = (OprogStatus.polydisp*stocvar + 1.0)* Oparams.a[0]; 
+		 axbP[i] = (OprogStatus.polydisp*stocvar + 1.0)* Oparams.b[0];
+		 axcP[i] = (OprogStatus.polydisp*stocvar + 1.0)* Oparams.c[0];
 	       }
 	     while ( axaP[i] < Oparams.a[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) ||
-		    axaP[i] > Oparams.a[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp) )
-	      //
+		    axaP[i] > Oparams.a[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp) );
+#else
+	     /* this is just for testing purpose */
+	     if (i < 128)
+	       {
+		 axaP[i] = Oparams.a[0];
+		 axbP[i] = Oparams.b[0];
+		 axcP[i] = Oparams.c[0];
+	       }
+	     else
+	       {
+	       	 axaP[i] = Oparams.a[1];
+		 axbP[i] = Oparams.b[1];
+		 axcP[i] = Oparams.c[1];
+	       }
+#endif
+
 	      //printf("%.15G\n", radii[i]);
+	     axa[i] = axaP[i];
+	     axb[i] = axbP[i];
+	     axc[i] = axcP[i];
+	    }
+	  else
+	    {
+	      axa[i] = Oparams.a[0];
+	      axb[i] = Oparams.b[0];
+	      axc[i] = Oparams.c[0];
 	    }
 	}
+      else
+	{
+	  axa[i] = axaP[i];
+	  axb[i] = axbP[i];
+	  axc[i] = axcP[i];
+	}
+      //printf("$$$ axes[%d]=(%f,%f,%f)\n", i, axaP[i], axbP[i], axcP[i]);
 #else
       axa[i] = Oparams.a[0];
       axb[i] = Oparams.b[0];
@@ -2151,6 +2203,14 @@ void usrInitAft(void)
   for (i = 0; i < Oparams.parnum; i++)
     {
       maxax[i] = 0.0;
+#ifdef MD_POLYDISP
+      if (axaP[i] > maxax[i])
+	maxax[i] = axaP[i];
+      if (axbP[i] > maxax[i])
+	maxax[i] = axbP[i];
+      if (axcP[i] > maxax[i])
+	maxax[i] = axcP[i];
+#else
       a=(i<Oparams.parnumA)?0:1;
       if (Oparams.a[a] > maxax[i])
 	maxax[i] = Oparams.a[a];
@@ -2158,6 +2218,7 @@ void usrInitAft(void)
 	maxax[i] = Oparams.b[a];
       if (Oparams.c[a] > maxax[i])
 	maxax[i] = Oparams.c[a];
+#endif
       //printf("distSPA=%.15G distSPB=%.15G\n", distSPA, distSPB);
 #ifdef MD_PATCHY_HE
       //printf("maxax bef[%d]: %.15G\n", i, maxax[i]*2.0);
@@ -2192,7 +2253,7 @@ void usrInitAft(void)
 	    {
 #ifdef MD_POLYDISP
 	      if (OprogStatus.polydisp > 0.0)
-		Oparams.rcut = 1.01*calc_nnl_rcut()*(1.0+OprogStatus.polydisp*OprogStatus.polycutoff);
+		Oparams.rcut = calc_nnl_rcut();//*(1.0+OprogStatus.polydisp*OprogStatus.polycutoff);
 	      else
 		Oparams.rcut = calc_nnl_rcut();
 #else
@@ -2206,10 +2267,7 @@ void usrInitAft(void)
 #ifdef MD_POLYDISP
 	  if (Oparams.rcut <= 0.0)
 	    {
-	      if (OprogStatus.polydisp > 0.0)
-	       	Oparams.rcut = MAXAX*1.01*(1.0 + OprogStatus.polydisp*OprogStatus.polycutoff);
-	      else
-		Oparams.rcut = MAXAX*1.01;
+	      Oparams.rcut = MAXAX*1.01;
 	    }
 #else
 	  if (Oparams.rcut <= 0.0)
@@ -2217,6 +2275,8 @@ void usrInitAft(void)
 #endif
 	}
     }
+
+  printf("MAXAX: %.15G rcut: %.15G\n", MAXAX, Oparams.rcut);
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
   cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;

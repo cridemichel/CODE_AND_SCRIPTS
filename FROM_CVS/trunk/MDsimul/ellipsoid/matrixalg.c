@@ -2937,7 +2937,7 @@ void distSD(int i, int j, double shift[3], double *vecg, double lambda, int half
   jcg = j;
 #ifdef MD_POLYDISP
   minaxicg = min3(axaP[i], axbP[i], axcP[i]);
-  minaxjcg = min3(axaP[j], axbP[j],axcP[j]);
+  minaxjcg = min3(axaP[j], axbP[j], axcP[j]);
 #else
   if (i < Oparams.parnumA)
     minaxicg = min3(Oparams.a[0],Oparams.b[0],Oparams.c[0]);
