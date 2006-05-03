@@ -2566,7 +2566,7 @@ void adjust_maxddot(int i, double *maxddot)
     K = mddotfact;
 #endif
 #ifdef MD_POLYDISP
-  if (axaP[i] == axbP[i] == axcP[i])
+  if (axaP[i] == axbP[i] && axbP[i] == axcP[i])
     K = mddotfact;
 #else
   if (i < Oparams.parnumA)
@@ -2594,7 +2594,7 @@ void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddo
     K = mddotfact;
 #endif
 #ifdef MD_POLYDISP
-  if (axaP[i] == axbP[i] == axcP[i])
+  if (axaP[i] == axbP[i] && axbP[i] == axcP[i])
     K = mddotfact;
 #else
   if (i < Oparams.parnumA)
@@ -3499,12 +3499,16 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
     }
   else
     {
+#ifdef MD_POLYDISP
+      sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
       if (na < parnumA && n < parnumA)
 	sigSq = Sqr(maxax[na]+OprogStatus.epsd);
       else if (na >= parnumA && n >= parnumA)
 	sigSq = Sqr(maxax[na]+OprogStatus.epsd);
       else
 	sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#endif
     }
   MD_DEBUG2(printf("sigSq: %f\n", sigSq));
   tInt = Oparams.time - atomTime[n];
@@ -4115,12 +4119,16 @@ void PredictEventNNL(int na, int nb)
 	}
       else
 	{
+#ifdef MD_POLYDISP
+	  sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
 	  if (na < parnumA && n < parnumA)
 	    sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 	  else if (na >= parnumA && n >= parnumA)
 	    sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 	  else
 	    sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#endif
 	}
       MD_DEBUG2(printf("sigSq: %f\n", sigSq));
       tInt = Oparams.time - atomTime[n];
@@ -4353,7 +4361,11 @@ void nextNNLupdate(int na)
 #else
   if (OprogStatus.targetPhi > 0.0)
     {
+#ifdef MD_POLYDISP
+      nnlfact = axa[na]/axaP[na];
+#else
       nnlfact = axa[na]/Oparams.a[na<Oparams.parnumA?0:1];
+#endif
       nebrTab[na].axa = nnlfact*OprogStatus.rNebrShell+axa[na];
       nebrTab[na].axb = nnlfact*OprogStatus.rNebrShell+axb[na];
       nebrTab[na].axc = nnlfact*OprogStatus.rNebrShell+axc[na];

@@ -721,6 +721,11 @@ struct pascii opro_ascii[] =
   //{"sumVy",        OS(sumVy),                    MAXPAR,  1, "%.10f"},
   //{"sumVz",        OS(sumVz),                    MAXPAR,  1, "%.10f"},
   {"W",            &OS(W),                          1,              1, "%.6G"},
+#ifdef MD_POLYDISP  
+  {"polydisp",     &OS(polydisp),                  1,          1, "%.15G"}, 
+  {"polycutoff",   &OS(polycutoff),                1,          1, "%.8G"},
+  {"targetPhi",    &OS(targetPhi),                 1,          1, "%.12G"},
+#endif
   {"savedXva",     &OS(savedXva),                   1,   1,   "%d"},
   {"CMreset",      &OS(CMreset),                    1,   1,  "%d"},
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
@@ -1067,6 +1072,10 @@ struct singlePar OsinglePar[] = {
   {"C0",      &Oparams.c[0],      CT},
   {"C1",      &Oparams.c[1],      CT},
   {"targetPhi", &OprogStatus.targetPhi, CT},
+#ifdef MD_POLYDISP
+  {"polydisp",  &OprogStatus.polydisp, CT},  
+  {"polycutoff",&OprogStatus.polycutoff, CT},
+#endif
 #ifndef MD_ASYM_ITENS
   {"Ia",      &Oparams.I[0],      CT},
   {"Ib",      &Oparams.I[1],      CT},
