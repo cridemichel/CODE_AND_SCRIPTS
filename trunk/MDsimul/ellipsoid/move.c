@@ -95,8 +95,8 @@ void print_matrix(double **M, int n)
     }
   printf("}\n");
 }
-double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-     		double *vecgsup, int calcguess);
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
+#ifdef MD_CALC_DPP
 void store_last_u(int i)
 {
   OprogStatus.lastu1x[i] = R[i][0][0];
@@ -109,6 +109,7 @@ void store_last_u(int i)
   OprogStatus.lastu3y[i] = R[i][2][1];
   OprogStatus.lastu3z[i] = R[i][2][2];
 }
+#endif
 double calc_dist_ij(int i, int j, double t)
 {
   static double shift[3] = {0,0,0}, vecgNeg[8];
@@ -293,9 +294,7 @@ void calcKVz(void)
   K += dd;
 }
 #endif
-double 
-calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-	    double *vecgsup, int calcguess);
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
 
 double get_min_dist_NNL (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
 {
@@ -1385,12 +1384,27 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   MD_DEBUG(printf("\n"));
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
+  if (OprogStatus.targetPhi > 0)
+    { 
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  else
+    { 
+      invaSq[na] = 1/Sqr(axaP[i]);
+      invbSq[na] = 1/Sqr(axbP[i]);
+      invcSq[na] = 1/Sqr(axcP[i]);
+    }
+#else
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
+#endif
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
 #ifdef MD_ASYM_ITENS
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
@@ -1398,12 +1412,27 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   Ia = Oparams.I[na];
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[j]);
+      invbSq[na] = 1/Sqr(axbP[j]);
+      invcSq[na] = 1/Sqr(axcP[j]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+#endif
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
 #ifdef MD_ASYM_ITENS
   tRDiagR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
@@ -2582,12 +2611,27 @@ void fdjac(int n, double x[], double fvec[], double **df,
   MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
   MD_DEBUG2(print_matrix(RA, 3));
   na = (iA < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[iA]);
       invbSq[na] = 1/Sqr(axb[iA]);
       invcSq[na] = 1/Sqr(axc[iA]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[iA]);
+      invbSq[na] = 1/Sqr(axbP[iA]);
+      invcSq[na] = 1/Sqr(axcP[iA]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[iA]);
+      invbSq[na] = 1/Sqr(axb[iA]);
+      invcSq[na] = 1/Sqr(axc[iA]);
+    }
+#endif
   tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
   MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
   MD_DEBUG2(print_matrix(Xa, 3));
@@ -2608,12 +2652,27 @@ void fdjac(int n, double x[], double fvec[], double **df,
   UpdateOrient(iB, ti, RB, OmegaB);
 #endif
   na = (iB < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[iB]);
       invbSq[na] = 1/Sqr(axb[iB]);
       invcSq[na] = 1/Sqr(axc[iB]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[iB]);
+      invbSq[na] = 1/Sqr(axbP[iB]);
+      invcSq[na] = 1/Sqr(axcP[iB]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[iB]);
+      invbSq[na] = 1/Sqr(axb[iB]);
+      invcSq[na] = 1/Sqr(axc[iB]);
+    }
+#endif
   tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
   DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
   DB[0][0] = invaSq[na];
@@ -2724,13 +2783,27 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   UpdateOrient(i, ti, Rt, Omega);
 #endif
   na = (i < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
-
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[i]);
+      invbSq[na] = 1/Sqr(axbP[i]);
+      invcSq[na] = 1/Sqr(axcP[i]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+#endif
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = tGuess - atomTime[j];
@@ -2743,12 +2816,27 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   UpdateOrient(j, ti, Rt, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[j]);
+      invbSq[na] = 1/Sqr(axbP[j]);
+      invcSq[na] = 1/Sqr(axcP[j]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+#endif
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 
 }
@@ -2822,12 +2910,27 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   UpdateOrient(i, ti, Rt, Omega);
 #endif
   na = (i < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[i]);
+      invbSq[na] = 1/Sqr(axbP[i]);
+      invcSq[na] = 1/Sqr(axcP[i]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+#endif
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = x[4] + (trefG - atomTime[j]);
@@ -2841,12 +2944,27 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   UpdateOrient(j, ti, Rt, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[j]);
+      invbSq[na] = 1/Sqr(axbP[j]);
+      invcSq[na] = 1/Sqr(axcP[j]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+#endif
  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 #if 0
   printf("Xa=\n");
@@ -3476,7 +3594,7 @@ void guess_dist(int i, int j,
   saB[0] = axa[j];
   saB[1] = axb[j];
   saB[2] = axc[j];
-
+  //printf("axes[%d]=%f,%f,%f axes[%d]=%f,%f,%f\n", i, axa[i], axb[i], axc[i], j, axa[j], axb[j], axc[j]);
   for (k1 = 0; k1 < 3; k1++)
     {
       gradA[k1] =  (rB[k1]-rA[k1]);
@@ -3570,12 +3688,27 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   UpdateOrient(i, ti, RtA, Omega);
 #endif
   na = (i < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[i]);
+      invbSq[na] = 1/Sqr(axbP[i]);
+      invcSq[na] = 1/Sqr(axcP[i]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+#endif
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
 
   ti = t + (t1 - atomTime[j]);
@@ -3588,12 +3721,27 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   UpdateOrient(j, ti, RtB, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[j]);
+      invbSq[na] = 1/Sqr(axbP[j]);
+      invcSq[na] = 1/Sqr(axcP[j]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+#endif
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
   if (OprogStatus.dist5)
     {
@@ -5313,12 +5461,16 @@ void PredictEvent (int na, int nb)
 			}
 		      else
 		       {
+#ifdef MD_POLYDISP
+			 sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
 			 if (na < parnumA && n < parnumA)
 			   sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 			 else if (na >= parnumA && n >= parnumA)
 			   sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 			 else
 			   sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#endif
 		       }
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 		      tInt = Oparams.time - atomTime[n];
@@ -5818,9 +5970,9 @@ void store_bump(int i, int j)
   
 #ifdef MD_POLYDISP
   fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
-	  uyz[i], uzx[i], uzy[i], uzz[i], axaP[na], axbP[na], axcP[na], "red");
+	  uyz[i], uzx[i], uzy[i], uzz[i], axaP[i], axbP[i], axcP[i], "red");
   fprintf(bf, tipodat2,rx[j]+Drx-RCMx, ry[j]+Dry-RCMy, rz[j]+Drz-RCMz, uxx[j], uxy[j], uxz[j], uyx[j], uyy[j], 
-	  uyz[j], uzx[j], uzy[j], uzz[j], axaP[na], axbP[na], axcP[na], "blue");
+	  uyz[j], uzx[j], uzy[j], uzz[j], axaP[j], axbP[j], axcP[j], "blue");
 #else
   na = (i < Oparams.parnumA)?0:1;
   fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
