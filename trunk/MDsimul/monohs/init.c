@@ -756,10 +756,11 @@ void usrInitAft(void)
 	    radii[i] = Oparams.sigma*0.5;
 	  else
 	    {
-	      while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp))
-		{
-		  radii[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.sigma*0.5; 
-		}
+	      	do
+		  {
+		    radii[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.sigma*0.5; 
+		  }
+	     	while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp))
 	      //printf("%.15G\n", radii[i]);
 	    }
 	}
