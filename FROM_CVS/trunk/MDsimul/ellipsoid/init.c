@@ -2123,9 +2123,10 @@ void usrInitAft(void)
 	    }
 	  else
 	    {
-	      axa[i] = Oparams.a[0];
-	      axb[i] = Oparams.b[0];
-	      axc[i] = Oparams.c[0];
+
+	      axa[i] = axaP[i];
+	      axb[i] = axbP[i];
+	      axc[i] = axcP[i];
 	    }
 	}
       else
