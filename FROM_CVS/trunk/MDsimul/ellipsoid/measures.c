@@ -17,6 +17,9 @@ char TXTA[10][MSG_LEN];
 char TXT[MSG_LEN];
 extern double Vz;
 FILE *mf;
+#ifdef MD_INELASTIC
+FILE *mf2;
+#endif
 extern double ***R;
 extern void UpdateSystem(void);
 double DphiSqA=0.0, DphiSqB=0.0, DrSqTotA=0.0, DrSqTotB=0.0;
@@ -25,7 +28,7 @@ double DphiSqA=0.0, DphiSqB=0.0, DrSqTotA=0.0, DrSqTotB=0.0;
  in the move function and in the measuring functions, note that the variables 
  to measures have to be put in the 'mdsimdep.h' file (see that) */
 extern double pi, s1t, Vol1t, invL, s1p, Elrc, Plrc;   
-extern double W, K, WC, T1xx, T1yy, T1zz,
+extern double W, K, WC, T1xx, T1yy, T1zz, Ktra, Krot,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, WCxy, WCyz, WCzx, 
   WCxx, WCyy, WCzz, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, 
@@ -451,6 +454,9 @@ void calcrotMSD(void)
 void temperat(void)
 {
   double dof;
+#ifdef MD_INELASTIC
+  double dofTra, dofRot, tempRot, tempTra;
+#endif
   /* DESCRIPTION:
      This the calculation of the instantaneous temperature */
 #if 0
@@ -477,13 +483,42 @@ void temperat(void)
       OprogStatus.sumTemp += temp;
       temp = OprogStatus.sumTemp / NUMCALCS;
     }
+#ifdef MD_INELASTIC
+  dofTra = dof/2;
+  dofRot = dof/2;
+  if (OprogStatus.brownian==1)
+    {
+      tempRot = 2.0 * Krot / dofRot;
+      tempTra = 2.0 * Ktra / dofTra;
+    }
+  else
+    {
+      tempRot = 2.0 * Ktra / (dofRot - 3.0);
+      tempTra = 2.0 * Krot / dofTra;
+    }
+#endif
   mf = fopenMPI(absMisHD("temp.dat"),"a");
+#ifdef MD_INELASTIC
+  mf2 =fopenMPI(absMisHD("temp_granular.dat"), "a"); 
+#endif
 #ifdef MD_BIG_DT
   fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, temp);
 #else
   fprintf(mf, "%15G %.15G\n", Oparams.time, temp);
 #endif
+
+#ifdef MD_INELASTIC
+#ifdef MD_BIG_DT
+  fprintf(mf2, "%15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, ((double)OprogStatus.collCount), tempTra, tempRot);
+#else
+  fprintf(mf2, "%15G %.15G %.15G %.15G\n", Oparams.time, ((double)OprogStatus.collCount), tempTra, tempRot);
+#endif
+#endif
+
   fclose(mf);
+#ifdef MD_INELASTIC
+  fclose(mf2);
+#endif
   /* pressure */
   if (OprogStatus.avngPress == 1)
     {

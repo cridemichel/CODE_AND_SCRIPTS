@@ -532,6 +532,9 @@ struct progStatus
 #endif
   double intervalSum;
   int eventMult;
+#if defined(MD_INELASTIC) || (MD_GRAVITY)
+  double tc;
+#endif
   /* ADD 13/4/2000 
      Logarithmic saving implemented for xva file */
   int xvaSaveMode;/* 0 = linear 1 = semilog 2 = bilog (not impl. yet) */
@@ -803,6 +806,9 @@ struct pascii opro_ascii[] =
 #endif
   {"eqlevel",     &OS(eqlevel),                    1,  1,    "%.12G"},
   {"eventMult",    &OS(eventMult),                  1,   1,  "%d"},  
+#if defined(MD_INELASTIC) || defined(MD_GRAVITY)
+  {"tc",      &OS(tc),                          1,  1,    "%.15G"},
+#endif
   {"overlaptol"   ,&OS(overlaptol),                 1,   1, "%f"},
   {"ipart",        &OS(ipart),                      1,   1, "%d"},
   {"brownian",     &OS(brownian),                   1,   1, "%d"},
@@ -870,8 +876,11 @@ struct pascii opar_ascii[]=
 #endif
 #ifdef MD_GRAVITY
   {"wallDiss",          &OP(wallDiss),                    1,   1,   "%f"},
-  {"partDiss",          &OP(partDiss),                    1,   1,   "%f"},
+  //{"partDiss",          &OP(partDiss),                    1,   1,   "%f"},
   {"ggrav",             &OP(ggrav),                       1,   1,   "%f"},
+#endif
+#if defined(MD_INELASTIC) || defined(MD_GRAVITY)
+  {"partDiss",          &OP(partDiss),                    1,   1,   "%f"},
 #endif
   {"M",                 &OP(M),                           1,   1,   "%d"},
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
@@ -1092,9 +1101,11 @@ struct singlePar OsinglePar[] = {
   {"mass1",       &Oparams.m[1],                CT},
 #ifdef MD_GRAVITY
   {"wallDiss",   &Oparams.wallDiss,         CT},
-  {"partDiss",   &Oparams.partDiss,         CT},
   {"quenchend",  &OprogStatus.quenchend,    CT},
   {"maxquench",  &OprogStatus.maxquench,    INT},
+#endif
+#if defined(MD_INELASTIC) || defined(MD_GRAVITY)
+  {"partDiss",   &Oparams.partDiss,         CT},
   {"tc",         &OprogStatus.tc,           CT},
 #endif
   {"eventMult",  &OprogStatus.eventMult,    INT},

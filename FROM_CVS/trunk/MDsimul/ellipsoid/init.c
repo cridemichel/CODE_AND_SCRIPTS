@@ -991,12 +991,15 @@ void usrInitBef(void)
     OprogStatus.endtime = 0;
     OprogStatus.rescaleTime = 1.0;
     OprogStatus.brownian = 0;
+#if defined(MD_INELASTIC) || defined(MD_GRAVITY)
+    Oparams.partDiss = 1.0;
+    OprogStatus.tc = 1E-5;
+#endif
 #ifdef MD_GRAVITY
     OprogStatus.taptau = 0.0;
     OprogStatus.rzup = 0.0;
     OprogStatus.expandFact= 1.0;
     OprogStatus.quenchend = 0.0;
-    OprogStatus.tc = 1E-5;
     OprogStatus.accrcmz = 0.0;
     OprogStatus.wallcollCount = 0;
     OprogStatus.checkquenchTime = 1.0;
@@ -1977,6 +1980,10 @@ void usrInitAft(void)
 	}
       f = fopenMPI(absMisHD("temp.dat"), "w+");
       fclose(f);
+#ifdef MD_INELASTIC
+      f = fopenMPI(absMisHD("temp_granular.dat"), "w+");
+      fclose(f);
+#endif
 #ifdef MD_HSVISCO
       f = fopenMPI(absMisHD("Ptens.dat"), "w+");
       fclose(f);
