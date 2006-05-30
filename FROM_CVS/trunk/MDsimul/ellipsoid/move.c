@@ -1586,6 +1586,11 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #else
   /* SQUARE WELL: modify here */
   factor =2.0*vc/denom;
+#ifdef MD_INELASTIC
+  if (!((Oparams.time - lastcol[i] < OprogStatus.tc)||
+  	(Oparams.time - lastcol[j] < OprogStatus.tc)))
+    factor *= (1+Oparams.partDiss)/2.0;
+#endif
   MD_DEBUG(printf("factor=%f denom=%f\n", factor, denom));
 #endif
   delpx = - factor * norm[0];
@@ -5800,6 +5805,7 @@ void calc_omega(int i)
 #ifdef MD_PATCHY_HE
 extern double calcpotene(void);
 #endif
+double Krot, Ktra;
 void calc_energy(char *msg)
 {
   int i, k1;
@@ -5812,7 +5818,7 @@ void calc_energy(char *msg)
   //Ib = matrix(3,3);
 #endif
 
-  K = 0;
+  K = Ktra = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
       if (i<Oparams.parnumA)
@@ -5821,7 +5827,7 @@ void calc_energy(char *msg)
 #ifdef MD_ASYM_ITENS
 	  //RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
 #endif
-	  K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  Ktra += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 #ifdef MD_ASYM_ITENS
 	  calc_omega(i);
 #endif
@@ -5838,13 +5844,13 @@ void calc_energy(char *msg)
 	  //printf("calcnorm wt: %.15G wtp:%.15G\n", calc_norm(wt), calc_norm(wtp));
 	  for (k1=0; k1 < 3; k1++)
 	    {
-	      K += Sqr(wtp[k1])*Oparams.I[0][k1];
+	      Krot += Sqr(wtp[k1])*Oparams.I[0][k1];
 	      //printf("I[%d][%d]=%.15G wt[%d]:%.15G wtp[%d]:%.15G\n", 0, k1, Oparams.I[0][k1],
 		//     k1, wt[k1], k1, wtp[k1]);
 	    }
 #else
 	  for (k1=0; k1 < 3; k1++)
-	    K += Sqr(wt[k1])*Oparams.I[0];
+	    Krot += Sqr(wt[k1])*Oparams.I[0];
 #endif
 	}
       else
@@ -5852,7 +5858,7 @@ void calc_energy(char *msg)
 #ifdef MD_ASYM_ITENS
 	  //RDiagtR(i, Ib, Oparams.I[1][0], Oparams.I[1][1], Oparams.I[1][2], R[i]);
 #endif
-	  K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  Ktra += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 #ifdef MD_ASYM_ITENS
 	  calc_omega(i);
 #endif
@@ -5867,14 +5873,17 @@ void calc_energy(char *msg)
 		wtp[k1] += R[i][k1][k2]*wt[k2];
 	    }
 	  for (k1=0; k1 < 3; k1++)
-	    K += Sqr(wtp[k1])*Oparams.I[1][k1];
+	    Krot += Sqr(wtp[k1])*Oparams.I[1][k1];
 #else
 	  for (k1=0; k1 < 3; k1++)
-	    K += Sqr(wt[k1])*Oparams.I[1];
+	    Krot += Sqr(wt[k1])*Oparams.I[1];
 #endif
 	}
     }
-  K *= 0.5;
+  Ktra *= 0.5;
+  Krot *= 0.5;
+  K = Ktra + Krot;
+
 #ifdef MD_ASYM_ITENS
   //free_matrix(Ia,3);
   //free_matrix(Ib,3);
