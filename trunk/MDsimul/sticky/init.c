@@ -579,6 +579,62 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 #ifdef MD_SILICA
 /* nella silica l'ossigeno ha solo due sticky points quindi l'inizializzazione
  * è diversa */
+#ifdef MD_THREESPOTS
+void buildTetrahedras(void)
+{
+  int i;
+  double Kl, Ktr, pi;
+  //double Oangle;
+  double radius; 
+  /* NOTA: i < Oparams.parnumA => O
+   *       i >= Oparams.parnumA => Si */
+  /* Oxygen */
+  //Oangle = acos(0) * 2.0 * 145.8 / 180.0;
+  pi = acos(0.0)*2.0;
+  Kl = cos(pi/6.0), Ktr = sin(pi/6.0);
+
+  printf("pi=%.15G radius = %f\n", pi, Oparams.sigma[0][1]/2.0);
+  for (i=0; i < Oparams.parnumA; i++)
+    {
+      /* il raggio è quello dell'interazione Si-O */
+      radius = Oparams.sigma[0][1]/2.0;
+      uxx[i] = -radius;
+      uyx[i] = 0.0;
+      uzx[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxx[i], uyx[i], uzx[i]);
+      uxy[i] = radius;
+      uyy[i] = 0.0;
+      uzy[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxy[i], uyy[i], uzy[i]);
+      /* NOTA: l'ossigeno ha solo due sticky spots */
+      uxz[i] = 0.0;
+      uyz[i] = 0.0;
+      uzz[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[green]\n", uxz[i], uyz[i], uzz[i]);
+    }
+
+  /* Silicon */
+  for (i=Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      /* il raggio è quello dell'interazione Si-O */
+      radius = Oparams.sigma[0][1]/2.0;
+      uxx[i] = Kl * radius;
+      uyx[i] = -Ktr * radius;
+      uzx[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxx[i], uyx[i], uzx[i]);
+      uxy[i] = -Kl* radius;
+      uyy[i] = -Ktr * radius;
+      uzy[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxy[i], uyy[i], uzy[i]);
+      uxz[i] = 0.0;
+      uyz[i] = radius;
+      uzz[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[green]\n", uxz[i], uyz[i], uzz[i]);
+    }
+  //printf("dist=%.15G\n", sqrt( Sqr(uxx[i-1]-uxy[i-1]) + Sqr(uyx[i]-uyy[i]) + Sqr(uzx[i]-uzz[i])));
+}
+
+#else
 void buildTetrahedras(void)
 {
   int i;
@@ -629,6 +685,7 @@ void buildTetrahedras(void)
     }
   //printf("dist=%.15G\n", sqrt( Sqr(uxx[i-1]-uxy[i-1]) + Sqr(uyx[i]-uyy[i]) + Sqr(uzx[i]-uzz[i])));
 }
+#endif
 void angvel(void)
 {
   int i;
