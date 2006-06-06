@@ -265,7 +265,7 @@ int bond_found(int i, int j, int imgx, int imgy, int imgz)
   else
     return 0;
 }
-void change_all_colors(int* color, int colorsrc, int colordst)
+void change_all_colors(int NP, int* color, int colorsrc, int colordst)
 {
   int ii;
   for (ii = 0; ii < NP; ii++)
@@ -275,7 +275,7 @@ void change_all_colors(int* color, int colorsrc, int colordst)
     }
 }
 char fncls[1024];
-int findmaxColor(int *color)
+int findmaxColor(int NP, int *color)
 {
   int i, maxc=-1;
   for (i = 0; i < NP; i++) 
@@ -336,7 +336,7 @@ int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int  NN, fine, JJ, nat, maxl, maxnp, np, nc, dix, diy, diz;
+  int  NN, fine, JJ, nat, maxl, maxnp, np, nc, dix, diy, diz, imgi2, imgj2;
   double refTime=0.0, ti;
   const int NUMREP = 7;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
@@ -494,13 +494,13 @@ int main(int argc, char **argv)
 		  else
 		    {
 		      if (color[i] < color[j])
-			change_all_colors(color, color[j], color[i]);
+			change_all_colors(NP, color, color[j], color[i]);
 		      else if (color[i] > color[j])
-			change_all_colors(color, color[i], color[j]);
+			change_all_colors(NP, color, color[i], color[j]);
 		    }
 		}
 	    }
-	  curcolor = findmaxColor(color)+1;
+	  curcolor = findmaxColor(NP, color)+1;
 	}
       for (i = NPA; i < NP; i++)
 	{
@@ -560,6 +560,7 @@ int main(int argc, char **argv)
 		      na++;
 		    }
 		}
+	      //printf("na=%d\n", na);
 	      curcolor = 0;
 	      for (i2 = 0; i2 < na*NUMREP; i2++)
 		{
@@ -567,33 +568,50 @@ int main(int argc, char **argv)
 		}
 	      for (i2 = 0; i2 < na*NUMREP; i2++)
 		{
-		  color2[i2] = curcolor;
+		  if (color2[i2]==-1)
+		    color2[i2] = curcolor;
+		  //printf("curcolor:%d\n", curcolor);
 		  for (j2 = 0; j2 < na*NUMREP; j2++)
 		    {
 		      i = dupcluster[i2];
 		      j = dupcluster[j2];
+		      if (i2 >= j2)
+			continue;
 		      if ((nspots[i]==MD_STSPOTS_A && nspots[j]==MD_STSPOTS_A) ||
 			  (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
 		      	continue;
 		      dix = diy = diz = 0;
-		      choose_image(i2 % na, &dix, &diy, &diz, +1);
-		      choose_image(j2 % na, &dix, &diy, &diz, -1);
-		      if (bond_found(i, j, dix, diy, diz))
+		      imgi2 = i2 / na;
+		      imgj2 = j2 / na;
+		      if (imgi2==imgj2 && i==j)
+			continue;
+		      //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
+		      choose_image(imgi2, &dix, &diy, &diz, +1);
+		      choose_image(imgj2, &dix, &diy, &diz, -1);
+		      if ( (nspots[i]==MD_STSPOTS_A && bond_found(i, j, dix, diy, diz)) ||
+			   (nspots[i]==MD_STSPOTS_B && bond_found(j, i, -dix, -diy, -diz))
+			   )
 			{
+			  //printf("qui!!!\n");
 			  if (color2[j2] == -1)
-			    color2[j2] = color2[i2];
+			    {
+			      color2[j2] = color2[i2];
+			      //printf("color2[j2]=color2[i2]=%d\n", color2[i2]);
+			    }
 			  else
 			    {
 			      if (color2[i2] < color2[j2])
-				change_all_colors(color2, color2[j2], color2[i2]);
+				change_all_colors(na*NUMREP, color2, color2[j2], color2[i2]);
 			      else if (color2[i2] > color2[j2])
-				change_all_colors(color2, color2[i2], color2[j2]);
+				change_all_colors(na*NUMREP, color2, color2[i2], color2[j2]);
 			    }
 			}
 		    }
-		  curcolor = findmaxColor(color2)+1;
+		  curcolor = findmaxColor(na*NUMREP, color2)+1;
+		  //printf("curcolor2=%d\n", curcolor);
 		}
 	      ncls2 = curcolor;
+	      //printf("ncls2=%d\n", ncls2);
 	      if (ncls2 < 7)
 		percola[nc] = 1;
 	    }
