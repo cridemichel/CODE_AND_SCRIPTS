@@ -16,7 +16,7 @@ char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1;
 int check_percolation = 1, *nspots;
-int points, foundDRs=0, foundrot=0, *color, *clsdim, *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
+int points, foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
 double calc_norm(double *vec)
 {
   int k1;
@@ -265,7 +265,7 @@ int bond_found(int i, int j, int imgx, int imgy, int imgz)
   else
     return 0;
 }
-void change_all_colors(int colorsrc, int colordst)
+void change_all_colors(int* color, int colorsrc, int colordst)
 {
   int ii;
   for (ii = 0; ii < NP; ii++)
@@ -339,7 +339,7 @@ int main(int argc, char **argv)
   int  NN, fine, JJ, nat, maxl, maxnp, np, nc, dix, diy, diz;
   double refTime=0.0, ti;
   const int NUMREP = 7;
-  int curcolor, ncls, b, j, almenouno, na, c, i2, j2;
+  int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   pi = acos(0.0)*2.0;
   if (argc <= 1)
     {
@@ -416,6 +416,7 @@ int main(int argc, char **argv)
   //ti = malloc(sizeof(double)*points);
   cc = malloc(sizeof(double)*points);
   color = malloc(sizeof(int)*NP*6);
+  color2= malloc(sizeof(int)*NP*6);
   nspots = malloc(sizeof(int)*NP);
   clsdim = malloc(sizeof(int)*NP);
   cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NP);
@@ -493,21 +494,23 @@ int main(int argc, char **argv)
 		  else
 		    {
 		      if (color[i] < color[j])
-			change_all_colors(color[j], color[i]);
+			change_all_colors(color, color[j], color[i]);
 		      else if (color[i] > color[j])
-			change_all_colors(color[i], color[j]);
+			change_all_colors(color, color[i], color[j]);
 		    }
 		}
 	    }
 	  curcolor = findmaxColor(color)+1;
 	}
-      ncls = curcolor;
       for (i = NPA; i < NP; i++)
 	{
 	  if (color[i]==-1)
-	    color[i] = curcolor;
-	  curcolor++;
-	}  
+	    {	    
+	      color[i] = curcolor;
+	    curcolor++;
+	    } 
+	}
+      ncls = curcolor;
       //printf("curcolor:%d\n", curcolor);
       sprintf(fncls, "%s.clusters", fname[nr1]);
       f = fopen(fncls, "w+");
@@ -521,6 +524,7 @@ int main(int argc, char **argv)
 	    if (color[a] == nc)
 	      clsdim[color[a]]++;
 	}
+      printf("NP=%d ncls=%d\n", NP, ncls);
       for (nc = 0; nc < ncls; nc++)
 	{
 	  cluster_sort[nc].dim = clsdim[nc];
@@ -559,11 +563,11 @@ int main(int argc, char **argv)
 	      curcolor = 0;
 	      for (i2 = 0; i2 < na*NUMREP; i2++)
 		{
-		  color[i2] = -1;	  
+		  color2[i2] = -1;	  
 		}
 	      for (i2 = 0; i2 < na*NUMREP; i2++)
 		{
-		  color[i2] = curcolor;
+		  color2[i2] = curcolor;
 		  for (j2 = 0; j2 < na*NUMREP; j2++)
 		    {
 		      i = dupcluster[i2];
@@ -576,21 +580,21 @@ int main(int argc, char **argv)
 		      choose_image(j2 % na, &dix, &diy, &diz, -1);
 		      if (bond_found(i, j, dix, diy, diz))
 			{
-			  if (color[j2] == -1)
-			    color[j2] = color[i2];
+			  if (color2[j2] == -1)
+			    color2[j2] = color2[i2];
 			  else
 			    {
-			      if (color[i2] < color[j2])
-				change_all_colors(color[j2], color[i2]);
-			      else if (color[i2] > color[j2])
-				change_all_colors(color[i2], color[j2]);
+			      if (color2[i2] < color2[j2])
+				change_all_colors(color2, color2[j2], color2[i2]);
+			      else if (color2[i2] > color2[j2])
+				change_all_colors(color2, color2[i2], color2[j2]);
 			    }
 			}
 		    }
-		  curcolor = findmaxColor(color)+1;
+		  curcolor = findmaxColor(color2)+1;
 		}
-	      ncls = curcolor;
-	      if (ncls < 7)
+	      ncls2 = curcolor;
+	      if (ncls2 < 7)
 		percola[nc] = 1;
 	    }
 	}
