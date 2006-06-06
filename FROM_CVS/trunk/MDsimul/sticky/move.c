@@ -39,8 +39,13 @@ int calcdist_retcheck;
 double rA[3], rB[3];
 int polinterr, polinterrRyck;
 #ifdef MD_SILICA
+#ifdef MD_THREESPOTS
+int mapbondsaSiO[MD_PBONDS]={1,1,2,2,3,3};
+int mapbondsbSiO[MD_PBONDS]={1,2,1,2,1,2};
+#else
 int mapbondsaSiO[MD_PBONDS]={1,1,2,2,3,3,4,4};
 int mapbondsbSiO[MD_PBONDS]={1,2,1,2,1,2,1,2};
+#endif
 int *mapbondsa;
 int *mapbondsb;
 extern int *crossevtodel;
@@ -2009,9 +2014,17 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
 void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
-  int a;
+  int a, NUMAT;
   /* l'atomo zero si suppone nell'origine */
-  for (a=0; a < 5; a++)
+#ifdef MD_SILICA
+  if (i >= Oparams.parnumA)
+    NUMAT = 5;
+  else
+    NUMAT = 3;
+#else
+  NUMAT = 5;
+#endif
+  for (a=0; a < NUMAT; a++)
     BuildAtomPosAt(i, a, rO, R, rat[a]);
 
   //if (i==215)

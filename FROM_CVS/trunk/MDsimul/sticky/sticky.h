@@ -68,7 +68,11 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define NK 10000
 #define NA 5 /* number of atoms for each molecule (particle) */
 #ifdef MD_SILICA
+#ifdef MD_THREESPOTS
+#define MD_PBONDS 6 /* questo è il max num di bonds possibili fra due molecole */
+#else
 #define MD_PBONDS 8 /* questo è il max num di bonds possibili fra due molecole */
+#endif
 /* chiedere a Francesco!! */
 #else
 #define MD_PBONDS 8
