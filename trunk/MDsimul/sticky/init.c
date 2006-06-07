@@ -686,6 +686,7 @@ void buildTetrahedras(void)
   //printf("dist=%.15G\n", sqrt( Sqr(uxx[i-1]-uxy[i-1]) + Sqr(uyx[i]-uyy[i]) + Sqr(uzx[i]-uzz[i])));
 }
 #endif
+#if 1
 void angvel(void)
 {
   int i;
@@ -701,6 +702,102 @@ void angvel(void)
       wz[i] = 0;
     }
 }
+#else
+void angvel(void)
+{
+  int i;
+  double inert;                 /* momentum of inertia of the molecule */
+  double norm, osq, o, mean;
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz;
+  //L = cbrt(Vol);
+  invL = 1.0 / L;
+  
+  Mtot = Oparams.m[0]; /* total mass of molecule */
+
+  inert = Oparams.I[0]; /* momentum of inertia */
+ 
+  mean = 3.0*Oparams.T / inert;
+
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      xisq = 1.0;
+      
+      while (xisq >= 1.0)
+	{
+	  xi1  = ranf() * 2.0 - 1.0;
+	  xi2  = ranf() * 2.0 - 1.0;
+	  xisq = xi1 * xi1 + xi2 * xi2;
+	}
+      
+      xi = sqrt (fabs(1.0 - xisq));
+      ox = 2.0 * xi1 * xi;
+      oy = 2.0 * xi2 * xi;
+      oz = 1.0 - 2.0 * xisq;
+      
+      /* Renormalize */
+      osq   = ox * ox + oy * oy + oz * oz;
+      norm  = sqrt(fabs(osq));
+      ox    = ox / norm;
+      oy    = oy / norm;
+      oz    = oz / norm;
+      
+      /* Choose the magnitude of the angular velocity
+         NOTE: consider that it is an exponential distribution 
+	 (i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+      
+      osq   = - mean * log(ranf());
+      o     = sqrt(fabs(osq));
+      ox    = o * ox;
+      oy    = o * oy;
+      oz    = o * oz;
+      wx[i] = ox;
+      wy[i] = oy;
+      wz[i] = oz;
+    }
+  Mtot = Oparams.m[1]; /* total mass of molecule */
+
+  inert = Oparams.I[1]; /* momentum of inertia */
+ 
+  mean = 3.0*Oparams.T / inert;
+
+  for (i = Oparams.parnumA; i < Oparams.parnumA; i++)
+    {
+      xisq = 1.0;
+      
+      while (xisq >= 1.0)
+	{
+	  xi1  = ranf() * 2.0 - 1.0;
+	  xi2  = ranf() * 2.0 - 1.0;
+	  xisq = xi1 * xi1 + xi2 * xi2;
+	}
+      
+      xi = sqrt (fabs(1.0 - xisq));
+      ox = 2.0 * xi1 * xi;
+      oy = 2.0 * xi2 * xi;
+      oz = 1.0 - 2.0 * xisq;
+      
+      /* Renormalize */
+      osq   = ox * ox + oy * oy + oz * oz;
+      norm  = sqrt(fabs(osq));
+      ox    = ox / norm;
+      oy    = oy / norm;
+      oz    = oz / norm;
+      
+      /* Choose the magnitude of the angular velocity
+         NOTE: consider that it is an exponential distribution 
+	 (i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+      osq   = - mean * log(ranf());
+      o     = sqrt(fabs(osq));
+      ox    = o * ox;
+      oy    = o * oy;
+      oz    = o * oz;
+      wx[i] = ox;
+      wy[i] = oy;
+      wz[i] = oz;
+    }
+}
+#endif
 #else
 void buildTetrahedras(void)
 {
@@ -1446,7 +1543,7 @@ extern int bound(int na, int n, int a, int b);
 #ifdef MD_SILICA
 void check_all_bonds(void)
 {
-  int nl, nn, warn, amin, bmin, i, j, nb, iA, nc;
+  int nl, nn, warn, amin, bmin, i, j, nb, iA, nc, nl_ignore;
   double shift[3], dist, dists[MD_PBONDS];
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
@@ -1464,17 +1561,23 @@ void check_all_bonds(void)
       if (warn)
 	break;
       nb = 0;
-      for (nl = 0; nl < 3; nl++)
+      iA = (i<Oparams.parnumA)?0:1;
+      nl_ignore = (i<Oparams.parnumA)?1:0;
+
+      for (nl = 0; nl < 4; nl++)
 	{
 	  /* i legami possono essere solo tra Si e O!! */
-	  if (nl != 2)
+	  if (nl < 2 )
 	    continue;
 	  
-	  iA = (i < Oparams.parnumA)?0:1;
+	 // iA = (i < Oparams.parnumA)?0:1;
 	  if (nl < 2)
 	    nc = 0;
 	  else
 	    nc = 1; 
+	  if (nl==nl_ignore || nl==iA+2)
+	    continue;
+ 
 	  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
 	    {
 	      jZ = inCell[nc][2][i] + iZ;    
@@ -1542,6 +1645,7 @@ void check_all_bonds(void)
 				// && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
 				{
 				  warn=1;
+				  printf("dists[%d]:%.15G i=%d j=%d\n", nn, dists[nn], i, j);
 #if 0
 				  aa = mapbondsa[nn];
 				  bb = mapbondsb[nn];
