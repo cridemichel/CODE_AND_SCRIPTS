@@ -2017,10 +2017,17 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
   int a, NUMAT;
   /* l'atomo zero si suppone nell'origine */
 #ifdef MD_SILICA
+#ifdef MD_THREESPOTS
+  if (i >= Oparams.parnumA)
+    NUMAT = 4;
+  else
+    NUMAT = 3;
+#else
   if (i >= Oparams.parnumA)
     NUMAT = 5;
   else
     NUMAT = 3;
+#endif
 #else
   NUMAT = 5;
 #endif
