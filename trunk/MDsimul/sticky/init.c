@@ -1206,6 +1206,12 @@ void StartRun(void)
       for (n = 0; n < Oparams.parnum; n++)
 	{
 	  iA = (n < Oparams.parnumA)?0:1;
+	  /*
+	   * 0 è la lista della specie A per l'interazione A-A
+	   * 1 è la lista della specie B per l'interazione B-B
+	   * 2 è la lista costituita da molecole B per l'interazione A-B
+	   * 3 è la lista costituita da molecole A per l'interazione B-A
+	   * */
 	  if (iA == 0 && nc == 0)
 	    nl = 0;
 	  else if (iA == 1 && nc == 0)
@@ -2014,6 +2020,7 @@ void usrInitAft(void)
   radat = matrix(Oparams.parnum,NA);
   deltat = matrix(Oparams.parnum,NA);
   maxax = malloc(sizeof(double)*Oparams.parnum);
+
   scdone = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnumA; i++)
     {
@@ -2046,7 +2053,12 @@ void usrInitAft(void)
    * Silica l'interazione bonded è solo tra Si e O, per cui basta avere un solo maxax per 
    * particella!! */
   for (i = 0; i < Oparams.parnum; i++)
-    maxax[i] =(Oparams.sigma[0][1] + Oparams.sigmaSticky + OprogStatus.epsd);
+    {
+      if (i < Oparams.parnumA)
+     	maxax[i] =(Oparams.sigma[0][0] + Oparams.sigmaSticky + OprogStatus.epsd);
+      else
+     	maxax[i] =(Oparams.sigma[1][1] + Oparams.sigmaSticky + OprogStatus.epsd);
+    }
 #else
   /* maxax è il diametro del centroide */
   for (i = 0; i < Oparams.parnum; i++)
@@ -2058,7 +2070,7 @@ void usrInitAft(void)
 	}
       else
 	{
-	  maxax[i] = Oparams.sigma[1][1];
+	  maxax[i] = Oparams.sigma[1][1] + Oparams.sigmaSticky + OprogStatus.epsd;
 	}
     }
 #endif
