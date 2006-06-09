@@ -69,7 +69,10 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define NA 5 /* number of atoms for each molecule (particle) */
 #ifdef MD_SILICA
 #ifdef MD_THREESPOTS
-#define MD_PBONDS 6 /* questo è il max num di bonds possibili fra due molecole */
+#define MD_PBONDS_AA 4 /* questo è il max num di bonds possibili fra due molecole */
+#define MD_PBONDS_BB 9
+#define MD_PBONDS_AB 6
+#define MD_PBONDS 9
 #else
 #define MD_PBONDS 8 /* questo è il max num di bonds possibili fra due molecole */
 #endif
@@ -79,7 +82,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #endif
 #define MD_DIST_ELECTSITES 0.45
 #define MD_DIST_HYDROSITES 0.5
-#define MAXPAR 3000      /* maximum number of simulated particles */
+#define MAXPAR 20000      /* maximum number of simulated particles */
 
 #define NUM_PAR 2000   /* Number of particles for the simulation */
 #define NUMK 99    /* number of k-points in which we must  calculate the 
