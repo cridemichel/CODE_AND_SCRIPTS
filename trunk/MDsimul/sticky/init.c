@@ -19,8 +19,17 @@ extern double *lastcol;
 double *axa, *axb, *axc;
 double **Aip;
 #ifdef MD_SILICA
+#ifdef MD_THREESPOTS
+extern int mapbondsaAB[MD_PBONDS_AB];
+extern int mapbondsbAB[MD_PBONDS_AB];
+extern int mapbondsaAA[MD_PBONDS_AA];
+extern int mapbondsbAA[MD_PBONDS_AA];
+extern int mapbondsaBB[MD_PBONDS_BB];
+extern int mapbondsbBB[MD_PBONDS_BB];
+#else
 extern int mapbondsaSiO[MD_PBONDS];
 extern int mapbondsbSiO[MD_PBONDS];
+#endif
 extern int *mapbondsa;
 extern int *mapbondsb;
 int *crossevtodel;
@@ -1549,9 +1558,10 @@ void save_init_conf(void)
 }
 extern int bound(int na, int n, int a, int b);
 #ifdef MD_SILICA
+extern int set_pbonds(int i, int j);
 void check_all_bonds(void)
 {
-  int nl, nn, warn, amin, bmin, i, j, nb, iA, nc, nl_ignore;
+  int nl, nn, warn, amin, bmin, i, j, nb, iA, nc, nl_ignore, npbonds;
   double shift[3], dist, dists[MD_PBONDS];
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
@@ -1646,7 +1656,8 @@ void check_all_bonds(void)
 
 			  assign_bond_mapping(i, j);
 			  dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-			  for (nn=0; nn < MD_PBONDS; nn++)
+			  npbonds = set_pbonds(i, j);
+			  for (nn=0; nn < npbonds; nn++)
 			    {
 			      if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
 				  && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
@@ -1845,6 +1856,7 @@ void check_all_bonds(void)
 #endif
 /* ======================== >>> usrInitAft <<< ==============================*/
 extern void calc_energy(char *msg);
+extern int set_pbonds(int i, int j);
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -1862,7 +1874,7 @@ void usrInitAft(void)
   char fname[128];
 #endif
 #ifdef MD_SILICA
-  int nl, nc;
+  int nl, nc, npbonds;
 #endif
   int a;
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
@@ -2096,7 +2108,8 @@ void usrInitAft(void)
 	shift[2] = L*rint(drz/L);
 	assign_bond_mapping(i, j);
 	dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-	for (nn=0; nn < MD_PBONDS; nn++)
+	npbonds = set_pbonds(i, j);
+	for (nn=0; nn < npbonds; nn++)
 	  {
 #if 0
 	    if (i==0) 

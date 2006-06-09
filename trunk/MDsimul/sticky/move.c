@@ -38,10 +38,32 @@ extern int SolveLineq (double **a, double *x, int n);
 int calcdist_retcheck;
 double rA[3], rB[3];
 int polinterr, polinterrRyck;
+int do_check_negpairs = 0;
+int set_pbonds(int i, int j)
+{
 #ifdef MD_SILICA
 #ifdef MD_THREESPOTS
-int mapbondsaSiO[MD_PBONDS]={1,1,2,2,3,3};
-int mapbondsbSiO[MD_PBONDS]={1,2,1,2,1,2};
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    return MD_PBONDS_AA;
+  else if (i >= Oparams.parnumA && j >= Oparams.parnumA)
+    return MD_PBONDS_BB;
+  else
+    return MD_PBONDS_AB;
+#else
+return MD_PBONDS;
+#endif
+#else
+return MD_PBONDS;
+#endif
+}
+#ifdef MD_SILICA
+#ifdef MD_THREESPOTS
+int mapbondsaAB[MD_PBONDS_AB]={1,1,2,2,3,3};
+int mapbondsbAB[MD_PBONDS_AB]={1,2,1,2,1,2};
+int mapbondsaAA[MD_PBONDS_AA]={1,1,2,2};
+int mapbondsbAA[MD_PBONDS_AA]={1,2,1,2};
+int mapbondsaBB[MD_PBONDS_BB]={1,1,1,2,2,2,3,3,3};
+int mapbondsbBB[MD_PBONDS_BB]={1,2,3,1,2,3,1,2,3};
 #else
 int mapbondsaSiO[MD_PBONDS]={1,1,2,2,3,3,4,4};
 int mapbondsbSiO[MD_PBONDS]={1,2,1,2,1,2,1,2};
@@ -1141,9 +1163,9 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 //	shift[a] = 0.0;
     }
 #endif
-  MD_DEBUG10(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
+  MD_DEBUG30(printf("[STICKY bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   /* qui calcolo il punto di contatto */
-  MD_DEBUG20(printf("ata: %d atb: %d\n", ata, atb));
+  MD_DEBUG30(printf("STICKY i=%d j=%d ata: %d atb: %d\n", i, j, ata, atb));
   MD_DEBUG20(printf("rA %f %f %f\n", rA[0], rA[1], rA[2]));
   MD_DEBUG20(printf("rB %f %f %f\n", rB[0], rB[1], rB[2]));
   BuildAtomPosAt(i, ata, rA, R[i], ratA);
@@ -2184,6 +2206,35 @@ int ibr, jbr, nnbr;
 double shiftbr[3], trefbr;
 #if 1
 #ifdef MD_SILICA
+#ifdef MD_THREESPOTS
+void assign_bond_mapping(int i, int j)
+{
+  /* NOTA: l'interazione bonded è solo tra Si e O 
+   * i <  Oparams.parnumA => O
+   * i >=  Oparams.parnumA => Si */
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    {
+      mapbondsa = mapbondsaAA;
+      mapbondsb = mapbondsbAA;
+    }
+  else if (i >= Oparams.parnumA && j >= Oparams.parnumA)
+    {
+      mapbondsa = mapbondsaBB;
+      mapbondsb = mapbondsbBB;
+
+    }
+  else if (i < Oparams.parnumA && j >= Oparams.parnumA)
+    {
+      mapbondsa = mapbondsbAB;
+      mapbondsb = mapbondsaAB;
+    }
+  else
+    {
+      mapbondsa = mapbondsaAB;
+      mapbondsb = mapbondsbAB;
+    }
+}
+#else
 void assign_bond_mapping(int i, int j)
 {
   /* NOTA: l'interazione bonded è solo tra Si e O 
@@ -2200,6 +2251,7 @@ void assign_bond_mapping(int i, int j)
       mapbondsb = mapbondsbSiO;
     }
 }
+#endif
 #endif
 #endif
 double funcs2beZeroed(double x, double tref, int i, int j, int nn, double shift[3])
@@ -2323,7 +2375,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin
   double ratA[NA][3], ratB[NA][3], dist;
   int firstdist = 1, nn, kk;
   double Omega[3][3];
-  int na;
+  int na, npbonds;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
@@ -2353,9 +2405,10 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin
     }
   /* calcola sigmaSq[][]!!! */
   distmin = 0;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  npbonds = set_pbonds(i, j);
+  for (nn = 0; nn < npbonds; nn++)
     {
-      if (bondpair != -1 && bondpair != nn)
+     if (bondpair != -1 && bondpair != nn)
 	{
 	  //printf("qui in calcDistNeg\n");
 	  continue;
@@ -2596,11 +2649,12 @@ int refine_contact(int i, int j, double tref, double t1, double t2, int nn, doub
  * dell'acqua e della silica, quindi lo tratto a parte.
  * Inoltre non c'è interazione tra un atomo grosso e un atomo sticky. */
 int check_cross(double distsOld[MD_PBONDS], double dists[MD_PBONDS], 
-		int crossed[MD_PBONDS], int bondpair)
+		int crossed[MD_PBONDS], int bondpair, int npbonds)
 {
   int nn;
   int retcross = 0;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+ 
+  for (nn = 0; nn < npbonds; nn++)
     {
       crossed[nn] = MD_EVENT_NONE;
       if (bondpair != -1 && bondpair != nn)
@@ -2620,8 +2674,10 @@ int check_cross_strictcheck(int i, int j, double distsOld[MD_PBONDS], double dis
 		int crossed[MD_PBONDS], int bondpair)
 {
   int nn;
-  int retcross = 0;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  int retcross = 0, npbonds;
+
+  npbonds = set_pbonds(i, j);
+  for (nn = 0; nn < npbonds; nn++)
     {
       crossed[nn] = MD_EVENT_NONE;
       if (bondpair != -1 && bondpair != nn)
@@ -2642,8 +2698,9 @@ int check_cross_strictcheck(int i, int j, double distsOld[MD_PBONDS], double dis
 int check_cross_strictcheck_sf(int i, int j, double distsOld[MD_PBONDS], double dists[MD_PBONDS], int crossed[MD_PBONDS], int bondpair)
 {
   int nn;
-  int retcross = 0;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  int retcross = 0, npbonds;
+  npbonds = set_pbonds(i, j);
+  for (nn = 0; nn < npbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -2659,11 +2716,11 @@ int check_cross_strictcheck_sf(int i, int j, double distsOld[MD_PBONDS], double 
 
 
 int get_dists_tocheck(double distsOld[], double dists[], int tocheck[], int dorefine[],
-		      int bondpair)
+		      int bondpair, int npbonds)
 {
   int nn;
   int rettochk = 0;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  for (nn = 0; nn < npbonds; nn++)
     {
       tocheck[nn] = 0;
       if ( dists[nn]*distsOld[nn] > 0.0 &&
@@ -2676,11 +2733,11 @@ int get_dists_tocheck(double distsOld[], double dists[], int tocheck[], int dore
     }
   return rettochk;
 }
-double get_max_deldist(double distsOld[MD_PBONDS], double dists[MD_PBONDS], int bondpair)
+double get_max_deldist(double distsOld[MD_PBONDS], double dists[MD_PBONDS], int bondpair, int npbonds)
 {
   int nn, first = 1;
   double maxdd=0.0, dd;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  for (nn = 0; nn < npbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -2706,7 +2763,7 @@ double eval_maxddist(int i, int j, int bondpair, double t1, double *maxddotOpt)
   double ti, rA[3], rB[3], Omega[3][3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
 	 r12i[3], r12j[3];//, maxddotOpt[MD_PBONDS];
   double maxddot=0.0, nr12i, nr12j;
-  int nn, kk;
+  int nn, kk, npbonds;
   ti = t1 - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -2721,7 +2778,8 @@ double eval_maxddist(int i, int j, int bondpair, double t1, double *maxddotOpt)
   /* ...and now orientations */
   UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
   BuildAtomPos(j, rB, RtB, ratB);
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  npbonds = set_pbonds(i, j);
+  for (nn = 0; nn < npbonds; nn++)
     {
       for (kk = 0; kk < 3; kk++)
 	{
@@ -2755,11 +2813,11 @@ double eval_maxddist(int i, int j, int bondpair, double t1, double *maxddotOpt)
     }
   return maxddot;
 }
-void calc_delt(double *maxddoti, double *delt, double *dists, int bondpair)
+void calc_delt(double *maxddoti, double *delt, double *dists, int bondpair, int npbonds)
 {
   int nn;
   double dt;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  for (nn = 0; nn < npbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -2777,7 +2835,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
   double told, delt, distsOld[MD_PBONDS];
   const int MAXOPTITS = 500;
-  int its=0, amin, bmin, crossed[MD_PBONDS]; 
+  int its=0, amin, bmin, crossed[MD_PBONDS], npbonds; 
   /* estimate of maximum rate of change for d */
 #if 0
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
@@ -2790,6 +2848,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
   MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
   delt = OprogStatus.h;
+  npbonds = set_pbonds(i, j);
   if (fabs(*d1) < epsdFast)
     {
       assign_dists(distsOld, dists);
@@ -2800,7 +2859,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
       if (maxddot*(t2-(t1+*t)) < fabs(*d1)-OprogStatus.epsd)
 	return 1;
 #ifdef MD_OPTDDIST
-      calc_delt(maxddoti, &delt, distsOld, bondpair);
+      calc_delt(maxddoti, &delt, distsOld, bondpair, npbonds);
 #else
       delt = fabs(*d1) / maxddot;
 #endif
@@ -2819,7 +2878,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
       //printf("[SEARCH_CONTACT_FASTER] t=%.15G maxddot=%.15G\n", *t, eval_maxddist(i, j, bondpair, *t));
       *t += delt;
       *d1 = calcDistNeg(*t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-      if (check_cross(distsOld, dists, crossed, bondpair))
+      if (check_cross(distsOld, dists, crossed, bondpair, npbonds))
 	{
 	  /* go back! */
 	  MD_DEBUG30(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
@@ -2984,7 +3043,7 @@ int interpol(int i, int j, int nn,
   dmin = calcDistNegOne(*tmin, tref, i, j, nn, shift);
 #if 0
   printf("delt=%.15G *tmin=%.15G BAH=%.15G\n", delt, *tmin, 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5)));
-printf("A=%.15G\n", A);
+  printf("A=%.15G i=%d j=%d\n", A, i, j);
   printf("{{%.15G,%.15G},{%.15G,%.15G},{%.15G,%.15G}} - *tmin=%.15G,%.15G\n", t, d1, t+delt*0.5,d3, t+delt, d2, *tmin, dmin);
 #endif
   if (*tmin < t+delt && *tmin > t && (d1*dmin < 0.0 || ignoresignchg))
@@ -3036,10 +3095,11 @@ int valid_collision(int i, int j, int ata, int atb, int collCode)
 }
 int get_bonded(int i, int j)
 {
-  int nb, jj, jj2, kk, nn, aa, bb;
+  int nb, jj, jj2, kk, nn, aa, bb, npbonds;
   nb = numbonds[i];
   if (!OprogStatus.assumeOneBond)
     return -1;
+  npbonds = set_pbonds(i, j);
   for (kk = 0; kk < nb; kk++)
     {
       jj = bonds[i][kk] / (NA*NA);
@@ -3048,7 +3108,7 @@ int get_bonded(int i, int j)
       bb = jj2 % NA;
       if (jj == j)
 	{
-	  for (nn=0; nn < MD_PBONDS; nn++)
+	  for (nn=0; nn < npbonds; nn++)
 	    if (mapbondsa[nn]==aa && mapbondsb[nn]==bb)
 	      return nn;
 	} 
@@ -3059,12 +3119,13 @@ int get_bonded(int i, int j)
 
 int check_negpairs(int *negpairs, int bondpair, int i, int j)
 {
-  int nn, sum;
+  int nn, sum, npbonds;
   sum = 0;
 //  if (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == 0 
   //    && lastbump[j].at == 0)
     //return 2;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  npbonds = set_pbonds(i, j);
+  for (nn = 0; nn < npbonds; nn++)
     {
       negpairs[nn] = 0;
       if (bondpair != -1 && bondpair != nn)
@@ -3088,8 +3149,9 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
 
 int delt_is_too_big_hc(int i, int j, int bondpair, double *dists)
 {
-  int nn;
-  for (nn=0; nn < MD_PBONDS; nn++)
+  int nn, npbonds;
+  npbonds = set_pbonds(i, j);
+  for (nn=0; nn < npbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -3103,8 +3165,9 @@ int delt_is_too_big_hc(int i, int j, int bondpair, double *dists)
 int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 		    int *negpairs)
 {
-  int nn;
-  for (nn=0; nn < MD_PBONDS; nn++)
+  int nn, npbonds;
+  npbonds = set_pbonds(i, j);
+  for (nn=0; nn < npbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -3139,7 +3202,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   double h, d, dold, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS]; 
   double maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   //const int MAXOPTITS = 4;
-  int bondpair, itstb, adjt1=0;
+  int bondpair, itstb, adjt1=0, npbonds;
   int its, foundrc;
 #if 0
   //const int MAXITS = 100;
@@ -3164,6 +3227,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #ifdef MD_SILICA
   assign_bond_mapping(i, j);
 #endif
+  npbonds = set_pbonds(i, j);
   /* NOTA: 
    * - epsd è di quanto varia d ad ogni iterazione e quindi determina il grado di accuratezza
    * con cui viene individuato il punto di contatto. In generale se due ellissoidi si "spizzicano"
@@ -3186,7 +3250,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
 
   //printf("[LOCATE_CONTACT INIZIO] t=%.15G maxddot=%.15G\n", t1, eval_maxddist(i, j, bondpair, t1));
-  MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
+  MD_DEBUG30(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = OprogStatus.h; /* last resort time increment */
   if (*collCode!=MD_EVENT_NONE)
     {
@@ -3201,7 +3265,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
    * 2) fare un passo ed eventualmente ridurlo finchè la distanza non è corretta.
    */
   df = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-  for (nn=0; nn < MD_PBONDS; nn++)
+  for (nn=0; nn < npbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -3238,7 +3302,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
   MD_DEBUG30(printf("[BEFORE SEARCH CONTACT FASTER]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
 #ifdef MD_NEGPAIRS
-  sumnegpairs = check_negpairs(negpairs, bondpair, i, j); 
+  /* tale check ha senso solo appena dopo un urto fra i e j */
+  if (do_check_negpairs)
+    sumnegpairs = check_negpairs(negpairs, bondpair, i, j); 
+  else
+    sumnegpairs = 0;
 #endif
 #if 0
 #ifdef MD_NEGPAIRS
@@ -3271,8 +3339,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #if 0
   dold=calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
   d=calcDistNeg(t+1E-20, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
-  printf("d-dold=%.30G\n", d-dold);
 #endif
+  MD_DEBUG30(
+  if (sumnegpairs)
+    printf("_======> d=%.30G\n", calcDistNeg(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair));
+    )
   if (search_contact_faster(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot, maxddoti))
     {
       return 0;  
@@ -3321,7 +3392,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #else
       if (!firstaftsf)
 	{
-	  deldist = get_max_deldist(distsOld2, distsOld, bondpair);
+	  deldist = get_max_deldist(distsOld2, distsOld, bondpair, npbonds);
 	  normddot = fabs(deldist)/delt;
 	  /* NOTA: forse qui si potrebbe anche usare sempre delt = epsd/maxddot */
 	  if (normddot!=0)
@@ -3378,7 +3449,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       //dold2 = dold;
       d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 
-      deldist = get_max_deldist(distsOld, dists, bondpair);
+      deldist = get_max_deldist(distsOld, dists, bondpair, npbonds);
       if (deldist > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -3420,6 +3491,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
 	  if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs))
 	    {
+	      //printf("delt=%.15G\n", delt);
 	      if (!interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
 			    dists[sumnegpairs-1], &tmin, shift, 1))
 		{
@@ -3434,7 +3506,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #if 1
 	      else 
 		{
-		  printf("[INFO] using old goldenfactor method to reduce delt\n");
+		  MD_DEBUG30(printf("[INFO] using old goldenfactor method to reduce delt\n"));
+		  MD_DEBUG30(exit(-1));
+		  //printf("tini=%.15G tmin=%.15G t+delt=%.15G sumnegpairs=%d delt=%.15G d1=%.15G d2=%.15G\n",
+		//	 tini, tmin, tini+delt, sumnegpairs, delt, distsOld[sumnegpairs-1],
+		//	 dists[sumnegpairs-1]);
+	
 		  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 			 delt > minh)
 		    {
@@ -3459,13 +3536,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	}
 #endif
       MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
-      for (nn=0; nn < MD_PBONDS; nn++)
+      for (nn=0; nn < npbonds; nn++)
 	dorefine[nn] = MD_EVENT_NONE;
       //ncr=check_cross_strictcheck(i, j, distsOld, dists, crossed, bondpair);
-      ncr=check_cross(distsOld, dists, crossed, bondpair);
+      ncr=check_cross(distsOld, dists, crossed, bondpair, npbonds);
       /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
        * sticky */
-      for (nn = 0; nn < MD_PBONDS; nn++)
+      for (nn = 0; nn < npbonds; nn++)
 	{
 	  t2arr[nn] = t; 
 
@@ -3496,8 +3573,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 
 #define MD_INTERPOL
 #ifdef MD_INTERPOL
-      ntc = get_dists_tocheck(distsOld, dists, tocheck, dorefine, bondpair);
-      for (nn = 0; nn < MD_PBONDS; nn++)
+      ntc = get_dists_tocheck(distsOld, dists, tocheck, dorefine, bondpair, npbonds);
+      for (nn = 0; nn < npbonds; nn++)
 	{
 	  if (tocheck[nn])
 	    {
@@ -3521,7 +3598,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #endif
       tmin = 0;
       gotcoll = 0;
-      for (nn = 0; nn < MD_PBONDS; nn++)
+      for (nn = 0; nn < npbonds; nn++)
 	{
 	  if (dorefine[nn]!=MD_EVENT_NONE)
 	    {
@@ -3880,7 +3957,7 @@ void PredictCellCross(int na, int nc)
 //	 na, ATOM_LIMIT+evCode, k, tm[k], tm[k]+Oparams.time, evCode);
 
 }
-int sticky_bump(int nl)
+int sticky_bump(int n, int na, int nl)
 {
 #ifdef MD_THREESPOTS
   return 1;
@@ -4016,7 +4093,7 @@ void PredictColl (int na, int nb, int nl)
     		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
     		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
 		      /* N.B. 2 e 3 sono le liste per urti tra specie diverse */
-		      if (sticky_bump(nl))
+		      if (sticky_bump(n,na,nl))
 			{
 			  /* maxax[...] è il diametro dei centroidi dei due tipi
 			   * di ellissoidi */
@@ -4126,7 +4203,7 @@ void PredictColl (int na, int nb, int nl)
 		      //exit(-1);
 #if 1
 		      /* gli sticky spots esistono solo nell'interazione AB */
-		      if (sticky_bump(nl))
+		      if (sticky_bump(n,na,nl))
 			{
 			  if (!locate_contact(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 			    {
@@ -4787,6 +4864,7 @@ void ProcessCollision(void)
 #ifdef MD_HSVISCO
   OprogStatus.lastcoll = Oparams.time;
 #endif
+  do_check_negpairs = 1;
 #ifdef MD_SILICA
   iA = (evIdA<Oparams.parnumA)?0:1;
   nl_ignore = (evIdA<Oparams.parnumA)?1:0;
@@ -4809,11 +4887,12 @@ void ProcessCollision(void)
 	continue;
       PredictColl(evIdB, evIdA, nl);
     }
+  
 #else
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
 #endif
-  
+  do_check_negpairs = 0;
 }
 #ifdef MD_SILICA
 void docellcross2(int k, double velk, int cellsk, int nc)
