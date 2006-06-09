@@ -391,7 +391,7 @@ void rebuild_linked_list()
   double L2;
   int j, n, nl, iA, nc;
   L2 = 0.5 * L;
-  for (nl = 0; nl < 3; nl++)
+  for (nl = 0; nl < 4; nl++)
     {
       cellsx[nl] = L / Oparams.rcut[nl];
       cellsy[nl] = L / Oparams.rcut[nl];
@@ -401,7 +401,7 @@ void rebuild_linked_list()
       cellsz[nl] = L / Oparams.rcut[nl];
 #endif 
     }
-  for (nl = 0; nl < 3; nl++)
+  for (nl = 0; nl < 4; nl++)
     {
       for (j = 0; j < cellsx[nl]*cellsy[nl]*cellsz[nl] + Oparams.parnum; j++)
 	cellList[nl][j] = -1;
@@ -3880,6 +3880,17 @@ void PredictCellCross(int na, int nc)
 //	 na, ATOM_LIMIT+evCode, k, tm[k], tm[k]+Oparams.time, evCode);
 
 }
+int sticky_bump(int nl)
+{
+#ifdef MD_THREESPOTS
+  return 1;
+#else
+  if (nl==2||nl==3)
+    return 1;
+  else 
+    return 0;
+#endif
+}
 void PredictColl (int na, int nb, int nl) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -4004,7 +4015,8 @@ void PredictColl (int na, int nb, int nl)
 	    	      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
     		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
     		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-		      if (nl==2||nl==3)
+		      /* N.B. 2 e 3 sono le liste per urti tra specie diverse */
+		      if (sticky_bump(nl))
 			{
 			  /* maxax[...] è il diametro dei centroidi dei due tipi
 			   * di ellissoidi */
@@ -4019,7 +4031,7 @@ void PredictColl (int na, int nb, int nl)
 			      else if (na >= parnumA && n >= parnumA)
 				sigSq = Sqr(maxax[na]);
 			      else
-				sigSq = Sqr((maxax[n]+maxax[na])*0.5+Oparams.sigmaSticky+OprogStatus.epsd);
+				sigSq = Sqr((maxax[n]+maxax[na])*0.5);
 			    }
 			  MD_DEBUG2(printf("sigSq: %f\n", sigSq));
  			  d = Sqr (b) - vv * (distSq - sigSq);
@@ -4114,7 +4126,7 @@ void PredictColl (int na, int nb, int nl)
 		      //exit(-1);
 #if 1
 		      /* gli sticky spots esistono solo nell'interazione AB */
-		      if (nl == 2 || nl == 3)
+		      if (sticky_bump(nl))
 			{
 			  if (!locate_contact(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 			    {
@@ -4337,7 +4349,7 @@ void PredictEvent (int na, int nb)
 			  else if (na >= parnumA && n >= parnumA)
 			    sigSq = Sqr(maxax[na]);
 			  else
-			    sigSq = Sqr((maxax[n]+maxax[na])*0.5+Oparams.sigmaSticky+OprogStatus.epsd);
+			    sigSq = Sqr((maxax[n]+maxax[na])*0.5);
 			}
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 		      tInt = Oparams.time - atomTime[n];

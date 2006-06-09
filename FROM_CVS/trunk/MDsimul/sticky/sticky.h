@@ -766,6 +766,18 @@ struct singlePar OsinglePar[] = {
   {"P",          &Oparams.P,                  CT},
   {"L",          &L,                          CT},
 #ifdef MD_SILICA
+#ifdef MD_THREESPOTS
+  {"sigmaAA", &Oparams.sigma[1][1], CT},
+  {"sigmaBB",  &Oparams.sigma[0][0], CT},
+  {"sigmaAB", &Oparams.sigma[0][1], CT},
+  {"massA",   &Oparams.m[1], CT},
+  {"massB",    &Oparams.m[0], CT},
+  {"bheight",  &Oparams.bheight,            CT},
+#ifndef MD_ASYM_ITENS
+  {"IA",      &Oparams.I[1],      CT},
+  {"IB",       &Oparams.I[0],      CT},
+#endif
+#else
   {"sigmaSiSi", &Oparams.sigma[1][1], CT},
   {"sigmaOO",  &Oparams.sigma[0][0], CT},
   {"sigmaSiO", &Oparams.sigma[0][1], CT},
@@ -775,6 +787,7 @@ struct singlePar OsinglePar[] = {
 #ifndef MD_ASYM_ITENS
   {"ISi",      &Oparams.I[1],      CT},
   {"IO",       &Oparams.I[0],      CT},
+#endif
 #endif
 #else
   /* sigma[0][0] = atomo grande  
@@ -796,9 +809,15 @@ struct singlePar OsinglePar[] = {
   {"targetPhi", &OprogStatus.targetPhi, CT},
   {"eventMult",  &OprogStatus.eventMult,    INT},
 #ifdef MD_SILICA
+#ifdef MD_THREESPOTS
+  {"rcutAA",       &Oparams.rcut[0],             CT},
+  {"rcutBB",      &Oparams.rcut[1],             CT},
+  {"rcutAB",      &Oparams.rcut[2],             CT},
+#else
   {"rcutOO",       &Oparams.rcut[0],             CT},
   {"rcutSiSi",     &Oparams.rcut[1],             CT},
   {"rcutSiO",      &Oparams.rcut[2],             CT},
+#endif
 #else
   {"rcut",       &Oparams.rcut,             CT},
 #endif
