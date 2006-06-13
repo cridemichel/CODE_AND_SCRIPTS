@@ -38,7 +38,7 @@ extern int SolveLineq (double **a, double *x, int n);
 int calcdist_retcheck;
 double rA[3], rB[3];
 int polinterr, polinterrRyck;
-int do_check_negpairs = 0;
+int do_check_negpairs = 1;
 int set_pbonds(int i, int j)
 {
 #ifdef MD_SILICA
@@ -3508,9 +3508,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		{
 		  MD_DEBUG30(printf("[INFO] using old goldenfactor method to reduce delt\n"));
 		  MD_DEBUG30(exit(-1));
-		  //printf("tini=%.15G tmin=%.15G t+delt=%.15G sumnegpairs=%d delt=%.15G d1=%.15G d2=%.15G\n",
-		//	 tini, tmin, tini+delt, sumnegpairs, delt, distsOld[sumnegpairs-1],
-		//	 dists[sumnegpairs-1]);
+		  /*printf("tini=%.15G tmin=%.15G t+delt=%.15G sumnegpairs=%d delt=%.15G d1=%.15G d2=%.15G\n",
+			 tini, tmin, tini+delt, sumnegpairs, delt, distsOld[sumnegpairs-1],
+			 dists[sumnegpairs-1]);*/
 	
 		  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 			 delt > minh)
@@ -4892,7 +4892,7 @@ void ProcessCollision(void)
   PredictEvent(evIdA, -1);
   PredictEvent(evIdB, evIdA);
 #endif
-  do_check_negpairs = 0;
+  do_check_negpairs = 1;
 }
 #ifdef MD_SILICA
 void docellcross2(int k, double velk, int cellsk, int nc)
