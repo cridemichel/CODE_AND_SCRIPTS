@@ -21,6 +21,7 @@ extern int *equilibrated;
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **REtA, **REtB;
 extern double cosEulAng[2][3], sinEulAng[2][3];
 extern long long int itsFNL, timesFNL, timesSNL, itsSNL;
+extern int do_check_negpairs;
 #ifdef MD_ASYM_ITENS
 extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp, *angM;
 #else
@@ -1457,7 +1458,10 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #endif
   MD_DEBUG30(printf("[BEFORE SEARCH CONTACT FASTER_SP]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
 #ifdef MD_NEGPAIRS
-  sumnegpairs = check_negpairs(negpairs, bondpair, i, j); 
+  if (do_check_negpairs)
+    sumnegpairs = check_negpairs(negpairs, bondpair, i, j); 
+  else
+    sumnegpairs = 0;
 #endif
   if (search_contact_fasterSP(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot, maxddoti))
     {
@@ -1561,6 +1565,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #if 1
 	      else 
 		{
+		  printf("[INFO] using old goldenfactor method to reduce delt\n");
 		  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 			 delt > minh)
 		    {

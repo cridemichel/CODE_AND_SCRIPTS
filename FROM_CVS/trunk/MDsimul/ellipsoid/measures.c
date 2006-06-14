@@ -484,8 +484,8 @@ void temperat(void)
       temp = OprogStatus.sumTemp / NUMCALCS;
     }
 #ifdef MD_INELASTIC
-  dofTra = dof/2;
-  dofRot = dof/2;
+  dofTra = 3;
+  dofRot = 2;
   if (OprogStatus.brownian==1)
     {
       tempRot = 2.0 * Krot / dofRot;

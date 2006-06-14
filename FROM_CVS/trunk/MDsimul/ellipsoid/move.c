@@ -15,6 +15,7 @@ extern int *equilibrated;
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
 double minaxA, minaxB, minaxAB;
+int do_check_negpairs = 0;
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
 #else
@@ -6042,6 +6043,7 @@ void ProcessCollision(void)
 #else
   OprogStatus.lastcolltime[evIdA] = OprogStatus.lastcolltime[evIdB] = 
     lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+  do_check_negpairs = 1;
 #ifdef MD_CALC_DPP
   store_last_u(evIdA);
   store_last_u(evIdB);
@@ -6075,6 +6077,7 @@ void ProcessCollision(void)
       PredictEvent(evIdA, -1);
       PredictEvent(evIdB, evIdA);
     }
+  do_check_negpairs = 0;
 }
 void docellcross(int k, double velk, double *rkptr, int cellsk)
 {
