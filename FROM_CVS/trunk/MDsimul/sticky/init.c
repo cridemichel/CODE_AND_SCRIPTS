@@ -2097,9 +2097,11 @@ void usrInitAft(void)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
 	/* l'interazione bonded è solo tra Si e O!! */
+#ifndef MD_THREESPOTS
 	if ( !((i < Oparams.parnumA && j >= Oparams.parnumA)||
 	       (i >= Oparams.parnumA && j < Oparams.parnumA)) )
 	  continue; 
+#endif
 	drx = rx[i] - rx[j];
 	shift[0] = L*rint(drx/L);
 	dry = ry[i] - ry[j];
