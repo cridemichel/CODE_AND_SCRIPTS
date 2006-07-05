@@ -141,10 +141,14 @@ void calcV(void)
  tref = 0.0;
 #endif
 #ifdef MD_SILICA
+#ifdef MD_THREESPOTS
+   fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V);
+#else
  if (Oparams.parnumA < Oparams.parnum)
    fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum-Oparams.parnumA));
  else
    fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum));
+#endif
 #else
  fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum));
 #endif
