@@ -731,6 +731,23 @@ void bump (int i, int j, double* W)
   vy[j] = vy[j] - delvy;
   vz[i] = vz[i] + delvz;
   vz[j] = vz[j] - delvz;
+#ifdef MD_FULL_LANG
+  factor = ( rxij * ( v2x[i] - v2x[j] ) +
+	    ryij * ( v2y[i] - v2y[j] ) +
+	    rzij * ( v2z[i] - v2z[j] ) ) / sigSq;
+  if (factor < 0.0)
+    {
+      delvx = - factor * rxij;
+      delvy = - factor * ryij;
+      delvz = - factor * rzij;
+      v2x[i] = v2x[i] + delvx;
+      v2x[j] = v2x[j] - delvx;
+      v2y[i] = v2y[i] + delvy;
+      v2y[j] = v2y[j] - delvy;
+      v2z[i] = v2z[i] + delvz;
+      v2z[j] = v2z[j] - delvz;
+     }
+#endif
 #ifdef MD_HSVISCO 
   if (OprogStatus.lastcoll!=-1)
     {
@@ -1593,9 +1610,9 @@ void velsFullLang(double T, double xi)
       bigauss(sigmar, sigmav, crv, &drz, &dvz);
 
       /* 14/07/06: CHECK WHAT FOLLOWS!!! */
-      vx[i] = vx[i]*(1.0 - c0)/chsi + drx;
-      vy[i] = vy[i]*(1.0 - c0)/chsi + dry;
-      vz[i] = vz[i]*(1.0 - c0)/chsi + drz;
+      vx[i] = v2x[i]*(1.0 - c0)/chsi + drx;
+      vy[i] = v2y[i]*(1.0 - c0)/chsi + dry;
+      vz[i] = v2z[i]*(1.0 - c0)/chsi + drz;
       vx[i] /= dt;
       vy[i] /= dt;
       vz[i] /= dt;
