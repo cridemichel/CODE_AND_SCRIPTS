@@ -29,7 +29,9 @@ int checkz(char *msg)
     }
   return 0;
 }
-
+#ifdef MD_FULL_LANG
+extern bigauss(double sigma1, double sigma2, double c12, double* chsi1p, double* chsi2p);
+#endif
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 extern char TXT[MSG_LEN];
@@ -1527,7 +1529,147 @@ void velsKick (double Txi)
   /* TODO: do we need to move the center of mass to the origin? see comvel() routine */
 }
 #endif
+#ifdef MD_FULL_LANG
+void velsFullLang(double T, double xi)
+{
+ /*
+    Translational velocities from maxwell-boltzmann distribution  
+    The routine put in vx, vy, vz a velocity choosen from a M.-B. 
+    distribution.
+    
+    The distribution is determined by temperature and (unit) mass.
+    This routine is general, and can be used for atoms, linear    
+    molecules, and non-linear molecules.                          
+    
+    ROUTINE REFERENCED:                                          
+    
+    COORD_TYPE gauss(void)
+    Returns a uniform random normal variate from a           
+    distribution with zero mean and unit variance.           
+    
+    VARIABLES 
+    COORD_TYPE temp       Temperature 
+    m[NA]                 Masses of atoms (NA is the number of atoms)
+    int  Nm               Number of molecules  
+  */
+  double rTemp, sumx, sumy, sumz, RCMx, RCMy, RCMz;
+  /*COORD_TYPE Px, Py, Pz;*/
+  int i;
+  double kTm, chsidt, echsidt, e2chsidt, chsi, c0, c1, c2, c1mc2, sigmar, sigmav, crv;	 
+  double drx, dry, drz;
 
+  rTemp = sqrt(temp / Oparams.m);  
+  kTm = Oparams.T / Oparams.m;
+  chsidt = Oparams.xi * Oparams.steplength;
+  echsidt  = exp(-Oparams.xi*Oparams.steplength);
+  e2chsidt = exp(-2.0*Oparams.xi*Oparams.steplength);
+  dt = Oparams.Dt;
+  chsi = Oparams.xi;
+  c0 = exp(-chsi*dt);
+  c1 = (1-c0)/(chsi*dt);
+  c2 = (1-c1)/(chsi*dt);
+  c1mc2 = c1 - c2;
+  /* qui si assume che le masse di tutti gli atomi del disco sono uguali! */
+  sigmar = sqrt( dt * (kTm / chsi) *
+		(2.0 -  ( 3.0 - 4.0 * echsidt + e2chsidt) / chsidt) );
+  sigmav = sqrt(kTm * ( 1.0 - e2chsidt ) );
+  crv = dt * kTm * Sqr( 1.0 - echsidt) / chsidt / sigmar / sigmav;
+  
+  /* variance of the velocities distribution function, we assume k = 1 */ 
+  for (i = 0; i < Nm; i++)
+    {
+      /* Set the velocities of both atoms to the center of mass velocities,
+         the exact velocities will be set in the angvel() routine, where we 
+         will set:
+	 Atom 1: v1  = Vcm + W^(d21 * m2/(m2+m1))
+	 Atom 2: v2  = Vcm - W^(d21 * m1/(m1+m2))
+	 where Vcm is the center of mass velocity (that is the actual 
+	 velocity of both atoms), W is the angular velocity of the molecule,
+	 d21 is the vector joining the two atoms (from 2 to 1) and 
+	 m1 and m2 are the masses of two atoms 
+      */
+      bigauss(sigmar, sigmav, crv, &drx, &dvx);
+      bigauss(sigmar, sigmav, crv, &dry, &dvy);
+      bigauss(sigmar, sigmav, crv, &drz, &dvz);
+
+      /* 14/07/06: CHECK WHAT FOLLOWS!!! */
+      vx[i] = vx[i]*(1.0 - c0)/chsi + drx;
+      vy[i] = vy[i]*(1.0 - c0)/chsi + dry;
+      vz[i] = vz[i]*(1.0 - c0)/chsi + drz;
+      vx[i] /= dt;
+      vy[i] /= dt;
+      vz[i] /= dt;
+      v2x[i] = (c0 - 1.0)*v2x[i] + dvx;
+      v2y[i] = (c0 - 1.0)*v2y[i] + dvy;
+      v2z[i] = (c0 - 1.0)*v2z[i] + dvz;
+
+      //vx[i] = rTemp * gauss();
+      //vy[i] = rTemp * gauss();
+      //vz[i] = rTemp * gauss();
+    }
+  /* Remove net momentum, to have a total momentum equals to zero */
+  sumx = 0.0;
+  sumy = 0.0;
+  sumz = 0.0;
+  
+  for (i=0; i < Nm; i++)
+       {
+	 /* (sumx, sumy, sumz) is the total momentum */ 
+	 sumx = sumx + vx[i];
+	 sumy = sumy + vy[i];
+	 sumz = sumz + vz[i];
+	 //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
+       }
+     
+  sumx = sumx / ((COORD_TYPE) Nm ); 
+  sumy = sumy / ((COORD_TYPE) Nm );
+  sumz = sumz / ((COORD_TYPE) Nm );
+
+  //Px=0.0; Py=0.0; Pz=0.0;
+  /* Now (sumx, sumy, sumz) is the total momentum per atom (Ptot/(2*Nm)) */
+  for(i = 0;i <  Nm; i++)
+    {
+      vx[i] = vx[i] - sumx;
+      vy[i] = vy[i] - sumy;
+      vz[i] = vz[i] - sumz;
+      /* In this way the total (net) momentum of the system of 
+	 molecules is zero */
+    }
+
+  if (!resetCM)
+    return;
+  /* ADD 27/1/1998:
+     And Now we put the center of mass of the box in the origin of axis
+     because otherwise int NPT method the total momentum is not zero */
+  RCMx = 0.0;
+  RCMy = 0.0;
+  RCMz = 0.0;
+
+  for (i = 0; i < Nm; i++)
+    {
+      RCMx += rx[i]; /* Here RCM is the center of mass of the box */
+      RCMy += ry[i];
+      RCMz += rz[i];
+    }
+  
+  RCMx /= (COORD_TYPE) Nm;
+  RCMy /= (COORD_TYPE) Nm;
+  RCMz /= (COORD_TYPE) Nm;
+
+  for(i=0; i < Nm; i++)
+    {
+      //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
+      rx[i] -= RCMx;
+      ry[i] -= RCMy;
+#ifndef MD_GRAVITY
+      rz[i] -= RCMz;
+#endif
+    }
+  /* Now the center of mass of the box is in the origin */
+
+
+}
+#endif
 void rebuildLinkedList(void)
 {
   int j, n;
@@ -1699,11 +1841,13 @@ void move(void)
 		  OprogStatus.lastcoll = OprogStatus.time;
 		}
 #endif
-              #ifdef MD_FPBROWNIAN
+              #if defined(MD_FPBROWNIAN)
                 /* in the FP-Brownian code, instead of re-randomizing velocities,
                    we need to evolve the velocities and then give them a "kick" */
                 velsKick(Oparams.T*Oparams.xi);
-              #else
+	      #elif defined(MD_FULL_LANG)
+	        velsFullLang(Oparams.T,Oparams.xi);
+	      #else
 	        velsBrown(Oparams.T);
               #endif
 #ifdef MD_HSVISCO
