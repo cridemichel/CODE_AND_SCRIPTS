@@ -89,8 +89,10 @@
 	   filling each one ).
 	 - Implement doubly dimensioned array as a definition apart.
 */
-#ifdef MD_POLYDISP
+#if defined(MD_POLYDISP)
 #define SAVE_LIST rx, ry, rz, vx, vy, vz, radii, lastcol
+#elif defined(MD_FULL_LANG)
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, v2x, v2y, v2z, lastcol
 #else
 #define SAVE_LIST rx, ry, rz, vx, vy, vz, lastcol
 #endif
@@ -116,8 +118,10 @@
    arrays (to see how AllocCoord() works see AllocCoord() code in 
    mdarray.c file).
 */
-#ifdef MD_POLYDISP
+#if defined(MD_POLYDISP)
 #define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz, &radii, &lastcol
+#elif defined(MD_FULL_LANG)
+#define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz, &v2x, &v2y, &v2z, &lastcol
 #else
 #define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz, &lastcol
 #endif
@@ -128,8 +132,10 @@
    from right to left, first we choose the molucule, then the atom and 
    finally the coordinate, for example consider the position: 
    coordinate(rx, ry, rz) <- atom <- molecule*/
-#ifdef MD_POLYDISP
+#if defined(MD_POLYDISP)
 #define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz, *radii, *lastcol
+#elif defined(MD_FULL_LANG)
+#define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz, *v2x, *v2y, *v2z, *lastcol
 #else
 #define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz, *lastcol
 #endif
@@ -369,7 +375,7 @@ struct params
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
   COORD_TYPE m;             /* atoms masses */
-#ifdef MD_FPBROWNIAN
+#if defined(MD_FPBROWNIAN) || defined(MD_FULL_LANG)
   COORD_TYPE xi;            /* Fokker-Planck damping xi for Brownian dyn. */
 #endif
   COORD_TYPE sigma;     /* pair potential length parameters */
@@ -516,7 +522,7 @@ struct pascii opar_ascii[]=
   {"P",                 &OP(P),                           1,   1, "%.6G"},
   {"T",                 &OP(T),                           1,   1, "%.6G"},
   {"m",                 &OP(m),                           1,   1, "%.6G"},
-#ifdef MD_FPBROWNIAN
+#if defined(MD_FPBROWNIAN) || defined(MD_FULL_LANG)
   {"xi",                &OP(xi),                          1,   1, "%.6G"},
 #endif
   {"sigma",             &OP(sigma),                       1,   1, "%.8G"},
@@ -649,7 +655,7 @@ struct singlePar OsinglePar[] = {
   {"ggrav",      &Oparams.ggrav,            CT},
 #endif
   {"mass",       &Oparams.m,                CT},
-#ifdef MD_FPBROWNIAN
+#if defined(MD_FPBROWNIAN) || defined(MD_FULL_LANG)
   {"xi",         &Oparams.xi,               CT},
 #endif
   {"targetPhi", &OprogStatus.targetPhi, CT},

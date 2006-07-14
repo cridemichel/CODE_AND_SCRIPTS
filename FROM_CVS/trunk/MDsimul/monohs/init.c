@@ -277,7 +277,21 @@ COORD_TYPE gauss(void)
 
   return  (((( a9 * r2 + a7 ) * r2 + a5 ) * r2 + a3 ) * r2 + a1 ) * r;
 }
+#ifdef MD_FULL_LANG
+void bigauss(double sigma1, double sigma2, double c12, double* chsi1p, double* chsi2p)
+{
+  /* 
+     Random bivariate from the standard normal distribution.
+     To be used for Brownian Dynamics.
+     */
+  double chsi1, chsi2;
 
+  chsi1 = gauss();
+  chsi2 = gauss();
+  *chsi1p = sigma1 * chsi1;
+  *chsi2p = sigma2 * ( c12 * chsi1 + sqrt(1 - Sqr(c12))*chsi2);
+}
+#endif
 void resetCM(int Nm)
 {
   COORD_TYPE sumx, sumy, sumz, RCMx, RCMy, RCMz;
