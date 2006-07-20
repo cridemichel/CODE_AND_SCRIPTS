@@ -30,7 +30,7 @@ int checkz(char *msg)
   return 0;
 }
 #ifdef MD_FULL_LANG
-extern bigauss(double sigma1, double sigma2, double c12, double* chsi1p, double* chsi2p);
+extern void bigauss(double sigma1, double sigma2, double c12, double* chsi1p, double* chsi2p);
 #endif
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
@@ -497,12 +497,14 @@ void outputSummary(void)
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
 	 (2.0*K/(3.0*Oparams.parnum-3.0)), Vz);
 #endif
+#ifndef MD_FULL_LANG
   f = fopenMPI(MD_HD_MIS "T.dat", "a");
   fprintf(f, "%.15f %.15f\n", OprogStatus.time, (2.0*K/(3.0*Oparams.parnum-3.0)));
   fclose(f);
   f = fopenMPI(MD_HD_MIS "Vz2.dat", "a");
   fprintf(f, "%.15f %.15f\n", OprogStatus.time, Sqr(Vz));
   fclose(f);
+#endif
   printf("Number of collisions: %lld\n", OprogStatus.collCount);
   if (OprogStatus.numquench==0)
     {
@@ -733,8 +735,8 @@ void bump (int i, int j, double* W)
   vz[j] = vz[j] - delvz;
 #ifdef MD_FULL_LANG
   factor = ( rxij * ( v2x[i] - v2x[j] ) +
-	    ryij * ( v2y[i] - v2y[j] ) +
-	    rzij * ( v2z[i] - v2z[j] ) ) / sigSq;
+  	ryij * ( v2y[i] - v2y[j] ) +
+        rzij * ( v2z[i] - v2z[j] ) ) / sigSq;
   if (factor < 0.0)
     {
       delvx = - factor * rxij;
@@ -1508,9 +1510,9 @@ void velsKick (double Txi)
       vx[i] += rTemp * gauss();
       vy[i] += rTemp * gauss();
       vz[i] += rTemp * gauss();
-      #ifdef MD_FPBROWNIAN_DEBUG
-        printf("velvil %d %.15G %.15G\n", i, OprogStatus.time, sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])));
-      #endif
+#ifdef MD_FPBROWNIAN_DEBUG
+       printf("velvil %d %.15G %.15G\n", i, OprogStatus.time, sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])));
+#endif
     }
 
   /* remove net momentum */
@@ -1571,15 +1573,16 @@ void velsFullLang(double T, double xi)
   */
   double rTemp, sumx, sumy, sumz, RCMx, RCMy, RCMz;
   /*COORD_TYPE Px, Py, Pz;*/
-  int i;
+  int i, Nm;
   double kTm, chsidt, echsidt, e2chsidt, chsi, c0, c1, c2, c1mc2, sigmar, sigmav, crv;	 
-  double drx, dry, drz;
+  double drx, dry, drz, dt, dvx, dvy, dvz;
 
-  rTemp = sqrt(temp / Oparams.m);  
+  Nm = Oparams.parnum;
+  //rTemp = sqrt(temp / Oparams.m);  
   kTm = Oparams.T / Oparams.m;
-  chsidt = Oparams.xi * Oparams.steplength;
-  echsidt  = exp(-Oparams.xi*Oparams.steplength);
-  e2chsidt = exp(-2.0*Oparams.xi*Oparams.steplength);
+  chsidt = Oparams.xi * Oparams.Dt;
+  echsidt  = exp(-Oparams.xi*Oparams.Dt);
+  e2chsidt = exp(-2.0*Oparams.xi*Oparams.Dt);
   dt = Oparams.Dt;
   chsi = Oparams.xi;
   c0 = exp(-chsi*dt);
@@ -1616,14 +1619,15 @@ void velsFullLang(double T, double xi)
       vx[i] /= dt;
       vy[i] /= dt;
       vz[i] /= dt;
-      v2x[i] = (c0 - 1.0)*v2x[i] + dvx;
-      v2y[i] = (c0 - 1.0)*v2y[i] + dvy;
-      v2z[i] = (c0 - 1.0)*v2z[i] + dvz;
+      v2x[i] = c0*v2x[i] + dvx;
+      v2y[i] = c0*v2y[i] + dvy;
+      v2z[i] = c0*v2z[i] + dvz;
 
       //vx[i] = rTemp * gauss();
       //vy[i] = rTemp * gauss();
       //vz[i] = rTemp * gauss();
     }
+  return;	
   /* Remove net momentum, to have a total momentum equals to zero */
   sumx = 0.0;
   sumy = 0.0;
@@ -1652,38 +1656,33 @@ void velsFullLang(double T, double xi)
       /* In this way the total (net) momentum of the system of 
 	 molecules is zero */
     }
-
-  if (!resetCM)
-    return;
-  /* ADD 27/1/1998:
-     And Now we put the center of mass of the box in the origin of axis
-     because otherwise int NPT method the total momentum is not zero */
-  RCMx = 0.0;
-  RCMy = 0.0;
-  RCMz = 0.0;
-
-  for (i = 0; i < Nm; i++)
-    {
-      RCMx += rx[i]; /* Here RCM is the center of mass of the box */
-      RCMy += ry[i];
-      RCMz += rz[i];
-    }
+  sumx = 0.0;
+  sumy = 0.0;
+  sumz = 0.0;
   
-  RCMx /= (COORD_TYPE) Nm;
-  RCMy /= (COORD_TYPE) Nm;
-  RCMz /= (COORD_TYPE) Nm;
+  for (i=0; i < Nm; i++)
+       {
+	 /* (sumx, sumy, sumz) is the total momentum */ 
+	 sumx = sumx + v2x[i];
+	 sumy = sumy + v2y[i];
+	 sumz = sumz + v2z[i];
+	 //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
+       }
+     
+  sumx = sumx / ((COORD_TYPE) Nm ); 
+  sumy = sumy / ((COORD_TYPE) Nm );
+  sumz = sumz / ((COORD_TYPE) Nm );
 
-  for(i=0; i < Nm; i++)
+  //Px=0.0; Py=0.0; Pz=0.0;
+  /* Now (sumx, sumy, sumz) is the total momentum per atom (Ptot/(2*Nm)) */
+  for(i = 0;i <  Nm; i++)
     {
-      //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
-      rx[i] -= RCMx;
-      ry[i] -= RCMy;
-#ifndef MD_GRAVITY
-      rz[i] -= RCMz;
-#endif
+      v2x[i] = v2x[i] - sumx;
+      v2y[i] = v2y[i] - sumy;
+      v2z[i] = v2z[i] - sumz;
+      /* In this way the total (net) momentum of the system of 
+	 molecules is zero */
     }
-  /* Now the center of mass of the box is in the origin */
-
 
 }
 #endif

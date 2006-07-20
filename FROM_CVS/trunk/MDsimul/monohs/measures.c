@@ -9,7 +9,7 @@
 
 void UpdateSystem (void);
 void calcKVz (void);
-
+FILE *mf;
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 
 #ifdef MPI
@@ -148,7 +148,13 @@ void transDiff(void)
     Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
   
   DrSqTot /= ((double) Oparams.parnum);
-  
+  mf = fopenMPI(absMisHD("msd.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", OprogStatus.time + OprogStatus.refTime, DrSqTot);
+#else
+  fprintf(mf, "%15G %.15G\n", OprogStatus.time, DrSqTot);
+#endif
+  fclose(mf);
 }
 
 /* ============================ >>> temperat <<< =========================== */
@@ -161,12 +167,24 @@ void temperat(void)
   K = 0.0;
   for (i = 0; i < Oparams.parnum; i++)
     {
+#ifdef MD_FULL_LANG
+      K += Sqr(v2x[i]) + Sqr(v2y[i]) + Sqr(v2z[i]);
+#else
       K += Sqr(vx[i]) + Sqr(vy[i]) + Sqr(vz[i]);
+#endif
     }
 
   K = 0.5 * K * Oparams.m;
 
   temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
+
+  mf = fopenMPI(absMisHD("T.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", OprogStatus.time + OprogStatus.refTime, temp);
+#else
+  fprintf(mf, "%15G %.15G\n", OprogStatus.time, temp);
+#endif
+  fclose(mf);
 
   Ktransl = 0.0;
   m = Oparams.m;

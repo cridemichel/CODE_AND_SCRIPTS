@@ -397,6 +397,11 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE m, int resetCM)
       vx[i] = rTemp * gauss();
       vy[i] = rTemp * gauss();
       vz[i] = rTemp * gauss();
+#ifdef MD_FULL_LANG
+      v2x[i] = rTemp * gauss();
+      v2y[i] = rTemp * gauss();
+      v2z[i] = rTemp * gauss();
+#endif
       //printf("rank[%d] vx[%d]: %f\n", my_rank, i, vx[i]);
       /* gauss() is a gaussian variable with mean = 0 and variance = 1, that is
                                2
@@ -824,6 +829,8 @@ void usrInitAft(void)
       FILE *f;
       /* truncate file to zero lenght */
       f = fopenMPI(MD_HD_MIS "T.dat", "w");
+      fclose(f);
+      f = fopenMPI(absMisHD("msd.dat"), "w+");
       fclose(f);
       f = fopenMPI(MD_HD_MIS "Vz2.dat", "w");
       fclose(f);
