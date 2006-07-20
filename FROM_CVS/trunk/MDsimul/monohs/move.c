@@ -1548,6 +1548,34 @@ void velsKick (double Txi)
   /* TODO: do we need to move the center of mass to the origin? see comvel() routine */
 }
 #endif
+#ifdef MD_MICRO_LANG
+extern double gauss(void);
+void velsMicroLang(double T, double xi)
+{
+   double c1, c2, M, n, gam, vpx, vpy, vpz, m, kTm;
+   int i;
+   n = 1.0/Oparams.Dt;
+   M = Oparams.m;
+   gam = Oparams.xi*M;
+   m = Oparams.Dt*gam / 2.0; 	
+   c1 = (M - m)/(M+m);
+   kTm = sqrt(Oparams.T / m);
+   c2 = kTm*2*m / (M+m);
+   //printf("c1=%f c2=%f T=%.15G m=%.15G\n", c1, c2, T, m);
+   for (i = 0; i < Oparams.parnum; i++)
+    {
+       vpx = gauss();
+       vpy = gauss();
+       vpz = gauss();
+       vx[i] = c1*vx[i] + c2*vpx;
+       vy[i] = c1*vy[i] + c2*vpy;
+       vz[i] = c1*vz[i] + c2*vpz;
+       //printf("vpx=%.15G,%.15G,%.15G kTm=%.15G\n", vpx, vpy, vpz, kTm);
+       //printf("(%.15G, %.15G, %.15G)\n", vx[i], vy[i], vz[i]);
+     }  
+    
+} 
+#endif
 #ifdef MD_FULL_LANG
 void velsFullLang(double T, double xi)
 {
@@ -1622,17 +1650,15 @@ void velsFullLang(double T, double xi)
       v2x[i] = c0*v2x[i] + dvx;
       v2y[i] = c0*v2y[i] + dvy;
       v2z[i] = c0*v2z[i] + dvz;
-
       //vx[i] = rTemp * gauss();
       //vy[i] = rTemp * gauss();
       //vz[i] = rTemp * gauss();
     }
-  return;	
   /* Remove net momentum, to have a total momentum equals to zero */
   sumx = 0.0;
   sumy = 0.0;
   sumz = 0.0;
-  
+  return; 
   for (i=0; i < Nm; i++)
        {
 	 /* (sumx, sumy, sumz) is the total momentum */ 
@@ -1863,6 +1889,8 @@ void move(void)
                 velsKick(Oparams.T*Oparams.xi);
 	      #elif defined(MD_FULL_LANG)
 	        velsFullLang(Oparams.T,Oparams.xi);
+	      #elif defined(MD_MICRO_LANG)
+		velsMicroLang(Oparams.T,Oparams.xi);
 	      #else
 	        velsBrown(Oparams.T);
               #endif
