@@ -397,10 +397,14 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE m, int resetCM)
       vx[i] = rTemp * gauss();
       vy[i] = rTemp * gauss();
       vz[i] = rTemp * gauss();
-#ifdef MD_FULL_LANG
+#if defined(MD_FULL_LANG)
       v2x[i] = rTemp * gauss();
       v2y[i] = rTemp * gauss();
       v2z[i] = rTemp * gauss();
+#elif defined(MD_MICRO_LANG)
+      v2x[i] = vx[i];
+      v2y[i] = vy[i];
+      v2z[i] = vz[i];
 #endif
       //printf("rank[%d] vx[%d]: %f\n", my_rank, i, vx[i]);
       /* gauss() is a gaussian variable with mean = 0 and variance = 1, that is
@@ -877,11 +881,9 @@ void usrInitAft(void)
 	  vcmx = vx[i];
 	  vcmy = vy[i];
 	  vcmz = vz[i];
-	
 	  OprogStatus.vcmx0[i] = vcmx;
 	  OprogStatus.vcmy0[i] = vcmy;
 	  OprogStatus.vcmz0[i] = vcmz;
-	  
 	}
       
       OprogStatus.sumEta   = 0.0;
@@ -916,7 +918,17 @@ void writeAllCor(FILE* fs)
     {
       fprintf(fs, tipodat, vx[i], vy[i], vz[i]);
     }
-
+#if defined(MD_MICRO_LANG) || defined(MD_FULL_LANG)
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+#ifdef MD_MICRO_LANG
+      v2x[i] = vx[i];
+      v2y[i] = vy[i];
+      v2z[i] = vz[i];
+#endif
+      fprintf(fs, tipodat, v2x[i], v2y[i], v2z[i]);
+    }
+#endif
   fprintf(fs, "%.15G %.15G\n", L, Lz);
 }
 
@@ -944,7 +956,18 @@ void readAllCor(FILE* fs)
 	}
       
     }
-  
+#if defined(MD_MICRO_LANG) || defined(MD_FULL_LANG)
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      if (fscanf(fs, "%lf %lf %lf\n", &v2x[i], &v2y[i], &v2z[i]) < 3)
+	{
+	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
+	  exit(-1);
+	}
+      
+    }
+
+#endif
 
   if (fscanf(fs, "%lf %lf\n",  &L, &Lz) < 2)
     {
