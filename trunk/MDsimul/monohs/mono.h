@@ -375,7 +375,7 @@ struct params
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
   COORD_TYPE m;             /* atoms masses */
-#if defined(MD_FPBROWNIAN) || defined(MD_FULL_LANG)
+#if defined(MD_FPBROWNIAN) || defined(MD_FULL_LANG) || defined(MD_MICRO_LANG)
   COORD_TYPE xi;            /* Fokker-Planck damping xi for Brownian dyn. */
 #endif
   COORD_TYPE sigma;     /* pair potential length parameters */
@@ -522,7 +522,7 @@ struct pascii opar_ascii[]=
   {"P",                 &OP(P),                           1,   1, "%.6G"},
   {"T",                 &OP(T),                           1,   1, "%.6G"},
   {"m",                 &OP(m),                           1,   1, "%.6G"},
-#if defined(MD_FPBROWNIAN) || defined(MD_FULL_LANG)
+#if defined(MD_FPBROWNIAN) || defined(MD_FULL_LANG) || defined (MD_MICRO_LANG)
   {"xi",                &OP(xi),                          1,   1, "%.6G"},
 #endif
   {"sigma",             &OP(sigma),                       1,   1, "%.8G"},
@@ -655,7 +655,7 @@ struct singlePar OsinglePar[] = {
   {"ggrav",      &Oparams.ggrav,            CT},
 #endif
   {"mass",       &Oparams.m,                CT},
-#if defined(MD_FPBROWNIAN) || defined(MD_FULL_LANG)
+#if defined(MD_FPBROWNIAN) || defined(MD_FULL_LANG) || defined(MD_MICRO_LANG)
   {"xi",         &Oparams.xi,               CT},
 #endif
   {"targetPhi", &OprogStatus.targetPhi, CT},
