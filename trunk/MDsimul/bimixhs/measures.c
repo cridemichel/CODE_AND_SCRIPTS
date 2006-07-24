@@ -131,6 +131,13 @@ void calcV(void)
 {
 #ifdef MD_SQWELL
   V = calcpotene();
+  mf = fopenMPI(absMisHD("energy.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, V);
+#else
+  fprintf(mf, "%15G %.15G\n", Oparams.time, V);
+#endif
+  fclose(mf);
 #else
   V = 0;
 #endif
@@ -283,7 +290,50 @@ void transDiff(void)
     Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
   
   DrSqTot /= ((double) Oparams.parnumA);
+  mf = fopenMPI(absMisHD("msdA.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, DrSqTot);
+#else
+  fprintf(mf, "%15G %.15G\n", Oparams.time, DrSqTot);
+#endif
+  fclose(mf);
+  if (Oparams.parnumA == Oparams.parnumA)
+    return;
+ 
+  DrSqTot = 0.0;
+  Dr4 = 0.0;
+
+  for(i=Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      Drx = rx[i] - OprogStatus.rxCMi[i] + L*OprogStatus.DR[i][0]; 
+      Dry = ry[i] - OprogStatus.ryCMi[i] + L*OprogStatus.DR[i][1];
+      Drz = rz[i] - OprogStatus.rzCMi[i] + L*OprogStatus.DR[i][2];
+      if (OprogStatus.ipart == i)
+	{
+	  //sprintf(TXT,"i = %d\n", i);
+	  //mdPrintf(STD, TXT, NULL);
+	  /* Motion of the OprogStatus.ipart particle */
+	  sqrtdr2 = sqrt(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
+	}
+      DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
+      Dr4 += Sqr(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
+   }
+  /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
+     because DrSq is zero! */
+ 
+  Dtrans = DrSqTot / ( 6.0 * ((double) Oparams.time) *
+		       ((double) Oparams.parnumA ) );   
+  Aa = ((double) Oparams.parnumA ) * 3.0 * 
+    Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
   
+  DrSqTot /= ((double) Oparams.parnumA);
+  mf = fopenMPI(absMisHD("msdB.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, DrSqTot);
+#else
+  fprintf(mf, "%15G %.15G\n", Oparams.time, DrSqTot);
+#endif
+  fclose(mf);
 }
 
 /* ============================ >>> temperat <<< =========================== */
@@ -321,6 +371,14 @@ void temperat(void)
       OprogStatus.sumPress += press;
       press = OprogStatus.sumPress / NUMCALCS;
     }
+  mf = fopenMPI(absMisHD("T.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, temp);
+#else
+  fprintf(mf, "%15G %.15G\n", Oparams.time, temp);
+#endif
+  fclose(mf);
+
 #if 0
   sprintf(TXT, "P:%.10f T:%.10f W: %10f\n", press, temp, W);
   mdMsg(STD,NOSYS, NULL, "NOTICE", NULL,  TXT, NULL);
