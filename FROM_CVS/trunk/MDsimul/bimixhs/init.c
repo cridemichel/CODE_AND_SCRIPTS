@@ -1127,6 +1127,15 @@ void usrInitAft(void)
       f = fopenMPI(MD_HD_MIS "D.dat", "w");
       fclose(f);
 #endif
+      f = fopenMPI(absMisHD("msdA.dat"), "w+");
+      fclose(f);
+      if (Oparams.parnumA < Oparams.parnumA)
+	{
+	  f = fopenMPI(absMisHD("msdB.dat"), "w+");
+	  fclose(f);
+	}
+      f = fopenMPI(absMisHD("energy.dat"), "w+");
+      fclose(f);
 #ifdef MD_HSVISCO
       f = fopenMPI(absMisHD("Ptens.dat"), "w+");
       fclose(f);
@@ -1235,7 +1244,6 @@ void readAllCor(FILE* fs)
       
     }
   
-
 #ifdef MD_GRAVITY
   if (fscanf(fs, "%lf %lf\n",  &L, &Lz) < 2)
     {

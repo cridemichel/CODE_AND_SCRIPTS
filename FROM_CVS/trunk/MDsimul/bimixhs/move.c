@@ -1437,7 +1437,128 @@ void velsBrown(double T)
 {
   comvel_brown(T, Oparams.m); 
 }
+#ifdef MD_MICRO_LANG
+extern double gauss(void);
+extern double ranf(void);
+void random_direction(double *nx, double *ny, double *nz)
+{
+  double xisq, xi1, xi2, xi, nsq, norm;
+  xisq = 1.0;
+  while (xisq >= 1.0)
+    {
+      xi1  = ranf() * 2.0 - 1.0;
+      xi2  = ranf() * 2.0 - 1.0;
+      xisq = xi1 * xi1 + xi2 * xi2;
+    }
+  xi = sqrt (fabs(1.0 - xisq));
+  *nx = 2.0 * xi1 * xi;
+  *ny = 2.0 * xi2 * xi;
+  *nz = 1.0 - 2.0 * xisq;
 
+  /* Renormalize */
+  nsq   = (*nx)*(*nx) + (*ny)*(*ny) + (*nz)*(*nz);
+  norm  = sqrt(fabs(nsq));
+  *nx    = *nx / norm;
+  *ny    = *ny / norm;
+  *nz    = *nz / norm;
+}
+void velsMicroLang(double T, double xi)
+{
+   double c1, c2, M, n, gam, vpx, vpy, vpz, m, kTm, nx, ny, nz;
+   double mredl, b, vxij, vyij, vzij, delpx, delpy, delpz, factor;	
+   int i;
+   n = 1.0/Oparams.Dt;
+   //printf("c1=%f c2=%f T=%.15G m=%.15G\n", c1, c2, T, m);
+   //c2 = kTm*2*m / (M+m);
+   for (i = 0; i < Oparams.parnum; i++)
+    {
+       if (i == 0 || i == Oparams.parnumA)
+	 {
+	   M = (i < Oparams.parnumA)?Oparams.m[0]:Oparams.m[1];
+	   gam = Oparams.xi*M;
+	   /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
+	   m = Oparams.Dt*gam *(3.0 / 2.0); 
+	   mredl = m*M/(m+M);
+	   //c1 = (M - m)/(M+m);
+	   kTm = sqrt(Oparams.T / m);
+	 }
+#if 0
+       vpx = gauss();
+       vpy = gauss();
+       vpz = gauss();
+#else
+       vpx = kTm*gauss();
+       vpy = kTm*gauss();
+       vpz = kTm*gauss();
+#endif
+       random_direction(&nx, &ny, &nz);	
+#if 0
+       vx[i] = c1*vx[i] + c2*vpx;
+       vy[i] = c1*vy[i] + c2*vpy;
+       vz[i] = c1*vz[i] + c2*vpz;
+#else
+       vxij = vx[i] - vpx;
+       vyij = vy[i] - vpy;
+       vzij = vz[i] - vpz;
+#if 0
+       /* se n è sempre parallelo alla velocità
+       * relativa allora torniamo all'implementazione
+       * originaria errata */
+       {
+         double norm;
+	 norm = sqrt(Sqr(vxij)+Sqr(vyij)+Sqr(vzij));
+	 nx = vxij/norm;
+	 ny = vyij/norm;
+	 nz = vzij/norm;
+       }
+#endif
+       b = nx*vxij + ny*vyij + nz*vzij; 
+#if 1
+       if (b > 0.0)
+	 {
+	    nx = -nx;
+	    ny = -ny;
+	    nz = -nz;
+	    b = -b;
+	 }
+#endif
+       //b = sqrt(Sqr(vxij)+Sqr(vyij)+Sqr(vzij));
+       factor = -2.0*b;
+       factor *= mredl;
+       delpx = factor*nx;
+       delpy = factor*ny;
+       delpz = factor*nz;
+#if 1
+       vx[i] += delpx/M;
+       vy[i] += delpy/M;
+       vz[i] += delpz/M;
+        
+#if 0
+       if (fabs(delpx) > 1.0 || fabs(delpy) > 1.0 || fabs(delpz) > 1.0)
+	 {
+	   printf("delp=(%.15G,%.15G,%.15G)\n", delpx, delpy, delpz);
+	   printf("M=%.15G mredl=%.15G m=%.15G\n", M, mredl, m);
+	   printf("v=(%.15G,%.15G,%.15G)\n", vx[i], vy[i], vz[i]);
+	   printf("vp=(%.15G,%.15G,%.15G) n=%.15G,%.15G,%.15G\n", vpx, vpy, vpz,nx,ny,nz);
+	   //printf("kTm=%.15G b=%.15G\n", kTm, b);
+	   //printf("b=%.15G factor=%.15G\n", b,factor);
+	 }
+#endif
+#else
+	/* cosi' è come nel caso 1D, ma essendo qui in 3D cio' equivale ad assumere che il versore
+	* n sia sempre parallelo alla velocità relativa vij! */
+	vx[i] -= vxij*2.0*mredl/M;
+	vy[i] -= vyij*2.0*mredl/M;
+	vz[i] -= vzij*2.0*mredl/M;
+#endif
+       //printf("delp=(%.15G, %.15G, %.15G)\n", delpx, delpy, delpz);
+#endif
+       //printf("vpx=%.15G,%.15G,%.15G kTm=%.15G\n", vpx, vpy, vpz, kTm);
+       //printf("(%.15G, %.15G, %.15G)\n", vx[i], vy[i], vz[i]);
+     }  
+    
+} 
+#endif
 void rebuildLinkedList(void)
 {
   int j, n;
@@ -1711,7 +1832,11 @@ void move(void)
 		  OprogStatus.lastcoll = Oparams.time;
 		}
 #endif
+#if defined(MD_MICRO_LANG)
+	      velsMicroLang(Oparams.T, Oparams.xi);
+#else
 	      velsBrown(Oparams.T);
+#endif
 #ifdef MD_HSVISCO
 	      calcT();
 #endif

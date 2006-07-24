@@ -385,6 +385,9 @@ struct params
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
   COORD_TYPE m[2];             /* atoms masses */
+#if defined(MD_FULL_LANG) || defined(MD_MICRO_LANG)
+  double xi;
+#endif
   COORD_TYPE sigma[2][2];     /* pair potential length parameters */
   double rcut;
   int equilibrat;               /* != 0 if equilibrating */
@@ -534,6 +537,9 @@ struct pascii opar_ascii[]=
   {"P",                 &OP(P),                           1,   1, "%.6G"},
   {"T",                 &OP(T),                           1,   1, "%.6G"},
   {"m",                 OP(m),                            2,   1, "%.6G"},
+#if defined(MD_FULL_LANG) || defined(MD_MICRO_LANG)
+  {"xi",                &OP(xi),                          1, 1, "%.6G"},
+#endif
   {"sigma",             OP(sigma),                        2,   2, "%.8G"},
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
@@ -681,6 +687,9 @@ struct singlePar OsinglePar[] = {
 #endif
   {"massA",       &Oparams.m[0],                CT},
   {"massB",       &Oparams.m[1],                CT},
+#if defined(MD_FULL_LANG) || defined(MD_MICRO_LANG)
+  {"xi",         &Oparams.xi,               CT},
+#endif
 #ifdef MD_GRAVITY
   {"wallDiss",   &Oparams.wallDiss,         CT},
   {"partDiss",   &Oparams.partDiss,         CT},
