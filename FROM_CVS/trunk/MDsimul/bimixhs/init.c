@@ -894,7 +894,8 @@ void usrInitAft(void)
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
     Oparams.delta[1][0] = Oparams.delta[0][1];
 #endif
-    Mred[0][0] = Mred[1][1] = 0.5;
+    Mred[0][0] = (Oparams.m[0]*Oparams.m[0])/(Oparams.m[0]+Oparams.m[0]);
+    Mred[1][1] = (Oparams.m[1]*Oparams.m[1])/(Oparams.m[1]+Oparams.m[1]);
     Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
     /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
      * le particelle */
