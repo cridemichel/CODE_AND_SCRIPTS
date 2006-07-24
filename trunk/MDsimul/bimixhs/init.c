@@ -1130,7 +1130,7 @@ void usrInitAft(void)
 #endif
       f = fopenMPI(absMisHD("msdA.dat"), "w+");
       fclose(f);
-      if (Oparams.parnumA < Oparams.parnumA)
+      if (Oparams.parnumA < Oparams.parnum)
 	{
 	  f = fopenMPI(absMisHD("msdB.dat"), "w+");
 	  fclose(f);

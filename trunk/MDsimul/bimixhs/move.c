@@ -1472,15 +1472,21 @@ void velsMicroLang(double T, double xi)
    //c2 = kTm*2*m / (M+m);
    for (i = 0; i < Oparams.parnum; i++)
     {
-       if (i == 0 || i == Oparams.parnumA)
+       if (i == 0)
 	 {
-	   M = (i < Oparams.parnumA)?Oparams.m[0]:Oparams.m[1];
+	   M = Oparams.m[0];
 	   gam = Oparams.xi*M;
 	   /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
 	   m = Oparams.Dt*gam *(3.0 / 2.0); 
 	   mredl = m*M/(m+M);
 	   //c1 = (M - m)/(M+m);
 	   kTm = sqrt(Oparams.T / m);
+	 }
+       else if (i == Oparams.parnumA)
+	 {
+	   M = Oparams.m[1];
+	   /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
+	   mredl = m*M/(m+M);
 	 }
 #if 0
        vpx = gauss();

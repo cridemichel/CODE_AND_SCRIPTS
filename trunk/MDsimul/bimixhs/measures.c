@@ -297,7 +297,7 @@ void transDiff(void)
   fprintf(mf, "%15G %.15G\n", Oparams.time, DrSqTot);
 #endif
   fclose(mf);
-  if (Oparams.parnumA == Oparams.parnumA)
+  if (Oparams.parnum == Oparams.parnumA)
     return;
  
   DrSqTot = 0.0;
