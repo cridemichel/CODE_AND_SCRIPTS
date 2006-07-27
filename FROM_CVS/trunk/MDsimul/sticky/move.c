@@ -3267,6 +3267,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   df = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
   for (nn=0; nn < npbonds; nn++)
     {
+      if (!do_check_negpairs)
+	break;
       if (bondpair != -1 && bondpair != nn)
 	continue;
       if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
