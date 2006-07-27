@@ -697,7 +697,7 @@ void buildTetrahedras(void)
   //printf("dist=%.15G\n", sqrt( Sqr(uxx[i-1]-uxy[i-1]) + Sqr(uyx[i]-uyy[i]) + Sqr(uzx[i]-uzz[i])));
 }
 #endif
-#if 1
+#if 0
 void angvel(void)
 {
   int i;
