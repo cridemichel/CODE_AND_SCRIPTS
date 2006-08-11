@@ -66,6 +66,8 @@ int evIdA, evIdB;
 extern int poolSize;
 #ifndef MD_POLYDISP
 extern double *radii;
+#else
+extern double *radiiINI;
 #endif
 extern int *scdone;
 double presst1=-1.0, presst2=-1.0;
@@ -262,9 +264,12 @@ void scale_coords(double sf)
       rx[i] *= sf;
       ry[i] *= sf;
       rz[i] *= sf;
+      radii[i] *= sf;
     }
 }
-
+#ifdef MD_POLYDISP
+extern double PHI0;
+#endif
 double scale_radius(int i, int j, double rA[3], double rB[3], double shift[3], double *factor)
 {
   int kk;
@@ -272,11 +277,19 @@ double scale_radius(int i, int j, double rA[3], double rB[3], double shift[3], d
 
   L2 = 0.5 * L;
   phi = calc_phi();
+#ifdef MD_POLYDISP
+  phi0 = PHI0;
+#else
   phi0 =((double)Oparams.parnum)*Sqr(Oparams.sigma*0.5)*(Oparams.sigma*0.5);
   phi0 *= 4.0*pi/3.0;
   phi0 /= L*L*Lz;
+#endif
   C = cbrt(OprogStatus.targetPhi/phi0);
+#ifdef MD_POLYDISP
+  Ccur = radii[i]/radiiINI[i]; 
+#else
   Ccur = radii[i]/(Oparams.sigma*0.5); 
+#endif
   F = C / Ccur;
   for (kk=0; kk < 3; kk++)
     {
@@ -387,7 +400,11 @@ void scale_Phi(void)
   if (first)
     {
       first = 0;
+#ifdef MD_POLYDISP
+      rad0I = radiiINI[0];
+#else
       rad0I = Oparams.sigma*0.5;
+#endif
       target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
   //printf("[scale_Phi] >>>> Volume fraction: %.15G target: %.15G\n", phi, target);
@@ -452,9 +469,15 @@ void scale_Phi(void)
 	  its++;
 	}
 #endif
+#ifdef MD_POLYDISP
+      radai = radiiINI[i];//Oparams.sigma*0.5;
+#else
       radai = Oparams.sigma*0.5;
-      //printf("radai: %.15G radii[i]: %.15G radai/radii=%.15G target: %.15G\n",
-	//     radai, radii[i], radii[i]/radai, target);
+#endif
+      /*
+      printf("radai: %.15G radii[i]: %.15G radii/radai=%.15G target: %.15G\n",
+	     radai, radii[i], radii[i]/radai, target);
+      */
       if (fabs(radii[i] / radai - target) < OprogStatus.axestol)
 	{
 	  done++;
