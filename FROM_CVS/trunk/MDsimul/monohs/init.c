@@ -909,11 +909,17 @@ void writeAllCor(FILE* fs)
 {
   int i;
   const char tipodat[] = "%.15G %.15G %.15G\n";
+#ifdef MD_POLYDISP
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      fprintf(fs, "%.15G %.15G %.15G %.15G\n", rx[i], ry[i], rz[i], radii[i]);
+    }
+#else
   for (i = 0; i < Oparams.parnum; i++)
     {
       fprintf(fs, tipodat, rx[i], ry[i], rz[i]);
     }
-  
+#endif
   for (i = 0; i < Oparams.parnum; i++)
     {
       fprintf(fs, tipodat, vx[i], vy[i], vz[i]);
@@ -938,6 +944,16 @@ void readAllCor(FILE* fs)
 {
   int i;
 
+#ifdef MD_POLYDISP
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      if (fscanf(fs, "%lf %lf %lf %lf\n", &rx[i], &ry[i], &rz[i], &radii[i]) < 4)
+	{
+	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
+	  exit(-1);
+	}
+    }
+#else
   for (i = 0; i < Oparams.parnum; i++)
     {
       if (fscanf(fs, "%lf %lf %lf\n", &rx[i], &ry[i], &rz[i]) < 3)
@@ -946,7 +962,7 @@ void readAllCor(FILE* fs)
 	  exit(-1);
 	}
     }
-  
+#endif 
   for (i = 0; i < Oparams.parnum; i++)
     {
       if (fscanf(fs, "%lf %lf %lf\n", &vx[i], &vy[i], &vz[i]) < 3)
