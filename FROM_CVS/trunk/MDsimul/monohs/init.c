@@ -33,6 +33,8 @@ extern const double timbig;
 int poolSize;
 #ifndef MD_POLYDISP
 double *radii;
+#else
+double *radiiINI;
 #endif
 int *scdone;
 /* ================================= */
@@ -620,6 +622,9 @@ void StartRun(void)
 double *rhoz;
 extern double calc_phi(void);
 /* ======================== >>> usrInitAft <<< ==============================*/
+#ifdef MD_POLYDISP
+double PHI0;
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -767,17 +772,24 @@ void usrInitAft(void)
 
 #ifndef MD_POLYDISP
   radii = malloc(sizeof(double)*Oparams.parnum);
+#else
+  if (OprogStatus.targetPhi > 0.0)
+    radiiINI = malloc(sizeof(double)*Oparams.parnum);
 #endif
   scdone = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
     {
       scdone[i] = 0;
 #ifdef MD_POLYDISP
+      if (OprogStatus.targetPhi > 0.0)
+	radiiINI[i] = radii[i];
+
       if (newSim)
 	{
-	  if (OprogStatus.polydisp <= 0.0)
+	 /* if (OprogStatus.polydisp <= 0.0)
 	    radii[i] = Oparams.sigma*0.5;
-	  else
+	  else*/
+	  if (OprogStatus.polydisp > 0.0)
 	    {
 	      	do
 		  {
@@ -824,8 +836,11 @@ void usrInitAft(void)
   if (OprogStatus.scalevel) 
     ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+#ifdef MD_POLYDISP
+  printf(">>>> Volume fraction: %.15G\n", PHI0=calc_phi());
+#else
   printf(">>>> Volume fraction: %.15G\n", calc_phi());
-
+#endif
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)
