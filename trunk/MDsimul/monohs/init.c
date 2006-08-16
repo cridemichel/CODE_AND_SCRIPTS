@@ -677,10 +677,20 @@ void usrInitAft(void)
   if (Oparams.rcut <= 0.0)
     {
 #ifdef MD_POLYDISP
-      if (OprogStatus.polydisp > 0.0)
+      double maxrad=-1.0;
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  if (radii[i] > maxrad)
+	    maxrad = radii[i];
+	}
+      Oparams.rcut = 1.01*maxrad*2.0;
+/* 
+ *     if (OprogStatus.polydisp > 0.0)
 	Oparams.rcut = 1.01*Oparams.sigma*(1.0 + OprogStatus.polydisp*OprogStatus.polycutoff);
       else
 	Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+*
+*/
 #else
       Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
 #endif
