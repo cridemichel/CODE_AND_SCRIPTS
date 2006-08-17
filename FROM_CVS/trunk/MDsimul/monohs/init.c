@@ -678,19 +678,30 @@ void usrInitAft(void)
     {
 #ifdef MD_POLYDISP
       double maxrad=-1.0;
-      for (i = 0; i < Oparams.parnum; i++)
+      if (!strcmp(OprogStatus.inifile,"*"))
 	{
-	  if (radii[i] > maxrad)
-	    maxrad = radii[i];
+	  if (OprogStatus.polydisp > 0.0)
+	    {
+	      Oparams.rcut = 1.01*Oparams.sigma*(1.0 + OprogStatus.polydisp*OprogStatus.polycutoff);
+	    }
+	  else
+	    {
+	      Oparams.rcut = 1.01*Oparams.sigma;
+	    }
 	}
-      Oparams.rcut = 1.01*maxrad*2.0;
-/* 
- *     if (OprogStatus.polydisp > 0.0)
-	Oparams.rcut = 1.01*Oparams.sigma*(1.0 + OprogStatus.polydisp*OprogStatus.polycutoff);
       else
-	Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
-*
-*/
+	/*      else
+		Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+		*/
+
+    	{
+	  for (i = 0; i < Oparams.parnum; i++)
+	    {
+	      if (radii[i] > maxrad)
+		maxrad = radii[i];
+	    }
+	  Oparams.rcut = 1.01*maxrad*2.0;
+	}
 #else
       Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
 #endif
@@ -799,14 +810,19 @@ void usrInitAft(void)
 	 /* if (OprogStatus.polydisp <= 0.0)
 	    radii[i] = Oparams.sigma*0.5;
 	  else*/
-	  if (OprogStatus.polydisp > 0.0)
+	  if (!strcmp(OprogStatus.inifile,"*"))
 	    {
-	      	do
-		  {
-		    radii[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.sigma*0.5; 
-		  }
-	     	while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp));
-	      //printf("%.15G\n", radii[i]);
+	      if (OprogStatus.polydisp > 0.0)
+		{
+		  do
+		    {
+		      radii[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.sigma*0.5; 
+		    }
+	      while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp));
+		  //printf("%.15G\n", radii[i]);
+		}
+	      else
+		radii[i] = Oparams.sigma*0.5;
 	    }
 	}
 #else
