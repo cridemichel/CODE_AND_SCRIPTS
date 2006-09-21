@@ -257,6 +257,35 @@ double distance(int i, int j, int imgx, int imgy, int imgz)
     }
   return 1;
 }
+double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
+		  int imgjx, int imgjy, int imgjz)
+{
+  int a, b, maxa, maxb;
+
+  if (i < NPA)
+    {
+      maxa = MD_STSPOTS_A;
+      maxb = MD_STSPOTS_B;
+    }
+  else
+    {
+      maxa = MD_STSPOTS_B;
+      maxb = MD_STSPOTS_A;
+    }
+  for (a = 0; a < maxa; a++)
+    {
+      for (b = 0; b < maxb; b++)
+	{
+	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
+	    //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
+	  if (Sqr(rat[a][0][i] + imgix*L - (rat[b][0][j]+imgjx*L))+Sqr(rat[a][1][i] + imgiy*L - (rat[b][1][j] + imgjy*L))
+	      +Sqr(rat[a][2][i] + imgiz*L -(rat[b][2][j]+imgjz*L)) < Sqr(sigmaSticky))	  
+		return -1;
+	}
+    }
+  return 1;
+}
+
 
 int bond_found(int i, int j, int imgx, int imgy, int imgz)
 {
@@ -265,6 +294,15 @@ int bond_found(int i, int j, int imgx, int imgy, int imgz)
   else
     return 0;
 }
+int bond_foundR(int i, int j, int imgix, int imgiy, int imgiz,
+		int imgjx, int imgjy, int imgjz)
+{
+  if (distanceR(i, j, imgix, imgiy, imgiz, imgjx, imgjy, imgjz) < 0.0)
+    return 1;
+  else
+    return 0;
+}
+
 void change_all_colors(int NP, int* color, int colorsrc, int colordst)
 {
   int ii;
@@ -308,37 +346,30 @@ int compare_func (const void *aa, const void *bb)
   else
     return 0;
 }
-void choose_image(int img, int *dix, int *diy, int *diz, int di)
+const int images_array[27][3]={{0,0,0},
+{1,0,0},{0,1,0},{0,0,1},
+{-1,0,0},{0,-1,0},{0,0,-1},
+{1,1,0}, {0,1,1}, {1,0,1},
+{-1,-1,0},{0,-1,-1},{-1,0,-1},
+{-1,+1,0},{0,-1,+1},{-1,0,+1},
+{+1,-1,0},{0,+1,-1},{+1,0,-1},
+{1,1,1},{-1,-1,-1},
+{-1,1,1},{1,-1,1},{1,1,-1},
+{-1,-1,1},{1,-1,-1},{-1,1,-1}};
+
+void choose_image(int img, int *dix, int *diy, int *diz)
 {
-  switch (img)
-    {
-    case 1:
-      *dix += di;
-      break;
-    case 2:
-      *dix -= di;
-      break;
-    case 3:
-      *diy += di;
-      break;
-    case 4:
-      *diy -= di;
-      break;
-    case 5:
-      *diz += di;
-      break;
-    case 6:
-      *diz -= di;
-      break;
-    }
+  *dix = images_array[img][0];
+  *diy = images_array[img][1];
+  *diz = images_array[img][2];
 }
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int  NN, fine, JJ, nat, maxl, maxnp, np, nc, dix, diy, diz, imgi2, imgj2;
+  int  NN, fine, JJ, nat, maxl, maxnp, np, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2;
   double refTime=0.0, ti;
-  const int NUMREP = 7;
+  const int NUMREP = 27;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   pi = acos(0.0)*2.0;
   if (argc <= 1)
@@ -415,14 +446,14 @@ int main(int argc, char **argv)
     points = maxnp;
   //ti = malloc(sizeof(double)*points);
   cc = malloc(sizeof(double)*points);
-  color = malloc(sizeof(int)*NP*6);
-  color2= malloc(sizeof(int)*NP*6);
+  color = malloc(sizeof(int)*NP);
+  color2= malloc(sizeof(int)*NP*NUMREP);
   nspots = malloc(sizeof(int)*NP);
   clsdim = malloc(sizeof(int)*NP);
   cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NP);
   clssizedst = malloc(sizeof(int)*NP);
   clssizedstAVG = malloc(sizeof(int)*NP);
-  dupcluster = malloc(sizeof(int)*NP*6); 
+  dupcluster = malloc(sizeof(int)*NP*NUMREP); 
   percola = malloc(sizeof(int)*NP);
   for (i = 0; i < NP; i++)
     {
@@ -524,7 +555,7 @@ int main(int argc, char **argv)
 	    if (color[a] == nc)
 	      clsdim[color[a]]++;
 	}
-      printf("NP=%d ncls=%d\n", NP, ncls);
+      //printf("NP=%d ncls=%d\n", NP, ncls);
       for (nc = 0; nc < ncls; nc++)
 	{
 	  cluster_sort[nc].dim = clsdim[nc];
@@ -555,12 +586,12 @@ int main(int argc, char **argv)
 		    {
 		      for (c = 0; c < NUMREP; c++)
 			{
-			  dupcluster[c*clsdim[nc]+na] = i;
+			  dupcluster[c*cluster_sort[nc].dim+na] = i;
 			}
 		      na++;
 		    }
 		}
-	      //printf("na=%d\n", na);
+	      //printf("NP=%d NPA=%d na=%d,clsdim[%d]=%d\n", NP, NPA,na,nc,cluster_sort[nc].dim);
 	      curcolor = 0;
 	      for (i2 = 0; i2 < na*NUMREP; i2++)
 		{
@@ -581,16 +612,22 @@ int main(int argc, char **argv)
 			  (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
 		      	continue;
 		      dix = diy = diz = 0;
+		      djx = djy = djz = 0;
 		      imgi2 = i2 / na;
 		      imgj2 = j2 / na;
-		      if (imgi2==imgj2 && i==j)
+		      if (i2==j2)
 			continue;
 		      //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
-		      choose_image(imgi2, &dix, &diy, &diz, +1);
-		      choose_image(imgj2, &dix, &diy, &diz, -1);
-		      if ( (nspots[i]==MD_STSPOTS_A && bond_found(i, j, dix, diy, diz)) ||
-			   (nspots[i]==MD_STSPOTS_B && bond_found(j, i, -dix, -diy, -diz))
-			   )
+		      choose_image(imgi2, &dix, &diy, &diz);
+		      choose_image(imgj2, &djx, &djy, &djz);
+		      if ( bond_foundR(i, j, dix, diy, diz, djx, djy, djz) ||
+			   bond_foundR(i, j, dix, diy, diz, djx-3, djy, djz) ||
+		       	   bond_foundR(i, j, dix, diy, diz, djx+3, djy, djz) ||
+	      		   bond_foundR(i, j, dix, diy, diz, djx, djy-3, djz) ||
+      			   bond_foundR(i, j, dix, diy, diz, djx, djy+3, djz) ||
+			   bond_foundR(i, j, dix, diy, diz, djx, djy, djz-3) ||
+			   bond_foundR(i, j, dix, diy, diz, djx, djy, djz+3)
+			 )
 			{
 			  //printf("qui!!!\n");
 			  if (color2[j2] == -1)
@@ -612,7 +649,7 @@ int main(int argc, char **argv)
 		}
 	      ncls2 = curcolor;
 	      //printf("ncls2=%d\n", ncls2);
-	      if (ncls2 < 7)
+	      if (ncls2 < NUMREP)
 		percola[nc] = 1;
 	    }
 	}
