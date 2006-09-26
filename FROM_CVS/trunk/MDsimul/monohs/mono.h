@@ -92,7 +92,7 @@
 #if defined(MD_POLYDISP)
 #define SAVE_LIST rx, ry, rz, vx, vy, vz, radii, lastcol
 #elif defined(MD_FULL_LANG) || defined(MD_MICRO_LANG)
-#define SAVE_LIST rx, ry, rz, vx, vy, vz, v2x, v2y, v2z, lastcol
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, lastcol
 #else
 #define SAVE_LIST rx, ry, rz, vx, vy, vz, lastcol
 #endif
@@ -121,7 +121,7 @@
 #if defined(MD_POLYDISP)
 #define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz, &radii, &lastcol
 #elif defined(MD_FULL_LANG) || defined (MD_MICRO_LANG)
-#define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz, &v2x, &v2y, &v2z, &lastcol
+#define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz, &lastcol
 #else
 #define ALLOC_LIST  &rx, &ry, &rz, &vx, &vy, &vz, &lastcol
 #endif
@@ -135,7 +135,7 @@
 #if defined(MD_POLYDISP)
 #define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz, *radii, *lastcol
 #elif defined(MD_FULL_LANG) || defined(MD_MICRO_LANG)
-#define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz, *v2x, *v2y, *v2z, *lastcol
+#define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz, *lastcol
 #else
 #define DECL_LIST   *rx, *ry, *rz, *vx, *vy, *vz, *lastcol
 #endif
