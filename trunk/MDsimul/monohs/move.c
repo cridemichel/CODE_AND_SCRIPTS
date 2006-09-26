@@ -1605,7 +1605,7 @@ void velsMicroLang(double T, double xi)
    M = Oparams.m;
    gam = Oparams.xi*M;
    /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
-   m = Oparams.Dt*gam *(3.0 / 2.0); 
+   m = Oparams.Dt*gam/2.0//;(3.0 / 2.0); 
    c1 = (M - m)/(M+m);
    kTm = sqrt(Oparams.T / m);
    //printf("c1=%f c2=%f T=%.15G m=%.15G\n", c1, c2, T, m);
@@ -1613,7 +1613,7 @@ void velsMicroLang(double T, double xi)
    mredl = m*M/(m+M);
    for (i = 0; i < Oparams.parnum; i++)
     {
-#if 0
+#if 1
        vpx = gauss();
        vpy = gauss();
        vpz = gauss();
@@ -1623,7 +1623,7 @@ void velsMicroLang(double T, double xi)
        vpz = kTm*gauss();
 #endif
        random_direction(&nx, &ny, &nz);	
-#if 0
+#if 1
        vx[i] = c1*vx[i] + c2*vpx;
        vy[i] = c1*vy[i] + c2*vpy;
        vz[i] = c1*vz[i] + c2*vpz;
@@ -1643,6 +1643,7 @@ void velsMicroLang(double T, double xi)
 	 nz = vzij/norm;
        }
 #endif
+#if 0
        b = nx*vxij + ny*vyij + nz*vzij; 
 #if 1
        if (b > 0.0)
@@ -1669,6 +1670,7 @@ void velsMicroLang(double T, double xi)
 	vx[i] -= vxij*2.0*mredl/M;
 	vy[i] -= vyij*2.0*mredl/M;
 	vz[i] -= vzij*2.0*mredl/M;
+#endif
 #endif
        //printf("delp=(%.15G, %.15G, %.15G)\n", delpx, delpy, delpz);
 #endif
