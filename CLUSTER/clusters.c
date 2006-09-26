@@ -10,13 +10,14 @@
 #define MD_PBONDS 10
 #define Sqr(x) ((x)*(x))
 char **fname; 
-double L, time, *ti, *R[3][3], *cc, *r0[3], r0L[3], RL[3][3], *DR0[3];
+double L, time, *ti, *R[3][3], *cc, *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1;
 double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], *dupcluster;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int NP, NPA=-1;
+int NP, NPA=-1, ncNV, ncNV2;
 int check_percolation = 1, *nspots;
-int points, foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
+int points, foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
+    *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
 double calc_norm(double *vec)
 {
   int k1;
@@ -141,6 +142,7 @@ void build_atom_positions(void)
   spApos[4][0] = Dr;
   spBpos[0][0] = Dr;
   spBpos[1][0] = Dr;
+  printf("Dr:%.15G pi=%.15G theta=%.15G\n", Dr, pi, theta);
   //printf("Dr: %.15G theta: %.15G pi=%.15G a=%.15G b=%.15G c=%.15G\n",
   //	 Dr, theta, pi, sa[1], sb[1], sc[1]);
   for (k1 = 0; k1 < MD_STSPOTS_A; k1++)
@@ -228,7 +230,7 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
   int a;
   /* l'atomo zero si suppone nell'origine */
-  if (i < NP)
+  if (i < NPA)
     {
       for (a=0; a < MD_STSPOTS_A+1; a++)
 	BuildAtomPosAt(i, a, rO, R, rat[a]);
@@ -240,27 +242,72 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
     }
 }
 #define Sqr(x) ((x)*(x))
-double distance(int i, int j, int imgx, int imgy, int imgz)
+int check_distance(int i, int j, double imgx, double imgy, double imgz)
+{
+  double Dx, Dy, Dz;
+
+  Dx = fabs(rat[0][0][i] + imgx - rat[0][0][j]);
+  Dy = fabs(rat[0][1][i] + imgy - rat[0][1][j]);
+  Dz = fabs(rat[0][2][i] + imgz - rat[0][2][j]);
+
+  if (Dx > maxsax || Dy > maxsax || Dz > maxsax)
+    return 1;
+  else 
+    return 0;
+}
+
+double distance(int i, int j)
 {
   int a, b;
+  double imgx, imgy, imgz;
+  double Dx, Dy, Dz;
 
-  for (a = 0; a < MD_STSPOTS_A; a++)
+  Dx = rat[0][0][i] - rat[0][0][j];
+  Dy = rat[0][1][i] - rat[0][1][j];
+  Dz = rat[0][2][i] - rat[0][2][j];
+  imgx = -L*rint(Dx/L);
+  imgy = -L*rint(Dy/L);
+  imgz = -L*rint(Dz/L);
+  
+  if (check_distance(i, j, imgx, imgy, imgz))
+    return 1;
+  for (a = 1; a < MD_STSPOTS_A+1; a++)
     {
-      for (b = 0; b < MD_STSPOTS_B; b++)
+      for (b = 1; b < MD_STSPOTS_B+1; b++)
 	{
 	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
 	    //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
-	  if (Sqr(rat[a][0][i] + imgx*L -rat[b][0][j])+Sqr(rat[a][1][i] + imgy*L -rat[b][1][j])
-	      +Sqr(rat[a][2][i] + imgz*L -rat[b][2][j]) < Sqr(sigmaSticky))	  
+	  if (Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j])
+	      +Sqr(rat[a][2][i] + imgz -rat[b][2][j]) < Sqr(sigmaSticky))	  
 		return -1;
 	}
     }
   return 1;
 }
+int check_distanceR(int i, int j, int imgix, int imgiy, int imgiz,
+		  int imgjx, int imgjy, int imgjz, double imgx, double imgy, double imgz)
+{
+  double Dx, Dy, Dz;
+
+  Dx = fabs(rat[0][0][i] + (imgix-imgjx)*L + imgx  - rat[0][0][j]);
+  Dy = fabs(rat[0][1][i] + (imgiy-imgjy)*L + imgy - rat[0][1][j]);
+  Dz = fabs(rat[0][2][i] + (imgiz-imgjz)*L + imgz - rat[0][2][j]);
+
+  if (Dx > maxsax || Dy > maxsax || Dz > maxsax)
+    {
+      return 1;
+    }
+  else 
+    {
+      return 0;
+    }
+}
 double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
-		  int imgjx, int imgjy, int imgjz)
+		  int imgjx, int imgjy, int imgjz, double Lbig)
 {
   int a, b, maxa, maxb;
+  double imgx, imgy, imgz;
+  double Dx, Dy, Dz, dx, dy, dz;
 
   if (i < NPA)
     {
@@ -272,14 +319,27 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
       maxa = MD_STSPOTS_B;
       maxb = MD_STSPOTS_A;
     }
-  for (a = 0; a < maxa; a++)
+
+  dx = L*(imgix-imgjx);
+  dy = L*(imgiy-imgjy);
+  dz = L*(imgiz-imgjz);
+  Dx = rat[0][0][i] - rat[0][0][j] + dx;
+  Dy = rat[0][1][i] - rat[0][1][j] + dy;
+  Dz = rat[0][2][i] - rat[0][2][j] + dz;
+  imgx = -Lbig*rint(Dx/Lbig);
+  imgy = -Lbig*rint(Dy/Lbig);
+  imgz = -Lbig*rint(Dz/Lbig);
+
+  if (check_distanceR(i, j, imgix, imgiy, imgiz, imgjx, imgjy, imgjz, imgx, imgy, imgz))
+    return 1;
+  for (a = 1; a < maxa+1; a++)
     {
-      for (b = 0; b < maxb; b++)
+      for (b = 1; b < maxb+1; b++)
 	{
 	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
-	    //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
-	  if (Sqr(rat[a][0][i] + imgix*L - (rat[b][0][j]+imgjx*L))+Sqr(rat[a][1][i] + imgiy*L - (rat[b][1][j] + imgjy*L))
-	      +Sqr(rat[a][2][i] + imgiz*L -(rat[b][2][j]+imgjz*L)) < Sqr(sigmaSticky))	  
+	    //+Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
+	  if (Sqr(rat[a][0][i] + dx + imgx - rat[b][0][j])+Sqr(rat[a][1][i] + dy + imgy - rat[b][1][j])
+	      + Sqr(rat[a][2][i] + dz + imgz - rat[b][2][j]) < Sqr(sigmaSticky))	  
 		return -1;
 	}
     }
@@ -287,17 +347,17 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
 }
 
 
-int bond_found(int i, int j, int imgx, int imgy, int imgz)
+int bond_found(int i, int j)
 {
-  if (distance(i, j, imgx, imgy, imgz) < 0.0)
+  if (distance(i, j) < 0.0)
     return 1;
   else
     return 0;
 }
 int bond_foundR(int i, int j, int imgix, int imgiy, int imgiz,
-		int imgjx, int imgjy, int imgjz)
+		int imgjx, int imgjy, int imgjz, double Lbig)
 {
-  if (distanceR(i, j, imgix, imgiy, imgiz, imgjx, imgjy, imgjz) < 0.0)
+  if (distanceR(i, j, imgix, imgiy, imgiz, imgjx, imgjy, imgjz, Lbig) < 0.0)
     return 1;
   else
     return 0;
@@ -346,6 +406,7 @@ int compare_func (const void *aa, const void *bb)
   else
     return 0;
 }
+#if 1
 const int images_array[27][3]={{0,0,0},
 {1,0,0},{0,1,0},{0,0,1},
 {-1,0,0},{0,-1,0},{0,0,-1},
@@ -356,7 +417,11 @@ const int images_array[27][3]={{0,0,0},
 {1,1,1},{-1,-1,-1},
 {-1,1,1},{1,-1,1},{1,1,-1},
 {-1,-1,1},{1,-1,-1},{-1,1,-1}};
-
+#else
+const int images_array[8][3]={{0,0,0},
+{1,0,0},{0,1,0},{0,0,1},
+{1,1,0},{1,0,1},{0,1,1},{1,1,1}};
+#endif
 void choose_image(int img, int *dix, int *diy, int *diz)
 {
   *dix = images_array[img][0];
@@ -367,8 +432,8 @@ int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int  NN, fine, JJ, nat, maxl, maxnp, np, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2;
-  double refTime=0.0, ti;
+  int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2;
+  double refTime=0.0, ti, ene=0.0;
   const int NUMREP = 27;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   pi = acos(0.0)*2.0;
@@ -448,13 +513,29 @@ int main(int argc, char **argv)
   cc = malloc(sizeof(double)*points);
   color = malloc(sizeof(int)*NP);
   color2= malloc(sizeof(int)*NP*NUMREP);
+  clsdim2=malloc(sizeof(int)*NP*NUMREP);
   nspots = malloc(sizeof(int)*NP);
   clsdim = malloc(sizeof(int)*NP);
+  clsdimNV = malloc(sizeof(int)*NP);
+  clscolNV = malloc(sizeof(int)*NP);
+  clscol   = malloc(sizeof(int)*NP);
   cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NP);
   clssizedst = malloc(sizeof(int)*NP);
   clssizedstAVG = malloc(sizeof(int)*NP);
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
   percola = malloc(sizeof(int)*NP);
+  maxax0 = sa[0];
+  if (sb[0] > maxax0)
+    maxax0 = sb[0];
+  if (sc[0] > maxax0)
+    maxax0 = sc[0];
+  maxax1 = sa[1];
+  if (sb[1] > maxax1)
+    maxax1 = sb[1];
+  if (sc[0] > maxax1)
+    maxax1 = sc[1];
+  maxsax = fabs(maxax1)+fabs(maxax0)+2.0*sigmaSticky;
+  printf("maxsax=%.15G\n", maxsax);
   for (i = 0; i < NP; i++)
     {
       clssizedstAVG[i] = 0;
@@ -482,6 +563,7 @@ int main(int argc, char **argv)
     printf("[MIXTURE] files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", nfiles, NP, NPA, L, NN, maxl);
   else
     printf("[MONODISPERE] files=%d NP = %d L=%.15G NN=%d maxl=%d\n", nfiles, NP, L, NN, maxl);
+  printf("sigmaSticky=%.15G\n", sigmaSticky);
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
@@ -507,19 +589,17 @@ int main(int argc, char **argv)
 	  clssizedst[i] = 0;
 	}
       curcolor = 0;
+      ene=0;
+      //coppie = 0;
       for (i = 0; i < NPA; i++)
 	{
 	  color[i] = curcolor;
 	  for (j = NPA; j < NP; j++)
 	    {
-      	      if (bond_found(i, j, 0, 0, 0) || 
-		  bond_found(i, j, -1, 0, 0) || 
-		  bond_found(i, j, +1, 0, 0) ||
-		  bond_found(i, j, 0, -1, 0) || 
-		  bond_found(i, j, 0, +1, 0) ||
-		  bond_found(i, j, 0, 0, -1) || 
-		  bond_found(i, j, 0, 0, +1) )
+	      //coppie++;
+      	      if (bond_found(i, j))  
 		{
+		  ene=ene+1.0;
 		  if (color[j] == -1)
 		    color[j] = color[i];
 		  else
@@ -538,7 +618,7 @@ int main(int argc, char **argv)
 	  if (color[i]==-1)
 	    {	    
 	      color[i] = curcolor;
-	    curcolor++;
+	      curcolor++;
 	    } 
 	}
       ncls = curcolor;
@@ -553,13 +633,31 @@ int main(int argc, char **argv)
 	{
 	  for (a = 0; a < NP; a++)
 	    if (color[a] == nc)
-	      clsdim[color[a]]++;
+	      {
+		clsdim[color[a]]++;
+		clscol[nc] = color[a];
+	      }
 	}
       //printf("NP=%d ncls=%d\n", NP, ncls);
+      /*  ==== >>> REMOVE VOIDS <<< ==== */
+      ncNV=0;
       for (nc = 0; nc < ncls; nc++)
 	{
-	  cluster_sort[nc].dim = clsdim[nc];
-	  cluster_sort[nc].color = nc;
+	  if (clsdim[nc] != 0)
+	    {
+	      clsdimNV[ncNV] = clsdim[nc];
+	      clscolNV[ncNV] = clscol[nc]; 
+	      ncNV++;
+	    }
+
+	}
+      ncls = ncNV;
+      printf("ENERGIA TOT=%.15G\n", ene);
+      for (nc = 0; nc < ncls; nc++)
+	{
+	  //printf("clsdimNV[%d]=%d\n",nc ,clsdimNV[nc]);
+	  cluster_sort[nc].dim = clsdimNV[nc];
+	  cluster_sort[nc].color = clscolNV[nc];
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
       /* ============== >>> PERCOLATION <<< ================== */
@@ -572,10 +670,13 @@ int main(int argc, char **argv)
 	      else
 		nspots[i] = MD_STSPOTS_B;		
 	    }	
+	  ene=0;
+	  //coppie = 0;
 	  for (nc = 0; nc < ncls; nc++)
 	    {
-	      if (clsdim[nc]==1)
+	      if (cluster_sort[nc].dim==1)
 		continue;
+	      //printf("Analysing cluster #%d of #%d\n", nc+1, ncls);
 	      /* N.B per verificare la percolazione ogni cluster va "duplicato"
 	       * in tutte le direzioni e se alla fine risulta comunque un unico 
 	       * cluster allora tale cluster è percolante.*/
@@ -601,6 +702,7 @@ int main(int argc, char **argv)
 		{
 		  if (color2[i2]==-1)
 		    color2[i2] = curcolor;
+		  //printf("nc=%d na*NUMREP=%d i2=%d\n",nc, na*NUMREP, i2);
 		  //printf("curcolor:%d\n", curcolor);
 		  for (j2 = 0; j2 < na*NUMREP; j2++)
 		    {
@@ -611,6 +713,7 @@ int main(int argc, char **argv)
 		      if ((nspots[i]==MD_STSPOTS_A && nspots[j]==MD_STSPOTS_A) ||
 			  (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
 		      	continue;
+		      //coppie++;
 		      dix = diy = diz = 0;
 		      djx = djy = djz = 0;
 		      imgi2 = i2 / na;
@@ -620,15 +723,17 @@ int main(int argc, char **argv)
 		      //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
 		      choose_image(imgi2, &dix, &diy, &diz);
 		      choose_image(imgj2, &djx, &djy, &djz);
-		      if ( bond_foundR(i, j, dix, diy, diz, djx, djy, djz) ||
+		      if ( bond_foundR(i, j, dix, diy, diz, djx, djy, djz, 3.0*L) )
+		      
+		      /*||
 			   bond_foundR(i, j, dix, diy, diz, djx-3, djy, djz) ||
-		       	   bond_foundR(i, j, dix, diy, diz, djx+3, djy, djz) ||
-	      		   bond_foundR(i, j, dix, diy, diz, djx, djy-3, djz) ||
+			   bond_foundR(i, j, dix, diy, diz, djx+3, djy, djz) ||
+			   bond_foundR(i, j, dix, diy, diz, djx, djy-3, djz) ||
       			   bond_foundR(i, j, dix, diy, diz, djx, djy+3, djz) ||
 			   bond_foundR(i, j, dix, diy, diz, djx, djy, djz-3) ||
-			   bond_foundR(i, j, dix, diy, diz, djx, djy, djz+3)
-			 )
+			   bond_foundR(i, j, dix, diy, diz, djx, djy, djz+3) )*/
 			{
+			  ene=ene+1.0;
 			  //printf("qui!!!\n");
 			  if (color2[j2] == -1)
 			    {
@@ -648,12 +753,34 @@ int main(int argc, char **argv)
 		  //printf("curcolor2=%d\n", curcolor);
 		}
 	      ncls2 = curcolor;
-	      //printf("ncls2=%d\n", ncls2);
-	      if (ncls2 < NUMREP)
+	      for (nc2 = 0; nc2 < ncls2; nc2++)
+		{
+		  clsdim2[nc2] = 0; 
+		}
+	      for (nc2 = 0; nc2 < ncls2; nc2++)
+		{
+		  for (a = 0; a < na*NUMREP; a++)
+		    if (color2[a] == nc2)
+		      {
+			clsdim2[color2[a]]++;
+		      }
+		}
+
+	      /* ==== >>> REMOVE_VOIDS <<< ==== */
+	      ncNV2=0;
+	      for (nc2 = 0; nc2 < ncls2; nc2++)
+		{
+		  if (clsdim2[nc2] != 0)
+		    {
+		      ncNV2++;
+		    }
+		}
+	      printf("ncls2=%d\n", ncNV2);
+	      if (ncNV2 < NUMREP)
 		percola[nc] = 1;
 	    }
 	}
-
+      printf("ENE TOT (PERCOLATION) = %.15G\n", ene/((double)(NUMREP)));
       almenouno = 0;
       for (nc = 0; nc < ncls; nc++)
 	{
@@ -678,8 +805,9 @@ int main(int argc, char **argv)
       fclose(f);
       for (nc = 0; nc < ncls; nc++)
 	{
-	  clssizedst[clsdim[nc]]++;
-	  clssizedstAVG[clsdim[nc]]++;
+	  //printf("cluster_sort[%d].dim=%d color=%d\n", nc, cluster_sort[nc].dim, cluster_sort[nc].color);
+	  clssizedst[cluster_sort[nc].dim]++;
+	  clssizedstAVG[cluster_sort[nc].dim]++;
 	}
       sprintf(fncls, "%s.clsdst", fname[nr1]);
       f = fopen(fncls, "w+");
