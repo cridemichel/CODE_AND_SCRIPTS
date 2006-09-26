@@ -1605,7 +1605,7 @@ void velsMicroLang(double T, double xi)
    M = Oparams.m;
    gam = Oparams.xi*M;
    /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
-   m = Oparams.Dt*gam/2.0//;(3.0 / 2.0); 
+   m = Oparams.Dt*gam/2.0;//;(3.0 / 2.0); 
    c1 = (M - m)/(M+m);
    kTm = sqrt(Oparams.T / m);
    //printf("c1=%f c2=%f T=%.15G m=%.15G\n", c1, c2, T, m);
