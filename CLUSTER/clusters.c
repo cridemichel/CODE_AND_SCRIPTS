@@ -1038,6 +1038,101 @@ int main(int argc, char **argv)
 		    color2[i2] = curcolor;
 		  //printf("nc=%d na*NUMREP=%d i2=%d\n",nc, na*NUMREP, i2);
 		  //printf("curcolor:%d\n", curcolor);
+		  i = dupcluster[i2];
+		  for (iZ = -1; iZ <= 1; iZ++) 
+		    {
+		      jZ = inCell[2][i] + iZ;    
+		      shift[2] = 0.;
+		      /* apply periodico boundary condition along z if gravitational
+		       * fiels is not present */
+		      if (jZ == -1) 
+			{
+			  jZ = cellsz - 1;    
+			  shift[2] = - L;
+			} 
+		      else if (jZ == cellsz) 
+			{
+			  jZ = 0;    
+			  shift[2] = L;
+			}
+		      for (iY = -1; iY <= 1; iY ++) 
+			{
+			  jY = inCell[1][i] + iY;    
+			  shift[1] = 0.0;
+			  if (jY == -1) 
+			    {
+			      jY = cellsy - 1;    
+			      shift[1] = -L;
+			    } 
+			  else if (jY == cellsy) 
+			    {
+			      jY = 0;    
+			      shift[1] = L;
+			    }
+			  for (iX = -1; iX <= +1; iX ++) 
+			    {
+			      jX = inCell[0][i] + iX;    
+			      shift[0] = 0.0;
+			      if (jX == -1) 
+				{
+				  jX = cellsx - 1;    
+				  shift[0] = - L;
+				} 
+			      else if (jX == cellsx) 
+				{
+				  jX = 0;   
+				  shift[0] = L;
+				}
+			      j = (jZ *cellsy + jY) * cellsx + jX + NP;
+			      for (j = cellList[j]; j > -1; j = cellList[j]) 
+				{
+				  if (color[j] != cluster_sort[nc].color)
+				    continue;
+				 if (particles_type == 1)
+				    {
+				      if ((nspots[i]==MD_STSPOTS_A && nspots[j]==MD_STSPOTS_A) ||
+					  (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
+					continue;
+				    }
+				  //coppie++;
+				  dix = diy = diz = 0;
+				  djx = djy = djz = 0;
+				  imgi2 = i2 / na;
+				  //imgj2 = j2 / na;
+				  j2 = j + na*imgi2;
+				  if (particles_type==0 && j2 <= i2) 
+				    continue;
+				  //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
+				  choose_image(imgi2, &dix, &diy, &diz);
+				  djx = dix;
+				  djy = diy;
+				  djz = diz;
+				  //choose_image(imgj2, &djx, &djy, &djz);
+				  
+				  //if (dix!=0||diy!=0||diz!=0||djx!=0||djy!=0||djz!=0)
+				  //printf("(%d,%d,%d)-(%d,%d,%d)\n", dix, diy, diz, djx, djy, djz);
+				  if ( bond_foundR(i, j, dix, diy, diz, djx, djy, djz, 2.0*L) )
+				    {
+				      ene=ene+1.0;
+				      //printf("qui!!!\n");
+				      if (color2[j2] == -1)
+					{
+					  color2[j2] = color2[i2];
+					  //printf("color2[j2]=color2[i2]=%d\n", color2[i2]);
+					}
+				      else
+					{
+					  if (color2[i2] < color2[j2])
+					    change_all_colors(na*NUMREP, color2, color2[j2], color2[i2]);
+					  else if (color2[i2] > color2[j2])
+					    change_all_colors(na*NUMREP, color2, color2[i2], color2[j2]);
+					}
+				    }
+				}
+			    }
+			}
+		    }
+#if 0
 		  for (j2 = 0; j2 < na*NUMREP; j2++)
 		    {
 		      i = dupcluster[i2];
@@ -1080,6 +1175,7 @@ int main(int argc, char **argv)
 			    }
 			}
 		    }
+#endif
 		  curcolor = findmaxColor(na*NUMREP, color2)+1;
 		  //printf("curcolor2=%d\n", curcolor);
 		}
