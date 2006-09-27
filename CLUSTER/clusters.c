@@ -308,19 +308,33 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
     }
 }
 #define Sqr(x) ((x)*(x))
-int check_distance(double Dx, double Dy, double Dz)
+int check_distance(int i, int j, double Dx, double Dy, double Dz)
 {
   double DxL, DyL, DzL;
-
+  double ma;
   DxL = fabs(Dx);
   DyL = fabs(Dy);
   DzL = fabs(Dz);
 
-  if (DxL > maxsax || DyL > maxsax || DzL > maxsax)
+  if (particles_type == 1)
+    {
+      ma = maxsax;
+    }
+  else if (particles_type == 0)
+    {
+      if (i < NPA && j < NPA)
+	ma = maxsaxAA;
+      else if (i >= NPA && j >= NPA)
+	ma = maxsaxBB;
+      else
+	ma = maxsaxAB;
+    }
+  if (DxL > ma || DyL > ma || DzL > ma)
     return 1;
   else 
     return 0;
 }
+
 
 double distance(int i, int j)
 {
@@ -335,9 +349,10 @@ double distance(int i, int j)
   imgx = -L*rint(Dx/L);
   imgy = -L*rint(Dy/L);
   imgz = -L*rint(Dz/L);
-  
-  if (check_distance(Dx+imgx, Dy+imgy, Dz+imgz))
+
+  if (check_distance(i, j, Dx+imgx, Dy+imgy, Dz+imgz))
     return 1;
+
   if (particles_type == 1)
     {
       maxa = MD_STSPOTS_A;
@@ -452,8 +467,8 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
   imgy = -Lbig*rint(Dy/Lbig);
   imgz = -Lbig*rint(Dz/Lbig);
 
-  //if (check_distance(Dx + imgx, Dy + imgy, Dz + imgz))
-    //return 1;
+  if (check_distance(i, j, Dx + imgx, Dy + imgy, Dz + imgz))
+    return 1;
   for (a = 1; a < maxa+1; a++)
     {
       for (b = 1; b < maxb+1; b++)
@@ -767,8 +782,9 @@ int main(int argc, char **argv)
 	  for (j = jbeg; j < NP; j++)
 	    {
 	      //coppie++;
-	      if (particles_type == 0 && jbeg <= i) 
+	      if (particles_type == 0 && j <= i) 
 		continue;
+	      //printf("(%d-%d)\n", i, j);
       	      if (bond_found(i, j))  
 		{
 		  ene=ene+1.0;
