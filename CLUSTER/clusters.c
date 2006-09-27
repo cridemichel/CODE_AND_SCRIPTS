@@ -17,6 +17,7 @@ char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2;
 int check_percolation = 1, *nspots;
+char inputfile[1024];
 int points, foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
     *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
 double calc_norm(double *vec)
@@ -431,6 +432,36 @@ void choose_image(int img, int *dix, int *diy, int *diz)
   *diy = images_array[img][1];
   *diz = images_array[img][2];
 }
+void print_usage(void)
+{
+  printf("Usage: clusters <listafile>\n");
+  exit(0);
+}
+
+void parse_params(int argc, char** argv)
+{
+  int cc=1;
+  if (argc <= 1)
+    {
+      print_usage();
+    }
+  while (cc < argc)
+    {
+      if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
+	{
+	  print_usage();
+	}
+      else if (!strcmp(argv[cc],"--noperc") || !strcmp(argv[cc],"-np" ))
+	{
+	 check_percolation = 0;
+	} 
+      else if (cc == argc)
+	print_usage();
+      else
+	strcpy(inputfile,argv[cc]);
+      cc++;
+    }
+}
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
@@ -440,13 +471,10 @@ int main(int argc, char **argv)
   const int NUMREP = 8;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   pi = acos(0.0)*2.0;
-  if (argc <= 1)
-    {
-      printf("Usage: clusters <listafile>\n");
-      //printf("where NN il the lenght of the logarithmic block\n");
-      exit(-1);
-    }
-  f2 = fopen(argv[1], "r");
+    /* parse arguments */
+  parse_params(argc, argv);
+
+  f2 = fopen(inputfile, "r");
   c2 = 0;
   maxl = 0;
   while (!feof(f2))
@@ -658,7 +686,7 @@ int main(int argc, char **argv)
 
 	}
       ncls = ncNV;
-      printf("ENERGIA TOT=%.15G\n", ene);
+      printf("E/N = %.15G\n", ene/((double)NP));
       for (nc = 0; nc < ncls; nc++)
 	{
 	  //printf("clsdimNV[%d]=%d\n",nc ,clsdimNV[nc]);
@@ -778,12 +806,12 @@ int main(int argc, char **argv)
 		      ncNV2++;
 		    }
 		}
-	      printf("ncls2=%d\n", ncNV2);
+	      //printf("ncls2=%d\n", ncNV2);
 	      if (ncNV2 < NUMREP)
 		percola[nc] = 1;
 	    }
 	}
-      printf("ENE TOT (PERCOLATION) = %.15G\n", ene/((double)(NUMREP)));
+      printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
       almenouno = 0;
       for (nc = 0; nc < ncls; nc++)
 	{
