@@ -387,6 +387,8 @@ double distance(int i, int j)
 	{
 	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
 	    //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
+	  //printf("[DISTANCE] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + imgz -rat[b][2][j])));
+	 
 	  if (Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j])
 	      +Sqr(rat[a][2][i] + imgz -rat[b][2][j]) < Sqr(sigmaSticky))	  
 		return -1;
@@ -474,8 +476,7 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
     {
       for (b = 1; b < maxb+1; b++)
 	{
-	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
-	    //+Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
+	  //printf("[DISTANCER] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + dx + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + dy + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + dz + imgz -rat[b][2][j])));
 	  if (Sqr(rat[a][0][i] + dx + imgx - rat[b][0][j])+Sqr(rat[a][1][i] + dy + imgy - rat[b][1][j])
 	      + Sqr(rat[a][2][i] + dz + imgz - rat[b][2][j]) < Sqr(sigmaSticky))	  
 		return -1;
@@ -601,6 +602,7 @@ int main(int argc, char **argv)
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
+  //int coppie;
   double refTime=0.0, ti, ene=0.0;
   const int NUMREP = 8;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
@@ -784,7 +786,13 @@ int main(int argc, char **argv)
 	}
       for (i = 0; i < ifin; i++)
 	{
-	  color[i] = curcolor;
+	  if (particles_type == 1)
+	    color[i] = curcolor;
+	  else if (particles_type == 0)
+	    { 
+	      if (color[i] == -1)
+		color[i] = curcolor;
+	    }
 	  for (j = jbeg; j < NP; j++)
 	    {
 	      //coppie++;
@@ -802,6 +810,7 @@ int main(int argc, char **argv)
 		      else if (color[i] > color[j])
 			change_all_colors(NP, color, color[i], color[j]);
 		    }
+		  
 		}
 	    }
 	  curcolor = findmaxColor(NP, color)+1;
@@ -814,6 +823,7 @@ int main(int argc, char **argv)
 	      color[i] = curcolor;
 	      curcolor++;
 	    } 
+	  //printf("color[%d]=%d\n", i, color[i]);
 	}
       ncls = curcolor;
       //printf("curcolor:%d\n", curcolor);
@@ -847,6 +857,7 @@ int main(int argc, char **argv)
 	}
       ncls = ncNV;
       printf("E/N = %.15G\n", ene/((double)NP));
+      //printf("coppie PERC=%d\n", coppie);
       for (nc = 0; nc < ncls; nc++)
 	{
 	  //printf("clsdimNV[%d]=%d\n",nc ,clsdimNV[nc]);
@@ -985,6 +996,7 @@ int main(int argc, char **argv)
 	    }
 	}
       printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
+      //printf("coppie PERC=%d\n", coppie);
       almenouno = 0;
       for (nc = 0; nc < ncls; nc++)
 	{
