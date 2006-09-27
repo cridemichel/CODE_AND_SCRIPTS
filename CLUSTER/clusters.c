@@ -735,13 +735,6 @@ int main(int argc, char **argv)
 		      //if (dix!=0||diy!=0||diz!=0||djx!=0||djy!=0||djz!=0)
 			//printf("(%d,%d,%d)-(%d,%d,%d)\n", dix, diy, diz, djx, djy, djz);
 		      if ( bond_foundR(i, j, dix, diy, diz, djx, djy, djz, 2.0*L) )
-		      /*||
-			   bond_foundR(i, j, dix, diy, diz, djx-3, djy, djz) ||
-			   bond_foundR(i, j, dix, diy, diz, djx+3, djy, djz) ||
-			   bond_foundR(i, j, dix, diy, diz, djx, djy-3, djz) ||
-      			   bond_foundR(i, j, dix, diy, diz, djx, djy+3, djz) ||
-			   bond_foundR(i, j, dix, diy, diz, djx, djy, djz-3) ||
-			   bond_foundR(i, j, dix, diy, diz, djx, djy, djz+3) )*/
 			{
 			  ene=ene+1.0;
 			  //printf("qui!!!\n");
