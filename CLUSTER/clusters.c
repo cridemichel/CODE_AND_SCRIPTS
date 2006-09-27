@@ -10,13 +10,16 @@
 #define MD_PBONDS 10
 #define Sqr(x) ((x)*(x))
 char **fname; 
-double L, time, *ti, *R[3][3], *cc, *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1;
-double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3];
+double L, time, *ti, *R[3][3], *cc, *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
+       maxsaxAA, maxsaxAB, maxsaxBB;
+double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
+       Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
 int *dupcluster;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2;
-int check_percolation = 1, *nspots;
+int check_percolation = 1, *nspots, particles_type=1;
+/* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int points, foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
     *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
@@ -28,6 +31,13 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
+void vectProdVec(double *A, double *B, double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
+}
+
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *DR[3], double *R[3][3])
 {
   FILE *f;
@@ -121,6 +131,7 @@ double spBpos[MD_STSPOTS_B][3] = {{MD_SP_DELR, 0.0, 0.0},{MD_SP_DELR, 3.14159, 0
 
 double spXYZ_A[MD_STSPOTS_A][3];
 double spXYZ_B[MD_STSPOTS_B][3];
+
 void build_atom_positions(void)
 {
  /* N.B. le coordinate spXpos sono del tipo (Dr, theta, phi),
@@ -144,7 +155,7 @@ void build_atom_positions(void)
   spApos[4][0] = Dr;
   spBpos[0][0] = Dr;
   spBpos[1][0] = Dr;
-  printf("Dr:%.15G pi=%.15G theta=%.15G\n", Dr, pi, theta);
+  //printf("Dr:%.15G pi=%.15G theta=%.15G\n", Dr, pi, theta);
   //printf("Dr: %.15G theta: %.15G pi=%.15G a=%.15G b=%.15G c=%.15G\n",
   //	 Dr, theta, pi, sa[1], sb[1], sc[1]);
   for (k1 = 0; k1 < MD_STSPOTS_A; k1++)
@@ -227,6 +238,59 @@ void BuildAtomPosAt(int i, int ata, double rO[3], double R[3][3], double rat[3])
     }
   
 }
+
+void BuildAtomPosAt32(int i, int ata, double rO[3], double R[3][3], double rat[3])
+{
+  /* calcola le coordinate nel laboratorio di uno specifico atomo */
+  int kk;
+  double r1[3], r2[3], r3[3], nr;
+  double radius; 
+  /* l'atomo zero si suppone nell'origine 
+   * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
+   * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
+   * a partire da questi. */
+
+  /* NOTA: qui si assume che tutte e due le specie abbiamo lo stesso diametro!!! */
+  radius = sigmaAA / 2.0;
+  if (ata == 0)
+    {
+      for (kk = 0; kk < 3; kk++)
+	rat[kk] = rO[kk];
+    }
+  else if (ata <= 3)
+    {
+      for (kk = 0; kk < 3; kk++)
+	rat[kk] = rO[kk] + R[kk][ata-1]; 
+    }
+  else
+    {
+      for (kk = 0; kk < 3; kk++)
+	{
+	  r1[kk] = R[kk][1]-R[kk][0];
+	  r2[kk] = R[kk][2]-R[kk][0];
+	}
+      vectProdVec(r1, r2, r3);
+      nr = calc_norm(r3);
+      for (kk = 0; kk < 3; kk++)
+	r3[kk] *= radius/nr;
+      for (kk = 0; kk < 3; kk++)
+	rat[kk] = rO[kk] - r3[kk]; 
+    }
+}
+
+void BuildAtomPos32(int i, double rO[3], double R[3][3], double rat[5][3])
+{
+  /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
+  int a, NUMAT;
+  /* l'atomo zero si suppone nell'origine */
+  if (i >= NPA)
+    NUMAT = 4;
+  else
+    NUMAT = 3;
+  for (a=0; a < NUMAT; a++)
+    BuildAtomPosAt32(i, a, rO, R, rat[a]);
+}
+
 void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
@@ -261,6 +325,7 @@ int check_distance(double Dx, double Dy, double Dz)
 double distance(int i, int j)
 {
   int a, b;
+  int maxa, maxb;
   double imgx, imgy, imgz;
   double Dx, Dy, Dz;
 
@@ -273,9 +338,37 @@ double distance(int i, int j)
   
   if (check_distance(Dx+imgx, Dy+imgy, Dz+imgz))
     return 1;
-  for (a = 1; a < MD_STSPOTS_A+1; a++)
+  if (particles_type == 1)
     {
-      for (b = 1; b < MD_STSPOTS_B+1; b++)
+      maxa = MD_STSPOTS_A;
+      maxb = MD_STSPOTS_B;
+    }
+  else if (particles_type == 0)
+    {
+      if (i < NPA && j >= NPA)
+	{
+	  maxa = 2;
+	  maxb = 3;
+	}
+      else if (i < NPA && j < NPA)
+	{
+	  maxa = 2;
+	  maxb = 2;
+	}
+      else if (i >= NPA && j >= NPA)
+	{
+	  maxa = 3; 
+	  maxb = 3;
+	}
+      else
+	{
+	  maxa = 3;
+	  maxb = 2;
+	}
+    }
+  for (a = 1; a < maxa+1; a++)
+    {
+      for (b = 1; b < maxb+1; b++)
 	{
 	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
 	    //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
@@ -312,16 +405,41 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
   int a, b, maxa, maxb;
   double imgx, imgy, imgz;
   double Dx, Dy, Dz, dx, dy, dz;
-
-  if (i < NPA)
+  if (particles_type == 1)
     {
-      maxa = MD_STSPOTS_A;
-      maxb = MD_STSPOTS_B;
+      if (i < NPA)
+	{
+	  maxa = MD_STSPOTS_A;
+	  maxb = MD_STSPOTS_B;
+	}
+      else
+	{
+	  maxa = MD_STSPOTS_B;
+	  maxb = MD_STSPOTS_A;
+	}
     }
-  else
+  else if (particles_type == 0)
     {
-      maxa = MD_STSPOTS_B;
-      maxb = MD_STSPOTS_A;
+      if (i < NPA && j >= NPA)
+	{
+	  maxa = 2;
+	  maxb = 3;
+	}
+      else if (i < NPA && j < NPA)
+	{
+	  maxa = 2;
+	  maxb = 2;
+	}
+      else if (i >= NPA && j >= NPA)
+	{
+	  maxa = 3; 
+	  maxb = 3;
+	}
+      else
+	{
+	  maxa = 3;
+	  maxb = 2;
+	}
     }
 
   dx = L*(imgix-imgjx);
@@ -466,7 +584,7 @@ int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2;
+  int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg;
   double refTime=0.0, ti, ene=0.0;
   const int NUMREP = 8;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
@@ -523,6 +641,12 @@ int main(int argc, char **argv)
 	sscanf(parval, "%lf %lf\n", &sb[0], &sb[1]);	
       else if (nat==1 && !strcmp(parname,"c"))
 	sscanf(parval, "%lf %lf\n", &sc[0], &sc[1]);	
+      else if (nat==1 && !strcmp(parname,"sigmaAA"))
+	sscanf(parval, "%lf\n", &sigmaAA);	
+      else if (nat==1 && !strcmp(parname,"sigmaAB"))
+	sscanf(parval, "%lf\n", &sigmaAB);	
+      else if (nat==1 && !strcmp(parname,"sigmaBB"))
+	sscanf(parval, "%lf\n", &sigmaAA);	
       else if (nat==1 && !strcmp(parname,"sigmaSticky"))
 	sigmaSticky = atof(parval);
       else if (nat==1 && !strcmp(parname,"theta"))
@@ -531,6 +655,10 @@ int main(int argc, char **argv)
 	Dr = atof(parval);
     }
   fclose(f);
+  /* default = ellipsoids */
+  if (sigmaAA != -1.0)
+    particles_type = 0;
+  
   if (NPA == -1)
     NPA = NP;
   if (argc == 3)
@@ -555,18 +683,27 @@ int main(int argc, char **argv)
   clssizedstAVG = malloc(sizeof(int)*NP);
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
   percola = malloc(sizeof(int)*NP);
-  maxax0 = sa[0];
-  if (sb[0] > maxax0)
-    maxax0 = sb[0];
-  if (sc[0] > maxax0)
-    maxax0 = sc[0];
-  maxax1 = sa[1];
-  if (sb[1] > maxax1)
-    maxax1 = sb[1];
-  if (sc[0] > maxax1)
-    maxax1 = sc[1];
-  maxsax = fabs(maxax1)+fabs(maxax0)+2.0*sigmaSticky;
-  printf("maxsax=%.15G\n", maxsax);
+  if (particles_type == 1)
+    {
+      maxax0 = sa[0];
+      if (sb[0] > maxax0)
+	maxax0 = sb[0];
+      if (sc[0] > maxax0)
+	maxax0 = sc[0];
+      maxax1 = sa[1];
+      if (sb[1] > maxax1)
+	maxax1 = sb[1];
+      if (sc[0] > maxax1)
+	maxax1 = sc[1];
+      maxsax = fabs(maxax1)+fabs(maxax0)+2.0*sigmaSticky;
+      //printf("maxsax=%.15G\n", maxsax);
+    }
+  else
+    {
+      maxsaxAA = fabs(sigmaAA)+2.0*sigmaSticky;
+      maxsaxAB = fabs(sigmaAB)+2.0*sigmaSticky;
+      maxsaxBB = fabs(sigmaBB)+2.0*sigmaSticky;
+    }
   for (i = 0; i < NP; i++)
     {
       clssizedstAVG[i] = 0;
@@ -588,13 +725,20 @@ int main(int argc, char **argv)
     {
       cc[ii]=0.0;
     }
-  build_atom_positions();
-
+  if (particles_type==1)
+    {
+      build_atom_positions();
+      printf("SYSTEM: ELLISPOIDS - DGEBA\n");
+    }
+  else
+    {
+      printf("SYSTEM: SPHERES 3-2\n");
+    }
   if (NPA != NP)
     printf("[MIXTURE] files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", nfiles, NP, NPA, L, NN, maxl);
   else
     printf("[MONODISPERE] files=%d NP = %d L=%.15G NN=%d maxl=%d\n", nfiles, NP, L, NN, maxl);
-  printf("sigmaSticky=%.15G\n", sigmaSticky);
+  //printf("sigmaSticky=%.15G\n", sigmaSticky);
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
@@ -610,7 +754,10 @@ int main(int argc, char **argv)
 		RL[a][b] = R[a][b][i];
 	    }
 	  //printf("r0L[%d]=%.15G %.15G %.15G\n", i, r0L[0], r0L[1], r0L[2]);
-	  BuildAtomPos(i, r0L, RL, ratL);
+	  if (particles_type == 1)
+	    BuildAtomPos(i, r0L, RL, ratL);
+	  else if (particles_type == 0)
+	    BuildAtomPos32(i, r0L, RL, ratL);
 	  for (a = 0; a < NA; a++)
 	    for (b = 0; b < 3; b++)
 	      rat[a][b][i] = ratL[a][b];
@@ -625,12 +772,19 @@ int main(int argc, char **argv)
       curcolor = 0;
       ene=0;
       //coppie = 0;
+      if (particles_type == 1)
+	jbeg = NPA;
+      else 
+	jbeg = 0; 
+
       for (i = 0; i < NPA; i++)
 	{
 	  color[i] = curcolor;
-	  for (j = NPA; j < NP; j++)
+	  for (j = jbeg; j < NP; j++)
 	    {
 	      //coppie++;
+	      if (particles_type == 0 && jbeg <= i) 
+		continue;
       	      if (bond_found(i, j))  
 		{
 		  ene=ene+1.0;
@@ -647,7 +801,8 @@ int main(int argc, char **argv)
 	    }
 	  curcolor = findmaxColor(NP, color)+1;
 	}
-      for (i = NPA; i < NP; i++)
+      /* considera la particelle singole come cluster da 1 */
+      for (i = 0; i < NP; i++)
 	{
 	  if (color[i]==-1)
 	    {	    
@@ -700,10 +855,20 @@ int main(int argc, char **argv)
 
 	  for (i=0; i < NP; i++)
 	    {
-    	      if (i < NPA)
-		nspots[i] = MD_STSPOTS_A;
+	      if (particles_type == 1)
+		{
+		  if (i < NPA)
+		    nspots[i] = MD_STSPOTS_A;
+		  else
+		    nspots[i] = MD_STSPOTS_B;		
+		}
 	      else
-		nspots[i] = MD_STSPOTS_B;		
+		{
+		  if (i < NPA)
+		    nspots[i] = 2;
+		  else
+		    nspots[i] = 3;		
+		}
 	    }	
 	  ene=0;
 	  //coppie = 0;
@@ -747,9 +912,12 @@ int main(int argc, char **argv)
 		      j = dupcluster[j2];
 		      if (i2 >= j2)
 			continue;
-		      if ((nspots[i]==MD_STSPOTS_A && nspots[j]==MD_STSPOTS_A) ||
-			  (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
-		      	continue;
+		      if (particles_type == 1)
+			{
+			  if ((nspots[i]==MD_STSPOTS_A && nspots[j]==MD_STSPOTS_A) ||
+			      (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
+			    continue;
+			}
 		      //coppie++;
 		      dix = diy = diz = 0;
 		      djx = djy = djz = 0;
