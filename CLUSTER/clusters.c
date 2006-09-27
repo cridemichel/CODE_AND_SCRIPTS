@@ -696,8 +696,6 @@ int main(int argc, char **argv)
 		      for (c = 0; c < NUMREP; c++)
 			{
 			  dupcluster[c*cluster_sort[nc].dim+na] = i;
-			  if (c*cluster_sort[nc].dim+na > NP*NUMREP)
-			    printf("NP*NUMREP=%d c*cluster_sort[%d].dim+na=%d", NP*NUMREP, nc, c*cluster_sort[nc].dim+na);
 			}
 		      na++;
 		    }
