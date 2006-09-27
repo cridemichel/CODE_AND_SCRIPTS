@@ -10,7 +10,7 @@
 #define MD_PBONDS 10
 #define Sqr(x) ((x)*(x))
 char **fname; 
-double L, time, *ti, *R[3][3], *cc, *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
+double L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
        Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
@@ -21,7 +21,7 @@ int NP, NPA=-1, ncNV, ncNV2;
 int check_percolation = 1, *nspots, particles_type=1;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
-int points, foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
+int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
     *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
 double calc_norm(double *vec)
 {
@@ -641,12 +641,8 @@ int main(int argc, char **argv)
 	sscanf(parval, "%lf %lf\n", &sb[0], &sb[1]);	
       else if (nat==1 && !strcmp(parname,"c"))
 	sscanf(parval, "%lf %lf\n", &sc[0], &sc[1]);	
-      else if (nat==1 && !strcmp(parname,"sigmaAA"))
-	sscanf(parval, "%lf\n", &sigmaAA);	
-      else if (nat==1 && !strcmp(parname,"sigmaAB"))
-	sscanf(parval, "%lf\n", &sigmaAB);	
-      else if (nat==1 && !strcmp(parname,"sigmaBB"))
-	sscanf(parval, "%lf\n", &sigmaAA);	
+      else if (nat==1 && !strcmp(parname,"sigma"))
+	sscanf(parval, "%lf %lf %lf %lf\n", &sigmaAA, &sigmaAB, &sigmaAB, &sigmaBB);	
       else if (nat==1 && !strcmp(parname,"sigmaSticky"))
 	sigmaSticky = atof(parval);
       else if (nat==1 && !strcmp(parname,"theta"))
@@ -656,20 +652,12 @@ int main(int argc, char **argv)
     }
   fclose(f);
   /* default = ellipsoids */
+  //printf("sigmaAA=%.15G\n", sigmaAA);
   if (sigmaAA != -1.0)
     particles_type = 0;
   
   if (NPA == -1)
     NPA = NP;
-  if (argc == 3)
-    points=atoi(argv[2]);
-  else
-    points=NN;
-  maxnp = NN + (nfiles-NN)/NN;
-  if (points > maxnp)
-    points = maxnp;
-  //ti = malloc(sizeof(double)*points);
-  cc = malloc(sizeof(double)*points);
   color = malloc(sizeof(int)*NP);
   color2= malloc(sizeof(int)*NP*NUMREP);
   clsdim2=malloc(sizeof(int)*NP*NUMREP);
@@ -720,10 +708,6 @@ int main(int argc, char **argv)
 	{
 	  R[a][b] = malloc(sizeof(double)*NP);
 	}
-    }
-  for (ii=0; ii < points; ii++)
-    {
-      cc[ii]=0.0;
     }
   if (particles_type==1)
     {
