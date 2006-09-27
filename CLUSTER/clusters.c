@@ -14,7 +14,7 @@ double L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0
        maxsaxAA, maxsaxAB, maxsaxBB;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
        Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
-int *dupcluster;
+int *dupcluster, RCUT, shift[3];
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2;
@@ -597,11 +597,34 @@ void parse_params(int argc, char** argv)
       cc++;
     }
 }
+int *inCell[3], *cellList, cellsx, cellsy, cellsz;
+void build_linked_list(void)
+{
+  double L2;
+  int j, n;
+  L2 = 0.5 * L;
+
+  for (j = 0; j < cellsx*cellsy*cellsz + NP; j++)
+    cellList[j] = -1;
+
+  for (n = 0; n < NP; n++)
+    {
+      inCell[0][n] =  (rat[0][0][n] + L2) * cellsx / L;
+      inCell[1][n] =  (rat[0][1][n] + L2) * cellsy / L;
+      inCell[2][n] =  (rat[0][2][n] + L2) * cellsz / L;
+      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+	inCell[0][n] + NP;
+      cellList[n] = cellList[j];
+      cellList[j] = n;
+    }
+}
+
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
+  int jX, jY, jZ, iX, iY, iZ;
   //int coppie;
   double refTime=0.0, ti, ene=0.0;
   const int NUMREP = 8;
@@ -688,6 +711,7 @@ int main(int argc, char **argv)
   clssizedst = malloc(sizeof(int)*NP);
   clssizedstAVG = malloc(sizeof(int)*NP);
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
+  
   percola = malloc(sizeof(int)*NP);
   if (particles_type == 1)
     {
@@ -710,6 +734,19 @@ int main(int argc, char **argv)
       maxsaxAB = fabs(sigmaAB)+2.0*sigmaSticky;
       maxsaxBB = fabs(sigmaBB)+2.0*sigmaSticky;
     }
+  /* WARNING: se i diametri sono diversi va cambiato qua!! */ 
+  if (particles_type == 1)
+    RCUT = maxsax;
+  else if (particles_type == 0)
+    RCUT = maxsaxAA*1.01;
+  cellsx = L / RCUT;
+  cellsy = L / RCUT;
+  cellsz = L / RCUT;
+  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP));
+  inCell[0] = malloc(sizeof(int)*NP);
+  inCell[1] = malloc(sizeof(int)*NP);
+  inCell[2] = malloc(sizeof(int)*NP);
+
   for (i = 0; i < NP; i++)
     {
       clssizedstAVG[i] = 0;
@@ -774,6 +811,8 @@ int main(int argc, char **argv)
       curcolor = 0;
       ene=0;
       //coppie = 0;
+      build_linked_list();
+
       if (particles_type == 1)
 	{
 	  jbeg = NPA;
@@ -793,6 +832,82 @@ int main(int argc, char **argv)
 	      if (color[i] == -1)
 		color[i] = curcolor;
 	    }
+	  for (iZ = -1; iZ <= 1; iZ++) 
+	    {
+	      jZ = inCell[2][i] + iZ;    
+	      shift[2] = 0.;
+	      /* apply periodico boundary condition along z if gravitational
+	       * fiels is not present */
+	      if (jZ == -1) 
+		{
+		  jZ = cellsz - 1;    
+		  shift[2] = - L;
+		} 
+	      else if (jZ == cellsz) 
+		{
+		  jZ = 0;    
+		  shift[2] = L;
+		}
+	      for (iY = -1; iY <= 1; iY ++) 
+		{
+		  jY = inCell[1][i] + iY;    
+		  shift[1] = 0.0;
+		  if (jY == -1) 
+		    {
+		      jY = cellsy - 1;    
+		      shift[1] = -L;
+		    } 
+		  else if (jY == cellsy) 
+		    {
+		      jY = 0;    
+		      shift[1] = L;
+		    }
+		  for (iX = -1; iX <= +1; iX ++) 
+		    {
+		      jX = inCell[0][i] + iX;    
+		      shift[0] = 0.0;
+		      if (jX == -1) 
+			{
+			  jX = cellsx - 1;    
+			  shift[0] = - L;
+			} 
+		      else if (jX == cellsx) 
+			{
+			  jX = 0;   
+			  shift[0] = L;
+			}
+		      j = (jZ *cellsy + jY) * cellsx + jX + NP;
+		      for (j = cellList[j]; j > -1; j = cellList[j]) 
+			{
+			  switch (particles_type)
+			    {
+			    case 0:
+			      if (j <= i) 
+				continue;
+			      break;
+			    case 1:
+			      if ((i < NPA && j < NPA) || ( i >= NPA && j >= NPA))
+				continue;
+			      break;
+			    }
+			  if (bond_found(i, j))  
+			    {
+			      ene=ene+1.0;
+			      if (color[j] == -1)
+				color[j] = color[i];
+			      else
+				{
+				  if (color[i] < color[j])
+				    change_all_colors(NP, color, color[j], color[i]);
+				  else if (color[i] > color[j])
+				    change_all_colors(NP, color, color[i], color[j]);
+				}
+			    }
+			}
+		    }
+		}
+	    }
+#if 0 
 	  for (j = jbeg; j < NP; j++)
 	    {
 	      //coppie++;
@@ -813,6 +928,7 @@ int main(int argc, char **argv)
 		  
 		}
 	    }
+#endif
 	  curcolor = findmaxColor(NP, color)+1;
 	}
       /* considera la particelle singole come cluster da 1 */
@@ -994,8 +1110,8 @@ int main(int argc, char **argv)
 	      if (ncNV2 < NUMREP)
 		percola[nc] = 1;
 	    }
+	  printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
 	}
-      printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
       //printf("coppie PERC=%d\n", coppie);
       almenouno = 0;
       for (nc = 0; nc < ncls; nc++)
