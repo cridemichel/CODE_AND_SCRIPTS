@@ -469,6 +469,7 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
 
   if (check_distance(i, j, Dx + imgx, Dy + imgy, Dz + imgz))
     return 1;
+  //printf("i=%d j=%d rat[][0][i]=%.15G,%.15G\n", i, j, rat[1][0][i], rat[2][0][i]);
   for (a = 1; a < maxa+1; a++)
     {
       for (b = 1; b < maxb+1; b++)
@@ -599,7 +600,7 @@ int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg;
+  int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   double refTime=0.0, ti, ene=0.0;
   const int NUMREP = 8;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
@@ -772,11 +773,16 @@ int main(int argc, char **argv)
       ene=0;
       //coppie = 0;
       if (particles_type == 1)
-	jbeg = NPA;
+	{
+	  jbeg = NPA;
+	  ifin = NPA;
+	}
       else 
-	jbeg = 0; 
-
-      for (i = 0; i < NPA; i++)
+	{
+	  jbeg = 0; 
+	  ifin = NP;
+	}
+      for (i = 0; i < ifin; i++)
 	{
 	  color[i] = curcolor;
 	  for (j = jbeg; j < NP; j++)
@@ -784,7 +790,6 @@ int main(int argc, char **argv)
 	      //coppie++;
 	      if (particles_type == 0 && j <= i) 
 		continue;
-	      //printf("(%d-%d)\n", i, j);
       	      if (bond_found(i, j))  
 		{
 		  ene=ene+1.0;
