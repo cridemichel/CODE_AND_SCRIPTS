@@ -11,7 +11,8 @@
 #define Sqr(x) ((x)*(x))
 char **fname; 
 double L, time, *ti, *R[3][3], *cc, *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1;
-double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], *dupcluster;
+double pi, sa[2], sb[2], sc[2], Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3];
+int *dupcluster;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2;
@@ -242,15 +243,15 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
     }
 }
 #define Sqr(x) ((x)*(x))
-int check_distance(int i, int j, double imgx, double imgy, double imgz)
+int check_distance(double Dx, double Dy, double Dz)
 {
-  double Dx, Dy, Dz;
+  double DxL, DyL, DzL;
 
-  Dx = fabs(rat[0][0][i] + imgx - rat[0][0][j]);
-  Dy = fabs(rat[0][1][i] + imgy - rat[0][1][j]);
-  Dz = fabs(rat[0][2][i] + imgz - rat[0][2][j]);
+  DxL = fabs(Dx);
+  DyL = fabs(Dy);
+  DzL = fabs(Dz);
 
-  if (Dx > maxsax || Dy > maxsax || Dz > maxsax)
+  if (DxL > maxsax || DyL > maxsax || DzL > maxsax)
     return 1;
   else 
     return 0;
@@ -269,7 +270,7 @@ double distance(int i, int j)
   imgy = -L*rint(Dy/L);
   imgz = -L*rint(Dz/L);
   
-  if (check_distance(i, j, imgx, imgy, imgz))
+  if (check_distance(Dx+imgx, Dy+imgy, Dz+imgz))
     return 1;
   for (a = 1; a < MD_STSPOTS_A+1; a++)
     {
@@ -284,6 +285,7 @@ double distance(int i, int j)
     }
   return 1;
 }
+#if 0
 int check_distanceR(int i, int j, int imgix, int imgiy, int imgiz,
 		  int imgjx, int imgjy, int imgjz, double imgx, double imgy, double imgz)
 {
@@ -302,6 +304,7 @@ int check_distanceR(int i, int j, int imgix, int imgiy, int imgiz,
       return 0;
     }
 }
+#endif
 double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
 		  int imgjx, int imgjy, int imgjz, double Lbig)
 {
@@ -330,8 +333,8 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
   imgy = -Lbig*rint(Dy/Lbig);
   imgz = -Lbig*rint(Dz/Lbig);
 
-  if (check_distanceR(i, j, imgix, imgiy, imgiz, imgjx, imgjy, imgjz, imgx, imgy, imgz))
-    return 1;
+  //if (check_distance(Dx + imgx, Dy + imgy, Dz + imgz))
+    //return 1;
   for (a = 1; a < maxa+1; a++)
     {
       for (b = 1; b < maxb+1; b++)
@@ -406,7 +409,7 @@ int compare_func (const void *aa, const void *bb)
   else
     return 0;
 }
-#if 1
+#if 0
 const int images_array[27][3]={{0,0,0},
 {1,0,0},{0,1,0},{0,0,1},
 {-1,0,0},{0,-1,0},{0,0,-1},
@@ -434,7 +437,7 @@ int main(int argc, char **argv)
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2;
   double refTime=0.0, ti, ene=0.0;
-  const int NUMREP = 27;
+  const int NUMREP = 8;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   pi = acos(0.0)*2.0;
   if (argc <= 1)
@@ -578,10 +581,13 @@ int main(int argc, char **argv)
 	      for (b = 0; b < 3; b++)
 		RL[a][b] = R[a][b][i];
 	    }
+	  //printf("r0L[%d]=%.15G %.15G %.15G\n", i, r0L[0], r0L[1], r0L[2]);
 	  BuildAtomPos(i, r0L, RL, ratL);
 	  for (a = 0; a < NA; a++)
 	    for (b = 0; b < 3; b++)
 	      rat[a][b][i] = ratL[a][b];
+
+	  //printf("rat[]=%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
 	}
       for (i = 0; i < NP; i++)
 	{
@@ -663,6 +669,7 @@ int main(int argc, char **argv)
       /* ============== >>> PERCOLATION <<< ================== */
       if (check_percolation)
 	{
+
 	  for (i=0; i < NP; i++)
 	    {
     	      if (i < NPA)
@@ -681,6 +688,7 @@ int main(int argc, char **argv)
 	       * in tutte le direzioni e se alla fine risulta comunque un unico 
 	       * cluster allora tale cluster è percolante.*/
 	      na = 0;
+	      //printf("i=1011 j=277 rat=%.15G %.15G\n", rat[0][0][1011], rat[0][0][377]);
 	      for (i=0; i < NP; i++)
 		{
 		  if (color[i]==cluster_sort[nc].color)
@@ -688,10 +696,13 @@ int main(int argc, char **argv)
 		      for (c = 0; c < NUMREP; c++)
 			{
 			  dupcluster[c*cluster_sort[nc].dim+na] = i;
+			  if (c*cluster_sort[nc].dim+na > NP*NUMREP)
+			    printf("NP*NUMREP=%d c*cluster_sort[%d].dim+na=%d", NP*NUMREP, nc, c*cluster_sort[nc].dim+na);
 			}
 		      na++;
 		    }
 		}
+	      //printf("i=1011 j=277 rat=%.15G %.15G\n", rat[0][0][1011], rat[0][0][377]);
 	      //printf("NP=%d NPA=%d na=%d,clsdim[%d]=%d\n", NP, NPA,na,nc,cluster_sort[nc].dim);
 	      curcolor = 0;
 	      for (i2 = 0; i2 < na*NUMREP; i2++)
@@ -723,8 +734,9 @@ int main(int argc, char **argv)
 		      //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
 		      choose_image(imgi2, &dix, &diy, &diz);
 		      choose_image(imgj2, &djx, &djy, &djz);
-		      if ( bond_foundR(i, j, dix, diy, diz, djx, djy, djz, 3.0*L) )
-		      
+		      //if (dix!=0||diy!=0||diz!=0||djx!=0||djy!=0||djz!=0)
+			//printf("(%d,%d,%d)-(%d,%d,%d)\n", dix, diy, diz, djx, djy, djz);
+		      if ( bond_foundR(i, j, dix, diy, diz, djx, djy, djz, 2.0*L) )
 		      /*||
 			   bond_foundR(i, j, dix, diy, diz, djx-3, djy, djz) ||
 			   bond_foundR(i, j, dix, diy, diz, djx+3, djy, djz) ||
