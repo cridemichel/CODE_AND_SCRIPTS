@@ -10,11 +10,13 @@
 #define MD_PBONDS 10
 #define Sqr(x) ((x)*(x))
 char **fname; 
+
+const int NUMREP = 8;
 double L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
-       maxsaxAA, maxsaxAB, maxsaxBB;
+       maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
        Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
-int *dupcluster, RCUT, shift[3];
+int *dupcluster, shift[3];
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2;
@@ -618,6 +620,29 @@ void build_linked_list(void)
       cellList[j] = n;
     }
 }
+void build_linked_list_perc(int clsdim, double Lbig)
+{
+  double L2;
+  int img, j, n, np, dix, diy, diz;
+  L2 = 0.5 * L;
+
+  for (j = 0; j < cellsx*cellsy*cellsz + NP*NUMREP; j++)
+    cellList[j] = -1;
+  //printf("cells=%d %d %d Lbig=%.15G L=%.15G\n", cellsx, cellsy, cellsz, Lbig, L);
+  for (n = 0; n < clsdim*NUMREP; n++)
+    {
+      img = n / clsdim;
+      choose_image(img, &dix, &diy, &diz);
+      np = dupcluster[n];
+      inCell[0][n] =  (rat[0][0][np] + dix*L + L2) * cellsx / Lbig;
+      inCell[1][n] =  (rat[0][1][np] + diy*L + L2) * cellsy / Lbig;
+      inCell[2][n] =  (rat[0][2][np] + diz*L + L2) * cellsz / Lbig;
+      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+	inCell[0][n] + NP*NUMREP;
+      cellList[n] = cellList[j];
+      cellList[j] = n;
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -627,7 +652,6 @@ int main(int argc, char **argv)
   int jX, jY, jZ, iX, iY, iZ;
   //int coppie;
   double refTime=0.0, ti, ene=0.0;
-  const int NUMREP = 8;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   pi = acos(0.0)*2.0;
     /* parse arguments */
@@ -711,7 +735,6 @@ int main(int argc, char **argv)
   clssizedst = malloc(sizeof(int)*NP);
   clssizedstAVG = malloc(sizeof(int)*NP);
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
-  
   percola = malloc(sizeof(int)*NP);
   if (particles_type == 1)
     {
@@ -823,16 +846,12 @@ int main(int argc, char **argv)
 	  jbeg = 0; 
 	  ifin = NP;
 	}
-      for (i = 0; i < ifin; i++)
+      for (i = 0; i < NP; i++)
 	{
-	  if (particles_type == 1)
+    	  if (color[i] == -1)
 	    color[i] = curcolor;
-	  else if (particles_type == 0)
-	    { 
-	      if (color[i] == -1)
-		color[i] = curcolor;
-	    }
-	  for (iZ = -1; iZ <= 1; iZ++) 
+	    
+	  for (iZ = -1; iZ <= +1; iZ++) 
 	    {
 	      jZ = inCell[2][i] + iZ;    
 	      shift[2] = 0.;
@@ -848,7 +867,7 @@ int main(int argc, char **argv)
 		  jZ = 0;    
 		  shift[2] = L;
 		}
-	      for (iY = -1; iY <= 1; iY ++) 
+	      for (iY = -1; iY <= +1; iY ++) 
 		{
 		  jY = inCell[1][i] + iY;    
 		  shift[1] = 0.0;
@@ -886,7 +905,8 @@ int main(int argc, char **argv)
 				continue;
 			      break;
 			    case 1:
-			      if ((i < NPA && j < NPA) || ( i >= NPA && j >= NPA))
+			      if ((i < NPA && j < NPA) || ( i >= NPA && j >= NPA) ||
+				  (i >= NPA && j < NPA))
 				continue;
 			      break;
 			    }
@@ -984,6 +1004,17 @@ int main(int argc, char **argv)
       /* ============== >>> PERCOLATION <<< ================== */
       if (check_percolation)
 	{
+	  free(cellList);
+	  free(inCell[0]);
+	  free(inCell[1]);
+	  free(inCell[2]);
+	  cellsx = 2.0*L / RCUT;
+	  cellsy = 2.0*L / RCUT;
+	  cellsz = 2.0*L / RCUT;
+	  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP*NUMREP));
+	  inCell[0] = malloc(sizeof(int)*NP*NUMREP);
+	  inCell[1] = malloc(sizeof(int)*NP*NUMREP);
+	  inCell[2] = malloc(sizeof(int)*NP*NUMREP);
 
 	  for (i=0; i < NP; i++)
 	    {
@@ -1008,6 +1039,7 @@ int main(int argc, char **argv)
 	    {
 	      if (cluster_sort[nc].dim==1)
 		continue;
+
 	      //printf("Analysing cluster #%d of #%d\n", nc+1, ncls);
 	      /* N.B per verificare la percolazione ogni cluster va "duplicato"
 	       * in tutte le direzioni e se alla fine risulta comunque un unico 
@@ -1025,6 +1057,8 @@ int main(int argc, char **argv)
 		      na++;
 		    }
 		}
+
+	      build_linked_list_perc(cluster_sort[nc].dim, 2.0*L);
 	      //printf("i=1011 j=277 rat=%.15G %.15G\n", rat[0][0][1011], rat[0][0][377]);
 	      //printf("NP=%d NPA=%d na=%d,clsdim[%d]=%d\n", NP, NPA,na,nc,cluster_sort[nc].dim);
 	      curcolor = 0;
@@ -1041,7 +1075,7 @@ int main(int argc, char **argv)
 		  i = dupcluster[i2];
 		  for (iZ = -1; iZ <= 1; iZ++) 
 		    {
-		      jZ = inCell[2][i] + iZ;    
+		      jZ = inCell[2][i2] + iZ;    
 		      shift[2] = 0.;
 		      /* apply periodico boundary condition along z if gravitational
 		       * fiels is not present */
@@ -1057,7 +1091,7 @@ int main(int argc, char **argv)
 			}
 		      for (iY = -1; iY <= 1; iY ++) 
 			{
-			  jY = inCell[1][i] + iY;    
+			  jY = inCell[1][i2] + iY;    
 			  shift[1] = 0.0;
 			  if (jY == -1) 
 			    {
@@ -1071,7 +1105,7 @@ int main(int argc, char **argv)
 			    }
 			  for (iX = -1; iX <= +1; iX ++) 
 			    {
-			      jX = inCell[0][i] + iX;    
+			      jX = inCell[0][i2] + iX;    
 			      shift[0] = 0.0;
 			      if (jX == -1) 
 				{
@@ -1083,31 +1117,28 @@ int main(int argc, char **argv)
 				  jX = 0;   
 				  shift[0] = L;
 				}
-			      j = (jZ *cellsy + jY) * cellsx + jX + NP;
-			      for (j = cellList[j]; j > -1; j = cellList[j]) 
+			      j2 = (jZ *cellsy + jY) * cellsx + jX + NP*NUMREP;
+			      for (j2 = cellList[j2]; j2 > -1; j2 = cellList[j2]) 
 				{
-				  if (color[j] != cluster_sort[nc].color)
+				  //if (color[j] != cluster_sort[nc].color)
+				    //continue;
+				  //coppie++;
+				  j = dupcluster[j2];
+			 	  if (j2 <= i2) 
 				    continue;
-				 if (particles_type == 1)
-				    {
+			 	  if (particles_type == 1)
+			       	   {
 				      if ((nspots[i]==MD_STSPOTS_A && nspots[j]==MD_STSPOTS_A) ||
 					  (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
 					continue;
 				    }
-				  //coppie++;
-				  dix = diy = diz = 0;
-				  djx = djy = djz = 0;
+				  //dix = diy = diz = 0;
+				  //djx = djy = djz = 0;
 				  imgi2 = i2 / na;
-				  //imgj2 = j2 / na;
-				  j2 = j + na*imgi2;
-				  if (particles_type==0 && j2 <= i2) 
-				    continue;
-				  //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
+				  imgj2 = j2 / na;
+				  				  //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
 				  choose_image(imgi2, &dix, &diy, &diz);
-				  djx = dix;
-				  djy = diy;
-				  djz = diz;
-				  //choose_image(imgj2, &djx, &djy, &djz);
+				  choose_image(imgj2, &djx, &djy, &djz);
 				  
 				  //if (dix!=0||diy!=0||diz!=0||djx!=0||djy!=0||djz!=0)
 				  //printf("(%d,%d,%d)-(%d,%d,%d)\n", dix, diy, diz, djx, djy, djz);
