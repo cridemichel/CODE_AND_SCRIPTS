@@ -12,15 +12,16 @@
 char **fname; 
 
 const int NUMREP = 8;
+int MAXBONDS = 10;
 double L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
        Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
-int *dupcluster, shift[3];
+int *dupcluster, shift[3], *numbonds, **bonds;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2;
-int check_percolation = 1, *nspots, particles_type=1;
+int check_percolation = 1, *nspots, particles_type=1, output_bonds=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
@@ -592,6 +593,18 @@ void parse_params(int argc, char** argv)
 	{
 	 check_percolation = 0;
 	} 
+      else if (!strcmp(argv[cc],"--bonds") || !strcmp(argv[cc],"-b" ))
+	{
+ 	  output_bonds = 1;
+	} 
+      else if (!strcmp(argv[cc],"--maxbonds") || !strcmp(argv[cc],"-mb" ))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  MAXBONDS = atoi(argv[cc]);
+ 	  output_bonds = 1;
+	} 
       else if (cc == argc)
 	print_usage();
       else
@@ -642,6 +655,22 @@ void build_linked_list_perc(int clsdim, double Lbig)
       cellList[n] = cellList[j];
       cellList[j] = n;
     }
+}
+void add_bond(int i, int j)
+{
+  bonds[i][numbonds[i]] = j;
+  numbonds[i]++;
+}
+/* Allocate memory for a matrix of integers */
+int** AllocMatI(int size1, int size2)
+{
+  int** v;
+  int k;
+  v = (int**) malloc(size1 * sizeof(int*));
+  v[0] = (int*) malloc(size1 * size2 * sizeof(int));
+  for (k = 1; k < size1; k++)
+    v[k] = v[k-1] + size2;
+  return v;
 }
 
 int main(int argc, char **argv)
@@ -736,6 +765,11 @@ int main(int argc, char **argv)
   clssizedstAVG = malloc(sizeof(int)*NP);
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
   percola = malloc(sizeof(int)*NP);
+  if (output_bonds)
+    {
+      numbonds  = malloc(sizeof(int)*NP); 
+      bonds = AllocMatI(NP, MAXBONDS);
+    }
   if (particles_type == 1)
     {
       maxax0 = sa[0];
@@ -912,6 +946,11 @@ int main(int argc, char **argv)
 			    }
 			  if (bond_found(i, j))  
 			    {
+			      if (output_bonds)
+				{
+				  add_bond(i, j);
+				  add_bond(j, i);
+				}
 			      ene=ene+1.0;
 			      if (color[j] == -1)
 				color[j] = color[i];
@@ -1274,6 +1313,19 @@ int main(int argc, char **argv)
 	{
 	  if (clssizedst[i] != 0)
 	    fprintf(f, "%d %d\n", i, clssizedst[i]);
+	}
+      fclose(f);
+    }
+  if (output_bonds)
+    {
+      f = fopen("bonds.dat", "w+");
+      fprintf(f, "%d %.15G\n", NP, L);
+      for (i = 0; i < NP; i++)
+	{
+	  fprintf(f,"%d %d\n", i, numbonds[i]);
+	  for (c = 0; c < numbonds[i]-1; c++)
+	    fprintf(f, "%d ", bonds[i][c]);
+	  fprintf(f, "%d\n", bonds[i][numbonds[i]-1]);
 	}
       fclose(f);
     }
