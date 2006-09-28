@@ -1322,6 +1322,10 @@ int main(int argc, char **argv)
       fprintf(f, "%d %.15G\n", NP, L);
       for (i = 0; i < NP; i++)
 	{
+	  fprintf(f,"%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
+	}	  
+      for (i = 0; i < NP; i++)
+	{
 	  fprintf(f,"%d %d\n", i, numbonds[i]);
 	  for (c = 0; c < numbonds[i]-1; c++)
 	    fprintf(f, "%d ", bonds[i][c]);
