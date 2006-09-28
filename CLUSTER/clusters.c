@@ -591,11 +591,11 @@ void parse_params(int argc, char** argv)
 	}
       else if (!strcmp(argv[cc],"--noperc") || !strcmp(argv[cc],"-np" ))
 	{
-	 check_percolation = 0;
+	  check_percolation = 0;
 	} 
       else if (!strcmp(argv[cc],"--bonds") || !strcmp(argv[cc],"-b" ))
 	{
- 	  output_bonds = 1;
+	  output_bonds = 1;
 	} 
       else if (!strcmp(argv[cc],"--maxbonds") || !strcmp(argv[cc],"-mb" ))
 	{
