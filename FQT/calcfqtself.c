@@ -182,7 +182,7 @@ int main(int argc, char **argv)
 	{
 	  sqReB[qmod] = malloc(sizeof(double)*points);
 	  sqImB[qmod] = malloc(sizeof(double)*points);
-       }
+	}
       //ccB[qmod] = malloc(sizeof(double)*points);
     }
   ti = malloc(sizeof(double)*points);
