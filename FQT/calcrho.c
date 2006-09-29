@@ -76,12 +76,13 @@ int mesh[][NKSHELL][3]=
 double twopi;
 int main(int argc, char **argv)
 {
-  FILE *f, *f2;
+  FILE *f, *f2, *fA, *fB;
   DIR* dir;
+  char mode[10];
   int c2, i, ii, nr1, a;
   int iq, NN, maxl, nfiles, nat;
   int qmin = 0, qmax = KMODMAX, qmod; 
-  double invL, rxdummy, *sumImA, *sumReA, *sumImB, *sumReB, scalFact;
+  double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
 
   twopi = acos(0)*4.0;	  
   if (argc <= 1)
@@ -176,11 +177,6 @@ int main(int argc, char **argv)
     {
       r0[a] = malloc(sizeof(double)*NP);
     }
-  sumReA = malloc(sizeof(double)*KMODMAX);
-  sumReB = malloc(sizeof(double)*KMODMAX);
-  sumImA = malloc(sizeof(double)*KMODMAX);
-  sumImB = malloc(sizeof(double)*KMODMAX);
-	  
   for (qmod = qmin; qmod <= qmax; qmod++)
     {
       for (iq=0; iq < ntripl[qmod]; iq++)
@@ -190,39 +186,59 @@ int main(int argc, char **argv)
 	  qz[qmod][iq]=invL*twopi*mesh[qmod][iq][2];
 	}
     }
-  dir=opendir("./RHOTMP");
-  if (errno==ENOENT)
-    system("mkdir RHOTMP/");
-  else
-    closedir(dir);
-  f = fopen("RHOTMP/components.dat","w");
   if (NPA < NP)
-    fprintf(f, "2\n");
+    {
+      dir=opendir("./RHOTMPA");
+      if (errno==ENOENT)
+	system("mkdir RHOTMPA/");
+      else
+	closedir(dir);
+      dir=opendir("./RHOTMPB");
+      if (errno==ENOENT)
+	system("mkdir RHOTMPB/");
+      else
+	closedir(dir);
+    }
   else
-    fprintf(f, "1\n");
-  fclose(f);
+    {
+      dir=opendir("./RHOTMP");
+      if (errno==ENOENT)
+	system("mkdir RHOTMP/");
+      else
+	closedir(dir);
+    }
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0);
       for (qmod = qmin; qmod <= qmax; qmod++)
 	{
-	  sprintf(fname2,"RHOTMP/ro.00.k=%03d", qmod);
 	  if (qmod == qmin)
+	    strcpy(mode,"w");
+	  else
+	    strcpy(mode,"a");
+	  if (NPA < NP)
 	    {
-	      f=fopen(fname2,"w");
-	      /* il numero dopo M indica il numero di rho parziali che verranno calcolate per ogni
-	       * q. Ad es. per un sistema monodispero avremo "M 1" mentr per una mistura di 2 
-	       * componenti avremo "M 2"*/ 
+	      sprintf(fname2,"RHOTMPA/ro.00.k=%03d", qmod);
+	      fA=fopen(fname2,mode);
+	      sprintf(fname2,"RHOTMPB/ro.00.k=%03d", qmod);
+	      fB=fopen(fname2,mode);
       	    }
 	  else 
 	    {
-	      f=fopen(fname2,"a");
+	      sprintf(fname2,"RHOTMP/ro.00.k=%03d", qmod);
+	      f=fopen(fname2,mode);
 	    }
-	  fprintf(f, "%.15G %d\n", time+refTime, ntripl[qmod]);
+	  if (NPA < NP)
+	    {
+	      fprintf(fA, "%.15G %d\n", time+refTime, ntripl[qmod]);
+	      fprintf(fB, "%.15G %d\n", time+refTime, ntripl[qmod]);
+	    }
+	  else
+	    fprintf(f, "%.15G %d\n", time+refTime, ntripl[qmod]);
 	  for(iq=0; iq < ntripl[qmod]; iq++)
 	    {
-	      sumReA[iq]=sumReB[iq]=0.0;
-	      sumImA[iq]=sumImB[iq]=0.0;
+	      sumReA=sumReB=0.0;
+	      sumImA=sumImB=0.0;
 	      for (i=0; i < NP; i++)
 		{
 		  rxdummy = scalFact*(r0[0][i]*mesh[qmod][iq][0]
@@ -231,32 +247,30 @@ int main(int argc, char **argv)
 		  //printf("dummy:%.15G\n", rxdummy);
 		  if (i < NPA)
 		    {
-		      sumReA[iq] += cos(rxdummy);
-		      sumImA[iq] += sin(rxdummy);
+		      sumReA += cos(rxdummy);
+		      sumImA += sin(rxdummy);
 		    }
 		  else
 		    {
-		      sumReB[iq] += cos(rxdummy);
-		      sumImB[iq] += sin(rxdummy);
+		      sumReB += cos(rxdummy);
+		      sumImB += sin(rxdummy);
 		    }  
 		}
+	      if (NPA < NP)
+		{
+		  fprintf(fA, "(%.15G,%.15G) ", sumReA, sumImA);
+		  fprintf(fB, "(%.15G,%.15G) ", sumReB, sumImB);
+		}
+	      else
+		fprintf(f, "(%.15G,%.15G) ", sumReA, sumImA);
 	    }
-	  for (iq = 0; iq < ntripl[qmod]-1; iq++)
-	    fprintf(f, "(%.15G,%.15G) ", sumReA[iq], sumImA[iq]);
-	  fprintf(f, "(%.15G,%.15G)", sumReA[ntripl[qmod]-1], sumImA[ntripl[qmod]-1]);
 	  if (NPA < NP)
-	    fprintf(f, " ");
-	  else
-	    fprintf(f, "\n");
-	  /* se si tratta di una mistura la prima serie di ntripl[qmod] punti
-	   * è rhoA mentre la seconda serie è rhoB */ 
-	  if (NPA < NP)	
 	    {
-	      for (iq = 0; iq < ntripl[qmod]-1; iq++)
-		fprintf(f, "(%.15G,%.15G) ", sumReB[iq], sumImB[iq]);
-	      fprintf(f, "(%.15G,%.15G)\n", sumReA[ntripl[qmod]-1], sumImA[ntripl[qmod]-1]);
-    	    }
-	  fclose(f);
+	      fclose(fA);
+	      fclose(fB);
+	    }
+	  else
+	    fclose(f);
 	}
     }
   return 0;
