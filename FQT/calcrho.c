@@ -164,6 +164,7 @@ int main(int argc, char **argv)
   
   scalFact = twopi * invL;
   //printf("maxnp=%d points=%d\n",maxnp, points);
+  printf("qmin = %d qmax=%d\n", qmin, qmax);
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
   else if ((B0 > A0 && B0 > C0) || (B0 < A0 && B0 < C0))
@@ -241,6 +242,7 @@ int main(int argc, char **argv)
 	    }
 	  if (NPA < NP)
 	    {
+	      //printf("refTime=%.15G nf=%d\n", refTime, nr1);
 	      fprintf(fA, "%.15G %d\n", time+refTime, ntripl[qmod]);
 	      fprintf(fB, "%.15G %d\n", time+refTime, ntripl[qmod]);
 	    }
@@ -275,13 +277,19 @@ int main(int argc, char **argv)
 	      else
 		fprintf(f, "(%.15G,%.15G) ", sumReA, sumImA);
 	    }
+
 	  if (NPA < NP)
 	    {
+	      fprintf(fA, "\n");
+	      fprintf(fB, "\n");
 	      fclose(fA);
 	      fclose(fB);
 	    }
 	  else
-	    fclose(f);
+	    {
+	      fprintf(f,"\n");
+	      fclose(f);
+	    }
 	}
     }
   return 0;
