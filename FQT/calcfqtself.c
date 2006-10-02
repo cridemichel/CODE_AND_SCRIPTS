@@ -163,6 +163,7 @@ int main(int argc, char **argv)
   if (points > maxnp)
     points = maxnp;
 
+  printf("qmin=%d qmax=%d\n", qmin, qmax);
   //printf("maxnp=%d points=%d\n",maxnp, points);
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
@@ -276,26 +277,28 @@ int main(int argc, char **argv)
     		      sqImA[qmod][np] += sumImA;
 		      sqReB[qmod][np] += sumReB;
 		      sqImB[qmod][np] += sumImB;
+		      cc[qmod][np] += 1.0;
 		    }
-
-		  sqReA[qmod][np] /= ((double)NPA);
-		  sqImA[qmod][np] /= ((double)NPA);
+		  
+#if 0
+		  /* BUG: codice da eliminare */
+		  sqReA[qmod][np] /= (double) NPA;
 		  if (NPA < NP)
-		    {
-		      sqReB[qmod][np] /= ((double)NP-NPA);
-		      sqImB[qmod][np] /= ((double)NP-NPA);
-		    }
-		  cc[qmod][np] += 1.0;
+		    sqReB[qmod][np] /= (double) NP-NPA;
+#endif
 		  //printf("cc[%d][%d]=%.15G sqre=%.15G sqim=%.15G\n", qmod, np, cc[qmod][np],
-		//	 sqRe[qmod][np], sqIm[qmod][np]);
+		  //	 sqRe[qmod][np], sqIm[qmod][np]);
 		}
 	    }
 	}
+      
     }
+
   for (qmod = qmin; qmod <= qmax; qmod++)
     {
       for (ii=0; ii < points; ii++)
 	{
+	  //printf("cc[%d][%d]:%.15G\n", qmod, ii, cc[qmod][ii]);
 	  sqReA[qmod][ii] = sqReA[qmod][ii]/cc[qmod][ii];
 	  sqImA[qmod][ii] = sqImA[qmod][ii]/cc[qmod][ii];
 	  if (NPA  < NP)
@@ -307,10 +310,11 @@ int main(int argc, char **argv)
 	//	 cc[qmod][ii]);
 	}
     }
-  for (qmod = qmin; qmod < qmax; qmod++)
+  for (qmod = qmin; qmod <= qmax; qmod++)
     {
       sprintf(fname2, "Fqs-%d",qmod);
       f = fopen (fname2, "w+");
+      printf("SqReA[%d][0]:%.15G SqReB[][0]: %.15G\n", qmod, sqReA[qmod][0], sqReB[qmod][0]);
       for (ii = 1; ii < points; ii++)
 	{
 	  if (NPA == NP)
@@ -328,7 +332,7 @@ int main(int argc, char **argv)
 			sqImA[qmod][ii]+sqImB[qmod][ii]);
 	    }
 	}
+      fclose(f);
     }
-  fclose(f);
   return 0;
 }

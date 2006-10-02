@@ -5,17 +5,27 @@
 #define MAXPTS 1000
 #define MAXQ 500
 #define NUMQ 100
-char fname[1024]; 
-double time, Cav0, Cav, rhoR0[MAXQ], rhoI0[MAXQ], *cc[MAXQ],*C[MAXQ], 
-       rhoR1[MAXQ], rhoI1[MAXQ], *ti, *rhoRt[MAXQ], *rhoIt[MAXQ],
-       *rhoRtp[MAXQ], *rhoItp[MAXQ], *tiall;
+#define MAXCOMPS 2
+char fname[2][1024]; 
+double time, Cav, Cav0, CavAA0, CavBB0, CavAB0, 
+       CavAA, CavAB, CavBB,
+       rhoR0[MAXCOMPS][MAXQ], rhoI0[MAXCOMPS][MAXQ], 
+       rhoR0[MAXCOMPS][MAXQ], rhoI0[MAXCOMPS][MAXQ],
+       *cc[MAXQ],*CAA[MAXQ],
+       *CBB[MAXQ], *CAB[MAXQ],
+       rhoR1[MAXCOMPS][MAXQ], rhoI1[MAXCOMPS][MAXQ], *ti, *rhoRt[MAXCOMPS][MAXQ], 
+       *rhoIt[MAXCOMPS][MAXQ],
+       *rhoRtp[MAXCOMPS][MAXQ], *rhoItp[MAXCOMPS][MAXQ], *rhoRt[MAXCOMPS][MAXQ], 
+       *rhoIt[MAXCOMPS][MAXQ],
+       *rhoRtp[MAXCOMPS][MAXQ], *rhoItp[MAXCOMPS][MAXQ], *tiall;
 int *NQarr;
-int points, comps;
+int points, comps=2;
+char AB[2]={'A','B'};
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3, *f4;
   double A1, A2, A3 ;
-  int first=1, firstp=1, NQ, nq, c1, c2, c3, i, ii, nlines, nr1, nr2, ll, mm, llp, mmp;
+  int c, first=1, firstp=1, NQ, nq, c1, c2, c3, i, ii, nlines, nr1, nr2, ll, mm, llp, mmp;
   int qmin, qmax, NN, fine, JJ, maxnp, np;
   if (argc <= 1)
     {
@@ -32,8 +42,11 @@ int main(int argc, char **argv)
   else
     points = NN;
   c2 = 0;
-  sprintf(fname, "RHOTMP/ro.%02d.k=%03d", 0, 2);
-  f2 = fopen(fname, "r");
+  if (comps==2)
+    sprintf(fname[0], "RHOTMPA/ro.%02d.k=%03d", 0, 2);
+  else
+    sprintf(fname[0], "RHOTMP/ro.%02d.k=%03d", 0, 2);
+  f2 = fopen(fname[0], "r");
   while (!feof(f2))
     {
       fscanf(f2, "%lf %d ", &time, &NQ);
@@ -47,6 +60,7 @@ int main(int argc, char **argv)
   if (points > maxnp)
     points = maxnp;
   fprintf(stderr, "allocating %d items\n", nlines);
+#if 0
   if ((f4 = fopen("RHOTMP/components.dat","r"))==NULL)
     comps = 1; /* monodisperse system (one component) */
   else
@@ -54,18 +68,34 @@ int main(int argc, char **argv)
       fscanf(f4, "%d\n", &comps);
       fclose(f4);
     }
-   
+#endif 
+  if (comps==2)
+    sprintf(fname[0], "RHOTMPA/NN.dat");
+  else
+    sprintf(fname[0], "RHOTMP/NN.dat");
+  if (!(f = fopen(fname[0],"r")))
+    {
+      printf("ERROR: file %s does not exist\n", fname[0]);
+      exit(-1);
+    }
+  fscanf(f,"%d\n", &NN);
+  fclose(f);
   for (i=0; i < MAXQ; i++)
     {
-      for (c = 0; c < comps; c++)
+      for ( c = 0; c < comps; c++)
 	{
-	  rhoRt[i] = malloc(sizeof(double)*nlines);
-	  rhoIt[i] = malloc(sizeof(double)*nlines);
-	  rhoRtp[i] = malloc(sizeof(double)*nlines);
-	  rhoItp[i] = malloc(sizeof(double)*nlines);
+	  rhoRt[c][i] = malloc(sizeof(double)*nlines);
+	  rhoIt[c][i] = malloc(sizeof(double)*nlines);
+	  rhoRtp[c][i] = malloc(sizeof(double)*nlines);
+	  rhoItp[c][i] = malloc(sizeof(double)*nlines);
 	}
       cc[i] = malloc(sizeof(double)*points);
-      C[i]  = malloc(sizeof(double)*points);
+      CAA[i]  = malloc(sizeof(double)*points);
+      if (comps==2)
+	{
+	  CBB[i]  = malloc(sizeof(double)*points);
+	  CAB[i]  = malloc(sizeof(double)*points);
+	}
     }
   ti = malloc(sizeof(double)*points);
   tiall = malloc(sizeof(double)*nlines);
@@ -81,58 +111,46 @@ int main(int argc, char **argv)
       for (i=0; i < MAXQ; i++)
 	for (ii=0; ii < points; ii++)
 	  {
-	    C[i][ii] = 0.0;
+	    CAA[i][ii] = CBB[i][ii] = CAB[i][ii] = 0.0;
 	    cc[i][ii] = 0;
 	  }
       fprintf(stderr, "nf=%d\n", nq);
-      sprintf(fname, "RHOTMP/ro.%02d.k=%03d", ll*10+mm,nq);
-      printf("Opening fname=%s\n", fname);
-      c2 = 0;
-      f2 = fopen(fname, "r");
-      while (!feof(f2))
+      for (c = 0; c < 2; c++)
 	{
-	  //printf("reading c2=%d\n", c2);
-	  fscanf(f2, "%lf %d ", &time, &NQ);
-	  
-	  if (c2==0)
-	    NQarr[nq] = NQ;
-  	  for (i = 0; i < NQ; i++)
+	  c2 = 0;
+	  sprintf(fname[c], "RHOTMP%c/ro.%02d.k=%03d", AB[c], ll*10+mm,nq);
+	  printf("Opening fname=%s\n", fname[c]);
+	  f2 = fopen(fname[c], "r");
+	  while (!feof(f2))
 	    {
-	      fscanf(f2, "(%lf,%lf) ", &(rhoRt[i][c2]), &(rhoIt[i][c2]));
+	      //printf("reading c2=%d\n", c2);
+	      fscanf(f2, "%lf %d ", &time, &NQ);
+	      if (c2==0)
+		NQarr[nq] = NQ;
+	      for (i = 0; i < NQ; i++)
+		{
+		  fscanf(f2, "(%lf,%lf) ", &(rhoRt[c][i][c2]), &(rhoIt[c][i][c2]));
+		}
+	      if (tiall[c2] == -1.0)
+		{
+		  tiall[c2] = time;
+		  //printf("c2=%d time=%.15G\n", c2, ti[c2]);
+		}
+	      //printf("%d fname: %s %.15G %.15G %.15G\n", c2, fname, P0[0], P0[1], P0[2]);
+	      c2++;
 	    }
-	  if (tiall[c2] == -1.0)
-	    {
-	      tiall[c2] = time;
-	      //printf("c2=%d time=%.15G\n", c2, ti[c2]);
-	    }
-	  //printf("%d fname: %s %.15G %.15G %.15G\n", c2, fname, P0[0], P0[1], P0[2]);
-	  c2++;
+	  fclose(f2);
+	  //c2 = 0;
 	}
-      fclose(f2);
-      //c2 = 0;
-
-      sprintf(fname, "RHOTMP/ro.%02d.k=%03d", llp*10+mmp,nq);
-      c2 = 0;
-      f2 = fopen(fname, "r");
-      while (!feof(f2))
-	{
-	  //printf("reading c2=%d\n", c2);
-	  fscanf(f2, "%lf %d ", &time, &NQ);
-  	  for (i = 0; i < NQ; i++)
-	    {
-	      fscanf(f2, "(%lf,%lf) ", &(rhoRtp[i][c2]), &(rhoItp[i][c2]));
-	     //printf("NQ=%d nq=%d QUI i=%d c2=%d rhoRtp: %.15G  rhoItp: %.15G \n",NQ, nq, i, c2,
-	     //	     rhoRtp[i][c2], rhoItp[i][c2]);
-	    }
-  	  c2++;
-	}
-      fclose(f2);
       for (nr1 = 0; nr1 < nlines; nr1=nr1+NN)
 	{	
 	  for (i=0; i < NQ; i++)
 	    {
-	      rhoR0[i] = rhoRt[i][nr1];
-	      rhoI0[i] = rhoIt[i][nr1]; 
+	      for (c = 0; c < 2; c++)
+		{
+		  rhoR0[c][i] = rhoRt[c][i][nr1];
+		  rhoI0[c][i] = rhoIt[c][i][nr1]; 
+		}
 	    }
 	  fine = 0;
 	  for (JJ = 0; fine == 0; JJ++)
@@ -150,9 +168,18 @@ int main(int argc, char **argv)
 		  for (i=0; i < NQ; i++) 
 		    {
 		      //printf("i=%d NQ=%d rhoRtp=%f rhoItp=%f\n", i, NQ, rhoRtp[i][nr2], rhoItp[i][nr2]);
-		      rhoR1[i] = rhoRtp[i][nr2];
-		      rhoI1[i] = rhoItp[i][nr2];
-		      C[i][np] += rhoR1[i]*rhoR0[i]+rhoI1[i]*rhoI0[i];
+		      for (c=0; c < 2; c++)
+			{
+			  rhoR1[c][i] = rhoRtp[c][i][nr2];
+			  rhoI1[c][i] = rhoItp[c][i][nr2];
+			}
+		      CAA[i][np] += rhoR1[0][i]*rhoR0[0][i]+rhoI1[0][i]*rhoI0[0][i];
+		      if (comps==2)
+			{
+			  CBB[i][np] += rhoR1[1][i]*rhoR0[1][i]+rhoI1[1][i]*rhoI0[1][i];
+			  CAB[i][np] += rhoR1[0][i]*rhoR0[1][i]+rhoI1[0][i]*rhoI0[1][i];
+			}
+
 		      //printf("C[%d][%d]: %.15G cc:%f\n", i, nr2-nr1, C[i][nr2-nr1], cc[i][nr2-nr1]);
 		      cc[i][np] += 1.0;
 		      //printf("qui c3-c2=%d\n", c3-c2);
@@ -166,43 +193,74 @@ int main(int argc, char **argv)
 		}
 	    }
 	}
-      sprintf(fname, "sqt.%02d%02d.k=%03d",ll*10+mm,llp*10+mmp,nq);
-      f = fopen(fname, "w+");
-      sprintf(fname, "N-sqt.%02d%02d.k=%03d",ll*10+mm,llp*10+mmp,nq);
-      f2 = fopen(fname, "w+");
-      Cav0 = 0.0;
+      sprintf(fname[0], "sqt.k=%03d",nq);
+      f = fopen(fname[0], "w+");
+      sprintf(fname[0], "N-sqt.k=%03d", nq);
+      f2 = fopen(fname[0], "w+");
+      Cav = CavAA0 = CavBB0 = CavAB0 = 0.0;
       for (i = 0; i < NQarr[nq]; i++)
 	{
 	  if (cc[i][0] > 0)
-	    Cav0 += C[i][0]/cc[i][0];
+	    {
+	      CavAA0 += CAA[i][0]/cc[i][0];
+	      if (comps == 2)
+		{
+		  CavBB0 += CBB[i][0]/cc[i][0];
+		  CavAB0 += CAB[i][0]/cc[i][0];
+		}
+	    }
 	}
-      Cav0 /= ((double)NQarr[nq]);
-      
+      CavAA0 /= ((double)NQarr[nq]);
+      if (comps==2)
+	{
+	  CavBB0 /= ((double)NQarr[nq]);
+	  CavAB0 /= ((double)NQarr[nq]);
+	  Cav0 = CavAA0 + CavAB0 + CavBB0;
+	}
       for (ii=1; ii < points; ii++)
 	{
-	  Cav = 0.0;
+	  CavAA = 0.0;
+	  if (comps==2)
+	    CavBB = CavAB = 0.0;
 	  for (i = 0; i < NQarr[nq]; i++)
 	    {
 	      if (cc[i][ii] > 0)
-		Cav += C[i][ii]/cc[i][ii];
+		{
+		  CavAA += CAA[i][ii]/cc[i][ii];
+		  if (comps==2)
+		    {
+		      CavBB += CBB[i][ii]/cc[i][ii];
+		      CavAB += CAB[i][ii]/cc[i][ii];
+		    }
+		}
 	    }
-	  Cav /= ((double)NQarr[nq]);
+	  CavAA /= ((double)NQarr[nq]);
+	  if (comps==2)
+	    {
+	      CavBB /= ((double)NQarr[nq]);
+	      CavAB /= ((double)NQarr[nq]);
+	      Cav = CavAA + CavAB + CavBB;
+	    }
 	  if (ti[ii] > -1.0)
 	    {
-	      fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], Cav, cc[0][ii]*NQarr[nq]);
-	      fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], Cav/Cav0, cc[0][ii]*NQarr[nq]);
+	    if (comps==2)
+	      {
+		fprintf(f, "%.15G %.15G %.15G %.15G%.15G %f\n", ti[ii]-ti[0], Cav, CavAA, 
+		   	CavBB, CavAB, cc[0][ii]*NQarr[nq]);
+		fprintf(f, "%.15G %.15G %.15G %.15G%.15G %f\n", ti[ii]-ti[0], CavAA/CavAA0, 
+			CavAA/CavAA0, CavBB/CavBB0, CavAB/CavAB0,
+		     	cc[0][ii]*NQarr[nq]);
+
+	      }
+	    else
+	      {
+		fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], CavAA, cc[0][ii]*NQarr[nq]);
+		fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], CavAA/CavAA0, cc[0][ii]*NQarr[nq]);
+	      }
 	    }
 	}
       fclose(f);
       fclose(f2);
     }
-  for (i=0; i < MAXQ; i++)
-    {
-      free(rhoIt[i]);
-      free(rhoRt[i]);
-      free(rhoItp[i]);
-      free(rhoRtp[i]);
-    }
-	
   return 0;
 }

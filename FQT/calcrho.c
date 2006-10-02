@@ -198,6 +198,12 @@ int main(int argc, char **argv)
 	system("mkdir RHOTMPB/");
       else
 	closedir(dir);
+      f=fopen("./RHOTMPA/NN.dat","w");
+      fprintf(f, "%d\n", NN);
+      fclose(f);
+      f=fopen("./RHOTMPB/NN.dat","w");
+      fprintf(f, "%d\n", NN);
+      fclose(f);
     }
   else
     {
@@ -206,7 +212,12 @@ int main(int argc, char **argv)
 	system("mkdir RHOTMP/");
       else
 	closedir(dir);
+      f=fopen("./RHOTMP/NN.dat","w");
+      fprintf(f, "%d\n", NN);
+      fclose(f);
+
     }
+
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0);
