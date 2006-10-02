@@ -33,19 +33,19 @@ int main(int argc, char **argv)
       printf("where NN is the number of configurations in a logarithmic block\n");
       exit(-1);
     }
-  NN =  atoi(argv[1]);
-  qmin = atoi(argv[2]);
-  qmax = atoi(argv[3]);
+  //NN =  atoi(argv[1]);
+  qmin = atoi(argv[1]);
+  qmax = atoi(argv[2]);
   NQarr = malloc(sizeof(int)*qmax);
-  if (argc == 5)
-    points = atoi(argv[4]);
+  if (argc == 4)
+    points = atoi(argv[3]);
   else
     points = NN;
   c2 = 0;
   if (comps==2)
-    sprintf(fname[0], "RHOTMPA/ro.%02d.k=%03d", 0, 2);
+    sprintf(fname[0], "RHOTMPA/ro.00.k=%03d", 0, 2);
   else
-    sprintf(fname[0], "RHOTMP/ro.%02d.k=%03d", 0, 2);
+    sprintf(fname[0], "RHOTMP/ro.00.k=%03d", 0, 2);
   f2 = fopen(fname[0], "r");
   while (!feof(f2))
     {
@@ -80,6 +80,7 @@ int main(int argc, char **argv)
     }
   fscanf(f,"%d\n", &NN);
   fclose(f);
+  printf("NN=%d\n", NN);
   for (i=0; i < MAXQ; i++)
     {
       for ( c = 0; c < comps; c++)
@@ -118,15 +119,17 @@ int main(int argc, char **argv)
       for (c = 0; c < 2; c++)
 	{
 	  c2 = 0;
-	  sprintf(fname[c], "RHOTMP%c/ro.%02d.k=%03d", AB[c], ll*10+mm,nq);
+	  sprintf(fname[0], "RHOTMP%c/ro.00.k=%03d", AB[c],nq);
 	  printf("Opening fname=%s\n", fname[c]);
-	  f2 = fopen(fname[c], "r");
+	  f2 = fopen(fname[0], "r");
 	  while (!feof(f2))
 	    {
 	      //printf("reading c2=%d\n", c2);
 	      fscanf(f2, "%lf %d ", &time, &NQ);
+	      printf("time=%.15G\n", time);
 	      if (c2==0)
 		NQarr[nq] = NQ;
+	      
 	      for (i = 0; i < NQ; i++)
 		{
 		  fscanf(f2, "(%lf,%lf) ", &(rhoRt[c][i][c2]), &(rhoIt[c][i][c2]));
