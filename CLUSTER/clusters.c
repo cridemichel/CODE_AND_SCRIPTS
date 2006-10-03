@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 #define MAXPTS 10000
-#define MAXFILES 5000
+#define MAXFILES 10000
 #define NA 6
 #define MD_STSPOTS_A 5
 #define MD_STSPOTS_B 2
@@ -612,7 +612,7 @@ void parse_params(int argc, char** argv)
       cc++;
     }
 }
-int *inCell[3], *cellList, cellsx, cellsy, cellsz;
+int *inCell[3]={NULL,NULL,NULL}, *cellList=NULL, cellsx, cellsy, cellsz;
 void build_linked_list(void)
 {
   double L2;
@@ -796,20 +796,7 @@ int main(int argc, char **argv)
     RCUT = maxsax;
   else if (particles_type == 0)
     RCUT = maxsaxAA*1.01;
-  cellsx = L / RCUT;
-  cellsy = L / RCUT;
-  cellsz = L / RCUT;
-  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP));
-  inCell[0] = malloc(sizeof(int)*NP);
-  inCell[1] = malloc(sizeof(int)*NP);
-  inCell[2] = malloc(sizeof(int)*NP);
 
-  for (i = 0; i < NP; i++)
-    {
-      clssizedstAVG[i] = 0;
-      clssizedst[i] = 0; 
-      percola[i] = 0; 
-    }
   for (a = 0; a < 3; a++)
     {
       for (b = 0; b < NA; b++)
@@ -837,6 +824,27 @@ int main(int argc, char **argv)
   //printf("sigmaSticky=%.15G\n", sigmaSticky);
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
+      if (!cellList)
+	{
+	  free(cellList);
+	  free(inCell[0]);
+	  free(inCell[1]);
+	  free(inCell[2]);
+	}
+      
+      cellsx = L / RCUT;
+      cellsy = L / RCUT;
+      cellsz = L / RCUT;
+      cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP));
+      inCell[0] = malloc(sizeof(int)*NP);
+      inCell[1] = malloc(sizeof(int)*NP);
+      inCell[2] = malloc(sizeof(int)*NP);
+      for (i = 0; i < NP; i++)
+	{
+	  clssizedstAVG[i] = 0;
+	  percola[i] = 0; 
+	}
+
       readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
       ti = time + refTime;
       /* costruisce la posizione di tutti gli sticky spots */
