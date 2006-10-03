@@ -144,30 +144,32 @@ int main(int argc, char** argv)
 	       sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
 	     }
 	}
+      if (NA == -1)
+	NA = N;
       for (qmod=0; qmod < KMODMAX; qmod++)
 	{
 	  Sq[qmod] = 0.0;      
-	  if (NA!=-1)
+	  if (NA < N)
 	    {
 	      SqAA[qmod] = SqAB[qmod] = SqBB[qmod] = 0.0;
 	    }
 	}
-  
+
       scalFact = twopi * invL;
       invNm = 1.0 / ((double)N);
-      if (NA != -1)
+      if (NA < N)
 	{
 	  invNmAA = 1.0/((double)NA);
 	  invNmBB = 1.0/((double)N-NA);
 	  invNmAB = 1.0/sqrt(((double)N-NA)*((double)NA));
 	}
       
-      if (NA!=-1)
+      if (NA < N)
 	printf("[MIXTURE N=%d NA=%d] ", N, NA);
       else 
 	printf("[MONODISPERSE] ");
       printf("nf=%d twopi=%.15G N=%d invL=%.15G invNm:%.15G\n", nf, twopi, N, invL, invNm);
-      if (NA == -1)
+      if (NA == N)
 	{
 	  for(n = 0; n < KMODMAX; n++)
 	    {
@@ -222,12 +224,15 @@ int main(int argc, char** argv)
 		      rCMk = kbeg + scalFact * 
 			(r[0][i] * mesh[n][mp][0] + r[1][i] * mesh[n][mp][1] + 
 			 r[2][i] * mesh[n][mp][2]);
-		      reRhoA = reRhoA + cos(rCMk); 
-		      imRhoA = imRhoA + sin(rCMk);
-		      if (NA!=-1)
+		      if (i < NA)
 			{
 			  reRhoA = reRhoA + cos(rCMk); 
 			  imRhoA = imRhoA + sin(rCMk);
+		       	}
+		      else 
+			{
+			  reRhoB = reRhoB + cos(rCMk); 
+			  imRhoB = imRhoB + sin(rCMk);
 			}
 
 		      /* Imaginary part of exp(i*k*r) for the actual molecule*/
@@ -256,7 +261,7 @@ int main(int argc, char** argv)
       fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
     }
   fclose(of);
-  if (NA != -1) 
+  if (NA < N) 
     {
       of = fopen("SqAA.dat", "w+");
       for (qmod = 0; qmod  < KMODMAX; qmod++)
