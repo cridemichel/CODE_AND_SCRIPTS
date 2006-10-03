@@ -1334,10 +1334,10 @@ int main(int argc, char **argv)
 	}	  
       for (i = 0; i < NP; i++)
 	{
-	  fprintf(f,"%d %d\n", i, numbonds[i]);
+	  fprintf(f,"%d %d\n", i+1, numbonds[i]);
 	  for (c = 0; c < numbonds[i]-1; c++)
-	    fprintf(f, "%d ", bonds[i][c]);
-	  fprintf(f, "%d\n", bonds[i][numbonds[i]-1]);
+	    fprintf(f, "%d ", bonds[i][c]+1);
+	  fprintf(f, "%d\n", bonds[i][numbonds[i]-1]+1);
 	}
       fclose(f);
     }
