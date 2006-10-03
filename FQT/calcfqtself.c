@@ -314,7 +314,7 @@ int main(int argc, char **argv)
     {
       sprintf(fname2, "Fqs-%d",qmod);
       f = fopen (fname2, "w+");
-      printf("SqReA[%d][0]:%.15G SqReB[][0]: %.15G\n", qmod, sqReA[qmod][0], sqReB[qmod][0]);
+      //printf("SqReA[%d][0]:%.15G SqReB[][0]: %.15G\n", qmod, sqReA[qmod][0], sqReB[qmod][0]);
       for (ii = 1; ii < points; ii++)
 	{
 	  if (NPA == NP)
