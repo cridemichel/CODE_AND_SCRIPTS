@@ -265,9 +265,9 @@ int main(int argc, char **argv)
 	    if (comps==2)
 	      {
 		fprintf(f, "%.15G %.15G %.15G %.15G %.15G %f\n", ti[ii]-ti[0], Cav, CavAA, 
-		   	CavBB, CavAB, cc[0][ii]*NQarr[nq]);
+		   	CavBB, CavAB+CavBA, cc[0][ii]*NQarr[nq]);
 		fprintf(f2, "%.15G %.15G %.15G %.15G %.15G %f\n", ti[ii]-ti[0], Cav/Cav0, 
-			CavAA/CavAA0, CavBB/CavBB0, CavAB/CavAB0,
+			CavAA/CavAA0, CavBB/CavBB0, (CavAB+CavBA)/(CavAB0+CavBA0),
 		     	cc[0][ii]*NQarr[nq]);
 
 	      }
