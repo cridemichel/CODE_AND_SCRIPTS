@@ -12,7 +12,8 @@ int readCnf = 0, physunit=0;
 #define KMODMAX 298 
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
-double qavg[KMODMAX], qmin=0, qmax=KMODMAX;
+double qavg[KMODMAX];
+int qmin=0, qmax=KMODMAX;
 int ntripl[]=
 #include "./ntripl.dat"
 int mesh[][NKSHELL][3]= 
@@ -158,7 +159,7 @@ int main(int argc, char** argv)
 	    {
 	      r[a] = malloc(sizeof(double)*N);
 	    }
-	  first = 0;
+	  //first = 0;
 	}
       for (i=0; i < N; i++)
 	{
@@ -174,6 +175,7 @@ int main(int argc, char** argv)
       if (NA == -1)
 	NA = N;
       //NA = N;//force monodisperse
+      scalFact = twopi * invL;
       if (first)
 	{
 	  for (qmod=0; qmod <= qmax; qmod++)
@@ -191,14 +193,16 @@ int main(int argc, char** argv)
 		  qavg[qmod] = 0;
 		  for (mp = 0; mp < ntripl[qmod]; mp++) 
 		    {
-		      qavg[qmod] += sqrt(Sqr(mesh[qmod][mp][0])+Sqr(mesh[qmod][mp][0])+Sqr(mesh[qmod][mp][0]));
+		      qavg[qmod] += sqrt(Sqr(((double)mesh[qmod][mp][0]))+
+					 Sqr(((double)mesh[qmod][mp][1]))+
+					 Sqr(((double)mesh[qmod][mp][2])));
 		    }
 		  qavg[qmod] *= scalFact/((double)ntripl[qmod]);
+		  //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
 		}
 	    }
-
+	  first = 0;
 	}
-      scalFact = twopi * invL;
       invNm = 1.0 / ((double)N);
       if (NA < N)
 	{
