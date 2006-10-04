@@ -29,8 +29,8 @@ int main(int argc, char **argv)
   int qmin, qmax, NN, fine, JJ, maxnp, np;
   if (argc <= 1)
     {
-      printf("Usage: calcfqtcoll <NN> <qmin> <qmax> [points] \n");
-      printf("where NN is the number of configurations in a logarithmic block\n");
+      printf("Usage: calcfqtcoll <qmin> <qmax> [points] \n");
+      //printf("where NN is the number of configurations in a logarithmic block\n");
       exit(-1);
     }
   //NN =  atoi(argv[1]);
