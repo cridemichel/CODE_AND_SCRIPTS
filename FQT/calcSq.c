@@ -14,6 +14,7 @@ int readCnf = 0, physunit=0;
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double qavg[KMODMAX];
 int qmin=0, qmax=KMODMAX;
+double qminpu=-1.0, qmaxpu=-1.0;
 int ntripl[]=
 #include "./ntripl.dat"
 int mesh[][NKSHELL][3]= 
@@ -46,19 +47,33 @@ void parse_param(int argc, char** argv)
 	{
 	  physunit = 1;
 	}
-      else if (!strcmp(argv[cc],"--qmin") || !strcmp(argv[cc],"--qm"))
+      else if (!strcmp(argv[cc],"--qmin") || !strcmp(argv[cc],"-qm"))
 	{
 	  cc++;
 	  if (cc == argc)
 	    print_usage();
 	  qmin = atoi(argv[cc]);
 	}
-      else if (!strcmp(argv[cc],"--qmax") || !strcmp(argv[cc],"--qM"))
+      else if (!strcmp(argv[cc],"--qmax") || !strcmp(argv[cc],"-qM"))
 	{
 	  cc++;
 	  if (cc == argc)
 	    print_usage();
 	  qmax = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--qpumin") || !strcmp(argv[cc],"-qpum"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qminpu = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--qpumax") || !strcmp(argv[cc],"-qpuM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmaxpu = atof(argv[cc]);
 	}
       else if (cc == argc)
 	print_usage();
@@ -178,17 +193,9 @@ int main(int argc, char** argv)
       scalFact = twopi * invL;
       if (first)
 	{
-	  for (qmod=0; qmod <= qmax; qmod++)
+	  if (physunit || qminpu != -1.0 || qmaxpu != -1.0)
 	    {
-	      Sq[qmod] = 0.0;      
-	      if (NA < N)
-		{
-	    	  SqAA[qmod] = SqAB[qmod] = SqBB[qmod] = 0.0;
-		}
-	    }
-	  if (physunit)
-	    {
-	      for (qmod = qmin; qmod <= qmax; qmod++)
+	      for (qmod = 0; qmod < KMODMAX; qmod++)
 		{
 		  qavg[qmod] = 0;
 		  for (mp = 0; mp < ntripl[qmod]; mp++) 
@@ -199,6 +206,23 @@ int main(int argc, char** argv)
 		    }
 		  qavg[qmod] *= scalFact/((double)ntripl[qmod]);
 		  //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
+		}
+	      if (qminpu != -1.0 && qminpu >= 0.0)
+		qmin = ceil(qminpu / (scalFact/2.0) - 2);
+	      if (qmaxpu != -1.0 && qmaxpu > 0.0)
+		qmax = floor(qmaxpu / (scalFact/2.0) - 3);
+	      if (qmin < 0)
+		qmin = 0;
+	      if (qmax >= KMODMAX)
+		qmax = KMODMAX-1;
+	    }
+	  printf("scalFact: %.15G qmin: %d qmax: %d qminpu: %.15G qmaxpu: %.15G\n", scalFact, qmin, qmax, qminpu, qmaxpu);
+	  for (qmod=qmin; qmod <= qmax; qmod++)
+	    {
+	      Sq[qmod] = 0.0;      
+	      if (NA < N)
+		{
+	    	  SqAA[qmod] = SqAB[qmod] = SqBB[qmod] = 0.0;
 		}
 	    }
 	  first = 0;
@@ -215,10 +239,11 @@ int main(int argc, char** argv)
 	printf("[MIXTURE N=%d NA=%d] ", N, NA);
       else 
 	printf("[MONODISPERSE] ");
-      printf("nf=%d twopi=%.15G N=%d invL=%.15G invNm:%.15G\n", nf, twopi, N, invL, invNm);
+      printf("nf=%d twopi=%.15G N=%d invL=%.15G invNm:%.15G qmin: %d qmax: %d\n", nf, twopi, N, invL, invNm,
+	     qmin, qmax);
       if (NA == N)
 	{
-	  for(n = 0; n <= qmax; n++)
+	  for(n = qmin; n <= qmax; n++)
 	    {
 	      sumRho = 0.0;
 	      for(mp = 0; mp < ntripl[n]; mp++)
@@ -251,7 +276,7 @@ int main(int argc, char** argv)
 	}
       else
 	{
-	  for(n = 0; n <= qmax; n++)
+	  for(n = qmin; n <= qmax; n++)
 	    {
 	      sumRhoAA = sumRhoBB = sumRhoAB = 0.0;
 	      for(mp = 0; mp < ntripl[n]; mp++)
