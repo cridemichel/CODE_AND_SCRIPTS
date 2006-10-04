@@ -16,19 +16,19 @@ int main (void)
 {
   FILE *fs, *fs2;
   int n1,n2,n3, nt;
-  int wt, maxn = 150, ntripl, ntripl2, maxik;
+  int wt, maxn = 310, ntripl, ntripl2, maxik;
   const int maxtripl = 150;
   /* qui k e' in unita' di 2pi/L */
-  double Dk = 0.5, maxk = 50.0, k = 0.0, ktry = 0.0;
+  double Dk = 0.5, maxk = 300.0, k = 0.0, ktry = 0.0;
   int ik;
   int i, nct, ct[1000];
   
-  fs = fopen("triplets.txt", "w");
-  fs2 = fopen("ntripl.txt", "w");
+  fs = fopen("kmesh.dat", "w");
+  fs2 = fopen("ntripl.dat", "w");
   fprintf(fs, "{");
   fprintf(fs2,"{");
 
-  maxik = ceil(maxk / Dk); 
+  maxik = ceil(maxk / Dk)+1; 
   printf("k=");
   for (ik=2; ik < maxik; ++ik) 
     { 
@@ -90,8 +90,8 @@ int main (void)
   printf("\n");
 
   fseek(fs2, -1, SEEK_CUR);
-  fprintf(fs2, "};");
-  fprintf(fs, "};");
+  fprintf(fs2, "};\n");
+  fprintf(fs, "};\n");
   fseek(fs, -1, SEEK_CUR);
   fclose(fs);
   fclose(fs2);
