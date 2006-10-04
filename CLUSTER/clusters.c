@@ -115,7 +115,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	      sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %[^\n]\n", 
     		     &r[0][i], &r[1][i], &r[2][i], 
 		     &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
-		     &R[2][0][i], &R[2][1][i], &R[2][2][i]); 
+		     &R[2][0][i], &R[2][1][i], &R[2][2][i], dummy); 
 	      //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
 	    
 	    }
@@ -314,7 +314,7 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
 int check_distance(int i, int j, double Dx, double Dy, double Dz)
 {
   double DxL, DyL, DzL;
-  double ma;
+  double ma=0.0;
   DxL = fabs(Dx);
   DyL = fabs(Dy);
   DzL = fabs(Dz);
@@ -342,7 +342,7 @@ int check_distance(int i, int j, double Dx, double Dy, double Dz)
 double distance(int i, int j)
 {
   int a, b;
-  int maxa, maxb;
+  int maxa=0, maxb=0;
   double imgx, imgy, imgz;
   double Dx, Dy, Dz;
 
@@ -422,7 +422,7 @@ int check_distanceR(int i, int j, int imgix, int imgiy, int imgiz,
 double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
 		  int imgjx, int imgjy, int imgjz, double Lbig)
 {
-  int a, b, maxa, maxb;
+  int a, b, maxa=0, maxb=0;
   double imgx, imgy, imgz;
   double Dx, Dy, Dz, dx, dy, dz;
   if (particles_type == 1)
@@ -515,6 +515,7 @@ void change_all_colors(int NP, int* color, int colorsrc, int colordst)
     }
 }
 char fncls[1024];
+char fn[1024];
 int findmaxColor(int NP, int *color)
 {
   int i, maxc=-1;
@@ -1288,10 +1289,21 @@ int main(int argc, char **argv)
 	}
       //printf("coppie PERC=%d\n", coppie);
       almenouno = 0;
+
+      sprintf(fn, "perc%s.dat", fname[nr1]);
+      f2 = fopen(fn, "w");
+      fclose(f2);
       for (nc = 0; nc < ncls; nc++)
 	{
 	  //if (cluster_sort[nc].dim >= 2)
 	    //almenouno = 1;
+	  if (percola[cluster_sort[nc].color])
+	    {
+	      sprintf(fn, "perc%s.dat", fname[nr1]);
+	      f2 = fopen(fn, "a");
+	      fprintf(f2, "%d %d\n", nc, cluster_sort[nc].dim);
+	      fclose(f2);
+	    }
 	  if (percola[cluster_sort[nc].color])
 	    fprintf(f, "1 ");
 	  else
@@ -1323,23 +1335,24 @@ int main(int argc, char **argv)
 	    fprintf(f, "%d %d\n", i, clssizedst[i]);
 	}
       fclose(f);
-    }
-  if (output_bonds)
-    {
-      f = fopen("bonds.dat", "w+");
-      fprintf(f, "%d %.15G\n", NP, L);
-      for (i = 0; i < NP; i++)
+      if (output_bonds)
 	{
-	  fprintf(f,"%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
-	}	  
-      for (i = 0; i < NP; i++)
-	{
-	  fprintf(f,"%d %d\n", i+1, numbonds[i]);
-	  for (c = 0; c < numbonds[i]-1; c++)
+	  sprintf(fn, "%s.bonds", fname[nr1]);
+	  f = fopen(fn, "w+");
+	  fprintf(f, "%d %.15G\n", NP, L);
+	  for (i = 0; i < NP; i++)
+	    {
+	      fprintf(f,"%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
+	    }	  
+	  for (i = 0; i < NP; i++)
+	    {
+	      fprintf(f,"%d %d\n", i+1, numbonds[i]);
+	      for (c = 0; c < numbonds[i]-1; c++)
 	    fprintf(f, "%d ", bonds[i][c]+1);
-	  fprintf(f, "%d\n", bonds[i][numbonds[i]-1]+1);
+	      fprintf(f, "%d\n", bonds[i][numbonds[i]-1]+1);
+	    }
+	  fclose(f);
 	}
-      fclose(f);
     }
   f = fopen("avg_cluster_size_distr.dat", "w+");
   for (i = 1; i < NP; i++)
