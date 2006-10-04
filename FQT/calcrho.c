@@ -228,7 +228,7 @@ int main(int argc, char **argv)
       readconf(fname[nr1], &time, &refTime, NP, r0);
       for (qmod = qmin; qmod <= qmax; qmod++)
 	{
-	  if (qmod == qmin)
+	  if (nr1 == 0)
 	    strcpy(mode,"w");
 	  else
 	    strcpy(mode,"a");

@@ -41,6 +41,7 @@ int main(int argc, char **argv)
     points = atoi(argv[3]);
   else
     points = NN;
+  printf("points:%d\n", points);
   c2 = 0;
   if (comps==2)
     sprintf(fname[0], "RHOTMPA/ro.00.k=%03d", qmin);
