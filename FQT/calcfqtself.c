@@ -61,7 +61,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
     }
   fclose(f);
 }
-#define KMODMAX 598
+#define KMODMAX 600
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double *sqReA[KMODMAX], *sqImA[KMODMAX], *sqReB[KMODMAX], *sqImB[KMODMAX];
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
   FILE *f, *f2;
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
-  int qmin = 5, qmax = 30, qmod; 
+  int qmin = 0, qmax = KMODMAX-1, qmod; 
   double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
 
   twopi = acos(0)*4.0;	  

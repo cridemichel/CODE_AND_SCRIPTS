@@ -64,7 +64,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
     }
   fclose(f);
 }
-#define KMODMAX 598
+#define KMODMAX 600
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double *cc[KMODMAX];
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
   char mode[10];
   int c2, i, ii, nr1, a;
   int iq, NN, maxl, nfiles, nat;
-  int qmin = 0, qmax = KMODMAX, qmod; 
+  int qmin = 0, qmax = KMODMAX-1, qmod; 
   double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
 
   twopi = acos(0)*4.0;	  
@@ -156,7 +156,8 @@ int main(int argc, char **argv)
     }
   fclose(f);
   invL = 1.0/L;
-  printf("qui NP=%d argv=%s %s %s %s\n", NP, argv[0], argv[1], argv[2], argv[3]);
+ 
+  printf("qui NP=%d argv=%s %s\n", NP, argv[0], argv[1]);
   if (argc >= 2)
     qmin = atoi(argv[2]);
   if (argc == 4)
