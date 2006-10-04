@@ -313,7 +313,7 @@ int main(int argc, char** argv)
   if (NA < N) 
     {
       of = fopen("SqAA.dat", "w+");
-      for (qmod = qmin; qmod  <= qmax; qmod++)
+      for (qmod = qmin; qmod <= qmax; qmod++)
 	{
 	  SqAA[qmod] = (SqAA[qmod]  * invNmAA) / ((double) ntripl[qmod]) / ((double)nf);  
 	  //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
@@ -324,7 +324,7 @@ int main(int argc, char** argv)
 	}
       fclose(of);
       of = fopen("SqBB.dat", "w+");
-      for (qmod = 0; qmod  < KMODMAX; qmod++)
+      for (qmod = 0; qmod <= qmax; qmod++)
 	{
 	  SqBB[qmod] = (SqBB[qmod]  * invNmBB) / ((double) ntripl[qmod]) / ((double)nf);  
 	  //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
@@ -335,7 +335,7 @@ int main(int argc, char** argv)
 	}
       fclose(of);
       of = fopen("SqAB.dat", "w+");
-      for (qmod = 0; qmod  < KMODMAX; qmod++)
+      for (qmod = 0; qmod <= qmax; qmod++)
 	{
 	  SqAB[qmod] = (SqAB[qmod]  * invNmAB) / ((double) ntripl[qmod]) / ((double)nf);  
 	  //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
