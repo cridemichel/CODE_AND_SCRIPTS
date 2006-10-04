@@ -8,21 +8,21 @@ char line[100000], parname[124], parval[256000];
 int N, NA=-1;
 double x[3], *r[3];
 char fname[1024], inputfile[1024];
-int readCnf = 0;
+int readCnf = 0, physunit=0;
 #define KMODMAX 298 
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
+double qavg[KMODMAX], qmin=0, qmax=KMODMAX;
 int ntripl[]=
 #include "./ntripl.dat"
 int mesh[][NKSHELL][3]= 
 #include "./kmesh.dat"
 double twopi;
 double Sq[KMODMAX], sumRho, reRho, imRho, rCMk, scalFact, invNm, invL, L, invNmAA, invNmBB, invNmAB;
-double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, 
-       imRhoB;
+double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, imRhoB;
 void print_usage(void)
 {
-  printf("calcSq [--help/-h] [--cnf/-c] <confs_file>\n");
+  printf("calcSq [--qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --cnf/-c | --phys-unit/-pu] <confs_file> [qmin] [qmax]\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -41,10 +41,30 @@ void parse_param(int argc, char** argv)
 	{
 	  readCnf = 1;
 	} 
+      else if (!strcmp(argv[cc],"--phys-unit") || !strcmp(argv[cc],"-pu"))
+	{
+	  physunit = 1;
+	}
+      else if (!strcmp(argv[cc],"--qmin") || !strcmp(argv[cc],"--qm"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmin = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--qmax") || !strcmp(argv[cc],"--qM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmax = atoi(argv[cc]);
+	}
       else if (cc == argc)
 	print_usage();
       else
-	strcpy(inputfile,argv[cc]);
+	{ 
+	  strcpy(inputfile,argv[cc]);
+	}
       cc++;
     }
 }
@@ -67,6 +87,10 @@ int main(int argc, char** argv)
   parse_param(argc, argv);
   f2 = fopen(inputfile,"r");
   nf = 0;
+  if (qmax >= KMODMAX)
+    qmax = KMODMAX-1;
+  if (qmin < 0)
+    qmin = 0;
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
@@ -139,22 +163,41 @@ int main(int argc, char** argv)
       for (i=0; i < N; i++)
 	{
 	   fscanf(f, "%[^\n]\n", line); 
+	   //printf("line=%s\n", line);
 	   if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
 	     {
+	       //printf("boh\n");
 	       sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
 	     }
+	   //printf("r=(%.15G,%.15G,%.15G)\n", r[0][i], r[1][i], r[2][i]);
 	}
       if (NA == -1)
 	NA = N;
-      for (qmod=0; qmod < KMODMAX; qmod++)
+      //NA = N;//force monodisperse
+      if (first)
 	{
-	  Sq[qmod] = 0.0;      
-	  if (NA < N)
+	  for (qmod=0; qmod <= qmax; qmod++)
 	    {
-	      SqAA[qmod] = SqAB[qmod] = SqBB[qmod] = 0.0;
+	      Sq[qmod] = 0.0;      
+	      if (NA < N)
+		{
+	    	  SqAA[qmod] = SqAB[qmod] = SqBB[qmod] = 0.0;
+		}
 	    }
-	}
+	  if (physunit)
+	    {
+	      for (qmod = qmin; qmod <= qmax; qmod++)
+		{
+		  qavg[qmod] = 0;
+		  for (mp = 0; mp < ntripl[qmod]; mp++) 
+		    {
+		      qavg[qmod] += sqrt(Sqr(mesh[qmod][mp][0])+Sqr(mesh[qmod][mp][0])+Sqr(mesh[qmod][mp][0]));
+		    }
+		  qavg[qmod] *= scalFact/((double)ntripl[qmod]);
+		}
+	    }
 
+	}
       scalFact = twopi * invL;
       invNm = 1.0 / ((double)N);
       if (NA < N)
@@ -171,7 +214,7 @@ int main(int argc, char** argv)
       printf("nf=%d twopi=%.15G N=%d invL=%.15G invNm:%.15G\n", nf, twopi, N, invL, invNm);
       if (NA == N)
 	{
-	  for(n = 0; n < KMODMAX; n++)
+	  for(n = 0; n <= qmax; n++)
 	    {
 	      sumRho = 0.0;
 	      for(mp = 0; mp < ntripl[n]; mp++)
@@ -204,7 +247,7 @@ int main(int argc, char** argv)
 	}
       else
 	{
-	  for(n = 0; n < KMODMAX; n++)
+	  for(n = 0; n <= qmax; n++)
 	    {
 	      sumRhoAA = sumRhoBB = sumRhoAB = 0.0;
 	      for(mp = 0; mp < ntripl[n]; mp++)
@@ -249,26 +292,31 @@ int main(int argc, char** argv)
 	      //printf("sumRho=%.15G Sq[%d]=%.15G\n", sumRho, n, Sq[n]);
 	    }
 	  fclose(f);
-
 	}
     }
   fclose(f2); 
   of = fopen("Sq.dat", "w+");
-  for (qmod = 0; qmod  < KMODMAX; qmod++)
+  for (qmod = qmin; qmod  <= qmax; qmod++)
     {
       Sq[qmod] = (Sq[qmod]  * invNm) / ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
-      fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
+      if (physunit)
+	fprintf(of, "%.15G %.15G\n", scalFact*(1.25+0.5*qmod), Sq[qmod]); 
+      else
+	fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
     }
   fclose(of);
   if (NA < N) 
     {
       of = fopen("SqAA.dat", "w+");
-      for (qmod = 0; qmod  < KMODMAX; qmod++)
+      for (qmod = qmin; qmod  <= qmax; qmod++)
 	{
 	  SqAA[qmod] = (SqAA[qmod]  * invNmAA) / ((double) ntripl[qmod]) / ((double)nf);  
 	  //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
-	  fprintf(of, "%d %.15G\n", qmod, SqAA[qmod]); 
+	  if (physunit)
+	    fprintf(of, "%.15G %.15G\n", scalFact*(1.25+0.5*qmod), SqAA[qmod]); 
+	  else
+	    fprintf(of, "%d %.15G\n", qmod, SqAA[qmod]); 
 	}
       fclose(of);
       of = fopen("SqBB.dat", "w+");
@@ -276,7 +324,10 @@ int main(int argc, char** argv)
 	{
 	  SqBB[qmod] = (SqBB[qmod]  * invNmBB) / ((double) ntripl[qmod]) / ((double)nf);  
 	  //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
-	  fprintf(of, "%d %.15G\n", qmod, SqBB[qmod]); 
+	  if (physunit)
+	    fprintf(of, "%.15G %.15G\n", scalFact*(1.25+0.5*qmod), SqBB[qmod]); 
+	  else
+	    fprintf(of, "%d %.15G\n", qmod, SqBB[qmod]); 
 	}
       fclose(of);
       of = fopen("SqAB.dat", "w+");
@@ -284,9 +335,12 @@ int main(int argc, char** argv)
 	{
 	  SqAB[qmod] = (SqAB[qmod]  * invNmAB) / ((double) ntripl[qmod]) / ((double)nf);  
 	  //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
-	  fprintf(of, "%d %.15G\n", qmod, SqAB[qmod]); 
+	  if (physunit)
+	    fprintf(of, "%.15G %.15G\n", scalFact*(1.25+0.5*qmod), SqAB[qmod]); 
+	  else
+	    fprintf(of, "%d %.15G\n", qmod, SqAB[qmod]); 
 	}
       fclose(of);
-
     }
+  return 0;
 }
