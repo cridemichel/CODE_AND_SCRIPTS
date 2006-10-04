@@ -301,7 +301,7 @@ int main(int argc, char** argv)
       Sq[qmod] = (Sq[qmod]  * invNm) / ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
-	fprintf(of, "%.15G %.15G\n", scalFact*(1.25+0.5*qmod), Sq[qmod]); 
+	fprintf(of, "%.15G %.15G\n", qavg[qmod], Sq[qmod]); 
       else
 	fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
     }
@@ -314,7 +314,7 @@ int main(int argc, char** argv)
 	  SqAA[qmod] = (SqAA[qmod]  * invNmAA) / ((double) ntripl[qmod]) / ((double)nf);  
 	  //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
 	  if (physunit)
-	    fprintf(of, "%.15G %.15G\n", scalFact*(1.25+0.5*qmod), SqAA[qmod]); 
+	    fprintf(of, "%.15G %.15G\n", qavg[qmod], SqAA[qmod]); 
 	  else
 	    fprintf(of, "%d %.15G\n", qmod, SqAA[qmod]); 
 	}
@@ -325,7 +325,7 @@ int main(int argc, char** argv)
 	  SqBB[qmod] = (SqBB[qmod]  * invNmBB) / ((double) ntripl[qmod]) / ((double)nf);  
 	  //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
 	  if (physunit)
-	    fprintf(of, "%.15G %.15G\n", scalFact*(1.25+0.5*qmod), SqBB[qmod]); 
+	    fprintf(of, "%.15G %.15G\n", qavg[qmod], SqBB[qmod]); 
 	  else
 	    fprintf(of, "%d %.15G\n", qmod, SqBB[qmod]); 
 	}
@@ -336,7 +336,7 @@ int main(int argc, char** argv)
 	  SqAB[qmod] = (SqAB[qmod]  * invNmAB) / ((double) ntripl[qmod]) / ((double)nf);  
 	  //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
 	  if (physunit)
-	    fprintf(of, "%.15G %.15G\n", scalFact*(1.25+0.5*qmod), SqAB[qmod]); 
+	    fprintf(of, "%.15G %.15G\n", qavg[qmod], SqAB[qmod]); 
 	  else
 	    fprintf(of, "%d %.15G\n", qmod, SqAB[qmod]); 
 	}
