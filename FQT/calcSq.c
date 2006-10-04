@@ -9,7 +9,7 @@ int N, NA=-1;
 double x[3], *r[3];
 char fname[1024], inputfile[1024];
 int readCnf = 0, physunit=0;
-#define KMODMAX 298 
+#define KMODMAX 598 
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double qavg[KMODMAX];
