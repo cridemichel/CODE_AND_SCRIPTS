@@ -162,7 +162,10 @@ int main(int argc, char **argv)
     qmin = atoi(argv[2]);
   if (argc == 4)
     qmax = atoi(argv[3]);
-  
+  if (qmax >= KMODMAX)
+    qmax = KMODMAX-1;
+  if (qmin < 0)
+    qmin = 0;
   scalFact = twopi * invL;
   //printf("maxnp=%d points=%d\n",maxnp, points);
   printf("qmin = %d qmax=%d\n", qmin, qmax);
