@@ -1,12 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <math.h>
 #define MAXPTS 1000
 #define MAXQ 500
 #define NUMQ 100
 #define MAXCOMPS 2
+#define KMODMAX 600
+#define NKSHELL 150
+#define Sqr(x) ((x)*(x))
 char fname[2][1024]; 
+int ntripl[]=
+#include "./ntripl.dat"
+int mesh[][NKSHELL][3]= 
+#include "./kmesh.dat"
+
 double time, Cav, Cav0, CavAA0, CavBB0, CavAB0, 
        CavAA, CavAB, CavBB, CavBA0, CavBA, 
        rhoR0[MAXCOMPS][MAXQ], rhoI0[MAXCOMPS][MAXQ], 
@@ -19,23 +27,135 @@ double time, Cav, Cav0, CavAA0, CavBB0, CavAB0,
        *rhoRt[MAXCOMPS][MAXQ], 
        *rhoIt[MAXCOMPS][MAXQ], *tiall;
 int *NQarr;
-int points, comps=2;
+int qmin, qmax, points, comps=2;
 char AB[2]={'A','B'};
+void print_usage(void)
+{
+  printf("calcfqtcoll [--qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] <lista_files> [qmin] [qmax] [points]\n");
+  printf("where points is the number of points of the correlation function\n");
+  exit(0);
+}
+double qavg[KMODMAX];
+
+double qminpu = -1.0, qmaxpu = -1.0;
+
+void parse_param(int argc, char** argv)
+{
+  int cc=1, extraparam=0;
+  
+  if (argc==1)
+    print_usage();
+  while (cc < argc)
+    {
+      //printf("cc=%d extraparam=%d argc=%d\n", cc, extraparam, argc);
+      if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
+	{
+	  print_usage();
+	}
+      else if (!strcmp(argv[cc],"--qmin") || !strcmp(argv[cc],"-qm"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmin = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--qmax") || !strcmp(argv[cc],"-qM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmax = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--qpumin") || !strcmp(argv[cc],"-qpum"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qminpu = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--qpumax") || !strcmp(argv[cc],"-qpuM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmaxpu = atof(argv[cc]);
+	}
+      else if (cc == argc || extraparam == 4)
+	print_usage();
+      else if (extraparam == 2)
+	{
+	  extraparam++;
+	  //printf("qui2 argv[%d]:%s\n",cc, argv[cc]);
+	  points = atoi(argv[cc]);
+	  //printf("points:%d\n", points);
+	}
+      else if (extraparam == 0)
+	{
+	  extraparam++;
+	  qmin = atoi(argv[cc]);
+	  //printf("qmin=%d\n", qmin);
+	}
+      else if (extraparam == 1)
+	{
+	  extraparam++;
+	  qmax = atoi(argv[cc]);
+	}
+      else
+	print_usage();
+      cc++;
+    }
+}
+
+void set_qmin_qmax_from_q_pu(double scalFact)
+{
+  int qmod, mp;
+  for (qmod = 0; qmod < KMODMAX; qmod++)
+    {
+      qavg[qmod] = 0;
+      for (mp = 0; mp < ntripl[qmod]; mp++) 
+	{
+	  qavg[qmod] += sqrt(Sqr(((double)mesh[qmod][mp][0]))+
+			     Sqr(((double)mesh[qmod][mp][1]))+
+			     Sqr(((double)mesh[qmod][mp][2])));
+	}
+      qavg[qmod] *= scalFact/((double)ntripl[qmod]);
+      //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
+    }
+  if (qminpu != -1.0 && qminpu == qmaxpu)
+    {
+      qmin = rint((qminpu-1.0) / (scalFact/2.0));
+      qmax = qmin;
+    }
+  else 
+    {
+      if (qminpu != -1.0 && qminpu >= 0.0)
+	qmin = ceil( (qminpu-1.0) / (scalFact/2.0));
+      if (qmaxpu != -1.0 && qmaxpu > 0.0)
+	qmax = floor( (qmaxpu-1.0) / (scalFact/2.0));
+    }
+}
+
+
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3, *f4;
   double A1, A2, A3 ;
   int c, first=1, firstp=1, NQ, nq, c1, c2, c3, i, ii, nlines, nr1, nr2, ll, mm, llp, mmp;
-  int qmin, qmax, NN, fine, JJ, maxnp, np;
+  int NN, fine, JJ, maxnp, np;
+#if 0
   if (argc <= 1)
     {
       printf("Usage: calcfqtcoll <qmin> <qmax> [points] \n");
       //printf("where NN is the number of configurations in a logarithmic block\n");
       exit(-1);
     }
+#endif
+  parse_param(argc, argv);
   //NN =  atoi(argv[1]);
+#if 0
   qmin = atoi(argv[1]);
   qmax = atoi(argv[2]);
+#endif
   NQarr = malloc(sizeof(int)*qmax);
   if (argc == 4)
     points = atoi(argv[3]);
