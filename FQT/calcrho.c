@@ -171,7 +171,7 @@ void set_qmin_qmax_from_q_pu(double scalFact)
     }
   if (qminpu != -1.0 && qminpu == qmaxpu)
     {
-      qmin = round((qminpu-1.0) / (scalFact/2.0));
+      qmin = rint((qminpu-1.0) / (scalFact/2.0));
       qmax = qmin;
     }
   else 

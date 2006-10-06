@@ -238,7 +238,7 @@ int main(int argc, char** argv)
 		}
 	      if (qminpu != -1.0 && qminpu == qmaxpu)
 		{
-		  qmin = round((qminpu-1.0) / (scalFact/2.0));
+		  qmin = rint((qminpu-1.0) / (scalFact/2.0));
 		  qmax = qmin;
 		}
 	      else 
