@@ -3,9 +3,10 @@
 #include <string.h>
 #include <math.h>
 #define MAXPTS 1000
+#define Sqr(x) ((x)*(x))
 char **fname; 
 double time, *ti, *r0[3], *r1[3], L, refTime;
-int points, assez, NP, NPA;
+int points=-1, assez, NP, NPA;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 double A0, A1, B0, B1, C0, C1;
@@ -15,7 +16,11 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
   FILE *f;
   double r0, r1, r2, R[3][3];
   int nat=0, i, cpos, a;
-  f = fopen(fname, "r");
+  if (!(f = fopen(fname, "r")))
+    {
+      printf("ERROR: I can not open file %s\n", fname);
+      exit(-1);
+    }
   while (!feof(f) && nat < 2) 
     {
       cpos = ftell(f);
@@ -67,29 +72,148 @@ double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double *sqReA[KMODMAX], *sqImA[KMODMAX], *sqReB[KMODMAX], *sqImB[KMODMAX];
 double *cc[KMODMAX];
 char fname2[512];
+char inputfile[1024];
 int ntripl[]=
 #include "./ntripl.dat"
 int mesh[][NKSHELL][3]= 
 #include "./kmesh.dat"
 double twopi;
+void print_usage(void)
+{
+  printf("calcfqtself [--qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] <lista_files> [points] [qmin] [qmax]\n");
+  printf("where points is the number of points of the correlation function\n");
+  exit(0);
+}
+double qavg[KMODMAX];
+
+int qmin = 0, qmax = KMODMAX-1; 
+double qminpu = -1.0, qmaxpu = -1.0;
+void parse_param(int argc, char** argv)
+{
+  int cc=1, extraparam=0;
+  
+  if (argc==1)
+    print_usage();
+  while (cc < argc)
+    {
+      //printf("cc=%d extraparam=%d argc=%d\n", cc, extraparam, argc);
+      if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
+	{
+	  print_usage();
+	}
+      else if (!strcmp(argv[cc],"--qmin") || !strcmp(argv[cc],"-qm"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmin = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--qmax") || !strcmp(argv[cc],"-qM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmax = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--qpumin") || !strcmp(argv[cc],"-qpum"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qminpu = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--qpumax") || !strcmp(argv[cc],"-qpuM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmaxpu = atof(argv[cc]);
+	}
+      else if (cc == argc || extraparam == 4)
+	print_usage();
+      else if (extraparam == 0)
+	{ 
+	  extraparam++;
+	  //printf("qui1 extraparam:%d\n", extraparam);
+	  strcpy(inputfile,argv[cc]);
+	}
+      else if (extraparam == 1)
+	{
+	  extraparam++;
+	  //printf("qui2 argv[%d]:%s\n",cc, argv[cc]);
+	  points = atoi(argv[cc]);
+	  //printf("points:%d\n", points);
+	}
+      else if (extraparam == 2)
+	{
+	  extraparam++;
+	  qmin = atoi(argv[cc]);
+	  //printf("qmin=%d\n", qmin);
+	}
+      else if (extraparam == 3)
+	{
+	  extraparam++;
+	  qmax = atoi(argv[cc]);
+	}
+      else
+	print_usage();
+      cc++;
+    }
+}
+void set_qmin_qmax_from_q_pu(double scalFact)
+{
+  int qmod, mp;
+  for (qmod = 0; qmod < KMODMAX; qmod++)
+    {
+      qavg[qmod] = 0;
+      for (mp = 0; mp < ntripl[qmod]; mp++) 
+	{
+	  qavg[qmod] += sqrt(Sqr(((double)mesh[qmod][mp][0]))+
+			     Sqr(((double)mesh[qmod][mp][1]))+
+			     Sqr(((double)mesh[qmod][mp][2])));
+	}
+      qavg[qmod] *= scalFact/((double)ntripl[qmod]);
+      //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
+    }
+  if (qminpu != -1.0 && qminpu == qmaxpu)
+    {
+      qmin = round((qminpu-1.0) / (scalFact/2.0));
+      qmax = qmin;
+    }
+  else 
+    {
+      if (qminpu != -1.0 && qminpu >= 0.0)
+	qmin = ceil( (qminpu-1.0) / (scalFact/2.0));
+      if (qmaxpu != -1.0 && qmaxpu > 0.0)
+	qmax = floor( (qmaxpu-1.0) / (scalFact/2.0));
+    }
+}
+
 int main(int argc, char **argv)
 {
   FILE *f, *f2;
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
-  int qmin = 0, qmax = KMODMAX-1, qmod; 
+  int qmod; 
   double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
 
   twopi = acos(0)*4.0;	  
+#if 0
   if (argc <= 1)
     {
       printf("Usage: calcfqself <lista_file> [points] [qmin] [qmax]\n");
       printf("where points is the number of points of the correlation function\n");
       exit(-1);
     }
- 
+#endif 
+  parse_param(argc, argv);
+  //printf(">>qmin=%d\n", qmin);
   c2 = 0;
-  f2 = fopen(argv[1], "r");
+  if (!(f2 = fopen(inputfile, "r")))
+    {
+      printf("ERROR: I can not open file %s\n", inputfile);
+      exit(-1);
+    }
   maxl = 0;
   while (!feof(f2))
     {
@@ -107,7 +231,12 @@ int main(int argc, char **argv)
       fscanf(f2, "%[^\n]\n", fname[ii]); 
     }
 
-  f = fopen(fname[0], "r");
+
+  if (!(f = fopen(fname[0], "r")))
+    {
+      printf("ERROR: I can not open file %s\n", fname[0]);
+      exit(-1);
+    }
   nat = 0;
   while (!feof(f) && nat < 2) 
     {
@@ -149,6 +278,7 @@ int main(int argc, char **argv)
     }
   fclose(f);
   invL = 1.0/L;
+#if 0
   if (argc >= 3)
     points = atoi(argv[2]);
   else
@@ -157,13 +287,25 @@ int main(int argc, char **argv)
     qmin = atoi(argv[3]);
   if (argc == 5)
     qmax = atoi(argv[4]);
-  
+#endif
+  if (points == -1)
+    points = NN;
   scalFact = twopi * invL;
+  set_qmin_qmax_from_q_pu(scalFact);
+  if (qmax >= KMODMAX)
+    qmax = KMODMAX-1;
+  if (qmin < 0)
+    qmin = 0;
+  if (qmin > qmax)
+    {
+      printf("ERROR: qmin must be less than qmax\n");
+      exit(-1);
+    }
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
 
-  printf("qmin=%d qmax=%d\n", qmin, qmax);
+  printf("qmin=%d qmax=%d invL=%.15G\n", qmin, qmax, invL);
   //printf("maxnp=%d points=%d\n",maxnp, points);
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
@@ -279,13 +421,6 @@ int main(int argc, char **argv)
 		      sqImB[qmod][np] += sumImB;
 		      cc[qmod][np] += 1.0;
 		    }
-		  
-#if 0
-		  /* BUG: codice da eliminare */
-		  sqReA[qmod][np] /= (double) NPA;
-		  if (NPA < NP)
-		    sqReB[qmod][np] /= (double) NP-NPA;
-#endif
 		  //printf("cc[%d][%d]=%.15G sqre=%.15G sqim=%.15G\n", qmod, np, cc[qmod][np],
 		  //	 sqRe[qmod][np], sqIm[qmod][np]);
 		}
@@ -313,7 +448,11 @@ int main(int argc, char **argv)
   for (qmod = qmin; qmod <= qmax; qmod++)
     {
       sprintf(fname2, "Fqs-%d",qmod);
-      f = fopen (fname2, "w+");
+      if (!(f = fopen (fname2, "w+")))
+	{
+	  printf("ERROR: I can not open file %s\n", fname2);
+	  exit(-1);
+	}
       //printf("SqReA[%d][0]:%.15G SqReB[][0]: %.15G\n", qmod, sqReA[qmod][0], sqReB[qmod][0]);
       for (ii = 1; ii < points; ii++)
 	{
