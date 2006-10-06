@@ -30,7 +30,8 @@ void print_usage(void)
 void parse_param(int argc, char** argv)
 {
   int cc=1;
-  
+  int extraparam = 0;  
+
   if (argc==1)
     print_usage();
   while (cc < argc)
@@ -75,12 +76,27 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  qmaxpu = atof(argv[cc]);
 	}
-      else if (cc == argc)
+      else if (cc == argc || extraparam == 3)
 	print_usage();
-      else
+      else if (extraparam == 0)
 	{ 
+	  extraparam = 1;
 	  strcpy(inputfile,argv[cc]);
 	}
+      else if (extraparam == 1)
+	{
+	  extraparam = 2;
+	  //printf("qui2 argv[%d]:%s\n",cc, argv[cc]);
+	  qmin = atoi(argv[cc]);
+	  //printf("qmin:%d\n", qmin);
+	}
+      else if (extraparam == 2)
+	{
+	  extraparam = 3;
+	  qmax = atoi(argv[cc]);
+	}
+      else
+	print_usage();
       cc++;
     }
 }
@@ -101,17 +117,30 @@ int main(int argc, char** argv)
 #endif
   twopi = acos(0.0)*4.0;
   parse_param(argc, argv);
-  f2 = fopen(inputfile,"r");
+  if (!(f2 = fopen(inputfile,"r")))
+    {
+      printf("ERROR: I can not open file %s\n", inputfile);
+      exit(-1);
+    }
   nf = 0;
   if (qmax >= KMODMAX)
     qmax = KMODMAX-1;
   if (qmin < 0)
     qmin = 0;
+  if (qmin > qmax)
+    {
+      printf("ERROR: qmin must be less than qmax\n");
+      exit(-1);
+    }
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
       //printf("fname=%s argv[2]=%s\n",fname, argv[2]);
-      f = fopen(fname,"r");
+      if (!(f = fopen(fname,"r")))
+	{
+	  printf("ERROR: I can not open file %s\n", fname);
+	  exit(-1);
+	}
       nf++;
       tref=0.0;
       if (first)
