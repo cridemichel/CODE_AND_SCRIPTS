@@ -169,10 +169,18 @@ void set_qmin_qmax_from_q_pu(double scalFact)
       qavg[qmod] *= scalFact/((double)ntripl[qmod]);
       //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
     }
-  if (qminpu != -1.0 && qminpu >= 0.0)
-    qmin = ceil(qminpu / (scalFact/2.0) - 2);
-  if (qmaxpu != -1.0 && qmaxpu > 0.0)
-    qmax = floor(qmaxpu / (scalFact/2.0) - 3);
+  if (qminpu != -1.0 && qminpu == qmaxpu)
+    {
+      qmin = round((qminpu-1.0) / (scalFact/2.0));
+      qmax = qmin;
+    }
+  else 
+    {
+      if (qminpu != -1.0 && qminpu >= 0.0)
+	qmin = ceil( (qminpu-1.0) / (scalFact/2.0));
+      if (qmaxpu != -1.0 && qmaxpu > 0.0)
+	qmax = floor( (qmaxpu-1.0) / (scalFact/2.0));
+    }
 }
 int main(int argc, char **argv)
 {
