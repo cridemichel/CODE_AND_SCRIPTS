@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.12 2005/10/25 20:44:03 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.14 2005/11/16 11:06:12 demichel Exp $     */
 #ifndef lint
-//static char vcid[] = "$Id: mdsimul.c,v 1.12 2005/10/25 20:44:03 demichel Exp $";
+//static char vcid[] = "$Id: mdsimul.c,v 1.14 2005/11/16 11:06:12 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -425,7 +425,8 @@ int main(int argc, char *argv[])
   for (i=0; i < numOfProcs; i++)
     equilibrated[i] = 0;
 #endif
-    // printf("PID CHILD: %d\n",pid);
+  MD_EXT_INIT(&argc, &argv);
+  // printf("PID CHILD: %d\n",pid);
   /* ------------------>>> function to call at exit <<<-------------- */ 
 #if !defined(CRAY) && !defined(ORIGIN) && !defined(MD_MAC)
   on_exit(endJob, NULL);
@@ -484,6 +485,9 @@ int main(int argc, char *argv[])
   
   commMD();
 
+#ifdef MD_HE_PARALL
+  MD_EXT_END();
+#endif
 #if defined(MPI)
 #if defined(PRINTER_PROC)
   MPI_Ssend("fine", 5, MPI_CHAR, 

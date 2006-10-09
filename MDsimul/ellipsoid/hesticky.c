@@ -21,6 +21,7 @@ extern int *equilibrated;
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **REtA, **REtB;
 extern double cosEulAng[2][3], sinEulAng[2][3];
 extern long long int itsFNL, timesFNL, timesSNL, itsSNL;
+extern int do_check_negpairs;
 #ifdef MD_ASYM_ITENS
 extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp, *angM;
 #else
@@ -400,6 +401,19 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   for (a=0; a < 3; a++)
     vc += (vCA[a]-vCB[a])*norm[a];
   MD_DEBUG20(printf("[bump] before bump vc=%.15G\n", vc));
+#if 1
+  if ((vc > 0 && bt == MD_OUTIN_BARRIER) ||
+      (vc < 0 && bt == MD_INOUT_BARRIER))// && fabs(vc) > 1E-10)
+    {
+      MD_DEBUG(printf("norm = (%f,%f,%f)\n", norm[0], norm[1],norm[2]));
+      MD_DEBUG(printf("vel  = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
+      MD_DEBUG(printf("i=%d r = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]));
+      //printf("[WARNING] maybe second collision has been wrongly predicted\n");
+      //printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
+      return;
+    }
+#endif
+
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
 #ifdef MD_ASYM_ITENS 
   for (a=0; a < 3; a++)
@@ -1132,7 +1146,7 @@ double distfuncSP(double x)
 }
 int interpolSP(int i, int j, int nn, 
 	     double tref, double t, double delt, double d1, double d2,
-	     double *tmin, double shift[3])
+	     double *tmin, double shift[3], int ignoresignchg)
 {
   double d3, A, dmin;
   /* NOTA: dists di seguito può non essere usata? controllare!*/
@@ -1163,7 +1177,7 @@ int interpolSP(int i, int j, int nn,
       *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
     }
   dmin = calcDistNegOneSP(*tmin, tref, i, j, nn, shift);
-  if (*tmin < t+delt && *tmin > t && d1*dmin < 0.0)
+  if (*tmin < t+delt && *tmin > t && (d1*dmin < 0.0 || ignoresignchg) )
     {
       *tmin += tref;
       return 0;
@@ -1222,9 +1236,11 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
 	&& lastbump[j].at == mapbondsb[nn]))
 	continue;
       negpairs[nn] = 1;
-      sum += 1;
+      return nn+1;
+      //sum += 1;
     }
-  return (sum > 0)?1:0;
+  return 0;
+  //return (sum > 0)?1:0;
 }
 
 int delt_is_too_big_hc(int i, int j, int bondpair, double *dists, double *distsOld)
@@ -1251,10 +1267,12 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 	continue;
       if (!negpairs[nn])
 	continue;
-    if (dists[nn] > 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
-      return 1;
-    if (dists[nn] < 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
-      return 1;
+      /* N.B. distsOld[nn] non va controllato poiché dopo un urto cmq ci deve essere un estremo
+       * di distanza dmin t.c. dmin > 0 se !bound(i,j..) o dmin < 0 se bound(i,j...) */
+      if (dists[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	return 1;
+      if (dists[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	return 1;
     }
   return 0;
 }
@@ -1349,7 +1367,7 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
-  const double minh = 1E-14;
+  const double minh = 1E-20;
   double h, d, dold, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS];
   double maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
 #ifndef MD_BASIC_DT
@@ -1440,7 +1458,10 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #endif
   MD_DEBUG30(printf("[BEFORE SEARCH CONTACT FASTER_SP]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
 #ifdef MD_NEGPAIRS
-  sumnegpairs = check_negpairs(negpairs, bondpair, i, j); 
+  if (do_check_negpairs)
+    sumnegpairs = check_negpairs(negpairs, bondpair, i, j); 
+  else
+    sumnegpairs = 0;
 #endif
   if (search_contact_fasterSP(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot, maxddoti))
     {
@@ -1530,6 +1551,46 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
        * valore accettabile. */
       if (sumnegpairs)// && !firstaftsf)
 	{
+	  if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs))
+	    {
+	      if(!interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+			     dists[sumnegpairs-1], &tmin, shift, 1))
+		{
+		  //printf("qui\n");
+		  tmin -= t1;
+		  delt = tmin - tini;
+		  t = tmin;
+		  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+		}
+#if 1
+	      else 
+		{
+		  printf("[INFO] using old goldenfactor method to reduce delt\n");
+		  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
+			 delt > minh)
+		    {
+		      delt /= GOLD; 
+		      t = tini + delt;
+		      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+		      itstb++;
+		      if (!interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
+				      dists[sumnegpairs-1], &tmin, shift, 1))
+			{
+			  tmin -= t1;
+			  delt = tmin - tini;
+			  t = tmin;
+			  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+			  break;
+			}
+		    }
+		}
+#endif
+	    } 
+	  sumnegpairs = 0;
+	}
+
+#if 0
+	  
 	  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 		 delt > minh)
 	    {
@@ -1540,6 +1601,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    }
 	  sumnegpairs = 0;
 	}
+#endif
 #endif
       MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
       for (nn=0; nn < MD_PBONDS; nn++)
@@ -1574,7 +1636,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    {
 	      //printf("tocheck[%d]:%d\n", nn, tocheck[nn]);
 	      if (interpolSP(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
-			   &troot, shift))
+			   &troot, shift, 0))
 		dorefine[nn] = MD_EVENT_NONE;
 	      else 
 		{
@@ -1606,12 +1668,12 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		  MD_DEBUG(printf("[locate_contact_sp] its: %d\n", its));
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
 		   * scarta tale urto */
-		  if (troot > t2 || troot < t1
-#if 1
+		  if (troot > t2 || troot < t1)
+#if 0
 		  || 
 		      (lastbump[i].mol == j && lastbump[j].mol==i && 
 		       lastbump[i].at == mapbondsa[nn]
-		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-15))
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-20))
 #endif
 		    {
 		     MD_DEBUG31(printf("SP lastbump[%d].mol=%d lastbump[%d].at=%d lastbump[%d].mol=%d lastbump[%d].at=%d\n", i, lastbump[i].mol, i, lastbump[i].at, j, lastbump[j].mol, j, lastbump[j].at));
@@ -1758,7 +1820,7 @@ int check_cross_sp(int nsp, double distsOld[6][NA], double dists[6][NA], int cro
   int retcross = 0;
   for (nn = 0; nn < 6; nn++)
     {
-      for (nn2 = 0; nn2 < 6; nn2++)
+      for (nn2 = 0; nn2 < nsp; nn2++)
 	{
 
 	  crossed[nn][nn2] = 0;
@@ -1784,7 +1846,7 @@ int check_cross_scf_sp(int NSP, double distsOld[6][NA], double dists[6][NA], int
 	{
 	  crossed[nn][nn2] = 0;
 	  //printf("dists[%d]=%.15G distsOld[%d]:%.15G\n", nn, dists[nn], nn, distsOld[nn]);
-	  if (fabs(dists[nn][nn2]) < 1E-14 && distsOld[nn][nn2] > 0.0)
+	  if ((fabs(dists[nn][nn2]) < 1E-15 || dists[nn][nn2] < 0.0) && distsOld[nn][nn2] > 0.0)
 	    {
 	      crossed[nn][nn2] = 1;
 	      retcross = 1;
@@ -1912,14 +1974,32 @@ void calc_delt_sp(int nsp, double maxddoti[6][NA], double *delt, double dists[6]
   //printf("I chose dt=%.15G\n", *delt);
 }
 extern double max(double a, double b);
+extern const double mddotfact;
+void adjust_maxddoti_sp(int i, int NSP, double *maxddot, double maxddotiLC[6][NA], double maxddoti[6][NA])
+{
+  double K = 1.0;
+  int a, b;
+#ifdef MD_ASYM_ITENS
+  if (Mx[i] == 0.0 && My[i] == 0.0 && Mz[i] == 0.0)
+    K = mddotfact;
+#else
+  if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
+    K = mddotfact;
+#endif
+  *maxddot *= K;
+  for (a = 0; a < 6; a++)
+    for (b = 0; b < NSP; b++)
+      maxddoti[a][b] = K*maxddotiLC[a][b];
 
+}
 int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double t2, 
 					  double epsd, double *d1, double epsdFast, 
-					  double dists[6][NA], double maxddoti[6][NA], double maxddot)
+					  double dists[6][NA], double maxddotiLC[6][NA], double maxddot)
 {
   double told, delt=1E-15, distsOld[6][NA];
   const double GOLD= 1.618034;
   const int MAXOPTITS = 500;
+  double maxddoti[6][NA];
   int its=0, crossed[6][NA], itsf, NSP; 
 
   if (i < Oparams.parnumA)
@@ -1938,6 +2018,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
       assign_dists_sp(NSP, distsOld, dists);
       return 0;
     }
+  adjust_maxddoti_sp(i, NSP, &maxddot, maxddotiLC, maxddoti);
   while (fabs(*d1) > epsdFast && its < MAXOPTITS)
     {
 #if 1
@@ -1960,7 +2041,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
       //printf("d=%.15G t=%.15G\n", *d1, *t+t1);
 #if 1
       itsf = 0;
-      while (check_cross_scf_sp(NSP, distsOld, dists, crossed))
+      while (check_cross_sp(NSP, distsOld, dists, crossed))
 	{
 	  /* reduce step size */
 	  if (itsf == 0 && delt - OprogStatus.h > 0)

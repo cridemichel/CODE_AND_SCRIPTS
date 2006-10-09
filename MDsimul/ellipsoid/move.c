@@ -15,6 +15,7 @@ extern int *equilibrated;
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
 double minaxA, minaxB, minaxAB;
+int do_check_negpairs = 0;
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
 #else
@@ -95,9 +96,21 @@ void print_matrix(double **M, int n)
     }
   printf("}\n");
 }
-double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-     		double *vecgsup, int calcguess);
-
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
+#ifdef MD_CALC_DPP
+void store_last_u(int i)
+{
+  OprogStatus.lastu1x[i] = R[i][0][0];
+  OprogStatus.lastu1y[i] = R[i][0][1];
+  OprogStatus.lastu1z[i] = R[i][0][2];
+  OprogStatus.lastu2x[i] = R[i][1][0];
+  OprogStatus.lastu2y[i] = R[i][1][1];
+  OprogStatus.lastu2z[i] = R[i][1][2];
+  OprogStatus.lastu3x[i] = R[i][2][0];
+  OprogStatus.lastu3y[i] = R[i][2][1];
+  OprogStatus.lastu3z[i] = R[i][2][2];
+}
+#endif
 double calc_dist_ij(int i, int j, double t)
 {
   static double shift[3] = {0,0,0}, vecgNeg[8];
@@ -282,9 +295,7 @@ void calcKVz(void)
   K += dd;
 }
 #endif
-double 
-calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-	    double *vecgsup, int calcguess);
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
 
 double get_min_dist_NNL (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
 {
@@ -517,21 +528,31 @@ double max3(double a, double b, double c);
 double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], double rD[3], 
 		      double shift[3], double scalfact, double *factor, int j)
 {
-  int kk;
+  int kk, ii;
   double nnlfact;
   double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2, fact3;
   double boxdiag, factNNL=1.0;
   L2 = 0.5 * L;
   phi = calc_phi();
+#ifdef MD_POLYDISP
+  phi0 = 0.0;
+  for (ii = 0; ii < Oparams.parnum; ii++)
+    phi0 += axaP[ii]*axbP[ii]*axcP[ii];
+#else
   phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
   phi0 +=((double)Oparams.parnum-Oparams.parnumA)*Oparams.a[1]*Oparams.b[1]*Oparams.c[1];
+#endif
   phi0 *= 4.0*pi/3.0;
   phi0 /= L*L*L;
   C = cbrt(OprogStatus.targetPhi/phi0);
+#ifdef MD_POLYDISP
+  Ccur = axa[i] / axaP[i];
+#else
   if (i < Oparams.parnumA)
     Ccur = axa[i]/Oparams.a[0]; 
   else
     Ccur = axa[i]/Oparams.a[1]; 
+#endif
   F = C / Ccur;
   if (j != -1)
     {
@@ -600,7 +621,11 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
     }
   else
     {
+#ifdef MD_POLYDISP
+      nnlfact = axa[i]/axaP[i];
+#else
       nnlfact = axa[i]/Oparams.a[i<Oparams.parnumA?0:1];
+#endif
       boxdiag = 2.0*sqrt(Sqr(axa[i]+OprogStatus.rNebrShell*nnlfact)+
 			 Sqr(axb[i]+OprogStatus.rNebrShell*nnlfact)+
 			 Sqr(axc[i]+OprogStatus.rNebrShell*nnlfact)); 
@@ -695,7 +720,11 @@ void scale_Phi(void)
   if (first)
     {
       first = 0;
+#ifdef MD_POLYDISP
+      a0I = axaP[0];
+#else
       a0I = Oparams.a[0];
+#endif
       rcutIni = Oparams.rcut;
       target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
@@ -784,10 +813,14 @@ void scale_Phi(void)
 	    }
 	}
 #endif
+#ifdef MD_POLYDISP
+      axai = axaP[i];
+#else
       if (i < Oparams.parnumA)
 	axai = Oparams.a[0];
       else
 	axai = Oparams.a[1];
+#endif
       if (fabs(axa[i] / axai - target) < OprogStatus.axestol)
 	{
 	  done++;
@@ -1232,6 +1265,59 @@ void update_MSDrot(int i)
   OprogStatus.sumoy[i] += (wx[i]*R[i][1][0]+wy[i]*R[i][1][1]+wz[i]*R[i][1][2])*ti;
   OprogStatus.sumoz[i] += (wx[i]*R[i][2][0]+wy[i]*R[i][2][1]+wz[i]*R[i][2][2])*ti;
 }
+#ifdef MD_CALC_DPP
+extern double scalProd(double *A, double *B);
+extern void vectProdVec(double *A, double *B, double *C);
+
+void update_MSD(int i)
+{
+  int a, b;
+  double ti;
+  double lu[3][3], nw[3],un, normw, dsum[3][3], nvecu[3], vel[3];
+  ti = Oparams.time - OprogStatus.lastcolltime[i];
+  /* sumox, sumoy e sumoz sono gli integrali nel tempo delle componenti della velocità
+   * angolare lungo gli assi dell'ellissoide */
+  lu[0][0] = OprogStatus.lastu1x[i];
+  lu[0][1] = OprogStatus.lastu1y[i];
+  lu[0][2] = OprogStatus.lastu1z[i];
+  lu[1][0] = OprogStatus.lastu2x[i];
+  lu[1][1] = OprogStatus.lastu2y[i];
+  lu[1][2] = OprogStatus.lastu2z[i];
+  lu[2][0] = OprogStatus.lastu3x[i];
+  lu[2][1] = OprogStatus.lastu3y[i];
+  lu[2][2] = OprogStatus.lastu3z[i];
+  nw[0] = wx[i];
+  nw[1] = wy[i];
+  nw[2] = wz[i];
+  vel[0] = vx[i];
+  vel[1] = vy[i];
+  vel[2] = vz[i];
+  normw = calc_norm(nw);
+  if (normw==0.0)
+    {
+      for (a=0; a < 3; a++)
+	for (b=0; b < 3; b++)
+	  dsum[a][b] = ti*lu[a][b];
+    }
+  else
+    {
+      for (a=0; a < 3; a++)
+	nw[a] /= normw; 
+      for (b=0; b < 3; b++)
+	{
+	  un = scalProd(nw, lu[b]);
+	  for (a=0; a < 3; a++)
+	    dsum[b][a] = ti*un*nw[a];
+	  vectProdVec(nw, lu[b], nvecu);
+	  for (a=0; a < 3; a++)
+	    dsum[b][a] += (sin(normw*ti)/normw)*(lu[b][a]-un*nw[a]) - ((cos(normw*ti)-1.0)/normw)*nvecu[a];
+	}
+    }
+  OprogStatus.sumdx[i] += scalProd(dsum[0],vel);
+  OprogStatus.sumdy[i] += scalProd(dsum[1],vel);
+  OprogStatus.sumdz[i] += scalProd(dsum[2],vel);
+}
+#endif
 #ifdef MD_ASYM_ITENS
 extern void calc_angmom(int i, double **I);
 extern void upd_refsysM(int i);
@@ -1299,12 +1385,27 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   MD_DEBUG(printf("\n"));
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
+  if (OprogStatus.targetPhi > 0)
+    { 
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  else
+    { 
+      invaSq[na] = 1/Sqr(axaP[i]);
+      invbSq[na] = 1/Sqr(axbP[i]);
+      invcSq[na] = 1/Sqr(axcP[i]);
+    }
+#else
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
+#endif
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
 #ifdef MD_ASYM_ITENS
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
@@ -1312,12 +1413,27 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   Ia = Oparams.I[na];
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[j]);
+      invbSq[na] = 1/Sqr(axbP[j]);
+      invcSq[na] = 1/Sqr(axcP[j]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+#endif
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
 #ifdef MD_ASYM_ITENS
   tRDiagR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
@@ -1423,8 +1539,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       MD_DEBUG(printf("i=%d r = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]));
       printf("[ERROR t=%.15G] maybe second collision has been wrongly predicted %d-%d\n",Oparams.time,i,j);
       printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
-      store_bump(i,j);
-      exit(-1);
+      MD_DEBUG(store_bump(i,j));
+      MD_DEBUG(exit(-1));
       return;
     }
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
@@ -1471,6 +1587,11 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #else
   /* SQUARE WELL: modify here */
   factor =2.0*vc/denom;
+#ifdef MD_INELASTIC
+  if (!((Oparams.time - lastcol[i] < OprogStatus.tc)||
+  	(Oparams.time - lastcol[j] < OprogStatus.tc)))
+    factor *= (1+Oparams.partDiss)/2.0;
+#endif
   MD_DEBUG(printf("factor=%f denom=%f\n", factor, denom));
 #endif
   delpx = - factor * norm[0];
@@ -2496,12 +2617,27 @@ void fdjac(int n, double x[], double fvec[], double **df,
   MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
   MD_DEBUG2(print_matrix(RA, 3));
   na = (iA < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[iA]);
       invbSq[na] = 1/Sqr(axb[iA]);
       invcSq[na] = 1/Sqr(axc[iA]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[iA]);
+      invbSq[na] = 1/Sqr(axbP[iA]);
+      invcSq[na] = 1/Sqr(axcP[iA]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[iA]);
+      invbSq[na] = 1/Sqr(axb[iA]);
+      invcSq[na] = 1/Sqr(axc[iA]);
+    }
+#endif
   tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
   MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
   MD_DEBUG2(print_matrix(Xa, 3));
@@ -2522,12 +2658,27 @@ void fdjac(int n, double x[], double fvec[], double **df,
   UpdateOrient(iB, ti, RB, OmegaB);
 #endif
   na = (iB < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[iB]);
       invbSq[na] = 1/Sqr(axb[iB]);
       invcSq[na] = 1/Sqr(axc[iB]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[iB]);
+      invbSq[na] = 1/Sqr(axbP[iB]);
+      invcSq[na] = 1/Sqr(axcP[iB]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[iB]);
+      invbSq[na] = 1/Sqr(axb[iB]);
+      invcSq[na] = 1/Sqr(axc[iB]);
+    }
+#endif
   tRDiagR(iB, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
   DB[0][1] = DB[0][2] = DB[1][0] = DB[1][2] = DB[2][0] = DB[2][1] = 0.0;
   DB[0][0] = invaSq[na];
@@ -2638,13 +2789,27 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   UpdateOrient(i, ti, Rt, Omega);
 #endif
   na = (i < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
-
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[i]);
+      invbSq[na] = 1/Sqr(axbP[i]);
+      invcSq[na] = 1/Sqr(axcP[i]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+#endif
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = tGuess - atomTime[j];
@@ -2657,12 +2822,27 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   UpdateOrient(j, ti, Rt, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[j]);
+      invbSq[na] = 1/Sqr(axbP[j]);
+      invcSq[na] = 1/Sqr(axcP[j]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+#endif
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 
 }
@@ -2736,12 +2916,27 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   UpdateOrient(i, ti, Rt, Omega);
 #endif
   na = (i < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[i]);
+      invbSq[na] = 1/Sqr(axbP[i]);
+      invcSq[na] = 1/Sqr(axcP[i]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+#endif
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
 
   ti = x[4] + (trefG - atomTime[j]);
@@ -2755,12 +2950,27 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   UpdateOrient(j, ti, Rt, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[j]);
+      invbSq[na] = 1/Sqr(axbP[j]);
+      invcSq[na] = 1/Sqr(axcP[j]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+#endif
  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
 #if 0
   printf("Xa=\n");
@@ -3390,7 +3600,7 @@ void guess_dist(int i, int j,
   saB[0] = axa[j];
   saB[1] = axb[j];
   saB[2] = axc[j];
-
+  //printf("axes[%d]=%f,%f,%f axes[%d]=%f,%f,%f\n", i, axa[i], axb[i], axc[i], j, axa[j], axb[j], axc[j]);
   for (k1 = 0; k1 < 3; k1++)
     {
       gradA[k1] =  (rB[k1]-rA[k1]);
@@ -3484,12 +3694,27 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   UpdateOrient(i, ti, RtA, Omega);
 #endif
   na = (i < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[i]);
+      invbSq[na] = 1/Sqr(axbP[i]);
+      invcSq[na] = 1/Sqr(axcP[i]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+#endif
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
 
   ti = t + (t1 - atomTime[j]);
@@ -3502,12 +3727,27 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   UpdateOrient(j, ti, RtB, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#ifdef MD_POLYDISP
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[j]);
+      invbSq[na] = 1/Sqr(axbP[j]);
+      invcSq[na] = 1/Sqr(axcP[j]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+#endif
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
   if (OprogStatus.dist5)
     {
@@ -4378,6 +4618,39 @@ double distfunc(double x)
     polinterr = 0;
   return y;
 }
+int interpolSNP(int i, int j, double tref, double t, double delt, double d1, double d2, double *tmin, double* vecg, double shift[3])
+{
+  double d3, A;
+  double r1[3], r2[3], alpha;
+  double dmin;
+  d3 = calcDistNeg(t+delt*0.5, tref, i, j, shift, r1, r2, &alpha, vecg, 0);
+  xa[0] = 0;
+  ya[0] = d1;
+  xa[1] = delt*0.5;
+  ya[1] = d3;
+  xa[2] = delt;
+  ya[2] = d2;
+  if (ya[0]-ya[1] == 0.0)
+    {
+      *tmin = t + delt*0.25;
+    }
+  else if (ya[2]-ya[0] ==0.0)
+    {
+      *tmin = t + delt*0.5;
+    }
+  else
+    {      
+      A = (ya[2]-ya[0])/(ya[0]-ya[1]);
+      *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
+    }
+  if (*tmin < t+delt && *tmin > t)
+    {
+      dmin = calcDistNeg(*tmin, tref, i, j, shift, r1, r2, &alpha, vecg, 0);
+      *tmin += tref;
+      return 0;
+    }
+  return 1;
+}
 int interpol(int i, int j, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3], int bracketing)
 {
   int nb;
@@ -4521,7 +4794,7 @@ double calc_maxddot(int i, int j)
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
   double h, d, dold, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
-  double maxddot, delt, troot, vecgroot[8];
+  double maxddot, delt, troot, vecgroot[8], tini, tmin;
 #ifndef MD_BASIC_DT
   double normddot, ddot[3], dold2, vecgdold2[8];
 #endif
@@ -4530,7 +4803,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #ifndef MD_ASYM_ITENS
   double factori, factorj; 
 #endif
-  int dorefine;
+  int dorefine, sumnegpairs=0;
   int its, foundrc, kk;
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
@@ -4621,6 +4894,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  printf("i=%d j=%d BOH d=%.15G\n", i, j, d);
 	  exit(-1);
 	}
+      sumnegpairs = 1;
 #if 0
       its = 0;	
       while (d < 0)
@@ -4636,7 +4910,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     }
   else if (d<0&&fabs(d)>OprogStatus.epsd)
     {
-      printf("[WARNING] t=%.10G d=%.15G < 0 i=%d j=%d\n",t+t1, d, i, j);
+      printf("[WARNING] t=%.10G d=%.15G < 0 i=%d j=%d\n", t+t1, d, i, j);
       printf("[WARNING] Some collision has been missed, ellipsoid may overlap!\n");
       store_bump(i, j);
       return 0;
@@ -4687,6 +4961,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	//delt = h;
       if (dold < epsd)
 	delt = epsd / maxddot;
+      tini = t;
       t += delt;
       for (kk = 0; kk < 8; kk++)
 	vecgdold2[kk] = vecgd[kk];
@@ -4715,6 +4990,22 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	}
 #endif
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f d1-d2:%.15G\n", t, d1, d2, fabs(d1-d2)));
+      if (sumnegpairs)
+	{
+	  MD_DEBUG(printf("sumnnegpairs d=%.15G\n", d));
+  	  if (d <= 0.0)
+	    {
+	      if(!interpolSNP(i, j, t1, tini, delt, dold, d, &tmin, vecgd, shift))
+		{
+		  tmin -= t1;
+		  delt = tmin - tini;
+		  t = tmin;
+		  d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
+		  MD_DEBUG(printf("qui tmin = %.15G d=%.15G delt=%.15G\n", tmin, d, delt));
+		}
+	    }
+	  sumnegpairs = 0;	  
+	}
       dorefine = 0;      
       if (dold > 0 && d < 0)
 	{
@@ -4761,21 +5052,29 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      MD_DEBUG31(printf("collision will occur at time %.15G\n", vecg[4])); 
 	      MD_DEBUG31(printf("[locate_contact] its: %d\n", its));
 #ifdef MD_PATCHY_HE
-	      if (vecg[4]>t2 || vecg[4]<t1 || 
+	      if (vecg[4]>t2 || vecg[4]<t1)
+#if 0
+		|| 
 		  (lastbump[i].mol==j && lastbump[i].at==0 && lastbump[j].mol==i && lastbump[j].at==0
 		   && fabs(vecg[4] - lastcol[i])<1E-15))
+#endif
 		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
 		return 0;
 	      else
 		return 1;
 
 #else
-	      if (vecg[4]>t2 || vecg[4]<t1 || 
-		  (lastbump[i] == j && lastbump[j]==i && fabs(vecg[4] - lastcol[i])<1E-15))
+	      if (vecg[4]>t2 || vecg[4]<t1)
+#if 0
+		|| 
+		  (lastbump[i] == j && lastbump[j]==i && fabs(vecg[4] - lastcol[i])<1E-14))
 		  // && !vc_is_pos(i, j, vecg[0], vecg[1], vecg[2], vecg[4]))
-		return 0;
+#endif
+		  return 0;
 	      else
-		return 1;
+		{
+		  return 1;
+		}
 #endif
 	    }
 	  else 
@@ -5168,12 +5467,16 @@ void PredictEvent (int na, int nb)
 			}
 		      else
 		       {
+#ifdef MD_POLYDISP
+			 sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
 			 if (na < parnumA && n < parnumA)
 			   sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 			 else if (na >= parnumA && n >= parnumA)
 			   sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 			 else
 			   sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#endif
 		       }
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 		      tInt = Oparams.time - atomTime[n];
@@ -5503,6 +5806,7 @@ void calc_omega(int i)
 #ifdef MD_PATCHY_HE
 extern double calcpotene(void);
 #endif
+double Krot, Ktra;
 void calc_energy(char *msg)
 {
   int i, k1;
@@ -5515,7 +5819,7 @@ void calc_energy(char *msg)
   //Ib = matrix(3,3);
 #endif
 
-  K = 0;
+  K = Ktra = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
       if (i<Oparams.parnumA)
@@ -5524,7 +5828,7 @@ void calc_energy(char *msg)
 #ifdef MD_ASYM_ITENS
 	  //RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
 #endif
-	  K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  Ktra += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 #ifdef MD_ASYM_ITENS
 	  calc_omega(i);
 #endif
@@ -5541,13 +5845,13 @@ void calc_energy(char *msg)
 	  //printf("calcnorm wt: %.15G wtp:%.15G\n", calc_norm(wt), calc_norm(wtp));
 	  for (k1=0; k1 < 3; k1++)
 	    {
-	      K += Sqr(wtp[k1])*Oparams.I[0][k1];
+	      Krot += Sqr(wtp[k1])*Oparams.I[0][k1];
 	      //printf("I[%d][%d]=%.15G wt[%d]:%.15G wtp[%d]:%.15G\n", 0, k1, Oparams.I[0][k1],
 		//     k1, wt[k1], k1, wtp[k1]);
 	    }
 #else
 	  for (k1=0; k1 < 3; k1++)
-	    K += Sqr(wt[k1])*Oparams.I[0];
+	    Krot += Sqr(wt[k1])*Oparams.I[0];
 #endif
 	}
       else
@@ -5555,7 +5859,7 @@ void calc_energy(char *msg)
 #ifdef MD_ASYM_ITENS
 	  //RDiagtR(i, Ib, Oparams.I[1][0], Oparams.I[1][1], Oparams.I[1][2], R[i]);
 #endif
-	  K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  Ktra += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 #ifdef MD_ASYM_ITENS
 	  calc_omega(i);
 #endif
@@ -5570,14 +5874,17 @@ void calc_energy(char *msg)
 		wtp[k1] += R[i][k1][k2]*wt[k2];
 	    }
 	  for (k1=0; k1 < 3; k1++)
-	    K += Sqr(wtp[k1])*Oparams.I[1][k1];
+	    Krot += Sqr(wtp[k1])*Oparams.I[1][k1];
 #else
 	  for (k1=0; k1 < 3; k1++)
-	    K += Sqr(wt[k1])*Oparams.I[1];
+	    Krot += Sqr(wt[k1])*Oparams.I[1];
 #endif
 	}
     }
-  K *= 0.5;
+  Ktra *= 0.5;
+  Krot *= 0.5;
+  K = Ktra + Krot;
+
 #ifdef MD_ASYM_ITENS
   //free_matrix(Ia,3);
   //free_matrix(Ib,3);
@@ -5671,12 +5978,19 @@ void store_bump(int i, int j)
   RCMy = (ry[i]+ry[j]+Dry)*0.5;
   RCMz = (rz[i]+rz[j]+Drz)*0.5;
   
+#ifdef MD_POLYDISP
+  fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	  uyz[i], uzx[i], uzy[i], uzz[i], axaP[i], axbP[i], axcP[i], "red");
+  fprintf(bf, tipodat2,rx[j]+Drx-RCMx, ry[j]+Dry-RCMy, rz[j]+Drz-RCMz, uxx[j], uxy[j], uxz[j], uyx[j], uyy[j], 
+	  uyz[j], uzx[j], uzy[j], uzz[j], axaP[j], axbP[j], axcP[j], "blue");
+#else
   na = (i < Oparams.parnumA)?0:1;
   fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 	  uyz[i], uzx[i], uzy[i], uzz[i], Oparams.a[na], Oparams.b[na], Oparams.c[na], "red");
   na = (j < Oparams.parnumA)?0:1;
   fprintf(bf, tipodat2,rx[j]+Drx-RCMx, ry[j]+Dry-RCMy, rz[j]+Drz-RCMz, uxx[j], uxy[j], uxz[j], uyx[j], uyy[j], 
 	  uyz[j], uzx[j], uzy[j], uzz[j], Oparams.a[na], Oparams.b[na], Oparams.c[na], "blue");
+#endif
   //writeAllCor(bf);
 #ifdef MD_PATCHY_HE
   rA[0] = rx[i]-RCMx;
@@ -5729,6 +6043,11 @@ void ProcessCollision(void)
 #else
   OprogStatus.lastcolltime[evIdA] = OprogStatus.lastcolltime[evIdB] = 
     lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+  do_check_negpairs = 1;
+#ifdef MD_CALC_DPP
+  store_last_u(evIdA);
+  store_last_u(evIdB);
+#endif
 #ifdef MD_PATCHY_HE
   lastbump[evIdA].mol=evIdB;
   lastbump[evIdA].at = evIdC;
@@ -5758,6 +6077,7 @@ void ProcessCollision(void)
       PredictEvent(evIdA, -1);
       PredictEvent(evIdB, evIdA);
     }
+  do_check_negpairs = 0;
 }
 void docellcross(int k, double velk, double *rkptr, int cellsk)
 {
@@ -6114,6 +6434,10 @@ void move(void)
 	      calc_omega(i);
 #endif
 	      update_MSDrot(i);
+#ifdef MD_CALC_DPP
+	      update_MSD(i);
+	      store_last_u(i);
+#endif
 	      OprogStatus.lastcolltime[i] = Oparams.time;
 	    }
 	  R2u();
@@ -6196,6 +6520,10 @@ void move(void)
 	  for (i=0; i < Oparams.parnum; i++)
 	    {
 	      update_MSDrot(i);
+#ifdef MD_CALC_DPP
+	      update_MSD(i);
+	      store_last_u(i);
+#endif
 	      OprogStatus.lastcolltime[i] = Oparams.time;
 	    }
 	  if (OprogStatus.brownian)

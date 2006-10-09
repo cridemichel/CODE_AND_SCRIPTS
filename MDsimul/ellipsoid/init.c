@@ -53,6 +53,13 @@ double Ia, Ib, invIa, invIb;
 double *theta0, *phi0, *psi0, *costheta0, *sintheta0, **REt, **REtA, **REtB, *angM, ***RM, **RE0, **Rdot;
 double cosEulAng[2][3], sinEulAng[2][3];
 #endif
+#if defined(MD_HE_PARALL)
+int MPIpid;
+int my_rank;
+int numOfProcs; /* number of processeses in a communicator */
+#endif 
+
+
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
 extern double *vector(int n);
@@ -957,6 +964,10 @@ void usrInitBef(void)
     Oparams.time = 0.0;
     OprogStatus.tolT = 0.0;
     OprogStatus.targetPhi = 0.0;
+#ifdef MD_POLYDISP
+    OprogStatus.polydisp = 0.0;
+    OprogStatus.polycutoff = 5.0;
+#endif
     OprogStatus.scalfact = 0.8;
     OprogStatus.reducefact = 0.9;
     OprogStatus.nebrTabFac = 200;
@@ -980,12 +991,15 @@ void usrInitBef(void)
     OprogStatus.endtime = 0;
     OprogStatus.rescaleTime = 1.0;
     OprogStatus.brownian = 0;
+#if defined(MD_INELASTIC) || defined(MD_GRAVITY)
+    Oparams.partDiss = 1.0;
+    OprogStatus.tc = 1E-5;
+#endif
 #ifdef MD_GRAVITY
     OprogStatus.taptau = 0.0;
     OprogStatus.rzup = 0.0;
     OprogStatus.expandFact= 1.0;
     OprogStatus.quenchend = 0.0;
-    OprogStatus.tc = 1E-5;
     OprogStatus.accrcmz = 0.0;
     OprogStatus.wallcollCount = 0;
     OprogStatus.checkquenchTime = 1.0;
@@ -1010,6 +1024,20 @@ void usrInitBef(void)
 	OprogStatus.sumox[i] = 0.0;
 	OprogStatus.sumoy[i] = 0.0;
 	OprogStatus.sumoz[i] = 0.0;
+#ifdef MD_CALC_DPP
+	OprogStatus.sumdx[i] = 0.0;
+	OprogStatus.sumdy[i] = 0.0;
+	OprogStatus.sumdz[i] = 0.0;
+	OprogStatus.lastu1x[i] = 0.0;
+	OprogStatus.lastu1y[i] = 0.0;
+	OprogStatus.lastu1z[i] = 0.0;
+	OprogStatus.lastu2x[i] = 0.0;
+	OprogStatus.lastu2y[i] = 0.0;
+	OprogStatus.lastu2z[i] = 0.0;
+	OprogStatus.lastu3x[i] = 0.0;
+	OprogStatus.lastu3y[i] = 0.0;
+	OprogStatus.lastu3z[i] = 0.0;
+#endif
       }
     OprogStatus.eventMult = 100;
     OprogStatus.overlaptol = 0.0001;
@@ -1541,6 +1569,19 @@ double calc_shell(void)
 double calc_nnl_rcut(void)
 {
   double rcutA, rcutB;
+#ifdef MD_POLYDISP
+  int i;
+  double rcutMax=0.0;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      rcutA = 2.0*sqrt(Sqr(axaP[i]+OprogStatus.rNebrShell)+
+		   Sqr(axbP[i]+OprogStatus.rNebrShell)+
+		   Sqr(axcP[i]+OprogStatus.rNebrShell));
+      if  (rcutA  > rcutMax)
+	rcutMax = rcutA;
+    }
+  return 1.01*rcutMax;
+#else
   rcutA = 2.0*sqrt(Sqr(Oparams.a[0]+OprogStatus.rNebrShell)+
 		   Sqr(Oparams.b[0]+OprogStatus.rNebrShell)+
 		   Sqr(Oparams.c[0]+OprogStatus.rNebrShell));
@@ -1548,8 +1589,136 @@ double calc_nnl_rcut(void)
 		   Sqr(Oparams.b[1]+OprogStatus.rNebrShell)+
 		   Sqr(Oparams.c[1]+OprogStatus.rNebrShell));
   return 1.01*max(rcutA, rcutB);
+#endif
 }
+#ifdef MD_HE_PARALL
+MPI_Datatype Particletype;
+MPI_Datatype Eventtype;
 
+void mpi_define_structs(void)
+{
+  MPI_Datatype type_pair[15]={MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, 
+    MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE,
+    MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
+  int blocklen_pair[15]={2,6,18,12,8,6,6,4,2,2,2,2,2,2,18}, a;
+  MPI_Aint displ_pair[15];
+  MPI_Datatype type_ev[5]={MPI_DOUBLE,MPI_DOUBLE,MPI_INT,MPI_INT, MPI_INT};
+  int blocklen_ev[5]={1,3,1,1,3};
+  MPI_Aint displ_ev[5];
+  MPI_Address(&parall_pair, &displ_pair[0]);
+  MPI_Address(parall_pair.pos, &displ_pair[1]);
+  MPI_Address(parall_pair.R, &displ_pair[2]);
+  MPI_Address(parall_pair.vels, &displ_pair[3]);
+  MPI_Address(parall_pair.axes, &displ_pair[4]);
+  MPI_Address(parall_pair.cells, &displ_pair[5]);
+  MPI_Address(parall_pair.lastbump, &displ_pair[6]);
+  MPI_Address(parall_pair.time,  &displ_pair[7]);
+  MPI_Address(parall_pair.atomTime, &displ_pair[8]);
+#ifdef MD_ASYM_ITENS
+  MPI_Address(parall_pair.angM,  &displ_pair[9]);
+  MPI_Address(parall_pair.sintheta0, &displ_pair[10]);
+  MPI_Address(parall_pair.costheta0, &displ_pair[11]);
+  MPI_Address(parall_pair.phi0,      &displ_pair[12]);
+  MPI_Address(parall_pair.psi0,      &displ_pair[13]);
+  MPI_Address(parall_pair.RM,        &displ_pair[14]);
+  for (a = 14; a >= 0; a--)
+    displ_pair[a] -= displ_pair[0];
+  MPI_Type_struct(15, blocklen_pair, displ_pair, type_pair, &Particletype);
+#else
+  for (a = 8; a >= 0; a--)
+    displ_pair[a] -= displ_pair[0];
+  MPI_Type_struct(9, blocklen_pair, displ_pair, type_pair, &Particletype);
+#endif
+  MPI_Type_commit(&Particletype);
+  MPI_Address(&parall_event, &displ_ev[0]);
+  MPI_Address(parall_event.rC, &displ_ev[1]);
+  MPI_Address(&parall_event.a, &displ_ev[2]);
+  MPI_Address(&parall_event.b, &displ_ev[3]);
+#ifdef MD_PATCHY_HE
+  MPI_Address(parall_event.sp, &displ_ev[4]);
+  for (a = 4; a >= 0; a--)
+    displ_ev[a] -= displ_ev[0];
+  MPI_Type_struct(5, blocklen_ev, displ_ev, type_ev, &Eventtype);
+#else
+  for (a = 3; a >= 0; a--)
+    displ_ev[a] -= displ_ev[0];
+  MPI_Type_struct(4, blocklen_ev, displ_ev, type_ev, &Eventtype);
+#endif
+  MPI_Type_commit(&Eventtype);
+}
+void md_mpi_init(int *pargc, char***pargv)
+{
+  MPI_Init(pargc, pargv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numOfProcs); 
+  mpi_define_structs();
+}
+extern const int iwtagEvent, iwtagPair;
+void md_mpi_finalize()
+{
+  int npr;
+  char msgtype;
+  for(npr = 1; npr < numOfProcs; npr++)
+    {
+      //parall_pair.p[0] = -2;
+      //parall_pair.p[1] = -2;
+      msgtype = 'T';
+      MPI_Send(&msgtype, 1, MPI_CHAR, npr, iwtagPair, MPI_COMM_WORLD);
+      //MPI_Send(&parall_pair, 1, Particletype, npr, iwtagPair, MPI_COMM_WORLD);
+    }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Finalize();
+}
+#endif
+#ifdef MD_HE_PARALL
+extern int parall_slave_get_data(parall_pair_struct *parall_pair);
+extern void find_contact_parall(int na, int n, parall_event_struct *parall_event);
+extern MPI_Status parall_status;
+void slave_task(void)
+{
+  int njob, iriceve;
+  char msgtype;
+
+  if (my_rank == 0)
+    return;
+  while(1)
+    {
+      /* slaves processes here */
+      for(njob = 0; njob >= 0; njob++)
+	{
+	  //printf("receiving new job rank=%d\n", my_rank);
+	  MPI_Recv(&msgtype, 1, MPI_CHAR, 0, iwtagPair, MPI_COMM_WORLD, &parall_status);
+	  if (msgtype == 'D')
+	    {
+	      break;
+	    }
+	  else if (msgtype == 'T')
+	    {
+	      //printf("FINE rank=%d\n", my_rank);
+	      MPI_Barrier(MPI_COMM_WORLD);
+	      MPI_Finalize();
+	      exit(0);
+	    }
+	  MPI_Recv(&parall_pair, 1, Particletype, 0, iwtagPair, MPI_COMM_WORLD, &parall_status);
+	  iriceve = parall_status.MPI_SOURCE;
+	  //printf("received from %d rank=%d\n", iriceve, my_rank);
+	  parall_slave_get_data(&parall_pair);
+	  //printf("FINDING CONTACT TIME....rank=%d\n", my_rank);
+	  find_contact_parall(parall_pair.p[0], parall_pair.p[1], &parall_event);
+	  //printf("<<<<DONE my_rank=%d  i=%d j=%d\n", my_rank, parall_pair.p[0],
+	  //     parall_pair.p[1]);
+	  MPI_Send(&parall_event, 1, Eventtype, 0, iwtagEvent, MPI_COMM_WORLD);
+	  //printf("mmmmmmaaa rank=%d\n", my_rank);
+	  /* predict collision here */
+	}
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+}
+#endif
+#ifdef MD_CALC_DPP
+extern void store_last_u(int i);
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -1564,8 +1733,11 @@ void usrInitAft(void)
   int j, amin, bmin, nn, aa, bb, NPB;
   double distSPA, distSPB;
 #endif
+#ifdef MD_POLYDISP
+  double stocvar;
+#endif
   int a;
-  /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
+ /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
   /* initialize global varibales */
   pi = 2.0 * acos(0);
@@ -1623,7 +1795,13 @@ void usrInitAft(void)
   mgA = Oparams.m[0]*Oparams.ggrav; 
   mgB = Oparams.m[1]*Oparams.ggrav;
 #endif
-
+#ifdef MD_POLYDISP
+  if (Oparams.parnumA < Oparams.parnum)
+    {
+      printf("ERROR: Oparams.parnum has to be equal to Oparams.parnumA with polydispersity!\n");
+      exit(-1);
+    }
+#endif
   if (OprogStatus.epsdSD < 0.0)
     OprogStatus.epsdSD = Sqr(OprogStatus.epsd);
   if (OprogStatus.tolSDlong < 0.0)
@@ -1639,19 +1817,39 @@ void usrInitAft(void)
   lastbump = malloc(sizeof(int)*Oparams.parnum);
 #endif
 #ifdef MD_PATCHY_HE
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    tree = AllocMatI(9, poolSize);
+#else
   tree = AllocMatI(12, poolSize);
+#endif
   bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
   numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
   bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
 #else
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    tree = AllocMatI(9, poolSize);
+#else
   tree = AllocMatI(9, poolSize);
 #endif
+#endif
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    {
+      treeTime = malloc(sizeof(double)*poolSize);
+      treeRxC  = malloc(sizeof(double)*poolSize);
+      treeRyC  = malloc(sizeof(double)*poolSize);
+      treeRzC  = malloc(sizeof(double)*poolSize);
+    }
+#else
   treeTime = malloc(sizeof(double)*poolSize);
   treeRxC  = malloc(sizeof(double)*poolSize);
   treeRyC  = malloc(sizeof(double)*poolSize);
   treeRzC  = malloc(sizeof(double)*poolSize);
+#endif
   Xa = matrix(3, 3);
   Xb = matrix(3, 3);
   XbXa = matrix(3, 3);
@@ -1764,15 +1962,28 @@ void usrInitAft(void)
       fclose(f);
       f = fopenMPI(absMisHD("rotMSDA.dat"), "w+");
       fclose(f);
+#ifdef MD_CALC_DPP
+      f = fopenMPI(absMisHD("MSDAxyz.dat"), "w+");
+      fclose(f);
+#endif
       if (Oparams.parnum > Oparams.parnumA)
 	{
 	  f = fopenMPI(absMisHD("MSDB.dat"), "w+");
 	  fclose(f);
 	  f = fopenMPI(absMisHD("rotMSDB.dat"), "w+");
 	  fclose(f);
+#ifdef MD_CALC_DPP
+    	  f = fopenMPI(absMisHD("MSDBxyz.dat"), "w+");
+	  fclose(f);
+#endif
+ 
 	}
       f = fopenMPI(absMisHD("temp.dat"), "w+");
       fclose(f);
+#ifdef MD_INELASTIC
+      f = fopenMPI(absMisHD("temp_granular.dat"), "w+");
+      fclose(f);
+#endif
 #ifdef MD_HSVISCO
       f = fopenMPI(absMisHD("Ptens.dat"), "w+");
       fclose(f);
@@ -1811,6 +2022,23 @@ void usrInitAft(void)
 	  OprogStatus.sumox[i] = 0.0;
 	  OprogStatus.sumoy[i] = 0.0;
 	  OprogStatus.sumoz[i] = 0.0;
+#ifdef MD_CALC_DPP
+  	  OprogStatus.sumdx[i] = 0.0;
+  	  OprogStatus.sumdy[i] = 0.0;
+  	  OprogStatus.sumdz[i] = 0.0;
+	  store_last_u(i);
+#if 0
+  	  OprogStatus.lastu1x[i] = 0.0;
+  	  OprogStatus.lastu1y[i] = 0.0;
+  	  OprogStatus.lastu1z[i] = 0.0;
+  	  OprogStatus.lastu2x[i] = 0.0;
+  	  OprogStatus.lastu2y[i] = 0.0;
+  	  OprogStatus.lastu2z[i] = 0.0;
+  	  OprogStatus.lastu3x[i] = 0.0;
+  	  OprogStatus.lastu3y[i] = 0.0;
+  	  OprogStatus.lastu3z[i] = 0.0;
+#endif
+#endif
 	}
       OprogStatus.nextcheckTime += fabs(OprogStatus.rescaleTime);
       OprogStatus.nextSumTime += OprogStatus.intervalSum;
@@ -1832,10 +2060,24 @@ void usrInitAft(void)
   if (OprogStatus.useNNL)
     {
       printf("I'm going to use NNL, good choice to go fast :)\n");
+#ifdef MD_HE_PARALL
+      if (my_rank == 0)	
+ 	nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+#else
       nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+#endif
     }
   for (i=0; i < Oparams.parnumA; i++)
     {
+#ifdef MD_HE_PARALL
+      if (my_rank == 0 && OprogStatus.useNNL)	
+	{
+	  nebrTab[i].len = 0;
+	  nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+	  nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
+	  nebrTab[i].R = matrix(3, 3);
+	}
+#else
       if (OprogStatus.useNNL)
 	{
 	  nebrTab[i].len = 0;
@@ -1843,19 +2085,87 @@ void usrInitAft(void)
 	  nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
 	  nebrTab[i].R = matrix(3, 3);
 	}
+#endif
       scdone[i] = 0;
+#ifdef MD_POLYDISP
+      /* assegna i semiassi usando una gaussiana con deviazione standard fissata da OprogStatus.polydisp (%) */
+      if (newSim)
+	{
+	  if (OprogStatus.polydisp > 0.0)
+	    {
+	      /* notare che le seguenti condizioni non dipendono dai semiassi ma solo dal valore restituito
+	       * da gauss() quindi basta controllare solo uno dei tre semiassi. */
+#if 1
+	     do
+	       {
+		 /* N.B. i semiassi vengono scalati di un fattore casuale ma in maniera
+		  * isotropa. */
+		 stocvar = gauss();
+       		 axaP[i] = (OprogStatus.polydisp*stocvar + 1.0)* Oparams.a[0]; 
+		 axbP[i] = (OprogStatus.polydisp*stocvar + 1.0)* Oparams.b[0];
+		 axcP[i] = (OprogStatus.polydisp*stocvar + 1.0)* Oparams.c[0];
+	       }
+	     while ( axaP[i] < Oparams.a[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) ||
+		    axaP[i] > Oparams.a[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp) );
+#else
+	     /* this is just for testing purpose */
+	     if (i < 128)
+	       {
+		 axaP[i] = Oparams.a[0];
+		 axbP[i] = Oparams.b[0];
+		 axcP[i] = Oparams.c[0];
+	       }
+	     else
+	       {
+	       	 axaP[i] = Oparams.a[1];
+		 axbP[i] = Oparams.b[1];
+		 axcP[i] = Oparams.c[1];
+	       }
+#endif
+
+	      //printf("%.15G\n", radii[i]);
+	     axa[i] = axaP[i];
+	     axb[i] = axbP[i];
+	     axc[i] = axcP[i];
+	    }
+	  else
+	    {
+
+	      axa[i] = axaP[i];
+	      axb[i] = axbP[i];
+	      axc[i] = axcP[i];
+	    }
+	}
+      else
+	{
+	  axa[i] = axaP[i];
+	  axb[i] = axbP[i];
+	  axc[i] = axcP[i];
+	}
+      //printf("$$$ axes[%d]=(%f,%f,%f)\n", i, axaP[i], axbP[i], axcP[i]);
+#else
       axa[i] = Oparams.a[0];
       axb[i] = Oparams.b[0];
       axc[i] = Oparams.c[0];
+#endif
     }
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
     {
+#ifdef MD_HE_PARALL
+      if (my_rank == 0 && OprogStatus.useNNL)
+	{
+	  nebrTab[i].len = 0;
+	  nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+	  nebrTab[i].R = matrix(3, 3);
+	}
+#else
       if (OprogStatus.useNNL)
 	{
 	  nebrTab[i].len = 0;
 	  nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
 	  nebrTab[i].R = matrix(3, 3);
 	}
+#endif
       scdone[i] = 0;
       axa[i] = Oparams.a[1];
       axb[i] = Oparams.b[1];
@@ -1901,6 +2211,14 @@ void usrInitAft(void)
   for (i = 0; i < Oparams.parnum; i++)
     {
       maxax[i] = 0.0;
+#ifdef MD_POLYDISP
+      if (axaP[i] > maxax[i])
+	maxax[i] = axaP[i];
+      if (axbP[i] > maxax[i])
+	maxax[i] = axbP[i];
+      if (axcP[i] > maxax[i])
+	maxax[i] = axcP[i];
+#else
       a=(i<Oparams.parnumA)?0:1;
       if (Oparams.a[a] > maxax[i])
 	maxax[i] = Oparams.a[a];
@@ -1908,6 +2226,7 @@ void usrInitAft(void)
 	maxax[i] = Oparams.b[a];
       if (Oparams.c[a] > maxax[i])
 	maxax[i] = Oparams.c[a];
+#endif
       //printf("distSPA=%.15G distSPB=%.15G\n", distSPA, distSPB);
 #ifdef MD_PATCHY_HE
       //printf("maxax bef[%d]: %.15G\n", i, maxax[i]*2.0);
@@ -1940,16 +2259,32 @@ void usrInitAft(void)
 	  printf("[INFO] I've adjusted rNebrShell to %.15G\n", OprogStatus.rNebrShell);	  
 	  if (Oparams.rcut <= 0.0)
 	    {
+#ifdef MD_POLYDISP
+	      if (OprogStatus.polydisp > 0.0)
+		Oparams.rcut = calc_nnl_rcut();//*(1.0+OprogStatus.polydisp*OprogStatus.polycutoff);
+	      else
+		Oparams.rcut = calc_nnl_rcut();
+#else
 	      Oparams.rcut = calc_nnl_rcut();
+#endif
 	      printf("[INFO] I've chosen rcut= %.15G\n", Oparams.rcut);
 	    }
 	}
       else
 	{
+#ifdef MD_POLYDISP
 	  if (Oparams.rcut <= 0.0)
-	    Oparams.rcut = MAXAX*1.01;
+	    {
+	      Oparams.rcut = MAXAX*1.01;
+	    }
+#else
+	  if (Oparams.rcut <= 0.0)
+	      Oparams.rcut = MAXAX*1.01;
+#endif
 	}
     }
+
+  printf("MAXAX: %.15G rcut: %.15G\n", MAXAX, Oparams.rcut);
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
   cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
@@ -2010,6 +2345,9 @@ void usrInitAft(void)
     }
 #endif
   //exit(-1);
+#ifdef MD_HE_PARALL
+  slave_task();
+#endif
   StartRun(); 
   if (mgl_mode != 2)
     ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);

@@ -8,7 +8,9 @@
 
 /* ================== >>> PROGRAM DEFINES(CUSTOMIZE!) <<< ===================*/
 #define MD_HARDSPHERES
-
+#ifdef MD_HE_PARALL
+#include <mpi.h>
+#endif
 #define MDSIMUL "/home/demichel/shared/simul/mdsimul"
 /* this is the executable, you must change this to your directory */
 #ifdef MD_USE_CBLAS
@@ -55,6 +57,51 @@ void UpdateSystem(void);
 #define MDINTFMT "%d"
 #endif
 
+#ifdef MD_HE_PARALL
+typedef struct 
+{
+  int p[2];
+  double pos[6];
+  double R[18];
+  double vels[12];
+  double axes[8];
+  int cells[6];
+  int lastbump[6];
+  double time[4];
+  double atomTime[2];
+#ifdef MD_ASYM_ITENS
+  double angM[2];
+  double sintheta0[2];
+  double costheta0[2];
+  double phi0[2];
+  double psi0[2];
+  double RM[18];
+#endif
+} parall_pair_struct;
+typedef struct 
+{
+  double t;
+  double rC[3];
+  int a;
+  int b;
+#ifdef MD_PATCHY_HE
+  int sp[3];
+#endif
+} parall_event_struct;
+#ifdef MAIN
+parall_pair_struct parall_pair;
+parall_event_struct parall_event;
+#else
+extern parall_pair_struct parall_pair;
+extern parall_event_struct parall_event;
+#endif
+void md_mpi_init(int *argc, char***argv);
+void md_mpi_finalize(void);
+#undef MD_EXT_INIT
+#undef MD_EXT_END
+#define MD_EXT_INIT(X,Y) md_mpi_init(X,Y)
+#define MD_EXT_END() md_mpi_finalize()
+#endif
 #define NDIM 3
 #define MD_DEBUG(X)  
 #define MD_DEBUG2(X)     
@@ -105,17 +152,26 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 	   filling each one ).
 	 - Implement doubly dimensioned array as a definition apart.
 */
+#ifdef MD_POLYDISP
+#define MD_SAVE_AXES , axaP, axbP, axcP
+#define MD_ALLOC_AXES , &axaP, &axbP, &axcP
+#define MD_DECL_AXES  , *axaP, *axbP,  *axcP
+#else
+#define MD_SAVE_AXES
+#define MD_ALLOC_AXES
+#define MD_DECL_AXES
+#endif
 #ifdef MD_ASYM_ITENS
 #ifdef MD_GRAVITY
-#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz, lastcol
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz, lastcol MD_SAVE_AXES 
 #else
-#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz MD_SAVE_AXES
 #endif
 #else
 #ifdef MD_GRAVITY
-#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, vx, vy, vz, wx, wy, wz, lastcol
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, vx, vy, vz, wx, wy, wz, lastcol MD_SAVE_AXES
 #else
-#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, vx, vy, vz, wx, wy, wz
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, vx, vy, vz, wx, wy, wz MD_SAVE_AXES
 #endif
 #endif
 #undef  EXT_SLST
@@ -152,15 +208,15 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 */
 #ifdef MD_ASYM_ITENS
 #ifdef MD_GRAVITY
-#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &Mx, &My, &Mz, &lastcol
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &Mx, &My, &Mz, &lastcol MD_ALLOC_AXES
 #else
-#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &Mx, &My, &Mz 
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &Mx, &My, &Mz MD_ALLOC_AXES
 #endif
 #else
 #ifdef MD_GRAVITY
-#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &lastcol
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &lastcol MD_ALLOC_AXES
 #else
-#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz 
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz MD_ALLOC_AXES
 #endif
 #endif
 /* this is used to declare the particle variables ( see below ) 
@@ -172,15 +228,15 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
    coordinate(rx, ry, rz) <- atom <- molecule*/
 #ifdef MD_ASYM_ITENS
 #ifdef MD_GRAVITY
-#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *Mx, *My, *Mz, *lastcol
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *Mx, *My, *Mz, *lastcol MD_DECL_AXES
 #else
-#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *Mx, *My, *Mz
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *Mx, *My, *Mz MD_DECL_AXES
 #endif
 #else
 #ifdef MD_GRAVITY
-#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *lastcol
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *lastcol MD_DECL_AXES
 #else
-#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz MD_DECL_AXES
 #endif
 #endif				   
 #undef EXT_DLST
@@ -324,6 +380,20 @@ struct progStatus
   double sumox[MAXPAR];
   double sumoy[MAXPAR];
   double sumoz[MAXPAR];
+#ifdef MD_CALC_DPP
+  double sumdx[MAXPAR];
+  double sumdy[MAXPAR];
+  double sumdz[MAXPAR];
+  double lastu1x[MAXPAR];
+  double lastu1y[MAXPAR];
+  double lastu1z[MAXPAR];
+  double lastu2x[MAXPAR];
+  double lastu2y[MAXPAR];
+  double lastu2z[MAXPAR];
+  double lastu3x[MAXPAR];
+  double lastu3y[MAXPAR];
+  double lastu3z[MAXPAR];
+#endif
   double lastcolltime[MAXPAR];
   double springkSD;
   int SDmethod;
@@ -411,6 +481,10 @@ struct progStatus
   int guessDistOpt;
   int forceguess;
   double targetPhi;
+#ifdef MD_POLYDISP
+  double polydisp;
+  double polycutoff;
+#endif
   double scalfact;
   double reducefact;
   double phitol;
@@ -458,6 +532,9 @@ struct progStatus
 #endif
   double intervalSum;
   int eventMult;
+#if defined(MD_INELASTIC) || (MD_GRAVITY)
+  double tc;
+#endif
   /* ADD 13/4/2000 
      Logarithmic saving implemented for xva file */
   int xvaSaveMode;/* 0 = linear 1 = semilog 2 = bilog (not impl. yet) */
@@ -619,6 +696,20 @@ struct pascii opro_ascii[] =
   {"sumox",        OS(sumox),                       -MAXPAR,        1, "%.15G"},
   {"sumoy",        OS(sumoy),                       -MAXPAR,        1, "%.15G"},
   {"sumoz",        OS(sumoz),                       -MAXPAR,        1, "%.15G"},
+#ifdef MD_CALC_DPP
+  {"sumdx",        OS(sumdx),                       -MAXPAR,        1, "%.15G"},
+  {"sumdy",        OS(sumdy),                       -MAXPAR,        1, "%.15G"},
+  {"sumdz",        OS(sumdz),                       -MAXPAR,        1, "%.15G"},
+  {"lastu1x",       OS(lastu1x),                      -MAXPAR,        1, "%.15G"},
+  {"lastu1y",       OS(lastu1y),                      -MAXPAR,        1, "%.15G"},
+  {"lastu1z",       OS(lastu1z),                      -MAXPAR,        1, "%.15G"},
+  {"lastu2x",       OS(lastu2x),                      -MAXPAR,        1, "%.15G"},
+  {"lastu2y",       OS(lastu2y),                      -MAXPAR,        1, "%.15G"},
+  {"lastu2z",       OS(lastu2z),                      -MAXPAR,        1, "%.15G"},
+  {"lastu3x",       OS(lastu3x),                      -MAXPAR,        1, "%.15G"},
+  {"lastu3y",       OS(lastu3y),                      -MAXPAR,        1, "%.15G"},
+  {"lastu3z",       OS(lastu3z),                      -MAXPAR,        1, "%.15G"},
+#endif
   {"rxCMi",        OS(rxCMi),                       -MAXPAR,        1, "%.15G"},
   {"ryCMi",        OS(ryCMi),                       -MAXPAR,        1, "%.15G"},
   {"rzCMi",        OS(rzCMi),                       -MAXPAR,        1, "%.15G"},
@@ -633,6 +724,11 @@ struct pascii opro_ascii[] =
   //{"sumVy",        OS(sumVy),                    MAXPAR,  1, "%.10f"},
   //{"sumVz",        OS(sumVz),                    MAXPAR,  1, "%.10f"},
   {"W",            &OS(W),                          1,              1, "%.6G"},
+#ifdef MD_POLYDISP  
+  {"polydisp",     &OS(polydisp),                  1,          1, "%.15G"}, 
+  {"polycutoff",   &OS(polycutoff),                1,          1, "%.8G"},
+  {"targetPhi",    &OS(targetPhi),                 1,          1, "%.12G"},
+#endif
   {"savedXva",     &OS(savedXva),                   1,   1,   "%d"},
   {"CMreset",      &OS(CMreset),                    1,   1,  "%d"},
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
@@ -710,6 +806,9 @@ struct pascii opro_ascii[] =
 #endif
   {"eqlevel",     &OS(eqlevel),                    1,  1,    "%.12G"},
   {"eventMult",    &OS(eventMult),                  1,   1,  "%d"},  
+#if defined(MD_INELASTIC) || defined(MD_GRAVITY)
+  {"tc",      &OS(tc),                          1,  1,    "%.15G"},
+#endif
   {"overlaptol"   ,&OS(overlaptol),                 1,   1, "%f"},
   {"ipart",        &OS(ipart),                      1,   1, "%d"},
   {"brownian",     &OS(brownian),                   1,   1, "%d"},
@@ -777,8 +876,11 @@ struct pascii opar_ascii[]=
 #endif
 #ifdef MD_GRAVITY
   {"wallDiss",          &OP(wallDiss),                    1,   1,   "%f"},
-  {"partDiss",          &OP(partDiss),                    1,   1,   "%f"},
+  //{"partDiss",          &OP(partDiss),                    1,   1,   "%f"},
   {"ggrav",             &OP(ggrav),                       1,   1,   "%f"},
+#endif
+#if defined(MD_INELASTIC) || defined(MD_GRAVITY)
+  {"partDiss",          &OP(partDiss),                    1,   1,   "%f"},
 #endif
   {"M",                 &OP(M),                           1,   1,   "%d"},
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
@@ -979,6 +1081,10 @@ struct singlePar OsinglePar[] = {
   {"C0",      &Oparams.c[0],      CT},
   {"C1",      &Oparams.c[1],      CT},
   {"targetPhi", &OprogStatus.targetPhi, CT},
+#ifdef MD_POLYDISP
+  {"polydisp",  &OprogStatus.polydisp, CT},  
+  {"polycutoff",&OprogStatus.polycutoff, CT},
+#endif
 #ifndef MD_ASYM_ITENS
   {"Ia",      &Oparams.I[0],      CT},
   {"Ib",      &Oparams.I[1],      CT},
@@ -995,9 +1101,11 @@ struct singlePar OsinglePar[] = {
   {"mass1",       &Oparams.m[1],                CT},
 #ifdef MD_GRAVITY
   {"wallDiss",   &Oparams.wallDiss,         CT},
-  {"partDiss",   &Oparams.partDiss,         CT},
   {"quenchend",  &OprogStatus.quenchend,    CT},
   {"maxquench",  &OprogStatus.maxquench,    INT},
+#endif
+#if defined(MD_INELASTIC) || defined(MD_GRAVITY)
+  {"partDiss",   &Oparams.partDiss,         CT},
   {"tc",         &OprogStatus.tc,           CT},
 #endif
   {"eventMult",  &OprogStatus.eventMult,    INT},

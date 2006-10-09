@@ -1,4 +1,4 @@
-#include<mdsimul.h>
+ #include<mdsimul.h>
 #define MD_NNLPLANES
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
@@ -14,6 +14,10 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
+#ifdef MD_HE_PARALL
+extern int my_rank;
+extern int numOfProcs; /* number of processeses in a communicator */
+#endif
 extern const double timbig;
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 extern double rA[3], rB[3];
@@ -2263,6 +2267,7 @@ double calcvecFNeigh(int i, double t, double t1, double* ddot, double *r1)
   return fabs(scalProd(ddot, gradplane));
 #endif
 }
+void adjust_maxddot(int i, double *maxddot);
 
 int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2, 
 				double *vecgd, double epsd, double *d1, double epsdFast,
@@ -2291,6 +2296,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 #endif
 #endif
+  adjust_maxddot(i, &maxddot);
   //printf("SCALPROD = %.15G\n", vx[0]*gradplane[0]+vy[1]*gradplane[1]+vz[2]*gradplane[2]);
   *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed, nplane);
   timesFNL++;
@@ -2440,7 +2446,7 @@ int check_cross_scf(double distsOld[6], double dists[6], int crossed[6])
     {
       crossed[nn] = 0;
       //printf("dists[%d]=%.15G distsOld[%d]:%.15G\n", nn, dists[nn], nn, distsOld[nn]);
-      if (fabs(dists[nn]) < 1E-14 && distsOld[nn] > 0.0)
+      if ((fabs(dists[nn]) < 1E-14 || dists[nn] < 0.0)  && distsOld[nn] > 0.0)
 	{
 	  crossed[nn] = 1;
 	  retcross = 1;
@@ -2548,14 +2554,73 @@ void calc_delt(double maxddoti[6], double *delt, double dists[6])
     }
   //printf("I chose dt=%.15G\n", *delt);
 }
+const double mddotfact = 1.001;
+void adjust_maxddot(int i, double *maxddot)
+{
+  double K = 1.0;
+#ifdef MD_ASYM_ITENS
+  if (Mx[i] == 0.0 && My[i] == 0.0 && Mz[i] == 0.0)
+    K = mddotfact;
+#else
+  if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
+    K = mddotfact;
+#endif
+#ifdef MD_POLYDISP
+  if (axaP[i] == axbP[i] && axbP[i] == axcP[i])
+    K = mddotfact;
+#else
+  if (i < Oparams.parnumA)
+    {
+      if (Oparams.a[0] == Oparams.b[0] && Oparams.b[0] == Oparams.c[0])
+	K = mddotfact;
+    }
+  else
+    {
+      if (Oparams.a[1] == Oparams.b[1] && Oparams.b[1] == Oparams.c[1])
+	K = mddotfact;
+    }
+#endif
+  *maxddot *= K;
+}
+void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddoti[6])
+{
+  double K = 1.0;
+  int a;
+#ifdef MD_ASYM_ITENS
+  if (Mx[i] == 0.0 && My[i] == 0.0 && Mz[i] == 0.0)
+    K = mddotfact;
+#else
+  if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
+    K = mddotfact;
+#endif
+#ifdef MD_POLYDISP
+  if (axaP[i] == axbP[i] && axbP[i] == axcP[i])
+    K = mddotfact;
+#else
+  if (i < Oparams.parnumA)
+    {
+      if (Oparams.a[0] == Oparams.b[0] && Oparams.b[0] == Oparams.c[0])
+	K = mddotfact;
+    }
+  else
+    {
+      if (Oparams.a[1] == Oparams.b[1] && Oparams.b[1] == Oparams.c[1])
+	K = mddotfact;
+    }
+#endif
+  *maxddot *= K;
+  for (a = 0; a < 6; a++)
+    maxddoti[a] = K*maxddotiLC[a];
+}
 int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2, 
 					  double vecgd[6][8], double epsd, 
 					  double *d1, double epsdFast, 
-					  double dists[6], double maxddoti[6], double maxddot)
+					  double dists[6], double maxddotiLC[6], double maxddot)
 {
   double told, delt=1E-15, distsOld[6];
   const double GOLD= 1.618034;
   const int MAXOPTITS = 500;
+  double maxddoti[6];
   int its=0, crossed[6], itsf; 
   *d1 = calcDistNegNeighPlaneAll(*t, t1, i, distsOld, vecgd, 1);
 #if 0
@@ -2569,6 +2634,8 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
       assign_dists(distsOld, dists);
       return 0;
     }
+  adjust_maxddoti(i, &maxddot, maxddotiLC, maxddoti);
+
   while (fabs(*d1) > epsdFast && its < MAXOPTITS)
     {
 #if 1
@@ -2591,7 +2658,7 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
       //printf("d=%.15G t=%.15G\n", *d1, *t+t1);
 #if 1
       itsf = 0;
-      while (check_cross_scf(distsOld, dists, crossed))
+      while (check_cross(distsOld, dists, crossed))
 	{
 	  /* reduce step size */
 	  if (itsf == 0 && delt - OprogStatus.h > 0)
@@ -3406,6 +3473,550 @@ extern double max(double a, double b);
 extern int locate_contactSP(int i, int j, double shift[3], double t1, double t2, double *evtime, int *ata, int *atb, int *collCode);
 extern void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent);
 #endif
+#ifdef MD_HE_PARALL
+extern MPI_Datatype Particletype;
+extern MPI_Datatype Eventtype;
+#endif
+#ifdef MD_HE_PARALL
+void find_contact_parall(int na, int n, parall_event_struct *parall_event)
+{
+  double shift[3];
+  double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq, t, vecg[5];
+  double t1, t2;
+  int overlap;
+#ifdef MD_PATCHY_HE
+  double evtimeHC, evtime;
+  int ac, bc, acHC, bcHC, collCode, collCodeOld;
+#endif
+  shift[0] = L*rint((rx[na]-rx[n])/L);
+  shift[1] = L*rint((ry[na]-ry[n])/L);
+  shift[2] = L*rint((rz[na]-rz[n])/L);
+  /* maxax[...] è il diametro dei centroidi dei due tipi
+   * di ellissoidi */
+  if (OprogStatus.targetPhi > 0)
+    {
+      sigSq = Sqr(max_ax(na)+max_ax(n)+OprogStatus.epsd);
+    }
+  else
+    {
+#ifdef MD_POLYDISP
+      sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
+      if (na < parnumA && n < parnumA)
+	sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+      else if (na >= parnumA && n >= parnumA)
+	sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+      else
+	sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#endif
+    }
+  MD_DEBUG2(printf("sigSq: %f\n", sigSq));
+  tInt = Oparams.time - atomTime[n];
+  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+  dv[0] = vx[na] - vx[n];
+  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+  dv[1] = vy[na] - vy[n];
+#ifdef MD_GRAVITY
+  dr[2] = rz[na] - 
+    (rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
+  dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
+#else
+  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+  dv[2] = vz[na] - vz[n];
+#endif
+  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+  d = Sqr (b) - vv * (distSq - sigSq);
+  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+    {
+      /* i centroidi non collidono per cui non ci può essere
+       * nessun urto sotto tali condizioni */
+      parall_event->t = -timbig;
+      return;
+    }
+  MD_DEBUG32(printf("PREDICTING na=%d n=%d\n", na , n));
+  if (vv==0.0)
+    {
+      if (distSq >= sigSq)
+	{
+	  parall_event->t = -timbig;
+	  return;	 
+	}
+      /* la vel relativa è zero e i centroidi non si overlappano quindi
+       * non si possono urtare! */
+      t1 = t = 0;
+      t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+		   urtare ruotando */
+    }
+  else if (distSq >= sigSq)
+    {
+      t = t1 = - (sqrt (d) + b) / vv;
+      t2 = (sqrt (d) - b) / vv;
+      overlap = 0;
+    }
+  else 
+    {
+      MD_DEBUG(printf("Centroids overlap!\n"));
+      t2 = t = (sqrt (d) - b) / vv;
+      t1 = 0.0; 
+      overlap = 1;
+      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+    }
+  MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
+  MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
+  //t += Oparams.time; 
+  t2 += Oparams.time;
+  t1 += Oparams.time;
+
+#if 0
+  tnnl = min(nebrTab[na].nexttime,nebrTab[n].nexttime);
+  if (tnnl < t2)
+    t2 = tnnl;
+#else      
+  /* WARNING: OprogStatus.h è un buffer di sicurezza */
+  if (nextNNLrebuild < t2)
+    t2 = nextNNLrebuild + OprogStatus.h;
+#endif
+  // t1 = Oparams.time;
+  // t2 = nebrTab[na].nexttime;//,nebrTab[n].nexttime);
+
+  MD_DEBUG32(printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime));
+  MD_DEBUG32(printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2));
+#ifdef MD_PATCHY_HE
+  evtime = t2;
+  collCode = MD_EVENT_NONE;
+  rxC = ryC = rzC = 0.0;
+  MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
+  collCodeOld = collCode;
+  evtimeHC = evtime;
+  acHC = ac = 0;
+  bcHC = bc = 0;
+  if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
+				    (na >= Oparams.parnumA && n < Oparams.parnumA)))
+    {
+      if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+	{
+	  collCode = MD_EVENT_NONE;
+	}
+    }
+  if (collCode!=MD_EVENT_NONE)
+    t2 = evtime+1E-7;
+  if (locate_contact(na, n, shift, t1, t2, vecg))
+    {
+      if (collCode == MD_EVENT_NONE || (collCode!=MD_EVENT_NONE && vecg[4] <= evtime))
+	{
+	  collCode = MD_CORE_BARRIER;
+	  evtime = vecg[4];
+	  rxC = vecg[0];
+	  ryC = vecg[1];
+	  rzC = vecg[2];
+	}
+    }
+  else
+    {
+      if (collCode == MD_EVENT_NONE)
+	{
+	  parall_event->t = -timbig;
+	  return;
+	}
+    }
+
+  t = evtime;
+#else
+  if (!locate_contact(na, n, shift, t1, t2, vecg))
+    {
+      parall_event->t = -timbig;
+      return;
+    }
+  rxC = vecg[0];
+  ryC = vecg[1];
+  rzC = vecg[2];
+  t = vecg[4];
+#endif
+  parall_event->t = t;
+  parall_event->a = na;
+  parall_event->b = n;
+  parall_event->rC[0] = rxC;
+  parall_event->rC[1] = ryC;
+  parall_event->rC[2] = rzC;
+  //printf("scheduling t=%.15G na=%d n=%d rC=%.15G %.15G %.15G\n", 
+//	 t, na, n, rxC, ryC, rzC);
+#ifdef MD_PATCHY_HE
+  parall_event->sp[0] = ac;
+  parall_event->sp[1] = bc;
+  parall_event->sp[2] = collCode;
+#endif
+}
+MPI_Status parall_status;
+#ifdef MD_PATCHY_HE
+extern struct LastBumpS *lastbump;
+#else
+extern int *lastbump;
+#endif
+extern double *lastcol;
+void parall_slave_get_data(parall_pair_struct *parall_pair)
+{
+  int i, j, a, b;
+  i = parall_pair->p[0];
+  j = parall_pair->p[1];
+  rx[i] = parall_pair->pos[0];
+  ry[i] = parall_pair->pos[1];
+  rz[i] = parall_pair->pos[2];
+  rx[j] = parall_pair->pos[3];
+  ry[j] = parall_pair->pos[4];
+  rz[j] = parall_pair->pos[5];
+  for (a = 0; a < 3; a++)
+    {
+      for (b = 0; b < 3; b++)
+	{
+	  R[i][a][b] = parall_pair->R[a*3+b];
+	  R[j][a][b] = parall_pair->R[a*3+b+9]; 
+	}
+    }
+  vx[i] = parall_pair->vels[0];
+  vy[i] = parall_pair->vels[1];
+  vz[i] = parall_pair->vels[2];
+  vx[j] = parall_pair->vels[3];
+  vy[j] = parall_pair->vels[4];
+  vz[j] = parall_pair->vels[5];
+  wx[i] = parall_pair->vels[6];
+  wy[i] = parall_pair->vels[7];
+  wz[i] = parall_pair->vels[8];
+  wx[j] = parall_pair->vels[9];
+  wy[j] = parall_pair->vels[10];
+  wz[j] = parall_pair->vels[11];
+  axa[i] = parall_pair->axes[0];
+  axb[i] = parall_pair->axes[1];
+  axc[i] = parall_pair->axes[2];
+  axa[j] = parall_pair->axes[3];
+  axb[j] = parall_pair->axes[4];
+  axc[j] = parall_pair->axes[5];
+  maxax[i] = parall_pair->axes[6];
+  maxax[j] = parall_pair->axes[7];
+  inCell[0][i] = parall_pair->cells[0];
+  inCell[1][i] = parall_pair->cells[1];
+  inCell[2][i] = parall_pair->cells[2];
+  inCell[0][j] = parall_pair->cells[3];
+  inCell[1][j] = parall_pair->cells[4];
+  inCell[2][j] = parall_pair->cells[5];
+#ifdef MD_PATCHY_HE
+  lastbump[i].mol = parall_pair->lastbump[0];
+  lastbump[i].at = parall_pair->lastbump[1];
+  lastbump[i].type = parall_pair->lastbump[2];
+  lastbump[j].mol = parall_pair->lastbump[3];
+  lastbump[j].at = parall_pair->lastbump[4];
+  lastbump[j].type = parall_pair->lastbump[5];
+#else
+  lastbump[i] = parall_pair->lastbump[0];
+  lastbump[i] = parall_pair->lastbump[1];
+#endif
+  Oparams.time = parall_pair->time[0];
+  nextNNLrebuild = parall_pair->time[1];
+  lastcol[i] = parall_pair->time[2];
+  lastcol[j] = parall_pair->time[3];
+  atomTime[i] = parall_pair->atomTime[0];
+  atomTime[j] = parall_pair->atomTime[1];
+#ifdef MD_ASYM_ITENS
+  angM[i] = parall_pair->angM[0];
+  angM[j] = parall_pair->angM[1];
+  sintheta0[i] = parall_pair->sintheta0[0];
+  sintheta0[j] = parall_pair->sintheta0[1];
+  costheta0[i] = parall_pair->costheta0[0];
+  costheta0[j] = parall_pair->costheta0[1];
+  phi0[i] = parall_pair->phi0[0];
+  phi0[j] = parall_pair->phi0[1];
+  psi0[i] = parall_pair->psi0[0];
+  psi0[j] = parall_pair->psi0[1];
+  for (a = 0; a < 3; a++)
+    {
+      for (b = 0; b < 3; b++)
+	{
+	  RM[i][a][b] = parall_pair->RM[a*3+b];
+	  RM[j][a][b] = parall_pair->RM[a*3+b+9]; 
+	}
+    }
+#endif
+}
+void parall_set_data_terminate(parall_pair_struct *parall_pair)
+{
+  parall_pair->p[0] = -1;
+  parall_pair->p[1] = -1;
+}
+void parall_set_data(int i, int j, parall_pair_struct *parall_pair)
+{
+  int a, b;
+  parall_pair->p[0] = i;
+  parall_pair->p[1] = j;
+  parall_pair->pos[0] = rx[i];
+  parall_pair->pos[1] = ry[i];
+  parall_pair->pos[2] = rz[i];
+  parall_pair->pos[3] = rx[j];
+  parall_pair->pos[4] = ry[j];
+  parall_pair->pos[5] = rz[j];
+  for (a = 0; a < 3; a++)
+    {
+      for (b = 0; b < 3; b++)
+	{
+	  parall_pair->R[a*3+b] = R[i][a][b];
+	  parall_pair->R[a*3+b+9] = R[j][a][b]; 
+	}
+    }
+  parall_pair->vels[0] = vx[i];
+  parall_pair->vels[1] = vy[i];
+  parall_pair->vels[2] = vz[i];
+  parall_pair->vels[3] = vx[j];
+  parall_pair->vels[4] = vy[j];
+  parall_pair->vels[5] = vz[j];
+  parall_pair->vels[6] = wx[i];
+  parall_pair->vels[7] = wy[i];
+  parall_pair->vels[8] = wz[i];
+  parall_pair->vels[9] = wx[j];
+  parall_pair->vels[10] = wy[j];
+  parall_pair->vels[11] = wz[j];
+  parall_pair->axes[0] = axa[i];
+  parall_pair->axes[1] = axb[i];
+  parall_pair->axes[2] = axc[i];
+  parall_pair->axes[3] = axa[j];
+  parall_pair->axes[4] = axb[j];
+  parall_pair->axes[5] = axc[j];
+  parall_pair->axes[6] = maxax[i];
+  parall_pair->axes[7] = maxax[j];
+  parall_pair->cells[0] = inCell[0][i];
+  parall_pair->cells[1] = inCell[1][i];
+  parall_pair->cells[2] = inCell[2][i];
+  parall_pair->cells[3] = inCell[0][j];
+  parall_pair->cells[4] = inCell[1][j];
+  parall_pair->cells[5] = inCell[2][j];
+#ifdef MD_PATCHY_HE
+  parall_pair->lastbump[0] = lastbump[i].mol;
+  parall_pair->lastbump[1] = lastbump[i].at;
+  parall_pair->lastbump[2] = lastbump[i].type;
+  parall_pair->lastbump[3] = lastbump[j].mol;
+  parall_pair->lastbump[4] = lastbump[j].at;
+  parall_pair->lastbump[5] = lastbump[j].type;
+#else
+  parall_pair->lastbump[0] = lastbump[i];
+  parall_pair->lastbump[1] = lastbump[j];
+#endif
+  parall_pair->time[0] = Oparams.time;
+  parall_pair->time[1] = nextNNLrebuild;
+  parall_pair->time[2] = lastcol[i];
+  parall_pair->time[3] = lastcol[j];
+  parall_pair->atomTime[0] = atomTime[i];
+  parall_pair->atomTime[1] = atomTime[j];
+#ifdef MD_ASYM_ITENS
+  parall_pair->angM[0] = angM[i];
+  parall_pair->angM[1] = angM[j];
+  parall_pair->sintheta0[0] = sintheta0[i];
+  parall_pair->sintheta0[1] = sintheta0[j];
+  parall_pair->costheta0[0] = costheta0[i];
+  parall_pair->costheta0[1] = costheta0[j];
+  parall_pair->phi0[0] = phi0[i];
+  parall_pair->phi0[1] = phi0[j];
+  parall_pair->psi0[0] = psi0[i];
+  parall_pair->psi0[1] = psi0[j];
+  for (a = 0; a < 3; a++)
+    {
+      for (b = 0; b < 3; b++)
+	{
+	  parall_pair->RM[a*3+b] = RM[i][a][b];
+	  parall_pair->RM[a*3+b+9] = RM[j][a][b]; 
+	}
+    }
+
+#endif
+}
+void parall_get_data_and_schedule(parall_event_struct parall_event)
+{
+  int na, n;
+#ifdef MD_PATCHY_HE
+  int collCode, ac, bc;
+#endif
+  double t;
+  t = parall_event.t;
+  if (t == - timbig)
+    return;
+  na = parall_event.a;
+  n = parall_event.b;
+  rxC = parall_event.rC[0];
+  ryC = parall_event.rC[1];
+  rzC = parall_event.rC[2];
+#ifdef MD_PATCHY_HE
+  ac = parall_event.sp[0];
+  bc = parall_event.sp[1];
+  collCode = parall_event.sp[2];
+  ScheduleEventBarr (na, n,  ac, bc, collCode, t);
+#else
+  ScheduleEvent (na, n, t);
+#endif
+}
+/* PredicEventNNL parallelizzata */
+const int iwtagEvent = 1, iwtagPair = 2;
+
+void PredictEventNNL(int na, int nb) 
+{
+  int i, signDir[NDIM]={0,0,0}, evCode, k, n;
+  double  tm[NDIM];
+  char msgtype;
+  int npr, iriceve, ndone=0;
+#ifdef MD_HE_PARALL
+  int missing, num_work_request, njob, njob2i[512];
+#endif
+  if (vz[na] != 0.0) 
+    {
+      if (vz[na] > 0.0) 
+	signDir[2] = 0;/* direzione positiva */
+      else 
+	signDir[2] = 1;/* direzione negativa */
+      tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
+	       cellsz - rz[na] - L2) / vz[na];
+    } 
+  else 
+    tm[2] = timbig;
+  if (vx[na] != 0.0) 
+    {
+      if (vx[na] > 0.0) 
+	signDir[0] = 0;/* direzione positiva */
+      else 
+	signDir[0] = 1;/* direzione negativa */
+      tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L /
+	       cellsx - rx[na] - L2) / vx[na];
+    } 
+  else 
+    tm[0] = timbig;
+  
+  if (vy[na] != 0.) 
+    {
+      if (vy[na] > 0.) 
+	signDir[1] = 0;
+      else 
+	signDir[1] = 1;
+      tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L /
+	       cellsy - ry[na] - L2) / vy[na];
+    } 
+  else 
+    tm[1] = timbig;
+  /* ====== */
+  /* Find minimum time */
+  k = -1; /* giusto per dare un valore ed evitare una warning */
+  if (tm[1] <= tm[2]) {
+    if (tm[0] <= tm[1]) k = 0;
+    else k = 1;
+  } else {
+    if (tm[0] <= tm[2]) k = 0;
+    else k = 2;
+  }
+#if 1
+  if (tm[k]<0)
+    {
+      tm[k] = 0.0;
+#if 1
+      printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
+      printf("Cells(%d,%d,%d)\n", inCell[0][na], inCell[1][na], inCell[2][na]);
+      printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
+	     signDir[2]);
+#endif
+    }
+#endif
+  /* 100+0 = attraversamento cella lungo x
+   * 100+1 =       "           "     "   y
+   * 100+2 =       "           "     "   z */
+  evCode = 100 + k;
+  /* urto con le pareti, il che vuol dire:
+   * se lungo z e rz = -L/2 => urto con parete */ 
+  ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+  /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni */
+  if (nb >= ATOM_LIMIT)
+    return;
+  MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
+  if (my_rank == 0)
+    {
+      num_work_request = 0;
+      for (i=0; i < nebrTab[na].len; i++)
+	{
+	  n = nebrTab[na].list[i]; 
+	  if (!(n != na && n!=nb && (nb >= -1 || n < na)))
+	    continue;
+	  if (numOfProcs == 1)
+	    {
+	      parall_set_data(na, n, &parall_pair);
+	      find_contact_parall(parall_pair.p[0], parall_pair.p[1], &parall_event);
+	      parall_get_data_and_schedule(parall_event);
+	    }
+	  //printf("to locate: n=%d\n", n);
+	  njob2i[num_work_request] = i;
+	  num_work_request++; 
+	}	
+      if (numOfProcs == 1)
+	return;
+      if (num_work_request == 0)
+	{
+	  for(npr = 1; npr < numOfProcs; npr++)
+	    {
+	      //printf("sending termination to %d\n", npr);
+	      msgtype = 'D';
+	      MPI_Send(&msgtype, 1, MPI_CHAR, npr, iwtagPair, MPI_COMM_WORLD); 
+	      //MPI_Send(&parall_pair, 1, Particletype, npr, iwtagPair, MPI_COMM_WORLD);
+	    }
+	  MPI_Barrier(MPI_COMM_WORLD);
+	  return;
+	}
+      /* master process (rank=0) distributes jobs */
+      for (njob=1; njob < numOfProcs; njob++)
+	{
+	  if (njob > num_work_request)
+       	    break;
+	  n = nebrTab[na].list[njob2i[njob-1]]; 
+	  //printf(">>> num_work_request: %d numofproc:%d sending to %d\n", num_work_request, numOfProcs, njob);
+	  //printf("na=%d sending n=%d to %d\n",na, n, njob);
+	  parall_set_data(na ,n, &parall_pair);
+	  //printf("sending to %d\n", njob);
+	  msgtype = 'F';
+	  MPI_Send(&msgtype, 1, MPI_CHAR, njob, iwtagPair, MPI_COMM_WORLD); 
+	  MPI_Send(&parall_pair, 1, Particletype, njob, iwtagPair, MPI_COMM_WORLD);
+	  //printf("sent!!!!\n");
+	}    
+      //printf("????????????????\n");
+      //printf("num_work_request=%d numofproc=%d\n", num_work_request, numOfProcs);
+      for (njob=numOfProcs; njob <= num_work_request; njob++)
+	 {
+	   //printf("my_rank=%d njob = %d\n", my_rank, njob);
+	   n = nebrTab[na].list[njob2i[njob-1]]; 
+	   MPI_Recv(&parall_event, 1, Eventtype, MPI_ANY_SOURCE, iwtagEvent, MPI_COMM_WORLD, &parall_status);
+	   ndone++;
+	   //printf("§§§§§§ ndone=%d\n", ndone);
+	   iriceve = parall_status.MPI_SOURCE;
+	   //printf(">>>na=%d sending n=%d to %d\n",na, n, iriceve);
+	   parall_get_data_and_schedule(parall_event);
+	   parall_set_data(na, n, &parall_pair);
+ 	   msgtype = 'F';
+ 	   MPI_Send(&msgtype, 1, MPI_CHAR, iriceve, iwtagPair, MPI_COMM_WORLD); 
+	   MPI_Send(&parall_pair, 1, Particletype, iriceve, iwtagPair, MPI_COMM_WORLD);
+	 }
+      for (missing = ndone+1; missing <= num_work_request; missing++)
+	{
+	  //printf("my_rank=%d receiving missing = %d\n", my_rank, missing);
+	  MPI_Recv(&parall_event, 1, Eventtype, MPI_ANY_SOURCE, iwtagEvent, MPI_COMM_WORLD, &parall_status);
+	  iriceve = parall_status.MPI_SOURCE;
+	  parall_get_data_and_schedule(parall_event);
+	}
+      //printf("mmm\n");
+      for(npr = 1; npr < numOfProcs; npr++)
+	{
+	  //printf("RANK0000 terminating process=%d\n", npr);
+	  //parall_set_data_terminate(&parall_pair);
+  	  msgtype = 'D';
+	  MPI_Send(&msgtype, 1, MPI_CHAR, npr, iwtagPair, MPI_COMM_WORLD); 
+  	  //MPI_Send(&parall_pair, 1, Particletype, npr, iwtagPair, MPI_COMM_WORLD);
+	}
+    }
+      
+  MPI_Barrier(MPI_COMM_WORLD);
+  //printf("FINISHED rank=%d\n", my_rank);
+}
+#else
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
@@ -3483,6 +4094,7 @@ void PredictEventNNL(int na, int nb)
   if (nb >= ATOM_LIMIT)
     return;
   MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
+
   for (i=0; i < nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
@@ -3492,8 +4104,9 @@ void PredictEventNNL(int na, int nb)
 #endif
       if (!(n != na && n!=nb && (nb >= -1 || n < na)))
 	continue;
-     // for (kk=0; kk < 3; kk++)
-     //	shift[kk] = nebrTab[na].shift[i][kk];
+      //
+      // for (kk=0; kk < 3; kk++)
+      //	shift[kk] = nebrTab[na].shift[i][kk];
       shift[0] = L*rint((rx[na]-rx[n])/L);
       shift[1] = L*rint((ry[na]-ry[n])/L);
       shift[2] = L*rint((rz[na]-rz[n])/L);
@@ -3506,12 +4119,16 @@ void PredictEventNNL(int na, int nb)
 	}
       else
 	{
+#ifdef MD_POLYDISP
+	  sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
 	  if (na < parnumA && n < parnumA)
 	    sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 	  else if (na >= parnumA && n >= parnumA)
 	    sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 	  else
 	    sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#endif
 	}
       MD_DEBUG2(printf("sigSq: %f\n", sigSq));
       tInt = Oparams.time - atomTime[n];
@@ -3640,6 +4257,7 @@ void PredictEventNNL(int na, int nb)
 #endif
     }
 }
+#endif
 #ifdef MD_PATCHY_HE
 extern int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2);
 #endif
@@ -3652,6 +4270,7 @@ void updrebuildNNL(int na)
   int ip;
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE
+  nnltime1 = timbig;
   if (OprogStatus.targetPhi <= 0.0)
     {
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
@@ -3742,7 +4361,11 @@ void nextNNLupdate(int na)
 #else
   if (OprogStatus.targetPhi > 0.0)
     {
+#ifdef MD_POLYDISP
+      nnlfact = axa[na]/axaP[na];
+#else
       nnlfact = axa[na]/Oparams.a[na<Oparams.parnumA?0:1];
+#endif
       nebrTab[na].axa = nnlfact*OprogStatus.rNebrShell+axa[na];
       nebrTab[na].axb = nnlfact*OprogStatus.rNebrShell+axb[na];
       nebrTab[na].axc = nnlfact*OprogStatus.rNebrShell+axc[na];
@@ -3773,6 +4396,7 @@ void nextNNLupdate(int na)
   MD_DEBUG31(printf("BUILDING NNL FOR i=%d\n",na));
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE
+  nnltime1 = timbig;
   if (OprogStatus.targetPhi <= 0.0)
     {
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))

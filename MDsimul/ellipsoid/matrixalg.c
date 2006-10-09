@@ -610,7 +610,6 @@ void dlinmin(double p[], double xi[], int n, double *fret, double (*func)(double
 }
 #if 1
 extern double *axa, *axb, *axc;
-
 double f1dimPow(double x) 
   /*Must accompany linmin.*/
 {
@@ -2513,6 +2512,10 @@ void guessdistByMesh(int i, int j, double shift[3], double *vecg)
   double vec[8];
   icg = i;
   jcg = j;
+#ifdef MD_POLYDISP
+  minaxicg = min3(axaP[i],axbP[i],axcP[i]);
+  minaxjcg = min3(axaP[j],axbP[j],axcP[j]);
+#else
   if (i < Oparams.parnumA)
     minaxicg = min3(Oparams.a[0],Oparams.b[0],Oparams.c[0]);
   else 
@@ -2521,7 +2524,7 @@ void guessdistByMesh(int i, int j, double shift[3], double *vecg)
     minaxjcg = min3(Oparams.a[0],Oparams.b[0],Oparams.c[0]);
   else 
     minaxjcg = min3(Oparams.a[1],Oparams.b[1],Oparams.c[1]);
-
+#endif
   for (kk=0; kk < 3; kk++)
     {
       shiftcg[kk] = shift[kk];
@@ -2932,6 +2935,10 @@ void distSD(int i, int j, double shift[3], double *vecg, double lambda, int half
   double vec[8];
   icg = i;
   jcg = j;
+#ifdef MD_POLYDISP
+  minaxicg = min3(axaP[i], axbP[i], axcP[i]);
+  minaxjcg = min3(axaP[j], axbP[j], axcP[j]);
+#else
   if (i < Oparams.parnumA)
     minaxicg = min3(Oparams.a[0],Oparams.b[0],Oparams.c[0]);
   else 
@@ -2940,7 +2947,7 @@ void distSD(int i, int j, double shift[3], double *vecg, double lambda, int half
     minaxjcg = min3(Oparams.a[0],Oparams.b[0],Oparams.c[0]);
   else 
     minaxjcg = min3(Oparams.a[1],Oparams.b[1],Oparams.c[1]);
-
+#endif
   lambdacg = lambda;
   cghalfspring = halfspring;
   for (kk=0; kk < 3; kk++)
