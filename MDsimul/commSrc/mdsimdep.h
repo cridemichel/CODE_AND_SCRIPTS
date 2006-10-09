@@ -1,1 +1,0 @@
-/home/demichel/postdoc/hardellipsoid/hardellSVN/CODE/MDsimul/ellipsoid/ellipsoid.h
