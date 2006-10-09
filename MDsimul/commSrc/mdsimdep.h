@@ -1,1 +1,1 @@
-/home/demichel/MDsimul/sticky/sticky.h
+/home/demichel/postdoc/hardellipsoid/hardellSVN/CODE/MDsimul/ellipsoid/ellipsoid.h

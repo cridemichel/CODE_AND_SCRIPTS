@@ -315,19 +315,6 @@ realclean: clean
 	rm -f $(BIN)/*
 
 clean:
-	cd rigidABdbLJ && $(MAKE) clean
-	cd gauss && $(MAKE) clean
-	cd bimix && $(MAKE) clean
-	cd bimixLMC && $(MAKE) clean
-	cd monoLJ && $(MAKE) clean
-	cd monohs && $(MAKE) clean
-	cd bimixhs && $(MAKE) clean
 	cd commSrc && $(MAKE) clean
-	cd monoLJ_PT && $(MAKE) clean
-	cd monoLJ_DPT && $(MAKE) clean	
-	cd monoLMC && $(MAKE) clean
-	cd laponite && $(MAKE) clean
-	cd nmpoly && $(MAKE) clean
 	cd ellipsoid && $(MAKE) clean
-	cd sticky && $(MAKE) clean
 
