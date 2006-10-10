@@ -1957,7 +1957,7 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
    * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
    * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
    * a partire da questi. */
-
+  /* WARNING: se le particelle che interagiscono hanno diametro diverso da sigma[0][1] qui va cambiato!!!! */ 
   radius = Oparams.sigma[0][1] / 2.0;
   if (ata == 0)
     {
