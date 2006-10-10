@@ -1074,6 +1074,16 @@ void initCoord(void)
   setToZero(SAVE_LIST, 
 	    NULL);  /* Set to zero all the coordinates */
 
+#if 0 
+  rx[0] = 0.0;
+  ry[0] = +0.6;
+  rz[0] = 0.0;
+ 
+  rx[1] = 0.0;
+  ry[1] = -0.6;
+  rz[1] = 0.0;
+#endif
+
   FCC(Oparams.parnum, Oparams.m); 
   /* Put the baricenter of each molecule on a FCC lattice, and set 
      their orientations */  
