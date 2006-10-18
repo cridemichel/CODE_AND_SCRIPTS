@@ -3,14 +3,20 @@
 #include <string.h>
 #include <math.h>
 #define MAXPTS 1000
+#define NA 6
+#define MD_STSPOTS_A 5
+#define MD_STSPOTS_B 2
+#define MD_SP_DELR 0.0
+int MAXBONDS = 10;
+
 #define Sqr(x) ((x)*(x))
 char **fname; 
-double time, *ti, *r0[3], *r1[3], L, refTime, *R[3][3], maxsax, maxax0, maxax1, maxsaxAA, 
+double *DR0[3], pi, time, *ti, *r0[3], *r1[3], L, refTime, *R[3][3], maxsax, maxax0, maxax1, maxsaxAA, 
        maxsaxAB, maxsaxBB, RCUT;
 double sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
        Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
 int *inCell[3]={NULL,NULL,NULL}, *cellList=NULL, cellsx, cellsy, cellsz;
-double shift[3];
+double *Fb[2], shift[3];
 int *numbondst, **bondst, *numbonds0, **bonds0;
 int points=-1, assez, NP, NPA;
 int particles_type = 1;
@@ -503,13 +509,9 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double *sqReA[KMODMAX], *sqImA[KMODMAX], *sqReB[KMODMAX], *sqImB[KMODMAX];
-double *cc[KMODMAX];
+double *cc;
 char fname2[512];
 char inputfile[1024];
-int ntripl[]=
-#include "./ntripl.dat"
-int mesh[][NKSHELL][3]= 
-#include "./kmesh.dat"
 double twopi;
 void print_usage(void)
 {
@@ -560,7 +562,7 @@ void add_bond(int i, int j, int *numbonds, int **bonds)
 
 void find_bonds(int *numbonds, int **bonds, double *eneO)
 {
-  int i, iZ, jZ, iX, jX, iY, JY;
+  int i, iZ, jZ, iX, jX, iY, jY, j;
   double shift[3];
   double ene=0.0;
   for (i = 0; i < NP; i++)
@@ -637,15 +639,25 @@ void find_bonds(int *numbonds, int **bonds, double *eneO)
     }
   *eneO = ene;
 }
+int exist_bond(int na, int n, int a, int b, int *numbonds, int **bonds)
+{
+  int i;
+  for (i = 0; i < numbonds[na]; i++)
+    if (bonds[na][i] == n*(NA*NA)+a*NA+b)
+      return 1;
+  return 0;
+}
+
 int main(int argc, char **argv)
 {
   FILE *f, *f2;
-  int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
-  int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
-  int qmod; 
-  double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
+  int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a, b;
+  int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp, jj2;
+  int nb, j; 
+  double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact, ene0, enet;
 
   twopi = acos(0)*4.0;	  
+  pi = twopi / 2.0;	
 #if 0
   if (argc <= 1)
     {
@@ -722,6 +734,15 @@ int main(int argc, char **argv)
 	  fscanf(f, "%[^\n]\n", parval);
 	  sscanf(parval, "%lf %lf ", &C0, &C1);
 	}
+      else if (nat==1 && !strcmp(parname,"sigma"))
+	sscanf(parval, "%lf %lf %lf %lf\n", &sigmaAA, &sigmaAB, &sigmaAB, &sigmaBB);	
+      else if (nat==1 && !strcmp(parname,"sigmaSticky"))
+	sigmaSticky = atof(parval);
+      else if (nat==1 && !strcmp(parname,"theta"))
+	theta = atof(parval);
+      else if (nat==1 && !strcmp(parname,"Dr"))
+	Dr = atof(parval);
+
     }
   fclose(f);
   invL = 1.0/L;
@@ -762,7 +783,8 @@ int main(int argc, char **argv)
   bonds0 = AllocMatI(NP, MAXBONDS);
   numbondst  = malloc(sizeof(int)*NP); 
   bondst = AllocMatI(NP, MAXBONDS);
-  
+  Fb[0] = malloc(sizeof(double)*points);
+  Fb[1] = malloc(sizeof(double)*points);
   for (a=0; a < 3; a++)
     {
       r0[a] = malloc(sizeof(double)*NP);
@@ -770,8 +792,11 @@ int main(int argc, char **argv)
     }
 
   for (ii=0; ii < points; ii++)
-    ti[ii] = -1.0;
-
+    {
+      ti[ii] = -1.0;
+      Fb[0][ii] = 0.0;
+      Fb[1][ii] = 0.0;
+    }
   first = 0;
   fclose(f2);
   for (ii=0; ii < points; ii++)
@@ -830,27 +855,21 @@ int main(int argc, char **argv)
 
   c2 = 0;
   JJ = 0;
+  cellsx = L / RCUT;
+  cellsy = L / RCUT;
+  cellsz = L / RCUT;
+  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP));
+  inCell[0] = malloc(sizeof(int)*NP);
+  inCell[1] = malloc(sizeof(int)*NP);
+  inCell[2] = malloc(sizeof(int)*NP);
+
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
     {	
-      if (!cellList)
-	{
-	  free(cellList);
-	  free(inCell[0]);
-	  free(inCell[1]);
-	  free(inCell[2]);
-	}
-      
-      cellsx = L / RCUT;
-      cellsy = L / RCUT;
-      cellsz = L / RCUT;
-      cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP));
-      inCell[0] = malloc(sizeof(int)*NP);
-      inCell[1] = malloc(sizeof(int)*NP);
-      inCell[2] = malloc(sizeof(int)*NP);
-
-      readconf(fname[nr1], &time, &refTime, NP, r0);
+            readconf(fname[nr1], &time, &refTime, NP, r0);
       build_linked_list();
-      find_bonds(numbonds0, bonds0);
+      //printf("qui\n");
+      find_bonds(numbonds0, bonds0, &ene0);
+      //printf("qui2\n");
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
 	{
@@ -874,26 +893,69 @@ int main(int argc, char **argv)
 		}
 	      /* accumulate bond correlation function */ 
 	      build_linked_list();
-	      find_bonds(numbonds0, bonds0);
+	      find_bonds(numbondst, bondst, &enet);
 	      for (i = 0; i < NP; i++)
 		{
-		  if (i < NPA)
+		  for (nb = 0; nb < numbondst[i]; nb++)
 		    {
-		    
-		    }
-		  else
-		    {
-
+		      j = bondst[nb][i] / NA;
+		      jj2 = bondst[nb][i] % (NA*NA);
+		      a = jj2 / NA; 
+		      b = jj2 % NA;
+		      if (i < NPA)
+			{
+			  if (exist_bond(i, a, j, b, numbonds0, bonds0))
+			    Fb[0][np] += 1.0;  
+			}
+		      else
+			{
+			  if (exist_bond(i, a, j, b, numbonds0, bonds0))
+			    Fb[1][np] += 1.0;
+			}
 		    }
 		}
-	      cc[qmod][np] += 1.0;
+	      cc[np] += 1.0;
 	    }
 	}
     }
-
   /* print correlation function to a file */
+  if (NPA < NP)
+    {
+      f = fopen("FbondsA.dat", "w");
+    }
+  else
+    {
+      f = fopen("Fbonds.dat", "w");
+    }
   for (ii=0; ii < points; ii++)
     {
+      Fb[0][ii] /= ((double)cc[ii]);
     }
+  for (ii=0; ii < points; ii++)
+    {
+      Fb[0][ii] /=  Fb[0][0];
+    }
+  for (ii=0; ii < points; ii++)
+    {
+      printf("%.15G %.15G\n", ti[ii], Fb[0][ii]);
+    }
+  fclose(f);
+  if (NPA < NP)
+    {
+      f = fopen("FbondsB.dat", "w");
+    }
+  for (ii=0; ii < points; ii++)
+    {
+      Fb[1][ii] /= ((double)cc[ii]);
+    }
+  for (ii=0; ii < points; ii++)
+    {
+      Fb[1][ii] /=  Fb[1][0];
+    }
+  for (ii=0; ii < points; ii++)
+    {
+      printf("%.15G %.15G\n", ti[ii], Fb[1][ii]);
+    }
+  fclose(f);
   return 0;
 }
