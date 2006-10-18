@@ -823,6 +823,10 @@ int main(int argc, char **argv)
   else
     printf("[MONODISPERE] files=%d NP = %d L=%.15G NN=%d maxl=%d\n", nfiles, NP, L, NN, maxl);
   //printf("sigmaSticky=%.15G\n", sigmaSticky);
+  for (i = 0; i < NP; i++)
+    {
+      clssizedstAVG[i] = 0;
+    }      
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       if (!cellList)
@@ -842,7 +846,6 @@ int main(int argc, char **argv)
       inCell[2] = malloc(sizeof(int)*NP);
       for (i = 0; i < NP; i++)
 	{
-	  clssizedstAVG[i] = 0;
 	  percola[i] = 0; 
 	}
 
