@@ -1001,7 +1001,7 @@ int main(int argc, char **argv)
     }
   for (ii=0; ii < points; ii++)
     {
-      printf("%.15G %.15G\n", ti[ii], Fb[0][ii]);
+      fprintf(f, "%.15G %.15G\n", ti[ii], Fb[0][ii]);
     }
   fclose(f);
   if (NPA < NP)
