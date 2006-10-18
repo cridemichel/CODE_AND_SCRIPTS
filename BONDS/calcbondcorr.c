@@ -18,7 +18,7 @@ double sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0},
 int *inCell[3]={NULL,NULL,NULL}, *cellList=NULL, cellsx, cellsy, cellsz;
 double *Fb[2], shift[3];
 int *numbondst, **bondst, *numbonds0, **bonds0;
-int points=-1, assez, NP, NPA;
+int points=-1, assez, NP, NPA, foundDRs=0;
 int particles_type = 1;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
@@ -331,6 +331,7 @@ double distance(int i, int j)
     {
       for (b = 1; b < maxb+1; b++)
 	{
+
 	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
 	    //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
 	  //printf("[DISTANCE] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + imgz -rat[b][2][j])));
@@ -448,18 +449,11 @@ int bond_foundR(int i, int j, int imgix, int imgiy, int imgiz,
     return 0;
 }
 
-
-
-void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
+void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *DR[3], double *R[3][3])
 {
   FILE *f;
-  double r0, r1, r2, R[3][3];
-  int nat=0, i, cpos, a;
-  if (!(f = fopen(fname, "r")))
-    {
-      printf("ERROR: I can not open file %s\n", fname);
-      exit(-1);
-    }
+  int nat=0, i, cpos;
+  f = fopen(fname, "r");
   while (!feof(f) && nat < 2) 
     {
       cpos = ftell(f);
@@ -474,13 +468,45 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	  fseek(f, cpos, SEEK_SET);
 	  fscanf(f, "%[^:]:", parname);
 	  //printf("[%s] parname=%s\n", fname, parname);
-	  if (!strcmp(parname, "time"))
+	  if (!strcmp(parname,"DR"))
+	    {
+	      for (i=0; i < NP; i++)
+		{
+		  fscanf(f, " %lf %lf %lf ", &DR[0][i], &DR[1][i], &DR[2][i]);
+		}
+	      foundDRs = 1;
+	    }
+#if 0
+	  else if (!strcmp(parname,"sumox"))
+	    {
+	      for (i=0; i < NP; i++)
+		{
+		  fscanf(f, " %lf ", &w[0][i]); 
+		}
+	      foundrot = 1;
+	    }
+	  else if (!strcmp(parname,"sumoy"))
+	    {
+	      for (i=0; i < NP; i++)
+		{
+		  fscanf(f, " %lf ", &w[1][i]); 
+		}
+	    }
+	  else if (!strcmp(parname,"sumoz"))
+	    {
+	      for (i=0; i < NP; i++)
+		{
+		  fscanf(f, " %lf ", &w[2][i]); 
+		}
+	    }
+#endif
+	  else if (!strcmp(parname, "time"))
 	    {
 	      fscanf(f, "%[^\n]\n", parval);
 	      *ti = atof(parval);
 	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }	
-  	  else if (!strcmp(parname, "refTime"))
+	  else if (!strcmp(parname, "refTime"))
 	    {
 	      fscanf(f, "%[^\n]\n", parval);
 	      *refTime = atof(parval);
@@ -494,17 +520,20 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	  for (i = 0; i < NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
-	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
-		{
-		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
-		}
+	      sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %[^\n]\n", 
+    		     &r[0][i], &r[1][i], &r[2][i], 
+		     &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
+		     &R[2][0][i], &R[2][1][i], &R[2][2][i], dummy); 
+	      //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
+	    
 	    }
- 	  break; 
+	  break; 
 	}
 
     }
   fclose(f);
 }
+
 #define KMODMAX 600
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
@@ -556,6 +585,11 @@ void parse_param(int argc, char** argv)
 }
 void add_bond(int i, int j, int *numbonds, int **bonds)
 {
+  if (numbonds[i] > MAXBONDS)
+    {
+      printf("Too many bonds?!?\n");
+      exit(-1);
+    }
   bonds[i][numbonds[i]] = j;
   numbonds[i]++;
 }
@@ -628,8 +662,10 @@ void find_bonds(int *numbonds, int **bonds, double *eneO)
 			}
 		      if (bond_found(i, j))  
 			{
+			  //printf("qui1\n");
 		      	  add_bond(i, j, numbonds, bonds);
 	    		  add_bond(j, i, numbonds, bonds);
+			  //printf("qui2\n");
 			  ene=ene+1.0;
 			}
 		    }
@@ -647,7 +683,30 @@ int exist_bond(int na, int n, int a, int b, int *numbonds, int **bonds)
       return 1;
   return 0;
 }
-
+void build_spots_positions(double *r0[3], double *R[3][3])
+{
+  int i, a, b;
+  double r0L[3], RL[3][3], ratL[NA][3];
+  for (i = 0; i < NP; i++)
+    {
+      /* qui va il codice per individuare i cluster */
+      for (a = 0; a < 3; a++)
+	{
+	  r0L[a] = r0[a][i];
+	  for (b = 0; b < 3; b++)
+	    RL[a][b] = R[a][b][i];
+	}
+      //printf("r0L[%d]=%.15G %.15G %.15G\n", i, r0L[0], r0L[1], r0L[2]);
+      if (particles_type == 1)
+	BuildAtomPos(i, r0L, RL, ratL);
+      else if (particles_type == 0)
+	BuildAtomPos32(i, r0L, RL, ratL);
+      for (a = 0; a < NA; a++)
+	for (b = 0; b < 3; b++)
+	  rat[a][b][i] = ratL[a][b];
+      //printf("rat[]=%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
+    }
+}
 int main(int argc, char **argv)
 {
   FILE *f, *f2;
@@ -865,11 +924,13 @@ int main(int argc, char **argv)
 
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
     {	
-            readconf(fname[nr1], &time, &refTime, NP, r0);
+      readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
+      /* costruisce la posizione di tutti gli sticky spots */
+      build_spots_positions(r0, R);
       build_linked_list();
-      //printf("qui\n");
+      for ( i = 0; i < NP; i++)
+	numbonds0[i] = 0;
       find_bonds(numbonds0, bonds0, &ene0);
-      //printf("qui2\n");
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
 	{
@@ -885,14 +946,17 @@ int main(int argc, char **argv)
 		}
 	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
-	      readconf(fname[nr2], &time, &refTime, NP, r1);
+	      readconf(fname[nr2], &time, &refTime, NP, r1, DR0, R);
 	      if (np < points && ti[np] == -1.0)
 		{
 		  ti[np] = time + refTime;
 		  //printf("np=%d time=%.15G\n", np, ti[np]);
 		}
 	      /* accumulate bond correlation function */ 
+	      build_spots_positions(r0, R);
 	      build_linked_list();
+	      for ( i = 0; i < NP; i++)
+		numbondst[i] = 0;
 	      find_bonds(numbondst, bondst, &enet);
 	      for (i = 0; i < NP; i++)
 		{
@@ -943,19 +1007,19 @@ int main(int argc, char **argv)
   if (NPA < NP)
     {
       f = fopen("FbondsB.dat", "w");
+      for (ii=0; ii < points; ii++)
+	{
+	  Fb[1][ii] /= ((double)cc[ii]);
+	}
+      for (ii=0; ii < points; ii++)
+	{
+	  Fb[1][ii] /=  Fb[1][0];
+	}
+      for (ii=0; ii < points; ii++)
+	{
+	  fprintf(f, "%.15G %.15G\n", ti[ii], Fb[1][ii]);
+	}
+      fclose(f);
     }
-  for (ii=0; ii < points; ii++)
-    {
-      Fb[1][ii] /= ((double)cc[ii]);
-    }
-  for (ii=0; ii < points; ii++)
-    {
-      Fb[1][ii] /=  Fb[1][0];
-    }
-  for (ii=0; ii < points; ii++)
-    {
-      printf("%.15G %.15G\n", ti[ii], Fb[1][ii]);
-    }
-  fclose(f);
   return 0;
 }
