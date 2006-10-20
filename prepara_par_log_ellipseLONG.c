@@ -44,6 +44,8 @@ int main(int argc, char **argv){
 #endif
 
 #ifdef _DISSIPATION
+  restitution=_DISSIPATION;
+  tC=1.0e-5;
   printf("partDiss: %lf\n",restitution);
   printf("tc: %lf\n",tC);
 #endif
@@ -69,22 +71,8 @@ int main(int argc, char **argv){
 
 
   storerate = Dt;
-  stepnum   = (NTau*Tau)/Dt;
+  stepnum   = ceil( (NTau*Tau)/Dt );
   NN        = ceil( log(Tau/storerate) / log(base) );
-
-
-  sprintf(localPath,"CNF");
-
-#ifdef _NEWCONF
-  sprintf(inifile,"*\nL: %g",60.2*pow((double)parnum/(double)256,1./3.));
-#else
-  sprintf(inifile,"%s/ellipsoidPhi%s_%sPR.cor",localPath,Phi,El);
-#endif
-
-  sprintf(endfile,"%s/ellipsoidPhi%s_%sPR.cor",localPath,Phi,El);
-
-  sprintf(tmpPath,"/home/scala/simdat/mdtmp/ellipsoid/Phi%s_%s/",Phi,El);
-  sprintf(misPath,tmpPath);
 
 
   A0=atof(El); 
@@ -105,6 +93,29 @@ int main(int argc, char **argv){
   }
   rcut = 1.01*diagNN; // If I don't use neighbour lists, change this!!
 #endif
+
+
+
+  sprintf(localPath,"CNF");
+
+
+#ifdef _NEWCONF
+ {
+   double L=A0;
+   if(B0>L) L=B0; if(C0>L) L=C0; 
+   //L *= 1.1*ceil( pow((double)parnum, 1./3.) );
+   L = (L/3.0) * 60.2 * pow((double)parnum/(double)256,1./3.);
+   sprintf(inifile,"*\nL: %g",L);
+ }
+#else
+  sprintf(inifile,"%s/ellipsoidPhi%s_%sPR.cor",localPath,Phi,El);
+#endif
+
+  sprintf(endfile,"%s/ellipsoidPhi%s_%sPR.cor",localPath,Phi,El);
+
+  sprintf(tmpPath,"/home/scala/simdat/mdtmp/ellipsoid/Phi%s_%s/",Phi,El);
+  sprintf(misPath,tmpPath);
+
 
   /////////////////////////////////////////////////////////
 
@@ -167,41 +178,65 @@ int main(int argc, char **argv){
   printf("nebrTabFac: %d\n",500); //max number of n.n. in a n.n.l.
 #endif 
 
-#ifdef _STEEPDESC
-  printf("springkSD: 1\n");
-  if(A0>B0) printf("stepSDA: %g\n",B0);
-  else printf("stepSDA: %g\n",A0);
-  printf("tolSD: 0.20\n");
-  printf("tolSDlong: 0.05\n");
-  printf("tolSDconstr: 0.05\n");
-  printf("maxitsSD:  500\n");
-#endif
-
-  if( (atof(El)<0.3) || (atof(El)>3.0) ) //damped newton raphson
-    printf("toldxNR: %g\n",0.40);
+  // sistema ridotto:
+  printf("dist5NL: %d\n",1);
+  printf("paralNNL: %d\n",1);
+  /*  { 
+    double elong = atof(El);
+    if((elong<=3.0)&&(elong>=0.25)) printf("dist5: %d\n",1);
+    }*/
+  printf("dist5: %d\n",1);
 
   printf("h: %g\n",1.0e-7); // minimum step
   printf("epsd: %g\n",epsd);
   printf("epsdFast: %g\n",1.2*epsd);
   printf("epsdFastR: %g\n",1.2*epsd);
   printf("epsdMax: %g\n",1.1*epsd);
+#ifndef _STEEPDESC
+  if( (atof(El)<0.3) || (atof(El)>3.0) ) //damped newton raphson
+    printf("toldxNR: %g\n",0.35);
   printf("zbrakn: 100\n");
   if(epsd<100.0*zbrentTol) zbrentTol=1.0e-2*epsd;
   printf("zbrentTol: %g\n",zbrentTol);
+#endif
 
 
-  // sistema ridotto:
-  printf("dist5NL: %d\n",1);
-  { 
-    double elong = atof(El);
-    if((elong<=3.0)&&(elong>=0.25)) printf("dist5: %d\n",1);
-  }
-      
+#ifdef _STEEPDESC
+  printf("springkSD: %g\n",1.0); 
+  printf("stepSDA: %g\n",0.5);
+  //  printf("stepSDB: %g\n",5.0);  
+  printf("SDmethod: %d\n",2); 
+  printf("epsdSD: %g\n",0.1);
+  printf("toldxNR: %g\n",0.35);
+  printf("tolSDconstr:%g\n", 0.002);
+  printf("tolSDgrad: %g\n",0.5);
+  printf("tolSD: %g\n",0.05);
+  printf("maxitsSD: %d\n",500);
+  printf("zbrakn: %g\n",0);
+  printf("zbrentTol: %g\n",1.0e-7);
+
+//per equilibrare!
+//tmsd2end: -1.0
+//rmsd2end: -1.0
+
+//compilare con -DMD_BIG_DT
+//bigDt: 1.0 //reset dell'origine del calendario
+ 
+  //  if(A0>B0) printf("stepSDA: %g\n",B0);
+  //  else printf("stepSDA: %g\n",A0);
+  //printf("tolSD: 0.20\n");
+  //printf("tolSDlong: 0.05\n");
+  //printf("tolSDconstr: %g\n",0.03);
+  //printf("maxitsSD:  500\n");
+#endif
+
+    
 #ifdef _GROWTH
   printf("targetPhi: %g\n",_GROWTH);
 #else
   printf("targetPhi: 0.0\n");
 #endif
+
   printf("phitol: 1E-10\n");
   printf("axestol: 1E-8\n");
   printf("scalfact: %g\n",0.2);
@@ -214,11 +249,7 @@ int main(int argc, char **argv){
   printf("mass0: 1.0\n");
   printf("rcut: %lf\n",rcut);
   printf("overlaptol: 0.01\n");
-#ifdef _GROWTH
-  printf("intervalSum: %lf\n",0.05);
-#else
   printf("intervalSum: %lf\n",Tau/10.); /* frequency of the output*/
-#endif
   printf("eventMult: 200\n");
   printf("bakSaveMode: 0\n");
   printf("storerate: %lf\n",storerate);

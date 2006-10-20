@@ -168,7 +168,7 @@ bimixhs: bimixhs_link common bimixhsObjs
 	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJ) $(BIMIXHSOBJS) -o $(BIN)/bimixhs -lm 
 
 ellipsoid: ellipsoid_link common ellipsoidObjs
-	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJ) $(ELLIPSOIDOBJS) -o $(BIN)/ellipsoid -lm 
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJ) $(ELLIPSOIDOBJS) -o $(BIN)/ellipsoid.inelastic -lm 
 
 sticky: sticky_link common stickyObjs
 	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJ) $(STICKYOBJS) -o $(BIN)/sticky -lm 

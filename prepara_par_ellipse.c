@@ -21,6 +21,8 @@ int main(int argc, char **argv){
   double zbrentTol = 1.0e-7;
   double A0, B0=1.0, C0=1.0, rcut;
   
+  double restitution=0.98,tC=1.0e-5;
+
   double Dt=0.01;
   int    Nsave=1000; /* number of configurations to save */
   double storerate;
@@ -38,6 +40,13 @@ int main(int argc, char **argv){
   
 #ifdef _DT
   Dt=_DT;
+#endif
+
+#ifdef _DISSIPATION
+  restitution=_DISSIPATION;
+  tC=1.0e-5;
+  printf("partDiss: %lf\n",restitution);
+  printf("tc: %lf\n",tC);
 #endif
 
   if(argc<3){
@@ -92,6 +101,8 @@ int main(int argc, char **argv){
 #endif
 
   storerate=(stepnum*Dt)/(double)Nsave;
+
+  /////////////////////////////////////////////////////////
 
   printf("parnum: %d\n",parnum);
   printf("parnumA: %d\n",parnumA);
