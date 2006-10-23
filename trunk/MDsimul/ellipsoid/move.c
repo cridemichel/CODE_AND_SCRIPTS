@@ -957,7 +957,6 @@ void scalevels(double temp, double K, double Vz)
   int i; 
   double sf, VVx, VVy, VVz, ddx, ddy, ddz;
   sf = sqrt( ( (3.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
-
   VVx = VVy = VVz = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
     {
@@ -5819,7 +5818,7 @@ void calc_energy(char *msg)
   //Ib = matrix(3,3);
 #endif
 
-  K = Ktra = 0;
+  K = Ktra = Krot = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
       if (i<Oparams.parnumA)
