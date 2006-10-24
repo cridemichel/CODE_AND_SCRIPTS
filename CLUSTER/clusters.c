@@ -28,7 +28,8 @@ int check_percolation = 1, *nspots, particles_type=1, output_bonds=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
-    *clsdimsort, *clssizedst, *clssizedstAVG, *percola;
+    *clsdimsort, *clssizedst, *percola;
+double *clssizedstAVG;
 double calc_norm(double *vec)
 {
   int k1;
@@ -834,7 +835,7 @@ int main(int argc, char **argv)
   clscol   = malloc(sizeof(int)*NP);
   cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NP);
   clssizedst = malloc(sizeof(int)*NP);
-  clssizedstAVG = malloc(sizeof(int)*NP);
+  clssizedstAVG = malloc(sizeof(double)*NP);
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
   percola = malloc(sizeof(int)*NP);
   if (output_bonds)
@@ -913,7 +914,7 @@ int main(int argc, char **argv)
   //printf("sigmaSticky=%.15G\n", sigmaSticky);
   for (i = 0; i < NP; i++)
     {
-      clssizedstAVG[i] = 0;
+      clssizedstAVG[i] = 0.0;
     }      
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
@@ -1429,7 +1430,7 @@ int main(int argc, char **argv)
 	{
 	  //printf("cluster_sort[%d].dim=%d color=%d\n", nc, cluster_sort[nc].dim, cluster_sort[nc].color);
 	  clssizedst[cluster_sort[nc].dim]++;
-	  clssizedstAVG[cluster_sort[nc].dim]++;
+	  clssizedstAVG[cluster_sort[nc].dim] += 1.0;
 	}
       sprintf(fncls, "%s.clsdst", fname[nr1]);
       f = fopen(fncls, "w+");
@@ -1461,8 +1462,8 @@ int main(int argc, char **argv)
   f = fopen("avg_cluster_size_distr.dat", "w+");
   for (i = 1; i < NP; i++)
     {
-      if (clssizedstAVG[i] != 0)
-	fprintf(f, "%d %d\n", i, clssizedstAVG[i]/nfiles);
+      if (clssizedstAVG[i] != 0.0)
+	fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
     }
   fclose(f);
   return 0;
