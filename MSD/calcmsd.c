@@ -10,12 +10,17 @@ double **DR, **DR0;
 double *r0[3], *w0[3], *rt[3], *wt[3], *rtold[3];
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int points, foundDRs=0, foundrot=0;
-
+int points, foundDRs=0, foundrot=0, eventDriven=0;
+double storerate = -1;
+int bakSaveMode = -1;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double **DR)
 {
   FILE *f;
   int nat=0, i, cpos;
+  double dt=-1;
+  int curstp=-1;
+
+  *ti = -1.0;
   f = fopen(fname, "r");
   while (!feof(f) && nat < 2) 
     {
@@ -67,6 +72,18 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	      *ti = atof(parval);
 	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }	
+	  else if (!strcmp(parname, "curStep"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      curstp = atoi(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }	
+	  else if (!strcmp(parname, "steplength"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      dt = atof(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }
 	  else if (!strcmp(parname, "refTime"))
 	    {
 	      fscanf(f, "%[^\n]\n", parval);
@@ -88,8 +105,12 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	    }
 	  break; 
 	}
-
     }
+  /* N.B.nei codici non-event-driven non esiste il parametro time negli store 
+   * files ascii, quindi il tempo lo calcolo usando i passi correnti e il passo
+   * d'integrazione. */ 
+  if (*ti == -1)
+    *ti = ((double)curstp)*dt;
   fclose(f);
 }
 int main(int argc, char **argv)
@@ -142,6 +163,13 @@ int main(int argc, char **argv)
 	  continue;
 	}
       sscanf(line, "%[^:]:%[^\n]\n", parname, parval); 
+      if (!strcmp(parname,"storerate"))
+	{
+	  eventDriven = 1;
+	  storerate = atof(parval);
+	}
+      if (!strcmp(parname,"bakSaveMode"))
+	bakSaveMode = atoi(parval);
       if (!strcmp(parname,"parnum"))
 	NP = atoi(parval);
       if (!strcmp(parname,"parnumA"))
@@ -156,6 +184,9 @@ int main(int argc, char **argv)
     points=atoi(argv[2]);
   else
     points=NN;
+  if ((eventDriven==1 && storerate <= 0.0 && bakSaveMode <= 0)
+      || (eventDriven==0 && bakSaveMode <= 0)) 
+      NN = 1;
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
@@ -190,6 +221,10 @@ int main(int argc, char **argv)
     printf("[MIXTURE] points=%d files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, NPA, L, NN, maxl);
   else
     printf("[MONODISPERE] points=%d files=%d NP = %d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, L, NN, maxl);
+  if (eventDriven)
+    printf("[ED] Event-Driven simulation\n");
+  else
+    printf("[MD] Time-Driven simulation\n");
   for (a=0; a < 3; a++)
     {
       r0[a] = malloc(sizeof(double)*NP);
