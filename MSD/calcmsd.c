@@ -220,7 +220,7 @@ int main(int argc, char **argv)
   if (NPA != NP)
     printf("[MIXTURE] points=%d files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, NPA, L, NN, maxl);
   else
-    printf("[MONODISPERE] points=%d files=%d NP = %d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, L, NN, maxl);
+    printf("[MONODISPERSE] points=%d files=%d NP = %d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, L, NN, maxl);
   if (eventDriven)
     printf("[ED] Event-Driven simulation\n");
   else
