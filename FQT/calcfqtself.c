@@ -9,13 +9,15 @@ double time, *ti, *r0[3], *r1[3], L, refTime;
 int points=-1, assez, NP, NPA;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-double A0, A1, B0, B1, C0, C1;
-
+double A0, A1, B0, B1, C0, C1, storerate=-1.0;
+int bakSaveMode = -1, eventDriven=0;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
   FILE *f;
   double r0, r1, r2, R[3][3];
-  int nat=0, i, cpos, a;
+  int curstp, nat=0, i, cpos, a;
+  double dt;
+  *ti = -1.0;
   if (!(f = fopen(fname, "r")))
     {
       printf("ERROR: I can not open file %s\n", fname);
@@ -47,6 +49,19 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	      *refTime = atof(parval);
 	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }	
+	  else if (!strcmp(parname, "curStep"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      curstp = atoi(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }	
+	  else if (!strcmp(parname, "steplength"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      dt = atof(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }
+
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
@@ -62,8 +77,9 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	    }
  	  break; 
 	}
-
     }
+  if (*ti == -1.0)
+    *ti = ((double)curstp)*dt;
   fclose(f);
 }
 #define KMODMAX 600
@@ -177,15 +193,15 @@ void set_qmin_qmax_from_q_pu(double scalFact)
     }
   if (qminpu != -1.0 && qminpu == qmaxpu)
     {
-      qmin = rint((qminpu-1.0) / (scalFact/2.0));
+      qmin = rint(qminpu / (scalFact/2.0) - 2.0);
       qmax = qmin;
     }
   else 
     {
       if (qminpu != -1.0 && qminpu >= 0.0)
-	qmin = ceil( (qminpu-1.0) / (scalFact/2.0));
+	qmin = ceil( qminpu / (scalFact/2.0) - 2.0);
       if (qmaxpu != -1.0 && qmaxpu > 0.0)
-	qmax = floor( (qmaxpu-1.0) / (scalFact/2.0));
+	qmax = floor( qmaxpu / (scalFact/2.0) - 2.0);
     }
 }
 
@@ -260,6 +276,13 @@ int main(int argc, char **argv)
 	NPA = atoi(parval);
       else if (!strcmp(parname,"NN"))
 	NN = atoi(parval);
+      else if (!strcmp(parname,"storerate"))
+	{
+	  storerate = atof(parval);
+	  eventDriven = 1;
+	}
+      else if (!strcmp(parname,"bakSaveMode"))
+	bakSaveMode = atoi(parval);
       else if (!strcmp(parname, "a"))
        	{
 	  fscanf(f, "%[^\n]\n", parval);
@@ -294,13 +317,21 @@ int main(int argc, char **argv)
   set_qmin_qmax_from_q_pu(scalFact);
   if (qmax >= KMODMAX)
     qmax = KMODMAX-1;
+  if (qmax < 0)
+    qmax = 0;
   if (qmin < 0)
     qmin = 0;
+  if (qmin >= KMODMAX)
+    qmin = KMODMAX-1;
+  
   if (qmin > qmax)
     {
       printf("ERROR: qmin must be less than qmax\n");
       exit(-1);
     }
+  if ((eventDriven==1 && storerate <= 0.0 && bakSaveMode <= 0)
+      || (eventDriven==0 && bakSaveMode <= 0)) 
+    NN = 1;
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
@@ -315,6 +346,11 @@ int main(int argc, char **argv)
     assez = 2;
   if (NPA == -1)
     NPA = NP;
+  if (eventDriven)
+    printf("[ED] Event-Driven simulation\n");
+  else
+    printf("[MD] Time-Driven simulation\n");
+ 
   //fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
   for (qmod = qmin; qmod <= qmax; qmod++)
     {

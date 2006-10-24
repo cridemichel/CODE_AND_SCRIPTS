@@ -244,14 +244,18 @@ int main(int argc, char** argv)
 	      else 
 		{
 		  if (qminpu != -1.0 && qminpu >= 0.0)
-		    qmin = ceil( (qminpu-1.0) / (scalFact/2.0));
+		    qmin = ceil( qminpu / (scalFact/2.0) - 2.0);
 		  if (qmaxpu != -1.0 && qmaxpu > 0.0)
-		    qmax = floor( (qmaxpu-1.0) / (scalFact/2.0));
+		    qmax = floor( qmaxpu / (scalFact/2.0) - 2.0);
 		}
 	      if (qmin < 0)
 		qmin = 0;
+	      if (qmin >= KMODMAX)
+		qmax = KMODMAX-1; 
 	      if (qmax >= KMODMAX)
 		qmax = KMODMAX-1;
+	      if (qmax < 0)
+		qmax = 0;
 	    }
 	  printf("scalFact: %.15G qmin: %d qmax: %d qminpu: %.15G qmaxpu: %.15G\n", scalFact, qmin, qmax, qminpu, qmaxpu);
 	  for (qmod=qmin; qmod <= qmax; qmod++)

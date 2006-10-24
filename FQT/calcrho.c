@@ -171,15 +171,15 @@ void set_qmin_qmax_from_q_pu(double scalFact)
     }
   if (qminpu != -1.0 && qminpu == qmaxpu)
     {
-      qmin = rint((qminpu-1.0) / (scalFact/2.0));
+      qmin = rint(qminpu / (scalFact/2.0) - 2.0);
       qmax = qmin;
     }
   else 
     {
       if (qminpu != -1.0 && qminpu >= 0.0)
-	qmin = ceil( (qminpu-1.0) / (scalFact/2.0));
+	qmin = ceil( qminpu / (scalFact/2.0) - 2.0);
       if (qmaxpu != -1.0 && qmaxpu > 0.0)
-	qmax = floor( (qmaxpu-1.0) / (scalFact/2.0));
+	qmax = floor( qmaxpu / (scalFact/2.0) - 2.0);
     }
 }
 int main(int argc, char **argv)
@@ -287,8 +287,12 @@ int main(int argc, char **argv)
   set_qmin_qmax_from_q_pu(scalFact);
   if (qmax >= KMODMAX)
     qmax = KMODMAX-1;
+  if (qmax < 0)
+    qmax = 0;
   if (qmin < 0)
     qmin = 0;
+  if (qmin >= KMODMAX)
+    qmin = KMODMAX-1;
   if (qmin > qmax)
     {
       printf("ERROR: qmin must be less than qmax\n");
