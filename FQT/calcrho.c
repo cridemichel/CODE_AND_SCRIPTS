@@ -81,7 +81,7 @@ int mesh[][NKSHELL][3]=
 double twopi;
 void print_usage(void)
 {
-  printf("calcrho [--qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] [qmin] [qmax]\n");
+  printf("calcrho [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] [qmin] [qmax]\n");
   exit(0);
 }
 double qavg[KMODMAX];

@@ -24,7 +24,7 @@ double Sq[KMODMAX], sumRho, reRho, imRho, rCMk, scalFact, invNm, invL, L, invNmA
 double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, imRhoB;
 void print_usage(void)
 {
-  printf("calcSq [--qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --cnf/-c | --phys-unit/-pu] <confs_file> [qmin] [qmax]\n");
+  printf("calcSq [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --cnf/-c | --phys-unit/-pu] <confs_file> [qmin] [qmax]\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
