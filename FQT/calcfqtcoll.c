@@ -27,7 +27,7 @@ double time, Cav, Cav0, CavAA0, CavBB0, CavAB0,
        *rhoRt[MAXCOMPS][MAXQ], 
        *rhoIt[MAXCOMPS][MAXQ], *tiall;
 int *NQarr;
-int qmin, qmax, points, comps=2;
+int qmin, qmax, points=-1, comps=2;
 char AB[2]={'A','B'};
 void print_usage(void)
 {
@@ -51,6 +51,15 @@ void parse_param(int argc, char** argv)
       if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
 	{
 	  print_usage();
+	}
+      else if (!strcmp(argv[cc],"--ncomps") || !strcmp(argv[cc],"-nc"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  comps = atoi(argv[cc]);
+	  if (comps < 1 || comps > 2)
+	    print_usage();
 	}
       else if (!strcmp(argv[cc],"--qmin") || !strcmp(argv[cc],"-qm"))
 	{
@@ -123,15 +132,15 @@ void set_qmin_qmax_from_q_pu(double scalFact)
     }
   if (qminpu != -1.0 && qminpu == qmaxpu)
     {
-      qmin = rint((qminpu-1.0) / (scalFact/2.0));
+      qmin = rint(qminpu / (scalFact/2.0) - 2.0);
       qmax = qmin;
     }
   else 
     {
       if (qminpu != -1.0 && qminpu >= 0.0)
-	qmin = ceil( (qminpu-1.0) / (scalFact/2.0));
+	qmin = ceil( qminpu / (scalFact/2.0) - 2.0);
       if (qmaxpu != -1.0 && qmaxpu > 0.0)
-	qmax = floor( (qmaxpu-1.0) / (scalFact/2.0));
+	qmax = floor( qmaxpu / (scalFact/2.0) - 2.0);
     }
 }
 
@@ -157,10 +166,29 @@ int main(int argc, char **argv)
   qmax = atoi(argv[2]);
 #endif
   NQarr = malloc(sizeof(int)*qmax);
+  if (qmax >= KMODMAX)
+    qmax = KMODMAX-1;
+  if (qmax < 0)
+    qmax = 0;
+  if (qmin < 0)
+    qmin = 0;
+  if (qmin >= KMODMAX)
+    qmin = KMODMAX-1;
+  
+  if (qmin > qmax)
+    {
+      printf("ERROR: qmin must be less than qmax\n");
+      exit(-1);
+    }
+
+  if (points==-1)
+    points = NN;
+#if 0
   if (argc == 4)
     points = atoi(argv[3]);
   else
     points = NN;
+#endif
   printf("points:%d\n", points);
   c2 = 0;
   if (comps==2)

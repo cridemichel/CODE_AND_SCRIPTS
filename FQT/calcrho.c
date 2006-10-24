@@ -13,7 +13,8 @@ int points, assez, NP, NPA;
 char parname[128], parval[256000], line[256000];
 char dummy[2048], inputfile[1024];
 double A0, A1, B0, B1, C0, C1;
-
+double storerate=-1.0;
+int eventDriven=0, bakSaveMode=-1;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
   FILE *f;
@@ -257,6 +258,13 @@ int main(int argc, char **argv)
 	NPA = atoi(parval);
       else if (!strcmp(parname,"NN"))
 	NN = atoi(parval);
+      else if (!strcmp(parname,"storerate"))
+	{
+	  storerate = atof(parval);
+	  eventDriven = 1;
+	}
+      else if (!strcmp(parname,"bakSaveMode"))
+	bakSaveMode = atoi(parval);
       else if (!strcmp(parname, "a"))
        	{
 	  fscanf(f, "%[^\n]\n", parval);
@@ -298,6 +306,10 @@ int main(int argc, char **argv)
       printf("ERROR: qmin must be less than qmax\n");
       exit(-1);
     }
+  if ((eventDriven==1 && storerate <= 0.0 && bakSaveMode <= 0)
+      || (eventDriven==0 && bakSaveMode <= 0)) 
+    NN = 1;
+
   //printf("maxnp=%d points=%d\n",maxnp, points);
   printf("qmin = %d qmax=%d\n", qmin, qmax);
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
@@ -308,6 +320,10 @@ int main(int argc, char **argv)
     assez = 2;
   if (NPA == -1)
     NPA = NP;
+  if (eventDriven)
+    printf("[ED] Event-Driven simulation\n");
+  else
+    printf("[MD] Time-Driven simulation\n");
   //fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
   for (a=0; a < 3; a++)
     {
