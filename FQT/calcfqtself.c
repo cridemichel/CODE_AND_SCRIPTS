@@ -82,7 +82,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
     *ti = ((double)curstp)*dt;
   fclose(f);
 }
-#define KMODMAX 600
+#define KMODMAX 599
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double *sqReA[KMODMAX], *sqImA[KMODMAX], *sqReB[KMODMAX], *sqImB[KMODMAX];
