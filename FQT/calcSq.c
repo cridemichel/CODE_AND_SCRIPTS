@@ -107,7 +107,7 @@ int main(int argc, char** argv)
   FILE *f, *f2, *of;
   int nf, i, a, b, n, mp;
   double ti, tref=0.0, kbeg=0.0;
-  int qmod, first = 1;
+  int qmod, first = 1, NP1, NP2;
 #if 0
   if (argc == 1)
     {
@@ -188,7 +188,17 @@ int main(int argc, char** argv)
 	  fscanf(f,"%[^\n]\n",line);
 	  sscanf(line, "%[^:\n ]:%[^\n]\n", parname, parval);
 	  if (!strcmp(parname,"parnum"))
-	    N = atoi(parval);
+	    {
+	      if (sscanf(parval, "%d %d ", &NP1, &NP2) < 2)
+		{
+		  N = atoi(parval);
+		}
+	      else
+		{
+		  N = NP1+NP2;
+		  NA = NP1;
+		}
+	    }
 	  if (!strcmp(parname,"parnumA"))
 	    NA = atoi(parval); 
 	  if (!strcmp(parname,"time"))
