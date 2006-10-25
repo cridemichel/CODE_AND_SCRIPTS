@@ -118,7 +118,7 @@ int main(int argc, char **argv)
   FILE *f, *f2, *f3, *fA, *fB, *f2A, *f2B;
   double *adjDr[3], Dr, Dw, A1, A2, A3, dr;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int NP, NPA=-1, NN, fine, JJ, nat, maxl, maxnp, np;
+  int NP, NPA=-1, NN, fine, JJ, nat, maxl, maxnp, np, NP1, NP2;
   double refTime=0.0;
   if (argc <= 1)
     {
@@ -171,7 +171,17 @@ int main(int argc, char **argv)
       if (!strcmp(parname,"bakSaveMode"))
 	bakSaveMode = atoi(parval);
       if (!strcmp(parname,"parnum"))
-	NP = atoi(parval);
+	{
+	  if (sscanf(parval, "%d %d ", &NP1, &NP2) < 2)
+	    {
+	      NP = atoi(parval);
+	    }
+	  else
+	    {
+	      NP = NP1+NP2;
+	      NPA = NP1;
+	    }
+	}
       if (!strcmp(parname,"parnumA"))
 	NPA = atoi(parval);
       if (!strcmp(parname,"NN"))
