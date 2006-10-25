@@ -317,7 +317,6 @@ int main(int argc, char **argv)
 	}
     }
   fclose(f);
-  invL = 1.0/L;
 #if 0
   if (argc >= 3)
     points = atoi(argv[2]);
@@ -328,6 +327,9 @@ int main(int argc, char **argv)
   if (argc == 5)
     qmax = atoi(argv[4]);
 #endif
+  if (!eventDriven)
+    L = cbrt(L);
+  invL = 1.0/L;
   if (points == -1)
     points = NN;
   scalFact = twopi * invL;

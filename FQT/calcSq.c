@@ -170,7 +170,7 @@ int main(int argc, char** argv)
 		      NA = NP1;
 		    }
 		}
-	      else if (!strcmp(parname, "time"))
+	      else if (!strcmp(parname, "storerate"))
 		eventDriven = 1;
 	    }
 	  while (strcmp(line,"@@@"));
