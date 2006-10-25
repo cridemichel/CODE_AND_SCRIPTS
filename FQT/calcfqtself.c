@@ -10,7 +10,7 @@ int points=-1, assez, NP, NPA;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 double A0, A1, B0, B1, C0, C1, storerate=-1.0;
-int bakSaveMode = -1, eventDriven=0;
+int bakSaveMode = -1, eventDriven=0, skip=0;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
   FILE *f;
@@ -96,7 +96,7 @@ int mesh[][NKSHELL][3]=
 double twopi;
 void print_usage(void)
 {
-  printf("calcfqtself [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] <lista_files> [points] [qmin] [qmax]\n");
+  printf("calcfqtself [ --skip/-s | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] <lista_files> [points] [qmin] [qmax]\n");
   printf("where points is the number of points of the correlation function\n");
   exit(0);
 }
@@ -130,6 +130,13 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  qmax = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--skip") || !strcmp(argv[cc],"-s"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  skip = atoi(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--qpumin") || !strcmp(argv[cc],"-qpum"))
 	{
@@ -210,7 +217,7 @@ int main(int argc, char **argv)
   FILE *f, *f2;
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
-  int qmod; 
+  int qmod, NP1, NP2; 
   double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
 
   twopi = acos(0)*4.0;	  
@@ -271,7 +278,17 @@ int main(int argc, char **argv)
 	}
       sscanf(line, "%[^:]:%[^\n]\n", parname, parval); 
       if (!strcmp(parname,"parnum"))
-	NP = atoi(parval);
+	{
+	  if (sscanf(parval, "%d %d ", &NP1, &NP2) < 2)
+	    {
+	      NP = atoi(parval);
+	    }
+	  else
+	    {
+	      NP = NP1+NP2;
+	      NPA = NP1;
+	    }
+	}
       else if (!strcmp(parname,"parnumA"))
 	NPA = atoi(parval);
       else if (!strcmp(parname,"NN"))
@@ -332,6 +349,8 @@ int main(int argc, char **argv)
   if ((eventDriven==1 && storerate <= 0.0 && bakSaveMode <= 0)
       || (eventDriven==0 && bakSaveMode <= 0)) 
     NN = 1;
+  if (NN!=1)
+    skip = 0;
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
@@ -400,7 +419,7 @@ int main(int argc, char **argv)
     }
   c2 = 0;
   JJ = 0;
-  for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
+  for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN+skip)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0);
       fine = 0;
