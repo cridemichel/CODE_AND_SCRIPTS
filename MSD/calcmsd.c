@@ -10,7 +10,8 @@ double **DR, **DR0;
 double *r0[3], *w0[3], *rt[3], *wt[3], *rtold[3];
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int points, foundDRs=0, foundrot=0, eventDriven=0;
+int points=-1, foundDRs=0, foundrot=0, eventDriven=0, skip=1;
+char inputfile[2048];
 double storerate = -1;
 int bakSaveMode = -1;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double **DR)
@@ -113,6 +114,50 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
     *ti = ((double)curstp)*dt;
   fclose(f);
 }
+void print_usage(void)
+{
+  printf("Usage: calcmsd <listafile> [number of points]\n");
+  exit(0);
+}
+void parse_param(int argc, char** argv)
+{
+  int cc=1, extraparam=0;
+  
+  if (argc==1)
+    print_usage();
+  while (cc < argc)
+    {
+      //printf("cc=%d extraparam=%d argc=%d\n", cc, extraparam, argc);
+      if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
+	{
+	  print_usage();
+	}
+      else if (!strcmp(argv[cc],"--skip") || !strcmp(argv[cc],"-s"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  skip = atoi(argv[cc]);
+	}
+      else if (cc == argc || extraparam == 2)
+	print_usage();
+      else if (extraparam == 0)
+	{ 
+	  extraparam++;
+	  //printf("qui1 extraparam:%d\n", extraparam);
+	  strcpy(inputfile,argv[cc]);
+	}
+      else if (extraparam == 1)
+	{
+	  extraparam++;
+	  points = atoi(argv[cc]);
+	}
+      else
+	print_usage();
+      cc++;
+    }
+}
+
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3, *fA, *fB, *f2A, *f2B;
@@ -120,13 +165,16 @@ int main(int argc, char **argv)
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int NP, NPA=-1, NN, fine, JJ, nat, maxl, maxnp, np, NP1, NP2;
   double refTime=0.0;
+#if 0
   if (argc <= 1)
     {
       printf("Usage: calcmsd <listafile> [number of points]\n");
       //printf("where NN il the lenght of the logarithmic block\n");
       exit(-1);
     }
-  f2 = fopen(argv[1], "r");
+#endif
+  parse_param(argc, argv);
+  f2 = fopen(inputfile, "r");
   c2 = 0;
   maxl = 0;
   while (!feof(f2))
@@ -190,13 +238,13 @@ int main(int argc, char **argv)
   fclose(f);
   if (NPA == -1)
     NPA = NP;
-  if (argc == 3)
-    points=atoi(argv[2]);
-  else
+  if (points == -1)
     points=NN;
   if ((eventDriven==1 && storerate <= 0.0 && bakSaveMode <= 0)
       || (eventDriven==0 && bakSaveMode <= 0)) 
-      NN = 1;
+    NN = 1;
+  if (NN!=1)
+    skip = 0;
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
@@ -244,7 +292,7 @@ int main(int argc, char **argv)
       wt[a] = malloc(sizeof(double)*NP);
       adjDr[a] = malloc(sizeof(double)*NP); 
     }
-  for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
+  for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN+skip)
     {	
       for (i=0; i < NP; i++)
 	for (a=0; a < 3; a++)
