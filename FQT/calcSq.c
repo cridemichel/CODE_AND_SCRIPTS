@@ -13,7 +13,7 @@ int readCnf = 0, physunit=0;
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double qavg[KMODMAX];
-int qmin=0, qmax=KMODMAX-1;
+int qmin=0, qmax=KMODMAX-1, eventDriven = 0;
 double qminpu=-1.0, qmaxpu=-1.0;
 int ntripl[]=
 #include "./ntripl.dat"
@@ -106,7 +106,7 @@ int main(int argc, char** argv)
 {
   FILE *f, *f2, *of;
   int nf, i, a, b, n, mp;
-  double ti, tref=0.0, kbeg=0.0;
+  double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
   int qmod, first = 1, NP1, NP2;
 #if 0
   if (argc == 1)
@@ -159,15 +159,36 @@ int main(int argc, char** argv)
 	      fscanf(f,"%[^\n]\n",line);
 	      sscanf(line, "%[^:\n ]:%[^\n]\n", parname, parval);
 	      if (!strcmp(parname,"parnum"))
-		N = atoi(parval);
+		{
+	       	  if (sscanf(parval, "%d %d ", &NP1, &NP2) < 2)
+	    	    {
+	    	      N = atoi(parval);
+	    	    }
+		  else
+		    {
+		      N = NP1+NP2;
+		      NA = NP1;
+		    }
+		}
+	      else if (!strcmp(parname, "time"))
+		eventDriven = 1;
 	    }
 	  while (strcmp(line,"@@@"));
 	  for (i=0; i < 2*N; i++)
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
 	    }	
-	  fscanf(f, "%lf\n", &L);
-	  invL = 1.0/L;
+ 	  if (eventDriven == 1)
+	    {
+	      fscanf(f, "%lf\n", &L);
+	      invL = 1.0/L;
+	    }
+	  else
+	    {
+	      fscanf(f, "%lf %lf %lf %lf %lf\n", &Vol, &a1, &a2, &a3, &a4);
+	      L = cbrt(Vol);
+	      invL = 1.0/L;
+	    }
 	}
       //printf("L=%.15G\n", L);
       /* -------- */
