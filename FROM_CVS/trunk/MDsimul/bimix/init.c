@@ -583,6 +583,7 @@ void usrInitAft(void)
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
+  FILE *f1;
 #ifdef MD_LOADMESH
   int i1, i2;
   FILE* f;
@@ -716,6 +717,15 @@ void usrInitAft(void)
       mdPrintf(ALL, msgs, NULL);
 #endif
 #endif
+      f1 = fopen("msd.dat", "w");
+      fclose(f1);
+      if (Oparams.parnum[1]!=0)
+	{
+	 f1 = fopen("msdA.dat", "w");
+	 fclose(f1);
+	 f1 = fopen("msdB.dat", "w");
+	 fclose(f1);
+	}
       if (OprogStatus.Nose == 0)
 	{
 	  /* If we begin a new simulation and we don't use Nose-Andersen method
