@@ -418,7 +418,7 @@ int chkBakAsciiSteps(void)
 	if(my_rank == 0)
 #endif
 #ifdef MDLLINT
-	  printf("[%lld] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
+	printf("[%lld] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
 	if ( ((long long int)rint(OprogStatus.fstps)) > logBlock )
 	  {
 	    OprogStatus.fstps = 1;
@@ -428,7 +428,6 @@ int chkBakAsciiSteps(void)
 	 printf("[%d] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
 	 if ( ((int)rint(OprogStatus.fstps)) > logBlock )
 	   {
-	     
 	     OprogStatus.fstps = 1;
 	     printf("[%d] fstps: %.6f\n\n", Oparams.curStep, OprogStatus.fstps);
 	  }
