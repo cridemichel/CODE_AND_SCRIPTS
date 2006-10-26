@@ -927,7 +927,7 @@ void Newsimul (char *argom)
 #endif
   OprogStatus.savedXva = -1;
   OprogStatus.fstps = 1;
-  logBlock = (int) pow(OprogStatus.base, (double) OprogStatus.NN);
+  logBlock = (int) rint(pow(OprogStatus.base, (double) OprogStatus.NN+1));
   printf("logBlock: %d base:%f NN:%d\n", logBlock, OprogStatus.base, OprogStatus.NN);
   /* La prima volta che va in saveXva savedXva diventa 0 e cosi'
      deve essere !!! */
