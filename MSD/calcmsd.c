@@ -248,6 +248,8 @@ int main(int argc, char **argv)
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
+  if (eventDriven==0)
+    L = cbrt(L);
   ti = malloc(sizeof(double)*points);
   rotMSD = malloc(sizeof(double)*points);
   MSD = malloc(sizeof(double)*points);
