@@ -156,11 +156,11 @@ void transDiff(void)
     {
       f=fopen("msdA.dat", "a");
       fprintf(f, "%.15G %.15G\n", Oparams.steplength*Oparams.curStep, 
-	      DrSqTot[0]/((double)Oparams.parnum[0]));
+	      DrSqTot[0]);
       fclose(f);
       f=fopen("msdB.dat", "a");
       fprintf(f, "%.15G %.15G\n", Oparams.steplength*Oparams.curStep, 
-	      DrSqTot[1]/((double)Oparams.parnum[1]));
+	      DrSqTot[1]);
       fclose(f);
     }
   //printf("Dtr[0]: %.6f Dtr[1]: %.6f\n", Dtrans[0], Dtrans[1]);
