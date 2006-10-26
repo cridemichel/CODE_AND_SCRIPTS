@@ -393,9 +393,9 @@ int chkBakAsciiSteps(void)
     cslb = Oparams.curStep % logBlock;
     retval = 0;
 #ifdef MDLLINT
-    if ( (cslb == ((long long int)OprogStatus.fstps)) || (cslb == 0))
+    if ( (cslb == ((long long int)rint(OprogStatus.fstps))) || (cslb == 0))
 #else
-    if ( (cslb == ((int)OprogStatus.fstps)) || (cslb == 0))
+    if ( (cslb == ((int)rint(OprogStatus.fstps))) || (cslb == 0))
 #endif
      {
 	retval = 1;
@@ -406,12 +406,12 @@ int chkBakAsciiSteps(void)
 	//OprogStatus.fstps = (int) (base * 
 	//((double) OprogStatus.fstps));
 #ifdef MDLLINT
-	oldfstps = (long long int)OprogStatus.fstps;
-	while (oldfstps == (long long int)OprogStatus.fstps)
+	oldfstps = (long long int)rint(OprogStatus.fstps);
+	while (oldfstps == (long long int)rint(OprogStatus.fstps))
 	  OprogStatus.fstps = base * OprogStatus.fstps;
 #else
-	oldfstps = (int)OprogStatus.fstps;
-	while (oldfstps == (int)OprogStatus.fstps)
+	oldfstps = (int)rint(OprogStatus.fstps);
+	while (oldfstps == (int)rint(OprogStatus.fstps))
 	  OprogStatus.fstps = base * OprogStatus.fstps;
 #endif
 #ifdef MPI
@@ -419,14 +419,14 @@ int chkBakAsciiSteps(void)
 #endif
 #ifdef MDLLINT
 	  printf("[%lld] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
-	if ( ((long long int)OprogStatus.fstps) > logBlock )
+	if ( ((long long int)rint(OprogStatus.fstps)) > logBlock )
 	  {
 	    OprogStatus.fstps = 1;
 	    printf("[%lld] fstps: %.6f\n\n", Oparams.curStep, OprogStatus.fstps);
 	  }
 #else
 	 printf("[%d] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
-	 if ( ((int)OprogStatus.fstps) > logBlock )
+	 if ( ((int)rint(OprogStatus.fstps)) > logBlock )
 	   {
 	     
 	     OprogStatus.fstps = 1;
