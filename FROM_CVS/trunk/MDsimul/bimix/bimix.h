@@ -17,7 +17,7 @@
 
 #define MD_HOME "./"
 /* directory to store temporary files */ 
-#define MD_SIMDAT MD_HOME "/simdat"
+#define MD_SIMDAT MD_HOME ""
 
 #ifdef MD_LOADMESH
 #define MD_MESHDIR MD_HOME "./"
