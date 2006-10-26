@@ -130,8 +130,8 @@ void press_ex(void)
 void transDiff(void)
 {
   int a, i;
-  double Drx, Dry, Drz;
-  
+  double DrSq=0.0, Drx, Dry, Drz;
+  FILE *f;  
   for (a = 0; a < 2; a++)
     {
       DrSqTot[a] = 0.0;
@@ -145,10 +145,25 @@ void transDiff(void)
       Dtrans[a] = DrSqTot[a] / ( 6.0 * ((double) Oparams.steplength) *
 	     		    ((double) Oparams.curStep) * 
 			    ((double) Oparams.parnum[a] ) );   
+      DrSq += DrSqTot[a];
       DrSqTot[a] /= ((double) Oparams.parnum[a]);
     }
-
-  printf("Dtr[0]: %.6f Dtr[1]: %.6f\n", Dtrans[0], Dtrans[1]);
+  f=fopen("msd.dat", "a");
+  fprintf(f, "%.15G %.15G\n", Oparams.steplength*Oparams.curStep, 
+	  DrSq/((double)Oparams.parnum[a]+Oparams.parnum[a]));
+  fclose(f);
+  if (Oparams.parnum[1]!=0)
+    {
+      f=fopen("msdA.dat", "a");
+      fprintf(f, "%.15G %.15G\n", Oparams.steplength*Oparams.curStep, 
+	      DrSqTot[0]/((double)Oparams.parnum[0]));
+      fclose(f);
+      f=fopen("msdB.dat", "a");
+      fprintf(f, "%.15G %.15G\n", Oparams.steplength*Oparams.curStep, 
+	      DrSqTot[1]/((double)Oparams.parnum[1]));
+      fclose(f);
+    }
+  //printf("Dtr[0]: %.6f Dtr[1]: %.6f\n", Dtrans[0], Dtrans[1]);
 }
 
 /* ============================ >>> temperat <<< =========================== */
