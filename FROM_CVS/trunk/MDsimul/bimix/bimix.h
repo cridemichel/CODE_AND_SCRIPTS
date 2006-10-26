@@ -15,16 +15,16 @@
 
 #define XTERM   "/usr/X11R6/bin/nxterm"
 
-#define MD_HOME "/home/demichel"
+#define MD_HOME "./"
 /* directory to store temporary files */ 
 #define MD_SIMDAT MD_HOME "/simdat"
 
 #ifdef MD_LOADMESH
-#define MD_MESHDIR MD_HOME "/simdat"
+#define MD_MESHDIR MD_HOME "./"
 #endif
 
-#define MD_HD_TMP MD_SIMDAT "/mdtmp/"
-#define MD_HD_MIS MD_SIMDAT "/measures/" 
+#define MD_HD_TMP MD_SIMDAT ""
+#define MD_HD_MIS MD_SIMDAT "" 
 /* directory to store measures files */
 
 #define MD_TAPE_TMP "/iomega/mdtmp/"
