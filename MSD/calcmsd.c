@@ -216,7 +216,7 @@ int main(int argc, char **argv)
 	  eventDriven = 1;
 	  storerate = atof(parval);
 	}
-      if (!strcmp(parname,"bakSaveMode"))
+      if (!strcmp(parname,"bakSavedMode"))
 	bakSaveMode = atoi(parval);
       if (!strcmp(parname,"parnum"))
 	{
