@@ -390,15 +390,18 @@ int chkBakAsciiSteps(void)
       return 0;
 
     //printf("logBlock:%d\n", logBlock);
-    cslb = Oparams.curStep % logBlock;
     retval = 0;
-#ifdef MDLLINT
-    if ( (cslb == ((long long int)rint(OprogStatus.fstps))) || (cslb == 0))
+    cslb = Oparams.curStep % logBlock;
+  #ifdef MDLLINT
+    if ( (cslb == ((long long int)rint(OprogStatus.fstps))))
 #else
-    if ( (cslb == ((int)rint(OprogStatus.fstps))) || (cslb == 0))
+    if ( (cslb == ((int)rint(OprogStatus.fstps))))
 #endif
      {
-	retval = 1;
+       if (cslb == 0)
+	 retval = 0;
+       else
+	 retval = 1;
 	/*printf("[%d]  cs mod lb: %d fsteps: %f logblock: %d\n", Oparams.curStep,
 	  Oparams.curStep % logBlock,
 	  OprogStatus.fstps, logBlock);*/
@@ -419,14 +422,14 @@ int chkBakAsciiSteps(void)
 #endif
 #ifdef MDLLINT
 	printf("[%lld] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
-	if ( ((long long int)rint(OprogStatus.fstps)) > logBlock )
+	if ( ((long long int)rint(OprogStatus.fstps)) == logBlock )
 	  {
 	    OprogStatus.fstps = 1;
 	    printf("[%lld] fstps: %.6f\n\n", Oparams.curStep, OprogStatus.fstps);
 	  }
 #else
 	 printf("[%d] fstps: %.6f\n", Oparams.curStep, OprogStatus.fstps);
-	 if ( ((int)rint(OprogStatus.fstps)) > logBlock )
+	 if ( ((int)rint(OprogStatus.fstps)) == logBlock )
 	   {
 	     OprogStatus.fstps = 1;
 	     printf("[%d] fstps: %.6f\n\n", Oparams.curStep, OprogStatus.fstps);
