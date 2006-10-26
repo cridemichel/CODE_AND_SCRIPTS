@@ -10,7 +10,7 @@ UTIL = wtdutil heteroutil bixva
 bimix:  md2asciiBM measures.o forces.o move.o init.o conjgrad.o corutil cri2fra fsk fk mediafsk basinsSerial calcdrsq calcpress calcSk calcSkAB calcSkAA calcSkBB calcSkAAallk#basins$(UTIL)
 
 link: 
-	simuln.sh $(PERC)/bimix/$(SDHDR) 0 
+	#simuln.sh $(PERC)/bimix/$(SDHDR) 0 
 	rm $(COMM)/mdsimdep.h ; ln -s $(PERC)/bimix/$(SDHDR) $(COMM)/mdsimdep.h
 
 link1: 
