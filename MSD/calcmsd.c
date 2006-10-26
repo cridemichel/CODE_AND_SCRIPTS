@@ -245,6 +245,7 @@ int main(int argc, char **argv)
     NN = 1;
   if (NN!=1)
     skip = 0;
+  
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
@@ -329,6 +330,7 @@ int main(int argc, char **argv)
 		    for (a=0; a < 3; a++)
 		      rtold[a][i] = rt[a][i];
 		}
+	      //printf("fname[%d]:%s\n", nr2, fname[nr2]);
 	      readconf(fname[nr2], &time, &refTime, NP, rt, wt, DR);
 	      if (np < points && ti[np] == -1.0)
 		{
@@ -350,11 +352,14 @@ int main(int argc, char **argv)
 		      }
 		    else
 		      {
-			if (nr2 > nr1 && fabs(dr) > L*0.5)
-			  if (dr > 0.0)
-			    adjDr[a][i] -= L;
-			  else
-			    adjDr[a][i] += L;
+			if (eventDriven)
+			  {
+			    if (nr2 > nr1 && fabs(dr) > L*0.5)
+			      if (dr > 0.0)
+				adjDr[a][i] -= L;
+			      else
+				adjDr[a][i] += L;
+			  }
 		      }
 		    //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
 		    
