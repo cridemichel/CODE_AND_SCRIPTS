@@ -312,9 +312,11 @@ int main(int argc, char **argv)
 	}
     }
   fclose(f);
+  if (!eventDriven)
+    L = cbrt(L);
   invL = 1.0/L;
  
-  printf("qui NP=%d argv=%s %s inputfile=%s\n", NP, argv[0], argv[1], inputfile);
+  printf("qui NP=%d argv=%s %s inputfile=%s L=%.15G\n", NP, argv[0], argv[1], inputfile, L);
 #if 0
   if (argc >= 2)
     qmin = atoi(argv[2]);
