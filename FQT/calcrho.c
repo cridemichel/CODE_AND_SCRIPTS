@@ -19,7 +19,10 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
   FILE *f;
   //double R[3][3];
-  int nat=0, i, cpos;
+  double dt;
+  int nat=0, i, cpos, curstp;
+  *ti = -1.0;
+
   if (!(f = fopen(fname, "r")))
     {
       printf("ERROR: I can not open file %s\n", fname);
@@ -51,6 +54,20 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	      *refTime = atof(parval);
 	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }	
+	  else if (!strcmp(parname, "curStep"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      curstp = atoi(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }	
+	  else if (!strcmp(parname, "steplength"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      dt = atof(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }
+
+
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
@@ -68,6 +85,9 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	}
 
     }
+  if (*ti == -1.0)
+    *ti = ((double)curstp)*dt;
+
   fclose(f);
 }
 #define KMODMAX 599
@@ -82,7 +102,7 @@ int mesh[][NKSHELL][3]=
 double twopi;
 void print_usage(void)
 {
-  printf("calcrho [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] [qmin] [qmax]\n");
+  printf("calcrho [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] <lista_files> [qmin] [qmax]\n");
   exit(0);
 }
 double qavg[KMODMAX];
@@ -188,7 +208,7 @@ int main(int argc, char **argv)
   FILE *f, *f2, *fA, *fB;
   DIR* dir;
   char mode[10];
-  int c2, i, ii, nr1, a;
+  int c2, i, ii, nr1, a, NP1, NP2;
   int iq, NN, maxl, nfiles, nat;
   int qmod; 
   double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
@@ -253,7 +273,17 @@ int main(int argc, char **argv)
 	}
       sscanf(line, "%[^:]:%[^\n]\n", parname, parval); 
       if (!strcmp(parname,"parnum"))
-	NP = atoi(parval);
+	{
+	  if (sscanf(parval, "%d %d ", &NP1, &NP2) < 2)
+	    {
+	      NP = atoi(parval);
+	    }
+	  else
+	    {
+	      NP = NP1+NP2;
+	      NPA = NP1;
+	    }
+	}
       else if (!strcmp(parname,"parnumA"))
 	NPA = atoi(parval);
       else if (!strcmp(parname,"NN"))
@@ -311,8 +341,7 @@ int main(int argc, char **argv)
     NN = 1;
 
   //printf("maxnp=%d points=%d\n",maxnp, points);
-  printf("qmin = %d qmax=%d\n", qmin, qmax);
-  if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
+ if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
   else if ((B0 > A0 && B0 > C0) || (B0 < A0 && B0 < C0))
     assez = 1;
@@ -320,7 +349,11 @@ int main(int argc, char **argv)
     assez = 2;
   if (NPA == -1)
     NPA = NP;
-  if (eventDriven)
+  if (NPA==NP)
+    printf("[MONODISPERSE] NP=%d qmin = %d qmax=%d\n", NP, qmin, qmax);
+  else
+    printf("[MIXTURE] NP=%d NPA=%d qmin = %d qmax=%d\n", NP, NPA, qmin, qmax);
+   if (eventDriven)
     printf("[ED] Event-Driven simulation\n");
   else
     printf("[MD] Time-Driven simulation\n");
