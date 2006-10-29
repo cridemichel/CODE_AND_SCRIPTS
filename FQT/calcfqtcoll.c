@@ -259,20 +259,24 @@ int main(int argc, char **argv)
     tiall[ii] = -1.0;
   first = 0;
   fclose(f2);
-
   for (nq = qmin; nq <= qmax; nq++)
     {
       for (i=0; i < MAXQ; i++)
 	for (ii=0; ii < points; ii++)
 	  {
-	    CAA[i][ii] = CBB[i][ii] = CAB[i][ii] = CBA[i][ii] = 0.0;
+	    CAA[i][ii] = 0.0; 
+	    if (comps==2)
+	      CBB[i][ii] = CAB[i][ii] = CBA[i][ii] = 0.0;
 	    cc[i][ii] = 0;
 	  }
       fprintf(stderr, "nq=%d\n", nq);
-      for (c = 0; c < 2; c++)
+      for (c = 0; c < comps; c++)
 	{
 	  c2 = 0;
-	  sprintf(fname[0], "RHOTMP%c/ro.00.k=%03d", AB[c],nq);
+	  if (comps==2)
+	    sprintf(fname[0], "RHOTMP%c/ro.00.k=%03d", AB[c],nq);
+	  else
+	    sprintf(fname[0], "RHOTMP/ro.00.k=%03d", nq);
 	  //printf("Opening fname=%s\n", fname[0]);
 	  f2 = fopen(fname[0], "r");
 	  while (!feof(f2))
@@ -304,7 +308,7 @@ int main(int argc, char **argv)
 	{	
 	  for (i=0; i < NQ; i++)
 	    {
-	      for (c = 0; c < 2; c++)
+	      for (c = 0; c < comps; c++)
 		{
 		  rhoR0[c][i] = rhoRt[c][i][nr1];
 		  rhoI0[c][i] = rhoIt[c][i][nr1]; 
@@ -328,7 +332,7 @@ int main(int argc, char **argv)
 		  for (i=0; i < NQ; i++) 
 		    {
 		      //printf("i=%d NQ=%d rhoRtp=%f rhoItp=%f\n", i, NQ, rhoRtp[i][nr2], rhoItp[i][nr2]);
-		      for (c=0; c < 2; c++)
+		      for (c=0; c < comps; c++)
 			{
 			  rhoR1[c][i] = rhoRt[c][i][nr2];
 			  rhoI1[c][i] = rhoIt[c][i][nr2];
