@@ -182,7 +182,7 @@ int main(int argc, char** argv)
 	    {
 	      fscanf(f, "%lf\n", &L);
 	      invL = 1.0/L;
-	      printf("qui\n");
+	      //printf("qui\n");
 	    }
 	  else
 	    {
