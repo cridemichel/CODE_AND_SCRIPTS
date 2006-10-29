@@ -356,7 +356,6 @@ int main(int argc, char **argv)
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
-
   printf("qmin=%d qmax=%d invL=%.15G NN=%d points=%d\n", qmin, qmax, invL, NN, points);
   //printf("maxnp=%d points=%d\n",maxnp, points);
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
@@ -371,7 +370,15 @@ int main(int argc, char **argv)
     printf("[ED] Event-Driven simulation\n");
   else
     printf("[MD] Time-Driven simulation\n");
- 
+  if (NP==NPA)
+    {
+      printf("[MONODISPERSE] NP=%d\n", NP);
+    }
+  else
+    {
+      printf("[MIXTURE] NP=%d NPA=%d\n", NP, NPA);
+    }
+
   //fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
   for (qmod = qmin; qmod <= qmax; qmod++)
     {
@@ -474,8 +481,11 @@ int main(int argc, char **argv)
 			}
 	    	      sqReA[qmod][np] += sumReA;
     		      sqImA[qmod][np] += sumImA;
-		      sqReB[qmod][np] += sumReB;
-		      sqImB[qmod][np] += sumImB;
+		      if (NPA < NP)
+			{
+			  sqReB[qmod][np] += sumReB;
+			  sqImB[qmod][np] += sumImB;
+			}
 		      cc[qmod][np] += 1.0;
 		    }
 		  //printf("cc[%d][%d]=%.15G sqre=%.15G sqim=%.15G\n", qmod, np, cc[qmod][np],
