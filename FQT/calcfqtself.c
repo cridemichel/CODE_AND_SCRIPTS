@@ -298,7 +298,7 @@ int main(int argc, char **argv)
 	  storerate = atof(parval);
 	  eventDriven = 1;
 	}
-      else if (!strcmp(parname,"bakSaveMode"))
+      else if (!strcmp(parname,"bakSavedMode"))
 	bakSaveMode = atoi(parval);
       else if (!strcmp(parname, "a"))
        	{
@@ -357,7 +357,7 @@ int main(int argc, char **argv)
   if (points > maxnp)
     points = maxnp;
 
-  printf("qmin=%d qmax=%d invL=%.15G\n", qmin, qmax, invL);
+  printf("qmin=%d qmax=%d invL=%.15G NN=%d points=%d\n", qmin, qmax, invL, NN, points);
   //printf("maxnp=%d points=%d\n",maxnp, points);
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
