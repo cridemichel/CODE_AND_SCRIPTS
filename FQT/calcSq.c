@@ -170,7 +170,7 @@ int main(int argc, char** argv)
 		      NA = NP1;
 		    }
 		}
-	      else if (!strcmp(parname, "storerate"))
+	      else if (!strcmp(parname, "time"))
 		eventDriven = 1;
 	    }
 	  while (strcmp(line,"@@@"));
@@ -182,6 +182,7 @@ int main(int argc, char** argv)
 	    {
 	      fscanf(f, "%lf\n", &L);
 	      invL = 1.0/L;
+	      printf("qui\n");
 	    }
 	  else
 	    {
@@ -311,6 +312,10 @@ int main(int argc, char** argv)
 	printf("[MIXTURE N=%d NA=%d] ", N, NA);
       else 
 	printf("[MONODISPERSE] ");
+      if (eventDriven)
+	printf("[ED] ");
+      else
+	printf("[MD]");
       printf("nf=%d twopi=%.15G N=%d invL=%.15G invNm:%.15G qmin: %d qmax: %d\n", nf, twopi, N, invL, invNm,
 	     qmin, qmax);
       if (NA == N)
