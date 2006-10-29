@@ -233,7 +233,7 @@ int main(int argc, char **argv)
 #endif 
   for (i=0; i < MAXQ; i++)
     {
-      for ( c = 0; c < 2; c++)
+      for ( c = 0; c < comps; c++)
 	{
 	  rhoRt[c][i] = malloc(sizeof(double)*nlines);
 	  rhoIt[c][i] = malloc(sizeof(double)*nlines);
