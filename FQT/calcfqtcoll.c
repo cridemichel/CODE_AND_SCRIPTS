@@ -31,7 +31,7 @@ int qmin, qmax, points=-1, comps=2;
 char AB[2]={'A','B'};
 void print_usage(void)
 {
-  printf("calcfqtcoll [--qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] <lista_files> [qmin] [qmax] [points]\n");
+  printf("calcfqtcoll [--qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] [qmin] [qmax] [points]\n");
   printf("where points is the number of points of the correlation function\n");
   exit(0);
 }

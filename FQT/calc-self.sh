@@ -1,7 +1,7 @@
 #!/bin/bash
 #normalmente se i file ci sono già non ricalcola le varie grandezze ma si puo' forzare il ricalcolo
 FORCE_MSD=0
-FORCE_FQSELF=0
+FORCE_FQSELF=1
 FORCE_SQ=0
 FORCE_CN=0
 FORCE=0
@@ -80,6 +80,8 @@ ONESTORE=`ls Store-*-*gz| tail -1`
 NN=`cat $ONESTORE | gunzip -c | awk -F : '{if ($1=="NN") print $2}'` 
 fi
 NPTS=`echo "$NN*60"| bc`
+#echo "NPTS=" $NPTS
+#exit
 if [ "$L" != "" ]
 then
 gunzip -f Store*gz

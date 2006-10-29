@@ -293,7 +293,7 @@ int main(int argc, char **argv)
 	  storerate = atof(parval);
 	  eventDriven = 1;
 	}
-      else if (!strcmp(parname,"bakSaveMode"))
+      else if (!strcmp(parname,"bakSavedMode"))
 	bakSaveMode = atoi(parval);
       else if (!strcmp(parname, "a"))
        	{
@@ -316,7 +316,7 @@ int main(int argc, char **argv)
     L = cbrt(L);
   invL = 1.0/L;
  
-  printf("qui NP=%d argv=%s %s inputfile=%s L=%.15G\n", NP, argv[0], argv[1], inputfile, L);
+  printf("qui NP=%d bakSaveMode=%d inputfile=%s L=%.15G\n", NP, bakSaveMode, inputfile, L);
 #if 0
   if (argc >= 2)
     qmin = atoi(argv[2]);
