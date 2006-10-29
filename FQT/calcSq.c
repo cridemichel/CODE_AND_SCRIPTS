@@ -298,7 +298,7 @@ int main(int argc, char** argv)
 	    	  SqAA[qmod] = SqAB[qmod] = SqBB[qmod] = 0.0;
 		}
 	    }
-	  first = 0;
+	  //first = 0;
 	}
       invNm = 1.0 / ((double)N);
       if (NA < N)
@@ -307,17 +307,20 @@ int main(int argc, char** argv)
 	  invNmBB = 1.0/((double)N-NA);
 	  invNmAB = 1.0/sqrt(((double)N-NA)*((double)NA));
 	}
-      
-      if (NA < N)
-	printf("[MIXTURE N=%d NA=%d] ", N, NA);
-      else 
-	printf("[MONODISPERSE] ");
-      if (eventDriven)
-	printf("[ED] ");
-      else
-	printf("[MD]");
-      printf("nf=%d twopi=%.15G N=%d invL=%.15G invNm:%.15G qmin: %d qmax: %d\n", nf, twopi, N, invL, invNm,
-	     qmin, qmax);
+      if (first)
+	{
+	  if (NA < N)
+	    printf("[MIXTURE N=%d NA=%d] ", N, NA);
+	  else 
+	    printf("[MONODISPERSE] ");
+	  if (eventDriven)
+	    printf("[ED] ");
+	  else
+	    printf("[MD]");
+	  printf("twopi=%.15G N=%d invL=%.15G invNm:%.15G qmin: %d qmax: %d\n", twopi, N, invL, invNm,
+		 qmin, qmax);
+	  first = 0;
+	}
       if (NA == N)
 	{
 	  for(n = qmin; n <= qmax; n++)
