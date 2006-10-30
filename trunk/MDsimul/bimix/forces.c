@@ -558,6 +558,8 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 #ifdef SOFT_SPHERE
   int PP;
   double Epsab4;
+#elif defined(NM_SPHERE)
+  double vabNN, vabMM, factor, sigmaFactorSq[NA][NA];
 #endif
 #ifdef MD_GRAVITY
   const double g = 9.81;/**(1E10/(0.5E12*0.5E12));*//* g in unità ridotte!*/
@@ -578,6 +580,9 @@ void LJForce(COORD_TYPE epsab[NA][NA],
    NOTE: We refer to ab-quantities as all bidimensional arrays 
          that depend upon atoms pair(e.g. 'Vab[a][b]' is a 'ab'-variable, 
 	 instead 'sigab[a][b]' is an ab-constant */
+#ifdef NM_SPHERE
+  factor = pow(2.0,1.0/6.0);
+#endif
 
   loop(a, 1, NA)
     {
@@ -587,14 +592,22 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	  rcutab[a][b] = rcut * sigab[a][b];
 	  rcutabSq[a][b] = Sqr(rcutab[a][b]);
 	  sigabSq[a][b] = Sqr(sigab[a][b]);
+#ifdef NM_SPHERE
+	  epsab4[a][b] = epsab[a][b] / (((double) Oparams.NN) - ((double)Oparams.MM));
+	  epsab24[a][b] = 6.0 * epsab[a][b] / (((double) Oparams.NN) - ((double)Oparams.MM));
+	  sigmaFactorSq[a][b] = Sqr(sigab[a][b]*factor);
+#else
 	  epsab4[a][b] = 4.0 * epsab[a][b];
 	  epsab24[a][b] = 24.0 * epsab[a][b];
+#endif
 	  srab2   = sigabSq[a][b] / rcutabSq[a][b];
 	  srab6   = srab2 * srab2 * srab2;
 	  srab12  = Sqr(srab6);
 #ifdef SOFT_SPHERE
 	  /* metterci il valore esatto eventualmente se si vuole la continuita'
 	     nella forza al cutoff */
+	  dvdr[a][b] = 0.0;
+#elif defined(NM_SPHERE)
 	  dvdr[a][b] = 0.0;
 #else	  
 	  dvdr[a][b] = epsab24[a][b] * (srab6 - 2.0 * srab12) / rcutab[a][b];
@@ -736,6 +749,32 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	  fxab  = fab * rxab;         
 	  fyab  = fab * ryab;
 	  fzab  = fab * rzab;
+#elif defined(NM_SPHERE)
+	  srab2 = sigmaFactorSq[a][b] / rabSq;
+	  vabNN = ((double)Oparams.MM)*pow(srab2, ((double)Oparams.NN)/2.0);
+	  vabMM = -((double)Oparams.NN)*pow(srab2, ((double)Oparams.MM)/2.0);
+	  vab = vabNN + vabMM;
+  	  wab = ((double)Oparams.NN)*vabNN + ((double)Oparams.MM)*vabMM ;
+	  Vab[a][b] += vab;
+	  Wab[a][b] += wab;
+	  fab   = epsab4[a][b] * wab / rabSq;
+	  /* force between two atoms */
+	  fxab  = fab * rxab;         
+	  fyab  = fab * ryab;
+	  fzab  = fab * rzab;
+#elif defined(SOFT_SPHERE)
+	  srab2 = sigabSq[a][b] /rabSq;
+	  vabNN = pow(srab2, ((double)Oparams.NN)/2.0);
+	  vabMM = -pow(srab2, ((double)Oparams.MM)/2.0);
+	  vab = vabNN + vabMM;
+	  wab = ((double)Oparams.NN)*vabNN - ((double)Oparams.MM)*vabMM ;
+	  Vab[a][b] += vab;
+	  Wab[a][b] += wab;
+	  fab   = epsab4[a][b] * wab / rabSq;
+	  /* force between two atoms */
+	  fxab  = fab * rxab;         
+	  fyab  = fab * ryab;
+	  fzab  = fab * rzab;
 #else
 	  srab2   = sigabSq[a][b] / rabSq;
 	  srab6   = srab2 * srab2 * srab2;
@@ -812,6 +851,24 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	  V  = V + Vab[a][b]  * epsab4[a][b];
 	  Vc = Vc + Vcab[a][b] * epsab4[a][b];
 	  W  = W + Wab[a][b] * epsab4[a][b] / 3.0;
+	}
+    }
+#elif defined(NM_SPHERE)
+ for (a = 0; a < NA; a++)
+   for (b = 0; b < NA; b++)
+     {
+       srab2 = sigmaFactorSq[a][b] / rcutabSq[a][b];
+       vabCut = ((double)Oparams.MM)*pow(srab2, Oparams.NN/2.0)-((double)Oparams.NN)*pow(srab2,Oparams.MM/2.0);
+       Vcab[a][b] = Vab[a][b] - ((double)ncut[a][b]) * vabCut;
+     }
+ /* MULTIPLY FOR ENERGY FACTORS */
+  loop(a, 1, NA)
+    {
+      loop(b, 1, NA) 
+	{
+	  V  = V + Vab[a][b]  * epsab4[a][b];
+	  Vc = Vc + Vcab[a][b] * epsab4[a][b];
+	  W  = W + Wab[a][b]  * epsab24[a][b] / 3.0;
 	}
     }
 
