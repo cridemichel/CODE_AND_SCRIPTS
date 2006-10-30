@@ -291,7 +291,7 @@ int main(int argc, char **argv)
 	}
       else if (!strcmp(parname,"parnumA"))
 	NPA = atoi(parval);
-      else if (!strcmp(parname,"NN"))
+      else if (nat==0 && !strcmp(parname,"NN"))
 	NN = atoi(parval);
       else if (!strcmp(parname,"storerate"))
 	{
