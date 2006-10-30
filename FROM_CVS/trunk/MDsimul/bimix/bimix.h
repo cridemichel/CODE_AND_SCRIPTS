@@ -375,7 +375,10 @@ struct params
 #ifdef SOFT_SPHERE
   int PP; 
 #endif
-
+#ifdef NM_SPHERE
+  int NN;
+  int MM;
+#endif
   COORD_TYPE tol;               /* Tolerance of the shake algoritm used 
 				   by RATTLE */
   /* questi li ho messi per poter leggere i .cor file prodotti 
@@ -494,6 +497,11 @@ struct pascii opar_ascii[]=
 #ifdef SOFT_SPHERE
   {"PP",                &OP(PP),                          1,   1,  "%d"},
 #endif
+#ifdef NM_SPHERE
+  {"NN",                &OP(NN),                          1,   1,  "%d"},
+  {"MM",                &OP(MM),                          1,   1,  "%d"},
+#endif
+ 
   {"rcut",              &OP(rcut),                        1,   1, "%.8G"},
   {"sigma",             OP(sigab),                        2,   2, "%.8G"},
   {"epsilon",           OP(epsab),                        2,   2, "%.8G"},
@@ -646,6 +654,10 @@ struct singlePar OsinglePar[] = {
   {"tapping",    &OprogStatus.tapping,      INT},
   {"taptau",     &OprogStatus.taptau,       INT},
   {"taptol",     &OprogStatus.taptol,       CT},
+#endif
+#ifdef NM_SPHERE
+  {"N",          &Oparams.NN,               INT},
+  {"M",          &Oparams.MM,               INT},
 #endif
   {"rcut",       &Oparams.rcut,             CT},
   {"atomsDist",  &Oparams.d,                CT},

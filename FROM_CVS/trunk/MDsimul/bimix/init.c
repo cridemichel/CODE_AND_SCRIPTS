@@ -528,7 +528,10 @@ void usrInitBef(void)
   Oparams.M = 5; /* cells in each direction for linked lists */
   Oparams.d = 0.025;
   Oparams.tol = 0.0000001;
-  
+#ifdef NM_SPHERE
+  Oparams.NN = 12;
+  Oparams.MM = 6;
+#endif
   OprogStatus.Q = 1.0;  /* Default value of the parameter of the Nose method */
   OprogStatus.Nose = 1; /* Use nose method by default */ 
   OprogStatus.W = 0.0027;
