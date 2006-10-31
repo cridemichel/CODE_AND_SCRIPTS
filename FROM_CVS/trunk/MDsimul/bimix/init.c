@@ -537,6 +537,7 @@ void usrInitBef(void)
   OprogStatus.W = 0.0027;
   OprogStatus.avVol = 0.0;
   OprogStatus.avs   = 0.0;
+  OprogStatus.eqFact = 1.0; 
   OprogStatus.tolVol = 0.0001;
   OprogStatus.tols  = 0.001;
   OprogStatus.tolVol1 = 0.1;

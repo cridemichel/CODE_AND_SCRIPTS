@@ -330,6 +330,7 @@ struct progStatus
   int NN;         /* Logatithmic block length */
   double fstps;         /* There are KK block each base^NN long */
   char nRun[132];
+  double eqFact;
   /* ======================================================================= */
 };
 
@@ -671,6 +672,7 @@ struct singlePar OsinglePar[] = {
   {"tmpPath",    OprogStatus.tmpPath,       STR},
   {"misPath",    OprogStatus.misPath,       STR},
 
+  {"eqFact",     &OprogStatus.eqFact,        CT},
   {"base",       &OprogStatus.base,         CT},
   {"NN",         &OprogStatus.NN,           INT},
   {"nRun",       OprogStatus.nRun,         STR},
