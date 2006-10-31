@@ -920,7 +920,7 @@ int check_equibrat(void)
     }
   /* Qui si è scelto come criterio di equilibratura che le particelle
    * si siano spostate in media più di 1 sigma */
-  if (DrSq[0] > Oparams.sigab[0][0])
+  if (DrSq[0] > OprogStatus.eqFact*Oparams.sigab[0][0])
     return 1;
   else 
     return 0;
@@ -1090,8 +1090,9 @@ void move(void)
 	  ENDSIM = 1;
 	}
 #else
-      mdPrintf(ALL, "All systems reached equilibrium, simulation completed",
-	       NULL);
+      if (OprogStatus.equilibrated)
+	mdPrintf(ALL, "All systems reached equilibrium, simulation completed",
+		 NULL);
       ENDSIM = OprogStatus.equilibrated;
 #endif
     }
