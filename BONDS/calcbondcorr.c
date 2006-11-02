@@ -295,7 +295,7 @@ double distance(int i, int j)
   int a, b;
   int maxa=0, maxb=0;
   double imgx, imgy, imgz;
-  double Dx, Dy, Dz, sigmaStickSq;
+  double Dx, Dy, Dz, sigmaStickySq;
   Dx = rat[0][0][i] - rat[0][0][j];
   Dy = rat[0][1][i] - rat[0][1][j];
   Dz = rat[0][2][i] - rat[0][2][j];
@@ -310,7 +310,7 @@ double distance(int i, int j)
     {
       maxa = MD_STSPOTS_A;
       maxb = MD_STSPOTS_B;
-      sigmaStickSq = Sqr(sigmaSticky); 
+      sigmaStickySq = Sqr(sigmaSticky); 
     }
   else if (particles_type == 0)
     {
@@ -334,7 +334,7 @@ double distance(int i, int j)
 	  maxa = 3;
 	  maxb = 2;
 	}
-      sigmaStickSq = Sqr(sigmaSticky); 
+      sigmaStickySq = Sqr(sigmaSticky); 
     }
   else if (particles_type == 2) 
     {
@@ -342,21 +342,22 @@ double distance(int i, int j)
       maxb = 1;
       if (i < NPA && j >= NPA)
 	{
-	  sigmaStickSq = Sqr(maxsaxAB);
+	  sigmaStickySq = Sqr(maxsaxAB);
 	}
       else if (i < NPA && j < NPA)
 	{
-	  sigmaStickSq = Sqr(maxsaxAA);
+	  sigmaStickySq = Sqr(maxsaxAA);
 	}
       else if (i >= NPA && j >= NPA)
 	{
-	  sigmaStickSq = Sqr(maxsaxBB);
+	  sigmaStickySq = Sqr(maxsaxBB);
 	}
       else
 	{
-	  sigmaStickSq = Sqr(maxsaxAB);
+	  sigmaStickySq = Sqr(maxsaxAB);
 	}
     }
+  //printf("sigmaStickySq=%.15G\n", sigmaStickySq);
   for (a = 1; a < maxa+1; a++)
     {
       for (b = 1; b < maxb+1; b++)
@@ -367,7 +368,7 @@ double distance(int i, int j)
 	  //printf("[DISTANCE] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + imgz -rat[b][2][j])));
 	 
 	  if (Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j])
-	      +Sqr(rat[a][2][i] + imgz -rat[b][2][j]) < Sqr(sigmaSticky))	  
+	      +Sqr(rat[a][2][i] + imgz -rat[b][2][j]) < sigmaStickySq)	  
 		return -1;
 	}
     }
