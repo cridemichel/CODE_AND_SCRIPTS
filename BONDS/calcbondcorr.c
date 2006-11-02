@@ -846,16 +846,19 @@ int main(int argc, char **argv)
       maxsax = fabs(maxax1)+fabs(maxax0)+2.0*sigmaSticky;
       //printf("maxsax=%.15G\n", maxsax);
     }
-  else if (particles_type = 2)
+  else if (particles_type == 2)
     {
       maxsaxAA = sigmaAA+deltaAA;
       maxsaxAB = sigmaAB+deltaAB;
       maxsaxBB = sigmaBB+deltaBB;
       maxsax = sigmaAA + deltaAA;
-      if (sigmaAB+deltaAB > maxsax)
-	maxsax = sigmaAB+deltaAB;
-      if (sigmaBB+deltaBB > maxsax)
-	maxsax = sigmaBB+deltaBB;
+      if (NPA < NP)
+	{
+	  if (sigmaAB+deltaAB > maxsax)
+	    maxsax = sigmaAB+deltaAB;
+	  if (sigmaBB+deltaBB > maxsax)
+	    maxsax = sigmaBB+deltaBB;
+	}
     }
   else
     {
@@ -890,6 +893,8 @@ int main(int argc, char **argv)
   if (particles_type == 2)
     {
       printf("SYSTEM: SQUARE WELL BIMIX\n");
+      printf("delta: %.15G %.15G %.15G sigma: %.15G %.15G %.15G maxsax:%.15G\n ", deltaAA, deltaAB, deltaBB,
+	     sigmaAA, sigmaAB, sigmaBB, maxsax);
     }
   else
     {
@@ -898,7 +903,7 @@ int main(int argc, char **argv)
   if (NPA != NP)
     printf("[MIXTURE] files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", nfiles, NP, NPA, L, NN, maxl);
   else
-    printf("[MONODISPERE] files=%d NP = %d L=%.15G NN=%d maxl=%d\n", nfiles, NP, L, NN, maxl);
+    printf("[MONODISPERSE] files=%d NP = %d L=%.15G NN=%d maxl=%d\n", nfiles, NP, L, NN, maxl);
 
   c2 = 0;
   JJ = 0;
@@ -924,6 +929,7 @@ int main(int argc, char **argv)
 	{
 	  for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
 	    {
+	      printf("nr1=%d nr2=%d\n", nr1, nr2);
 	      /* N.B. considera NN punti in maniera logaritmica e poi calcola i punti in maniera lineare 
 	       * distanziati di NN punti. */
               np = (JJ == 0)?nr2-nr1:NN-1+JJ;	      
