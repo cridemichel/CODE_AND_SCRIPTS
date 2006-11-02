@@ -675,11 +675,12 @@ void find_bonds(int *numbonds, int **bonds, double *eneO)
     }
   *eneO = ene;
 }
-int exist_bond(int na, int n, int a, int b, int *numbonds, int **bonds)
+int exist_bond(int na, int n, int *numbonds, int **bonds)
 {
   int i;
   for (i = 0; i < numbonds[na]; i++)
-    if (bonds[na][i] == n*(NA*NA)+a*NA+b)
+    if (bonds[na][i] == n)
+      //if (bonds[na][i] == n*(NA*NA)+a*NA+b)
       return 1;
   return 0;
 }
@@ -962,18 +963,19 @@ int main(int argc, char **argv)
 		{
 		  for (nb = 0; nb < numbondst[i]; nb++)
 		    {
-		      j = bondst[nb][i] / NA;
-		      jj2 = bondst[nb][i] % (NA*NA);
-		      a = jj2 / NA; 
-		      b = jj2 % NA;
+		      j = bondst[i][nb];
+		      //j = bondst[nb][i] / NA;
+		      //jj2 = bondst[nb][i] % (NA*NA);
+		      //a = jj2 / NA; 
+		      //b = jj2 % NA;
 		      if (i < NPA)
 			{
-			  if (exist_bond(i, a, j, b, numbonds0, bonds0))
+			  if (exist_bond(i, j, numbonds0, bonds0))
 			    Fb[0][np] += 1.0;  
 			}
 		      else
 			{
-			  if (exist_bond(i, a, j, b, numbonds0, bonds0))
+			  if (exist_bond(i, j, numbonds0, bonds0))
 			    Fb[1][np] += 1.0;
 			}
 		    }
@@ -995,13 +997,15 @@ int main(int argc, char **argv)
     {
       Fb[0][ii] /= ((double)cc[ii]);
     }
+#if 0
   for (ii=0; ii < points; ii++)
     {
       Fb[0][ii] /=  Fb[0][0];
     }
-  for (ii=0; ii < points; ii++)
+#endif
+  for (ii=1; ii < points; ii++)
     {
-      fprintf(f, "%.15G %.15G\n", ti[ii], Fb[0][ii]);
+      fprintf(f, "%.15G %.15G\n", ti[ii]-ti[0], Fb[0][ii]/Fb[0][0], Fb[0][ii]);
     }
   fclose(f);
   if (NPA < NP)
@@ -1011,13 +1015,15 @@ int main(int argc, char **argv)
 	{
 	  Fb[1][ii] /= ((double)cc[ii]);
 	}
+#if 0
       for (ii=0; ii < points; ii++)
 	{
 	  Fb[1][ii] /=  Fb[1][0];
 	}
-      for (ii=0; ii < points; ii++)
+#endif
+      for (ii=1; ii < points; ii++)
 	{
-	  fprintf(f, "%.15G %.15G\n", ti[ii], Fb[1][ii]);
+	  fprintf(f, "%.15G %.15G\n", ti[ii]-ti[0], Fb[1][ii]/Fb[1][0], Fb[1][ii]);
 	}
       fclose(f);
     }
