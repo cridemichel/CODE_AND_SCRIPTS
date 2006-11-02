@@ -14,7 +14,8 @@ char **fname;
 double *DR0[3], pi, time, *ti, *r0[3], *r1[3], L, refTime, *R[3][3], maxsax, maxax0, maxax1, maxsaxAA, 
        maxsaxAB, maxsaxBB, RCUT;
 double sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
-       Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
+       Dr, theta, sigmaSticky, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0,
+       deltaAA=-1.0, deltaBB=-1.0, deltaAB=-1.0;
 int *inCell[3]={NULL,NULL,NULL}, *cellList=NULL, cellsx, cellsy, cellsz;
 double *Fb[2], shift[3];
 int *numbondst, **bondst, *numbonds0, **bonds0;
@@ -237,6 +238,13 @@ void BuildAtomPos32(int i, double rO[3], double R[3][3], double rat[5][3])
     BuildAtomPosAt32(i, a, rO, R, rat[a]);
 }
 
+void BuildAtomPosSQ(int i, double rO[3], double rat[1][3])
+{
+  int a;
+  for (a = 0; a < 3; a++)
+    rat[1][a] = rO[a];
+}
+
 void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
@@ -266,7 +274,7 @@ int check_distance(int i, int j, double Dx, double Dy, double Dz)
     {
       ma = maxsax;
     }
-  else if (particles_type == 0)
+  else if (particles_type == 0 || particles_type == 2)
     {
       if (i < NPA && j < NPA)
 	ma = maxsaxAA;
@@ -287,8 +295,7 @@ double distance(int i, int j)
   int a, b;
   int maxa=0, maxb=0;
   double imgx, imgy, imgz;
-  double Dx, Dy, Dz;
-
+  double Dx, Dy, Dz, sigmaStickSq;
   Dx = rat[0][0][i] - rat[0][0][j];
   Dy = rat[0][1][i] - rat[0][1][j];
   Dz = rat[0][2][i] - rat[0][2][j];
@@ -303,6 +310,7 @@ double distance(int i, int j)
     {
       maxa = MD_STSPOTS_A;
       maxb = MD_STSPOTS_B;
+      sigmaStickSq = Sqr(sigmaSticky); 
     }
   else if (particles_type == 0)
     {
@@ -325,6 +333,28 @@ double distance(int i, int j)
 	{
 	  maxa = 3;
 	  maxb = 2;
+	}
+      sigmaStickSq = Sqr(sigmaSticky); 
+    }
+  else if (particles_type == 2) 
+    {
+      maxa = 1;
+      maxb = 1;
+      if (i < NPA && j >= NPA)
+	{
+	  sigmaStickSq = Sqr(maxsaxAB);
+	}
+      else if (i < NPA && j < NPA)
+	{
+	  sigmaStickSq = Sqr(maxsaxAA);
+	}
+      else if (i >= NPA && j >= NPA)
+	{
+	  sigmaStickSq = Sqr(maxsaxBB);
+	}
+      else
+	{
+	  sigmaStickSq = Sqr(maxsaxAB);
 	}
     }
   for (a = 1; a < maxa+1; a++)
@@ -363,87 +393,10 @@ int check_distanceR(int i, int j, int imgix, int imgiy, int imgiz,
     }
 }
 #endif
-double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
-		  int imgjx, int imgjy, int imgjz, double Lbig)
-{
-  int a, b, maxa=0, maxb=0;
-  double imgx, imgy, imgz;
-  double Dx, Dy, Dz, dx, dy, dz;
-  if (particles_type == 1)
-    {
-      if (i < NPA)
-	{
-	  maxa = MD_STSPOTS_A;
-	  maxb = MD_STSPOTS_B;
-	}
-      else
-	{
-	  maxa = MD_STSPOTS_B;
-	  maxb = MD_STSPOTS_A;
-	}
-    }
-  else if (particles_type == 0)
-    {
-      if (i < NPA && j >= NPA)
-	{
-	  maxa = 2;
-	  maxb = 3;
-	}
-      else if (i < NPA && j < NPA)
-	{
-	  maxa = 2;
-	  maxb = 2;
-	}
-      else if (i >= NPA && j >= NPA)
-	{
-	  maxa = 3; 
-	  maxb = 3;
-	}
-      else
-	{
-	  maxa = 3;
-	  maxb = 2;
-	}
-    }
-
-  dx = L*(imgix-imgjx);
-  dy = L*(imgiy-imgjy);
-  dz = L*(imgiz-imgjz);
-  Dx = rat[0][0][i] - rat[0][0][j] + dx;
-  Dy = rat[0][1][i] - rat[0][1][j] + dy;
-  Dz = rat[0][2][i] - rat[0][2][j] + dz;
-  imgx = -Lbig*rint(Dx/Lbig);
-  imgy = -Lbig*rint(Dy/Lbig);
-  imgz = -Lbig*rint(Dz/Lbig);
-
-  if (check_distance(i, j, Dx + imgx, Dy + imgy, Dz + imgz))
-    return 1;
-  //printf("i=%d j=%d rat[][0][i]=%.15G,%.15G\n", i, j, rat[1][0][i], rat[2][0][i]);
-  for (a = 1; a < maxa+1; a++)
-    {
-      for (b = 1; b < maxb+1; b++)
-	{
-	  //printf("[DISTANCER] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + dx + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + dy + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + dz + imgz -rat[b][2][j])));
-	  if (Sqr(rat[a][0][i] + dx + imgx - rat[b][0][j])+Sqr(rat[a][1][i] + dy + imgy - rat[b][1][j])
-	      + Sqr(rat[a][2][i] + dz + imgz - rat[b][2][j]) < Sqr(sigmaSticky))	  
-		return -1;
-	}
-    }
-  return 1;
-}
-
 
 int bond_found(int i, int j)
 {
   if (distance(i, j) < 0.0)
-    return 1;
-  else
-    return 0;
-}
-int bond_foundR(int i, int j, int imgix, int imgiy, int imgiz,
-		int imgjx, int imgjy, int imgjz, double Lbig)
-{
-  if (distanceR(i, j, imgix, imgiy, imgiz, imgjx, imgjy, imgjz, Lbig) < 0.0)
     return 1;
   else
     return 0;
@@ -520,10 +473,14 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  for (i = 0; i < NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
-	      sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %[^\n]\n", 
-    		     &r[0][i], &r[1][i], &r[2][i], 
-		     &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
-		     &R[2][0][i], &R[2][1][i], &R[2][2][i], dummy); 
+	      if (particles_type == 2)
+		sscanf(line, "%lf %lf %lf\n", 
+		       &r[0][i], &r[1][i], &r[2][i]); 
+	      else
+		sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %[^\n]\n", 
+		       &r[0][i], &r[1][i], &r[2][i], 
+		       &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
+		       &R[2][0][i], &R[2][1][i], &R[2][2][i], dummy); 
 	      //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
 	    
 	    }
@@ -659,6 +616,10 @@ void find_bonds(int *numbonds, int **bonds, double *eneO)
 			      (i >= NPA && j < NPA))
 			    continue;
 			  break;
+		       	case 2:
+	    		  if (j <= i) 
+    			    continue;
+			  break;
 			}
 		      if (bond_found(i, j))  
 			{
@@ -702,6 +663,9 @@ void build_spots_positions(double *r0[3], double *R[3][3])
 	BuildAtomPos(i, r0L, RL, ratL);
       else if (particles_type == 0)
 	BuildAtomPos32(i, r0L, RL, ratL);
+      else if (particles_type == 2) 
+	BuildAtomPosSQ(i, r0L, ratL);
+
       for (a = 0; a < NA; a++)
 	for (b = 0; b < 3; b++)
 	  rat[a][b][i] = ratL[a][b];
@@ -798,6 +762,8 @@ int main(int argc, char **argv)
 	sscanf(parval, "%lf %lf %lf %lf\n", &sigmaAA, &sigmaAB, &sigmaAB, &sigmaBB);	
       else if (nat==1 && !strcmp(parname,"sigmaSticky"))
 	sigmaSticky = atof(parval);
+      else if (nat==1 && !strcmp(parname,"delta"))
+	sscanf(parval, "%lf %lf %lf %lf\n", &deltaAA, &deltaAB, &deltaAB, &deltaBB);	
       else if (nat==1 && !strcmp(parname,"theta"))
 	theta = atof(parval);
       else if (nat==1 && !strcmp(parname,"Dr"))
@@ -832,8 +798,12 @@ int main(int argc, char **argv)
   else if ((C0 > A0 && C0 > B0) || (C0 < A0 && C0 < B0))
     assez = 2;
   if (sigmaAA != -1.0)
-    particles_type = 0;
-
+    {
+      if (deltaAA == -1.0)
+	particles_type = 0;
+      else
+	particles_type = 2; /* bimixhs */
+    }
   if (NPA == -1)
     NPA = NP;
   //fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
@@ -876,6 +846,17 @@ int main(int argc, char **argv)
       maxsax = fabs(maxax1)+fabs(maxax0)+2.0*sigmaSticky;
       //printf("maxsax=%.15G\n", maxsax);
     }
+  else if (particles_type = 2)
+    {
+      maxsaxAA = sigmaAA+deltaAA;
+      maxsaxAB = sigmaAB+deltaAB;
+      maxsaxBB = sigmaBB+deltaBB;
+      maxsax = sigmaAA + deltaAA;
+      if (sigmaAB+deltaAB > maxsax)
+	maxsax = sigmaAB+deltaAB;
+      if (sigmaBB+deltaBB > maxsax)
+	maxsax = sigmaBB+deltaBB;
+    }
   else
     {
       maxsaxAA = fabs(sigmaAA)+2.0*sigmaSticky;
@@ -887,6 +868,8 @@ int main(int argc, char **argv)
     RCUT = maxsax;
   else if (particles_type == 0)
     RCUT = maxsaxAA*1.01;
+  else if (particles_type == 2)
+    RCUT = maxsax*1.01;
 
   for (a = 0; a < 3; a++)
     {
@@ -903,6 +886,10 @@ int main(int argc, char **argv)
     {
       build_atom_positions();
       printf("SYSTEM: ELLISPOIDS - DGEBA\n");
+    }
+  if (particles_type == 2)
+    {
+      printf("SYSTEM: SQUARE WELL BIMIX\n");
     }
   else
     {
