@@ -7,7 +7,7 @@
 #define MD_STSPOTS_A 5
 #define MD_STSPOTS_B 2
 #define MD_SP_DELR 0.0
-int MAXBONDS = 10;
+int MAXBONDS = 20;
 
 #define Sqr(x) ((x)*(x))
 char **fname; 
@@ -242,7 +242,7 @@ void BuildAtomPosSQ(int i, double rO[3], double rat[1][3])
 {
   int a;
   for (a = 0; a < 3; a++)
-    rat[1][a] = rO[a];
+    rat[0][a] = rat[1][a] = rO[a];
 }
 
 void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
@@ -915,7 +915,7 @@ int main(int argc, char **argv)
   inCell[0] = malloc(sizeof(int)*NP);
   inCell[1] = malloc(sizeof(int)*NP);
   inCell[2] = malloc(sizeof(int)*NP);
-
+  printf("NN=%d\n", NN);
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
@@ -941,6 +941,7 @@ int main(int argc, char **argv)
 		}
 	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
+	      //printf("doing nr1=%d nr2=%d\n", nr1, nr2);
 	      readconf(fname[nr2], &time, &refTime, NP, r1, DR0, R);
 	      if (np < points && ti[np] == -1.0)
 		{
@@ -948,7 +949,7 @@ int main(int argc, char **argv)
 		  //printf("np=%d time=%.15G\n", np, ti[np]);
 		}
 	      /* accumulate bond correlation function */ 
-	      build_spots_positions(r0, R);
+	      build_spots_positions(r1, R);
 	      build_linked_list();
 	      for ( i = 0; i < NP; i++)
 		numbondst[i] = 0;
