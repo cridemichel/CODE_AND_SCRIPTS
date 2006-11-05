@@ -142,11 +142,11 @@ if [ "$QMAX" == "-1" ]
 then
 $PR listamsd 0 0 
 $PR listamsd $SQMAX $SQMAX
-$PR2 listamsd $NPTS 0 0
-$PR2 listamsd $NPTS $SQMAX $SQMAX
+$PR2 0 0 $NPTS
+$PR2 $SQMAX $SQMAX $NPTS
 else
 $PR listamsd $QMIN $QMAX
-$PR2 listamsd $NPTS $QMIN $QMAX
+$PR2 $QMIN $QMAX $NPTS
 fi
 echo "DONE"
 fi
