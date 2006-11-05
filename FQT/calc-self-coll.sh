@@ -47,7 +47,7 @@ if [ $FORCE == "0" ]
 then
 if [ \( -e Cn.dat  \) -a \( -e Sq.dat \) -a \( -e Fqs-0 \) -a \( -e MSDcnf.dat \) -a \( N-sqt.k=000 \)]
 then
-echo "qui Phi=" $f
+echo "all done, skipping Phi=" $f
 cd ..
 continue
 fi
@@ -62,6 +62,7 @@ fi
 #cd ..
 #continue
 #fi
+echo "Doing Phi=" $f
 touch IN_PROGRESS
 PR=$EXE_PATH/MSD/calcmsd
 L=`ls Store-*-*gz 2> /dev/null`
@@ -118,7 +119,8 @@ if [ "$QMAX" == "-1" ]
 then
 PR=$EXE_PATH/FQT/findmax
 SQMAX=`$PR Sq.dat 0`
-echo "QMAX FROM SQ= " $SQMAX
+SQMAXFQS=`echo "$SQMAX" | awk -v sqmax=$SQMAX '{printf("%d",sqmax)}'`
+echo "QMAX FROM SQ= "$SQMAX " [" $SQMAXFQS "]"
 fi
 if [ ! \( -e Fqs-0 \) -o \( $FORCE_FQSELF == "1" \) ]
 then
@@ -128,6 +130,7 @@ if [ "$QMAX" == "-1" ]
 then
 $PR listamsd $NPTS 0 0
 $PR listamsd $NPTS $SQMAX $SQMAX
+cp Fqs-$SQMAXFQS Fqs-$SQMAXFQS.max
 else
 $PR listamsd $NPTS $QMIN $QMAX
 fi
@@ -144,9 +147,12 @@ $PR listamsd 0 0
 $PR listamsd $SQMAX $SQMAX
 $PR2 --ncomps 1 0 0 $NPTS
 $PR2 --ncomps 1 $SQMAX $SQMAX $NPTS
+rm -fr RHOTMP/
+cp N-sqt.k=$SQMAX N-sqt.k=$SQMAX.max
 else
 $PR listamsd $QMIN $QMAX
 $PR2 --ncomps 1 $QMIN $QMAX $NPTS
+rm -fr RHOTMP/
 fi
 echo "DONE"
 fi
