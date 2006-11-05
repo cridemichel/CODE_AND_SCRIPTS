@@ -189,7 +189,7 @@ int main(int argc, char **argv)
   else
     points = NN;
 #endif
-  printf("points:%d\n", points);
+  printf("points:%d components=%d\n", points, comps);
   c2 = 0;
   if (comps==2)
     sprintf(fname[0], "RHOTMPA/ro.00.k=%03d", qmin);
