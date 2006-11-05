@@ -112,12 +112,13 @@ echo "CALCOLO SQ..."
 ls Store-*-0 > listasq
 PR=$EXE_PATH/FQT/calcSq
 $PR --cnf listasq
+echo "DONE"
+fi
 if [ "$QMAX" == "-1" ]
 then
 PR=$EXE_PATH/FQT/findmax
 SQMAX=`$PR Sq.dat 0`
-fi
-echo "DONE"
+echo "QMAX FROM SQ= " $SQMAX
 fi
 if [ ! \( -e Fqs-0 \) -o \( $FORCE_FQSELF == "1" \) ]
 then
