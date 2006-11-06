@@ -8,6 +8,7 @@
 */
 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
+void check_coords(char *msg);
 
 extern char TXT[MSG_LEN];
 extern int ENDSIM;
@@ -179,7 +180,18 @@ void FCC(int Nm, COORD_TYPE *m)
 #else
       rz[i] = rz[i] - 0.5 * L;
 #endif
+#if 0
+      rx[i] *= 0.99;
+      ry[i] *= 0.99;
+      rz[i] *= 0.99;
+      if (fabs(rx[i])>=L*0.5 ||fabs(ry[i])>= L*0.5|| fabs(rz[i]) >= L*0.5) 
+      	{
+	  printf("[WRONG COORD: %d] L:%f L2:%f rx[n]:%.15G ry[n]:%.15G rz[n]:%.15G\n", i, L, L*0.5,  
+		 rx[i], ry[i], rz[i]);
+#endif	}
+
     }
+
   return;
 }
 
@@ -502,7 +514,6 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 	 molecules is zero */
     }
 
-
   if (!resetCM)
     return;
 #ifndef MD_GRAVITY
@@ -577,7 +588,7 @@ void initCoord(void)
      their orientations */  
   
   /* set both atoms velocity to the center of mass velocity */
-  comvel(Oparams.parnum, Oparams.T, Oparams.m, 1); 
+  comvel(Oparams.parnum, Oparams.T, Oparams.m, 0); 
 #if 1
   K = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
@@ -705,7 +716,8 @@ void usrInitBef(void)
 #if 0
 	if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
 	  {
-	    printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
+	    printf("BOH?!?L:%f L2:%f n:%d rx[n]:%.15G ry[n]:%.15G rz[n]:%.15G\n", L, L2, n, 
+		   rx[n], ry[n], rz[n]);
 	    printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
 		   inCell[0][n],inCell[1][n], inCell[2][n]);
 	  }
@@ -851,6 +863,30 @@ void add_bonds (int na, int *numbonds)
     }
 }
 #endif
+void check_coords(char *msg)
+{
+  int i;
+  if (msg==NULL)
+    msg = "WARNING";
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      if (fabs(rx[i]) > L*0.5)
+	{
+	  printf("[%s] i=%d rx=%.15G\n", msg, i, rx[i]);
+	  exit(-1);
+	}
+      if (fabs(ry[i]) > L*0.5)
+	{
+	  printf("[%s] i=%d rx=%.15G\n", msg, i, ry[i]);
+	  exit(-1);
+	}
+      if (fabs(rz[i]) > L*0.5)
+	{
+	  printf("[%s] i=%d rx=%.15G\n", msg, i, rz[i]);
+	  exit(-1);
+	}
+    }
+}
 /* ======================== >>> usrInitAft <<< ==============================*/
 void usrInitAft(void)
   {
@@ -873,7 +909,7 @@ void usrInitAft(void)
 
     /* initialize global varibales */
     pi = 2.0 * acos(0);
-    
+
     Nm = Oparams.parnumA;
     parnumA = Oparams.parnumA;
     parnumB = Oparams.parnum - Oparams.parnumA;
