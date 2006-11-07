@@ -232,7 +232,6 @@ int main(int argc, char** argv)
   cost = 4.0 * pi * NP / 3.0 / (L*L*L);
   for (ii = 0; ii < points; ii++)
     {
-      r += delr;
       rlower = ( (double) ii) * delr;
       rupper = rlower + delr;
       nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower);
@@ -244,6 +243,7 @@ int main(int argc, char** argv)
       fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
 #endif
       fprintf(f, "%.15G %.15G\n", r, g0m);
+      r += delr;
     }
   fclose(f);
 }
