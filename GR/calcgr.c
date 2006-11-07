@@ -192,7 +192,7 @@ int main(int argc, char** argv)
   g4 = malloc(sizeof(double)*points);
   g6 = malloc(sizeof(double)*points);
 #endif
-  delr = (L*sqrt(3.0)) / ((double)points);
+  delr = L / 2.0 / ((double)points);
   rewind(f2);
   nf = 0;
   while (!feof(f2))
@@ -202,8 +202,8 @@ int main(int argc, char** argv)
       nf++;
       readconf(fname, &time, &refTime, NP, x, w, DR);
 
-      for (i = 0; i < NP; i++)
-	for (j = 0; j < i; j++)
+      for (i = 0; i < NP-1; i++)
+	for (j = i+1; j < NP; j++)
 	  {
 	    for (a = 0; a < 3; a++)
 	      {
@@ -221,22 +221,22 @@ int main(int argc, char** argv)
 	     }
 	   else 
 	     {
-	       printf("bin=%d\n", bin);
+	       //printf("bin=%d\n", bin);
 	       //exit(1);
 	     }
 	  }
     }
   fclose(f2); 
   f = fopen("gr.dat", "w+");
-  r = 0.0;
+  r = delr*0.5;
   cost = 4.0 * pi * NP / 3.0 / (L*L*L);
   for (ii = 0; ii < points; ii++)
     {
-      r += delr*(ii+0.5);
+      r += delr;
       rlower = ( (double) ii) * delr;
       rupper = rlower + delr;
       nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower);
-      g0m = g0[ii]/((double)nf)/nIdeal;
+      g0m = g0[ii]/((double)nf)/((double)NP)/nIdeal;
 #if 0
       g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
       g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
