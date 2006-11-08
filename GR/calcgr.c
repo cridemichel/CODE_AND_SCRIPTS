@@ -3,23 +3,22 @@
 #include <stdio.h>
 #include <string.h>
 #define Sqr(x) ((x)*(x))
-char line[100000], parname[124], parval[256000];
+char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
 int N, particles_type=1;
 double *x[3], L, ti, *w[3], storerate;
-double **DR, deltaAA=-1.0, deltaBB=-1.0, deltaAB=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0, 
+double *DR[3], deltaAA=-1.0, deltaBB=-1.0, deltaAB=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0, 
        Dr, theta, sigmaSticky=-1.0, sa[2], sb[2], sc[2], maxax0, maxax1, maxax, maxsax, maxsaxAA, maxsaxAB, maxsaxBB;
 char fname[1024], inputfile[1024];
 int eventDriven=0;
 int points;
 int foundDRs=0, foundrot=0;
-void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double **DR)
+void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double *DR[3])
 {
   FILE *f;
   int nat=0, i, cpos;
   double dt=-1;
   int curstp=-1;
-
   *ti = -1.0;
   f = fopen(fname, "r");
   while (!feof(f) && nat < 2) 
@@ -40,7 +39,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	    {
 	      for (i=0; i < NP; i++)
 		{
-		  fscanf(f, " %lf %lf %lf ", &DR[i][0], &DR[i][1], &DR[i][2]);
+		  fscanf(f, " %lf %lf %lf ", &DR[0][i], &DR[1][i], &DR[2][i]);
 		}
 	      foundDRs = 1;
 	    }
@@ -138,6 +137,7 @@ void parse_param(int argc, char** argv)
 double pi;
 int *inCell[3]={NULL,NULL,NULL}, *cellList=NULL, cellsx, cellsy, cellsz;
 int NP, NPA;
+#if 0
 void build_linked_list(void)
 {
   double L2;
@@ -158,13 +158,13 @@ void build_linked_list(void)
       cellList[j] = n;
     }
 }
-
+#endif
 
 int main(int argc, char** argv)
 {
   FILE *f, *f2;
-  int nf, i, a, b, nat, NN, j, ii, *g0, bin;
-  double r, delr, tref=0.0, Dx[3], g0m, distSq, rlower, rupper, cost, nIdeal;
+  int nf, i, a, b, nat, NN, j, ii, bin;
+  double r, delr, tref=0.0, Dx[3], *g0, g0m, distSq, rlower, rupper, cost, nIdeal;
   double time, refTime, RCUT;
   int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
   double shift[3];
@@ -317,6 +317,7 @@ int main(int argc, char** argv)
       printf("SYSTEM: SQUARE WELL\n");
     }
 
+#if 0
   cellsx = L / RCUT;
   cellsy = L / RCUT;
   cellsz = L / RCUT;
@@ -324,12 +325,14 @@ int main(int argc, char** argv)
   inCell[0] = malloc(sizeof(int)*NP);
   inCell[1] = malloc(sizeof(int)*NP);
   inCell[2] = malloc(sizeof(int)*NP);
-  printf("L=%.15G RCUT=%.15G \n", L, RCUT);
+#endif
+  printf("L=%.15G\n", L);
   g0 = malloc(sizeof(double)*points);
-  DR = malloc(sizeof(double*)*NP);
-  for (ii = 0; ii < NP; ii++)
+  for (ii=0; ii < points; ii++)
+    g0[ii] = 0.0;
+  for (ii = 0; ii < 3; ii++)
     {
-      DR[ii]  = malloc(sizeof(double)*3);
+      DR[ii]  = malloc(sizeof(double)*NP);
     }
 #if 0
   g2 = malloc(sizeof(double)*points);
@@ -345,82 +348,31 @@ int main(int argc, char** argv)
       //printf("fname=%s argv[2]=%s\n",fname, argv[2]);
       nf++;
       readconf(fname, &time, &refTime, NP, x, w, DR);
-      build_linked_list();
-      for (i = 0; i < NP; i++)
-	{
-	  for (iZ = -1; iZ <= +1; iZ++) 
-	    {
-	      jZ = inCell[2][i] + iZ;    
-	      shift[2] = 0.;
-	      /* apply periodico boundary condition along z if gravitational
-	       * fiels is not present */
-	      if (jZ == -1) 
-		{
-		  jZ = cellsz - 1;    
-		  shift[2] = - L;
-		} 
-	      else if (jZ == cellsz) 
-		{
-		  jZ = 0;    
-		  shift[2] = L;
-		}
-	      for (iY = -1; iY <= +1; iY ++) 
-		{
-		  jY = inCell[1][i] + iY;    
-		  shift[1] = 0.0;
-		  if (jY == -1) 
-		    {
-		      jY = cellsy - 1;    
-		      shift[1] = -L;
-		    } 
-		  else if (jY == cellsy) 
-		    {
-		      jY = 0;    
-		      shift[1] = L;
-		    }
-		  for (iX = -1; iX <= +1; iX ++) 
-		    {
-		      jX = inCell[0][i] + iX;    
-		      shift[0] = 0.0;
-		      if (jX == -1) 
-			{
-			  jX = cellsx - 1;    
-			  shift[0] = - L;
-			} 
-		      else if (jX == cellsx) 
-			{
-			  jX = 0;   
-			  shift[0] = L;
-			}
-		      j = (jZ *cellsy + jY) * cellsx + jX + NP;
-		      for (j = cellList[j]; j > -1; j = cellList[j]) 
-			{
-			  if (j <= i) 
-			    continue;
-			  for (a = 0; a < 3; a++)
-			    {
-			      Dx[a] = x[a][i] - x[a][j];
-			    }
-			  for (a = 0; a < 3; a++)
-			    Dx[a] = Dx[a] - L * rint(Dx[a]/L);
-			  distSq = 0.0;
-			  for (a = 0; a < 3; a++)
-			    distSq += Sqr(Dx[a]);
-			  bin = ((int) (sqrt(distSq) / delr)); 
-			  if (bin < points || bin >= 0)
-			    {
-			      g0[bin] += 2.0;
-			    }
-			  else 
-			    {
-			      //printf("bin=%d\n", bin);
-			      //exit(1);
-			    }
-			}
-		    }
-		}
-	    }
-	}
+      for (i=0; i < NP-1; i++)
+	for (j = i+1; j < NP; j++)
+	  {
+	    for (a = 0; a < 3; a++)
+	      {
+		Dx[a] = x[a][i] - x[a][j];
+	      }
+	    for (a = 0; a < 3; a++)
+	      Dx[a] = Dx[a] - L * rint(Dx[a]/L);
+	    distSq = 0.0;
+	    for (a = 0; a < 3; a++)
+	      distSq += Sqr(Dx[a]);
+	    bin = ((int) (sqrt(distSq) / delr)); 
+	    //printf("(%d-%d) bin=%d\n", i, j, bin);
+	    if (bin < points || bin >= 0)
+	      {
+		g0[bin] += 2.0;
+		//printf("g0[%d]=%.15G\n", bin, g0[bin]);
+	      }
+	    else 
+	      {
+		//printf("bin=%d\n", bin);
+		//exit(1);
+	      }
+	  }
     }
   fclose(f2); 
   f = fopen("gr.dat", "w+");
@@ -431,6 +383,7 @@ int main(int argc, char** argv)
       rlower = ( (double) ii) * delr;
       rupper = rlower + delr;
       nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower);
+      //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
       g0m = g0[ii]/((double)nf)/((double)NP)/nIdeal;
 #if 0
       g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
@@ -438,9 +391,10 @@ int main(int argc, char** argv)
       g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
       fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
 #endif
-      fprintf(f, "%.15G %.15G\n", r, g0m);
+      fprintf(f, "%.15G %.15G %.15G\n", r, g0m, g0[ii]);
       r += delr;
     }
   fclose(f);
+  return 0;
 }
 
