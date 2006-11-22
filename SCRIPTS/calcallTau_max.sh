@@ -11,6 +11,7 @@ FNTM="allTAUtraM-X0_${EL}.dat"
 FNT="allTAUtra-X0_${EL}.dat"
 FNR="allTAUrot-X0_${EL}.dat"
 echo -n "" > $FNT
+echo -n "" > $FNTM
 echo -n "" > $FNR
 A1=1.0
 B1=1.1
