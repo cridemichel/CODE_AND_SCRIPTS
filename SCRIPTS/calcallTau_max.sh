@@ -1,11 +1,11 @@
 PERC=$HOME/ELLIPSOIDS/FQT/
-if [ "$1" == "" ]
+if [ "$2" == "" ]
 then
 CDIR=`pwd`
 DIR=`basename $CDIR`
 EL=`echo $DIR | awk -F _ '{print $2}'`
 else
-EL=$1
+EL=$2
 fi
 FNTM="allTAUtraM-X0_${EL}.dat"
 FNT="allTAUtra-X0_${EL}.dat"
@@ -22,7 +22,14 @@ C3=1.5
 A2=1.0
 B2=1.1
 C2=1.5
-for f in Phi* 
+if [ "$1" == "" ]
+then
+DIRS='Phi*'
+else
+DIRS="$1"
+fi
+#echo "DIRS:" $DIRS
+for f in $DIRS
 do
 cd $f
 PHI=`echo $f | awk -F Phi '{print $2}'`
@@ -56,7 +63,7 @@ ST=0.00001
 STA=0.00001
 STB=`cat Fqs-$MAXQ.max| tail -1 | LANG=C awk '{print $1/10}'`
 #MAXQ=2
-echo "STA=" $STA "STB" $STB
+echo "STA=" $STA "STB=" $STB
 echo "a=$A1; b=$B1; c=$C1; fit [$STA:] a*exp(-(x/b)) \"Fqs-$MAXQ.max\" via a,b; fit [$STA:$STB] a*exp(-((x/b)**c)) \"Fqs-$MAXQ.max\" via a,b,c; print a, b, c" > fit.tmp
 echo "Fit della Fself"
 gnuplot fit.tmp > gpout.tmp 2>&1  
@@ -65,6 +72,19 @@ A1=`tail -1 gpout.tmp | awk '{print $1}'`
 B1=`tail -1 gpout.tmp | awk '{print $2}'`
 C1=`tail -1 gpout.tmp | awk '{print $3}'`
 #echo "A="$A "B="$B "C="$C
+if [ "${C1}" == "" ]
+then
+A1=1.0
+B1=1.1
+C1=1.5
+echo "a=$A1; b=$B1; c=$C1; fit [$STA:] a*exp(-(x/b)) \"Fqs-$MAXQ.max\" via a,b; fit [$STA:$STB] a*exp(-((x/b)**c)) \"Fqs-$MAXQ.max\" via a,b,c; print a, b, c" > fit.tmp
+echo "Fit della Fself"
+gnuplot fit.tmp > gpout.tmp 2>&1 
+cp fit.tmp fitFqs-$MAXQ.tmp
+A1=`tail -1 gpout.tmp | awk '{print $1}'`
+B1=`tail -1 gpout.tmp | awk '{print $2}'`
+C1=`tail -1 gpout.tmp | awk '{print $3}'`
+fi
 TAUM=`echo "gamma(1.0/${C1})*${B1}/${C1}" | octave | awk '{if ($1=="ans") print $3}'`
 ST=0.00001
 echo $EL $PHI $TAUM >> ../$FNTM
@@ -83,6 +103,19 @@ cp fit.tmp fitFqs-0.tmp
 A3=`tail -1 gpout.tmp | awk '{print $1}'`
 B3=`tail -1 gpout.tmp | awk '{print $2}'`
 C3=`tail -1 gpout.tmp | awk '{print $3}'`
+if [ "${C3}" == "" ]
+then
+A3=1.0
+B3=1.1
+C3=1.5
+echo "a=$A3; b=$B3; c=$C3; fit [$STA:] a*exp(-(x/b)) \"Fqs-$MAXQ\" via a,b; fit [$STA:$STB] a*exp(-((x/b)**c)) \"Fqs-$MAXQ\" via a,b,c; print a, b, c" > fit.tmp
+echo "Fit della Fself"
+gnuplot fit.tmp > gpout.tmp 2>&1  
+cp fit.tmp fitFqs-0.tmp
+A3=`tail -1 gpout.tmp | awk '{print $1}'`
+B3=`tail -1 gpout.tmp | awk '{print $2}'`
+C3=`tail -1 gpout.tmp | awk '{print $3}'`
+fi
 #echo "A="$A "B="$B "C="$C
 TAUM=`echo "gamma(1.0/${C3})*${B3}/${C3}" | octave | awk '{if ($1=="ans") print $3}'`
 ST=0.00001
@@ -95,6 +128,19 @@ echo "Fit della C2"
 A2=`tail -1 gpout.tmp | awk '{print $1}'`
 B2=`tail -1 gpout.tmp | awk '{print $2}'`
 C2=`tail -1 gpout.tmp | awk '{print $3}'`
+if [ "${C2}" == "" ]
+then
+A2=1.0
+B2=1.1
+C2=1.5
+echo "a=$A2; b=$B2; c=$C2; fit [$ST:] a*exp(-(x/b)) \"Cn.dat\" via a,b; fit [$ST:(3.0*b)] a*exp(-((x/b)**c)) \"Cn.dat\" using 1:2 via a,b,c; print a, b, c " > fit.tmp
+gnuplot fit.tmp > gpout.tmp 2>&1
+cp fit.tmp fitC2.tmp
+echo "Fit della C2"
+A2=`tail -1 gpout.tmp | awk '{print $1}'`
+B2=`tail -1 gpout.tmp | awk '{print $2}'`
+C2=`tail -1 gpout.tmp | awk '{print $3}'`
+fi
 TAUM=`echo "gamma(1.0/${C2})*${B2}/${C2}" | octave | awk '{if ($1=="ans") print $3}'`
 ##rm gpout.tmp
 echo $EL $PHI $TAUM >> ../$FNR
