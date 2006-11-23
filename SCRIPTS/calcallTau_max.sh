@@ -10,9 +10,15 @@ fi
 FNTM="allTAUtraM-X0_${EL}.dat"
 FNT="allTAUtra-X0_${EL}.dat"
 FNR="allTAUrot-X0_${EL}.dat"
+FNTMS="allTAUtraM-X0_${EL}_2D.dat"
+FNTS="allTAUtra-X0_${EL}_2D.dat"
+FNRS="allTAUrot-X0_${EL}_2D.dat"
 echo -n "" > $FNT
 echo -n "" > $FNTM
 echo -n "" > $FNR
+echo -n "" > $FNTS
+echo -n "" > $FNTMS
+echo -n "" > $FNRS
 A1=1.0
 B1=1.1
 C1=1.5
@@ -88,6 +94,7 @@ fi
 TAUM=`echo "gamma(1.0/${C1})*${B1}/${C1}" | octave | awk '{if ($1=="ans") print $3}'`
 ST=0.00001
 echo $EL $PHI $TAUM >> ../$FNTM
+echo $PHI $TAUM >> ../$FNTMS
 ###
 MAXQ=0
 echo "MAXQ="$MAXQ
@@ -120,6 +127,7 @@ fi
 TAUM=`echo "gamma(1.0/${C3})*${B3}/${C3}" | octave | awk '{if ($1=="ans") print $3}'`
 ST=0.00001
 echo $EL $PHI $TAUM >> ../$FNT
+echo $PHI $TAUM >> ../$FNTS
 ###
 echo "a=$A2; b=$B2; c=$C2; fit [$ST:] a*exp(-(x/b)) \"Cn.dat\" via a,b; fit [$ST:(3.0*b)] a*exp(-((x/b)**c)) \"Cn.dat\" using 1:2 via a,b,c; print a, b, c " > fit.tmp
 gnuplot fit.tmp > gpout.tmp 2>&1
@@ -144,6 +152,7 @@ fi
 TAUM=`echo "gamma(1.0/${C2})*${B2}/${C2}" | octave | awk '{if ($1=="ans") print $3}'`
 ##rm gpout.tmp
 echo $EL $PHI $TAUM >> ../$FNR
+echo $PHI $TAUM >> ../$FNRS
 rm fit.tmp
 cd ..
 done
