@@ -47,6 +47,7 @@ int main(int argc, char **argv)
    {
      fscanf(f,"%s %s %lf\n", X0, Phi, &val);
      sf = cerca_X0(X0);
+     printf("sf=%f\n", sf);
      if (type==0)
        printf("%s %s %f\n", X0, Phi, val*sf); 
      else
