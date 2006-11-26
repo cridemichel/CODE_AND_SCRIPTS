@@ -1,10 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 char X0[256], Phi[256];
-char scal_arr_str[1000];
+char scal_arr_str[1000][256];
 double scal_arr_dbl[1000];
 double val;
-int nf;
+int nf, type;
 /* arg #1 file con gli scaling factors
  * arg #2 file da scalare (nel formato X0 Phi <valore>)*/
 double cerca_X0(char *X0)
@@ -35,7 +36,7 @@ int main(int argc, char **argv)
   i=0;
   while (!feof(f))
     {
-      fscanf("%s %lf\n", X0, &val);
+      fscanf(f,"%s %lf\n", X0, &val);
       strcpy(X0, scal_arr_str[i++]);
       scal_arr_dbl[i] = val;
     }
@@ -44,8 +45,8 @@ int main(int argc, char **argv)
   f = fopen(argv[3], "r");
   while (!feof(f))
    {
-     fscanf("%s %lf %lf\n", X0, &Phi, &val);
-     sf = cerca_X0();
+     fscanf(f,"%s %lf %lf\n", X0, &Phi, &val);
+     sf = cerca_X0(X0);
      if (type==0)
        printf("%s %s %f\n", X0, Phi, val*sf); 
      else
