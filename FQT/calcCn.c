@@ -224,10 +224,8 @@ int main(int argc, char **argv)
 		  ti[np] = time + refTime;
 		  //printf("np=%d time=%.15G\n", np, ti[np]);
 		}
-  
 	      if (nr2 == nr1)
 		continue;
-
 	      for (i=0; i < NP; i++) 
 		{
 		  costh2 = 0.0;
@@ -270,16 +268,15 @@ int main(int argc, char **argv)
   f = fopen("Cn.dat", "w+");
   for (ii=1; ii < points; ii++)
     {
-      C6m = (231.0*(C6A[ii]+C6B[ii])/(ccA[ii]+ccB[ii]) - 
-	     315.0*(C4A[ii]+C4B[ii])/(ccA[ii]+ccB[ii]) + 105.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) -
-	     5.0)/16.0;
-      C4m = (35.0*(C4A[ii]+C4B[ii])/(ccA[ii]+ccB[ii]) - 30.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) 
-	     + 3.0) / 8.0;
-      C2m = (3.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) - 1.0)/2.0;
-      C1m = (C1A[ii] + C1B[ii]) / (ccA[ii]+ccB[ii]);
-
       if (NPA < NP)
 	{
+	  C6m = (231.0*(C6A[ii]+C6B[ii])/(ccA[ii]+ccB[ii]) - 
+	      	 315.0*(C4A[ii]+C4B[ii])/(ccA[ii]+ccB[ii]) + 105.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) -
+		 5.0)/16.0;
+	  C4m = (35.0*(C4A[ii]+C4B[ii])/(ccA[ii]+ccB[ii]) - 30.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) 
+		 + 3.0) / 8.0;
+	  C2m = (3.0*(C2A[ii]+C2B[ii])/(ccA[ii]+ccB[ii]) - 1.0)/2.0;
+	  C1m = (C1A[ii] + C1B[ii]) / (ccA[ii]+ccB[ii]);
 	  C6mA = (231.0*C6A[ii]/ccA[ii] - 315.0*C4A[ii]/ccA[ii] + 105.0*C2A[ii]/ccA[ii] - 5.0)/16.0;
 	  C4mA = (35.0*C4A[ii]/ccA[ii] - 30.0*C2A[ii]/ccA[ii] + 3.0) / 8.0;
 	  C2mA = (3.0*C2A[ii]/ccA[ii] - 1.0)/2.0;
@@ -288,6 +285,15 @@ int main(int argc, char **argv)
 	  C4mB = (35.0*C4B[ii]/ccB[ii] - 30.0*C2B[ii]/ccB[ii] + 3.0) / 8.0;
 	  C2mB = (3.0*C2B[ii]/ccB[ii] - 1.0)/2.0;
 	  C1mB = C1B[ii]/ccB[ii];
+	}
+      else
+	{
+	  C6m = (231.0*C6A[ii]/ccA[ii] - 
+		 315.0*C4A[ii]/ccA[ii] + 105.0*C2A[ii]/ccA[ii] -
+		 5.0)/16.0;
+	  C4m = (35.0*C4A[ii]/ccA[ii] - 30.0*C2A[ii]/ccA[ii] + 3.0) / 8.0;
+	  C2m = (3.0*C2A[ii]/ccA[ii] - 1.0)/2.0;
+	  C1m = C1A[ii] / ccA[ii];
 	}
 
       if (ti[ii] > -1.0)
@@ -298,6 +304,7 @@ int main(int argc, char **argv)
 	      fprintf(fB, "%.15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C1mB, C2mB, C4mB, C6mB); 
 	    }
 	  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C1m, C2m, C4m, C6m);
+	  //fprintf(f, "%.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], C2m, C4m, C6m);
 	}
     }
   fclose(f);
