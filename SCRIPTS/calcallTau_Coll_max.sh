@@ -33,7 +33,7 @@ cd $f
 PHI=`echo $f | awk -F Phi '{print $2}'`
 if [ ! -e N-sqt.k\=000 ]
 then
-echo "Phi=" $PHI " The file Fqs-0 does not exist, skipping..."
+echo "Phi=" $PHI " The file N-sqt.k\=000 does not exist, skipping..."
 cd ..
 continue
 fi
@@ -55,7 +55,7 @@ echo "Processing Phi=" $PHI
 #MAXQ2=$MAXQ
 #MAXQ=`echo $MAXQ2 | awk -v maxq=$MAXQ2 '{if (maxq > 29) print "29"; else if (maxq < 2) print "2"; else print maxq}'`
 #STA=`tail -n 50 screen_ell${EL}EQ${PHI} | awk '{if ($1=="[MSDcheck]") print $5}'` 
-MAXQ=`ls N-sqt.\=*max | awk -F . '{print $2}'| awk -F '=' '{print $2}'`
+MAXQ=`ls N-sqt.k\=*max | awk -F . '{print $2}'| awk -F '=' '{print $2}'`
 echo "MAXQ="$MAXQ
 ST=0.00001
 STA=0.00001
