@@ -23,8 +23,8 @@ double deltaAA=-1.0, deltaAB=-1.0, deltaBB=-1.0;
 int *dupcluster, shift[3], *numbonds, **bonds;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int NP, NPA=-1, ncNV, ncNV2;
-int check_percolation = 1, *nspots, particles_type=1, output_bonds=0;
+int NP, NPA=-1, ncNV, ncNV2, START, END;
+int check_percolation = 1, *nspots, particles_type=1, output_bonds=0, mix_type=-1;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
@@ -641,7 +641,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [--noperc/-np] [--bonds/-b] [--maxbonds] <listafile>\n");
+  printf("Usage: clusters [--mixtype/-mt] [--noperc/-np] [--bonds/-b] [--maxbonds] <listafile>\n");
   exit(0);
 }
 
@@ -657,6 +657,13 @@ void parse_params(int argc, char** argv)
       if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
 	{
 	  print_usage();
+	}
+      else if (!strcmp(argv[cc],"--ptype") || !strcmp(argv[cc],"-pt" ))
+	{
+	  cc++;
+          if (cc = argc)
+	     print_usage();
+	  mix_type = atoi(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--noperc") || !strcmp(argv[cc],"-np" ))
 	{
@@ -691,7 +698,7 @@ void build_linked_list(void)
   for (j = 0; j < cellsx*cellsy*cellsz + NP; j++)
     cellList[j] = -1;
 
-  for (n = 0; n < NP; n++)
+  for (n = START; n < END; n++)
     {
       inCell[0][n] =  (rat[0][0][n] + L2) * cellsx / L;
       inCell[1][n] =  (rat[0][1][n] + L2) * cellsy / L;
@@ -822,9 +829,23 @@ int main(int argc, char **argv)
     particles_type = 2; /* 2 means square well system*/
   else if (sigmaAA != -1.0)
     particles_type = 0;
-  
   if (NPA == -1)
     NPA = NP;
+  if (mix_type==-1 || NPA==NP)
+    {
+    	START=0;
+        END=NP;
+    }
+   else if (mix_type==0)
+    {
+       START=0;
+       END=NPA;
+     }	 
+  else
+     {
+     	START=NPA;
+        END=NP;
+     }
   color = malloc(sizeof(int)*NP);
   color2= malloc(sizeof(int)*NP*NUMREP);
   clsdim2=malloc(sizeof(int)*NP*NUMREP);
