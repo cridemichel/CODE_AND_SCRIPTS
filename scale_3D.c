@@ -37,8 +37,9 @@ int main(int argc, char **argv)
   while (!feof(f))
     {
       fscanf(f,"%s %lf\n", X0, &val);
-      strcpy(X0, scal_arr_str[i++]);
+      strcpy(X0, scal_arr_str[i]);
       scal_arr_dbl[i] = val;
+      i++;
     }
   nf = i;
   fclose(f);
