@@ -38,6 +38,9 @@ else
 if [ -e "rand_ellips.par" ]
 then
 L=`cat rand_ellips.par | awk -F ':' '{ if ($1=="L") print $2}'` 
+A0=`cat rand_ellips.par | awk -F ':' '{ if ($1=="A0") print $2}'`
+B0=`cat rand_ellips.par | awk -F ':' '{ if ($1=="B0") print $2}'`
+C0=`cat rand_ellips.par | awk -F ':' '{ if ($1=="C0") print $2}'`
 else
 echo "I can not get L! Skipping state point" $f " " $g
 cd ..
@@ -46,9 +49,10 @@ fi
 fi
 echo "L= " $L " Doing " $g
 PR=$EXE_PATH/FQT/findmax
+SF=`echo "e((1.0/3.0)*l($A0*$B0*$C0))"|bc -l`
 SQMAX=`$PR Sq.dat 0`
 #PI=`echo "pi" |octave| LANG=C gawk -F '=' '{if ($1=="ans") print $2}'`
-SQMAXFQS=`echo "$SQMAX" | LANG=C gawk -v sqmax="$SQMAX" -v L="$L" -v alpha="$ALPHA" '{pi=atan2(1.0,1.0)*4.0; printf("%.15G",((2.0*pi/L)*(0.5*sqmax+1.25))^alpha)}'`
+SQMAXFQS=`echo "$SQMAX" | LANG=C gawk -v SF=$SF -v sqmax="$SQMAX" -v L="$L" -v alpha="$ALPHA" '{pi=atan2(1.0,1.0)*4.0; printf("%.15G",((SF*2.0*pi/L)*(0.5*sqmax+1.25))^alpha)}'`
 X0=`echo $f | gawk -F '_' '{print $2}'`
 PHI=`echo $g | LANG=C gawk -F 'Phi' '{print $2}'`
 echo $X0 " " $PHI " " $SQMAXFQS >> ../../$FN
