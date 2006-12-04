@@ -10,18 +10,16 @@ int nf, type;
  * arg #2 file da scalare (nel formato X0 Phi <valore>)*/
 double cerca_X0(char *X0)
 {
-  int i;
+  int i=0;
   while (i < nf)
     {
       if (!strcmp(X0, scal_arr_str[i]))
 	return scal_arr_dbl[i];
-      else
-	{
-	  fprintf(stderr,"ERROR: Scaling factor not found!\n");
-	  exit(-1);
-	}
       i++;
     }
+  fprintf(stderr,"ERROR: Scaling factor not found!\n");
+  exit(-1);
+
 }
 int main(int argc, char **argv)
 {
