@@ -1462,6 +1462,8 @@ void random_direction(double *nx, double *ny, double *nz)
   *ny    = *ny / norm;
   *nz    = *nz / norm;
 }
+
+
 void velsMicroLang(double T, double xi)
 {
    double c1, c2, M, n, gam, vpx, vpy, vpz, m, kTm, nx, ny, nz;
@@ -1477,18 +1479,24 @@ void velsMicroLang(double T, double xi)
 	   M = Oparams.m[0];
 	   gam = Oparams.xi*M;
 	   /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
-	   m = Oparams.Dt*gam *(3.0 / 2.0); 
+	   m = Oparams.Dt*gam/2.0;// *(3.0 / 2.0); 
 	   mredl = m*M/(m+M);
-	   //c1 = (M - m)/(M+m);
 	   kTm = sqrt(Oparams.T / m);
+	   c1 = (M - m)/(M+m);
+	   c2 = kTm*2*m / (M+m);
 	 }
        else if (i == Oparams.parnumA)
 	 {
 	   M = Oparams.m[1];
 	   /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
-	   mredl = m*M/(m+M);
+	   //mredl = m*M/(m+M);
+	   gam = Oparams.xi*M;
+	   m = Oparams.Dt*gam/2.0;// *(3.0 / 2.0); 
+	   kTm = sqrt(Oparams.T / m);
+	   c1 = (M - m)/(M+m);
+	   c2 = kTm*2*m / (M+m);
 	 }
-#if 0
+#if 1
        vpx = gauss();
        vpy = gauss();
        vpz = gauss();
@@ -1497,8 +1505,8 @@ void velsMicroLang(double T, double xi)
        vpy = kTm*gauss();
        vpz = kTm*gauss();
 #endif
-       random_direction(&nx, &ny, &nz);	
-#if 0
+       //random_direction(&nx, &ny, &nz);	
+#if 1
        vx[i] = c1*vx[i] + c2*vpx;
        vy[i] = c1*vy[i] + c2*vpy;
        vz[i] = c1*vz[i] + c2*vpz;
@@ -1518,8 +1526,9 @@ void velsMicroLang(double T, double xi)
 	 nz = vzij/norm;
        }
 #endif
+#if 0
        b = nx*vxij + ny*vyij + nz*vzij; 
-#if 1
+#if 0
        if (b > 0.0)
 	 {
 	    nx = -nx;
@@ -1534,7 +1543,7 @@ void velsMicroLang(double T, double xi)
        delpx = factor*nx;
        delpy = factor*ny;
        delpz = factor*nz;
-#if 1
+#if 0
        vx[i] += delpx/M;
        vy[i] += delpy/M;
        vz[i] += delpz/M;
@@ -1561,8 +1570,35 @@ void velsMicroLang(double T, double xi)
 #endif
        //printf("vpx=%.15G,%.15G,%.15G kTm=%.15G\n", vpx, vpy, vpz, kTm);
        //printf("(%.15G, %.15G, %.15G)\n", vx[i], vy[i], vz[i]);
-     }  
-    
+#endif
+    }
+#elif defined(MD_FULL_LANG)
+void velsFullLang(double T, double xi)
+{
+   double c1, c2, M, n, gam, vpx, vpy, vpz, m, kTm, nx, ny, nz;
+   double mredl, b, vxij, vyij, vzij, delpx, delpy, delpz, factor;	
+   double exp2gamt, expgamt;
+   int i;
+   //printf("c1=%f c2=%f T=%.15G m=%.15G\n", c1, c2, T, m);
+   //c2 = kTm*2*m / (M+m);
+   for (i = 0; i < Oparams.parnum; i++)
+    {
+       if (i == 0)
+	 {
+	   c1=exp(-Oparams.xi*Oparams.Dt);
+	   /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
+	   kTm = Oparams.T / m;
+	   c2 = sqrt(kTm*(1 - Sqr(c1)));
+	 }
+       else if (i == Oparams.parnumA)
+	 {
+	   /* fix this for mixtures!!! */
+	 }
+       //random_direction(&nx, &ny, &nz);	
+       vx[i] = c1*vx[i] + c2*gauss();
+       vy[i] = c1*vy[i] + c2*gauss();
+       vz[i] = c1*vz[i] + c2*gauss();
+    }
 } 
 #endif
 void rebuildLinkedList(void)
@@ -1840,6 +1876,9 @@ void move(void)
 #endif
 #if defined(MD_MICRO_LANG)
 	      velsMicroLang(Oparams.T, Oparams.xi);
+#elif defined(MD_FULL_LANG)
+	      velsFullLang(Oparams.T, Oparams.xi);
+
 #else
 	      velsBrown(Oparams.T);
 #endif
