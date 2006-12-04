@@ -1587,12 +1587,15 @@ void velsFullLang(double T, double xi)
 	 {
 	   c1=exp(-Oparams.xi*Oparams.Dt);
 	   /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
-	   kTm = Oparams.T / m;
+	   kTm = Oparams.T / Oparams.m[0];
 	   c2 = sqrt(kTm*(1 - Sqr(c1)));
 	 }
        else if (i == Oparams.parnumA)
 	 {
-	   /* fix this for mixtures!!! */
+	   c1=exp(-Oparams.xi*Oparams.Dt);
+	   /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
+	   kTm = Oparams.T / Oparams.m[1];
+	   c2 = sqrt(kTm*(1 - Sqr(c1)));
 	 }
        //random_direction(&nx, &ny, &nz);	
        vx[i] = c1*vx[i] + c2*gauss();
