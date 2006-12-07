@@ -1437,9 +1437,9 @@ void velsBrown(double T)
 {
   comvel_brown(T, Oparams.m); 
 }
-#ifdef MD_MICRO_LANG
 extern double gauss(void);
 extern double ranf(void);
+#ifdef MD_MICRO_LANG
 void random_direction(double *nx, double *ny, double *nz)
 {
   double xisq, xi1, xi2, xi, nsq, norm;
@@ -1572,10 +1572,11 @@ void velsMicroLang(double T, double xi)
        //printf("(%.15G, %.15G, %.15G)\n", vx[i], vy[i], vz[i]);
 #endif
     }
+}
 #elif defined(MD_FULL_LANG)
 void velsFullLang(double T, double xi)
 {
-   double c1, c2, M, n, gam, vpx, vpy, vpz, m, kTm, nx, ny, nz;
+   double c1, c2, M, n, gam, vxp, vyp, vzp, m, kTm, nx, ny, nz;
    double mredl, b, vxij, vyij, vzij, delpx, delpy, delpz, factor;	
    double exp2gamt, expgamt;
    int i;
@@ -1586,14 +1587,13 @@ void velsFullLang(double T, double xi)
        if (i == 0)
 	 {
 	   c1=exp(-Oparams.xi*Oparams.Dt);
-	   /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
 	   kTm = Oparams.T / Oparams.m[0];
 	   c2 = sqrt(kTm*(1 - Sqr(c1)));
+           //printf("kTm=%.15G c1=%.15Gi c2:%.15G\n", kTm, c1, c2);
 	 }
        else if (i == Oparams.parnumA)
 	 {
 	   c1=exp(-Oparams.xi*Oparams.Dt);
-	   /* il 3 deriva dal fatto che bisogna mediare su metà angolo solido!*/
 	   kTm = Oparams.T / Oparams.m[1];
 	   c2 = sqrt(kTm*(1 - Sqr(c1)));
 	 }
@@ -1601,7 +1601,7 @@ void velsFullLang(double T, double xi)
        vx[i] = c1*vx[i] + c2*gauss();
        vy[i] = c1*vy[i] + c2*gauss();
        vz[i] = c1*vz[i] + c2*gauss();
-    }
+}
 } 
 #endif
 void rebuildLinkedList(void)
@@ -1824,9 +1824,17 @@ void move(void)
 	  writeAllCor(bf);
 	  fclose(bf);
 #ifdef MPI
+#ifdef MD_MAC
+          sprintf(fileop3, "/usr/bin/gzip -f %s_R%d", fileop, my_rank);
+#else
           sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+#endif
 #else 
+#ifdef MD_MAC
+          sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+#else
           sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
 #endif
 	  system(fileop3);
 #endif
