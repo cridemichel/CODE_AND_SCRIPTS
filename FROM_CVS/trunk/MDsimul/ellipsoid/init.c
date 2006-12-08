@@ -2441,7 +2441,35 @@ void writeAllCor(FILE* fs)
   const char tipodat2_mgl[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
   const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
-
+#ifdef EDHE_FLEX
+  int j;
+  if (!mgl_mode)
+    {
+      for (i=0; i < Oparams.ntypes; i++)
+	fprintf(fs, "%d\n", typeNP[i]);
+      for (i=0; i < Oparams.ntypes; i++)
+	{
+	  /* write particles parameters */
+	  fprintf(fs, "%.15f %.15G %.15G\n", typesArr[i].sax[0], typesArr[i].sa[1], typesArr[i].sax[2]); 
+	  fprintf(fs, "%.15G %.15G %.15G %.15G\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
+		  typesArr[i].I[2]);
+	  /* write sticky spots parameters */
+	  fprintf(fs, "%d\n", typesArr.nspots);
+	  for (j = 0; j < typesArr.nspots; j++)
+	    fprintf(fs, "%.15G %.15G %.15G %.15G ", typesArr[i].spots[j].x[0],typesArr[i].spots[j].x[1],
+		    typesArr[i].spots[j].x[2], typesArr[i].spots[j].sigma);
+	  fprintf(fs, "\n");
+	} 
+      /* write interactions */
+      for (i=0; i < Oparams.ninters; i++)
+	{
+	  fscanf(fs, "%d %d %d %d %.15G %.15G %.15G ", intersArr[i].type1, intersArr.spot1, intersArr.type2, 
+		 intersArr.spot2, 
+		 intersArr.bheight, intersArr.bhin, intersArr.bhout);
+	} 
+      fprintf(fs, "\n");
+    }
+#endif
   if (mgl_mode)
     {
       fprintf(fs, ".Vol: %f\n", L*L*L);
@@ -2496,7 +2524,53 @@ void writeAllCor(FILE* fs)
 #endif
     }
 }
+#ifdef EDHE_FLEX
+int readBinCoord_heflex(int cfd)
+{
+  int i;
+  int j, size;
+  unsigned char rerr = 0;
 
+  size = sizeof(int)*Oparams.ntypes;
+  typeNP = malloc(size);
+  rerr |= -readSegs(cfd, "Init", "Error reading typeNP", CONT, size, typeNP, NULL);
+ 
+  size = sizeof(partType)*Oparams.ntypes; 
+  typesArr = malloc(size);
+  rerr |= -readSegs(cfd, "Init", "Error reading typesArr", CONT, size, typesArr, NULL);
+
+  for (i=0; i < Oparams.ntypes; i++)
+    {
+      size = sizeof(spotStruct*typesArr.spots);
+      typesArr.spots = malloc(size);
+      rerr |= -readSegs(cfd, "Init", "Error reading spots", CONT, size, typesArr.spots, NULL);
+    } 
+  /* read interactions */
+  intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
+  rerr |= -readSegs(cfd, "Init", "Error reading intersArr", CONT, size, intersArr, NULL);
+  return rerr;
+}
+void writeBinCoord_heflex(int cfd)
+{
+  int i;
+  int j, size;
+
+  size = sizeof(int)*Oparams.ntypes;
+  writeSegs(cfd, "Init", "Error writing typeNP", CONT, size, typeNP, NULL);
+ 
+  size = sizeof(partType)*Oparams.ntypes; 
+  writeSegs(cfd, "Init", "Error writing typesArr", CONT, size, typesArr, NULL);
+
+  for (i=0; i < Oparams.ntypes; i++)
+    {
+      size = sizeof(spotStruct*typesArr.spots);
+      writeSegs(cfd, "Init", "Error writing spots", CONT, size, typesArr.spots, NULL);
+    } 
+  /* read interactions */
+  writeSegs(cfd, "Init", "Error writing intersArr", CONT, size, intersArr, NULL);
+}
+
+#endif
 /* ========================== >>> readAllCor <<< ========================== */
 void readAllCor(FILE* fs)
 {
