@@ -57,6 +57,31 @@ void UpdateSystem(void);
 #define MDINTFMT "%d"
 #endif
 
+#ifdef EDHE_FLEX
+typedef struct {
+  double x[3];
+  double sigma;
+} spotStruct;
+
+typedef struct 
+{
+  double sax[3];
+  double m;
+  double I[3];
+  double nspots;
+  spotStruct* spots; 
+} partType;
+typedef struct 
+{
+  int type1;
+  int spot1;
+  int type2;
+  int spot2;
+  double bheight;
+  double bhin;
+  double bhout;
+} interStruct;
+#endif
 #ifdef MD_HE_PARALL
 typedef struct 
 {
@@ -243,7 +268,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #ifdef MD_GRAVITY
 #define EXT_DLST  L, Lz 
 #else
-#define EXT_DLST  L
+#define EXT_DLST  L 
 #endif
 #if 1
 #define treeLeft   tree[0]
@@ -577,7 +602,9 @@ struct params
 
   /* =================== >>> DON'T TOUCH THESE !!!! <<< =================== */
   int parnum;        	/* total number of particles */
+#ifndef EDHE_FLEX
   int parnumA;          /* number of particles A */
+#endif
   MDINT totStep;	/* temporal step number that simulation 
 				   must do */
   MDINT curStep;	/* current step of simulation */
@@ -591,20 +618,27 @@ struct params
   double partDiss;             /*dissipazione negli urti fra particelle */
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
+#ifndef EDHE_FLEX
   COORD_TYPE m[2];             /* atoms masses */
-  
+#endif 
+#ifdef EDHE_FLEX
+  int ntypes;
+  int ninters;
+#else
   double a[2];
   double b[2];
   double c[2];
+#endif 
   double rcut;
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
-
+#ifndef EDHE_FLEX
 #ifndef MD_ASYM_ITENS
   double I[2];
 #else
   double I[2][3];
+#endif
 #endif
 #ifdef MD_PATCHY_HE
   int nmax;
@@ -856,23 +890,29 @@ extern struct pascii opro_ascii[];
 struct pascii opar_ascii[]=
 {
   {"parnum",            &OP(parnum),                      1,     1, "%d"},
+#ifndef EDHE_FLEX
   {"parnumA",           &OP(parnumA),                      1,     1, "%d"},
+#endif
   {"totStep",           &OP(totStep),                     1,   1,  MDINTFMT},
   {"time",              &OP(time),                        1,   1, "%.15G"},
   {"curStep",           &OP(curStep),                     1,   1,  MDINTFMT},
   {"P",                 &OP(P),                           1,   1, "%.6G"},
   {"T",                 &OP(T),                           1,   1, "%.6G"},
+#ifndef EDHE_FLEX
   {"m",                 OP(m),                            2,   1, "%.6G"},
   {"a",                 OP(a),                             2,   1, "%.8G"},
   {"b",                 OP(b),                             2,   1, "%.8G"},
   {"c",                 OP(c),                             2,   1, "%.8G"},
+#endif
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
+#ifndef EDHE_FLEX
 #ifndef MD_ASYM_ITENS
   {"I",                 OP(I),                             2,   1, "%.8G"},
 #else
   {"I",                 OP(I),                             2,   3, "%.8G"},
+#endif
 #endif
 #ifdef MD_GRAVITY
   {"wallDiss",          &OP(wallDiss),                    1,   1,   "%f"},
@@ -906,9 +946,13 @@ of the object, and elsewhere we put only extern declarations */
 #ifdef MAIN
 COORD_TYPE DECL_LIST;
 COORD_TYPE EXT_DLST;
+partType* typesArr;
+double *typeNP;
 #else
 extern COORD_TYPE DECL_LIST; 
 extern COORD_TYPE EXT_DLST;
+extern partType* typesArr;
+extern double *typeNP;
 #endif 
 
 /* ======================== >>> singlePar Array <<< ========================*/
@@ -932,7 +976,9 @@ struct singlePar OsinglePar[] = {
        structure declaration.
   */
   {"parnum" ,    &Oparams.parnum,             INT},
+#ifndef EDHE_FLEX
   {"parnumA" ,   &Oparams.parnumA,            INT},
+#endif
   {"stepnum",    &Oparams.totStep,            LLINT},
   {"inifile" ,   &OprogStatus.inifile,        STR},
   {"endfile" ,   &OprogStatus.endfile,        STR},
@@ -1074,17 +1120,20 @@ struct singlePar OsinglePar[] = {
   /* ======================================================================= */
  
   /* ==================== >>> PUT HERE YOUR PARAMS <<< ===================== */
+#ifndef EDHE_FLEX
   {"A0",      &Oparams.a[0],      CT},
   {"A1",      &Oparams.a[1],      CT},
   {"B0",      &Oparams.b[0],      CT},
   {"B1",      &Oparams.b[1],      CT},
   {"C0",      &Oparams.c[0],      CT},
   {"C1",      &Oparams.c[1],      CT},
+#endif
   {"targetPhi", &OprogStatus.targetPhi, CT},
 #ifdef MD_POLYDISP
   {"polydisp",  &OprogStatus.polydisp, CT},  
   {"polycutoff",&OprogStatus.polycutoff, CT},
 #endif
+#ifndef EDHE_FLEX
 #ifndef MD_ASYM_ITENS
   {"Ia",      &Oparams.I[0],      CT},
   {"Ib",      &Oparams.I[1],      CT},
@@ -1094,11 +1143,14 @@ struct singlePar OsinglePar[] = {
   {"I1b",      &Oparams.I[1][0],      CT},
   {"I3b",      &Oparams.I[1][2],      CT},
 #endif
+#endif
 #ifdef MD_GRAVITY
   {"ggrav",      &Oparams.ggrav,            CT},
 #endif
+#ifndef EDHE_FLEX
   {"mass0",       &Oparams.m[0],                CT},
   {"mass1",       &Oparams.m[1],                CT},
+#endif
 #ifdef MD_GRAVITY
   {"wallDiss",   &Oparams.wallDiss,         CT},
   {"quenchend",  &OprogStatus.quenchend,    CT},
