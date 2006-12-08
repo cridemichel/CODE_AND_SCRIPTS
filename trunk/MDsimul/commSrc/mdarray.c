@@ -14,8 +14,8 @@ extern struct simStat OsimStat;
 
 /* ==========================================================================*/
 #ifdef EDHE_FLEX
-extern int readBinCoord_heflex(void);
-extern void writeBinCoord_heflex(void);
+extern int readBinCoord_heflex(int cfd);
+extern void writeBinCoord_heflex(int cfd);
 #endif
 
 extern int SEGSIZE;        /* length in bytes of an array */
@@ -466,7 +466,7 @@ int readBak(int bfd)
       return 1; /* 1 = ERROR */
     }
 #ifdef EDHE_FLEX
- rerr |= -readBinCoord_heflex(cfd);
+ rerr |= -readBinCoord_heflex(bfd);
 #endif
 
  /* loads all arrays from the file associated with the fdes descriptor */
@@ -913,7 +913,7 @@ void saveBak(char *fileName)
   mdWrite(bf, NULL, "Error writing the program status.", EXIT,
 	  sizeof (struct progStatus), &OprogStatus);
 #ifdef EDHE_FLEX
-  writeBinCoord_heflex(cfd);
+  writeBinCoord_heflex(bf);
 #endif
 
   /* writes all arrays to the disk physically making a sync() */

@@ -2450,12 +2450,12 @@ void writeAllCor(FILE* fs)
       for (i=0; i < Oparams.ntypes; i++)
 	{
 	  /* write particles parameters */
-	  fprintf(fs, "%.15f %.15G %.15G\n", typesArr[i].sax[0], typesArr[i].sa[1], typesArr[i].sax[2]); 
+	  fprintf(fs, "%.15f %.15G %.15G\n", typesArr[i].sax[0], typesArr[i].sax[1], typesArr[i].sax[2]); 
 	  fprintf(fs, "%.15G %.15G %.15G %.15G\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
 		  typesArr[i].I[2]);
 	  /* write sticky spots parameters */
-	  fprintf(fs, "%d\n", typesArr.nspots);
-	  for (j = 0; j < typesArr.nspots; j++)
+	  fprintf(fs, "%d\n", typesArr[i].nspots);
+	  for (j = 0; j < typesArr[i].nspots; j++)
 	    fprintf(fs, "%.15G %.15G %.15G %.15G ", typesArr[i].spots[j].x[0],typesArr[i].spots[j].x[1],
 		    typesArr[i].spots[j].x[2], typesArr[i].spots[j].sigma);
 	  fprintf(fs, "\n");
@@ -2463,9 +2463,10 @@ void writeAllCor(FILE* fs)
       /* write interactions */
       for (i=0; i < Oparams.ninters; i++)
 	{
-	  fscanf(fs, "%d %d %d %d %.15G %.15G %.15G ", intersArr[i].type1, intersArr.spot1, intersArr.type2, 
-		 intersArr.spot2, 
-		 intersArr.bheight, intersArr.bhin, intersArr.bhout);
+	  fprintf (fs, "%d %d %d %d %.15G %.15G %.15G ", intersArr[i].type1, intersArr[i].spot1,
+		 intersArr[i].type2, 
+		 intersArr[i].spot2, 
+		 intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout);
 	} 
       fprintf(fs, "\n");
     }
@@ -2541,9 +2542,9 @@ int readBinCoord_heflex(int cfd)
 
   for (i=0; i < Oparams.ntypes; i++)
     {
-      size = sizeof(spotStruct*typesArr.spots);
-      typesArr.spots = malloc(size);
-      rerr |= -readSegs(cfd, "Init", "Error reading spots", CONT, size, typesArr.spots, NULL);
+      size = sizeof(spotStruct)*typesArr[i].nspots;
+      typesArr[i].spots = malloc(size);
+      rerr |= -readSegs(cfd, "Init", "Error reading spots", CONT, size, typesArr[i].spots, NULL);
     } 
   /* read interactions */
   intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
@@ -2563,8 +2564,8 @@ void writeBinCoord_heflex(int cfd)
 
   for (i=0; i < Oparams.ntypes; i++)
     {
-      size = sizeof(spotStruct*typesArr.spots);
-      writeSegs(cfd, "Init", "Error writing spots", CONT, size, typesArr.spots, NULL);
+      size = sizeof(spotStruct)*typesArr[i].nspots;
+      writeSegs(cfd, "Init", "Error writing spots", CONT, size, typesArr[i].spots, NULL);
     } 
   /* read interactions */
   writeSegs(cfd, "Init", "Error writing intersArr", CONT, size, intersArr, NULL);
@@ -2584,13 +2585,13 @@ void readAllCor(FILE* fs)
   for (i=0; i < Oparams.ntypes; i++)
     {
       /* read particles parameters */
-      fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sa[1], &typesArr[i].sax[2]); 
+      fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
       fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
 	   &typesArr[i].I[2]);
       /* read sticky spots parameters */
-      fscanf(fs, "%d ", &typesArr.nspots);
-      typesArr.spots = malloc(sizeof(spotStruct*typesArr.spots));
-      for (j = 0; j < typesArr.nspots; j++)
+      fscanf(fs, "%d ", &typesArr[i].nspots);
+      typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots);
+      for (j = 0; j < typesArr[i].nspots; j++)
 	fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],
 	       &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
     } 
@@ -2598,9 +2599,9 @@ void readAllCor(FILE* fs)
   intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
   for (i=0; i < Oparams.ninters; i++)
    {
-     fscanf(fs, "%d %d %d %d %lf %lf %lf ", &intersArr[i].type1, &intersArr.spot1, &intersArr.type2, 
-	    &intersArr.spot2, 
-	    &intersArr.bheight, &intersArr.bhin, &intersArr.bhout);
+     fscanf(fs, "%d %d %d %d %lf %lf %lf ", &intersArr[i].type1, &intersArr[i].spot1, &intersArr[i].type2, 
+	    &intersArr[i].spot2, 
+	    &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout);
    } 
 #endif
   for (i = 0; i < Oparams.parnum; i++)
