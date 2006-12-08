@@ -2497,12 +2497,38 @@ void writeAllCor(FILE* fs)
     }
 }
 
-
 /* ========================== >>> readAllCor <<< ========================== */
 void readAllCor(FILE* fs)
 {
   int i;
-
+#ifdef EDHE_FLEX
+  int j;
+  typeNP = malloc(sizeof(int)*Oparams.ntypes);
+  for (i=0; i < Oparams.ntypes; i++)
+    fscanf(fs, "%d ", &typeNP[i]);
+  typesArr = malloc(sizeof(partType)*Oparams.ntypes);
+  for (i=0; i < Oparams.ntypes; i++)
+    {
+      /* read particles parameters */
+      fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sa[1], &typesArr[i].sax[2]); 
+      fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
+	   &typesArr[i].I[2]);
+      /* read sticky spots parameters */
+      fscanf(fs, "%d ", &typesArr.nspots);
+      typesArr.spots = malloc(sizeof(spotStruct*typesArr.spots));
+      for (j = 0; j < typesArr.nspots; j++)
+	fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],
+	       &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
+    } 
+  /* read interactions */
+  intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
+  for (i=0; i < Oparams.ninters; i++)
+   {
+     fscanf(fs, "%d %d %d %d %lf %lf %lf ", &intersArr[i].type1, &intersArr.spot1, &intersArr.type2, 
+	    &intersArr.spot2, 
+	    &intersArr.bheight, &intersArr.bhin, &intersArr.bhout);
+   } 
+#endif
   for (i = 0; i < Oparams.parnum; i++)
     {
       if (fscanf(fs, "%lf %lf %lf ", &rx[i], &ry[i], &rz[i]) < 3)

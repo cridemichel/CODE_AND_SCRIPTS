@@ -6456,9 +6456,17 @@ void move(void)
 	  if (mgl_mode==0)
 	    {
 #ifdef MPI
+#ifdef MD_MAC
+	      sprintf(fileop3, "/usr/bin/gzip -f %s_R%d", fileop, my_rank);
+#else
 	      sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+#endif
 #else 
+#ifdef MD_MAC
+	      sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+#else
 	      sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
 #endif
     	      system(fileop3);
 	    }
