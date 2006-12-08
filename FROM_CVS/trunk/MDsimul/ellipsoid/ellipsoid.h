@@ -68,7 +68,7 @@ typedef struct
   double sax[3];
   double m;
   double I[3];
-  double nspots;
+  int nspots;
   spotStruct* spots; 
 } partType;
 typedef struct 
@@ -602,9 +602,7 @@ struct params
 
   /* =================== >>> DON'T TOUCH THESE !!!! <<< =================== */
   int parnum;        	/* total number of particles */
-#ifndef EDHE_FLEX
   int parnumA;          /* number of particles A */
-#endif
   MDINT totStep;	/* temporal step number that simulation 
 				   must do */
   MDINT curStep;	/* current step of simulation */
@@ -618,27 +616,22 @@ struct params
   double partDiss;             /*dissipazione negli urti fra particelle */
   COORD_TYPE P;			/* pressure */
   COORD_TYPE T;			/* temperature */
-#ifndef EDHE_FLEX
   COORD_TYPE m[2];             /* atoms masses */
-#endif 
 #ifdef EDHE_FLEX
   int ntypes;
   int ninters;
-#else
+#endif
   double a[2];
   double b[2];
   double c[2];
-#endif 
   double rcut;
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
-#ifndef EDHE_FLEX
 #ifndef MD_ASYM_ITENS
   double I[2];
 #else
   double I[2][3];
-#endif
 #endif
 #ifdef MD_PATCHY_HE
   int nmax;
@@ -947,12 +940,14 @@ of the object, and elsewhere we put only extern declarations */
 COORD_TYPE DECL_LIST;
 COORD_TYPE EXT_DLST;
 partType* typesArr;
-double *typeNP;
+interStruct* intersArr;
+int *typeNP;
 #else
 extern COORD_TYPE DECL_LIST; 
 extern COORD_TYPE EXT_DLST;
 extern partType* typesArr;
-extern double *typeNP;
+extern interStruct* intersArr;
+extern int *typeNP;
 #endif 
 
 /* ======================== >>> singlePar Array <<< ========================*/
