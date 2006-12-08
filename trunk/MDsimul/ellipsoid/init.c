@@ -1719,6 +1719,26 @@ void slave_task(void)
 #ifdef MD_CALC_DPP
 extern void store_last_u(int i);
 #endif
+#ifdef EDHE_FLEX
+int *typeOfPart;
+void assignPartTypes(void)
+{
+  int pt, i, ini, end, nt=0;
+  typeOfPart = malloc(sizeof(int)*Oparams.parnum);
+  ini = 0;
+  end = typeNP[0];
+  for (pt=0; pt < Oparams.ntypes; pt++)
+    {
+      for (i=ini; i < end; i++)
+	{
+	  typeOfPart[i] = nt; 
+	}
+      ini += typeNP[nt];
+      end += typeNP[nt+1];
+      nt++;
+    }
+}
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -1753,7 +1773,7 @@ void usrInitAft(void)
     OprogStatus.epsdMaxNL = OprogStatus.epsdMaxNL;
   if (OprogStatus.epsdFastRNL == -1.0)
     OprogStatus.epsdFastRNL = OprogStatus.epsdFastR;
-#ifdef MD_PATCHY_HE
+#if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
   if (OprogStatus.epsdSP == -1.0)
     OprogStatus.epsdSP = OprogStatus.epsd;
   if (OprogStatus.epsdFastSP == -1.0)
@@ -1816,7 +1836,7 @@ void usrInitAft(void)
 #else
   lastbump = malloc(sizeof(int)*Oparams.parnum);
 #endif
-#ifdef MD_PATCHY_HE
+#if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
 #ifdef MD_HE_PARALL
   if (my_rank == 0)
     tree = AllocMatI(9, poolSize);
@@ -1910,7 +1930,7 @@ void usrInitAft(void)
   for (i=0; i < Oparams.parnum; i++)
     {
       R[i] = matrix(3, 3);
-#ifdef MD_PATCHY_HE
+#if defined(MD_PATCHY_HE)||defined(EDHE_FLEX)
       lastbump[i].mol = -1;
       lastbump[i].at = -1;
 #else
@@ -1918,6 +1938,9 @@ void usrInitAft(void)
 #endif
       lastcol[i] = 0.0;
     }
+#ifdef EDHE_FLEX
+  assignPartTypes();
+#endif
   u2R();
   if (OprogStatus.CMreset==-1)
     {
@@ -1954,7 +1977,7 @@ void usrInitAft(void)
 #endif
       Oparams.time=0.0;
       /* truncate file to zero lenght */
-#ifdef MD_PATCHY_HE
+#if defined(MD_PATCHY_HE) || defiend(EDHE_FLEX)
       f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
 #endif
@@ -2187,7 +2210,7 @@ void usrInitAft(void)
 #endif
     };
 
-  /* maxax è il diametro del centroide */
+  /* maxax e' il diametro del centroide */
 #ifdef MD_PATCHY_HE
   build_atom_positions();
   distSPA = 0.0;
@@ -2198,6 +2221,7 @@ void usrInitAft(void)
       if (dist > distSPA)
 	distSPA = dist;
     }
+
   distSPB = 0.0;
   for (aa = 0; aa < MD_STSPOTS_B; aa++)
     {
@@ -2213,6 +2237,13 @@ void usrInitAft(void)
       maxax[i] = 0.0;
 #ifdef MD_POLYDISP
       if (axaP[i] > maxax[i])
+	maxax[i] = axaP[i];
+      if (axbP[i] > maxax[i])
+	maxax[i] = axbP[i];
+      if (axcP[i] > maxax[i])
+	maxax[i] = axcP[i];
+#elif defined(EDHE_FLEX)
+      if ( typeOfPart[i] > maxax[i])
 	maxax[i] = axaP[i];
       if (axbP[i] > maxax[i])
 	maxax[i] = axbP[i];
@@ -2299,7 +2330,7 @@ void usrInitAft(void)
   inCell[0] = malloc(sizeof(int)*Oparams.parnum);
   inCell[1]= malloc(sizeof(int)*Oparams.parnum);
   inCell[2] = malloc(sizeof(int)*Oparams.parnum);
-#ifdef MD_PATCHY_HE
+#if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
   for (i=0; i < Oparams.parnum; i++)
     {
       numbonds[i] = 0;
