@@ -13,6 +13,10 @@
 extern struct simStat OsimStat;
 
 /* ==========================================================================*/
+#ifdef EDHE_FLEX
+extern int readBinCoord_heflex(void);
+extern void writeBinCoord_heflex(void);
+#endif
 
 extern int SEGSIZE;        /* length in bytes of an array */
 
@@ -319,7 +323,6 @@ void setToZero(COORD_TYPE* ptr, ...)
     }
   va_end(ap);
 }
-
 /* ========================= >>> ReadCoord <<< =============================*/
 int readCoord(int cfd)
 {
@@ -341,6 +344,9 @@ int readCoord(int cfd)
   /* ALLOC_LIST is a macro defined in mdsimul.h and contains a list of 
      all addresses of the coordinates declared in the simulaiton
      (see that file) */
+#ifdef EDHE_FLEX
+  rerr |= -readBinCoord_heflex(cfd);
+#endif
 #ifdef MD_ALLOC_POLY
   AllocCoordPoly(SEGSIZE, ALLOC_LIST, NULL);
   /* loads all arrays from the file associated with the fdes descriptor */
@@ -377,12 +383,15 @@ void saveCoord(char* fileName)
   cfd = mdCreat(fileName, "End",
 		"Final coordinates are in the restore files on HD and Tape", 
 		EXIT);  
-   
   SEGSIZE = sizeof(double) * Oparams.parnum;
   /*printf("Using SEGSIZE=%d\n", SEGSIZE);*/
   mdWrite(cfd, NULL, 
 	  "Error writing the params struct.", EXIT,
 	  sizeof(struct params), &Oparams);
+#ifdef EDHE_FLEX
+  writeBinCoord_heflex(cfd);
+#endif
+
 #ifdef MD_ALLOC_POLY
   /* writes all arrays to the disk physically making a sync() */
   writeSegsPoly(cfd, "End", "Error writing final coordinates", EXIT,
@@ -456,7 +465,10 @@ int readBak(int bfd)
     { 
       return 1; /* 1 = ERROR */
     }
- 
+#ifdef EDHE_FLEX
+ rerr |= -readBinCoord_heflex(cfd);
+#endif
+
  /* loads all arrays from the file associated with the fdes descriptor */
 #ifdef MD_ALLOC_POLY
  rerr |= -readSegsPoly(bfd, "Restore", "Error reading restore file", CONT, 
@@ -900,7 +912,10 @@ void saveBak(char *fileName)
   /* write the progStatus struct (see TECH_INFO file) */
   mdWrite(bf, NULL, "Error writing the program status.", EXIT,
 	  sizeof (struct progStatus), &OprogStatus);
-  
+#ifdef EDHE_FLEX
+  writeBinCoord_heflex(cfd);
+#endif
+
   /* writes all arrays to the disk physically making a sync() */
 #ifdef MD_ALLOC_POLY
   writeSegsPoly(bf, NULL, "Error writing coordinates array on restore file", EXIT,
