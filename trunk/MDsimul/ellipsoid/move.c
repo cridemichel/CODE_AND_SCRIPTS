@@ -2616,6 +2616,9 @@ void fdjac(int n, double x[], double fvec[], double **df,
 {
   /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
   int na; 
+#ifdef EDHE_FLEX
+  int typei, typej;
+#endif
   double  rA[3], rB[3], ti, vA[3], vB[3];
 #ifndef MD_ASYM_ITENS
   double OmegaA[3][3], OmegaB[3][3];
@@ -2642,7 +2645,13 @@ void fdjac(int n, double x[], double fvec[], double **df,
   MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
   MD_DEBUG2(print_matrix(RA, 3));
   na = (iA < Oparams.parnumA)?0:1;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  na = 0;
+  typei = typeOfPart[i];
+  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+#elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[iA]);
@@ -2683,7 +2692,13 @@ void fdjac(int n, double x[], double fvec[], double **df,
   UpdateOrient(iB, ti, RB, OmegaB);
 #endif
   na = (iB < Oparams.parnumA)?0:1;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  na = 0;
+  typej = typeOfPart[j];
+  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+#elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[iB]);
@@ -2797,6 +2812,9 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
 {
   double ti;
   int na;
+#ifdef EDHE_FLEX
+  int typei, typej;
+#endif
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
 #endif
@@ -2814,7 +2832,13 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   UpdateOrient(i, ti, Rt, Omega);
 #endif
   na = (i < Oparams.parnumA)?0:1;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  na = 0;
+  typei = typeOfPart[i];
+  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+#elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
@@ -2847,7 +2871,13 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
   UpdateOrient(j, ti, Rt, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  na = 0;
+  typej = typeOfPart[j];
+  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+#elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
@@ -2922,6 +2952,9 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   int na, k1, k2; 
   double  rA[3], rB[3], ti;
   double fx[3], gx[3];
+#ifdef EDHE_FLEX
+  int typei, typej;
+#endif
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
 #endif
@@ -2941,7 +2974,13 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   UpdateOrient(i, ti, Rt, Omega);
 #endif
   na = (i < Oparams.parnumA)?0:1;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  na = 0;
+  typei = typeOfPart[i];
+  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+#elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
@@ -2975,7 +3014,13 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   UpdateOrient(j, ti, Rt, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  na = 0;
+  typej = typeOfPart[j];
+  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+#elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
