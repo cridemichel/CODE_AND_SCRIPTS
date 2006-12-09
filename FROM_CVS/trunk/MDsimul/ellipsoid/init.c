@@ -59,6 +59,10 @@ int my_rank;
 int numOfProcs; /* number of processeses in a communicator */
 #endif 
 
+#ifdef EDHE_FLEX
+int *mapbondsaFlex, *mapbondsbFlex;
+double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
+#endif
 
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
@@ -1721,6 +1725,18 @@ extern void store_last_u(int i);
 #endif
 #ifdef EDHE_FLEX
 int *typeOfPart;
+double eval_max_dist_for_spots(int pt)
+{
+  int ns;
+  double dist, distMax=0.0;
+  for (ns=0; ns < typesArr[pt].nspots; ns++)
+    {
+      dist = calc_norm(typesArr[pt].spots[ns].x) + typesArr[pt].spots[ns].sigma*0.5;
+      if (dist > distMax)
+	distMax = dist;
+    }
+  return distMax;
+}
 void assignPartTypes(void)
 {
   int pt, i, ini, end, nt=0;
@@ -1748,10 +1764,13 @@ void usrInitAft(void)
   int Nm, i, sct, overlap;
   COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
   COORD_TYPE *m;
-#ifdef MD_PATCHY_HE
+#if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
   double shift[3], drx, dry, drz, dist, dists[MD_PBONDS];
   int j, amin, bmin, nn, aa, bb, NPB;
   double distSPA, distSPB;
+#endif
+#ifdef EDHE_FLEX
+  double maxSpots;
 #endif
 #ifdef MD_POLYDISP
   double stocvar;
@@ -1939,6 +1958,12 @@ void usrInitAft(void)
       lastcol[i] = 0.0;
     }
 #ifdef EDHE_FLEX
+  mapbondsaFlex = malloc(sizeof(int)*Oparams.ninters*2);
+  mapbondsbFlex = malloc(sizeof(int)*Oparams.ninters*2);
+  mapBheightFlex = malloc(sizeof(double)*Oparams.ninters*2);
+  mapBhinFlex    = malloc(sizeof(double)*Oparams.ninters*2);
+  mapBhoutFlex   = malloc(sizeof(double)*Oparams.ninters*2);
+  mapSigmaFlex   = malloc(sizeof(double)*Oparams.ninters*2);
   assignPartTypes();
 #endif
   u2R();
@@ -2243,12 +2268,15 @@ void usrInitAft(void)
       if (axcP[i] > maxax[i])
 	maxax[i] = axcP[i];
 #elif defined(EDHE_FLEX)
-      if ( typeOfPart[i] > maxax[i])
-	maxax[i] = axaP[i];
-      if (axbP[i] > maxax[i])
-	maxax[i] = axbP[i];
-      if (axcP[i] > maxax[i])
-	maxax[i] = axcP[i];
+      if (typesArr[typeOfPart[i]].sax[0] > maxax[i])
+	maxax[i] = typesArr[typeOfPart[i]].sax[0];
+      if (typesArr[typeOfPart[i]].sax[1] > maxax[i])
+	maxax[i] = typesArr[typeOfPart[i]].sax[1];
+      if (typesArr[typeOfPart[i]].sax[2] > maxax[i])
+	maxax[i] = typesArr[typeOfPart[i]].sax[2];
+      maxSpots = eval_max_dist_for_spots(typeOfPart[i]);
+      if (maxSpots > maxax[i])
+	maxax[i] = maxSpots;
 #else
       a=(i<Oparams.parnumA)?0:1;
       if (Oparams.a[a] > maxax[i])
