@@ -8,6 +8,11 @@
 
 /* ================== >>> PROGRAM DEFINES(CUSTOMIZE!) <<< ===================*/
 #define MD_HARDSPHERES
+#ifdef EDHE_FLEX
+#ifndef MD_ASYM_ITENS
+#define MD_ASYM_ITENS
+#endif
+#endif
 #ifdef MD_HE_PARALL
 #include <mpi.h>
 #endif
@@ -31,7 +36,9 @@ void UpdateSystem(void);
 
 #define MD_HD_MIS MD_SIMDAT "" 
 /* directory to store measures files */
-
+#if defined(MD_POLYDISP) && defined(EDHE_FLEX)
+#error "-DMD_POLYDISP is not compatible with -DEDHE_FLEX!"
+#endif
 #undef MD_BASIC_DT
 #define MD_TAPE_TMP "/iomega/mdtmp/"
 /* directory on Tape to store some temporary files (restore files and 
