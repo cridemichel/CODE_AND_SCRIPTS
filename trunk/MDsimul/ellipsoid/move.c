@@ -3739,6 +3739,11 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double ti, segno, segno2;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck, tryagain = 0;
+#ifdef EDHE_FLOEX
+  int typei, typej;
+  double axaiF, axbiF, axciF;
+  double axajF, axbjF, axcjF;
+#endif
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
 #endif
@@ -3749,8 +3754,21 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t + (t1 - atomTime[i]);
+#ifdef EDHE_FLEX
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+  axaiF = partType[typei].sax[0];
+  axbiF = partType[typei].sax[1];
+  axciF = partType[typei].sax[2];
+  minaxA = min3(axaiF,axbiF,axciF);
+  axajF = partType[typej].sax[0];
+  axbjF = partType[typej].sax[1];
+  axcjF = partType[typej].sax[2];
+  minaxB = min3(axajF,axbjF,axcjF);
+#else
   minaxA = min3(axa[i],axb[i],axc[i]);
   minaxB = min3(axa[j],axb[j],axc[j]);
+#endif
   minaxAB = min(minaxA,minaxB);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -3764,7 +3782,13 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   UpdateOrient(i, ti, RtA, Omega);
 #endif
   na = (i < Oparams.parnumA)?0:1;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  na = 0;
+  typei = typeOfPart[i];
+  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+#elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
@@ -3797,7 +3821,13 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   UpdateOrient(j, ti, RtB, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  na = 0;
+  typej = typeOfPart[j];
+  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+#elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
@@ -3939,7 +3969,11 @@ retry:
 	    }
 	  nvecnf = calc_norm(vecnf);
 	  if ( nvecnf > 0.0)
+#ifdef EDHE_FLEX
+	    g2 = OprogStatus.epsdGDO*min3(axajF,axjF,axcjF)/calc_norm(vecnf); 
+#else
 	    g2 = OprogStatus.epsdGDO*min3(axa[j],axb[j],axc[j])/calc_norm(vecnf); 
+#endif
 	  else 
 	    g2 = g1;
 	}	  
@@ -4317,6 +4351,9 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
 { 
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double norm[3], wrx, wry, wrz, OmegaA[3][3], OmegaB[3][3];
+#ifdef EDHE_FLEX
+  int typei, typej;
+#endif
   double modn;
   int na, a, b;
   MD_DEBUG(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
@@ -4345,23 +4382,38 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   na = (i < Oparams.parnumA)?0:1;
   
   UpdateOrient(i, t-atomTime[i], RA, OmegaA);
+
+#ifdef EDHE_FLEX
+  na = 0;
+  typei = typeOfPart[i];
+  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+#else
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
-  
+#endif  
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
-
   na = (j < Oparams.parnumA)?0:1;
   UpdateOrient(j, t-atomTime[j], RB, OmegaB);
+#ifdef EDHE_FLEX
+  na = 0;
+  typej = typeOfPart[j];
+  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+#else
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
+#endif
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
   for (a=0; a < 3; a++)
     {
@@ -4557,13 +4609,23 @@ double calcopt_maxddot(int i, int j, double *r1 , double *r2, double factori, do
   int kk, na;
   double Iamin, Ibmin;
   double dd[3], ndd;
+#ifdef EDHE_FLEX
+  int typei, typej;
+#endif
   for (kk=0; kk < 3; kk++)
     dd[kk] = r2[kk] - r1[kk];
   ndd = calc_norm(dd);
+#ifdef EDHE_FLEX
+  typei = typeOfPart[i];
+  Iamin = min(typesArr[typei].I[0], typesArr[typei].I[1]);
+  typej = typeOfPart[j];
+  Ibmin = min(typesArr[typej].I[0], typesArr[typej].I[0]);
+#else
   na = i<Oparams.parnumA?0:1;
   Iamin = min(Oparams.I[na][0],Oparams.I[na][2]);
   na = j<Oparams.parnumA?0:1;
   Ibmin = min(Oparams.I[na][0],Oparams.I[na][2]);
+#endif
   for (kk=0; kk < 3; kk++)
     dd[kk] /= ndd;
   return (vx[i]-vx[j])*dd[0]+(vy[i]-vy[j])*dd[1]+(vz[i]-vz[j])*dd[2] +
@@ -5736,6 +5798,9 @@ void calc_energynew(char *msg)
 {
   int i, k1;
   double wt[3];
+#ifdef EDHE_FLEX
+  int typei;
+#endif
 #ifdef MD_ASYM_ITENS
   double **Ia, **Ib;
   Ia = matrix(3,3); 
@@ -5754,7 +5819,12 @@ void calc_energynew(char *msg)
 	  for (k1=0; k1 < 3; k1++)
 	    {
 #ifdef MD_ASYM_ITENS
+#ifdef EDHE_FLEX
+	      typei = typeOfPart[i];
+      	      K += wt[k1]*tyepsArr[typei].I[k1]*wt[k1];
+#else
       	      K += wt[k1]*Oparams.I[0][k1]*wt[k1];
+#endif
 #else
 	      K += Oparams.I[0]*Sqr(wt[k1]);
 #endif
@@ -5769,7 +5839,12 @@ void calc_energynew(char *msg)
 	  for (k1=0; k1 < 3; k1++)
 	    {
 #ifdef MD_ASYM_ITENS
-      	      K += wt[k1]*Oparams.I[1][k1]*wt[k1];
+#ifdef EDHE_FLEX
+	      typei = typeOfPart[i];
+      	      K += wt[k1]*tyepsArr[typei].I[k1]*wt[k1];
+#else
+	      K += wt[k1]*Oparams.I[1][k1]*wt[k1];
+#endif
 #else
       	      K += Oparams.I[1]*Sqr(wt[k1]);
 #endif
@@ -5787,6 +5862,9 @@ void calc_energy_i(char *msg, int i)
 {
   int k1;
   double wt[3];
+#ifdef EDHE_FLEX
+  int typei;
+#endif
 #ifdef MD_ASYM_ITENS
   double **Ia, **Ib;
   int k2;
@@ -5798,7 +5876,12 @@ void calc_energy_i(char *msg, int i)
     {
       /* calcola tensore d'inerzia e le matrici delle due quadriche */
 #ifdef MD_ASYM_ITENS
+#ifdef EDHE_FLEX
+      typei = typeOfPart[i];
+      RDiagtR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
+#else
       RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
+#endif
 #endif
       K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
       wt[0] = wx[i];
@@ -5818,7 +5901,12 @@ void calc_energy_i(char *msg, int i)
   else
     {
 #ifdef MD_ASYM_ITENS
+#ifdef EDHE_FLEX
+      typei = typeOfPart[i];
+      RDiagtR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
+#else
       RDiagtR(i, Ib, Oparams.I[1][0], Oparams.I[1][1], Oparams.I[1][2], R[i]);
+#endif
 #endif
       K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
       wt[0] = wx[i];
@@ -5848,10 +5936,16 @@ void calc_omega(int i)
 {
   double Mvec[3], omega[3];
   int k1, k2, na;
-
+#ifdef EDHE_FLEX
+  int typei;
+#endif
   na = (i < Oparams.parnumA)?0:1;
+#ifdef EDHE_FLEX
+  typei = typeOfPart[i];	
+  tRDiagR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
+#else
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
- 
+#endif
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       {
