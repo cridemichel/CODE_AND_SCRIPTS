@@ -939,15 +939,19 @@ of the object, and elsewhere we put only extern declarations */
 #ifdef MAIN
 COORD_TYPE DECL_LIST;
 COORD_TYPE EXT_DLST;
+#ifdef EDHE_FLEX
 partType* typesArr;
 interStruct* intersArr;
 int *typeNP;
+#endif
 #else
 extern COORD_TYPE DECL_LIST; 
 extern COORD_TYPE EXT_DLST;
+#ifdef EDHE_FLEX
 extern partType* typesArr; /* array con tutti i tipi presenti nella simulazione */
 extern interStruct* intersArr; /* array di strutture contenente tutte le interazioni */
 extern int *typeNP; /* array contentente il numero di particelle di ogni specie */
+#endif
 #endif 
 
 /* ======================== >>> singlePar Array <<< ========================*/

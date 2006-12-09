@@ -60,7 +60,7 @@ int numOfProcs; /* number of processeses in a communicator */
 #endif 
 
 #ifdef EDHE_FLEX
-int *mapbondsaFlex, *mapbondsbFlex;
+int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
 #endif
 
@@ -108,7 +108,7 @@ void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z,
 extern void check_shift(int i, int j, double *shift);
 void check_all_bonds(void)
 {
-  int nn, warn, amin, bmin, i, j, nb;
+  int nn, warn, amin, bmin, i, j, nb, nbonds;
   double shift[3], dist, dists[MD_PBONDS];
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
@@ -182,7 +182,12 @@ void check_all_bonds(void)
 		      check_shift(i, j, shift);
 		      assign_bond_mapping(i,j);
 		      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-		      for (nn=0; nn < MD_PBONDS; nn++)
+#ifdef EDHE_FLEX
+		      nbonds = nbondsFlex;
+#else
+		      nbonds = MD_PBONDS;
+#endif
+		      for (nn=0; nn < nbonds; nn++)
 			{
 			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
 			      && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
@@ -1115,67 +1120,87 @@ double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
 extern void PredictEvent(int, int);
 extern void InitEventList(void);
 void StartRun(void)
-  {
-    int j, k, n;
+{
+  int j, k, n;
 
-    for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
-      cellList[j] = -1;
-    /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
-    for (n = 0; n < Oparams.parnum; n++)
-      {
-	atomTime[n] = Oparams.time;
-	inCell[0][n] =  (rx[n] + L2) * cellsx / L;
-	inCell[1][n] =  (ry[n] + L2) * cellsy / L;
+  for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
+    cellList[j] = -1;
+  /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
+  for (n = 0; n < Oparams.parnum; n++)
+    {
+      atomTime[n] = Oparams.time;
+      inCell[0][n] =  (rx[n] + L2) * cellsx / L;
+      inCell[1][n] =  (ry[n] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
-	inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+      inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
 #else
-	inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+      inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
 #endif
-	//printf("inCell: %d, %d, %d\n", inCell[0][n], inCell[1][n], inCell[2][n]);
-	//printf("n=%d(%f,%f,%f)\n",n,rx[n], ry[n], rz[n]);
+      //printf("inCell: %d, %d, %d\n", inCell[0][n], inCell[1][n], inCell[2][n]);
+      //printf("n=%d(%f,%f,%f)\n",n,rx[n], ry[n], rz[n]);
 #if 0
-	if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
-	  {
-	    printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
-	    printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
-		   inCell[0][n],inCell[1][n], inCell[2][n]);
-	  }
+      if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
+	{
+	  printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
+	  printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
+		 inCell[0][n],inCell[1][n], inCell[2][n]);
+	}
 #endif	  
-	j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
-	  inCell[0][n] + Oparams.parnum;
-	cellList[n] = cellList[j];
-	cellList[j] = n;
-      }
-    InitEventList();
-    for (k = 0;  k < NDIM; k++)
-      {
-	cellRange[2*k]   = - 1;
-	cellRange[2*k+1] =   1;
-      }
-    if (OprogStatus.useNNL)
-      rebuildNNL();
-    for (n = 0; n < Oparams.parnum; n++)
-      {
-	if (OprogStatus.useNNL)
-	  PredictEventNNL(n, -2);
-	else
-	  PredictEvent(n, -2);
-      }
+      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+	inCell[0][n] + Oparams.parnum;
+      cellList[n] = cellList[j];
+      cellList[j] = n;
+    }
+  InitEventList();
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  if (OprogStatus.useNNL)
+    rebuildNNL();
+  for (n = 0; n < Oparams.parnum; n++)
+    {
+      if (OprogStatus.useNNL)
+	PredictEventNNL(n, -2);
+      else
+	PredictEvent(n, -2);
+    }
 #if 0
     {
       double dist, rC[3], rD[3], shift[3];
       int i, j;
-  for (i = 0; i < Oparams.parnum; i++)
-    {
-      j=-1;
-      dist = get_min_dist(i, &j, rC, rD, shift);
-      printf("dist %d:%.8G\n", i, dist);
-    }
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  j=-1;
+	  dist = get_min_dist(i, &j, rC, rD, shift);
+	  printf("dist %d:%.8G\n", i, dist);
+	}
     }
 #endif
 
-  }
-
+}
+#ifdef EDHE_FLEX
+int get_num_pbonds(int i, int j)
+{
+#if 1
+  return nbondsFlex;
+#else
+  int ni, type1, type2, a;
+  type1 = typeOfPart[i];
+  type2 = typeOfPart[j];
+  for (ni=0; ni < Oparams.ninters; ni++)
+    {
+      if ((intersArr[ni].type1 == type1 && intersArr[ni] == type2) ||
+	  (intersArr[ni].type1 == type2 && intersArr[ni] == type1))
+	{
+	  a+=2;
+	}	
+    }
+  return a;
+#endif
+}
+#endif
 #ifdef MD_PATCHY_HE
 extern void build_atom_positions(void);
 extern void add_bond(int na, int n, int a, int b);
@@ -2002,7 +2027,7 @@ void usrInitAft(void)
 #endif
       Oparams.time=0.0;
       /* truncate file to zero lenght */
-#if defined(MD_PATCHY_HE) || defiend(EDHE_FLEX)
+#if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
       f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
 #endif
