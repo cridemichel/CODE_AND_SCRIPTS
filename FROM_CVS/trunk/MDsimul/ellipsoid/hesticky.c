@@ -243,6 +243,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double Mvec[3], omega[3];
 #endif
   int na, a, kk;
+#ifdef EDHE_FLEX
+  double sigAB;
+#endif
 #if 0
   if (i < Oparams.parnumA && j < Oparams.parnumA)
     {
@@ -304,9 +307,16 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   /* controllare con cura la scelta dei parametri relativi ai diametri delle sferette
    * e alle larghezze delle buche dei potenziali a buca quadrata */
   MD_DEBUG20(printf("coll code: %d\n", bt));
+#ifdef EDHE_FLEX
+  sigAB = 0.5*(partType[typeOfPart[i]].spots[ata].sigma + partType[typeOfPart[j]].spots[atb].sigma);
+  rCx = ratA[0] - rAB[0]*sigAB*0.5;
+  rCy = ratA[1] - rAB[1]*sigAB*0.5;
+  rCz = ratA[2] - rAB[2]*sigAB*0.5;
+#else
   rCx = ratA[0] - rAB[0]*Oparams.sigmaSticky*0.5;
   rCy = ratA[1] - rAB[1]*Oparams.sigmaSticky*0.5;
   rCz = ratA[2] - rAB[2]*Oparams.sigmaSticky*0.5;
+#endif  
   rAC[0] = rA[0] - rCx;
   rAC[1] = rA[1] - rCy;
   rAC[2] = rA[2] - rCz;
@@ -651,6 +661,33 @@ void remove_bond(int na, int n, int a, int b)
     printf("rimossi due bond boh...\n");
 #endif
 }
+#ifdef EDHE_FLEX
+void assign_bond_mapping(int i, int j)
+{
+  int ni, type1, type2, a;
+  type1 = typeOfPart[i];
+  type2 = typeOfPart[j];
+  for (ni=0; ni < Oparams.ninters; ni++)
+    {
+      if ((intersArr[ni].type1 == type1 && intersArr[ni] == type2) ||
+	  (intersArr[ni].type1 == type2 && intersArr[ni] == type1))
+	{
+	  mapbondsaFlex[a] = intersArr[ni].spot1+1;
+          mapbondsbFlex[a] = intersArr[ni].spot2+1;
+	  mapbondsaFlex[a+1] = intersArr[ni].spot2+1;
+	  mapbondsbFlex[a+1] = intersArr[ni].spot1+1;
+	  mapBheightFlex[a] = mapBheightFlex[a+1] = intersArr[ni].bheight;
+	  mapBinFlex[a] = mapBinFlex[a+1] = intersArr[ni].bin;
+          mapBoutFlex[a] = mapBoutFlex[a+1] = intersArr[ni].bout;
+          mapSigmaFlex[a] = mapSigmaFlex[a+1] = 0.5*(partType[type1].spots[intersArr[ni].spot1]
+					     	     + partType[type2].spots[intersArr[ni].spot2]);
+	  a+=2;
+	}	
+    }
+  mapbondsa = mapbondsaFlex;
+  mapbondsb = mapbondsbFlex;
+} 
+#else
 void assign_bond_mapping(int i, int j)
 {
   /* NOTA: l'interazione bonded è solo tra Si e O 
@@ -667,6 +704,7 @@ void assign_bond_mapping(int i, int j)
       mapbondsa = mapbondsbAB;
     }
 }
+#endif
 
 int bound(int na, int n, int a, int b);
 void add_bond(int na, int n, int a, int b)
@@ -819,7 +857,11 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
   for (kk=0; kk < 3; kk++)
     distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
   MD_DEBUG20(printf("dist= %.15G\n", sqrt(distSq)-Oparams.sigmaSticky));
+#ifdef EDHE_FLEX
+  return sqrt(distSq) - mapSigmaFlex[nn];
+#else
   return sqrt(distSq) - Oparams.sigmaSticky;
+#endif
 }
 
 /* N.B. per la silica tale routine va cambiata! */
@@ -876,7 +918,11 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
       distSq = 0;
       for (kk=0; kk < 3; kk++)
 	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+#ifdef EDHE_FLEX
+      dists[nn] = dist = sqrt(distSq) - mapSigmaFlex[nn];
+#else
       dists[nn] = dist = sqrt(distSq) - Oparams.sigmaSticky;
+#endif     
       if (firstdist || fabs(dist) < fabs(distmin))
 	{
 	  firstdist = 0;
@@ -1288,6 +1334,12 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
 
   for (kk=0; kk < MD_PBONDS; kk++)
     {
+#ifdef EDHE_FLEX
+      factori = calc_norm(typesArr[typeOfPart[i]].spots[mapbondsa[kk]-1].x) + 
+	0.5*mapSigmaFlex[kk] + OprogStatus.epsdSP;
+      factorj = calc_norm(typesArr[typeOfPart[j]].spots[mapbondsb[kk]-1].x) + 
+	0.5*mapSigmaFlex[kk] + OprogStatus.epsdSP;
+#else
       if (i < Oparams.parnumA)
 	factori = calc_norm(spXYZ_A[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
       else
@@ -1296,6 +1348,7 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
 	factorj = calc_norm(spXYZ_A[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
       else
 	factorj = calc_norm(spXYZ_B[mapbondsb[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
+#endif
 #if 0
 	factori = 0.5*maxax[i]+OprogStatus.epsdSP;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 	factorj = 0.5*maxax[j]+OprogStatus.epsdSP;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
@@ -1890,7 +1943,11 @@ double calcDistNegOneNNL_sp_norient(double t, double t1, int i, int nn, double r
   for (kk=0; kk < 3; kk++)
     dist += -(ratA[nn+1][kk]-rB[kk])*gradplane[kk];
   MD_DEBUG32(printf("DIST NOORIENT nn=%d t=%.15G dist=%.15G\n", nn, t+t1, dist- Oparams.sigmaSticky*0.5));
+#ifdef EDHE_FLEX
+  return dist - mapSigmaFlex[nn]*0.5;
+#else
   return dist - Oparams.sigmaSticky*0.5;
+#endif
 }
 
 double calcDistNegNeighPlaneAll_sp(int nsp, double t, double t1, int i, double dists[6][NA])
@@ -2117,7 +2174,11 @@ double calcDistNegOneNNL_sp(double t, double t1, int i, int nn)
     dist += -(ratA[nn+1][kk]-rB[kk])*gradplane[kk];
   MD_DEBUG32(printf("BRENT nn=%d t=%.15G dist= %.15G\n", nn,
 		    t1+t,  dist - Oparams.sigmaSticky*0.5));
+#ifdef EDHE_FLEX
+  return dist - mapSigmaFlex[nn]*0.5;
+#else
   return dist - Oparams.sigmaSticky*0.5;
+#endif
 }
 double funcs2beZeroedNNL_sp(double x, double tref, int i, int nn)
 {
@@ -2164,10 +2225,15 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
 #if 0
   factori = 0.5*maxax[i]+OprogStatus.epsdSP;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 #else
+#ifdef EDHE_FLEX
+  factori = calc_norm(typesArr[typeOfPart[i]].spots[mapbondsa[nn]-1].x) +
+    0.5*mapSigmaFlex[nn] + OprogStatus.epsdSP;
+#else
   if (i < Oparams.parnumA)
     factori = calc_norm(spXYZ_A[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
   else
     factori = calc_norm(spXYZ_B[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
+#endif
 #endif
 #if 0
   na = i<Oparams.parnumA?0:1;
@@ -2186,10 +2252,15 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
 #if 0
   factori = 0.5*maxax[i]+OprogStatus.epsdSP;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 #else
+#ifdef EDHE_FLEX
+  factori = calc_norm(typesArr[typeOfPart[i]].spots[mapbondsa[nn]-1].x) +
+    0.5*mapSigmaFlex[nn] + OprogStatus.epsdSP;
+#else
    if (i < Oparams.parnumA)
     factori = calc_norm(spXYZ_A[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
   else
     factori = calc_norm(spXYZ_B[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
+#endif
 #endif
   return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
