@@ -22,6 +22,12 @@ extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **REtA, **REtB;
 extern double cosEulAng[2][3], sinEulAng[2][3];
 extern long long int itsFNL, timesFNL, timesSNL, itsSNL;
 extern int do_check_negpairs;
+
+#ifdef EDHE_FLEX
+extern int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
+extern double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
+#endif
+
 #ifdef MD_ASYM_ITENS
 extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp, *angM;
 #else
@@ -684,6 +690,7 @@ void assign_bond_mapping(int i, int j)
 	  a+=2;
 	}	
     }
+  nbondsFlex = a;
   mapbondsa = mapbondsaFlex;
   mapbondsb = mapbondsbFlex;
 } 
@@ -866,11 +873,11 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
 
 /* N.B. per la silica tale routine va cambiata! */
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
-		   double dists[MD_PBONDS], int bondpair)
+		   double *dists, int bondpair)
 {
   double distmin, distSq, ti;
   double ratA[NA][3], ratB[NA][3], dist;
-  int firstdist = 1, nn, kk;
+  int firstdist = 1, nn, kk, nbonds;
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
 #endif
@@ -908,7 +915,12 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   BuildAtomPos(j, rB, RtB, ratB);
   /* calcola sigmaSq[][]!!! */
   distmin = 0;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+  for (nn = 0; nn < nbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	{
@@ -957,12 +969,18 @@ int refine_contactSP(int i, int j, double tref, double t1, double t2, int nn, do
       return 1; 
     }
 }
-int check_crossSP(double distsOld[MD_PBONDS], double dists[MD_PBONDS], 
-		int crossed[MD_PBONDS], int bondpair)
+int check_crossSP(double *distsOld, double *dists, 
+		int *crossed, int bondpair)
 {
   int nn;
   int retcross = 0;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  int nbonds;
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+  for (nn = 0; nn < nbonds; nn++)
     {
       crossed[nn] = MD_EVENT_NONE;
       if (bondpair != -1 && bondpair != nn)
@@ -978,12 +996,19 @@ int check_crossSP(double distsOld[MD_PBONDS], double dists[MD_PBONDS],
     }
   return retcross;
 }
-int get_dists_tocheckSP(double distsOld[], double dists[], int tocheck[], int dorefine[],
+int get_dists_tocheckSP(double *distsOld, double *dists, int *tocheck, int *dorefine,
 		      int bondpair)
 {
   int nn;
   int rettochk = 0;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  int nbonds;
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+
+  for (nn = 0; nn < nbonds; nn++)
     {
       tocheck[nn] = 0;
       if ( dists[nn]*distsOld[nn] > 0.0 &&
@@ -996,11 +1021,18 @@ int get_dists_tocheckSP(double distsOld[], double dists[], int tocheck[], int do
     }
   return rettochk;
 }
-double get_max_deldistSP(double distsOld[MD_PBONDS], double dists[MD_PBONDS], int bondpair)
+double get_max_deldistSP(double *distsOld, double *dists, int bondpair)
 {
   int nn, first = 1;
   double maxdd=0.0, dd;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  int nbonds;
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+
+  for (nn = 0; nn < nbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -1016,7 +1048,11 @@ double get_max_deldistSP(double distsOld[MD_PBONDS], double dists[MD_PBONDS], in
 
 void assign_distsSP(double a[], double b[])
 {
+#ifdef EDHE_FLEX
+  memcpy(b, a, nbondsFlex*sizeof(double));
+#else
   memcpy(b, a, MD_PBONDS*sizeof(double));
+#endif
 }
 /* NOTA: tale stima ottimizzata della maggiorazione per la velocità di variazione della distanza
  * sembra corretta, fare comunque dei test.*/
@@ -1032,6 +1068,7 @@ double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt
 #endif
   double maxddot=0.0, nr12i, nr12j;
   int nn, kk;
+  int nbonds;
   ti = t1 - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -1056,7 +1093,13 @@ double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt
   UpdateOrient(j, ti, RtB, Omega);
 #endif
   BuildAtomPos(j, rB, RtB, ratB);
-  for (nn = 0; nn < MD_PBONDS; nn++)
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+
+  for (nn = 0; nn < nbonds; nn++)
     {
       for (kk = 0; kk < 3; kk++)
 	{
@@ -1093,7 +1136,14 @@ void calc_deltSP(double *maxddoti, double *delt, double *dists, int bondpair)
 {
   int nn;
   double dt;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  int nbonds;
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+
+  for (nn = 0; nn <  nbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -1105,7 +1155,7 @@ void calc_deltSP(double *maxddoti, double *delt, double *dists, int bondpair)
   //printf("I chose dt=%.15G\n", *delt);
 }
 
-int search_contact_fasterSP(int i, int j, double *shift, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double dists[MD_PBONDS], int bondpair, double maxddot, double *maxddoti)
+int search_contact_fasterSP(int i, int j, double *shift, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double *dists, int bondpair, double maxddot, double *maxddoti)
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
@@ -1246,7 +1296,15 @@ int valid_collision(int i, int j, int ata, int atb, int collCode)
 int get_bonded(int i, int j)
 {
   int nb, jj, jj2, kk, nn, aa, bb;
+  int nbonds;
+
   nb = numbonds[i];
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+
   if (!OprogStatus.assumeOneBond)
     return -1;
   for (kk = 0; kk < nb; kk++)
@@ -1257,7 +1315,7 @@ int get_bonded(int i, int j)
       bb = jj2 % NA;
       if (jj == j)
 	{
-	  for (nn=0; nn < MD_PBONDS; nn++)
+	  for (nn=0; nn < nbonds; nn++)
 	    if (mapbondsa[nn]==aa && mapbondsb[nn]==bb)
 	      return nn;
 	} 
@@ -1270,10 +1328,17 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
 {
   int nn, sum;
   sum = 0;
+  int nbonds;
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+
 //  if (lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == 0 
   //    && lastbump[j].at == 0)
     //return 2;
-  for (nn = 0; nn < MD_PBONDS; nn++)
+  for (nn = 0; nn < nbonds; nn++)
     {
       negpairs[nn] = 0;
       if (bondpair != -1 && bondpair != nn)
@@ -1292,7 +1357,14 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
 int delt_is_too_big_hc(int i, int j, int bondpair, double *dists, double *distsOld)
 {
   int nn;
-  for (nn=0; nn < MD_PBONDS; nn++)
+  int nbonds;
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+
+  for (nn=0; nn < nbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -1307,7 +1379,14 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 		    int *negpairs)
 {
   int nn;
-  for (nn=0; nn < MD_PBONDS; nn++)
+  int nbonds;
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+
+  for (nn=0; nn < nbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -1331,8 +1410,14 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
   double Iamin, Ibmin;
 #endif
   double factori, factorj, maxddot=0.0;
+  int nbonds;
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
 
-  for (kk=0; kk < MD_PBONDS; kk++)
+  for (kk=0; kk < nbonds; kk++)
     {
 #ifdef EDHE_FLEX
       factori = calc_norm(typesArr[typeOfPart[i]].spots[mapbondsa[kk]-1].x) + 
@@ -1379,8 +1464,14 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
   int kk;
   double maxddot=0.0;
   double factori, factorj;
+  int nbonds;
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
 
-  for (kk=0; kk < MD_PBONDS; kk++)
+  for (kk=0; kk < nbonds; kk++)
     {
 #if 0
       if (i < Oparams.parnumA)
@@ -1423,6 +1514,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   const double minh = 1E-20;
   double h, d, dold, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS];
   double maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
+  int nbonds;
 #ifndef MD_BASIC_DT
   double deldist, normddot, dold2, distsOld2[MD_PBONDS]; 
 #endif
@@ -1474,7 +1566,13 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
    * 2) fare un passo ed eventualmente ridurlo finchè la distanza non è corretta.
    */
   df = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-  for (nn=0; nn < MD_PBONDS; nn++)
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+
+  for (nn=0; nn < nbonds; nn++)
     {
       if (bondpair != -1 && bondpair != nn)
 	continue;
@@ -1657,12 +1755,12 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #endif
 #endif
       MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
-      for (nn=0; nn < MD_PBONDS; nn++)
+      for (nn=0; nn < nbonds; nn++)
 	dorefine[nn] = MD_EVENT_NONE;
       ncr=check_crossSP(distsOld, dists, crossed, bondpair);
       /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
        * sticky */
-      for (nn = 0; nn < MD_PBONDS; nn++)
+      for (nn = 0; nn < nbonds; nn++)
 	{
 	  t2arr[nn] = t; 
 
@@ -1683,7 +1781,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #define MD_INTERPOL
 #ifdef MD_INTERPOL
       ntc = get_dists_tocheckSP(distsOld, dists, tocheck, dorefine, bondpair);
-      for (nn = 0; nn < MD_PBONDS; nn++)
+      for (nn = 0; nn < nbonds; nn++)
 	{
 	  if (tocheck[nn])
 	    {
@@ -1707,7 +1805,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #endif
       tmin = 0;
       gotcoll = 0;
-      for (nn = 0; nn < MD_PBONDS; nn++)
+      for (nn = 0; nn < nbonds; nn++)
 	{
 	  if (dorefine[nn]!=MD_EVENT_NONE)
 	    {
