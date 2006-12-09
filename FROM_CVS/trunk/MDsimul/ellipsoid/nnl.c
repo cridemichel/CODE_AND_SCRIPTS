@@ -2558,6 +2558,10 @@ const double mddotfact = 1.001;
 void adjust_maxddot(int i, double *maxddot)
 {
   double K = 1.0;
+#ifdef EDHE_FLEX
+  int typei;
+  double axa, axb, axc;
+#endif
 #ifdef MD_ASYM_ITENS
   if (Mx[i] == 0.0 && My[i] == 0.0 && Mz[i] == 0.0)
     K = mddotfact;
@@ -2567,6 +2571,14 @@ void adjust_maxddot(int i, double *maxddot)
 #endif
 #ifdef MD_POLYDISP
   if (axaP[i] == axbP[i] && axbP[i] == axcP[i])
+    K = mddotfact;
+#else
+#ifdef EDHE_FLEX
+  typei = typeOfPart[i];
+  axa = partType[typei].sax[0];
+  axb = partType[typei].sax[1];
+  axc = partType[typei].sax[2];
+  if (axa == axb && axb == axc)
     K = mddotfact;
 #else
   if (i < Oparams.parnumA)
@@ -2579,6 +2591,7 @@ void adjust_maxddot(int i, double *maxddot)
       if (Oparams.a[1] == Oparams.b[1] && Oparams.b[1] == Oparams.c[1])
 	K = mddotfact;
     }
+#endif
 #endif
   *maxddot *= K;
 }
@@ -2586,6 +2599,10 @@ void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddo
 {
   double K = 1.0;
   int a;
+#ifdef EDHE_FLEX
+  int typei;
+  double axa, axb, axc;
+#endif
 #ifdef MD_ASYM_ITENS
   if (Mx[i] == 0.0 && My[i] == 0.0 && Mz[i] == 0.0)
     K = mddotfact;
@@ -2595,6 +2612,14 @@ void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddo
 #endif
 #ifdef MD_POLYDISP
   if (axaP[i] == axbP[i] && axbP[i] == axcP[i])
+    K = mddotfact;
+#else
+#ifdef EDHE_FLEX
+  typei = typeOfPart[i];
+  axa = partType[typei].sax[0];
+  axb = partType[typei].sax[1];
+  axc = partType[typei].sax[2];
+  if (axa == axb && axb == axc)
     K = mddotfact;
 #else
   if (i < Oparams.parnumA)
@@ -2607,6 +2632,7 @@ void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddo
       if (Oparams.a[1] == Oparams.b[1] && Oparams.b[1] == Oparams.c[1])
 	K = mddotfact;
     }
+#endif
 #endif
   *maxddot *= K;
   for (a = 0; a < 6; a++)
@@ -4352,10 +4378,20 @@ void nextNNLupdate(int na)
 #else
   double Omega[3][3];
 #endif
+#ifdef EDHE_FLEX
+  int typena;
+#endif
 #ifndef MD_NNLPLANES
+#ifdef EDHE_FLEX
+  typena = typeOfPart[na];
+  nebrTab[na].axa = OprogStatus.rNebrShell*partType[typena].sax[0];
+  nebrTab[na].axb = OprogStatus.rNebrShell*partType[typena].sax[1];
+  nebrTab[na].axc = OprogStatus.rNebrShell*partType[typena].sax[2];
+#else
   nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];
   nebrTab[na].axb = OprogStatus.rNebrShell*axb[na];
   nebrTab[na].axc = OprogStatus.rNebrShell*axc[na];
+#endif
   DelDist = max3(nebrTab[na].axa,nebrTab[na].axb,nebrTab[na].axc) -
     max3(axa[na],axb[na],axc[na]);
 #else
@@ -4373,9 +4409,16 @@ void nextNNLupdate(int na)
     }
   else
     {
+#ifdef EDHE_FLEX
+      typena = typeOfPar[na]; 
+      nebrTab[na].axa = OprogStatus.rNebrShell+partType[typena].sax[0];
+      nebrTab[na].axb = OprogStatus.rNebrShell+partType[typena].sax[1];
+      nebrTab[na].axc = OprogStatus.rNebrShell+partType[typena].sax[2];
+#else
       nebrTab[na].axa = OprogStatus.rNebrShell+axa[na];
       nebrTab[na].axb = OprogStatus.rNebrShell+axb[na];
       nebrTab[na].axc = OprogStatus.rNebrShell+axc[na];
+#endif
       DelDist = OprogStatus.rNebrShell;
     }
 #endif
