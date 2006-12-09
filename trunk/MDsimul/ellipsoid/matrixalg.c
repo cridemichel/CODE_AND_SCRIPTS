@@ -2933,9 +2933,24 @@ void distSD(int i, int j, double shift[3], double *vecg, double lambda, int half
   double Fret;
   int iter;
   double vec[8];
+#ifdef EDHE_FLEX
+  int typei, typej;
+  double axaiF, axbiF, axciF, axajF, axbjF, axcjF;
+#endif
   icg = i;
   jcg = j;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+  axaiF = typesArr[typei].sax[0];
+  axbiF = typesArr[typei].sax[1];
+  axciF = typesArr[typei].sax[2];
+  minaxicg = min3(axaiF, axbiF, axciF);
+  axajF = typesArr[typej].sax[0];
+  axbjF = typesArr[typej].sax[1];
+  axcjF = typesArr[typej].sax[2];
+  minaxjcg = min3(axajF, axbjF, axcjF);
+#elif defined(MD_POLYDISP)
   minaxicg = min3(axaP[i], axbP[i], axcP[i]);
   minaxjcg = min3(axaP[j], axbP[j], axcP[j]);
 #else
