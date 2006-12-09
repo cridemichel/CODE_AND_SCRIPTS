@@ -231,6 +231,27 @@ int one_is_bonded(int i, int a, int j, int b)
   else
     return 0;
 }
+#ifdef EDHE_FLEX
+void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double *bhin, double *bhout)
+{
+  int type1, type2, pt;
+  type1 = typeOfPart[i];
+  type2 = typeOfPart[j];
+  for (pt = 0; pt < Oparams.ninters; pt++)
+    {
+      if ((intersArr[pt].type1 == type1 && intersArr[pt].type2 == type2 &&
+	 intersArr[pt].spot1 == ata-1 && intersArr[pt].spot2 == atb-1) ||
+	  (intersArr[pt].type1 == type2 && intersArr[pt].type2 == type1 &&
+	   intersArr[pt].spot1 == atb-1 && intersArr[pt].spot2 == ata-1) )
+	{
+	  *bheight = intersArr[pt].bheight;
+	  *bhin    = intersArr[pt].bhin;
+	  *bhout   = intersArr[pt].bhout;
+	  return;
+	} 
+    }
+}
+#endif
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
@@ -238,6 +259,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
+  double bhin, bhout, bheight;
 #ifdef MD_HSVISCO
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
@@ -465,6 +487,13 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     denom += invIb*Sqr(rBCn[a]);
 #endif
   mredl = 1.0 / denom;
+#ifdef EDHE_FLEX
+  get_inter_bheights(i, j, ata, atb, &bheight, &bhin, &bhout);
+#else
+  bheight = Oparams.bheight; 
+  bhin = Oparams.bhin;
+  bhout= Oparams.bhout;
+#endif
   switch (bt)
     {
       /* N.B.
@@ -476,7 +505,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_INOUT_BARRIER:
-      if (Sqr(vc) < 2.0*(Oparams.bheight+Oparams.bhout)/mredl)
+      if (Sqr(vc) < 2.0*(bheight+bhout)/mredl)
 	{
 	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
 			    Oparams.time, vc,  bt,
@@ -487,7 +516,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	{
 	  MD_DEBUG31(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
 		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
-	  factor = -vc + sqrt(Sqr(vc) - 2.0*Oparams.bheight/mredl);
+	  factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
 	  remove_bond(i, j, ata, atb);
 	  remove_bond(j, i, atb, ata);
 	}
@@ -498,7 +527,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_OUTIN_BARRIER:
-      if (one_is_bonded(i, ata, j, atb) || (Oparams.bhin >= 0.0 && Sqr(vc) < 2.0*Oparams.bhin/mredl))
+      if (one_is_bonded(i, ata, j, atb) || (Oparams.bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
 	{
 	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
 			    Oparams.time, vc,  bt,
@@ -509,10 +538,10 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	{
 	  add_bond(i, j, ata, atb);
 	  add_bond(j, i, atb, ata);
-	  factor = -vc - sqrt(Sqr(vc) + 2.0*Oparams.bheight/mredl);
+	  factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
 	}
 	MD_DEBUG31(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
-		      i, ata, j, atb, Sqr(vc) + 2.0*Oparams.bheight/mredl, Oparams.bheight, mredl));
+		      i, ata, j, atb, Sqr(vc) + 2.0*bheight/mredl, bheight, mredl));
 #if 0
 	{ double dist;
 	  double shift[3]={0,0,0};
