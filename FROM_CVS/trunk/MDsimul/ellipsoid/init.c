@@ -1833,7 +1833,14 @@ void usrInitAft(void)
 
   /* initialize global varibales */
   pi = 2.0 * acos(0);
-
+#ifdef EDHE_FLEX 
+ if (OprogStatus.targetPhi > 0.0)
+   {
+     printf("WARNING: You can not use growth with -DEDHE_FLEX!");
+     printf("Exiting...");
+     exit(-1);
+   } 
+#endif
   Nm = Oparams.parnumA;
   parnumA = Oparams.parnumA;
   parnumB = Oparams.parnum - Oparams.parnumA;
