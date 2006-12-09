@@ -26,6 +26,8 @@ extern int do_check_negpairs;
 #ifdef EDHE_FLEX
 extern int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 extern double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
+extern double *distsOld, *dists, *distsOld2, *maxddoti;
+extern int *crossed, *tocheck, *dorefine, *crossed, *negpairs;
 #endif
 
 #ifdef MD_ASYM_ITENS
@@ -68,7 +70,7 @@ extern long long int itsF, timesF, itsS, timesS, numcoll;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
 void ScheduleEventBarr (int idA, int idB, int idata, int atb, int idcollcode, double tEvent);
-double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double dists[MD_PBONDS], int bondpair);
+double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
 extern void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3], double *phir, double *psir);
 
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
@@ -1046,7 +1048,7 @@ double get_max_deldistSP(double *distsOld, double *dists, int bondpair)
   return maxdd;
 }
 
-void assign_distsSP(double a[], double b[])
+void assign_distsSP(double *a, double *b)
 {
 #ifdef EDHE_FLEX
   memcpy(b, a, nbondsFlex*sizeof(double));
@@ -1159,9 +1161,15 @@ int search_contact_fasterSP(int i, int j, double *shift, double *t, double t1, d
 {
   /* NOTA: 
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
-  double told, delt, distsOld[MD_PBONDS];
+  double told, delt; 
+#ifndef EDHE_FLEX
+  double distsOld[MD_PBONDS];
+#endif
   const int MAXOPTITS = 500;
-  int its=0, amin, bmin, crossed[MD_PBONDS]; 
+  int its=0, amin, bmin;
+#ifndef EDHE_FLEX
+  int crossed[MD_PBONDS]; 
+#endif
   /* estimate of maximum rate of change for d */
 #if 0
   maxddot = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
@@ -1512,20 +1520,32 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
   const double minh = 1E-20;
-  double h, d, dold, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS];
+  double h, d, dold, t;
+#ifndef EDHE_FLEX
+  double dists[MD_PBONDS], t2arr[MD_PBONDS], distsOld[MD_PBONDS];
+#endif
   double maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   int nbonds;
 #ifndef MD_BASIC_DT
-  double deldist, normddot, dold2, distsOld2[MD_PBONDS]; 
+  double deldist, normddot, dold2; 
+#ifndef EDHE_FLEX
+  double distsOld2[MD_PBONDS];
+#endif
 #endif
   //const int MAXOPTITS = 4;
   int bondpair, itstb;
   int its, foundrc;
-  double maxddoti[MD_PBONDS], epsd, epsdFast, epsdFastR, epsdMax; 
-  int tocheck[MD_PBONDS], dorefine[MD_PBONDS], ntc, ncr, nn, gotcoll, amin, bmin,
-      crossed[MD_PBONDS], firstaftsf;
+#ifndef EDHE_FLEX
+  double maxddoti[MD_PBONDS];
+  int tocheck[MD_PBONDS], dorefine[MD_PBONDS], crossed[MD_PBONDS];
+#endif
+  double epsd, epsdFast, epsdFastR, epsdMax; 
+  int  ntc, ncr, nn, gotcoll, amin, bmin, firstaftsf;
 #ifdef MD_NEGPAIRS
-  int negpairs[MD_PBONDS], sumnegpairs;
+  int sumnegpairs;
+#ifndef EDHE_FLEX
+  int negpairs[MD_PBONDS];
+#endif
 #endif
   const double GOLD= 1.618034;
   epsd = OprogStatus.epsdSP;
