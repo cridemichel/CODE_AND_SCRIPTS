@@ -275,6 +275,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   int na, a, kk;
 #ifdef EDHE_FLEX
   double sigAB;
+  int typei, typej;
 #endif
 #if 0
   if (i < Oparams.parnumA && j < Oparams.parnumA)
@@ -362,7 +363,12 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       /* scalare tutti i raggi qui */
     }
 #ifdef MD_ASYM_ITENS
+#ifdef EDHE_FLEX
+  typei = typeOfPart[i];
+  tRDiagR(i, Ia, partType[typei].I[0], partType[typei].I[1], partType[typei].I[2], R[i]);
+#else
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
+#endif
 #else
   Ia = Oparams.I[na];
 #endif
@@ -372,7 +378,12 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       /* scalare tutti i raggi qui */
     }
 #ifdef MD_ASYM_ITENS
+#ifdef EDHE_FLEX
+  typej = typeOfPart[j];
+  tRDiagR(j, Ib, partType[typej].I[0], partType[typej].I[1], partType[typej].I[2], R[j]);
+#else
   tRDiagR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
+#endif
 #else
   Ib = Oparams.I[na];
 #endif
@@ -432,10 +443,13 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   vCB[1] = vy[j] + wry;
   vCB[2] = vz[j] + wrz;
 
-  
+#ifdef EDHE_FLEX
+  invmi = 1.0/partType[typei].m;
+  invmj = 1.0/partType[typej].m; 
+#else 
   invmi = (i<Oparams.parnumA)?1/Oparams.m[0]:1/Oparams.m[1];
   invmj = (j<Oparams.parnumA)?1/Oparams.m[0]:1/Oparams.m[1];
-
+#endif
   denom = invmi + invmj; 
   vc = 0;
   for (a=0; a < 3; a++)
