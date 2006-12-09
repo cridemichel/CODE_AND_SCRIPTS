@@ -62,6 +62,8 @@ int numOfProcs; /* number of processeses in a communicator */
 #ifdef EDHE_FLEX
 int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
+double *distsOld, *dists, *distsOld2, *maxddoti;
+int *crossed, *tocheck, *dorefine, *crossed, *negpairs;
 #endif
 
 extern double **matrix(int n, int m);
@@ -109,7 +111,10 @@ extern void check_shift(int i, int j, double *shift);
 void check_all_bonds(void)
 {
   int nn, warn, amin, bmin, i, j, nb, nbonds;
-  double shift[3], dist, dists[MD_PBONDS];
+  double shift[3], dist;
+#ifndef EDHE_FLEX
+  double dists[MD_PBONDS];
+#endif
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
@@ -1750,6 +1755,28 @@ extern void store_last_u(int i);
 #endif
 #ifdef EDHE_FLEX
 int *typeOfPart;
+int get_max_nbonds(void)
+{
+  int pt1, pt2;
+  int ni, type1, type2, a, maxpbonds=0;
+  for (pt1=0; pt1 < Oparams.ntypes; pt1++)
+    {
+      for (pt2=pt1; pt2 < Oparams.ntypes; pt2++)
+      type1 = pt1;
+      type2 = pt2;
+      for (ni=0; ni < Oparams.ninters; ni++)
+	{
+	  if ((intersArr[ni].type1 == type1 && intersArr[ni] == type2) ||
+	      (intersArr[ni].type1 == type2 && intersArr[ni] == type1))
+	    {
+	      a+=2;
+	    }	
+	}
+      if (a > maxpbonds)
+	maxpbonds = a;
+    }
+  return maxpbonds;
+}
 double eval_max_dist_for_spots(int pt)
 {
   int ns;
@@ -1789,6 +1816,7 @@ void usrInitAft(void)
   int Nm, i, sct, overlap;
   COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
   COORD_TYPE *m;
+  int maxnbonds;
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
   double shift[3], drx, dry, drz, dist, dists[MD_PBONDS];
   int j, amin, bmin, nn, aa, bb, NPB;
@@ -1983,12 +2011,23 @@ void usrInitAft(void)
       lastcol[i] = 0.0;
     }
 #ifdef EDHE_FLEX
-  mapbondsaFlex = malloc(sizeof(int)*Oparams.ninters*2);
-  mapbondsbFlex = malloc(sizeof(int)*Oparams.ninters*2);
-  mapBheightFlex = malloc(sizeof(double)*Oparams.ninters*2);
-  mapBhinFlex    = malloc(sizeof(double)*Oparams.ninters*2);
-  mapBhoutFlex   = malloc(sizeof(double)*Oparams.ninters*2);
-  mapSigmaFlex   = malloc(sizeof(double)*Oparams.ninters*2);
+  maxnbonds = get_max_nbonds();
+  mapbondsaFlex = malloc(sizeof(int)*maxnbonds);
+  mapbondsbFlex = malloc(sizeof(int)*maxnbonds);
+  mapBheightFlex = malloc(sizeof(double)*maxnbonds);
+  mapBhinFlex    = malloc(sizeof(double)*maxnbonds);
+  mapBhoutFlex   = malloc(sizeof(double)*maxnbonds);
+  mapSigmaFlex   = malloc(sizeof(double)*maxnbonds);
+  dists    = malloc(maxnbonds*sizeof(double));
+  distsOld = malloc(maxnbonds*sizeof(double));
+  distsOld2= malloc(maxnbonds*sizeof(double));
+  t2arr    = malloc(maxnbonds*sizeof(double));
+  maxddoti = malloc(maxnbonds*sizeof(double));
+  crossed  = malloc(maxnbonds*sizeof(int));
+  tocheck  = malloc(maxnbonds*sizeof(int));
+  dorefine = malloc(maxnbonds*sizeof(int));
+  crossed  = malloc(maxnbonds*sizeof(int));
+  negpairs = malloc(maxnbonds*sizeof(int));
   assignPartTypes();
 #endif
   u2R();
