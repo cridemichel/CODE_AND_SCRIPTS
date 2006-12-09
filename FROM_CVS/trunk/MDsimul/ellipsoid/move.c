@@ -1349,6 +1349,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   double rnI[3];
   double Mvec[3], omega[3];
 #endif
+#ifdef EDHE_FLEX
+  int typei, typej;
+#endif
   int na, a, b;
   MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
@@ -1384,7 +1387,13 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   MD_DEBUG(printf("\n"));
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  na = 0;
+  typei = typeOfPart[i];
+  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+#elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     { 
       invaSq[na] = 1/Sqr(axa[i]);
@@ -1407,12 +1416,22 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
 #ifdef MD_ASYM_ITENS
+#ifdef EDHE_FLEX
+  tRDiagR(i, Ia, partType[typei].I[0], partType[typei].I[1], partType[typei].I[2], R[i]);
+#else
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
+#endif
 #else
   Ia = Oparams.I[na];
 #endif
   na = (j < Oparams.parnumA)?0:1;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  na = 0;
+  typej = typeOfPart[j];
+  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
+  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
+  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+#elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
@@ -1435,7 +1454,11 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
 #ifdef MD_ASYM_ITENS
+#ifdef EDHE_FLEX
+  tRDiagR(j, Ib, partType[typej].I[0], partType[typej].I[1], partType[typej].I[2], R[j]);
+#else
   tRDiagR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
+#endif
 #else
   Ib = Oparams.I[na];
 #endif
@@ -1521,10 +1544,13 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   vCB[0] = vx[j] + wrx;
   vCB[1] = vy[j] + wry;
   vCB[2] = vz[j] + wrz;
- 
+#ifdef EDHE_FLEX
+  invmi = 1.0/partType[typei].m;
+  invmj = 1.0/partType[typej].m; 
+#else 
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
-  
+#endif 
   denom = invmi + invmj; 
   vc = 0;
   for (a=0; a < 3; a++)
