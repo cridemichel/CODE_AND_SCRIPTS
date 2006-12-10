@@ -35,7 +35,7 @@ int main(int argc, char **argv)
   while (!feof(f))
     {
       fscanf(f,"%s %lf\n", X0, &val);
-      strcpy(X0, scal_arr_str[i]);
+      strcpy(scal_arr_str[i], X0);
       scal_arr_dbl[i] = val;
       i++;
     }
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
    {
      fscanf(f,"%s %s %lf\n", X0, Phi, &val);
      sf = cerca_X0(X0);
-     printf("sf=%f\n", sf);
+     //printf("sf=%f\n", sf);
      if (type==0)
        printf("%s %s %f\n", X0, Phi, val*sf); 
      else
