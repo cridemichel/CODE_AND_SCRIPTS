@@ -343,7 +343,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
    * e alle larghezze delle buche dei potenziali a buca quadrata */
   MD_DEBUG20(printf("coll code: %d\n", bt));
 #ifdef EDHE_FLEX
-  sigAB = 0.5*(partType[typeOfPart[i]].spots[ata].sigma + partType[typeOfPart[j]].spots[atb].sigma);
+  sigAB = 0.5*(typesArr[typeOfPart[i]].spots[ata].sigma + typesArr[typeOfPart[j]].spots[atb].sigma);
   rCx = ratA[0] - rAB[0]*sigAB*0.5;
   rCy = ratA[1] - rAB[1]*sigAB*0.5;
   rCz = ratA[2] - rAB[2]*sigAB*0.5;
@@ -369,7 +369,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #ifdef MD_ASYM_ITENS
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
-  tRDiagR(i, Ia, partType[typei].I[0], partType[typei].I[1], partType[typei].I[2], R[i]);
+  tRDiagR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
 #else
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
 #endif
@@ -384,7 +384,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #ifdef MD_ASYM_ITENS
 #ifdef EDHE_FLEX
   typej = typeOfPart[j];
-  tRDiagR(j, Ib, partType[typej].I[0], partType[typej].I[1], partType[typej].I[2], R[j]);
+  tRDiagR(j, Ib, typesArr[typej].I[0], typesArr[typej].I[1], typesArr[typej].I[2], R[j]);
 #else
   tRDiagR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
 #endif
@@ -448,8 +448,8 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   vCB[2] = vz[j] + wrz;
 
 #ifdef EDHE_FLEX
-  invmi = 1.0/partType[typei].m;
-  invmj = 1.0/partType[typej].m; 
+  invmi = 1.0/typesArr[typei].m;
+  invmj = 1.0/typesArr[typej].m; 
 #else 
   invmi = (i<Oparams.parnumA)?1/Oparams.m[0]:1/Oparams.m[1];
   invmj = (j<Oparams.parnumA)?1/Oparams.m[0]:1/Oparams.m[1];
@@ -735,8 +735,8 @@ void assign_bond_mapping(int i, int j)
 	  mapBheightFlex[a] = mapBheightFlex[a+1] = intersArr[ni].bheight;
 	  mapBinFlex[a] = mapBinFlex[a+1] = intersArr[ni].bin;
           mapBoutFlex[a] = mapBoutFlex[a+1] = intersArr[ni].bout;
-          mapSigmaFlex[a] = mapSigmaFlex[a+1] = 0.5*(partType[type1].spots[intersArr[ni].spot1]
-					     	     + partType[type2].spots[intersArr[ni].spot2]);
+          mapSigmaFlex[a] = mapSigmaFlex[a+1] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1]
+					     	     + typesArr[type2].spots[intersArr[ni].spot2]);
 	  a+=2;
 	}	
     }
