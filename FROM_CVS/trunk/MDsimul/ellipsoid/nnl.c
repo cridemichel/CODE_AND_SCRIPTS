@@ -28,6 +28,9 @@ extern double **Ia, **Ib, **invIa, **invIb;
 #else
 extern double Ia, Ib, invIa, invIb;
 #endif
+#ifdef EDHE_FLEX
+extern int *typeOfPart;
+#endif
 extern double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 extern int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
@@ -2575,9 +2578,9 @@ void adjust_maxddot(int i, double *maxddot)
 #else
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
-  axa = partType[typei].sax[0];
-  axb = partType[typei].sax[1];
-  axc = partType[typei].sax[2];
+  axa = typesArr[typei].sax[0];
+  axb = typesArr[typei].sax[1];
+  axc = typesArr[typei].sax[2];
   if (axa == axb && axb == axc)
     K = mddotfact;
 #else
@@ -2616,9 +2619,9 @@ void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddo
 #else
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
-  axa = partType[typei].sax[0];
-  axb = partType[typei].sax[1];
-  axc = partType[typei].sax[2];
+  axa = typesArr[typei].sax[0];
+  axb = typesArr[typei].sax[1];
+  axc = typesArr[typei].sax[2];
   if (axa == axb && axb == axc)
     K = mddotfact;
 #else
@@ -4384,9 +4387,9 @@ void nextNNLupdate(int na)
 #ifndef MD_NNLPLANES
 #ifdef EDHE_FLEX
   typena = typeOfPart[na];
-  nebrTab[na].axa = OprogStatus.rNebrShell*partType[typena].sax[0];
-  nebrTab[na].axb = OprogStatus.rNebrShell*partType[typena].sax[1];
-  nebrTab[na].axc = OprogStatus.rNebrShell*partType[typena].sax[2];
+  nebrTab[na].axa = OprogStatus.rNebrShell*typesArr[typena].sax[0];
+  nebrTab[na].axb = OprogStatus.rNebrShell*typesArr[typena].sax[1];
+  nebrTab[na].axc = OprogStatus.rNebrShell*typesArr[typena].sax[2];
 #else
   nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];
   nebrTab[na].axb = OprogStatus.rNebrShell*axb[na];
@@ -4410,10 +4413,10 @@ void nextNNLupdate(int na)
   else
     {
 #ifdef EDHE_FLEX
-      typena = typeOfPar[na]; 
-      nebrTab[na].axa = OprogStatus.rNebrShell+partType[typena].sax[0];
-      nebrTab[na].axb = OprogStatus.rNebrShell+partType[typena].sax[1];
-      nebrTab[na].axc = OprogStatus.rNebrShell+partType[typena].sax[2];
+      typena = typeOfPart[na]; 
+      nebrTab[na].axa = OprogStatus.rNebrShell+typesArr[typena].sax[0];
+      nebrTab[na].axb = OprogStatus.rNebrShell+typesArr[typena].sax[1];
+      nebrTab[na].axc = OprogStatus.rNebrShell+typesArr[typena].sax[2];
 #else
       nebrTab[na].axa = OprogStatus.rNebrShell+axa[na];
       nebrTab[na].axb = OprogStatus.rNebrShell+axb[na];

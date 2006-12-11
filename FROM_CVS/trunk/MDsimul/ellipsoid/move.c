@@ -7,6 +7,9 @@
 #define MD_DEBUG20(x) 
 #define MD_DEBUG31(x) 
 #define MD_DEBUG32(x) 
+#ifdef EDHE_FLEX
+extern int *typeOfPart;
+#endif
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -959,14 +962,14 @@ int all_spots_on_zaxis(int pt)
   for (sp=0; sp < typesArr[pt].nspots; sp++)
     {
       /* N.B. x[2] is the z-axis! */
-      if (typesArr[pt].spots[sp].x[0]!=0.0 || tyepsArr[pt].spots[sp].x[1]!=0.0) 
+      if (typesArr[pt].spots[sp].x[0]!=0.0 || typesArr[pt].spots[sp].x[1]!=0.0) 
 	return 0;
     }
   return 1;
 }
 int get_dof_flex(void)
 {
-  int i, pt, sp;
+  int i, pt, sp, dofOfType, dofTot;
   dofTot = 0;
   for (pt = 0; pt < Oparams.parnum; pt++)
     {
@@ -1001,6 +1004,7 @@ int get_dof_flex(void)
     }
   /* il centro di massa dell'anticorpo è fermo */
   dofTot -= 3;
+  return dofTot;
 }
 #endif
 #ifdef MD_GRAVITY
@@ -2703,7 +2707,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
   na = (iA < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   na = 0;
-  typei = typeOfPart[i];
+  typei = typeOfPart[iA];
   invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
   invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
   invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
@@ -2750,7 +2754,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
   na = (iB < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   na = 0;
-  typej = typeOfPart[j];
+  typej = typeOfPart[iB];
   invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
   invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
   invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
@@ -3795,7 +3799,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double ti, segno, segno2;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck, tryagain = 0;
-#ifdef EDHE_FLOEX
+#ifdef EDHE_FLEX
   int typei, typej;
   double axaiF, axbiF, axciF;
   double axajF, axbjF, axcjF;
@@ -4026,7 +4030,7 @@ retry:
 	  nvecnf = calc_norm(vecnf);
 	  if ( nvecnf > 0.0)
 #ifdef EDHE_FLEX
-	    g2 = OprogStatus.epsdGDO*min3(axajF,axjF,axcjF)/calc_norm(vecnf); 
+	    g2 = OprogStatus.epsdGDO*min3(axajF,axbjF,axcjF)/calc_norm(vecnf); 
 #else
 	    g2 = OprogStatus.epsdGDO*min3(axa[j],axb[j],axc[j])/calc_norm(vecnf); 
 #endif
@@ -5877,7 +5881,7 @@ void calc_energynew(char *msg)
 #ifdef MD_ASYM_ITENS
 #ifdef EDHE_FLEX
 	      typei = typeOfPart[i];
-      	      K += wt[k1]*tyepsArr[typei].I[k1]*wt[k1];
+      	      K += wt[k1]*typesArr[typei].I[k1]*wt[k1];
 #else
       	      K += wt[k1]*Oparams.I[0][k1]*wt[k1];
 #endif
@@ -5897,7 +5901,7 @@ void calc_energynew(char *msg)
 #ifdef MD_ASYM_ITENS
 #ifdef EDHE_FLEX
 	      typei = typeOfPart[i];
-      	      K += wt[k1]*tyepsArr[typei].I[k1]*wt[k1];
+      	      K += wt[k1]*typesArr[typei].I[k1]*wt[k1];
 #else
 	      K += wt[k1]*Oparams.I[1][k1]*wt[k1];
 #endif

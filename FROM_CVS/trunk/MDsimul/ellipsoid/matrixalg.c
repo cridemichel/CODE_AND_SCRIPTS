@@ -8,6 +8,9 @@
 #define MD_DEBUG(X) 
 #define MD_DEBUG10(X) 
 #define MD_DEBUG18(X) 
+#ifdef EDHE_FLEX 
+extern int *typeOfPart;
+#endif
 int ncom;
 double (*nrfunc)(double []); 
 double f1dim(double x);
