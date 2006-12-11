@@ -267,8 +267,8 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
-  double bhin, bhout, bheight;
-  int nmax;
+  double bhin=-1, bhout=-1, bheight=-1;
+  int nmax=-1;
 #ifdef MD_HSVISCO
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
@@ -728,6 +728,7 @@ void assign_bond_mapping(int i, int j)
   int ni, type1, type2, a;
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
+  a=0;
   for (ni=0; ni < Oparams.ninters; ni++)
     {
       if ((intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2) ||
