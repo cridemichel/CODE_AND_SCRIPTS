@@ -531,7 +531,10 @@ double max3(double a, double b, double c);
 double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], double rD[3], 
 		      double shift[3], double scalfact, double *factor, int j)
 {
-  int kk, ii;
+  int kk;
+#ifndef EDHE_FLEX
+  int ii;
+#endif
   double nnlfact;
   double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2, fact3;
   double boxdiag, factNNL=1.0;
@@ -969,7 +972,7 @@ int all_spots_on_zaxis(int pt)
 }
 int get_dof_flex(void)
 {
-  int i, pt, sp, dofOfType, dofTot;
+  int pt, dofOfType, dofTot;
   dofTot = 0;
   for (pt = 0; pt < Oparams.parnum; pt++)
     {
@@ -1059,7 +1062,10 @@ void scalevels(double temp, double K, double Vz)
 void scalevels(double temp, double K)
 {
   int i; 
-  double sf, dof;
+  double sf;
+#ifndef EDHE_FLEX
+  double dof;
+#endif
 #ifdef EDHE_FLEX
   sf = sqrt( ( dofTot * temp ) / (2.0*K) );
 #else
@@ -1381,7 +1387,134 @@ void update_MSD(int i)
 extern void calc_angmom(int i, double **I);
 extern void upd_refsysM(int i);
 #endif
+#ifdef EDHE_FLEX
+void bumpHS(int i, int j, double *W)
+{
+  double rxij, ryij, rzij, factor;
+  double delvx, delvy, delvz, invmi, invmj, denom;
+  double sigSq;
+  int typei, typej;
+#ifdef MD_HSVISCO
+  double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
+#endif
 
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+
+  numcoll++;
+
+  invmi = 1.0/typesArr[typei].m;
+  invmj = 1.0/typesArr[typej].m; 
+
+  denom = invmi + invmj; 
+  sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 
+  rxij = rx[i] - rx[j];
+  if (fabs (rxij) > L2)
+    rxij = rxij - SignR(L, rxij);
+  ryij = ry[i] - ry[j];
+  if (fabs (ryij) > L2)
+    ryij = ryij - SignR(L, ryij);
+  rzij = rz[i] - rz[j];
+  if (fabs (rzij) > L2)
+    rzij = rzij - SignR(L, rzij);
+  factor = ( rxij * ( vx[i] - vx[j] ) +
+	     ryij * ( vy[i] - vy[j] ) +
+	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
+  factor *= 2.0 / denom;
+  delvx = - factor * rxij;
+  delvy = - factor * ryij;
+  delvz = - factor * rzij;
+#ifdef MD_HSVISCO
+  DTxy = delvx*delvy*invmi + vx[i]*delvy + delvx*vy[i];
+  DTxy += delvx*delvy*invmj - vx[j]*delvy - delvx*vy[j]; 
+  DTyz = delvy*delvz*invmi + vy[i]*delvz + delvy*vz[i];
+  DTyz += delvy*delvz*invmj - vy[j]*delvz - delvy*vz[j];
+  DTzx = delvz*delvx*invmi + vz[i]*delvx + delvz*vx[i];
+  DTzx += delvz*delvx*invmj - vz[j]*delvx - delvz*vx[j];
+
+  DTxx = delvx*delvx*invmi + vx[i]*delvx + delvx*vx[i];
+  DTxx += delvx*delvx*invmj - vx[j]*delvx - delvx*vx[j]; 
+  DTyy = delvy*delvy*invmi + vy[i]*delvy + delvy*vy[i];
+  DTyy += delvy*delvy*invmj - vy[j]*delvy - delvy*vy[j];
+  DTzz = delvz*delvz*invmi + vz[i]*delvz + delvz*vz[i];
+  DTzz += delvz*delvz*invmj - vz[j]*delvz - delvz*vz[j];
+#endif
+
+  vx[i] = vx[i] + delvx*invmi;
+  vx[j] = vx[j] - delvx*invmj;
+  vy[i] = vy[i] + delvy*invmi;
+  vy[j] = vy[j] - delvy*invmj;
+  vz[i] = vz[i] + delvz*invmi;
+  vz[j] = vz[j] - delvz*invmj;
+  update_MSDrot(i);
+  update_MSDrot(j);
+#ifdef MD_HSVISCO 
+  if (OprogStatus.lastcoll!=-1)
+    {
+      taus = Oparams.time - OprogStatus.lastcoll;
+      OprogStatus.DQTxy += OprogStatus.Txy*taus; 
+      OprogStatus.DQTyz += OprogStatus.Tyz*taus;
+      OprogStatus.DQTzx += OprogStatus.Tzx*taus;
+
+      OprogStatus.DQTxx += OprogStatus.Txx*taus; 
+      OprogStatus.DQTyy += OprogStatus.Tyy*taus;
+      OprogStatus.DQTzz += OprogStatus.Tzz*taus;
+      //taus = Oparams.time - OprogStatus.lastcoll;
+      //printf("DQT= %f %f %f\n", OprogStatus.DQTxy, OprogStatus.DQTyz, OprogStatus.DQTzx);
+      OprogStatus.DQWxy += rxij*delvy;
+      OprogStatus.DQWyz += ryij*delvz;
+      OprogStatus.DQWzx += rzij*delvx;
+
+      OprogStatus.DQWxx += rxij*delvx;
+      OprogStatus.DQWyy += ryij*delvy;
+      OprogStatus.DQWzz += rzij*delvz;
+      OprogStatus.DQWxxHS += rxij*delvx;
+      OprogStatus.DQWyyHS += ryij*delvy;
+      OprogStatus.DQWzzHS += rzij*delvz;
+      //printf("DQW= %f %f %f\n", OprogStatus.DQWxy, OprogStatus.DQWyz, OprogStatus.DQWzx);
+    }
+  OprogStatus.Txy += DTxy; 
+  OprogStatus.Tyz += DTyz;
+  OprogStatus.Tzx += DTzx;
+  OprogStatus.Txx += DTxx; 
+  OprogStatus.Tyy += DTyy;
+  OprogStatus.Tzz += DTzz;
+#endif
+  /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
+  //*W = delvx * rxij + delvy * ryij + delvz * rzij;
+  /* prob. quanto segue non serve */
+#ifdef MD_ASYM_ITENS
+  calc_angmom(i, Ia);
+  upd_refsysM(i);
+  calc_angmom(j, Ib);
+  upd_refsysM(j);
+#endif
+ 
+}
+int is_sphere(int i)
+{
+  int type1;
+  type1 = typeOfPart[i];
+  if (typesArr[type1].sax[0] == typesArr[type1].sax[1] &&
+      typesArr[type1].sax[1] == typesArr[type1].sax[2])
+    return 1;
+  else 
+    return 0;
+}
+int are_spheres(int i, int j)
+{
+  int type1, type2;
+  type1 = typeOfPart[i];
+  type2 = typeOfPart[j];
+  if (typesArr[type1].sax[0] == typesArr[type1].sax[1] &&
+      typesArr[type1].sax[1] == typesArr[type1].sax[2] &&
+      typesArr[type2].sax[0] == typesArr[type2].sax[1] &&
+      typesArr[type2].sax[1] == typesArr[type2].sax[2])  
+    return 1;
+  else 
+    return 0;
+}
+#endif
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
   /*
@@ -1413,6 +1546,13 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   int typei, typej;
 #endif
   int na, a, b;
+#ifdef EDHE_FLEX
+  if (are_spheres(i, j))
+    {
+      bumpHS(i, j, W);
+      return;
+    } 
+#endif
   MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
   MD_DEBUG32(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
@@ -4666,11 +4806,13 @@ int refine_contact(int i, int j, double t1, double t, double vecgd[8], double sh
 #ifdef MD_ASYM_ITENS
 double calcopt_maxddot(int i, int j, double *r1 , double *r2, double factori, double factorj)
 {
-  int kk, na;
+  int kk;
   double Iamin, Ibmin;
   double dd[3], ndd;
 #ifdef EDHE_FLEX
   int typei, typej;
+#else
+  int na;
 #endif
   for (kk=0; kk < 3; kk++)
     dd[kk] = r2[kk] - r1[kk];
@@ -4983,6 +5125,73 @@ double calc_maxddot(int i, int j)
 #endif
 }
 #endif
+#ifdef EDHE_FLEX
+int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, double vecg[5])
+{
+  double d, t, evtime;
+  int typei, typej;
+  double sigSq, b, dr[3], dv[3], tInt, vv;
+  int collCode;
+  t2 += Oparams.time;
+  t1 += Oparams.time;
+  /* calcola cmq l'urto fra le due core spheres */
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+  sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 
+  tInt = Oparams.time - atomTime[i];
+  dr[0] = rx[i] - (rx[j] + vx[j] * tInt) - shift[0];	  
+  dv[0] = vx[i] - vx[j];
+  dr[1] = ry[i] - (ry[j] + vy[j] * tInt) - shift[1];
+  dv[1] = vy[i] - vy[j];
+  dr[2] = rz[i] - (rz[j] + vz[j] * tInt) - shift[2];
+  dv[2] = vz[i] - vz[j];
+  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+  collCode = MD_EVENT_NONE;
+
+  if (b < 0.0) 
+    {
+      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+      d = Sqr (b) - vv * 
+	(Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]) - sigSq);
+      if (d >= 0.) 
+	{
+	  t = - (sqrt (d) + b) / vv;
+	  if (t < 0)
+	    {
+#if 0
+	      printf("time:%.15f tInt:%.15f\n", Oparams.time,
+		     tInt);
+	      printf("t = %.15G\n", t);
+	      printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+					  Sqr(dr[2]))-1.0 );
+	      printf("STEP: %lld\n", (long long int)Oparams.curStep);
+	      printf("atomTime: %.10f \n", atomTime[n]);
+	      printf("n:%d na:%d\n", n, na);
+	      printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
+#endif
+	      t = 0;
+	    }
+	  collCode = MD_CORE_BARRIER;
+	  evtime = Oparams.time + t;
+	  MD_DEBUG(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
+	} 
+    }
+  if (collCode != MD_EVENT_NONE && evtime > t1 && evtime < t2)
+    {
+      /* N.B. nel caso di urto fra sfere dure le coordinate del punto di contatto non servono,
+	 per questo qui vengono messe a 0 
+       */
+      vecg[0] = 0;
+      vecg[1] = 0;
+      vecg[2] = 0;
+      vecg[3] = 0;
+      vecg[4] = evtime;
+      return 1;  
+    }
+  else 
+    return 0;
+}
+#endif
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
   double h, d, dold, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
@@ -4997,6 +5206,12 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
   int dorefine, sumnegpairs=0;
   int its, foundrc, kk;
+#ifdef EDHE_FLEX
+  if (are_spheres(i, j))
+    {
+      return locate_contact_HS(i, j, shift, t1, t2, vecg);
+    }
+#endif
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
