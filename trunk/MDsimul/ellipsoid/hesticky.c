@@ -226,7 +226,6 @@ int getnumbonds(int np, int at)
     }
   return nb;
 }
-#endif
 int one_is_bonded(int i, int a, int j, int b, int nmax)
 {
   /* per ora è disbilitato */
