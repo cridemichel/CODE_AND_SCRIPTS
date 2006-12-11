@@ -2581,8 +2581,8 @@ void writeAllCor(FILE* fs)
 	{
 	  /* write particles parameters */
 	  fprintf(fs, "%.15f %.15G %.15G\n", typesArr[i].sax[0], typesArr[i].sax[1], typesArr[i].sax[2]); 
-	  fprintf(fs, "%.15G %.15G %.15G %.15G\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
-		  typesArr[i].I[2]);
+	  fprintf(fs, "%.15G %.15G %.15G %.15G %d\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
+		  typesArr[i].I[2], typesArr[i].brownian);
 	  /* write sticky spots parameters */
 	  fprintf(fs, "%d\n", typesArr[i].nspots);
 	  for (j = 0; j < typesArr[i].nspots; j++)
@@ -2593,10 +2593,10 @@ void writeAllCor(FILE* fs)
       /* write interactions */
       for (i=0; i < Oparams.ninters; i++)
 	{
-	  fprintf (fs, "%d %d %d %d %.15G %.15G %.15G ", intersArr[i].type1, intersArr[i].spot1,
+	  fprintf (fs, "%d %d %d %d %.15G %.15G %.15G %d ", intersArr[i].type1, intersArr[i].spot1,
 		 intersArr[i].type2, 
 		 intersArr[i].spot2, 
-		 intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout);
+		 intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout, interArr[i].nmax);
 	} 
       fprintf(fs, "\n");
     }
@@ -2716,8 +2716,8 @@ void readAllCor(FILE* fs)
     {
       /* read particles parameters */
       fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
-      fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
-	   &typesArr[i].I[2]);
+      fscanf(fs, "%lf %lf %lf %lf %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
+	   &typesArr[i].I[2], &typesArr[i].brownian);
       /* read sticky spots parameters */
       fscanf(fs, "%d ", &typesArr[i].nspots);
       typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots);
@@ -2729,9 +2729,9 @@ void readAllCor(FILE* fs)
   intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
   for (i=0; i < Oparams.ninters; i++)
    {
-     fscanf(fs, "%d %d %d %d %lf %lf %lf ", &intersArr[i].type1, &intersArr[i].spot1, &intersArr[i].type2, 
+     fscanf(fs, "%d %d %d %d %lf %lf %lf %d ", &intersArr[i].type1, &intersArr[i].spot1, &intersArr[i].type2, 
 	    &intersArr[i].spot2, 
-	    &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout);
+	    &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout, &intersArr[i].nmax);
    } 
 #endif
   for (i = 0; i < Oparams.parnum; i++)
