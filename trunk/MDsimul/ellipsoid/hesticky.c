@@ -222,17 +222,19 @@ int getnumbonds(int np, int at)
     }
   return nb;
 }
-int one_is_bonded(int i, int a, int j, int b)
+#endif
+int one_is_bonded(int i, int a, int j, int b, int nmax)
 {
   /* per ora è disbilitato */
   //return 0;
-  if (getnumbonds(i,a) >= Oparams.nmax || getnumbonds(j,b) >= Oparams.nmax)
+  if (getnumbonds(i,a) >= nmax || getnumbonds(j,b) >= nmax)
     return 1;
   else
     return 0;
 }
 #ifdef EDHE_FLEX
-void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double *bhin, double *bhout)
+void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double *bhin, double *bhout,
+			int *nmax)
 {
   int type1, type2, pt;
   type1 = typeOfPart[i];
@@ -247,6 +249,7 @@ void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double 
 	  *bheight = intersArr[pt].bheight;
 	  *bhin    = intersArr[pt].bhin;
 	  *bhout   = intersArr[pt].bhout;
+	  *nmax    = intersArr[pt].nmax;
 	  return;
 	} 
     }
@@ -260,6 +263,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
   double bhin, bhout, bheight;
+  int nmax;
 #ifdef MD_HSVISCO
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
@@ -502,11 +506,12 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #endif
   mredl = 1.0 / denom;
 #ifdef EDHE_FLEX
-  get_inter_bheights(i, j, ata, atb, &bheight, &bhin, &bhout);
+  get_inter_bheights(i, j, ata, atb, &bheight, &bhin, &bhout, &nmax);
 #else
   bheight = Oparams.bheight; 
   bhin = Oparams.bhin;
   bhout= Oparams.bhout;
+  nmax = Oparams.nmax;
 #endif
   switch (bt)
     {
@@ -541,7 +546,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_OUTIN_BARRIER:
-      if (one_is_bonded(i, ata, j, atb) || (Oparams.bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
+      if (one_is_bonded(i, ata, j, atb, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
 	{
 	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
 			    Oparams.time, vc,  bt,
