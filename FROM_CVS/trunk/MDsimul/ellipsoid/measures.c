@@ -165,6 +165,9 @@ void energy(void)
 {
   /* DESCRIPTION:
      This measuring function calculate the total energy of the system */
+#ifdef EDHE_FLEX
+  double mass;
+#endif
   double Px, Py, Pz, RCMx, RCMy, RCMz;
   int mol, Nm, i;
   double px, py, pz;
@@ -207,9 +210,16 @@ void energy(void)
   UpdateSystem();
   for(i = 0; i < Oparams.parnumA; i++)
     {
+#ifdef EDHE_FLEX
+      mass = typesArr[typeOfPart[i]].m;
+      px = mass * vx[i];
+      py = mass * vy[i];
+      pz = mass * vz[i];
+#else
       px = Oparams.m[0] * vx[i];
       py = Oparams.m[0] * vy[i];
       pz = Oparams.m[0] * vz[i];
+#endif
       //vectProd(rx[a][i], ry[a][i], rz[a][i], 
       //     vx[a][i], vy[a][i], vz[a][i],
           //&lx, &ly, &lz);
@@ -222,9 +232,16 @@ void energy(void)
     }
   for(i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
+#ifdef EDHE_FLEX
+      mass = typesArr[typeOfPart[i]].m;
+      px = mass * vx[i];
+      py = mass * vy[i];
+      pz = mass * vz[i];
+#else
       px = Oparams.m[1] * vx[i];
       py = Oparams.m[1] * vy[i];
       pz = Oparams.m[1] * vz[i];
+#endif
       Px += px;
       Py += py;
       Pz += pz;
@@ -248,15 +265,29 @@ void energy(void)
   
   for(i = 0; i < Oparams.parnumA; i++)
     {
+#ifdef EDHE_FLEX
+      mass = typesArr[typeOfPart[i]].m;
+      RCMx = mass * rx[i];
+      RCMy = mass * ry[i];
+      RCMz = mass * rz[i];
+#else 
       RCMx += rx[i]*Oparams.m[0];
       RCMy += ry[i]*Oparams.m[0];
       RCMz += rz[i]*Oparams.m[0];
+#endif
     }
   for(i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
+#ifdef EDHE_FLEX
+      mass = typesArr[typeOfPart[i]].m;
+      RCMx = mass * rx[i];
+      RCMy = mass * ry[i];
+      RCMz = mass * rz[i];
+#else 
       RCMx += rx[i]*Oparams.m[1];
       RCMy += ry[i]*Oparams.m[1];
       RCMz += rz[i]*Oparams.m[1];
+#endif
     }
   sprintf(TXTA[2],"  BOX CM=(%.15f,%.15f,%.15f)\n", RCMx, RCMy, RCMz);
   //printf("RANK: %d STEP: %d\n", my_rank, Oparams.curStep);

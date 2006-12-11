@@ -75,6 +75,7 @@ typedef struct
   double sax[3];
   double m;
   double I[3];
+  int brownian;
   int nspots;
   spotStruct* spots; 
 } partType;
@@ -87,6 +88,7 @@ typedef struct
   double bheight;
   double bhin;
   double bhout;
+  int nmax;
 } interStruct;
 #endif
 #ifdef MD_HE_PARALL
