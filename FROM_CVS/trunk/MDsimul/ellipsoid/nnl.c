@@ -2766,7 +2766,8 @@ int locate_contact_neigh_plane_HS(int i, double *evtime, double t2)
       dv[0] = vx[i];
       dv[1] = vy[i];
       dv[2] = vz[i];
-      /* controllare che il gradiente sia a norma unitaria! */
+      /* N.B. controllare che il gradiente sia a norma unitaria e che sia uscente rispetto 
+	 al parallelepipedo delle NNL! */
       dist = scalProd(dr, gradplane_all[nn]) - typesArr[typei].sax[0];
       b = scalProd(dv, gradplane_all[nn]);
       if (b < 0)
