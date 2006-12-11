@@ -69,15 +69,27 @@ typedef struct {
   double x[3];
   double sigma;
 } spotStruct;
-
+/* come possono esserci n sticky spots, 
+   si puo' anche pensare di mettere n corpi rigidi 
+   di forma super-ellissoidale 
+ */
+typedef struct {
+  double x[3];
+  double sax[3];
+  int n[3];	
+} hardobjsStruct;
 typedef struct 
 {
   double sax[3];
+  int n[3]; /* super-ellipsoids integer exponents */
   double m;
   double I[3];
   int brownian;
   int nspots;
   spotStruct* spots; 
+  int nhardobjs; /* one can add other sub-objects to build a super-object made of 
+		   several super-ellipsoids with their spots */
+  hardobjsStruct* hardobjs;
 } partType;
 typedef struct 
 {
