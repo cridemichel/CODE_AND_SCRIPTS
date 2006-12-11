@@ -958,8 +958,11 @@ int all_spots_on_zaxis(int pt)
   int sp;
   for (sp=0; sp < typesArr[pt].nspots; sp++)
     {
-      dofOfType = 	
+      /* N.B. x[2] is the z-axis! */
+      if (typesArr[pt].spots[sp].x[0]!=0.0 || tyepsArr[pt].spots[sp].x[1]!=0.0) 
+	return 0;
     }
+  return 1;
 }
 int get_dof_flex(void)
 {
@@ -1443,9 +1446,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     { 
@@ -1470,7 +1473,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], R[i]);
 #ifdef MD_ASYM_ITENS
 #ifdef EDHE_FLEX
-  tRDiagR(i, Ia, partType[typei].I[0], partType[typei].I[1], partType[typei].I[2], R[i]);
+  tRDiagR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
 #else
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
 #endif
@@ -1481,9 +1484,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -1508,7 +1511,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], R[j]);
 #ifdef MD_ASYM_ITENS
 #ifdef EDHE_FLEX
-  tRDiagR(j, Ib, partType[typej].I[0], partType[typej].I[1], partType[typej].I[2], R[j]);
+  tRDiagR(j, Ib, typesArr[typej].I[0], typesArr[typej].I[1], typesArr[typej].I[2], R[j]);
 #else
   tRDiagR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
 #endif
@@ -1598,8 +1601,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   vCB[1] = vy[j] + wry;
   vCB[2] = vz[j] + wrz;
 #ifdef EDHE_FLEX
-  invmi = 1.0/partType[typei].m;
-  invmj = 1.0/partType[typej].m; 
+  invmi = 1.0/typesArr[typei].m;
+  invmj = 1.0/typesArr[typej].m; 
 #else 
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
@@ -2701,9 +2704,9 @@ void fdjac(int n, double x[], double fvec[], double **df,
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -2748,9 +2751,9 @@ void fdjac(int n, double x[], double fvec[], double **df,
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -2888,9 +2891,9 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -2927,9 +2930,9 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -3030,9 +3033,9 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -3070,9 +3073,9 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -3810,13 +3813,13 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
   typej = typeOfPart[j];
-  axaiF = partType[typei].sax[0];
-  axbiF = partType[typei].sax[1];
-  axciF = partType[typei].sax[2];
+  axaiF = typesArr[typei].sax[0];
+  axbiF = typesArr[typei].sax[1];
+  axciF = typesArr[typei].sax[2];
   minaxA = min3(axaiF,axbiF,axciF);
-  axajF = partType[typej].sax[0];
-  axbjF = partType[typej].sax[1];
-  axcjF = partType[typej].sax[2];
+  axajF = typesArr[typej].sax[0];
+  axbjF = typesArr[typej].sax[1];
+  axcjF = typesArr[typej].sax[2];
   minaxB = min3(axajF,axbjF,axcjF);
 #else
   minaxA = min3(axa[i],axb[i],axc[i]);
@@ -3838,9 +3841,9 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -3877,9 +3880,9 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -4439,9 +4442,9 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(partType[typei].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typei].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typei].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
 #else
   if (OprogStatus.targetPhi > 0)
     {
@@ -4456,9 +4459,9 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(partType[typej].sax[0]);
-  invbSq[na] = 1/Sqr(partType[typej].sax[1]);
-  invcSq[na] = 1/Sqr(partType[typej].sax[2]);
+  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
 #else
   if (OprogStatus.targetPhi > 0)
     {
