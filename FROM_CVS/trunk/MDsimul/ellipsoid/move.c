@@ -953,17 +953,51 @@ extern void upd_refsysM(int i);
 #endif
 #ifdef EDHE_FLEX
 int dofTot;
+int all_spots_on_zaxis(int pt)
+{
+  int sp;
+  for (sp=0; sp < typesArr[pt].nspots; sp++)
+    {
+      dofOfType = 	
+    }
+}
 int get_dof_flex(void)
 {
-  int i, pt;
+  int i, pt, sp;
+  dofTot = 0;
   for (pt = 0; pt < Oparams.parnum; pt++)
     {
       /* Sphere */
       if (typesArr[pt].sax[0] == typesArr[pt].sax[1] &&
 	  typesArr[pt].sax[1] == typesArr[pt].sax[2])
-      dofOfType =;
-
+	{
+	  /* sfere con o senza sticky spots */
+	  if (typesArr[pt].nspots == 0)	  
+	    dofOfType = 3;
+	  else
+	    dofOfType = 5;
+	}
+      else if (typesArr[pt].nspots == 0)
+	{
+	  /* ellissoide senza sticky spots */
+	  dofOfType = 5;
+   	}
+      else
+	{
+	  /* loop over all spots to see whether they are along z-axis or not */
+	  if (all_spots_on_zaxis(pt))
+	    {
+	      dofOfType = 5;
+	    }
+	  else
+	    {
+	      dofOfType = 6;
+	    }
+	}
+	dofTot += dofOfType*typeNP[pt];
     }
+  /* il centro di massa dell'anticorpo è fermo */
+  dofTot -= 3;
 }
 #endif
 #ifdef MD_GRAVITY
