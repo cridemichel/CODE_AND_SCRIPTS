@@ -63,7 +63,7 @@ int numOfProcs; /* number of processeses in a communicator */
 int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
 double *distsOld, *dists, *distsOld2, *maxddoti;
-int *crossed, *tocheck, *dorefine, *crossed, *negpairs;
+int *crossed, *tocheck, *dorefine, *crossed, *negpairs, dofTot;
 #endif
 
 extern double **matrix(int n, int m);
@@ -2046,6 +2046,7 @@ void usrInitAft(void)
     }
 #ifdef EDHE_FLEX
   maxnbonds = get_max_nbonds();
+  dofTot = get_dof_flex();
   mapbondsaFlex = malloc(sizeof(int)*maxnbonds);
   mapbondsbFlex = malloc(sizeof(int)*maxnbonds);
   mapBheightFlex = malloc(sizeof(double)*maxnbonds);
