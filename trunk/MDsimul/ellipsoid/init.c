@@ -60,9 +60,10 @@ int numOfProcs; /* number of processeses in a communicator */
 #endif 
 
 #ifdef EDHE_FLEX
+int *typeOfPart;
 int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
-double *distsOld, *dists, *distsOld2, *maxddoti;
+double *t2arr, *distsOld, *dists, *distsOld2, *maxddoti;
 int *crossed, *tocheck, *dorefine, *crossed, *negpairs, dofTot;
 #endif
 
@@ -1239,10 +1240,12 @@ int get_num_pbonds(int i, int j)
 extern void build_atom_positions(void);
 extern void add_bond(int na, int n, int a, int b);
 extern double calcpotene(void);
+#ifndef EDHE_FLEX
 int get_num_pbonds(int i, int j)
 {
   return MD_PBONDS;
 }
+#endif
 #endif
 extern void print_matrix(double **M, int n);
 
@@ -1600,7 +1603,10 @@ extern double max3(double a, double b, double c);
 double calc_shell(void)
 {
 #ifdef MD_PATCHY_HE
-  int aa, kk;
+#ifndef EDHE_FLEX
+  int aa;	
+#endif
+  int kk;
   double v[3], norm, delta;
 #endif
   double deltamax = 0.0;
@@ -1613,11 +1619,11 @@ double calc_shell(void)
     {
       for (sp = 0; sp < typesArr[pt].nspots; sp++) 
 	{
-	  norm = calc_norm(typesArr[pt].spots[sp].x)
+	  norm = calc_norm(typesArr[pt].spots[sp].x);
 	    for (kk=0; kk < 3; kk++)
 	      v[kk] = (norm + typesArr[pt].spots[sp].sigma*0.5) * typesArr[pt].spots[sp].x[kk] / norm;
 	  delta = max3(v[0]-typesArr[pt].sax[0],v[1]-typesArr[pt].sax[1],v[2]-typesArr[pt].sax[2]);
-	  if (aa == 0 || delta > deltamax)
+	  if (sp == 0 || delta > deltamax)
 	    deltamax  = delta;
 	}   
     }
@@ -1801,7 +1807,6 @@ void slave_task(void)
 extern void store_last_u(int i);
 #endif
 #ifdef EDHE_FLEX
-int *typeOfPart;
 int get_max_nbonds(void)
 {
   int pt1, pt2;
@@ -1809,18 +1814,21 @@ int get_max_nbonds(void)
   for (pt1=0; pt1 < Oparams.ntypes; pt1++)
     {
       for (pt2=pt1; pt2 < Oparams.ntypes; pt2++)
-      type1 = pt1;
-      type2 = pt2;
-      for (ni=0; ni < Oparams.ninters; ni++)
 	{
-	  if ((intersArr[ni].type1 == type1 && intersArr[ni] == type2) ||
-	      (intersArr[ni].type1 == type2 && intersArr[ni] == type1))
+	  type1 = pt1;
+	  type2 = pt2;
+	  a=0;
+	  for (ni=0; ni < Oparams.ninters; ni++)
 	    {
-	      a+=2;
-	    }	
+	      if ((intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2) ||
+		  (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1))
+		{
+		  a+=2;
+		}	
+	    }
+	  if (a > maxpbonds)
+	    maxpbonds = a;
 	}
-      if (a > maxpbonds)
-	maxpbonds = a;
     }
   return maxpbonds;
 }
@@ -1854,6 +1862,9 @@ void assignPartTypes(void)
     }
 }
 #endif
+#ifdef EDHE_FLEX
+extern int get_dof_flex(void);
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -1862,12 +1873,19 @@ void usrInitAft(void)
      all your function for initialization, like maps() in this case */
   int Nm, i, sct, overlap;
   COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
+#ifndef EDHE_FLEX
   COORD_TYPE *m;
+#endif
   int maxnbonds;
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
-  double shift[3], drx, dry, drz, dist, dists[MD_PBONDS];
+  double shift[3], drx, dry, drz, dist;
+#ifndef EDHE_FLEX
+  double dists[MD_PBONDS];
+#endif
   int j, amin, bmin, nn, aa, bb, NPB;
+#ifndef EDHE_FLEX
   double distSPA, distSPB;
+#endif
 #endif
 #ifdef EDHE_FLEX
   double maxSpots;
@@ -2069,22 +2087,22 @@ void usrInitAft(void)
 #ifdef EDHE_FLEX
   maxnbonds = get_max_nbonds();
   dofTot = get_dof_flex();
-  mapbondsaFlex = malloc(sizeof(int)*maxnbonds);
-  mapbondsbFlex = malloc(sizeof(int)*maxnbonds);
-  mapBheightFlex = malloc(sizeof(double)*maxnbonds);
-  mapBhinFlex    = malloc(sizeof(double)*maxnbonds);
-  mapBhoutFlex   = malloc(sizeof(double)*maxnbonds);
-  mapSigmaFlex   = malloc(sizeof(double)*maxnbonds);
-  dists    = malloc(maxnbonds*sizeof(double));
-  distsOld = malloc(maxnbonds*sizeof(double));
-  distsOld2= malloc(maxnbonds*sizeof(double));
-  t2arr    = malloc(maxnbonds*sizeof(double));
-  maxddoti = malloc(maxnbonds*sizeof(double));
-  crossed  = malloc(maxnbonds*sizeof(int));
-  tocheck  = malloc(maxnbonds*sizeof(int));
-  dorefine = malloc(maxnbonds*sizeof(int));
-  crossed  = malloc(maxnbonds*sizeof(int));
-  negpairs = malloc(maxnbonds*sizeof(int));
+  mapbondsaFlex = (int*)malloc(sizeof(int)*maxnbonds);
+  mapbondsbFlex = (int*)malloc(sizeof(int)*maxnbonds);
+  mapBheightFlex = (double*) malloc(sizeof(double)*maxnbonds);
+  mapBhinFlex    = (double*)malloc(sizeof(double)*maxnbonds);
+  mapBhoutFlex   = (double*)malloc(sizeof(double)*maxnbonds);
+  mapSigmaFlex   = (double*)malloc(sizeof(double)*maxnbonds);
+  dists    = (double*)malloc(maxnbonds*sizeof(double));
+  distsOld = (double*)malloc(maxnbonds*sizeof(double));
+  distsOld2= (double*)malloc(maxnbonds*sizeof(double));
+  t2arr    = (double*)malloc(maxnbonds*sizeof(double));
+  maxddoti = (double*)malloc(maxnbonds*sizeof(double));
+  crossed  = (int*)malloc(maxnbonds*sizeof(int));
+  tocheck  = (int*)malloc(maxnbonds*sizeof(int));
+  dorefine = (int*)malloc(maxnbonds*sizeof(int));
+  crossed  = (int*)malloc(maxnbonds*sizeof(int));
+  negpairs = (int*)malloc(maxnbonds*sizeof(int));
   assignPartTypes();
 #endif
   u2R();
@@ -2419,7 +2437,7 @@ void usrInitAft(void)
 	maxax[i] = Oparams.c[a];
 #endif
       //printf("distSPA=%.15G distSPB=%.15G\n", distSPA, distSPB);
-#ifdef MD_PATCHY_HE
+#if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
       //printf("maxax bef[%d]: %.15G\n", i, maxax[i]*2.0);
       if (i < Oparams.parnumA)
 	{
@@ -2644,7 +2662,7 @@ void writeAllCor(FILE* fs)
 	{
 	  /* write particles parameters */
 	  fprintf(fs, "%.15f %.15G %.15G\n", typesArr[i].sax[0], typesArr[i].sax[1], typesArr[i].sax[2]); 
-	  fscanf(fs, "%d %d %d\n", typesArr[i].n[0], typesArr[i].n[1], typesArr[i].n[2]);
+	  fprintf(fs, "%d %d %d\n", typesArr[i].n[0], typesArr[i].n[1], typesArr[i].n[2]);
 	  fprintf(fs, "%.15G %.15G %.15G %.15G %d\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
 		  typesArr[i].I[2], typesArr[i].brownian);
 	  /* write sticky spots parameters */
@@ -2654,10 +2672,10 @@ void writeAllCor(FILE* fs)
 		    typesArr[i].spots[j].x[2], typesArr[i].spots[j].sigma);
 	  fprintf(fs, "\n");
 	  for (j = 0; j < typesArr[i].nhardobjs; j++)
-	    fscanf(fs, "%.15G %.15G %.15G % .15G %.15G %.15G %d %d %d ", 
-		   typesArr[i].hardobjs[j].x[0],typesArr[i].hardobjs[j].x[1],typesArr[i].hardobjss[j].x[2], 
-		   typesarr[i].hardobjs[j].sax[0],typesarr[i].hardobjs[j].sax[1],typesarr[i].hardobjs[j].sax[2],
-		   typesarr[i].hardobjs[j].n[0],typesarr[i].hardobjs[j].n[1],typesarr[i].hardobjs[j].n[2]);
+	    fprintf(fs, "%.15G %.15G %.15G % .15G %.15G %.15G %d %d %d ", 
+		   typesArr[i].hardobjs[j].x[0],typesArr[i].hardobjs[j].x[1],typesArr[i].hardobjs[j].x[2], 
+		   typesArr[i].hardobjs[j].sax[0],typesArr[i].hardobjs[j].sax[1],typesArr[i].hardobjs[j].sax[2],
+		   typesArr[i].hardobjs[j].n[0],typesArr[i].hardobjs[j].n[1],typesArr[i].hardobjs[j].n[2]);
 	  fprintf(fs, "\n");
 	} 
       /* write interactions */
@@ -2666,7 +2684,7 @@ void writeAllCor(FILE* fs)
 	  fprintf (fs, "%d %d %d %d %.15G %.15G %.15G %d ", intersArr[i].type1, intersArr[i].spot1,
 		 intersArr[i].type2, 
 		 intersArr[i].spot2, 
-		 intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout, interArr[i].nmax);
+		 intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout, intersArr[i].nmax);
 	} 
       fprintf(fs, "\n");
     }
@@ -2696,7 +2714,7 @@ void writeAllCor(FILE* fs)
 	  BuildAtomPos(i, rA, R[i], ratA);
 #ifdef EDHE_FLEX
 	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots; nn++)
-	    fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
 		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn].sigma*0.5);
 #else
 	  for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
@@ -2735,7 +2753,7 @@ void writeAllCor(FILE* fs)
 int readBinCoord_heflex(int cfd)
 {
   int i;
-  int j, size;
+  int size;
   unsigned char rerr = 0;
 
   size = sizeof(int)*Oparams.ntypes;
@@ -2760,7 +2778,7 @@ int readBinCoord_heflex(int cfd)
 void writeBinCoord_heflex(int cfd)
 {
   int i;
-  int j, size;
+  int size;
 
   size = sizeof(int)*Oparams.ntypes;
   writeSegs(cfd, "Init", "Error writing typeNP", CONT, size, typeNP, NULL);
@@ -2804,9 +2822,9 @@ void readAllCor(FILE* fs)
       /* hard objects (for now super-ellipsoids) */
       for (j = 0; j < typesArr[i].nhardobjs; j++)
 	fscanf(fs, "%lf %lf %lf %lf %lf %lf %d %d %d ", 
-	       &typesArr[i].hardobjs[j].x[0],&typesArr[i].hardobjs[j].x[1], &typesArr[i].hardobjss[j].x[2], 
-	       &typesarr[i].hardobjs[j].sax[0],&typesarr[i].hardobjs[j].sax[1], &typesarr[i].hardobjs[j].sax[2],
-	       &typesarr[i].hardobjs[j].n[0], &typesarr[i].hardobjs[j].n[1], &typesarr[i].hardobjs[j].n[2]);
+	       &typesArr[i].hardobjs[j].x[0],&typesArr[i].hardobjs[j].x[1], &typesArr[i].hardobjs[j].x[2], 
+	       &typesArr[i].hardobjs[j].sax[0],&typesArr[i].hardobjs[j].sax[1], &typesArr[i].hardobjs[j].sax[2],
+	       &typesArr[i].hardobjs[j].n[0], &typesArr[i].hardobjs[j].n[1], &typesArr[i].hardobjs[j].n[2]);
     } 
   /* read interactions */
   intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
