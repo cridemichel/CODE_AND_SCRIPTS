@@ -9,6 +9,9 @@
 #define MD_DEBUG30(x)
 #define MD_DEBUG31(x) 
 #define MD_DEBUG32(x) 
+#ifdef EDHE_FLEX
+extern int is_sphere(int i);
+#endif
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -2748,6 +2751,42 @@ void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBAL
       calc_grad_and_point_plane(i, gradplaneALL[nn], rBALL[nn], nn);
     }
 }
+#ifdef EDHE_FLEX
+int locate_contact_neigh_plane_HS(int i, double *evtime, double t2)
+{
+  int nn, typei, first=1;
+  double t1, b, dist, dr[3], colltime=0.0, dv[3];
+  typei = typeOfPart[i];
+  t1 = Oparams.time;
+  for (nn = 0; nn < 6; nn++)
+    {
+      dr[0] = rx[i] - rBall[nn][0];
+      dr[1] = ry[i] - rBall[nn][1];
+      dr[2] = rz[i] - rBall[nn][2];  
+      dv[0] = vx[i];
+      dv[1] = vy[i];
+      dv[2] = vz[i];
+      /* controllare che il gradiente sia a norma unitaria! */
+      dist = scalProd(dr, gradplane_all[nn]) - typesArr[typei].sax[0];
+      b = scalProd(dv, gradplane_all[nn]);
+      if (b < 0)
+	continue;
+      colltime = dist/b;
+      if (colltime > t1 && colltime < t2)
+	{
+	  if (colltime < *evtime || first)
+	    {
+	      first = 0;  
+	      *evtime = colltime;	
+	    }
+	}
+    }	
+  if (first)
+    return 0;
+  else
+    return 1;
+}
+#endif
 int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 {
   /* const double minh = 1E-14;*/
@@ -2773,6 +2812,14 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
   t1 = Oparams.time;
   //t2 = timbig;
   calc_grad_and_point_plane_all(i, gradplane_all, rBall);
+  /* la collisione di una sfera con i vari piani si puo' calcolare 
+     velocemente senza passare per il codice che segue */
+#ifdef EDHE_FLEX
+  if (is_sphere(i))
+    {
+      return locate_contact_neigh_plane_HS(i, evtime, t2);
+    }
+#endif
   factori = 0.5*maxax[i]+OprogStatus.epsdNL;
   maxddot = 0.0;
   for (nn = 0; nn < 6; nn++)
@@ -4328,6 +4375,26 @@ void updrebuildNNL(int na)
  else
    {
      nnltime2 = nnltime1;
+#ifdef EDHE_FLEX
+     if (is_sphere(na))
+       {
+	 calc_grad_and_point_plane_all(na, gradplane_all, rBall);
+	 if (!locate_contact_neigh_plane_HS(na, &nnltime2, nnltime1))
+	   {
+	     /* do nothing */
+	   }
+       }  
+     else
+       {
+	 for (ip = 0; ip < 6; ip++)
+	   {
+	     if (!locate_contact_neigh_plane(na, vecg, ip, nnltime1))
+	       continue;
+	     if (vecg[4] < nnltime2)
+	       nnltime2 = vecg[4];
+	   }
+       }
+#else
      for (ip = 0; ip < 6; ip++)
        {
 	 if (!locate_contact_neigh_plane(na, vecg, ip, nnltime1))
@@ -4335,6 +4402,7 @@ void updrebuildNNL(int na)
 	 if (vecg[4] < nnltime2)
 	   nnltime2 = vecg[4];
        }
+#endif
    }
  nebrTab[na].nexttime = min(nnltime1, nnltime2);
 #else
