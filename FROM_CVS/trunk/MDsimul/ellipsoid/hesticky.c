@@ -1,4 +1,4 @@
-#ifdef MD_PATCHY_HE
+#if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
 #include<mdsimul.h>
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
@@ -59,8 +59,10 @@ extern double rA[3], rB[3];
 extern double gradplane_all[6][3], rBall[6][3];
 extern int polinterr, polinterrRyck;
 /* *** change here if you change the number sticky spots *** */
+#ifndef EDHE_FLEX
 int mapbondsaAB[MD_PBONDS]={1,1,2,2,3,3,4,4,5,5};
 int mapbondsbAB[MD_PBONDS]={1,2,1,2,1,2,1,2,1,2};
+#endif
 int *mapbondsa;
 int *mapbondsb;
 /* ------------------------------------------------------------ */
@@ -134,6 +136,7 @@ double rcutL, aL, bL, cL;
 extern double max_ax(int i);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
 #define MD_SP_DELR 0.0
+#ifndef EDHE_FLEX
 double spApos[MD_STSPOTS_A][3] = {{MD_SP_DELR, 0.54, 0.0},{MD_SP_DELR, 0.54, 3.14159},{MD_SP_DELR, 2.60159,0.0},
     {MD_SP_DELR, 2.60159, 3.14159},{MD_SP_DELR, 1.5708, 0.0}};
 double spBpos[MD_STSPOTS_B][3] = {{MD_SP_DELR, 0.0, 0.0},{MD_SP_DELR, 3.14159, 0.0}};
@@ -204,6 +207,7 @@ void build_atom_positions(void)
       spXYZ_B[k1][2] = z + grad[2]*(Oparams.sigmaSticky*0.5 + spBpos[k1][0]) ;
     }
 }
+#endif
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
 extern void calc_energy(char *msg);
 extern void print_matrix(double **M, int n);
@@ -809,10 +813,14 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
 
   if (ata > 0)
     {
+#ifdef EDHE_FLEX
+      spXYZ = typesArr[typeOfPart[i]].spots[ata-1].x;
+#else
       if (i < Oparams.parnumA)
 	spXYZ = spXYZ_A[ata-1];
       else  
 	spXYZ = spXYZ_B[ata-1];
+#endif
     }
   //radius = Oparams.sigma[0][1] / 2.0;
   if (ata == 0)
@@ -841,6 +849,10 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
   int a;
   /* l'atomo zero si suppone nell'origine */
+#ifdef EDHE_FLEX
+  for (a=0; a < typesArr[typeOfPart[i]].nspots+1; a++)
+    BuildAtomPosAt(i, a, rO, R, rat[a]);
+#else
   if (i < Oparams.parnumA)
     {
       for (a=0; a < MD_STSPOTS_A+1; a++)
@@ -851,6 +863,7 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
       for (a=0; a < MD_STSPOTS_B+1; a++)
 	BuildAtomPosAt(i, a, rO, R, rat[a]);
     }
+#endif
 }
 int ibr, jbr, nnbr; 
 double shiftbr[3], trefbr;
@@ -2224,11 +2237,14 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
   const int MAXOPTITS = 500;
   double maxddoti[6][NA];
   int its=0, crossed[6][NA], itsf, NSP; 
-
+#ifdef EDHE_FLEX
+  NSP = typesArr[typeOfPart[i]].nspots;
+#else
   if (i < Oparams.parnumA)
     NSP = MD_STSPOTS_A;
   else
     NSP = MD_STSPOTS_B;
+#endif
   *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, distsOld);
 #if 0
   if ((t2-t1)*maxddot < *d1 - OprogStatus.epsdSPNL)
@@ -2457,10 +2473,14 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   t = 0;//t1;
   t1 = Oparams.time;
   //t2 = timbig;
+#ifdef EDHE_FLEX
+  NSP = typesArr[typeOfPart[i].nspots];
+#else
   if (i < Oparams.parnumA)
     NSP = MD_STSPOTS_A;
   else
     NSP = MD_STSPOTS_B;
+#endif
   calc_grad_and_point_plane_all(i, gradplane_all, rBall);
   //factori = 0.5*maxax[i]+OprogStatus.epsdSPNL;
   maxddot = 0.0;

@@ -12,6 +12,8 @@
 #ifndef MD_ASYM_ITENS
 #define MD_ASYM_ITENS
 #endif
+/* EDHE_FLEX e MD_POLYDISP sono incompatibili */
+#undef MD_POLYDISP
 #endif
 #ifdef MD_HE_PARALL
 #include <mpi.h>
