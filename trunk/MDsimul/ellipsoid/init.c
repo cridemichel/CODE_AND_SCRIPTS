@@ -86,8 +86,10 @@ extern double **fjac,*g,*p,*xold;
 extern int *indx;
 #ifdef MD_PATCHY_HE
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double dists[MD_PBONDS], int bondpair);
+#ifndef EDHE_FLEX
 extern double spXYZ_A[MD_STSPOTS_A][3];
 extern double spXYZ_B[MD_STSPOTS_B][3];
+#endif
 #endif
 struct nebrTabStruct *nebrTab;
 /* ================================= */
@@ -1602,7 +1604,24 @@ double calc_shell(void)
   double v[3], norm, delta;
 #endif
   double deltamax = 0.0;
+#ifdef EDHE_FLEX
+  int pt, sp;
+#endif
 #ifdef MD_PATCHY_HE
+#ifdef EDHE_FLEX
+  for (pt = 0; pt < Oparams.ntypes; pt++)
+    {
+      for (sp = 0; sp < typesArr[pt].nspots; sp++) 
+	{
+	  norm = calc_norm(typesArr[pt].spots[sp].x)
+	    for (kk=0; kk < 3; kk++)
+	      v[kk] = (norm + typesArr[pt].spots[sp].sigma*0.5) * typesArr[pt].spots[sp].x[kk] / norm;
+	  delta = max3(v[0]-typesArr[pt].sax[0],v[1]-typesArr[pt].sax[1],v[2]-typesArr[pt].sax[2]);
+	  if (aa == 0 || delta > deltamax)
+	    deltamax  = delta;
+	}   
+    }
+#else
   for (aa = 0; aa < MD_STSPOTS_A; aa++)
     {
        norm = calc_norm(spXYZ_A[aa]);
@@ -1621,6 +1640,7 @@ double calc_shell(void)
        if (aa == 0 || delta > deltamax)
 	 deltamax  = delta;
     }
+#endif
 #else
   deltamax = 0.0;
 #endif
@@ -1906,12 +1926,14 @@ void usrInitAft(void)
   Lz2 = Lz*0.5;
 #endif
   poolSize = OprogStatus.eventMult*Oparams.parnum;
+#ifndef EDHE_FLEX
   m = Oparams.m;
   Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
   invmA = 1.0/Oparams.m[0];
   invmB = 1.0/Oparams.m[1];
   Mred[0][0] = Mred[1][1] = 0.5;
   Mred[0][1] = Mred[1][0] = (Oparams.m[0]*Oparams.m[1])/(Oparams.m[0]+Oparams.m[1]);
+#endif
 #if 0
   printf("massA: %f massB: %f sigmaA:%f sigmaB:%f sigmaAB:%f\n", Oparams.m[0], Oparams.m[1],
 	 Oparams.sigma[0][0], Oparams.sigma[1][1], Oparams.sigma[0][1]);
@@ -2198,10 +2220,11 @@ void usrInitAft(void)
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = Oparams.time;
     }
-
+#ifndef EDHE_FLEX
   axa = malloc(sizeof(double)*Oparams.parnum);
   axb = malloc(sizeof(double)*Oparams.parnum);
   axc = malloc(sizeof(double)*Oparams.parnum);
+#endif
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
   if (OprogStatus.useNNL)
@@ -2291,9 +2314,11 @@ void usrInitAft(void)
 	}
       //printf("$$$ axes[%d]=(%f,%f,%f)\n", i, axaP[i], axbP[i], axcP[i]);
 #else
+#ifndef EDHE_FLEX
       axa[i] = Oparams.a[0];
       axb[i] = Oparams.b[0];
       axc[i] = Oparams.c[0];
+#endif
 #endif
     }
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
@@ -2314,19 +2339,27 @@ void usrInitAft(void)
 	}
 #endif
       scdone[i] = 0;
+#ifndef EDHE_FLEX
       axa[i] = Oparams.a[1];
       axb[i] = Oparams.b[1];
       axc[i] = Oparams.c[1];
+#endif
     }
+#ifndef EDHE_FLEX
   printf(">>>> phi=%.12G L=%f (%f,%f,%f)\n", calc_phi(), L, Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
   if (Oparams.parnumA < Oparams.parnum)
     printf("semi-axes of B (%f, %f ,%f)\n",Oparams.a[1], Oparams.b[1], Oparams.c[1]);
+#else
+  printf("[FLEX] phi=%.12G L=%f\n", calc_phi(), L); 
+#endif
   /* evaluation of principal inertia moments*/ 
   for (a = 0; a < 2; a++)
     {
+#ifndef EDHE_FLEX
       invaSq[a] = Sqr(1/Oparams.a[a]);
       invbSq[a] = Sqr(1/Oparams.b[a]);
       invcSq[a] = Sqr(1/Oparams.c[a]);
+#endif
 #ifdef MD_ASYM_ITENS
       ItensD[a][0] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.b[a])+Sqr(Oparams.c[a]));
       ItensD[a][1] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.c[a]));
@@ -2335,7 +2368,7 @@ void usrInitAft(void)
     };
 
   /* maxax e' il diametro del centroide */
-#ifdef MD_PATCHY_HE
+#if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
   build_atom_positions();
   distSPA = 0.0;
   for (aa = 0; aa < MD_STSPOTS_A; aa++)
@@ -2463,7 +2496,9 @@ void usrInitAft(void)
       numbonds[i] = 0;
     }
   printf("L=%f parnum: %d parnumA: %d\n", L, Oparams.parnum, Oparams.parnumA);
+#ifndef EDHE_FLEX
   printf("sigmaSticky=%.15G\n", Oparams.sigmaSticky);
+#endif
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
@@ -2659,9 +2694,15 @@ void writeAllCor(FILE* fs)
 	  rA[1] = ry[i];
 	  rA[2] = rz[i];
 	  BuildAtomPos(i, rA, R[i], ratA);
+#ifdef EDHE_FLEX
+	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots; nn++)
+	    fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn].sigma*0.5);
+#else
 	  for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
 	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
 		    ratA[nn][0], ratA[nn][1], ratA[nn][2], Oparams.sigmaSticky*0.5);
+#endif
 #endif
 	}
     }
