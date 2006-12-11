@@ -26,10 +26,12 @@ extern int do_check_negpairs;
 #ifdef EDHE_FLEX
 extern int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 extern double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
-extern double *distsOld, *dists, *distsOld2, *maxddoti;
+extern double *t2arr, *distsOld, *dists, *distsOld2, *maxddoti;
 extern int *crossed, *tocheck, *dorefine, *crossed, *negpairs;
 #endif
-
+#ifdef EDHE_FLEX
+extern int *typeOfPart;
+#endif
 #ifdef MD_ASYM_ITENS
 extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp, *angM;
 #else
@@ -728,18 +730,18 @@ void assign_bond_mapping(int i, int j)
   type2 = typeOfPart[j];
   for (ni=0; ni < Oparams.ninters; ni++)
     {
-      if ((intersArr[ni].type1 == type1 && intersArr[ni] == type2) ||
-	  (intersArr[ni].type1 == type2 && intersArr[ni] == type1))
+      if ((intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2) ||
+	  (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1))
 	{
 	  mapbondsaFlex[a] = intersArr[ni].spot1+1;
           mapbondsbFlex[a] = intersArr[ni].spot2+1;
 	  mapbondsaFlex[a+1] = intersArr[ni].spot2+1;
 	  mapbondsbFlex[a+1] = intersArr[ni].spot1+1;
 	  mapBheightFlex[a] = mapBheightFlex[a+1] = intersArr[ni].bheight;
-	  mapBinFlex[a] = mapBinFlex[a+1] = intersArr[ni].bin;
-          mapBoutFlex[a] = mapBoutFlex[a+1] = intersArr[ni].bout;
-          mapSigmaFlex[a] = mapSigmaFlex[a+1] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1]
-					     	     + typesArr[type2].spots[intersArr[ni].spot2]);
+	  mapBhinFlex[a] = mapBhinFlex[a+1] = intersArr[ni].bhin;
+          mapBhoutFlex[a] = mapBhoutFlex[a+1] = intersArr[ni].bhout;
+          mapSigmaFlex[a] = mapSigmaFlex[a+1] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
+					     	     + typesArr[type2].spots[intersArr[ni].spot2].sigma);
 	  a+=2;
 	}	
     }
@@ -2473,7 +2475,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   t1 = Oparams.time;
   //t2 = timbig;
 #ifdef EDHE_FLEX
-  NSP = typesArr[typeOfPart[i].nspots];
+  NSP = typesArr[typeOfPart[i]].nspots;
 #else
   if (i < Oparams.parnumA)
     NSP = MD_STSPOTS_A;
