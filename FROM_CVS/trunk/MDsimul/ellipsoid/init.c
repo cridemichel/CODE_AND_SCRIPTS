@@ -560,9 +560,36 @@ void resetCM(int onlyz)
 }
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
 {
+#ifdef EDHE_FLEX
+  double rTemp, mass;
+#else
   COORD_TYPE rTemp[2] ;
+#endif
   /*COORD_TYPE Px, Py, Pz;*/
   int i;
+#ifdef EDHE_FLEX
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      /* Set the velocities of both atoms to the center of mass velocities,
+         the exact velocities will be set in the angvel() routine, where we 
+         will set:
+	 Atom 1: v1  = Vcm + W^(d21 * m2/(m2+m1))
+	 Atom 2: v2  = Vcm - W^(d21 * m1/(m1+m2))
+	 where Vcm is the center of mass velocity (that is the actual 
+	 velocity of both atoms), W is the angular velocity of the molecule,
+	 d21 is the vector joining the two atoms (from 2 to 1) and 
+	 m1 and m2 are the masses of two atoms 
+      */
+      if (typesArr[typeOfPart[i]].brownian)
+	{
+	  mass = typesArr[typeOfPart[i]].m;
+	  rTemp = sqrt(temp / mass);  
+	  vx[i] = rTemp * gauss(); 
+	  vy[i] = rTemp * gauss();
+	  vz[i] = rTemp * gauss();
+	}	  
+    }
+#else
   rTemp[0] = sqrt(temp / m[0]);  
   rTemp[1] = sqrt(temp / m[1]);
   /* variance of the velocities distribution function, we assume k = 1 */ 
@@ -599,7 +626,7 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
         ----------- * exp( - --- )         
 	 sqrt(2*PI)           2     */
     }
- 
+#endif 
 }
 
 /* ========================== >>> comvel <<< =============================== */
@@ -2581,6 +2608,7 @@ void writeAllCor(FILE* fs)
 	{
 	  /* write particles parameters */
 	  fprintf(fs, "%.15f %.15G %.15G\n", typesArr[i].sax[0], typesArr[i].sax[1], typesArr[i].sax[2]); 
+	  fscanf(fs, "%d %d %d\n", typesArr[i].n[0], typesArr[i].n[1], typesArr[i].n[2]);
 	  fprintf(fs, "%.15G %.15G %.15G %.15G %d\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
 		  typesArr[i].I[2], typesArr[i].brownian);
 	  /* write sticky spots parameters */
@@ -2588,6 +2616,12 @@ void writeAllCor(FILE* fs)
 	  for (j = 0; j < typesArr[i].nspots; j++)
 	    fprintf(fs, "%.15G %.15G %.15G %.15G ", typesArr[i].spots[j].x[0],typesArr[i].spots[j].x[1],
 		    typesArr[i].spots[j].x[2], typesArr[i].spots[j].sigma);
+	  fprintf(fs, "\n");
+	  for (j = 0; j < typesArr[i].nhardobjs; j++)
+	    fscanf(fs, "%.15G %.15G %.15G % .15G %.15G %.15G %d %d %d ", 
+		   typesArr[i].hardobjs[j].x[0],typesArr[i].hardobjs[j].x[1],typesArr[i].hardobjss[j].x[2], 
+		   typesarr[i].hardobjs[j].sax[0],typesarr[i].hardobjs[j].sax[1],typesarr[i].hardobjs[j].sax[2],
+		   typesarr[i].hardobjs[j].n[0],typesarr[i].hardobjs[j].n[1],typesarr[i].hardobjs[j].n[2]);
 	  fprintf(fs, "\n");
 	} 
       /* write interactions */
@@ -2716,14 +2750,21 @@ void readAllCor(FILE* fs)
     {
       /* read particles parameters */
       fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
+      fscanf(fs, "%d %d %d ", &typesArr[i].n[0], &typesArr[i].n[1], &typesArr[i].n[2]);
       fscanf(fs, "%lf %lf %lf %lf %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
 	   &typesArr[i].I[2], &typesArr[i].brownian);
       /* read sticky spots parameters */
-      fscanf(fs, "%d ", &typesArr[i].nspots);
+      fscanf(fs, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
       typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots);
       for (j = 0; j < typesArr[i].nspots; j++)
 	fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],
 	       &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
+      /* hard objects (for now super-ellipsoids) */
+      for (j = 0; j < typesArr[i].nhardobjs; j++)
+	fscanf(fs, "%lf %lf %lf %lf %lf %lf %d %d %d ", 
+	       &typesArr[i].hardobjs[j].x[0],&typesArr[i].hardobjs[j].x[1], &typesArr[i].hardobjss[j].x[2], 
+	       &typesarr[i].hardobjs[j].sax[0],&typesarr[i].hardobjs[j].sax[1], &typesarr[i].hardobjs[j].sax[2],
+	       &typesarr[i].hardobjs[j].n[0], &typesarr[i].hardobjs[j].n[1], &typesarr[i].hardobjs[j].n[2]);
     } 
   /* read interactions */
   intersArr = malloc(sizeof(interStruct)*Oparams.ninters);

@@ -951,6 +951,21 @@ void calc_omega(int i);
 void calc_angmom(int i, double **I);
 extern void upd_refsysM(int i);
 #endif
+#ifdef EDHE_FLEX
+int dofTot;
+int get_dof_flex(void)
+{
+  int i, pt;
+  for (pt = 0; pt < Oparams.parnum; pt++)
+    {
+      /* Sphere */
+      if (typesArr[pt].sax[0] == typesArr[pt].sax[1] &&
+	  typesArr[pt].sax[1] == typesArr[pt].sax[2])
+      dofOfType =;
+
+    }
+}
+#endif
 #ifdef MD_GRAVITY
 void scalevels(double temp, double K, double Vz)
 {
@@ -1004,9 +1019,13 @@ void scalevels(double temp, double K)
 {
   int i; 
   double sf, dof;
+#ifdef EDHE_FLEX
+  sf = sqrt( ( dofTot * temp ) / (2.0*K) );
+#else
   dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
     OprogStatus.dofB*((double) (Oparams.parnum-Oparams.parnumA));
   sf = sqrt( ( (dof - 3.0) * temp ) / (2.0*K) );
+#endif
   for (i = 0; i < Oparams.parnumA; i++)
     {
       vx[i] *= sf;
