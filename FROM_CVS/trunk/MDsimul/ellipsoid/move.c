@@ -442,10 +442,19 @@ double calc_phi(void)
   double N = 0;
   //const double pi = acos(0)*2;
   int i ;
+#ifdef EDHE_FLEX
+  int typei;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      typei = typeOfPart[i];
+      N += typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
+    }
+#else
   for (i=0; i < Oparams.parnum; i++)
     {
       N += axa[i]*axb[i]*axc[i];
     }
+#endif
   N *= 4.0*pi/3.0;
   return N / (L*L*L);
 }
