@@ -1879,6 +1879,7 @@ void usrInitAft(void)
   int maxnbonds;
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
   double shift[3], drx, dry, drz, dist;
+  int pt;
 #ifndef EDHE_FLEX
   double dists[MD_PBONDS];
 #endif
@@ -2085,6 +2086,16 @@ void usrInitAft(void)
       lastcol[i] = 0.0;
     }
 #ifdef EDHE_FLEX
+  /* check moments of inertia */
+  for (pt=0; pt < Oparams.ntypes; pt++)
+    {
+      if (typesArr[pt].I[0]!=typesArr[pt].I[1])
+	{
+	  printf("ERROR: Moments of inertia along x-axis and y-axis must be equal!\n");
+	  printf("Aborting...\n");
+	  exit(-1);
+	}
+    } 
   maxnbonds = get_max_nbonds();
   dofTot = get_dof_flex();
   mapbondsaFlex = (int*)malloc(sizeof(int)*maxnbonds);
