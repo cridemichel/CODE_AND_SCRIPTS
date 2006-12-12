@@ -209,11 +209,6 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define MD_ALLOC_EXTRAS
 #define MD_DECL_EXTRAS
 #endif
-#ifdef EDHE_FLEX
-#define MD_SAVE_INT typeOfPart
-#define MD_ALLOC_INT &typeOfPart
-#define MD_DECL_INT *typeOfPart
-#endif
 #ifdef MD_ASYM_ITENS
 #ifdef MD_GRAVITY
 #define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz, lastcol MD_SAVE_EXTRAS
@@ -975,7 +970,7 @@ COORD_TYPE EXT_DLST;
 int MD_DECL_INT;
 partType* typesArr;
 interStruct* intersArr;
-int *typeNP;
+int *typeNP, *typeOfPart;
 #endif
 #else
 extern COORD_TYPE DECL_LIST; 
@@ -984,7 +979,7 @@ extern COORD_TYPE EXT_DLST;
 extern int MD_DECL_INT;
 extern partType* typesArr; /* array con tutti i tipi presenti nella simulazione */
 extern interStruct* intersArr; /* array di strutture contenente tutte le interazioni */
-extern int *typeNP; /* array contentente il numero di particelle di ogni specie */
+extern int *typeNP, *typeOfPart; /* array contentente il numero di particelle di ogni specie */
 #endif
 #endif 
 
