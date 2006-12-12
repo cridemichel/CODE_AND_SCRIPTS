@@ -60,6 +60,61 @@ int numOfProcs; /* number of processeses in a communicator */
 #endif 
 
 #ifdef EDHE_FLEX
+char colsFlex[][256] = {"red","green","blue", "snow","ghost","gainsboro","OldLace","linen","PapayaWhip","blanched",
+"BlanchedAlmond","bisque","peach","PeachPuff","navajo","moccasin","cornsilk","ivory","lemon",
+"LemonChiffon","seashell","honeydew","mint","MintCream","azure","alice","AliceBlue","lavender","lavender",
+"LavenderBlush","misty","MistyRose","dark","DarkSlateGray","dark","DarkSlateGrey","dim",
+"DimGray","dim","DimGrey","slate","SlateGray","slate","SlateGrey","light","LightSlateGray","light",
+"LightSlateGrey","gray","grey","light","LightGrey","light","LightGray","midnight","MidnightBlue","navy",
+"navy","NavyBlue","cornflower","CornflowerBlue","dark","DarkSlateBlue","slate","SlateBlue","medium","MediumSlateBlue",
+"light","LightSlateBlue","medium","MediumBlue","royal","RoyalBlue","dodger","DodgerBlue","deep",
+"DeepSkyBlue","sky","SkyBlue","light","LightSkyBlue","steel","SteelBlue","light","LightSteelBlue","light",
+"LightBlue","powder","PowderBlue","pale","PaleTurquoise","dark","DarkTurquoise","medium","MediumTurquoise","turquoise",
+"cyan","light","LightCyan","cadet","CadetBlue","medium","MediumAquamarine","aquamarine","dark","DarkGreen",
+"dark","DarkOliveGreen","dark","DarkSeaGreen","sea","SeaGreen","medium","MediumSeaGreen","light","LightSeaGreen",
+"pale","PaleGreen","spring","SpringGreen","lawn","LawnGreen","chartreuse","medium","MediumSpringGreen",
+"GreenYellow","lime","LimeGreen","yellow","YellowGreen","forest","ForestGreen","olive","OliveDrab",
+"dark","DarkKhaki","khaki","pale","PaleGoldenrod","light","LightGoldenrodYellow","light","LightYellow","yellow",
+"gold","light","LightGoldenrod","goldenrod","dark","DarkGoldenrod","rosy","RosyBrown","indian","IndianRed",
+"saddle","SaddleBrown","sienna","peru","burlywood","beige","wheat","sandy","SandyBrown","tan",
+"chocolate","firebrick","brown","dark","DarkSalmon","salmon","light","LightSalmon","orange","dark",
+"DarkOrange","coral","light","LightCoral","tomato","orange","OrangeRed","hot","HotPink",
+"deep","DeepPink","pink","light","LightPink","pale","PaleVioletRed","maroon","medium","MediumVioletRed",
+"violet","VioletRed","magenta","violet","plum","orchid","medium","MediumOrchid","dark","DarkOrchid",
+"dark","DarkViolet","blue","BlueViolet","purple","medium","MediumPurple","thistle","snow1","snow2",
+"snow3","snow4","seashell1","seashell2","seashell3","seashell4",
+"bisque1","bisque2","bisque3","bisque4","PeachPuff1","PeachPuff2","PeachPuff3","PeachPuff4",
+"LemonChiffon1","LemonChiffon2","LemonChiffon3","LemonChiffon4","cornsilk1","cornsilk2","cornsilk3","cornsilk4",
+"ivory1","ivory2","ivory3","ivory4","honeydew1","honeydew2","honeydew3","honeydew4","LavenderBlush1","LavenderBlush2",
+"LavenderBlush3","LavenderBlush4","MistyRose1","MistyRose2","MistyRose3","MistyRose4","azure1","azure2","azure3","azure4",
+"SlateBlue1","SlateBlue2","SlateBlue3","SlateBlue4","RoyalBlue1","RoyalBlue2","RoyalBlue3","RoyalBlue4","blue1","blue2",
+"blue3","blue4","DodgerBlue1","DodgerBlue2","DodgerBlue3","DodgerBlue4","SteelBlue1","SteelBlue2","SteelBlue3","SteelBlue4",
+"DeepSkyBlue1","DeepSkyBlue2","DeepSkyBlue3","DeepSkyBlue4","SkyBlue1","SkyBlue2","SkyBlue3","SkyBlue4","LightSkyBlue1","LightSkyBlue2",
+"LightSkyBlue3","LightSkyBlue4","SlateGray1","SlateGray2","SlateGray3","SlateGray4","LightSteelBlue1","LightSteelBlue2","LightSteelBlue3","LightSteelBlue4",
+"LightBlue1","LightBlue2","LightBlue3","LightBlue4","LightCyan1","LightCyan2","LightCyan3","LightCyan4","PaleTurquoise1","PaleTurquoise2",
+"PaleTurquoise3","PaleTurquoise4","CadetBlue1","CadetBlue2","CadetBlue3","CadetBlue4","turquoise1","turquoise2","turquoise3","turquoise4",
+"cyan1","cyan2","cyan3","cyan4","DarkSlateGray1","DarkSlateGray2","DarkSlateGray3","DarkSlateGray4","aquamarine1","aquamarine2",
+"aquamarine3","aquamarine4","DarkSeaGreen1","DarkSeaGreen2","DarkSeaGreen3","DarkSeaGreen4","SeaGreen1","SeaGreen2","SeaGreen3","SeaGreen4",
+"PaleGreen1","PaleGreen2","PaleGreen3","PaleGreen4","SpringGreen1","SpringGreen2","SpringGreen3","SpringGreen4","green1","green2",
+"green3","green4","chartreuse1","chartreuse2","chartreuse3","chartreuse4","OliveDrab1","OliveDrab2","OliveDrab3","OliveDrab4",
+"DarkOliveGreen1","DarkOliveGreen2","DarkOliveGreen3","DarkOliveGreen4","khaki1","khaki2","khaki3","khaki4","LightGoldenrod1","LightGoldenrod2",
+"LightGoldenrod3","LightGoldenrod4","LightYellow1","LightYellow2","LightYellow3","LightYellow4","yellow1","yellow2","yellow3","yellow4",
+"gold1","gold2","gold3","gold4","goldenrod1","goldenrod2","goldenrod3","goldenrod4","DarkGoldenrod1","DarkGoldenrod2",
+"DarkGoldenrod3","DarkGoldenrod4","RosyBrown1","RosyBrown2","RosyBrown3","RosyBrown4","IndianRed1","IndianRed2","IndianRed3","IndianRed4",
+"sienna1","sienna2","sienna3","sienna4","burlywood1","burlywood2","burlywood3","burlywood4","wheat1","wheat2",
+"wheat3","wheat4","tan1","tan2","tan3","tan4","chocolate1","chocolate2","chocolate3","chocolate4",
+"firebrick1","firebrick2","firebrick3","firebrick4","brown1","brown2","brown3","brown4","salmon1","salmon2",
+"salmon3","salmon4","LightSalmon1","LightSalmon2","LightSalmon3","LightSalmon4","orange1","orange2","orange3","orange4",
+"DarkOrange1","DarkOrange2","DarkOrange3","DarkOrange4","coral1","coral2","coral3","coral4","tomato1","tomato2",
+"tomato3","tomato4","OrangeRed1","OrangeRed2","OrangeRed3","OrangeRed4","red1","red2","red3","red4",
+"DeepPink1","DeepPink2","DeepPink3","DeepPink4","HotPink1","HotPink2","HotPink3","HotPink4","pink1","pink2",
+"pink3","pink4","LightPink1","LightPink2","LightPink3","LightPink4","PaleVioletRed1","PaleVioletRed2","PaleVioletRed3","PaleVioletRed4",
+"maroon1","maroon2","maroon3","maroon4","VioletRed1","VioletRed2","VioletRed3","VioletRed4","magenta1","magenta2",
+"magenta3","magenta4","orchid1","orchid2","orchid3","orchid4","plum1","plum2","plum3","plum4",
+"MediumOrchid1","MediumOrchid2","MediumOrchid3","MediumOrchid4","DarkOrchid1","DarkOrchid2","DarkOrchid3","DarkOrchid4","purple1","purple2",
+"purple3","purple4","MediumPurple1","MediumPurple2","MediumPurple3","MediumPurple4","thistle1","thistle2","thistle3","thistle4","DarkBlue","dark","DarkCyan",
+"dark","DarkMagenta","dark","DarkRed","light","LightGreen", ""};
+int numcols;
 int *typeOfPart;
 int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
@@ -1861,6 +1916,24 @@ void assignPartTypes(void)
       nt++;
     }
 }
+void check_conf(void)
+{
+  int i, pt;
+  int *typeNPL;
+  typeNPL = malloc(sizeof(int)*Oparams.ntypes);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      typeNPL[typeOfPart[i]]++;
+    }
+  for (pt = 0; pt < Oparams.ntypes; pt++)
+    {
+      if (typeNPL[pt] != typeNP[pt])
+	{
+	  printf("WARNING: the number of particles of type %d (%d) is different from what expected (%d)!\n",
+		 pt, typeNPL[pt], typeNP[pt]);
+	}
+    }
+}
 #endif
 #ifdef EDHE_FLEX
 extern int get_dof_flex(void);
@@ -1906,6 +1979,13 @@ void usrInitAft(void)
      printf("Exiting...");
      exit(-1);
    } 
+ numcols=0;
+ for (i=0;;i++)
+   {
+     if (!strcmp(colsFlex[i],""))
+       break;
+     numcols++;
+   }
 #endif
   Nm = Oparams.parnumA;
   parnumA = Oparams.parnumA;
@@ -2114,7 +2194,7 @@ void usrInitAft(void)
   dorefine = (int*)malloc(maxnbonds*sizeof(int));
   crossed  = (int*)malloc(maxnbonds*sizeof(int));
   negpairs = (int*)malloc(maxnbonds*sizeof(int));
-  assignPartTypes();
+  check_conf();
 #endif
   u2R();
   if (OprogStatus.CMreset==-1)
@@ -2654,6 +2734,7 @@ extern double rA[3], rB[3];
 #ifdef MD_PATCHY_HE
 void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 #endif
+
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs)
 {
@@ -2664,11 +2745,13 @@ void writeAllCor(FILE* fs)
   const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
 #ifdef EDHE_FLEX
+  const char tipodat2_flex[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n";
   int j;
   if (!mgl_mode)
     {
       for (i=0; i < Oparams.ntypes; i++)
-	fprintf(fs, "%d\n", typeNP[i]);
+	fprintf(fs, "%d ", typeNP[i]);
+      fprintf(fs, "\n");
       for (i=0; i < Oparams.ntypes; i++)
 	{
 	  /* write particles parameters */
@@ -2705,6 +2788,12 @@ void writeAllCor(FILE* fs)
       fprintf(fs, ".Vol: %f\n", L*L*L);
       for (i = 0; i < Oparams.parnum; i++)
 	{
+#ifdef EDHE_FLEX
+      	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+		  uyz[i], uzx[i], uzy[i], uzz[i], typesArr[typeOfPart[i]].sax[0], 
+		  typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],
+		  colsFlex[typeOfPart[i]%numcols]);
+#else
 	  if (i < Oparams.parnumA)
 	    {
 	      fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
@@ -2718,6 +2807,7 @@ void writeAllCor(FILE* fs)
 		      Oparams.a[1], Oparams.b[1], Oparams.c[1],
 		      "green");
 	    }
+#endif
 #ifdef MD_PATCHY_HE
 	  rA[0] = rx[i];
 	  rA[1] = ry[i];
@@ -2739,8 +2829,13 @@ void writeAllCor(FILE* fs)
     {
       for (i = 0; i < Oparams.parnum; i++)
 	{
+#ifdef EDHE_FLEX
+	  fprintf(fs, tipodat2_flex, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+		  uyz[i], uzx[i], uzy[i], uzz[i], typeOfPart[i]);
+#else
 	  fprintf(fs, tipodat2, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 		  uyz[i], uzx[i], uzy[i], uzz[i]);
+#endif
 	}
     }
   if (mgl_mode==0)
@@ -2853,12 +2948,22 @@ void readAllCor(FILE* fs)
 	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	  exit(-1);
 	}
-      if (fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
-		 &uxx[i], &uxy[i], &uxz[i], &uyx[i], &uyy[i], &uyz[i], &uzx[i], &uzy[i], &uzz[i]) < 3)
+#ifdef EDHE_FLEX
+      if (fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lfi %d\n", 
+		 &uxx[i], &uxy[i], &uxz[i], &uyx[i], &uyy[i], &uyz[i], &uzx[i], &uzy[i], &uzz[i],
+		 &typeOfPart[i]) < 10)
 	{
 	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	  exit(-1);
 	}
+#else
+      if (fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
+		 &uxx[i], &uxy[i], &uxz[i], &uyx[i], &uyy[i], &uyz[i], &uzx[i], &uzy[i], &uzz[i]) < 9)
+	{
+	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
+	  exit(-1);
+	}
+#endif
     }
   
   for (i = 0; i < Oparams.parnum; i++)
