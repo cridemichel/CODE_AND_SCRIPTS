@@ -2759,7 +2759,7 @@ void writeAllCor(FILE* fs)
 	  fprintf(fs, "%.15G %.15G %.15G %.15G %d\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
 		  typesArr[i].I[2], typesArr[i].brownian);
 	  /* write sticky spots parameters */
-	  fprintf(fs, "%d\n", typesArr[i].nspots);
+	  fprintf(fs, "%d %d\n", typesArr[i].nspots, typesArr[i].nhardobjs);
 	  for (j = 0; j < typesArr[i].nspots; j++)
 	    fprintf(fs, "%.15G %.15G %.15G %.15G ", typesArr[i].spots[j].x[0],typesArr[i].spots[j].x[1],
 		    typesArr[i].spots[j].x[2], typesArr[i].spots[j].sigma);
