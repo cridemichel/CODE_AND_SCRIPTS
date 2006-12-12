@@ -11,9 +11,6 @@
 #ifdef MPI
 extern int my_rank;
 #endif
-#ifdef EDHE_FLEX
-extern int *typeOfPart;
-#endif
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 char TXTA[10][MSG_LEN];

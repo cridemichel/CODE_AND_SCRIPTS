@@ -115,7 +115,6 @@ char colsFlex[][256] = {"red","green","blue", "snow","ghost","gainsboro","OldLac
 "purple3","purple4","MediumPurple1","MediumPurple2","MediumPurple3","MediumPurple4","thistle1","thistle2","thistle3","thistle4","DarkBlue","dark","DarkCyan",
 "dark","DarkMagenta","dark","DarkRed","light","LightGreen", ""};
 int numcols;
-int *typeOfPart;
 int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
 double *t2arr, *distsOld, *dists, *distsOld2, *maxddoti;
@@ -2862,6 +2861,10 @@ int readBinCoord_heflex(int cfd)
   int size;
   unsigned char rerr = 0;
 
+  size = sizeof(int)*Oparams.parnum;
+  typeOfPart = malloc(size);
+  rerr |= -readSegs(cfd, "Init", "Error reading typeNP", CONT, size, typeOfPart, NULL);
+ 
   size = sizeof(int)*Oparams.ntypes;
   typeNP = malloc(size);
   rerr |= -readSegs(cfd, "Init", "Error reading typeNP", CONT, size, typeNP, NULL);
@@ -2908,6 +2911,8 @@ void readAllCor(FILE* fs)
   int i;
 #ifdef EDHE_FLEX
   int j;
+
+  typeOfPart = malloc(sizeof(int)*Oparams.parnum);
   typeNP = malloc(sizeof(int)*Oparams.ntypes);
   for (i=0; i < Oparams.ntypes; i++)
     fscanf(fs, "%d ", &typeNP[i]);

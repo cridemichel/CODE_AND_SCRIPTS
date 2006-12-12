@@ -29,9 +29,6 @@ extern double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex;
 extern double *t2arr, *distsOld, *dists, *distsOld2, *maxddoti;
 extern int *crossed, *tocheck, *dorefine, *crossed, *negpairs;
 #endif
-#ifdef EDHE_FLEX
-extern int *typeOfPart;
-#endif
 #ifdef MD_ASYM_ITENS
 extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp, *angM;
 #else

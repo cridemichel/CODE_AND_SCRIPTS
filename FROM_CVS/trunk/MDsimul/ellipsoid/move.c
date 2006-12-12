@@ -7,9 +7,6 @@
 #define MD_DEBUG20(x) 
 #define MD_DEBUG31(x) 
 #define MD_DEBUG32(x) 
-#ifdef EDHE_FLEX
-extern int *typeOfPart;
-#endif
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */

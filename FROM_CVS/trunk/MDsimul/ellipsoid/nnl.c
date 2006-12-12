@@ -31,9 +31,6 @@ extern double **Ia, **Ib, **invIa, **invIb;
 #else
 extern double Ia, Ib, invIa, invIb;
 #endif
-#ifdef EDHE_FLEX
-extern int *typeOfPart;
-#endif
 extern double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 extern int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;

@@ -201,25 +201,30 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 	 - Implement doubly dimensioned array as a definition apart.
 */
 #ifdef MD_POLYDISP
-#define MD_SAVE_AXES , axaP, axbP, axcP
-#define MD_ALLOC_AXES , &axaP, &axbP, &axcP
-#define MD_DECL_AXES  , *axaP, *axbP,  *axcP
+#define MD_SAVE_EXTRAS , axaP, axbP, axcP
+#define MD_ALLOC_EXTRAS , &axaP, &axbP, &axcP
+#define MD_DECL_EXTRAS  , *axaP, *axbP,  *axcP
 #else
-#define MD_SAVE_AXES
-#define MD_ALLOC_AXES
-#define MD_DECL_AXES
+#define MD_SAVE_EXTRAS
+#define MD_ALLOC_EXTRAS
+#define MD_DECL_EXTRAS
+#endif
+#ifdef EDHE_FLEX
+#define MD_SAVE_INT typeOfPart
+#define MD_ALLOC_INT &typeOfPart
+#define MD_DECL_INT *typeOfPart
 #endif
 #ifdef MD_ASYM_ITENS
 #ifdef MD_GRAVITY
-#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz, lastcol MD_SAVE_AXES 
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz, lastcol MD_SAVE_EXTRAS
 #else
-#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz MD_SAVE_AXES
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, Mx, My, Mz MD_SAVE_EXTRAS
 #endif
 #else
 #ifdef MD_GRAVITY
-#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, vx, vy, vz, wx, wy, wz, lastcol MD_SAVE_AXES
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, vx, vy, vz, wx, wy, wz, lastcol MD_SAVE_EXTRAS
 #else
-#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, vx, vy, vz, wx, wy, wz MD_SAVE_AXES
+#define SAVE_LIST rx, ry, rz, vx, vy, vz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, vx, vy, vz, wx, wy, wz MD_SAVE_EXTRAS
 #endif
 #endif
 #undef  EXT_SLST
@@ -256,15 +261,15 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 */
 #ifdef MD_ASYM_ITENS
 #ifdef MD_GRAVITY
-#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &Mx, &My, &Mz, &lastcol MD_ALLOC_AXES
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &Mx, &My, &Mz, &lastcol MD_ALLOC_EXTRAS
 #else
-#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &Mx, &My, &Mz MD_ALLOC_AXES
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &Mx, &My, &Mz MD_ALLOC_EXTRAS
 #endif
 #else
 #ifdef MD_GRAVITY
-#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &lastcol MD_ALLOC_AXES
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz, &lastcol MD_ALLOC_EXTRAS
 #else
-#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz MD_ALLOC_AXES
+#define ALLOC_LIST  &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz, &uzx, &uzy, &uzz, &vx, &vy, &vz, &wx, &wy, &wz MD_ALLOC_EXTRAS
 #endif
 #endif
 /* this is used to declare the particle variables ( see below ) 
@@ -276,15 +281,15 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
    coordinate(rx, ry, rz) <- atom <- molecule*/
 #ifdef MD_ASYM_ITENS
 #ifdef MD_GRAVITY
-#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *Mx, *My, *Mz, *lastcol MD_DECL_AXES
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *Mx, *My, *Mz, *lastcol MD_DECL_EXTRAS
 #else
-#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *Mx, *My, *Mz MD_DECL_AXES
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *Mx, *My, *Mz MD_DECL_EXTRAS
 #endif
 #else
 #ifdef MD_GRAVITY
-#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *lastcol MD_DECL_AXES
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz, *lastcol MD_DECL_EXTRAS
 #else
-#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz MD_DECL_AXES
+#define DECL_LIST   *rx, *ry, *rz, *uxx, *uxy, *uxz, *uyx, *uyy, *uyz, *uzx, *uzy, *uzz, *vx, *vy, *vz, *wx, *wy, *wz MD_DECL_EXTRAS
 #endif
 #endif				   
 #undef EXT_DLST
@@ -967,6 +972,7 @@ of the object, and elsewhere we put only extern declarations */
 COORD_TYPE DECL_LIST;
 COORD_TYPE EXT_DLST;
 #ifdef EDHE_FLEX
+int MD_DECL_INT;
 partType* typesArr;
 interStruct* intersArr;
 int *typeNP;
@@ -975,6 +981,7 @@ int *typeNP;
 extern COORD_TYPE DECL_LIST; 
 extern COORD_TYPE EXT_DLST;
 #ifdef EDHE_FLEX
+extern int MD_DECL_INT;
 extern partType* typesArr; /* array con tutti i tipi presenti nella simulazione */
 extern interStruct* intersArr; /* array di strutture contenente tutte le interazioni */
 extern int *typeNP; /* array contentente il numero di particelle di ogni specie */
