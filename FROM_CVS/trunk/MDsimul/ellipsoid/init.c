@@ -2918,6 +2918,8 @@ void readAllCor(FILE* fs)
     fscanf(fs, "%d ", &typeNP[i]);
   typesArr = malloc(sizeof(partType)*Oparams.ntypes);
   for (i=0; i < Oparams.ntypes; i++)
+    fscanf(fs, "%d ", &typeNP[i]);
+  for (i=0; i < Oparams.ntypes; i++)
     {
       /* read particles parameters */
       fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
@@ -2927,6 +2929,7 @@ void readAllCor(FILE* fs)
       /* read sticky spots parameters */
       fscanf(fs, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
       typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots);
+      //printf("QUI nhardobjs=%d ntypes=%d\n",typesArr[i].nhardobjs, Oparams.ntypes );
       for (j = 0; j < typesArr[i].nspots; j++)
 	fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],
 	       &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
@@ -2954,10 +2957,11 @@ void readAllCor(FILE* fs)
 	  exit(-1);
 	}
 #ifdef EDHE_FLEX
-      if (fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lfi %d\n", 
+      if (fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n", 
 		 &uxx[i], &uxy[i], &uxz[i], &uyx[i], &uyy[i], &uyz[i], &uzx[i], &uzy[i], &uzz[i],
 		 &typeOfPart[i]) < 10)
 	{
+	  //printf("typeOfPart[%d]:%d\n", i, typeOfPart[i]);
 	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	  exit(-1);
 	}
@@ -2969,6 +2973,7 @@ void readAllCor(FILE* fs)
 	  exit(-1);
 	}
 #endif
+      //printf("%d r=(%f,%f,%f) type=%d\n", i, rx[i], ry[i], rz[i], typeOfPart[i]);
     }
   
   for (i = 0; i < Oparams.parnum; i++)
@@ -2991,6 +2996,7 @@ void readAllCor(FILE* fs)
 	  exit(-1);
 	}
 #endif
+      //printf("%d v=(%f,%f,%f)\n", i, vx[i], vy[i], vz[i]);
     }
 
 #ifdef MD_GRAVITY
