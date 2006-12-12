@@ -2407,7 +2407,7 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
   factori = 0.5*maxax[i]+OprogStatus.epsdSP;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 #else
 #ifdef EDHE_FLEX
-  factori = calc_norm(typesArr[typeOfPart[i]].spots[mapbondsa[nn]-1].x) +
+  factori = calc_norm(typesArr[typeOfPart[i]].spots[nn].x) +
     0.5*mapSigmaFlex[nn] + OprogStatus.epsdSP;
 #else
   if (i < Oparams.parnumA)
