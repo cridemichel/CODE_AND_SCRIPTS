@@ -101,6 +101,36 @@ void AllocCoord(int size, COORD_TYPE** pointer, ...)
     }	
   va_end(ap);
 }
+/* ============================ >>> AllocCoord <<< ==========================*/
+void AllocInteger(int size, int** pointer, ...)
+{
+  /* Allocate contigously memmory */
+  va_list ap;
+  int** ptrs[MAXVARS];
+  int totBytes, totArr; 
+  int i;
+  va_start(ap, pointer);
+  
+  ptrs[0] = pointer;
+  totBytes = size;
+  for (i=1; (ptrs[i] = va_arg(ap, int**)) != 0; ++i)
+    { 
+      totBytes += size; /* total bytes to allocate */
+    }
+  totArr = i; /* total number of arrays to allocate */
+  
+  *ptrs[0] = malloc(totBytes);
+  //intf("totBytes = %d size: %d\n", totBytes, size);
+  for (i = 1; i < totArr; ++i)
+    {
+      *ptrs[i] =(int*)((char*) *ptrs[i-1] + size);  
+      //intf("pointer value ptrs[%d]:%d\n", i, (int)*ptrs[i]);
+      //intf("*sptr relative %d\n\n",(int) *ptrs[i] - (int)*ptrs[0]);
+      //intf("totArr: %d\n", totArr);
+    }	
+  va_end(ap);
+}
+
 
 /* ==================== >>> AllocCoordFrag <<< =====================*/
 void AllocCoordFrag(int size, COORD_TYPE** pointer, ...)
@@ -361,7 +391,6 @@ int readCoord(int cfd)
 		    SEGSIZE, SAVE_LIST,
 		    NULL);    /* NULL means: 'no more pointers to load' */
 #endif
- 
 #ifdef EXT_SLST 
   rerr |= -readSegs(cfd, "Init", "Error reading extra coordinates", CONT,
 		    sizeof(COORD_TYPE), EXT_SLST,
