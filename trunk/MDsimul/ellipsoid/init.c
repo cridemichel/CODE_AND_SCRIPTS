@@ -1969,6 +1969,9 @@ void usrInitAft(void)
   int a;
  /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
+#ifdef EDHE_FLEX
+  Oparams.parnumA = Oparams.parnum;
+#endif
   /* initialize global varibales */
   pi = 2.0 * acos(0);
 #ifdef EDHE_FLEX 
@@ -2429,6 +2432,7 @@ void usrInitAft(void)
 #endif
 #endif
     }
+#ifndef EDHE_FLEX
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
     {
 #ifdef MD_HE_PARALL
@@ -2453,6 +2457,7 @@ void usrInitAft(void)
       axc[i] = Oparams.c[1];
 #endif
     }
+#endif
 #ifndef EDHE_FLEX
   printf(">>>> phi=%.12G L=%f (%f,%f,%f)\n", calc_phi(), L, Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
   if (Oparams.parnumA < Oparams.parnum)
@@ -2889,6 +2894,9 @@ void writeBinCoord_heflex(int cfd)
   int i;
   int size;
 
+  size = sizeof(int)*Oparams.parnum;
+  writeSegs(cfd, "Init", "Error writing typeOfPart", CONT, size, typeOfPart, NULL);
+ 
   size = sizeof(int)*Oparams.ntypes;
   writeSegs(cfd, "Init", "Error writing typeNP", CONT, size, typeNP, NULL);
  
