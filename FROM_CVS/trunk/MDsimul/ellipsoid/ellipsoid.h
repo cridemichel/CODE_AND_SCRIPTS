@@ -940,7 +940,11 @@ struct pascii opar_ascii[]=
 #endif
   {"M",                 &OP(M),                           1,   1,   "%d"},
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
-#ifdef MD_PATCHY_HE
+#ifdef EDHE_FLEX
+  {"ninters",       &OP(ninters),                         1,  1,    "%d"},
+  {"ntypes",        &OP(ntypes),                          1,  1,    "%d"},
+#endif
+#if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
   {"sigmaSticky",       &OP(sigmaSticky),                       1,   1, "%.15G"},
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
   {"bhin",               &OP(bhin),                         1,   1, "%.15G"},
@@ -1000,6 +1004,10 @@ struct singlePar OsinglePar[] = {
   {"parnum" ,    &Oparams.parnum,             INT},
 #ifndef EDHE_FLEX
   {"parnumA" ,   &Oparams.parnumA,            INT},
+#endif
+#ifdef EDHE_FLEX
+  {"ntypes",     &Oparams.ntypes,             INT},
+  {"ninters",    &Oparams.ninters,            INT},
 #endif
   {"stepnum",    &Oparams.totStep,            LLINT},
   {"inifile" ,   &OprogStatus.inifile,        STR},
