@@ -2196,6 +2196,8 @@ void usrInitAft(void)
 	  printf("Aborting...\n");
 	  exit(-1);
 	}
+      MD_DEBUG50(printf("semi-assi del tipo %d=%f %f %f\n", pt, typesArr[pt].sax[0], typesArr[pt].sax[1],
+			typesArr[pt].sax[2]);)
     } 
   maxnbonds = get_max_nbonds();
   dofTot = get_dof_flex();
@@ -2946,8 +2948,6 @@ void readAllCor(FILE* fs)
   for (i=0; i < Oparams.ntypes; i++)
     fscanf(fs, "%d ", &typeNP[i]);
   typesArr = malloc(sizeof(partType)*Oparams.ntypes);
-  for (i=0; i < Oparams.ntypes; i++)
-    fscanf(fs, "%d ", &typeNP[i]);
   for (i=0; i < Oparams.ntypes; i++)
     {
       /* read particles parameters */

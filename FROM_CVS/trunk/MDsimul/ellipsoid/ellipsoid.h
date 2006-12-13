@@ -155,6 +155,7 @@ void md_mpi_finalize(void);
 #define MD_DEBUG2(X)     
 #define MD_DEBUG3(X) 
 #define MD_DEBUG4(X) 
+#define MD_DEBUG50(X) 
 /* ========================================================================= */
 
 /* ====================== >>> SIMULATION DEFINES <<< ========================*/
