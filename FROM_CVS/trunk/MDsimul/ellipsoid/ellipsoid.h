@@ -12,6 +12,9 @@
 #ifndef MD_ASYM_ITENS
 #define MD_ASYM_ITENS
 #endif
+#ifndef MD_PATCHY_HE
+#define MD_PATCHY_HE
+#endif
 /* EDHE_FLEX e MD_POLYDISP sono incompatibili */
 #undef MD_POLYDISP
 #endif
