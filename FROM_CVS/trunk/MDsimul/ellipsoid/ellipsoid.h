@@ -86,6 +86,8 @@ typedef struct
   int n[3]; /* super-ellipsoids integer exponents */
   double m;
   double I[3];
+  double xoff[3];
+  int ignoreCore;/* if 1 ignore collisions of the core object */
   int brownian;
   int nspots;
   spotStruct* spots; 
@@ -1107,8 +1109,12 @@ struct singlePar OsinglePar[] = {
   {"SDmethod",    &OprogStatus.SDmethod,     INT},
   {"toldxNR",    &OprogStatus.toldxNR,  CT},
   {"tolAngNR",   &OprogStatus.tolAngNR, CT},
+#ifdef EDHE_FLEX
+  {"stepSD",      &OprogStatus.stepSDA,         CT},
+#else
   {"stepSDA",     &OprogStatus.stepSDA,         CT},
   {"stepSDB",     &OprogStatus.stepSDB,         CT},
+#endif
   {"maxitsSD",   &OprogStatus.maxitsSD,       INT},
   {"zbrakn",     &OprogStatus.zbrakn,         INT},
   {"zbrentTol",  &OprogStatus.zbrentTol,      CT},

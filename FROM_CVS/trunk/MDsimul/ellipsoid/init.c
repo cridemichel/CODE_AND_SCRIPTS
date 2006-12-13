@@ -2007,6 +2007,7 @@ void usrInitAft(void)
        break;
      numcols++;
    }
+ OprogStatus.stepSDB = OprogStatus.stepSDA;
 #endif
   Nm = Oparams.parnumA;
   parnumA = Oparams.parnumA;
@@ -2784,8 +2785,9 @@ void writeAllCor(FILE* fs)
 	  /* write particles parameters */
 	  fprintf(fs, "%.15f %.15G %.15G\n", typesArr[i].sax[0], typesArr[i].sax[1], typesArr[i].sax[2]); 
 	  fprintf(fs, "%d %d %d\n", typesArr[i].n[0], typesArr[i].n[1], typesArr[i].n[2]);
-	  fprintf(fs, "%.15G %.15G %.15G %.15G %d\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
-		  typesArr[i].I[2], typesArr[i].brownian);
+	  fprintf(fs, "%.15G %.15G %.15G %.15G %d %d\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
+		  typesArr[i].I[2], typesArr[i].brownian, typesArr[i].ignoreCore);
+	  fprintf(fs, "%.15G %.15G %.15G\n", typesArr[i].xoff[0], typesArr[i].xoff[1], typesArr[i].xoff[2]); 
 	  /* write sticky spots parameters */
 	  fprintf(fs, "%d %d\n", typesArr[i].nspots, typesArr[i].nhardobjs);
 	  for (j = 0; j < typesArr[i].nspots; j++)
@@ -2953,8 +2955,9 @@ void readAllCor(FILE* fs)
       /* read particles parameters */
       fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
       fscanf(fs, "%d %d %d ", &typesArr[i].n[0], &typesArr[i].n[1], &typesArr[i].n[2]);
-      fscanf(fs, "%lf %lf %lf %lf %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
-	   &typesArr[i].I[2], &typesArr[i].brownian);
+      fscanf(fs, "%lf %lf %lf %lf %d %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
+	   &typesArr[i].I[2], &typesArr[i].brownian, &typesArr[i].ignoreCore);
+      fscanf(fs, "%lf %lf %lf ", &typesArr[i].xoff[0], &typesArr[i].xoff[1], &typesArr[i].xoff[2]); 
       /* read sticky spots parameters */
       fscanf(fs, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
       typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots);

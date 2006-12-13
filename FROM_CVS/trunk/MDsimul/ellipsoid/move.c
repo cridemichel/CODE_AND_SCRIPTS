@@ -3986,6 +3986,10 @@ extern double scalProd(double *A, double *B);
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
+  /* SDmethod=1 usa la riduzione del passo nello Steepest Descent (SD) e applica lo SD sempre
+     SDmethod=2 non usa la riduzione del passo e applica lo SD solo se il calcolo della distanza fallisce 
+     SDmethod=3 usa la riduzione del passo e applica lo SD solo se il calcolo della distanza fallisce 
+     SDmethod=4 non usa la riduzione del passo e applica lo SD sempre */
   double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], fx[3];
   double ti, segno, segno2;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
@@ -5265,6 +5269,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   int dorefine, sumnegpairs=0;
   int its, foundrc, kk;
 #ifdef EDHE_FLEX
+  if (typesArr[typeOfPart[i]].ignoreCore || typesArr[typeOfPart[j]].ignoreCore)
+    return 0;
   if (are_spheres(i, j))
     {
       return locate_contact_HS(i, j, shift, t1, t2, vecg);
