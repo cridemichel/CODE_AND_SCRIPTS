@@ -5923,7 +5923,7 @@ void PredictEvent (int na, int nb)
 			}
 		      else
 		       {
-#ifdef MD_POLYDISP
+#if defined(MD_POLYDISP) || defined(EDHE_FLEX)
 			 sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
 #else
 			 if (na < parnumA && n < parnumA)
@@ -6393,7 +6393,7 @@ void store_bump_neigh(int i, double *r1, double *r2)
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
 #ifdef EDHE_FLEX
   int kk;
-  double axi[3], axj[3];
+  double axi[3];
 #endif
 #ifdef MD_BIG_DT
   sprintf(fileop2 ,"StoreBumpNeigh-%d-t%.8f", i, Oparams.time + OprogStatus.refTime);

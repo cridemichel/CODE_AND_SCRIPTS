@@ -1710,10 +1710,29 @@ double calc_shell(void)
 double calc_nnl_rcut(void)
 {
   double rcutA, rcutB;
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  int kk;
+  double ax[3];
+#endif
+#if defined(MD_POLYDISP) || defined(EDHE_FLEX)
   int i;
   double rcutMax=0.0;
+#endif 
+#ifdef EDHE_FLEX
   for (i = 0; i < Oparams.parnum; i++)
+    {
+      for (kk=0; kk < 3; kk++)
+	ax[kk] = typesArr[typeOfPart[i]].sax[kk];
+      rcutA = 2.0*sqrt(Sqr(ax[0]+OprogStatus.rNebrShell)+
+		   Sqr(ax[1]+OprogStatus.rNebrShell)+
+		   Sqr(ax[2]+OprogStatus.rNebrShell));
+      if  (rcutA  > rcutMax)
+	rcutMax = rcutA;
+    }
+  return 1.01*rcutMax;
+
+#elif defined(MD_POLYDISP)
+ for (i = 0; i < Oparams.parnum; i++)
     {
       rcutA = 2.0*sqrt(Sqr(axaP[i]+OprogStatus.rNebrShell)+
 		   Sqr(axbP[i]+OprogStatus.rNebrShell)+
@@ -2563,7 +2582,9 @@ void usrInitAft(void)
 	  printf("[INFO] I've adjusted rNebrShell to %.15G\n", OprogStatus.rNebrShell);	  
 	  if (Oparams.rcut <= 0.0)
 	    {
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+	      Oparams.rcut = calc_nnl_rcut();
+#elif defiend(MD_POLYDISP)
 	      if (OprogStatus.polydisp > 0.0)
 		Oparams.rcut = calc_nnl_rcut();//*(1.0+OprogStatus.polydisp*OprogStatus.polycutoff);
 	      else
