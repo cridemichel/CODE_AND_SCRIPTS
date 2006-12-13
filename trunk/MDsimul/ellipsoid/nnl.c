@@ -2894,6 +2894,10 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
   int its, foundrc;
   double t1, epsd, epsdFast, epsdFastR, epsdMax; 
   int kk,tocheck[6], dorefine[6], ntc, ncr, nn, gotcoll, crossed[6], firstaftsf;
+#ifdef EDHE_FLEX
+  if (typesArr[typeOfPart[i]].ignoreCore)
+    return 0;
+#endif
   epsd = OprogStatus.epsdNL;
   epsdFast = OprogStatus.epsdFastNL;
   epsdFastR= OprogStatus.epsdFastRNL;
@@ -3166,6 +3170,10 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   double epsd, epsdFast, epsdFastR, epsdMax; 
   int dorefine, distfail;
   int its, foundrc, kk;
+#ifdef EDHE_FLEX
+  if (typesArr[typeOfPart[i]].ignoreCore)
+    return 0;
+#endif
   epsd = OprogStatus.epsdNL;
   epsdFast = OprogStatus.epsdFastNL;
   epsdFastR= OprogStatus.epsdFastRNL;
