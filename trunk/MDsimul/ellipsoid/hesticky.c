@@ -744,6 +744,7 @@ void assign_bond_mapping(int i, int j)
 	}	
     }
   nbondsFlex = a;
+  //printf(">>>>quii nbonds=%d\n", nbondsFlex);
   mapbondsa = mapbondsaFlex;
   mapbondsb = mapbondsbFlex;
 } 
@@ -1613,6 +1614,10 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   epsdFastR= OprogStatus.epsdFastSP;
   epsdMax = OprogStatus.epsdSP;
   assign_bond_mapping(i, j);
+#ifdef EDHE_FLEX
+  if (nbondsFlex==0)
+    return 0;
+#endif
   bondpair = get_bonded(i, j);
   t = 0.0;
 #ifdef MD_OPTDDIST

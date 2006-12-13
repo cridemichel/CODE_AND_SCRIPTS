@@ -6021,6 +6021,12 @@ void PredictEvent (int na, int nb)
 		      evtimeHC = evtime;
 		      acHC = ac = 0;
 		      bcHC = bc = 0;
+#ifdef EDHE_FLEX
+		      if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+			{
+			  collCode = MD_EVENT_NONE;
+			}
+#else
 		      if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
 							(na >= Oparams.parnumA && n < Oparams.parnumA)))
 			{
@@ -6029,6 +6035,7 @@ void PredictEvent (int na, int nb)
 			      collCode = MD_EVENT_NONE;
 			    }
 			}
+#endif
 		      if (collCode!=MD_EVENT_NONE)
 			t2 = evtime+1E-7;
 		      if (locate_contact(na, n, shift, t1, t2, vecg))
