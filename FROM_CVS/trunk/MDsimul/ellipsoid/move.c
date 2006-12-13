@@ -3324,6 +3324,10 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
 {
   double rDC[3], rD[3], A[3][3], b[3], c[3];
   int k1, k2;
+#ifdef EDHE_FLEX
+  int kk;
+  double axi[3], axj[3];
+#endif
 #ifdef MD_USE_CBLAS
   double XaL[3][3], XbL[3][3];
   for (k1 = 0; k1 < 3; k1++)
@@ -3386,10 +3390,23 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
     {
       for (k1 = 0; k1 < 3; k1++)
 	rDC[k1] = rD[k1] - x[k1];
+#ifdef EDHE_FLEX
+      for (kk=0; kk < 3; kk++)
+	{
+	  axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
+	  axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	}
+      if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axi[0],axi[1],axi[2])+max3(axj[0],axj[1],axj[2])))
+	{
+	  fdjac_disterr = 1;	
+	}
+
+#else
       if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axa[iA],axb[iA],axc[iA])+max3(axa[iB],axb[iB],axc[iB])))
 	{
 	  fdjac_disterr = 1;	
 	}
+#endif
     }
 #endif
   for (k1 = 0; k1 < 3; k1++)
@@ -3455,6 +3472,10 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
 void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx, double *gx)
 {
+#ifdef EDHE_FLEX
+  int kk;
+  double axi[3], axj[3];
+#endif
   double rDC[3];
   int k1, k2;
   for (k1 = 0; k1 < 3; k1++)
@@ -3481,11 +3502,22 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
     {
       for (k1 = 0; k1 < 3; k1++)
 	rDC[k1] = x[k1+3] - x[k1];
+#ifdef EDHE_FLEX
+      for (kk=0; kk < 3; kk++)
+	{
+	  axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
+	  axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	}
+      if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axi[0],axi[1],axi[2])+max3(axj[0],axj[1],axj[2])))
+	{
+	  fdjac_disterr = 1;	
+	}
+#else
       if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axa[iA],axb[iA],axc[iA])+max3(axa[iB],axb[iB],axc[iB])))
 	{
 	  fdjac_disterr = 1;	
 	}
- 
+#endif 
     }
 #endif
   for (k1 = 0; k1 < 3; k1++)
@@ -3869,13 +3901,24 @@ void guess_dist(int i, int j,
   double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
   int k1, n;
   double saA[3], saB[3];
-
+#ifdef EDHE_FLEX
+  int typei, typej;
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+  saA[0] = typesArr[typei].sax[0];
+  saA[1] = typesArr[typei].sax[1];
+  saA[2] = typesArr[typei].sax[2];
+  saB[0] = typesArr[typej].sax[0];
+  saB[1] = typesArr[typej].sax[1];
+  saB[2] = typesArr[typej].sax[2];
+#else
   saA[0] = axa[i];
   saA[1] = axb[i];
   saA[2] = axc[i];
   saB[0] = axa[j];
   saB[1] = axb[j];
   saB[2] = axc[j];
+#endif
   //printf("axes[%d]=%f,%f,%f axes[%d]=%f,%f,%f\n", i, axa[i], axb[i], axc[i], j, axa[j], axb[j], axc[j]);
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -6348,6 +6391,10 @@ void store_bump_neigh(int i, double *r1, double *r2)
   int ii;
   FILE *bf;
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
+#ifdef EDHE_FLEX
+  int kk;
+  double axi[3], axj[3];
+#endif
 #ifdef MD_BIG_DT
   sprintf(fileop2 ,"StoreBumpNeigh-%d-t%.8f", i, Oparams.time + OprogStatus.refTime);
 #else
@@ -6368,8 +6415,16 @@ void store_bump_neigh(int i, double *r1, double *r2)
     {
       if (ii==i)
 	{
+#ifdef EDHE_FLEX
+	  for (kk=0; kk < 3; kk++)
+	    axi[kk] = typesArr[typeOfPart[i]].sax[kk];
+	  fprintf(bf, tipodat2,rx[ii], ry[ii], rz[ii], uxx[ii], uxy[ii], uxz[ii], uyx[ii], uyy[ii], 
+	  	  uyz[ii], uzx[ii], uzy[ii], uzz[ii], axi[0], axi[1], axi[2], "red");
+
+#else
 	  fprintf(bf, tipodat2,rx[ii], ry[ii], rz[ii], uxx[ii], uxy[ii], uxz[ii], uyx[ii], uyy[ii], 
 	  	  uyz[ii], uzx[ii], uzy[ii], uzz[ii], axa[i], axb[i], axc[i], "red");
+#endif
 	  fprintf(bf, tipodat2,nebrTab[i].r[0], nebrTab[i].r[1], nebrTab[i].r[2], nebrTab[i].R[0][0], nebrTab[i].R[0][1], 
 		  nebrTab[i].R[0][2], nebrTab[i].R[1][0], nebrTab[i].R[1][1], nebrTab[i].R[1][2], 
 	  	  nebrTab[i].R[2][0], nebrTab[i].R[2][1], nebrTab[i].R[2][2], 
@@ -6393,6 +6448,10 @@ void store_bump(int i, int j)
   char fileop2[512], fileop[512];
   int na;
   FILE *bf;
+#ifdef EDHE_FLEX
+  int kk;
+  double axi[3], axj[3];
+#endif
 #ifdef MD_PATCHY_HE
   int nn;
   double ratA[NA][3], ratB[NA][3];
@@ -6422,8 +6481,18 @@ void store_bump(int i, int j)
   RCMx = (rx[i]+rx[j]+Drx)*0.5;
   RCMy = (ry[i]+ry[j]+Dry)*0.5;
   RCMz = (rz[i]+rz[j]+Drz)*0.5;
-  
-#ifdef MD_POLYDISP
+#ifdef EDHE_FLEX
+  for (kk=0; kk < 3; kk++)
+    {
+      axi[kk] = typesArr[typeOfPart[i]].sax[kk];
+      axj[kk] = typesArr[typeOfPart[j]].sax[kk];
+    }
+  fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	  uyz[i], uzx[i], uzy[i], uzz[i], axi[0], axi[1], axi[2], "red");
+  fprintf(bf, tipodat2,rx[j]+Drx-RCMx, ry[j]+Dry-RCMy, rz[j]+Drz-RCMz, uxx[j], uxy[j], uxz[j], uyx[j], uyy[j], 
+	  uyz[j], uzx[j], uzy[j], uzz[j], axj[0], axj[1], axj[2], "blue");
+
+#elif defined(MD_POLYDISP)
   fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 	  uyz[i], uzx[i], uzy[i], uzz[i], axaP[i], axbP[i], axcP[i], "red");
   fprintf(bf, tipodat2,rx[j]+Drx-RCMx, ry[j]+Dry-RCMy, rz[j]+Drz-RCMz, uxx[j], uxy[j], uxz[j], uyx[j], uyy[j], 
