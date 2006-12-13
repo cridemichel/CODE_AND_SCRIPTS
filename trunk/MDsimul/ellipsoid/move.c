@@ -3849,8 +3849,10 @@ void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
   A = 0.0;
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
-      A += rBA[k1]*Xa[k1][k2]*rBA[k2];
- 
+      {
+	MD_DEBUG(printf("Xa[%d][%d]%f\n", k1, k2,Xa[k1][k2]);)
+    	A += rBA[k1]*Xa[k1][k2]*rBA[k2];
+      }
 #if 0
   for (k1 = 0; k1 < 3; k1++)
     {   
@@ -4003,6 +4005,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t + (t1 - atomTime[i]);
+  MD_DEBUG50(printf("[calcDistNeg] - BEGIN");)
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
   typej = typeOfPart[j];
@@ -4073,9 +4076,12 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+  invaSq[na] = 1.0/Sqr(typesArr[typej].sax[0]);
+  MD_DEBUG50(printf("BOH semiasse a del tipo %d: %f\n",typei, typesArr[typej].sax[0]));
+  invbSq[na] = 1.0/Sqr(typesArr[typej].sax[1]);
+  invcSq[na] = 1.0/Sqr(typesArr[typej].sax[2]);
+  MD_DEBUG50(printf("sax of %d %f %f %f %f %f %f\n", i, typesArr[typei].sax[0],typesArr[typei].sax[1],
+	 typesArr[typei].sax[2], invaSq[na], invbSq[na], invbSq[na]));
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -4098,6 +4104,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
     }
 #endif
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
+
   if (OprogStatus.dist5)
     {
       for (k1 = 0; k1 < 3; k1++)
@@ -4138,22 +4145,22 @@ retry:
   if (calcguess || tryagain)
     {
       if (OprogStatus.guessDistOpt==1)
-	guess_dist(i, j, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
+	{
+	  guess_dist(i, j, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
 #if 0
 	  for(k1=0; k1 < 3; k1++)
 	    r12[k1] = rC[k1]-rD[k1]; 
 	  printf("PRIMA PRIMA dist=%.15f\n",calc_norm(r12));
 #endif
+	}
       else
 	{
 	  calc_intersec(rB, rA, Xa, rC);
 	  calc_intersec(rA, rB, Xb, rD);
 	}
 #if 1
-
       for(k1=0; k1 < 3; k1++)
 	r12[k1] = rC[k1]-rD[k1]; 
-
       if ((OprogStatus.SDmethod==1 || OprogStatus.SDmethod==4) || tryagain)
 	{
 	  for (k1=0; k1 < 3; k1++)
@@ -4186,11 +4193,11 @@ retry:
 	}
 #endif
 	}
-      MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
+      MD_DEBUG50(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
       calc_grad(rC, rA, Xa, gradf);
       calc_grad(rD, rB, Xb, gradg);
-      MD_DEBUG(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
+      MD_DEBUG50(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
 		      gradf[0], gradf[1], gradf[2], gradg[0], gradg[1], gradg[2]));
       nf = calc_norm(gradf);
       ng = calc_norm(gradg);
@@ -4407,6 +4414,8 @@ retry:
 	}
     }
 #endif
+
+  MD_DEBUG50(printf("[calcDistNeg] - END");)
   if (OprogStatus.dist5)
     {
       if (segno*vecg[4]<0 && fabs(segno*vecg[4])>3E-8)
