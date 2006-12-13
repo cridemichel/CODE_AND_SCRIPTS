@@ -86,7 +86,9 @@ typedef struct
   int n[3]; /* super-ellipsoids integer exponents */
   double m;
   double I[3];
+#if 0
   double xoff[3];
+#endif
   int ignoreCore;/* if 1 ignore collisions of the core object */
   int brownian;
   int nspots;
