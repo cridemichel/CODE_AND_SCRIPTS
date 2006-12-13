@@ -6808,7 +6808,8 @@ void timeshift_variables(void)
   nextNNLrebuild -= OprogStatus.bigDt;
   for (i = 0; i < Oparams.parnum; i++)
     {
-      nebrTab[i].nexttime -= OprogStatus.bigDt;
+      if (OprogStatus.useNNL)
+	nebrTab[i].nexttime -= OprogStatus.bigDt;
       atomTime[i] -= OprogStatus.bigDt;
       lastcol[i] -= OprogStatus.bigDt;
       OprogStatus.lastcolltime[i] -= OprogStatus.bigDt;
