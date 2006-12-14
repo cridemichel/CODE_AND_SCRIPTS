@@ -15,6 +15,7 @@ void DeleteEvent(int );
 void NextEvent(void);
 extern int poolSize;
 extern double rxC, ryC, rzC;
+#define MD_DEBUG20(x) 
 #if 0
 #define treeLeft   tree[0]
 #define treeRight  tree[1]
@@ -308,9 +309,9 @@ void NextEvent (void)
   evIdD = treeIdD[idNow];
   evIdE = treeIdE[idNow];
 #endif
-  MD_DEBUG2(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
+  MD_DEBUG20(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
-  MD_DEBUG(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
+  MD_DEBUG20(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
   if (evIdB < ATOM_LIMIT + 2 * NDIM) 
     /* Se si tratta di un urto fra particelle o con le pareti...
