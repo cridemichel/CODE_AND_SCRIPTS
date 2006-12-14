@@ -2036,10 +2036,10 @@ retryoverlap:
 	  if ( nvecnf > 0.0)
 	    {
 #ifdef EDHE_FLEX
-	      typei = typeOfPart[j];
-	      axaF = typesArr[j].sax[0];
-	      axbF = typesArr[j].sax[1];
-	      axcF = typesArr[j].sax[2]; 
+	      typej = typeOfPart[j];
+	      axaF = typesArr[typej].sax[0];
+	      axbF = typesArr[typej].sax[1];
+	      axcF = typesArr[typej].sax[2]; 
 	      g2 = OprogStatus.epsdGDO*min3(axaF,axbF,axcF)/calc_norm(vecnf); 
 #else
   	      g2 = OprogStatus.epsdGDO*min3(axa[j],axb[j],axc[j])/calc_norm(vecnf); 
