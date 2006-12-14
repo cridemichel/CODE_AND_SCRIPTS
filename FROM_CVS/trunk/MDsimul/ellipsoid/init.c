@@ -1280,10 +1280,10 @@ int get_num_pbonds(int i, int j)
   type2 = typeOfPart[j];
   for (ni=0; ni < Oparams.ninters; ni++)
     {
-      if ((intersArr[ni].type1 == type1 && intersArr[ni] == type2) ||
-	  (intersArr[ni].type1 == type2 && intersArr[ni] == type1))
+      if ((intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2) ||
+	  (intersArr[ni].type1 == type2 && intersArr[ni].type1 == type1))
 	{
-	  a+=2;
+	  a+=1;
 	}	
     }
   return a;
@@ -2637,12 +2637,14 @@ void usrInitAft(void)
   printf("sigmaSticky=%.15G\n", Oparams.sigmaSticky);
 #endif
   for ( i = 0; i < Oparams.parnum-1; i++)
-    for ( j = i + 1; j < Oparams.parnum; j++)
+    for ( j = i+1; j < Oparams.parnum; j++)
       {
 	/* l'interazione sticky è solo fra fra A e B! */
+#ifndef EDHE_FLEX
 	if (!((i < Oparams.parnumA && j >= Oparams.parnumA)|| 
 	      (i >= Oparams.parnumA && j < Oparams.parnumA)))
 	  continue;
+#endif
 	drx = rx[i] - rx[j];
 	shift[0] = L*rint(drx/L);
 	dry = ry[i] - ry[j];
@@ -2652,6 +2654,7 @@ void usrInitAft(void)
 	assign_bond_mapping(i, j);
 	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 	NPB = get_num_pbonds(i, j);
+	//\printf("NPB=%d\n", NPB);
 	for (nn=0; nn < NPB; nn++)
 	  {
    	    if (dists[nn] < 0.0)
@@ -2664,6 +2667,7 @@ void usrInitAft(void)
 	      }
 	  }
       }
+
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
 #endif
 #ifdef MD_ASYM_ITENS

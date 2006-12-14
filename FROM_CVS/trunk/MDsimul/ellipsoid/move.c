@@ -5975,7 +5975,7 @@ void PredictEvent (int na, int nb)
 			   * nessun urto sotto tali condizioni */
 			  continue;
 			}
-		      MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
+		      MD_DEBUG20(printf("PREDICTING na=%d n=%d\n", na , n));
 		      if (vv==0.0)
 			{
 			  if (distSq >= sigSq)
@@ -5991,6 +5991,7 @@ void PredictEvent (int na, int nb)
 			  t = t1 = - (sqrt (d) + b) / vv;
 			  t2 = (sqrt (d) - b) / vv;
 			  overlap = 0;
+			  MD_DEBUG20(printf("qui..boh sigSq:%.15G\n", sigSq));
 			}
 		      else 
 			{
@@ -6015,7 +6016,8 @@ void PredictEvent (int na, int nb)
 		      evtime = t2;
 		      collCode = MD_EVENT_NONE;
 		      rxC = ryC = rzC = 0.0;
-		      MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
+		      MD_DEBUG20(printf("time=%.15G t1=%.15G t2=%.15G maxax[%d]:%.15G maxax[%d]:%.15G\n", 
+					Oparams.time, t1, t2, na, maxax[na], n, maxax[n]));
 		      MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
 		      collCodeOld = collCode;
 		      evtimeHC = evtime;
@@ -6105,13 +6107,13 @@ void PredictEvent (int na, int nb)
 			}
 #endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
-		      MD_DEBUG20(printf("time: %f Adding collision %d-%d\n", Oparams.time+t, na, n));
+		      MD_DEBUG20(printf("time: %f Adding collision %d-%d\n", t, na, n));
 #ifdef MD_PATCHY_HE
 		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #else
 		      ScheduleEvent (na, n, t);
 #endif
-		      MD_DEBUG20(printf("schedule event [collision](%d,%d)\n", na, ATOM_LIMIT+evCode));
+		      MD_DEBUG20(printf("schedule event [collision](%d,%d)\n", na, collCode));
 		    }
 		} 
 	    }

@@ -324,7 +324,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	  rB[a] += SignR(L, Dr);
 	}
     }
-  MD_DEBUG10(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
+  MD_DEBUG20(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   /* qui calcolo il punto di contatto */
   MD_DEBUG20(printf("ata: %d atb: %d\n", ata, atb));
   MD_DEBUG20(printf("rA %f %f %f\n", rA[0], rA[1], rA[2]));
@@ -338,14 +338,14 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     rAB[kk] = ratA[kk] - ratB[kk];
   /* reduce to minimum image rAB[]!! */
  nrAB = calc_norm(rAB);
- MD_DEBUG(printf("sigmaSticky= %.15G norm rAB: %.15G\n", Oparams.sigmaSticky, calc_norm(rAB)));
  for (kk = 0; kk < 3; kk++)
     rAB[kk] /= nrAB;
   /* controllare con cura la scelta dei parametri relativi ai diametri delle sferette
    * e alle larghezze delle buche dei potenziali a buca quadrata */
   MD_DEBUG20(printf("coll code: %d\n", bt));
 #ifdef EDHE_FLEX
-  sigAB = 0.5*(typesArr[typeOfPart[i]].spots[ata].sigma + typesArr[typeOfPart[j]].spots[atb].sigma);
+  sigAB = 0.5*(typesArr[typeOfPart[i]].spots[ata-1].sigma + typesArr[typeOfPart[j]].spots[atb-1].sigma);
+  MD_DEBUG20(printf("sigmaSticky= %.15G norm rAB: %.15G\n", sigAB, nrAB));
   rCx = ratA[0] - rAB[0]*sigAB*0.5;
   rCy = ratA[1] - rAB[1]*sigAB*0.5;
   rCz = ratA[2] - rAB[2]*sigAB*0.5;
@@ -728,20 +728,28 @@ void assign_bond_mapping(int i, int j)
   a=0;
   for (ni=0; ni < Oparams.ninters; ni++)
     {
-      if ((intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2) ||
-	  (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1))
+      if (intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2)
 	{
 	  mapbondsaFlex[a] = intersArr[ni].spot1+1;
           mapbondsbFlex[a] = intersArr[ni].spot2+1;
-	  mapbondsaFlex[a+1] = intersArr[ni].spot2+1;
-	  mapbondsbFlex[a+1] = intersArr[ni].spot1+1;
-	  mapBheightFlex[a] = mapBheightFlex[a+1] = intersArr[ni].bheight;
-	  mapBhinFlex[a] = mapBhinFlex[a+1] = intersArr[ni].bhin;
-          mapBhoutFlex[a] = mapBhoutFlex[a+1] = intersArr[ni].bhout;
-          mapSigmaFlex[a] = mapSigmaFlex[a+1] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
-					     	     + typesArr[type2].spots[intersArr[ni].spot2].sigma);
-	  a+=2;
+	  mapBheightFlex[a] = intersArr[ni].bheight;
+	  mapBhinFlex[a] = intersArr[ni].bhin;
+          mapBhoutFlex[a] = intersArr[ni].bhout;
+          mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
+				 + typesArr[type2].spots[intersArr[ni].spot2].sigma);
+	  a++;
 	}	
+      else if (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1)
+	{
+	  mapbondsaFlex[a] = intersArr[ni].spot2+1;
+	  mapbondsbFlex[a] = intersArr[ni].spot1+1;
+	  mapBheightFlex[a] = intersArr[ni].bheight;
+	  mapBhinFlex[a] = intersArr[ni].bhin;
+          mapBhoutFlex[a] = intersArr[ni].bhout;
+          mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
+				 + typesArr[type2].spots[intersArr[ni].spot2].sigma);
+	  a++;
+	}
     }
   nbondsFlex = a;
   //printf(">>>>quii nbonds=%d\n", nbondsFlex);
@@ -894,7 +902,7 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
 #endif
   assign_bond_mapping(i, j);
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
-  MD_DEBUG20(printf("BRENT nn=%d\n", nn));
+  MD_DEBUG(printf("BRENT nn=%d\n", nn));
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -926,7 +934,7 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
   distSq = 0;
   for (kk=0; kk < 3; kk++)
     distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
-  MD_DEBUG20(printf("dist= %.15G\n", sqrt(distSq)-Oparams.sigmaSticky));
+  MD_DEBUG(printf("dist= %.15G\n", sqrt(distSq)-Oparams.sigmaSticky));
 #ifdef EDHE_FLEX
   return sqrt(distSq) - mapSigmaFlex[nn];
 #else
@@ -995,6 +1003,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
 #ifdef EDHE_FLEX
       dists[nn] = dist = sqrt(distSq) - mapSigmaFlex[nn];
+      //MD_DEBUG20(printf("dists[%d]:%.15G\n", nn, dists[nn]);)
 #else
       dists[nn] = dist = sqrt(distSq) - Oparams.sigmaSticky;
 #endif     
@@ -1347,6 +1356,7 @@ int interpolSP(int i, int j, int nn,
       *tmin += tref;
       return 0;
     }
+  //printf("%.15G %.15G\n %.15G %.15G \n %.15G %.15G \n", 0.0, d1, delt*0.5, d3, delt, d2);
   return 1;
 }
 
@@ -1464,10 +1474,18 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
       /* N.B. distsOld[nn] non va controllato poiché dopo un urto cmq ci deve essere un estremo
        * di distanza dmin t.c. dmin > 0 se !bound(i,j..) o dmin < 0 se bound(i,j...) */
       if (dists[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
-	return 1;
+	{
+	  MD_DEBUG20(printf("time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]);)
+	  MD_DEBUG20(printf("mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j);)
+	  return 1;
+	}
       if (dists[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
-	return 1;
-    }
+	{
+	  MD_DEBUG20(printf(">>>>time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]);)
+	  MD_DEBUG20(printf(">>>>mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j);)
+	  return 1;
+	}	  
+}
   return 0;
 }
 #ifdef MD_ASYM_ITENS
@@ -1650,7 +1668,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #else
   nbonds = MD_PBONDS;
 #endif
- 
+  MD_DEBUG20(calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	     printf("t1=%.15G t=%.15G dists[0]=%.15G\n", t1, t, dists[0]);)
 #ifndef MD_NEGPAIRS
   /* NOTA: le strategie per evitare problemi dopo una collisione sono due:
    * 1) andare avanti nel tempo finché la distanza non è corretta.
@@ -1948,6 +1967,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    }
 	}
     }
+  MD_DEBUG20(printf("[locateContactSP] - FINE\n");)
   if (gotcoll == 1)
     return 1;
   else if (gotcoll == -1)
@@ -2146,7 +2166,7 @@ double calcDistNegNeighPlaneAll_sp(int nsp, double t, double t1, int i, double d
   double phi, psi;
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
-  MD_DEBUG20(printf("BRENT nn=%d\n", nn));
+  MD_DEBUG(printf("BRENT nn=%d\n", nn));
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -2339,7 +2359,7 @@ double calcDistNegOneNNL_sp(double t, double t1, int i, int nn)
   double phi, psi;
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
-  MD_DEBUG20(printf("BRENT nn=%d\n", nn));
+  MD_DEBUG(printf("BRENT nn=%d\n", nn));
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
