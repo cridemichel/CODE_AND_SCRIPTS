@@ -8,7 +8,9 @@
 */
 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
-
+#ifdef MD_AB41
+extern int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
+#endif
 #ifdef MPI
 extern int my_rank;
 #endif
@@ -52,6 +54,9 @@ double calcpotene(void)
 {
   double Epot; 
   int na;
+#ifdef MD_AB41
+  int kk, j, numbondsAA, numbondsAB;
+#endif
 #if 0
   double shift[NDIM];
   int evCode, cellRangeEne[2*NDIM], signDir[NDIM];
@@ -126,7 +131,23 @@ double calcpotene(void)
     }
 #else
  for (na = 0; na < Oparams.parnum; na++)
-    Epot -= Oparams.bheight*numbonds[na];
+   {
+#ifdef MD_AB41
+     numbondsAA = numbondsAB = 0;
+     for (kk=0; kk < numbonds[na]; kk++)
+       {
+	 j=bonds[na][kk]/(NA*NA);
+	 if (na < Oparams.parnumA && j < Oparams.parnumA)
+	   numbondsAA++;
+	 else
+	   numbondsAB++; 
+       }
+     Epot -= Oparams.bheightAA*numbondsAA;
+     Epot -= Oparams.bheightAB*numbondsAB;
+#else
+     Epot -= Oparams.bheight*numbonds[na];
+#endif
+   }
 #endif
  return 0.5*Epot;
 }

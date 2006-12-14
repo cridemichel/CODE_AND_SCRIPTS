@@ -3,12 +3,13 @@
 /* CONVENTION: 
    indices a,b are used for atoms inside a molecule , while
    indices i,j ares used for molecules 
-   NOTE: The box edge length is unity, so every length must be referred to 
-         the this quantity.
-*/
+NOTE: The box edge length is unity, so every length must be referred to 
+the this quantity.
+ */
 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
-#define MD_DEBUG10(x) x
+extern double max(double a, double b);
+#define MD_DEBUG10(x) 
 extern char TXT[MSG_LEN];
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
@@ -26,6 +27,11 @@ extern int mapbondsaAA[MD_PBONDS_AA];
 extern int mapbondsbAA[MD_PBONDS_AA];
 extern int mapbondsaBB[MD_PBONDS_BB];
 extern int mapbondsbBB[MD_PBONDS_BB];
+#elif MD_AB41
+extern int mapbondsaAB[MD_PBONDS_AB];
+extern int mapbondsbAB[MD_PBONDS_AB];
+extern int mapbondsaAA[MD_PBONDS_AA];
+extern int mapbondsbAA[MD_PBONDS_AA];
 #else
 extern int mapbondsaSiO[MD_PBONDS];
 extern int mapbondsbSiO[MD_PBONDS];
@@ -39,17 +45,17 @@ extern int mapbondsb[MD_PBONDS];
 #endif
 int *scdone;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
- Here you can put all the variable that you use only in this file, that is 
- in the move function and in the measuring functions, note that the variables 
- to measures have to be put in the 'mdsimdep.h' file (see that) */
+   Here you can put all the variable that you use only in this file, that is 
+   in the move function and in the measuring functions, note that the variables 
+   to measures have to be put in the 'mdsimdep.h' file (see that) */
 double mgA, mgB, g2;
 extern COORD_TYPE pi, L, invL, L2;   
 #ifdef MD_GRAVITY
 extern double Lz2;
 #endif
 extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
-  T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
-  Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB; 
+       T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
+       Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB; 
 
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
@@ -74,8 +80,8 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin
 
 /*=========================== >>> vectProd <<< =========================== */
 void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z, 
-	 COORD_TYPE r2x, COORD_TYPE r2y, COORD_TYPE r2z, 
-	 COORD_TYPE* r3x, COORD_TYPE* r3y, COORD_TYPE* r3z)
+	      COORD_TYPE r2x, COORD_TYPE r2y, COORD_TYPE r2z, 
+	      COORD_TYPE* r3x, COORD_TYPE* r3y, COORD_TYPE* r3z)
 {
   /* DESCRIPTIOM:
      r3 = [ r1, r2 ] where [ , ] the vectorial product */
@@ -111,9 +117,9 @@ void FCC(int Nm, COORD_TYPE *m)
        int           Nm                   Number of molecules             
        COORD_TYPE    d                    diatomic molecule length 
        COORD_TYPE    rxCm, ryCm, rzCm     Molecular Center of mass 
-                                          positions             
+       positions             
        COORD_TYPE    ex, ey, ez           half of vector joining atom a and b 
-                                          in a molecule 
+       in a molecule 
        COORD_TYPE    rRoot3               1.0 / sqrt ( 3.0 ) */
   int Nc, Ncz;
   double rRoot3; /* = 0.5773503; */
@@ -147,13 +153,13 @@ void FCC(int Nm, COORD_TYPE *m)
   bx[0] =  0.0;
   by[0] =  0.0;
   bz[0] =  0.0;
-  
+
   /*  Sublattice B */
   bx[1] =  Cell2;
   by[1] =  Cell2;
   bz[1] =  0.0;
   /* Sublattice C */
-  
+
   bx[2] =  0.0;
   by[2] =  Cell2;
 #ifdef MD_GRAVITY
@@ -169,9 +175,9 @@ void FCC(int Nm, COORD_TYPE *m)
 #else
   bz[3] =  Cell2;
 #endif  
-  
+
   /* Construct the lattice from the unit cell */
-  
+
   ii = 0;
   for(iz = 0; iz < Ncz; iz++) /* loops over unit cells (that are simply cubes) */ 
     {
@@ -187,8 +193,8 @@ void FCC(int Nm, COORD_TYPE *m)
 		     particles so we stop if all the particles was positioned.
 		     This condition in fact means: 'If all the particles was
 		     positioned => end'
-		  */
-		  
+		   */
+
 		  /* Center of Mass of the actual molecule (m + iref) */
 		  rx[ii+iref] = bx[iref] + Cell * ((double) ix);
 		  ry[ii+iref] = by[iref] + Cell * ((double) iy);
@@ -206,9 +212,9 @@ void FCC(int Nm, COORD_TYPE *m)
 	    }
 	}
     }
-  
+
   /* Shift centre of box to the origin */
-  
+
   for(i = 0;i < Nm; i++)
     {
       /* Initial position values are between -0.5 and 0.5 */
@@ -236,28 +242,28 @@ void FCC(int Nm, COORD_TYPE *m)
    COORD_TYPE    ox[Nm],oy[Nm],oz[Nm] Space-fixed angular velocities 
    COORD_TYPE    temp                 Reduced temperature            
    COORD_TYPE    inert                moment of inertia      
-                                                            
- SUPPLIED ROUTINES:                                           
-                                                              
-  void comvel(Nm, temp, m)                                   
-    Sets the centre of mass velocities for a configuration of 
-    linear molecules at a given temperature.                  
-  void angvel(Nm, temp, m, d)                            
-    Sets the angular velocities for a configuration of linear 
-    molecules at a given temperature.                         
-  COORD_TYPE ranf(void)                                 
-    Returns a uniform random variate on the range zero to one 
-  COORD_TYPE gauss(void)                                
-    Returns a uniform random normal variate from a            
-    distribution with zero mean and unit variance.            
-                                                              
- UNITS:                                                       
-                                                              
- We employ Lennard-Jones units 
- PROPERTY                    UNITS                     
-       rx, ry, rz           (epsilon/Mtot)**(1.0/2.0)             
-       ox, oy, oz           (epsilon/Mtot*sigma**2)**(1.0/2.0)    
-       inert                 Mtot*sigma**2                        
+
+   SUPPLIED ROUTINES:                                           
+
+   void comvel(Nm, temp, m)                                   
+   Sets the centre of mass velocities for a configuration of 
+   linear molecules at a given temperature.                  
+   void angvel(Nm, temp, m, d)                            
+   Sets the angular velocities for a configuration of linear 
+   molecules at a given temperature.                         
+   COORD_TYPE ranf(void)                                 
+   Returns a uniform random variate on the range zero to one 
+   COORD_TYPE gauss(void)                                
+   Returns a uniform random normal variate from a            
+   distribution with zero mean and unit variance.            
+
+UNITS:                                                       
+
+We employ Lennard-Jones units 
+PROPERTY                    UNITS                     
+rx, ry, rz           (epsilon/Mtot)**(1.0/2.0)             
+ox, oy, oz           (epsilon/Mtot*sigma**2)**(1.0/2.0)    
+inert                 Mtot*sigma**2                        
 */
 #ifdef MPI
 extern int my_rank;
@@ -274,24 +280,24 @@ COORD_TYPE ranf(void)
 /* ============================= >>> gauss <<< ============================= */
 COORD_TYPE gauss(void)
 {
-  
+
   /* 
      Random variate from the standard normal distribution.
-     
+
      The distribution is gaussian with zero mean and unit variance.
-     REFERENCE:                                                    
-                                                                
-     Knuth D, The art of computer programming, (2nd edition        
-     Addison-Wesley), 1978                                      
-                                                                
-     ROUTINE REFERENCED:                                           
-                                                                
-     COORD_TYPE ranf()                                  
-     Returns a uniform random variate on the range zero to one  
-  */
+REFERENCE:                                                    
+
+Knuth D, The art of computer programming, (2nd edition        
+Addison-Wesley), 1978                                      
+
+ROUTINE REFERENCED:                                           
+
+COORD_TYPE ranf()                                  
+Returns a uniform random variate on the range zero to one  
+   */
 
   COORD_TYPE  a1=3.949846138, a3 = 0.252408784, a5 = 0.076542912, 
-    a7 = 0.008355968, a9 = 0.029899776;
+	      a7 = 0.008355968, a9 = 0.029899776;
   COORD_TYPE sum, r, r2;
   int i;
 
@@ -301,7 +307,7 @@ COORD_TYPE gauss(void)
     {
       sum = sum + ranf();
     }
-  
+
   r  = ( sum - 6.0 ) / 4.0;
   r2 = r * r;
 
@@ -318,7 +324,7 @@ void resetCM(void)
   sumx = 0.0;
   sumy = 0.0;
   sumz = 0.0;
-  
+
   for(i=0; i < Oparams.parnumA; i++)
     {
       sumx = sumx + vx[i]*Oparams.m[0];
@@ -331,7 +337,7 @@ void resetCM(void)
       sumy = sumy + vy[i]*Oparams.m[1];
       sumz = sumz + vz[i]*Oparams.m[1];
     }
-     
+
   sumx = sumx / Mtot; 
   sumy = sumy / Mtot;
   sumz = sumz / Mtot;
@@ -346,7 +352,7 @@ void resetCM(void)
       /* In this way the total (net) momentum of the system of 
 	 molecules is zero */
     }
-  
+
   /* ADD 27/1/1998:
      And Now we put the center of mass of the box in the origin of axis
      because otherwise int NPT method the total momentum is not zero */
@@ -360,14 +366,14 @@ void resetCM(void)
       RCMy += ry[i]*Oparams.m[0];
       RCMz += rz[i]*Oparams.m[0];
     }
-  
+
   for(i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
       RCMx += rx[i]*Oparams.m[1]; /* Here RCM is the center of mass of the box */
       RCMy += ry[i]*Oparams.m[1];
       RCMz += rz[i]*Oparams.m[1];
     }
-  
+
   RCMx /= Mtot;
   RCMy /= Mtot;
   RCMz /= Mtot;
@@ -391,23 +397,23 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
   for (i = 0; i < Oparams.parnumA; i++)
     {
       /* Set the velocities of both atoms to the center of mass velocities,
-         the exact velocities will be set in the angvel() routine, where we 
-         will set:
+	 the exact velocities will be set in the angvel() routine, where we 
+	 will set:
 	 Atom 1: v1  = Vcm + W^(d21 * m2/(m2+m1))
 	 Atom 2: v2  = Vcm - W^(d21 * m1/(m1+m2))
 	 where Vcm is the center of mass velocity (that is the actual 
 	 velocity of both atoms), W is the angular velocity of the molecule,
 	 d21 is the vector joining the two atoms (from 2 to 1) and 
 	 m1 and m2 are the masses of two atoms 
-      */
-      
+       */
+
       vx[i] = rTemp[0] * gauss(); 
       vy[i] = rTemp[0] * gauss();
       vz[i] = rTemp[0] * gauss();
       /* gauss() is a gaussian variable with mean = 0 and variance = 1, that is
-                               2
-	     1                X
-        ----------- * exp( - --- )         
+	 2
+	 1                X
+	 ----------- * exp( - --- )         
 	 sqrt(2*PI)           2     */
     }
   for (i = Oparams.parnumA; i < Oparams.parnum; i++)
@@ -416,12 +422,12 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
       vy[i] = rTemp[1] * gauss();
       vz[i] = rTemp[1] * gauss();
       /* gauss() is a gaussian variable with mean = 0 and variance = 1, that is
-                               2
-	     1                X
-        ----------- * exp( - --- )         
+	 2
+	 1                X
+	 ----------- * exp( - --- )         
 	 sqrt(2*PI)           2     */
     }
- 
+
   angvel();
 }
 void scalevels(double temp, double K);
@@ -430,26 +436,26 @@ void scalevels(double temp, double K);
 void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 {
 
-   /*
-    Translational velocities from maxwell-boltzmann distribution  
-    The routine put in vx, vy, vz a velocity choosen from a M.-B. 
-    distribution.
-    
-    The distribution is determined by temperature and (unit) mass.
-    This routine is general, and can be used for atoms, linear    
-    molecules, and non-linear molecules.                          
-    
-    ROUTINE REFERENCED:                                          
-    
-    COORD_TYPE gauss(void)
-    Returns a uniform random normal variate from a           
-    distribution with zero mean and unit variance.           
-    
-    VARIABLES 
-    COORD_TYPE temp       Temperature 
-    m[NA]                 Masses of atoms (NA is the number of atoms)
-    int  Nm               Number of molecules  
-  */
+  /*
+     Translational velocities from maxwell-boltzmann distribution  
+     The routine put in vx, vy, vz a velocity choosen from a M.-B. 
+     distribution.
+
+     The distribution is determined by temperature and (unit) mass.
+     This routine is general, and can be used for atoms, linear    
+     molecules, and non-linear molecules.                          
+
+     ROUTINE REFERENCED:                                          
+
+     COORD_TYPE gauss(void)
+     Returns a uniform random normal variate from a           
+     distribution with zero mean and unit variance.           
+
+     VARIABLES 
+     COORD_TYPE temp       Temperature 
+     m[NA]                 Masses of atoms (NA is the number of atoms)
+     int  Nm               Number of molecules  
+   */
   COORD_TYPE rTemp[2], sumx, sumy, sumz, RCMx, RCMy, RCMz, Mtot;
   /*COORD_TYPE Px, Py, Pz;*/
   int i;
@@ -461,74 +467,74 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
   for (i = 0; i < Oparams.parnumA; i++)
     {
       /* Set the velocities of both atoms to the center of mass velocities,
-         the exact velocities will be set in the angvel() routine, where we 
-         will set:
+	 the exact velocities will be set in the angvel() routine, where we 
+	 will set:
 	 Atom 1: v1  = Vcm + W^(d21 * m2/(m2+m1))
 	 Atom 2: v2  = Vcm - W^(d21 * m1/(m1+m2))
 	 where Vcm is the center of mass velocity (that is the actual 
 	 velocity of both atoms), W is the angular velocity of the molecule,
 	 d21 is the vector joining the two atoms (from 2 to 1) and 
 	 m1 and m2 are the masses of two atoms 
-      */
-      
+       */
+
       vx[i] = rTemp[0] * gauss(); 
       vy[i] = rTemp[0] * gauss();
       vz[i] = rTemp[0] * gauss();
       //printf("rank[%d] vx[%d]: %f\n", my_rank, i, vx[i]);
       /* gauss() is a gaussian variable with mean = 0 and variance = 1, that is
-                               2
-	     1                X
-        ----------- * exp( - --- )         
+	 2
+	 1                X
+	 ----------- * exp( - --- )         
 	 sqrt(2*PI)           2     */
       K = K + 0.5 * Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));
     }
   for (i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
       /* Set the velocities of both atoms to the center of mass velocities,
-         the exact velocities will be set in the angvel() routine, where we 
-         will set:
+	 the exact velocities will be set in the angvel() routine, where we 
+	 will set:
 	 Atom 1: v1  = Vcm + W^(d21 * m2/(m2+m1))
 	 Atom 2: v2  = Vcm - W^(d21 * m1/(m1+m2))
 	 where Vcm is the center of mass velocity (that is the actual 
 	 velocity of both atoms), W is the angular velocity of the molecule,
 	 d21 is the vector joining the two atoms (from 2 to 1) and 
 	 m1 and m2 are the masses of two atoms 
-      */
-      
+       */
+
       vx[i] = rTemp[1] * gauss(); 
       vy[i] = rTemp[1] * gauss();
       vz[i] = rTemp[1] * gauss();
       //printf("rank[%d] vx[%d]: %f\n", my_rank, i, vx[i]);
       /* gauss() is a gaussian variable with mean = 0 and variance = 1, that is
-                               2
-	     1                X
-        ----------- * exp( - --- )         
+	 2
+	 1                X
+	 ----------- * exp( - --- )         
 	 sqrt(2*PI)           2     */
       K = K + 0.5 * Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));
     }
- 
+
   /* Remove net momentum, to have a total momentum equals to zero */
   sumx = 0.0;
   sumy = 0.0;
   sumz = 0.0;
-  
+
   for(i = 0; i < Oparams.parnumA; i++)
-       {
-	 /* (sumx, sumy, sumz) is the total momentum */ 
-	 sumx = sumx + vx[i]*Oparams.m[0];
-	 sumy = sumy + vy[i]*Oparams.m[0];
-	 sumz = sumz + vz[i]*Oparams.m[0];
-	 //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
-       }
-   for(i = Oparams.parnumA; i < Oparams.parnum; i++)
-       {
-	 /* (sumx, sumy, sumz) is the total momentum */ 
-	 sumx = sumx + vx[i]*Oparams.m[1];
-	 sumy = sumy + vy[i]*Oparams.m[1];
-	 sumz = sumz + vz[i]*Oparams.m[1];
-	 //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
-       }
- 
+    {
+      /* (sumx, sumy, sumz) is the total momentum */ 
+      sumx = sumx + vx[i]*Oparams.m[0];
+      sumy = sumy + vy[i]*Oparams.m[0];
+      sumz = sumz + vz[i]*Oparams.m[0];
+      //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
+    }
+  for(i = Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      /* (sumx, sumy, sumz) is the total momentum */ 
+      sumx = sumx + vx[i]*Oparams.m[1];
+      sumy = sumy + vy[i]*Oparams.m[1];
+      sumz = sumz + vz[i]*Oparams.m[1];
+      //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
+    }
+
   sumx = sumx / Mtot; 
   sumy = sumy / Mtot;
   sumz = sumz / Mtot;
@@ -571,7 +577,7 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
       RCMy += ry[i]*Oparams.m[1];
       RCMz += rz[i]*Oparams.m[1];
     }
-  
+
 
   RCMx /= Mtot;
   RCMy /= Mtot;
@@ -644,7 +650,59 @@ void buildTetrahedras(void)
     }
   //printf("dist=%.15G\n", sqrt( Sqr(uxx[i-1]-uxy[i-1]) + Sqr(uyx[i]-uyy[i]) + Sqr(uzx[i]-uzz[i])));
 }
+#elif MD_AB41
+void buildTetrahedras(void)
+{
+  int i;
+  //double Kl, Ktr, pi;
+  double Oangle;
+  const double Kl = sqrt(8.0/3.0), Kdh = 1.0/3.0, Ktr = sqrt(8.0)/6.0;
+  double radius; 
+  /* NOTA: i < Oparams.parnumA => O
+   *       i >= Oparams.parnumA => Si */
+  /* Oxygen */
+  //Oangle = acos(0) * 2.0 * 145.8 / 180.0;
+  pi = acos(0.0)*2.0;
+  //Kl = cos(pi/6.0), Ktr = sin(pi/6.0);
+  Oangle = acos(0) * 2.0 * 145.8 / 180.0;
 
+  printf("pi=%.15G radius = %f\n", pi, Oparams.sigma[0][1]/2.0);
+  for (i=0; i < Oparams.parnumA; i++)
+    {
+      /* il raggio è quello dell'interazione Si-O */
+      radius = Oparams.sigma[0][0]/2.0;
+      uxx[i] = Kl * radius / 2.0;
+      uyx[i] = -Ktr * radius;
+      uzx[i] = -Kdh * radius;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxx[i], uyx[i], uzx[i]);
+      uxy[i] = -Kl * radius / 2.0;
+      uyy[i] = -Ktr * radius;
+      uzy[i] = -Kdh * radius;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxy[i], uyy[i], uzy[i]);
+      uxz[i] = 0.0;
+      uyz[i] = Ktr * 2.0 * radius;
+      uzz[i] = -Kdh * radius;
+    }
+
+  for (i=Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      /* il raggio è quello dell'interazione Si-O */
+      radius = Oparams.sigma[1][1]/2.0;
+      uxx[i] = radius * cos(Oangle);
+      uyx[i] = radius * sin(Oangle);
+      uzx[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxx[i], uyx[i], uzx[i]);
+      uxy[i] = 0.0;
+      uyy[i] = 0.0;
+      uzy[i] = 0.0;
+      //printf("%f %f %f @ 0.075 C[red]\n", uxy[i], uyy[i], uzy[i]);
+      /* NOTA: l'ossigeno ha solo due sticky spots */
+      uxz[i] = 0.0;
+      uyz[i] = 0.0;
+      uzz[i] = 0.0;
+    }
+  //printf("dist=%.15G\n", sqrt( Sqr(uxx[i-1]-uxy[i-1]) + Sqr(uyx[i]-uyy[i]) + Sqr(uzx[i]-uzz[i])));
+}
 #else
 void buildTetrahedras(void)
 {
@@ -723,40 +781,40 @@ void angvel(void)
   double ox, oy, oz;
   //L = cbrt(Vol);
   invL = 1.0 / L;
-  
+
   Mtot = Oparams.m[0]; /* total mass of molecule */
 
   inert = Oparams.I[0]; /* momentum of inertia */
- 
+
   mean = 3.0*Oparams.T / inert;
 
   for (i = 0; i < Oparams.parnumA; i++)
     {
       xisq = 1.0;
-      
+
       while (xisq >= 1.0)
 	{
 	  xi1  = ranf() * 2.0 - 1.0;
 	  xi2  = ranf() * 2.0 - 1.0;
 	  xisq = xi1 * xi1 + xi2 * xi2;
 	}
-      
+
       xi = sqrt (fabs(1.0 - xisq));
       ox = 2.0 * xi1 * xi;
       oy = 2.0 * xi2 * xi;
       oz = 1.0 - 2.0 * xisq;
-      
+
       /* Renormalize */
       osq   = ox * ox + oy * oy + oz * oz;
       norm  = sqrt(fabs(osq));
       ox    = ox / norm;
       oy    = oy / norm;
       oz    = oz / norm;
-      
+
       /* Choose the magnitude of the angular velocity
-         NOTE: consider that it is an exponential distribution 
-	 (i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
-      
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+
       osq   = - mean * log(ranf());
       o     = sqrt(fabs(osq));
       ox    = o * ox;
@@ -769,35 +827,35 @@ void angvel(void)
   Mtot = Oparams.m[1]; /* total mass of molecule */
 
   inert = Oparams.I[1]; /* momentum of inertia */
- 
+
   mean = 3.0*Oparams.T / inert;
 
   for (i = Oparams.parnumA; i < Oparams.parnumA; i++)
     {
       xisq = 1.0;
-      
+
       while (xisq >= 1.0)
 	{
 	  xi1  = ranf() * 2.0 - 1.0;
 	  xi2  = ranf() * 2.0 - 1.0;
 	  xisq = xi1 * xi1 + xi2 * xi2;
 	}
-      
+
       xi = sqrt (fabs(1.0 - xisq));
       ox = 2.0 * xi1 * xi;
       oy = 2.0 * xi2 * xi;
       oz = 1.0 - 2.0 * xisq;
-      
+
       /* Renormalize */
       osq   = ox * ox + oy * oy + oz * oz;
       norm  = sqrt(fabs(osq));
       ox    = ox / norm;
       oy    = oy / norm;
       oz    = oz / norm;
-      
+
       /* Choose the magnitude of the angular velocity
-         NOTE: consider that it is an exponential distribution 
-	 (i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
       osq   = - mean * log(ranf());
       o     = sqrt(fabs(osq));
       ox    = o * ox;
@@ -844,40 +902,40 @@ void angvel(void)
   double ox, oy, oz;
   //L = cbrt(Vol);
   invL = 1.0 / L;
-  
+
   Mtot = Oparams.m[0]; /* total mass of molecule */
 
   inert = Oparams.I[0]; /* momentum of inertia */
- 
+
   mean = 3.0*Oparams.T / inert;
 
   for (i = 0; i < Oparams.parnum; i++)
     {
       xisq = 1.0;
-      
+
       while (xisq >= 1.0)
 	{
 	  xi1  = ranf() * 2.0 - 1.0;
 	  xi2  = ranf() * 2.0 - 1.0;
 	  xisq = xi1 * xi1 + xi2 * xi2;
 	}
-      
+
       xi = sqrt (fabs(1.0 - xisq));
       ox = 2.0 * xi1 * xi;
       oy = 2.0 * xi2 * xi;
       oz = 1.0 - 2.0 * xisq;
-      
+
       /* Renormalize */
       osq   = ox * ox + oy * oy + oz * oz;
       norm  = sqrt(fabs(osq));
       ox    = ox / norm;
       oy    = oy / norm;
       oz    = oz / norm;
-      
+
       /* Choose the magnitude of the angular velocity
-         NOTE: consider that it is an exponential distribution 
-	 (i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
-      
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+
       osq   = - mean * log(ranf());
       o     = sqrt(fabs(osq));
       ox    = o * ox;
@@ -1078,7 +1136,7 @@ void initCoord(void)
   rx[0] = 0.0;
   ry[0] = +0.6;
   rz[0] = 0.0;
- 
+
   rx[1] = 0.0;
   ry[1] = -0.6;
   rz[1] = 0.0;
@@ -1087,7 +1145,7 @@ void initCoord(void)
   FCC(Oparams.parnum, Oparams.m); 
   /* Put the baricenter of each molecule on a FCC lattice, and set 
      their orientations */  
-  
+
   /* set both atoms velocity to the center of mass velocity */
   comvel(Oparams.parnum, Oparams.T, Oparams.m, 0); 
 #if 1
@@ -1113,89 +1171,93 @@ void initCoord(void)
 
 /* =========================== >>> usrInitBef <<< ========================== */
 void usrInitBef(void)
-  {
-    int i;
-    /* DESCRIPTION:
-       This function is called before any other initialization, put here 
-       yours, for example initialize accumulators ! 
-       NOTE: You should supply parameters value in parameters file, so this 
-	     initilization are quite fictitiuos for parameters, anyway 
-	     accumulators initialization is crucial */
-    
-    /* ===================== >>> INIT PARAMETERS <<< ======================== 
+{
+  int i;
+  /* DESCRIPTION:
+     This function is called before any other initialization, put here 
+     yours, for example initialize accumulators ! 
+NOTE: You should supply parameters value in parameters file, so this 
+initilization are quite fictitiuos for parameters, anyway 
+accumulators initialization is crucial */
+
+  /* ===================== >>> INIT PARAMETERS <<< ======================== 
      All the values set here for Oparams structure are taken as defaults if you
      don't specify corresponding parameters in the parameters file  */
-    Dtrans = 0.0; /* DtransOld should become a field of OprogStatus */
+  Dtrans = 0.0; /* DtransOld should become a field of OprogStatus */
 
-    V = 0.0;
-    L = 9.4;
-    Oparams.bheight = 0.0;
-    OprogStatus.maxbonds = 20;
-    Oparams.T = 2.0;
-    Oparams.P = 1.0;
-    Oparams.M = 5; /* cells in each direction for linked lists */
-    
-    Oparams.time = 0.0;
-    OprogStatus.tolT = 0.0;
-    OprogStatus.targetPhi = 0.0;
-    OprogStatus.scalfact = 0.8;
-    OprogStatus.reducefact = 0.9;
-    OprogStatus.nebrTabFac = 150;
-    OprogStatus.rNebrShell = 0.4;
-    /* If 1 the program calculate of the corrisponding variable a mean from
-       the begin of the run and not the instanteaneous value */
-    OprogStatus.avnggr    = 0;
-    Oparams.Dt = 0.01;
-    OprogStatus.avngS     = 0;
-    OprogStatus.avngPress = 0;
-    OprogStatus.avngTemp  = 0;
-    OprogStatus.scalevel = 0;
-    OprogStatus.endtime = 0;
-    //OprogStatus.tryharder = 0;
-    OprogStatus.rescaleTime = 1.0;
-    OprogStatus.brownian = 0;
-    OprogStatus.checkGrazing = 0;
+  V = 0.0;
+  L = 9.4;
+#if MD_AB41
+  Oparams.bheightAA = Oparams.bheightAB = 0.0;
+#else
+  Oparams.bheight = 0.0;
+#endif
+  OprogStatus.maxbonds = 20;
+  Oparams.T = 2.0;
+  Oparams.P = 1.0;
+  Oparams.M = 5; /* cells in each direction for linked lists */
+
+  Oparams.time = 0.0;
+  OprogStatus.tolT = 0.0;
+  OprogStatus.targetPhi = 0.0;
+  OprogStatus.scalfact = 0.8;
+  OprogStatus.reducefact = 0.9;
+  OprogStatus.nebrTabFac = 150;
+  OprogStatus.rNebrShell = 0.4;
+  /* If 1 the program calculate of the corrisponding variable a mean from
+     the begin of the run and not the instanteaneous value */
+  OprogStatus.avnggr    = 0;
+  Oparams.Dt = 0.01;
+  OprogStatus.avngS     = 0;
+  OprogStatus.avngPress = 0;
+  OprogStatus.avngTemp  = 0;
+  OprogStatus.scalevel = 0;
+  OprogStatus.endtime = 0;
+  //OprogStatus.tryharder = 0;
+  OprogStatus.rescaleTime = 1.0;
+  OprogStatus.brownian = 0;
+  OprogStatus.checkGrazing = 0;
 #ifdef MD_BIG_DT
-    OprogStatus.refTime = 0.0;
-    OprogStatus.bigDt = -1.0;
+  OprogStatus.refTime = 0.0;
+  OprogStatus.bigDt = -1.0;
 #endif
 #ifndef MD_ASYM_ITENS
-    for (i = 0; i < 2; i++)
-      Oparams.I[i] = 1.0;
+  for (i = 0; i < 2; i++)
+    Oparams.I[i] = 1.0;
 #endif
-    OprogStatus.eventMult = 100;
-    OprogStatus.overlaptol = 0.0001;
-    /* Il promo step inizia con un tapping a temperatura T */
-    Oparams.m[0] = Oparams.m[1] = 1.0;
-    //Oparams.sigma[0][0] = Oparams.sigma[1][1] = Oparams.sigma[1][0]= Oparams.sigma[0][1]=1.0;
-    OprogStatus.collCount = 0;
-    OprogStatus.crossCount = 0;
-    OprogStatus.h=1E-7;
-    OprogStatus.assumeOneBond=0;
-    OprogStatus.epsd = 0.0005;
-    OprogStatus.epsdFast = 0.002;
-    OprogStatus.epsdFastR = 0.0025;
-    OprogStatus.epsdMax = 0.001;
-    OprogStatus.zbrakn = 100;
-    OprogStatus.zbrentTol = 0.00001;
-    OprogStatus.forceguess = 1;
-    OprogStatus.phitol = 1E-12;
-    OprogStatus.axestol = 1E-8;
-    OprogStatus.nextSumTime = 0.0;
-    OprogStatus.nextcheckTime = 0.0;
-    OprogStatus.intervalSum = 1.0;
-    OprogStatus.n1 = 160;
-    OprogStatus.n2 = 60;
-    OprogStatus.storerate = 0.01;
-    OprogStatus.KK = 0;
-    OprogStatus.JJ = 0;
-    /* Parameters relative to Ruocco AC force
-       See: cond-mat/00001311, Ruocco et al. */
-    OprogStatus.rNebrShell = 2.7; /* the radius of neighbour list shell */
-    for (i = 0; i < PE_POINTS; i++)
-      OprogStatus.PE[i] = 0;
-    /* ======================================================================= */
-  }
+  OprogStatus.eventMult = 100;
+  OprogStatus.overlaptol = 0.0001;
+  /* Il promo step inizia con un tapping a temperatura T */
+  Oparams.m[0] = Oparams.m[1] = 1.0;
+  //Oparams.sigma[0][0] = Oparams.sigma[1][1] = Oparams.sigma[1][0]= Oparams.sigma[0][1]=1.0;
+  OprogStatus.collCount = 0;
+  OprogStatus.crossCount = 0;
+  OprogStatus.h=1E-7;
+  OprogStatus.assumeOneBond=0;
+  OprogStatus.epsd = 0.0005;
+  OprogStatus.epsdFast = 0.002;
+  OprogStatus.epsdFastR = 0.0025;
+  OprogStatus.epsdMax = 0.001;
+  OprogStatus.zbrakn = 100;
+  OprogStatus.zbrentTol = 0.00001;
+  OprogStatus.forceguess = 1;
+  OprogStatus.phitol = 1E-12;
+  OprogStatus.axestol = 1E-8;
+  OprogStatus.nextSumTime = 0.0;
+  OprogStatus.nextcheckTime = 0.0;
+  OprogStatus.intervalSum = 1.0;
+  OprogStatus.n1 = 160;
+  OprogStatus.n2 = 60;
+  OprogStatus.storerate = 0.01;
+  OprogStatus.KK = 0;
+  OprogStatus.JJ = 0;
+  /* Parameters relative to Ruocco AC force
+See: cond-mat/00001311, Ruocco et al. */
+  OprogStatus.rNebrShell = 2.7; /* the radius of neighbour list shell */
+  for (i = 0; i < PE_POINTS; i++)
+    OprogStatus.PE[i] = 0;
+  /* ======================================================================= */
+}
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
 #ifdef MD_SILICA
@@ -1250,9 +1312,9 @@ void StartRun(void)
 	  inCell[nc][2][n] =  (rz[n] + L2)  * cellsz[nl] / L;
 #endif
 	  /*printf("nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
-		 nl, nc, n, inCell[nc][0][n], inCell[nc][1][n], inCell[nc][2][n],
-		 cellsx[nl], cellsy[nl], cellsz[nl]);
-		 */
+	    nl, nc, n, inCell[nc][0][n], inCell[nc][1][n], inCell[nc][2][n],
+	    cellsx[nl], cellsy[nl], cellsz[nl]);
+	   */
 #if 0
 	  if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
 	    {
@@ -1289,7 +1351,7 @@ void StartRun(void)
 	    continue;
 	  /*TO BE REMOVED*/
 	  //if (nl==3)
-	    //continue;
+	  //continue;
 	  //printf("======>qui nl=%d\n", nl);
 	  PredictColl(n, -2, nl); 
 	}
@@ -1310,57 +1372,57 @@ void StartRun(void)
 }
 #else
 void StartRun(void)
-  {
-    int j, k, n;
+{
+  int j, k, n;
 
-    for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
-      cellList[j] = -1;
-    /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
-    for (n = 0; n < Oparams.parnum; n++)
-      {
-	atomTime[n] = Oparams.time;
-	inCell[0][n] =  (rx[n] + L2) * cellsx / L;
-	inCell[1][n] =  (ry[n] + L2) * cellsy / L;
+  for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
+    cellList[j] = -1;
+  /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
+  for (n = 0; n < Oparams.parnum; n++)
+    {
+      atomTime[n] = Oparams.time;
+      inCell[0][n] =  (rx[n] + L2) * cellsx / L;
+      inCell[1][n] =  (ry[n] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
-	inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+      inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
 #else
-	inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+      inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
 #endif
 #if 0
-	if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
-	  {
-	    printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
-	    printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
-		   inCell[0][n],inCell[1][n], inCell[2][n]);
-	  }
+      if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
+	{
+	  printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
+	  printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
+		 inCell[0][n],inCell[1][n], inCell[2][n]);
+	}
 #endif	  
-	j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
-	  inCell[0][n] + Oparams.parnum;
-	cellList[n] = cellList[j];
-	cellList[j] = n;
-      }
-    InitEventList();
-    for (k = 0;  k < NDIM; k++)
-      {
-	cellRange[2*k]   = - 1;
-	cellRange[2*k+1] =   1;
-      }
-    for (n = 0; n < Oparams.parnum; n++)
-      PredictEvent(n, -2); 
-    //exit(-1);
+      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+	inCell[0][n] + Oparams.parnum;
+      cellList[n] = cellList[j];
+      cellList[j] = n;
+    }
+  InitEventList();
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  for (n = 0; n < Oparams.parnum; n++)
+    PredictEvent(n, -2); 
+  //exit(-1);
 #if 0
     {
       double dist, rC[3], rD[3], shift[3];
       int i, j;
-  for (i = 0; i < Oparams.parnum; i++)
-    {
-      j=-1;
-      dist = get_min_dist(i, &j, rC, rD, shift);
-      printf("dist %d:%.8G\n", i, dist);
-    }
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  j=-1;
+	  dist = get_min_dist(i, &j, rC, rD, shift);
+	  printf("dist %d:%.8G\n", i, dist);
+	}
     }
 #endif
-  }
+}
 #endif
 extern void add_bond(int na, int n, int a, int b);
 extern void remove_bond(int na, int n, int a, int b);
@@ -1387,7 +1449,7 @@ void u2R(void)
       R[i][2][2] = uzz[i];
       MD_DEBUG2(print_matrix(R[i], 3));
     }
-  
+
 }
 void R2u(void)
 {
@@ -1407,41 +1469,41 @@ void R2u(void)
 }
 #define SIGN(X) ((X>0)?1.0:(-1.0)) 
 typedef struct {
-	double x,y,z;
+  double x,y,z;
 } XYZ;
 typedef struct {
-	double point[3];
-//	double grad[3];
-	struct {
-	  int i;	  
-	  int j;
-	} neigh[4];
+  double point[3];
+  //	double grad[3];
+  struct {
+    int i;	  
+    int j;
+  } neigh[4];
 } MESHXYZ;
 
 MESHXYZ **ellips_mesh[2];
 void EvalSuperEllipse(double theta,double phi, double a, double b, double c, MESHXYZ *pm)
 {
-   double cth,cphi,sth,sphi;
+  double cth,cphi,sth,sphi;
 
-   cth = cos(theta);
-   cphi = cos(phi);
-   sth= sin(theta);
-   sphi = sin(phi);
-   pm->point[0] = a * cphi * sth;
-   pm->point[1] = b * sphi * sth;
-   pm->point[2] = c * cth;
+  cth = cos(theta);
+  cphi = cos(phi);
+  sth= sin(theta);
+  sphi = sin(phi);
+  pm->point[0] = a * cphi * sth;
+  pm->point[1] = b * sphi * sth;
+  pm->point[2] = c * cth;
 #if 1
-     {
-       FILE* f;
-       f = fopen("mesh.dat", "a");
-       fprintf(f,"%f %f %f\n", pm->point[0], pm->point[1], pm->point[2]);
-       fclose(f);
-     }
+    {
+      FILE* f;
+      f = fopen("mesh.dat", "a");
+      fprintf(f,"%f %f %f\n", pm->point[0], pm->point[1], pm->point[2]);
+      fclose(f);
+    }
 #endif
 #if 0
-   pm->grad[0] = 2.0*pm->point[0]/Sqr(a);
-   pm->grad[1] = 2.0*pm->point[1]/Sqr(b);
-   pm->grad[2] = 2.0*pm->point[2]/Sqr(c);
+  pm->grad[0] = 2.0*pm->point[0]/Sqr(a);
+  pm->grad[1] = 2.0*pm->point[1]/Sqr(b);
+  pm->grad[2] = 2.0*pm->point[2]/Sqr(c);
 #endif
 }
 void add_neighbours(MESHXYZ** mesh, int i, int j)
@@ -1581,7 +1643,7 @@ void check_all_bonds(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
-  
+
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
   warn = 0;
   for ( i = 0; i < Oparams.parnum; i++)
@@ -1597,15 +1659,15 @@ void check_all_bonds(void)
 	  /* i legami possono essere solo tra Si e O!! */
 	  if (nl < 2 )
 	    continue;
-	  
-	 // iA = (i < Oparams.parnumA)?0:1;
+
+	  // iA = (i < Oparams.parnumA)?0:1;
 	  if (nl < 2)
 	    nc = 0;
 	  else
 	    nc = 1; 
 	  if (nl==nl_ignore || nl==iA+2)
 	    continue;
- 
+
 	  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
 	    {
 	      jZ = inCell[nc][2][i] + iZ;    
@@ -1738,7 +1800,7 @@ void check_all_bonds(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
-  
+
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 
   warn = 0;
@@ -1809,7 +1871,7 @@ void check_all_bonds(void)
 			{
 			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
 			      && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
-			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
+			    // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
 			    {
 			      warn=1;
 #if 0
@@ -1832,7 +1894,7 @@ void check_all_bonds(void)
 				  remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
 				}
 			    }
-  			}
+			}
 		    }
 		}
 	    }
@@ -1945,7 +2007,7 @@ void usrInitAft(void)
 #ifdef MD_SILICA
   for (nl = 0; nl < 4; nl++)
     cellList[nl] = malloc(sizeof(int)*
-  			  (cellsx[nl]*cellsy[nl]*cellsz[nl]+Oparams.parnum));
+			  (cellsx[nl]*cellsy[nl]*cellsz[nl]+Oparams.parnum));
   crossevtodel = malloc(sizeof(int)*Oparams.parnum);
   for (nc = 0; nc < 2; nc++)
     {
@@ -1999,7 +2061,7 @@ void usrInitAft(void)
   if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);
-      
+
       if ( overlap ) 
 	{
 	  printf("ERROR: Particle overlap in initial configuration\n");
@@ -2026,7 +2088,7 @@ void usrInitAft(void)
 	  calc_energy(NULL);
 	  scalevels(Oparams.T, K);
 	}
-      
+
       Oparams.time=0.0;
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = 0.0;
@@ -2078,10 +2140,17 @@ void usrInitAft(void)
    * particella!! */
   for (i = 0; i < Oparams.parnum; i++)
     {
+#ifdef MD_AB41
       if (i < Oparams.parnumA)
-     	maxax[i] =(Oparams.sigma[0][0] + Oparams.sigmaSticky + OprogStatus.epsd);
+	maxax[i] =Oparams.sigma[0][0] + max(Oparams.sigmaStickyAA,Oparams.sigmaStickyAB) + OprogStatus.epsd;
       else
-     	maxax[i] =(Oparams.sigma[1][1] + Oparams.sigmaSticky + OprogStatus.epsd);
+	maxax[i] =Oparams.sigma[1][1] + Oparams.sigmaStickyAB + OprogStatus.epsd;
+#else
+      if (i < Oparams.parnumA)
+	maxax[i] =(Oparams.sigma[0][0] + Oparams.sigmaSticky + OprogStatus.epsd);
+      else
+	maxax[i] =(Oparams.sigma[1][1] + Oparams.sigmaSticky + OprogStatus.epsd);
+#endif
     }
 #else
   /* maxax è il diametro del centroide */
@@ -2111,6 +2180,10 @@ void usrInitAft(void)
 	if ( !((i < Oparams.parnumA && j >= Oparams.parnumA)||
 	       (i >= Oparams.parnumA && j < Oparams.parnumA)) )
 	  continue; 
+#endif
+#ifdef MD_AB41
+	if (i >= Oparams.parnumA && j >= Oparams.parnumA)
+	  continue;		  
 #endif
 	drx = rx[i] - rx[j];
 	shift[0] = L*rint(drx/L);
@@ -2229,7 +2302,7 @@ void usrInitAft(void)
       OprogStatus.DQxy = 0.0;
       OprogStatus.DQyz = 0.0;
       OprogStatus.DQzx = 0.0;
-   
+
       for(i = 0; i < Oparams.parnum; i++)
 	{
 #ifdef MD_STORE_BONDS
@@ -2301,7 +2374,7 @@ void writeAllCor(FILE* fs)
       Rl[2][0] = uzx[i];
       Rl[2][1] = uzy[i];
       Rl[2][2] = uzz[i];
- 
+
       BuildAtomPos(i, rO, Rl, rat);
       /* write coords */
       for (a = 0; a < 5; a++)
@@ -2313,8 +2386,13 @@ void writeAllCor(FILE* fs)
 	    }
 	  else if (a < 3)
 	    {
+#ifdef MD_AB41
+	      fprintf(fs, "%.15G %.15G %.15G @ %f C[grey]\n", rat[a][0], rat[a][1], rat[a][2],
+		      Oparams.sigmaStickyAA/2.0);
+#else
 	      fprintf(fs, "%.15G %.15G %.15G @ %f C[grey]\n", rat[a][0], rat[a][1], rat[a][2],
 		      Oparams.sigmaSticky/2.0);
+#endif
 	    }
 	}
     }
@@ -2334,7 +2412,7 @@ void writeAllCor(FILE* fs)
       Rl[2][0] = uzx[i];
       Rl[2][1] = uzy[i];
       Rl[2][2] = uzz[i];
- 
+
       BuildAtomPos(i, rO, Rl, rat);
       /* write coords */
       for (a = 0; a < 5; a++)
@@ -2346,8 +2424,13 @@ void writeAllCor(FILE* fs)
 	    }
 	  else if (a < 5)
 	    {
+#ifdef MD_AB41
+	      fprintf(fs, "%.15G %.15G %.15G @ %f C[grey]\n", rat[a][0], rat[a][1], rat[a][2],
+		      Oparams.sigmaStickyAB/2.0);
+#else
 	      fprintf(fs, "%.15G %.15G %.15G @ %f C[grey]\n", rat[a][0], rat[a][1], rat[a][2],
 		      Oparams.sigmaSticky/2.0);
+#endif
 	    }
 	}
     }
@@ -2372,7 +2455,7 @@ void writeAllCor(FILE* fs)
       Rl[2][0] = uzx[i];
       Rl[2][1] = uzy[i];
       Rl[2][2] = uzz[i];
- 
+
       BuildAtomPos(i, rO, Rl, rat);
       /* write coords */
       for (a = 0; a < 5; a++)
@@ -2433,7 +2516,7 @@ void readAllCor(FILE* fs)
 	  exit(-1);
 	}
     }
-  
+
   for (i = 0; i < Oparams.parnum; i++)
     {
       if (fscanf(fs, "%lf %lf %lf ", &vx[i], &vy[i], &vz[i]) < 3)
@@ -2447,7 +2530,7 @@ void readAllCor(FILE* fs)
 	  exit(-1);
 	}
     }
-  
+
 
 #ifdef MD_GRAVITY
   if (fscanf(fs, "%lf %lf\n",  &L, &Lz) < 2)
@@ -2462,5 +2545,5 @@ void readAllCor(FILE* fs)
       exit(-1);
     }
 #endif
-      
+
 }
