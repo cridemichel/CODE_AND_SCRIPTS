@@ -641,7 +641,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [--mixtype/-mt] [--noperc/-np] [--bonds/-b] [--maxbonds] <listafile>\n");
+  printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--maxbonds] <listafile>\n");
   exit(0);
 }
 
