@@ -1166,6 +1166,14 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       return;
     }
 #endif
+#if 0
+  if ((i < Oparams.parnumA && j >= Oparams.parnumA) ||
+      (i >= Oparams.parnumA && j < Oparams.parnumA))
+    {
+      printf("ok\n");
+      exit(-1);
+    }
+#endif
   rA[0] = rx[i];
   rA[1] = ry[i];
   rA[2] = rz[i];
@@ -1992,7 +2000,15 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
    * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
    * a partire da questi. */
   /* WARNING: se le particelle che interagiscono hanno diametro diverso da sigma[0][1] qui va cambiato!!!! */ 
+#ifdef MD_AB41
+  if (i < Oparams.parnumA)
+    radius = Oparams.sigma[0][0] / 2.0;
+  else
+    radius = Oparams.sigma[1][1] / 2.0;
+  //printf("i=%d sigma=%f\n", i, radius*2.0);
+#else
   radius = Oparams.sigma[0][1] / 2.0;
+#endif
   if (ata == 0)
     {
       for (kk = 0; kk < 3; kk++)
@@ -2286,13 +2302,13 @@ void assign_bond_mapping(int i, int j)
     }
   else if (i < Oparams.parnumA && j >= Oparams.parnumA)
     {
-      mapbondsa = mapbondsbAB;
-      mapbondsb = mapbondsaAB;
+      mapbondsa = mapbondsaAB;
+      mapbondsb = mapbondsbAB;
     }
   else
     {
-      mapbondsa = mapbondsaAB;
-      mapbondsb = mapbondsbAB;
+      mapbondsa = mapbondsbAB;
+      mapbondsb = mapbondsaAB;
     }
 }
 #else
@@ -2389,7 +2405,7 @@ double calcDistNegOne(double t, double t1, int i, int j, int nn, double shift[3]
   if (i < Oparams.parnumA && j < Oparams.parnumA)
     sigmaSticky = Oparams.sigmaStickyAA;
   else
-     sigmaSticky = Oparams.sigmaStickyAB;
+    sigmaSticky = Oparams.sigmaStickyAB;
 #else
   sigmaSticky = Oparams.sigmaSticky;
 #endif
