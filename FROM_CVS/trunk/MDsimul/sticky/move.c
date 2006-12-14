@@ -5462,6 +5462,50 @@ void timeshift_calendar(void)
     } 
 }
 #endif
+#ifdef MD_SAVEFRA
+void save_fra(void)
+{
+  char fileop[1024], fileop2[1024], fileop3[1024];
+  double rat[NA][3];
+  double rcm[3];	
+  int i;
+  FILE* f;
+  sprintf(fileop2 ,"StoreF-%d-%d", 
+	  OprogStatus.KK, OprogStatus.JJ);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (f = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Error saving store file!\n", NULL);
+      exit(-1);
+    }
+  fprintf(f, "0 0 %d %d 0\n", Oparams.parnum, Oparams.parnumA);
+  fprintf(f, "%.15G %.15G %.15G 0 0 0\n", L, L, L);
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      rcm[0] = rx[i];
+      rcm[1] = ry[i];
+      rcm[2] = rz[i];
+      BuildAtomPos(i, rcm, R[i], rat);
+      fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
+      fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
+      fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+    }
+  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      rcm[0] = rx[i];
+      rcm[1] = ry[i];
+      rcm[2] = rz[i];
+      BuildAtomPos(i, rcm, R[i], rat);
+      fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
+      fprintf(f, "0.0 0.0 0.0\n");
+      fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+    }
+  sprintf(fileop3, "/bin/gzip -f %s", fileop);
+  system(fileop3);
+  fclose(f);
+}
+#endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -5534,6 +5578,9 @@ void move(void)
 	    }
 	  UpdateSystem();
 	  R2u();
+#ifdef MD_SAVEFRA
+	  save_fra();
+#endif
 #ifndef MD_STOREMGL
 	  writeAsciiPars(bf, opro_ascii);
 	  fprintf(bf, sepStr);
