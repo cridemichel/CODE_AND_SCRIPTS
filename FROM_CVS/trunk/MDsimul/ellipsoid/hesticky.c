@@ -730,6 +730,7 @@ void assign_bond_mapping(int i, int j)
     {
       if (intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2)
 	{
+	  /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
 	  mapbondsaFlex[a] = intersArr[ni].spot1+1;
           mapbondsbFlex[a] = intersArr[ni].spot2+1;
 	  mapBheightFlex[a] = intersArr[ni].bheight;
@@ -741,6 +742,7 @@ void assign_bond_mapping(int i, int j)
 	}	
       else if (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1)
 	{
+	  /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
 	  mapbondsaFlex[a] = intersArr[ni].spot2+1;
 	  mapbondsbFlex[a] = intersArr[ni].spot1+1;
 	  mapBheightFlex[a] = intersArr[ni].bheight;
