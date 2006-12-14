@@ -6536,9 +6536,9 @@ void store_bump(int i, int j)
   rA[2] = rz[i]-RCMz;
   BuildAtomPos(i, rA, R[i], ratA);
 #ifdef EDHE_FLEX
-  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots; nn++)
+  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
     fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
-	    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn].sigma*0.5);
+	    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
 #else
   for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
     fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
@@ -6549,9 +6549,9 @@ void store_bump(int i, int j)
   rB[2] = rz[j]-RCMz+Drz;
   BuildAtomPos(j, rB, R[j], ratB);
 #ifdef EDHE_FLEX
-  for (nn = 1; nn < typesArr[typeOfPart[j]].nspots; nn++)
+  for (nn = 1; nn < typesArr[typeOfPart[j]].nspots+1; nn++)
     fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
-	    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[j]].spots[nn].sigma*0.5);
+	    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[j]].spots[nn-1].sigma*0.5);
 #else
   for (nn = 1; nn < ((j < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
     fprintf(bf,"%.15f %.15f %.15f @ %.15G C[brown]\n",
