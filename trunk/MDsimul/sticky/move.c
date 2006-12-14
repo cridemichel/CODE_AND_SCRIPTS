@@ -4044,9 +4044,11 @@ int sticky_bump(int n, int na, int nl)
 #ifdef MD_THREESPOTS
   return 1;
 #elif defined(MD_AB41)
-  /* le particelle B interagiscono solo come HS*/
-  if (nl==1||nl==2||nl==3)
+  /* le particelle B (nl=1 i.e. interazione B-B) interagiscono solo come HS*/
+  if (nl==0||nl==2||nl==3)
     return 1;
+  else
+    return 0;
 #else
   if (nl==2||nl==3)
     return 1;
@@ -4850,7 +4852,6 @@ void store_bump(int i, int j)
   int ii,a;
   FILE *bf;
   double rat[5][3], rO[3], **Rl;
-  double sigmaSticky;
 #if 0
   const char tipodat2[]= "%.15G %.15G %.15G\n";
 #endif
