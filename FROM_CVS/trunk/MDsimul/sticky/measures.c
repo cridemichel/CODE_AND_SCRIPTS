@@ -165,10 +165,14 @@ void calcV(void)
 #ifdef MD_THREESPOTS
    fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V);
 #else
+#ifdef MD_AB41
+ fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum));
+#else
  if (Oparams.parnumA < Oparams.parnum)
    fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum-Oparams.parnumA));
  else
    fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum));
+#endif
 #endif
 #else
  fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum));
