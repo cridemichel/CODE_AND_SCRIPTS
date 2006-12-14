@@ -73,6 +73,10 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define MD_PBONDS_BB 9
 #define MD_PBONDS_AB 6
 #define MD_PBONDS 9
+#elif defined(MD_AB41)
+#define MD_PBONDS_AA 16 /* questo è il max num di bonds possibili fra due molecole */
+#define MD_PBONDS_AB 4
+#define MD_PBONDS 16
 #else
 #define MD_PBONDS 8 /* questo è il max num di bonds possibili fra due molecole */
 #endif
@@ -433,7 +437,12 @@ struct params
   COORD_TYPE T;			/* temperature */
   COORD_TYPE m[2];             /* atoms masses */
   double sigma[2][2];
+#ifdef MD_AB41
+  double sigmaStickyAA;
+  double sigmaStickyAB;
+#else
   double sigmaSticky;
+#endif
 #ifdef MD_SILICA
   double rcut[3];
 #else
@@ -442,8 +451,12 @@ struct params
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
-
+#ifdef MD_AB41
+  double bheightAA;
+  double bheightAB;
+#else
   double bheight;
+#endif
 #ifndef MD_ASYM_ITENS
   double I[2];
 #endif
@@ -638,7 +651,12 @@ struct pascii opar_ascii[]=
   {"T",                 &OP(T),                           1,   1, "%.6G"},
   {"m",                OP(m),                            2,   1, "%.10G"},
   {"sigma",           OP(sigma),                        2,   2, "%.10G"},
+#ifdef MD_AB41
+  {"sigmaStickyAA",     &OP(sigmaStickyAA),                  1,   1, "%.10G"},
+  {"sigmaStickyAB",     &OP(sigmaStickyAB),                  1,   1, "%.10G"},
+#else
   {"sigmaSticky",     &OP(sigmaSticky),                  1,   1, "%.10G"},
+#endif
 #ifdef MD_SILICA
   {"rcut",              OP(rcut),                        3,   1, "%.10G"},
 #else
@@ -650,7 +668,12 @@ struct pascii opar_ascii[]=
   {"I",                 OP(I),                             2,   1, "%.8G"},
 #endif
   {"M",                 &OP(M),                           1,   1,   "%d"},
+#ifdef MD_AB41
+  {"bheightAA",           &OP(bheightAA),                     1,   1, "%.15G"},
+  {"bheightAB",           &OP(bheightAB),                     1,   1, "%.15G"},
+#else
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
+#endif
   {"", NULL, 0, 0, ""}
 };
 #else
@@ -780,6 +803,18 @@ struct singlePar OsinglePar[] = {
   {"IA",      &Oparams.I[1],      CT},
   {"IB",       &Oparams.I[0],      CT},
 #endif
+#elif defined(MD_AB41)
+  {"sigmaAA", &Oparams.sigma[1][1], CT},
+  {"sigmaBB",  &Oparams.sigma[0][0], CT},
+  {"sigmaAB", &Oparams.sigma[0][1], CT},
+  {"massA",   &Oparams.m[1], CT},
+  {"massB",    &Oparams.m[0], CT},
+  {"bheightAA",  &Oparams.bheightAA,  CT},
+  {"bheightAB",  &Oparams.bheightAB,  CT},
+#ifndef MD_ASYM_ITENS
+  {"IA",      &Oparams.I[1],      CT},
+  {"IB",       &Oparams.I[0],      CT},
+#endif
 #else
   {"sigmaSiSi", &Oparams.sigma[1][1], CT},
   {"sigmaOO",  &Oparams.sigma[0][0], CT},
@@ -800,7 +835,12 @@ struct singlePar OsinglePar[] = {
   {"bheight",  &Oparams.bheight,            CT},
   {"I",        &Oparams.I[0],      CT},
 #endif
+#ifdef MD_AB41
+  {"sigmaStickyAA",&Oparams.sigmaStickyAA,        CT},
+  {"sigmaStickyAB",&Oparams.sigmaStickyAB,        CT},
+#else
   {"sigmaSticky",&Oparams.sigmaSticky,        CT},
+#endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
   {"avngS",      &OprogStatus.avngS,          INT},
@@ -812,7 +852,7 @@ struct singlePar OsinglePar[] = {
   {"targetPhi", &OprogStatus.targetPhi, CT},
   {"eventMult",  &OprogStatus.eventMult,    INT},
 #ifdef MD_SILICA
-#ifdef MD_THREESPOTS
+#if defined(MD_THREESPOTS) || defined(MD_AB41)
   {"rcutAA",       &Oparams.rcut[0],             CT},
   {"rcutBB",      &Oparams.rcut[1],             CT},
   {"rcutAB",      &Oparams.rcut[2],             CT},

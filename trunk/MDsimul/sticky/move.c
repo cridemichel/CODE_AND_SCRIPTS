@@ -49,6 +49,15 @@ int set_pbonds(int i, int j)
     return MD_PBONDS_BB;
   else
     return MD_PBONDS_AB;
+#elif defined(MD_AB41)
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    return MD_PBONDS_AA;
+#if 0
+  else if (i >= Oparams.parnumA && j >= Oparams.parnumA)
+    return MD_PBONDS_BB;
+#endif  
+  else
+    return MD_PBONDS_AB;
 #else
 return MD_PBONDS;
 #endif
@@ -64,6 +73,11 @@ int mapbondsaAA[MD_PBONDS_AA]={1,1,2,2};
 int mapbondsbAA[MD_PBONDS_AA]={1,2,1,2};
 int mapbondsaBB[MD_PBONDS_BB]={1,1,1,2,2,2,3,3,3};
 int mapbondsbBB[MD_PBONDS_BB]={1,2,3,1,2,3,1,2,3};
+#elif defined(MD_AB41)
+int mapbondsaAB[MD_PBONDS_AB]={1,2,3,4};
+int mapbondsbAB[MD_PBONDS_AB]={1,1,1,1};
+int mapbondsaAA[MD_PBONDS_AA]={1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4};
+int mapbondsbAA[MD_PBONDS_AA]={1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4};
 #else
 int mapbondsaSiO[MD_PBONDS]={1,1,2,2,3,3,4,4};
 int mapbondsbSiO[MD_PBONDS]={1,2,1,2,1,2,1,2};
@@ -1085,6 +1099,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
   double ratA[3], ratB[3], norm[3];
+  double bheight;
 #ifdef MD_HSVISCO
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
@@ -1096,6 +1111,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   double factorinvIa, factorinvIb;
 #endif
   //double shift[3];
+  double sigmaSticky;
   int na, a, kk;
 #if 1
   if (i < Oparams.parnumA && j < Oparams.parnumA)
@@ -1112,6 +1128,14 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
     {
       sigmai = Oparams.sigma[0][1];
     }
+#endif
+#ifdef MD_AB41
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    sigmaSticky = Oparams.sigmaStickyAA;
+  else 
+    sigmaSticky = Oparams.sigmaStickyAB;
+#else
+  sigmaSticky = Oparams.sigmaSticky;
 #endif
   /*printf("(i:%d,j:%d sigSq:%f\n", i, j, sigSq);*/
   /*printf("mredl: %f\n", mredl);*/
@@ -1215,9 +1239,11 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   /* controllare con cura la scelta dei parametri relativi ai diametri delle sferette
    * e alle larghezze delle buche dei potenziali a buca quadrata */
   MD_DEBUG20(printf("coll code: %d\n", bt));
-  rCx = ratA[0] - rAB[0]*Oparams.sigmaSticky*0.5;
-  rCy = ratA[1] - rAB[1]*Oparams.sigmaSticky*0.5;
-  rCz = ratA[2] - rAB[2]*Oparams.sigmaSticky*0.5;
+
+  rCx = ratA[0] - rAB[0]*sigmaSticky*0.5;
+  rCy = ratA[1] - rAB[1]*sigmaSticky*0.5;
+  rCz = ratA[2] - rAB[2]*sigmaSticky*0.5;
+
   rAC[0] = rA[0] - rCx;
   rAC[1] = rA[1] - rCy;
   rAC[2] = rA[2] - rCz;
@@ -1404,6 +1430,14 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   oldnbj = numbonds[j];
 #endif
   mredl = 1.0 / denom;
+#ifdef MD_AB41
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    bheight = Oparams.bheightAA;
+  else
+    bheight = Oparams.bheightAB;
+#else
+  bheight = Oparams.bheight;
+#endif
   switch (bt)
     {
       /* N.B.
@@ -1415,7 +1449,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_INOUT_BARRIER:
-      if (Sqr(vc) < 2.0*Oparams.bheight/mredl)
+      if (Sqr(vc) < 2.0*bheight/mredl)
 	{
 #if 1
 	  MD_DEBUG36(printf("t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n", Oparams.time,
@@ -1430,7 +1464,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 	  MD_DEBUG36(printf("t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", Oparams.time, vc, bt,
 		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 #endif
-	  factor = -vc + sqrt(Sqr(vc) - 2.0*Oparams.bheight/mredl);
+	  factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
 	  //oldbond = bound(i, j, ata, atb);
 	  //printf("qui\n");
 	  remove_bond(i, j, ata, atb);
@@ -1457,9 +1491,9 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       save_all_bonds(i, oldnbi);
       save_all_bonds(j, oldnbj);
 #endif
-      factor = -vc - sqrt(Sqr(vc) + 2.0*Oparams.bheight/mredl);
+      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
       MD_DEBUG36(printf("delta= %f height: %f mredl=%f\n", 
-		      Sqr(vc) + 2.0*Oparams.bheight/mredl, Oparams.bheight, mredl));
+		      Sqr(vc) + 2.0*bheight/mredl, bheight, mredl));
       factor *= mredl;
       break;
     }
@@ -2044,6 +2078,11 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
     NUMAT = 4;
   else
     NUMAT = 3;
+#elif defined(MD_AB41)
+  if (i >= Oparams.parnumA)
+    NUMAT = 2;
+  else
+    NUMAT = 5;
 #else
   if (i >= Oparams.parnumA)
     NUMAT = 5;
@@ -2234,6 +2273,28 @@ void assign_bond_mapping(int i, int j)
       mapbondsb = mapbondsbAB;
     }
 }
+#elif defined(MD_AB41)
+void assign_bond_mapping(int i, int j)
+{
+  /* NOTA: l'interazione bonded è solo tra Si e O 
+   * i <  Oparams.parnumA => O
+   * i >=  Oparams.parnumA => Si */
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    {
+      mapbondsa = mapbondsaAA;
+      mapbondsb = mapbondsbAA;
+    }
+  else if (i < Oparams.parnumA && j >= Oparams.parnumA)
+    {
+      mapbondsa = mapbondsbAB;
+      mapbondsb = mapbondsaAB;
+    }
+  else
+    {
+      mapbondsa = mapbondsaAB;
+      mapbondsb = mapbondsbAB;
+    }
+}
 #else
 void assign_bond_mapping(int i, int j)
 {
@@ -2319,9 +2380,18 @@ double calcDistNegOne(double t, double t1, int i, int j, int nn, double shift[3]
   double ratA[NA][3], ratB[NA][3];
   int kk;
   double Omega[3][3];
+  double sigmaSticky;
   int na;
 #ifdef MD_SILICA
   assign_bond_mapping(i, j);
+#endif
+#ifdef MD_AB41
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    sigmaSticky = Oparams.sigmaStickyAA;
+  else
+     sigmaSticky = Oparams.sigmaStickyAB;
+#else
+  sigmaSticky = Oparams.sigmaSticky;
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   MD_DEBUG20(printf("BRENT nn=%d\n", nn));
@@ -2354,8 +2424,8 @@ double calcDistNegOne(double t, double t1, int i, int j, int nn, double shift[3]
   distSq = 0;
   for (kk=0; kk < 3; kk++)
     distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
-  MD_DEBUG20(printf("dist= %.15G\n", sqrt(distSq)-Oparams.sigmaSticky));
-  return sqrt(distSq) - Oparams.sigmaSticky;
+  MD_DEBUG20(printf("dist= %.15G\n", sqrt(distSq)-sigmaSticky));
+  return sqrt(distSq) - sigmaSticky;
 #if 0
   if (firstdist || fabs(dist) < fabs(distmin))
     {
@@ -2375,8 +2445,17 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin
   double ratA[NA][3], ratB[NA][3], dist;
   int firstdist = 1, nn, kk;
   double Omega[3][3];
+  double sigmaSticky;
   int na, npbonds;
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+#ifdef MD_AB41
+  if (i < Oparams.parnumA && j < Oparams.parnumA)
+    sigmaSticky = Oparams.sigmaStickyAA;
+  else
+    sigmaSticky = Oparams.sigmaStickyAB;
+#else
+  sigmaSticky = Oparams.sigmaSticky;
+#endif
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
@@ -2416,7 +2495,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin
       distSq = 0;
       for (kk=0; kk < 3; kk++)
 	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
-      dists[nn] = dist = sqrt(distSq) - Oparams.sigmaSticky;
+      dists[nn] = dist = sqrt(distSq) - sigmaSticky;
       if (firstdist || fabs(dist) < fabs(distmin))
 	{
 	  firstdist = 0;
@@ -3964,6 +4043,10 @@ int sticky_bump(int n, int na, int nl)
 {
 #ifdef MD_THREESPOTS
   return 1;
+#elif defined(MD_AB41)
+  /* le particelle B interagiscono solo come HS*/
+  if (nl==1||nl==2||nl==3)
+    return 1;
 #else
   if (nl==2||nl==3)
     return 1;
@@ -4767,6 +4850,7 @@ void store_bump(int i, int j)
   int ii,a;
   FILE *bf;
   double rat[5][3], rO[3], **Rl;
+  double sigmaSticky;
 #if 0
   const char tipodat2[]= "%.15G %.15G %.15G\n";
 #endif
@@ -4816,13 +4900,33 @@ void store_bump(int i, int j)
 		}
 	      else if (a < 3)
 		{
+#ifdef MD_AB41
+		  if (ii < Oparams.parnumA)
+		    fprintf(bf, "%.15G %.15G %.15G @ %f C[blue]\n", rat[a][0], rat[a][1], rat[a][2],
+		  	    Oparams.sigmaStickyAA/2.0);
+		  else
+		    fprintf(bf, "%.15G %.15G %.15G @ %f C[blue]\n", rat[a][0], rat[a][1], rat[a][2],
+			  Oparams.sigmaStickyAB/2.0);
+
+#else
 		  fprintf(bf, "%.15G %.15G %.15G @ %f C[blue]\n", rat[a][0], rat[a][1], rat[a][2],
 			  Oparams.sigmaSticky/2.0);
+#endif
 		}
 	      else if (a < 5)
 		{
+#ifdef MD_AB41
+		  if (ii < Oparams.parnumA)
+		    fprintf(bf, "%.15G %.15G %.15G @ %f C[green]\n", rat[a][0], rat[a][1], rat[a][2],
+			    Oparams.sigmaStickyAA/2.0);
+		  else
+		    fprintf(bf, "%.15G %.15G %.15G @ %f C[green]\n", rat[a][0], rat[a][1], rat[a][2],
+			    Oparams.sigmaStickyAB/2.0);
+
+#else
 		  fprintf(bf, "%.15G %.15G %.15G @ %f C[green]\n", rat[a][0], rat[a][1], rat[a][2],
 			  Oparams.sigmaSticky/2.0);
+#endif
 		}
 	    }
 	}
