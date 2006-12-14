@@ -2862,6 +2862,9 @@ void writeAllCor(FILE* fs)
     }
   else
     {
+#ifdef EDHE_FLEX
+      fprintf(fs, "@@@\n");
+#endif
       for (i = 0; i < Oparams.parnum; i++)
 	{
 #ifdef EDHE_FLEX
@@ -2988,6 +2991,9 @@ void readAllCor(FILE* fs)
 	    &intersArr[i].spot2, 
 	    &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout, &intersArr[i].nmax);
    } 
+#endif
+#ifdef EDHE_FLEX
+  fscanf(fs, "@@@ ");
 #endif
   for (i = 0; i < Oparams.parnum; i++)
     {
