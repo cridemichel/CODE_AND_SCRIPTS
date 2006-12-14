@@ -66,7 +66,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 
 #define C_T COORD_TYPE
 #define NK 10000
-#define NA 5 /* number of atoms for each molecule (particle) */
+#define NA 100 /* number of atoms for each molecule (particle) */
 #ifdef MD_SILICA
 #ifdef MD_THREESPOTS
 #define MD_PBONDS_AA 4 /* questo è il max num di bonds possibili fra due molecole */
@@ -793,8 +793,8 @@ struct singlePar OsinglePar[] = {
   {"L",          &L,                          CT},
 #ifdef MD_SILICA
 #ifdef MD_THREESPOTS
-  {"sigmaAA", &Oparams.sigma[1][1], CT},
-  {"sigmaBB",  &Oparams.sigma[0][0], CT},
+  {"sigmaAA", &Oparams.sigma[0][0], CT},
+  {"sigmaBB",  &Oparams.sigma[1][1], CT},
   {"sigmaAB", &Oparams.sigma[0][1], CT},
   {"massA",   &Oparams.m[1], CT},
   {"massB",    &Oparams.m[0], CT},
@@ -804,8 +804,8 @@ struct singlePar OsinglePar[] = {
   {"IB",       &Oparams.I[0],      CT},
 #endif
 #elif defined(MD_AB41)
-  {"sigmaAA", &Oparams.sigma[1][1], CT},
-  {"sigmaBB",  &Oparams.sigma[0][0], CT},
+  {"sigmaAA", &Oparams.sigma[0][0], CT},
+  {"sigmaBB",  &Oparams.sigma[1][1], CT},
   {"sigmaAB", &Oparams.sigma[0][1], CT},
   {"massA",   &Oparams.m[1], CT},
   {"massB",    &Oparams.m[0], CT},
