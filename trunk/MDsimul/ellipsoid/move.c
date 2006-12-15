@@ -4,7 +4,7 @@
 #define MD_DEBUG10(x) 
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
-#define MD_DEBUG20(x) 
+#define MD_DEBUG20(x)  
 #define MD_DEBUG31(x) 
 #define MD_DEBUG32(x) 
 #if defined(MPI)
@@ -5170,6 +5170,7 @@ double calc_maxddot(int i, int j)
   double factori, factorj;
   factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
   factorj = 0.5*maxax[j]+OprogStatus.epsd;//sqrt(Sqr(axa[j])+Sqr(axb[j])+Sqr(axc[j]));
+  MD_DEBUG20(printf("[calc_maxddot] maxax[%d]:%.15G maxax[%d]:%.15G\n", i, maxax[i], j, maxax[j]);)
 #if 0
   /* N.B. nel caso della trottola simmetrica il modulo di w comunque non varia (anche 
    * se w ruota, ossia precede, intorno al vettore momento angolare) nel 
@@ -5949,7 +5950,8 @@ void PredictEvent (int na, int nb)
 			   sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
 #endif
 		       }
-		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
+		      MD_DEBUG20(printf("sigSq: %f maxax[%d]:%.15G maxax[%d]:%.15G\n", sigSq, na, maxax[na],
+					n, maxax[n]));
 		      tInt = Oparams.time - atomTime[n];
 		      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
 		      dv[0] = vx[na] - vx[n];
@@ -5991,7 +5993,7 @@ void PredictEvent (int na, int nb)
 			  t = t1 = - (sqrt (d) + b) / vv;
 			  t2 = (sqrt (d) - b) / vv;
 			  overlap = 0;
-			  MD_DEBUG20(printf("qui..boh sigSq:%.15G\n", sigSq));
+			  MD_DEBUG20(printf("qui..boh sig:%.15G dist=%.15G\n", sqrt(sigSq), sqrt(distSq)));
 			}
 		      else 
 			{
@@ -6045,6 +6047,7 @@ void PredictEvent (int na, int nb)
 			  if (collCode == MD_EVENT_NONE || (collCode!=MD_EVENT_NONE && vecg[4] <= evtime))
 			    {
 			      collCode = MD_CORE_BARRIER;
+			      ac = bc = 0;
 			      evtime = vecg[4];
 			      rxC = vecg[0];
 			      ryC = vecg[1];
@@ -6113,7 +6116,7 @@ void PredictEvent (int na, int nb)
 #else
 		      ScheduleEvent (na, n, t);
 #endif
-		      MD_DEBUG20(printf("schedule event [collision](%d,%d)\n", na, collCode));
+		      MD_DEBUG20(printf("schedule event [collision](%d,%d)-(%d,%d) collCode=%d\n", na, ac, n, bc, collCode));
 		    }
 		} 
 	    }
@@ -6575,7 +6578,8 @@ void ProcessCollision(void)
       cellRange[2*k+1] =   1;
     }
   MD_DEBUG10(calc_energy("prima"));
-  MD_DEBUG20(printf("[BUMP] t=%.15G i=%d j=%d\n", Oparams.time,evIdA,evIdB)); 
+  MD_DEBUG20(printf("[BUMP] t=%.15G i=%d at=%d j=%d at=%d collCode=%d\n", 
+		    Oparams.time,evIdA,evIdC, evIdB, evIdD, evIdE)); 
 
 #ifdef MD_PATCHY_HE
   /* i primi due bit sono il tipo di event (uscit buca, entrata buca, collisione con core 
