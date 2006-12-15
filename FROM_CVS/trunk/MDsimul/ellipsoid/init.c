@@ -2787,7 +2787,7 @@ void writeAllCor(FILE* fs)
       for (i=0; i < Oparams.ntypes; i++)
 	{
 	  /* write particles parameters */
-	  fprintf(fs, "%.15f %.15G %.15G\n", typesArr[i].sax[0], typesArr[i].sax[1], typesArr[i].sax[2]); 
+	  fprintf(fs, "%.15G %.15G %.15G\n", typesArr[i].sax[0], typesArr[i].sax[1], typesArr[i].sax[2]); 
 	  fprintf(fs, "%d %d %d\n", typesArr[i].n[0], typesArr[i].n[1], typesArr[i].n[2]);
 	  fprintf(fs, "%.15G %.15G %.15G %.15G %d %d\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
 		  typesArr[i].I[2], typesArr[i].brownian, typesArr[i].ignoreCore);
@@ -2797,25 +2797,23 @@ void writeAllCor(FILE* fs)
 	  /* write sticky spots parameters */
 	  fprintf(fs, "%d %d\n", typesArr[i].nspots, typesArr[i].nhardobjs);
 	  for (j = 0; j < typesArr[i].nspots; j++)
-	    fprintf(fs, "%.15G %.15G %.15G %.15G ", typesArr[i].spots[j].x[0],typesArr[i].spots[j].x[1],
+	    fprintf(fs, "%.15G %.15G %.15G %.15G\n", typesArr[i].spots[j].x[0],typesArr[i].spots[j].x[1],
 		    typesArr[i].spots[j].x[2], typesArr[i].spots[j].sigma);
-	  fprintf(fs, "\n");
 	  for (j = 0; j < typesArr[i].nhardobjs; j++)
-	    fprintf(fs, "%.15G %.15G %.15G % .15G %.15G %.15G %d %d %d ", 
+	    fprintf(fs, "%.15G %.15G %.15G % .15G %.15G %.15G %d %d %d\n", 
 		   typesArr[i].hardobjs[j].x[0],typesArr[i].hardobjs[j].x[1],typesArr[i].hardobjs[j].x[2], 
 		   typesArr[i].hardobjs[j].sax[0],typesArr[i].hardobjs[j].sax[1],typesArr[i].hardobjs[j].sax[2],
 		   typesArr[i].hardobjs[j].n[0],typesArr[i].hardobjs[j].n[1],typesArr[i].hardobjs[j].n[2]);
-	  fprintf(fs, "\n");
 	} 
       /* write interactions */
       for (i=0; i < Oparams.ninters; i++)
 	{
-	  fprintf (fs, "%d %d %d %d %.15G %.15G %.15G %d ", intersArr[i].type1, intersArr[i].spot1,
+	  fprintf (fs, "%d %d %d %d %.15G %.15G %.15G %d\n", intersArr[i].type1, intersArr[i].spot1,
 		 intersArr[i].type2, 
 		 intersArr[i].spot2, 
 		 intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout, intersArr[i].nmax);
 	} 
-      fprintf(fs, "\n");
+      //fprintf(fs, "\n");
     }
 #endif
   if (mgl_mode)
