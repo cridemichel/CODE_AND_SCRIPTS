@@ -2176,7 +2176,7 @@ void usrInitAft(void)
     for ( j = i + 1; j < Oparams.parnum; j++)
       {
 	/* l'interazione bonded è solo tra Si e O!! */
-#ifndef MD_THREESPOTS
+#if !defined(MD_THREESPOTS) && !defined(MD_AB41)
 	if ( !((i < Oparams.parnumA && j >= Oparams.parnumA)||
 	       (i >= Oparams.parnumA && j < Oparams.parnumA)) )
 	  continue; 
@@ -2238,7 +2238,7 @@ void usrInitAft(void)
 	  }
       }
 #endif
-  printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
+  printf("Energia potenziale all'inizio: %.15f\n", calcpotene()/((double)Oparams.parnum));
   //exit(-1);
   StartRun(); 
 
