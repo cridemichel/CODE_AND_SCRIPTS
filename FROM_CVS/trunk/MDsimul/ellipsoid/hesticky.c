@@ -1427,6 +1427,8 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
       if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
 	&& lastbump[j].at == mapbondsb[nn]))
 	continue;
+      MD_DEBUG20(printf("[check_negpairs] i=%d ati=%d j=%d atj=%d nn=%d\n", i, mapbondsa[nn],j, mapbondsb[nn],nn);)
+      MD_DEBUG20(printf("[check_negpairs] lastbump[%d]=%d %d lastbump[%d]=%d %d\n", i, lastbump[i].mol, lastbump[j].at, j,lastbump[j].mol, lastbump[j].at));
       negpairs[nn] = 1;
       return nn+1;
       //sum += 1;
@@ -1477,14 +1479,14 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
        * di distanza dmin t.c. dmin > 0 se !bound(i,j..) o dmin < 0 se bound(i,j...) */
       if (dists[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	{
-	  MD_DEBUG20(printf("time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]);)
-	  MD_DEBUG20(printf("mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j);)
+	  MD_DEBUG20(printf("[delt_is_too_big] time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]));
+	  MD_DEBUG20(printf("mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j));
 	  return 1;
 	}
       if (dists[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	{
-	  MD_DEBUG20(printf(">>>>time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]);)
-	  MD_DEBUG20(printf(">>>>mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j);)
+	  MD_DEBUG20(printf("[delt_is_too_big] >>>>time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]));
+	  MD_DEBUG20(printf(">>>>mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j));
 	  return 1;
 	}	  
 }
@@ -1598,7 +1600,7 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
 #endif
 
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
-		   double *evtime, int *ata, int *atb, int *collCode)
+		     double *evtime, int *ata, int *atb, int *collCode)
 {
   const double minh = 1E-20;
   double h, d, dold, t;
@@ -1670,8 +1672,9 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #else
   nbonds = MD_PBONDS;
 #endif
-  MD_DEBUG20(calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-	     printf("t1=%.15G t=%.15G dists[0]=%.15G\n", t1, t, dists[0]);)
+
+  //MD_DEBUG20(calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+//		printf("[locate_contactSP - BEGIN]t1=%.15G t=%.15G dists[0]=%.15G\n", t1, t, dists[0]););
 #ifndef MD_NEGPAIRS
   /* NOTA: le strategie per evitare problemi dopo una collisione sono due:
    * 1) andare avanti nel tempo finché la distanza non è corretta.
@@ -1719,13 +1722,14 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
     sumnegpairs = check_negpairs(negpairs, bondpair, i, j); 
   else
     sumnegpairs = 0;
+  MD_DEBUG20(printf("negpair:%d\n", sumnegpairs));
 #endif
   if (search_contact_fasterSP(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair, maxddot, maxddoti))
     {
       return 0;  
     }
   timesS++;
-  MD_DEBUG30(printf("[AFTER SEARCH CONTACT FASTER_SP]Dopo distances between %d-%d d1=%.12G\n", i, j, d));
+  MD_DEBUG20(printf("[AFTER SEARCH CONTACT FASTER_SP]Dopo distances between %d-%d d1=%.12G\n", i, j, d));
 
   MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
@@ -1773,11 +1777,11 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	  MD_DEBUG30(printf("SP ==========>>>>> t=%.15G t2=%.15G\n", t, t2));
 	  continue;
 	}
-      MD_DEBUG30(printf("SP delt: %f epsd/maxddot:%f h*t:%f maxddot:%f\n", delt, epsd/maxddot,h*t,maxddot));
+      MD_DEBUG20(printf("SP epsd:%.15G delt: %f epsd/maxddot:%f h*t:%f maxddot:%f\n", epsd, delt, epsd/maxddot,h*t,maxddot));
       tini = t;
       t += delt;
       d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-
+      MD_DEBUG20(printf("t1=%.15G t=%.15G d=%.15G\n", t1, t, d));
       deldist = get_max_deldistSP(distsOld, dists, bondpair);
       if (deldist > epsdMax)
 	{
@@ -1857,153 +1861,152 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	  itstb++;
 	}
       sumnegpairs = 0;
-    }
 #endif
 #endif
-  MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
-  for (nn=0; nn < nbonds; nn++)
-    dorefine[nn] = MD_EVENT_NONE;
-  ncr=check_crossSP(distsOld, dists, crossed, bondpair);
-  /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
-   * sticky */
-  for (nn = 0; nn < nbonds; nn++)
-    {
-      t2arr[nn] = t; 
-
-      dorefine[nn] = MD_EVENT_NONE;
-      if (crossed[nn]!=MD_EVENT_NONE)
+      MD_DEBUG30(printf(">>>>> d = %.15G\n", d));
+      for (nn=0; nn < nbonds; nn++)
+	dorefine[nn] = MD_EVENT_NONE;
+      ncr=check_crossSP(distsOld, dists, crossed, bondpair);
+      /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
+       * sticky */
+      for (nn = 0; nn < nbonds; nn++)
 	{
-	  /* se dorefine è 2 vuol dire che due superfici si sono
-	   * attraversate */
-	  if (valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
+	  t2arr[nn] = t; 
+
+	  dorefine[nn] = MD_EVENT_NONE;
+	  if (crossed[nn]!=MD_EVENT_NONE)
 	    {
-	      MD_DEBUG30(printf("SP type: %d i=%d j=%d ata=%d atb=%d bound:%d\n", crossed[nn], i, j, mapbondsa[nn],
-				mapbondsb[nn], bound(i, j, mapbondsa[nn], mapbondsb[nn])));
-	      dorefine[nn] = crossed[nn];
+	      /* se dorefine è 2 vuol dire che due superfici si sono
+	       * attraversate */
+	      if (valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
+		{
+		  MD_DEBUG30(printf("SP type: %d i=%d j=%d ata=%d atb=%d bound:%d\n", crossed[nn], i, j, mapbondsa[nn],
+				    mapbondsb[nn], bound(i, j, mapbondsa[nn], mapbondsb[nn])));
+		  dorefine[nn] = crossed[nn];
+		}
 	    }
 	}
-    }
 
 #define MD_INTERPOL
 #ifdef MD_INTERPOL
-  ntc = get_dists_tocheckSP(distsOld, dists, tocheck, dorefine, bondpair);
-  for (nn = 0; nn < nbonds; nn++)
-    {
-      if (tocheck[nn])
+      ntc = get_dists_tocheckSP(distsOld, dists, tocheck, dorefine, bondpair);
+      for (nn = 0; nn < nbonds; nn++)
 	{
-	  //printf("tocheck[%d]:%d\n", nn, tocheck[nn]);
-	  if (interpolSP(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
-			 &troot, shift, 0))
-	    dorefine[nn] = MD_EVENT_NONE;
-	  else 
+	  if (tocheck[nn])
 	    {
-	      if (distsOld[nn] > 0.0)
-		dorefine[nn] = MD_OUTIN_BARRIER;
-	      else
-		dorefine[nn] = MD_INOUT_BARRIER;
-	      if (!valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
+	      //printf("tocheck[%d]:%d\n", nn, tocheck[nn]);
+	      if (interpolSP(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
+			     &troot, shift, 0))
 		dorefine[nn] = MD_EVENT_NONE;
-	      else
-		t2arr[nn] = troot - t1;
+	      else 
+		{
+		  if (distsOld[nn] > 0.0)
+		    dorefine[nn] = MD_OUTIN_BARRIER;
+		  else
+		    dorefine[nn] = MD_INOUT_BARRIER;
+		  if (!valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
+		    dorefine[nn] = MD_EVENT_NONE;
+		  else
+		    t2arr[nn] = troot - t1;
+		}
 	    }
 	}
-    }
 #endif
-  tmin = 0;
-  gotcoll = 0;
-  for (nn = 0; nn < nbonds; nn++)
-    {
-      if (dorefine[nn]!=MD_EVENT_NONE)
+      tmin = 0;
+      gotcoll = 0;
+      for (nn = 0; nn < nbonds; nn++)
 	{
-	  MD_DEBUG30(printf("REFINE dorefine[%d]:%d\n", nn, dorefine[nn]));
-	  if (refine_contactSP(i, j, t1, t-delt, t2arr[nn], nn, shift, &troot))
+	  if (dorefine[nn]!=MD_EVENT_NONE)
 	    {
-	      //printf("[locate_contact] Adding collision between %d-%d\n", i, j);
-	      MD_DEBUG30(printf("[locate_contact_sp] Adding collision between %d-%d\n", i, j));
-	      MD_DEBUG30(printf("[locate_contact_sp] t=%.15G nn=%d\n", t, nn));
-	      MD_DEBUG30(printf("[locate_contact_sp] troot=%.15G\n", troot));
-	      MD_DEBUG(printf("[locate_contact_sp] its: %d\n", its));
-	      /* se il legame già c'è e con l'urto si forma tale legame allora
-	       * scarta tale urto */
-	      if (troot > t2 || troot < t1)
-#if 0
-		|| 
-		  (lastbump[i].mol == j && lastbump[j].mol==i && 
-		   lastbump[i].at == mapbondsa[nn]
-		   && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-20))
-#endif
-		     {
-		       MD_DEBUG31(printf("SP lastbump[%d].mol=%d lastbump[%d].at=%d lastbump[%d].mol=%d lastbump[%d].at=%d\n", i, lastbump[i].mol, i, lastbump[i].at, j, lastbump[j].mol, j, lastbump[j].at));
-		       //gotcoll = -1;
-		       continue;
-		     }
-	      else
+	      MD_DEBUG30(printf("REFINE dorefine[%d]:%d\n", nn, dorefine[nn]));
+	      if (refine_contactSP(i, j, t1, t-delt, t2arr[nn], nn, shift, &troot))
 		{
-		  gotcoll = 1;
-		  MD_DEBUG31(printf("SP *evtime=%.15G troot=%.15G troot-*evtime:%.15G\n", *evtime, troot, 
-				    troot-*evtime));
-		  if (*collCode == MD_EVENT_NONE || troot < *evtime)
+		  //printf("[locate_contact] Adding collision between %d-%d\n", i, j);
+		  MD_DEBUG30(printf("[locate_contact_sp] Adding collision between %d-%d\n", i, j));
+		  MD_DEBUG30(printf("[locate_contact_sp] t=%.15G nn=%d\n", t, nn));
+		  MD_DEBUG30(printf("[locate_contact_sp] troot=%.15G\n", troot));
+		  MD_DEBUG(printf("[locate_contact_sp] its: %d\n", its));
+		  /* se il legame già c'è e con l'urto si forma tale legame allora
+		   * scarta tale urto */
+		  if (troot > t2 || troot < t1)
+#if 0
+		    || 
+		      (lastbump[i].mol == j && lastbump[j].mol==i && 
+		       lastbump[i].at == mapbondsa[nn]
+		       && lastbump[j].at == mapbondsb[nn] && fabs(troot - lastcol[i]) < 1E-20))
+#endif
+			 {
+			   MD_DEBUG31(printf("SP lastbump[%d].mol=%d lastbump[%d].at=%d lastbump[%d].mol=%d lastbump[%d].at=%d\n", i, lastbump[i].mol, i, lastbump[i].at, j, lastbump[j].mol, j, lastbump[j].at));
+			   //gotcoll = -1;
+			   continue;
+			 }
+		  else
 		    {
-		      *ata = mapbondsa[nn];
-		      *atb = mapbondsb[nn];
-		      *evtime = troot;
-		      *collCode = dorefine[nn]; 
-		      MD_DEBUG31(printf("SP ok scheduling collision between %d-%d nn=%d\n", i, j, nn));
-		      MD_DEBUG31(printf("SP collcode=%d bound(i, j, nn):%d\n", *collCode, 
-					bound(i, j, mapbondsa[nn], mapbondsb[nn])));
+		      gotcoll = 1;
+		      MD_DEBUG31(printf("SP *evtime=%.15G troot=%.15G troot-*evtime:%.15G\n", *evtime, troot, 
+					troot-*evtime));
+		      if (*collCode == MD_EVENT_NONE || troot < *evtime)
+			{
+			  *ata = mapbondsa[nn];
+			  *atb = mapbondsb[nn];
+			  *evtime = troot;
+			  *collCode = dorefine[nn]; 
+			  MD_DEBUG31(printf("SP ok scheduling collision between %d-%d nn=%d\n", i, j, nn));
+			  MD_DEBUG31(printf("SP collcode=%d bound(i, j, nn):%d\n", *collCode, 
+					    bound(i, j, mapbondsa[nn], mapbondsb[nn])));
+			}
+		      continue;
 		    }
+		}
+	      else 
+		{
+		  MD_DEBUG(printf("[locate_contactSP] can't find contact point!\n"));
+#ifdef MD_INTERPOL
+		  if (!tocheck[nn])
+#endif
+		    mdPrintf(ALL,"[locate_contactSP] can't find contact point!\n",NULL);
+		  /* Se refine_contact fallisce deve cmq continuare a cercare 
+		   * non ha senso smettere...almeno credo */
+		  //gotcoll = -1;
 		  continue;
 		}
 	    }
-	  else 
-	    {
-	      MD_DEBUG(printf("[locate_contactSP] can't find contact point!\n"));
-#ifdef MD_INTERPOL
-	      if (!tocheck[nn])
-#endif
-		mdPrintf(ALL,"[locate_contactSP] can't find contact point!\n",NULL);
-	      /* Se refine_contact fallisce deve cmq continuare a cercare 
-	       * non ha senso smettere...almeno credo */
-	      //gotcoll = -1;
-	      continue;
-	    }
 	}
-    }
-  MD_DEBUG20(printf("[locateContactSP] - FINE\n");)
-  if (gotcoll == 1)
-    return 1;
-  else if (gotcoll == -1)
-    return 0;
-  if (fabs(d) > epsdFastR)
-    {
-      if (search_contact_fasterSP(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair,
-				  maxddot, maxddoti))
+      if (gotcoll == 1)
+	return 1;
+      else if (gotcoll == -1)
+	return 0;
+      if (fabs(d) > epsdFastR)
 	{
-	  MD_DEBUG30(printf("[search contact faster locate_contact_sp] d: %.15G\n", d));
-	  return 0;
-	}
+	  if (search_contact_fasterSP(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair,
+				      maxddot, maxddoti))
+	    {
+	      MD_DEBUG30(printf("[search contact faster locate_contact_sp] d: %.15G\n", d));
+	      return 0;
+	    }
 #if 1
-      dold = d;
-      assign_distsSP(dists, distsOld);
+	  dold = d;
+	  assign_distsSP(dists, distsOld);
 #else
-      dold = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
+	  dold = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
 #endif
-      firstaftsf = 1;
-      its++;
-      //itsS++;
-      continue;
-    }
-  dold = d;
-  MD_DEBUG30(printf("SP ==========>>>>> t=%.15G t2=%.15G\n", t, t2));
+	  firstaftsf = 1;
+	  its++;
+	  //itsS++;
+	  continue;
+	}
+      dold = d;
+      MD_DEBUG30(printf("SP ==========>>>>> t=%.15G t2=%.15G\n", t, t2));
 #ifndef MD_BASIC_DT
-  assign_distsSP(distsOld,  distsOld2);
+      assign_distsSP(distsOld,  distsOld2);
 #endif
-  assign_distsSP(dists, distsOld);
-  its++;
-  itsS++;
-}
-MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
-return 0;
+      assign_distsSP(dists, distsOld);
+      its++;
+      itsS++;
+    }
+  MD_DEBUG20(printf("[locateContactSP] - FINE\n"));
+  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+  return 0;
 }
 /* -------- >>> neighbour list stuff <<< --------- */
 double get_max_deldist_sp(int nsp, double distsOld[6][NA], double dists[6][NA])
