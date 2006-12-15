@@ -2849,9 +2849,9 @@ void writeAllCor(FILE* fs)
 	  rA[2] = rz[i];
 	  BuildAtomPos(i, rA, R[i], ratA);
 #ifdef EDHE_FLEX
-	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots; nn++)
+	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
 	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
-		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn].sigma*0.5);
+		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
 #else
 	  for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
 	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
