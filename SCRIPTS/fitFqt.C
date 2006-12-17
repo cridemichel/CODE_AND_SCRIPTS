@@ -77,6 +77,8 @@ Double_t fitFunctionExp(Double_t *x, Double_t* par)
 TF1 *fitFcn; 
 // type = 0 exponential
 // type = 1 stretched
+// type = 2 fa prima il fit esponenziale e poi usa i parametri ottenuti 
+// per il fit stretched
 void fitFqt(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
 {
   TFile *f = new TFile("basic.root","RECREATE");
@@ -84,7 +86,7 @@ void fitFqt(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
   TAxis *xax, *yax;
   Int_t npar;
   Double_t par[10], dx, dy;
-  Float_t minxXF, maxXF;
+  Float_t minXF, maxXF;
   Float_t minX, maxX, minY, maxY;
   c1->SetFillColor(33);
   c1->SetFrameFillColor(41);
@@ -114,27 +116,19 @@ void fitFqt(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
       minXF = minX;
       maxXF = maxX;
     }
-  if (type==0)
-    {
-      npar = 2;
-    }  
-  else
-    {
-      npar = 3;
-    }
-  if (type==0)
-    fitFcn = new TF1("fitFcn",fitFunctionExp, minXF, maxXF, npar);
-  else
-    fitFcn = new TF1("fitFcn",fitFunctionStreched, minXF, maxXF, npar);
-  // create a TF1 with the range from 0 to 3 and 6 parameters
+  fitFcn = new TF1("fitFcn",fitFunctionStreched, minXF, maxXF, 3);
+ // create a TF1 with the range from 0 to 3 and 6 parameters
   fitFcn->SetNpx(500);
   fitFcn->SetLineWidth(2);
   fitFcn->SetLineColor(kBlue);
   /* q=800 guess */
-  if (npar == 3)
-    fitFcn->SetParameters(1.0,1.0,1.0);
-  else
-    fitFcn->SetParameters(1.0,1.0);
+  fitFcn->SetParLimits(2,minXF, maxXF);
+  fitFcn->SetParameters(1.0,1.0,1.0);
+  if (type==0||type==2)
+    fitFcn->FixParameter(2,1.0); 
+  else 
+    fitFcn->SetParLimits(2,0.01,2.2);
+	
 #endif
   //fitFcn->Draw();
   //h2->Fit("fitFcn");
@@ -142,12 +136,10 @@ void fitFqt(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
   //h2->SetMarkerSize(0.8);
   // writes the fit results into the par array
   //fitFcn->GetParameters(par);
+  gStyle->SetOptFit(1111);	
   grafico->SetLineWidth(3); 
   grafico->SetMarkerStyle(21); 
   grafico->SetLineColor(2); 
-  //use a TProfile to convert the 2-d to 1-d problem
-  //TProfile *prof = h2->ProfileX();
-  //prof->Fit("fitFcn");
   Double_t dx = 5*(maxX-minX)/100;
   Double_t dy = 5*(maxY-minY)/100;
 #if 1
@@ -162,13 +154,22 @@ void fitFqt(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
   h2->Draw();
 #endif
   grafico->Fit("fitFcn", "R");
+
+  if (type==2)
+    {
+      fitFcn->GetParameters(par);
+      fitFcn->SetParameters(par[0],par[1],1.0);
+      fitFcn->SetParLimits(2,0.01,2.2);
+      grafico->Fit("fitFcn", "R");
+    }
   grafico->Draw("PL");
+
  //prof->Draw("same");
   //prof->SetStats(kFALSE);
   //fitFcn->Draw("same");
   // draw the legend
 #if 1
-  TLegend *legend = new TLegend(0.6,0.65,0.88,0.85);
+  TLegend *legend = new TLegend(0.6,0.45,0.88,0.65);
   legend->SetTextFont(72);
   legend->SetTextSize(0.04);
   legend->AddEntry(grafico,"Data","lp");
