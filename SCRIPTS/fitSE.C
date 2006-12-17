@@ -184,6 +184,7 @@ void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
     }
   grafico->Draw("PL");
 
+  printf("CHISQUARE: %.15G PROB: %.15G\n", fitFcn->GetChisquare(), fitFcn->GetProb());
  //prof->Draw("same");
   //prof->SetStats(kFALSE);
   //fitFcn->Draw("same");
