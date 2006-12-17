@@ -79,7 +79,7 @@ TF1 *fitFcn;
 // type = 1 stretched
 // type = 2 fa prima il fit esponenziale e poi usa i parametri ottenuti 
 // per il fit stretched
-void fitFqt(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
+void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
 {
   TFile *f = new TFile("basic.root","RECREATE");
   c1 = new TCanvas("c1","fit with stretched exponential",10,10,700,500);
@@ -94,6 +94,13 @@ void fitFqt(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
   if (fileName==NULL)
     {
       printf("You have to supply the filename!\n");
+      printf("Usage: root.exe 'fitSE(<filename>,<type>,<beg>,<end>)\n");
+      printf("<filename>: file containing data to fit\n");
+      printf("<type>: 0 = exponential fit, 1 = stretched exp fit, 2 = fit with exp and use result to fit with stretched exp\n");
+      printf("<beg>: start of subrange to fit\n");
+      printf("<end>: end of subrange to fit\n");
+      printf("if <beg> and <end> are omitted then use all points\n");
+      printf("if <beg> = <end> then start fitting from <beg>\n");  
       exit(-1);
     }
   //printf("fileName=%s\n", fileName);
