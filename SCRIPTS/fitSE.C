@@ -131,6 +131,11 @@ void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
       minXF = beg;
       maxXF = maxX;
     }
+  else if (beg != 0.0 && end != 0.0)
+    {
+      minXF = beg;
+      maxXF = end;
+    }
   else
     {
       minXF = minX;
