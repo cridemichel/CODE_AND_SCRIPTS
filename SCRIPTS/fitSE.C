@@ -8,6 +8,7 @@ TH2F *h2;
 TNtuple *ntuple = new TNtuple("ntuple","data from ascii file","x:y");
 TCanvas *c1;
 TGraph *grafico;
+Int_t autox=0, autoy=0, hXpnts=100000, hYpnts=10;
 TGraph* readascii(char* name, Float_t *minX, Float_t *maxX, Float_t *minY, Float_t *maxY)
 {
   //   example of macro to read data from an ascii file and
@@ -65,7 +66,17 @@ TGraph* readascii(char* name, Float_t *minX, Float_t *maxX, Float_t *minY, Float
     }
   Double_t dx = 5*(*maxX-*minX)/100;
   Double_t dy = 5*(*maxY-*minY)/100;
-  h2 = new TH2F("h2","fit",1000,(*minX-dx),(*maxX+dx), 1000, (*minY-dy), (*maxY+dy));
+#if 1
+  if (autox == -1)
+    hXpnts = (int)((*maxX - *minX)/ fabs(*minX));
+  if (autoy == -1)
+    hYpnts = (int)((*maxY - *minY)/ fabs(*minY));
+  if (autox > 0)
+    hXpnts = autox;
+  if (autoy > 0)
+    hYpnts = autoy;
+  h2 = new TH2F("h2","fit",hXpnts,(*minX-dx),(*maxX+dx), hYpnts, (*minY-dy), (*maxY+dy));
+#endif
   //for (i=0; i < nlines; i++)
   //  {
   //    h2->Fill(xarr[i],yarr[i]);
@@ -92,7 +103,7 @@ TF1 *fitFcn;
 // type = 1 stretched
 // type = 2 fa prima il fit esponenziale e poi usa i parametri ottenuti 
 // per il fit stretched
-void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
+void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0, Int_t xpoints=0, Int_t ypoints=0)
 {
   TFile *f = new TFile("basic.root","RECREATE");
   c1 = new TCanvas("c1","fit with stretched exponential",10,10,700,500);
@@ -104,6 +115,8 @@ void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
   c1->SetFillColor(33);
   c1->SetFrameFillColor(41);
   c1->SetGrid();
+  autox = xpoints;
+  autoy = ypoints;
   if (fileName==NULL)
     {
       printf("You have to supply the filename!\n");
@@ -167,7 +180,7 @@ void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0)
   grafico->SetLineColor(2); 
   Double_t dx = 5*(maxX-minX)/100;
   Double_t dy = 5*(maxY-minY)/100;
-#if 1
+#if 0
   yax = h2->GetYaxis();
   yax->SetRangeUser(minY-dy,maxY+dy);
   xax = h2->GetXaxis();
