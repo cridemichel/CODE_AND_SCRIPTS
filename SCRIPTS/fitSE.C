@@ -12,15 +12,16 @@ TGraph* readascii(char* name, Float_t *minX, Float_t *maxX, Float_t *minY, Float
 {
   //   example of macro to read data from an ascii file and
   //   create a root file with an histogram and an ntuple.
-  ifstream in;
+  //ifstream in;
   // we assume a file basic.dat in the current directory
   // this file has 3 columns of float data
-  in.open(name);
+  //in.open(name);
   printf("reading: %s\n", name);
   Float_t *xarr, *yarr, erry, avg;
   Float_t x, y, foo;
   Int_t nlines = 0, i;
 
+#if 0
   while (1) {
     in >> x >> y >> foo;
     if (!in.good()) break;
@@ -28,6 +29,18 @@ TGraph* readascii(char* name, Float_t *minX, Float_t *maxX, Float_t *minY, Float
     ntuple->Fill(x,y);
     nlines++;
   }
+#else
+  FILE *f;
+  char dummy[4096];
+  f=fopen(name,"r");
+  while (!feof(f))
+    {
+      fscanf(f, "%f %f %[^\n]\n", &x, &y, &dummy);
+      ntuple->Fill(x,y);
+      nlines++;
+    }
+  fclose(f);
+#endif
   xarr = new Float_t[nlines];
   yarr = new Float_t[nlines];
   ntuple->SetBranchAddress("x", &x);
@@ -52,7 +65,7 @@ TGraph* readascii(char* name, Float_t *minX, Float_t *maxX, Float_t *minY, Float
     }
   Double_t dx = 5*(*maxX-*minX)/100;
   Double_t dy = 5*(*maxY-*minY)/100;
-  h2 = new TH2F("h2","fit demo ",1000,(*minX-dx),(*maxX+dx), 1000, (*minY-dy), (*maxY+dy));
+  h2 = new TH2F("h2","fit",1000,(*minX-dx),(*maxX+dx), 1000, (*minY-dy), (*maxY+dy));
   //for (i=0; i < nlines; i++)
   //  {
   //    h2->Fill(xarr[i],yarr[i]);
@@ -61,7 +74,7 @@ TGraph* readascii(char* name, Float_t *minX, Float_t *maxX, Float_t *minY, Float
   printf(" found %d pointsn (min=%.15G max=%.15G miny=%.15G maxy=%.15G dx=%f dy=%f)\n",nlines, 
 	 *minX, *maxX, *minY, *maxY, dx, dy);
 
-  in.close();
+  //in.close();
   return grafico;
 }
 
