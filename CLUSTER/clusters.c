@@ -661,7 +661,7 @@ void parse_params(int argc, char** argv)
       else if (!strcmp(argv[cc],"--ptype") || !strcmp(argv[cc],"-pt" ))
 	{
 	  cc++;
-          if (cc = argc)
+          if (cc == argc)
 	     print_usage();
 	  mix_type = atoi(argv[cc]);
 	}
