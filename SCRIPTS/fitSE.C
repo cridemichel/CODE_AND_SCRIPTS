@@ -120,11 +120,16 @@ void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0, 
   if (fileName==NULL)
     {
       printf("You have to supply the filename!\n");
-      printf("Usage: root.exe 'fitSE(<filename>,<type>,<beg>,<end>)\n");
+      printf("Usage: root.exe 'fitSE(<filename>,<type>,<beg>,<end>,<xpnts>,<ypnts>)\n");
       printf("<filename>: file containing data to fit\n");
       printf("<type>: 0 = exponential fit, 1 = stretched exp fit, 2 = fit with exp and use result to fit with stretched exp\n");
       printf("<beg>: start of subrange to fit\n");
       printf("<end>: end of subrange to fit\n");
+      printf("<xpnts>: number of points along x-axis for histogram mesh\n");
+      printf("<ypnts>: number of points along y-axis for histogram mesh\n");
+      printf("<xpnts> and <ypnts> can be set to -1 if one wants the program to automagically\n");
+      printf("calculate the best value in order to have all points in a logarithm plot\n");
+      printf("a value > 0 indicates the exact number of points to use and 0 means use hard coded defaults\n"); 
       printf("if <beg> and <end> are omitted then use all points\n");
       printf("if <beg> = <end> then start fitting from <beg>\n");  
       exit(-1);
