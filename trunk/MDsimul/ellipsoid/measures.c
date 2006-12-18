@@ -33,7 +33,9 @@ extern double W, K, WC, T1xx, T1yy, T1zz, Ktra, Krot,
   WCxx, WCyy, WCzz, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, 
   Patxy, Patyz, Patzx, Patxx, Patyy, Patzz;  
-
+#ifdef EDHE_FLEX
+extern int *bondscache, *numbonds, **bonds;
+#endif
 /* used by linked list routines */
 extern int *head, *list, *map;  /* arrays of integer */
 extern int NCell, mapSize, M;
@@ -57,6 +59,9 @@ double calcpotene(void)
 {
   double Epot; 
   int na;
+#ifdef EDHE_FLEX
+  int kk2, jj, kk, jj2, aa, bb;
+#endif
 #if 0
   double shift[NDIM];
   int cellRangeEne[2 * NDIM];
@@ -131,7 +136,28 @@ double calcpotene(void)
     }
 #else
  for (na = 0; na < Oparams.parnum; na++)
-    Epot -= numbonds[na];
+   {
+#ifdef EDHE_FLEX
+     for (kk=0; kk < numbonds[na]; kk++)
+       {
+	 jj = bonds[na][kk]/(NA*NA);
+	 jj2 = bonds[na][kk]%(NA*NA);
+	 aa = jj2 / NA;
+	 bb = jj2 % NA;
+	 for (kk2 = 0; kk2 < Oparams.ninters; kk2++)
+	   {
+	     if ( (intersArr[kk2].type1 == na && intersArr[kk2].type2 == jj &&
+		   intersArr[kk2].spot1 == aa-1 && intersArr[kk2].spot2 == bb-1) || 
+		  (intersArr[kk2].type1 == jj && intersArr[kk2].type2 == na &&
+		   intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
+	       Epot -= intersArr[kk2].bheight;
+	   }
+       }
+     //Epot -= numbonds[na];
+#else
+     Epot -= numbonds[na];
+#endif
+   }
 #endif
  return 0.5*Epot;
 }
