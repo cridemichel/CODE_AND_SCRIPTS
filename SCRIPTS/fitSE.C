@@ -8,7 +8,7 @@ TH2F *h2;
 TNtuple *ntuple = new TNtuple("ntuple","data from ascii file","x:y");
 TCanvas *c1;
 TGraph *grafico;
-Int_t autox=0, autoy=0, hXpnts=100000, hYpnts=10;
+Int_t logx=0, logy=0, hXpnts=100, hYpnts=100, autox=100, autoy=100;
 TGraph* readascii(char* name, Float_t *minX, Float_t *maxX, Float_t *minY, Float_t *maxY)
 {
   //   example of macro to read data from an ascii file and
@@ -64,23 +64,31 @@ TGraph* readascii(char* name, Float_t *minX, Float_t *maxX, Float_t *minY, Float
       if (i==0 || y > *maxY)
 	*maxY = y;
     }
-  Double_t dx = 5*(*maxX-*minX)/100;
-  Double_t dy = 5*(*maxY-*minY)/100;
+  Double_t dx, dy;
+  if (logx)
+    {
+      dx = 5.0*(*minX/100.0); 
+    }
+  else  
+    {
+      dx = 5.0*(*maxX-*minX)/100.0;
+    }
+  if (logy)
+    {
+      dy = 5.0*(*minY/100.0);
+    }
+  else
+    {
+      dy = 5.0*(*maxY-*minY)/100.0;
+    }
+
 #if 1
-  if (autox == -1)
-    hXpnts = (int)((*maxX - *minX)/ fabs(*minX));
-  if (autoy == -1)
-    hYpnts = (int)((*maxY - *minY)/ fabs(*minY));
   if (autox > 0)
     hXpnts = autox;
   if (autoy > 0)
     hYpnts = autoy;
-  h2 = new TH2F("h2","fit",hXpnts,(*minX-dx),(*maxX+dx), hYpnts, (*minY-dy), (*maxY+dy));
 #endif
-  //for (i=0; i < nlines; i++)
-  //  {
-  //    h2->Fill(xarr[i],yarr[i]);
-  //  }
+  h2 = new TH2F("h2","fit",hXpnts,(*minX-dx),(*maxX+dx), hYpnts, (*minY-dy), (*maxY+dy));
   grafico = new TGraph(nlines, xarr, yarr);
   printf(" found %d pointsn (min=%.15G max=%.15G miny=%.15G maxy=%.15G dx=%f dy=%f)\n",nlines, 
 	 *minX, *maxX, *minY, *maxY, dx, dy);
@@ -103,7 +111,8 @@ TF1 *fitFcn;
 // type = 1 stretched
 // type = 2 fa prima il fit esponenziale e poi usa i parametri ottenuti 
 // per il fit stretched
-void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0, Int_t xpoints=0, Int_t ypoints=0)
+void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0, Int_t llogx=0, Int_t llogy=0,
+	   Int_t xpnts=-1, Int_t ypnts=-1)
 {
   TFile *f = new TFile("basic.root","RECREATE");
   c1 = new TCanvas("c1","fit with stretched exponential",10,10,700,500);
@@ -112,24 +121,31 @@ void fitSE(char *fileName=NULL, Int_t type=0, Float_t beg=0.0, Float_t end=0.0, 
   Double_t par[10], dx, dy;
   Float_t minXF, maxXF;
   Float_t minX, maxX, minY, maxY;
+  if (llogx)
+    gPad->SetLogx(1);
+  if (llogy)
+    gPad->SetLogy(1);
+
   c1->SetFillColor(33);
   c1->SetFrameFillColor(41);
   c1->SetGrid();
-  autox = xpoints;
-  autoy = ypoints;
+  logx = llogx;
+  logy = llogy;
+  ;autox = xpnts;
+  autoy = ypnts;
   if (fileName==NULL)
     {
       printf("You have to supply the filename!\n");
-      printf("Usage: root.exe 'fitSE(<filename>,<type>,<beg>,<end>,<xpnts>,<ypnts>)\n");
+      printf("Usage: root.exe 'fitSE(<filename>,<type>,<beg>,<end>,<logx>,<logy>,<xpnts>,<ypnts>)\n");
       printf("<filename>: file containing data to fit\n");
       printf("<type>: 0 = exponential fit, 1 = stretched exp fit, 2 = fit with exp and use result to fit with stretched exp\n");
       printf("<beg>: start of subrange to fit\n");
       printf("<end>: end of subrange to fit\n");
+      printf("<logx>: 1 log scale for x-axis 0 = linear\n");
+      printf("<logy>: 1 log scale for y-axis 0 = linear\n");
       printf("<xpnts>: number of points along x-axis for histogram mesh\n");
       printf("<ypnts>: number of points along y-axis for histogram mesh\n");
-      printf("<xpnts> and <ypnts> can be set to -1 if one wants the program to automagically\n");
-      printf("calculate the best value in order to have all points in a logarithm plot\n");
-      printf("a value > 0 indicates the exact number of points to use and 0 means use hard coded defaults\n"); 
+      printf("<xpnts> and <ypnts> affect the zoom\n");
       printf("if <beg> and <end> are omitted then use all points\n");
       printf("if <beg> = <end> then start fitting from <beg>\n");  
       exit(-1);
