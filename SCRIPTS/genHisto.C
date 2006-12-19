@@ -45,7 +45,7 @@ TNtuple* readascii(char* name, Int_t *nlines)
   return ntuple;
 }
 
-void genHisto(char *fileName=NULL, Int_t nbins=100, Int_t minx=-1, Int_t maxx=-1, Int_t col=0)
+void genHisto(char *fileName=NULL, Int_t nbins=100, Int_t minx=-1, Int_t maxx=-1)
 {
   TNtuple *ntuple; 
   TFile *f = new TFile("basic.root","RECREATE");
@@ -61,13 +61,11 @@ void genHisto(char *fileName=NULL, Int_t nbins=100, Int_t minx=-1, Int_t maxx=-1
   if (fileName==NULL)
     {
       printf("You have to supply the filename!\n");
-      printf("Usage: root.exe 'getHisto(<filename>,<logx>,<logy>,<xpnts>,<ypnts>)\n");
+      printf("Usage: root.exe 'getHisto(<filename>,<nbins>,<minx>,<maxy>)\n");
       printf("<filename>: file containing data to fit\n");
-      printf("<logx>: 1 log scale for x-axis 0 = linear\n");
-      printf("<logy>: 1 log scale for y-axis 0 = linear\n");
-      printf("<xpnts>: number of points along x-axis for histogram mesh\n");
-      printf("<ypnts>: number of points along y-axis for histogram mesh\n");
-      printf("<xpnts> and <ypnts> affect the zoom\n");
+      printf("<nbins>: number of bins\n");
+      printf("<minx>: minimum x for binning\n");
+      printf("<maxx>: maximum x for binning\n");
       exit(-1);
     }
   //printf("fileName=%s\n", fileName);
@@ -101,19 +99,23 @@ void genHisto(char *fileName=NULL, Int_t nbins=100, Int_t minx=-1, Int_t maxx=-1
     h1->Fill(xarr[i]);
  
   //h1->SetStats(kFALSE);
-  h1->Draw();
+  h1->SetFillColor(kRed);
+  //gStyle->SetHistLineColor(4);
+  h1->Draw("bar3");
   
   c1->cd(2);	 
   h2 = new TH1F("Phi2","Histogram", nbins, minx, maxx);
   for (i = 0; i < nlines; i++)
     h2->Fill(yarr[i]);
-  h2->Draw(); 
+  h2->SetFillColor(kGreen);
+  //gStyle->SetHistLineColor(6);
+  h2->Draw("bar3"); 
 #if 1
   TLegend *legend = new TLegend(0.8,0.45,1.0,0.65);
   legend->SetTextFont(72);
   legend->SetTextSize(0.04);
-  legend->AddEntry(Phi1,"Phi1","lp");
-  legend->AddEntry(Phi2,"Phi2","l");
+  legend->AddEntry(Phi1,"Phi1");
+  legend->AddEntry(Phi2,"Phi2");
   legend->Draw();
 #endif
   f->Write();
