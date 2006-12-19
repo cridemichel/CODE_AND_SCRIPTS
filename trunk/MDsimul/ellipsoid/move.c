@@ -5684,7 +5684,9 @@ double estimate_tmin(double t, int na, int nb)
   return tmin;
 }
 #endif
-
+#ifdef EDHE_FLEX
+extern void check_these_bonds(int i, int j, double *shift, double t);
+#endif
 void PredictEvent (int na, int nb) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -6030,6 +6032,8 @@ void PredictEvent (int na, int nb)
 			{
 			  collCode = MD_EVENT_NONE;
 			}
+		      MD_DEBUG20(if (collCode!=MD_EVENT_NONE) printf("na=%d ac=%d n=%d bc=%d\n", na, ac, n, bc));
+		      MD_DEBUG20(if (collCode!=MD_EVENT_NONE) check_these_bonds(na, n, shift, evtime));
 #else
 		      if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
 							(na >= Oparams.parnumA && n < Oparams.parnumA)))
