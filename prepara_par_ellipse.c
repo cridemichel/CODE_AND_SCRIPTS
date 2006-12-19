@@ -141,7 +141,7 @@ int main(int argc, char **argv){
   if((stepnum/Nsave)>100) printf("energyCalc: %d\n",stepnum/Nsave);
   else printf("energyCalc: 100\n");
   printf("energyName: energy-\n");
-  printf("tempSteps: 10000\n");
+  printf("tempSteps: 100\n");
   printf("tempName: temp-\n");
 
   printf("DtrSteps: 0\n");

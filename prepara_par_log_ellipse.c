@@ -44,6 +44,8 @@ int main(int argc, char **argv){
 #endif
 
 #ifdef _DISSIPATION
+  restitution=_DISSIPATION;
+  tC=1.0e-5;
   printf("partDiss: %lf\n",restitution);
   printf("tc: %lf\n",tC);
 #endif
@@ -144,7 +146,7 @@ int main(int argc, char **argv){
   printf("tapeTimes: 0\n");
   printf("energyCalc: 100\n");
   printf("energyName: energy-\n");
-  printf("tempSteps: 10000\n");
+  printf("tempSteps: 100\n");
   printf("tempName: temp-\n");
 
   printf("DtrSteps: 0\n");
