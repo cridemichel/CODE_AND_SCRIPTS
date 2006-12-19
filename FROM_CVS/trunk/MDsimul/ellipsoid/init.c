@@ -165,6 +165,48 @@ void vectProd(COORD_TYPE r1x, COORD_TYPE r1y, COORD_TYPE r1z,
 
 #ifdef MD_PATCHY_HE
 extern void check_shift(int i, int j, double *shift);
+#ifdef EDHE_FLEX
+void check_these_bonds(int i, int j, double *shift, double t)
+{
+  int amin, warn, bmin, nbonds, nn;
+  double dist;
+  assign_bond_mapping(i,j);
+
+  printf(">>>>>>>>>>QUI\n");
+  dist = calcDistNegSP(t, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+  for (nn=0; nn < nbonds; nn++)
+    {
+      if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
+	  && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+	// && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
+	{
+	  warn=1;
+	  MD_DEBUG31(
+		     //printf("dists[1]:%.15G\n", dists[1]);
+		     printf("[dist<0]dists[%d]:%.15G\n", nn, dists[nn]);
+		     printf("i=%d j=%d %d %d\n", i, j, mapbondsa[nn], mapbondsb[nn]);
+		     printf("NA*NA*i+a*NA+b=%d\n", NA*NA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
+		    )
+	}
+      else if (dists[nn]>0.0 && 
+	       fabs(dists[nn])> OprogStatus.epsd && 
+	       bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+	{
+	  warn = 2;
+	  printf("[PredictEvent]wrong number of bonds between %d(%d) and %d(%d) nbonds=%d nn=%d\n",
+		 i, mapbondsa[nn], j, mapbondsb[nn], nbonds, nn);
+	  printf("sigmaSticky=%f dist=%.15G\n", 0.5*(typesArr[typeOfPart[i]].spots[mapbondsa[nn]-1].sigma+typesArr[typeOfPart[j]].spots[mapbondsb[nn]-1].sigma),
+		 dists[nn]);
+	  exit(-1);	
+	}
+    }
+}
+#endif
 void check_all_bonds(void)
 {
   int nn, warn, amin, bmin, i, j, nb, nbonds;
@@ -238,9 +280,11 @@ void check_all_bonds(void)
 		    {
 		      if (i == j)
 			continue;
+#ifndef EDHE_FLEX
 		      if (! ((i < Oparams.parnumA && j >= Oparams.parnumA)||
 			     (i >= Oparams.parnumA && j < Oparams.parnumA)))
 			  continue;
+#endif
 		      check_shift(i, j, shift);
 		      assign_bond_mapping(i,j);
 		      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
@@ -276,7 +320,9 @@ void check_all_bonds(void)
 				   bound(i,j,mapbondsa[nn], mapbondsb[nn]))
 			    {
 			      warn = 2;
-			      printf("wrong number of bonds between %d and %d\n", i, j);
+			      printf("wrong number of bonds between %d(%d) and %d(%d) nbonds=%d nn=%d\n",
+				     i, mapbondsa[nn], j, mapbondsb[nn], nbonds, nn);
+
 			      //printf("[dist>0]dists[%d]:%.15G\n", nn, dists[nn]);
 			      if (OprogStatus.checkGrazing==1)
 				{
@@ -2653,6 +2699,7 @@ void usrInitAft(void)
 	shift[2] = L*rint(drz/L);
 	assign_bond_mapping(i, j);
 	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+//	    printf("i(%d,%d)-j(%d,%d) dists=%.15G\n", i, mapbondsa[nn], j, mapbondsb[nn], dists[nn]);
 	NPB = get_num_pbonds(i, j);
 	//\printf("NPB=%d\n", NPB);
 	for (nn=0; nn < NPB; nn++)

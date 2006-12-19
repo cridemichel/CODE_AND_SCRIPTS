@@ -326,7 +326,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
   MD_DEBUG20(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   /* qui calcolo il punto di contatto */
-  MD_DEBUG20(printf("ata: %d atb: %d\n", ata, atb));
+  MD_DEBUG20(printf("i=%d ata: %d j=%d atb: %d\n", i, ata, j, atb));
   MD_DEBUG20(printf("rA %f %f %f\n", rA[0], rA[1], rA[2]));
   MD_DEBUG20(printf("rB %f %f %f\n", rB[0], rB[1], rB[2]));
   BuildAtomPosAt(i, ata, rA, R[i], ratA);
@@ -726,6 +726,7 @@ void assign_bond_mapping(int i, int j)
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
   a=0;
+  MD_DEBUG20(printf("type(%d)=%d type(%d)%d\n", i, type1, j, type2));
   for (ni=0; ni < Oparams.ninters; ni++)
     {
       if (intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2)
@@ -738,6 +739,10 @@ void assign_bond_mapping(int i, int j)
           mapBhoutFlex[a] = intersArr[ni].bhout;
           mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
 				 + typesArr[type2].spots[intersArr[ni].spot2].sigma);
+	  MD_DEBUG20(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
+	  MD_DEBUG20(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
+			    typesArr[type2].spots[intersArr[ni].spot2].sigma));
+	  MD_DEBUG20(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
 	  a++;
 	}	
       else if (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1)
@@ -748,8 +753,12 @@ void assign_bond_mapping(int i, int j)
 	  mapBheightFlex[a] = intersArr[ni].bheight;
 	  mapBhinFlex[a] = intersArr[ni].bhin;
           mapBhoutFlex[a] = intersArr[ni].bhout;
-          mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
-				 + typesArr[type2].spots[intersArr[ni].spot2].sigma);
+          mapSigmaFlex[a] = 0.5*(typesArr[type2].spots[intersArr[ni].spot1].sigma
+				 + typesArr[type1].spots[intersArr[ni].spot2].sigma);
+	  MD_DEBUG20(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
+	  MD_DEBUG20(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
+			    typesArr[type2].spots[intersArr[ni].spot2].sigma));
+	  MD_DEBUG20(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
 	  a++;
 	}
     }
@@ -1005,7 +1014,8 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
 #ifdef EDHE_FLEX
       dists[nn] = dist = sqrt(distSq) - mapSigmaFlex[nn];
-      //MD_DEBUG20(printf("dists[%d]:%.15G\n", nn, dists[nn]);)
+      MD_DEBUG20(printf("dists[%d]:%.15G mapSigmaFlex[]:%f\n", nn, dists[nn], mapSigmaFlex[nn]));
+      MD_DEBUG20(printf("mapbondsa[%d]:%d mapbondsb[%d]:%d\n", nn, mapbondsb[nn], nn, mapbondsb[nn])); 
 #else
       dists[nn] = dist = sqrt(distSq) - Oparams.sigmaSticky;
 #endif     
