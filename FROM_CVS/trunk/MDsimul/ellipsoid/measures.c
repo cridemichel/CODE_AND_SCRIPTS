@@ -6,7 +6,7 @@
    NOTE: The box edge length is unity, so every length must be referred to 
          the this quantity.
 */
-
+#define MD_DEBUG21(x)
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 #ifdef MPI
 extern int my_rank;
@@ -135,29 +135,34 @@ double calcpotene(void)
 	}
     }
 #else
- for (na = 0; na < Oparams.parnum; na++)
-   {
+  MD_DEBUG21(printf("BEGIN\n"));
+  for (na = 0; na < Oparams.parnum; na++)
+    {
 #ifdef EDHE_FLEX
-     for (kk=0; kk < numbonds[na]; kk++)
-       {
-	 jj = bonds[na][kk]/(NA*NA);
-	 jj2 = bonds[na][kk]%(NA*NA);
-	 aa = jj2 / NA;
-	 bb = jj2 % NA;
-	 for (kk2 = 0; kk2 < Oparams.ninters; kk2++)
-	   {
-	     if ( (intersArr[kk2].type1 == na && intersArr[kk2].type2 == jj &&
-		   intersArr[kk2].spot1 == aa-1 && intersArr[kk2].spot2 == bb-1) || 
-		  (intersArr[kk2].type1 == jj && intersArr[kk2].type2 == na &&
-		   intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
-	       Epot -= intersArr[kk2].bheight;
-	   }
-       }
-     //Epot -= numbonds[na];
+      for (kk=0; kk < numbonds[na]; kk++)
+	{
+	  jj = bonds[na][kk]/(NA*NA);
+	  jj2 = bonds[na][kk]%(NA*NA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  for (kk2 = 0; kk2 < Oparams.ninters; kk2++)
+	    {
+	      if ( (intersArr[kk2].type1 == na && intersArr[kk2].type2 == jj &&
+		    intersArr[kk2].spot1 == aa-1 && intersArr[kk2].spot2 == bb-1) || 
+		   (intersArr[kk2].type1 == jj && intersArr[kk2].type2 == na &&
+		    intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
+		{
+		  MD_DEBUG21(printf("(%d,%d)-(%d,%d) height=%.15G\n", na, aa-1, jj, bb-1, intersArr[kk2].bheight));
+		  Epot -= intersArr[kk2].bheight;
+		}		 
+	    }
+	}
+      //Epot -= numbonds[na];
 #else
-     Epot -= numbonds[na];
+      Epot -= numbonds[na];
 #endif
-   }
+    }
+  MD_DEBUG21(printf("END\n"));
 #endif
  return 0.5*Epot;
 }
