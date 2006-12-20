@@ -160,15 +160,33 @@ int main(int argc, char **argv)
   //////////////////////////////////////////////////////////////////
   //adjust parameters
   //////////////////////////////////////////////////////////////////
+  string junk_s;
+
+#ifdef _LOG_SAVING
+  /* logarithmic saving of configurations */
+  double Tau(1); search_token("--Tau",Tau);
+  int NTau(10); search_token("--NTau",NTau);
+  storerate = Dt;
+  stepnum   = NTau*static_cast<int>( ceil(Tau/Dt) );
+  NN        = static_cast<int>( ceil( log(Tau/storerate) / log(base) ) );
+#else
+  /* linear saving of configurations */
+  int Nsave(1000); search_token("--Nsave",Nsave);
+  if(stepnum<Nsave) Nsave=1+stepnum/10;
+  storerate=(stepnum*Dt)/(double)Nsave;
+#endif
   
   parnumA=parnum; // only 1 species
 
- 
+  if ( search_token("--elastic",junk_s) ) {partDiss=1.0; tc=0.0;}
+  
   // if a newconf, should be very diluted 
-  int NewConf; if(search_token("--NewConf",NewConf)){
+  if(search_token("--NewConf",junk_s)){
     inifile="*"; 
     rescaleTime=0.1;
     scalevel=1;
+    stepnum=100; storerate=stepnum*Dt/2.0;
+    partDiss=1.0; tc=0.0;
     cout <<"L: "<<60.2*pow((double)parnum/(double)256,1./3.)<<endl;
   }  
 
@@ -185,19 +203,6 @@ int main(int argc, char **argv)
   rcut = 1.01*diagNN; // If I don't use neighbour lists, change this!!
 
 
-#ifdef _LOG_SAVING
-  /* logarithmic saving of configurations */
-  double Tau(1); search_token("--Tau",Tau);
-  int NTau(10); search_token("--NTau",NTau);
-  storerate = Dt;
-  stepnum   = NTau*static_cast<int>( ceil(Tau/Dt) );
-  NN        = static_cast<int>( ceil( log(Tau/storerate) / log(base) ) );
-#else
-  /* linear saving of configurations */
-  int Nsave(1000); search_token("--Nsave",Nsave);
-  if(stepnum<Nsave) Nsave=1+stepnum/10;
-  storerate=(stepnum*Dt)/(double)Nsave;
-#endif
 
   //////////////////////////////////////////////////////////////////
   //write the parameters
@@ -234,8 +239,10 @@ int main(int argc, char **argv)
   cout<<"rotMSDName: "<<rotMSDName<<endl; 
   //  cout<<"VName: "<<VName<<endl; 
   //  cout<<"VSteps: "<<VSteps<<endl; 
-  cout<<"partDiss: "<<partDiss<<endl; 
-  cout<<"tc: "<<tc<<endl; 
+  if(partDiss<1.0&&partDiss>0.0){ 
+	cout<<"partDiss: "<<partDiss<<endl; 
+  	cout<<"tc: "<<tc<<endl;
+  }	
   cout<<"h: "<<h<<endl; 
   cout<<"epsd: "<<epsd<<endl; 
   cout<<"epsdFast: "<<epsdFast<<endl; 
