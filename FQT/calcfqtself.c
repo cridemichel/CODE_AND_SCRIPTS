@@ -469,7 +469,7 @@ int main(int argc, char **argv)
 	{
 	  fscanf(f, "%[^\n]\n", line);
 	  isperc = atoi(strtok(line," "));
-	  while (!(pnum=strtok(NULL," ")))
+	  while (pnum=strtok(NULL," "))
 	    {
 	      if (isperc)
 		isPercPart[atoi(pnum)] = 1; 
