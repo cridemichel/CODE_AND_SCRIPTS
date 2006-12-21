@@ -318,11 +318,15 @@ int main(int argc, char **argv)
     }
   if (clusters)
     {
-      sprintf(cluststr,"%s.clusters",fname[nr1]);
+      sprintf(cluststr,"%s.clusters",fname[0]);
       isPercPart = malloc(sizeof(int)*NP);
       for (i=0; i < NP; i++)
 	isPercPart[i] = -1;
-      f = fopen(cluststr, "r");
+      if (!(f = fopen(cluststr, "r")))
+	{
+	  printf("I can not open %s file...\n", cluststr);
+	  exit(-1);
+	}
       while (!feof(f))
 	{
 	  fscanf(f, "%[^\n]\n", line);
