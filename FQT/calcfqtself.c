@@ -459,7 +459,12 @@ int main(int argc, char **argv)
       isPercPart = malloc(sizeof(int)*NP);
       for (i=0; i < NP; i++)
 	isPercPart[i] = -1;
-      f = fopen(cluststr, "r");
+      if (!(f = fopen(cluststr, "r")))
+	{
+	  printf("I can not open %s file...\n", cluststr);
+	  exit(-1);
+	}
+
       while (!feof(f))
 	{
 	  fscanf(f, "%[^\n]\n", line);
