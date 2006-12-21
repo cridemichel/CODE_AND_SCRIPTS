@@ -1,6 +1,12 @@
+#ifdef MGL_MACOS
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#include <GLUT/glut.h>
+#else
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -73,7 +79,6 @@ void myinit (void)
     glEnable (GL_LIGHT0);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
     glEnable(GL_CULL_FACE);
     //glDisable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -285,8 +290,7 @@ void displayAtom(int nf, int nm, int na)
   atom = &mols[nf][nm].atom[na];
   glTranslatef(atom->common.rx,atom->common.ry,atom->common.rz);/* 1st atom */ 
   
-  fadeFact = calcFadeFact(globset.fadeMode, nf);
-  
+  fadeFact = atom->common.transp*calcFadeFact(globset.fadeMode, nf);
   if (atom->common.greyLvl)
     {
       setColor(mgl_bw[atom->common.greyLvl], fadeFact);
@@ -317,7 +321,14 @@ void displayAtom(int nf, int nm, int na)
     }
   if (atom->common.type==MGL_ATOM_SPHERE)
     {
+      //glEnable (GL_BLEND);
+      if (atom->common.transp < 1.0)
+	glDepthMask (GL_FALSE);
+      //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       glutSolidSphere (atom->sphere.radius, globset.stacks, globset.slides);
+      if (atom->common.transp < 1.0)
+	glDepthMask (GL_TRUE);
+      //glDisable (GL_BLEND); 
     }
   else if (atom->common.type==MGL_ATOM_DISK)
     {
@@ -341,10 +352,14 @@ void displayAtom(int nf, int nm, int na)
       glTranslatef(0, 0, atom->disk.height);
       gluDisk(ss2, 0, atom->disk.radius, globset.stacks, globset.slides);
       glPopMatrix();
+      if (atom->common.transp < 1.0)
+	glDepthMask (GL_FALSE);
       gluCylinder(ss, atom->disk.radius, 
 		      atom->disk.radius, 
 		      atom->disk.height, 
 		      globset.stacks, globset.slides);
+      if (atom->common.transp < 1.0)
+	glDepthMask (GL_TRUE);
       glPushMatrix();
       gluQuadricOrientation(ss3, GLU_INSIDE);
       gluDisk(ss3, 0, atom->disk.radius, globset.stacks, globset.slides);
@@ -360,10 +375,14 @@ void displayAtom(int nf, int nm, int na)
       normn = sqrt(Sqr(atom->disk.nx)+Sqr(atom->disk.ny)+Sqr(atom->disk.nz));
       rotangle = 180.0*acos(atom->disk.nz/normn)/Pi; 	
       glRotatef(rotangle, rax, ray, raz);
+      if (atom->common.transp < 1.0)
+	glDepthMask (GL_FALSE);
       gluCylinder(ss, atom->cylinder.toprad, 
 		      atom->cylinder.botrad, 
 		      atom->cylinder.height, 
 		      globset.stacks, globset.slides);
+      if (atom->common.transp < 1.0)
+	glDepthMask (GL_TRUE);
     }
   else if (atom->common.type==MGL_ATOM_SUPELLIPS)
     {
@@ -384,13 +403,21 @@ void displayAtom(int nf, int nm, int na)
       /* notare che x' = R x quindi:
        * x = Inversa(R) x' = Trasposta(R) x'*/
       glMultTransposeMatrixf(rotm);
+      //glEnable (GL_BLEND);
+      if (atom->common.transp < 1.0)
+	glDepthMask (GL_FALSE);
+      //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       CreateSuperEllipse(atom->supellips.n1, 
 			 atom->supellips.n2, atom->supellips.a, 
 			 atom->supellips.b, atom->supellips.c, globset.stacks, 
 			 globset.slides, 1);
+      if (atom->common.transp < 1.0)
+	glDepthMask (GL_TRUE);
+      //glDisable (GL_BLEND); 
     }
- /*ss = gluNewQuadric();
-    gluSphere(ss, sig[na], 12, 12);
+
+/*
+    gluSphere ss = gluNewQuadric();(ss, sig[na], 12, 12);
   */
   glPopMatrix();
 
@@ -472,7 +499,12 @@ void displayBonds(int nf, int i)
 	{
 	  setColor(mgl_col[globset.default_col].rgba, fadeFact);
 	}
+
+      if (mols[nf][i].bond[nb].transp < 1.0)
+	glDepthMask (GL_FALSE);
       renderSolidCylinder(rcmx, rcmy, rcmz, mols[nf][i].bond[nb].thickness, normn);
+      if (mols[nf][i].bond[nb].transp < 1.0)
+	glDepthMask (GL_TRUE);
       glPopMatrix();
     }
 }
@@ -535,8 +567,11 @@ void onScreenInfo()
   glPopAttrib();
   glPopMatrix();
 }
-
+#ifdef MGL_MACOS
 #include<png.h>
+#else
+#include<png.h>
+#endif
 /*extern PNG_EXPORT(void,png_set_zbuf_size);*/
 void save_image(void)
 {
@@ -785,7 +820,7 @@ void print_usage(void)
   printf("molgl [-h/--help | --saveandquit/-sq | --pngfile/-f <filename> \n");
   printf("| --viewpoint/-vp (x,y,z) | --diameter/-d <atoms_diameter> | --noinfos/-ni\n");
   printf("| --nobox|-nb | --semiax/-sa (a,b,c) | --stacks/-st <stacks>\n");
-  printf("| --slides/-sl <slides>] <input_file> \n");
+  printf("| --slides/-sl <slides>] | --bondtransp/-br | --transp/-r <input_file> \n");
 }
 /* ============================= >>> args <<< ============================= */
 void args(int argc, char* argv[])
@@ -911,7 +946,27 @@ void args(int argc, char* argv[])
 		}
 	      globset.defbondcol = atoi(argv[i]);
 	    }
-	  else if (!strcmp(argv[i],"--height")|| !strcmp(argv[i],"-ht"))
+	  else if (!strcmp(argv[i],"--bondtransp")|| !strcmp(argv[i],"-br"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the default bond transparency!\n");
+		  exit(-1);
+		}
+	      globset.defbondtransp = atof(argv[i]);
+	    }
+	  else if (!strcmp(argv[i],"--transp")|| !strcmp(argv[i],"-r"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the default transparency!\n");
+		  exit(-1);
+		}
+	      globset.deftransp = atof(argv[i]);
+	    }
+	 else if (!strcmp(argv[i],"--height")|| !strcmp(argv[i],"-ht"))
 	    {
 	      i++;
 	      globset.setheight = 1;
@@ -954,11 +1009,18 @@ void args(int argc, char* argv[])
 void dropSpaces(char *S);
 int getColByName(const char* name);
 
-int parsecol(char *str)
+int parsecol(char *str, double *transp)
 {
   int colNum;
   char* eptr;
-  
+  char cols[128];
+  /* guess if there is transparency */
+  //printf("str:%s\n", str);
+  if (sscanf(str, "%[^/]/%lf",cols,transp)==2)
+    str=cols;
+  else
+    *transp = globset.deftransp;
+  //printf("deftransp:%.15G\n", globset.deftransp);
   colNum = (int) strtod(str, &eptr);
   if (eptr == str) /* not a number */
     {
@@ -981,7 +1043,7 @@ void assignAtom(int nf, int i, int a, const char* L)
   char s1[128], s2[128], s3[128], s4[128], s5[128], s6[128], s7[128], s8[128], s9[128];
   char s10[128], s11[128], s12[128], s13[128], s14[128], s15[128], s16[128];
   atom_s *at;
-
+  double t;
   at = &mols[nf][i].atom[a];
   if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16) == 16)
     {
@@ -1008,7 +1070,8 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.n1 = 1.0;
       at->supellips.n2 = 1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = parsecol(s16);
+      at->common.atcol  = parsecol(s16,&t);
+      at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15) == 15)
     {
@@ -1036,6 +1099,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.n2 = 1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
+      at->common.transp = globset.deftransp;
     }
   else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s C[%[^]]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13) == 13)
     {
@@ -1071,7 +1135,8 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.n1 = 1.0;
       at->supellips.n2 = 1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = parsecol(s13);
+      at->common.atcol  = parsecol(s13, &t);
+      at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s %s %s %s @ %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9) == 9)
     {
@@ -1089,7 +1154,8 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->disk.radius = atof(s7);
       at->disk.height = atof(s8);
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = parsecol(s9);
+      at->common.atcol  = parsecol(s9, &t);
+      at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s %s %s %s @ %s %s", s1, s2, s3, s4, s5, s6, s7, s8) == 8)
     {
@@ -1108,6 +1174,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->disk.height = atof(s8);
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
+      at->common.transp = globset.deftransp;
     }
   else if (sscanf(L,"%s %s %s @ %s $ %s ", s1, s2, s3, s4, s5) == 5 )
     {
@@ -1123,6 +1190,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->sphere.radius = atof(s4);
       at->common.greyLvl = atoi(s5);
       at->common.atcol  = -1;
+      at->common.transp = globset.deftransp;
     }
   else if (sscanf(L,"%s %s %s @ %s C[%[^]]", s1, s2, s3, s4, s5) == 5)
     {
@@ -1135,7 +1203,8 @@ void assignAtom(int nf, int i, int a, const char* L)
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
       at->sphere.radius = atof(s4);
       at->common.greyLvl = 0;
-      at->common.atcol = parsecol(s5);
+      at->common.atcol = parsecol(s5, &t);
+      at->common.transp = t;
     }
    else if (sscanf(L,"%s %s %s C[%[^]]", s1, s2, s3, s4) == 4 )
     {
@@ -1148,7 +1217,8 @@ void assignAtom(int nf, int i, int a, const char* L)
       else
 	at->sphere.radius = globset.diameter/2.0;
       at->common.greyLvl = 0;
-      at->common.atcol = parsecol(s4);
+      at->common.atcol = parsecol(s4, &t);
+      at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s @ %s ", s1, s2, s3, s4) == 4 )
     {
@@ -1162,6 +1232,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->sphere.radius = atof(s4);
       at->common.greyLvl = 0;
       at->common.atcol  = -1;
+      at->common.transp = globset.deftransp;
     }
   else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s ", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12) == 12)
     {
@@ -1198,6 +1269,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.n2 = 1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
+      at->common.transp = globset.deftransp;
     }
   else if (sscanf(L,"%s %s %s %s %s %s ", s1, s2, s3, s4, s5, s6) == 6)
     {
@@ -1225,6 +1297,7 @@ void assignAtom(int nf, int i, int a, const char* L)
 	}
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
+      at->common.transp = globset.deftransp;
     }
   else if (sscanf(L,"%s %s %s ", s1, s2, s3) == 3 )
     {
@@ -1239,6 +1312,7 @@ void assignAtom(int nf, int i, int a, const char* L)
 	at->sphere.radius = globset.diameter/2.0;
       at->common.greyLvl = 0;
       at->common.atcol  = -1;
+      at->common.transp = globset.deftransp;
     }
   else
     {
@@ -1359,7 +1433,7 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
   */
   char parName[1024], parVal[1024], s1[1024], s2[1024], s3[1024], s4[1024], *ns;
   int lett, j, a, nb;
-  double defbondthick;
+  double defbondthick, t, defbondtransp;
   int defbondcolor;
   /* Syntax:
      <parname> : <value>
@@ -1470,6 +1544,7 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
       nb = 0;
       defbondthick = globset.defbondthick;
       defbondcolor = globset.defbondcol;
+      defbondtransp = globset.defbondtransp;
       while(ns)
 	{
 	  nb++;
@@ -1483,15 +1558,18 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
 	      mols[*nf][*i].bond[nb-1].from = atoi(s1);
 	      mols[*nf][*i].bond[nb-1].to   = atoi(s2);
 	      mols[*nf][*i].bond[nb-1].thickness = atof(s3);
-	      mols[*nf][*i].bond[nb-1].color     = parsecol(s4);
+	      mols[*nf][*i].bond[nb-1].color     = parsecol(s4,&t);
+	      mols[*nf][*i].bond[nb-1].transp    = t;
 	      defbondthick = atoi(s3);
-	      defbondcolor = parsecol(s4);
+	      defbondcolor = parsecol(s4, &t);
+	      defbondtransp = t;
 	    }
 	  else if (sscanf(ns, "[%[^,],%[^]]",s1,s2)==2)
 	    {
 	      /* [spessore,colore] */
 	      defbondthick = atof(s1);
-	      defbondcolor = atoi(s2);
+	      defbondcolor = parsecol(s2,&t);
+	      defbondtransp = t;
 	    }
 	  else if (sscanf(ns, "%[^-]-%s", s1, s2)==2)
 	    {
@@ -1500,6 +1578,7 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
 	      mols[*nf][*i].bond[nb-1].to   = atoi(s2);
 	      mols[*nf][*i].bond[nb-1].thickness = defbondthick;
 	      mols[*nf][*i].bond[nb-1].color     = defbondcolor;
+	      mols[*nf][*i].bond[nb-1].transp    = defbondtransp;
 #if 0
 	      printf("qui [%s,%s] bondthick:%f\n", s1,s2, mols[*nf][*i].bond[nb-1].thickness );
 #endif
@@ -1769,6 +1848,8 @@ void default_pars(void)
   globset.default_col=466;
   globset.defbondthick = 1.0;
   globset.defbondcol = 465;
+  globset.defbondtransp = 1.0;
+  globset.deftransp = 1.0;
   readRGB();
 
   setBW();
@@ -1897,7 +1978,7 @@ int main(int argc, char** argv)
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowPosition(100, 100);
   glutInitWindowSize(globset.Width,globset.Height);
-  glutCreateWindow("MOLGL by Cristiano De Michele (C) 1998-2004");
+  glutCreateWindow("MOLGL by Cristiano De Michele (C) 1998-2006");
   myinit();
   loadAtomPos();
 #ifdef MGL_USELIST

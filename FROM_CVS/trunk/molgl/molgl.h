@@ -36,6 +36,7 @@ struct atom_common {
   double rz;
   int atcol;
   int greyLvl;
+  double transp;
 };
 struct atom_sphere
 {
@@ -92,6 +93,7 @@ struct bond
   bond_types_e type;
   double thickness; /* spessore del bond */
   int color; /* colore del bond */ 
+  double transp;
 };
 typedef union atom atom_s; 
 typedef struct bond bond_s;
@@ -153,5 +155,7 @@ struct global_settings
   int default_col;
   double defbondthick;
   int defbondcol;
+  double defbondtransp;
+  double deftransp;
 };
 
