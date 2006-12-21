@@ -2276,7 +2276,10 @@ void usrInitAft(void)
     {
       comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
     }
-
+  else if (OprogStatus.CMreset==-3)
+   {
+      resetCM(0);
+   }
   if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);
