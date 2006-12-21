@@ -1621,9 +1621,17 @@ void save_init_conf(void)
   fclose(bf);
 #ifndef MD_STOREMGL
 #ifdef MPI
+#ifdef MD_MAC
+  sprintf(fileop3, "/usr/bin/gzip -f %s_R%d", fileop, my_rank);
+#else
   sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+#endif
 #else 
-  sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#ifdef MD_MAC
+  sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+#else
+   sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
 #endif
   system(fileop3);
 #endif
