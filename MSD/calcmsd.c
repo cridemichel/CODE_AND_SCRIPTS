@@ -5,13 +5,15 @@
 #define MAXPTS 10000
 #define MAXFILES 5000
 char **fname; 
-double L, time, *ti, *rotMSD, *MSD, *rotMSDA, *MSDA, *rotMSDB, *MSDB, *cc;
+double L, time, *ti, *rotMSD, *MSD, *rotMSDA, *MSDA, *rotMSDB, *MSDB, *cc, *rotMSDcls[2], *MSDcls[2], *cc_cls[2];
 double **DR, **DR0;
 double *r0[3], *w0[3], *rt[3], *wt[3], *rtold[3];
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int points=-1, foundDRs=0, foundrot=0, eventDriven=0, skip=1;
-char inputfile[2048];
+int points=-1, foundDRs=0, foundrot=0, eventDriven=0, skip=1, clusters=0;
+int *isPercPart;
+char *pnum;
+char inputfile[2048], cluststr[2048];
 double storerate = -1;
 int bakSaveMode = -1;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double **DR)
@@ -116,7 +118,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 }
 void print_usage(void)
 {
-  printf("Usage: calcmsd [ --skip/-s ] <listafile> [number of points]\n");
+  printf("Usage: calcmsd [ --skip/-s | --clusters/-c ] <listafile> [number of points]\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -138,6 +140,10 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  skip = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--clusters") || !strcmp(argv[cc],"-c"))
+	{
+	  clusters=1;
 	}
       else if (cc == argc || extraparam == 2)
 	print_usage();
@@ -164,7 +170,8 @@ int main(int argc, char **argv)
   double *adjDr[3], Dr, Dw, A1, A2, A3, dr;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int NP, NPA=-1, NN=-1, fine, JJ, nat, maxl, maxnp, np, NP1, NP2;
-  double refTime=0.0;
+  double refTime=0.0, tmpdbl;
+  int isperc, kk;
 #if 0
   if (argc <= 1)
     {
@@ -259,6 +266,15 @@ int main(int argc, char **argv)
   rotMSDA = malloc(sizeof(double)*points);
   rotMSDB = malloc(sizeof(double)*points);
   cc = malloc(sizeof(double)*points);
+  if (clusters)
+    {
+      for (kk=0; kk < 2; kk++)
+	{
+	  cc_cls[kk] = malloc(sizeof(double)*points);
+	  MSDcls[kk] = malloc(sizeof(double)*points);
+	  rotMSDcls[kk] = malloc(sizeof(double)*points);
+	}
+    }
   DR = malloc(sizeof(double*)*NP);
   DR0= malloc(sizeof(double*)*NP);
   for (ii = 0; ii < NP; ii++)
@@ -276,6 +292,11 @@ int main(int argc, char **argv)
       rotMSDB[ii] = 0.0;
       MSDB[ii] = 0.0;
       cc[ii]=0.0;
+      if (clusters)
+	{
+	  MSDcls[0][ii]=MSDcls[1][ii]=0.0;
+	  cc_cls[0][ii]=cc_cls[1][ii]= 0;
+	}
     }
     
   if (NPA != NP)
@@ -295,6 +316,27 @@ int main(int argc, char **argv)
       wt[a] = malloc(sizeof(double)*NP);
       adjDr[a] = malloc(sizeof(double)*NP); 
     }
+  if (clusters)
+    {
+      sprintf(cluststr,"%s.clusters",fname[nr1]);
+      isPercPart = malloc(sizeof(int)*NP);
+      for (i=0; i < NP; i++)
+	isPercPart[i] = -1;
+      f = fopen(cluststr, "r");
+      while (!feof(f))
+	{
+	  fscanf(f, "%[^\n]\n", line);
+	  isperc = atoi(strtok(line," "));
+	  while (!(pnum=strtok(NULL," ")))
+	    {
+	      if (isperc)
+		isPercPart[atoi(pnum)] = 1; 
+	      else
+		isPercPart[atoi(pnum)] = 0; 
+	    } 
+	}
+      fclose(f);
+    } 
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN+skip)
     {	
       for (i=0; i < NP; i++)
@@ -362,11 +404,29 @@ int main(int argc, char **argv)
 			  }
 		      }
 		    //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
-		    
-		    MSD[np] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+
+		    tmpdbl = (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+		    MSD[np] += tmpdbl;
+		    if (clusters)
+		      {
+			if (isPercPart[i]==1)
+			  MSDcls[0][np] += tmpdbl;
+			else if (isPercPart[i] == 0)
+			  MSDcls[1][np] += tmpdbl;
+		      }	  
 		    if (foundrot)
-		      rotMSD[np] += Dw*Dw;
-		    if (NP != NPA)
+		      {
+			tmpdbl = Dw*Dw;
+			rotMSD[np] += tmpdbl;
+			if (clusters)
+			  {
+			    if (isPercPart[i]==1)
+			      rotMSDcls[0][np] += tmpdbl;
+			    else if (isPercPart[i] == 0)
+			      rotMSDcls[1][np] += tmpdbl;
+			  }	  
+		      }
+	    	    if (NP != NPA)
 		      {
 			if (i < NPA)
 			  {
@@ -381,6 +441,13 @@ int main(int argc, char **argv)
 			      rotMSDB[np] += Dw*Dw;
 			  }
 		      }
+		    if (clusters)
+		      {
+			if (isPercPart[i]==1)
+			  cc_cls[0][np] += 1.0;  
+			else if (isPercPart[i] == 0)
+			  cc_cls[1][np] += 1.0;
+		      }		      
 		  }
 	      cc[np] += 1.0;
 	      //printf("cc[%d]:%f\n", nr2-nr1, cc[nr2-nr1]);
@@ -429,6 +496,37 @@ int main(int argc, char **argv)
       fclose(fB);
       if (foundrot)
 	fclose(f2B);
+    }
+  if (clusters)
+    {
+      f = fopen("MSDcnfClsPerc.dat", "w+");
+      f2 = fopen("rotMSDcnfClsPerc.dat","w+");
+      for (ii=1; ii < points; ii++)
+	{
+	  //printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
+	  if (cc_cls[0][ii] > 0 && ti[ii] > -1.0)
+	    {
+	      fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], MSDcls[0][ii]/cc_cls[0][ii], cc_cls[0][ii]);
+	      if (foundrot)
+		fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSDcls[0][ii]/cc_cls[0][ii], cc_cls[0][ii]);
+	    }
+	}
+      fclose(f);
+      fclose(f2);
+      f = fopen("MSDcnfClsNotPerc.dat", "w+");
+      f2 = fopen("rotMSDcnfClsNotPerc.dat","w+");
+      for (ii=1; ii < points; ii++)
+	{
+	  //printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
+	  if (cc_cls[1][ii] > 0 && ti[ii] > -1.0)
+	    {
+	      fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], MSDcls[1][ii]/cc_cls[1][ii], cc_cls[1][ii]);
+	      if (foundrot)
+		fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSDcls[1][ii]/cc_cls[1][ii], cc_cls[1][ii]);
+	    }
+	}
+      fclose(f);
+      fclose(f2);
     }
   return 0;
 }
