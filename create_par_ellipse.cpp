@@ -96,6 +96,7 @@ int main(int argc, char **argv)
   int tapeTimes(0); search_token("--tapeTimes",tapeTimes);
   int energyCalc(50); search_token("--energyCalc",energyCalc);
   string energyName("energy-"); search_token("--energyName",energyName);
+  int tempCalc(1); search_token("--tempCalc",tempCalc);
   int tempSteps(1); search_token("--tempSteps",tempSteps);
   string tempName("temp-"); search_token("--tempName",tempName);
   int DtrSteps(10); search_token("--DtrSteps",DtrSteps);
@@ -230,6 +231,7 @@ int main(int argc, char **argv)
   cout<<"tapeTimes: "<<tapeTimes<<endl; 
   cout<<"energyCalc: "<<energyCalc<<endl; 
   cout<<"energyName: "<<energyName<<endl; 
+  cout<<"tempCalc: "<<tempCalc<<endl; 
   cout<<"tempSteps: "<<tempSteps<<endl; 
   cout<<"tempName: "<<tempName<<endl; 
   cout<<"DtrSteps: "<<DtrSteps<<endl; 
