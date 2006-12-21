@@ -5,10 +5,12 @@
 #define MAXPTS 1000
 #define Sqr(x) ((x)*(x))
 char **fname; 
+int *isPercPart;
 double time, *ti, *r0[3], *r1[3], L, refTime;
-int points=-1, assez, NP, NPA;
+int points=-1, assez, NP, NPA, clusters=0;
 char parname[128], parval[256000], line[256000];
-char dummy[2048];
+char dummy[2048], cluststr[2048];
+char *pnum;
 double A0, A1, B0, B1, C0, C1, storerate=-1.0;
 int bakSaveMode = -1, eventDriven=0, skip=0;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
@@ -86,7 +88,8 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double *sqReA[KMODMAX], *sqImA[KMODMAX], *sqReB[KMODMAX], *sqImB[KMODMAX];
-double *cc[KMODMAX];
+double *sqRe_cls[2][KMODMAX], *sqIm_cls[2][KMODMAX];
+double *cc[KMODMAX], *cc_cls[2][KMODMAX];
 char fname2[512];
 char inputfile[1024];
 int ntripl[]=
@@ -96,7 +99,7 @@ int mesh[][NKSHELL][3]=
 double twopi;
 void print_usage(void)
 {
-  printf("calcfqtself [ --skip/-s | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] <lista_files> [points] [qmin] [qmax]\n");
+  printf("calcfqtself [ --skip/-s | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h! clusters/-c ] <lista_files> [points] [qmin] [qmax]\n");
   printf("where points is the number of points of the correlation function\n");
   exit(0);
 }
@@ -123,6 +126,10 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  qmin = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--clusters") || !strcmp(argv[cc],"-c"))
+	{
+	  clusters=1;
 	}
       else if (!strcmp(argv[cc],"--qmax") || !strcmp(argv[cc],"-qM"))
 	{
@@ -217,9 +224,9 @@ int main(int argc, char **argv)
   FILE *f, *f2;
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
-  int qmod, NP1, NP2; 
+  int qmod, NP1, NP2, kk, isperc; 
   double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
-
+  double costmp, sintmp;
   twopi = acos(0)*4.0;	  
 #if 0
   if (argc <= 1)
@@ -385,6 +392,16 @@ int main(int argc, char **argv)
       sqReA[qmod] = malloc(sizeof(double)*points);
       sqImA[qmod] = malloc(sizeof(double)*points);
       cc[qmod] = malloc(sizeof(double)*points);
+      if (clusters)
+	{
+	  for (kk=0; kk < 2; kk++)
+	    {
+	      cc_cls[kk][qmod] = malloc(sizeof(double)*points);
+	      sqRe_cls[kk][qmod] = malloc(sizeof(double)*points);
+	      sqIm_cls[kk][qmod] = malloc(sizeof(double)*points);
+	    }
+	}
+
       if (NPA < NP)
 	{
 	  sqReB[qmod] = malloc(sizeof(double)*points);
@@ -401,7 +418,6 @@ int main(int argc, char **argv)
 
   for (ii=0; ii < points; ii++)
     ti[ii] = -1.0;
-
   first = 0;
   fclose(f2);
   for (qmod = qmin; qmod <= qmax; qmod++)
@@ -411,6 +427,15 @@ int main(int argc, char **argv)
 	  sqReA[qmod][ii] = 0.0;
 	  sqImA[qmod][ii] = 0.0;
 	  cc[qmod][ii] = 0.0;
+	  if (clusters)
+	    {
+	      for (kk=0; kk < 2; kk++)
+		{
+		  sqRe_cls[kk][qmod][ii] = 0.0;
+		  sqIm_cls[kk][qmod][ii] = 0.0;
+		  cc_cls[kk][qmod][ii] = 0.0;
+		}		  
+	    }
 	  if (NPA < NP)
 	    {
 	      sqReB[qmod][ii] = 0.0;
@@ -428,6 +453,27 @@ int main(int argc, char **argv)
     }
   c2 = 0;
   JJ = 0;
+  if (clusters)
+    {
+      sprintf(cluststr,"%s.clusters",fname[0]);
+      isPercPart = malloc(sizeof(int)*NP);
+      for (i=0; i < NP; i++)
+	isPercPart[i] = -1;
+      f = fopen(cluststr, "r");
+      while (!feof(f))
+	{
+	  fscanf(f, "%[^\n]\n", line);
+	  isperc = atoi(strtok(line," "));
+	  while (!(pnum=strtok(NULL," ")))
+	    {
+	      if (isperc)
+		isPercPart[atoi(pnum)] = 1; 
+	      else
+		isPercPart[atoi(pnum)] = 0; 
+	    } 
+	}
+      fclose(f);
+    } 
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN+skip)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0);
@@ -468,16 +514,33 @@ int main(int argc, char **argv)
 			    +(r0[1][i]-r1[1][i])*mesh[qmod][iq][1]
 			    +(r0[2][i]-r1[2][i])*mesh[qmod][iq][2]);
 			  //printf("dummy:%.15G\n", rxdummy);
+			  costmp = cos(rxdummy);
+			  sintmp = sin(rxdummy);
 			  if (i < NPA)
 			    {
-			      sumReA += cos(rxdummy);
-			      sumImA += sin(rxdummy);
+			      sumReA += costmp;
+			      sumImA += sintmp;
 			    }
 			  else
 			    {
-			      sumReB += cos(rxdummy);
-			      sumImB += sin(rxdummy);
+			      sumReB += costmp;
+			      sumImB += sintmp;
 			    }  
+			  if (clusters)
+			    {
+			      if (isPercPart[i]==1)
+				{
+				  sqRe_cls[0][qmod][np] += costmp;
+				  sqIm_cls[0][qmod][np] += sintmp;
+				  cc_cls[0][qmod][np] += 1.0;
+				}
+			      else if (isPercPart[i]==0)
+				{
+				  sqRe_cls[1][qmod][np] += costmp;
+				  sqIm_cls[1][qmod][np] += sintmp;
+				  cc_cls[1][qmod][np] += 1.0;
+				}
+			    }
 			}
 	    	      sqReA[qmod][np] += sumReA;
     		      sqImA[qmod][np] += sumImA;
@@ -493,7 +556,6 @@ int main(int argc, char **argv)
 		}
 	    }
 	}
-      
     }
 
   for (qmod = qmin; qmod <= qmax; qmod++)
@@ -503,6 +565,11 @@ int main(int argc, char **argv)
 	  //printf("cc[%d][%d]:%.15G\n", qmod, ii, cc[qmod][ii]);
 	  sqReA[qmod][ii] = sqReA[qmod][ii]/cc[qmod][ii];
 	  sqImA[qmod][ii] = sqImA[qmod][ii]/cc[qmod][ii];
+	  if (clusters)
+	    {
+	      sqRe_cls[kk][qmod][ii] = sqRe_cls[kk][qmod][ii]/cc_cls[kk][qmod][ii];
+	      sqIm_cls[kk][qmod][ii] = sqIm_cls[kk][qmod][ii]/cc_cls[kk][qmod][ii];
+	    }
 	  if (NPA  < NP)
 	    {
 	      sqReB[qmod][ii] = sqReB[qmod][ii]/cc[qmod][ii];
@@ -539,6 +606,40 @@ int main(int argc, char **argv)
 	    }
 	}
       fclose(f);
+    }
+  if (clusters)
+    {
+      for (qmod = qmin; qmod <= qmax; qmod++)
+	{
+	  sprintf(fname2, "FqsClsPerc-%d",qmod);
+	  if (!(f = fopen (fname2, "w+")))
+	    {
+	      printf("ERROR: I can not open file %s\n", fname2);
+	      exit(-1);
+	    }
+	  //printf("SqReA[%d][0]:%.15G SqReB[][0]: %.15G\n", qmod, sqReA[qmod][0], sqReB[qmod][0]);
+	  for (ii = 1; ii < points; ii++)
+	    {
+	      if ((sqRe_cls[0][qmod][ii]!=0.0 || sqIm_cls[0][qmod][ii]!=0.0) && (ti[ii]> -1.0))
+    		fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqRe_cls[0][qmod][ii]/sqRe_cls[0][qmod][0],
+			sqIm_cls[0][qmod][ii]);
+	    }
+	  fclose(f);
+	  sprintf(fname2, "FqsClsNotPerc-%d",qmod);
+	  if (!(f = fopen (fname2, "w+")))
+	    {
+	      printf("ERROR: I can not open file %s\n", fname2);
+	      exit(-1);
+	    }
+	  //printf("SqReA[%d][0]:%.15G SqReB[][0]: %.15G\n", qmod, sqReA[qmod][0], sqReB[qmod][0]);
+	  for (ii = 1; ii < points; ii++)
+	    {
+	      if ((sqRe_cls[1][qmod][ii]!=0.0 || sqIm_cls[1][qmod][ii]!=0.0) && (ti[ii]> -1.0))
+    		fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqRe_cls[1][qmod][ii]/sqRe_cls[1][qmod][0],
+			sqIm_cls[1][qmod][ii]);
+	    }
+	  fclose(f);
+}
     }
   return 0;
 }
