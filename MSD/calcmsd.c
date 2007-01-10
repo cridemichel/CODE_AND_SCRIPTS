@@ -388,72 +388,74 @@ int main(int argc, char **argv)
 	      if (nr2 == nr1)
 		continue;
 	      for (i = 0; i < NP; i++)
-		for (a = 0; a < 3; a++)
-		  {
-		    Dw = wt[a][i] - w0[a][i];
-		    Dr = rt[a][i] - r0[a][i];
-		    dr = rt[a][i] - rtold[a][i];
-		    if (foundDRs)
-		      {
-			adjDr[a][i] = L*(DR[i][a]-DR0[i][a]); 
-		      }
-		    else
-		      {
-			if (eventDriven)
-			  {
-			    if (nr2 > nr1 && fabs(dr) > L*0.5)
-			      if (dr > 0.0)
-				adjDr[a][i] -= L;
-			      else
-				adjDr[a][i] += L;
-			  }
-		      }
-		    //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
+		{
+		  for (a = 0; a < 3; a++)
+		    {
+		      Dw = wt[a][i] - w0[a][i];
+		      Dr = rt[a][i] - r0[a][i];
+		      dr = rt[a][i] - rtold[a][i];
+		      if (foundDRs)
+			{
+			  adjDr[a][i] = L*(DR[i][a]-DR0[i][a]); 
+			}
+		      else
+			{
+			  if (eventDriven)
+			    {
+			      if (nr2 > nr1 && fabs(dr) > L*0.5)
+				if (dr > 0.0)
+				  adjDr[a][i] -= L;
+				else
+				  adjDr[a][i] += L;
+			    }
+			}
+		      //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
 
-		    tmpdbl = (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
-		    MSD[np] += tmpdbl;
-		    if (clusters)
-		      {
-			if (isPercPart[i]==1)
-			  MSDcls[0][np] += tmpdbl;
-			else if (isPercPart[i] == 0)
-			  MSDcls[1][np] += tmpdbl;
-		      }	  
-		    if (foundrot)
-		      {
-			tmpdbl = Dw*Dw;
-			rotMSD[np] += tmpdbl;
-			if (clusters)
-			  {
-			    if (isPercPart[i]==1)
-			      rotMSDcls[0][np] += tmpdbl;
-			    else if (isPercPart[i] == 0)
-			      rotMSDcls[1][np] += tmpdbl;
-			  }	  
-		      }
-	    	    if (NP != NPA)
-		      {
-			if (i < NPA)
-			  {
-			    MSDA[np] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
-			    if (foundrot)
-			      rotMSDA[np] += Dw*Dw;
-			  }
-			else
-			  {
-		    	    MSDB[np] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
-	    		    if (foundrot)
-			      rotMSDB[np] += Dw*Dw;
-			  }
-		      }
-		    if (clusters)
-		      {
-			if (isPercPart[i]==1)
-			  cc_cls[0][np] += 1.0;  
-			else if (isPercPart[i] == 0)
-			  cc_cls[1][np] += 1.0;
-		      }		      
-		  }
+		      tmpdbl = (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+		      MSD[np] += tmpdbl;
+		      if (clusters)
+			{
+			  if (isPercPart[i]==1)
+			    MSDcls[0][np] += tmpdbl;
+			  else if (isPercPart[i] == 0)
+			    MSDcls[1][np] += tmpdbl;
+			}	  
+		      if (foundrot)
+			{
+			  tmpdbl = Dw*Dw;
+			  rotMSD[np] += tmpdbl;
+			  if (clusters)
+			    {
+			      if (isPercPart[i]==1)
+				rotMSDcls[0][np] += tmpdbl;
+			      else if (isPercPart[i] == 0)
+				rotMSDcls[1][np] += tmpdbl;
+			    }	  
+			}
+		      if (NP != NPA)
+			{
+			  if (i < NPA)
+			    {
+			      MSDA[np] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+			      if (foundrot)
+				rotMSDA[np] += Dw*Dw;
+			    }
+			  else
+			    {
+			      MSDB[np] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
+			      if (foundrot)
+				rotMSDB[np] += Dw*Dw;
+			    }
+			}
+		    }
+		  if (clusters)
+		    {
+		      if (isPercPart[i]==1)
+			cc_cls[0][np] += 1.0;  
+		      else if (isPercPart[i] == 0)
+			cc_cls[1][np] += 1.0;
+		    }	
+		}
 	      cc[np] += 1.0;
 	      //printf("cc[%d]:%f\n", nr2-nr1, cc[nr2-nr1]);
 	    }
