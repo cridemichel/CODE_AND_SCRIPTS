@@ -1,8 +1,11 @@
 ROOTEXE="root.exe"
 PERC=$HOME/postdoc/hardellipsoid/hardellSVN/CODE/SCRIPTS/
 CNBEG=0.1
-FQSBEG=0.5
-FQCBEG=0.5
+FQSBEG=0.1
+FQCBEG=0.1
+DOCN=1
+DOFQS=1
+DOFQC=1
 if [ "$3" = "" ]
 then
 TYPE="2"
@@ -51,7 +54,7 @@ fi
 cd Phi$2
 echo "Processing " $X0 " Phi" $2 
 #echo $RCMD " " `pwd`
-if [ \( -e Cn.dat \) -a \( "$f" != "X0_1.0" \) ]
+if [ \( -e Cn.dat \) -a \( "$f" != "X0_1.0" \) -a \( "$DOCN" == "1" \) ]
 then
 echo -n "Fitting Cn.dat..."
 RCMD=`echo "$PERC/fitSE.C(\"Cn.dat\",$TYPE,$CNBEG,1000,0)"`
@@ -66,7 +69,7 @@ echo "done"
 fi
 #
 FQS=`ls -r -1 Fqs*max 2> /dev/null | tail -1 2> /dev/null` 
-if [ "$FQS" != "" ]
+if [ \( "$FQS" != "" \) -a \( "$DOFQS" == "1" \) ]
 then
 echo -n "Fitting " $FQS "..."
 RCMD=`echo "$PERC/fitSE.C(\"$FQS\",$TYPE,$FQSBEG,1000,0)"`
@@ -81,7 +84,7 @@ echo "done"
 fi
 #
 FQC=`ls -r -1 N-sqt*max 2> /dev/null | tail -1 2> /dev/null` 
-if [ "$FQC" != "" ]
+if [ "$FQC" != "" -a \( "$DOFQC" == "1" \) ]
 then
 echo -n "Fitting " $FQC "..."
 RCMD=`echo "$PERC/fitSE.C(\"$FQC\",$TYPE,$FQCBEG,1000,0)"`
