@@ -2,9 +2,9 @@ ROOTEXE="root.exe"
 PERC=$HOME/postdoc/hardellipsoid/hardellSVN/CODE/SCRIPTS/
 CNBEG=0.1
 FQSBEG=0.1
-FQCBEG=0.1
-DOCN=1
-DOFQS=1
+FQCBEG=0.2
+DOCN=0
+DOFQS=0
 DOFQC=1
 if [ "$3" = "" ]
 then
@@ -27,15 +27,24 @@ FQSCHISQVSX0="chisq_vs_X0_Fqs_Phi$2_$EXT.dat"
 FQCTAUVSX0="tau_vs_X0_N-sqt_Phi$2_$EXT.dat"
 FQCBETAVSX0="beta_vs_X0_N-sqt_Phi$2_$EXT.dat"
 FQCCHISQVSX0="chisq_vs_X0_N-sqt_Phi$2_$EXT.dat"
+if [ "$DOFQC" == "1" ]
+then
 echo -n "" > $FQCTAUVSX0
 echo -n "" > $FQCBETAVSX0
 echo -n "" > $FQCCHISQVSX0
+fi
+if [ "$DOFQS" == "1" ]
+then
 echo -n "" > $FQSTAUVSX0
 echo -n "" > $FQSBETAVSX0
 echo -n "" > $FQSCHISQVSX0
+fi
+if [ "$DOCN" == "1" ]
+then
 echo -n "" > $CNTAUVSX0
 echo -n "" > $CNBETAVSX0
 echo -n "" > $CNCHISQVSX0
+fi
 LF=_rootexe.log
 if [ "$1" == "" ]
 then
