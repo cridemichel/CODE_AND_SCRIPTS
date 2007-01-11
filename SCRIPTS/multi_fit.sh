@@ -50,6 +50,8 @@ continue
 fi
 cd Phi$2
 #echo $RCMD " " `pwd`
+if [ -e Cn.dat ]
+then
 RCMD=`echo "$PERC/fitSE.C(\"Cn.dat\",2,$CNBEG,1000,1)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk '{if ($2=="p1") print $3}'`
@@ -57,8 +59,11 @@ BETA=`cat $LF | tail -4 | awk '{if ($2=="p2") print $3}'`
 CHISQ=`cat $LF | tail -4 | awk '{if ($1=="CHISQUARE:") print $2}'`
 echo $X0 $TAU $CHISQ >> ../../$CNTAUVSX0
 echo $X0 $BETA $CHISQ >> ../../$CNBETAVSX0
+fi
 #
 FQS=`ls -r -1 Fqs*max | tail -1` 
+if [ "$FQS" != "" ]
+then
 RCMD=`echo "$PERC/fitSE.C(\"$FQS\",2,$FQSBEG,1000,1)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk '{if ($2=="p1") print $3}'`
@@ -66,8 +71,11 @@ BETA=`cat $LF | tail -4 | awk '{if ($2=="p2") print $3}'`
 CHISQ=`cat $LF | tail -4 | awk '{if ($1=="CHISQUARE:") print $2}'`
 echo $X0 $TAU $CHISQ >> ../../$FQSTAUVSX0
 echo $X0 $BETA $CHISQ >> ../../$FQSBETAVSX0
+fi
 #
 FQC=`ls -r -1 N-sqt*max | tail -1` 
+if [ "$FQC" != "" ]
+then
 RCMD=`echo "$PERC/fitSE.C(\"$FQC\",2,$FQCBEG,1000,1)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | awk '{if ($2=="p1") print $3}'`
@@ -75,6 +83,7 @@ BETA=`cat $LF | awk '{if ($2=="p2") print $3}'`
 CHISQ=`cat $LF | awk '{if ($1=="CHISQUARE:") print $2}'`
 echo $X0 $TAU $CHISQ >> ../../$FQCTAUVSX0
 echo $X0 $BETA $CHISQ >> ../../$FQCBETAVSX0
+fi
 rm $LF
 cd ..
 cd ..
