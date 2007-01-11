@@ -1,3 +1,4 @@
+export LANG=C
 ROOTEXE="root.exe"
 PERC=$HOME/postdoc/hardellipsoid/hardellSVN/CODE/SCRIPTS/
 SCALFACTS="$HOME/ELLIPSOIDS/scaling_factors.dat"
@@ -5,8 +6,8 @@ GSF="$HOME/ELLIPSOIDS/get_scalfact"
 CNBEG=0.1
 FQSBEG=0.15
 FQCBEG=0.15
-DOCN=0
-DOFQS=0
+DOCN=1
+DOFQS=1
 DOFQC=1
 if [ "$3" = "" ]
 then
