@@ -1,8 +1,10 @@
 ROOTEXE="root.exe"
 PERC=$HOME/postdoc/hardellipsoid/hardellSVN/CODE/SCRIPTS/
+SCALFACTS="$HOME/ELLIPSOIDS/scaling_factors.dat"
+GSF="$HOME/ELLIPSOIDS/get_scalfact"
 CNBEG=0.1
 FQSBEG=0.1
-FQCBEG=0.2
+FQCBEG=0.1
 DOCN=0
 DOFQS=0
 DOFQC=1
@@ -55,6 +57,7 @@ for f in $1
 do
 cd $f
 X0=`echo $f | awk -F '_' '{print $2}'`
+TFACT=`$GSF $SCALFACTS $X0`
 if [ ! -d "Phi$2" ]
 then
 cd ..
@@ -66,9 +69,10 @@ echo "Processing " $X0 " Phi" $2
 if [ \( -e Cn.dat \) -a \( "$f" != "X0_1.0" \) -a \( "$DOCN" == "1" \) ]
 then
 echo -n "Fitting Cn.dat..."
-RCMD=`echo "$PERC/fitSE.C(\"Cn.dat\",$TYPE,$CNBEG,1000,0)"`
+CNBEGSC=`echo "$CNBEG*$TFACT"|bc -l`
+RCMD=`echo "$PERC/fitSE.C(\"Cn.dat\",$TYPE,$CNBEGSC,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
-TAU=`cat $LF | tail -4 | awk '{if ($2=="p1") print $3}'`
+TAU=`cat $LF | tail -4 | awk -v sf=$TFACT '{if ($2=="p1") print $3/sf}'`
 BETA=`cat $LF | tail -4 | awk '{if ($2=="p2") print $3}'`
 CHISQ=`cat $LF | tail -4 | awk '{if ($1=="CHISQUARE:") print $2}'`
 echo $X0 $TAU >> ../../$CNTAUVSX0
@@ -81,9 +85,10 @@ FQS=`ls -r -1 Fqs*max 2> /dev/null | tail -1 2> /dev/null`
 if [ \( "$FQS" != "" \) -a \( "$DOFQS" == "1" \) ]
 then
 echo -n "Fitting " $FQS "..."
-RCMD=`echo "$PERC/fitSE.C(\"$FQS\",$TYPE,$FQSBEG,1000,0)"`
+FQSBEGSC=`echo "$FQSBEG*$TFACT"|bc -l`
+RCMD=`echo "$PERC/fitSE.C(\"$FQS\",$TYPE,$FQSBEGSC,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
-TAU=`cat $LF | tail -4 | awk '{if ($2=="p1") print $3}'`
+TAU=`cat $LF | tail -4 | awk -v sf=$TFACT '{if ($2=="p1") print $3/sf}'`
 BETA=`cat $LF | tail -4 | awk '{if ($2=="p2") print $3}'`
 CHISQ=`cat $LF | tail -4 | awk '{if ($1=="CHISQUARE:") print $2}'`
 echo $X0 $TAU >> ../../$FQSTAUVSX0
@@ -96,9 +101,12 @@ FQC=`ls -r -1 N-sqt*max 2> /dev/null | tail -1 2> /dev/null`
 if [ "$FQC" != "" -a \( "$DOFQC" == "1" \) ]
 then
 echo -n "Fitting " $FQC "..."
-RCMD=`echo "$PERC/fitSE.C(\"$FQC\",$TYPE,$FQCBEG,1000,0)"`
+#echo "qui1 " $FQCBEG  " " $TFACT
+FQCBEGSC=`echo "$FQCBEG*$TFACT"|bc -l`
+echo "qui2"
+RCMD=`echo "$PERC/fitSE.C(\"$FQC\",$TYPE,$FQCBEGSC,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
-TAU=`cat $LF | tail -4 | awk '{if ($2=="p1") print $3}'`
+TAU=`cat $LF | tail -4 | awk -v sf=$TFACT '{if ($2=="p1") print $3/sf}'`
 BETA=`cat $LF | tail -4 | awk '{if ($2=="p2") print $3}'`
 CHISQ=`cat $LF | tail -4 | awk '{if ($1=="CHISQUARE:") print $2}'`
 echo $X0 $TAU >> ../../$FQCTAUVSX0
