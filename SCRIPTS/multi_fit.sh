@@ -51,7 +51,7 @@ fi
 cd Phi$2
 echo "Processing " $X0 " Phi" $2 
 #echo $RCMD " " `pwd`
-if [ -e Cn.dat ]
+if [ \( -e Cn.dat \) -a \( "$f" != "X0_1.0" \) ]
 then
 echo -n "Fitting Cn.dat..."
 RCMD=`echo "$PERC/fitSE.C(\"Cn.dat\",2,$CNBEG,1000,0)"`
@@ -64,7 +64,7 @@ echo $X0 $BETA $CHISQ >> ../../$CNBETAVSX0
 echo "done"
 fi
 #
-FQS=`ls -r -1 Fqs*max | tail -1 2> /dev/null` 
+FQS=`ls -r -1 Fqs*max 2> /dev/null | tail -1 2> /dev/null` 
 if [ "$FQS" != "" ]
 then
 echo -n "Fitting " $FQS "..."
@@ -78,7 +78,7 @@ echo $X0 $BETA $CHISQ >> ../../$FQSBETAVSX0
 echo "done"
 fi
 #
-FQC=`ls -r -1 N-sqt*max | tail -1` 
+FQC=`ls -r -1 N-sqt*max 2> /dev/null | tail -1 2> /dev/null` 
 if [ "$FQC" != "" ]
 then
 echo -n "Fitting " $FQC "..."
