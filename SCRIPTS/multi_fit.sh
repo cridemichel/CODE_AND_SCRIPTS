@@ -34,12 +34,6 @@ echo -n "" > $CNTAUVSX0
 echo -n "" > $CNBETAVSX0
 echo -n "" > $CNCHISQVSX0
 LF=_rootexe.log
-if [ "$5" == "" ]
-then 
-TYPE=2
-else
-TYPE=$5
-fi
 if [ "$1" == "" ]
 then
 echo "multi_fit.sh '<list of dir>' <volume_fraction>"
