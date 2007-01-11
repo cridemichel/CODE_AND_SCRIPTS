@@ -3,8 +3,8 @@ PERC=$HOME/postdoc/hardellipsoid/hardellSVN/CODE/SCRIPTS/
 SCALFACTS="$HOME/ELLIPSOIDS/scaling_factors.dat"
 GSF="$HOME/ELLIPSOIDS/get_scalfact"
 CNBEG=0.1
-FQSBEG=0.1
-FQCBEG=0.1
+FQSBEG=0.15
+FQCBEG=0.15
 DOCN=0
 DOFQS=0
 DOFQC=1
@@ -64,7 +64,7 @@ cd ..
 continue
 fi
 cd Phi$2
-echo "Processing " $X0 " Phi" $2 
+echo "Processing " $X0 " Phi" $2 "( Scaling Factor=" $TFACT " )"
 #echo $RCMD " " `pwd`
 if [ \( -e Cn.dat \) -a \( "$f" != "X0_1.0" \) -a \( "$DOCN" == "1" \) ]
 then
@@ -103,7 +103,6 @@ then
 echo -n "Fitting " $FQC "..."
 #echo "qui1 " $FQCBEG  " " $TFACT
 FQCBEGSC=`echo "$FQCBEG*$TFACT"|bc -l`
-echo "qui2"
 RCMD=`echo "$PERC/fitSE.C(\"$FQC\",$TYPE,$FQCBEGSC,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk -v sf=$TFACT '{if ($2=="p1") print $3/sf}'`
