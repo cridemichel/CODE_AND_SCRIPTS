@@ -89,9 +89,9 @@ then
 echo -n "Fitting " $FQC "..."
 RCMD=`echo "$PERC/fitSE.C(\"$FQC\",$TYPE,$FQCBEG,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
-TAU=`cat $LF | awk '{if ($2=="p1") print $3}'`
-BETA=`cat $LF | awk '{if ($2=="p2") print $3}'`
-CHISQ=`cat $LF | awk '{if ($1=="CHISQUARE:") print $2}'`
+TAU=`cat $LF | tail -4 | awk '{if ($2=="p1") print $3}'`
+BETA=`cat $LF | tail -4 | awk '{if ($2=="p2") print $3}'`
+CHISQ=`cat $LF | tail -4 | awk '{if ($1=="CHISQUARE:") print $2}'`
 echo $X0 $TAU >> ../../$FQCTAUVSX0
 echo $X0 $BETA >> ../../$FQCBETAVSX0
 echo $X0 $CHISQ >> ../../$FQCCHISQVSX0
