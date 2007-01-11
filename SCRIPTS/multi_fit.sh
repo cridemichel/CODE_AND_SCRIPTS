@@ -43,6 +43,11 @@ for f in $1
 do
 cd $f
 X0=`echo $f | awk -F '_' '{print $2}'`
+if [ ! -d "Phi$2" ]
+then
+cd ..
+continue
+fi
 cd Phi$2
 #echo $RCMD " " `pwd`
 RCMD=`echo "$PERC/fitSE.C(\"Cn.dat\",2,$CNBEG,1000,1)"`
