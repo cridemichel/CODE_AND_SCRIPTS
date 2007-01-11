@@ -1,8 +1,8 @@
 ROOTEXE="root.exe"
 PERC=$HOME/postdoc/hardellipsoid/hardellSVN/CODE/SCRIPTS/
-CNBEG=0.15
-FQSBEG=1.0
-FQCBEG=1.0
+CNBEG=0.1
+FQSBEG=0.5
+FQCBEG=0.5
 if [ "$3" = "" ]
 then
 TYPE="2"
@@ -60,7 +60,7 @@ echo "Processing " $X0 " Phi" $2
 if [ \( -e Cn.dat \) -a \( "$f" != "X0_1.0" \) ]
 then
 echo -n "Fitting Cn.dat..."
-RCMD=`echo "$PERC/fitSE.C(\"Cn.dat\",2,$CNBEG,1000,0)"`
+RCMD=`echo "$PERC/fitSE.C(\"Cn.dat\",$TYPE,$CNBEG,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk '{if ($2=="p1") print $3}'`
 BETA=`cat $LF | tail -4 | awk '{if ($2=="p2") print $3}'`
@@ -75,7 +75,7 @@ FQS=`ls -r -1 Fqs*max 2> /dev/null | tail -1 2> /dev/null`
 if [ "$FQS" != "" ]
 then
 echo -n "Fitting " $FQS "..."
-RCMD=`echo "$PERC/fitSE.C(\"$FQS\",2,$FQSBEG,1000,0)"`
+RCMD=`echo "$PERC/fitSE.C(\"$FQS\",$TYPE,$FQSBEG,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk '{if ($2=="p1") print $3}'`
 BETA=`cat $LF | tail -4 | awk '{if ($2=="p2") print $3}'`
@@ -90,7 +90,7 @@ FQC=`ls -r -1 N-sqt*max 2> /dev/null | tail -1 2> /dev/null`
 if [ "$FQC" != "" ]
 then
 echo -n "Fitting " $FQC "..."
-RCMD=`echo "$PERC/fitSE.C(\"$FQC\",2,$FQCBEG,1000,0)"`
+RCMD=`echo "$PERC/fitSE.C(\"$FQC\",$TYPE,$FQCBEG,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | awk '{if ($2=="p1") print $3}'`
 BETA=`cat $LF | awk '{if ($2=="p2") print $3}'`
