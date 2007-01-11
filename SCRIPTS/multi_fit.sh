@@ -17,16 +17,22 @@ EXT="str"
 fi
 CNTAUVSX0="tau_vs_X0_Cn_Phi$2_$EXT.dat"
 CNBETAVSX0="beta_vs_X0_Cn_Phi$2_$EXT.dat"
+CNCHISQVSX0="chisq_vs_X0_Cn_Phi$2_$EXT.dat"
 FQSTAUVSX0="tau_vs_X0_Fqs_Phi$2_$EXT.dat"
 FQSBETAVSX0="beta_vs_X0_Fqs_Phi$2_$EXT.dat"
+FQSCHISQVSX0="chisq_vs_X0_Fqs_Phi$2_$EXT.dat"
 FQCTAUVSX0="tau_vs_X0_N-sqt_Phi$2_$EXT.dat"
 FQCBETAVSX0="beta_vs_X0_N-sqt_Phi$2_$EXT.dat"
+FQCCHISQVSX0="chisq_vs_X0_N-sqt_Phi$2_$EXT.dat"
 echo -n "" > $FQCTAUVSX0
 echo -n "" > $FQCBETAVSX0
+echo -n "" > $FQCCHISQVSX0
 echo -n "" > $FQSTAUVSX0
 echo -n "" > $FQSBETAVSX0
+echo -n "" > $FQSCHISQVSX0
 echo -n "" > $CNTAUVSX0
 echo -n "" > $CNBETAVSX0
+echo -n "" > $CNCHISQVSX0
 LF=_rootexe.log
 if [ "$5" == "" ]
 then 
@@ -59,8 +65,9 @@ $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk '{if ($2=="p1") print $3}'`
 BETA=`cat $LF | tail -4 | awk '{if ($2=="p2") print $3}'`
 CHISQ=`cat $LF | tail -4 | awk '{if ($1=="CHISQUARE:") print $2}'`
-echo $X0 $TAU $CHISQ >> ../../$CNTAUVSX0
-echo $X0 $BETA $CHISQ >> ../../$CNBETAVSX0
+echo $X0 $TAU >> ../../$CNTAUVSX0
+echo $X0 $BETA >> ../../$CNBETAVSX0
+echo $X0 $CHISQ >> ../../$CNCHISQVSX0
 echo "done"
 fi
 #
@@ -73,8 +80,9 @@ $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk '{if ($2=="p1") print $3}'`
 BETA=`cat $LF | tail -4 | awk '{if ($2=="p2") print $3}'`
 CHISQ=`cat $LF | tail -4 | awk '{if ($1=="CHISQUARE:") print $2}'`
-echo $X0 $TAU $CHISQ >> ../../$FQSTAUVSX0
-echo $X0 $BETA $CHISQ >> ../../$FQSBETAVSX0
+echo $X0 $TAU >> ../../$FQSTAUVSX0
+echo $X0 $BETA >> ../../$FQSBETAVSX0
+echo $X0 $CHISQ >> ../../$FQSCHISQVSX0
 echo "done"
 fi
 #
@@ -87,8 +95,9 @@ $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | awk '{if ($2=="p1") print $3}'`
 BETA=`cat $LF | awk '{if ($2=="p2") print $3}'`
 CHISQ=`cat $LF | awk '{if ($1=="CHISQUARE:") print $2}'`
-echo $X0 $TAU $CHISQ >> ../../$FQCTAUVSX0
-echo $X0 $BETA $CHISQ >> ../../$FQCBETAVSX0
+echo $X0 $TAU >> ../../$FQCTAUVSX0
+echo $X0 $BETA >> ../../$FQCBETAVSX0
+echo $X0 $CHISQ >> ../../$FQCCHISQVSX0
 echo "done"
 fi
 if [ -e $LF ] 
