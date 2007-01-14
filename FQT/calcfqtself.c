@@ -99,7 +99,7 @@ int mesh[][NKSHELL][3]=
 double twopi;
 void print_usage(void)
 {
-  printf("calcfqtself [ --skip/-s | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h! clusters/-c ] <lista_files> [points] [qmin] [qmax]\n");
+  printf("calcfqtself [ --skip/-s | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --clusters/-c ] <lista_files> [points] [qmin] [qmax]\n");
   printf("where points is the number of points of the correlation function\n");
   exit(0);
 }
