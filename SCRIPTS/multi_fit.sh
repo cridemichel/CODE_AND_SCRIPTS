@@ -4,8 +4,8 @@ PERC=$HOME/postdoc/hardellipsoid/hardellSVN/CODE/SCRIPTS/
 SCALFACTS="$HOME/ELLIPSOIDS/scaling_factors.dat"
 GSF="$HOME/ELLIPSOIDS/get_scalfact"
 CNBEG=0.1
-FQSBEG=0.15
-FQCBEG=0.15
+FQSBEG=0.1
+FQCBEG=0.1
 DOCN=1
 DOFQS=1
 DOFQC=1
@@ -82,7 +82,7 @@ echo $X0 $CHISQ >> ../../$CNCHISQVSX0
 echo "done"
 fi
 #
-FQS=`ls -r -1 Fqs*max 2> /dev/null | tail -1 2> /dev/null` 
+FQS=`ls -rt -1 Fqs*max 2> /dev/null | tail -1 2> /dev/null` 
 if [ \( "$FQS" != "" \) -a \( "$DOFQS" == "1" \) ]
 then
 echo -n "Fitting " $FQS "..."
@@ -98,12 +98,13 @@ echo $X0 $CHISQ >> ../../$FQSCHISQVSX0
 echo "done"
 fi
 #
-FQC=`ls -r -1 N-sqt*max 2> /dev/null | tail -1 2> /dev/null` 
+FQC=`ls -rt -1 N-sqt*max 2> /dev/null | tail -1 2> /dev/null` 
 if [ "$FQC" != "" -a \( "$DOFQC" == "1" \) ]
 then
 echo -n "Fitting " $FQC "..."
 #echo "qui1 " $FQCBEG  " " $TFACT
 FQCBEGSC=`echo "$FQCBEG*$TFACT"|bc -l`
+echo "FQCBEG= " $FQCBEG " FQCBEGSC= " $FQCBEGSC " SF= " $TFACT 
 RCMD=`echo "$PERC/fitSE.C(\"$FQC\",$TYPE,$FQCBEGSC,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk -v sf=$TFACT '{if ($2=="p1") print $3/sf}'`
