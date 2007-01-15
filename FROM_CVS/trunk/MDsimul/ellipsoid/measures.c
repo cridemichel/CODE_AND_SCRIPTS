@@ -546,8 +546,8 @@ void temperat(void)
       temp = OprogStatus.sumTemp / NUMCALCS;
     }
 #ifdef MD_INELASTIC
-  dofTra = 3;
-  dofRot = 2;
+  dofTra = 3*((double)Oparams.parnum);
+  dofRot = 2*((double)Oparams.parnum);
   if (OprogStatus.brownian==1)
     {
       tempRot = 2.0 * Krot / dofRot;
@@ -555,8 +555,8 @@ void temperat(void)
     }
   else
     {
-      tempRot = 2.0 * Ktra / (dofRot - 3.0);
-      tempTra = 2.0 * Krot / dofTra;
+      tempRot = 2.0 * Ktra / dofRot;
+      tempTra = 2.0 * Krot / (dofTra-3.0);
     }
 #endif
   mf = fopenMPI(absMisHD("temp.dat"),"a");
