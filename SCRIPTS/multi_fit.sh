@@ -75,7 +75,7 @@ echo -n "Fitting Cn.dat..."
 if [ "$BEGTIME" == "MSD" ]
 then
 MSDTHR="0.2"
-CNBEGSC=`findTimeFromMSD rotMSDcnf.dat $MSDTHR`
+CNBEGSC=`$GTM rotMSDcnf.dat $MSDTHR`
 else
 CNBEGSC=`echo "$CNBEG*$TFACT"|bc -l`
 fi
@@ -97,7 +97,7 @@ echo -n "Fitting " $FQS "..."
 if [ "$BEGTIME" == "MSD" ]
 then
 MSDTHR=`echo "$TFACT/10.0" | bc -l`
-FQSBEGSC=`findTimeFromMSD MSDcnf.dat $MSDTHR`
+FQSBEGSC=`$GTM MSDcnf.dat $MSDTHR`
 else
 FQSBEGSC=`echo "$FQSBEG*$TFACT"|bc -l`
 fi
@@ -120,7 +120,7 @@ echo -n "Fitting " $FQC "..."
 if [ "$BEGTIME" == "MSD" ]
 then
 MSDTHR=`echo "$TFACT/10.0" | bc -l`
-FQCBEGSC=`findTimeFromMSD MSDcnf.dat $MSDTHR`
+FQCBEGSC=`$GTM MSDcnf.dat $MSDTHR`
 else
 FQCBEGSC=`echo "$FQCBEG*$TFACT"|bc -l`
 fi
