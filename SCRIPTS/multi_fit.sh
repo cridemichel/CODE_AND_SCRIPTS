@@ -3,10 +3,12 @@ ROOTEXE="root.exe"
 PERC=$HOME/postdoc/hardellipsoid/hardellSVN/CODE/SCRIPTS/
 SCALFACTS="$HOME/ELLIPSOIDS/scaling_factors.dat"
 GSF="$HOME/ELLIPSOIDS/get_scalfact"
-CNBEG=0.1
+GTM="$HOME/ELLIPSOIDS/getTimeFromMSD"
+BEGTIME="MSD"
+CNBEG=0.05
 FQSBEG=0.1
 FQCBEG=0.1
-DOCN=1
+DOCN=0
 DOFQS=1
 DOFQC=1
 if [ "$3" = "" ]
@@ -70,7 +72,13 @@ echo "Processing " $X0 " Phi" $2 "( Scaling Factor=" $TFACT " )"
 if [ \( -e Cn.dat \) -a \( "$f" != "X0_1.0" \) -a \( "$DOCN" == "1" \) ]
 then
 echo -n "Fitting Cn.dat..."
+if [ "$BEGTIME" == "MSD" ]
+then
+MSDTHR="0.2"
+CNBEGSC=`findTimeFromMSD rotMSDcnf.dat $MSDTHR`
+else
 CNBEGSC=`echo "$CNBEG*$TFACT"|bc -l`
+fi
 RCMD=`echo "$PERC/fitSE.C(\"Cn.dat\",$TYPE,$CNBEGSC,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk -v sf=$TFACT '{if ($2=="p1") print $3/sf}'`
@@ -86,7 +94,13 @@ FQS=`ls -rt -1 Fqs*max 2> /dev/null | tail -1 2> /dev/null`
 if [ \( "$FQS" != "" \) -a \( "$DOFQS" == "1" \) ]
 then
 echo -n "Fitting " $FQS "..."
+if [ "$BEGTIME" == "MSD" ]
+then
+MSDTHR=`echo "$TFACT/10.0" | bc -l`
+FQSBEGSC=`findTimeFromMSD MSDcnf.dat $MSDTHR`
+else
 FQSBEGSC=`echo "$FQSBEG*$TFACT"|bc -l`
+fi
 RCMD=`echo "$PERC/fitSE.C(\"$FQS\",$TYPE,$FQSBEGSC,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk -v sf=$TFACT '{if ($2=="p1") print $3/sf}'`
@@ -103,7 +117,13 @@ if [ "$FQC" != "" -a \( "$DOFQC" == "1" \) ]
 then
 echo -n "Fitting " $FQC "..."
 #echo "qui1 " $FQCBEG  " " $TFACT
+if [ "$BEGTIME" == "MSD" ]
+then
+MSDTHR=`echo "$TFACT/10.0" | bc -l`
+FQCBEGSC=`findTimeFromMSD MSDcnf.dat $MSDTHR`
+else
 FQCBEGSC=`echo "$FQCBEG*$TFACT"|bc -l`
+fi
 echo "FQCBEG= " $FQCBEG " FQCBEGSC= " $FQCBEGSC " SF= " $TFACT 
 RCMD=`echo "$PERC/fitSE.C(\"$FQC\",$TYPE,$FQCBEGSC,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF

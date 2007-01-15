@@ -1004,7 +1004,7 @@ int main(int argc, char **argv)
 	  jbeg = 0; 
 	  ifin = NP;
 	}
-      for (i = 0; i < NP; i++)
+      for (i = START; i < END; i++)
 	{
     	  if (color[i] == -1)
 	    color[i] = curcolor;
@@ -1119,7 +1119,7 @@ int main(int argc, char **argv)
 	  curcolor = findmaxColor(NP, color)+1;
 	}
       /* considera la particelle singole come cluster da 1 */
-      for (i = 0; i < NP; i++)
+      for (i = START; i < END; i++)
 	{
 	  if (color[i]==-1)
 	    {	    
@@ -1183,7 +1183,7 @@ int main(int argc, char **argv)
 	  inCell[1] = malloc(sizeof(int)*NP*NUMREP);
 	  inCell[2] = malloc(sizeof(int)*NP*NUMREP);
 
-	  for (i=0; i < NP; i++)
+	  for (i=START; i < END; i++)
 	    {
 	      if (particles_type == 1)
 		{
@@ -1220,7 +1220,7 @@ int main(int argc, char **argv)
 	       * cluster allora tale cluster è percolante.*/
 	      na = 0;
 	      //printf("i=1011 j=277 rat=%.15G %.15G\n", rat[0][0][1011], rat[0][0][377]);
-	      for (i=0; i < NP; i++)
+	      for (i=START; i < END; i++)
 		{
 		  if (color[i]==cluster_sort[nc].color)
 		    {
@@ -1465,12 +1465,12 @@ int main(int argc, char **argv)
 	{
 	  sprintf(fn, "%s.bonds", fname[nr1]);
 	  f = fopen(fn, "w+");
-	  fprintf(f, "%d %.15G\n", NP, L);
-	  for (i = 0; i < NP; i++)
+	  fprintf(f, "%d %.15G\n", START-END, L);
+	  for (i = START; i < END; i++)
 	    {
 	      fprintf(f,"%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
 	    }	  
-	  for (i = 0; i < NP; i++)
+	  for (i = START; i < END; i++)
 	    {
 	      fprintf(f,"%d %d\n", i+1, numbonds[i]);
 	      for (c = 0; c < numbonds[i]-1; c++)
