@@ -572,8 +572,11 @@ int main(int argc, char **argv)
 	  sqImA[qmod][ii] = sqImA[qmod][ii]/cc[qmod][ii];
 	  if (clusters)
 	    {
-	      sqRe_cls[kk][qmod][ii] = sqRe_cls[kk][qmod][ii]/cc_cls[kk][qmod][ii];
-	      sqIm_cls[kk][qmod][ii] = sqIm_cls[kk][qmod][ii]/cc_cls[kk][qmod][ii];
+	      for (kk=0; kk < 2; kk++)
+		{
+      		  sqRe_cls[kk][qmod][ii] = sqRe_cls[kk][qmod][ii]/cc_cls[kk][qmod][ii];
+    		  sqIm_cls[kk][qmod][ii] = sqIm_cls[kk][qmod][ii]/cc_cls[kk][qmod][ii];
+		}
 	    }
 	  if (NPA  < NP)
 	    {
