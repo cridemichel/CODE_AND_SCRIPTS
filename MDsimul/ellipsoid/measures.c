@@ -6,7 +6,7 @@
    NOTE: The box edge length is unity, so every length must be referred to 
          the this quantity.
 */
-
+#define MD_DEBUG21(x)
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 #ifdef MPI
 extern int my_rank;
@@ -33,7 +33,9 @@ extern double W, K, WC, T1xx, T1yy, T1zz, Ktra, Krot,
   WCxx, WCyy, WCzz, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, 
   Patxy, Patyz, Patzx, Patxx, Patyy, Patzz;  
-
+#ifdef EDHE_FLEX
+extern int *bondscache, *numbonds, **bonds;
+#endif
 /* used by linked list routines */
 extern int *head, *list, *map;  /* arrays of integer */
 extern int NCell, mapSize, M;
@@ -57,6 +59,9 @@ double calcpotene(void)
 {
   double Epot; 
   int na;
+#ifdef EDHE_FLEX
+  int kk2, jj, kk, jj2, aa, bb;
+#endif
 #if 0
   double shift[NDIM];
   int cellRangeEne[2 * NDIM];
@@ -130,8 +135,34 @@ double calcpotene(void)
 	}
     }
 #else
- for (na = 0; na < Oparams.parnum; na++)
-    Epot -= numbonds[na];
+  MD_DEBUG21(printf("BEGIN\n"));
+  for (na = 0; na < Oparams.parnum; na++)
+    {
+#ifdef EDHE_FLEX
+      for (kk=0; kk < numbonds[na]; kk++)
+	{
+	  jj = bonds[na][kk]/(NA*NA);
+	  jj2 = bonds[na][kk]%(NA*NA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  for (kk2 = 0; kk2 < Oparams.ninters; kk2++)
+	    {
+	      if ( (intersArr[kk2].type1 == na && intersArr[kk2].type2 == jj &&
+		    intersArr[kk2].spot1 == aa-1 && intersArr[kk2].spot2 == bb-1) || 
+		   (intersArr[kk2].type1 == jj && intersArr[kk2].type2 == na &&
+		    intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
+		{
+		  MD_DEBUG21(printf("(%d,%d)-(%d,%d) height=%.15G\n", na, aa-1, jj, bb-1, intersArr[kk2].bheight));
+		  Epot -= intersArr[kk2].bheight;
+		}		 
+	    }
+	}
+      //Epot -= numbonds[na];
+#else
+      Epot -= numbonds[na];
+#endif
+    }
+  MD_DEBUG21(printf("END\n"));
 #endif
  return 0.5*Epot;
 }
@@ -165,6 +196,9 @@ void energy(void)
 {
   /* DESCRIPTION:
      This measuring function calculate the total energy of the system */
+#ifdef EDHE_FLEX
+  double mass;
+#endif
   double Px, Py, Pz, RCMx, RCMy, RCMz;
   int mol, Nm, i;
   double px, py, pz;
@@ -207,9 +241,16 @@ void energy(void)
   UpdateSystem();
   for(i = 0; i < Oparams.parnumA; i++)
     {
+#ifdef EDHE_FLEX
+      mass = typesArr[typeOfPart[i]].m;
+      px = mass * vx[i];
+      py = mass * vy[i];
+      pz = mass * vz[i];
+#else
       px = Oparams.m[0] * vx[i];
       py = Oparams.m[0] * vy[i];
       pz = Oparams.m[0] * vz[i];
+#endif
       //vectProd(rx[a][i], ry[a][i], rz[a][i], 
       //     vx[a][i], vy[a][i], vz[a][i],
           //&lx, &ly, &lz);
@@ -222,9 +263,16 @@ void energy(void)
     }
   for(i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
+#ifdef EDHE_FLEX
+      mass = typesArr[typeOfPart[i]].m;
+      px = mass * vx[i];
+      py = mass * vy[i];
+      pz = mass * vz[i];
+#else
       px = Oparams.m[1] * vx[i];
       py = Oparams.m[1] * vy[i];
       pz = Oparams.m[1] * vz[i];
+#endif
       Px += px;
       Py += py;
       Pz += pz;
@@ -248,15 +296,29 @@ void energy(void)
   
   for(i = 0; i < Oparams.parnumA; i++)
     {
+#ifdef EDHE_FLEX
+      mass = typesArr[typeOfPart[i]].m;
+      RCMx = mass * rx[i];
+      RCMy = mass * ry[i];
+      RCMz = mass * rz[i];
+#else 
       RCMx += rx[i]*Oparams.m[0];
       RCMy += ry[i]*Oparams.m[0];
       RCMz += rz[i]*Oparams.m[0];
+#endif
     }
   for(i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
+#ifdef EDHE_FLEX
+      mass = typesArr[typeOfPart[i]].m;
+      RCMx = mass * rx[i];
+      RCMy = mass * ry[i];
+      RCMz = mass * rz[i];
+#else 
       RCMx += rx[i]*Oparams.m[1];
       RCMy += ry[i]*Oparams.m[1];
       RCMz += rz[i]*Oparams.m[1];
+#endif
     }
   sprintf(TXTA[2],"  BOX CM=(%.15f,%.15f,%.15f)\n", RCMx, RCMy, RCMz);
   //printf("RANK: %d STEP: %d\n", my_rank, Oparams.curStep);
@@ -484,8 +546,8 @@ void temperat(void)
       temp = OprogStatus.sumTemp / NUMCALCS;
     }
 #ifdef MD_INELASTIC
-  dofTra = 3;
-  dofRot = 2;
+  dofTra = 3*((double)Oparams.parnum);
+  dofRot = 2*((double)Oparams.parnum);
   if (OprogStatus.brownian==1)
     {
       tempRot = 2.0 * Krot / dofRot;
@@ -493,8 +555,8 @@ void temperat(void)
     }
   else
     {
-      tempRot = 2.0 * Ktra / (dofRot - 3.0);
-      tempTra = 2.0 * Krot / dofTra;
+      tempRot = 2.0 * Ktra / dofRot;
+      tempTra = 2.0 * Krot / (dofTra-3.0);
     }
 #endif
   mf = fopenMPI(absMisHD("temp.dat"),"a");
