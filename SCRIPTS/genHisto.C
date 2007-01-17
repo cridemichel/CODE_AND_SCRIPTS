@@ -39,12 +39,12 @@ TNtuple* readascii(char* name, Int_t *nlines, Int_t ncol)
     {
       if (ncol==2)
 	{
-  	  fscanf(f, "%f %f %[^\n]\n", &x, &y, dummy);
+  	  fscanf(f, "%f %f\n", &x, &y);
   	  ntuple->Fill(x,y);
 	}
       else 
 	{
-	  fscanf(f, "%f %[^\n]\n", &x, dummy);
+	  fscanf(f, "%f\n", &x);
   	  ntuple->Fill(x);
 	}
       (*nlines)++;
