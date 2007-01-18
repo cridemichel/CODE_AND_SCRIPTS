@@ -1,4 +1,4 @@
- #include<mdsimul.h>
+#include<mdsimul.h>
 #define MD_NNLPLANES
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
@@ -3676,12 +3676,16 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
 #ifdef MD_POLYDISP
       sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
 #else
+#ifdef EDHE_FLEX
+      sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
       if (na < parnumA && n < parnumA)
 	sigSq = Sqr(maxax[na]+OprogStatus.epsd);
       else if (na >= parnumA && n >= parnumA)
 	sigSq = Sqr(maxax[na]+OprogStatus.epsd);
       else
 	sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#endif
 #endif
     }
   MD_DEBUG2(printf("sigSq: %f\n", sigSq));
@@ -3767,6 +3771,15 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
   evtimeHC = evtime;
   acHC = ac = 0;
   bcHC = bc = 0;
+#ifdef EDHE_FLEX
+  if (OprogStatus.targetPhi <=0)
+    {
+      if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+	{
+	  collCode = MD_EVENT_NONE;
+	}
+    }
+#else
   if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
 				    (na >= Oparams.parnumA && n < Oparams.parnumA)))
     {
@@ -3775,6 +3788,7 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
 	  collCode = MD_EVENT_NONE;
 	}
     }
+#endif
   if (collCode!=MD_EVENT_NONE)
     t2 = evtime+1E-7;
   if (locate_contact(na, n, shift, t1, t2, vecg))
@@ -4296,6 +4310,9 @@ void PredictEventNNL(int na, int nb)
 #ifdef MD_POLYDISP
 	  sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
 #else
+#ifdef EDHE_FLEX
+	  sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
 	  if (na < parnumA && n < parnumA)
 	    sigSq = Sqr(maxax[na]+OprogStatus.epsd);
 	  else if (na >= parnumA && n >= parnumA)
@@ -4303,8 +4320,9 @@ void PredictEventNNL(int na, int nb)
 	  else
 	    sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
 #endif
+#endif
 	}
-      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
+      MD_DEBUG32(printf("n=%d na=%d maxaxes=%f %f sigSq: %f\n", n, na, maxax[n], maxax[na], sigSq));
       tInt = Oparams.time - atomTime[n];
       dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
       dv[0] = vx[na] - vx[n];
@@ -4385,6 +4403,15 @@ void PredictEventNNL(int na, int nb)
       evtimeHC = evtime;
       acHC = ac = 0;
       bcHC = bc = 0;
+#ifdef EDHE_FLEX
+      if (OprogStatus.targetPhi <=0)
+	{
+	  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+	    {
+	      collCode = MD_EVENT_NONE;
+	    }
+	}
+#else
       if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
 					(na >= Oparams.parnumA && n < Oparams.parnumA)))
 	{
@@ -4393,6 +4420,7 @@ void PredictEventNNL(int na, int nb)
 	      collCode = MD_EVENT_NONE;
 	    }
 	}
+#endif
       if (collCode!=MD_EVENT_NONE)
 	t2 = evtime+1E-7;
       if (locate_contact(na, n, shift, t1, t2, vecg))
@@ -4423,8 +4451,8 @@ void PredictEventNNL(int na, int nb)
       rzC = vecg[2];
       t = vecg[4];
 #endif
-      MD_DEBUG32(printf("Scheduling collision between %d and %d at t=%.15G\n", na, n, t));
 #ifdef MD_PATCHY_HE
+      MD_DEBUG32(printf("Scheduling collision between %d and %d ac=%d bc=%d at t=%.15G\n", na, n, ac, bc, t));
       ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #else
       ScheduleEvent (na, n, t);
@@ -4455,7 +4483,7 @@ void updrebuildNNL(int na)
     }
   else 
     nnltime1 = timbig;
-  MD_DEBUG32(printf("sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
+  MD_DEBUG32(printf("nexttime=%.15G\n", nebrTab[na].nexttime));
 #else
   nnltime1 = timbig;
 #endif
@@ -4525,7 +4553,7 @@ void updrebuildNNL(int na)
     }
 #endif
  
-  //printf("updneigh REBUILD i=%d t=%.15G\n", na, nebrTab[na].nexttime);
+  MD_DEBUG32(printf("updneigh REBUILD i=%d t=%.15G nextNNLrebuild=%.15G\n", na, nebrTab[na].nexttime, nextNNLrebuild));
   if (nebrTab[na].nexttime < nextNNLrebuild)
     nextNNLrebuild = nebrTab[na].nexttime;
 }
@@ -4550,6 +4578,7 @@ void nextNNLupdate(int na)
 #ifdef EDHE_FLEX
   int typena;
 #endif
+  MD_DEBUG32(printf("nextNNLupdate...\n"));
 #ifndef MD_NNLPLANES
 #ifdef EDHE_FLEX
   typena = typeOfPart[na];
@@ -4624,7 +4653,7 @@ void nextNNLupdate(int na)
     }
   else
     nnltime1 = timbig;
-  MD_DEBUG32(printf("[nextNNLupdate] sptime: %.15G nexttime=%.15G\n", sptime, nebrTab[na].nexttime));
+  MD_DEBUG32(printf("[nextNNLupdate] nexttime=%.15G\n", nebrTab[na].nexttime));
 #else
   nnltime1 = timbig; 
 #endif
@@ -4695,6 +4724,7 @@ void BuildNNL(int na)
   /*double cels[NDIM];*/
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
   nebrTab[na].len = 0;
+  MD_DEBUG32(printf("Building NNL...\n"));
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;

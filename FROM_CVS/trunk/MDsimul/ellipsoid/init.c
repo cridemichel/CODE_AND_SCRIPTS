@@ -1720,8 +1720,17 @@ double calc_shell(void)
       for (sp = 0; sp < typesArr[pt].nspots; sp++) 
 	{
 	  norm = calc_norm(typesArr[pt].spots[sp].x);
-	    for (kk=0; kk < 3; kk++)
-	      v[kk] = (norm + typesArr[pt].spots[sp].sigma*0.5) * typesArr[pt].spots[sp].x[kk] / norm;
+	  if (norm!=0.0)
+	    {
+	      for (kk=0; kk < 3; kk++)
+		v[kk] = (norm + typesArr[pt].spots[sp].sigma*0.5) * typesArr[pt].spots[sp].x[kk] / norm;
+	    }
+	  else
+	    {
+	      for (kk=0; kk < 3; kk++)
+		v[kk] = typesArr[pt].spots[sp].sigma*0.5;
+	    }	      
+	  //printf("pt=%d sp=%d v=%.15G %.15G %.15G\n", pt, sp, v[0], v[1], v[2]);
 	  delta = max3(v[0]-typesArr[pt].sax[0],v[1]-typesArr[pt].sax[1],v[2]-typesArr[pt].sax[2]);
 	  if (sp == 0 || delta > deltamax)
 	    deltamax  = delta;
@@ -2593,6 +2602,7 @@ void usrInitAft(void)
       maxSpots = eval_max_dist_for_spots(typeOfPart[i]);
       if (maxSpots > maxax[i])
 	maxax[i] = maxSpots;
+      printf("maxax[%d]:%f maxSpots:%f\n", i, maxax[i], maxSpots);
 #else
       a=(i<Oparams.parnumA)?0:1;
       if (Oparams.a[a] > maxax[i])
