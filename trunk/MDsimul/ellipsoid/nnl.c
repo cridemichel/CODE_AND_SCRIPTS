@@ -4428,6 +4428,7 @@ void PredictEventNNL(int na, int nb)
 	  if (collCode == MD_EVENT_NONE || (collCode!=MD_EVENT_NONE && vecg[4] <= evtime))
 	    {
 	      collCode = MD_CORE_BARRIER;
+	      ac = bc = 0;
 	      evtime = vecg[4];
 	      rxC = vecg[0];
 	      ryC = vecg[1];
