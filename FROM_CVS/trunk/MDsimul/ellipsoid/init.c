@@ -2602,7 +2602,7 @@ void usrInitAft(void)
       maxSpots = eval_max_dist_for_spots(typeOfPart[i]);
       if (maxSpots > maxax[i])
 	maxax[i] = maxSpots;
-      printf("maxax[%d]:%f maxSpots:%f\n", i, maxax[i], maxSpots);
+      //printf("maxax[%d]:%f maxSpots:%f\n", i, maxax[i], maxSpots);
 #else
       a=(i<Oparams.parnumA)?0:1;
       if (Oparams.a[a] > maxax[i])

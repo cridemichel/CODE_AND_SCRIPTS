@@ -261,6 +261,7 @@ void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double 
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
+  double shift[3]={0,0,0};
   double factor=0, invmi, invmj, mredl;
   double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
@@ -307,8 +308,8 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     {
       bump(i, j, rxC, ryC, rzC, W);
       MD_DEBUG31(calc_energy("DOPO HARD COLL"));
-      MD_DEBUG10(printf(">>>>>>>>>>collCode: %d\n", bt));
-      MD_DEBUG30(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
+      MD_DEBUG33(printf(">>>>>>>>>>collCode: %d\n", bt));
+      MD_DEBUG33(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
       return;
     }
   numcoll++;
@@ -347,7 +348,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG20(printf("coll code: %d\n", bt));
 #ifdef EDHE_FLEX
   sigAB = 0.5*(typesArr[typeOfPart[i]].spots[ata-1].sigma + typesArr[typeOfPart[j]].spots[atb-1].sigma);
-  MD_DEBUG20(printf("sigmaSticky= %.15G norm rAB: %.15G\n", sigAB, nrAB));
+  MD_DEBUG33(printf("sigmaSticky= %.15G norm rAB: %.15G\n", sigAB, nrAB));
+  MD_DEBUG33(printf("distance between (%d,%d) - (%d,%d) = %.15G\n", i, ata, j, atb, 
+		    calcDistNegOneSP(Oparams.time,0.0,i,j,0, shift))); 
   rCx = ratA[0] - rAB[0]*sigAB*0.5;
   rCy = ratA[1] - rAB[1]*sigAB*0.5;
   rCz = ratA[2] - rAB[2]*sigAB*0.5;
@@ -1261,9 +1264,9 @@ int search_contact_fasterSP(int i, int j, double *shift, double *t, double t1, d
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*maxax[j]*0.5;
 #endif
   *d1 = calcDistNegSP(*t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
-  MD_DEBUG30(printf("[IN SEARCH CONTACT FASTER]*d1=%.15G t=%.15G bondpair=%d\n", *d1, *t, bondpair));
+  MD_DEBUG33(printf("[IN SEARCH CONTACT FASTER]*d1=%.15G t1=%.15G t=%.15G bondpair=%d\n", *d1, t1, *t, bondpair));
   timesF++;
-  MD_DEBUG10(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
+  MD_DEBUG33(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
   delt = OprogStatus.h;
   if (fabs(*d1) < epsdFast)
@@ -1439,8 +1442,8 @@ int check_negpairs(int *negpairs, int bondpair, int i, int j)
       if (!(lastbump[i].mol == j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn]
 	&& lastbump[j].at == mapbondsb[nn]))
 	continue;
-      MD_DEBUG20(printf("[check_negpairs] i=%d ati=%d j=%d atj=%d nn=%d\n", i, mapbondsa[nn],j, mapbondsb[nn],nn);)
-      MD_DEBUG20(printf("[check_negpairs] lastbump[%d]=%d %d lastbump[%d]=%d %d\n", i, lastbump[i].mol, lastbump[j].at, j,lastbump[j].mol, lastbump[j].at));
+      MD_DEBUG33(printf("[check_negpairs] i=%d ati=%d j=%d atj=%d nn=%d\n", i, mapbondsa[nn],j, mapbondsb[nn],nn);)
+      MD_DEBUG33(printf("[check_negpairs] lastbump[%d]=%d %d lastbump[%d]=%d %d\n", i, lastbump[i].mol, lastbump[j].at, j,lastbump[j].mol, lastbump[j].at));
       negpairs[nn] = 1;
       return nn+1;
       //sum += 1;
@@ -1491,17 +1494,17 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
        * di distanza dmin t.c. dmin > 0 se !bound(i,j..) o dmin < 0 se bound(i,j...) */
       if (dists[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	{
-	  MD_DEBUG20(printf("[delt_is_too_big] time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]));
-	  MD_DEBUG20(printf("mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j));
+	  MD_DEBUG33(printf("[delt_is_too_big] time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]));
+	  MD_DEBUG33(printf("mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j));
 	  return 1;
 	}
       if (dists[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	{
-	  MD_DEBUG20(printf("[delt_is_too_big] >>>>time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]));
-	  MD_DEBUG20(printf(">>>>mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j));
+	  MD_DEBUG33(printf("[delt_is_too_big] >>>>time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]));
+	  MD_DEBUG33(printf(">>>>mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j));
 	  return 1;
 	}	  
-}
+    }
   return 0;
 }
 #ifdef MD_ASYM_ITENS
@@ -1838,7 +1841,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #if 1
 	      else 
 		{
-		  printf("[INFO] using old goldenfactor method to reduce delt\n");
+		  printf("[*INFO*] using old goldenfactor method to reduce delt\n");
+		  MD_DEBUG33(printf("i=%d j=%d\n", i, j));
 		  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 			 delt > minh)
 		    {
