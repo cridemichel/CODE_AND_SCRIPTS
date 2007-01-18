@@ -10,6 +10,7 @@
 #define MD_DEBUG30(x)  //qui 
 #define MD_DEBUG31(x)  //qui 
 #define MD_DEBUG32(x) 
+#define MD_DEBUG33(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
@@ -299,9 +300,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       sigmai = Oparams.sigma[0][1];
     }
 #endif
-  numcoll++;
-  //printf("collision code: %d (%d,%d)\n", bt, i, j);
+   //printf("collision code: %d (%d,%d)\n", bt, i, j);
   MD_DEBUG31(calc_energy("PRIMA"));
+  MD_DEBUG33(printf("[BUMPSP] t=%.15G i=%d ata=%d j=%d atb=%d\n", Oparams.time, i, ata, j, atb));
   if (bt == MD_CORE_BARRIER)
     {
       bump(i, j, rxC, ryC, rzC, W);
@@ -310,6 +311,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       MD_DEBUG30(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
       return;
     }
+  numcoll++;
   rA[0] = rx[i];
   rA[1] = ry[i];
   rA[2] = rz[i];

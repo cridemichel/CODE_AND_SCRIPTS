@@ -1408,7 +1408,7 @@ void bumpHS(int i, int j, double *W)
   typej = typeOfPart[j];
 
   numcoll++;
-
+  MD_DEBUG32(printf("[BUMPHS] numcoll:%lld\n", numcoll));
   invmi = 1.0/typesArr[typei].m;
   invmj = 1.0/typesArr[typej].m; 
 
@@ -1561,6 +1561,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
   MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
+  MD_DEBUG32(printf("[BUMP] numcoll:%lld\n", numcoll));
   MD_DEBUG32(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
@@ -6114,8 +6115,8 @@ void PredictEvent (int na, int nb)
 			}
 #endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
-		      MD_DEBUG20(printf("time: %f Adding collision %d-%d\n", t, na, n));
 #ifdef MD_PATCHY_HE
+		      MD_DEBUG32(printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc));
 		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #else
 		      ScheduleEvent (na, n, t);
