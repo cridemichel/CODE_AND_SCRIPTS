@@ -1700,6 +1700,41 @@ void upd_refsysM(int i)
 void RDiagtR(int i, double **M, double a, double b, double c, double **Ri);
 extern double max(double a, double b);
 extern double max3(double a, double b, double c);
+#ifdef EDHE_FLEX
+void calc_encpp(void)
+{
+  int kk;
+  double v[3], norm;
+  int pt, sp;
+  for (pt = 0; pt < Oparams.ntypes; pt++)
+    {
+      for (kk = 0; kk < 3; kk++)
+	typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk];
+
+      for (sp = 0; sp < typesArr[pt].nspots; sp++) 
+	{
+	  //norm = calc_norm(typesArr[pt].spots[sp].x);
+	  if (1)
+	    {
+	      for (kk=0; kk < 3; kk++)
+		v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]);
+	    }
+	  else
+	    {
+	      for (kk=0; kk < 3; kk++)
+		v[kk] = typesArr[pt].spots[sp].sigma*0.5;
+	    }	      
+	  //printf("pt=%d sp=%d v=%.15G %.15G %.15G\n", pt, sp, v[0], v[1], v[2]);
+	  for (kk = 0; kk < 3; kk++)
+	    {
+	      if (v[kk] > typesArr[pt].ppsax[kk]) 
+		typesArr[pt].ppsax[kk] = v[kk];
+	    }
+	  printf("pt=%d ppsax=%f %f %f\n", pt, typesArr[pt].ppsax[0],typesArr[pt].ppsax[1],typesArr[pt].ppsax[2]);
+	}   
+    }
+}
+#endif
 double calc_shell(void)
 {
 #ifdef MD_PATCHY_HE
@@ -1732,8 +1767,9 @@ double calc_shell(void)
 	    }	      
 	  //printf("pt=%d sp=%d v=%.15G %.15G %.15G\n", pt, sp, v[0], v[1], v[2]);
 	  delta = max3(v[0]-typesArr[pt].sax[0],v[1]-typesArr[pt].sax[1],v[2]-typesArr[pt].sax[2]);
-	  if (sp == 0 || delta > deltamax)
+	  if (( pt==0 && sp == 0) || delta > deltamax)
 	    deltamax  = delta;
+	  //printf("deltamax=%.15G\n", deltamax);
 	}   
     }
 #else
@@ -1752,7 +1788,7 @@ double calc_shell(void)
        for (kk=0; kk < 3; kk++)
 	 v[kk] = (norm + Oparams.sigmaSticky*0.5) * spXYZ_B[aa][kk] /  norm;
        delta = max3(v[0]-Oparams.a[1],v[1]-Oparams.b[1],v[2]-Oparams.c[1]);
-       if (aa == 0 || delta > deltamax)
+       if (delta > deltamax)
 	 deltamax  = delta;
     }
 #endif
@@ -1777,7 +1813,7 @@ double calc_nnl_rcut(void)
   for (i = 0; i < Oparams.parnum; i++)
     {
       for (kk=0; kk < 3; kk++)
-	ax[kk] = typesArr[typeOfPart[i]].sax[kk];
+	ax[kk] = typesArr[typeOfPart[i]].ppsax[kk];
       rcutA = 2.0*sqrt(Sqr(ax[0]+OprogStatus.rNebrShell)+
 		   Sqr(ax[1]+OprogStatus.rNebrShell)+
 		   Sqr(ax[2]+OprogStatus.rNebrShell));
@@ -2639,9 +2675,14 @@ void usrInitAft(void)
 	{
 	  /* in questo modo rNebrShell è la "buccia" rispetto al minimo 
 	   * parallelepipedo che include l'ellissoide più gli sticky spots */
+#ifndef EDHE_FLEX
 	  if (OprogStatus.targetPhi <= 0.0)
 	    OprogStatus.rNebrShell += calc_shell();
+	  
 	  printf("[INFO] I've adjusted rNebrShell to %.15G\n", OprogStatus.rNebrShell);	  
+#else
+	  calc_encpp();
+#endif	  
 	  if (Oparams.rcut <= 0.0)
 	    {
 #ifdef EDHE_FLEX
