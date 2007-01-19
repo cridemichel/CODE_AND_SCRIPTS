@@ -4635,6 +4635,7 @@ void nextNNLupdate(int na)
 #endif
   DelDist += distBuf;
   MD_DEBUG31(printf("DelDist=%.15G\n", DelDist));
+  typena = typeOfPart[na]; 
   nebrTab[na].r[0] = rx[na];
   nebrTab[na].r[1] = ry[na];
   nebrTab[na].r[2] = rz[na];
