@@ -1714,16 +1714,8 @@ void calc_encpp(void)
       for (sp = 0; sp < typesArr[pt].nspots; sp++) 
 	{
 	  //norm = calc_norm(typesArr[pt].spots[sp].x);
-	  if (1)
-	    {
-	      for (kk=0; kk < 3; kk++)
-		v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]);
-	    }
-	  else
-	    {
-	      for (kk=0; kk < 3; kk++)
-		v[kk] = typesArr[pt].spots[sp].sigma*0.5;
-	    }	      
+	  for (kk=0; kk < 3; kk++)
+    	    v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]);
 	  //printf("pt=%d sp=%d v=%.15G %.15G %.15G\n", pt, sp, v[0], v[1], v[2]);
 	  for (kk = 0; kk < 3; kk++)
 	    {
