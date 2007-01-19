@@ -1730,7 +1730,7 @@ void calc_encpp(void)
 	      if (v[kk] > typesArr[pt].ppsax[kk]) 
 		typesArr[pt].ppsax[kk] = v[kk];
 	    }
-	  printf("pt=%d ppsax=%f %f %f\n", pt, typesArr[pt].ppsax[0],typesArr[pt].ppsax[1],typesArr[pt].ppsax[2]);
+	  //printf("pt=%d ppsax=%f %f %f\n", pt, typesArr[pt].ppsax[0],typesArr[pt].ppsax[1],typesArr[pt].ppsax[2]);
 	}   
     }
 }
