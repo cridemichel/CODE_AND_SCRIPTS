@@ -9,8 +9,9 @@
 #define MD_DEBUG29(x) 
 #define MD_DEBUG30(x)  //qui 
 #define MD_DEBUG31(x)  //qui 
-#define MD_DEBUG32(x) 
+#define MD_DEBUG32(x)   
 #define MD_DEBUG33(x) 
+#define MD_DEBUG34(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
@@ -731,7 +732,7 @@ void assign_bond_mapping(int i, int j)
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
   a=0;
-  MD_DEBUG20(printf("type(%d)=%d type(%d)%d\n", i, type1, j, type2));
+  MD_DEBUG34(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
   for (ni=0; ni < Oparams.ninters; ni++)
     {
       if (intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2)
@@ -744,10 +745,10 @@ void assign_bond_mapping(int i, int j)
           mapBhoutFlex[a] = intersArr[ni].bhout;
           mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
 				 + typesArr[type2].spots[intersArr[ni].spot2].sigma);
-	  MD_DEBUG20(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
-	  MD_DEBUG20(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
+	  MD_DEBUG34(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
+	  MD_DEBUG34(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
 			    typesArr[type2].spots[intersArr[ni].spot2].sigma));
-	  MD_DEBUG20(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
+	  MD_DEBUG34(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
 	  a++;
 	}	
       else if (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1)
@@ -760,10 +761,10 @@ void assign_bond_mapping(int i, int j)
           mapBhoutFlex[a] = intersArr[ni].bhout;
           mapSigmaFlex[a] = 0.5*(typesArr[type2].spots[intersArr[ni].spot1].sigma
 				 + typesArr[type1].spots[intersArr[ni].spot2].sigma);
-	  MD_DEBUG20(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
-	  MD_DEBUG20(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
+	  MD_DEBUG34(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
+	  MD_DEBUG34(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
 			    typesArr[type2].spots[intersArr[ni].spot2].sigma));
-	  MD_DEBUG20(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
+	  MD_DEBUG34(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
 	  a++;
 	}
     }
@@ -1673,7 +1674,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   maxddot = calc_maxddot(i, j);
 #endif
 #endif
-  MD_DEBUG10(printf("[locate_contact] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
+  MD_DEBUG29(printf("BEGIN [locate_contactSP] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
   h = OprogStatus.h; /* last resort time increment */
   if (*collCode!=MD_EVENT_NONE)
     {
@@ -1731,7 +1732,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	}
     }
 #endif
-  MD_DEBUG30(printf("[BEFORE SEARCH CONTACT FASTER_SP]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
+  MD_DEBUG29(printf("[BEFORE SEARCH CONTACT FASTER_SP]Dopo distances between %d-%d t=%.15G t2=%.15G\n", i, j, t, t2));
 #ifdef MD_NEGPAIRS
   if (do_check_negpairs)
     sumnegpairs = check_negpairs(negpairs, bondpair, i, j); 
@@ -2166,9 +2167,14 @@ double calcDistNegOneNNL_sp_norient(double t, double t1, int i, int nn, double r
   dist = 0;
   for (kk=0; kk < 3; kk++)
     dist += -(ratA[nn+1][kk]-rB[kk])*gradplane[kk];
-  MD_DEBUG32(printf("DIST NOORIENT nn=%d t=%.15G dist=%.15G\n", nn, t+t1, dist- Oparams.sigmaSticky*0.5));
 #ifdef EDHE_FLEX
-  return dist - mapSigmaFlex[nn]*0.5;
+  MD_DEBUG32(printf("DIST NOORIENT nn=%d t=%.15G dist=%.15G\n", nn, t+t1, dist - mapSigmaFlex[nn]*0.5));
+#else
+  MD_DEBUG32(printf("DIST NOORIENT nn=%d t=%.15G dist=%.15G\n", nn, t+t1, dist- Oparams.sigmaSticky*0.5));
+#endif
+#ifdef EDHE_FLEX
+  MD_DEBUG34(printf("nn=%d sigma=%.15G %f %f %f\n", nn, mapSigmaFlex[nn]*0.5, ratA[nn+1][0], ratA[nn+1][1], ratA[nn+1][2]));
+  return dist - typesArr[typeOfPart[i]].spots[nn].sigma*0.5;
 #else
   return dist - Oparams.sigmaSticky*0.5;
 #endif
@@ -2186,13 +2192,13 @@ double calcDistNegNeighPlaneAll_sp(int nsp, double t, double t1, int i, double d
 #ifdef MD_ASYM_ITENS
   double phi, psi;
 #endif
-  MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+  MD_DEBUG34(printf("t=%f tai=%f i=%d\n", t, t+t1-atomTime[i], i));
   MD_DEBUG(printf("BRENT nn=%d\n", nn));
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
-  MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
+  MD_DEBUG34(printf("rA (%f,%f,%f)\n", rB[0]-rA[0], rB[1]-rA[1], rB[2]-rA[2]));
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
@@ -2213,7 +2219,7 @@ double calcDistNegNeighPlaneAll_sp(int nsp, double t, double t1, int i, double d
 	      rB[kk] = rBall[nn][kk];
 	    }
 	  dists[nn][nn2] = calcDistNegOneNNL_sp_norient(t, t1, i, nn2, ratA);
-	  //printf("dist[%d]:%.15G\n", nn, dists[nn]);
+	  MD_DEBUG34(printf("dist[%d]:%.15G\n", nn, dists[nn][nn2]));
 	  if ((nn==0 && nn2==0) || dists[nn][nn2] < dmin)
 	    dmin = dists[nn][nn2];
 	}
@@ -2247,7 +2253,7 @@ void calc_delt_sp(int nsp, double maxddoti[6][NA], double *delt, double dists[6]
       for (nn2 = 0; nn2 < nsp; nn2++)
 	{
 	  dt = fabs(dists[nn][nn2]) / maxddoti[nn][nn2];
-	  //printf("nn=%d dt=%.15G delt=%.15G dists=%.15G maxddoti=%15G\n", nn, dt, *delt, dists[nn], maxddoti[nn]);
+	  //printf("nn=%d dt=%.15G delt=%.15G dists=%.15G maxddoti=%15G\n", nn, dt, *delt, dists[nn][nn2], maxddoti[nn][nn2]);
 	  if ((nn==0 && nn2 ==0) || dt < (*delt))
 	    *delt = dt;
 	}
@@ -2291,6 +2297,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
     NSP = MD_STSPOTS_B;
 #endif
   *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, distsOld);
+  MD_DEBUG34(printf("[search_contact_faster_neigh_plane_all_sp] t=%.15G t1=%.15G dist=%.15G\n", *t, t1, *d1));
 #if 0
   if ((t2-t1)*maxddot < *d1 - OprogStatus.epsdSPNL)
     return 1;
@@ -2316,6 +2323,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 #endif
       *t += delt;
       *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
+      MD_DEBUG34(printf("UNO *d1=%.15G t=%.15G t1=%.15G\n", *d1,*t,t1));
 #if 0
       if (its > 100 && its%10 == 0)
 	{
@@ -2334,6 +2342,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 	    delt /= GOLD;
 	  *t = told + delt;
 	  *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
+	  MD_DEBUG34(printf("DUE *d1=%.15G t=%.15G t1=%.15G\n", *d1,*t,t1));
 	  itsf++;	
 	  if (itsf > 100)
 	    {
@@ -2346,8 +2355,8 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
      if (check_cross_sp(NSP, distsOld, dists, crossed))
        {
 	 /* go back! */
-	 MD_DEBUG30(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	 MD_DEBUG30(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
+	 MD_DEBUG34(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	 MD_DEBUG34(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	 *t = told;	  
 	 *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
 	 return 0;
@@ -2356,8 +2365,8 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
       if (*t+t1 > t2)
 	{
 	  *t = told;
-	  MD_DEBUG30(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG30(printf("convergence t>t2\n"));
+	  MD_DEBUG34(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG34(printf("convergence t>t2\n"));
 	  *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
 	  return 1;
 	}
@@ -2402,7 +2411,7 @@ double calcDistNegOneNNL_sp(double t, double t1, int i, int nn)
   MD_DEBUG32(printf("BRENT nn=%d t=%.15G dist= %.15G\n", nn,
 		    t1+t,  dist - Oparams.sigmaSticky*0.5));
 #ifdef EDHE_FLEX
-  return dist - mapSigmaFlex[nn]*0.5;
+  return dist - typesArr[typeOfPart[i]].spots[nn].sigma*0.5;
 #else
   return dist - Oparams.sigmaSticky*0.5;
 #endif
@@ -2544,6 +2553,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	  //printf("nn=%d maxddoti=%.15G\n", nn, maxddoti);
 	}
     }
+  MD_DEBUG34(printf("BEGIN [locate_contact_neigh_plane_parall_sp] maxddot=%.15G\n", maxddot));
   h = OprogStatus.h; /* last resort time increment */
   delt = h;
   
@@ -2553,7 +2563,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
       return 0;  
     }
 
-  MD_DEBUG30(printf("t=%.15G d=%.15G\n", t, d));
+  MD_DEBUG34(printf("[locate_contact_neigh_plane_parall_sp] BOH t=%.15G d=%.15G\n", t, d));
   timesSNL++;
   foundrc = 0;
   assign_dists_sp(NSP, dists, distsOld);
@@ -2596,7 +2606,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
       tini = t;
       t += delt;
       d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
-      MD_DEBUG30(printf("t=%.15G d=%.15G\n", t, d));
+      MD_DEBUG34(printf("[locate_contact_neigh_plane_parall_sp]t=%.15G d=%.15G\n", t, d));
       deldist = get_max_deldist_sp(NSP, distsOld, dists);
       if (deldist > epsdMax)
 	{
@@ -2656,7 +2666,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 		    }
 		  else 
 		    {
-		      MD_DEBUG32(printf("qui-1 t-delt=%.15G t=%.15G t2arr=%.15G\n", t-delt,t, troot));
+		      MD_DEBUG34(printf("qui-1 t-delt=%.15G t=%.15G t2arr=%.15G\n", t-delt,t, troot));
 		      dorefine[nn][nn2] = 1;
 		      t2arr[nn][nn2] = troot-t1;
 		    }
@@ -2677,8 +2687,8 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	      if (dorefine[nn][nn2]!=0)
 		{
 		  assign_plane(nn);
-		  MD_DEBUG32(printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t1+t-delt, t1+t2arr[nn][nn2], delt, nn, nn2, dists[nn][nn2], nn, nn2, distsOld[nn][nn2]));
-		  MD_DEBUG32(printf("d(%.15G)=%.15G d(%.15G)=%.15G\n",
+		  MD_DEBUG34(printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t1+t-delt, t1+t2arr[nn][nn2], delt, nn, nn2, dists[nn][nn2], nn, nn2, distsOld[nn][nn2]));
+		  MD_DEBUG34(printf("d(%.15G)=%.15G d(%.15G)=%.15G\n",
 				    t-delt, calcDistNegOneNNL_sp(t-delt, t1, i, nn2),
 				    t2arr[nn][nn2], calcDistNegOneNNL_sp(t2arr[nn][nn2],
 									 t1, i, nn2)));
@@ -2686,9 +2696,9 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 		    {
 		      //printf("[locate_contact] Adding collision for ellips. N. %d t=%.15G t1=%.15G t2=%.15G\n", i,
 		      //	 vecg[4], t1 , t2);
-		      MD_DEBUG(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-		      MD_DEBUG(printf("[locate_contact] t=%.15G nn=%d\n", t, nn));
-		      MD_DEBUG(printf("[locate_contact] its: %d\n", its));
+		      MD_DEBUG34(printf("[locate_contact_neigh_plane_parall_sp] Adding collision for %d\n", i));
+		      MD_DEBUG34(printf("[locate_contact_neigh_plane_parall_sp] t=%.15G nn=%d\n", t, nn));
+		      MD_DEBUG34(printf("[locate_contact_neigh_plane_parall_sp] its: %d\n", its));
 		      /* se il legame già c'è e con l'urto si forma tale legame allora
 		       * scarta tale urto */
 		      if (troot > t2 || troot < t1)
@@ -2713,13 +2723,13 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 		    }
 		  else 
 		    {
-		      MD_DEBUG(printf("[locate_contact_sp] can't find contact point!\n"));
+		      MD_DEBUG34(printf("[locate_contact_sp] can't find contact point!\n"));
 #ifdef MD_INTERPOL
 		      if (!tocheck[nn][nn2])
 #endif
 			mdPrintf(ALL,"[locate_contact_nnl_sp] can't find contact point!\n",NULL);
 
-		      MD_DEBUG32(printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t-delt, t2arr[nn][nn2], delt, nn, nn2, dists[nn][nn2], nn, nn2, distsOld[nn][nn2]));
+		      MD_DEBUG34(printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t-delt, t2arr[nn][nn2], delt, nn, nn2, dists[nn][nn2], nn, nn2, distsOld[nn][nn2]));
 		      /* Se refine_contact fallisce deve cmq continuare a cercare 
 		       * non ha senso smettere...almeno credo */
 		      //gotcoll = -1;
@@ -2735,7 +2745,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	  if (search_contact_faster_neigh_plane_all_sp(i, &t, t1, t2, epsd, &d, epsdFast, 
 						       dists, maxddoti, maxddot))
 	    {
-	      MD_DEBUG30(printf("[search contact faster locate_contact] d: %.15G\n", d));
+	      MD_DEBUG34(printf("[search contact faster locate_contact] d: %.15G\n", d));
 	      return 0;
 	    }
 	  dold = d;
@@ -2752,7 +2762,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
       its++;
       itsSNL++;
     }
-  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+  MD_DEBUG34(printf("[locate_contact] its: %d\n", its));
   return 0;
 }
 #endif

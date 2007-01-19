@@ -9,6 +9,7 @@
 #define MD_DEBUG30(x)
 #define MD_DEBUG31(x) 
 #define MD_DEBUG32(x) 
+#define MD_DEBUG33(x) 
 #ifdef EDHE_FLEX
 extern int is_sphere(int i);
 #endif
@@ -185,6 +186,7 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       /* rB[] (i.e. nebrTab[i].r[]) è un punto appartenente al piano */
       point[kk] = nebrTab[i].r[kk] + del*grad[kk]; 
     }
+  MD_DEBUG33(printf("i=%d del=%f point=%f %f %f grad =%f %f %f\n", i, del, point[0], point[1], point[2], grad[0], grad[1], grad[2] ));
 }
 void growth_rebuildNNL(int i)
 {
@@ -4474,11 +4476,14 @@ void updrebuildNNL(int na)
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE
   nnltime1 = timbig;
+  MD_DEBUG33(printf("qui\n"));
+  MD_DEBUG33(printf("posEll=%f %f %f posNNL %f %f %f \n", rx[na], ry[na], rz[na], nebrTab[na].r[0],nebrTab[na].r[1],
+		    nebrTab[na].r[2]));
   if (OprogStatus.targetPhi <= 0.0)
     {
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
 	{
-	  printf("[ERROR] failed to find escape time for sticky spots\n");
+	  printf("[ERROR] failed to find escape time for sticky spots na=%d\n", na);
 	  exit(-1);
 	}
     }
@@ -4579,7 +4584,9 @@ void nextNNLupdate(int na)
 #ifdef EDHE_FLEX
   int typena;
 #endif
-  MD_DEBUG32(printf("nextNNLupdate...\n"));
+  MD_DEBUG33(printf("nextNNLupdate...\n"));
+  MD_DEBUG33(printf("posEll=%f %f %f posNNL %f %f %f \n", rx[na], ry[na], rz[na], nebrTab[na].r[0],nebrTab[na].r[1],
+		    nebrTab[na].r[2]));
 #ifndef MD_NNLPLANES
 #ifdef EDHE_FLEX
   typena = typeOfPart[na];
@@ -4615,9 +4622,9 @@ void nextNNLupdate(int na)
     {
 #ifdef EDHE_FLEX
       typena = typeOfPart[na]; 
-      nebrTab[na].axa = OprogStatus.rNebrShell+typesArr[typena].sax[0];
-      nebrTab[na].axb = OprogStatus.rNebrShell+typesArr[typena].sax[1];
-      nebrTab[na].axc = OprogStatus.rNebrShell+typesArr[typena].sax[2];
+      nebrTab[na].axa = OprogStatus.rNebrShell+typesArr[typena].ppsax[0];
+      nebrTab[na].axb = OprogStatus.rNebrShell+typesArr[typena].ppsax[1];
+      nebrTab[na].axc = OprogStatus.rNebrShell+typesArr[typena].ppsax[2];
 #else
       nebrTab[na].axa = OprogStatus.rNebrShell+axa[na];
       nebrTab[na].axb = OprogStatus.rNebrShell+axb[na];
