@@ -1706,16 +1706,41 @@ void calc_encpp(void)
   int kk;
   double v[3], norm;
   int pt, sp;
+  double com[3];
+ 
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
+#if 0
+      com[0] = 0.0;
+      com[1] = 0.0;
+      com[2] = 0.0;
+      for (sp = 0; sp < typesArr[pt].nspots; sp++) 
+	{	
+	  for (kk=0; kk < 3; kk++)
+	    com[kk] += typesArr[pt].spots[sp].x[kk];
+	}
+      for (kk=0; kk < 3; kk++)
+	com[kk] /= ((double)(typesArr[pt].nspots+1.0));
+      printf("pt=%d com=%f %f %f\n", pt, com[0], com[1], com[2]);
+      for (kk=0; kk < 3; kk++)
+	typesArr[pt].ppr[kk] = com[kk];
+      for (kk = 0; kk < 3; kk++)
+	typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk]+fabs(com[kk]);
+#else
       for (kk = 0; kk < 3; kk++)
 	typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk];
+#endif
 
       for (sp = 0; sp < typesArr[pt].nspots; sp++) 
 	{
 	  //norm = calc_norm(typesArr[pt].spots[sp].x);
+#if 0
+	  for (kk=0; kk < 3; kk++)
+    	    v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]-com[kk]);
+#else
 	  for (kk=0; kk < 3; kk++)
     	    v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]);
+#endif
 	  //printf("pt=%d sp=%d v=%.15G %.15G %.15G\n", pt, sp, v[0], v[1], v[2]);
 	  for (kk = 0; kk < 3; kk++)
 	    {
