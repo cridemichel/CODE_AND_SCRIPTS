@@ -9,7 +9,7 @@
 #define MD_DEBUG29(x) 
 #define MD_DEBUG30(x)  //qui 
 #define MD_DEBUG31(x)  //qui 
-#define MD_DEBUG32(x)   
+#define MD_DEBUG32(x)    
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
 #define MD_NEGPAIRS
@@ -2168,7 +2168,7 @@ double calcDistNegOneNNL_sp_norient(double t, double t1, int i, int nn, double r
   for (kk=0; kk < 3; kk++)
     dist += -(ratA[nn+1][kk]-rB[kk])*gradplane[kk];
 #ifdef EDHE_FLEX
-  MD_DEBUG32(printf("DIST NOORIENT nn=%d t=%.15G dist=%.15G\n", nn, t+t1, dist - mapSigmaFlex[nn]*0.5));
+  MD_DEBUG32(printf("DIST NOORIENT nn=%d t=%.15G dist=%.15G\n", nn, t+t1, dist - typesArr[typeOfPart[i]].spots[nn].sigma*0.5));
 #else
   MD_DEBUG32(printf("DIST NOORIENT nn=%d t=%.15G dist=%.15G\n", nn, t+t1, dist- Oparams.sigmaSticky*0.5));
 #endif
@@ -2463,7 +2463,7 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
 #else
 #ifdef EDHE_FLEX
   factori = calc_norm(typesArr[typeOfPart[i]].spots[nn].x) +
-    0.5*mapSigmaFlex[nn] + OprogStatus.epsdSP;
+   typesArr[typeOfPart[i]].spots[nn].sigma*0.5 + OprogStatus.epsdSP;
 #else
   if (i < Oparams.parnumA)
     factori = calc_norm(spXYZ_A[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
@@ -2490,7 +2490,7 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
 #else
 #ifdef EDHE_FLEX
   factori = calc_norm(typesArr[typeOfPart[i]].spots[mapbondsa[nn]-1].x) +
-    0.5*mapSigmaFlex[nn] + OprogStatus.epsdSP;
+     typesArr[typeOfPart[i]].spots[nn].sigma*0.5 + OprogStatus.epsdSP;
 #else
    if (i < Oparams.parnumA)
     factori = calc_norm(spXYZ_A[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
