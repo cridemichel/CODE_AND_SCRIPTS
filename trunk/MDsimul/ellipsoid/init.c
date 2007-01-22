@@ -683,7 +683,8 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
 	 d21 is the vector joining the two atoms (from 2 to 1) and 
 	 m1 and m2 are the masses of two atoms 
       */
-      if (typesArr[typeOfPart[i]].brownian)
+      /* brownian = 0 non fa niente, 1 = brownian motion, 2 = rescale vels (see scalevels()) */
+      if (typesArr[typeOfPart[i]].brownian==1)
 	{
 	  mass = typesArr[typeOfPart[i]].m;
 	  rTemp = sqrt(temp / mass);  
@@ -2062,7 +2063,7 @@ void check_conf(void)
 }
 #endif
 #ifdef EDHE_FLEX
-extern int get_dof_flex(void);
+extern int get_dof_flex(int filter);
 #endif
 void usrInitAft(void)
 {
@@ -2309,7 +2310,7 @@ void usrInitAft(void)
 			typesArr[pt].sax[2]);)
     } 
   maxnbonds = get_max_nbonds();
-  dofTot = get_dof_flex();
+  dofTot = get_dof_flex(0);
   mapbondsaFlex = (int*)malloc(sizeof(int)*maxnbonds);
   mapbondsbFlex = (int*)malloc(sizeof(int)*maxnbonds);
   mapBheightFlex = (double*) malloc(sizeof(double)*maxnbonds);
