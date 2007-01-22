@@ -55,7 +55,7 @@ void UpdateSystem(void);
 /* 16/1/1998 ADD: <XVA defines> */
 #define MD_HD_XVA "/work2/xvafiles/"
 #define MD_TAPE_XVA "/iomega/xvafiles/"
-
+#define MD_EDHEFLEX_OPTNNL
 
 #define NUM_MISURE 30         /* maximum number of
 				 measure done during simulation */
