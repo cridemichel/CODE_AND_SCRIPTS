@@ -4569,6 +4569,9 @@ void updAllNNL()
   for (i=0; i < Oparams.parnum; i++)
     updrebuildNNL(i);
 }
+#ifdef EDHE_FLEX
+void body2labR(int i, double xp[], double x[], double *rO, double **R);
+#endif
 void nextNNLupdate(int na)
 {
   int i1, i2, ip;
@@ -4582,6 +4585,7 @@ void nextNNLupdate(int na)
   double Omega[3][3];
 #endif
 #ifdef EDHE_FLEX
+  double xl[3];
   int typena;
 #endif
   MD_DEBUG33(printf("nextNNLupdate...\n"));
@@ -4636,9 +4640,11 @@ void nextNNLupdate(int na)
   DelDist += distBuf;
   MD_DEBUG31(printf("DelDist=%.15G\n", DelDist));
   typena = typeOfPart[na]; 
+#ifndef EDHE_FLEX
   nebrTab[na].r[0] = rx[na];
   nebrTab[na].r[1] = ry[na];
   nebrTab[na].r[2] = rz[na];
+#endif
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(na, 0, RtB, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
@@ -4648,6 +4654,18 @@ void nextNNLupdate(int na)
     for (i2 = 0; i2 < 3; i2++)
       nebrTab[na].R[i1][i2] = RtB[i1][i2];
   /* calcola il tempo a cui si deve ricostruire la NNL */
+#ifdef EDHE_FLEX
+#ifdef MD_EDHEFLEX_OPTNNL
+  body2labR(na, typesArr[typena].ppr, xl, NULL, nebrTab[na].R);
+  nebrTab[na].r[0] = rx[na]+xl[0];
+  nebrTab[na].r[1] = ry[na]+xl[1];
+  nebrTab[na].r[2] = rz[na]+xl[2];
+#else
+  nebrTab[na].r[0] = rx[na];
+  nebrTab[na].r[1] = ry[na];
+  nebrTab[na].r[2] = rz[na];
+#endif
+#endif
   MD_DEBUG31(printf("BUILDING NNL FOR i=%d\n",na));
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE

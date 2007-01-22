@@ -1710,7 +1710,7 @@ void calc_encpp(void)
  
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
-#if 0
+#ifdef MD_EDHEFLEX_OPTNNL
       com[0] = 0.0;
       com[1] = 0.0;
       com[2] = 0.0;
@@ -1721,11 +1721,11 @@ void calc_encpp(void)
 	}
       for (kk=0; kk < 3; kk++)
 	com[kk] /= ((double)(typesArr[pt].nspots+1.0));
-      printf("pt=%d com=%f %f %f\n", pt, com[0], com[1], com[2]);
       for (kk=0; kk < 3; kk++)
 	typesArr[pt].ppr[kk] = com[kk];
       for (kk = 0; kk < 3; kk++)
 	typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk]+fabs(com[kk]);
+      //printf("pt=%d com=%f %f %f\n", pt, com[0], com[1], com[2]);
 #else
       for (kk = 0; kk < 3; kk++)
 	typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk];
@@ -1734,7 +1734,7 @@ void calc_encpp(void)
       for (sp = 0; sp < typesArr[pt].nspots; sp++) 
 	{
 	  //norm = calc_norm(typesArr[pt].spots[sp].x);
-#if 0
+#ifdef MD_EDHEFLEX_OPTNNL
 	  for (kk=0; kk < 3; kk++)
     	    v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]-com[kk]);
 #else
