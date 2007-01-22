@@ -976,12 +976,14 @@ int all_spots_on_zaxis(int pt)
     }
   return 1;
 }
-int get_dof_flex(void)
+int get_dof_flex(int filter)
 {
   int pt, dofOfType, dofTot;
   dofTot = 0;
   for (pt = 0; pt < Oparams.parnum; pt++)
     {
+      if (filter != 0 && typesArr[typeOfPart[pt]].brownian != filter)
+	continue;
       /* Sphere */
       if (typesArr[pt].sax[0] == typesArr[pt].sax[1] &&
 	  typesArr[pt].sax[1] == typesArr[pt].sax[2])
@@ -1065,6 +1067,37 @@ void scalevels(double temp, double K, double Vz)
   MD_DEBUG2(printf("sf: %.15f temp: %f K: %f Vz: %.15f minvz:%.15G\n", sf, temp, K, Vz));
 }
 #else
+#ifdef EDHE_FLEX
+void scalevels(double temp, double K)
+{
+  int i; 
+  double sf;
+  double dof;
+  dof = get_dof_flex(2);
+  sf = sqrt( ( dof * temp ) / (2.0*K) );
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      if (typesArr[typeOfPart[i]].brownian!=2)
+	continue;
+      vx[i] *= sf;
+      vy[i] *= sf;
+      vz[i] *= sf;
+      wx[i] *= sf;
+      wy[i] *= sf;
+      wz[i] *= sf;
+#ifdef MD_ASYM_ITENS
+      /* N.B. notare che il reference system con l'asse-z parallelo ad M non 
+       * cambia poiché la direzione di M non cambia! */
+      angM[i] *= sf;
+      Mx[i] *= sf;
+      My[i] *= sf;
+      Mz[i] *= sf;
+#endif
+      /* scala anche i tempi di collisione! */
+    } 
+   MD_DEBUG2(printf("sf: %.15f temp: %f K: %f Vz: %.15f minvz:%.15G\n", sf, temp, K, Vz));
+}
+#else
 void scalevels(double temp, double K)
 {
   int i; 
@@ -1115,6 +1148,7 @@ void scalevels(double temp, double K)
     } 
    MD_DEBUG2(printf("sf: %.15f temp: %f K: %f Vz: %.15f minvz:%.15G\n", sf, temp, K, Vz));
 }
+#endif
 #endif
 /* ============================ >>> updateQ <<< =========================== */
 void updateDQ(COORD_TYPE dt)
