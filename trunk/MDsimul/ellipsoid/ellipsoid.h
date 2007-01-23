@@ -170,8 +170,11 @@ void md_mpi_finalize(void);
 /* ========================================================================= */
 
 /* ====================== >>> SIMULATION DEFINES <<< ========================*/
+#ifdef MD_EDHEFLEX_WALL
+enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE,MD_WALL};
+#else
 enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
-
+#endif
 #define C_T COORD_TYPE
 #define NK 10000
 #define NA 1000 /* number of atoms for each molecule (particle) */

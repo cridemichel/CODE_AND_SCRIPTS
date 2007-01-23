@@ -150,7 +150,11 @@ double calc_maxddot_nnl(int i, double *gradplane)
 #endif
 }
 #endif
-
+#ifdef MD_EDHEFLEX_WALL
+extern int globalHW;
+extern void calc_grad_and_point_plane_hwbump(double *grad, double *point, int nplane);
+extern void PredictHardWall(int na, int nplane, double tsup);
+#endif
 void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {
   int kk;
@@ -4290,7 +4294,7 @@ void PredictEventNNL(int na, int nb)
 #ifdef MD_EDHEFLEX_WALL
   if (inCell[2][na] == 0)
     PredictHardWall(na, 0, Oparams.time+tm[k]);
-  else if (inCell[2][na] == celssz-1)
+  else if (inCell[2][na] == cellsz-1)
     PredictHardWall(na, 1, Oparams.time+tm[k]);
 #endif
 
