@@ -5755,14 +5755,182 @@ void calc_grad_and_point_plane_hwbump(double *grad, double *point, int nplane)
       /* rB[] (i.e. nebrTab[i].r[]) è un punto appartenente al piano */
       point[kk] = (kk==2)?del*grad[kk]:0; 
     }
-  MD_DEBUG33(printf("i=%d del=%f point=%f %f %f grad =%f %f %f\n", i, del, point[0], point[1], point[2], grad[0], grad[1], grad[2] ));
 }
 int globalHW = 0;
+void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
+{
+  double factor, invmi;
+  double wrx, wry, wrz, rACn[3] ;
+  double rAC[3], vCA[3], vc;
+  double norm[3];
+  double denom;
+  double invaSq, invbSq, invcSq;
+#ifdef MD_HSVISCO
+  double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz ;
+  double rxij, ryij, rzij, Dr;
+#endif
+#ifndef MD_ASYM_ITENS
+  double factorinvIa;
+#endif
+  int k;
+#ifdef MD_ASYM_ITENS
+  int k1,k2;
+  double rnI[3];
+  double Mvec[3], omega[3];
+#endif
+  int typei;
+  int a, b;
+
+  if (is_sphere(i))
+    {
+      update_MSDrot(i);
+      vz[i] = -vz[i];
+#ifdef MD_ASYM_ITENS
+      calc_angmom(i, Ia);
+      upd_refsysM(i);
+#endif
+      return;
+    }
+  rAC[0] = rx[i] - rCx;
+  rAC[1] = ry[i] - rCy;
+  rAC[2] = rz[i] - rCz;
+  
+  typei = typeOfPart[i];
+  invaSq = 1/Sqr(typesArr[typei].sax[0]);
+  invbSq = 1/Sqr(typesArr[typei].sax[1]);
+  invcSq = 1/Sqr(typesArr[typei].sax[2]);
+  tRDiagR(i, Xa, invaSq, invbSq, invcSq, R[i]);
+#ifdef MD_ASYM_ITENS
+  tRDiagR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
+#else
+  Ia = Oparams.I[na];
+#endif
+#ifdef MD_ASYM_ITENS
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Iatmp[k1][k2] = Ia[k1][k2];
+      } 
+  InvMatrix(Iatmp, invIa, 3);
+  Mvec[0] = Mx[i];
+  Mvec[1] = My[i];
+  Mvec[2] = Mz[i];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      omega[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+    }
+  wx[i] = omega[0];
+  wy[i] = omega[1];
+  wz[i] = omega[2];
+#else
+  invIa = 1/Ia;
+  MD_DEBUG(printf("Ia=%f Ib=%f\n", Ia, Ib));
+#endif
+  for (k=0; k<3; k++)
+    norm[k] = (k==2)?(2.0*nplane-1.0):0;
+
+  vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
+  vCA[2] = vz[i] + wrz;
+  invmi = 1.0/typesArr[typei].m;
+  denom = invmi;
+  vc = vCA[2]*norm[2];
+#ifdef MD_ASYM_ITENS 
+  for (a=0; a < 3; a++)
+    {
+      rnI[a] = 0;
+      for (b = 0; b < 3; b++)
+	{
+	  rnI[a] += invIa[a][b]*rACn[b]; 
+	}
+    }
+  for (a = 0; a < 3; a++)
+    denom += rnI[a]*rACn[a];
+#else
+  for (a = 0; a < 3; a++)
+    denom += invIa*Sqr(rACn[a]);
+#endif
+  factor = 2.0*vc;
+  vz[i] = vz[i] - norm[2]*factor;
+  factor /= denom;
+  update_MSDrot(i);
+  if (rAC[0]!=0.0 || rAC[1]!=0.0)
+    { 
+      rACn[0] = rAC[1]*norm[2];
+      rACn[1] = -rAC[0]*norm[2];
+      //rACn[2] = 0.0;
+      //vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
+#ifdef MD_ASYM_ITENS
+      /* rACn[2]=0 per quello a < 2*/
+      for (a=0; a < 2; a++)
+	{
+	  wx[i] += factor*invIa[0][a]*rACn[a];
+	  wy[i] += factor*invIa[1][a]*rACn[a];
+	  wz[i] += factor*invIa[2][a]*rACn[a];
+	}
+#else
+      factorinvIa = factor*invIa;
+      wx[i] += factorinvIa*rACn[0];
+      wy[i] += factorinvIa*rACn[1];
+      /* N.B. rACn[2] = 0 */
+      //wz[i] += factorinvIa*rACn[2];
+#endif
+#ifdef MD_ASYM_ITENS
+      calc_angmom(i, Ia);
+      upd_refsysM(i);
+#endif
+    }
+}
+void PredictEvent (int na, int nb); 
+
 void ProcessWallColl(void)
 {
+  int k;
+  UpdateAtom(evIdA);
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  MD_DEBUG10(calc_energy("prima"));
+  MD_DEBUG20(printf("[BUMP] t=%.15G i=%d at=%d j=%d at=%d collCode=%d\n", 
+		    Oparams.time,evIdA,evIdC, evIdB, evIdD, evIdE)); 
 
-
+  bumpHW(evIdA, evIdB, rxC, ryC, rzC, &W);
+  MD_DEBUG10(calc_energy("dopo"));
+  MD_DEBUG(store_bump(evIdA, evIdB));
+  //ENDSIM=1;
+  /*printf("qui time: %.15f\n", Oparams.time);*/
+  OprogStatus.lastcolltime[evIdA] = OprogStatus.lastcolltime[evIdB] = 
+    lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+#ifdef MD_CALC_DPP
+  store_last_u(evIdA);
+  store_last_u(evIdB);
+#endif
+  lastbump[evIdA].mol=evIdB;
+  lastbump[evIdA].at = evIdC;
+  lastbump[evIdB].mol=evIdA;
+  lastbump[evIdB].at = evIdD;
+  //printf("lastbump[%d].at=%d lastbump[%d].at=%d\n", evIdA, lastbump[evIdA].at, evIdB, lastbump[evIdB].at);
+  lastbump[evIdA].type = evIdE;
+  lastbump[evIdB].type = evIdE;
+#ifdef MD_HSVISCO
+  OprogStatus.lastcoll = Oparams.time;
+#endif
+  if (OprogStatus.useNNL)
+    {
+      /* ricalcola i tempi di collisione con la NL */
+      updrebuildNNL(evIdA);
+      PredictEventNNL(evIdA, -1);
+    }
+  else
+    {
+      PredictEvent(evIdA, -1);
+    }
 }
+extern int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup);
+
 void PredictHardWall(int na, int nplane, double tsup)
 {
   double vecg[5], hwtime;
@@ -5775,7 +5943,10 @@ void PredictHardWall(int na, int nplane, double tsup)
   if (vecg[4] < tsup)
     {
       hwtime = vecg[4];
-      ScheduleEvent (na, ATOM_LIMIT + nplane, hwtime);
+      rxC = vecg[0];
+      ryC = vecg[1];
+      rzC = vecg[2];
+      ScheduleEventBarr(na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, hwtime);
     }
   globalHW = 0;
 }
@@ -5976,7 +6147,7 @@ void PredictEvent (int na, int nb)
 #ifdef MD_EDHEFLEX_WALL
   if (inCell[2][na] == 0)
     PredictHardWall(na, 0, Oparams.time+tm[k]);
-  else if (inCell[2][na] == celssz-1)
+  else if (inCell[2][na] == cellsz-1)
     PredictHardWall(na, 1, Oparams.time+tm[k]);
 #endif
 #endif
@@ -6576,7 +6747,6 @@ extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
-  int na;
   FILE *bf;
 #ifdef EDHE_FLEX
   int kk;
