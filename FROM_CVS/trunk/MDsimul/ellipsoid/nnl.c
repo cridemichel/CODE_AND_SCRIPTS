@@ -155,6 +155,13 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {
   int kk;
   double del=0.0, segno;
+#ifdef MD_EDHEFLEX_WALL
+  if (globalHW==1)
+    {
+      calc_grad_and_point_plane_hwbump(grad, point, nplane);
+      return;
+    }
+#endif
   for (kk=0; kk < 3; kk++)
     {
       /* NOTA: controllare che non si debbano scambiare kk e nplane/2 */ 
@@ -4280,11 +4287,17 @@ void PredictEventNNL(int na, int nb)
   /* urto con le pareti, il che vuol dire:
    * se lungo z e rz = -L/2 => urto con parete */ 
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+#ifdef MD_EDHEFLEX_WALL
+  if (inCell[2][na] == 0)
+    PredictHardWall(na, 0, Oparams.time+tm[k]);
+  else if (inCell[2][na] == celssz-1)
+    PredictHardWall(na, 1, Oparams.time+tm[k]);
+#endif
+
   /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni */
   if (nb >= ATOM_LIMIT)
     return;
   MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
-
   for (i=0; i < nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
@@ -4760,6 +4773,11 @@ void BuildNNL(int na)
   for (kk=0; kk < 3; kk++)
     shift[kk] = 0;
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+#if defined(MD_EDHEFLEX_WALL)
+  /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
+  if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+  if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+#endif
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
       jZ = inCell[2][na] + iZ;    

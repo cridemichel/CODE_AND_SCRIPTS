@@ -5722,6 +5722,64 @@ double estimate_tmin(double t, int na, int nb)
 #ifdef EDHE_FLEX
 extern void check_these_bonds(int i, int j, double *shift, double t);
 #endif
+#ifdef MD_EDHEFLEX_WALL
+void calc_grad_and_point_plane_hwbump(double *grad, double *point, int nplane)
+{
+  /* nplane = 0 -> -L/2, nplane = 1 -> -L/2 */  
+  int kk;
+  double del=0.0, segno;
+  for (kk=0; kk < 3; kk++)
+    {
+      grad[kk] = (kk==2)?1:0;
+    }
+  switch (nplane)
+    {
+    case 0:
+      del = -L/2.0;	
+      break;
+    case 1:
+      del = L/2.0;	
+      break;
+    }
+
+  /* NOTA: epsdNL+epsd viene usato come buffer per evitare problemi numerici 
+   * nell'update delle NNL. */
+  del -= OprogStatus.epsdNL+OprogStatus.epsd;
+  for (kk=0; kk < 3; kk++)
+    {
+      if (nplane % 2 == 0)
+	segno = 1;
+      else
+	segno = -1;
+      grad[kk] *= segno;
+      /* rB[] (i.e. nebrTab[i].r[]) è un punto appartenente al piano */
+      point[kk] = (kk==2)?del*grad[kk]:0; 
+    }
+  MD_DEBUG33(printf("i=%d del=%f point=%f %f %f grad =%f %f %f\n", i, del, point[0], point[1], point[2], grad[0], grad[1], grad[2] ));
+}
+int globalHW = 0;
+void ProcessWallColl(void)
+{
+
+
+}
+void PredictHardWall(int na, int nplane, double tsup)
+{
+  double vecg[5], hwtime;
+  globalHW = 1;
+  if (!locate_contact_neigh_plane(na, vecg, nplane, tsup))
+    {
+      globalHW = 0;
+      return;
+    }
+  if (vecg[4] < tsup)
+    {
+      hwtime = vecg[4];
+      ScheduleEvent (na, ATOM_LIMIT + nplane, hwtime);
+    }
+  globalHW = 0;
+}
+#endif
 void PredictEvent (int na, int nb) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -5911,10 +5969,16 @@ void PredictEvent (int na, int nb)
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
-#ifdef MD_GRAVITY
+#if defined(MD_GRAVITY) || defined(MD_EDHEFLEX_WALL)
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
   if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
   if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+#ifdef MD_EDHEFLEX_WALL
+  if (inCell[2][na] == 0)
+    PredictHardWall(na, 0, Oparams.time+tm[k]);
+  else if (inCell[2][na] == celssz-1)
+    PredictHardWall(na, 1, Oparams.time+tm[k]);
+#endif
 #endif
 
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
@@ -6998,6 +7062,12 @@ void move(void)
 	{
 	  ProcessCellCrossing();
 	  OprogStatus.crossCount++;
+	}
+#endif
+#ifdef MD_EDHEFLEX_WALL
+      else if (evIdB < ATOM_LIMIT + NDIM*2)
+	{
+	  ProcessWallColl();
 	}
 #endif
       /* ATOM_LIMIT +6 <= evIdB < ATOM_LIMIT+100 eventi che si possono usare 
