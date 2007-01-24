@@ -989,7 +989,7 @@ int get_dof_flex(int filter)
       if (filter != 0 && typesArr[pt].brownian != filter)
 	continue;
       /* Sphere */
-      if (typesArr[pt].sax[0] == typesArr[pt].sax[1] &&
+      else if (typesArr[pt].sax[0] == typesArr[pt].sax[1] &&
 	  typesArr[pt].sax[1] == typesArr[pt].sax[2])
 	{
 	  /* sfere con o senza sticky spots */
@@ -1018,7 +1018,7 @@ int get_dof_flex(int filter)
 	dofTot += dofOfType*typeNP[pt];
     }
   /* il centro di massa dell'anticorpo è fermo */
-  dofTot -= 3;
+  //dofTot -= 3;
   return dofTot;
 }
 #endif
@@ -1077,7 +1077,7 @@ void scalevels(double temp, double K)
   int i; 
   double sf;
   double dof;
-  dof = get_dof_flex(2);
+  dof = get_dof_flex(2)-3;
   sf = sqrt( ( dof * temp ) / (2.0*K) );
   //printf("dof=%f temp=%.15G sf=%.15G\n", dof, temp, sf );
   for (i = 0; i < Oparams.parnum; i++)
@@ -6632,6 +6632,57 @@ void calc_omega(int i)
 extern double calcpotene(void);
 #endif
 double Krot, Ktra;
+void calc_energy_filtered(int filter)
+{
+  int i, k1;
+  double wt[3];
+#ifdef MD_ASYM_ITENS
+  double wtp[3];
+  int k2;
+  //double **Ia, **Ib;
+  //Ia = matrix(3,3); 
+  //Ib = matrix(3,3);
+#endif
+  K = Ktra = Krot = 0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (filter!=0 && typesArr[typeOfPart[i]].brownian!=filter)
+	continue;
+      /* calcola tensore d'inerzia e le matrici delle due quadriche */
+#ifdef MD_ASYM_ITENS
+      //RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
+#endif
+      Ktra += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+#ifdef MD_ASYM_ITENS
+      calc_omega(i);
+#endif
+      wt[0] = wx[i];
+      wt[1] = wy[i];
+      wt[2] = wz[i];
+#ifdef MD_ASYM_ITENS
+      for (k1=0; k1 < 3; k1++)
+	{
+	  wtp[k1] = 0.0;
+	  for (k2=0; k2 < 3; k2++)
+	    wtp[k1] += R[i][k1][k2]*wt[k2];
+	}
+      //printf("calcnorm wt: %.15G wtp:%.15G\n", calc_norm(wt), calc_norm(wtp));
+      for (k1=0; k1 < 3; k1++)
+	{
+	  Krot += Sqr(wtp[k1])*Oparams.I[0][k1];
+	  //printf("I[%d][%d]=%.15G wt[%d]:%.15G wtp[%d]:%.15G\n", 0, k1, Oparams.I[0][k1],
+	  //     k1, wt[k1], k1, wtp[k1]);
+	}
+#else
+      for (k1=0; k1 < 3; k1++)
+	Krot += Sqr(wt[k1])*Oparams.I[0];
+#endif
+    }
+  Ktra *= 0.5;
+  Krot *= 0.5;
+  K = Ktra + Krot;
+}
+
 void calc_energy(char *msg)
 {
   int i, k1;
@@ -7711,7 +7762,11 @@ void move(void)
 		}
 	      K *= 0.5;
 #endif
+#ifdef EDHE_FLEX
+	      calc_energy_filtered(2);
+#else
 	      calc_energy(NULL);
+#endif
 	      scalevels(Oparams.T, K);
 	      if (OprogStatus.useNNL)
 		updAllNNL();
