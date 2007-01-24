@@ -360,7 +360,9 @@ struct progStatus
   char inifile[NAME_LENGTH];
   int iniFormat; /* 0 = binary 1 = ascii 2 = both */
   int endFormat; /* 0 = binary 1 = ascii 2 = both */
-
+#ifdef MD_EDHEFLEX_WALL
+  int hardwall;
+#endif
 #ifdef MD_BILOG
   double basew;
   int lastbilogsaved;
@@ -712,6 +714,9 @@ struct pascii opro_ascii[] =
   {"endFile",      OS(endfile),                     1,   NAME_LENGTH,   "%s"},
   {"iniFormat",    &OS(iniFormat),                  1,               1, "%d"},
   {"endFormat",    &OS(endFormat),                  1,               1, "%d"},
+#ifdef MD_EDHEFLEX_WALL
+  {"hardwall",     &OS(hardwall),                   1,               1, "%d"},
+#endif
   {"dataFiles",    OS(dataFiles),         NUM_MISURE,     NAME_LENGTH, "%s"},
   {"xvaSteps",     &OS(xvaSteps),                  1,               1, MDINTFMT},
   {"bakSteps",     &OS(bakSteps),                  1,               1, MDINTFMT},
@@ -1032,6 +1037,9 @@ struct singlePar OsinglePar[] = {
   {"xvafile" ,   &OprogStatus.xvafile,        STR},
   {"inistep" ,   &Oparams.curStep,            LLINT},
   {"endFormat",  &OprogStatus.endFormat,      INT},
+#ifdef MD_EDHEFLEX_WALL
+  {"hardwall",   &OprogStatus.hardwall,       INT},
+#endif
   {"iniFormat",  &OprogStatus.iniFormat,      INT},
   {"tapeTimes",  &OprogStatus.tapeTimes,      LLINT},
   {"bakSteps",   &OprogStatus.bakSteps,       LLINT},

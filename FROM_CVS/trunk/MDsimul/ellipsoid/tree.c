@@ -5,6 +5,7 @@
    "The Art of Molecular Dynamics Simulation" by D. C. Rapaport, 
    published by Cambridge University Press (1995).
 *********************************************************************/
+#define MD_DEBUG34(x) 
 #include <mdsimul.h>
 extern int **tree, evIdA, evIdB;
 #ifdef MD_PATCHY_HE
@@ -309,7 +310,7 @@ void NextEvent (void)
   evIdD = treeIdD[idNow];
   evIdE = treeIdE[idNow];
 #endif
-  MD_DEBUG20(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
+  MD_DEBUG34(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
   MD_DEBUG20(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));

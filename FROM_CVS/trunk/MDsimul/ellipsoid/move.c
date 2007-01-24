@@ -7,6 +7,10 @@
 #define MD_DEBUG20(x)  
 #define MD_DEBUG31(x) 
 #define MD_DEBUG32(x) 
+#define MD_DEBUG33(x) 
+#define MD_DEBUG34(x) 
+#define MD_DEBUG35(x)  
+#define MD_DEBUG36(x) 
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -4990,6 +4994,13 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	return 1;
 #endif 
       delt = *d1  / maxddot;
+#if defined(MD_BASIC_DT) || defined (EDHE_FLEX)
+      if (delt < (epsd / maxddot))
+	{
+	  MD_DEBUG10(printf("convergence reached in %d iterations\n", its));
+	  return 0;
+	}
+#else
       normddot = calcvecF(i, j, *t, t1, r1, r2, ddot, shift);
       /* check for convergence */
      
@@ -4998,6 +5009,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	  MD_DEBUG10(printf("convergence reached in %d iterations\n", its));
 	  return 0;
 	}
+#endif
       *t += delt;
 #if 1
       if (*t + t1 > t2)
@@ -5723,38 +5735,38 @@ double estimate_tmin(double t, int na, int nb)
 extern void check_these_bonds(int i, int j, double *shift, double t);
 #endif
 #ifdef MD_EDHEFLEX_WALL
-void calc_grad_and_point_plane_hwbump(double *grad, double *point, int nplane)
+void calc_grad_and_point_plane_hwbump(int i, double *grad, double *point, int nplane)
 {
   /* nplane = 0 -> -L/2, nplane = 1 -> -L/2 */  
   int kk;
   double del=0.0, segno;
+  MD_DEBUG33(printf("[PRIMA] del=%.15G grad=%f %f %f point=%f %f %f\n", del, grad[0], grad[1], grad[2], 
+		    point[0], point[1], point[2]));
+
   for (kk=0; kk < 3; kk++)
     {
       grad[kk] = (kk==2)?1:0;
     }
-  switch (nplane)
-    {
-    case 0:
-      del = -L/2.0;	
-      break;
-    case 1:
-      del = L/2.0;	
-      break;
-    }
-
+  del = L/2.0;
   /* NOTA: epsdNL+epsd viene usato come buffer per evitare problemi numerici 
    * nell'update delle NNL. */
-  del -= OprogStatus.epsdNL+OprogStatus.epsd;
+  //del -= OprogStatus.epsdNL+OprogStatus.epsd;
   for (kk=0; kk < 3; kk++)
     {
       if (nplane % 2 == 0)
-	segno = 1;
+	segno = -1.0;
       else
-	segno = -1;
+	segno = 1.0;
       grad[kk] *= segno;
       /* rB[] (i.e. nebrTab[i].r[]) è un punto appartenente al piano */
       point[kk] = (kk==2)?del*grad[kk]:0; 
     }
+  /* N.B. aggiusta il punto in modo che sia allineato con la particella lungo x e y.
+     Notare che l'unica cosa che conta è che point[] appartenga al piano in questione.*/
+  point[0] = rx[i];
+  point[1] = ry[i];
+  MD_DEBUG35(printf("[DOPO] del=%.15G grad=%f %f %f point=%f %f %f\n", del, grad[0], grad[1], grad[2], 
+		    point[0], point[1], point[2]));
 }
 int globalHW = 0;
 void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
@@ -5795,6 +5807,8 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
   
+  MD_DEBUG35(printf("i=%d nplane=%d rAC=%f %f %fi rC=%f %f %f\n", i, nplane, rAC[0], rAC[1], rAC[2], rCx, rCy, rCz));
+  MD_DEBUG35(printf("r(%d)=%f %f %f time=%.15G\n", i, rx[i], ry[i], rz[i], Oparams.time));
   typei = typeOfPart[i];
   invaSq = 1/Sqr(typesArr[typei].sax[0]);
   invbSq = 1/Sqr(typesArr[typei].sax[1]);
@@ -5836,30 +5850,31 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   invmi = 1.0/typesArr[typei].m;
   denom = invmi;
   vc = vCA[2]*norm[2];
+  rACn[0] = rAC[1]*norm[2];
+  rACn[1] = -rAC[0]*norm[2];
+
 #ifdef MD_ASYM_ITENS 
   for (a=0; a < 3; a++)
     {
       rnI[a] = 0;
-      for (b = 0; b < 3; b++)
+      for (b = 0; b < 2; b++)
 	{
 	  rnI[a] += invIa[a][b]*rACn[b]; 
 	}
     }
-  for (a = 0; a < 3; a++)
+  for (a = 0; a < 2; a++)
     denom += rnI[a]*rACn[a];
 #else
-  for (a = 0; a < 3; a++)
+  for (a = 0; a < 2; a++)
     denom += invIa*Sqr(rACn[a]);
 #endif
-  factor = 2.0*vc;
-  vz[i] = vz[i] - norm[2]*factor;
-  factor /= denom;
+  factor = 2.0*vc/denom;
+  vz[i] = vz[i] - invmi*norm[2]*factor;
   update_MSDrot(i);
   if (rAC[0]!=0.0 || rAC[1]!=0.0)
     { 
-      rACn[0] = rAC[1]*norm[2];
-      rACn[1] = -rAC[0]*norm[2];
-      //rACn[2] = 0.0;
+      MD_DEBUG35(printf("QUI factor=%.15G wrz=%.15G\n", factor,wrz));
+       //rACn[2] = 0.0;
       //vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
 #ifdef MD_ASYM_ITENS
       /* rACn[2]=0 per quello a < 2*/
@@ -5887,34 +5902,31 @@ void PredictEvent (int na, int nb);
 void ProcessWallColl(void)
 {
   int k;
+  MD_DEBUG35(printf("PRIr(%d)=%f %f %f time=%.15G\n", evIdA, rx[evIdA], ry[evIdA], rz[evIdA], Oparams.time));
   UpdateAtom(evIdA);
+  MD_DEBUG35(printf("DOPr(%d)=%f %f %f time=%.15G\n", evIdA, rx[evIdA], ry[evIdA], rz[evIdA], Oparams.time));
   for (k = 0;  k < NDIM; k++)
     {
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
-  MD_DEBUG10(calc_energy("prima"));
-  MD_DEBUG20(printf("[BUMP] t=%.15G i=%d at=%d j=%d at=%d collCode=%d\n", 
+  MD_DEBUG36(calc_energy("prima"));
+  MD_DEBUG36(printf("[BUMP] t=%.15G i=%d at=%d j=%d at=%d collCode=%d\n", 
 		    Oparams.time,evIdA,evIdC, evIdB, evIdD, evIdE)); 
 
-  bumpHW(evIdA, evIdB, rxC, ryC, rzC, &W);
-  MD_DEBUG10(calc_energy("dopo"));
+  bumpHW(evIdA, evIdB-ATOM_LIMIT, rxC, ryC, rzC, &W);
+  MD_DEBUG36(calc_energy("dopo"));
   MD_DEBUG(store_bump(evIdA, evIdB));
   //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
-  OprogStatus.lastcolltime[evIdA] = OprogStatus.lastcolltime[evIdB] = 
-    lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+  OprogStatus.lastcolltime[evIdA] = lastcol[evIdA] = Oparams.time;
 #ifdef MD_CALC_DPP
   store_last_u(evIdA);
-  store_last_u(evIdB);
 #endif
-  lastbump[evIdA].mol=evIdB;
+  lastbump[evIdA].mol=evIdB-ATOM_LIMIT;
   lastbump[evIdA].at = evIdC;
-  lastbump[evIdB].mol=evIdA;
-  lastbump[evIdB].at = evIdD;
   //printf("lastbump[%d].at=%d lastbump[%d].at=%d\n", evIdA, lastbump[evIdA].at, evIdB, lastbump[evIdB].at);
   lastbump[evIdA].type = evIdE;
-  lastbump[evIdB].type = evIdE;
 #ifdef MD_HSVISCO
   OprogStatus.lastcoll = Oparams.time;
 #endif
@@ -5931,24 +5943,20 @@ void ProcessWallColl(void)
 }
 extern int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup);
 
-void PredictHardWall(int na, int nplane, double tsup)
+int locateHardWall(int na, int nplane, double tsup, double vecg[5])
 {
-  double vecg[5], hwtime;
   globalHW = 1;
+
+  MD_DEBUG33(printf("inCell=%d pos of %d=%f %f %f\n", inCell[2][na], na, rx[na], ry[na], rz[na]));
   if (!locate_contact_neigh_plane(na, vecg, nplane, tsup))
     {
       globalHW = 0;
-      return;
-    }
-  if (vecg[4] < tsup)
-    {
-      hwtime = vecg[4];
-      rxC = vecg[0];
-      ryC = vecg[1];
-      rzC = vecg[2];
-      ScheduleEventBarr(na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, hwtime);
+      return 0;
     }
   globalHW = 0;
+  if (vecg[4] < tsup)
+    return 1;
+  return 0;
 }
 #endif
 void PredictEvent (int na, int nb) 
@@ -5965,6 +5973,7 @@ void PredictEvent (int na, int nb)
 #ifdef MD_PATCHY_HE
   int ac, bc, collCode, collCodeOld, acHC, bcHC;
   double evtime, evtimeHC;
+  int nplane=-1;
 #endif
   double vecg[5];
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
@@ -6137,19 +6146,32 @@ void PredictEvent (int na, int nb)
 #endif
   MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
+#ifndef MD_EDHEFLEX_WALL
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
-
+#endif
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 #if defined(MD_GRAVITY) || defined(MD_EDHEFLEX_WALL)
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
-  if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
-  if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
-#ifdef MD_EDHEFLEX_WALL
-  if (inCell[2][na] == 0)
-    PredictHardWall(na, 0, Oparams.time+tm[k]);
-  else if (inCell[2][na] == cellsz-1)
-    PredictHardWall(na, 1, Oparams.time+tm[k]);
-#endif
+  if (OprogStatus.hardwall)
+    {
+      if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+      if (inCell[2][na] == 0)
+	nplane = 0;
+      else if (inCell[2][na] == cellsz-1)
+	nplane = 1;
+      if (nplane!=-1 && locateHardWall(na, nplane, Oparams.time+tm[k], vecg))
+	{
+	  rxC = vecg[0];
+	  ryC = vecg[1];
+	  rzC = vecg[2];
+	  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[5]);
+	}
+      else
+	ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+    }
+  else
+    ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 #endif
 
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
@@ -6981,6 +7003,7 @@ void ProcessCellCrossing(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
+  MD_DEBUG34(printf("OLD cellCrossing evIdA=%d k=%d inCells=%d %d %d\n", evIdA, k, inCell[0][evIdA], inCell[1][evIdA], inCell[2][evIdA]));
 #ifdef MD_GRAVITY
   j = evIdB - ATOM_LIMIT;
   if (j >= 100)
@@ -7028,6 +7051,7 @@ void ProcessCellCrossing(void)
    * ed inoltre tali celle servono solo per costruire le NNL e non più per predire gli 
    * urti fra gli ellissoidi. */
   MD_DEBUG32(printf("i=%d PROCESS CELL CROSSING\n", evIdA));
+  MD_DEBUG34(printf("NEW cellCrossing evIdA=%d k=%d inCells=%d %d %d\n", evIdA, k, inCell[0][evIdA], inCell[1][evIdA], inCell[2][evIdA]));
   if (OprogStatus.useNNL)
     PredictEventNNL(evIdA, evIdB);
   else
@@ -7221,10 +7245,13 @@ void move(void)
 	  OprogStatus.collCount++;
 	}
 
-#ifdef MD_GRAVITY
+#if defined(MD_GRAVITY) || defined(MD_EDHEFLEX_WALL)
       else if (evIdB >= ATOM_LIMIT + 100 || evIdB < ATOM_LIMIT + NDIM * 2)
 	{
-	  ProcessCellCrossing();
+	  if (evIdE == MD_WALL)
+	    ProcessWallColl();
+	  else
+	    ProcessCellCrossing();
 	  OprogStatus.crossCount++;
 	}
 #else
@@ -7232,12 +7259,6 @@ void move(void)
 	{
 	  ProcessCellCrossing();
 	  OprogStatus.crossCount++;
-	}
-#endif
-#ifdef MD_EDHEFLEX_WALL
-      else if (evIdB < ATOM_LIMIT + NDIM*2)
-	{
-	  ProcessWallColl();
 	}
 #endif
       /* ATOM_LIMIT +6 <= evIdB < ATOM_LIMIT+100 eventi che si possono usare 

@@ -1113,6 +1113,9 @@ void usrInitBef(void)
     OprogStatus.polydisp = 0.0;
     OprogStatus.polycutoff = 5.0;
 #endif
+#ifdef MD_EDHEFLEX_WALL
+    OprogStatus.hardwall = 0;
+#endif
     OprogStatus.scalfact = 0.8;
     OprogStatus.reducefact = 0.9;
     OprogStatus.nebrTabFac = 200;
