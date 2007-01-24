@@ -513,6 +513,9 @@ void calcrotMSD(void)
   
 }
 /* ============================ >>> temperat <<< =========================== */
+#ifdef EDHE_FLEX
+extern int get_dof_flex(int filter);
+#endif
 void temperat(void)
 {
   double dof;
@@ -534,8 +537,12 @@ void temperat(void)
   K *= 0.5;
 #endif
   calc_energy(NULL);
+#ifdef EDHE_FLEX
+  dof = get_dof_flex(0);
+#else
   dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
     OprogStatus.dofB*((double) (Oparams.parnum-Oparams.parnumA));
+#endif
   if (OprogStatus.brownian==1)
     temp = 2.0 * K / dof;
   else
