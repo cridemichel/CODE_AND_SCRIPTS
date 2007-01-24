@@ -984,9 +984,9 @@ int get_dof_flex(int filter)
 {
   int pt, dofOfType, dofTot;
   dofTot = 0;
-  for (pt = 0; pt < Oparams.parnum; pt++)
+  for (pt = 0; pt < Oparams.ntypes; pt++)
     {
-      if (filter != 0 && typesArr[typeOfPart[pt]].brownian != filter)
+      if (filter != 0 && typesArr[pt].brownian != filter)
 	continue;
       /* Sphere */
       if (typesArr[pt].sax[0] == typesArr[pt].sax[1] &&
@@ -1079,6 +1079,7 @@ void scalevels(double temp, double K)
   double dof;
   dof = get_dof_flex(2);
   sf = sqrt( ( dof * temp ) / (2.0*K) );
+  //printf("dof=%f temp=%.15G sf=%.15G\n", dof, temp, sf );
   for (i = 0; i < Oparams.parnum; i++)
     {
       if (typesArr[typeOfPart[i]].brownian!=2)
