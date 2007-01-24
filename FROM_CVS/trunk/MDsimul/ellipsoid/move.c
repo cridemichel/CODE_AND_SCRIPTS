@@ -5975,6 +5975,9 @@ void PredictEvent (int na, int nb)
   double evtime, evtimeHC;
   int nplane=-1;
 #endif
+#ifdef EDHE_FLEX
+  double cctime;
+#endif
   double vecg[5];
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
@@ -6069,8 +6072,16 @@ void PredictEvent (int na, int nb)
 	signDir[2] = 0;/* direzione positiva */
       else 
 	signDir[2] = 1;/* direzione negativa */
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall && ((signDir[2]==0 && inCell[2][na]==cellsz-1) || (signDir[2]==1 && inCell[2][na]==0)))
+	tm[2] = timbig;
+      else
+	tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
+		 cellsz - rz[na] - L2) / vz[na];
+#else
       tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
 	       cellsz - rz[na] - L2) / vz[na];
+#endif
     } 
   else 
     tm[2] = timbig;
@@ -6148,9 +6159,11 @@ void PredictEvent (int na, int nb)
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
 #ifndef MD_EDHEFLEX_WALL
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+#else
+  cctime = Oparams.time+tm[k];
 #endif
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
-#if defined(MD_GRAVITY) || defined(MD_EDHEFLEX_WALL)
+#if (defined(MD_GRAVITY) || defined(MD_EDHEFLEX_WALL))
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
   if (OprogStatus.hardwall)
     {
@@ -6160,18 +6173,18 @@ void PredictEvent (int na, int nb)
 	nplane = 0;
       else if (inCell[2][na] == cellsz-1)
 	nplane = 1;
-      if (nplane!=-1 && locateHardWall(na, nplane, Oparams.time+tm[k], vecg))
+      if (nplane!=-1 && locateHardWall(na, nplane, cctime, vecg))
 	{
 	  rxC = vecg[0];
 	  ryC = vecg[1];
 	  rzC = vecg[2];
-	  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[5]);
+	  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
 	}
       else
-	ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+	ScheduleEvent (na, ATOM_LIMIT + evCode, cctime);
     }
   else
-    ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+    ScheduleEvent (na, ATOM_LIMIT + evCode, cctime);
 #endif
 
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 

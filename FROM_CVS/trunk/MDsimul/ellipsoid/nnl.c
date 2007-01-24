@@ -2434,7 +2434,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
       delt = *d1 / maxddot;
       //printf("normddot: %.15G\n", epsd/normddot);
       /* check for convergence */
-#if defined(MD_EDHEFLEX_WALL) || defined(MD_BASIC_DT)
+#if defined(EDHE_FLEX) || defined(MD_BASIC_DT)
       if (delt < (epsd / maxddot))
 	{
 	  MD_DEBUG35(printf("convergence reached in %d iterations\n", its));
