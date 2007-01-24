@@ -4588,6 +4588,19 @@ void updrebuildNNL(int na)
   MD_DEBUG33(printf("qui\n"));
   MD_DEBUG33(printf("posEll=%f %f %f posNNL %f %f %f \n", rx[na], ry[na], rz[na], nebrTab[na].r[0],nebrTab[na].r[1],
 		    nebrTab[na].r[2]));
+#ifdef EDHE_FLEX
+  if (OprogStatus.targetPhi <= 0.0 && typesArr[typeOfPart[na]].nspots > 0)
+    {
+      if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
+	{
+	  printf("[ERROR] failed to find escape time for sticky spots na=%d\n", na);
+	  printf("i=%d nspots=%d\n", na,  typesArr[typeOfPart[na]].nspots);
+	  exit(-1);
+	}
+    }
+  else 
+    nnltime1 = timbig;
+#else
   if (OprogStatus.targetPhi <= 0.0)
     {
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
@@ -4598,6 +4611,8 @@ void updrebuildNNL(int na)
     }
   else 
     nnltime1 = timbig;
+
+#endif
   MD_DEBUG32(printf("nexttime=%.15G\n", nebrTab[na].nexttime));
 #else
   nnltime1 = timbig;
@@ -4778,6 +4793,19 @@ void nextNNLupdate(int na)
   MD_DEBUG31(printf("BUILDING NNL FOR i=%d\n",na));
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE
+#ifdef EDHE_FLEX
+  nnltime1 = timbig;
+  if (OprogStatus.targetPhi <= 0.0 && typesArr[typeOfPart[na]].nspots > 0)
+    {
+      if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
+	{
+	  printf("[ERROR] failed to find escape time for sticky spots\n");
+	  exit(-1);
+	}
+    }
+  else
+    nnltime1 = timbig;
+#else
   nnltime1 = timbig;
   if (OprogStatus.targetPhi <= 0.0)
     {
@@ -4789,6 +4817,8 @@ void nextNNLupdate(int na)
     }
   else
     nnltime1 = timbig;
+
+#endif
   MD_DEBUG32(printf("[nextNNLupdate] nexttime=%.15G\n", nebrTab[na].nexttime));
 #else
   nnltime1 = timbig; 
