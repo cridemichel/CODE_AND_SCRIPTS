@@ -10,6 +10,8 @@
 #define MD_DEBUG31(x) 
 #define MD_DEBUG32(x) 
 #define MD_DEBUG33(x) 
+#define MD_DEBUG34(x) 
+#define MD_DEBUG35(x)  
 #ifdef EDHE_FLEX
 extern int is_sphere(int i);
 #endif
@@ -152,8 +154,8 @@ double calc_maxddot_nnl(int i, double *gradplane)
 #endif
 #ifdef MD_EDHEFLEX_WALL
 extern int globalHW;
-extern void calc_grad_and_point_plane_hwbump(double *grad, double *point, int nplane);
-extern void PredictHardWall(int na, int nplane, double tsup);
+extern void calc_grad_and_point_plane_hwbump(int i, double *grad, double *point, int nplane);
+extern int locateHardWall(int na, int nplane, double tsup, double vecg[5]);
 #endif
 void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {
@@ -162,7 +164,7 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 #ifdef MD_EDHEFLEX_WALL
   if (globalHW==1)
     {
-      calc_grad_and_point_plane_hwbump(grad, point, nplane);
+      calc_grad_and_point_plane_hwbump(i, grad, point, nplane);
       return;
     }
 #endif
@@ -1186,6 +1188,7 @@ void calc_intersec_neigh_plane(double *rA, double *rB, double **Xa, double *grad
   rBAgrad = scalProd(rBA, grad);
   for (k1=0; k1 < 3; k1++)
     rD[k1] = rA[k1] + rBAgrad*grad[k1];
+  MD_DEBUG35(if (globalHW && Oparams.curStep > 5100) printf("[GuessSimple] rC=%f %f %f rD=%f %f %f\n", rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
 }
 void guess_distNeigh_plane(int i, 
 		double *rA, double *rB, double **Xa, double *grad, double *rC, double *rD,
@@ -1232,6 +1235,9 @@ void guess_distNeigh_plane(int i,
   sp = scalProd(dB, grad);
   for (k1=0; k1 < 3; k1++)
     rD[k1] = rC[k1] + sp*grad[k1];
+  MD_DEBUG35(if (0 && globalHW && Oparams.curStep >= 5100) printf("[GuessOpt] rC=%f %f %f rD=%f %f %f\n", rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
+  MD_DEBUG35(if (0 && globalHW && Oparams.curStep >= 5100) printf("[GuessOpt] grad=%f %f %f rA=%f %f %f rB=%f %f %f\n",
+							     grad[0], grad[1], grad[2], rA[0], rA[1], rA[2], rB[0], rB[1], rB[2]));
 }
 void calc_intersec_neigh(double *rB, double *rA, double **Xa, double* rI, double alpha)
 {
@@ -1374,9 +1380,12 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
    * la loro distanza e restituirla di seguito */
   /* NOTA2: per ora fa in ogni caso il guess ma si potrebbe facilmente fare in modo
    * di usare il vecchio vecg. */
+#if 0
   if (calcgradandpoint)
     calc_grad_and_point_plane(i, gradplane, rB, nplane);
-  
+#endif
+  MD_DEBUG34(printf("PRI gradf=(%f,%f,%f) gradplane=(%f,%f,%f)\n",
+		  gradf[0], gradf[1], gradf[2], gradplane[0], gradplane[1], gradplane[2]));
   if (OprogStatus.guessDistOpt==1)
     {
       guess_distNeigh_plane(i, rA, rB, Xa, gradplane, rC, rD, RtA);
@@ -1385,12 +1394,14 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
     {
       calc_intersec_neigh_plane(rA, rB, Xa, gradplane, rC, rD);
     }
+  MD_DEBUG30(if (globalHW && Oparams.curStep >= 5100) printf("[GuessOpt] t=%.15G\n",t+t1));
+
   for(k1=0; k1 < 3; k1++)
     r12[k1] = rC[k1]-rD[k1]; 
-  MD_DEBUG(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
+  MD_DEBUG34(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
   calc_grad(rC, rA, Xa, gradf);
-  MD_DEBUG(printf("gradf=(%f,%f,%f) gradplane=(%f,%f,%f)\n",
+  MD_DEBUG34(printf("DOPO gradf=(%f,%f,%f) gradplane=(%f,%f,%f)\n",
 		  gradf[0], gradf[1], gradf[2], gradplane[0], gradplane[1], gradplane[2]));
   nf = calc_norm(gradf);
   ng = calc_norm(gradplane);
@@ -2242,8 +2253,13 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
   int nb, distfail;
   double d3, t1, t2;
   double r1[3], r2[3], xb1[2], xb2[2];
+#ifdef MD_EDHEFLEX_WALL
+  if (OprogStatus.paralNNL && !globalHW)
+    assign_plane(nplane);
+#else
   if (OprogStatus.paralNNL)
     assign_plane(nplane);
+#endif
   sogliaErr_zbrent = OprogStatus.epsdNL;
   d3 = calcDistNegNeighPlane(t+delt*0.5, tref, i, r1, r2, vecg, 0, 0, &distfail, nplane);
   xa[0] = t;
@@ -2365,7 +2381,9 @@ double calcvecFNeigh(int i, double t, double t1, double* ddot, double *r1)
   vectProd(wx[i], wy[i], wz[i], rcat[0], rcat[1], rcat[2], &wra[0], &wra[1], &wra[2]);
   for (kk=0; kk < 3; kk++)
     ddot[kk] += wra[kk];
-  //printf("^^^ sp = %.15G norm= %.15G\n", fabs(scalProd(ddot, gradplane)), calc_norm(ddot));
+  MD_DEBUG35(printf("^^^ sp = %.15G norm= %.15G\n", fabs(scalProd(ddot, gradplane)), calc_norm(ddot)));
+  MD_DEBUG35(printf("w=%.15G %.15G %.15G rcat=%.15G %.15G %.15G v=%f %f %f wra=%f %f %f\n", wx[i], wy[i], wz[i],
+		    rcat[0], rcat[1], rcat[2], vx[i], vy[i], vz[i], wra[0],wra[1], wra[2]));
 #if 0
   return calc_norm(ddot);
 #else
@@ -2408,33 +2426,42 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
   //printf("SCALPROD = %.15G\n", vx[0]*gradplane[0]+vy[1]*gradplane[1]+vz[2]*gradplane[2]);
   *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed, nplane);
   timesFNL++;
-  MD_DEBUG20(printf("Pri distances between %d d1=%.12G epsd*epsdTimes:%f\n", i, *d1, epsdFast));
+  MD_DEBUG35(printf("Pri distances between %d d1=%.12G epsd*epsdTimes:%f\n", i, *d1, epsdFast));
   //printf("[SEARCH_CONTACT_FASTER] t=%.15G ellips N. %d d=%.15G\n", *t, i, *d1); 
   while (*d1 > epsdFast && its < MAXOPTITS)
     {
       told = *t;
       delt = *d1 / maxddot;
-      normddot = calcvecFNeigh(i, *t, t1, ddot, r1);
       //printf("normddot: %.15G\n", epsd/normddot);
       /* check for convergence */
-     
-      if (normddot!=0 && delt < (epsd / normddot))
+#if defined(MD_EDHEFLEX_WALL) || defined(MD_BASIC_DT)
+      if (delt < (epsd / maxddot))
 	{
-	  MD_DEBUG20(printf("convergence reached in %d iterations\n", its));
+	  MD_DEBUG35(printf("convergence reached in %d iterations\n", its));
 	  return 0;
 	}
       *t += delt;
+#else 
+      normddot = calcvecFNeigh(i, *t, t1, ddot, r1);
+      if (normddot!=0 && delt < (epsd / normddot))
+	{
+	  MD_DEBUG35(printf("convergence reached in %d iterations\n", its));
+	  return 0;
+	}
+      *t += delt;
+#endif
 #if 1
       if (*t + t1 > t2)
 	{
 	  *t = told;
-	  MD_DEBUG20(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG20(printf("convergence t>t2\n"));
+	  MD_DEBUG35(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG35(printf("convergence t>t2\n"));
 	  *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 0, &distfailed, nplane);
 	  return 1;
 	}
 #endif
       *d1 = calcDistNegNeighPlane(*t, t1, i, r1, r2, vecgd, 1, 1, &distfailed, nplane);
+      MD_DEBUG35(printf("Inside Loop distances between %d d1=%.12G\n", i, *d1));
       //printf("NNL LOOP SEARCH CONTACT FASTER i=%d *d1=%.15G *t=%.15G\n", i, *d1, *t+t1);
       /* NOTA: nel caso di urto di un ellissoide con la sua neighbour list 
        * a t=0 i due ellissoidi hanno stesso centro e assi principali paralleli
@@ -2506,7 +2533,7 @@ int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], doub
   vecg[4] += t1;
   if (retcheck==2)
     {
-      MD_DEBUG10(printf("newtNeigh did not find any contact point!\n"));
+      MD_DEBUG35(printf("newtNeigh did not find any contact point!\n"));
       return 0;
     }
   else
@@ -3169,6 +3196,9 @@ int dist_too_big(int i, double t, double t1)
   else 
     return 0;
 }
+#ifdef MD_PATCHY_HE
+extern struct LastBumpS *lastbump;
+#endif
 int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 {
   double h, d, dold, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
@@ -3200,9 +3230,23 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   dtmp = calcDistNegNeighPlane(t, Oparams.time, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
   if (dtmp < 0)
     {
-      printf("La distanza fra l'ellissoide N. %d e il piano %d è negativa d=%.15G\n", i, nplane, dtmp);
+#ifdef MD_EDHEFLEX_WALL
+      /* N.B. nel caso di urto con muro la distanza può essere negativa all'inizio! */
+      if (!globalHW)
+	{
+	  printf("La distanza fra l'ellissoide N. %d e il piano %d e' negativa d=%.15G\n", i, nplane, dtmp);
+	  printf("nexttime[%d]: %.15G\n", i, nebrTab[i].nexttime);
+	  exit(-1);
+	}
+      else if (!(lastbump[i].mol==nplane && lastbump[i].type==MD_WALL))
+	{
+	  printf("[WARNING] distance (d=%.15G) between particle N. %d and plane %d along z is negative!\n", dtmp, i, nplane);
+	}
+#else
+      printf("La distanza fra l'ellissoide N. %d e il piano %d e' negativa d=%.15G\n", i, nplane, dtmp);
       printf("nexttime[%d]: %.15G\n", i, nebrTab[i].nexttime);
       exit(-1);
+#endif
     }
   if (!bracket_neigh(i, &t1, &t2, nplane))
     {
@@ -3210,10 +3254,12 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       return 0;
     }
   t1 += Oparams.time;	
-  if (tsup < t2)
+  if (tsup < Oparams.time+t2)
     t2 = tsup;
   else
     t2 += Oparams.time;
+  MD_DEBUG35(if (globalHW) printf("[GuessOpt] t1=%.15Gi t2=%.15G\n",t1, t2));
+  //printf("t1=%.15G t2=%.15G time=%.15G tsup=%.15G\n", t1, t2, Oparams.time, tsup);
   //printf("LOCATE_CONTACT_NNL nplane=%d grad=%.8f %.8f %.8f  rB=%.8f %.8f %.8f t1=%.8f t2=%.8f tsup=%.8f maxax[%d]=%f\n", nplane, 
   //	 gradplane[0], gradplane[1], gradplane[2], rB[0], rB[1], rB[2], t1, t2, tsup, i, maxax[i]);
 #ifdef MD_ASYM_ITENS
@@ -3226,7 +3272,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   h = OprogStatus.h; /* last resort time increment */
   if (search_contact_faster_neigh_plane(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2, nplane))
     return 0;  
-  MD_DEBUG(printf(">>>>d:%f\n", d));
+  MD_DEBUG35(printf(">>>>d:%f\n", d));
   foundrc = 0;
   for (kk = 0; kk < 8; kk++)
     vecgdold[kk] = vecgd[kk];
@@ -3235,7 +3281,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   while (t + t1 < t2 || !dist_too_big(i,t,t1))
     {
       MD_DEBUG31(printf("LOC CONT rB = %.15G %.15G %.15G\n", rB[0], rB[1], rB[2]));
-#ifdef MD_BASIC_DT
+#if defined(MD_BASIC_DT) 
       delt = epsd / maxddot;
       t += delt;
       d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
@@ -3255,14 +3301,14 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       dold2 = dold;
       //printf("NNL [LOCATE_CONTACT] >>>>>>>>>>>><<<<<<<<<<\n"); 
       d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
-      MD_DEBUG31(printf("NNL [LOCATE_CONTACT] delt=%.15G (%.15G,maxddot=%.10G,normddot=%.15G) t=%.15G ellips N. %d d=%.15G dold=%.15G its=%d t1=%.15G t2=%.15G vparall=%.15G\n", 
+      MD_DEBUG35(printf("NNL [LOCATE_CONTACT] delt=%.15G (%.15G,maxddot=%.10G,normddot=%.15G) t=%.15G ellips N. %d d=%.15G dold=%.15G its=%d t1=%.15G t2=%.15G vparall=%.15G\n", 
       delt, epsd/maxddot, maxddot, normddot, t, i, d, dold, its, t1, t2, fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2]))); 
       if (fabs(d-dold2) > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
 	   * cerca di correggere il passo per ottenere un valore
 	   * più vicino a epsd*/
-	  //printf("P delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt, fabs(d2-d2old), d2, d2old);
+	  MD_DEBUG35(printf("P delt: %.15G d-d2o:%.15G d2o:%.15G\n", delt, fabs(d-dold2), dold2));
 	  t -= delt;
 	  //delt = d2old / maxddot;
 	  delt = epsd / maxddot;
@@ -3274,6 +3320,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	  //t += delt*epsd/fabs(d2-d2old);
 	  itsSNL++;
 	  d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgdold2, 0, 0, &distfail, nplane);
+	  MD_DEBUG35(printf("new dist d=%.15G delt=%.15G\n", d, delt));
 	  for (kk = 0; kk < 8; kk++)
 	    vecgd[kk] = vecgdold2[kk];
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
@@ -3282,6 +3329,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 #if 1
       if (d > epsdFastR)
 	{
+	  MD_DEBUG35(printf("[d>epsdFastR] d=%.15G\n", d));
 	  if (search_contact_faster_neigh_plane(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2, nplane))
 	    {
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
@@ -3299,7 +3347,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       dorefine = 0;      
       if (dold > 0 && d < 0)
 	{
-	  //printf(">>>>>>>>>QUI\n");
+	  MD_DEBUG35(printf(">>>>>>>>>QUI\n"));
        	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
 #ifndef MD_NOINTERPOL  
@@ -3327,12 +3375,12 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	}
       if (dorefine)
 	{
-	  MD_DEBUG31(printf("NNL REFINING CONTACT t=%.15G troot=%.15G t1=%.15G\n", t, troot, t1));
+	  MD_DEBUG35(printf("NNL REFINING CONTACT t=%.15G troot=%.15G t1=%.15G\n", t, troot, t1));
 	  if (refine_contact_neigh_plane(i, t1, troot, vecgroot, vecg, nplane))
 	    {
-	      MD_DEBUG31(printf("[locate_contact] Adding collision between %d\n", i));
-	      MD_DEBUG31(printf("collision will occur at time %.15G\n", vecg[4])); 
-	      MD_DEBUG31(printf("[locate_contact] its: %d\n", its));
+	      MD_DEBUG35(printf("[locate_contact] Adding collision between %d\n", i));
+	      MD_DEBUG35(printf("collision will occur at time %.15G\n", vecg[4])); 
+	      MD_DEBUG35(printf("[locate_contact] its: %d\n", its));
 	      if (vecg[4]>t2 || vecg[4]<t1)
 		return 0;
 	      else
@@ -3347,12 +3395,11 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	    }
 	  else 
 	    {
-	      MD_DEBUG(printf("[locate_contact] can't find contact point!\n"));
+	      MD_DEBUG35(printf("[locate_contact] can't find contact point!\n"));
 	      if (d < 0)
 		{
-		  MD_DEBUG10(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
-		  MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
-		  MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+		  MD_DEBUG35(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
+		  MD_DEBUG35(printf("[locate_contact] its: %d\n", its));
 		  return 0;
 		  //if (lastbump[i] == j && lastbump[j]==i )
 		   // return 0;
@@ -3405,6 +3452,14 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
       told = *t;
       delt = *d1 / maxddot;
       MD_DEBUG20(printf("SEARCH_CONTACT_FASTER delt=%.15G maxddot: %.15G\n", delt, maxddot));
+#if defined(EDHE_FLEX) || defined(MD_BASIC_DT)
+      /* check for convergence */
+      if (delt < (epsd / maxddot))
+	{
+	  MD_DEBUG20(printf("convergence reached in %d iterations\n", its));
+	  return 0;
+	}
+#else
       normddot = calcvecFNeigh(i, *t, t1, ddot, r1);
       //printf("normddot: %.15G\n", epsd/normddot);
       /* check for convergence */
@@ -3414,6 +3469,7 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
 	  MD_DEBUG20(printf("convergence reached in %d iterations\n", its));
 	  return 0;
 	}
+#endif
       *t += delt;
 #if 1
       if (*t + t1 > t2)
@@ -4071,8 +4127,16 @@ void PredictEventNNL(int na, int nb)
 	signDir[2] = 0;/* direzione positiva */
       else 
 	signDir[2] = 1;/* direzione negativa */
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall && ((signDir[2]==0 && inCell[2][na]==cellsz-1) || (signDir[2]==1 && inCell[2][na]==0)))
+	tm[2] = timbig;
+      else
+	tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
+		 cellsz - rz[na] - L2) / vz[na];
+#else
       tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
 	       cellsz - rz[na] - L2) / vz[na];
+#endif    
     } 
   else 
     tm[2] = timbig;
@@ -4227,6 +4291,9 @@ void PredictEventNNL(int na, int nb)
 #ifdef MD_PATCHY_HE
   int ac, bc, collCode, collCodeOld, acHC, bcHC;
   double evtime, evtimeHC;
+#ifdef MD_EDHEFLEX_WALL
+  int nplane=-1;
+#endif
 #endif
   if (vz[na] != 0.0) 
     {
@@ -4234,8 +4301,16 @@ void PredictEventNNL(int na, int nb)
 	signDir[2] = 0;/* direzione positiva */
       else 
 	signDir[2] = 1;/* direzione negativa */
+#if defined(MD_EDHEFLEX_WALL) 
+      if (OprogStatus.hardwall && ((signDir[2]==0 && inCell[2][na]==cellsz-1) || (signDir[2]==1 && inCell[2][na]==0)))
+	tm[2] = timbig;
+      else
+	tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
+		 cellsz - rz[na] - L2) / vz[na];
+#else
       tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
 	       cellsz - rz[na] - L2) / vz[na];
+#endif
     } 
   else 
     tm[2] = timbig;
@@ -4290,16 +4365,33 @@ void PredictEventNNL(int na, int nb)
   evCode = 100 + k;
   /* urto con le pareti, il che vuol dire:
    * se lungo z e rz = -L/2 => urto con parete */ 
-  ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 #ifdef MD_EDHEFLEX_WALL
-  if (inCell[2][na] == 0)
-    PredictHardWall(na, 0, Oparams.time+tm[k]);
-  else if (inCell[2][na] == cellsz-1)
-    PredictHardWall(na, 1, Oparams.time+tm[k]);
+  if (OprogStatus.hardwall)
+    {
+      if (inCell[2][na] == 0)
+	nplane = 0;
+      else if (inCell[2][na] == cellsz-1)
+	nplane = 1;
+      if (nplane!=-1 && locateHardWall(na, nplane, Oparams.time+tm[k], vecg))
+	{
+	  rxC = vecg[0];
+	  ryC = vecg[1];
+	  rzC = vecg[2];
+	  MD_DEBUG35(printf("Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
+	  MD_DEBUG35(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
+	  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
+	}
+      else
+	ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+    }
+  else
+    ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
+#else
+  ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 #endif
 
   /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni */
-  if (nb >= ATOM_LIMIT)
+  if (nb >= ATOM_LIMIT+2*NDIM)
     return;
   MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
   for (i=0; i < nebrTab[na].len; i++)
@@ -4779,8 +4871,11 @@ void BuildNNL(int na)
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 #if defined(MD_EDHEFLEX_WALL)
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
-  if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
-  if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+  if (OprogStatus.hardwall)
+    {
+      if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+    }
 #endif
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
