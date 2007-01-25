@@ -6680,6 +6680,7 @@ void calc_omega(int i)
 extern double calcpotene(void);
 #endif
 double Krot, Ktra;
+#ifdef EDHE_FLEX
 void calc_energy_filtered(int filter)
 {
   int i, k1;
@@ -6700,7 +6701,7 @@ void calc_energy_filtered(int filter)
 #ifdef MD_ASYM_ITENS
       //RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
 #endif
-      Ktra += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+      Ktra += typesArr[typeOfPart[i]].m*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 #ifdef MD_ASYM_ITENS
       calc_omega(i);
 #endif
@@ -6717,19 +6718,20 @@ void calc_energy_filtered(int filter)
       //printf("calcnorm wt: %.15G wtp:%.15G\n", calc_norm(wt), calc_norm(wtp));
       for (k1=0; k1 < 3; k1++)
 	{
-	  Krot += Sqr(wtp[k1])*Oparams.I[0][k1];
+	  Krot += Sqr(wtp[k1])*typesArr[typeOfPart[i]].I[k1];
 	  //printf("I[%d][%d]=%.15G wt[%d]:%.15G wtp[%d]:%.15G\n", 0, k1, Oparams.I[0][k1],
 	  //     k1, wt[k1], k1, wtp[k1]);
 	}
 #else
       for (k1=0; k1 < 3; k1++)
-	Krot += Sqr(wt[k1])*Oparams.I[0];
+	Krot += Sqr(wt[k1])*typesArr[typeOfPart[i]].I[k1];
 #endif
     }
   Ktra *= 0.5;
   Krot *= 0.5;
   K = Ktra + Krot;
 }
+#endif
 
 void calc_energy(char *msg)
 {
@@ -6752,7 +6754,11 @@ void calc_energy(char *msg)
 #ifdef MD_ASYM_ITENS
 	  //RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
 #endif
+#ifdef EDHE_FLEX
+	  Ktra += typesArr[typeOfPart[i]].m*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+#else
 	  Ktra += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+#endif
 #ifdef MD_ASYM_ITENS
 	  calc_omega(i);
 #endif
@@ -6769,13 +6775,23 @@ void calc_energy(char *msg)
 	  //printf("calcnorm wt: %.15G wtp:%.15G\n", calc_norm(wt), calc_norm(wtp));
 	  for (k1=0; k1 < 3; k1++)
 	    {
+#ifdef EDHE_FLEX
+	      Krot += Sqr(wtp[k1])*typesArr[typeOfPart[i]].I[k1];
+#else
 	      Krot += Sqr(wtp[k1])*Oparams.I[0][k1];
+#endif
 	      //printf("I[%d][%d]=%.15G wt[%d]:%.15G wtp[%d]:%.15G\n", 0, k1, Oparams.I[0][k1],
 		//     k1, wt[k1], k1, wtp[k1]);
 	    }
 #else
 	  for (k1=0; k1 < 3; k1++)
-	    Krot += Sqr(wt[k1])*Oparams.I[0];
+	    {
+#ifdef EDHE_FLEX
+	      Krot += Sqr(wt[k1])*typesArr[typeOfPart[i]].I[k1];
+#else
+	      Krot += Sqr(wt[k1])*Oparams.I[0];
+#endif
+	    }
 #endif
 	}
       else
