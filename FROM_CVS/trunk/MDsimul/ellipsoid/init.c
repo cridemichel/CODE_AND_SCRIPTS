@@ -40,6 +40,9 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB; 
 int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
+#ifdef MD_EDHEFLEX_OPTNNL
+int *inCell_NNL[3], *cellList_NNL;
+#endif
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
@@ -2748,6 +2751,12 @@ void usrInitAft(void)
   inCell[0] = malloc(sizeof(int)*Oparams.parnum);
   inCell[1]= malloc(sizeof(int)*Oparams.parnum);
   inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MD_EDHEFLEX_OPTNNL
+  cellList_NNL = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
+  inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
+  inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
+#endif
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
   for (i=0; i < Oparams.parnum; i++)
     {

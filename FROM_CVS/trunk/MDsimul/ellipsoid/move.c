@@ -205,6 +205,9 @@ double *lastcol;
 double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
+#ifdef MD_EDHEFLEX_OPTNNL
+extern int *inCell_NNL[3], *cellList_NNL;
+#endif
 int evIdA, evIdB, parnumB, parnumA;
 #ifdef MD_PATCHY_HE
 int evIdC, evIdD, evIdE;
@@ -650,7 +653,51 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
     }
   return calc_phi();
 }
+#ifdef MD_EDHEFLEX_OPTNNL
+void rebuild_linked_list_NNL()
+{
+  /* N.B. Se si usano le NNL ottimizzate il centro di massa geometrico delle NNL non coincide con il 
+     centro di massa degli ellissoidi, in tale caso quindi le linked lists degli ellissoidi vengono usate 
+     per avere una sovrastima in caso di urti con la parete dura e per mantenere gli ellissoidi nella
+     first box. */
+  double L2, xx, yy, zz, invL;
+  int j, n;
+  L2 = 0.5 * L;
+  invL = 1.0/L;
+  cellsx = L / Oparams.rcut;
+  cellsy = L / Oparams.rcut;
+#ifdef MD_GRAVITY
+  cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
+#else
+  cellsz = L / Oparams.rcut;
+#endif 
+  for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
+    cellList_NNL[j] = -1;
+  /* NOTA: rcut delle LL per le NNL è uguale a quello delle LL per gli ellissoidi
+     ma quest'ultimo potrebbe essere scelto ad hoc. Inoltre le LL per gli ellissoidi 
+     vengono solo usate per avere una upper limit per il tempo di collisione contro la pareti dure */  
+  /* rebuild event calendar */
 
+  for (n = 0; n < Oparams.parnum; n++)
+    {
+      /* reduce to first box */
+      xx = nebrTab[n].r[0] - L*rint(nebrTab[n].r[0]*invL);
+      yy = nebrTab[n].r[1] - L*rint(nebrTab[n].r[1]*invL);
+      zz = nebrTab[n].r[2] - L*rint(nebrTab[n].r[2]*invL);
+      inCell_NNL[0][n] =  (xx + L2) * cellsx / L;
+      inCell_NNL[1][n] =  (yy + L2) * cellsy / L;
+#ifdef MD_GRAVITY
+      inCell_NNL[2][n] =  (zz + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+#else
+      inCell_NNL[2][n] =  (zz + L2)  * cellsz / L;
+#endif
+      j = (inCell_NNL[2][n]*cellsy + inCell_NNL[1][n])*cellsx + 
+	inCell_NNL[0][n] + Oparams.parnum;
+      cellList_NNL[n] = cellList_NNL[j];
+      cellList_NNL[j] = n;
+    }
+}
+#endif
 void rebuild_linked_list()
 {
   double L2;
