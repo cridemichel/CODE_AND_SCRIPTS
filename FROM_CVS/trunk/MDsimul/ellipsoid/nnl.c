@@ -37,6 +37,9 @@ extern double Ia, Ib, invIa, invIb;
 extern double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 extern int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
+#ifdef MD_EDHEFLEX_OPTNNL
+extern int *inCell_NNL[3], *cellList_NNL;
+#endif
 extern int evIdA, evIdB, parnumB, parnumA;
 extern double *axa, *axb, *axc;
 extern int *scdone;
@@ -68,7 +71,7 @@ double nextNNLrebuild;
 extern void UpdateSystem(void);
 extern void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3]);
 extern void nextNNLupdate(int na);
-extern void BuildNNL(int na);
+void BuildNNL(int na);
 extern long long int itsF, timesF, itsS, timesS, numcoll, itsFNL, itsSNL, timesSNL, timesFNL;
 extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
 extern double accngA, accngB;
@@ -214,7 +217,9 @@ void growth_rebuildNNL(int i)
       BuildNNL(n);
     }
 }
-
+#ifdef MD_EDHEFLEX_OPTNNL
+extern void rebuild_linked_list_NNL(void);
+#endif
 void rebuildNNL(void)
 {
   int i;
@@ -228,6 +233,11 @@ void rebuildNNL(void)
       if (i==0 || nebrTab[i].nexttime < nltime)
 	nltime = nebrTab[i].nexttime;
     }
+#ifdef MD_EDHEFLEX_OPTNNL
+  /* il centro di massa del parallelepipedo può non coincidere con quello dell'ellissoide
+     in tal caso per cui le linked lists vanno generate ad hoc */
+  rebuild_linked_list_NNL();
+#endif
   for (i=0; i < Oparams.parnum; i++)
     {
       BuildNNL(i);
@@ -4381,7 +4391,7 @@ void PredictEventNNL(int na, int nb)
 	  MD_DEBUG35(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
 	  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
 	}
-      else
+      else 
 	ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
     }
   else
@@ -4883,6 +4893,7 @@ void BuildNNL(int na)
   double shift[NDIM];
   int kk;
   double dist;
+  int *inCellL[3], *cellListL;
 #ifndef MD_NNLPLANES
   double vecgsup[8], alpha;
 #endif
@@ -4891,6 +4902,7 @@ void BuildNNL(int na)
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
   nebrTab[na].len = 0;
   MD_DEBUG32(printf("Building NNL...\n"));
+
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
@@ -4899,17 +4911,26 @@ void BuildNNL(int na)
   for (kk=0; kk < 3; kk++)
     shift[kk] = 0;
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+#ifdef MD_EDHEFLEX_OPTNNL
+  for (k=0; k < 3; k++)
+    inCellL[k] = inCell_NNL[k];
+  cellListL = cellList_NNL;
+#else
+  for (k=0; k < 3; k++)
+    inCellL[k] = inCell[k];
+  cellListL = cellList;
+#endif
 #if defined(MD_EDHEFLEX_WALL)
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
   if (OprogStatus.hardwall)
     {
-      if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
-      if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+      if (inCellL[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (inCellL[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
     }
 #endif
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
-      jZ = inCell[2][na] + iZ;    
+      jZ = inCellL[2][na] + iZ;    
       shift[2] = 0.;
       /* apply periodic boundary condition along z if gravitational
        * fiels is not present */
@@ -4925,7 +4946,7 @@ void BuildNNL(int na)
 	}
       for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
 	{
-	  jY = inCell[1][na] + iY;    
+	  jY = inCellL[1][na] + iY;    
 	  shift[1] = 0.0;
 	  if (jY == -1) 
 	    {
@@ -4939,7 +4960,7 @@ void BuildNNL(int na)
 	    }
 	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
 	    {
-	      jX = inCell[0][na] + iX;    
+	      jX = inCellL[0][na] + iX;    
 	      shift[0] = 0.0;
 	      if (jX == -1) 
 		{
@@ -4952,7 +4973,7 @@ void BuildNNL(int na)
 		  shift[0] = L;
 		}
 	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
-	      for (n = cellList[n]; n > -1; n = cellList[n]) 
+	      for (n = cellListL[n]; n > -1; n = cellListL[n]) 
 		{
 		  if (n != na)// && n != nb && (nb >= -1 || n < na)) 
 		    {
