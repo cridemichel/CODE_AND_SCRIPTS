@@ -548,7 +548,11 @@ void temperat(void)
   if (OprogStatus.brownian==1)
     temp = 2.0 * K / dof;
   else
+#ifdef EDHE_FLEX
+    temp = 2.0 * K / dof;
+#else
     temp = 2.0 * K / (dof - 3.0);
+#endif
   if (OprogStatus.avngTemp == 1)
     {
       OprogStatus.sumTemp += temp;
