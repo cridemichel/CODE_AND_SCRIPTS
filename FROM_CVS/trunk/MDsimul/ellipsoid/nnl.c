@@ -39,6 +39,7 @@ extern int *inCell[3], **tree, *cellList, cellRange[2*NDIM],
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 #ifdef MD_EDHEFLEX_OPTNNL
 extern int *inCell_NNL[3], *cellList_NNL;
+extern double *rxNNL, *ryNNL, *rzNNL;
 #endif
 extern int evIdA, evIdB, parnumB, parnumA;
 extern double *axa, *axb, *axc;
@@ -1773,13 +1774,33 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
 #endif
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
+#ifdef MD_EDHEFLEX_OPTNNL
+  rA[0] = rxNNL[i];
+  rA[1] = ryNNL[i];
+  rA[2] = rzNNL[i];
+  rB[0] = rxNNL[j] + shift[0];
+  rB[1] = ryNNL[j] + shift[1];
+  rB[2] = rzNNL[j] + shift[2];
+#else
   rA[0] = nebrTab[i].r[0];
   rA[1] = nebrTab[i].r[1];
   rA[2] = nebrTab[i].r[2];
   rB[0] = nebrTab[j].r[0] + shift[0];
   rB[1] = nebrTab[j].r[1] + shift[1];
   rB[2] = nebrTab[j].r[2] + shift[2];
- 
+#endif
+#if 0
+  for (k1=0; k1<3; k1++)
+    { 
+      if (fabs(rA[k1]-rB[k1]) > L)
+	{
+	  printf("boh... shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+	  printf("rA=%f %f %f\n", rA[0], rA[1], rA[2]);
+	  printf("rB=%f %f %f\n", nebrTab[j].r[0], rB[1], rB[2]);
+	  exit(-1);
+	}
+    }
+#endif
   EA[0] = nebrTab[i].axa;
   EA[1] = nebrTab[i].axb;
   EA[2] = nebrTab[i].axc;
@@ -4794,6 +4815,8 @@ void nextNNLupdate(int na)
   nebrTab[na].r[0] = rx[na]+xl[0];
   nebrTab[na].r[1] = ry[na]+xl[1];
   nebrTab[na].r[2] = rz[na]+xl[2];
+  //if (Oparams.curStep > 2690 && na <= 4)
+  //printf("r[%d]=%f %f %f nebrTab.r=%f %f %f xl=%f %f %f\n", na, rx[na], ry[na], rz[na], nebrTab[na].r[0], nebrTab[na].r[1], nebrTab[na].r[2], xl[0], xl[1], xl[2]);
 #else
   nebrTab[na].r[0] = rx[na];
   nebrTab[na].r[1] = ry[na];
@@ -4993,6 +5016,7 @@ void BuildNNL(int na)
 		      if (dist < 0)
 			{
 			  MD_DEBUG32(printf("Adding ellipsoid N. %d to NNL of %d\n", n, na));
+
 #if 0
 			  if (n==132 && na==106)
 			    { printf("bahbah (106-132): %f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 106, 132, shift)); 
