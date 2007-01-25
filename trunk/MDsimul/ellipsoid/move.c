@@ -1125,7 +1125,7 @@ void scalevels(double temp, double K)
   int i; 
   double sf;
   double dof;
-  dof = get_dof_flex(2)-3;
+  dof = get_dof_flex(2);
   sf = sqrt( ( dof * temp ) / (2.0*K) );
   //printf("dof=%f temp=%.15G sf=%.15G\n", dof, temp, sf );
   for (i = 0; i < Oparams.parnum; i++)
