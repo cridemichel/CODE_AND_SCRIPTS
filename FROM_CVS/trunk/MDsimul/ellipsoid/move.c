@@ -205,6 +205,10 @@ double *lastcol;
 double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
   cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
+#ifdef EDHE_FLEX
+extern void calc_momentum_filtered(double P[3], int filter);
+double frozenDOF=0.0;
+#endif
 #ifdef MD_EDHEFLEX_OPTNNL
 extern int *inCell_NNL[3], *cellList_NNL;
 extern double *rxNNL, *ryNNL, *rzNNL;
@@ -1125,7 +1129,7 @@ void scalevels(double temp, double K)
   int i; 
   double sf;
   double dof;
-  dof = get_dof_flex(2);
+  dof = get_dof_flex(2) - frozenDOF;
   sf = sqrt( ( dof * temp ) / (2.0*K) );
   //printf("dof=%f temp=%.15G sf=%.15G\n", dof, temp, sf );
   for (i = 0; i < Oparams.parnum; i++)
@@ -7286,6 +7290,10 @@ void timeshift_calendar(void)
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
+#ifdef EDHE_FLEX
+  double P[3];
+  int kk;
+#endif
   char fileop[1024], fileop2[1024]; 
   char fileop3[1024];
   FILE *bf;
@@ -7470,6 +7478,16 @@ void move(void)
      else if (evIdB == ATOM_LIMIT + 10)
 	{
 	  UpdateSystem();
+#ifdef EDHE_FLEX
+	  calc_momentum_filtered(P, 0);
+	  frozenDOF = 0.0;	
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      if (fabs(P[kk]-OprogStatus.Pold[kk]) < OprogStatus.Pthr)
+		frozenDOF=frozenDOF+1.0;
+	      OprogStatus.Pold[kk] = P[kk];
+	    }
+#endif
 	  R2u();
 	  if (Oparams.curStep == Oparams.totStep)
 	    {

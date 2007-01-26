@@ -360,6 +360,10 @@ struct progStatus
   char inifile[NAME_LENGTH];
   int iniFormat; /* 0 = binary 1 = ascii 2 = both */
   int endFormat; /* 0 = binary 1 = ascii 2 = both */
+#ifdef EDHE_FLEX
+  double Pold[3];
+  double Pthr;
+#endif
 #ifdef MD_EDHEFLEX_WALL
   int hardwall;
 #endif
@@ -714,6 +718,10 @@ struct pascii opro_ascii[] =
   {"endFile",      OS(endfile),                     1,   NAME_LENGTH,   "%s"},
   {"iniFormat",    &OS(iniFormat),                  1,               1, "%d"},
   {"endFormat",    &OS(endFormat),                  1,               1, "%d"},
+#ifdef EDHE_FLEX
+  {"Pold",           OS(Pold),                     3, 1, "%.15G" },
+  {"Pthr",           &OS(Pthr),                    1, 1, "%.15G" },
+#endif
 #ifdef MD_EDHEFLEX_WALL
   {"hardwall",     &OS(hardwall),                   1,               1, "%d"},
 #endif
@@ -1037,6 +1045,9 @@ struct singlePar OsinglePar[] = {
   {"xvafile" ,   &OprogStatus.xvafile,        STR},
   {"inistep" ,   &Oparams.curStep,            LLINT},
   {"endFormat",  &OprogStatus.endFormat,      INT},
+#ifdef EDHE_FLEX
+  {"Pthr",       &OprogStatus.Pthr, CT},
+#endif
 #ifdef MD_EDHEFLEX_WALL
   {"hardwall",   &OprogStatus.hardwall,       INT},
 #endif
