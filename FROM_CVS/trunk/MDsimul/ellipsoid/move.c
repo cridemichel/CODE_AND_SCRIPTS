@@ -1021,20 +1021,46 @@ extern void upd_refsysM(int i);
 #endif
 #ifdef EDHE_FLEX
 int dofTot;
-int all_spots_on_zaxis(int pt)
+int all_spots_on_symaxis(int sa, int pt)
 {
   int sp;
+  int axA, axB;
+  axA = sa++ % 3;
+  axB = sa++ % 3;
   for (sp=0; sp < typesArr[pt].nspots; sp++)
     {
       /* N.B. x[2] is the z-axis! */
-      if (typesArr[pt].spots[sp].x[0]!=0.0 || typesArr[pt].spots[sp].x[1]!=0.0) 
+      if (typesArr[pt].spots[sp].x[axA]!=0.0 || typesArr[pt].spots[sp].x[axB]!=0.0) 
 	return 0;
     }
   return 1;
 }
+int all_spots_in_CoM(int pt)
+{
+  int sp;  
+  for (sp=0; sp < typesArr[pt].nspots; sp++)
+    {
+      /* N.B. x[2] is the z-axis! */
+      if (typesArr[pt].spots[sp].x[0]!=0.0 || typesArr[pt].spots[sp].x[1]!=0.0 ||  
+	  typesArr[pt].spots[sp].x[2]!=0.0 ) 
+	return 0;
+    }
+  return 1;	
+}
+int two_axes_are_equal(int pt)
+{
+  /* tale funzione restituisce l'asse di simmetria dell'ellissoide (0=x, 1=y, 2=z) */ 
+  if (typesArr[pt].sax[0] == typesArr[pt].sax[1])
+    return 2;
+  if (typesArr[pt].sax[0] == typesArr[pt].sax[2])
+    return 1;
+  if (typesArr[pt].sax[1] == typesArr[pt].sax[2])
+    return 0;
+  return -1;
+}
 int get_dof_flex(int filter)
 {
-  int pt, dofOfType, dofTot;
+  int pt, dofOfType, dofTot, sa;
   dofTot = 0;
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
@@ -1045,32 +1071,40 @@ int get_dof_flex(int filter)
 	  typesArr[pt].sax[1] == typesArr[pt].sax[2])
 	{
 	  /* sfere con o senza sticky spots */
-	  if (typesArr[pt].nspots == 0)	  
+	  if (typesArr[pt].nspots == 0 || (typesArr[pt].nspots!=0 && all_spots_in_CoM(pt)))	  
 	    dofOfType = 3;
 	  else
 	    dofOfType = 5;
 	}
       else if (typesArr[pt].nspots == 0)
 	{
-	  /* ellissoide senza sticky spots */
-	  dofOfType = 5;
+	  if (two_axes_are_equal(pt)!=-1)
+	    dofOfType = 5;
+	  else
+	    /* ellissoide senza sticky spots */
+	    dofOfType = 6;
    	}
       else
 	{
 	  /* loop over all spots to see whether they are along z-axis or not */
-	  if (all_spots_on_zaxis(pt))
-	    {
-	      dofOfType = 5;
-	    }
+	  sa = two_axes_are_equal(pt);
+	  if (sa == -1)
+	    dofOfType = 6;
 	  else
 	    {
-	      dofOfType = 6;
+	      if (all_spots_on_symaxis(sa, pt))
+		{
+		  dofOfType = 5;
+		}
+	      else
+		{
+		  dofOfType = 6;
+		}
 	    }
 	}
 	dofTot += dofOfType*typeNP[pt];
     }
   /* il centro di massa dell'anticorpo è fermo */
-  //dofTot -= 3;
   return dofTot;
 }
 #endif
