@@ -1642,6 +1642,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #ifdef EDHE_FLEX
   if (are_spheres(i, j))
     {
+      numcoll++;
       bumpHS(i, j, W);
       return;
     } 
@@ -5291,13 +5292,11 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
   int typei, typej;
   double sigSq, b, dr[3], dv[3], tInt, vv;
   int collCode;
-  t2 += Oparams.time;
-  t1 += Oparams.time;
   /* calcola cmq l'urto fra le due core spheres */
   typei = typeOfPart[i];
   typej = typeOfPart[j];
   sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 
-  tInt = Oparams.time - atomTime[i];
+  tInt = Oparams.time - atomTime[j];
   dr[0] = rx[i] - (rx[j] + vx[j] * tInt) - shift[0];	  
   dv[0] = vx[i] - vx[j];
   dr[1] = ry[i] - (ry[j] + vy[j] * tInt) - shift[1];
