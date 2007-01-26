@@ -361,8 +361,7 @@ struct progStatus
   int iniFormat; /* 0 = binary 1 = ascii 2 = both */
   int endFormat; /* 0 = binary 1 = ascii 2 = both */
 #ifdef EDHE_FLEX
-  double Pold[3];
-  double Pthr;
+  int frozenDOF;
 #endif
 #ifdef MD_EDHEFLEX_WALL
   int hardwall;
@@ -719,8 +718,7 @@ struct pascii opro_ascii[] =
   {"iniFormat",    &OS(iniFormat),                  1,               1, "%d"},
   {"endFormat",    &OS(endFormat),                  1,               1, "%d"},
 #ifdef EDHE_FLEX
-  {"Pold",           OS(Pold),                     3, 1, "%.15G" },
-  {"Pthr",           &OS(Pthr),                    1, 1, "%.15G" },
+  {"frozenDOF",      &OS(frozenDOF),                1,       1,  "%d" },
 #endif
 #ifdef MD_EDHEFLEX_WALL
   {"hardwall",     &OS(hardwall),                   1,               1, "%d"},
@@ -1046,7 +1044,7 @@ struct singlePar OsinglePar[] = {
   {"inistep" ,   &Oparams.curStep,            LLINT},
   {"endFormat",  &OprogStatus.endFormat,      INT},
 #ifdef EDHE_FLEX
-  {"Pthr",       &OprogStatus.Pthr, CT},
+  {"frozenDOF",       &OprogStatus.frozenDOF,  INT},
 #endif
 #ifdef MD_EDHEFLEX_WALL
   {"hardwall",   &OprogStatus.hardwall,       INT},

@@ -34,7 +34,6 @@ extern double W, K, WC, T1xx, T1yy, T1zz, Ktra, Krot,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, 
   Patxy, Patyz, Patzx, Patxx, Patyy, Patzz;  
 #ifdef EDHE_FLEX
-extern double frozenDOF;
 extern int *bondscache, *numbonds, **bonds;
 #endif
 /* used by linked list routines */
@@ -569,7 +568,7 @@ void temperat(void)
 #endif
 #ifdef EDHE_FLEX
   calc_energy_filtered(0);
-  dof = get_dof_flex(0) - frozenDOF;
+  dof = get_dof_flex(0) - OprogStatus.frozenDOF;
 #else
   calc_energy(NULL);
   dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
