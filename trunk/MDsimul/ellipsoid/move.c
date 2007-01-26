@@ -1025,14 +1025,19 @@ int all_spots_on_symaxis(int sa, int pt)
 {
   int sp;
   int axA, axB;
-  axA = sa++ % 3;
-  axB = sa++ % 3;
+  axA = (sa+1) % 3;
+  axB = (axA+1) % 3;
+  MD_DEBUG35(sprintf("pt=%d sa=%d axA=%d axB=%d ", pt, sa, axA, axB));
   for (sp=0; sp < typesArr[pt].nspots; sp++)
     {
       /* N.B. x[2] is the z-axis! */
       if (typesArr[pt].spots[sp].x[axA]!=0.0 || typesArr[pt].spots[sp].x[axB]!=0.0) 
-	return 0;
+	{
+	  MD_DEBUG35(printf("all spots are *not* on sym axis\n"));
+	  return 0;
+	}
     }
+  MD_DEBUG35(printf("all spots *are* on sym axis\n"));
   return 1;
 }
 int all_spots_in_CoM(int pt)
@@ -1067,7 +1072,7 @@ int get_dof_flex(int filter)
       if (filter != 0 && typesArr[pt].brownian != filter)
 	continue;
       /* Sphere */
-      else if (typesArr[pt].sax[0] == typesArr[pt].sax[1] &&
+      if (typesArr[pt].sax[0] == typesArr[pt].sax[1] &&
 	  typesArr[pt].sax[1] == typesArr[pt].sax[2])
 	{
 	  /* sfere con o senza sticky spots */
@@ -1102,7 +1107,8 @@ int get_dof_flex(int filter)
 		}
 	    }
 	}
-	dofTot += dofOfType*typeNP[pt];
+      MD_DEBUG35(printf("pt=%d dofOfType=%d filter=%d brown=%d ntypes=%d\n", pt, dofOfType, filter, typesArr[pt].brownian, Oparams.ntypes));
+      dofTot += dofOfType*typeNP[pt];
     }
   /* il centro di massa dell'anticorpo è fermo */
   return dofTot;
