@@ -1685,6 +1685,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   MD_DEBUG(printf("QUIIII collCode=%d\n", *collCode));
 #ifdef EDHE_FLEX
   nbonds = nbondsFlex;
+  if (nbonds==0)
+    return 0;
 #else
   nbonds = MD_PBONDS;
 #endif
