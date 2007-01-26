@@ -34,6 +34,7 @@ extern double W, K, WC, T1xx, T1yy, T1zz, Ktra, Krot,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, 
   Patxy, Patyz, Patzx, Patxx, Patyy, Patzz;  
 #ifdef EDHE_FLEX
+extern double frozenDOF;
 extern int *bondscache, *numbonds, **bonds;
 #endif
 /* used by linked list routines */
@@ -191,6 +192,31 @@ void calcV(void)
 }
 void calc_energy(char *msg);
 extern double *angM;
+#ifdef EDHE_FLEX
+void calc_momentum_filtered(double P[3], int filter)
+{
+  double mass;
+  int i;
+  double px, py, pz;
+  UpdateSystem();
+  P[0] = 0.0;
+  P[1] = 0.0;
+  P[2] = 0.0;
+  invL = 1.0 / L;
+  for(i = 0; i < Oparams.parnum; i++)
+    {
+      if (filter != 0 && filter != typesArr[typeOfPart[i]].brownian)
+	continue;
+      mass = typesArr[typeOfPart[i]].m;
+      px = mass * vx[i];
+      py = mass * vy[i];
+      pz = mass * vz[i];
+      P[0] += px;
+      P[1] += py;
+      P[2] += pz;
+    }
+}
+#endif
 /* ============================== >>> Energy <<< ============================*/
 void energy(void)
 {
@@ -520,6 +546,10 @@ extern void calc_energy_filtered(int filter);
 void temperat(void)
 {
   double dof;
+#ifdef EDHE_FLEX
+  int kk;
+  double P[3];
+#endif
 #ifdef MD_INELASTIC
   double dofTra, dofRot, tempRot, tempTra;
 #endif
@@ -539,7 +569,7 @@ void temperat(void)
 #endif
 #ifdef EDHE_FLEX
   calc_energy_filtered(0);
-  dof = get_dof_flex(0);
+  dof = get_dof_flex(0) - frozenDOF;
 #else
   calc_energy(NULL);
   dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
@@ -553,6 +583,7 @@ void temperat(void)
 #else
     temp = 2.0 * K / (dof - 3.0);
 #endif
+  
   if (OprogStatus.avngTemp == 1)
     {
       OprogStatus.sumTemp += temp;
@@ -600,6 +631,10 @@ void temperat(void)
       OprogStatus.sumPress += press;
       press = OprogStatus.sumPress / NUMCALCS;
     }
+#ifdef EDHE_FLEX
+  sprintf(TXT, "DOF:%.15G T:%.15G \n", dof, temp);
+  mdMsg(STD,NOSYS, NULL, "NOTICE", NULL,  TXT, NULL);
+#endif
 #if 0
   sprintf(TXT, "P:%.10f T:%.10f W: %10f\n", press, temp, W);
   mdMsg(STD,NOSYS, NULL, "NOTICE", NULL,  TXT, NULL);
