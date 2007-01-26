@@ -1117,6 +1117,9 @@ void usrInitBef(void)
     OprogStatus.polydisp = 0.0;
     OprogStatus.polycutoff = 5.0;
 #endif
+#ifdef EDHE_FLEX
+    OprogStatus.Pthr = 1E-12;
+#endif
 #ifdef MD_EDHEFLEX_WALL
     OprogStatus.hardwall = 0;
 #endif
@@ -2071,6 +2074,7 @@ void check_conf(void)
 #endif
 #ifdef EDHE_FLEX
 extern int get_dof_flex(int filter);
+extern void calc_momentum_filtered(double P[3], int filter);
 #endif
 void usrInitAft(void)
 {
@@ -2804,6 +2808,10 @@ void usrInitAft(void)
       }
 
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
+#endif
+#ifdef EDHE_FLEX
+  if (newSim == 1)
+    calc_momentum_filtered(OprogStatus.Pold, 0);
 #endif
 #ifdef MD_ASYM_ITENS
   for (i=0; i < Oparams.parnum; i++)
