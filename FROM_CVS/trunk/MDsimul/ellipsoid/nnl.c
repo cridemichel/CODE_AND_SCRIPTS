@@ -12,6 +12,8 @@
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
 #define MD_DEBUG35(x)  
+#define MD_DEBUG36(x) 
+#define MD_DEBUG37(x) 
 #ifdef EDHE_FLEX
 extern int is_sphere(int i);
 #endif
@@ -2815,6 +2817,7 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
   double maxddoti[6];
   int its=0, crossed[6], itsf; 
   *d1 = calcDistNegNeighPlaneAll(*t, t1, i, distsOld, vecgd, 1);
+  MD_DEBUG36(printf("[SEARCH_CONTACT_FASTER_NNL_PARALL]t=%.15G d=%.15G\n", *t, *d1));
 #if 0
   if ((t2-t1)*maxddot < *d1 - OprogStatus.epsd)
     return 1;
@@ -2926,13 +2929,16 @@ int locate_contact_neigh_plane_HS(int i, double *evtime, double t2)
       dv[0] = vx[i];
       dv[1] = vy[i];
       dv[2] = vz[i];
+      //printf("calc_norm(dr)=%.15G v=%.15G %.15G %.15G grad=%.15G %.15G %.15G\n", calc_norm(dr), vx[i], vy[i], vz[i],
+	//     gradplane_all[nn][0], gradplane_all[nn][1], gradplane_all[nn][2]);
       /* N.B. controllare che il gradiente sia a norma unitaria e che sia uscente rispetto 
 	 al parallelepipedo delle NNL! */
-      dist = scalProd(dr, gradplane_all[nn]) - typesArr[typei].sax[0];
+      dist = fabs(scalProd(dr, gradplane_all[nn])) - typesArr[typei].sax[0];
       b = scalProd(dv, gradplane_all[nn]);
       if (b < 0)
 	continue;
-      colltime = dist/b;
+      //printf("dist=%.15G b=%.15G\n", dist, b);
+      colltime = dist/b+Oparams.time;
       if (colltime > t1 && colltime < t2)
 	{
 	  if (colltime < *evtime || first)
@@ -2942,6 +2948,7 @@ int locate_contact_neigh_plane_HS(int i, double *evtime, double t2)
 	    }
 	}
     }	
+  MD_DEBUG36(printf("t1=%.15G t2=%.15G colltime=%.15G\n", t1, t2, *evtime));
   if (first)
     return 0;
   else
@@ -2983,6 +2990,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
   if (is_sphere(i))
     {
       return locate_contact_neigh_plane_HS(i, evtime, t2);
+      MD_DEBUG37(printf("HS evtime=%.15G\n", *evtime));
     }
 #endif
   factori = 0.5*maxax[i]+OprogStatus.epsdNL;
@@ -3001,12 +3009,15 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
     }
   h = OprogStatus.h; /* last resort time increment */
   delt = h;
-  
+ 
+
+  MD_DEBUG36(printf("[LOCATE_CONTACT_PARALL_NNL] BEGIN t=%.15G\n", t)); 
   if (search_contact_faster_neigh_plane_all(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, 
 					       dists, maxddoti, maxddot))
     {
       return 0;  
     }
+  MD_DEBUG36(printf("[LOCATE_CONTACT_PARALL_NNL] dopo primo search_contact_faster\n")); 
   assign_vec(vecgd, vecgdold);/* assegna a vecgdold vecgd */
   timesSNL++;
   foundrc = 0;
@@ -3050,6 +3061,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
       tini = t;
       t += delt;
       d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd, 0);
+      MD_DEBUG36(printf("[LOCATE_CONTACT_PARALL_NNL] dentro loop t=%.15G d=%.15G\n", t, d)); 
       deldist = get_max_deldist(distsOld, dists);
       if (deldist > epsdMax)
 	{
@@ -3145,6 +3157,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 		  MD_DEBUG30(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 		  MD_DEBUG30(printf("[locate_contact] t=%.15G nn=%d\n", t, nn));
 		  MD_DEBUG(printf("[locate_contact] its: %d\n", its));
+		  MD_DEBUG36(printf("[LOCATE_CONTACT_PARALL_NNL] do refine t1=%.15G t=%.15G vecg[4]:%.15G\n", t, t2arr[nn], vecg[4])); 
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
 		   * scarta tale urto */
 		  if (vecg[4] > t2 || vecg[4] < t1)
@@ -3162,7 +3175,10 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 			}
 		      //printf("QUI\n");
 		      if (nn==5)
-			return 1;
+			{
+			  MD_DEBUG37(printf(">>>1 evtime=%.15G\n", *evtime));
+			  return 1;
+			}
 		      else
 			continue;
 		    }
@@ -3182,7 +3198,10 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 	    }
 	}
       if (gotcoll == 1)
-	return 1;
+	{
+	  MD_DEBUG37(printf(">>>2 evtime=%.15G\n", *evtime));
+	  return 1;
+	}
       if (fabs(d) > epsdFastR)
 	{
 	  if (search_contact_faster_neigh_plane_all(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, 
@@ -4546,7 +4565,7 @@ void PredictEventNNL(int na, int nb)
       acHC = ac = 0;
       bcHC = bc = 0;
 #ifdef EDHE_FLEX
-      if (OprogStatus.targetPhi <=0)
+      if (OprogStatus.targetPhi <=0 && typesArr[typeOfPart[na]].nspots > 0 && typesArr[typeOfPart[n]].nspots > 0)
 	{
 	  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
 	    {
