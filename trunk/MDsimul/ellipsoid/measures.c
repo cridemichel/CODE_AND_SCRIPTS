@@ -145,11 +145,12 @@ double calcpotene(void)
 	  jj2 = bonds[na][kk]%(NA*NA);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
+	  //printf("numbonds[%d]=%d aa=%d bb=%d\n", na, numbonds[na], aa, bb);
 	  for (kk2 = 0; kk2 < Oparams.ninters; kk2++)
 	    {
-	      if ( (intersArr[kk2].type1 == na && intersArr[kk2].type2 == jj &&
+	      if ( (intersArr[kk2].type1 == typeOfPart[na] && intersArr[kk2].type2 == typeOfPart[jj] &&
 		    intersArr[kk2].spot1 == aa-1 && intersArr[kk2].spot2 == bb-1) || 
-		   (intersArr[kk2].type1 == jj && intersArr[kk2].type2 == na &&
+		   (intersArr[kk2].type1 == typeOfPart[jj] && intersArr[kk2].type2 == typeOfPart[na] &&
 		    intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
 		{
 		  MD_DEBUG21(printf("(%d,%d)-(%d,%d) height=%.15G\n", na, aa-1, jj, bb-1, intersArr[kk2].bheight));
