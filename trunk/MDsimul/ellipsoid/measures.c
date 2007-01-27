@@ -631,7 +631,7 @@ void temperat(void)
       press = OprogStatus.sumPress / NUMCALCS;
     }
 #ifdef EDHE_FLEX
-  sprintf(TXT, "DOF:%.15G T:%.15G \n", dof, temp);
+  sprintf(TXT, "DOF:%.15G T:%.15G", dof, temp);
   mdMsg(STD,NOSYS, NULL, "NOTICE", NULL,  TXT, NULL);
 #endif
 #if 0

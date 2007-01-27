@@ -16,6 +16,7 @@
 #define MD_DEBUG37(x) 
 #ifdef EDHE_FLEX
 extern int is_sphere(int i);
+extern int *is_a_sphere_NNL;
 #endif
 #if defined(MPI)
 extern int my_rank;
@@ -1765,6 +1766,49 @@ retryneigh:
       return -calc_norm(r12);
     }
 }
+#ifdef EDHE_FLEX
+extern int are_spheres(int i, int j);
+
+double calcDistNegNNLoverlapPlaneHS(int i, int j, double rA[3], double rB[3])
+{
+  double RR, R01, DD[3];
+  double EA[3], EB[3];
+  int k1;
+  EA[0] = nebrTab[i].axa;
+  EA[1] = nebrTab[i].axb;
+  EA[2] = nebrTab[i].axc;
+  EB[0] = nebrTab[j].axa;
+  EB[1] = nebrTab[j].axb;
+  EB[2] = nebrTab[j].axc;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      DD[k1] = rA[k1] - rB[k1];
+    }
+  /* axis C0+s*A0 */
+  RR = fabs(DD[0]);
+  R01 = EA[0] + EB[0];
+  if ( RR > R01 )
+    return 1.0; /* non si intersecano */
+  /* axis C0+s*A1 */
+  RR = fabs(DD[1]);
+  R01 = EA[1] + EB[1];
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*A2 */
+  RR = fabs(DD[2]);
+  R01 = EA[2] + EB[2];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*B0 */
+  RR = fabs(DD[0]);
+  R01 = EA[0] + EB[0];
+  if ( RR > R01 )
+    return 1.0;
+
+  return -1.0;
+}
+#endif
 double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3])
 {
   double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
@@ -1791,6 +1835,11 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
   rB[1] = nebrTab[j].r[1] + shift[1];
   rB[2] = nebrTab[j].r[2] + shift[2];
 #endif
+#ifdef EDHE_FLEX
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j])
+    return calcDistNegNNLoverlapPlaneHS(i, j, rA, rB);
+#endif
+
 #if 0
   for (k1=0; k1<3; k1++)
     { 
