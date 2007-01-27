@@ -4291,7 +4291,8 @@ void PredictEventNNL(int na, int nb)
   /* urto con le pareti, il che vuol dire:
    * se lungo z e rz = -L/2 => urto con parete */ 
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
-  /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni */
+  /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni (visto che stiamo in PredictEventNNL
+     e si stanno usando le neighborurs lists */
   if (nb >= ATOM_LIMIT)
     return;
   MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
@@ -4489,7 +4490,8 @@ void PredictEventNNL(int na, int nb)
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 #endif
 
-  /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni */
+  /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni (visto che in tal caso stiamo 
+     usando le NNL */
   if (nb >= ATOM_LIMIT+2*NDIM)
     return;
   MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
