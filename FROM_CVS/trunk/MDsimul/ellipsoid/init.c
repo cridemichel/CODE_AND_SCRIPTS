@@ -1845,9 +1845,14 @@ double calc_nnl_rcut(void)
     {
       for (kk=0; kk < 3; kk++)
 	ax[kk] = typesArr[typeOfPart[i]].ppsax[kk];
-      rcutA = 2.0*sqrt(Sqr(ax[0]+OprogStatus.rNebrShell)+
-		   Sqr(ax[1]+OprogStatus.rNebrShell)+
-		   Sqr(ax[2]+OprogStatus.rNebrShell));
+      /* nel caso si tratti di un oggetto a simmetria sferica l'orientazione rimane della NNL (che è un cubo) rimane invariata
+	 nel tempo per cui si può prendere rcut appena più grande del lato della NNL cubica*/
+      if (is_a_sphere_NNL[i])
+	rcutA = 2.0*max3(ax[0]+OprogStatus.rNebrShell,ax[1]+OprogStatus.rNebrShell,ax[2]+OprogStatus.rNebrShell);
+      else
+	rcutA = 2.0*sqrt(Sqr(ax[0]+OprogStatus.rNebrShell)+
+	      		 Sqr(ax[1]+OprogStatus.rNebrShell)+
+	      		 Sqr(ax[2]+OprogStatus.rNebrShell));
       if  (rcutA  > rcutMax)
 	rcutMax = rcutA;
     }
@@ -2726,7 +2731,10 @@ void usrInitAft(void)
 	MAXAX = maxax[i];
       //printf("maxax aft[%d]: %.15G\n", i, maxax[i]);
     }
-  /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
+#ifdef EDHE_FLEX
+  is_a_sphere_NNL = malloc(sizeof(int)*Oparams.parnum);
+  find_spheres_NNL();
+#endif/* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
   if (newSim)
     {
@@ -2806,10 +2814,7 @@ void usrInitAft(void)
   ryNNL = malloc(sizeof(double)*Oparams.parnum);
   rzNNL = malloc(sizeof(double)*Oparams.parnum);
 #endif
-#ifdef EDHE_FLEX
-  is_a_sphere_NNL = malloc(sizeof(int)*Oparams.parnum);
-  find_spheres_NNL();
-#endif
+
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
   for (i=0; i < Oparams.parnum; i++)
     {
