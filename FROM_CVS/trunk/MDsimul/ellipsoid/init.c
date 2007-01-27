@@ -44,6 +44,9 @@ int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
 int *inCell_NNL[3], *cellList_NNL;
 double *rxNNL, *ryNNL, *rzNNL;
 #endif
+#ifdef EDHE_FLEX
+int *is_a_sphere_NNL;
+#endif
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
@@ -2074,6 +2077,32 @@ void check_conf(void)
 #endif
 #ifdef EDHE_FLEX
 extern int get_dof_flex(int filter);
+extern int all_spots_in_CoM(int pt);
+void find_spheres_NNL(void)
+{
+  int i, k1, k2, pt;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      is_a_sphere_NNL[i] = 1;
+      pt = typeOfPart[i];
+      if (!(typesArr[pt].sax[0] == typesArr[pt].sax[1] && 
+	    typesArr[pt].sax[1] == typesArr[pt].sax[2] )) 
+	{
+	  is_a_sphere_NNL[i] = 0;
+	  continue;
+	}
+      if (typesArr[pt].nspots > 0 && !all_spots_in_CoM(pt))
+	{
+	  is_a_sphere_NNL[i] = 0;
+	  continue;
+	}
+      /* l'orientazione non cambia durante la simulazione
+	 se si tratta di oggetti a simmetria sferica */
+      for (k1 = 0; k1 < 3 ; k1++)
+	for (k2 = 0; k2 < 3 ; k2++)
+	  R[i][k1][k2] = (k1==k2)?1.0:0.0;
+    }
+}
 #endif
 void usrInitAft(void)
 {
@@ -2085,6 +2114,8 @@ void usrInitAft(void)
   COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
 #ifndef EDHE_FLEX
   COORD_TYPE *m;
+#else
+  double rcut2;
 #endif
   int maxnbonds;
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
@@ -2735,7 +2766,18 @@ void usrInitAft(void)
 	    }
 #else
 	  if (Oparams.rcut <= 0.0)
+	    {
+#ifdef EDHE_FLEX
+	      calc_encpp();
+	      rcut2 = calc_nnl_rcut();
+	      if (rcut2 > MAXAX*1.01)
+		Oparams.rcut = MAXAX*1.01;
+	      else
+		Oparams.rcut = rcut2;
+#else
 	      Oparams.rcut = MAXAX*1.01;
+#endif
+	    }
 #endif
 	}
     }
@@ -2763,6 +2805,10 @@ void usrInitAft(void)
   rxNNL = malloc(sizeof(double)*Oparams.parnum);
   ryNNL = malloc(sizeof(double)*Oparams.parnum);
   rzNNL = malloc(sizeof(double)*Oparams.parnum);
+#endif
+#ifdef EDHE_FLEX
+  is_a_sphere_NNL = malloc(sizeof(int)*Oparams.parnum);
+  find_spheres_NNL();
 #endif
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
   for (i=0; i < Oparams.parnum; i++)

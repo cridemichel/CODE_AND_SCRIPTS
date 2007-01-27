@@ -1103,7 +1103,7 @@ int get_dof_flex(int filter)
 		}
 	    }
 	}
-      MD_DEBUG35(printf("pt=%d dofOfType=%d filter=%d brown=%d ntypes=%d\n", pt, dofOfType, filter, typesArr[pt].brownian, Oparams.ntypes));
+      MD_DEBUG36(printf("pt=%d dofOfType=%d filter=%d brown=%d ntypes=%d\n", pt, dofOfType, filter, typesArr[pt].brownian, Oparams.ntypes));
       dofTot += dofOfType*typeNP[pt];
     }
   /* il centro di massa dell'anticorpo è fermo */
