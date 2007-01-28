@@ -5555,6 +5555,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     {
 #ifdef MD_BASIC_DT
       delt = epsd/maxddot;
+      tini = t;
       t += delt;
       d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
 #else
