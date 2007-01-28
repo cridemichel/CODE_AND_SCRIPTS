@@ -9,6 +9,7 @@ extern int *equilibrated;
 #ifdef MD_HSVISCO
 void calcT(void);
 #endif
+long long int numcoll=0;
 #ifdef MD_GRAVITY
 int checkz(char *msg)
 {
@@ -151,6 +152,7 @@ void outputSummary(void)
   fprintf(f, "%.15f %.15f\n", Oparams.time, Sqr(Vz));
   fclose(f);
 #endif
+  printf(">>> numcoll:%lld\n", numcoll);
 }
 #ifdef MD_GRAVITY
 void scalevels(double temp, double K, double Vz)
@@ -343,6 +345,7 @@ void bump (int i, int j, double* W, int bt)
 #ifdef MD_HSVISCO
   double taus;
 #endif
+  numcoll++;
   if (i < parnumA && j < parnumA)
     {
       sigSq = Sqr(Oparams.sigma[0][0]);
