@@ -345,7 +345,6 @@ void bump (int i, int j, double* W, int bt)
 #ifdef MD_HSVISCO
   double taus;
 #endif
-  numcoll++;
   if (i < parnumA && j < parnumA)
     {
       sigSq = Sqr(Oparams.sigma[0][0]);
@@ -1304,6 +1303,7 @@ void ProcessCollision(void)
 #else
   bump(evIdA, evIdB, &W);
 #endif
+  numcoll++;
 #ifdef MD_HSVISCO
   OprogStatus.lastcoll = Oparams.time;
 #endif
