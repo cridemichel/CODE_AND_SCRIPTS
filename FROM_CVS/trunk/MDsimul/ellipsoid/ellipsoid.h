@@ -44,7 +44,7 @@ void UpdateSystem(void);
 #if defined(MD_POLYDISP) && defined(EDHE_FLEX)
 #error "-DMD_POLYDISP is not compatible with -DEDHE_FLEX!"
 #endif
-#undef MD_BASIC_DT
+//#undef MD_BASIC_DT
 #define MD_TAPE_TMP "/iomega/mdtmp/"
 /* directory on Tape to store some temporary files (restore files and 
    measures files)*/
