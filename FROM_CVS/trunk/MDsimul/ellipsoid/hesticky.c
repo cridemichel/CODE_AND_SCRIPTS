@@ -259,6 +259,155 @@ void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double 
     }
 }
 #endif
+#ifdef EDHE_FLEX
+void bumpSPHS(int i, int j, double *W, int bt)
+{
+  double rAB[3], vAB[3], nrAB, rA[3], rB[3], invmi, invmj, vc, delpx, delpy, delpz;
+  double bhin=-1, bhout=-1, bheight=-1, factor=0, mredl, Dr, denom;
+  int a, kk, typei, typej, nmax=-1;
+  numcoll++;
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+  rB[0] = rx[j];
+  rB[1] = ry[j];
+  rB[2] = rz[j];
+  for (a=0; a < 3; a++)
+    {
+      Dr = rA[a]-rB[a];
+      if (fabs(Dr) > L2)
+	{
+	  rB[a] += SignR(L, Dr);
+	}
+    }
+  for (kk = 0; kk < 3; kk++)
+    {
+      rAB[kk] = rA[kk] - rB[kk];
+    }
+  vAB[0] = vx[i] - vx[j];
+  vAB[1] = vy[i] - vy[j];
+  vAB[2] = vz[i] - vz[j];
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+  invmi = 1.0/typesArr[typei].m;
+  invmj = 1.0/typesArr[typej].m; 
+  nrAB = calc_norm(rAB);
+  for (a=0; a < 3; a++)
+   rAB[a] /= nrAB;  
+  vc = 0;
+  for (a=0; a < 3; a++)
+    vc += vAB[a]*rAB[a];
+  denom = invmi + invmj;
+  mredl = 1.0/denom;
+  get_inter_bheights(i, j, 1, 1, &bheight, &bhin, &bhout, &nmax);
+  switch (bt)
+    {
+      /* N.B.
+       * Notare che Oparams.bheight è la profondità della buca ed 
+       * è una quantità positiva!!*/
+      /* b = vc*r ma ora b -> vc riscrivere correttamente le seguenti equazioni!! */
+    case MD_CORE_BARRIER:
+      factor = -2.0*vc;
+      factor *= mredl;
+      break;
+    case MD_INOUT_BARRIER:
+      if (Sqr(vc) < 2.0*(bheight+bhout)/mredl)
+	{
+	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
+			    Oparams.time, vc,  bt,
+		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	  factor = -2.0*vc;
+	}
+      else
+	{
+	  MD_DEBUG31(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
+		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	  factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
+	  remove_bond(i, j, 1, 1);
+	  remove_bond(j, i, 1, 1);
+	}
+      factor *= mredl;
+      break;
+    case MD_OUTIN_BARRIER:
+      if (one_is_bonded(i, 1, j, 1, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
+	{
+	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
+			    Oparams.time, vc,  bt,
+		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	  factor = -2.0*vc;
+	}
+      else
+	{
+	  add_bond(i, j, 1, 1);
+	  add_bond(j, i, 1, 1);
+	  factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
+	}
+	MD_DEBUG31(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
+		      i, ata, j, atb, Sqr(vc) + 2.0*bheight/mredl, bheight, mredl));
+      factor *= mredl;
+      break;
+    }
+  delpx = factor * rAB[0];
+  delpy = factor * rAB[1];
+  delpz = factor * rAB[2];
+#ifdef MD_HSVISCO
+  DTxy = delpx*delpy*invmi + vx[i]*delpy + delpx*vy[i];
+  DTxy += delpx*delpy*invmj - vx[j]*delpy - delpx*vy[j]; 
+  DTyz = delpy*delpz*invmi + vy[i]*delpz + delpy*vz[i];
+  DTyz += delpy*delpz*invmj - vy[j]*delpz - delpy*vz[j];
+  DTzx = delpz*delpx*invmi + vz[i]*delpx + delpz*vx[i];
+  DTzx += delpz*delpx*invmj - vz[j]*delpx - delpz*vx[j];
+
+  DTxx = delpx*delpx*invmi + vx[i]*delpx + delpx*vx[i];
+  DTxx += delpx*delpx*invmj - vx[j]*delpx - delpx*vx[j]; 
+  DTyy = delpy*delpy*invmi + vy[i]*delpy + delpy*vy[i];
+  DTyy += delpy*delpy*invmj - vy[j]*delpy - delpy*vy[j];
+  DTzz = delpz*delpz*invmi + vz[i]*delpz + delpz*vz[i];
+  DTzz += delpz*delpz*invmj - vz[j]*delpz - delpz*vz[j];
+#endif
+  vx[i] = vx[i] + delpx*invmi;
+  vx[j] = vx[j] - delpx*invmj;
+  vy[i] = vy[i] + delpy*invmi;
+  vy[j] = vy[j] - delpy*invmj;
+  vz[i] = vz[i] + delpz*invmi;
+  vz[j] = vz[j] - delpz*invmj;
+  update_MSDrot(i);
+  update_MSDrot(j);
+#ifdef MD_HSVISCO 
+  if (OprogStatus.lastcoll!=-1)
+    {
+      taus = Oparams.time - OprogStatus.lastcoll;
+      OprogStatus.DQTxy += OprogStatus.Txy*taus; 
+      OprogStatus.DQTyz += OprogStatus.Tyz*taus;
+      OprogStatus.DQTzx += OprogStatus.Tzx*taus;
+
+      OprogStatus.DQTxx += OprogStatus.Txx*taus; 
+      OprogStatus.DQTyy += OprogStatus.Tyy*taus;
+      OprogStatus.DQTzz += OprogStatus.Tzz*taus;
+      OprogStatus.DQWxy += (rA[0]-rB[0])*delpy;
+      OprogStatus.DQWyz += (rA[1]-rB[1])*delpz;
+      OprogStatus.DQWzx += (rA[2]-rB[2])*delpx;
+      OprogStatus.DQWxx += (rA[0]-rB[0])*delpx;
+      OprogStatus.DQWyy += (rA[1]-rB[1])*delpy;
+      OprogStatus.DQWzz += (rA[2]-rB[2])*delpz;
+      OprogStatus.DQWxxST += (rA[0]-rB[0])*delpx;
+      OprogStatus.DQWyyST += (rA[1]-rB[1])*delpy;
+      OprogStatus.DQWzzST += (rA[2]-rB[2])*delpz;
+    }
+  OprogStatus.Txy += DTxy; 
+  OprogStatus.Tyz += DTyz;
+  OprogStatus.Tzx += DTzx;
+  OprogStatus.Txx += DTxx; 
+  OprogStatus.Tyy += DTyy;
+  OprogStatus.Tzz += DTzz;
+#endif
+
+}	
+#endif
+#ifdef EDHE_FLEX
+extern int *is_a_sphere_NNL;
+#endif
+
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
@@ -313,6 +462,15 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       MD_DEBUG33(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
       return;
     }
+#if 1
+#ifdef EDHE_FLEX
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1)
+    {
+      bumpSPHS(i, j, W, bt);
+      return;
+    }
+#endif
+#endif
   numcoll++;
   rA[0] = rx[i];
   rA[1] = ry[i];
@@ -1047,7 +1205,7 @@ int refine_contactSP(int i, int j, double tref, double t1, double t2, int nn, do
   trefbr = tref;
   for (kk=0; kk < 3; kk++)
     shiftbr[kk] = shift[kk];
-  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-16);
+  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-14);
   *troot += tref;
   if (polinterr==1)
     {
@@ -1614,12 +1772,88 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
   return maxddot;
 }
 #endif
+#if 1
+int locate_contact_HSSP(int na, int n, double shift[3], double t1, double t2, double *evtime, int* ata, int *atb, 
+			int *collCode)
+{
+  double dr[NDIM], dv[NDIM], b, d, t=0.0, tInt, vv;
+  double distSq, sigSq;
+  int collCodeL;
 
+  sigSq = Sqr(mapSigmaFlex[0]);
+
+  //printf("sigma=%.15G\n", mapSigmaFlex[0]);
+  tInt = Oparams.time - atomTime[n];
+  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+  dv[0] = vx[na] - vx[n];
+  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+  dv[1] = vy[na] - vy[n];
+#ifdef MD_GRAVITY
+  dr[2] = rz[na] - 
+    (rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
+  dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
+#else
+  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+  dv[2] = vz[na] - vz[n];
+#endif
+  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+
+  distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
+  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+  collCodeL = MD_EVENT_NONE;
+  /* per ora tale ottimizzazione assume un solo spot per particella */ 
+  if (!bound(n, na, 1, 1))
+    {
+      if ( b < 0.0 ) 
+	{
+	  d = Sqr (b) - vv * (distSq - sigSq);
+	  if (d > 0.0)
+	    {
+	      t = (-sqrt (d) - b) / vv;
+	      if (t > 0 || (t < 0 && distSq < sigSq))
+		collCodeL = MD_OUTIN_BARRIER;
+	    }
+	}
+    }
+  else
+    {
+      d = Sqr (b) - vv * (distSq - sigSq);
+      if (d > 0.0)
+	{
+	  t = ( sqrt (d) - b) / vv;
+	  if (t > 0 || (t < 0 && distSq > sigSq))
+	    collCodeL = MD_INOUT_BARRIER;
+	}
+    }
+  if (t < 0 && collCodeL!= MD_EVENT_NONE)
+    {
+      t = 0;
+    }
+  t += Oparams.time;
+  if (collCodeL != MD_EVENT_NONE && t > t1 && t < t2)// && t < *evtime )
+    {
+      *collCode = collCodeL;
+      *ata = *atb = 1;
+      *evtime = t;
+      return 1;
+    }  
+  else
+    return 0;
+
+}
+#endif
+#ifdef EDHE_FLEX
+extern int *is_a_sphere_NNL;
+#endif
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
 		     double *evtime, int *ata, int *atb, int *collCode)
 {
   const double minh = 1E-20;
   double h, d, dold, t;
+#if 0
+  int cc;
+  double tt;
+#endif
 #ifndef EDHE_FLEX
   double dists[MD_PBONDS], t2arr[MD_PBONDS], distsOld[MD_PBONDS];
 #endif
@@ -1655,7 +1889,22 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #ifdef EDHE_FLEX
   if (nbondsFlex==0)
     return 0;
+#if 1
+  /* NOTA: in realta is_a_sphere_NNL richiede che il core sia sferico e che tutti gli sticky
+     spots siano posizionati nel centro di massa del core. Qui basterebbe che lo sticky spot
+     sia posizionato sul centro di massa della particella a prescindere dalla forma del core. */
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1)
+    {
+#if 0
+      tt=*evtime;
+      cc=*collCode;
 #endif
+      return locate_contact_HSSP(i, j, shift, t1, t2, evtime, ata, atb, collCode);
+      //printf("HSSP evtime=%.15G\n", tt);
+    }
+#endif
+#endif
+
   bondpair = get_bonded(i, j);
   t = 0.0;
 #ifdef MD_OPTDDIST
@@ -1969,6 +2218,11 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 			  *ata = mapbondsa[nn];
 			  *atb = mapbondsb[nn];
 			  *evtime = troot;
+#if 0 
+			  if (fabs(tt-*evtime) > 1E-13)
+			    printf("BOH tt=%.15G evtime=%.15G\n", tt, *evtime);
+#endif
+			  //printf(">>> evtime=%.15G\n", *evtime);
 			  *collCode = dorefine[nn]; 
 			  MD_DEBUG31(printf("SP ok scheduling collision between %d-%d nn=%d\n", i, j, nn));
 			  MD_DEBUG31(printf("SP collcode=%d bound(i, j, nn):%d\n", *collCode, 
@@ -1992,7 +2246,10 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    }
 	}
       if (gotcoll == 1)
-	return 1;
+	{
+	  //printf(">>> evtime=%.15G\n", *evtime);
+	  return 1;
+	}
       else if (gotcoll == -1)
 	return 0;
       if (fabs(d) > epsdFastR)
@@ -2436,7 +2693,7 @@ int refine_contact_neigh_plane_sp(int i, double tref, double t1, double t2, doub
   ibr = i;
   nnbr = nsp;
   trefbr = tref;
-  *troot=zbrent(funcs2beZeroedBrentNNL_sp, t1, t2, 1E-16);
+  *troot=zbrent(funcs2beZeroedBrentNNL_sp, t1, t2, 1E-14);
   *troot += tref;
   if (polinterr==1)
     {
@@ -2504,7 +2761,49 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 }
 #endif
+#ifdef EDHE_FLEX
+extern double scalProd(double *A, double *B);
+int locate_contact_neigh_plane_parall_sphs(int i, double *evtime, double t2)
+{
+  int nn, typei, first=1;
+  double t1, b, dist, dr[3], colltime=0.0, dv[3];
+  typei = typeOfPart[i];
+  t1 = Oparams.time;
+  for (nn = 0; nn < 6; nn++)
+    {
+      dr[0] = rx[i] - rBall[nn][0];
+      dr[1] = ry[i] - rBall[nn][1];
+      dr[2] = rz[i] - rBall[nn][2];  
+      dv[0] = vx[i];
+      dv[1] = vy[i];
+      dv[2] = vz[i];
+      //printf("calc_norm(dr)=%.15G v=%.15G %.15G %.15G grad=%.15G %.15G %.15G\n", calc_norm(dr), vx[i], vy[i], vz[i],
+	//     gradplane_all[nn][0], gradplane_all[nn][1], gradplane_all[nn][2]);
+      /* N.B. controllare che il gradiente sia a norma unitaria e che sia uscente rispetto 
+	 al parallelepipedo delle NNL! */
+      dist = fabs(scalProd(dr, gradplane_all[nn])) - typesArr[typei].spots[0].sigma;
+      b = scalProd(dv, gradplane_all[nn]);
+      if (b < 0)
+	continue;
+      //printf("dist=%.15G b=%.15G\n", dist, b);
+      colltime = dist/b+Oparams.time;
+      if (colltime > t1 && colltime < t2)
+	{
+	  if (colltime < *evtime || first)
+	    {
+	      first = 0;  
+	      *evtime = colltime;	
+	    }
+	}
+    }	
+  MD_DEBUG34(printf("t1=%.15G t2=%.15G colltime=%.15G\n", t1, t2, *evtime));
+  if (first)
+    return 0;
+  else
+    return 1;
 
+}
+#endif
 
 int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 {
@@ -2539,6 +2838,17 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 #endif
   calc_grad_and_point_plane_all(i, gradplane_all, rBall);
   //factori = 0.5*maxax[i]+OprogStatus.epsdSPNL;
+#ifdef EDHE_FLEX
+  /* NOTA: in realta is_a_sphere_NNL richiede che il core sia sferico e che tutti gli sticky
+     spots siano posizionati nel centro di massa del core. */
+#if 0
+  /* N.B. facendo dei test, questa ottimizzazione non offre in realtà vantaggi */
+  if (is_a_sphere_NNL[i] && NSP==1)
+    {
+      return locate_contact_neigh_plane_parall_sphs(i, evtime, t2);
+    }
+#endif
+#endif
   maxddot = 0.0;
   for (nn = 0; nn < 6; nn++)
     {
