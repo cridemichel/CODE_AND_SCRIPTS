@@ -9,7 +9,7 @@
 #define MD_DEBUG31(x) 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
-void writeAllCor(FILE* fs);
+void writeAllCor(FILE* fs, int saveAll);
 void scalevels(double temp, double K);
 extern void rebuildNNL(void);
 extern char TXT[MSG_LEN];
@@ -46,6 +46,7 @@ double *rxNNL, *ryNNL, *rzNNL;
 #endif
 #ifdef EDHE_FLEX
 int *is_a_sphere_NNL;
+int *is2saveArr;
 #endif
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
@@ -1139,6 +1140,10 @@ void usrInitBef(void)
        the begin of the run and not the instanteaneous value */
     OprogStatus.avnggr    = 0;
     Oparams.Dt = 0.01;
+#ifdef EDHE_FLEX
+    OprogStatus.stripStore = 0;
+    strcpy(OprogStatus.par2save, "ALL"); 
+#endif
 #ifdef MD_BIG_DT
     OprogStatus.bigDt = -1.0;
 #endif
@@ -2109,6 +2114,9 @@ void find_spheres_NNL(void)
     }
 }
 #endif
+#ifdef EDHE_FLEX
+void par2saveArr(void);
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -2734,6 +2742,10 @@ void usrInitAft(void)
 #ifdef EDHE_FLEX
   is_a_sphere_NNL = malloc(sizeof(int)*Oparams.parnum);
   find_spheres_NNL();
+  is2saveArr = malloc(sizeof(int)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    is2saveArr[i] = 0;
+  par2saveArr();
 #endif/* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
   if (newSim)
@@ -2949,15 +2961,84 @@ void usrInitAft(void)
 	  OprogStatus.hist[i] = 0;
 	}
     }
+#ifdef EDHE_FLEX
+  if (!strcmp(OprogStatus.par2save,"ALL") || !strcmp(OprogStatus.par2save,"all"))
+    globSaveAll = 1;
+  else
+    globSaveAll = 0;
+#endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 }
 extern double rA[3], rB[3];
+#ifdef EDHE_FLEX
+int is_valid_parname_progStatus(char *pn)
+{
+  /* salva solo quello che può servire per l'analisi */
+  if (!strcmp(pn, "DR") ||
+      !strcmp(pn, "sumox") ||
+      !strcmp(pn, "sumoy") ||
+      !strcmp(pn, "sumoz") ||
+      !strcmp(pn, "refTime")
+      )
+    return 1; 
+  else 
+    return 0;
+}
+int is_valid_parname_params(char *pn)
+{
+  /* salva solo quello che può servire per l'analisi */
+   if (!strcmp(pn, "parnum") ||
+      !strcmp(pn, "totSteps") ||
+      !strcmp(pn, "Dt") ||
+      !strcmp(pn, "time") ||
+      !strcmp(pn, "curStep") ||
+      !strcmp(pn, "ninters") ||
+      !strcmp(pn, "ntypes") 
+      )
+    return 1; 
+  else 
+    return 0;
+}
+#endif
 #ifdef MD_PATCHY_HE
 void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 #endif
-
+#ifdef EDHE_FLEX
+void par2saveArr(void)
+{
+  char *ns;
+  int first=1, i;
+  char s1[32], s2[32];
+  if (!strcmp(OprogStatus.par2save,"all")||!strcmp(OprogStatus.par2save,"ALL"))
+    return;
+  ns = strtok(OprogStatus.par2save, ",");
+  while(ns || first)
+    {
+      first = 0;
+      if (!ns && first)
+	ns = OprogStatus.par2save;
+      if (sscanf(ns, "%[^-]-%s", s1, s2)==2)
+	{
+	  for (i=atoi(s1); i <= atoi(s2); i++)
+	    {
+	      is2saveArr[i] = 1;
+	    }
+	}
+      else
+	is2saveArr[atoi(ns)]=1;
+      ns = strtok(NULL, ",");
+    }
+}
+int is_to_save(int i)
+{
+  if (is2saveArr[i])
+    return 1;
+  else
+    return 0;
+}
+#endif
 /* ========================== >>> writeAllCor <<< ========================== */
-void writeAllCor(FILE* fs)
+void writeAllCor(FILE* fs, int saveAll)
 {
   int i;
   int nn;
@@ -3011,6 +3092,14 @@ void writeAllCor(FILE* fs)
       for (i = 0; i < Oparams.parnum; i++)
 	{
 #ifdef EDHE_FLEX
+	  if (!saveAll && !globSaveAll)
+	    {
+	      if (!is_to_save(i))
+		continue;
+	    }
+#endif
+
+#ifdef EDHE_FLEX
       	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 		  uyz[i], uzx[i], uzy[i], uzz[i], typesArr[typeOfPart[i]].sax[0], 
 		  typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],
@@ -3055,6 +3144,13 @@ void writeAllCor(FILE* fs)
       for (i = 0; i < Oparams.parnum; i++)
 	{
 #ifdef EDHE_FLEX
+	  if (!saveAll && !globSaveAll)
+	    {
+	      if (!is_to_save(i))
+		continue;
+	    }
+#endif
+#ifdef EDHE_FLEX
 	  fprintf(fs, tipodat2_flex, rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 		  uyz[i], uzx[i], uzy[i], uzz[i], typeOfPart[i]);
 #else
@@ -3067,6 +3163,13 @@ void writeAllCor(FILE* fs)
     {
       for (i = 0; i < Oparams.parnum; i++)
 	{
+#ifdef EDHE_FLEX
+	  if (!saveAll && !globSaveAll)
+	    {
+	      if (!is_to_save(i))
+		continue;
+	    }
+#endif
 #ifdef MD_ASYM_ITENS
 	  fprintf(fs, tipodat, vx[i], vy[i], vz[i], Mx[i], My[i], Mz[i]);
 #else

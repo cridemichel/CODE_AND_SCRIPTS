@@ -70,6 +70,7 @@ void UpdateSystem(void);
 #endif
 
 #ifdef EDHE_FLEX
+#define PAR2SAVE_LEN 1024
 typedef struct {
   double x[3];
   double sigma;
@@ -622,7 +623,10 @@ struct progStatus
   int PE[PE_POINTS];
   double ENmin;
   double ENmax;
-
+#ifdef EDHE_FLEX
+  char par2save[PAR2SAVE_LEN];
+  int stripStore;
+#endif
   /* ======================================================================= */
 };
 
@@ -921,6 +925,10 @@ struct pascii opro_ascii[] =
   {"ENmin",        &OS(ENmin),                      1,  1,  "%.6G"},
   {"ENmax",        &OS(ENmax),                      1,  1,  "%.6G"},
   {"PE",           OS(PE),                 PE_POINTS,    1,  "%d"},
+#ifdef EDHE_FLEX
+  {"par2save",     &OS(par2save),          1, PAR2SAVE_LEN,  "%s"},
+  {"stripStore",   &OS(stripStore),        1, 1,             "%d"},
+#endif
   {"", NULL, 0, 0, ""}
 };
 #else
@@ -1248,6 +1256,10 @@ struct singlePar OsinglePar[] = {
 #ifdef MD_BILOG
   {"basew",     &OprogStatus.basew,         CT},
 #endif
+#ifdef EDHE_FLEX
+  {"par2save",   &OprogStatus.par2save,    STR},
+  {"stripStore",  &OprogStatus.stripStore,  INT},
+#endif
   {"ENmin",      &OprogStatus.ENmin,        CT},
   {"ENmax",      &OprogStatus.ENmax,        CT},
   {"nRun",       &OprogStatus.nRun,         STR},
@@ -1287,13 +1299,14 @@ extern struct singlePar OsinglePar[];
 COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,
   press_m, press_at, rcmz, rho, ItensD[2][3], pressST, pressHS, pressKin;
 COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, Aa, V, DrSqTot, temp_transl, DphiSq;
-int MB[NUMV];
+int globSaveAll=1, MB[NUMV];
 #else 
 extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs,
   press, press_m, press_at, temp_transl, rcmz, rho;
 extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot,
   DphiSq, ItensD[2][3], DphiSq, pressST, pressHS, pressKin;
 extern int MB[NUMV];
+extern int globSaveAll;
 #endif
 
 /* ============= >>> PUT HERE MEASURING FUNCTION PROTOTYPES <<< ============*/
