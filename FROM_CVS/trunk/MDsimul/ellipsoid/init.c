@@ -2984,7 +2984,8 @@ int is_valid_parname_progStatus(char *pn)
       !strcmp(pn, "base")||
       !strcmp(pn, "KK")||
       !strcmp(pn, "JJ")||
-      !strcmp(pn, "frozenDOF")
+      !strcmp(pn, "frozenDOF")||
+      !strcmp(pn, "par2save")
       )
     return 1; 
   else 
