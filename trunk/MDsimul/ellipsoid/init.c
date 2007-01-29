@@ -2978,7 +2978,13 @@ int is_valid_parname_progStatus(char *pn)
       !strcmp(pn, "sumox") ||
       !strcmp(pn, "sumoy") ||
       !strcmp(pn, "sumoz") ||
-      !strcmp(pn, "refTime")
+      !strcmp(pn, "refTime")||
+      !strcmp(pn, "storerate")||
+      !strcmp(pn, "NN")||
+      !strcmp(pn, "base")||
+      !strcmp(pn, "KK")||
+      !strcmp(pn, "JJ")||
+      !strcmp(pn, "frozenDOF")
       )
     return 1; 
   else 

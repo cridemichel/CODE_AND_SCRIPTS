@@ -7579,7 +7579,8 @@ void move(void)
 	  if (Oparams.curStep == Oparams.totStep)
 	    {
 #ifdef EDHE_FLEX
-	      saveFinalFullStore();
+	      if (!globSaveAll || OprogStatus.stripStore)
+		saveFinalFullStore();
 #endif
 	      outputSummary();
 	    }
@@ -8016,7 +8017,8 @@ void move(void)
   if (ENDSIM)
     {
 #ifdef EDHE_FLEX
-      saveFinalFullStore();
+      if (!globSaveAll || OprogStatus.stripStore)
+	saveFinalFullStore();
 #endif
       R2u();
     }
