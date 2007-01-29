@@ -11,6 +11,13 @@
 #define MD_DEBUG34(x) 
 #define MD_DEBUG35(x)  
 #define MD_DEBUG36(x) 
+void update_MSDrot(int i);
+void update_MSD(int i);
+#ifdef MD_ASYM_ITENS
+void calc_omega(int i);
+void calc_angmom(int i, double **I);
+extern void upd_refsysM(int i);
+#endif
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -64,7 +71,7 @@ void InitEventList (void);
 void calcT(void);
 #endif
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
-void writeAllCor(FILE* fs);
+extern void writeAllCor(FILE* fs, int saveAll);
 extern struct nebrTabStruct *nebrTab;
 double nextNNLrebuild;
 extern void rebuildNNL(void);
@@ -248,7 +255,69 @@ void check_shift(int i, int j, double *shift)
       shift[2] = L*rint(drz/L);
     }
 }
+#ifdef EDHE_FLEX
+void saveFinalFullStore(void)
+{
+  char fileop3[1024], fileop2[512], fileop[512];
+  int ii, i, stripStoreBak, globSaveAllBak;
+  FILE *bf;
+  const char sepStr[] = "@@@\n";
 
+  sprintf(fileop2 ,"StoreFinal");
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii finale!\n", NULL);
+      exit(-1);
+    }
+  UpdateSystem();
+  for (i=0; i < Oparams.parnum; i++)
+    {
+#ifdef MD_ASYM_ITENS
+      calc_omega(i);
+#endif
+      update_MSDrot(i);
+#ifdef MD_CALC_DPP
+      update_MSD(i);
+      store_last_u(i);
+#endif
+    }
+  R2u();
+  if (mgl_mode==0)
+    {
+      stripStoreBak = OprogStatus.stripStore;
+      OprogStatus.stripStore = 0;
+      globSaveAllBak = globSaveAll;
+      globSaveAll = 1;
+      writeAsciiPars(bf, opro_ascii);
+      fprintf(bf, sepStr);
+      writeAsciiPars(bf, opar_ascii);
+      fprintf(bf, sepStr);
+      OprogStatus.stripStore = stripStoreBak;
+      globSaveAll = globSaveAllBak;
+    }	      
+  writeAllCor(bf, 1);
+  fclose(bf);
+  if (mgl_mode==0)
+    {
+#ifdef MPI
+#ifdef MD_MAC
+      sprintf(fileop3, "/usr/bin/gzip -f %s_R%d", fileop, my_rank);
+#else
+      sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+#endif
+#else 
+#ifdef MD_MAC
+      sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+#else
+      sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
+#endif
+      system(fileop3);
+    }
+}
+#endif
 /* ========================== >>> scalCor <<< ============================= */
 void scalCor(int Nm)
 { 
@@ -1010,11 +1079,6 @@ void outputSummary(void)
   fclose(f);
 #endif
 }
-#ifdef MD_ASYM_ITENS
-void calc_omega(int i);
-void calc_angmom(int i, double **I);
-extern void upd_refsysM(int i);
-#endif
 #ifdef EDHE_FLEX
 int dofTot;
 int all_spots_on_symaxis(int sa, int pt)
@@ -7468,7 +7532,7 @@ void move(void)
 	  if (mgl_mode==0)
 	    {
 	      writeAsciiPars(bf, opro_ascii);
-	      fprintf(bf, sepStr);
+    	      fprintf(bf, sepStr);
 	      writeAsciiPars(bf, opar_ascii);
 	      fprintf(bf, sepStr);
 	    }	      
@@ -7476,7 +7540,7 @@ void move(void)
 	  //fprintf(bf, ".semiAxes: %f %f %f, %f %f %f\n",
 	  //	  Oparams.a[0], Oparams.b[0], Oparams.c[0],
   	  //  Oparams.a[1], Oparams.b[1], Oparams.c[1]);
-	  writeAllCor(bf);
+	  writeAllCor(bf, 0);
 	  fclose(bf);
 	  if (mgl_mode==0)
 	    {
@@ -7514,6 +7578,9 @@ void move(void)
 	  R2u();
 	  if (Oparams.curStep == Oparams.totStep)
 	    {
+#ifdef EDHE_FLEX
+	      saveFinalFullStore();
+#endif
 	      outputSummary();
 	    }
 
@@ -7947,5 +8014,10 @@ void move(void)
       ENDSIM=1;
     }
   if (ENDSIM)
-    R2u();
+    {
+#ifdef EDHE_FLEX
+      saveFinalFullStore();
+#endif
+      R2u();
+    }
 }
