@@ -260,11 +260,17 @@ void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double 
 }
 #endif
 #ifdef EDHE_FLEX
+#ifdef MD_HANDLE_INFMASS
+void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j);
+#endif
 void bumpSPHS(int i, int j, double *W, int bt)
 {
   double rAB[3], vAB[3], nrAB, rA[3], rB[3], invmi, invmj, vc, delpx, delpy, delpz;
   double bhin=-1, bhout=-1, bheight=-1, factor=0, mredl, Dr, denom;
   int a, kk, typei, typej, nmax=-1;
+#ifdef MD_HANDLE_INFMASS
+  int infMass_i=0, infMass_j=0;
+#endif
   numcoll++;
   rA[0] = rx[i];
   rA[1] = ry[i];
@@ -289,8 +295,20 @@ void bumpSPHS(int i, int j, double *W, int bt)
   vAB[2] = vz[i] - vz[j];
   typei = typeOfPart[i];
   typej = typeOfPart[j];
+#ifdef MD_HANDLE_INFMASS
+  check_inf_mass(typei, typej, &infMass_i, &infMass_j);
+  if (infMass_i)
+    invmi = 0.0;
+  else
+    invmi = 1.0/typesArr[typei].m;
+  if (infMass_j)
+    invmj = 0.0;
+  else
+    invmj = 1.0/typesArr[typej].m; 
+#else
   invmi = 1.0/typesArr[typei].m;
   invmj = 1.0/typesArr[typej].m; 
+#endif
   nrAB = calc_norm(rAB);
   for (a=0; a < 3; a++)
    rAB[a] /= nrAB;  
@@ -407,7 +425,9 @@ void bumpSPHS(int i, int j, double *W, int bt)
 #ifdef EDHE_FLEX
 extern int *is_a_sphere_NNL;
 #endif
-
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+extern void check_inf_mass_itens(int typei, int typej, int *infMass_i, int *infMass_j, int *infItens_i, int *infItens_j);
+#endif
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
@@ -433,6 +453,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   int na, a, kk;
 #ifdef EDHE_FLEX
   double sigAB;
+#ifdef MD_HANDLE_INFMASS
+  int infMass_j=0, infMass_i=0, infItens_i=0, infItens_j=0;
+#endif
   int typei, typej;
 #endif
 #if 0
@@ -469,6 +492,13 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       bumpSPHS(i, j, W, bt);
       return;
     }
+#endif
+#endif
+#ifdef EDHE_FLEX
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+#ifdef MD_HANDLE_INFMASS
+  check_inf_mass_itens(typei, typej, &infMass_i, &infMass_j, &infItens_i, &infItens_j);
 #endif
 #endif
   numcoll++;
@@ -534,7 +564,6 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
 #ifdef MD_ASYM_ITENS
 #ifdef EDHE_FLEX
-  typei = typeOfPart[i];
   tRDiagR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
 #else
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
@@ -549,7 +578,6 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
 #ifdef MD_ASYM_ITENS
 #ifdef EDHE_FLEX
-  typej = typeOfPart[j];
   tRDiagR(j, Ib, typesArr[typej].I[0], typesArr[typej].I[1], typesArr[typej].I[2], R[j]);
 #else
   tRDiagR(j, Ib, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[j]);
@@ -560,6 +588,63 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
   /* calcola le matrici inverse del tensore d'inerzia */
 #ifdef MD_ASYM_ITENS
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Iatmp[k1][k2] = Ia[k1][k2];
+	Ibtmp[k1][k2] = Ib[k1][k2];
+      }  
+  if (!infItens_i)
+    {
+      InvMatrix(Iatmp, invIa, 3);
+      Mvec[0] = Mx[i];
+      Mvec[1] = My[i];
+      Mvec[2] = Mz[i];
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  omega[k1] = 0.0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+	}
+      wx[i] = omega[0];
+      wy[i] = omega[1];
+      wz[i] = omega[2];
+    }
+  else
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  invIa[k1][k2] = 0.0;
+      wx[i] = 0.0;
+      wy[i] = 0.0;
+      wz[i] = 0.0;
+    }
+  if (!infItens_j)
+    {
+      InvMatrix(Ibtmp, invIb, 3);
+      Mvec[0] = Mx[j];
+      Mvec[1] = My[j];
+      Mvec[2] = Mz[j];
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  omega[k1] = 0.0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    omega[k1] += invIb[k1][k2]*Mvec[k2]; 
+	}
+      wx[j] = omega[0];
+      wy[j] = omega[1];
+      wz[j] = omega[2];}  
+  else
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  invIb[k1][k2] = 0.0;
+      wx[j] = 0.0;
+      wy[j] = 0.0;
+      wz[j] = 0.0;  
+    }
+#else
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       {
@@ -594,10 +679,22 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   wx[j] = omega[0];
   wy[j] = omega[1];
   wz[j] = omega[2];
+#endif
+#else
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+  if (!infItens_i)
+    invIa = 1/Ia;
+  else
+    invIa = 0.0;
+  if (!infItens_j)
+    invIb = 1/Ib;
+  else
+    invIb = 0.0;
 #else
   invIa = 1/Ia;
   invIb = 1/Ib;
   MD_DEBUG20(printf("Ia=%f Ib=%f\n", Ia, Ib));
+#endif
 #endif
   for (a=0; a < 3; a++)
     norm[a] = rAB[a];
@@ -619,6 +716,13 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #else 
   invmi = (i<Oparams.parnumA)?1/Oparams.m[0]:1/Oparams.m[1];
   invmj = (j<Oparams.parnumA)?1/Oparams.m[0]:1/Oparams.m[1];
+#endif
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+  if (infMass_i)
+    invmi = 0.0;
+  if (infMass_j)
+    invmj = 0.0;
+  //printf("infMass=i %d:%d %d:%d %.15G %.15G\n", i, infMass_i, j, infMass_j, invmi, invmj);
 #endif
   denom = invmi + invmj; 
   vc = 0;
@@ -820,10 +924,23 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   wz[j] -= factorinvIb*rBCn[2];
 #endif
 #ifdef MD_ASYM_ITENS
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+  if (!infItens_i)
+    {
+      calc_angmom(i, Ia);
+      upd_refsysM(i);
+    }
+  if (!infItens_j)
+    {
+      calc_angmom(j, Ib);
+      upd_refsysM(j);
+    }
+#else
   calc_angmom(i, Ia);
   upd_refsysM(i);
   calc_angmom(j, Ib);
   upd_refsysM(j);
+#endif
 #endif
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
@@ -2804,7 +2921,10 @@ int locate_contact_neigh_plane_parall_sphs(int i, double *evtime, double t2)
 
 }
 #endif
-
+#ifdef MD_HANDLE_INFMASS
+extern int is_infinite_Itens(int i);
+extern int is_infinite_mass(int i);
+#endif
 int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 {
   /* const double minh = 1E-14;*/
@@ -2825,6 +2945,18 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   epsdFast = OprogStatus.epsdFastSPNL;
   epsdFastR= OprogStatus.epsdFastSPNL;
   epsdMax = OprogStatus.epsdSPNL;
+#ifdef MD_HANDLE_INFMASS
+  if (is_infinite_Itens(i) && is_infinite_mass(i))
+    {
+      *evtime = timbig;
+      return 1;
+    }
+  if (is_infinite_mass(i) && is_a_sphere_NNL[i])
+    {
+      *evtime = timbig;
+      return 1;    
+    }
+#endif
   t = 0;//t1;
   t1 = Oparams.time;
   //t2 = timbig;

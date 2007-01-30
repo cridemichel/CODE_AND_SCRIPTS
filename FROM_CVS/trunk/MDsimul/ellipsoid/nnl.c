@@ -1182,7 +1182,7 @@ void calc_intersec_neigh_plane(double *rA, double *rB, double **Xa, double *grad
  
   if (A <= 0)
     {
-      printf("NNL [calc_intersec] Serious problem guessing distance, aborting...\n");
+      printf("NNL2 [calc_intersec] Serious problem guessing distance, aborting...\n");
       printf("tt = %f D=%f A=%f B=%f C=%f\n", tt, D, A, B, C);
       printf("grad = (%.10f, %.10f, %.10f\n", grad[0], grad[1], grad[2]);
       printf("distance: %f\n", sqrt(Sqr(rBA[0])+Sqr(rBA[1])+Sqr(rBA[2])));
@@ -1269,7 +1269,7 @@ void calc_intersec_neigh(double *rB, double *rA, double **Xa, double* rI, double
  
   if (A <= 0)
     {
-      printf("[calc_intersec] Serious problem guessing distance, aborting...\n");
+      printf("NNL [calc_intersec] Serious problem guessing distance, aborting...\n");
       printf("tt = %f D=%f A=%f B=%f C=%f\n", tt, D, A, B, C);
       printf("distance: %f\n", sqrt(Sqr(rBA[0])+Sqr(rBA[1])+Sqr(rBA[2])));
       print_matrix(Xa,3);
@@ -2963,6 +2963,10 @@ void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBAL
       calc_grad_and_point_plane(i, gradplaneALL[nn], rBALL[nn], nn);
     }
 }
+#ifdef MD_HANDLE_INFMASS
+extern int is_infinite_Itens(int i);
+extern int is_infinite_mass(int i);
+#endif
 #ifdef EDHE_FLEX
 int locate_contact_neigh_plane_HS(int i, double *evtime, double t2)
 {
@@ -3032,7 +3036,19 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
   t = 0;//t1;
   t1 = Oparams.time;
   //t2 = timbig;
-  calc_grad_and_point_plane_all(i, gradplane_all, rBall);
+#ifdef MD_HANDLE_INFMASS
+  if (is_infinite_Itens(i) && is_infinite_mass(i))
+    {
+      *evtime = timbig;
+      return 1;
+    }
+  if (is_infinite_mass(i) && is_sphere(i))
+    {
+      *evtime = timbig;
+      return 1;    
+    }
+#endif
+ calc_grad_and_point_plane_all(i, gradplane_all, rBall);
   /* la collisione di una sfera con i vari piani si puo' calcolare 
      velocemente senza passare per il codice che segue */
 #ifdef EDHE_FLEX
@@ -4676,6 +4692,9 @@ void PredictEventNNL(int na, int nb)
 #ifdef MD_PATCHY_HE
 extern int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2);
 #endif
+#ifdef MD_HANDLE_INFMASS
+extern int is_infinite_mass(int i);
+#endif
 void updrebuildNNL(int na)
 {
   /* qui ricalcola solo il tempo di collisione dell'ellisoide na-esimo con 
@@ -4694,9 +4713,20 @@ void updrebuildNNL(int na)
     {
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
 	{
+#ifdef MD_HANDLE_INFMASS
+	  if (is_infinite_mass(na))
+	    nnltime1 = timbig; 
+	  else
+	    {
+	      printf("[ERROR] failed to find escape time for sticky spots na=%d\n", na);
+	      printf("i=%d nspots=%d\n", na,  typesArr[typeOfPart[na]].nspots);
+	      exit(-1);
+	    }
+#else
 	  printf("[ERROR] failed to find escape time for sticky spots na=%d\n", na);
 	  printf("i=%d nspots=%d\n", na,  typesArr[typeOfPart[na]].nspots);
 	  exit(-1);
+#endif
 	}
     }
   else 
