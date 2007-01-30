@@ -6332,6 +6332,9 @@ int locateHardWall(int na, int nplane, double tsup, double vecg[5])
   return 0;
 }
 #endif
+#ifdef EDHE_FLEX
+extern int may_interact_all(int i, int j);
+#endif
 void PredictEvent (int na, int nb) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -6611,6 +6614,11 @@ void PredictEvent (int na, int nb)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
+#ifdef EDHE_FLEX
+		      if (!may_interact_all(na, n))
+			continue;
+#endif
+	
 		      /* maxax[...] è il diametro dei centroidi dei due tipi
 		       * di ellissoidi */
 		      if (OprogStatus.targetPhi > 0)

@@ -18,6 +18,10 @@
 extern int is_sphere(int i);
 extern int *is_a_sphere_NNL;
 #endif
+#ifdef EDHE_FLEX
+extern int is_infinite_Itens(int i);
+extern int is_infinite_mass(int i);
+#endif
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -2963,10 +2967,6 @@ void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBAL
       calc_grad_and_point_plane(i, gradplaneALL[nn], rBALL[nn], nn);
     }
 }
-#ifdef MD_HANDLE_INFMASS
-extern int is_infinite_Itens(int i);
-extern int is_infinite_mass(int i);
-#endif
 #ifdef EDHE_FLEX
 int locate_contact_neigh_plane_HS(int i, double *evtime, double t2)
 {
@@ -4505,7 +4505,6 @@ void PredictEventNNL(int na, int nb)
 #else
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 #endif
-
   /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni (visto che in tal caso stiamo 
      usando le NNL */
   if (nb >= ATOM_LIMIT+2*NDIM)
@@ -4708,6 +4707,16 @@ void updrebuildNNL(int na)
   MD_DEBUG33(printf("qui\n"));
   MD_DEBUG33(printf("posEll=%f %f %f posNNL %f %f %f \n", rx[na], ry[na], rz[na], nebrTab[na].r[0],nebrTab[na].r[1],
 		    nebrTab[na].r[2]));
+#ifdef EDHE_FLEX
+  if (is_infinite_Itens(na) && is_infinite_mass(na))
+    {
+      return;
+    }
+  if (is_infinite_mass(na) && is_a_sphere_NNL[na])
+    {
+      return;    
+    }
+#endif
 #ifdef EDHE_FLEX
   if (OprogStatus.targetPhi <= 0.0 && typesArr[typeOfPart[na]].nspots > 0)
     {
@@ -5011,6 +5020,45 @@ void nextNNLupdate(int na)
   nebrTab[na].len=0;
   nebrTab[na].time = Oparams.time;
 }
+#ifdef EDHE_FLEX
+int may_interact_core(int i, int j)
+{
+  int typei, typej;
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+  if (!typesArr[typei].ignoreCore && 
+      !typesArr[typej].ignoreCore)
+   return 1;
+ else
+   return 0; 
+}
+int may_interact_spots(int i, int j)
+{
+  int type1, type2, ni;
+  type1 = typeOfPart[i];
+  type2 = typeOfPart[j];
+  for (ni = 0; ni < Oparams.ninters; ni++)
+    {
+      if (intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2)
+	{
+	  return 1;
+	}	
+      else if (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1)
+	{
+	  return 1;
+	}
+    }
+  return 0;
+}
+int may_interact_all(int i, int j)
+{
+  if (may_interact_core(i, j))
+    return 1;
+  if (may_interact_spots(i, j))
+    return 1;
+  return 0;
+}
+#endif
 void BuildNNL(int na) 
 {
   double shift[NDIM];
@@ -5100,7 +5148,12 @@ void BuildNNL(int na)
 		{
 		  if (n != na)// && n != nb && (nb >= -1 || n < na)) 
 		    {
-      		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
+#ifdef EDHE_FLEX
+    		      if (!may_interact_all(na, n))
+			continue;
+#endif
+	
+		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 #ifdef MD_NNLPLANES
 		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift); 
 #else
