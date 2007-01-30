@@ -223,7 +223,8 @@ void energy(void)
   /* DESCRIPTION:
      This measuring function calculate the total energy of the system */
 #ifdef EDHE_FLEX
-  double mass;
+  double mass, Mtot;
+  int cc=0;
 #endif
   double Px, Py, Pz, RCMx, RCMy, RCMz;
   int mol, Nm, i;
@@ -319,11 +320,20 @@ void energy(void)
   RCMx = 0.0;
   RCMy = 0.0;
   RCMz = 0.0;
-  
+#ifdef EDHE_FLEX
+  cc = 0; 
+  Mtot = 0.0;	
+#endif 
   for(i = 0; i < Oparams.parnumA; i++)
     {
 #ifdef EDHE_FLEX
       mass = typesArr[typeOfPart[i]].m;
+      if (mass > MD_INF_MASS)
+	{
+	  cc++;
+	  continue;
+	}
+      Mtot += mass;
       RCMx = mass * rx[i];
       RCMy = mass * ry[i];
       RCMz = mass * rz[i];
@@ -346,6 +356,11 @@ void energy(void)
       RCMz += rz[i]*Oparams.m[1];
 #endif
     }
+#ifdef EDHE_FLEX
+  RCMx /= Mtot;
+  RCMy /= Mtot;
+  RCMz /= Mtot;
+#endif
   sprintf(TXTA[2],"  BOX CM=(%.15f,%.15f,%.15f)\n", RCMx, RCMy, RCMz);
   //printf("RANK: %d STEP: %d\n", my_rank, Oparams.curStep);
   //fflush(stdout);
