@@ -256,6 +256,7 @@ void check_shift(int i, int j, double *shift)
     }
 }
 #ifdef EDHE_FLEX
+void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j);
 void saveFullStore(char* fname)
 {
   char fileop3[1024], fileop2[512], fileop[512];
@@ -1591,6 +1592,9 @@ void bumpHS(int i, int j, double *W)
   double delvx, delvy, delvz, invmi, invmj, denom;
   double sigSq;
   int typei, typej;
+#ifdef MD_HANDLE_INFMASS
+  int infMass_i=0, infMass_j=0;
+#endif
 #ifdef MD_HSVISCO
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
@@ -1599,10 +1603,21 @@ void bumpHS(int i, int j, double *W)
   typej = typeOfPart[j];
 
   numcoll++;
+#ifdef MD_HANDLE_INFMASS
+  check_inf_mass(typei, typej, &infMass_i, &infMass_j);
   MD_DEBUG32(printf("[BUMPHS] numcoll:%lld\n", numcoll));
+  if (infMass_i)
+    invmi = 0.0;
+  else
+    invmi = 1.0/typesArr[typei].m;
+  if (infMass_j)
+    invmj = 0.0;
+  else
+    invmj = 1.0/typesArr[typej].m; 
+#else
   invmi = 1.0/typesArr[typei].m;
   invmj = 1.0/typesArr[typej].m; 
-
+#endif 
   denom = invmi + invmj; 
   sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 
   rxij = rx[i] - rx[j];
@@ -1712,6 +1727,50 @@ int are_spheres(int i, int j)
     return 0;
 }
 #endif
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+void check_inf_mass_itens(int typei, int typej, int *infMass_i, int *infMass_j, int *infItens_i, int *infItens_j)
+{
+#if 0
+  *infMass_i = *infMass_j = *infItens_i = *infItens_j = 0;
+  return;
+#endif
+  if (typesArr[typei].I[0] > MD_INF_ITENS||
+      typesArr[typei].I[1] > MD_INF_ITENS||
+      typesArr[typei].I[2] > MD_INF_ITENS)
+    *infItens_i = 1;
+  else
+    *infItens_i = 0;
+  if (typesArr[typej].I[0] > MD_INF_ITENS||
+      typesArr[typej].I[1] > MD_INF_ITENS||
+      typesArr[typej].I[2] > MD_INF_ITENS)
+    *infItens_j = 1;
+  else
+    *infItens_j = 0;
+  if (typesArr[typei].m > MD_INF_MASS)
+    *infMass_i = 1;
+  else 
+    *infMass_i = 0;
+  if (typesArr[typej].m > MD_INF_MASS)
+    *infMass_j = 1;
+  else 
+    *infMass_j = 0;
+}
+void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j)
+{
+#if 0
+  *infMass_i = *infMass_j = 0;
+  return;
+#endif
+  if (typesArr[typei].m > MD_INF_MASS)
+    *infMass_i = 1;
+  else 
+    *infMass_i = 0;
+  if (typesArr[typej].m > MD_INF_MASS)
+    *infMass_j = 1;
+  else 
+    *infMass_j = 0;
+}
+#endif
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
   /*
@@ -1741,6 +1800,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
 #ifdef EDHE_FLEX
   int typei, typej;
+#ifdef MD_HANDLE_INFMASS
+  int infMass_j=0, infMass_i=0, infItens_i=0, infItens_j=0;
+#endif
 #endif
   int na, a, b;
 #ifdef EDHE_FLEX
@@ -1751,7 +1813,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       return;
     } 
 #endif
-  MD_DEBUG(calc_energy("dentro bump1"));
+ MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
   MD_DEBUG32(printf("[BUMP] numcoll:%lld\n", numcoll));
   MD_DEBUG32(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
@@ -1789,6 +1851,10 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
+  typej = typeOfPart[j];
+#ifdef MD_HANDLE_INFMASS
+  check_inf_mass_itens(typei, typej, &infMass_i, &infMass_j, &infItens_i, &infItens_j);
+#endif
   invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
   invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
   invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
@@ -1826,7 +1892,6 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   na = (j < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   na = 0;
-  typej = typeOfPart[j];
   invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
   invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
   invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
@@ -1872,6 +1937,57 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 	Iatmp[k1][k2] = Ia[k1][k2];
 	Ibtmp[k1][k2] = Ib[k1][k2];
       } 
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+  if (!infItens_i)
+    {
+      InvMatrix(Iatmp, invIa, 3);
+      Mvec[0] = Mx[i];
+      Mvec[1] = My[i];
+      Mvec[2] = Mz[i];
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  omega[k1] = 0.0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+	}
+      wx[i] = omega[0];
+      wy[i] = omega[1];
+      wz[i] = omega[2];
+    }
+  else
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  invIa[k1][k2] = 0.0;
+      wx[i] = 0.0;
+      wy[i] = 0.0;
+      wz[i] = 0.0;
+    }
+  if (!infItens_j)
+    {
+      InvMatrix(Ibtmp, invIb, 3);
+      Mvec[0] = Mx[j];
+      Mvec[1] = My[j];
+      Mvec[2] = Mz[j];
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  omega[k1] = 0.0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    omega[k1] += invIb[k1][k2]*Mvec[k2]; 
+	}
+      wx[j] = omega[0];
+      wy[j] = omega[1];
+      wz[j] = omega[2];}  
+  else
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  invIb[k1][k2] = 0.0;
+      wx[j] = 0.0;
+      wy[j] = 0.0;
+      wz[j] = 0.0;  
+    }
+#else
   InvMatrix(Iatmp, invIa, 3);
   InvMatrix(Ibtmp, invIb, 3);
   Mvec[0] = Mx[i];
@@ -1898,10 +2014,22 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   wx[j] = omega[0];
   wy[j] = omega[1];
   wz[j] = omega[2];
+#endif
+#else
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+  if (!infItens_i)
+    invIa = 1/Ia;
+  else
+    invIa = 0.0;
+  if (!infItens_j)
+    invIb = 1/Ib;
+  else
+    invIb = 0.0;
 #else
   invIa = 1/Ia;
   invIb = 1/Ib;
   MD_DEBUG(printf("Ia=%f Ib=%f\n", Ia, Ib));
+#endif
 #endif
   for (a=0; a < 3; a++)
     {
@@ -1950,6 +2078,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
 #endif 
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+  if (infMass_i)
+    invmi = 0.0;
+  if (infMass_j)
+    invmj = 0.0;
+#endif
   denom = invmi + invmj; 
   vc = 0;
   for (a=0; a < 3; a++)
@@ -2067,10 +2201,23 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   wz[j] -= factorinvIb*rBCn[2];
 #endif
 #ifdef MD_ASYM_ITENS
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+  if (!infItens_i)
+    {
+      calc_angmom(i, Ia);
+      upd_refsysM(i);
+    }
+  if (!infItens_j)
+    {
+      calc_angmom(j, Ib);
+      upd_refsysM(j);
+    }
+#else
   calc_angmom(i, Ia);
   upd_refsysM(i);
   calc_angmom(j, Ib);
   upd_refsysM(j);
+#endif
 #endif
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
@@ -2360,12 +2507,17 @@ void adjust_norm(double **R)
     }
 }
 #endif
+#ifdef MD_HANDLE_INFMASS
+int is_infinite_Itens(int i);
+#endif
 #ifdef MD_ASYM_ITENS
 void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3], double *phi, double *psi);
 void UpdateAtom(int i)
 {
   double ti, phi, psi;
   int k1, k2;
+
+
   ti = Oparams.time - atomTime[i];
   
   rx[i] += vx[i]*ti;
@@ -2376,6 +2528,11 @@ void UpdateAtom(int i)
 #else
   rz[i] += vz[i]*ti;
 #endif
+#ifdef MD_HANDLE_INFMASS
+  if (is_infinite_Itens(i))
+    return;
+#endif
+ 
   symtop_evolve_orient(i, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
@@ -2614,6 +2771,28 @@ void evolve_euler_angles_symtop(int i, double ti, double *phi, double *psi)
   printf("costheta0[]:%.15G psi0[]:%.15G phi0[]=%.15G Delta=%.15G\n", costheta0[i], psi0[i], phi0[i], invI1*angM[i]*ti);
 #endif
 }
+#ifdef EDHE_FLEX
+int is_infinite_Itens(int i)
+{
+  int typei;
+  typei = typeOfPart[i];
+  if (typesArr[typei].I[0] > MD_INF_ITENS ||
+      typesArr[typei].I[1] > MD_INF_ITENS ||
+      typesArr[typei].I[2] > MD_INF_ITENS)
+    return 1;
+  else
+    return 0;
+}
+int is_infinite_mass(int i)
+{
+  int typei;
+  typei = typeOfPart[i];
+  if (typesArr[typei].m > MD_INF_MASS)
+    return 1;
+  else
+    return 0;
+}
+#endif
 void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3], double *phir, double *psir)
 {
   double phi, psi, cospsi, sinpsi, cosphi, sinphi;
@@ -2675,6 +2854,10 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
   double wSq, w, OmegaSq[3][3], M[3][3];
   double sinw, cosw;
   int k1, k2, k3;
+#ifdef MD_HANDLE_INFMASS
+  if (is_infinite_Itens(i))
+    return;
+#endif
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
   w = sqrt(wSq);
   if (ti != 0.0 && w != 0.0) 

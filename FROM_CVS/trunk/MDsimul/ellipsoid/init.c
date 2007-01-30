@@ -26,6 +26,10 @@ extern int *lastbump;
 extern double *lastcol;
 double *axa, *axb, *axc;
 double **Aip;
+#ifdef EDHE_FLEX
+extern int is_infinite_Itens(int i);
+extern int is_infinite_mass(int i);
+#endif
 int *scdone;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
@@ -592,7 +596,88 @@ COORD_TYPE gauss(void)
 
   return  (((( a9 * r2 + a7 ) * r2 + a5 ) * r2 + a3 ) * r2 + a1 ) * r;
 }
+#ifdef EDHE_FLEX
+void resetCM(int onlyz)
+{
+  COORD_TYPE sumx, sumy, sumz, RCMx, RCMy, RCMz;
+  COORD_TYPE Mtot, mass;
+  int i;
+  /* Remove net momentum, to have a total momentum equals to zero */
+  Mtot = 0.0;
+  sumx = 0.0;
+  sumy = 0.0;
+  sumz = 0.0;
+  
+  for(i=0; i < Oparams.parnum; i++)
+    {
+      if (is_infinite_mass(i))
+	{
+	  continue;
+	}
+      mass = typesArr[typeOfPart[i]].m;
+      Mtot += mass;
+      sumx = sumx + vx[i]*mass;
+      sumy = sumy + vy[i]*mass;
+      sumz = sumz + vz[i]*mass;
+    }
+     
+  sumx = sumx / Mtot; 
+  sumy = sumy / Mtot;
+  sumz = sumz / Mtot;
 
+  //Px=0.0; Py=0.0; Pz=0.0;
+  /* Now (sumx, sumy, sumz) is the total momentum per atom (Ptot/(2*Nm)) */
+  for(i = 0; i < Oparams.parnum; i++)
+    {
+      if (is_infinite_mass(i))
+	{
+	  continue;
+	}
+      vx[i] = vx[i] - sumx;
+      vy[i] = vy[i] - sumy;
+      vz[i] = vz[i] - sumz;
+      /* In this way the total (net) momentum of the system of 
+	 molecules is zero */
+    }
+  
+  /* ADD 27/1/1998:
+     And Now we put the center of mass of the box in the origin of axis
+     because otherwise int NPT method the total momentum is not zero */
+  RCMx = 0.0;
+  RCMy = 0.0;
+  RCMz = 0.0;
+
+  for(i = 0; i < Oparams.parnum; i++)
+    {
+      if (is_infinite_mass(i))
+	{
+	  continue;
+	}
+      mass = typesArr[typeOfPart[i]].m;
+      RCMx += rx[i]*mass; /* Here RCM is the center of mass of the box */
+      RCMy += ry[i]*mass;
+      RCMz += rz[i]*mass;
+    }
+  
+  RCMx /= Mtot;
+  RCMy /= Mtot;
+  RCMz /= Mtot;
+
+  for(i = 0; i < Oparams.parnum; i++)
+    {
+      if (is_infinite_mass(i))
+	continue;
+      if (onlyz)
+	 rz[i] -= RCMz;
+      else
+	{
+       	  rx[i] -= RCMx;
+	  ry[i] -= RCMy;
+	  rz[i] -= RCMz;
+	}
+    }
+}
+#else
 void resetCM(int onlyz)
 {
   COORD_TYPE sumx, sumy, sumz, RCMx, RCMy, RCMz;
@@ -669,6 +754,7 @@ void resetCM(int onlyz)
 	}
     }
 }
+#endif
 void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
 {
 #ifdef EDHE_FLEX
@@ -740,11 +826,128 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
     }
 #endif 
 }
-
+#ifdef EDHE_FLEX
 /* ========================== >>> comvel <<< =============================== */
 void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 {
+  double rTemp, sumx, sumy, sumz, RCMx, RCMy, RCMz, Mtot, mass;
+  /*COORD_TYPE Px, Py, Pz;*/
+  int i;
+  Mtot = 0.0;
 
+  /* variance of the velocities distribution function, we assume k = 1 */ 
+  K = 0;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      /* Set the velocities of both atoms to the center of mass velocities,
+         the exact velocities will be set in the angvel() routine, where we 
+         will set:
+	 Atom 1: v1  = Vcm + W^(d21 * m2/(m2+m1))
+	 Atom 2: v2  = Vcm - W^(d21 * m1/(m1+m2))
+	 where Vcm is the center of mass velocity (that is the actual 
+	 velocity of both atoms), W is the angular velocity of the molecule,
+	 d21 is the vector joining the two atoms (from 2 to 1) and 
+	 m1 and m2 are the masses of two atoms 
+      */
+
+      if (is_infinite_mass(i))
+	{
+	  continue;
+	}
+      mass = typesArr[typeOfPart[i]].m;
+      Mtot += mass;
+      rTemp = sqrt(temp / mass);  
+      vx[i] = rTemp * gauss(); 
+      vy[i] = rTemp * gauss();
+      vz[i] = rTemp * gauss();
+      //printf("rank[%d] vx[%d]: %f\n", my_rank, i, vx[i]);
+      /* gauss() is a gaussian variable with mean = 0 and variance = 1, that is
+                               2
+	     1                X
+        ----------- * exp( - --- )         
+	 sqrt(2*PI)           2     */
+      K = K + 0.5 * Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));
+    }
+ 
+  /* Remove net momentum, to have a total momentum equals to zero */
+  sumx = 0.0;
+  sumy = 0.0;
+  sumz = 0.0;
+  
+  for(i = 0; i < Oparams.parnum; i++)
+    {
+      if (is_infinite_mass(i))
+	continue;
+      /* (sumx, sumy, sumz) is the total momentum */ 
+      mass = typesArr[typeOfPart[i]].m;
+      sumx = sumx + vx[i]*mass;
+      sumy = sumy + vy[i]*mass;
+      sumz = sumz + vz[i]*mass;
+      //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
+    }
+ 
+  sumx = sumx / Mtot; 
+  sumy = sumy / Mtot;
+  sumz = sumz / Mtot;
+
+  //Px=0.0; Py=0.0; Pz=0.0;
+  /* Now (sumx, sumy, sumz) is the total momentum per atom (Ptot/(2*Nm)) */
+  for(i = 0; i < Oparams.parnum; i++)
+    {
+      if (is_infinite_mass(i))
+	continue;
+      vx[i] = vx[i] - sumx;
+      vy[i] = vy[i] - sumy;
+      vz[i] = vz[i] - sumz;
+      /* In this way the total (net) momentum of the system of 
+	 molecules is zero */
+    }
+
+
+  if (!resetCM)
+    return;
+#ifndef MD_GRAVITY
+  printf("temp: %f T: %f\n", temp, 2.0*K/(3.0*Oparams.parnum - 3.0));
+  scalevels(temp, K);
+#endif
+  /* ADD 27/1/1998:
+     And Now we put the center of mass of the box in the origin of axis
+     because otherwise int NPT method the total momentum is not zero */
+  RCMx = 0.0;
+  RCMy = 0.0;
+  RCMz = 0.0;
+
+  for(i = 0; i < Oparams.parnumA; i++)
+    {
+      if (is_infinite_mass(i))
+	continue;
+      mass = typesArr[typeOfPart[i]].m;
+      RCMx += rx[i]*mass; /* Here RCM is the center of mass of the box */
+      RCMy += ry[i]*mass;
+      RCMz += rz[i]*mass;
+    }
+  
+
+  RCMx /= Mtot;
+  RCMy /= Mtot;
+  RCMz /= Mtot;
+  for(i=0; i < Oparams.parnum; i++)
+    {
+      if (is_infinite_mass(i))
+	continue;
+      //printf("rank[%d] vx[%d]: %.20f\n", my_rank, i, vx[i]);
+      rx[i] -= RCMx;
+      ry[i] -= RCMy;
+#ifndef MD_GRAVITY
+      rz[i] -= RCMz;
+#endif
+    }
+  /* Now the center of mass of the box is in the origin */
+}
+#else
+/* ========================== >>> comvel <<< =============================== */
+void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
+{
    /*
     Translational velocities from maxwell-boltzmann distribution  
     The routine put in vx, vy, vz a velocity choosen from a M.-B. 
@@ -901,6 +1104,7 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
     }
   /* Now the center of mass of the box is in the origin */
 }
+#endif
 void angvel(void)
 {
   int i;
@@ -1017,6 +1221,7 @@ void initCoord(void)
   
   /* set both atoms velocity to the center of mass velocity */
   comvel(Oparams.parnum, Oparams.T, Oparams.m, 0); 
+#ifndef EDHE_FLEX
 #if 1
   K = 0.0;
   for (i = 0; i < Oparams.parnumA; i++)
@@ -1030,6 +1235,7 @@ void initCoord(void)
   K *= 0.5;
   printf("All'inizio T=%f\n", 2.0 * K / (3.0 * Oparams.parnum - 3.0));
 
+#endif
 #endif
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
@@ -2398,6 +2604,31 @@ void usrInitAft(void)
    {
       resetCM(0);
    }
+#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+  if (newSim)
+    {  
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  if (is_infinite_mass(i))
+	    {
+	      vx[i] = 0.0;
+	      vy[i] = 0.0;
+	      vz[i] = 0.0;
+	    }
+	  if (is_infinite_Itens(i))
+	    {
+	      Mx[i] = 0.0;
+	      My[i] = 0.0;
+	      Mz[i] = 0.0;
+	      wx[i] = 0.0;
+	      wy[i] = 0.0;
+	      wz[i] = 0.0;
+	    }
+	}
+
+    }
+#endif
+
   if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);

@@ -71,6 +71,9 @@ void UpdateSystem(void);
 
 #ifdef EDHE_FLEX
 #define PAR2SAVE_LEN 1024
+#define MD_INF_ITENS 1E199
+#define MD_INF_MASS  1E199
+#define MD_HANDLE_INFMASS
 typedef struct {
   double x[3];
   double sigma;
