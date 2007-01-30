@@ -2530,9 +2530,11 @@ void UpdateAtom(int i)
 #endif
 #ifdef MD_HANDLE_INFMASS
   if (is_infinite_Itens(i))
-    return;
+    {
+      atomTime[i] = Oparams.time;
+      return;
+    }
 #endif
- 
   symtop_evolve_orient(i, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
@@ -2798,7 +2800,26 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double co
   double phi, psi, cospsi, sinpsi, cosphi, sinphi;
   int k1, k2, k3;
   //wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
-  if (ti == 0.0 || angM[i] == 0.0)
+#ifdef MD_HANDLE_INFMASS
+  if (is_infinite_Itens(i))
+    {    
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    Ro[k1][k2] = R[i][k1][k2];
+	  }
+      cosea[0] = cos(phi0[i]);
+      cosea[1] = costheta0[i];
+      cosea[2] = cos(psi0[i]);
+      sinea[0] = sin(phi0[i]);
+      sinea[1] = sintheta0[i];
+      sinea[2] = sin(psi0[i]);
+      *psir = psi0[i];
+      *phir = phi0[i];
+      return;
+    }
+#endif
+   if (ti == 0.0 || angM[i] == 0.0)
     {
       for (k1 = 0; k1 < 3; k1++)
 	for (k2 = 0; k2 < 3; k2++)
@@ -2856,7 +2877,23 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
   int k1, k2, k3;
 #ifdef MD_HANDLE_INFMASS
   if (is_infinite_Itens(i))
-    return;
+    {
+      Omega[0][0] = 0;
+      Omega[0][1] = 0;
+      Omega[0][2] = 0;
+      Omega[1][0] = 0;
+      Omega[1][1] = 0;
+      Omega[1][2] = 0;
+      Omega[2][0] = 0;
+      Omega[2][1] = 0;
+      Omega[2][2] = 0;
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    Ro[k1][k2] = R[i][k1][k2];
+	  }
+      return;
+    }
 #endif
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
   w = sqrt(wSq);
