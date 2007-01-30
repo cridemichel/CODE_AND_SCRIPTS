@@ -6975,6 +6975,11 @@ void calc_omega(int i)
   na = (i < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];	
+  if (is_infinite_Itens(i))
+    {
+      wx[i] = wy[i] = wz[i] = 0.0;
+      return;     
+    }
   tRDiagR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
 #else
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
