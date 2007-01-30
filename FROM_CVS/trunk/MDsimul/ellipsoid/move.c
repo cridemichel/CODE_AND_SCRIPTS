@@ -256,14 +256,14 @@ void check_shift(int i, int j, double *shift)
     }
 }
 #ifdef EDHE_FLEX
-void saveFinalFullStore(void)
+void saveFullStore(char* fname)
 {
   char fileop3[1024], fileop2[512], fileop[512];
   int ii, i, stripStoreBak, globSaveAllBak;
   FILE *bf;
   const char sepStr[] = "@@@\n";
 
-  sprintf(fileop2 ,"StoreFinal");
+  sprintf(fileop2 ,fname);
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
   if ( (bf = fopenMPI(fileop, "w")) == NULL)
@@ -284,19 +284,17 @@ void saveFinalFullStore(void)
 #endif
     }
   R2u();
-  if (mgl_mode==0)
+  stripStoreBak = OprogStatus.stripStore;
+  OprogStatus.stripStore = 0;
+  globSaveAllBak = globSaveAll;
+  globSaveAll = 1;
+   if (mgl_mode==0)
     {
-      stripStoreBak = OprogStatus.stripStore;
-      OprogStatus.stripStore = 0;
-      globSaveAllBak = globSaveAll;
-      globSaveAll = 1;
       writeAsciiPars(bf, opro_ascii);
       fprintf(bf, sepStr);
       writeAsciiPars(bf, opar_ascii);
       fprintf(bf, sepStr);
-      OprogStatus.stripStore = stripStoreBak;
-      globSaveAll = globSaveAllBak;
-    }	      
+   }	      
   writeAllCor(bf, 1);
   fclose(bf);
   if (mgl_mode==0)
@@ -316,7 +314,9 @@ void saveFinalFullStore(void)
 #endif
       system(fileop3);
     }
-}
+  OprogStatus.stripStore = stripStoreBak;
+  globSaveAll = globSaveAllBak;
+ }
 #endif
 /* ========================== >>> scalCor <<< ============================= */
 void scalCor(int Nm)
@@ -7580,7 +7580,7 @@ void move(void)
 	    {
 #ifdef EDHE_FLEX
 	      if (!globSaveAll || OprogStatus.stripStore)
-		saveFinalFullStore();
+		saveFullStore("StoreFinal");
 #endif
 	      outputSummary();
 	    }
@@ -8018,7 +8018,7 @@ void move(void)
     {
 #ifdef EDHE_FLEX
       if (!globSaveAll || OprogStatus.stripStore)
-	saveFinalFullStore();
+	saveFullStore("StoreFinal");
 #endif
       R2u();
     }
