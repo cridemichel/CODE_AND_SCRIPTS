@@ -2984,14 +2984,9 @@ int is_valid_parname_progStatus(char *pn)
       !strcmp(pn, "sumoy") ||
       !strcmp(pn, "sumoz") ||
       !strcmp(pn, "refTime")||
-      !strcmp(pn, "storerate")||
-      !strcmp(pn, "NN")||
-      !strcmp(pn, "base")||
       !strcmp(pn, "KK")||
-      !strcmp(pn, "JJ")||
-      !strcmp(pn, "frozenDOF")||
-      !strcmp(pn, "par2save")
-      )
+      !strcmp(pn, "JJ")
+     )
     return 1; 
   else 
     return 0;
@@ -2999,13 +2994,9 @@ int is_valid_parname_progStatus(char *pn)
 int is_valid_parname_params(char *pn)
 {
   /* salva solo quello che può servire per l'analisi */
-   if (!strcmp(pn, "parnum") ||
-      !strcmp(pn, "totSteps") ||
-      !strcmp(pn, "Dt") ||
-      !strcmp(pn, "time") ||
-      !strcmp(pn, "curStep") ||
-      !strcmp(pn, "ninters") ||
-      !strcmp(pn, "ntypes") 
+   if (!strcmp(pn, "totSteps") ||
+       !strcmp(pn, "time") ||
+       !strcmp(pn, "curStep") 
       )
     return 1; 
   else 
