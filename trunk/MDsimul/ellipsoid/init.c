@@ -2116,6 +2116,7 @@ void find_spheres_NNL(void)
 #endif
 #ifdef EDHE_FLEX
 void par2saveArr(void);
+extern void saveFullStore(char* fname);
 #endif
 void usrInitAft(void)
 {
@@ -2966,6 +2967,10 @@ void usrInitAft(void)
     globSaveAll = 1;
   else
     globSaveAll = 0;
+  if (!globSaveAll || OprogStatus.stripStore)
+    {
+      saveFullStore("StoreInit");
+    }
 #endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 }
@@ -3056,7 +3061,7 @@ void writeAllCor(FILE* fs, int saveAll)
 #ifdef EDHE_FLEX
   const char tipodat2_flex[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n";
   int j;
-  if (!mgl_mode)
+  if (!mgl_mode && !OprogStatus.stripStore)
     {
       for (i=0; i < Oparams.ntypes; i++)
 	fprintf(fs, "%d ", typeNP[i]);
@@ -3146,7 +3151,8 @@ void writeAllCor(FILE* fs, int saveAll)
   else
     {
 #ifdef EDHE_FLEX
-      fprintf(fs, "@@@\n");
+      if (!OprogStatus.stripStore)
+	fprintf(fs, "@@@\n");
 #endif
       for (i = 0; i < Oparams.parnum; i++)
 	{
