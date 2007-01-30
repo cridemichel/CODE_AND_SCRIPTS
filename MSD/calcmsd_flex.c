@@ -164,7 +164,7 @@ void parse_param(int argc, char** argv)
     }
 }
 int  *is2saveArr, notAll=0;
-char p2s[1024];
+char p2s[1024]="all";
 int par2saveArr(int NP)
 {
   char *ns;
