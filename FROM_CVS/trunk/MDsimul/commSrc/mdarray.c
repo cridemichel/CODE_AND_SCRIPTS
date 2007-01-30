@@ -662,7 +662,11 @@ void readAsciiPars(FILE* pfs, struct pascii strutt[])
 	  }*/
     }
 }
-
+#ifdef EDHE_FLEX
+extern int is_valid_parname_progStatus(char *pn);
+extern int is_valid_parname_params(char *pn);
+extern int is_to_save(int i);
+#endif
 /* ======================== >>> readAsciiPars <<< ========================= */
 void writeAsciiPars(FILE* fs, struct pascii strutt[])
 {
@@ -674,6 +678,19 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[])
   
   for  (i=0; strutt[i].ptr != NULL; ++i) /* parname=NULL menas END */
     {
+#ifdef EDHE_FLEX
+      if (OprogStatus.stripStore && strutt == opro_ascii)
+	{
+	  if (!is_valid_parname_progStatus(strutt[i].parName))
+	    continue;
+	}
+      if (OprogStatus.stripStore && strutt == opar_ascii)
+	{
+	  if (!is_valid_parname_params(strutt[i].parName))
+	    continue;
+
+	}
+#endif
       fprintf(fs, "%s: ", strutt[i].parName);
       if (strchr(strutt[i].type,'f') || strchr(strutt[i].type, 'e')
 	  || strchr(strutt[i].type, 'E') || strchr(strutt[i].type, 'g')
@@ -685,12 +702,20 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[])
 	if (strutt[i].qty == -MAXPAR)		
 	  strutt[i].qty = Oparams.parnum;
 	for (n = 0; n < strutt[i].qty; n++)
-	    {
-	      for (e = 0; e < strutt[i].block_length; e++)
-		{
-		  fprintf(fs, strutt[i].type, *(bd + n*strutt[i].block_length + e));
-		  fprintf(fs, " ");
-		}
+	  {
+#ifdef EDHE_FLEX
+	    if ((strutt[i].qty==Oparams.parnum || strutt[i].qty==MAXPAR) 
+		&& !globSaveAll)
+	      {
+		if (!is_to_save(n))
+		  continue;
+	      }
+#endif
+	    for (e = 0; e < strutt[i].block_length; e++)
+	      {
+		fprintf(fs, strutt[i].type, *(bd + n*strutt[i].block_length + e));
+		fprintf(fs, " ");
+	      }
 	    }
 	}
       else if (strchr(strutt[i].type, 'd'))
