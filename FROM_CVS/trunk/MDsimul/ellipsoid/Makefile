@@ -6,7 +6,7 @@ UTIL = wtdutil heteroutil xvautil corutil jumps
 ellipsoid: link measures.o move.o init.o corutil tree.o matrixalg.o nnl.o hesticky.o# $(UTIL)
 
 link:
-	rm $(COMM)/mdsimdep.h ; ln -s $(PERC)/ellipsoid/$(SDHDR) $(COMM)/mdsimdep.h 
+	ln -sf $(PERC)/ellipsoid/$(SDHDR) $(COMM)/mdsimdep.h 
 # rigidABdbLJ utilities 
 wtdutil: wtdutil.o
 	$(CC) $(LDFLAGS) wtdutil.o -o $(BIN)/MOwtdutil -lm 
