@@ -6315,12 +6315,19 @@ void ProcessWallColl(void)
     }
 }
 extern int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup);
-
+extern int *is_a_sphere_NNL;
 int locateHardWall(int na, int nplane, double tsup, double vecg[5])
 {
+  if ((is_infinite_Itens(na) && is_infinite_mass(na)) ||
+      (is_infinite_mass(na) && is_a_sphere_NNL[na]))
+    {
+      return 0;
+    }
+
   globalHW = 1;
 
   MD_DEBUG33(printf("inCell=%d pos of %d=%f %f %f\n", inCell[2][na], na, rx[na], ry[na], rz[na]));
+
   if (!locate_contact_neigh_plane(na, vecg, nplane, tsup))
     {
       globalHW = 0;
@@ -6334,6 +6341,7 @@ int locateHardWall(int na, int nplane, double tsup, double vecg[5])
 #endif
 #ifdef EDHE_FLEX
 extern int may_interact_all(int i, int j);
+extern int *is_a_sphere_NNL;
 #endif
 void PredictEvent (int na, int nb) 
 {
