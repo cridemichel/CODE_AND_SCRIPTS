@@ -4519,6 +4519,7 @@ void PredictEventNNL(int na, int nb)
 #endif
       if (!(n != na && n!=nb && (nb >= -1 || n < na)))
 	continue;
+      	
       //
       // for (kk=0; kk < 3; kk++)
       //	shift[kk] = nebrTab[na].shift[i][kk];
@@ -4694,6 +4695,9 @@ extern int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2
 #ifdef MD_HANDLE_INFMASS
 extern int is_infinite_mass(int i);
 #endif
+#ifdef EDHE_FLEX
+extern int *is_a_sphere_NNL;
+#endif
 void updrebuildNNL(int na)
 {
   /* qui ricalcola solo il tempo di collisione dell'ellisoide na-esimo con 
@@ -4851,6 +4855,20 @@ void nextNNLupdate(int na)
 #ifdef EDHE_FLEX
   double xl[3];
   int typena;
+#endif
+#ifdef EDHE_FLEX
+#if 1
+  if (is_infinite_mass(na) && is_infinite_Itens(na))
+    {
+      nebrTab[na].nexttime = timbig;
+      return;
+    }
+  if (is_infinite_mass(na) && is_a_sphere_NNL[na])
+    {
+      nebrTab[na].nexttime = timbig;
+      return;
+    }
+#endif
 #endif
   MD_DEBUG33(printf("nextNNLupdate...\n"));
   MD_DEBUG33(printf("posEll=%f %f %f posNNL %f %f %f \n", rx[na], ry[na], rz[na], nebrTab[na].r[0],nebrTab[na].r[1],
@@ -5037,6 +5055,8 @@ int may_interact_spots(int i, int j)
   int type1, type2, ni;
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
+  if (typesArr[i].nspots == 0 || typesArr[j].nspots == 0)
+    return 0;
   for (ni = 0; ni < Oparams.ninters; ni++)
     {
       if (intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2)
@@ -5052,6 +5072,10 @@ int may_interact_spots(int i, int j)
 }
 int may_interact_all(int i, int j)
 {
+  /* infinite mass spheres can not interact! */
+  if (is_infinite_mass(i) && is_a_sphere_NNL[i] &&
+      is_infinite_mass(j) && is_a_sphere_NNL[j])
+    return 0;
   if (may_interact_core(i, j))
     return 1;
   if (may_interact_spots(i, j))
@@ -5152,7 +5176,6 @@ void BuildNNL(int na)
     		      if (!may_interact_all(na, n))
 			continue;
 #endif
-	
 		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 #ifdef MD_NNLPLANES
 		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift); 
