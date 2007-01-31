@@ -7629,6 +7629,9 @@ void timeshift_calendar(void)
     } 
 }
 #endif
+#ifdef EDHE_FLEX
+extern int getnumbonds(int np, int na interStruct ts);
+#endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -8243,6 +8246,22 @@ void move(void)
       updatePE(Oparams.parnum);
 #endif
     }
+#ifdef EDHE_FLEX
+  nb = getnumbonds(0,4) + getnumbonds(1, 5);			
+  if (nb==2)
+    {
+	double ti = 0;
+	ti = Oparams.time;	
+#ifdef 	MD_BIG_DT
+	ti += OprogStatus.refTime;	
+#endif
+	printf("2 BONDS time = %.15G\n", ti)
+	ENDSIM=1;
+    }
+    else if (nb==1)
+	{}
+	
+#endif
   if ((OprogStatus.rmsd2end > 0.0 && OprogStatus.tmsd2end > 0.0 &&
        DphiSqA > Sqr(OprogStatus.rmsd2end) 
        && DrSqTotA > Sqr(OprogStatus.tmsd2end)) 
