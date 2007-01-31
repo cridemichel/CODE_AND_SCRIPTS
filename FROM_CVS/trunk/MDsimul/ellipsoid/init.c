@@ -219,6 +219,46 @@ void check_these_bonds(int i, int j, double *shift, double t)
     }
 }
 #endif
+#ifdef EDHE_FLEX
+int all_bonds_of_same_type(int i, int ni)
+{
+  int kk, jj, jj2, aa, bb, cc;
+  cc = 0;
+  for (kk=0; kk < numbonds[i]; kk++)
+    {
+      jj = bonds[i][kk] / (NA*NA);
+      jj2 = bonds[i][kk] % (NA*NA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      if ((intersArr[ni].type1 == jj && intersArr[ni].spot1 == aa) ||
+	  (intersArr[ni].type2 == jj && intersArr[ni].spot2 == bb))
+	    cc++;
+    }
+  return cc;
+}
+int nmax_reached(int i, int j, int a, int b)
+{
+  int kk, type1, type2, ni;
+  type1=typeOfPart[i];
+  type2=typeOfPart[j];
+  for (ni=0; ni < Oparams.ninters; ni++)
+    {
+      if (intersArr[ni].type1 == type1 && intersArr[ni].spot1+1 == a && intersArr[ni].type2 == type2 &&
+	  intersArr[ni].spot2+1 == b)
+	{
+	  if (intersArr[ni].nmax == all_bonds_of_same_type(i,j))
+	    return 1;	    
+	}
+      else if (intersArr[ni].type1 == type2 && intersArr[ni].spot1+1 == b && intersArr[ni].type2 == type1 &&
+	       intersArr[ni].spot2+1 == a )
+	{
+	  if (intersArr[ni].nmax == all_bonds_of_same_type(i,j))
+	    return 1;
+	}
+    }
+  return 0;
+}
+#endif
 void check_all_bonds(void)
 {
   int nn, warn, amin, bmin, i, j, nb, nbonds;
@@ -308,12 +348,13 @@ void check_all_bonds(void)
 		      for (nn=0; nn < nbonds; nn++)
 			{
 			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
-			      && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+			      && !bound(i,j,mapbondsa[nn], mapbondsb[nn]) )
 			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
 			    {
 			      warn=1;
 #ifdef EDHE_FLEX
-		    	      printf("numbonds[%d]=%d numbonds[%d]=%d\n", i, numbonds[i], j, numbonds[j]);
+			      if (nmax_reached(i,j, mapbondsa[nn], mapbondsa[nn]))
+				  warn=0;
 #endif
 		  	      MD_DEBUG31(
 			      //printf("dists[1]:%.15G\n", dists[1]);
