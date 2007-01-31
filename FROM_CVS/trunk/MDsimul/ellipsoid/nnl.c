@@ -4856,20 +4856,6 @@ void nextNNLupdate(int na)
   double xl[3];
   int typena;
 #endif
-#ifdef EDHE_FLEX
-#if 1
-  if (is_infinite_mass(na) && is_infinite_Itens(na))
-    {
-      nebrTab[na].nexttime = timbig;
-      return;
-    }
-  if (is_infinite_mass(na) && is_a_sphere_NNL[na])
-    {
-      nebrTab[na].nexttime = timbig;
-      return;
-    }
-#endif
-#endif
   MD_DEBUG33(printf("nextNNLupdate...\n"));
   MD_DEBUG33(printf("posEll=%f %f %f posNNL %f %f %f \n", rx[na], ry[na], rz[na], nebrTab[na].r[0],nebrTab[na].r[1],
 		    nebrTab[na].r[2]));
