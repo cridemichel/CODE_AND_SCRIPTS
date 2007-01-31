@@ -230,8 +230,8 @@ int all_bonds_of_same_type(int i, int ni)
       jj2 = bonds[i][kk] % (NA*NA);
       aa = jj2 / NA;
       bb = jj2 % NA;
-      if ((intersArr[ni].type1 == jj && intersArr[ni].spot1 == aa) ||
-	  (intersArr[ni].type2 == jj && intersArr[ni].spot2 == bb))
+      if ((intersArr[ni].type1 == jj && intersArr[ni].spot1+1 == aa) ||
+	  (intersArr[ni].type2 == jj && intersArr[ni].spot2+1 == bb))
 	    cc++;
     }
   return cc;
@@ -246,13 +246,13 @@ int nmax_reached(int i, int j, int a, int b)
       if (intersArr[ni].type1 == type1 && intersArr[ni].spot1+1 == a && intersArr[ni].type2 == type2 &&
 	  intersArr[ni].spot2+1 == b)
 	{
-	  if (intersArr[ni].nmax == all_bonds_of_same_type(i,j))
+	  if (intersArr[ni].nmax == all_bonds_of_same_type(i,ni))
 	    return 1;	    
 	}
       else if (intersArr[ni].type1 == type2 && intersArr[ni].spot1+1 == b && intersArr[ni].type2 == type1 &&
 	       intersArr[ni].spot2+1 == a )
 	{
-	  if (intersArr[ni].nmax == all_bonds_of_same_type(i,j))
+	  if (intersArr[ni].nmax == all_bonds_of_same_type(i,ni))
 	    return 1;
 	}
     }
