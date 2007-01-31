@@ -7630,7 +7630,7 @@ void timeshift_calendar(void)
 }
 #endif
 #ifdef EDHE_FLEX
-extern int getnumbonds(int np, int na interStruct ts);
+extern int getnumbonds(int np, int na, interStruct ts);
 #endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
@@ -7646,6 +7646,10 @@ void move(void)
 #endif
   int k, n;
   double timeold;
+#ifdef EDHE_FLEX
+  int nb;
+  interStruct ts;
+#endif
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;
@@ -8247,19 +8251,43 @@ void move(void)
 #endif
     }
 #ifdef EDHE_FLEX
-  nb = getnumbonds(0,4) + getnumbonds(1, 5);			
+  ts.type1 = 0;
+  ts.type2 = 5;
+  ts.spot1 = 4;
+  ts.spot2 = 0;
+  nb = getnumbonds(0,4,ts);
+  ts.type1 = 1;
+  ts.type2 = 5;
+  ts.spot1 = 5;
+  ts.spot2 = 0;
+  nb += getnumbonds(1,5,ts);			
   if (nb==2)
     {
-	double ti = 0;
-	ti = Oparams.time;	
+      double ti = 0;
+      FILE* f;
+      ti = Oparams.time;	
 #ifdef 	MD_BIG_DT
-	ti += OprogStatus.refTime;	
+      ti += OprogStatus.refTime;	
 #endif
-	printf("2 BONDS time = %.15G\n", ti)
-	ENDSIM=1;
+      printf("2 BONDS time = %.15G ... FINISHED !\n", ti);
+      ENDSIM=1;
+      f=fopen("twobonds.dat","w");
+      fprintf(f,"%.15G", ti);
+      fclose(f);
     }
-    else if (nb==1)
-	{}
+  else if (nb==1)
+    {
+      double ti = 0;
+      FILE* f;
+      ti = Oparams.time;	
+#ifdef 	MD_BIG_DT
+      ti += OprogStatus.refTime;	
+#endif
+      printf("1 BOND time = %.15G\n", ti);
+      f=fopen("onebond.dat","w");
+      fprintf(f,"%.15G", ti);
+      fclose(f);
+    }	
 	
 #endif
   if ((OprogStatus.rmsd2end > 0.0 && OprogStatus.tmsd2end > 0.0 &&
