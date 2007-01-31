@@ -352,10 +352,6 @@ void check_all_bonds(void)
 			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
 			    {
 			      warn=1;
-#ifdef EDHE_FLEX
-			      if (nmax_reached(i,j, mapbondsa[nn], mapbondsa[nn]))
-				  warn=0;
-#endif
 		  	      MD_DEBUG31(
 			      //printf("dists[1]:%.15G\n", dists[1]);
 			      printf("[dist<0]dists[%d]:%.15G\n", nn, dists[nn]);
