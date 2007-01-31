@@ -7631,6 +7631,7 @@ void timeshift_calendar(void)
 #endif
 #ifdef EDHE_FLEX
 extern int getnumbonds(int np, int na, interStruct ts);
+int first=1;
 #endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
@@ -7647,7 +7648,7 @@ void move(void)
   int k, n;
   double timeold;
 #ifdef EDHE_FLEX
-  int nb, first=1;
+  int nb;
   interStruct ts;
 #endif
   /* Zero all components of pressure tensor */
