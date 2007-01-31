@@ -212,6 +212,46 @@ void build_atom_positions(void)
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
 extern void calc_energy(char *msg);
 extern void print_matrix(double **M, int n);
+#ifdef EDHE_FLEX
+int getnumbonds(int np, int na, interStruct ts)
+{
+  int kk, jj, jj2, aa, bb, nb;
+  nb=0;
+  for (kk = 0; kk < numbonds[np]; kk++)
+    {
+      jj = bonds[np][kk] / (NA*NA);
+      jj2 = bonds[np][kk] % (NA*NA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      if (na != aa) 
+	continue;
+      if ((aa == ts.spot1+1 && typeOfPart[jj] == ts.type2 && bb == ts.spot2+1 &&
+	   typeOfPart[np] == ts.type1 )||
+	  (bb == ts.spot1+1 && typeOfPart[np] == ts.type2 && aa == ts.spot2+1 &&
+	   typeOfPart[jj] == ts.type1 ))
+	nb++;
+    }
+  return nb;
+}
+
+int one_is_bonded(int i, int a, int j, int b, int nmax)
+{
+  /* per ora è disbilitato */
+  //return 0;
+  int ni, type1, type2, nt;
+  interStruct ts;
+  type1 = typeOfPart[i];
+  type2 = typeOfPart[j];
+  ts.type1 = type1;
+  ts.type2 = type2;
+  ts.spot1 = a-1;
+  ts.spot2 = b-1;
+  if (getnumbonds(i,a,ts) >= nmax || getnumbonds(j,b,ts) >= nmax)
+    return 1;
+  else
+    return 0;
+}
+#else
 int getnumbonds(int np, int at)
 {
   int kk, jj, jj2, aa, bb, nb;
@@ -236,6 +276,7 @@ int one_is_bonded(int i, int a, int j, int b, int nmax)
   else
     return 0;
 }
+#endif
 #ifdef EDHE_FLEX
 void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double *bhin, double *bhout,
 			int *nmax)
