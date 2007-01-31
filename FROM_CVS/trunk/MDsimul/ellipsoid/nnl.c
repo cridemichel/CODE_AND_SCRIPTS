@@ -5055,7 +5055,7 @@ int may_interact_spots(int i, int j)
   int type1, type2, ni;
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
-  if (typesArr[i].nspots == 0 || typesArr[j].nspots == 0)
+  if (typesArr[type1].nspots == 0 || typesArr[type2].nspots == 0)
     return 0;
   for (ni = 0; ni < Oparams.ninters; ni++)
     {
