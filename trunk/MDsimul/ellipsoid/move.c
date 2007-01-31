@@ -8273,7 +8273,7 @@ void move(void)
       printf("2 BONDS time = %.15G ... FINISHED !\n", ti);
       ENDSIM=1;
       f=fopen("twobonds.dat","w");
-      fprintf(f,"%.15G", ti);
+      fprintf(f,"%.15G\n", ti);
       fclose(f);
     }
   else if (nb==1 && first)
@@ -8287,7 +8287,7 @@ void move(void)
 #endif
       printf("1 BOND time = %.15G\n", ti);
       f=fopen("onebond.dat","w");
-      fprintf(f,"%.15G", ti);
+      fprintf(f,"%.15G\n", ti);
       fclose(f);
     }	
 	
