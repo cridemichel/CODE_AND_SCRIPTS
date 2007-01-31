@@ -312,7 +312,10 @@ void check_all_bonds(void)
 			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
 			    {
 			      warn=1;
-			      MD_DEBUG31(
+#ifdef EDHE_FLEX
+		    	      printf("numbonds[%d]=%d numbonds[%d]=%d\n", i, numbonds[i], j, numbonds[j]);
+#endif
+		  	      MD_DEBUG31(
 			      //printf("dists[1]:%.15G\n", dists[1]);
 			      printf("[dist<0]dists[%d]:%.15G\n", nn, dists[nn]);
 			      printf("i=%d j=%d %d %d\n", i, j, mapbondsa[nn], mapbondsb[nn]);
