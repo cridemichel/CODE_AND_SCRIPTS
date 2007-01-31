@@ -7647,7 +7647,7 @@ void move(void)
   int k, n;
   double timeold;
 #ifdef EDHE_FLEX
-  int nb;
+  int nb, first=1;
   interStruct ts;
 #endif
   /* Zero all components of pressure tensor */
@@ -8275,10 +8275,11 @@ void move(void)
       fprintf(f,"%.15G", ti);
       fclose(f);
     }
-  else if (nb==1)
+  else if (nb==1 && first)
     {
       double ti = 0;
       FILE* f;
+      first = 0;
       ti = Oparams.time;	
 #ifdef 	MD_BIG_DT
       ti += OprogStatus.refTime;	
