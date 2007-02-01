@@ -1696,13 +1696,14 @@ void bumpHS(int i, int j, double *W)
   /* TO CHECK: il viriale ha senso solo se non c'è la gravità */
   //*W = delvx * rxij + delvy * ryij + delvz * rzij;
   /* prob. quanto segue non serve */
+#if 0
 #ifdef MD_ASYM_ITENS
   calc_angmom(i, Ia);
   upd_refsysM(i);
   calc_angmom(j, Ib);
   upd_refsysM(j);
 #endif
- 
+#endif 
 }
 int is_sphere(int i)
 {
@@ -1804,9 +1805,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
 #ifdef EDHE_FLEX
   int typei, typej;
-#ifdef MD_HANDLE_INFMASS
   int infMass_j=0, infMass_i=0, infItens_i=0, infItens_j=0;
-#endif
 #endif
   int na, a, b;
 #ifdef EDHE_FLEX
@@ -1941,8 +1940,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 	Iatmp[k1][k2] = Ia[k1][k2];
 	Ibtmp[k1][k2] = Ib[k1][k2];
       } 
-#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
-  if (!infItens_i)
+#if defined(EDHE_FLEX) 
+  if (!infItens_i && !is_a_sphere_NNL[i])
     {
       InvMatrix(Iatmp, invIa, 3);
       Mvec[0] = Mx[i];
@@ -1967,7 +1966,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       wy[i] = 0.0;
       wz[i] = 0.0;
     }
-  if (!infItens_j)
+  if (!infItens_j && !is_a_sphere_NNL[i])
     {
       InvMatrix(Ibtmp, invIb, 3);
       Mvec[0] = Mx[j];
@@ -2204,14 +2203,23 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
 #endif
+#if 0
+/* se si azzerano invIa o invIb e le vel. ang. nel caso si tratti di oggetti sferici questo codice è ridondante */
+#ifdef EDHE_FLEX
+  if (is_a_sphere_NNL[i])
+    set_angmom_to_zero(i);
+  if (is_a_sphere_NNL[j])
+    set_angmom_to_zero(j);
+#endif
+#endif
 #ifdef MD_ASYM_ITENS
-#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
-  if (!infItens_i)
+#if defined(EDHE_FLEX) 
+  if (!infItens_i && !is_a_sphere_NNL[i])
     {
       calc_angmom(i, Ia);
       upd_refsysM(i);
     }
-  if (!infItens_j)
+  if (!infItens_j && !is_a_sphere_NNL[j])
     {
       calc_angmom(j, Ib);
       upd_refsysM(j);
@@ -2262,12 +2270,6 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   OprogStatus.Txx += DTxx; 
   OprogStatus.Tyy += DTyy;
   OprogStatus.Tzz += DTzz;
-#endif
-#ifdef EDHE_FLEX
-  if (is_a_sphere_NNL[i])
-    set_angmom_to_zero(i);
-  if (is_a_sphere_NNL[j])
-    set_angmom_to_zero(j);
 #endif
 }
 #ifdef MD_GRAVITY
