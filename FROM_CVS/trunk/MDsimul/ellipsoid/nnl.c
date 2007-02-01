@@ -1214,7 +1214,7 @@ void guess_distNeigh_plane(int i,
 {
   double gradA[3], gradaxA[3], dA[3], dB[3];
   int k1, n;
-  double saA[3], saB[3], sp;
+  double saA[3], sp;
 #ifdef EDHE_FLEX
   int typei;
 #endif
@@ -1230,9 +1230,6 @@ void guess_distNeigh_plane(int i,
   saA[1] = axb[i];
   saA[2] = axc[i];
 #endif
-  saB[0] = nebrTab[i].axa;
-  saB[1] = nebrTab[i].axb;
-  saB[2] = nebrTab[i].axb;
   for (k1 = 0; k1 < 3; k1++)
     gradA[k1] =  grad[k1];
   for (n = 0; n < 3; n++)
@@ -1309,7 +1306,7 @@ void guess_distNeigh(int i,
 #endif
   saB[0] = nebrTab[i].axa;
   saB[1] = nebrTab[i].axb;
-  saB[2] = nebrTab[i].axb;
+  saB[2] = nebrTab[i].axc;
   for (k1 = 0; k1 < 3; k1++)
     {
       gradA[k1] =  (rB[k1]-rA[k1]);
