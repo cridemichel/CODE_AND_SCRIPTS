@@ -213,7 +213,7 @@ extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri
 extern void calc_energy(char *msg);
 extern void print_matrix(double **M, int n);
 #ifdef EDHE_FLEX
-int getnumbonds(int np, int na, interStruct ts)
+int getnumbonds(int np, interStruct ts)
 {
   int kk, jj, jj2, aa, bb, nb;
   nb=0;
@@ -223,8 +223,8 @@ int getnumbonds(int np, int na, interStruct ts)
       jj2 = bonds[np][kk] % (NA*NA);
       aa = jj2 / NA;
       bb = jj2 % NA;
-      if (na != aa) 
-	continue;
+      //if (na != aa) 
+	//continue;
       if ((aa == ts.spot1+1 && typeOfPart[jj] == ts.type2 && bb == ts.spot2+1 &&
 	   typeOfPart[np] == ts.type1 )||
 	  (bb == ts.spot1+1 && typeOfPart[np] == ts.type2 && aa == ts.spot2+1 &&
@@ -246,7 +246,7 @@ int one_is_bonded(int i, int a, int j, int b, int nmax)
   ts.type2 = type2;
   ts.spot1 = a-1;
   ts.spot2 = b-1;
-  if (getnumbonds(i,a,ts) >= nmax || getnumbonds(j,b,ts) >= nmax)
+  if (getnumbonds(i,ts) >= nmax || getnumbonds(j,ts) >= nmax)
     return 1;
   else
     return 0;
