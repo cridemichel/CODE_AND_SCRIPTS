@@ -9,8 +9,8 @@ EQSTPS=4000
 else
 EQSTPS=$1
 fi
-N2=`ls -1 CONF-1-*.dat|wc -l`
-NT=`ls -1 CONF-*-*.dat | wc -l`
+N2=`ls -1 conf-1-*.dat|wc -l`
+NT=`ls -1 conf-*-*.dat | wc -l`
 N1=`echo $NT/$N2 | bc`
 n1="0"
 n2="0"
@@ -31,7 +31,7 @@ mkdir RUN-${n1}-${n2}
 fi
 cd RUN-${n1}-${n2}
 PARFILE="ellipsoid_flex.par"
-INICONF="CONF-$n1-$n2.dat"
+INICONF="conf-$n1-$n2.dat"
 rm -f COORD_TMP*
 rm -f Store-*
 ELLEXE="../../ellipsoid"
