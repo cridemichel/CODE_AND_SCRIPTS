@@ -256,6 +256,7 @@ void check_shift(int i, int j, double *shift)
     }
 }
 #ifdef EDHE_FLEX
+extern int *is_a_sphere_NNL;
 void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j);
 void saveFullStore(char* fname)
 {
@@ -1771,6 +1772,9 @@ void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j)
     *infMass_j = 0;
 }
 #endif
+#ifdef EDHE_FLEX
+extern void set_angmom_to_zero(int i);
+#endif
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
   /*
@@ -2258,6 +2262,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   OprogStatus.Txx += DTxx; 
   OprogStatus.Tyy += DTyy;
   OprogStatus.Tzz += DTzz;
+#endif
+#ifdef EDHE_FLEX
+  if (is_a_sphere_NNL[i])
+    set_angmom_to_zero(i);
+  if (is_a_sphere_NNL[j])
+    set_angmom_to_zero(j);
 #endif
 }
 #ifdef MD_GRAVITY
@@ -5629,7 +5639,7 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
   dv[2] = vz[i] - vz[j];
   b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
   collCode = MD_EVENT_NONE;
-
+  evtime = timbig;
   if (b < 0.0) 
     {
       vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
@@ -6315,7 +6325,6 @@ void ProcessWallColl(void)
     }
 }
 extern int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup);
-extern int *is_a_sphere_NNL;
 int locateHardWall(int na, int nplane, double tsup, double vecg[5])
 {
   if ((is_infinite_Itens(na) && is_infinite_mass(na)) ||

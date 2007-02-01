@@ -15,6 +15,10 @@
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
+#ifdef EDHE_FLEX
+extern void set_angmom_to_zero(int i);
+extern int *is_a_sphere_NNL;
+#endif
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -462,9 +466,6 @@ void bumpSPHS(int i, int j, double *W, int bt)
 #endif
 
 }	
-#endif
-#ifdef EDHE_FLEX
-extern int *is_a_sphere_NNL;
 #endif
 #if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
 extern void check_inf_mass_itens(int typei, int typej, int *infMass_i, int *infMass_j, int *infItens_i, int *infItens_j);
@@ -982,6 +983,12 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   calc_angmom(j, Ib);
   upd_refsysM(j);
 #endif
+#endif
+#ifdef EDHE_FLEX
+  if (is_a_sphere_NNL[i])
+    set_angmom_to_zero(i);
+  if (is_a_sphere_NNL[j])
+    set_angmom_to_zero(j);
 #endif
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
@@ -2690,6 +2697,10 @@ void adjust_maxddoti_sp(int i, int NSP, double *maxddot, double maxddotiLC[6][NA
   if (wx[i] == 0.0 && wy[i] == 0.0 && wz[i] == 0.0)
     K = mddotfact;
 #endif
+#ifdef EDHE_FLEX
+  if (is_a_sphere_NNL[i])
+    K = mddotfact;
+#endif
   *maxddot *= K;
   for (a = 0; a < 6; a++)
     for (b = 0; b < NSP; b++)
@@ -2924,9 +2935,20 @@ extern double scalProd(double *A, double *B);
 int locate_contact_neigh_plane_parall_sphs(int i, double *evtime, double t2)
 {
   int nn, typei, first=1;
-  double t1, b, dist, dr[3], colltime=0.0, dv[3];
+  double t1, b, dist, dr[3], colltime=0.0, dv[3], sigMax;
   typei = typeOfPart[i];
   t1 = Oparams.time;
+  /* cerca lo spot più grande */
+  sigMax = 0.0;
+  for (nn = 0; nn < typesArr[typei].nspots; nn++)
+    {
+      if (typesArr[typei].spots[nn].sigma > sigMax || first);
+	{
+	  first = 0.0;
+	  sigMax = typesArr[typei].spots[nn].sigma;
+	}
+    }
+  first = 1;
   for (nn = 0; nn < 6; nn++)
     {
       dr[0] = rx[i] - rBall[nn][0];
@@ -2939,7 +2961,7 @@ int locate_contact_neigh_plane_parall_sphs(int i, double *evtime, double t2)
 	//     gradplane_all[nn][0], gradplane_all[nn][1], gradplane_all[nn][2]);
       /* N.B. controllare che il gradiente sia a norma unitaria e che sia uscente rispetto 
 	 al parallelepipedo delle NNL! */
-      dist = fabs(scalProd(dr, gradplane_all[nn])) - typesArr[typei].spots[0].sigma;
+      dist = fabs(scalProd(dr, gradplane_all[nn])) - sigMax;
       b = scalProd(dv, gradplane_all[nn]);
       if (b < 0)
 	continue;
@@ -3014,9 +3036,9 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 #ifdef EDHE_FLEX
   /* NOTA: in realta is_a_sphere_NNL richiede che il core sia sferico e che tutti gli sticky
      spots siano posizionati nel centro di massa del core. */
-#if 0
+#if 1
   /* N.B. facendo dei test, questa ottimizzazione non offre in realtà vantaggi */
-  if (is_a_sphere_NNL[i] && NSP==1)
+  if (is_a_sphere_NNL[i])
     {
       return locate_contact_neigh_plane_parall_sphs(i, evtime, t2);
     }
