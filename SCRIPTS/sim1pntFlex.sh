@@ -18,6 +18,16 @@ n2="0"
 CDIR=`pwd`
 BN=`basename $CDIR`
 SIG=`echo $BN | awk -F 'sigma' '{print $2}'`
+N1MAX="5"
+N2MAX="5"
+if [ $N1 -gt $N1MAX ]
+then
+N1=$N1MAX
+fi
+if [ $N2 -gt $N2MAX ]
+then
+N2=$N2MAX
+fi
 echo "N1=" $N1 "N2=" $N2
 while [ $n1 -lt $N1 ]
 do
