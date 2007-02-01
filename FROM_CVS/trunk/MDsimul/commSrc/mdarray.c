@@ -776,6 +776,9 @@ void saveCorAscii(void)
     }
   else
     {
+#ifdef EDHE_FLEX
+      sprintf(fn ,"CorFinal");
+#else
 #ifdef MDLLINT 
       sprintf(fn ,"CorT%.6G_%s_%lld", 
 	      Oparams.T, 
@@ -784,6 +787,7 @@ void saveCorAscii(void)
       sprintf(fn ,"CorT%.6G_%s_%d", 
 	      Oparams.T, 
 	      OprogStatus.nRun, Oparams.curStep);
+#endif
 #endif
     }
   if ( (bf = fopenMPI(absTmpAsciiHD(fn), "w")) == NULL )
