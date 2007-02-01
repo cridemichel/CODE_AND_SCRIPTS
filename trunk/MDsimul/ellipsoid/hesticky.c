@@ -495,9 +495,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   int na, a, kk;
 #ifdef EDHE_FLEX
   double sigAB;
-#ifdef MD_HANDLE_INFMASS
   int infMass_j=0, infMass_i=0, infItens_i=0, infItens_j=0;
-#endif
   int typei, typej;
 #endif
 #if 0
@@ -630,14 +628,14 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
   /* calcola le matrici inverse del tensore d'inerzia */
 #ifdef MD_ASYM_ITENS
-#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+#if defined(EDHE_FLEX) 
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       {
 	Iatmp[k1][k2] = Ia[k1][k2];
 	Ibtmp[k1][k2] = Ib[k1][k2];
       }  
-  if (!infItens_i)
+  if (!infItens_i && !is_a_sphere_NNL[i])
     {
       InvMatrix(Iatmp, invIa, 3);
       Mvec[0] = Mx[i];
@@ -662,7 +660,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       wy[i] = 0.0;
       wz[i] = 0.0;
     }
-  if (!infItens_j)
+  if (!infItens_j && !is_a_sphere_NNL[j])
     {
       InvMatrix(Ibtmp, invIb, 3);
       Mvec[0] = Mx[j];
@@ -965,14 +963,23 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
 #endif
+#if 0
+/* se si azzerano invIa o invIb e le vel. ang. nel caso si tratti di oggetti sferici questo codice è ridondante */
+#ifdef EDHE_FLEX
+  if (is_a_sphere_NNL[i])
+    set_angmom_to_zero(i);
+  if (is_a_sphere_NNL[j])
+    set_angmom_to_zero(j);
+#endif
+#endif
 #ifdef MD_ASYM_ITENS
-#if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
-  if (!infItens_i)
+#if defined(EDHE_FLEX) 
+  if (!infItens_i && !is_a_sphere_NNL[i])
     {
       calc_angmom(i, Ia);
       upd_refsysM(i);
     }
-  if (!infItens_j)
+  if (!infItens_j && !is_a_sphere_NNL[j])
     {
       calc_angmom(j, Ib);
       upd_refsysM(j);
@@ -984,13 +991,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   upd_refsysM(j);
 #endif
 #endif
-#ifdef EDHE_FLEX
-  if (is_a_sphere_NNL[i])
-    set_angmom_to_zero(i);
-  if (is_a_sphere_NNL[j])
-    set_angmom_to_zero(j);
-#endif
-  MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
+ MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, vx[i],vy[i],vz[i], j, vx[j],vy[j],vz[j]));
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
