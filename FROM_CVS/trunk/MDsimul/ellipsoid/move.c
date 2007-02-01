@@ -7630,7 +7630,7 @@ void timeshift_calendar(void)
 }
 #endif
 #ifdef EDHE_FLEX
-extern int getnumbonds(int np, int na, interStruct ts);
+extern int getnumbonds(int np, interStruct ts);
 int first=1;
 #endif
 /* ============================ >>> move<<< =================================*/
@@ -8256,12 +8256,12 @@ void move(void)
   ts.type2 = 5;
   ts.spot1 = 4;
   ts.spot2 = 0;
-  nb = getnumbonds(0,5,ts);
+  nb = getnumbonds(0,ts);
   ts.type1 = 1;
   ts.type2 = 5;
   ts.spot1 = 5;
   ts.spot2 = 0;
-  nb += getnumbonds(1,6,ts);			
+  nb += getnumbonds(1,ts);			
   if (nb==2)
     {
       double ti = 0;
