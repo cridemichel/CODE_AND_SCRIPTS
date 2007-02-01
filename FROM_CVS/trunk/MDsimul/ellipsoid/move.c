@@ -2774,8 +2774,13 @@ void evolve_euler_angles_symtop(int i, double ti, double *phi, double *psi)
 {
   /* N.B. per la trottola simmetrica theta è costante */
   double I1, I3, invI1;
+#ifdef EDHE_FLEX
+  I1 = typesArr[typeOfPart[i]].I[0];
+  I3 = typesArr[typeOfPart[i]].I[2]; 
+#else
   I1 = (i < Oparams.parnumA) ? Oparams.I[0][0]:Oparams.I[1][0];
   I3 = (i < Oparams.parnumA) ? Oparams.I[0][2]:Oparams.I[1][2]; 
+#endif
   invI1 = 1.0/I1;
   /* see Landau - Mechanics */
   *phi = invI1 * angM[i] * ti + phi0[i];
@@ -3025,8 +3030,13 @@ void calc_Rdot(int i, double cosea[3], double sinea[3], double **Ro)
   sinphicospsi = sinphi*cospsi;
   cosphisinpsi = cosphi*sinpsi;
   cosphisinth = cosphi*sinth;
+#ifdef EDHE_FLEX
+  I1 = typesArr[typeOfPart[i]].I[0];
+  I3 = typesArr[typeOfPart[i]].I[2];
+#else
   I1 = Oparams.I[i<Oparams.parnumA?0:1][0];
   I3 = Oparams.I[i<Oparams.parnumA?0:1][2];
+#endif
   A = angM[i]/I1;
   B = angM[i]*cosea[1]*(I1 - I3)/(I1*I3);
   REt[0][0] = -B*cosphisinpsi - A*sinphicospsi - costh*( A*cosphisinpsi + B*sinphicospsi);
