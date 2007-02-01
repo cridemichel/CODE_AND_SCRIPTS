@@ -25,7 +25,11 @@ extern char msgStrA[MSG_LEN],msgStrB[MSG_LEN],msgStrC[MSG_LEN];
 								   
 extern unsigned char BAK, STA, BAKT;
 
+#ifdef EDHE_FLEX
+extern void writeAllCor(FILE* , int);
+#else
 extern void writeAllCor(FILE* );
+#endif
 extern void readAllCor(FILE* );
 
 const char sepStr[] = "@@@\n";
@@ -761,9 +765,15 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[])
 }
 
 /* ADDED 19/04/2001 */
+#ifdef EDHE_FLEX
+extern int globSaveAll;
+#endif
 /* ========================= >>> SaveCorAscii <<< ========================== */
 void saveCorAscii(void)
 {
+#ifdef EDHE_FLEX
+  int globSaveAllBak, stripStoreBak;
+#endif
   FILE *bf;
   char fn[NAME_LENGTH];
   sync();
@@ -797,14 +807,30 @@ void saveCorAscii(void)
 	    msgStrA,
 	    NULL);
     }
+#ifdef EDHE_FLEX
+  stripStoreBak = OprogStatus.stripStore;
+  OprogStatus.stripStore = 0;
+  globSaveAllBak = globSaveAll;
+  globSaveAll = 1;
+#endif
 
   if (mgl_mode==0)
     {
       writeAsciiPars(bf, opar_ascii);
       fprintf(bf, sepStr);
     }
-  writeAllCor(bf);  
-  
+#ifdef EDHE_FLEX
+  writeAllCor(bf,1);
+  OprogStatus.stripStore = stripStoreBak;
+  globSaveAll = globSaveAllBak;
+#else
+  writeAllCor(bf);
+#endif  
+#ifdef EDHE_FLEX 
+  OprogStatus.stripStore = stripStoreBak;
+  globSaveAll = globSaveAllBak;
+#endif
+
   fclose(bf);
   sync();
 }
@@ -930,7 +956,6 @@ void saveBakAscii(char *fn)
   /*
     fprintf(bf, "%d %d %.5f %.5f\n", Oparams.curStep, Oparams.parnum, 
     Vol, Oparams.T);*/
-
   if (mgl_mode == 0)
     {
       writeAsciiPars(bf, opro_ascii);
@@ -940,10 +965,12 @@ void saveBakAscii(char *fn)
     }
 
   /* Questa deve essere definita nei file dipendenti dalla simulazione */  
+#ifdef EDHE_FLEX
+  writeAllCor(bf, 1);
+#else
   writeAllCor(bf);
-  
+#endif
   fclose(bf);
- 
   sync();/* <--------------------------------------------------------  SYNC */
 }
 

@@ -234,7 +234,7 @@ void rebuildNNL(void)
   double nltime=timbig;
   UpdateSystem();
   if (OprogStatus.useNNL==2)
-    printf("Rebuilding NNL t=%.15G\n", Oparams.time);
+    printf("Rebuilding NNL t=%.15G numcoll=%lld\n", Oparams.time, numcoll);
   for (i=0; i < Oparams.parnum; i++)
     {
       nextNNLupdate(i);
