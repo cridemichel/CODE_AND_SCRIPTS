@@ -70,7 +70,7 @@ $SIMEQ -fa ./$PARFILE > screen_$SIMEQ
 I1="0 4 5 0 1 0 100000 1"
 I2="1 5 5 0 1 0 100000 1"
 #attiva l'interazione antigene-anticorpo
-cat CorFinal | awk -v i1="$I1" -v i2="$I2" 'BEGIN {nat=0} {if ($0=="@@@") nat++; if ($0=="@@@" && nat==3) {print i1; print i2; print "@@@"} else print $0}' > Corini
+cat CorFinal | awk -v i1="$I1" -v i2="$I2" 'BEGIN {nat=0} {if ($0=="@@@") nat++; if ($0=="@@@" && nat==3) {print i1; print i2; print "@@@"} else print $0}' > CorIni
 ../set_params.sh $PARFILE stepnum $STPS base 1 NN 1 storerate $STORERATE intervalSum 10.0 inifile CorIni endfile ${SIMPR}.cor
 ln -sf $ELLEXE $SIMPR
 $SIMPR -fa ./$PARFILE > screen_$SIMPR 
