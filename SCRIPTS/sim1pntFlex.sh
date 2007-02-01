@@ -46,7 +46,7 @@ RCUT="-1"
 cp ../$PARFILE .
 cp ../$INICONF .
 #elimina l'interazione antigene-anticorpo durante l'equilibratura
-cat $INICONF | awk 'BEGIN { nat=0 } {if ( !((($1==0 && $2==4)||($1==1 && 2==5)) && (nat == 2)) print $0; if ($0=="@@@") nat++}' > iniconf.dat
+cat $INICONF | awk 'BEGIN { nat=0 } {if (!((($1=="0" && $2=="4")||($1=="1" && $2=="5")) && (nat == 2))) print $0; if ($0=="@@@") nat++;}' > iniconf.dat
 if [ $EQSTPS -eq 0 ]
 then
 STPS=4000
