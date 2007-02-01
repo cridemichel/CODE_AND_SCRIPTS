@@ -45,19 +45,25 @@ RCUT="-1"
 #N.B. it's supposed that we use NNL here!!
 cp ../$PARFILE .
 cp ../$INICONF .
+#elimina l'interazione antigene-anticorpo durante l'equilibratura
+cat $INICONF | awk 'BEGIN { nat=0 } {if ( !((($1==0 && $2==4)||($1==1 && 2==5)) && (nat == 2)) print $0; if ($0=="@@@") nat++}' > iniconf.dat
 if [ $EQSTPS -eq 0 ]
 then
 STPS=4000
 else
 STPS=$EQSTPS
 fi
-../set_params.sh $PARFILE stepnum $STPS storerate 0.0 scalevel 1 rescaleTime 5.0 intervalSum 10.0 inifile $INICONF endfile ${SIMEQ}.cor
+../set_params.sh $PARFILE stepnum $STPS storerate 0.0 scalevel 1 rescaleTime 5.0 intervalSum 10.0 inifile iniconf.dat endfile ${SIMEQ}.cor
 ln -sf $ELLEXE $SIMEQ 
 $SIMEQ -fa ./$PARFILE > screen_$SIMEQ 
 #PRODUZIONE
-../set_params.sh $PARFILE stepnum $STPS base 1 NN 1 storerate $STORERATE intervalSum 10.0 inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
+I1="0 4 5 0 1 0 100000 1"
+I2="1 5 5 0 1 0 100000 1"
+#attiva l'interazione antigene-anticorpo
+cat CorFinal | awk -v i1="$I1" -v i2="$I2" 'BEGIN {nat=0} {if ($0=="@@@") nat++; if ($0=="@@@" && nat==3) {print i1; print i2; print "@@@"} else print $0}' > Corini
+../set_params.sh $PARFILE stepnum $STPS base 1 NN 1 storerate $STORERATE intervalSum 10.0 inifile CorIni endfile ${SIMPR}.cor
 ln -sf $ELLEXE $SIMPR
-$SIMPR -f ./$PARFILE > screen_$SIMPR 
+$SIMPR -fa ./$PARFILE > screen_$SIMPR 
 cd ..
 n2=$[$n2+1]
 done
