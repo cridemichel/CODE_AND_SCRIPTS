@@ -2942,7 +2942,7 @@ int locate_contact_neigh_plane_parall_sphs(int i, double *evtime, double t2)
   sigMax = 0.0;
   for (nn = 0; nn < typesArr[typei].nspots; nn++)
     {
-      if (typesArr[typei].spots[nn].sigma > sigMax || first);
+      if (typesArr[typei].spots[nn].sigma > sigMax || first)
 	{
 	  first = 0;
 	  sigMax = typesArr[typei].spots[nn].sigma;
