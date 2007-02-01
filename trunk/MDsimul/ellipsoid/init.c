@@ -2363,6 +2363,11 @@ void find_spheres_NNL(void)
 #ifdef EDHE_FLEX
 void par2saveArr(void);
 extern void saveFullStore(char* fname);
+void set_angmom_to_zero(int i)
+{
+  Mx[i]=My[i]=Mz[i]=0.0;
+  wx[i]=wy[i]=wz[i]=0.0;
+}
 #endif
 void usrInitAft(void)
 {
@@ -3014,6 +3019,11 @@ void usrInitAft(void)
 #ifdef EDHE_FLEX
   is_a_sphere_NNL = malloc(sizeof(int)*Oparams.parnum);
   find_spheres_NNL();
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (is_a_sphere_NNL[i])
+	set_angmom_to_zero(i);
+    }
   is2saveArr = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
     is2saveArr[i] = 0;
