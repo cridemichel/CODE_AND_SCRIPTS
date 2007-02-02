@@ -814,6 +814,16 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   for (a = 0; a < 3; a++)
     denom += invIb*Sqr(rBCn[a]);
 #endif
+#ifdef EDHE_FLEX
+#if 0
+  if (is_a_sphere_NNL[i])
+    for (a = 0; a < 3; a++)
+      rBCn[a] = 0.0;
+  if (is_a_sphere_NNL[j])
+    for (a = 0; a < 3; a++)
+      rACn[a] = 0.0;
+#endif
+#endif
   mredl = 1.0 / denom;
 #ifdef EDHE_FLEX
   get_inter_bheights(i, j, ata, atb, &bheight, &bhin, &bhout, &nmax);
