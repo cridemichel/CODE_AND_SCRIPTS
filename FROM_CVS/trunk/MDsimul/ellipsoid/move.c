@@ -1816,6 +1816,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       return;
     } 
 #endif
+
  MD_DEBUG(calc_energy("dentro bump1"));
   numcoll++;
   MD_DEBUG32(printf("[BUMP] numcoll:%lld\n", numcoll));
@@ -1966,7 +1967,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       wy[i] = 0.0;
       wz[i] = 0.0;
     }
-  if (!infItens_j && !is_a_sphere_NNL[i])
+  if (!infItens_j && !is_a_sphere_NNL[j])
     {
       InvMatrix(Ibtmp, invIb, 3);
       Mvec[0] = Mx[j];
@@ -1980,7 +1981,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 	}
       wx[j] = omega[0];
       wy[j] = omega[1];
-      wz[j] = omega[2];}  
+      wz[j] = omega[2];
+    }  
   else
     {
       for (k1 = 0; k1 < 3; k1++)
@@ -2120,7 +2122,11 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   for (a = 0; a < 3; a++)
     denom += invIa*Sqr(rACn[a]);
 #endif
-  vectProd(rBC[0], rBC[1], rBC[2], norm[0], norm[1], norm[2], &rBCn[0], &rBCn[1], &rBCn[2]);
+  if (!is_a_sphere_NNL[i])
+    vectProd(rBC[0], rBC[1], rBC[2], norm[0], norm[1], norm[2], &rBCn[0], &rBCn[1], &rBCn[2]);
+  else
+    for (a=0; a < 3; a++)
+      rBCn[a] = 0.0;  
 #ifdef MD_ASYM_ITENS  
   for (a=0; a < 3; a++)
     {
@@ -2135,6 +2141,21 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #else
   for (a = 0; a < 3; a++)
     denom += invIb*Sqr(rBCn[a]);
+#endif
+#ifdef EDHE_FLEX
+#if 0
+  if (is_a_sphere_NNL[i])
+    for (a = 0; a < 3; a++)
+      rBCn[a] = 0.0;
+  if (is_a_sphere_NNL[j])
+    for (a = 0; a < 3; a++)
+      rACn[a] = 0.0;
+#endif
+#endif
+#if 0
+  if (i==2 && j==259)
+    printf("rBCn[]=%.15G %.15G %.15G w=%.15G %.15G %.15G rnI=%.15G %.15G %.15G\n", rBCn[0], rBCn[1], rBCn[2],
+	   wx[j], wy[j], wz[j], rnI[0], rnI[1], rnI[2]);
 #endif
 #ifdef MD_GRAVITY
   factor =2.0*vc/denom;
@@ -2203,7 +2224,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
 #endif
-#if 0
+#if 1
 /* se si azzerano invIa o invIb e le vel. ang. nel caso si tratti di oggetti sferici questo codice è ridondante */
 #ifdef EDHE_FLEX
   if (is_a_sphere_NNL[i])
@@ -7654,6 +7675,57 @@ void timeshift_calendar(void)
 extern int getnumbonds(int np, interStruct ts);
 int first=1;
 #endif
+#ifdef EDHE_FLEX
+int termination(void)
+{
+  int nb;
+  interStruct ts;
+  ts.type1 = 0;
+  ts.type2 = 5;
+  ts.spot1 = 4;
+  ts.spot2 = 0;
+  nb = getnumbonds(0,ts);
+  ts.type1 = 1;
+  ts.type2 = 5;
+  ts.spot1 = 5;
+  ts.spot2 = 0;
+  nb += getnumbonds(1,ts);			
+  if ((nb==1 || nb==2) && first)
+    {
+      double ti = 0;
+      FILE* f;
+      first = 0;
+      ti = Oparams.time;	
+#ifdef 	MD_BIG_DT
+      ti += OprogStatus.refTime;	
+#endif
+      printf("1 BOND time = %.15G\n", ti);
+      f=fopen("onebond.dat","w");
+      fprintf(f,"%.15G\n", ti);
+      fclose(f);
+      return 0;
+    }	 
+  if (nb==2)
+    {
+      double ti = 0;
+      FILE* f;
+      if (first == 1)
+	first = 0;
+      ti = Oparams.time;	
+#ifdef 	MD_BIG_DT
+      ti += OprogStatus.refTime;	
+#endif
+      printf("2 BONDS time = %.15G ... FINISHED !\n", ti);
+      ENDSIM=1;
+      f=fopen("twobonds.dat","w");
+      fprintf(f,"%.15G\n", ti);
+      fclose(f);
+      return 1;
+    }
+  return 0; 
+}	
+#endif
+
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -7668,10 +7740,6 @@ void move(void)
 #endif
   int k, n;
   double timeold;
-#ifdef EDHE_FLEX
-  int nb;
-  interStruct ts;
-#endif
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;
@@ -7682,6 +7750,13 @@ void move(void)
   /* get next event */
   while (!ENDSIM)
     {
+#ifdef EDHE_FLEX 
+      if (termination())
+	{
+	  ENDSIM=1;
+	  break;
+	}
+#endif
       innerstep++;
       if (OprogStatus.useNNL)
 	timeold = Oparams.time;
@@ -8272,47 +8347,7 @@ void move(void)
       updatePE(Oparams.parnum);
 #endif
     }
-#ifdef EDHE_FLEX
-  ts.type1 = 0;
-  ts.type2 = 5;
-  ts.spot1 = 4;
-  ts.spot2 = 0;
-  nb = getnumbonds(0,ts);
-  ts.type1 = 1;
-  ts.type2 = 5;
-  ts.spot1 = 5;
-  ts.spot2 = 0;
-  nb += getnumbonds(1,ts);			
-  if (nb==2)
-    {
-      double ti = 0;
-      FILE* f;
-      ti = Oparams.time;	
-#ifdef 	MD_BIG_DT
-      ti += OprogStatus.refTime;	
-#endif
-      printf("2 BONDS time = %.15G ... FINISHED !\n", ti);
-      ENDSIM=1;
-      f=fopen("twobonds.dat","w");
-      fprintf(f,"%.15G\n", ti);
-      fclose(f);
-    }
-  else if (nb==1 && first)
-    {
-      double ti = 0;
-      FILE* f;
-      first = 0;
-      ti = Oparams.time;	
-#ifdef 	MD_BIG_DT
-      ti += OprogStatus.refTime;	
-#endif
-      printf("1 BOND time = %.15G\n", ti);
-      f=fopen("onebond.dat","w");
-      fprintf(f,"%.15G\n", ti);
-      fclose(f);
-    }	
-	
-#endif
+
   if ((OprogStatus.rmsd2end > 0.0 && OprogStatus.tmsd2end > 0.0 &&
        DphiSqA > Sqr(OprogStatus.rmsd2end) 
        && DrSqTotA > Sqr(OprogStatus.tmsd2end)) 
