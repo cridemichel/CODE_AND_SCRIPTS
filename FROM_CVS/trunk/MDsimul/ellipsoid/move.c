@@ -10,7 +10,7 @@
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
 #define MD_DEBUG35(x)  
-#define MD_DEBUG36(x) 
+#define MD_DEBUG36(x)  
 void update_MSDrot(int i);
 void update_MSD(int i);
 #ifdef MD_ASYM_ITENS
@@ -1817,10 +1817,10 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     } 
 #endif
 
- MD_DEBUG(calc_energy("dentro bump1"));
+  MD_DEBUG36(calc_energy("dentro bump1"));
   numcoll++;
-  MD_DEBUG32(printf("[BUMP] numcoll:%lld\n", numcoll));
-  MD_DEBUG32(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
+  MD_DEBUG36(printf("[BUMP] numcoll:%lld\n", numcoll));
+  MD_DEBUG36(printf("i=%d j=%d [bump] t=%f contact point: %f,%f,%f \n", i, j, Oparams.time, rxC, ryC, rzC));
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
@@ -1932,7 +1932,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
   //MD_DEBUG(calc_energy("dentro bump2"));
   MD_DEBUG11(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
-  MD_DEBUG(calc_energy("dentro bump3"));
+  MD_DEBUG36(calc_energy("dentro bump3"));
   /* calcola le matrici inverse del tensore d'inerzia */
 #ifdef MD_ASYM_ITENS
   for (k1 = 0; k1 < 3; k1++)
@@ -2122,11 +2122,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   for (a = 0; a < 3; a++)
     denom += invIa*Sqr(rACn[a]);
 #endif
-  if (!is_a_sphere_NNL[i])
-    vectProd(rBC[0], rBC[1], rBC[2], norm[0], norm[1], norm[2], &rBCn[0], &rBCn[1], &rBCn[2]);
-  else
-    for (a=0; a < 3; a++)
-      rBCn[a] = 0.0;  
+  vectProd(rBC[0], rBC[1], rBC[2], norm[0], norm[1], norm[2], &rBCn[0], &rBCn[1], &rBCn[2]);
 #ifdef MD_ASYM_ITENS  
   for (a=0; a < 3; a++)
     {
@@ -2224,7 +2220,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
 #endif
-#if 1
+#if 0
 /* se si azzerano invIa o invIb e le vel. ang. nel caso si tratti di oggetti sferici questo codice è ridondante */
 #ifdef EDHE_FLEX
   if (is_a_sphere_NNL[i])
@@ -6213,9 +6209,11 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
     {
       update_MSDrot(i);
       vz[i] = -vz[i];
+#if 0
 #ifdef MD_ASYM_ITENS
       calc_angmom(i, Ia);
       upd_refsysM(i);
+#endif
 #endif
       return;
     }

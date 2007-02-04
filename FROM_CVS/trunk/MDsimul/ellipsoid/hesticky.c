@@ -12,6 +12,7 @@
 #define MD_DEBUG32(x)    
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
+#define MD_DEBUG36(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
@@ -515,14 +516,14 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
 #endif
    //printf("collision code: %d (%d,%d)\n", bt, i, j);
-  MD_DEBUG31(calc_energy("PRIMA"));
-  MD_DEBUG33(printf("[BUMPSP] t=%.15G i=%d ata=%d j=%d atb=%d\n", Oparams.time, i, ata, j, atb));
+  MD_DEBUG36(calc_energy("PRIMA"));
+  MD_DEBUG36(printf("[BUMPSP] t=%.15G i=%d ata=%d j=%d atb=%d\n", Oparams.time, i, ata, j, atb));
   if (bt == MD_CORE_BARRIER)
     {
       bump(i, j, rxC, ryC, rzC, W);
-      MD_DEBUG31(calc_energy("DOPO HARD COLL"));
-      MD_DEBUG33(printf(">>>>>>>>>>collCode: %d\n", bt));
-      MD_DEBUG33(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
+      MD_DEBUG36(calc_energy("DOPO HARD COLL"));
+      MD_DEBUG36(printf(">>>>>>>>>>collCode: %d\n", bt));
+      MD_DEBUG36(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
       return;
     }
 #if 1
@@ -846,14 +847,14 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     case MD_INOUT_BARRIER:
       if (Sqr(vc) < 2.0*(bheight+bhout)/mredl)
 	{
-	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
+	  MD_DEBUG36(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
 			    Oparams.time, vc,  bt,
 		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 	  factor = -2.0*vc;
 	}
       else
 	{
-	  MD_DEBUG31(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
+	  MD_DEBUG36(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
 		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 	  factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
 	  remove_bond(i, j, ata, atb);
@@ -879,7 +880,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	  add_bond(j, i, atb, ata);
 	  factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
 	}
-	MD_DEBUG31(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
+	MD_DEBUG36(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
 		      i, ata, j, atb, Sqr(vc) + 2.0*bheight/mredl, bheight, mredl));
 #if 0
 	{ double dist;
@@ -1006,7 +1007,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
 
-  MD_DEBUG31(calc_energy("DOPO"));
+  MD_DEBUG36(calc_energy("DOPO"));
 }
 void check_bonds(char* msg, int i, int j, int ata, int atb, int yesexit)
 {

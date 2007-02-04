@@ -3295,6 +3295,7 @@ void par2saveArr(void)
   char s1[32], s2[32];
   if (!strcmp(OprogStatus.par2save,"all")||!strcmp(OprogStatus.par2save,"ALL"))
     return;
+
   ns = strtok(OprogStatus.par2save, ",");
   while(ns || first)
     {
@@ -3303,6 +3304,7 @@ void par2saveArr(void)
 	ns = OprogStatus.par2save;
       if (sscanf(ns, "%[^-]-%s", s1, s2)==2)
 	{
+	  //printf("s1=%s s2=%s\n",s1,s2);
 	  for (i=atoi(s1); i <= atoi(s2); i++)
 	    {
 	      is2saveArr[i] = 1;
@@ -3312,6 +3314,10 @@ void par2saveArr(void)
 	is2saveArr[atoi(ns)]=1;
       ns = strtok(NULL, ",");
     }
+  //for (i=0; i < Oparams.parnum; i++)
+    //{
+      //printf("is_to_save[%d]=%d\n", i, is2saveArr[i]);
+    //}
 }
 int is_to_save(int i)
 {
