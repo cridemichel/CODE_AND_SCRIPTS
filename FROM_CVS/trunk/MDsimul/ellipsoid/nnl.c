@@ -1369,6 +1369,13 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
+#ifdef EDHE_FLEX
+  if (globalHW)
+    {
+      rB[0] = rA[0];
+      rB[1] = rB[1];
+    }
+#endif
   MD_DEBUG20(printf("AAAA ti= %.15G rA (%.15G,%.15G,%.15G)\n", ti, rA[0], rA[1], rA[2]));
   MD_DEBUG20(printf("AAAA t1=%.15G atomTime[%d]=%.15G\n",t1,i,atomTime[i]));
   /* ...and now orientations */
