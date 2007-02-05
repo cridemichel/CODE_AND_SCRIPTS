@@ -1373,7 +1373,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   if (globalHW)
     {
       rB[0] = rA[0];
-      rB[1] = rB[1];
+      rB[1] = rA[1];
     }
 #endif
   MD_DEBUG20(printf("AAAA ti= %.15G rA (%.15G,%.15G,%.15G)\n", ti, rA[0], rA[1], rA[2]));
