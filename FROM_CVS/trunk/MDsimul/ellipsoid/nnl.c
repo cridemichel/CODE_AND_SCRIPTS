@@ -2634,6 +2634,7 @@ int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], doub
 int bracket_neigh(int i, double *t1, double *t2, int nplane)
 {
   double dd, veln, vel[3], r1[3], dr[3], fabsveln;
+  double t2bn;
   int kk;
   vel[0] = vx[i];
   vel[1] = vy[i];
@@ -2655,7 +2656,9 @@ int bracket_neigh(int i, double *t1, double *t2, int nplane)
     *t1 = (dd - maxax[i]) / fabsveln;
   else
     *t1 = 0.0;
-  *t2 = (dd + maxax[i]) / fabsveln;
+  t2bn = (dd + maxax[i]) / fabsveln;
+  if (t2bn+Oparams.time < *t2)
+    *t2 = t2bn;
   if (*t2 < *t1)
     {
       printf("problema nel bracketing per i=%d, t1=%.15G t2=%.15G\n", i, *t1, *t2);
@@ -3373,6 +3376,8 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       return 0;
     }
   t1 += Oparams.time;	
+  if (t1 > tsup)
+    return 0;
   if (tsup < Oparams.time+t2)
     t2 = tsup;
   else
