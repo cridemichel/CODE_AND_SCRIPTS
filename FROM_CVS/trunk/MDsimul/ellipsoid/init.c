@@ -3048,7 +3048,7 @@ void usrInitAft(void)
 	    {
 #ifdef EDHE_FLEX
 	      Oparams.rcut = calc_nnl_rcut();
-#elif defiend(MD_POLYDISP)
+#elif defined(MD_POLYDISP)
 	      if (OprogStatus.polydisp > 0.0)
 		Oparams.rcut = calc_nnl_rcut();//*(1.0+OprogStatus.polydisp*OprogStatus.polycutoff);
 	      else
