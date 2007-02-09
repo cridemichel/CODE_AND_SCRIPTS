@@ -7284,6 +7284,7 @@ void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
   FILE *bf;
+  int na;
 #ifdef EDHE_FLEX
   int kk;
   double axi[3], axj[3];

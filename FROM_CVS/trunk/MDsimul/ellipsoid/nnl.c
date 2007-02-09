@@ -4913,7 +4913,9 @@ void nextNNLupdate(int na)
 #endif
   DelDist += distBuf;
   MD_DEBUG31(printf("DelDist=%.15G\n", DelDist));
+#ifdef EDHE_FLEX
   typena = typeOfPart[na]; 
+#endif
 #ifndef EDHE_FLEX
   nebrTab[na].r[0] = rx[na];
   nebrTab[na].r[1] = ry[na];
