@@ -529,6 +529,7 @@ void outputSummary(void)
   fclose(f);
 #endif
   printf("Number of collisions: %lld\n", OprogStatus.collCount);
+#if 0
   if (OprogStatus.numquench==0)
     {
       calcRho();
@@ -540,6 +541,7 @@ void outputSummary(void)
       fprintf(f, "%.15f %.15f\n", OprogStatus.time, rcmz);
       fclose(f);
     }
+#endif
 }
 void scalevels(double temp, double K, double Vz)
 {

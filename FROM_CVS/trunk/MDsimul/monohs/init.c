@@ -415,6 +415,8 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE m, int resetCM)
         ----------- * exp( - --- )         
 	 sqrt(2*PI)           2     */
     }
+  if (OprogStatus.brownian)
+    return;
   /* Remove net momentum, to have a total momentum equals to zero */
   sumx = 0.0;
   sumy = 0.0;
