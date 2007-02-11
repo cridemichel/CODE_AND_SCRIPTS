@@ -228,6 +228,7 @@ int main(int argc, char **argv)
 		   }
 		  velACV[np] += veltmp;
 		  omACV[np] += omtmp;
+		  cc[np]+=1.0;
 		}
 	    }
 	}
