@@ -555,8 +555,8 @@ void temperat(void)
     }
   else
     {
-      tempRot = 2.0 * Ktra / dofRot;
-      tempTra = 2.0 * Krot / (dofTra-3.0);
+      tempRot = 2.0 * Krot / dofRot;
+      tempTra = 2.0 * Ktra / (dofTra-3.0);
     }
 #endif
   mf = fopenMPI(absMisHD("temp.dat"),"a");
