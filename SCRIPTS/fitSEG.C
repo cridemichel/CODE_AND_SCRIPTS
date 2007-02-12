@@ -188,7 +188,11 @@ void fitSEG(char *fileName=NULL, Float_t omegaq= - 1.0, Int_t type=0, Float_t be
   fitFcn->SetParLimits(2,minXF, maxXF);
   fitFcn->SetParameters(1.0,1.0,1.0,1.0,1.0);
   if (type==0||type==2)
-    fitFcn->FixParameter(2,1.0); 
+    {
+      fitFcn->FixParameter(2,1.0); 
+      fitFcn->FixParameter(3,1.0);
+      fitFcn->FixParameter(4,0.0);
+    }
   else if (type==3)
     {
       fitFcn->FixParameter(2,1.0);
@@ -239,8 +243,9 @@ void fitSEG(char *fileName=NULL, Float_t omegaq= - 1.0, Int_t type=0, Float_t be
   if (type==3)
     {
       fitFcn->GetParameters(par);
-      fitFcn->SetParameters(par[0],par[1],par[2],1.0,0.0);
+      fitFcn->SetParameters(par[0],par[1],par[2],1.0,omegaq);
       fitFcn->SetParLimits(3,0.0,1.0);
+      //fitFcn->FixParameter(2,1.0);
       if (omegaq >= 0.0)
 	fitFcn->FixParameter(4,omegaq);
       else

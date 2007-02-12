@@ -121,7 +121,6 @@ void build_ref_axes(double u1[3], double u2[3], double u3[3])
   n = calc_norm(u1);
   for (a = 0; a < 3; a++)
     u1[a] /= n;
-  for (a=0; a < 3; a++)
     
   u2[0] = 2.0*r3[0]-(r1[0] + r2[0]);
   u2[1] = 2.0*r3[1]-(r1[1] + r2[1]);
@@ -130,7 +129,8 @@ void build_ref_axes(double u1[3], double u2[3], double u3[3])
   n = calc_norm(u2);
   for (a = 0; a < 3; a++)
     u2[a] /= n;
-    
+   
+  //fprintf(stderr,"u1.u2=%.15G\n", u1[0]*u2[0]+u1[1]*u2[1]+u1[2]*u2[2]);
   vectProd(u1[0], u1[1], u1[2], u2[0], u2[1], u2[2], &u3[0], &u3[1], &u3[2]);  
 
 }
