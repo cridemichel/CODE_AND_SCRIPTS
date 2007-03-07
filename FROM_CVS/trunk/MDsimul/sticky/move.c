@@ -5479,10 +5479,11 @@ void save_fra(void)
       mdPrintf(STD, "Error saving store file!\n", NULL);
       exit(-1);
     }
-  fprintf(f, "0 0 %d %d 0\n", Oparams.parnum, Oparams.parnumA);
-  fprintf(f, "%.15G %.15G %.15G 0 0 0\n", L, L, L);
+  fprintf(f, "%d 0 %d %d 0\n", Oparams.curStep, Oparams.parnum, Oparams.parnumA);
+  fprintf(f, "%.15G %.15G %.15G 0 0 %.15G\n", L, L, L, Oparams.Dt);
   for (i = 0; i < Oparams.parnumA; i++)
     {
+      //printf("i=%d\n",i);
       rcm[0] = rx[i];
       rcm[1] = ry[i];
       rcm[2] = rz[i];
@@ -5502,11 +5503,11 @@ void save_fra(void)
       fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
     }
 #ifdef MD_MAC
-  sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+  //sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
 #else
-  sprintf(fileop3, "/bin/gzip -f %s", fileop);
+  //sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
-  system(fileop3);
+  //system(fileop3);
   fclose(f);
 }
 #endif
@@ -5571,6 +5572,7 @@ void move(void)
 	}
       else if (evIdB == ATOM_LIMIT + 8)
 	{
+#ifndef MD_SAVEFRA
 	  sprintf(fileop2 ,"Store-%d-%d", 
 		  OprogStatus.KK, OprogStatus.JJ);
 	  /* store conf */
@@ -5580,11 +5582,12 @@ void move(void)
 	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
 	      exit(-1);
 	    }
+#endif
 	  UpdateSystem();
 	  R2u();
 #ifdef MD_SAVEFRA
 	  save_fra();
-#endif
+#else
 #ifndef MD_STOREMGL
 	  writeAsciiPars(bf, opro_ascii);
 	  fprintf(bf, sepStr);
@@ -5612,6 +5615,7 @@ void move(void)
 #endif
 #endif
 	  system(fileop3);
+#endif
 #endif
 	  OprogStatus.JJ++;
 	  if (OprogStatus.JJ == OprogStatus.NN)
