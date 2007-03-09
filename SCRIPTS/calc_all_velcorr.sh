@@ -7,6 +7,7 @@ do
 cd $f 
 if [ ! -d Phi$1 ]
 then
+cd ..
 continue
 fi
 cd Phi$1
