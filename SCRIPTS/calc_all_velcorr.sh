@@ -12,7 +12,7 @@ continue
 fi
 cd Phi$1
 echo "Doing " $f
-touch IN_PROGRESS
+EXE_PATH="$HOME/ELLIPSOIDS"
 PR=$EXE_PATH/AUTOCORR_VEL/calcACV
 L=`ls Store-*-*gz 2> /dev/null`
 #echo "L=" $L
