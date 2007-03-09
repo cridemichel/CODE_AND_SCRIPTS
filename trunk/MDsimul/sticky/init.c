@@ -1225,6 +1225,15 @@ accumulators initialization is crucial */
   for (i = 0; i < 2; i++)
     Oparams.I[i] = 1.0;
 #endif
+#ifdef MD_ROTDIFF_MIS
+  for (i = 0; i < MAXPAR; i++)
+    {
+      OprogStatus.lastcolltime[i] = 0.0;
+      OprogStatus.sumox[i] = 0.0;
+      OprogStatus.sumoy[i] = 0.0;
+      OprogStatus.sumoz[i] = 0.0;
+    }
+#endif
   OprogStatus.eventMult = 100;
   OprogStatus.overlaptol = 0.0001;
   /* Il promo step inizia con un tapping a temperatura T */

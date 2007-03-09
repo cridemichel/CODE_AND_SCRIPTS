@@ -386,7 +386,77 @@ void temperat(void)
   mdMsg(STD,NOSYS, NULL, "NOTICE", NULL,  TXT, NULL);
 #endif
 }
-
+#ifdef MD_ROTDIFF_MIS
+void calcrotMSD(void)
+{
+  FILE *fA, *fB;
+  int i, a;
+  double DphiA[3], DphiB[3];
+  DphiSqA = DphiSqB = 0.0;
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      DphiSqA += Sqr(OprogStatus.sumox[i])+Sqr(OprogStatus.sumoy[i])+
+	Sqr(OprogStatus.sumoz[i]);
+    }
+  DphiSqA /= ((double)Oparams.parnumA);
+  if (Oparams.parnumA < Oparams.parnum)
+    {
+      for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+	{
+	  DphiSqB += Sqr(OprogStatus.sumox[i])+Sqr(OprogStatus.sumoy[i])+
+	    Sqr(OprogStatus.sumoz[i]);
+	}
+      DphiSqB /= ((double)Oparams.parnum - Oparams.parnumA);
+    }
+  for (a = 0; a < 3; a++)
+    DphiA[a] = 0.0;
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      DphiA[0] += Sqr(OprogStatus.sumox[i]);
+      DphiA[1] += Sqr(OprogStatus.sumoy[i]);
+      DphiA[2] += Sqr(OprogStatus.sumoz[i]);
+    } 
+  for (a = 0; a < 3; a++)
+    DphiA[a] /= ((double) Oparams.parnumA);
+  if (Oparams.parnumA < Oparams.parnum)
+    {
+      for (a = 0; a < 3; a++)
+	DphiB[a] = 0.0;
+      for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+	{
+       	  DphiB[0] += Sqr(OprogStatus.sumox[i]);
+	  DphiB[1] += Sqr(OprogStatus.sumoy[i]);
+	  DphiB[2] += Sqr(OprogStatus.sumoz[i]);
+	} 
+      for (a = 0; a < 3; a++)
+	DphiB[a] /= ((double) Oparams.parnum-Oparams.parnumA);
+    }
+  DphiSq = DphiSqA;
+  fA = fopenMPI(absMisHD("rotMSDA.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(fA,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, DphiSqA, 
+	  DphiA[0], DphiA[1], DphiA[2]); 
+#else
+  fprintf(fA,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, DphiSqA, 
+	  DphiA[0], DphiA[1], DphiA[2]); 
+#endif
+  fclose(fA);
+  if (Oparams.parnum > Oparams.parnumA)
+    {
+      fB = fopenMPI(absMisHD("rotMSDB.dat"),"a");
+      
+#ifdef MD_BIG_DT
+      fprintf(fB,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, DphiSqB,
+	      DphiB[0], DphiB[1], DphiB[2]); 
+#else
+      fprintf(fB,"%.15G %.15G %.15G %.15G %.15G\n", Oparams.time, DphiSqB,
+	      DphiB[0], DphiB[1], DphiB[2]); 
+#endif
+      fclose(fB);
+    }
+  
+}
+#endif
 /* ======================== >>> structFacts <<< =============================*/
 void structFacts_OLD(void)
 {
