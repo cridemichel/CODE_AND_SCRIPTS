@@ -11,6 +11,12 @@ cd ..
 continue
 fi
 cd Phi$1
+if [ \( -e omACV.dat \) -a \( -e velACV.dat \) ]
+then 
+cd ..
+cd ..
+continue
+fi
 echo "Doing " $f
 EXE_PATH="$HOME/ELLIPSOIDS"
 PR=$EXE_PATH/AUTOCORR_VEL/calcACV
@@ -39,6 +45,7 @@ fi
 ls Store-*-* | sort -t - -k 2 -k 3 -n > lista
 $PR lista $NPTS
 rm lista
+gzip -f Store*
 cd ..
 cd ..
 done
