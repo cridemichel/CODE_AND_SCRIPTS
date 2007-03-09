@@ -200,6 +200,9 @@ struct LastBumpS
   int at;
   int type;
 };
+#ifdef MD_ROTDIFF_MIS
+void calcrotMSD(void);
+#endif
 #define ATOM_LIMIT 10000000
 /* ======================== >>> struct progStatus <<< =======================*/
 struct progStatus
@@ -296,6 +299,12 @@ struct progStatus
   COORD_TYPE PxyArr[5];
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
+#ifdef MD_ROTDIFF_MIS
+  double sumox[MAXPAR];
+  double sumoy[MAXPAR];
+  double sumoz[MAXPAR];
+  double lastcolltime[MAXPAR];
+#endif
   /* Accumulator for the radial distribution function */
   int hist[MAXBIN];
   int equilibrated;
@@ -533,6 +542,11 @@ struct pascii opro_ascii[] =
   {"PxyArr",       OS(PxyArr),                      5,              1, "%.10G"},
   {"PyzArr",       OS(PyzArr),                      5,              1, "%.10G"},
   {"PzxArr",       OS(PzxArr),                      5,              1, "%.10G"},
+#ifdef MD_ROTDIFF_MIS
+  {"sumox",        OS(sumox),                       -MAXPAR,        1, "%.15G"},
+  {"sumoy",        OS(sumoy),                       -MAXPAR,        1, "%.15G"},
+  {"sumoz",        OS(sumoz),                       -MAXPAR,        1, "%.15G"},
+#endif
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
 #if 1
@@ -762,6 +776,11 @@ struct singlePar OsinglePar[] = {
   {"VSteps",  &OprogStatus.measSteps[9],   LLINT},
   {"VCalc",   &OprogStatus.measCalc[9],    LLINT},   
   {"VName",   &OprogStatus.dataFiles[9],   STR},
+#ifdef MD_ROTDIFF_MIS
+  {"rotMSDSteps",  &OprogStatus.measSteps[10],   LLINT},
+  {"rotMSDCalc",   &OprogStatus.measCalc[10],    LLINT},   
+  {"rotMSDName",   &OprogStatus.dataFiles[10],   STR},
+#endif
   {"CMreset",    &OprogStatus.CMreset,        INT},
   {"rNebrShell", &OprogStatus.rNebrShell,     CT},
   {"overlaptol", &OprogStatus.overlaptol,     CT},
@@ -918,14 +937,14 @@ extern struct singlePar OsinglePar[];
 #ifdef MAIN
 COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,
   press_m, press_at, rcmz, rho, ItensD[2][3], pressST, pressHS, pressKin;
-COORD_TYPE Ptens[3], DQtens[3], 
+COORD_TYPE Ptens[3], DQtens[3], DphiSq, DphiSqA, DphiSqB; 
   sqrtdr2, Aa, V, DrSqTot, temp_transl;
 int MB[NUMV];
 #else 
 extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs,
   press, press_m, press_at, temp_transl, rcmz, rho, pressST, pressHS, pressKin;
 extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot,
-  DphiSq, ItensD[2][3];
+  DphiSq, ItensD[2][3], DphiSqA, DphiSqB;
 extern int MB[NUMV];
 #endif
 
@@ -969,7 +988,10 @@ struct measure Omeasure[NUM_MISURE]=
   {&press,  sizeof(COORD_TYPE),       calcpress   },
   {Ptens,   sizeof(COORD_TYPE)*3,     Ptensor     },
   {DQtens,  sizeof(COORD_TYPE)*3,     DQtensor    },
-  {&V,       sizeof(double),          calcV       },
+  {&V,      sizeof(double),          calcV       },
+#ifdef MD_ROTDIFF_MIS
+  {&DphiSq, sizeof(double),           calcrotMSD    },
+#endif
   /* ======================================================================= */
   {NULL, 0, NULL}                   /* End of list don't touch this */
 };
