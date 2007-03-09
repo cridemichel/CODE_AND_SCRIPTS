@@ -193,7 +193,18 @@ void newt(double x[], int n, int *check,
 void rebuildCalendar(void);
 void R2u(void);
 void store_bump(int i, int j);
-
+#ifdef MD_ROTDIFF_MIS
+void update_MSDrot(int i)
+{
+  double ti;
+  ti = Oparams.time - OprogStatus.lastcolltime[i];
+  /* sumox, sumoy e sumoz sono gli integrali nel tempo delle componenti della velocità
+   * angolare lungo gli assi dell'ellissoide */
+  OprogStatus.sumox[i] += (wx[i]*R[i][0][0]+wy[i]*R[i][0][1]+wz[i]*R[i][0][2])*ti;
+  OprogStatus.sumoy[i] += (wx[i]*R[i][1][0]+wy[i]*R[i][1][1]+wz[i]*R[i][1][2])*ti;
+  OprogStatus.sumoz[i] += (wx[i]*R[i][2][0]+wy[i]*R[i][2][1]+wz[i]*R[i][2][2])*ti;
+}
+#endif
 /* ========================== >>> scalCor <<< ============================= */
 void scalCor(int Nm)
 { 
@@ -1569,6 +1580,10 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 #endif
 
   MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
+#ifdef MD_ROTDIFF_MIS
+  update_MSDrot(i);
+  update_MSDrot(j);
+#endif
 #ifdef MD_ASYM_ITENS
   for (a=0; a < 3; a++)
     {
@@ -4977,8 +4992,13 @@ void ProcessCollision(void)
   MD_DEBUG(store_bump(evIdA, evIdB));
   //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
+#ifdef MD_ROTDIFF_MIS
+  OprogStatus.lastcolltime[evIdA] =  lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+  OprogStatus.lastcolltime[evIdB] = lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+#else
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
+#endif
   lastbump[evIdA].mol = evIdB;
   lastbump[evIdB].mol = evIdA;
   lastbump[evIdA].at = evIdC;
@@ -5441,6 +5461,9 @@ void timeshift_variables(void)
     {
       atomTime[i] -= OprogStatus.bigDt;
       lastcol[i] -= OprogStatus.bigDt;
+#ifdef MD_ROTDIFF_MIS
+      OprogStatus.lastcolltime[i] -= OprogStatus.bigDt;
+#endif
 #ifdef MD_HSVISCO
       OprogStatus.lastcoll -= OprogStatus.bigDt;
 #endif
@@ -5523,6 +5546,7 @@ void move(void)
   const char sepStr[] = "@@@\n";
 #endif
   int innerstep=0;
+  int i;
   /* Zero all components of pressure tensor */
 #if 0
   Wxy = 0.0;
@@ -5584,6 +5608,13 @@ void move(void)
 	    }
 #endif
 	  UpdateSystem();
+#ifdef MD_ROTDIFF_MIS
+	  for (i=0; i < Oparams.parnum; i++)
+	    {
+	      update_MSDrot(i);
+	      OprogStatus.lastcolltime[i] = Oparams.time;
+	    }
+#endif
 	  R2u();
 #ifdef MD_SAVEFRA
 	  save_fra();
@@ -5633,6 +5664,13 @@ void move(void)
       else if (evIdB == ATOM_LIMIT + 10)
 	{
 	  UpdateSystem();
+#ifdef MD_ROTDIFF_MIS
+	  for (i=0; i < Oparams.parnum; i++)
+	    {
+	      update_MSDrot(i);
+	      OprogStatus.lastcolltime[i] = Oparams.time;
+	    }
+#endif
 	  R2u();
 #if 0
 	    {
