@@ -2285,6 +2285,15 @@ void usrInitAft(void)
 	  f = fopenMPI(absMisHD("msdB.dat"), "w+");
 	  fclose(f);
 	}
+#ifdef MD_ROTDIFF_MIS
+      f = fopenMPI(absMisHD("rotMSDA.dat"), "w+");
+      fclose(f);
+      if (Oparams.parnum > Oparams.parnumA)
+	{
+	  f = fopenMPI(absMisHD("rotMSDB.dat"), "w+");
+	  fclose(f);
+	}
+#endif
       f = fopenMPI(absMisHD("temp.dat"), "w+");
       fclose(f);
 #ifdef MD_HSVISCO
