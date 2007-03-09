@@ -266,13 +266,15 @@ void transDiff(void)
   double Drx, Dry, Drz, Dr4;
   int i;
   DrSqTot = 0.0;
+#if 0
   Dr4 = 0.0;
-
+#endif
   for(i=0; i < Oparams.parnumA; i++)
     {
       Drx = rx[i] - OprogStatus.rxCMi[i] + L*OprogStatus.DR[i][0]; 
       Dry = ry[i] - OprogStatus.ryCMi[i] + L*OprogStatus.DR[i][1];
       Drz = rz[i] - OprogStatus.rzCMi[i] + L*OprogStatus.DR[i][2];
+#if 0
       if (OprogStatus.ipart == i)
 	{
 	  //sprintf(TXT,"i = %d\n", i);
@@ -280,8 +282,11 @@ void transDiff(void)
 	  /* Motion of the OprogStatus.ipart particle */
 	  sqrtdr2 = sqrt(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
 	}
+#endif
       DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
+#if 0
       Dr4 += Sqr(Sqr(Drx) + Sqr(Dry) + Sqr(Drz));
+#endif
    }
   /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
      because DrSq is zero! */
@@ -293,9 +298,10 @@ void transDiff(void)
 		       ((double) Oparams.parnumA ) );   
 #endif
   //printf("Dtr: %f\n", Dtrans);
+#if 0
   Aa = ((double) Oparams.parnumA ) * 3.0 * 
     Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
-  
+#endif
   DrSqTot /= ((double) Oparams.parnumA);
 #if 1
   mf = fopenMPI(absMisHD("msdA.dat"),"a");
