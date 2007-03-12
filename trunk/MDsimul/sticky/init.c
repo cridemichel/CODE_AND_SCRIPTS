@@ -2150,6 +2150,15 @@ void usrInitAft(void)
       ItensD[a][2] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.b[a]));
 #endif
     };
+  if (OprogStatus.scalevel)
+    {
+      printf("CONSTANT TEMPERATURE T=%.15G MOLS=%d MOLA=%d\n", Oparams.T, Oparams.parnum, Oparams.parnum-Oparams.parnumA);
+    }
+  else
+    {
+      printf("CONSTANT ENERGY SIMULATION MOLS=%d MOLA=%d\n", Oparams.parnum, Oparams.parnum-Oparams.parnumA);
+    }
+
 #ifdef MD_SILICA
   /* write code for silica here!! */
   /* maxax è il diametro del centroide, notare che nel caso della
