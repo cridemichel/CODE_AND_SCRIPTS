@@ -5493,7 +5493,7 @@ void save_fra(void)
   double rcm[3];	
   int i;
   FILE* f;
-  sprintf(fileop2 ,"StoreF-%d-%d", 
+  sprintf(fileop2 ,"Cnf-%d-%d", 
 	  OprogStatus.KK, OprogStatus.JJ);
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
@@ -5502,7 +5502,7 @@ void save_fra(void)
       mdPrintf(STD, "Error saving store file!\n", NULL);
       exit(-1);
     }
-  fprintf(f, "%d 0 %d %d 0\n", Oparams.curStep, Oparams.parnum, Oparams.parnumA);
+  fprintf(f, "%d 0 %d %d 0\n", Oparams.curStep, Oparams.parnum, Oparams.parnum-Oparams.parnumA);
   fprintf(f, "%.15G %.15G %.15G 0 0 %.15G\n", L, L, L, Oparams.Dt);
   for (i = 0; i < Oparams.parnumA; i++)
     {
