@@ -5525,12 +5525,14 @@ void save_fra(void)
       fprintf(f, "0.0 0.0 0.0\n");
       fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
     }
+#ifdef MD_SAVEFRA_COMPRESSED
 #ifdef MD_MAC
-  //sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+  sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
 #else
-  //sprintf(fileop3, "/bin/gzip -f %s", fileop);
+  sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
-  //system(fileop3);
+  system(fileop3);
+#endif
   fclose(f);
 }
 #endif
