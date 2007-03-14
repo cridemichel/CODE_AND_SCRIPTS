@@ -10,7 +10,7 @@ double **DR, **DR0;
 double *r0[3], *w0[3], *rt[3], *wt[3], *rtold[3];
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int points=-1, foundDRs=0, foundrot=0, eventDriven=0, skip=1, clusters=0;
+int points=-1, foundDRs=0, foundrot=0, eventDriven=0, skip=1;
 int *isPercPart;
 char *pnum;
 char inputfile[2048], cluststr[2048];
@@ -118,7 +118,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 }
 void print_usage(void)
 {
-  printf("Usage: calcmsd [ --skip/-s | --clusters/-c ] <listafile> [number of points]\n");
+  printf("Usage: calcmsd [ --skip/-s ] <listafile> [number of points]\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -140,10 +140,6 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  skip = atoi(argv[cc]);
-	}
-      else if (!strcmp(argv[cc],"--clusters") || !strcmp(argv[cc],"-c"))
-	{
-	  clusters=1;
 	}
       else if (cc == argc || extraparam == 2)
 	print_usage();
