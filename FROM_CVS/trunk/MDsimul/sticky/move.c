@@ -4823,7 +4823,7 @@ void calc_energy(char *msg)
   Ib = matrix(3,3);
 #endif
 
-  K = 0;
+  K = Ktra = Krot = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
       if (i < Oparams.parnumA)
@@ -4832,7 +4832,7 @@ void calc_energy(char *msg)
 #ifdef MD_ASYM_ITENS
 	  RDiagtR(i, Ia, ItensD[0][0], ItensD[0][1], ItensD[0][2], R[i]);
 #endif
-	  K += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  Ktra += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 	  wt[0] = wx[i];
 	  wt[1] = wy[i];
 	  wt[2] = wz[i];
@@ -4844,7 +4844,7 @@ void calc_energy(char *msg)
 	      }
 #else
 	  for (k1=0; k1 < 3; k1++)
-	    K += Sqr(wt[k1])*Oparams.I[0];
+	    Krot += Sqr(wt[k1])*Oparams.I[0];
 #endif
 	}
       else
@@ -4852,7 +4852,7 @@ void calc_energy(char *msg)
 #ifdef MD_ASYM_ITENS
 	  RDiagtR(i, Ib, ItensD[1][0], ItensD[1][1], ItensD[1][2], R[i]);
 #endif
-	  K += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  Ktra += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 	  wt[0] = wx[i];
 	  wt[1] = wy[i];
 	  wt[2] = wz[i];
@@ -4864,11 +4864,13 @@ void calc_energy(char *msg)
 	      }
 #else
 	  for (k1=0; k1 < 3; k1++)
-	    K += Sqr(wt[k1])*Oparams.I[1];
+	    Krot += Sqr(wt[k1])*Oparams.I[1];
 #endif
 	}
     }
-  K *= 0.5;
+  Ktra *= 0.5;
+  Krot *= 0.5;
+  K = Ktra + Krot;
 #ifdef MD_ASYM_ITENS
   free_matrix(Ia,3);
   free_matrix(Ib,3);
@@ -5782,6 +5784,10 @@ void move(void)
 	      calcT();
 #endif
 	      rebuildCalendar();
+#ifdef MD_BIG_DT
+	      if (OprogStatus.bigDt > 0.0)
+		ScheduleEvent(-1,ATOM_LIMIT + 11, OprogStatus.bigDt);
+#endif
 	      if (OprogStatus.intervalSum > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)

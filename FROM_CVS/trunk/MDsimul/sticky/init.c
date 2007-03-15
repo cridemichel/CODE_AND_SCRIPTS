@@ -785,7 +785,6 @@ void angvel(void)
   Mtot = Oparams.m[0]; /* total mass of molecule */
 
   inert = Oparams.I[0]; /* momentum of inertia */
-
   mean = 3.0*Oparams.T / inert;
 
   for (i = 0; i < Oparams.parnumA; i++)
