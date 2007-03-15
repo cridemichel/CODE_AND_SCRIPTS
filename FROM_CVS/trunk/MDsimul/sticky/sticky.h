@@ -937,13 +937,12 @@ extern struct singlePar OsinglePar[];
 #ifdef MAIN
 COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,
   press_m, press_at, rcmz, rho, ItensD[2][3], pressST, pressHS, pressKin;
-COORD_TYPE Ptens[3], DQtens[3], DphiSq, DphiSqA, DphiSqB,
-	   sqrtdr2, Aa, V, DrSqTot, temp_transl;
+COORD_TYPE Ptens[3], DQtens[3], DphiSq, DphiSqA, DphiSqB, Ktra, Krot, sqrtdr2, Aa, V, DrSqTot, temp_transl;
 int MB[NUMV];
 #else 
 extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs,
   press, press_m, press_at, temp_transl, rcmz, rho, pressST, pressHS, pressKin;
-extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot,
+extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot, Krot, Ktra,
   DphiSq, ItensD[2][3], DphiSqA, DphiSqB;
 extern int MB[NUMV];
 #endif

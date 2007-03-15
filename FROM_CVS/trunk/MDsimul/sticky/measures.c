@@ -343,6 +343,7 @@ void transDiff(void)
 /* ============================ >>> temperat <<< =========================== */
 void temperat(void)
 {
+  double tempRot, tempTra;
   /* DESCRIPTION:
      This the calculation of the instantaneous temperature */
 #if 0
@@ -365,7 +366,8 @@ void temperat(void)
 #endif
   calc_energy(NULL);
   temp = 2.0 * K / (6.0 * Oparams.parnum - 3.0);
-
+  tempTra =  2.0 * Ktra / (3.0 * Oparams.parnum);
+  tempRot =  2.0 * Krot / (3.0 * Oparams.parnum);
   if (OprogStatus.avngTemp == 1)
     {
       OprogStatus.sumTemp += temp;
@@ -381,9 +383,9 @@ void temperat(void)
 #if 1
   mf = fopenMPI(absMisHD("temp.dat"),"a");
 #ifdef MD_BIG_DT
-  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, temp);
+  fprintf(mf, "%15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, temp, tempTra, tempRot);
 #else
-  fprintf(mf, "%15G %.15G\n", Oparams.time, temp);
+  fprintf(mf, "%15G %.15G %.15G %.15G\n", Oparams.time, temp, tempTra, tempRot);
 #endif
   fclose(mf);
 #endif
