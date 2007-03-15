@@ -5506,7 +5506,7 @@ void save_fra(void)
     }
   fprintf(f, "%d 0 %d %d 0\n", Oparams.curStep, Oparams.parnum, Oparams.parnum-Oparams.parnumA);
   fprintf(f, "%.15G %.15G %.15G 0 0 %.15G\n", L, L, L, Oparams.Dt);
-  for (i = 0; i < Oparams.parnumA; i++)
+  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
       //printf("i=%d\n",i);
       rcm[0] = rx[i];
@@ -5517,7 +5517,7 @@ void save_fra(void)
       fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
       fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
     }
-  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+  for (i = 0; i < Oparams.parnumA; i++)
     {
       rcm[0] = rx[i];
       rcm[1] = ry[i];
