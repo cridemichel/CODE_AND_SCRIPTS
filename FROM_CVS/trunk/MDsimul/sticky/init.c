@@ -428,7 +428,7 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
 	 sqrt(2*PI)           2     */
     }
 
-  angvel();
+  //angvel();
 }
 void scalevels(double temp, double K);
 

@@ -371,14 +371,14 @@ void temperat(void)
 #ifdef MD_THREESPOTS
   if (OprogStatus.brownian)
     {
-      dogTra = 6.0*(Oparams.parnum-Oparams.parnumA);
-      dogRot = 5.0*Oparams.parnumA;
+      dogTra = 3.0*Oparams.parnum;
+      dogRot = 2.0*Oparams.parnumA + 3.0*(Oparams.parnum-Oparams.parnumA);
       dogTot = dogTra + dogRot; 
     }
   else
     {
-      dogTra = 6.0*(Oparams.parnum-Oparams.parnumA)-3;
-      dogRot = 5.0*Oparams.parnumA;
+      dogTra = 6.0*Oparams.parnum-3;
+      dogRot = 2.0*Oparams.parnumA+3.0*(Oparams.parnum-Oparams.parnumA);
       dogTot = dogTra + dogRot; 
     }
   temp = 2.0 * K / dogTot;
