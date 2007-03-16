@@ -772,25 +772,26 @@ void angvel(void)
     }
 }
 #else
+extern double scalProd(double *A, double *B);
+extern double calc_norm(double *vec);
 void angvel(void)
 {
-  int i;
+  int i, a;
   double inert;                 /* momentum of inertia of the molecule */
-  double norm, osq, o, mean;
+  double norm, osq, o, mean, symax[3];
   double  xisq, xi1, xi2, xi;
-  double ox, oy, oz;
+  double ox, oy, oz, ww[3], wsz;
   //L = cbrt(Vol);
   invL = 1.0 / L;
 
   Mtot = Oparams.m[0]; /* total mass of molecule */
 
   inert = Oparams.I[0]; /* momentum of inertia */
+ 
   mean = 3.0*Oparams.T / inert;
-
   for (i = 0; i < Oparams.parnumA; i++)
     {
       xisq = 1.0;
-
       while (xisq >= 1.0)
 	{
 	  xi1  = ranf() * 2.0 - 1.0;
@@ -819,10 +820,25 @@ NOTE: consider that it is an exponential distribution
       ox    = o * ox;
       oy    = o * oy;
       oz    = o * oz;
-      wx[i] = ox;
-      wy[i] = oy;
-      wz[i] = oz;
+      
+      ww[0] = ox;
+      ww[1] = oy;
+      ww[2] = oz;
+      for (a=0; a < 3; a++)
+	symax[a] = R[i][0][a];
+      norm = calc_norm(symax);
+      for (a=0; a < 3; a++)
+	symax[a] /= norm;
+      wsz = scalProd(ww, symax);
+      wx[i] = ox-symax[0]*wsz;
+      wy[i] = oy-symax[1]*wsz;
+      wz[i] = oz-symax[2]*wsz;
+      //ww[0] = wx[i];
+      //ww[1] = wy[i];
+      //ww[2] = wz[i];
+      //printf("componente lungo z=%.15g\n",scalProd(ww, symax));
     }
+
   Mtot = Oparams.m[1]; /* total mass of molecule */
 
   inert = Oparams.I[1]; /* momentum of inertia */

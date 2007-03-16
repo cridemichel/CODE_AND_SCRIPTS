@@ -344,6 +344,9 @@ void transDiff(void)
 void temperat(void)
 {
   double tempRot, tempTra;
+#ifdef MD_THREESPOTS
+  double dogTot, dogTra, dogRot;
+#endif
   /* DESCRIPTION:
      This the calculation of the instantaneous temperature */
 #if 0
@@ -365,9 +368,27 @@ void temperat(void)
     temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
 #endif
   calc_energy(NULL);
+#ifdef MD_THREESPOTS
+  if (OprogStatus.brownian)
+    {
+      dogTra = 6.0*(Oparams.parnum-Oparams.parnumA);
+      dogRot = 5.0*Oparams.parnumA;
+      dogTot = dogTra + dogRot; 
+    }
+  else
+    {
+      dogTra = 6.0*(Oparams.parnum-Oparams.parnumA)-3;
+      dogRot = 5.0*Oparams.parnumA;
+      dogTot = dogTra + dogRot; 
+    }
+  temp = 2.0 * K / dogTot;
+  tempTra =  2.0 * Ktra / dogTra;
+  tempRot =  2.0 * Krot / dogRot;
+#else
   temp = 2.0 * K / (6.0 * Oparams.parnum - 3.0);
   tempTra =  2.0 * Ktra / (3.0 * Oparams.parnum);
   tempRot =  2.0 * Krot / (3.0 * Oparams.parnum);
+#endif
   if (OprogStatus.avngTemp == 1)
     {
       OprogStatus.sumTemp += temp;
