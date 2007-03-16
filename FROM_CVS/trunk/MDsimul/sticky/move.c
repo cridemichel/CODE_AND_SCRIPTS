@@ -5524,7 +5524,7 @@ void save_fra(void)
       rcm[2] = rz[i];
       BuildAtomPos(i, rcm, R[i], rat);
       fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
-      fprintf(f, "0.0 0.0 0.0\n");
+      fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
       fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
     }
 #ifdef MD_SAVEFRA_COMPRESSED
