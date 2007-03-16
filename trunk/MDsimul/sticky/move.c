@@ -3915,6 +3915,8 @@ void PredictCellCross(int na, int nc)
   int ignorecross[3], k, evCode, signDir[NDIM]={0,0,0}, iA, nl;
   double tm[3];
 
+  if (nc==1 && (Oparams.parnumA==Oparams.parnum || Oparams.parnumA==0))
+    return;
   iA = (na < Oparams.parnumA)?0:1;
   ignorecross[0] = ignorecross[1] = ignorecross[2] = 1;
   if (iA == 0 && nc == 0)
