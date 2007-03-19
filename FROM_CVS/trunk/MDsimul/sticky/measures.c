@@ -377,10 +377,11 @@ void temperat(void)
     }
   else
     {
-      dogTra = 6.0*Oparams.parnum-3;
+      dogTra = 3.0*Oparams.parnum-3;
       dogRot = 2.0*Oparams.parnumA+3.0*(Oparams.parnum-Oparams.parnumA);
       dogTot = dogTra + dogRot; 
     }
+  //printf("dogTot: %.15G dogTra: %.15G dogRot:%.15G\n", dogTot, dogTra, dogRot);
   temp = 2.0 * K / dogTot;
   tempTra =  2.0 * Ktra / dogTra;
   tempRot =  2.0 * Krot / dogRot;
