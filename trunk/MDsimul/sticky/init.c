@@ -788,7 +788,12 @@ void angvel(void)
 
   inert = Oparams.I[0]; /* momentum of inertia */
  
+
+#ifdef MD_THREESPOTS
+  mean = 2.0*Oparams.T / inert;
+#else
   mean = 3.0*Oparams.T / inert;
+#endif
   for (i = 0; i < Oparams.parnumA; i++)
     {
       xisq = 1.0;
@@ -803,7 +808,19 @@ void angvel(void)
       ox = 2.0 * xi1 * xi;
       oy = 2.0 * xi2 * xi;
       oz = 1.0 - 2.0 * xisq;
-
+      ww[0] = ox;
+      ww[1] = oy;
+      ww[2] = oz;
+      for (a=0; a < 3; a++)
+	symax[a] = R[i][a][0];
+      norm = calc_norm(symax);
+      for (a=0; a < 3; a++)
+	symax[a] /= norm;
+      wsz = scalProd(ww, symax);
+      ox = ox-symax[0]*wsz;
+      oy = oy-symax[1]*wsz;
+      oz = oz-symax[2]*wsz;
+   
       /* Renormalize */
       osq   = ox * ox + oy * oy + oz * oz;
       norm  = sqrt(fabs(osq));
@@ -821,18 +838,6 @@ NOTE: consider that it is an exponential distribution
       oy    = o * oy;
       oz    = o * oz;
       
-      ww[0] = ox;
-      ww[1] = oy;
-      ww[2] = oz;
-      for (a=0; a < 3; a++)
-	symax[a] = R[i][0][a];
-      norm = calc_norm(symax);
-      for (a=0; a < 3; a++)
-	symax[a] /= norm;
-      wsz = scalProd(ww, symax);
-      wx[i] = ox-symax[0]*wsz;
-      wy[i] = oy-symax[1]*wsz;
-      wz[i] = oz-symax[2]*wsz;
       //ww[0] = wx[i];
       //ww[1] = wy[i];
       //ww[2] = wz[i];
