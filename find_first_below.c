@@ -29,7 +29,7 @@ int main(int argc, char **argv)
   double maxy, maxx;
   if (argc < 3)
     {
-      printf("devi fornire il nome del file come argomento e la soglia\n");
+      printf("devi fornire il nome del file come argomento e la soglia (reale compreso tra 0 e 1)\n");
       exit(-1);
     }
   soglia = atof(argv[2]);
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
   for (cc = ccini; cc < pnts; cc++)
     {
       //printf("maxx: %.15G maxy: %.15G x: %.15G y: %.15G\n", maxx, maxy, func[0][cc], func[1][cc]);
-      if (func[1][cc] < soglia)
+      if (func[1][cc] < soglia*first)
 	{
 	  printf("%.15G", func[0][cc]);
 	  exit(-1);
