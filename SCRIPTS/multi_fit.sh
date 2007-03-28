@@ -4,7 +4,7 @@ PERC=$HOME/postdoc/hardellipsoid/hardellSVN/CODE/SCRIPTS/
 SCALFACTS="$HOME/ELLIPSOIDS/scaling_factors.dat"
 GSF="$HOME/ELLIPSOIDS/get_scalfact"
 GTM="$HOME/ELLIPSOIDS/getTimeFromMSD"
-BEGTIME=""
+BEGTIME="ACV"
 CNBEG=0.02
 FQSBEG=0.15
 FQCBEG=0.15
@@ -76,6 +76,9 @@ if [ "$BEGTIME" == "MSD" ]
 then
 MSDTHR="0.2"
 CNBEGSC=`$GTM rotMSDcnf.dat $MSDTHR`
+elif [ "$BEGTIME" == "ACV" ]
+then
+CNBEGSC=`get_scalf_fact tempdecad_omACV_Phi$2.dat $X0`
 else
 CNBEGSC=`echo "$CNBEG*$TFACT"|bc -l`
 fi
@@ -98,6 +101,9 @@ if [ "$BEGTIME" == "MSD" ]
 then
 MSDTHR=`echo "$TFACT/10.0" | bc -l`
 FQSBEGSC=`$GTM MSDcnf.dat $MSDTHR`
+elif [ "$BEGTIME" == "ACV" ]
+then
+CNBEGSC=`get_scalf_fact tempdecad_velACV_Phi$2.dat $X0`
 else
 FQSBEGSC=`echo "$FQSBEG*$TFACT"|bc -l`
 fi
@@ -121,6 +127,9 @@ if [ "$BEGTIME" == "MSD" ]
 then
 MSDTHR=`echo "$TFACT/10.0" | bc -l`
 FQCBEGSC=`$GTM MSDcnf.dat $MSDTHR`
+elif [ "$BEGTIME" == "ACV" ]
+then
+CNBEGSC=`get_scalf_fact tempdecad_velACV_Phi$2.dat $X0`
 else
 FQCBEGSC=`echo "$FQCBEG*$TFACT"|bc -l`
 fi
