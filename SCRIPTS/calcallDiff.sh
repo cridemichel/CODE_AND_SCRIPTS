@@ -42,7 +42,7 @@ echo "fit [$STA:$STB] a*x+b 'rotMSDcnf.dat' via a,b" > fit.tmp
 gnuplot fit.tmp > gpout.tmp 2>&1
 A=`cat gpout.tmp | awk 'BEGIN {pr=0} {if (pr==1 && $1=="a") {print $3; pr++;}; if ($1=="Final") pr=1;}'`
 rm gpout.tmp
-Dr=`echo $A/6.0 | bc -l`
+Dr=`echo $A/4.0 | bc -l`
 echo $EL $PHI $Dr >> ../$FNR
 rm fit.tmp
 cd ..
