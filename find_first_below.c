@@ -24,7 +24,7 @@ char line[4096], dummy[4096];
 int main(int argc, char **argv)
 {
   FILE *f;
-  int maxxi, cc, pnts, ccini;
+  int maxxi, cc, pnts, ccini=0;
   double first, soglia;
   double maxy, maxx;
   if (argc < 3)
@@ -54,6 +54,7 @@ int main(int argc, char **argv)
   for (cc = ccini; cc < pnts; cc++)
     {
       //printf("maxx: %.15G maxy: %.15G x: %.15G y: %.15G\n", maxx, maxy, func[0][cc], func[1][cc]);
+      //printf("value=%.15G thr=%.15G\n", func[1][cc], soglia*first);
       if (func[1][cc] < soglia*first)
 	{
 	  printf("%.15G", func[0][cc]);

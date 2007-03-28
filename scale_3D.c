@@ -17,7 +17,7 @@ double cerca_X0(char *X0)
 	return scal_arr_dbl[i];
       i++;
     }
-  fprintf(stderr,"ERROR: Scaling factor not found!\n");
+  fprintf(stderr,"ERROR: Scaling factor not found X0=%s!\n", X0);
   exit(-1);
 
 }
