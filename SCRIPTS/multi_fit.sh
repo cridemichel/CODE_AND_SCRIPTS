@@ -78,7 +78,8 @@ MSDTHR="0.2"
 CNBEGSC=`$GTM rotMSDcnf.dat $MSDTHR`
 elif [ "$BEGTIME" == "ACV" ]
 then
-CNBEGSC=`get_scalf_fact tempdecad_omACV_Phi$2.dat $X0`
+#CNBEGSC=`$GSF ../../tempdecad_omACV_Phi$2.dat $X0`
+CNBEGSC=`$GSF ../../tempdecad_omACV_Phi$2.dat $X0`
 else
 CNBEGSC=`echo "$CNBEG*$TFACT"|bc -l`
 fi
@@ -103,7 +104,7 @@ MSDTHR=`echo "$TFACT/10.0" | bc -l`
 FQSBEGSC=`$GTM MSDcnf.dat $MSDTHR`
 elif [ "$BEGTIME" == "ACV" ]
 then
-CNBEGSC=`get_scalf_fact tempdecad_velACV_Phi$2.dat $X0`
+FQSBEGSC=`$GSF ../../tempdecad_velACV_Phi$2.dat $X0`
 else
 FQSBEGSC=`echo "$FQSBEG*$TFACT"|bc -l`
 fi
@@ -129,7 +130,7 @@ MSDTHR=`echo "$TFACT/10.0" | bc -l`
 FQCBEGSC=`$GTM MSDcnf.dat $MSDTHR`
 elif [ "$BEGTIME" == "ACV" ]
 then
-CNBEGSC=`get_scalf_fact tempdecad_velACV_Phi$2.dat $X0`
+FQCBEGSC=`$GSF ../../tempdecad_velACV_Phi$2.dat $X0`
 else
 FQCBEGSC=`echo "$FQCBEG*$TFACT"|bc -l`
 fi
