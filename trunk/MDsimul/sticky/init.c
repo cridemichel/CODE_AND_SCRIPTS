@@ -837,7 +837,10 @@ NOTE: consider that it is an exponential distribution
       ox    = o * ox;
       oy    = o * oy;
       oz    = o * oz;
-      
+      wx[i] = ox;
+      wy[i] = oy;
+      wz[i] = oz;
+    
       //ww[0] = wx[i];
       //ww[1] = wy[i];
       //ww[2] = wz[i];
