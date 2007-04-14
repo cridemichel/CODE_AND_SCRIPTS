@@ -774,20 +774,24 @@ void angvel(void)
 #else
 extern double scalProd(double *A, double *B);
 extern double calc_norm(double *vec);
+extern void vectProdVec(double *A, double *B, double *C);
 void angvel(void)
 {
   int i, a;
-  double inert;                 /* momentum of inertia of the molecule */
+  double pi, inert;                 /* momentum of inertia of the molecule */
   double norm, osq, o, mean, symax[3];
   double  xisq, xi1, xi2, xi;
   double ox, oy, oz, ww[3], wsz;
+#ifdef MD_THREESPOTS
+  double u1[3], u2[3], u3[3];
+#endif
   //L = cbrt(Vol);
   invL = 1.0 / L;
 
   Mtot = Oparams.m[0]; /* total mass of molecule */
 
   inert = Oparams.I[0]; /* momentum of inertia */
- 
+  pi = acos(0)*2; 
 
 #ifdef MD_THREESPOTS
   mean = 2.0*Oparams.T / inert;
@@ -796,6 +800,7 @@ void angvel(void)
 #endif
   for (i = 0; i < Oparams.parnumA; i++)
     {
+#ifndef MD_THREESPOTS
       xisq = 1.0;
       while (xisq >= 1.0)
 	{
@@ -808,6 +813,7 @@ void angvel(void)
       ox = 2.0 * xi1 * xi;
       oy = 2.0 * xi2 * xi;
       oz = 1.0 - 2.0 * xisq;
+#if 0
       ww[0] = ox;
       ww[1] = oy;
       ww[2] = oz;
@@ -820,7 +826,7 @@ void angvel(void)
       ox = ox-symax[0]*wsz;
       oy = oy-symax[1]*wsz;
       oz = oz-symax[2]*wsz;
-   
+#endif
       /* Renormalize */
       osq   = ox * ox + oy * oy + oz * oz;
       norm  = sqrt(fabs(osq));
@@ -840,11 +846,34 @@ NOTE: consider that it is an exponential distribution
       wx[i] = ox;
       wy[i] = oy;
       wz[i] = oz;
-    
-      //ww[0] = wx[i];
-      //ww[1] = wy[i];
-      //ww[2] = wz[i];
-      //printf("componente lungo z=%.15g\n",scalProd(ww, symax));
+#else
+      xi1  = ranf()*2.0*pi;
+      ox = cos(xi1);
+      oy = sin(xi1);
+      /* Choose the magnitude of the angular velocity
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+
+      osq   = - mean * log(ranf());
+      o     = sqrt(fabs(osq));
+      ox    = o * ox;
+      oy    = o * oy;
+      for (a=0; a < 3; a++)
+	u3[a] = R[i][a][0];
+      norm = calc_norm(u3);
+      for (a=0; a < 3; a++)
+	u3[a] /= norm;
+      u2[0] = 1;
+      u2[1] = 1;
+      u2[2] = 1;
+      wsz = scalProd(u2, u3);
+      for (a=0; a < 3; a++)
+	u2[a] = u2[a]-u3[a]*wsz;
+      vectProdVec(u2, u3, u1);
+      wx[i] = u1[0]*ox+u2[0]*oy;
+      wy[i] = u1[1]*ox+u2[1]*oy;
+      wz[i] = u1[2]*ox+u2[2]*oy;
+#endif
     }
 
   Mtot = Oparams.m[1]; /* total mass of molecule */
