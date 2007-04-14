@@ -869,6 +869,9 @@ NOTE: consider that it is an exponential distribution
       wsz = scalProd(u2, u3);
       for (a=0; a < 3; a++)
 	u2[a] = u2[a]-u3[a]*wsz;
+      norm=calc_norm(u2);
+      for (a=0; a < 3; a++)
+	u2[a] /= norm;
       vectProdVec(u2, u3, u1);
       wx[i] = u1[0]*ox+u2[0]*oy;
       wy[i] = u1[1]*ox+u2[1]*oy;
