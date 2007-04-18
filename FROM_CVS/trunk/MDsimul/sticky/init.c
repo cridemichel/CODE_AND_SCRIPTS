@@ -854,7 +854,11 @@ NOTE: consider that it is an exponential distribution
 NOTE: consider that it is an exponential distribution 
 (i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
 
-      osq   = - mean * log(ranf());
+      do
+	{
+	  osq   = - mean * log(ranf());
+	}
+      while (isnan(osq)||isinf(osq));
       o     = sqrt(fabs(osq));
       ox    = o * ox;
       oy    = o * oy;
