@@ -277,6 +277,7 @@ COORD_TYPE ranf(void)
   return rand() / ( (COORD_TYPE) RAND_MAX );
 }
 
+
 /* ============================= >>> gauss <<< ============================= */
 COORD_TYPE gauss(void)
 {
@@ -775,6 +776,15 @@ void angvel(void)
 extern double scalProd(double *A, double *B);
 extern double calc_norm(double *vec);
 extern void vectProdVec(double *A, double *B, double *C);
+/* ============================ >>> ranf <<< =============================== */
+double ranfRandom(void)
+{
+  /*  Returns a uniform random variate in the range 0 to 1 (excluding 0).         
+      Good random number generators are machine specific.
+      please use the one recommended for your machine. */
+  return (1.0-((double)rand()) / ((double) RAND_MAX) + 1);
+}
+
 void angvel(void)
 {
   int i, a;
@@ -838,7 +848,11 @@ void angvel(void)
 NOTE: consider that it is an exponential distribution 
 (i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
 
+#if 1
+      osq   = - mean * log(ranfRandom());
+#else
       osq   = - mean * log(ranf());
+#endif
       o     = sqrt(fabs(osq));
       ox    = o * ox;
       oy    = o * oy;
@@ -853,12 +867,15 @@ NOTE: consider that it is an exponential distribution
       /* Choose the magnitude of the angular velocity
 NOTE: consider that it is an exponential distribution 
 (i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
-
+#if 1
+      osq   = - mean * log(ranfRandom());
+#else
       do
 	{
 	  osq   = - mean * log(ranf());
 	}
       while (isnan(osq)||isinf(osq));
+#endif
       o     = sqrt(fabs(osq));
       ox    = o * ox;
       oy    = o * oy;
@@ -892,7 +909,6 @@ NOTE: consider that it is an exponential distribution
   for (i = Oparams.parnumA; i < Oparams.parnumA; i++)
     {
       xisq = 1.0;
-
       while (xisq >= 1.0)
 	{
 	  xi1  = ranf() * 2.0 - 1.0;
@@ -915,7 +931,11 @@ NOTE: consider that it is an exponential distribution
       /* Choose the magnitude of the angular velocity
 NOTE: consider that it is an exponential distribution 
 (i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+#if 1 
+      osq   = - mean * log(ranfRandom());
+#else
       osq   = - mean * log(ranf());
+#endif
       o     = sqrt(fabs(osq));
       ox    = o * ox;
       oy    = o * oy;
