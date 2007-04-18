@@ -782,7 +782,7 @@ double ranfRandom(void)
   /*  Returns a uniform random variate in the range 0 to 1 (excluding 0).         
       Good random number generators are machine specific.
       please use the one recommended for your machine. */
-  return (1.0-((double)rand()) / ((double) RAND_MAX) + 1);
+  return (1.0-(((double)rand()) / ((double) RAND_MAX) + 1));
 }
 
 void angvel(void)
