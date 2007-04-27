@@ -11,7 +11,7 @@ extern double *treeTime, *treeRxC, *treeRyC, *treeRzC;
 void DeleteEvent(int );
 void NextEvent(void);
 extern int poolSize;
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 extern int *crossevtodel;
 #endif
 extern double rxC, ryC, rzC;
@@ -60,7 +60,7 @@ int check_node(char* str, int id, int idNew, int idUp)
   return 0;
 }
 
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent) 
 {
   int id, idNew, more;
@@ -441,7 +441,7 @@ void NextEvent (void)
 	  /* qui elimina anche gli eventi relativi al cell crossing con le altre liste.
 	   * Notare che se si hanno più di due specie si devono eliminare *tutti* gli eventi 
 	   * di cell-crossing magari con un loop */
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 	  if (crossevtodel[id-1]!=-1)
 	    DeleteEvent (id+Oparams.parnum);
 	  
@@ -488,7 +488,7 @@ void NextEvent (void)
       /* L'evento è un cell-crossing o un evento generico (output o misura) */
       DeleteEvent (idNow);
       /* se evIdC == 1 vuol dire che si tratta di un cell crossing ma nc=1 */
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
       if (evIdB < ATOM_LIMIT + 100) 
 	{
 	  treeCircAR[idNow] = treeIdA[0];
@@ -564,7 +564,7 @@ void DeleteEvent (int id)
 		   treeUp[idp], treeLeft[id], treeRight[id],
 		   treeLeft[treeUp[idp]], treeRight[treeUp[idp]]));
 }
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 void InitEventList (void) 
 {
   int id;

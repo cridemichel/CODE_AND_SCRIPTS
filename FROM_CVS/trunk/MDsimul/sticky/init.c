@@ -1348,20 +1348,20 @@ See: cond-mat/00001311, Ruocco et al. */
 }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 int *inCell[2][3], *cellList[4], cellsx[4], cellsy[4], cellsz[4];
 #else
 int *inCell[3], *cellList, cellsx, cellsy, cellsz;
 #endif
 int **tree, cellRange[2*NDIM];
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 extern void PredictColl(int na, int nb, int nl);
 extern void PredictCellCross(int na, int nc);
 #else
 extern void PredictEvent(int, int);
 #endif
 extern void InitEventList(void);
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 void StartRun(void)
 {
   int j, k, n, nl, nc, iA, nl_ignore;
@@ -1725,7 +1725,7 @@ void save_init_conf(void)
 #endif
 }
 extern int bound(int na, int n, int a, int b);
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 extern int set_pbonds(int i, int j);
 void check_all_bonds(void)
 {
@@ -2067,7 +2067,7 @@ void usrInitAft(void)
   Oparams.sigma[1][1] = Oparams.sigma[0][0];
 #endif
   Oparams.sigma[1][0] = Oparams.sigma[0][1];
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
   /* NOTA: nella lista nl=2 con rcut=rcutSiO ci sono tutte e sole le molecole O
    * mentre nella lista nl=3 con rcut=rcutSiO ci sono tutte e sole le molecole Si */
   Oparams.rcut[3] = Oparams.rcut[2];
@@ -2076,7 +2076,7 @@ void usrInitAft(void)
   invmB = 1.0/Oparams.m[1];
   /* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
   for (nl = 0; nl < 4; nl++)
     {
       if (Oparams.rcut[nl] <= 0.0)
@@ -2100,7 +2100,7 @@ void usrInitAft(void)
   lastcol= malloc(sizeof(double)*Oparams.parnum);
   atomTime = malloc(sizeof(double)*Oparams.parnum);
   lastbump = malloc(sizeof(struct LastBumpS)*Oparams.parnum);
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
   for (nl = 0; nl < 4; nl++)
     cellList[nl] = malloc(sizeof(int)*
 			  (cellsx[nl]*cellsy[nl]*cellsz[nl]+Oparams.parnum));
@@ -2144,7 +2144,7 @@ void usrInitAft(void)
   R = malloc(sizeof(double**)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
     {
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
       crossevtodel[i] = -1;
 #endif
       R[i] = matrix(3, 3);
