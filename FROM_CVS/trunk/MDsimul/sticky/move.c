@@ -3311,7 +3311,7 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
   return 0;
 }
 extern double max(double a, double b);
-#undef MD_BASIC_DT
+#define MD_BASIC_DT
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
@@ -5547,6 +5547,107 @@ void save_fra(void)
   fclose(f);
 }
 #endif
+#if defined(MD_SILICA) && defined(MD_USE_SINGLE_LL)
+void rebuild_bonds(void)
+{
+  int i, j, k, nn;
+  int cellRangeT[2 * NDIM], amin, bmin, npbonds;
+  double shift[3], drx, dry, drz, dist, dists[MD_PBONDS];
+  int jZ, iZ, iY, jY, iX, jX, n, na, aa, bb;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      numbonds[i] = 0;
+    }
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  for (na = 0; na < Oparams.parnum; na++)
+    {
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	{
+	  jZ = inCell[2][na] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      jZ = cellsz - 1;    
+	      shift[2] = - L;
+	    } 
+	  else if (jZ == cellsz) 
+	    {
+	      jZ = 0;    
+	      shift[2] = L;
+	    }
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	    {
+	      jY = inCell[1][na] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsy - 1;    
+		  shift[1] = -L;
+		} 
+	      else if (jY == cellsy) 
+		{
+		  jY = 0;    
+		  shift[1] = L;
+		}
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		{
+		  jX = inCell[0][na] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsx - 1;    
+		      shift[0] = - L;
+		    } 
+		  else if (jX == cellsx) 
+		    {
+		      jX = 0;   
+		      shift[0] = L;
+		    }
+		  n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+		  for (n = cellList[n]; n > -1; n = cellList[n]) 
+		    {
+		      if (n <= na)
+			continue;
+		      /* l'interazione bonded è solo tra Si e O!! */
+		      i=na; 
+		      j=n;
+		      drx = rx[i] - rx[j];
+		      shift[0] = L*rint(drx/L);
+		      dry = ry[i] - ry[j];
+		      shift[1] = L*rint(dry/L);
+		      drz = rz[i] - rz[j]; 
+		      shift[2] = L*rint(drz/L);
+		      assign_bond_mapping(i, j);
+		      dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+		      npbonds = set_pbonds(i, j);
+		      for (nn=0; nn < npbonds; nn++)
+			{
+			  if (dists[nn]<0.0)
+			    {
+			      //printf("(%d,%d)-(%d,%d)\n", i, mapbondsa[nn], j, mapbondsb[nn]);
+			      aa = mapbondsa[nn];
+			      bb = mapbondsb[nn];
+			      add_bond(i, j, aa, bb);
+			      add_bond(j, i, bb, aa);
+			    }
+			}
+		    }
+		}
+	    }
+	}
+    }
+}
+#endif
+
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -5791,6 +5892,10 @@ void move(void)
 	      velsBrown(Oparams.T);
 #ifdef MD_HSVISCO
 	      calcT();
+#endif
+#if defined(MD_SILICA) && defined(MD_USE_SINGLE_LL)
+	      //rebuild_linked_list();
+	      //rebuild_bonds();
 #endif
 	      rebuildCalendar();
 #ifdef MD_BIG_DT
