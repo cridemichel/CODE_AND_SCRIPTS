@@ -452,7 +452,7 @@ struct params
 #else
   double sigmaSticky;
 #endif
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
   double rcut[3];
 #else
   double rcut;
@@ -671,7 +671,7 @@ struct pascii opar_ascii[]=
 #else
   {"sigmaSticky",     &OP(sigmaSticky),                  1,   1, "%.10G"},
 #endif
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
   {"rcut",              OP(rcut),                        3,   1, "%.10G"},
 #else
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
@@ -870,7 +870,7 @@ struct singlePar OsinglePar[] = {
   /* ==================== >>> PUT HERE YOUR PARAMS <<< ===================== */
   {"targetPhi", &OprogStatus.targetPhi, CT},
   {"eventMult",  &OprogStatus.eventMult,    INT},
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 #if defined(MD_THREESPOTS) || defined(MD_AB41)
   {"rcutAA",       &Oparams.rcut[0],             CT},
   {"rcutBB",      &Oparams.rcut[1],             CT},
