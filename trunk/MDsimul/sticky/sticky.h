@@ -8,7 +8,7 @@
 
 /* ================== >>> PROGRAM DEFINES(CUSTOMIZE!) <<< ===================*/
 #define MD_HARDSPHERES
-
+//#define MD_USE_SINGLE_LL
 #define MDSIMUL "/home/demichel/shared/simul/mdsimul"
 /* this is the executable, you must change this to your directory */
 #ifdef MD_USE_CBLAS
