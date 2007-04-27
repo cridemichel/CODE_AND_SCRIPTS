@@ -4052,7 +4052,7 @@ void PredictCellCross(int na, int nc)
       printf("cells= (%d,%d,%d)\n", cellsx[nl], cellsy[nl], cellsz[nl]);
       printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
 	     signDir[2]);
-      /*exit(-1);*/
+      exit(-1);
       /*tm[k] = 0.0;*/
 #endif
     }
