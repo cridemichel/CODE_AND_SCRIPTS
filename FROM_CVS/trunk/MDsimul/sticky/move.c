@@ -171,7 +171,7 @@ const double timbig = 1E12;
 double *lastcol;
 double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 int  **tree, cellRange[2*NDIM], initUcellx, initUcelly, initUcellz;
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 int *inCell[2][3], *cellList[4], cellsx[4], cellsy[4], cellsz[4];
 #else
 int *inCell[3], *cellList, cellsx, cellsy, cellsz;
@@ -432,7 +432,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   return calc_phi();
 }
 #endif
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 void rebuild_linked_list()
 {
   double L2;
@@ -3916,7 +3916,7 @@ double estimate_tmin(double t, int na, int nb)
   return tmin;
 }
 #endif
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 void PredictCellCross(int na, int nc)
 {
   int ignorecross[3], k, evCode, signDir[NDIM]={0,0,0}, iA, nl;
@@ -4406,7 +4406,7 @@ void PredictEvent (int na, int nb)
   /*double cells[NDIM];*/
   int collCode;
   int cellRangeT[2 * NDIM], signDir[NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
-#ifndef MD_SILICA
+#if !defined(MD_SILICA) || defined(MD_USE_SINGLE_LL)
   int evCode;
 #endif
   MD_DEBUG29(printf("PredictEvent: %d,%d\n", na, nb));
@@ -5020,7 +5020,7 @@ void ProcessCollision(void)
   OprogStatus.lastcoll = Oparams.time;
 #endif
   do_check_negpairs = 1;
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
   iA = (evIdA<Oparams.parnumA)?0:1;
   nl_ignore = (evIdA<Oparams.parnumA)?1:0;
   for (nc = 0; nc < 2; nc++)
@@ -5049,7 +5049,7 @@ void ProcessCollision(void)
 #endif
   do_check_negpairs = 0;
 }
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 void docellcross2(int k, double velk, int cellsk, int nc)
 {
   if (velk > 0.0)
@@ -5133,7 +5133,7 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 #endif
 }
 #endif
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 int check_boxwall(int k, int nc, int nl)
 {
   int cellsk=0;
@@ -5405,7 +5405,7 @@ void rebuildLinkedList(void)
     }
 }
 #endif
-#ifdef MD_SILICA
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 void rebuildCalendar(void)
 {
   int k, n, nl, nl_ignore, iA, nc;
