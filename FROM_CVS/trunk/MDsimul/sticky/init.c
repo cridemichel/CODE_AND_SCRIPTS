@@ -1889,6 +1889,7 @@ void check_all_bonds(void)
   int nn, warn, amin, bmin, i, j, nb;
   double shift[3], dist, dists[MD_PBONDS];
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
+  int md_pbonds;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
   for (k = 0;  k < NDIM; k++)
@@ -1963,13 +1964,25 @@ void check_all_bonds(void)
 		      shift2[2] = L*rint(drz/L);
 #endif
 		      dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-		      for (nn=0; nn < MD_PBONDS; nn++)
+#ifdef MD_THREESPOTS
+		      if (i < Oparams.parnumA && j < Oparams.parnumA)
+			md_pbonds = MD_PBONDS_AA;
+		      else if (i >= Oparams.parnumA && j >= Oparams.parnumA)
+			md_pbonds = MD_PBONDS_BB;
+		      else
+			md_pbonds = MD_PBONDS_AB;
+#else
+		      md_pbonds = MD_PBONDS;
+#endif
+		      for (nn=0; nn < md_pbonds; nn++)
 			{
 			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
 			      && !bound(i,j,mapbondsa[nn], mapbondsb[nn]))
 			    // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
 			    {
 			      warn=1;
+			      printf("i=%d j=%d pos=%f %f %f vel=%f %f %f\n", i,j, rx[i], ry[i], rz[i], vx[i], vy[i],
+		    		     vz[i]);
 #if 0
 			      aa = mapbondsa[nn];
 			      bb = mapbondsb[nn];
