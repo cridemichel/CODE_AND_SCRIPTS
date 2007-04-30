@@ -65,9 +65,13 @@ void Continue(void)
 #if !defined(MPI)
   printf("setting seed:%d time:%d\n", OprogStatus.mdseed, (int)time(NULL));
   if (OprogStatus.mdseed>=0) 
-    srand(OprogStatus.mdseed);
+    {
+      srand(OprogStatus.mdseed);
+    }
   else
-    srand(((int)time(NULL)));
+    {
+      srand(((int)time(NULL)));
+    }
 #endif
 
   
