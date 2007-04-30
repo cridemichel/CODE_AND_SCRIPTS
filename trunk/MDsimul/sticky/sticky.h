@@ -8,13 +8,15 @@
 
 /* ================== >>> PROGRAM DEFINES(CUSTOMIZE!) <<< ===================*/
 #define MD_HARDSPHERES
-//#define MD_USE_SINGLE_LL
+#define MD_USE_SINGLE_LL
 #define MDSIMUL "/home/demichel/shared/simul/mdsimul"
 /* this is the executable, you must change this to your directory */
 #ifdef MD_USE_CBLAS
 #include <cblas.h>
 #endif
 #define XTERM   "/usr/X11R6/bin/nxterm"
+#define MD_COORDTMP_ASCII(x) save_coordtmp_ascii(x)
+void save_coordtmp_ascii(unsigned char);
 extern void UpdateSystem(void);
 #undef UPDATE_SYSTEM
 #define UPDATE_SYSTEM UpdateSystem();
