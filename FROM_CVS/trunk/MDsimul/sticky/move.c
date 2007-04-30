@@ -5648,6 +5648,51 @@ void rebuild_bonds(void)
 }
 #endif
 
+void save_coordtmp_ascii(unsigned char hdWhich)
+{
+  char fileop[1024], fileop2[1024];
+  FILE *bf;
+  char fileop3[1024];
+  const char sepStr[] = "@@@\n";
+  int i;	
+  sprintf(fileop2 ,"COORD_TMP_ASCII%d", (int)hdWhich);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "fopen: error in save_coordtmp_ascii!\n", NULL);
+      exit(-1);
+    }
+  UpdateSystem();
+#ifdef MD_ROTDIFF_MIS
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      update_MSDrot(i);
+      OprogStatus.lastcolltime[i] = Oparams.time;
+    }
+#endif
+  R2u();
+  writeAsciiPars(bf, opro_ascii);
+  fprintf(bf, sepStr);
+  writeAsciiPars(bf, opar_ascii);
+  fprintf(bf, sepStr);
+  writeAllCor(bf);
+  fclose(bf);
+#ifdef MPI
+#ifdef MD_MAC
+  sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+#else
+  sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+#endif
+#else 
+#ifdef MD_MAC
+  sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+#else
+  sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
+#endif
+  system(fileop3);
+}
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
