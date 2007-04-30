@@ -5408,9 +5408,15 @@ void rebuildLinkedList(void)
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 void rebuildCalendar(void)
 {
-  int k, n, nl, nl_ignore, iA, nc;
+  int k, n, nl, nl_ignore, iA, nc, i;
+
 
   InitEventList();
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      crossevtodel[i] = -1;
+    } 
+
   for (k = 0;  k < 3; k++)
     {
       cellRange[2*k]   = - 1;
