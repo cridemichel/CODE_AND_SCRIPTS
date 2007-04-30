@@ -1045,8 +1045,11 @@ void doubleBufBak(unsigned char* hdWhich, unsigned char* tapeWhich,
   /* absTmpHD operator build an absolute name for restore file, 
      that is path + BAK_FILE_NAME ( see mdsimul.h ), while 
      appSw operator append 0 or 1 to the name */
-  saveBak(appSw( absTmpHD(BAK_FILE_NAME), *hdWhich )  );
- 
+    saveBak(appSw( absTmpHD(BAK_FILE_NAME), *hdWhich )  );
+#ifdef MD_COORDTMP_ASCII
+    MD_COORDTMP_ASCII(*hdWhich);
+#endif
+
   *hdWhich = sw(*hdWhich);	/* switch buffer for next saving on disk*/
   if ( (*times == OprogStatus.tapeTimes) 
        && (OprogStatus.tapeTimes != 0) )
