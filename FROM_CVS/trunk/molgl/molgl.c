@@ -667,7 +667,7 @@ void save_image(void)
        PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT); 
 
    /* Copy the image into our buffer */
-   /*glReadBuffer(GL_BACK_LEFT);*/
+   //glReadBuffer(GL_BACK);
    glReadPixels(0,0,width,height,GL_RGB,GL_UNSIGNED_BYTE,image);
    row_pointer=(png_bytep*)malloc(sizeof(png_bytep)*height);
    row_pointer = png_malloc(png_ptr,
@@ -710,7 +710,6 @@ void display (void)
     }
 #endif
   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
- 
   if (globset.setvp)
     {
       glLoadIdentity();
@@ -820,7 +819,10 @@ void print_usage(void)
   printf("molgl [-h/--help | --saveandquit/-sq | --pngfile/-f <filename> \n");
   printf("| --viewpoint/-vp (x,y,z) | --diameter/-d <atoms_diameter> | --noinfos/-ni\n");
   printf("| --nobox|-nb | --semiax/-sa (a,b,c) | --stacks/-st <stacks>\n");
+  printf("| --slides/-sl <slides> | --degreesx/-dgx <rotation_angle>\n");
+  printf("| --degreesy/-dgy <rotation_angle> | --degreesz/dgz <rotatioan_angle>\n");
   printf("| --slides/-sl <slides>] | --bondtransp/-br | --transp/-r <input_file> \n");
+  printf("| --boxsize/-L <box_size> ] <input_file> \n");
 }
 /* ============================= >>> args <<< ============================= */
 void args(int argc, char* argv[])
@@ -945,6 +947,46 @@ void args(int argc, char* argv[])
 		  exit(-1);
 		}
 	      globset.defbondcol = atoi(argv[i]);
+	    }
+	  else if (!strcmp(argv[i],"--boxsize")|| !strcmp(argv[i],"-L"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the box size!\n");
+		  exit(-1);
+		}
+	      globset.L = atof(argv[i]);
+	    }
+	  else if (!strcmp(argv[i],"--degreesx") || !strcmp(argv[i],"-dgx"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the rotation angle around x-axis!\n");
+		  exit(-1);
+		}
+	      globset.degx = atof(argv[i]);
+	    }
+	  else if (!strcmp(argv[i],"--degreesy")|| !strcmp(argv[i],"-dgy"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the rotation angle around y-axis!\n");
+		  exit(-1);
+		}
+	      globset.degy = atof(argv[i]);
+	    }
+	  else if (!strcmp(argv[i],"--degreesz") || !strcmp(argv[i],"-dgz"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the rotation angle around z-axis!\n");
+		  exit(-1);
+		}
+	      globset.degz = atof(argv[i]);
 	    }
 	  else if (!strcmp(argv[i],"--bondtransp")|| !strcmp(argv[i],"-br"))
 	    {
