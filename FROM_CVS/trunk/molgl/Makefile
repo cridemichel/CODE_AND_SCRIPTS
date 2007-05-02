@@ -2,10 +2,11 @@ MGL_LIBS=-L/usr/X11/lib -L/usr/local/lib -L/usr/X11R6/lib -L/usr/lib -lm -lXmu -
 MGL_INCLUDE= -I$(MD)/include -I/usr/X11R6/include -I/usr/local/include -UMGL_USELIST -I/sw/include
 
 molgl: molgl.o #mglgui.o
-	gcc  -lpng -O0 -g -o molgl molgl.o $(MGL_LIBS) 
+	gcc  -lpng -O3 -o molgl molgl.o $(MGL_LIBS) 
 
 molgl.o: molgl.c molgl.h
-	gcc -O0 -g -c -Wall -DMGL_MACOS $(MGL_INCLUDE) -o molgl.o molgl.c
+	gcc -O3 -c -Wall $(MGL_INCLUDE) -o molgl.o molgl.c
+#USARE QUESTO PER MAC OSX: gcc -O0 -g -c -Wall -DMGL_MACOS $(MGL_INCLUDE) -o molgl.o molgl.c
 
 #mglgui.o : mglgui.C mglgui.H
 #	g++ -c -Wall $(MGL_INCLUDE) -o mglgui.o mglgui.C
