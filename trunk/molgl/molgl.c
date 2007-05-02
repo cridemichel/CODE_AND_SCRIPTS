@@ -822,7 +822,7 @@ void print_usage(void)
   printf("| --slides/-sl <slides> | --degreesx/-dgx <rotation_angle>\n");
   printf("| --degreesy/-dgy <rotation_angle> | --degreesz/dgz <rotatioan_angle>\n");
   printf("| --slides/-sl <slides>] | --bondtransp/-br | --transp/-r <input_file> \n");
-  printf("| --boxsize/-L <box_size> ] <input_file> \n");
+  printf("| --boxsize/-L <box_size> | --distance/-di <distance_offset>] <input_file> \n");
 }
 /* ============================= >>> args <<< ============================= */
 void args(int argc, char* argv[])
@@ -947,6 +947,16 @@ void args(int argc, char* argv[])
 		  exit(-1);
 		}
 	      globset.defbondcol = atoi(argv[i]);
+	    }
+	  else if (!strcmp(argv[i],"--distance")|| !strcmp(argv[i],"-di"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the distance!\n");
+		  exit(-1);
+		}
+	      globset.dist = atof(argv[i]);
 	    }
 	  else if (!strcmp(argv[i],"--boxsize")|| !strcmp(argv[i],"-L"))
 	    {
@@ -1885,7 +1895,7 @@ void default_pars(void)
   globset.setvp = 0;
   globset.diameter = 1.0;
   globset.height = 0.2;
-  globset.dist = 1.0;
+  globset.dist = 0.0;
   globset.default_bw=120;
   globset.default_col=466;
   globset.defbondthick = 1.0;
