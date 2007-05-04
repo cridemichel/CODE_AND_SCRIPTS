@@ -1974,6 +1974,7 @@ void check_all_bonds(void)
 #else
 		      md_pbonds = MD_PBONDS;
 #endif
+		      assign_bond_mapping(i, j);
 		      for (nn=0; nn < md_pbonds; nn++)
 			{
 			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
