@@ -1955,7 +1955,7 @@ void check_all_bonds(void)
 		    {
 		      if (i == j)
 			continue;
-#if 0 
+#if 0
 		      drx = rx[i] - rx[j];
 		      shift2[0] = L*rint(drx/L);
 		      dry = ry[i] - ry[j];
@@ -1963,6 +1963,7 @@ void check_all_bonds(void)
 		      drz = rz[i] - rz[j]; 
 		      shift2[2] = L*rint(drz/L);
 #endif
+		      assign_bond_mapping(i, j);
 		      dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 #ifdef MD_THREESPOTS
 		      if (i < Oparams.parnumA && j < Oparams.parnumA)
@@ -1974,7 +1975,6 @@ void check_all_bonds(void)
 #else
 		      md_pbonds = MD_PBONDS;
 #endif
-		      assign_bond_mapping(i, j);
 		      for (nn=0; nn < md_pbonds; nn++)
 			{
 			  if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
