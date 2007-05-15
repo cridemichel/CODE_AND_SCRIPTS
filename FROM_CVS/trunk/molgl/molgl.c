@@ -770,7 +770,7 @@ void display (void)
     count++;
   if (globset.saveandquit==1)
     glFinish(); 
-  glFlush();
+  //glFlush();
   glutSwapBuffers();
   if (globset.saveandquit==1)
     {
