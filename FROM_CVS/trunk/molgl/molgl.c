@@ -2091,7 +2091,7 @@ int main(int argc, char** argv)
   glutKeyboardFunc(key);
   glutSpecialFunc(special);
   /*glutVisibilityFunc(visible);*/
-  glutPostRedisplay();
+  //glutPostRedisplay();
   glutMainLoop();
   return 0;             /* ANSI C requires main to return int. */
 }
