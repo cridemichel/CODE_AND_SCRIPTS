@@ -80,8 +80,8 @@ void myinit (void)
     glEnable (GL_LIGHT0);
     if (globset.twolights)
       glEnable(GL_LIGHT1);
-    glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
     glEnable(GL_CULL_FACE);
     //glDisable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -227,13 +227,14 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
       glEnd();
       return;
    }
-   delta1 = 0.01 * TWOPI / n1;
-   delta2 = 0.01 * TWOPI / n2;
+   delta1 = 0.01*TWOPI / (double)n1;
+   delta2 =  0.01*TWOPI / (double)n2;
    for (j=0;j<n1/2;j++) {
       theta1 = (j+1) * TWOPI / (double)n1 - PID2;
       theta2 = j * TWOPI / (double)n1 - PID2;
-
-      if (method == 0)
+      if (method==2)
+	glBegin(GL_TRIANGLE_FAN);
+      else if (method == 0)
          glBegin(GL_QUAD_STRIP);
       else
          glBegin(GL_TRIANGLE_STRIP);
@@ -242,21 +243,23 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
             theta3 = 0;
          else
             theta3 = i * TWOPI / n2;
-
+   
          EvalSuperEllipse(theta2,theta3,power1,power2,a,b,c,&p);
          EvalSuperEllipse(theta2+delta1,theta3,power1,power2,a,b,c,&p1);
          EvalSuperEllipse(theta2,theta3+delta2,power1,power2,a,b,c,&p2);
          en = CalcNormal(p,p1,p2);
          glNormal3f(en.x,en.y,en.z);
          //glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
+	 //glColor4f(1,1,1,0.1);
          glVertex3f(p.x,p.y,p.z);
 
          EvalSuperEllipse(theta1,theta3,power1,power2,a,b,c,&p);
-         EvalSuperEllipse(theta1-delta1,theta3,power1,power2,a,b,c,&p1);
-         EvalSuperEllipse(theta1,theta3-delta2,power1,power2,a,b,c,&p2);
+         EvalSuperEllipse(theta1+delta1,theta3,power1,power2,a,b,c,&p1);
+         EvalSuperEllipse(theta1,theta3+delta2,power1,power2,a,b,c,&p2);
          en = CalcNormal(p,p1,p2);
          glNormal3f(en.x,en.y,en.z);
          //glTexCoord2f(i/(double)n,2*j/(double)n);
+	 //glColor4f(1,1,1,0.1);
          glVertex3f(p.x,p.y,p.z);
       }
       glEnd();
@@ -412,10 +415,42 @@ void displayAtom(int nf, int nm, int na)
       /*if (atom->common.transp < 1.0)
 	glDepthMask (GL_FALSE);*/
       //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      CreateSuperEllipse(atom->supellips.n1, 
-			 atom->supellips.n2, atom->supellips.a, 
-			 atom->supellips.b, atom->supellips.c, globset.stacks, 
-			 globset.slides, 1);
+      /* for now disabled */
+      if (0 && atom->supellips.n1==1 && atom->supellips.n2==1)
+	{
+	  for (k1 = 0; k1 < 4; k1++)
+	    for (k2 = 0; k2 < 4; k2++)
+	      {
+		if (k1 < 3 && k2 < 3 && k1==k2)
+		  {
+		    switch(k1)
+		      {
+		      case 0:
+			rotm[k1*4+k2]=atom->supellips.a;
+		      break;
+		      case 1:
+			rotm[k1*4+k2]=atom->supellips.b;
+		      break;
+		      case 2:
+			rotm[k1*4+k2]=atom->supellips.c;
+		      break;
+		      }
+		  }
+		else if (k1==3 && k2 ==3)
+		  rotm[15] = 1.0;
+	    else
+	      rotm[k1*4+k2] = 0.0;
+	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
+	  }
+	  glMultMatrixf(rotm);
+       	  glutSolidSphere (1, globset.stacks, globset.slides);
+	}	  
+      else
+	CreateSuperEllipse(atom->supellips.n1, 
+	  		   atom->supellips.n2, atom->supellips.a, 
+	  		   atom->supellips.b, atom->supellips.c, globset.stacks, 
+	  		   globset.slides, 1);
+
       /*if (atom->common.transp < 1.0)
 	glDepthMask (GL_TRUE);*/
       //glDisable (GL_BLEND); 
@@ -571,6 +606,7 @@ void onScreenInfo()
   myReshape(globset.Width, globset.Height);
   glPopAttrib();
   glPopMatrix();
+  glEnable(GL_DEPTH_TEST);
 }
 #ifdef MGL_MACOS
 #include<png.h>
@@ -746,14 +782,19 @@ void display (void)
  
   for (nf = 0; nf < globset.frameNo; ++nf)
     {
+#if 1
       if (nf == 0)
 	{
-	  glDepthMask(GL_TRUE);
+	  if (globset.depthmask)
+	    glDepthMask(GL_TRUE);
+	  else
+	    glDepthMask(GL_FALSE);
 	}
       else 
 	{
 	  glDepthMask(GL_FALSE);
 	}
+#endif
 #ifdef MGL_USELIST
       glCallList(atomsList[nf]);
 #else
@@ -766,7 +807,8 @@ void display (void)
 #endif
     }
   glPopMatrix ();
-  
+  if (!globset.depthmask)
+    glDepthMask(GL_TRUE); 
   if (globset.infos) onScreenInfo();
   if (globset.saveandquit==1)
     count++;
@@ -869,6 +911,10 @@ void args(int argc, char* argv[])
 	  else if (!strcmp(argv[i],"--twolights") || !strcmp(argv[i],"-tl"))
 	    {
 	      globset.twolights = 1;
+	    }
+	  else if (!strcmp(argv[i],"--nodepthmask") || !strcmp(argv[i],"-ndm"))
+	    {
+	      globset.depthmask = 0;
 	    }
 	  else if (!strcmp(argv[i],"--pngfile") || !strcmp(argv[i],"-f"))
 	    {
@@ -1956,6 +2002,7 @@ void default_pars(void)
   globset.light_pos1[0]=globset.light_pos1[1]=globset.light_pos1[2]=10.0;
   globset.light_pos1[3]=0.0;
   globset.twolights=0;
+  globset.depthmask=1;
   readRGB();
 
   setBW();
