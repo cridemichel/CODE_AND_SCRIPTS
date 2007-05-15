@@ -325,13 +325,13 @@ void displayAtom(int nf, int nm, int na)
   if (atom->common.type==MGL_ATOM_SPHERE)
     {
       //glEnable (GL_BLEND);
-      if (atom->common.transp < 1.0)
-	glDepthMask (GL_FALSE);
+      /*if (atom->common.transp < 1.0)
+	glDepthMask (GL_FALSE);*/
       //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       glutSolidSphere (atom->sphere.radius, globset.stacks, globset.slides);
-      if (atom->common.transp < 1.0)
-	glDepthMask (GL_TRUE);
-      //glDisable (GL_BLEND); 
+      /* if (atom->common.transp < 1.0)
+	glDepthMask (GL_TRUE); */
+     //glDisable (GL_BLEND); 
     }
   else if (atom->common.type==MGL_ATOM_DISK)
     {
@@ -355,14 +355,15 @@ void displayAtom(int nf, int nm, int na)
       glTranslatef(0, 0, atom->disk.height);
       gluDisk(ss2, 0, atom->disk.radius, globset.stacks, globset.slides);
       glPopMatrix();
+      /*
       if (atom->common.transp < 1.0)
-	glDepthMask (GL_FALSE);
+	glDepthMask (GL_FALSE);*/
       gluCylinder(ss, atom->disk.radius, 
 		      atom->disk.radius, 
 		      atom->disk.height, 
 		      globset.stacks, globset.slides);
-      if (atom->common.transp < 1.0)
-	glDepthMask (GL_TRUE);
+      /* if (atom->common.transp < 1.0)
+	glDepthMask (GL_TRUE); */
       glPushMatrix();
       gluQuadricOrientation(ss3, GLU_INSIDE);
       gluDisk(ss3, 0, atom->disk.radius, globset.stacks, globset.slides);
@@ -378,14 +379,15 @@ void displayAtom(int nf, int nm, int na)
       normn = sqrt(Sqr(atom->disk.nx)+Sqr(atom->disk.ny)+Sqr(atom->disk.nz));
       rotangle = 180.0*acos(atom->disk.nz/normn)/Pi; 	
       glRotatef(rotangle, rax, ray, raz);
-      if (atom->common.transp < 1.0)
-	glDepthMask (GL_FALSE);
+      /*
+	 if (atom->common.transp < 1.0)
+	 glDepthMask (GL_FALSE);*/
       gluCylinder(ss, atom->cylinder.toprad, 
 		      atom->cylinder.botrad, 
 		      atom->cylinder.height, 
 		      globset.stacks, globset.slides);
-      if (atom->common.transp < 1.0)
-	glDepthMask (GL_TRUE);
+      /*if (atom->common.transp < 1.0)
+	glDepthMask (GL_TRUE);*/
     }
   else if (atom->common.type==MGL_ATOM_SUPELLIPS)
     {
@@ -407,15 +409,15 @@ void displayAtom(int nf, int nm, int na)
        * x = Inversa(R) x' = Trasposta(R) x'*/
       glMultTransposeMatrixf(rotm);
       //glEnable (GL_BLEND);
-      if (atom->common.transp < 1.0)
-	glDepthMask (GL_FALSE);
+      /*if (atom->common.transp < 1.0)
+	glDepthMask (GL_FALSE);*/
       //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       CreateSuperEllipse(atom->supellips.n1, 
 			 atom->supellips.n2, atom->supellips.a, 
 			 atom->supellips.b, atom->supellips.c, globset.stacks, 
 			 globset.slides, 1);
-      if (atom->common.transp < 1.0)
-	glDepthMask (GL_TRUE);
+      /*if (atom->common.transp < 1.0)
+	glDepthMask (GL_TRUE);*/
       //glDisable (GL_BLEND); 
     }
 
@@ -503,11 +505,11 @@ void displayBonds(int nf, int i)
 	  setColor(mgl_col[globset.default_col].rgba, fadeFact);
 	}
 
-      if (mols[nf][i].bond[nb].transp < 1.0)
-	glDepthMask (GL_FALSE);
+      /*if (mols[nf][i].bond[nb].transp < 1.0)
+	glDepthMask (GL_FALSE);*/
       renderSolidCylinder(rcmx, rcmy, rcmz, mols[nf][i].bond[nb].thickness, normn);
-      if (mols[nf][i].bond[nb].transp < 1.0)
-	glDepthMask (GL_TRUE);
+      /*if (mols[nf][i].bond[nb].transp < 1.0)
+	glDepthMask (GL_TRUE);*/
       glPopMatrix();
     }
 }
