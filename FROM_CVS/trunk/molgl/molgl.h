@@ -159,6 +159,7 @@ struct global_settings
   double deftransp;
   int nrefresh;
   int twolights;
+  int depthmask;
   GLfloat light_pos0[4];
   GLfloat light_pos1[4];
 };
