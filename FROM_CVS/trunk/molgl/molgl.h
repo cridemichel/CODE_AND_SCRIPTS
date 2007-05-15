@@ -158,5 +158,8 @@ struct global_settings
   double defbondtransp;
   double deftransp;
   int nrefresh;
+  int twolights;
+  GLfloat light_pos0[4];
+  GLfloat light_pos1[4];
 };
 
