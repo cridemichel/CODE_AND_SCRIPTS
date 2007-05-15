@@ -768,13 +768,14 @@ void display (void)
   if (globset.infos) onScreenInfo();
   if (globset.saveandquit==1)
     count++;
+  if (globset.saveandquit==1)
+    glFinish(); 
   glFlush();
   glutSwapBuffers();
   if (globset.saveandquit==1)
     {
       if (count==globset.nrefresh)
 	{
-	  glFinish();
 	  save_image();
 	  exit(0);
 	}
