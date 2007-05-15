@@ -80,9 +80,13 @@ void myinit (void)
     glEnable (GL_LIGHT0);
     if (globset.twolights)
       glEnable(GL_LIGHT1);
+#if 1
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
     glEnable(GL_CULL_FACE);
+#else
+    glEnable(GL_POLYGON_STIPPLE);
+#endif
     //glDisable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     
@@ -446,11 +450,12 @@ void displayAtom(int nf, int nm, int na)
        	  glutSolidSphere (1, globset.stacks, globset.slides);
 	}	  
       else
-	CreateSuperEllipse(atom->supellips.n1, 
-	  		   atom->supellips.n2, atom->supellips.a, 
-	  		   atom->supellips.b, atom->supellips.c, globset.stacks, 
-	  		   globset.slides, 1);
-
+	{
+	  CreateSuperEllipse(atom->supellips.n1, 
+	    		     atom->supellips.n2, atom->supellips.a, 
+	    		     atom->supellips.b, atom->supellips.c, globset.stacks, 
+	    		     globset.slides, 1);
+	}
       /*if (atom->common.transp < 1.0)
 	glDepthMask (GL_TRUE);*/
       //glDisable (GL_BLEND); 
