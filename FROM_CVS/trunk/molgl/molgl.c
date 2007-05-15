@@ -768,6 +768,7 @@ void display (void)
   if (globset.infos) onScreenInfo();
   if (globset.saveandquit==1)
     count++;
+  glFlush();
   glutSwapBuffers();
   if (globset.saveandquit==1)
     {
