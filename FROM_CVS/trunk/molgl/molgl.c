@@ -36,23 +36,24 @@ void setLight(void)
   GLfloat light_specular1[] = { 1.0, 1.0, 1.0, 1.0 }; 
  
   /*	light_position is NOT default value	*/
-  GLfloat light_position0[] = { 10.0, 10.0, 10.0, 0.0 };
-  GLfloat light_position1[] = { -10.0, -10.0, -10.0, 0.0};
+  //GLfloat light_position0[] = { 10.0, 10.0, 10.0, 0.0 };
+  //GLfloat light_position1[] = { -10.0, -10.0, -10.0, 0.0};
   GLfloat lmodel_ambient[] = { 0.2, 0.2, 0.2, 0.15 };
   GLfloat local_view[] = { 0.0 };
   glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
   glLightModelfv(GL_LIGHT_MODEL_LOCAL_VIEWER, local_view);
   
-  //glLightModeli(GL_LIGHT_MODEL, GL_LIGHT_TWO_SIDE);
+ 
+  glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 1);
 
   glLightfv (GL_LIGHT0, GL_AMBIENT, light_ambient0);
   glLightfv (GL_LIGHT0, GL_DIFFUSE, light_diffuse0);
   glLightfv (GL_LIGHT0, GL_SPECULAR, light_specular0);
-  glLightfv (GL_LIGHT0, GL_POSITION, light_position0);
+  glLightfv (GL_LIGHT0, GL_POSITION, globset.light_pos0);
   glLightfv (GL_LIGHT1, GL_AMBIENT, light_ambient1);
   glLightfv (GL_LIGHT1, GL_DIFFUSE, light_diffuse1);
   glLightfv (GL_LIGHT1, GL_SPECULAR, light_specular1);
-  glLightfv (GL_LIGHT1, GL_POSITION, light_position1);
+  glLightfv (GL_LIGHT1, GL_POSITION, globset.light_pos1);
 
 }
 
@@ -77,6 +78,8 @@ void myinit (void)
     //glFrontFace (GL_CW);
     glEnable (GL_LIGHTING);
     glEnable (GL_LIGHT0);
+    if (globset.twolights)
+      glEnable(GL_LIGHT1);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_CULL_FACE);
@@ -770,6 +773,7 @@ void display (void)
     {
       if (count==globset.nrefresh)
 	{
+	  glFinish();
 	  save_image();
 	  exit(0);
 	}
@@ -826,8 +830,9 @@ void print_usage(void)
   printf("| --nobox|-nb | --semiax/-sa (a,b,c) | --stacks/-st <stacks>\n");
   printf("| --slides/-sl <slides> | --degreesx/-dgx <rotation_angle>\n");
   printf("| --degreesy/-dgy <rotation_angle> | --degreesz/dgz <rotatioan_angle>\n");
-  printf("| --slides/-sl <slides>] | --bondtransp/-br | --transp/-r <input_file> \n");
-  printf("| --boxsize/-L <box_size> | --distance/-di <distance_offset>] <input_file> \n");
+  printf("| --slides/-sl <slides> | --bondtransp/-br <transparency> | --transp/-r <transparency> \n");
+  printf("| --boxsize/-L <box_size> | --distance/-di <distance_offset> \n");
+  printf("| --twolights/-tl | --light_pos0/-lp0 (x,y,z) | --light_pos1/-lp1 (x,y,z) ] <input_file> \n"); 
 }
 /* ============================= >>> args <<< ============================= */
 void args(int argc, char* argv[])
@@ -857,6 +862,10 @@ void args(int argc, char* argv[])
 	    {
 	      globset.saveandquit = 1;
 	    }
+	  else if (!strcmp(argv[i],"--twolights") || !strcmp(argv[i],"-tl"))
+	    {
+	      globset.twolights = 1;
+	    }
 	  else if (!strcmp(argv[i],"--pngfile") || !strcmp(argv[i],"-f"))
 	    {
 	      i++;
@@ -878,6 +887,26 @@ void args(int argc, char* argv[])
 		}
 	      sscanf(argv[i], "(%lf,%lf,%lf)", &globset.ivpx, &globset.ivpy, &globset.ivpz);
 	      globset.setvp = 1;
+	    }
+	  else if (!strcmp(argv[i],"--lightpos0")||!strcmp(argv[i],"-lp0"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the light N.0 position (x,y,z)!\n");
+		  exit(-1);
+		}
+	      sscanf(argv[i], "(%f,%f,%f)", &globset.light_pos0[0], &globset.light_pos0[1], &globset.light_pos0[2]);
+	    }
+	  else if (!strcmp(argv[i],"--lightpos1")||!strcmp(argv[i],"-lp1"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the light N.1 position (x,y,z)!\n");
+		  exit(-1);
+		}
+	      sscanf(argv[i], "(%f,%f,%f)", &globset.light_pos1[0], &globset.light_pos1[1], &globset.light_pos1[2]);
 	    }
 	  else if (!strcmp(argv[i],"--nrefresh")||!strcmp(argv[i],"-nr"))
 	    {
@@ -1918,6 +1947,11 @@ void default_pars(void)
   globset.defbondtransp = 1.0;
   globset.deftransp = 1.0;
   globset.nrefresh=1;
+  globset.light_pos0[0]=globset.light_pos0[1]=globset.light_pos0[2]=10.0;
+  globset.light_pos0[3]=0.0;
+  globset.light_pos1[0]=globset.light_pos1[1]=globset.light_pos1[2]=10.0;
+  globset.light_pos1[3]=0.0;
+  globset.twolights=0;
   readRGB();
 
   setBW();
