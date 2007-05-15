@@ -696,6 +696,7 @@ void save_image(void)
 /* ======================== >>> display <<< ===============================*/
 void display (void)
 {
+  static int count=0;
   int nf;
 #ifndef MGL_USELIST
   int i, j;
@@ -762,12 +763,16 @@ void display (void)
   glPopMatrix ();
   
   if (globset.infos) onScreenInfo();
-
+  if (globset.saveandquit==1)
+    count++;
   glutSwapBuffers();
   if (globset.saveandquit==1)
     {
-      save_image();
-      exit(0);
+      if (count==globset.nrefresh)
+	{
+	  save_image();
+	  exit(0);
+	}
     }
 }
 
@@ -873,6 +878,16 @@ void args(int argc, char* argv[])
 		}
 	      sscanf(argv[i], "(%lf,%lf,%lf)", &globset.ivpx, &globset.ivpy, &globset.ivpz);
 	      globset.setvp = 1;
+	    }
+	  else if (!strcmp(argv[i],"--nrefresh")||!strcmp(argv[i],"-nr"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the number of refresh!\n");
+		  exit(-1);
+		}
+	      globset.nrefresh = atoi(argv[i]);
 	    }
 	  else if (!strcmp(argv[i],"--stacks")|| !strcmp(argv[i],"-st"))
 	    {
@@ -1902,6 +1917,7 @@ void default_pars(void)
   globset.defbondcol = 465;
   globset.defbondtransp = 1.0;
   globset.deftransp = 1.0;
+  globset.nrefresh=1;
   readRGB();
 
   setBW();
