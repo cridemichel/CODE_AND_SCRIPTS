@@ -157,5 +157,6 @@ struct global_settings
   int defbondcol;
   double defbondtransp;
   double deftransp;
+  int nrefresh;
 };
 
