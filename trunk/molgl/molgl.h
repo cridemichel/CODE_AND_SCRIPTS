@@ -160,6 +160,7 @@ struct global_settings
   int nrefresh;
   int twolights;
   int depthmask;
+  int exitDelay;
   GLfloat light_pos0[4];
   GLfloat light_pos1[4];
 };
