@@ -1,4 +1,4 @@
-MGL_LIBS=-L/usr/X11/lib -L/usr/local/lib -L/usr/X11R6/lib -L/usr/lib -lm -lXmu -lXi    -lGL -lGLU -lglut -lX11 -lXext -L/sw/lib 
+MGL_LIBS=-L/usr/X11/lib -L/usr/lib -lm -lXmu -lXi    -lGL -lGLU -lglut -lX11 -lXext 
 MGL_INCLUDE= -I$(MD)/include -I/usr/X11R6/include -I/usr/local/include -UMGL_USELIST -I/sw/include
 
 molgl: molgl.o #mglgui.o
