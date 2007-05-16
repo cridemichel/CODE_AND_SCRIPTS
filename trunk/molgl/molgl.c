@@ -329,16 +329,21 @@ void displayAtom(int nf, int nm, int na)
 	    }
 	}
     }
+  glEnable (GL_BLEND);
+  if (atom->common.transp < 1.0)
+    {
+      glDepthMask (GL_FALSE);
+      glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+  else
+    {
+      glDepthMask (GL_TRUE);
+      glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
   if (atom->common.type==MGL_ATOM_SPHERE)
     {
-      //glEnable (GL_BLEND);
-      /*if (atom->common.transp < 1.0)
-	glDepthMask (GL_FALSE);*/
-      //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       glutSolidSphere (atom->sphere.radius, globset.stacks, globset.slides);
-      /* if (atom->common.transp < 1.0)
-	glDepthMask (GL_TRUE); */
-     //glDisable (GL_BLEND); 
+      
     }
   else if (atom->common.type==MGL_ATOM_DISK)
     {
@@ -460,7 +465,9 @@ void displayAtom(int nf, int nm, int na)
 	glDepthMask (GL_TRUE);*/
       //glDisable (GL_BLEND); 
     }
-
+  if (atom->common.transp < 1.0)
+    glDepthMask (GL_TRUE); 
+  glDisable (GL_BLEND); 
 /*
     gluSphere ss = gluNewQuadric();(ss, sig[na], 12, 12);
   */
@@ -792,7 +799,7 @@ void display (void)
  
   for (nf = 0; nf < globset.frameNo; ++nf)
     {
-#if 1
+#if 0
       if (nf == 0)
 	{
 	  if (globset.depthmask)
@@ -817,8 +824,8 @@ void display (void)
 #endif
     }
   glPopMatrix ();
-  if (!globset.depthmask)
-    glDepthMask(GL_TRUE); 
+  //if (!globset.depthmask)
+    //glDepthMask(GL_TRUE); 
   if (globset.infos) onScreenInfo();
   if (globset.saveandquit==1)
     count++;
