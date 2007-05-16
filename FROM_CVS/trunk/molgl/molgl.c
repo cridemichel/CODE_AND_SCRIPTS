@@ -738,7 +738,13 @@ void save_image(void)
    free(fn);
    free(image);
 }
-
+void timerCB(int val)
+{
+  glFinish();
+  glutSwapBuffers();
+  save_image();
+  exit(0);
+}
 /* ======================== >>> display <<< ===============================*/
 void display (void)
 {
@@ -819,11 +825,16 @@ void display (void)
     count++;
   if (globset.saveandquit==1)
     glFinish(); 
-  //glFlush();
   glutSwapBuffers();
+  if (globset.saveandquit==1 && globset.exitDelay > 0)
+    {
+      glutPostRedisplay();
+      glutTimerFunc(globset.exitDelay, timerCB, 1);
+      return;
+    }
   if (globset.saveandquit==1)
     {
-      if (count==globset.nrefresh)
+      if (globset.nrefresh==1 || (globset.nrefresh > 1 && count >= globset.nrefresh))
 	{
 	  save_image();
 	  exit(0);
@@ -968,12 +979,22 @@ void args(int argc, char* argv[])
 	      i++;
 	      if (i == argc)
 		{
-		  fprintf(stderr, "ERROR: You must supply the number of refresh!\n");
+		  fprintf(stderr, "ERROR: You must supply the number of refresh done before quitting!\n");
 		  exit(-1);
 		}
 	      globset.nrefresh = atoi(argv[i]);
 	    }
-	  else if (!strcmp(argv[i],"--stacks")|| !strcmp(argv[i],"-st"))
+	  else if (!strcmp(argv[i],"--exitDelay")||!strcmp(argv[i],"-ed"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the delay in msec before quitting!\n");
+		  exit(-1);
+		}
+	      globset.exitDelay = atoi(argv[i]);
+	    }
+	   else if (!strcmp(argv[i],"--stacks")|| !strcmp(argv[i],"-st"))
 	    {
 	      i++;
 	      if (i == argc)
@@ -2002,6 +2023,7 @@ void default_pars(void)
   globset.defbondtransp = 1.0;
   globset.deftransp = 1.0;
   globset.nrefresh=1;
+  globset.exitDelay=0;/* ritardo in msec prima di fare save and quit */
   globset.light_pos0[0]=globset.light_pos0[1]=globset.light_pos0[2]=10.0;
   globset.light_pos0[3]=0.0;
   globset.light_pos1[0]=globset.light_pos1[1]=globset.light_pos1[2]=10.0;
