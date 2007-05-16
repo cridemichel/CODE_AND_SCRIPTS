@@ -896,7 +896,8 @@ void print_usage(void)
   printf("| --degreesy/-dgy <rotation_angle> | --degreesz/dgz <rotatioan_angle>\n");
   printf("| --slides/-sl <slides> | --bondtransp/-br <transparency> | --transp/-r <transparency> \n");
   printf("| --boxsize/-L <box_size> | --distance/-di <distance_offset> \n");
-  printf("| --twolights/-tl | --light_pos0/-lp0 (x,y,z) | --light_pos1/-lp1 (x,y,z) ] <input_file> \n"); 
+  printf("| --twolights/-tl | --light_pos0/-lp0 (x,y,z) | --light_pos1/-lp1 (x,y,z)\n"); 
+  printf("| --exitDelay/-ed | --nrefresh/-nr ] <input_file> \n"); 
 }
 /* ============================= >>> args <<< ============================= */
 void args(int argc, char* argv[])
