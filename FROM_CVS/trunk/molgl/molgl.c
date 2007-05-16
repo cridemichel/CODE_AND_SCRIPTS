@@ -329,18 +329,19 @@ void displayAtom(int nf, int nm, int na)
 	    }
 	}
     }
-  /*
+ /* 
   glEnable (GL_BLEND);
   if (atom->common.transp < 1.0)
     {
-      glDepthMask (GL_FALSE);
+      //glDepthMask (GL_FALSE);
       glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
   else
     {
-      glDepthMask (GL_TRUE);
+      //glDepthMask (GL_TRUE);
       glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    }*/
+    }
+    */
   if (atom->common.type==MGL_ATOM_SPHERE)
     {
       glutSolidSphere (atom->sphere.radius, globset.stacks, globset.slides);
@@ -466,10 +467,10 @@ void displayAtom(int nf, int nm, int na)
 	glDepthMask (GL_TRUE);*/
       //glDisable (GL_BLEND); 
     }
-  /* 
-  if (atom->common.transp < 1.0)
+  
+  /*if (atom->common.transp < 1.0)
     glDepthMask (GL_TRUE); 
-  glDisable (GL_BLEND); */
+    glDisable (GL_BLEND); */ 
 /*
     gluSphere ss = gluNewQuadric();(ss, sig[na], 12, 12);
   */
