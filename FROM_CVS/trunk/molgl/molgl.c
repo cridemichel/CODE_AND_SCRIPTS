@@ -738,12 +738,11 @@ void save_image(void)
    free(fn);
    free(image);
 }
+void display (void);
 void timerCB(int val)
 {
-  glFinish();
-  glutSwapBuffers();
-  save_image();
-  exit(0);
+  globset.nrefresh=1;
+  display();
 }
 /* ======================== >>> display <<< ===============================*/
 void display (void)
@@ -826,9 +825,12 @@ void display (void)
   if (globset.saveandquit==1)
     glFinish(); 
   glutSwapBuffers();
-  if (globset.saveandquit==1 && globset.exitDelay > 0)
+  if (globset.nrefresh > 1 && count==1 && globset.exitDelay==0)
+    globset.exitDelay=1000; /* dopo 1 sec in ogni caso esce */
+  //printf("count=%d exitDelay=%d nrefresh=%d QUI\n", count, globset.exitDelay, globset.nrefresh);
+  if (globset.exitDelay > 0 && count==1)
     {
-      glutPostRedisplay();
+      //glutPostRedisplay();
       glutTimerFunc(globset.exitDelay, timerCB, 1);
       return;
     }
