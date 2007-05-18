@@ -3,7 +3,7 @@ SDHDR=ellipsoid.h
 
 UTIL = wtdutil heteroutil xvautil corutil jumps
 
-ellipsoid: link measures.o move.o init.o corutil tree.o matrixalg.o nnl.o hesticky.o# $(UTIL)
+ellipsoid: link measures.o move.o init.o corutil tree.o matrixalg.o nnl.o hesticky.o superellipsoid.o# $(UTIL)
 
 link:
 	ln -sf $(PERC)/ellipsoid/$(SDHDR) $(COMM)/mdsimdep.h 
@@ -43,6 +43,9 @@ nnl.o: nnl.c $(SDHDR) $(COMM)/mdsimul.h
 	
 hesticky.o: hesticky.c $(SDHDR) $(COMM)/mdsimul.h
 	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o hesticky.o hesticky.c
+	
+superellipsoid.o: superellipsoid.c $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o superellipsoid.o superellipsoid.c
 	
 wtdutil.o: wtd.c wtd.h $(SDHDR) $(COMM)/mdsimul.h
 	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o wtdutil.o wtd.c
