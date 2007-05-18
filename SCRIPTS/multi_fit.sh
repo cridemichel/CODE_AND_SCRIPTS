@@ -9,8 +9,8 @@ CNBEG=0.02
 FQSBEG=0.15
 FQCBEG=0.15
 DOCN=1
-DOFQS=1
-DOFQC=1
+DOFQS=0
+DOFQC=0
 if [ "$3" = "" ]
 then
 TYPE="2"
@@ -83,6 +83,7 @@ CNBEGSC=`$GSF ../../tempdecad_omACV_Phi$2.dat $X0`
 else
 CNBEGSC=`echo "$CNBEG*$TFACT"|bc -l`
 fi
+CNBEGSC=`echo $CNBEGSC*1.5|bc -l`
 RCMD=`echo "$PERC/fitSE.C(\"Cn.dat\",$TYPE,$CNBEGSC,1000,0)"`
 $ROOTEXE -b -q $RCMD > $LF
 TAU=`cat $LF | tail -4 | awk -v sf=$TFACT '{if ($2=="p1") print $3/sf}'`
