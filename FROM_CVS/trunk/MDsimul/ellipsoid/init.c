@@ -3348,7 +3348,7 @@ void writeAllCor(FILE* fs, int saveAll)
 	{
 	  /* write particles parameters */
 	  fprintf(fs, "%.15G %.15G %.15G\n", typesArr[i].sax[0], typesArr[i].sax[1], typesArr[i].sax[2]); 
-	  fprintf(fs, "%d %d %d\n", typesArr[i].n[0], typesArr[i].n[1], typesArr[i].n[2]);
+	  fprintf(fs, "%.15G %.15G %.15G\n", typesArr[i].n[0], typesArr[i].n[1], typesArr[i].n[2]);
 	  fprintf(fs, "%.15G %.15G %.15G %.15G %d %d\n", typesArr[i].m, typesArr[i].I[0], typesArr[i].I[1],
 		  typesArr[i].I[2], typesArr[i].brownian, typesArr[i].ignoreCore);
 #if 0
@@ -3360,7 +3360,7 @@ void writeAllCor(FILE* fs, int saveAll)
 	    fprintf(fs, "%.15G %.15G %.15G %.15G\n", typesArr[i].spots[j].x[0],typesArr[i].spots[j].x[1],
 		    typesArr[i].spots[j].x[2], typesArr[i].spots[j].sigma);
 	  for (j = 0; j < typesArr[i].nhardobjs; j++)
-	    fprintf(fs, "%.15G %.15G %.15G % .15G %.15G %.15G %d %d %d\n", 
+	    fprintf(fs, "%.15G %.15G %.15G % .15G %.15G %.15G %.15G %.15G %.15G\n", 
 		   typesArr[i].hardobjs[j].x[0],typesArr[i].hardobjs[j].x[1],typesArr[i].hardobjs[j].x[2], 
 		   typesArr[i].hardobjs[j].sax[0],typesArr[i].hardobjs[j].sax[1],typesArr[i].hardobjs[j].sax[2],
 		   typesArr[i].hardobjs[j].n[0],typesArr[i].hardobjs[j].n[1],typesArr[i].hardobjs[j].n[2]);
@@ -3544,7 +3544,7 @@ void readAllCor(FILE* fs)
     {
       /* read particles parameters */
       fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
-      fscanf(fs, "%d %d %d ", &typesArr[i].n[0], &typesArr[i].n[1], &typesArr[i].n[2]);
+      fscanf(fs, "%lf %lf %lf ", &typesArr[i].n[0], &typesArr[i].n[1], &typesArr[i].n[2]);
       fscanf(fs, "%lf %lf %lf %lf %d %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
 	   &typesArr[i].I[2], &typesArr[i].brownian, &typesArr[i].ignoreCore);
 #if 0
@@ -3559,7 +3559,7 @@ void readAllCor(FILE* fs)
 	       &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
       /* hard objects (for now super-ellipsoids) */
       for (j = 0; j < typesArr[i].nhardobjs; j++)
-	fscanf(fs, "%lf %lf %lf %lf %lf %lf %d %d %d ", 
+	fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lf ", 
 	       &typesArr[i].hardobjs[j].x[0],&typesArr[i].hardobjs[j].x[1], &typesArr[i].hardobjs[j].x[2], 
 	       &typesArr[i].hardobjs[j].sax[0],&typesArr[i].hardobjs[j].sax[1], &typesArr[i].hardobjs[j].sax[2],
 	       &typesArr[i].hardobjs[j].n[0], &typesArr[i].hardobjs[j].n[1], &typesArr[i].hardobjs[j].n[2]);
