@@ -87,14 +87,14 @@ typedef struct {
   double sax[3];
   double ppsax[3]; /* semi-lati di un parallelepipedo che circoscrive l'ellissoide con tutti i suoi sticky spots */
   double ppr[3];
-  int n[3];	
+  double n[3];	
 } hardobjsStruct;
 typedef struct 
 {
   double sax[3];
   double ppsax[3]; /* semi-lati di un parallelepipedo che circoscrive l'ellissoide con tutti i suoi sticky spots */
   double ppr[3];
-  int n[3]; /* super-ellipsoids integer exponents */
+  double n[3];/*super-ellipsoids double parameters (as in Povray) */
   double m;
   double I[3];
 #if 0

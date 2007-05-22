@@ -4435,6 +4435,11 @@ extern void distSD(int i, int j, double shift[3], double *vecg, double lambda, i
 extern void distconjgrad(int i, int j, double shift[3], double *vec);
 extern int maxitsRyck;
 extern double scalProd(double *A, double *B);
+extern int is_superellipse(int i);
+extern int newtDistNegSE(double x[], int n, int *check, 
+	  void (*vecfunc)(int, double [], double [], int, int, double []),
+	  int iA, int iB, double shift[3], int tryagain);
+
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -4774,7 +4779,14 @@ retry:
 	  vecg[4] = vecg8[7];
 	  OprogStatus.dist5 = 1;
 	}
+#ifdef MD_SUPERELLIPSOID
+      if (is_superellipse(i) || is_superellipse(j))
+	newtDistNegSE(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift, tryagain); 
+      else
+	newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift, tryagain); 
+#else
       newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift, tryagain); 
+#endif
     }
   else 
     newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift, tryagain); 
