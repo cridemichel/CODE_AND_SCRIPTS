@@ -64,4 +64,12 @@ int calcdist_retcheck;
 extern double rA[3], rB[3];
 extern double gradplane_all[6][3], rBall[6][3];
 extern int polinterr, polinterrRyck;
+int is_superellipse(int i)
+{
+  int kk;
+  if (typesArr[typeOfPart [i]].n[0]==1 && typesArr[typeOfPart [i]].n[1]==1)
+    return 0;
+  else 
+    return 1;
+}
 #endif
