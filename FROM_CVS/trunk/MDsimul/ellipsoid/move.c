@@ -3780,6 +3780,14 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
   int kk;
   double axi[3], axj[3];
 #endif
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(iA) || is_superellipse(iB))
+    {
+      fdjacDistNeg5SE(n, x, fvec, df, vecfunc, iA, iB, shift, fx, gx);
+      return;
+    }
+#endif
+ 
 #ifdef MD_USE_CBLAS
   double XaL[3][3], XbL[3][3];
   for (k1 = 0; k1 < 3; k1++)
@@ -3921,6 +3929,9 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
  //printf("F2BZdistNeg5 fvec (%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]);
 #endif
 }
+extern void fdjacDistNegSE(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx, double *gx);
+
 void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx, double *gx)
 {
@@ -3930,6 +3941,13 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
 #endif
   double rDC[3];
   int k1, k2;
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(iA) || is_superellipse(iB))
+    {
+      fdjacDistNegSE(n, x, fvec, df, vecfunc, iA, iB, shift, fx, gx);
+      return;
+    }
+#endif
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)

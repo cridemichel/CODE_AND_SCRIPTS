@@ -67,9 +67,47 @@ extern int polinterr, polinterrRyck;
 int is_superellipse(int i)
 {
   int kk;
-  if (typesArr[typeOfPart [i]].n[0]==1 && typesArr[typeOfPart [i]].n[1]==1)
+  if (typesArr[typeOfPart [i]].n[0]==1.0 && typesArr[typeOfPart [i]].n[1]==1.0)
     return 0;
   else 
     return 1;
+}
+int newtDistNegSE()
+{
+
+
+}
+int newtDistNeg5SE()
+{
+
+
+}
+int newtDistNegNeighPlaneSE()
+{
+
+}
+int newtDistNegNeighPlane5SE()
+{
+
+}
+
+int funcs2beZeroedDistNegSE()
+{
+
+}
+
+int funcs2beZeroedDistNeg5SE()
+{
+
+}
+int funcs2beZeroedDistNegNeighPlaneSE()
+{
+
+
+}
+int funcs2beZeroedDistNegNeighPlane5SE()
+{
+
+
 }
 #endif
