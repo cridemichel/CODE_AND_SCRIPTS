@@ -784,12 +784,22 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 }
 extern double gradplane[3];
+void funcs2beZeroedDistNegNeighPlane5SE(int n, double x[], double fvec[], int i);
+
 void funcs2beZeroedDistNegNeighPlane5(int n, double x[], double fvec[], int i)
 {
   int k1, k2; 
   double fx[3], rD[3];
   /* x = (r, alpha, t) */ 
   
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(i))
+    {
+      funcs2beZeroedDistNegNeighPlane5SE(n, x, fvec, i);
+      return;
+    }
+#endif
+ 
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
@@ -817,12 +827,22 @@ void funcs2beZeroedDistNegNeighPlane5(int n, double x[], double fvec[], int i)
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
+extern void fdjacDistNegNeighPlane5SE(int n, double x[], double fvec[], double **df, 
+		   void (*vecfunc)(int, double [], double [], int), int iA);
 
 void fdjacDistNegNeighPlane5(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int), int iA)
 {
   double fx[3], rD[3];
   int k1, k2;
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(iA) || is_superellipse(iB))
+    {
+      fdjacDistNegNeighPlane5SE(n, x, fvec, df, vecfunc, iA, iB, shift, fx, gx);
+      return;
+    }
+#endif
+ 
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
@@ -878,12 +898,22 @@ void fdjacDistNegNeighPlane5(int n, double x[], double fvec[], double **df,
  fvec[3] = 0.5*fvec[3]-1.0;
 #endif
 }
+extern void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int), int iA);
 
 void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int), int iA)
 {
   double fx[3];
   int k1, k2;
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(iA) || is_superellipse(iB))
+    {
+      fdjacDistNegNeighPlaneSE(n, x, fvec, df, vecfunc, iA, iB, shift, fx, gx);
+      return;
+    }
+#endif
+ 
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
@@ -1069,6 +1099,8 @@ void fdjacDistNegNeigh(int n, double x[], double fvec[], double **df,
   //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
 }
+extern void funcs2beZeroedDistNegNeighPlaneSE(int n, double x[], double fvec[], int i);
+
 void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[], int i)
 {
   int k1, k2; 
@@ -1082,6 +1114,14 @@ void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[], int i)
   print_matrix(Xb, 3);
 #endif
   
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(i))
+    {
+      funcs2beZeroedDistNegNeighPlaneSE(n, x, fvec, i);
+      return;
+    }
+#endif
+ 
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;

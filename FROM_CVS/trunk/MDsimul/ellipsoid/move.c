@@ -3770,6 +3770,9 @@ double scalProd(double *A, double *B);
 double rA[3], rB[3];
 //#define MD_GLOBALNRD
 int fdjac_disterr;
+void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df, 
+		   void (*vecfunc)(int, double [], double [], int, int, double []), 
+		   int iA, int iB, double shift[3], double *fx, double *gx);
 
 void fdjacDistNeg5(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx, double *gx)
@@ -4157,6 +4160,7 @@ void fdjacDist(int n, double x[], double fvec[], double **df,
   //MD_DEBUG(printf("F2BZdist fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
 }
+extern void funcs2beZeroedDistNegSE(int n, double x[], double fvec[], int i, int j, double shift[3]);
 
 void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
@@ -4170,7 +4174,15 @@ void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, doubl
   printf("Xb=\n");
   print_matrix(Xb, 3);
 #endif
-  
+
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(i) || is_superellipse(j))
+    {
+      funcs2beZeroedDistNegSE(n, x, fvec, i, j, shift);
+      return;
+    }
+#endif
+ 
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
@@ -4208,6 +4220,8 @@ void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, doubl
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
+extern void funcs2beZeroedDistNeg5SE(int n, double x[], double fvec[], int i, int j, double shift[3]);
+
 void funcs2beZeroedDistNeg5(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
   int k1, k2; 
@@ -4220,7 +4234,14 @@ void funcs2beZeroedDistNeg5(int n, double x[], double fvec[], int i, int j, doub
   printf("Xb=\n");
   print_matrix(Xb, 3);
 #endif
-  
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(i) || is_superellipse(j))
+    {
+      funcs2beZeroedDistNeg5SE(n, x, fvec, i, j, shift);
+      return;
+    }
+#endif
+ 
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
