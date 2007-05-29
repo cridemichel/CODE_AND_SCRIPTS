@@ -2702,6 +2702,10 @@ void usrInitAft(void)
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
       f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
+#ifdef MD_ABSORPTION
+      f = fopenMPI(absMisHD("absorption.dat"), "w+");
+      fclose(f);
+#endif
 #endif
       f = fopenMPI(absMisHD("MSDA.dat"), "w+");
       fclose(f);
