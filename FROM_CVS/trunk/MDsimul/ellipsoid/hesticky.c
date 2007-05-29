@@ -468,6 +468,23 @@ void bumpSPHS(int i, int j, double *W, int bt)
 
 }	
 #endif
+#if defined(EDHE_FLEX) && defined(MD_ABSORPTION)
+void handle_absorb(int ricettore, int protein)
+{
+  FILE *f; 
+  f = fopenMPI(absMisHD("absorpion.dat"),"a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%d %15G %.15G %.15G %.15G\n", ricettore, Oparams.time + OprogStatus.refTime, rx[protein], ry[protein], rz[protein]);
+#else
+  fprintf(mf, "%d %15G %.15G %.15G %.15G\n", ricettore, Oparams.time,  rx[protein], ry[protein], rz[protein]);
+#endif
+  fclose(f);
+  /* for now place protein randomly at fixed height L/2-sigma/2 */
+  rz[protein] = L*0.5 - 0.5;
+  rx[protein] = (gauss() - 0.5)*L;
+  ry[protein] = (gauss() - 0.5)*L;
+}
+#endif
 #if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
 extern void check_inf_mass_itens(int typei, int typej, int *infMass_i, int *infMass_j, int *infItens_i, int *infItens_j);
 #endif
@@ -528,6 +545,20 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
 #if 1
 #ifdef EDHE_FLEX
+#ifdef MD_ABSORPTION 
+  if ((typeOfPart[i]==0 && typeOfPart[j]==1) ||
+      (typeOfPart[i]==1 && typeOfPart[j]==0))
+    {
+      if (typeOfPart[i]==0)
+	{
+	  handle_absorb(i,j); /* i è il ricettore in questo caso */
+	}
+      else
+	{
+	  handle_absorb(j,i); /* j è il ricettore in questo caso */
+	}
+    }
+#endif
   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1)
     {
       bumpSPHS(i, j, W, bt);
