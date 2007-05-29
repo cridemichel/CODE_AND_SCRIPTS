@@ -72,40 +72,49 @@ int is_superellipse(int i)
   else 
     return 1;
 }
-int newtDistNegSE()
+void fdjacDistNegSE(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int, int, double []), 
+	       int iA, int iB, double shift[3], double *fx, double *gx)
 {
 
 
 }
-int newtDistNeg5SE()
+void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df, 
+		   void (*vecfunc)(int, double [], double [], int, int, double []), 
+		   int iA, int iB, double shift[3], double *fx, double *gx)
 {
 
 
 }
-int newtDistNegNeighPlaneSE()
+
+int fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int), int iA)
 {
 
 }
-int newtDistNegNeighPlane5SE()
+int fdjacDistNegNeighPlane5SE(int n, double x[], double fvec[], double **df, 
+		   void (*vecfunc)(int, double [], double [], int), int iA)
 {
 
 }
 
-int funcs2beZeroedDistNegSE()
+int funcs2beZeroedDistNegSE(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
 
 }
 
-int funcs2beZeroedDistNeg5SE()
+int funcs2beZeroedDistNeg5SE(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
 
 }
-int funcs2beZeroedDistNegNeighPlaneSE()
+
+int funcs2beZeroedDistNegNeighPlaneSE(int n, double x[], double fvec[], int i)
 {
 
 
 }
-int funcs2beZeroedDistNegNeighPlane5SE()
+
+int funcs2beZeroedDistNegNeighPlane5SE(int n, double x[], double fvec[], int i)
 {
 
 
