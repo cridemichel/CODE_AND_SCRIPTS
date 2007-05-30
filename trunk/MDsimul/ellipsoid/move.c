@@ -6414,7 +6414,13 @@ int locateHardWall(int na, int nplane, double tsup, double vecg[5])
     {
       return 0;
     }
-
+#ifdef EDHE_FLEX
+  if (is_sphere(i))
+    {
+      return locate_contact_neigh_plane_HS_semiperm(i, evtime, t2);
+      MD_DEBUG37(printf("HS evtime=%.15G\n", *evtime));
+    }
+#endif
   globalHW = 1;
 
   MD_DEBUG33(printf("inCell=%d pos of %d=%f %f %f\n", inCell[2][na], na, rx[na], ry[na], rz[na]));
