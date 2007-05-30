@@ -166,7 +166,7 @@ double calc_maxddot_nnl(int i, double *gradplane)
 #ifdef MD_EDHEFLEX_WALL
 extern int globalHW;
 extern void calc_grad_and_point_plane_hwbump(int i, double *grad, double *point, int nplane);
-extern int locateHardWall(int na, int nplane, double tsup, double vecg[5]);
+extern int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw);
 #endif
 void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {
@@ -178,6 +178,13 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       calc_grad_and_point_plane_hwbump(i, grad, point, nplane);
       return;
     }
+#ifdef MD_ABSORPTION
+  if (globalHW==2)
+    {
+      calc_grad_and_point_plane_hwsemiperm(i, grad, point);
+      return;
+    }
+#endif
 #endif
   for (kk=0; kk < 3; kk++)
     {
@@ -3012,15 +3019,15 @@ void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBAL
     }
 }
 #ifdef EDHE_FLEX
-int locate_contact_neigh_plane_HS_wall_semiperm(int i, double *evtime, double t2)
+int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2)
 {
   int nn, typei, first=1;
   double t1, b, dist, dr[3], colltime=0.0, dv[3];
   typei = typeOfPart[i];
   t1 = Oparams.time;
-  dr[0] = rx[i];
-  dr[1] = ry[i];
-  dr[2] = (L2-OprogStatus.bufHeight)-rz[i];  
+  dr[0] = rx[i] - rB[0];
+  dr[1] = ry[i] - rB[1];
+  dr[2] = rz[i] - rB[2];  
   dv[0] = vx[i];
   dv[1] = vy[i];
   dv[2] = vz[i];
@@ -3028,26 +3035,24 @@ int locate_contact_neigh_plane_HS_wall_semiperm(int i, double *evtime, double t2
   //     gradplane_all[nn][0], gradplane_all[nn][1], gradplane_all[nn][2]);
   /* N.B. controllare che il gradiente sia a norma unitaria e che sia uscente rispetto 
      al parallelepipedo delle NNL! */
-  dist = dr[2] - typesArr[typei].sax[0];
-  b = dv[2];
+  dist = fabs(scalProd(dr, gradplane)) - typesArr[typei].sax[0];
+  b = scalProd(dv, gradplane);
   if (b < 0)
-    continue;
+    return 0;
   //printf("dist=%.15G b=%.15G\n", dist, b);
   colltime = dist/b+Oparams.time;
   if (colltime > t1 && colltime < t2)
     {
       if (colltime < *evtime || first)
 	{
-	  first = 0;  
 	  *evtime = colltime;	
+	  return 1;
 	}
     }
   MD_DEBUG36(printf("t1=%.15G t2=%.15G colltime=%.15G\n", t1, t2, *evtime));
-  if (first)
-    return 0;
-  else
-    return 1;
+  return 0;
 }
+
 int locate_contact_neigh_plane_HS(int i, double *evtime, double t2)
 {
   int nn, typei, first=1;
@@ -3424,6 +3429,20 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   timesSNL++;
   calc_grad_and_point_plane(i, gradplane, rB, nplane);
   dtmp = calcDistNegNeighPlane(t, Oparams.time, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
+#ifdef MD_ABSORPTION
+  if (globalHW==2 && typeOfPart[i]==2)
+    {
+      if (dtmp > 0.0)
+	{
+	  typeOfPart[i]=1;
+	  return 0;
+	}
+      else
+	{
+	  return 0;
+	}
+    }
+#endif
   if (dtmp < 0)
     {
 #ifdef MD_EDHEFLEX_WALL
@@ -4568,27 +4587,21 @@ void PredictEventNNL(int na, int nb)
 #ifdef MD_EDHEFLEX_WALL
   if (OprogStatus.hardwall)
     {
-#if defined(MD_ABSORPTION) && 0
+#if defined(MD_ABSORPTION) 
       if (OprogStatus.bufHeight > 0.0)
 	{
 	  if (vz[na] != 0.0)
 	    {
-	      if ( (rz[na] < L2 - OprogStatus.bufHeight) &&  typeOfPart[na]==1)
-		/* il tipo 1 vuol dire che sono proteine non-ghost */
-		{
-		  if ((L2-OprogStatus.bufHeight)-rz[na] < maxax[na]*0.5 || 
-		      (vz[na] > 0.0 && (L2-OprogStatus.bufHeight)-(rz[na] + maxax[na]*0.5) / vz[na]))
-		    tibw = (L2 - OprogStatus.bufHeight - rz[na]) / vz[na];
-		  if (nplane!=-1 && locateHardWall(na, nplane, Oparams.time+tibw, vecg))
-		    {
-		      rxC = vecg[0];
-		      ryC = vecg[1];
-		      rzC = vecg[2];
-		      MD_DEBUG35(printf("Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
-		      MD_DEBUG35(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
-		      ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
-		    }
-	     	}  
+	      /* the semi-permeable plane is just one (nplane=0) */
+	      if (locateHardWall(na, 0, Oparams.time+tm[k], vecg, 2))
+    		{
+		  rxC = vecg[0];
+		  ryC = vecg[1];
+		  rzC = vecg[2];
+		  MD_DEBUG35(printf("Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
+		  MD_DEBUG35(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
+		  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
+		}
 	    }
 	}
 #endif
@@ -4596,7 +4609,7 @@ void PredictEventNNL(int na, int nb)
 	nplane = 0;
       else if (inCell[2][na] == cellsz-1)
 	nplane = 1;
-      if (nplane!=-1 && locateHardWall(na, nplane, Oparams.time+tm[k], vecg))
+      if (nplane!=-1 && locateHardWall(na, nplane, Oparams.time+tm[k], vecg, 1))
 	{
 	  rxC = vecg[0];
 	  ryC = vecg[1];
