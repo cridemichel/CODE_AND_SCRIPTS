@@ -548,6 +548,9 @@ struct progStatus
   double epsdSPNL;
   double epsdFastSPNL;
 #endif
+#ifdef MD_ABSORPTION
+  double bufHeight;
+#endif
   int dofA;
   int dofB;
   int guessDistOpt;
@@ -910,6 +913,9 @@ struct pascii opro_ascii[] =
   {"JJ",            &OS(JJ),                        1, 1,     "%d"},
   {"tmpPath",      OS(tmpPath),                     1,  NAME_LENGTH, "%s"},
   {"misPath",      OS(misPath),                     1,  NAME_LENGTH, "%s"},
+#ifdef MD_ABSORPTION
+  {"bufHeight",    &OS(bufHeight),                 1, 1,     "%.10G"},
+#endif
   {"dofA",         &OS(dofA),                        1,  1, "%d"},
   {"dofB",         &OS(dofB),                        1,  1, "%d"},
   {"base",         &OS(base),                       1,  1, "%.6G"},
@@ -1056,6 +1062,9 @@ struct singlePar OsinglePar[] = {
   {"endFormat",  &OprogStatus.endFormat,      INT},
 #ifdef EDHE_FLEX
   {"frozenDOF",       &OprogStatus.frozenDOF,  INT},
+#endif
+#ifdef MD_ABSORPTION
+  {"bufHeight", &OprogStatus.bufHeight, CT},
 #endif
 #ifdef MD_EDHEFLEX_WALL
   {"hardwall",   &OprogStatus.hardwall,       INT},

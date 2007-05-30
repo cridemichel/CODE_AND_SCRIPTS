@@ -6198,9 +6198,35 @@ double estimate_tmin(double t, int na, int nb)
 extern void check_these_bonds(int i, int j, double *shift, double t);
 #endif
 #ifdef MD_EDHEFLEX_WALL
+#ifdef MD_ABSORPTION
+void calc_grad_and_point_plane_hwsemiperm(int i, double *grad, double *point)
+{
+  /* nplane = 0 -> -L/2, nplane = 1 -> L/2 */  
+  int kk;
+  double del=0.0, segno;
+  MD_DEBUG33(printf("[PRIMA] del=%.15G grad=%f %f %f point=%f %f %f\n", del, grad[0], grad[1], grad[2], 
+		    point[0], point[1], point[2]));
+
+  for (kk=0; kk < 3; kk++)
+    {
+      grad[kk] = (kk==2)?1:0;
+    }
+  del = L/2.0-OprogStatus.bufHeight;
+  /* NOTA: epsdNL+epsd viene usato come buffer per evitare problemi numerici 
+   * nell'update delle NNL. */
+  //del -= OprogStatus.epsdNL+OprogStatus.epsd;
+  point[2] = del;
+  /* N.B. aggiusta il punto in modo che sia allineato con la particella lungo x e y.
+     Notare che l'unica cosa che conta è che point[] appartenga al piano in questione.*/
+  point[0] = rx[i];
+  point[1] = ry[i];
+  MD_DEBUG35(printf("[DOPO] del=%.15G grad=%f %f %f point=%f %f %f\n", del, grad[0], grad[1], grad[2], 
+		    point[0], point[1], point[2]));
+}
+#endif
 void calc_grad_and_point_plane_hwbump(int i, double *grad, double *point, int nplane)
 {
-  /* nplane = 0 -> -L/2, nplane = 1 -> -L/2 */  
+  /* nplane = 0 -> -L/2, nplane = 1 -> L/2 */ 
   int kk;
   double del=0.0, segno;
   MD_DEBUG33(printf("[PRIMA] del=%.15G grad=%f %f %f point=%f %f %f\n", del, grad[0], grad[1], grad[2], 
@@ -6407,21 +6433,30 @@ void ProcessWallColl(void)
     }
 }
 extern int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup);
-int locateHardWall(int na, int nplane, double tsup, double vecg[5])
+extern double gradplane[3], rB[3];
+
+extern void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane);
+int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2);
+
+int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
 {
   if ((is_infinite_Itens(na) && is_infinite_mass(na)) ||
       (is_infinite_mass(na) && is_a_sphere_NNL[na]))
     {
       return 0;
     }
+  globalHW = ghw;
 #ifdef EDHE_FLEX
-  if (is_sphere(i))
+  /* ottimizzazione nel caso di sfere che urtano il muro duro */
+  if (is_sphere(na))
     {
-      return locate_contact_neigh_plane_HS_semiperm(i, evtime, t2);
-      MD_DEBUG37(printf("HS evtime=%.15G\n", *evtime));
+      calc_grad_and_point_plane(na, gradplane, rB, nplane);
+      vecg[0] = rx[na];
+      vecg[1] = ry[na];
+      vecg[2] = rz[na]+typesArr[typeOfPart[na]].sax[0];
+      return locate_contact_neigh_plane_HS_one(na, &vecg[4], tsup);
     }
 #endif
-  globalHW = 1;
 
   MD_DEBUG33(printf("inCell=%d pos of %d=%f %f %f\n", inCell[2][na], na, rx[na], ry[na], rz[na]));
 
@@ -6648,13 +6683,36 @@ void PredictEvent (int na, int nb)
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
   if (OprogStatus.hardwall)
     {
+#if defined(MD_ABSORPTION) 
+      if (OprogStatus.bufHeight > 0.0)
+	{
+	  if (vz[na] != 0.0)
+	    {
+	      hwcell = (L-OprogStatus.bufHeight)*cellsz/L;
+	      if (hwcell-inCell[2][na] < 2)
+		{
+		  /* the semi-permeable plane is just one (nplane=0) */
+		  if (locateHardWall(na, 0, cctime, vecg, 2))
+		    {
+		      rxC = vecg[0];
+		      ryC = vecg[1];
+		      rzC = vecg[2];
+		      MD_DEBUG35(printf("Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
+		      MD_DEBUG35(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
+		      ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
+		    }
+		}
+	    }
+	}
+#endif
+
       if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
       if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
       if (inCell[2][na] == 0)
 	nplane = 0;
       else if (inCell[2][na] == cellsz-1)
 	nplane = 1;
-      if (nplane!=-1 && locateHardWall(na, nplane, cctime, vecg))
+      if (nplane!=-1 && locateHardWall(na, nplane, cctime, vecg, 1))
 	{
 	  rxC = vecg[0];
 	  ryC = vecg[1];

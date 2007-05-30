@@ -482,11 +482,17 @@ void handle_absorb(int ricettore, int protein)
   fprintf(f, "%d %15G %.15G %.15G %.15G\n", ricettore, Oparams.time,  rx[protein], ry[protein], rz[protein]);
 #endif
   fclose(f);
-  /* for now place protein randomly at fixed height L/2-sigma/2 */
-  rz[protein] = L*0.5 - 0.5;
+  /* proteins must be placed in the buffer taking into account that they are solid with respect to box wall
+   * and to proteins of type 1 */
+  /* for now the particle is placed midway between semipermeable wall and box wall */
+  rz[protein] = L*0.5 - OprogStatus.bufHeight*0.5;
   rx[protein] = (ranf() - 0.5)*L;
   ry[protein] = (ranf() - 0.5)*L;
  
+  /* ora la particella diventa del tipo "buffer" 
+   */
+  typeOfPart[protein] = 2;
+  
   n = (inCell[2][protein] * cellsy + inCell[1][protein] )*cellsx + inCell[0][protein]
     + Oparams.parnum;
   
