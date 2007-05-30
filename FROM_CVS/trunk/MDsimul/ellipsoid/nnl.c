@@ -168,6 +168,9 @@ extern int globalHW;
 extern void calc_grad_and_point_plane_hwbump(int i, double *grad, double *point, int nplane);
 extern int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw);
 #endif
+#ifdef MD_ABSORPTION
+void calc_grad_and_point_plane_hwsemiperm(int i, double *grad, double *point);
+#endif
 void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {
   int kk;
