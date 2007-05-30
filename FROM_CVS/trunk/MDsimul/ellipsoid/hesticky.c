@@ -469,20 +469,43 @@ void bumpSPHS(int i, int j, double *W, int bt)
 }	
 #endif
 #if defined(EDHE_FLEX) && defined(MD_ABSORPTION)
+extern double ranf(void);
+extern void rebuild_linked_list();
 void handle_absorb(int ricettore, int protein)
 {
   FILE *f; 
-  f = fopenMPI(absMisHD("absorpion.dat"),"a");
+  int j, n;
+  f = fopenMPI(absMisHD("absorption.dat"),"a");
 #ifdef MD_BIG_DT
-  fprintf(mf, "%d %15G %.15G %.15G %.15G\n", ricettore, Oparams.time + OprogStatus.refTime, rx[protein], ry[protein], rz[protein]);
+  fprintf(f, "%d %15G %.15G %.15G %.15G\n", ricettore, Oparams.time + OprogStatus.refTime, rx[protein], ry[protein], rz[protein]);
 #else
-  fprintf(mf, "%d %15G %.15G %.15G %.15G\n", ricettore, Oparams.time,  rx[protein], ry[protein], rz[protein]);
+  fprintf(f, "%d %15G %.15G %.15G %.15G\n", ricettore, Oparams.time,  rx[protein], ry[protein], rz[protein]);
 #endif
   fclose(f);
   /* for now place protein randomly at fixed height L/2-sigma/2 */
   rz[protein] = L*0.5 - 0.5;
-  rx[protein] = (gauss() - 0.5)*L;
-  ry[protein] = (gauss() - 0.5)*L;
+  rx[protein] = (ranf() - 0.5)*L;
+  ry[protein] = (ranf() - 0.5)*L;
+ 
+  n = (inCell[2][protein] * cellsy + inCell[1][protein] )*cellsx + inCell[0][protein]
+    + Oparams.parnum;
+  
+  while (cellList[n] != protein) 
+    n = cellList[n];
+  /* Eliminazione di protein dalla lista della cella n-esima */
+  cellList[n] = cellList[protein];
+
+  inCell[0][protein] =  (rx[protein] + L2) * cellsx / L;
+  inCell[1][protein] =  (ry[protein] + L2) * cellsy / L;
+#ifdef MD_GRAVITY
+  inCell[2][protein] =  (rz[protein] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+#else
+  inCell[2][protein] =  (rz[protein] + L2)  * cellsz / L;
+#endif
+  j = (inCell[2][protein]*cellsy + inCell[1][protein])*cellsx + 
+    inCell[0][protein] + Oparams.parnum;
+  cellList[protein] = cellList[j];
+  cellList[j] = protein;
 }
 #endif
 #if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
@@ -549,13 +572,16 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   if ((typeOfPart[i]==0 && typeOfPart[j]==1) ||
       (typeOfPart[i]==1 && typeOfPart[j]==0))
     {
+      numcoll++;
       if (typeOfPart[i]==0)
 	{
 	  handle_absorb(i,j); /* i è il ricettore in questo caso */
+	  return;
 	}
       else
 	{
 	  handle_absorb(j,i); /* j è il ricettore in questo caso */
+	  return;
 	}
     }
 #endif
@@ -1988,8 +2014,11 @@ int locate_contact_HSSP(int na, int n, double shift[3], double t1, double t2, do
   double distSq, sigSq;
   int collCodeL;
 
+#ifndef EDHE_FLEX 
+  sigSq = Sqr(Oparams.sigmaSticky);
+#else
   sigSq = Sqr(mapSigmaFlex[0]);
-
+#endif
   //printf("sigma=%.15G\n", mapSigmaFlex[0]);
   tInt = Oparams.time - atomTime[n];
   dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
