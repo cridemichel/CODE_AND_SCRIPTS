@@ -1529,6 +1529,7 @@ void StartRun(void)
   for (n = 0; n < Oparams.parnum; n++)
     {
       atomTime[n] = Oparams.time;
+      //printf("qui n=%d %.15G %.15G %.15G\n", n, rx[n], ry[n], rz[n]);
       inCell[0][n] =  (rx[n] + L2) * cellsx / L;
       inCell[1][n] =  (ry[n] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
