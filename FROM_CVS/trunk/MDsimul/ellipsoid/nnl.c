@@ -3031,6 +3031,22 @@ int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2)
   dr[0] = rx[i] - rB[0];
   dr[1] = ry[i] - rB[1];
   dr[2] = rz[i] - rB[2];  
+#ifdef MD_ABSORPTION
+  if (globalHW==2 && typeOfPart[i]==2)
+    {
+      //printf("qui globalHW=%d type=%d\n", globalHW, typeOfPart[i]);
+      if (dr[2]+typesArr[typeOfPart[i]].sax[0] < 0.0)
+	{
+	  typeOfPart[i]=1;
+	  return 0;
+	}
+      else
+	{
+	  return 0;
+	}
+    }
+#endif
+
   dv[0] = vx[i];
   dv[1] = vy[i];
   dv[2] = vz[i];
