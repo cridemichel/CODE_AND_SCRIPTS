@@ -6486,6 +6486,9 @@ void PredictEvent (int na, int nb)
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], 
 	 b, d, t, tInt, vv, distSq, t1, t2;
   int overlap;
+#ifdef MD_ABSORPTION
+  int hwcell;
+#endif
 #ifdef MD_PATCHY_HE
   int ac, bc, collCode, collCodeOld, acHC, bcHC;
   double evtime, evtimeHC;
