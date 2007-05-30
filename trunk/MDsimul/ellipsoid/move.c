@@ -6436,7 +6436,7 @@ extern int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double 
 extern double gradplane[3], rB[3];
 
 extern void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane);
-int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2);
+extern int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2);
 
 int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
 {
@@ -6454,7 +6454,16 @@ int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
       vecg[0] = rx[na];
       vecg[1] = ry[na];
       vecg[2] = rz[na]+typesArr[typeOfPart[na]].sax[0];
-      return locate_contact_neigh_plane_HS_one(na, &vecg[4], tsup);
+      //printf("type=%d ghw=%d na=%d (%.15G %.15G %.15G)\n", typeOfPart[na], ghw, na, rx[na], ry[na], rz[na]);
+      if(!locate_contact_neigh_plane_HS_one(na, &vecg[4], tsup));
+	{
+	  globalHW = 0;
+	  return 0;
+	}
+      globalHW=0;
+      if (vecg[4] < tsup)
+	return 1;
+      return 1;
     }
 #endif
 
@@ -6692,6 +6701,7 @@ void PredictEvent (int na, int nb)
 	  if (vz[na] != 0.0)
 	    {
 	      hwcell = (L-OprogStatus.bufHeight)*cellsz/L;
+#if 1
 	      if (hwcell-inCell[2][na] < 2)
 		{
 		  /* the semi-permeable plane is just one (nplane=0) */
@@ -6702,9 +6712,10 @@ void PredictEvent (int na, int nb)
 		      rzC = vecg[2];
 		      MD_DEBUG35(printf("Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
 		      MD_DEBUG35(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
-		      ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
+		      ScheduleEventBarr (na, ATOM_LIMIT, 0, 0, MD_WALL, vecg[4]);
 		    }
 		}
+#endif
 	    }
 	}
 #endif
