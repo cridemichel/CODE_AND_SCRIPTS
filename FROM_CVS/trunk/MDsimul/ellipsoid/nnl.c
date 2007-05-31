@@ -14,6 +14,7 @@
 #define MD_DEBUG35(x)  
 #define MD_DEBUG36(x) 
 #define MD_DEBUG37(x) 
+#define MD_DEBUG38(x) 
 #ifdef EDHE_FLEX
 extern int is_sphere(int i);
 extern int *is_a_sphere_NNL;
@@ -3024,9 +3025,10 @@ void calc_grad_and_point_plane_all(int i, double gradplaneALL[6][3], double rBAL
 #ifdef EDHE_FLEX
 int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2)
 {
-  int nn, typei, first=1;
+  int nn, typei;
   double t1, b, dist, dr[3], colltime=0.0, dv[3];
   typei = typeOfPart[i];
+
   t1 = Oparams.time;
   dr[0] = rx[i] - rB[0];
   dr[1] = ry[i] - rB[1];
@@ -3037,8 +3039,9 @@ int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2)
       //printf("qui globalHW=%d type=%d\n", globalHW, typeOfPart[i]);
       if (dr[2]+typesArr[typeOfPart[i]].sax[0] < 0.0)
 	{
+	  MD_DEBUG38(printf("time=%.15G i=%d switched to type 1 rz[]=%f\n",Oparams.time, i, rz[i])); 
 	  typeOfPart[i]=1;
-	  return 0;
+	  //return 0;
 	}
       else
 	{
@@ -3058,15 +3061,22 @@ int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2)
   b = scalProd(dv, gradplane);
   if (b < 0)
     return 0;
-  //printf("dist=%.15G b=%.15G\n", dist, b);
+#if 0
+  if (typeOfPart[i]==1 && (rz[i]-L*0.5-OprogStatus.bufHeight+typesArr[typei].sax[0] > 0.0 || 
+			   rz[i]-0.5 < -L*0.5))
+    {
+
+      printf("i=%d dist=%.15G b=%.15G typei=%d incellz=%d rz=%.15G\n", i, dist, b, typeOfPart[i], inCell[2][i], rz[i]);
+      printf("gradplane=%f %f %f point=%f %f %f dr=%f %f %f ghw=%d\n", gradplane[0], gradplane[1], gradplane[2], rB[0],
+	     rB[1], rB[2], dr[0], dr[1], dr[2], globalHW);\
+      exit(-1);
+    }
+#endif  
   colltime = dist/b+Oparams.time;
   if (colltime > t1 && colltime < t2)
     {
-      if (colltime < *evtime || first)
-	{
-	  *evtime = colltime;	
-	  return 1;
-	}
+      *evtime = colltime;	
+      return 1;
     }
   MD_DEBUG36(printf("t1=%.15G t2=%.15G colltime=%.15G\n", t1, t2, *evtime));
   return 0;
@@ -4533,6 +4543,9 @@ void PredictEventNNL(int na, int nb)
   int nplane=-1;
 #endif
 #endif
+#ifdef MD_ABSORPTION
+  int hwcell;
+#endif
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -4611,19 +4624,26 @@ void PredictEventNNL(int na, int nb)
 	{
 	  if (vz[na] != 0.0)
 	    {
-	      /* the semi-permeable plane is just one (nplane=0) */
-	      if (locateHardWall(na, 0, Oparams.time+tm[k], vecg, 2))
-    		{
-		  rxC = vecg[0];
-		  ryC = vecg[1];
-		  rzC = vecg[2];
-		  MD_DEBUG35(printf("Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
-		  MD_DEBUG35(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
-		  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
+	      hwcell = (L-OprogStatus.bufHeight)*cellsz/L;
+#if 1
+	      if (hwcell-inCell[2][na] < 2)
+		{
+		  /* the semi-permeable plane is just one (nplane=0) */
+		  if (locateHardWall(na, 0, Oparams.time+tm[k], vecg, 2))
+		    {
+		      rxC = vecg[0];
+		      ryC = vecg[1];
+		      rzC = vecg[2];
+		      MD_DEBUG38(printf("SEMIPERM Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
+		      MD_DEBUG38(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
+		      ScheduleEventBarr (na, ATOM_LIMIT+50, 0, 0, MD_WALL, vecg[4]);
+		    }
 		}
+#endif
 	    }
 	}
 #endif
+
       if (inCell[2][na] == 0)
 	nplane = 0;
       else if (inCell[2][na] == cellsz-1)

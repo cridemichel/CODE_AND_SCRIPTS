@@ -13,6 +13,7 @@
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
 #define MD_DEBUG36(x) 
+#define MD_DEBUG38(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
@@ -488,11 +489,11 @@ void handle_absorb(int ricettore, int protein)
   rz[protein] = L*0.5 - OprogStatus.bufHeight*0.5;
   rx[protein] = (ranf() - 0.5)*L;
   ry[protein] = (ranf() - 0.5)*L;
- 
+  //printf("pos of %d %.15G %.15G %.15G\n", protein, rx[protein], ry[protein], rz[protein]); 
   /* ora la particella diventa del tipo "buffer" 
    */
   typeOfPart[protein] = 2;
-  
+  MD_DEBUG38(printf("time=%.15G i=%d switched to type 2\n", Oparams.time, protein)); 
   n = (inCell[2][protein] * cellsy + inCell[1][protein] )*cellsx + inCell[0][protein]
     + Oparams.parnum;
   

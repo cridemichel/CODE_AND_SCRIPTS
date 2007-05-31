@@ -310,16 +310,23 @@ void NextEvent (void)
   evIdD = treeIdD[idNow];
   evIdE = treeIdE[idNow];
 #endif
-  MD_DEBUG34(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
-		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
+  MD_DEBUG34(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f id=%d\n", (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time, idNow));
   MD_DEBUG20(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
-  if (evIdB < ATOM_LIMIT + 2 * NDIM) 
+  if (evIdB < ATOM_LIMIT+2*NDIM || evIdB==ATOM_LIMIT+50)
     /* Se si tratta di un urto fra particelle o con le pareti...
      * qui in sostanza si considerano solo gli eventi che cambiano lo stato 
      * della particella, cioè la sua velocità */
     {
       /* qui incrementa di 1 poiché il nodo root non contiene eventi */
+#ifdef MD_ABSORPTION
+      /* NOTA: gli id che vanno da 0...Oparams.parnum sono riservati ai cell crossing
+         o agli urti con le pareti della scatola, nel caso di urto con la membrana 
+	 semi-permeabile tale evento va rimosso esplicitamente altrimentri rimane nel calendario 
+	 degli eventi */
+      if (evIdB==ATOM_LIMIT+50)
+	DeleteEvent(idNow);
+#endif
       if (evIdA < evIdB) 
 	{
 	  idAx = evIdA + 1;    
@@ -337,6 +344,7 @@ void NextEvent (void)
       for (id = idAx; id <= idBx; id += idtx) 
 	{
 	  DeleteEvent (id);
+	  MD_DEBUG34(printf("deleted event #%d\n", id));
 	  for (idd = treeCircAL[id]; idd != id; idd = treeCircAL[idd]) 
 	    {
 	      /* il successivo (R) del precedente (L) diviene il successivo 
