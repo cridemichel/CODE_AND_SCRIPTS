@@ -11,6 +11,7 @@
 #define MD_DEBUG34(x) 
 #define MD_DEBUG35(x)  
 #define MD_DEBUG36(x)  
+#define MD_DEBUG38(x) 
 void update_MSDrot(int i);
 void update_MSD(int i);
 #ifdef MD_ASYM_ITENS
@@ -6282,6 +6283,7 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   int typei;
   int a, b;
 
+  MD_DEBUG38(printf("Collision with wall evIdA: %d vz: %.15f rz:%.15G evIdB=%d\n", i, vz[i], rz[i], evIdB-ATOM_LIMIT));
   if (is_sphere(i))
     {
       update_MSDrot(i);
@@ -6402,9 +6404,10 @@ void ProcessWallColl(void)
       cellRange[2*k+1] =   1;
     }
   MD_DEBUG36(calc_energy("prima"));
-  MD_DEBUG36(printf("[BUMP] t=%.15G i=%d at=%d j=%d at=%d collCode=%d\n", 
+  MD_DEBUG38(printf("[BUMP WALLCOLL] t=%.15G i=%d at=%d j=%d at=%d collCode=%d\n", 
 		    Oparams.time,evIdA,evIdC, evIdB, evIdD, evIdE)); 
 
+  MD_DEBUG38( printf("i=%d pos=%f %f %f vel=%f %f %f\n", evIdA, rx[evIdA], ry[evIdA], rz[evIdA], vx[evIdA], vy[evIdA], vz[evIdA]));
   bumpHW(evIdA, evIdB-ATOM_LIMIT, rxC, ryC, rzC, &W);
   MD_DEBUG36(calc_energy("dopo"));
   MD_DEBUG(store_bump(evIdA, evIdB));
@@ -6440,6 +6443,7 @@ extern int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2);
 
 int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
 {
+  double delt, tone;
   if ((is_infinite_Itens(na) && is_infinite_mass(na)) ||
       (is_infinite_mass(na) && is_a_sphere_NNL[na]))
     {
@@ -6451,32 +6455,49 @@ int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
   if (is_sphere(na))
     {
       calc_grad_and_point_plane(na, gradplane, rB, nplane);
-      vecg[0] = rx[na];
-      vecg[1] = ry[na];
-      vecg[2] = rz[na]+typesArr[typeOfPart[na]].sax[0];
       //printf("type=%d ghw=%d na=%d (%.15G %.15G %.15G)\n", typeOfPart[na], ghw, na, rx[na], ry[na], rz[na]);
-      if(!locate_contact_neigh_plane_HS_one(na, &vecg[4], tsup));
+
+      //if (ghw==2)
+	//tsup = timbig;
+      if(!locate_contact_neigh_plane_HS_one(na, &vecg[4], tsup))
 	{
 	  globalHW = 0;
+	  //printf("NO time one=%.15G\n", vecg[4]);
 	  return 0;
 	}
+
       globalHW=0;
+      delt = vecg[4]-Oparams.time;
+      vecg[0] = rx[na]+vx[na]*delt;
+      vecg[1] = ry[na]+vy[na]*delt;
+      if (nplane==1)
+	vecg[2] = rz[na]+vz[na]*delt+typesArr[typeOfPart[na]].sax[0];
+      else
+	vecg[2] = rz[na]+vz[na]*delt-typesArr[typeOfPart[na]].sax[0];
+ 
       if (vecg[4] < tsup)
 	return 1;
-      return 1;
+      return 0;
     }
 #endif
 
   MD_DEBUG33(printf("inCell=%d pos of %d=%f %f %f\n", inCell[2][na], na, rx[na], ry[na], rz[na]));
-
   if (!locate_contact_neigh_plane(na, vecg, nplane, tsup))
     {
+      //printf("NO locate neigh full %.15G\n", vecg[4]);
       globalHW = 0;
       return 0;
     }
   globalHW = 0;
   if (vecg[4] < tsup)
-    return 1;
+    {
+#if 0
+      printf("OK locate neigh full %.15G\n", vecg[4]);
+      if (fabs(tone-vecg[4]) > 1E-10)
+	exit(-1);
+#endif
+      return 1;
+    }
   return 0;
 }
 #endif
@@ -6515,7 +6536,7 @@ void PredictEvent (int na, int nb)
   int cellRangeT[2 * NDIM], signDir[NDIM]={0,0,0}, evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
 
-  MD_DEBUG(printf("PredictEvent: %d,%d\n", na, nb));
+  MD_DEBUG38(printf("PredictEvent: %d,%d\n", na, nb));
   MD_DEBUG(calc_energy("PredEv"));
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
@@ -6710,9 +6731,9 @@ void PredictEvent (int na, int nb)
 		      rxC = vecg[0];
 		      ryC = vecg[1];
 		      rzC = vecg[2];
-		      MD_DEBUG35(printf("Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
-		      MD_DEBUG35(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
-		      ScheduleEventBarr (na, ATOM_LIMIT, 0, 0, MD_WALL, vecg[4]);
+		      MD_DEBUG38(printf("SEMIPERM Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
+		      MD_DEBUG38(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
+		      ScheduleEventBarr (na, ATOM_LIMIT+50, 0, 0, MD_WALL, vecg[4]);
 		    }
 		}
 #endif
@@ -6731,10 +6752,14 @@ void PredictEvent (int na, int nb)
 	  rxC = vecg[0];
 	  ryC = vecg[1];
 	  rzC = vecg[2];
+	  MD_DEBUG38(printf("scheduled collision with wall na=%d nplane=%d evtime=%.15G\n", na, nplane, vecg[4]));
 	  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
 	}
       else
-	ScheduleEvent (na, ATOM_LIMIT + evCode, cctime);
+	{
+	  MD_DEBUG38(printf("scheduled cell-crossing with wall na=%d evtime=%.15G\n", na, cctime));
+	  ScheduleEvent (na, ATOM_LIMIT + evCode, cctime);
+	}
     }
   else
     ScheduleEvent (na, ATOM_LIMIT + evCode, cctime);
@@ -6978,7 +7003,7 @@ void PredictEvent (int na, int nb)
 #endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
 #ifdef MD_PATCHY_HE
-		      MD_DEBUG32(printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc));
+		      MD_DEBUG38(printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc));
 		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #else
 		      ScheduleEvent (na, n, t);
@@ -7950,7 +7975,12 @@ void move(void)
 	  ProcessCollision();
 	  OprogStatus.collCount++;
 	}
-
+#if defined(MD_ABSORPTION) && 1
+      else if (evIdB == ATOM_LIMIT+50)
+	{
+	  ProcessWallColl();
+	}
+#endif
 #if defined(MD_GRAVITY) || defined(MD_EDHEFLEX_WALL)
       else if (evIdB >= ATOM_LIMIT + 100 || evIdB < ATOM_LIMIT + NDIM * 2)
 	{
