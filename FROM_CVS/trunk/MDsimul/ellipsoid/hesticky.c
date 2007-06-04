@@ -478,9 +478,9 @@ void handle_absorb(int ricettore, int protein)
   int j, n;
   f = fopenMPI(absMisHD("absorption.dat"),"a");
 #ifdef MD_BIG_DT
-  fprintf(f, "%d %15G %.15G %.15G %.15G\n", ricettore, Oparams.time + OprogStatus.refTime, rx[protein], ry[protein], rz[protein]);
+  fprintf(f, "%d %.15G %.15G %.15G %.15G\n", ricettore, Oparams.time + OprogStatus.refTime, rx[protein], ry[protein], rz[protein]);
 #else
-  fprintf(f, "%d %15G %.15G %.15G %.15G\n", ricettore, Oparams.time,  rx[protein], ry[protein], rz[protein]);
+  fprintf(f, "%d %.15G %.15G %.15G %.15G\n", ricettore, Oparams.time,  rx[protein], ry[protein], rz[protein]);
 #endif
   fclose(f);
   /* proteins must be placed in the buffer taking into account that they are solid with respect to box wall
