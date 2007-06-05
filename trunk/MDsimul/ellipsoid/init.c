@@ -3395,10 +3395,12 @@ void writeAllCor(FILE* fs, int saveAll)
 #endif
 
 #ifdef EDHE_FLEX
+#ifndef MD_FOUR_BEADS
       	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 		  uyz[i], uzx[i], uzy[i], uzz[i], typesArr[typeOfPart[i]].sax[0], 
 		  typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],
 		  colsFlex[typeOfPart[i]%numcols]);
+#endif
 #else
 	  if (i < Oparams.parnumA)
 	    {
@@ -3420,14 +3422,25 @@ void writeAllCor(FILE* fs, int saveAll)
 	  rA[2] = rz[i];
 	  BuildAtomPos(i, rA, R[i], ratA);
 #ifdef EDHE_FLEX
+#ifdef MD_FOUR_BEADS
+	  for (nn = 1; nn < 5; nn++)
+	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+	  fprintf(fs, ".Bonds: 0-1[0.1:green],0-2[0.1:green],0-3[0.1:green],1-2[0.1:green],1-3[0.1:green],2-3[0.1:green]\n");
+#else
 	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
 	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
 		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+#endif
 #else
 	  for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
 	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
 		    ratA[nn][0], ratA[nn][1], ratA[nn][2], Oparams.sigmaSticky*0.5);
 #endif
+#endif
+#ifdef MD_FOUR_BEADS
+	  if (i < Oparams.parnum-1)
+	    fprintf(fs, ".newmol\n");
 #endif
 	}
     }
