@@ -3338,6 +3338,9 @@ void writeAllCor(FILE* fs, int saveAll)
   int i;
   int nn;
   double ratA[NA][3];
+#ifdef MD_FOUR_BEADS
+  char bcolor[32];
+#endif
   const char tipodat2_mgl[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
   const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
@@ -3423,9 +3426,13 @@ void writeAllCor(FILE* fs, int saveAll)
 	  BuildAtomPos(i, rA, R[i], ratA);
 #ifdef EDHE_FLEX
 #ifdef MD_FOUR_BEADS
+	  if (i%2==0)
+	    strcpy(bcolor,"red");
+	  else
+	    strcpy(bcolor,"blue");
 	  for (nn = 1; nn < 5; nn++)
-	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
-		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[%s]\n", 
+		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5,bcolor);
 	  fprintf(fs, ".Bonds: 0-1[0.1:green],0-2[0.1:green],0-3[0.1:green],1-2[0.1:green],1-3[0.1:green],2-3[0.1:green]\n");
 #else
 	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
