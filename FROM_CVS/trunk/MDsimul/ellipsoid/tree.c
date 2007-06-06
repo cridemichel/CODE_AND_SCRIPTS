@@ -310,7 +310,7 @@ void NextEvent (void)
   evIdD = treeIdD[idNow];
   evIdE = treeIdE[idNow];
 #endif
-  MD_DEBUG34(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f id=%d\n", (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time, idNow));
+  MD_DEBUG34(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%.15G id=%d\n", (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time, idNow));
   MD_DEBUG20(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
   if (evIdB < ATOM_LIMIT+2*NDIM || evIdB==ATOM_LIMIT+50)
