@@ -1369,6 +1369,8 @@ void usrInitBef(void)
 #endif
 #ifdef EDHE_FLEX
     OprogStatus.frozenDOF = 3;
+    Oparams.saveBonds = 1;
+    Oparams.maxbondsSaved = -1;
 #endif
 #ifdef MD_EDHEFLEX_WALL
     OprogStatus.hardwall = 0;
@@ -2370,6 +2372,45 @@ void set_angmom_to_zero(int i)
   wx[i]=wy[i]=wz[i]=0.0;
 }
 #endif
+void find_bonds(void)
+{
+  int i, j, NPB, nn, aa, bb;
+  double drx, dry, drz, dist, shift[3];
+  int amin, bmin;
+  for ( i = 0; i < Oparams.parnum-1; i++)
+    for ( j = i+1; j < Oparams.parnum; j++)
+      {
+	/* l'interazione sticky è solo fra fra A e B! */
+#ifndef EDHE_FLEX
+	if (!((i < Oparams.parnumA && j >= Oparams.parnumA)|| 
+	      (i >= Oparams.parnumA && j < Oparams.parnumA)))
+	  continue;
+#endif
+	drx = rx[i] - rx[j];
+	shift[0] = L*rint(drx/L);
+	dry = ry[i] - ry[j];
+	shift[1] = L*rint(dry/L);
+	drz = rz[i] - rz[j]; 
+	shift[2] = L*rint(drz/L);
+	assign_bond_mapping(i, j);
+	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+	//	    printf("i(%d,%d)-j(%d,%d) dists=%.15G\n", i, mapbondsa[nn], j, mapbondsb[nn], dists[nn]);
+	NPB = get_num_pbonds(i, j);
+	//\printf("NPB=%d\n", NPB);
+	for (nn=0; nn < NPB; nn++)
+	  {
+	    if (dists[nn] < 0.0)
+	      {
+		//printf("(%d,%d)-(%d,%d)\n", i, mapbondsa[nn], j, mapbondsb[nn]);
+		aa = mapbondsa[nn];
+		bb = mapbondsb[nn];
+		add_bond(i, j, aa, bb);
+		add_bond(j, i, bb, aa);
+	      }
+	  }
+      }
+}
+
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -2508,9 +2549,17 @@ void usrInitAft(void)
 #else
   tree = AllocMatI(12, poolSize);
 #endif
+#ifdef EDHE_FLEX
+  if (Oparams.maxbondsSaved==-1)
+    {
+      bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+      numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+    }
+#else
   bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
-  bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+#endif
+  bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
   bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
 #else
@@ -2701,6 +2750,8 @@ void usrInitAft(void)
       Oparams.time=0.0;
       /* truncate file to zero lenght */
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
+      f = fopenMPI(absMisHD("radius_of_gyration.dat"), "w+");
+      fclose(f);
       f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
 #ifdef MD_ABSORPTION
@@ -3115,47 +3166,34 @@ void usrInitAft(void)
 #endif
 
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
+#ifdef EDHE_FLEX
+  if (Oparams.maxbondsSaved==-1)
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  numbonds[i] = 0;
+	}
+    }
+#else
   for (i=0; i < Oparams.parnum; i++)
     {
       numbonds[i] = 0;
     }
+#endif
   printf("L=%f parnum: %d parnumA: %d\n", L, Oparams.parnum, Oparams.parnumA);
 #ifndef EDHE_FLEX
   printf("sigmaSticky=%.15G\n", Oparams.sigmaSticky);
 #endif
-  for ( i = 0; i < Oparams.parnum-1; i++)
-    for ( j = i+1; j < Oparams.parnum; j++)
-      {
-	/* l'interazione sticky è solo fra fra A e B! */
-#ifndef EDHE_FLEX
-	if (!((i < Oparams.parnumA && j >= Oparams.parnumA)|| 
-	      (i >= Oparams.parnumA && j < Oparams.parnumA)))
-	  continue;
+#ifdef EDHE_FLEX
+  if (Oparams.maxbondsSaved==-1)
+    {
+      find_bonds();
+    }
+  if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
+    Oparams.maxbondsSaved = OprogStatus.maxbonds;
+#else
+  find_bonds();
 #endif
-	drx = rx[i] - rx[j];
-	shift[0] = L*rint(drx/L);
-	dry = ry[i] - ry[j];
-	shift[1] = L*rint(dry/L);
-	drz = rz[i] - rz[j]; 
-	shift[2] = L*rint(drz/L);
-	assign_bond_mapping(i, j);
-	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-//	    printf("i(%d,%d)-j(%d,%d) dists=%.15G\n", i, mapbondsa[nn], j, mapbondsb[nn], dists[nn]);
-	NPB = get_num_pbonds(i, j);
-	//\printf("NPB=%d\n", NPB);
-	for (nn=0; nn < NPB; nn++)
-	  {
-   	    if (dists[nn] < 0.0)
-	      {
-		//printf("(%d,%d)-(%d,%d)\n", i, mapbondsa[nn], j, mapbondsb[nn]);
-		aa = mapbondsa[nn];
-		bb = mapbondsb[nn];
-		add_bond(i, j, aa, bb);
-		add_bond(j, i, bb, aa);
-	      }
-	  }
-      }
-
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
 #endif
 #ifdef MD_ASYM_ITENS
@@ -3383,6 +3421,18 @@ void writeAllCor(FILE* fs, int saveAll)
 		 intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout, intersArr[i].nmax);
 	} 
       //fprintf(fs, "\n");
+      if (Oparams.saveBonds)
+	{
+	  for (i = 0; i < Oparams.parnum; i++)
+	    {
+	      fprintf(fs, "%d ", numbonds[i]);
+	      for (j = 0; j < numbonds[i]; j++)
+		{
+		  fprintf(fs, "%d ", bonds[i][j]);
+		}
+	      fprintf(fs, "\n");
+	    }
+	}
     }
 #endif
   if (mgl_mode)
@@ -3529,7 +3579,27 @@ int readBinCoord_heflex(int cfd)
     } 
   /* read interactions */
   intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
+  size = sizeof(interStruct)*Oparams.ninters;
   rerr |= -readSegs(cfd, "Init", "Error reading intersArr", CONT, size, intersArr, NULL);
+
+  if (Oparams.saveBonds)
+    { 
+      /* N.B. i file binari d'ora (07/06/07) in poi  conterranno sempre i bonds se Oparams.saveBonds=1! */
+      size = Oparams.parnum*sizeof(int);
+      numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+      rerr |= -readSegs(cfd, "Init", "Error reading numbonds", CONT, size, numbonds, NULL);
+     
+      if (OprogStatus.maxbonds < Oparams.maxbondsSaved)
+	OprogStatus.maxbonds = Oparams.maxbondsSaved;
+      bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  size = sizeof(int)*numbonds[i];
+	  //printf("maxbondsSaved=%d numbonds[%d]:%d\n", Oparams.maxbondsSaved, i, numbonds[i]);
+	  rerr |= -readSegs(cfd, "Init", "Error reading bonds", CONT, size, bonds[i], NULL);
+	}
+    }
+
   return rerr;
 }
 void writeBinCoord_heflex(int cfd)
@@ -3551,8 +3621,23 @@ void writeBinCoord_heflex(int cfd)
       size = sizeof(spotStruct)*typesArr[i].nspots;
       writeSegs(cfd, "Init", "Error writing spots", CONT, size, typesArr[i].spots, NULL);
     } 
-  /* read interactions */
+  size = sizeof(interStruct)*Oparams.ninters;
+  /* write interactions */
   writeSegs(cfd, "Init", "Error writing intersArr", CONT, size, intersArr, NULL);
+  /* se Oparams.maxbondsSaved è > 0 vuol dire che sono stati salvati nella presente
+     configurazione anche i bond */
+  if (Oparams.saveBonds)
+    { 
+      /* N.B. i file binari d'ora (07/06/07) in poi  conterranno sempre i bonds se Oparams.saveBonds=1! */
+      size = Oparams.parnum*sizeof(int);
+      writeSegs(cfd, "Init", "Error writing numbonds", CONT, size, numbonds, NULL);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  size = sizeof(int)*numbonds[i];
+	  //printf("writing bonds: %d\n", numbonds[i]);
+	  writeSegs(cfd, "Init", "Error writing bonds", CONT, size, bonds[i], NULL);
+	}
+    }
 }
 
 #endif
@@ -3561,6 +3646,7 @@ void readAllCor(FILE* fs)
 {
   int i;
 #ifdef EDHE_FLEX
+  char sep[256];
   int j;
 
   typeOfPart = malloc(sizeof(int)*Oparams.parnum);
@@ -3600,9 +3686,33 @@ void readAllCor(FILE* fs)
 	    &intersArr[i].spot2, 
 	    &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout, &intersArr[i].nmax);
    } 
-#endif
-#ifdef EDHE_FLEX
-  fscanf(fs, "@@@ ");
+  fscanf(fs, "%s ", sep);
+  /* se ci sono i bond li legge, altrimenti ci deve essere il separatore "@@@" */
+  if (strcmp(sep, "@@@"))
+    {
+      /* Oparams.maxbondsSaved deve contenere il numero massimo di bond salvati 
+	 nella configurazione che si sta leggendo */ 
+      if (Oparams.maxbondsSaved < 0)
+	Oparams.maxbondsSaved = OprogStatus.maxbonds;
+      if (OprogStatus.maxbonds < Oparams.maxbondsSaved)
+	OprogStatus.maxbonds = Oparams.maxbondsSaved;
+      bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+      numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  if (i==0)
+	    sscanf(sep, "%d", &numbonds[0]);
+	  else
+	    fscanf(fs, "%d ", &numbonds[i]);
+	  //printf("i=%d, numbonds[]=%d\n", i, numbonds[i]);
+	  for (j = 0; j < numbonds[i]; j++)
+	    {
+	      fscanf(fs, "%d ", &bonds[i][j]);
+	    }
+	}
+      fscanf(fs, "@@@ ");
+    }
 #endif
   for (i = 0; i < Oparams.parnum; i++)
     {
