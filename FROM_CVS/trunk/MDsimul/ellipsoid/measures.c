@@ -21,6 +21,7 @@ FILE *mf;
 FILE *mf2;
 #endif
 extern double ***R;
+void radius_of_gyration(void);
 extern void UpdateSystem(void);
 double DphiSqA=0.0, DphiSqB=0.0, DrSqTotA=0.0, DrSqTotB=0.0;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
@@ -171,6 +172,9 @@ double calcpotene(void)
 void calcV(void)
 {
 #ifdef MD_PATCHY_HE
+#ifdef MD_FOUR_BEADS
+  radius_of_gyration();
+#endif
   V = calcpotene();
   mf = fopenMPI(absMisHD("energy.dat"),"a");
 #if 0
@@ -371,6 +375,42 @@ void energy(void)
   fclose(mf);
 #endif
 }
+
+void radius_of_gyration(void)
+{
+  int i, kk;
+  double rmean[3], rgyr;
+  FILE *f;
+  f = fopenMPI(absMisHD("radius_of_gyration.dat"),"a");
+
+  /* evaluate center of mass of the protein */
+  for (kk = 0; kk < 3; kk++)
+    rmean[kk] = 0.0; 
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      rmean[0] += rx[i];
+      rmean[1] += ry[i];
+      rmean[2] += rz[i];
+    }
+  for (kk=0; kk < 3; kk++)
+    rmean[kk] /= Oparams.parnum;
+  rgyr = 0.0;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      rgyr += Sqr(rx[i]-rmean[0]);
+      rgyr += Sqr(ry[i]-rmean[0]);
+      rgyr += Sqr(rz[i]-rmean[0]);
+    }
+  rgyr /= (double)Oparams.parnum;
+  rgyr = sqrt(rgyr);
+#ifdef MD_BIG_DT
+  fprintf(f, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, rgyr);
+#else
+  fprintf(f, "%15G %.15G\n", Oparams.time, rgyr);
+#endif
+  fclose(f);
+}
+
 /* ========================== >>> transDiff <<< =============================*/
 void transDiff(void)
 {

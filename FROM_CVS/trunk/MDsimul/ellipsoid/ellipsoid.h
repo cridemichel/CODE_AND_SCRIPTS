@@ -673,6 +673,8 @@ struct params
 #ifdef EDHE_FLEX
   int ntypes;
   int ninters;
+  int saveBonds;
+  int maxbondsSaved;
 #endif
   double a[2];
   double b[2];
@@ -986,6 +988,8 @@ struct pascii opar_ascii[]=
 #ifdef EDHE_FLEX
   {"ninters",       &OP(ninters),                         1,  1,    "%d"},
   {"ntypes",        &OP(ntypes),                          1,  1,    "%d"},
+  {"saveBonds",      &OP(saveBonds),                      1,  1,    "%d"},
+  {"maxbondsSaved",  &OP(maxbondsSaved),                  1,  1,    "%d"},
 #endif
 #if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
   {"sigmaSticky",       &OP(sigmaSticky),                       1,   1, "%.15G"},
@@ -1196,6 +1200,9 @@ struct singlePar OsinglePar[] = {
   {"assumeOneBond", &OprogStatus.assumeOneBond, INT},
   {"checkGrazing",  &OprogStatus.checkGrazing, INT},
   {"maxbonds",      &OprogStatus.maxbonds,     INT},
+#ifdef EDHE_FLEX
+  {"saveBonds",     &Oparams.saveBonds,        INT},
+#endif
   {"nmax",          &Oparams.nmax,         INT},
   {"Dr",            &Oparams.Dr,           CT},
   {"theta",         &Oparams.theta,        CT},
