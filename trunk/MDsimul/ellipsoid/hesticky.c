@@ -1134,6 +1134,15 @@ void assign_bond_mapping(int i, int j)
   MD_DEBUG34(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
   for (ni=0; ni < Oparams.ninters; ni++)
     {
+#if 1
+#ifdef MD_FOUR_BEADS
+      
+      /* il legame peptidico è solo tra amminoacidi adiacenti, quindi 
+       * nel caso del modello four beads si fa un'ottimizzazione ad-hoc */
+      if ((intersArr[ni].spot1 > 15 || intersArr[ni].spot2 > 15) && (abs(i-j) > 1))
+	  continue;
+#endif
+#endif
       if (intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2)
 	{
 	  /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
@@ -2131,6 +2140,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   epsdMax = OprogStatus.epsdSP;
   assign_bond_mapping(i, j);
 #ifdef EDHE_FLEX
+
   if (nbondsFlex==0)
     return 0;
 #if 1

@@ -379,27 +379,45 @@ void energy(void)
 void radius_of_gyration(void)
 {
   int i, kk;
-  double rmean[3], rgyr;
+  double rcx, rcy, rcz, dx, dy, dz, rmean[3], rgyr;
   FILE *f;
   f = fopenMPI(absMisHD("radius_of_gyration.dat"),"a");
 
   /* evaluate center of mass of the protein */
-  for (kk = 0; kk < 3; kk++)
-    rmean[kk] = 0.0; 
-  for (i = 0; i < Oparams.parnum; i++)
+  rmean[0] = rcx = rx[0];
+  rmean[1] = rcy = ry[0];
+  rmean[2] = rcz = rz[0];
+  for (i = 0; i < Oparams.parnum-1; i++)
     {
-      rmean[0] += rx[i];
-      rmean[1] += ry[i];
-      rmean[2] += rz[i];
+      dx = rx[i+1]-rx[i];
+      dy = ry[i+1]-ry[i];
+      dz = rz[i+1]-rz[i];
+      /* minimum image */
+      dx = dx - L*rint(dx/L);
+      dy = dy - L*rint(dy/L);
+      dz = dz - L*rint(dz/L);
+      rcx = rcx + dx;
+      rcy = rcy + dy;
+      rcz = rcz + dz;
+      rmean[0] += rcx;
+      rmean[1] += rcy;
+      rmean[2] += rcz;
     }
   for (kk=0; kk < 3; kk++)
     rmean[kk] /= Oparams.parnum;
   rgyr = 0.0;
   for (i = 0; i < Oparams.parnum; i++)
     {
-      rgyr += Sqr(rx[i]-rmean[0]);
-      rgyr += Sqr(ry[i]-rmean[0]);
-      rgyr += Sqr(rz[i]-rmean[0]);
+      dx = rx[i]-rmean[0];
+      dy = ry[i]-rmean[1];
+      dz = rz[i]-rmean[2];
+      /* minimum image */
+      dx = dx - L*rint(dx/L);
+      dy = dy - L*rint(dy/L);
+      dz = dz - L*rint(dz/L);
+      rgyr += Sqr(dx);
+      rgyr += Sqr(dy);
+      rgyr += Sqr(dz);
     }
   rgyr /= (double)Oparams.parnum;
   rgyr = sqrt(rgyr);
