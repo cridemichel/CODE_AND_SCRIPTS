@@ -11,7 +11,7 @@ double *r0[3], *w0[3], *rt[3], *wt[3], *rtold[3];
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int points=-1, foundDRs=0, foundrot=0, eventDriven=0, skip=1, clusters=0;
-int *isPercPart;
+int *isPercPart, stripStore=0;
 char *pnum;
 char inputfile[2048], cluststr[2048];
 double storerate = -1;
@@ -19,13 +19,17 @@ int bakSaveMode = -1;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double **DR)
 {
   FILE *f;
-  int nat=0, i, cpos;
+  int atMax, nat=0, i, cpos;
   double dt=-1;
   int curstp=-1;
 
   *ti = -1.0;
   f = fopen(fname, "r");
-  while (!feof(f) && nat < 3) 
+  if (stripStore)
+    atMax = 2;
+  else
+    atMax = 3; 
+  while (!feof(f) && nat < atMax) 
     {
       cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
@@ -96,7 +100,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
-      else if (nat==3)
+      else if (nat==atMax)
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
@@ -203,7 +207,7 @@ int main(int argc, char **argv)
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int NP, NPA=-1, NN=-1, fine, JJ, nat, maxl, maxnp, np, NP1, NP2;
   double refTime=0.0, tmpdbl;
-  int isperc, kk;
+  int isperc, kk, probNS=0;
 #if 0
   if (argc <= 1)
     {
@@ -232,7 +236,12 @@ int main(int argc, char **argv)
       fscanf(f2, "%[^\n]\n", fname[ii]); 
     }
   fclose(f2);
-  f = fopen(fname[0], "r");
+  probNS=0;
+  if (!(f = fopen("StoreInit", "r")))
+    {
+      f = fopen(fname[0], "r");
+      probNS = 1;
+    }
   nat = 0;
   while (!feof(f) && nat < 3) 
     {
@@ -271,6 +280,15 @@ int main(int argc, char **argv)
 	    {
 	      NP = NP1+NP2;
 	      NPA = NP1;
+	    }
+	}
+      if (!strcmp(parname,"stripStore"))
+	{
+	  stripStore = atoi(parval);
+	  if (stripStore && probNS)
+	    {
+	      printf("Store files are stripped, you have to supply StoreInit file!\n");
+	      exit(-1);
 	    }
 	}
       if (!strcmp(parname,"parnumA"))
