@@ -3377,6 +3377,7 @@ void writeAllCor(FILE* fs, int saveAll)
   int nn;
   double ratA[NA][3];
 #ifdef MD_FOUR_BEADS
+  int nn2;
   char bcolor[32];
   char beadcol[2][4][32] = {{"red","green","blue","orange"},{"red","green","blue","orange"}};
 #endif
@@ -3477,14 +3478,17 @@ void writeAllCor(FILE* fs, int saveAll)
 	  BuildAtomPos(i, rA, R[i], ratA);
 #ifdef EDHE_FLEX
 #ifdef MD_FOUR_BEADS
-	 for (nn = 1; nn < 5; nn++)
+	 for (nn = 0; nn < 16; nn++)
 	   {
+	     nn2 = nn % 4;
+	     if (nn2 != 0)
+	       continue;
 	     if (i%2==0)
-	       strcpy(bcolor,beadcol[0][nn-1]);
+	       strcpy(bcolor,beadcol[0][nn/4]);
 	     else
-	       strcpy(bcolor,beadcol[1][nn-1]);
+	       strcpy(bcolor,beadcol[1][nn/4]);
 	     fprintf(fs,"%.15f %.15f %.15f @ %.15G C[%s]\n", 
-	 	     ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5,bcolor);
+	 	     ratA[nn+1][0], ratA[nn+1][1], ratA[nn+1][2], typesArr[typeOfPart[i]].spots[nn].sigma*0.5,bcolor);
 	   }
 	 fprintf(fs, ".Bonds: 0-1[0.1:green],0-2[0.1:green],0-3[0.1:green],1-2[0.1:green],1-3[0.1:green],2-3[0.1:green]\n");
 #else
