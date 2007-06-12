@@ -7,7 +7,7 @@ double time, *ACF, *tempi, *pointsArr, *cc, veltmp, *ti, L, refTime, *omACV, *ve
 int points, assez, NP, NPA, npoints;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-double A0, A1, B0, B1, C0, C1;
+double A0, A1, B0, B1, C0, C1, ACFm, ACFSqm;
 
 
 int main(int argc, char **argv)
@@ -43,7 +43,15 @@ int main(int argc, char **argv)
       fscanf(f2, " %lf %lf ", &(tempi[ii]), &(pointsArr[ii])); 
       //printf("tempo=%.15G punto=%.15G\n", tempi[ii], pointsArr[ii]);
     }
-
+  ACFm=ACFSqm=0.0;
+  for (ii=0; ii < npoints; ii++)
+    {
+      ACFm += pointsArr[ii];
+      ACFSqm += pointsArr[ii]*pointsArr[ii];
+    }
+  ACFm /= npoints;
+  ACFSqm /= npoints;
+  printf("ACFm=%.15G\n", ACFm);
   cc = malloc(sizeof(double)*npoints);
   ACF= malloc(sizeof(double)*npoints);
   ti = malloc(sizeof(double)*npoints);
@@ -63,31 +71,27 @@ int main(int argc, char **argv)
   for (nr1 = 0; nr1 < npoints; nr1=nr1+NN)
     {	
       fine = 0;
-      for (JJ = 0; fine == 0; JJ++)
+      for (nr2 = nr1; nr2 < npoints; nr2++)
 	{
-	  for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
+	  /* N.B. considera NN punti in maniera logaritmica e poi calcola i punti in maniera lineare 
+	   * distanziati di NN punti. */
+	  np = nr2-nr1;	      
+	  if (nr2 >= npoints || np >= points)
 	    {
-	      /* N.B. considera NN punti in maniera logaritmica e poi calcola i punti in maniera lineare 
-	       * distanziati di NN punti. */
-              np = (JJ == 0)?nr2-nr1:NN-1+JJ;	      
-	      if (nr2 >= npoints || np >= points)
-		{
-		  fine = 1;
-		  break;
-		}
-	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
-		continue;
-	      if (np < points && ti[np] == -1.0)
-		{
-		  ti[np] = tempi[np];
-		  //printf("np=%d time=%.15G\n", np, ti[np]);
-		}
-	      if (nr2 == nr1)
-		continue;
-	      ACF[np] += pointsArr[np]*pointsArr[0];
-    	      cc[np]+=1.0;
-	      //printf("cc[%d]=%f np=%d nr1=%d nr2=%d\n", np, cc[np], np, nr1, nr2);
+	      fine = 1;
+	      break;
 	    }
+	  if (np < points && ti[np] == -1.0)
+	    {
+	      ti[np] = tempi[np];
+	      //printf("np=%d time=%.15G\n", np, ti[np]);
+	    }
+	  if (nr2 == nr1)
+	    continue;
+	  ACF[np] += (pointsArr[nr2]-ACFm)*(pointsArr[nr1]-ACFm);
+	  cc[np]+=1.0;
+	  //printf("points nr1=%f nr2=%f\n", pointsArr[nr1], pointsArr[nr2]);
+	  //printf("cc[%d]=%f np=%d nr1=%d nr2=%d\n", np, cc[np], np, nr1, nr2);
 	}
     }
   f = fopen("ACF.dat", "w+");
@@ -96,7 +100,7 @@ int main(int argc, char **argv)
       ACF[ii] = ACF[ii]/cc[ii];
       if (ti[ii] > -1.0)
 	{
-	  fprintf(f, "%.15G %.15G\n", ti[ii]-ti[0], ACF[ii]/ACF[1]);
+	  fprintf(f, "%.15G %.15G\n", ti[ii]-ti[0], ACF[ii]/(ACFSqm-ACFm*ACFm));
 	}
     }
   fclose(f);
