@@ -77,6 +77,7 @@ void UpdateSystem(void);
 typedef struct {
   double x[3];
   double sigma;
+  int same;
 } spotStruct;
 /* come possono esserci n sticky spots, 
    si puo' anche pensare di mettere n corpi rigidi 
