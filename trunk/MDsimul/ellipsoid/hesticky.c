@@ -1125,6 +1125,39 @@ void remove_bond(int na, int n, int a, int b)
 #endif
 }
 #ifdef EDHE_FLEX
+#ifdef MD_FOUR_BEADS
+/* this optimization does not affect performances */
+int ignore_interaction(int i, int j, int ni)
+{
+  int sp1, sp2;
+  /* il legame peptidico è solo tra amminoacidi adiacenti, quindi 
+   * nel caso del modello four beads si fa un'ottimizzazione ad-hoc */
+  sp1=intersArr[ni].spot1;
+  sp2=intersArr[ni].spot2;
+  if ((sp1 > 15 || sp2 > 15) && (abs(i-j) > 1))
+    return 1;
+  if (abs(i-j)==1)
+    {
+      /* se due atomi interagiscono 
+	 in maniera peptidica allora non interagiscono in maniera
+	 hard-core */
+      if ( (sp1 == 0 && sp2 == 0)  ||
+	   (sp1 == 1 && sp2 == 14) ||
+	   (sp1 == 14&& sp2 == 1 ) ||
+	   (sp1 == 3 && sp2 == 10) ||
+	   (sp1 == 10&& sp2 == 3)  ||
+	   (sp1 == 5 && sp2 == 15) ||
+	   (sp1 == 15&& sp2 == 5 ) ||
+	   (sp1 == 7 && sp2 == 11) ||
+	   (sp1 == 11&& sp2 == 7) ||
+	   (sp1 == 9&& sp2 == 13) ||
+	   (sp1 ==13&& sp2 == 9 )
+	 )
+	return 1;
+    }
+  return 0;
+}
+#endif
 void assign_bond_mapping(int i, int j)
 {
   int ni, type1, type2, a;
@@ -1136,11 +1169,8 @@ void assign_bond_mapping(int i, int j)
     {
 #if 0
 #ifdef MD_FOUR_BEADS
-      
-      /* il legame peptidico è solo tra amminoacidi adiacenti, quindi 
-       * nel caso del modello four beads si fa un'ottimizzazione ad-hoc */
-      if ((intersArr[ni].spot1 > 15 || intersArr[ni].spot2 > 15) && (abs(i-j) > 1))
-	  continue;
+      if (ignore_interaction(i, j, ni))
+	continue;	
 #endif
 #endif
       if (intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2)
