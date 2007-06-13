@@ -2425,15 +2425,19 @@ void find_conciding_spots(void)
   int nt, ns1, ns2;
   for (nt=0; nt < Oparams.ntypes; nt++)
     {
-      for (ns1=1; ns1 < typesArr[nt].nspots; ns1++)
+      for (ns1=0; ns1 < typesArr[nt].nspots; ns1++)
+	typesArr[nt].spots[ns1].same=ns1;
+      for (ns1=0; ns1 < typesArr[nt].nspots; ns1++)
 	{
 	  /* se spots[ns1].same=ns1 vuol dire che tale spots non coincide con nessun altro */
-	  typesArr[nt].spots[ns1].same=ns1;
-	  for (ns2=0; ns2 < ns1; ns2++)
+	  if (typesArr[nt].spots[ns1].same != ns1)
+	    continue;
+	  for (ns2=ns1+1; ns2 < typesArr[nt].nspots; ns2++)
 	    {
-	      if (same_position(typesArr[nt].spots[ns1].x,typesArr[nt].spots[ns2].x))
+	      if (same_position(typesArr[nt].spots[ns1].x,typesArr[nt].spots[ns2].x) &&
+		  typesArr[nt].spots[ns2].same == ns2)
 		{
-		  typesArr[nt].spots[ns1].same = typesArr[nt].spots[ns2].same;
+		  typesArr[nt].spots[ns2].same = ns1;
 		}
 	    }
 	}
@@ -3215,11 +3219,11 @@ void usrInitAft(void)
   printf("sigmaSticky=%.15G\n", Oparams.sigmaSticky);
 #endif
 #ifdef EDHE_FLEX
-  if (Oparams.maxbondsSaved==-1)
+  find_conciding_spots();
+   if (Oparams.maxbondsSaved==-1)
     {
       find_bonds();
     }
-  find_conciding_spots();
   if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
     Oparams.maxbondsSaved = OprogStatus.maxbonds;
 #else
