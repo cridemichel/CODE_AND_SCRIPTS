@@ -2411,7 +2411,36 @@ void find_bonds(void)
 	  }
       }
 }
+#ifdef EDHE_FLEX
+int same_position(double x1[3], double x2[3])
+{
+  int kk;
+  for (kk=0; kk < 3; kk++)
+    if (x1[kk]!=x2[kk])
+      return 0;
+  return 1;
+}
+void find_conciding_spots(void)
+{
+  int nt, ns1, ns2;
+  for (nt=0; nt < Oparams.ntypes; nt++)
+    {
+      for (ns1=1; ns1 < typesArr[nt].nspots; ns1++)
+	{
+	  /* se spots[ns1].same=ns1 vuol dire che tale spots non coincide con nessun altro */
+	  typesArr[nt].spots[ns1].same=ns1;
+	  for (ns2=0; ns2 < ns1; ns2++)
+	    {
+	      if (same_position(typesArr[nt].spots[ns1].x,typesArr[nt].spots[ns2].x))
+		{
+		  typesArr[nt].spots[ns1].same = typesArr[nt].spots[ns2].same;
+		}
+	    }
+	}
+    }
 
+}
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -3190,6 +3219,7 @@ void usrInitAft(void)
     {
       find_bonds();
     }
+  find_conciding_spots();
   if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
     Oparams.maxbondsSaved = OprogStatus.maxbonds;
 #else
