@@ -2394,14 +2394,15 @@ void find_bonds(void)
 	shift[2] = L*rint(drz/L);
 	assign_bond_mapping(i, j);
 	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-	//	    printf("i(%d,%d)-j(%d,%d) dists=%.15G\n", i, mapbondsa[nn], j, mapbondsb[nn], dists[nn]);
 	NPB = get_num_pbonds(i, j);
-	//\printf("NPB=%d\n", NPB);
+	
+	printf("NPB=%d\n", NPB);
 	for (nn=0; nn < NPB; nn++)
 	  {
-	    if (dists[nn] < 0.0)
+	    //if (mapbondsa[nn] >= 15 && mapbondsb[nn] >= 15)
+		  printf("(%d,%d)-(%d,%d): %.15G\n", i, mapbondsa[nn]-1, j, mapbondsb[nn]-1, dists[nn]);
+    	    if (dists[nn] < 0.0)
 	      {
-		//printf("(%d,%d)-(%d,%d)\n", i, mapbondsa[nn], j, mapbondsb[nn]);
 		aa = mapbondsa[nn];
 		bb = mapbondsb[nn];
 		add_bond(i, j, aa, bb);

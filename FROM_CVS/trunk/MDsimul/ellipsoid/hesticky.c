@@ -1134,7 +1134,7 @@ void assign_bond_mapping(int i, int j)
   MD_DEBUG34(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
   for (ni=0; ni < Oparams.ninters; ni++)
     {
-#if 1
+#if 0
 #ifdef MD_FOUR_BEADS
       
       /* il legame peptidico è solo tra amminoacidi adiacenti, quindi 
@@ -1158,6 +1158,16 @@ void assign_bond_mapping(int i, int j)
 			    typesArr[type2].spots[intersArr[ni].spot2].sigma));
 	  MD_DEBUG34(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
 	  a++;
+	  if (type1 == type2 && intersArr[ni].spot1 != intersArr[ni].spot2)
+	    {
+	      mapbondsaFlex[a] = intersArr[ni].spot2+1;
+	      mapbondsbFlex[a] = intersArr[ni].spot1+1;
+	      mapBheightFlex[a] = mapBheightFlex[a-1];
+	      mapBhinFlex[a] = mapBhinFlex[a-1];
+	      mapBhoutFlex[a] = mapBhoutFlex[a-1];
+	      mapSigmaFlex[a] = mapSigmaFlex[a-1];
+	      a++;
+	    }
 	}	
       else if (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1)
 	{
@@ -1174,6 +1184,18 @@ void assign_bond_mapping(int i, int j)
 			    typesArr[type2].spots[intersArr[ni].spot2].sigma));
 	  MD_DEBUG34(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
 	  a++;
+#if 0
+	  if (type1 == type2 && intersArr[ni].spot1 != intersArr[ni].spot2)
+	    {
+	      mapbondsaFlex[a] = intersArr[ni].spot1+1;
+	      mapbondsbFlex[a] = intersArr[ni].spot2+1;
+	      mapBheightFlex[a] = mapBheightFlex[a-1];
+	      mapBhinFlex[a] = mapBhinFlex[a-1];
+	      mapBhoutFlex[a] = mapBhoutFlex[a-1];
+	      mapSigmaFlex[a] = mapSigmaFlex[a-1];
+	      a++;
+	    }
+#endif
 	}
     }
   nbondsFlex = a;
@@ -1205,7 +1227,7 @@ void add_bond(int na, int n, int a, int b)
 {
   if (bound(na, n, a, b))
     {
-      printf("il bond %d,%d eiste già!\n", na, n);
+      printf("il bond (%d,%d),(%d,%d) eiste già!\n", na, a, n, b);
       return;
     }
   bonds[na][numbonds[na]] = n*(NA*NA)+a*NA+b;
