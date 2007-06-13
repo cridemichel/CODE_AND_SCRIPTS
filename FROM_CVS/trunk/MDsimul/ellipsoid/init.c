@@ -2396,11 +2396,11 @@ void find_bonds(void)
 	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 	NPB = get_num_pbonds(i, j);
 	
-	printf("NPB=%d\n", NPB);
+	//printf("NPB=%d\n", NPB);
 	for (nn=0; nn < NPB; nn++)
 	  {
 	    //if (mapbondsa[nn] >= 15 && mapbondsb[nn] >= 15)
-		  printf("(%d,%d)-(%d,%d): %.15G\n", i, mapbondsa[nn]-1, j, mapbondsb[nn]-1, dists[nn]);
+		//  printf("(%d,%d)-(%d,%d): %.15G\n", i, mapbondsa[nn]-1, j, mapbondsb[nn]-1, dists[nn]);
     	    if (dists[nn] < 0.0)
 	      {
 		aa = mapbondsa[nn];
