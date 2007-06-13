@@ -1335,8 +1335,17 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
   int a;
   /* l'atomo zero si suppone nell'origine */
 #ifdef EDHE_FLEX
+  int kk, same;
   for (a=0; a < typesArr[typeOfPart[i]].nspots+1; a++)
-    BuildAtomPosAt(i, a, rO, R, rat[a]);
+    {
+      if (a > 0 && (same = typesArr[typeOfPart[i]].spots[a-1].same)!=a-1)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    rat[a][kk] = rat[same+1][kk];
+	}
+      else
+	BuildAtomPosAt(i, a, rO, R, rat[a]);
+    }
 #else
   if (i < Oparams.parnumA)
     {
