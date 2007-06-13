@@ -1340,11 +1340,14 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
     {
       if (a > 0 && (same = typesArr[typeOfPart[i]].spots[a-1].same)!=a-1)
 	{
+	  //printf("qui a=%d\n", a);
 	  for (kk=0; kk < 3; kk++)
 	    rat[a][kk] = rat[same+1][kk];
 	}
+      //printf("1)same=%d rat[%d]=%f %f %f\n", same, a, rat[a][0], rat[a][1], rat[a][2]);
       else
 	BuildAtomPosAt(i, a, rO, R, rat[a]);
+      //printf("2)rat[%d]=%f %f %f\n", a, rat[a][0], rat[a][1], rat[a][2]);
     }
 #else
   if (i < Oparams.parnumA)
@@ -1402,7 +1405,11 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
   UpdateOrient(i, ti, RtA, Omega);
 #endif
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
+#if 0
   BuildAtomPos(i, rA, RtA, ratA);
+#else
+  BuildAtomPosAt(i, mapbondsa[nn], rA, RtA, ratA[mapbondsa[nn]]);
+#endif  
   na = (i < Oparams.parnumA)?0:1;
   ti = t + (t1 - atomTime[j]);
   rB[0] = rx[j] + vx[j]*ti + shift[0];
@@ -1415,7 +1422,11 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
   UpdateOrient(j, ti, RtB, Omega);
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#if 0
   BuildAtomPos(j, rB, RtB, ratB);
+#else
+  BuildAtomPosAt(j, mapbondsb[nn], rB, RtB, ratB[mapbondsb[nn]]);
+#endif  
   /* calcola sigmaSq[][]!!! */
   distSq = 0;
   for (kk=0; kk < 3; kk++)
@@ -1485,13 +1496,16 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	  continue;
 	}
       distSq = 0;
+
+#ifdef EDHE_FLEX
       for (kk=0; kk < 3; kk++)
 	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
-#ifdef EDHE_FLEX
       dists[nn] = dist = sqrt(distSq) - mapSigmaFlex[nn];
       MD_DEBUG20(printf("dists[%d]:%.15G mapSigmaFlex[]:%f\n", nn, dists[nn], mapSigmaFlex[nn]));
       MD_DEBUG20(printf("mapbondsa[%d]:%d mapbondsb[%d]:%d\n", nn, mapbondsb[nn], nn, mapbondsb[nn])); 
 #else
+      for (kk=0; kk < 3; kk++)
+	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
       dists[nn] = dist = sqrt(distSq) - Oparams.sigmaSticky;
 #endif     
       if (firstdist || fabs(dist) < fabs(distmin))
