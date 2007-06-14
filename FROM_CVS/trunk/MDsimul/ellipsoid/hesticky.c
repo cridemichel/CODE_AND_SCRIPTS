@@ -1126,10 +1126,10 @@ void remove_bond(int na, int n, int a, int b)
 }
 #ifdef EDHE_FLEX
 #ifdef MD_FOUR_BEADS
-/* this optimization does not affect performances */
+/* this optimization does not affect performances (only 6% better)*/
 int ignore_interaction(int i, int j, int ni)
 {
-  int sp1, sp2;
+  int sp1, sp2, spp1, spp2;
   /* il legame peptidico è solo tra amminoacidi adiacenti, quindi 
    * nel caso del modello four beads si fa un'ottimizzazione ad-hoc */
   sp1=intersArr[ni].spot1;
@@ -1154,7 +1154,17 @@ int ignore_interaction(int i, int j, int ni)
 	   (sp1 ==13&& sp2 == 9 )
 	 )
 	return 1;
+#if 1
+      spp1 = sp1;
+      spp2 = sp2;
+      if ((spp1 == 26 && spp2==16)||
+	  (spp1 == 27 && spp2==17)||
+	  (spp1 == 24 && spp2==22)||
+	  (spp1 == 25 && spp2==23))
+	return 1;
+#endif
     }
+
   return 0;
 }
 #endif
@@ -1167,7 +1177,7 @@ void assign_bond_mapping(int i, int j)
   MD_DEBUG34(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
   for (ni=0; ni < Oparams.ninters; ni++)
     {
-#if 0
+#if 1
 #ifdef MD_FOUR_BEADS
       if (ignore_interaction(i, j, ni))
 	continue;	
@@ -2215,7 +2225,6 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   epsdMax = OprogStatus.epsdSP;
   assign_bond_mapping(i, j);
 #ifdef EDHE_FLEX
-
   if (nbondsFlex==0)
     return 0;
 #if 1
