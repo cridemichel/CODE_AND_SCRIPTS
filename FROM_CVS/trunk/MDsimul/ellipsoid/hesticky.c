@@ -1160,7 +1160,9 @@ int ignore_interaction(int i, int j, int ni)
       if ((spp1 == 26 && spp2==16)||
 	  (spp1 == 27 && spp2==17)||
 	  (spp1 == 24 && spp2==22)||
-	  (spp1 == 25 && spp2==23))
+	  (spp1 == 25 && spp2==23)||
+	  (spp1 == 28 && spp2==18)||
+	  (spp1 == 29 && spp2==19))
 	return 1;
 #endif
     }
@@ -1448,7 +1450,37 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
   return sqrt(distSq) - Oparams.sigmaSticky;
 #endif
 }
-
+#ifdef EDHE_FLEX
+#ifdef MD_SEARCH_DIST
+/* cercare la distanza al quadrato già calcolata
+ * non sembra essere conveniente dal punto di vista 
+ * delle performances (almeno nel caso della polialanina),
+ * comunque definendo -DMD_SEARCH_DIST si può attivare 
+ * quest'ottimizzazione. */
+int search_dist(int i, int j, int nn, double *distsSq)
+{
+  int kk, typei, typej, sps1, sps2, sp1, sp2;
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+  sp1 = mapbondsa[nn];
+  sp2 = mapbondsb[nn];
+  if (nn==0)
+    return 0;
+  for (kk = 0; kk < nn; kk++)
+    {
+      sps1 = mapbondsa[kk];
+      sps2 = mapbondsb[kk];
+      if (typesArr[typei].spots[sp1].same == sps1  &&
+	  typesArr[typej].spots[sp2].same == sps2)
+	{
+	  distsSq[nn] = distsSq[kk];
+	  return 1;
+	}
+    }
+  return 0;
+}
+#endif
+#endif
 /* N.B. per la silica tale routine va cambiata! */
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
@@ -1456,6 +1488,9 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   double distmin, distSq, ti;
   double ratA[NA][3], ratB[NA][3], dist;
   int firstdist = 1, nn, kk, nbonds;
+#ifdef MD_SEARCH_DIST
+  double distsSq[NA];
+#endif
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
 #endif
@@ -1506,13 +1541,26 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	  continue;
 	}
       distSq = 0;
-
 #ifdef EDHE_FLEX
+#ifdef MD_SEARCH_DIST
+      if (search_dist(i, j, nn, distsSq))
+	{
+	  distSq = distsSq[nn];
+	  //printf("1)distSq:%.15G\n", distSq);
+	}
+      else
+	{
+	  for (kk=0; kk < 3; kk++)
+	    distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+	  distsSq[nn] = distSq;
+	}
+#else
       for (kk=0; kk < 3; kk++)
-	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+    	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
       dists[nn] = dist = sqrt(distSq) - mapSigmaFlex[nn];
       MD_DEBUG20(printf("dists[%d]:%.15G mapSigmaFlex[]:%f\n", nn, dists[nn], mapSigmaFlex[nn]));
       MD_DEBUG20(printf("mapbondsa[%d]:%d mapbondsb[%d]:%d\n", nn, mapbondsb[nn], nn, mapbondsb[nn])); 
+#endif
 #else
       for (kk=0; kk < 3; kk++)
 	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
