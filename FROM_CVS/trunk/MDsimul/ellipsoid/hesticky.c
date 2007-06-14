@@ -1347,10 +1347,15 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
   int a;
   /* l'atomo zero si suppone nell'origine */
 #ifdef EDHE_FLEX
-  int kk, same;
-  for (a=0; a < typesArr[typeOfPart[i]].nspots+1; a++)
+  int type, kk, same;
+  int typei;
+  spotStruct *spots;
+
+  typei = typeOfPart[i];
+  spots = typesArr[typei].spots;
+  for (a=0; a < typesArr[typei].nspots+1; a++)
     {
-      if (a > 0 && (same = typesArr[typeOfPart[i]].spots[a-1].same)!=a-1)
+      if (a > 0 && (same = spots[a-1].same)!=a-1)
 	{
 	  //printf("qui a=%d\n", a);
 	  for (kk=0; kk < 3; kk++)
