@@ -338,9 +338,9 @@ void energy(void)
 	  continue;
 	}
       Mtot += mass;
-      RCMx = mass * rx[i];
-      RCMy = mass * ry[i];
-      RCMz = mass * rz[i];
+      RCMx += mass * rx[i];
+      RCMy += mass * ry[i];
+      RCMz += mass * rz[i];
 #else 
       RCMx += rx[i]*Oparams.m[0];
       RCMy += ry[i]*Oparams.m[0];
@@ -351,9 +351,9 @@ void energy(void)
     {
 #ifdef EDHE_FLEX
       mass = typesArr[typeOfPart[i]].m;
-      RCMx = mass * rx[i];
-      RCMy = mass * ry[i];
-      RCMz = mass * rz[i];
+      RCMx += mass * rx[i];
+      RCMy += mass * ry[i];
+      RCMz += mass * rz[i];
 #else 
       RCMx += rx[i]*Oparams.m[1];
       RCMy += ry[i]*Oparams.m[1];
