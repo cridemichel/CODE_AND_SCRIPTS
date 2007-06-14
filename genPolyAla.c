@@ -5,8 +5,8 @@
 #include <time.h>
 #include <math.h>
 #include <float.h>
-#undef DEBUG
-
+#define DEBUG
+#define NAMINO 60
 double *rx, *ry, *rz, *vx, *vy, *vz, *wx, *wy, *wz, ***Ri, omega[3];
 double eigenVect[3][3];
 int Namino;
@@ -17,6 +17,12 @@ double sigCA, sigBC, sigNC, sigCC, sigAC, sigAN, sigNN, sigBA, sigBN, sigAA, sig
        sigNCA1, sigNCA2, sigNC1, sigNC2, sigCAC2, sigCAC2, sigCAC1, sigCAC2, 
        A[3], B[3], C[3]; 
 double  xT, rT, dT;
+#ifdef PEPTIDE_PLATE
+double massPlate, sigPepCA, sigPepC, sigPepN, sigCC_Ami, sigCACA_Ami, sigNN_Ami;
+double Iplate[3], xpep[4][3];
+double *rxP, *ryP, *rzP, *vxP, *vyP, *vzP, *wxP, *wyP, *wzP, ***RiP;
+int Nplate;
+#endif
 #include <float.h>
 
 void diag_sym(int n, double ** A, double *lambda, double ** B)
@@ -288,7 +294,11 @@ void init_parameters(void)
   sigBB= 3.0700000;
   sigNC= 3.1900000;
   /* values given by Sergey 06/06/07 */
-#if 1
+#ifdef PEPTIDE_PLATE
+  sigCC_Ami = 0.1;
+  sigCACA_Ami = 0.1;
+  sigNN_Ami = 0.1;
+#else
   /* diametri spot per legame peptidico */
   sigCN1 = 1.2985;
   sigCN2 = 1.3515;
@@ -304,7 +314,8 @@ void init_parameters(void)
   sigNC2 = 1.3515;
   sigCAC1 = 2.38336;
   sigCAC2 = 2.48064;
-#else
+#endif
+#if 0
   sigCAN1 = dL - tetraEdge*0.5-PBw;
   sigCAN2 = dL - tetraEdge*0.5+PBw;
   sigNCA1 = sigCAN1;
@@ -323,6 +334,13 @@ void init_parameters(void)
   sigCACA2 = bondDistAvg + PBw;
 #endif
   massAmino = 1.0;
+#ifdef PEPTIDE_PLATE
+  massPlate = 0.001;
+  Iplate[0] = Iplate[1] = Iplate[2] = 0.001;
+  sigPepCA = 0.1;
+  sigPepC = 0.1;
+  sigPepN = 0.1;
+#endif
   Iamino[0] = Iamino[1] = Iamino[2] = 1.0;
   brownian = 0;
 }
@@ -515,6 +533,9 @@ void calcEigenValVectSergey(double I[3][3], double R[3][3], double EV[3])
   free(Il);
 }
 double aminoPos[60][4][3];
+#ifdef PEPTIDE_PLATE
+double platePos[60][4][3];
+#endif
 void print_distances(double xx[4][3])
 {
   int jj, kk;
@@ -536,6 +557,38 @@ void buildAminoSpotsSergey(double xout[4][3])
     for (jj=0; jj < 3; jj++)
       xout[ii][jj] = spotsPos[ii][jj];
 }
+#ifdef PEPTIDE_PLATE
+double massPlateSpots[4]={1.0,1.0,1.0,1.0};
+void buildPeptidePlate(double xout[4][3])
+{
+  int a, kk, jj, jj2;
+  double  com[3], R[3][3], xtmp[4][3], Itens[3][3], Iev[3], Rt[3][3];
+  calcCOM(platePos[0],com); 
+  for (a=0; a < 4; a++)
+    for (kk=0; kk < 3; kk++)
+      xtmp[a][kk] = platePos[0][a][kk] - com[kk];
+  
+  calcItens(xtmp, massPlateSpots, Itens);
+  /* diagonalizza il tensore d'inerzia e ottiene gli autovettori */
+  calcEigenValVect(Itens, R, Iev);
+  //printf("Using %d Eigenvalues=%.15G %.15G %.15G\n", use, Iev[0], Iev[1], Iev[2]);
+  for (jj=0; jj < 3; jj++)
+    {
+      for (kk=0; kk < 3; kk++)
+	eigenVect[jj][kk] = R[jj][kk];
+    }
+  for (jj=0; jj < 4; jj++)
+    lab2body(platePos[0][jj], xout[jj], com, R);
+
+#if dEBUG
+  for (jj=0; jj < 4; jj++)
+   {
+     printf("plate spots[%d]=(%.15G,%.15G,%.15G)\n", jj, xout[jj][0], xout[jj][1], xout[jj][2]);
+   }
+  print_distances(xout);
+#endif
+}
+#endif
 void buildAminoSpots(int use, double xout[4][3])
 {
   int a, kk, jj, jj2;
@@ -705,7 +758,25 @@ void readSergeyPos(char *fn)
       fscanf(f,"%lf %lf %lf\n", &aminoPos[i][0][0], &aminoPos[i][0][1], &aminoPos[i][0][2]);
       fscanf(f,"%lf %lf %lf\n", &aminoPos[i][1][0], &aminoPos[i][1][1], &aminoPos[i][1][2]);  
       i++;
+
     }
+#ifdef PEPTIDE_PLATE
+  for (i = 0; i < NAMINO-1; i++)
+    {
+      /* CA of aminoacid i */
+      for (kk=0; kk < 3; kk++)
+	platePos[i][0][kk] = aminoPos[i][0][kk];
+      /* C of aminoacid i */
+      for (kk=0; kk < 3; kk++)
+	platePos[i][1][kk] = aminoPos[i][3][kk];
+      /* CA of aminoacid i+1*/
+      for (kk=0; kk < 3; kk++)
+	platePos[i][2][kk] = aminoPos[i+1][0][kk];
+      /* N of aminaocid i+1 */
+      for (kk=0; kk < 3; kk++)
+	platePos[i][3][kk] = aminoPos[i+1][2][kk];
+    }
+#endif
 }
 
 /* Allocate memory for a matrix of COORD_TYPE */
@@ -809,6 +880,31 @@ void calcItensTot(double I[3][3], double RCM[3])
 	    I[j][k] += Icom[j][k]; 
 	  }
       }	
+#ifdef PEPTIDE_PLATE
+  /* moment of inertia of centers of mass */
+  for (j=0; j < 3; j++)
+    for (k=0; k < 3; k++)
+      {
+	for (i=0; i < Nplate; i++)
+	  {
+	    ri[0] = rxP[i]-RCM[0];
+	    ri[1] = ryP[i]-RCM[1];
+	    ri[2] = rzP[i]-RCM[2];
+	    distSq = Sqr(ri[0])+Sqr(ri[1])+Sqr(ri[2]);
+	    I[j][k] += massPlate*(((j==k)?distSq:0.0) - ri[j]*ri[k]);
+	  }
+      }
+  /* moment of inertia with respect to centes of mass */
+  for (i=0; i < Nplate; i++)
+    {
+      tRDiagR(Icom, Iplate[0], Iplate[1], Iplate[2], RiP[i]);
+      for (j=0; j < 3; j++)
+    	for (k=0; k < 3; k++)
+	  {
+	    I[j][k] += Icom[j][k]; 
+	  }
+      }	
+#endif
 }
 void calcTotAngMom(double Mtot[3], double RCM[3], double VCM[3])
 {
@@ -853,6 +949,47 @@ void calcTotAngMom(double Mtot[3], double RCM[3], double VCM[3])
      Mtot[1] += Lrb[1]+massAmino*C[1];
      Mtot[2] += Lrb[2]+massAmino*C[2];
    }
+#ifdef PEPTIDE_PLATE
+  for (i=0; i < Nplate; i++)
+   {
+     A[0] = vxP[i]-VCM[0];
+     A[1] = vyP[i]-VCM[1];
+     A[2] = vzP[i]-VCM[2];
+     B[0] = rxP[i]-RCM[0];
+     B[1] = ryP[i]-RCM[1];
+     B[2] = rzP[i]-RCM[2];
+     vectProdVec(B, A, C);
+     om[0]=wxP[i];
+     om[1]=wyP[i];
+     om[2]=wzP[i];
+#if 1
+     if (Iplate[0]==Iplate[1] && Iplate[1]==Iplate[2])
+       {
+	 for (kk=0; kk < 3; kk++)
+	   {
+	     Lrb[kk] = Iplate[kk]*om[kk];
+	   }
+       }
+     else
+       {
+	 tRDiagR(Ia,Iplate[0],Iplate[1],Iplate[2],RiP[i]);
+	 for (kk=0; kk < 3; kk++)
+	   {
+	     Lrb[kk] = 0;
+	     for (ll=0; ll < 3; ll++)
+	       {
+		 Lrb[kk]+=Ia[kk][ll]*om[ll];
+	       }
+	   }
+       }
+     	 
+#endif
+     Mtot[0] += Lrb[0]+massPlate*C[0];
+     Mtot[1] += Lrb[1]+massPlate*C[1];
+     Mtot[2] += Lrb[2]+massPlate*C[2];
+   }
+
+#endif
 }
 int main(int argc, char** argv)
 {
@@ -873,7 +1010,11 @@ int main(int argc, char** argv)
  f=fopen("polyAla.cnf","w");
  init_parameters();
  /* i bond peptidici sono ognuno una particella */
+#ifdef PEPTIDE_PLATE
+ fprintf(f,"parnum:%d\n", 2*Namino-1); 
+#else
  fprintf(f,"parnum:%d\n", Namino); 
+#endif 
  fprintf(f,"totStep:%d\n", 20000);
  fprintf(f,"time:%.15G\n",0.0); 
  fprintf(f,"curStep:%d\n", 0); 
@@ -882,22 +1023,35 @@ int main(int argc, char** argv)
  fprintf(f,"rcut:%.15G\n", -1.0);
  fprintf(f,"equilibrat: %d\n", 0); 
  fprintf(f,"Dt:%.15G\n", 0.05); 
+#ifdef PEPTIDE_PLATE
+ fprintf(f,"ninters:%d\n", 14);
+ fprintf(f,"ntypes:%d\n", 2); 
+#else
  fprintf(f,"ninters:%d\n", 18);
  fprintf(f,"ntypes:%d\n", 1); 
+#endif 
  fprintf(f,"@@@\n");
+#ifdef PEPTIDE_PLATE
+ fprintf(f,"%d %d\n", Namino, Namino-1);
+#else
  fprintf(f,"%d\n", Namino);
+#endif
  /* amminoacid types (Alanyn in this case) */ 
  fprintf(f, "%.15G %.15G %.15G\n", 0.01, 0.01, 0.01);
  fprintf(f, "%.15G %.15G %.15G\n", 1.0, 1.0, 1.0);
  fprintf(f, "%.15G %.15G %.15G %.15G %d %d\n", massAmino, Iamino[0], Iamino[1], Iamino[2], brownian, 1);
+#ifdef PEPTIDE_PLATE 
+ fprintf(f, "%d %d\n", 19, 0);
+#else
  fprintf(f, "%d %d\n", 30, 0);
+#endif
 #ifdef TETRAHEDRON
  buildTetrahedra(x, tetraEdge);
  Dh = sqrt(6.0)/12.0*tetraEdge;/* =r; */
  Dh2 = (sqrt(3.0)/3.0 - sqrt(3.0)/6.0)*tetraEdge;/* = x-d */
 #endif
  buildAminoSpots(0, x);
- /* spots for steric hindrance */
+/* spots for steric hindrance */
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAA);/* CA (0) - 0 */
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAC);/* CA (0) - 1 */
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigBA);/* CA (0) - 2 */
@@ -917,7 +1071,11 @@ int main(int argc, char** argv)
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigNC);/* C  (3) - 13 */
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigAC);/* C  (3) - 14 */
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigBC);/* C  (3) - 15 */
-
+#ifdef PEPTIDE_PLATE
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigPepC);  /* 16 C */ 
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigPepCA);/* 17 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigPepN); /* 18 N */
+#else
  /* spots for peptide bond (centers coincide with previous spots) */
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCN1);  /* 16 C */ 
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCN2);  /* 17 C */
@@ -933,7 +1091,19 @@ int main(int argc, char** argv)
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNC2);  /* 27 N */
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAC1); /* 28 CA */
  fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAC2); /* 29 CA */
-
+#endif
+#ifdef PEPTIDE_PLATE
+ buildPeptidePlate(xpep);
+ fprintf(f, "%.15G %.15G %.15G\n", 0.01, 0.01, 0.01);
+ fprintf(f, "%.15G %.15G %.15G\n", 1.0, 1.0, 1.0);
+ fprintf(f, "%.15G %.15G %.15G %.15G %d %d\n", massPlate, Iplate[0], Iplate[1], Iplate[2], brownian, 1);
+ fprintf(f, "%d %d\n", 4, 0);
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[0][0], xpep[0][1], xpep[0][2], sigPepCA);
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[1][0], xpep[1][1], xpep[1][2], sigPepC);
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[2][0], xpep[2][1], xpep[2][2], sigPepCA);
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[3][0], xpep[3][1], xpep[3][2], sigPepN);
+#endif
+ 
  /* all interactions */ 
  /* N.B. if barrier is higher than a certain threshold optimize bump routine! */ 
  /* hard core interactions */
@@ -957,8 +1127,18 @@ int main(int argc, char** argv)
  //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,14, 0, 1, 0.0, 1E10, 0.0, 10);
  //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,15, 0, 5, 0.0, 1E10, 0.0, 10);
 
- /* peptide covalent interactions (permanent) */
  PBdepth = 0.0001;
+#ifdef PEPTIDE_PLATE
+ /* C(Amino)-C(Plate)*/
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 16, 1, 1, PBdepth, 0.0,  1E10, 1);
+ /* CA(Amino)-CA(Plate)*/
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 17, 1, 0, PBdepth,  0.0, 1E10, 1);
+ /* CA(Amino)-CA(Plate) */
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  17, 1, 2, PBdepth, 0.0,  1E10, 1);
+ /* N(Amino)-N(Plate) */
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  18, 1, 3, PBdepth,  0.0, 1E10, 1);
+#else
+ /* peptide covalent interactions (permanent) */
  /* C-N */
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  16, 0, 26, 0.0, 1E10,  0.0, 10);
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  17, 0, 27, PBdepth,  0.0, 1E10, 1);
@@ -968,15 +1148,31 @@ int main(int argc, char** argv)
  /* CA-CA */
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  20, 0,  20, 0.0, 1E10,  0.0, 10);
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  21, 0,  21, PBdepth,  0.0, 1E10, 1);
-#if 1
  /* CA-N */
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 22, 0, 24, 0.0, 1E10,  0.0, 10);
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 23, 0, 25, PBdepth,  0.0, 1E10, 1);
-#endif 
+#endif
  fprintf(f, "@@@\n");
  /* positions of amminoacids */
  dirx = 1.0;
  diry = 0.0;
+#ifdef PEPTIDE_PLATE
+ Nplate = Namino-1;
+ RiP = malloc(sizeof(double**)*Nplate);
+ for (i=0; i < Nplate; i++)
+   {
+     RiP[i] = AllocMatR(3,3);
+   }
+ rxP = malloc(sizeof(double)*Nplate);
+ ryP = malloc(sizeof(double)*Nplate);
+ rzP = malloc(sizeof(double)*Nplate);
+ vxP = malloc(sizeof(double)*Nplate);
+ vyP = malloc(sizeof(double)*Nplate);
+ vzP = malloc(sizeof(double)*Nplate);
+ wxP = malloc(sizeof(double)*Nplate);
+ wyP = malloc(sizeof(double)*Nplate);
+ wzP = malloc(sizeof(double)*Nplate);
+#endif
  Rx = Ry = Rz = 0.0;
  Ri = malloc(sizeof(double**)*Namino);
  for (i=0; i < Namino; i++)
@@ -1064,10 +1260,71 @@ int main(int argc, char** argv)
 #endif
 #endif
    }
+#ifdef PEPTIDE_PLATE
+ /* --------------- PLATES POS BEG ------------ */
+ for (i=0; i < Nplate; i++)
+   {
+     calcCOM(platePos[i],com); 
+     /* calcola il tensore d'inerzia */
+     /* i vettori riga di R sono i versori che individuano il 
+	sistema di riferimento solidale con l'amminoacido cioè
+	con il corpo rigido */
+     for (a=0; a < 4; a++)
+       for (kk=0; kk < 3; kk++)
+	 xtmp[a][kk] = platePos[i][a][kk] - com[kk];
+#if 1
+     calcItens(xtmp, massPlateSpots, Itens);
+#else
+     calcItensSergey(xtmp, massPlate, Itens); 
+#endif
+     /* diagonalizza il tensore d'inerzia e ottiene gli autovettori */
+     calcEigenValVect(Itens, R, Iev);
+     check_eigenval(platePos[i], R, Iev, com);
+
+     for (ii=0; ii < 3; ii++)
+       for (kk=0; kk < 3; kk++)
+	 RiP[i][ii][kk] = R[ii][kk];
+#ifdef DEBUG
+      if (i==0 || i==1)
+       {
+	 printf("BEG PLATE ====> eigenvalues: %f %f %f\n", Iev[0], Iev[1], Iev[2]);
+	 printf("COM=%.15G %.15G %.15G\n", com[0], com[1], com[2]);
+	 printf("i=%d ------------ \n", i);
+	 print_matrix("Itens",Itens);
+	 print_matrix("Orientation Matrix",R);
+	 print("===================== END ================ \n");
+       }
+#endif
+      rxP[i] = com[0];
+      ryP[i] = com[1];
+      rzP[i] = com[2];
+#ifdef DEBUG
+      printf("PLATE i=%d ------------\n", i);
+      for (jj=0; jj < 4; jj++)
+	{
+	 body2lab(xpep[jj], xlab[jj], com, R);
+	 printf("xout=%.15G %.15G %.15G\n", xlab[jj][0], xlab[jj][1], xlab[jj][2]);
+	 printf("sergey[%d]=%.15G %.15G %.15G\n", i, aminoPos[i][jj][0],aminoPos[i][jj][1],aminoPos[i][jj][2]);
+	 if (i < NAMINO)
+	   printf("sergey[%d]=%.15G %.15G %.15G\n",i+1,aminoPos[i+1][jj][0],aminoPos[i+1][jj][1],aminoPos[i+1][jj][2]);
+	 //lab2body(aminoPos[i][jj], xlab[jj], com, R);
+	 //printf("spots=%.15G %.15G %.15G\n", xlab[jj][0], xlab[jj][1], xlab[jj][2]);
+       }
+#endif
+     Rx += com[0];
+     Ry += com[1];
+     Rz += com[2];
+   }
+ Rx /= (Namino+Nplate);
+ Ry /= (Namino+Nplate);
+ Rz /= (Namino+Nplate);
+
+  /* -------------- PLATES ---------------- */
+#else
  Rx /= Namino;
  Ry /= Namino;
  Rz /= Namino;
-
+#endif
  for (i=0; i < Namino; i++)
    {
      rx[i] -= Rx;
@@ -1077,7 +1334,18 @@ int main(int argc, char** argv)
 	     Ri[i][0][0], Ri[i][0][1], Ri[i][0][2], Ri[i][1][0], Ri[i][1][1], 
 	     Ri[i][1][2], Ri[i][2][0],Ri[i][2][1],Ri[i][2][2]); 
    } 
- /* velocities and angular velocities of aminoacids */
+#ifdef PEPTIDE_PLATE
+ for (i=0; i < Nplate; i++)
+   {
+     rxP[i] -= Rx;
+     ryP[i] -= Ry;
+     rzP[i] -= Rz;
+     fprintf(f, "%.15G %.15G %.15G %.15G %.15G  %.15G %.15G %.15G %.15G %.15G %.15G %.15G 1\n", rxP[i], ryP[i], rzP[i],
+	     RiP[i][0][0], RiP[i][0][1], RiP[i][0][2], RiP[i][1][0], RiP[i][1][1], 
+	     RiP[i][1][2], RiP[i][2][0], RiP[i][2][1], RiP[i][2][2]); 
+   }
+#endif
+  /* velocities and angular velocities of aminoacids */
  K = sqrt(T/massAmino);
  Mtot[0] = Mtot[1] = Mtot[2] = Vx = Vy = Vz = 0;
  for (i=0; i < Namino; i++)
@@ -1090,11 +1358,25 @@ int main(int argc, char** argv)
      Vz += vz[i];
      angvel(i, &wx[i], &wy[i], &wz[i], T);
    }
-   
+#ifdef PEPTIDE_PLATE
+ for (i=0; i < Nplate; i++)
+   {
+     vxP[i] =  K*gauss();
+     vyP[i] =  K*gauss();
+     vzP[i] =  K*gauss();
+     Vx += vxP[i];
+     Vy += vyP[i];
+     Vz += vzP[i];
+     angvel(i, &wxP[i], &wyP[i], &wzP[i], T);
+   }
+ Vx /= (Namino+Nplate);
+ Vy /= (Namino+Nplate);
+ Vz /= (Namino+Nplate);
+#else 
  Vx /= Namino;
  Vy /= Namino;
  Vz /= Namino;
-  
+#endif 
  RCM[0] = 0.0;
  RCM[1] = 0.0;
  RCM[2] = 0.0;
@@ -1107,6 +1389,15 @@ int main(int argc, char** argv)
      vy[i] -= VCM[1];
      vz[i] -= VCM[2];
    }
+#ifdef PEPTIDE_PLATE
+ for (i=0; i < Nplate; i++)
+   {
+     vxP[i] -= VCM[0];
+     vyP[i] -= VCM[1];
+     vzP[i] -= VCM[2];
+   }
+
+#endif
  VCM[0]=VCM[1]=VCM[2]=0.0;
  calcTotAngMom(Mtot, RCM, VCM);
  printf("[Prima]Total Angular Momentum= %.15G %.15G %.15G\n", Mtot[0], Mtot[1], Mtot[2]);
@@ -1131,6 +1422,23 @@ int main(int argc, char** argv)
      fprintf(f, "%.15G %.15G %.15G %.15G %.15G %.15G\n", vx[i], vy[i], vz[i], 
 	     wx[i], wy[i], wz[i]);
    } 
+#ifdef PEPTIDE_PLATE
+ for (i=0; i < Nplate; i++)
+   {
+     B[0] = rxP[i];
+     B[1] = ryP[i];
+     B[2] = rzP[i];
+     vectProdVec(omega, B, C);
+     vxP[i] -= C[0];
+     vyP[i] -= C[1];
+     vzP[i] -= C[2];
+     wxP[i] -= omega[0];
+     wyP[i] -= omega[1];
+     wzP[i] -= omega[2];
+     fprintf(f, "%.15G %.15G %.15G %.15G %.15G %.15G\n", vxP[i], vyP[i], vzP[i], 
+	     wxP[i], wyP[i], wzP[i]);
+   } 
+#endif
  calcTotAngMom(Mtot, RCM, VCM);
  printf("[dopo]Total Angular Momentum= %.15G %.15G %.15G\n", Mtot[0], Mtot[1], Mtot[2]);
  fprintf(f, "%.15G\n", L);
