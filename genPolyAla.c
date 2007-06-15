@@ -6,7 +6,7 @@
 #include <math.h>
 #include <float.h>
 #undef DEBUG
-#undef DEBUGP
+#define DEBUGP
 #define NAMINO 60
 double *rx, *ry, *rz, *vx, *vy, *vz, *wx, *wy, *wz, ***Ri, omega[3];
 double eigenVect[3][3];
@@ -336,7 +336,7 @@ void init_parameters(void)
 #endif
   massAmino = 1.0;
 #ifdef PEPTIDE_PLATE
-  massPlate = 0.001;
+  massPlate = 1.0;
   Iplate[0] = Iplate[1] = Iplate[2] = 1.0;
   sigPepCA = 0.1;
   sigPepC = 0.1;
@@ -492,29 +492,35 @@ void calcEigenValVect(double I[3][3], double R[3][3], double EV[3])
   vectProdVec(u1, u2, R[2]);
 }
 double** AllocMatR(int size1, int size2);
-
-void check_eigenval(double xlab[4][3], double R[3][3], double EV[3], double com[3], double x[4][3])
+double deterM(double M[3][3])
 {
-  double xbody[4][3];
+  return M[0][0]*M[1][1]*M[2][2] + M[0][1]*M[1][2]*M[2][0] + M[0][2]*M[1][0]*M[2][1] - M[2][0]*M[1][1]*M[0][2] 
+    - M[2][1]*M[1][2]*M[0][0] - M[2][2]*M[1][0]*M[0][1]; 
+}
+void check_eigenval(int type, double xlab[4][3], double R[3][3], double EV[3], double com[3], double x[4][3])
+{
+  double xbody[4][3], Rini[3][3];
   int jj, kk, ii, l;
   /* computed eigenvectors are unitary but may have opposite 
    * versus with respect to the desired body fixed frame */
+	
   for (jj=0; jj < 4; jj++)
     {
       lab2body(xlab[jj], xbody[jj], com, R);
     }
-  
+  printf("prima detR=%.15G\n", deterM(R));
   for (l=0; l < 3; l++)
     for (jj=0; jj < 4; jj++)
       {
-	if (xbody[jj][l]*x[jj][l] < 0.0)
+	if (fabs(xbody[jj][l]-x[jj][l]) > 1E-10 && xbody[jj][l]*x[jj][l] < 0.0)
 	  {
-	    for (ii=0; ii < 3; ii++)
-	      for (kk=0; kk < 3; kk++)
-		R[l][kk] = -R[l][kk];
+	    printf("xbody[%d][%d] %.15G x=%.15G\n", jj, l, xbody[jj][l], x[jj][l]);
+	    for (kk=0; kk < 3; kk++)
+	      R[l][kk] = -R[l][kk];
 	    break;
 	  }
       }
+  printf("dopo detR=%.15G\n", deterM(R));
 }
 void calcEigenValVectSergey(double I[3][3], double R[3][3], double EV[3])
 {
@@ -580,10 +586,19 @@ void buildPeptidePlate(double xout[4][3])
   /* diagonalizza il tensore d'inerzia e ottiene gli autovettori */
   calcEigenValVect(Itens, R, Iev);
   //printf("Using %d Eigenvalues=%.15G %.15G %.15G\n", use, Iev[0], Iev[1], Iev[2]);
+  if (deterM(R) < 0.0)
+    {
+      for (jj=0; jj < 3; jj++)
+	{
+	  R[2][jj] = -R[2][jj];
+	}
+    }
   for (jj=0; jj < 3; jj++)
     {
       for (kk=0; kk < 3; kk++)
-	eigenVect[jj][kk] = R[jj][kk];
+	{
+  	  eigenVect[jj][kk] = R[jj][kk];
+	}
     }
   for (jj=0; jj < 4; jj++)
     lab2body(platePos[0][jj], xout[jj], com, R);
@@ -1254,7 +1269,12 @@ int main(int argc, char** argv)
 #endif
      /* diagonalizza il tensore d'inerzia e ottiene gli autovettori */
      calcEigenValVect(Itens, R, Iev);
-     check_eigenval(aminoPos[i], R, Iev, com, x);
+     check_eigenval(0, aminoPos[i], R, Iev, com, x);
+     if (deterM(R) < 0.0)
+       {
+	 printf("[PLATE] i=%d detR=%.15G is less than 0!\n", i, deterM(R));
+	 exit(-1);
+       }
 
      for (ii=0; ii < 3; ii++)
        for (kk=0; kk < 3; kk++)
@@ -1320,7 +1340,14 @@ int main(int argc, char** argv)
 #endif
      /* diagonalizza il tensore d'inerzia e ottiene gli autovettori */
      calcEigenValVect(Itens, R, Iev);
-     check_eigenval(platePos[i], R, Iev, com, xpep);
+   
+     check_eigenval(1, platePos[i], R, Iev, com, xpep);
+     if (deterM(R) < 0.0)
+       {
+	 printf("[PLATE] i=%d detR=%.15G is less than 0!\n", i, deterM(R));
+	 exit(-1);
+       }
+
 #ifdef DEBUGP
       printf("PLATE i=%d ------------\n", i);
       for (jj=0; jj < 4; jj++)
@@ -1342,7 +1369,7 @@ int main(int argc, char** argv)
        for (kk=0; kk < 3; kk++)
 	 RiP[i][ii][kk] = R[ii][kk];
 #ifdef DEBUGP
-      if (i==0 || i==1)
+      if (1 || i==0 || i==1)
        {
 	 printf("i=%d BEG PLATE ====> eigenvalues: %f %f %f\n", i, Iev[0], Iev[1], Iev[2]);
 	 printf("COM=%.15G %.15G %.15G\n", com[0], com[1], com[2]);
@@ -1384,6 +1411,7 @@ int main(int argc, char** argv)
      rxP[i] -= Rx;
      ryP[i] -= Ry;
      rzP[i] -= Rz;
+     /* fix quick and dirty: we now that orientations of plate are all equal */
      fprintf(f, "%.15G %.15G %.15G %.15G %.15G  %.15G %.15G %.15G %.15G %.15G %.15G %.15G 1\n", rxP[i], ryP[i], rzP[i],
 	     RiP[i][0][0], RiP[i][0][1], RiP[i][0][2], RiP[i][1][0], RiP[i][1][1], 
 	     RiP[i][1][2], RiP[i][2][0], RiP[i][2][1], RiP[i][2][2]); 
