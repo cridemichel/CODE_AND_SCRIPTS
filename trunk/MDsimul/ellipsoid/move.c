@@ -2713,6 +2713,12 @@ void calc_euler_angles(int i, double **M, double *phi, double *theta, double *ps
 {
   double sintheta;
   *theta = acos(M[2][2]);
+#if 0
+  if (i==117)
+    {
+      print_matrix(M, 3);
+    } 
+#endif
   if (*theta == 0.0)
     {
       *phi = *psi = 0;
@@ -2757,6 +2763,7 @@ void calc_euler_angles(int i, double **M, double *phi, double *theta, double *ps
 	*psi = pi + *psi;
 #endif
     }
+  //printf("psi=%.15G theta=%.15G phi=%.15G\n", *psi, *theta, *phi);
 #if 0
   printf("*psi: %.15G psi0: %.15G sintheta: %.15G M[1][2]:%.15G\n", *psi, psi0[i], sintheta, M[1][2]);
   printf("M[1][2]:%.15G sintheta:%.15G\n", M[1][2], sintheta);
@@ -2854,8 +2861,10 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double co
       return;
     }
 #endif
+#if 1
    if (ti == 0.0 || angM[i] == 0.0)
     {
+      //printf("phi0=%.15G costheta0=%.15G sintheta0=%.15G psi0=%.15G\n", phi0[i], costheta0[i], sintheta0[i], psi0[i]);
       for (k1 = 0; k1 < 3; k1++)
 	for (k2 = 0; k2 < 3; k2++)
 	  {
@@ -2871,6 +2880,7 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double co
       *phir = phi0[i];
       return;
     }
+#endif
   evolve_euler_angles_symtop(i, ti, &phi, &psi);
 #if 0
   if (isnan(phi) || isnan(psi))
@@ -7212,7 +7222,7 @@ void calc_omega(int i)
   wx[i] = omega[0];
   wy[i] = omega[1];
   wz[i] = omega[2];
-  //printf("w[%d]=%.15G %.15G %.15G\n", i, wx[i], wy[i], wz[i]);
+  //printf("i=%d M=%.15G %.15G %.15G w[%d]=%.15G %.15G %.15G\n", i, Mx[i], My[i], Mz[i], i, wx[i], wy[i], wz[i]);
 }
 #endif
 #ifdef MD_PATCHY_HE
@@ -7542,7 +7552,7 @@ void ProcessCollision(void)
       cellRange[2*k+1] =   1;
     }
   MD_DEBUG10(calc_energy("prima"));
-  MD_DEBUG20(printf("[BUMP] t=%.15G i=%d at=%d j=%d at=%d collCode=%d\n", 
+  MD_DEBUG38(printf("[BUMP] t=%.15G i=%d at=%d j=%d at=%d collCode=%d\n", 
 		    Oparams.time,evIdA,evIdC, evIdB, evIdD, evIdE)); 
 
 #ifdef MD_PATCHY_HE

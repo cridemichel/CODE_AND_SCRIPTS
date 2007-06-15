@@ -1134,7 +1134,9 @@ int ignore_interaction(int i, int j, int ni)
    * nel caso del modello four beads si fa un'ottimizzazione ad-hoc */
   sp1=intersArr[ni].spot1;
   sp2=intersArr[ni].spot2;
-  if ((sp1 > 15 || sp2 > 15) && (abs(i-j) > 1))
+  /* nel caso del modello con plate peptidica i e j > 60 sono le plate
+     quindi non bisogna ignorare tali interazioni! */
+  if ((sp1 > 15 || sp2 > 15) && (abs(i-j) > 1) && i < 60 && j < 60)
     return 1;
   if (abs(i-j)==1)
     {
@@ -1155,15 +1157,18 @@ int ignore_interaction(int i, int j, int ni)
 	 )
 	return 1;
 #if 1
-      spp1 = sp1;
-      spp2 = sp2;
-      if ((spp1 == 26 && spp2==16)||
-	  (spp1 == 27 && spp2==17)||
-	  (spp1 == 24 && spp2==22)||
-	  (spp1 == 25 && spp2==23)||
-	  (spp1 == 28 && spp2==18)||
-	  (spp1 == 29 && spp2==19))
-	return 1;
+      if (typeOfPart[i]==0 && typeOfPart[j]==0)
+	{
+	  spp1 = sp1;
+	  spp2 = sp2;
+	  if ((spp1 == 26 && spp2==16)||
+	      (spp1 == 27 && spp2==17)||
+	      (spp1 == 24 && spp2==22)||
+	      (spp1 == 25 && spp2==23)||
+	      (spp1 == 28 && spp2==18)||
+	      (spp1 == 29 && spp2==19))
+	    return 1;
+	}
 #endif
     }
 
@@ -1176,7 +1181,7 @@ void assign_bond_mapping(int i, int j)
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
   a=0;
-  MD_DEBUG34(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
+  MD_DEBUG38(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
   for (ni=0; ni < Oparams.ninters; ni++)
     {
 #if 1
@@ -1195,10 +1200,10 @@ void assign_bond_mapping(int i, int j)
           mapBhoutFlex[a] = intersArr[ni].bhout;
           mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
 				 + typesArr[type2].spots[intersArr[ni].spot2].sigma);
-	  MD_DEBUG34(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
-	  MD_DEBUG34(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
+	  MD_DEBUG38(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
+	  MD_DEBUG38(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
 			    typesArr[type2].spots[intersArr[ni].spot2].sigma));
-	  MD_DEBUG34(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
+	  MD_DEBUG38(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
 	  a++;
 	  if (type1 == type2 && intersArr[ni].spot1 != intersArr[ni].spot2)
 	    {
@@ -1221,10 +1226,10 @@ void assign_bond_mapping(int i, int j)
           mapBhoutFlex[a] = intersArr[ni].bhout;
           mapSigmaFlex[a] = 0.5*(typesArr[type2].spots[intersArr[ni].spot1].sigma
 				 + typesArr[type1].spots[intersArr[ni].spot2].sigma);
-	  MD_DEBUG34(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
-	  MD_DEBUG34(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
+	  MD_DEBUG38(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
+	  MD_DEBUG38(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
 			    typesArr[type2].spots[intersArr[ni].spot2].sigma));
-	  MD_DEBUG34(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
+	  MD_DEBUG38(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
 	  a++;
 #if 0
 	  if (type1 == type2 && intersArr[ni].spot1 != intersArr[ni].spot2)
@@ -1364,7 +1369,7 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
       //printf("1)same=%d rat[%d]=%f %f %f\n", same, a, rat[a][0], rat[a][1], rat[a][2]);
       else
 	BuildAtomPosAt(i, a, rO, R, rat[a]);
-      //printf("2)rat[%d]=%f %f %f\n", a, rat[a][0], rat[a][1], rat[a][2]);
+      //printf("i=%d rat[%d]=%.15G %.15G %.15G\n", i, a, rat[a][0], rat[a][1], rat[a][2]);
     }
 #else
   if (i < Oparams.parnumA)
@@ -1524,7 +1529,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
+ symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
   //UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
   UpdateOrient(j, ti, RtB, Omega);
@@ -1563,8 +1568,8 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
       for (kk=0; kk < 3; kk++)
     	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
       dists[nn] = dist = sqrt(distSq) - mapSigmaFlex[nn];
-      MD_DEBUG20(printf("dists[%d]:%.15G mapSigmaFlex[]:%f\n", nn, dists[nn], mapSigmaFlex[nn]));
-      MD_DEBUG20(printf("mapbondsa[%d]:%d mapbondsb[%d]:%d\n", nn, mapbondsb[nn], nn, mapbondsb[nn])); 
+      MD_DEBUG38(printf("dists[%d]:%.15G mapSigmaFlex[]:%f\n", nn, dists[nn], mapSigmaFlex[nn]));
+      MD_DEBUG38(printf("i=%d mapbondsa[%d]:%d j=%d mapbondsb[%d]:%d\n", i, nn, mapbondsa[nn], j, nn, mapbondsb[nn])); 
 #endif
 #else
       for (kk=0; kk < 3; kk++)
@@ -1573,6 +1578,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #endif     
       if (firstdist || fabs(dist) < fabs(distmin))
 	{
+	  MD_DEBUG38(printf("firstdist=%d dist=%.15G distmin=%.15G\n", firstdist, dist, distmin));
 	  firstdist = 0;
 	  distmin = dist;
 	  *amin = mapbondsa[nn];
@@ -2314,7 +2320,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   maxddot = calc_maxddot(i, j);
 #endif
 #endif
-  MD_DEBUG29(printf("BEGIN [locate_contactSP] %d-%d t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,t1, t2, shift[0], shift[1], shift[2]));
+  MD_DEBUG38(printf("BEGIN [locate_contactSP] %d-%d maxddot=%.15G t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,maxddot, t1, t2, shift[0], shift[1], shift[2]));
   h = OprogStatus.h; /* last resort time increment */
   if (*collCode!=MD_EVENT_NONE)
     {
@@ -2387,7 +2393,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
       return 0;  
     }
   timesS++;
-  MD_DEBUG20(printf("[AFTER SEARCH CONTACT FASTER_SP]Dopo distances between %d-%d d1=%.12G\n", i, j, d));
+  MD_DEBUG38(printf("[AFTER SEARCH CONTACT FASTER_SP]Dopo distances between %d-%d d1=%.12G\n", i, j, d));
 
   MD_DEBUG(printf(">>>>d:%f\n", d));
   foundrc = 0;
@@ -2406,6 +2412,23 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
       tini = t;
       t += delt;
       d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+      MD_DEBUG38(printf("epsd=%.15G maxddot=%.15G epsd/maxddot%.15G t1=%.15G t=%.15G d=%.15G\n", epsd, maxddot,
+			epsd/maxddot, t1, t, d));
+#if 0
+      if (i==117 && j==58)
+	{
+	  t = tini;
+	  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	  MD_DEBUG38(printf("2)epsd=%.15G maxddot=%.15G epsd/maxddot%.15G t1=%.15G t=%.15G d=%.15G\n", epsd, maxddot,
+			    epsd/maxddot, t1, t, d));
+	  t = tini+1E-20;
+	  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	  MD_DEBUG38(printf("3)epsd=%.15G maxddot=%.15G epsd/maxddot%.15G t1=%.15G t=%.15G d=%.15G\n", epsd, maxddot,
+			    epsd/maxddot, t1, t, d));
+ 
+	  exit(-1);
+	}
+#endif
 #else
       if (!firstaftsf)
 	{
@@ -2439,7 +2462,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
       tini = t;
       t += delt;
       d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-      MD_DEBUG20(printf("t1=%.15G t=%.15G d=%.15G\n", t1, t, d));
+      MD_DEBUG38(printf("t1=%.15G t=%.15G d=%.15G\n", t1, t, d));
       deldist = get_max_deldistSP(distsOld, dists, bondpair);
       if (deldist > epsdMax)
 	{
@@ -2581,9 +2604,10 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	      if (refine_contactSP(i, j, t1, t-delt, t2arr[nn], nn, shift, &troot))
 		{
 		  //printf("[locate_contact] Adding collision between %d-%d\n", i, j);
-		  MD_DEBUG30(printf("[locate_contact_sp] Adding collision between %d-%d\n", i, j));
-		  MD_DEBUG30(printf("[locate_contact_sp] t=%.15G nn=%d\n", t, nn));
-		  MD_DEBUG30(printf("[locate_contact_sp] troot=%.15G\n", troot));
+		  MD_DEBUG38(printf("[locate_contact_sp] Adding collision between %d-%d\n", i, j));
+		  MD_DEBUG38(printf("[locate_contact_sp] t=%.15G nn=%d t1=%.15G delt=%.15G t2arr[nn]=%.15G\n", t, nn,
+				    t1, delt, t2arr[nn]));
+		  MD_DEBUG38(printf("[locate_contact_sp] troot=%.15G\n", troot));
 		  MD_DEBUG(printf("[locate_contact_sp] its: %d\n", its));
 		  /* se il legame già c'è e con l'urto si forma tale legame allora
 		   * scarta tale urto */
@@ -2615,8 +2639,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #endif
 			  //printf(">>> evtime=%.15G\n", *evtime);
 			  *collCode = dorefine[nn]; 
-			  MD_DEBUG31(printf("SP ok scheduling collision between %d-%d nn=%d\n", i, j, nn));
-			  MD_DEBUG31(printf("SP collcode=%d bound(i, j, nn):%d\n", *collCode, 
+			  MD_DEBUG38(printf("SP ok scheduling collision between %d-%d nn=%d\n", i, j, nn));
+			  MD_DEBUG38(printf("SP collcode=%d bound(i, j, nn):%d\n", *collCode, 
 					    bound(i, j, mapbondsa[nn], mapbondsb[nn])));
 			}
 		      continue;
