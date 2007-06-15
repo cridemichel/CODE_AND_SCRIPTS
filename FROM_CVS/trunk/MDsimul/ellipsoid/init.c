@@ -1562,6 +1562,7 @@ void StartRun(void)
     }
   if (OprogStatus.useNNL)
     rebuildNNL();
+
   for (n = 0; n < Oparams.parnum; n++)
     {
       if (OprogStatus.useNNL)
@@ -1819,6 +1820,7 @@ void calc_RM(int i)
     }
   for (k1 = 0; k1 < 3; k1++)
     RM[i][2][k1] = Mvec[k1]/angM[i];
+
   RM[i][0][0] = RM[i][2][1];
   RM[i][0][1] = -RM[i][2][0];
   RM[i][0][2] = 0.0;
@@ -1854,6 +1856,8 @@ void calc_RM(int i)
   for (k1 = 0; k1 < 3; k1++)
     RM[i][0][k1] /= norm;
   vectProdVec(RM[i][2],RM[i][0],RM[i][1]); 
+  //printf("to ang mom ref sys\n");
+  //print_matrix(RM[i],3);
 #if 0
   //printf("1 scal 2: %.15G\n",  scalProd(RM[i][0], RM[i][2]));
   for (k1=0; k1 < 3; k1++)
@@ -1955,6 +1959,7 @@ void upd_refsysM(int i)
 #endif
      }
 #if 0
+  print_matrix(R[i],3);
   printf("RE0[%d]=\n",i);
   print_matrix(RE0, 3);
 #endif
@@ -2393,16 +2398,22 @@ void find_bonds(void)
 	drz = rz[i] - rz[j]; 
 	shift[2] = L*rint(drz/L);
 	assign_bond_mapping(i, j);
+
 	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 	NPB = get_num_pbonds(i, j);
 	
-	//printf("NPB=%d\n", NPB);
+#if 0
+	if (NPB==0)
+	  printf("i=%d j=%d\n",i, j);
+#endif
 	for (nn=0; nn < NPB; nn++)
 	  {
+	    //printf("Oparams.parnum=%d i=%d typei=%d j=%d typej=%d nn=%d dist=%.15G\n", Oparams.parnum, i, typeOfPart[i], j, typeOfPart[j], nn, dists[nn]);
 	    //if (mapbondsa[nn] >= 15 && mapbondsb[nn] >= 15)
 		//  printf("(%d,%d)-(%d,%d): %.15G\n", i, mapbondsa[nn]-1, j, mapbondsb[nn]-1, dists[nn]);
     	    if (dists[nn] < 0.0)
 	      {
+		//printf("Oparams.parnum=%d i=%d typei=%d j=%d typej=%d nn=%d dist=%.15G\n", Oparams.parnum, i, typeOfPart[i], j, typeOfPart[j], nn, dists[nn]);
 		aa = mapbondsa[nn];
 		bb = mapbondsb[nn];
 		add_bond(i, j, aa, bb);
@@ -2445,6 +2456,24 @@ void find_conciding_spots(void)
 
 }
 #endif
+
+void boh(void)
+{
+  double dl, tini=0.0, t1=0.0, tl; 
+  double shift[3]={0.0,0.0,0.0};
+  double dist[1000];
+  int amin, bmin; 
+  tl = tini;
+  dl = calcDistNegSP(tl, t1, 118, 58, shift, &amin, &bmin, dists, -1);
+  printf("1)t1=%.15G t=%.15G d=%.15G\n", t1, tl, dl);
+  tl = tini+1E-20;
+  dl = calcDistNegSP(tl, t1, 118, 58, shift, &amin, &bmin, dists, -1);
+  printf("2)t1=%.15G t=%.15G d=%.15G\n", t1, tl, dl);
+
+  exit(-1);
+}
+
+
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -3229,8 +3258,6 @@ void usrInitAft(void)
 #else
   find_bonds();
 #endif
-  printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
-#endif
 #ifdef MD_ASYM_ITENS
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -3239,11 +3266,13 @@ void usrInitAft(void)
       upd_refsysM(i);
     }
 #endif
+  printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
+#endif
   //exit(-1);
 #ifdef MD_HE_PARALL
   slave_task();
 #endif
-  StartRun(); 
+  StartRun();
   if (mgl_mode != 2)
     ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0 && mgl_mode!=2)
