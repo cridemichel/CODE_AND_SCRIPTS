@@ -6,7 +6,7 @@
 #include <math.h>
 #include <float.h>
 #undef DEBUG
-#define DEBUGP
+#undef DEBUGP
 #define NAMINO 60
 double *rx, *ry, *rz, *vx, *vy, *vz, *wx, *wy, *wz, ***Ri, omega[3];
 double eigenVect[3][3];
@@ -492,6 +492,7 @@ void calcEigenValVect(double I[3][3], double R[3][3], double EV[3])
   vectProdVec(u1, u2, R[2]);
 }
 double** AllocMatR(int size1, int size2);
+const double minDbl = 1E-10;
 double deterM(double M[3][3])
 {
   return M[0][0]*M[1][1]*M[2][2] + M[0][1]*M[1][2]*M[2][0] + M[0][2]*M[1][0]*M[2][1] - M[2][0]*M[1][1]*M[0][2] 
@@ -508,19 +509,31 @@ void check_eigenval(int type, double xlab[4][3], double R[3][3], double EV[3], d
     {
       lab2body(xlab[jj], xbody[jj], com, R);
     }
-  printf("prima detR=%.15G\n", deterM(R));
+  //printf("prima detR=%.15G\n", deterM(R));
   for (l=0; l < 3; l++)
     for (jj=0; jj < 4; jj++)
       {
-	if (fabs(xbody[jj][l]-x[jj][l]) > 1E-10 && xbody[jj][l]*x[jj][l] < 0.0)
+	//printf("xbody[%d][%d] %.15G x=%.15G\n", jj, l, xbody[jj][l], x[jj][l]);
+	if (fabs(xbody[jj][l]-x[jj][l]) > minDbl && xbody[jj][l]*x[jj][l] < 0.0)
 	  {
-	    printf("xbody[%d][%d] %.15G x=%.15G\n", jj, l, xbody[jj][l], x[jj][l]);
 	    for (kk=0; kk < 3; kk++)
 	      R[l][kk] = -R[l][kk];
 	    break;
 	  }
       }
-  printf("dopo detR=%.15G\n", deterM(R));
+  /* dirty fix for plates: they have z-coords=0 in the rigid body ref. system */
+  if (deterM(R) < 0.0)
+    {
+      for (l=0; l < 3; l++)
+	{
+	  if (fabs(xbody[0][l]) < minDbl)
+	    {
+	      for (kk=0; kk < 3; kk++)
+		R[l][kk] = -R[l][kk];
+	    }
+	}
+    }
+  //printf("dopo detR=%.15G\n", deterM(R));
 }
 void calcEigenValVectSergey(double I[3][3], double R[3][3], double EV[3])
 {
