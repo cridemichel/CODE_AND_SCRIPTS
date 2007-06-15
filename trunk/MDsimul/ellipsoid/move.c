@@ -2837,11 +2837,26 @@ int is_infinite_mass(int i)
     return 0;
 }
 #endif
+void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3]);
 void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3], double *phir, double *psir)
 {
   double phi, psi, cospsi, sinpsi, cosphi, sinphi;
   int k1, k2, k3;
   //wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
+#if 1
+#ifdef EDHE_FLEX
+  int typei;
+  double It;
+  typei=typeOfPart[i];
+  if ((It=typesArr[typei].I[0])==typesArr[typei].I[1] &&
+      typesArr[typei].I[1]==typesArr[typei].I[2])
+    {
+      double Omega[3][3];
+      UpdateOrient(i, ti, Ro, Omega);
+      return;
+    }
+#endif
+#endif
 #ifdef MD_HANDLE_INFMASS
   if (is_infinite_Itens(i))
     {    
