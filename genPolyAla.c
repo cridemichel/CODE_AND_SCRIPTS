@@ -16,7 +16,7 @@ double temp, L, massAmino, T, Iamino[3], x[4][3], tetraEdge, dL, PBw, Dh, Dh2;
 double sigCA, sigBC, sigNC, sigCC, sigAC, sigAN, sigNN, sigBA, sigBN, sigAA, sigBB,
        sigCN1, sigCN2, sigCCA1, sigCCA2, sigCACA1, sigCACA2, sigCAN1, sigCAN2,
        sigNCA1, sigNCA2, sigNC1, sigNC2, sigCAC2, sigCAC2, sigCAC1, sigCAC2, 
-       A[3], B[3], C[3]; 
+       A[3], B[3], C[3], delCANbond, delCCAbond; 
 double  xT, rT, dT;
 #ifdef PEPTIDE_PLATE
 double massPlate, sigPepCA, sigPepC, sigPepN, sigCC_Ami, sigCACA_Ami, sigNN_Ami;
@@ -296,9 +296,18 @@ void init_parameters(void)
   sigNC= 3.1900000;
   /* values given by Sergey 06/06/07 */
 #ifdef PEPTIDE_PLATE
-  sigCC_Ami = 0.1;
-  sigCACA_Ami = 0.1;
-  sigNN_Ami = 0.1;
+  /* I do the following to have the correct 
+     (according to 4 beads model) distances
+     between C and CA and between N and CA */
+  sigCAN1 = 2.35788;
+  sigCAN2 = 2.45412;
+  delCANbond = sigCAN2-sigCAN1;
+  sigCCA1 = 2.38336;
+  sigCCA2 = 2.48064;
+  delCCAbond = sigCCA2-sigCCA1;
+  sigCACA_Ami = 0.05;
+  sigCC_Ami = delCANbond - sigCACA_Ami;
+  sigNN_Ami = delCCAbond - sigCACA_Ami;
 #else
   /* diametri spot per legame peptidico */
   sigCN1 = 1.2985;
@@ -338,9 +347,9 @@ void init_parameters(void)
 #ifdef PEPTIDE_PLATE
   massPlate = 1.0;
   Iplate[0] = Iplate[1] = Iplate[2] = 1.0;
-  sigPepCA = 0.1;
-  sigPepC = 0.1;
-  sigPepN = 0.1;
+  sigPepCA = sigCACA_Ami;
+  sigPepC = delCCAbond - 0.05;
+  sigPepN = delCANbond - 0.05;
 #endif
   Iamino[0] = Iamino[1] = Iamino[2] = 1.0;
   brownian = 0;
