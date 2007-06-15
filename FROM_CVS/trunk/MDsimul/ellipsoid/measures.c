@@ -375,19 +375,21 @@ void energy(void)
   fclose(mf);
 #endif
 }
-
+#ifdef EDHE_FLEX
 void radius_of_gyration(void)
 {
-  int i, kk;
+  int i, kk, Namino;
   double rcx, rcy, rcz, dx, dy, dz, rmean[3], rgyr;
   FILE *f;
   f = fopenMPI(absMisHD("radius_of_gyration.dat"),"a");
 
+  Namino = typeNP[0];
   /* evaluate center of mass of the protein */
   rmean[0] = rcx = rx[0];
   rmean[1] = rcy = ry[0];
   rmean[2] = rcz = rz[0];
-  for (i = 0; i < Oparams.parnum-1; i++)
+  /* evaluate rad of gyr just for aminoacids not for plates */
+  for (i = 0; i < Namino; i++)
     {
       dx = rx[i+1]-rx[i];
       dy = ry[i+1]-ry[i];
@@ -404,9 +406,9 @@ void radius_of_gyration(void)
       rmean[2] += rcz;
     }
   for (kk=0; kk < 3; kk++)
-    rmean[kk] /= Oparams.parnum;
+    rmean[kk] /= ((double)Namino);
   rgyr = 0.0;
-  for (i = 0; i < Oparams.parnum; i++)
+  for (i = 0; i < Namino; i++)
     {
       dx = rx[i]-rmean[0];
       dy = ry[i]-rmean[1];
@@ -419,7 +421,7 @@ void radius_of_gyration(void)
       rgyr += Sqr(dy);
       rgyr += Sqr(dz);
     }
-  rgyr /= (double)Oparams.parnum;
+  rgyr /= ((double)Namino);
   rgyr = sqrt(rgyr);
 #ifdef MD_BIG_DT
   fprintf(f, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, rgyr);
@@ -428,6 +430,7 @@ void radius_of_gyration(void)
 #endif
   fclose(f);
 }
+#endif
 
 /* ========================== >>> transDiff <<< =============================*/
 void transDiff(void)
