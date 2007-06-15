@@ -5,7 +5,8 @@
 #include <time.h>
 #include <math.h>
 #include <float.h>
-#define DEBUG
+#undef DEBUG
+#undef DEBUGP
 #define NAMINO 60
 double *rx, *ry, *rz, *vx, *vy, *vz, *wx, *wy, *wz, ***Ri, omega[3];
 double eigenVect[3][3];
@@ -336,7 +337,7 @@ void init_parameters(void)
   massAmino = 1.0;
 #ifdef PEPTIDE_PLATE
   massPlate = 0.001;
-  Iplate[0] = Iplate[1] = Iplate[2] = 0.001;
+  Iplate[0] = Iplate[1] = Iplate[2] = 1.0;
   sigPepCA = 0.1;
   sigPepC = 0.1;
   sigPepN = 0.1;
@@ -492,7 +493,7 @@ void calcEigenValVect(double I[3][3], double R[3][3], double EV[3])
 }
 double** AllocMatR(int size1, int size2);
 
-void check_eigenval(double xlab[4][3], double R[3][3], double EV[3], double com[3])
+void check_eigenval(double xlab[4][3], double R[3][3], double EV[3], double com[3], double x[4][3])
 {
   double xbody[4][3];
   int jj, kk, ii, l;
@@ -558,11 +559,18 @@ void buildAminoSpotsSergey(double xout[4][3])
       xout[ii][jj] = spotsPos[ii][jj];
 }
 #ifdef PEPTIDE_PLATE
+void print_matrix(char *txt, double M[3][3]);
 double massPlateSpots[4]={1.0,1.0,1.0,1.0};
 void buildPeptidePlate(double xout[4][3])
 {
   int a, kk, jj, jj2;
   double  com[3], R[3][3], xtmp[4][3], Itens[3][3], Iev[3], Rt[3][3];
+  double xlab[4][3];
+  int i;
+#ifdef DEBUGP
+  for (kk=0; kk < 4; kk++)
+    printf("[BUILDPLATEPOS]platePos[0][%d]:%f %f %f\n", kk, platePos[0][kk][0],platePos[0][kk][1],platePos[0][kk][2]);
+#endif  
   calcCOM(platePos[0],com); 
   for (a=0; a < 4; a++)
     for (kk=0; kk < 3; kk++)
@@ -580,14 +588,41 @@ void buildPeptidePlate(double xout[4][3])
   for (jj=0; jj < 4; jj++)
     lab2body(platePos[0][jj], xout[jj], com, R);
 
-#if dEBUG
+#ifdef DEBUGP
   for (jj=0; jj < 4; jj++)
    {
      printf("plate spots[%d]=(%.15G,%.15G,%.15G)\n", jj, xout[jj][0], xout[jj][1], xout[jj][2]);
    }
   print_distances(xout);
 #endif
-}
+#if 1
+#ifdef DEBUGP
+     printf("[BUILPLATEPOS] i=0\n");
+     i=0;
+     for (jj=0; jj < 4; jj++)
+       {
+	 print_matrix("i=0 Orientation Matrix",R);
+	 printf("i=0 COM=%f %f %f\n", com[0], com[1], com[2]);
+	 body2lab(xout[jj], xlab[jj], com, R);
+	 printf("xout[%d]=%f %f %f\n", jj, xout[jj][0], xout[jj][1], xout[jj][2]);
+	 printf("xout=%.15G %.15G %.15G\n", xlab[jj][0], xlab[jj][1], xlab[jj][2]);
+	 printf("sergey=%.15G %.15G %.15G\n", platePos[i][jj][0],platePos[i][jj][1],platePos[i][jj][2]);
+	 lab2body(platePos[0][jj], xlab[jj], com, R);
+	 printf("plate spots=%.15G %.15G %.15G\n", xlab[jj][0], xlab[jj][1], xlab[jj][2]);
+       }
+#endif
+#ifdef DEBUGP
+      if (i==0 || i==1)
+       {
+	 printf("BEG PLATE[BUILDPLATEPOS] ====> eigenvalues: %f %f %f\n", Iev[0], Iev[1], Iev[2]);
+	 printf("COM=%.15G %.15G %.15G\n", com[0], com[1], com[2]);
+	 printf("i=%d ------------ \n", i);
+	 print_matrix("Itens",Itens);
+	 printf("===================== END[BUILDPLATEPOS] ================ \n");
+       }
+#endif
+ #endif
+ }
 #endif
 void buildAminoSpots(int use, double xout[4][3])
 {
@@ -994,6 +1029,7 @@ void calcTotAngMom(double Mtot[3], double RCM[3], double VCM[3])
 int main(int argc, char** argv)
 {
  FILE *f;
+ double masstot;
  double RCM[3], VCM[3];
  double K, rr, PBdepth, mod, dirx, diry, com[3], R[3][3];
  double Vx, Vy, Vz, Mtot[3], ItensTot[3][3],
@@ -1188,7 +1224,7 @@ int main(int argc, char** argv)
  wx = malloc(sizeof(double)*Namino);
  wy = malloc(sizeof(double)*Namino);
  wz = malloc(sizeof(double)*Namino);
-
+ masstot = 0;
  for (i=0; i < Namino; i++)
    {
 #if 0
@@ -1218,7 +1254,7 @@ int main(int argc, char** argv)
 #endif
      /* diagonalizza il tensore d'inerzia e ottiene gli autovettori */
      calcEigenValVect(Itens, R, Iev);
-     check_eigenval(aminoPos[i], R, Iev, com);
+     check_eigenval(aminoPos[i], R, Iev, com, x);
 
      for (ii=0; ii < 3; ii++)
        for (kk=0; kk < 3; kk++)
@@ -1251,9 +1287,10 @@ int main(int argc, char** argv)
 	 printf("spots=%.15G %.15G %.15G\n", xlab[jj][0], xlab[jj][1], xlab[jj][2]);
        }
 #endif
-     Rx += com[0];
-     Ry += com[1];
-     Rz += com[2];
+     masstot += massAmino;
+     Rx += massAmino*com[0];
+     Ry += massAmino*com[1];
+     Rz += massAmino*com[2];
 #if 0
      printf("scalProd R[2]*R[0]=%.15G\n", scalProd(R[2],R[0]));
      printf("scalProd R[1]*R[0]=%.15G\n", scalProd(R[1],R[0]));
@@ -1265,6 +1302,10 @@ int main(int argc, char** argv)
  for (i=0; i < Nplate; i++)
    {
      calcCOM(platePos[i],com); 
+#ifdef DEBUGP
+     for (kk=0; kk < 4; kk++)
+       printf("[MAIN]platePos[%d][%d]:%f %f %f\n", i, kk, platePos[i][kk][0],platePos[i][kk][1],platePos[i][kk][2]);
+#endif
      /* calcola il tensore d'inerzia */
      /* i vettori riga di R sono i versori che individuano il 
 	sistema di riferimento solidale con l'amminoacido cioè
@@ -1279,51 +1320,54 @@ int main(int argc, char** argv)
 #endif
      /* diagonalizza il tensore d'inerzia e ottiene gli autovettori */
      calcEigenValVect(Itens, R, Iev);
-     check_eigenval(platePos[i], R, Iev, com);
-
+     check_eigenval(platePos[i], R, Iev, com, xpep);
+#ifdef DEBUGP
+      printf("PLATE i=%d ------------\n", i);
+      for (jj=0; jj < 4; jj++)
+	{
+	  printf("i=%d COM=%f %f %f\n", i, com[0], com[1], com[2]);
+	  print_matrix("[MAIN]Orientation Matrix",R);
+	  body2lab(xpep[jj], xlab[jj], com, R);
+	  printf("xpep[%d]=%f %f %f\n", jj, xpep[jj][0], xpep[jj][1], xpep[jj][2]);
+	  printf("xout=%.15G %.15G %.15G\n", xlab[jj][0], xlab[jj][1], xlab[jj][2]);
+	  printf("plate from sergey[%d]=%.15G %.15G %.15G\n", i,platePos[i][jj][0],platePos[i][jj][1],platePos[i][jj][2]);
+	  printf("sergey[%d]=%.15G %.15G %.15G\n", i,aminoPos[i][jj][0],aminoPos[i][jj][1],aminoPos[i][jj][2]);
+	  if (i < NAMINO)
+	    printf("sergey[%d]=%.15G %.15G %.15G\n",i+1,aminoPos[i+1][jj][0],aminoPos[i+1][jj][1],aminoPos[i+1][jj][2]);
+	  //lab2body(aminoPos[i][jj], xlab[jj], com, R);
+	 //printf("spots=%.15G %.15G %.15G\n", xlab[jj][0], xlab[jj][1], xlab[jj][2]);
+       }
+#endif
      for (ii=0; ii < 3; ii++)
        for (kk=0; kk < 3; kk++)
 	 RiP[i][ii][kk] = R[ii][kk];
-#ifdef DEBUG
+#ifdef DEBUGP
       if (i==0 || i==1)
        {
-	 printf("BEG PLATE ====> eigenvalues: %f %f %f\n", Iev[0], Iev[1], Iev[2]);
+	 printf("i=%d BEG PLATE ====> eigenvalues: %f %f %f\n", i, Iev[0], Iev[1], Iev[2]);
 	 printf("COM=%.15G %.15G %.15G\n", com[0], com[1], com[2]);
-	 printf("i=%d ------------ \n", i);
 	 print_matrix("Itens",Itens);
-	 print_matrix("Orientation Matrix",R);
-	 print("===================== END ================ \n");
+	 //print_matrix("Orientation Matrix",R);
+	 printf("===================== END ================ \n");
        }
 #endif
       rxP[i] = com[0];
       ryP[i] = com[1];
       rzP[i] = com[2];
-#ifdef DEBUG
-      printf("PLATE i=%d ------------\n", i);
-      for (jj=0; jj < 4; jj++)
-	{
-	 body2lab(xpep[jj], xlab[jj], com, R);
-	 printf("xout=%.15G %.15G %.15G\n", xlab[jj][0], xlab[jj][1], xlab[jj][2]);
-	 printf("sergey[%d]=%.15G %.15G %.15G\n", i, aminoPos[i][jj][0],aminoPos[i][jj][1],aminoPos[i][jj][2]);
-	 if (i < NAMINO)
-	   printf("sergey[%d]=%.15G %.15G %.15G\n",i+1,aminoPos[i+1][jj][0],aminoPos[i+1][jj][1],aminoPos[i+1][jj][2]);
-	 //lab2body(aminoPos[i][jj], xlab[jj], com, R);
-	 //printf("spots=%.15G %.15G %.15G\n", xlab[jj][0], xlab[jj][1], xlab[jj][2]);
-       }
-#endif
-     Rx += com[0];
-     Ry += com[1];
-     Rz += com[2];
+      masstot += massPlate;
+      Rx += massPlate*com[0];
+      Ry += massPlate*com[1];
+      Rz += massPlate*com[2];
    }
- Rx /= (Namino+Nplate);
- Ry /= (Namino+Nplate);
- Rz /= (Namino+Nplate);
+ Rx /= masstot;
+ Ry /= masstot;
+ Rz /= masstot;
 
   /* -------------- PLATES ---------------- */
 #else
- Rx /= Namino;
- Ry /= Namino;
- Rz /= Namino;
+ Rx /= masstot;
+ Ry /= masstot;
+ Rz /= masstot;
 #endif
  for (i=0; i < Namino; i++)
    {
@@ -1353,9 +1397,9 @@ int main(int argc, char** argv)
      vx[i] =  K*gauss();
      vy[i] =  K*gauss();
      vz[i] =  K*gauss();
-     Vx += vx[i];
-     Vy += vy[i];
-     Vz += vz[i];
+     Vx += massAmino*vx[i];
+     Vy += massAmino*vy[i];
+     Vz += massAmino*vz[i];
      angvel(i, &wx[i], &wy[i], &wz[i], T);
    }
 #ifdef PEPTIDE_PLATE
@@ -1364,18 +1408,18 @@ int main(int argc, char** argv)
      vxP[i] =  K*gauss();
      vyP[i] =  K*gauss();
      vzP[i] =  K*gauss();
-     Vx += vxP[i];
-     Vy += vyP[i];
-     Vz += vzP[i];
+     Vx += massPlate*vxP[i];
+     Vy += massPlate*vyP[i];
+     Vz += massPlate*vzP[i];
      angvel(i, &wxP[i], &wyP[i], &wzP[i], T);
    }
- Vx /= (Namino+Nplate);
- Vy /= (Namino+Nplate);
- Vz /= (Namino+Nplate);
+ Vx /= masstot;
+ Vy /= masstot;
+ Vz /= masstot;
 #else 
- Vx /= Namino;
- Vy /= Namino;
- Vz /= Namino;
+ Vx /= masstot;
+ Vy /= masstot;
+ Vz /= masstot;
 #endif 
  RCM[0] = 0.0;
  RCM[1] = 0.0;
