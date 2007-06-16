@@ -3511,6 +3511,10 @@ void writeAllCor(FILE* fs, int saveAll)
 	      if (!is_to_save(i))
 		continue;
 	    }
+#ifdef MD_FOUR_BEADS
+	  if (i >= typeNP[0])
+	    continue;
+#endif
 #endif
 
 #ifdef EDHE_FLEX
