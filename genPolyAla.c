@@ -8,6 +8,7 @@
 #undef DEBUG
 #undef DEBUGP
 #define NAMINO 60
+const double infbarr = 1E10;
 double *rx, *ry, *rz, *vx, *vy, *vz, *wx, *wy, *wz, ***Ri, omega[3];
 double eigenVect[3][3];
 int Namino;
@@ -1176,54 +1177,54 @@ int main(int argc, char** argv)
  fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[2][0], xpep[2][1], xpep[2][2], sigPepCA);
  fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[3][0], xpep[3][1], xpep[3][2], sigPepN);
 #endif
- 
+
  /* all interactions */ 
  /* N.B. if barrier is higher than a certain threshold optimize bump routine! */ 
  /* hard core interactions */
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 0, 0, 0,  0.0, 1E10, 0.0, 10);
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 1, 0, 14, 0.0, 1E10, 0.0, 10);
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 2, 0, 6,  0.0, 1E10, 0.0, 10);
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 3, 0, 10, 0.0, 1E10, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 0, 0, 0,  0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 1, 0, 14, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 2, 0, 6,  0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 3, 0, 10, 0.0, infbarr, 0.0, 10);
  
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 4, 0, 4, 0.0, 1E10, 0.0, 10);
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 5, 0, 15, 0.0, 1E10, 0.0, 10);
- //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 6, 0, 2, 0.0, 1E10, 0.0, 10);
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 7, 0, 11, 0.0, 1E10, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 4, 0, 4, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 5, 0, 15, 0.0, infbarr, 0.0, 10);
+ //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 6, 0, 2, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 7, 0, 11, 0.0, infbarr, 0.0, 10);
 
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 8, 0, 8, 0.0, 1E10, 0.0, 10);
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 9, 0, 13, 0.0, 1E10, 0.0, 10);
- //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,10, 0, 3, 0.0, 1E10, 0.0, 10);
- //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,11, 0, 7, 0.0, 1E10, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 8, 0, 8, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 9, 0, 13, 0.0, infbarr, 0.0, 10);
+ //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,10, 0, 3, 0.0, infbarr, 0.0, 10);
+ //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,11, 0, 7, 0.0, infbarr, 0.0, 10);
 
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,12, 0, 12, 0.0, 1E10, 0.0, 10);
- //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,13, 0, 9, 0.0, 1E10, 0.0, 10);
- //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,14, 0, 1, 0.0, 1E10, 0.0, 10);
- //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,15, 0, 5, 0.0, 1E10, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,12, 0, 12, 0.0, infbarr, 0.0, 10);
+ //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,13, 0, 9, 0.0, infbarr, 0.0, 10);
+ //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,14, 0, 1, 0.0, infbarr, 0.0, 10);
+ //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,15, 0, 5, 0.0, infbarr, 0.0, 10);
 
  PBdepth = 0.0001;
 #ifdef PEPTIDE_PLATE
  /* C(Amino)-C(Plate)*/
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 16, 1, 1, PBdepth, 0.0,  1E10, 1);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 16, 1, 1, PBdepth, 0.0,  infbarr, 1);
  /* CA(Amino)-CA(Plate)*/
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 17, 1, 0, PBdepth,  0.0, 1E10, 1);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 17, 1, 0, PBdepth,  0.0, infbarr, 1);
  /* CA(Amino)-CA(Plate) */
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  17, 1, 2, PBdepth, 0.0,  1E10, 1);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  17, 1, 2, PBdepth, 0.0,  infbarr, 1);
  /* N(Amino)-N(Plate) */
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  18, 1, 3, PBdepth,  0.0, 1E10, 1);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  18, 1, 3, PBdepth,  0.0, infbarr, 1);
 #else
  /* peptide covalent interactions (permanent) */
  /* C-N */
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  16, 0, 26, 0.0, 1E10,  0.0, 10);
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  17, 0, 27, PBdepth,  0.0, 1E10, 1);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  16, 0, 26, 0.0, infbarr,  0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  17, 0, 27, PBdepth,  0.0, infbarr, 1);
  /* C-CA */
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  18, 0, 28, 0.0, 1E10,  0.0, 10);
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  19, 0, 29, PBdepth,  0.0, 1E10, 1);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  18, 0, 28, 0.0, infbarr,  0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  19, 0, 29, PBdepth,  0.0, infbarr, 1);
  /* CA-CA */
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  20, 0,  20, 0.0, 1E10,  0.0, 10);
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  21, 0,  21, PBdepth,  0.0, 1E10, 1);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  20, 0,  20, 0.0, infbarr,  0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  21, 0,  21, PBdepth,  0.0, infbarr, 1);
  /* CA-N */
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 22, 0, 24, 0.0, 1E10,  0.0, 10);
- fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 23, 0, 25, PBdepth,  0.0, 1E10, 1);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 22, 0, 24, 0.0, infbarr,  0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 23, 0, 25, PBdepth,  0.0, infbarr, 1);
 #endif
  fprintf(f, "@@@\n");
  /* positions of amminoacids */
