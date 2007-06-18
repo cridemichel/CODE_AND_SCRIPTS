@@ -1087,13 +1087,16 @@ void move(void)
 	{
 	  mdPrintf(ALL,"All systems reached equilibrium, simulation completed", 
 		   NULL);
-	  printf("[MSDcheck] time= %.15G\n", Oparams.curStep*Oparams.steplength);
 	  ENDSIM = 1;
 	}
 #else
       if (OprogStatus.equilibrated)
-	mdPrintf(ALL, "All systems reached equilibrium, simulation completed",
+	{
+	  mdPrintf(ALL, "All systems reached equilibrium, simulation completed",
 		 NULL);
+
+	  printf("[MSDcheck] time= %.15G\n", Oparams.curStep*Oparams.steplength);
+	}
       ENDSIM = OprogStatus.equilibrated;
 #endif
     }
