@@ -1085,8 +1085,9 @@ void move(void)
        * equilibrati quindi la simulazione può terminare */
       if (sumeq == numOfProcs)
 	{
-	  mdPrintf(ALL,"All systems reached equilibrium, simulation completed", 
+	  mdPrintf(ALL,"All systems reached equilibrium, simulation completed\n", 
 		   NULL);
+	  printf("[MSDcheck] time= %.15G\n", Oparams.curStep*Oparams.steplength);
 	  ENDSIM = 1;
 	}
 #if 1
