@@ -1420,7 +1420,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
-#ifdef EDHE_FLEX
+#if defined(EDHE_FLEX) && defined (MD_EDHEFLEX_WALL)
   if (globalHW)
     {
       rB[0] = rA[0];
