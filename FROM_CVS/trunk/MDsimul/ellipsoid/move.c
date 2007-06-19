@@ -1232,7 +1232,11 @@ void scalevels(double temp, double K)
   int i; 
   double sf;
   double dof;
+#ifdef MD_FOUR_BEADS
+  dof = ((double)Oparams.parnum)*6.0-6.0;
+#else
   dof = get_dof_flex(2) - OprogStatus.frozenDOF;
+#endif
   sf = sqrt( ( dof * temp ) / (2.0*K) );
   //printf("dof=%f temp=%.15G sf=%.15G\n", dof, temp, sf );
   for (i = 0; i < Oparams.parnum; i++)
