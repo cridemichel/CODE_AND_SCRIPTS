@@ -645,7 +645,12 @@ void temperat(void)
 #endif
 #ifdef EDHE_FLEX
   calc_energy_filtered(0);
+#ifdef MD_FOUR_BEADS
+  /* note that also angular momentum is conserved, hence we have 6 degrees of freedom less! */
+  dof = ((double)Oparams.parnum)*6.0;
+#else
   dof = get_dof_flex(0) - OprogStatus.frozenDOF;
+#endif
 #else
   calc_energy(NULL);
   dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
@@ -655,7 +660,11 @@ void temperat(void)
     temp = 2.0 * K / dof;
   else
 #ifdef EDHE_FLEX
+#ifdef MD_FOUR_BEADS
+    temp = 2.0 * K / (dof-6.0);
+#else
     temp = 2.0 * K / dof;
+#endif
 #else
     temp = 2.0 * K / (dof - 3.0);
 #endif
@@ -676,7 +685,7 @@ void temperat(void)
   else
     {
       tempRot = 2.0 * Ktra / dofRot;
-      tempTra = 2.0 * Krot / (dofTra-3.0);
+      tempTra = 2.0 * Krot / (dofTra-6.0);
     }
 #elif defined(MD_INELASTIC)
   dofTra = 3*((double)Oparams.parnum);
