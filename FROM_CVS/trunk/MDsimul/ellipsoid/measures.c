@@ -626,7 +626,7 @@ void temperat(void)
   int kk;
   double P[3];
 #endif
-#ifdef MD_INELASTIC
+#if defined(MD_INELASTIC) || defined(MD_FOUR_BEADS)
   double dofTra, dofRot, tempRot, tempTra;
 #endif
   /* DESCRIPTION:
@@ -665,7 +665,20 @@ void temperat(void)
       OprogStatus.sumTemp += temp;
       temp = OprogStatus.sumTemp / NUMCALCS;
     }
-#ifdef MD_INELASTIC
+#ifdef MD_FOUR_BEADS
+  dofTra = 3.0*((double)Oparams.parnum);
+  dofRot = dof - dofTra;
+   if (OprogStatus.brownian==1)
+    {
+      tempRot = 2.0 * Krot / dofRot;
+      tempTra = 2.0 * Ktra / dofTra;
+    }
+  else
+    {
+      tempRot = 2.0 * Ktra / dofRot;
+      tempTra = 2.0 * Krot / (dofTra-3.0);
+    }
+#elif defined(MD_INELASTIC)
   dofTra = 3*((double)Oparams.parnum);
   dofRot = 2*((double)Oparams.parnum);
   if (OprogStatus.brownian==1)
@@ -683,12 +696,20 @@ void temperat(void)
 #ifdef MD_INELASTIC
   mf2 =fopenMPI(absMisHD("temp_granular.dat"), "a"); 
 #endif
+#ifndef MD_FOUR_BEADS
 #ifdef MD_BIG_DT
   fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, temp);
 #else
   fprintf(mf, "%15G %.15G\n", Oparams.time, temp);
 #endif
-
+#endif
+#ifdef MD_FOUR_BEADS
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, temp, tempTra, tempRot);
+#else
+  fprintf(mf, "%15G %.15G %.15G %.15G\n", Oparams.time, temp, tempTra, tempRot);
+#endif
+#else
 #ifdef MD_INELASTIC
 #ifdef MD_BIG_DT
   fprintf(mf2, "%15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, ((double)OprogStatus.collCount), tempTra, tempRot);
@@ -696,7 +717,7 @@ void temperat(void)
   fprintf(mf2, "%15G %.15G %.15G %.15G\n", Oparams.time, ((double)OprogStatus.collCount), tempTra, tempRot);
 #endif
 #endif
-
+#endif
   fclose(mf);
 #ifdef MD_INELASTIC
   fclose(mf2);
