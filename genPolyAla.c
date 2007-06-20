@@ -1,4 +1,4 @@
-#include <stdio.h> /* standart input,output */
+#include <stdio.h> /* standart inputoutput */
 #include <ctype.h> /* for charachter recognition */
 #include <stdlib.h> /* for conversion from char to dec */
 #include <strings.h>
@@ -13,7 +13,7 @@ double *rx, *ry, *rz, *vx, *vy, *vz, *wx, *wy, *wz, ***Ri, omega[3];
 double eigenVect[3][3];
 int Namino;
 int brownian;
-double temp, L, massAmino, T, Iamino[3], x[4][3], tetraEdge, dL, PBw, Dh, Dh2;
+double fact, temp, L, massAmino, T, Iamino[3], x[4][3], tetraEdge, dL, PBw, Dh, Dh2;
 double sigCA, sigBC, sigNC, sigCC, sigAC, sigAN, sigNN, sigBA, sigBN, sigAA, sigBB,
        sigCN1, sigCN2, sigCCA1, sigCCA2, sigCACA1, sigCACA2, sigCAN1, sigCAN2,
        sigNCA1, sigNCA2, sigNC1, sigNC2, sigCAC2, sigCAC2, sigCAC1, sigCAC2, 
@@ -296,17 +296,18 @@ void init_parameters(void)
   sigBB= 3.0700000;
   sigNC= 3.1900000;
   /* values given by Sergey 06/06/07 */
+  fact=2.0;
 #ifdef PEPTIDE_PLATE
   /* I do the following to have the correct 
      (according to 4 beads model) distances
      between C and CA and between N and CA */
   sigCAN1 = 2.35788;
   sigCAN2 = 2.45412;
-  delCANbond = sigCAN2-sigCAN1;
+  delCANbond = fact*(sigCAN2-sigCAN1);
   sigCCA1 = 2.38336;
   sigCCA2 = 2.48064;
   delCCAbond = sigCCA2-sigCCA1;
-  sigCACA_Ami = 0.05;
+  sigCACA_Ami = fact*(0.05);
   sigCC_Ami = delCANbond - sigCACA_Ami;
   sigNN_Ami = delCCAbond - sigCACA_Ami;
 #else
@@ -347,13 +348,15 @@ void init_parameters(void)
   massAmino = 1.0;
 #ifdef PEPTIDE_PLATE
   massPlate = 1.0;
-  Iplate[0] = Iplate[1] = Iplate[2] = 1.0;
+  Iplate[0] = Iplate[1] = 100.0; 
+  Iplate[2] = 100.0;
   sigPepCA = sigCACA_Ami;
   sigPepC = delCCAbond - 0.05;
   sigPepN = delCANbond - 0.05;
 #endif
-  Iamino[0] = Iamino[1] = Iamino[2] = 1.0;
-  brownian = 0;
+  Iamino[0] = Iamino[1] = 100.0;
+  Iamino[2] = 100.0;
+  brownian = 2;
 }
 void angvel(int i, double *wx, double *wy, double* wz, double temp)
 {
