@@ -3801,6 +3801,7 @@ void readAllCor(FILE* fs)
 	       &typesArr[i].hardobjs[j].sax[0],&typesArr[i].hardobjs[j].sax[1], &typesArr[i].hardobjs[j].sax[2],
 	       &typesArr[i].hardobjs[j].n[0], &typesArr[i].hardobjs[j].n[1], &typesArr[i].hardobjs[j].n[2]);
     } 
+  //printf("qui nintersIJ=%d\n", Oparams.nintersIJ);
   /* read interactions */
   intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
   for (i=0; i < Oparams.ninters; i++)
@@ -3812,7 +3813,7 @@ void readAllCor(FILE* fs)
 
   
   /* read interactions */
-  if (Oparams.nintersIJ)
+  if (Oparams.nintersIJ > 0)
     {
       intersArrIJ = malloc(sizeof(interStructIJ)*Oparams.nintersIJ);
       for (i=0; i < Oparams.nintersIJ; i++)
