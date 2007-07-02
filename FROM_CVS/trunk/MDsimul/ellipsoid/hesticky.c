@@ -290,6 +290,22 @@ void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double 
   int type1, type2, pt;
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
+  /* first look up from interactions between specific particles then
+     from interaction between types */
+  for (pt = 0; pt < Oparams.nintersIJ; pt++)
+    {
+      if ((intersArrIJ[pt].i == i && intersArrIJ[pt].j == j &&
+	   intersArrIJ[pt].spot1 == ata-1 && intersArrIJ[pt].spot2 == atb-1) ||
+	  (intersArrIJ[pt].i == j && intersArrIJ[pt].j == i &&
+	   intersArrIJ[pt].spot1 == atb-1 && intersArrIJ[pt].spot2 == ata-1) )
+	{
+	  *bheight = intersArrIJ[pt].bheight;
+	  *bhin    = intersArrIJ[pt].bhin;
+	  *bhout   = intersArrIJ[pt].bhout;
+	  *nmax=1;
+	  return;
+	} 
+    }
   for (pt = 0; pt < Oparams.ninters; pt++)
     {
       if ((intersArr[pt].type1 == type1 && intersArr[pt].type2 == type2 &&
@@ -364,6 +380,7 @@ void bumpSPHS(int i, int j, double *W, int bt)
     vc += vAB[a]*rAB[a];
   denom = invmi + invmj;
   mredl = 1.0/denom;
+ 
   get_inter_bheights(i, j, 1, 1, &bheight, &bhin, &bhout, &nmax);
   switch (bt)
     {
@@ -1178,10 +1195,38 @@ int ignore_interaction(int i, int j, int ni)
 void assign_bond_mapping(int i, int j)
 {
   int ni, type1, type2, a;
+#ifdef MD_FOUR_BEADS
+  int jj, kk;
+#endif
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
   a=0;
   MD_DEBUG38(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
+  for (ni=0; ni < Oparams.nintersIJ; ni++)
+    {
+      if (intersArrIJ[ni].i == i && intersArrIJ[ni].j == j)
+	{
+	  mapbondsaFlex[a] = intersArrIJ[ni].spot1+1;
+          mapbondsbFlex[a] = intersArrIJ[ni].spot2+1;
+	  mapBheightFlex[a] = intersArrIJ[ni].bheight;
+	  mapBhinFlex[a] = intersArrIJ[ni].bhin;
+          mapBhoutFlex[a] = intersArrIJ[ni].bhout;
+	  mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArrIJ[ni].spot1].sigma
+				 + typesArr[type2].spots[intersArrIJ[ni].spot2].sigma);
+	  a++;
+       	}	 
+     else if (intersArrIJ[ni].i == j && intersArrIJ[ni].j == i) 
+       {
+	 mapbondsaFlex[a] = intersArrIJ[ni].spot2+1;
+	 mapbondsbFlex[a] = intersArrIJ[ni].spot1+1;
+	 mapBheightFlex[a] = intersArrIJ[ni].bheight;
+	 mapBhinFlex[a] = intersArrIJ[ni].bhin;
+	 mapBhoutFlex[a] = intersArrIJ[ni].bhout;
+	 mapSigmaFlex[a] = 0.5*(typesArr[type2].spots[intersArrIJ[ni].spot1].sigma
+				+ typesArr[type1].spots[intersArrIJ[ni].spot2].sigma);
+	 a++;	 
+       } 
+    }
   for (ni=0; ni < Oparams.ninters; ni++)
     {
 #if 1
@@ -1244,6 +1289,30 @@ void assign_bond_mapping(int i, int j)
 	    }
 #endif
 	}
+#ifdef MD_FOUR_BEADS
+      /* all with all */
+      else if (intersArr[ni].type1==-1 && intersArr[ni].type2==-1)
+	{
+	  mapbondsaFlex[a] = intersArr[ni].spot1+1;
+          mapbondsbFlex[a] = intersArr[ni].spot2+1;
+	  mapBheightFlex[a] = intersArr[ni].bheight;
+	  mapBhinFlex[a] = intersArr[ni].bhin;
+          mapBhoutFlex[a] = intersArr[ni].bhout;
+          mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
+				 + typesArr[type2].spots[intersArr[ni].spot2].sigma);
+	  a++;
+	  if (intersArr[ni].spot1 != intersArr[ni].spot2)
+	    {
+	      mapbondsaFlex[a] = intersArr[ni].spot2+1;
+	      mapbondsbFlex[a] = intersArr[ni].spot1+1;
+	      mapBheightFlex[a] = mapBheightFlex[a-1];
+	      mapBhinFlex[a] = mapBhinFlex[a-1];
+	      mapBhoutFlex[a] = mapBhoutFlex[a-1];
+	      mapSigmaFlex[a] = mapSigmaFlex[a-1];
+	      a++;
+	    }
+	}
+#endif
     }
   nbondsFlex = a;
   //printf(">>>>quii nbonds=%d\n", nbondsFlex);

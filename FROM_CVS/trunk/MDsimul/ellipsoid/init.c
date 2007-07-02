@@ -1516,7 +1516,11 @@ void usrInitBef(void)
     for (i = 0; i < PE_POINTS; i++)
       OprogStatus.PE[i] = 0;
     /* ======================================================================= */
-  }
+#ifdef EDHE_FLEX
+    Oparams.ninters = 0;
+    Oparams.nintersIJ = 0;
+#endif   
+}
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
 extern void PredictEvent(int, int);
@@ -1601,6 +1605,15 @@ int get_num_pbonds(int i, int j)
 	  a+=1;
 	}	
     }
+  for (ni=0; ni < Oparams.nintersIJ; ni++)
+    {
+      if ((intersArrIJ[ni].i == i && intersArrIJ[ni].j == j) ||
+	  (intersArrIJ[ni].i == j && intersArrIJ[ni].j == i))
+	{
+	  a+=1;
+	}	
+    }
+
   return a;
 #endif
 }
@@ -2268,8 +2281,9 @@ extern void store_last_u(int i);
 #ifdef EDHE_FLEX
 int get_max_nbonds(void)
 {
-  int pt1, pt2;
+  int pt1, pt2, i, maxijbonds=0;
   int ni, type1, type2, a, maxpbonds=0;
+  int *intersI;
   for (pt1=0; pt1 < Oparams.ntypes; pt1++)
     {
       for (pt2=pt1; pt2 < Oparams.ntypes; pt2++)
@@ -2289,7 +2303,22 @@ int get_max_nbonds(void)
 	    maxpbonds = a;
 	}
     }
-  return maxpbonds;
+  intersI = malloc(sizeof(int)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    intersI[i] = 0;
+  for (ni=0; ni < Oparams.nintersIJ; ni++)
+    {
+      (intersI[intersArrIJ[ni].i])+=2; 
+      (intersI[intersArrIJ[ni].j])+=2;
+    }
+  maxijbonds=0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (intersI[i] > maxijbonds)
+	maxijbonds = intersI[i];
+    }
+  free(intersI);
+  return maxpbonds+maxijbonds;
 }
 double eval_max_dist_for_spots(int pt)
 {
@@ -3481,10 +3510,21 @@ void writeAllCor(FILE* fs, int saveAll)
       for (i=0; i < Oparams.ninters; i++)
 	{
 	  fprintf (fs, "%d %d %d %d %.15G %.15G %.15G %d\n", intersArr[i].type1, intersArr[i].spot1,
-		 intersArr[i].type2, 
-		 intersArr[i].spot2, 
-		 intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout, intersArr[i].nmax);
-	} 
+  		   intersArr[i].type2, 
+  		   intersArr[i].spot2, 
+  		   intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout, intersArr[i].nmax);
+	}
+      if (Oparams.nintersIJ > 0)
+	{
+    	  /* write interactions */
+	  for (i=0; i < Oparams.nintersIJ; i++)
+	    {
+	      fprintf (fs, "%d %d %d %d %.15G %.15G %.15G\n", intersArrIJ[i].i, intersArrIJ[i].spot1,
+		       intersArrIJ[i].j, 
+	      	       intersArrIJ[i].spot2, 
+	      	       intersArrIJ[i].bheight, intersArrIJ[i].bhin, intersArrIJ[i].bhout);
+	    } 
+	}
       //fprintf(fs, "\n");
       if (Oparams.saveBonds)
 	{
@@ -3653,7 +3693,12 @@ int readBinCoord_heflex(int cfd)
   intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
   size = sizeof(interStruct)*Oparams.ninters;
   rerr |= -readSegs(cfd, "Init", "Error reading intersArr", CONT, size, intersArr, NULL);
-
+  if (Oparams.nintersIJ > 0)
+    {
+      intersArrIJ = malloc(sizeof(interStructIJ)*Oparams.nintersIJ);
+      size = sizeof(interStructIJ)*Oparams.nintersIJ;
+      rerr |= -readSegs(cfd, "Init", "Error reading intersArrIJ", CONT, size, intersArrIJ, NULL);
+    }
   if (Oparams.saveBonds)
     { 
       /* N.B. i file binari d'ora (07/06/07) in poi  conterranno sempre i bonds se Oparams.saveBonds=1! */
@@ -3696,6 +3741,12 @@ void writeBinCoord_heflex(int cfd)
   size = sizeof(interStruct)*Oparams.ninters;
   /* write interactions */
   writeSegs(cfd, "Init", "Error writing intersArr", CONT, size, intersArr, NULL);
+  if (Oparams.nintersIJ > 0)
+    {
+      size = sizeof(interStructIJ)*Oparams.nintersIJ;
+      /* write interactions */
+      writeSegs(cfd, "Init", "Error writing intersArrIJ", CONT, size, intersArrIJ, NULL);
+    }
   /* se Oparams.maxbondsSaved è > 0 vuol dire che sono stati salvati nella presente
      configurazione anche i bond */
   if (Oparams.saveBonds)
@@ -3758,6 +3809,19 @@ void readAllCor(FILE* fs)
 	    &intersArr[i].spot2, 
 	    &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout, &intersArr[i].nmax);
    } 
+
+  
+  /* read interactions */
+  if (Oparams.nintersIJ)
+    {
+      intersArrIJ = malloc(sizeof(interStructIJ)*Oparams.nintersIJ);
+      for (i=0; i < Oparams.nintersIJ; i++)
+	{
+	  fscanf(fs, "%d %d %d %d %lf %lf %lf ", &intersArrIJ[i].i, &intersArrIJ[i].spot1, &intersArrIJ[i].j, 
+		 &intersArrIJ[i].spot2, 
+		 &intersArrIJ[i].bheight, &intersArrIJ[i].bhin, &intersArrIJ[i].bhout);
+	} 
+    }
   fscanf(fs, "%s ", sep);
   /* se ci sono i bond li legge, altrimenti ci deve essere il separatore "@@@" */
   if (strcmp(sep, "@@@"))

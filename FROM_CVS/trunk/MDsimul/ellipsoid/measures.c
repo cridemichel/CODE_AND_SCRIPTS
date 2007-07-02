@@ -158,6 +158,20 @@ double calcpotene(void)
 		  Epot -= intersArr[kk2].bheight;
 		}		 
 	    }
+	  if (Oparams.nintersIJ > 0)
+	    {
+	      for (kk2 = 0; kk2 < Oparams.nintersIJ; kk2++)
+		{
+		  if ( (intersArrIJ[kk2].i == na && intersArrIJ[kk2].j == jj &&
+		      	intersArrIJ[kk2].spot1 == aa-1 && intersArrIJ[kk2].spot2 == bb-1) || 
+		       (intersArrIJ[kk2].i == jj && intersArrIJ[kk2].j == na &&
+			intersArrIJ[kk2].spot1 == bb-1 && intersArrIJ[kk2].spot2 == aa-1) )  
+		    {
+		      MD_DEBUG21(printf("(%d,%d)-(%d,%d) height=%.15G\n", na, aa-1, jj, bb-1, intersArrIJ[kk2].bheight));
+		      Epot -= intersArrIJ[kk2].bheight;
+		    }
+		}	
+	    }
 	}
       //Epot -= numbonds[na];
 #else
