@@ -372,8 +372,13 @@ void init_parameters(void)
   Iamino[0] = Iamino[1] = 100.0;
   Iamino[2] = 100.0;
   brownian = 2;
-  ntypes = 60;
-  ninters = ntypes*20*(ntypes-1)/2;
+#ifdef PEPTIDE_PLATE
+  ntypes = 2;
+  ninters = 14;
+#else
+  ntypes = 1;
+  ninters = 18;
+#endif
 }
 void angvel(int i, double *wx, double *wy, double* wz, double temp)
 {
@@ -1114,6 +1119,12 @@ void readGoMatrix(char *fn)
     {
       fscanf(f, "%d %d %lf \n", &goArr[i].i, &goArr[i].j, &goArr[i].u0);
     }
+   for (i=0; i < ngointer; i++)
+    {
+      goArr[i].i -= 1;
+      goArr[i].j -= 1;
+    }
+  fclose(f); 
 }
 
 int main(int argc, char** argv)
@@ -1134,7 +1145,7 @@ int main(int argc, char** argv)
  srand(2);
  readSergeyPos(argv[1]);
  readGoMatrix(argv[2]);
- f=fopen("polyAla.cnf","w");
+ f=fopen("goModel.cnf","w");
  init_parameters();
  /* i bond peptidici sono ognuno una particella */
 #ifdef PEPTIDE_PLATE
@@ -1150,14 +1161,9 @@ int main(int argc, char** argv)
  fprintf(f,"rcut:%.15G\n", -1.0);
  fprintf(f,"equilibrat: %d\n", 0); 
  fprintf(f,"Dt:%.15G\n", 0.05); 
-#ifdef PEPTIDE_PLATE
- fprintf(f,"ninters:%d\n", 14);
- fprintf(f,"nintersIJ:%d\n", ngointer);
- fprintf(f,"ntypes:%d\n", 2); 
-#else
  fprintf(f,"ninters:%d\n", ninters);
+ fprintf(f,"nintersIJ:%d\n", ngointer);
  fprintf(f,"ntypes:%d\n", ntypes); 
-#endif 
  fprintf(f,"@@@\n");
 #ifdef PEPTIDE_PLATE
  fprintf(f,"%d %d\n", Namino, Namino-1);
@@ -1178,64 +1184,61 @@ int main(int argc, char** argv)
  Dh = sqrt(6.0)/12.0*tetraEdge;/* =r; */
  Dh2 = (sqrt(3.0)/3.0 - sqrt(3.0)/6.0)*tetraEdge;/* = x-d */
 #endif
- for (i=0; i < ntypes; i++)
-   { 
-     buildAminoSpots(0, x);
-     /* spots for steric hindrance */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAA);/* CA (0) - 0 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAC);/* CA (0) - 1 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigBA);/* CA (0) - 2 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAN);/* CA (0) - 3 */
+ buildAminoSpots(0, x);
+ /* spots for steric hindrance */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAA);/* CA (0) - 0 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAC);/* CA (0) - 1 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigBA);/* CA (0) - 2 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAN);/* CA (0) - 3 */
 
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigBB);/* CB (1) - 4 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigBC);/* CB (1) - 5 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigBA);/* CB (1) - 6 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigBN);/* CB (1) - 7 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigBB);/* CB (1) - 4 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigBC);/* CB (1) - 5 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigBA);/* CB (1) - 6 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigBN);/* CB (1) - 7 */
 
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNN);/* N  (2) - 8 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNC);/* N  (2) - 9 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigAN);/* N  (2) - 10 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigBN);/* N  (2) - 11*/
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNN);/* N  (2) - 8 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNC);/* N  (2) - 9 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigAN);/* N  (2) - 10 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigBN);/* N  (2) - 11*/
 
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCC);/* C  (3) - 12 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigNC);/* C  (3) - 13 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigAC);/* C  (3) - 14 */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigBC);/* C  (3) - 15 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCC);/* C  (3) - 12 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigNC);/* C  (3) - 13 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigAC);/* C  (3) - 14 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigBC);/* C  (3) - 15 */
 #ifdef PEPTIDE_PLATE
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigPepC);  /* 16 C */ 
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigPepCA);/* 17 CA */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigPepN); /* 18 N */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigCB2GM); /* 19 CB for Go Model */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigPepC);  /* 16 C */ 
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigPepCA);/* 17 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigPepN); /* 18 N */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigCB2GM); /* 19 CB for Go Model */
 #else
-     /* spots for peptide bond (centers coincide with previous spots) */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCN1);  /* 16 C */ 
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCN2);  /* 17 C */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCCA1); /* 18 C */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCCA2); /* 19 C */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCACA1);/* 20 CA */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCACA2);/* 21 CA */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAN1); /* 22 CA */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAN2); /* 23 CA */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNCA1); /* 24 N */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNCA2); /* 25 N */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNC1);  /* 26 N */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNC2);  /* 27 N */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAC1); /* 28 CA */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAC2); /* 29 CA */
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigCB2GM); /* 30 CB for Go Model */
+ /* spots for peptide bond (centers coincide with previous spots) */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCN1);  /* 16 C */ 
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCN2);  /* 17 C */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCCA1); /* 18 C */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCCA2); /* 19 C */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCACA1);/* 20 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCACA2);/* 21 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAN1); /* 22 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAN2); /* 23 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNCA1); /* 24 N */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNCA2); /* 25 N */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNC1);  /* 26 N */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNC2);  /* 27 N */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAC1); /* 28 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAC2); /* 29 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigCB2GM); /* 30 CB for Go Model */
 #endif
 #ifdef PEPTIDE_PLATE
-     buildPeptidePlate(xpep);
-     fprintf(f, "%.15G %.15G %.15G\n", 0.01, 0.01, 0.01);
-     fprintf(f, "%.15G %.15G %.15G\n", 1.0, 1.0, 1.0);
-     fprintf(f, "%.15G %.15G %.15G %.15G %d %d\n", massPlate, Iplate[0], Iplate[1], Iplate[2], brownian, 1);
-     fprintf(f, "%d %d\n", 4, 0);
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[0][0], xpep[0][1], xpep[0][2], sigPepCA);
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[1][0], xpep[1][1], xpep[1][2], sigPepC);
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[2][0], xpep[2][1], xpep[2][2], sigPepCA);
-     fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[3][0], xpep[3][1], xpep[3][2], sigPepN);
+ buildPeptidePlate(xpep);
+ fprintf(f, "%.15G %.15G %.15G\n", 0.01, 0.01, 0.01);
+ fprintf(f, "%.15G %.15G %.15G\n", 1.0, 1.0, 1.0);
+ fprintf(f, "%.15G %.15G %.15G %.15G %d %d\n", massPlate, Iplate[0], Iplate[1], Iplate[2], brownian, 1);
+ fprintf(f, "%d %d\n", 4, 0);
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[0][0], xpep[0][1], xpep[0][2], sigPepCA);
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[1][0], xpep[1][1], xpep[1][2], sigPepC);
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[2][0], xpep[2][1], xpep[2][2], sigPepCA);
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[3][0], xpep[3][1], xpep[3][2], sigPepN);
 #endif
-   }
  /* all interactions */ 
  /* N.B. if barrier is higher than a certain threshold optimize bump routine! */ 
  /* hard core interactions */
@@ -1243,7 +1246,7 @@ int main(int argc, char** argv)
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 1, 0, 14, 0.0, infbarr, 0.0, 10);
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 2, 0, 6,  0.0, infbarr, 0.0, 10);
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 3, 0, 10, 0.0, infbarr, 0.0, 10);
- 
+
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 4, 0, 4, 0.0, infbarr, 0.0, 10);
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 5, 0, 15, 0.0, infbarr, 0.0, 10);
  //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 6, 0, 2, 0.0, infbarr, 0.0, 10);
