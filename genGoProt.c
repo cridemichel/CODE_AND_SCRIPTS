@@ -1175,9 +1175,9 @@ int main(int argc, char** argv)
  fprintf(f, "%.15G %.15G %.15G\n", 1.0, 1.0, 1.0);
  fprintf(f, "%.15G %.15G %.15G %.15G %d %d\n", massAmino, Iamino[0], Iamino[1], Iamino[2], brownian, 1);
 #ifdef PEPTIDE_PLATE 
- fprintf(f, "%d %d\n", 19, 0);
+ fprintf(f, "%d %d\n", 20, 0);
 #else
- fprintf(f, "%d %d\n", 32, 0);
+ fprintf(f, "%d %d\n", 33, 0);
 #endif
 #ifdef TETRAHEDRON
  buildTetrahedra(x, tetraEdge);
