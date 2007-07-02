@@ -5216,6 +5216,20 @@ int may_interact_spots(int i, int j)
 	  return 1;
 	}
     }
+  if (Oparams.nintersIJ > 0)
+    {
+      for (ni = 0; ni < Oparams.nintersIJ; ni++)
+	{
+	  if (intersArrIJ[ni].i == i && intersArrIJ[ni].j == j)
+	    {
+	      return 1;
+	    }	
+	  else if (intersArrIJ[ni].i == j && intersArrIJ[ni].j == i)
+	    {
+	      return 1;
+	    }
+	}
+    }
   return 0;
 }
 int may_interact_all(int i, int j)

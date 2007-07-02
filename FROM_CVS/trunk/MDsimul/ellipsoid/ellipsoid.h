@@ -119,6 +119,16 @@ typedef struct
   double bhout;
   int nmax;
 } interStruct;
+typedef struct 
+{
+  int i;
+  int spot1;
+  int j;
+  int spot2;
+  double bheight;
+  double bhin;
+  double bhout;
+} interStructIJ;
 #endif
 #ifdef MD_HE_PARALL
 typedef struct 
@@ -675,6 +685,7 @@ struct params
   int ninters;
   int saveBonds;
   int maxbondsSaved;
+  int nintersIJ;
 #endif
   double a[2];
   double b[2];
@@ -987,6 +998,7 @@ struct pascii opar_ascii[]=
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
 #ifdef EDHE_FLEX
   {"ninters",       &OP(ninters),                         1,  1,    "%d"},
+  {"nintersIJ",     &OP(nintersIJ),                       1,  1,    "%d"},
   {"ntypes",        &OP(ntypes),                          1,  1,    "%d"},
   {"saveBonds",      &OP(saveBonds),                      1,  1,    "%d"},
   {"maxbondsSaved",  &OP(maxbondsSaved),                  1,  1,    "%d"},
@@ -1018,6 +1030,7 @@ int MD_DECL_INT;
 partType* typesArr;
 interStruct* intersArr;
 int *typeNP, *typeOfPart;
+interStructIJ* intersArrIJ;
 #endif
 #else
 extern COORD_TYPE DECL_LIST; 
@@ -1026,6 +1039,7 @@ extern COORD_TYPE EXT_DLST;
 extern int MD_DECL_INT;
 extern partType* typesArr; /* array con tutti i tipi presenti nella simulazione */
 extern interStruct* intersArr; /* array di strutture contenente tutte le interazioni */
+extern interStructIJ* intersArrIJ;
 extern int *typeNP, *typeOfPart; /* array contentente il numero di particelle di ogni specie */
 #endif
 #endif 
@@ -1057,6 +1071,7 @@ struct singlePar OsinglePar[] = {
 #ifdef EDHE_FLEX
   {"ntypes",     &Oparams.ntypes,             INT},
   {"ninters",    &Oparams.ninters,            INT},
+  {"nintersIJ",  &Oparams.nintersIJ,          INT},
 #endif
   {"stepnum",    &Oparams.totStep,            LLINT},
   {"inifile" ,   &OprogStatus.inifile,        STR},
