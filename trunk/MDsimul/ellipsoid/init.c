@@ -2354,6 +2354,10 @@ void check_conf(void)
   int i, pt;
   int *typeNPL;
   typeNPL = malloc(sizeof(int)*Oparams.ntypes);
+  for (i=0; i < Oparams.ntypes; i++)
+    {
+      typeNPL[i] = 0;
+    }
   for (i=0; i < Oparams.parnum; i++)
     {
       typeNPL[typeOfPart[i]]++;
@@ -2366,6 +2370,7 @@ void check_conf(void)
 		 pt, typeNPL[pt], typeNP[pt]);
 	}
     }
+  free(typeNPL);
 }
 #endif
 #ifdef EDHE_FLEX
@@ -2442,7 +2447,10 @@ void find_bonds(void)
 		//  printf("(%d,%d)-(%d,%d): %.15G\n", i, mapbondsa[nn]-1, j, mapbondsb[nn]-1, dists[nn]);
     	    if (dists[nn] < 0.0)
 	      {
-		//printf("Oparams.parnum=%d i=%d typei=%d j=%d typej=%d nn=%d dist=%.15G\n", Oparams.parnum, i, typeOfPart[i], j, typeOfPart[j], nn, dists[nn]);
+#if 0
+		if (mapbondsa[nn]==20 && mapbondsb[nn]==20)
+		  printf("Oparams.parnum=%d i=%d typei=%d j=%d typej=%d nn=%d dist=%.15G\n", Oparams.parnum, i, typeOfPart[i], j, typeOfPart[j], nn, dists[nn]);
+#endif
 		aa = mapbondsa[nn];
 		bb = mapbondsb[nn];
 		add_bond(i, j, aa, bb);
