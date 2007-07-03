@@ -14,6 +14,8 @@
 #define MD_DEBUG34(x) 
 #define MD_DEBUG36(x) 
 #define MD_DEBUG38(x) 
+#define MD_DEBUG39(x) 
+#define MD_DEBUG40(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
@@ -393,39 +395,74 @@ void bumpSPHS(int i, int j, double *W, int bt)
       factor *= mredl;
       break;
     case MD_INOUT_BARRIER:
-      if (Sqr(vc) < 2.0*(bheight+bhout)/mredl)
-	{
-	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
-			    Oparams.time, vc,  bt,
-		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
-	  factor = -2.0*vc;
-	}
+      if (bheight < 0)
+       	{
+ 	  if (bhout >=0.0 && Sqr(vc) < 2.0*bhout/mredl)
+ 	    {
+ 	      factor = -2.0*vc;
+ 	    }
+ 	  else
+ 	    {
+ 	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
+ 	      MD_DEBUG40(printf("[MD_INOUT_BARRIER] qui factor=%.15G\n", factor));
+ 	      remove_bond(i, j, 1, 1);
+ 	      remove_bond(j, i, 1, 1);
+ 	    }	      
+  	}
       else
-	{
-	  MD_DEBUG31(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
-		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
-	  factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
-	  remove_bond(i, j, 1, 1);
-	  remove_bond(j, i, 1, 1);
+    	{
+ 	  if (Sqr(vc) < 2.0*(bheight+bhout)/mredl)
+ 	    {
+ 	      MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
+    				Oparams.time, vc,  bt,
+	       			sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	      factor = -2.0*vc;
+	    }
+	  else
+	    {
+	      MD_DEBUG31(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
+				sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
+	      remove_bond(i, j, 1, 1);
+	      remove_bond(j, i, 1, 1);
+	    }
 	}
       factor *= mredl;
       break;
     case MD_OUTIN_BARRIER:
-      if (one_is_bonded(i, 1, j, 1, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
+      if (bheight < 0)
 	{
-	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
+	  if (one_is_bonded(i, 1, j, 1, nmax) || Sqr(vc) < 2.0*(-bheight+bhin)/mredl)
+	    {
+	      factor = -2.0*vc;
+	      MD_DEBUG40(printf("[MD_OUTIN_BARRIER REP] qui factor=%.15G\n", factor));
+	    }
+	  else 
+	    {
+	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
+	      add_bond(i, j, 1, 1);
+	      add_bond(j, i, 1, 1);
+	      MD_DEBUG40(printf("[MD_OUTIN_BARRIER IN] qui factor=%.15G\n", factor));
+	    }
+	}
+      else 
+	{
+	  if (one_is_bonded(i, 1, j, 1, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
+	    {
+	      MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
 			    Oparams.time, vc,  bt,
-		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
-	  factor = -2.0*vc;
-	}
-      else
-	{
-	  add_bond(i, j, 1, 1);
-	  add_bond(j, i, 1, 1);
-	  factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
-	}
-	MD_DEBUG31(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
+			    sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	      factor = -2.0*vc;
+	    }
+	  else
+	    {
+	      add_bond(i, j, 1, 1);
+	      add_bond(j, i, 1, 1);
+	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
+	    }
+	  MD_DEBUG31(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
 		      i, ata, j, atb, Sqr(vc) + 2.0*bheight/mredl, bheight, mredl));
+	}	  
       factor *= mredl;
       break;
     }
@@ -534,6 +571,9 @@ void handle_absorb(int ricettore, int protein)
 #endif
 #if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
 extern void check_inf_mass_itens(int typei, int typej, int *infMass_i, int *infMass_j, int *infItens_i, int *infItens_j);
+double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
+		   double *dists, int bondpair);
+void assign_bond_mapping(int i, int j);
 #endif
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
@@ -580,7 +620,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
 #endif
    //printf("collision code: %d (%d,%d)\n", bt, i, j);
-  MD_DEBUG36(calc_energy("PRIMA"));
+  MD_DEBUG40(if (ata==20 && atb==20) calc_energy("PRIMA"));
   MD_DEBUG36(printf("[BUMPSP] t=%.15G i=%d ata=%d j=%d atb=%d\n", Oparams.time, i, ata, j, atb));
   if (bt == MD_CORE_BARRIER)
     {
@@ -850,12 +890,12 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   vc = 0;
   for (a=0; a < 3; a++)
     vc += (vCA[a]-vCB[a])*norm[a];
-  MD_DEBUG20(printf("[bump] before bump vc=%.15G\n", vc));
+  MD_DEBUG40( if (ata==20 && atb==20) printf("=======> PRIMA bt=%d vc=%.15G\n", bt, vc));
 #if 1
   if ((vc > 0 && bt == MD_OUTIN_BARRIER) ||
       (vc < 0 && bt == MD_INOUT_BARRIER))// && fabs(vc) > 1E-10)
     {
-      MD_DEBUG(printf("norm = (%f,%f,%f)\n", norm[0], norm[1],norm[2]));
+      MD_DEBUG39(printf(">>>>>>>>>>>>>>> norm = (%f,%f,%f) vc=%.15G\n", norm[0], norm[1],norm[2],vc));
       MD_DEBUG(printf("vel  = (%f,%f,%f)\n", vx[i], vy[i], vz[i]));
       MD_DEBUG(printf("i=%d r = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]));
       //printf("[WARNING] maybe second collision has been wrongly predicted\n");
@@ -915,6 +955,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   bhout= Oparams.bhout;
   nmax = Oparams.nmax;
 #endif
+  //MD_DEBUG40(if (ata==20 && atb==20) printf("[bump] before bump vc=%.15G\n", vc));
   switch (bt)
     {
       /* N.B.
@@ -926,20 +967,37 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_INOUT_BARRIER:
-      if (Sqr(vc) < 2.0*(bheight+bhout)/mredl)
+      if (bheight < 0)
 	{
-	  MD_DEBUG36(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
-			    Oparams.time, vc,  bt,
-		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
-	  factor = -2.0*vc;
+	  if (bhout >= 0.0 && Sqr(vc) < 2.0*bhout/mredl)
+	    {
+	      factor = -2.0*vc;
+	    }
+	  else
+	    {
+	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
+	      MD_DEBUG40(printf("[MD_INOUT_BARRIER] qui factor=%.15G\n", factor));
+	      remove_bond(i, j, ata, atb);
+	      remove_bond(j, i, atb, ata);
+	    }
 	}
       else
 	{
-	  MD_DEBUG36(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
-		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
-	  factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
-	  remove_bond(i, j, ata, atb);
-	  remove_bond(j, i, atb, ata);
+	  if (Sqr(vc) < 2.0*(bheight+bhout)/mredl)
+	    {
+	      MD_DEBUG36(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
+		    		Oparams.time, vc,  bt,
+				sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	      factor = -2.0*vc;
+	    }
+	  else
+	    {
+	      MD_DEBUG36(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
+				sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
+	      remove_bond(i, j, ata, atb);
+	      remove_bond(j, i, atb, ata);
+	    }
 	}
 #if 0
       printf("factor: %.15G mredl=%.15G vc=%.15G sqrt(XXX=%.15G) bheight: %.15G\n",
@@ -948,21 +1006,40 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_OUTIN_BARRIER:
-      if (one_is_bonded(i, ata, j, atb, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
+      if (bheight < 0)
 	{
-	  MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
-			    Oparams.time, vc,  bt,
-		 sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
-	  factor = -2.0*vc;
+	  if (one_is_bonded(i, ata, j, atb, nmax) || Sqr(vc) < 2.0*(-bheight+bhin)/mredl)
+	    {
+	      factor = -2.0*vc;
+	      MD_DEBUG40(printf("[MD_OUTIN_BARRIER REP] qui factor=%.15G\n", factor));
+	    }
+	  else 
+	    {
+	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
+	      add_bond(i, j, ata, atb);
+	      add_bond(j, i, atb, ata);
+	      MD_DEBUG40(printf("[MD_OUTIN_BARRIER IN] qui factor=%.15G\n", factor));
+	    }
 	}
       else
 	{
-	  add_bond(i, j, ata, atb);
-	  add_bond(j, i, atb, ata);
-	  factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
-	}
-	MD_DEBUG36(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
+	  if (one_is_bonded(i, ata, j, atb, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
+	    {
+	      MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
+		    		Oparams.time, vc,  bt,
+				sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	      factor = -2.0*vc;
+    	    }
+	  else
+	    {
+	      add_bond(i, j, ata, atb);
+	      add_bond(j, i, atb, ata);
+	      printf("bohhhhh vc=%.15G\n", vc);
+	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
+	    }
+	  MD_DEBUG36(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
 		      i, ata, j, atb, Sqr(vc) + 2.0*bheight/mredl, bheight, mredl));
+	}
 #if 0
 	{ double dist;
 	  double shift[3]={0,0,0};
@@ -1064,6 +1141,35 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     set_angmom_to_zero(j);
 #endif
 #endif
+#if 0
+    {
+      double d,df, dists[100];
+      int amin, bmin, bondpair;
+      double shift[3]={0.0,0.0,0.0};
+      if (ata==20 && atb==20)
+	{	
+	  assign_bond_mapping(i, j);
+	  df = calcDistNegSP(2.5E-15, Oparams.time, i, j, shift, &amin, &bmin, dists, -1);
+	  printf(">>>dists=%.15G<<<<\n", dists[0]);
+	}	  
+    }
+
+#endif
+MD_DEBUG40(
+  vectProd(wx[i], wy[i], wz[i], -rAC[0], -rAC[1], -rAC[2], &wrx, &wry, &wrz);
+  vCA[0] = vx[i] + wrx;
+  vCA[1] = vy[i] + wry;
+  vCA[2] = vz[i] + wrz;
+  vectProd(wx[j], wy[j], wz[j], -rBC[0], -rBC[1], -rBC[2], &wrx, &wry, &wrz);
+  vCB[0] = vx[j] + wrx;
+  vCB[1] = vy[j] + wry;
+  vCB[2] = vz[j] + wrz;
+  vc = 0;
+  for (a=0; a < 3; a++)
+    vc += (vCA[a]-vCB[a])*norm[a];
+  if (ata==20 && atb==20)
+    printf("=======> DOPO bt=%d vc=%.15G\n", bt, vc);
+);
 #ifdef MD_ASYM_ITENS
 #if defined(EDHE_FLEX) 
   if (!infItens_i && !is_a_sphere_NNL[i])
@@ -1088,7 +1194,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG(printf("after bump %d-(%.10f,%.10f,%.10f) %d-(%.10f,%.10f,%.10f)\n", 
 		  i, wx[i],wy[i],wz[i], j, wx[j],wy[j],wz[j]));
 
-  MD_DEBUG36(calc_energy("DOPO"));
+  MD_DEBUG40(if (ata==20 && atb==20) calc_energy("DOPO"));
 }
 void check_bonds(char* msg, int i, int j, int ata, int atb, int yesexit)
 {
@@ -1988,6 +2094,10 @@ int interpolSP(int i, int j, int nn,
     {
       A = (ya[2]-ya[0])/(ya[0]-ya[1]);
       *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
+      MD_DEBUG39(if (ignoresignchg) printf("BEG ------------------------------\n"));
+      MD_DEBUG39(if (ignoresignchg) printf("1+A*0.5=%.15G A=%.15G\n", 1.0+A*0.5, A));
+      MD_DEBUG39(if (ignoresignchg) printf("ya[2]=%.15G ya[1]=%.15G ya[0]=%.15G\n",ya[2], ya[1], ya[0]));
+      MD_DEBUG39(if (ignoresignchg) printf("------------------------------ END\n"));
     }
   dmin = calcDistNegOneSP(*tmin, tref, i, j, nn, shift);
   if (*tmin < t+delt && *tmin > t && (d1*dmin < 0.0 || ignoresignchg) )
@@ -1995,6 +2105,7 @@ int interpolSP(int i, int j, int nn,
       *tmin += tref;
       return 0;
     }
+  MD_DEBUG39(if (ignoresignchg) printf("*tmin=%.15G tref=%.15G delt=%.15G t=%.15G t+delt=%.15G\n",*tmin, tref, delt, t, t+delt));
   //printf("%.15G %.15G\n %.15G %.15G \n %.15G %.15G \n", 0.0, d1, delt*0.5, d3, delt, d2);
   return 1;
 }
@@ -2116,14 +2227,14 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
        * di distanza dmin t.c. dmin > 0 se !bound(i,j..) o dmin < 0 se bound(i,j...) */
       if (dists[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	{
-	  MD_DEBUG33(printf("[delt_is_too_big] time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]));
-	  MD_DEBUG33(printf("mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j));
+	  MD_DEBUG39(printf("[delt_is_too_big] time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]));
+	  MD_DEBUG39(printf("mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j));
 	  return 1;
 	}
       if (dists[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
 	{
-	  MD_DEBUG33(printf("[delt_is_too_big] >>>>time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]));
-	  MD_DEBUG33(printf(">>>>mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j));
+	  MD_DEBUG39(printf("[delt_is_too_big] >>>>time: %.15G dists[%d]:%.15G\n", Oparams.time, nn, dists[nn]));
+	  MD_DEBUG39(printf(">>>>mapbonds[%d]:%d mapbonds[%d]:%d i=%dj=%d \n", nn, mapbondsa[nn], nn, mapbondsa[nn], i, j));
 	  return 1;
 	}	  
     }
@@ -2576,7 +2687,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #if 1
 	      else 
 		{
-		  printf("[*INFO*] using old goldenfactor method to reduce delt\n");
+		  printf("[locate_contactSP/*INFO*] using old goldenfactor method to reduce delt\n");
 		  MD_DEBUG33(printf("i=%d j=%d\n", i, j));
 		  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 			 delt > minh)
