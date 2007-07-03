@@ -1294,10 +1294,8 @@ int main(int argc, char** argv)
 #endif
  for (i=0; i < ngointer; i++)
    {
-     if (goArr[i].u0 < 0.0)
-       fprintf(f, "%d %d %d %d %.15G %.15G %.15G\n", goArr[i].i, GMspot, goArr[i].j, GMspot, -goArr[i].u0, 0.0, 0.0);
-     else
-       fprintf(f, "%d %d %d %d %.15G %.15G %.15G\n", goArr[i].i, GMspot, goArr[i].j, GMspot, 0.0, goArr[i].u0, 0.0);
+     /* nel mio codice un potenziale positivo vuol dire che è un potenziale attrattivo */
+     fprintf(f, "%d %d %d %d %.15G %.15G %.15G\n", goArr[i].i, GMspot, goArr[i].j, GMspot, -goArr[i].u0, 0.0, 0.0);
    }
  fprintf(f, "@@@\n");
  /* positions of amminoacids */
