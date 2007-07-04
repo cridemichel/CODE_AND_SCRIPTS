@@ -642,6 +642,8 @@ struct progStatus
 #ifdef EDHE_FLEX
   char par2save[PAR2SAVE_LEN];
   int stripStore;
+  double Tf; /* temperatura finale per il quench */
+  double xi; /* rate di riduzione durante il quench per il folding */
 #endif
   /* ======================================================================= */
 };
@@ -950,6 +952,8 @@ struct pascii opro_ascii[] =
 #ifdef EDHE_FLEX
   {"par2save",     &OS(par2save),          1, PAR2SAVE_LEN,  "%s"},
   {"stripStore",   &OS(stripStore),        1, 1,             "%d"},
+  {"Tf",           &OS(Tf),                1, 1,             "%.15G"},
+  {"xi",           &OS(xi),                1, 1,             "%.15G"},
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -1293,6 +1297,8 @@ struct singlePar OsinglePar[] = {
 #ifdef EDHE_FLEX
   {"par2save",   &OprogStatus.par2save,    STR},
   {"stripStore",  &OprogStatus.stripStore,  INT},
+  {"Tf",          &OprogStatus.Tf,          CT},
+  {"xi",          &OprogStatus.xi,          CT},
 #endif
   {"ENmin",      &OprogStatus.ENmin,        CT},
   {"ENmax",      &OprogStatus.ENmax,        CT},

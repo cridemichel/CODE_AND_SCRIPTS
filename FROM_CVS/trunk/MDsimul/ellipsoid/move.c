@@ -1232,10 +1232,28 @@ void scalevels(double temp, double K)
   int i; 
   double sf;
   double dof;
+#ifdef EDHE_FLEX
+  double Ti;
+  static int first = 1;
+#endif 
 #ifdef MD_FOUR_BEADS
   dof = ((double)Oparams.parnum)*6.0-6.0;
 #else
   dof = get_dof_flex(2) - OprogStatus.frozenDOF;
+#endif
+#ifdef EDHE_FLEX
+  /* quench per il folding */
+  if (OprogStatus.scalevel == 2)
+    {
+      if (first) 
+	{
+	  first = 0;
+	  Ti = Oparams.T;
+	}
+      else
+	Ti = 2.0*K/dof;
+      temp = Oparams.T = OprogStatus.xi*OprogStatus.Tf + (1.0-OprogStatus.xi)*Ti;
+    } 
 #endif
   sf = sqrt( ( dof * temp ) / (2.0*K) );
   //printf("dof=%f temp=%.15G sf=%.15G\n", dof, temp, sf );
