@@ -1245,6 +1245,7 @@ void scalevels(double temp, double K)
   /* quench per il folding */
   if (OprogStatus.scalevel == 2)
     {
+#if 0
       if (first) 
 	{
 	  first = 0;
@@ -1252,6 +1253,9 @@ void scalevels(double temp, double K)
 	}
       else
 	Ti = 2.0*K/dof;
+#else
+      Ti = Oparams.T;
+#endif
       temp = Oparams.T = OprogStatus.xi*OprogStatus.Tf + (1.0-OprogStatus.xi)*Ti;
     } 
 #endif
