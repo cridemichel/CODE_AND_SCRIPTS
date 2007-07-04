@@ -1391,6 +1391,8 @@ void usrInitBef(void)
 #ifdef EDHE_FLEX
     OprogStatus.stripStore = 0;
     strcpy(OprogStatus.par2save, "ALL"); 
+    OprogStatus.xi = 0.00001;
+    OprogStatus.Tf = 0.01;
 #endif
 #ifdef MD_BIG_DT
     OprogStatus.bigDt = -1.0;
