@@ -1034,7 +1034,6 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	    {
 	      add_bond(i, j, ata, atb);
 	      add_bond(j, i, atb, ata);
-	      printf("bohhhhh vc=%.15G\n", vc);
 	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
 	    }
 	  MD_DEBUG36(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
