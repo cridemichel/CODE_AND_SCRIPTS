@@ -1095,6 +1095,7 @@ void readGoMatrix(char *fn)
   FILE* f;
   int i, ii, jj;
   double u0, dd;
+  char *ptr;
   char s1[256];
   printf("reading go matrix!\n");
   if (!(f = fopen(fn,"r")))
@@ -1106,8 +1107,8 @@ void readGoMatrix(char *fn)
   while (!feof(f))
     {
       fscanf(f, "%s %d %lf \n", &s1, &jj, &u0);
-      dd = strtol(s1, NULL, 0);
-      if (errno==EINVAL)
+      dd = strtol(s1, &ptr, 0);
+      if (errno==EINVAL || !ptr)
 	break;
       i++;
     }
