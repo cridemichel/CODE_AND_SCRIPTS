@@ -1107,8 +1107,9 @@ void readGoMatrix(char *fn)
   while (!feof(f))
     {
       fscanf(f, "%s %d %lf \n", &s1, &jj, &u0);
-      dd = strtol(s1, &ptr, 0);
-      if (errno==EINVAL || !ptr)
+      dd = strtol(s1, &ptr, 10);
+      //printf("prt=%p ptr[0]=%c ptr[0]=%d\n", ptr, ptr[0], ptr[0]);
+      if (errno==EINVAL || ptr==s1)
 	break;
       i++;
     }
