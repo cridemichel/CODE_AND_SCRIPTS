@@ -373,8 +373,8 @@ void init_parameters(void)
   Iamino[2] = 100.0;
   brownian = 2;
 #ifdef PEPTIDE_PLATE
-  ntypes = 2;
-  ninters = 14;
+  ntypes = 3;
+  ninters = 14+20;
 #else
   ntypes = 1;
   ninters = 18;
@@ -1168,7 +1168,7 @@ int main(int argc, char** argv)
  fprintf(f,"ntypes:%d\n", ntypes); 
  fprintf(f,"@@@\n");
 #ifdef PEPTIDE_PLATE
- fprintf(f,"%d %d\n", Namino, Namino-1);
+ fprintf(f,"%d %d %d\n", Namino-1, Namino-1, 1);
 #else
  fprintf(f,"%d\n", Namino);
 #endif
@@ -1241,6 +1241,59 @@ int main(int argc, char** argv)
  fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[2][0], xpep[2][1], xpep[2][2], sigPepCA);
  fprintf(f, "%.15G %.15G %.15G %.15G\n", xpep[3][0], xpep[3][1], xpep[3][2], sigPepN);
 #endif
+ /*GLYCINE does not have CB, hence we define a separate type for it! */
+ /* spots for steric hindrance */
+ /* amminoacid types (Alanyn in this case) */ 
+ fprintf(f, "%.15G %.15G %.15G\n", 0.01, 0.01, 0.01);
+ fprintf(f, "%.15G %.15G %.15G\n", 1.0, 1.0, 1.0);
+ fprintf(f, "%.15G %.15G %.15G %.15G %d %d\n", massAmino, Iamino[0], Iamino[1], Iamino[2], brownian, 1);
+#ifdef PEPTIDE_PLATE 
+ fprintf(f, "%d %d\n", 20, 0);
+#else
+ fprintf(f, "%d %d\n", 33, 0);
+#endif
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAA);/* CA (0) - 0 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAC);/* CA (0) - 1 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigBA);/* CA (0) - 2 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAN);/* CA (0) - 3 */
+
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAA/2.0);/* CB (1) - 4 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAC/2.0);/* CB (1) - 5 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigBA/2.0);/* CB (1) - 6 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigAN/2.0);/* CB (1) - 7 */
+
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNN);/* N  (2) - 8 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNC);/* N  (2) - 9 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigAN);/* N  (2) - 10 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigBN);/* N  (2) - 11*/
+
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCC);/* C  (3) - 12 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigNC);/* C  (3) - 13 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigAC);/* C  (3) - 14 */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigBC);/* C  (3) - 15 */
+#ifdef PEPTIDE_PLATE
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigPepC);  /* 16 C */ 
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigPepCA);/* 17 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigPepN); /* 18 N */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCB2GM); /* 19 CB for Go Model */
+#else
+ /* spots for peptide bond (centers coincide with previous spots) */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCN1);  /* 16 C */ 
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCN2);  /* 17 C */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCCA1); /* 18 C */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[3][0], x[3][1], x[3][2], sigCCA2); /* 19 C */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCACA1);/* 20 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCACA2);/* 21 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAN1); /* 22 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAN2); /* 23 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNCA1); /* 24 N */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNCA2); /* 25 N */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNC1);  /* 26 N */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[2][0], x[2][1], x[2][2], sigNC2);  /* 27 N */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAC1); /* 28 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[0][0], x[0][1], x[0][2], sigCAC2); /* 29 CA */
+ fprintf(f, "%.15G %.15G %.15G %.15G\n", x[1][0], x[1][1], x[1][2], sigCB2GM); /* 30 CB for Go Model */
+#endif
  /* all interactions */ 
  /* N.B. if barrier is higher than a certain threshold optimize bump routine! */ 
  /* hard core interactions */
@@ -1263,7 +1316,27 @@ int main(int argc, char** argv)
  //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,13, 0, 9, 0.0, infbarr, 0.0, 10);
  //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,14, 0, 1, 0.0, infbarr, 0.0, 10);
  //fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,15, 0, 5, 0.0, infbarr, 0.0, 10);
+ /* hard core interactions between GLYCINE and other aminoacids */
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 0, 2, 0,  0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 1, 2, 14, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 2, 2, 6,  0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 3, 2, 10, 0.0, infbarr, 0.0, 10);
 
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 4, 2, 4, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 5, 2, 15, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 6, 2, 2, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 7, 2, 11, 0.0, infbarr, 0.0, 10);
+
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 8, 2, 8, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0, 9, 2, 13, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,10, 2, 3, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,11, 2, 7, 0.0, infbarr, 0.0, 10);
+
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,12, 2, 12, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,13, 2, 9, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,14, 2, 1, 0.0, infbarr, 0.0, 10);
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,15, 2, 5, 0.0, infbarr, 0.0, 10);
+ /* -------------------------------------------------------------------- */
  PBdepth = 0.0001;
 #ifdef PEPTIDE_PLATE
  /* C(Amino)-C(Plate)*/
@@ -1274,6 +1347,14 @@ int main(int argc, char** argv)
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  17, 1, 2, PBdepth, 0.0,  infbarr, 1);
  /* N(Amino)-N(Plate) */
  fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 0,  18, 1, 3, PBdepth,  0.0, infbarr, 1);
+ /* C(Amino)-C(Plate)*/
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 2, 16, 1, 1, PBdepth, 0.0,  infbarr, 1);
+ /* CA(Amino)-CA(Plate)*/
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 2, 17, 1, 0, PBdepth,  0.0, infbarr, 1);
+ /* CA(Amino)-CA(Plate) */
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 2,  17, 1, 2, PBdepth, 0.0,  infbarr, 1);
+ /* N(Amino)-N(Plate) */
+ fprintf(f, "%d %d %d %d %.15G %.15G %.15G %d\n", 2,  18, 1, 3, PBdepth,  0.0, infbarr, 1);
 #else
  /* peptide covalent interactions (permanent) */
  /* C-N */
@@ -1296,7 +1377,7 @@ int main(int argc, char** argv)
 #endif
  for (i=0; i < ngointer; i++)
    {
-     /* nel mio codice un potenziale positivo vuol dire che è un potenziale attrattivo */
+     /* nel mio codice un potenziale positivo vuol dire che un potenziale attrattivo */
      fprintf(f, "%d %d %d %d %.15G %.15G %.15G\n", goArr[i].i, GMspot, goArr[i].j, GMspot, -goArr[i].u0, 0.0, 0.0);
    }
  fprintf(f, "@@@\n");
@@ -1497,7 +1578,12 @@ int main(int argc, char** argv)
      rx[i] -= Rx;
      ry[i] -= Ry;
      rz[i] -= Rz;
-     fprintf(f, "%.15G %.15G %.15G %.15G %.15G  %.15G %.15G %.15G %.15G %.15G %.15G %.15G 0\n", rx[i], ry[i], rz[i],
+     if (i==29) /* GLYCINE does not have CB bead! */
+       fprintf(f, "%.15G %.15G %.15G %.15G %.15G  %.15G %.15G %.15G %.15G %.15G %.15G %.15G 2\n", rx[i], ry[i], rz[i],
+	     Ri[i][0][0], Ri[i][0][1], Ri[i][0][2], Ri[i][1][0], Ri[i][1][1], 
+	     Ri[i][1][2], Ri[i][2][0],Ri[i][2][1],Ri[i][2][2]); 
+     else
+       fprintf(f, "%.15G %.15G %.15G %.15G %.15G  %.15G %.15G %.15G %.15G %.15G %.15G %.15G 0\n", rx[i], ry[i], rz[i],
 	     Ri[i][0][0], Ri[i][0][1], Ri[i][0][2], Ri[i][1][0], Ri[i][1][1], 
 	     Ri[i][1][2], Ri[i][2][0],Ri[i][2][1],Ri[i][2][2]); 
    } 
