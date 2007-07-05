@@ -108,26 +108,43 @@ typedef struct
 		   several super-ellipsoids with their spots */
   hardobjsStruct* hardobjs;
 } partType;
+
 typedef struct 
 {
-  int type1;
-  int spot1;
-  int type2;
+  int min;
+  int max;
+} rangeStruct;
+
+typedef struct 
+{
+  int type1; /* se type1 == -2 usa i range r1 */
+  int spot1; 
+  int type2; /* se type2 == -2 usa i range r2 */
   int spot2;
   double bheight;
   double bhin;
   double bhout;
   int nmax;
+  int nr1; /* numero di range */
+  rangeStruct* r1;
+  int nr2; /* numero di range */
+  rangeStruct* r2;
 } interStruct;
+
 typedef struct 
 {
-  int i;
+  int i; /* se i==-2 usa i range r1 */
   int spot1;
-  int j;
+  int j; /* se j==-2 usa i range r2 */
   int spot2;
   double bheight;
   double bhin;
   double bhout;
+  int nr1; /* numero di range */
+  rangeStruct* r1;
+  int nr2; /* numero di range */
+  rangeStruct* r2;
+
 } interStructIJ;
 #endif
 #ifdef MD_HE_PARALL
