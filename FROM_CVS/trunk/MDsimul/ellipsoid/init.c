@@ -3864,7 +3864,7 @@ void readAllCor(FILE* fs)
 #else
   for (i=0; i < Oparams.ninters; i++)
     {
-      fscanf(fs, "%s %d %s %d %lf %lf %lf %d ", &intersArr[i].type1, &intersArr[i].spot1, &intersArr[i].type2, 
+      fscanf(fs, "%d %d %d %d %lf %lf %lf %d ", &intersArr[i].type1, &intersArr[i].spot1, &intersArr[i].type2, 
  	     &intersArr[i].spot2, 
  	     &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout, &intersArr[i].nmax);
       //parse_ranges(s1, &intersArr[i].type1, &intersArr[i].nr1, &intersArr[i].r1);
