@@ -307,7 +307,7 @@ void init_parameters(void)
   sigBB= 3.0700000; /* hard core interaction for CB-CB interaction within go-model */
   sigNC= 3.1900000;
   /* values given by Sergey 06/06/07 */
-  fact=2.0;
+  fact=1.0;
 #ifdef PEPTIDE_PLATE
   /* I do the following to have the correct 
      (according to 4 beads model) distances
@@ -317,7 +317,7 @@ void init_parameters(void)
   delCANbond = fact*(sigCAN2-sigCAN1);
   sigCCA1 = 2.38336;
   sigCCA2 = 2.48064;
-  delCCAbond = sigCCA2-sigCCA1;
+  delCCAbond = fact*(sigCCA2-sigCCA1);
   sigCACA_Ami = fact*(0.05);
   sigCC_Ami = delCANbond - sigCACA_Ami;
   sigNN_Ami = delCCAbond - sigCACA_Ami;
@@ -366,8 +366,8 @@ void init_parameters(void)
   Iplate[0] = Iplate[1] = 100.0; 
   Iplate[2] = 100.0;
   sigPepCA = sigCACA_Ami;
-  sigPepC = delCCAbond - 0.05;
-  sigPepN = delCANbond - 0.05;
+  sigPepC = delCCAbond - sigPepCA;
+  sigPepN = delCANbond - sigPepCA;
 #endif
   Iamino[0] = Iamino[1] = 100.0;
   Iamino[2] = 100.0;
