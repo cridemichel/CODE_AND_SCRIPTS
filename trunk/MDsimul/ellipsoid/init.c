@@ -3774,6 +3774,46 @@ void writeBinCoord_heflex(int cfd)
 }
 
 #endif
+#ifdef EDHE_FLEX
+void parse_one_range(char *s, int *A, int *nr, rangeStruct **r)
+{
+  int m, M;
+  if (sscanf(s, "%d-%d", &m, &M)==2)
+    {
+      *A = -2;
+      (*nr)++;
+      if (*nr == 1)
+	*r = malloc(sizeof(rangeStruct)*(*nr));
+      else
+	*r = realloc(*r, sizeof(rangeStruct)*(*nr));
+      (*r)->min = m;
+      (*r)->max = M;
+    }
+  else
+    {
+      *A = atoi(s);
+      *r = NULL;
+      *nr = 0;
+    }
+}
+void parse_ranges(char *s, int *A, int *nr, rangeStruct **r)
+{
+  char *ns;
+  ns = strtok(s, ",");
+
+  *nr = 0;
+  if (!ns)
+    {
+      parse_one_range(s, A, nr, r);
+      return;
+    }
+  while (ns)
+    {
+      parse_one_range(ns, A, nr, r);
+      ns = strtok(NULL, ",");
+    } 
+}
+#endif
 /* ========================== >>> readAllCor <<< ========================== */
 void readAllCor(FILE* fs)
 {
@@ -3814,13 +3854,23 @@ void readAllCor(FILE* fs)
   //printf("qui nintersIJ=%d\n", Oparams.nintersIJ);
   /* read interactions */
   intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
+#if 0
   for (i=0; i < Oparams.ninters; i++)
    {
      fscanf(fs, "%d %d %d %d %lf %lf %lf %d ", &intersArr[i].type1, &intersArr[i].spot1, &intersArr[i].type2, 
 	    &intersArr[i].spot2, 
 	    &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout, &intersArr[i].nmax);
    } 
-
+#else
+  for (i=0; i < Oparams.ninters; i++)
+    {
+      fscanf(fs, "%s %d %s %d %lf %lf %lf %d ", &intersArr[i].type1, &intersArr[i].spot1, &intersArr[i].type2, 
+ 	     &intersArr[i].spot2, 
+ 	     &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout, &intersArr[i].nmax);
+      //parse_ranges(s1, &intersArr[i].type1, &intersArr[i].nr1, &intersArr[i].r1);
+      //parse_ranges(s2, &intersArr[i].type2, &intersArr[i].nr2, &intersArr[i].r2);
+    } 
+#endif
   
   /* read interactions */
   if (Oparams.nintersIJ > 0)
