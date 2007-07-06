@@ -3473,6 +3473,28 @@ int is_to_save(int i)
     return 0;
 }
 #endif
+#ifdef EDHE_FLEX
+void fprintf_ranges(FILE *f, int A, int nr, rangeStruct* r)
+{
+  int kk;
+  if (A==-2)
+    {
+      for (kk=0; kk < nr; kk++)
+	{
+	  if (r[kk].min==r[kk].max)
+	    fprintf(f, "%d", r[kk].min);
+	  else
+	    fprintf(f, "%d-%d", r[kk].min, r[kk].max);	
+	  if (kk==nr-1)
+	    fprintf(f," ");
+	  else
+	    fprintf(f,","); 
+	}
+    }
+  else
+    fprintf(f, "%d ", A);
+}
+#endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
 {
@@ -3519,20 +3541,38 @@ void writeAllCor(FILE* fs, int saveAll)
       /* write interactions */
       for (i=0; i < Oparams.ninters; i++)
 	{
+#if 0
 	  fprintf (fs, "%d %d %d %d %.15G %.15G %.15G %d\n", intersArr[i].type1, intersArr[i].spot1,
   		   intersArr[i].type2, 
   		   intersArr[i].spot2, 
   		   intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout, intersArr[i].nmax);
+#else
+	  fprintf_ranges(fs, intersArr[i].type1, intersArr[i].nr1, intersArr[i].r1);
+	  fprintf(fs, "%d ", intersArr[i].spot1);
+	  fprintf_ranges(fs, intersArr[i].type2, intersArr[i].nr2, intersArr[i].r2);
+	  fprintf(fs, "%d ", intersArr[i].spot2);
+	  fprintf (fs, "%.15G %.15G %.15G %d\n", 
+		   intersArr[i].bheight, intersArr[i].bhin, intersArr[i].bhout, intersArr[i].nmax);
+#endif
 	}
       if (Oparams.nintersIJ > 0)
 	{
     	  /* write interactions */
 	  for (i=0; i < Oparams.nintersIJ; i++)
 	    {
+#if 0
 	      fprintf (fs, "%d %d %d %d %.15G %.15G %.15G\n", intersArrIJ[i].i, intersArrIJ[i].spot1,
 		       intersArrIJ[i].j, 
 	      	       intersArrIJ[i].spot2, 
 	      	       intersArrIJ[i].bheight, intersArrIJ[i].bhin, intersArrIJ[i].bhout);
+#else
+	      fprintf_ranges(fs, intersArrIJ[i].i, intersArrIJ[i].nr1, intersArrIJ[i].r1);
+	      fprintf(fs, "%d ", intersArrIJ[i].spot1);
+	      fprintf_ranges(fs, intersArrIJ[i].j, intersArrIJ[i].nr2, intersArrIJ[i].r2);
+	      fprintf(fs, "%d ", intersArrIJ[i].spot2);
+	      fprintf (fs, "%.15G %.15G %.15G\n",   
+		       intersArrIJ[i].bheight, intersArrIJ[i].bhin, intersArrIJ[i].bhout);
+#endif
 	    } 
 	}
       //fprintf(fs, "\n");
@@ -3703,11 +3743,42 @@ int readBinCoord_heflex(int cfd)
   intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
   size = sizeof(interStruct)*Oparams.ninters;
   rerr |= -readSegs(cfd, "Init", "Error reading intersArr", CONT, size, intersArr, NULL);
+  for (i=0; i < Oparams.ninters; i++)
+    {
+      if (intersArr[i].type1==-2)
+	{
+	  size = sizeof(rangeStruct)*intersArr[i].nr1;
+	  intersArr[i].r1 = malloc(size);
+	  rerr |= readSegs(cfd, "Init", "Error reading ranges", CONT, size, intersArr[i].r1, NULL);
+	}
+      if (intersArr[i].type2==-2)
+	{
+	  size = sizeof(rangeStruct)*intersArr[i].nr2;
+	  intersArr[i].r2 = malloc(size);
+	  rerr |=readSegs(cfd, "Init", "Error reading ranges", CONT, size, intersArr[i].r2, NULL);
+	}
+    }
+
   if (Oparams.nintersIJ > 0)
     {
       intersArrIJ = malloc(sizeof(interStructIJ)*Oparams.nintersIJ);
       size = sizeof(interStructIJ)*Oparams.nintersIJ;
       rerr |= -readSegs(cfd, "Init", "Error reading intersArrIJ", CONT, size, intersArrIJ, NULL);
+      for (i=0; i < Oparams.nintersIJ; i++)
+	{
+	  if (intersArrIJ[i].i==-2)
+	    {
+	      size = sizeof(rangeStruct)*intersArrIJ[i].nr1;
+	      intersArrIJ[i].r1 = malloc(size);
+	      rerr |= readSegs(cfd, "Init", "Error reading ranges", CONT, size, intersArrIJ[i].r1, NULL);
+	    }
+	  if (intersArrIJ[i].j==-2)
+	    {
+	      size = sizeof(rangeStruct)*intersArrIJ[i].nr2;
+	      intersArrIJ[i].r2 = malloc(size);
+	      rerr |=readSegs(cfd, "Init", "Error reading ranges", CONT, size, intersArrIJ[i].r2, NULL);
+	    }
+	}
     }
   if (Oparams.saveBonds)
     { 
@@ -3751,11 +3822,39 @@ void writeBinCoord_heflex(int cfd)
   size = sizeof(interStruct)*Oparams.ninters;
   /* write interactions */
   writeSegs(cfd, "Init", "Error writing intersArr", CONT, size, intersArr, NULL);
+  /* writing all ranges here */
+  for (i=0; i < Oparams.ninters; i++)
+    {
+      if (intersArr[i].type1==-2)
+	{
+	  size = sizeof(rangeStruct)*intersArr[i].nr1;
+	  writeSegs(cfd, "Init", "Error writing ranges", CONT, size, intersArr[i].r1, NULL);
+	}
+      if (intersArr[i].type2==-2)
+	{
+	  size = sizeof(rangeStruct)*intersArr[i].nr2;
+	  writeSegs(cfd, "Init", "Error writing ranges", CONT, size, intersArr[i].r2, NULL);
+	}
+    }
   if (Oparams.nintersIJ > 0)
     {
       size = sizeof(interStructIJ)*Oparams.nintersIJ;
       /* write interactions */
       writeSegs(cfd, "Init", "Error writing intersArrIJ", CONT, size, intersArrIJ, NULL);
+      /* writing all ranges here */
+      for (i=0; i < Oparams.nintersIJ; i++)
+	{
+	  if (intersArrIJ[i].i==-2)
+	    {
+	      size = sizeof(rangeStruct)*intersArrIJ[i].nr1;
+	      writeSegs(cfd, "Init", "Error writing ranges", CONT, size, intersArrIJ[i].r1, NULL);
+	    }
+	  if (intersArrIJ[i].j==-2)
+	    {
+	      size = sizeof(rangeStruct)*intersArrIJ[i].nr2;
+	      writeSegs(cfd, "Init", "Error writing ranges", CONT, size, intersArrIJ[i].r2, NULL);
+	    }
+	}
     }
   /* se Oparams.maxbondsSaved è > 0 vuol dire che sono stati salvati nella presente
      configurazione anche i bond */
@@ -3781,13 +3880,13 @@ void parse_one_range(char *s, int *A, int *nr, rangeStruct **r)
   if (sscanf(s, "%d-%d", &m, &M)==2)
     {
       *A = -2;
-      (*nr)++;
-      if (*nr == 1)
-	*r = malloc(sizeof(rangeStruct)*(*nr));
+      if (*nr == 0)
+	*r = malloc(sizeof(rangeStruct)*(*nr+1));
       else
-	*r = realloc(*r, sizeof(rangeStruct)*(*nr));
-      (*r)->min = m;
-      (*r)->max = M;
+	*r = realloc(*r, sizeof(rangeStruct)*(*nr+1));
+      (*r)[*nr].min = m;
+      (*r)[*nr].max = M;
+      (*nr)++;
     }
   else
     {
@@ -3809,6 +3908,7 @@ void parse_ranges(char *s, int *A, int *nr, rangeStruct **r)
     }
   while (ns)
     {
+      MD_DEBUG31(printf("ns=%s\n", ns));
       parse_one_range(ns, A, nr, r);
       ns = strtok(NULL, ",");
     } 
@@ -3821,7 +3921,10 @@ void readAllCor(FILE* fs)
 #ifdef EDHE_FLEX
   char sep[256];
   int j;
+  char *s1, *s2;
 
+  s1 = malloc(sizeof(char)*65535);
+  s2 = malloc(sizeof(char)*65535);
   typeOfPart = malloc(sizeof(int)*Oparams.parnum);
   typeNP = malloc(sizeof(int)*Oparams.ntypes);
   for (i=0; i < Oparams.ntypes; i++)
@@ -3864,11 +3967,12 @@ void readAllCor(FILE* fs)
 #else
   for (i=0; i < Oparams.ninters; i++)
     {
-      fscanf(fs, "%d %d %d %d %lf %lf %lf %d ", &intersArr[i].type1, &intersArr[i].spot1, &intersArr[i].type2, 
+      fscanf(fs, "%s %d %s %d %lf %lf %lf %d ", s1, &intersArr[i].spot1, s2, 
  	     &intersArr[i].spot2, 
  	     &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout, &intersArr[i].nmax);
-      //parse_ranges(s1, &intersArr[i].type1, &intersArr[i].nr1, &intersArr[i].r1);
-      //parse_ranges(s2, &intersArr[i].type2, &intersArr[i].nr2, &intersArr[i].r2);
+      parse_ranges(s1, &intersArr[i].type1, &intersArr[i].nr1, &intersArr[i].r1);
+      parse_ranges(s2, &intersArr[i].type2, &intersArr[i].nr2, &intersArr[i].r2);
+      MD_DEBUG31(printf("type1=%d type2=%d\n", intersArr[i].type1, intersArr[i].type2));
     } 
 #endif
   
@@ -3878,9 +3982,26 @@ void readAllCor(FILE* fs)
       intersArrIJ = malloc(sizeof(interStructIJ)*Oparams.nintersIJ);
       for (i=0; i < Oparams.nintersIJ; i++)
 	{
+#if 0
 	  fscanf(fs, "%d %d %d %d %lf %lf %lf ", &intersArrIJ[i].i, &intersArrIJ[i].spot1, &intersArrIJ[i].j, 
 		 &intersArrIJ[i].spot2, 
 		 &intersArrIJ[i].bheight, &intersArrIJ[i].bhin, &intersArrIJ[i].bhout);
+#else
+	  fscanf(fs, "%s %d %s %d %lf %lf %lf ", s1, &intersArrIJ[i].spot1, s2, 
+		 &intersArrIJ[i].spot2, 
+		 &intersArrIJ[i].bheight, &intersArrIJ[i].bhin, &intersArrIJ[i].bhout);
+	  parse_ranges(s1, &intersArrIJ[i].i, &intersArrIJ[i].nr1, &intersArrIJ[i].r1);
+	  parse_ranges(s2, &intersArrIJ[i].j, &intersArrIJ[i].nr2, &intersArrIJ[i].r2);
+	  MD_DEBUG31(printf("i=%d j=%d\n", intersArrIJ[i].i, intersArrIJ[i].j));
+#if 0
+	  if (intersArrIJ[i].j==-2)
+	    {
+	      int kk;
+	      for (kk = 0; kk < intersArrIJ[i].nr2; kk++)
+		printf(">>> %d-%d\n", intersArrIJ[i].r2[kk].min, intersArrIJ[i].r2[kk].max);
+	    }
+#endif
+#endif
 	} 
     }
   fscanf(fs, "%s ", sep);
@@ -3975,4 +4096,6 @@ void readAllCor(FILE* fs)
     }
 #endif
       
+  free(s1);
+  free(s2);
 }

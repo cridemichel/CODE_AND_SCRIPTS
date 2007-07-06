@@ -1297,6 +1297,26 @@ int ignore_interaction(int i, int j, int ni)
   return 0;
 }
 #endif
+int is_in_ranges(int A, int B, int nr, rangeStruct* r)
+{
+  int kk;
+  if (A==-1 && B==-1)
+    return 0;
+  if (A==B)
+    return 1;
+  if (B==-2)
+    {
+      for (kk=0; kk < nr; kk++)  
+	{
+	  if (A >= r[kk].min && A <= r[kk].max)
+	    {
+	      MD_DEBUG38(printf("A=%d B=%d beccato min=%d max=%d\n", A, B, r[kk].min, r[kk].max));
+	      return 1;
+	    }
+	}
+    }
+  return 0;
+}
 void assign_bond_mapping(int i, int j)
 {
   int ni, type1, type2, a;
@@ -1309,7 +1329,8 @@ void assign_bond_mapping(int i, int j)
   MD_DEBUG38(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
   for (ni=0; ni < Oparams.nintersIJ; ni++)
     {
-      if (intersArrIJ[ni].i == i && intersArrIJ[ni].j == j)
+      if (is_in_ranges(i, intersArrIJ[ni].i, intersArrIJ[ni].nr1, intersArrIJ[ni].r1) && 
+	  is_in_ranges(j, intersArrIJ[ni].j, intersArrIJ[ni].nr2, intersArrIJ[ni].r2))
 	{
 	  mapbondsaFlex[a] = intersArrIJ[ni].spot1+1;
           mapbondsbFlex[a] = intersArrIJ[ni].spot2+1;
@@ -1320,7 +1341,8 @@ void assign_bond_mapping(int i, int j)
 				 + typesArr[type2].spots[intersArrIJ[ni].spot2].sigma);
 	  a++;
        	}	 
-     else if (intersArrIJ[ni].i == j && intersArrIJ[ni].j == i) 
+     else if (is_in_ranges(j, intersArrIJ[ni].i, intersArrIJ[ni].nr1, intersArrIJ[ni].r1) && 
+	      is_in_ranges(i, intersArrIJ[ni].j, intersArrIJ[ni].nr2, intersArrIJ[ni].r2)) 
        {
 	 mapbondsaFlex[a] = intersArrIJ[ni].spot2+1;
 	 mapbondsbFlex[a] = intersArrIJ[ni].spot1+1;
@@ -1340,7 +1362,8 @@ void assign_bond_mapping(int i, int j)
 	continue;	
 #endif
 #endif
-      if (intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2)
+      if (is_in_ranges(type1, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	  is_in_ranges(type2, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
 	{
 	  /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
 	  mapbondsaFlex[a] = intersArr[ni].spot1+1;
@@ -1366,7 +1389,8 @@ void assign_bond_mapping(int i, int j)
 	      a++;
 	    }
 	}	
-      else if (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1)
+      else if (is_in_ranges(type2, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	       is_in_ranges(type1, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
 	{
 	  /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
 	  mapbondsaFlex[a] = intersArr[ni].spot2+1;
