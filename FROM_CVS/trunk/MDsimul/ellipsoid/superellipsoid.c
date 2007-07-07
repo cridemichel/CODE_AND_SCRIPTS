@@ -64,6 +64,11 @@ int calcdist_retcheck;
 extern double rA[3], rB[3];
 extern double gradplane_all[6][3], rBall[6][3];
 extern int polinterr, polinterrRyck;
+extern double max3(double a, double b, double c);
+extern double scalProd(double *A, double *B);
+extern int fdjac_disterr;
+extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdirs;
+
 int is_superellipse(int i)
 {
   int kk;
@@ -76,47 +81,599 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
     	       void (*vecfunc)(int, double [], double [], int, int, double []), 
 	       int iA, int iB, double shift[3], double *fx, double *gx)
 {
+#ifdef EDHE_FLEX
+  int kk;
+  double axi[3], axj[3];
+#endif
+  double rDC[3];
+  int k1, k2;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*Xa[k1][k2];
+	  df[k1][k2+3] = 2.0*Sqr(x[6])*Xb[k1][k2];
+	}
+    }
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
+	}
+    }
+#if 1
+  if (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 3)
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	rDC[k1] = x[k1+3] - x[k1];
+#ifdef EDHE_FLEX
+      for (kk=0; kk < 3; kk++)
+	{
+	  axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
+	  axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	}
+      if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axi[0],axi[1],axi[2])+max3(axj[0],axj[1],axj[2])))
+	{
+	  fdjac_disterr = 1;	
+	}
+#else
+      if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axa[iA],axb[iA],axc[iA])+max3(axa[iB],axb[iB],axc[iB])))
+	{
+	  fdjac_disterr = 1;	
+	}
+#endif 
+    }
+#endif
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  for (k1 = 0; k1 < 5; k1++)
+    {
+      df[3][k1+3] = 0;
+    } 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = 0;
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1+3] = gx[k1];
+    } 
+  df[4][6] = df[4][7] = 0;
 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][6] = 2.0*x[6]*gx[k1];
+      df[k1][7] = 0.0;
+    } 
 
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2] = 1 + 2.0*x[7]*Xa[k1][k2];
+	  else 
+	    df[k1+5][k2] = 2.0*x[7]*Xa[k1][k2];
+	}
+    }
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2+3] = -1;
+	  else 
+	    df[k1+5][k2+3] = 0;
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][6] = 0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][7] = fx[k1];
+#ifndef MD_GLOBALNRD
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+ fvec[4] = 0.5*fvec[4]-1.0;
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
+  //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+#endif
 }
 void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int, int, double []), 
 		   int iA, int iB, double shift[3], double *fx, double *gx)
 {
+  double rDC[3], rD[3], A[3][3], b[3], c[3];
+  int k1, k2;
+#ifdef EDHE_FLEX
+  int kk;
+  double axi[3], axj[3];
+#endif
 
+#ifdef MD_USE_CBLAS
+  double XaL[3][3], XbL[3][3];
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	XaL[k1][k2] = Xa[k1][k2];
+	XbL[k1][k2] = Xb[k1][k2];
+	A[k1][k2] = 2.0*Xb[k1][k2]*Sqr(x[3]);
+      }
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
+	      3, 3, 3, 4.0*Sqr(x[3])*x[4], &XaL[0][0],
+	      3, &XbL[0][0], 3,
+	      1.0, &A[0][0], 3);
+#else
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+#if 0
+	  A[k1][k2] = 0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    A[k1][k2] += Xb[k1][k3]*Xa[k3][k2];
+#else
+	  A[k1][k2] = XbXa[k1][k2];
+#endif
+	  A[k1][k2] *= 4.0*Sqr(x[3])*x[4];
+	  A[k1][k2] += 2.0*Xb[k1][k2]*Sqr(x[3]);
+	}
+    }	
+#endif
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*Xa[k1][k2] + A[k1][k2];
+	}
+    }
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	}
+      rD[k1] = x[k1] + fx[k1]*x[4];
+    } 
+  //printf("rC: %f %f %f rD: %f %f %f\n", x[0], x[1], x[2], rD[0], rD[1], rD[2]);
+  //printf("fx: %f %f %f x[4]: %f\n", fx[0], fx[1], fx[2], x[4]);
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  gx[k1] += 2.0*Xb[k1][k2]*(rD[k2]-rB[k2]);
+	}
+    }
+#if 1
+  if (OprogStatus.SDmethod==2 || OprogStatus.SDmethod==3)
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	rDC[k1] = rD[k1] - x[k1];
+#ifdef EDHE_FLEX
+      for (kk=0; kk < 3; kk++)
+	{
+	  axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
+	  axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	}
+      if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axi[0],axi[1],axi[2])+max3(axj[0],axj[1],axj[2])))
+	{
+	  fdjac_disterr = 1;	
+	}
 
+#else
+      if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axa[iA],axb[iA],axc[iA])+max3(axa[iB],axb[iB],axc[iB])))
+	{
+	  fdjac_disterr = 1;	
+	}
+#endif
+    }
+#endif
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      b[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  b[k1] += Xb[k1][k2]*fx[k2];
+	}
+      b[k1] *= 2.0*Sqr(x[3]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      c[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  c[k1] += gx[k2]*Xa[k2][k1];
+	}
+      c[k1] *= 2.0*x[4];
+      c[k1] += gx[k1];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  df[3][3] = 0.0;
+  df[3][4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = c[k1];
+    } 
+  df[4][3] = 0.0;
+  df[4][4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[4][4] += gx[k1]*fx[k1];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][3] = 2.0*x[3]*gx[k1];
+      df[k1][4] = b[k1];
+    } 
+
+#ifndef MD_GLOBALNRD
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (rD[k1]-rB[k1])*gx[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+ fvec[4] = 0.5*fvec[4]-1.0;
+ //print_matrix(df, 5);
+ //printf("fx: %f %f %f gx: %f %f %f\n", fx[0]/calc_norm(fx), fx[1]/calc_norm(fx), 
+ //	fx[2]/calc_norm(fx), gx[0]/calc_norm(gx), gx[1]/calc_norm(gx), gx[2]/calc_norm(gx));
+ //printf("F2BZdistNeg5 fvec (%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]);
+#endif
 }
 
-int fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df, 
+void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int), int iA)
 {
+  double fx[3];
+  int k1, k2;
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*Xa[k1][k2];
+	  df[k1][k2+3] = 0;
+	}
+    }
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      //gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  //gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
+	}
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  for (k1 = 0; k1 < 5; k1++)
+    {
+      df[3][k1+3] = 0;
+    } 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = 0;
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1+3] = gradplane[k1];
+    } 
+  df[4][6] = df[4][7] = 0;
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][6] = -2.0*x[6]*gradplane[k1];
+      df[k1][7] = 0.0;
+    } 
+
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2] = 1.0; //+ 2.0*x[7]*Xa[k1][k2];
+	  else 
+	    df[k1+5][k2] = 0.0;//2.0*x[7]*Xa[k1][k2];
+	}
+    }
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2+3] = -1;
+	  else 
+	    df[k1+5][k2+3] = 0;
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][6] = 0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][7] = gradplane[k1];//fx[k1];
+#ifndef MD_GLOBALNRDNL
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[6])*gradplane[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+ //fvec[4] = 0.5*fvec[4]-1.0;
+ /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + gradplane[k1]*x[7];//[k1]*x[7]; 
+  //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+#endif
 
 }
-int fdjacDistNegNeighPlane5SE(int n, double x[], double fvec[], double **df, 
+void fdjacDistNegNeighPlane5SE(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int), int iA)
 {
+  double fx[3], rD[3];
+  int k1, k2;
+ 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*Xa[k1][k2];
+	}
+    }
+  /* calc fx*/
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	}
+      rD[k1] = x[k1] + gradplane[k1]*x[4];
+    } 
+  //printf("rC: %f %f %f rD: %f %f %f\n", x[0], x[1], x[2], rD[0], rD[1], rD[2]);
+  //printf("fx: %f %f %f x[4]: %f\n", fx[0], fx[1], fx[2], x[4]);
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  df[3][3] = 0.0;
+  df[3][4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = gradplane[k1];
+    } 
+  df[4][3] = 0.0;
+  df[4][4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[4][4] += gradplane[k1]*gradplane[k1];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][3] = -2.0*x[3]*gradplane[k1];
+      df[k1][4] = 0.0;
+    } 
+
+#ifndef MD_GLOBALNRDNL
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[3])*gradplane[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (rD[k1]-rB[k1])*gradplane[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+#endif
 
 }
 
-int funcs2beZeroedDistNegSE(int n, double x[], double fvec[], int i, int j, double shift[3])
+void funcs2beZeroedDistNegSE(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
+  int k1, k2; 
+  double fx[3], gx[3];
+  /* x = (r, alpha, t) */ 
 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3] - rB[k2]);
+    }
+
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
+
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
+#if 0
+  MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+  MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+#endif
 }
 
-int funcs2beZeroedDistNeg5SE(int n, double x[], double fvec[], int i, int j, double shift[3])
+void funcs2beZeroedDistNeg5SE(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
+  int k1, k2; 
+  double fx[3], gx[3], rD[3];
+  /* x = (r, alpha, t) */ 
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+	}
+      rD[k1] = x[k1] + fx[k1]*x[4];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(rD[k2] - rB[k2]);
+    }
 
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (rD[k1]-rB[k1])*gx[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
+
+#if 0
+  MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+  MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+#endif
 }
 
-int funcs2beZeroedDistNegNeighPlaneSE(int n, double x[], double fvec[], int i)
+void funcs2beZeroedDistNegNeighPlaneSE(int n, double x[], double fvec[], int i)
 {
+  int k1, k2; 
+  double fx[3];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+    }
+#if 0
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3] - rB[k2]);
+    }
+#endif
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[6])*gradplane[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  //fvec[4] = 0.5*fvec[4]-1.0;
 
-
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + gradplane[k1]*x[7];//fx[k1]*x[7]; 
+#if 0
+  MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+  MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+#endif
 }
 
-int funcs2beZeroedDistNegNeighPlane5SE(int n, double x[], double fvec[], int i)
+void funcs2beZeroedDistNegNeighPlane5SE(int n, double x[], double fvec[], int i)
 {
+  int k1, k2; 
+  double fx[3], rD[3];
 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+	}
+      rD[k1] = x[k1] + gradplane[k1]*x[4];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[3])*gradplane[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (rD[k1]-rB[k1])*gradplane[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+#if 0
+  MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+  MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+#endif
 
 }
+/* 06/07/2007 TODO: steepest descent for super-ellipsoids! */
 #endif

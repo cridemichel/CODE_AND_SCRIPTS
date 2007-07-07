@@ -14,6 +14,9 @@
 #define MD_DEBUG38(x) 
 void update_MSDrot(int i);
 void update_MSD(int i);
+#ifdef MD_SUPERELLIPSOID
+int is_superellipse(int i);
+#endif
 #ifdef MD_ASYM_ITENS
 void calc_omega(int i);
 void calc_angmom(int i, double **I);
@@ -4870,14 +4873,7 @@ retry:
 	  vecg[4] = vecg8[7];
 	  OprogStatus.dist5 = 1;
 	}
-#ifdef MD_SUPERELLIPSOID
-      if (is_superellipse(i) || is_superellipse(j))
-	newtDistNegSE(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift, tryagain); 
-      else
-	newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift, tryagain); 
-#else
       newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift, tryagain); 
-#endif
     }
   else 
     newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift, tryagain); 

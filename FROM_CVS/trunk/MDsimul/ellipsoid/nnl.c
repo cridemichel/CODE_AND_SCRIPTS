@@ -19,6 +19,9 @@
 extern int is_sphere(int i);
 extern int *is_a_sphere_NNL;
 #endif
+#ifdef MD_SUPERELLIPSOID
+int is_superellipse(int i);
+#endif
 #ifdef EDHE_FLEX
 extern int is_infinite_Itens(int i);
 extern int is_infinite_mass(int i);
@@ -847,9 +850,9 @@ void fdjacDistNegNeighPlane5(int n, double x[], double fvec[], double **df,
   double fx[3], rD[3];
   int k1, k2;
 #ifdef MD_SUPERELLIPSOID
-  if (is_superellipse(iA) || is_superellipse(iB))
+  if (is_superellipse(iA))
     {
-      fdjacDistNegNeighPlane5SE(n, x, fvec, df, vecfunc, iA, iB, shift, fx, gx);
+      fdjacDistNegNeighPlane5SE(n, x, fvec, df, vecfunc, iA);
       return;
     }
 #endif
@@ -918,9 +921,9 @@ void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df,
   double fx[3];
   int k1, k2;
 #ifdef MD_SUPERELLIPSOID
-  if (is_superellipse(iA) || is_superellipse(iB))
+  if (is_superellipse(iA))
     {
-      fdjacDistNegNeighPlaneSE(n, x, fvec, df, vecfunc, iA, iB, shift, fx, gx);
+      fdjacDistNegNeighPlaneSE(n, x, fvec, df, vecfunc, iA);
       return;
     }
 #endif
