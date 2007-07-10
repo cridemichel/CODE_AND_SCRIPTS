@@ -5190,6 +5190,7 @@ void nextNNLupdate(int na)
   nebrTab[na].time = Oparams.time;
 }
 #ifdef EDHE_FLEX
+extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
 int may_interact_core(int i, int j)
 {
   int typei, typej;
@@ -5210,11 +5211,13 @@ int may_interact_spots(int i, int j)
     return 0;
   for (ni = 0; ni < Oparams.ninters; ni++)
     {
-      if (intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2)
+      if (is_in_ranges(type1, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	  is_in_ranges(type2, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
 	{
 	  return 1;
 	}	
-      else if (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1)
+      else if (is_in_ranges(type2, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	       is_in_ranges(type1, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
 	{
 	  return 1;
 	}
@@ -5223,11 +5226,13 @@ int may_interact_spots(int i, int j)
     {
       for (ni = 0; ni < Oparams.nintersIJ; ni++)
 	{
-	  if (intersArrIJ[ni].i == i && intersArrIJ[ni].j == j)
+	  if (is_in_ranges(i, intersArrIJ[ni].i, intersArrIJ[ni].nr1, intersArrIJ[ni].r1) && 
+	      is_in_ranges(j, intersArrIJ[ni].j, intersArrIJ[ni].nr2, intersArrIJ[ni].r2))
 	    {
 	      return 1;
 	    }	
-	  else if (intersArrIJ[ni].i == j && intersArrIJ[ni].j == i)
+	  else if (is_in_ranges(j, intersArrIJ[ni].i, intersArrIJ[ni].nr1, intersArrIJ[ni].r1) && 
+		   is_in_ranges(i, intersArrIJ[ni].j, intersArrIJ[ni].nr2, intersArrIJ[ni].r2))
 	    {
 	      return 1;
 	    }
