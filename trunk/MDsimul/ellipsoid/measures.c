@@ -56,6 +56,9 @@ extern int *inCell[3], cellsx, cellsy, cellsz;
 extern int *cellList;
 extern int bound(int na, int n);
 int *numbonds;
+#ifdef EDHE_FLEX
+extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
+#endif
 double calcpotene(void)
 {
   double Epot; 
@@ -149,9 +152,11 @@ double calcpotene(void)
 	  //printf("numbonds[%d]=%d aa=%d bb=%d\n", na, numbonds[na], aa, bb);
 	  for (kk2 = 0; kk2 < Oparams.ninters; kk2++)
 	    {
-	      if ( (intersArr[kk2].type1 == typeOfPart[na] && intersArr[kk2].type2 == typeOfPart[jj] &&
+	      if ( (is_in_ranges(typeOfPart[na], intersArr[kk2].type1, intersArr[kk2].nr1, intersArr[kk2].r1) && 
+		    is_in_ranges(typeOfPart[jj], intersArr[kk2].type2, intersArr[kk2].nr2, intersArr[kk2].r2) &&
 		    intersArr[kk2].spot1 == aa-1 && intersArr[kk2].spot2 == bb-1) || 
-		   (intersArr[kk2].type1 == typeOfPart[jj] && intersArr[kk2].type2 == typeOfPart[na] &&
+		   (is_in_ranges(typeOfPart[jj], intersArr[kk2].type1, intersArr[kk2].nr1, intersArr[kk2].r1) && 
+		    is_in_ranges(typeOfPart[na], intersArr[kk2].type2, intersArr[kk2].nr2, intersArr[kk2].r2) &&
 		    intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
 		{
 		  MD_DEBUG21(printf("(%d,%d)-(%d,%d) height=%.15G\n", na, aa-1, jj, bb-1, intersArr[kk2].bheight));
@@ -162,9 +167,11 @@ double calcpotene(void)
 	    {
 	      for (kk2 = 0; kk2 < Oparams.nintersIJ; kk2++)
 		{
-		  if ( (intersArrIJ[kk2].i == na && intersArrIJ[kk2].j == jj &&
+		  if ( (is_in_ranges(na, intersArrIJ[kk2].i, intersArrIJ[kk2].nr1, intersArrIJ[kk2].r1) && 
+			is_in_ranges(jj, intersArrIJ[kk2].j, intersArrIJ[kk2].nr2, intersArrIJ[kk2].r2) &&
 		      	intersArrIJ[kk2].spot1 == aa-1 && intersArrIJ[kk2].spot2 == bb-1) || 
-		       (intersArrIJ[kk2].i == jj && intersArrIJ[kk2].j == na &&
+		       (is_in_ranges(jj, intersArrIJ[kk2].i, intersArrIJ[kk2].nr1, intersArrIJ[kk2].r1) && 
+			is_in_ranges(na, intersArrIJ[kk2].j, intersArrIJ[kk2].nr2, intersArrIJ[kk2].r2) &&
 			intersArrIJ[kk2].spot1 == bb-1 && intersArrIJ[kk2].spot2 == aa-1) )  
 		    {
 		      MD_DEBUG21(printf("(%d,%d)-(%d,%d) height=%.15G\n", na, aa-1, jj, bb-1, intersArrIJ[kk2].bheight));

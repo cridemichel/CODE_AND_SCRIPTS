@@ -220,6 +220,7 @@ void check_these_bonds(int i, int j, double *shift, double t)
 }
 #endif
 #ifdef EDHE_FLEX
+#if 0
 int all_bonds_of_same_type(int i, int ni)
 {
   int kk, jj, jj2, aa, bb, cc;
@@ -258,6 +259,7 @@ int nmax_reached(int i, int j, int a, int b)
     }
   return 0;
 }
+#endif
 #endif
 void check_all_bonds(void)
 {
