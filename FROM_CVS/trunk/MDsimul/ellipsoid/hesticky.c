@@ -16,6 +16,7 @@
 #define MD_DEBUG38(x) 
 #define MD_DEBUG39(x) 
 #define MD_DEBUG40(x) 
+#define MD_DEBUG41(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
@@ -221,7 +222,7 @@ extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri
 extern void calc_energy(char *msg);
 extern void print_matrix(double **M, int n);
 #ifdef EDHE_FLEX
-int getnumbonds(int np, interStruct ts)
+int getnumbonds(int np, interStruct *ts, int inverted)
 {
   int kk, jj, jj2, aa, bb, nb;
   nb=0;
@@ -233,28 +234,66 @@ int getnumbonds(int np, interStruct ts)
       bb = jj2 % NA;
       //if (na != aa) 
 	//continue;
-      if ((aa == ts.spot1+1 && typeOfPart[jj] == ts.type2 && bb == ts.spot2+1 &&
-	   typeOfPart[np] == ts.type1 )||
-	  (bb == ts.spot1+1 && typeOfPart[np] == ts.type2 && aa == ts.spot2+1 &&
-	   typeOfPart[jj] == ts.type1 ))
-	nb++;
+      if (!inverted)
+	{
+	  if (aa == ts->spot1+1 && typeOfPart[jj]==ts->type2 && bb == ts->spot2+1)
+	    nb++;
+	}
+      else
+	{
+	  if (aa == ts->spot2+1 && typeOfPart[jj]==ts->type1 && bb == ts->spot1+1)  
+	    nb++;
+	}
     }
   return nb;
 }
-
+#if 0
+void get_interaction(int type1, int s1, int type2, int s2, interStruct **ts, int *inverted)
+{
+  int ni;
+  for (ni=0; ni < Oparams.ninters; ni++)
+    {
+      if (is_in_ranges(type1, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	  is_in_ranges(type2, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
+	{
+	  if (intersArr[ni].spot1==s1 && intersArr[ni].spot2==s2)
+	    {
+	      *inverted=0;
+	      *ts = intersArr[ni];
+	      return;
+	    }
+	}
+      else if (is_in_ranges(type2, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	       is_in_ranges(type1, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
+	{
+	  if (intersArr[ni].spot1==s2 && intersArr[ni].spot2==s1)
+	    {
+	      *inverted=1;
+	      *ts = intersArr[ni];
+	      return;
+	    }
+	}
+    }
+}
+#endif
 int one_is_bonded(int i, int a, int j, int b, int nmax)
 {
   /* per ora è disbilitato */
   //return 0;
-  int ni, type1, type2, nt;
+  int type1, type2;
   interStruct ts;
+  if (nmax < 0)
+    return 0;
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
+#if 1
   ts.type1 = type1;
   ts.type2 = type2;
   ts.spot1 = a-1;
   ts.spot2 = b-1;
-  if (getnumbonds(i,ts) >= nmax || getnumbonds(j,ts) >= nmax)
+#endif
+  //get_interaction(type1, a-1, type2, b-1, &ts, &inverted);
+  if (getnumbonds(i, &ts, 0) >= nmax || getnumbonds(j, &ts, 1) >= nmax)
     return 1;
   else
     return 0;
@@ -286,6 +325,7 @@ int one_is_bonded(int i, int a, int j, int b, int nmax)
 }
 #endif
 #ifdef EDHE_FLEX
+extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
 void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double *bhin, double *bhout,
 			int *nmax)
 {
@@ -296,29 +336,35 @@ void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double 
      from interaction between types */
   for (pt = 0; pt < Oparams.nintersIJ; pt++)
     {
-      if ((intersArrIJ[pt].i == i && intersArrIJ[pt].j == j &&
+      if ((is_in_ranges(i, intersArrIJ[pt].i, intersArrIJ[pt].nr1, intersArrIJ[pt].r1) && 
+	   is_in_ranges(j, intersArrIJ[pt].j, intersArrIJ[pt].nr2, intersArrIJ[pt].r2) &&
 	   intersArrIJ[pt].spot1 == ata-1 && intersArrIJ[pt].spot2 == atb-1) ||
-	  (intersArrIJ[pt].i == j && intersArrIJ[pt].j == i &&
+	  (is_in_ranges(j, intersArrIJ[pt].i, intersArrIJ[pt].nr1, intersArrIJ[pt].r1) && 
+	   is_in_ranges(i, intersArrIJ[pt].j, intersArrIJ[pt].nr2, intersArrIJ[pt].r2) &&
 	   intersArrIJ[pt].spot1 == atb-1 && intersArrIJ[pt].spot2 == ata-1) )
 	{
 	  *bheight = intersArrIJ[pt].bheight;
 	  *bhin    = intersArrIJ[pt].bhin;
 	  *bhout   = intersArrIJ[pt].bhout;
-	  *nmax=1;
+	  //ijinter=1;
+	  *nmax=-2;
 	  return;
 	} 
     }
   for (pt = 0; pt < Oparams.ninters; pt++)
     {
-      if ((intersArr[pt].type1 == type1 && intersArr[pt].type2 == type2 &&
-	 intersArr[pt].spot1 == ata-1 && intersArr[pt].spot2 == atb-1) ||
-	  (intersArr[pt].type1 == type2 && intersArr[pt].type2 == type1 &&
+      if ((is_in_ranges(type1, intersArr[pt].type1, intersArr[pt].nr1, intersArr[pt].r1) && 
+	   is_in_ranges(type2, intersArr[pt].type2, intersArr[pt].nr2, intersArr[pt].r2) &&
+	   intersArr[pt].spot1 == ata-1 && intersArr[pt].spot2 == atb-1) ||
+	  (is_in_ranges(type2, intersArr[pt].type1, intersArr[pt].nr1, intersArr[pt].r1) && 
+	   is_in_ranges(type1, intersArr[pt].type2, intersArr[pt].nr2, intersArr[pt].r2) &&
 	   intersArr[pt].spot1 == atb-1 && intersArr[pt].spot2 == ata-1) )
 	{
 	  *bheight = intersArr[pt].bheight;
 	  *bhin    = intersArr[pt].bhin;
 	  *bhout   = intersArr[pt].bhout;
 	  *nmax    = intersArr[pt].nmax;
+	  //ijinter  = 0;
 	  return;
 	} 
     }
@@ -578,7 +624,7 @@ void assign_bond_mapping(int i, int j);
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
-  double shift[3]={0,0,0};
+  //double shift[3]={0,0,0};
   double factor=0, invmi, invmj, mredl;
   double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3];
   double rAB[3], rAC[3], rBC[3], vCA[3], vCB[3], vc;
@@ -1310,7 +1356,7 @@ int is_in_ranges(int A, int B, int nr, rangeStruct* r)
 	{
 	  if (A >= r[kk].min && A <= r[kk].max)
 	    {
-	      MD_DEBUG38(printf("A=%d B=%d beccato min=%d max=%d\n", A, B, r[kk].min, r[kk].max));
+	      MD_DEBUG41(printf("A=%d B=%d beccato min=%d max=%d\n", A, B, r[kk].min, r[kk].max));
 	      return 1;
 	    }
 	}
@@ -1320,13 +1366,10 @@ int is_in_ranges(int A, int B, int nr, rangeStruct* r)
 void assign_bond_mapping(int i, int j)
 {
   int ni, type1, type2, a;
-#ifdef MD_FOUR_BEADS
-  int jj, kk;
-#endif
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
   a=0;
-  MD_DEBUG38(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
+  MD_DEBUG41(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
   for (ni=0; ni < Oparams.nintersIJ; ni++)
     {
       if (is_in_ranges(i, intersArrIJ[ni].i, intersArrIJ[ni].nr1, intersArrIJ[ni].r1) && 
@@ -1550,7 +1593,7 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
   int a;
   /* l'atomo zero si suppone nell'origine */
 #ifdef EDHE_FLEX
-  int type, kk, same;
+  int kk, same;
   int typei;
   spotStruct *spots;
 

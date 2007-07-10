@@ -7872,7 +7872,7 @@ void timeshift_calendar(void)
 }
 #endif
 #ifdef EDHE_FLEX
-extern int getnumbonds(int np, interStruct ts);
+extern int getnumbonds(int np, interStruct *ts, int inverted);
 int first=1;
 #endif
 #ifdef EDHE_FLEX
@@ -7884,12 +7884,12 @@ int termination(void)
   ts.type2 = 5;
   ts.spot1 = 4;
   ts.spot2 = 0;
-  nb = getnumbonds(0,ts);
+  nb = getnumbonds(0,&ts, 0);
   ts.type1 = 1;
   ts.type2 = 5;
   ts.spot1 = 5;
   ts.spot2 = 0;
-  nb += getnumbonds(1,ts);			
+  nb += getnumbonds(1,&ts, 0);			
   if ((nb==1 || nb==2) && first)
     {
       double ti = 0;
@@ -7950,7 +7950,7 @@ void move(void)
   /* get next event */
   while (!ENDSIM)
     {
-#ifdef EDHE_FLEX 
+#if defined(EDHE_FLEX) && defined(MD_RABBIT) 
       if (termination())
 	{
 	  ENDSIM=1;
