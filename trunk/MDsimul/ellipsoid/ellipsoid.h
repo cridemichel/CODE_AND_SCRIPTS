@@ -38,7 +38,7 @@ void UpdateSystem(void);
 #define MD_SIMDAT MD_HOME ""
 #define MD_HD_TMP MD_SIMDAT ""
 /* directory to store temporary files */ 
-
+#define Power(x,y) pow((x),(y))
 #define MD_HD_MIS MD_SIMDAT "" 
 /* directory to store measures files */
 #if defined(MD_POLYDISP) && defined(EDHE_FLEX)
