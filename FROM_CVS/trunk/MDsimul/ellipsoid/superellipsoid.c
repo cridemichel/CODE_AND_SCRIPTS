@@ -125,6 +125,30 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   df[2][2] = (-2*nm2*pow(z/c,2/n))/(Sqr(n)*Sqr(z)); 
 }
 extern void lab2body(int i, double x[], double xp[], double *rO, double **R);
+void body2lab_fx(int i, double xp[], double x[], double **R)
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+    }
+}
+void body2lab_fxx(int i, double fxxp[3][3], double fxx[3][3], double **R)
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      fxx[k1][k2] = 0;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  fxx[k1] += R[k2][k1]*fxxp[k2];
+       	} 
+    }
+}
 
 void fdjacDistNegSE(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), 
@@ -135,18 +159,21 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
   double axi[3], axj[3];
 #endif
   double rDC[3];
-  double xpA[3], xpB[3], fxx[3][3], gxx[3][3];
+  double xpA[3], xpB[3], fxxp[3][3], gxxp[3][3], fxp[3], gxp[3], fxx[3][3], gxx[3][3];
   int k1, k2;
   /* ci mettiamo nel riferimento del corpo rigido dove lo Jacobiano
      assume la forma più semplice */
   lab2body(iA, &x[0], xpA, rA, RtA);
   lab2body(iB, &x[3], xpB, rB, RtB);  
-  calcfx(fx, xpA[0], xpA[1], xpA[2], iA);
-  calcfx(gx, xpB[0], xpB[1], xpB[2], iB);
-  calcfxx(fxx, xpA[0], xpA[1], xpA[2] ,iA);
-  calcfxx(gxx, xpB[0], xpB[1], xpB[2], iB);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
+  calcfx(gxp, xpB[0], xpB[1], xpB[2], iB);
+  calcfxx(fxxp, xpA[0], xpA[1], xpA[2] ,iA);
+  calcfxx(gxxp, xpB[0], xpB[1], xpB[2], iB);
   /* ...and now we have to go back to laboratory reference system */
-  
+  body2lab_fx(iA, fxp, fx, RtA);
+  body2lab_fx(iB, gxp, gx, RtA);  
+  body2lab_fxx(iA, fxxp, fxx, RtA);
+  body2lab_fxx(iB, gxxp, gxx, RtB);
 #if 1
   if (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 3)
     {
