@@ -71,12 +71,61 @@ extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdir
 
 int is_superellipse(int i)
 {
-  int kk;
   if (typesArr[typeOfPart [i]].n[0]==1.0 && typesArr[typeOfPart [i]].n[1]==1.0)
     return 0;
   else 
     return 1;
 }
+void calcfx(double *fx, double x, double y, double z, int i)
+{
+/* calcola il gradiente della superficie nel riferimento del corpo rigido*/
+  double a, b, c, n, e;
+  double xa2e, yb2e, A, inve2;
+  a = typesArr[typeOfPart[i]].sax[0];
+  b = typesArr[typeOfPart[i]].sax[1];
+  c = typesArr[typeOfPart[i]].sax[2];
+  e = typesArr[typeOfPart[i]].n[0];
+  n = typesArr[typeOfPart[i]].n[1];
+  inve2 = 2.0/e;	 
+  xa2e = pow(x/a,inve2);
+  yb2e = pow(y/a,inve2);
+  A = pow(xa2e+yb2e,-1.0+e/n);
+  inve2 = 2.0/e;
+  fx[0] = (2.0*xa2e*A)/(n*x);
+  fx[1] = (2.0*yb2e*A)/(n*y);
+  fx[2] = (2.0*pow(z/c,2.0/n))/(n*z);
+}
+
+void calcfxx(double df[3][3], double x, double y, double z, int i)
+{
+  /* calcola fxx nel riferimento del corpo rigido */
+  double a, b, c, n, e;
+  double xa2e, yb2e, A, xa2eyb2e, emn, nm2, em2, inve2, eSqrnxy;
+  a = typesArr[typeOfPart[i]].sax[0];
+  b = typesArr[typeOfPart[i]].sax[1];
+  c = typesArr[typeOfPart[i]].sax[2];
+  e = typesArr[typeOfPart[i]].n[0];
+  n = typesArr[typeOfPart[i]].n[1];
+  inve2 = 2.0/e;
+  xa2e = pow(x/a,inve2);
+  yb2e = pow(y/a,inve2);
+  eSqrnxy = e*Sqr(n)*x*y;
+  A = pow(xa2e+yb2e, -2.0+e/n);
+  xa2eyb2e = xa2e*yb2e;
+  emn = e-n;
+  nm2 = n-2.0;
+  em2 = e-2.0;
+  df[0][0] = (A*(-2.0*e*nm2*Sqr(xa2e) - 
+       2.0*em2*n*xa2eyb2e))/ (e*Sqr(n)*Sqr(x));
+  df[0][1] = (4*emn*xa2eyb2e*A)/ (eSqrnxy); 
+  df[0][2] = 0.0;
+  df[1][0] = 4*emn*xa2eyb2e*A/(eSqrnxy);
+  df[1][1] = (A*(-2*em2*n*xa2e*yb2e- 2*e*nm2*Sqr(yb2e)))/(e*Sqr(n)*Sqr(y));
+  df[1][2] = df[2][0] = df[2][1] = 0.0;
+  df[2][2] = (-2*nm2*pow(z/c,2/n))/(Sqr(n)*Sqr(z)); 
+}
+extern void lab2body(int i, double x[], double xp[], double *rO, double **R);
+
 void fdjacDistNegSE(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), 
 	       int iA, int iB, double shift[3], double *fx, double *gx)
@@ -86,26 +135,18 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
   double axi[3], axj[3];
 #endif
   double rDC[3];
+  double xpA[3], xpB[3], fxx[3][3], gxx[3][3];
   int k1, k2;
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      for (k2 = 0; k2 < 3; k2++)
-       	{
-	  df[k1][k2] = 2.0*Xa[k1][k2];
-	  df[k1][k2+3] = 2.0*Sqr(x[6])*Xb[k1][k2];
-	}
-    }
-  /* calc fx e gx */
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fx[k1] = 0;
-      gx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
-	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
-	}
-    }
+  /* ci mettiamo nel riferimento del corpo rigido dove lo Jacobiano
+     assume la forma più semplice */
+  lab2body(iA, &x[0], xpA, rA, RtA);
+  lab2body(iB, &x[3], xpB, rB, RtB);  
+  calcfx(fx, xpA[0], xpA[1], xpA[2], iA);
+  calcfx(gx, xpB[0], xpB[1], xpB[2], iB);
+  calcfxx(fxx, xpA[0], xpA[1], xpA[2] ,iA);
+  calcfxx(gxx, xpB[0], xpB[1], xpB[2], iB);
+  /* ...and now we have to go back to laboratory reference system */
+  
 #if 1
   if (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 3)
     {
@@ -129,6 +170,7 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
 #endif 
     }
 #endif
+
   for (k1 = 0; k1 < 3; k1++)
     {
       df[3][k1] = fx[k1];
