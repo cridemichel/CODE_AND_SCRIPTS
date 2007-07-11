@@ -137,17 +137,28 @@ void body2lab_fx(int i, double xp[], double x[], double **R)
        	} 
     }
 }
-void body2lab_fxx(int i, double fxxp[3][3], double fxx[3][3], double **R)
+void body2lab_fxx(int i, double fxxp[3][3], double fxx[3][3], double **Ri)
 {
-  int k1, k2;
-  for (k1=0; k1 < 3; k1++)
-    {
-      fxx[k1][k2] = 0;
-      for (k2=0; k2 < 3; k2++)
-	{
-	  fxx[k1] += R[k2][k1]*fxxp[k2];
-       	} 
-    }
+  int k1, k2, k3;
+  double Rtmp[3][3];
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Rtmp[k1][k2] = 0.0;
+	for (k3=0; k3 < 3; k3++)
+	  {
+	    Rtmp[k1][k2] += fxxp[k1][k3]*Ri[k3][k2];
+	  }
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	fxx[k1][k2] = 0.0;
+	for (k3=0; k3 < 3; k3++)
+	  {
+	    fxx[k1][k2] += Ri[k3][k1]*Rtmp[k3][k2];
+	  }
+      }
 }
 
 void fdjacDistNegSE(int n, double x[], double fvec[], double **df, 
@@ -174,6 +185,14 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
   body2lab_fx(iB, gxp, gx, RtA);  
   body2lab_fxx(iA, fxxp, fxx, RtA);
   body2lab_fxx(iB, gxxp, gxx, RtB);
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*fxx[k1][k2];
+	  df[k1][k2+3] = 2.0*Sqr(x[6])*gxx[k1][k2];
+	}
+    }
 #if 1
   if (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 3)
     {
@@ -227,9 +246,9 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
       for (k2 = 0; k2 < 3; k2++)
 	{
 	  if (k1==k2)
-	    df[k1+5][k2] = 1 + 2.0*x[7]*Xa[k1][k2];
+	    df[k1+5][k2] = 1 + 2.0*x[7]*fxx[k1][k2];
 	  else 
-	    df[k1+5][k2] = 2.0*x[7]*Xa[k1][k2];
+	    df[k1+5][k2] = 2.0*x[7]*fxx[k1][k2];
 	}
     }
   for (k1=0; k1<3; k1++)
@@ -583,24 +602,19 @@ void fdjacDistNegNeighPlane5SE(int n, double x[], double fvec[], double **df,
 
 void funcs2beZeroedDistNegSE(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
-  int k1, k2; 
-  double fx[3], gx[3];
+  int k1; 
+  double fx[3], gx[3], xpA[3], xpB[3], fxp[3], gxp[3];
   /* x = (r, alpha, t) */ 
 
+  lab2body(i, &x[0], xpA, rA, RtA);
+  lab2body(j, &x[3], xpB, rB, RtB);  
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], i);
+  calcfx(gxp, xpB[0], xpB[1], xpB[2], j);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(i, fxp, fx, RtA);
+  body2lab_fx(j, gxp, gx, RtA);  
+ 
   for (k1 = 0; k1 < 3; k1++)
-    {
-      fx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
-    }
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      gx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3] - rB[k2]);
-    }
-
-   for (k1 = 0; k1 < 3; k1++)
     {
       fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
     }
