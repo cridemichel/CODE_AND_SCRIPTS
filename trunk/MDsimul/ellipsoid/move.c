@@ -3342,6 +3342,13 @@ void fdjac(int n, double x[], double fvec[], double **df,
   double phi, psi;
 #endif
   int k1, k2;
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(iA) || is_superellipse(iB))
+    {
+      fdjacSE(n, x, fvec, df, vecfunc, iA, iB, shift, fx, gx);
+      return;
+    }
+#endif
   ti = x[4] + (trefG - atomTime[iA]);
   rA[0] = rx[iA] + vx[iA]*ti;
   rA[1] = ry[iA] + vy[iA]*ti;

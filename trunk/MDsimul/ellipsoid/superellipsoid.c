@@ -160,7 +160,116 @@ void body2lab_fxx(int i, double fxxp[3][3], double fxx[3][3], double **Ri)
 	  }
       }
 }
+void fdjacSE(int n, double x[], double fvec[], double **df, 
+	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
+{
+  /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
+  int na; 
+#ifdef EDHE_FLEX
+  int typei, typej;
+#endif
+  double  rA[3], rB[3], ti, vA[3], vB[3];
+#ifndef MD_ASYM_ITENS
+  double OmegaA[3][3], OmegaB[3][3];
+#endif
+  double DA[3][3], DB[3][3], fx[3], gx[3];
+  double Fxt[3], Gxt[3], Ft, Gt;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
+  int k1, k2;
+  double xpA[3], xpB[3], fxxp[3][3], gxxp[3][3], fxx[3][3], gxx[3][3], fxp[3], gxp[3];
 
+  ti = x[4] + (trefG - atomTime[iA]);
+  rA[0] = rx[iA] + vx[iA]*ti;
+  rA[1] = ry[iA] + vy[iA]*ti;
+  rA[2] = rz[iA] + vz[iA]*ti;
+  vA[0] = vx[iA];
+  vA[1] = vy[iA];
+  vA[2] = vz[iA];
+  /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
+  UpdateOrient(iA, ti, RA, OmegaA);
+#endif
+  MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
+  MD_DEBUG2(print_matrix(RA, 3));
+  na = (iA < Oparams.parnumA)?0:1;
+  typei = typeOfPart[iA];
+  ti = x[4] + (trefG - atomTime[iB]);
+  rB[0] = rx[iB] + vx[iB]*ti + shift[0];
+  rB[1] = ry[iB] + vy[iB]*ti + shift[1];
+  rB[2] = rz[iB] + vz[iB]*ti + shift[2];
+  vB[0] = vx[iB];
+  vB[1] = vy[iB];
+  vB[2] = vz[iB];
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(iB, ti, RB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
+#else
+  UpdateOrient(iB, ti, RB, OmegaB);
+#endif
+  na = (iB < Oparams.parnumA)?0:1;
+  typej = typeOfPart[iB];
+
+  lab2body(iA, &x[0], xpA, rA, RtA);
+  lab2body(iB, &x[3], xpB, rB, RtB);  
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
+  calcfx(gxp, xpB[0], xpB[1], xpB[2], iB);
+  calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
+  calcfxx(gxxp, xpB[0], xpB[1], xpB[2], iB);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(iA, fxp, fx, RtA);
+  body2lab_fx(iB, gxp, gx, RtA);  
+  body2lab_fxx(iA, fxxp, fxx, RtA);
+  body2lab_fxx(iB, gxxp, gxx, RtB);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = gx[k1];
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][3] = 2.0*x[3]*gx[k1];
+    } 
+  df[3][3] = 0.0;
+  df[4][3] = 0.0;
+#ifdef MD_ASYM_ITENS
+  calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
+  calcFxtFt(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], Xb, DB, RB, rB, vB, gx, Gxt, &Gt);
+#else
+  calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
+#endif
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][4] = Fxt[k1]+Sqr(x[3])*Gxt[k1]; 
+    } 
+  df[3][4] = Ft;
+  df[4][4] = Gt;
+#ifndef MD_GLOBALNR
+  /* and now evaluate fvec */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1]-rB[k1])*gx[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
+#endif
+}
 void fdjacDistNegSE(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int, int, double []), 
 	       int iA, int iB, double shift[3], double *fx, double *gx)
