@@ -1302,9 +1302,6 @@ int ignore_interaction(int i, int j, int ni)
    * nel caso del modello four beads si fa un'ottimizzazione ad-hoc */
   sp1=intersArr[ni].spot1;
   sp2=intersArr[ni].spot2;
-  /* il 19=Cbeta e deve poter interagire senza restrizioni */
-   if (sp1==19 && sp2==19 && i < 60 && j < 60)
-    return 0;
   /* nel caso del modello con plate peptidica i e j > 60 sono le plate
      quindi non bisogna ignorare tali interazioni! */
    if ((sp1 > 15 || sp2 > 15) && (abs(i-j) > 1) && i < 60 && j < 60)
