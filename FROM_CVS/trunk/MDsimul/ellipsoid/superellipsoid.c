@@ -16,6 +16,13 @@
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
+#ifdef MD_ASYM_ITENS
+extern double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtB, **Rdot;
+extern double cosEulAng[2][3], sinEulAng[2][3];
+#endif
+extern double rxC, ryC, rzC, trefG;
+extern double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
+extern void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double cosea[3], double sinea[3], double *phir, double *psir);
 #ifdef EDHE_FLEX
 extern void set_angmom_to_zero(int i);
 extern int *is_a_sphere_NNL;
@@ -160,6 +167,75 @@ void body2lab_fxx(int i, double fxxp[3][3], double fxx[3][3], double **Ri)
 	  }
       }
 }
+extern void calc_Rdot(int i, double cosea[3], double sinea[3], double **Ro);
+
+void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[3], double **X,
+	       double D[3][3], double **R, 
+	       double pos[3], double vel[3], double fxp[3], double fxxp[3][3],
+	       double Fxt[3], double *Ft)
+{
+  double tRfxRdot[3][3], tRdotfxR[3][3], fxRdot[3]; 
+  double DtX[3][3], dx[3];
+  int k1, k2, k3;
+  calc_Rdot(i, cosea, sinea, Rdot);
+#if 0
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fxRdot[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fxRdot[k1] += Rdot[k1][k2]*fxp[k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  tRfxxRdot[k1][k2] = 0.0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    {
+	      if (fxR[k3][k1] == 0.0 || Rdot[k3][k2] == 0.0)
+		continue;
+	      tRfxxRdot[k1][k2] += fxx[k3][k1]*Rdot[k3][k2]; 
+	    }
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  tRdotDfx[k1][k2] = 0.0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    {
+	      if (Rdot[k3][k1] == 0.0 || fxR[k3][k2] == 0.0)
+		continue;
+	      tRdotfxR[k1][k2] += Rdot[k3][k1]*fxR[k3][k2]; 
+	    }
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      DtX[k1][k2] = tRdotfxR[k1][k2] + tRfxRdot[k1][k2];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      Fxt[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	Fxt[k1] += DtX[k1][k2]*(x[k2]-pos[k2]) - X[k1][k2]*vel[k2]; 
+      Fxt[k1] *= 2.0;
+     } 
+   *Ft = 0;
+   for (k1 = 0; k1 < 3; k1++)
+     dx[k1] = x[k1]-pos[k1];
+   for (k1 = 0; k1 < 3; k1++)
+     {
+       for (k2 = 0; k2 < 3; k2++)
+	 {
+	   *Ft += -vel[k1]*X[k1][k2]*dx[k2]+dx[k1]*DtX[k1][k2]*dx[k2]-dx[k1]*X[k1][k2]*vel[k2];
+	 }
+     }
+#endif
+
+}
 void fdjacSE(int n, double x[], double fvec[], double **df, 
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 {
@@ -173,11 +249,11 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   double OmegaA[3][3], OmegaB[3][3];
 #endif
   double DA[3][3], DB[3][3], fx[3], gx[3];
-  double Fxt[3], Gxt[3], Ft, Gt;
+  double Fxt[3], Gxt[3], Ft=0.0, Gt=0.0;
 #ifdef MD_ASYM_ITENS
   double phi, psi;
 #endif
-  int k1, k2;
+  int k1;
   double xpA[3], xpB[3], fxxp[3][3], gxxp[3][3], fxx[3][3], gxx[3][3], fxp[3], gxp[3];
 
   ti = x[4] + (trefG - atomTime[iA]);
@@ -240,13 +316,10 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
     } 
   df[3][3] = 0.0;
   df[4][3] = 0.0;
-#ifdef MD_ASYM_ITENS
-  calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
-  calcFxtFt(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], Xb, DB, RB, rB, vB, gx, Gxt, &Gt);
-#else
-  calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
-  calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
-#endif
+  /* questi vanno ricalcolati per i superellissoidi!*/
+  calcFxtFtSE(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fxp, fxxp, Fxt, &Ft);
+  calcFxtFtSE(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], Xb, DB, RB, rB, vB, gxp, gxxp, Gxt, &Gt);
+  /* -------------------------------------------- */
   for (k1 = 0; k1 < 3; k1++)
     {
       df[k1][4] = Fxt[k1]+Sqr(x[3])*Gxt[k1]; 
@@ -406,64 +479,39 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
   int kk;
   double axi[3], axj[3];
 #endif
-
-#ifdef MD_USE_CBLAS
-  double XaL[3][3], XbL[3][3];
-  for (k1 = 0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      {
-	XaL[k1][k2] = Xa[k1][k2];
-	XbL[k1][k2] = Xb[k1][k2];
-	A[k1][k2] = 2.0*Xb[k1][k2]*Sqr(x[3]);
-      }
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
-	      3, 3, 3, 4.0*Sqr(x[3])*x[4], &XaL[0][0],
-	      3, &XbL[0][0], 3,
-	      1.0, &A[0][0], 3);
-#else
+  double xpA[3], xpB[3], fxxp[3][3], gxxp[3][3], fxp[3], gxp[3], fxx[3][3], gxx[3][3];
+  lab2body(iA, &x[0], xpA, rA, RtA);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
+  calcfxx(fxxp, xpA[0], xpA[1], xpA[2] ,iA);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(iA, fxp, fx, RtA);
+  body2lab_fxx(iA, fxxp, fxx, RtA);
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
        	{
-#if 0
-	  A[k1][k2] = 0;
-	  for (k3 = 0; k3 < 3; k3++)
-	    A[k1][k2] += Xb[k1][k3]*Xa[k3][k2];
-#else
-	  A[k1][k2] = XbXa[k1][k2];
-#endif
-	  A[k1][k2] *= 4.0*Sqr(x[3])*x[4];
-	  A[k1][k2] += 2.0*Xb[k1][k2]*Sqr(x[3]);
+	  A[k1][k2] = Sqr(x[3])*(gxx[k1][k2] + x[4]*fxx[k1][k2]*gxx[k1][k2]);
 	}
     }	
-#endif
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
        	{
-	  df[k1][k2] = 2.0*Xa[k1][k2] + A[k1][k2];
+	  df[k1][k2] = fxx[k1][k2] + A[k1][k2];
 	}
     }
   /* calc fx e gx */
   for (k1 = 0; k1 < 3; k1++)
     {
-      fx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
-	}
       rD[k1] = x[k1] + fx[k1]*x[4];
     } 
+  lab2body(iB, rD, xpB, rB, RtB);  
+  calcfx(gxp, xpB[0], xpB[1], xpB[2], iB);
+  calcfxx(gxxp, xpB[0], xpB[1], xpB[2], iB);
+  body2lab_fx(iB, gxp, gx, RtA);  
+  body2lab_fxx(iB, gxxp, gxx, RtB);
   //printf("rC: %f %f %f rD: %f %f %f\n", x[0], x[1], x[2], rD[0], rD[1], rD[2]);
   //printf("fx: %f %f %f x[4]: %f\n", fx[0], fx[1], fx[2], x[4]);
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      gx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  gx[k1] += 2.0*Xb[k1][k2]*(rD[k2]-rB[k2]);
-	}
-    }
 #if 1
   if (OprogStatus.SDmethod==2 || OprogStatus.SDmethod==3)
     {
@@ -502,9 +550,8 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
       c[k1] = 0.0;
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  c[k1] += gx[k2]*Xa[k2][k1];
+	  c[k1] += gx[k2]*fxx[k2][k1];
 	}
-      c[k1] *= 2.0*x[4];
       c[k1] += gx[k1];
     }
   for (k1 = 0; k1 < 3; k1++)
@@ -554,27 +601,25 @@ void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df,
 {
   double fx[3];
   int k1, k2;
+  double xpA[3], fxxp[3][3], fxp[3], fxx[3][3];
+
+  /* ci mettiamo nel riferimento del corpo rigido dove lo Jacobiano
+     assume la forma più semplice */
+  lab2body(iA, &x[0], xpA, rA, RtA);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
+  calcfxx(fxxp, xpA[0], xpA[1], xpA[2] ,iA);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(iA, fxp, fx, RtA);
+  body2lab_fxx(iA, fxxp, fxx, RtA);
 
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
        	{
-	  df[k1][k2] = 2.0*Xa[k1][k2];
+	  df[k1][k2] = fxx[k1][k2];
 	  df[k1][k2+3] = 0;
 	}
     }
-  /* calc fx e gx */
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fx[k1] = 0;
-      //gx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
-	  //gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
-	}
-    } 
-
   for (k1 = 0; k1 < 3; k1++)
     {
       df[3][k1] = fx[k1];
@@ -651,22 +696,26 @@ void fdjacDistNegNeighPlane5SE(int n, double x[], double fvec[], double **df,
 {
   double fx[3], rD[3];
   int k1, k2;
- 
+  double xpA[3], fxxp[3][3], fxp[3], fxx[3][3];
+
+   /* ci mettiamo nel riferimento del corpo rigido dove lo Jacobiano
+     assume la forma più semplice */
+  lab2body(iA, &x[0], xpA, rA, RtA);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
+  calcfxx(fxxp, xpA[0], xpA[1], xpA[2] ,iA);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(iA, fxp, fx, RtA);
+  body2lab_fxx(iA, fxxp, fxx, RtA);
+
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
        	{
-	  df[k1][k2] = 2.0*Xa[k1][k2];
+	  df[k1][k2] = fxx[k1][k2];
 	}
     }
-  /* calc fx*/
   for (k1 = 0; k1 < 3; k1++)
     {
-      fx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
-	}
       rD[k1] = x[k1] + gradplane[k1]*x[4];
     } 
   //printf("rC: %f %f %f rD: %f %f %f\n", x[0], x[1], x[2], rD[0], rD[1], rD[2]);
@@ -750,27 +799,25 @@ void funcs2beZeroedDistNegSE(int n, double x[], double fvec[], int i, int j, dou
 
 void funcs2beZeroedDistNeg5SE(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
-  int k1, k2; 
+  int k1; 
   double fx[3], gx[3], rD[3];
   /* x = (r, alpha, t) */ 
-  
+  double xpA[3], xpB[3], fxp[3], gxp[3];
+  /* ci mettiamo nel riferimento del corpo rigido dove lo Jacobiano
+     assume la forma più semplice */
+  lab2body(i, &x[0], xpA, rA, RtA);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], i);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(i, fxp, fx, RtA);
+
   for (k1 = 0; k1 < 3; k1++)
     {
-      fx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
-	}
       rD[k1] = x[k1] + fx[k1]*x[4];
     }
+  lab2body(j, rD, xpB, rB, RtB);  
+  calcfx(gxp, xpB[0], xpB[1], xpB[2], j);
+  body2lab_fx(j, gxp, gx, RtA);  
   for (k1 = 0; k1 < 3; k1++)
-    {
-      gx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	gx[k1] += 2.0*Xb[k1][k2]*(rD[k2] - rB[k2]);
-    }
-
-   for (k1 = 0; k1 < 3; k1++)
     {
       fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
     }
@@ -793,23 +840,16 @@ void funcs2beZeroedDistNeg5SE(int n, double x[], double fvec[], int i, int j, do
 
 void funcs2beZeroedDistNegNeighPlaneSE(int n, double x[], double fvec[], int i)
 {
-  int k1, k2; 
+  int k1; 
   double fx[3];
+  double xpA[3], fxp[3];
+
+  lab2body(i, &x[0], xpA, rA, RtA);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], i);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(i, fxp, fx, RtA);
+
   for (k1 = 0; k1 < 3; k1++)
-    {
-      fx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
-    }
-#if 0
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      gx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3] - rB[k2]);
-    }
-#endif
-   for (k1 = 0; k1 < 3; k1++)
     {
       fvec[k1] = fx[k1] - Sqr(x[6])*gradplane[k1];
     }
