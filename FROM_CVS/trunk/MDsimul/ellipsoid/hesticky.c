@@ -17,6 +17,7 @@
 #define MD_DEBUG39(x) 
 #define MD_DEBUG40(x) 
 #define MD_DEBUG41(x) 
+#define MD_DEBUG45(x)  
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
@@ -3221,7 +3222,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
     NSP = MD_STSPOTS_B;
 #endif
   *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, distsOld);
-  MD_DEBUG34(printf("[search_contact_faster_neigh_plane_all_sp] t=%.15G t1=%.15G dist=%.15G\n", *t, t1, *d1));
+  MD_DEBUG45(printf("[search_contact_faster_neigh_plane_all_sp] t=%.15G t1=%.15G dist=%.15G\n", *t, t1, *d1));
 #if 0
   if ((t2-t1)*maxddot < *d1 - OprogStatus.epsdSPNL)
     return 1;
@@ -3247,7 +3248,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 #endif
       *t += delt;
       *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
-      MD_DEBUG34(printf("UNO *d1=%.15G t=%.15G t1=%.15G\n", *d1,*t,t1));
+      MD_DEBUG45(printf("UNO *d1=%.15G t=%.15G t1=%.15G delt=%.15G\n", *d1,*t,t1,delt));
 #if 0
       if (its > 100 && its%10 == 0)
 	{
@@ -3266,7 +3267,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 	    delt /= GOLD;
 	  *t = told + delt;
 	  *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
-	  MD_DEBUG34(printf("DUE *d1=%.15G t=%.15G t1=%.15G\n", *d1,*t,t1));
+	  MD_DEBUG45(printf("DUE *d1=%.15G t=%.15G t1=%.15G\n", *d1,*t,t1));
 	  itsf++;	
 	  if (itsf > 100)
 	    {
@@ -3732,7 +3733,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 #endif
 			mdPrintf(ALL,"[locate_contact_nnl_sp] can't find contact point!\n",NULL);
 
-		      MD_DEBUG34(printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t-delt, t2arr[nn][nn2], delt, nn, nn2, dists[nn][nn2], nn, nn2, distsOld[nn][nn2]));
+		      MD_DEBUG45(if (!tocheck[nn][nn2]) printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t-delt, t2arr[nn][nn2], delt, nn, nn2, dists[nn][nn2], nn, nn2, distsOld[nn][nn2]));
 		      /* Se refine_contact fallisce deve cmq continuare a cercare 
 		       * non ha senso smettere...almeno credo */
 		      //gotcoll = -1;
