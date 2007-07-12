@@ -1997,7 +1997,7 @@ void calc_encpp(void)
   double v[3], norm;
   int pt, sp;
   double com[3];
- 
+
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
 #ifdef MD_EDHEFLEX_OPTNNL
@@ -2015,6 +2015,8 @@ void calc_encpp(void)
 	typesArr[pt].ppr[kk] = com[kk];
       for (kk = 0; kk < 3; kk++)
 	typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk]+fabs(com[kk]);
+      MD_DEBUG31(printf("typesArr.sax= %f %f %f .ppsax=%f %f %f\n", typesArr[pt].sax[0],typesArr[pt].sax[1],typesArr[pt].sax[2],
+	                                                 typesArr[pt].ppsax[0],typesArr[pt].ppsax[1],typesArr[pt].ppsax[2]));
       //printf("pt=%d com=%f %f %f\n", pt, com[0], com[1], com[2]);
 #else
       for (kk = 0; kk < 3; kk++)
@@ -3243,7 +3245,11 @@ void usrInitAft(void)
 #endif
 	}
     }
-
+  else 
+    {
+      if (OprogStatus.useNNL)
+	calc_encpp();
+    }
   printf("MAXAX: %.15G rcut: %.15G\n", MAXAX, Oparams.rcut);
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
   cellsx = L / Oparams.rcut;

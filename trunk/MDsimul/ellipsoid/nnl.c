@@ -15,6 +15,7 @@
 #define MD_DEBUG36(x) 
 #define MD_DEBUG37(x) 
 #define MD_DEBUG38(x) 
+#define MD_DEBUG39(x) 
 #ifdef EDHE_FLEX
 extern int is_sphere(int i);
 extern int *is_a_sphere_NNL;
@@ -210,7 +211,7 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       del = nebrTab[i].axc;	
       break;
     }
-
+MD_DEBUG39(printf("lati parallel %f %f %f\n", nebrTab[i].axa, nebrTab[i].axb, nebrTab[i].axc));
   /* NOTA: epsdNL+epsd viene usato come buffer per evitare problemi numerici 
    * nell'update delle NNL. */
   del -= OprogStatus.epsdNL+OprogStatus.epsd;
@@ -224,7 +225,8 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       /* rB[] (i.e. nebrTab[i].r[]) è un punto appartenente al piano */
       point[kk] = nebrTab[i].r[kk] + del*grad[kk]; 
     }
-  MD_DEBUG33(printf("i=%d del=%f point=%f %f %f grad =%f %f %f\n", i, del, point[0], point[1], point[2], grad[0], grad[1], grad[2] ));
+  MD_DEBUG39(printf("i=%d del=%f point=%f %f %f grad =%f %f %f\n", i, del, point[0], point[1], point[2], grad[0], grad[1], grad[2] ));
+  MD_DEBUG39(printf("pos=%f %f %f\n", rx[i], ry[i], rz[i]));
 }
 void growth_rebuildNNL(int i)
 {
