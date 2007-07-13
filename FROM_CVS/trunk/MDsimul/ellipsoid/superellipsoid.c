@@ -169,34 +169,34 @@ void body2lab_fxx(int i, double fxxp[3][3], double fxx[3][3], double **Ri)
 }
 extern void calc_Rdot(int i, double cosea[3], double sinea[3], double **Ro);
 
-void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[3], double **X,
-	       double D[3][3], double **R, 
-	       double pos[3], double vel[3], double fxp[3], double fxxp[3][3],
+void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[3], 
+	       double **R, double pos[3], double vel[3], double fxp[3], double fxxp[3][3],
 	       double Fxt[3], double *Ft)
 {
-  double tRfxRdot[3][3], tRdotfxR[3][3], fxRdot[3]; 
+  double tRfxRdot[3][3], tRdotfxR[3][3], tRdotfx[3], fxxRdot[3][3], tRfxx[3][3]; 
   double DtX[3][3], dx[3];
   int k1, k2, k3;
   calc_Rdot(i, cosea, sinea, Rdot);
-#if 0
+#if 1
   for (k1 = 0; k1 < 3; k1++)
     {
-      fxRdot[k1] = 0.0;
+      tRdotfx[k1] = 0.0;
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  fxRdot[k1] += Rdot[k1][k2]*fxp[k2];
+	  tRdotfx[k1] += Rdot[k2][k1]*fxp[k2];
 	}
     }
+
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  tRfxxRdot[k1][k2] = 0.0;
+	  tRfxx[k1][k2] = 0.0;
 	  for (k3 = 0; k3 < 3; k3++)
 	    {
-	      if (fxR[k3][k1] == 0.0 || Rdot[k3][k2] == 0.0)
+	      if (R[k3][k1] == 0.0 || fxxp[k3][k2] == 0.0)
 		continue;
-	      tRfxxRdot[k1][k2] += fxx[k3][k1]*Rdot[k3][k2]; 
+	      tRfxx[k1][k2] += R[k3][k1]*fxxp[k3][k2];
 	    }
 	}
     }
@@ -204,12 +204,12 @@ void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  tRdotDfx[k1][k2] = 0.0;
+	  tRfxRdot[k1][k2] = 0.0;
 	  for (k3 = 0; k3 < 3; k3++)
 	    {
-	      if (Rdot[k3][k1] == 0.0 || fxR[k3][k2] == 0.0)
+	      if (Rdot[k3][k1] == 0.0 || tRfxx[k3][k2] == 0.0)
 		continue;
-	      tRdotfxR[k1][k2] += Rdot[k3][k1]*fxR[k3][k2]; 
+	      tRfxRdot[k1][k2] += tRfxx[k1][k3]*Rdot[k3][k1]; 
 	    }
 	}
     }
@@ -220,17 +220,19 @@ void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[
     {
       Fxt[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
-	Fxt[k1] += DtX[k1][k2]*(x[k2]-pos[k2]) - X[k1][k2]*vel[k2]; 
-      Fxt[k1] *= 2.0;
+	Fxt[k1] += tRdotfx[k1] + DtX[k1][k2]*x[k2] - tRfxx[k1][k2]*vel[k2]; 
      } 
    *Ft = 0;
+#if 0
    for (k1 = 0; k1 < 3; k1++)
      dx[k1] = x[k1]-pos[k1];
+#endif
    for (k1 = 0; k1 < 3; k1++)
      {
+       *Ft += fxp[k1]*vel[k1];
        for (k2 = 0; k2 < 3; k2++)
 	 {
-	   *Ft += -vel[k1]*X[k1][k2]*dx[k2]+dx[k1]*DtX[k1][k2]*dx[k2]-dx[k1]*X[k1][k2]*vel[k2];
+	   *Ft += fxp[k1]*Rdot[k1][k2]*x[k2];
 	 }
      }
 #endif
@@ -317,8 +319,8 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   df[3][3] = 0.0;
   df[4][3] = 0.0;
   /* questi vanno ricalcolati per i superellissoidi!*/
-  calcFxtFtSE(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fxp, fxxp, Fxt, &Ft);
-  calcFxtFtSE(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], Xb, DB, RB, rB, vB, gxp, gxxp, Gxt, &Gt);
+  calcFxtFtSE(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], RA, rA, vA, fxp, fxxp, Fxt, &Ft);
+  calcFxtFtSE(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], RB, rB, vB, gxp, gxxp, Gxt, &Gt);
   /* -------------------------------------------- */
   for (k1 = 0; k1 < 3; k1++)
     {
