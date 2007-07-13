@@ -2417,6 +2417,7 @@ void set_angmom_to_zero(int i)
   wx[i]=wy[i]=wz[i]=0.0;
 }
 #endif
+#ifdef EDHE_FLEX
 void find_bonds(void)
 {
   int i, j, NPB, nn, aa, bb;
@@ -2465,6 +2466,7 @@ void find_bonds(void)
 	  }
       }
 }
+#endif
 #ifdef EDHE_FLEX
 int same_position(double x1[3], double x2[3])
 {
@@ -2499,7 +2501,7 @@ void find_conciding_spots(void)
 
 }
 #endif
-
+#ifdef EDHE_FLEX
 void boh(void)
 {
   double dl, tini=0.0, t1=0.0, tl; 
@@ -2515,8 +2517,7 @@ void boh(void)
 
   exit(-1);
 }
-
-
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -3247,8 +3248,10 @@ void usrInitAft(void)
     }
   else 
     {
+#ifdef EDHE_FLEX
       if (OprogStatus.useNNL)
 	calc_encpp();
+#endif
     }
   printf("MAXAX: %.15G rcut: %.15G\n", MAXAX, Oparams.rcut);
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
@@ -3296,13 +3299,13 @@ void usrInitAft(void)
 #endif
 #ifdef EDHE_FLEX
   find_conciding_spots();
-   if (Oparams.maxbondsSaved==-1)
+  if (Oparams.maxbondsSaved==-1)
     {
       find_bonds();
     }
   if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
     Oparams.maxbondsSaved = OprogStatus.maxbonds;
-#else
+#elif defined(MD_PATCHY_HE)
   find_bonds();
 #endif
 #ifdef MD_ASYM_ITENS
@@ -4056,6 +4059,7 @@ void readAllCor(FILE* fs)
 	  mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	  exit(-1);
 	}
+      //printf("pos=%f %f %f type=%d\n", rx[i], ry[i], rz[i], typeOfPart[i]);
 #else
       if (fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
 		 &uxx[i], &uxy[i], &uxz[i], &uyx[i], &uyy[i], &uyz[i], &uzx[i], &uzy[i], &uzz[i]) < 9)
@@ -4104,6 +4108,8 @@ void readAllCor(FILE* fs)
     }
 #endif
       
+#ifdef EDHE_FLEX
   free(s1);
   free(s2);
+#endif
 }
