@@ -3293,8 +3293,9 @@ void usrInitAft(void)
       numbonds[i] = 0;
     }
 #endif
+#endif
   printf("L=%f parnum: %d parnumA: %d\n", L, Oparams.parnum, Oparams.parnumA);
-#ifndef EDHE_FLEX
+#if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
   printf("sigmaSticky=%.15G\n", Oparams.sigmaSticky);
 #endif
 #ifdef EDHE_FLEX
@@ -3316,6 +3317,7 @@ void usrInitAft(void)
       upd_refsysM(i);
     }
 #endif
+#ifdef MD_PATCHY_HE
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
 #endif
   //exit(-1);
