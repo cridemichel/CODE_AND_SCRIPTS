@@ -16,6 +16,8 @@ void update_MSDrot(int i);
 void update_MSD(int i);
 #ifdef MD_SUPERELLIPSOID
 int is_superellipse(int i);
+void fdjacSE(int n, double x[], double fvec[], double **df, 
+	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3]);
 #endif
 #ifdef MD_ASYM_ITENS
 void calc_omega(int i);
@@ -3080,7 +3082,6 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 #ifndef MD_APPROX_JACOB
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
-#ifdef MD_ASYM_ITENS
 void calc_Rdot(int i, double cosea[3], double sinea[3], double **Ro)
 {
   int k1,k2,k3;
@@ -3192,8 +3193,7 @@ void calcFxtFt(int i, double x[3], double **RM, double cosea[3], double sinea[3]
 	 }
      }
 }
-#else
-void calcFxtFt(double x[3], double **X,
+void calcFxtFtSym(double x[3], double **X,
 	       double D[3][3], double Omega[3][3], double **R, 
 	       double pos[3], double vel[3], double gradf[3],
 	       double Fxt[3], double *Ft)
@@ -3268,7 +3268,6 @@ void calcFxtFt(double x[3], double **X,
 	 }
      }
 }
-#endif
 //#define MD_GLOBALNR
 #undef MD_GLOBALNR2
 void fdjacGuess(int n, double x[], double fvec[], double **df, 
@@ -3323,6 +3322,16 @@ void fdjacGuess(int n, double x[], double fvec[], double **df,
   fvec[3] = 0.5*fvec[3]-1.0 - (0.5*tmp-1.0);
 #endif
 }
+int isSymItens(int i)
+{
+  int typei;
+  typei = typeOfPart[i];
+  if (typesArr[typei].I[0]==typesArr[typei].I[1] &&
+      typesArr[typei].I[1]==typesArr[typei].I[2])
+    return 1;
+  else
+    return 0;
+}
 /* funzione che calcola lo Jacobiano */
 void fdjac(int n, double x[], double fvec[], double **df, 
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
@@ -3333,9 +3342,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
   int typei, typej;
 #endif
   double  rA[3], rB[3], ti, vA[3], vB[3];
-#ifndef MD_ASYM_ITENS
   double OmegaA[3][3], OmegaB[3][3];
-#endif
   double DA[3][3], DB[3][3], fx[3], gx[3];
   double Fxt[3], Gxt[3], Ft, Gt;
 #ifdef MD_ASYM_ITENS
@@ -3345,7 +3352,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
 #ifdef MD_SUPERELLIPSOID
   if (is_superellipse(iA) || is_superellipse(iB))
     {
-      fdjacSE(n, x, fvec, df, vecfunc, iA, iB, shift, fx, gx);
+      fdjacSE(n, x, fvec, df, vecfunc, iA, iB, shift);
       return;
     }
 #endif
@@ -3358,7 +3365,10 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vA[2] = vz[iA];
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+ if (isSymItens(iA)) 
+   UpdateOrient(iA, ti, RA, OmegaA);
+ else
+   symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
   UpdateOrient(iA, ti, RA, OmegaA);
 #endif
@@ -3407,7 +3417,10 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vB[1] = vy[iB];
   vB[2] = vz[iB];
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(iB, ti, RB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
+  if (isSymItens(iB)) 
+    UpdateOrient(iB, ti, RB, OmegaB);
+  else
+    symtop_evolve_orient(iB, ti, RB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
   UpdateOrient(iB, ti, RB, OmegaB);
 #endif
@@ -3495,11 +3508,17 @@ void fdjac(int n, double x[], double fvec[], double **df,
   df[3][3] = 0.0;
   df[4][3] = 0.0;
 #ifdef MD_ASYM_ITENS
-  calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
-  calcFxtFt(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], Xb, DB, RB, rB, vB, gx, Gxt, &Gt);
+  if (isSymItens(iA))
+    calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  else
+    calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
+  if (isSymItens(iB))
+    calcFxtFtSym(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
+  else
+    calcFxtFt(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], Xb, DB, RB, rB, vB, gx, Gxt, &Gt);
 #else
-  calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
-  calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
+  calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  calcFxtFtSym(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
 #endif
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -5494,6 +5513,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
 #endif
   *d1 = calcDistNeg(*t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  //printf("quii d=%.15G\n", *d1);
+  
   timesF++;
   MD_DEBUG31(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
