@@ -20,6 +20,9 @@
 extern int is_sphere(int i);
 extern int *is_a_sphere_NNL;
 #endif
+#ifdef EDHE_FLEX
+extern int isSymItens(int i);
+#endif
 #ifdef MD_SUPERELLIPSOID
 int is_superellipse(int i);
 #endif
@@ -90,17 +93,14 @@ extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto
 extern double accngA, accngB;
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
 extern double min(double a, double b);
-#ifdef MD_ASYM_ITENS
 extern void calcFxtFt(int i, double x[3], double **RM, double cosea[3], double sinea[3], double **X,
 	       double D[3][3], double **R, 
 	       double pos[3], double vel[3], double gradf[3],
 	       double Fxt[3], double *Ft);
-#else
-extern void calcFxtFt(double x[3], double **X,
+extern void calcFxtFtSym(double x[3], double **X,
 	       double D[3][3], double Omega[3][3], double **R, 
 	       double pos[3], double vel[3], double gradf[3],
 	       double Fxt[3], double *Ft);
-#endif
 double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3]);
 extern double calc_norm(double *vec);
 extern void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3]);
@@ -211,7 +211,7 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
       del = nebrTab[i].axc;	
       break;
     }
-MD_DEBUG39(printf("lati parallel %f %f %f\n", nebrTab[i].axa, nebrTab[i].axb, nebrTab[i].axc));
+  MD_DEBUG39(printf("i=%d lati parallel %f %f %f\n", i, nebrTab[i].axa, nebrTab[i].axb, nebrTab[i].axc));
   /* NOTA: epsdNL+epsd viene usato come buffer per evitare problemi numerici 
    * nell'update delle NNL. */
   del -= OprogStatus.epsdNL+OprogStatus.epsd;
@@ -226,7 +226,7 @@ MD_DEBUG39(printf("lati parallel %f %f %f\n", nebrTab[i].axa, nebrTab[i].axb, ne
       point[kk] = nebrTab[i].r[kk] + del*grad[kk]; 
     }
   MD_DEBUG39(printf("i=%d del=%f point=%f %f %f grad =%f %f %f\n", i, del, point[0], point[1], point[2], grad[0], grad[1], grad[2] ));
-  MD_DEBUG39(printf("pos=%f %f %f\n", rx[i], ry[i], rz[i]));
+  MD_DEBUG39(printf("nplane=%d pos=%f %f %f\n", nplane, rx[i], ry[i], rz[i]));
 }
 void growth_rebuildNNL(int i)
 {
@@ -283,11 +283,8 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
 #ifdef EDHE_FLEX
   int typei;
 #endif
-#ifdef MD_ASYM_ITENS
   double psi, phi;
-#else
   double OmegaA[3][3];
-#endif
   int k1, k2;
   ti = x[4] + (trefG - atomTime[iA]);
   rA[0] = rx[iA] + vx[iA]*ti;
@@ -298,7 +295,10 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
   vA[2] = vz[iA];
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+  if (isSymItens(iA))
+    UpdateOrient(iA, ti, RA, OmegaA);
+  else
+    symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
   UpdateOrient(iA, ti, RA, OmegaA);
 #endif
@@ -401,9 +401,12 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
   df[3][3] = 0.0;
   df[4][3] = 0.0;
 #ifdef MD_ASYM_ITENS
-  calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
+  if (isSymItens(iA))
+    calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  else
+    calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
 #else
-  calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
 #endif
   //calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
   for (k1 = 0; k1 < 3; k1++)
@@ -446,11 +449,8 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
 #ifdef EDHE_FLEX
   int typei, typej;
 #endif
- #ifdef MD_ASYM_ITENS
   double phi, psi;
-#else
   double OmegaA[3][3];
-#endif
   ti = x[4] + (trefG - atomTime[iA]);
   rA[0] = rx[iA] + vx[iA]*ti;
   rA[1] = ry[iA] + vy[iA]*ti;
@@ -460,7 +460,10 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   vA[2] = vz[iA];
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+  if (isSymItens(iA))
+    UpdateOrient(iA, ti, RA, OmegaA);
+  else
+    symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
   UpdateOrient(iA, ti, RA, OmegaA);
 #endif
@@ -561,9 +564,12 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   df[3][3] = 0.0;
   df[4][3] = 0.0;
 #ifdef MD_ASYM_ITENS
-  calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
+  if (isSymItens(iA))
+    calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  else
+    calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
 #else
-  calcFxtFt(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
 #endif
   //calcFxtFt(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
   for (k1 = 0; k1 < 3; k1++)
@@ -2829,7 +2835,8 @@ void calc_delt(double maxddoti[6], double *delt, double dists[6])
   for (nn = 0; nn < 6; nn++)
     {
       dt = fabs(dists[nn]) / maxddoti[nn];
-      //printf("nn=%d dt=%.15G delt=%.15G dists=%.15G maxddoti=%15G\n", nn, dt, *delt, dists[nn], maxddoti[nn]);
+      //if (dt < 1E-14)
+	//printf("nn=%d dt=%.15G delt=%.15G dists=%.15G maxddoti=%15G\n", nn, dt, *delt, dists[nn], maxddoti[nn]);
       if (nn==0 || dt < (*delt))
 	*delt = dt;
     }
@@ -2963,7 +2970,8 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
 	  printf("NNL SEARCH CONTACT FASTER t=%.15G its=%d\n", *t+t1, its);
 	}
 #endif
-      //printf("d=%.15G t=%.15G\n", *d1, *t+t1);
+      //if (delt < 1E-12)
+	//printf("maxddot=%.15G delt=%.15G d=%.15G t=%.15G\n", maxddot, delt, *d1, *t+t1);
 #if 1
       itsf = 0;
       while (check_cross(distsOld, dists, crossed))
