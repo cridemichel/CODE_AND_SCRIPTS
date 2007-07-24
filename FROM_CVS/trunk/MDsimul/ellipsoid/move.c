@@ -12,6 +12,7 @@
 #define MD_DEBUG35(x)  
 #define MD_DEBUG36(x)  
 #define MD_DEBUG38(x) 
+#define MD_DEBUG39(x) 
 void update_MSDrot(int i);
 void update_MSD(int i);
 #ifdef MD_SUPERELLIPSOID
@@ -4029,6 +4030,8 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
   if (is_superellipse(iA) || is_superellipse(iB))
     {
       fdjacDistNegSE(n, x, fvec, df, vecfunc, iA, iB, shift, fx, gx);
+      MD_DEBUG39(printf("SUPERELLIPSE:\n"));
+      MD_DEBUG39(print_matrix(df, 8));
       return;
     }
 #endif
@@ -4122,6 +4125,8 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
     df[k1+5][6] = 0;
   for (k1 = 0; k1 < 3; k1++)
     df[k1+5][7] = fx[k1];
+  MD_DEBUG39(printf("ELLIPSE:\n"));
+  MD_DEBUG39(print_matrix(df, 8));
 #ifndef MD_GLOBALNRD
  /* and now evaluate fvec */
  for (k1 = 0; k1 < 3; k1++)
@@ -4143,6 +4148,8 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
   //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
+  MD_DEBUG38(printf("ELLIPSE fvec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4], fvec[5],
+	 fvec[6], fvec[7]));
 }
 
 /* funzione che calcola lo Jacobiano */
