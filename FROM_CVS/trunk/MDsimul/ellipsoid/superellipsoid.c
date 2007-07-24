@@ -13,6 +13,7 @@
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
 #define MD_DEBUG36(x) 
+#define MD_DEBUG37(x) x
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
@@ -78,10 +79,21 @@ extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdir
 
 int is_superellipse(int i)
 {
+  MD_DEBUG37(return 1);
   if (typesArr[typeOfPart [i]].n[0]==1.0 && typesArr[typeOfPart [i]].n[1]==1.0)
     return 0;
   else 
     return 1;
+}
+double calcf(double *x,int i)
+{
+  double a,b,c,e,n;
+  a = typesArr[typeOfPart[i]].sax[0];
+  b = typesArr[typeOfPart[i]].sax[1];
+  c = typesArr[typeOfPart[i]].sax[2];
+  e = typesArr[typeOfPart[i]].n[0];
+  n = typesArr[typeOfPart[i]].n[1];
+  return pow(pow(x[0]/a,2.0/e)+pow(x[1]/b,2.0/e),e/n)+pow(x[3]/c,2.0/n)-1.0; 
 }
 void calcfx(double *fx, double x, double y, double z, int i)
 {
@@ -93,11 +105,11 @@ void calcfx(double *fx, double x, double y, double z, int i)
   c = typesArr[typeOfPart[i]].sax[2];
   e = typesArr[typeOfPart[i]].n[0];
   n = typesArr[typeOfPart[i]].n[1];
-  inve2 = 2.0/e;	 
+  //printf("a=%f b=%f c=%f e=%f n=%f\n", a,b,c,e,n);
+  inve2 = 2.0/e;	
   xa2e = pow(x/a,inve2);
-  yb2e = pow(y/a,inve2);
+  yb2e = pow(y/b,inve2);
   A = pow(xa2e+yb2e,-1.0+e/n);
-  inve2 = 2.0/e;
   fx[0] = (2.0*xa2e*A)/(n*x);
   fx[1] = (2.0*yb2e*A)/(n*y);
   fx[2] = (2.0*pow(z/c,2.0/n))/(n*z);
@@ -107,7 +119,7 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
 {
   /* calcola fxx nel riferimento del corpo rigido */
   double a, b, c, n, e;
-  double xa2e, yb2e, A, xa2eyb2e, emn, nm2, em2, inve2, eSqrnxy;
+  double xa2e, yb2e, A, xa2eyb2e, emn, nm2, em2, inve2, eSqrnxy, eSqrnxSq;
   a = typesArr[typeOfPart[i]].sax[0];
   b = typesArr[typeOfPart[i]].sax[1];
   c = typesArr[typeOfPart[i]].sax[2];
@@ -115,8 +127,9 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   n = typesArr[typeOfPart[i]].n[1];
   inve2 = 2.0/e;
   xa2e = pow(x/a,inve2);
-  yb2e = pow(y/a,inve2);
+  yb2e = pow(y/b,inve2);
   eSqrnxy = e*Sqr(n)*x*y;
+  eSqrnxSq = e*Sqr(n)*x*x;
   A = pow(xa2e+yb2e, -2.0+e/n);
   xa2eyb2e = xa2e*yb2e;
   emn = e-n;
@@ -124,12 +137,12 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   em2 = e-2.0;
   df[0][0] = (A*(-2.0*e*nm2*Sqr(xa2e) - 
        2.0*em2*n*xa2eyb2e))/ (e*Sqr(n)*Sqr(x));
-  df[0][1] = (4*emn*xa2eyb2e*A)/ (eSqrnxy); 
+  df[0][1] = (4*emn*xa2eyb2e*A)/ (eSqrnxSq); 
   df[0][2] = 0.0;
   df[1][0] = 4*emn*xa2eyb2e*A/(eSqrnxy);
-  df[1][1] = (A*(-2*em2*n*xa2e*yb2e- 2*e*nm2*Sqr(yb2e)))/(e*Sqr(n)*Sqr(y));
+  df[1][1] = (A*(-2*em2*n*xa2e*yb2e- 2.0*e*nm2*Sqr(yb2e)))/(e*Sqr(n)*Sqr(y));
   df[1][2] = df[2][0] = df[2][1] = 0.0;
-  df[2][2] = (-2*nm2*pow(z/c,2/n))/(Sqr(n)*Sqr(z)); 
+  df[2][2] = (2.0*(2.0/n-1.0)*pow(z/c,2/n))/(n*Sqr(z)); 
 }
 extern void lab2body(int i, double x[], double xp[], double *rO, double **R);
 void body2lab_fx(int i, double xp[], double x[], double **R)
@@ -373,6 +386,7 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
     {
       for (k2 = 0; k2 < 3; k2++)
        	{
+	  //printf("fxx[%d][%d]=%.15G gxx=%.15G\n", k1, k2, fxx[k1][k2], gxx[k1][k2]);
 	  df[k1][k2] = 2.0*fxx[k1][k2];
 	  df[k1][k2+3] = 2.0*Sqr(x[6])*gxx[k1][k2];
 	}
@@ -451,19 +465,24 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
     df[k1+5][7] = fx[k1];
 #ifndef MD_GLOBALNRD
  /* and now evaluate fvec */
- for (k1 = 0; k1 < 3; k1++)
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
     {
-      fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
-    }
- fvec[3] = 0.0;
- fvec[4] = 0.0;
- for (k1 = 0; k1 < 3; k1++)
-   {
       fvec[3] += (x[k1]-rA[k1])*fx[k1];
       fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[4] = 0.5*fvec[4]-1.0;
+
+ printf("OLD)f=%.15G g=%.15G\n", fvec[3], fvec[4]);
+ for (k1 = 0; k1 < 3; k1++)
+   {
+     fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
    }
- fvec[3] = 0.5*fvec[3]-1.0;
- fvec[4] = 0.5*fvec[4]-1.0;
+ fvec[3] = calcf(xpA,iA);
+ fvec[4] = calcf(xpB,iB);
+ printf("NEW)f=%.15G g=%.15G\n", fvec[3], fvec[4]);
   /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
    * essere anche negativa! */
   for (k1=0; k1 < 3; k1++)
@@ -778,15 +797,9 @@ void funcs2beZeroedDistNegSE(int n, double x[], double fvec[], int i, int j, dou
     {
       fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
     }
-  fvec[3] = 0.0;
-  fvec[4] = 0.0;
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      fvec[4] += (x[k1+3]-rB[k1])*gx[k1];
-    }
-  fvec[3] = 0.5*fvec[3]-1.0;
-  fvec[4] = 0.5*fvec[4]-1.0;
+
+  fvec[3] = calcf(xpA,i);
+  fvec[4] = calcf(xpB,j);
 
   /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
    * essere anche negativa! */
