@@ -79,6 +79,7 @@ extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdir
 
 int is_superellipse(int i)
 {
+	return 1;
   MD_DEBUG37(return 1);
   if (typesArr[typeOfPart [i]].n[0]==1.0 && typesArr[typeOfPart [i]].n[1]==1.0)
     return 0;
@@ -236,16 +237,15 @@ void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[
 	Fxt[k1] += tRdotfx[k1] + DtX[k1][k2]*x[k2] - tRfxx[k1][k2]*vel[k2]; 
      } 
    *Ft = 0;
-#if 0
+#if 1
    for (k1 = 0; k1 < 3; k1++)
      dx[k1] = x[k1]-pos[k1];
 #endif
    for (k1 = 0; k1 < 3; k1++)
      {
-       *Ft += fxp[k1]*vel[k1];
        for (k2 = 0; k2 < 3; k2++)
 	 {
-	   *Ft += fxp[k1]*Rdot[k1][k2]*x[k2];
+	   *Ft += -fxp[k1]*R[k1][k2]*vel[k2] + fxp[k1]*Rdot[k1][k2]*dx[k2];
 	 }
      }
 #endif
@@ -303,17 +303,17 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   na = (iB < Oparams.parnumA)?0:1;
   typej = typeOfPart[iB];
 
-  lab2body(iA, &x[0], xpA, rA, RtA);
-  lab2body(iB, &x[3], xpB, rB, RtB);  
+  lab2body(iA, &x[0], xpA, rA, RA);
+  lab2body(iB, &x[3], xpB, rB, RB);  
   calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
   calcfx(gxp, xpB[0], xpB[1], xpB[2], iB);
   calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
   calcfxx(gxxp, xpB[0], xpB[1], xpB[2], iB);
   /* ...and now we have to go back to laboratory reference system */
-  body2lab_fx(iA, fxp, fx, RtA);
-  body2lab_fx(iB, gxp, gx, RtA);  
-  body2lab_fxx(iA, fxxp, fxx, RtA);
-  body2lab_fxx(iB, gxxp, gxx, RtB);
+  body2lab_fx(iA, fxp, fx, RA);
+  body2lab_fx(iB, gxp, gx, RB);  
+  body2lab_fxx(iA, fxxp, fxx, RA);
+  body2lab_fxx(iB, gxxp, gxx, RB);
 
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -334,6 +334,9 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   /* questi vanno ricalcolati per i superellissoidi!*/
   calcFxtFtSE(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], RA, rA, vA, fxp, fxxp, Fxt, &Ft);
   calcFxtFtSE(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], RB, rB, vB, gxp, gxxp, Gxt, &Gt);
+  
+  printf("1)[SE] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
+  printf("1)[SE] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
   /* -------------------------------------------- */
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -347,6 +350,7 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
     {
       fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
     }
+  /* WARNING: fix this for SE!!!! */
   fvec[3] = 0.0;
   fvec[4] = 0.0;
   for (k1 = 0; k1 < 3; k1++)
