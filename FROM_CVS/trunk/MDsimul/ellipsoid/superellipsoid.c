@@ -13,7 +13,7 @@
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
 #define MD_DEBUG36(x) 
-#define MD_DEBUG37(x) x
+#define MD_DEBUG37(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
@@ -93,7 +93,7 @@ double calcf(double *x,int i)
   c = typesArr[typeOfPart[i]].sax[2];
   e = typesArr[typeOfPart[i]].n[0];
   n = typesArr[typeOfPart[i]].n[1];
-  return pow(pow(x[0]/a,2.0/e)+pow(x[1]/b,2.0/e),e/n)+pow(x[3]/c,2.0/n)-1.0; 
+  return pow(pow(x[0]/a,2.0/e)+pow(x[1]/b,2.0/e),e/n)+pow(x[2]/c,2.0/n)-1.0; 
 }
 void calcfx(double *fx, double x, double y, double z, int i)
 {
@@ -373,22 +373,39 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
      assume la forma più semplice */
   lab2body(iA, &x[0], xpA, rA, RtA);
   lab2body(iB, &x[3], xpB, rB, RtB);  
+#if 0
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
+	}
+    }
+#endif
+  MD_DEBUG37(printf("fx=%.15G %.15G %.15G gx=%.15G %.15G %.15G\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
   calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
   calcfx(gxp, xpB[0], xpB[1], xpB[2], iB);
   calcfxx(fxxp, xpA[0], xpA[1], xpA[2] ,iA);
   calcfxx(gxxp, xpB[0], xpB[1], xpB[2], iB);
   /* ...and now we have to go back to laboratory reference system */
   body2lab_fx(iA, fxp, fx, RtA);
-  body2lab_fx(iB, gxp, gx, RtA);  
+  body2lab_fx(iB, gxp, gx, RtB);  
   body2lab_fxx(iA, fxxp, fxx, RtA);
   body2lab_fxx(iB, gxxp, gxx, RtB);
+  MD_DEBUG37(printf("NEW fx=%.15G %.15G %.15G gx=%.15G %.15G %.15G\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
        	{
 	  //printf("fxx[%d][%d]=%.15G gxx=%.15G\n", k1, k2, fxx[k1][k2], gxx[k1][k2]);
-	  df[k1][k2] = 2.0*fxx[k1][k2];
-	  df[k1][k2+3] = 2.0*Sqr(x[6])*gxx[k1][k2];
+	  df[k1][k2] = fxx[k1][k2];
+	  df[k1][k2+3] = Sqr(x[6])*gxx[k1][k2];
+	  printf("fxx[%d][%d]:%.15g Xa:%.15G\n", k1, k2, fxx[k1][k2], 2.0*Xa[k1][k2]);
+	  printf("gxx[%d][%d]:%.15g Xb:%.15G\n", k1, k2, gxx[k1][k2], 2.0*Xb[k1][k2]);
 	}
     }
 #if 1
@@ -444,9 +461,9 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
       for (k2 = 0; k2 < 3; k2++)
 	{
 	  if (k1==k2)
-	    df[k1+5][k2] = 1 + 2.0*x[7]*fxx[k1][k2];
+	    df[k1+5][k2] = 1 + x[7]*fxx[k1][k2];
 	  else 
-	    df[k1+5][k2] = 2.0*x[7]*fxx[k1][k2];
+	    df[k1+5][k2] = x[7]*fxx[k1][k2];
 	}
     }
   for (k1=0; k1<3; k1++)
@@ -475,14 +492,14 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
   fvec[3] = 0.5*fvec[3]-1.0;
   fvec[4] = 0.5*fvec[4]-1.0;
 
- printf("OLD)f=%.15G g=%.15G\n", fvec[3], fvec[4]);
+ MD_DEBUG37(printf("OLD)f=%.15G g=%.15G\n", fvec[3], fvec[4]));
  for (k1 = 0; k1 < 3; k1++)
    {
      fvec[k1] = fx[k1] + Sqr(x[6])*gx[k1];
    }
  fvec[3] = calcf(xpA,iA);
  fvec[4] = calcf(xpB,iB);
- printf("NEW)f=%.15G g=%.15G\n", fvec[3], fvec[4]);
+ MD_DEBUG37(printf("NEW)f=%.15G g=%.15G\n", fvec[3], fvec[4]));
   /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
    * essere anche negativa! */
   for (k1=0; k1 < 3; k1++)

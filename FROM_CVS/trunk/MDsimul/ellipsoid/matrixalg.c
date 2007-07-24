@@ -5,9 +5,9 @@
 #include<math.h>
 #include<stdio.h>
 #include<stdlib.h>
-#define MD_DEBUG(X) X
-#define MD_DEBUG10(X) X
-#define MD_DEBUG18(X) X
+#define MD_DEBUG(X) 
+#define MD_DEBUG10(X) 
+#define MD_DEBUG18(X)
 #ifdef EDHE_FLEX 
 extern int *typeOfPart;
 #endif
