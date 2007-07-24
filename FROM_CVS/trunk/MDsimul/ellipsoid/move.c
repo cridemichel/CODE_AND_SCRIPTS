@@ -4928,7 +4928,7 @@ retry:
 	  calcguess=2;
 	  goto retry;
 	} 
-      printf("I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      printf("[calcDistNeg] I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
       Oparams.time = t + t1;
       store_bump(i, j);
       exit(-1);
@@ -4996,7 +4996,7 @@ retry:
     }
 #endif
 
-  MD_DEBUG50(printf("[calcDistNeg] - END");)
+  MD_DEBUG50(printf("[calcDistNeg] - END"));
   if (OprogStatus.dist5)
     {
       if (segno*vecg[4]<0 && fabs(segno*vecg[4])>3E-8)

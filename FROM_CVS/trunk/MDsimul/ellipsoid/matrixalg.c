@@ -5,9 +5,9 @@
 #include<math.h>
 #include<stdio.h>
 #include<stdlib.h>
-#define MD_DEBUG(X) 
-#define MD_DEBUG10(X) 
-#define MD_DEBUG18(X) 
+#define MD_DEBUG(X) X
+#define MD_DEBUG10(X) X
+#define MD_DEBUG18(X) X
 #ifdef EDHE_FLEX 
 extern int *typeOfPart;
 #endif
@@ -4669,6 +4669,7 @@ void newtDistNeg(double x[], int n, int *check,
 #else
       if (OprogStatus.toldxNR > 0.0)
 	{
+	  MD_DEBUG(printf("qui?!?\n"));
 	  if (OprogStatus.dist5)
 	    adjust_step_dist5(x, p, fx, gx);
 	  else
