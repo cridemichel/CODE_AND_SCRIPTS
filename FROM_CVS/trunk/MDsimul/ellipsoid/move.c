@@ -3354,7 +3354,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
   if (is_superellipse(iA) || is_superellipse(iB))
     {
       fdjacSE(n, x, fvec, df, vecfunc, iA, iB, shift);
-      return;
+      //return;
     }
 #endif
   ti = x[4] + (trefG - atomTime[iA]);
@@ -3521,6 +3521,8 @@ void fdjac(int n, double x[], double fvec[], double **df,
   calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
   calcFxtFtSym(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
 #endif
+  printf("2)[HE] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
+  printf("2)[HE] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
   for (k1 = 0; k1 < 3; k1++)
     {
       //df[k1][4] = 0;
