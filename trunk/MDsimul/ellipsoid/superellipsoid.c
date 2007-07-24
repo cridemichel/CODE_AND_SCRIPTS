@@ -373,7 +373,7 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
      assume la forma più semplice */
   lab2body(iA, &x[0], xpA, rA, RtA);
   lab2body(iB, &x[3], xpB, rB, RtB);  
-#if 0
+#if 1
   /* calc fx e gx */
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -404,8 +404,8 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
 	  //printf("fxx[%d][%d]=%.15G gxx=%.15G\n", k1, k2, fxx[k1][k2], gxx[k1][k2]);
 	  df[k1][k2] = fxx[k1][k2];
 	  df[k1][k2+3] = Sqr(x[6])*gxx[k1][k2];
-	  printf("fxx[%d][%d]:%.15g Xa:%.15G\n", k1, k2, fxx[k1][k2], 2.0*Xa[k1][k2]);
-	  printf("gxx[%d][%d]:%.15g Xb:%.15G\n", k1, k2, gxx[k1][k2], 2.0*Xb[k1][k2]);
+	  MD_DEBUG37(printf("fxx[%d][%d]:%.15g Xa:%.15G\n", k1, k2, fxx[k1][k2], 2.0*Xa[k1][k2]));
+	  MD_DEBUG37(printf("gxx[%d][%d]:%.15g Xb:%.15G\n", k1, k2, gxx[k1][k2], 2.0*Xb[k1][k2]));
 	}
     }
 #if 1
@@ -480,6 +480,8 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
     df[k1+5][6] = 0;
   for (k1 = 0; k1 < 3; k1++)
     df[k1+5][7] = fx[k1];
+  MD_DEBUG37(printf("SUPERELLIPSE:\n"));
+  MD_DEBUG37(print_matrix(df, 8));
 #ifndef MD_GLOBALNRD
  /* and now evaluate fvec */
   fvec[3] = 0.0;
@@ -506,6 +508,8 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
   //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
+  MD_DEBUG37(printf("SUPERELLIPSE fvec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4], fvec[5],
+	 fvec[6], fvec[7]));
 }
 void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int, int, double []), 
@@ -808,7 +812,7 @@ void funcs2beZeroedDistNegSE(int n, double x[], double fvec[], int i, int j, dou
   calcfx(gxp, xpB[0], xpB[1], xpB[2], j);
   /* ...and now we have to go back to laboratory reference system */
   body2lab_fx(i, fxp, fx, RtA);
-  body2lab_fx(j, gxp, gx, RtA);  
+  body2lab_fx(j, gxp, gx, RtB);  
  
   for (k1 = 0; k1 < 3; k1++)
     {
