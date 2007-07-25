@@ -4580,7 +4580,9 @@ extern int is_superellipse(int i);
 extern int newtDistNegSE(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3], int tryagain);
-
+#ifdef MD_SUPERELLIPSOID
+extern double calc_sign_SE(int i, double *r, double **R, double *x, double **X);
+#endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -4994,11 +4996,15 @@ retry:
     } 
   
   *alpha = vecg[3];
+#ifdef MD_SUPERELLIPSOID
+  segno = calc_sign_SE(i, rA, RtA, r2, Xa);
+#else
   segno = -1;
   /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++) 
       segno += (r2[k1]-rA[k1])*Xa[k1][k2]*(r2[k2]-rA[k2]); 
+#endif
 #if 0
   if (!OprogStatus.dist5)
     {
@@ -5069,11 +5075,15 @@ retry:
 	}
     }
 #ifdef MD_PATCHY_HE
+#ifdef MD_SUPERELLIPSOID
+  segno2 = calc_sign_SE(j, rB, RtB, r1, Xb);
+#else
   segno2 = -1;
   /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++) 
       segno2 += (r1[k1]-rB[k1])*Xb[k1][k2]*(r1[k2]-rB[k2]); 
+#endif
   if (segno2*segno < 0.0 && fabs(segno*segno2) > 3E-8)
     {
       if (tryagain && OprogStatus.targetPhi <= 0)
