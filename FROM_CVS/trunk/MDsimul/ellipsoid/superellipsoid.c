@@ -1138,4 +1138,25 @@ void funcs2beZeroedSE(int n, double x[], double fvec[], int i, int j, double shi
   fvec[3] = calcf(xpA, i);
   fvec[4] = calcf(xpB, j);
 }
+void calc_norm_SE(int i, double *x, double *n, double *r, double **R, double **X)
+{
+  double xp[3], fxp[3];
+  int a, b;
+  if (!is_superellipse(i))
+    {
+      for (a=0; a < 3; a++)
+	{
+	  n[a] = 0;
+	  for (b = 0; b < 3; b++)
+	    {
+	      n[a] += -X[a][b]*(r[b]-x[b]);
+	    }
+	}
+      return;
+    }
+  lab2body(i, x, xp, r, R);
+  calcfx(fxp, xp[0], xp[1], xp[2], i);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(i, fxp, n, R);
+}
 #endif
