@@ -990,4 +990,29 @@ void funcs2beZeroedDistNegNeighPlane5SE(int n, double x[], double fvec[], int i)
 
 }
 /* 06/07/2007 TODO: steepest descent for super-ellipsoids! */
+double calc_sign_SE(int i, double *r, double **R, double *x, double **X)
+{
+  double a,b,c,e,n;
+  int k1, k2;
+  double xp[3], segno;
+  a = typesArr[typeOfPart[i]].sax[0];
+  b = typesArr[typeOfPart[i]].sax[1];
+  c = typesArr[typeOfPart[i]].sax[2];
+  e = typesArr[typeOfPart[i]].n[0];
+  n = typesArr[typeOfPart[i]].n[1];
+  if (!is_superellipse(i))
+    {
+      segno = -1;
+      /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++) 
+	  segno += (x[k1]-r[k1])*X[k1][k2]*(x[k2]-r[k2]); 
+      return segno;
+      MD_DEBUG37(printf("HE segno=%.15G\n", segno));
+    }
+  lab2body(i, x, xp, r, R);
+  segno = pow(pow(xp[0]/a,2.0/e)+pow(xp[1]/b,2.0/e),e/n)+pow(xp[2]/c,2.0/n)-1.0; 
+  MD_DEBUG37(printf("SE segno = %.15G\n" , segno));
+  return segno;
+}
 #endif
