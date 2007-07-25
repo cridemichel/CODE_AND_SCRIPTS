@@ -5,7 +5,7 @@
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x)  
-#define MD_DEBUG31(x) x
+#define MD_DEBUG31(x) 
 #define MD_DEBUG32(x) 
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
@@ -1810,6 +1810,9 @@ void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j)
 #ifdef EDHE_FLEX
 extern void set_angmom_to_zero(int i);
 #endif
+#ifdef MD_SUPERELLIPSOID
+extern void calc_norm_SE(int i, double *x, double *n, double *r, double **R, double **X);
+#endif
 void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 {
   /*
@@ -1820,10 +1823,13 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
    ** THE ROUTINE ALSO COMPUTES COLLISIONAL VIRIAL W.               **
    *******************************************************************
    */
+#ifdef MD_SUPERELLIPSOID
+  double rC[3], rAA[3], rCsh[3];
+#endif
   double factor, invmi, invmj;
   double delpx, delpy, delpz, wrx, wry, wrz, rACn[3], rBCn[3];
   double rAC[3], rBC[3], vCA[3], vCB[3], vc;
-  double norm[3];
+  double norm[3], norm2[3];
   double modn, denom;
 #ifdef MD_HSVISCO
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz ;
@@ -1859,9 +1865,21 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
 #if 1
+#ifdef MD_SUPERELLIPSOID
+  for (a=0; a < 3; a++)
+    {
+      rCsh[a] = 0.0;
+      if (fabs (rAC[a]) > L2)
+	{
+	  rCsh[a] = SignR(L, rAC[a]);
+	  rAC[a] -= rCsh[a];
+	}
+    }
+#else
   for (a=0; a < 3; a++)
     if (fabs (rAC[a]) > L2)
       rAC[a] -= SignR(L, rAC[a]);
+#endif
 #endif
   rBC[0] = rx[j] - rCx;
   rBC[1] = ry[j] - rCy;
@@ -2070,6 +2088,19 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   MD_DEBUG(printf("Ia=%f Ib=%f\n", Ia, Ib));
 #endif
 #endif
+#if defined(MD_SUPERELLIPSOID)
+  rAA[0] = rx[i];
+  rAA[1] = ry[i];
+  rAA[2] = rz[i];
+  rC[0] = rCx;
+  rC[1] = rCy;
+  rC[2] = rCz;
+  for (a=0; a < 3; a++)
+    rC[a] += rCsh[a];
+      
+  calc_norm_SE(i, rC, norm, rAA, R[i], Xa);
+  //printf("normSE=%.15G %.15G %15G\n", norm[0], norm[1], norm[2]);
+#else
   for (a=0; a < 3; a++)
     {
       norm[a] = 0;
@@ -2078,6 +2109,14 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 	  norm[a] += -Xa[a][b]*rAC[b];
 	}
     }
+#if 0
+  if (fabs(norm2[0]-norm[0])>1E-14)
+    {
+      printf("boh norm2[0]=%.15G norm[0]=%.15G rCsh %f %f %f\n", norm2[0], norm[0], rCsh[0], rCsh[1], rCsh[2]);
+    }
+#endif
+  //printf("normHE=%.15G %.15G %15G\n", norm[0], norm[1], norm[2]);
+#endif
   modn = 0.0;
   for (a = 0; a < 3; a++)
     modn += Sqr(norm[a]);
