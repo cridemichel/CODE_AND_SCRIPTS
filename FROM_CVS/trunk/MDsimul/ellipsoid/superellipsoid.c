@@ -419,7 +419,7 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
      assume la forma più semplice */
   lab2body(iA, &x[0], xpA, rA, RtA);
   lab2body(iB, &x[3], xpB, rB, RtB);  
-#if 1
+#if 0
   /* calc fx e gx */
   for (k1 = 0; k1 < 3; k1++)
     {

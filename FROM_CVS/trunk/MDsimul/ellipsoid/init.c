@@ -3143,9 +3143,9 @@ void usrInitAft(void)
 #elif defined(EDHE_FLEX)
       if (typesArr[typeOfPart[i]].sax[0] > maxax[i])
 	maxax[i] = typesArr[typeOfPart[i]].sax[0];
-      if (typesArr[typeOfPart[i]].sax[1] > maxax[i])
+      if (2.5*typesArr[typeOfPart[i]].sax[1] > maxax[i])
 	maxax[i] = typesArr[typeOfPart[i]].sax[1];
-      if (typesArr[typeOfPart[i]].sax[2] > maxax[i])
+      if (2.5*typesArr[typeOfPart[i]].sax[2] > maxax[i])
 	maxax[i] = typesArr[typeOfPart[i]].sax[2];
       maxSpots = eval_max_dist_for_spots(typeOfPart[i]);
       if (maxSpots > maxax[i])

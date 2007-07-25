@@ -5,7 +5,7 @@
 #define MD_DEBUG11(x) 
 #define MD_DEBUG15(x) 
 #define MD_DEBUG20(x)  
-#define MD_DEBUG31(x) 
+#define MD_DEBUG31(x) x
 #define MD_DEBUG32(x) 
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
@@ -5001,8 +5001,8 @@ retry:
 	  vecgsup[k1+5] = r2[k1];
 	}
       r12[k1] = r1[k1] - r2[k1];
-      MD_DEBUG31(printf("r1 %.15G %.15G %.15G r2 %.15G %.15G %.15G \n", r1[0], r1[1], r1[2], r2[0], r2[1], r2[2]));
-      MD_DEBUG31(printf("r12=%.15G\n", calc_norm(r12)));
+      MD_DEBUG38(printf("r1 %.15G %.15G %.15G r2 %.15G %.15G %.15G \n", r1[0], r1[1], r1[2], r2[0], r2[1], r2[2]));
+      MD_DEBUG38(printf("r12=%.15G\n", calc_norm(r12)));
     } 
   
   *alpha = vecg[3];
@@ -5565,6 +5565,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 #if 1
       if (*t+t1 < t2 && (t2 - (*t + t1))*maxddot < fabs(*d1) - OprogStatus.epsd)
 	{
+	  MD_DEBUG31(printf("fine qui A maxddot=%.15G *d1=%.15G\n", maxddot, *d1));
 	  return 1;
 	}
 #endif
@@ -7030,7 +7031,7 @@ void PredictEvent (int na, int nb)
 		      rxC = ryC = rzC = 0.0;
 		      MD_DEBUG20(printf("time=%.15G t1=%.15G t2=%.15G maxax[%d]:%.15G maxax[%d]:%.15G\n", 
 					Oparams.time, t1, t2, na, maxax[na], n, maxax[n]));
-		      MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
+		      MD_DEBUG20(printf("t1=%.15G t2=%.15G\n", t1, t2));
 		      collCodeOld = collCode;
 		      evtimeHC = evtime;
 		      acHC = ac = 0;
