@@ -13,6 +13,7 @@
 #define MD_DEBUG36(x)  
 #define MD_DEBUG38(x) 
 #define MD_DEBUG39(x) 
+void print_matrix(double **M, int n);
 void update_MSDrot(int i);
 void update_MSD(int i);
 #ifdef MD_SUPERELLIPSOID
@@ -3366,7 +3367,8 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vA[2] = vz[iA];
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
- if (isSymItens(iA)) 
+  ////UpdateOrient(iA, ti, RA, OmegaA);////
+  if (isSymItens(iA)) 
    UpdateOrient(iA, ti, RA, OmegaA);
  else
    symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
@@ -3404,6 +3406,8 @@ void fdjac(int n, double x[], double fvec[], double **df,
     }
 #endif
   tRDiagR(iA, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
+  MD_DEBUG39(printf("HE\n"));
+  MD_DEBUG39(print_matrix(Xb,3));
   MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq[na], invbSq[na], invcSq[na]));
   MD_DEBUG2(print_matrix(Xa, 3));
   DA[0][1] = DA[0][2] = DA[1][0] = DA[1][2] = DA[2][0] = DA[2][1] = 0.0;
@@ -3418,6 +3422,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
   vB[1] = vy[iB];
   vB[2] = vz[iB];
 #ifdef MD_ASYM_ITENS
+  ////UpdateOrient(iB, ti, RB, OmegaB);////
   if (isSymItens(iB)) 
     UpdateOrient(iB, ti, RB, OmegaB);
   else
@@ -3476,7 +3481,9 @@ void fdjac(int n, double x[], double fvec[], double **df,
 	  gx[k1] += 2.0*Xb[k1][k2]*(x[k2]-rB[k2]);
 	}
     } 
-
+  MD_DEBUG39(printf("2)HE fx=%.15G %.15G %.15G\n", fx[0], fx[1], fx[2]));
+  MD_DEBUG39(printf("2)HE gx=%.15G %.15G %.15G\n", gx[0], gx[1], gx[2]));
+  
   for (k1 = 0; k1 < 3; k1++)
     {
 #if 0
@@ -3509,6 +3516,11 @@ void fdjac(int n, double x[], double fvec[], double **df,
   df[3][3] = 0.0;
   df[4][3] = 0.0;
 #ifdef MD_ASYM_ITENS
+  ////calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  ////calcFxtFtSym(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
+  ////printf("2)[HEsym] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
+  ////printf("2)[HEsym] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
+ 
   if (isSymItens(iA))
     calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
   else
@@ -3521,8 +3533,8 @@ void fdjac(int n, double x[], double fvec[], double **df,
   calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
   calcFxtFtSym(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
 #endif
-  printf("2)[HE] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
-  printf("2)[HE] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
+  ///printf("2)[HE] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
+  ///printf("2)[HE] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
   for (k1 = 0; k1 < 3; k1++)
     {
       //df[k1][4] = 0;

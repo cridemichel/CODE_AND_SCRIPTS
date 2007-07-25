@@ -38,6 +38,7 @@ extern double cosEulAng[2][3], sinEulAng[2][3];
 extern long long int itsFNL, timesFNL, timesSNL, itsSNL;
 extern int do_check_negpairs;
 
+extern int isSymItens(int i);
 #ifdef EDHE_FLEX
 extern int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 extern double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
@@ -79,7 +80,7 @@ extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdir
 
 int is_superellipse(int i)
 {
-	return 1;
+  return 1;
   MD_DEBUG37(return 1);
   if (typesArr[typeOfPart [i]].n[0]==1.0 && typesArr[typeOfPart [i]].n[1]==1.0)
     return 0;
@@ -183,14 +184,29 @@ void body2lab_fxx(int i, double fxxp[3][3], double fxx[3][3], double **Ri)
 }
 extern void calc_Rdot(int i, double cosea[3], double sinea[3], double **Ro);
 
-void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[3], 
+void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[3], double Omega[3][3], 
 	       double **R, double pos[3], double vel[3], double fxp[3], double fxxp[3][3],
 	       double Fxt[3], double *Ft)
 {
-  double tRfxRdot[3][3], tRdotfxR[3][3], tRdotfx[3], fxxRdot[3][3], tRfxx[3][3]; 
-  double DtX[3][3], dx[3];
+  double tRfxxRdot[3][3], tRfxxR[3][3], tRdotfx[3], tRfxx[3][3]; 
+  double dx[3];
   int k1, k2, k3;
-  calc_Rdot(i, cosea, sinea, Rdot);
+  if (isSymItens(i))
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      Rdot[k1][k2] = 0.0;
+	      for (k3 = 0; k3 < 3; k3++)
+		{
+		  Rdot[k1][k2] += -R[k1][k3]*Omega[k3][k2];
+		}
+	    }
+	}	
+    }
+  else
+    calc_Rdot(i, cosea, sinea, Rdot);
 #if 1
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -218,39 +234,55 @@ void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  tRfxRdot[k1][k2] = 0.0;
+	  tRfxxRdot[k1][k2] = 0.0;
 	  for (k3 = 0; k3 < 3; k3++)
 	    {
-	      if (Rdot[k3][k1] == 0.0 || tRfxx[k3][k2] == 0.0)
+	      if (tRfxx[k1][k3] == 0.0 || Rdot[k3][k2] == 0.0)
 		continue;
-	      tRfxRdot[k1][k2] += tRfxx[k1][k3]*Rdot[k3][k1]; 
+	      tRfxxRdot[k1][k2] += tRfxx[k1][k3]*Rdot[k3][k2]; 
 	    }
 	}
     }
   for (k1 = 0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      DtX[k1][k2] = tRdotfxR[k1][k2] + tRfxRdot[k1][k2];
-  for (k1 = 0; k1 < 3; k1++)
     {
-      Fxt[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
-	Fxt[k1] += tRdotfx[k1] + DtX[k1][k2]*x[k2] - tRfxx[k1][k2]*vel[k2]; 
-     } 
-   *Ft = 0;
+	{
+	  tRfxxR[k1][k2] = 0.0;
+	  for (k3 = 0; k3 < 3; k3++)
+	    {
+	      if (tRfxx[k1][k3] == 0.0 || R[k3][k2] == 0.0)
+		continue;
+	      tRfxxR[k1][k2] += tRfxx[k1][k3]*R[k3][k2]; 
+	    }
+	}
+    }
+#if 0
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      DtX[k1][k2] = tRfxxRdot[k1][k2] + tRfxxR[k1][k2];
+#endif  
 #if 1
    for (k1 = 0; k1 < 3; k1++)
      dx[k1] = x[k1]-pos[k1];
 #endif
    for (k1 = 0; k1 < 3; k1++)
+    {
+      Fxt[k1] = tRdotfx[k1];
+      for (k2 = 0; k2 < 3; k2++)
+	Fxt[k1] += tRfxxRdot[k1][k2]*dx[k2] - tRfxxR[k1][k2]*vel[k2]; 
+     } 
+   *Ft = 0;
+   for (k1 = 0; k1 < 3; k1++)
      {
        for (k2 = 0; k2 < 3; k2++)
 	 {
+	   /* 24/07/07 il primo addendo è corretto il secondo no! */
 	   *Ft += -fxp[k1]*R[k1][k2]*vel[k2] + fxp[k1]*Rdot[k1][k2]*dx[k2];
 	 }
      }
 #endif
-
 }
+extern void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3]);
 void fdjacSE(int n, double x[], double fvec[], double **df, 
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
 {
@@ -260,10 +292,8 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   int typei, typej;
 #endif
   double  rA[3], rB[3], ti, vA[3], vB[3];
-#ifndef MD_ASYM_ITENS
   double OmegaA[3][3], OmegaB[3][3];
-#endif
-  double DA[3][3], DB[3][3], fx[3], gx[3];
+  double fx[3], gx[3];
   double Fxt[3], Gxt[3], Ft=0.0, Gt=0.0;
 #ifdef MD_ASYM_ITENS
   double phi, psi;
@@ -280,7 +310,10 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   vA[2] = vz[iA];
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+  if (isSymItens(iA))
+    UpdateOrient(iA, ti, RA, OmegaA);
+  else
+    symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
   UpdateOrient(iA, ti, RA, OmegaA);
 #endif
@@ -296,7 +329,10 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   vB[1] = vy[iB];
   vB[2] = vz[iB];
 #ifdef MD_ASYM_ITENS
-  symtop_evolve_orient(iB, ti, RB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
+  if (isSymItens(iB))
+    UpdateOrient(iB, ti, RB, OmegaB);
+  else
+    symtop_evolve_orient(iB, ti, RB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
   UpdateOrient(iB, ti, RB, OmegaB);
 #endif
@@ -304,7 +340,7 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   typej = typeOfPart[iB];
 
   lab2body(iA, &x[0], xpA, rA, RA);
-  lab2body(iB, &x[3], xpB, rB, RB);  
+  lab2body(iB, &x[0], xpB, rB, RB);  
   calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
   calcfx(gxp, xpB[0], xpB[1], xpB[2], iB);
   calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
@@ -314,7 +350,8 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   body2lab_fx(iB, gxp, gx, RB);  
   body2lab_fxx(iA, fxxp, fxx, RA);
   body2lab_fxx(iB, gxxp, gxx, RB);
-
+  MD_DEBUG37(printf("1)SE fx=%.15G %.15G %.15G\n", fx[0], fx[1], fx[2]));
+  MD_DEBUG37(printf("1)SE gx=%.15G %.15G %.15G\n", gx[0], gx[1], gx[2]));
   for (k1 = 0; k1 < 3; k1++)
     {
       df[3][k1] = fx[k1];
@@ -332,11 +369,11 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   df[3][3] = 0.0;
   df[4][3] = 0.0;
   /* questi vanno ricalcolati per i superellissoidi!*/
-  calcFxtFtSE(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], RA, rA, vA, fxp, fxxp, Fxt, &Ft);
-  calcFxtFtSE(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], RB, rB, vB, gxp, gxxp, Gxt, &Gt);
+  calcFxtFtSE(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], OmegaA, RA, rA, vA, fxp, fxxp, Fxt, &Ft);
+  calcFxtFtSE(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], OmegaB, RB, rB, vB, gxp, gxxp, Gxt, &Gt);
   
-  printf("1)[SE] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
-  printf("1)[SE] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
+  ///printf("1)[SE] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
+  ///printf("1)[SE] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
   /* -------------------------------------------- */
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -351,6 +388,7 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
       fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
     }
   /* WARNING: fix this for SE!!!! */
+#if 0
   fvec[3] = 0.0;
   fvec[4] = 0.0;
   for (k1 = 0; k1 < 3; k1++)
@@ -360,6 +398,9 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
     }
   fvec[3] = 0.5*fvec[3]-1.0;
   fvec[4] = 0.5*fvec[4]-1.0;
+#endif
+  fvec[3] = calcf(xpA, iA);
+  fvec[4] = calcf(xpB, iB);
 #endif
 }
 void fdjacDistNegSE(int n, double x[], double fvec[], double **df, 
@@ -488,6 +529,7 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
   MD_DEBUG37(print_matrix(df, 8));
 #ifndef MD_GLOBALNRD
  /* and now evaluate fvec */
+#if 0
   fvec[3] = 0.0;
   fvec[4] = 0.0;
   for (k1 = 0; k1 < 3; k1++)
@@ -497,7 +539,7 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
     }
   fvec[3] = 0.5*fvec[3]-1.0;
   fvec[4] = 0.5*fvec[4]-1.0;
-
+#endif
  MD_DEBUG37(printf("OLD)f=%.15G g=%.15G\n", fvec[3], fvec[4]));
  for (k1 = 0; k1 < 3; k1++)
    {
