@@ -3700,7 +3700,9 @@ void funcs2beZeroedGuess(int n, double x[], double fvecG[], int i, int j, double
     }
   fvecG[3] = 0.5*fvecG[3]-1.0 - (0.5*tmp-1.0);
 }
-
+#ifdef MD_SUPERELLIPSOID
+extern void funcs2beZeroedSE(int n, double x[], double fvec[], int i, int j, double shift[3]);
+#endif
 void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
   int na, k1, k2; 
@@ -3716,7 +3718,13 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
   double cosea[3], sinea[3], phi, psi;
 #endif
   /* x = (r, alpha, t) */ 
-  
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(i) || is_superellipse(j))
+    {
+      funcs2beZeroedSE(n, x, fvec, i, j, shift);
+      return;
+    }
+#endif  
   ti = x[4] + (trefG - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
