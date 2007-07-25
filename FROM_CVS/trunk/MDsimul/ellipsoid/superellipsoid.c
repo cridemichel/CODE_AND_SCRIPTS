@@ -80,7 +80,7 @@ extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdir
 
 int is_superellipse(int i)
 {
-  return 1;
+  //return 1;
   MD_DEBUG37(return 1);
   if (typesArr[typeOfPart [i]].n[0]==1.0 && typesArr[typeOfPart [i]].n[1]==1.0)
     return 0;
