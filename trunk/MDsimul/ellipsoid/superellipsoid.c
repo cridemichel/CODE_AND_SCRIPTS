@@ -80,7 +80,7 @@ extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdir
 
 int is_superellipse(int i)
 {
-  //return 1;
+  return 1;
   MD_DEBUG37(return 1);
   if (typesArr[typeOfPart [i]].n[0]==1.0 && typesArr[typeOfPart [i]].n[1]==1.0)
     return 0;
@@ -139,12 +139,12 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   em2 = e-2.0;
   df[0][0] = (A*(-2.0*e*nm2*Sqr(xa2e) - 
        2.0*em2*n*xa2eyb2e))/ (e*Sqr(n)*Sqr(x));
-  df[0][1] = (4*emn*xa2eyb2e*A)/ (eSqrnxSq); 
+  df[0][1] = (4*emn*xa2eyb2e*A)/ (eSqrnxy); 
   df[0][2] = 0.0;
   df[1][0] = 4*emn*xa2eyb2e*A/(eSqrnxy);
-  df[1][1] = (A*(-2*em2*n*xa2e*yb2e- 2.0*e*nm2*Sqr(yb2e)))/(e*Sqr(n)*Sqr(y));
+  df[1][1] = (A*(-2.0*em2*n*xa2e*yb2e- 2.0*e*nm2*Sqr(yb2e)))/(e*Sqr(n)*Sqr(y));
   df[1][2] = df[2][0] = df[2][1] = 0.0;
-  df[2][2] = (2.0*(2.0/n-1.0)*pow(z/c,2/n))/(n*Sqr(z)); 
+  df[2][2] = -(2.0*nm2*pow(z/c,2.0/n))/(Sqr(n)*Sqr(z)); 
 }
 extern void lab2body(int i, double x[], double xp[], double *rO, double **R);
 void body2lab_fx(int i, double xp[], double x[], double **R)
