@@ -95,8 +95,9 @@ double calcf(double *x,int i)
   c = typesArr[typeOfPart[i]].sax[2];
   e = typesArr[typeOfPart[i]].n[0];
   n = typesArr[typeOfPart[i]].n[1];
-  return pow(pow(x[0]/a,2.0/e)+pow(x[1]/b,2.0/e),e/n)+pow(x[2]/c,2.0/n)-1.0; 
+  return pow(pow(fabs(x[0])/a,2.0/e)+pow(fabs(x[1])/b,2.0/e),e/n)+pow(fabs(x[2])/c,2.0/n)-1.0; 
 }
+#define Sign(x) ((x>=0)?1:-1)
 void calcfx(double *fx, double x, double y, double z, int i)
 {
 /* calcola il gradiente della superficie nel riferimento del corpo rigido*/
@@ -109,12 +110,12 @@ void calcfx(double *fx, double x, double y, double z, int i)
   n = typesArr[typeOfPart[i]].n[1];
   //printf("a=%f b=%f c=%f e=%f n=%f\n", a,b,c,e,n);
   inve2 = 2.0/e;	
-  xa2e = pow(x/a,inve2);
-  yb2e = pow(y/b,inve2);
+  xa2e = pow(fabs(x)/a,inve2);
+  yb2e = pow(fabs(y)/b,inve2);
   A = pow(xa2e+yb2e,-1.0+e/n);
   fx[0] = (2.0*xa2e*A)/(n*x);
   fx[1] = (2.0*yb2e*A)/(n*y);
-  fx[2] = (2.0*pow(z/c,2.0/n))/(n*z);
+  fx[2] = (2.0*pow(fabs(z)/c,2.0/n))/(n*z);
 }
 
 void calcfxx(double df[3][3], double x, double y, double z, int i)
@@ -128,8 +129,8 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   e = typesArr[typeOfPart[i]].n[0];
   n = typesArr[typeOfPart[i]].n[1];
   inve2 = 2.0/e;
-  xa2e = pow(x/a,inve2);
-  yb2e = pow(y/b,inve2);
+  xa2e = pow(fabs(x)/a,inve2);
+  yb2e = pow(fabs(y)/b,inve2);
   eSqrnxy = e*Sqr(n)*x*y;
   eSqrnxSq = e*Sqr(n)*x*x;
   A = pow(xa2e+yb2e, -2.0+e/n);
@@ -144,7 +145,7 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   df[1][0] = 4*emn*xa2eyb2e*A/(eSqrnxy);
   df[1][1] = (A*(-2.0*em2*n*xa2e*yb2e- 2.0*e*nm2*Sqr(yb2e)))/(e*Sqr(n)*Sqr(y));
   df[1][2] = df[2][0] = df[2][1] = 0.0;
-  df[2][2] = -(2.0*nm2*pow(z/c,2.0/n))/(Sqr(n)*Sqr(z)); 
+  df[2][2] = -(2.0*nm2*pow(fabs(z)/c,2.0/n))/(Sqr(n)*Sqr(z)); 
 }
 extern void lab2body(int i, double x[], double xp[], double *rO, double **R);
 void body2lab_fx(int i, double xp[], double x[], double **R)
@@ -1011,7 +1012,7 @@ double calc_sign_SE(int i, double *r, double **R, double *x, double **X)
       MD_DEBUG37(printf("HE segno=%.15G\n", segno));
     }
   lab2body(i, x, xp, r, R);
-  segno = pow(pow(xp[0]/a,2.0/e)+pow(xp[1]/b,2.0/e),e/n)+pow(xp[2]/c,2.0/n)-1.0; 
+  segno = pow(pow(fabs(xp[0])/a,2.0/e)+pow(fabs(xp[1])/b,2.0/e),e/n)+pow(fabs(xp[2])/c,2.0/n)-1.0; 
   MD_DEBUG37(printf("SE segno = %.15G\n" , segno));
   return segno;
 }

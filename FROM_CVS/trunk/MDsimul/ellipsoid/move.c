@@ -5001,11 +5001,14 @@ retry:
 	  vecgsup[k1+5] = r2[k1];
 	}
       r12[k1] = r1[k1] - r2[k1];
+      MD_DEBUG31(printf("r1 %.15G %.15G %.15G r2 %.15G %.15G %.15G \n", r1[0], r1[1], r1[2], r2[0], r2[1], r2[2]));
+      MD_DEBUG31(printf("r12=%.15G\n", calc_norm(r12)));
     } 
   
   *alpha = vecg[3];
 #ifdef MD_SUPERELLIPSOID
   segno = calc_sign_SE(i, rA, RtA, r2, Xa);
+  //printf("segno=%.15G\n", segno);
 #else
   segno = -1;
   /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
@@ -5967,6 +5970,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #if 1
   MD_DEBUG20(printf("[LOCATE_CONTACT] INIZIO\n"));
   d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  //printf("t=%.15G t1=%.15G rA=%.15G %.15G %.15G rB=%.15G %.15G %.15G d=%.15G\n", t, t1, rx[i], ry[i], rz[i],
+  //	 rx[j], ry[j], rz[j], d);
 #if 1
 #if 0
   maxddot = calcopt_maxddot(i, j, r1, r2, factori, factorj);
@@ -6016,6 +6021,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   if (search_contact_faster(i, j, shift, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0; 
   MD_DEBUG31(printf("[LOCATE_CONTACT]>>>>d:%f t=%.15G\n", d,t));
+  //printf("[LOCATE_CONTACT]>>>>i:%d j:%d d:%.15G t=%.15G\n", i,j,d,t);
   foundrc = 0;
 #if 0
   if (d1 < 0)
