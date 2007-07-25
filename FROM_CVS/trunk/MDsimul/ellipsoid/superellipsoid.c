@@ -82,7 +82,7 @@ int is_superellipse(int i)
 {
   return 1;
   MD_DEBUG37(return 1);
-  if (typesArr[typeOfPart [i]].n[0]==1.0 && typesArr[typeOfPart [i]].n[1]==1.0)
+  if (typesArr[typeOfPart[i]].n[0]==1.0 && typesArr[typeOfPart[i]].n[1]==1.0)
     return 0;
   else 
     return 1;
@@ -1014,5 +1014,127 @@ double calc_sign_SE(int i, double *r, double **R, double *x, double **X)
   segno = pow(pow(xp[0]/a,2.0/e)+pow(xp[1]/b,2.0/e),e/n)+pow(xp[2]/c,2.0/n)-1.0; 
   MD_DEBUG37(printf("SE segno = %.15G\n" , segno));
   return segno;
+}
+
+void funcs2beZeroedSE(int n, double x[], double fvec[], int i, int j, double shift[3])
+{
+  int na, k1, k2; 
+  double  rA[3], rB[3], ti;
+  double fx[3], gx[3], xpA[3], xpB[3], fxp[3], gxp[3];
+#ifdef EDHE_FLEX
+  int typei, typej;
+#endif
+  double OmegaA[3][3], OmegaB[3][3];
+#ifdef MD_ASYM_ITENS
+  double cosea[3], sinea[3], phi, psi;
+#endif
+  /* x = (r, alpha, t) */ 
+  ti = x[4] + (trefG - atomTime[i]);
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  if (isSymItens(i))
+    UpdateOrient(i, ti, RA, OmegaA);
+  else
+    symtop_evolve_orient(i, ti, RA, REt, cosea, sinea, &phi, &psi);
+#else
+  UpdateOrient(i, ti, Rt, Omega);
+#endif
+  na = (i < Oparams.parnumA)?0:1;
+#ifdef EDHE_FLEX
+  na = 0;
+  typei = typeOfPart[i];
+  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+#elif defined(MD_POLYDISP)
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[i]);
+      invbSq[na] = 1/Sqr(axbP[i]);
+      invcSq[na] = 1/Sqr(axcP[i]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+#endif
+  tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], Rt);
+
+  ti = x[4] + (trefG - atomTime[j]);
+  MD_DEBUG(printf("x[4]:%.15f atomTime[%d]:%.15f\n",x[4], j, atomTime[j]));
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+#ifdef MD_ASYM_ITENS
+  if (isSymItens(j))
+    UpdateOrient(j, ti, RB, OmegaB);
+  else
+    symtop_evolve_orient(j, ti, RB, REt, cosea, sinea, &phi, &psi);
+#else
+  UpdateOrient(j, ti, Rt, Omega);
+#endif
+  na = (j < Oparams.parnumA)?0:1;
+#ifdef EDHE_FLEX
+  na = 0;
+  typej = typeOfPart[j];
+  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+#elif defined(MD_POLYDISP)
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(axaP[j]);
+      invbSq[na] = 1/Sqr(axbP[j]);
+      invcSq[na] = 1/Sqr(axcP[j]);
+    }
+#else
+  if (OprogStatus.targetPhi > 0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+#endif
+  tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], Rt);
+#if 0
+  printf("Xa=\n");
+  print_matrix(Xa, 3);
+  printf("Xb=\n");
+  print_matrix(Xb, 3);
+#endif
+  
+  lab2body(i, &x[0], xpA, rA, RA);
+  lab2body(j, &x[0], xpB, rB, RB);  
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], i);
+  calcfx(gxp, xpB[0], xpB[1], xpB[2], j);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(i, fxp, fx, RA);
+  body2lab_fx(j, gxp, gx, RB);  
+
+  MD_DEBUG(print_matrix(Xb,3));
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
+    }
+  fvec[3] = calcf(xpA, i);
+  fvec[4] = calcf(xpB, j);
 }
 #endif
