@@ -5,9 +5,10 @@
 #include<math.h>
 #include<stdio.h>
 #include<stdlib.h>
-#define MD_DEBUG(X) 
-#define MD_DEBUG10(X) 
-#define MD_DEBUG18(X)
+#define MD_DEBUG(x) 
+#define MD_DEBUG10(x) 
+#define MD_DEBUG18(x)
+#define MD_DEBUG20(x) 
 #ifdef EDHE_FLEX 
 extern int *typeOfPart;
 #endif
@@ -3945,8 +3946,8 @@ void newt(double x[], int n, int *check,
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3])
 {
-  int i,its,ok;
-  double d,f,stpmax,sum,test; 
+  int i,j, its,ok;
+  double d,f,stpmax,sum,test, fold; 
 #if 0
   int *indx;
   double **fjac,*g,*p,*xold;
@@ -4015,7 +4016,7 @@ void newt(double x[], int n, int *check,
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNR
       lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminMD,iA,iB,shift, TOLX); 
-      MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
+      MD_DEBUG20(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	if (fabs(fvec[i]) > test) 
@@ -4032,8 +4033,6 @@ void newt(double x[], int n, int *check,
 	  test=0.0; 
 	  den=FMAX(f,0.5*n);
 	  for (i=0;i<n;i++)
-	    {
-	      temp=fabs(g[i])*FMAX(fabs(x[i]),1.0)/den;
 	      if (temp > test) 
 		test=temp; 
 	    } 
@@ -4076,7 +4075,8 @@ void newt(double x[], int n, int *check,
       	  test += fabs(p[i]);
 	  x[i] += p[i];
 	}
-      MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
+      MD_DEBUG20(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
+      MD_DEBUG20(printf("fvec = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
       if (test < TOLX) 
 	{ 
@@ -4086,7 +4086,7 @@ void newt(double x[], int n, int *check,
 	}
 #endif
     } 
-  MD_DEBUG10(printf("maxits!!!\n"));
+  MD_DEBUG20(printf("maxits!!!\n"));
   *check = 2;
   FREERETURN; 
   return;
