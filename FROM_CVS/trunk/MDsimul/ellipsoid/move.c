@@ -10,9 +10,10 @@
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
 #define MD_DEBUG35(x)  
-#define MD_DEBUG36(x)  
+#define MD_DEBUG36(x) x
 #define MD_DEBUG38(x) 
 #define MD_DEBUG39(x) 
+#define MD_DEBUG40(x) x
 void print_matrix(double **M, int n);
 void update_MSDrot(int i);
 void update_MSD(int i);
@@ -1531,7 +1532,36 @@ void RDiagtR(int i, double **M, double a, double b, double c, double **Ri)
 	  }
       }
 }
-
+#ifdef MD_SUPERELLIPSOID
+extern void lab2body(int i, double x[], double xp[], double *rO, double **R);
+extern double calcf(double *x,int i);
+void check_contact(int i, int j, double rCx, double rCy, double rCz) 
+{
+  int k1, k2;
+  double x[3], xp[3], del[3], r[3];
+  x[0] = rCx;
+  x[1] = rCy;
+  x[2] = rCz;
+  r[0] = rx[i];
+  r[1] = ry[i];
+  r[2] = rz[i];
+  for (k1=0; k1 < 3; k1++)
+    x[k1] -= L*rint((x[k1] - r[k1])/L);
+  lab2body(i, x, xp, r, R[i]);
+  printf("i=%d f=%.15G\n", i, calcf(xp, i));
+  /* ...and now we have to go back to laboratory reference system */
+  //body2lab_fx(i, xp, r, R[i]);
+  r[0] = rx[j];
+  r[1] = ry[j];
+  r[2] = rz[j];
+  for (k1=0; k1 < 3; k1++)
+    x[k1] -= L*rint((x[k1] - r[k1])/L);
+  lab2body(j, x, xp, r, R[j]);
+  printf("j=%d f=%.15G\n", j, calcf(xp, j));
+  /* ...and now we have to go back to laboratory reference system */
+  //body2lab_fx(j, xp, r, R[j]);
+} 
+#else
 void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *rBC)
 {
   int k1, k2;
@@ -1549,6 +1579,7 @@ void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *
   //if (fabs(f) > 1E-5||fabs(g) > 1E-5)
    // exit(-1);
 }
+#endif
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
 double calcDist(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
@@ -1890,8 +1921,8 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       shift[0] = L*rint((rx[i]-rx[j])/L);
       shift[1] = L*rint((ry[i]-ry[j])/L);
       shift[2] = L*rint((rz[i]-rz[j])/L);
-      printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]):
-      printf("[bump] distance between %d-%d: %.15f\n", i, j, calcDistNeg(Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
+      printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]);
+      printf("[bump] distance between %d-%d: %.15f\n", i, j, calcDistNeg(0.0, Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
     }
 #endif 
   for (a=0; a < 3; a++)
@@ -1983,7 +2014,11 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   Ib = Oparams.I[na];
 #endif
   //MD_DEBUG(calc_energy("dentro bump2"));
+#ifdef MD_SUPERELLIPSOID
+  MD_DEBUG36(check_contact(evIdA, evIdB, rCx, rCy, rCz));
+#else
   MD_DEBUG11(check_contact(evIdA, evIdB, Xa, Xb, rAC, rBC));
+#endif
   MD_DEBUG36(calc_energy("dentro bump3"));
   /* calcola le matrici inverse del tensore d'inerzia */
 #ifdef MD_ASYM_ITENS
@@ -3394,7 +3429,7 @@ void fdjac(int n, double x[], double fvec[], double **df,
   if (is_superellipse(iA) || is_superellipse(iB))
     {
       fdjacSE(n, x, fvec, df, vecfunc, iA, iB, shift);
-      //return;
+      return;
     }
 #endif
   ti = x[4] + (trefG - atomTime[iA]);
@@ -5120,7 +5155,7 @@ retry:
 	      calcdist_retcheck = 1;
 	      return 0.0;
 	    }
-	  printf("segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[7], calc_norm(r12));
+	  printf("1) segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[7], calc_norm(r12));
 	  return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
 	}
     }
@@ -5152,7 +5187,7 @@ retry:
 	  calcdist_retcheck = 1;
 	  return 0.0;
 	}
-      printf("segno: %.8G segno2: %.15G dist=%.15G\n", segno, segno2, calc_norm(r12));
+      printf("2) segno: %.8G segno2: %.15G dist=%.15G\n", segno, segno2, calc_norm(r12));
       return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
     }
 #endif
@@ -7027,7 +7062,7 @@ void PredictEvent (int na, int nb)
 			   * nessun urto sotto tali condizioni */
 			  continue;
 			}
-		      MD_DEBUG20(printf("PREDICTING na=%d n=%d\n", na , n));
+		      MD_DEBUG40(printf("PREDICTING na=%d n=%d\n", na , n));
 		      if (vv==0.0)
 			{
 			  if (distSq >= sigSq)
@@ -7043,19 +7078,19 @@ void PredictEvent (int na, int nb)
 			  t = t1 = - (sqrt (d) + b) / vv;
 			  t2 = (sqrt (d) - b) / vv;
 			  overlap = 0;
-			  MD_DEBUG20(printf("qui..boh sig:%.15G dist=%.15G\n", sqrt(sigSq), sqrt(distSq)));
+			  MD_DEBUG40(printf("qui..boh sig:%.15G dist=%.15G\n", sqrt(sigSq), sqrt(distSq)));
 			}
 		      else 
 			{
-			  MD_DEBUG(printf("Centroids overlap!\n"));
+			  MD_DEBUG40(printf("Centroids overlap!\n"));
 			  t2 = t = (sqrt (d) - b) / vv;
 			  t1 = 0.0; 
 			  overlap = 1;
 			  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
 			  MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
 			}
-		      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
-		      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
+		      MD_DEBUG40(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
+		      MD_DEBUG40(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
 		      //t += Oparams.time; 
 		      t2 += Oparams.time;
 		      t1 += Oparams.time;
@@ -7080,8 +7115,8 @@ void PredictEvent (int na, int nb)
 			{
 			  collCode = MD_EVENT_NONE;
 			}
-		      MD_DEBUG20(if (collCode!=MD_EVENT_NONE) printf("na=%d ac=%d n=%d bc=%d\n", na, ac, n, bc));
-		      MD_DEBUG20(if (collCode!=MD_EVENT_NONE) check_these_bonds(na, n, shift, evtime));
+		      MD_DEBUG40(if (collCode!=MD_EVENT_NONE) printf("na=%d ac=%d n=%d bc=%d\n", na, ac, n, bc));
+		      MD_DEBUG(if (collCode!=MD_EVENT_NONE) check_these_bonds(na, n, shift, evtime));
 #else
 		      if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
 							(na >= Oparams.parnumA && n < Oparams.parnumA)))
@@ -7113,9 +7148,9 @@ void PredictEvent (int na, int nb)
 			}
 
 		      t = evtime;
-		      MD_DEBUG31(printf("(%d,%d)-(%d,%d) troot=%.15G\n", na, ac, n, bc, evtime));
-		      MD_DEBUG31(printf("evtimeHC=%.15G",evtimeHC));
-		      MD_DEBUG31(printf("dist(t=%.15G,%d-%d):%.15G dist(t=%.15G)=%.15G\n", evtimeHC, na, n, 
+		      MD_DEBUG40(printf("(%d,%d)-(%d,%d) troot=%.15G\n", na, ac, n, bc, evtime));
+		      MD_DEBUG40(printf("evtimeHC=%.15G",evtimeHC));
+		      MD_DEBUG40(printf("dist(t=%.15G,%d-%d):%.15G dist(t=%.15G)=%.15G\n", evtimeHC, na, n, 
 					calc_dist_ij(na, n, evtimeHC), evtime, calc_dist_ij(na, n, evtime)));
 #else
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
@@ -7163,12 +7198,12 @@ void PredictEvent (int na, int nb)
 #endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
 #ifdef MD_PATCHY_HE
-		      MD_DEBUG38(printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc));
+		      MD_DEBUG40(printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc));
 		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #else
 		      ScheduleEvent (na, n, t);
 #endif
-		      MD_DEBUG20(printf("schedule event [collision](%d,%d)-(%d,%d) collCode=%d\n", na, ac, n, bc, collCode));
+		      MD_DEBUG40(printf("schedule event [collision](%d,%d)-(%d,%d) collCode=%d\n", na, ac, n, bc, collCode));
 		    }
 		} 
 	    }
