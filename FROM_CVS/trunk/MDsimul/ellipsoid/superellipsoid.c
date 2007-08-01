@@ -14,6 +14,7 @@
 #define MD_DEBUG34(x) 
 #define MD_DEBUG36(x) 
 #define MD_DEBUG37(x) 
+#define MD_DEBUG38(x) 
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
@@ -299,7 +300,7 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
 #ifdef MD_ASYM_ITENS
   double phi, psi;
 #endif
-  int k1;
+  int k1, k2;
   double xpA[3], xpB[3], fxxp[3][3], gxxp[3][3], fxx[3][3], gxx[3][3], fxp[3], gxp[3];
 
   ti = x[4] + (trefG - atomTime[iA]);
@@ -355,6 +356,14 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   MD_DEBUG37(printf("1)SE gx=%.15G %.15G %.15G\n", gx[0], gx[1], gx[2]));
   for (k1 = 0; k1 < 3; k1++)
     {
+      for (k2 = 0; k2 < 3; k2++)
+  	{
+	  df[k1][k2] = fxx[k1][k2] + Sqr(x[3])*gxx[k1][k2];
+	}
+    }
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
       df[3][k1] = fx[k1];
     } 
 
@@ -373,8 +382,8 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
   calcFxtFtSE(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], OmegaA, RA, rA, vA, fxp, fxxp, Fxt, &Ft);
   calcFxtFtSE(iB, x, RM[iB], cosEulAng[1], sinEulAng[1], OmegaB, RB, rB, vB, gxp, gxxp, Gxt, &Gt);
   
-  ///printf("1)[SE] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
-  ///printf("1)[SE] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
+  //printf("1)[SE] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
+  //printf("1)[SE] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
   /* -------------------------------------------- */
   for (k1 = 0; k1 < 3; k1++)
     {

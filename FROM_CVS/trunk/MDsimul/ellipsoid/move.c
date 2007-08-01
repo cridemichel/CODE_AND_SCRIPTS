@@ -10,10 +10,10 @@
 #define MD_DEBUG33(x) 
 #define MD_DEBUG34(x) 
 #define MD_DEBUG35(x)  
-#define MD_DEBUG36(x) x
+#define MD_DEBUG36(x) 
 #define MD_DEBUG38(x) 
 #define MD_DEBUG39(x) 
-#define MD_DEBUG40(x) x
+#define MD_DEBUG40(x) 
 void print_matrix(double **M, int n);
 void update_MSDrot(int i);
 void update_MSD(int i);
@@ -3590,10 +3590,10 @@ void fdjac(int n, double x[], double fvec[], double **df,
   df[3][3] = 0.0;
   df[4][3] = 0.0;
 #ifdef MD_ASYM_ITENS
-  ////calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
-  ////calcFxtFtSym(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
-  ////printf("2)[HEsym] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
-  ////printf("2)[HEsym] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
+  ///calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  ///calcFxtFtSym(x, Xb, DB, OmegaB, RB, rB, vB, gx, Gxt, &Gt);
+  ///printf("2)[HEsym] Ft=%.15G Fxt=%.15G %.15G %.15G\n", Ft, Fxt[0], Fxt[1], Fxt[2]);
+  ///printf("2)[HEsym] Gt=%.15G Gxt=%.15G %.15G %.15G\n", Gt, Gxt[0], Gxt[1], Gxt[2]);
  
   if (isSymItens(iA))
     calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
@@ -5528,7 +5528,7 @@ int refine_contact(int i, int j, double t1, double t, double vecgd[8], double sh
   vecg[4] += t1;
   if (retcheck==2)
     {
-      MD_DEBUG31(printf("newt did not find any contact point!\n"));
+      MD_DEBUG40(printf("newt did not find any contact point!\n"));
       return 0;
     }
 #if 0
@@ -5632,14 +5632,14 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
   //printf("quii d=%.15G\n", *d1);
   
   timesF++;
-  MD_DEBUG31(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
+  MD_DEBUG40(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
   while (*d1 > epsdFast && its < MAXOPTITS)
     {
 #if 1
       if (*t+t1 < t2 && (t2 - (*t + t1))*maxddot < fabs(*d1) - OprogStatus.epsd)
 	{
-	  MD_DEBUG31(printf("fine qui A maxddot=%.15G *d1=%.15G\n", maxddot, *d1));
+	  MD_DEBUG40(printf("fine qui A maxddot=%.15G *d1=%.15G\n", maxddot, *d1));
 	  return 1;
 	}
 #endif
@@ -5654,7 +5654,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 #if defined(MD_BASIC_DT) || defined (EDHE_FLEX)
       if (delt < (epsd / maxddot))
 	{
-	  MD_DEBUG10(printf("convergence reached in %d iterations\n", its));
+	  MD_DEBUG40(printf("convergence reached in %d iterations\n", its));
 	  return 0;
 	}
 #else
@@ -5663,7 +5663,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
      
       if (normddot!=0 && delt < (epsd / normddot))
 	{
-	  MD_DEBUG10(printf("convergence reached in %d iterations\n", its));
+	  MD_DEBUG40(printf("convergence reached in %d iterations\n", its));
 	  return 0;
 	}
 #endif
@@ -5672,8 +5672,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
       if (*t + t1 > t2)
 	{
 	  *t = told;
-	  MD_DEBUG31(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG31(printf("convergence t>t2\n"));
+	  MD_DEBUG40(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG40(printf("convergence t>t2\n"));
 	  *d1 = calcDistNeg(*t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
 	  return 1;
 	}
@@ -5682,8 +5682,8 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
       if (*d1 < 0)
 	{
 	  /* go back! */
-	  MD_DEBUG31(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
-	  MD_DEBUG31(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
+	  MD_DEBUG40(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
+	  MD_DEBUG40(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	  *t = told;	  
 	  *d1 = calcDistNeg(*t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
 	  return 0;
@@ -5693,7 +5693,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
       itsF++;
     }
 
-  MD_DEBUG31(printf("max iterations %d iterations reached t=%f t2=%f\n", its, *t, t2));
+  MD_DEBUG40(printf("max iterations %d iterations reached t=%f t2=%f maxddot=%.15G *d1=%.15G\n", its, *t, t2, maxddot, *d1));
   return 0;
 }
 extern double **Aip;
@@ -6043,7 +6043,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
   MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d));
 #if 1
-  MD_DEBUG20(printf("[LOCATE_CONTACT] INIZIO\n"));
+  MD_DEBUG40(printf("[LOCATE_CONTACT] INIZIO\n"));
   d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
   //printf("t=%.15G t1=%.15G rA=%.15G %.15G %.15G rB=%.15G %.15G %.15G d=%.15G\n", t, t1, rx[i], ry[i], rz[i],
   //	 rx[j], ry[j], rz[j], d);
@@ -6092,10 +6092,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       return 0;
     }
 #endif
-  MD_DEBUG31(printf("[LOCATE_CONTACT] prima search contact faster\n"));
+  MD_DEBUG40(printf("[LOCATE_CONTACT] prima search contact faster\n"));
   if (search_contact_faster(i, j, shift, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
     return 0; 
-  MD_DEBUG31(printf("[LOCATE_CONTACT]>>>>d:%f t=%.15G\n", d,t));
+  MD_DEBUG40(printf("[LOCATE_CONTACT]>>>>d:%f t=%.15G\n", d,t));
   //printf("[LOCATE_CONTACT]>>>>i:%d j:%d d:%.15G t=%.15G\n", i,j,d,t);
   foundrc = 0;
 #if 0
@@ -6226,9 +6226,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	{
 	  if (refine_contact(i, j, t1, troot, vecgroot, shift, vecg))
 	    {
-	      MD_DEBUG31(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
-	      MD_DEBUG31(printf("collision will occur at time %.15G\n", vecg[4])); 
-	      MD_DEBUG31(printf("[locate_contact] its: %d\n", its));
+	      MD_DEBUG40(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
+	      MD_DEBUG40(printf("collision will occur at time %.15G\n", vecg[4])); 
+	      MD_DEBUG40(printf("[locate_contact] its: %d\n", its));
 #ifdef MD_PATCHY_HE
 	      if (vecg[4]>t2 || vecg[4]<t1)
 #if 0
@@ -6257,14 +6257,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	    }
 	  else 
 	    {
-	      MD_DEBUG31(printf("[locate_contact] can't find contact point!\n"));
-	      MD_DEBUG31(printf("troot=%.15G t1=%.15G delt=%.15G t=%.15G troot-t=%.15G\n", troot, t1, delt, t, troot-t-t1));
+	      MD_DEBUG40(printf("[locate_contact] can't find contact point!\n"));
+	      MD_DEBUG40(printf("troot=%.15G t1=%.15G delt=%.15G t=%.15G troot-t=%.15G\n", troot, t1, delt, t, troot-t-t1));
 	      if (d < 0)
 		{
-		  MD_DEBUG31(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
+		  MD_DEBUG40(printf("t=%.15G d2 < 0 and I did not find contact point, boh...\n",t));
 		  //MD_DEBUG10(printf("d1: %.15G d2: %.15G\n", d1, d2));
-		  MD_DEBUG31(printf("[locate_contact] its: %d d=%.15G\n", its, d));
-		  MD_DEBUG31(printf("dold=%.15G d=%.15G\n", dold, d));
+		  MD_DEBUG40(printf("[locate_contact] its: %d d=%.15G\n", its, d));
+		  MD_DEBUG40(printf("dold=%.15G d=%.15G\n", dold, d));
 		  return 0;
 		  //if (lastbump[i] == j && lastbump[j]==i )
 		   // return 0;
@@ -7089,8 +7089,8 @@ void PredictEvent (int na, int nb)
 			  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
 			  MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
 			}
-		      MD_DEBUG40(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
-		      MD_DEBUG40(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
+		      MD_DEBUG40(printf("t=%f curtime: %f b=%f d=%f t1=%.15G t2=%.15G\n", t, Oparams.time, b ,d, t1, t2));
+		      MD_DEBUG40(printf("dr=(%f,%f,%f) sigSq: %f\n", dr[0], dr[1], dr[2], sigSq));
 		      //t += Oparams.time; 
 		      t2 += Oparams.time;
 		      t1 += Oparams.time;
