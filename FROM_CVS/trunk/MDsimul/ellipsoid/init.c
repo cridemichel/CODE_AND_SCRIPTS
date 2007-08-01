@@ -3141,12 +3141,17 @@ void usrInitAft(void)
       if (axcP[i] > maxax[i])
 	maxax[i] = axcP[i];
 #elif defined(EDHE_FLEX)
+#ifdef MD_SUPERELLIPSOID
       if (typesArr[typeOfPart[i]].sax[0] > maxax[i])
 	maxax[i] = typesArr[typeOfPart[i]].sax[0];
       if (2.5*typesArr[typeOfPart[i]].sax[1] > maxax[i])
 	maxax[i] = typesArr[typeOfPart[i]].sax[1];
       if (2.5*typesArr[typeOfPart[i]].sax[2] > maxax[i])
 	maxax[i] = typesArr[typeOfPart[i]].sax[2];
+#else
+      maxax[i] = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
+	Sqr(typesArr[typeOfPart[i]].sax[2]));
+#endif
       maxSpots = eval_max_dist_for_spots(typeOfPart[i]);
       if (maxSpots > maxax[i])
 	maxax[i] = maxSpots;

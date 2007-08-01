@@ -1011,6 +1011,10 @@ double calc_sign_SE(int i, double *r, double **R, double *x, double **X)
       return segno;
       MD_DEBUG37(printf("HE segno=%.15G\n", segno));
     }
+#if 0
+  for (k1=0; k1 < 3; k1++)
+    x[k1] += L*rint((x[k1] - r[k1])/L);
+#endif
   lab2body(i, x, xp, r, R);
   segno = pow(pow(fabs(xp[0])/a,2.0/e)+pow(fabs(xp[1])/b,2.0/e),e/n)+pow(fabs(xp[2])/c,2.0/n)-1.0; 
   MD_DEBUG37(printf("SE segno = %.15G\n" , segno));
