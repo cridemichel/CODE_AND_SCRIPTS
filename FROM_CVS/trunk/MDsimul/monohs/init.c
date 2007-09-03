@@ -586,6 +586,7 @@ void usrInitBef(void)
     OprogStatus.PE[i] = 0;
 #ifdef MD_POLYDISP
   OprogStatus.ext_radii=0;
+  strcpy(OprogStatus.radiiFile, "*");
 #endif
   /* ======================================================================= */
 }
@@ -629,6 +630,20 @@ extern double calc_phi(void);
 /* ======================== >>> usrInitAft <<< ==============================*/
 #ifdef MD_POLYDISP
 double PHI0;
+#endif
+#ifdef MD_POLYDISP
+void read_radii(char *fn)
+{
+  FILE *fp;
+  int i;
+  fp=fopen(fn,"r");
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      fscanf(fp, "%lf ", &radii[i]);
+      radii[i]/=2.0;
+    }
+  fclose(fp);
+}
 #endif
 void usrInitAft(void)
 {
@@ -682,11 +697,18 @@ void usrInitAft(void)
   m = Oparams.m;
   /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
+  if (OprogStatus.ext_radii)
+    {
+      if (strcmp(OprogStatus.radiiFile,"*"))
+	read_radii(OprogStatus.radiiFile);
+      else
+	read_radii("radii.dat");
+    }      
   if (Oparams.rcut <= 0.0)
     {
 #ifdef MD_POLYDISP
       double maxrad=-1.0;
-      if (!strcmp(OprogStatus.inifile,"*"))
+      if (!strcmp(OprogStatus.inifile,"*") && !OprogStatus.ext_radii)
 	{
 	  if (OprogStatus.polydisp > 0.0)
 	    {
@@ -806,11 +828,7 @@ void usrInitAft(void)
     radiiINI = malloc(sizeof(double)*Oparams.parnum);
 #endif
   scdone = malloc(sizeof(int)*Oparams.parnum);
-#ifdef MD_POLYDISP
-  if (OprogStatus.ext_radii==1)
-    fp=fopen("radii.dat","r");
-#endif
-  for (i=0; i < Oparams.parnum; i++)
+ for (i=0; i < Oparams.parnum; i++)
     {
       scdone[i] = 0;
 #ifdef MD_POLYDISP
@@ -822,36 +840,25 @@ void usrInitAft(void)
 	 /* if (OprogStatus.polydisp <= 0.0)
 	    radii[i] = Oparams.sigma*0.5;
 	  else*/
-	  if (!strcmp(OprogStatus.inifile,"*"))
+	  if (!strcmp(OprogStatus.inifile,"*") && !OprogStatus.ext_radii)
 	    {
-	      if (OprogStatus.ext_radii==1)
+	      if (OprogStatus.polydisp > 0.0)
 		{
-		  fscanf(fp, "%lf ", &radii[i]);
+		  do
+		    {
+		      radii[i] = (OprogStatus.polydisp*gauss() + 1.0)*Oparams.sigma*0.5; 
+		    }
+		  while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp));
+		  //printf("%.15G\n", radii[i]);
 		}
 	      else
-		{
-		  if (OprogStatus.polydisp > 0.0)
-		    {
-		      do
-			{
-			  radii[i] = (OprogStatus.polydisp*gauss() + 1.0)*Oparams.sigma*0.5; 
-			}
-		      while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp));
-		      //printf("%.15G\n", radii[i]);
-		    }
-		  else
-		    radii[i] = Oparams.sigma*0.5;
-		}
+		radii[i] = Oparams.sigma*0.5;
 	    }
 	}
 #else
       radii[i] = Oparams.sigma*0.5;
 #endif
     }
-#ifdef MD_POLYDISP
-  if (OprogStatus.ext_radii==1)
-    fclose(fp); 
-#endif
   if (Oparams.curStep == 1)
     {
       check ( Oparams.sigma, &overlap, &K, &V);
