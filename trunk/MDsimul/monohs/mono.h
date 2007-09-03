@@ -339,7 +339,9 @@ struct progStatus
   int PE[PE_POINTS];
   double ENmin;
   double ENmax;
-
+#ifdef MD_POLYDISP
+  int ext_radii;
+#endif
   /* ======================================================================= */
 };
 
@@ -506,6 +508,9 @@ struct pascii opro_ascii[] =
   {"ENmin",        &OS(ENmin),                      1,  1,  "%.6G"},
   {"ENmax",        &OS(ENmax),                      1,  1,  "%.6G"},
   {"PE",           OS(PE),                 PE_POINTS,    1,  "%d"},
+#ifdef MD_POLYDISP
+  {"ext_radii",           &OS(ext_radii),          1, 1, "%d"},
+#endif
   {"", NULL, 0, 0, ""}
 };
 #else
@@ -689,6 +694,9 @@ struct singlePar OsinglePar[] = {
   {"ENmin",      &OprogStatus.ENmin,        CT},
   {"ENmax",      &OprogStatus.ENmax,        CT},
   {"nRun",       &OprogStatus.nRun,         STR},
+#ifdef MD_POLYDISP
+  {"ext_radii",  &OprogStatus.ext_radii,    INT},
+#endif
   /* ======================================================================= */
 
   {"", NULL, 0} /* end of list, don't touch this !!! */

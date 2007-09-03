@@ -1945,10 +1945,18 @@ void move(void)
 	  fprintf(bf, sepStr);
 	  writeAllCor(bf);
 	  fclose(bf);
+#ifdef MD_MAC
+#ifdef MPI
+          sprintf(fileop3, "/usr/bin/gzip -f %s_R%d", fileop, my_rank);
+#else 
+          sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+#endif
+#else
 #ifdef MPI
           sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
 #else 
           sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
 #endif
 	  system(fileop3);
 	  OprogStatus.JJ++;
