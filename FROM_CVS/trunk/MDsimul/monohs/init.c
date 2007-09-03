@@ -584,6 +584,9 @@ void usrInitBef(void)
   OprogStatus.rNebrShell = 2.7; /* the radius of neighbour list shell */
   for (i = 0; i < PE_POINTS; i++)
     OprogStatus.PE[i] = 0;
+#ifdef MD_POLYDISP
+  OprogStatus.ext_radii=0;
+#endif
   /* ======================================================================= */
 }
 extern void check ( double sigma, int *overlap, double *K, double *V);
@@ -638,6 +641,9 @@ void usrInitAft(void)
   FILE* f;
   const int numk = 98;
   const int numk2av = 150;
+#endif
+#ifdef MD_POLYDISP
+  FILE *fp;
 #endif
   int jZmax; 
   int Nm, i, sct, overlap;
@@ -800,6 +806,10 @@ void usrInitAft(void)
     radiiINI = malloc(sizeof(double)*Oparams.parnum);
 #endif
   scdone = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MD_POLYDISP
+  if (OprogStatus.ext_radii==1)
+    fp=fopen("radii.dat","r");
+#endif
   for (i=0; i < Oparams.parnum; i++)
     {
       scdone[i] = 0;
@@ -814,24 +824,34 @@ void usrInitAft(void)
 	  else*/
 	  if (!strcmp(OprogStatus.inifile,"*"))
 	    {
-	      if (OprogStatus.polydisp > 0.0)
+	      if (OprogStatus.ext_radii==1)
 		{
-		  do
-		    {
-		      radii[i] = (OprogStatus.polydisp*gauss() + 1.0)* Oparams.sigma*0.5; 
-		    }
-	      while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp));
-		  //printf("%.15G\n", radii[i]);
+		  fscanf(fp, "%lf ", &radii[i]);
 		}
 	      else
-		radii[i] = Oparams.sigma*0.5;
+		{
+		  if (OprogStatus.polydisp > 0.0)
+		    {
+		      do
+			{
+			  radii[i] = (OprogStatus.polydisp*gauss() + 1.0)*Oparams.sigma*0.5; 
+			}
+		      while (radii[i] < Oparams.sigma*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigma*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp));
+		      //printf("%.15G\n", radii[i]);
+		    }
+		  else
+		    radii[i] = Oparams.sigma*0.5;
+		}
 	    }
 	}
 #else
       radii[i] = Oparams.sigma*0.5;
 #endif
     }
-
+#ifdef MD_POLYDISP
+  if (OprogStatus.ext_radii==1)
+    fclose(fp); 
+#endif
   if (Oparams.curStep == 1)
     {
       check ( Oparams.sigma, &overlap, &K, &V);
