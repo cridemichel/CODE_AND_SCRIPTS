@@ -341,6 +341,7 @@ struct progStatus
   double ENmax;
 #ifdef MD_POLYDISP
   int ext_radii;
+  char radiiFile[NAME_LENGTH];
 #endif
   /* ======================================================================= */
 };
@@ -510,6 +511,7 @@ struct pascii opro_ascii[] =
   {"PE",           OS(PE),                 PE_POINTS,    1,  "%d"},
 #ifdef MD_POLYDISP
   {"ext_radii",           &OS(ext_radii),          1, 1, "%d"},
+  {"radiiFile",           OS(radiiFile),          1, NAME_LENGTH, "%s"},
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -696,6 +698,7 @@ struct singlePar OsinglePar[] = {
   {"nRun",       &OprogStatus.nRun,         STR},
 #ifdef MD_POLYDISP
   {"ext_radii",  &OprogStatus.ext_radii,    INT},
+  {"radiiFile",  OprogStatus.radiiFile,    STR},
 #endif
   /* ======================================================================= */
 
