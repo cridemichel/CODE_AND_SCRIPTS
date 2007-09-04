@@ -396,7 +396,11 @@ struct params
 
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   double delta[2][2]; /* ampiezza della buca */
+#ifdef MD_MIXWDEPTH
+  double bheight[2][2];
+#else
   double bheight;
+#endif
 #endif
 #ifdef MD_GRAVITY
   double ggrav;
@@ -553,7 +557,11 @@ struct pascii opar_ascii[]=
   {"tol",               &OP(tol),                         1,   1, "%.15G"},
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   {"delta",             &OP(delta),                       2,   2, "%.15G"},
+#ifdef MD_MIXWDEPTH
+  {"bheight",           &OP(bheight),                     2,   2, "%.15G"},
+#else
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
+#endif
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -669,7 +677,13 @@ struct singlePar OsinglePar[] = {
   {"deltaAA",    &Oparams.delta[0][0],            CT},
   {"deltaBB",    &Oparams.delta[1][1],            CT},
   {"deltaAB",    &Oparams.delta[0][1],            CT},
+#ifdef MD_MIXWDEPTH
+  {"bheightAA",    &Oparams.bheight[0][0],          CT},
+  {"bheightAB",    &Oparams.bheight[0][1],          CT},
+  {"bheightBB",    &Oparams.bheight[1][1],          CT},
+#else
   {"bheight",    &Oparams.bheight,          CT},
+#endif
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
   {"avngPress",  &OprogStatus.avngPress,      INT},
