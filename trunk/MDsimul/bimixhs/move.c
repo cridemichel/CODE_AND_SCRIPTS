@@ -1054,7 +1054,6 @@ void PredictEvent (int na, int nb)
   if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
   if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
 #endif
-
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
       jZ = inCell[2][na] + iZ;    
@@ -1189,6 +1188,7 @@ void PredictEvent (int na, int nb)
 			  
 #endif
 		  	    
+
 			  if (b < 0.0)
 			    { 
 		      	      d= Sqr (b) - vv * (distSq - sigSq);
@@ -1208,7 +1208,7 @@ no_core_bump:
 			      if (d > 0.0)
 				{
 				  t = ( sqrt (d) - b) / vv;
-				  if (t > 0 || (t < 0 && distSq > sigDeltaSq))
+				  if (t > 0) //|| (t < 0 && distSq > sigDeltaSq))
 				    collCode = MD_INOUT_BARRIER;
 				}
 			    }
