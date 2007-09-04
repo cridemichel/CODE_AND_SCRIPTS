@@ -345,9 +345,16 @@ void bump (int i, int j, double* W, int bt)
 #ifdef MD_HSVISCO
   double taus;
 #endif
-  if (i < parnumA && j < parnumA)
+   double bheight;
+#ifndef MD_MIXWDEPTH
+   bheight = Oparams.bheight;
+#endif
+   if (i < parnumA && j < parnumA)
     {
       sigSq = Sqr(Oparams.sigma[0][0]);
+#ifdef MD_MIXWDEPTH
+      bheight = Oparams.bheight[0][0];
+#endif
       sigDeltaSq = Sqr(Oparams.sigma[0][0]+Oparams.delta[0][0]);
       mredl = Mred[0][0];
     }
@@ -355,13 +362,19 @@ void bump (int i, int j, double* W, int bt)
     {
       sigSq = Sqr(Oparams.sigma[1][1]);
       sigDeltaSq = Sqr(Oparams.sigma[1][1]+Oparams.delta[1][1]);
-      mredl = Mred[1][1];
+#ifdef MD_MIXWDEPTH
+      bheight = Oparams.bheight[1][1];
+#endif
+       mredl = Mred[1][1];
     }
   else
     {
       sigSq = Sqr(Oparams.sigma[0][1]);
       sigDeltaSq = Sqr(Oparams.sigma[0][1]+Oparams.delta[0][1]);
-      mredl = Mred[0][1]; 
+#ifdef MD_MIXWDEPTH
+      bheight = Oparams.bheight[0][1];
+#endif
+       mredl = Mred[0][1]; 
     }
   vxij = vx[i] - vx[j];
   vyij = vy[i] - vy[j];
@@ -401,13 +414,13 @@ void bump (int i, int j, double* W, int bt)
 #ifdef MD_INFBARRIER
       factor = -2.0*b;
 #elif defined(MD_SQWELL)
-      if (Sqr(b) < 2.0*sigDeltaSq*Oparams.bheight/mredl)
+      if (Sqr(b) < 2.0*sigDeltaSq*bheight/mredl)
 	{
 	  factor = -2.0*b;
 	}
       else
 	{
-	  factor = -b + sqrt(Sqr(b) - 2.0*sigDeltaSq*Oparams.bheight/mredl);
+	  factor = -b + sqrt(Sqr(b) - 2.0*sigDeltaSq*bheight/mredl);
 	  remove_bond(i, j);
 	  remove_bond(j, i);
 	}
@@ -424,7 +437,7 @@ void bump (int i, int j, double* W, int bt)
 #elif defined(MD_SQWELL)
       add_bond(i, j);
       add_bond(j, i);
-      factor = -b - sqrt(Sqr(b) + 2.0*sigDeltaSq*Oparams.bheight/mredl);
+      factor = -b - sqrt(Sqr(b) + 2.0*sigDeltaSq*bheight/mredl);
 #endif
       factor *= mredl / sigDeltaSq;
       break;

@@ -628,7 +628,11 @@ void usrInitBef(void)
     L = 9.4;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
     Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
+#ifdef MD_MIXWDEPTH
+    Oparams.bheight[0][0]=Oparams.bheight[0][1]=Oparams.bheight[1][0]=Oparams.bheight[1][1]=0.0;
+#else
     Oparams.bheight = 0.0;
+#endif
     OprogStatus.maxbonds = 20;
 #endif
 #ifdef MD_GRAVITY
@@ -928,6 +932,9 @@ void usrInitAft(void)
     invmB = 1.0/Oparams.m[1];
     Oparams.sigma[1][0] = Oparams.sigma[0][1];
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
+#ifdef MD_MIXWDEPTH
+    Oparams.bheight[1][0] = Oparams.bheight[0][1];
+#endif
     Oparams.delta[1][0] = Oparams.delta[0][1];
 #endif
     Mred[0][0] = (Oparams.m[0]*Oparams.m[0])/(Oparams.m[0]+Oparams.m[0]);
