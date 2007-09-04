@@ -854,7 +854,7 @@ void add_bonds (int na, int *numbonds)
 		      dr[1] = ry[na] - ry[n] - shift[1];
 		      dr[2] = rz[na] - rz[n] - shift[2];
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
-		      if (distSq < sigDeltaSq)
+		      if (distSq < sigDeltaSq && sigDeltaSq != sigSq)
 			{
 			  (*numbonds)++;
 			  add_bond(n, na);
