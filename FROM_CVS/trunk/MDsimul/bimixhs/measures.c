@@ -50,10 +50,14 @@ extern int bound(int na, int n);
 int *numbonds;
 double calcpotene(void)
 {
+#ifdef MD_MIXWDEPTH
+  int i, j, kk;  
+#endif  
   double shift[NDIM], Epot; 
   int cellRangeEne[2 * NDIM], signDir[NDIM], evCode,
       iX, iY, iZ, jX, jY, jZ, k, n, na;
   Epot = 0;
+
 #if 0
   for (k = 0; k < NDIM; k++)
     { 
@@ -121,8 +125,24 @@ double calcpotene(void)
 	}
     }
 #else
+#ifdef MD_MIXWDEPTH
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      for (kk=0; kk < numbonds[i]; kk++)
+	{
+	  j = bonds[i][kk];
+	  if (i < Oparams.parnumA && j < Oparams.parnumA)
+	    Epot -= Oparams.bheight[0][0];
+	  else if (i >= Oparams.parnumA && j >= Oparams.parnumA)
+	    Epot -= Oparams.bheight[1][1];
+	  else
+	    Epot -= Oparams.bheight[0][1];
+	}
+    }
+#else	
  for (na = 0; na < Oparams.parnum; na++)
     Epot -= numbonds[na];
+#endif
 #endif
  return 0.5*Epot;
 }

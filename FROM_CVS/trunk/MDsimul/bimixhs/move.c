@@ -1163,7 +1163,7 @@ void PredictEvent (int na, int nb)
 		      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
 		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
 		      collCode = MD_EVENT_NONE;
-		      if (!bound(n, na))
+		      if (!bound(n, na) && sigSq != sigDeltaSq)
 			{
 			  if ( b < 0.0 ) 
 			    {
@@ -1202,7 +1202,7 @@ void PredictEvent (int na, int nb)
 #ifdef MD_INFBARRIER
 no_core_bump:
 #endif
-			  if (collCode == MD_EVENT_NONE)
+			  if (collCode == MD_EVENT_NONE && sigSq != sigDeltaSq)
 			    {
 			      d = Sqr (b) - vv * (distSq - sigDeltaSq);
 			      if (d > 0.0)
