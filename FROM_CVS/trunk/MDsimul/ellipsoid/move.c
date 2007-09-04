@@ -55,6 +55,9 @@ extern void check_all_bonds(void);
 #else
 int *lastbump;
 #endif
+#ifdef MD_SPHERICAL_WALL
+extern int sphWall;
+#endif
 extern double *axa, *axb, *axc;
 extern int *scdone;
 extern double *maxax;
@@ -7205,6 +7208,14 @@ void PredictEvent (int na, int nb)
 #endif
 		      MD_DEBUG40(printf("schedule event [collision](%d,%d)-(%d,%d) collCode=%d\n", na, ac, n, bc, collCode));
 		    }
+#ifdef MD_SPHERICAL_WALL
+		  if (cellList[n]==-1)
+		    {
+		      n=sphWall;
+		      /* notare che cellList[sphWall]=-1 sempre 
+			 dove sphWall è la particella che costituisce la semi-calotta sferica */
+		    }
+#endif
 		} 
 	    }
 	}

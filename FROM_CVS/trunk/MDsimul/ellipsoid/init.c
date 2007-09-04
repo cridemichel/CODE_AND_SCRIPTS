@@ -30,6 +30,9 @@ double **Aip;
 extern int is_infinite_Itens(int i);
 extern int is_infinite_mass(int i);
 #endif
+#ifdef MD_SPHERICAL_WALL
+int sphWall;
+#endif
 int *scdone;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
@@ -2000,6 +2003,10 @@ void calc_encpp(void)
 
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
+#ifdef MD_SPHERICAL_WALL
+      if (pt == Oparams.ntypes-1)
+	continue;
+#endif
 #ifdef MD_EDHEFLEX_OPTNNL
       com[0] = 0.0;
       com[1] = 0.0;
@@ -2061,6 +2068,10 @@ double calc_shell(void)
 #ifdef EDHE_FLEX
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
+#ifdef MD_SPHERICAL_WALL
+      if (pt == Oparams.ntypes-1)
+	continue;
+#endif
       for (sp = 0; sp < typesArr[pt].nspots; sp++) 
 	{
 	  norm = calc_norm(typesArr[pt].spots[sp].x);
@@ -2121,6 +2132,10 @@ double calc_nnl_rcut(void)
 #ifdef EDHE_FLEX
   for (i = 0; i < Oparams.parnum; i++)
     {
+#ifdef MD_SPHERICAL_WALL
+      if (typeOfPart[i] == Oparams.ntypes-1)
+	continue;
+#endif
       for (kk=0; kk < 3; kk++)
 	ax[kk] = typesArr[typeOfPart[i]].ppsax[kk];
       /* nel caso si tratti di un oggetto a simmetria sferica l'orientazione rimane della NNL (che è un cubo) rimane invariata
@@ -2807,6 +2822,17 @@ void usrInitAft(void)
       resetCM(0);
    }
 #if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
+#ifdef MD_SPHERICAL_WALL
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* N.B. il tipo numero Oparams.ntypes-1 deve essere il muro sferico! */
+      if (typeOfPart[i] == Oparams.ntypes-1)
+	{
+	  sphWall = i;
+	  break;	  
+	}
+    }
+#endif
   if (newSim)
     {  
       for (i=0; i < Oparams.parnum; i++)
@@ -3180,8 +3206,13 @@ void usrInitAft(void)
 	}
 #endif
       maxax[i] *= 2.0;
+#ifdef MD_SPHERICAL_WALL
+      if (maxax[i] > MAXAX && typeOfPart[i] != Oparams.ntypes-1)
+	MAXAX = maxax[i];
+#else
       if (maxax[i] > MAXAX)
 	MAXAX = maxax[i];
+#endif
       //printf("maxax aft[%d]: %.15G\n", i, maxax[i]);
     }
 #ifdef EDHE_FLEX
