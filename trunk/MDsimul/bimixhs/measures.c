@@ -32,6 +32,7 @@ extern double W, K, WC, T1xx, T1yy, T1zz,
 /* used by linked list routines */
 extern int *head, *list, *map;  /* arrays of integer */
 extern int NCell, mapSize, M;
+extern int *bondscache, **bonds;
 
 /* neighbour list method variables */
 extern double dispHi;
