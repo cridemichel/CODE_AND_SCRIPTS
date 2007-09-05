@@ -7212,6 +7212,7 @@ void PredictEvent (int na, int nb)
 		  if (cellList[n]==-1)
 		    {
 		      n=sphWall;
+		      //printf("cellList[%d]:%d\n", sphWall, cellList[sphWall]);
 		      /* notare che cellList[sphWall]=-1 sempre 
 			 dove sphWall è la particella che costituisce la semi-calotta sferica */
 		    }

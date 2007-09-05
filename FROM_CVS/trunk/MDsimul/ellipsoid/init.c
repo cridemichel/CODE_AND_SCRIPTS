@@ -1541,6 +1541,13 @@ void StartRun(void)
   /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
   for (n = 0; n < Oparams.parnum; n++)
     {
+#ifdef MD_SPHERICAL_WALL
+      if (n==sphWall)
+	{
+	  cellList[sphWall]=-1;
+	  continue;
+	}
+#endif
       atomTime[n] = Oparams.time;
       //printf("qui n=%d %.15G %.15G %.15G\n", n, rx[n], ry[n], rz[n]);
       inCell[0][n] =  (rx[n] + L2) * cellsx / L;
@@ -2457,7 +2464,6 @@ void find_bonds(void)
 
 	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 	NPB = get_num_pbonds(i, j);
-	
 #if 0
 	if (NPB==0)
 	  printf("i=%d j=%d\n",i, j);
@@ -2470,7 +2476,7 @@ void find_bonds(void)
     	    if (dists[nn] < 0.0)
 	      {
 #if 0
-		if (mapbondsa[nn]==20 && mapbondsb[nn]==20)
+		if (j==1001)
 		  printf("Oparams.parnum=%d i=%d typei=%d j=%d typej=%d nn=%d dist=%.15G\n", Oparams.parnum, i, typeOfPart[i], j, typeOfPart[j], nn, dists[nn]);
 #endif
 		aa = mapbondsa[nn];
@@ -2676,6 +2682,16 @@ void usrInitAft(void)
     {
       bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
       numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+#ifdef MD_SPHERICAL_WALL
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  if (typeOfPart[i]==Oparams.ntypes-1)
+	    {
+	      bonds[i] = malloc(sizeof(int)*Oparams.parnum);
+	      break;
+	    }
+	}
+#endif
     }
 #else
   bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
