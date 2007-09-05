@@ -37,9 +37,9 @@ extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
 double minaxA, minaxB, minaxAB;
 int do_check_negpairs = 0;
 #ifdef MD_ASYM_ITENS
-double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
+extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
 #else
-double Ia, Ib, invIa, invIb;
+extern double Ia, Ib, invIa, invIb;
 #endif
 #ifdef MD_PATCHY_HE
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt);
@@ -6917,6 +6917,7 @@ void PredictEvent (int na, int nb)
 #if defined(MD_ABSORPTION) 
       if (OprogStatus.bufHeight > 0.0)
 	{
+#if !defined(MD_SPHERICAL_WALL)
 	  if (vz[na] != 0.0)
 	    {
 	      hwcell = (L-OprogStatus.bufHeight)*cellsz/L;
@@ -6936,6 +6937,7 @@ void PredictEvent (int na, int nb)
 		}
 #endif
 	    }
+#endif
 	}
 #endif
 
