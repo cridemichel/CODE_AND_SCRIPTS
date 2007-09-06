@@ -271,10 +271,14 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #endif
 #endif
 #undef  EXT_SLST
+#ifdef MD_LXYZ
+#define EXT_SLST  &L[0], &L[1], &L[2]
+#else
 #ifdef MD_GRAVITY
 #define EXT_SLST  &L, &Lz
 #else
 #define EXT_SLST  &L
+#endif
 #endif
 /* Reduced list of variables to save on xva file (tape file) */ 
 #ifdef MD_GRAVITY
@@ -336,10 +340,14 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #endif
 #endif				   
 #undef EXT_DLST
+#ifdef MD_LXYZ
+#define EXT_DLST  L[3] 
+#else
 #ifdef MD_GRAVITY
 #define EXT_DLST  L, Lz 
 #else
 #define EXT_DLST  L 
+#endif
 #endif
 #if 1
 #define treeLeft   tree[0]
@@ -1229,7 +1237,13 @@ struct singlePar OsinglePar[] = {
 #endif
   {"W",          &OprogStatus.W,              CT},
   {"P",          &Oparams.P,                  CT},
+#ifdef MD_LXYZ
+  {"Lx",          &L[0],                     CT},
+  {"Ly",          &L[1],                     CT},
+  {"Lz",          &L[2],                     CT},
+#else
   {"L",          &L,                        CT},
+#endif
 #ifdef MD_PATCHY_HE
   {"sigmaSticky", &Oparams.sigmaSticky,     CT},
   {"bheight",    &Oparams.bheight,          CT},

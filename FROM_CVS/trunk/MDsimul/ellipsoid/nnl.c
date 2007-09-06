@@ -43,7 +43,11 @@ extern const double timbig;
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 extern double rA[3], rB[3];
 extern double rxC, ryC, rzC;
+#ifdef MD_LXYZ
+extern double pi, invL[3], L2[3], Vz; 
+#else
 extern double pi, invL, L2, Vz; 
+#endif
 #ifdef MD_ASYM_ITENS
 extern double **Ia, **Ib, **invIa, **invIb;
 #else
@@ -3990,9 +3994,15 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
   double evtimeHC, evtime;
   int ac, bc, acHC, bcHC, collCode, collCodeOld;
 #endif
+#ifdef MD_LXYZ
+  shift[0] = L[0]*rint((rx[na]-rx[n])/L[0]);
+  shift[1] = L[1]*rint((ry[na]-ry[n])/L[1]);
+  shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+#else
   shift[0] = L*rint((rx[na]-rx[n])/L);
   shift[1] = L*rint((ry[na]-ry[n])/L);
   shift[2] = L*rint((rz[na]-rz[n])/L);
+#endif
   /* maxax[...] è il diametro dei centroidi dei due tipi
    * di ellissoidi */
   if (OprogStatus.targetPhi > 0)
@@ -4387,39 +4397,70 @@ void PredictEventNNL(int na, int nb)
 	signDir[2] = 0;/* direzione positiva */
       else 
 	signDir[2] = 1;/* direzione negativa */
+#ifdef MD_LXYZ
 #ifdef MD_EDHEFLEX_WALL
       if (OprogStatus.hardwall && ((signDir[2]==0 && inCell[2][na]==cellsz-1) || (signDir[2]==1 && inCell[2][na]==0)))
 	tm[2] = timbig;
       else
-	tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
+	tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L[2] /
+		 cellsz - rz[na] - L2[2]) / vz[na];
+#else
+      tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L[2] /
+	       cellsz - rz[na] - L2[2]) / vz[na];
+#endif
+#else
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall && ((signDir[2]==0 && inCell[2][na]==cellsz-1) || (signDir[2]==1 && inCell[2][na]==0)))
+	tm[2] = timbig;
+      else
+	  tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
 		 cellsz - rz[na] - L2) / vz[na];
 #else
       tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
 	       cellsz - rz[na] - L2) / vz[na];
+#endif
 #endif    
     } 
   else 
     tm[2] = timbig;
   if (vx[na] != 0.0) 
     {
+#ifdef MD_LXYZ
+      if (vx[na] > 0.0) 
+	signDir[0] = 0;/* direzione positiva */
+      else 
+	signDir[0] = 1;/* direzione negativa */
+      tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L[0] /
+	       cellsx - rx[na] - L2[0]) / vx[na];
+#else
       if (vx[na] > 0.0) 
 	signDir[0] = 0;/* direzione positiva */
       else 
 	signDir[0] = 1;/* direzione negativa */
       tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L /
 	       cellsx - rx[na] - L2) / vx[na];
+#endif
     } 
   else 
     tm[0] = timbig;
   
   if (vy[na] != 0.) 
     {
+#ifdef MD_LXYZ
+      if (vy[na] > 0.) 
+	signDir[1] = 0;
+      else 
+	signDir[1] = 1;
+      tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L[1] /
+	       cellsy - ry[na] - L2[1]) / vy[na];
+#else
       if (vy[na] > 0.) 
 	signDir[1] = 0;
       else 
 	signDir[1] = 1;
       tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L /
 	       cellsy - ry[na] - L2) / vy[na];
+#endif
     } 
   else 
     tm[1] = timbig;
@@ -4565,6 +4606,18 @@ void PredictEventNNL(int na, int nb)
 	signDir[2] = 0;/* direzione positiva */
       else 
 	signDir[2] = 1;/* direzione negativa */
+#ifdef MD_LXYZ
+#if defined(MD_EDHEFLEX_WALL) 
+      if (OprogStatus.hardwall && ((signDir[2]==0 && inCell[2][na]==cellsz-1) || (signDir[2]==1 && inCell[2][na]==0)))
+	tm[2] = timbig;
+      else
+	tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L[2] /
+		 cellsz - rz[na] - L2[2]) / vz[na];
+#else
+      tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L[2]/
+	       cellsz - rz[na] - L2[2]) / vz[na];
+#endif
+#else
 #if defined(MD_EDHEFLEX_WALL) 
       if (OprogStatus.hardwall && ((signDir[2]==0 && inCell[2][na]==cellsz-1) || (signDir[2]==1 && inCell[2][na]==0)))
 	tm[2] = timbig;
@@ -4575,6 +4628,7 @@ void PredictEventNNL(int na, int nb)
       tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
 	       cellsz - rz[na] - L2) / vz[na];
 #endif
+#endif
     } 
   else 
     tm[2] = timbig;
@@ -4584,8 +4638,13 @@ void PredictEventNNL(int na, int nb)
 	signDir[0] = 0;/* direzione positiva */
       else 
 	signDir[0] = 1;/* direzione negativa */
+#ifdef MD_LXYZ
+      tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L[0] /
+	       cellsx - rx[na] - L2[0]) / vx[na];
+#else
       tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L /
 	       cellsx - rx[na] - L2) / vx[na];
+#endif    
     } 
   else 
     tm[0] = timbig;
@@ -4596,8 +4655,13 @@ void PredictEventNNL(int na, int nb)
 	signDir[1] = 0;
       else 
 	signDir[1] = 1;
+#ifdef MD_LXYZ
+      tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L[1] /
+	       cellsy - ry[na] - L2[1]) / vy[na];
+#else
       tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L /
 	       cellsy - ry[na] - L2) / vy[na];
+#endif
     } 
   else 
     tm[1] = timbig;
@@ -4637,7 +4701,11 @@ void PredictEventNNL(int na, int nb)
 	{
 	  if (vz[na] != 0.0)
 	    {
+#ifdef MD_LXYZ
+	      hwcell = (L[2]-OprogStatus.bufHeight)*cellsz/L[2];
+#else
 	      hwcell = (L-OprogStatus.bufHeight)*cellsz/L;
+#endif
 #if 1
 	      if (hwcell-inCell[2][na] < 2)
 		{
@@ -4696,10 +4764,15 @@ void PredictEventNNL(int na, int nb)
       //
       // for (kk=0; kk < 3; kk++)
       //	shift[kk] = nebrTab[na].shift[i][kk];
+#ifdef MD_LXYZ
+      shift[0] = L[0]*rint((rx[na]-rx[n])/L[0]);
+      shift[1] = L[1]*rint((ry[na]-ry[n])/L[1]);
+      shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+#else
       shift[0] = L*rint((rx[na]-rx[n])/L);
       shift[1] = L*rint((ry[na]-ry[n])/L);
       shift[2] = L*rint((rz[na]-rz[n])/L);
-
+#endif
       /* maxax[...] è il diametro dei centroidi dei due tipi
        * di ellissoidi */
       if (OprogStatus.targetPhi > 0)
@@ -5312,12 +5385,20 @@ void BuildNNL(int na)
       if (jZ == -1) 
 	{
 	  jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	  shift[2] = - L[2];
+#else
 	  shift[2] = - L;
+#endif
 	} 
       else if (jZ == cellsz) 
 	{
 	  jZ = 0;    
+#ifdef MD_LXYZ
+	  shift[2] = L[2];
+#else
 	  shift[2] = L;
+#endif
 	}
       for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
 	{
@@ -5326,12 +5407,20 @@ void BuildNNL(int na)
 	  if (jY == -1) 
 	    {
 	      jY = cellsy - 1;    
+#ifdef MD_LXYZ
+	      shift[1] = -L[1];
+#else
 	      shift[1] = -L;
+#endif
 	    } 
 	  else if (jY == cellsy) 
 	    {
 	      jY = 0;    
+#ifdef MD_LXYZ
+	      shift[1] = L[1];
+#else
 	      shift[1] = L;
+#endif
 	    }
 	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
 	    {
@@ -5340,12 +5429,20 @@ void BuildNNL(int na)
 	      if (jX == -1) 
 		{
 		  jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		  shift[0] = - L[0];
+#else
 		  shift[0] = - L;
+#endif
 		} 
 	      else if (jX == cellsx) 
 		{
 		  jX = 0;   
+#ifdef MD_LXYZ
+		  shift[0] = L[0];
+#else
 		  shift[0] = L;
+#endif
 		}
 	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 	      for (n = cellListL[n]; n > -1; n = cellListL[n]) 
