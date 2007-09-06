@@ -71,7 +71,7 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
   int id, idNew, more;
   id = 0;
 
-  MD_DEBUG2(printf("#%lld ScheduleEvent() idA:%d idB:%d evtime:%.15f\n", 
+  MD_DEBUG34(printf("#%lld ScheduleEvent() idA:%d idB:%d evtime:%.15f\n", 
 		   (long long int)Oparams.curStep, idA, idB,
 		  tEvent));
   if ((idB < ATOM_LIMIT ||
@@ -91,6 +91,7 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
     }
   else 
     idNew = idA + 1;
+  MD_DEBUG34(printf("idNew=%d\n", idNew));
   /* Se qui vuol dire che si tratta di un cell-crossing o 
      di un urto con parete
      NOTA: urto con parete e cell-crossing sono esclusivi, per cui basta un nodo 
@@ -394,11 +395,20 @@ void NextEvent (void)
     
   /*printf("Next event evIdA: %d, evIdB:%d\n", evIdA, evIdB);*/
 }
-
+#ifdef MD_SPHERICAL_WALL
+extern int sphWall;
+#endif
 void DeleteEvent (int id)
 {
   int idp, idq, idr;
 
+#ifdef MD_SPHERICAL_WALL
+  /* N.B. sphWall+1 è l'evento di cell-crossing del 
+     muro sferico ma tale evento non viene schedulato affatto
+     e quindi non va neanche rimosso */
+ if (id == sphWall+1)
+  return; 
+#endif
   MD_DEBUG2(printf("[ DeleteEvent ] deleting node #%d\n", id));
   idr = treeRight[id];
   if (idr == -1)
