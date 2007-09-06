@@ -28,7 +28,12 @@ double DphiSqA=0.0, DphiSqB=0.0, DrSqTotA=0.0, DrSqTotB=0.0;
  Here you can put all the variable that you use only in this file, that is 
  in the move function and in the measuring functions, note that the variables 
  to measures have to be put in the 'mdsimdep.h' file (see that) */
-extern double pi, s1t, Vol1t, invL, s1p, Elrc, Plrc;   
+extern double pi, s1t, Vol1t, s1p, Elrc, Plrc;   
+#ifdef MD_LXYZ
+extern double invL[3];
+#else
+extern double invL;
+#endif
 extern double W, K, WC, T1xx, T1yy, T1zz, Ktra, Krot,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, WCxy, WCyz, WCzx, 
   WCxx, WCyy, WCzz, Wxx, Wyy, Wzz,
@@ -227,7 +232,7 @@ void calc_momentum_filtered(double P[3], int filter)
   P[0] = 0.0;
   P[1] = 0.0;
   P[2] = 0.0;
-  invL = 1.0 / L;
+  //invL = 1.0 / L;
   for(i = 0; i < Oparams.parnum; i++)
     {
       if (filter != 0 && filter != typesArr[typeOfPart[i]].brownian)
@@ -254,7 +259,7 @@ void energy(void)
   double Px, Py, Pz, RCMx, RCMy, RCMz;
   int mol, Nm, i;
   double px, py, pz;
-  double invL;
+//  double invL;
   double tref;
 #ifdef MD_BIG_DT
   tref = OprogStatus.refTime;
@@ -265,12 +270,17 @@ void energy(void)
   FILE* mf;
 #endif
   Nm = Oparams.parnum;
+#ifdef MD_LXYZ
+  sprintf(TXTA[0],"STEP %lld [MEASURE]\n  Lx: %.10f Ly: %.10f Lz:%.15f\n", 
+	  (long long int)Oparams.curStep, L[0], L[1], L[2]);
+#else
 #ifdef MD_GRAVITY
   sprintf(TXTA[0],"STEP %lld [MEASURE]\n  L: %.10f Lz: %.10f\n", 
 	  (long long int)Oparams.curStep, L, Lz);
 #else
   sprintf(TXTA[0],"STEP %lld [MEASURE]\n  L: %.10f\n", 
 	  (long long int)Oparams.curStep, L);
+#endif
 #endif
   calc_energy("[MEASURES]"); 
   //printf("angM[0]:%.15G angM[10]:%.15G\n", angM[0], angM[10]);
@@ -289,7 +299,7 @@ void energy(void)
   Px = 0.0;
   Py = 0.0;
   Pz = 0.0;
-  invL = 1.0 / L;
+  //invL = 1.0 / L;
   UpdateSystem();
   for(i = 0; i < Oparams.parnumA; i++)
     {
@@ -416,9 +426,15 @@ void radius_of_gyration(void)
       dy = ry[i+1]-ry[i];
       dz = rz[i+1]-rz[i];
       /* minimum image */
+#ifdef MD_LXYZ
+      dx = dx - L[0]*rint(dx/L[0]);
+      dy = dy - L[1]*rint(dy/L[1]);
+      dz = dz - L[2]*rint(dz/L[2]);
+#else
       dx = dx - L*rint(dx/L);
       dy = dy - L*rint(dy/L);
       dz = dz - L*rint(dz/L);
+#endif
       rcx = rcx + dx;
       rcy = rcy + dy;
       rcz = rcz + dz;
@@ -435,9 +451,15 @@ void radius_of_gyration(void)
       dy = ry[i]-rmean[1];
       dz = rz[i]-rmean[2];
       /* minimum image */
+#ifdef MD_LXYZ
+      dx = dx - L[0]*rint(dx/L[0]);
+      dy = dy - L[1]*rint(dy/L[1]);
+      dz = dz - L[2]*rint(dz/L[2]);
+#else
       dx = dx - L*rint(dx/L);
       dy = dy - L*rint(dy/L);
       dz = dz - L*rint(dz/L);
+#endif
       rgyr += Sqr(dx);
       rgyr += Sqr(dy);
       rgyr += Sqr(dz);
@@ -470,9 +492,15 @@ void transDiff(void)
   f = fopen(absMisHD("MSDA.dat"), "a");
   for(i=0; i < Oparams.parnumA; i++)
     {
+#ifdef MD_LXYZ
+      Drx = rx[i] - OprogStatus.rxCMi[i] + L[0]*OprogStatus.DR[i][0]; 
+      Dry = ry[i] - OprogStatus.ryCMi[i] + L[1]*OprogStatus.DR[i][1];
+      Drz = rz[i] - OprogStatus.rzCMi[i] + L[2]*OprogStatus.DR[i][2];
+#else
       Drx = rx[i] - OprogStatus.rxCMi[i] + L*OprogStatus.DR[i][0]; 
       Dry = ry[i] - OprogStatus.ryCMi[i] + L*OprogStatus.DR[i][1];
       Drz = rz[i] - OprogStatus.rzCMi[i] + L*OprogStatus.DR[i][2];
+#endif
 #if 0
       if (OprogStatus.ipart == i)
 	{
@@ -498,9 +526,15 @@ void transDiff(void)
       DrSqTot = 0.0;
       for(i=Oparams.parnumA; i < Oparams.parnum; i++)
 	{
+#ifdef MD_LXYZ
+	  Drx = rx[i] - OprogStatus.rxCMi[i] + L[0]*OprogStatus.DR[i][0]; 
+	  Dry = ry[i] - OprogStatus.ryCMi[i] + L[1]*OprogStatus.DR[i][1];
+	  Drz = rz[i] - OprogStatus.rzCMi[i] + L[2]*OprogStatus.DR[i][2];
+#else
 	  Drx = rx[i] - OprogStatus.rxCMi[i] + L*OprogStatus.DR[i][0]; 
 	  Dry = ry[i] - OprogStatus.ryCMi[i] + L*OprogStatus.DR[i][1];
 	  Drz = rz[i] - OprogStatus.rzCMi[i] + L*OprogStatus.DR[i][2];
+#endif
 	  DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
 	}
       
@@ -778,10 +812,14 @@ void structFacts_OLD(void)
   sumS = OprogStatus.sumS;
   DELR = (REND - RBEG) / MAXBIN;
   pi4 = pi * 4.0;
+#ifdef MD_LXYZ
+  Vol = L[0]*L[1]*L[2];  
+#else
 #if defined(MD_GRAVITY)
   Vol = Lz*Sqr(L);
 #else
   Vol = L*L*L;  
+#endif
 #endif
   rhoAv = (double) Oparams.parnum / Vol; /* V = 1 here !!!!!!!!!!!!*/ 
   scalFact = (KEND - KBEG) / NUMK;
@@ -834,7 +872,13 @@ void structFacts(void)
   /* DESCRIPTION:
      This mesuring function calculates the static structure factor */
   double reRho, imRho, pi2;
-  double invNmA, scalFact;
+#ifdef MD_LXYZ
+  double scalFact[3];
+  int kk;
+#else
+  double scalFact;
+#endif
+  double invNmA;
   double rCMk, sumRho;
   double *sumS, kbeg;
   int mp, i, NmA, n;
@@ -845,12 +889,22 @@ void structFacts(void)
   const int numk = 98;
   /* useful quantities */
   sumS = OprogStatus.sumS;
+#ifdef MD_LXYZ
+  for (kk=0; kk < 3; kk++)
+    invL[kk] = 1.0 / L[kk];
+#else
   invL = 1.0 / L;
+#endif
   //scalFact = (KEND - KBEG) / NUMK;
   
   pi2 = 2.0 * pi;
   kbeg = 0.0; //pi2 * invL;
+#ifdef MD_LXYZ
+  for (kk=0; kk < 3; kk++)
+    scalFact[kk] = pi2 * invL[kk];
+#else
   scalFact = pi2 * invL;
+#endif
   //printf("maxI : %d\n", maxI);
   /* We take 'maxI' values of Phi and 'maxI' values of Teta, so we have in this
      way NUMK2AV = maxI * maxI (about) values for 'k' over the 
@@ -876,9 +930,14 @@ void structFacts(void)
 		  printf("ERRORE nella MESH!!!!!!!!\n");
 		  exit(-1);
 		}
+#ifdef MD_LXYZ
+	      rCMk = kbeg + scalFact[0] * rx[i] * mesh[n][mp][0] + scalFact[1] * ry[i] * mesh[n][mp][1] + 
+		 scalFact[2] * rz[i] * mesh[n][mp][2];
+#else
 	      rCMk = kbeg + scalFact * 
 		(rx[i] * mesh[n][mp][0] + ry[i] * mesh[n][mp][1] + 
 		 rz[i] * mesh[n][mp][2]);
+#endif
 	      reRho = reRho + cos(rCMk) ; 
 	      imRho = imRho + sin(rCMk);
 	      /* Imaginary part of exp(i*k*r) for the actual molecule*/
@@ -936,6 +995,9 @@ void maxwell(void)
 }
 
 /* =========================== >>> radDens <<< ============================= */
+#ifdef MD_LXYZ
+extern double min3(double a, double b, double c);
+#endif
 void radDens(void)
 {
   int bin, Nm, i, j;
@@ -943,17 +1005,31 @@ void radDens(void)
   double Vol, rij, rxij, ryij, rzij, rijSq;
   double m, rlower, rupper, cost, nIdeal; 
   double rhoAv, DELR;
+
+#ifdef MD_LXYZ
+  for (i=0; i < 3; i++)
+    invL[i] = 1.0 / L[i];
+#else
   invL = 1.0 / L;
+#endif
   Nm = Oparams.parnumA;
   rhoAv = (double) Nm;
   m = Oparams.m[0];
+#ifdef MD_LXYZ
+  Vol = L[0]*L[1]*L[2];
+#else
 #ifdef MD_GRAVITY
   Vol = Sqr(L)*Lz;
 #else
   Vol = L*L*L;
+#endif
 #endif 
-  DELR = (L/2.0 - RBEG) / MAXBIN;
 
+#ifdef MD_LXYZ
+  DELR = (min3(L[0],L[1],L[2])/2.0 - RBEG) / MAXBIN;
+#else
+  DELR = (L/2.0 - RBEG) / MAXBIN;
+#endif
   hist = OprogStatus.hist;
   
   if (OprogStatus.avnggr == 0)
@@ -971,10 +1047,16 @@ void radDens(void)
 	  rxij = rx[i] - rx[j];
 	  ryij = ry[i] - ry[j];
 	  rzij = rz[i] - rz[j];
+#ifdef MD_LXYZ
+	  rxij = rxij - L[0] * rint(invL[0] * rxij);
+	  ryij = ryij - L[1] * rint(invL[1] * ryij);
+	  rzij = rzij - L[2] * rint(invL[2] * rzij);
+#else
 	  rxij = rxij - L * rint(invL * rxij);
 	  ryij = ryij - L * rint(invL * ryij);
 #if !defined(MD_GRAVITY)
 	  rzij = rzij - L * rint(invL * rzij);
+#endif
 #endif
 	  rijSq = Sqr(rxij) + Sqr(ryij) + Sqr(rzij);
 	  rij =  sqrt(rijSq);

@@ -48,7 +48,11 @@ void main(int argc, char* argv[])
   int cfd, i, Nm;
   COORD_TYPE K, Tcur, RCMx, RCMy, RCMz, Drx, Dry, Drz;
   COORD_TYPE *m, scalFact, Mtot;
+#ifdef MD_LXYZ
+  COORD_TYPE invL[3]; //r01;
+#else
   COORD_TYPE invL; //r01;
+#endif
   FILE* posf;
   
   args(argc, argv);
@@ -67,7 +71,12 @@ void main(int argc, char* argv[])
   Nm = Oparams.parnum;
   m = Oparams.m;
   Mtot = Oparams.m[0] + Oparams.m[1];
+#ifdef MD_LXYZ
+  for (i=0; i < 3; i ++)
+    invL[i] = 1.0 / L[i];
+#else
   invL = 1.0 / L;
+#endif
   /* Evaluate the instantenous temperature of the input coordiantes */
   K = 0.0;
   
@@ -106,10 +115,15 @@ void main(int argc, char* argv[])
       for(i = 0; i < Nm; i++)
 	{
 	  
+#ifdef MD_LXYZ
+	  Drx = - L[0] * rint(rx[i] * invL[0]);
+	  Dry = - L[1] * rint(ry[i] * invL[1]);
+	  Drz = - L[2] * rint(rz[i] * invL[2]);
+#else
 	  Drx = - L * rint(rx[i] * invL);
 	  Dry = - L * rint(ry[i] * invL);
 	  Drz = - L * rint(rz[i] * invL);
-	  
+#endif 
 	  /* Scale coordinates to first cell */
 	  rx[i] = rx[i] + Drx;
 	  ry[i] = ry[i] + Dry;

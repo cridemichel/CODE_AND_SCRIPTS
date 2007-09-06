@@ -138,9 +138,15 @@ double calc_dist_ij(int i, int j, double t)
 {
   static double shift[3] = {0,0,0}, vecgNeg[8];
   double d,r1[3], r2[3], alpha;
+#ifdef MD_LXYZ
+  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
   shift[0] = L*rint((rx[i]-rx[j])/L);
   shift[1] = L*rint((ry[i]-ry[j])/L);
   shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
   d=calcDistNeg(t, 0, i, j, shift, r1, r2, &alpha, vecgNeg, 1);
   return d;
 }
@@ -200,7 +206,17 @@ extern void kinet(int Nm, COORD_TYPE* velx, COORD_TYPE* vely,
 extern void ScheduleEvent (int idA, int idB, double tEvent);
 extern void NextEvent (void);
 void distanza(int ia, int ib);
-double pi, invL, L2, Vz;   
+#ifdef MD_LXYZ
+double invL[3];
+#else
+double invL;
+#endif
+double pi, Vz;
+#ifdef MD_LXYZ
+double L2[3];
+#else
+double L2;
+#endif 
 #ifdef MD_GRAVITY
 double Lz2;
 #endif
@@ -254,17 +270,29 @@ void check_shift(int i, int j, double *shift)
   if (cellsx <= 2)
     {
       drx = rx[i] - rx[j];
+#ifdef MD_LXYZ
+      shift[0] = L[0]*rint(drx/L[0]);
+#else
       shift[0] = L*rint(drx/L);
+#endif
     }
   if (cellsy <= 2)
     {
       dry = ry[i] - ry[j];
+#ifdef MD_LXYZ
+      shift[1] = L[1]*rint(dry/L[1]);
+#else
       shift[1] = L*rint(dry/L);
+#endif
     }
   if (cellsz <=2)
     {
       drz = rz[i] - rz[j]; 
+#ifdef MD_LXYZ
+      shift[2] = L[2]*rint(drz/L[2]);
+#else
       shift[2] = L*rint(drz/L);
+#endif
     }
 }
 #ifdef EDHE_FLEX
@@ -336,17 +364,28 @@ void saveFullStore(char* fname)
 void scalCor(int Nm)
 { 
   int i;
-  double DRx, DRy, DRz, invL;
-  
+  double DRx, DRy, DRz;
+ 
+#ifdef MD_LXYZ
+  for (i=0; i < 3; i++)
+    invL[i] = 1.0 / L[i];
+#else
   invL = 1.0 / L;
+#endif 
   /* Reduced particles to first box */
   for(i=0; i < Oparams.parnum; i++)
     {
       /* (DRx, DRy, DRz) is the quantity to add to the positions to 
 	 scale them */
+#ifdef MD_LXYZ
+      DRx = - L[0] * rint(invL[0] * rx[i]);
+      DRy = - L[1] * rint(invL[1] * ry[i]);
+      DRz = - L[2] * rint(invL[2] * rz[i]);
+#else
       DRx = - L * rint(invL * rx[i]);
       DRy = - L * rint(invL * ry[i]);
       DRz = - L * rint(invL * rz[i]);
+#endif
       rx[i] += DRx;
       ry[i] += DRy;
       rz[i] += DRz;
@@ -410,10 +449,15 @@ double get_min_dist_NNL (int na, int *jmin, double *rCmin, double *rDmin, double
       n = nebrTab[na].list[i]; 
       if (!(n != na))
 	continue;
+#ifdef MD_LXYZ
+      shift[0] = L[0]*rint((rx[na]-rx[n])/L[0]);
+      shift[1] = L[1]*rint((ry[na]-ry[n])/L[1]);
+      shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+#else
       shift[0] = L*rint((rx[na]-rx[n])/L);
       shift[1] = L*rint((ry[na]-ry[n])/L);
       shift[2] = L*rint((rz[na]-rz[n])/L);
-
+#endif
       if (n!=na) 
 	{
 	  dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
@@ -462,12 +506,20 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
       if (jZ == -1) 
 	{
 	  jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	  shift[2] = - L[2];
+#else
 	  shift[2] = - L;
+#endif
 	} 
       else if (jZ == cellsz) 
 	{
 	  jZ = 0;    
+#ifdef MD_LXYZ
+	  shift[2] = L[2];
+#else
 	  shift[2] = L;
+#endif
 	}
       for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
 	{
@@ -476,12 +528,20 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
 	  if (jY == -1) 
 	    {
 	      jY = cellsy - 1;    
+#ifdef MD_LXYZ
+	      shift[1] = -L[1];
+#else
 	      shift[1] = -L;
+#endif
 	    } 
 	  else if (jY == cellsy) 
 	    {
 	      jY = 0;    
+#ifdef MD_LXYZ
+	      shift[1] = L[1];
+#else
 	      shift[1] = L;
+#endif
 	    }
 	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
 	    {
@@ -490,12 +550,20 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
 	      if (jX == -1) 
 		{
 		  jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		  shift[0] = - L[0];
+#else
 		  shift[0] = - L;
+#endif
 		} 
 	      else if (jX == cellsx) 
 		{
 		  jX = 0;   
+#ifdef MD_LXYZ
+		  shift[0] = L[0];
+#else
 		  shift[0] = L;
+#endif
 		}
 	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 	      for (n = cellList[n]; n > -1; n = cellList[n]) 
@@ -547,7 +615,11 @@ double calc_phi(void)
     }
 #endif
   N *= 4.0*pi/3.0;
+#ifdef MD_LXYZ
+  return N / (L[0]*L[1]*L[2]);
+#else
   return N / (L*L*L);
+#endif
 }
 double calc_norm(double *vec);
 void calc_ellips_norms(double *rAC, double *rBD, double *norm, double *norm2)
@@ -615,7 +687,12 @@ double max_ax(int i)
 void scale_coords(double sf)
 {
   int i; 
+#ifdef MD_LXYZ
+  for (i=0; i < 3; i++)
+    L[i] *= sf;
+#else
   L *= sf;
+#endif
   for (i = 0; i < Oparams.parnum; i++)
     {
       rx[i] *= sf;
@@ -633,9 +710,14 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   int ii;
 #endif
   double nnlfact;
-  double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2, fact3;
+  double C, Ccur, F, phi0, phi, fact, rAC[3], rBD[3], fact1, fact2, fact3;
   double boxdiag, factNNL=1.0;
+#ifdef MD_LXYZ
+  for (kk=0; kk < 3; kk++)
+    L2[kk] = 0.5 * L[kk];
+#else
   L2 = 0.5 * L;
+#endif
   phi = calc_phi();
 #ifdef MD_POLYDISP
   phi0 = 0.0;
@@ -646,7 +728,11 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
   phi0 +=((double)Oparams.parnum-Oparams.parnumA)*Oparams.a[1]*Oparams.b[1]*Oparams.c[1];
 #endif
   phi0 *= 4.0*pi/3.0;
+#ifdef MD_LXYZ
+  phi0 /= L[0]*L[1]*L[2];
+#else
   phi0 /= L*L*L;
+#endif
   C = cbrt(OprogStatus.targetPhi/phi0);
 #ifdef MD_POLYDISP
   Ccur = axa[i] / axaP[i];
@@ -662,14 +748,24 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
       for (kk=0; kk < 3; kk++)
 	{
 	  rAC[kk] = rA[kk] - rC[kk];
+#ifdef MD_LXYZ
+	  if (fabs (rAC[kk]) > L2[kk])
+	    rAC[kk] -= SignR(L[kk], rAC[kk]);
+#else
 	  if (fabs (rAC[kk]) > L2)
 	    rAC[kk] -= SignR(L, rAC[kk]);
+#endif
 	}
       for (kk=0; kk < 3; kk++)
 	{
 	  rBD[kk] = rB[kk] - rD[kk];
+#ifdef MD_LXYZ
+	  if (fabs (rBD[kk]) > L2[kk])
+	    rBD[kk] -= SignR(L[kk], rBD[kk]);
+#else
 	  if (fabs (rBD[kk]) > L2)
 	    rBD[kk] -= SignR(L, rBD[kk]);
+#endif
 	}
     }
   /* 0.99 serve per evitare che si tocchino */
@@ -744,10 +840,26 @@ void rebuild_linked_list_NNL()
      centro di massa degli ellissoidi, in tale caso quindi le linked lists degli ellissoidi vengono usate 
      per avere una sovrastima in caso di urti con la parete dura e per mantenere gli ellissoidi nella
      first box. */
-  double L2, invL;
+  //double L2, invL;
+#ifdef MD_LXYZ
+  int kk;
+#endif
   int j, n;
+#ifdef MD_LXYZ
+  for (kk = 0; kk < 3; kk++)
+    {
+      L2[kk] = 0.5 * L[kk];
+      invL[kk] = 1.0/L[kk];
+    }
+#else
   L2 = 0.5 * L;
   invL = 1.0/L;
+#endif
+#ifdef MD_LXYZ
+  cellsx = L[0] / Oparams.rcut;
+  cellsy = L[1] / Oparams.rcut;
+  cellsz = L[2] / Oparams.rcut;
+#else
   cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
 #ifdef MD_GRAVITY
@@ -755,6 +867,7 @@ void rebuild_linked_list_NNL()
 #else
   cellsz = L / Oparams.rcut;
 #endif 
+#endif
   for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
     cellList_NNL[j] = -1;
   /* NOTA: rcut delle LL per le NNL ###guale a quello delle LL per gli ellissoidi
@@ -765,6 +878,14 @@ void rebuild_linked_list_NNL()
   for (n = 0; n < Oparams.parnum; n++)
     {
       /* reduce to first box */
+#ifdef MD_LXYZ
+      rxNNL[n] = nebrTab[n].r[0] - L[0]*rint(nebrTab[n].r[0]*invL[0]);
+      ryNNL[n] = nebrTab[n].r[1] - L[1]*rint(nebrTab[n].r[1]*invL[1]);
+      rzNNL[n] = nebrTab[n].r[2] - L[2]*rint(nebrTab[n].r[2]*invL[2]);
+      inCell_NNL[0][n] =  (rxNNL[n] + L2[0]) * cellsx / L[0];
+      inCell_NNL[1][n] =  (ryNNL[n] + L2[1]) * cellsy / L[1];
+      inCell_NNL[2][n] =  (rzNNL[n] + L2[2]) * cellsz / L[2];
+#else
       rxNNL[n] = nebrTab[n].r[0] - L*rint(nebrTab[n].r[0]*invL);
       ryNNL[n] = nebrTab[n].r[1] - L*rint(nebrTab[n].r[1]*invL);
       rzNNL[n] = nebrTab[n].r[2] - L*rint(nebrTab[n].r[2]*invL);
@@ -775,6 +896,7 @@ void rebuild_linked_list_NNL()
 #else
       inCell_NNL[2][n] =  (rzNNL[n] + L2)  * cellsz / L;
 #endif
+#endif
       j = (inCell_NNL[2][n]*cellsy + inCell_NNL[1][n])*cellsx + 
        inCell_NNL[0][n] + Oparams.parnum;
       cellList_NNL[n] = cellList_NNL[j];
@@ -784,15 +906,29 @@ void rebuild_linked_list_NNL()
 #endif
 void rebuild_linked_list()
 {
-  double L2;
+  //double L2;
+#ifdef MD_LXYZ 
+  int kk;
+#endif
   int j, n;
+#ifdef MD_LXYZ
+  for (kk = 0; kk < 3; kk++)
+    L2[kk] = 0.5 * L[kk];
+#else
   L2 = 0.5 * L;
+#endif
+#ifdef MD_LXYZ
+  cellsx = L[0] / Oparams.rcut;
+  cellsy = L[1] / Oparams.rcut;
+  cellsz = L[2] / Oparams.rcut;
+#else
   cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
 #ifdef MD_GRAVITY
   cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
 #else
   cellsz = L / Oparams.rcut;
+#endif
 #endif 
   for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
     cellList[j] = -1;
@@ -800,12 +936,18 @@ void rebuild_linked_list()
   /* rebuild event calendar */
   for (n = 0; n < Oparams.parnum; n++)
     {
+#ifdef MD_LXYZ
+      inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
+      inCell[1][n] =  (ry[n] + L2[1]) * cellsy / L[1];
+      inCell[2][n] =  (rz[n] + L2[2]) * cellsz / L[2];
+#else
       inCell[0][n] =  (rx[n] + L2) * cellsx / L;
       inCell[1][n] =  (ry[n] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
       inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
 #else
       inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+#endif
 #endif
       j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
 	inCell[0][n] + Oparams.parnum;
@@ -857,7 +999,7 @@ void scale_Phi(void)
   static double a0I, target;
   double distMinT, distMin=1E60, rAmin[3], rBmin[3], rC[3]={0,0,0}, 
 	 rD[3]={0,0,0};
-  double L2, shift[3], phi, scalfact, factor, axai;
+  double shift[3], phi, scalfact, factor, axai;
   if (OprogStatus.targetPhi <= 0)
     return;
   
@@ -876,7 +1018,12 @@ void scale_Phi(void)
       target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
   //UpdateSystem();   
+#ifdef MD_LXYZ
+  for (kk=0; kk < 3; kk++)
+    L2[kk] = 0.5 * L[kk];
+#else
   L2 = 0.5 * L;
+#endif
   /* get the minimum distance in the system */
   phi = calc_phi();
   for (kk = 0;  kk < 3; kk++)
@@ -1417,10 +1564,16 @@ void check (int *overlap, double *K, double *V)
 	   rxij = rxi - rx[j];
 	   ryij = ryi - ry[j];
 	   rzij = rzi - rz[j];
+#ifdef MD_LXYZ
+	   rxij = rxij - L[0]*rint(invL[0]*rxij);
+	   ryij = ryij - L[1]*rint(invL[1]*ryij);
+	   rzij = rzij - L[2]*rint(invL[2]*rzij);
+#else
 	   rxij = rxij - L*rint(invL*rxij);
 	   ryij = ryij - L*rint(invL*ryij);
 #if !defined(MD_GRAVITY)
 	   rzij = rzij - L*rint(invL*rzij);
+#endif
 #endif
 	   rijSq = Sqr(rxij) + Sqr(ryij) + Sqr(rzij);
 	   if (i < parnumA && j < parnumA)
@@ -1548,8 +1701,13 @@ void check_contact(int i, int j, double rCx, double rCy, double rCz)
   r[0] = rx[i];
   r[1] = ry[i];
   r[2] = rz[i];
+#ifdef MD_LXYZ
+for (k1=0; k1 < 3; k1++)
+    x[k1] -= L[k1]*rint((x[k1] - r[k1])/L[k1]);
+#else
   for (k1=0; k1 < 3; k1++)
     x[k1] -= L*rint((x[k1] - r[k1])/L);
+#endif
   lab2body(i, x, xp, r, R[i]);
   printf("i=%d f=%.15G\n", i, calcf(xp, i));
   /* ...and now we have to go back to laboratory reference system */
@@ -1557,8 +1715,13 @@ void check_contact(int i, int j, double rCx, double rCy, double rCz)
   r[0] = rx[j];
   r[1] = ry[j];
   r[2] = rz[j];
+#ifdef MD_LXYZ
+  for (k1=0; k1 < 3; k1++)
+    x[k1] -= L[k1]*rint((x[k1] - r[k1])/L[k1]);
+#else
   for (k1=0; k1 < 3; k1++)
     x[k1] -= L*rint((x[k1] - r[k1])/L);
+#endif
   lab2body(j, x, xp, r, R[j]);
   printf("j=%d f=%.15G\n", j, calcf(xp, j));
   /* ...and now we have to go back to laboratory reference system */
@@ -1570,8 +1733,13 @@ void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *
   int k1, k2;
   double f, g, del[3];
   f = g = -1; 
+#ifdef MD_LXYZ
+  for (k1=0; k1 < 3; k1++)
+    del[0] = -L[k1]*rint((rAC[k1] - rBC[k1])/L[k1]);
+#else
   for (k1=0; k1 < 3; k1++)
     del[0] = -L*rint((rAC[k1] - rBC[k1])/L);
+#endif
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       {
@@ -1689,6 +1857,17 @@ void bumpHS(int i, int j, double *W)
 #endif 
   denom = invmi + invmj; 
   sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 
+#ifdef MD_LXYZ
+  rxij = rx[i] - rx[j];
+  if (fabs (rxij) > L2[0])
+    rxij = rxij - SignR(L[0], rxij);
+  ryij = ry[i] - ry[j];
+  if (fabs (ryij) > L2[1])
+    ryij = ryij - SignR(L[1], ryij);
+  rzij = rz[i] - rz[j];
+  if (fabs (rzij) > L2[2])
+    rzij = rzij - SignR(L[2], rzij);
+#else
   rxij = rx[i] - rx[j];
   if (fabs (rxij) > L2)
     rxij = rxij - SignR(L, rxij);
@@ -1698,6 +1877,7 @@ void bumpHS(int i, int j, double *W)
   rzij = rz[i] - rz[j];
   if (fabs (rzij) > L2)
     rzij = rzij - SignR(L, rzij);
+#endif
   factor = ( rxij * ( vx[i] - vx[j] ) +
 	     ryij * ( vy[i] - vy[j] ) +
 	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
@@ -1903,16 +2083,29 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   for (a=0; a < 3; a++)
     {
       rCsh[a] = 0.0;
+#ifdef MD_LXYZ
+      if (fabs (rAC[a]) > L2[a])
+	{
+	  rCsh[a] = SignR(L[a], rAC[a]);
+	  rAC[a] -= rCsh[a];
+	}#else
       if (fabs (rAC[a]) > L2)
 	{
 	  rCsh[a] = SignR(L, rAC[a]);
 	  rAC[a] -= rCsh[a];
 	}
+#endif
     }
+#else
+#ifdef MD_LXYZ
+  for (a=0; a < 3; a++)
+    if (fabs (rAC[a]) > L2[a])
+      rAC[a] -= SignR(L[a], rAC[a]);
 #else
   for (a=0; a < 3; a++)
     if (fabs (rAC[a]) > L2)
       rAC[a] -= SignR(L, rAC[a]);
+#endif
 #endif
 #endif
   rBC[0] = rx[j] - rCx;
@@ -1931,8 +2124,13 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   for (a=0; a < 3; a++)
     {
       MD_DEBUG(printf("P rBC[%d]:%.15f ", a, rBC[a]));
+#ifdef MD_LXYZ
+      if (fabs (rBC[a]) > L2[a])
+	rBC[a] -= SignR(L[a], rBC[a]);
+#else
       if (fabs (rBC[a]) > L2)
 	rBC[a] -= SignR(L, rBC[a]);
+#endif
       MD_DEBUG(printf("D rBC[%d]:%.15f ", a, rBC[a]));
     }
   MD_DEBUG(printf("\n"));
@@ -2375,12 +2573,21 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       OprogStatus.DQTyy += OprogStatus.Tyy*taus;
       OprogStatus.DQTzz += OprogStatus.Tzz*taus;
       //taus = Oparams.time - OprogStatus.lastcoll;
+#ifdef MD_LXYZ
+      Dr = L[0]*rint((rx[i]-rx[j])/L[0]);
+      rxij = (rx[i]-rx[j]) - Dr;
+      Dr = L[1]*rint((ry[i]-ry[j])/L[1]);
+      ryij = (ry[i]-ry[j]) - Dr;
+      Dr = L[2]*rint((rz[i]-rz[j])/L[2]);
+      rzij = (rz[i]-rz[j]) - Dr;
+#else
       Dr = L*rint((rx[i]-rx[j])/L);
       rxij = (rx[i]-rx[j]) - Dr;
       Dr = L*rint((ry[i]-ry[j])/L);
       ryij = (ry[i]-ry[j]) - Dr;
       Dr = L*rint((rz[i]-rz[j])/L);
       rzij = (rz[i]-rz[j]) - Dr;
+#endif
       OprogStatus.DQWxy += rxij*delpy;
       OprogStatus.DQWyz += ryij*delpz;
       OprogStatus.DQWzx += rzij*delpx;
@@ -2427,17 +2634,32 @@ void calcRho(void)
   int jZ, jY, jX, n, npart, jZmax;
   double rhohcp, hhcp, Lz2, sig;
   double dia;
+#ifdef MD_LXYZ
+  Lz = L[2];
+  Lz2 = L[2]*0.5;
+#else
   Lz2 = Lz*0.5;
+#endif
   /* hhcp è l'altezza delle particelle con diametro piu' piccolo 
    * se fossero close-packed */
   dia = (Oparams.sigma[0][0] < Oparams.sigma[1][1])?Oparams.sigma[0][0]:Oparams.sigma[1][1];
   rhohcp =0.7405*24/(4*pi*dia*dia*dia) ; 
+#ifdef MD_LXYZ
+  hhcp = Oparams.parnum/(rhohcp*L[0]*L[1]);
+#else
   hhcp = Oparams.parnum/(rhohcp*Sqr(L));
-
+#endif
+#ifdef MD_LXYZ
+  if (OprogStatus.rhobh <= 0)
+    hhcp = Oparams.parnum/(rhohcp*L[0]*L[1])+OprogStatus.rhobh;
+  else
+    hhcp = (Oparams.parnum/(rhohcp*L[0]*L[1]))*OprogStatus.rhobh;
+#else
   if (OprogStatus.rhobh <= 0)
     hhcp = Oparams.parnum/(rhohcp*Sqr(L))+OprogStatus.rhobh;
   else
     hhcp = (Oparams.parnum/(rhohcp*Sqr(L)))*OprogStatus.rhobh;
+#endif
   /* Se rhobh > 0 allora l'altezza per il calcolo della densità è:
    * h_closepacking * rhobh */
   jZmax = (int) ((Lz / (OprogStatus.extraLz + Lz)) * cellsz)+1;  
@@ -2459,7 +2681,11 @@ void calcRho(void)
 		npart++;
 	    }
 	}
+#ifdef MD_LXYZ
+  rho = ((double)npart)/(L[0]*L[1]*hhcp);
+#else
   rho = ((double)npart)/(L*L*hhcp);
+#endif
 }
 
 void save_rho(void)
@@ -2547,9 +2773,15 @@ void calcObserv(void)
   K *= 0.5;
   for(i=0; i < Oparams.parnumA; i++)
     {
+#ifdef MD_LXYZ
+      Drx = rx[i] - OprogStatus.rxCMi[i] + L[0]*OprogStatus.DR[i][0]; 
+      Dry = ry[i] - OprogStatus.ryCMi[i] + L[1]*OprogStatus.DR[i][1];
+      Drz = rz[i] - OprogStatus.rzCMi[i] + L[2]*OprogStatus.DR[i][2];
+#else
       Drx = rx[i] - OprogStatus.rxCMi[i] + L*OprogStatus.DR[i][0]; 
       Dry = ry[i] - OprogStatus.ryCMi[i] + L*OprogStatus.DR[i][1];
       Drz = rz[i] - OprogStatus.rzCMi[i] + L*OprogStatus.DR[i][2];
+#endif
       DrSqTot = DrSqTot + Sqr(Drx) + Sqr(Dry) + Sqr(Drz);
    }
   /* NOTE: The first Dtrans(first simulation step) is not meaningful, 
@@ -5319,9 +5551,15 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   rAC[1] = ry[i] + vy[i]*(t - atomTime[i]) - rCy;
   rAC[2] = rz[i] + vz[i]*(t - atomTime[i]) - rCz;
 #if 1
+#ifdef MD_LXYZ
+  for (a=0; a < 3; a++)
+    if (fabs (rAC[a]) > L2[a])
+      rAC[a] -= SignR(L[a], rAC[a]);
+#else
   for (a=0; a < 3; a++)
     if (fabs (rAC[a]) > L2)
       rAC[a] -= SignR(L, rAC[a]);
+#endif
 #endif
   rBC[0] = rx[j] + vx[j]*(t-atomTime[j]) - rCx;
   rBC[1] = ry[j] + vy[j]*(t-atomTime[j]) - rCy;
@@ -5330,8 +5568,13 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   for (a=0; a < 3; a++)
     {
       MD_DEBUG(printf("P rBC[%d]:%.15f ", a, rBC[a]));
+#ifdef MD_LXYZ
+      if (fabs (rBC[a]) > L2[a])
+	rBC[a] -= SignR(L[a], rBC[a]);
+#else
       if (fabs (rBC[a]) > L2)
 	rBC[a] -= SignR(L, rBC[a]);
+#endif
       MD_DEBUG(printf("D rBC[%d]:%.15f ", a, rBC[a]));
     }
   MD_DEBUG(printf("\n"));
@@ -6333,12 +6576,20 @@ double estimate_tmin(double t, int na, int nb)
       if (jZ == -1) 
 	{
 	  jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	  shift[2] = - L[2];
+#else
 	  shift[2] = - L;
+#endif
 	} 
       else if (jZ == cellsz) 
 	{
-	  jZ = 0;    
+	  jZ = 0;  
+#ifdef MD_LXYZ
+	  shift[2] = L[2];
+#else  
 	  shift[2] = L;
+#endif
 	}
 #endif
       for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
@@ -6348,12 +6599,20 @@ double estimate_tmin(double t, int na, int nb)
 	  if (jY == -1) 
 	    {
 	      jY = cellsy - 1;    
+#ifdef MD_LXYZ
+	      shift[1] = -L[1];
+#else
 	      shift[1] = -L;
+#endif
 	    } 
 	  else if (jY == cellsy) 
 	    {
 	      jY = 0;    
+#ifdef MD_LXYZ
+	      shift[1] = L[1];
+#else
 	      shift[1] = L;
+#endif
 	    }
 	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
 	    {
@@ -6362,12 +6621,20 @@ double estimate_tmin(double t, int na, int nb)
 	      if (jX == -1) 
 		{
 		  jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		  shift[0] = - L[0];
+#else
 		  shift[0] = - L;
+#endif
 		} 
 	      else if (jX == cellsx) 
 		{
 		  jX = 0;   
+#ifdef MD_LXYZ
+		  shift[0] = L[0];
+#else
 		  shift[0] = L;
+#endif
 		}
 	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 	      for (n = cellList[n]; n > -1; n = cellList[n]) 
@@ -6410,7 +6677,11 @@ void calc_grad_and_point_plane_hwsemiperm(int i, double *grad, double *point)
     {
       grad[kk] = (kk==2)?1:0;
     }
+#ifdef MD_LXYZ
+  del = L[2]/2.0-OprogStatus.bufHeight;
+#else
   del = L/2.0-OprogStatus.bufHeight;
+#endif
   /* NOTA: epsdNL+epsd viene usato come buffer per evitare problemi numerici 
    * nell'update delle NNL. */
   //del -= OprogStatus.epsdNL+OprogStatus.epsd;
@@ -6435,7 +6706,11 @@ void calc_grad_and_point_plane_hwbump(int i, double *grad, double *point, int np
     {
       grad[kk] = (kk==2)?1:0;
     }
+#ifdef MD_LXYZ
+  del = L[2]/2.0;
+#else
   del = L/2.0;
+#endif
   /* NOTA: epsdNL+epsd viene usato come buffer per evitare problemi numerici 
    * nell'update delle NNL. */
   //del -= OprogStatus.epsdNL+OprogStatus.epsd;
@@ -6819,6 +7094,18 @@ void PredictEvent (int na, int nb)
 	signDir[2] = 0;/* direzione positiva */
       else 
 	signDir[2] = 1;/* direzione negativa */
+#ifdef MD_LXYZ
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall && ((signDir[2]==0 && inCell[2][na]==cellsz-1) || (signDir[2]==1 && inCell[2][na]==0)))
+	tm[2] = timbig;
+      else
+	tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L[2] /
+		 cellsz - rz[na] - L2[2]) / vz[na];
+#else
+      tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L[2] /
+	       cellsz - rz[na] - L2[2]) / vz[na];
+#endif
+#else
 #ifdef MD_EDHEFLEX_WALL
       if (OprogStatus.hardwall && ((signDir[2]==0 && inCell[2][na]==cellsz-1) || (signDir[2]==1 && inCell[2][na]==0)))
 	tm[2] = timbig;
@@ -6828,6 +7115,7 @@ void PredictEvent (int na, int nb)
 #else
       tm[2] = ((inCell[2][na] + 1 - signDir[2]) * L /
 	       cellsz - rz[na] - L2) / vz[na];
+#endif
 #endif
     } 
   else 
@@ -6841,8 +7129,13 @@ void PredictEvent (int na, int nb)
 	signDir[0] = 0;/* direzione positiva */
       else 
 	signDir[0] = 1;/* direzione negativa */
+#ifdef MD_LXYZ
+      tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L[0] /
+	       cellsx - rx[na] - L2[0]) / vx[na];
+#else
       tm[0] = ((inCell[0][na] + 1 - signDir[0]) * L /
 	       cellsx - rx[na] - L2) / vx[na];
+#endif
     } 
   else 
     tm[0] = timbig;
@@ -6853,8 +7146,13 @@ void PredictEvent (int na, int nb)
 	signDir[1] = 0;
       else 
 	signDir[1] = 1;
+#ifdef MD_LXYZ
+      tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L[1] /
+	       cellsy - ry[na] - L2[1]) / vy[na];
+#else
       tm[1] = ((inCell[1][na] + 1 - signDir[1]) * L /
 	       cellsy - ry[na] - L2) / vy[na];
+#endif
     } 
   else 
     tm[1] = timbig;
@@ -6920,7 +7218,11 @@ void PredictEvent (int na, int nb)
 #if !defined(MD_SPHERICAL_WALL)
 	  if (vz[na] != 0.0)
 	    {
+#ifdef MD_LXYZ
+	      hwcell = (L[2]-OprogStatus.bufHeight)*cellsz/L[2];
+#else
 	      hwcell = (L-OprogStatus.bufHeight)*cellsz/L;
+#endif
 #if 1
 	      if (hwcell-inCell[2][na] < 2)
 		{
@@ -6975,12 +7277,20 @@ void PredictEvent (int na, int nb)
       if (jZ == -1) 
 	{
 	  jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	  shift[2] = - L[2];
+#else
 	  shift[2] = - L;
+#endif
 	} 
       else if (jZ == cellsz) 
 	{
 	  jZ = 0;    
+#ifdef MD_LXYZ
+	  shift[2] = L[2];
+#else
 	  shift[2] = L;
+#endif
 	}
 #endif
       for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
@@ -6990,12 +7300,20 @@ void PredictEvent (int na, int nb)
 	  if (jY == -1) 
 	    {
 	      jY = cellsy - 1;    
+#ifdef MD_LXYZ
+	      shift[1] = -L[1];
+#else
 	      shift[1] = -L;
+#endif
 	    } 
 	  else if (jY == cellsy) 
 	    {
 	      jY = 0;    
+#ifdef MD_LXYZ
+	      shift[1] = L[1];
+#else
 	      shift[1] = L;
+#endif
 	    }
 	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
 	    {
@@ -7004,12 +7322,20 @@ void PredictEvent (int na, int nb)
 	      if (jX == -1) 
 		{
 		  jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		  shift[0] = - L[0];
+#else
 		  shift[0] = - L;
+#endif
 		} 
 	      else if (jX == cellsx) 
 		{
 		  jX = 0;   
+#ifdef MD_LXYZ
+		  shift[0] = L[0];
+#else
 		  shift[0] = L;
+#endif
 		}
 	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 	      for (n = cellList[n]; n > -1; n = cellList[n]) 
@@ -7609,7 +7935,11 @@ void store_bump_neigh(int i, double *r1, double *r2)
     }
   UpdateSystem();
   R2u();
+#ifdef MD_LXYZ
+  fprintf(bf, ".Vol: %f\n", L[0]*L[1]*L[2]);
+#else
   fprintf(bf, ".Vol: %f\n", L*L*L);
+#endif  
   MD_DEBUG(printf("[Store bump]: %.15G\n", Oparams.time));
   for (ii = 0; ii < Oparams.parnum; ii++)
     {
@@ -7674,10 +8004,15 @@ void store_bump(int i, int j)
   R2u();
   fprintf(bf, ".Vol: %f\n", Oparams.rcut*Oparams.rcut*Oparams.rcut);
   MD_DEBUG(printf("[Store bump]: %.15G\n", Oparams.time));
+#ifdef MD_LXYZ
+  Drx = L[0]*rint((rx[i]-rx[j])/L[0]);
+  Dry = L[1]*rint((ry[i]-ry[j])/L[1]);
+  Drz = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
   Drx = L*rint((rx[i]-rx[j])/L);
   Dry = L*rint((ry[i]-ry[j])/L);
   Drz = L*rint((rz[i]-rz[j])/L);
-
+#endif
   RCMx = (rx[i]+rx[j]+Drx)*0.5;
   RCMy = (ry[i]+ry[j]+Dry)*0.5;
   RCMz = (rz[i]+rz[j]+Drz)*0.5;
@@ -7830,9 +8165,18 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 	      exit(-1);
 	    }
 #endif
+#ifdef MD_LXYZ
+	  *rkptr = -L2[k];
+#else
 	  *rkptr = -L2;
+#endif
+#ifdef MD_LXYZ
+	  if (OprogStatus.useNNL)
+	    nebrTab[evIdA].r[k] -= L[k];
+#else
 	  if (OprogStatus.useNNL)
 	    nebrTab[evIdA].r[k] -= L;
+#endif
 	  OprogStatus.DR[evIdA][k]++;
 	}
 
@@ -7845,8 +8189,16 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 	{
 	  inCell[k][evIdA] = cellsk - 1;
 	  if (OprogStatus.useNNL)
+#ifdef MD_LXYZ
+	    nebrTab[evIdA].r[k] += L[k];
+#else
 	    nebrTab[evIdA].r[k] += L;
+#endif
+#ifdef MD_LXYZ
+	  *rkptr = L2[k];
+#else
 	  *rkptr = L2;
+#endif
 	  OprogStatus.DR[evIdA][k]--;
 	}
     }
@@ -7954,12 +8306,18 @@ void rebuildLinkedList(void)
   for (n = 0; n < Oparams.parnum; n++)
     {
       atomTime[n] = Oparams.time;
+#ifdef MD_LXYZ
+      inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
+      inCell[1][n] =  (ry[n] + L2[1]) * cellsy / L[1];
+      inCell[2][n] =  (rz[n] + L2[2]) * cellsz / L[2];
+#else
       inCell[0][n] =  (rx[n] + L2) * cellsx / L;
       inCell[1][n] =  (ry[n] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
       inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
 #else
       inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+#endif
 #endif
       j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
 	inCell[0][n] + Oparams.parnum;
@@ -7991,8 +8349,13 @@ void distanza(int ia, int ib)
   dx = rx[ia]-rx[ib];
   dy = ry[ia]-ry[ib];
   dz = rz[ia]-rz[ib];
+#ifdef MD_LXYZ
+  dx = dx - L[0]*rint(dx/L[0]);
+  dy = dx - L[1]*rint(dy/L[1]);
+#else
   dx = dx - L*rint(dx/L);
   dy = dx - L*rint(dy/L);
+#endif
   printf("dist(%d,%d): %f\n", ia, ib, sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz)));
 }
 void rebuildLinkedList(void);

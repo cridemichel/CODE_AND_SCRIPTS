@@ -39,7 +39,11 @@ int *scdone;
  in the move function and in the measuring functions, note that the variables 
  to measures have to be put in the 'mdsimdep.h' file (see that) */
 double mgA, mgB, g2;
-extern COORD_TYPE pi, L, invL, L2;   
+#ifdef MD_LXYZ
+extern COORD_TYPE pi, invL[3], L2[3];   
+#else
+extern COORD_TYPE pi, invL, L2;   
+#endif
 #ifdef MD_GRAVITY
 extern double Lz2;
 #endif
@@ -297,12 +301,20 @@ void check_all_bonds(void)
 	  if (jZ == -1) 
 	    {
 	      jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	      shift[2] = - L[2];
+#else
 	      shift[2] = - L;
+#endif
 	    } 
 	  else if (jZ == cellsz) 
 	    {
 	      jZ = 0;    
+#ifdef MD_LXYZ
+	      shift[2] = L[2];
+#else
 	      shift[2] = L;
+#endif
 	    }
 	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
 	    {
@@ -311,12 +323,20 @@ void check_all_bonds(void)
 	      if (jY == -1) 
 		{
 		  jY = cellsy - 1;    
+#ifdef MD_LXYZ
+		  shift[1] = -L[1];
+#else
 		  shift[1] = -L;
+#endif
 		} 
 	      else if (jY == cellsy) 
 		{
 		  jY = 0;    
+#ifdef MD_LXYZ
+		  shift[1] = L[1];
+#else
 		  shift[1] = L;
+#endif
 		}
 	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
 		{
@@ -325,12 +345,20 @@ void check_all_bonds(void)
 		  if (jX == -1) 
 		    {
 		      jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		      shift[0] = - L[0];
+#else
 		      shift[0] = - L;
+#endif
 		    } 
 		  else if (jX == cellsx) 
 		    {
 		      jX = 0;   
+#ifdef MD_LXYZ
+		      shift[0] = L[0];
+#else
 		      shift[0] = L;
+#endif
 		    }
 		  j = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 		  for (j = cellList[j]; j > -1; j = cellList[j]) 
@@ -424,11 +452,19 @@ void check_coord(void)
 {
   int i;
   for (i = 0; i < Oparams.parnum; i++)
+#ifdef MD_LXYZ
+    if (fabs(rx[i]) > L[0]*0.5 || fabs(ry[i])>L[1]*0.5 || fabs(rz[i]) > L[2]*0.5)
+      {
+	printf("%d is out of box!\n", i);
+	exit(-1);
+      }
+#else
     if (fabs(rx[i]) > L*0.5 || fabs(ry[i])>L*0.5 || fabs(rz[i]) > L*0.5)
       {
 	printf("%d is out of box!\n", i);
 	exit(-1);
       }
+#endif
 }
 COORD_TYPE ranf(void);
 /* ============================= >>> FCC <<< ================================*/
@@ -451,7 +487,11 @@ void FCC(int Nm, COORD_TYPE *m)
        COORD_TYPE    rRoot3               1.0 / sqrt ( 3.0 ) */
   int Nc, Ncz;
   double rRoot3; /* = 0.5773503; */
+#ifdef MD_LXYZ
+  double Cell[3], Cell2[3];
+#else
   double Cell, Cell2;
+#endif
 #ifdef MD_GRAVITY
   double Cellz, Cell2z;
 #endif
@@ -470,11 +510,19 @@ void FCC(int Nm, COORD_TYPE *m)
   printf("Nc: %d\n", Nc);
 #endif
   /* Calculate the side of the unit cell */
+#ifdef MD_LXYZ
+  for (ii=0; ii < 3; ii++)
+    {
+      Cell[ii] = L[ii] / ((double) Nc); /* unit cell length */
+      Cell2[ii] = 0.5 * Cell[ii];              /* half unit cell length */
+    }
+#else
   Cell  = L / ((double) Nc); /* unit cell length */
   Cell2 = 0.5 * Cell;              /* half unit cell length */
 #ifdef MD_GRAVITY
   Cellz = Lz / ((double) Nc);
   Cell2z = 0.5 * Cellz;
+#endif
 #endif
   /* Sublattice A */
   rRoot3 = 1.0 / sqrt(3.0);
@@ -483,27 +531,47 @@ void FCC(int Nm, COORD_TYPE *m)
   bz[0] =  0.0;
   
   /*  Sublattice B */
+#ifdef MD_LXYZ
+  bx[1] =  Cell2[0];
+  by[1] =  Cell2[1];
+#else
   bx[1] =  Cell2;
   by[1] =  Cell2;
+#endif
   bz[1] =  0.0;
   /* Sublattice C */
   
   bx[2] =  0.0;
+#ifdef MD_LXYZ
+  by[2] =  Cell2[1];
+#else
   by[2] =  Cell2;
+#endif
+#ifdef MD_LXYZ
+  bz[2] = Cell2[2];
+#else
 #ifdef MD_GRAVITY
   bz[2] = Cell2z;
 #else
   bz[2] = Cell2;
+#endif
 #endif  
   /* Sublattice D */
+#ifdef MD_LXYZ
+  bx[3] =  Cell2[0];
+#else
   bx[3] =  Cell2;
+#endif
   by[3] =  0.0;
+#ifdef MD_LXYZ
+  bz[3] =  Cell2[2];
+#else
 #ifdef MD_GRAVITY
   bz[3] = Cell2z;
 #else
   bz[3] =  Cell2;
 #endif  
-  
+#endif 
   /* Construct the lattice from the unit cell */
   
   ii = 0;
@@ -524,12 +592,18 @@ void FCC(int Nm, COORD_TYPE *m)
 		  */
 		  
 		  /* Center of Mass of the actual molecule (m + iref) */
+#ifdef MD_LXYZ
+		  rx[ii+iref] = bx[iref] + Cell[0] * ((double) ix);
+		  ry[ii+iref] = by[iref] + Cell[1] * ((double) iy);
+		  rz[ii+iref] = bz[iref] + Cell[2] * ((double) iz);
+#else
 		  rx[ii+iref] = bx[iref] + Cell * ((double) ix);
 		  ry[ii+iref] = by[iref] + Cell * ((double) iy);
 #ifdef MD_GRAVITY
 		  rz[ii+iref] = bz[iref] + Cellz * ((double) iz);
 #else
 		  rz[ii+iref] = bz[iref] + Cell * ((double) iz);
+#endif
 #endif
 #if 0
 		  printf("#%d (%f,%f,%f) ix:%d iy:%d iz:%d\n", ii+iref, rx[ii+iref],
@@ -546,6 +620,11 @@ void FCC(int Nm, COORD_TYPE *m)
   for(i = 0;i < Nm; i++)
     {
       /* Initial position values are between -0.5 and 0.5 */
+#ifdef MD_LXYZ
+      rx[i] = rx[i] - 0.5 * L[0] + ranf()*1E-7; 
+      ry[i] = ry[i] - 0.5 * L[1] + ranf()*1E-7;
+      rz[i] = rz[i] - 0.5 * L[2] + ranf()*1E-7;
+#else
       rx[i] = rx[i] - 0.5 * L + ranf()*1E-7; 
       ry[i] = ry[i] - 0.5 * L + ranf()*1E-7;
 #ifdef MD_GRAVITY
@@ -555,6 +634,7 @@ void FCC(int Nm, COORD_TYPE *m)
 	rz[i] = rz[i] - 0.5 * Lz + Oparams.sigma[1][1]*0.5 + 0.1;
 #else
       rz[i] = rz[i] - 0.5 * L + ranf()*1E-7;
+#endif
 #endif
       //printf("%d = (%f,%f,%f)\n", i, rx[i], ry[i], rz[i]);
     }
@@ -1343,7 +1423,11 @@ void usrInitBef(void)
     Dtrans = 0.0; /* DtransOld should become a field of OprogStatus */
 
     V = 0.0;
+#ifdef MD_LXYZ
+    L[0] = L[1] = L[2] = 9.4;
+#else
     L = 9.4;
+#endif
 #ifdef MD_PATCHY_HE
     Oparams.sigmaSticky = 1.0;
     Oparams.bheight = 0.0;
@@ -1550,12 +1634,18 @@ void StartRun(void)
 #endif
       atomTime[n] = Oparams.time;
       //printf("qui n=%d %.15G %.15G %.15G\n", n, rx[n], ry[n], rz[n]);
+#ifdef MD_LXYZ
+      inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
+      inCell[1][n] =  (ry[n] + L2[1]) * cellsy / L[1];
+      inCell[2][n] =  (rz[n] + L2[2]) * cellsz / L[2];
+#else
       inCell[0][n] =  (rx[n] + L2) * cellsx / L;
       inCell[1][n] =  (ry[n] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
       inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
 #else
       inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+#endif
 #endif
       //printf("inCell: %d, %d, %d\n", inCell[0][n], inCell[1][n], inCell[2][n]);
       //printf("n=%d(%f,%f,%f)\n",n,rx[n], ry[n], rz[n]);
@@ -2455,11 +2545,23 @@ void find_bonds(void)
 	  continue;
 #endif
 	drx = rx[i] - rx[j];
+#ifdef MD_LXYZ
+	shift[0] = L[0]*rint(drx/L[0]);
+#else
 	shift[0] = L*rint(drx/L);
+#endif
 	dry = ry[i] - ry[j];
+#ifdef MD_LXYZ
+	shift[1] = L[1]*rint(dry/L[1]);
+#else
 	shift[1] = L*rint(dry/L);
+#endif
 	drz = rz[i] - rz[j]; 
+#ifdef MD_LXYZ
+	shift[2] = L[2]*rint(drz/L[2]);
+#else
 	shift[2] = L*rint(drz/L);
+#endif
 	assign_bond_mapping(i, j);
 
 	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
@@ -2545,6 +2647,9 @@ void usrInitAft(void)
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
+#ifdef MD_LXYZ
+  int kk;
+#endif
   int Nm, i, sct, overlap;
   COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
 #ifndef EDHE_FLEX
@@ -2625,8 +2730,16 @@ void usrInitAft(void)
   costhrNR = cos(OprogStatus.tolAngNR);
   if (OprogStatus.dist5==0)
     OprogStatus.dist8stps = 0;
+#ifdef MD_LXYZ
+  for (kk=0; kk < 3; kk++)
+    {
+      invL[kk] = 1.0/L[kk];
+      L2[kk] = 0.5*L[kk];
+    }
+#else
   invL = 1.0/L;
   L2 = 0.5*L;
+#endif
 #ifdef MD_GRAVITY
   rcmz = -Lz*0.5;
   Lz2 = Lz*0.5;
@@ -3129,11 +3242,19 @@ void usrInitAft(void)
     }
 #endif
 #ifndef EDHE_FLEX
+#ifdef MD_LXYZ
+  printf(">>>> phi=%.12G L=%f %f %f (%f,%f,%f)\n", calc_phi(), L[0], L[1], L[2], Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
+#else
   printf(">>>> phi=%.12G L=%f (%f,%f,%f)\n", calc_phi(), L, Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
+#endif
   if (Oparams.parnumA < Oparams.parnum)
     printf("semi-axes of B (%f, %f ,%f)\n",Oparams.a[1], Oparams.b[1], Oparams.c[1]);
 #else
+#ifdef MD_LXYZ
+  printf("[FLEX] phi=%.12G L=%f %f %f\n", calc_phi(), L[0], L[1], L[2]); 
+#else
   printf("[FLEX] phi=%.12G L=%f\n", calc_phi(), L); 
+#endif
 #endif
   /* evaluation of principal inertia moments*/ 
   for (a = 0; a < 2; a++)
@@ -3307,6 +3428,11 @@ void usrInitAft(void)
     }
   printf("MAXAX: %.15G rcut: %.15G\n", MAXAX, Oparams.rcut);
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+#ifdef MD_LXYZ
+  cellsx = L[0] / Oparams.rcut;
+  cellsy = L[1] / Oparams.rcut;
+  cellsz = L[2] / Oparams.rcut;
+#else
   cellsx = L / Oparams.rcut;
   cellsy = L / Oparams.rcut;
 #ifdef MD_GRAVITY
@@ -3314,6 +3440,7 @@ void usrInitAft(void)
 #else
   cellsz = L / Oparams.rcut;
 #endif 
+#endif
   printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
 	 cellsx, cellsy, cellsz);
   cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
@@ -3346,7 +3473,11 @@ void usrInitAft(void)
     }
 #endif
 #endif
+#ifdef MD_LXYZ
+  printf("L=%f %f %f parnum: %d parnumA: %d\n", L[0], L[1], L[2], Oparams.parnum, Oparams.parnumA);
+#else
   printf("L=%f parnum: %d parnumA: %d\n", L, Oparams.parnum, Oparams.parnumA);
+#endif
 #if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
   printf("sigmaSticky=%.15G\n", Oparams.sigmaSticky);
 #endif
@@ -3657,7 +3788,11 @@ void writeAllCor(FILE* fs, int saveAll)
 #endif
   if (mgl_mode)
     {
+#ifdef MD_LXYZ
+      fprintf(fs, ".Vol: %f\n", L[0]*L[1]*L[2]);
+#else
       fprintf(fs, ".Vol: %f\n", L*L*L);
+#endif
       for (i = 0; i < Oparams.parnum; i++)
 	{
 #ifdef EDHE_FLEX
@@ -3772,10 +3907,14 @@ void writeAllCor(FILE* fs, int saveAll)
 	  fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
 #endif
 	}
+#ifdef MD_LXYZ
+      fprintf(fs, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
+#else
 #ifdef MD_GRAVITY
       fprintf(fs, "%.15G %.15G\n", L, Lz);
 #else
       fprintf(fs, "%.15G\n", L);
+#endif
 #endif
     }
 }
@@ -3979,6 +4118,7 @@ void parse_ranges(char *s, int *A, int *nr, rangeStruct **r)
     } 
 }
 #endif
+char line[4096];
 /* ========================== >>> readAllCor <<< ========================== */
 void readAllCor(FILE* fs)
 {
@@ -4147,7 +4287,22 @@ void readAllCor(FILE* fs)
 #endif
       //printf("%d v=(%f,%f,%f)\n", i, vx[i], vy[i], vz[i]);
     }
+#ifdef MD_LXYZ
+  fscanf(fs, "%[^\n]", line);
 
+  if (sscanf(line, "%lf %lf %lf\n", &L[0], &L[1], &L[2]) < 3)
+    {
+      if (sscanf(line, "%lf\n",  &L[0]) == 1)
+	{
+	  L[1]=L[2]=L[0];
+	}
+      else
+	{
+	  mdPrintf(STD, "ERROR[extra] reading ascii file\n", NULL);
+	  exit(-1);
+	}
+    }
+#else
 #ifdef MD_GRAVITY
   if (fscanf(fs, "%lf %lf\n",  &L, &Lz) < 2)
     {
@@ -4161,7 +4316,7 @@ void readAllCor(FILE* fs)
       exit(-1);
     }
 #endif
-      
+#endif      
 #ifdef EDHE_FLEX
   free(s1);
   free(s2);
