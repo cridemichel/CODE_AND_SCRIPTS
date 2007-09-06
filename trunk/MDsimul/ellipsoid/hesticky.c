@@ -600,7 +600,7 @@ void handle_absorb(int ricettore, int protein)
       if (typeOfPart[i]==2)
 	ng++;
     }
-  f = fopenMPI("ghost.dat", "a");
+  f = fopenMPI("buffer.dat", "a");
   fprintf(f, "%d\n", ng);
   fclose(f);	
   f = fopenMPI(absMisHD("absorption.dat"),"a");
