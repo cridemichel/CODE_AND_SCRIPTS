@@ -3023,7 +3023,7 @@ void usrInitAft(void)
 #ifdef MD_ABSORPTION
       f = fopenMPI(absMisHD("absorption.dat"), "w+");
       fclose(f);
-      f = fopenMPI(absMisHD("ghost.dat"), "w+");
+      f = fopenMPI(absMisHD("buffer.dat"), "w+");
       fclose(f);
 #endif
 #endif
