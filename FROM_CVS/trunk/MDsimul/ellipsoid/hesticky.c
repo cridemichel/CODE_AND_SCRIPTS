@@ -375,6 +375,9 @@ void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double 
     }
 }
 #endif
+#ifdef MD_SPHERICAL_WALL
+extern int sphWall;
+#endif
 #ifdef EDHE_FLEX
 #ifdef MD_HANDLE_INFMASS
 void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j);
@@ -588,6 +591,18 @@ void handle_absorb(int ricettore, int protein)
 {
   FILE *f; 
   int j, n;
+  int i;
+  int np=0, ng=0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (typeOfPart[i]==1)
+	np++;
+      if (typeOfPart[i]==2)
+	ng++;
+    }
+  f = fopenMPI("ghost.dat", "a");
+  fprintf(f, "%d\n", ng);
+  fclose(f);	
   f = fopenMPI(absMisHD("absorption.dat"),"a");
 #ifdef MD_BIG_DT
   fprintf(f, "%d %.15G %.15G %.15G %.15G\n", ricettore, Oparams.time + OprogStatus.refTime, rx[protein], ry[protein], rz[protein]);
@@ -672,6 +687,15 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double sigAB;
   int infMass_j=0, infMass_i=0, infItens_i=0, infItens_j=0;
   int typei, typej;
+#endif
+#if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
+  //if (i==sphWall || j==sphWall)
+  //printf("qui sphWall=%d i=%dA j=%dB typei=%d typej=%d\n", sphWall, i, j, typeOfPart[i], typeOfPart[j]);
+  if (j==sphWall && !bound(i, j, 0, 0) && typeOfPart[i]==2)
+    {
+      //printf("qui\n");
+      typeOfPart[i]=1;
+    }
 #endif
 #if 0
   if (i < Oparams.parnumA && j < Oparams.parnumA)
@@ -2517,6 +2541,9 @@ int locate_contact_HSSP(int na, int n, double shift[3], double t1, double t2, do
 }
 #endif
 #ifdef EDHE_FLEX
+#ifdef MD_ABSORPTION
+extern int sphWall;
+#endif
 extern int *is_a_sphere_NNL;
 #endif
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
@@ -2567,7 +2594,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   /* NOTA: in realta is_a_sphere_NNL richiede che il core sia sferico e che tutti gli sticky
      spots siano posizionati nel centro di massa del core. Qui basterebbe che lo sticky spot
      sia posizionato sul centro di massa della particella a prescindere dalla forma del core. */
-  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1)
+   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1)
     {
 #if 0
       tt=*evtime;
@@ -2578,7 +2605,6 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
     }
 #endif
 #endif
-
   bondpair = get_bonded(i, j);
   t = 0.0;
 #ifdef MD_OPTDDIST

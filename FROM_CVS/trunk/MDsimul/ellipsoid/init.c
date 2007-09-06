@@ -2744,7 +2744,11 @@ void usrInitAft(void)
   rcmz = -Lz*0.5;
   Lz2 = Lz*0.5;
 #endif
+#ifdef MD_SPHERICAL_WALL
+  poolSize = OprogStatus.eventMult*Oparams.parnum+Oparams.parnum;
+#else
   poolSize = OprogStatus.eventMult*Oparams.parnum;
+#endif
 #ifndef EDHE_FLEX
   m = Oparams.m;
   Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
@@ -3018,6 +3022,8 @@ void usrInitAft(void)
       fclose(f);
 #ifdef MD_ABSORPTION
       f = fopenMPI(absMisHD("absorption.dat"), "w+");
+      fclose(f);
+      f = fopenMPI(absMisHD("ghost.dat"), "w+");
       fclose(f);
 #endif
 #endif

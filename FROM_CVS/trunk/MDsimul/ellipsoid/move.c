@@ -877,6 +877,13 @@ void rebuild_linked_list_NNL()
  
   for (n = 0; n < Oparams.parnum; n++)
     {
+#ifdef MD_SPHERICAL_WALL
+      if (n==sphWall)
+	{
+	  cellList[sphWall]=-1;
+	  continue;
+	}
+#endif
       /* reduce to first box */
 #ifdef MD_LXYZ
       rxNNL[n] = nebrTab[n].r[0] - L[0]*rint(nebrTab[n].r[0]*invL[0]);
@@ -936,6 +943,13 @@ void rebuild_linked_list()
   /* rebuild event calendar */
   for (n = 0; n < Oparams.parnum; n++)
     {
+#ifdef MD_SPHERICAL_WALL
+      if (n==sphWall)
+	{
+	  cellList[sphWall]=-1;
+	  continue;
+	}
+#endif
 #ifdef MD_LXYZ
       inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
       inCell[1][n] =  (ry[n] + L2[1]) * cellsy / L[1];
@@ -6978,6 +6992,111 @@ int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
 extern int may_interact_all(int i, int j);
 extern int *is_a_sphere_NNL;
 #endif
+#ifdef MD_SPHERICAL_WALL
+void locate_spherical_wall(int na)
+{
+  double sigSq, dr[NDIM], dv[NDIM], shift[NDIM]={0.0,0.0,0.0}, tm[NDIM], 
+	 b, d, t, tInt, vv, distSq, t1, t2;
+  int ac, bc, collCode, collCodeOld, acHC, bcHC;
+  double evtime, evtimeHC;
+  int nplane=-1, overlap;
+  double cctime;
+  double vecg[5];
+  int cellRangeT[2 * NDIM], signDir[NDIM]={0,0,0}, evCode,
+  iX, iY, iZ, jX, jY, jZ, k, n;
+
+  if (!may_interact_all(na, sphWall))
+    return;
+  n=sphWall;
+  sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+  tInt = Oparams.time - atomTime[n];
+  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+  dv[0] = vx[na] - vx[n];
+  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+  dv[1] = vy[na] - vy[n];
+  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+  dv[2] = vz[na] - vz[n];
+
+  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+  d = Sqr (b) - vv * (distSq - sigSq);
+
+  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+    {
+      /* i centroidi non collidono per cui non ci può essere
+       * nessun urto sotto tali condizioni */
+     return; 
+    }
+  MD_DEBUG40(printf("PREDICTING na=%d n=%d\n", na , n));
+  if (vv==0.0)
+    {
+      if (distSq >= sigSq)
+	return;
+      /* la vel relativa è zero e i centroidi non si overlappano quindi
+       * non si possono urtare! */
+      t1 = t = 0;
+      t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+		   urtare ruotando */
+    }
+  else if (distSq >= sigSq)
+    {
+      t = t1 = - (sqrt (d) + b) / vv;
+      t2 = (sqrt (d) - b) / vv;
+      overlap = 0;
+      MD_DEBUG40(printf("qui..boh sig:%.15G dist=%.15G\n", sqrt(sigSq), sqrt(distSq)));
+    }
+  else 
+    {
+      MD_DEBUG40(printf("Centroids overlap!\n"));
+      t2 = t = (sqrt (d) - b) / vv;
+      t1 = 0.0; 
+      overlap = 1;
+      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+    }
+  MD_DEBUG40(printf("t=%f curtime: %f b=%f d=%f t1=%.15G t2=%.15G\n", t, Oparams.time, b ,d, t1, t2));
+  MD_DEBUG40(printf("dr=(%f,%f,%f) sigSq: %f\n", dr[0], dr[1], dr[2], sigSq));
+  //t += Oparams.time; 
+  t2 += Oparams.time;
+  t1 += Oparams.time;
+  evtime = t2;
+  collCode = MD_EVENT_NONE;
+  rxC = ryC = rzC = 0.0;
+  MD_DEBUG20(printf("time=%.15G t1=%.15G t2=%.15G maxax[%d]:%.15G maxax[%d]:%.15G\n", 
+		    Oparams.time, t1, t2, na, maxax[na], n, maxax[n]));
+  MD_DEBUG20(printf("t1=%.15G t2=%.15G\n", t1, t2));
+  collCodeOld = collCode;
+  evtimeHC = evtime;
+  acHC = ac = 0;
+  bcHC = bc = 0;
+  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+    {
+      collCode = MD_EVENT_NONE;
+    }
+  t = evtime;
+  if (t < Oparams.time)
+    {
+#if 1
+      printf("time:%.15f tInt:%.15f\n", Oparams.time,
+	     tInt);
+      printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+				  Sqr(dr[2]))-1.0 );
+      printf("STEP: %lld\n", (long long int)Oparams.curStep);
+      printf("atomTime: %.10f \n", atomTime[n]);
+      printf("n:%d na:%d\n", n, na);
+#endif
+      t = Oparams.time;
+    }
+
+  /* il tempo restituito da newt() è già un tempo assoluto */
+  if (collCode != MD_EVENT_NONE)
+    {
+      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
+      //printf("time=%.15G scheduling coll with sph wall: na=%d n=%d ac=%d bc=%d t=%.15G\n ", Oparams.time, na, n, ac, bc, t);
+    }
+}
+#endif
 void PredictEvent (int na, int nb) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -7008,7 +7127,10 @@ void PredictEvent (int na, int nb)
 #endif
   int cellRangeT[2 * NDIM], signDir[NDIM]={0,0,0}, evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
-
+#ifdef MD_SPHERICAL_WALL
+  if (na==sphWall || nb==sphWall)
+    return;
+#endif
   MD_DEBUG38(printf("PredictEvent: %d,%d\n", na, nb));
   MD_DEBUG(calc_energy("PredEv"));
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
@@ -7265,6 +7387,11 @@ void PredictEvent (int na, int nb)
     }
   else
     ScheduleEvent (na, ATOM_LIMIT + evCode, cctime);
+#endif
+#ifdef MD_SPHERICAL_WALL
+  //printf("qui1\n");
+  locate_spherical_wall(na);
+  //printf("qui2\n");
 #endif
 
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
@@ -7536,15 +7663,6 @@ void PredictEvent (int na, int nb)
 #endif
 		      MD_DEBUG40(printf("schedule event [collision](%d,%d)-(%d,%d) collCode=%d\n", na, ac, n, bc, collCode));
 		    }
-#ifdef MD_SPHERICAL_WALL
-		  if (cellList[n]==-1)
-		    {
-		      n=sphWall;
-		      //printf("cellList[%d]:%d\n", sphWall, cellList[sphWall]);
-		      /* notare che cellList[sphWall]=-1 sempre 
-			 dove sphWall è la particella che costituisce la semi-calotta sferica */
-		    }
-#endif
 		} 
 	    }
 	}
@@ -8089,6 +8207,8 @@ void ProcessCollision(void)
   MD_DEBUG38(printf("[BUMP] t=%.15G i=%d at=%d j=%d at=%d collCode=%d\n", 
 		    Oparams.time,evIdA,evIdC, evIdB, evIdD, evIdE)); 
 
+  //if (typeOfPart[evIdA]==2 || typeOfPart[evIdB]==2)
+    //printf("===> %d %d\n", evIdA, evIdB);
 #ifdef MD_PATCHY_HE
   /* i primi due bit sono il tipo di event (uscit buca, entrata buca, collisione con core 
    * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */
@@ -8305,6 +8425,13 @@ void rebuildLinkedList(void)
   /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
   for (n = 0; n < Oparams.parnum; n++)
     {
+#ifdef MD_SPHERICAL_WALL
+      if (n==sphWall)
+	{
+	  cellList[sphWall]=-1;
+	  continue;
+	}
+#endif
       atomTime[n] = Oparams.time;
 #ifdef MD_LXYZ
       inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
