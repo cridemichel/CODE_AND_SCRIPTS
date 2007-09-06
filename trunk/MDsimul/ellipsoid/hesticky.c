@@ -110,7 +110,11 @@ extern void ScheduleEvent (int idA, int idB, double tEvent);
 extern void NextEvent (void);
 void distanza(int ia, int ib);
 double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[3]);
+#ifdef MD_LXYZ
+extern double pi, invL[3], L2[3], Vz;   
+#else
 extern double pi, invL, L2, Vz;   
+#endif
 extern double W, K, T1xx, T1yy, T1zz,
        T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz, 
        Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB, DQxxOld, 
@@ -393,10 +397,17 @@ void bumpSPHS(int i, int j, double *W, int bt)
   for (a=0; a < 3; a++)
     {
       Dr = rA[a]-rB[a];
+#ifdef MD_LXYZ
+      if (fabs(Dr) > L2[a])
+	{
+	  rB[a] += SignR(L[a], Dr);
+	}
+#else
       if (fabs(Dr) > L2)
 	{
 	  rB[a] += SignR(L, Dr);
 	}
+#endif
     }
   for (kk = 0; kk < 3; kk++)
     {
@@ -587,9 +598,15 @@ void handle_absorb(int ricettore, int protein)
   /* proteins must be placed in the buffer taking into account that they are solid with respect to box wall
    * and to proteins of type 1 */
   /* for now the particle is placed midway between semipermeable wall and box wall */
+#ifdef MD_LXYZ
+  rz[protein] = L[2]*0.5 - OprogStatus.bufHeight*0.5;
+  rx[protein] = (ranf() - 0.5)*L[0];
+  ry[protein] = (ranf() - 0.5)*L[1];
+#else
   rz[protein] = L*0.5 - OprogStatus.bufHeight*0.5;
   rx[protein] = (ranf() - 0.5)*L;
   ry[protein] = (ranf() - 0.5)*L;
+#endif  
   //printf("pos of %d %.15G %.15G %.15G\n", protein, rx[protein], ry[protein], rz[protein]); 
   /* ora la particella diventa del tipo "buffer" 
    */
@@ -603,12 +620,18 @@ void handle_absorb(int ricettore, int protein)
   /* Eliminazione di protein dalla lista della cella n-esima */
   cellList[n] = cellList[protein];
 
+#ifdef MD_LXYZ
+  inCell[0][protein] =  (rx[protein] + L2[0]) * cellsx / L[0];
+  inCell[1][protein] =  (ry[protein] + L2[1]) * cellsy / L[1];
+  inCell[2][protein] =  (rz[protein] + L2[2]) * cellsz / L[2];
+#else
   inCell[0][protein] =  (rx[protein] + L2) * cellsx / L;
   inCell[1][protein] =  (ry[protein] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
   inCell[2][protein] =  (rz[protein] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
 #else
   inCell[2][protein] =  (rz[protein] + L2)  * cellsz / L;
+#endif
 #endif
   j = (inCell[2][protein]*cellsy + inCell[1][protein])*cellsx + 
     inCell[0][protein] + Oparams.parnum;
@@ -720,10 +743,17 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   for (a=0; a < 3; a++)
     {
       Dr = rA[a]-rB[a];
+#ifdef MD_LXYZ
+      if (fabs(Dr) > L2[a])
+	{
+	  rB[a] += SignR(L[a], Dr);
+	}
+#else
       if (fabs(Dr) > L2)
 	{
 	  rB[a] += SignR(L, Dr);
 	}
+#endif
     }
   MD_DEBUG20(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   /* qui calcolo il punto di contatto */
