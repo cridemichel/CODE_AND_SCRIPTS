@@ -212,7 +212,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define NK 10000
 #define NA 1000 /* number of atoms for each molecule (particle) */
 
-#define MAXPAR 5000      /* maximum number of simulated particles */
+#define MAXPAR 50000      /* maximum number of simulated particles */
 #ifdef MD_PATCHY_HE
 #define MD_STSPOTS_A 5
 #define MD_STSPOTS_B 2
