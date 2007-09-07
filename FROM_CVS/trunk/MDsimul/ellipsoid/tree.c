@@ -16,6 +16,9 @@ void DeleteEvent(int );
 void NextEvent(void);
 extern int poolSize;
 extern double rxC, ryC, rzC;
+#ifdef MD_SPHERICAL_WALL
+extern int sphWall;
+#endif
 #define MD_DEBUG20(x) 
 #if 0
 #define treeLeft   tree[0]
@@ -344,11 +347,21 @@ void NextEvent (void)
       /* qui rimuove dal calendario tutti gli eventi in cui sono coinvolte A o B */
       for (id = idAx; id <= idBx; id += idtx) 
 	{
+#ifdef MD_SPHERICAL_WALL
+	  if ((sphWall==treeIdA[id] && evIdB!=treeIdB[id])||
+	      (sphWall==treeIdB[id] && evIdA!=treeIdA[id]))
+	    continue;
+#endif
 	  DeleteEvent (id);
 	  MD_DEBUG34(printf("deleted event #%d\n", id));
 	  for (idd = treeCircAL[id]; idd != id; idd = treeCircAL[idd]) 
 	    {
-	      /* il successivo (R) del precedente (L) diviene il successivo 
+#ifdef MD_SPHERICAL_WALL
+    	      if ((sphWall==treeIdA[idd] && evIdB!=treeIdB[idd])||
+    		  (sphWall==treeIdB[idd] && evIdA!=treeIdA[idd]))
+    		continue;
+#endif
+		      /* il successivo (R) del precedente (L) diviene il successivo 
 	       * del nodo corrente poiché il nodo corrente è stato eliminato */
 	      treeCircBR[treeCircBL[idd]] = treeCircBR[idd];
 	      /* il precedente del successivo diviene il precedente del nodo
@@ -365,6 +378,11 @@ void NextEvent (void)
 	  treeCircAL[id] = treeCircAR[id] = id;
 	  for (idd = treeCircBL[id]; idd != id; idd = treeCircBL[idd]) 
 	    {
+#ifdef MD_SPHERICAL_WALL
+	      if ((sphWall==treeIdA[idd] && evIdB!=treeIdB[idd])||
+		  (sphWall==treeIdB[idd] && evIdA!=treeIdA[idd]))
+		continue;
+#endif
 	      /* vedere sopra infatti è lo stesso solo per la lista in cui
 	       * la particella è la prima della coppia (A) */
 	      treeCircAR[treeCircAL[idd]] = treeCircAR[idd];
@@ -395,9 +413,7 @@ void NextEvent (void)
     
   /*printf("Next event evIdA: %d, evIdB:%d\n", evIdA, evIdB);*/
 }
-#ifdef MD_SPHERICAL_WALL
-extern int sphWall;
-#endif
+
 void DeleteEvent (int id)
 {
   int idp, idq, idr;

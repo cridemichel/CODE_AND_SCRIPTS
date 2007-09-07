@@ -3997,11 +3997,25 @@ void find_contact_parall(int na, int n, parall_event_struct *parall_event)
 #ifdef MD_LXYZ
   shift[0] = L[0]*rint((rx[na]-rx[n])/L[0]);
   shift[1] = L[1]*rint((ry[na]-ry[n])/L[1]);
+#ifdef MD_EDHEFLEX_WALL
+  if (!OprogStatus.hardwall)
+    shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+  else
+    shift[2] = 0.0;
+#else
   shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+#endif
 #else
   shift[0] = L*rint((rx[na]-rx[n])/L);
   shift[1] = L*rint((ry[na]-ry[n])/L);
+#ifdef MD_EDHEFLEX_WALL
+  if (!OprogStatus.hardwall)
+    shift[2] = L*rint((rz[na]-rz[n])/L);
+  else
+    shift[2] = 0.0;
+#else
   shift[2] = L*rint((rz[na]-rz[n])/L);
+#endif
 #endif
   /* maxax[...] è il diametro dei centroidi dei due tipi
    * di ellissoidi */
@@ -4767,11 +4781,25 @@ void PredictEventNNL(int na, int nb)
 #ifdef MD_LXYZ
       shift[0] = L[0]*rint((rx[na]-rx[n])/L[0]);
       shift[1] = L[1]*rint((ry[na]-ry[n])/L[1]);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+      else
+	shift[2] = 0.0;
+#else
       shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+#endif
 #else
       shift[0] = L*rint((rx[na]-rx[n])/L);
       shift[1] = L*rint((ry[na]-ry[n])/L);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	shift[2] = L*rint((rz[na]-rz[n])/L);
+      else
+	shift[2] = 0.0;
+#else
       shift[2] = L*rint((rz[na]-rz[n])/L);
+#endif
 #endif
       /* maxax[...] è il diametro dei centroidi dei due tipi
        * di ellissoidi */

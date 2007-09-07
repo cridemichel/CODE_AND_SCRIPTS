@@ -284,14 +284,17 @@ void check_all_bonds(void)
       cellRange[2*k+1] =   1;
     }
   
-  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
-
   warn = 0;
   for ( i = 0; i < Oparams.parnum; i++)
     {
       if (warn)
 	break;
       nb = 0;
+      for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+#ifdef MD_EDHEFLEX_WALL
+      if (inCell[2][i] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (inCell[2][i] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+#endif 
       for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
 	{
 	  jZ = inCell[2][i] + iZ;    
@@ -300,6 +303,7 @@ void check_all_bonds(void)
 	   * fiels is not present */
 	  if (jZ == -1) 
 	    {
+	      printf("BOHHHH\n");
 	      jZ = cellsz - 1;    
 #ifdef MD_LXYZ
 	      shift[2] = - L[2];
@@ -2557,10 +2561,23 @@ void find_bonds(void)
 	shift[1] = L*rint(dry/L);
 #endif
 	drz = rz[i] - rz[j]; 
+#ifdef MD_EDHEFLEX_WALL
+	if (!OprogStatus.hardwall)
+	  {
+#ifdef MD_LXYZ
+	    shift[2] = L[2]*rint(drz/L[2]);
+#else
+    	    shift[2] = L*rint(drz/L);
+#endif
+	  }
+	else
+	  shift[2] = 0.0;
+#else
 #ifdef MD_LXYZ
 	shift[2] = L[2]*rint(drz/L[2]);
 #else
 	shift[2] = L*rint(drz/L);
+#endif
 #endif
 	assign_bond_mapping(i, j);
 
@@ -2816,7 +2833,11 @@ void usrInitAft(void)
 #endif
   bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
+#ifdef MD_SPHERICAL_WALL
+  bondscache = malloc(sizeof(int)*Oparams.parnum);
+#else
   bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
+#endif  
 #else
 #ifdef MD_HE_PARALL
   if (my_rank == 0)
@@ -2921,6 +2942,9 @@ void usrInitAft(void)
 			typesArr[pt].sax[2]);)
     } 
   maxnbonds = get_max_nbonds();
+  //printf("maxnbonds:%d\n OprogStatus.maxbonds: %d\n", maxnbonds, OprogStatus.maxbonds);
+  //if (OprogStatus.maxbonds > maxnbonds)
+    //maxnbonds = OprogStatus.maxbonds;
   dofTot = get_dof_flex(0);
   mapbondsaFlex = (int*)malloc(sizeof(int)*maxnbonds);
   mapbondsbFlex = (int*)malloc(sizeof(int)*maxnbonds);
