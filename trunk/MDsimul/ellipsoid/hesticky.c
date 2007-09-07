@@ -400,6 +400,10 @@ void bumpSPHS(int i, int j, double *W, int bt)
   for (a=0; a < 3; a++)
     {
       Dr = rA[a]-rB[a];
+#ifdef MD_EDHEFLEX_WALL
+      if (a==2 && OprogStatus.hardwall)
+	continue;
+#endif
 #ifdef MD_LXYZ
       if (fabs(Dr) > L2[a])
 	{
@@ -477,10 +481,13 @@ void bumpSPHS(int i, int j, double *W, int bt)
  	      MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
     				Oparams.time, vc,  bt,
 	       			sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	      //printf("qui3 bhout=%.15G i=%d j=%d\n", bhout, i, j);
 	      factor = -2.0*vc;
 	    }
 	  else
 	    {
+	      //printf("qui2\n");
+	      //printf("INOUT qui i=%d j=%d\n", i, j);
 	      MD_DEBUG31(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
 				sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
@@ -510,6 +517,7 @@ void bumpSPHS(int i, int j, double *W, int bt)
 	{
 	  if (one_is_bonded(i, 1, j, 1, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
 	    {
+	      //printf("qui1\n");
 	      MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
 			    Oparams.time, vc,  bt,
 			    sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
@@ -517,6 +525,7 @@ void bumpSPHS(int i, int j, double *W, int bt)
 	    }
 	  else
 	    {
+	      //printf("OUTIN qui i=%d j=%d\n", i, j);
 	      add_bond(i, j, 1, 1);
 	      add_bond(j, i, 1, 1);
 	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
@@ -626,6 +635,11 @@ void handle_absorb(int ricettore, int protein)
   /* ora la particella diventa del tipo "buffer" 
    */
   typeOfPart[protein] = 2;
+  //printf("abosorbed: %d\n", protein);
+#ifdef MD_SPHERICAL_WALL
+  remove_bond(protein, sphWall, 1, 1);
+  remove_bond(sphWall, protein, 1, 1);
+#endif
   MD_DEBUG38(printf("time=%.15G i=%d switched to type 2\n", Oparams.time, protein)); 
   n = (inCell[2][protein] * cellsy + inCell[1][protein] )*cellsx + inCell[0][protein]
     + Oparams.parnum;
@@ -691,7 +705,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
   //if (i==sphWall || j==sphWall)
   //printf("qui sphWall=%d i=%dA j=%dB typei=%d typej=%d\n", sphWall, i, j, typeOfPart[i], typeOfPart[j]);
-  if (j==sphWall && !bound(i, j, 0, 0) && typeOfPart[i]==2)
+  if (j==sphWall && !bound(i, j, 1, 1) && typeOfPart[i]==2)
     {
       //printf("qui\n");
       typeOfPart[i]=1;
@@ -743,11 +757,13 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	}
     }
 #endif
+#if 1
   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1)
     {
       bumpSPHS(i, j, W, bt);
       return;
     }
+#endif
 #endif
 #endif
 #ifdef EDHE_FLEX
@@ -767,6 +783,10 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   for (a=0; a < 3; a++)
     {
       Dr = rA[a]-rB[a];
+#ifdef MD_EDHEFLEX_WALL
+      if (a==2 && OprogStatus.hardwall)
+	continue;
+#endif
 #ifdef MD_LXYZ
       if (fabs(Dr) > L2[a])
 	{
@@ -2497,6 +2517,10 @@ int locate_contact_HSSP(int na, int n, double shift[3], double t1, double t2, do
   b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
 
   distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
+#if 0
+  if (n==170||na==170)
+    printf("distSq: %.15G sigSq=%.15G\n", distSq, sigSq);
+#endif
   vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
   collCodeL = MD_EVENT_NONE;
   /* per ora tale ottimizzazione assume un solo spot per particella */ 
@@ -2520,7 +2544,11 @@ int locate_contact_HSSP(int na, int n, double shift[3], double t1, double t2, do
 	{
 	  t = ( sqrt (d) - b) / vv;
 	  if (t > 0 || (t < 0 && distSq > sigSq))
-	    collCodeL = MD_INOUT_BARRIER;
+	    {
+	      //if ((na==170 || n==170)&&distSq>sigSq)
+	//	printf("NONONO t=%.15G t1=%.15G t2=%.15G\n", t+Oparams.time, t1, t2);
+	      collCodeL = MD_INOUT_BARRIER;
+	    }
 	}
     }
   if (t < 0 && collCodeL!= MD_EVENT_NONE)

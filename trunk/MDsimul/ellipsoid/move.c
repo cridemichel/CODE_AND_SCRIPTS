@@ -141,11 +141,25 @@ double calc_dist_ij(int i, int j, double t)
 #ifdef MD_LXYZ
   shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
   shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+#ifdef MD_EDHEFLEX_WALL
+  if (!OprogStatus.hardwall)
+    shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+  else
+    shift[2] = 0.0; 
+#else
   shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#endif
 #else
   shift[0] = L*rint((rx[i]-rx[j])/L);
   shift[1] = L*rint((ry[i]-ry[j])/L);
+#ifdef MD_EDHEFLEX_WALL
+  if (!OprogStatus.hardwall)
+    shift[2] = L*rint((rz[i]-rz[j])/L);
+  else
+    shift[2] = 0.0;
+#else
   shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
 #endif
   d=calcDistNeg(t, 0, i, j, shift, r1, r2, &alpha, vecgNeg, 1);
   return d;
@@ -288,10 +302,23 @@ void check_shift(int i, int j, double *shift)
   if (cellsz <=2)
     {
       drz = rz[i] - rz[j]; 
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	{
+#ifdef MD_LXYZ
+	  shift[2] = L[2]*rint(drz/L[2]);
+#else
+	  shift[2] = L*rint(drz/L);
+#endif
+	}
+      else 
+	shift[2] = 0.0;
+#else
 #ifdef MD_LXYZ
       shift[2] = L[2]*rint(drz/L[2]);
 #else
       shift[2] = L*rint(drz/L);
+#endif
 #endif
     }
 }
@@ -380,11 +407,25 @@ void scalCor(int Nm)
 #ifdef MD_LXYZ
       DRx = - L[0] * rint(invL[0] * rx[i]);
       DRy = - L[1] * rint(invL[1] * ry[i]);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	DRz = - L[2] * rint(invL[2] * rz[i]);
+      else
+	DRz = 0.0;
+#else
       DRz = - L[2] * rint(invL[2] * rz[i]);
+#endif
 #else
       DRx = - L * rint(invL * rx[i]);
       DRy = - L * rint(invL * ry[i]);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	DRz = - L * rint(invL * rz[i]);
+      else
+	DRz = 0.0;
+#else
       DRz = - L * rint(invL * rz[i]);
+#endif
 #endif
       rx[i] += DRx;
       ry[i] += DRy;
@@ -457,6 +498,10 @@ double get_min_dist_NNL (int na, int *jmin, double *rCmin, double *rDmin, double
       shift[0] = L*rint((rx[na]-rx[n])/L);
       shift[1] = L*rint((ry[na]-ry[n])/L);
       shift[2] = L*rint((rz[na]-rz[n])/L);
+#endif
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall)
+	shift[2] = 0.0;
 #endif
       if (n!=na) 
 	{
@@ -748,6 +793,10 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
       for (kk=0; kk < 3; kk++)
 	{
 	  rAC[kk] = rA[kk] - rC[kk];
+#ifdef MD_EDHEFLEX_WALL
+	  if (kk==2 && OprogStatus.hardwall)
+	    continue;
+#endif
 #ifdef MD_LXYZ
 	  if (fabs (rAC[kk]) > L2[kk])
 	    rAC[kk] -= SignR(L[kk], rAC[kk]);
@@ -759,6 +808,10 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
       for (kk=0; kk < 3; kk++)
 	{
 	  rBD[kk] = rB[kk] - rD[kk];
+#ifdef MD_EDHEFLEX_WALL
+	  if (kk==2 && OprogStatus.hardwall)
+	    continue;
+#endif
 #ifdef MD_LXYZ
 	  if (fabs (rBD[kk]) > L2[kk])
 	    rBD[kk] -= SignR(L[kk], rBD[kk]);
@@ -888,14 +941,28 @@ void rebuild_linked_list_NNL()
 #ifdef MD_LXYZ
       rxNNL[n] = nebrTab[n].r[0] - L[0]*rint(nebrTab[n].r[0]*invL[0]);
       ryNNL[n] = nebrTab[n].r[1] - L[1]*rint(nebrTab[n].r[1]*invL[1]);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	rzNNL[n] = nebrTab[n].r[2] - L[2]*rint(nebrTab[n].r[2]*invL[2]);
+      else
+	rzNNL[n] = nebrTab[n].r[2];
+#else
       rzNNL[n] = nebrTab[n].r[2] - L[2]*rint(nebrTab[n].r[2]*invL[2]);
+#endif
       inCell_NNL[0][n] =  (rxNNL[n] + L2[0]) * cellsx / L[0];
       inCell_NNL[1][n] =  (ryNNL[n] + L2[1]) * cellsy / L[1];
       inCell_NNL[2][n] =  (rzNNL[n] + L2[2]) * cellsz / L[2];
 #else
       rxNNL[n] = nebrTab[n].r[0] - L*rint(nebrTab[n].r[0]*invL);
       ryNNL[n] = nebrTab[n].r[1] - L*rint(nebrTab[n].r[1]*invL);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	rzNNL[n] = nebrTab[n].r[2] - L*rint(nebrTab[n].r[2]*invL);
+      else
+	rzNNL[n] = nebrTab[n].r[2];
+#else
       rzNNL[n] = nebrTab[n].r[2] - L*rint(nebrTab[n].r[2]*invL);
+#endif
       inCell_NNL[0][n] =  (rxNNL[n] + L2) * cellsx / L;
       inCell_NNL[1][n] =  (ryNNL[n] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
@@ -1581,12 +1648,22 @@ void check (int *overlap, double *K, double *V)
 #ifdef MD_LXYZ
 	   rxij = rxij - L[0]*rint(invL[0]*rxij);
 	   ryij = ryij - L[1]*rint(invL[1]*ryij);
+#ifdef MD_EDHEFLEX_WALL
+	   if (!OprogStatus.hardwall)
+	     rzij = rzij - L[2]*rint(invL[2]*rzij);
+#else
 	   rzij = rzij - L[2]*rint(invL[2]*rzij);
+#endif
 #else
 	   rxij = rxij - L*rint(invL*rxij);
 	   ryij = ryij - L*rint(invL*ryij);
 #if !defined(MD_GRAVITY)
+#ifdef MD_EDHEFLEX_WALL
+	   if (!OprogStatus.hardwall)
+	     rzij = rzij - L*rint(invL*rzij);
+#else
 	   rzij = rzij - L*rint(invL*rzij);
+#endif
 #endif
 #endif
 	   rijSq = Sqr(rxij) + Sqr(ryij) + Sqr(rzij);
@@ -1716,11 +1793,23 @@ void check_contact(int i, int j, double rCx, double rCy, double rCz)
   r[1] = ry[i];
   r[2] = rz[i];
 #ifdef MD_LXYZ
-for (k1=0; k1 < 3; k1++)
-    x[k1] -= L[k1]*rint((x[k1] - r[k1])/L[k1]);
+  for (k1=0; k1 < 3; k1++)
+    {
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall && k1==2)
+       continue;	
+#endif
+      x[k1] -= L[k1]*rint((x[k1] - r[k1])/L[k1]);
+    }
 #else
   for (k1=0; k1 < 3; k1++)
-    x[k1] -= L*rint((x[k1] - r[k1])/L);
+    {
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall && k1==2)
+       continue;	
+#endif
+      x[k1] -= L*rint((x[k1] - r[k1])/L);
+    }
 #endif
   lab2body(i, x, xp, r, R[i]);
   printf("i=%d f=%.15G\n", i, calcf(xp, i));
@@ -1731,10 +1820,22 @@ for (k1=0; k1 < 3; k1++)
   r[2] = rz[j];
 #ifdef MD_LXYZ
   for (k1=0; k1 < 3; k1++)
-    x[k1] -= L[k1]*rint((x[k1] - r[k1])/L[k1]);
+    {
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall && k1==2)
+  	continue;	
+#endif
+      x[k1] -= L[k1]*rint((x[k1] - r[k1])/L[k1]);
+    }
 #else
   for (k1=0; k1 < 3; k1++)
-    x[k1] -= L*rint((x[k1] - r[k1])/L);
+    {
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall && k1==2)
+ 	continue;	
+#endif
+      x[k1] -= L*rint((x[k1] - r[k1])/L);
+    }
 #endif
   lab2body(j, x, xp, r, R[j]);
   printf("j=%d f=%.15G\n", j, calcf(xp, j));
@@ -1749,10 +1850,22 @@ void check_contact(int i, int j, double** Xa, double **Xb, double *rAC, double *
   f = g = -1; 
 #ifdef MD_LXYZ
   for (k1=0; k1 < 3; k1++)
-    del[0] = -L[k1]*rint((rAC[k1] - rBC[k1])/L[k1]);
+    {
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall && k1==2)
+ 	continue;	
+#endif
+      del[0] = -L[k1]*rint((rAC[k1] - rBC[k1])/L[k1]);
+    }
 #else
   for (k1=0; k1 < 3; k1++)
-    del[0] = -L*rint((rAC[k1] - rBC[k1])/L);
+    {
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall && k1==2)
+ 	continue;	
+#endif
+      del[0] = -L*rint((rAC[k1] - rBC[k1])/L);
+    }
 #endif
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
@@ -1879,8 +1992,13 @@ void bumpHS(int i, int j, double *W)
   if (fabs (ryij) > L2[1])
     ryij = ryij - SignR(L[1], ryij);
   rzij = rz[i] - rz[j];
+#ifdef MD_EDHEFLEX_WALL
+  if (!OprogStatus.hardwall && fabs (rzij) > L2[2])
+    rzij = rzij - SignR(L[2], rzij);
+#else  
   if (fabs (rzij) > L2[2])
     rzij = rzij - SignR(L[2], rzij);
+#endif
 #else
   rxij = rx[i] - rx[j];
   if (fabs (rxij) > L2)
@@ -1889,8 +2007,13 @@ void bumpHS(int i, int j, double *W)
   if (fabs (ryij) > L2)
     ryij = ryij - SignR(L, ryij);
   rzij = rz[i] - rz[j];
+#ifdef MD_EDHEFLEX_WALL
+  if (!OprogStatus.hardwall && fabs (rzij) > L2)
+    rzij = rzij - SignR(L, rzij);
+#else
   if (fabs (rzij) > L2)
     rzij = rzij - SignR(L, rzij);
+#endif
 #endif
   factor = ( rxij * ( vx[i] - vx[j] ) +
 	     ryij * ( vy[i] - vy[j] ) +
@@ -2097,12 +2220,17 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   for (a=0; a < 3; a++)
     {
       rCsh[a] = 0.0;
+#ifdef MD_EDHEFLEX_WALL
+      if (a==2 && OprogStatus.hardwall)
+	continue;
+#endif
 #ifdef MD_LXYZ
       if (fabs (rAC[a]) > L2[a])
 	{
 	  rCsh[a] = SignR(L[a], rAC[a]);
 	  rAC[a] -= rCsh[a];
-	}#else
+	}
+#else
       if (fabs (rAC[a]) > L2)
 	{
 	  rCsh[a] = SignR(L, rAC[a]);
@@ -2113,12 +2241,24 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #else
 #ifdef MD_LXYZ
   for (a=0; a < 3; a++)
-    if (fabs (rAC[a]) > L2[a])
-      rAC[a] -= SignR(L[a], rAC[a]);
+    {
+#ifdef MD_EDHEFLEX_WALL
+      if (a==2 && OprogStatus.hardwall)
+	continue;
+#endif
+      if (fabs (rAC[a]) > L2[a])
+    	rAC[a] -= SignR(L[a], rAC[a]);
+    }
 #else
   for (a=0; a < 3; a++)
-    if (fabs (rAC[a]) > L2)
-      rAC[a] -= SignR(L, rAC[a]);
+    {
+#ifdef MD_EDHEFLEX_WALL
+      if (a==2 && OprogStatus.hardwall)
+	continue;
+#endif
+      if (fabs (rAC[a]) > L2)
+     	rAC[a] -= SignR(L, rAC[a]);
+    }
 #endif
 #endif
 #endif
@@ -2138,6 +2278,10 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   for (a=0; a < 3; a++)
     {
       MD_DEBUG(printf("P rBC[%d]:%.15f ", a, rBC[a]));
+#ifdef MD_EDHEFLEX_WALL
+      if (a==2 && OprogStatus.hardwall)
+	continue;
+#endif
 #ifdef MD_LXYZ
       if (fabs (rBC[a]) > L2[a])
 	rBC[a] -= SignR(L[a], rBC[a]);
@@ -2593,14 +2737,28 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       Dr = L[1]*rint((ry[i]-ry[j])/L[1]);
       ryij = (ry[i]-ry[j]) - Dr;
       Dr = L[2]*rint((rz[i]-rz[j])/L[2]);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	rzij = (rz[i]-rz[j]) - Dr;
+      else
+	rzij = rz[i]-rz[j];
+#else
       rzij = (rz[i]-rz[j]) - Dr;
+#endif
 #else
       Dr = L*rint((rx[i]-rx[j])/L);
       rxij = (rx[i]-rx[j]) - Dr;
       Dr = L*rint((ry[i]-ry[j])/L);
       ryij = (ry[i]-ry[j]) - Dr;
       Dr = L*rint((rz[i]-rz[j])/L);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	rzij = (rz[i]-rz[j]) - Dr;
+      else
+	rzij = rz[i]-rz[j];
+#else
       rzij = (rz[i]-rz[j]) - Dr;
+#endif
 #endif
       OprogStatus.DQWxy += rxij*delpy;
       OprogStatus.DQWyz += ryij*delpz;
@@ -5567,12 +5725,24 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
 #if 1
 #ifdef MD_LXYZ
   for (a=0; a < 3; a++)
-    if (fabs (rAC[a]) > L2[a])
-      rAC[a] -= SignR(L[a], rAC[a]);
+    {
+#ifdef MD_EDHEFLEX_WALL
+      if (a==2 && OprogStatus.hardwall)
+	continue;
+#endif
+      if (fabs (rAC[a]) > L2[a])
+	rAC[a] -= SignR(L[a], rAC[a]);
+    }
 #else
   for (a=0; a < 3; a++)
-    if (fabs (rAC[a]) > L2)
-      rAC[a] -= SignR(L, rAC[a]);
+    {
+#ifdef MD_EDHEFLEX_WALL
+      if (a==2 && OprogStatus.hardwall)
+	continue;
+#endif
+      if (fabs (rAC[a]) > L2)
+    	rAC[a] -= SignR(L, rAC[a]);
+    }
 #endif
 #endif
   rBC[0] = rx[j] + vx[j]*(t-atomTime[j]) - rCx;
@@ -5582,6 +5752,10 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   for (a=0; a < 3; a++)
     {
       MD_DEBUG(printf("P rBC[%d]:%.15f ", a, rBC[a]));
+#ifdef MD_EDHEFLEX_WALL
+      if (a==2 && OprogStatus.hardwall)
+	continue;
+#endif
 #ifdef MD_LXYZ
       if (fabs (rBC[a]) > L2[a])
 	rBC[a] -= SignR(L[a], rBC[a]);
@@ -7022,11 +7196,23 @@ void locate_spherical_wall(int na)
   vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
   d = Sqr (b) - vv * (distSq - sigSq);
 
+#if 0
+  if (na==170)
+    {
+      printf("time=%.15G rSW %f %f %f r[%d] %f %f %f\n", Oparams.time,rx[sphWall], ry[sphWall], rz[sphWall], na, rx[na], ry[na], rz[na]);
+      printf("d=%.15G distSq:%.15G sigSq=%.15G MAH\n", d, distSq, sigSq);
+    }
+#endif
   if (d < 0 || (b > 0.0 && distSq > sigSq)) 
     {
       /* i centroidi non collidono per cui non ci può essere
        * nessun urto sotto tali condizioni */
-     return; 
+#if 0
+	printf("time=%.15G rSW %f %f %f r[%d] %f %f %f\n", Oparams.time, rx[sphWall], ry[sphWall], rz[sphWall], na, rx[na], ry[na], rz[na]);
+      printf("d=%.15G distSq:%.15G sigSq=%.15G MAH\n", d, distSq, sigSq);
+      exit(-1);
+#endif
+      return; 
     }
   MD_DEBUG40(printf("PREDICTING na=%d n=%d\n", na , n));
   if (vv==0.0)
@@ -7093,7 +7279,13 @@ void locate_spherical_wall(int na)
   if (collCode != MD_EVENT_NONE)
     {
       ScheduleEventBarr (na, n,  ac, bc, collCode, t);
-      //printf("time=%.15G scheduling coll with sph wall: na=%d n=%d ac=%d bc=%d t=%.15G\n ", Oparams.time, na, n, ac, bc, t);
+#if 0
+      if (na==170||n==170)
+	{
+	  printf("collCode=%d\n", collCode);
+	  printf("time=%.15G scheduling coll with sph wall: na=%d n=%d ac=%d bc=%d t=%.15G\n ", Oparams.time, na, n, ac, bc, t);
+	}
+#endif
     }
 }
 #endif
@@ -7128,7 +7320,7 @@ void PredictEvent (int na, int nb)
   int cellRangeT[2 * NDIM], signDir[NDIM]={0,0,0}, evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
 #ifdef MD_SPHERICAL_WALL
-  if (na==sphWall || nb==sphWall)
+  if (na==sphWall|| nb==sphWall)
     return;
 #endif
   MD_DEBUG38(printf("PredictEvent: %d,%d\n", na, nb));
@@ -7389,11 +7581,22 @@ void PredictEvent (int na, int nb)
     ScheduleEvent (na, ATOM_LIMIT + evCode, cctime);
 #endif
 #ifdef MD_SPHERICAL_WALL
-  //printf("qui1\n");
+#if 0
+  if (evIdA==sphWall || evIdB==sphWall)
+    {
+      printf("qui1\n");
+      for (n=2; n < Oparams.parnum; n++) 
+	locate_spherical_wall(n);
+    }
+  else
+    {
+      locate_spherical_wall(na);
+    }
+#else
   locate_spherical_wall(na);
+#endif
   //printf("qui2\n");
 #endif
-
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
       jZ = inCell[2][na] + iZ;    
@@ -7420,6 +7623,7 @@ void PredictEvent (int na, int nb)
 #endif
 	}
 #endif
+      
       for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
 	{
 	  jY = inCell[1][na] + iY;    
@@ -8125,11 +8329,25 @@ void store_bump(int i, int j)
 #ifdef MD_LXYZ
   Drx = L[0]*rint((rx[i]-rx[j])/L[0]);
   Dry = L[1]*rint((ry[i]-ry[j])/L[1]);
+#ifdef MD_EDHEFLEX_WALL
+  if (!OprogStatus.hardwall)
+    Drz = L[2]*rint((rz[i]-rz[j])/L[2]);
+  else 
+    Drz = 0.0;
+#else
   Drz = L[2]*rint((rz[i]-rz[j])/L[2]);
+#endif
 #else
   Drx = L*rint((rx[i]-rx[j])/L);
   Dry = L*rint((ry[i]-ry[j])/L);
+#ifdef MD_EDHEFLEX_WALL
+  if (!OprogStatus.hardwall)
+    Drz = L*rint((rz[i]-rz[j])/L);
+  else
+    Drz = 0.0;
+#else
   Drz = L*rint((rz[i]-rz[j])/L);
+#endif
 #endif
   RCMx = (rx[i]+rx[j]+Drx)*0.5;
   RCMy = (ry[i]+ry[j]+Dry)*0.5;
@@ -8256,8 +8474,20 @@ void ProcessCollision(void)
     }
   else
     {
+#ifdef MD_SPHERICAL_WALL
+     if (evIdA==sphWall)
+       PredictEvent(evIdB, -1);
+     else if (evIdB==sphWall)
+       PredictEvent(evIdA, -1);
+     else
+       {
+	 PredictEvent(evIdA, -1);
+	 PredictEvent(evIdB, evIdA);
+       }
+#else
       PredictEvent(evIdA, -1);
       PredictEvent(evIdB, evIdA);
+#endif
     }
   do_check_negpairs = 0;
 }
