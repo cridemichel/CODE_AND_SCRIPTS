@@ -596,6 +596,7 @@ void bumpSPHS(int i, int j, double *W, int bt)
 #if defined(EDHE_FLEX) && defined(MD_ABSORPTION)
 extern double ranf(void);
 extern void rebuild_linked_list();
+extern double calcpotene(void);
 void handle_absorb(int ricettore, int protein)
 {
   FILE *f; 
@@ -609,6 +610,14 @@ void handle_absorb(int ricettore, int protein)
       if (typeOfPart[i]==2)
 	ng++;
     }
+  //printf("cella: %d rz[955]: %.15G inCell[1] %d %d %d\n", inCell[2][955], rz[955], inCell[0][1], inCell[1][1], inCell[2][1]);
+#if 0
+    {
+      double V;
+      V=calcpotene();
+      printf("buf from V: %d type2: %d\n", (int)(1000-V/0.0001), ng);
+    }
+#endif
   f = fopenMPI("buffer.dat", "a");
   fprintf(f, "%d\n", ng);
   fclose(f);	
@@ -705,9 +714,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
   //if (i==sphWall || j==sphWall)
   //printf("qui sphWall=%d i=%dA j=%dB typei=%d typej=%d\n", sphWall, i, j, typeOfPart[i], typeOfPart[j]);
-  if (j==sphWall && !bound(i, j, 1, 1) && typeOfPart[i]==2)
+  if (j==sphWall && !bound(i, j, 1, 1) && typeOfPart[i]==2 && bt==MD_OUTIN_BARRIER)
     {
-      //printf("qui\n");
+      //printf("qui i=%d\n", i);
       typeOfPart[i]=1;
     }
 #endif

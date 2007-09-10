@@ -348,20 +348,15 @@ void NextEvent (void)
       for (id = idAx; id <= idBx; id += idtx) 
 	{
 #ifdef MD_SPHERICAL_WALL
-	  if ((sphWall==treeIdA[id] && evIdB!=treeIdB[id])||
-	      (sphWall==treeIdB[id] && evIdA!=treeIdA[id]))
-	    continue;
+	  /* N.B. gli eventi in cui compare il muro sferico, a parte l'urto con evIdA non vanno cancellati  */
+	  if (id==sphWall+1)
+	    continue; 
 #endif
 	  DeleteEvent (id);
 	  MD_DEBUG34(printf("deleted event #%d\n", id));
 	  for (idd = treeCircAL[id]; idd != id; idd = treeCircAL[idd]) 
 	    {
-#ifdef MD_SPHERICAL_WALL
-    	      if ((sphWall==treeIdA[idd] && evIdB!=treeIdB[idd])||
-    		  (sphWall==treeIdB[idd] && evIdA!=treeIdA[idd]))
-    		continue;
-#endif
-		      /* il successivo (R) del precedente (L) diviene il successivo 
+	      /* il successivo (R) del precedente (L) diviene il successivo 
 	       * del nodo corrente poiché il nodo corrente è stato eliminato */
 	      treeCircBR[treeCircBL[idd]] = treeCircBR[idd];
 	      /* il precedente del successivo diviene il precedente del nodo
@@ -378,11 +373,6 @@ void NextEvent (void)
 	  treeCircAL[id] = treeCircAR[id] = id;
 	  for (idd = treeCircBL[id]; idd != id; idd = treeCircBL[idd]) 
 	    {
-#ifdef MD_SPHERICAL_WALL
-	      if ((sphWall==treeIdA[idd] && evIdB!=treeIdB[idd])||
-		  (sphWall==treeIdB[idd] && evIdA!=treeIdA[idd]))
-		continue;
-#endif
 	      /* vedere sopra infatti è lo stesso solo per la lista in cui
 	       * la particella è la prima della coppia (A) */
 	      treeCircAR[treeCircAL[idd]] = treeCircAR[idd];

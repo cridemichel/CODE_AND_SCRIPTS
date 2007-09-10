@@ -2919,6 +2919,17 @@ void usrInitAft(void)
   R = malloc(sizeof(double**)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
     {
+#if 1
+      double dist;
+      dist = sqrt(Sqr(rx[i]-rx[1])+Sqr(ry[i]-ry[1])+Sqr(rz[i]-rz[1]));
+      if (i > 1 && sqrt(Sqr(rx[i]-rx[1])+Sqr(ry[i]-ry[1])+Sqr(rz[i]-rz[1])) > 19.5)
+	  {	  
+	  printf("i=%d BOH dist=%.15G\n",i,sqrt(Sqr(rx[i]-rx[1])+Sqr(ry[i]-ry[1])+Sqr(rz[i]-rz[1])));
+			 
+	  }
+      //else if (i > 1 && dist > 19.0)
+	//fprintf(stderr,"%.15G %.15G %.15G @ 0.5\n", rx[i], ry[i], rz[i]);
+#endif
       R[i] = matrix(3, 3);
 #if defined(MD_PATCHY_HE)||defined(EDHE_FLEX)
       lastbump[i].mol = -1;

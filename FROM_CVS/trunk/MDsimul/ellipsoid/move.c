@@ -7280,7 +7280,7 @@ void locate_spherical_wall(int na)
     {
       ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #if 0
-      if (na==170||n==170)
+      if (na==955||n==955)
 	{
 	  printf("collCode=%d\n", collCode);
 	  printf("time=%.15G scheduling coll with sph wall: na=%d n=%d ac=%d bc=%d t=%.15G\n ", Oparams.time, na, n, ac, bc, t);
@@ -7494,6 +7494,7 @@ void PredictEvent (int na, int nb)
       printf("Cells(%d,%d,%d)\n", inCell[0][na], inCell[1][na], inCell[2][na]);
       printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
 	     signDir[2]);
+      printf("time=%.15G step=%d pos=%.15G %.15G %.15G\n", Oparams.time, Oparams.curStep, rx[na], ry[na], rz[na]);
       /*exit(-1);*/
       /*tm[k] = 0.0;*/
 #endif
@@ -7516,7 +7517,7 @@ void PredictEvent (int na, int nb)
 #endif
   MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
-#ifndef MD_EDHEFLEX_WALL
+#if !defined(MD_EDHEFLEX_WALL) 
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 #else
   cctime = Oparams.time+tm[k];
@@ -7563,6 +7564,8 @@ void PredictEvent (int na, int nb)
 	nplane = 0;
       else if (inCell[2][na] == cellsz-1)
 	nplane = 1;
+      //if (na==955)
+	//printf("na=%d cella:%d\n", na, inCell[2][na]);
       if (nplane!=-1 && locateHardWall(na, nplane, cctime, vecg, 1))
 	{
 	  rxC = vecg[0];
@@ -8425,6 +8428,13 @@ void ProcessCollision(void)
   MD_DEBUG38(printf("[BUMP] t=%.15G i=%d at=%d j=%d at=%d collCode=%d\n", 
 		    Oparams.time,evIdA,evIdC, evIdB, evIdD, evIdE)); 
 
+#if 0
+  if (evIdA==955)
+    {
+      fprintf(stderr,"%.15G %.15G %.15G @ 0.5\n", rx[955], ry[955], rz[955]);
+      fprintf(stderr,"%.15G %.15G %.15G @ 19\n", rx[1], ry[1], rz[1]);
+    }
+#endif
   //if (typeOfPart[evIdA]==2 || typeOfPart[evIdB]==2)
     //printf("===> %d %d\n", evIdA, evIdB);
 #ifdef MD_PATCHY_HE
@@ -8583,7 +8593,9 @@ void ProcessCellCrossing(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
-  MD_DEBUG34(printf("OLD cellCrossing evIdA=%d k=%d inCells=%d %d %d\n", evIdA, k, inCell[0][evIdA], inCell[1][evIdA], inCell[2][evIdA]));
+  //printf("OLD cellCrossing evIdA=%d k=%d inCells=%d %d %d (%.15G, %.15G, %.15G)\n", evIdA, k, inCell[0][evIdA], inCell[1][evIdA], inCell[2][evIdA],
+//	 rx[evIdA], ry[evIdA], rz[evIdA]);
+MD_DEBUG34(printf("OLD cellCrossing evIdA=%d k=%d inCells=%d %d %d\n", evIdA, k, inCell[0][evIdA], inCell[1][evIdA], inCell[2][evIdA]));
 #ifdef MD_GRAVITY
   j = evIdB - ATOM_LIMIT;
   if (j >= 100)
@@ -8632,6 +8644,8 @@ void ProcessCellCrossing(void)
    * urti fra gli ellissoidi. */
   MD_DEBUG32(printf("i=%d PROCESS CELL CROSSING\n", evIdA));
   MD_DEBUG34(printf("NEW cellCrossing evIdA=%d k=%d inCells=%d %d %d\n", evIdA, k, inCell[0][evIdA], inCell[1][evIdA], inCell[2][evIdA]));
+ // printf("NEW cellCrossing evIdA=%d k=%d inCells=%d %d %d (%.15G, %.15G, %.15G)\n", evIdA, k, inCell[0][evIdA], inCell[1][evIdA], inCell[2][evIdA],
+//	 rx[evIdA], ry[evIdA], rz[evIdA]);
   if (OprogStatus.useNNL)
     PredictEventNNL(evIdA, evIdB);
   else
@@ -8913,6 +8927,8 @@ void move(void)
 #if defined(MD_GRAVITY) || defined(MD_EDHEFLEX_WALL)
       else if (evIdB >= ATOM_LIMIT + 100 || evIdB < ATOM_LIMIT + NDIM * 2)
 	{
+	  //printf("inCell: %d %d %d evIdA=%d evIdB=%d evIdE=%d (%.15G, %.15G, %.15G)\n", inCell[0][evIdA], inCell[1][evIdA], inCell[2][evIdA],
+	//	 evIdA, evIdB, evIdE, rx[evIdA], ry[evIdA], rz[evIdA]);
 	  if (evIdE == MD_WALL)
 	    ProcessWallColl();
 	  else
