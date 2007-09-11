@@ -4598,6 +4598,9 @@ void PredictEventNNL(int na, int nb)
   //printf("FINISHED rank=%d\n", my_rank);
 }
 #else
+#ifdef MD_SPHERICAL_WALL
+extern int sphWall;
+#endif
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
@@ -4613,6 +4616,10 @@ void PredictEventNNL(int na, int nb)
 #endif
 #ifdef MD_ABSORPTION
   int hwcell;
+#endif
+#ifdef MD_SPHERICAL_WALL
+  if (na==sphWall|| nb==sphWall)
+    return;
 #endif
   if (vz[na] != 0.0) 
     {
@@ -4760,6 +4767,9 @@ void PredictEventNNL(int na, int nb)
 #else
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 #endif
+#ifdef MD_SPHERICAL_WALL
+  locate_spherical_wall(na);
+#endif 
   /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni (visto che in tal caso stiamo 
      usando le NNL */
   if (nb >= ATOM_LIMIT+2*NDIM)
@@ -4979,6 +4989,10 @@ void updrebuildNNL(int na)
   double vecg[5];
   double nnltime1, nnltime2;
   int ip;
+#ifdef MD_SPHERICAL_WALL
+  if (na==sphWall)
+    return;
+#endif
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE
   nnltime1 = timbig;
@@ -5222,6 +5236,7 @@ void nextNNLupdate(int na)
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
 	{
 	  printf("[ERROR] failed to find escape time for sticky spots\n");
+	  printf("na=%d\n", na);
 	  exit(-1);
 	}
     }
@@ -5378,7 +5393,10 @@ void BuildNNL(int na)
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
   nebrTab[na].len = 0;
   MD_DEBUG32(printf("Building NNL...\n"));
-
+#ifdef MD_SPHERICAL_WALL
+  if (na==sphWall)
+    return;
+#endif
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
