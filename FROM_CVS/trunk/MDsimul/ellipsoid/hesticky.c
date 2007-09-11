@@ -3521,6 +3521,7 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
 }
 #endif
 #ifdef EDHE_FLEX
+extern struct nebrTabStruct *nebrTab;
 extern double scalProd(double *A, double *B);
 int locate_contact_neigh_plane_parall_sphs(int i, double *evtime, double t2)
 {
@@ -3551,12 +3552,15 @@ int locate_contact_neigh_plane_parall_sphs(int i, double *evtime, double t2)
 	//     gradplane_all[nn][0], gradplane_all[nn][1], gradplane_all[nn][2]);
       /* N.B. controllare che il gradiente sia a norma unitaria e che sia uscente rispetto 
 	 al parallelepipedo delle NNL! */
-      dist = fabs(scalProd(dr, gradplane_all[nn])) - sigMax;
+      dist = fabs(scalProd(dr, gradplane_all[nn])) - sigMax*0.5;
       b = scalProd(dv, gradplane_all[nn]);
       if (b < 0)
 	continue;
-      //printf("dist=%.15G b=%.15G\n", dist, b);
       colltime = dist/b+Oparams.time;
+      //printf("pps=%f %f %f sigMax=%.15G\n",  nebrTab[i].axa, nebrTab[i].axb,  nebrTab[i].axc, sigMax);
+      //printf("centro=%f %f %f\n", nebrTab[i].r[0], nebrTab[i].r[1], nebrTab[i].r[2]); 
+      //printf("pos=%f %f %f\n", rx[i], ry[i], rz[i]);
+      //printf("nn=%d colltime=%.15G t1=%.15G t2=%.15G dist=%.15G b=%.15G\n", nn, colltime, t1, t2, dist, b);
       if (colltime > t1 && colltime < t2)
 	{
 	  if (colltime < *evtime || first)
