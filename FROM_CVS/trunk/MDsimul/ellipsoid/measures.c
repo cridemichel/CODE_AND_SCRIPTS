@@ -40,7 +40,11 @@ extern double W, K, WC, T1xx, T1yy, T1zz, Ktra, Krot,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, 
   Patxy, Patyz, Patzx, Patxx, Patyy, Patzz;  
 #ifdef EDHE_FLEX
-extern int *bondscache, *numbonds, **bonds;
+#ifdef MD_LL_BONDS
+extern long long int *bondscache, **bonds;
+#else
+extern int *bondscache, **bonds;
+#endif
 #endif
 /* used by linked list routines */
 extern int *head, *list, *map;  /* arrays of integer */
@@ -60,7 +64,7 @@ extern void vectProd(double r1x, double r1y, COORD_TYPE r1z,
 extern int *inCell[3], cellsx, cellsy, cellsz;
 extern int *cellList;
 extern int bound(int na, int n);
-int *numbonds;
+extern int *numbonds;
 #ifdef EDHE_FLEX
 extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
 #endif
@@ -69,7 +73,12 @@ double calcpotene(void)
   double Epot; 
   int na;
 #ifdef EDHE_FLEX
+#ifdef MD_LL_BONDS
+  long long int jj, jj2, aa, bb;
+  int kk, kk2;
+#else
   int kk2, jj, kk, jj2, aa, bb;
+#endif
 #endif
 #if 0
   double shift[NDIM];
@@ -150,8 +159,8 @@ double calcpotene(void)
 #ifdef EDHE_FLEX
       for (kk=0; kk < numbonds[na]; kk++)
 	{
-	  jj = bonds[na][kk]/(NA*NA);
-	  jj2 = bonds[na][kk]%(NA*NA);
+	  jj = bonds[na][kk]/(NANA);
+	  jj2 = bonds[na][kk]%(NANA);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
 	  //printf("numbonds[%d]=%d aa=%d bb=%d\n", na, numbonds[na], aa, bb);

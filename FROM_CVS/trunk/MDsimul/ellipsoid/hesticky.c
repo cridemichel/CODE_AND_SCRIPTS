@@ -132,7 +132,12 @@ extern int  **tree, cellRange[2*NDIM], initUcellx, initUcelly, initUcellz;
 extern int *inCell[3], *cellList, cellsx, cellsy, cellsz;
 extern int evIdA, evIdB, parnumB, parnumA, evIdD, evIdE;
 extern int evIdC;
+#ifdef MD_LL_BONDS
+extern long long int *bondscache, **bonds;
+extern int *numbonds;
+#else
 extern int *bondscache, *numbonds, **bonds;
+#endif
 void newtDist(double x[], int n, int *check, 
 	      void (*vecfunc)(int, double [], double [], int, int, double []),
 	      int iA, int iB, double shift[3]);
@@ -229,12 +234,17 @@ extern void print_matrix(double **M, int n);
 #ifdef EDHE_FLEX
 int getnumbonds(int np, interStruct *ts, int inverted)
 {
+#ifdef MD_LL_BONDS
+  long long int jj, jj2, aa, bb;
+  int kk, nb;
+#else
   int kk, jj, jj2, aa, bb, nb;
+#endif
   nb=0;
   for (kk = 0; kk < numbonds[np]; kk++)
     {
-      jj = bonds[np][kk] / (NA*NA);
-      jj2 = bonds[np][kk] % (NA*NA);
+      jj = bonds[np][kk] / (NANA);
+      jj2 = bonds[np][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
       //if (na != aa) 
@@ -306,12 +316,17 @@ int one_is_bonded(int i, int a, int j, int b, int nmax)
 #else
 int getnumbonds(int np, int at)
 {
+#ifdef MD_LL_BONDS
+  long long int jj, jj2, aa, bb;
+  int kk, nb;
+#else
   int kk, jj, jj2, aa, bb, nb;
+#endif
   nb=0;
   for (kk = 0; kk < numbonds[np]; kk++)
     {
-      jj = bonds[np][kk] / (NA*NA);
-      jj2 = bonds[np][kk] % (NA*NA);
+      jj = bonds[np][kk] / (NANA);
+      jj2 = bonds[np][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
       if (aa == at)
@@ -1327,7 +1342,12 @@ MD_DEBUG40(
 }
 void check_bonds(char* msg, int i, int j, int ata, int atb, int yesexit)
 {
+#ifdef MD_LL_BONDS
+  int a, b;
+  long long int B1;
+#else
   int a, b, B1;
+#endif
   for (a = 0; a < numbonds[i]-1; a++)
     {
       B1 = bonds[i][a];
@@ -1337,7 +1357,11 @@ void check_bonds(char* msg, int i, int j, int ata, int atb, int yesexit)
 	  if (B1 == bonds[i][b])
 	    {
 	      printf("Due bond uguali!!\n");
+#ifdef MD_LL_BONDS
+	      printf("bond=%lld\n", B1);
+#else
 	      printf("bond=%d\n", B1);
+#endif
 	      printf("[%s] i=%d j=%d ata=%d atb=%d\n", msg, i, j, ata, atb);
 	      if (yesexit)
 		exit(-1);
@@ -1347,18 +1371,27 @@ void check_bonds(char* msg, int i, int j, int ata, int atb, int yesexit)
 }
 void remove_bond(int na, int n, int a, int b)
 {
+#ifdef MD_LL_BONDS
+  int i, nb;
+  long long int aa, bb, ii, jj, jj2;
+#else
   int i, nb, ii, jj, aa, bb, jj2;
+#endif
   nb = numbonds[na];
   if (!nb)
     return;
   ii = 0;
+#ifdef MD_LL_BONDS
+  memcpy(bondscache, bonds[na], sizeof(long long int)*numbonds[na]);
+#else
   memcpy(bondscache, bonds[na], sizeof(int)*numbonds[na]);
-  /* bonds[i] = j*(NA*NA) + a * NA + b 
+#endif
+  /* bonds[i] = j*(NANA) + a * NA + b 
    * dove b è l'atomo di j */
   for (i = 0; i < nb; i++)
     {
-      jj = bondscache[i] / (NA*NA);
-      jj2 = bondscache[i] % (NA*NA);
+      jj = bondscache[i] / (NANA);
+      jj2 = bondscache[i] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
       if (jj != n || aa != a || bb != b)
@@ -1602,10 +1635,15 @@ void add_bond(int na, int n, int a, int b)
       printf("il bond (%d,%d),(%d,%d) eiste già!\n", na, a, n, b);
       return;
     }
-  bonds[na][numbonds[na]] = n*(NA*NA)+a*NA+b;
+#ifdef MD_LL_BONDS
+  bonds[na][numbonds[na]] = n*(((long long int)NA)*NA)+a*((long long int)NA)+b;
+#else
+  bonds[na][numbonds[na]] = n*(NANA)+a*NA+b;
+#endif
   numbonds[na]++;
   MD_DEBUG31(printf("numbonds[%d]=%d bonds[][numbonds-1]:%d a=%d b=%d\n", na, numbonds[na],bonds[na][numbonds[na]-1],
   a, b));
+  //printf("%lld NA=%d numbonds[%d]=%d bonds[][numbonds-1]:%lld a=%d b=%d\n",n*(NANA)+a*NA+b, NA, na, numbonds[na],bonds[na][numbonds[na]-1],a,b);
 #if 0
   if (numbonds[na]>4)
     {
@@ -1619,8 +1657,13 @@ int bound(int na, int n, int a, int b)
 {
   int i;
   for (i = 0; i < numbonds[na]; i++)
-    if (bonds[na][i] == n*(NA*NA)+a*NA+b)
+#ifdef MD_LL_BONDS
+    if (bonds[na][i] == n*(((long long int)NA)*NA)+a*((long long int)NA)+b)
       return 1;
+#else
+    if (bonds[na][i] == n*(NANA)+a*NA+b)
+      return 1;
+#endif
   return 0;
 }
 /* array con le posizioni degli atomi nel riferimento del corpo rigido 
@@ -2274,7 +2317,12 @@ int valid_collision(int i, int j, int ata, int atb, int collCode)
 }
 int get_bonded(int i, int j)
 {
+#ifdef MD_LL_BONDS
+  int nb, nn, kk;
+  long long int jj, jj2, aa, bb;
+#else
   int nb, jj, jj2, kk, nn, aa, bb;
+#endif  
   int nbonds;
 
   nb = numbonds[i];
@@ -2288,8 +2336,8 @@ int get_bonded(int i, int j)
     return -1;
   for (kk = 0; kk < nb; kk++)
     {
-      jj = bonds[i][kk] / (NA*NA);
-      jj2 = bonds[i][kk] % (NA*NA);
+      jj = bonds[i][kk] / (NANA);
+      jj2 = bonds[i][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
       if (jj == j)

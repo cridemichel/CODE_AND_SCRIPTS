@@ -262,7 +262,12 @@ int evIdA, evIdB, parnumB, parnumA;
 #ifdef MD_PATCHY_HE
 int evIdC, evIdD, evIdE;
 extern double *treeRxC, *treeRyC, *treeRzC;
+#ifdef MD_LL_BONDS
+extern long long int *bondscache, **bonds;
+extern int *numbonds;
+#else
 extern int *bondscache, *numbonds, **bonds;
+#endif
 #endif
 void newtDist(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),

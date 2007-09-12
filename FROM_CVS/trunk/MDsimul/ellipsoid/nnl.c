@@ -4600,6 +4600,7 @@ void PredictEventNNL(int na, int nb)
 #else
 #ifdef MD_SPHERICAL_WALL
 extern int sphWall;
+extern void locate_spherical_wall(int na);
 #endif
 void PredictEventNNL(int na, int nb) 
 {
