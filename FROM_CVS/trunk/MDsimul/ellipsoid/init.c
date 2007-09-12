@@ -2693,8 +2693,8 @@ void allocBondsSphWall(void)
 	  break;
 	}
     }
-#endif
 }
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
