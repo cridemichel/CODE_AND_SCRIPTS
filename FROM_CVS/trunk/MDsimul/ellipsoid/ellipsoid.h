@@ -56,6 +56,7 @@ void UpdateSystem(void);
 #define MD_HD_XVA "/work2/xvafiles/"
 #define MD_TAPE_XVA "/iomega/xvafiles/"
 #define MD_EDHEFLEX_OPTNNL
+#define MD_LL_BONDS
 
 #define NUM_MISURE 30         /* maximum number of measure done during simulation */
 #ifdef MDLLINT
@@ -210,8 +211,13 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #endif
 #define C_T COORD_TYPE
 #define NK 10000
-#define NA 1000 /* number of atoms for each molecule (particle) */
+#define NA 50000 /* number of atoms for each molecule (particle) */
 
+#ifdef MD_LL_BONDS
+#define NANA (((long long int)NA)*((long long int)NA))
+#else
+#define NANA (NA*NA)
+#endif
 #define MAXPAR 50000      /* maximum number of simulated particles */
 #ifdef MD_PATCHY_HE
 #define MD_STSPOTS_A 5

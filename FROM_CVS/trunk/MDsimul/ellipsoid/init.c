@@ -7,7 +7,17 @@
          the this quantity.
 */
 #define MD_DEBUG31(x) 
-/* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
+/* Allocate memory for a matrix of integers */
+long long int** AllocMatLLI(int size1, int size2)
+{
+  long long int** v;
+  int k;
+  v = (long long int**) malloc(size1 * sizeof(long long int*));
+  v[0] = (long long int*) malloc(size1 * size2 * sizeof(long long int));
+  for (k = 1; k < size1; k++)
+    v[k] = v[k-1] + size2;
+  return v;
+}/* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs, int saveAll);
 void scalevels(double temp, double K);
@@ -146,7 +156,12 @@ extern double *vector(int n);
 int poolSize;
 int parnumA, parnumB;
 #ifdef MD_PATCHY_HE
-int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
+#ifdef MD_LL_BONDS
+long long int *bondscache, **bonds;
+int *numbonds;
+#else
+int *bondscache, *numbonds, **bonds;
+#endif
 double *treeRxC, *treeRyC, *treeRzC;
 extern int *mapbondsa;
 extern int *mapbondsb;
@@ -209,7 +224,7 @@ void check_these_bonds(int i, int j, double *shift, double t)
 		     //printf("dists[1]:%.15G\n", dists[1]);
 		     printf("[dist<0]dists[%d]:%.15G\n", nn, dists[nn]);
 		     printf("i=%d j=%d %d %d\n", i, j, mapbondsa[nn], mapbondsb[nn]);
-		     printf("NA*NA*i+a*NA+b=%d\n", NA*NA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
+		     printf("NA*NA*i+a*NA+b=%d\n", NANA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
 		    )
 	}
       else if (dists[nn]>0.0 && 
@@ -234,8 +249,8 @@ int all_bonds_of_same_type(int i, int ni)
   cc = 0;
   for (kk=0; kk < numbonds[i]; kk++)
     {
-      jj = bonds[i][kk] / (NA*NA);
-      jj2 = bonds[i][kk] % (NA*NA);
+      jj = bonds[i][kk] / (NANA);
+      jj2 = bonds[i][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
       if ((intersArr[ni].type1 == jj && intersArr[ni].spot1+1 == aa) ||
@@ -393,7 +408,7 @@ void check_all_bonds(void)
 			      //printf("dists[1]:%.15G\n", dists[1]);
 			      printf("[dist<0]dists[%d]:%.15G\n", nn, dists[nn]);
 			      printf("i=%d j=%d %d %d\n", i, j, mapbondsa[nn], mapbondsb[nn]);
-			      printf("NA*NA*i+a*NA+b=%d\n", NA*NA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
+			      printf("NA*NA*i+a*NA+b=%d\n", NANA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
 			      )
 #if 0
 			      aa = mapbondsa[nn];
@@ -430,7 +445,11 @@ void check_all_bonds(void)
 	  mdPrintf(ALL, TXT, NULL);
 	  sprintf(TXT,"Step N. %d time=%.15G\n", Oparams.curStep, Oparams.time);
 	  mdPrintf(ALL, TXT, NULL);
+#ifdef MD_LL_BONDS
+	  printf("numbonds[%d]:%d bonds[][]:%lld\n", i, numbonds[i], bonds[i][0]);
+#else
 	  printf("numbonds[%d]:%d bonds[][]:%d\n", i, numbonds[i], bonds[i][0]);
+#endif
 	  if (warn==1)
 	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n",NULL);
 	  else
@@ -2658,6 +2677,24 @@ void boh(void)
   exit(-1);
 }
 #endif
+#ifdef MD_SPHERICAL_WALL
+void allocBondsSphWall(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (typeOfPart[i]==Oparams.ntypes-1)
+	{
+#ifdef MD_LL_BONDS
+	  bonds[i] = malloc(sizeof(long long int)*Oparams.parnum);
+#else
+	  bonds[i] = malloc(sizeof(int)*Oparams.parnum);
+#endif
+	  break;
+	}
+    }
+#endif
+}
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -2814,29 +2851,36 @@ void usrInitAft(void)
 #ifdef EDHE_FLEX
   if (Oparams.maxbondsSaved==-1)
     {
+#ifdef MD_LL_BONDS
+      bonds = AllocMatLLI(Oparams.parnum, OprogStatus.maxbonds);
+#else
       bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+#endif
       numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
 #ifdef MD_SPHERICAL_WALL
-      for (i=0; i < Oparams.parnum; i++)
-	{
-	  if (typeOfPart[i]==Oparams.ntypes-1)
-	    {
-	      bonds[i] = malloc(sizeof(int)*Oparams.parnum);
-	      break;
-	    }
-	}
+      allocBondsSphWall();
 #endif
     }
 #else
+#ifdef MD_LL_BONDS
+  bonds = AllocMatLLI(Oparams.parnum, OprogStatus.maxbonds);
+#else
   bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+#endif  
   numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
 #endif
-  bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
-  numbonds0 = (int *) malloc(Oparams.parnum*sizeof(int));
 #ifdef MD_SPHERICAL_WALL
+#ifdef MD_LL_BONDS
+  bondscache = malloc(sizeof(long long int)*Oparams.parnum);
+#else
   bondscache = malloc(sizeof(int)*Oparams.parnum);
+#endif
+#else
+#ifdef MD_LL_BONDS
+  bondscache = (long long int *) malloc(sizeof(long long int)*OprogStatus.maxbonds);
 #else
   bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
+#endif
 #endif  
 #else
 #ifdef MD_HE_PARALL
@@ -2919,7 +2963,7 @@ void usrInitAft(void)
   R = malloc(sizeof(double**)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
     {
-#if 1
+#if 0
       double dist;
       dist = sqrt(Sqr(rx[i]-rx[1])+Sqr(ry[i]-ry[1])+Sqr(rz[i]-rz[1]));
       if (i > 1 && sqrt(Sqr(rx[i]-rx[1])+Sqr(ry[i]-ry[1])+Sqr(rz[i]-rz[1])) > 19.5)
@@ -3820,7 +3864,11 @@ void writeAllCor(FILE* fs, int saveAll)
 	      fprintf(fs, "%d ", numbonds[i]);
 	      for (j = 0; j < numbonds[i]; j++)
 		{
+#ifdef MD_LL_BONDS
+		  fprintf(fs, "%lld ", bonds[i][j]);
+#else
 		  fprintf(fs, "%d ", bonds[i][j]);
+#endif
 		}
 	      fprintf(fs, "\n");
 	    }
@@ -4034,10 +4082,21 @@ int readBinCoord_heflex(int cfd)
      
       if (OprogStatus.maxbonds < Oparams.maxbondsSaved)
 	OprogStatus.maxbonds = Oparams.maxbondsSaved;
+#ifdef MD_LL_BONDS
+      bonds = AllocMatLLI(Oparams.parnum, OprogStatus.maxbonds);
+#else
       bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+#endif
+#ifdef MD_SPHERICAL_WALL
+      allocBondsSphWall();
+#endif
       for (i=0; i < Oparams.parnum; i++)
 	{
+#ifdef MD_LL_BONDS
+	  size = sizeof(long long int)*numbonds[i];
+#else
 	  size = sizeof(int)*numbonds[i];
+#endif
 	  //printf("maxbondsSaved=%d numbonds[%d]:%d\n", Oparams.maxbondsSaved, i, numbonds[i]);
 	  rerr |= -readSegs(cfd, "Init", "Error reading bonds", CONT, size, bonds[i], NULL);
 	}
@@ -4110,7 +4169,11 @@ void writeBinCoord_heflex(int cfd)
       writeSegs(cfd, "Init", "Error writing numbonds", CONT, size, numbonds, NULL);
       for (i=0; i < Oparams.parnum; i++)
 	{
+#ifdef MD_LL_BONDS
+	  size = sizeof(long long int)*numbonds[i];
+#else
 	  size = sizeof(int)*numbonds[i];
+#endif
 	  //printf("writing bonds: %d\n", numbonds[i]);
 	  writeSegs(cfd, "Init", "Error writing bonds", CONT, size, bonds[i], NULL);
 	}
@@ -4161,6 +4224,7 @@ void parse_ranges(char *s, int *A, int *nr, rangeStruct **r)
 #endif
 char line[4096];
 /* ========================== >>> readAllCor <<< ========================== */
+
 void readAllCor(FILE* fs)
 {
   int i;
@@ -4260,9 +4324,16 @@ void readAllCor(FILE* fs)
 	Oparams.maxbondsSaved = OprogStatus.maxbonds;
       if (OprogStatus.maxbonds < Oparams.maxbondsSaved)
 	OprogStatus.maxbonds = Oparams.maxbondsSaved;
+#ifdef MD_LL_BONDS
+      bonds = AllocMatLLI(Oparams.parnum, OprogStatus.maxbonds);
+#else
       bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+#endif
       numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
-
+#ifdef MD_SPHERICAL_WALL
+      allocBondsSphWall();
+#endif
+ 
       for (i = 0; i < Oparams.parnum; i++)
 	{
 	  if (i==0)
@@ -4272,7 +4343,11 @@ void readAllCor(FILE* fs)
 	  //printf("i=%d, numbonds[]=%d\n", i, numbonds[i]);
 	  for (j = 0; j < numbonds[i]; j++)
 	    {
+#ifdef MD_LL_BONDS
+	      fscanf(fs, "%lld ", &bonds[i][j]);
+#else	      
 	      fscanf(fs, "%d ", &bonds[i][j]);
+#endif	    
 	    }
 	}
       fscanf(fs, "@@@ ");
