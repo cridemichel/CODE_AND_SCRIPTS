@@ -8,6 +8,7 @@
 
 /* ================== >>> PROGRAM DEFINES(CUSTOMIZE!) <<< ===================*/
 #define MD_HARDSPHERES
+#undef MD_SAVE_DISTANCE
 #ifdef EDHE_FLEX
 #ifndef MD_ASYM_ITENS
 #define MD_ASYM_ITENS

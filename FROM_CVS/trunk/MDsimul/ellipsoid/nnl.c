@@ -4947,6 +4947,10 @@ void PredictEventNNL(int na, int nb)
 	      ryC = vecg[1];
 	      rzC = vecg[2];
 	    }
+#ifdef MD_SAVE_DISTANCE
+	  printf("found collision exiting...\n");
+	  exit(-1);
+#endif
 	}
       else
 	{
