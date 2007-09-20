@@ -5603,12 +5603,29 @@ retry:
       return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
     }
 #endif
+#ifdef MD_SAVE_DISTANCE
+    {
+      FILE *f;
+      f = fopen("distance-pred.dat", "a");
+      fprintf(f, "%.15G %.15G\n", t+t1, (segno > 0)?calc_norm(r12):-calc_norm(r12));
+      fclose(f);
+    }
+#endif
   if (segno > 0)
     return calc_norm(r12);
   else
     return -calc_norm(r12);
 }
-
+double calcJustDistNeg(double t, int i, int j)
+{
+  double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
+  double d, r1[3], r2[3], alpha;
+  shift[0] = L*rint((rx[i]-rx[j])/L);
+  shift[1] = L*rint((ry[i]-ry[j])/L);
+  shift[2] = L*rint((rz[i]-rz[j])/L);
+  d=calcDistNeg(t, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
+  return d;
+}
 double calcDist(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess)
 {
   double vecg[8], rC[3], rD[3], rDC[3], r12[3];
@@ -7810,6 +7827,10 @@ void PredictEvent (int na, int nb)
 			      ryC = vecg[1];
 			      rzC = vecg[2];
 			    }
+#ifdef MD_SAVE_DISTANCE
+    			  printf("found collision exiting...\n");
+    			  exit(-1);
+#endif
 			}
 		      else
 			{
@@ -7825,6 +7846,7 @@ void PredictEvent (int na, int nb)
 #else
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 		      	continue;
+
 		      rxC = vecg[0];
 		      ryC = vecg[1];
 		      rzC = vecg[2];
@@ -8982,6 +9004,16 @@ void move(void)
 	      OprogStatus.lastcolltime[i] = Oparams.time;
 	    }
 	  R2u();
+#ifdef MD_SAVE_DISTANCE
+	  if (mgl_mode==1)
+	    {
+	      FILE *f;
+	      f = fopen("distance.dat", "a");
+	      fprintf(f, "%.15G %.15G\n", Oparams.time + OprogStatus.refTime, calcJustDistNeg(Oparams.time, 0, 1));
+	      fclose(f);
+	    }
+#endif
+
 	  if (mgl_mode==0)
 	    {
 	      writeAsciiPars(bf, opro_ascii);
