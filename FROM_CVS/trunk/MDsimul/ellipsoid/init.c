@@ -3094,6 +3094,12 @@ void usrInitAft(void)
 #endif
       Oparams.time=0.0;
       /* truncate file to zero lenght */
+#ifdef MD_SAVE_DISTANCE
+      f = fopenMPI(absMisHD("distance.dat"), "w+");
+      fclose(f);
+      f = fopenMPI(absMisHD("distance-pred.dat"), "w+");
+      fclose(f);
+#endif
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
       f = fopenMPI(absMisHD("radius_of_gyration.dat"), "w+");
       fclose(f);
