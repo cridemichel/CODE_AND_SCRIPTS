@@ -5519,8 +5519,14 @@ void save_fra(void)
       mdPrintf(STD, "Error saving store file!\n", NULL);
       exit(-1);
     }
-  fprintf(f, "%d 0 %d %d 0\n", Oparams.curStep, Oparams.parnum, Oparams.parnum-Oparams.parnumA);
-  fprintf(f, "%.15G %.15G %.15G 0 0 %.15G\n", L, L, L, Oparams.Dt);
+#ifdef MF_BIG_DT
+fprintf(f, "%lld 0 %d %d 0\n", (long long int)((Oparams.time+OprogStatus.refTime)*1000.0/Oparams.Dt), 
+	  Oparams.parnum, Oparams.parnum-Oparams.parnumA);
+#else
+fprintf(f, "%lld 0 %d %d 0\n", (long long int)(Oparams.time*1000.0/Oparams.Dt), 
+	  Oparams.parnum, Oparams.parnum-Oparams.parnumA);
+#endif
+  fprintf(f, "%.15G %.15G %.15G 0 0 %.15G\n", L, L, L, Oparams.Dt/1000.0);
   for (i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
       //printf("i=%d\n",i);
