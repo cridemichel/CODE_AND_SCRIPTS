@@ -3810,8 +3810,10 @@ void fdjacGuess(int n, double x[], double fvec[], double **df,
   fvec[3] = 0.5*fvec[3]-1.0 - (0.5*tmp-1.0);
 #endif
 }
+#ifdef MD_ASYM_ITENS
 int isSymItens(int i)
 {
+#ifdef EDHE_FLEX
   int typei;
   typei = typeOfPart[i];
   if (typesArr[typei].I[0]==typesArr[typei].I[1] &&
@@ -3819,7 +3821,17 @@ int isSymItens(int i)
     return 1;
   else
     return 0;
+#else
+  int typei;
+  typei = (i<Oparams.parnumA)?0:1;
+  if (Oparams.I[typei][0]==Oparams.I[typei][1] &&
+      Oparams.I[typei][1]==Oparams.I[typei][2])
+    return 1;
+  else
+    return 0;
+#endif
 }
+#endif
 /* funzione che calcola lo Jacobiano */
 void fdjac(int n, double x[], double fvec[], double **df, 
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3])
@@ -5077,6 +5089,9 @@ extern int newtDistNegSE(double x[], int n, int *check,
 #ifdef MD_SUPERELLIPSOID
 extern double calc_sign_SE(int i, double *r, double **R, double *x, double **X);
 #endif
+#ifdef MD_SAVE_DISTANCE
+void saveStore(double t);
+#endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -5609,6 +5624,7 @@ retry:
       f = fopen("distance-pred.dat", "a");
       fprintf(f, "%.15G %.15G\n", t+t1, (segno > 0)?calc_norm(r12):-calc_norm(r12));
       fclose(f);
+      saveStore(t+t1);
     }
 #endif
   if (segno > 0)
@@ -5616,6 +5632,62 @@ retry:
   else
     return -calc_norm(r12);
 }
+double calcJustDistNeg(double t, int i, int j);
+#ifdef MD_SAVE_DISTANCE
+extern char colsFlex[][256];
+extern int numcols;
+void saveStore(double t)
+{
+  const char tipodat2_mgl[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
+  const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
+  const char tipodat2_flex[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n";
+  static int ti=0;
+  int i, k1, k2;
+  FILE *bf;
+  double dt, rxU, ryU, rzU, RU[3][3], phi, psi, cosEulAng[2][3], sinEulAng[2][3];	
+  const char sepStr[] = "@@@\n";
+  char fileop2[1024], fileop[1024], fileop3[1024];
+  ti++;
+  sprintf(fileop2 ,"StoreF-%d", ti);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+      exit(-1);
+    }
+#ifdef MD_LXYZ
+  fprintf(bf, ".Vol: %f\n", L[0]*L[1]*L[2]);
+#else
+  fprintf(bf, ".Vol: %f\n", L*L*L);
+#endif
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      dt = t - atomTime[i];
+      rxU = rx[i] + vx[i]*dt;
+      ryU = ry[i] + vy[i]*dt;
+      rzU = rz[i] + vz[i]*dt;
+      symtop_evolve_orient(i, dt, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  RU[k1][k2] = RA[k1][k2];
+#ifdef EDHE_FLEX
+
+      fprintf(bf, tipodat2_mgl,rxU, ryU, rzU, RU[0][0], RU[0][1], RU[0][2], RU[1][0], RU[1][1], 
+	      RU[1][2], RU[2][0], RU[2][1], RU[2][2], typesArr[typeOfPart[i]].sax[0], 
+	      typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],
+	      colsFlex[typeOfPart[i]%numcols]);
+#else
+      fprintf(bf, tipodat2_mgl,rxU, ryU, rzU, RU[0][0], RU[0][1], RU[0][2], RU[1][0], RU[1][1], 
+	      RU[1][2], RU[2][0], RU[2][1], RU[2][2], Oparams.a[(i<Oparams.parnumA)?0:1], 
+	      Oparams.b[(i<Oparams.parnumA)?0:1], Oparams.b[(i<Oparams.parnumA)?0:1],
+	      "Red");
+#endif
+    }
+  fclose(bf);
+}
+#endif
 double calcJustDistNeg(double t, int i, int j)
 {
   double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
