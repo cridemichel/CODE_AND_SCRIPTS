@@ -4044,7 +4044,7 @@ void PredictCellCross(int na, int nc)
       tm[k] = 0.0;
       printf("real cells: %d %d %d\n", (int)((rx[na] + L2) * cellsx[nl] / L),
 	     (int)((ry[na] + L2) * cellsy[nl] / L), (int)((rz[na] + L2)  * cellsz[nl] / L));
-#if 1
+#if 0
       printf("nc=%d na=%d nl=%d\n",nc,na,nl);
       printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
       printf("Cells(%d,%d,%d)\n", inCell[nc][0][na], inCell[nc][1][na], 
@@ -5519,7 +5519,7 @@ void save_fra(void)
       mdPrintf(STD, "Error saving store file!\n", NULL);
       exit(-1);
     }
-#ifdef MF_BIG_DT
+#ifdef MD_BIG_DT
 fprintf(f, "%lld 0 %d %d 0\n", (long long int)((Oparams.time+OprogStatus.refTime)*1000.0/Oparams.Dt), 
 	  Oparams.parnum, Oparams.parnum-Oparams.parnumA);
 #else
