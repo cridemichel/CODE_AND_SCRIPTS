@@ -11,11 +11,13 @@ ls Cnf-*-0 | sort -t - -k 2 -n > lista
 N=`wc -l lista | awk '{print $1}'`
 i=0
 echo "N=" $N
-while [ $i -lt $N ]
+#while [ $i -lt $N ]
+for f in `cat lista`
 do
-if [ ! -e CNF_$i ]
+i=`echo $f | awk -F - '{print $2}'`
+if [ ! -e $ST/CNF_$i ]
 then
-mkdir CNF_$i
+mkdir $ST/CNF_$i
 fi
 cp B*par $ST/CNF_$i/$PARF
 T=`cat $ST/CNF_$i/$PARF | awk -F ':' '{if ($1=="temperat") print $2}'`
@@ -31,5 +33,5 @@ cd $ST/CNF_$i
 $ESE -fa sticky.par
 cd ..
 cd ..
-i=$[$i+1]
+#i=$[$i+1]
 done
