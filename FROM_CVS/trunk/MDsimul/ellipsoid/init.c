@@ -2552,9 +2552,12 @@ void set_angmom_to_zero(int i)
   wx[i]=wy[i]=wz[i]=0.0;
 }
 #endif
-#ifdef EDHE_FLEX
+#if defined(EDHE_FLEX) || defined(MD_PATCHY_HE)
 void find_bonds(void)
 {
+#ifndef EDHE_FLEX
+  double dists[MD_PBONDS];
+#endif
   int i, j, NPB, nn, aa, bb;
   double drx, dry, drz, dist, shift[3];
   int amin, bmin;
