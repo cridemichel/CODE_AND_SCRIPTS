@@ -20,7 +20,7 @@
 extern int is_sphere(int i);
 extern int *is_a_sphere_NNL;
 #endif
-#ifdef EDHE_FLEX
+#if defined(EDHE_FLEX) || defined(MD_PATCHY_HE)
 extern int isSymItens(int i);
 #endif
 #ifdef MD_SUPERELLIPSOID
