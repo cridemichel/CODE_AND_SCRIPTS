@@ -784,7 +784,47 @@ double ranfRandom(void)
       please use the one recommended for your machine. */
   return (1.0-(((double)rand()) / (((double) RAND_MAX) + 1)));
 }
+#if 0
+void angvel(void)
+{
+  int i, a;
+  double pi, inert;                 /* momentum of inertia of the molecule */
+  double norm, osq, o, mean, symax[3];
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, ww[3], wsz;
+#ifdef MD_THREESPOTS
+  double u1[3], u2[3], u3[3];
+#endif
+  //L = cbrt(Vol);
+  invL = 1.0 / L;
 
+  Mtot = Oparams.m[0]; /* total mass of molecule */
+
+  inert = Oparams.I[0]; /* momentum of inertia */
+  pi = acos(0)*2; 
+
+  mean = sqrt(Oparams.T / inert);
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      wx[i] = mean * gauss(); 
+      wy[i] = mean * gauss();
+      wz[i] = mean * gauss();
+    }
+
+  Mtot = Oparams.m[1]; /* total mass of molecule */
+
+  inert = Oparams.I[1]; /* momentum of inertia */
+
+  mean = sqrt(Oparams.T / inert);
+
+  for (i = Oparams.parnumA; i < Oparams.parnumA; i++)
+    {
+      wx[i] = mean * gauss(); 
+      wy[i] = mean * gauss();
+      wz[i] = mean * gauss();
+    }
+}
+#else
 void angvel(void)
 {
   int i, a;
@@ -806,6 +846,9 @@ void angvel(void)
 #ifdef MD_THREESPOTS
   mean = 2.0*Oparams.T / inert;
 #else
+  /* N.B. QUESTO E' SBAGLIATO PERCHE' LA DISTRIBUZIONE
+     E' COME QUELLA TRASLAZIONALE (VEDI LANDAU) 
+     CORREGGERE!!!! */
   mean = 3.0*Oparams.T / inert;
 #endif
   for (i = 0; i < Oparams.parnumA; i++)
@@ -945,6 +988,7 @@ NOTE: consider that it is an exponential distribution
       wz[i] = oz;
     }
 }
+#endif
 #endif
 #else
 void buildTetrahedras(void)
