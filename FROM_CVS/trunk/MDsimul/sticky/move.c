@@ -194,15 +194,68 @@ void rebuildCalendar(void);
 void R2u(void);
 void store_bump(int i, int j);
 #ifdef MD_ROTDIFF_MIS
+double calc_norm(double *vec);
+double scalProd(double *A, double *B);
+void vectProdVec(double *A, double *B, double *C);
+void build_orient_matrix(int i, double Rt[3][3])
+{
+  double norm, u1[3], u2[3], u3[3], wsz;
+  int a;
+#ifdef MD_THREESPOTS
+  if (i < Oparams.parnumA)
+    {
+      for (a=0; a < 3; a++)
+       	u3[a]=R[i][a][1]-R[i][a][0];      
+      norm = calc_norm(u3);
+      for (a=0; a < 3; a++)
+	u3[a] /= norm;
+      if (u3[0]==1.0 && u3[1]==1.0 && u3[2]==1.0)
+	{
+	  u2[0] = -1.0;
+	  u2[1] = -1.0;
+	  u2[2] = -1.0;
+	}	
+      else
+	{
+	  u2[0] = 1.0;
+	  u2[1] = 1.0;
+	  u2[2] = 1.0;
+	}
+      wsz = scalProd(u2, u3);
+      for (a=0; a < 3; a++)
+	u2[a] = u2[a]-u3[a]*wsz;
+      norm=calc_norm(u2);
+      for (a=0; a < 3; a++)
+	u2[a] /= norm;
+      vectProdVec(u2, u3, u1);
+      for (a = 0; a < 3; a++)
+	{
+	  Rt[0][a] = u1[a];
+	  Rt[1][a] = u2[a];
+	  Rt[2][a] = u3[a];
+	}
+    }
+  else
+    {
+      /* TODO: in tale caso ho tre vettori che vanno ortonormalizzati */
+    }
+#else
+  /* TODO: in tale caso ho tre vettori che vanno ortonormalizzati */
+#endif
+}
 void update_MSDrot(int i)
 {
   double ti;
+  double Rt[3][3];
   ti = Oparams.time - OprogStatus.lastcolltime[i];
   /* sumox, sumoy e sumoz sono gli integrali nel tempo delle componenti della velocità
    * angolare lungo gli assi dell'ellissoide */
-  OprogStatus.sumox[i] += (wx[i]*R[i][0][0]+wy[i]*R[i][0][1]+wz[i]*R[i][0][2])*ti;
-  OprogStatus.sumoy[i] += (wx[i]*R[i][1][0]+wy[i]*R[i][1][1]+wz[i]*R[i][1][2])*ti;
-  OprogStatus.sumoz[i] += (wx[i]*R[i][2][0]+wy[i]*R[i][2][1]+wz[i]*R[i][2][2])*ti;
+  /* ERRORE: la matrice d'orientazione va costruita poiché nel presente codice 
+     R[][] contiene la posizione di 3 spots (o meno)!!! */
+  build_orient_matrix(i, Rt);	
+  OprogStatus.sumox[i] += (wx[i]*Rt[0][0]+wy[i]*Rt[0][1]+wz[i]*Rt[0][2])*ti;
+  OprogStatus.sumoy[i] += (wx[i]*Rt[1][0]+wy[i]*Rt[1][1]+wz[i]*Rt[1][2])*ti;
+  OprogStatus.sumoz[i] += (wx[i]*Rt[2][0]+wy[i]*Rt[2][1]+wz[i]*Rt[2][2])*ti;
 }
 #endif
 /* ========================== >>> scalCor <<< ============================= */
