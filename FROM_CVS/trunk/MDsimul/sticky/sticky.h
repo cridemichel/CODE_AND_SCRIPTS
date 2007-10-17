@@ -378,6 +378,9 @@ struct progStatus
   double nextcheckTime;
   double nextSumTime;
   double nextDt;
+#ifdef MD_DOUBLE_DT
+  double nextDtR;
+#endif
 #ifdef MD_BIG_DT
   double refTime;
   double bigDt;
@@ -437,6 +440,9 @@ struct params
 				   must do */
   MDINT curStep;	/* current step of simulation */
   double time;
+#ifdef MD_DOUBLE_DT
+  double DtR;
+#endif
   double Dt;
   /* ======================================================================= */
  
@@ -604,6 +610,9 @@ struct pascii opro_ascii[] =
   {"endtime",      &OS(endtime),                    1,  1,    "%.15G"},
   {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
   {"nextSumTime"  ,&OS(nextSumTime),                1,  1,    "%.15G"},
+#ifdef MD_DOUBLE_DT
+  {"nextDtR",       &OS(nextDtR),                     1,  1,    "%.15G"},
+#endif
   {"nextDt",       &OS(nextDt),                     1,  1,    "%.15G"},
 #ifdef MD_BIG_DT
   {"refTime",      &OS(refTime),                    1,  1,    "%.15G"},
@@ -679,6 +688,9 @@ struct pascii opar_ascii[]=
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
 #endif
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
+#ifdef MD_DOUBLE_DT
+  {"DtR",                &OP(DtR),                          1,   1, "%.15G"},
+#endif
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
 #ifndef MD_ASYM_ITENS
   {"I",                 OP(I),                             2,   1, "%.8G"},
@@ -792,6 +804,9 @@ struct singlePar OsinglePar[] = {
   {"storerate",     &OprogStatus.storerate,     CT},
   {"scalevel",   &OprogStatus.scalevel,       INT},
   {"endtime",    &OprogStatus.endtime,        CT},
+#ifdef MD_DOUBLE_DT
+  {"DtR",         &Oparams.DtR,                 CT},
+#endif
   {"Dt",         &Oparams.Dt,                 CT},
 #ifdef MD_BIG_DT
   {"bigDt",      &OprogStatus.bigDt,           CT},

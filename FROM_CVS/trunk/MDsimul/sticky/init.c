@@ -428,8 +428,9 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
 	 ----------- * exp( - --- )         
 	 sqrt(2*PI)           2     */
     }
-
+#ifndef MD_DOUBLE_DT
   angvel();
+#endif
 }
 void scalevels(double temp, double K);
 
@@ -1331,6 +1332,9 @@ accumulators initialization is crucial */
      the begin of the run and not the instanteaneous value */
   OprogStatus.avnggr    = 0;
   Oparams.Dt = 0.01;
+#ifdef MD_DOUBLE_DT
+  Oparams.DtR = Oparams.Dt*(3.0/10.0);
+#endif
   OprogStatus.avngS     = 0;
   OprogStatus.avngPress = 0;
   OprogStatus.avngTemp  = 0;
@@ -2251,6 +2255,9 @@ void usrInitAft(void)
       if (OprogStatus.storerate > 0.0)
 	OprogStatus.nextStoreTime = OprogStatus.storerate;
       OprogStatus.nextDt += Oparams.Dt;
+#ifdef MD_DOUBLE_DT
+      OprogStatus.nextDtR += Oparams.DtR;	
+#endif
     }
   else
     {
@@ -2412,6 +2419,9 @@ void usrInitAft(void)
   if (OprogStatus.scalevel > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+#ifdef MD_DOUBLE_DT
+  ScheduleEvent(-1, ATOM_LIMIT+12,OprogStatus.nextDtR);
+#endif
 #ifdef MD_BIG_DT
   if (OprogStatus.bigDt > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT + 11, OprogStatus.bigDt);

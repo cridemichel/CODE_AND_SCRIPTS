@@ -5758,6 +5758,7 @@ void save_coordtmp_ascii(unsigned char hdWhich)
 #endif
   system(fileop3);
 }
+extern void angvel(void);
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -5888,7 +5889,7 @@ void move(void)
       else if (evIdB == ATOM_LIMIT + 10)
 	{
 	  UpdateSystem();
-#ifdef MD_ROTDIFF_MIS
+#if defined(MD_ROTDIFF_MIS) && !defined(MD_DOUBLE_DT)
 	  for (i=0; i < Oparams.parnum; i++)
 	    {
 	      update_MSDrot(i);
@@ -6018,6 +6019,9 @@ void move(void)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      if (OprogStatus.scalevel)
 		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+#ifdef MD_DOUBLE_DT
+	      ScheduleEvent(-1, ATOM_LIMIT+12, OprogStatus.nextDtR);
+#endif
 	    }
 #ifdef MD_HSVISCO
 	  else
@@ -6090,6 +6094,33 @@ void move(void)
 	  OprogStatus.refTime += OprogStatus.bigDt;
        	  ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
 	}
+#endif
+#ifdef MD_DOUBLE_DT
+      else if (evIdB == ATOM_LIMIT + 12)
+	{
+	  UpdateSystem();
+#if defined(MD_ROTDIFF_MIS) 
+	  for (i=0; i < Oparams.parnum; i++)
+	    {
+	      update_MSDrot(i);
+	    }
+#endif
+	  angvel();
+	  rebuildCalendar();		  
+#ifdef MD_BIG_DT
+	  if (OprogStatus.bigDt > 0.0)
+	    ScheduleEvent(-1,ATOM_LIMIT + 11, OprogStatus.bigDt);
+#endif
+	  if (OprogStatus.intervalSum > 0.0)
+	    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+	  if (OprogStatus.storerate > 0.0)
+	    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+	  if (OprogStatus.scalevel)
+	    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+	  OprogStatus.nextDtR += Oparams.DtR;
+	  ScheduleEvent(-1, ATOM_LIMIT+12,OprogStatus.nextDtR);
+	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+	}	
 #endif
       else if (evIdB == ATOM_LIMIT + 9)
 	{
