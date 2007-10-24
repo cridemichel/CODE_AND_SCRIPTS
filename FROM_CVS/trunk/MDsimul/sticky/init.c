@@ -2420,7 +2420,8 @@ void usrInitAft(void)
     ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 #ifdef MD_DOUBLE_DT
-  ScheduleEvent(-1, ATOM_LIMIT+12,OprogStatus.nextDtR);
+  if (OprogStatus.brownian)
+    ScheduleEvent(-1, ATOM_LIMIT+12,OprogStatus.nextDtR);
 #endif
 #ifdef MD_BIG_DT
   if (OprogStatus.bigDt > 0.0)
