@@ -5522,6 +5522,10 @@ void timeshift_variables(void)
   if (OprogStatus.rescaleTime > 0.0)
     OprogStatus.nextcheckTime -= OprogStatus.bigDt;
   OprogStatus.nextDt -= OprogStatus.bigDt;
+#ifdef MD_DOUBLE_DT
+  if (OprogStatus.brownian)
+    OprogStatus.nextDtR -= OprogStatus.bigDt;
+#endif
   if (OprogStatus.intervalSum > 0.0)
     OprogStatus.nextSumTime -= OprogStatus.bigDt;
   //nextStoreTime viene calcolato opportunamente ogni volta quindi non va shiftato
