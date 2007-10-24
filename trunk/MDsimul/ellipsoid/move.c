@@ -5692,9 +5692,15 @@ double calcJustDistNeg(double t, int i, int j)
 {
   double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
   double d, r1[3], r2[3], alpha;
+#ifdef MD_LXYZ
+  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
   shift[0] = L*rint((rx[i]-rx[j])/L);
   shift[1] = L*rint((ry[i]-ry[j])/L);
   shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
   d=calcDistNeg(t, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
   return d;
 }
