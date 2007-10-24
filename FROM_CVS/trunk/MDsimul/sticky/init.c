@@ -850,11 +850,20 @@ void angvel(void)
   /* N.B. QUESTO E' SBAGLIATO PERCHE' LA DISTRIBUZIONE
      E' COME QUELLA TRASLAZIONALE (VEDI LANDAU) 
      CORREGGERE!!!! */
+#if 1
+  mean = sqrt(Oparams.T / inert);
+#else
   mean = 3.0*Oparams.T / inert;
+#endif
 #endif
   for (i = 0; i < Oparams.parnumA; i++)
     {
 #ifndef MD_THREESPOTS
+#if 1
+      wx[i] = mean * gauss(); 
+      wy[i] = mean * gauss();
+      wz[i] = mean * gauss();
+#else
       xisq = 1.0;
       while (xisq >= 1.0)
 	{
@@ -904,6 +913,7 @@ NOTE: consider that it is an exponential distribution
       wx[i] = ox;
       wy[i] = oy;
       wz[i] = oz;
+#endif
 #else
       xi1  = ranf()*2.0*pi;
       ox = cos(xi1);
@@ -948,8 +958,17 @@ NOTE: consider that it is an exponential distribution
 
   inert = Oparams.I[1]; /* momentum of inertia */
 
-  mean = 3.0*Oparams.T / inert;
+#if 1
+  mean = sqrt(Oparams.T / inert);
+  for (i = Oparams.parnumA; i < Oparams.parnumA; i++)
+    {
 
+      wx[i] = mean * gauss(); 
+      wy[i] = mean * gauss();
+      wz[i] = mean * gauss();
+    }
+#else
+  mean = 3.0*Oparams.T / inert;
   for (i = Oparams.parnumA; i < Oparams.parnumA; i++)
     {
       xisq = 1.0;
@@ -988,6 +1007,7 @@ NOTE: consider that it is an exponential distribution
       wy[i] = oy;
       wz[i] = oz;
     }
+#endif
 }
 #endif
 #endif
