@@ -9,6 +9,12 @@ EQSTPS=4000
 else
 EQSTPS=$1
 fi
+if [ "$2" = "" ]
+then
+PRSTPS=1000000
+else
+PRSTPS=$2
+fi
 N2=`ls -1 conf-1-*.dat|wc -l`
 NT=`ls -1 conf-*-*.dat | wc -l`
 N1=`echo $NT/$N2 | bc`
@@ -47,7 +53,7 @@ rm -f Store-*
 ELLEXE="../../ellipsoid"
 SIMEQ="ellflexEQ-${SIG}-${n1}-${n2}"
 SIMPR="ellflexPR-${SIG}-${n1}-${n2}"
-STORERATE="1.0"
+STORERATE="5000.0"
 USENNL=0
 PARNUM=2024
 DT="0.05"
@@ -56,7 +62,9 @@ RCUT="-1"
 cp ../$PARFILE .
 cp ../$INICONF .
 #elimina l'interazione antigene-anticorpo durante l'equilibratura
-cat $INICONF | awk 'BEGIN { nat=0 } {if (!((($1=="0" && $2=="4")||($1=="1" && $2=="5")) && (nat == 2))) print $0; if ($0=="@@@") nat++;}' > iniconf.dat
+#TEMP FIX: interactions between ellipsoids and pivot are wrong in giu confs.
+cat $INICONF | awk 'BEGIN { nat=0 } {if (!((($1=="0" && $2=="4")||($1=="1" && $2=="5")) && (nat == 2))) {if ($2=="3" || $2=="4") printf("$d $d $d $d $d $d $d $d\n",$1,0,$3,$4,$5,$6,$7,$8); else print $0;} if ($0=="@@@") nat++;}' > iniconf.dat
+#cat $INICONF | awk 'BEGIN { nat=0 } {if (!((($1=="0" && $2=="1")||($1=="1" && $2=="1")) && (nat == 2))) print $0; if ($0=="@@@") nat++;}' > iniconf.dat
 if [ $EQSTPS -eq 0 ]
 then
 STPS=4000
@@ -67,9 +75,15 @@ fi
 ln -sf $ELLEXE $SIMEQ 
 $SIMEQ -fa ./$PARFILE > screen_$SIMEQ 
 #PRODUZIONE
-I1="0 4 5 0 1 0 100000 1"
-I2="1 5 5 0 1 0 100000 1"
+I1="0 1 5 0 1 0 100000 1"
+I2="1 1 5 0 1 0 100000 1"
 #attiva l'interazione antigene-anticorpo
+if [ $PRSTPS -eq 0 ]
+then
+STPS=1000000
+else
+STPS=$PRSTPS
+fi
 cat CorFinal | awk -v i1="$I1" -v i2="$I2" 'BEGIN {nat=0} {if ($0=="@@@") nat++; if ($0=="@@@" && nat==3) {print i1; print i2; print "@@@"} else print $0}' > CorIni
 ../set_params.sh $PARFILE stepnum $STPS base 1 NN 1 storerate $STORERATE intervalSum 10.0 inifile CorIni endfile ${SIMPR}.cor
 ln -sf $ELLEXE $SIMPR
