@@ -63,7 +63,7 @@ cp ../$PARFILE .
 cp ../$INICONF .
 #elimina l'interazione antigene-anticorpo durante l'equilibratura
 #TEMP FIX: interactions between ellipsoids and pivot are wrong in giu confs.
-cat $INICONF | awk 'BEGIN { nat=0 } {if (!((($1=="0" && $2=="4")||($1=="1" && $2=="5")) && (nat == 2))) {if ($2=="3" || $2=="4") printf("$d $d $d $d $d $d $d $d\n",$1,0,$3,$4,$5,$6,$7,$8); else print $0;} if ($0=="@@@") nat++;}' > iniconf.dat
+cat $INICONF | awk 'BEGIN { nat=0 } {if (!((($1=="0" && $2=="4")||($1=="1" && $2=="5")) && (nat == 2))) {if ($2=="3" || $2=="4") printf("$d $d $d $d $d $d $d $d\n",$1,0,$3,0,$5,$6,$7,$8); else print $0;} if ($0=="@@@") nat++;}' > iniconf.dat
 #cat $INICONF | awk 'BEGIN { nat=0 } {if (!((($1=="0" && $2=="1")||($1=="1" && $2=="1")) && (nat == 2))) print $0; if ($0=="@@@") nat++;}' > iniconf.dat
 if [ $EQSTPS -eq 0 ]
 then
