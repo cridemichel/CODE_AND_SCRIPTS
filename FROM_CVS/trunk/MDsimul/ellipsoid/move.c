@@ -8883,12 +8883,12 @@ int termination(void)
   interStruct ts;
   ts.type1 = 0;
   ts.type2 = 5;
-  ts.spot1 = 4;
+  ts.spot1 = 1;
   ts.spot2 = 0;
   nb = getnumbonds(0,&ts, 0);
   ts.type1 = 1;
   ts.type2 = 5;
-  ts.spot1 = 5;
+  ts.spot1 = 1;
   ts.spot2 = 0;
   nb += getnumbonds(1,&ts, 0);			
   if ((nb==1 || nb==2) && first)
