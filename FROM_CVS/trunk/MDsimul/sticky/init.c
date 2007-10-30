@@ -1308,7 +1308,14 @@ void initCoord(void)
 #endif
   /* set the exact velocity of both atoms, considering the rotational motion 
      of the molecule, too. */
+#if 1
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      wx[i]=wy[i]=wz[i]=0.0;
+    }
+#else
   angvel(); 
+#endif
   buildTetrahedras();
   //wrap_initCoord();
 }
