@@ -631,6 +631,7 @@ void LJForce(int Nm, double rcut)
 	  srab6   = srab2 * srab2 * srab2;
 	  /*srab12  = Sqr(srab6);*/
 	  vabhc = Oparams.crep * srab6;
+	  //printf("atcharge[%d]=%.15G atcharge[%d]=%.15G\n", a, atcharge[a], b, atcharge[b]);
 	  vabyu = inv4pieps0*atcharge[a]*atcharge[b]*exp(-rab*kD)/(rab*Oparams.epsilon);
 #if 0
 	  if (rab< 0.96)
