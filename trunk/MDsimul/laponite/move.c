@@ -3127,7 +3127,7 @@ void move(void)
   for (i=1; i < 2000; i++)
     {
       nebrNow=1;
-      dist =0.1 + 0.002 * i;
+      dist =0.05 + 0.002 * i;
       FCC2(Oparams.parnum, Oparams.Diam, Oparams.m,dist-1.67468);
       /* distanza fra i 3 atomi le cui coordinate evolvono nel tempo
        * Notare che i 3 atomi formano un triangolo equiliatero quindi
