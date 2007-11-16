@@ -2606,8 +2606,8 @@ void find_bonds(void)
 	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 	NPB = get_num_pbonds(i, j);
 #if 0
-	if (NPB==0)
-	  printf("i=%d j=%d\n",i, j);
+	//if (NPB==0)
+	  printf("i=%d j=%d NPB=%d\n",i, j, NPB);
 #endif
 	for (nn=0; nn < NPB; nn++)
 	  {
