@@ -1632,7 +1632,7 @@ void add_bond(int na, int n, int a, int b)
 {
   if (bound(na, n, a, b))
     {
-      printf("il bond (%d,%d),(%d,%d) eiste già!\n", na, a, n, b);
+      printf("il bond (%d,%d),(%d,%d) esiste gia'!\n", na, a, n, b);
       return;
     }
 #ifdef MD_LL_BONDS
