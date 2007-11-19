@@ -358,7 +358,7 @@ void saveSpotsPos(char *fname)
       //printf("spots[i=%d]=%d\n", i, spots);
       for (a = 1; a < spots+1; a++)
 	{
-	  fprintf(bf, "%.15G %.15G %.15G\n", ratSS[a][0], ratSS[a][1], ratSS[a][2]);
+	  fprintf(bf, "%d %d %.15G %.15G %.15G\n", i, a, ratSS[a][0], ratSS[a][1], ratSS[a][2]);
 	}
     }
   fclose(bf); 
