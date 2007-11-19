@@ -1737,7 +1737,6 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
       //printf("1)same=%d rat[%d]=%f %f %f\n", same, a, rat[a][0], rat[a][1], rat[a][2]);
       else
 	BuildAtomPosAt(i, a, rO, R, rat[a]);
-      //printf("i=%d rat[%d]=%.15G %.15G %.15G\n", i, a, rat[a][0], rat[a][1], rat[a][2]);
     }
 #else
   if (i < Oparams.parnumA)
