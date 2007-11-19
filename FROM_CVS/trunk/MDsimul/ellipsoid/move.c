@@ -330,6 +330,40 @@ void check_shift(int i, int j, double *shift)
 #ifdef EDHE_FLEX
 extern int *is_a_sphere_NNL;
 void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j);
+#ifdef MD_SAVE_SPOTS
+void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
+double ratSS[NA][3];
+void saveSpotsPos(char *fname)
+{
+  int spots, a, i;
+  char fileop3[1024], fileop2[512], fileop[512];
+  double r[3];
+  FILE* bf;
+  sprintf(fileop2 ,fname);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveSpotsPos!\n", NULL);
+      exit(-1);
+    }
+  UpdateSystem();
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      r[0] = rx[i];
+      r[1] = ry[i];
+      r[2] = rz[i];
+      BuildAtomPos(i, r, R[i], ratSS);
+      spots = typesArr[typeOfPart[i]].nspots;
+      //printf("spots[i=%d]=%d\n", i, spots);
+      for (a = 1; a < spots+1; a++)
+	{
+	  fprintf(bf, "%.15G %.15G %.15G\n", ratSS[a][0], ratSS[a][1], ratSS[a][2]);
+	}
+    }
+  fclose(bf); 
+}
+#endif
 void saveFullStore(char* fname)
 {
   char fileop3[1024], fileop2[512], fileop[512];
@@ -9578,6 +9612,11 @@ void move(void)
       printf("[MSDcheck] steps %d time %.15G\n", Oparams.curStep, Oparams.time);
       ENDSIM=1;
     }
+
+#ifdef MD_SAVE_SPOTS
+  if (ENDSIM==1 || Oparams.curStep == Oparams.totStep)
+    saveSpotsPos("spots.pos");
+#endif
   if (ENDSIM)
     {
 #ifdef EDHE_FLEX
