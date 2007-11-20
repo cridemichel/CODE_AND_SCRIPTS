@@ -5112,6 +5112,9 @@ double calc_norm(double *vec)
   return sqrt(norm);
 }
 extern int check_point(char* msg, double *p, double *rc, double **XX);
+#ifdef MD_SUPERELLIPSOID
+extern void distSDSupEll(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
+#endif
 extern void distSD(int i, int j, double shift[3], double *vecg, double lambda, int halfspring);
 extern void distconjgrad(int i, int j, double shift[3], double *vec);
 extern int maxitsRyck;
@@ -5322,7 +5325,11 @@ retry:
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
 	  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
+#ifdef MD_SUPERELLIPSOID
+	  distSDSupEll(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+#else
 	  distSD(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+#endif
 	  for (k1=0; k1 < 3; k1++)
 	    {
 	      rC[k1] = vecgcg[k1];
