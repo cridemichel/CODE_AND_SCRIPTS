@@ -87,6 +87,7 @@ void check_distances(void)
     printf("[Step N.%d] Tutte le distanze sono corrette\n", Oparams.curStep);
 }
 #if defined(MD_TSHAPED)
+#undef MD_HOC
 /* ============================= >>> FCC <<< ================================*/
 void FCC2(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol)
 {
@@ -125,9 +126,14 @@ void FCC2(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol)
   Mtot = m[0] + m[1];
   /*printf("Nc: %d\n", Nc);*/
   /* Calculate the side of the unit cell */
+#ifdef MD_HOC 
+/* T-HOUSE-OF-CARDS */
   Cell  = D/2.0 + distmol; /* unit cell length */
   Cell2 = 0.5 * Cell;              /* half unit cell length */
-
+#else
+  Cell  = D + distmol; /* unit cell length */
+  Cell2 = 0.5 * Cell;              /* half unit cell length */
+#endif
   /* Sublattice A */
   iRoot3 = 1.0 / sqrt(3.0);
   sRoot3 = sqrt(3.0);
@@ -148,17 +154,32 @@ void FCC2(int Nm, COORD_TYPE D, COORD_TYPE* m, double distmol)
   e2z[0] = 0.0;
    
   /*  Sublattice B */
+#ifdef MD_HOC
+  /* T-HOUSE-OF-CARDS */
   bx[1] =  0.0;
   by[1] =  0.0;
   bz[1] =  Cell;
+#else
+  bx[1] =  0.0;
+  by[1] =  Cell;
+  bz[1] =  2.5;
+#endif
   ex[1] =  0.0;
   ey[1] =  1.0;
   ez[1] =  0.0;
-  /* e2 è ortogonale a e */
+  /* e2 e' ortogonale a e */
+  
+#ifdef MD_HOC
+  /* T-HOUSE-OF-CARDS */
   e2x[1] = 0.0;
   e2y[1] = 0.0;
   e2z[1] = 1.0;
-
+#else
+  /* O-O */
+  e2x[1] = 1.0;
+  e2y[1] = 0.0;
+  e2z[1] = 0.0;
+#endif
   /* Center of Mass of the actual molecule (m + iref) */
   rxCm = bx[0];
   ryCm = by[0];

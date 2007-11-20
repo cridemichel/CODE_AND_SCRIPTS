@@ -3115,6 +3115,7 @@ void buildAtomsPositions(void)
 }
 extern int **ncut;
 #ifdef MD_TSHAPED
+#undef MD_HOC
 void move(void)
 {
   /* DESCRIPTION:
@@ -3124,11 +3125,16 @@ void move(void)
   FILE* f;
   double dist;
   f = fopen("V.dat", "w");
-  for (i=1; i < 2000; i++)
+  for (i=1; i < 3000; i++)
     {
       nebrNow=1;
-      dist =0.05 + 0.002 * i;
+      dist =0.05 + 0.005 * i;
+#ifdef MD_HOC
+      /* T-SHAPED */
       FCC2(Oparams.parnum, Oparams.Diam, Oparams.m,dist-1.67468);
+#else
+      FCC2(Oparams.parnum, Oparams.Diam*0.5, Oparams.m,dist-2*1.67468);
+#endif
       /* distanza fra i 3 atomi le cui coordinate evolvono nel tempo
        * Notare che i 3 atomi formano un triangolo equiliatero quindi
        * le 3 distanze sono uguali */
