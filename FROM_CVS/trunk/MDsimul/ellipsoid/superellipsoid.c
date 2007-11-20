@@ -1173,12 +1173,14 @@ void calc_norm_SE(int i, double *x, double *n, double *r, double **R, double **X
   body2lab_fx(i, fxp, n, R);
 }
 /* steepest descent per super-ellissoidi */
+int icg, jcg;
 double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, double *signA, double *signB)
 {
   int kk, k1, k2; 
   double K1, K2, F, nf, ng, gx2[3], fx2[3], dd[3], normdd, ngA, ngB;
   double S=1.0, A=1.0, B, gradfx, gradgx;
   doneryck = 0;
+#if 0
   for (k1 = 0; k1 < 3; k1++)
     {
       fx[k1] = 0;
@@ -1186,17 +1188,24 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
 	fx[k1] += Xa[k1][k2]*(vec[k2] - rA[k2]);
       fx[k1] *= 2.0;
     }
+#endif
+  calc_norm_SE(icg, vec, fx, rA, R[icg], Xa);
+
   for (k1 = 0; k1 < 3; k1++)
     {
+#if 0
       gx[k1] = 0;
       for (k2 = 0; k2 < 3; k2++)
 	gx[k1] += Xb[k1][k2]*(vec[k2+3] - rB[k2]);
       gx[k1] *= 2.0;
+#endif
       dd[k1] = vec[k1+3]-vec[k1];
     }
+  calc_norm_SE(jcg, vec, gx, rB, R[jcg], Xb);
 
   if (OprogStatus.forceguess)
     {
+#if 0
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  gx2[k1] = 0;
@@ -1214,7 +1223,9 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
 	}
       *signA = A = 0.5*A - 1.0;
       *signB = B = 0.5*B - 1.0;
-      
+#endif
+      A = calc_sign_SE(icg, rA, R[icg],&(vec[3]), Xa); 
+      B = calc_sign_SE(jcg, rB, R[jcg],&(vec[0]), Xb);
       if (A<0 && B<0)
 	S = -1.0;
       else
@@ -1226,7 +1237,7 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
       doneryck = 2;
       return 0;
     }
-  /* la norma dei gradienti è sempre stepSDA e stepSDB*/ 
+  /* la norma dei gradienti e' sempre stepSDA e stepSDB*/ 
   if (OprogStatus.SDmethod==1 || OprogStatus.SDmethod==3)
     {
       K1= icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
@@ -1306,24 +1317,8 @@ double  cgfuncRyckSE(double *vec)
   double A, B, F;
   if (OprogStatus.forceguess)
     {
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  gx2[k1] = 0;
-	  for (k2 = 0; k2 < 3; k2++)
-	    gx2[k1] += 2.0*Xb[k1][k2]*(vec[k2] - rB[k2]);
-       	  fx2[k1] = 0;
-	  for (k2 = 0; k2 < 3; k2++)
-	    fx2[k1] += 2.0*Xa[k1][k2]*(vec[k2+3] - rA[k2]);
-	}
-      A = B = 0.0;
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  A += (vec[k1+3]-rA[k1])*fx2[k1];
-	  B += (vec[k1]-rB[k1])*gx2[k1];
-	}
-      A = 0.5*A - 1.0;
-      B = 0.5*B - 1.0;
-      
+      A = calc_sign_SE(icg, rA, R[icg],&(vec[3]), Xa); 
+      B = calc_sign_SE(jcg, rB, R[jcg],&(vec[0]), Xb);
       if (A<0 && B<0)
 	A = - OprogStatus.springkSD;
       else
@@ -1340,7 +1335,7 @@ double  cgfuncRyckSE(double *vec)
 
 extern double max3(double a, double b, double c);
 extern double min3(double a, double b, double c);
-
+/* questa e' la routine piu' complicata da riscrivere per i super-ellissoidi */ 
 void projontoSE(double* ri, double *dr, double* rA, double **Xa, double *gradf, double *sfA, double dist)
 {
   int kk, its, done=0, k1, k2, MAXITS=50;
