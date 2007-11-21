@@ -78,6 +78,7 @@ extern double max3(double a, double b, double c);
 extern double scalProd(double *A, double *B);
 extern int fdjac_disterr;
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdirs;
+extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
 
 int is_superellipse(int i)
 {
@@ -1029,10 +1030,10 @@ double calc_sign_SE(int i, double *r, double **R, double *x, double **X)
   MD_DEBUG37(printf("SE segno = %.15G\n" , segno));
   return segno;
 }
-
+extern double costolSDgrad;
 void funcs2beZeroedSE(int n, double x[], double fvec[], int i, int j, double shift[3])
 {
-  int na, k1, k2; 
+  int na, k1; 
   double  rA[3], rB[3], ti;
   double fx[3], gx[3], xpA[3], xpB[3], fxp[3], gxp[3];
 #ifdef EDHE_FLEX
@@ -1173,11 +1174,11 @@ void calc_norm_SE(int i, double *x, double *n, double *r, double **R, double **X
   body2lab_fx(i, fxp, n, R);
 }
 /* steepest descent per super-ellissoidi */
-int icg, jcg;
+int icg, jcg, doneryck=0;
 double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, double *signA, double *signB)
 {
-  int kk, k1, k2; 
-  double K1, K2, F, nf, ng, gx2[3], fx2[3], dd[3], normdd, ngA, ngB;
+  int kk, k1; 
+  double K1, K2, F, nf, ng, dd[3], normdd, ngA, ngB;
   double S=1.0, A=1.0, B, gradfx, gradgx;
   doneryck = 0;
 #if 0
@@ -1189,7 +1190,7 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
       fx[k1] *= 2.0;
     }
 #endif
-  calc_norm_SE(icg, vec, fx, rA, R[icg], Xa);
+  calc_norm_SE(icg, vec, fx, rA, RtA, Xa);
 
   for (k1 = 0; k1 < 3; k1++)
     {
@@ -1201,7 +1202,7 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
 #endif
       dd[k1] = vec[k1+3]-vec[k1];
     }
-  calc_norm_SE(jcg, vec, gx, rB, R[jcg], Xb);
+  calc_norm_SE(jcg, vec, gx, rB, RtB, Xb);
 
   if (OprogStatus.forceguess)
     {
@@ -1310,10 +1311,9 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
   return F; 
 }
 /* =========================== >>> forces <<< ======================= */
-double  cgfuncRyckSE(double *vec)
+double cgfuncRyckSE(double *vec)
 {
-  int kk, k1, k2;
-  double fx2[3], gx2[3];
+  int kk;
   double A, B, F;
   if (OprogStatus.forceguess)
     {
@@ -1332,16 +1332,89 @@ double  cgfuncRyckSE(double *vec)
     F += A*Sqr(vec[kk]-vec[kk+3]);
   return F;
 }
+extern long long int itsfrprmn, callsfrprmn,callsok, callsprojonto, itsprojonto;
 
+extern double sfA, sfB;
+extern double shiftcg[3], lambdacg, minaxicg, minaxjcg;
+extern double gradfG[3], gradgG[3], dxG[6];
 extern double max3(double a, double b, double c);
 extern double min3(double a, double b, double c);
-/* questa e' la routine piu' complicata da riscrivere per i super-ellissoidi */ 
-void projontoSE(double* ri, double *dr, double* rA, double **Xa, double *gradf, double *sfA, double dist)
+extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+extern int cghalfspring, icg, jcg, doneryck;
+double calcfLab(int i, double *x, double *rA, double **Ri)
 {
-  int kk, its, done=0, k1, k2, MAXITS=50;
+  double xp[3];
+  lab2body(i, &x[0], xp, rA, Ri);
+  return calcf(xp, i);
+}
+double func_to_zero(double chsi, int i, double *x, double *n, double *r, double **X, double **Ri, double *dr)
+{
+  double x1[3], p[3];
+  int kk;
+  /* n Ã¨ la normale al punto x relativamente al super-ellissoide
+     i, che ha il centro di massa posizionato in r a ha orientazione Ri.
+     Se si tratta di un ellissoide X non Ã¨ altro che la matrice Xa "ruotata" di Ri */
+  for (kk=0; kk < 3; kk++)
+    p[kk] = x[kk] + dr[kk];
+  /* N.B. per ora ho scelto di cercare di portare il glider sulla superficie
+     lungo la direzione individuata dal centro del super-ellissoide e dal punto x+dr.
+     Per superfici convesse esiste sempre una soluzione di tale problema.
+     In alternativa, come ho giÃ  fatto per gli ellissoidi, si puo' usare la direzione individuata
+     dalla normale nel punto x tuttavia in tale caso la soluzione non esiste sempre, anche se
+     con un passo sufficientemente piccolo esiste anche per superfici concave.  */
+  for (kk=0; kk < 3; kk++)
+    x1[kk] = p[kk] - chsi*(p[kk]-r[kk]);
+  return calcfLab(i, x1, r, Ri);	
+}
+int iSE;
+double *xSE, *nSE, *rSE, **XSE, **RiSE, *drSE;
+double func_to_zero_zb(double chsi)
+{
+  return func_to_zero(chsi, iSE, xSE, nSE, rSE, XSE, RiSE, drSE);
+}
+int find_surf_sol(int i, double *x, double *n, double *r, double *sol, double **X, double **Ri, double *dr)
+{
+  double chsi, chsi1, chsi2;
+  /* unidimensional root finding (NR or Brent? see Numerical Recipe to make a decision) */
+  /* Evaluate the initial value of chsi according to sign of point x with respect to the surface of the SE*/
+#if 0
+  chsi = calc_sign_SE(i, r, Ri, x, X);
+  if (chsi < 0)
+    {
+      chsi1 = chsi;
+      chsi2 = -chsi;
+    }
+  else
+    {
+      chsi1 = chsi;
+      chsi2 = -chsi;
+    }
+#else
+  chsi1 = 0.0;
+  chsi2 = 1.0;
+#endif
+
+  iSE = i;
+  rSE = r;
+  XSE = X;
+  RiSE = Ri;
+  drSE = dr;
+  nSE = n;
+  xSE = x;
+  chsi = zbrent(func_to_zero_zb, chsi1, chsi2, 1E-7);
+  if (polinterr)
+    return 0;
+  else 
+    return 1;
+}
+/* questa e' la routine piu' complicata da riscrivere per i super-ellissoidi */ 
+extern int accngA, accngB;
+void projontoSE(int i, double* ri, double *dr, double* rA, double **Xa, double **Ri, double *gradf, double *sfA, double dist)
+{
+  int kk, its, done=0, MAXITS=50, ret;
   const double GOLD=1.618034;
-  double Xag[3], r1AXa[3], r1[3], r1A[3], sf, sqrtDelta, A2;
-  double curv2, A, B, C, Delta, sol=0.0, ng, curv, lambda;
+  double r1[3], r1A[3], sf;
+  double sol=0.0;
   sf = *sfA;
   its = 0;
  
@@ -1349,137 +1422,21 @@ void projontoSE(double* ri, double *dr, double* rA, double **Xa, double *gradf, 
   while (!done && its <= MAXITS)
     {
       itsprojonto++;
-      ng = calc_norm(gradf);
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  Xag[k1] = 0.0;
-	  for (k2=0; k2 < 3; k2++)
-	    {
-	      Xag[k1] += Xa[k1][k2]*gradf[k2];
-	    }	      
-	}
-      if ((OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 4) && OprogStatus.tolAngSD > 0.0)
-	{
-	  curv = 0.0;
-	  for (k1 = 0; k1 < 3; k1++)
-	    {
-	      curv += dr[k1]*Xag[k1];
-	    }
-	  lambda = min(sf, Sqr(ng)*fabs(costolAngSD/curv));
-	  //printf("curv=%.15G lambda= %.15G\n", curv, lambda);
-	  sf = lambda;
-	}
-      if ((OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 4) && OprogStatus.tolSDconstr > 0.0)
-	{
-	  //dh = 0.0;
-	  curv2 = 0.0;
-	  for (k1 = 0; k1 < 3; k1++)
-	    {
-	      //dh += dr[k1]*gradf[k1];
-	      for (k2 = 0; k2 < 3; k2++)
-		{
-		  curv2 += dr[k1]*Xa[k1][k2]*dr[k2];
-		}	
-	    }
-	  curv2 /= 2.0;
-	  //dh /= 2.0;
-	  lambda = min(sf,sqrt(OprogStatus.tolSDconstr/fabs(curv2)));
-	  //printf("boh=%.15G\n",sqrt(OprogStatus.tolSDconstr/fabs(curv2)) );
-	  sf = lambda;
-	}
       for (kk=0; kk < 3; kk++)
 	{
 	  r1[kk] = ri[kk] + dr[kk]*sf; 
 	  r1A[kk] = r1[kk] - rA[kk];
 	}
-      //dr1par = sf*calc_norm(dr);
-      A=0;
-      B=0;
-      C=0;
-#if 1
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  //Xag[k1] = 0.0;
-	  r1AXa[k1] = 0.0;
-	  for (k2=0; k2 < 3; k2++)
-	    {
-	      //Xag[k1] += Xa[k1][k2]*gradf[k2];
-	      r1AXa[k1] += r1A[k2]*Xa[k2][k1]; 
-	    }
-	} 
-#endif
-      for (k1=0; k1 < 3; k1++)
-	{
-
-#if 0
-	  for (k2=0; k2 < 3; k2++)
-	    {
-	      A += gradf[k1]*Xa[k1][k2]*gradf[k2];
-	      B += r1A[k1]*Xa[k1][k2]*gradf[k2];
-	      //  printf("riA[%d]=%f Xa[%d][%d]=%f\n", r1A[k1], Xa[k1][k2]);
-	      C += r1A[k1]*Xa[k1][k2]*r1A[k2];
-	    }
-#else
-	  A += gradf[k1]*Xag[k1];
-	  B += r1AXa[k1]*gradf[k1];
-	  C += r1AXa[k1]*r1A[k1];
-#endif
-	}
-      B *= 2.0;
-      C -= 1.0;
-      Delta = Sqr(B) - 4.0*A*C;
-      if (Delta < 0 || A==0.0)
+      ret = find_surf_sol(i, r1, gradf, rA, &sol, Xa, Ri, dr);
+      /* se la soluzione e' stata trovata (ret==0) allora riduce sf e ritenta */
+      if (!ret)
 	{
 	  sf /= GOLD;
 	  its++;
 	  continue;
 	}
-      sqrtDelta = sqrt(Delta);
-      A2 = 2.0*A;
-#if 0
-      s1 = (-B - sqrtDelta)/A2;
-      s2 = (-B + sqrtDelta)/A2;
-      if (fabs(s1) < fabs(s2))
-	sol = s1;
-      else
-	sol = s2;
-#else
-      if (B > 0)
-	sol = (-B + sqrtDelta)/A2; 
-      else
-	sol = (-B - sqrtDelta)/A2;
-#endif
-      //if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*sf*calc_norm(dr))
-      if (OprogStatus.SDmethod==1 || OprogStatus.SDmethod==3)
-	{
-	  if (dist > OprogStatus.epsd && fabs(sol)*ng > OprogStatus.tolSDconstr*dist/2.0)
-	    {
-	      sf /= GOLD;
-	      its++;
-	      continue;
-	    }
-	}
-#if 0
-      /* WARNING: APPARENTEMENTE NON CONVIENE RISCALARE sol e sf se stepSDA è abbastanza piccolo,
-       * ma verificare che questo è vero */
-      else
-	{
-#if 0
-	  factor = min(1.0, OprogStatus.tolSDconstr*dr1par/ng);
-	  sol *= factor;
-	  sf *= factor;
-#endif
-	  if (fabs(sol)*ng > OprogStatus.tolSDconstr*dr1par)
-	    {
-	      sf /= GOLD;
-	      its++;
-	      continue;
-	    }
-	}
-#endif
      done = 1;
     }
- 
   if (!done)
     {
       printf("maximum number of iterations reached in projont! Aborting...\n");
@@ -1493,8 +1450,10 @@ void projontoSE(double* ri, double *dr, double* rA, double **Xa, double *gradf, 
   /* commentando questa riga il valore di sf usato per rimanere "aderenti" alla superficie
    * non viene mantenuto.
    * In tal modo il passo non puo' decrescere in maniera irreversibile se non intorno al minimo. */
+#if 0
   if (OprogStatus.SDmethod == 1 || OprogStatus.SDmethod==3)
     *sfA = sf;
+#endif
 }
 int check_doneSE(double fp, double fpold, double minax)
 {
@@ -1564,8 +1523,8 @@ void projectgradSE(double *p, double *xi, double *gradf, double *gradg)
       dist+=Sqr(p[kk+3]-p[kk]);
     }
   dist = sqrt(dist);
-  projontoSE(p, xi, rA, Xa, gradf, &sfA, dist);
-  projontoSE(&p[3], &xi[3], rB, Xb, gradg, &sfB, dist);
+  projontoSE(icg, p, xi, rA, Xa, RtA, gradf, &sfA, dist);
+  projontoSE(jcg, &p[3], &xi[3], rB, Xb, RtB, gradg, &sfB, dist);
 }
 void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
@@ -1576,7 +1535,7 @@ void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, doubl
 { 
   int j,its;
   const int ITMAXFR = OprogStatus.maxitsSD;
-  const double GOLD=1.618034;
+  //const double GOLD=1.618034;
   double fp, fpold=0.0, signA, signB;
   double minax, xi[6], xiold[6];
   double signAold, signBold, pold[6];
@@ -1596,7 +1555,7 @@ void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, doubl
     }
 #if 1
   if ((OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 4) &&
-      check_done(fp, fpold, minax))
+      check_doneSE(fp, fpold, minax))
     {
       callsok++;
       return;
@@ -1617,26 +1576,27 @@ void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, doubl
       signBold = signB;
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
-
+#if 0
       if ((OprogStatus.SDmethod == 1 || OprogStatus.SDmethod == 3) && fp > fpold)
 	{
 	  sfA /= GOLD;
 	  sfB /= GOLD;
-	}      
-      projectgrad(p, xi, gradfG, gradgG);
+	}    
+#endif  
+      projectgradSE(p, xi, gradfG, gradgG);
       if (doneryck==2)
 	{
 	  callsok++;
 	  return;
 	 }
-      if (check_done(fp, fpold, minax))
+      if (check_doneSE(fp, fpold, minax))
 	{
 	  callsok++;
 	  return;
 	}
     } 
   return; 
-  nrerror("Too many iterations in frprmn");
+  //nrerror("Too many iterations in frprmn");
   
 }
 void distSDSupEll(int i, int j, double shift[3], double *vecg, double lambda, int halfspring)
@@ -1675,7 +1635,6 @@ void distSDSupEll(int i, int j, double shift[3], double *vecg, double lambda, in
   else 
     minaxjcg = min3(Oparams.a[1],Oparams.b[1],Oparams.c[1]);
 #endif
-  lambdacg = lambda;
   cghalfspring = halfspring;
   for (kk=0; kk < 3; kk++)
     {
