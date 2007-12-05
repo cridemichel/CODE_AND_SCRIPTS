@@ -1345,17 +1345,23 @@ double calcfLab(int i, double *x, double *rA, double **Ri)
 {
   double xp[3];
   lab2body(i, &x[0], xp, rA, Ri);
+  //printf("rA = %.15G %.15G %.15G\n", rA[0], rA[1], rA[2]);
+  //printf("xp=%f %f %f\n", xp[0], xp[1], xp[2]);
+  //printf("Ri=%f %f %f %f %f %f %f %f %f\n", Ri[0][0], Ri[0][1], Ri[0][1], Ri[1][0], Ri[1][1], Ri[1][2],
+  //  Ri[2][0], Ri[2][1], Ri[2][2]);
   return calcf(xp, i);
 }
-double func_to_zero(double chsi, int i, double *x, double *n, double *r, double **X, double **Ri, double *dr)
+double func_to_zero(double chsi, int i, double *ri, double *x, double *n, double *r, double **X, double **Ri, double *dr,
+		    double sf)
 {
-  double x1[3], p[3];
+  double x1[3], p[3], A;
   int kk;
   /* n è la normale al punto x relativamente al super-ellissoide
      i, che ha il centro di massa posizionato in r a ha orientazione Ri.
      Se si tratta di un ellissoide X non è altro che la matrice Xa "ruotata" di Ri */
   for (kk=0; kk < 3; kk++)
-    p[kk] = x[kk] + dr[kk];
+    p[kk] = ri[kk] + sf*dr[kk];
+  ///printf("f(x)=%.15G\n", calcfLab(i, ri, r, Ri));
   /* N.B. per ora ho scelto di cercare di portare il glider sulla superficie
      lungo la direzione individuata dal centro del super-ellissoide e dal punto x+dr.
      Per superfici convesse esiste sempre una soluzione di tale problema.
@@ -1364,16 +1370,20 @@ double func_to_zero(double chsi, int i, double *x, double *n, double *r, double 
      con un passo sufficientemente piccolo esiste anche per superfici concave.  */
   for (kk=0; kk < 3; kk++)
     x1[kk] = p[kk] - chsi*(p[kk]-r[kk]);
-  return calcfLab(i, x1, r, Ri);	
+  ///printf("sf=%f x1=%f %f %f chsi=%f p=%f %f %f r=%f %f %f dr=%f %f %f\n", sf, x1[0], x1[1], x1[2], chsi, p[0], p[1], p[2], r[0], r[1], r[2], dr[0], dr[1], dr[2]);
+  A = calcfLab(i, x1, r, Ri);	
+  ///printf("A=%.15G \n", A);
+  return A;
 }
 int iSE;
-double *xSE, *nSE, *rSE, **XSE, **RiSE, *drSE;
+double *xSE, *nSE, *rSE, **XSE, **RiSE, *drSE, sfSE, *riSE;
 double func_to_zero_zb(double chsi)
 {
-  return func_to_zero(chsi, iSE, xSE, nSE, rSE, XSE, RiSE, drSE);
+  return func_to_zero(chsi, iSE, riSE, xSE, nSE, rSE, XSE, RiSE, drSE, sfSE);
 }
-int find_surf_sol(int i, double *x, double *n, double *r, double *sol, double **X, double **Ri, double *dr)
+int find_surf_sol(int i, double *ri, double *x, double *n, double *r, double *sol, double **X, double **Ri, double *dr, double sf)
 {
+  int kk;
   double chsi, chsi1, chsi2;
   /* unidimensional root finding (NR or Brent? see Numerical Recipe to make a decision) */
   /* Evaluate the initial value of chsi according to sign of point x with respect to the surface of the SE*/
@@ -1390,10 +1400,10 @@ int find_surf_sol(int i, double *x, double *n, double *r, double *sol, double **
       chsi2 = -chsi;
     }
 #else
-  chsi1 = 0.0;
+  chsi1 = -1.0;
   chsi2 = 1.0;
 #endif
-
+  sfSE = sf;
   iSE = i;
   rSE = r;
   XSE = X;
@@ -1401,6 +1411,8 @@ int find_surf_sol(int i, double *x, double *n, double *r, double *sol, double **
   drSE = dr;
   nSE = n;
   xSE = x;
+  riSE= ri;
+  //printf("func_to_zero_zb(0)=%.15G func_to_zero_zb(1):%.15G\n", func_to_zero_zb(0), func_to_zero_zb(1));
   chsi = zbrent(func_to_zero_zb, chsi1, chsi2, 1E-7);
   if (polinterr)
     return 0;
@@ -1422,12 +1434,15 @@ void projontoSE(int i, double* ri, double *dr, double* rA, double **Xa, double *
   while (!done && its <= MAXITS)
     {
       itsprojonto++;
+#if 1
       for (kk=0; kk < 3; kk++)
 	{
 	  r1[kk] = ri[kk] + dr[kk]*sf; 
 	  r1A[kk] = r1[kk] - rA[kk];
 	}
-      ret = find_surf_sol(i, r1, gradf, rA, &sol, Xa, Ri, dr);
+#endif
+      //printf("dr=%f %f %f\n", dr[0], dr[1], dr[2]);
+      ret = find_surf_sol(i, ri, r1, gradf, rA, &sol, Xa, Ri, dr, sf);
       /* se la soluzione e' stata trovata (ret==0) allora riduce sf e ritenta */
       if (!ret)
 	{
@@ -1435,17 +1450,18 @@ void projontoSE(int i, double* ri, double *dr, double* rA, double **Xa, double *
 	  its++;
 	  continue;
 	}
-     done = 1;
+      done = 1;
     }
   if (!done)
     {
-      printf("maximum number of iterations reached in projont! Aborting...\n");
+      printf("[SE] maximum number of iterations reached in projonto! Aborting...\n");
       printf("sol=%.15G norm(dr)=%.15G sf=%.15G\n", sol, calc_norm(dr), sf);
       exit(-1);
     }
   for (kk = 0; kk < 3; kk++)
     {
-      dr[kk] = sol*gradf[kk] + sf*dr[kk]; 
+      //dr[kk] = sol*gradf[kk] + sf*dr[kk]; 
+      dr[kk] = sf*dr[kk]-sol*(r1[kk]-rA[kk]); 
     }
   /* commentando questa riga il valore di sf usato per rimanere "aderenti" alla superficie
    * non viene mantenuto.
@@ -1547,7 +1563,6 @@ void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, doubl
   callsfrprmn++;
   /*Initializations.*/
   fp = (*dfunc)(p,xi,gradfG,gradgG, &signA, &signB); 
-  
   if (doneryck==2)
     {
       callsok++;
@@ -1561,6 +1576,8 @@ void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, doubl
       return;
     }
 #endif
+  //printf("p=%f %f %f xi=%f %f %f gradfG=%f %f %f gradgG=%f %f %f\n", p[0], p[1], p[2],
+  //	 xi[0], xi[1], xi[2], gradfG[0], gradfG[1], gradfG[2], gradgG[0], gradgG[1], gradgG[2]);
   projectgradSE(p,xi,gradfG,gradgG);  
   for (its=1;its<=ITMAXFR;its++)
     { 
@@ -1650,5 +1667,53 @@ void distSDSupEll(int i, int j, double shift[3], double *vecg, double lambda, in
     {
       vecg[kk] = vec[kk];
     }
+}
+double func_to_zero_intersec(double chsi, int i, double *x, double *r, double **Ri)
+{
+  double x1[3], p[3], A;
+  int kk;
+  for (kk=0; kk < 3; kk++)
+    x1[kk] = r[kk] + chsi*(x[kk]-r[kk]);
+  A = calcfLab(i, x1, r, Ri);	
+  return A;
+}
+double func_to_zero_intersec_zb(double chsi)
+{
+  return func_to_zero_intersec(chsi, iSE, xSE, rSE, RiSE);
+}
+
+int calc_intersecSE(int i, double *rB, double *rA, double **Ri, double* rI)
+{
+  double chsi1, chsi2, chsi;
+  int kk;
+#if 0
+  chsi = calc_sign_SE(i, r, Ri, x, X);
+  if (chsi < 0)
+    {
+      chsi1 = chsi;
+      chsi2 = -chsi;
+    }
+  else
+    {
+      chsi1 = chsi;
+      chsi2 = -chsi;
+    }
+#else
+  chsi1 = 0.0;
+  chsi2 = 1.0;
+#endif
+  iSE = i;
+  rSE = rA;
+  RiSE = Ri;
+  xSE = rB;
+  //printf("func_to_zero_zb(0)=%.15G func_to_zero_zb(1):%.15G\n", func_to_zero_zb(0), func_to_zero_zb(1));
+  chsi = zbrent(func_to_zero_intersec_zb, chsi1, chsi2, 1E-14);
+  for (kk=0; kk < 3; kk++)
+    rI[kk] = rA[kk] + chsi*(rB[kk]-rA[kk]);
+  //printf("polinterr=%d intersec: %.15G\n", polinterr, calcfLab(i, rI, rA, Ri));
+  if (polinterr)
+    return 0;
+  else 
+    return 1;
 }
 #endif
