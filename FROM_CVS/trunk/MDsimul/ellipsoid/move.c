@@ -4970,6 +4970,9 @@ void funcs2beZeroedDist(int n, double x[], double fvec[], int i, int j, double s
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
+#ifdef MD_SUPERELLIPSOID
+extern  void calc_intersecSE(int i, double *rB, double *rA, double **RA, double* rI);
+#endif
 void calc_intersec(double *rB, double *rA, double **Xa, double* rI)
 {
   double A, B=0.0, C=0.0, D=0.0, tt=0.0;
@@ -5036,6 +5039,9 @@ void guess_dist(int i, int j,
   double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
   int k1, n;
   double saA[3], saB[3];
+#ifdef MD_SUPERELLIPSOID
+  double DdA[3], DdB[3], sfA, sfB, nDdA, nDdB;
+#endif
 #ifdef EDHE_FLEX
   int typei, typej;
   typei = typeOfPart[i];
@@ -5079,6 +5085,40 @@ void guess_dist(int i, int j,
       gradaxB[n] /= gBn;
     }
 #endif
+#ifdef MD_SUPERELLIPSOID
+  sfA = sfB = 0.0;	
+  for (k1=0; k1 < 3; k1++)
+    {
+      sfA += Sqr(saA[k1]); 
+      sfB += Sqr(saB[k1]);
+    }
+  sfA = sqrt(sfA);
+  sfB = sqrt(sfB);
+  for (k1=0; k1 < 3; k1++)
+    {
+      dA[k1] = rA[k1];
+      dB[k1] = rB[k1];
+      /* il punto con la direzione ottimizzata deve cmq essere
+         fuori dal super-ellissoide altrimenti non va */
+      DdA[k1]=DdB[k1]=0.0;
+      for (n=0; n < 3;n++)
+	{
+	  DdA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+	  DdB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
+	}
+    }
+
+  nDdA = calc_norm(DdA);
+  nDdB = calc_norm(DdB);
+
+  for (k1=0; k1 < 3; k1++)
+    {
+      dA[k1] = sfA*DdA[k1]/nDdA + dA[k1]; 
+      dB[k1] = sfB*DdB[k1]/nDdB + dB[k1];
+    }
+  calc_intersecSE(i, dA, rA, RA, rC);
+  calc_intersecSE(j, dB, rB, RB, rD);
+#else
   for (k1=0; k1 < 3; k1++)
     {
       dA[k1] = rA[k1];
@@ -5089,8 +5129,9 @@ void guess_dist(int i, int j,
 	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
 	}
     }
-  calc_intersec(dA, rA, Xa, rC);
+   calc_intersec(dA, rA, Xa, rC);
   calc_intersec(dB, rB, Xb, rD);
+#endif
 }
 
 void calc_grad(double *rC, double *rA, double **Xa, double *grad)
@@ -5305,8 +5346,13 @@ retry:
 	}
       else
 	{
+#ifdef MD_SUPERELLIPSOID
+	  calc_intersecSE(i, rB, rA, RtA, rC);
+	  calc_intersecSE(j, rA, rB, RtB, rD);
+#else
 	  calc_intersec(rB, rA, Xa, rC);
 	  calc_intersec(rA, rB, Xb, rD);
+#endif
 	}
 #if 1
       for(k1=0; k1 < 3; k1++)
