@@ -29,6 +29,7 @@ extern void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, do
 extern void set_angmom_to_zero(int i);
 extern int *is_a_sphere_NNL;
 #endif
+int icg, jcg, doneryck;
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -1174,7 +1175,6 @@ void calc_norm_SE(int i, double *x, double *n, double *r, double **R, double **X
   body2lab_fx(i, fxp, n, R);
 }
 /* steepest descent per super-ellissoidi */
-int icg, jcg, doneryck=0;
 double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, double *signA, double *signB)
 {
   int kk, k1; 
@@ -1340,7 +1340,7 @@ extern double gradfG[3], gradgG[3], dxG[6];
 extern double max3(double a, double b, double c);
 extern double min3(double a, double b, double c);
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
-extern int cghalfspring, icg, jcg, doneryck;
+extern int cghalfspring;
 double calcfLab(int i, double *x, double *rA, double **Ri)
 {
   double xp[3];
