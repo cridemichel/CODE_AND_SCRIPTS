@@ -210,7 +210,6 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
    double delta1, delta2;
    /* n1 = stacks
     * n2 = slides */
-
    /* Shall we just draw a point? */
    if (n1 < 4 && n2 < 4) {
       glBegin(GL_POINTS);
