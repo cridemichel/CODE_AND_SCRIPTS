@@ -52,6 +52,8 @@ struct atom_supellips
   double c;
   int n1;  /* integer for super-ellipsoid */
   int n2; 
+  double tbeg;
+  double tend;
 };
 struct atom_disk
 {
