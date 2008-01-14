@@ -200,6 +200,87 @@ XYZ CalcNormal(XYZ p, XYZ p1, XYZ p2)
 
    return(n);
 }
+#if 1
+void CreatePartialSuperEllipse(double power1,double power2, double a, double b, double c,
+			int n1, int n2, int method, double thetaBeg, double thetaEnd)
+{
+   int i,j;
+   double theta1,theta2,theta3;
+   XYZ p,p1,p2,en;
+   int n1beg, n1end;
+   double delta1, delta2;
+   /* n1 = stacks
+    * n2 = slides */
+   /* Shall we just draw a point? */
+   if (n1 < 4 && n2 < 4) {
+      glBegin(GL_POINTS);
+      glVertex3f(0.0,0.0,0.0);
+      glEnd();
+      return;
+   }
+
+   /* Shall we just draw a plus */
+   if (power1 > 10 && power2 > 10) {
+      glBegin(GL_LINES);
+      glVertex3f(-1.0, 0.0, 0.0);
+      glVertex3f( 1.0, 0.0, 0.0);
+      glVertex3f( 0.0,-1.0, 0.0);
+      glVertex3f( 0.0, 1.0, 0.0);
+      glVertex3f( 0.0, 0.0,-1.0);
+      glVertex3f( 0.0, 0.0, 1.0);
+      glEnd();
+      return;
+   }
+   delta1 = 0.01*TWOPI / (double)n1;
+   delta2 =  0.01*TWOPI / (double)n2;
+   if (thetaBeg > 0)
+     n1beg = (int) rint(n1*thetaBeg/TWOPI);
+   else 
+     n1beg = 0;
+   if (thetaEnd > 0)
+     n1end = (int) rint(n1*thetaEnd/TWOPI);
+   else
+     n1end = n1/2;
+   printf("thetaBeg: %.15G thetaEnd: %.15G n1beg=%d n1end=%d n1=%d n2=%d\n", thetaBeg, thetaEnd, n1beg, n1end, n1, n2);
+   for (j=0;j<n1/2;j++) {
+      if (j >= n1beg && j < n1end)
+	continue;
+      theta1 = (j+1) * TWOPI / (double)n1 - PID2;
+      theta2 = j * TWOPI / (double)n1 - PID2;
+      if (method==2)
+	glBegin(GL_TRIANGLE_FAN);
+      else if (method == 0)
+         glBegin(GL_QUAD_STRIP);
+      else
+         glBegin(GL_TRIANGLE_STRIP);
+      for (i=0;i<=n2;i++) {
+         if (i == 0 || i == n2)
+            theta3 = 0;
+         else
+            theta3 = i * TWOPI / n2;
+   
+         EvalSuperEllipse(theta2,theta3,power1,power2,a,b,c,&p);
+         EvalSuperEllipse(theta2+delta1,theta3,power1,power2,a,b,c,&p1);
+         EvalSuperEllipse(theta2,theta3+delta2,power1,power2,a,b,c,&p2);
+         en = CalcNormal(p,p1,p2);
+         glNormal3f(en.x,en.y,en.z);
+         //glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
+	 //glColor4f(1,1,1,0.1);
+         glVertex3f(p.x,p.y,p.z);
+
+         EvalSuperEllipse(theta1,theta3,power1,power2,a,b,c,&p);
+         EvalSuperEllipse(theta1+delta1,theta3,power1,power2,a,b,c,&p1);
+         EvalSuperEllipse(theta1,theta3+delta2,power1,power2,a,b,c,&p2);
+         en = CalcNormal(p,p1,p2);
+         glNormal3f(en.x,en.y,en.z);
+         //glTexCoord2f(i/(double)n,2*j/(double)n);
+	 //glColor4f(1,1,1,0.1);
+         glVertex3f(p.x,p.y,p.z);
+      }
+      glEnd();
+   }
+}
+#endif
 
 void CreateSuperEllipse(double power1,double power2, double a, double b, double c,
 			int n1, int n2, int method)
@@ -457,10 +538,18 @@ void displayAtom(int nf, int nm, int na)
 	}	  
       else
 	{
-	  CreateSuperEllipse(atom->supellips.n1, 
-	    		     atom->supellips.n2, atom->supellips.a, 
-	    		     atom->supellips.b, atom->supellips.c, globset.stacks, 
-	    		     globset.slides, 1);
+	  if (atom->supellips.tbeg > 0.0 || atom->supellips.tend > 0.0)
+	    {
+	      CreatePartialSuperEllipse(atom->supellips.n1, 
+	  				atom->supellips.n2, atom->supellips.a, 
+					atom->supellips.b, atom->supellips.c, globset.stacks, 
+					globset.slides, 1, atom->supellips.tbeg, atom->supellips.tend);
+	    }
+	  else
+	    CreateSuperEllipse(atom->supellips.n1, 
+		  	       atom->supellips.n2, atom->supellips.a, 
+		  	       atom->supellips.b, atom->supellips.c, globset.stacks, 
+		  	       globset.slides, 1);
 	}
       /*if (atom->common.transp < 1.0)
 	glDepthMask (GL_TRUE);*/
@@ -1225,15 +1314,17 @@ int parsecol(char *str, double *transp)
 void assignAtom(int nf, int i, int a, const char* L)
 {
   char s1[128], s2[128], s3[128], s4[128], s5[128], s6[128], s7[128], s8[128], s9[128];
-  char s10[128], s11[128], s12[128], s13[128], s14[128], s15[128], s16[128];
+  char s10[128], s11[128], s12[128], s13[128], s14[128], s15[128], s16[128], s17[128], s18[128];
   atom_s *at;
   double t;
   at = &mols[nf][i].atom[a];
-  if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16) == 16)
+  printf("read: %s\n", L);
+  if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18) == 18)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
-      printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
-	     atoi(s5),i, j);*/
+  	printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	atoi(s5),i, j);*/
+      printf("qui\n");
       at->common.rx = atof(s1);
       at->common.ry = atof(s2);
       at->common.rz = atof(s3);
@@ -1253,6 +1344,39 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.c = atof(s15);
       at->supellips.n1 = 1.0;
       at->supellips.n2 = 1.0;
+      at->supellips.tbeg = atof(s16);
+      at->supellips.tend = atof(s17);
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = parsecol(s18,&t);
+      at->common.transp = t;
+
+    }
+  else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16) == 16)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+  	printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	atoi(s5),i, j);*/
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SUPELLIPS;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->supellips.R[0][0] = atof(s4);
+      at->supellips.R[0][1] = atof(s5);
+      at->supellips.R[0][2] = atof(s6);
+      at->supellips.R[1][0] = atof(s7);
+      at->supellips.R[1][1] = atof(s8);
+      at->supellips.R[1][2] = atof(s9);
+      at->supellips.R[2][0] = atof(s10);
+      at->supellips.R[2][1] = atof(s11);
+      at->supellips.R[2][2] = atof(s12);
+      at->supellips.a = atof(s13);
+      at->supellips.b = atof(s14);
+      at->supellips.c = atof(s15);
+      at->supellips.n1 = 1.0;
+      at->supellips.n2 = 1.0;
+      at->supellips.tbeg = -1.0;
+      at->supellips.tend = -1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = parsecol(s16,&t);
       at->common.transp = t;
@@ -1281,6 +1405,8 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.c = atof(s15);
       at->supellips.n1 = 1.0;
       at->supellips.n2 = 1.0;
+      at->supellips.tbeg = -1.0;
+      at->supellips.tend = -1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
       at->common.transp = globset.deftransp;
@@ -1318,6 +1444,8 @@ void assignAtom(int nf, int i, int a, const char* L)
 	}
       at->supellips.n1 = 1.0;
       at->supellips.n2 = 1.0;
+      at->supellips.tbeg = -1.0;
+      at->supellips.tend = -1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = parsecol(s13, &t);
       at->common.transp = t;
@@ -1451,6 +1579,8 @@ void assignAtom(int nf, int i, int a, const char* L)
 	}
       at->supellips.n1 = 1.0;
       at->supellips.n2 = 1.0;
+      at->supellips.tbeg = -1.0;
+      at->supellips.tend = -1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
       at->common.atcol  = -1;
       at->common.transp = globset.deftransp;
