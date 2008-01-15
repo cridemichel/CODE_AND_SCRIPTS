@@ -476,16 +476,19 @@ void displayAtom(int nf, int nm, int na)
 	  rotangle = 180.0*acos(atom->sphere_spot.ny/normn)/Pi;
 	}
       glRotatef(rotangle, rax, ray, raz);
+      glRotatef(180, 1, 0, 0);/* up-down flip */
       //printf("rotangle=%.15G rax=%f %f %f\n", rotangle, rax, ray, raz);
       CreatePartialSuperEllipse(atom->sphere_spot.n1, 
 				atom->sphere_spot.n2, atom->sphere_spot.a, 
 				atom->sphere_spot.b, atom->sphere_spot.c, globset.stacks, 
-				globset.slides, 1, 0.0, atom->sphere_spot.tbeg);
+				globset.slides, //1, 0.0, atom->sphere_spot.tbeg);
+				1, atom->sphere_spot.tbeg, TWOPI/2.0);
       setColor(mgl_col[atom->sphere_spot.spotcol].rgba, fadeFact);
       CreatePartialSuperEllipse(atom->sphere_spot.n1, 
 				atom->sphere_spot.n2, atom->sphere_spot.a, 
 				atom->sphere_spot.b, atom->sphere_spot.c, globset.stacks, 
-				globset.slides, 1, atom->sphere_spot.tbeg, TWOPI/2.0);
+				globset.slides, //1, atom->sphere_spot.tbeg, TWOPI/2.0);
+				1, 0.0, atom->sphere_spot.tbeg);
     }
   else if (atom->common.type==MGL_ATOM_DISK)
     {
