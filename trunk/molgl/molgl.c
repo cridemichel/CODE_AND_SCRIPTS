@@ -233,6 +233,7 @@ void CreatePartialSuperEllipse(double power1,double power2, double a, double b, 
    }
    delta1 = 0.01*TWOPI / (double)n1;
    delta2 =  0.01*TWOPI / (double)n2;
+   //printf("boh=%.15G n1/2=%d thetaBeg =%.15G TWOPI=%.15G thetaBeg/TWOPI=%.15G\n", ((double)(n1/2))*thetaBeg/TWOPI, n1/2, thetaBeg, TWOPI, thetaBeg/TWOPI);
    if (thetaBeg > 0)
      n1beg = (int) rint(n1*thetaBeg/TWOPI);
    else 
@@ -241,9 +242,9 @@ void CreatePartialSuperEllipse(double power1,double power2, double a, double b, 
      n1end = (int) rint(n1*thetaEnd/TWOPI);
    else
      n1end = n1/2;
-   printf("thetaBeg: %.15G thetaEnd: %.15G n1beg=%d n1end=%d n1=%d n2=%d\n", thetaBeg, thetaEnd, n1beg, n1end, n1, n2);
+   //printf("thetaBeg: %.15G thetaEnd: %.15G n1beg=%d n1end=%d n1=%d n2=%d\n", thetaBeg, thetaEnd, n1beg, n1end, n1, n2);
    for (j=0;j<n1/2;j++) {
-      if (j >= n1beg && j < n1end)
+      if (!(j >= n1beg && j < n1end))
 	continue;
       theta1 = (j+1) * TWOPI / (double)n1 - PID2;
       theta2 = j * TWOPI / (double)n1 - PID2;
@@ -426,6 +427,35 @@ void displayAtom(int nf, int nm, int na)
     {
       glutSolidSphere (atom->sphere.radius, globset.stacks, globset.slides);
       
+    }
+  else if (atom->common.type==MGL_ATOM_SPHERE_SPOT)
+    {
+      /* qui si deve orientare il superellissoide */
+      for (k1 = 0; k1 < 4; k1++)
+	for (k2 = 0; k2 < 4; k2++)
+	  {
+	    if (k1 < 3 && k2 < 3)
+	      {
+		rotm[k1*4+k2]=atom->sphere_spot.R[k2][k1];
+	      }
+	    else if (k1==3 && k2 ==3)
+	      rotm[15] = 1.0;
+	    else
+	      rotm[k1*4+k2] = 0.0;
+	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
+	  }
+      /* notare che x' = R x quindi:
+       * x = Inversa(R) x' = Trasposta(R) x'*/
+      glMultTransposeMatrixf(rotm);
+      CreatePartialSuperEllipse(atom->sphere_spot.n1, 
+				atom->sphere_spot.n2, atom->sphere_spot.a, 
+				atom->sphere_spot.b, atom->sphere_spot.c, globset.stacks, 
+				globset.slides, 1, 0.0, atom->sphere_spot.tbeg);
+      setColor(mgl_col[atom->sphere_spot.spotcol].rgba, fadeFact);
+      CreatePartialSuperEllipse(atom->sphere_spot.n1, 
+				atom->sphere_spot.n2, atom->sphere_spot.a, 
+				atom->sphere_spot.b, atom->sphere_spot.c, globset.stacks, 
+				globset.slides, 1, atom->sphere_spot.tbeg, TWOPI/2.0);
     }
   else if (atom->common.type==MGL_ATOM_DISK)
     {
@@ -1318,13 +1348,13 @@ void assignAtom(int nf, int i, int a, const char* L)
   atom_s *at;
   double t;
   at = &mols[nf][i].atom[a];
-  printf("read: %s\n", L);
-  if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18) == 18)
+  //printf("read: %s\n", L);
+  if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s C[%[^]]] P %s %s ", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18) == 18)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
   	printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
 	atoi(s5),i, j);*/
-      printf("qui\n");
+      //printf("qui\n");
       at->common.rx = atof(s1);
       at->common.ry = atof(s2);
       at->common.rz = atof(s3);
@@ -1344,10 +1374,10 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.c = atof(s15);
       at->supellips.n1 = 1.0;
       at->supellips.n2 = 1.0;
-      at->supellips.tbeg = atof(s16);
-      at->supellips.tend = atof(s17);
+      at->supellips.tbeg = atof(s17);
+      at->supellips.tend = atof(s18);
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = parsecol(s18,&t);
+      at->common.atcol  = parsecol(s16,&t);
       at->common.transp = t;
 
     }
@@ -1503,6 +1533,38 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.greyLvl = atoi(s5);
       at->common.atcol  = -1;
       at->common.transp = globset.deftransp;
+    }
+  else if (sscanf(L,"%s %s %s @ %s C[%[^]]] P %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7) == 7)
+    {
+      /* disegna una sfera di colore s5 con una calotta (che parte dall'angolo s6) di colore s7*/
+      /* printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+      */
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SPHERE_SPOT;
+      //greylLvl[j][i] = colIdxBW[j];// default value of grey level
+      at->sphere_spot.R[0][0] = 1.0;
+      at->sphere_spot.R[0][1] = 0.0;
+      at->sphere_spot.R[0][2] = 0.0;
+      at->sphere_spot.R[1][0] = 0.0;
+      at->sphere_spot.R[1][1] = 1.0;
+      at->sphere_spot.R[1][2] = 0.0;
+      at->sphere_spot.R[2][0] = 0.0;
+      at->sphere_spot.R[2][1] = 0.0;
+      at->sphere_spot.R[2][2] = 1.0;
+      at->sphere_spot.n1 = 1.0;
+      at->sphere_spot.n2 = 1.0;
+      at->sphere_spot.a = atof(s4);
+      at->sphere_spot.b = atof(s4);
+      at->sphere_spot.c = atof(s4);
+      at->sphere_spot.tbeg = atof(s6);
+      at->sphere_spot.tend = atof(s6);
+      at->sphere_spot.spotcol = parsecol(s7, &t);
+      at->common.transp = t;
+      at->common.greyLvl = 0;
+      at->common.atcol = parsecol(s5, &t);
+      at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s @ %s C[%[^]]", s1, s2, s3, s4, s5) == 5)
     {
