@@ -67,6 +67,9 @@ struct atom_sphere_spot
   double tbeg;
   double tend;
   int spotcol;
+  double nx;
+  double ny;
+  double nz;
 };
 struct atom_disk
 {

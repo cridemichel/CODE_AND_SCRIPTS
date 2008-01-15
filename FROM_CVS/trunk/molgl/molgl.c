@@ -431,6 +431,7 @@ void displayAtom(int nf, int nm, int na)
   else if (atom->common.type==MGL_ATOM_SPHERE_SPOT)
     {
       /* qui si deve orientare il superellissoide */
+#if 0
       for (k1 = 0; k1 < 4; k1++)
 	for (k2 = 0; k2 < 4; k2++)
 	  {
@@ -444,9 +445,38 @@ void displayAtom(int nf, int nm, int na)
 	      rotm[k1*4+k2] = 0.0;
 	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
 	  }
+#endif
       /* notare che x' = R x quindi:
        * x = Inversa(R) x' = Trasposta(R) x'*/
-      glMultTransposeMatrixf(rotm);
+      //glMultTransposeMatrixf(rotm);
+      vectProd(0,1,0,atom->sphere_spot.nx, atom->sphere_spot.ny, atom->sphere_spot.nz,
+		   &rax, &ray, &raz);
+
+      if (rax==0 && ray==0 && raz==0)
+	{
+	  if (atom->sphere_spot.ny < 0)
+	    {
+	      rax = 0;
+	      ray = 0;
+	      raz = 1;
+	      rotangle=180;
+	    }
+	  else
+	    {
+	      rax = 0;
+	      ray = 0;
+	      raz = 1;
+	      rotangle = 0;
+	    }
+	}
+      else
+       	{
+	  normra = sqrt(Sqr(rax)+Sqr(ray)+Sqr(raz));
+	  normn = sqrt(Sqr(atom->sphere_spot.nx)+Sqr(atom->sphere_spot.ny)+Sqr(atom->sphere_spot.nz));
+	  rotangle = 180.0*acos(atom->sphere_spot.ny/normn)/Pi;
+	}
+      glRotatef(rotangle, rax, ray, raz);
+      //printf("rotangle=%.15G rax=%f %f %f\n", rotangle, rax, ray, raz);
       CreatePartialSuperEllipse(atom->sphere_spot.n1, 
 				atom->sphere_spot.n2, atom->sphere_spot.a, 
 				atom->sphere_spot.b, atom->sphere_spot.c, globset.stacks, 
@@ -467,9 +497,29 @@ void displayAtom(int nf, int nm, int na)
       ss3 =  gluNewQuadric();
       vectProd(0,0,1,atom->disk.nx, atom->disk.ny, atom->disk.nz,
 	       &rax, &ray, &raz);
-      normra = sqrt(Sqr(rax)+Sqr(ray)+Sqr(raz));
-      normn = sqrt(Sqr(atom->disk.nx)+Sqr(atom->disk.ny)+Sqr(atom->disk.nz));
-      rotangle = 180.0*acos(atom->disk.nz/normn)/Pi; 	       
+      if (rax==0 && ray==0 && raz==0)
+	{
+	  if (atom->sphere_spot.nz < 0)
+	    {
+	      rax = 0;
+	      ray = 1;
+	      raz = 0;
+	      rotangle = 180;
+	    }
+	  else
+	    {
+	      rax = 0;
+	      ray = 1;
+	      raz = 0;
+	      rotangle = 0;
+	    }
+	}
+      else
+	{
+	  normra = sqrt(Sqr(rax)+Sqr(ray)+Sqr(raz));
+	  normn = sqrt(Sqr(atom->disk.nx)+Sqr(atom->disk.ny)+Sqr(atom->disk.nz));
+	  rotangle = 180.0*acos(atom->disk.nz/normn)/Pi; 	       
+	}
 #if 0
       printf("Rotation Angle: %f around (%f,%f,%f) n(%f,%f,%f)\n", 
 	     rotangle, rax, ray, raz,atom->disk.nx, atom->disk.ny,acos(atom->disk.nz/normn)/Pi );
@@ -1534,7 +1584,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.atcol  = -1;
       at->common.transp = globset.deftransp;
     }
-  else if (sscanf(L,"%s %s %s @ %s C[%[^]]] P %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7) == 7)
+  else if (sscanf(L,"%s %s %s @ %s C[%[^]]] P %s %s %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10) == 10)
     {
       /* disegna una sfera di colore s5 con una calotta (che parte dall'angolo s6) di colore s7*/
       /* printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
@@ -1544,6 +1594,9 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.rz = atof(s3);
       at->common.type = MGL_ATOM_SPHERE_SPOT;
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
+      at->sphere_spot.nx = atof(s6);
+      at->sphere_spot.ny = atof(s7);
+      at->sphere_spot.nz = atof(s8);
       at->sphere_spot.R[0][0] = 1.0;
       at->sphere_spot.R[0][1] = 0.0;
       at->sphere_spot.R[0][2] = 0.0;
@@ -1558,9 +1611,9 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->sphere_spot.a = atof(s4);
       at->sphere_spot.b = atof(s4);
       at->sphere_spot.c = atof(s4);
-      at->sphere_spot.tbeg = atof(s6);
-      at->sphere_spot.tend = atof(s6);
-      at->sphere_spot.spotcol = parsecol(s7, &t);
+      at->sphere_spot.tbeg = atof(s9);
+      at->sphere_spot.tend = atof(s9);
+      at->sphere_spot.spotcol = parsecol(s10, &t);
       at->common.transp = t;
       at->common.greyLvl = 0;
       at->common.atcol = parsecol(s5, &t);
