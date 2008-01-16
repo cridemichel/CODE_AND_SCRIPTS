@@ -413,7 +413,8 @@ void displayAtom(int nf, int nm, int na)
   GLUquadricObj *ss, *ss2, *ss3;
   atom_s *atom;
   int k1, k2;
-  double rax, ray, raz, rotangle, normra, normn, Pi, redrad;
+  double rax, ray, raz, rotangle, normra, normn, Pi, redrad, ang, dh;
+  int ms;
   glPushMatrix();
   Pi = 2.0*acos(0);
   atom = &mols[nf][nm].atom[na];
@@ -470,7 +471,11 @@ void displayAtom(int nf, int nm, int na)
     {
       /* draw the sphere first with reduced radius to arrange spot later on it */
       //printf("quiiiii\n");
-      redrad = atom->sphere_mspot.a*0.98;
+      ms = (globset.stacks < globset.slides)?globset.stacks:globset.slides;
+      ang = TWOPI/ms;
+      dh = atom->sphere_mspot.a*(1.0-cos(ang*0.5));
+      //printf("ms=%d rad=%.15G dh=%.15G\n", ms, atom->sphere_mspot.a, dh);
+      redrad = atom->sphere_mspot.a-dh*2.0;
       glutSolidSphere (redrad, globset.stacks, globset.slides);
       sl = atom->sphere_mspot.sl;
       //printf("sl=%p\n", sl);
@@ -1674,7 +1679,7 @@ void assignAtom(int nf, int i, int a, const char* L)
 	  newsp = malloc(sizeof(struct spotlst));
 	  newsp->next = *sl;
 	  sscanf(ss, "%lf %lf %lf %lf C[%[^]]] ", &newsp->n[0], &newsp->n[1], &newsp->n[2], &newsp->spotangle, s10); 
-	  printf("scanning ss=%s\n", ss);
+	  //printf("scanning ss=%s\n", ss);
 	  newsp->spotcol = parsecol(s10, &t);
 	  *sl = newsp;
 	}
