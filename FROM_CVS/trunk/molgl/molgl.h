@@ -1,7 +1,6 @@
 #define MAXN 25000 /* maximum number of molecules to plot */
 #define NUMBW 256
-#define MAXAT 16 /* maximum number of aroms per molecule allowed
-		       (equal to the number of greys) */
+#define MAXAT 16 /* maximum number of aroms per molecule allowed (equal to the number of greys) */
 
 #define PI 2.0*acos(0.0)
 #define TWOPI (4.0*acos(0.0))
@@ -26,7 +25,7 @@ struct colStruct
   float rgba[4];
   char name[32];
 } *mgl_col;
-enum atom_types {MGL_ATOM_SPHERE, MGL_ATOM_DISK, MGL_ATOM_CYLINDER, MGL_ATOM_SUPELLIPS, MGL_ATOM_SPHERE_SPOT};
+enum atom_types {MGL_ATOM_SPHERE, MGL_ATOM_DISK, MGL_ATOM_CYLINDER, MGL_ATOM_SUPELLIPS, MGL_ATOM_SPHERE_SPOT, MGL_ATOM_SPHERE_MSPOT};
 typedef enum atom_types atom_types_e;
 
 struct atom_common {
@@ -71,6 +70,27 @@ struct atom_sphere_spot
   double ny;
   double nz;
 };
+struct spotlst
+{
+  double n[3];
+  int spotcol;
+  double spotangle;
+  struct spotlst *next;
+};
+struct atom_sphere_mspot
+{
+  struct atom_common common;
+  double R[3][3]; 
+  double a; /* semi-axes */
+  double b;
+  double c;
+  int n1;  /* integer for super-ellipsoid */
+  int n2; 
+  double tbeg;
+  double tend;
+  int nspot;
+  struct spotlst* sl;
+};
 struct atom_disk
 {
   struct atom_common common;
@@ -99,6 +119,7 @@ union atom
   struct atom_cylinder cylinder;
   struct atom_supellips supellips;
   struct atom_sphere_spot sphere_spot;
+  struct atom_sphere_mspot sphere_mspot; 
 };
 enum bond_types {NONE, MGL_BOND_WIRE, MGL_BOND_CYLINDER};
 typedef enum bond_types bond_types_e;
