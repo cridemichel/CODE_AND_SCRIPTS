@@ -5,8 +5,8 @@
 #define PI 2.0*acos(0.0)
 #define TWOPI (4.0*acos(0.0))
 #define PID2 acos(0.0)
-#define STACKS 20
-#define SLIDES 20
+#define STACKS 30
+#define SLIDES 30
 #define MGL_DISK_STACKS 15
 #define MGL_DISK_SLIDES 15
 #define MGL_NO_FADE  1
