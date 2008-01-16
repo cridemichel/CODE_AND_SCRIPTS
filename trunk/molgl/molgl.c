@@ -366,16 +366,54 @@ void EvalSuperEllipse(double t1,double t2,double p1,double p2,
    p->y = b * SIGN(st1) * pow(fabs(st1),p1);
    p->z = c * tmp * SIGN(st2) * pow(fabs(st2),p2);
 }
-
+void render_one_spot(double nx, double ny, double nz, double spotradius, 
+		     int spotcol, double spotangle, float fadeFact)
+{
+  double rax, ray, raz, rotangle, normra, normn;
+  double Pi;
+  Pi = 2.0*acos(0);
+ 
+  vectProd(0,1,0, nx, ny, nz, &rax, &ray, &raz);
+  if (rax==0 && ray==0 && raz==0)
+    {
+      if (ny < 0)
+	{
+	  rax = 0;
+	  ray = 0;
+	  raz = 1;
+	  rotangle=180;
+	}
+      else
+	{
+	  rax = 0;
+	  ray = 0;
+	  raz = 1;
+	  rotangle = 0;
+	}
+    }
+  else
+    {
+      normra = sqrt(Sqr(rax)+Sqr(ray)+Sqr(raz));
+      normn = sqrt(Sqr(nx)+Sqr(ny)+Sqr(nz));
+      rotangle = 180.0*acos(ny/normn)/Pi;
+    }
+  glRotatef(rotangle, rax, ray, raz);
+  glRotatef(180, 1, 0, 0);/* up-down flip */
+  /* render the spot here! */
+  setColor(mgl_col[spotcol].rgba, fadeFact);
+  CreatePartialSuperEllipse(1, 1, spotradius, spotradius, spotradius, globset.stacks, 
+			    globset.slides, 1, 0.0, spotangle);
+}
 /* ========================== >>> displayMol <<< ===========================*/
 void displayAtom(int nf, int nm, int na)
 {
   float fadeFact;
   float rotm[16];
+  struct spotlst *sl;
   GLUquadricObj *ss, *ss2, *ss3;
   atom_s *atom;
   int k1, k2;
-  double rax, ray, raz, rotangle, normra, normn, Pi;
+  double rax, ray, raz, rotangle, normra, normn, Pi, redrad;
   glPushMatrix();
   Pi = 2.0*acos(0);
   atom = &mols[nf][nm].atom[na];
@@ -410,7 +448,7 @@ void displayAtom(int nf, int nm, int na)
 	    }
 	}
     }
- /* 
+  /* 
   glEnable (GL_BLEND);
   if (atom->common.transp < 1.0)
     {
@@ -427,6 +465,22 @@ void displayAtom(int nf, int nm, int na)
     {
       glutSolidSphere (atom->sphere.radius, globset.stacks, globset.slides);
       
+    }
+  else if (atom->common.type==MGL_ATOM_SPHERE_MSPOT)
+    {
+      /* draw the sphere first with reduced radius to arrange spot later on it */
+      //printf("quiiiii\n");
+      redrad = atom->sphere_mspot.a*0.98;
+      glutSolidSphere (redrad, globset.stacks, globset.slides);
+      sl = atom->sphere_mspot.sl;
+      //printf("sl=%p\n", sl);
+      while (sl)
+	{
+	  //printf("sl=%p col=%d angle=%.15G\n", sl, sl->spotcol, sl->spotangle);
+	  render_one_spot(sl->n[0], sl->n[1], sl->n[2], atom->sphere_mspot.a, 
+			  sl->spotcol, sl->spotangle, fadeFact);
+	  sl = sl->next;
+	}
     }
   else if (atom->common.type==MGL_ATOM_SPHERE_SPOT)
     {
@@ -1394,11 +1448,14 @@ int parsecol(char *str, double *transp)
 }
 /* PARSE parse  parsing  PARSING */
 /* ========================== >>> assignAtom <<< ===========================*/
+char shl[4096];
 void assignAtom(int nf, int i, int a, const char* L)
 {
   char s1[128], s2[128], s3[128], s4[128], s5[128], s6[128], s7[128], s8[128], s9[128];
   char s10[128], s11[128], s12[128], s13[128], s14[128], s15[128], s16[128], s17[128], s18[128];
+  char *ss;
   atom_s *at;
+  struct spotlst** sl, *newsp;
   double t;
   at = &mols[nf][i].atom[a];
   //printf("read: %s\n", L);
@@ -1586,6 +1643,46 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->common.greyLvl = atoi(s5);
       at->common.atcol  = -1;
       at->common.transp = globset.deftransp;
+    }
+  else if (sscanf(L,"%s %s %s @ %s C[%[^]]] M %[^\n]\n", s1, s2, s3, s4, s5, shl) == 6)
+    {
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SPHERE_MSPOT;
+      //greylLvl[j][i] = colIdxBW[j];// default value of grey level
+      at->sphere_mspot.R[0][0] = 1.0;
+      at->sphere_mspot.R[0][1] = 0.0;
+      at->sphere_mspot.R[0][2] = 0.0;
+      at->sphere_mspot.R[1][0] = 0.0;
+      at->sphere_mspot.R[1][1] = 1.0;
+      at->sphere_mspot.R[1][2] = 0.0;
+      at->sphere_mspot.R[2][0] = 0.0;
+      at->sphere_mspot.R[2][1] = 0.0;
+      at->sphere_mspot.R[2][2] = 1.0;
+      at->sphere_mspot.n1 = 1.0;
+      at->sphere_mspot.n2 = 1.0;
+      at->sphere_mspot.a = atof(s4);
+      at->sphere_mspot.b = atof(s4);
+      at->sphere_mspot.c = atof(s4);
+      /* loop over spots here */ 
+      sl = &at->sphere_mspot.sl;
+      *sl=NULL;
+      //printf("shl=%s\n", shl);
+      for (ss = strtok(shl, ":"); ss; ss = strtok(NULL, ":"))
+	{ 
+	  newsp = malloc(sizeof(struct spotlst));
+	  newsp->next = *sl;
+	  sscanf(ss, "%lf %lf %lf %lf C[%[^]]] ", &newsp->n[0], &newsp->n[1], &newsp->n[2], &newsp->spotangle, s10); 
+	  printf("scanning ss=%s\n", ss);
+	  newsp->spotcol = parsecol(s10, &t);
+	  *sl = newsp;
+	}
+      /* ------------------- */
+      at->common.transp = t;
+      at->common.greyLvl = 0;
+      at->common.atcol = parsecol(s5, &t);
+      at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s @ %s C[%[^]]] P %s %s %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10) == 10)
     {
