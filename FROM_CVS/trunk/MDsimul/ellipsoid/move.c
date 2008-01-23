@@ -3604,6 +3604,7 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
 #ifndef MD_APPROX_JACOB
 extern double **matrix(int n, int m);
 extern void free_matrix(double **M, int n);
+#ifdef MD_ASYM_ITENS
 void calc_Rdot(int i, double cosea[3], double sinea[3], double **Ro)
 {
   int k1,k2,k3;
@@ -3715,6 +3716,7 @@ void calcFxtFt(int i, double x[3], double **RM, double cosea[3], double sinea[3]
 	 }
      }
 }
+#endif
 void calcFxtFtSym(double x[3], double **X,
 	       double D[3][3], double Omega[3][3], double **R, 
 	       double pos[3], double vel[3], double gradf[3],
