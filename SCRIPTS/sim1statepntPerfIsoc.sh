@@ -31,8 +31,8 @@ else
 EQSTPS=$4
 fi
 PARFILE=ellips.par
-cp $PARFILE X0_$2
-cd X0_$2 
+cp $PARFILE X0_$3
+cd X0_$3
 rm -f COORD_TMP*
 rm -f Store-*
 ELLEXE="../../ellipsoid"

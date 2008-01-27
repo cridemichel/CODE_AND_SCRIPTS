@@ -16,7 +16,7 @@ fi
 echo "X0= "$X0 "Phi=" $1
 if [ $TEST != "1" ]
 then
-../../SCRIPTS/sim1statepntPerf.sh $1 2 $X0
+../../SCRIPTS/sim1statepntPerfIsoc.sh $1 2 $X0
 fi
 i=$[$i+1]
 X0=`echo "$X0*$BASE"|bc -l| awk '{printf("%1.3G",$1)}'`
