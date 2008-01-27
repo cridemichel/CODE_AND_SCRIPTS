@@ -1,6 +1,7 @@
+TEST=1
 X0="0.4"
 BASE=1.1
-if [ "$1" == ""]
+if [ "$1" == "" ]
 then
 echo "You must supply the volume fraction!"
 exit
@@ -8,13 +9,17 @@ fi
 i=1
 while [ $i -le 10 ]
 do
-X0=`echo "$X0*$BASE"|bc -l`
-if [ ! -e $X0 ]
+if [ ! -e X0_$X0 ]
 then
-mkdir $X0
+mkdir X0_$X0
 fi
-cd $X0
+cd X0_$X0
+echo "X0= "$X0 "Phi=" $1
+if [ $TEST != "1" ]
+then
 ../../../SCRIPTS/sim1statepntPerf.sh $1 2 $X0
+fi
 cd ..
 i=$[$i+1]
+X0=`echo "$X0*$BASE"|bc -l| awk '{printf("%1.2G",$1)}'`
 done
