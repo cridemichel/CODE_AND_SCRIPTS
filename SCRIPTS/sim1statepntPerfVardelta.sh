@@ -26,8 +26,12 @@ fi
 EQSTPS=0
 PARFILE=ellips.par
 SETPARAMS=../../set_params.sh
-cp $PARFILE X0_$3
-cd X0_$3
+if [ ! -e DelNNL_$3 ]
+then
+mkdir DelNNL_$3
+fi
+cp $PARFILE DelNNL_$3
+cd DelNNL_$4
 rm -f COORD_TMP*
 rm -f Store-*
 ELLEXE="../../ellipsoid"
