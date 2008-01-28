@@ -26,11 +26,11 @@ fi
 EQSTPS=0
 PARFILE=ellips.par
 SETPARAMS=../../set_params.sh
-if [ ! -e DelNNL_$3 ]
+if [ ! -e DelNNL_$4 ]
 then
-mkdir DelNNL_$3
+mkdir DelNNL_$4
 fi
-cp $PARFILE DelNNL_$3
+cp ../$PARFILE DelNNL_$4
 cd DelNNL_$4
 rm -f COORD_TMP*
 rm -f Store-*
@@ -75,7 +75,7 @@ RCUT=`echo "2.0*e(0.5*l(($A0+$RNNL)*($A0+$RNNL)+($B0+$RNNL)*($B0+$RNNL)+($C0+$RN
 fi
 echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
 #RANDOMIZZAZIONE INIZIALE
-cp ../$PARFILE rand_$PARFILE
+cp $PARFILE rand_$PARFILE
 echo "L:" $INIL >> rand_$PARFILE
 #>>> SET TEMPERATURE TO 1.0
 $SETPARAMS rand_$PARFILE stepnum 10 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM parnumA $PARNUMA A0 $A0 B0 $B0 C0 $C0 rNebrShell $4
