@@ -1,8 +1,7 @@
 # $1 = volume fraction
 # $2 = cicli di produzione (1 ciclo = 1 tempo di equilibratura) (se < 0 non fa la produzione)
 # $3 = elongazione
-# $4 = se < 0 non fa l'equilibratura, se = 0 usa il MSD per terminare l'equilibratura, se > 0 fa 
-#      $4 passi di equilibratura ( 0 = default ) 
+# $4 = DeltaNNL
 if [ "$1" = "" ]
 then
 echo "Syntax: sim1statepnt <Volume_Fraction> <production_cycles> [elongation] [equilibration_steps]"
@@ -24,12 +23,7 @@ EL=`echo $DIR | awk -F _ '{print $2}'`
 else
 EL=$3
 fi
-if [ "$4" = "" ]
-then
 EQSTPS=0
-else
-EQSTPS=$4
-fi
 PARFILE=ellips.par
 SETPARAMS=../../set_params.sh
 cp $PARFILE X0_$3
@@ -80,7 +74,7 @@ echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
 cp ../$PARFILE rand_$PARFILE
 echo "L:" $INIL >> rand_$PARFILE
 #>>> SET TEMPERATURE TO 1.0
-$SETPARAMS rand_$PARFILE stepnum 10 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM parnumA $PARNUMA A0 $A0 B0 $B0 C0 $C0
+$SETPARAMS rand_$PARFILE stepnum 10 targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM parnumA $PARNUMA A0 $A0 B0 $B0 C0 $C0 rNebrShell $4
 ln -sf $ELLEXE $SIMRA
 $SIMRA -f ./rand_${PARFILE} > screen_$SIMRA 
 #exit 
@@ -90,7 +84,7 @@ ln -sf $ELLEXE $SIMRA
 $SIMRA -f ./rand_${PARFILE} >> screen_$SIMRA 
 #exit
 #CRESCITA
-$SETPARAMS $PARFILE stepnum 1000000 targetPhi $1 storerate 0.0 intervalSum 0.05 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor parnum $PARNUM parnumA $PARNUMA A0 $A0 B0 $B0 C0 $C0
+$SETPARAMS $PARFILE stepnum 1000000 targetPhi $1 storerate 0.0 intervalSum 0.05 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor parnum $PARNUM parnumA $PARNUMA A0 $A0 B0 $B0 C0 $C0 rNebrShell $4
 ln -sf $ELLEXE $SIMGR
 $SIMGR -f $PARFILE > screen_$SIMGR 
 #exit 
