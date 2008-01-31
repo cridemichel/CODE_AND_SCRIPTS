@@ -9,11 +9,16 @@ fi
 for f in $1
 do
 VD="0.04"
+if [ ! -e Phi$f ]
+then 
+mkdir Phi$f
+fi
 cd Phi$f
 echo "X0= "$X0 "Phi=" $f
 i=1
 while [ $i -le 20 ]
 do
+echo "VD=" $VD
 if [ $TEST != "1" ]
 then
 ../sim1statepntPerfVardelta.sh $f 1 $X0 $VD
