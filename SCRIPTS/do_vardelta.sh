@@ -1,7 +1,6 @@
 TEST=0
 X0="$2"
-VD="0.04"
-BASE="1.02"
+BASE="1.165"
 if [ "$1" == "" ]
 then
 echo "You must supply volume fractions and the elongation!"
@@ -9,6 +8,7 @@ exit
 fi
 for f in $1
 do
+VD="0.04"
 cd Phi$f
 echo "X0= "$X0 "Phi=" $f
 i=1
