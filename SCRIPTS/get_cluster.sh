@@ -5,6 +5,7 @@ NC=${#colarr[*]}
 ai=0  
 #echo "COL1=" ${colarr[1]} "COL2=" ${colarr[2]} "NC=" $NC
 #exit
+head -1 $1 
 cat $2 |
 while read PRIMO RESTO
 do
