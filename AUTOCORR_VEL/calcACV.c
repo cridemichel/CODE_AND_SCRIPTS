@@ -4,18 +4,18 @@
 #define MAXPTS 1000
 char **fname; 
 double time, *cc, veltmp, omtmp, *ti, *vel0[3], *velt[3], *omega0[3], *omegat[3], 
-       L, refTime, *omACV, *velACV;
+       L, refTime=0.0, *omACV, *velACV;
 int points, assez, NP, NPA;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-double A0, A1, B0, B1, C0, C1;
-
+double A0=-1.0, A1, B0, B1, C0, C1;
+double dt=-1.0;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *vel[3], 
 	      double *omega[3])
 {
   FILE *f;
   double r0, r1, r2, R[3][3], v[3], w[3];
-  int nat=0, i, cpos, a;
+  int foundtime=0, nat=0, i, cpos, a;
   f = fopen(fname, "r");
   while (!feof(f) && nat < 2) 
     {
@@ -31,9 +31,15 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *vel[3],
 	  fseek(f, cpos, SEEK_SET);
 	  fscanf(f, "%[^:]:", parname);
 	  //printf("[%s] parname=%s\n", fname, parname);
-	  if (!strcmp(parname, "time"))
+	  if (nat==1 && !foundtime && !strcmp(parname,"curStep"))
 	    {
 	      fscanf(f, "%[^\n]\n", parval);
+	      *ti = atoi(parval)*dt;
+	    }
+	  else if (!strcmp(parname, "time"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      foundtime=1;
 	      *ti = atof(parval);
 	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }	
@@ -50,20 +56,30 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *vel[3],
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
-	      fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
-		     &r0, &r1, &r2, &R[0][0], &R[0][1], &R[0][2],
-		     &R[1][0], &R[1][1], &R[1][2], &R[2][0], &R[2][1], &R[2][2]); 
+	      if (A0 > 0.0)
+		fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
+		       &r0, &r1, &r2, &R[0][0], &R[0][1], &R[0][2],
+		       &R[1][0], &R[1][1], &R[1][2], &R[2][0], &R[2][1], &R[2][2]); 
+	      else
+		fscanf(f, "%lf %lf %lf\n", &r0, &r1, &r2); 
+
 	      //for (a = 0; a < 3; a++)
 		//u[a][i] = R[assez][a];
 	    }
 	  for (i = 0; i < NP; i++) 
 	    {
-	      fscanf(f, "%lf %lf %lf %lf %lf %lf\n", 
-		     &v[0], &v[1], &v[2], &w[0], &w[1], &w[2]); 
+	      if (A0 > 0.0)
+		fscanf(f, "%lf %lf %lf %lf %lf %lf\n", 
+		       &v[0], &v[1], &v[2], &w[0], &w[1], &w[2]); 
+	      else
+		fscanf(f, "%lf %lf %lf\n", 
+		       &v[0], &v[1], &v[2]); 
+
 	      for (a = 0; a < 3; a++)
 		{
 		  vel[a][i] = v[a];
-		  omega[a][i] = w[a]; 
+		  if (A0 > 0.0)
+		    omega[a][i] = w[a]; 
 		}
 	    }
   	  break; 
@@ -126,8 +142,10 @@ int main(int argc, char **argv)
 	NP = atoi(parval);
       else if (!strcmp(parname,"parnumA"))
 	NPA = atoi(parval);
-      else if (!strcmp(parname,"NN"))
+      else if (!strcmp(parname,"NN") && nat==0)
 	NN = atoi(parval);
+      else if (!strcmp(parname,"steplength"))
+	dt = atof(parval);
       else if (!strcmp(parname, "a"))
        	{
 	  fscanf(f, "%[^\n]\n", parval);
@@ -162,7 +180,12 @@ int main(int argc, char **argv)
     assez = 2;
   if (NPA == -1)
     NPA = NP;
-  fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d assez=%d maxl=%d\n", points, NN, NP, nfiles, maxnp, assez, maxl);
+  if (dt<0.0)
+    fprintf(stderr, "[ED SIM] allocating %d items NN=%d NP=%d num files=%d maxnp=%d assez=%d maxl=%d\n", points, NN, NP, nfiles, maxnp, assez, maxl);
+  else
+    fprintf(stderr, "[MD SIM] allocating %d items NN=%d NP=%d num files=%d maxnp=%d assez=%d maxl=%d dt=%.15G\n", points, NN, NP, nfiles, maxnp, assez, maxl, dt);
+  if (A0 > 0.0)
+    printf("[ELLIPSOIDS]\n"); 
   if (NPA < NP)
     {
       printf("NPA=%d\n", NPA);
@@ -224,28 +247,35 @@ int main(int argc, char **argv)
 		  for (a = 0; a < 3; a++)
 		   {
 	             veltmp += velt[a][i]*vel0[a][i];
-		     omtmp += omegat[a][i]*omega0[a][i];
+		     if (A0 > 0.0)
+		       omtmp += omegat[a][i]*omega0[a][i];
 		   }
 		  velACV[np] += veltmp;
-		  omACV[np] += omtmp;
+		  if (A0 > 0.0)
+		    omACV[np] += omtmp;
 		  cc[np]+=1.0;
 		}
 	    }
 	}
     }
   f = fopen("velACV.dat", "w+");
-  f2= fopen("omACV.dat", "w+");
+  if (A0 > 0.0)
+    f2= fopen("omACV.dat", "w+");
   for (ii=1; ii < points; ii++)
     {
+      printf("cc[%d]=%f\n", ii, cc[ii]);
       velACV[ii] = velACV[ii]/cc[ii];
-      omACV[ii] = omACV[ii]/cc[ii];
+      if (A0 > 0.0)
+	omACV[ii] = omACV[ii]/cc[ii];
       if (ti[ii] > -1.0)
 	{
 	  fprintf(f, "%.15G %.15G\n", ti[ii]-ti[0], velACV[ii]);
-	  fprintf(f2, "%.15G %.15G\n", ti[ii]-ti[0], omACV[ii]);
+	  if (A0 > 0.0)
+	    fprintf(f2, "%.15G %.15G\n", ti[ii]-ti[0], omACV[ii]);
 	}
     }
   fclose(f);
-  fclose(f2);
+  if (A0 > 0.0)
+    fclose(f2);
   return 0;
 }
