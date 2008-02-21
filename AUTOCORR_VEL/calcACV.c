@@ -266,7 +266,7 @@ int main(int argc, char **argv)
     f2= fopen("omACV.dat", "w+");
   for (ii=1; ii < points; ii++)
     {
-      printf("cc[%d]=%f\n", ii, cc[ii]);
+      //printf("cc[%d]=%f\n", ii, cc[ii]);
       velACV[ii] = velACV[ii]/cc[ii];
       if (A0 > 0.0)
 	omACV[ii] = omACV[ii]/cc[ii];
