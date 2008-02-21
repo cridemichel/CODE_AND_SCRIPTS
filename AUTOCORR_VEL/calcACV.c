@@ -163,7 +163,7 @@ int main(int argc, char **argv)
 	}
     }
   fclose(f);
-  if (argc == 3)
+  if (argc >= 3)
     points = atoi(argv[2]);
   else
     points = NN;
@@ -206,7 +206,7 @@ int main(int argc, char **argv)
   ti = malloc(sizeof(double)*points);
   for (ii=0; ii < points; ii++)
     ti[ii] = -1.0;
-  if (argc==4)
+  if (argc >= 4)
     NN=atoi(argv[3]);
   first = 0;
   fclose(f2);
@@ -236,6 +236,7 @@ int main(int argc, char **argv)
 	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
 	      readconf(fname[nr2], &time, &refTime, NP, velt, omegat);
+	      //printf("nr1=%d nr2=%d JJ=%d time=%.15G\n", nr1, nr2, JJ, time);
 	      if (np < points && ti[np] == -1.0)
 		{
 		  ti[np] = time + refTime;
