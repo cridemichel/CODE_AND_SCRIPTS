@@ -5,7 +5,7 @@
 char **fname; 
 double time, *cc, veltmp, omtmp, *ti, *vel0[3], *velt[3], *omega0[3], *omegat[3], 
        L, refTime=0.0, *omACV, *velACV;
-int points, assez, NP, NPA;
+int points, assez, NP, NPA=-1;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 double A0=-1.0, A1, B0, B1, C0, C1;
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
   int NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
   if (argc <= 1)
     {
-      printf("Usage: calcACV <lista_file> [points] \n");
+      printf("Usage: calcACV <lista_file> [points] [incremento] [num. particelle]\n");
       printf("where points is the number of points of the correlation function\n");
       exit(-1);
     }
@@ -167,6 +167,8 @@ int main(int argc, char **argv)
     points = atoi(argv[2]);
   else
     points = NN;
+  if (argc == 5)
+    NP = atoi(argv[4]);
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
@@ -204,7 +206,8 @@ int main(int argc, char **argv)
   ti = malloc(sizeof(double)*points);
   for (ii=0; ii < points; ii++)
     ti[ii] = -1.0;
-
+  if (argc==4)
+    NN=atoi(argv[3]);
   first = 0;
   fclose(f2);
   for (ii=0; ii < points; ii++)
