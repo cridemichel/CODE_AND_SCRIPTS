@@ -22,6 +22,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
   int nat=0, i, cpos;
   double dt=-1;
   int curstp=-1;
+  static int first = 1;
 
   *ti = -1.0;
   f = fopen(fname, "r");
@@ -45,7 +46,8 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 		{
 		  fscanf(f, " %lf %lf %lf ", &DR[i][0], &DR[i][1], &DR[i][2]);
 		}
-	      foundDRs = 1;
+	      if (first)
+		foundDRs = 1;
 	    }
 	  else if (!strcmp(parname,"sumox"))
 	    {
@@ -115,6 +117,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
   if (*ti == -1)
     *ti = ((double)curstp)*dt;
   fclose(f);
+  first = 0;
 }
 void print_usage(void)
 {
