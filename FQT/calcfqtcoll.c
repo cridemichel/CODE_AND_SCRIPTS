@@ -165,7 +165,7 @@ int main(int argc, char **argv)
   qmin = atoi(argv[1]);
   qmax = atoi(argv[2]);
 #endif
-  NQarr = malloc(sizeof(int)*qmax);
+  NQarr = malloc(sizeof(int)*(qmax+1));
   if (qmax >= KMODMAX)
     qmax = KMODMAX-1;
   if (qmax < 0)

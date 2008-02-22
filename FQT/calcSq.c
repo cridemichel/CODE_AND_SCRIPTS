@@ -4,7 +4,7 @@
 #include <string.h>
 //#include <lapack.h>
 #define Sqr(x) ((x)*(x))
-char line[100000], parname[124], parval[256000];
+char line[1000000], parname[124], parval[2560000];
 int N, NA=-1;
 double x[3], *r[3];
 char fname[1024], inputfile[1024];
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
-      //printf("fname=%s argv[2]=%s\n",fname, argv[2]);
+      printf("fname=%s argv[2]=%s\n",fname, argv[2]);
       if (!(f = fopen(fname,"r")))
 	{
 	  printf("ERROR: I can not open file %s\n", fname);
@@ -182,7 +182,7 @@ int main(int argc, char** argv)
 	    {
 	      fscanf(f, "%lf\n", &L);
 	      invL = 1.0/L;
-	      //printf("qui\n");
+	      //printf("qui L=%.15G\n", L);
 	    }
 	  else
 	    {
