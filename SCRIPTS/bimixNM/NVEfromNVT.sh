@@ -24,9 +24,15 @@ else
 FACT=$2
 fi
 LASTFILE=`ls ../T$1/Cnf*|sort -t - -k 3 -n | tail -1`
-TOTSTPS=`cat $LASTFILE | awk -v fact=$FACT -F : '{if ($1=="totStep") print $2*fact}'`
+if `zcat $LASTFILE > /dev/null 2>&1` 
+then
+CATEXE="zcat"
+else
+CATEXE="cat"
+fi
+TOTSTPS=`$CATEXE $LASTFILE | awk -v fact=$FACT -F : '{if ($1=="totStep") print $2*fact}'`
+$CATEXE $LASTFILE | awk -v tstps=$TOTSTPS -F : ' BEGIN {doout=0} {if (doout==1) print $0; if ($0=="@@@") doout=1;}' > restart.cor
 echo "totSteps=>" $TOTSTPS
-cat $LASTFILE | awk -v tstps=$TOTSTPS -F : ' BEGIN {doout=0} {if (doout==1) print $0; if ($0=="@@@") doout=1;}' > restart.cor
 ../set_params.sh $PARFILE bakSaveMode 1 stepnum $TOTSTPS inifile restart.cor endFormat 2 endfile ${SIMNVE}.cor Nose 0 nRun NVE
 if [ "$3" != "" ]
 then 
