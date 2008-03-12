@@ -1528,6 +1528,9 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_INOUT_BARRIER:
+#ifdef MD_INF_BARRIER
+      factor = -2.0*vc;
+#else
       if (Sqr(vc) < 2.0*bheight/mredl)
 	{
 #if 1
@@ -1553,6 +1556,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 	  save_all_bonds(j, oldnbj);
 #endif
 	}
+#endif
       factor *= mredl;
 #if 0
       if (fabs(distSq - sigDeltaSq)>1E-12)    
@@ -1560,6 +1564,9 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
 #endif
       break;
     case MD_OUTIN_BARRIER:
+#ifdef MD_INF_BARRIER
+      factor = -2.0*vc;
+#else
 #if 0
       if ((i==78 && j==98)|| (i==98 && j==78))
 	printf("ENTERING 78-98 collType: %d\n", bt);
@@ -1571,6 +1578,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
       save_all_bonds(j, oldnbj);
 #endif
       factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
+#endif     
       MD_DEBUG36(printf("delta= %f height: %f mredl=%f\n", 
 		      Sqr(vc) + 2.0*bheight/mredl, bheight, mredl));
       factor *= mredl;
@@ -5565,7 +5573,7 @@ void save_fra(void)
   char fileop[1024], fileop2[1024], fileop3[1024];
   double rat[NA][3];
   double rcm[3];	
-  int i;
+  int i, ret, rerr;
   FILE* f;
   sprintf(fileop2 ,"Cnf-%d-%d", 
 	  OprogStatus.KK, OprogStatus.JJ);
@@ -5576,14 +5584,18 @@ void save_fra(void)
       mdPrintf(STD, "Error saving store file!\n", NULL);
       exit(-1);
     }
+  rerr = 0;
 #ifdef MD_BIG_DT
-fprintf(f, "%lld 0 %d %d 0\n", (long long int)((Oparams.time+OprogStatus.refTime)*1000.0/Oparams.Dt), 
-	  Oparams.parnum, Oparams.parnum-Oparams.parnumA);
+  ret = fprintf(f, "%lld 0 %d %d 0\n", 
+		(long long int)((Oparams.time+OprogStatus.refTime)*1000.0/Oparams.Dt), 
+		Oparams.parnum, Oparams.parnum-Oparams.parnumA);
 #else
-fprintf(f, "%lld 0 %d %d 0\n", (long long int)(Oparams.time*1000.0/Oparams.Dt), 
-	  Oparams.parnum, Oparams.parnum-Oparams.parnumA);
+  ret = fprintf(f, "%lld 0 %d %d 0\n", (long long int)(Oparams.time*1000.0/Oparams.Dt), 
+		Oparams.parnum, Oparams.parnum-Oparams.parnumA) 
 #endif
-  fprintf(f, "%.15G %.15G %.15G 0 0 %.15G\n", L, L, L, Oparams.Dt/1000.0);
+  rerr |= (ret < 0)?1:0;  
+  ret = fprintf(f, "%.15G %.15G %.15G 0 0 %.15G\n", L, L, L, Oparams.Dt/1000.0);
+  rerr |= (ret < 0)?1:0;  
   for (i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
       //printf("i=%d\n",i);
@@ -5591,9 +5603,12 @@ fprintf(f, "%lld 0 %d %d 0\n", (long long int)(Oparams.time*1000.0/Oparams.Dt),
       rcm[1] = ry[i];
       rcm[2] = rz[i];
       BuildAtomPos(i, rcm, R[i], rat);
-      fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
-      fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
-      fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
+      rerr |= (ret < 0)?1:0;  
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
+      rerr |= (ret < 0)?1:0;  
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+      rerr |= (ret < 0)?1:0;  
     }
   for (i = 0; i < Oparams.parnumA; i++)
     {
@@ -5601,9 +5616,12 @@ fprintf(f, "%lld 0 %d %d 0\n", (long long int)(Oparams.time*1000.0/Oparams.Dt),
       rcm[1] = ry[i];
       rcm[2] = rz[i];
       BuildAtomPos(i, rcm, R[i], rat);
-      fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
-      fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
-      fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
+      rerr |= (ret < 0)?1:0;  
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
+      rerr |= (ret < 0)?1:0;  
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+      rerr |= (ret < 0)?1:0;  
     }
 #ifdef MD_SAVEFRA_COMPRESSED
 #ifdef MD_MAC
@@ -5613,6 +5631,8 @@ fprintf(f, "%lld 0 %d %d 0\n", (long long int)(Oparams.time*1000.0/Oparams.Dt),
 #endif
   system(fileop3);
 #endif
+  if (rerr)
+    error_on_writing(f, fileop, "save_fra", "fprintf");
   fclose(f);
 }
 #endif
