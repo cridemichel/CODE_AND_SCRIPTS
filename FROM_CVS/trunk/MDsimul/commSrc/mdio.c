@@ -10,7 +10,6 @@ int printerRank;
 int my_rank, numOfProcs;
 MPI_Status status;
 #endif
-
 /* ============================ >>> openMPI <<< ============================ */
 int openNewMPI(char* fn, int how, int perm)
 {
@@ -821,3 +820,12 @@ void existDir(char* dirName)
     }
   closedir(rfdir);
 }
+
+void error_on_writing(FILE* f, char* filename, char *where, char *command)
+{
+  mdMsg(ALL, errno, where, "CRITICAL ERROR", command, NULL);
+  fclose(f);
+  remove(filename);
+  exit(-1);
+}
+
