@@ -33,7 +33,7 @@ fi
 TOTSTPS=`$CATEXE $LASTFILE | awk -v fact=$FACT -F : '{if ($1=="totStep") print $2*fact}'`
 $CATEXE $LASTFILE | awk -v tstps=$TOTSTPS -F : ' BEGIN {doout=0} {if (doout==1) print $0; if ($0=="@@@") doout=1;}' > restart.cor
 echo "totSteps=>" $TOTSTPS
-../set_params.sh $PARFILE bakSaveMode 1 stepnum $TOTSTPS inifile restart.cor endFormat 2 endfile ${SIMNVE}.cor Nose 0 nRun NVE
+../set_params.sh $PARFILE temperat $1  bakSaveMode 1 stepnum $TOTSTPS inifile restart.cor endFormat 2 endfile ${SIMNVE}.cor Nose 0 nRun NVE
 if [ "$3" != "" ]
 then 
 #NOTA: se si specifica NN FACT si riferisce ai blocchi di NN configurazioni 
