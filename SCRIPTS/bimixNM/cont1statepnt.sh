@@ -1,12 +1,17 @@
 PARFILE=BMsoft.par
-cp $PARFILE T$1
+if [ "$1" == "" ]
+then
+echo "con1statepnt.sh <temperature> <factor> <custom string>"
+exit
+fi
+#cp $PARFILE T$1
 cd T$1
 rm -f COORD_TMP*
 ELLEXE="../../bimix"
-SIMCONT="bimixNMT$1"
+SIMCONT="bimixNM${3}T$1"
 STORERATE="0.01"
 PARNUM=1000
-DT="0.003"
+DT="0.002"
 if [ "$2" == "" ]
 then
 FACT=5
