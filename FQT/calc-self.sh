@@ -22,8 +22,8 @@ then
 FORCE=1
 fi
 EXE_PATH=$HOME/ELLIPSOIDS
-QMIN=2
-QMAX=30
+QMIN=0
+QMAX=40
 if [ "$1" == "" ]
 then
 PHIDIRS=`ls -d Phi*/`
