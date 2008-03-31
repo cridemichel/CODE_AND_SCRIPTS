@@ -23,7 +23,7 @@ QMAX=`$PFQT/findmax Sq.dat 0`
 $PFQT/calcrho lista $QMAX $QMAX >> $LOGFILE 2>&1
 $PFQT/calcfqtcoll --ncomps 2 $QMAX $QMAX $PTS >> $LOGFILE 2>&1 
 $PFQT/calcfqtself lista $PTS $QMAX $QMAX >> $LOGFILE 2>&1
-$PMSD/calcmsd lista $PTS >> $LOGFILE 2>&1
+$PMSD/calcmsd -ng lista $PTS >> $LOGFILE 2>&1
 cd ..
 echo "done!"
 done
