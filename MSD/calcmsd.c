@@ -121,7 +121,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 }
 void print_usage(void)
 {
-  printf("Usage: calcmsd [ --skip/-s | --clusters/-c ] <listafile> [number of points]\n");
+  printf("Usage: calcmsd [ --nongauss/-ng | --skip/-s | --clusters/-c ] <listafile> [number of points]\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
