@@ -8,7 +8,6 @@
 */
 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
-extern void saveBakAscii(void);
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 extern void links(COORD_TYPE rcut, COORD_TYPE sigab[NA][NA]);
@@ -1099,9 +1098,6 @@ void move(void)
 	}
       ENDSIM = OprogStatus.equilibrated;
 #endif
-      /* save last equilibrated conf before quitting */
-      if (ENDSIM)
-	saveBakAscii(); 
     }
   
   /* Update the integral of the pressure tensor */
