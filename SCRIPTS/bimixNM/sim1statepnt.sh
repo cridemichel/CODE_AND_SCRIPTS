@@ -24,7 +24,7 @@ DT="0.002"
 #RANDOMIZZAZIONE INIZIALE
 cp $PARFILE rand_$PARFILE
 #>>> SET TEMPERATURE TO 10.0
-../set_params.sh rand_$PARFILE Nose 2 steplength $DT stepnum 1000 chkeqstps 50 eqFact 5.0 endfile ${SIMRA}.cor parnum $PARNUM temperat 10.0 sResetSteps 100 CMreset 100 bakSaveMode 0
+../set_params.sh rand_$PARFILE endFormat 2 Nose 2 steplength $DT stepnum 1000 chkeqstps 50 eqFact 5.0 endfile ${SIMRA}.cor parnum $PARNUM temperat 10.0 sResetSteps 100 CMreset 100 bakSaveMode 0 bakStepsAscii 10000
 ln -sf $BMEXE $SIMRA
 $SIMRA -f ./rand_${PARFILE} > screen_$SIMRA 
 cp rand_$PARFILE $PARFILE
