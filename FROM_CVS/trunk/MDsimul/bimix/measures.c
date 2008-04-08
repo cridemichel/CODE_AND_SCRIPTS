@@ -150,7 +150,7 @@ void transDiff(void)
     }
   f=fopen("msd.dat", "a");
   fprintf(f, "%.15G %.15G\n", Oparams.steplength*Oparams.curStep, 
-	  DrSq/((double)Oparams.parnum[a]+Oparams.parnum[a]));
+	  DrSq/((double)Oparams.parnum[0]+Oparams.parnum[1]));
   fclose(f);
   if (Oparams.parnum[1]!=0)
     {
