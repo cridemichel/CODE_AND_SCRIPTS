@@ -8,6 +8,7 @@
 */
 
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
+extern void saveBakAscii(char *fn);
 extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 extern void links(COORD_TYPE rcut, COORD_TYPE sigab[NA][NA]);
@@ -1099,7 +1100,8 @@ void move(void)
       ENDSIM = OprogStatus.equilibrated;
 #endif
     }
-  
+  if (Oparams.curStep == Oparams.totStep || ENDSIM)
+    saveBakAscii(NULL);
   /* Update the integral of the pressure tensor */
 #if 0
   updateDQ(Oparams.steplength);
