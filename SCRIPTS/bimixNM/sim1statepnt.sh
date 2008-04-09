@@ -1,7 +1,8 @@
 PARFILE=BMsoft.par
 if [ "$1" == "" ]
 then
-echo "You must supply the temperature and the number of cycles!"
+echo "You must supply the temperature, the number of cycles and optionally a custom string, i.e.:"
+echo "sim1statepnt.sh <temperature> <num. of cycles> <custom string>"
 exit
 fi
 ln -sf $HOME/MDsimul/bin/bimix bimixNM 
@@ -24,7 +25,7 @@ DT="0.002"
 #RANDOMIZZAZIONE INIZIALE
 cp $PARFILE rand_$PARFILE
 #>>> SET TEMPERATURE TO 10.0
-../set_params.sh rand_$PARFILE endFormat 2 Nose 2 steplength $DT stepnum 1000 chkeqstps 50 eqFact 5.0 endfile ${SIMRA}.cor parnum $PARNUM temperat 10.0 sResetSteps 100 CMreset 100 bakSaveMode 0 bakStepsAscii 10000
+../set_params.sh rand_$PARFILE endFormat 2 Nose 2 steplength $DT stepnum 1000 chkeqstps 50 eqFact 5.0 endfile ${SIMRA}.cor parnum $PARNUM temperat 10.0 sResetSteps 100 CMreset 100 bakSaveMode 0 bakStepsAscii 500000
 ln -sf $BMEXE $SIMRA
 $SIMRA -f ./rand_${PARFILE} > screen_$SIMRA 
 cp rand_$PARFILE $PARFILE
@@ -46,7 +47,7 @@ rm -f Cnf*
 STCI=`cat screen_$SIMEQ | awk '{if ($1=="[MSDcheck]") print $3}'`
 STPS=`echo "$STCI*$2"| bc -l`
 NN=`echo "l($STCI)/l(1.4)" | bc -l | awk '{printf("%d",$0)}'`
-../set_params.sh $PARFILE stepnum $STPS chkeqstps 0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor sResetSteps 0 bakSaveMode 1
+../set_params.sh $PARFILE stepnum $STPS chkeqstps 0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor sResetSteps 0 bakSaveMode 0
 ln -sf $BMEXE $SIMPR
 ./$SIMPR -f ./$PARFILE > screen_$SIMPR  
 cd ..
