@@ -3,6 +3,7 @@ FL=""
 for f in NM*-*
 do
 FL="$FL $f/rho*/NVE-T*/Fqs* $f/rho*/NVE-T*/N-sqt* $f/rho*/NVE-T*/MSD* $f/rho*/NVE-T*/Sq* $f/rho*/NVE-T*/alpha*" 
+FL="$FL $f/rho*/T*/Fqs* $f/rho*/T*/N-sqt* $f/rho*/T*/MSD* $f/rho*/T*/Sq* $f/rho*/T*/alpha*"
 done
 echo "FILE_LIST=" $FL
 tar czf  BMNMres${DATA}.tgz $FL

@@ -1,5 +1,11 @@
 echo "Deleting unuseful Cnf files..."
-for f in T*
+if [ "$1" == "" ]
+then
+DIRS="T*"
+else
+DIRS=$1
+fi
+for f in $DIRS
 do
 cd  $f
 echo "Dir: " $f
