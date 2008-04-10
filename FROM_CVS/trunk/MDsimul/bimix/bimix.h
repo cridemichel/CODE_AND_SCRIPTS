@@ -440,6 +440,11 @@ struct pascii opro_ascii[] =
   {"histMB",       OS(histMB),                  NUMV,               1, "%d"},
   {"sumTemp",      &OS(sumTemp),                    1,              1, "%.6G"},
   //mancano le rxi per i coeff. di diffusione!!!!
+#if 0
+  {"rxi",        OS(rxi),                  -MAXPAR,              1, "%.10G"},
+  {"ryi",        OS(ryi),                  -MAXPAR,              1, "%.10G"},
+  {"rzi",        OS(rzi),                  -MAXPAR,              1, "%.10G"},
+#endif
   {"sumPress",     &OS(sumPress),                   1,              1, "%.6G"},
   {"Q",            &OS(Q),                          1,              1 , "%.6G"},
   {"W",            &OS(W),                          1,              1, "%.6G"},
