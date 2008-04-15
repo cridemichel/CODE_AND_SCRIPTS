@@ -1100,7 +1100,7 @@ void move(void)
       ENDSIM = OprogStatus.equilibrated;
 #endif
     }
-  if (Oparams.curStep == Oparams.totStep || ENDSIM)
+  if (OprogStatus.bakSaveMode==0 && (Oparams.curStep == Oparams.totStep || ENDSIM))
     saveBakAscii(NULL);
   /* Update the integral of the pressure tensor */
 #if 0
