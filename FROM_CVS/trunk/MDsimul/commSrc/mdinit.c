@@ -263,7 +263,7 @@ void Continue(void)
 #if !defined(MD_HARDSPHERES) && !defined(MC_SIMUL)
   OxvaHead.Vol = Vol;
 #endif
-  logBlock = (int) rint(pow(OprogStatus.base, (double) OprogStatus.NN));
+  logBlock = (int) rint(pow(OprogStatus.base, (double) OprogStatus.NN+1));
 
   /* avendo letto il file di backup vol e' gia' inizializzata
      correttamente */
