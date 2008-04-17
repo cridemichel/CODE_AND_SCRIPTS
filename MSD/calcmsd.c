@@ -174,7 +174,7 @@ void parse_param(int argc, char** argv)
 int main(int argc, char **argv)
 {
   FILE *fngA, *fngB, *fng, *f, *f2, *f3, *fA, *fB, *f2A, *f2B;
-  double *adjDr[3], Dr, Dw, A1, A2, A3, dr;
+  double *adjDr[3], Dr, Dw, A1, A2, A3, dr, DR2, DR2DR2;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int NP, NPA=-1, NN=-1, fine, JJ, nat, maxl, maxnp, np, NP1, NP2;
   double refTime=0.0, tmpdbl;
@@ -408,6 +408,8 @@ int main(int argc, char **argv)
 		continue;
 	      for (i = 0; i < NP; i++)
 		{
+		  if (nongauss)
+		    DR2=0;
 		  for (a = 0; a < 3; a++)
 		    {
 		      Dw = wt[a][i] - w0[a][i];
@@ -433,11 +435,8 @@ int main(int argc, char **argv)
 		      tmpdbl = (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 		      MSD[np] += tmpdbl;
 		      if (nongauss)
-			{
-			  alpha2[np] += tmpdbl*tmpdbl;
-
-			}
-		      if (clusters)
+			DR2 += tmpdbl;
+	    	      if (clusters)
 			{
 			  if (isPercPart[i]==1)
 			    MSDcls[0][np] += tmpdbl;
@@ -462,8 +461,6 @@ int main(int argc, char **argv)
 			    {
 			      tmpdbl = (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 			      MSDA[np] += tmpdbl;
-			      if (nongauss)
-				alpha2A[np] += tmpdbl*tmpdbl;
 			      if (foundrot)
 				rotMSDA[np] += Dw*Dw;
 			    }
@@ -471,13 +468,21 @@ int main(int argc, char **argv)
 			    {
 			      tmpdbl = (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
 			      MSDB[np] += tmpdbl;
-			      if (nongauss)
-				alpha2B[np] += tmpdbl*tmpdbl;
 			      if (foundrot)
 				rotMSDB[np] += Dw*Dw;
 			    }
 			}
 		    }
+		  if (nongauss)
+	    	    {
+		      DR2DR2 = DR2*DR2;
+	    	      alpha2[np] += DR2DR2;
+		      if (i < NPA)
+			alpha2A[np] += DR2DR2;
+		      else
+			alpha2B[np] += DR2DR2;
+		    }
+	
 		  if (clusters)
 		    {
 		      if (isPercPart[i]==1)
@@ -520,7 +525,7 @@ int main(int argc, char **argv)
 	  tmpdbl = tmpdbl*tmpdbl;
 	  fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], MSD[ii]/cc[ii]/((double)NP), cc[ii]);
 	  if (nongauss)
-	    fprintf(fng, "%.15G %.15G %f\n", ti[ii]-ti[0], (3.0/5.0)*alpha2[ii]/cc[ii]/((double)NP)/tmpdbl, cc[ii]);
+	    fprintf(fng, "%.15G %.15G %f\n", ti[ii]-ti[0], (3.0/5.0)*alpha2[ii]/cc[ii]/((double)NP)/tmpdbl-1.0, cc[ii]);
 	  if (foundrot)
 	    fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSD[ii]/cc[ii]/((double)NP), cc[ii]);
 	}
@@ -536,10 +541,10 @@ int main(int argc, char **argv)
 	    {
 	      tmpdbl = MSDA[ii]/cc[ii]/((double)NPA);
 	      tmpdbl = tmpdbl*tmpdbl;
-	      fprintf(fngA, "%.15G %.15G %f\n", ti[ii]-ti[0], (3.0/5.0)*alpha2A[ii]/cc[ii]/((double)NPA)/tmpdbl, cc[ii]);
+	      fprintf(fngA, "%.15G %.15G %f\n", ti[ii]-ti[0], (3.0/5.0)*alpha2A[ii]/cc[ii]/((double)NPA)/tmpdbl-1.0, cc[ii]);
 	      tmpdbl = MSDB[ii]/cc[ii]/((double)NP-NPA);
 	      tmpdbl = tmpdbl*tmpdbl;
-	      fprintf(fngB, "%.15G %.15G %f\n", ti[ii]-ti[0], (3.0/5.0)*alpha2B[ii]/cc[ii]/((double)NP-NPA)/tmpdbl, cc[ii]);
+	      fprintf(fngB, "%.15G %.15G %f\n", ti[ii]-ti[0], (3.0/5.0)*alpha2B[ii]/cc[ii]/((double)NP-NPA)/tmpdbl-1.0, cc[ii]);
 	    }
 	}
     }
