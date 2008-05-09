@@ -8965,7 +8965,7 @@ void timeshift_calendar(void)
 extern int getnumbonds(int np, interStruct *ts, int inverted);
 int first=1;
 #endif
-#ifdef EDHE_FLEX
+#if defined(EDHE_FLEX) && defined(MD_RABBIT)
 int termination(void)
 {
   int nb;
@@ -8979,7 +8979,7 @@ int termination(void)
   ts.type2 = 5;
   ts.spot1 = 1;
   ts.spot2 = 0;
-  nb += getnumbonds(1,&ts, 0);			
+  nb += getnumbonds(1, &ts, 0);			
   if ((nb==1 || nb==2) && first)
     {
       double ti = 0;
@@ -8995,6 +8995,20 @@ int termination(void)
       fclose(f);
       return 0;
     }	 
+  if (nb==1)
+    {
+      double ti = 0;
+      ti = Oparams.time;	
+#ifdef 	MD_BIG_DT
+      ti += OprogStatus.refTime;	
+#endif
+      if (ti - OprogStatus.first_time > OprogStatus.time_limit) 
+	{
+	  ENDSIM=1;
+	  printf("1 BOND but time limit (=%f) from first bond (=%f) reached\n", OprogStatus.time_limit, OprogStatus.first_time);
+	  printf("EXITING!\n");
+	}
+    }
   if (nb==2)
     {
       double ti = 0;

@@ -1506,6 +1506,10 @@ void usrInitBef(void)
     OprogStatus.xi = 0.00001;
     OprogStatus.Tf = 0.01;
 #endif
+#ifdef MD_RABBIT
+    OprogStatus.time_limit = 100000000000.0;
+    OprogStatus.first_time = 0.0;
+#endif
 #ifdef MD_BIG_DT
     OprogStatus.bigDt = -1.0;
 #endif
