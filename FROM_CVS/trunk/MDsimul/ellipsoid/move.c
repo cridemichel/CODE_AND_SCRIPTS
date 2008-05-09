@@ -8989,6 +8989,7 @@ int termination(void)
 #ifdef 	MD_BIG_DT
       ti += OprogStatus.refTime;	
 #endif
+      OprogStatus.first_time = ti;
       printf("1 BOND time = %.15G\n", ti);
       f=fopen("onebond.dat","w");
       fprintf(f,"%.15G\n", ti);
