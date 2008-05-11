@@ -8970,6 +8970,9 @@ int termination(void)
 {
   int nb;
   interStruct ts;
+#if 1
+  return 0;
+#endif
   ts.type1 = 0;
   ts.type2 = 5;
   ts.spot1 = 1;
