@@ -204,8 +204,47 @@ double calcpotene(void)
  return 0.5*Epot;
 }
 #endif
+#ifdef MD_RABBIT
+extern int getnumbonds(int np, interStruct *ts, int inverted);
+void get_bimono_bonds(int *bulk, int *mono, int *bi)
+{
+  int nb, i, ti;
+  interStruct ts;
+  *bulk = 0;
+  *mono = 0;
+  *bi = 0;
+  nb=0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      ti = typeOfPart[i];
+      if (ti==0 || ti==1)
+	{
+	  ts.type1 = ti;
+	  ts.type2 = 5;
+	  ts.spot1 = 1;
+	  ts.spot2 = 0; 
+	  if (ti==0)
+	    nb = getnumbonds(i, &ts, 0);
+	  else
+	    nb += getnumbonds(i, &ts, 0);
+	  if (ti==1)
+	    {
+	      if (nb==1) 
+		(*mono)++;
+	      else if (nb==2)
+		(*mono)++;
+	      else
+		(*bulk)++;
+	    }
+	}
+    }
+}
+#endif
 void calcV(void)
 {
+#ifdef MD_RABBIT
+  int bulk, mono, bi;
+#endif
 #ifdef MD_PATCHY_HE
 #ifdef MD_FOUR_BEADS
   radius_of_gyration();
@@ -227,6 +266,17 @@ void calcV(void)
  fclose(mf);
 #else
   V = 0;
+#endif
+#ifdef MD_RABBIT
+  /* Salva il numero di legami monovalenti e bivalenti */
+  mf = fopenMPI(absMisHD("bi-mono-bonds.dat"),"a");
+  get_bimono_bonds(&bulk, &mono, &bi);
+#ifdef MD_BIG_DT
+  fprintf(mf, "%15G %d %d %d\n", Oparams.time + OprogStatus.refTime, bulk, mono, bi);
+#else
+  fprintf(mf, "%15G %d %d %d\n", Oparams.time, bulk, mono, bi);
+#endif
+  fclose(mf);
 #endif
 }
 void calc_energy(char *msg);
