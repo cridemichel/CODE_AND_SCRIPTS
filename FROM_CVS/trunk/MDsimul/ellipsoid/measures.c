@@ -232,7 +232,7 @@ void get_bimono_bonds(int *bulk, int *mono, int *bi)
 	      if (nb==1) 
 		(*mono)++;
 	      else if (nb==2)
-		(*mono)++;
+		(*bi)++;
 	      else
 		(*bulk)++;
 	    }
@@ -258,9 +258,9 @@ void calcV(void)
     fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
 #else
 #ifdef MD_BIG_DT
-  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, V/((double)Oparams.parnum));
+  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, V);
 #else
-  fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
+  fprintf(mf, "%15G %.15G\n", Oparams.time, V);
 #endif
 #endif
  fclose(mf);
