@@ -1406,7 +1406,7 @@ int two_axes_are_equal(int pt)
 }
 int get_dof_flex(int filter)
 {
-  int pt, dofOfType, dofTot, sa;
+  int pt, dofOfType, dofTot, sa, dofR2sub=0, dofT2sub=0;
   dofTot = 0;
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
@@ -1417,8 +1417,10 @@ int get_dof_flex(int filter)
 	  typesArr[pt].sax[1] == typesArr[pt].sax[2])
 	{
 	  /* sfere con o senza sticky spots */
+	  /* il controllo sulla massa infinita andrebbe esteso a tutti casi */
+
 	  if (typesArr[pt].nspots == 0 || (typesArr[pt].nspots!=0 && all_spots_in_CoM(pt)))	  
-	    dofOfType = 3;
+    	    dofOfType = 3;
 	  else
 	    dofOfType = 5;
 	}
@@ -1449,6 +1451,21 @@ int get_dof_flex(int filter)
 	    }
 	}
       MD_DEBUG36(printf("pt=%d dofOfType=%d filter=%d brown=%d ntypes=%d\n", pt, dofOfType, filter, typesArr[pt].brownian, Oparams.ntypes));
+      if (typesArr[pt].m > MD_INF_MASS) 
+	dofT2sub = 3;
+      dofR2sub = 0;
+      if (typesArr[pt].I[0] > MD_INF_ITENS)
+	dofR2sub++;
+      if (typesArr[pt].I[1] > MD_INF_ITENS)
+	dofR2sub++;
+      if (typesArr[pt].I[2] > MD_INF_ITENS)
+	dofR2sub++;
+      if (dofOfType == 5 && dofR2sub == 3)
+	dofR2sub = 2;
+      if (dofOfType == 3)
+	dofOfType -= dofT2sub;
+      else 
+	dofOfType -= dofT2sub + dofR2sub;
       dofTot += dofOfType*typeNP[pt];
     }
   /* il centro di massa dell'anticorpo è fermo */
