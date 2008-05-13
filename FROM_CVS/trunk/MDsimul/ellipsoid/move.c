@@ -8311,7 +8311,8 @@ void calc_energy_filtered(int filter)
 #ifdef MD_ASYM_ITENS
       //RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
 #endif
-      Ktra += typesArr[typeOfPart[i]].m*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+      if (typesArr[typeOfPart[i]].m <= MD_INF_MASS)
+	Ktra += typesArr[typeOfPart[i]].m*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 #ifdef MD_ASYM_ITENS
       calc_omega(i);
 #endif
@@ -8328,13 +8329,17 @@ void calc_energy_filtered(int filter)
       //printf("calcnorm wt: %.15G wtp:%.15G\n", calc_norm(wt), calc_norm(wtp));
       for (k1=0; k1 < 3; k1++)
 	{
-	  Krot += Sqr(wtp[k1])*typesArr[typeOfPart[i]].I[k1];
+	  if (typesArr[typeOfPart[i]].I[k1] < MD_INF_ITENS)
+	    Krot += Sqr(wtp[k1])*typesArr[typeOfPart[i]].I[k1];
 	  //printf("I[%d][%d]=%.15G wt[%d]:%.15G wtp[%d]:%.15G\n", 0, k1, Oparams.I[0][k1],
 	  //     k1, wt[k1], k1, wtp[k1]);
 	}
 #else
       for (k1=0; k1 < 3; k1++)
-	Krot += Sqr(wt[k1])*typesArr[typeOfPart[i]].I[k1];
+	{
+	  if (typesArr[typeOfPart[i]].I[k1] < MD_INF_ITENS)
+	    Krot += Sqr(wt[k1])*typesArr[typeOfPart[i]].I[k1];
+	}
 #endif
     }
   Ktra *= 0.5;
