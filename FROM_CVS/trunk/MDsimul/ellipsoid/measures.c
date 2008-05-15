@@ -732,12 +732,165 @@ void calcrotMSD(void)
 #ifdef EDHE_FLEX
 extern int get_dof_flex(int filter);
 extern void calc_energy_filtered(int filter);
+extern void calc_omega(int i);
+
+void calc_energy_filtered_per_type(int filter, double *Kt)
+{
+  int i, k1;
+  double wt[3], DK;
+  int nt;
+#ifdef MD_ASYM_ITENS
+  double wtp[3];
+  int k2;
+  //double **Ia, **Ib;
+  //Ia = matrix(3,3); 
+  //Ib = matrix(3,3);
+#endif
+  for (nt=0; nt < Oparams.ntypes; nt++)
+    Kt[nt] = 0.0;
+  K = Ktra = Krot = 0;
+  nt = 0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (filter!=0 && typesArr[typeOfPart[i]].brownian!=filter)
+	continue;
+      if (i >= typeNP[nt])
+	nt++;
+      /* calcola tensore d'inerzia e le matrici delle due quadriche */
+#ifdef MD_ASYM_ITENS
+      //RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
+#endif
+      if (typesArr[typeOfPart[i]].m <= MD_INF_MASS)
+	{
+          DK = typesArr[typeOfPart[i]].m*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])); 
+	  Ktra += DK;
+	  Kt[nt] += DK;
+	}
+#ifdef MD_ASYM_ITENS
+      calc_omega(i);
+#endif
+      wt[0] = wx[i];
+      wt[1] = wy[i];
+      wt[2] = wz[i];
+#ifdef MD_ASYM_ITENS
+      for (k1=0; k1 < 3; k1++)
+	{
+	  wtp[k1] = 0.0;
+	  for (k2=0; k2 < 3; k2++)
+	    wtp[k1] += R[i][k1][k2]*wt[k2];
+	}
+      //printf("calcnorm wt: %.15G wtp:%.15G\n", calc_norm(wt), calc_norm(wtp));
+      for (k1=0; k1 < 3; k1++)
+	{
+	  if (typesArr[typeOfPart[i]].I[k1] < MD_INF_ITENS)
+	    {
+	      DK = Sqr(wtp[k1])*typesArr[typeOfPart[i]].I[k1];
+	      Krot += DK;
+	      Kt[nt] += DK;
+	    }
+	  //printf("I[%d][%d]=%.15G wt[%d]:%.15G wtp[%d]:%.15G\n", 0, k1, Oparams.I[0][k1],
+	  //     k1, wt[k1], k1, wtp[k1]);
+	}
+#else
+      for (k1=0; k1 < 3; k1++)
+	{
+	  if (typesArr[typeOfPart[i]].I[k1] < MD_INF_ITENS)
+	    {
+	      DK = Sqr(wt[k1])*typesArr[typeOfPart[i]].I[k1];
+	      Krot += DK;
+	      Kt[nt] += DK;
+	    }
+	}
+#endif
+    }
+  Ktra *= 0.5;
+  Krot *= 0.5;
+  for (nt=0; nt < Oparams.ntypes; nt++)
+    Kt[nt] *= 0.5;
+  K = Ktra + Krot;
+}
+extern int all_spots_in_CoM(int pt);
+extern int two_axes_are_equal(int pt);
+int all_spots_on_symaxis(int sa, int pt);
+
+int get_dof_flex_per_type(int *doft)
+{
+  int pt, dofOfType, dofTot, sa, dofR2sub=0, dofT2sub=0;
+  dofTot = 0;
+  for (pt = 0; pt < Oparams.ntypes; pt++)
+    {
+      /* Sphere */
+      if (typesArr[pt].sax[0] == typesArr[pt].sax[1] &&
+	  typesArr[pt].sax[1] == typesArr[pt].sax[2])
+	{
+	  /* sfere con o senza sticky spots */
+	  /* il controllo sulla massa infinita andrebbe esteso a tutti casi */
+
+	  if (typesArr[pt].nspots == 0 || (typesArr[pt].nspots!=0 && all_spots_in_CoM(pt)))	  
+    	    dofOfType = 3;
+	  else
+	    dofOfType = 5;
+	}
+      else if (typesArr[pt].nspots == 0)
+	{
+	  if (two_axes_are_equal(pt)!=-1)
+	    dofOfType = 5;
+	  else
+	    /* ellissoide senza sticky spots */
+	    dofOfType = 6;
+   	}
+      else
+	{
+	  /* loop over all spots to see whether they are along z-axis or not */
+	  sa = two_axes_are_equal(pt);
+	  if (sa == -1)
+	    dofOfType = 6;
+	  else
+	    {
+	      if (all_spots_on_symaxis(sa, pt))
+		{
+		  dofOfType = 5;
+		}
+	      else
+		{
+		  dofOfType = 6;
+		}
+	    }
+	}
+      //MD_DEBUG36(printf("pt=%d dofOfType=%d filter=%d brown=%d ntypes=%d\n", pt, dofOfType, filter, typesArr[pt].brownian, Oparams.ntypes));
+      if (typesArr[pt].m > MD_INF_MASS) 
+	dofT2sub = 3;
+      dofR2sub = 0;
+      if (typesArr[pt].I[0] > MD_INF_ITENS)
+	dofR2sub++;
+      if (typesArr[pt].I[1] > MD_INF_ITENS)
+	dofR2sub++;
+      if (typesArr[pt].I[2] > MD_INF_ITENS)
+	dofR2sub++;
+      if (dofOfType == 5 && dofR2sub == 3)
+	dofR2sub = 2;
+      if (dofOfType == 3)
+	dofOfType -= dofT2sub;
+      else 
+	dofOfType -= dofT2sub + dofR2sub;
+      doft[pt] = dofOfType*typeNP[pt];
+      dofTot += dofOfType*typeNP[pt];
+    }
+  /* il centro di massa dell'anticorpo è fermo */
+  return dofTot;
+}
+
 #endif
 void temperat(void)
 {
   double dof;
 #ifdef EDHE_FLEX
   int kk;
+#ifndef MD_FOUR_BEADS
+  static double *Kt=NULL;
+  static int *doft=NULL;
+  int nt=0;
+#endif
   double P[3];
 #endif
 #if defined(MD_INELASTIC) || defined(MD_FOUR_BEADS)
@@ -758,12 +911,22 @@ void temperat(void)
   K *= 0.5;
 #endif
 #ifdef EDHE_FLEX
+#ifdef MD_FOUR_BEADS
   calc_energy_filtered(0);
+#else  
+  if (!Kt)
+    Kt = malloc(Oparams.ntypes*sizeof(double));
+  if (!doft)
+    doft = malloc(Oparams.ntypes*sizeof(int));
+  calc_energy_filtered_per_type(0, Kt);
+#endif
 #ifdef MD_FOUR_BEADS
   /* note that also angular momentum is conserved, hence we have 6 degrees of freedom less! */
   dof = ((double)Oparams.parnum)*6.0;
 #else
-  dof = get_dof_flex(0) - OprogStatus.frozenDOF;
+  //dof = get_dof_flex(0) - OprogStatus.frozenDOF;
+  dof = get_dof_flex_per_type(doft);
+  dof -= OprogStatus.frozenDOF;
 #endif
 #else
   calc_energy(NULL);
@@ -820,24 +983,35 @@ void temperat(void)
   mf2 =fopenMPI(absMisHD("temp_granular.dat"), "a"); 
 #endif
 #ifndef MD_FOUR_BEADS
+#ifndef MD_FOUR_BEADS
 #ifdef MD_BIG_DT
-  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, temp);
+  fprintf(mf, "%.15G %.15G ", Oparams.time + OprogStatus.refTime, temp);
 #else
-  fprintf(mf, "%15G %.15G\n", Oparams.time, temp);
+  fprintf(mf, "%.15G %.15G ", Oparams.time, temp);
+#endif
+  for (nt = 0; nt < Oparams.ntypes; nt++)
+    fprintf(mf, "%.15G ", ((doft[nt]==0)?(0.0):(2.0*Kt[nt]/doft[nt])) );
+  fprintf(mf, "\n");
+#else
+#ifdef MD_BIG_DT
+  fprintf(mf, "%.15G %.15G\n", Oparams.time + OprogStatus.refTime, temp);
+#else
+  fprintf(mf, "%.15G %.15G\n", Oparams.time, temp);
+#endif
 #endif
 #endif
 #ifdef MD_FOUR_BEADS
 #ifdef MD_BIG_DT
-  fprintf(mf, "%15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, temp, tempTra, tempRot);
+  fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, temp, tempTra, tempRot);
 #else
-  fprintf(mf, "%15G %.15G %.15G %.15G\n", Oparams.time, temp, tempTra, tempRot);
+  fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time, temp, tempTra, tempRot);
 #endif
 #else
 #ifdef MD_INELASTIC
 #ifdef MD_BIG_DT
-  fprintf(mf2, "%15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, ((double)OprogStatus.collCount), tempTra, tempRot);
+  fprintf(mf2, "%.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, ((double)OprogStatus.collCount), tempTra, tempRot);
 #else
-  fprintf(mf2, "%15G %.15G %.15G %.15G\n", Oparams.time, ((double)OprogStatus.collCount), tempTra, tempRot);
+  fprintf(mf2, "%.15G %.15G %.15G %.15G\n", Oparams.time, ((double)OprogStatus.collCount), tempTra, tempRot);
 #endif
 #endif
 #endif
