@@ -734,7 +734,7 @@ extern int get_dof_flex(int filter);
 extern void calc_energy_filtered(int filter);
 extern void calc_omega(int i);
 
-void calc_energy_filtered_per_type(int filter, double *Kt)
+void calc_energy_filtered_per_type(double *Kt)
 {
   int i, k1;
   double wt[3], DK;
@@ -749,13 +749,8 @@ void calc_energy_filtered_per_type(int filter, double *Kt)
   for (nt=0; nt < Oparams.ntypes; nt++)
     Kt[nt] = 0.0;
   K = Ktra = Krot = 0;
-  nt = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
-      if (filter!=0 && typesArr[typeOfPart[i]].brownian!=filter)
-	continue;
-      if (i >= typeNP[nt])
-	nt++;
       /* calcola tensore d'inerzia e le matrici delle due quadriche */
 #ifdef MD_ASYM_ITENS
       //RDiagtR(i, Ia, Oparams.I[0][0], Oparams.I[0][1], Oparams.I[0][2], R[i]);
@@ -764,7 +759,7 @@ void calc_energy_filtered_per_type(int filter, double *Kt)
 	{
           DK = typesArr[typeOfPart[i]].m*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])); 
 	  Ktra += DK;
-	  Kt[nt] += DK;
+	  Kt[typeOfPart[i]] += DK;
 	}
 #ifdef MD_ASYM_ITENS
       calc_omega(i);
@@ -786,7 +781,7 @@ void calc_energy_filtered_per_type(int filter, double *Kt)
 	    {
 	      DK = Sqr(wtp[k1])*typesArr[typeOfPart[i]].I[k1];
 	      Krot += DK;
-	      Kt[nt] += DK;
+	      Kt[typeOfPart[i]] += DK;
 	    }
 	  //printf("I[%d][%d]=%.15G wt[%d]:%.15G wtp[%d]:%.15G\n", 0, k1, Oparams.I[0][k1],
 	  //     k1, wt[k1], k1, wtp[k1]);
@@ -798,7 +793,7 @@ void calc_energy_filtered_per_type(int filter, double *Kt)
 	    {
 	      DK = Sqr(wt[k1])*typesArr[typeOfPart[i]].I[k1];
 	      Krot += DK;
-	      Kt[nt] += DK;
+	      Kt[typeOfPart[i]] += DK;
 	    }
 	}
 #endif
@@ -819,6 +814,7 @@ int get_dof_flex_per_type(int *doft)
   dofTot = 0;
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
+      dofT2sub = 0;
       /* Sphere */
       if (typesArr[pt].sax[0] == typesArr[pt].sax[1] &&
 	  typesArr[pt].sax[1] == typesArr[pt].sax[2])
@@ -857,7 +853,6 @@ int get_dof_flex_per_type(int *doft)
 		}
 	    }
 	}
-      //MD_DEBUG36(printf("pt=%d dofOfType=%d filter=%d brown=%d ntypes=%d\n", pt, dofOfType, filter, typesArr[pt].brownian, Oparams.ntypes));
       if (typesArr[pt].m > MD_INF_MASS) 
 	dofT2sub = 3;
       dofR2sub = 0;
@@ -918,7 +913,7 @@ void temperat(void)
     Kt = malloc(Oparams.ntypes*sizeof(double));
   if (!doft)
     doft = malloc(Oparams.ntypes*sizeof(int));
-  calc_energy_filtered_per_type(0, Kt);
+  calc_energy_filtered_per_type(Kt);
 #endif
 #ifdef MD_FOUR_BEADS
   /* note that also angular momentum is conserved, hence we have 6 degrees of freedom less! */
