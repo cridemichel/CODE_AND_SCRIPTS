@@ -41,8 +41,8 @@ double sfA, sfB;
 double invaSq, invbSq, invcSq, costolAngSD;
 double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 double rA[3], rB[3];
-void (*nrfuncv)(int n, double v[], double fvec[], int i, int j, double shift[3]);
-void (*nrfuncvD)(int n, double v[], double fvec[], int i, int j, double shift[3]);
+void (*nrfuncv)(int n, double v[], double fvec[], double shift[3]);
+void (*nrfuncvD)(int n, double v[], double fvec[], double shift[3]);
 int nn, nn2, nnD; /* Global variables to communicate with fmin.*/
 double *fvec, *fvecG, *fvecD;
 double **fjac,*g,*p,*xold;
@@ -73,11 +73,11 @@ double scalProd(double *A, double *B)
     R += A[kk]*B[kk];
   return R;
 }
-double fminD(double x[], int iA, int iB, double shift[]) 
+double fminD(double x[], double shift[]) 
 {
   int i;
   double sum;
-  (*nrfuncvD)(nnD,x,fvecD,iA,iB,shift);
+  (*nrfuncvD)(nnD,x,fvecD,shift);
   for (sum=0.0,i=0;i<nnD;i++)
     sum += Sqr(fvecD[i]); 
   return 0.5*sum; 
@@ -631,98 +631,9 @@ void frprmnRyck(double p[], int n, double ftol, int *iter, double *fret, double 
 }
 
 
-void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], double x[], 
-	    double *f, double stpmax, int *check, 
-	    double (*func)(double [], int), int iA, 
-	    double tolx)
-/*
-   Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
-   fold and g[1..n], and a direction p[1..n], finds a new point x[1..n] along the direction p
-   from xold where the function func has decreased  "sufficiently".  The new function value is 
-   returned in f. stpmax is an input quantity that limits the length of the steps so that 
-   you do not try to evaluate the function in regions where it is unde ned or subject 
-   to overflow.
-   p is usually the Newton direction. The output quantity check is false (0) on a normal exit. 
-   It is true (1) when x is too close to xold. In a minimization algorithm, this usually 
-   signals convergence and can be ignored. 
-   However, in a zero-finding algorithm the calling program 
-   should check whether the convergence is spurious. Some  difficult  problems may require 
-   double precision in this routine.*/
-{
-  int i; 
-  double a,alam,alam2=0.0,alamin,b,disc,f2=0.0,rhs1,rhs2,slope,sum,temp, test,tmplam; 
-  *check=0; 
-  for (sum=0.0,i=0;i<n;i++) 
-    sum += p[i]*p[i]; 
-  sum=sqrt(sum); 
-  if (sum > stpmax) 
-    for (i=0;i<n;i++) 
-      p[i] *= stpmax/sum; /*Scale if attempted step is too big.*/ 
-  for (slope=0.0,i=0;i<n;i++) 
-    slope += g[i]*p[i]; 
-  if (slope >= 0.0) 
-    {
-      printf("Roundoff problem in lnsrch."); 
-      exit(-1);
-    }
-  test=0.0; /*Compute lambda_min.*/
-  for (i=0;i<n;i++) 
-    {
-      temp=fabs(p[i])/FMAX(fabs(xold[i]),1.0); 
-      if (temp > test) 
-	test=temp; 
-    } 
-  alamin=tolx/test; alam=1.0;
-  for (;;) 
-    { 
-      for (i=0;i<n;i++) 
-	x[i]=xold[i]+alam*p[i]; 
-      *f=(*func)(x,iA); 
-      if (alam < alamin) 
-	{ /* Convergence on  x. For zero  nding, the calling program 
-	     should verify the convergence.*/ 
-	  for (i=0;i<n;i++) 
-	    x[i]=xold[i]; 
-	  *check=1; 
-	  return;
-	}
-      else if (*f <= fold+ALF*alam*slope) 
-	return; 
-	/* Su cient function decrease.*/
-      else 
-	{ /* Backtrack. */
-	  if (alam == 1.0) 
-	    tmplam = -slope/(2.0*(*f-fold-slope));/* First time.*/
-	  else
-	    { /* Subsequent backtracks.*/
-	      rhs1 = *f-fold-alam*slope;
-	      rhs2=f2-fold-alam2*slope;
-	      a=(rhs1/(alam*alam)-rhs2/(alam2*alam2))/(alam-alam2);
-	      b=(-alam2*rhs1/(alam*alam)+alam*rhs2/(alam2*alam2))/(alam-alam2); 
-	      if (a == 0.0) 
-		tmplam = -slope/(2.0*b); 
-	      else 
-		{
-		  disc=b*b-3.0*a*slope; 
-		  if (disc < 0.0) 
-		    tmplam=0.5*alam; 
-		  else if (b <= 0.0) 
-		    tmplam=(-b+sqrt(disc))/(3.0*a); 
-		  else 
-		    tmplam=-slope/(b+sqrt(disc)); 
-		} 
-	      if (tmplam > 0.5*alam) 
-		tmplam=0.5*alam; /* lambda <= 0.5 lambda_1.*/
-	    } 
-	}
-      alam2=alam;
-      f2 = *f; 
-      alam=FMAX(tmplam,0.1*alam); /* lambda >= 0.1 lambda_1.*/
-    }/* Try again.*/
-}
 void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[], 
 	    double *f, double stpmax, int *check, 
-	    double (*func)(double [], int, int, double[]), int iA, int iB, double shift[3],
+	    double (*func)(double [], double[]), double shift[3],
 	    double tolx)
 /*
    Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
@@ -766,7 +677,7 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
     { 
       for (i=0;i<n;i++) 
 	x[i]=xold[i]+alam*p[i]; 
-      *f=(*func)(x,iA,iB,shift); 
+      *f=(*func)(x,shift); 
       if (alam < alamin) 
 	{ /* Convergence on  x. For zero  nding, the calling program 
 	     should verify the convergence.*/ 
@@ -809,7 +720,7 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
       alam=FMAX(tmplam,0.1*alam); /* lambda >= 0.1 lambda_1.*/
     }/* Try again.*/
 }
-void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3]);
+void fdjacFD(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double [], int, int, double []), double shift[3]);
 void ludcmp(double **a, int n,  int* indx, double* d, int *ok)
 {
   /* A[i][j] = Aij 
@@ -926,7 +837,7 @@ void lubksb(double **a, int n, int* indx, double *b)
     } /* All done! */
 }
 
-void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, double shift[3])
+void funcs2beZeroedDistNeg(int n, double x[], double fvec[], double shift[3])
 {
   int k1, k2; 
   double fx[3], gx[3];
@@ -964,7 +875,7 @@ void funcs2beZeroedDistNeg(int n, double x[], double fvec[], int i, int j, doubl
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
 }
 void fdjacDistNeg(int n, double x[], double fvec[], double **df, 
-    	       void (*vecfunc)(int, double [], double [], int, int, double []), int iA, int iB, double shift[3], double *fx, double *gx)
+    	       void (*vecfunc)(int, double [], double [], double []), double shift[3], double *fx, double *gx)
 {
   int kk;
   double axi[3], axj[3];
@@ -1078,8 +989,8 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
 
 
 void newtDistNeg(double x[], int n, int *check, 
-	  void (*vecfunc)(int, double [], double [], int, int, double []),
-	  int iA, int iB, double shift[3], int tryagain)
+	  void (*vecfunc)(int, double [], double [], double []),
+	  double shift[3], int tryagain)
 {
   int i,its=0,ok;
   double fx[3], gx[3];
@@ -1088,9 +999,9 @@ void newtDistNeg(double x[], int n, int *check,
   nnD=n; 
   nrfuncvD=vecfunc; 
 #ifdef MD_GLOBALNRD
-  f=fminD(x,iA,iB,shift); /*fvec is also computed by this call.*/
+  f=fminD(x,shift); /*fvec is also computed by this call.*/
 #else
-  funcs2beZeroedDistNeg(n,x,fvecD,iA,iB,shift);
+  funcs2beZeroedDistNeg(n,x,fvecD,shift);
 #endif
   test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
   for (i=0;i<n;i++) 
@@ -1116,7 +1027,7 @@ void newtDistNeg(double x[], int n, int *check,
 	  FREERETURND;
 	}
       fdjac_disterr = 0;
-      fdjacDistNeg(n,x,fvecD,fjac,vecfunc, iA, iB, shift, fx, gx);
+      fdjacDistNeg(n,x,fvecD,fjac,vecfunc, shift, fx, gx);
       if (fdjac_disterr && !tryagain)
 	{
 	  *check = 2;
@@ -1157,7 +1068,7 @@ void newtDistNeg(double x[], int n, int *check,
 	{
 	  adjust_step_dist8(x, p, fx, gx);
 	} 
-      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,iA,iB,shift, TOLXD); 
+      lnsrch(n,xold,fold,g,p,x,&f,stpmax,check,fminD,shift, TOLXD); 
 
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
@@ -1232,7 +1143,7 @@ void newtDistNeg(double x[], int n, int *check,
   return;
 }
 
-void tRDiagR(int i, double **M, double a, double b, double c, double **Ri)
+void tRDiagR(double **M, double a, double b, double c, double **Ri)
 {
   int na;
   int k1, k2, k3;
@@ -1290,8 +1201,7 @@ void print_matrix(double **M, int n)
 }
 
 
-void guess_dist(int i, int j, 
-		double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
+void guess_dist(double *rA, double *rB, double **Xa, double **Xb, double *rC, double *rD,
 		double **RA, double **RB)
 {
   double gradA[3], gradB[3], gradaxA[3], gradaxB[3], dA[3], dB[3];
@@ -1396,8 +1306,7 @@ void distSD(double shift[3], double *vecg, double lambda, int halfspring)
 }
 
 
-double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
-     		double *vecgsup, int calcguess)
+double calcDistNeg(double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess)
 {
   /* SDmethod=1 usa la riduzione del passo nello Steepest Descent (SD) e applica lo SD sempre
      SDmethod=2 non usa la riduzione del passo e applica lo SD solo se il calcolo della distanza fallisce 
@@ -1407,7 +1316,6 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double ti, segno, segno2;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
   int retcheck, tryagain = 0;
-  int typei, typej;
   double axaiF, axbiF, axciF;
   double axajF, axbjF, axcjF;
 #ifndef MD_ASYM_ITENS
@@ -1437,7 +1345,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   invaSq = 1/Sqr(saxA[0]);
   invbSq = 1/Sqr(saxA[1]);
   invcSq = 1/Sqr(saxA[2]);
-  tRDiagR(i, Xa, invaSq, invbSq, invcSq, RtA);
+  tRDiagR(Xa, invaSq, invbSq, invcSq, RtA);
 
   rB[0] = rxB;
   rB[1] = ryB;
@@ -1445,7 +1353,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   invaSq = 1.0/Sqr(saxB[0]);
   invbSq = 1.0/Sqr(saxB[1]);
   invcSq = 1.0/Sqr(saxB[2]);
-  tRDiagR(j, Xb, invaSq, invbSq, invcSq, RtB);
+  tRDiagR(Xb, invaSq, invbSq, invcSq, RtB);
 
 retry:
   if (forceguess)
@@ -1454,7 +1362,7 @@ retry:
     {
       if (guessDistOpt==1)
 	{
-	  guess_dist(i, j, rA, rB, Xa, Xb, rC, rD, RtA, RtB);
+	  guess_dist(rA, rB, Xa, Xb, rC, rD, RtA, RtB);
 	}
       else
 	{
@@ -1534,7 +1442,7 @@ retry:
 	vecg[k1] = vecgsup[k1];
     }
   
-  newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift, tryagain); 
+  newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, shift, tryagain); 
   //numcalldist++;
   if (retcheck != 0)
     {
@@ -1555,7 +1463,7 @@ retry:
 	  calcguess=2;
 	  goto retry;
 	} 
-      printf("[calcDistNeg] I couldn't calculate distance between %d and %d\n, exiting....\n", i, j);
+      printf("[calcDistNeg] I couldn't calculate distance between HEs exiting....\n");
       exit(-1);
     }
   for (k1 = 0; k1 < 8; k1++)
