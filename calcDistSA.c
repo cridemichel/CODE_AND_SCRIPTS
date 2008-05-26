@@ -35,21 +35,37 @@ const double epsdSD = 0.01;
 int fdjac_disterr;
 long long int itsfrprmn=0, callsfrprmn=0,callsok=0, callsprojonto=0, itsprojonto=0;
 long long accngA=0, accngB=0;
-double costolSDgrad, saxA[3], saxB[3], rxA, ryA, rzA, rxB, ryB, rzB;
+double costolSDgrad, saxA[3]={2,1,1}, saxB[3]={2,1,1}, posA[3]={0.0,0.0,-3.0}, posB[3]={0.0,0.0,+3.0};
+double RinpA[3][3]={{1,0,0},{0,1,0},{0,0,1}};
+double RinpB[3][3]={{1,0,0},{0,1,0},{0,0,1}};
 double gradfG[3], gradgG[3], dxG[6];
 double sfA, sfB;
 double invaSq, invbSq, invcSq, costolAngSD;
-double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+double **XbXa, **Xa, **Xb, **RA, **RB, **Rt, **RtA, **RtB, r1[3], r2[3];
 double rA[3], rB[3];
 void (*nrfuncv)(int n, double v[], double fvec[], double shift[3]);
 void (*nrfuncvD)(int n, double v[], double fvec[], double shift[3]);
 int nn, nn2, nnD; /* Global variables to communicate with fmin.*/
-double *fvec, *fvecG, *fvecD;
+double *fvecD;
 double **fjac,*g,*p,*xold;
 int *indx;
 double shiftcg[3], lambdacg, minaxicg, minaxjcg;
 
 int cghalfspring, icg, jcg, doneryck;
+double *vector(int n)
+{
+  return calloc(n, sizeof(double)); 
+}
+double **matrix(int n, int m)
+{
+  double **M;
+  int i;
+  M = malloc(sizeof(double*)*n);
+  for (i=0; i < n; i++)
+    M[i] = calloc(m, sizeof(double));
+  return M;
+}
+
 /* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
 calling program. Global variables also communicate the function values back to 
@@ -1306,12 +1322,18 @@ void distSD(double shift[3], double *vecg, double lambda, int halfspring)
 }
 
 
-double calcDistNeg(double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess)
+double calcDistNeg(double rrA[3], double RRA[3][3], double ssaxA[3], double rrB[3], double RRB[3][3], 
+		   double ssaxB[3])
 {
   /* SDmethod=1 usa la riduzione del passo nello Steepest Descent (SD) e applica lo SD sempre
      SDmethod=2 non usa la riduzione del passo e applica lo SD solo se il calcolo della distanza fallisce 
      SDmethod=3 usa la riduzione del passo e applica lo SD solo se il calcolo della distanza fallisce 
      SDmethod=4 non usa la riduzione del passo e applica lo SD sempre */
+  double shift[3]={0.0,0.0,0.0}; 
+  double vecgsup[8]={0,0,0,0,0,0,0,0};
+  double alpha;
+  int aa, bb;
+  int calcguess=1;
   double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], fx[3];
   double ti, segno, segno2;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
@@ -1329,30 +1351,45 @@ double calcDistNeg(double shift[3], double *r1, double *r2, double *alpha, doubl
   costolSDgrad = cos(tolSDgrad);
   costhrNR = cos(tolAngNR);
   costolAngSD = cos(tolAngSD);
-  axaiF = saxA[0];
-  axbiF = saxA[1];
-  axciF = saxA[2];
+  fvecD=vector(8);
+  XbXa = matrix(3, 3);
+  Xa = matrix(3, 3);
+  Xb = matrix(3, 3);
+  RA = matrix(3, 3);
+  RB = matrix(3, 3);
+  Rt = matrix(3, 3);
+  RtA = matrix(3, 3);
+  RtB = matrix(3, 3);
+  for (aa=0; aa < 3; aa++)
+    for (bb=0; bb < 3; bb++)
+      {
+	RtA[aa][bb] = RRA[aa][bb];
+	RtB[aa][bb] = RRB[aa][bb];	
+      }
+  axaiF = ssaxA[0];
+  axbiF = ssaxA[1];
+  axciF = ssaxA[2];
   minaxA = min3(axaiF,axbiF,axciF);
-  axajF = saxB[0];
-  axbjF = saxB[1];
-  axcjF = saxB[2];
+  axajF = ssaxB[0];
+  axbjF = ssaxB[1];
+  axcjF = ssaxB[2];
   minaxB = min3(axajF,axbjF,axcjF);
   minaxAB = min(minaxA,minaxB);
-  rA[0] = rxA;
-  rA[1] = ryA;
-  rA[2] = rzA;
+  rA[0] = rrA[0];
+  rA[1] = rrA[1];
+  rA[2] = rrA[2];
   /* ...and now orientations */
-  invaSq = 1/Sqr(saxA[0]);
-  invbSq = 1/Sqr(saxA[1]);
-  invcSq = 1/Sqr(saxA[2]);
+  invaSq = 1/Sqr(ssaxA[0]);
+  invbSq = 1/Sqr(ssaxA[1]);
+  invcSq = 1/Sqr(ssaxA[2]);
   tRDiagR(Xa, invaSq, invbSq, invcSq, RtA);
 
-  rB[0] = rxB;
-  rB[1] = ryB;
-  rB[2] = rzB;
-  invaSq = 1.0/Sqr(saxB[0]);
-  invbSq = 1.0/Sqr(saxB[1]);
-  invcSq = 1.0/Sqr(saxB[2]);
+  rB[0] = rrB[0];
+  rB[1] = rrB[1];
+  rB[2] = rrB[2];
+  invaSq = 1.0/Sqr(ssaxB[0]);
+  invbSq = 1.0/Sqr(ssaxB[1]);
+  invcSq = 1.0/Sqr(ssaxB[2]);
   tRDiagR(Xb, invaSq, invbSq, invcSq, RtB);
 
 retry:
@@ -1480,7 +1517,7 @@ retry:
       r12[k1] = r1[k1] - r2[k1];
     } 
   
-  *alpha = vecg[3];
+  alpha = vecg[3];
   segno = -1;
   /* se rC è all'interno dell'ellissoide A allora restituisce una distanza negativa*/
   for (k1 = 0; k1 < 3; k1++)
@@ -1530,4 +1567,8 @@ retry:
   else
     return -calc_norm(r12);
 }
-
+int main(int argc, char **argv)
+{
+  printf("Dist=%.15G\n", calcDistNeg(posA, RinpA, saxA, posB, RinpB, saxB));
+  return 0;
+}
