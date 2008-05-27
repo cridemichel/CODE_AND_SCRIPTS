@@ -49,6 +49,7 @@ int nn, nn2, nnD; /* Global variables to communicate with fmin.*/
 double *fvecD;
 double **fjac,*g,*p,*xold;
 int *indx;
+double gradplane[3];
 double shiftcg[3], lambdacg, minaxicg, minaxjcg;
 
 int cghalfspring, icg, jcg, doneryck;
@@ -1004,7 +1005,6 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
    * essere anche negativa! */
   for (k1=0; k1 < 3; k1++)
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
-  //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
 #endif
 }
 
@@ -1325,7 +1325,619 @@ void distSD(double shift[3], double *vecg, double lambda, int halfspring)
       vecg[kk] = vec[kk];
     }
 }
+void init_all(void)
+{
+  costolSDgrad = cos(tolSDgrad);
+  costhrNR = cos(tolAngNR);
+  costolAngSD = cos(tolAngSD);
+  fvecD=vector(8);
+  fjac=matrix(8, 8);
+  g=vector(8);
+  p=vector(8); 
+  xold=vector(8); 
+  //fvec=vector(8); 
+  indx=ivector(8);
+  fvecD=vector(8);
+  XbXa = matrix(3, 3);
+  Xa = matrix(3, 3);
+  Xb = matrix(3, 3);
+  RA = matrix(3, 3);
+  RB = matrix(3, 3);
+  Rt = matrix(3, 3);
+  RtA = matrix(3, 3);
+  RtB = matrix(3, 3);
+}
+void calc_intersec_neigh(double *rB, double *rA, double **Xa, double* rI, double alpha)
+{
+  double A, B=0.0, C=0.0, D=0.0, tt=0.0;
+  double rBA[3];
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    rBA[k1] = rB[k1] - rA[k1];
+  A = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      A += rBA[k1]*Xa[k1][k2]*rBA[k2];
+ 
+  if (A <= 0)
+    {
+      printf("NNL [calc_intersec] Serious problem guessing distance, aborting...\n");
+      printf("tt = %f D=%f A=%f B=%f C=%f\n", tt, D, A, B, C);
+      printf("distance: %f\n", sqrt(Sqr(rBA[0])+Sqr(rBA[1])+Sqr(rBA[2])));
+      exit(-1);
+    }
+  tt = sqrt(1 / A); 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      rI[k1] = rA[k1] + alpha*tt*rBA[k1];  
+    }
+}
+void guess_distNeigh_plane(double *rA, double *rB, double **Xa, double *grad, double *rC, double *rD,
+		double **RA, double saA[3])
+{
+  double gradA[3], gradaxA[3], dA[3], dB[3];
+  int k1, n;
+  double sp;
+  for (k1 = 0; k1 < 3; k1++)
+    gradA[k1] =  grad[k1];
+  for (n = 0; n < 3; n++)
+    {
+      gradaxA[n] = 0;
+      for (k1 = 0; k1 < 3; k1++) 
+	gradaxA[n] += gradA[k1]*RA[n][k1];
+    }
+  for (k1=0; k1 < 3; k1++)
+    {
+      dA[k1] = rA[k1];
+      for (n=0; n < 3;n++)
+	dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+    }
+  calc_intersec_neigh(dA, rA, Xa, rC, 1);
+  for (k1=0; k1 < 3; k1++)
+    dB[k1] = rB[k1] - rC[k1];
+  sp = scalProd(dB, grad);
+  for (k1=0; k1 < 3; k1++)
+    rD[k1] = rC[k1] + sp*grad[k1];
+}
+void calc_intersec_neigh_plane(double *rA, double *rB, double **Xa, double *grad, double* rC, double* rD)
+{
+  double A, B=0.0, C=0.0, D=0.0, tt=0.0;
+  double rBA[3], rBAgrad;
+  int k1, k2;
+  /* la direzione è quella perpendicolare al piano */
+  for (k1=0; k1 < 3; k1++)
+    rBA[k1] = grad[k1];
+  A = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      A += rBA[k1]*Xa[k1][k2]*rBA[k2];
+ 
+  if (A <= 0)
+    {
+      printf("NNL2 [calc_intersec] Serious problem guessing distance, aborting...\n");
+      printf("tt = %f D=%f A=%f B=%f C=%f\n", tt, D, A, B, C);
+      printf("grad = (%.10f, %.10f, %.10f\n", grad[0], grad[1], grad[2]);
+      printf("distance: %f\n", sqrt(Sqr(rBA[0])+Sqr(rBA[1])+Sqr(rBA[2])));
+      //print_matrix(Xa,3);
+      //print_matrix(Xb,3);
+      exit(-1);
+    }
+  tt = sqrt(1 / A); 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      rC[k1] = rA[k1] + tt*rBA[k1];  
+    }
 
+  /* ...e ora calcoliamo rD (guess sul piano) */
+  for (k1=0; k1 < 3; k1++)
+    rBA[k1] = rB[k1] - rA[k1];
+  rBAgrad = scalProd(rBA, grad);
+  for (k1=0; k1 < 3; k1++)
+    rD[k1] = rA[k1] + rBAgrad*grad[k1];
+}
+void funcs2beZeroedNeighPlane(int n, double x[], double fvec[])
+{
+  int na, k1, k2; 
+  double  rA[3], ti;
+  double fx[3];
+  double invaSqN, invbSqN, invcSqN;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
+#if 0
+  invaSqN = 1/Sqr(typesArr[typei].sax[0]);
+  invbSqN = 1/Sqr(typesArr[typei].sax[1]);
+  invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+  tRDiagR(i, Xa, invaSqN, invbSqN, invcSqN, Rt);
+#endif
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+      	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+   }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[3])*gradplane[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+#if 1
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1]-rB[k1])*gradplane[k1];
+#endif
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+}
+
+void fdjacDistNegNeighPlane(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double []))
+{
+  double fx[3];
+  int k1, k2;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = 2.0*Xa[k1][k2];
+	  df[k1][k2+3] = 0;
+	}
+    }
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      //gx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2]-rA[k2]);
+	  //gx[k1] += 2.0*Xb[k1][k2]*(x[k2+3]-rB[k2]);
+	}
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  for (k1 = 0; k1 < 5; k1++)
+    {
+      df[3][k1+3] = 0;
+    } 
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = 0;
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1+3] = gradplane[k1];
+    } 
+  df[4][6] = df[4][7] = 0;
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][6] = -2.0*x[6]*gradplane[k1];
+      df[k1][7] = 0.0;
+    } 
+
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2] = 1.0; //+ 2.0*x[7]*Xa[k1][k2];
+	  else 
+	    df[k1+5][k2] = 0.0;//2.0*x[7]*Xa[k1][k2];
+	}
+    }
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2+3] = -1;
+	  else 
+	    df[k1+5][k2+3] = 0;
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][6] = 0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][7] = gradplane[k1];//fx[k1];
+#ifndef MD_GLOBALNRDNL
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[6])*gradplane[k1];
+    }
+ fvec[3] = 0.0;
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
+   }
+ fvec[3] = 0.5*fvec[3]-1.0;
+ //fvec[4] = 0.5*fvec[4]-1.0;
+ /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + gradplane[k1]*x[7];//[k1]*x[7]; 
+#endif
+}
+void (*nrfuncvDNeigh)(int n, double v[], double f[]);
+
+double fminDNeigh(double x[]) 
+/* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
+vector of functions at x. It is set to point to a user-supplied routine in the 
+calling program. Global variables also communicate the function values back to 
+the calling program.*/
+{
+  int i;
+  double sum;
+  (*nrfuncvDNeigh)(nnD,x,fvecD);
+  for (sum=0.0,i=0;i<nnD;i++)
+    sum += Sqr(fvecD[i]); 
+  return 0.5*sum; 
+}
+void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], double x[], 
+	    double *f, double stpmax, int *check, 
+	    double (*func)(double []), 
+	    double tolx)
+/*
+   Given an n-dimensional point xold[1..n], the value of the function and gradient there, 
+   fold and g[1..n], and a direction p[1..n], finds a new point x[1..n] along the direction p
+   from xold where the function func has decreased  "sufficiently".  The new function value is 
+   returned in f. stpmax is an input quantity that limits the length of the steps so that 
+   you do not try to evaluate the function in regions where it is unde ned or subject 
+   to overflow.
+   p is usually the Newton direction. The output quantity check is false (0) on a normal exit. 
+   It is true (1) when x is too close to xold. In a minimization algorithm, this usually 
+   signals convergence and can be ignored. 
+   However, in a zero-finding algorithm the calling program 
+   should check whether the convergence is spurious. Some  difficult  problems may require 
+   double precision in this routine.*/
+{
+  int i; 
+  double a,alam,alam2=0.0,alamin,b,disc,f2=0.0,rhs1,rhs2,slope,sum,temp, test,tmplam; 
+  *check=0; 
+  for (sum=0.0,i=0;i<n;i++) 
+    sum += p[i]*p[i]; 
+  sum=sqrt(sum); 
+  if (sum > stpmax) 
+    for (i=0;i<n;i++) 
+      p[i] *= stpmax/sum; /*Scale if attempted step is too big.*/ 
+  for (slope=0.0,i=0;i<n;i++) 
+    slope += g[i]*p[i]; 
+  if (slope >= 0.0) 
+    {
+      printf("Roundoff problem in lnsrch."); 
+      exit(-1);  
+    }
+  test=0.0; /*Compute lambda_min.*/
+  for (i=0;i<n;i++) 
+    {
+      temp=fabs(p[i])/FMAX(fabs(xold[i]),1.0); 
+      if (temp > test) 
+	test=temp; 
+    } 
+  alamin=tolx/test; alam=1.0;
+  for (;;) 
+    { 
+      for (i=0;i<n;i++) 
+	x[i]=xold[i]+alam*p[i]; 
+      *f=(*func)(x); 
+      if (alam < alamin) 
+	{ /* Convergence on  x. For zero  nding, the calling program 
+	     should verify the convergence.*/ 
+	  for (i=0;i<n;i++) 
+	    x[i]=xold[i]; 
+	  *check=1; 
+	  return;
+	}
+      else if (*f <= fold+ALF*alam*slope) 
+	return; 
+	/* Su cient function decrease.*/
+      else 
+	{ /* Backtrack. */
+	  if (alam == 1.0) 
+	    tmplam = -slope/(2.0*(*f-fold-slope));/* First time.*/
+	  else
+	    { /* Subsequent backtracks.*/
+	      rhs1 = *f-fold-alam*slope;
+	      rhs2=f2-fold-alam2*slope;
+	      a=(rhs1/(alam*alam)-rhs2/(alam2*alam2))/(alam-alam2);
+	      b=(-alam2*rhs1/(alam*alam)+alam*rhs2/(alam2*alam2))/(alam-alam2); 
+	      if (a == 0.0) 
+		tmplam = -slope/(2.0*b); 
+	      else 
+		{
+		  disc=b*b-3.0*a*slope; 
+		  if (disc < 0.0) 
+		    tmplam=0.5*alam; 
+		  else if (b <= 0.0) 
+		    tmplam=(-b+sqrt(disc))/(3.0*a); 
+		  else 
+		    tmplam=-slope/(b+sqrt(disc)); 
+		} 
+	      if (tmplam > 0.5*alam) 
+		tmplam=0.5*alam; /* lambda <= 0.5 lambda_1.*/
+	    } 
+	}
+      alam2=alam;
+      f2 = *f; 
+      alam=FMAX(tmplam,0.1*alam); /* lambda >= 0.1 lambda_1.*/
+    }/* Try again.*/
+}
+void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[]);
+
+void newtDistNegNeighPlane(double x[], int n, int *check, 
+		 	   void (*vecfunc)(int, double [], double []))
+{
+  int i,its=0,ok;
+  double d,stpmax,sum,test;
+#if 0
+  int * indx;
+  double **fjac,*g,*p,*xold; 
+  indx=ivector(n); 
+  fjac=matrix(n, n);
+  g=vector(n);
+  p=vector(n); 
+  xold=vector(n); 
+  fvecD=vector(n); 
+#endif
+  /*Define global variables.*/
+  nnD=n; 
+  nrfuncvDNeigh=vecfunc; 
+#ifdef MD_GLOBALNRDNL
+  f=fminDNeigh(x); /*fvec is also computed by this call.*/
+#else
+  funcs2beZeroedDistNegNeighPlane(n,x,fvecD);
+#endif
+  test=0.0; /* Test for initial guess being a root. Use more stringent test than simply TOLF.*/
+  for (i=0;i<n;i++) 
+    if (fabs(fvecD[i]) > test)
+      test=fabs(fvecD[i]); 
+  if (test < 0.01*TOLFD)
+    {
+      *check=0; 
+      FREERETURND;
+    }
+  for (sum=0.0,i=0;i<n;i++) 
+    sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
+  stpmax=STPMX*FMAX(sqrt(sum),(double)n);
+  for (its=0;its<MAXITS3;its++)
+    { /* Start of iteration loop. */
+       /* ============ */
+      fdjacDistNegNeighPlane(n,x,fvecD,fjac,vecfunc);
+      /* If analytic Jacobian is available, you can 
+	  replace the routine fdjac below with your own routine.*/
+#ifdef MD_GLOBALNRDNL
+       for (i=0;i<n;i++) { /* Compute  f for the line search.*/
+	 for (sum=0.0,j=0;j<n;j++)
+	  sum += fjac[j][i]*fvecD[j]; 
+	g[i]=sum; 
+      } 
+      for (i=0;i<n;i++) 
+	xold[i]=x[i]; /* Store x,*/ 
+      fold=f; /* and f. */
+#else
+      test=0.0; /* Test for convergence on function values.*/
+      for (i=0;i<n;i++) 
+	test +=fabs(fvecD[i]); 
+      if (test < TOLFD)
+	{
+	  *check = 0;
+	  FREERETURND;
+	}
+#endif 
+      for (i=0;i<n;i++) 
+	p[i] = -fvecD[i]; /* Right-hand side for linear equations.*/
+#if 1
+      ludcmp(fjac,n,indx,&d, &ok); /* Solve linear equations by LU decomposition.*/
+      lubksb(fjac,n,indx,p);
+#else
+      gaussj(fjac,n,p);
+#endif
+      /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
+#ifdef MD_GLOBALNRDNL
+      lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fminDNeigh,TOLXD); 
+      test=0.0; /* Test for convergence on function values.*/
+      for (i=0;i<n;i++) 
+	if (fabs(fvecD[i]) > test) 
+	  test=fabs(fvecD[i]); 
+      if (test < TOLFD) 
+	{ 
+	  *check=0; 
+	  FREERETURND
+	}
+      if (*check) 
+	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
+#if 0
+	  test=0.0; 
+	  den=FMAX(f,0.5*n);
+	  for (i=0;i<n;i++)
+	    {
+	      temp=fabs(g[i])*FMAX(fabs(x[i]),1.0)/den;
+	      if (temp > test) 
+		test=temp; 
+	    } 
+	  *check=(test < TOLMIN ? 2 : 0);
+#endif
+	  /* se c'è anche il sospetto di un minimo locale allora fai
+	   * un newton-raphson semplice */
+	  for (i=0; i < n; i++)
+	    {
+	      x[i] = xold[i];
+	      x[i] += p[i]; 
+	    }
+	  *check = 0;
+  	  //FREERETURND 
+	} 
+      test=0.0; /* Test for convergence on x. */
+      for (i=0;i<n;i++) 
+	{
+	  temp=(fabs(x[i]-xold[i]))/FMAX(fabs(x[i]),1.0); 
+	  if (temp > test) 
+	    test=temp; 
+	} 
+      if (test < TOLXD) 
+	{
+	  FREERETURND;
+	}
+#if 1
+      if (*check==2)
+	{
+	  FREERETURND;
+	}
+#endif
+#else
+      test = 0;
+      for (i=0;i<n;i++) 
+	{ 
+      	  test += fabs(p[i]);
+	  x[i] += p[i];
+	}
+      if (test < TOLXD) 
+	{ 
+	  *check = 0;
+	  FREERETURND; 
+	}
+#endif
+    } 
+  *check = 2;
+  FREERETURND;
+  return;
+}
+void funcs2beZeroedDistNegNeighPlane(int n, double x[], double fvec[])
+{
+  int k1, k2; 
+  double fx[3];
+  /* x = (r, alpha, t) */ 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fx[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+	fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
+    }
+   for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[6])*gradplane[k1];
+    }
+  fvec[3] = 0.0;
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
+    }
+  fvec[3] = 0.5*fvec[3]-1.0;
+  //fvec[4] = 0.5*fvec[4]-1.0;
+
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + gradplane[k1]*x[7];//fx[k1]*x[7]; 
+}
+
+
+/* distance between an ellipsoid and a plane */
+double calcDistNegNeighPlane(double rrA[3], double RRA[3][3], double ssaxA[3], double rrB[3], double gradB[3])
+
+{
+  /* NOTA: nplane = {0...7} e indica il piano rispetto al quale dobbiamo calcolare la distanza */
+  double vecg[8], rC[3], rD[3], rDC[3], r12[3], invaSqN, invbSqN, invcSqN;
+  double ti, segno;
+  double vecgsup[8];
+  int retcheck;
+  double nf, ng, gradf[3];
+  const int calcguess=1;
+#ifdef MD_ASYM_ITENS
+  double psi, phi;
+#endif
+  int k1, err, aa, bb;
+  err = 0;
+  init_all();
+  for (aa=0; aa < 3; aa++)
+    for (bb=0; bb < 3; bb++)
+      {
+	RtA[aa][bb] = RRA[aa][bb];
+      }
+  rA[0] = rrA[0];
+  rA[1] = rrA[1];
+  rA[2] = rrA[2];
+  rB[0] = rrB[0];
+  rB[1] = rrB[1];
+  rB[2] = rrB[2];
+  invaSqN = 1.0/Sqr(ssaxA[0]);
+  invbSqN = 1.0/Sqr(ssaxA[1]);
+  invcSqN = 1.0/Sqr(ssaxA[2]);
+  for (aa=0; aa < 3; aa++)
+    gradplane[aa] = gradB[aa];
+  tRDiagR(Xa, invaSqN, invbSqN, invcSqN, RtA);
+  /* NOTA: dato l'ellissoide e la sua neighbour list a t=0 bisognerebbe stimare con esattezza 
+   * la loro distanza e restituirla di seguito */
+  /* NOTA2: per ora fa in ogni caso il guess ma si potrebbe facilmente fare in modo
+   * di usare il vecchio vecg. */
+  if (guessDistOpt==1)
+    {
+      guess_distNeigh_plane(rA, rB, Xa, gradplane, rC, rD, RtA, ssaxA);
+    }
+  else
+    {
+      calc_intersec_neigh_plane(rA, rB, Xa, gradplane, rC, rD);
+    }
+
+  for(k1=0; k1 < 3; k1++)
+    r12[k1] = rC[k1]-rD[k1]; 
+  calc_grad(rC, rA, Xa, gradf);
+  nf = calc_norm(gradf);
+  ng = calc_norm(gradplane);
+  vecg[6] = sqrt(nf/ng);
+  for (k1=0; k1 < 3; k1++)
+    {
+      vecg[k1] = rC[k1];
+      vecg[k1+3] = rD[k1];
+      rDC[k1] = rD[k1] - rC[k1];
+    }
+
+  /*vecg[4] = calc_norm(rDC);
+   * QUESTO GUESS POTREBBE ESSERE MIGLIORE ANCHE SE IN PRATICA SEMBRA
+   * LO STESSO. */
+  vecg[7] = 0.0;
+  newtDistNegNeighPlane(vecg, 8, &retcheck, funcs2beZeroedDistNegNeighPlane); 
+  if (retcheck != 0)
+    {
+      printf("[NNL] I couldn't calculate distance between %d and its NL, calcguess=%d, exiting....\n", calcguess);
+      exit(-1);
+    }
+  for (k1 = 0; k1 < 8; k1++)
+    {
+      vecgsup[k1] = vecg[k1]; 
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      r1[k1] = vecg[k1];
+      r2[k1] = vecg[k1+3];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      r12[k1] = r1[k1] - r2[k1];
+    } 
+  segno = vecg[7];
+  if (segno > 0)
+    {
+      //printf("t=%.15G distanza: %.15G\n", t, calc_norm(r12));
+      return calc_norm(r12);
+    }
+  else
+    {
+      //printf("t=%.15G distanza: %.15G\n", t, -calc_norm(r12));
+      return -calc_norm(r12);
+    }
+}
 
 double calcDistNeg(double rrA[3], double RRA[3][3], double ssaxA[3], double rrB[3], double RRB[3][3], 
 		   double ssaxB[3])
@@ -1353,25 +1965,7 @@ double calcDistNeg(double rrA[3], double RRA[3][3], double ssaxA[3], double rrB[
 #ifdef MD_ASYM_ITENS
   double phi, psi;
 #endif
-  costolSDgrad = cos(tolSDgrad);
-  costhrNR = cos(tolAngNR);
-  costolAngSD = cos(tolAngSD);
-  fvecD=vector(8);
-  fjac=matrix(8, 8);
-  g=vector(8);
-  p=vector(8); 
-  xold=vector(8); 
-  //fvec=vector(8); 
-  indx=ivector(8);
-  fvecD=vector(8);
-  XbXa = matrix(3, 3);
-  Xa = matrix(3, 3);
-  Xb = matrix(3, 3);
-  RA = matrix(3, 3);
-  RB = matrix(3, 3);
-  Rt = matrix(3, 3);
-  RtA = matrix(3, 3);
-  RtB = matrix(3, 3);
+  init_all();
   for (aa=0; aa < 3; aa++)
     for (bb=0; bb < 3; bb++)
       {
