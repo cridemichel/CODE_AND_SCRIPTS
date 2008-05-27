@@ -38,6 +38,7 @@ long long accngA=0, accngB=0;
 double costolSDgrad, saxA[3]={2,1,1}, saxB[3]={2,1,1}, posA[3]={0.0,0.0,-3.0}, posB[3]={0.0,0.0,+3.0};
 double RinpA[3][3]={{1,0,0},{0,1,0},{0,0,1}};
 double RinpB[3][3]={{1,0,0},{0,1,0},{0,0,1}};
+double gradinpB[3]={0,0,1};
 double gradfG[3], gradgG[3], dxG[6];
 double sfA, sfB;
 double invaSq, invbSq, invcSq, costolAngSD;
@@ -1007,7 +1008,6 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
     fvec[k1+5] = x[k1] - x[k1+3] + fx[k1]*x[7]; 
 #endif
 }
-
 
 void newtDistNeg(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], double []),
@@ -2176,5 +2176,6 @@ retry:
 int main(int argc, char **argv)
 {
   printf("Dist=%.15G\n", calcDistNeg(posA, RinpA, saxA, posB, RinpB, saxB));
+  printf("Dist HE-Plane=%.15G\n", calcDistNegNeighPlane(posA, RinpA, saxA, posB, gradinpB));
   return 0;
 }
