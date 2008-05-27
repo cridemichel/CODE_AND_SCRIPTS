@@ -52,6 +52,11 @@ int *indx;
 double shiftcg[3], lambdacg, minaxicg, minaxjcg;
 
 int cghalfspring, icg, jcg, doneryck;
+int *ivector(int n)
+{
+  return calloc(n, sizeof(int)); 
+}
+
 double *vector(int n)
 {
   return calloc(n, sizeof(double)); 
@@ -1351,6 +1356,13 @@ double calcDistNeg(double rrA[3], double RRA[3][3], double ssaxA[3], double rrB[
   costolSDgrad = cos(tolSDgrad);
   costhrNR = cos(tolAngNR);
   costolAngSD = cos(tolAngSD);
+  fvecD=vector(8);
+  fjac=matrix(8, 8);
+  g=vector(8);
+  p=vector(8); 
+  xold=vector(8); 
+  //fvec=vector(8); 
+  indx=ivector(8);
   fvecD=vector(8);
   XbXa = matrix(3, 3);
   Xa = matrix(3, 3);
