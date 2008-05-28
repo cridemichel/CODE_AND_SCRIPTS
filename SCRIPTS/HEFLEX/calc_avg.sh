@@ -29,7 +29,7 @@ CFS=`echo "$S*$ru2m^2*$Nav"|octave -q| awk -F '=' '{print $2}'`
 BINI=`echo $f | awk -F '/' '{print $1}' | awk -F '_' '{print $2}'`
 SIG=`echo $f | awk -F '/' '{print $2}' | awk -F '_' '{print $2}'`
 echo "NP="$NP "CF=" $CF " CFS=" $CFS
-echo $BINI $SIG `cat bi-mono-bonds.dat | LANG=C awk -v np="$NP" -v nant="$NANT" -v cf="$CF" -v cfs="$CFS" '{if (NR >= np) {B+=$2; mono+=$3; bi+=$4; cc++}} END{print (B/cc/cf, mono/cc/cfs, bi/cc/cfs, (nant-(mono/cc)-(bi/cc)*2)/cfs, (bi/cc+mono/cc)/(2.0*nant), nant/cfs)}'` >> ../../$FN
+echo $BINI $SIG `cat bi-mono-bonds.dat | LANG=C awk -v np="$NP" -v nant="$NANT" -v cf="$CF" -v cfs="$CFS" '{if (NR >= np) {B+=$2; mono+=$3; bi+=$4; cc++}} END{print (B/cc/cf, mono/cc/cfs, bi/cc/cfs, (nant-(mono/cc)-(bi/cc)*2)/cfs, (bi/cc+mono/cc)/nant, nant/cfs)}'` >> ../../$FN
 cd ..
 cd ..
 done
