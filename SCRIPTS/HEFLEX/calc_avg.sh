@@ -21,7 +21,7 @@ NP=`echo "$NP*$2"|bc -l|awk '{printf ("%d",$1)}'`
 fi
 echo "Points to skip #" $NP
 L=`tail -1 CorIni`
-NANT=`cat CorIni | awk '{if (nat==1) print $5; if ($0="@@@") nat=1;}'`
+NANT=`cat CorIni | awk '{if (nat==1) {print $6; nat=2}; if ($0=="@@@") nat++;}'`
 V=`echo "$L*$L*$L" | bc -l`
 S=`echo "$L*$L" | bc -l`
 CF=`echo "$V*1000*$ru2m^3*$Nav"|octave -q| awk -F '=' '{print $2}'`
@@ -29,7 +29,7 @@ CFS=`echo "$S*$ru2m^2*$Nav"|octave -q| awk -F '=' '{print $2}'`
 BINI=`echo $f | awk -F '/' '{print $1}' | awk -F '_' '{print $2}'`
 SIG=`echo $f | awk -F '/' '{print $2}' | awk -F '_' '{print $2}'`
 echo "NP="$NP "CF=" $CF " CFS=" $CFS
-echo $BINI $SIG `cat bi-mono-bonds.dat | LANG=C awk -v np="$NP" -v nant="$NANT" -v cf="$CF" -v cfs="$CFS" '{if (NR >= np) {B+=$2; mono+=$3; bi+=$4; cc++}} END{print (B/cc/cf, mono/cc/cfs, bi/cc/cfs, (nant-(mono/cc)-(bi/cc)*2)/cfs, (bi/cc+mono/cc)/(2.0*nant))}'` >> ../../$FN
+echo $BINI $SIG `cat bi-mono-bonds.dat | LANG=C awk -v np="$NP" -v nant="$NANT" -v cf="$CF" -v cfs="$CFS" '{if (NR >= np) {B+=$2; mono+=$3; bi+=$4; cc++}} END{print (B/cc/cf, mono/cc/cfs, bi/cc/cfs, (nant-(mono/cc)-(bi/cc)*2)/cfs, (bi/cc+mono/cc)/(2.0*nant), nant/cfs)}'` >> ../../$FN
 cd ..
 cd ..
 done
