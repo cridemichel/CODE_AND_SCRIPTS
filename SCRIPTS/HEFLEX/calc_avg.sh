@@ -9,9 +9,10 @@ then
 DN="half"
 fi
 echo -n "" > $FN
-for f in $1
+for f in `cat $1`
 do
 cd $f
+echo "DIR=" $f
 NP=`wc -l bi-mono-bonds.dat | awk '{print $1}'`
 if [ "$DN" = "half" ]
 then
