@@ -984,8 +984,10 @@ void temperat(void)
 #else
   fprintf(mf, "%.15G %.15G ", Oparams.time, temp);
 #endif
+#ifdef EDHE_FLEX
   for (nt = 0; nt < Oparams.ntypes; nt++)
     fprintf(mf, "%.15G ", ((doft[nt]==0)?(0.0):(2.0*Kt[nt]/doft[nt])) );
+#endif
   fprintf(mf, "\n");
 #else
 #ifdef MD_BIG_DT
