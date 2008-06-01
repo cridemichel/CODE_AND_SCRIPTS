@@ -52,6 +52,7 @@ void UpdateSystem(void);
 
 #define MD_TAPE_MIS "/iomega/measures/"
 /* directory on tape to store measures */
+#define MD_COORDTMP_ASCII(x) save_coordtmp_ascii(x)
 
 /* 16/1/1998 ADD: <XVA defines> */
 #define MD_HD_XVA "/work2/xvafiles/"

@@ -3700,6 +3700,20 @@ void usrInitAft(void)
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 }
 extern double rA[3], rB[3];
+
+void save_coordtmp_ascii(unsigned char hdWhich)
+{
+  char fileop[1024], fileop2[1024];
+  FILE *bf;
+  char fileop3[1024];
+  const char sepStr[] = "@@@\n";
+  int i;	
+  sprintf(fileop2 ,"COORD_TMP_ASCII%d", (int)hdWhich);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  saveFullStore(fileop);
+}
+
 #ifdef EDHE_FLEX
 int is_valid_parname_progStatus(char *pn)
 {

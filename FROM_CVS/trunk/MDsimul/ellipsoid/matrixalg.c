@@ -3424,13 +3424,11 @@ void ludcmp(double **a, int n,  int* indx, double* d, int *ok)
       for (j=0;j<n;j++)
 	{
 	  if ((temp=fabs(a[i][j])) > big) big=temp; 
-	  MD_DEBUG50(printf("a[%d][%d]:%.15G\n",i,j,a[i][j]));////
 	}
       if (big == 0.0)
 	{
 	  printf("ERROR: Singular matrix in routine ludcmp\n"); 
 	  *ok = 1;
-	  MD_DEBUG50(exit(-1));
 	  return;
 	}
       /* No nonzero largest element. */
