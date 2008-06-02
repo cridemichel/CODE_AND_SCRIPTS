@@ -818,12 +818,14 @@ int main(int argc, char** argv)
      fscanf(ff, "%d ", &(typeOfAmino[i]));
    }
  fclose(ff);
- for (i = 0; i < seqlen; i++)
+ for (i = 0; i < 20; i++)
    ntypesOfAmino[i]=0;
  for (i = 0; i < seqlen; i++)
-   {
+   { 
+     typeOfAmino[i]-=1;
      ++(ntypesOfAmino[typeOfAmino[i]]);
    }
+ //printf("===>T=%.15G seqlen=%d",T, seqlen);
  printf("...done\n");
  ff=fopen("Interactions.dat","r");
  ninters = 0;
@@ -929,6 +931,7 @@ int main(int argc, char** argv)
    } 
  /* velocities and angular velocities of aminoacids */
  K = sqrt(T/massAmino);
+ printf("T=%.15G massAmin: %.15G\n", T, massAmino);
  Mtot[0] = Mtot[1] = Mtot[2] = Vx = Vy = Vz = 0;
  for (i=0; i < Namino; i++)
    {
