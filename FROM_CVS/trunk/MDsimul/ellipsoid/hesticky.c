@@ -847,6 +847,17 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG33(printf("sigmaSticky= %.15G norm rAB: %.15G\n", sigAB, nrAB));
   MD_DEBUG33(printf("distance between (%d,%d) - (%d,%d) = %.15G\n", i, ata, j, atb, 
 		    calcDistNegOneSP(Oparams.time,0.0,i,j,0, shift))); 
+#if 0
+  if (Oparams.curStep >= 1000 && ((i==31 && j==30)||(i==30&&j==31)))
+  {
+    double shift[3];
+    shift[0] = L*rint((rx[i]-rx[j])/L);
+    shift[1] = L*rint((ry[i]-ry[j])/L);
+    shift[2] = L*rint((rz[i]-rz[j])/L);
+    printf("distance between (%d,%d) - (%d,%d) = %.15G\n", i, ata, j, atb, 
+	 calcDistNegOneSP(Oparams.time,0.0,i,j,0, shift));
+  }
+#endif  
   rCx = ratA[0] - rAB[0]*sigAB*0.5;
   rCy = ratA[1] - rAB[1]*sigAB*0.5;
   rCz = ratA[2] - rAB[2]*sigAB*0.5;
