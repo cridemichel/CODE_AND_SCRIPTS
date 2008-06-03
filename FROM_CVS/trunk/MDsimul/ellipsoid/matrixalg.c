@@ -3573,8 +3573,8 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLF2 1.0E-3
 #endif
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
-#define TOLX 1.0E-14//1.0e-7 /* Convergence criterion on  x.*/ 
-#define TOLXD 1.0E-14
+#define TOLX 1.0E-12//1.0e-7 /* Convergence criterion on  x.*/ 
+#define TOLXD 1.0E-12
 #define MAXITS 100 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define MAXITS2 100
 #define TOLF 1.0E-14// 1.0e-4
