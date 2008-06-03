@@ -68,7 +68,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 
 #define C_T COORD_TYPE
 #define NK 10000
-#define NA 100 /* number of atoms for each molecule (particle) */
+#define NA 5 /* number of atoms for each molecule (particle) */
 #ifdef MD_SILICA
 #ifdef MD_THREESPOTS
 #define MD_PBONDS_AA 4 /* questo è il max num di bonds possibili fra due molecole */
