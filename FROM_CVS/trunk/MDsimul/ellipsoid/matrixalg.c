@@ -9,6 +9,7 @@
 #define MD_DEBUG10(x) 
 #define MD_DEBUG18(x)
 #define MD_DEBUG20(x) 
+#define MD_NEW_NR_CHECKS
 #ifdef EDHE_FLEX 
 extern int *typeOfPart;
 #endif
@@ -97,6 +98,7 @@ double min(double a, double b)
 static double maxarg1,maxarg2;
 #define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
         (maxarg1) : (maxarg2))
+
 double sfA, sfB;
 /* =========================== >>> max <<< ================================= */
 double max(double a, double b)
@@ -3575,8 +3577,8 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLXD 1.0E-14
 #define MAXITS 100 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define MAXITS2 100
-#define TOLF 1.0E-10// 1.0e-4
-#define TOLFD 1.0E-10
+#define TOLF 1.0E-14// 1.0e-4
+#define TOLFD 1.0E-14
 #define TOLMIN 1.0E-12//1.0e-6 
 #define STPMX 100.0
 void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], double x[], 
@@ -3785,6 +3787,30 @@ extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, doubl
 
 extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
 //#define MD_GLOBALNR
+#ifdef MD_NEW_NR_CHECKS
+inline double test_func_values(double *fvec, int n)
+{
+  int i;
+  double test=0.0;
+  for (i=0;i<n;i++) 
+    if (fabs(fvec[i]) > test) 
+      test=fabs(fvec[i]);
+  return test;
+}
+inline double test_xvalues(double *xold, double *x, int n)
+{
+  double test=0.0;
+  int i;
+  for (i=0;i<n;i++) 
+    {
+      temp=(fabs(x[i]-xold[i]))/FMAX(fabs(x[i]),1.0); 
+      //temp=(fabs(x[i]-xold[i]))/fabs(x[i]); 
+      if (temp > test) 
+	test=temp; 
+    }
+  return test;
+}
+#endif
 void newtNeigh(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
@@ -3844,9 +3870,13 @@ void newtNeigh(double x[], int n, int *check,
 	xold[i]=x[i]; /* Store x,*/ 
       fold=f; /* and f. */
 #else
+#ifdef MD_NEW_NR_CHECKS
+      test = test_func_values(fvec, n);
+#else
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	test +=fabs(fvec[i]); 
+#endif
       if (test < TOLF)
 	{
 	  *check = 0;
@@ -3920,6 +3950,14 @@ void newtNeigh(double x[], int n, int *check,
 	}
 #endif
 #else
+#ifdef MD_NEW_NR_CHECKS
+      for (i=0;i<n;i++) 
+	{ 
+	  xold[i] = x[i];
+	  x[i] += p[i];
+	}
+      test = test_xvalues(xold, x, n);
+#else
       test = 0;
       for (i=0;i<n;i++) 
 	{ 
@@ -3927,6 +3965,7 @@ void newtNeigh(double x[], int n, int *check,
 	  x[i] += p[i];
 	}
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
+#endif
       if (test < TOLX) 
 	{ 
 	  *check = 0;
@@ -3994,9 +4033,13 @@ void newt(double x[], int n, int *check,
 	xold[i]=x[i]; /* Store x,*/ 
       fold=f; /* and f. */
 #else
+#ifdef MD_NEW_NR_CHECKS
+      test = test_func_values(fvec, n);
+#else
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	test +=fabs(fvec[i]); 
+#endif
       if (test < TOLF)
 	{
 	  *check = 0;
@@ -4068,12 +4111,21 @@ void newt(double x[], int n, int *check,
 	}
 #endif
 #else
+#ifdef MD_NEW_NR_CHECKS
+      for (i=0;i<n;i++) 
+	{ 
+	  xold[i] = x[i];
+	  x[i] += p[i];
+	}
+      test = test_xvalues(xold, x, n);
+#else
       test = 0;
       for (i=0;i<n;i++) 
 	{ 
       	  test += fabs(p[i]);
 	  x[i] += p[i];
 	}
+#endif
       MD_DEBUG20(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
       MD_DEBUG20(printf("fvec = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
@@ -4152,9 +4204,13 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	xold[i]=x[i]; /* Store x,*/ 
       fold=f; /* and f. */
 #else
+#ifdef MD_NEW_NR_CHECKS
+      test = test_func_values(fvecD, n);
+#else
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	test +=fabs(fvecD[i]); 
+#endif
       if (test < TOLFD)
 	{
 	  *check = 0;
@@ -4235,12 +4291,21 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	}
 #endif
 #else
+#ifdef MD_NEW_NR_CHECKS
+      for (i=0;i<n;i++) 
+	{ 
+	  xold[i] = x[i];
+	  x[i] += p[i];
+	}
+      test = test_xvalues(xold, x, n);
+#else
       test = 0;
       for (i=0;i<n;i++) 
 	{ 
       	  test += fabs(p[i]);
 	  x[i] += p[i];
 	}
+#endif
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
       if (test < TOLXD) 
@@ -4311,9 +4376,13 @@ void newtDistNegNeigh(double x[], int n, int *check,
 	xold[i]=x[i]; /* Store x,*/ 
       fold=f; /* and f. */
 #else
+#ifdef MD_NEW_NR_CHECKS
+      test = test_func_values(fvecD, n);
+#else
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	test +=fabs(fvecD[i]); 
+#endif
       if (test < TOLFD)
 	{
 	  *check = 0;
@@ -4394,12 +4463,21 @@ void newtDistNegNeigh(double x[], int n, int *check,
 	}
 #endif
 #else
+#ifdef MD_NEW_NR_CHECKS
+      for (i=0;i<n;i++) 
+	{ 
+	  xold[i] = x[i];
+	  x[i] += p[i];
+	}
+      test = test_xvalues(xold, x, n);
+#else
       test = 0;
       for (i=0;i<n;i++) 
 	{ 
       	  test += fabs(p[i]);
 	  x[i] += p[i];
 	}
+#endif
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
       if (test < TOLXD) 
@@ -4575,9 +4653,13 @@ void newtDistNeg(double x[], int n, int *check,
 	xold[i]=x[i]; /* Store x,*/ 
       fold=f; /* and f. */
 #else
+#ifdef MD_NEW_NR_CHECKS
+      test = test_func_values(fvecD, n);
+#else
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	test +=fabs(fvecD[i]); 
+#endif
       if (test < TOLFD)
 	{
 	  *check = 0;
@@ -4674,12 +4756,21 @@ void newtDistNeg(double x[], int n, int *check,
 	  else
 	    adjust_step_dist8(x, p, fx, gx);
 	}
+#ifdef MD_NEW_NR_CHECKS
+      for (i=0;i<n;i++) 
+	{ 
+	  xold[i] = x[i];
+	  x[i] += p[i];
+	}
+      test = test_xvalues(xold, x, n);
+#else
       test = 0;
       for (i=0;i<n;i++) 
 	{ 
 	  test += fabs(p[i]);
 	  x[i] += p[i];
 	}
+#endif
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
       if (test < TOLXD) 
@@ -4752,9 +4843,13 @@ void newtDist(double x[], int n, int *check,
 	xold[i]=x[i]; /* Store x,*/ 
       fold=f; /* and f. */
 #else
+#ifdef MD_NEW_NR_CHECKS
+      test = test_func_values(fvecD, n);
+#else
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	test +=fabs(fvecD[i]); 
+#endif
       if (test < TOLFD)
 	{
 	  *check = 0;
@@ -4831,12 +4926,21 @@ void newtDist(double x[], int n, int *check,
 	}
 #endif
 #else
+#ifdef MD_NEW_NR_CHECKS
+      for (i=0;i<n;i++) 
+	{ 
+	  xold[i] = x[i];
+	  x[i] += p[i];
+	}
+      test = test_xvalues(xold, x, n);
+#else
       test = 0;
       for (i=0;i<n;i++) 
 	{ 
       	  test += fabs(p[i]);
 	  x[i] += p[i];
 	}
+#endif
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
       if (test < TOLXD) 
