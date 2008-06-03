@@ -3573,12 +3573,23 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLF2 1.0E-3
 #endif
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
+#ifdef MD_NEW_NR_CHECKS
+#define TOLX 1.0E-14//1.0e-7 /* Convergence criterion on  x.*/ 
+#define TOLXD 1.0E-14
+#else
 #define TOLX 1.0E-12//1.0e-7 /* Convergence criterion on  x.*/ 
 #define TOLXD 1.0E-12
+#endif
 #define MAXITS 100 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define MAXITS2 100
+/* N.B. se dovessero esserci problemi aumentare TOLF e TOLFD */
+#ifdef MD_NEW_NR_CHECKS
 #define TOLF 1.0E-14// 1.0e-4
 #define TOLFD 1.0E-14
+#else
+#define TOLF 1.0E-13// 1.0e-4
+#define TOLFD 1.0E-13
+#endif
 #define TOLMIN 1.0E-12//1.0e-6 
 #define STPMX 100.0
 void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], double x[], 
@@ -4659,11 +4670,13 @@ void newtDistNeg(double x[], int n, int *check,
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	test +=fabs(fvecD[i]); 
+      //test /= ((double) n);
 #endif
       if (test < TOLFD)
 	{
+	  //printf("[newtDistNeg] test < TOLFD\n");
 	  *check = 0;
-	  MD_DEBUG(printf(" test < TOLF\n"));
+	  MD_DEBUG(printf(" test < TOLFD\n"));
 	  FREERETURND;
 	}
 #endif 
@@ -4770,13 +4783,15 @@ void newtDistNeg(double x[], int n, int *check,
 	  test += fabs(p[i]);
 	  x[i] += p[i];
 	}
+      //test /= ((double) n);
 #endif
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
       if (test < TOLXD) 
 	{ 
+	  //printf("test<TOLXD\n");
 	  *check = 0;
-	  MD_DEBUG(printf("test < TOLX\n"));
+	  MD_DEBUG(printf("test < TOLXD\n"));
 	  FREERETURND; 
 	}
 #endif
