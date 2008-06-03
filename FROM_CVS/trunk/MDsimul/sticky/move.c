@@ -2806,7 +2806,7 @@ int refine_contact(int i, int j, double tref, double t1, double t2, int nn, doub
   trefbr = tref;
   for (kk=0; kk < 3; kk++)
     shiftbr[kk] = shift[kk];
-  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-14);
+  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-16);
   *troot += tref;
   if (polinterr==1)
     {
@@ -5571,7 +5571,7 @@ void timeshift_calendar(void)
 void save_fra(void)
 {
   char fileop[1024], fileop2[1024], fileop3[1024];
-  double rat[NA][3];
+  double rat[5][3];
   double rcm[3];	
   int i, ret, rerr;
   FILE* f;
@@ -5599,9 +5599,9 @@ void save_fra(void)
   for (i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
       //printf("i=%d\n",i);
-      rcm[0] = rx[i];
-      rcm[1] = ry[i];
-      rcm[2] = rz[i];
+      rcm[0] = rx[i]+L*OprogStatus.DR[i][0];
+      rcm[1] = ry[i]+L*OprogStatus.DR[i][1];
+      rcm[2] = rz[i]+L*OprogStatus.DR[i][2];
       BuildAtomPos(i, rcm, R[i], rat);
       ret = fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
       rerr |= (ret < 0)?1:0;  
@@ -5612,9 +5612,9 @@ void save_fra(void)
     }
   for (i = 0; i < Oparams.parnumA; i++)
     {
-      rcm[0] = rx[i];
-      rcm[1] = ry[i];
-      rcm[2] = rz[i];
+      rcm[0] = rx[i]+L*OprogStatus.DR[i][0];
+      rcm[1] = ry[i]+L*OprogStatus.DR[i][1];
+      rcm[2] = rz[i]+L*OprogStatus.DR[i][2];
       BuildAtomPos(i, rcm, R[i], rat);
       ret = fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
       rerr |= (ret < 0)?1:0;  
