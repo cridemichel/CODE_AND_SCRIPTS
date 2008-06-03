@@ -2321,7 +2321,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   rBC[0] = rx[j] - rCx;
   rBC[1] = ry[j] - rCy;
   rBC[2] = rz[j] - rCz;
-#if 0
+#if 1
     {
       double shift[3], r1[3], r2[3], alpha, vecgd[8], r12[3];
       shift[0] = L*rint((rx[i]-rx[j])/L);
