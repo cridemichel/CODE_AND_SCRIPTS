@@ -2998,7 +2998,7 @@ void distSD(int i, int j, double shift[3], double *vecg, double lambda, int half
 }
 #define ITMAXZB 100 
 /* Maximum allowed number of iterations.*/
-#define EPSP 1.0e-15 /* Machine floating-point precision.*/
+#define EPSP 3.0e-16 /* Machine floating-point precision.*/
 void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], double xb2[], 
 	   int *nb)
 /* Given a function fx defined on the interval from x1-x2 subdivide the interval into n equally
