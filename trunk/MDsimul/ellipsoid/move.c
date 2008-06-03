@@ -2328,7 +2328,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       shift[1] = L*rint((ry[i]-ry[j])/L);
       shift[2] = L*rint((rz[i]-rz[j])/L);
       printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]);
-      printf("[bump] distance between %d-%d: %.15f\n", i, j, calcDistNeg(0.0, Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
+      printf("[bump] distance between %d-%d: %.15G\n", i, j, calcDistNeg(0.0, Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
     }
 #endif 
   for (a=0; a < 3; a++)
