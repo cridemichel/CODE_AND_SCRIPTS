@@ -3577,18 +3577,18 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLX 1.0E-14//1.0e-7 /* Convergence criterion on  x.*/ 
 #define TOLXD 1.0E-14
 #else
-#define TOLX 1.0E-12//1.0e-7 /* Convergence criterion on  x.*/ 
-#define TOLXD 1.0E-12
+#define TOLX 1.0E-14//1.0e-7 /* Convergence criterion on  x.*/ 
+#define TOLXD 1.0E-14
 #endif
 #define MAXITS 100 // se le particelle non si urtano il newton-raphson farà MAXITS iterazioni
 #define MAXITS2 100
 /* N.B. se dovessero esserci problemi aumentare TOLF e TOLFD */
 #ifdef MD_NEW_NR_CHECKS
-#define TOLF 1.0E-14// 1.0e-4
-#define TOLFD 1.0E-14
+#define TOLF 1.0E-12// 1.0e-4
+#define TOLFD 1.0E-12
 #else
-#define TOLF 1.0E-13// 1.0e-4
-#define TOLFD 1.0E-13
+#define TOLF 1.0E-10// 1.0e-4
+#define TOLFD 1.0E-10
 #endif
 #define TOLMIN 1.0E-12//1.0e-6 
 #define STPMX 100.0
