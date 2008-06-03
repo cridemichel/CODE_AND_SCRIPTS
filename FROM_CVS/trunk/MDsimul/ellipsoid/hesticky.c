@@ -1966,7 +1966,7 @@ int refine_contactSP(int i, int j, double tref, double t1, double t2, int nn, do
   trefbr = tref;
   for (kk=0; kk < 3; kk++)
     shiftbr[kk] = shift[kk];
-  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-14);
+  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-20);
   *troot += tref;
   if (polinterr==1)
     {
@@ -3499,7 +3499,7 @@ int refine_contact_neigh_plane_sp(int i, double tref, double t1, double t2, doub
   ibr = i;
   nnbr = nsp;
   trefbr = tref;
-  *troot=zbrent(funcs2beZeroedBrentNNL_sp, t1, t2, 1E-14);
+  *troot=zbrent(funcs2beZeroedBrentNNL_sp, t1, t2, 1E-20);
   *troot += tref;
   if (polinterr==1)
     {
