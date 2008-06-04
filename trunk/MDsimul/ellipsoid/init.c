@@ -1424,7 +1424,7 @@ void initCoord(void)
   //wrap_initCoord();
 }
 #ifdef MD_ASYM_ITENS
-void calc_omega(int i);
+void calc_omega(int i, double *wwx, double *wwy, double *wwz);
 #endif
 /* =========================== >>> usrInitBef <<< ========================== */
 void usrInitBef(void)
@@ -3597,7 +3597,7 @@ void usrInitAft(void)
 #ifdef MD_ASYM_ITENS
   for (i=0; i < Oparams.parnum; i++)
     {
-      calc_omega(i);
+      calc_omega(i, &(wx[i]), &(wy[i]), &(wz[i]));
       angM[i] = sqrt(Sqr(Mx[i])+Sqr(My[i])+Sqr(Mz[i]));
       upd_refsysM(i);
     }
