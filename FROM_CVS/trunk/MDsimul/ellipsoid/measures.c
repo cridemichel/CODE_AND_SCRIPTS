@@ -732,8 +732,7 @@ void calcrotMSD(void)
 #ifdef EDHE_FLEX
 extern int get_dof_flex(int filter);
 extern void calc_energy_filtered(int filter);
-extern void calc_omega(int i);
-
+extern void calc_omega(int i, double *wwx, double *wwy, double *wwz);
 void calc_energy_filtered_per_type(double *Kt)
 {
   int i, k1;
@@ -762,11 +761,12 @@ void calc_energy_filtered_per_type(double *Kt)
 	  Kt[typeOfPart[i]] += DK;
 	}
 #ifdef MD_ASYM_ITENS
-      calc_omega(i);
-#endif
+      calc_omega(i, &(wt[0]), &(wt[1]), &(wt[2]));
+#else
       wt[0] = wx[i];
       wt[1] = wy[i];
       wt[2] = wz[i];
+#endif
 #ifdef MD_ASYM_ITENS
       for (k1=0; k1 < 3; k1++)
 	{
@@ -928,6 +928,7 @@ void temperat(void)
   dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
     OprogStatus.dofB*((double) (Oparams.parnum-Oparams.parnumA));
 #endif
+
   if (OprogStatus.brownian==1)
     temp = 2.0 * K / dof;
   else

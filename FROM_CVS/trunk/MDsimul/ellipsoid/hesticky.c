@@ -848,14 +848,14 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG33(printf("distance between (%d,%d) - (%d,%d) = %.15G\n", i, ata, j, atb, 
 		    calcDistNegOneSP(Oparams.time,0.0,i,j,0, shift))); 
 #if 0
-  if (Oparams.curStep >= 1000 && ((i==31 && j==30)||(i==30&&j==31)))
   {
-    double shift[3];
+    double shift[3], dd;
     shift[0] = L*rint((rx[i]-rx[j])/L);
     shift[1] = L*rint((ry[i]-ry[j])/L);
     shift[2] = L*rint((rz[i]-rz[j])/L);
-    printf("distance between (%d,%d) - (%d,%d) = %.15G\n", i, ata, j, atb, 
-	 calcDistNegOneSP(Oparams.time,0.0,i,j,0, shift));
+    dd = calcDistNegOneSP(Oparams.time,0.0,i,j,0, shift); 
+    if (fabs(dd) > 5E-14)
+      printf("[bumpSP] t=%.15G distance between (%d,%d) - (%d,%d) = %.15G\n", Oparams.time, i, ata, j, atb, dd);
   }
 #endif  
   rCx = ratA[0] - rAB[0]*sigAB*0.5;
@@ -2905,7 +2905,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #if 1
 	      else 
 		{
-		  printf("[locate_contactSP/*INFO*] using old goldenfactor method to reduce delt\n");
+		  printf("[locate_contactSP/*INFO*] i=%d j=%d using old goldenfactor method to reduce delt\n", i, j);
 		  MD_DEBUG33(printf("i=%d j=%d\n", i, j));
 		  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
 			 delt > minh)
@@ -2981,8 +2981,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	      else 
 		{
 		  if (distsOld[nn] > 0.0)
-		    dorefine[nn] = MD_OUTIN_BARRIER;
-		  else
+	    	    dorefine[nn] = MD_OUTIN_BARRIER;
+    		  else
 		    dorefine[nn] = MD_INOUT_BARRIER;
 		  if (!valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
 		    dorefine[nn] = MD_EVENT_NONE;
