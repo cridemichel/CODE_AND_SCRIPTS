@@ -23,7 +23,7 @@ void fdjacSE(int n, double x[], double fvec[], double **df,
 	   void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3]);
 #endif
 #ifdef MD_ASYM_ITENS
-void calc_omega(int i);
+void calc_omega(int i, double *wwx, double *wwy, double *wwz);
 void calc_angmom(int i, double **I);
 extern void upd_refsysM(int i);
 #endif
@@ -382,9 +382,6 @@ void saveFullStore(char* fname)
   UpdateSystem();
   for (i=0; i < Oparams.parnum; i++)
     {
-#ifdef MD_ASYM_ITENS
-      calc_omega(i);
-#endif
       update_MSDrot(i);
 #ifdef MD_CALC_DPP
       update_MSD(i);
@@ -2323,12 +2320,16 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   rBC[2] = rz[j] - rCz;
 #if 0
     {
-      double shift[3], r1[3], r2[3], alpha, vecgd[8], r12[3];
+      double dd, shift[3], r1[3], r2[3], alpha, vecgd[8], r12[3];
       shift[0] = L*rint((rx[i]-rx[j])/L);
       shift[1] = L*rint((ry[i]-ry[j])/L);
       shift[2] = L*rint((rz[i]-rz[j])/L);
-      printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]);
-      printf("[bump] distance between %d-%d: %.15G\n", i, j, calcDistNeg(0.0, Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1));
+      dd=calcDistNeg(0.0, Oparams.time, i, j, shift, r1, r2, &alpha, vecgd, 1);
+      if (fabs(dd) > 5E-13)
+	{ 
+	  printf("shift=(%f,%f,%f)\n", shift[0], shift[1], shift[2]);
+	  printf("[bump] distance between %d-%d: %.15G\n", i, j, dd);
+	}
     }
 #endif 
   for (a=0; a < 3; a++)
@@ -8246,7 +8247,7 @@ void calc_energy_i(char *msg, int i)
   
 }
 #ifdef MD_ASYM_ITENS
-void calc_omega(int i)
+void calc_omega(int i, double *wwx, double *wwy, double *wwz)
 {
   double Mvec[3], omega[3];
   int k1, k2, na;
@@ -8258,7 +8259,7 @@ void calc_omega(int i)
   typei = typeOfPart[i];	
   if (is_infinite_Itens(i))
     {
-      wx[i] = wy[i] = wz[i] = 0.0;
+      *wwx = *wwy = *wwz = 0.0;
       return;     
     }
   tRDiagR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
@@ -8280,9 +8281,9 @@ void calc_omega(int i)
       for (k2 = 0; k2 < 3; k2++)
 	omega[k1] += invIa[k1][k2]*Mvec[k2]; 
     }
-  wx[i] = omega[0];
-  wy[i] = omega[1];
-  wz[i] = omega[2];
+  *wwx = omega[0];
+  *wwy = omega[1];
+  *wwz = omega[2];
   //printf("i=%d M=%.15G %.15G %.15G w[%d]=%.15G %.15G %.15G\n", i, Mx[i], My[i], Mz[i], i, wx[i], wy[i], wz[i]);
 }
 #endif
@@ -8314,11 +8315,12 @@ void calc_energy_filtered(int filter)
       if (typesArr[typeOfPart[i]].m <= MD_INF_MASS)
 	Ktra += typesArr[typeOfPart[i]].m*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 #ifdef MD_ASYM_ITENS
-      calc_omega(i);
-#endif
+      calc_omega(i, &(wt[0]), &(wt[1]), &(wt[2]));
+#else
       wt[0] = wx[i];
       wt[1] = wy[i];
       wt[2] = wz[i];
+#endif
 #ifdef MD_ASYM_ITENS
       for (k1=0; k1 < 3; k1++)
 	{
@@ -8375,11 +8377,12 @@ void calc_energy(char *msg)
 	  Ktra += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 #endif
 #ifdef MD_ASYM_ITENS
-	  calc_omega(i);
-#endif
+	  calc_omega(i, &(wt[0]), &(wt[1]), &(wt[2]));
+#else
 	  wt[0] = wx[i];
 	  wt[1] = wy[i];
 	  wt[2] = wz[i];
+#endif
 #ifdef MD_ASYM_ITENS
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -8416,11 +8419,12 @@ void calc_energy(char *msg)
 #endif
 	  Ktra += Oparams.m[1]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 #ifdef MD_ASYM_ITENS
-	  calc_omega(i);
-#endif
+	  calc_omega(i, &(wt[0]), &(wt[1]), &(wt[2]));
+#else
 	  wt[0] = wx[i];
 	  wt[1] = wy[i];
 	  wt[2] = wz[i];
+#endif
 #ifdef MD_ASYM_ITENS
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -9200,9 +9204,6 @@ void move(void)
 	  UpdateSystem();
 	  for (i=0; i < Oparams.parnum; i++)
 	    {
-#ifdef MD_ASYM_ITENS
-	      calc_omega(i);
-#endif
 	      update_MSDrot(i);
 #ifdef MD_CALC_DPP
 	      update_MSD(i);
@@ -9455,6 +9456,7 @@ void move(void)
       else if (evIdB == ATOM_LIMIT + 11)
 	{
 	  //UpdateSystem();
+
 	  timeshift_calendar();
 	  timeshift_variables();
 	  OprogStatus.refTime += OprogStatus.bigDt;
