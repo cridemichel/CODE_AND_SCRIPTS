@@ -3584,8 +3584,8 @@ void InvMatrix(double **a, double **b, int NB)
 #define MAXITS2 100
 /* N.B. se dovessero esserci problemi aumentare TOLF e TOLFD */
 #ifdef MD_NEW_NR_CHECKS
-#define TOLF 1.0E-13// 1.0e-4
-#define TOLFD 1.0E-13
+#define TOLF 1.0E-12// 1.0e-4
+#define TOLFD 1.0E-12
 #else
 #define TOLF 1.0E-10// 1.0e-4
 #define TOLFD 1.0E-10
