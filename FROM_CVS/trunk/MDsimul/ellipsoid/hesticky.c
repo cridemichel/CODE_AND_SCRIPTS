@@ -25,6 +25,7 @@
 #ifdef EDHE_FLEX
 extern void set_angmom_to_zero(int i);
 extern int *is_a_sphere_NNL;
+extern int isSymItens(int i);
 #endif
 #if defined(MPI)
 extern int my_rank;
@@ -713,6 +714,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
   double denom, rCx, rCy, rCz, nrAB, Dr;
+  double invIaS=0.0, invIbS=0.0;
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
 #endif
@@ -916,9 +918,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       }  
   if (!infItens_i && !is_a_sphere_NNL[i])
     {
-      InvMatrix(Iatmp, invIa, 3);
       if (!isSymItens(i))
 	{
+	  InvMatrix(Iatmp, invIa, 3);
 	  Mvec[0] = Mx[i];
 	  Mvec[1] = My[i];
 	  Mvec[2] = Mz[i];
@@ -932,21 +934,28 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	  wy[i] = omega[1];
 	  wz[i] = omega[2];
 	}
+      else
+	invIaS = 1.0/typesArr[typei].I[0];
     }
   else
     {
-      for (k1 = 0; k1 < 3; k1++)
-	for (k2 = 0; k2 < 3; k2++)
-	  invIa[k1][k2] = 0.0;
+      if (!isSymItens(i))
+	{
+	  for (k1 = 0; k1 < 3; k1++)
+	    for (k2 = 0; k2 < 3; k2++)
+	      invIa[k1][k2] = 0.0;
+	}
+      else
+	invIaS = 1.0/typesArr[typei].I[0];
       wx[i] = 0.0;
       wy[i] = 0.0;
       wz[i] = 0.0;
     }
   if (!infItens_j && !is_a_sphere_NNL[j])
     {
-      InvMatrix(Ibtmp, invIb, 3);
       if (!isSymItens(j))
 	{
+	  InvMatrix(Ibtmp, invIb, 3);
 	  Mvec[0] = Mx[j];
 	  Mvec[1] = My[j];
 	  Mvec[2] = Mz[j];
@@ -960,12 +969,19 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	  wy[j] = omega[1];
 	  wz[j] = omega[2];
 	}
+      else
+	invIbS = 1.0 / typesArr[typej].I[0];
     }  
   else
     {
-      for (k1 = 0; k1 < 3; k1++)
-	for (k2 = 0; k2 < 3; k2++)
-	  invIb[k1][k2] = 0.0;
+      if (!isSymItens(j))
+	{
+	  for (k1 = 0; k1 < 3; k1++)
+	    for (k2 = 0; k2 < 3; k2++)
+	      invIb[k1][k2] = 0.0;
+	}
+      else
+	invIbS = 1.0/typesArr[typej].I[0];
       wx[j] = 0.0;
       wy[j] = 0.0;
       wz[j] = 0.0;  
@@ -1070,32 +1086,49 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
 #ifdef MD_ASYM_ITENS 
-  for (a=0; a < 3; a++)
+  if (!isSymItens(i))
     {
-      rnI[a] = 0;
-      for (b = 0; b < 3; b++)
+      for (a=0; a < 3; a++)
 	{
-	  rnI[a] += invIa[a][b]*rACn[b]; 
+	  rnI[a] = 0;
+	  for (b = 0; b < 3; b++)
+	    {
+	      rnI[a] += invIa[a][b]*rACn[b]; 
+	    }
 	}
+      for (a = 0; a < 3; a++)
+	denom += rnI[a]*rACn[a];
     }
-  for (a = 0; a < 3; a++)
-    denom += rnI[a]*rACn[a];
+  else
+    {
+      for (a = 0; a < 3; a++)
+	denom += invIaS*Sqr(rACn[a]);
+    }
 #else
   for (a = 0; a < 3; a++)
     denom += invIa*Sqr(rACn[a]);
 #endif
   vectProd(rBC[0], rBC[1], rBC[2], norm[0], norm[1], norm[2], &rBCn[0], &rBCn[1], &rBCn[2]);
 #ifdef MD_ASYM_ITENS  
-  for (a=0; a < 3; a++)
+  if (!isSymItens(j))
     {
-      rnI[a] = 0;
-      for (b = 0; b < 3; b++)
+      for (a=0; a < 3; a++)
 	{
-	  rnI[a] += invIb[a][b]*rBCn[b]; 
+	  rnI[a] = 0;
+	  for (b = 0; b < 3; b++)
+	    {
+	      rnI[a] += invIb[a][b]*rBCn[b]; 
+	    }
 	}
+
+      for (a = 0; a < 3; a++)
+	denom += rnI[a]*rBCn[a];
     }
-  for (a = 0; a < 3; a++)
-    denom += rnI[a]*rBCn[a];
+  else
+    {
+      for (a = 0; a < 3; a++)
+	denom += invIbS*Sqr(rBCn[a]);
+    }
 #else
   for (a = 0; a < 3; a++)
     denom += invIb*Sqr(rBCn[a]);
@@ -1274,6 +1307,37 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
 #ifdef MD_ASYM_ITENS
   factor = -factor;
+  if (isSymItens(i))
+    {
+      wx[i] += factor*invIaS*rACn[0];
+      wy[i] += factor*invIaS*rACn[1];
+      wz[i] += factor*invIaS*rACn[2];
+    }
+  else
+    {
+      for (a=0; a < 3; a++)
+	{
+	  wx[i] += factor*invIa[0][a]*rACn[a];
+	  wy[i] += factor*invIa[1][a]*rACn[a];
+	  wz[i] += factor*invIa[2][a]*rACn[a];
+	}	 
+    }
+  if (isSymItens(j))
+    {
+      wx[j] -= factor*invIbS*rBCn[0];
+      wy[j] -= factor*invIbS*rBCn[1];
+      wz[j] -= factor*invIbS*rBCn[2];
+    }
+  else
+    {
+      for (a=0; a < 3; a++)
+	{
+	  wx[j] -= factor*invIb[0][a]*rBCn[a];
+	  wy[j] -= factor*invIb[1][a]*rBCn[a];
+	  wz[j] -= factor*invIb[2][a]*rBCn[a];
+	}
+    }
+#if 0
   for (a=0; a < 3; a++)
     {
       wx[i] += factor*invIa[0][a]*rACn[a];
@@ -1283,6 +1347,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       wz[i] += factor*invIa[2][a]*rACn[a];
       wz[j] -= factor*invIb[2][a]*rBCn[a];
     }
+#endif
 #else
   MD_DEBUG(printf(">>>>>>>>>>collCode: %d\n", bt));
   MD_DEBUG(printf("numbonds[0]:%d numbonds[1]:%d\n", numbonds[0], numbonds[1]));

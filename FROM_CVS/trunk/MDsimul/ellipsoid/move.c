@@ -2243,6 +2243,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #ifndef MD_ASYM_ITENS
   double factorinvIa, factorinvIb;
 #endif
+  double invIaS=0.0, invIbS=0.0;
 #ifdef MD_ASYM_ITENS
   int k1,k2;
   double rnI[3];
@@ -2448,9 +2449,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #if defined(EDHE_FLEX) 
   if (!infItens_i && !is_a_sphere_NNL[i])
     {
-      InvMatrix(Iatmp, invIa, 3);
       if (!isSymItens(i))
 	{
+	  InvMatrix(Iatmp, invIa, 3);
 	  Mvec[0] = Mx[i];
 	  Mvec[1] = My[i];
 	  Mvec[2] = Mz[i];
@@ -2464,21 +2465,28 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 	  wy[i] = omega[1];
 	  wz[i] = omega[2];
 	}
+      else
+	invIaS = 1.0/typesArr[typei].I[0];
     }
   else
     {
-      for (k1 = 0; k1 < 3; k1++)
-	for (k2 = 0; k2 < 3; k2++)
-	  invIa[k1][k2] = 0.0;
+      if (!isSymItens(i))
+	{
+	  for (k1 = 0; k1 < 3; k1++)
+	    for (k2 = 0; k2 < 3; k2++)
+	      invIa[k1][k2] = 0.0;
+	}
+      else
+	invIaS = 1.0/typesArr[typei].I[0];
       wx[i] = 0.0;
       wy[i] = 0.0;
       wz[i] = 0.0;
     }
   if (!infItens_j && !is_a_sphere_NNL[j])
     {
-      InvMatrix(Ibtmp, invIb, 3);
       if (!isSymItens(j))
 	{
+	  InvMatrix(Ibtmp, invIb, 3);
 	  Mvec[0] = Mx[j];
 	  Mvec[1] = My[j];
 	  Mvec[2] = Mz[j];
@@ -2492,12 +2500,20 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 	  wy[j] = omega[1];
 	  wz[j] = omega[2];
 	}
+      else
+	invIbS = 1.0/typesArr[typej].I[0];
     }  
   else
     {
-      for (k1 = 0; k1 < 3; k1++)
-	for (k2 = 0; k2 < 3; k2++)
-	  invIb[k1][k2] = 0.0;
+      if (!isSymItens(j))
+	{
+	  for (k1 = 0; k1 < 3; k1++)
+	    for (k2 = 0; k2 < 3; k2++)
+	      invIb[k1][k2] = 0.0;
+	}
+      else
+	invIbS = 1.0/typesArr[typej].I[0];
+
       wx[j] = 0.0;
       wy[j] = 0.0;
       wz[j] = 0.0;  
@@ -2639,32 +2655,48 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     }
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
 #ifdef MD_ASYM_ITENS 
-  for (a=0; a < 3; a++)
+  if (!isSymItens(i))
     {
-      rnI[a] = 0;
+      for (a=0; a < 3; a++)
+	{
+	  rnI[a] = 0;
       for (b = 0; b < 3; b++)
 	{
 	  rnI[a] += invIa[a][b]*rACn[b]; 
 	}
+	}
+      for (a = 0; a < 3; a++)
+	denom += rnI[a]*rACn[a];
     }
-  for (a = 0; a < 3; a++)
-    denom += rnI[a]*rACn[a];
+  else
+    {
+      for (a = 0; a < 3; a++)
+	denom += invIaS*Sqr(rACn[a]);
+    }
 #else
   for (a = 0; a < 3; a++)
     denom += invIa*Sqr(rACn[a]);
 #endif
   vectProd(rBC[0], rBC[1], rBC[2], norm[0], norm[1], norm[2], &rBCn[0], &rBCn[1], &rBCn[2]);
 #ifdef MD_ASYM_ITENS  
-  for (a=0; a < 3; a++)
+  if (!isSymItens(j))
     {
-      rnI[a] = 0;
-      for (b = 0; b < 3; b++)
+      for (a=0; a < 3; a++)
 	{
-	  rnI[a] += invIb[a][b]*rBCn[b]; 
+	  rnI[a] = 0;
+	  for (b = 0; b < 3; b++)
+	    {
+	      rnI[a] += invIb[a][b]*rBCn[b]; 
+	    }
 	}
+      for (a = 0; a < 3; a++)
+	denom += rnI[a]*rBCn[a];
     }
-  for (a = 0; a < 3; a++)
-    denom += rnI[a]*rBCn[a];
+  else
+    {
+      for (a = 0; a < 3; a++)
+	denom += invIbS*Sqr(rBCn[a]);
+    }
 #else
   for (a = 0; a < 3; a++)
     denom += invIb*Sqr(rBCn[a]);
@@ -2732,14 +2764,35 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   update_MSDrot(i);
   update_MSDrot(j);
 #ifdef MD_ASYM_ITENS
-  for (a=0; a < 3; a++)
+  if (isSymItens(i))
     {
-      wx[i] += factor*invIa[0][a]*rACn[a];
-      wx[j] -= factor*invIb[0][a]*rBCn[a];
-      wy[i] += factor*invIa[1][a]*rACn[a];
-      wy[j] -= factor*invIb[1][a]*rBCn[a];
-      wz[i] += factor*invIa[2][a]*rACn[a];
-      wz[j] -= factor*invIb[2][a]*rBCn[a];
+      wx[i] += factor*invIaS*rACn[0];
+      wy[i] += factor*invIaS*rACn[1];
+      wz[i] += factor*invIaS*rACn[2];
+    }
+  else
+    {
+      for (a=0; a < 3; a++)
+	{
+	  wx[i] += factor*invIa[0][a]*rACn[a];
+	  wy[i] += factor*invIa[1][a]*rACn[a];
+	  wz[i] += factor*invIa[2][a]*rACn[a];
+	}	 
+    }
+  if (isSymItens(j))
+    {
+      wx[j] -= factor*invIbS*rBCn[0];
+      wy[j] -= factor*invIbS*rBCn[1];
+      wz[j] -= factor*invIbS*rBCn[2];
+    }
+  else
+    {
+      for (a=0; a < 3; a++)
+	{
+	  wx[j] -= factor*invIb[0][a]*rBCn[a];
+	  wy[j] -= factor*invIb[1][a]*rBCn[a];
+	  wz[j] -= factor*invIb[2][a]*rBCn[a];
+	}
     }
 #else
   factorinvIa = factor*invIa;
@@ -7153,7 +7206,7 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
 #ifdef MD_ASYM_ITENS
   int k1,k2;
   double rnI[3];
-  double Mvec[3], omega[3];
+  double Mvec[3], omega[3], invIaS=0.0;
 #endif
   int typei;
   int a, b;
@@ -7188,14 +7241,15 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   Ia = Oparams.I[na];
 #endif
 #ifdef MD_ASYM_ITENS
-  for (k1 = 0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      {
-	Iatmp[k1][k2] = Ia[k1][k2];
-      } 
-  InvMatrix(Iatmp, invIa, 3);
+  
   if (!isSymItens(i))
     {
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    Iatmp[k1][k2] = Ia[k1][k2];
+	  } 
+      InvMatrix(Iatmp, invIa, 3);
       Mvec[0] = Mx[i];
       Mvec[1] = My[i];
       Mvec[2] = Mz[i];
@@ -7209,6 +7263,8 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
       wy[i] = omega[1];
       wz[i] = omega[2];
     }
+  else
+    invIaS = 1.0/typesArr[typei].I[0];
 #else
   invIa = 1/Ia;
   MD_DEBUG(printf("Ia=%f Ib=%f\n", Ia, Ib));
@@ -7225,16 +7281,24 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   rACn[1] = -rAC[0]*norm[2];
 
 #ifdef MD_ASYM_ITENS 
-  for (a=0; a < 3; a++)
+  if (!isSymItens(i))
     {
-      rnI[a] = 0;
-      for (b = 0; b < 2; b++)
+      for (a=0; a < 3; a++)
 	{
-	  rnI[a] += invIa[a][b]*rACn[b]; 
+	  rnI[a] = 0;
+	  for (b = 0; b < 2; b++)
+	    {
+	      rnI[a] += invIa[a][b]*rACn[b]; 
+	    }
 	}
+      for (a = 0; a < 2; a++)
+	denom += rnI[a]*rACn[a];
     }
-  for (a = 0; a < 2; a++)
-    denom += rnI[a]*rACn[a];
+  else
+    {
+      for (a = 0; a < 3; a++)
+	denom += invIaS*Sqr(rACn[a]);
+    }
 #else
   for (a = 0; a < 2; a++)
     denom += invIa*Sqr(rACn[a]);
@@ -7249,11 +7313,20 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
       //vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
 #ifdef MD_ASYM_ITENS
       /* rACn[2]=0 per quello a < 2*/
-      for (a=0; a < 2; a++)
+      if (isSymItens(i))
 	{
-	  wx[i] += factor*invIa[0][a]*rACn[a];
-	  wy[i] += factor*invIa[1][a]*rACn[a];
-	  wz[i] += factor*invIa[2][a]*rACn[a];
+      	  wx[i] += factor*invIaS*rACn[0];
+	  wy[i] += factor*invIaS*rACn[1];
+	  //wz[i] += factor*invIaS*rACn[2];
+	}
+      else
+	{
+	  for (a=0; a < 2; a++)
+	    {
+	      wx[i] += factor*invIa[0][a]*rACn[a];
+	      wy[i] += factor*invIa[1][a]*rACn[a];
+	      wz[i] += factor*invIa[2][a]*rACn[a];
+	    }
 	}
 #else
       factorinvIa = factor*invIa;
@@ -8272,6 +8345,13 @@ void calc_omega(int i, double *wwx, double *wwy, double *wwz)
       *wwx = *wwy = *wwz = 0.0;
       return;     
     }
+  if (isSymItens(i))
+    {
+      *wwx = wx[i];
+      *wwy = wy[i];    
+      *wwz = wz[i];
+      return;
+    }
   tRDiagR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
 #else
   tRDiagR(i, Ia, Oparams.I[na][0], Oparams.I[na][1], Oparams.I[na][2], R[i]);
@@ -8394,17 +8474,23 @@ void calc_energy(char *msg)
 	  wt[2] = wz[i];
 #endif
 #ifdef MD_ASYM_ITENS
-	  for (k1=0; k1 < 3; k1++)
+	  if (!isSymItens(i))
 	    {
-	      wtp[k1] = 0.0;
-	      for (k2=0; k2 < 3; k2++)
-		wtp[k1] += R[i][k1][k2]*wt[k2];
+	      for (k1=0; k1 < 3; k1++)
+		{
+		  wtp[k1] = 0.0;
+		  for (k2=0; k2 < 3; k2++)
+		    wtp[k1] += R[i][k1][k2]*wt[k2];
+		}
 	    }
 	  //printf("calcnorm wt: %.15G wtp:%.15G\n", calc_norm(wt), calc_norm(wtp));
 	  for (k1=0; k1 < 3; k1++)
 	    {
 #ifdef EDHE_FLEX
-	      Krot += Sqr(wtp[k1])*typesArr[typeOfPart[i]].I[k1];
+	      if (!isSymItens(i))
+		Krot += Sqr(wtp[k1])*typesArr[typeOfPart[i]].I[k1];
+	      else
+		Krot += Sqr(wt[k1])*typesArr[typeOfPart[i]].I[k1];
 #else
 	      Krot += Sqr(wtp[k1])*Oparams.I[0][k1];
 #endif
