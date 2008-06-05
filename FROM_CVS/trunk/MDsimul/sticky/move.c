@@ -5527,6 +5527,7 @@ void distanza(int ia, int ib)
 void timeshift_variables(void)
 {
   int i;
+  Oparams.time = 0.0;
   if (OprogStatus.rescaleTime > 0.0)
     OprogStatus.nextcheckTime -= OprogStatus.bigDt;
   OprogStatus.nextDt -= OprogStatus.bigDt;
@@ -6114,7 +6115,7 @@ void move(void)
 	  //UpdateSystem();
 	  timeshift_calendar();
 	  timeshift_variables();
-	  Oparams.time -= OprogStatus.bigDt;
+	  //Oparams.time -= OprogStatus.bigDt;
 	  OprogStatus.refTime += OprogStatus.bigDt;
        	  ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
 	}
