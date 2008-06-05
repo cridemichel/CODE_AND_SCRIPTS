@@ -91,6 +91,7 @@ extern void updrebuildNNL(int na);
 extern void PredictEventNNL(int na, int nb);
 extern void updAllNNL();
 #ifdef MD_PATCHY_HE
+int isSymItens(int i);
 extern int locate_contactSP(int i, int j, double shift[3], double t1, double t2, double *evtime, int *ata, int *atb, int *collCode);
 extern void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent);
 extern int *mapbondsa;
@@ -2447,9 +2448,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #if defined(EDHE_FLEX) 
   if (!infItens_i && !is_a_sphere_NNL[i])
     {
+      InvMatrix(Iatmp, invIa, 3);
       if (!isSymItens(i))
 	{
-	  InvMatrix(Iatmp, invIa, 3);
 	  Mvec[0] = Mx[i];
 	  Mvec[1] = My[i];
 	  Mvec[2] = Mz[i];
@@ -2475,9 +2476,9 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     }
   if (!infItens_j && !is_a_sphere_NNL[j])
     {
+      InvMatrix(Ibtmp, invIb, 3);
       if (!isSymItens(j))
 	{
-	  InvMatrix(Ibtmp, invIb, 3);
 	  Mvec[0] = Mx[j];
 	  Mvec[1] = My[j];
 	  Mvec[2] = Mz[j];
@@ -7187,14 +7188,14 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   Ia = Oparams.I[na];
 #endif
 #ifdef MD_ASYM_ITENS
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Iatmp[k1][k2] = Ia[k1][k2];
+      } 
+  InvMatrix(Iatmp, invIa, 3);
   if (!isSymItens(i))
     {
-      for (k1 = 0; k1 < 3; k1++)
-	for (k2 = 0; k2 < 3; k2++)
-	  {
-	    Iatmp[k1][k2] = Ia[k1][k2];
-	  } 
-      InvMatrix(Iatmp, invIa, 3);
       Mvec[0] = Mx[i];
       Mvec[1] = My[i];
       Mvec[2] = Mz[i];

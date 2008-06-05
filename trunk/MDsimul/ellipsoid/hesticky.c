@@ -916,9 +916,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       }  
   if (!infItens_i && !is_a_sphere_NNL[i])
     {
+      InvMatrix(Iatmp, invIa, 3);
       if (!isSymItens(i))
 	{
-	  InvMatrix(Iatmp, invIa, 3);
 	  Mvec[0] = Mx[i];
 	  Mvec[1] = My[i];
 	  Mvec[2] = Mz[i];
@@ -944,9 +944,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
   if (!infItens_j && !is_a_sphere_NNL[j])
     {
+      InvMatrix(Ibtmp, invIb, 3);
       if (!isSymItens(j))
 	{
-	  InvMatrix(Ibtmp, invIb, 3);
 	  Mvec[0] = Mx[j];
 	  Mvec[1] = My[j];
 	  Mvec[2] = Mz[j];

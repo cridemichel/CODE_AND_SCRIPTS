@@ -287,7 +287,7 @@ void calc_momentum_filtered(double P[3], int filter)
   double mass;
   int i;
   double px, py, pz;
-  UpdateSystem();
+  //UpdateSystem();
   P[0] = 0.0;
   P[1] = 0.0;
   P[2] = 0.0;
