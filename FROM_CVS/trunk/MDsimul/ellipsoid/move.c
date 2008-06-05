@@ -8954,6 +8954,7 @@ void rebuildLinkedList(void);
 void timeshift_variables(void)
 {
   int i;
+  Oparams.time = 0.0;
   if (OprogStatus.scalevel)
     OprogStatus.nextcheckTime -= OprogStatus.bigDt;
   OprogStatus.nextDt -= OprogStatus.bigDt;
