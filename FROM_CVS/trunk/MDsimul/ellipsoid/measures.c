@@ -770,11 +770,19 @@ void calc_energy_filtered_per_type(double *Kt)
       wt[2] = wz[i];
 #endif
 #ifdef MD_ASYM_ITENS
-      for (k1=0; k1 < 3; k1++)
+      if (!isSymItens(i))
 	{
-	  wtp[k1] = 0.0;
-	  for (k2=0; k2 < 3; k2++)
-	    wtp[k1] += R[i][k1][k2]*wt[k2];
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      wtp[k1] = 0.0;
+	      for (k2=0; k2 < 3; k2++)
+		wtp[k1] += R[i][k1][k2]*wt[k2];
+	    }
+	}
+      else
+	{
+	  for (k1=0; k1 < 3; k1++)
+	    wtp[k1] = wt[k1];
 	}
       //printf("calcnorm wt: %.15G wtp:%.15G\n", calc_norm(wt), calc_norm(wtp));
       for (k1=0; k1 < 3; k1++)
