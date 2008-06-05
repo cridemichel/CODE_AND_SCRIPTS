@@ -3828,6 +3828,10 @@ void newtNeigh(double x[], int n, int *check,
 {
   int i,its,ok;
   double d,f,stpmax,sum,test; 
+#ifdef MD_GLOBALNRNL
+  int j;
+  double fold;
+#endif
 #if 0
   int *indx;
   double **fjac,*g,*p,*xold;
@@ -4163,6 +4167,10 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 {
   int i,its=0,ok;
   double d,stpmax,sum,test;
+#ifdef MD_GLOBALNRDNL
+  double fold,f;
+  int j;
+#endif
 #if 0
   int * indx;
   double **fjac,*g,*p,*xold; 
@@ -4341,6 +4349,10 @@ void newtDistNegNeigh(double x[], int n, int *check,
 {
   int i,its=0,ok;
   double d,stpmax,sum,test; 
+#ifdef MD_GLOBALNRDNL
+  double f, fold;
+  int j;
+#endif
 #if 0
   int *indx;
   double **fjac,*g,*p,*xold;
@@ -4598,6 +4610,10 @@ void newtDistNeg(double x[], int n, int *check,
   int i,its=0,ok;
   double fx[3], gx[3];
   double d,stpmax,sum,test; 
+#ifdef MD_GLOBALNRD
+  double f, fold;
+  int j;
+#endif
 #if 0
   int *indx;
   double **fjac,*g,*p,*xold;
@@ -4811,6 +4827,10 @@ void newtDist(double x[], int n, int *check,
 {
   int i, its,ok;
   double d,stpmax,sum,test; 
+#ifdef MD_GLOBALNRD
+  double f, fold;
+  int j;
+#endif
 #if 0
   int *indx;
   double **fjac,*g,*p,*xold;

@@ -19,6 +19,7 @@
 #define MD_DEBUG41(x) 
 #define MD_DEBUG45(x)  
 #define MD_NEGPAIRS
+#define ZBRENTTOL 1.0E-16
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
 #ifdef EDHE_FLEX
@@ -854,7 +855,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     shift[1] = L*rint((ry[i]-ry[j])/L);
     shift[2] = L*rint((rz[i]-rz[j])/L);
     dd = calcDistNegOneSP(Oparams.time,0.0,i,j,0, shift); 
-    if (fabs(dd) > 5E-14)
+    if (fabs(dd) > 5E-15)
       printf("[bumpSP] t=%.15G distance between (%d,%d) - (%d,%d) = %.15G\n", Oparams.time, i, ata, j, atb, dd);
   }
 #endif  
@@ -1977,7 +1978,7 @@ int refine_contactSP(int i, int j, double tref, double t1, double t2, int nn, do
   trefbr = tref;
   for (kk=0; kk < 3; kk++)
     shiftbr[kk] = shift[kk];
-  *troot=zbrent(funcs2beZeroedBrent, t1, t2, 1E-16);
+  *troot=zbrent(funcs2beZeroedBrent, t1, t2, ZBRENTTOL);
   *troot += tref;
   if (polinterr==1)
     {
@@ -3510,7 +3511,7 @@ int refine_contact_neigh_plane_sp(int i, double tref, double t1, double t2, doub
   ibr = i;
   nnbr = nsp;
   trefbr = tref;
-  *troot=zbrent(funcs2beZeroedBrentNNL_sp, t1, t2, 1E-16);
+  *troot=zbrent(funcs2beZeroedBrentNNL_sp, t1, t2, ZBRENTTOL);
   *troot += tref;
   if (polinterr==1)
     {
