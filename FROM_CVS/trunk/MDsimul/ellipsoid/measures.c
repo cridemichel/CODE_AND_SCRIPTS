@@ -359,6 +359,7 @@ void energy(void)
   Py = 0.0;
   Pz = 0.0;
   //invL = 1.0 / L;
+  /* questa puo' fare casini con il timeshift: controllare! */
   UpdateSystem();
   for(i = 0; i < Oparams.parnumA; i++)
     {
