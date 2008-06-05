@@ -359,8 +359,9 @@ void energy(void)
   Py = 0.0;
   Pz = 0.0;
   //invL = 1.0 / L;
-  /* questa puo' fare casini con il timeshift: controllare! */
-  UpdateSystem();
+  /* questa puo' fare casini con il timeshift e comunque non serve a nulla in quanto 
+     ad ogni Dt chiama UpdateSystem()! */
+  //UpdateSystem();
   for(i = 0; i < Oparams.parnumA; i++)
     {
 #ifdef EDHE_FLEX

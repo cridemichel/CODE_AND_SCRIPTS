@@ -2447,19 +2447,22 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #if defined(EDHE_FLEX) 
   if (!infItens_i && !is_a_sphere_NNL[i])
     {
-      InvMatrix(Iatmp, invIa, 3);
-      Mvec[0] = Mx[i];
-      Mvec[1] = My[i];
-      Mvec[2] = Mz[i];
-      for (k1 = 0; k1 < 3; k1++)
+      if (!isSymItens(i))
 	{
-	  omega[k1] = 0.0;
-	  for (k2 = 0; k2 < 3; k2++)
-	    omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+	  InvMatrix(Iatmp, invIa, 3);
+	  Mvec[0] = Mx[i];
+	  Mvec[1] = My[i];
+	  Mvec[2] = Mz[i];
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      omega[k1] = 0.0;
+	      for (k2 = 0; k2 < 3; k2++)
+		omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+	    }
+	  wx[i] = omega[0];
+	  wy[i] = omega[1];
+	  wz[i] = omega[2];
 	}
-      wx[i] = omega[0];
-      wy[i] = omega[1];
-      wz[i] = omega[2];
     }
   else
     {
@@ -2472,19 +2475,22 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
     }
   if (!infItens_j && !is_a_sphere_NNL[j])
     {
-      InvMatrix(Ibtmp, invIb, 3);
-      Mvec[0] = Mx[j];
-      Mvec[1] = My[j];
-      Mvec[2] = Mz[j];
-      for (k1 = 0; k1 < 3; k1++)
+      if (!isSymItens(j))
 	{
-	  omega[k1] = 0.0;
-	  for (k2 = 0; k2 < 3; k2++)
-	    omega[k1] += invIb[k1][k2]*Mvec[k2]; 
+	  InvMatrix(Ibtmp, invIb, 3);
+	  Mvec[0] = Mx[j];
+	  Mvec[1] = My[j];
+	  Mvec[2] = Mz[j];
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      omega[k1] = 0.0;
+	      for (k2 = 0; k2 < 3; k2++)
+		omega[k1] += invIb[k1][k2]*Mvec[k2]; 
+	    }
+	  wx[j] = omega[0];
+	  wy[j] = omega[1];
+	  wz[j] = omega[2];
 	}
-      wx[j] = omega[0];
-      wy[j] = omega[1];
-      wz[j] = omega[2];
     }  
   else
     {
@@ -3921,9 +3927,9 @@ void fdjac(int n, double x[], double fvec[], double **df,
 #ifdef MD_ASYM_ITENS
   ////UpdateOrient(iA, ti, RA, OmegaA);////
   if (isSymItens(iA)) 
-   UpdateOrient(iA, ti, RA, OmegaA);
- else
-   symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+    UpdateOrient(iA, ti, RA, OmegaA);
+  else
+    symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
   UpdateOrient(iA, ti, RA, OmegaA);
 #endif
@@ -7181,24 +7187,27 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   Ia = Oparams.I[na];
 #endif
 #ifdef MD_ASYM_ITENS
-  for (k1 = 0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      {
-	Iatmp[k1][k2] = Ia[k1][k2];
-      } 
-  InvMatrix(Iatmp, invIa, 3);
-  Mvec[0] = Mx[i];
-  Mvec[1] = My[i];
-  Mvec[2] = Mz[i];
-  for (k1 = 0; k1 < 3; k1++)
+  if (!isSymItens(i))
     {
-      omega[k1] = 0.0;
-      for (k2 = 0; k2 < 3; k2++)
-	omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    Iatmp[k1][k2] = Ia[k1][k2];
+	  } 
+      InvMatrix(Iatmp, invIa, 3);
+      Mvec[0] = Mx[i];
+      Mvec[1] = My[i];
+      Mvec[2] = Mz[i];
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  omega[k1] = 0.0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+	}
+      wx[i] = omega[0];
+      wy[i] = omega[1];
+      wz[i] = omega[2];
     }
-  wx[i] = omega[0];
-  wy[i] = omega[1];
-  wz[i] = omega[2];
 #else
   invIa = 1/Ia;
   MD_DEBUG(printf("Ia=%f Ib=%f\n", Ia, Ib));

@@ -916,19 +916,22 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       }  
   if (!infItens_i && !is_a_sphere_NNL[i])
     {
-      InvMatrix(Iatmp, invIa, 3);
-      Mvec[0] = Mx[i];
-      Mvec[1] = My[i];
-      Mvec[2] = Mz[i];
-      for (k1 = 0; k1 < 3; k1++)
+      if (!isSymItens(i))
 	{
-	  omega[k1] = 0.0;
-	  for (k2 = 0; k2 < 3; k2++)
-	    omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+	  InvMatrix(Iatmp, invIa, 3);
+	  Mvec[0] = Mx[i];
+	  Mvec[1] = My[i];
+	  Mvec[2] = Mz[i];
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      omega[k1] = 0.0;
+	      for (k2 = 0; k2 < 3; k2++)
+		omega[k1] += invIa[k1][k2]*Mvec[k2]; 
+	    }
+	  wx[i] = omega[0];
+	  wy[i] = omega[1];
+	  wz[i] = omega[2];
 	}
-      wx[i] = omega[0];
-      wy[i] = omega[1];
-      wz[i] = omega[2];
     }
   else
     {
@@ -941,19 +944,23 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
   if (!infItens_j && !is_a_sphere_NNL[j])
     {
-      InvMatrix(Ibtmp, invIb, 3);
-      Mvec[0] = Mx[j];
-      Mvec[1] = My[j];
-      Mvec[2] = Mz[j];
-      for (k1 = 0; k1 < 3; k1++)
+      if (!isSymItens(j))
 	{
-	  omega[k1] = 0.0;
-	  for (k2 = 0; k2 < 3; k2++)
-	    omega[k1] += invIb[k1][k2]*Mvec[k2]; 
+	  InvMatrix(Ibtmp, invIb, 3);
+	  Mvec[0] = Mx[j];
+	  Mvec[1] = My[j];
+	  Mvec[2] = Mz[j];
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      omega[k1] = 0.0;
+	      for (k2 = 0; k2 < 3; k2++)
+		omega[k1] += invIb[k1][k2]*Mvec[k2]; 
+	    }
+	  wx[j] = omega[0];
+	  wy[j] = omega[1];
+	  wz[j] = omega[2];
 	}
-      wx[j] = omega[0];
-      wy[j] = omega[1];
-      wz[j] = omega[2];}  
+    }  
   else
     {
       for (k1 = 0; k1 < 3; k1++)
