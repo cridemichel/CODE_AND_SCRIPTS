@@ -204,7 +204,8 @@ void energy(void)
   Py = 0.0;
   Pz = 0.0;
   invL = 1.0 / L;
-  UpdateSystem();
+  /* 05/06/08: questo sembra essere pericoloso e non serve! */
+  //UpdateSystem();
   for(i = 0; i < Oparams.parnumA; i++)
     {
       px = Oparams.m[0] * vx[i];
