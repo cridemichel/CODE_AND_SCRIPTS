@@ -9553,7 +9553,6 @@ void move(void)
       else if (evIdB == ATOM_LIMIT + 11)
 	{
 	  //UpdateSystem();
-
 	  timeshift_calendar();
 	  timeshift_variables();
 	  OprogStatus.refTime += OprogStatus.bigDt;
