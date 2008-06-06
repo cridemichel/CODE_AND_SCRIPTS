@@ -700,6 +700,58 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 		   double *dists, int bondpair);
 void assign_bond_mapping(int i, int j);
 #endif
+#ifdef MD_RABBIT
+int get_rabbit_bonds(int ifebA, int tA, int ifebB, int tB)
+{
+  int nb;
+  interStruct ts;
+  ts.type1 = tA;
+  ts.type2 = 5;
+  ts.spot1 = 1;
+  ts.spot2 = 0; 
+  nb = getnumbonds(ifebA, &ts, 0);
+  ts.type1 = tB;
+  nb += getnumbonds(ifebB, &ts, 0);
+  return nb;
+}
+void update_rates(int i, int j, int ata, int atb, double inc)
+{
+  int typei, typej, nb;
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+
+  if (typei == 0 && typej == 5)
+    nb = get_rabbit_bonds(i, 0, i+1, 1);
+  else if (typei == 1 && typej == 5)
+    nb = get_rabbit_bonds(i-1, 0, i, 1);
+  else if (typej == 0 && typei == 5)
+    nb = get_rabbit_bonds(j, 0, j+1, 1);
+  else if (typej == 1 && typei == 5)
+    nb = get_rabbit_bonds(j-1, 0, j, 1);
+  else
+    return;
+
+  if (inc > 0.0)
+    {
+      /* B = antibody, L = ligand/antigene */
+      if (nb == 0)
+	/* B + L -> BL */
+	OprogStatus.rate[0] += 1.0;
+      else
+       /* BL + L -> BL2 */	
+	OprogStatus.rate[1] += 1.0;
+    }
+  else
+    {
+      if (nb == 2)
+	/* BL2 -> BL */
+	OprogStatus.rate[2] += 1.0;
+      else 
+	/* BL -> B + L */
+	OprogStatus.rate[3] += 1.0;
+    }
+}
+#endif
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
@@ -1176,6 +1228,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	      MD_DEBUG40(printf("[MD_INOUT_BARRIER] qui factor=%.15G\n", factor));
 	      remove_bond(i, j, ata, atb);
 	      remove_bond(j, i, atb, ata);
+#ifdef MD_RABBIT
+	      update_rates(i, j, ata, atb, -1);
+#endif
 	    }
 	}
       else
@@ -1194,6 +1249,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
 	      remove_bond(i, j, ata, atb);
 	      remove_bond(j, i, atb, ata);
+#ifdef MD_RABBIT
+	      update_rates(i, j, ata, atb, -1.0);
+#endif
 	    }
 	}
 #if 0
@@ -1215,6 +1273,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
 	      add_bond(i, j, ata, atb);
 	      add_bond(j, i, atb, ata);
+#ifdef MD_RABBIT
+	      update_rates(i, j, ata, atb, +1.0);
+#endif
 	      MD_DEBUG40(printf("[MD_OUTIN_BARRIER IN] qui factor=%.15G\n", factor));
 	    }
 	}
@@ -1232,6 +1293,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	      add_bond(i, j, ata, atb);
 	      add_bond(j, i, atb, ata);
 	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
+#ifdef MD_RABBIT
+	      update_rates(i, j, ata, atb, +1.0);
+#endif
 	    }
 	  MD_DEBUG36(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
 		      i, ata, j, atb, Sqr(vc) + 2.0*bheight/mredl, bheight, mredl));

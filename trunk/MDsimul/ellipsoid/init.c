@@ -3115,6 +3115,8 @@ void usrInitAft(void)
 #ifdef MD_RABBIT
       f = fopenMPI(absMisHD("bi-mono-bonds.dat"), "w+");
       fclose(f);
+      f = fopenMPI(absMisHD("rates.dat"), "w+");
+      fclose(f);
 #endif
 #ifdef MD_ABSORPTION
       f = fopenMPI(absMisHD("absorption.dat"), "w+");

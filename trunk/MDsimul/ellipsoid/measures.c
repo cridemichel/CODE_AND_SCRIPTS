@@ -242,8 +242,9 @@ void get_bimono_bonds(int *bulk, int *mono, int *bi)
 #endif
 void calcV(void)
 {
+  double ti;
 #ifdef MD_RABBIT
-  int bulk, mono, bi;
+  int bulk, mono, bi, k;
 #endif
 #ifdef MD_PATCHY_HE
 #ifdef MD_FOUR_BEADS
@@ -272,10 +273,23 @@ void calcV(void)
   mf = fopenMPI(absMisHD("bi-mono-bonds.dat"),"a");
   get_bimono_bonds(&bulk, &mono, &bi);
 #ifdef MD_BIG_DT
-  fprintf(mf, "%15G %d %d %d\n", Oparams.time + OprogStatus.refTime, bulk, mono, bi);
+  fprintf(mf, "%G %d %d %d\n", Oparams.time + OprogStatus.refTime, bulk, mono, bi);
 #else
-  fprintf(mf, "%15G %d %d %d\n", Oparams.time, bulk, mono, bi);
+  fprintf(mf, "%G %d %d %d\n", Oparams.time, bulk, mono, bi);
 #endif
+  fclose(mf);
+  /* Salva i rates */
+  mf = fopenMPI(absMisHD("rates.dat"),"a");
+  ti = Oparams.time;
+#ifdef MD_BIG_DT
+  ti += OprogStatus.refTime;
+#endif
+  fprintf(mf, "%G ", ti);
+  for (k = 0; k < 4; k++)
+    {
+      fprintf(mf, "%G ", OprogStatus.rate[k]/ti);
+    } 
+  fprintf(mf, "\n");
   fclose(mf);
 #endif
 }
