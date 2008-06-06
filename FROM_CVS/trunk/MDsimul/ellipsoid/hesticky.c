@@ -736,19 +736,19 @@ void update_rates(int i, int j, int ata, int atb, double inc)
          inc = -1 bond broken */
       /* B = antibody, L = ligand/antigene */
       if (nb == 1)
-	/* B + L -> BL */
+	/* k1: B + L -> BL */
 	OprogStatus.rate[0] += 1.0;
       else if (nb == 2)
-       /* BL + L -> BL2 */	
+	/* k2: BL + L -> BL2 */	
 	OprogStatus.rate[1] += 1.0;
     }
   else
     {
       if (nb == 1)
-	/* BL2 -> BL */
+	/* k3: BL2 -> BL */
 	OprogStatus.rate[2] += 1.0;
       else if (nb == 0)
-	/* BL -> B + L */
+	/* k5: BL -> B + L */
 	OprogStatus.rate[3] += 1.0;
     }
 }
