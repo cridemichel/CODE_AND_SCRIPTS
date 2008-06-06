@@ -10,6 +10,9 @@ do
 NODE=${LN[$i]}
 echo "NODE: irrmalin"${NODE}
 echo "CONF: "${CN}  
-ssh foffi@irrmalin${NODE} ${DIR}/run_one_job.sh ${CN}
+ssh -n foffi@irrmalin${NODE} ${DIR}/run_one_job.sh ${CN} &
+echo "JOB SUBMITTED" 
+#ssh -n foffi@irrmalin${NODE} ${DIR}/renice_last_job.sh &
+#echo "JOB RENICED"
 i=$[$i+1]
 done

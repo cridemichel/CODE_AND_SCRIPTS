@@ -47,4 +47,8 @@ rm -fr Store*
 rm -fr COORD_TMP*
 ln -sf ../../ellipsoid $EEXE 
 ../../set_params.sh $PARFILE stepnum 100000000 storerate $STORERATE stripStore 1 intervalSum 10.0 scalevel 1 rescaleTime $RESC_TIME hardwall 1 par2save 0-$[$NUM_ANTIBODY-1] inifile CorIni endfile corfinal.cor temperat $TEMP VSteps $ENESTPS
-$EEXE -fa ellipsoid_flex.par > screen &
+./$EEXE -fa ellipsoid_flex.par > screen &
+#get last job ID
+#JOBID=`jobs -p`
+#write to a FILE
+#echo $JOBID > ../../_JOBID_ 
