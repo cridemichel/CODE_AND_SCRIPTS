@@ -1,0 +1,2 @@
+cd CRISTIANO/ANTIBODYGENE
+./run_sim_IgG.sh $1

@@ -1,4 +1,5 @@
 FN="all_pts.dat"
+RA="eqconst.dat"
 #numero di Avogadro
 Nav="6.023E23"
 #conversione da 1 unità ridotta di lunghezza a 1 m
@@ -35,3 +36,4 @@ cd ..
 cd ..
 done
 cat $FN | sort -k 1 -n > sorted$FN
+cat sorted$FN | LANG=C awk '{K1=$4/($3*$6); K2=$5/($4*$6); print ($6,K1,K2,$8)}' > $RA
