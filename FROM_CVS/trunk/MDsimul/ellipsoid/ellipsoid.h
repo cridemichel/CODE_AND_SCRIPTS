@@ -687,6 +687,7 @@ struct progStatus
 #ifdef MD_RABBIT
   double first_time;
   double time_limit;
+  double rate[10];
 #endif
   /* ======================================================================= */
 };
@@ -1001,6 +1002,7 @@ struct pascii opro_ascii[] =
 #ifdef MD_RABBIT
   {"time_limit",           &OS(time_limit),                1, 1,             "%.15G"},
   {"first_time",           &OS(first_time),                1, 1,             "%.15G"},
+  {"rate",                 &OS(rate),                      10, 1,            "%f"},
 #endif
   {"", NULL, 0, 0, ""}
 };
