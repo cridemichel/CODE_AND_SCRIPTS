@@ -248,6 +248,31 @@ void growth_rebuildNNL(int i)
 #ifdef MD_EDHEFLEX_OPTNNL
 extern void rebuild_linked_list_NNL(void);
 #endif
+#ifdef MD_GHOST_IGG
+void update_ghost_status(void)
+{
+  int i, curnigg, a, notransition;
+
+  for (i = 0; i < typeNP[0]; i++)
+    {
+      curnigg = ghostInfoArr[i].iggnum;
+      if (ghostInfoArr[i].ghost_status == 2)
+	{
+	  notransition = 0;
+	  for (a = 0; a < nebrTab[i].len; a++)
+	    {
+	      if ( ghostInfoArr[nebrTab[i].list[a]].iggnum != -1 &&
+		   ghostInfoArr[nebrTab[i].list[a]].iggnum != curnigg )
+		notransition = 1;
+	    }
+	  /* if notransition == 1 it means that there are possible overlap 
+	     transition fro 2 (bound) to 1 (bulk) */ 
+	  if (notransition == 0)
+	    ghostInfoArr[i].ghost_status = 1;
+	}
+    }
+}
+#endif
 void rebuildNNL(void)
 {
   int i;
@@ -270,6 +295,10 @@ void rebuildNNL(void)
     {
       BuildNNL(i);
     }
+#ifdef MD_GHOST_IGG
+  update_ghost_status();
+#endif
+ 
   /* next complete update */
   nextNNLrebuild = nltime;
   if (OprogStatus.useNNL==2)
@@ -5501,7 +5530,7 @@ void BuildNNL(int na)
 		  if (n != na)// && n != nb && (nb >= -1 || n < na)) 
 		    {
 #ifdef EDHE_FLEX
-    		      if (!may_interact_all(na, n))
+		      if (!may_interact_all(na, n))
 			continue;
 #endif
 		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
@@ -5513,25 +5542,12 @@ void BuildNNL(int na)
 #endif
 		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
 		       * in OprogStatus */
-#if 0
-		      if (n==132 && na==106)
-			printf("beccato!! dist=%f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 132, 106, shift));
-#endif
 		      if (dist < 0)
 			{
 			  MD_DEBUG32(printf("Adding ellipsoid N. %d to NNL of %d\n", n, na));
-
-#if 0
-			  if (n==132 && na==106)
-			    { printf("bahbah (106-132): %f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 106, 132, shift)); 
-
-			      printf("bahbah (132-106): %f\n", calcDistNegNNLoverlapPlane(Oparams.time, 0.0, 132, 106, shift)); 
-			      printf("shift= (%f,%f,%f)\n", shift[0], shift[1], shift[2]);
-}
-#endif
-			  nebrTab[na].list[nebrTab[na].len] = n;
+ 			  nebrTab[na].list[nebrTab[na].len] = n;
 			  //for (kk=0; kk < 3; kk++)
-			    //nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
+			  //nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
 			  nebrTab[na].len++;
 			}
 		    }
