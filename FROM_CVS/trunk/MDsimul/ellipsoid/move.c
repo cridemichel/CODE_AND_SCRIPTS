@@ -6661,11 +6661,17 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
 #ifdef MD_GHOST_IGG
 int areGhost(int i, int j)
 {
+  if (ghostInfoArr[i].iggnum < 0 || ghostInfoArr[j].iggnum < 0)
+    return 0;
   if (ghostInfoArr[i].iggnum == ghostInfoArr[j].iggnum)
     return 0;
   if ((ghostInfoArr[i].ghost_status==2 && ghostInfoArr[i].ghost_status==1)||
-      (ghostInfoArr[i].ghost_status==1 && ghostInfoArr[i].ghost_status==2))
-    return 1;
+      (ghostInfoArr[i].ghost_status==1 && ghostInfoArr[i].ghost_status==2)||
+      (ghostInfoArr[i].ghost_status==2 && ghostInfoArr[i].ghost_status==2))
+    {
+      //printf("They are ghost!\n i=%d, j=%d", i, j);
+      return 1;
+    }
   return 0;
 }
 #endif
