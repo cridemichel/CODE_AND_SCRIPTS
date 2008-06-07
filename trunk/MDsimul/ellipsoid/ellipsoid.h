@@ -77,6 +77,14 @@ void UpdateSystem(void);
 #define MD_INF_ITENS 1E199
 #define MD_INF_MASS  1E199
 #define MD_HANDLE_INFMASS
+#ifdef MD_GHOST_IGG
+typedef struct {
+  int iggnum;    /* IgG a cui appartiene l'ellissoide */
+  int ghost_status; /* 1 (bulk) o 2 (legto) */
+} ghostInfo;
+ghostInfo *ghostInfoArr;
+#endif
+
 typedef struct {
   double x[3];
   double sigma;

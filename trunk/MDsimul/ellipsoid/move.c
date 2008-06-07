@@ -6658,6 +6658,17 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
     return 0;
 }
 #endif
+#ifdef MD_GHOST_IGG
+int areGhost(int i, int j)
+{
+  if (ghostInfoArr[i].iggnum == ghostInfoArr[j].iggnum)
+    return 0;
+  if ((ghostInfoArr[i].ghost_status==2 && ghostInfoArr[i].ghost_status==1)||
+      (ghostInfoArr[i].ghost_status==1 && ghostInfoArr[i].ghost_status==2))
+    return 1;
+  return 0;
+}
+#endif
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
   double h, d, dold, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
@@ -6675,6 +6686,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #ifdef EDHE_FLEX
   if (typesArr[typeOfPart[i]].ignoreCore || typesArr[typeOfPart[j]].ignoreCore)
     return 0;
+#ifdef MD_GHOST_IGG
+  if (areGhost(i, j))
+    return 0;
+#endif
   if (are_spheres(i, j))
     {
       return locate_contact_HS(i, j, shift, t1, t2, vecg);

@@ -149,7 +149,6 @@ double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex;
 double *t2arr, *distsOld, *dists, *distsOld2, *maxddoti;
 int *crossed, *tocheck, *dorefine, *crossed, *negpairs, dofTot;
 #endif
-
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
 extern double *vector(int n);
@@ -2702,12 +2701,42 @@ void allocBondsSphWall(void)
     }
 }
 #endif
+#ifdef MD_GHOST_IGG
+extern int get_rabbit_bonds(int ifebA, int tA, int ifebB, int tB);
+#endif
+#ifdef MD_GHOST_IGG
+void init_ghostArr(void)
+{
+  int i, iggStatus, nigg, NIGG;
+  nigg=0;
+  iggStatus = 0;
+  ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
+  /* here I assume that Igg HE are first Nigg */
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (typeOfPart[i] > 2)
+	{
+	  ghostInfoArr[i].iggnum = -1;
+	  ghostInfoArr[i].ghost_status = -1; 
+	  continue;
+	}
+      if (typeOfPart[i] == 0)
+	iggStatus = (get_rabbit_bonds(i, 0, i+1, 1) > 0)?2:1;
+
+      ghostInfoArr[i].iggnum = nigg;
+      ghostInfoArr[i].ghost_status = iggStatus; 
+      if (typeOfPart[i]==2)
+	nigg++;
+    }
+}
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
+
 #ifdef MD_LXYZ
   int kk;
 #endif
@@ -3611,6 +3640,9 @@ void usrInitAft(void)
 #ifdef MD_HE_PARALL
   slave_task();
 #endif
+#ifdef MD_GHOST_IGG
+  init_ghostArr();
+#endif
   StartRun();
   if (mgl_mode != 2)
     ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
@@ -3690,7 +3722,7 @@ void usrInitAft(void)
 	}
     }
 #ifdef EDHE_FLEX
-  if (!strcmp(OprogStatus.par2save,"ALL") || !strcmp(OprogStatus.par2save,"all"))
+ if (!strcmp(OprogStatus.par2save,"ALL") || !strcmp(OprogStatus.par2save,"all"))
     globSaveAll = 1;
   else
     globSaveAll = 0;
