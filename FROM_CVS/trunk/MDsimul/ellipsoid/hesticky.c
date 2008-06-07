@@ -717,6 +717,9 @@ int get_rabbit_bonds(int ifebA, int tA, int ifebB, int tB)
 void update_rates(int i, int j, int ata, int atb, double inc)
 {
   int typei, typej, nb;
+#ifdef MD_GHOST_IGG
+  int ibeg, a;
+#endif
   typei = typeOfPart[i];
   typej = typeOfPart[j];
 
@@ -730,6 +733,33 @@ void update_rates(int i, int j, int ata, int atb, double inc)
     nb = get_rabbit_bonds(j-1, 0, j, 1);
   else
     return;
+#ifdef MD_GHOST_IGG
+  if (inc > 0.0 && nb == 1)
+    {
+      /* change status of IgG that i belongs to
+	 B + L -> BL hence transition from state 1 (bulk) to state 2 (bulk) */
+      if (typei==0)
+	{
+	  ibeg = i;
+	}
+      else if (typei==1)
+	{
+	  ibeg = i-1;
+	}
+      else if (typej==0)
+	{
+	  ibeg = j;
+	}
+      else
+	{
+	  ibeg = j-1;
+	}
+      for (a = 0; a < 3; a++)
+	{
+	  ghostInfoArr[ibeg+a].ghost_status = 2;
+	}
+    }
+#endif
   if (inc > 0.0)
     {
       /* inc = +1 new bond
