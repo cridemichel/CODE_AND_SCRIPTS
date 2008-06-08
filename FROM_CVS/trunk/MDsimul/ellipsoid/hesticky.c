@@ -714,30 +714,14 @@ int get_rabbit_bonds(int ifebA, int tA, int ifebB, int tB)
   nb += getnumbonds(ifebB, &ts, 0);
   return nb;
 }
-void update_rates(int i, int j, int ata, int atb, double inc)
+#ifdef MD_GHOST_IGG
+void make_ghosts(int inc, int nb, int i, int typei, int j, int typej)
 {
-  int typei, typej, nb;
-#ifdef MD_GHOST_IGG
-  int ibeg, a;
-#endif
-  typei = typeOfPart[i];
-  typej = typeOfPart[j];
-
-  if (typei == 0 && typej == 5)
-    nb = get_rabbit_bonds(i, 0, i+1, 1);
-  else if (typei == 1 && typej == 5)
-    nb = get_rabbit_bonds(i-1, 0, i, 1);
-  else if (typej == 0 && typei == 5)
-    nb = get_rabbit_bonds(j, 0, j+1, 1);
-  else if (typej == 1 && typei == 5)
-    nb = get_rabbit_bonds(j-1, 0, j, 1);
-  else
-    return;
-#ifdef MD_GHOST_IGG
+  int a, ibeg;
   if (inc > 0.0 && nb == 1)
     {
-      /* change status of IgG that i belongs to
-	 B + L -> BL hence transition from state 1 (bulk) to state 2 (bulk) */
+      /* change status of IgG that i belongs to,
+	 B + L -> BL hence transition from state 1 (bulk) to state 2 (bound) */
       if (typei==0)
 	{
 	  ibeg = i;
@@ -759,6 +743,26 @@ void update_rates(int i, int j, int ata, int atb, double inc)
 	  ghostInfoArr[ibeg+a].ghost_status = 2;
 	}
     }
+}
+#endif
+void update_rates(int i, int j, int ata, int atb, double inc)
+{
+  int typei, typej, nb;
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+
+  if (typei == 0 && typej == 5)
+    nb = get_rabbit_bonds(i, 0, i+1, 1);
+  else if (typei == 1 && typej == 5)
+    nb = get_rabbit_bonds(i-1, 0, i, 1);
+  else if (typej == 0 && typei == 5)
+    nb = get_rabbit_bonds(j, 0, j+1, 1);
+  else if (typej == 1 && typei == 5)
+    nb = get_rabbit_bonds(j-1, 0, j, 1);
+  else
+    return;
+#ifdef MD_GHOST_IGG
+  make_ghosts(inc, nb, i, typei, j, typej);
 #endif
   if (inc > 0.0)
     {
@@ -940,7 +944,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     shift[1] = L*rint((ry[i]-ry[j])/L);
     shift[2] = L*rint((rz[i]-rz[j])/L);
     dd = calcDistNegOneSP(Oparams.time,0.0,i,j,0, shift); 
-    if (fabs(dd) > 5E-15)
+    if (fabs(dd) > 5E-15 && ((i < 200 && j >= 1200) || (j < 200 && i >= 1200)) )
       printf("[bumpSP] t=%.15G distance between (%d,%d) - (%d,%d) = %.15G\n", Oparams.time, i, ata, j, atb, dd);
   }
 #endif  
@@ -2808,6 +2812,24 @@ int locate_contact_HSSP(int na, int n, double shift[3], double t1, double t2, do
 extern int sphWall;
 #endif
 extern int *is_a_sphere_NNL;
+int are_bonds_broken(int i, int j, double *dists)
+{
+  int nn;
+  int nbonds;
+  nbonds = nbondsFlex;
+  for (nn=0; nn < nbonds; nn++)
+    {
+      if (dists[nn] >= 0.0 && bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	{
+	  return 1;
+	}
+      if (dists[nn] <= 0.0 && !bound(i,j,mapbondsa[nn],mapbondsb[nn]))
+	{
+	  return 1;
+	}	  
+    }
+  return 0;
+}
 #endif
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
 		     double *evtime, int *ata, int *atb, int *collCode)
@@ -2887,6 +2909,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #endif
 #endif
   MD_DEBUG38(printf("BEGIN [locate_contactSP] %d-%d maxddot=%.15G t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,maxddot, t1, t2, shift[0], shift[1], shift[2]));
+  //printf("BEGIN [locate_contactSP] %d-%d maxddot=%.15G t1=%f t2=%f shift=(%f,%f,%f)\n", i,j,maxddot, t1, t2, shift[0], shift[1], shift[2]);
   h = OprogStatus.h; /* last resort time increment */
   if (*collCode!=MD_EVENT_NONE)
     {
@@ -2968,6 +2991,17 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   dold = d;
 #else
   dold = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
+#endif
+#ifdef EDHE_FLEX
+#if 0
+  if (are_bonds_broken(i, j, dists) && !sumnegpairs)
+    {
+      printf("i=%d j=%d bonds broken at begin of locate_contactSP\n", i, j);
+      printf("This shouldn't happen...\n");
+      printf("Aborting\n");
+      exit(-1);
+    }
+#endif
 #endif
   firstaftsf = 1;
   its = 0;
@@ -3067,11 +3101,13 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		  //printf("qui\n");
 		  tmin -= t1;
 		  delt = tmin - tini;
+		  //printf("NEW delt=%.15G\n", delt);
 		  t = tmin;
 		  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 		}
 #if 1
-	      else 
+	      //if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs))
+	      else
 		{
 		  printf("[locate_contactSP/*INFO*] i=%d j=%d using old goldenfactor method to reduce delt\n", i, j);
 		  MD_DEBUG33(printf("i=%d j=%d\n", i, j));
@@ -3145,7 +3181,18 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	      //printf("tocheck[%d]:%d\n", nn, tocheck[nn]);
 	      if (interpolSP(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
 			     &troot, shift, 0))
-		dorefine[nn] = MD_EVENT_NONE;
+		{
+#if 0
+		  if ((i < 200 && j >= 1200) || (i >= 1200 && j < 200))
+		    {
+		      printf("1)time=%.15G i=%d ata=%d j=%d atb=%d Grazing collision missed?\n",
+			     Oparams.time + OprogStatus.refTime, i, mapbondsa[nn], j, mapbondsb[nn]);  
+		      printf("2)distsOld=%.15G dists=%.15G\n", distsOld[nn], dists[nn]);
+		      printf("3)t=%.15G delt=%.15G t1=%.15G\n", t, delt, t1);
+		    }
+#endif
+		  dorefine[nn] = MD_EVENT_NONE;
+		}
 	      else 
 		{
 		  if (distsOld[nn] > 0.0)
