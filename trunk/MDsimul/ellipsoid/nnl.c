@@ -296,7 +296,8 @@ void rebuildNNL(void)
       BuildNNL(i);
     }
 #ifdef MD_GHOST_IGG
-  update_ghost_status();
+  if (OprogStatus.ghostsim)
+    update_ghost_status();
 #endif
  
   /* next complete update */
