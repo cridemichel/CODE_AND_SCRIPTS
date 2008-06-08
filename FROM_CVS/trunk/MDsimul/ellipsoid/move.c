@@ -6661,13 +6661,17 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
 #ifdef MD_GHOST_IGG
 int areGhost(int i, int j)
 {
+  /* only HE belonging to IgGs can be ghost */
   if (ghostInfoArr[i].iggnum < 0 || ghostInfoArr[j].iggnum < 0)
     return 0;
+  /* if the two HE belong to same IgG then they do interact! */
   if (ghostInfoArr[i].iggnum == ghostInfoArr[j].iggnum)
     return 0;
-  if ((ghostInfoArr[i].ghost_status==2 && ghostInfoArr[i].ghost_status==1)||
-      (ghostInfoArr[i].ghost_status==1 && ghostInfoArr[i].ghost_status==2)||
-      (ghostInfoArr[i].ghost_status==2 && ghostInfoArr[i].ghost_status==2))
+  /* species 2 HE (bound) can not interact with species 1 HE (bulk) 
+     and species 2 HE can not interact with other specie 2 HE */
+  if ((ghostInfoArr[i].ghost_status==2 && ghostInfoArr[j].ghost_status==1)||
+      (ghostInfoArr[i].ghost_status==1 && ghostInfoArr[j].ghost_status==2)||
+      (ghostInfoArr[i].ghost_status==2 && ghostInfoArr[j].ghost_status==2))
     {
       //printf("They are ghost!\n i=%d, j=%d", i, j);
       return 1;

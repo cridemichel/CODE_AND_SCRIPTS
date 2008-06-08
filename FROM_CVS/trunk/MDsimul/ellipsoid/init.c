@@ -2707,14 +2707,14 @@ extern int get_rabbit_bonds(int ifebA, int tA, int ifebB, int tB);
 #ifdef MD_GHOST_IGG
 void init_ghostArr(void)
 {
-  int i, iggStatus, nigg, NIGG;
+  int i, iggStatus, nigg;
   nigg=0;
   iggStatus = 0;
   ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
   /* here I assume that Igg HE are first Nigg */
   for (i=0; i < Oparams.parnum; i++)
     {
-      if (typeOfPart[i] > 2)
+      if (typeOfPart[i] > 3)
 	{
 	  ghostInfoArr[i].iggnum = -1;
 	  ghostInfoArr[i].ghost_status = -1; 
@@ -2723,9 +2723,18 @@ void init_ghostArr(void)
       if (typeOfPart[i] == 0)
 	iggStatus = (get_rabbit_bonds(i, 0, i+1, 1) > 0)?2:1;
 
-      ghostInfoArr[i].iggnum = nigg;
-      ghostInfoArr[i].ghost_status = iggStatus; 
-      if (typeOfPart[i]==2)
+      if (typeOfPart[i] <= 2)
+	{
+	  ghostInfoArr[i].iggnum = nigg;
+	  ghostInfoArr[i].ghost_status = iggStatus; 
+	}	  
+      else
+	{
+	  ghostInfoArr[i].iggnum = -1;
+	  ghostInfoArr[i].ghost_status = -1; 
+	}
+      //printf("i=%d status=%d nigg=%d\n", i, iggStatus, nigg);
+      if (typeOfPart[i]==3)
 	nigg++;
     }
 }
