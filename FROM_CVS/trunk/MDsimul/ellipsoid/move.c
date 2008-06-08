@@ -9079,6 +9079,7 @@ void timeshift_variables(void)
   if (OprogStatus.scalevel)
     OprogStatus.nextcheckTime -= OprogStatus.bigDt;
   OprogStatus.nextDt -= OprogStatus.bigDt;
+  //printf("OprogStatus.nextDt:%.15G\n", OprogStatus.nextDt);
   if (OprogStatus.intervalSum > 0.0)
     OprogStatus.nextSumTime -= OprogStatus.bigDt;
   //nextStoreTime viene calcolato opportunamente ogni volta quindi non va shiftato
@@ -9181,7 +9182,22 @@ int termination(void)
   return 0; 
 }	
 #endif
-
+#ifdef MD_BIG_DT
+void rebuild_all_events(void)
+{
+  if (OprogStatus.useNNL)
+    updAllNNL();
+  rebuildCalendar();
+  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+  if (OprogStatus.rescaleTime > 0)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  else
+    OprogStatus.scalevel = 0;
+}
+#endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -9577,11 +9593,12 @@ void move(void)
 #ifdef MD_BIG_DT
       else if (evIdB == ATOM_LIMIT + 11)
 	{
-	  //UpdateSystem();
+	  UpdateSystem();
 	  timeshift_calendar();
 	  timeshift_variables();
 	  OprogStatus.refTime += OprogStatus.bigDt;
 	  ScheduleEvent(-1, ATOM_LIMIT + 11, OprogStatus.bigDt);
+          rebuild_all_events();
 	}
 #endif
 #if 0 && defined(MD_NNL)
