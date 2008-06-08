@@ -1505,6 +1505,9 @@ void usrInitBef(void)
     OprogStatus.xi = 0.00001;
     OprogStatus.Tf = 0.01;
 #endif
+#ifdef MD_GHOST_IGG
+    OprogStatus.ghostsim = 0; /* 0 = no ghost IgG when they are bound, 1 = ghost */
+#endif
 #ifdef MD_RABBIT
     OprogStatus.time_limit = 100000000000.0;
     OprogStatus.first_time = 0.0;
@@ -3650,7 +3653,11 @@ void usrInitAft(void)
   slave_task();
 #endif
 #ifdef MD_GHOST_IGG
-  init_ghostArr();
+  if (OprogStatus.ghostsim)
+    {
+      printf("[GHOST SIMULATION]: Initializing structures...\n");    
+      init_ghostArr();
+    }
 #endif
   StartRun();
   if (mgl_mode != 2)

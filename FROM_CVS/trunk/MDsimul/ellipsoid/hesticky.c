@@ -762,7 +762,8 @@ void update_rates(int i, int j, int ata, int atb, double inc)
   else
     return;
 #ifdef MD_GHOST_IGG
-  make_ghosts(inc, nb, i, typei, j, typej);
+  if (OprogStatus.ghostsim)
+    make_ghosts(inc, nb, i, typei, j, typej);
 #endif
   if (inc > 0.0)
     {
