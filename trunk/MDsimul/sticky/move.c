@@ -5784,6 +5784,21 @@ void save_coordtmp_ascii(unsigned char hdWhich)
   system(fileop3);
 }
 extern void angvel(void);
+#ifdef MD_BIG_DT
+void rebuid_all_events(void)
+{
+  rebuildCalendar();
+  if (OprogStatus.intervalSum > 0.0)	
+    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+  if (OprogStatus.scalevel)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  else
+    OprogStatus.scalevel = 0;
+}
+#endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -6118,6 +6133,9 @@ void move(void)
 	  //Oparams.time -= OprogStatus.bigDt;
 	  OprogStatus.refTime += OprogStatus.bigDt;
        	  ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
+#if 0
+	  rebuid_all_events();
+#endif
 	}
 #endif
 #ifdef MD_DOUBLE_DT
