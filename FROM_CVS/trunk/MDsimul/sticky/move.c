@@ -2941,6 +2941,9 @@ double eval_maxddist(int i, int j, int bondpair, double t1, double *maxddotOpt)
   double ti, rA[3], rB[3], Omega[3][3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
 	 r12i[3], r12j[3];//, maxddotOpt[MD_PBONDS];
   double maxddot=0.0, nr12i, nr12j;
+#if 1
+  double sig2;
+#endif
   int nn, kk, npbonds;
   ti = t1 - atomTime[i];
   rA[0] = rx[i] + vx[i]*ti;
@@ -2966,6 +2969,18 @@ double eval_maxddist(int i, int j, int bondpair, double t1, double *maxddotOpt)
 	}
       nr12i = calc_norm(r12i);
       nr12j = calc_norm(r12j);
+#if 0 
+#ifdef MD_AB41
+      if (i < Oparams.parnumA && j < Oparams.parnumA)
+	sig2 = 0.5*Oparams.sigmaStickyAA;
+      else
+	sig2 = 0.5*Oparams.sigmaStickyAB;
+#else
+      sig2 = 0.5*Oparams.sigmaSticky;
+#endif
+      nr12i += sig2;
+      nr12j += sig2;
+#endif
       for (kk = 0; kk < 3; kk++)
 	{
 	  //printf("nr12i=%.15G nr12j=%.15G\n", nr12i, nr12j);
@@ -5799,6 +5814,82 @@ void rebuid_all_events(void)
     OprogStatus.scalevel = 0;
 }
 #endif
+#ifdef MD_SAVE_REALLY_ALL
+void saveTreeBondsLL(char *fn)
+{
+  int bf, segsize;
+  int a, i, nc, nl; 
+  bf = creat(fn, 0666);
+  segsize = Oparams.parnum*OprogStatus.eventMult;
+  for (a = 0; a < 12; a++)
+    write(bf, tree[a], sizeof(int)*segsize);
+  write(bf, treeTime, sizeof(double)*segsize);
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
+  for (nl = 0; nl < 4; nl++)
+    write(bf, cellList[nl], sizeof(int)*(cellsx[nl]*cellsy[nl]*cellsz[nl]+Oparams.parnum));
+  for (nc = 0; nc < 2; nc++)
+    {
+      for(a = 0; a < 3; a++)
+	write(bf, inCell[nc][a], sizeof(int)*Oparams.parnum); 
+    }
+#else
+  write(bf, cellList, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  for(a = 0; a < 3; a++)
+    write(bf, inCell[a], sizeof(int)*Oparams.parnum); 
+#endif
+  write(bf, numbonds, sizeof(int)*Oparams.parnum);
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      write(bf, bonds[i], sizeof(int)*OprogStatus.maxbonds);
+    } 
+  write(bf, atomTime, sizeof(double)*Oparams.parnum);
+  write(bf, lastbump, sizeof(struct LastBumpS)*Oparams.parnum);
+  write(bf, lastcol,  sizeof(double)*Oparams.parnum);
+  write(bf, crossevtodel, sizeof(int)*Oparams.parnum);
+  close(bf);
+}
+void readTreeBondsLL(char *fn)
+{
+  int bf, segsize, a, nc, nl, i;
+  
+  bf = open(fn,  CONT | O_WRONLY, 0666);
+  segsize = Oparams.parnum*OprogStatus.eventMult;
+  for (a = 0; a < 12; a++)
+    read(bf, tree[a], sizeof(int)*segsize);
+  read(bf, treeTime, sizeof(double)*segsize);
+#if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
+  for (nl = 0; nl < 4; nl++)
+    read(bf, cellList[nl], sizeof(int)*(cellsx[nl]*cellsy[nl]*cellsz[nl]+Oparams.parnum));
+  for (nc = 0; nc < 2; nc++)
+    {
+      for(a = 0; a < 3; a++)
+	read(bf, inCell[nc][a], sizeof(int)*Oparams.parnum); 
+    }
+#else
+  read(bf, cellList, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  for(a = 0; a < 3; a++)
+    read(bf, inCell[a], sizeof(int)*Oparams.parnum); 
+#endif
+  read(bf, numbonds, sizeof(int)*Oparams.parnum);
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      read(bf, bonds[i], sizeof(int)*OprogStatus.maxbonds);
+    } 
+  read(bf, atomTime, sizeof(double)*Oparams.parnum);
+  read(bf, lastbump, sizeof(struct LastBumpS)*Oparams.parnum);
+  read(bf, lastcol,  sizeof(double)*Oparams.parnum);
+  read(bf, crossevtodel, sizeof(int)*Oparams.parnum);
+  close(bf);
+}
+void backup_all(void)
+{
+  char fn[256];
+  sprintf(fn, "BinaryBak-%d",Oparams.curStep);
+  saveBak(fn);
+  sprintf(fn, "SaveTree-%d",Oparams.curStep);
+  saveTreeBondsLL(fn);
+}
+#endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -5896,6 +5987,10 @@ void move(void)
 #endif
 	  writeAllCor(bf);
 	  fclose(bf);
+#ifdef MD_SAVE_REALLY_ALL
+	  if (OprogStatus.saveReallyAll)
+	    backup_all();
+#endif
 #ifndef MD_STOREMGL
 #ifdef MPI
 #ifdef MD_MAC

@@ -1420,6 +1420,11 @@ See: cond-mat/00001311, Ruocco et al. */
   for (i = 0; i < PE_POINTS; i++)
     OprogStatus.PE[i] = 0;
   /* ======================================================================= */
+#ifdef MD_SAVE_REALLY_ALL
+  OprogStatus.saveReallyAll=0;
+  OprogStatus.readBinTree=0;
+  strcpy(OprogStatus.iniTree,"NONE");
+#endif
 }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
@@ -2114,6 +2119,9 @@ void check_all_bonds(void)
 /* ======================== >>> usrInitAft <<< ==============================*/
 extern void calc_energy(char *msg);
 extern int set_pbonds(int i, int j);
+#ifdef MD_SAVE_REALLY_ALL
+extern void readTreeBondsLL(char *fn);
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -2551,6 +2559,10 @@ void usrInitAft(void)
 	}
     }
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
+#ifdef MD_SAVE_REALLY_ALL
+  if (OprogStatus.readBinTree)
+    readTreeBondsLL(OprogStatus.iniTree);
+#endif
 }
 
 extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
