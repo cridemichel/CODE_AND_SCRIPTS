@@ -2301,6 +2301,10 @@ double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt
 	}
       nr12i = calc_norm(r12i);
       nr12j = calc_norm(r12j);
+#if 0
+      nr12i += typesArr[i].spots[mapbondsa[nn]-1].sigma*0.5;
+      nr12j += typesArr[i].spots[mapbondsb[nn]-1].sigma*0.5;
+#endif
       for (kk = 0; kk < 3; kk++)
 	{
 	  r12i[kk] *= (nr12i+OprogStatus.epsdSP)/nr12i;
@@ -2640,10 +2644,17 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
   for (kk=0; kk < nbonds; kk++)
     {
 #ifdef EDHE_FLEX
+#if 0
       factori = calc_norm(typesArr[typeOfPart[i]].spots[mapbondsa[kk]-1].x) + 
 	0.5*mapSigmaFlex[kk] + OprogStatus.epsdSP;
       factorj = calc_norm(typesArr[typeOfPart[j]].spots[mapbondsb[kk]-1].x) + 
 	0.5*mapSigmaFlex[kk] + OprogStatus.epsdSP;
+#else
+      factori = calc_norm(typesArr[typeOfPart[i]].spots[mapbondsa[kk]-1].x) + 
+	typesArr[typeOfPart[i]].spots[mapbondsa[kk]-1].sigma*0.5 + OprogStatus.epsdSP;
+      factorj = calc_norm(typesArr[typeOfPart[j]].spots[mapbondsb[kk]-1].x) + 
+	typesArr[typeOfPart[j]].spots[mapbondsb[kk]-1].sigma*0.5 + OprogStatus.epsdSP;
+#endif
 #else
       if (i < Oparams.parnumA)
 	factori = calc_norm(spXYZ_A[mapbondsa[kk]-1]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
