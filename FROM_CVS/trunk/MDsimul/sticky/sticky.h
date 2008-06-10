@@ -416,6 +416,7 @@ struct progStatus
   int saveReallyAll;
   int readBinTree;
   char iniTree[NAME_LENGTH];
+  char iniBak[NAME_LENGTH];
 #endif
   /* ======================================================================= */
 };
@@ -664,7 +665,8 @@ struct pascii opro_ascii[] =
 #ifdef MD_SAVE_REALLY_ALL
   {"saveReallyAll",  &OS(saveReallyAll),  1, 1, "%d"},
   {"readBinTree",    &OS(readBinTree),    1, 1, "%d"},
-  {"initTree",       &OS(iniTree),         1, NAME_LENGTH, "%s"},
+  {"iniTree",        &OS(iniTree),         1, NAME_LENGTH, "%s"},
+  {"iniBak",         &OS(iniBak),          1, NAME_LENGTH, "%s"},
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -932,6 +934,7 @@ struct singlePar OsinglePar[] = {
   {"saveReallyAll",  &OprogStatus.saveReallyAll,  INT},
   {"readBinTree",    &OprogStatus.readBinTree,    INT},
   {"iniTree",        &OprogStatus.iniTree,        STR},
+  {"iniBak",         &OprogStatus.iniBak,         STR},
 #endif
   
   /* ======================================================================= */
