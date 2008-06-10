@@ -2302,6 +2302,15 @@ double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt
       nr12i = calc_norm(r12i);
       nr12j = calc_norm(r12j);
 #if 0
+      /* N.B. questo, in teoria, non è necessario poiche' 
+	 la distanza tra due spot A e B risulta essere:
+	 d(t) = |rA(t) - rB(t)| - 0.5*(sigmaA+sigmaB)
+         dove rA(t) e rB(t) sono i centri degli spot e 
+         sigmaA e sigmaB i loro diametri, 
+         per cui la derivata temporale di tale grandezza
+         è:
+         d[d(t)]/dt = d/dt [ |rA(t) - rB(t)| ]
+       */
       nr12i += typesArr[i].spots[mapbondsa[nn]-1].sigma*0.5;
       nr12j += typesArr[i].spots[mapbondsb[nn]-1].sigma*0.5;
 #endif
