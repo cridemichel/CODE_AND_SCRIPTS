@@ -412,7 +412,11 @@ struct progStatus
   int PE[PE_POINTS];
   double ENmin;
   double ENmax;
-
+#ifdef MD_SAVE_REALLY_ALL
+  int saveReallyAll;
+  int readBinTree;
+  char iniTree[NAME_LENGTH];
+#endif
   /* ======================================================================= */
 };
 
@@ -657,6 +661,11 @@ struct pascii opro_ascii[] =
   {"collCount",     &OS(collCount),      1, 1, "%d"},
   {"crossCount",    &OS(crossCount),     1, 1, "%d"},
   {"scaleVolTime",  &OS(scaleVolTime),   1, 1, "%.15G"},
+#ifdef MD_SAVE_REALLY_ALL
+  {"saveReallyAll",  &OS(saveReallyAll),  1, 1, "%d"},
+  {"readBinTree",    &OS(readBinTree),    1, 1, "%d"},
+  {"initTree",       &OS(iniTree),         1, NAME_LENGTH, "%s"},
+#endif
   {"", NULL, 0, 0, ""}
 };
 #else
@@ -919,6 +928,12 @@ struct singlePar OsinglePar[] = {
   {"ENmin",      &OprogStatus.ENmin,        CT},
   {"ENmax",      &OprogStatus.ENmax,        CT},
   {"nRun",       &OprogStatus.nRun,         STR},
+#ifdef MD_SAVE_REALLY_ALL
+  {"saveReallyAll",  &OprogStatus.saveReallyAll,  INT},
+  {"readBinTree",    &OprogStatus.readBinTree,    INT},
+  {"iniTree",        &OprogStatus.iniTree,        STR},
+#endif
+  
   /* ======================================================================= */
 
   {"", NULL, 0} /* end of list, don't touch this !!! */
