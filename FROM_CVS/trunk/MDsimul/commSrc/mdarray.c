@@ -633,9 +633,11 @@ void asciiParsing(struct pascii strutt[],
 /* ======================== >>> readAsciiPars <<< ========================= */
 void readAsciiPars(FILE* pfs, struct pascii strutt[])
 {
-  char line[256000+NAME_LENGTH];
-  char str1[NAME_LENGTH], str2[256000];
+  char *line;
+  char str1[NAME_LENGTH], *str2;
 
+  line = malloc((256000+NAME_LENGTH)*sizeof(char));
+  str2 = malloc(256000*sizeof(char)); 
   /* scanning the file for the other params */
   while (!feof(pfs))
     {
@@ -665,6 +667,8 @@ void readAsciiPars(FILE* pfs, struct pascii strutt[])
 	  printf("str2:%s\n", str2);
 	  }*/
     }
+  free(line);
+  free(str2);
 }
 #ifdef EDHE_FLEX
 extern int is_valid_parname_progStatus(char *pn);
