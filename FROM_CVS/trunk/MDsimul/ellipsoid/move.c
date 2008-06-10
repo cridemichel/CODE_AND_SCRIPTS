@@ -9593,12 +9593,12 @@ void move(void)
 #ifdef MD_BIG_DT
       else if (evIdB == ATOM_LIMIT + 11)
 	{
-	  UpdateSystem();
+	  //UpdateSystem();
 	  timeshift_calendar();
 	  timeshift_variables();
 	  OprogStatus.refTime += OprogStatus.bigDt;
 	  ScheduleEvent(-1, ATOM_LIMIT + 11, OprogStatus.bigDt);
-          rebuild_all_events();
+          //rebuild_all_events();
 	}
 #endif
 #if 0 && defined(MD_NNL)
