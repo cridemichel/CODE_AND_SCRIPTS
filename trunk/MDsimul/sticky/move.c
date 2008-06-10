@@ -5851,7 +5851,8 @@ void saveTreeBondsLL(char *fn)
 void readTreeBondsLL(char *fn)
 {
   int bf, segsize, a, nc, nl, i;
-  
+ 
+  printf("Reading binary tree: %s ", fn); 
   bf = open(fn,  CONT | O_WRONLY, 0666);
   segsize = Oparams.parnum*OprogStatus.eventMult;
   for (a = 0; a < 12; a++)
@@ -5880,6 +5881,7 @@ void readTreeBondsLL(char *fn)
   read(bf, lastcol,  sizeof(double)*Oparams.parnum);
   read(bf, crossevtodel, sizeof(int)*Oparams.parnum);
   close(bf);
+  printf("...done\n");
 }
 void backup_all(void)
 {
@@ -5888,6 +5890,15 @@ void backup_all(void)
   saveBak(fn);
   sprintf(fn, "SaveTree-%d",Oparams.curStep);
   saveTreeBondsLL(fn);
+}
+void readBinBak(char *fn)
+{
+  int bf;
+  printf("Reading binary restart file: %s ", fn);
+  bf = open(fn,  EXIT | O_RDONLY, 0666);
+  readBak(bf);
+  close(bf);
+  printf("...done\n");
 }
 #endif
 /* ============================ >>> move<<< =================================*/
@@ -5987,10 +5998,6 @@ void move(void)
 #endif
 	  writeAllCor(bf);
 	  fclose(bf);
-#ifdef MD_SAVE_REALLY_ALL
-	  if (OprogStatus.saveReallyAll)
-	    backup_all();
-#endif
 #ifndef MD_STOREMGL
 #ifdef MPI
 #ifdef MD_MAC
@@ -6018,6 +6025,10 @@ void move(void)
 	    (pow(OprogStatus.base,OprogStatus.NN)*OprogStatus.KK+pow(OprogStatus.base,OprogStatus.JJ));
 #ifdef MD_BIG_DT
 	  OprogStatus.nextStoreTime -= OprogStatus.refTime;
+#endif
+#ifdef MD_SAVE_REALLY_ALL
+	  if (OprogStatus.saveReallyAll)
+	    backup_all();
 #endif
 	  ScheduleEvent(-1, ATOM_LIMIT + 8, OprogStatus.nextStoreTime);
 	}

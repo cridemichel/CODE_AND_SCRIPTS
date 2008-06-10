@@ -1423,7 +1423,8 @@ See: cond-mat/00001311, Ruocco et al. */
 #ifdef MD_SAVE_REALLY_ALL
   OprogStatus.saveReallyAll=0;
   OprogStatus.readBinTree=0;
-  strcpy(OprogStatus.iniTree,"NONE");
+  strcpy(OprogStatus.iniTree,"SaveTree");
+  strcpy(OprogStatus.iniBak,"BinaryBak");
 #endif
 }
 extern void check (int *overlap, double *K, double *V);
@@ -2121,6 +2122,7 @@ extern void calc_energy(char *msg);
 extern int set_pbonds(int i, int j);
 #ifdef MD_SAVE_REALLY_ALL
 extern void readTreeBondsLL(char *fn);
+extern void readBinBak(char *fn);
 #endif
 void usrInitAft(void)
 {
@@ -2134,6 +2136,9 @@ void usrInitAft(void)
   COORD_TYPE *m;
   double drx, dry, drz, shift[3], dists[MD_PBONDS];
   int j;
+#ifdef MD_SAVE_REALLY_ALL
+  int readBinTree=0;
+#endif
 #ifdef MD_STORE_BONDS
   FILE *fnb;
   char fname[128];
@@ -2144,6 +2149,13 @@ void usrInitAft(void)
   int a;
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
+#ifdef MD_SAVE_REALLY_ALL
+  if (OprogStatus.readBinTree)
+    {
+      readBinTree = OprogStatus.readBinTree;
+      readBinBak(OprogStatus.iniBak);
+    }
+#endif
   /* initialize global varibales */
   pi = 2.0 * acos(0);
 
@@ -2445,6 +2457,15 @@ void usrInitAft(void)
 #endif
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene()/((double)Oparams.parnum));
   //exit(-1);
+#ifdef MD_SAVE_REALLY_ALL
+  if (readBinTree)
+    {
+      readTreeBondsLL(OprogStatus.iniTree);
+      return;
+    }
+#endif
+
+
   StartRun(); 
 
   if (OprogStatus.intervalSum > 0.0)
@@ -2559,10 +2580,6 @@ void usrInitAft(void)
 	}
     }
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
-#ifdef MD_SAVE_REALLY_ALL
-  if (OprogStatus.readBinTree)
-    readTreeBondsLL(OprogStatus.iniTree);
-#endif
 }
 
 extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
