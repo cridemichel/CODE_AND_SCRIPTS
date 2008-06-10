@@ -282,6 +282,43 @@ int nmax_reached(int i, int j, int a, int b)
 }
 #endif
 #endif
+#ifdef MD_CHECK_POINT
+void read_check_point(void)
+{
+  if ((fs = fopenMPI(fn, "r")) == NULL)
+    {
+      sprintf(msgStrA, "Problem opening checkpoint file %s ", fn);
+      mdMsg(ALL, NOSYS, "read_check_point", "ERROR", NULL,
+	    msgStrA,
+	    NULL);
+      exit(-1);
+    }
+
+  readAsciiPars(fs, opro_ascii);
+  readAsciiPars(fs, opar_ascii);
+  /* Entrambe queste macro sono definite nel file mono_DPT.h */
+  /* read up to coordinates begin */
+  readAllCorCP(fs);
+
+  fclose(fs);
+
+}
+void restart_from_check_point(void)
+{
+  read_check_point();
+  StartRun();
+  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+  if (OprogStatus.rescaleTime > 0)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  else
+    OprogStatus.scalevel = 0;
+  ScheduleEvent(-1, ATOM_LIMIT + 11, OprogStatus.bigDt);
+}
+#endif
 void check_all_bonds(void)
 {
   int nn, warn, amin, bmin, i, j, nb, nbonds;
@@ -292,7 +329,7 @@ void check_all_bonds(void)
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
-  for (k = 0;  k < NDIM; k++)
+ for (k = 0;  k < NDIM; k++)
     {
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
@@ -419,14 +456,14 @@ void check_all_bonds(void)
 			      //nb++;
 			    }
 			  else if (dists[nn]>0.0 && 
-				   fabs(dists[nn])> OprogStatus.epsd && 
+				   fabs(dists[nn]) > OprogStatus.epsd && 
 				   bound(i,j,mapbondsa[nn], mapbondsb[nn]))
 			    {
 			      warn = 2;
 			      printf("wrong number of bonds between %d(%d) and %d(%d) nbonds=%d nn=%d\n",
 				     i, mapbondsa[nn], j, mapbondsb[nn], nbonds, nn);
 
-			      //printf("[dist>0]dists[%d]:%.15G\n", nn, dists[nn]);
+			      printf("[dist>0]dists[%d]:%.15G\n", nn, dists[nn]);
 			      if (OprogStatus.checkGrazing==1)
 				{
 				  remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
@@ -467,6 +504,10 @@ void check_all_bonds(void)
 	    }
 	}
     }
+#ifdef MD_CHECK_POINT
+  saveFullStore("ED_CHECK_POINT\n");
+#endif
+ 
 }
 #endif
 void ScheduleEvent (int idA, int idB, double tEvent); 
