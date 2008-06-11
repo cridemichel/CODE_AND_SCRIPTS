@@ -3434,6 +3434,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   const double minh = 1E-20;
   double h, d, dold, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS]; 
   double maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
+  int retip;
+  double dmin;
   //const int MAXOPTITS = 4;
   int bondpair, itstb, adjt1=0, npbonds;
   int its, foundrc;
