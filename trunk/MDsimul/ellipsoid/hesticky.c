@@ -2489,10 +2489,20 @@ int interpolSP(int i, int j, int nn,
       MD_DEBUG39(if (ignoresignchg) printf("------------------------------ END\n"));
     }
   dmin = calcDistNegOneSP(*tmin, tref, i, j, nn, shift);
-  if (*tmin < t+delt && *tmin > t && (d1*dmin < 0.0 || ignoresignchg) )
+ 
+  if (*tmin < t+delt && *tmin > t)
     {
+
       *tmin += tref;
-      return 0;
+      if (!ignoresignchg)
+	{
+	  if (d1*dmin < 0.0)
+	    return 0;
+	  else
+	    return 2;
+	}
+      else
+	return 0;
     }
   MD_DEBUG39(if (ignoresignchg) printf("*tmin=%.15G tref=%.15G delt=%.15G t=%.15G t+delt=%.15G\n",*tmin, tref, delt, t, t+delt));
   //printf("%.15G %.15G\n %.15G %.15G \n %.15G %.15G \n", 0.0, d1, delt*0.5, d3, delt, d2);
@@ -2852,11 +2862,42 @@ int are_bonds_broken(int i, int j, double *dists)
   return 0;
 }
 #endif
+#ifdef EDHE_FLEX
+double brent_tref, shiftBrent[3];
+int iBrent, jBrent, nnBrent;
+double distSPbrent(double t)
+{
+  return calcDistNegOneSP(t, brent_tref, iBrent, jBrent, nnBrent, shiftBrent);
+}
+extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
+int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt, double d1, double d2, double shift[3], double *troot, double *dmin)
+{
+  int a;
+  return 0;
+  brent_tref = tref;
+  iBrent = i;
+  jBrent = j;
+  nnBrent = nn;
+  for (a=0; a < 3; a++)
+    shiftBrent[a] = shift[a];
+  /* use brent to find the exact minimum */
+  *dmin = brent(t1, t1+delt, t1+delt*0.5, distSPbrent, 1E-15, troot);
+  if (*troot > t1 && *troot < t1+delt && *dmin*d1 < 0.0)
+    {
+      /* found a crossing! */
+      *troot += tref;
+      return 1;
+    }
+  return 0;/* no collision found */
+}
+#endif
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
 		     double *evtime, int *ata, int *atb, int *collCode)
 {
   const double minh = 1E-20;
   double h, d, dold, t;
+  int retip;
+  double dmin;	
 #if 0
   int cc;
   double tt;
@@ -3200,8 +3241,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	  if (tocheck[nn])
 	    {
 	      //printf("tocheck[%d]:%d\n", nn, tocheck[nn]);
-	      if (interpolSP(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
-			     &troot, shift, 0))
+	      if ((retip=interpolSP(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
+		      		   &troot, shift, 0)))
 		{
 #if 0
 		  if ((i < 200 && j >= 1200) || (i >= 1200 && j < 200))
@@ -3212,7 +3253,29 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		      printf("3)t=%.15G delt=%.15G t1=%.15G\n", t, delt, t1);
 		    }
 #endif
+#ifdef EDHE_FLEX
+		  if (retip==1)
+		    dorefine[nn] = MD_EVENT_NONE;
+		  else
+		    {
+		      /* interpolSP ha trovato un minimo ma non c'è stato cambio di segno */
+		      if (grazing_try_harder(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], shift, &troot, &dmin))
+			{
+			  if (distsOld[nn] > 0.0)
+			    dorefine[nn] = MD_OUTIN_BARRIER;
+			  else
+			    dorefine[nn] = MD_INOUT_BARRIER;
+			  if (!valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
+			    dorefine[nn] = MD_EVENT_NONE;
+			  else
+			    t2arr[nn] = troot - t1;
+			}
+		      else
+			dorefine[nn] = MD_EVENT_NONE;
+		    }
+#else
 		  dorefine[nn] = MD_EVENT_NONE;
+#endif
 		}
 	      else 
 		{

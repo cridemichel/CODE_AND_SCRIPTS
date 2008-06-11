@@ -292,6 +292,25 @@ void delete_events(int evIdA)
     }
   treeCircBL[id] = treeCircBR[id] = id;
 }
+#ifdef EDHE_FLEX
+int check_next_event(void)
+{
+  int idNow;
+  double evtime;
+  idNow = treeRight[0];  
+  /* Cerca la prossima collisione con tempo minore 
+   * NOTA: l'albero è ordinato e ogni nodo sinistro ha un tempo inferiore */
+  while (treeLeft[idNow] > -1 && !(treeIdB[idNow] >= ATOM_LIMIT + 100 || treeIdB[idNow] < ATOM_LIMIT + NDIM * 2)) 
+    idNow = treeLeft[idNow];
+  
+  evtime = treeTime[idNow];
+  if (fabs(evtime-Oparams.time) < 1E-14)
+    {
+      return 1;
+    }
+  return 0;
+}
+#endif
 void NextEvent (void) 
 {
   int id, idAx, idBx, idd, idNow, idtx;
