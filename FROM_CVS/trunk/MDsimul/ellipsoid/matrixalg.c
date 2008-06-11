@@ -306,7 +306,7 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
 { 
   int iter, ITMAXBR=100;
   const double CGOLD=0.3819660;
-  const double ZEPSBR=1E-10;
+  const double ZEPSBR=1E-20;
   double a,b,d=0.0,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
   double e=0.0, fuold;
   /* This will be the distance moved on the step before last.*/
