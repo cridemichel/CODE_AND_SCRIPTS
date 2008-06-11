@@ -5820,6 +5820,7 @@ void saveTreeBondsLL(char *fn)
   int bf, segsize;
   int a, i, nc, nl; 
   bf = creat(fn, 0666);
+  //printf("time=%.15G step:%d treeRight[0]:%d\n", Oparams.time, Oparams.curStep, treeRight[0]);
   segsize = Oparams.parnum*OprogStatus.eventMult;
   for (a = 0; a < 12; a++)
     write(bf, tree[a], sizeof(int)*segsize);
@@ -5853,7 +5854,7 @@ void readTreeBondsLL(char *fn)
   int bf, segsize, a, nc, nl, i;
  
   printf("Reading binary tree: %s ", fn); 
-  bf = open(fn,  CONT | O_WRONLY, 0666);
+  bf = open(fn,  EXIT | O_RDONLY, 0666);
   segsize = Oparams.parnum*OprogStatus.eventMult;
   for (a = 0; a < 12; a++)
     read(bf, tree[a], sizeof(int)*segsize);
@@ -5881,14 +5882,15 @@ void readTreeBondsLL(char *fn)
   read(bf, lastcol,  sizeof(double)*Oparams.parnum);
   read(bf, crossevtodel, sizeof(int)*Oparams.parnum);
   close(bf);
+  //printf("time=%.15G step:%d treeRight[0]:%d\n", Oparams.time, Oparams.curStep, treeRight[0]);
   printf("...done\n");
 }
-void backup_all(void)
+void backup_all(int jj, int kk)
 {
   char fn[256];
-  sprintf(fn, "BinaryBak-%d",Oparams.curStep);
+  sprintf(fn, "BinaryBak-%d-%d",jj,kk);
   saveBak(fn);
-  sprintf(fn, "SaveTree-%d",Oparams.curStep);
+  sprintf(fn, "SaveTree-%d-%d",jj,kk);
   saveTreeBondsLL(fn);
 }
 void readBinBak(char *fn)
@@ -5904,6 +5906,9 @@ void readBinBak(char *fn)
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
+#ifdef MD_SAVE_REALLY_ALL
+  int jj, kk;
+#endif
   char fileop[1024], fileop2[1024];
 #ifndef MD_STOREMGL
   char fileop3[1024];
@@ -5963,6 +5968,10 @@ void move(void)
 	}
       else if (evIdB == ATOM_LIMIT + 8)
 	{
+#ifdef MD_SAVE_REALLY_ALL
+	  jj=OprogStatus.JJ;
+	  kk=OprogStatus.KK;
+#endif
 #ifndef MD_SAVEFRA
 	  sprintf(fileop2 ,"Store-%d-%d", 
 		  OprogStatus.KK, OprogStatus.JJ);
@@ -6026,11 +6035,11 @@ void move(void)
 #ifdef MD_BIG_DT
 	  OprogStatus.nextStoreTime -= OprogStatus.refTime;
 #endif
+	  ScheduleEvent(-1, ATOM_LIMIT + 8, OprogStatus.nextStoreTime);
 #ifdef MD_SAVE_REALLY_ALL
 	  if (OprogStatus.saveReallyAll)
-	    backup_all();
+	    backup_all(jj, kk);
 #endif
-	  ScheduleEvent(-1, ATOM_LIMIT + 8, OprogStatus.nextStoreTime);
 	}
       else if (evIdB == ATOM_LIMIT + 10)
 	{

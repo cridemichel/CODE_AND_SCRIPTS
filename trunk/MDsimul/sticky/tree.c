@@ -384,6 +384,7 @@ void NextEvent (void)
   /* Il nodo root (0), a cui non è associato alcun evento,
    * è linkato con il suo right pointer al primo nodo che contiene
    * un evento */
+
   idNow = treeRight[0];  
   /* Cerca l'evento con tempo minore 
    * NOTA: l'albero è ordinato e ogni nodo sinistro ha un tempo inferiore */
