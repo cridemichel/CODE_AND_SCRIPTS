@@ -3239,10 +3239,18 @@ int interpol(int i, int j, int nn,
   printf("A=%.15G i=%d j=%d\n", A, i, j);
   printf("{{%.15G,%.15G},{%.15G,%.15G},{%.15G,%.15G}} - *tmin=%.15G,%.15G\n", t, d1, t+delt*0.5,d3, t+delt, d2, *tmin, dmin);
 #endif
-  if (*tmin < t+delt && *tmin > t && (d1*dmin < 0.0 || ignoresignchg))
+  if (*tmin < t+delt && *tmin > t)
     {
       *tmin += tref;
-      return 0;
+      if (!ignoresignchg)
+	{
+	  if (d1*dmin < 0.0)
+	    return 0;
+	  else
+	    return 2;
+	}
+      else
+	return 0;
     }
 #if 0
   if (OprogStatus.tryharder==0)
@@ -3388,6 +3396,38 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 }
 extern double max(double a, double b);
 #define MD_BASIC_DT
+double brent_tref, shiftBrent[3];
+int iBrent, jBrent, nnBrent;
+double distSPbrent(double t)
+{
+  return calcDistNegOne(t, brent_tref, iBrent, jBrent, nnBrent, shiftBrent);
+}
+#define MD_BRENT_TOL 1E-15
+extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
+int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt, double d1, double d2, double shift[3], double *troot, double *dmin)
+{
+  int a;
+#ifndef MD_GRAZING_TRYHARDER
+  return 0;
+#endif
+  printf("[grazing_try_harder] i=%d j=%d nn=%d time=%.15G\n", i, j, nn, tref+t1);
+  brent_tref = tref;
+  iBrent = i;
+  jBrent = j;
+  nnBrent = nn;
+  for (a=0; a < 3; a++)
+    shiftBrent[a] = shift[a];
+  /* use brent to find the exact minimum */
+  *dmin = brent(t1, t1+delt*0.5, t1+delt, distSPbrent, MD_BRENT_TOL, troot);
+  if (*troot >= t1 && *troot <= t1+delt && *dmin*d1 < 0.0)
+    {
+      /* found a crossing! */
+      *troot += tref;
+      return 1;
+    }
+  return 0;/* no collision found */
+}
+
 int locate_contact(int i, int j, double shift[3], double t1, double t2, 
 		   double *evtime, int *ata, int *atb, int *collCode)
 {
@@ -3775,9 +3815,30 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  if (tocheck[nn])
 	    {
 	      //printf("tocheck[%d]:%d\n", nn, tocheck[nn]);
-	      if (interpol(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
-			   &troot, shift, 0))
-		dorefine[nn] = MD_EVENT_NONE;
+	      if ((retip=interpol(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], 
+			   &troot, shift, 0)))
+		{
+		  if (retip==1)
+		    dorefine[nn] = MD_EVENT_NONE;
+		  else
+		    {
+		      /* interpolSP ha trovato un minimo ma non c'è stato cambio di segno */
+		      if (grazing_try_harder(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], shift, &troot, &dmin))
+			{
+			  if (distsOld[nn] > 0.0)
+			    dorefine[nn] = MD_OUTIN_BARRIER;
+			  else
+			    dorefine[nn] = MD_INOUT_BARRIER;
+			  if (!valid_collision(i, j, mapbondsa[nn], mapbondsb[nn], crossed[nn]))
+			    dorefine[nn] = MD_EVENT_NONE;
+			  else
+			    t2arr[nn] = troot - t1;
+			}
+		      else
+			dorefine[nn] = MD_EVENT_NONE;
+		    }
+
+		}
 	      else 
 		{
 		  if (distsOld[nn] > 0.0)
