@@ -295,7 +295,7 @@ void delete_events(int evIdA)
 #ifdef EDHE_FLEX
 int check_next_event(void)
 {
-  int idNow;
+  int idNow, idLast, fine;
   double evtime;
   idNow = treeRight[0];  
   /* Cerca la prossima collisione con tempo minore 
