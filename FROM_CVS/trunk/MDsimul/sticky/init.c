@@ -1414,8 +1414,6 @@ accumulators initialization is crucial */
   OprogStatus.storerate = 0.01;
   OprogStatus.KK = 0;
   OprogStatus.JJ = 0;
-  /* Parameters relative to Ruocco AC force
-See: cond-mat/00001311, Ruocco et al. */
   OprogStatus.rNebrShell = 2.7; /* the radius of neighbour list shell */
   for (i = 0; i < PE_POINTS; i++)
     OprogStatus.PE[i] = 0;
@@ -2149,16 +2147,18 @@ void usrInitAft(void)
   int a;
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
+ /* initialize global varibales */
+  pi = 2.0 * acos(0);
 #ifdef MD_SAVE_REALLY_ALL
   if (OprogStatus.readBinTree)
     {
       readBinTree = OprogStatus.readBinTree;
       readBinBak(OprogStatus.iniBak);
+      newSim=0;
+      //printf("OprogStatus.nextSumTime:%.15G", OprogStatus.nextSumTime);
     }
 #endif
-  /* initialize global varibales */
-  pi = 2.0 * acos(0);
-
+ 
   Nm = Oparams.parnumA;
   parnumA = Oparams.parnumA;
   parnumB = Oparams.parnum - Oparams.parnumA;
@@ -2384,6 +2384,16 @@ void usrInitAft(void)
 	}
     }
 #endif
+#ifdef MD_SAVE_REALLY_ALL
+  if (readBinTree)
+    {
+      printf("OprogStatus.nextDt:%.15G\n", OprogStatus.nextDt);
+      printf("Oparams.time=%.15G\n", Oparams.time);
+      readTreeBondsLL(OprogStatus.iniTree);
+      return;
+    }
+#endif
+
   for (i=0; i < Oparams.parnum; i++)
     {
       numbonds[i] = 0;
@@ -2457,17 +2467,7 @@ void usrInitAft(void)
 #endif
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene()/((double)Oparams.parnum));
   //exit(-1);
-#ifdef MD_SAVE_REALLY_ALL
-  if (readBinTree)
-    {
-      readTreeBondsLL(OprogStatus.iniTree);
-      return;
-    }
-#endif
-
-
   StartRun(); 
-
   if (OprogStatus.intervalSum > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
@@ -2485,6 +2485,7 @@ void usrInitAft(void)
 #endif
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
+
   if (newSim == 1)
     {
       FILE *f;
@@ -2580,6 +2581,8 @@ void usrInitAft(void)
 	}
     }
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
+
+
 }
 
 extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
