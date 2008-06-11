@@ -300,10 +300,27 @@ int check_next_event(void)
   idNow = treeRight[0];  
   /* Cerca la prossima collisione con tempo minore 
    * NOTA: l'albero è ordinato e ogni nodo sinistro ha un tempo inferiore */
-  while (treeLeft[idNow] > -1 && !(treeIdB[idNow] >= ATOM_LIMIT + 100 || treeIdB[idNow] < ATOM_LIMIT + NDIM * 2)) 
-    idNow = treeLeft[idNow];
-  
+
+  while (!(treeIdB[idNow] >= ATOM_LIMIT + 100 || treeIdB[idNow] < ATOM_LIMIT + NDIM * 2))
+    {
+      fine = 0;
+      idLast = idNow;
+      idNow = treeRight[0];
+      while (!fine)
+	{
+	  if (idNow == idLast)
+	    idNow = treeRight[idNow];
+	  else
+	    idNow = treeLeft[idNow];
+
+	  if (idNow == -1)
+	    fine=1;
+	}
+    }
+  /* se non è una collisione ignoralo (return 0)*/ 
+
   evtime = treeTime[idNow];
+  /* se la collisione è molto ravvicinata attenzione! (return 1) */
   if (fabs(evtime-Oparams.time) < 1E-14)
     {
       return 1;
