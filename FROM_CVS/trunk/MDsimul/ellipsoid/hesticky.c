@@ -2869,11 +2869,15 @@ double distSPbrent(double t)
 {
   return calcDistNegOneSP(t, brent_tref, iBrent, jBrent, nnBrent, shiftBrent);
 }
+#define MD_BRENT_TOL 1E-15
 extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
 int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt, double d1, double d2, double shift[3], double *troot, double *dmin)
 {
   int a;
+#ifndef MD_GRAZING_TRYHARDER
   return 0;
+#endif
+  printf("[grazing_try_harder] i=%d j=%d nn=%d time=%.15G\n", i, j, nn, tref+t1);
   brent_tref = tref;
   iBrent = i;
   jBrent = j;
@@ -2881,8 +2885,8 @@ int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt
   for (a=0; a < 3; a++)
     shiftBrent[a] = shift[a];
   /* use brent to find the exact minimum */
-  *dmin = brent(t1, t1+delt, t1+delt*0.5, distSPbrent, 1E-15, troot);
-  if (*troot > t1 && *troot < t1+delt && *dmin*d1 < 0.0)
+  *dmin = brent(t1, t1+delt*0.5, t1+delt, distSPbrent, MD_BRENT_TOL, troot);
+  if (*troot >= t1 && *troot <= t1+delt && *dmin*d1 < 0.0)
     {
       /* found a crossing! */
       *troot += tref;
