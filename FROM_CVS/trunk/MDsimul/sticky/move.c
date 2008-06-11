@@ -3396,11 +3396,11 @@ int delt_is_too_big(int i, int j, int bondpair, double *dists, double *distsOld,
 }
 extern double max(double a, double b);
 #define MD_BASIC_DT
-double brent_tref, shiftBrent[3];
+double brentSign, brent_tref, shiftBrent[3];
 int iBrent, jBrent, nnBrent;
 double distSPbrent(double t)
 {
-  return calcDistNegOne(t, brent_tref, iBrent, jBrent, nnBrent, shiftBrent);
+  return brentSign*calcDistNegOne(t, brent_tref, iBrent, jBrent, nnBrent, shiftBrent);
 }
 #define MD_BRENT_TOL 1E-15
 extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
@@ -3411,6 +3411,9 @@ int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt
   return 0;
 #endif
   printf("[grazing_try_harder] i=%d j=%d nn=%d time=%.15G\n", i, j, nn, tref+t1);
+  /* Brent looks always for a minimum hence we have to change sign
+     if grazing occurrs coming from negative distances */
+  brentSign = ((d1>0.0)?1.0:-1.0);
   brent_tref = tref;
   iBrent = i;
   jBrent = j;
@@ -3419,6 +3422,7 @@ int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt
     shiftBrent[a] = shift[a];
   /* use brent to find the exact minimum */
   *dmin = brent(t1, t1+delt*0.5, t1+delt, distSPbrent, MD_BRENT_TOL, troot);
+  *dmin *= brentSign;
   if (*troot >= t1 && *troot <= t1+delt && *dmin*d1 < 0.0)
     {
       /* found a crossing! */
@@ -3741,7 +3745,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		  d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
 		}
 #if 1
-	      else 
+	      /* if, for any reason, the minimum just found does not exist, lay outside [tini, tini+delt]
+		 or breaks bond, try harder using follwing loop, alternatively we could use brent minimization
+		 algorithm */
+	      if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs))
+	      //else 
 		{
 		  printf("[INFO] using old goldenfactor method to reduce delt\n");
 		  MD_DEBUG30(exit(-1));
