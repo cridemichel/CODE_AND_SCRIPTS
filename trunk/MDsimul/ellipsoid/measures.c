@@ -749,6 +749,7 @@ void calcrotMSD(void)
 extern int get_dof_flex(int filter);
 extern void calc_energy_filtered(int filter);
 extern void calc_omega(int i, double *wwx, double *wwy, double *wwz);
+extern int isSymItens(int i);
 void calc_energy_filtered_per_type(double *Kt)
 {
   int i, k1;
