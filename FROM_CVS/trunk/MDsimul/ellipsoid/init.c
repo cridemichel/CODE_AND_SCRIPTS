@@ -2754,6 +2754,10 @@ void init_ghostArr(void)
   int i, iggStatus, nigg;
   nigg=0;
   iggStatus = 0;
+  
+  if (ghostInfoArr)
+    return;/* if here it means that ghostInfoArr has been read from file */
+
   ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
   /* here I assume that Igg HE are first Nigg */
   for (i=0; i < Oparams.parnum; i++)
@@ -3996,6 +4000,15 @@ void writeAllCor(FILE* fs, int saveAll)
 	    }
 	}
     }
+#ifdef MD_GHOST_IGG
+  if (OprogStatus.ghostsim)
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  fprintf(fs, "%d %d\n", ghostInfoArr[i].iggnum, ghostInfoArr[i].ghost_status);
+	}
+    }
+#endif
 #endif
   if (mgl_mode)
     {
@@ -4136,6 +4149,12 @@ int readBinCoord_heflex(int cfd)
   int size;
   unsigned char rerr = 0;
 
+#ifdef MD_GHOST_IGG
+  size = sizeof(ghostInfo)*Oparams.parnum;
+  ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
+  rerr |= readSegs(cfd, "Init", "Error reading ghostInfoArr", CONT, size, ghostInfoArr, NULL);
+#endif
+
   size = sizeof(int)*Oparams.parnum;
   typeOfPart = malloc(size);
   rerr |= -readSegs(cfd, "Init", "Error reading typeNP", CONT, size, typeOfPart, NULL);
@@ -4230,6 +4249,11 @@ void writeBinCoord_heflex(int cfd)
 {
   int i;
   int size;
+
+#ifdef MD_GHOST_IGG
+  size = sizeof(ghostInfo)*Oparams.parnum;
+  writeSegs(cfd, "Init", "Error writing ghostInfoArr", CONT, size, ghostInfoArr, NULL);
+#endif
 
   size = sizeof(int)*Oparams.parnum;
   writeSegs(cfd, "Init", "Error writing typeOfPart", CONT, size, typeOfPart, NULL);
@@ -4350,6 +4374,9 @@ char line[4096];
 void readAllCor(FILE* fs)
 {
   int i;
+#ifdef MD_GHOST_IGG
+  int size;
+#endif
 #ifdef EDHE_FLEX
   char sep[256];
   int j;
@@ -4474,6 +4501,21 @@ void readAllCor(FILE* fs)
 	}
       fscanf(fs, "@@@ ");
     }
+#ifdef MD_GHOST_IGG
+  fscanf(fs, "%s ", sep);
+  if (strcmp(sep, "@@@"))
+    {
+      size = sizeof(ghostInfo)*Oparams.parnum;
+      ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  if (i==0)
+	    sscanf(sep, "%d %d", &(ghostInfoArr[i].iggnum), &(ghostInfoArr[i].ghost_status));
+	  else
+	    fscanf(fs, "%d %d ", &(ghostInfoArr[i].iggnum), &(ghostInfoArr[i].ghost_status));
+	}
+    }
+#endif
 #endif
   for (i = 0; i < Oparams.parnum; i++)
     {

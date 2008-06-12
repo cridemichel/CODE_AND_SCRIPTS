@@ -82,7 +82,6 @@ typedef struct {
   int iggnum;    /* IgG a cui appartiene l'ellissoide */
   int ghost_status; /* 1 (bulk) o 2 (legto) */
 } ghostInfo;
-ghostInfo *ghostInfoArr;
 #endif
 
 typedef struct {
@@ -1411,11 +1410,17 @@ extern struct singlePar OsinglePar[];
 		       perform a mean */
 
 #ifdef MAIN
+#ifdef MD_GHOST_IGG
+ghostInfo *ghostInfoArr=NULL;
+#endif
 COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,
   press_m, press_at, rcmz, rho, ItensD[2][3], pressST, pressHS, pressKin;
 COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, Aa, V, DrSqTot, temp_transl, DphiSq;
 int globSaveAll=1, MB[NUMV];
 #else 
+#ifdef MD_GHOST_IGG
+extern ghostInfo *ghostInfoArr;
+#endif
 extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs,
   press, press_m, press_at, temp_transl, rcmz, rho;
 extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot,

@@ -6667,11 +6667,11 @@ int areGhost(int i, int j)
   /* if the two HE belong to same IgG then they do interact! */
   if (ghostInfoArr[i].iggnum == ghostInfoArr[j].iggnum)
     return 0;
-  /* species 2 HE (bound) can not interact with species 1 HE (bulk) 
-     and species 2 HE can not interact with other specie 2 HE */
-  if ((ghostInfoArr[i].ghost_status==2 && ghostInfoArr[j].ghost_status==1)||
-      (ghostInfoArr[i].ghost_status==1 && ghostInfoArr[j].ghost_status==2)||
-      (ghostInfoArr[i].ghost_status==2 && ghostInfoArr[j].ghost_status==2))
+  /* species 2/3 HE (bound) can not interact with species 1 HE (bulk) 
+     and species 2/3  HE can not interact with other specie 2/3 HE */
+  if ((ghostInfoArr[i].ghost_status > 1 && ghostInfoArr[j].ghost_status==1)||
+      (ghostInfoArr[i].ghost_status==1 && ghostInfoArr[j].ghost_status > 1)||
+      (ghostInfoArr[i].ghost_status > 1 && ghostInfoArr[j].ghost_status > 1))
     {
       //printf("They are ghost!\n i=%d, j=%d", i, j);
       return 1;

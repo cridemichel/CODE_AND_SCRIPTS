@@ -256,7 +256,10 @@ void update_ghost_status(void)
   for (i = 0; i < typeNP[0]; i++)
     {
       curnigg = ghostInfoArr[i].iggnum;
-      if (ghostInfoArr[i].ghost_status == 2)
+      /* 3 is an intermediate state going from 1 to 2, hence
+       when all bonds get broken we have follwing transitions:
+       2 -> 3 -> 1 */
+      if (ghostInfoArr[i].ghost_status == 3)
 	{
 	  notransition = 0;
 	  for (a = 0; a < nebrTab[i].len; a++)
@@ -266,7 +269,7 @@ void update_ghost_status(void)
 		notransition = 1;
 	    }
 	  /* if notransition == 1 it means that there are possible overlap 
-	     transition fro 2 (bound) to 1 (bulk) */ 
+	     in the transition from 3 (not bound but possibly overlapping) to 1 (bulk) */ 
 	  if (notransition == 0)
 	    ghostInfoArr[i].ghost_status = 1;
 	}
