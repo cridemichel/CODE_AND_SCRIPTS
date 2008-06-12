@@ -4509,6 +4509,8 @@ void readAllCor(FILE* fs)
     }
 #if 0
 #ifdef MD_GHOST_IGG
+  /* for now ascii restore file does not contain ghostInfoArr data, hence
+     to restart a simulation preserving ghost status a binary COORD_TMPX file has to be used (ellipsoid -c)*/
   fscanf(fs, "%s ", sep);
   if (!strcmp(sep, "@@@ GHOST @@@"))
     {
