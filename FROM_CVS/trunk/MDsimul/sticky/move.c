@@ -3246,8 +3246,11 @@ int interpol(int i, int j, int nn,
 	{
 	  if (d1*dmin < 0.0)
 	    return 0;
-	  else
+	  /* we can call grazing_try_harder() (i.e. brent) only if dmin is less than d1 and d2 (bracketing condition) */
+	  else if (fabs(dmin) < fabs(d1) && fabs(dmin) < fabs(d2))
 	    return 2;
+	  else
+	    return 1;
 	}
       else
 	return 0;
@@ -3439,7 +3442,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   double h, d, dold, t2arr[MD_PBONDS], t, dists[MD_PBONDS], distsOld[MD_PBONDS]; 
   double maxddot, delt, troot, tmin, tini; //distsOld2[MD_PBONDS];
   int retip;
-  double dmin;
+  double dmin, deltini;
   //const int MAXOPTITS = 4;
   int bondpair, itstb, adjt1=0, npbonds;
   int its, foundrc;
@@ -3733,6 +3736,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	  if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs))
 	    {
 	      //printf("delt=%.15G\n", delt);
+	      deltini = delt;
 	      if (!interpol(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
 			    dists[sumnegpairs-1], &tmin, shift, 1))
 		{
@@ -3751,6 +3755,8 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 	      if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs))
 	      //else 
 		{
+		  delt = deltini;
+		  t = tini;
 		  printf("[INFO] using old goldenfactor method to reduce delt\n");
 		  MD_DEBUG30(exit(-1));
 		  /*printf("[INFO] using old goldenfactor method to reduce delt\n");
