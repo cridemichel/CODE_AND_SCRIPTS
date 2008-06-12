@@ -2771,7 +2771,7 @@ void init_ghostArr(void)
 
       if (typeOfPart[i] == 0)
 	{
-	  iggStatus = (get_rabbit_bonds(i, 0, i+1, 1) > 0)?3:1;
+	  iggStatus = (get_rabbit_bonds(i, 0, i+1, 1) > 0)?2:3;
 	}
       /* set all IgG in state 3, so that even if IgG overlap 
      	 it is ok */
