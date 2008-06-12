@@ -2498,8 +2498,11 @@ int interpolSP(int i, int j, int nn,
 	{
 	  if (d1*dmin < 0.0)
 	    return 0;
-	  else
+	  /* we can call grazing_try_harder() (i.e. brent) only if dmin is less than d1 and d2 (bracketing condition) */
+	  else if (fabs(dmin) < fabs(d1) && fabs(dmin) < fabs(d2))
 	    return 2;
+	  else 
+	    return 1;
 	}
       else
 	return 0;
@@ -2905,7 +2908,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   const double minh = 1E-20;
   double h, d, dold, t;
   int retip;
-  double dmin;	
+  double dmin, deltini;	
 #if 0
   int cc;
   double tt;
@@ -3165,6 +3168,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	{
 	  if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs))
 	    {
+	      deltini = delt;
 	      if(!interpolSP(i, j, sumnegpairs-1, t1, tini, delt, distsOld[sumnegpairs-1], 
 			     dists[sumnegpairs-1], &tmin, shift, 1))
 		{
@@ -3182,6 +3186,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	      if (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs))
 	      //else
 		{
+		  t = tini;
+		  delt = deltini;
 		  printf("[locate_contactSP/*INFO*] i=%d j=%d using old goldenfactor method to reduce delt\n", i, j);
 		  MD_DEBUG33(printf("i=%d j=%d\n", i, j));
 		  while (delt_is_too_big(i, j, bondpair, dists, distsOld, negpairs) && 
