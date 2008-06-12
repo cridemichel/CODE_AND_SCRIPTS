@@ -718,7 +718,8 @@ int get_rabbit_bonds(int ifebA, int tA, int ifebB, int tB)
 void make_ghosts(int inc, int nb, int i, int typei, int j, int typej)
 {
   int a, ibeg;
-  if (inc > 0.0 && nb == 1)
+  if ( (inc > 0.0 && nb == 1) 
+       || (inc < 0.0 && nb == 0) )
     {
       /* change status of IgG that i belongs to,
 	 B + L -> BL hence transition from state 1 (bulk) to state 2 (bound) */
@@ -738,9 +739,21 @@ void make_ghosts(int inc, int nb, int i, int typei, int j, int typej)
 	{
 	  ibeg = j-1;
 	}
-      for (a = 0; a < 3; a++)
+      if (inc > 0.0)
 	{
-	  ghostInfoArr[ibeg+a].ghost_status = 2;
+	  for (a = 0; a < 3; a++)
+	    {
+	      ghostInfoArr[ibeg+a].ghost_status = 2;
+	    }
+	}
+      else
+	{
+	  /* 3 is an intermediate state from 2 (bound) -> 1 (bulk),
+	     hence 3 is a free antibody but still ghost */
+	  for (a = 0; a < 3; a++)
+	    {
+	      ghostInfoArr[ibeg+a].ghost_status = 3;
+	    }
 	}
     }
 }
@@ -1265,7 +1278,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	      remove_bond(i, j, ata, atb);
 	      remove_bond(j, i, atb, ata);
 #ifdef MD_RABBIT
-	      update_rates(i, j, ata, atb, -1);
+	      update_rates(i, j, ata, atb, -1.0);
 #endif
 	    }
 	}
