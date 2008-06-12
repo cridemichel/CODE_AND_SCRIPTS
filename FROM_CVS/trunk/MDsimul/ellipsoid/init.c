@@ -2768,9 +2768,13 @@ void init_ghostArr(void)
 	  ghostInfoArr[i].ghost_status = -1; 
 	  continue;
 	}
-      if (typeOfPart[i] == 0)
-	iggStatus = (get_rabbit_bonds(i, 0, i+1, 1) > 0)?2:1;
 
+      if (typeOfPart[i] == 0)
+	{
+	  iggStatus = (get_rabbit_bonds(i, 0, i+1, 1) > 0)?3:1;
+	}
+      /* set all IgG in state 3, so that even if IgG overlap 
+     	 it is ok */
       if (typeOfPart[i] <= 2)
 	{
 	  ghostInfoArr[i].iggnum = nigg;
@@ -4000,6 +4004,7 @@ void writeAllCor(FILE* fs, int saveAll)
 	    }
 	}
     }
+#if 0
 #ifdef MD_GHOST_IGG
   if (OprogStatus.ghostsim)
     {
@@ -4008,6 +4013,7 @@ void writeAllCor(FILE* fs, int saveAll)
 	  fprintf(fs, "%d %d\n", ghostInfoArr[i].iggnum, ghostInfoArr[i].ghost_status);
 	}
     }
+#endif
 #endif
 #endif
   if (mgl_mode)
@@ -4501,21 +4507,19 @@ void readAllCor(FILE* fs)
 	}
       fscanf(fs, "@@@ ");
     }
+#if 0
 #ifdef MD_GHOST_IGG
   fscanf(fs, "%s ", sep);
-  if (strcmp(sep, "@@@"))
+  if (!strcmp(sep, "@@@ GHOST @@@"))
     {
       size = sizeof(ghostInfo)*Oparams.parnum;
       ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
       for (i=0; i < Oparams.parnum; i++)
-	{
-	  if (i==0)
-	    sscanf(sep, "%d %d", &(ghostInfoArr[i].iggnum), &(ghostInfoArr[i].ghost_status));
-	  else
-	    fscanf(fs, "%d %d ", &(ghostInfoArr[i].iggnum), &(ghostInfoArr[i].ghost_status));
-	}
+	fscanf(fs, "%d %d ", &(ghostInfoArr[i].iggnum), &(ghostInfoArr[i].ghost_status));
     }
 #endif
+#endif
+
 #endif
   for (i = 0; i < Oparams.parnum; i++)
     {
