@@ -2936,6 +2936,67 @@ void assign_dists(double a[], double b[])
 #define MD_OPTDDIST
 /* NOTA: tale stima ottimizzata della maggiorazione per la velocità di variazione della distanza
  * sembra corretta, fare comunque dei test.*/
+#if 1 
+double eval_maxddist(int i, int j, int bondpair, double t1, double *maxddotOpt)
+{
+  double ti, rA[3], rB[3], Omega[3][3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
+	 r12i[3], r12j[3];//, maxddotOpt[MD_PBONDS];
+  double maxddot=0.0, nr12i, nr12j;
+  double sig2, factori, factorj;
+  int nn, kk, npbonds;
+  ti = t1 - atomTime[i];
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  /* ...and now orientations */
+  UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
+  BuildAtomPos(i, rA, RtA, ratA);
+  ti = t1 - atomTime[j];
+  rB[0] = rx[j] + vx[j]*ti;
+  rB[1] = ry[j] + vy[j]*ti;
+  rB[2] = rz[j] + vz[j]*ti;
+  /* ...and now orientations */
+  UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
+  BuildAtomPos(j, rB, RtB, ratB);
+  npbonds = set_pbonds(i, j);
+  for (nn = 0; nn < npbonds; nn++)
+    {
+      for (kk = 0; kk < 3; kk++)
+	{
+	  r12i[kk] = (ratA[mapbondsa[nn]][kk]-rA[kk]);
+  	  r12j[kk] = (ratB[mapbondsb[nn]][kk]-rB[kk]);	  
+	}
+      nr12i = calc_norm(r12i);
+      nr12j = calc_norm(r12j);
+#ifdef MD_AB41
+      if (i < Oparams.parnumA && j < Oparams.parnumA)
+	sig2 = 0.5*Oparams.sigmaStickyAA;
+      else
+	sig2 = 0.5*Oparams.sigmaStickyAB;
+#else
+      sig2 = 0.5*Oparams.sigmaSticky;
+#endif
+      nr12i += sig2;
+      nr12j += sig2;
+      factori = nr12i + OprogStatus.epsd;
+      factorj = nr12j + OprogStatus.epsd;
+      maxddotOpt[nn] = sqrt(Sqr(vx[i]-vx[j])+Sqr(vy[i]-vy[j])+Sqr(vz[i]-vz[j])) +
+	sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori + 
+	sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
+      if (OprogStatus.assumeOneBond && nn==bondpair)
+	{
+	  maxddot = maxddotOpt[nn];
+	  return maxddot;
+	}
+      else
+	{
+	  if (nn==0 || maxddotOpt[nn] > maxddot)
+	    maxddot = maxddotOpt[nn];
+	}
+    }
+  return maxddot;
+}
+#else
 double eval_maxddist(int i, int j, int bondpair, double t1, double *maxddotOpt)
 {
   double ti, rA[3], rB[3], Omega[3][3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
@@ -3006,6 +3067,7 @@ double eval_maxddist(int i, int j, int bondpair, double t1, double *maxddotOpt)
     }
   return maxddot;
 }
+#endif
 void calc_delt(double *maxddoti, double *delt, double *dists, int bondpair, int npbonds)
 {
   int nn;
