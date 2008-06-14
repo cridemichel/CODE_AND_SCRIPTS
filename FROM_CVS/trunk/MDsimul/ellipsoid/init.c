@@ -3708,6 +3708,12 @@ void usrInitAft(void)
       init_ghostArr();
     }
 #endif
+#ifdef MD_GRAZING_TRYHARDER
+  printf("[INFO] Grazing Try-Harder code ENABLED!\n");
+#else
+  printf("[INFO] Grazing Try-Harder code DISABLED!\n");
+#endif
+
   StartRun();
   if (mgl_mode != 2)
     ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
