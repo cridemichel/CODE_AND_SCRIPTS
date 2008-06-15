@@ -224,7 +224,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #ifndef EDHE_FLEX
 #define NA 10 /* number of atoms for each molecule (particle) */
 #else
-#define NA 1000//50000 /* number of atoms for each molecule (particle) */
+#define NA 100//50000 /* number of atoms for each molecule (particle) */
 #endif
 #ifdef MD_LL_BONDS
 #define NANA (((long long int)NA)*((long long int)NA))

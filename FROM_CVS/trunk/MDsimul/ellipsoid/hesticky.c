@@ -2198,6 +2198,7 @@ int check_crossSP(double *distsOld, double *dists,
 	  else
 	    crossed[nn] = MD_INOUT_BARRIER;
 	  retcross = 1;
+	  //printf("nn=%d dists[nn]:%.15G distsOld[nn]:%.15G\n", nn, dists[nn], distsOld[nn]);
 	}
     }
   return retcross;
@@ -2513,7 +2514,10 @@ int interpolSP(int i, int j, int nn,
 	    return 0;
 	  /* we can call grazing_try_harder() (i.e. brent) only if dmin is less than d1 and d2 (bracketing condition) */
 	  else if (fabs(dmin) < fabs(d1) && fabs(dmin) < fabs(d2))
-	    return 2;
+	    {
+	      //printf("dmin=%.15G\n", dmin);
+	      return 2;
+	    }
 	  else 
 	    return 1;
 	}
@@ -2906,6 +2910,7 @@ int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt
   /* use brent to find the exact minimum */
   *dmin = brent(t1, t1+delt*0.5, t1+delt, distSPbrent, MD_BRENT_TOL, troot);
   *dmin *= brentSign;
+  //printf("try harder cross dmin=%.15G\n", *dmin);
   if (*troot >= t1 && *troot <= t1+delt && *dmin*d1 < 0.0)
     {
       /* found a crossing! */
@@ -2915,13 +2920,51 @@ int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt
   return 0;/* no collision found */
 }
 #endif
+void check_bracketing(int i, int j, double tref, double *t1, double *t2, double nn, double shift[3], int evtype)
+{
+  const double GOLD= 1.618034;
+  double d1, d2, delt;
+  d1 = calcDistNegOneSP(*t1, tref, i, j, nn, shift);
+  d2 = calcDistNegOneSP(*t2, tref, i, j, nn, shift); 
+
+  //printf("1)t1=%.15G d1=%.15G t2=%.15G d2= %.15G\n", *t1, d1, *t2, d2);
+  delt = *t2-*t1;
+  if (d2*d1 < 0.0)
+    {
+      return;
+    }
+  while (d2*d1 >= 0.0)
+    {
+      delt *= GOLD;
+      if (evtype==MD_INOUT_BARRIER)
+	{
+	  if (d1 >= 0.0)
+	    *t1 = *t2 - delt;
+	  else 
+	    *t2 = *t1 + delt;
+	}
+      else
+	{
+	  if (d1 <= 0.0)
+	    *t1 = *t2 - delt;
+	  else
+	    *t2 = *t1 + delt;
+	}
+      d1 = calcDistNegOneSP(*t1, tref, i, j, nn, shift);
+      d2 = calcDistNegOneSP(*t2, tref, i, j, nn, shift); 
+      //printf("d1=%.15G d2= %.15G\n", d1, d2);
+      delt = *t2 - *t1;
+    }
+}
+
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
 		     double *evtime, int *ata, int *atb, int *collCode)
 {
   const double minh = 1E-20;
   double h, d, dold, t;
   int retip;
-  double dmin, deltini;	
+  double dmin, deltini;
+  //double tb1, tb2;	
 #if 0
   int cc;
   double tt;
@@ -3097,7 +3140,18 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
       delt = epsd/maxddot;
       tini = t;
       t += delt;
-      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+      /* d can not be exactly zero! */
+      while ((d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair))==0.0)
+	{
+#if 0
+	  delt *= GOLD;
+	  t = tini + delt;
+#else
+	  t=t+delt;
+#endif
+	}
+      //if ((i==50 && j==51)||(i==51&&j==50))
+       //printf("t=%.15G d=%.15G\n", t, d);
       MD_DEBUG38(printf("epsd=%.15G maxddot=%.15G epsd/maxddot%.15G t1=%.15G t=%.15G d=%.15G\n", epsd, maxddot,
 			epsd/maxddot, t1, t, d));
 #if 0
@@ -3289,6 +3343,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		  else
 		    {
 		      /* interpolSP ha trovato un minimo ma non c'è stato cambio di segno */
+		      //printf("t-delt=%.15G t=%.15G  distsOls[%d]:%.15G dist[]=%.15G\n", t-delt, t, nn, distsOld[nn], dists[nn]);
 		      if (grazing_try_harder(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], shift, &troot, &dmin))
 			{
 			  if (distsOld[nn] > 0.0)
@@ -3328,6 +3383,13 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	  if (dorefine[nn]!=MD_EVENT_NONE)
 	    {
 	      MD_DEBUG30(printf("REFINE dorefine[%d]:%d\n", nn, dorefine[nn]));
+	      /* ensure that t-delt and t2arr[nn] bracket the solution */
+	      //printf("tini=%.15G t-delt=%.15G\n", tini, t-delt);
+#if 0
+	      tb1 = t-delt;
+	      tb2 = t2arr[nn];
+	      check_bracketing(i, j, t1, &tb1, &tb2, nn, shift, dorefine[nn]);
+#endif
 	      if (refine_contactSP(i, j, t1, t-delt, t2arr[nn], nn, shift, &troot))
 		{
 		  //printf("[locate_contact] Adding collision between %d-%d\n", i, j);
@@ -3393,7 +3455,9 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	  return 1;
 	}
       else if (gotcoll == -1)
-	return 0;
+	{
+	  return 0;
+	}
       if (fabs(d) > epsdFastR)
 	{
 	  if (search_contact_fasterSP(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair,
@@ -3488,6 +3552,7 @@ int interpolNeighPlane_sp(int i, double tref, double t, double delt, double d1, 
   if (*tmin < t+delt && *tmin > t && d1*dmin < 0.0)
     {
       *tmin += tref;
+      //printf("dmin=%.15G *tmin=%.15G\n", dmin, *tmin-tref);
       return 0;
     }
   return 1;
@@ -3507,7 +3572,7 @@ int check_cross_sp(int nsp, double distsOld[6][NA], double dists[6][NA], int cro
 	  if (dists[nn][nn2] < 0.0  && distsOld[nn][nn2] > 0.0)
 	    {
 	      crossed[nn][nn2] = 1;
-	      //printf("CROSSED[%d]:%d\n", nn, crossed[nn]);
+	      //printf("CROSSED[%d][%d]:%d\n", nn, nn2, crossed[nn][nn2]);
 	      retcross = 1;
 	    }
 	}
@@ -3989,6 +4054,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   epsdFast = OprogStatus.epsdFastSPNL;
   epsdFastR= OprogStatus.epsdFastSPNL;
   epsdMax = OprogStatus.epsdSPNL;
+  //printf("INIZIO LOCATE CONTACT SP NNL\n");
 #ifdef MD_HANDLE_INFMASS
   if (is_infinite_Itens(i) && is_infinite_mass(i))
     {
@@ -4129,6 +4195,10 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	      t2arr[nn][nn2] = t; 
 	      dorefine[nn][nn2] = crossed[nn][nn2];
 #if 0
+	      if (dorefine[nn][nn2])
+		{
+		  printf("nn=%d nn2=%d t-delt=%.15G t2arr=%.15G\n", nn, nn2, t-delt, t2arr[nn][nn2]);
+		}
 	      if (crossed[nn]!=0)
 		{
 		  if (distsOld[nn] > 0 && dists[nn] < 0)
@@ -4143,6 +4213,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
       ntc = get_dists_tocheck_sp(NSP, distsOld, dists, tocheck, dorefine);
       for (nn = 0; nn < 6; nn++)
 	{
+	  assign_plane(nn);
 	  for (nn2 = 0; nn2 < NSP; nn2++)
 	    {
 	      if (tocheck[nn][nn2])
@@ -4180,6 +4251,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 				    t-delt, calcDistNegOneNNL_sp(t-delt, t1, i, nn2),
 				    t2arr[nn][nn2], calcDistNegOneNNL_sp(t2arr[nn][nn2],
 									 t1, i, nn2)));
+		  //printf("DOPO nn=%d nn2=%d t-delt=%.15G t2arr=%.15G\n", nn, nn2, t-delt, t2arr[nn][nn2]);
 		  if (refine_contact_neigh_plane_sp(i, t1, t-delt, t2arr[nn][nn2], &troot, nn, nn2))
 		    {
 		      //printf("[locate_contact] Adding collision for ellips. N. %d t=%.15G t1=%.15G t2=%.15G\n", i,
