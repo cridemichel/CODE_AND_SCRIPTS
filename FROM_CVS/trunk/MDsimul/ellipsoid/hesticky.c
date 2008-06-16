@@ -927,6 +927,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	}
 #endif
     }
+  //printf("[bump] i=%d j=%d ata=%d atb=%d t=%f contact point: %f,%f,%f \n", i, j, ata, atb, Oparams.time, rxC, ryC, rzC)
   MD_DEBUG20(printf("[bump] t=%f contact point: %f,%f,%f \n", Oparams.time, rxC, ryC, rzC));
   /* qui calcolo il punto di contatto */
   MD_DEBUG20(printf("i=%d ata: %d j=%d atb: %d\n", i, ata, j, atb));
@@ -2961,6 +2962,13 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		     double *evtime, int *ata, int *atb, int *collCode)
 {
   const double minh = 1E-20;
+  /* minimum acceptable distance increasing time by delt after a bump,
+     below this distance variation we can not distinguish two successive bumps */  
+#ifdef MD_PARANOID_CHECKS
+  const double DMINEPS=1E-13;
+  const double MINDT=1E-15;
+  double dtroot, dini;
+#endif
   double h, d, dold, t;
   int retip;
   double dmin, deltini;
@@ -3121,6 +3129,9 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #else
   dold = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, distsOld, bondpair);
 #endif
+#ifdef MD_PARANOID_CHECKS
+  dini=d;
+#endif
 #ifdef EDHE_FLEX
 #if 0
   if (are_bonds_broken(i, j, dists) && !sumnegpairs)
@@ -3143,12 +3154,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
       /* d can not be exactly zero! */
       while ((d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair))==0.0)
 	{
-#if 0
-	  delt *= GOLD;
-	  t = tini + delt;
-#else
-	  t=t+delt;
-#endif
+	  t += delt*0.5;
 	}
       //if ((i==50 && j==51)||(i==51&&j==50))
        //printf("t=%.15G d=%.15G\n", t, d);
@@ -3242,9 +3248,9 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		  //printf("qui\n");
 		  tmin -= t1;
 		  delt = tmin - tini;
-		  //printf("NEW delt=%.15G\n", delt);
-		  t = tmin;
+  		  t = tmin;
 		  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+		  //printf("NEW delt=%.15G d=%.15G \n", delt, d);
 		}
 #if 1
 	      /* if, for any reason, the minimum just found does not exist, lay outside [tini, tini+delt]
@@ -3278,6 +3284,9 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #endif
 	    } 
 	  sumnegpairs = 0;
+#ifdef MD_PARANOID_CHECKS
+	  dini=d;
+#endif
 	}
 
 #if 0
@@ -3297,6 +3306,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
       for (nn=0; nn < nbonds; nn++)
 	dorefine[nn] = MD_EVENT_NONE;
       ncr=check_crossSP(distsOld, dists, crossed, bondpair);
+
       /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
        * sticky */
       for (nn = 0; nn < nbonds; nn++)
@@ -3346,6 +3356,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		      //printf("t-delt=%.15G t=%.15G  distsOls[%d]:%.15G dist[]=%.15G\n", t-delt, t, nn, distsOld[nn], dists[nn]);
 		      if (grazing_try_harder(i, j, nn, t1, t-delt, delt, distsOld[nn], dists[nn], shift, &troot, &dmin))
 			{
+			  //printf("try harder troot=%.15G dmin=%.15G\n", troot, dmin);
 			  if (distsOld[nn] > 0.0)
 			    dorefine[nn] = MD_OUTIN_BARRIER;
 			  else
@@ -3414,11 +3425,22 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 			 }
 		  else
 		    {
-		      gotcoll = 1;
 		      MD_DEBUG31(printf("SP *evtime=%.15G troot=%.15G troot-*evtime:%.15G\n", *evtime, troot, 
 					troot-*evtime));
+#ifdef MD_PARANOID_CHECKS
+		      if (lastbump[i].mol==j && lastbump[j].mol==i && lastbump[i].at == mapbondsa[nn] &&
+			  lastbump[j].at == mapbondsb[nn] && fabs(troot-lastcol[i]) < MINDT &&
+			  fabs(troot-lastcol[j]) < MINDT)
+			{
+			  dtroot = calcDistNegOneSP(0.0, troot, i, j, nn, shift);
+			  if (fabs(dtroot-dini) < DMINEPS)
+			    continue;
+			    //printf("last=%.15G troot=%.15G dt=%.15G\\n", lastcol[i], troot, fabs(lastcol[i]-troot));
+			}
+#endif
 		      if (*collCode == MD_EVENT_NONE || troot < *evtime)
 			{
+			  gotcoll = 1;
 			  *ata = mapbondsa[nn];
 			  *atb = mapbondsb[nn];
 			  *evtime = troot;
@@ -3437,7 +3459,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		}
 	      else 
 		{
-		  MD_DEBUG(printf("[locate_contactSP] can't find contact point!\n"));
+  		  MD_DEBUG(printf("[locate_contactSP] can't find contact point!\n"));
 #ifdef MD_INTERPOL
 		  if (!tocheck[nn])
 #endif
@@ -3463,6 +3485,10 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	  if (search_contact_fasterSP(i, j, shift, &t, t1, t2, epsd, &d, epsdFast, dists, bondpair,
 				      maxddot, maxddoti))
 	    {
+#ifdef MD_PARANOID_CHECKS
+	      if (dini*d < 0.0)
+		printf("[PARANOID CHECKS:locate_contactSP] sign change not detected dini=%.15G d=%.15G!\n", dini, d);	
+#endif
 	      MD_DEBUG30(printf("[search contact faster locate_contact_sp] d: %.15G\n", d));
 	      return 0;
 	    }
@@ -4135,7 +4161,10 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
       delt = epsd/maxddot;
       tini = t;
       t += delt;
-      d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+      while ((d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists))==0.0)
+	{
+	  t += delt*0.5;
+	}
 #else
       if (!firstaftsf)
 	{
