@@ -3265,7 +3265,10 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
       delt = epsd/maxddot;
       tini = t;
       t += delt;
-      d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd, 0);
+      while ((d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd, 0))==0.0)
+	{
+	  t += delt*0.5;
+	}
 #else
       if (!firstaftsf)
 	{
