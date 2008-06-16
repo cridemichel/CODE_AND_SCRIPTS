@@ -6683,6 +6683,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 {
   double h, d, dold, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double maxddot, delt, troot, vecgroot[8], tini, tmin;
+#ifdef MD_PARANOID_CHECKS
+  const double DMINEPS=1E-13;
+  const double MINDT=1E-15;
+  double dini;
+#endif
 #ifndef MD_BASIC_DT
   double normddot, ddot[3], dold2, vecgdold2[8];
 #endif
@@ -6847,13 +6852,19 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
     vecgdold[kk] = vecgd[kk];
   dold = d;
   its = 0;
+#ifdef MD_PARANOID_CHECKS
+  dini = d;
+#endif
   while (t + t1 < t2)
     {
 #ifdef MD_BASIC_DT
       delt = epsd/maxddot;
       tini = t;
       t += delt;
-      d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
+      while ((d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0))==0.0)
+	{
+	  t += delt*0.5;
+	}
 #else
 #if 1
       normddot = calcvecF(i, j, t, t1, r1, r2, ddot, shift);
@@ -6909,6 +6920,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 		}
 	    }
 	  sumnegpairs = 0;	  
+#ifdef MD_PARANOID_CHECKS
+	  dini = d;
+#endif
 	}
       dorefine = 0;      
       if (dold > 0 && d < 0)
@@ -6956,6 +6970,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      MD_DEBUG40(printf("collision will occur at time %.15G\n", vecg[4])); 
 	      MD_DEBUG40(printf("[locate_contact] its: %d\n", its));
 #ifdef MD_PATCHY_HE
+#ifdef MD_PARANOID_CHECKS
+	      if (lastbump[i].mol==j && lastbump[i].at==0 && lastbump[j].mol==i && lastbump[j].at==0
+		   && fabs(vecg[4] - lastcol[i])<MINDT)
+		continue;
+#endif
 	      if (vecg[4]>t2 || vecg[4]<t1)
 #if 0
 		|| 
@@ -7009,6 +7028,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	{
 	  if (search_contact_faster(i, j, shift, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2))
 	    {
+#ifdef MD_PARANOID_CHECKS
+	      if (dini*d < 0.0)
+	       printf("[PARANOID CHECKS:locate_contact] sign change not detected!\n");	
+#endif
 	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
 	      return 0;
 	    }
@@ -7020,7 +7043,6 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	  continue;
 	}
 #endif
- 
       dold = d;
       for (kk = 0; kk < 8; kk++)
 	vecgdold[kk] = vecgd[kk];
@@ -7031,7 +7053,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   if (foundrc==0)
     printf("%d-%d t=%.12G > t2=%.12G I did not find any contact point!\n", i, j, t, t2);
   );
-
+#ifdef MD_PARANOID_CHECKS
+  if ((!foundrc) && (dini*d < 0.0))
+    printf("[PARANOID CHECKS:locate_contact] sign change not detected!\n");	
+#endif
   MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
   return foundrc;
 }
