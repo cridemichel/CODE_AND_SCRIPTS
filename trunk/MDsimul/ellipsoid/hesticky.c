@@ -2422,7 +2422,7 @@ int search_contact_fasterSP(int i, int j, double *shift, double *t, double t1, d
 #endif
       *t += delt;
       *d1 = calcDistNegSP(*t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
-      if (check_crossSP(distsOld, dists, crossed, bondpair))
+      if (check_crossSP(distsOld, dists, crossed, bondpair) || (*d1==0.0))
 	{
 	  /* go back! */
 	  MD_DEBUG30(printf("SP d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
@@ -2966,9 +2966,9 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
      below this distance variation we can not distinguish two successive bumps */  
 #ifdef MD_PARANOID_CHECKS
   const double DMINEPS=1E-13;
-  const double MINDT=1E-15;
   double dtroot, dini;
 #endif
+  const double MINDT=1E-15;
   double h, d, dold, t;
   int retip;
   double dmin, deltini;
@@ -3154,9 +3154,32 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
       /* d can not be exactly zero! */
       while ((d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair))==0.0)
 	{
-	  t += delt*0.5;
+	  delt *= GOLD;
+	  t = tini + delt;
 	}
-      //if ((i==50 && j==51)||(i==51&&j==50))
+#ifdef MD_PARANOID_CHECKS
+      if ((fabs(d-dold)==0.0))
+	{
+	  /* first we reduce delt to check d=dold is just random */
+	  deltini = delt;
+	  delt /= GOLD;
+	  t = tini + delt;
+	  d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	  if (fabs(d-dold)!=0.0)
+	    {
+	      delt = deltini;
+	      t = tini + delt;
+	      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	    } 
+	  while (fabs(d-dold)==0.0)
+	    {
+	      delt *= GOLD;
+	      t = tini + delt;
+	      d = calcDistNegSP(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+	    }	
+	}
+#endif
+       //if ((i==50 && j==51)||(i==51&&j==50))
        //printf("t=%.15G d=%.15G\n", t, d);
       MD_DEBUG38(printf("epsd=%.15G maxddot=%.15G epsd/maxddot%.15G t1=%.15G t=%.15G d=%.15G\n", epsd, maxddot,
 			epsd/maxddot, t1, t, d));
@@ -3829,7 +3852,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
       //printf("d=%.15G t=%.15G\n", *d1, *t+t1);
 #if 1
       itsf = 0;
-      while (check_cross_sp(NSP, distsOld, dists, crossed))
+      while (check_cross_sp(NSP, distsOld, dists, crossed)||(*d1==0.0))
 	{
 	  /* reduce step size */
 	  if (itsf == 0 && delt - OprogStatus.h > 0)
@@ -3848,7 +3871,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 	    }
 	}
 #else
-     if (check_cross_sp(NSP, distsOld, dists, crossed))
+     if (check_cross_sp(NSP, distsOld, dists, crossed)||(*d1==0.0))
        {
 	 /* go back! */
 	 MD_DEBUG34(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
@@ -4065,9 +4088,13 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   /* const double minh = 1E-14;*/
   double h, d, dold, t2arr[6][NA], t, dists[6][NA], distsOld[6][NA]; 
   double maxddot, delt, troot, tini, maxddoti[6][NA];
+#ifdef MD_PARANOID_CHECKS
+  double deltini;
+#endif
 #ifndef MD_BASIC_DT
   double distsOld2[6][NA], dold2, normddot, deldist;
 #endif
+  const double GOLD = 1.618034;
   int firstev, nn2;
   /*
   const int MAXITS = 100;
@@ -4163,8 +4190,32 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
       t += delt;
       while ((d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists))==0.0)
 	{
-	  t += delt*0.5;
+	  delt *= GOLD;
+	  t = tini + delt;
 	}
+#ifdef MD_PARANOID_CHECKS
+      if ((fabs(d-dold)==0.0))
+	{
+	  /* first we reduce delt to check d=dold is just random */
+	  deltini = delt;
+	  delt /= GOLD;
+	  t = tini + delt;
+	  d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+	  if (fabs(d-dold)!=0.0)
+	    {
+	      delt = deltini;
+	      t = tini + delt;
+	      d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+	    } 
+	  while (fabs(d-dold)==0.0)
+	    {
+	      delt *= GOLD;
+	      t = tini + delt;
+	      d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+	    }	
+	}
+
+#endif
 #else
       if (!firstaftsf)
 	{
