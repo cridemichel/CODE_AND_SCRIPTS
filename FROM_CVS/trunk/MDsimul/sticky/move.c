@@ -3679,7 +3679,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
       tini = t;
       delt = epsd/maxddot;
       t += delt;
-      d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair);
+      while ((d = calcDistNeg(t, t1, i, j, shift, &amin, &bmin, dists, bondpair))==0.0)
+	{
+	  delt *= GOLD;
+	  t = tini + delt;
+	}
 #else
 #if 0
       deldist = get_max_deldist(distsOld2, distsOld);
