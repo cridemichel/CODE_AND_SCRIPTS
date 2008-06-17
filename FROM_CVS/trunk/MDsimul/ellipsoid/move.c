@@ -6380,7 +6380,7 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
 	}
 #endif
       *d1 = calcDistNeg(*t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
-      if (*d1 < 0)
+      if (*d1 <= 0.0)
 	{
 	  /* go back! */
 	  MD_DEBUG40(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
@@ -6683,13 +6683,16 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 {
   double h, d, dold, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double maxddot, delt, troot, vecgroot[8], tini, tmin;
+  const double GOLD= 1.618034;
 #ifdef MD_PARANOID_CHECKS
+  double deltini;
   const double DMINEPS=1E-13;
   const double MINDT=1E-15;
   double dini;
 #endif
 #ifndef MD_BASIC_DT
   double normddot, ddot[3], dold2, vecgdold2[8];
+  const double GOLD= 1.618034;
 #endif
   //const int MAXOPTITS = 4;
   double epsd, epsdFast, epsdFastR, epsdMax;
@@ -6863,8 +6866,31 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       t += delt;
       while ((d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0))==0.0)
 	{
-	  t += delt*0.5;
+	  delt *= GOLD;
+	  t = tini + delt;
 	}
+#ifdef MD_PARANOID_CHECKS
+      if ((fabs(d-dold)==0.0))
+	{
+	  /* first we reduce delt to check d=dold is just random */
+	  deltini = delt;
+	  delt /= GOLD;
+	  t = tini + delt;
+	  d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
+	  if (fabs(d-dold)!=0.0)
+	    {
+	      delt = deltini;
+	      t = tini + delt;
+	      d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
+	    } 
+	  while (fabs(d-dold)==0.0)
+	    {
+	      delt *= GOLD;
+	      t = tini + delt;
+	      d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0);
+	    }	
+	}
+#endif
 #else
 #if 1
       normddot = calcvecF(i, j, t, t1, r1, r2, ddot, shift);
