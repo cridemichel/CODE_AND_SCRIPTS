@@ -163,9 +163,10 @@ double calcpotene(void)
 	  jj2 = bonds[na][kk]%(NANA);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
-	  //printf("numbonds[%d]=%d aa=%d bb=%d\n", na, numbonds[na], aa, bb);
+	  //printf("numbonds[%d]=%d aa=%lld bb=%lld ninters:%d\n", na, numbonds[na], aa, bb, Oparams.ninters);
 	  for (kk2 = 0; kk2 < Oparams.ninters; kk2++)
 	    {
+	      //printf("type[%d]=%d type[%lld]=%d \n", na, typeOfPart[na], jj, typeOfPart[jj]);
 	      if ( (is_in_ranges(typeOfPart[na], intersArr[kk2].type1, intersArr[kk2].nr1, intersArr[kk2].r1) && 
 		    is_in_ranges(typeOfPart[jj], intersArr[kk2].type2, intersArr[kk2].nr2, intersArr[kk2].r2) &&
 		    intersArr[kk2].spot1 == aa-1 && intersArr[kk2].spot2 == bb-1) || 
