@@ -89,7 +89,7 @@ int numOfProcs; /* number of processeses in a communicator */
 #endif 
 
 #ifdef EDHE_FLEX
-char colsFlex[][256] = {"red","green","blue", "snow","ghost","gainsboro","OldLace","linen","PapayaWhip","blanched",
+char colsFlex[][256] = {"red","green","blue", "snow","gainsboro","OldLace","linen","PapayaWhip","blanched",
 "BlanchedAlmond","bisque","peach","PeachPuff","navajo","moccasin","cornsilk","ivory","lemon",
 "LemonChiffon","seashell","honeydew","mint","MintCream","azure","alice","AliceBlue","lavender","lavender",
 "LavenderBlush","misty","MistyRose","dark","DarkSlateGray","dark","DarkSlateGrey","dim",
@@ -3650,7 +3650,6 @@ void usrInitAft(void)
   ryNNL = malloc(sizeof(double)*Oparams.parnum);
   rzNNL = malloc(sizeof(double)*Oparams.parnum);
 #endif
-
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
 #ifdef EDHE_FLEX
   if (Oparams.maxbondsSaved==-1)

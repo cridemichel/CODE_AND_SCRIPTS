@@ -251,9 +251,14 @@ extern void rebuild_linked_list_NNL(void);
 #ifdef MD_GHOST_IGG
 void update_ghost_status(void)
 {
-  int i, curnigg, a, notransition;
+  int i, curnigg, a, notransition, np;
 
-  for (i = 0; i < typeNP[0]; i++)
+  np = 0;
+  for (a=0; a < 4; a++)
+    {
+      np += typeNP[a];
+    }
+  for (i = 0; i < np; i++)
     {
       curnigg = ghostInfoArr[i].iggnum;
       /* 3 is an intermediate state going from 1 to 2, hence

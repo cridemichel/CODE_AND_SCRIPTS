@@ -696,8 +696,7 @@ void handle_absorb(int ricettore, int protein)
 #endif
 #if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
 extern void check_inf_mass_itens(int typei, int typej, int *infMass_i, int *infMass_j, int *infItens_i, int *infItens_j);
-double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
-		   double *dists, int bondpair);
+double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
 void assign_bond_mapping(int i, int j);
 #endif
 #ifdef MD_RABBIT
@@ -2150,6 +2149,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	  *bmin = mapbondsb[nn];
 	}
     }
+
   return distmin;
 }
 int refine_contactSP(int i, int j, double tref, double t1, double t2, int nn, double shift[3], double *troot)
