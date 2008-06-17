@@ -3011,7 +3011,7 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
 	//printf("maxddot=%.15G delt=%.15G d=%.15G t=%.15G\n", maxddot, delt, *d1, *t+t1);
 #if 1
       itsf = 0;
-      while (check_cross(distsOld, dists, crossed))
+      while (check_cross(distsOld, dists, crossed)||(*d1==0.0))
 	{
 	  /* reduce step size */
 	  if (itsf == 0 && delt - OprogStatus.h > 0)
@@ -3029,7 +3029,7 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
 	    }
 	}
 #else
-     if (check_cross(distsOld, dists, crossed))
+     if (check_cross(distsOld, dists, crossed)||(*d1==0.0))
        {
 	 /* go back! */
 	 MD_DEBUG30(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
@@ -3182,10 +3182,14 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 #endif
   double maxddot, delt, troot, tini, maxddoti[6];
   int firstev;
+#ifdef MD_PARANOID_CHECKS
+  double deltini;
+#endif
   /*
   const int MAXITS = 100;
   const double EPS=3E-8;*/ 
   /* per calcolare derivate numeriche questo è il magic number in doppia precisione (vedi Num. Rec.)*/
+  const double GOLD= 1.618034;
   int its, foundrc;
   double t1, epsd, epsdFast, epsdFastR, epsdMax; 
   int kk,tocheck[6], dorefine[6], ntc, ncr, nn, gotcoll, crossed[6], firstaftsf;
@@ -3267,8 +3271,31 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
       t += delt;
       while ((d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd, 0))==0.0)
 	{
-	  t += delt*0.5;
+	  delt *= GOLD;
+	  t = tini + delt;
 	}
+#ifdef MD_PARANOID_CHECKS
+      if ((fabs(d-dold)==0.0))
+	{
+	  /* first we reduce delt to check d=dold is just random */
+	  deltini = delt;
+	  delt /= GOLD;
+	  t = tini + delt;
+	  d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd, 0);
+	  if (fabs(d-dold)!=0.0)
+	    {
+	      delt = deltini;
+	      t = tini + delt;
+	      d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd, 0);
+	    } 
+	  while (fabs(d-dold)==0.0)
+	    {
+	      delt *= GOLD;
+	      t = tini + delt;
+	      d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd, 0);
+	    }	
+	}
+#endif
 #else
       if (!firstaftsf)
 	{
