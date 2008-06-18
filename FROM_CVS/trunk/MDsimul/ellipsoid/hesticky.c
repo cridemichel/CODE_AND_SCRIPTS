@@ -25,6 +25,8 @@
 #ifdef EDHE_FLEX
 extern void set_angmom_to_zero(int i);
 extern int *is_a_sphere_NNL;
+#endif
+#ifdef MD_PATCHY_HE
 extern int isSymItens(int i);
 #endif
 #if defined(MPI)
@@ -67,7 +69,7 @@ extern double invaSq[2], invbSq[2], invcSq[2];
 extern double rxC, ryC, rzC;
 extern int SolveLineq (double **a, double *x, int n); 
 extern double calc_norm(double *vec);
-int calcdist_retcheck;
+extern int calcdist_retcheck;
 extern double rA[3], rB[3];
 extern double gradplane_all[6][3], rBall[6][3];
 extern int polinterr, polinterrRyck;
@@ -154,7 +156,7 @@ void newt(double x[], int n, int *check,
 void rebuildCalendar(void);
 void R2u(void);
 void store_bump(int i, int j);
-double rcutL, aL, bL, cL;
+extern double rcutL, aL, bL, cL;
 extern double max_ax(int i);
 void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[]);
 #define MD_SP_DELR 0.0
@@ -2093,7 +2095,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
 #ifdef MD_ASYM_ITENS
- symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
+  symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
   //UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
   UpdateOrient(j, ti, RtB, Omega);
@@ -2450,7 +2452,7 @@ int search_contact_fasterSP(int i, int j, double *shift, double *t, double t1, d
 }
 extern double **Aip;
 extern void polint(double xa[], double ya[], int n, double x, double *y, double *dy);
-double xa[3], ya[3];
+extern double xa[3], ya[3];
 double distfuncSP(double x)
 {
   double dy, y;
