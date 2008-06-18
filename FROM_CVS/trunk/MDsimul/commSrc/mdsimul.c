@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.15 2007-02-10 21:25:28 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.16 2008-06-18 08:46:55 demichel Exp $     */
 #ifndef lint
-//static char vcid[] = "$Id: mdsimul.c,v 1.15 2007-02-10 21:25:28 demichel Exp $";
+//static char vcid[] = "$Id: mdsimul.c,v 1.16 2008-06-18 08:46:55 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -33,7 +33,7 @@ extern char TXT[MSG_LEN];
 /* shared array of two integers for active lock/unlock (semaphores) */
 
 /* log stream */
-FILE* output;
+extern FILE* output;
 
 /* strings to store messages (use calling mdMsg()) */
 extern char msgStrA[MSG_LEN], msgStrB[MSG_LEN], msgStrC[MSG_LEN]; 
@@ -402,6 +402,8 @@ void build_bilog_arr(void)
 #endif
 }
 #endif
+extern void scanFile(char* argom);
+
 /* =============================== >>> MAIN <<< ============================*/
 int main(int argc, char *argv[])
 {
@@ -460,7 +462,7 @@ int main(int argc, char *argv[])
   if ( argsMd(argc, argv) == 1) /* args parse commandline arguments  */
     /* args = 1 means:  'begin  a new simulation' */
     {
-      Newsimul(paramFile);/* parsFile is the params file passed as argument */
+      Newsimul(paramFile);
     }
   else /* otherwise continue a previuosly interrupted simulation */
     {
