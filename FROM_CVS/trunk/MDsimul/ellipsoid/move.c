@@ -6602,7 +6602,6 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
   double sigSq, b, dr[3], dv[3], tInt, vv;
   int collCode;
   /* calcola cmq l'urto fra le due core spheres */
-  printf("qui\n");
   typei = typeOfPart[i];
   typej = typeOfPart[j];
   sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 
