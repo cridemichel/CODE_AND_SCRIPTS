@@ -52,8 +52,9 @@ void UpdateSystem(void);
 
 #define MD_TAPE_MIS "/iomega/measures/"
 /* directory on tape to store measures */
+#ifdef EDHE_FLEX
 #define MD_COORDTMP_ASCII(x) save_coordtmp_ascii(x)
-
+#endif
 /* 16/1/1998 ADD: <XVA defines> */
 #define MD_HD_XVA "/work2/xvafiles/"
 #define MD_TAPE_XVA "/iomega/xvafiles/"
@@ -775,7 +776,7 @@ struct params
 /* ======================== >>> params instance <<< ========================
    MAIN is a macro defined only in mdsimul.c, so there we put the instance
    of the object, and elsewhere we put only extern declarations */
-#ifndef MAIN
+#ifdef MAIN
 struct params Oparams;
 #else
 extern struct params Oparams;

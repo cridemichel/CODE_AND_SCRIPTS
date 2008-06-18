@@ -8,7 +8,7 @@ int SEGSIZE, corBool = 0, tBool = 0, ihdr = 1, ohdr = 1, posBool = 0, Nm,
   boxcmBool = 0;
 int outBool = 0; /* if true writes output coordinates file */
 int infoBool = 0;
-
+struct params Oparams;
 /* strings to store messages (use calling mdMsg()) */
 COORD_TYPE T;
 COORD_TYPE DECL_LIST;

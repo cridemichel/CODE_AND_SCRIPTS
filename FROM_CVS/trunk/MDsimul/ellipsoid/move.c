@@ -50,7 +50,7 @@ extern double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, 
 extern double cosEulAng[2][3], sinEulAng[2][3];
 #endif
 #ifdef MD_PATCHY_HE
-struct LastBumpS *lastbump;
+extern struct LastBumpS *lastbump;
 extern void check_all_bonds(void);
 #else
 int *lastbump;
@@ -85,7 +85,7 @@ void calcT(void);
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 extern void writeAllCor(FILE* fs, int saveAll);
 extern struct nebrTabStruct *nebrTab;
-double nextNNLrebuild;
+extern double nextNNLrebuild;
 extern void rebuildNNL(void);
 extern void updrebuildNNL(int na);
 extern void PredictEventNNL(int na, int nb);
@@ -252,14 +252,15 @@ const double timbig = 1E12;
 extern double g2, mgA, mgB;
 #endif
 double *lastcol;
-double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
+extern double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
-  cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
+    cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 #ifdef MD_EDHEFLEX_OPTNNL
 extern int *inCell_NNL[3], *cellList_NNL;
 extern double *rxNNL, *ryNNL, *rzNNL;
 #endif
-int evIdA, evIdB, parnumB, parnumA;
+int evIdA, evIdB;
+extern int parnumA, parnumB;
 #ifdef MD_PATCHY_HE
 int evIdC, evIdD, evIdE;
 extern double *treeRxC, *treeRyC, *treeRzC;
@@ -1359,7 +1360,7 @@ void outputSummary(void)
 #endif
 }
 #ifdef EDHE_FLEX
-int dofTot;
+extern int dofTot;
 int all_spots_on_symaxis(int sa, int pt)
 {
   int sp;
@@ -6601,6 +6602,7 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
   double sigSq, b, dr[3], dv[3], tInt, vv;
   int collCode;
   /* calcola cmq l'urto fra le due core spheres */
+  printf("qui\n");
   typei = typeOfPart[i];
   typej = typeOfPart[j];
   sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 

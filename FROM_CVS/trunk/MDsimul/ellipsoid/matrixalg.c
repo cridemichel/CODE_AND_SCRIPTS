@@ -5,7 +5,6 @@
 #include<math.h>
 #include<stdio.h>
 #include<stdlib.h>
-#define MD_DEBUG(x) 
 #define MD_DEBUG10(x) 
 #define MD_DEBUG18(x)
 #define MD_DEBUG20(x) 

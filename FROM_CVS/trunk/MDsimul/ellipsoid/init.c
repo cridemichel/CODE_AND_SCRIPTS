@@ -60,7 +60,7 @@ extern double Lz2;
 extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB; 
-int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
+extern int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
 #ifdef MD_EDHEFLEX_OPTNNL
 int *inCell_NNL[3], *cellList_NNL;
 double *rxNNL, *ryNNL, *rzNNL;
@@ -1852,7 +1852,7 @@ typedef struct {
 	} neigh[4];
 } MESHXYZ;
 
-MESHXYZ **ellips_mesh[2];
+extern MESHXYZ **ellips_mesh[2];
 void EvalSuperEllipse(double theta,double phi, double a, double b, double c, MESHXYZ *pm)
 {
    double cth,cphi,sth,sphi;
@@ -3804,7 +3804,7 @@ void usrInitAft(void)
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 }
 extern double rA[3], rB[3];
-
+#ifdef EDHE_FLEX
 void save_coordtmp_ascii(unsigned char hdWhich)
 {
   char fileop[1024], fileop2[1024];
@@ -3817,7 +3817,7 @@ void save_coordtmp_ascii(unsigned char hdWhich)
   strcpy(fileop, absTmpAsciiHD(fileop2));
   saveFullStore(fileop);
 }
-
+#endif
 #ifdef EDHE_FLEX
 int is_valid_parname_progStatus(char *pn)
 {
