@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.16 2008-06-18 08:46:55 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.17 2008-06-18 08:48:41 demichel Exp $     */
 #ifndef lint
-//static char vcid[] = "$Id: mdsimul.c,v 1.16 2008-06-18 08:46:55 demichel Exp $";
+//static char vcid[] = "$Id: mdsimul.c,v 1.17 2008-06-18 08:48:41 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
