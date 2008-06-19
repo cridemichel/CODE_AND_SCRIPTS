@@ -296,6 +296,7 @@ double brentRyck(double ax, double bx, double cx, double (*f)(double), double to
   *xmin=x; /*Never get here.*/
   return fx;
 }
+int brentTooManyIter;
 double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin)
 /*Given a function f, and given a bracketing triplet of abscissas ax, bx, cx 
  * (such that bx is between ax and cx, and f(bx) is less than both f(ax) and f(cx)),
@@ -308,6 +309,7 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
   const double ZEPSBR=1E-20;
   double a,b,d=0.0,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
   double e=0.0, fuold;
+  brentTooManyIter=0;
   /* This will be the distance moved on the step before last.*/
   a=(ax < cx ? ax : cx); /*a and b must be in ascending order, 
 			   but input abscissas need not be.*/
@@ -387,7 +389,9 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
 	    }
 	} /* Done with housekeeping. Back for another iteration.*/
     }
-  nrerror("Too many iterations in brent"); 
+  printf("Too many iterations in brent!\n");
+  brentTooManyIter=1;
+  //nrerror("Too many iterations in brent"); 
   *xmin=x; /*Never get here.*/
   return fx;
 }

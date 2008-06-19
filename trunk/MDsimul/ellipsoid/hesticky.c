@@ -2893,6 +2893,7 @@ double distSPbrent(double t)
   return brentSign*calcDistNegOneSP(t, brent_tref, iBrent, jBrent, nnBrent, shiftBrent);
 }
 #define MD_BRENT_TOL 1E-15
+extern int brentTooManyIter;
 extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
 int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt, double d1, double d2, double shift[3], double *troot, double *dmin)
 {
@@ -2914,7 +2915,8 @@ int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt
   *dmin = brent(t1, t1+delt*0.5, t1+delt, distSPbrent, MD_BRENT_TOL, troot);
   *dmin *= brentSign;
   //printf("try harder cross dmin=%.15G\n", *dmin);
-  if (*troot >= t1 && *troot <= t1+delt && *dmin*d1 < 0.0)
+  /* if brentTooManyIter==1 means that something went wrong in brent */
+  if (!brentTooManyIter && *troot >= t1 && *troot <= t1+delt && *dmin*d1 < 0.0)
     {
       /* found a crossing! */
       *troot += tref;
