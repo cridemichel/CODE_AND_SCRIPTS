@@ -6453,6 +6453,46 @@ int interpolSNP(int i, int j, double tref, double t, double delt, double d1, dou
     }
   return 1;
 }
+double brent_trefHE, shiftBrentHE[3], brentSignHE, *brent_vecgHE;
+int iBrentHE, jBrentHE;
+double distbrentHE(double t)
+{
+  double r1[3], r2[3], alpha;
+  return brentSignHE*calcDistNeg(t, brent_trefHE, iBrentHE, jBrentHE, shiftBrentHE, r1, r2, &alpha, brent_vecgHE, 0);
+}
+#define MD_BRENT_TOL 1E-15
+extern int brentTooManyIter;
+extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
+int grazing_try_harderHE(int i, int j, double tref, double t1, double delt, double d1, double d2, double shift[3], double *vecg, double *troot, double *dmin)
+{
+  int a;
+#ifndef MD_GRAZING_TRYHARDER
+  return 0;
+#endif
+  printf("[grazing_try_harderHE] i=%d j=%d time=%.15G\n", i, j, tref+t1);
+  /* Brent looks always for a minimum hence we have to change sign
+     if grazing occurrs coming from negative distances */
+  brentSignHE = ((d1>0.0)?1.0:-1.0);
+  brent_trefHE = tref;
+  brent_vecgHE = vecg;
+  iBrentHE = i;
+  jBrentHE = j;
+  for (a=0; a < 3; a++)
+    shiftBrentHE[a] = shift[a];
+  /* use brent to find the exact minimum */
+  *dmin = brent(t1, t1+delt*0.5, t1+delt, distbrentHE, MD_BRENT_TOL, troot);
+  *dmin *= brentSignHE;
+  //printf("DOPO dmin(%.15G)=%.15G\n", *troot, *dmin);
+  //printf("try harder cross dmin=%.15G\n", *dmin);
+  if (!brentTooManyIter && *troot >= t1 && *troot <= t1+delt && *dmin*d1 < 0.0)
+    {
+      /* found a crossing! */
+      /* 19/06/08 NOTE: note that we need times relative to tref, i.e.
+	 we do not need to add tref to the solution *troot here!*/
+      return 1;
+    }
+  return 0;/* no collision found */
+}
 int interpol(int i, int j, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3], int bracketing)
 {
   int nb;
@@ -6511,6 +6551,22 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
 		  t2 = tmin;
 		  t1 = t;
 		}
+	      else if (fabs(dmin) < fabs(d1) && fabs(dmin) < fabs(d2))
+		{
+		  /* differently from interpolSP we call grazing_try_harder_HE() func
+		     from here because for sumnegpairs case there is a dedicated 
+		     function called interpolSNP */
+		  //printf("PRIMA delt=%.15G\n", delt);
+		  //printf("PRIMA d1(%.15G)=%.15G dmin(%.15G) = %.15G d2(%.15G)=%.15G\n", t, d1, tmin, dmin, t+delt, d2);
+		  if (grazing_try_harderHE(i, j, tref, t, delt, d1, d2, shift, vecg, &tmin, &dmin))
+		    {
+		      /* in grazing_try_harderHE() already checks for d1*dmin < 0.0 */
+		      t2 = tmin;
+	    	      t1 = t;
+		    }
+		  else
+		    return 1;
+		}
 	      else
 		return 1;
 	    }
@@ -6551,6 +6607,7 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
       printf("distfunc(t1)=%.10G distfunc(t2)=%.10G\n", distfunc(t), distfunc(t+delt));
       return 1;
     }
+  /* ERROR CHECKING */
   if ((*troot < t && fabs(*troot-t)>3E-8) || (*troot > t+delt && fabs(*troot - (t+delt))>3E-8))
     {
       if (OprogStatus.zbrakn > 0)
