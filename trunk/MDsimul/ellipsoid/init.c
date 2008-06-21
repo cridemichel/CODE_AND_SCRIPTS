@@ -319,6 +319,9 @@ void restart_from_check_point(void)
   ScheduleEvent(-1, ATOM_LIMIT + 11, OprogStatus.bigDt);
 }
 #endif
+#ifdef MD_GHOST_IGG
+extern int areGhost(int i, int j);
+#endif
 void check_all_bonds(void)
 {
   int nn, warn, amin, bmin, i, j, nb, nbonds;
@@ -420,6 +423,11 @@ void check_all_bonds(void)
 		    {
 		      if (i == j)
 			continue;
+#ifdef MD_GHOST_IGG
+		      /* do not check ghost particles, it is meaningless! */
+		      if (areGhost(i, j))
+			continue;
+#endif
 #ifndef EDHE_FLEX
 		      if (! ((i < Oparams.parnumA && j >= Oparams.parnumA)||
 			     (i >= Oparams.parnumA && j < Oparams.parnumA)))
@@ -2775,16 +2783,8 @@ void init_ghostArr(void)
 	}
       /* set all IgG in state 3, so that even if IgG overlap 
      	 it is ok */
-      if (typeOfPart[i] <= 2)
-	{
-	  ghostInfoArr[i].iggnum = nigg;
-	  ghostInfoArr[i].ghost_status = iggStatus; 
-	}	  
-      else
-	{
-	  ghostInfoArr[i].iggnum = -1;
-	  ghostInfoArr[i].ghost_status = -1; 
-	}
+      ghostInfoArr[i].iggnum = nigg;
+      ghostInfoArr[i].ghost_status = iggStatus; 
       //printf("i=%d status=%d nigg=%d\n", i, iggStatus, nigg);
       if (typeOfPart[i]==3)
 	nigg++;
