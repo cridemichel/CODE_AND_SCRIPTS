@@ -6731,7 +6731,9 @@ int areGhost(int i, int j)
       (ghostInfoArr[i].ghost_status==1 && ghostInfoArr[j].ghost_status > 1)||
       (ghostInfoArr[i].ghost_status > 1 && ghostInfoArr[j].ghost_status > 1))
     {
-      //printf("They are ghost!\n i=%d, j=%d", i, j);
+      /*
+      printf("They are ghost!\n ghostStatus[%d]=%d, ghostStatus[%d]=%d", i, ghostInfoArr[i].ghost_status, j, 
+	     ghostInfoArr[j].ghost_status);*/
       return 1;
     }
   return 0;

@@ -742,7 +742,7 @@ void make_ghosts(int inc, int nb, int i, int typei, int j, int typej)
 	}
       if (inc > 0.0)
 	{
-	  for (a = 0; a < 3; a++)
+	  for (a = 0; a < 4; a++)
 	    {
 	      ghostInfoArr[ibeg+a].ghost_status = 2;
 	    }
@@ -751,7 +751,7 @@ void make_ghosts(int inc, int nb, int i, int typei, int j, int typej)
 	{
 	  /* 3 is an intermediate state from 2 (bound) -> 1 (bulk),
 	     hence 3 is a free antibody but still ghost */
-	  for (a = 0; a < 3; a++)
+	  for (a = 0; a < 4; a++)
 	    {
 	      ghostInfoArr[ibeg+a].ghost_status = 3;
 	    }
@@ -2961,7 +2961,9 @@ void check_bracketing(int i, int j, double tref, double *t1, double *t2, double 
       delt = *t2 - *t1;
     }
 }
-
+#ifdef MD_GHOST_IGG
+extern int areGhost(int i, int j);
+#endif
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
 		     double *evtime, int *ata, int *atb, int *collCode)
 {
@@ -3013,6 +3015,13 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   epsdFastR= OprogStatus.epsdFastSP;
   epsdMax = OprogStatus.epsdSP;
   assign_bond_mapping(i, j);
+#ifdef MD_GHOST_IGG
+  if (OprogStatus.ghostsim && areGhost(i, j))
+    {
+      //printf("locate_contactSP: they are ghost i=%d j=%d\n", i, j);
+      return 0; 
+    }   
+#endif
 #ifdef EDHE_FLEX
   if (nbondsFlex==0)
     return 0;

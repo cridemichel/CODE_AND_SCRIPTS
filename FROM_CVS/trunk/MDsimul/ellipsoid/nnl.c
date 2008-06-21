@@ -276,7 +276,10 @@ void update_ghost_status(void)
 	  /* if notransition == 1 it means that there are possible overlap 
 	     in the transition from 3 (not bound but possibly overlapping) to 1 (bulk) */ 
 	  if (notransition == 0)
-	    ghostInfoArr[i].ghost_status = 1;
+	    {
+	      //printf("transition i=%d 3->1\n", i);
+	      ghostInfoArr[i].ghost_status = 1;
+	    }
 	}
     }
 }
