@@ -169,7 +169,7 @@ double DrSq = 0.0;
 const double timbig = 1E12;
 /* used by linked list routines */
 double *lastcol;
-double *treetime, *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
+double *atomTime, *rCx, *rCy, *rCz; /* rC è la coordinata del punto di contatto */
 int  **tree, cellRange[2*NDIM], initUcellx, initUcelly, initUcellz;
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 int *inCell[2][3], *cellList[4], cellsx[4], cellsy[4], cellsz[4];
@@ -1840,7 +1840,7 @@ void calcObserv(void)
     }
 #endif
 }
-extern double *treeTime;
+double *treeTime;
 void adjust_norm(double **R)
 {
   int k1, k2; 
