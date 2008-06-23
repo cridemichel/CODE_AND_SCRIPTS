@@ -591,8 +591,8 @@ void usrInitBef(void)
   /* ======================================================================= */
 }
 extern void check ( double sigma, int *overlap, double *K, double *V);
-double *treeTime, *atomTime;
-int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
+extern double *treeTime, *atomTime;
+extern int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
 extern void PredictEvent(int, int);
 extern void InitEventList(void);
 void StartRun(void)
@@ -697,6 +697,7 @@ void usrInitAft(void)
   m = Oparams.m;
   /* Calcoliam rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
+#ifdef MD_POLYDISP
   if (OprogStatus.ext_radii)
     {
       if (strcmp(OprogStatus.radiiFile,"*"))
@@ -704,6 +705,7 @@ void usrInitAft(void)
       else
 	read_radii("radii.dat");
     }      
+#endif
   if (Oparams.rcut <= 0.0)
     {
 #ifdef MD_POLYDISP

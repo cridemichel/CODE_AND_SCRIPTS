@@ -13,7 +13,7 @@ int infoBool = 0;
 COORD_TYPE T;
 COORD_TYPE DECL_LIST;
 COORD_TYPE EXT_DLST;
-
+struct params Oparams;
 /*  ======================= >>> Function prototypes <<< =====================*/
 void args(int argc, char **argv);
 void loadCor(int cfd);
