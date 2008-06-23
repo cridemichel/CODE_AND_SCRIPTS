@@ -62,13 +62,13 @@ extern COORD_TYPE dispHi;
 extern const double timbig;
 double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdirs;
 #ifdef MD_ASYM_ITENS
-double **Ia, **Ib, **invIa, **invIb;
+extern double **Ia, **Ib, **invIa, **invIb;
 #else
-double Ia, Ib, invIa, invIb;
+extern double Ia, Ib, invIa, invIb;
 #endif
 extern double **matrix(int n, int m);
 int poolSize;
-int parnumA, parnumB;
+extern int parnumA, parnumB;
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 double invaSq[2], invbSq[2], invcSq[2];
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
@@ -1426,13 +1426,13 @@ accumulators initialization is crucial */
 #endif
 }
 extern void check (int *overlap, double *K, double *V);
-double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
+extern double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
-int *inCell[2][3], *cellList[4], cellsx[4], cellsy[4], cellsz[4];
+extern int *inCell[2][3], *cellList[4], cellsx[4], cellsy[4], cellsz[4];
 #else
-int *inCell[3], *cellList, cellsx, cellsy, cellsz;
+extern int *inCell[3], *cellList, cellsx, cellsy, cellsz;
 #endif
-int **tree, cellRange[2*NDIM];
+extern int **tree, cellRange[2*NDIM];
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 extern void PredictColl(int na, int nb, int nl);
 extern void PredictCellCross(int na, int nc);
@@ -1647,7 +1647,7 @@ typedef struct {
   } neigh[4];
 } MESHXYZ;
 
-MESHXYZ **ellips_mesh[2];
+extern MESHXYZ **ellips_mesh[2];
 void EvalSuperEllipse(double theta,double phi, double a, double b, double c, MESHXYZ *pm)
 {
   double cth,cphi,sth,sphi;
