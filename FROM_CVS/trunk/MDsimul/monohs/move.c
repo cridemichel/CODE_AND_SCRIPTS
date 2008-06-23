@@ -59,7 +59,7 @@ const double timbig = 1E12;
 #ifdef MD_GRAVITY
 extern double g2, mg;
 #endif
-double *treetime, *atomTime;
+double *atomTime;
 int *inCell[3], **tree, *cellList, cellRange[2*NDIM], 
     cellsx, cellsy, cellsz, initUcellx, initUcelly, initUcellz;
 int evIdA, evIdB;
@@ -933,7 +933,7 @@ void calcObserv(void)
   V *= mg;
 #endif
 }
-extern double *treeTime;
+double *treeTime;
 void UpdateAtom(int i)
 {
 #ifdef MD_FPBROWNIAN
