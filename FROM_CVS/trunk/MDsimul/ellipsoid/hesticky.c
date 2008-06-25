@@ -776,7 +776,8 @@ void update_rates(int i, int j, int ata, int atb, double inc)
   else
     return;
 #ifdef MD_GHOST_IGG
-  if (OprogStatus.ghostsim)
+  /* if ghostsim==2 do not accept only transition 2->3 and 3->1 */
+  if (OprogStatus.ghostsim==1)
     make_ghosts(inc, nb, i, typei, j, typej);
 #endif
   if (inc > 0.0)

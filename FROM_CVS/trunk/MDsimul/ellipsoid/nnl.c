@@ -307,6 +307,7 @@ void rebuildNNL(void)
       BuildNNL(i);
     }
 #ifdef MD_GHOST_IGG
+  /* if ghostsim=1/2 allow transition from 3 to 1 */	
   if (OprogStatus.ghostsim)
     update_ghost_status();
 #endif
