@@ -4034,7 +4034,8 @@ void newt(double x[], int n, int *check,
   stpmax=STPMX*FMAX(sqrt(sum),(double)n);
   funcs2beZeroed(n,x,fvec,iA,iB,shift);
   for (its=0;its<MAXITS;its++)
-    { /* Start of iteration loop. */
+    { 
+      /* Start of iteration loop. */
       /* Stabilization */
        /* ============ */
        //funcs2beZeroed(n,x,fvec,iA,iB,shift);
@@ -4088,16 +4089,8 @@ void newt(double x[], int n, int *check,
 	  FREERETURN
 	}
       if (*check) 
-	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
-#if 0
-	  test=0.0; 
-	  den=FMAX(f,0.5*n);
-	  for (i=0;i<n;i++)
-	      if (temp > test) 
-		test=temp; 
-	    } 
-	  *check=(test < TOLMIN ? 2 : 0);
-#endif
+	{ 
+	  /* Check for gradient of f zero, i.e., spurious convergence.*/
 	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
 	  /* se c'è anche il sospetto di un minimo locale allora fai
 	   * un newton-raphson semplice */

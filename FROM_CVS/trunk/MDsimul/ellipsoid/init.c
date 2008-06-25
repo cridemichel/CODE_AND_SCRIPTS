@@ -425,7 +425,7 @@ void check_all_bonds(void)
 			continue;
 #ifdef MD_GHOST_IGG
 		      /* do not check ghost particles, it is meaningless! */
-		      if (areGhost(i, j))
+		      if (OprogStatus.ghostsim && areGhost(i, j))
 			continue;
 #endif
 #ifndef EDHE_FLEX
@@ -2777,7 +2777,13 @@ void init_ghostArr(void)
 	  continue;
 	}
 
-      if (typeOfPart[i] == 0)
+      /* if ghostsim == 2 accept only transition all antibody
+	 will be in status 3 and only transition from 3 to 1 will be accepted */
+      if (OprogStatus.ghostsim == 2)
+	{
+	  iggStatus = 3;
+	}
+      else if (typeOfPart[i] == 0)
 	{
 	  iggStatus = (get_rabbit_bonds(i, 0, i+1, 1) > 0)?2:3;
 	}
