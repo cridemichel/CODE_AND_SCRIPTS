@@ -89,8 +89,8 @@ int numOfProcs; /* number of processeses in a communicator */
 #endif 
 
 #ifdef EDHE_FLEX
-char colsFlex[][256] = {"red","green","blue", "snow","gainsboro","OldLace","linen","PapayaWhip","blanched",
-"BlanchedAlmond","bisque","peach","PeachPuff","navajo","moccasin","cornsilk","ivory","lemon",
+char colsFlex[][256] = {"red","green","blue", "snow","gainsboro","OldLace","linen","PapayaWhip","blanched almond",
+"BlanchedAlmond","bisque","peach puff","PeachPuff","navajo white","moccasin","cornsilk","ivory","lemon chiffon",
 "LemonChiffon","seashell","honeydew","mint","MintCream","azure","alice","AliceBlue","lavender","lavender",
 "LavenderBlush","misty","MistyRose","dark","DarkSlateGray","dark","DarkSlateGrey","dim",
 "DimGray","dim","DimGrey","slate","SlateGray","slate","SlateGrey","light","LightSlateGray","light",
