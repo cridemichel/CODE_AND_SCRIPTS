@@ -2797,6 +2797,55 @@ void init_ghostArr(void)
     }
 }
 #endif
+#ifdef MD_PROTEIN_DESIGN
+extern char nativeConf[512];
+double *rxNat, *ryNat, *rzNat, *RNat[3][3], *numbondsNat, **bondsNat;
+void store_coords_and_orient(void)
+{
+
+}
+void store_bonds(void)
+{
+
+
+}
+void free_all_native(void)
+{
+  int a, i;
+  free(typesArr);
+  for (a=0; a < Oparams.ntypes; a++)
+    free(typesArr[a].spots);
+  free(intersArr);
+  if (Oparams.nintersIJ > 0)
+    free(intersArrIJ);
+  free(typeOfPart);
+  free(typeNP);
+  free(numbonds);
+
+}
+void read_native_conf(void)
+{
+  readCorAscii(nativeConf);
+  if (Oparams.maxbondsSaved==-1)
+    {
+#ifdef MD_LL_BONDS
+      bonds = AllocMatLLI(Oparams.parnum, OprogStatus.maxbonds);
+#else
+      bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+#endif
+      numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
+      find_bonds();
+    }
+  store_coords_and_orient();
+  store_bonds();
+  free_all_native();
+}
+void calc_order_param_native(void)
+{
+
+
+}
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -3712,6 +3761,9 @@ void usrInitAft(void)
       printf("[GHOST SIMULATION]: Initializing structures...\n");    
       init_ghostArr();
     }
+#endif
+#ifdef MD_PROTEIN_DESIGN
+  read_native_conf();
 #endif
 #ifdef MD_GRAZING_TRYHARDER
   printf("[INFO] Grazing Try-Harder code ENABLED!\n");
