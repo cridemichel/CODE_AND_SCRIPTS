@@ -781,7 +781,13 @@ struct params Oparams;
 #else
 extern struct params Oparams;
 #endif
-
+#ifdef MD_PROTEIN_DESIGN
+#ifdef MAIN
+struct params OparamsNative;
+#else
+extern struct params OparamsNative;
+#endif
+#endif
 
 #define OS(_A_) OprogStatus._A_
 #define OP(_A_) Oparams._A_
