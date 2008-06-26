@@ -2853,10 +2853,39 @@ void read_native_conf(void)
     fscanf(fs, "%lf %lf %lf %[^\n]", &(rxNat[i]), &(rxNat[i]), &(ryNat[i]), dummy2);
   fclose(fs);
 }
+int boundNat(int na, int n)
+{
+  int a;
+  if (abs(na-n)==1)
+    return 0;
+  for (a=0; a < numbondsNat[na]; a++)
+    {
+#ifdef MD_LL_BONDS
+    if (bonds[na][a] / (((long long int)NA)*NA) == n)
+      return 1;
+#else
+    if (bonds[na][a] / (NANA) == n)
+      return 1;
+#endif
+    }
+  return 0;
+}
 void calc_order_param_native(void)
 {
-
-
+  int i, j;
+  double RMSD;
+  RMSD=0.0;
+  for (i=0; i < Oparams.parnum; i++)
+    for (j=i+1; j < Oparams.parnum; j++)
+      {
+	if (boundNat(i, j))
+	  {
+	    RMSD += Sqr((rxNat[i]-rxNat[j])-(rx[i]-rx[j]));
+	    RMSD += Sqr((ryNat[i]-ryNat[j])-(ry[i]-ry[j]));
+    	    RMSD += Sqr((rzNat[i]-rzNat[j])-(rz[i]-rz[j]));
+	  }
+      }
+  return sqrt(RMSD/((double)Oparams.parnum));
 }
 #endif
 void usrInitAft(void)
