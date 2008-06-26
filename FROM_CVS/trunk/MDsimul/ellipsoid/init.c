@@ -1475,6 +1475,9 @@ void initCoord(void)
 void calc_omega(int i, double *wwx, double *wwy, double *wwz);
 #endif
 /* =========================== >>> usrInitBef <<< ========================== */
+#ifdef MD_PROTEIN_DESIGN
+void read_native_conf(void);
+#endif
 void usrInitBef(void)
 {
   int i;
@@ -1689,6 +1692,10 @@ void usrInitBef(void)
     Oparams.ninters = 0;
     Oparams.nintersIJ = 0;
 #endif   
+#ifdef MD_PROTEIN_DESIGN
+    read_native_conf();
+#endif
+
 }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
@@ -2799,46 +2806,52 @@ void init_ghostArr(void)
 #endif
 #ifdef MD_PROTEIN_DESIGN
 extern char nativeConf[512];
-double *rxNat, *ryNat, *rzNat, *RNat[3][3], *numbondsNat, **bondsNat;
-void store_coords_and_orient(void)
-{
-
-}
-void store_bonds(void)
-{
-
-
-}
-void free_all_native(void)
-{
-  int a, i;
-  free(typesArr);
-  for (a=0; a < Oparams.ntypes; a++)
-    free(typesArr[a].spots);
-  free(intersArr);
-  if (Oparams.nintersIJ > 0)
-    free(intersArrIJ);
-  free(typeOfPart);
-  free(typeNP);
-  free(numbonds);
-
-}
+double *rxNat, *ryNat, *rzNat, *RNat[3][3];
+#ifdef MD_LL_BONDS
+long long int **bondsNat;
+int *numbondsNat;
+#else
+int *numbondsNat, **bondsNat;
+#endif
+char dummy2[1024];
 void read_native_conf(void)
 {
-  readCorAscii(nativeConf);
-  if (Oparams.maxbondsSaved==-1)
-    {
+  int i, j, parnum;
+  FILE *fs;
+  char sep[256];
+  // increase OprogStatus.maxbonds in usrInitBef if needed!!!
+  printf("nativeConf:%s\n", nativeConf);
+  
+  fs = fopen(nativeConf, "r");
+  fscanf(fs, "%d ", &parnum);
+  printf("parnum=%d OprogStatus.maxbonds=%d\n", parnum, OprogStatus.maxbonds);
+  rxNat = malloc(sizeof(double)*parnum);
+  ryNat = malloc(sizeof(double)*parnum);
+  rzNat = malloc(sizeof(double)*parnum);
+  numbondsNat = malloc(sizeof(int)*parnum);
 #ifdef MD_LL_BONDS
-      bonds = AllocMatLLI(Oparams.parnum, OprogStatus.maxbonds);
+  bondsNat = AllocMatLLI(parnum, OprogStatus.maxbonds);
 #else
-      bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+  bondsNat = AllocMatI(parnum, OprogStatus.maxbonds);
 #endif
-      numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
-      find_bonds();
+  for (i = 0; i < parnum; i++)
+    {
+      if (i==0)
+	sscanf(sep, "%d", &numbondsNat[0]);
+      else
+	fscanf(fs, "%d ", &numbondsNat[i]);
+      for (j = 0; j < numbondsNat[i]; j++)
+	{
+#ifdef MD_LL_BONDS
+	  fscanf(fs, "%lld ", &bondsNat[i][j]);
+#else	      
+	  fscanf(fs, "%d ", &bondsNat[i][j]);
+#endif	    
+	}
     }
-  store_coords_and_orient();
-  store_bonds();
-  free_all_native();
+  for (i=0; i < parnum; i++)
+    fscanf(fs, "%lf %lf %lf %[^\n]", &(rxNat[i]), &(rxNat[i]), &(ryNat[i]), dummy2);
+  fclose(fs);
 }
 void calc_order_param_native(void)
 {
@@ -3761,9 +3774,6 @@ void usrInitAft(void)
       printf("[GHOST SIMULATION]: Initializing structures...\n");    
       init_ghostArr();
     }
-#endif
-#ifdef MD_PROTEIN_DESIGN
-  read_native_conf();
 #endif
 #ifdef MD_GRAZING_TRYHARDER
   printf("[INFO] Grazing Try-Harder code ENABLED!\n");
