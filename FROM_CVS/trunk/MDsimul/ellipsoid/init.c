@@ -2820,11 +2820,11 @@ void read_native_conf(void)
   FILE *fs;
   char sep[256];
   // increase OprogStatus.maxbonds in usrInitBef if needed!!!
-  printf("nativeConf:%s\n", nativeConf);
+  //printf("nativeConf:%s\n", nativeConf);
   
   fs = fopen(nativeConf, "r");
   fscanf(fs, "%d ", &parnum);
-  printf("parnum=%d OprogStatus.maxbonds=%d\n", parnum, OprogStatus.maxbonds);
+  //printf("parnum=%d OprogStatus.maxbonds=%d\n", parnum, OprogStatus.maxbonds);
   rxNat = malloc(sizeof(double)*parnum);
   ryNat = malloc(sizeof(double)*parnum);
   rzNat = malloc(sizeof(double)*parnum);
@@ -2870,7 +2870,7 @@ int boundNat(int na, int n)
     }
   return 0;
 }
-void calc_order_param_native(void)
+double calc_order_param_native(void)
 {
   int i, j;
   double RMSD;
@@ -2883,8 +2883,10 @@ void calc_order_param_native(void)
 	    RMSD += Sqr((rxNat[i]-rxNat[j])-(rx[i]-rx[j]));
 	    RMSD += Sqr((ryNat[i]-ryNat[j])-(ry[i]-ry[j]));
     	    RMSD += Sqr((rzNat[i]-rzNat[j])-(rz[i]-rz[j]));
+	    //printf("qui!i=%d j=%d RMSDP=%.15G\n", i, j, Sqr((rxNat[i]-rxNat[j])-(rx[i]-rx[j])));
 	  }
       }
+  //printf("RMSD=%.15G\n", RMSD);
   return sqrt(RMSD/((double)Oparams.parnum));
 }
 #endif
@@ -3299,6 +3301,10 @@ void usrInitAft(void)
       fclose(f);
       f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
+#ifdef MD_PROTEIN_DESIGN
+      f = fopenMPI(absMisHD("ordpara.dat"), "w+");
+      fclose(f);
+#endif
 #ifdef MD_RABBIT
       f = fopenMPI(absMisHD("bi-mono-bonds.dat"), "w+");
       fclose(f);
