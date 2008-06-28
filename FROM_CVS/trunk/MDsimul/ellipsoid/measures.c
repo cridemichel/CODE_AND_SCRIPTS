@@ -241,8 +241,14 @@ void get_bimono_bonds(int *bulk, int *mono, int *bi)
     }
 }
 #endif
+#ifdef MD_PROTEIN_DESIGN
+extern double calc_order_param_native(void);
+#endif
 void calcV(void)
 {
+#ifdef MD_PROTEIN_DESIGN
+  double ordp;	
+#endif
   double ti;
 #ifdef MD_RABBIT
   int bulk, mono, bi, k;
@@ -292,6 +298,16 @@ void calcV(void)
     } 
   fprintf(mf, "\n");
   fclose(mf);
+#endif
+#ifdef MD_PROTEIN_DESIGN
+  ordp = calc_order_param_native();
+  mf = fopen("ordpara.dat","a");
+#ifdef MD_BIG_DT
+  fprintf(mf, "%G %.15G\n", Oparams.time + OprogStatus.refTime, ordp);
+#else
+  fprintf(mf, "%G %.15G\n", Oparams.time, ordp);
+#endif
+  fclose(mf); 
 #endif
 }
 void calc_energy(char *msg);
