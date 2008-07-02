@@ -33,6 +33,9 @@ extern struct LastBumpS *lastbump;
 #else
 extern int *lastbump;
 #endif
+#ifdef MD_PROTEIN_DESIGN
+extern int nativeConfYN;
+#endif
 extern double *lastcol;
 double *axa, *axb, *axc;
 double **Aip;
@@ -1693,9 +1696,8 @@ void usrInitBef(void)
     Oparams.nintersIJ = 0;
 #endif   
 #ifdef MD_PROTEIN_DESIGN
-    read_native_conf();
+    strcpy(OprogStatus.nativeConf,"");
 #endif
-
 }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
@@ -2822,7 +2824,7 @@ void read_native_conf(void)
   // increase OprogStatus.maxbonds in usrInitBef if needed!!!
   //printf("nativeConf:%s\n", nativeConf);
   
-  fs = fopen(nativeConf, "r");
+  fs = fopen(OprogStatus.nativeConf, "r");
   fscanf(fs, "%d ", &parnum);
   //printf("parnum=%d OprogStatus.maxbonds=%d\n", parnum, OprogStatus.maxbonds);
   rxNat = malloc(sizeof(double)*parnum);
@@ -3282,6 +3284,13 @@ void usrInitAft(void)
       lastcol[i] = 0.0;
     }
 #endif
+#ifdef MD_PROTEIN_DESIGN
+  if (newSim && nativeConfYN==1)
+    strcpy(OprogStatus.nativeConf, nativeConf);
+  if (strcmp(OprogStatus.nativeConf, ""))
+    read_native_conf();
+#endif
+
   if (newSim)
     {
       FILE *f;
@@ -3302,8 +3311,11 @@ void usrInitAft(void)
       f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
 #ifdef MD_PROTEIN_DESIGN
-      f = fopenMPI(absMisHD("ordpara.dat"), "w+");
-      fclose(f);
+      if (strcmp(OprogStatus.nativeConf,""))
+	{
+	  f = fopenMPI(absMisHD("ordpara.dat"), "w+");
+	  fclose(f);
+	}
 #endif
 #ifdef MD_RABBIT
       f = fopenMPI(absMisHD("bi-mono-bonds.dat"), "w+");
