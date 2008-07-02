@@ -299,7 +299,10 @@ void calcV(void)
   fprintf(mf, "\n");
   fclose(mf);
 #endif
+ 
 #ifdef MD_PROTEIN_DESIGN
+  if (!strcmp(OprogStatus.nativeConf, ""))
+    return;
   ordp = calc_order_param_native();
   mf = fopen("ordpara.dat","a");
 #ifdef MD_BIG_DT
