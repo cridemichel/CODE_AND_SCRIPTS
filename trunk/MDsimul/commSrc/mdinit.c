@@ -976,6 +976,7 @@ void print_usage(void)
 }
 #ifdef MD_PROTEIN_DESIGN
 char nativeConf[512];
+int nativeConfYN=0;
 #endif
 /* ========================= >>> args <<< =================================*/
 int argsMd(int argc, char** argv)  
@@ -1053,6 +1054,7 @@ int argsMd(int argc, char** argv)
 	      mdPrintfR0(STD, TXT, NULL);
 	      exit(-1);
 	    }
+	  nativeConfYN=1;
 	  strcpy(nativeConf, argv[cc]); /* set paramFile string to the name 
 					  of the parameter file */
 	}

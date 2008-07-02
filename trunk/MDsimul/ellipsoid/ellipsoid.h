@@ -700,6 +700,9 @@ struct progStatus
   double time_limit;
   double rate[10];
 #endif
+#ifdef MD_PROTEIN_DESIGN
+  char nativeConf[NAME_LENGTH];
+#endif
   /* ======================================================================= */
 };
 
@@ -780,13 +783,6 @@ struct params
 struct params Oparams;
 #else
 extern struct params Oparams;
-#endif
-#ifdef MD_PROTEIN_DESIGN
-#ifdef MAIN
-struct params OparamsNative;
-#else
-extern struct params OparamsNative;
-#endif
 #endif
 
 #define OS(_A_) OprogStatus._A_
@@ -1023,6 +1019,9 @@ struct pascii opro_ascii[] =
   {"time_limit",           &OS(time_limit),                1, 1,             "%.15G"},
   {"first_time",           &OS(first_time),                1, 1,             "%.15G"},
   {"rate",                 &OS(rate),                      10, 1,            "%f"},
+#endif
+#ifdef MD_PROTEIN_DESIGN
+  {"nativeConf",           &OS(nativeConf),                  1, NAME_LENGTH, "%s"},
 #endif
   {"", NULL, 0, 0, ""}
 };
