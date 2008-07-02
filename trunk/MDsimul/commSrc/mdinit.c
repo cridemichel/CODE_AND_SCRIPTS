@@ -607,6 +607,10 @@ void scanFile(char* argom)
      in qualche modo ( ved. dopo o SIMUL_INFO ) */
   if (!strcmp(OprogStatus.inifile, "*"))
     {
+#ifdef EDHE_FLEX
+      printf("You have to supply an inifile if EDHE_FLEX macro is defined!\n");
+      exit(-1);
+#endif
       mdMsg(ALL, NOSYS, "Init", "NOTICE", NULL,
 	    "Generating initial coordinates...",
 	    NULL);
@@ -970,6 +974,9 @@ void print_usage(void)
   printf("                              2 -> save ascii file in mgl format and exit\n");
   exit (-1);
 }
+#ifdef MD_PROTEIN_DESIGN
+char nativeConf[512];
+#endif
 /* ========================= >>> args <<< =================================*/
 int argsMd(int argc, char** argv)  
 {
@@ -1036,6 +1043,20 @@ int argsMd(int argc, char** argv)
 	  strcpy(inifile_for_mgl, argv[cc]);
 	  ret=0;          /* 0 = continue a previuosly interrupted simulation */
 	}
+#ifdef MD_PROTEIN_DESIGN
+      else if (!strcmp(argv[cc], "-nc"))
+	{
+	  cc++;
+	  if (argc == cc)
+	    {
+	      sprintf(TXT, "ERROR: -nc needs an ascii coordinate file name.\n");
+	      mdPrintfR0(STD, TXT, NULL);
+	      exit(-1);
+	    }
+	  strcpy(nativeConf, argv[cc]); /* set paramFile string to the name 
+					  of the parameter file */
+	}
+#endif
       else if (!strcmp(argv[cc], "-fa"))
 	{
 	  cc++;
