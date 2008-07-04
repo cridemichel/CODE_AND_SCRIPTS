@@ -2875,8 +2875,9 @@ int boundNat(int na, int n)
 double calc_order_param_native(void)
 {
   int i, j;
-  double RMSD;
+  double RMSD, cc;
   RMSD=0.0;
+  cc=0;
   for (i=0; i < Oparams.parnum; i++)
     for (j=i+1; j < Oparams.parnum; j++)
       {
@@ -2886,10 +2887,11 @@ double calc_order_param_native(void)
 	    RMSD += Sqr((ryNat[i]-ryNat[j])-(ry[i]-ry[j]));
     	    RMSD += Sqr((rzNat[i]-rzNat[j])-(rz[i]-rz[j]));
 	    //printf("qui!i=%d j=%d RMSDP=%.15G\n", i, j, Sqr((rxNat[i]-rxNat[j])-(rx[i]-rx[j])));
+	    cc=cc+1.0;
 	  }
       }
   //printf("RMSD=%.15G\n", RMSD);
-  return sqrt(RMSD/((double)Oparams.parnum));
+  return sqrt(RMSD/cc);
 }
 #endif
 void usrInitAft(void)
