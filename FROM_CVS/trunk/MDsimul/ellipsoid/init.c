@@ -2875,7 +2875,7 @@ int boundNat(int na, int n)
 double calc_order_param_native(void)
 {
   int i, j;
-  double RMSD, cc;
+  double RMSD, cc, DSQ, DSQN;
   RMSD=0.0;
   cc=0;
   for (i=0; i < Oparams.parnum; i++)
@@ -2883,15 +2883,26 @@ double calc_order_param_native(void)
       {
 	if (boundNat(i, j))
 	  {
-	    RMSD += Sqr((rxNat[i]-rxNat[j])-(rx[i]-rx[j]));
-	    RMSD += Sqr((ryNat[i]-ryNat[j])-(ry[i]-ry[j]));
-    	    RMSD += Sqr((rzNat[i]-rzNat[j])-(rz[i]-rz[j]));
+	    DSQ=0.0;
+	    DSQ += Sqr((rx[i]-rx[j]));
+	    DSQ += Sqr((ry[i]-ry[j]));
+	    DSQ += Sqr((rz[i]-rz[j]));
+	    DSQ = sqrt(DSQ);
+
+	    DSQN=0.0;
+	    DSQN += Sqr((rxNat[i]-rxNat[j]));
+	    DSQN += Sqr((ryNat[i]-ryNat[j]));
+	    DSQN += Sqr((rzNat[i]-rzNat[j]));
+	    DSQN = sqrt(DSQN);
+
+	    RMSD += Sqr(DSQ-DSQN);
 	    //printf("qui!i=%d j=%d RMSDP=%.15G\n", i, j, Sqr((rxNat[i]-rxNat[j])-(rx[i]-rx[j])));
 	    cc=cc+1.0;
 	  }
       }
+  RMSD = sqrt(RMSD/cc);
   //printf("RMSD=%.15G\n", RMSD);
-  return sqrt(RMSD/cc);
+  return RMSD;
 }
 #endif
 void usrInitAft(void)
