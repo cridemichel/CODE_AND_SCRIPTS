@@ -2446,11 +2446,55 @@ void assign_plane(int nn)
     }
 }
 extern double sogliaErr_zbrent;
+
+double brent_tref_plane, brentSign_plane, *brent_vecg_plane;
+int iBrent_plane, brent_nplane;
+double distbrent_plane(double t)
+{
+  double r1[3], r2[3];
+  int distfail;
+  return brentSign_plane*calcDistNegNeighPlane(t, brent_tref_plane, iBrent_plane, r1, r2, brent_vecg_plane, 
+					       0, 0, &distfail, brent_nplane);
+}
+
+#define MD_BRENT_TOL 1E-15
+extern int brentTooManyIter;
+extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
+int grazing_try_harder_plane(int i, double tref, double t1, double delt, double d1, double d2, double *vecg, double *troot, double *dmin, int nplane)
+{
+  int a;
+#ifndef MD_GRAZING_TRYHARDER
+  return 0;
+#endif
+  printf("[grazing_try_harder_plane] i=%d time=%.15G\n", i, tref+t1);
+  /* Brent looks always for a minimum hence we have to change sign
+     if grazing occurrs coming from negative distances */
+  brentSign_plane = ((d1>0.0)?1.0:-1.0);
+  brent_tref_plane = tref;
+  brent_vecg_plane = vecg;
+  iBrent_plane = i;
+  brent_nplane= nplane;
+  /* use brent to find the exact minimum */
+  *dmin = brent(t1, t1+delt*0.5, t1+delt, distbrent_plane, MD_BRENT_TOL, troot);
+  *dmin *= brentSign_plane;
+  //printf("DOPO dmin(%.15G)=%.15G\n", *troot, *dmin);
+  //printf("try harder cross dmin=%.15G\n", *dmin);
+  if (!brentTooManyIter && *troot >= t1 && *troot <= t1+delt && *dmin*d1 < 0.0)
+    {
+      /* found a crossing! */
+      /* 19/06/08 NOTE: note that we need times relative to tref, i.e.
+	 we do not need to add tref to the solution *troot here!*/
+      return 1;
+    }
+  return 0;/* no collision found */
+}
+
 int interpolNeighPlane(int i, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, int bracketing, int nplane)
 {
   int nb, distfail;
-  double d3, t1, t2;
+  double d3, t1, t2, A;
   double r1[3], r2[3], xb1[2], xb2[2];
+  double tmin, dmin;
 #ifdef MD_EDHEFLEX_WALL
   if (OprogStatus.paralNNL && !globalHW)
     assign_plane(nplane);
@@ -2474,19 +2518,76 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
     }
   else
     {
-      t1 = t;
-      t2 = t+delt;
-      nb = 1;
-      zbrak(distfunc, t1, t2, OprogStatus.zbrakn, xb1, xb2, &nb);
-      if (nb==0 || polinterr==1)
+      if (OprogStatus.zbrakn==0)
 	{
-	  return 1;
+	  if (ya[0]-ya[1] == 0.0)
+	    {
+	      tmin = t + delt*0.25;
+	    }
+	  else if (ya[2]-ya[0] == 0.0)
+	    {
+	      tmin = t + delt*0.5;
+	    }
+	  else
+	    {      
+	      A = (ya[2]-ya[0])/(ya[0]-ya[1]);
+	      tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
+	    }
+	  if (tmin < t+delt && tmin > t)
+	    {
+	      dmin = calcDistNegNeighPlane(tmin, tref, i, r1, r2, vecg, 0, 0, &distfail, nplane);
+	      if (d1*dmin < 0.0)
+		{
+		  t2 = tmin;
+		  t1 = t;
+		}
+	      else if (fabs(dmin) < fabs(d1) && fabs(dmin) < fabs(d2))
+		{
+		  /* differently from interpolSP we call grazing_try_harder_HE() func
+		     from here because for sumnegpairs case there is a dedicated 
+		     function called interpolSNP */
+		  //printf("PRIMA delt=%.15G\n", delt);
+		  //printf("PRIMA d1(%.15G)=%.15G dmin(%.15G) = %.15G d2(%.15G)=%.15G\n", t, d1, tmin, dmin, t+delt, d2);
+		  /* call grazing_try_harder_plane(...) only if this routine is called from locateHardWall()
+		   (i.e. globalHW != 0) */
+		  if (globalHW && grazing_try_harder_plane(i, tref, t, delt, d1, d2, vecg, &tmin, &dmin, nplane))
+		    {
+		      /* in grazing_try_harderHE() already checks for d1*dmin < 0.0 */
+		      t2 = tmin;
+	    	      t1 = t;
+		    }
+		  else
+		    return 1;
+		}
+	      else
+		return 1;
+	    }
+	  else
+	    {
+	      return 1;
+	    }
 	}
-      t1 = xb1[0];
-      t2 = xb2[0];
+      else
+	{
+	  t1 = t;
+	  t2 = t+delt;
+	  nb = 1;
+	  zbrak(distfunc, t1, t2, OprogStatus.zbrakn, xb1, xb2, &nb);
+	  if (nb==0 || polinterr==1)
+	    {
+	      return 1;
+	    }
+	  t1 = xb1[0];
+	  t2 = xb2[0];
+	}
     }
   if (polinterr)
     return 1;
+  if (OprogStatus.zbrentTol <= 0.0)
+    {
+      *troot = tref + (t1+t2)*0.5;
+      return 0;
+    }
   *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
   if (polinterr)
     {
@@ -3535,11 +3636,30 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   if (typesArr[typeOfPart[i]].ignoreCore==2)
     return 0;
 #endif
-
+#ifdef EDHE_FLEX
+  if (globalHW)
+    {
+      /* 09/07/08: if we are looking for a collision with a wall
+	 be more accurate than in the case of NNL, 
+	 grazing collision can be a problem in this case */
+      epsd = OprogStatus.epsd;
+      epsdFast = OprogStatus.epsdFast;
+      epsdFastR= OprogStatus.epsdFastR;
+      epsdMax = OprogStatus.epsdMax;
+    }
+  else
+    {
+      epsd = OprogStatus.epsdNL;
+      epsdFast = OprogStatus.epsdFastNL;
+      epsdFastR= OprogStatus.epsdFastRNL;
+      epsdMax = OprogStatus.epsdMaxNL;
+    }
+#else
   epsd = OprogStatus.epsdNL;
   epsdFast = OprogStatus.epsdFastNL;
   epsdFastR= OprogStatus.epsdFastRNL;
   epsdMax = OprogStatus.epsdMaxNL;
+#endif
   /* NOTA: implementare le varie funzioni _neigh (search_contact_faster_neigh, ecc.)
    * in tali funzioni la particella j non è altro che un ellissoide più grande di i
    * con lo stesso centro e immobile */
