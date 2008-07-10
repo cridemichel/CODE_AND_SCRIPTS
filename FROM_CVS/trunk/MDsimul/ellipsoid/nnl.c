@@ -2549,7 +2549,8 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
 		  //printf("PRIMA delt=%.15G\n", delt);
 		  //printf("PRIMA d1(%.15G)=%.15G dmin(%.15G) = %.15G d2(%.15G)=%.15G\n", t, d1, tmin, dmin, t+delt, d2);
 		  /* call grazing_try_harder_plane(...) only if this routine is called from locateHardWall()
-		   (i.e. globalHW != 0) */
+		   (i.e. globalHW != 0), se rimuovo la condizione su globalHW, grazing_try_harder_plane()
+		   viene usato anche nella predizione dell'uscita dal bounding box delle NNL  */
 		  if (globalHW && grazing_try_harder_plane(i, tref, t, delt, d1, d2, vecg, &tmin, &dmin, nplane))
 		    {
 		      /* in grazing_try_harderHE() already checks for d1*dmin < 0.0 */
@@ -3641,7 +3642,11 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
     {
       /* 09/07/08: if we are looking for a collision with a wall
 	 be more accurate than in the case of NNL, 
-	 grazing collision can be a problem in this case */
+	 grazing collision can be a problem in this case,
+	 se in futuro volessi usare grazing_try_harder_plane() anche per le NNL
+	 allora questo if va rimosso e epsdFastNL, epsdFastRNL, ecc. vanno tutti 
+	 settati nel file .par con valori intorno a 1E-4/1E-5 
+       */
       epsd = OprogStatus.epsd;
       epsdFast = OprogStatus.epsdFast;
       epsdFastR= OprogStatus.epsdFastR;
