@@ -44,7 +44,7 @@ extern int is_infinite_Itens(int i);
 extern int is_infinite_mass(int i);
 #endif
 #ifdef MD_SPHERICAL_WALL
-int sphWall;
+int sphWall, sphWallOuter;
 #endif
 int *scdone;
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
@@ -1698,6 +1698,12 @@ void usrInitBef(void)
 #ifdef MD_PROTEIN_DESIGN
     strcpy(OprogStatus.nativeConf,"");
 #endif
+#ifdef MD_ABSORPTION
+#ifdef MD_SPHERICAL_WALL
+    OprogStatus.halfsolidangle = 0;
+#endif
+    OprogStatus.bufHeight = 1.2;
+#endif
 }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
@@ -2750,7 +2756,8 @@ void allocBondsSphWall(void)
   int i;
   for (i=0; i < Oparams.parnum; i++)
     {
-      if (typeOfPart[i]==Oparams.ntypes-1)
+      /* gli ultimi due tipi devono essere i "muri" sferici */
+      if (typeOfPart[i]==Oparams.ntypes-1 || typeOfPart[i]==Oparams.ntypes-2)
 	{
 #ifdef MD_LL_BONDS
 	  bonds[i] = malloc(sizeof(long long int)*Oparams.parnum);
@@ -3010,7 +3017,7 @@ void usrInitAft(void)
   Lz2 = Lz*0.5;
 #endif
 #ifdef MD_SPHERICAL_WALL
-  poolSize = OprogStatus.eventMult*Oparams.parnum+Oparams.parnum;
+  poolSize = OprogStatus.eventMult*Oparams.parnum+2*Oparams.parnum;
 #else
   poolSize = OprogStatus.eventMult*Oparams.parnum;
 #endif
@@ -3248,11 +3255,15 @@ void usrInitAft(void)
 #ifdef MD_SPHERICAL_WALL
   for (i=0; i < Oparams.parnum; i++)
     {
-      /* N.B. il tipo numero Oparams.ntypes-1 deve essere il muro sferico! */
-      if (typeOfPart[i] == Oparams.ntypes-1)
+      /* N.B. il tipo numero Oparams.ntypes-1 deve essere il muro sferico (interno)! */
+      if (typeOfPart[i] == Oparams.ntypes-2)
 	{
 	  sphWall = i;
-	  break;	  
+	}
+      /* ntypes-1 è il muro esterno */
+      if (typeOfPart[i] == Oparams.ntypes-1)
+	{
+	  sphWallOuter = i;	  
 	}
     }
 #endif
@@ -3666,7 +3677,7 @@ void usrInitAft(void)
 #endif
       maxax[i] *= 2.0;
 #ifdef MD_SPHERICAL_WALL
-      if (maxax[i] > MAXAX && typeOfPart[i] != Oparams.ntypes-1)
+      if (maxax[i] > MAXAX && typeOfPart[i] != Oparams.ntypes-1 && typeOfPart[i] != Oparams.ntypes-2)
 	MAXAX = maxax[i];
 #else
       if (maxax[i] > MAXAX)
