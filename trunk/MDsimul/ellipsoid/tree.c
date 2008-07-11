@@ -17,7 +17,7 @@ void NextEvent(void);
 extern int poolSize;
 extern double rxC, ryC, rzC;
 #ifdef MD_SPHERICAL_WALL
-extern int sphWall;
+extern int sphWall, sphWallOuter;
 #endif
 #define MD_DEBUG20(x) 
 #if 0
@@ -387,6 +387,8 @@ void NextEvent (void)
 	  /* N.B. gli eventi in cui compare il muro sferico, a parte l'urto con evIdA non vanno cancellati  */
 	  if (id==sphWall+1)
 	    continue; 
+	  if (id==sphWallOuter+1)
+	    continue; 
 #endif
 	  DeleteEvent (id);
 	  MD_DEBUG34(printf("deleted event #%d\n", id));
@@ -449,6 +451,8 @@ void DeleteEvent (int id)
      muro sferico ma tale evento non viene schedulato affatto
      e quindi non va neanche rimosso */
  if (id == sphWall+1)
+  return; 
+ if (id == sphWallOuter+1)
   return; 
 #endif
   MD_DEBUG2(printf("[ DeleteEvent ] deleting node #%d\n", id));
