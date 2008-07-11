@@ -838,7 +838,7 @@ int main(int argc, char** argv)
  fprintf(f,"parnum:%d\n", Namino); 
  fprintf(f,"totStep:%d\n", 20000);
  fprintf(f,"time:%.15G\n",0.0); 
- fprintf(f,"curStep:%d\n", 0); 
+ fprintf(f,"curStep:%d\n", 1); 
  fprintf(f,"P:%.15G\n", 1.0);
  fprintf(f,"T:%.15G\n", 1.0);
  fprintf(f,"rcut:%.15G\n", -1.0);
