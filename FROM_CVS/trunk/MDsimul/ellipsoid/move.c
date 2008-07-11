@@ -56,7 +56,7 @@ extern void check_all_bonds(void);
 int *lastbump;
 #endif
 #ifdef MD_SPHERICAL_WALL
-extern int sphWall;
+extern int sphWall, sphWallOuter;
 #endif
 extern double *axa, *axb, *axc;
 extern int *scdone;
@@ -974,6 +974,11 @@ void rebuild_linked_list_NNL()
 	  cellList[sphWall]=-1;
 	  continue;
 	}
+      if (n==sphWallOuter)
+	{
+	  cellList[sphWallOuter]=-1;
+	  continue;
+	}
 #endif
       /* reduce to first box */
 #ifdef MD_LXYZ
@@ -1052,6 +1057,11 @@ void rebuild_linked_list()
       if (n==sphWall)
 	{
 	  cellList[sphWall]=-1;
+	  continue;
+	}
+      if (n==sphWallOuter)
+	{
+	  cellList[sphWallOuter]=-1;
 	  continue;
 	}
 #endif
@@ -7593,7 +7603,7 @@ extern int may_interact_all(int i, int j);
 extern int *is_a_sphere_NNL;
 #endif
 #ifdef MD_SPHERICAL_WALL
-void locate_spherical_wall(int na)
+void locate_spherical_wall(int na, int outer)
 {
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM]={0.0,0.0,0.0}, tm[NDIM], 
 	 b, d, t, tInt, vv, distSq, t1, t2;
@@ -7607,7 +7617,10 @@ void locate_spherical_wall(int na)
 
   if (!may_interact_all(na, sphWall))
     return;
-  n=sphWall;
+  if (outer==1)
+    n=sphWallOuter;
+  else
+    n=sphWall;
   sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
   tInt = Oparams.time - atomTime[n];
   dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
@@ -8022,7 +8035,10 @@ void PredictEvent (int na, int nb)
       locate_spherical_wall(na);
     }
 #else
-  locate_spherical_wall(na);
+  /* inner wall */
+  locate_spherical_wall(na, 0);
+  /* outer wall */
+  locate_spherical_wall(na, 1);
 #endif
   //printf("qui2\n");
 #endif
@@ -8937,9 +8953,9 @@ void ProcessCollision(void)
   else
     {
 #ifdef MD_SPHERICAL_WALL
-     if (evIdA==sphWall)
+     if (evIdA==sphWall || evIdA==sphWallOuter)
        PredictEvent(evIdB, -1);
-     else if (evIdB==sphWall)
+     else if (evIdB==sphWall || evIdB==sphWallOuter)
        PredictEvent(evIdA, -1);
      else
        {
@@ -9125,6 +9141,11 @@ void rebuildLinkedList(void)
       if (n==sphWall)
 	{
 	  cellList[sphWall]=-1;
+	  continue;
+	}
+      if (n==sphWallOuter)
+	{
+	  cellList[sphWallOuter]=-1;
 	  continue;
 	}
 #endif
