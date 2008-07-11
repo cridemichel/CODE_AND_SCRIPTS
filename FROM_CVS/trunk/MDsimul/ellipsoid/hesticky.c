@@ -679,11 +679,19 @@ void handle_absorb(int ricettore, int protein)
   /* for now the particle is placed midway between semipermeable wall and box wall */
 #ifdef MD_SPHERICAL_WALL
   /* put the particle halfway between outer and inner spherical walls */
+  //printf("sphWall=%d sphWallOuter=%d\n", sphWall, sphWallOuter);
   modr = (typesArr[typeOfPart[sphWall]].spots[0].sigma + typesArr[typeOfPart[sphWallOuter]].spots[0].sigma) / 4.0; 
   rand_angle(oo);
+
+  //printf("norma oo=%.15G\n", calc_norm(oo));
   rx[protein] = rx[sphWall]+modr*oo[0];
   ry[protein] = ry[sphWall]+modr*oo[1];
   rz[protein] = rz[sphWall]+modr*oo[2];
+#if 0
+  printf("ghost protein=%d %f %f %f modr=%.15G\n", protein, rx[protein], ry[protein], rz[protein], 
+	 sqrt(Sqr(rx[protein]-rx[sphWall])+Sqr(ry[protein]-ry[sphWall])+Sqr(rz[protein]-rz[sphWall])));
+  printf("modr=%.15G rSphWall %f %f %f\n", modr, rx[sphWall], ry[sphWall], rz[sphWall]);
+#endif
 #ifdef MD_LXYZ
   LL = L[2];
 #else
