@@ -300,8 +300,8 @@ void init_parameters(void)
   massAmino = 1.0;
   Iamino[0] = Iamino[1] = 1.0;
   Iamino[2] = 1.0;
-  brownian = 0;
-  T=0.1;	
+  brownian = 2;
+  T=2.0;	
   ntypes=20;
 }
 double gauss(void);
@@ -858,7 +858,7 @@ int main(int argc, char** argv)
    {
      fprintf(f, "%.15G %.15G %.15G\n", DIAM_AMINO*0.5, DIAM_AMINO*0.5, DIAM_AMINO*0.5);
      fprintf(f, "%d %d %d\n", 1, 1, 1);/* ignore*/
-     fprintf(f, "%.15G %.15G %.15G %.15G %d %d\n", massAmino, Iamino[0], Iamino[1], Iamino[2], brownian, 1);
+     fprintf(f, "%.15G %.15G %.15G %.15G %d %d\n", massAmino, Iamino[0], Iamino[1], Iamino[2], brownian, 0);
      /* numero di patch del modello per ogni amminoacido */
      fprintf(f, "%d %d\n", NUM_PATCH, 0);
      buildAminoSpots(x);
