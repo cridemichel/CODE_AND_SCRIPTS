@@ -610,6 +610,9 @@ struct progStatus
 #endif
 #ifdef MD_ABSORPTION
   double bufHeight;
+#ifdef MD_SPHERICAL_WALL
+  int halfsolidangle;
+#endif
 #endif
   int dofA;
   int dofB;
@@ -990,6 +993,9 @@ struct pascii opro_ascii[] =
   {"misPath",      OS(misPath),                     1,  NAME_LENGTH, "%s"},
 #ifdef MD_ABSORPTION
   {"bufHeight",    &OS(bufHeight),                 1, 1,     "%.10G"},
+#ifdef MD_SPHERICAL_WALL
+  {"halfsolidangle",    &OS(halfsolidangle),        1, 1,     "%d"},
+#endif
 #endif
   {"dofA",         &OS(dofA),                        1,  1, "%d"},
   {"dofB",         &OS(dofB),                        1,  1, "%d"},
@@ -1156,6 +1162,9 @@ struct singlePar OsinglePar[] = {
 #endif
 #ifdef MD_ABSORPTION
   {"bufHeight", &OprogStatus.bufHeight, CT},
+#ifdef MD_SPHERICAL_WALL
+  {"halfsolidangle", &OprogStatus.halfsolidangle, INT},
+#endif
 #endif
 #ifdef MD_EDHEFLEX_WALL
   {"hardwall",   &OprogStatus.hardwall,       INT},

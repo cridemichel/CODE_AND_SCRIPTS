@@ -395,7 +395,7 @@ void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double 
 }
 #endif
 #ifdef MD_SPHERICAL_WALL
-extern int sphWall;
+extern int sphWall, sphWallOuter;
 #endif
 #ifdef EDHE_FLEX
 #ifdef MD_HANDLE_INFMASS
@@ -616,8 +616,35 @@ void bumpSPHS(int i, int j, double *W, int bt)
 extern double ranf(void);
 extern void rebuild_linked_list();
 extern double calcpotene(void);
+void rand_angle(double oo[3])
+{
+  double xisq, xi1, xi2, norm, osq, xi; 
+  xisq = 1.0;
+  while (xisq >= 1.0)
+    {
+      xi1  = ranf() * 2.0 - 1.0;
+      xi2  = ranf() * 2.0 - 1.0;
+      xisq = xi1 * xi1 + xi2 * xi2;
+    }
+
+  xi = sqrt (fabs(1.0 - xisq));
+  oo[0] = 2.0 * xi1 * xi;
+  oo[1] = 2.0 * xi2 * xi;
+  oo[2] = 1.0 - 2.0 * xisq;
+  osq   = oo[0]*oo[0] + oo[1] * oo[1] + oo[2] * oo[2];
+  norm  = sqrt(fabs(osq));
+  oo[0]    = oo[0] / norm;
+  oo[1]    = oo[1] / norm;
+  oo[2]    = oo[2] / norm;
+  if (OprogStatus.halfsolidangle && oo[2] < 0)
+    oo[2] = -oo[2];
+    
+}
 void handle_absorb(int ricettore, int protein)
 {
+#ifdef MD_SPHERICAL_WALL
+  double modr, oo[3], dist, LL;
+#endif
   FILE *f; 
   int j, n;
   int i;
@@ -650,6 +677,22 @@ void handle_absorb(int ricettore, int protein)
   /* proteins must be placed in the buffer taking into account that they are solid with respect to box wall
    * and to proteins of type 1 */
   /* for now the particle is placed midway between semipermeable wall and box wall */
+#ifdef MD_SPHERICAL_WALL
+  /* put the particle halfway between outer and inner spherical walls */
+  modr = (typesArr[typeOfPart[sphWall]].spots[0].sigma + typesArr[typeOfPart[sphWallOuter]].spots[0].sigma) / 4.0; 
+  rand_angle(oo);
+  rx[protein] = rx[sphWall]+modr*oo[0];
+  ry[protein] = ry[sphWall]+modr*oo[1];
+  rz[protein] = rz[sphWall]+modr*oo[2];
+#ifdef MD_LXYZ
+  LL = L[2];
+#else
+  LL = L;
+#endif
+  dist = LL-fabs(rz[protein])+typesArr[typeOfPart[protein]].spots[0].sigma*0.5;
+  if (dist < 0.0)
+    rz[protein] += dist+1E-7; 
+#else
 #ifdef MD_LXYZ
   rz[protein] = L[2]*0.5 - OprogStatus.bufHeight*0.5;
   rx[protein] = (ranf() - 0.5)*L[0];
@@ -659,6 +702,7 @@ void handle_absorb(int ricettore, int protein)
   rx[protein] = (ranf() - 0.5)*L;
   ry[protein] = (ranf() - 0.5)*L;
 #endif  
+#endif
   //printf("pos of %d %.15G %.15G %.15G\n", protein, rx[protein], ry[protein], rz[protein]); 
   /* ora la particella diventa del tipo "buffer" 
    */
