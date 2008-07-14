@@ -236,6 +236,9 @@ extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri
 extern void calc_energy(char *msg);
 extern void print_matrix(double **M, int n);
 #ifdef EDHE_FLEX
+#ifdef MD_SPHERICAL_WALL
+extern int sphWall, sphWallOuter;
+#endif
 int getnumbonds(int np, interStruct *ts, int inverted)
 {
 #ifdef MD_LL_BONDS
@@ -245,6 +248,10 @@ int getnumbonds(int np, interStruct *ts, int inverted)
   int kk, jj, jj2, aa, bb, nb;
 #endif
   nb=0;
+#ifdef MD_SPHERICAL_WALL
+  if (np==sphWall || np==sphWallOuter)
+    return 0;
+#endif
   for (kk = 0; kk < numbonds[np]; kk++)
     {
       jj = bonds[np][kk] / (NANA);
@@ -701,7 +708,7 @@ void handle_absorb(int ricettore, int protein)
     {
       dist = LL-fabs(rz[protein])+typesArr[typeOfPart[protein]].spots[0].sigma*0.5;
       if (dist < 0.0)
-	rz[protein] += dist+1E-7;
+	rz[protein] += fabs(dist)+1E-7;
     } 
 #else
 #ifdef MD_LXYZ
@@ -721,7 +728,7 @@ void handle_absorb(int ricettore, int protein)
   //printf("abosorbed: %d\n", protein);
 #ifdef MD_SPHERICAL_WALL
   remove_bond(protein, sphWall, 1, 1);
-  remove_bond(sphWall, protein, 1, 1);
+  //remove_bond(sphWall, protein, 1, 1);
 #endif
   MD_DEBUG38(printf("time=%.15G i=%d switched to type 2\n", Oparams.time, protein)); 
   n = (inCell[2][protein] * cellsy + inCell[1][protein] )*cellsx + inCell[0][protein]
@@ -888,9 +895,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   int typei, typej;
 #endif
 #if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
-  //if (i==sphWall || j==sphWall)
-  //printf("qui sphWall=%d i=%dA j=%dB typei=%d typej=%d\n", sphWall, i, j, typeOfPart[i], typeOfPart[j]);
-  if (j==sphWall && !bound(i, j, 1, 1) && typeOfPart[i]==2 && bt==MD_OUTIN_BARRIER)
+  //if (i==sphWallOuter || j==sphWallOuter)
+    //printf("qui sphWall=%d i=%dA j=%dB typei=%d typej=%d\n", sphWall, i, j, typeOfPart[i], typeOfPart[j]);
+  if (j==sphWall &&  typeOfPart[i]==2 && bt==MD_OUTIN_BARRIER && !bound(i, j, 1, 1))
     {
       //printf("qui i=%d\n", i);
       typeOfPart[i]=1;
@@ -1632,6 +1639,10 @@ void remove_bond(int na, int n, int a, int b)
 #else
   int i, nb, ii, jj, aa, bb, jj2;
 #endif
+#ifdef MD_SPHERICAL_WALL
+  if (na==sphWall || na==sphWallOuter)
+    return;
+#endif
   nb = numbonds[na];
   if (!nb)
     return;
@@ -1885,6 +1896,10 @@ void assign_bond_mapping(int i, int j)
 int bound(int na, int n, int a, int b);
 void add_bond(int na, int n, int a, int b)
 {
+#ifdef MD_SPHERICAL_WALL
+  if (na==sphWall || na==sphWallOuter)
+    return;
+#endif
   if (bound(na, n, a, b))
     {
       printf("il bond (%d,%d),(%d,%d) esiste gia'!\n", na, a, n, b);
@@ -1911,6 +1926,19 @@ void add_bond(int na, int n, int a, int b)
 int bound(int na, int n, int a, int b)
 {
   int i;
+#ifdef MD_SPHERICAL_WALL
+  if (na==sphWall || na==sphWallOuter)
+    {
+      int nt, bt;
+      printf("qui?!?\n");
+      nt = n;
+      bt= b;
+      n = na;
+      b = a;
+      na = nt;
+      a = bt;
+    }
+#endif
   for (i = 0; i < numbonds[na]; i++)
 #ifdef MD_LL_BONDS
     if (bonds[na][i] == n*(((long long int)NA)*NA)+a*((long long int)NA)+b)
@@ -2873,7 +2901,7 @@ int locate_contact_HSSP(int na, int n, double shift[3], double t1, double t2, do
   vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
   collCodeL = MD_EVENT_NONE;
   /* per ora tale ottimizzazione assume un solo spot per particella */ 
-  if (!bound(n, na, 1, 1))
+  if (!bound(na, n, 1, 1))
     {
       if ( b < 0.0 ) 
 	{

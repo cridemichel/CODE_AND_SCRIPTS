@@ -68,6 +68,9 @@ extern int *numbonds;
 #ifdef EDHE_FLEX
 extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
 #endif
+#ifdef MD_SPHERICAL_WALL
+extern int sphWall, sphWallOuter;
+#endif
 double calcpotene(void)
 {
   double Epot; 
@@ -176,6 +179,14 @@ double calcpotene(void)
 		{
 		  MD_DEBUG21(printf("(%d,%d)-(%d,%d) height=%.15G\n", na, aa-1, jj, bb-1, intersArr[kk2].bheight));
 		  Epot -= intersArr[kk2].bheight;
+#ifdef MD_SPHERICAL_WALL
+		  /* 14/07/08 NOTA: i muri sferici hanno sempre numbonds[sphWall/sphWallOuter]=0 quindi
+		  si considerano doppie le interazioni tra una certa particella ed un muro sferico,
+		  poiché il potenziale viene calcolato considerando che per ogni interazione ce n'è una simmetrica */ 
+		  if (jj==sphWall || jj==sphWallOuter)
+		    Epot -= intersArr[kk2].bheight;
+#endif
+
 		}		 
 	    }
 	  if (Oparams.nintersIJ > 0)
