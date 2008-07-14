@@ -1724,6 +1724,11 @@ void StartRun(void)
 	  cellList[sphWall]=-1;
 	  continue;
 	}
+      if (n==sphWallOuter)
+	{
+	  cellList[sphWallOuter]=-1;
+	  continue;
+	}
 #endif
       atomTime[n] = Oparams.time;
       //printf("qui n=%d %.15G %.15G %.15G\n", n, rx[n], ry[n], rz[n]);
@@ -2196,6 +2201,8 @@ void calc_encpp(void)
 #ifdef MD_SPHERICAL_WALL
       if (pt == Oparams.ntypes-1)
 	continue;
+      if (pt == Oparams.ntypes-2)
+	continue;
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
       com[0] = 0.0;
@@ -2261,6 +2268,8 @@ double calc_shell(void)
 #ifdef MD_SPHERICAL_WALL
       if (pt == Oparams.ntypes-1)
 	continue;
+      if (pt == Oparams.ntypes-2)
+	continue;
 #endif
       for (sp = 0; sp < typesArr[pt].nspots; sp++) 
 	{
@@ -2324,6 +2333,8 @@ double calc_nnl_rcut(void)
     {
 #ifdef MD_SPHERICAL_WALL
       if (typeOfPart[i] == Oparams.ntypes-1)
+	continue;
+      if (typeOfPart[i] == Oparams.ntypes-2)
 	continue;
 #endif
       for (kk=0; kk < 3; kk++)

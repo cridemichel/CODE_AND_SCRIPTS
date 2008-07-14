@@ -4796,8 +4796,8 @@ void PredictEventNNL(int na, int nb)
 }
 #else
 #ifdef MD_SPHERICAL_WALL
-extern int sphWall;
-extern void locate_spherical_wall(int na);
+extern int sphWall, sphWallOuter;
+extern void locate_spherical_wall(int na, int outer);
 #endif
 void PredictEventNNL(int na, int nb) 
 {
@@ -4817,6 +4817,8 @@ void PredictEventNNL(int na, int nb)
 #endif
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall|| nb==sphWall)
+    return;
+  if (na==sphWallOuter|| nb==sphWallOuter)
     return;
 #endif
   if (vz[na] != 0.0) 
@@ -4966,7 +4968,8 @@ void PredictEventNNL(int na, int nb)
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 #endif
 #ifdef MD_SPHERICAL_WALL
-  locate_spherical_wall(na);
+  locate_spherical_wall(na, 0);
+  locate_spherical_wall(na, 1);
 #endif 
   /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni (visto che in tal caso stiamo 
      usando le NNL */
@@ -5192,7 +5195,7 @@ void updrebuildNNL(int na)
   double nnltime1, nnltime2;
   int ip;
 #ifdef MD_SPHERICAL_WALL
-  if (na==sphWall)
+  if (na==sphWall || na==sphWallOuter)
     return;
 #endif
 #ifdef MD_NNLPLANES
@@ -5596,7 +5599,7 @@ void BuildNNL(int na)
   nebrTab[na].len = 0;
   MD_DEBUG32(printf("Building NNL...\n"));
 #ifdef MD_SPHERICAL_WALL
-  if (na==sphWall)
+  if (na==sphWall || na==sphWallOuter)
     return;
 #endif
   for (k = 0; k < NDIM; k++)
