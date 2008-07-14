@@ -7615,7 +7615,9 @@ void locate_spherical_wall(int na, int outer)
   int cellRangeT[2 * NDIM], signDir[NDIM]={0,0,0}, evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
 
-  if (!may_interact_all(na, sphWall))
+  if (outer == 0 && !may_interact_all(na, sphWall))
+    return;
+  if (outer == 1 && !may_interact_all(na, sphWallOuter))
     return;
   if (outer==1)
     n=sphWallOuter;
@@ -7760,6 +7762,8 @@ void PredictEvent (int na, int nb)
   iX, iY, iZ, jX, jY, jZ, k, n;
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall|| nb==sphWall)
+    return;
+  if (na==sphWallOuter|| nb==sphWallOuter)
     return;
 #endif
   MD_DEBUG38(printf("PredictEvent: %d,%d\n", na, nb));
