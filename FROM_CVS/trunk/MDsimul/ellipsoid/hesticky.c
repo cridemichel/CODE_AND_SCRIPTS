@@ -697,9 +697,12 @@ void handle_absorb(int ricettore, int protein)
 #else
   LL = L;
 #endif
-  dist = LL-fabs(rz[protein])+typesArr[typeOfPart[protein]].spots[0].sigma*0.5;
-  if (dist < 0.0)
-    rz[protein] += dist+1E-7; 
+  if (OprogStatus.halfsolidangle==1)
+    {
+      dist = LL-fabs(rz[protein])+typesArr[typeOfPart[protein]].spots[0].sigma*0.5;
+      if (dist < 0.0)
+	rz[protein] += dist+1E-7;
+    } 
 #else
 #ifdef MD_LXYZ
   rz[protein] = L[2]*0.5 - OprogStatus.bufHeight*0.5;
