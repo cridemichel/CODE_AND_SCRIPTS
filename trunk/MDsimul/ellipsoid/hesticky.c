@@ -3048,6 +3048,26 @@ void check_bracketing(int i, int j, double tref, double *t1, double *t2, double 
 #ifdef MD_GHOST_IGG
 extern int areGhost(int i, int j);
 #endif
+#ifdef MD_ALLOW_ONE_IGG_BOND
+int get_igg_bonds(int i, int j)
+{
+  int typei, typej, nb;
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+
+  if (typei == 0 && typej == 5)
+    nb = get_rabbit_bonds(i, 0, i+1, 1);
+  else if (typei == 1 && typej == 5)
+    nb = get_rabbit_bonds(i-1, 0, i, 1);
+  else if (typej == 0 && typei == 5)
+    nb = get_rabbit_bonds(j, 0, j+1, 1);
+  else if (typej == 1 && typei == 5)
+    nb = get_rabbit_bonds(j-1, 0, j, 1);
+  else
+    nb = -1;
+  return nb;
+}
+#endif
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
 		     double *evtime, int *ata, int *atb, int *collCode)
 {
@@ -3107,6 +3127,10 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
     }   
 #endif
 #ifdef EDHE_FLEX
+#if MD_ALLOW_ONE_IGG_BOND
+   if (get_igg_bonds(i, j)==1)
+     return 0;
+#endif
   if (nbondsFlex==0)
     return 0;
 #if 1
