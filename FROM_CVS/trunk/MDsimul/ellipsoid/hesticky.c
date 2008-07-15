@@ -717,7 +717,7 @@ void find_bonds_one(int i)
 		  nbonds = nbondsFlex;
 		  for (nn=0; nn < nbonds; nn++)
 		    {
-		      if (dists[nn]<0.0)
+		      if (dists[nn]<0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			{
 			  //printf("found bond between ghost particles! i=%d j=%d typei=%d typej=%d\n",
 			  //	 i, j, typeOfPart[i], typeOfPart[j]);
@@ -1032,6 +1032,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     {
       //printf("qui i=%d\n", i);
       typeOfPart[i]=1;
+      /* adjust bonds, because becoming a particle of type 1 (=not-in_buffer) it may overlap with other
+	 particle of same type */
+      find_bonds_one(i);
     }
 #endif
 #if 0
