@@ -457,6 +457,7 @@ void check_all_bonds(void)
 			      printf("i=%d j=%d %d %d\n", i, j, mapbondsa[nn], mapbondsb[nn]);
 			      printf("NA*NA*i+a*NA+b=%d\n", NANA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
 			      )
+
 #if 0
 			      aa = mapbondsa[nn];
 			      bb = mapbondsb[nn];
@@ -485,6 +486,11 @@ void check_all_bonds(void)
 		}
 	    }
 	}
+#ifdef MD_ALLOW_ONE_IGG_BOND
+      if (warn==1 && get_igg_bonds(i, j)==1)
+	continue;
+#endif
+
       if (warn)
 	{
 	  mdPrintf(ALL, "[WARNING] wrong number of bonds\n", NULL);

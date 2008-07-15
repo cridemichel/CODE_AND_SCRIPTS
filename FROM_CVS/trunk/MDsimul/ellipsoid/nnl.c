@@ -2551,6 +2551,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
 		  /* call grazing_try_harder_plane(...) only if this routine is called from locateHardWall()
 		   (i.e. globalHW != 0), se rimuovo la condizione su globalHW, grazing_try_harder_plane()
 		   viene usato anche nella predizione dell'uscita dal bounding box delle NNL  */
+#ifdef EDHE_FLEX
 		  if (globalHW && grazing_try_harder_plane(i, tref, t, delt, d1, d2, vecg, &tmin, &dmin, nplane))
 		    {
 		      /* in grazing_try_harderHE() already checks for d1*dmin < 0.0 */
@@ -2559,7 +2560,10 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
 		    }
 		  else
 		    return 1;
-		}
+#else
+		  return 1;
+#endif		
+}
 	      else
 		return 1;
 	    }
