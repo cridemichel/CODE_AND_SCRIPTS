@@ -620,6 +620,117 @@ void bumpSPHS(int i, int j, double *W, int bt)
 }	
 #endif
 #if defined(EDHE_FLEX) && defined(MD_ABSORPTION)
+void check_shift(int i, int j, double *shift);
+void assign_bond_mapping(int i, int j);
+double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
+
+void find_bonds_one(int i)
+{
+  int nn,  amin, bmin, j, nbonds;
+  double shift[3], dist;
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+#ifdef MD_EDHEFLEX_WALL
+  if (OprogStatus.hardwall==1)
+    {
+      if (inCell[2][i] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (inCell[2][i] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+    }
+#endif 
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCell[2][i] + iZ;    
+      shift[2] = 0.;
+      /* apply periodico boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  printf("BOHHHH\n");
+	  jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	  shift[2] = - L[2];
+#else
+	  shift[2] = - L;
+#endif
+	} 
+      else if (jZ == cellsz) 
+	{
+	  jZ = 0;    
+#ifdef MD_LXYZ
+	  shift[2] = L[2];
+#else
+	  shift[2] = L;
+#endif
+	}
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCell[1][i] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsy - 1;    
+#ifdef MD_LXYZ
+	      shift[1] = -L[1];
+#else
+	      shift[1] = -L;
+#endif
+	    } 
+	  else if (jY == cellsy) 
+	    {
+	      jY = 0;    
+#ifdef MD_LXYZ
+	      shift[1] = L[1];
+#else
+	      shift[1] = L;
+#endif
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCell[0][i] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		  shift[0] = - L[0];
+#else
+		  shift[0] = - L;
+#endif
+		} 
+	      else if (jX == cellsx) 
+		{
+		  jX = 0;   
+#ifdef MD_LXYZ
+		  shift[0] = L[0];
+#else
+		  shift[0] = L;
+#endif
+		}
+	      j = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+	      for (j = cellList[j]; j > -1; j = cellList[j]) 
+		{
+		  if (i == j)
+		    continue;
+		  check_shift(i, j, shift);
+		  assign_bond_mapping(i,j);
+		  dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+		  nbonds = nbondsFlex;
+		  for (nn=0; nn < nbonds; nn++)
+		    {
+		      if (dists[nn]<0.0)
+			{
+			  //printf("found bond between ghost particles! i=%d j=%d typei=%d typej=%d\n",
+			  //	 i, j, typeOfPart[i], typeOfPart[j]);
+			  add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
+			  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
+			}
+		    }
+		}
+	    }
+	}
+    }
+}
+
 extern double ranf(void);
 extern void rebuild_linked_list();
 extern double calcpotene(void);
@@ -651,6 +762,11 @@ void handle_absorb(int ricettore, int protein)
 {
 #ifdef MD_SPHERICAL_WALL
   double modr, oo[3], dist, LL;
+#ifdef MD_LL_BONDS
+  long long int aa, bb, jj, jj2;
+#else
+  int jj, aa, bb, jj2;
+#endif
 #endif
   FILE *f; 
   int j, n;
@@ -729,6 +845,18 @@ void handle_absorb(int ricettore, int protein)
 #ifdef MD_SPHERICAL_WALL
   remove_bond(protein, sphWall, 1, 1);
   //remove_bond(sphWall, protein, 1, 1);
+  /* N.B.: rimuove tutti i legami della particella protein e
+     tutti i legami di altre particelle con essa */
+  for (n=0; n < numbonds[protein]; n++)
+    {
+      jj = bonds[protein][n] / (NANA);
+      jj2 = bonds[protein][n] % (NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      if (jj!=sphWall && jj!=sphWallOuter)
+	remove_bond(jj, protein, bb, aa);
+    }
+  numbonds[protein]=0;
 #endif
   MD_DEBUG38(printf("time=%.15G i=%d switched to type 2\n", Oparams.time, protein)); 
   n = (inCell[2][protein] * cellsy + inCell[1][protein] )*cellsx + inCell[0][protein]
@@ -756,6 +884,9 @@ void handle_absorb(int ricettore, int protein)
     inCell[0][protein] + Oparams.parnum;
   cellList[protein] = cellList[j];
   cellList[j] = protein;
+#ifdef MD_SPHERICAL_WALL
+  find_bonds_one(protein);
+#endif
 }
 #endif
 #if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
@@ -1930,7 +2061,7 @@ int bound(int na, int n, int a, int b)
   if (na==sphWall || na==sphWallOuter)
     {
       int nt, bt;
-      printf("qui?!?\n");
+      //printf("qui?!?\n");
       nt = n;
       bt= b;
       n = na;
