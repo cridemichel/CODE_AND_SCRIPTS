@@ -3128,8 +3128,16 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #endif
 #ifdef EDHE_FLEX
 #if MD_ALLOW_ONE_IGG_BOND
-   if (get_igg_bonds(i, j)==1)
-     return 0;
+  if (typeOfPart[i]==5 || typeOfPart[j]==5)
+    {
+      if (get_igg_bonds(i, j)==1)
+	{
+	  if (typeOfPart[i]==5 && numbonds[j]==1)
+	    return 0;
+	  else if (typeOfPart[j]==5 && numbonds[i]==1)
+	    return 0;
+	}
+    }
 #endif
   if (nbondsFlex==0)
     return 0;
