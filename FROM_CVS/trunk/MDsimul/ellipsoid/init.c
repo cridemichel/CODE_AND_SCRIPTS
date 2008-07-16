@@ -762,7 +762,11 @@ COORD_TYPE ranf(void)
   /*  Returns a uniform random variate in the range 0 to 1.         
       Good random number generators are machine specific.
       please use the one recommended for your machine. */
+#ifdef MD_RAND48
+  return drand48();
+#else
   return rand() / ( (COORD_TYPE) RAND_MAX );
+#endif
 }
 
 /* ============================= >>> gauss <<< ============================= */

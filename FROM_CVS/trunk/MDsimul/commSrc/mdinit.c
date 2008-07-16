@@ -70,7 +70,11 @@ void Continue(void)
     }
   else
     {
+#ifdef MD_RAND48
+      srand48(((long int)time(NULL)));
+#else
       srand(((int)time(NULL)));
+#endif
     }
 #endif
 
