@@ -66,7 +66,11 @@ void Continue(void)
   printf("setting seed:%d time:%d\n", OprogStatus.mdseed, (int)time(NULL));
   if (OprogStatus.mdseed>=0) 
     {
+#ifdef MD_RAND48      
+      srand48(OprogStatus.mdseed);
+#else
       srand(OprogStatus.mdseed);
+#endif
     }
   else
     {
