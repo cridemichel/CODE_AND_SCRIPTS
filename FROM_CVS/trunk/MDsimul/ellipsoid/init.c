@@ -2866,10 +2866,7 @@ void read_native_conf(void)
 #endif
   for (i = 0; i < parnum; i++)
     {
-      if (i==0)
-	sscanf(sep, "%d", &numbondsNat[0]);
-      else
-	fscanf(fs, "%d ", &numbondsNat[i]);
+      fscanf(fs, "%d ", &numbondsNat[i]);
       for (j = 0; j < numbondsNat[i]; j++)
 	{
 #ifdef MD_LL_BONDS
@@ -2891,10 +2888,10 @@ int boundNat(int na, int n)
   for (a=0; a < numbondsNat[na]; a++)
     {
 #ifdef MD_LL_BONDS
-    if (bonds[na][a] / (((long long int)NA)*NA) == n)
+    if (bondsNat[na][a] / (((long long int)NA)*NA) == n)
       return 1;
 #else
-    if (bonds[na][a] / (NANA) == n)
+    if (bondsNat[na][a] / (NANA) == n)
       return 1;
 #endif
     }
