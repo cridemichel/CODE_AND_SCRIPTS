@@ -153,14 +153,14 @@ extern void newtDistNegNeighPlane(double x[], int n, int *check,
 	  int iA);
 extern double max(double a, double b);
 #ifdef MD_ASYM_ITENS
-double calc_maxddot_nnl(int i, double *gradplane)
+double calc_maxddot_nnl(int i, double *gradplane, double epsd)
 {
 #if 0
   int na;
   double Iamin;
 #endif
   double factori;
-  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 #if 0
   na = i<Oparams.parnumA?0:1;
   Iamin = min(Oparams.I[na][0],Oparams.I[na][2]);
@@ -2502,7 +2502,14 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
   if (OprogStatus.paralNNL)
     assign_plane(nplane);
 #endif
+#ifdef MD_EDHEFLEX_WALL
+  if (globalHW)
+    sogliaErr_zbrent = OprogStatus.epsd;
+  else
+    sogliaErr_zbrent = OprogStatus.epsdNL;
+#else
   sogliaErr_zbrent = OprogStatus.epsdNL;
+#endif
   d3 = calcDistNegNeighPlane(t+delt*0.5, tref, i, r1, r2, vecg, 0, 0, &distfail, nplane);
   xa[0] = t;
   ya[0] = d1;
@@ -2621,6 +2628,7 @@ int interpolNeigh(int i, double tref, double t, double delt, double d1, double d
   double d3, t1, t2;
   double r1[3], r2[3], xb1[2], xb2[2];
   d3 = calcDistNegNeigh(t+delt*0.5, tref, i, r1, r2, vecg, 0, 0, &distfail);
+  /* N.B. 21/07/08: InterpolNeigh è la funzione per l'interpolazione per le NNL ellissoidali che non vengono però usate! */
   sogliaErr_zbrent = OprogStatus.epsdNL;
   xa[0] = t;
   ya[0] = d1;
@@ -2710,7 +2718,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
   double factori;
   int its=0, distfailed, itsf=0; 
   const double GOLD= 1.618034;  
-  factori = 0.5*maxax[i]+OprogStatus.epsdNL;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 
   /* estimate of maximum rate of change for d */
 #if 0
@@ -2720,7 +2728,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
   /* WARNING: questa maggiorazione si applica al caso specifico dell'urto di un ellissoide con un piano,
    * è molto migliore della precedente ma va testata accuratamente! */
 #ifdef MD_ASYM_ITENS
-  maxddot = calc_maxddot_nnl(i, gradplane);
+  maxddot = calc_maxddot_nnl(i, gradplane, epsd);
 #else
   maxddot = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
@@ -2938,6 +2946,8 @@ int get_dists_tocheck(double distsOld[6], double dists[6], int tocheck[6], int d
   for (nn = 0; nn < 6; nn++)
     {
       tocheck[nn] = 0;
+      /* N.B. 21/07/08: questa routine viene usata in locate_contact_neigh_plane_parall() quindi non 
+	 per il calcolo dell'urto con una muro, per cui si puo' usare OprogStatus.epsdNK */
       if (dists[nn] < OprogStatus.epsdNL && distsOld[nn] < OprogStatus.epsdNL &&
 	  dorefine[nn] == 0)
 	{
@@ -3341,12 +3351,12 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
       MD_DEBUG37(printf("HS evtime=%.15G\n", *evtime));
     }
 #endif
-  factori = 0.5*maxax[i]+OprogStatus.epsdNL;
+  factori = 0.5*maxax[i]+epsd;
   maxddot = 0.0;
   for (nn = 0; nn < 6; nn++)
     {
 #ifdef MD_ASYM_ITENS
-      maxddoti[nn] = calc_maxddot_nnl(i, gradplane_all[nn]);
+      maxddoti[nn] = calc_maxddot_nnl(i, gradplane_all[nn], epsd);
 #else
       maxddoti[nn] = fabs(vx[i]*gradplane_all[nn][0]+vy[i]*gradplane_all[nn][1]+vz[i]*gradplane_all[nn][2])+
 	sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
@@ -3727,9 +3737,9 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   //printf("LOCATE_CONTACT_NNL nplane=%d grad=%.8f %.8f %.8f  rB=%.8f %.8f %.8f t1=%.8f t2=%.8f tsup=%.8f maxax[%d]=%f\n", nplane, 
   //	 gradplane[0], gradplane[1], gradplane[2], rB[0], rB[1], rB[2], t1, t2, tsup, i, maxax[i]);
 #ifdef MD_ASYM_ITENS
-  maxddot = calc_maxddot_nnl(i, gradplane);
+  maxddot = calc_maxddot_nnl(i, gradplane, epsd);
 #else
-  factori = 0.5*maxax[i]+OprogStatus.epsdNL;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
   maxddot = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 #endif
@@ -3825,7 +3835,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	    }
 	  dorefine = 1;
 	}
-      else if (dold < OprogStatus.epsdNL && d < OprogStatus.epsdNL)
+      else if (dold < epsd && d < epsd)
 	{
 #ifndef MD_NOINTERPOL
 	  for (kk=0; kk < 8; kk++)
@@ -3902,7 +3912,7 @@ int search_contact_faster_neigh(int i, double *t, double t1, double t2,
   double factori;
   int its=0, distfailed, itsf=0; 
   const double GOLD= 1.618034;  
-  factori = 0.5*maxax[i]+OprogStatus.epsdNL;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 
   /* estimate of maximum rate of change for d */
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
@@ -4032,7 +4042,7 @@ int locate_contact_neigh(int i, double vecg[5])
   t1 = Oparams.time;	
   t2 = timbig;
   
-  factori = 0.5*maxax[i]+OprogStatus.epsdNL;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  factori = 0.5*maxax[i]+epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
   maxddot = sqrt(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i])) +
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
   h = OprogStatus.h; /* last resort time increment */
@@ -4115,7 +4125,7 @@ int locate_contact_neigh(int i, double vecg[5])
 	    }
 	  dorefine = 1;
 	}
-      else if (dold < OprogStatus.epsdNL && d < OprogStatus.epsdNL)
+      else if (dold < epsd && d < epsd)
 	{
 #ifndef MD_NOINTERPOL
 	  for (kk=0; kk < 8; kk++)
