@@ -2558,7 +2558,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
 		  /* call grazing_try_harder_plane(...) only if this routine is called from locateHardWall()
 		   (i.e. globalHW != 0), se rimuovo la condizione su globalHW, grazing_try_harder_plane()
 		   viene usato anche nella predizione dell'uscita dal bounding box delle NNL  */
-#ifdef EDHE_FLEX
+#if defined(EDHE_FLEX) && defined(MD_EDHEFLEX_WALL)
 		  if (globalHW && grazing_try_harder_plane(i, tref, t, delt, d1, d2, vecg, &tmin, &dmin, nplane))
 		    {
 		      /* in grazing_try_harderHE() already checks for d1*dmin < 0.0 */
@@ -3651,7 +3651,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   if (typesArr[typeOfPart[i]].ignoreCore==2)
     return 0;
 #endif
-#ifdef EDHE_FLEX
+#if defined(EDHE_FLEX) && defined(MD_EDHEFLEX_WALL)
   if (globalHW)
     {
       /* 09/07/08: if we are looking for a collision with a wall
