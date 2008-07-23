@@ -3752,7 +3752,8 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
     vecgdold[kk] = vecgd[kk];
   dold = d;
   its = 0;
-  while (t + t1 < t2 || !dist_too_big(i,t,t1))
+  /* dist_too_big seems to be an unsafe optimization */
+  while (t + t1 < t2)// || !dist_too_big(i,t,t1))
     {
       MD_DEBUG31(printf("LOC CONT rB = %.15G %.15G %.15G\n", rB[0], rB[1], rB[2]));
 #if defined(MD_BASIC_DT) 
@@ -3831,7 +3832,8 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	      /* vecgd2 è vecgd al tempo t-delt */
 	      for (kk=0; kk < 8; kk++)
 		vecgroot[kk] = vecgdold[kk];
-	      troot = t1 + t - delt;
+	      /* VECCHIA SOLUZIONE: troot = t + t1 - delt;*/
+	      troot = t + t1;
 	    }
 	  dorefine = 1;
 	}
