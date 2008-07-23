@@ -36,4 +36,4 @@ cd ..
 cd ..
 done
 cat $FN | sort -k 1 -n > sorted$FN
-cat sorted$FN | LANG=C awk '{K1=$4/($3*$6); K2=$5/($4*$6); print ($6,K1,K2,$8)}' > $RA
+cat sorted$FN | LANG=C awk -v LA=$L '{K1=$4/($3*$6); K2=$5/($4*$6*(1-exp(-3.1415*81*$2))); print ($6,K1,K2,$8,$3)}' > $RA

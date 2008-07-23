@@ -36,7 +36,16 @@ mkdir $SIGN
 fi
 cd $SIGN
 mv ../../joined_${IGG}_${SIG}_$FN bi-mono-bonds.dat
-cp ../../${f}R1/CorIni .
+i=0
+while [ $i -lt 20 ]
+do
+if [ -e ../../${f}R${i} ]
+then
+cp ../../${f}R${i}/CorIni .
+break
+fi
+i=$[$i+1]
+done
 echo $IGG/$SIGN/ >> ../../listaJoined
 cd ..
 cd ..
