@@ -2868,9 +2868,9 @@ int bracket_neigh(int i, double *t1, double *t2, int nplane)
   for (kk=0; kk < 3; kk++)
     dr[kk] = r1[kk] - rB[kk]; 
   dd = fabs(scalProd(dr, gradplane));
-  if (veln == 0.0)
-    return 0;
-  if (veln < 0 && dd > maxax[i])
+  //if (veln == 0.0)
+    //return 0;
+  if (veln <= 0 && dd > maxax[i])
     return 0;
   fabsveln = fabs(veln);
   if (dd > maxax[i])
@@ -3647,6 +3647,8 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   double epsd, epsdFast, epsdFastR, epsdMax; 
   int dorefine, distfail;
   int its, foundrc, kk;
+  double tini, tmin;
+  int sumnegpairs=0;
 #ifdef EDHE_FLEX
   if (typesArr[typeOfPart[i]].ignoreCore==2)
     return 0;
@@ -3744,6 +3746,12 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 #endif
   h = OprogStatus.h; /* last resort time increment */
+#ifdef MD_EDHEFLEX_WALL
+  if (globalHW && lastbump[i].mol==nplane && lastbump[i].type==MD_WALL)
+    {
+      sumnegpairs=1;
+    }
+#endif
   if (search_contact_faster_neigh_plane(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2, nplane))
     return 0;  
   MD_DEBUG35(printf(">>>>d:%f\n", d));
@@ -3758,6 +3766,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       MD_DEBUG31(printf("LOC CONT rB = %.15G %.15G %.15G\n", rB[0], rB[1], rB[2]));
 #if defined(MD_BASIC_DT) 
       delt = epsd / maxddot;
+      tini = t;
       t += delt;
       d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
 #else
@@ -3801,7 +3810,23 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
 #endif
-
+#ifdef MD_EDHEFLEX_WALL
+      if (globalHW && sumnegpairs)
+	{
+	  MD_DEBUG(printf("sumnnegpairs d=%.15G\n", d));
+	  if (d <= 0.0)
+	    {
+	      if (!interpolNeighPlane(i, t1, t-delt, delt, dold, d, &tmin, vecgd, 1, nplane))	
+		  {
+		    tmin -= t1;
+		    delt = tmin - tini;
+		    t = tmin;
+		    d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
+		  }
+	    }
+	  sumnegpairs = 0;
+	}
+#endif
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f d1-d2:%.15G\n", t, d1, d2, fabs(d1-d2)));
       dorefine = 0;      
       if (dold > 0 && d < 0)
