@@ -2488,6 +2488,41 @@ int grazing_try_harder_plane(int i, double tref, double t1, double delt, double 
     }
   return 0;/* no collision found */
 }
+int interpolNeighPlaneSNP(int i, double tref, double t, double delt, double d1, double d2, double *tmin, double* vecg,  int nplane)
+{
+  double d3, A;
+  double r1[3], r2[3];
+  int distfail;
+  double dmin;
+  d3 = calcDistNegNeighPlane(t+delt*0.5, tref, i, r1, r2, vecg, 0, 0, &distfail, nplane);
+  xa[0] = 0;
+  ya[0] = d1;
+  xa[1] = delt*0.5;
+  ya[1] = d3;
+  xa[2] = delt;
+  ya[2] = d2;
+  if (ya[0]-ya[1] == 0.0)
+    {
+      *tmin = t + delt*0.25;
+    }
+  else if (ya[2]-ya[0] ==0.0)
+    {
+      *tmin = t + delt*0.5;
+    }
+  else
+    {      
+      A = (ya[2]-ya[0])/(ya[0]-ya[1]);
+      *tmin = t + 0.5*delt*((1.0 + A * 0.25)/( 1.0 + A * 0.5));
+    }
+  if (*tmin < t+delt && *tmin > t)
+    {
+      //dmin = calcDistNeg(*tmin, tref, i, j, shift, r1, r2, &alpha, vecg, 0);
+      dmin = calcDistNegNeighPlane(t+delt*0.5, tref, i, r1, r2, vecg, 0, 0, &distfail, nplane);
+      *tmin += tref;
+      return 0;
+    }
+  return 1;
+}
 
 int interpolNeighPlane(int i, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, int bracketing, int nplane)
 {
@@ -2570,7 +2605,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
 #else
 		  return 1;
 #endif		
-}
+		}
 	      else
 		return 1;
 	    }
@@ -3816,7 +3851,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	  MD_DEBUG(printf("sumnnegpairs d=%.15G\n", d));
 	  if (d <= 0.0)
 	    {
-	      if (!interpolNeighPlane(i, t1, t-delt, delt, dold, d, &tmin, vecgd, 1, nplane))	
+	      if (!interpolNeighPlaneSNP(i, t1, t-delt, delt, dold, d, &tmin, vecgd, nplane))	
 		  {
 		    tmin -= t1;
 		    delt = tmin - tini;
