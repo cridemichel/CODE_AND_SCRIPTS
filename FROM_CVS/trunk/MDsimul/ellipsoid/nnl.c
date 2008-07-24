@@ -3801,23 +3801,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	  //printf("D delt: %.15G d2-d2o:%.15G d2:%.15G d2o:%.15G\n", delt*epsd/fabs(d2-d2old), fabs(d2-d2old), d2, d2old);
 	}
 #endif
-#if 1
-      if (d > epsdFastR)
-	{
-	  MD_DEBUG35(printf("[d>epsdFastR] d=%.15G\n", d));
-	  if (search_contact_faster_neigh_plane(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2, nplane))
-	    {
-	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
-	      return 0;
-	    }
-	  for (kk = 0; kk < 8; kk++)
-	    vecgdold[kk] = vecgd[kk];
-	  dold = d;
-	  its++;
-	  itsSNL++;
-	  continue;
-	}
-#endif
+
       MD_DEBUG(printf(">>>> t = %f d1:%f d2:%f d1-d2:%.15G\n", t, d1, d2, fabs(d1-d2)));
       dorefine = 0;      
       if (dold > 0 && d < 0)
@@ -3889,6 +3873,23 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	      
 	    }
 	}
+#if 1
+      if (d > epsdFastR)
+	{
+	  MD_DEBUG35(printf("[d>epsdFastR] d=%.15G\n", d));
+	  if (search_contact_faster_neigh_plane(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, r1, r2, nplane))
+	    {
+	      MD_DEBUG10(printf("[locate_contact] its: %d\n", its));
+	      return 0;
+	    }
+	  for (kk = 0; kk < 8; kk++)
+	    vecgdold[kk] = vecgd[kk];
+	  dold = d;
+	  its++;
+	  itsSNL++;
+	  continue;
+	}
+#endif
       dold = d;
       for (kk = 0; kk < 8; kk++)
 	vecgdold[kk] = vecgd[kk];
