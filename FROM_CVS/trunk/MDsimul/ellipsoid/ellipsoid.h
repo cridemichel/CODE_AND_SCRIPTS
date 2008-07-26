@@ -599,6 +599,10 @@ struct progStatus
   double scaleVolTime;
   int brownian;
   double h;
+#ifdef MD_EDHEFLEX_WALL
+  double epsdPlane;
+  double epsdFastPlane;
+#endif
   double epsd;
   double epsdFast;
   double epsdFastR;
@@ -924,6 +928,10 @@ struct pascii opro_ascii[] =
 #endif
   {"scalevel",     &OS(scalevel),              1,   1, "%d"},
   {"equilibrated", &OS(equilibrated),          1,   1, "%d"},
+#ifdef MD_EDHEFLEX_WALL
+  {"epsdPlane",    &OS(epsdPlane),             1,   1, "%.12G"},
+  {"epsdFastPlabe", &OS(epsdFastPlane),        1,   1, "%.12G"},
+#endif
   {"epsd",         &OS(epsd),                  1,   1, "%.12G"},
   {"epsdNL",       &OS(epsdNL),                1,   1, "%.12G"},
   {"epsdSD",       &OS(epsdSD),                1,   1, "%.12G"},
@@ -1237,6 +1245,10 @@ struct singlePar OsinglePar[] = {
   {"Dt",         &Oparams.Dt,                 CT},
 #ifdef MD_BIG_DT
   {"bigDt",      &OprogStatus.bigDt,           CT},
+#endif
+#ifdef MD_EDHEFLEX_WALL
+  {"epsdPlane",       &OprogStatus.epsdPlane,      CT},
+  {"epsdFastPlane",   &OprogStatus.epsdFastPlane,  CT},
 #endif
   {"epsd",       &OprogStatus.epsd,           CT},
   {"epsdNL",     &OprogStatus.epsdNL,         CT},

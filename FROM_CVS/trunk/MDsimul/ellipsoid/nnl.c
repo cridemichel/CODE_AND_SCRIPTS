@@ -2457,7 +2457,7 @@ double distbrent_plane(double t)
 					       0, 0, &distfail, brent_nplane);
 }
 
-#define MD_BRENT_TOL 1E-15
+#define MD_BRENT_TOL 5E-16
 extern int brentTooManyIter;
 extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
 int grazing_try_harder_plane(int i, double tref, double t1, double delt, double d1, double d2, double *vecg, double *troot, double *dmin, int nplane)
@@ -2594,6 +2594,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
 		   (i.e. globalHW != 0), se rimuovo la condizione su globalHW, grazing_try_harder_plane()
 		   viene usato anche nella predizione dell'uscita dal bounding box delle NNL  */
 #if defined(EDHE_FLEX) && defined(MD_EDHEFLEX_WALL)
+		  //printf ("globalHW=%d dmin=%.15G d1=%.15G d2=%.15G\n", globalHW, dmin, d1, d2);
 		  if (globalHW && grazing_try_harder_plane(i, tref, t, delt, d1, d2, vecg, &tmin, &dmin, nplane))
 		    {
 		      /* in grazing_try_harderHE() already checks for d1*dmin < 0.0 */
@@ -2819,7 +2820,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
        * non arrivo ad una distanza positiva con il passo veloce */
 #if 1
       itsf = 0;
-      while (*d1 < 0 || distfailed)
+      while (*d1 <= 0 || distfailed)
 	{
 	  /* reduce step size */
 	  if (itsf == 0 && delt - OprogStatus.h > 0)
@@ -3698,10 +3699,10 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	 allora questo if va rimosso e epsdFastNL, epsdFastRNL, ecc. vanno tutti 
 	 settati nel file .par con valori intorno a 1E-4/1E-5 
        */
-      epsd = OprogStatus.epsd;
-      epsdFast = OprogStatus.epsdFast;
-      epsdFastR= OprogStatus.epsdFastR;
-      epsdMax = OprogStatus.epsdMax;
+      epsd = OprogStatus.epsdPlane;
+      epsdFast = OprogStatus.epsdFastPlane;
+      epsdFastR= OprogStatus.epsdFastPlane;
+      epsdMax = OprogStatus.epsdPlane;
     }
   else
     {
@@ -3803,7 +3804,16 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       delt = epsd / maxddot;
       tini = t;
       t += delt;
-      d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
+      if (globalHW)
+	{
+	  while ((d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane))==0.0)
+	    {
+	      delt *= GOLD;
+	      t = tini + delt;
+	    }
+	}
+      else
+	d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
 #else
       normddot = calcvecFNeigh(i, t, t1, ddot, r1);
       if (normddot!=0)
