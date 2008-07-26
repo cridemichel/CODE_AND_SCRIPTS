@@ -3674,6 +3674,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   double h, d, dold, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
   double dtmp, t1, t2, maxddot, delt, troot, vecgroot[8];
   //const int MAXOPTITS = 4;
+  const double GOLD= 1.618034;
 #ifndef MD_BASIC_DT
   double ddot[3], dold2, vecgdold2[8], normddot;
 #endif
