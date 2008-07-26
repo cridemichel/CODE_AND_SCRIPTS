@@ -1701,6 +1701,10 @@ void usrInitBef(void)
     for (i = 0; i < PE_POINTS; i++)
       OprogStatus.PE[i] = 0;
     /* ======================================================================= */
+#ifdef MD_EDHEFLEX_WALL
+    OprogStatus.epsdPlane=-1.0;
+    OprogStatus.epsdFastPlane=-1.0;
+#endif
 #ifdef EDHE_FLEX
     Oparams.ninters = 0;
     Oparams.nintersIJ = 0;
@@ -2930,6 +2934,9 @@ double calc_order_param_native(void)
   return RMSD;
 }
 #endif
+#ifdef MD_ASYM_ITENS
+extern int isSymItens(int i);
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -3000,6 +3007,12 @@ void usrInitAft(void)
     OprogStatus.epsdMaxNL = OprogStatus.epsdMaxNL;
   if (OprogStatus.epsdFastRNL == -1.0)
     OprogStatus.epsdFastRNL = OprogStatus.epsdFastR;
+#ifdef MD_EDHEFLEX_WALL
+  if (OprogStatus.epsdPlane==-1.0)
+    OprogStatus.epsdPlane = OprogStatus.epsd;
+  if (OprogStatus.epsdFastPlane==-1.0)
+    OprogStatus.epsdFastPlane = OprogStatus.epsdFast;
+#endif
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
   if (OprogStatus.epsdSP == -1.0)
     OprogStatus.epsdSP = OprogStatus.epsd;
@@ -3845,7 +3858,16 @@ void usrInitAft(void)
 #ifdef MD_ASYM_ITENS
   for (i=0; i < Oparams.parnum; i++)
     {
-      calc_omega(i, &(wx[i]), &(wy[i]), &(wz[i]));
+      if (isSymItens(i))
+	{
+	  double II;
+	  II=typesArr[typeOfPart[i]].I[0];
+	  wx[i]=Mx[i]/II;
+	  wy[i]=My[i]/II;
+	  wz[i]=Mz[i]/II;
+	}
+      else
+	calc_omega(i, &(wx[i]), &(wy[i]), &(wz[i]));
       angM[i] = sqrt(Sqr(Mx[i])+Sqr(My[i])+Sqr(Mz[i]));
       upd_refsysM(i);
     }
