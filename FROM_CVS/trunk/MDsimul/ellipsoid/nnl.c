@@ -3805,6 +3805,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
       delt = epsd / maxddot;
       tini = t;
       t += delt;
+#ifdef MD_EDHEFLEX_WALL
       if (globalHW)
 	{
 	  while ((d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane))==0.0)
@@ -3814,6 +3815,7 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 	    }
 	}
       else
+#endif
 	d = calcDistNegNeighPlane(t, t1, i, r1, r2, vecgd, 0, 0, &distfail, nplane);
 #else
       normddot = calcvecFNeigh(i, t, t1, ddot, r1);
