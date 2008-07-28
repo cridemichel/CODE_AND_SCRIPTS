@@ -1045,6 +1045,9 @@ void temperat(void)
   for (nt = 0; nt < Oparams.ntypes; nt++)
     fprintf(mf, "%.15G ", ((doft[nt]==0)?(0.0):(2.0*Kt[nt]/doft[nt])) );
 #endif
+#ifdef MD_PROTEIN_DESIGN
+  fprintf(mf, " %.15G %.15G", Oparams.T, OprogStatus.Tf);
+#endif
   fprintf(mf, "\n");
 #else
 #ifdef MD_BIG_DT
