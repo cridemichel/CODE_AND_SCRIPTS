@@ -912,6 +912,8 @@ int get_rabbit_bonds(int ifebA, int tA, int ifebB, int tB)
 void make_ghosts(int inc, int nb, int i, int typei, int j, int typej)
 {
   int a, ibeg;
+  if (OprogStatus.ghostsim==3)
+    return;
   if ( (inc > 0.0 && nb == 1) 
        || (inc < 0.0 && nb == 0) )
     {
