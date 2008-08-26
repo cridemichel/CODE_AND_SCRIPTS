@@ -2818,9 +2818,10 @@ void init_ghostArr(void)
 	  continue;
 	}
 
-      /* if ghostsim == 2 accept only transition all antibody
-	 will be in status 3 and only transition from 3 to 1 will be accepted */
-      if (OprogStatus.ghostsim == 2)
+      /* if ghostsim == 2 accept only transition 3->1, i.e. all antibody
+	 will be in status 3 and only transition from 3 to 1 will be accepted.-
+	 if ghostsim==2 all igg will be ghost and the will remain forever in state 3 (=ghost) */
+      if (OprogStatus.ghostsim == 2 || OprogStatus.ghostsim == 3)
 	{
 	  iggStatus = 3;
 	}

@@ -253,6 +253,9 @@ void update_ghost_status(void)
 {
   int i, curnigg, a, notransition, np;
 
+  /* ghostsim=3 means that all IgG are ghost forever (i.e. forever in state 3) */
+  if (OprogStatus.ghostsim==3)
+    return;
   np = 0;
   for (a=0; a < 4; a++)
     {
@@ -262,7 +265,7 @@ void update_ghost_status(void)
     {
       curnigg = ghostInfoArr[i].iggnum;
       /* 3 is an intermediate state going from 1 to 2, hence
-       when all bonds get broken we have follwing transitions:
+       when all bonds get broken we have following transitions:
        2 -> 3 -> 1 */
       if (ghostInfoArr[i].ghost_status == 3)
 	{
