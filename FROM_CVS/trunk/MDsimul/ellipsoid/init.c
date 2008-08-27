@@ -1576,6 +1576,7 @@ void usrInitBef(void)
 #ifdef MD_RABBIT
     OprogStatus.time_limit = 100000000000.0;
     OprogStatus.first_time = 0.0;
+    OprogStatus.rhozBinSize = 0.79/2.0+4.0+0.9+0.4+0.112+0.25;
 #endif
 #ifdef MD_BIG_DT
     OprogStatus.bigDt = -1.0;
@@ -2938,6 +2939,11 @@ double calc_order_param_native(void)
 #ifdef MD_ASYM_ITENS
 extern int isSymItens(int i);
 #endif
+#ifdef MD_RABBIT
+int nbins_rhoz;
+double *rhoz;
+extern double max3(double a, double b, double c);
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -3346,7 +3352,10 @@ void usrInitAft(void)
   if (strcmp(OprogStatus.nativeConf, ""))
     read_native_conf();
 #endif
-
+#ifdef MD_RABBIT
+  nbins_rhoz = L / OprogStatus.rhozBinSize; 
+  rhoz = malloc(sizeof(double)*nbins_rhoz);
+#endif
   if (newSim)
     {
       FILE *f;
@@ -3377,6 +3386,8 @@ void usrInitAft(void)
       f = fopenMPI(absMisHD("bi-mono-bonds.dat"), "w+");
       fclose(f);
       f = fopenMPI(absMisHD("rates.dat"), "w+");
+      fclose(f);
+      f = fopenMPI(absMisHD("rhoz.dat"), "w+");
       fclose(f);
 #endif
 #ifdef MD_ABSORPTION
