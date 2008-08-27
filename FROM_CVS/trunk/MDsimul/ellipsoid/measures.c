@@ -255,6 +255,33 @@ void get_bimono_bonds(int *bulk, int *mono, int *bi)
 #ifdef MD_PROTEIN_DESIGN
 extern double calc_order_param_native(void);
 #endif
+#ifdef MD_RABBIT
+extern int nbins_rhoz;
+extern double *rhoz;
+#endif
+#ifdef MD_RABBIT
+void calcrhoz(double *rhoz, int nbins)
+{
+  int i, a, nbin;
+
+  for (a = 0; a < nbins; a++)
+    rhoz[a] = 0.0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* se si tratta di un pivot allora...*/
+      if (typeOfPart[i]==3)
+	{
+
+#ifdef MD_LXYZ 
+	  nbin = (rz[i] + L[2]*0.5)*nbins/L[2];
+#else
+	  nbin = (rz[i] + L*0.5)*nbins/L;
+#endif
+	  rhoz[nbin]+=1.0;
+	}
+    }
+}
+#endif
 void calcV(void)
 {
 #ifdef MD_PROTEIN_DESIGN
@@ -262,7 +289,7 @@ void calcV(void)
 #endif
   double ti;
 #ifdef MD_RABBIT
-  int bulk, mono, bi, k;
+  int bulk, mono, bi, k, i;
 #endif
 #ifdef MD_PATCHY_HE
 #ifdef MD_FOUR_BEADS
@@ -288,6 +315,20 @@ void calcV(void)
 #endif
 #ifdef MD_RABBIT
   /* Salva il numero di legami monovalenti e bivalenti */
+  if (OprogStatus.rhozBinSize > 0.0)
+    {
+      mf = fopenMPI(absMisHD("rhoz.dat"),"a");
+      calcrhoz(rhoz, nbins_rhoz);
+      for (i=0; i < nbins_rhoz; i++)
+	{   
+#ifdef MD_BIG_DT
+	  fprintf(mf, "%G %.15G\n", Oparams.time + OprogStatus.refTime, rhoz[i]);
+#else
+	  fprintf(mf, "%G %.15G\n", Oparams.time, rhoz[i]);
+#endif
+	}
+      fclose(mf);
+    }
   mf = fopenMPI(absMisHD("bi-mono-bonds.dat"),"a");
   get_bimono_bonds(&bulk, &mono, &bi);
 #ifdef MD_BIG_DT
