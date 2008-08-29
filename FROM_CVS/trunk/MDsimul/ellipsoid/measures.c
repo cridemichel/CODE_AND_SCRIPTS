@@ -314,25 +314,7 @@ void calcV(void)
   V = 0;
 #endif
 #ifdef MD_RABBIT
-  /* Salva il numero di legami monovalenti e bivalenti */
-  if (OprogStatus.rhozBinSize > 0.0)
-    {
-      mf = fopenMPI(absMisHD("rhoz.dat"),"a");
-      calcrhoz(rhoz, nbins_rhoz);
-#ifdef MD_BIG_DT
-      fprintf(mf, "%G ", Oparams.time + OprogStatus.refTime);
-#else
-      fprintf(mf, "%G ", Oparams.time);
-#endif
-      for (i=0; i < nbins_rhoz; i++)
-	{   
-	  if (i == nbins_rhoz-1)
-	    fprintf(mf, "%.15G\n", rhoz[i]);
-	  else
-	    fprintf(mf, "%.15G ", rhoz[i]);
-	}
-      fclose(mf);
-    }
+  
   mf = fopenMPI(absMisHD("bi-mono-bonds.dat"),"a");
   get_bimono_bonds(&bulk, &mono, &bi);
 #ifdef MD_BIG_DT
@@ -355,7 +337,30 @@ void calcV(void)
   fprintf(mf, "\n");
   fclose(mf);
 #endif
- 
+
+#ifdef MD_RABBIT
+ /* Salva il numero di legami monovalenti e bivalenti */
+  if (OprogStatus.rhozBinSize > 0.0)
+    {
+      mf = fopenMPI(absMisHD("rhoz.dat"),"a");
+      calcrhoz(rhoz, nbins_rhoz);
+      /* rhoz[0] è lo slab dove ci sono gli anticorpi legati */
+      rhoz[0] -= bi+mono;
+#ifdef MD_BIG_DT
+      fprintf(mf, "%G ", Oparams.time + OprogStatus.refTime);
+#else
+      fprintf(mf, "%G ", Oparams.time);
+#endif
+      for (i=0; i < nbins_rhoz; i++)
+	{   
+	  if (i == nbins_rhoz-1)
+	    fprintf(mf, "%.15G\n", rhoz[i]);
+	  else
+	    fprintf(mf, "%.15G ", rhoz[i]);
+	}
+      fclose(mf);
+    }
+#endif
 #ifdef MD_PROTEIN_DESIGN
   if (!strcmp(OprogStatus.nativeConf, ""))
     return;
