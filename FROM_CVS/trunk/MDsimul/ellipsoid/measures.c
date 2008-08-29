@@ -319,13 +319,17 @@ void calcV(void)
     {
       mf = fopenMPI(absMisHD("rhoz.dat"),"a");
       calcrhoz(rhoz, nbins_rhoz);
+#ifdef MD_BIG_DT
+      fprintf(mf, "%G ", Oparams.time + OprogStatus.refTime);
+#else
+      fprintf(mf, "%G ", Oparams.time);
+#endif
       for (i=0; i < nbins_rhoz; i++)
 	{   
-#ifdef MD_BIG_DT
-	  fprintf(mf, "%G %.15G\n", Oparams.time + OprogStatus.refTime, rhoz[i]);
-#else
-	  fprintf(mf, "%G %.15G\n", Oparams.time, rhoz[i]);
-#endif
+	  if (i == nbins_rhoz-1)
+	    fprintf(mf, "%.15G\n", rhoz[i]);
+	  else
+	    fprintf(mf, "%.15G ", rhoz[i]);
 	}
       fclose(mf);
     }
