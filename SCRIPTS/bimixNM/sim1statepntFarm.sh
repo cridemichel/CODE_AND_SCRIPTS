@@ -2,7 +2,7 @@ PARFILE=BMsoft.par
 if [ "$5" == "" ]
 then
 echo "You must supply the temperature, the number of cycles and optionally a custom string, i.e.:"
-echo "sim1statepnt.sh <temperature> <num. of cycles> <custom string> <Sim. Num.> <eq. steps>"
+echo "sim1statepnt.sh <temperature> <num. of cycles> <custom string> <Sim. Num.> <eq. steps> <NN>"
 exit
 fi
 ln -sf $HOME/MDsimul/bin/bimix bimixNM 
@@ -11,7 +11,7 @@ then
 mkdir T$1-$4
 fi
 cp $PARFILE T$1-$4/
-cd T$1
+cd T$1-$4
 rm -f COORD_TMP*
 BMEXE="../bimixNM"
 SIMRA="bimixNM$3RA$1"
@@ -34,7 +34,7 @@ cp rand_$PARFILE $PARFILE
 ln -sf $BMEXE $SIMEQ 
 $SIMEQ -f ./$PARFILE > screen_$SIMEQ 
 #PRODUZIONE
-if [ ! -d ../T$1-$4 ]
+if [ ! -d ../NVE-T$1-$4 ]
 then
 mkdir ../NVE-T$1-$4
 fi
@@ -46,8 +46,14 @@ rm -f COORD_TMP*
 rm -f Cnf*
 #STCI=`cat screen_$SIMEQ | awk '{if ($1=="[MSDcheck]") print $3}'`
 STPS=`echo "$5*$2"| bc -l`
-NN=`echo "l($STCI)/l(1.4)" | bc -l | awk '{printf("%d",$0)}'`
-../set_params.sh $PARFILE stepnum $STPS chkeqstps 0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor sResetSteps 0 bakSaveMode 0
+if [ "$6" == "" ]
+then
+NN=`echo "l($5)/l(1.4)" | bc -l | awk '{printf("%d",$0)}'`
+else
+NN=$6
+fi
+#echo "SIMEQ=" ${SIMEQ}.cor " STPS=" $STPS " NN=" $NN
+../set_params.sh $PARFILE stepnum $STPS chkeqstps 0 NN $NN inifile ${SIMEQ}.cor endfile ${SIMPR}.cor sResetSteps 0 bakSaveMode 1 Nose 0
 ln -sf $BMEXE $SIMPR
 ./$SIMPR -f ./$PARFILE > screen_$SIMPR  
 cd ..
