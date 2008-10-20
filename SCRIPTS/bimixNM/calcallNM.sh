@@ -6,7 +6,7 @@ PTS=100000
 LOGFILE=analysis.log
 if [ "$1" == "" ] 
 then
-TEMPS=`ls -d T*`
+TEMPS=`ls -d NVE-T*`
 else
 TEMPS="$1"
 fi
