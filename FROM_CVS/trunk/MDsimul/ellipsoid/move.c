@@ -6503,9 +6503,19 @@ int grazing_try_harderHE(int i, int j, double tref, double t1, double delt, doub
     }
   return 0;/* no collision found */
 }
+#ifdef MD_GRAZING_TRYHARDER
+double trefGT, shiftGT[3], *vecgGT;
+int iGT, jGT;
+
+double distfuncGT(double t)
+{
+  double r1[3], r2[3], alpha;
+  return calcDistNeg(t, trefGT, iGT, jGT, shiftGT, r1, r2, &alpha, vecgGT, 0);
+}
+#endif
 int interpol(int i, int j, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, double shift[3], int bracketing)
 {
-  int nb;
+  int nb, a, triedharder=0;
   double d3, t1, t2, A;
   double r1[3], r2[3], alpha, xb1[2], xb2[2];
   double tmin, dmin;
@@ -6563,7 +6573,7 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
 		}
 	      else if (fabs(dmin) < fabs(d1) && fabs(dmin) < fabs(d2))
 		{
-		  /* differently from interpolSP we call grazing_try_harder_HE() func
+		  /* differently from interpolSP we call grazing_try_harderHE() func
 		     from here because for sumnegpairs case there is a dedicated 
 		     function called interpolSNP */
 		  //printf("PRIMA delt=%.15G\n", delt);
@@ -6571,6 +6581,7 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
 		  if (grazing_try_harderHE(i, j, tref, t, delt, d1, d2, shift, vecg, &tmin, &dmin))
 		    {
 		      /* in grazing_try_harderHE() already checks for d1*dmin < 0.0 */
+		      triedharder=1;
 		      t2 = tmin;
 	    	      t1 = t;
 		    }
@@ -6608,7 +6619,30 @@ int interpol(int i, int j, double tref, double t, double delt, double d1, double
       *troot = tref + (t1+t2)*0.5;
       return 0;
     }
+#ifdef MD_GRAZING_TRYHARDER
+  /* se grazing_try_harderHE() ha trovato un minimo allora 
+     non si deve usare in zbrent() il polinomio interpolante di secondo grado 
+     (chiamando distfunc), che ha un minimo ma non negativo (notare che proprio
+     sotto questa condizione si chiama grazing_try_harderHE()),
+     ma la distanza esatta tra i e j calcolata da distfuncGT.
+     */
+  if (triedharder)
+    {
+      trefGT = tref;
+      vecgGT = vecg;
+      iGT = i;
+      jGT = j;
+      for (a=0; a < 3; a++)
+	shiftGT[a] = shift[a];
+      *troot=zbrent(distfuncGT, t1, t2, OprogStatus.zbrentTol);
+    }
+  else
+    {
+      *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
+    }
+#else
   *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
+#endif
   if (polinterr)
     {
       printf("[interpol] bracketing: %d polinterr=%d t1=%.15G t2=%.15G\n", bracketing,polinterr, t1, t2);
