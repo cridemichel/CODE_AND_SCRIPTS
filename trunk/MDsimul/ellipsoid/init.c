@@ -3873,7 +3873,14 @@ void usrInitAft(void)
       if (isSymItens(i))
 	{
 	  double II;
+#ifdef EDHE_FLEX
 	  II=typesArr[typeOfPart[i]].I[0];
+#else
+	  if (i < Oparams.parnumA)
+	    II=Oparams.I[0][0];
+	  else
+	    II=Oparams.I[1][0];
+#endif
 	  wx[i]=Mx[i]/II;
 	  wy[i]=My[i]/II;
 	  wz[i]=Mz[i]/II;
