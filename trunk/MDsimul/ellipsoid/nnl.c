@@ -2526,9 +2526,22 @@ int interpolNeighPlaneSNP(int i, double tref, double t, double delt, double d1, 
     }
   return 1;
 }
+#ifdef MD_GRAZING_TRYHARDER
+extern double trefGT, *vecgGT;
+extern int iGT;
+int nplaneGT;
+static double distfuncGT(double t)
+{
+  double r1[3], r2[3];
+  int  distfail;
+  return calcDistNegNeighPlane(t, trefGT, iGT, r1, r2, vecgGT, 
+			       0, 0, &distfail, nplaneGT);
+}
+#endif
 
 int interpolNeighPlane(int i, double tref, double t, double delt, double d1, double d2, double *troot, double* vecg, int bracketing, int nplane)
 {
+  int triedharder=0, a;
   int nb, distfail;
   double d3, t1, t2, A;
   double r1[3], r2[3], xb1[2], xb2[2];
@@ -2601,6 +2614,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
 		  if (globalHW && grazing_try_harder_plane(i, tref, t, delt, d1, d2, vecg, &tmin, &dmin, nplane))
 		    {
 		      /* in grazing_try_harderHE() already checks for d1*dmin < 0.0 */
+		      triedharder=1;
 		      t2 = tmin;
 	    	      t1 = t;
 		    }
@@ -2639,7 +2653,28 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
       *troot = tref + (t1+t2)*0.5;
       return 0;
     }
+#ifdef MD_GRAZING_TRYHARDER
+  /* se grazing_try_harderHE() ha trovato un minimo allora 
+     non si deve usare in zbrent() il polinomio interpolante di secondo grado 
+     (chiamando distfunc), che ha un minimo ma non negativo (notare che proprio
+     sotto questa condizione si chiama grazing_try_harderHE()),
+     ma la distanza esatta tra i e il piano nplane calcolata da distfuncGT.
+     */
+  if (triedharder)
+   {
+      trefGT = tref;
+      vecgGT = vecg;
+      iGT = i;
+      nplaneGT=nplane;
+      *troot=zbrent(distfuncGT, t1, t2, OprogStatus.zbrentTol);
+    }
+  else
+    {
+      *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
+    }
+#else
   *troot=zbrent(distfunc, t1, t2, OprogStatus.zbrentTol);
+#endif
   if (polinterr)
     {
       printf("[interpol_neigh] bracketing: %d polinterr=%d t1=%.15G t2=%.15G\n", bracketing,polinterr, t1, t2);
