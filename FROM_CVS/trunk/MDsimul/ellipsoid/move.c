@@ -6507,7 +6507,7 @@ int grazing_try_harderHE(int i, int j, double tref, double t1, double delt, doub
 double trefGT, shiftGT[3], *vecgGT;
 int iGT, jGT;
 
-double distfuncGT(double t)
+static double distfuncGT(double t)
 {
   double r1[3], r2[3], alpha;
   return calcDistNeg(t, trefGT, iGT, jGT, shiftGT, r1, r2, &alpha, vecgGT, 0);
