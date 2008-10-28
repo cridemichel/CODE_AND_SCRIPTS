@@ -7647,7 +7647,7 @@ void locate_spherical_wall(int na, int outer)
   double cctime;
   double vecg[5];
   int cellRangeT[2 * NDIM], signDir[NDIM]={0,0,0}, evCode,
-  iX, iY, iZ, jX, jY, jZ, k, n;
+      iX, iY, iZ, jX, jY, jZ, k, n;
 
   if (outer == 0 && !may_interact_all(na, sphWall))
     return;
