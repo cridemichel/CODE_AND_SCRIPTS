@@ -1092,7 +1092,12 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
 #endif
 #if 1
-  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1)
+  /* NOTA 28/10/08: la condizione precedente era:
+     is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1 
+     tuttavia quella quello che veramente bumpSPHS() richiede è che 
+     le particelle abbiano un solo spot quindi la soluzione
+     attuale è più corretta */
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1)
     {
       bumpSPHS(i, j, W, bt);
       return;
@@ -3282,12 +3287,19 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
     }
 #endif
   if (nbondsFlex==0)
-    return 0;
+    {
+      return 0;
+    }
 #if 1
   /* NOTA: in realta is_a_sphere_NNL richiede che il core sia sferico e che tutti gli sticky
      spots siano posizionati nel centro di massa del core. Qui basterebbe che lo sticky spot
      sia posizionato sul centro di massa della particella a prescindere dalla forma del core. */
-   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1)
+  /* NOTA 28/10/08: la condizione precedente era:
+     is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1 
+     tuttavia quella quello che veramente bumpSPHS() richiede è che 
+     le particelle abbiano un solo spot quindi la soluzione
+     attuale è più corretta */
+   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1) 
     {
 #if 0
       tt=*evtime;
