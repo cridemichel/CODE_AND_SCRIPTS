@@ -5153,6 +5153,7 @@ void PredictEventNNL(int na, int nb)
 #else
 #ifdef EDHE_FLEX
 	  sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+	  //printf("max=(%d)%.15G (%d)%.15G\n", n, maxax[n], na, maxax[na]);
 #else
 	  if (na < parnumA && n < parnumA)
 	    sigSq = Sqr(maxax[na]+OprogStatus.epsd);
@@ -5299,6 +5300,7 @@ void PredictEventNNL(int na, int nb)
 #endif
 #ifdef MD_PATCHY_HE
       MD_DEBUG32(printf("Scheduling collision between %d and %d ac=%d bc=%d at t=%.15G\n", na, n, ac, bc, t));
+      //printf("Scheduling collision between %d and %d ac=%d bc=%d at t=%.15G\n", na, n, ac, bc, t);
       ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #else
       ScheduleEvent (na, n, t);
