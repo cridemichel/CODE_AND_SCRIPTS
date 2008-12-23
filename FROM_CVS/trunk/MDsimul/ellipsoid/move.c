@@ -8350,6 +8350,8 @@ void PredictEvent (int na, int nb)
 #ifdef MD_PATCHY_HE
 		      MD_DEBUG40(printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc));
 		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
+		      //printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc);
+
 #else
 		      ScheduleEvent (na, n, t);
 #endif
