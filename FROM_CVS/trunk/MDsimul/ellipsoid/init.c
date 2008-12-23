@@ -2716,6 +2716,7 @@ void find_bonds(void)
 		if (j==1001)
 		  printf("Oparams.parnum=%d i=%d typei=%d j=%d typej=%d nn=%d dist=%.15G\n", Oparams.parnum, i, typeOfPart[i], j, typeOfPart[j], nn, dists[nn]);
 #endif
+		//printf("adding bond i=%d j=%d aa=%d bb=%d\n", i, j, aa, bb);
 		aa = mapbondsa[nn];
 		bb = mapbondsb[nn];
 		add_bond(i, j, aa, bb);
@@ -3105,6 +3106,7 @@ void usrInitAft(void)
   tree = AllocMatI(12, poolSize);
 #endif
 #ifdef EDHE_FLEX
+  //printf("maxbonds=%d\n", OprogStatus.maxbonds);
   if (Oparams.maxbondsSaved==-1)
     {
 #ifdef MD_LL_BONDS

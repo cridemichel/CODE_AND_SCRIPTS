@@ -1105,6 +1105,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #endif
 #endif
 #endif
+  //printf("bt=%d bump i=%d j=%d ata=%d atb=%d\n", bt, i, j, ata, atb);
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
   typej = typeOfPart[j];
@@ -1466,6 +1467,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   nmax = Oparams.nmax;
 #endif
   //MD_DEBUG40(if (ata==20 && atb==20) printf("[bump] before bump vc=%.15G\n", vc));
+  //printf("QUIII\n");
   switch (bt)
     {
       /* N.B.
@@ -1482,11 +1484,13 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	  if (bhout >= 0.0 && Sqr(vc) < 2.0*bhout/mredl)
 	    {
 	      factor = -2.0*vc;
+	      //printf("BOND NOT BROKEN bump i=%d j=%d ata=%d atb=%d\n", i, j, ata, atb);
 	    }
 	  else
 	    {
 	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
 	      MD_DEBUG40(printf("[MD_INOUT_BARRIER] qui factor=%.15G\n", factor));
+	      //printf("BOND BROKEN bump i=%d j=%d ata=%d atb=%d\n", i, j, ata, atb);
 	      remove_bond(i, j, ata, atb);
 	      remove_bond(j, i, atb, ata);
 #ifdef MD_RABBIT
@@ -1502,9 +1506,11 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 		    		Oparams.time, vc,  bt,
 				sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 	      factor = -2.0*vc;
+	      //printf("BOND NOT BROKEN bump i=%d j=%d ata=%d atb=%d\n", i, j, ata, atb);
 	    }
 	  else
 	    {
+	      //printf("BOND BROKEN bump i=%d j=%d ata=%d atb=%d\n", i, j, ata, atb);
 	      MD_DEBUG36(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
 				sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
 	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
@@ -2060,6 +2066,7 @@ void add_bond(int na, int n, int a, int b)
   numbonds[na]++;
   MD_DEBUG31(printf("numbonds[%d]=%d bonds[][numbonds-1]:%d a=%d b=%d\n", na, numbonds[na],bonds[na][numbonds[na]-1],
   a, b));
+  //printf("[ADDING BOND] (%d,%d)-(%d,%d) numbonds[]=%d bonds[][numbonds-1]:%lld\n", na, a, n, b, numbonds[na],bonds[na][numbonds[na]-1]);
   //printf("%lld NA=%d numbonds[%d]=%d bonds[][numbonds-1]:%lld a=%d b=%d\n",n*(NANA)+a*NA+b, NA, na, numbonds[na],bonds[na][numbonds[na]-1],a,b);
 #if 0
   if (numbonds[na]>4)
@@ -3274,6 +3281,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
     }   
 #endif
 #ifdef EDHE_FLEX
+ 
 #if MD_ALLOW_ONE_IGG_BOND
   if (typeOfPart[i]==5 || typeOfPart[j]==5)
     {
@@ -3299,7 +3307,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
      tuttavia quella quello che veramente bumpSPHS() richiede è che 
      le particelle abbiano un solo spot quindi la soluzione
      attuale è più corretta */
-   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1) 
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1) 
     {
 #if 0
       tt=*evtime;
@@ -3612,7 +3620,6 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
       for (nn=0; nn < nbonds; nn++)
 	dorefine[nn] = MD_EVENT_NONE;
       ncr=check_crossSP(distsOld, dists, crossed, bondpair);
-
       /* N.B. crossed[] e tocheck[] sono array relativi agli 8 possibili tipi di attraversamento fra gli atomi
        * sticky */
       for (nn = 0; nn < nbonds; nn++)
@@ -3635,6 +3642,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 
 #define MD_INTERPOL
 #ifdef MD_INTERPOL
+      
       ntc = get_dists_tocheckSP(distsOld, dists, tocheck, dorefine, bondpair);
       for (nn = 0; nn < nbonds; nn++)
 	{
