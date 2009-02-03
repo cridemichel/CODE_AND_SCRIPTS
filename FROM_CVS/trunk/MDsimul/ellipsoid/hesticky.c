@@ -3221,6 +3221,30 @@ int get_igg_bonds(int i, int j)
     nb = -1;
   return nb;
 }
+#elif defined(MD_ALLOW_ONE_DUMBBELL_BOND)
+int get_db_bonds(int i, int j)
+{
+#ifdef MD_LL_BONDS
+  long long int jj, jj2, aa, bb;
+  int kk, nb;
+#else
+  int kk, jj, jj2, aa, bb, nb;
+#endif
+  nb=0;
+  for (kk = 0; kk < numbonds[i]; kk++)
+    {
+      jj = bonds[i][kk] / (NANA);
+      jj2 = bonds[i][kk] % (NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      if (jj2==j && ((aa==1 && bb==1) || (aa==1 && bb=3) || 
+		     (aa=3 && bb==1) || (aa==3 && bb==3)))
+       nb++;	
+    }
+  if (nb==2)
+    printf("i=%d j=%d nb=%d\n", i, j, nb);
+  return nb;
+} 
 #endif
 int locate_contactSP(int i, int j, double shift[3], double t1, double t2, 
 		     double *evtime, int *ata, int *atb, int *collCode)
@@ -3291,6 +3315,16 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    return 0;
 	  else if (typeOfPart[j]==5 && numbonds[i]==1)
 	    return 0;
+	}
+    }
+#elif defined(MD_ALLOW_ONE_DUMBBELL_BOND)
+  /* N.B. limita ad 1 il numero massimo di legami
+     fra due dumbbell */
+  if (typeOfPart[i]==0 && typeOfPart[j]==0)
+    {
+      if (get_db_bonds(i, j)==1)
+	{
+      	  return 0;
 	}
     }
 #endif
