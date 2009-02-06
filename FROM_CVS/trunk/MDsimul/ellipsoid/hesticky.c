@@ -302,12 +302,28 @@ void get_interaction(int type1, int s1, int type2, int s2, interStruct **ts, int
     }
 }
 #endif
+#ifdef MD_ALLOW_ONE_DUMBBELL_BOND
+int get_db_bonds(int i, int j);
+#endif
 int one_is_bonded(int i, int a, int j, int b, int nmax)
 {
   /* per ora è disbilitato */
   //return 0;
   int type1, type2;
   interStruct ts;
+
+#if defined(MD_ALLOW_ONE_DUMBBELL_BOND)
+  /* N.B. limita ad 1 il numero massimo di legami
+     fra due dumbbell */
+  if (typeOfPart[i]==0 && typeOfPart[j]==0)
+    {
+      if (get_db_bonds(i, j) == 1 )
+	{
+      	  return 1;
+	}
+    }
+#endif
+ 
   if (nmax < 0)
     return 0;
   type1 = typeOfPart[i];
@@ -3237,12 +3253,14 @@ int get_db_bonds(int i, int j)
       jj2 = bonds[i][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
-      if (jj2==j && ((aa==1 && bb==1) || (aa==1 && bb=3) || 
-		     (aa=3 && bb==1) || (aa==3 && bb==3)))
+      if (jj==j && ((aa==1 && bb==1) || (aa==1 && bb==3) || 
+		     (aa==3 && bb==1) || (aa==3 && bb==3)))
        nb++;	
     }
   if (nb==2)
     printf("i=%d j=%d nb=%d\n", i, j, nb);
+  //if (nb==1)
+    //printf("i=%d j=%d already bonded!\n", i, j);
   return nb;
 } 
 #endif
@@ -3315,16 +3333,6 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 	    return 0;
 	  else if (typeOfPart[j]==5 && numbonds[i]==1)
 	    return 0;
-	}
-    }
-#elif defined(MD_ALLOW_ONE_DUMBBELL_BOND)
-  /* N.B. limita ad 1 il numero massimo di legami
-     fra due dumbbell */
-  if (typeOfPart[i]==0 && typeOfPart[j]==0)
-    {
-      if (get_db_bonds(i, j)==1)
-	{
-      	  return 0;
 	}
     }
 #endif
