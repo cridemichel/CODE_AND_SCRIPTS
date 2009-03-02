@@ -29,7 +29,7 @@ extern void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, do
 extern void set_angmom_to_zero(int i);
 extern int *is_a_sphere_NNL;
 #endif
-int icg, jcg, doneryck;
+extern int icg, jcg, doneryck;
 #if defined(MPI)
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
@@ -53,7 +53,7 @@ extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp, *angM;
 extern double Ia, Ib, invIa, invIb;
 #endif
 extern double gradplane[3];
-struct LastBumpS *lastbump;
+extern struct LastBumpS *lastbump;
 extern double *axa, *axb, *axc;
 extern int *scdone;
 extern double *maxax;
@@ -71,7 +71,7 @@ extern double invaSq[2], invbSq[2], invcSq[2];
 extern double rxC, ryC, rzC;
 extern int SolveLineq (double **a, double *x, int n); 
 extern double calc_norm(double *vec);
-int calcdist_retcheck;
+extern int calcdist_retcheck;
 extern double rA[3], rB[3];
 extern double gradplane_all[6][3], rBall[6][3];
 extern int polinterr, polinterrRyck;
@@ -589,8 +589,13 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
-       	{
-	  A[k1][k2] = Sqr(x[3])*(gxx[k1][k2] + x[4]*fxx[k1][k2]*gxx[k1][k2]);
+	{/* 02/03/09: rivedere bene qui!!! */
+	  A[k1][k2] = gxx[k1][k2];
+	  for (k3 = 0; k3 < 3; k3++) 
+	    A[k1][k2] += x[4]*gxx[k1][k3]*fxx[k3][k2];
+	  if (k1==k2)
+	    A[k1][k2] += gxx[k1][k1];
+	  A[k1][k2] *= Sqr(x[3]);
 	}
     }	
   for (k1 = 0; k1 < 3; k1++)
