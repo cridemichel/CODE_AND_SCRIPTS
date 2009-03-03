@@ -1280,6 +1280,22 @@ void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
+#ifdef MD_SUPERELLIPSOID
+extern int calc_intersecSE(int i, double *rB, double *rA, double **Ri, double* rI);
+
+void calc_intersec_neigh_planeSE(int i, double *rA, double *rB, double **Xa, double *grad, double* rC, double* rD)
+{
+  double rAA[3], rBA[3], rBAgrad;
+  int k, k1;
+  calc_intersecSE(i, rB, rA, Xa, rC);
+  /* ...e ora calcoliamo rD (guess sul piano) */
+  for (k1=0; k1 < 3; k1++)
+    rBA[k1] = rB[k1] - rA[k1];
+  rBAgrad = scalProd(rBA, grad);
+  for (k1=0; k1 < 3; k1++)
+    rD[k1] = rA[k1] + rBAgrad*grad[k1];
+} 
+#endif
 void calc_intersec_neigh_plane(double *rA, double *rB, double **Xa, double *grad, double* rC, double* rD)
 {
   double A, B=0.0, C=0.0, D=0.0, tt=0.0;
@@ -1319,6 +1335,9 @@ void calc_intersec_neigh_plane(double *rA, double *rB, double **Xa, double *grad
     rD[k1] = rA[k1] + rBAgrad*grad[k1];
   MD_DEBUG35(if (globalHW && Oparams.curStep > 5100) printf("[GuessSimple] rC=%f %f %f rD=%f %f %f\n", rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
 }
+#ifdef MD_SUPERELLIPSOID
+extern void calc_intersec_neighSE(int i, double *rB, double *rA, double **Ri, double* rI);
+#endif
 void guess_distNeigh_plane(int i, 
 		double *rA, double *rB, double **Xa, double *grad, double *rC, double *rD,
 		double **RA)
@@ -1329,7 +1348,10 @@ void guess_distNeigh_plane(int i,
 #ifdef EDHE_FLEX
   int typei;
 #endif
- 
+ #ifdef MD_SUPERELLIPSOID
+  double DdA[3], sfA, nDdA;
+#endif
+
   //printf("===============>SONO QUI\n");
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];  
@@ -1349,13 +1371,37 @@ void guess_distNeigh_plane(int i,
       for (k1 = 0; k1 < 3; k1++) 
 	gradaxA[n] += gradA[k1]*RA[n][k1];
     }
+#ifdef MD_SUPERELLIPSOID
+  sfA = 0.0;	
+  for (k1=0; k1 < 3; k1++)
+    {
+      sfA += Sqr(saA[k1]); 
+    }
+  sfA = sqrt(sfA);
+  for (k1=0; k1 < 3; k1++)
+    {
+      dA[k1] = rA[k1];
+      DdA[k1] = 0;
+      for (n=0; n < 3;n++)
+	DdA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+    }
+  nDdA = calc_norm(DdA);
+  for (k1=0; k1 < 3; k1++)
+    {
+      dA[k1] = sfA*DdA[k1]/nDdA + dA[k1]; 
+    }
+
+  calc_intersec_neighSE(i, dA, rA, RA, rC);
+#else
   for (k1=0; k1 < 3; k1++)
     {
       dA[k1] = rA[k1];
       for (n=0; n < 3;n++)
 	dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
     }
+
   calc_intersec_neigh(dA, rA, Xa, rC, 1);
+#endif
   for (k1=0; k1 < 3; k1++)
     dB[k1] = rB[k1] - rC[k1];
   sp = scalProd(dB, grad);
@@ -1365,6 +1411,13 @@ void guess_distNeigh_plane(int i,
   MD_DEBUG35(if (0 && globalHW && Oparams.curStep >= 5100) printf("[GuessOpt] grad=%f %f %f rA=%f %f %f rB=%f %f %f\n",
 							     grad[0], grad[1], grad[2], rA[0], rA[1], rA[2], rB[0], rB[1], rB[2]));
 }
+#ifdef MD_SUPERELLIPSOID
+extern int calc_intersecSE(int i, double *rB, double *rA, double **Ri, double* rI);
+void calc_intersec_neighSE(int i, double *rB, double *rA, double **Ri, double* rI)
+{
+  calc_intersecSE(i, rB, rA, Ri, rI);
+}
+#endif
 void calc_intersec_neigh(double *rB, double *rA, double **Xa, double* rI, double alpha)
 {
   double A, B=0.0, C=0.0, D=0.0, tt=0.0;
@@ -1455,6 +1508,9 @@ void guess_distNeigh(int i,
   calc_intersec_neigh(dA, rA, Xa, rC, -1);
   calc_intersec_neigh(dB, rB, Xb, rD, 1);
 }
+#ifdef MD_SUPERELLIPSOID
+extern void calcfxLabSE(int i, double *x, double *r, double **Ri, double fx[3]);
+#endif
 double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane)
 
 {
@@ -1525,7 +1581,11 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
     }
   else
     {
+#ifdef MD_SUPERELLIPSOID
+      calc_intersec_neigh_planeSE(i, rA, rB, Xa, gradplane, rC, rD);
+#else
       calc_intersec_neigh_plane(rA, rB, Xa, gradplane, rC, rD);
+#endif
     }
   MD_DEBUG30(if (globalHW && Oparams.curStep >= 5100) printf("[GuessOpt] t=%.15G\n",t+t1));
 
@@ -1533,7 +1593,11 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
     r12[k1] = rC[k1]-rD[k1]; 
   MD_DEBUG34(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
+#ifdef MD_SUPERELLIPSOID
+  calcfxLabSE(i, rC, rA, RtA, gradf);
+#else
   calc_grad(rC, rA, Xa, gradf);
+#endif
   MD_DEBUG34(printf("DOPO gradf=(%f,%f,%f) gradplane=(%f,%f,%f)\n",
 		  gradf[0], gradf[1], gradf[2], gradplane[0], gradplane[1], gradplane[2]));
   nf = calc_norm(gradf);

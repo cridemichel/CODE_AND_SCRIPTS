@@ -5220,7 +5220,7 @@ void guess_dist(int i, int j,
 	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
 	}
     }
-   calc_intersec(dA, rA, Xa, rC);
+  calc_intersec(dA, rA, Xa, rC);
   calc_intersec(dB, rB, Xb, rD);
 #endif
 }
