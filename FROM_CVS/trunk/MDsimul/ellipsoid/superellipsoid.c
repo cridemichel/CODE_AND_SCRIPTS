@@ -994,7 +994,8 @@ void funcs2beZeroedDistNegNeighPlane5SE(int n, double x[], double fvec[], int i)
 #endif
 
 }
-/* 06/07/2007 TODO: steepest descent for super-ellipsoids! */
+/* 03/03/2009 TODO: 1) make NNL work 
+                    2) steepest descent for super-ellipsoids! */
 double calc_sign_SE(int i, double *r, double **R, double *x, double **X)
 {
   double a,b,c,e,n;
