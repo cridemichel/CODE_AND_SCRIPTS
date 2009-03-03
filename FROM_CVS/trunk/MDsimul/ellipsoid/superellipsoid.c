@@ -574,7 +574,7 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
 		   int iA, int iB, double shift[3], double *fx, double *gx)
 {
   double rDC[3], rD[3], A[3][3], b[3], c[3];
-  int k1, k2;
+  int k1, k2, k3;
 #ifdef EDHE_FLEX
   int kk;
   double axi[3], axj[3];
@@ -582,10 +582,20 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
   double xpA[3], xpB[3], fxxp[3][3], gxxp[3][3], fxp[3], gxp[3], fxx[3][3], gxx[3][3];
   lab2body(iA, &x[0], xpA, rA, RtA);
   calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
-  calcfxx(fxxp, xpA[0], xpA[1], xpA[2] ,iA);
+  calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
   /* ...and now we have to go back to laboratory reference system */
   body2lab_fx(iA, fxp, fx, RtA);
   body2lab_fxx(iA, fxxp, fxx, RtA);
+  /* calc fx e gx */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      rD[k1] = x[k1] + fx[k1]*x[4];
+    } 
+  lab2body(iB, rD, xpB, rB, RtB);  
+  calcfx(gxp, xpB[0], xpB[1], xpB[2], iB);
+  calcfxx(gxxp, xpB[0], xpB[1], xpB[2], iB);
+  body2lab_fx(iB, gxp, gx, RtB);  
+  body2lab_fxx(iB, gxxp, gxx, RtB);
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
@@ -593,8 +603,6 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
 	  A[k1][k2] = gxx[k1][k2];
 	  for (k3 = 0; k3 < 3; k3++) 
 	    A[k1][k2] += x[4]*gxx[k1][k3]*fxx[k3][k2];
-	  if (k1==k2)
-	    A[k1][k2] += gxx[k1][k1];
 	  A[k1][k2] *= Sqr(x[3]);
 	}
     }	
@@ -605,17 +613,7 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
 	  df[k1][k2] = fxx[k1][k2] + A[k1][k2];
 	}
     }
-  /* calc fx e gx */
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      rD[k1] = x[k1] + fx[k1]*x[4];
-    } 
-  lab2body(iB, rD, xpB, rB, RtB);  
-  calcfx(gxp, xpB[0], xpB[1], xpB[2], iB);
-  calcfxx(gxxp, xpB[0], xpB[1], xpB[2], iB);
-  body2lab_fx(iB, gxp, gx, RtA);  
-  body2lab_fxx(iB, gxxp, gxx, RtB);
-  //printf("rC: %f %f %f rD: %f %f %f\n", x[0], x[1], x[2], rD[0], rD[1], rD[2]);
+    //printf("rC: %f %f %f rD: %f %f %f\n", x[0], x[1], x[2], rD[0], rD[1], rD[2]);
   //printf("fx: %f %f %f x[4]: %f\n", fx[0], fx[1], fx[2], x[4]);
 #if 1
   if (OprogStatus.SDmethod==2 || OprogStatus.SDmethod==3)
@@ -646,16 +644,16 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
       b[k1] = 0.0;
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  b[k1] += Xb[k1][k2]*fx[k2];
+	  b[k1] += gxx[k1][k2]*fx[k2];
 	}
-      b[k1] *= 2.0*Sqr(x[3]);
+      b[k1] *= Sqr(x[3]);
     }
   for (k1 = 0; k1 < 3; k1++)
     {
       c[k1] = 0.0;
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  c[k1] += gx[k2]*fxx[k2][k1];
+	  c[k1] += x[4]*gx[k2]*fxx[k2][k1];
 	}
       c[k1] += gx[k1];
     }
@@ -681,23 +679,12 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
 
 #ifndef MD_GLOBALNRD
  /* and now evaluate fvec */
- for (k1 = 0; k1 < 3; k1++)
+  for (k1 = 0; k1 < 3; k1++)
     {
       fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
     }
- fvec[3] = 0.0;
- fvec[4] = 0.0;
- for (k1 = 0; k1 < 3; k1++)
-   {
-      fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      fvec[4] += (rD[k1]-rB[k1])*gx[k1];
-   }
- fvec[3] = 0.5*fvec[3]-1.0;
- fvec[4] = 0.5*fvec[4]-1.0;
- //print_matrix(df, 5);
- //printf("fx: %f %f %f gx: %f %f %f\n", fx[0]/calc_norm(fx), fx[1]/calc_norm(fx), 
- //	fx[2]/calc_norm(fx), gx[0]/calc_norm(gx), gx[1]/calc_norm(gx), gx[2]/calc_norm(gx));
- //printf("F2BZdistNeg5 fvec (%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]);
+  fvec[3] = calcf(xpA,iA);
+  fvec[4] = calcf(xpB,iB);
 #endif
 }
 
@@ -915,13 +902,14 @@ void funcs2beZeroedDistNeg5SE(int n, double x[], double fvec[], int i, int j, do
     }
   lab2body(j, rD, xpB, rB, RtB);  
   calcfx(gxp, xpB[0], xpB[1], xpB[2], j);
-  body2lab_fx(j, gxp, gx, RtA);  
+  body2lab_fx(j, gxp, gx, RtB);  
   for (k1 = 0; k1 < 3; k1++)
     {
       fvec[k1] = fx[k1] + Sqr(x[3])*gx[k1];
     }
-  fvec[3] = 0.0;
-  fvec[4] = 0.0;
+  fvec[3] = calcf(xpA,i);
+  fvec[4] = calcf(xpB,j);
+#if 0
   for (k1 = 0; k1 < 3; k1++)
     {
       fvec[3] += (x[k1]-rA[k1])*fx[k1];
@@ -929,7 +917,7 @@ void funcs2beZeroedDistNeg5SE(int n, double x[], double fvec[], int i, int j, do
     }
   fvec[3] = 0.5*fvec[3]-1.0;
   fvec[4] = 0.5*fvec[4]-1.0;
-
+#endif
 #if 0
   MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
   MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
