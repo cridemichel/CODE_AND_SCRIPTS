@@ -766,14 +766,12 @@ void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df,
     {
       fvec[k1] = fx[k1] - Sqr(x[6])*gradplane[k1];
     }
- fvec[3] = 0.0;
+ fvec[3] = calcf(xpA, iA);
  fvec[4] = 0.0;
  for (k1 = 0; k1 < 3; k1++)
    {
-      fvec[3] += (x[k1]-rA[k1])*fx[k1];
-      fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
+     fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
    }
- fvec[3] = 0.5*fvec[3]-1.0;
  //fvec[4] = 0.5*fvec[4]-1.0;
  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
    * essere anche negativa! */
@@ -940,14 +938,12 @@ void funcs2beZeroedDistNegNeighPlaneSE(int n, double x[], double fvec[], int i)
     {
       fvec[k1] = fx[k1] - Sqr(x[6])*gradplane[k1];
     }
-  fvec[3] = 0.0;
+  fvec[3] = calcf(xpA, i);
   fvec[4] = 0.0;
   for (k1 = 0; k1 < 3; k1++)
     {
-      fvec[3] += (x[k1]-rA[k1])*fx[k1];
       fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
     }
-  fvec[3] = 0.5*fvec[3]-1.0;
   //fvec[4] = 0.5*fvec[4]-1.0;
 
   /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
@@ -1697,11 +1693,13 @@ int calc_intersecSE(int i, double *rB, double *rA, double **Ri, double* rI)
   chsi2 = 1.0;
 #endif
   iSE = i;
-  rSE = rA;
-  RiSE = Ri;
-  xSE = rB;
+  rSE = rA;  /* centro del SE */
+  RiSE = Ri; /* orientazione del SE */
+  xSE = rB;  /* a partire da rA, rArB è la direzione lungo la quale calcolare il punto d'intersezione 
+	        con il SE*/
   //printf("func_to_zero_zb(0)=%.15G func_to_zero_zb(1):%.15G\n", func_to_zero_zb(0), func_to_zero_zb(1));
   chsi = zbrent(func_to_zero_intersec_zb, chsi1, chsi2, 1E-14);
+  //printf("i=%d chsi=%.15G\n", i, chsi);
   for (kk=0; kk < 3; kk++)
     rI[kk] = rA[kk] + chsi*(rB[kk]-rA[kk]);
   //printf("polinterr=%d intersec: %.15G\n", polinterr, calcfLab(i, rI, rA, Ri));
@@ -1709,5 +1707,13 @@ int calc_intersecSE(int i, double *rB, double *rA, double **Ri, double* rI)
     return 0;
   else 
     return 1;
+}
+void calcfxLabSE(int i, double *x, double *r, double **Ri, double fx[3])
+{
+  /* r = centro SE, Ri = orientazione SE, x=punto sulla superficie di cui si deve calcolare il gradiente */ 
+  double fxp[3], xpA[3];
+  lab2body(i, &x[0], xpA, r, Ri);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], i);
+  body2lab(i, fxp, fx, r, Ri);
 }
 #endif
