@@ -90,6 +90,8 @@ int is_superellipse(int i)
   else 
     return 1;
 }
+#define MD_TWOPARAMSE
+#ifdef MD_TWOPARAMSE
 double calcf(double *x,int i)
 {
   double a,b,c,e,n;
@@ -150,6 +152,66 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   df[1][2] = df[2][0] = df[2][1] = 0.0;
   df[2][2] = -(2.0*nm2*pow(fabs(z)/c,2.0/n))/(Sqr(n)*Sqr(z)); 
 }
+
+#else
+double calcf(double *x,int i)
+{
+  double a,b,c,n1,n2,n3;
+  a = typesArr[typeOfPart[i]].sax[0];
+  b = typesArr[typeOfPart[i]].sax[1];
+  c = typesArr[typeOfPart[i]].sax[2];
+  n1 = typesArr[typeOfPart[i]].n[0];
+  n2 = typesArr[typeOfPart[i]].n[1];
+  n3 = typesArr[typeOfPart[i]].n[2];
+  return pow(fabs(x[0])/a, n1)+pow(fabs(x[1])/b, n2)+pow(fabs(x[2])/c, n3);
+}
+#define Sign(x) ((x>=0)?1:-1)
+void calcfx(double *fx, double x, double y, double z, int i)
+{
+/* calcola il gradiente della superficie nel riferimento del corpo rigido*/
+  double a, b, c, n1, n2, n3;
+  double xa, yb, A, inve2;
+  double an1, bn2, cn3;
+  a = typesArr[typeOfPart[i]].sax[0];
+  b = typesArr[typeOfPart[i]].sax[1];
+  c = typesArr[typeOfPart[i]].sax[2];
+  n1 = typesArr[typeOfPart[i]].n[0];
+  n2 = typesArr[typeOfPart[i]].n[1];
+  n3 = typesArr[typeOfPart[i]].n[2];
+  an1=n1/pow(a,n1);
+  bn2=n2/pow(b,n2);
+  cn3=n3/pow(c,n3);
+  //printf("a=%f b=%f c=%f e=%f n=%f\n", a,b,c,e,n);
+  fx[0] = an1*pow(fabs(x),n1-1.0);
+  fx[1] = bn2*pow(fabs(y),n2-1.0);
+  fx[2] = cn3*pow(fabs(z),n3-1.0);
+}
+
+void calcfxx(double df[3][3], double x, double y, double z, int i)
+{
+  /* calcola fxx nel riferimento del corpo rigido */
+  double a, b, c, n1, n2, n3;
+  double an1, bn2, cn3;
+  a = typesArr[typeOfPart[i]].sax[0];
+  b = typesArr[typeOfPart[i]].sax[1];
+  c = typesArr[typeOfPart[i]].sax[2];
+  n1 = typesArr[typeOfPart[i]].n[0];
+  n2 = typesArr[typeOfPart[i]].n[1];
+  n3 = typesArr[typeOfPart[i]].n[2];
+  an1=Sqr(n1)/pow(a,n1);
+  bn2=Sqr(n2)/pow(b,n2);
+  cn3=Sqr(n3)/pow(c,n3);
+  df[0][0]=an1*pow(fabs(x),n1-2.0);
+  df[0][1]=0;
+  df[0][2]=0;
+  df[1][0]=0;
+  df[1][1]=bn2*pow(fabs(y),n2-2.0);
+  df[1][2]=0;
+  df[2][0]=0;
+  df[2][1]=0;
+  df[2][2]=cn3*pow(fabs(z),n3-2.0);
+}
+#endif
 extern void lab2body(int i, double x[], double xp[], double *rO, double **R);
 void body2lab_fx(int i, double xp[], double x[], double **R)
 {
@@ -892,7 +954,16 @@ void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df,
   /* ...and now we have to go back to laboratory reference system */
   body2lab_fx(iA, fxp, fx, RtA);
   body2lab_fxx(iA, fxxp, fxx, RtA);
-
+#if 0
+  if (isnan(fxx[0][0]))
+    {
+      printf("x=%f %f %f\n", x[0], x[1], x[2]);
+      printf("fxx: %f %f %f\n", fxx[0][0], fxx[1][1], fxx[2][2]);
+      printf("fxx: %f %f %f\n", fxxp[0][0], fxxp[1][1], fxxp[2][2]);
+      print_matrix(RtA, 3);
+      printf("xpA=%f %f %f\n", xpA[0], xpA[1], xpA[2]);
+    }
+#endif
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)

@@ -1607,6 +1607,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
       calc_intersec_neigh_plane(rA, rB, Xa, gradplane, rC, rD);
 #endif
     }
+  //printf("i=%d rA=%f %f %f rB=%f %f %f\n", i, rA[0], rA[1], rA[2], rB[0], rB[1], rB[2]);
   MD_DEBUG30(if (globalHW && Oparams.curStep >= 5100) printf("[GuessOpt] t=%.15G\n",t+t1));
 
   for(k1=0; k1 < 3; k1++)
