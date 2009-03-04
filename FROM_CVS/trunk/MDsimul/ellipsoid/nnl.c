@@ -321,6 +321,11 @@ void rebuildNNL(void)
     printf("nextNNLrebuild=%.15G\n", nextNNLrebuild);
   //ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 }
+#ifdef MD_SUPERELLIPSOID
+extern void funcs2beZeroedNeighPlaneSE(int n, double x[], double fvec[], int i);
+extern void fdjacNeighPlaneSE(int n, double x[], double fvec[], double **df, 
+		     void (*vecfunc)(int, double [], double [], int), int iA);
+#endif
 
 void fdjacNeighPlane(int n, double x[], double fvec[], double **df, 
 		     void (*vecfunc)(int, double [], double [], int), int iA)
@@ -335,6 +340,13 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
   double psi, phi;
   double OmegaA[3][3];
   int k1, k2;
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(iA))
+    {
+      fdjacNeighPlaneSE(n, x, fvec, df, vecfunc, iA);
+      return;
+    }
+#endif 
   ti = x[4] + (trefG - atomTime[iA]);
   rA[0] = rx[iA] + vx[iA]*ti;
   rA[1] = ry[iA] + vy[iA]*ti;
@@ -661,6 +673,13 @@ void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
 #ifdef EDHE_FLEX
   int typei;
 #endif
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(i))
+    {
+      funcs2beZeroedNeighPlaneSE(n, x, fvec, i);
+      return;
+    }
+#endif 
   /* x = (r, alpha, t) */ 
   ti = x[4] + (trefG - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
@@ -855,8 +874,9 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 }
 extern double gradplane[3];
-void funcs2beZeroedDistNegNeighPlane5SE(int n, double x[], double fvec[], int i);
-
+#ifdef MD_SUPERELLIPSOID
+extern void funcs2beZeroedDistNegNeighPlane5SE(int n, double x[], double fvec[], int i);
+#endif
 void funcs2beZeroedDistNegNeighPlane5(int n, double x[], double fvec[], int i)
 {
   int k1, k2; 
@@ -1621,11 +1641,17 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
    * LO STESSO. */
   else
     vecg[7] = 0.0;
+
+  //if (isnan(vecg[1]))
+   //   printf("BEFORE vecg: %f %f %f %f %f %f\n", vecg[0], vecg[1], vecg[2], vecg[3], vecg[4], vecg[5]);
   MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
   if (OprogStatus.dist5NL)
     newtDistNegNeighPlane(vecg, 5, &retcheck, funcs2beZeroedDistNegNeighPlane5, i); 
   else
     newtDistNegNeighPlane(vecg, 8, &retcheck, funcs2beZeroedDistNegNeighPlane, i); 
+
+  //if (isnan(vecg[1]))
+    //  printf("AFTER vecg: %f %f %f %f %f %f\n", vecg[0], vecg[1], vecg[2], vecg[3], vecg[4], vecg[5]);
   if (retcheck != 0)
     {
       if (OprogStatus.targetPhi>0)
@@ -3106,8 +3132,9 @@ double calcDistNegNeighPlaneAll(double t, double tref, int i, double dists[6], d
 	  gradplane[kk] = gradplane_all[nn][kk];
 	  rB[kk] = rBall[nn][kk];
 	}
+      //printf("rB=%f %f %f vecgd: %f %f %f %f %f %f\n", rB[0], rB[1], rB[2], vecgd[nn][0], vecgd[nn][1], vecgd[nn][2], vecgd[nn][3], vecgd[nn][4], vecgd[nn][5]);
       dists[nn] = calcDistNegNeighPlane(t, tref, i, r1, r2, vecgd[nn], calcguess, 0, &err, nn);
-      //printf("dist[%d]:%.15G\n", nn, dists[nn]);
+      //printf("NNL i=%d dist[%d]:%.15G\n", i, nn, dists[nn]);
       if (nn==0 || dists[nn] < dmin)
 	dmin = dists[nn];
     }
