@@ -280,7 +280,8 @@ void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[
      {
        for (k2 = 0; k2 < 3; k2++)
 	 {
-	   /* 24/07/07 il primo addendo è corretto il secondo no! */
+	   /* 24/07/07: il primo addendo è corretto il secondo no! */
+	   /* 04/03/09: CHECK THIS FORMULA!!! <======================================= !!!!!!!!!!! */
 	   *Ft += -fxp[k1]*R[k1][k2]*vel[k2] + fxp[k1]*Rdot[k1][k2]*dx[k2];
 	 }
      }
@@ -688,6 +689,194 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
 #endif
 }
 
+void fdjacNeighPlaneSE(int n, double x[], double fvec[], double **df, 
+		     void (*vecfunc)(int, double [], double [], int), int iA)
+{
+  /* N.B. QUESTA ROUTINE VA OTTIMIZZATA! ad es. calcolando una sola volta i gradienti di A e B...*/
+  double  rA[3], ti, vA[3], vB[3], OmegaB[3][3];
+  double DA[3][3], fx[3], invaSqN, invbSqN, invcSqN;
+  double Fxt[3], Ft;
+  double xpA[3], fxxp[3][3], fxp[3], fxx[3][3];
+#ifdef EDHE_FLEX
+  int typei;
+#endif
+  double psi, phi;
+  double OmegaA[3][3];
+  int k1, k2;
+  ti = x[4] + (trefG - atomTime[iA]);
+  rA[0] = rx[iA] + vx[iA]*ti;
+  rA[1] = ry[iA] + vy[iA]*ti;
+  rA[2] = rz[iA] + vz[iA]*ti;
+  vA[0] = vx[iA];
+  vA[1] = vy[iA];
+  vA[2] = vz[iA];
+  /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  if (isSymItens(iA))
+    UpdateOrient(iA, ti, RA, OmegaA);
+  else
+    symtop_evolve_orient(iA, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
+  UpdateOrient(iA, ti, RA, OmegaA);
+#endif
+  MD_DEBUG2(printf("i=%d ti=%f", iA, ti));
+  MD_DEBUG2(print_matrix(RA, 3));
+#ifdef EDHE_FLEX
+  typei = typeOfPart[iA];  
+  invaSqN = 1/Sqr(typesArr[typei].sax[0]);
+  invbSqN = 1/Sqr(typesArr[typei].sax[1]);
+  invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+#else
+  invaSqN = 1/Sqr(axa[iA]);
+  invbSqN = 1/Sqr(axb[iA]);
+  invcSqN = 1/Sqr(axc[iA]);
+#endif
+  //tRDiagR(iA, Xa, invaSqN, invbSqN, invcSqN, RA);
+  MD_DEBUG2(printf("invabc: (%f,%f,%f)\n", invaSq, invbSq, invcSq));
+  MD_DEBUG2(print_matrix(Xa, 3));
+  DA[0][1] = DA[0][2] = DA[1][0] = DA[1][2] = DA[2][0] = DA[2][1] = 0.0;
+  DA[0][0] = invaSqN;
+  DA[1][1] = invbSqN;
+  DA[2][2] = invcSqN;
+
+  /*N.B. il corpo rigido B (ossia il piano) in tale caso non evolve! */
+  vB[0] = 0.0;
+  vB[1] = 0.0;
+  vB[2] = 0.0;
+  OmegaB[0][0] = 0;
+  OmegaB[0][1] = 0;
+  OmegaB[0][2] = 0;
+  OmegaB[1][0] = 0;
+  OmegaB[1][1] = 0;
+  OmegaB[1][2] = 0;
+  OmegaB[2][0] = 0;
+  OmegaB[2][1] = 0;
+  OmegaB[2][2] = 0;
+   
+  lab2body(iA, &x[0], xpA, rA, RA);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
+  calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(iA, fxp, fx, RA);
+  body2lab_fxx(iA, fxxp, fxx, RA);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  df[k1][k2] = fxx[k1][k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = gradplane[k1];
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][3] = -2.0*x[3]*gradplane[k1];
+    } 
+  df[3][3] = 0.0;
+  df[4][3] = 0.0;
+  calcFxtFtSE(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], OmegaA, RA, rA, vA, fxp, fxxp, Fxt, &Ft);
+#if 0
+#ifdef MD_ASYM_ITENS
+  if (isSymItens(iA))
+    calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+  else
+    calcFxtFt(iA, x, RM[iA], cosEulAng[0], sinEulAng[0], Xa, DA, RA, rA, vA, fx, Fxt, &Ft);
+#else
+  calcFxtFtSym(x, Xa, DA, OmegaA, RA, rA, vA, fx, Fxt, &Ft);
+#endif
+#endif
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][4] = Fxt[k1];
+    } 
+ df[3][4] = Ft;
+ df[4][4] = 0.0;
+#ifndef MD_GLOBALNRNL
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[3])*gradplane[k1];
+    }
+ fvec[3] = calcf(xpA, iA);
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+      fvec[4] += (x[k1]-rB[k1])*gradplane[k1];
+   }
+ MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+#endif
+}
+
+void funcs2beZeroedNeighPlaneSE(int n, double x[], double fvec[], int i)
+{
+  int na, k1, k2; 
+  double  rA[3], ti;
+  double fx[3];
+  double invaSqN, invbSqN, invcSqN;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#else
+  double Omega[3][3];
+#endif
+#ifdef EDHE_FLEX
+  int typei;
+#endif
+  double xpA[3], fxp[3];
+
+  /* x = (r, alpha, t) */ 
+  ti = x[4] + (trefG - atomTime[i]);
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  /* ...and now orientations */
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(i, ti, Rt, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
+  UpdateOrient(i, ti, Rt, Omega);
+#endif
+  na = (i < Oparams.parnumA)?0:1;
+#ifdef EDHE_FLEX
+  typei = typeOfPart[i];  
+  invaSqN = 1/Sqr(typesArr[typei].sax[0]);
+  invbSqN = 1/Sqr(typesArr[typei].sax[1]);
+  invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+#else
+  invaSqN = 1.0/Sqr(axa[i]);
+  invbSqN = 1.0/Sqr(axb[i]);
+  invcSqN = 1.0/Sqr(axc[i]);
+#endif
+  //tRDiagR(i, Xa, invaSqN, invbSqN, invcSqN, Rt);
+
+  lab2body(i, &x[0], xpA, rA, Rt);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], i);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(i, fxp, fx, Rt);
+
+  /* il secondo ellissoide resta fermo al tempo iniziale */
+  /* il secondo corpo rigido (ossia il piano) non deve evolvere nel tempo */
+  MD_DEBUG(print_matrix(Xb,3));
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[3])*gradplane[k1];
+    }
+  fvec[3] = calcf(xpA, i);
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[4] += (x[k1]-rB[k1])*gradplane[k1];
+    }
+  MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
+}
+
 void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int), int iA)
 {
@@ -699,7 +888,7 @@ void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df,
      assume la forma più semplice */
   lab2body(iA, &x[0], xpA, rA, RtA);
   calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
-  calcfxx(fxxp, xpA[0], xpA[1], xpA[2] ,iA);
+  calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
   /* ...and now we have to go back to laboratory reference system */
   body2lab_fx(iA, fxp, fx, RtA);
   body2lab_fxx(iA, fxxp, fxx, RtA);
@@ -1714,6 +1903,6 @@ void calcfxLabSE(int i, double *x, double *r, double **Ri, double fx[3])
   double fxp[3], xpA[3];
   lab2body(i, &x[0], xpA, r, Ri);
   calcfx(fxp, xpA[0], xpA[1], xpA[2], i);
-  body2lab(i, fxp, fx, r, Ri);
+  body2lab_fx(i, fxp, fx, Ri);
 }
 #endif
