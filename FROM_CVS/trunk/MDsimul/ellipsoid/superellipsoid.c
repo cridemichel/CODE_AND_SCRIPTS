@@ -90,7 +90,7 @@ int is_superellipse(int i)
   else 
     return 1;
 }
-#define MD_TWOPARAMSE
+#undef MD_TWOPARAMSE
 #ifdef MD_TWOPARAMSE
 double calcf(double *x,int i)
 {
@@ -163,7 +163,7 @@ double calcf(double *x,int i)
   n1 = typesArr[typeOfPart[i]].n[0];
   n2 = typesArr[typeOfPart[i]].n[1];
   n3 = typesArr[typeOfPart[i]].n[2];
-  return pow(fabs(x[0])/a, n1)+pow(fabs(x[1])/b, n2)+pow(fabs(x[2])/c, n3);
+  return pow(fabs(x[0])/a, n1)+pow(fabs(x[1])/b, n2)+pow(fabs(x[2])/c, n3)-1.0;
 }
 #define Sign(x) ((x>=0)?1:-1)
 void calcfx(double *fx, double x, double y, double z, int i)
@@ -182,9 +182,9 @@ void calcfx(double *fx, double x, double y, double z, int i)
   bn2=n2/pow(b,n2);
   cn3=n3/pow(c,n3);
   //printf("a=%f b=%f c=%f e=%f n=%f\n", a,b,c,e,n);
-  fx[0] = an1*pow(fabs(x),n1-1.0);
-  fx[1] = bn2*pow(fabs(y),n2-1.0);
-  fx[2] = cn3*pow(fabs(z),n3-1.0);
+  fx[0] = Sign(x)*an1*pow(fabs(x),n1-1.0);
+  fx[1] = Sign(y)*bn2*pow(fabs(y),n2-1.0);
+  fx[2] = Sign(z)*cn3*pow(fabs(z),n3-1.0);
 }
 
 void calcfxx(double df[3][3], double x, double y, double z, int i)
@@ -198,9 +198,9 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   n1 = typesArr[typeOfPart[i]].n[0];
   n2 = typesArr[typeOfPart[i]].n[1];
   n3 = typesArr[typeOfPart[i]].n[2];
-  an1=Sqr(n1)/pow(a,n1);
-  bn2=Sqr(n2)/pow(b,n2);
-  cn3=Sqr(n3)/pow(c,n3);
+  an1=(n1)*(n1-1)/pow(a,n1);
+  bn2=(n2)*(n2-1)/pow(b,n2);
+  cn3=(n3)*(n3-1)/pow(c,n3);
   df[0][0]=an1*pow(fabs(x),n1-2.0);
   df[0][1]=0;
   df[0][2]=0;
@@ -1277,8 +1277,13 @@ double calc_sign_SE(int i, double *r, double **R, double *x, double **X)
     x[k1] += L*rint((x[k1] - r[k1])/L);
 #endif
   lab2body(i, x, xp, r, R);
+#ifdef MD_TWOPARAMSE
   segno = pow(pow(fabs(xp[0])/a,2.0/e)+pow(fabs(xp[1])/b,2.0/e),e/n)+pow(fabs(xp[2])/c,2.0/n)-1.0; 
+#else
+  segno = calcf(xp, i);
+#endif
   MD_DEBUG37(printf("SE segno = %.15G\n" , segno));
+
   return segno;
 }
 extern double costolSDgrad;
