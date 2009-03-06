@@ -80,7 +80,7 @@ extern double scalProd(double *A, double *B);
 extern int fdjac_disterr;
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdirs;
 extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri);
-
+extern void lab2body(int i, double x[], double xp[], double *rO, double **R);
 int is_superellipse(int i)
 {
   return 1;
@@ -210,9 +210,16 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   df[2][0]=0;
   df[2][1]=0;
   df[2][2]=cn3*pow(fabs(z),n3-2.0);
+#if 0
+  if (i==121)
+    {
+      printf("pow():%.15G n2-2=%.15G bn2=%.15G\n", pow(fabs(y),n2-2.0), n2-2, bn2);
+      printf("calcfxx: df= %f %f %f\n", df[0][0], df[1][1], df[2][2]);
+      printf("xyz=%.15G %.15G %.15G\n", x, y, z);
+    }
+#endif
 }
 #endif
-extern void lab2body(int i, double x[], double xp[], double *rO, double **R);
 void body2lab_fx(int i, double xp[], double x[], double **R)
 {
   int k1, k2;
@@ -509,7 +516,7 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
   MD_DEBUG37(printf("fx=%.15G %.15G %.15G gx=%.15G %.15G %.15G\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
   calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
   calcfx(gxp, xpB[0], xpB[1], xpB[2], iB);
-  calcfxx(fxxp, xpA[0], xpA[1], xpA[2] ,iA);
+  calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
   calcfxx(gxxp, xpB[0], xpB[1], xpB[2], iB);
   /* ...and now we have to go back to laboratory reference system */
   body2lab_fx(iA, fxp, fx, RtA);
@@ -949,13 +956,23 @@ void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df,
   /* ci mettiamo nel riferimento del corpo rigido dove lo Jacobiano
      assume la forma più semplice */
   lab2body(iA, &x[0], xpA, rA, RtA);
+#if 0
+  printf("in fdjac\n");
+  print_matrix(RtA,3);
+  printf("rA=%f %f %f xpA=%f %f %f %f %f %f\n", rA[0], rA[1], rA[2], xpA[0], xpA[1], xpA[2], x[0], x[1], x[2]);
+#endif
   calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
   calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
   /* ...and now we have to go back to laboratory reference system */
   body2lab_fx(iA, fxp, fx, RtA);
   body2lab_fxx(iA, fxxp, fxx, RtA);
 #if 0
-  if (isnan(fxx[0][0]))
+  printf("fxx0: %f %f %f\n", fxx[0][0], fxx[0][1], fxx[0][2]);
+  printf("fxx1: %f %f %f\n", fxx[1][0], fxx[1][1], fxx[1][2]);
+  printf("fxx2: %f %f %f\n", fxx[2][0], fxx[2][1], fxx[2][2]); 
+#endif
+#if 0
+  if (fabs(fxx[0][0])> 10)
     {
       printf("x=%f %f %f\n", x[0], x[1], x[2]);
       printf("fxx: %f %f %f\n", fxx[0][0], fxx[1][1], fxx[2][2]);
@@ -1020,6 +1037,7 @@ void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df,
     df[k1+5][6] = 0;
   for (k1 = 0; k1 < 3; k1++)
     df[k1+5][7] = gradplane[k1];//fx[k1];
+  //print_matrix(df,8);
 #ifndef MD_GLOBALNRDNL
  /* and now evaluate fvec */
  for (k1 = 0; k1 < 3; k1++)

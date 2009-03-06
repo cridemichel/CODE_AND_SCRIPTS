@@ -4203,12 +4203,17 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
   for (its=0;its<MAXITS3;its++)
     { /* Start of iteration loop. */
        /* ============ */
-      if (OprogStatus.dist5NL)
+      //if (x[0] > 1E4)
+#if 0
+      if (iA==121)
+       	printf("A its=%d check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",its, *check, test, x[0], x[1], x[2], x[3],x[4]);
+#endif
+     if (OprogStatus.dist5NL)
 	fdjacDistNegNeighPlane5(n,x,fvecD,fjac,vecfunc, iA);
       else
 	fdjacDistNegNeighPlane(n,x,fvecD,fjac,vecfunc, iA);
-      /* If analytic Jacobian is available, you can 
-	  replace the routine fdjac below with your own routine.*/
+      	/* If analytic Jacobian is available, you can 
+	   replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNRDNL
        for (i=0;i<n;i++) { /* Compute  f for the line search.*/
 	 for (sum=0.0,j=0;j<n;j++)
@@ -4307,6 +4312,10 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 #endif
 #else
 #ifdef MD_NEW_NR_CHECKS
+#if 0
+      if (iA==121)
+	printf("its=%d p=%f %f %f %f %f %f %f %f\n", its, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+#endif
       for (i=0;i<n;i++) 
 	{ 
 	  xold[i] = x[i];

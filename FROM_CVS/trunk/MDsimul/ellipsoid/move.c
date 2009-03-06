@@ -5261,6 +5261,9 @@ extern double calc_sign_SE(int i, double *r, double **R, double *x, double **X);
 #ifdef MD_SAVE_DISTANCE
 void saveStore(double t);
 #endif
+#ifdef MD_SUPERELLIPSOID
+extern void calcfxLabSE(int i, double *x, double *r, double **Ri, double fx[3]);
+#endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -5343,8 +5346,9 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
       invcSq[na] = 1/Sqr(axc[i]);
     }
 #endif
+#ifndef MD_SUPERELLIPSOID
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
-
+#endif
   ti = t + (t1 - atomTime[j]);
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
@@ -5385,8 +5389,10 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
       invcSq[na] = 1/Sqr(axc[j]);
     }
 #endif
+#ifndef MD_SUPERELLIPSOID
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
-
+#endif
+#ifndef MD_SUPERELLIPSOID
   if (OprogStatus.dist5)
     {
       for (k1 = 0; k1 < 3; k1++)
@@ -5399,6 +5405,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 	    }
 	}
     }
+#endif
   //printf(">>>>>>> BOHHHHHHHHHHHHHHHHH\n");
 #ifdef MC_SIMUL
   /* N.B. se si fa un Monte Carlo di ellissoidi queste condizioni evitano problemi nel calcolo 
@@ -5486,8 +5493,13 @@ retry:
 	}
       MD_DEBUG50(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
+#ifdef MD_SUPERELLIPSOID
+      calcfxLabSE(i, rC, rA, RtA, gradf);
+      calcfxLabSE(j, rD, rB, RtB, gradg);
+#else
       calc_grad(rC, rA, Xa, gradf);
       calc_grad(rD, rB, Xb, gradg);
+#endif
       MD_DEBUG50(printf("gradf=(%f,%f,%f) gradg=(%f,%f,%f)\n",
 		      gradf[0], gradf[1], gradf[2], gradg[0], gradg[1], gradg[2]));
       nf = calc_norm(gradf);
@@ -5671,11 +5683,15 @@ retry:
     {
       if (OprogStatus.dist5)// && !tryagain)
 	{
+#ifdef MD_SUPERELLIPSOID
+	  calcfxLabSE(i, r1, rA, RtA, fx);
+#else
     	  fx[k1] = 0;
 	  for (k2 = 0; k2 < 3; k2++)
 	    {
 	      fx[k1] += 2.0*Xa[k1][k2]*(r1[k2]-rA[k2]);
 	    }
+#endif
 	  r2[k1] = r1[k1] + fx[k1]*vecg[4];
 	  vecgsup[k1+5] = r2[k1];
 	}
