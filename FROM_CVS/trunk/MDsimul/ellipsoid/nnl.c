@@ -1303,17 +1303,39 @@ void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
 #ifdef MD_SUPERELLIPSOID
 extern int calc_intersecSE(int i, double *rB, double *rA, double **Ri, double* rI);
 
-void calc_intersec_neigh_planeSE(int i, double *rA, double *rB, double **Xa, double *grad, double* rC, double* rD)
+extern double calcfLab(int i, double *x, double *rA, double **Ri);
+void calc_intersec_neigh_planeSE(int i, double *rA, double *rB, double **Rt, double *grad, double* rC, double* rD)
 {
   double rAA[3], rBA[3], rBAgrad;
   int k, k1;
-  calc_intersecSE(i, rB, rA, Xa, rC);
-  /* ...e ora calcoliamo rD (guess sul piano) */
   for (k1=0; k1 < 3; k1++)
     rBA[k1] = rB[k1] - rA[k1];
+  /* notare che grad è un vettore unitario */
+  rBAgrad = scalProd(rBA, grad);
+  //printf("rBAgrad=%f\n", rBAgrad);
+  /* N.B. 06/03/09: il parallelepipedo usato per il calcolo dell'escape time è più piccolo 
+     di quello reale di  OprogStatus.epsdNL+OprogStatus.epsd (vedi nnl.c:calc_grad_and_point_plane())
+     per cui scegliendo come RD l'intersezione della normale al piano con il parallelepipedo
+     reale (sommando la quantità testé detta) ci si assicura che rD sia esterno al SE */
+  for (k1=0; k1 < 3; k1++)
+    rD[k1] = rA[k1] + (rBAgrad+OprogStatus.epsdNL+OprogStatus.epsd)*grad[k1];
+
+#if 0
+  printf("A qui rA=%f %f %f f(rD)=%f\n", rA[0], rA[1], rA[2], calcfLab(i, rD, rA, Rt) );
+  printf("rD=%f %f %f\n", rD[0], rD[1], rD[2]);
+#endif
+  /* N.B. 06/03/09: il punto rD deve essere sempre esterno al SE */
+  calc_intersecSE(i, rD, rA, Rt, rC);
+  //printf("B qui\n");
+  /* ...e ora calcoliamo rD (guess sul piano) */
+#if 0
+  for (k1=0; k1 < 3; k1++)
+    rBA[k1] = rB[k1] - rA[k1];
+  /* notare che grad è un vettore unitario */
   rBAgrad = scalProd(rBA, grad);
   for (k1=0; k1 < 3; k1++)
     rD[k1] = rA[k1] + rBAgrad*grad[k1];
+#endif
 } 
 #endif
 void calc_intersec_neigh_plane(double *rA, double *rB, double **Xa, double *grad, double* rC, double* rD)
@@ -1397,7 +1419,7 @@ void guess_distNeigh_plane(int i,
     {
       sfA += Sqr(saA[k1]); 
     }
-  sfA = sqrt(sfA);
+  sfA = sqrt(sfA)+OprogStatus.epsdNL+OprogStatus.epsd;
   for (k1=0; k1 < 3; k1++)
     {
       dA[k1] = rA[k1];
@@ -1581,7 +1603,9 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   invbSqN = 1.0/Sqr(axb[i]);
   invcSqN = 1.0/Sqr(axc[i]);
 #endif
+#ifndef MD_SUPERELLIPSOID
   tRDiagR(i, Xa, invaSqN, invbSqN, invcSqN, RtA);
+#endif
   //printf("ti= %.15G rNebrShell: %f\n", ti, OprogStatus.rNebrShell);
   ti = 0.0;
   MD_DEBUG20(printf("BBBB ti= %.15G rB (%.15G,%.15G,%.15G)\n", ti, rB[0], rB[1], rB[2]));
@@ -1602,7 +1626,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   else
     {
 #ifdef MD_SUPERELLIPSOID
-      calc_intersec_neigh_planeSE(i, rA, rB, Xa, gradplane, rC, rD);
+      calc_intersec_neigh_planeSE(i, rA, rB, RtA, gradplane, rC, rD);
 #else
       calc_intersec_neigh_plane(rA, rB, Xa, gradplane, rC, rD);
 #endif
@@ -1614,6 +1638,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
     r12[k1] = rC[k1]-rD[k1]; 
   MD_DEBUG34(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
+
 #ifdef MD_SUPERELLIPSOID
   calcfxLabSE(i, rC, rA, RtA, gradf);
 #else
@@ -3134,6 +3159,10 @@ double calcDistNegNeighPlaneAll(double t, double tref, int i, double dists[6], d
 	  rB[kk] = rBall[nn][kk];
 	}
       //printf("rB=%f %f %f vecgd: %f %f %f %f %f %f\n", rB[0], rB[1], rB[2], vecgd[nn][0], vecgd[nn][1], vecgd[nn][2], vecgd[nn][3], vecgd[nn][4], vecgd[nn][5]);
+#if 0
+      if (i==121)
+	printf("nn=%d calcguess=%d\n", nn, calcguess);
+#endif
       dists[nn] = calcDistNegNeighPlane(t, tref, i, r1, r2, vecgd[nn], calcguess, 0, &err, nn);
       //printf("NNL i=%d dist[%d]:%.15G\n", i, nn, dists[nn]);
       if (nn==0 || dists[nn] < dmin)
@@ -3264,7 +3293,10 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
   const int MAXOPTITS = 500;
   double maxddoti[6];
   int its=0, crossed[6], itsf; 
+
+  //printf("MARAMEO\n");
   *d1 = calcDistNegNeighPlaneAll(*t, t1, i, distsOld, vecgd, 1);
+  //printf("SCF NNL *d1=%.15G t=%.15G\n", *d1, *t);
   MD_DEBUG36(printf("[SEARCH_CONTACT_FASTER_NNL_PARALL]t=%.15G d=%.15G\n", *t, *d1));
 #if 0
   if ((t2-t1)*maxddot < *d1 - OprogStatus.epsd)
@@ -3291,6 +3323,8 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
 	return 1;
 #endif
       *t += delt;
+
+      //printf("PRIMA i=%d SCF dist=%.15G\n",i,*d1);
       *d1 = calcDistNegNeighPlaneAll(*t, t1, i, dists, vecgd, 1);
 #if 0
       if (its > 100 && its%10 == 0)
@@ -3300,6 +3334,8 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
 #endif
       //if (delt < 1E-12)
 	//printf("maxddot=%.15G delt=%.15G d=%.15G t=%.15G\n", maxddot, delt, *d1, *t+t1);
+
+      //printf("DOPO i=%d SCF dist=%.15G\n",i,*d1);
 #if 1
       itsf = 0;
       while (check_cross(distsOld, dists, crossed)||(*d1==0.0))
@@ -3536,6 +3572,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
  
 
   MD_DEBUG36(printf("[LOCATE_CONTACT_PARALL_NNL] BEGIN t=%.15G\n", t)); 
+  //printf("STARTING i=%d\n",i);
   if (search_contact_faster_neigh_plane_all(i, &t, t1, t2, vecgd, epsd, &d, epsdFast, 
 					       dists, maxddoti, maxddot))
     {
@@ -3562,9 +3599,12 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
       t += delt;
       while ((d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd, 0))==0.0)
 	{
+
+	  //printf("d=%.15G QUIIIIIIIIIIIQUOOO\n",d);
 	  delt *= GOLD;
 	  t = tini + delt;
 	}
+      //printf("NNLlocate t=%.15G d=%.15G QUIIIIIIIIIIIQUOOO\n",t, d);
 #ifdef MD_PARANOID_CHECKS
       if ((fabs(d-dold)==0.0))
 	{
@@ -3749,6 +3789,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 	}
       if (gotcoll == 1)
 	{
+	  //printf("i=%d BECCATA\n",i);
 	  MD_DEBUG37(printf(">>>2 evtime=%.15G\n", *evtime));
 	  return 1;
 	}
