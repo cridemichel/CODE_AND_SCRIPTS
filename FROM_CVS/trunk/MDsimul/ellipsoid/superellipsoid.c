@@ -1986,6 +1986,7 @@ int calc_intersecSE(int i, double *rB, double *rA, double **Ri, double* rI)
   for (kk=0; kk < 3; kk++)
     rI[kk] = rA[kk] + chsi*(rB[kk]-rA[kk]);
   //printf("polinterr=%d intersec: %.15G\n", polinterr, calcfLab(i, rI, rA, Ri));
+  
   if (polinterr)
     return 0;
   else 

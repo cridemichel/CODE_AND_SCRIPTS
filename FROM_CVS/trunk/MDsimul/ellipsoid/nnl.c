@@ -1304,6 +1304,7 @@ void funcs2beZeroedDistNegNeigh(int n, double x[], double fvec[], int i)
 extern int calc_intersecSE(int i, double *rB, double *rA, double **Ri, double* rI);
 
 extern double calcfLab(int i, double *x, double *rA, double **Ri);
+extern long long numcoll;
 void calc_intersec_neigh_planeSE(int i, double *rA, double *rB, double **Rt, double *grad, double* rC, double* rD)
 {
   double rAA[3], rBA[3], rBAgrad;
@@ -1326,6 +1327,23 @@ void calc_intersec_neigh_planeSE(int i, double *rA, double *rB, double **Rt, dou
 #endif
   /* N.B. 06/03/09: il punto rD deve essere sempre esterno al SE */
   calc_intersecSE(i, rD, rA, Rt, rC);
+  /* il guess iniziale per rD va calcolato però con il piano attuale */
+  for (k1=0; k1 < 3; k1++)
+    rD[k1] = rA[k1] + rBAgrad*grad[k1];
+#if 0
+    {double dd[3], dd1[3], dd2[3], dd3[3]; int kk;
+      for (kk=0; kk < 3; kk++)
+	{
+	  dd1[kk] = rC[kk]-rA[kk];
+	  dd2[kk] = rD[kk]-rA[kk];
+	  dd3[kk] = rD[kk]-rB[kk];
+	  dd[kk]=rC[kk]-rD[kk];
+	}
+      printf("numcoll=%lld norm rCD=%.15G rCA.rDA:%.15G\n", numcoll, calc_norm(dd), scalProd(dd1,dd2));
+      printf("rB.grad=%.15G\n", scalProd(dd3,grad));
+      printf("rB=%f %f %f rA=%f %f %f\n", rB[0], rB[1], rB[2], rA[0], rA[1], rA[2]);
+    }
+#endif
   //printf("B qui\n");
   /* ...e ora calcoliamo rD (guess sul piano) */
 #if 0
@@ -1661,13 +1679,30 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
     }
 
   if (OprogStatus.dist5NL)
-    vecg[4] = 0.0;
+    {
+#ifdef MD_SUPERELLIPSOID
+      if (scalProd(rDC,gradplane) > 0)
+	vecg[4] = calc_norm(rDC)/ng;
+      else
+	vecg[4] = -calc_norm(rDC)/ng;
+#else
+      vecg[4] = 0.0;
+#endif
   /*vecg[4] = calc_norm(rDC);
    * QUESTO GUESS POTREBBE ESSERE MIGLIORE ANCHE SE IN PRATICA SEMBRA
    * LO STESSO. */
+    }
   else
-    vecg[7] = 0.0;
-
+    {
+#ifdef MD_SUPERELLIPSOID
+      if (scalProd(rDC,gradplane) >= 0)
+	vecg[7] = calc_norm(rDC)/ng;
+      else
+	vecg[7] = -calc_norm(rDC)/ng;
+#else
+      vecg[7] = 0.0;
+#endif
+         }
   //if (isnan(vecg[1]))
    //   printf("BEFORE vecg: %f %f %f %f %f %f\n", vecg[0], vecg[1], vecg[2], vecg[3], vecg[4], vecg[5]);
   MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
