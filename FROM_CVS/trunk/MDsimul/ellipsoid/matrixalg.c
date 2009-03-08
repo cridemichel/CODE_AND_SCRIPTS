@@ -4192,6 +4192,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
   for (i=0;i<n;i++) 
     if (fabs(fvecD[i]) > test)
       test=fabs(fvecD[i]); 
+  //printf("INI fvec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", fvecD[0], fvecD[1], fvecD[2], fvecD[3], fvecD[4], fvecD[5], fvecD[6], fvecD[7]);
   if (test < 0.01*TOLFD)
     {
       *check=0; 

@@ -5736,7 +5736,7 @@ retry:
 	{
 	  if (tryagain && OprogStatus.targetPhi <= 0.0)
     	    {
-	      printf("[ERROR] I'm sorry but I can't really calculate distance\n");
+	      printf("[CalcDistNeg ERROR] I'm sorry but I can't really calculate distance\n");
 	      exit(-1);
 	    }
 	  if (!tryagain && (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod==3))
@@ -5750,7 +5750,7 @@ retry:
 	      calcdist_retcheck = 1;
 	      return 0.0;
 	    } 
-	  printf("segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[4], calc_norm(r12));
+	  printf("[calcDistNeg] segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[4], calc_norm(r12));
 	  return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
 	  //exit(-1);
 	}
@@ -5762,7 +5762,7 @@ retry:
 	  
       	  if (tryagain && OprogStatus.targetPhi <= 0)
 	    {
-	      printf("[ERROR] I'm sorry but I can't really calculate distance\n");
+	      printf("[CalcDistNeg ERROR] I'm sorry but I can't really calculate distance\n");
 	      exit(-1);
 	    } 
 	  if (!tryagain && ( OprogStatus.SDmethod==2 || OprogStatus.SDmethod==3 ))
@@ -5776,7 +5776,7 @@ retry:
 	      calcdist_retcheck = 1;
 	      return 0.0;
 	    }
-	  printf("1) segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[7], calc_norm(r12));
+	  printf("1) [calcDistNeg] segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[7], calc_norm(r12));
 	  return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
 	}
     }
@@ -5794,7 +5794,7 @@ retry:
     {
       if (tryagain && OprogStatus.targetPhi <= 0)
 	{
-	  printf("[ERROR segno*segno2] I'm sorry but I can't really calculate distance\n");
+	  printf("[calcDistNeg ERROR segno*segno2] I'm sorry but I can't really calculate distance\n");
 	  exit(-1);
 	} 
       if (!tryagain && ( OprogStatus.SDmethod==2 || OprogStatus.SDmethod==3 ))
@@ -5808,7 +5808,7 @@ retry:
 	  calcdist_retcheck = 1;
 	  return 0.0;
 	}
-      printf("2) segno: %.8G segno2: %.15G dist=%.15G\n", segno, segno2, calc_norm(r12));
+      printf("2) [calcDistNeg] segno: %.8G segno2: %.15G dist=%.15G\n", segno, segno2, calc_norm(r12));
       return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
     }
 #endif
