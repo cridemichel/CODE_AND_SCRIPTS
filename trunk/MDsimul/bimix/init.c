@@ -532,6 +532,7 @@ void usrInitBef(void)
   Oparams.NN = 12;
   Oparams.MM = 6;
 #endif
+  OprogStatus.mdseed = -1.0;
   OprogStatus.Q = 1.0;  /* Default value of the parameter of the Nose method */
   OprogStatus.Nose = 1; /* Use nose method by default */ 
   OprogStatus.W = 0.0027;
