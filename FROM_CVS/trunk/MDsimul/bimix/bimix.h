@@ -642,6 +642,7 @@ struct singlePar OsinglePar[] = {
   {"sigbb",      &Oparams.sigab[1][1],      CT},
   {"sigab",      &Oparams.sigab[0][1],      CT},
   {"mass0",      &Oparams.m[0],             CT},
+  {"seed",       &OprogStatus.mdseed,       INT},
   {"mass1",      &Oparams.m[1],             CT},
   {"cellNum",    &Oparams.M,                INT},
 #ifdef MD_GRAVITY
