@@ -5469,10 +5469,28 @@ retry:
 	  printf("PRIMA dist=%.15f\n",calc_norm(r12));
 	  //printf("distVera=%.15f\n", calcDist(t, i, j, shift, r1, r2, alpha, vecgsup, 1));
 #endif
+#if 0
+	    {double aa[3], bb[3];
+	     int kk5;
+	      for (kk5=0; kk5 < 3; kk5++)
+		aa[kk5] = rC[kk5]-rD[kk5];
+	      printf("BEFORE dist=%.15G\n", calc_norm(aa));
+	      printf("calcf(rC)=%.15G calcf(rD)=%.15G\n", calc_sign_SE(i, rA, RtA, rC, Xa), 
+		     calc_sign_SE(j, rB, RtB, rD, Xa));
+#endif
 #ifdef MD_SUPERELLIPSOID
 	  distSDSupEll(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
 #else
 	  distSD(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+#endif
+#if 0
+	  for (kk5=0; kk5 < 3; kk5++)
+		aa[kk5] = vecgcg[kk5]-vecgcg[kk5+3];
+	      printf("tryagain=%d DOPO dist=%.15G\n", tryagain, calc_norm(aa));
+	      printf("calcf(rC)=%.15G calcf(rD)=%.15G\n", calc_sign_SE(i, rA, RtA, vecgcg, Xa), 
+		     calc_sign_SE(j, rB, RtB, &(vecgcg[3]), Xa));
+
+	    }
 #endif
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -5544,10 +5562,18 @@ retry:
 #if 1
 	  if ((OprogStatus.SDmethod==1||OprogStatus.SDmethod==4) || tryagain)
 	    {
+	      double normDC;
 	      if (scalProd(gradf, rDC) < 0.0)
 		vecg[4] = 0.0;
 	      else
 		vecg[4] = calc_norm(rDC)/nf;  
+#if 0
+	      printf("vecg[4]=%.15G\n", vecg[4]);
+	      normDC = calc_norm(rDC);
+	      printf("normgradf=%.15G normgrag=%.15G\n", calc_norm(gradf), calc_norm(gradg));
+	      printf("gradf.gradg=%.15G\n", scalProd(gradf, gradg)/calc_norm(gradf)/calc_norm(gradg));
+	      printf("gradf.rDC=%.15G grafg.rDC=%.15G\n", scalProd(gradf,rDC)/normDC, scalProd(gradg,rDC)/normDC);
+#endif
 	    }
 	  else
 	    {
@@ -5559,7 +5585,16 @@ retry:
 		    vecg[4] = min(g1,g2);
 		}
 	      else
-		vecg[4] = 0.0;
+		{
+#if 1
+		  if (scalProd(gradf, rDC) < 0.0)
+		    vecg[4] = 0.0;
+		  else
+		    vecg[4] = calc_norm(rDC)/nf;  
+#else
+		  vecg[4] = 0.0;
+#endif
+		}
 	    }
 #endif
 	//   vecg[4] = 0.0;
@@ -5762,7 +5797,7 @@ retry:
 	  
       	  if (tryagain && OprogStatus.targetPhi <= 0)
 	    {
-	      printf("[CalcDistNeg ERROR] I'm sorry but I can't really calculate distance\n");
+	      printf("[CalcDistNeg ERROR] I'm sorry but I can't really calculate distance i=%d j=%d\n",i,j);
 	      exit(-1);
 	    } 
 	  if (!tryagain && ( OprogStatus.SDmethod==2 || OprogStatus.SDmethod==3 ))
@@ -5794,7 +5829,7 @@ retry:
     {
       if (tryagain && OprogStatus.targetPhi <= 0)
 	{
-	  printf("[calcDistNeg ERROR segno*segno2] I'm sorry but I can't really calculate distance\n");
+	  printf("[calcDistNeg ERROR segno*segno2] I'm sorry but I can't really calculate distance i=%d,j=%d\n",i,j);
 	  exit(-1);
 	} 
       if (!tryagain && ( OprogStatus.SDmethod==2 || OprogStatus.SDmethod==3 ))
@@ -7112,6 +7147,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	{
 	  if (refine_contact(i, j, t1, troot, vecgroot, shift, vecg))
 	    {
+	      //printf("found collision between i=%d j=%d\n",i,j);
 	      MD_DEBUG40(printf("[locate_contact] Adding collision between %d-%d\n", i, j));
 	      MD_DEBUG40(printf("collision will occur at time %.15G\n", vecg[4])); 
 	      MD_DEBUG40(printf("[locate_contact] its: %d\n", its));

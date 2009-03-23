@@ -211,6 +211,7 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   df[2][1]=0;
   df[2][2]=cn3*pow(fabs(z),n3-2.0);
 #if 0
+  printf("n2=%.15G y=%.15G bn2=%f\n", n2, y, bn2);
   if (i==121)
     {
       printf("pow():%.15G n2-2=%.15G bn2=%.15G\n", pow(fabs(y),n2-2.0), n2-2, bn2);
@@ -350,7 +351,10 @@ void calcFxtFtSE(int i, double x[3], double **RM, double cosea[3], double sinea[
        for (k2 = 0; k2 < 3; k2++)
 	 {
 	   /* 24/07/07: il primo addendo è corretto il secondo no! */
-	   /* 04/03/09: CHECK THIS FORMULA!!! <======================================= !!!!!!!!!!! */
+	   /* 04/03/09: CHECK THIS FORMULA!!! <======================================= !!!!!!!!!!! 
+	      10/03/09: la formula sembra corretta, forse il commento del 24/07/07 non era stato
+	                aggiornato.*/
+
 	   *Ft += -fxp[k1]*R[k1][k2]*vel[k2] + fxp[k1]*Rdot[k1][k2]*dx[k2];
 	 }
      }
@@ -955,11 +959,16 @@ void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df,
 
   /* ci mettiamo nel riferimento del corpo rigido dove lo Jacobiano
      assume la forma più semplice */
-  lab2body(iA, &x[0], xpA, rA, RtA);
+  lab2body(iA, &(x[0]), xpA, rA, RtA);
 #if 0
   printf("in fdjac\n");
   print_matrix(RtA,3);
   printf("rA=%f %f %f xpA=%f %f %f %f %f %f\n", rA[0], rA[1], rA[2], xpA[0], xpA[1], xpA[2], x[0], x[1], x[2]);
+#endif
+#if 0
+  printf("\n x-rA=%f %f %f\n", x[0]-rA[0], x[1]-rA[1], x[2]-rA[2]);
+  print_matrix(RtA,3);
+  printf("============\n");
 #endif
   calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
   calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
@@ -972,7 +981,7 @@ void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df,
   printf("fxx2: %f %f %f\n", fxx[2][0], fxx[2][1], fxx[2][2]); 
 #endif
 #if 0
-  if (fabs(fxx[0][0])> 10)
+  if (fabs(fxx[0][0])> 0)
     {
       printf("x=%f %f %f\n", x[0], x[1], x[2]);
       printf("fxx: %f %f %f\n", fxx[0][0], fxx[1][1], fxx[2][2]);
@@ -1475,7 +1484,7 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
 #endif
       dd[k1] = vec[k1+3]-vec[k1];
     }
-  calc_norm_SE(jcg, vec, gx, rB, RtB, Xb);
+  calc_norm_SE(jcg, &(vec[3]), gx, rB, RtB, Xb);
 
   if (OprogStatus.forceguess)
     {
@@ -1538,6 +1547,7 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
       fx[k1] /= nf;
       gx[k1] /= ng;
     }
+#if 0
   gradfx = 0;
   gradgx = 0;
   for (k1=0; k1 < 3; k1++)
@@ -1545,11 +1555,13 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
       gradfx += grad[k1]*fx[k1]; 
       gradgx += grad[k1+3]*gx[k1];
     }
+  //printf("gradfx=%.15G gradgx=%.15G nf=%.15G ng=%.15G\n", gradfx, gradgx, nf, ng);
   for (kk=0; kk < 3; kk++)
     {
       grad[kk] -= gradfx*fx[kk];
       grad[kk+3] -= gradgx*gx[kk];
     }
+#endif
   if (OprogStatus.tolSDgrad > 0.0)
     {
       if (OprogStatus.SDmethod==1 || OprogStatus.SDmethod==3)
@@ -1571,8 +1583,18 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
 	}
       else
 	{
-	  if (fabs(scalProd(fx,dd) > normdd*costolSDgrad && fabs(scalProd(gx,dd)) > normdd*costolSDgrad))
+#if 0
+	  printf("normdd=%.15G\n", normdd);
+	  printf("rAB=%.15G\n", sqrt(Sqr(rA[0]-rB[0]) + Sqr(rA[1]-rB[1]) + Sqr(rA[2]-rB[2])));
+#endif
+	  if (fabs(scalProd(fx,dd)) > normdd*costolSDgrad && fabs(scalProd(gx,dd)) > normdd*costolSDgrad)
 	    {
+#if 0
+	      printf("fx+qlpha^2*gx=%.15G\n", fx[0]*nf+Sqr(nf/ng)*gx[0]*ng);
+
+	      printf("fx=%.15G %.15G %.15G gx=%.15G %.15G %.15G\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]);
+	      printf("qui scalprod(fx,dd)=%.15G scalprod(gx,dd)=%.15G normdd=%.15G costolSDgrad=%.15G\n", fabs(scalProd(fx,dd))/normdd, fabs(scalProd(gx,dd))/normdd,normdd,costolSDgrad);
+#endif
 	      //accngA++;
 	      //accngB++;
 	      doneryck = 1;
@@ -1624,16 +1646,13 @@ double calcfLab(int i, double *x, double *rA, double **Ri)
   //  Ri[2][0], Ri[2][1], Ri[2][2]);
   return calcf(xp, i);
 }
-double func_to_zero(double chsi, int i, double *ri, double *x, double *n, double *r, double **X, double **Ri, double *dr,
-		    double sf)
+double func_to_zero(double chsi, int i, double *x, double *n, double *r, double **Ri)
 {
   double x1[3], p[3], A;
   int kk;
   /* n è la normale al punto x relativamente al super-ellissoide
      i, che ha il centro di massa posizionato in r a ha orientazione Ri.
      Se si tratta di un ellissoide X non è altro che la matrice Xa "ruotata" di Ri */
-  for (kk=0; kk < 3; kk++)
-    p[kk] = ri[kk] + sf*dr[kk];
   ///printf("f(x)=%.15G\n", calcfLab(i, ri, r, Ri));
   /* N.B. per ora ho scelto di cercare di portare il glider sulla superficie
      lungo la direzione individuata dal centro del super-ellissoide e dal punto x+dr.
@@ -1641,23 +1660,29 @@ double func_to_zero(double chsi, int i, double *ri, double *x, double *n, double
      In alternativa, come ho già fatto per gli ellissoidi, si puo' usare la direzione individuata
      dalla normale nel punto x tuttavia in tale caso la soluzione non esiste sempre, anche se
      con un passo sufficientemente piccolo esiste anche per superfici concave.  */
+
   for (kk=0; kk < 3; kk++)
-    x1[kk] = p[kk] - chsi*(p[kk]-r[kk]);
-  ///printf("sf=%f x1=%f %f %f chsi=%f p=%f %f %f r=%f %f %f dr=%f %f %f\n", sf, x1[0], x1[1], x1[2], chsi, p[0], p[1], p[2], r[0], r[1], r[2], dr[0], dr[1], dr[2]);
+    x1[kk] = x[kk] - chsi*n[kk];
+    //x1[kk] = p[kk] - chsi*(p[kk]-r[kk]);
+  
+    ///printf("sf=%f x1=%f %f %f chsi=%f p=%f %f %f r=%f %f %f dr=%f %f %f\n", sf, x1[0], x1[1], x1[2], chsi, p[0], p[1], p[2], r[0], r[1], r[2], dr[0], dr[1], dr[2]);
   A = calcfLab(i, x1, r, Ri);	
-  ///printf("A=%.15G \n", A);
+  ////printf("chsi=%.15G f(x1)=%.15G f(x)=%.15G\n", chsi, A, calcfLab(i, x, r, Ri));
+  //printf("f(r1)=%.15G \n", calcfLab(i, ri, r, Ri));
   return A;
 }
 int iSE;
-double *xSE, *nSE, *rSE, **XSE, **RiSE, *drSE, sfSE, *riSE;
+double *xSE, *nSE, *rSE, **RiSE;
 double func_to_zero_zb(double chsi)
 {
-  return func_to_zero(chsi, iSE, riSE, xSE, nSE, rSE, XSE, RiSE, drSE, sfSE);
+  return func_to_zero(chsi, iSE, xSE, nSE, rSE, RiSE);
 }
-int find_surf_sol(int i, double *ri, double *x, double *n, double *r, double *sol, double **X, double **Ri, double *dr, double sf)
+extern int zbrac(double (*func)(double), double *x1, double *x2);
+
+int find_surf_sol(int i, double *x, double *n, double *r, double *sol, double **Ri, double *dr, double dx)
 {
   int kk;
-  double chsi, chsi1, chsi2;
+  double chsi1, chsi2;
   /* unidimensional root finding (NR or Brent? see Numerical Recipe to make a decision) */
   /* Evaluate the initial value of chsi according to sign of point x with respect to the surface of the SE*/
 #if 0
@@ -1673,20 +1698,23 @@ int find_surf_sol(int i, double *ri, double *x, double *n, double *r, double *so
       chsi2 = -chsi;
     }
 #else
-  chsi1 = -1.0;
-  chsi2 = 1.0;
+  chsi1 = -dx;
+  chsi2 = dx;
 #endif
-  sfSE = sf;
   iSE = i;
   rSE = r;
-  XSE = X;
   RiSE = Ri;
-  drSE = dr;
   nSE = n;
   xSE = x;
-  riSE= ri;
+#if 1
+  if (!zbrac(func_to_zero_zb, &chsi1, &chsi2))
+    {
+      return 0;
+    }
+#endif
+   //riSE= ri;
   //printf("func_to_zero_zb(0)=%.15G func_to_zero_zb(1):%.15G\n", func_to_zero_zb(0), func_to_zero_zb(1));
-  chsi = zbrent(func_to_zero_zb, chsi1, chsi2, 1E-7);
+  *sol = zbrent(func_to_zero_zb, chsi1, chsi2, 1E-8);
   if (polinterr)
     return 0;
   else 
@@ -1694,55 +1722,25 @@ int find_surf_sol(int i, double *ri, double *x, double *n, double *r, double *so
 }
 /* questa e' la routine piu' complicata da riscrivere per i super-ellissoidi */ 
 extern int accngA, accngB;
-void projontoSE(int i, double* ri, double *dr, double* rA, double **Xa, double **Ri, double *gradf, double *sfA, double dist)
+void calc_constr_force(int i, double *x, double *n, double dt2, double *g, double *r, double **Ri, double dx)
 {
-  int kk, its, done=0, MAXITS=50, ret;
+  int kk, done=0, ret;
   const double GOLD=1.618034;
-  double r1[3], r1A[3], sf;
+  double r1A[3];
   double sol=0.0;
-  sf = *sfA;
-  its = 0;
  
   callsprojonto++;
-  while (!done && its <= MAXITS)
-    {
-      itsprojonto++;
-#if 1
-      for (kk=0; kk < 3; kk++)
-	{
-	  r1[kk] = ri[kk] + dr[kk]*sf; 
-	  r1A[kk] = r1[kk] - rA[kk];
-	}
-#endif
-      //printf("dr=%f %f %f\n", dr[0], dr[1], dr[2]);
-      ret = find_surf_sol(i, ri, r1, gradf, rA, &sol, Xa, Ri, dr, sf);
-      /* se la soluzione e' stata trovata (ret==0) allora riduce sf e ritenta */
-      if (!ret)
-	{
-	  sf /= GOLD;
-	  its++;
-	  continue;
-	}
-      done = 1;
-    }
-  if (!done)
-    {
-      printf("[SE] maximum number of iterations reached in projonto! Aborting...\n");
-      printf("sol=%.15G norm(dr)=%.15G sf=%.15G\n", sol, calc_norm(dr), sf);
-      exit(-1);
-    }
+  //printf("dr=%f %f %f\n", dr[0], dr[1], dr[2]);
+  ret = find_surf_sol(i, x, n, r, &sol, Ri, g, dx);
+  ////printf("i=%d SE sol=%.15G ret=%d\n", i, sol, ret);
   for (kk = 0; kk < 3; kk++)
     {
-      //dr[kk] = sol*gradf[kk] + sf*dr[kk]; 
-      dr[kk] = sf*dr[kk]-sol*(r1[kk]-rA[kk]); 
+      g[kk] = sol*n[kk]/dt2; 
+      //dr[kk] = sf*dr[kk]-sol*(r1[kk]-rA[kk]); 
     }
   /* commentando questa riga il valore di sf usato per rimanere "aderenti" alla superficie
    * non viene mantenuto.
    * In tal modo il passo non puo' decrescere in maniera irreversibile se non intorno al minimo. */
-#if 0
-  if (OprogStatus.SDmethod == 1 || OprogStatus.SDmethod==3)
-    *sfA = sf;
-#endif
 }
 int check_doneSE(double fp, double fpold, double minax)
 {
@@ -1801,7 +1799,16 @@ int check_doneSE(double fp, double fpold, double minax)
     }
   return 0;
 }
+void check_are_on_surf(char* str, int i, int j, double *ri, double *rj)
+{
+  double A, B;
+  A=  calc_sign_SE(i, rA, RtA, ri, Xa);
+  B=  calc_sign_SE(j, rB, RtB, rj, Xb);
+  printf("[%s] (%d,%d) calcf(ri)=%.15G calcf(rj)=%.15G\n",str, i, j, A, B);
 
+}
+
+#if 0
 void projectgradSE(double *p, double *xi, double *gradf, double *gradg)
 {
   int kk;
@@ -1812,9 +1819,23 @@ void projectgradSE(double *p, double *xi, double *gradf, double *gradg)
       dist+=Sqr(p[kk+3]-p[kk]);
     }
   dist = sqrt(dist);
+  //check_are_on_surf("SD LOOP BEF P", icg, jcg, p, &(p[3]));
   projontoSE(icg, p, xi, rA, Xa, RtA, gradf, &sfA, dist);
   projontoSE(jcg, &p[3], &xi[3], rB, Xb, RtB, gradg, &sfB, dist);
+
+#if 0
+    {
+      double pp[6];
+      for (kk=0; kk < 3; kk++)
+	{
+	  pp[kk] = p[kk]+xi[kk];
+	  pp[kk+3] = p[kk+3] + xi[kk+3];
+	}
+      check_are_on_surf("SD LOOP AFT P", icg, jcg, pp, &(pp[3]));
+    }
+#endif
 }
+#endif
 void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -1825,9 +1846,9 @@ void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, doubl
   int j,its;
   const int ITMAXFR = OprogStatus.maxitsSD;
   //const double GOLD=1.618034;
-  double fp, fpold=0.0, signA, signB;
-  double minax, xi[6], xiold[6];
-  double signAold, signBold, pold[6];
+  double dx, dt2, fp, fpold=0.0, signA, signB;
+  double minax, xi[6], xiold[6], g[6];
+  double signAold, signBold, pold[6], poldold[6];
   //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
  
   minax = min(minaxicg,minaxjcg);
@@ -1835,6 +1856,7 @@ void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, doubl
   sfB = jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
   callsfrprmn++;
   /*Initializations.*/
+  ////check_are_on_surf("SD BEGIN", icg, jcg, p, &(p[3]));
   fp = (*dfunc)(p,xi,gradfG,gradgG, &signA, &signB); 
   if (doneryck==2)
     {
@@ -1851,40 +1873,65 @@ void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, doubl
 #endif
   //printf("p=%f %f %f xi=%f %f %f gradfG=%f %f %f gradgG=%f %f %f\n", p[0], p[1], p[2],
   //	 xi[0], xi[1], xi[2], gradfG[0], gradfG[1], gradfG[2], gradgG[0], gradgG[1], gradgG[2]);
-  projectgradSE(p,xi,gradfG,gradgG);  
+
+  //projectgradSE(p,xi,gradfG,gradgG);  
+  //check_are_on_surf("SD BEGIN", icg, jcg, p, &(p[3]));
+  dt2 = Sqr(sfA);
+  for (j=0; j < n; j++)
+    {
+      pold[j] = p[j];
+    }	  
   for (its=1;its<=ITMAXFR;its++)
     { 
       itsfrprmn++;      
       *iter=its;
       for (j=0; j < n; j++)
 	{
+	  poldold[j] = pold[j];
 	  pold[j] = p[j];
 	  xiold[j] = xi[j];
-	  p[j] += xi[j];
+	  /* uncostrained move (verlet algorithm) */
+	  //p[j] = 2.0*pold[j] - poldold[j] + dt2*xi[j];
+	  p[j] = pold[j] + dt2*xi[j];
 	}
+      if (0)
+	{
+	  double ddd[3];
+	  int kk;
+	  for (kk=0; kk < 3; kk++)
+	    ddd[kk] = p[kk]-rA[kk];
+	  printf("n.ddd=%.15G\n", scalProd(gradfG, ddd));
+	  printf("its=%d p %f %f %f pold %f %f %f\n", its, p[0], p[1], p[2], pold[0], pold[1], pold[2]);
+	  printf("rA %f %f %f\n", rA[0], rA[1], rA[2]);
+	  printf("n %f %f %f\n", gradfG[0], gradfG[1], gradfG[2]); 
+	}
+      dx = calc_norm(&(xi[0]))*dt2;
+      calc_constr_force(icg, &(p[0]), gradfG, dt2, &(g[0]), rA, RtA, dx); 
+      dx = calc_norm(&(xi[3]))*dt2;
+      calc_constr_force(jcg, &(p[3]), gradgG, dt2, &(g[3]), rB, RtB, dx);
+      for (j=0; j < n; j++)
+	p[j] += -g[j]*dt2;
+
+      ////check_are_on_surf("SD LOOP", icg, jcg, p, &(p[3]));
+      //printf("A) distance(its=%d)=%.15G\n", its, sqrt(Sqr(p[0]-p[3])+Sqr(p[1]-p[4])+Sqr(p[2]-p[5])));
       signAold = signA;
       signBold = signB;
       fpold = fp; 
       fp = (*dfunc)(p,xi,gradfG, gradgG, &signA, &signB);
-#if 0
-      if ((OprogStatus.SDmethod == 1 || OprogStatus.SDmethod == 3) && fp > fpold)
-	{
-	  sfA /= GOLD;
-	  sfB /= GOLD;
-	}    
-#endif  
-      projectgradSE(p, xi, gradfG, gradgG);
       if (doneryck==2)
 	{
+	  //printf("QUIIII AAA\n");
 	  callsok++;
 	  return;
 	 }
       if (check_doneSE(fp, fpold, minax))
 	{
+	  //printf("QUIIII BBB\n");
 	  callsok++;
 	  return;
 	}
     } 
+  printf("[Steepest Descent LOOP] TOO MANY ITERATIONS\n");
   return; 
   //nrerror("Too many iterations in frprmn");
   

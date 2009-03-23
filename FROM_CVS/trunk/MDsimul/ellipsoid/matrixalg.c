@@ -2999,6 +2999,31 @@ void distSD(int i, int j, double shift[3], double *vecg, double lambda, int half
       vecg[kk] = vec[kk];
     }
 }
+
+#include <math.h>
+#define ZBRAC_FACTOR 1.6
+#define ZBRAC_NTRY 50
+int zbrac(double (*func)(double), double *x1, double *x2)
+{
+  int j;
+  double f1,f2;
+  if (*x1 == *x2) 
+    {
+      printf("Bad initial range in zbrac");
+      return 1;
+    }
+  f1=(*func)(*x1);
+  f2=(*func)(*x2);
+  for (j=1;j<=ZBRAC_NTRY;j++) {
+    if (f1*f2 < 0.0) return 1;
+    if (fabs(f1) < fabs(f2))
+      f1=(*func)(*x1 += ZBRAC_FACTOR*(*x1-*x2));
+    else
+      f2=(*func)(*x2 += ZBRAC_FACTOR*(*x2-*x1));
+  }
+  return 0;
+}
+
 #define ITMAXZB 100 
 /* Maximum allowed number of iterations.*/
 #define EPSP 3.0e-16 /* Machine floating-point precision.*/
@@ -3186,7 +3211,7 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
 	return 0.0;
     } 
 
-  printf("BRENT TOO MANY ITERATIONS\n");
+  printf("[zbrent] BRENT TOO MANY ITERATIONS\n");
   polinterr = 1;
   return 0.0;
   //nrerror("Maximum number of iterations exceeded in zbrent"); 
@@ -4206,7 +4231,6 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
        /* ============ */
       //if (x[0] > 1E4)
 #if 0
-      if (iA==121)
        	printf("A its=%d check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",its, *check, test, x[0], x[1], x[2], x[3],x[4]);
 #endif
      if (OprogStatus.dist5NL)
@@ -4645,6 +4669,7 @@ void newtDistNeg(double x[], int n, int *check,
   for (i=0;i<n;i++) 
     if (fabs(fvecD[i]) > test)
       test=fabs(fvecD[i]); 
+  //printf("newtDistNeg BEGIN: fvec= %.15G %.15G %.15G %.15G %.15G\n", fvecD[0], fvecD[1], fvecD[2], fvecD[3], fvecD[4]);
   if (test < 0.01*TOLFD)
     {
       *check=0; 
