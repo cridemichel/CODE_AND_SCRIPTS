@@ -5605,9 +5605,13 @@ retry:
 	  if ((OprogStatus.SDmethod==1 || OprogStatus.SDmethod==4) || tryagain)
 	    {
 	      if (scalProd(gradf, rDC) < 0.0)
-		vecg[7] = 0.0;
+		vecg[7] = 0.0;//-calc_norm(rDC)/nf;
 	      else
 		vecg[7] = calc_norm(rDC)/nf;  
+#if 0
+	      printf("rDC=%.15G nf=%.15G vecg[6]=%.15G vecg[7]=%.15G\n", calc_norm(rDC), nf, vecg[6], vecg[7]);
+	      printf("rA=%f %f %f rB=%f %f %f\n", rA[0], rA[1], rA[2], rB[0], rB[1], rB[2]);
+#endif
 	    }
 	  else
 	    {
@@ -5619,7 +5623,9 @@ retry:
 		    vecg[7] = min(g1,g2);
 		}
 	      else
-		vecg[7] = 0.0;
+		{
+		  vecg[7] = 0.0;
+		}
 	    }
 #endif
 	  //vecg[7] = 0.0;

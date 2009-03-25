@@ -3650,7 +3650,11 @@ void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], doub
   for (slope=0.0,i=0;i<n;i++) 
     slope += g[i]*p[i]; 
   if (slope >= 0.0) 
-    nrerror("Roundoff problem in lnsrch."); 
+    {
+      *check=2;
+      return;
+     // nrerror("Roundoff problem in lnsrch."); 
+    }
   test=0.0; /*Compute lambda_min.*/
   for (i=0;i<n;i++) 
     {
@@ -3736,7 +3740,11 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
   for (slope=0.0,i=0;i<n;i++) 
     slope += g[i]*p[i]; 
   if (slope >= 0.0) 
-    nrerror("Roundoff problem in lnsrch."); 
+    {
+      *check=2;
+      return;
+      //nrerror("Roundoff problem in lnsrch."); 
+    }
   test=0.0; /*Compute lambda_min.*/
   for (i=0;i<n;i++) 
     {
@@ -3751,7 +3759,7 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
 	x[i]=xold[i]+alam*p[i]; 
       *f=(*func)(x,iA,iB,shift); 
       if (alam < alamin) 
-	{ /* Convergence on  x. For zero  nding, the calling program 
+	{ /* Convergence on  x. For zero finding, the calling program 
 	     should verify the convergence.*/ 
 	  for (i=0;i<n;i++) 
 	    x[i]=xold[i]; 
@@ -3760,7 +3768,7 @@ void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[
 	}
       else if (*f <= fold+ALF*alam*slope) 
 	return; 
-	/* Su cient function decrease.*/
+	/* Sufficient function decrease.*/
       else 
 	{ /* Backtrack. */
 	  if (alam == 1.0) 
