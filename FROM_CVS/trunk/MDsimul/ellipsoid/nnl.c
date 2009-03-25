@@ -1570,6 +1570,7 @@ void guess_distNeigh(int i,
 }
 #ifdef MD_SUPERELLIPSOID
 extern void calcfxLabSE(int i, double *x, double *r, double **Ri, double fx[3]);
+extern void distSD_NNL(int i, double *vecg, double lambda, int halfspring);
 #endif
 double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane)
 
@@ -1579,6 +1580,10 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   double ti, segno;
   int retcheck;
   double nf, ng, gradf[3];
+#ifdef MD_SUPERELLIPSOID
+  double vecgcg[6], rCD[3];
+  int tryagain=0;
+#endif
 #ifdef MD_ASYM_ITENS
   double psi, phi;
 #else
@@ -1635,6 +1640,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   if (calcgradandpoint)
     calc_grad_and_point_plane(i, gradplane, rB, nplane);
 #endif
+retry:
   MD_DEBUG34(printf("PRI gradf=(%f,%f,%f) gradplane=(%f,%f,%f)\n",
 		  gradf[0], gradf[1], gradf[2], gradplane[0], gradplane[1], gradplane[2]));
   if (OprogStatus.guessDistOpt==1)
@@ -1658,6 +1664,29 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
 		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
 
 #ifdef MD_SUPERELLIPSOID
+#if 0
+  if ((OprogStatus.SDmethod==1 || OprogStatus.SDmethod==4) || tryagain)
+    {
+      for (k1=0; k1 < 3; k1++)
+	{
+	  vecgcg[k1] = rC[k1];
+	  vecgcg[k1+3] = rD[k1];
+	}
+      for (k1=0; k1 < 3; k1++)
+	rCD[k1]=rC[k1]-rD[k1];
+      printf("PRIMA rC=%f %f %f rD=%f %f %f rCD=%.15G\n", rC[0], rC[1], rC[2], rD[0], rD[1], rD[2], calc_norm(rCD));
+      distSD_NNL(i, vecgcg, OprogStatus.springkSD, 1);
+      for (k1=0; k1 < 3; k1++)
+	{
+	  rC[k1] = vecgcg[k1];
+	  rD[k1] = vecgcg[k1+3];
+	}	
+      for (k1=0; k1 < 3; k1++)
+	rCD[k1]=rC[k1]-rD[k1];
+      printf("DOPO rC=%f %f %f rD=%f %f %fi rCD=%.15G\n", rC[0], rC[1], rC[2], rD[0], rD[1], rD[2], calc_norm(rCD));
+
+    }
+#endif
   calcfxLabSE(i, rC, rA, RtA, gradf);
 #else
   calc_grad(rC, rA, Xa, gradf);
@@ -1713,6 +1742,18 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
 
   //if (isnan(vecg[1]))
     //  printf("AFTER vecg: %f %f %f %f %f %f\n", vecg[0], vecg[1], vecg[2], vecg[3], vecg[4], vecg[5]);
+#ifdef MD_SUPERELLIPSOID
+  if (retcheck != 0)
+    {
+      if (!tryagain && (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod==3))
+	{
+	  tryagain=1;
+	  goto retry;
+	}
+      printf("[NNL] I couldn't calculate distance between %d and its NL, calcguess=%d, exiting....\n", i, calcguess);
+      exit(-1);
+    }
+#else
   if (retcheck != 0)
     {
       if (OprogStatus.targetPhi>0)
@@ -1723,6 +1764,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
       printf("[NNL] I couldn't calculate distance between %d and its NL, calcguess=%d, exiting....\n", i, calcguess);
       exit(-1);
     }
+#endif
   if (OprogStatus.dist5NL)
     {
       for (k1 = 0; k1 < 5; k1++)
