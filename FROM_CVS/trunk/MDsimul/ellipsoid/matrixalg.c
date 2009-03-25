@@ -3629,7 +3629,7 @@ void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], doub
    fold and g[1..n], and a direction p[1..n], finds a new point x[1..n] along the direction p
    from xold where the function func has decreased  "sufficiently".  The new function value is 
    returned in f. stpmax is an input quantity that limits the length of the steps so that 
-   you do not try to evaluate the function in regions where it is unde ned or subject 
+   you do not try to evaluate the function in regions where it is undefined or subject 
    to overflow.
    p is usually the Newton direction. The output quantity check is false (0) on a normal exit. 
    It is true (1) when x is too close to xold. In a minimization algorithm, this usually 
@@ -4297,7 +4297,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	  MD_DEBUG(printf("test < TOLF\n"));
 	  FREERETURND
 	}
-      if (*check) 
+      if (*check==1) 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
 #if 0
 	  test=0.0; 
@@ -4769,7 +4769,7 @@ void newtDistNeg(double x[], int n, int *check,
 	  MD_DEBUG(printf("test < TOLF\n"));
 	  FREERETURND
 	}
-      if (*check) 
+      if (*check==1) 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
 #if 0
 	  test=0.0; 

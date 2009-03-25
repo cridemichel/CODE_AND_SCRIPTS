@@ -1456,6 +1456,139 @@ void calc_norm_SE(int i, double *x, double *n, double *r, double **R, double **X
   /* ...and now we have to go back to laboratory reference system */
   body2lab_fx(i, fxp, n, R);
 }
+/* steepest descent per super-ellissoidi e piani*/
+double gradcgfuncRyckNNLSE(double *vec, double *grad, double *fx, double *signA)
+{
+  int kk, k1; 
+  double K1, K2, F, nf, ng, dd[3], normdd, ngA, ngB;
+  double S=1.0, A=1.0, B, gradfx, gradgx, gx[3];
+  doneryck = 0;
+  calc_norm_SE(icg, vec, fx, rA, RtA, Xa);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      dd[k1] = vec[k1+3]-vec[k1];
+    }
+  /* NOTA 25/03/09: calcdist ha come parametro forceguess che in alcuni casi puo' essere 1 ed in altri 0 
+     usando quindi OprogStatus.forceguess non si tiene conto di ciò!! CONTROLLARE!!! */
+  for (k1 = 0; k1 < 3; k1++)
+    gx[k1] = gradplane[k1];
+#if 0
+  if (OprogStatus.forceguess)
+    {
+      A = calc_sign_SE(icg, rA, R[icg],&(vec[3]), Xa); 
+      //B = calc_sign_SE(jcg, rB, R[jcg],&(vec[0]), Xb);
+      if (A<0 && B<0)
+	S = -1.0;
+      else
+	S = 1.0;
+    }
+#endif
+  normdd = calc_norm(dd);
+  if (normdd==0)
+    {
+      doneryck = 2;
+      return 0;
+    }
+  /* la norma dei gradienti e' sempre stepSDA e stepSDB*/ 
+  if (OprogStatus.SDmethod==1 || OprogStatus.SDmethod==3)
+    {
+      K1= icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
+      K2= jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
+    }
+  else
+    {
+      K1 = OprogStatus.springkSD;
+      K2 = OprogStatus.springkSD;
+    }
+  for (kk=0; kk < 3; kk++)
+    {
+      if (OprogStatus.SDmethod == 1 || OprogStatus.SDmethod==3)
+	grad[kk] = S*dd[kk]/normdd;
+      else
+	grad[kk] = S*dd[kk];
+      grad[kk+3]= -K1*grad[kk];
+      grad[kk] *= K2;
+    }
+  nf = calc_norm(fx);
+  ng = calc_norm(gx);
+  for (k1=0; k1 < 3; k1++)
+    {
+      fx[k1] /= nf;
+      gx[k1] /= ng;
+    }
+#if 1
+  gradfx = 0;
+  gradgx = 0;
+  for (k1=0; k1 < 3; k1++)
+    {
+      gradfx += grad[k1]*fx[k1]; 
+      gradgx += grad[k1+3]*gx[k1];
+    }
+  //printf("gradfx=%.15G gradgx=%.15G nf=%.15G ng=%.15G\n", gradfx, gradgx, nf, ng);
+  for (kk=0; kk < 3; kk++)
+    {
+      grad[kk] -= gradfx*fx[kk];
+      grad[kk+3] -= gradgx*gx[kk];
+    }
+#endif
+  if (OprogStatus.tolSDgrad > 0.0)
+    {
+      if (OprogStatus.SDmethod==1 || OprogStatus.SDmethod==3)
+	{
+	  ngA = ngB = 0;  
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      ngA += Sqr(grad[kk]);
+	      ngB += Sqr(grad[kk+3]); 
+	      
+	    }
+	  if (sqrt(ngA) < OprogStatus.tolSDgrad*(icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB))
+	      //&& sqrt(ngB) < OprogStatus.tolSDgrad*(jcg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB))
+	    {
+	      //accngA++;
+	      //accngB++;
+	      doneryck = 1;
+	    }
+	}
+      else
+	{
+	  if (fabs(scalProd(fx,dd)) > normdd*costolSDgrad && fabs(scalProd(gx,dd)) > normdd*costolSDgrad)
+	    {
+	      doneryck = 1;
+	    }
+	}
+    }
+  S *= OprogStatus.springkSD;
+  F = S*Sqr(normdd);
+  return F; 
+}
+/* =========================== >>> forces <<< ======================= */
+double cgfuncRyckNNLSE(double *vec)
+{
+  int kk;
+  double A, B, F;
+  /* NOTA 25/03/09: calcdist ha come parametro forceguess che in alcuni casi puo' essere 1 ed in altri 0 
+     usando quindi OprogStatus.forceguess non si tiene conto di ciò!! CONTROLLARE!!! */
+#if 0
+  if (OprogStatus.forceguess)
+    {
+      A = calc_sign_SE(icg, rA, R[icg],&(vec[3]), Xa); 
+      B = calc_sign_SE(jcg, rB, R[jcg],&(vec[0]), Xb);
+      if (A<0 && B<0)
+	A = -OprogStatus.springkSD;
+      else
+	A = OprogStatus.springkSD;
+    }
+  else
+#endif
+    A = OprogStatus.springkSD;
+ 
+  F = 0.0;
+  for (kk=0; kk < 3; kk++)
+    F += A*Sqr(vec[kk]-vec[kk+3]);
+  return F;
+}
 /* steepest descent per super-ellissoidi */
 double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, double *signA, double *signB)
 {
@@ -1485,7 +1618,8 @@ double gradcgfuncRyckSE(double *vec, double *grad, double *fx, double *gx, doubl
       dd[k1] = vec[k1+3]-vec[k1];
     }
   calc_norm_SE(jcg, &(vec[3]), gx, rB, RtB, Xb);
-
+  /* NOTA 25/03/09: calcdist ha come parametro forceguess che in alcuni casi puo' essere 1 ed in altri 0 
+     usando quindi OprogStatus.forceguess non si tiene conto di ciò!! CONTROLLARE!!! */
   if (OprogStatus.forceguess)
     {
 #if 0
@@ -1836,6 +1970,105 @@ void projectgradSE(double *p, double *xi, double *gradf, double *gradg)
 #endif
 }
 #endif
+void frprmnRyckNNLSE(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double []))
+  /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
+   * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
+   * input as ftol. Returned quantities are p (the location of the minimum), iter
+   * (the number of iterations that were performed), and fret (the minimum value of the function).
+   * The routine linmin is called to perform line minimizations. */
+{ 
+  int j,its;
+  const int ITMAXFR = OprogStatus.maxitsSD;
+  //const double GOLD=1.618034;
+  double dx, dt2, fp, fpold=0.0, signA, signB;
+  double minax, xi[6], xiold[6], g[6];
+  double signAold, signBold, pold[6], poldold[6];
+  //printf("primaprima p= %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5]);
+ 
+  minax = min(minaxicg,minaxjcg);
+  sfA = icg<Oparams.parnumA?OprogStatus.stepSDA:OprogStatus.stepSDB;
+  callsfrprmn++;
+  /*Initializations.*/
+  ////check_are_on_surf("SD BEGIN", icg, jcg, p, &(p[3]));
+  fp = (*dfunc)(p,xi,gradfG, &signA); 
+  if (doneryck==2)
+    {
+      callsok++;
+      return;
+    }
+#if 1
+  if ((OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 4) &&
+      check_doneSE(fp, fpold, minax))
+    {
+      callsok++;
+      return;
+    }
+#endif
+  //printf("p=%f %f %f xi=%f %f %f gradfG=%f %f %f gradgG=%f %f %f\n", p[0], p[1], p[2],
+  //	 xi[0], xi[1], xi[2], gradfG[0], gradfG[1], gradfG[2], gradgG[0], gradgG[1], gradgG[2]);
+
+  //projectgradSE(p,xi,gradfG,gradgG);  
+  //check_are_on_surf("SD BEGIN", icg, jcg, p, &(p[3]));
+  dt2 = Sqr(sfA);
+  for (j=0; j < n; j++)
+    {
+      pold[j] = p[j];
+    }	  
+  for (its=1;its<=ITMAXFR;its++)
+    { 
+      itsfrprmn++;      
+      *iter=its;
+      for (j=0; j < n; j++)
+	{
+	  poldold[j] = pold[j];
+	  pold[j] = p[j];
+	  xiold[j] = xi[j];
+	  /* uncostrained move (verlet algorithm) */
+	  //p[j] = 2.0*pold[j] - poldold[j] + dt2*xi[j];
+	  p[j] = pold[j] + dt2*xi[j];
+	}
+      if (0)
+	{
+	  double ddd[3];
+	  int kk;
+	  for (kk=0; kk < 3; kk++)
+	    ddd[kk] = p[kk]-rA[kk];
+	  printf("n.ddd=%.15G\n", scalProd(gradfG, ddd));
+	  printf("its=%d p %f %f %f pold %f %f %f\n", its, p[0], p[1], p[2], pold[0], pold[1], pold[2]);
+	  printf("rA %f %f %f\n", rA[0], rA[1], rA[2]);
+	  printf("n %f %f %f\n", gradfG[0], gradfG[1], gradfG[2]); 
+	}
+      dx = calc_norm(&(xi[0]))*dt2;
+      calc_constr_force(icg, &(p[0]), gradfG, dt2, &(g[0]), rA, RtA, dx); 
+      //dx = calc_norm(&(xi[3]))*dt2;
+      //calc_constr_force(jcg, &(p[3]), gradgG, dt2, &(g[3]), rB, RtB, dx);
+      /* NOTA 25/03/09: la funzione seguente non serve in quanto è sufficente proiettare lo spostamento
+	 sul piano per far si che il punto appartenga ad esso */
+      //calc_constr_force_onplane(&(p[3]), gradplane, dt2, &(g[3]), rB);
+      for (j=0; j < 3; j++)
+	p[j] += -g[j]*dt2;
+
+      ////check_are_on_surf("SD LOOP", icg, jcg, p, &(p[3]));
+      //printf("A) distance(its=%d)=%.15G\n", its, sqrt(Sqr(p[0]-p[3])+Sqr(p[1]-p[4])+Sqr(p[2]-p[5])));
+      signAold = signA;
+      fpold = fp; 
+      fp = (*dfunc)(p,xi,gradfG, &signA);
+      if (doneryck==2)
+	{
+	  callsok++;
+	  return;
+	 }
+      if (check_doneSE(fp, fpold, minax))
+	{
+	  callsok++;
+	  return;
+	}
+    } 
+  printf("[Steepest Descent NNL LOOP] TOO MANY ITERATIONS\n");
+  return; 
+  //nrerror("Too many iterations in frprmn");
+  
+}
 void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, double (*func)(double []), double (*dfunc)(double [], double [], double [], double [], double*, double*))
   /*Given a starting point p[1..n], Fletcher-Reeves-Polak-Ribiere minimization is performed on a function func,
    * using its gradient as calculated by a routine dfunc. The convergence tolerance on the function value is
@@ -1988,6 +2221,36 @@ void distSDSupEll(int i, int j, double shift[3], double *vecg, double lambda, in
       vecg[kk] = vec[kk];
     }
 }
+void distSD_NNL(int i, double *vecg, double lambda, int halfspring)
+{
+  int kk;
+  double Fret;
+  int iter;
+  double vec[8];
+#ifdef EDHE_FLEX
+  int typei;
+  double axaiF, axbiF, axciF, axajF, axbjF, axcjF;
+#endif
+  icg = i;
+#ifdef EDHE_FLEX
+  typei = typeOfPart[i];
+  axaiF = typesArr[typei].sax[0];
+  axbiF = typesArr[typei].sax[1];
+  axciF = typesArr[typei].sax[2];
+  minaxicg = min3(axaiF, axbiF, axciF);
+#endif
+  cghalfspring = halfspring;
+  for (kk=0; kk < 6; kk++)
+    {
+      vec[kk] = vecg[kk];
+    }
+  frprmnRyckNNLSE(vec, 6, OprogStatus.tolSD, &iter, &Fret, cgfuncRyckNNLSE, gradcgfuncRyckNNLSE);
+  for (kk=0; kk < 6; kk++)
+    {
+      vecg[kk] = vec[kk];
+    }
+}
+
 double func_to_zero_intersec(double chsi, int i, double *x, double *r, double **Ri)
 {
   double x1[3], p[3], A;
