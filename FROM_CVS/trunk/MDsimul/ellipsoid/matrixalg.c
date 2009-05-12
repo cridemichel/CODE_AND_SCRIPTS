@@ -4190,6 +4190,11 @@ void newt(double x[], int n, int *check,
 }
 //#define MD_GLOBALNRD
 #define MAXITS3 200
+#if 0
+extern double gradplane[];
+extern double calc_norm(double *vec);
+extern double scalProd(double *A, double *B);
+#endif
 void newtDistNegNeighPlane(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
@@ -4285,12 +4290,38 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 #endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNRDNL
+      //printf("PRIMA fvec.fvec=%.15G\n", scalProd(fvecD, fvecD));
       lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fminDNeigh,iA, TOLXD); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
+#if 0
+      printf("its=%d check=%d test = %.15f x = (%.15G, %.15G, %.15G, %.15G, %.15G, %.15G, %.15G, %.15G )\n",its, *check, test, x[0], x[1], x[2], x[3],x[4], x[5], x[6], x[7]);
+      printf("fvec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", fvecD[0], fvecD[1], fvecD[2], fvecD[3], fvecD[4],
+	      fvecD[5], fvecD[6], fvecD[7]);
+      printf("gradplane=%.15G %.15G %.15G\n", gradplane[0], gradplane[1], gradplane[2]);      
+#endif
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	if (fabs(fvecD[i]) > test) 
 	  test=fabs(fvecD[i]); 
+#if 0
+      if (*check==2)
+	{
+	  double xpA[3], nf, fx[3], fxp[3];
+	  printf("BAHBAH\n");
+	  printf("g=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7]);
+	  printf("p=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+	  printf("fvec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", fvecD[0], fvecD[1], fvecD[2], fvecD[3], fvecD[4],
+	      fvecD[5], fvecD[6], fvecD[7]);
+	  //lab2body(iA, &(x[0]), xpA, rA, RtA);
+	  //calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
+	  //body2lab_fx(iA, fxp, fx, RtA);
+	  //nf=calc_norm(fx);
+          //printf("gradplane=%.15G %.15G %.15G fx=%.15G %.15G %.15G\n", gradplane[0], gradplane[1], gradplane[2],
+	//	 fx[0]/nf, fx[1]/nf, fx[2]/nf);
+
+	  printf("DOPO fvec.fvec=%.15G\n", scalProd(fvecD, fvecD));
+	}
+#endif
       if (test < TOLFD) 
 	{ 
 	  *check=0; 
@@ -4340,6 +4371,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
       if (*check==2)
 	{
 	  MD_DEBUG(printf("spurious convergence\n"));
+
 	  FREERETURND;
 	}
 #endif

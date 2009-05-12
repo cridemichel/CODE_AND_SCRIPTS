@@ -949,7 +949,137 @@ void funcs2beZeroedNeighPlaneSE(int n, double x[], double fvec[], int i)
     }
   MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 }
+#undef MD_FDJAC_SYM
+#ifdef MD_FDJAC_SYM
+void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df, 
+    	       void (*vecfunc)(int, double [], double [], int), int iA)
+{
+  double fx[3];
+  int k1, k2;
+  double xpA[3], fxxp[3][3], fxp[3], fxx[3][3];
 
+  /* ci mettiamo nel riferimento del corpo rigido dove lo Jacobiano
+     assume la forma più semplice */
+  lab2body(iA, &(x[0]), xpA, rA, RtA);
+#if 0
+  printf("in fdjac\n");
+  print_matrix(RtA,3);
+  printf("rA=%f %f %f xpA=%f %f %f %f %f %f\n", rA[0], rA[1], rA[2], xpA[0], xpA[1], xpA[2], x[0], x[1], x[2]);
+#endif
+#if 0
+  printf("\n x-rA=%f %f %f\n", x[0]-rA[0], x[1]-rA[1], x[2]-rA[2]);
+  print_matrix(RtA,3);
+  printf("============\n");
+#endif
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], iA);
+  calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(iA, fxp, fx, RtA);
+  body2lab_fxx(iA, fxxp, fxx, RtA);
+#if 0
+  printf("fxx0: %f %f %f\n", fxx[0][0], fxx[0][1], fxx[0][2]);
+  printf("fxx1: %f %f %f\n", fxx[1][0], fxx[1][1], fxx[1][2]);
+  printf("fxx2: %f %f %f\n", fxx[2][0], fxx[2][1], fxx[2][2]); 
+#endif
+#if 0
+  if (fabs(fxx[0][0])> 0)
+    {
+      printf("x=%f %f %f\n", x[0], x[1], x[2]);
+      printf("fxx: %f %f %f\n", fxx[0][0], fxx[1][1], fxx[2][2]);
+      printf("fxx: %f %f %f\n", fxxp[0][0], fxxp[1][1], fxxp[2][2]);
+      print_matrix(RtA, 3);
+      printf("xpA=%f %f %f\n", xpA[0], xpA[1], xpA[2]);
+    }
+#endif
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+       	{
+	  if (k1==k2)
+	    {
+	      df[k1][k2]=-1.0;
+	      df[k1][k2+3]=1.0;
+	    }
+	  else
+	    {
+	      df[k1][k2]=0.0;
+	      df[k1][k2+3]=0.0;
+	    }
+	    df[k1][k2] += -x[6]*fxx[k1][k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[3][k1] = fx[k1];
+    } 
+  for (k1 = 0; k1 < 5; k1++)
+    {
+      df[3][k1+3] = 0.0;
+    } 
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1] = 0;
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[4][k1+3] = gradplane[k1];
+    } 
+  df[4][6] = df[4][7] = 0;
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      df[k1][6] = -fx[k1];
+      df[k1][7] = 0.0;
+    } 
+
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2] = 1.0; //+ 2.0*x[7]*Xa[k1][k2];
+	  else 
+	    df[k1+5][k2] = 0.0;//2.0*x[7]*Xa[k1][k2];
+	}
+    }
+  for (k1=0; k1<3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  if (k1==k2)
+	    df[k1+5][k2+3] = -1.0;
+	  else 
+	    df[k1+5][k2+3] = 0;
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][6] = 0;
+  for (k1 = 0; k1 < 3; k1++)
+    df[k1+5][7] = gradplane[k1];//fx[k1];
+  //print_matrix(df,8);
+#ifndef MD_GLOBALNRDNL
+ /* and now evaluate fvec */
+ for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = x[k1+3] - x[k1] - x[6]*fx[k1];
+    }
+ fvec[3] = calcf(xpA, iA);
+ fvec[4] = 0.0;
+ for (k1 = 0; k1 < 3; k1++)
+   {
+     fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
+   }
+ //fvec[4] = 0.5*fvec[4]-1.0;
+ /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + gradplane[k1]*x[7];//[k1]*x[7]; 
+  //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G,%.12G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+#endif
+
+}
+#else
 void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int), int iA)
 {
@@ -1068,6 +1198,7 @@ void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df,
 #endif
 
 }
+#endif
 void fdjacDistNegNeighPlane5SE(int n, double x[], double fvec[], double **df, 
 		   void (*vecfunc)(int, double [], double [], int), int iA)
 {
@@ -1209,7 +1340,41 @@ void funcs2beZeroedDistNeg5SE(int n, double x[], double fvec[], int i, int j, do
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
+#ifdef MD_FDJAC_SYM
+void funcs2beZeroedDistNegNeighPlaneSE(int n, double x[], double fvec[], int i)
+{
+  int k1; 
+  double fx[3];
+  double xpA[3], fxp[3];
 
+  lab2body(i, &x[0], xpA, rA, RtA);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], i);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(i, fxp, fx, RtA);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = x[k1+3] - x[k1] - x[6]*fx[k1];
+    }
+  fvec[3] = calcf(xpA, i);
+  fvec[4] = 0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[4] += (x[k1+3]-rB[k1])*gradplane[k1];
+    }
+  //fvec[4] = 0.5*fvec[4]-1.0;
+
+  /* N.B. beta=x[7] non è al quadrato poichè in questo modo la distanza puo' 
+   * essere anche negativa! */
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + gradplane[k1]*x[7];//fx[k1]*x[7]; 
+#if 0
+  MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+  MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
+  MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
+#endif
+}
+#else
 void funcs2beZeroedDistNegNeighPlaneSE(int n, double x[], double fvec[], int i)
 {
   int k1; 
@@ -1243,6 +1408,7 @@ void funcs2beZeroedDistNegNeighPlaneSE(int n, double x[], double fvec[], int i)
   MD_DEBUG(printf("x (%f,%f,%f,%f,%f,%f,%f)\n", x[0], x[1], x[2], x[3], x[4], x[5], x[6]));
 #endif
 }
+#endif
 
 void funcs2beZeroedDistNegNeighPlane5SE(int n, double x[], double fvec[], int i)
 {

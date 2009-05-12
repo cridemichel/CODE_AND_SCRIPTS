@@ -1710,7 +1710,7 @@ retry:
   if (OprogStatus.dist5NL)
     {
 #ifdef MD_SUPERELLIPSOID
-      if (scalProd(rDC,gradplane) > 0)
+      if (scalProd(rDC,gradplane) >= 0)
 	vecg[4] = calc_norm(rDC)/ng;
       else
 	vecg[4] = -calc_norm(rDC)/ng;
@@ -1728,6 +1728,12 @@ retry:
 	vecg[7] = calc_norm(rDC)/ng;
       else
 	vecg[7] = -calc_norm(rDC)/ng;
+#ifdef MD_FDJAC_SYM
+      if (scalProd(rDC,gradplane) >= 0)
+	vecg[6] = calc_norm(rDC)/nf;
+      else
+	vecg[6] = -calc_norm(rDC)/nf;
+#endif
 #else
       vecg[7] = 0.0;
 #endif

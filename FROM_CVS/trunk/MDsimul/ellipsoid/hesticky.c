@@ -303,7 +303,7 @@ void get_interaction(int type1, int s1, int type2, int s2, interStruct **ts, int
 }
 #endif
 #ifdef MD_ALLOW_ONE_DUMBBELL_BOND
-int get_db_bonds(int i, int j);
+int get_db_bonds(int i, int j, int a);
 #endif
 int one_is_bonded(int i, int a, int j, int b, int nmax)
 {
@@ -314,10 +314,11 @@ int one_is_bonded(int i, int a, int j, int b, int nmax)
 
 #if defined(MD_ALLOW_ONE_DUMBBELL_BOND)
   /* N.B. limita ad 1 il numero massimo di legami
-     fra due dumbbell */
+     per ogni spot del dumbbell */
   if (typeOfPart[i]==0 && typeOfPart[j]==0)
     {
-      if (get_db_bonds(i, j) == 1 )
+      if (get_db_bonds(i, j, a) == 1 ||
+	  get_db_bonds(i, j, b) == 1 )
 	{
       	  return 1;
 	}
@@ -1020,6 +1021,112 @@ void update_rates(int i, int j, int ata, int atb, double inc)
     }
 }
 #endif
+#ifdef MD_SWDUMBBELL
+int swdbs_are_bonded(int i, int j, int ata, int atb)
+{
+  return bound(i, j, ata, atb);
+}
+double swdb_adjust_Epot(int i)
+{
+  double DelEpot=0.0;
+  int decene=0;
+#ifdef MD_LL_BONDS
+  long long int jjold, aaold, jj, jj2, aa, bb, jjj, jjj2, aaa, bbb;
+  int kk, kk2, kkk;
+#else
+  int kk2, jj, kk, jj2, aa, bb, jjj, jjj2, aaa, bbb, kkk, jjold, aaold;
+#endif
+  for (kk=0; kk < numbonds[i]; kk++)
+    {
+      jj = bonds[i][kk]/(NANA);
+      jj2 = bonds[i][kk]%(NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      printf("aa=%lld bb=%lld\n", aa, bb);
+      if (aa==2||aa==4)
+	{
+	  aaold = aa;
+	  jjold = jj;
+	  for (kkk=kk; kkk < numbonds[i]; kkk++)
+	    {
+	      if (aa==aaold && jj==jjold)
+		{
+		}
+	    }
+	}
+      for (kk2 = 0; kk2 < Oparams.ninters; kk2++)
+	{
+	  //printf("type[%d]=%d type[%lld]=%d \n", na, typeOfPart[na], jj, typeOfPart[jj]);
+	  if ( (is_in_ranges(typeOfPart[i], intersArr[kk2].type1, intersArr[kk2].nr1, intersArr[kk2].r1) && 
+		is_in_ranges(typeOfPart[jj], intersArr[kk2].type2, intersArr[kk2].nr2, intersArr[kk2].r2) &&
+		    intersArr[kk2].spot1 == aa-1 && intersArr[kk2].spot2 == bb-1) || 
+	       (is_in_ranges(typeOfPart[jj], intersArr[kk2].type1, intersArr[kk2].nr1, intersArr[kk2].r1) && 
+		is_in_ranges(typeOfPart[i], intersArr[kk2].type2, intersArr[kk2].nr2, intersArr[kk2].r2) &&
+		intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
+	    {
+	      if (decene)
+		{
+		  DelEpot += intersArr[kk2].bheight;
+		  decene=0;
+		  break;
+		}
+	    }		 
+	}
+    }
+#if 0
+  if (DelEpot != 0.0)
+    printf("Delta Ene=%.15G\n", DelEpot);
+#endif
+  return DelEpot;
+}
+int swdumbbell_bump_routine(int i, int j, int ata, int atb, int bt)
+{
+  int ata2, atb2;
+  if (!((ata==2 && atb==4) || (ata==4 && atb==2)))
+	return 0;
+  if (ata==2)
+    {
+      ata2=4;
+      atb2=2;
+    }	
+  else 
+    {
+      ata2=2;
+      atb2=4;
+    }
+  switch (bt)
+    {
+      /* N.B.
+       * Notare che Oparams.bheight è la profondità della buca ed 
+       * è una quantità positiva!!*/
+      /* b = vc*r ma ora b -> vc riscrivere correttamente le seguenti equazioni!! */
+
+    case MD_INOUT_BARRIER:
+      if (swdbs_are_bonded(i, j, ata2, atb2))
+	{
+	  remove_bond(i, j, ata, atb);
+      	  remove_bond(j, i, atb, ata);
+#if 1 
+	  printf("exit from double depth well...nothing happened\n");
+#endif
+	  return 1;
+	}
+      break;
+    case MD_OUTIN_BARRIER:
+      if (swdbs_are_bonded(i, j, ata2, atb2))
+	{
+	  add_bond(i, j, ata, atb);
+	  add_bond(j, i, atb, ata);
+#if 1
+	  printf("entering from double depth well...nothing happened\n");
+#endif
+	  return 1;
+	}
+      break;
+    }
+  return 0;
+}
+#endif
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
@@ -1120,6 +1227,10 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
 #endif
 #endif
+#endif
+#ifdef MD_SWDUMBBELL
+  if (swdumbbell_bump_routine(i, j, ata, atb, bt))
+    return;
 #endif
   //printf("bt=%d bump i=%d j=%d ata=%d atb=%d\n", bt, i, j, ata, atb);
 #ifdef EDHE_FLEX
@@ -3237,8 +3348,8 @@ int get_igg_bonds(int i, int j)
     nb = -1;
   return nb;
 }
-#elif defined(MD_ALLOW_ONE_DUMBBELL_BOND)
-int get_db_bonds(int i, int j)
+#elif defined(MD_ALLOW_ONE_DUMBBELL_BOND) 
+int get_db_bonds(int i, int j, int a)
 {
 #ifdef MD_LL_BONDS
   long long int jj, jj2, aa, bb;
@@ -3253,9 +3364,8 @@ int get_db_bonds(int i, int j)
       jj2 = bonds[i][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
-      if (jj==j && ((aa==1 && bb==1) || (aa==1 && bb==3) || 
-		     (aa==3 && bb==1) || (aa==3 && bb==3)))
-       nb++;	
+      if (jj==j && aa==a && (bb==2 || bb==4))
+	nb++;	
     }
   if (nb==2)
     printf("i=%d j=%d nb=%d\n", i, j, nb);
