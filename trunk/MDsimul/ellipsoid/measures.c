@@ -71,6 +71,9 @@ extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
 #ifdef MD_SPHERICAL_WALL
 extern int sphWall, sphWallOuter;
 #endif
+#ifdef MD_SWDUMBBELL
+extern double swdb_adjust_Epot(int i);
+#endif
 double calcpotene(void)
 {
   double Epot; 
@@ -189,6 +192,9 @@ double calcpotene(void)
 
 		}		 
 	    }
+#ifdef MD_SWDUMBBELL
+	  Epot+=swdb_adjust_Epot(na);
+#endif
 	  if (Oparams.nintersIJ > 0)
 	    {
 	      for (kk2 = 0; kk2 < Oparams.nintersIJ; kk2++)

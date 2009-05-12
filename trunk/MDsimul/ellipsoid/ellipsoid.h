@@ -629,7 +629,13 @@ struct progStatus
   int forceguess;
   double targetPhi;
 #ifdef MD_POLYDISP
+#ifdef MD_POLYDISP_XYZ
+  double polydispX;
+  double polydispY;
+  double polydispZ;
+#else
   double polydisp;
+#endif
   double polycutoff;
 #endif
   double scalfact;
@@ -899,7 +905,13 @@ struct pascii opro_ascii[] =
   //{"sumVz",        OS(sumVz),                    MAXPAR,  1, "%.10f"},
   {"W",            &OS(W),                          1,              1, "%.6G"},
 #ifdef MD_POLYDISP  
+#ifdef MD_POLYDISP_XYZ
+  {"polydispX",     &OS(polydispX),                  1,          1, "%.15G"}, 
+  {"polydispY",     &OS(polydispY),                  1,          1, "%.15G"},
+  {"polydispZ",     &OS(polydispZ),                  1,          1, "%.15G"},
+#else
   {"polydisp",     &OS(polydisp),                  1,          1, "%.15G"}, 
+#endif
   {"polycutoff",   &OS(polycutoff),                1,          1, "%.8G"},
   {"targetPhi",    &OS(targetPhi),                 1,          1, "%.12G"},
 #endif
@@ -1349,7 +1361,13 @@ struct singlePar OsinglePar[] = {
 #endif
   {"targetPhi", &OprogStatus.targetPhi, CT},
 #ifdef MD_POLYDISP
+#ifdef MD_POLYDISP_XYZ
+  {"polydispX",  &OprogStatus.polydispX, CT},  
+  {"polydispY",  &OprogStatus.polydispY, CT},
+  {"polydispZ",  &OprogStatus.polydispZ, CT},
+#else
   {"polydisp",  &OprogStatus.polydisp, CT},  
+#endif
   {"polycutoff",&OprogStatus.polycutoff, CT},
 #endif
 #ifndef EDHE_FLEX
