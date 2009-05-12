@@ -2343,7 +2343,7 @@ double calc_nnl_rcut(void)
   int kk;
   double ax[3];
 #endif
-#if defined(MD_POLYDISP) || defined(EDHE_FLEX) || defined(MD_POLYDISP_XYZ)
+#if defined(MD_POLYDISP) || defined(EDHE_FLEX) 
   int i;
   double rcutMax=0.0;
 #endif 
@@ -3563,7 +3563,6 @@ void usrInitAft(void)
 	    }
 	  else
 	    {
-
 	      axa[i] = axaP[i];
 	      axb[i] = axbP[i];
 	      axc[i] = axcP[i];
