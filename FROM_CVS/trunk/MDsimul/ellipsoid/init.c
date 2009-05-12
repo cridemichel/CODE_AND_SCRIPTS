@@ -1540,7 +1540,11 @@ void usrInitBef(void)
     OprogStatus.tolT = 0.0;
     OprogStatus.targetPhi = 0.0;
 #ifdef MD_POLYDISP
+#ifdef MD_POLYDISP_XYZ
+    OprogStatus.polydispX = OprogStatus.polydispY = OprogStatus.polydispZ = 0.0;
+#else
     OprogStatus.polydisp = 0.0;
+#endif
     OprogStatus.polycutoff = 5.0;
 #endif
 #ifdef EDHE_FLEX
@@ -2339,7 +2343,7 @@ double calc_nnl_rcut(void)
   int kk;
   double ax[3];
 #endif
-#if defined(MD_POLYDISP) || defined(EDHE_FLEX)
+#if defined(MD_POLYDISP) || defined(EDHE_FLEX) || defined(MD_POLYDISP_XYZ)
   int i;
   double rcutMax=0.0;
 #endif 
@@ -2367,7 +2371,7 @@ double calc_nnl_rcut(void)
     }
   return 1.01*rcutMax;
 
-#elif defined(MD_POLYDISP)
+#elif defined(MD_POLYDISP) 
  for (i = 0; i < Oparams.parnum; i++)
     {
       rcutA = 2.0*sqrt(Sqr(axaP[i]+OprogStatus.rNebrShell)+
@@ -2977,7 +2981,7 @@ void usrInitAft(void)
 #ifdef EDHE_FLEX
   double maxSpots;
 #endif
-#ifdef MD_POLYDISP
+#if defined(MD_POLYDISP) 
   double stocvar;
 #endif
   int a;
@@ -3077,7 +3081,7 @@ void usrInitAft(void)
   mgA = Oparams.m[0]*Oparams.ggrav; 
   mgB = Oparams.m[1]*Oparams.ggrav;
 #endif
-#ifdef MD_POLYDISP
+#if defined(MD_POLYDISP) 
   if (Oparams.parnumA < Oparams.parnum)
     {
       printf("ERROR: Oparams.parnum has to be equal to Oparams.parnumA with polydispersity!\n");
@@ -3529,10 +3533,42 @@ void usrInitAft(void)
 	}
 #endif
       scdone[i] = 0;
-#ifdef MD_POLYDISP
+#if defined(MD_POLYDISP)
       /* assegna i semiassi usando una gaussiana con deviazione standard fissata da OprogStatus.polydisp (%) */
       if (newSim)
 	{
+#ifdef MD_POLYDISP_XYZ
+	  if (OprogStatus.polydispX > 0.0 || OprogStatus.polydispY > 0.0 || OprogStatus.polydispZ > 0.0)
+	    {
+	      do
+		{
+		 /* N.B. i semiassi vengono scalati di un fattore casuale ma in maniera
+		  * isotropa. */
+		 stocvar = gauss();
+       		 axaP[i] = (OprogStatus.polydispX*stocvar + 1.0)* Oparams.a[0]; 
+		 axbP[i] = (OprogStatus.polydispY*stocvar + 1.0)* Oparams.b[0];
+		 axcP[i] = (OprogStatus.polydispZ*stocvar + 1.0)* Oparams.c[0];
+	       }
+	     while ( axaP[i] < Oparams.a[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydispX) ||
+		     axaP[i] > Oparams.a[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydispX) ||
+		     axbP[i] < Oparams.b[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydispY) ||
+		     axbP[i] > Oparams.b[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydispY) ||
+		     axcP[i] < Oparams.c[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydispZ) ||
+		     axcP[i] > Oparams.c[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydispZ) );
+
+	      //printf("%.15G\n", radii[i]);
+	     axa[i] = axaP[i];
+	     axb[i] = axbP[i];
+	     axc[i] = axcP[i];
+	    }
+	  else
+	    {
+
+	      axa[i] = axaP[i];
+	      axb[i] = axbP[i];
+	      axc[i] = axcP[i];
+	    }
+#else
 	  if (OprogStatus.polydisp > 0.0)
 	    {
 	      /* notare che le seguenti condizioni non dipendono dai semiassi ma solo dal valore restituito
@@ -3577,6 +3613,7 @@ void usrInitAft(void)
 	      axb[i] = axbP[i];
 	      axc[i] = axcP[i];
 	    }
+#endif
 	}
       else
 	{
@@ -3674,7 +3711,7 @@ void usrInitAft(void)
   for (i = 0; i < Oparams.parnum; i++)
     {
       maxax[i] = 0.0;
-#ifdef MD_POLYDISP
+#if defined(MD_POLYDISP) 
       if (axaP[i] > maxax[i])
 	maxax[i] = axaP[i];
       if (axbP[i] > maxax[i])
@@ -3762,11 +3799,18 @@ void usrInitAft(void)
 	    {
 #ifdef EDHE_FLEX
 	      Oparams.rcut = calc_nnl_rcut();
-#elif defined(MD_POLYDISP)
+#elif defined(MD_POLYDISP) 
+#ifdef MD_POLYDISP_XYZ
+	      if (OprogStatus.polydispX > 0.0||OprogStatus.polydispY > 0.0||OprogStatus.polydispZ > 0.0)
+		Oparams.rcut = calc_nnl_rcut();//*(1.0+OprogStatus.polydisp*OprogStatus.polycutoff);
+	      else
+		Oparams.rcut = calc_nnl_rcut();
+#else
 	      if (OprogStatus.polydisp > 0.0)
 		Oparams.rcut = calc_nnl_rcut();//*(1.0+OprogStatus.polydisp*OprogStatus.polycutoff);
 	      else
 		Oparams.rcut = calc_nnl_rcut();
+#endif
 #else
 	      Oparams.rcut = calc_nnl_rcut();
 #endif
@@ -3775,7 +3819,7 @@ void usrInitAft(void)
 	}
       else
 	{
-#ifdef MD_POLYDISP
+#if defined(MD_POLYDISP) 
 	  if (Oparams.rcut <= 0.0)
 	    {
 	      Oparams.rcut = MAXAX*1.01;
