@@ -3542,24 +3542,25 @@ void usrInitAft(void)
 	    {
 	      do
 		{
-		 /* N.B. i semiassi vengono scalati di un fattore casuale ma in maniera
-		  * isotropa. */
-		 stocvar = gauss();
-       		 axaP[i] = (OprogStatus.polydispX*stocvar + 1.0)* Oparams.a[0]; 
-		 axbP[i] = (OprogStatus.polydispY*stocvar + 1.0)* Oparams.b[0];
-		 axcP[i] = (OprogStatus.polydispZ*stocvar + 1.0)* Oparams.c[0];
-	       }
-	     while ( axaP[i] < Oparams.a[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydispX) ||
-		     axaP[i] > Oparams.a[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydispX) ||
-		     axbP[i] < Oparams.b[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydispY) ||
-		     axbP[i] > Oparams.b[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydispY) ||
-		     axcP[i] < Oparams.c[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydispZ) ||
-		     axcP[i] > Oparams.c[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydispZ) );
+		  /* N.B. i semiassi vengono scalati di un fattore casuale in maniera non isotropa */
+		  stocvar = gauss();
+		  axaP[i] = (OprogStatus.polydispX*stocvar + 1.0)* Oparams.a[0]; 
+		  stocvar = gauss();
+		  axbP[i] = (OprogStatus.polydispY*stocvar + 1.0)* Oparams.b[0];
+		  stocvar = gauss();
+		  axcP[i] = (OprogStatus.polydispZ*stocvar + 1.0)* Oparams.c[0];
+		}
+	      while ( axaP[i] < Oparams.a[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydispX) ||
+		      axaP[i] > Oparams.a[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydispX) ||
+		      axbP[i] < Oparams.b[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydispY) ||
+		      axbP[i] > Oparams.b[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydispY) ||
+		      axcP[i] < Oparams.c[0]*(1.0 - OprogStatus.polycutoff*OprogStatus.polydispZ) ||
+		      axcP[i] > Oparams.c[0]*(1.0 + OprogStatus.polycutoff*OprogStatus.polydispZ) );
 
 	      //printf("%.15G\n", radii[i]);
-	     axa[i] = axaP[i];
-	     axb[i] = axbP[i];
-	     axc[i] = axcP[i];
+	      axa[i] = axaP[i];
+	      axb[i] = axbP[i];
+	      axc[i] = axcP[i];
 	    }
 	  else
 	    {
@@ -4385,6 +4386,12 @@ void writeAllCor(FILE* fs, int saveAll)
 	  fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
 #endif
 	}
+#ifdef MD_POLYDISP
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  fprintf(fs, "%.15G %.15G %.15G\n", axaP[i], axbP[i], axcP[i]);
+	}
+#endif
 #ifdef MD_LXYZ
       fprintf(fs, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
 #else
@@ -4821,6 +4828,12 @@ void readAllCor(FILE* fs)
 #endif
       //printf("%d v=(%f,%f,%f)\n", i, vx[i], vy[i], vz[i]);
     }
+#ifdef MD_POLYDISP
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      fscanf(fs, "%lf %lf %lf\n", &axaP[i], &axbP[i], &axcP[i]);
+    }
+#endif
 #ifdef MD_LXYZ
   fscanf(fs, "%[^\n]", line);
 
