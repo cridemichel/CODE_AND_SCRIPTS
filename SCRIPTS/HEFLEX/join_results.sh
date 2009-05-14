@@ -1,9 +1,16 @@
+export LC_NUMERIC=C 
 FN="bi-mono-bonds.dat"
 if [ "$2" == "" ]
 then
 EQTIME="200000"
 else
 EQTIME="$2"
+fi
+if [ "$3" == "" ]
+then
+MAXTIME="1000000000"
+else
+MAXTIME="$3"
 fi
 echo -n "" > _lista_pref_
 echo -n "" > listaJoined
@@ -28,7 +35,7 @@ do
 IGG=`echo $f | awk -F '/' '{print $1}'`
 SIG=`echo $f | awk -F '/' '{print $2}'`
 SIGN=`echo $SIG | awk -F R '{print $1}'`
-cat ${f}R*/$FN | awk -v eqtime="$EQTIME" '{if ($1 > eqtime) print $0}'> joined_${IGG}_${SIG}_$FN
+cat ${f}R*/$FN | awk -v eqtime="$EQTIME" -v maxtime="$MAXTIME" '{if ($1 > eqtime && $1 < maxtime) print $0}'> joined_${IGG}_${SIG}_$FN
 cd $IGG
 if [ ! -e $SIGN ]
 then

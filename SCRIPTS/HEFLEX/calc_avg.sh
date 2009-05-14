@@ -1,3 +1,4 @@
+export LC_NUMERIC=C
 FN="all_pts.dat"
 RA="eqconst.dat"
 #numero di Avogadro
@@ -30,10 +31,11 @@ CF=`echo "$V*1000*$ru2m^3*$Nav"|octave -q| awk -F '=' '{print $2}'`
 CFS=`echo "$S*$ru2m^2*$Nav"|octave -q| awk -F '=' '{print $2}'`
 BINI=`echo $f | awk -F '/' '{print $1}' | awk -F '_' '{print $2}'`
 SIG=`echo $f | awk -F '/' '{print $2}' | awk -F '_' '{print $2}'`
-echo "NP="$NP "CF=" $CF " CFS=" $CFS
-echo $BINI $SIG `cat bi-mono-bonds.dat | LANG=C awk -v np="$NP" -v nant="$NANT" -v cf="$CF" -v cfs="$CFS" '{if (NR >= np) {B+=$2; mono+=$3; bi+=$4; cc++}} END{print (B/cc/cf, mono/cc/cfs, bi/cc/cfs, (nant-(mono/cc)-(bi/cc)*2)/cfs, (bi/cc+mono/cc)/nant, nant/cfs)}'` >> ../../$FN
+#echo "CF=" $CF "CFS=" $CFS
+echo "NP="$NP "CF=" $CF " CFS=" $CFS "NANT=" $NANT
+echo $BINI $SIG `cat bi-mono-bonds.dat | LC_NUMERIC=C awk -v np="$NP" -v nant="$NANT" -v cf="$CF" -v cfs="$CFS" '{if (NR >= np) {B+=$2; sigB+=$2*$2; mono+=$3; bi+=$4; cc++}} END{print (B/cc/cf, mono/cc/cfs, bi/cc/cfs, (nant-(mono/cc)-(bi/cc)*2)/cfs, (bi/cc+mono/cc)/nant, nant/cfs, sqrt(sigB/cc-B*B/(cc*cc))/(B/cc),mono/cc/250,bi/cc/250)}'` >> ../../$FN
 cd ..
 cd ..
 done
 cat $FN | sort -k 1 -n > sorted$FN
-cat sorted$FN | LANG=C awk -v LA=$L '{K1=$4/($3*$6); K2=$5/($4*$6*(1-exp(-3.1415*81*$2))); print ($6,K1,K2,$8,$3)}' > $RA
+cat sorted$FN | LC_NUMERIC=C awk -v LA="$L" -v cfs="$CFS" -v sup="$S" '{K1=$4/($3*$6)/(1-0.0*(30.0*$4*cfs/sup-64.0*$5*cfs/sup)); K2=$5/($4*$6*(1-exp(-3.1415*144*$2))); print ($8,K1,K2,$8,$3)}' > $RA
