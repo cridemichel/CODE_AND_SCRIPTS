@@ -5494,7 +5494,7 @@ void PredictEventNNL(int na, int nb)
 	    }
 #ifdef MD_SAVE_DISTANCE
 	  printf("found collision exiting...\n");
-	  exit(-1);
+	  //exit(-1);
 #endif
 	}
       else
