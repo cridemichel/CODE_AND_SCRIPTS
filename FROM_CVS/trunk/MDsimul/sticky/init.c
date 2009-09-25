@@ -2042,7 +2042,9 @@ void check_all_bonds(void)
 		      drz = rz[i] - rz[j]; 
 		      shift2[2] = L*rint(drz/L);
 #endif
+#ifdef MD_SILICA
 		      assign_bond_mapping(i, j);
+#endif
 		      dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 #ifdef MD_THREESPOTS
 		      if (i < Oparams.parnumA && j < Oparams.parnumA)
@@ -2418,7 +2420,9 @@ void usrInitAft(void)
 	shift[1] = L*rint(dry/L);
 	drz = rz[i] - rz[j]; 
 	shift[2] = L*rint(drz/L);
+#ifdef MD_SILICA
 	assign_bond_mapping(i, j);
+#endif
 	dist = calcDistNeg(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 	npbonds = set_pbonds(i, j);
 	for (nn=0; nn < npbonds; nn++)
