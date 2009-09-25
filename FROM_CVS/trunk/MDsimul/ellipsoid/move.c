@@ -5853,7 +5853,7 @@ retry:
       return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
     }
 #endif
-#ifdef MD_SAVE_DISTANCE
+#if defined(MD_SAVE_DISTANCE) && 0
     {
       FILE *f;
       f = fopen("distance-pred.dat", "a");
@@ -5939,6 +5939,31 @@ double calcJustDistNeg(double t, int i, int j)
   d=calcDistNeg(t, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
   return d;
 }
+#if defined(MD_SAVE_DISTANCE) && defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
+extern double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
+		   double *dists, int bondpair);
+extern int mapbondsaAB[MD_PBONDS];
+extern int mapbondsbAB[MD_PBONDS];
+double calcJustDistNegSP(double t, int i, int j, double *dists)
+{
+  double shift[3] = {0,0,0};
+  int amin, bmin;
+  double d, r1[3], r2[3], alpha;
+  mapbondsa = mapbondsaAB;
+  mapbondsb = mapbondsbAB;
+#ifdef MD_LXYZ
+  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+  shift[0] = L*rint((rx[i]-rx[j])/L);
+  shift[1] = L*rint((ry[i]-ry[j])/L);
+  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+  d=calcDistNegSP(t, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+  return d;
+}
+#endif
 double calcDist(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess)
 {
   double vecg[8], rC[3], rD[3], rDC[3], r12[3];
@@ -8345,7 +8370,7 @@ void PredictEvent (int na, int nb)
 			    }
 #ifdef MD_SAVE_DISTANCE
     			  printf("found collision exiting...\n");
-    			  exit(-1);
+    			  //exit(-1);
 #endif
 			}
 		      else
@@ -9428,6 +9453,9 @@ void rebuild_all_events(void)
     OprogStatus.scalevel = 0;
 }
 #endif
+#if defined(MD_SAVE_DISTANCE) && defined(MD_PATCHY_HE) && !defined(EDHE_FLEX) 
+double calcJustDistNegSP(double t, int i, int j, double* dists);
+#endif
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -9584,8 +9612,27 @@ void move(void)
 	  if (mgl_mode==1)
 	    {
 	      FILE *f;
+#if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
+	      double dists[MD_PBONDS], d;
+	      int i;
+#endif
 	      f = fopen("distance.dat", "a");
+#if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
+	      d=calcJustDistNegSP(Oparams.time, 0, 1, dists);
+	      fprintf(f, "%.15G %.15G ", Oparams.time + OprogStatus.refTime, calcJustDistNeg(Oparams.time, 0, 1));
+#if 1
+	      for (i=0; i < MD_PBONDS; i++)
+		{
+		  fprintf(f, "%.15G ", dists[i]);
+		}
+#else
+	      fprintf(f, "%.15G ", dists[1]);
+	      printf("mapbonds[0]:%d mapbondsb[1]:%d\n", mapbondsa[0], mapbondsb[1]);
+#endif
+	      fprintf(f, "\n");
+#else
 	      fprintf(f, "%.15G %.15G\n", Oparams.time + OprogStatus.refTime, calcJustDistNeg(Oparams.time, 0, 1));
+#endif
 	      fclose(f);
 	    }
 #endif
