@@ -3728,13 +3728,10 @@ void usrInitAft(void)
       if (typesArr[typeOfPart[i]].sax[2] > maxax[i])
 	maxax[i] = typesArr[typeOfPart[i]].sax[2];
 #else 
-#ifdef MD_SUPERELLIPSOID 
-      /* NOTA: nel caso di superellissoidi non si puo' considerare il centroide di raggio
-	 pari al semiasse maggiore ma va scelto pià grande!
-	 La seguente è una soluzione non ottima ma sicura in quanto si considera come
-	 raggio del centroide la diagonale
-	 del parallelepipedo avente i lati pari al doppio dei semi-assi.  */
-#endif      maxax[i] = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
+      /* per i superellissoidi il centroide non puo' essere uguale al raggio maggiore,
+	 così lo sceglo pari alla metà della diagonale maggiore del parallelepipedo
+	 con i lati pari al doppio dei semi-assi */
+      maxax[i] = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
 	Sqr(typesArr[typeOfPart[i]].sax[2]));
 #endif
 #else
@@ -3769,7 +3766,6 @@ void usrInitAft(void)
 	}
 #endif
       maxax[i] *= 2.0;
-/* 29/09/09 REMOVE THIS!!!! */
 
 #ifdef MD_SPHERICAL_WALL
       if (maxax[i] > MAXAX && typeOfPart[i] != Oparams.ntypes-1 && typeOfPart[i] != Oparams.ntypes-2)
