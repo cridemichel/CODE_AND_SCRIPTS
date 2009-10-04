@@ -4,7 +4,7 @@ EXTRA_OPTIONS_FOR_MAC=-dylib_file /System/Library/Frameworks/OpenGL.framework/Ve
 MGL_INCLUDE= -I$(MD)/include -I/usr/X11R6/include -I/usr/local/include -UMGL_USELIST -I/sw/include
 
 molgl: molgl.o #mglgui.o
-	gcc  -lpng -O3 -o molgl molgl.o $(MGL_LIBS) $(EXTRA_OPTIONS_FOR_MAC)
+	gcc -lpng -O3 -o molgl molgl.o $(MGL_LIBS) $(EXTRA_OPTIONS_FOR_MAC)
 
 molgl.o: molgl.c molgl.h
 	gcc -O3 -c -Wall $(MGL_INCLUDE) -o molgl.o molgl.c
