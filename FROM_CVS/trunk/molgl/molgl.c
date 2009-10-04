@@ -200,6 +200,157 @@ XYZ CalcNormal(XYZ p, XYZ p1, XYZ p2)
 
    return(n);
 }
+void EvalSuperQuadrics(double t1,double t2,double p1,double p2,double p3,
+		      double a, double b, double c, XYZ *p);
+void CreatePartialSuperQuadrics(double power1,double power2, double power3, 
+				double a, double b, double c,
+			int n1, int n2, int method, double thetaBeg, double thetaEnd)
+{
+   int i,j;
+   double theta1,theta2,theta3;
+   XYZ p,p1,p2,en;
+   int n1beg, n1end;
+   double delta1, delta2;
+   /* n1 = stacks
+    * n2 = slides */
+   /* Shall we just draw a point? */
+   if (n1 < 4 && n2 < 4) {
+      glBegin(GL_POINTS);
+      glVertex3f(0.0,0.0,0.0);
+      glEnd();
+      return;
+   }
+
+   /* Shall we just draw a plus */
+   if (power1 > 10 && power2 > 10) {
+      glBegin(GL_LINES);
+      glVertex3f(-1.0, 0.0, 0.0);
+      glVertex3f( 1.0, 0.0, 0.0);
+      glVertex3f( 0.0,-1.0, 0.0);
+      glVertex3f( 0.0, 1.0, 0.0);
+      glVertex3f( 0.0, 0.0,-1.0);
+      glVertex3f( 0.0, 0.0, 1.0);
+      glEnd();
+      return;
+   }
+   delta1 = 0.01*TWOPI / (double)n1;
+   delta2 =  0.01*TWOPI / (double)n2;
+   //printf("boh=%.15G n1/2=%d thetaBeg =%.15G TWOPI=%.15G thetaBeg/TWOPI=%.15G\n", ((double)(n1/2))*thetaBeg/TWOPI, n1/2, thetaBeg, TWOPI, thetaBeg/TWOPI);
+   if (thetaBeg > 0)
+     n1beg = (int) rint(n1*thetaBeg/TWOPI);
+   else 
+     n1beg = 0;
+   if (thetaEnd > 0)
+     n1end = (int) rint(n1*thetaEnd/TWOPI);
+   else
+     n1end = n1/2;
+   //printf("thetaBeg: %.15G thetaEnd: %.15G n1beg=%d n1end=%d n1=%d n2=%d\n", thetaBeg, thetaEnd, n1beg, n1end, n1, n2);
+   for (j=0;j<n1/2;j++) {
+      if (!(j >= n1beg && j < n1end))
+	continue;
+      theta1 = (j+1) * TWOPI / (double)n1 - PID2;
+      theta2 = j * TWOPI / (double)n1 - PID2;
+      if (method==2)
+	glBegin(GL_TRIANGLE_FAN);
+      else if (method == 0)
+         glBegin(GL_QUAD_STRIP);
+      else
+         glBegin(GL_TRIANGLE_STRIP);
+      for (i=0;i<=n2;i++) {
+         if (i == 0 || i == n2)
+            theta3 = 0;
+         else
+            theta3 = i * TWOPI / n2;
+   
+         EvalSuperQuadrics(theta2,theta3,power1,power2,power3,a,b,c,&p);
+         EvalSuperQuadrics(theta2+delta1,theta3,power1,power2,power3,a,b,c,&p1);
+         EvalSuperQuadrics(theta2,theta3+delta2,power1,power2,power3,a,b,c,&p2);
+         en = CalcNormal(p,p1,p2);
+         glNormal3f(en.x,en.y,en.z);
+         //glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
+	 //glColor4f(1,1,1,0.1);
+         glVertex3f(p.x,p.y,p.z);
+
+         EvalSuperQuadrics(theta1,theta3,power1,power2,power3,a,b,c,&p);
+         EvalSuperQuadrics(theta1+delta1,theta3,power1,power2,power3,a,b,c,&p1);
+         EvalSuperQuadrics(theta1,theta3+delta2,power1,power2,power3,a,b,c,&p2);
+         en = CalcNormal(p,p1,p2);
+         glNormal3f(en.x,en.y,en.z);
+         //glTexCoord2f(i/(double)n,2*j/(double)n);
+	 //glColor4f(1,1,1,0.1);
+         glVertex3f(p.x,p.y,p.z);
+      }
+      glEnd();
+   }
+}
+
+void CreateSuperQuadrics(double power1,double power2,double power3,double a, double b, double c,
+			int n1, int n2, int method)
+{
+   int i,j;
+   double theta1,theta2,theta3;
+   XYZ p,p1,p2,en;
+   double delta1, delta2;
+   /* n1 = stacks
+    * n2 = slides */
+   /* Shall we just draw a point? */
+   if (n1 < 4 && n2 < 4) {
+      glBegin(GL_POINTS);
+      glVertex3f(0.0,0.0,0.0);
+      glEnd();
+      return;
+   }
+
+   /* Shall we just draw a plus */
+   if (power1 > 10 && power2 > 10) {
+      glBegin(GL_LINES);
+      glVertex3f(-1.0, 0.0, 0.0);
+      glVertex3f( 1.0, 0.0, 0.0);
+      glVertex3f( 0.0,-1.0, 0.0);
+      glVertex3f( 0.0, 1.0, 0.0);
+      glVertex3f( 0.0, 0.0,-1.0);
+      glVertex3f( 0.0, 0.0, 1.0);
+      glEnd();
+      return;
+   }
+   delta1 = 0.01*TWOPI / (double)n1;
+   delta2 =  0.01*TWOPI / (double)n2;
+   for (j=0;j<n1/2;j++) {
+      theta1 = (j+1) * TWOPI / (double)n1 - PID2;
+      theta2 = j * TWOPI / (double)n1 - PID2;
+      if (method==2)
+	glBegin(GL_TRIANGLE_FAN);
+      else if (method == 0)
+         glBegin(GL_QUAD_STRIP);
+      else
+         glBegin(GL_TRIANGLE_STRIP);
+      for (i=0;i<=n2;i++) {
+         if (i == 0 || i == n2)
+            theta3 = 0;
+         else
+            theta3 = i * TWOPI / n2;
+   
+         EvalSuperQuadrics(theta2,theta3,power1,power2,power3,a,b,c,&p);
+         EvalSuperQuadrics(theta2+delta1,theta3,power1,power2,power3,a,b,c,&p1);
+         EvalSuperQuadrics(theta2,theta3+delta2,power1,power2,power3,a,b,c,&p2);
+         en = CalcNormal(p,p1,p2);
+         glNormal3f(en.x,en.y,en.z);
+         //glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
+	 //glColor4f(1,1,1,0.1);
+         glVertex3f(p.x,p.y,p.z);
+
+         EvalSuperQuadrics(theta1,theta3,power1,power2,power3,a,b,c,&p);
+         EvalSuperQuadrics(theta1+delta1,theta3,power1,power2,power3,a,b,c,&p1);
+         EvalSuperQuadrics(theta1,theta3+delta2,power1,power2,power3,a,b,c,&p2);
+         en = CalcNormal(p,p1,p2);
+         glNormal3f(en.x,en.y,en.z);
+         //glTexCoord2f(i/(double)n,2*j/(double)n);
+	 //glColor4f(1,1,1,0.1);
+         glVertex3f(p.x,p.y,p.z);
+      }
+      glEnd();
+   }
+}
 #if 1
 void CreatePartialSuperEllipse(double power1,double power2, double a, double b, double c,
 			int n1, int n2, int method, double thetaBeg, double thetaEnd)
@@ -366,6 +517,21 @@ void EvalSuperEllipse(double t1,double t2,double p1,double p2,
    p->y = b * SIGN(st1) * pow(fabs(st1),p1);
    p->z = c * tmp * SIGN(st2) * pow(fabs(st2),p2);
 }
+void EvalSuperQuadrics(double t1,double t2,double p1,double p2,double p3,
+		      double a, double b, double c, XYZ *p)
+{
+  double ct1,ct2,st1,st2;
+
+  ct1 = cos(t1);
+  ct2 = cos(t2);
+  st1 = sin(t1);
+  st2 = sin(t2);
+
+  p->x = a*SIGN(ct1) * pow(abs(ct1),1.0/p1) * SIGN(ct2) * pow(abs(ct2),1.0/p1);
+  p->y = b*SIGN(ct1) * pow(abs(ct1),1.0/p2) * SIGN(st2) * pow(abs(st2),1.0/p2);
+  p->z = c*SIGN(st1) * pow(abs(st1),1.0/p3);
+
+}
 void render_one_spot(double nx, double ny, double nz, double spotradius, 
 		     int spotcol, double spotangle, float fadeFact)
 {
@@ -373,6 +539,7 @@ void render_one_spot(double nx, double ny, double nz, double spotradius,
   double Pi;
   Pi = 2.0*acos(0);
  
+  glPushMatrix();
   vectProd(0,1,0, nx, ny, nz, &rax, &ray, &raz);
   if (rax==0 && ray==0 && raz==0)
     {
@@ -396,6 +563,8 @@ void render_one_spot(double nx, double ny, double nz, double spotradius,
       normra = sqrt(Sqr(rax)+Sqr(ray)+Sqr(raz));
       normn = sqrt(Sqr(nx)+Sqr(ny)+Sqr(nz));
       rotangle = 180.0*acos(ny/normn)/Pi;
+      //printf("n=%f %f %f r=%f %f %f\n", nx, ny, nz, rax, ray, raz);
+      //printf("rotangle=%f\n", rotangle);
     }
   glRotatef(rotangle, rax, ray, raz);
   glRotatef(180, 1, 0, 0);/* up-down flip */
@@ -403,6 +572,7 @@ void render_one_spot(double nx, double ny, double nz, double spotradius,
   setColor(mgl_col[spotcol].rgba, fadeFact);
   CreatePartialSuperEllipse(1, 1, spotradius, spotradius, spotradius, globset.stacks, 
 			    globset.slides, 1, 0.0, spotangle);
+  glPopMatrix(); 
 }
 /* ========================== >>> displayMol <<< ===========================*/
 void displayAtom(int nf, int nm, int na)
@@ -649,8 +819,9 @@ void displayAtom(int nf, int nm, int na)
 	glDepthMask (GL_FALSE);*/
       //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       /* for now disabled */
-      if (0 && atom->supellips.n1==1 && atom->supellips.n2==1)
+      if (1 && atom->supellips.n1==1 && atom->supellips.n2==1)
 	{
+	  //printf("qui st=%d sl=%d\n", globset.stacks, globset.slides);
 	  for (k1 = 0; k1 < 4; k1++)
 	    for (k2 = 0; k2 < 4; k2++)
 	      {
@@ -697,7 +868,84 @@ void displayAtom(int nf, int nm, int na)
 	glDepthMask (GL_TRUE);*/
       //glDisable (GL_BLEND); 
     }
-  
+  else if (atom->common.type==MGL_ATOM_SUPQUADRICS)
+    {
+      /* qui si deve orientare il superellissoide */
+      for (k1 = 0; k1 < 4; k1++)
+	for (k2 = 0; k2 < 4; k2++)
+	  {
+	    if (k1 < 3 && k2 < 3)
+	      {
+		rotm[k1*4+k2]=atom->supquadrics.R[k2][k1];
+	      }
+	    else if (k1==3 && k2 ==3)
+	      rotm[15] = 1.0;
+	    else
+	      rotm[k1*4+k2] = 0.0;
+	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
+	  }
+      /* notare che x' = R x quindi:
+       * x = Inversa(R) x' = Trasposta(R) x'*/
+      glMultTransposeMatrixf(rotm);
+      //glEnable (GL_BLEND);
+      /*if (atom->common.transp < 1.0)
+	glDepthMask (GL_FALSE);*/
+      //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      /* for now disabled */
+      if (1 && atom->supquadrics.n1==2 && atom->supquadrics.n2==2 &&
+	       atom->supquadrics.n3==2)
+	{
+	  //printf("qui st=%d sl=%d\n", globset.stacks, globset.slides);
+	  for (k1 = 0; k1 < 4; k1++)
+	    for (k2 = 0; k2 < 4; k2++)
+	      {
+		if (k1 < 3 && k2 < 3 && k1==k2)
+		  {
+		    switch(k1)
+		      {
+		      case 0:
+			rotm[k1*4+k2]=atom->supquadrics.a;
+		      break;
+		      case 1:
+			rotm[k1*4+k2]=atom->supquadrics.b;
+		      break;
+		      case 2:
+			rotm[k1*4+k2]=atom->supquadrics.c;
+		      break;
+		      }
+		  }
+		else if (k1==3 && k2 ==3)
+		  rotm[15] = 1.0;
+	    else
+	      rotm[k1*4+k2] = 0.0;
+	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
+	  }
+	  glMultMatrixf(rotm);
+       	  glutSolidSphere (1, globset.stacks, globset.slides);
+	}	  
+      else
+	{
+	  if (atom->supquadrics.tbeg > 0.0 || atom->supquadrics.tend > 0.0)
+	    {
+	      CreatePartialSuperQuadrics(atom->supquadrics.n1, 
+	  				atom->supquadrics.n2, 
+					atom->supquadrics.n3,
+				       	atom->supquadrics.a, 
+					atom->supquadrics.b, atom->supquadrics.c, globset.stacks, 
+					globset.slides, 1, atom->supquadrics.tbeg, 
+					atom->supquadrics.tend);
+	    }
+	  else
+	    CreateSuperQuadrics(atom->supquadrics.n1, 
+		  	       atom->supquadrics.n2, atom->supquadrics.n3,
+			       atom->supquadrics.a, 
+		  	       atom->supquadrics.b, atom->supquadrics.c, globset.stacks, 
+		  	       globset.slides, 1);
+	}
+      /*if (atom->common.transp < 1.0)
+	glDepthMask (GL_TRUE);*/
+      //glDisable (GL_BLEND); 
+    }
   /*if (atom->common.transp < 1.0)
     glDepthMask (GL_TRUE); 
     glDisable (GL_BLEND); */ 
@@ -1078,6 +1326,7 @@ void display (void)
     {
       if (globset.nrefresh==1 || (globset.nrefresh > 1 && count >= globset.nrefresh))
 	{
+	  //printf("nrefresh=%d count=%d exitDelay=%d\n", globset.nrefresh, count, globset.exitDelay);
 	  save_image();
 	  exit(0);
 	}
@@ -1458,13 +1707,47 @@ void assignAtom(int nf, int i, int a, const char* L)
 {
   char s1[128], s2[128], s3[128], s4[128], s5[128], s6[128], s7[128], s8[128], s9[128];
   char s10[128], s11[128], s12[128], s13[128], s14[128], s15[128], s16[128], s17[128], s18[128];
+  char s19[128];
   char *ss;
   atom_s *at;
   struct spotlst** sl, *newsp;
   double t;
   at = &mols[nf][i].atom[a];
   //printf("read: %s\n", L);
-  if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s C[%[^]]] P %s %s ", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18) == 18)
+  if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s C[%[^]]] Q %s %s %s ", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19) == 19)
+    {
+      /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
+  	printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
+	atoi(s5),i, j);*/
+      //printf("qui\n");
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_SUPQUADRICS;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->supquadrics.R[0][0] = atof(s4);
+      at->supquadrics.R[0][1] = atof(s5);
+      at->supquadrics.R[0][2] = atof(s6);
+      at->supquadrics.R[1][0] = atof(s7);
+      at->supquadrics.R[1][1] = atof(s8);
+      at->supquadrics.R[1][2] = atof(s9);
+      at->supquadrics.R[2][0] = atof(s10);
+      at->supquadrics.R[2][1] = atof(s11);
+      at->supquadrics.R[2][2] = atof(s12);
+      at->supquadrics.a = atof(s13);
+      at->supquadrics.b = atof(s14);
+      at->supquadrics.c = atof(s15);
+      at->supquadrics.n1 = atof(s17);
+      at->supquadrics.n2 = atof(s18);
+      at->supquadrics.n3 = atof(s18);
+      at->supquadrics.tbeg = -1.0;
+      at->supquadrics.tend = -1.0;
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = parsecol(s16,&t);
+      at->common.transp = t;
+
+    }
+  else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s C[%[^]]] P %s %s ", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18) == 18)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
   	printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",

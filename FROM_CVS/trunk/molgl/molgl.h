@@ -25,7 +25,7 @@ struct colStruct
   float rgba[4];
   char name[32];
 } *mgl_col;
-enum atom_types {MGL_ATOM_SPHERE, MGL_ATOM_DISK, MGL_ATOM_CYLINDER, MGL_ATOM_SUPELLIPS, MGL_ATOM_SPHERE_SPOT, MGL_ATOM_SPHERE_MSPOT};
+enum atom_types {MGL_ATOM_SPHERE, MGL_ATOM_DISK, MGL_ATOM_CYLINDER, MGL_ATOM_SUPELLIPS, MGL_ATOM_SUPQUADRICS, MGL_ATOM_SPHERE_SPOT, MGL_ATOM_SPHERE_MSPOT};
 typedef enum atom_types atom_types_e;
 
 struct atom_common {
@@ -51,6 +51,19 @@ struct atom_supellips
   double c;
   int n1;  /* integer for super-ellipsoid */
   int n2; 
+  double tbeg;
+  double tend;
+};
+struct atom_supquadrics
+{
+  struct atom_common common;
+  double R[3][3]; 
+  double a; /* semi-axes */
+  double b;
+  double c;
+  double n1;  /* integer for super-ellipsoid */
+  double n2; 
+  double n3;
   double tbeg;
   double tend;
 };
@@ -118,6 +131,7 @@ union atom
   struct atom_sphere sphere;
   struct atom_cylinder cylinder;
   struct atom_supellips supellips;
+  struct atom_supquadrics supquadrics;
   struct atom_sphere_spot sphere_spot;
   struct atom_sphere_mspot sphere_mspot; 
 };
