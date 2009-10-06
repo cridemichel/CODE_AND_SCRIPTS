@@ -315,7 +315,7 @@ void CreateSuperQuadrics(double power1,double power2,double power3,double a, dou
    }
    delta1 = 0.01*TWOPI / (double)n1;
    delta2 =  0.01*TWOPI / (double)n2;
-   for (j=0;j<n1/2;j++) {
+   for (j=0;j<(n1/2);j++) {
       theta1 = (j+1) * TWOPI / (double)n1 - PID2;
       theta2 = j * TWOPI / (double)n1 - PID2;
       if (method==2)
@@ -328,7 +328,7 @@ void CreateSuperQuadrics(double power1,double power2,double power3,double a, dou
          if (i == 0 || i == n2)
             theta3 = 0;
          else
-            theta3 = i * TWOPI / n2;
+            theta3 = i * TWOPI / n2;// - TWOPI/2.0;
    
          EvalSuperQuadrics(theta2,theta3,power1,power2,power3,a,b,c,&p);
          EvalSuperQuadrics(theta2+delta1,theta3,power1,power2,power3,a,b,c,&p1);
@@ -520,17 +520,27 @@ void EvalSuperEllipse(double t1,double t2,double p1,double p2,
 void EvalSuperQuadrics(double t1,double t2,double p1,double p2,double p3,
 		      double a, double b, double c, XYZ *p)
 {
-  double ct1,ct2,st1,st2;
+  double ct1,ct2,st1,st2, tmp;
 
   ct1 = cos(t1);
   ct2 = cos(t2);
   st1 = sin(t1);
   st2 = sin(t2);
+  //p1=p2=p3=2.0;
 
-  p->x = a*SIGN(ct1) * pow(abs(ct1),1.0/p1) * SIGN(ct2) * pow(abs(ct2),1.0/p1);
-  p->y = b*SIGN(ct1) * pow(abs(ct1),1.0/p2) * SIGN(st2) * pow(abs(st2),1.0/p2);
-  p->z = c*SIGN(st1) * pow(abs(st1),1.0/p3);
-
+  p->x = a*SIGN2(ct1) * pow(fabs(ct1),2.0/p1) * SIGN2(ct2) * pow(fabs(ct2),2.0/p1);
+  //printf("x actual=%.15G ellips=%.15G\n", p->x, a*SIGN2(ct1) * pow(fabs(ct1),1.0/2) * SIGN2(ct2) * pow(fabs(ct2),1.0/2));
+  p->y = b*SIGN2(ct1) * pow(fabs(ct1),2.0/p2) * SIGN2(st2) * pow(fabs(st2),2.0/p2);
+  //printf("y actual=%.15G ellips=%.15G\n", p->y, b*SIGN2(ct1) * pow(fabs(ct1),1.0/2) * SIGN2(st2) * pow(fabs(st2),1.0/2));
+  p->z = c*SIGN2(st1) * pow(fabs(st1),2.0/p3);
+  //printf("z actual=%.15G ellips=%.15G\n", c*SIGN2(st1) * pow(fabs(st1),1.0/p3), c*SIGN2(st1) * pow(fabs(st1),1.0/2.0));
+  
+#if 0
+  tmp  = SIGN(ct1) * pow(fabs(ct1),p1);
+   p->x = a * tmp * SIGN(ct2) * pow(fabs(ct2),p2);
+   p->y = b * SIGN(st1) * pow(fabs(st1),p1);
+   p->z = c * tmp * SIGN(st2) * pow(fabs(st2),p2);
+#endif
 }
 void render_one_spot(double nx, double ny, double nz, double spotradius, 
 		     int spotcol, double spotangle, float fadeFact)
@@ -936,11 +946,24 @@ void displayAtom(int nf, int nm, int na)
 					atom->supquadrics.tend);
 	    }
 	  else
-	    CreateSuperQuadrics(atom->supquadrics.n1, 
-		  	       atom->supquadrics.n2, atom->supquadrics.n3,
-			       atom->supquadrics.a, 
-		  	       atom->supquadrics.b, atom->supquadrics.c, globset.stacks, 
-		  	       globset.slides, 1);
+	    {
+	      printf("boh n1=%G n2=%G n3=%G\n", atom->supquadrics.n1, atom->supquadrics.n2,
+atom->supquadrics.n3);
+#if 0 
+	      CreateSuperEllipse(atom->supquadrics.n1, 
+	   			  atom->supquadrics.n2,
+	   			  atom->supquadrics.a, 
+	   			  atom->supquadrics.b, atom->supquadrics.c, globset.stacks, 
+	   			  globset.slides, 1);
+#else
+	      CreateSuperQuadrics(atom->supquadrics.n1, 
+	   			  atom->supquadrics.n2, atom->supquadrics.n3,
+	   			  atom->supquadrics.a, 
+	   			  atom->supquadrics.b, atom->supquadrics.c, globset.stacks, 
+	   			  globset.slides, 1);
+#endif
+	      //printf("qui\n");
+	    }
 	}
       /*if (atom->common.transp < 1.0)
 	glDepthMask (GL_TRUE);*/
@@ -1739,7 +1762,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supquadrics.c = atof(s15);
       at->supquadrics.n1 = atof(s17);
       at->supquadrics.n2 = atof(s18);
-      at->supquadrics.n3 = atof(s18);
+      at->supquadrics.n3 = atof(s19);
       at->supquadrics.tbeg = -1.0;
       at->supquadrics.tend = -1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
