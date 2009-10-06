@@ -15,6 +15,7 @@
 #define MGL_MAX_FRAMES 4
 #define MGL_REDBEFQUIT 5
 #define SIGN(X) ((X>0)?1.0:(-1.0)) 
+#define SIGN2(X)  ((X>0)?1.0:((X==0)?0.0:(-1.0)))
 typedef struct {
 	double x,y,z;
 } XYZ;
