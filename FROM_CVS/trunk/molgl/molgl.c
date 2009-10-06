@@ -947,8 +947,8 @@ void displayAtom(int nf, int nm, int na)
 	    }
 	  else
 	    {
-	      printf("boh n1=%G n2=%G n3=%G\n", atom->supquadrics.n1, atom->supquadrics.n2,
-atom->supquadrics.n3);
+	      //printf("boh n1=%G n2=%G n3=%G\n", atom->supquadrics.n1, atom->supquadrics.n2,
+//atom->supquadrics.n3);
 #if 0 
 	      CreateSuperEllipse(atom->supquadrics.n1, 
 	   			  atom->supquadrics.n2,
