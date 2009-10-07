@@ -4245,6 +4245,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
       //if (x[0] > 1E4)
 #if 0
        	printf("A its=%d check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",its, *check, test, x[0], x[1], x[2], x[3],x[4]);
+	printf("LOOP fvec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", fvecD[0], fvecD[1], fvecD[2], fvecD[3], fvecD[4], fvecD[5], fvecD[6], fvecD[7]);
 #endif
      if (OprogStatus.dist5NL)
 	fdjacDistNegNeighPlane5(n,x,fvecD,fjac,vecfunc, iA);
@@ -4278,6 +4279,12 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 #endif 
       for (i=0;i<n;i++) 
 	p[i] = -fvecD[i]; /* Right-hand side for linear equations.*/
+#if 0
+      printf("p=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2],
+	     p[3], p[4], p[5], p[6], p[7]);
+      printf("xold=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", x[0], x[1], x[2],
+	     x[3], x[4], x[5], x[6], x[7]);
+#endif
 #ifdef MD_USE_LAPACK
       SolveLineq(fjac,p,n);
 #else
@@ -4291,7 +4298,12 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNRDNL
       //printf("PRIMA fvec.fvec=%.15G\n", scalProd(fvecD, fvecD));
+//      printf("xold=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", x[0], x[1], x[2],
+//	      	 x[3], x[4], x[5], x[6], x[7]);
+      
       lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fminDNeigh,iA, TOLXD); 
+ //     printf("check=%d xnew=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", *check, x[0], x[1], x[2],
+//	      	 x[3], x[4], x[5], x[6], x[7]);
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
 #if 0
       printf("its=%d check=%d test = %.15f x = (%.15G, %.15G, %.15G, %.15G, %.15G, %.15G, %.15G, %.15G )\n",its, *check, test, x[0], x[1], x[2], x[3],x[4], x[5], x[6], x[7]);
@@ -4361,10 +4373,12 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	} 
       if (test < TOLXD) 
 	{
+	  //printf("test====== %.15G check=%d\n", test, *check);
 	  MD_DEBUG(printf("test<TOLXD test=%.15f\n", test));
 	  MD_DEBUG(printf("fvec: (%f,%f,%f,%f,%f,%f,%f,%f)\n",
 			  fvecD[0], fvecD[1], fvecD[2], fvecD[2], fvecD[3], 
 			  fvecD[4], fvecD[5], fvecD[6], fvecD[7]));
+	  *check=0;
 	  FREERETURND;
 	}
 #if 1
@@ -4386,6 +4400,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	  xold[i] = x[i];
 	  x[i] += p[i];
 	}
+      
       test = test_xvalues(xold, x, n);
 #else
       test = 0;
@@ -4399,6 +4414,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
       if (test < TOLXD) 
 	{ 
+	  //printf("SSSSDDD test=%.15G\n", test);
 	  *check = 0;
 	  MD_DEBUG(printf("test < TOLX\n"));
 	  FREERETURND; 
@@ -4838,6 +4854,9 @@ void newtDistNeg(double x[], int n, int *check,
 	  MD_DEBUG(printf("fvec: (%f,%f,%f,%f,%f,%f,%f,%f)\n",
 			  fvecD[0], fvecD[1], fvecD[2], fvecD[2], fvecD[3], 
 			  fvecD[4], fvecD[5], fvecD[6], fvecD[7]));
+#ifdef MD_SUPERELLIPSOID
+	  *check = 0;
+#endif
 	  FREERETURND;
 	}
 #if 1
@@ -5115,7 +5134,7 @@ the calling program.*/
   return 0.5*sum; 
 }
 double fminMD(double x[], int iA, int iB, double shift[3]) 
-/* Returns f = 1 2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
+/* Returns f = 1/2 F · F at x. The global pointer *nrfuncv points to a routine that returns the
 vector of functions at x. It is set to point to a user-supplied routine in the 
 calling program. Global variables also communicate the function values back to 
 the calling program.*/

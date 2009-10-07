@@ -1569,6 +1569,7 @@ void guess_distNeigh(int i,
   calc_intersec_neigh(dB, rB, Xb, rD, 1);
 }
 #ifdef MD_SUPERELLIPSOID
+extern double calcf(double *x,int i);
 extern void calcfxLabSE(int i, double *x, double *r, double **Ri, double fx[3]);
 extern void distSD_NNL(int i, double *vecg, double lambda, int halfspring);
 #endif
@@ -1655,9 +1656,26 @@ retry:
       calc_intersec_neigh_plane(rA, rB, Xa, gradplane, rC, rD);
 #endif
     }
+#if 0
+    {int uu;
+      double aa[3], bb[3];
+      for (uu=0; uu < 3; uu++)
+	{aa[uu] = rC[uu]-rD[uu];
+	  bb[uu]=rA[uu]-rB[uu];
+	}
+      printf("rCD=%.15G rAB=%.15G\n", calc_norm(aa), calc_norm(bb));
+    }
+#endif
   //printf("i=%d rA=%f %f %f rB=%f %f %f\n", i, rA[0], rA[1], rA[2], rB[0], rB[1], rB[2]);
   MD_DEBUG30(if (globalHW && Oparams.curStep >= 5100) printf("[GuessOpt] t=%.15G\n",t+t1));
-
+#if 0
+  /* check that point rC lies on the surface of object A (SE or HE) */
+    {
+      double xpA[3];
+      lab2body(i, rC, xpA, rA, RtA);
+      printf("after guess f(rC)=%.15G\n", calcf(xpA, i));
+    }
+#endif
   for(k1=0; k1 < 3; k1++)
     r12[k1] = rC[k1]-rD[k1]; 
   MD_DEBUG34(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
@@ -1695,6 +1713,11 @@ retry:
 		  gradf[0], gradf[1], gradf[2], gradplane[0], gradplane[1], gradplane[2]));
   nf = calc_norm(gradf);
   ng = calc_norm(gradplane);
+#if 0
+  printf ("gradf=%.15G %.15G %.15G gradg=%.15G %.15G %.15G\n", gradf[0], gradf[1], gradf[2],
+	  gradplane[0], gradplane[1], gradplane[2]);
+  printf("gradf.gradg=%.15G\n", scalProd(gradf, gradplane)/nf/ng);
+#endif
   if (OprogStatus.dist5NL)
     vecg[3] = sqrt(nf/ng);
   else
@@ -1757,6 +1780,8 @@ retry:
 	  goto retry;
 	}
       printf("[NNL] I couldn't calculate distance between %d and its NL, calcguess=%d, exiting....\n", i, calcguess);
+      //printf("vec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", vecg[0], vecg[1], vecg[2], vecg[3], vecg[4],
+	//     vecg[5], vecg[6], vecg[7]);
       exit(-1);
     }
 #else
@@ -3399,7 +3424,9 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
 #if 1
       calc_delt(maxddoti, &delt, distsOld);
       if (check_distance(maxddoti, dists, t1, t2, *t))
-	return 1;
+	{
+	  return 1;
+	}
 #else
       delt = fabs(*d1) / maxddot;
       if (*t + t1 < t2 && (t2 - (*t + t1))*maxddot < fabs(*d1) - OprogStatus.epsd)
