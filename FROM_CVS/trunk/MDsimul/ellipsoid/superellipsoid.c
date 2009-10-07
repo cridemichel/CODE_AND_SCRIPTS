@@ -947,6 +947,9 @@ void funcs2beZeroedNeighPlaneSE(int n, double x[], double fvec[], int i)
     {
       fvec[4] += (x[k1]-rB[k1])*gradplane[k1];
     }
+  for (k1=0; k1 < 3; k1++)
+    fvec[k1+5] = x[k1] - x[k1+3] + gradplane[k1]*x[7];//[k1]*x[7]; 
+  //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.
   MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 }
 #undef MD_FDJAC_SYM
@@ -1060,10 +1063,18 @@ void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df,
   //print_matrix(df,8);
 #ifndef MD_GLOBALNRDNL
  /* and now evaluate fvec */
- for (k1 = 0; k1 < 3; k1++)
+#if 0 
+/* ma che cavolo ho scritto qua?!? */
+  for (k1 = 0; k1 < 3; k1++)
     {
       fvec[k1] = x[k1+3] - x[k1] - x[6]*fx[k1];
     }
+#else
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      fvec[k1] = fx[k1] - Sqr(x[6])*gradplane[k1];
+    }
+#endif
  fvec[3] = calcf(xpA, iA);
  fvec[4] = 0.0;
  for (k1 = 0; k1 < 3; k1++)
@@ -1254,14 +1265,14 @@ void fdjacDistNegNeighPlane5SE(int n, double x[], double fvec[], double **df,
     {
       fvec[k1] = fx[k1] - Sqr(x[3])*gradplane[k1];
     }
- fvec[3] = 0.0;
+ //fvec[3] = 0.0;
  fvec[4] = 0.0;
  for (k1 = 0; k1 < 3; k1++)
    {
-      fvec[3] += (x[k1]-rA[k1])*fx[k1];
+      //fvec[3] += (x[k1]-rA[k1])*fx[k1];
       fvec[4] += (rD[k1]-rB[k1])*gradplane[k1];
    }
- fvec[3] = 0.5*fvec[3]-1.0;
+ fvec[3] = calcf(xpA, iA);
 #endif
 
 }
@@ -1414,28 +1425,26 @@ void funcs2beZeroedDistNegNeighPlane5SE(int n, double x[], double fvec[], int i)
 {
   int k1, k2; 
   double fx[3], rD[3];
+  double xpA[3], fxp[3];
 
+  lab2body(i, &x[0], xpA, rA, RtA);
+  calcfx(fxp, xpA[0], xpA[1], xpA[2], i);
+  /* ...and now we have to go back to laboratory reference system */
+  body2lab_fx(i, fxp, fx, RtA);
   for (k1 = 0; k1 < 3; k1++)
     {
-      fx[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  fx[k1] += 2.0*Xa[k1][k2]*(x[k2] - rA[k2]);
-	}
       rD[k1] = x[k1] + gradplane[k1]*x[4];
     }
   for (k1 = 0; k1 < 3; k1++)
     {
       fvec[k1] = fx[k1] - Sqr(x[3])*gradplane[k1];
     }
-  fvec[3] = 0.0;
   fvec[4] = 0.0;
   for (k1 = 0; k1 < 3; k1++)
     {
-      fvec[3] += (x[k1]-rA[k1])*fx[k1];
       fvec[4] += (rD[k1]-rB[k1])*gradplane[k1];
     }
-  fvec[3] = 0.5*fvec[3]-1.0;
+  fvec[3] = calcf(xpA, i);
 #if 0
   MD_DEBUG(printf("fx: (%f,%f,%f) gx (%f,%f,%f)\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
   MD_DEBUG(printf("fvec (%.12G,%.12G,%.12G,%.12G,%.12G,%.15G,%.15G,%.15G)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4],fvec[5],fvec[6],fvec[7]));
