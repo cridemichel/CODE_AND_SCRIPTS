@@ -2768,8 +2768,10 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   vx[j] = vx[j] - delpx*invmj;
   vy[i] = vy[i] + delpy*invmi;
   vy[j] = vy[j] - delpy*invmj;
+#ifndef MD_EDHEFLEX_2D
   vz[i] = vz[i] + delpz*invmi;
   vz[j] = vz[j] - delpz*invmj;
+#endif
   MD_DEBUG(printf("delp=(%f,%f,%f)\n", delpx, delpy, delpz));
 
   update_MSDrot(i);
