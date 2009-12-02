@@ -3333,8 +3333,12 @@ void usrInitAft(void)
 	}
 
     }
+#ifdef MD_EDHEFLEX_2D
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      vz[i] = 0.0;
+    }
 #endif
-
   if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);
