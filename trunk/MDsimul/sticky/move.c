@@ -3978,7 +3978,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 		    }
 		  else
 		    {
-		      if (*collCode == MD_EVENT_NONE || troot <= *evtime)
+		      if (*collCode == MD_EVENT_NONE || troot < *evtime)
 			{
 			  gotcoll = 1;
 			  *ata = mapbondsa[nn];
