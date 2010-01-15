@@ -993,7 +993,9 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
 	  rTemp = sqrt(temp / mass);  
 	  vx[i] = rTemp * gauss(); 
 	  vy[i] = rTemp * gauss();
+#ifndef MD_EDHEFLEX_2D
 	  vz[i] = rTemp * gauss();
+#endif
 	}	  
     }
 #else
@@ -1068,7 +1070,9 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
       rTemp = sqrt(temp / mass);  
       vx[i] = rTemp * gauss(); 
       vy[i] = rTemp * gauss();
+#ifndef MD_EDHEFLEX_2D
       vz[i] = rTemp * gauss();
+#endif
       //printf("rank[%d] vx[%d]: %f\n", my_rank, i, vx[i]);
       /* gauss() is a gaussian variable with mean = 0 and variance = 1, that is
                                2
@@ -1107,7 +1111,9 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 	continue;
       vx[i] = vx[i] - sumx;
       vy[i] = vy[i] - sumy;
+#ifndef MD_EDHEFLEX_2D
       vz[i] = vz[i] - sumz;
+#endif
       /* In this way the total (net) momentum of the system of 
 	 molecules is zero */
     }
@@ -1148,7 +1154,9 @@ void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
       rx[i] -= RCMx;
       ry[i] -= RCMy;
 #ifndef MD_GRAVITY
+#ifndef MD_EDHEFLEX_2D
       rz[i] -= RCMz;
+#endif
 #endif
     }
   /* Now the center of mass of the box is in the origin */
@@ -3333,6 +3341,7 @@ void usrInitAft(void)
 	}
 
     }
+#endif
 #ifdef MD_EDHEFLEX_2D
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -4656,16 +4665,32 @@ void readAllCor(FILE* fs)
   int j;
   char *s1, *s2;
 
+
   s1 = malloc(sizeof(char)*65535);
   s2 = malloc(sizeof(char)*65535);
   typeOfPart = malloc(sizeof(int)*Oparams.parnum);
   typeNP = malloc(sizeof(int)*Oparams.ntypes);
-  for (i=0; i < Oparams.ntypes; i++)
-    fscanf(fs, "%d ", &typeNP[i]);
-  typesArr = malloc(sizeof(partType)*Oparams.ntypes);
+#if 0
+  if (1)
+    {
+
+      char str[1024];
+  fscanf(fs,"%[^\n] ", str);
+  printf("str=%s\n", str);
+  exit(-1);
+    }
+#endif
   for (i=0; i < Oparams.ntypes; i++)
     {
-      /* read particles parameters */
+      fscanf(fs, "%d ", &typeNP[i]);
+      //printf("typeNP[%d]=%d\n", i, typeNP[i]);
+    }  
+
+  typesArr = malloc(sizeof(partType)*Oparams.ntypes);
+    
+  for (i=0; i < Oparams.ntypes; i++)
+    {
+        /* read particles parameters */
       fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
       fscanf(fs, "%lf %lf %lf ", &typesArr[i].n[0], &typesArr[i].n[1], &typesArr[i].n[2]);
       fscanf(fs, "%lf %lf %lf %lf %d %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
@@ -4698,6 +4723,7 @@ void readAllCor(FILE* fs)
 	    &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout, &intersArr[i].nmax);
    } 
 #else
+    
   for (i=0; i < Oparams.ninters; i++)
     {
       fscanf(fs, "%s %d %s %d %lf %lf %lf %d ", s1, &intersArr[i].spot1, s2, 

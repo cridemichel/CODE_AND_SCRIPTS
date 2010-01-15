@@ -3191,7 +3191,16 @@ void UpdateAtom(int i)
   double ti, phi, psi;
   int k1, k2;
 
-
+#if 0
+  double dist;
+  if (typeOfPart[i]==2 && (dist=Sqr(rx[i])+Sqr(ry[i])+Sqr(rz[i])) < 280.0*280.0/4.0)
+    {
+      printf("Particella i=%d ghost nella sfera interna boh...\n", i);
+      printf("time=%.15G dist=%.15G(<%.15G)\n", OprogStatus.refTime+Oparams.time, sqrt(dist),280.0);
+      printf("step=%d\n", Oparams.curStep);
+      exit(-1);
+    }
+#endif
   ti = Oparams.time - atomTime[i];
   
   rx[i] += vx[i]*ti;
@@ -3202,6 +3211,7 @@ void UpdateAtom(int i)
 #else
   rz[i] += vz[i]*ti;
 #endif
+  //printf("rz[%d]=%.15G vz[%d]=%.15G\n", i, rz[i], i, vz[i]);
 #ifdef MD_HANDLE_INFMASS
   if (is_infinite_Itens(i))
     {
