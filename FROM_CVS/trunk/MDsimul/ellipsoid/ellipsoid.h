@@ -243,7 +243,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define MD_STSPOTS_B 2
 #define MD_PBONDS 10
 #endif
-#define NUM_PAR 2000   /* Number of particles for the simulation */
+#define NUM_PAR 1000   /* Number of particles for the simulation */
 #define NUMK 99    /* number of k-points in which we must  calculate the 
 		       structure factor */ 
 #define MAXBIN 1000  /* Number of radius in which calculate the radial 
