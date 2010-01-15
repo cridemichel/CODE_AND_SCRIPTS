@@ -757,6 +757,8 @@ void find_bonds_one(int i)
 extern double ranf(void);
 extern void rebuild_linked_list();
 extern double calcpotene(void);
+#ifdef MD_SPHERICAL_WALL
+#ifndef MD_EDHEFLEX_2D
 void rand_angle(double oo[3])
 {
   double xisq, xi1, xi2, norm, osq, xi; 
@@ -781,8 +783,25 @@ void rand_angle(double oo[3])
     oo[2] = -oo[2];
     
 }
+#else
+void rand_angle(double oo[3])
+{
+  double theta, norm, osq; 
+  const double PI2=acos(0.0)*4.0;
+  theta  = ranf()*PI2;
+  /* 15/01/09: nel caso 2D la distribuzione deve essere uniforme su una circonferenza! */
+  oo[0] = cos(theta);
+  oo[1] = sin(theta);
+  oo[2] = 0.0;
+}
+#endif
+#endif
 void handle_absorb(int ricettore, int protein)
 {
+#ifdef MD_EDHEFLEX_ISOCUBE
+  double xx, yy, zz, Lloc[3];
+  int rr; 
+#endif
 #ifdef MD_SPHERICAL_WALL
   double modr, oo[3], dist, LL;
 #ifdef MD_LL_BONDS
@@ -832,7 +851,23 @@ void handle_absorb(int ricettore, int protein)
   //printf("norma oo=%.15G\n", calc_norm(oo));
   rx[protein] = rx[sphWall]+modr*oo[0];
   ry[protein] = ry[sphWall]+modr*oo[1];
+#ifndef MD_EDHEFLEX_2D
   rz[protein] = rz[sphWall]+modr*oo[2];
+#endif
+#if 0
+    {
+      double dist;
+      if ((dist=Sqr(rx[protein])+Sqr(ry[protein])+Sqr(rz[protein])) < 280*280/4.0)
+	{
+	  printf("sphWall coords=%f %f %f modr=%.15G\n", rx[sphWall], ry[sphWall], rz[sphWall],modr);
+	  printf("[HANDLE ABSORB] Particella protein=%d ghost nella sfera interna boh...\n", protein);
+	  printf("time=%.15G dist=%.15G(<%.15G)\n", OprogStatus.refTime+Oparams.time, sqrt(dist),280.0);
+	  printf("step=%d\n", Oparams.curStep);
+	  exit(-1);
+	}
+    }
+#endif
+
 #if 0
   printf("ghost protein=%d %f %f %f modr=%.15G\n", protein, rx[protein], ry[protein], rz[protein], 
 	 sqrt(Sqr(rx[protein]-rx[sphWall])+Sqr(ry[protein]-ry[sphWall])+Sqr(rz[protein]-rz[sphWall])));
@@ -850,6 +885,54 @@ void handle_absorb(int ricettore, int protein)
 	rz[protein] += fabs(dist)+1E-7;
     } 
 #else
+#ifdef MD_EDHEFLEX_ISOCUBE
+  xx = (ranf() - 0.5)*L[0];
+  yy = (ranf() - 0.5)*L[1];
+  zz = (ranf() - 0.5)*L[2];
+  /* scelga a caso una faccia delle 6 possibili della scatola 
+     e su questa metto a caso la particella  nel buffer */
+  rr = (int)(ranf()*6.0+1.0);  
+#ifdef MD_LXYZ
+  Lloc[0] = L[0];
+  Lloc[1] = L[1];
+  Lloc[2] = L[2];
+#else
+  Lloc[0] = L;
+  Lloc[1] = L;
+  Lloc[2] = L;
+#endif
+  if (rr%2==0)
+    segno = 1;
+  else 
+    segno = -1;
+  switch (rr / 2)
+    {
+    case 0:
+      rx[protein] = Lloc[0] + segno*OprogStatus.bufHeight*0.5;
+      ry[protein] = (ranf() - 0.5)*Lloc[1];
+      rz[protein] = (ranf() - 0.5)*Lloc[2];
+      break;
+    case 1:
+      ry[protein] = Lloc[1] + segno*OprogStatus.bufHeight*0.5;
+      rx[protein] = (ranf() - 0.5)*Lloc[0];
+      rz[protein] = (ranf() - 0.5)*Lloc[2];
+      break;
+    case 2:
+      rz[protein] = Lloc[2] + segno*OprogStatus.bufHeight*0.5;
+      rx[protein] = (ranf() - 0.5)*Lloc[0];
+      ry[protein] = (ranf() - 0.5)*Lloc[1];
+      break;
+    }
+#ifdef MD_LXYZ
+  rz[protein] = L[2]*0.5 - OprogStatus.bufHeight*0.5;
+  rx[protein] = (ranf() - 0.5)*L[0];
+  ry[protein] = (ranf() - 0.5)*L[1];
+#else
+  rz[protein] = L*0.5 - OprogStatus.bufHeight*0.5;
+  rx[protein] = (ranf() - 0.5)*L;
+  ry[protein] = (ranf() - 0.5)*L;
+#endif
+#else
 #ifdef MD_LXYZ
   rz[protein] = L[2]*0.5 - OprogStatus.bufHeight*0.5;
   rx[protein] = (ranf() - 0.5)*L[0];
@@ -859,6 +942,7 @@ void handle_absorb(int ricettore, int protein)
   rx[protein] = (ranf() - 0.5)*L;
   ry[protein] = (ranf() - 0.5)*L;
 #endif  
+#endif
 #endif
   //printf("pos of %d %.15G %.15G %.15G\n", protein, rx[protein], ry[protein], rz[protein]); 
   /* ora la particella diventa del tipo "buffer" 
@@ -1159,13 +1243,25 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
   //if (i==sphWallOuter || j==sphWallOuter)
     //printf("qui sphWall=%d i=%dA j=%dB typei=%d typej=%d\n", sphWall, i, j, typeOfPart[i], typeOfPart[j]);
-  if (j==sphWall &&  typeOfPart[i]==2 && bt==MD_OUTIN_BARRIER && !bound(i, j, 1, 1))
+  if (((j==sphWall && typeOfPart[i]==2)||(i==sphWall && typeOfPart[j]==2)) 
+      && bt==MD_OUTIN_BARRIER && !bound(i, j, 1, 1))
     {
-      //printf("qui i=%d\n", i);
-      typeOfPart[i]=1;
-      /* adjust bonds, because becoming a particle of type 1 (=not-in_buffer) it may overlap with other
-	 particle of same type */
-      find_bonds_one(i);
+#if 0
+      if (i==236 || j==236)
+	printf("qui i=%d j=%d\n", i, j);
+#endif
+      if (typeOfPart[i]==2)
+	{
+	  typeOfPart[i]=1;
+	  find_bonds_one(i);
+	}
+      else
+	{
+	  typeOfPart[j]=1;
+	  find_bonds_one(j);
+	}
+      /* find_bonds_on() adjusts bonds, because becoming a particle of type 1 (=not-in_buffer) 
+	 it may overlap with other particle of same type */
     }
 #endif
 #if 0
