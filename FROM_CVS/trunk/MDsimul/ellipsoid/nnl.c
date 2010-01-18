@@ -193,7 +193,11 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 #ifdef MD_ABSORPTION
   if (globalHW==2)
     {
+#ifdef MD_EDHEFLEX_ISOCUBE
+      calc_grad_and_point_plane_hwsemiperm(i, grad, point, nplane);
+#else
       calc_grad_and_point_plane_hwsemiperm(i, grad, point);
+#endif
       return;
     }
 #endif
