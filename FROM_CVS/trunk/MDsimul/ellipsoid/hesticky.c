@@ -923,15 +923,6 @@ void handle_absorb(int ricettore, int protein)
       ry[protein] = (ranf() - 0.5)*Lloc[1];
       break;
     }
-#ifdef MD_LXYZ
-  rz[protein] = L[2]*0.5 - OprogStatus.bufHeight*0.5;
-  rx[protein] = (ranf() - 0.5)*L[0];
-  ry[protein] = (ranf() - 0.5)*L[1];
-#else
-  rz[protein] = L*0.5 - OprogStatus.bufHeight*0.5;
-  rx[protein] = (ranf() - 0.5)*L;
-  ry[protein] = (ranf() - 0.5)*L;
-#endif
 #else
 #ifdef MD_LXYZ
   rz[protein] = L[2]*0.5 - OprogStatus.bufHeight*0.5;

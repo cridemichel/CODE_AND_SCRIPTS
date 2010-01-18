@@ -7395,6 +7395,55 @@ extern void check_these_bonds(int i, int j, double *shift, double t);
 #endif
 #ifdef MD_EDHEFLEX_WALL
 #ifdef MD_ABSORPTION
+#ifdef MD_EDHEFLEX_ISOCUBE
+void calc_grad_and_point_plane_hwsemiperm(int i, double *grad, double *point, int nplane)
+{
+  /* nplane = 0 -> -L/2, nplane = 1 -> L/2 */  
+  int kk;
+  double del=0.0, segno;
+  MD_DEBUG33(printf("[PRIMA] del=%.15G grad=%f %f %f point=%f %f %f\n", del, grad[0], grad[1], grad[2], 
+		    point[0], point[1], point[2]));
+
+  pldir=nplane/2;
+  for (kk=0; kk < 3; kk++)
+    {
+      grad[kk] = (kk==pldir)?1:0;
+
+    }
+#ifdef MD_LXYZ
+  del = L[pldir]/2.0-OprogStatus.bufHeight;
+#else
+  del = L/2.0-OprogStatus.bufHeight;
+#endif
+ 
+  for (kk=0; kk < 3; kk++)
+    {
+      if (nplane % 2 == 0)
+	segno = 1;
+      else
+	segno = -1;
+      grad[kk] *= segno;
+    }
+  if (pldir==0)
+    {
+      point[0] = del*grad[0]; 
+      point[1] = ry[i];
+      point[2] = rz[i];
+    }
+  else if (pldir==1)
+    {
+      point[1] = del*grad[1]; 
+      point[0] = rx[i];
+      point[2] = rz[i];
+    }
+  else
+    {
+      point[2] = del*grad[2]; 
+      point[0] = rx[i];
+      point[1] = ry[i];
+    }
+}
+#else
 void calc_grad_and_point_plane_hwsemiperm(int i, double *grad, double *point)
 {
   /* nplane = 0 -> -L/2, nplane = 1 -> L/2 */  
@@ -7423,6 +7472,7 @@ void calc_grad_and_point_plane_hwsemiperm(int i, double *grad, double *point)
   MD_DEBUG35(printf("[DOPO] del=%.15G grad=%f %f %f point=%f %f %f\n", del, grad[0], grad[1], grad[2], 
 		    point[0], point[1], point[2]));
 }
+#endif
 #endif
 void calc_grad_and_point_plane_hwbump(int i, double *grad, double *point, int nplane)
 {
@@ -7470,6 +7520,9 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   double norm[3];
   double denom;
   double invaSq, invbSq, invcSq;
+#ifdef MD_EDHEFLEX_ISOCUBE
+  int np;
+#endif
 #ifdef MD_HSVISCO
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz ;
   double rxij, ryij, rzij, Dr;
@@ -7490,7 +7543,17 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   if (is_sphere(i))
     {
       update_MSDrot(i);
+#ifdef MD_EDHEFLEX_ISOCUBE
+      np = evIdB - 50 - ATOM_LIMIT;
+      if (np < 2)
+	vx[i] = -vx[i];
+      else (np < 4)
+	vy[i] = -vy[i];
+      else
+	vz[i] = -vz[i];
+#else
       vz[i] = -vz[i];
+#endif
 #if 0
 #ifdef MD_ASYM_ITENS
       calc_angmom(i, Ia);
@@ -7499,6 +7562,8 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
 #endif
       return;
     }
+  /* 18/01/10: se non si tratta di sfere per ora l'urto puo' essere
+     solo lungo z */
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
@@ -7666,7 +7731,88 @@ extern double gradplane[3], rB[3];
 
 extern void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane);
 extern int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2);
+#ifdef MD_EDHEFLEX_ISOCUBE
+int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
+{
+  double delt, tone;
+  if ((is_infinite_Itens(na) && is_infinite_mass(na)) ||
+      (is_infinite_mass(na) && is_a_sphere_NNL[na]))
+    {
+      return 0;
+    }
+  globalHW = ghw;
+#ifdef EDHE_FLEX
+  /* ottimizzazione nel caso di sfere che urtano il muro duro */
+  if (is_sphere(na))
+    {
+      calc_grad_and_point_plane(na, gradplane, rB, nplane);
+      //printf("type=%d ghw=%d na=%d (%.15G %.15G %.15G)\n", typeOfPart[na], ghw, na, rx[na], ry[na], rz[na]);
 
+      //if (ghw==2)
+	//tsup = timbig;
+      if(!locate_contact_neigh_plane_HS_one(na, &vecg[4], tsup))
+	{
+	  globalHW = 0;
+	  //printf("NO time one=%.15G\n", vecg[4]);
+	  return 0;
+	}
+
+      globalHW=0;
+      delt = vecg[4]-Oparams.time;
+       if (nplane < 2)
+	{
+	  vecg[1] = ry[na]+vy[na]*delt;
+	  vecg[2] = rz[na]+vz[na]*delt;
+    	  if (nplane==1)
+	    vecg[0] = rx[na]+vx[na]*delt+typesArr[typeOfPart[na]].sax[0];
+	  else 
+	    vecg[0] = rx[na]+vx[na]*delt-typesArr[typeOfPart[na]].sax[0];
+	}
+      else if (nplane < 4)
+	{
+	  vecg[0] = rx[na]+vx[na]*delt;
+	  vecg[2] = rz[na]+vz[na]*delt;
+    	  if (nplane==3)
+	    vecg[1] = ry[na]+vy[na]*delt+typesArr[typeOfPart[na]].sax[1];
+	  else 
+	    vecg[1] = ry[na]+vy[na]*delt-typesArr[typeOfPart[na]].sax[1];
+	}
+      else (nplane < 6)
+	{
+	  vecg[0] = rx[na]+vx[na]*delt;
+	  vecg[1] = ry[na]+vy[na]*delt;
+	  if (nplane==3)
+	    vecg[2] = rz[na]+vz[na]*delt+typesArr[typeOfPart[na]].sax[2];
+	  else 
+	    vecg[2] = rz[na]+vz[na]*delt-typesArr[typeOfPart[na]].sax[2];
+	}
+	  
+      if (vecg[4] < tsup)
+	return 1;
+      return 0;
+    }
+#endif
+
+  MD_DEBUG33(printf("inCell=%d pos of %d=%f %f %f\n", inCell[2][na], na, rx[na], ry[na], rz[na]));
+  if (!locate_contact_neigh_plane(na, vecg, nplane, tsup))
+    {
+      //printf("NO locate neigh full %.15G\n", vecg[4]);
+      globalHW = 0;
+      return 0;
+    }
+  globalHW = 0;
+  if (vecg[4] < tsup)
+    {
+#if 0
+      printf("OK locate neigh full %.15G\n", vecg[4]);
+      if (fabs(tone-vecg[4]) > 1E-10)
+	exit(-1);
+#endif
+      return 1;
+    }
+  return 0;
+}
+#else
 int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
 {
   double delt, tone;
@@ -7726,6 +7872,7 @@ int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
     }
   return 0;
 }
+#endif
 #endif
 #ifdef EDHE_FLEX
 extern int may_interact_all(int i, int j);
@@ -7870,6 +8017,10 @@ void PredictEvent (int na, int nb)
   double sigSq, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM], 
 	 b, d, t, tInt, vv, distSq, t1, t2;
   int overlap;
+#ifdef MD_EDHEFLEX_ISOCUBE
+  double hwctime;
+  int nplcoll=-1;
+#endif
 #ifdef MD_ABSORPTION
   int hwcell;
 #endif
@@ -8100,6 +8251,96 @@ void PredictEvent (int na, int nb)
   if (OprogStatus.hardwall)
     {
 #if defined(MD_ABSORPTION) 
+#if defined(MD_EDHEFLEX_ISOCUBE)
+      if (OprogStatus.bufHeight > 0.0)
+	{
+#if !defined(MD_SPHERICAL_WALL)
+	  hwctime = timbig;
+	  if (vx[na] != 0.0)
+	    {
+#ifdef MD_LXYZ
+	      hwcell = (L[0]-OprogStatus.bufHeight)*cellsz/L[0];
+#else
+	      hwcell = (L-OprogStatus.bufHeight)*cellsz/L;
+#endif
+#if 1
+	      if (hwcell-inCell[0][na] > 0)
+		nplane = 0;
+	      else
+		nplane = 1;
+	      if (abs(hwcell-inCell[0][na]) < 2)
+		{
+		  /* the semi-permeable plane is just one (nplane=0) */
+		  if (locateHardWall(na, nplane, hwctime, vecg, 2))
+		    {
+		      rxC = vecg[0];
+		      ryC = vecg[1];
+		      rzC = vecg[2];
+		      hwctime = vecg[4];
+		      nplcoll = nplane;
+		    }
+		}
+#endif
+	    }
+	  if (vy[na] != 0.0)
+	    {
+#ifdef MD_LXYZ
+	      hwcell = (L[1]-OprogStatus.bufHeight)*cellsz/L[1];
+#else
+	      hwcell = (L-OprogStatus.bufHeight)*cellsz/L;
+#endif
+#if 1
+	      if (hwcell-inCell[1][na] > 0)
+		nplane = 2;
+	      else
+		nplane = 3;
+
+	      if (abs(hwcell-inCell[1][na]) < 2)
+		{
+		  /* the semi-permeable plane is just one (nplane=0) */
+		  if (locateHardWall(na, nplane, hwctime, vecg, 2))
+		    {
+		      rxC = vecg[0];
+		      ryC = vecg[1];
+		      rzC = vecg[2];
+		      hwctime = vecg[4];
+		      nplcoll = nplane;
+		    }
+		}
+#endif
+	    }
+#endif
+	  if (vz[na] != 0.0)
+	    {
+#ifdef MD_LXYZ
+	      hwcell = (L[2]-OprogStatus.bufHeight)*cellsz/L[2];
+#else
+	      hwcell = (L-OprogStatus.bufHeight)*cellsz/L;
+#endif
+#if 1
+	      if (hwcell-inCell[2][na] > 0)
+		nplane = 4;
+	      else
+		nplane = 5;
+
+	      if (abs(hwcell-inCell[2][na]) < 2)
+		{
+		  /* the semi-permeable plane is just one (nplane=0) */
+		  if (locateHardWall(na, nplane, hwctime, vecg, 2))
+		    {
+		      rxC = vecg[0];
+		      ryC = vecg[1];
+		      rzC = vecg[2];
+		      hwctime = vecg[4];
+		      nplcoll = nplane;
+		    }
+		}
+#endif
+	    }
+	  if (nplcoll != -1)	  
+	    ScheduleEventBarr (na, ATOM_LIMIT+50+nplcoll, 0, 0, MD_WALL, hwctime);
+	}
+#else
       if (OprogStatus.bufHeight > 0.0)
 	{
 #if !defined(MD_SPHERICAL_WALL)
@@ -8129,7 +8370,7 @@ void PredictEvent (int na, int nb)
 #endif
 	}
 #endif
-
+#endif
       if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
       if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
       if (inCell[2][na] == 0)
@@ -9565,10 +9806,18 @@ void move(void)
 	  OprogStatus.collCount++;
 	}
 #if defined(MD_ABSORPTION) && 1
+#if defined(MD_EDHEFLEX_ISOCUBE)
+      /* caso di 6 hard walls (ISOCUBE) */ 
+      else if (evIdB >= ATOM_LIMIT+50 && evIdB < ATOM_LIMIT+50+6)
+	{
+	  ProcessWallColl();
+	}
+#else
       else if (evIdB == ATOM_LIMIT+50)
 	{
 	  ProcessWallColl();
 	}
+#endif
 #endif
 #if defined(MD_GRAVITY) || defined(MD_EDHEFLEX_WALL)
       else if (evIdB >= ATOM_LIMIT + 100 || evIdB < ATOM_LIMIT + NDIM * 2)
