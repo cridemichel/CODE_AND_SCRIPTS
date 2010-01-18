@@ -178,7 +178,11 @@ extern void calc_grad_and_point_plane_hwbump(int i, double *grad, double *point,
 extern int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw);
 #endif
 #ifdef MD_ABSORPTION
+#ifdef MD_EDHEFLEX_ISOCUBE
+void calc_grad_and_point_plane_hwsemiperm(int i, double *grad, double *point, int nplane);
+#else
 void calc_grad_and_point_plane_hwsemiperm(int i, double *grad, double *point);
+#endif
 #endif
 void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
 {

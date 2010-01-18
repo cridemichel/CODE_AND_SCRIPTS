@@ -799,7 +799,7 @@ void rand_angle(double oo[3])
 void handle_absorb(int ricettore, int protein)
 {
 #ifdef MD_EDHEFLEX_ISOCUBE
-  double xx, yy, zz, Lloc[3];
+  double segno, xx, yy, zz, Lloc[3];
   int rr; 
 #endif
 #ifdef MD_SPHERICAL_WALL
