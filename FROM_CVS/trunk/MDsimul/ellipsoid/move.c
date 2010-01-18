@@ -7401,6 +7401,7 @@ void calc_grad_and_point_plane_hwsemiperm(int i, double *grad, double *point, in
   /* nplane = 0 -> -L/2, nplane = 1 -> L/2 */  
   int kk;
   double del=0.0, segno;
+  int pldir;
   MD_DEBUG33(printf("[PRIMA] del=%.15G grad=%f %f %f point=%f %f %f\n", del, grad[0], grad[1], grad[2], 
 		    point[0], point[1], point[2]));
 
@@ -7547,7 +7548,7 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
       np = evIdB - 50 - ATOM_LIMIT;
       if (np < 2)
 	vx[i] = -vx[i];
-      else (np < 4)
+      else if (np < 4)
 	vy[i] = -vy[i];
       else
 	vz[i] = -vz[i];
@@ -7777,7 +7778,7 @@ int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
 	  else 
 	    vecg[1] = ry[na]+vy[na]*delt-typesArr[typeOfPart[na]].sax[1];
 	}
-      else (nplane < 6)
+      else if (nplane < 6)
 	{
 	  vecg[0] = rx[na]+vx[na]*delt;
 	  vecg[1] = ry[na]+vy[na]*delt;
