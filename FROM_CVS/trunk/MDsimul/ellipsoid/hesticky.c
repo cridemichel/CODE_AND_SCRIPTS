@@ -545,6 +545,10 @@ void bumpSPHS(int i, int j, double *W, int bt)
 	    }
 	}
       factor *= mredl;
+#if 0
+      if (j==3128 && i==sphWallOuter)
+	printf("urto con parete\n");
+#endif
       break;
     case MD_OUTIN_BARRIER:
       if (bheight < 0)
@@ -734,15 +738,18 @@ void find_bonds_one(int i)
 		{
 		  if (i == j)
 		    continue;
+		  if (j==sphWall || j==sphWallOuter)
+		    continue;
 		  check_shift(i, j, shift);
 		  assign_bond_mapping(i,j);
 		  dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 		  nbonds = nbondsFlex;
+		  //printf("nbondsFlex=%d checking i=%d j=%d\n", nbondsFlex, i, j);
 		  for (nn=0; nn < nbonds; nn++)
 		    {
 		      if (dists[nn]<0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			{
-			  //printf("found bond between ghost particles! i=%d j=%d typei=%d typej=%d\n",
+			  //printf("[find_bonds_one] found bond between ghost particles! i=%d j=%d typei=%d typej=%d\n",
 			  //	 i, j, typeOfPart[i], typeOfPart[j]);
 			  add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
 			  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
@@ -857,11 +864,11 @@ void handle_absorb(int ricettore, int protein)
 #if 0
     {
       double dist;
-      if ((dist=Sqr(rx[protein])+Sqr(ry[protein])+Sqr(rz[protein])) < 280*280/4.0)
+      if ((dist=Sqr(rx[protein])+Sqr(ry[protein])+Sqr(rz[protein])) > 1.05*(60.05+1.5)*(60.05+1.5)/4.0)
 	{
 	  printf("sphWall coords=%f %f %f modr=%.15G\n", rx[sphWall], ry[sphWall], rz[sphWall],modr);
-	  printf("[HANDLE ABSORB] Particella protein=%d ghost nella sfera interna boh...\n", protein);
-	  printf("time=%.15G dist=%.15G(<%.15G)\n", OprogStatus.refTime+Oparams.time, sqrt(dist),280.0);
+	  printf("[HANDLE ABSORB] Particella protein=%d ghost oltre la sfera esterna boh...\n", protein);
+	  printf("time=%.15G dist=%.15G(>%.15G)\n", OprogStatus.refTime+Oparams.time, sqrt(dist),58.05);
 	  printf("step=%d\n", Oparams.curStep);
 	  exit(-1);
 	}
@@ -939,7 +946,7 @@ void handle_absorb(int ricettore, int protein)
   /* ora la particella diventa del tipo "buffer" 
    */
   typeOfPart[protein] = 2;
-  //printf("abosorbed: %d\n", protein);
+  //printf("absorbed (1->2): %d\n", protein);
 #ifdef MD_SPHERICAL_WALL
   remove_bond(protein, sphWall, 1, 1);
   //remove_bond(sphWall, protein, 1, 1);
@@ -954,7 +961,10 @@ void handle_absorb(int ricettore, int protein)
       if (jj!=sphWall && jj!=sphWallOuter)
 	remove_bond(jj, protein, bb, aa);
     }
+  //printf("numbonds[%d]=%d\n", protein, numbonds[protein]);
   numbonds[protein]=0;
+  /* 19/01/10: deve sempre rimanere il bond con il muro sferico esterno! */
+  add_bond(protein, sphWallOuter, 1, 1);
 #endif
   MD_DEBUG38(printf("time=%.15G i=%d switched to type 2\n", Oparams.time, protein)); 
   n = (inCell[2][protein] * cellsy + inCell[1][protein] )*cellsx + inCell[0][protein]
@@ -983,6 +993,7 @@ void handle_absorb(int ricettore, int protein)
   cellList[protein] = cellList[j];
   cellList[j] = protein;
 #ifdef MD_SPHERICAL_WALL
+  //printf("numbonds[%d]=%d\n", protein, numbonds[protein]);
   find_bonds_one(protein);
 #endif
 }
@@ -1234,7 +1245,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
   //if (i==sphWallOuter || j==sphWallOuter)
     //printf("qui sphWall=%d i=%dA j=%dB typei=%d typej=%d\n", sphWall, i, j, typeOfPart[i], typeOfPart[j]);
-  if (((j==sphWall && typeOfPart[i]==2)||(i==sphWall && typeOfPart[j]==2)) 
+  if (((j==sphWall && typeOfPart[i]==2) ||(i==sphWall && typeOfPart[j]==2)) 
       && bt==MD_OUTIN_BARRIER && !bound(i, j, 1, 1))
     {
 #if 0
@@ -1243,12 +1254,16 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #endif
       if (typeOfPart[i]==2)
 	{
+	  //printf("ghost->norm (i=%d)\n", i);
 	  typeOfPart[i]=1;
+	  //add_bond(i, sphWall, 1, 1);
 	  find_bonds_one(i);
 	}
       else
 	{
+	  //printf("ghost->norm (j=%d)\n", j);
 	  typeOfPart[j]=1;
+	  //add_bond(j, sphWall, 1, 1);
 	  find_bonds_one(j);
 	}
       /* find_bonds_on() adjusts bonds, because becoming a particle of type 1 (=not-in_buffer) 
@@ -1301,15 +1316,23 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	}
     }
 #endif
-#if 1
+#if 0
   /* NOTA 28/10/08: la condizione precedente era:
      is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1 
      tuttavia quella quello che veramente bumpSPHS() richiede è che 
      le particelle abbiano un solo spot quindi la soluzione
      attuale è più corretta */
-  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1)
+   if (i==sphWall||i==sphWallOuter||j==sphWall||j==sphWallOuter)
+     {
+       printf("bt=%d dist=%.15G\n", bt, sqrt(Sqr(rx[i])+Sqr(ry[i])+Sqr(rz[i])));
+       printf("qui i=%d j=%d sphWall=%d sphWallOuter=%d\n", i, j, sphWall, sphWallOuter);
+       printf("type[%d]=%d type[%d]=%d\n", i, typeOfPart[i], j, typeOfPart[j]);
+       printf("issphe[%d]=%d issphe[%d]=%d\n", i, is_a_sphere_NNL[i], j, is_a_sphere_NNL[j]);
+       printf("nspot[%d]=%d nspot[%d]=%d\n", i, typesArr[typeOfPart[i]].nspots, j, typesArr[typeOfPart[j]].nspots);
+     }
+    if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1)
     {
-      bumpSPHS(i, j, W, bt);
+       bumpSPHS(i, j, W, bt);
       return;
     }
 #endif
@@ -2010,6 +2033,7 @@ void remove_bond(int na, int n, int a, int b)
   if (na==sphWall || na==sphWallOuter)
     return;
 #endif
+ 
   nb = numbonds[na];
   if (!nb)
     return;

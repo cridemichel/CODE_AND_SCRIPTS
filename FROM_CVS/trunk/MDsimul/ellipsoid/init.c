@@ -2672,6 +2672,16 @@ void find_bonds(void)
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i+1; j < Oparams.parnum; j++)
       {
+#ifdef MD_SPHERICAL_WALL
+	/* treat bonds with spherical walls separately */
+	if (j==sphWall || j==sphWallOuter)
+	  {
+	    //printf("qui\n");
+	    add_bond(i, j, 1, 1);
+	    //add_bond(j, i, 1, 1);
+	    continue;
+	  }
+#endif
 	/* l'interazione sticky è solo fra fra A e B! */
 #ifndef EDHE_FLEX
 	if (!((i < Oparams.parnumA && j >= Oparams.parnumA)|| 
@@ -2803,7 +2813,7 @@ void allocBondsSphWall(void)
 #else
 	  bonds[i] = malloc(sizeof(int)*Oparams.parnum);
 #endif
-	  break;
+	  //break;
 	}
     }
 }
