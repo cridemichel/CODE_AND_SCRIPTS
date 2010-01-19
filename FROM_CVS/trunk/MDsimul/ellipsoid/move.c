@@ -8017,6 +8017,10 @@ void locate_spherical_wall(int na, int outer)
 #endif
 void PredictEvent (int na, int nb) 
 {
+  /* NOTA 19/01/10 [ABSORPTION]: questa routine ora è stata adattata al caso di buffer su tutte
+     le facce della simulation box, manca da adattare la routine PredictEventNNL(...) anche se 
+     per ora le NNL non vengono usate con il codice per l'assorbimento visto che stiamo simulando 
+     solo sfere. */
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
    * nb = -2,-1, 0 ... (Oparams.parnum - 1)
    *      -2 = controlla solo cell crossing e urti con pareti 
@@ -8028,6 +8032,7 @@ void PredictEvent (int na, int nb)
   int overlap;
 #ifdef MD_EDHEFLEX_ISOCUBE
   double hwctime;
+  int hwnplane=-1;
   int nplcoll=-1;
 #endif
 #ifdef MD_ABSORPTION
@@ -8382,6 +8387,65 @@ void PredictEvent (int na, int nb)
 #endif
       if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
       if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+#ifdef MD_EDHEFLEX_ISOCUBE
+      hwnplane = -1;
+      hwctime = cctime;
+      nplane = -1;
+      if (inCell[2][na] == 0)
+	nplane = 4;
+      else if (inCell[2][na] == cellsz-1)
+	nplane = 5;
+      //if (na==955)
+	//printf("na=%d cella:%d\n", na, inCell[2][na]);
+      if (nplane!=-1 && locateHardWall(na, nplane, hwctime, vecg, 1))
+	{
+	  rxC = vecg[0];
+	  ryC = vecg[1];
+	  rzC = vecg[2];
+	  hwctime = vecg[4];
+	  hwnplane = nplane;
+	  MD_DEBUG38(printf("scheduled collision with wall na=%d nplane=%d evtime=%.15G\n", na, nplane, vecg[4]));
+	}
+      nplane=-1;
+      if (inCell[0][na] == 0)
+	nplane = 0;
+      else if (inCell[0][na] == cellsx-1)
+	nplane = 1;
+      //if (na==955)
+	//printf("na=%d cella:%d\n", na, inCell[2][na]);
+      if (nplane!=-1 && locateHardWall(na, nplane, hwctime, vecg, 1))
+	{
+	  rxC = vecg[0];
+	  ryC = vecg[1];
+	  rzC = vecg[2];
+	  hwctime = vecg[4];
+	  hwnplane=nplane;
+	  MD_DEBUG38(printf("scheduled collision with wall na=%d nplane=%d evtime=%.15G\n", na, nplane, vecg[4]));
+	  //ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
+	}
+      nplane = -1;
+      if (inCell[1][na] == 0)
+	nplane = 2;
+      else if (inCell[1][na] == cellsy-1)
+	nplane = 3;
+      if (nplane!=-1 && locateHardWall(na, nplane, hwctime, vecg, 1))
+	{
+	  rxC = vecg[0];
+	  ryC = vecg[1];
+	  rzC = vecg[2];
+	  hwctime = vecg[4];
+	  hwnplane = nplane;
+	  MD_DEBUG38(printf("scheduled collision with wall na=%d nplane=%d evtime=%.15G\n", na, nplane, vecg[4]));
+	  //ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
+	}
+      if (hwnplane==-1)
+	{
+	  MD_DEBUG38(printf("scheduled cell-crossing with wall na=%d evtime=%.15G\n", na, cctime));
+	  ScheduleEvent (na, ATOM_LIMIT + evCode, cctime);
+	}
+      else
+	ScheduleEventBarr (na, ATOM_LIMIT + hwnplane, 0, 0, MD_WALL, hwctime);
+#else
       if (inCell[2][na] == 0)
 	nplane = 0;
       else if (inCell[2][na] == cellsz-1)
@@ -8401,7 +8465,8 @@ void PredictEvent (int na, int nb)
 	  MD_DEBUG38(printf("scheduled cell-crossing with wall na=%d evtime=%.15G\n", na, cctime));
 	  ScheduleEvent (na, ATOM_LIMIT + evCode, cctime);
 	}
-    }
+#endif
+   }
   else
     ScheduleEvent (na, ATOM_LIMIT + evCode, cctime);
 #endif
