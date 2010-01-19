@@ -3193,10 +3193,10 @@ void UpdateAtom(int i)
 
 #if 0
   double dist;
-  if (typeOfPart[i]==2 && (dist=Sqr(rx[i])+Sqr(ry[i])+Sqr(rz[i])) < 280.0*280.0/4.0)
+  if (typeOfPart[i]==2 && (dist=Sqr(rx[i])+Sqr(ry[i])+Sqr(rz[i])) > 1.05*(60.05/2.0+0.75)*(60.05/2.0+0.75))
     {
-      printf("Particella i=%d ghost nella sfera interna boh...\n", i);
-      printf("time=%.15G dist=%.15G(<%.15G)\n", OprogStatus.refTime+Oparams.time, sqrt(dist),280.0);
+      printf("Particella i=%d ghost oltre la sfera esterna boh...\n", i);
+      printf("time=%.15G dist=%.15G(<%.15G)\n", Oparams.time, sqrt(dist),280.0);
       printf("step=%d\n", Oparams.curStep);
       exit(-1);
     }
@@ -7996,6 +7996,14 @@ void locate_spherical_wall(int na, int outer)
   /* il tempo restituito da newt() è già un tempo assoluto */
   if (collCode != MD_EVENT_NONE)
     {
+#if 0
+      if (na==3128 &&(n==sphWall || n==sphWallOuter))
+	{
+	  printf("collCode=%d\n", collCode);
+	  printf("t=%.15G scheduling coll with wall na=%d n=%d(inner=%d outer=%d)\n", t, na, n, sphWall, sphWallOuter);
+	  printf("dist=%.15G\n", sqrt(Sqr(rx[na])+Sqr(ry[na])+Sqr(rz[na])));
+	}
+#endif
       ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #if 0
       if (na==955||n==955)
