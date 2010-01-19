@@ -672,7 +672,7 @@ void find_bonds_one(int i)
        * fiels is not present */
       if (jZ == -1) 
 	{
-	  printf("BOHHHH\n");
+	  //printf("BOHHHH\n");
 	  jZ = cellsz - 1;    
 #ifdef MD_LXYZ
 	  shift[2] = - L[2];
