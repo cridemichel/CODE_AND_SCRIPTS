@@ -1524,6 +1524,10 @@ void usrInitBef(void)
     L = 9.4;
 #endif
 #ifdef MD_PATCHY_HE
+    OprogStatus.autocat = 0;
+    OprogStatus.mac = 1.0;
+    OprogStatus.k0 = 0.0;
+    OprogStatus.k1 = 0.0;
     Oparams.sigmaSticky = 1.0;
     Oparams.bheight = 0.0;
     Oparams.bhin = 0.0;

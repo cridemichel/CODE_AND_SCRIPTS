@@ -1213,6 +1213,23 @@ int swdumbbell_bump_routine(int i, int j, int ata, int atb, int bt)
   return 0;
 }
 #endif
+/* 26/01/10: calcola la barriere in ingresso per tener 
+   conto di meccanismi autocatalitici.
+   Discutere l'implementazione della reazione autocatalitica
+   con emanuela e francesco. */
+extern double calcpotene(void);
+double eval_bhin(void)
+{
+  double ener, enermax, p, k0, k1, mac;
+  enermax = MD_STSPOTS_A*Oparams.parnumA;
+  ener = calcpotene();
+  p = ener/enermax;
+  k0 = OprogStatus.k0;
+  k1 = OprogStatus.k1;
+  mac = OprogStatus.mac;
+  /* k0 nell'espressione seguente deve essere > 1 */
+  return Oparams.bhin*(1.0-log(k0+k1*pow(p,mac))*Oparams.T);
+}
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
   /* NOTA: Controllare che inizializzare factor a 0 è corretto! */
@@ -1699,7 +1716,14 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   get_inter_bheights(i, j, ata, atb, &bheight, &bhin, &bhout, &nmax);
 #else
   bheight = Oparams.bheight; 
-  bhin = Oparams.bhin;
+  if (OprogStatus.autocat)
+    {
+      bhin = eval_bhin();
+    }
+  else
+    {
+      bhin = Oparams.bhin;
+    }
   bhout= Oparams.bhout;
   nmax = Oparams.nmax;
 #endif
