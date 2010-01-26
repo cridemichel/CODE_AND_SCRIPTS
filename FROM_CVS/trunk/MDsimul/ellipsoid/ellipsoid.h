@@ -101,6 +101,9 @@ typedef struct {
   double ppsax[3]; /* semi-lati di un parallelepipedo che circoscrive l'ellissoide con tutti i suoi sticky spots */
   double ppr[3];
   double n[3];	
+#if 0
+  double R[3][3]; /* orientazione relativa al sistema di riferimento del corpo rigido */
+#endif
 } hardobjsStruct;
 
 typedef struct 
@@ -612,6 +615,11 @@ struct progStatus
   double epsdFastRNL;
   double epsdMaxNL;
 #ifdef MD_PATCHY_HE
+  int autocat;
+  /* parametri per la reazione autocatalitica: k_c(p) = k0 + k1 * p^m */
+  double k0;
+  double k1;
+  double mac;
   double epsdSP;
   double epsdFastSP;
   double epsdSPNL;
@@ -961,6 +969,10 @@ struct pascii opro_ascii[] =
   {"epsdFastSP",     &OS(epsdFastSP),              1,   1, "%.12G"},
   {"epsdSPNL",       &OS(epsdSPNL),                1,   1, "%.12G"},
   {"epsdFastSPNL",   &OS(epsdFastSPNL),            1,   1, "%.12G"},
+  {"autocat",        &OS(autocat),                 1,   1, "%d"},
+  {"k0",             &OS(k0),                      1,   1, "%.12G"},
+  {"k1",             &OS(k1),                      1,   1, "%.12G"},
+  {"mac",            &OS(mac),                     1,   1, "%.12G"},
 #endif
   {"guessDistOpt", &OS(guessDistOpt),          1,   1, "%d"},
   {"springkSD",    &OS(springkSD),              1,   1, "%.12G"},
@@ -1280,6 +1292,10 @@ struct singlePar OsinglePar[] = {
   {"epsdFastSP",   &OprogStatus.epsdFastSP,       CT},
   {"epsdSPNL",     &OprogStatus.epsdSPNL,         CT},
   {"epsdFastSPNL", &OprogStatus.epsdFastSPNL,     CT},
+  {"autocat",      &OprogStatus.autocat,          INT},
+  {"k0",           &OprogStatus.k0,               CT},
+  {"k1",           &OprogStatus.k1,               CT},
+  {"mac",          &OprogStatus.mac,              CT},
 #endif
   {"guessDistOpt",&OprogStatus.guessDistOpt,  INT},
   {"tolSD",      &OprogStatus.tolSD,          CT},

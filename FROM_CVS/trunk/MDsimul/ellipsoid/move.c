@@ -8684,6 +8684,20 @@ void PredictEvent (int na, int nb)
 #endif
 		      if (collCode!=MD_EVENT_NONE)
 			t2 = evtime+1E-7;
+#ifdef ED_HESW
+		      /* per ora assumiamo un solo corpo rigido extra che serve per avere 
+			 la buca quadrata, l'urto tra le buche ellissoidali viene considerato
+			 come un urto tra gli spot 0 (per semplicità) */
+		      if (typesArr[typeOfPart[na]].nhardobjs == 1 &&
+			  typesArr[typeOfPart[n]].nhardobjs == 1)
+			{
+			  if (!locate_contact_hesw(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+			    { 
+			      collCode = MD_EVENT_NONE;
+			    }
+			}
+#endif
+
 		      if (locate_contact(na, n, shift, t1, t2, vecg))
 			{
 			  if (collCode == MD_EVENT_NONE || (collCode!=MD_EVENT_NONE && vecg[4] <= evtime))
