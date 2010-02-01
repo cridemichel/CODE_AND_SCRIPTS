@@ -1227,8 +1227,13 @@ double eval_bhin(void)
   k0 = OprogStatus.k0;
   k1 = OprogStatus.k1;
   mac = OprogStatus.mac;
-  /* k0 nell'espressione seguente deve essere > 1 */
-  return Oparams.bhin*(1.0-log(k0+k1*pow(p,mac))*Oparams.T);
+  /* k0 nell'espressione seguente deve essere >= 1 */
+  if (OprogStatus.autocat==1)
+    return Oparams.bhin*(1.0-log(k0+k1*pow(p,mac))*Oparams.T);
+  else 
+    /* NOTA 01/02/10: soluzione proposta da manu, tuttavia rimane una dipendenza da T in kc(p)
+       e sarebbe meglio moltiplicare k0 per T anche in quest'espressione. */
+    return Oparams.bhin*(1.0-k0*pow(p,mac));
 }
 void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 {
