@@ -2322,9 +2322,11 @@ void add_bond(int na, int n, int a, int b)
 #endif
   if (bound(na, n, a, b))
     {
-      printf("il bond (%d,%d),(%d,%d) esiste gia'!\n", na, a, n, b);
+      //printf("il bond (%d,%d),(%d,%d) esiste gia'!\n", na, a, n, b);
       return;
     }
+  //printf("ADDING BOND (%d,%d)-(%d,%d) bonds=%lld\n", na, a, n, b, n*(((long long int)NA)*NA)+a*((long long int)NA)+b);
+
 #ifdef MD_LL_BONDS
   bonds[na][numbonds[na]] = n*(((long long int)NA)*NA)+a*((long long int)NA)+b;
 #else
@@ -2362,8 +2364,14 @@ int bound(int na, int n, int a, int b)
 #endif
   for (i = 0; i < numbonds[na]; i++)
 #ifdef MD_LL_BONDS
+    //if (na==1841 && n==8965 && a==2 && b==2)
+    //	  printf("[BOUND] TUTTI (%d,%d)-(%d,%d) bonds=%lld\n", na, a, n, b, bonds[na][i]);
+
     if (bonds[na][i] == n*(((long long int)NA)*NA)+a*((long long int)NA)+b)
-      return 1;
+      {
+	//printf("[BOUND] (%d,%d)-(%d,%d) bonds=%lld\n", na, a, n, b, bonds[na][i]);
+       	return 1;
+      }
 #else
     if (bonds[na][i] == n*(NANA)+a*NA+b)
       return 1;
@@ -3285,6 +3293,100 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
   return maxddot;
 }
 #endif
+#ifdef MD_OPTIMIZE_NSPHSPOT
+int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, double t2, double *evtime, int* ata, int *atb, 
+			int *collCode)
+{
+  double dr[NDIM], dv[NDIM], b, d, t=0.0, tInt, vv;
+  double distSq, sigSq, tmin=0.0;
+  int collCodeL, nbonds, nb, aa=-1, bb=-1, collCodeMin;
+
+  nbonds = nbondsFlex;
+  if (nbonds==0)
+    return 0;
+
+  //printf("QUI\n");
+  collCodeMin = MD_EVENT_NONE;
+  for (nb = 0; nb < nbonds; nb++)
+    {
+      sigSq = Sqr(mapSigmaFlex[nb]);
+      //printf("sigma=%.15G\n", mapSigmaFlex[0]);
+      tInt = Oparams.time - atomTime[n];
+      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+      dv[0] = vx[na] - vx[n];
+      dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+      dv[1] = vy[na] - vy[n];
+#ifdef MD_GRAVITY
+      dr[2] = rz[na] - 
+	(rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
+      dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
+#else
+      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+      dv[2] = vz[na] - vz[n];
+#endif
+      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+
+      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
+#if 0
+      if (n==170||na==170)
+	printf("distSq: %.15G sigSq=%.15G\n", distSq, sigSq);
+#endif
+      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+      collCodeL = MD_EVENT_NONE;
+      /* per ora tale ottimizzazione assume un solo spot per particella */ 
+      if (!bound(na, n, mapbondsa[nb], mapbondsb[nb]))
+	{
+	  if ( b < 0.0 ) 
+	    {
+	      d = Sqr (b) - vv * (distSq - sigSq);
+	      if (d > 0.0)
+		{
+		  t = (-sqrt (d) - b) / vv;
+		  if (t > 0 || (t < 0 && distSq < sigSq))
+		    collCodeL = MD_OUTIN_BARRIER;
+		}
+	    }
+	}
+      else
+	{
+	  d = Sqr (b) - vv * (distSq - sigSq);
+	  if (d > 0.0)
+	    {
+	      t = ( sqrt (d) - b) / vv;
+	      if (t > 0 || (t < 0 && distSq > sigSq))
+		{
+		  //if ((na==170 || n==170)&&distSq>sigSq)
+		  //	printf("NONONO t=%.15G t1=%.15G t2=%.15G\n", t+Oparams.time, t1, t2);
+		  collCodeL = MD_INOUT_BARRIER;
+		}
+	    }
+	}
+      if (t < 0 && collCodeL!= MD_EVENT_NONE)
+	{
+	  t = 0;
+	}
+      t += Oparams.time;
+      if ( collCodeL != MD_EVENT_NONE && ((collCodeMin != MD_EVENT_NONE && t < tmin)
+					  || collCodeMin == MD_EVENT_NONE) )
+	{
+	  aa = mapbondsa[nb];
+	  bb = mapbondsb[nb];
+	  collCodeMin = collCodeL;
+	  tmin = t;
+	}
+    }
+  if (collCodeMin != MD_EVENT_NONE && tmin > t1 && tmin < t2)
+    {
+      *collCode = collCodeL;
+      *ata = aa;
+      *atb = bb;
+      *evtime = tmin;
+      return 1;
+    }  
+  else
+    return 0;
+}
+#endif
 #if 1
 int locate_contact_HSSP(int na, int n, double shift[3], double t1, double t2, double *evtime, int* ata, int *atb, 
 			int *collCode)
@@ -3599,6 +3701,17 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
      tuttavia quella quello che veramente bumpSPHS() richiede è che 
      le particelle abbiano un solo spot quindi la soluzione
      attuale è più corretta */
+#ifdef MD_OPTIMIZE_NSPHSPOT
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j]) 
+    {
+#if 0
+      tt=*evtime;
+      cc=*collCode;
+#endif
+      return locate_contact_HSSP_multispot(i, j, shift, t1, t2, evtime, ata, atb, collCode);
+      //printf("HSSP evtime=%.15G\n", tt);
+    }
+#else
   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1) 
     {
 #if 0
@@ -3608,6 +3721,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
       return locate_contact_HSSP(i, j, shift, t1, t2, evtime, ata, atb, collCode);
       //printf("HSSP evtime=%.15G\n", tt);
     }
+#endif
 #endif
 #endif
   bondpair = get_bonded(i, j);

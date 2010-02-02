@@ -2673,6 +2673,7 @@ void find_bonds(void)
   int i, j, NPB, nn, aa, bb;
   double drx, dry, drz, dist, shift[3];
   int amin, bmin;
+  //printf("INIZIO CERCO BOND\n");
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i+1; j < Oparams.parnum; j++)
       {
@@ -2681,7 +2682,10 @@ void find_bonds(void)
 	if (j==sphWall || j==sphWallOuter)
 	  {
 	    //printf("qui\n");
+	    //printf("SPHWALL i=%d j=%d numbonds[1841]=%d\n", i, j, numbonds[1841]);
+	    
 	    add_bond(i, j, 1, 1);
+	    //printf("boh\n");
 	    //add_bond(j, i, 1, 1);
 	    continue;
 	  }
@@ -2745,11 +2749,14 @@ void find_bonds(void)
 		//printf("adding bond i=%d j=%d aa=%d bb=%d\n", i, j, aa, bb);
 		aa = mapbondsa[nn];
 		bb = mapbondsb[nn];
+		//printf("adding bond (%d,%d)-(%d,%d)\n", i, aa, j, bb);
 		add_bond(i, j, aa, bb);
 		add_bond(j, i, bb, aa);
 	      }
 	  }
       }
+
+  //printf("FINE CERCO BOND\n");
 }
 #endif
 #ifdef EDHE_FLEX
@@ -3942,6 +3949,7 @@ void usrInitAft(void)
   find_conciding_spots();
   if (Oparams.maxbondsSaved==-1)
     {
+      //printf("nbonds[1841]=%d\n",numbonds[1841]);
       find_bonds();
     }
   if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
