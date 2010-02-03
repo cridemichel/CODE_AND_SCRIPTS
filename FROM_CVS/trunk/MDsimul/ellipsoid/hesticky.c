@@ -3307,31 +3307,31 @@ int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, dou
 
   //printf("QUI\n");
   collCodeMin = MD_EVENT_NONE;
+  //printf("sigma=%.15G\n", mapSigmaFlex[0]);
+  tInt = Oparams.time - atomTime[n];
+  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+  dv[0] = vx[na] - vx[n];
+  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+  dv[1] = vy[na] - vy[n];
+#ifdef MD_GRAVITY
+  dr[2] = rz[na] - 
+    (rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
+  dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
+#else
+  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+  dv[2] = vz[na] - vz[n];
+#endif
+  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+
+  distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
+#if 0
+  if (n==170||na==170)
+    printf("distSq: %.15G sigSq=%.15G\n", distSq, sigSq);
+#endif
+  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
   for (nb = 0; nb < nbonds; nb++)
     {
       sigSq = Sqr(mapSigmaFlex[nb]);
-      //printf("sigma=%.15G\n", mapSigmaFlex[0]);
-      tInt = Oparams.time - atomTime[n];
-      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
-      dv[0] = vx[na] - vx[n];
-      dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
-      dv[1] = vy[na] - vy[n];
-#ifdef MD_GRAVITY
-      dr[2] = rz[na] - 
-	(rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
-      dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
-#else
-      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
-      dv[2] = vz[na] - vz[n];
-#endif
-      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
-
-      distSq = Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]);
-#if 0
-      if (n==170||na==170)
-	printf("distSq: %.15G sigSq=%.15G\n", distSq, sigSq);
-#endif
-      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
       collCodeL = MD_EVENT_NONE;
       /* per ora tale ottimizzazione assume un solo spot per particella */ 
       if (!bound(na, n, mapbondsa[nb], mapbondsb[nb]))
@@ -3363,6 +3363,7 @@ int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, dou
 	}
       if (t < 0 && collCodeL!= MD_EVENT_NONE)
 	{
+	  //printf("BOH t=%.15G ata=%d atb=%d\n", t, *ata, *atb);
 	  t = 0;
 	}
       t += Oparams.time;
@@ -3377,10 +3378,11 @@ int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, dou
     }
   if (collCodeMin != MD_EVENT_NONE && tmin > t1 && tmin < t2)
     {
-      *collCode = collCodeL;
+      *collCode = collCodeMin;
       *ata = aa;
       *atb = bb;
       *evtime = tmin;
+      //printf("[locate_contact_HSSP_multispot] got collision collCode=%d ata=%d atb=%d time=%.15G\n", *collCode, *ata, *atb, *evtime);
       return 1;
     }  
   else
@@ -3702,14 +3704,9 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
      le particelle abbiano un solo spot quindi la soluzione
      attuale è più corretta */
 #ifdef MD_OPTIMIZE_NSPHSPOT
-  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j]) 
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j]) // && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1) 
     {
-#if 0
-      tt=*evtime;
-      cc=*collCode;
-#endif
       return locate_contact_HSSP_multispot(i, j, shift, t1, t2, evtime, ata, atb, collCode);
-      //printf("HSSP evtime=%.15G\n", tt);
     }
 #else
   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1) 
@@ -4170,6 +4167,8 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 #endif
 			  //printf(">>> evtime=%.15G\n", *evtime);
 			  *collCode = dorefine[nn]; 
+			  //printf("[locate_contact_HSSP] evtime=%.15G ata=%d atb=%d collCode=%d\n", *evtime,
+			//	 *ata, *atb, *collCode);
 			  MD_DEBUG38(printf("SP ok scheduling collision between %d-%d nn=%d\n", i, j, nn));
 			  MD_DEBUG38(printf("SP collcode=%d bound(i, j, nn):%d\n", *collCode, 
 					    bound(i, j, mapbondsa[nn], mapbondsb[nn])));
@@ -4191,9 +4190,9 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
 		}
 	    }
 	}
+      //printf(">>> evtime=%.15G\n", *evtime);
       if (gotcoll == 1)
 	{
-	  //printf(">>> evtime=%.15G\n", *evtime);
 	  return 1;
 	}
       else if (gotcoll == -1)
