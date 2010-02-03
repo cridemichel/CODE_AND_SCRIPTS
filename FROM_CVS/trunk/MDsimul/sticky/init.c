@@ -1037,6 +1037,7 @@ void buildTetrahedras(void)
       //printf("%f %f %f @ 0.075 C[green]\n", uxz[i], uyz[i], uzz[i]);
     }
 }
+#if 0
 void angvel(void)
 {
   int i;
@@ -1090,6 +1091,191 @@ NOTE: consider that it is an exponential distribution
       wz[i] = oz;
     }
 }
+#else
+void angvel(void)
+{
+  int i, a;
+  double pi, inert;                 /* momentum of inertia of the molecule */
+  double norm, osq, o, mean, symax[3];
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, ww[3], wsz;
+#ifdef MD_THREESPOTS
+  double u1[3], u2[3], u3[3];
+#endif
+  //L = cbrt(Vol);
+  invL = 1.0 / L;
+
+  Mtot = Oparams.m[0]; /* total mass of molecule */
+
+  inert = Oparams.I[0]; /* momentum of inertia */
+  pi = acos(0)*2; 
+
+#ifdef MD_THREESPOTS
+  mean = 2.0*Oparams.T / inert;
+#else
+  /* N.B. QUESTO E' SBAGLIATO PERCHE' LA DISTRIBUZIONE
+     E' COME QUELLA TRASLAZIONALE (VEDI LANDAU) 
+     CORREGGERE!!!! */
+#if 1
+  mean = sqrt(Oparams.T / inert);
+#else
+  mean = 3.0*Oparams.T / inert;
+#endif
+#endif
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+#ifndef MD_THREESPOTS
+#if 1
+      wx[i] = mean * gauss(); 
+      wy[i] = mean * gauss();
+      wz[i] = mean * gauss();
+#else
+      xisq = 1.0;
+      while (xisq >= 1.0)
+	{
+	  xi1  = ranf() * 2.0 - 1.0;
+	  xi2  = ranf() * 2.0 - 1.0;
+	  xisq = xi1 * xi1 + xi2 * xi2;
+	}
+
+      xi = sqrt (fabs(1.0 - xisq));
+      ox = 2.0 * xi1 * xi;
+      oy = 2.0 * xi2 * xi;
+      oz = 1.0 - 2.0 * xisq;
+#if 0
+      ww[0] = ox;
+      ww[1] = oy;
+      ww[2] = oz;
+      for (a=0; a < 3; a++)
+	symax[a] = R[i][a][0];
+      norm = calc_norm(symax);
+      for (a=0; a < 3; a++)
+	symax[a] /= norm;
+      wsz = scalProd(ww, symax);
+      ox = ox-symax[0]*wsz;
+      oy = oy-symax[1]*wsz;
+      oz = oz-symax[2]*wsz;
+#endif
+      /* Renormalize */
+      osq   = ox * ox + oy * oy + oz * oz;
+      norm  = sqrt(fabs(osq));
+      ox    = ox / norm;
+      oy    = oy / norm;
+      oz    = oz / norm;
+
+      /* Choose the magnitude of the angular velocity
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+
+#if 1
+      osq   = - mean * log(ranfRandom());
+#else
+      osq   = - mean * log(ranf());
+#endif
+      o     = sqrt(fabs(osq));
+      ox    = o * ox;
+      oy    = o * oy;
+      oz    = o * oz;
+      wx[i] = ox;
+      wy[i] = oy;
+      wz[i] = oz;
+#endif
+#else
+      xi1  = ranf()*2.0*pi;
+      ox = cos(xi1);
+      oy = sin(xi1);
+      /* Choose the magnitude of the angular velocity
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+#if 1
+      osq   = - mean * log(ranfRandom());
+#else
+      do
+	{
+	  osq   = - mean * log(ranf());
+	}
+      while (isnan(osq)||isinf(osq));
+#endif
+      o     = sqrt(fabs(osq));
+      ox    = o * ox;
+      oy    = o * oy;
+      for (a=0; a < 3; a++)
+	u3[a] = R[i][a][0];
+      norm = calc_norm(u3);
+      for (a=0; a < 3; a++)
+	u3[a] /= norm;
+      u2[0] = 1;
+      u2[1] = 1;
+      u2[2] = 1;
+      wsz = scalProd(u2, u3);
+      for (a=0; a < 3; a++)
+	u2[a] = u2[a]-u3[a]*wsz;
+      norm=calc_norm(u2);
+      for (a=0; a < 3; a++)
+	u2[a] /= norm;
+      vectProdVec(u2, u3, u1);
+      wx[i] = u1[0]*ox+u2[0]*oy;
+      wy[i] = u1[1]*ox+u2[1]*oy;
+      wz[i] = u1[2]*ox+u2[2]*oy;
+#endif
+    }
+
+  Mtot = Oparams.m[1]; /* total mass of molecule */
+
+  inert = Oparams.I[1]; /* momentum of inertia */
+
+#if 1
+  mean = sqrt(Oparams.T / inert);
+  for (i = Oparams.parnumA; i < Oparams.parnumA; i++)
+    {
+
+      wx[i] = mean * gauss(); 
+      wy[i] = mean * gauss();
+      wz[i] = mean * gauss();
+    }
+#else
+  mean = 3.0*Oparams.T / inert;
+  for (i = Oparams.parnumA; i < Oparams.parnumA; i++)
+    {
+      xisq = 1.0;
+      while (xisq >= 1.0)
+	{
+	  xi1  = ranf() * 2.0 - 1.0;
+	  xi2  = ranf() * 2.0 - 1.0;
+	  xisq = xi1 * xi1 + xi2 * xi2;
+	}
+
+      xi = sqrt (fabs(1.0 - xisq));
+      ox = 2.0 * xi1 * xi;
+      oy = 2.0 * xi2 * xi;
+      oz = 1.0 - 2.0 * xisq;
+
+      /* Renormalize */
+      osq   = ox * ox + oy * oy + oz * oz;
+      norm  = sqrt(fabs(osq));
+      ox    = ox / norm;
+      oy    = oy / norm;
+      oz    = oz / norm;
+
+      /* Choose the magnitude of the angular velocity
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+#if 1 
+      osq   = - mean * log(ranfRandom());
+#else
+      osq   = - mean * log(ranf());
+#endif
+      o     = sqrt(fabs(osq));
+      ox    = o * ox;
+      oy    = o * oy;
+      oz    = o * oz;
+      wx[i] = ox;
+      wy[i] = oy;
+      wz[i] = oz;
+    }
+#endif
+}
+#endif
 #endif
 void wrap_initCoord(void)
 {
@@ -2585,7 +2771,9 @@ void usrInitAft(void)
 	}
     }
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
-
+#ifdef MD_GRAZING_TRYHARDER
+  printf("Grazing try harder code ENABLED!\n");
+#endif
 
 }
 

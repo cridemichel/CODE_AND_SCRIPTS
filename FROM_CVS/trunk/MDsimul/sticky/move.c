@@ -241,6 +241,37 @@ void build_orient_matrix(int i, double Rt[3][3])
     }
 #else
   /* TODO: in tale caso ho tre vettori che vanno ortonormalizzati */
+  /* caso dell'acqua e della silica */
+  for (a=0; a < 3; a++)
+    u3[a]=R[i][a][1]-R[i][a][0];      
+  norm = calc_norm(u3);
+  for (a=0; a < 3; a++)
+    u3[a] /= norm;
+  if (u3[0]==1.0 && u3[1]==1.0 && u3[2]==1.0)
+    {
+      u2[0] = -1.0;
+      u2[1] = -1.0;
+      u2[2] = -1.0;
+    }	
+  else
+    {
+      u2[0] = 1.0;
+      u2[1] = 1.0;
+      u2[2] = 1.0;
+    }
+  wsz = scalProd(u2, u3);
+  for (a=0; a < 3; a++)
+    u2[a] = u2[a]-u3[a]*wsz;
+  norm=calc_norm(u2);
+  for (a=0; a < 3; a++)
+    u2[a] /= norm;
+  vectProdVec(u2, u3, u1);
+  for (a = 0; a < 3; a++)
+    {
+      Rt[0][a] = u1[a];
+      Rt[1][a] = u2[a];
+      Rt[2][a] = u3[a];
+    }
 #endif
 }
 void update_MSDrot(int i)
@@ -251,11 +282,17 @@ void update_MSDrot(int i)
   /* sumox, sumoy e sumoz sono gli integrali nel tempo delle componenti della velocità
    * angolare lungo gli assi dell'ellissoide */
   /* ERRORE: la matrice d'orientazione va costruita poiché nel presente codice 
-     R[][] contiene la posizione di 3 spots (o meno)!!! */
+     R[][] contiene la posizione di 3 spots (o meno)!!!  */
+#if 1
   build_orient_matrix(i, Rt);	
   OprogStatus.sumox[i] += (wx[i]*Rt[0][0]+wy[i]*Rt[0][1]+wz[i]*Rt[0][2])*ti;
   OprogStatus.sumoy[i] += (wx[i]*Rt[1][0]+wy[i]*Rt[1][1]+wz[i]*Rt[1][2])*ti;
   OprogStatus.sumoz[i] += (wx[i]*Rt[2][0]+wy[i]*Rt[2][1]+wz[i]*Rt[2][2])*ti;
+#else
+  OprogStatus.sumox[i] += wx[i]*ti;
+  OprogStatus.sumoy[i] += wy[i]*ti;
+  OprogStatus.sumoz[i] += wz[i]*ti;
+#endif
 }
 #endif
 /* ========================== >>> scalCor <<< ============================= */
@@ -4709,7 +4746,10 @@ void PredictEvent (int na, int nb)
 
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]); 
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
-
+#if 0
+  /* no collisions at all! */
+  return;
+#endif
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
       jZ = inCell[2][na] + iZ;    
@@ -6403,6 +6443,7 @@ void move(void)
 	  for (i=0; i < Oparams.parnum; i++)
 	    {
 	      update_MSDrot(i);
+	      OprogStatus.lastcolltime[i] = Oparams.time;
 	    }
 #endif
 	  angvel();
