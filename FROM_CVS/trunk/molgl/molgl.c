@@ -105,7 +105,8 @@ void setColor(float col[4], double ff)
   /* col is the specular color, diffusie and the ambient are calculated
      scaling this by df and af respectively */
   float mat[4]; /* atoms color */
-  float df = 0.95, af = 0.2;
+  // OLD VALURE PRE 29/01/2010: float df = 0.95, af = 0.2, sf=1.0;
+  float df = 0.85, af = 0.4, sf=0.85;
 #if 0
   int i;
 #endif
@@ -124,9 +125,28 @@ void setColor(float col[4], double ff)
   glMaterialfv (GL_FRONT, GL_AMBIENT, mat);
   mat[0] = df*col[0]; mat[1] = df*col[1]; mat[2] = df*col[2];	
   glMaterialfv (GL_FRONT, GL_DIFFUSE, mat);
-  mat[0] = col[0]; mat[1] = col[1]; mat[2] = col[2];
+  mat[0] = sf*col[0]; mat[1] = sf*col[1]; mat[2] = sf*col[2];
   glMaterialfv (GL_FRONT, GL_SPECULAR, mat);
   glMaterialf (GL_FRONT, GL_SHININESS, 0.9*128.0);
+}
+/* ========================== >>> setColor <<< =============================*/
+void setColorRGB(int ncol, double ff, float red, float green, float blue)
+{
+  float col[4];
+  int i;
+  if (ncol==-2)
+    {
+      col[0] = red;
+      col[1] = green;
+      col[2] = blue;
+      col[3] = 1.0;
+    }
+  else
+    {
+      for (i=0; i < 4; i++)
+	col[i] = mgl_col[ncol].rgba[i];
+    }
+  setColor(col, ff);
 }
 /* ======================== >>> calcFadeFact <<< ===========================*/
 double  calcFadeFact(int mode, int nf)
@@ -543,11 +563,12 @@ void EvalSuperQuadrics(double t1,double t2,double p1,double p2,double p3,
 #endif
 }
 void render_one_spot(double nx, double ny, double nz, double spotradius, 
-		     int spotcol, double spotangle, float fadeFact)
+		     int spotcol, double spotangle, float fadeFact, int red, int green, int blue)
 {
   double rax, ray, raz, rotangle, normra, normn;
   double Pi;
   Pi = 2.0*acos(0);
+  float col[4];
  
   glPushMatrix();
   vectProd(0,1,0, nx, ny, nz, &rax, &ray, &raz);
@@ -579,7 +600,7 @@ void render_one_spot(double nx, double ny, double nz, double spotradius,
   glRotatef(rotangle, rax, ray, raz);
   glRotatef(180, 1, 0, 0);/* up-down flip */
   /* render the spot here! */
-  setColor(mgl_col[spotcol].rgba, fadeFact);
+  setColorRGB(spotcol, fadeFact, red, green, blue);
   CreatePartialSuperEllipse(1, 1, spotradius, spotradius, spotradius, globset.stacks, 
 			    globset.slides, 1, 0.0, spotangle);
   glPopMatrix(); 
@@ -620,6 +641,10 @@ void displayAtom(int nf, int nm, int na)
 	    {
 	      setColor(mgl_col[atom->common.atcol].rgba, fadeFact);
 	    }
+	  else if (atom->common.atcol==-2) /* -2 = RGB format */
+	    {
+	      setColorRGB(atom->common.atcol, fadeFact, atom->common.atred, atom->common.atgreen, atom->common.atblue);
+	    }	    
 	  else
 	    {
 	      if (globset.NA)
@@ -663,7 +688,7 @@ void displayAtom(int nf, int nm, int na)
 	{
 	  //printf("sl=%p col=%d angle=%.15G\n", sl, sl->spotcol, sl->spotangle);
 	  render_one_spot(sl->n[0], sl->n[1], sl->n[2], atom->sphere_mspot.a, 
-			  sl->spotcol, sl->spotangle, fadeFact);
+			  sl->spotcol, sl->spotangle, fadeFact, sl->red, sl->green, sl->blue);
 	  sl = sl->next;
 	}
     }
@@ -722,7 +747,9 @@ void displayAtom(int nf, int nm, int na)
 				atom->sphere_spot.b, atom->sphere_spot.c, globset.stacks, 
 				globset.slides, //1, 0.0, atom->sphere_spot.tbeg);
 				1, atom->sphere_spot.tbeg, TWOPI/2.0);
-      setColor(mgl_col[atom->sphere_spot.spotcol].rgba, fadeFact);
+      
+      setColorRGB(atom->sphere_spot.spotcol, fadeFact, atom->sphere_spot.red, atom->sphere_spot.green,
+		  atom->sphere_spot.blue);
       CreatePartialSuperEllipse(atom->sphere_spot.n1, 
 				atom->sphere_spot.n2, atom->sphere_spot.a, 
 				atom->sphere_spot.b, atom->sphere_spot.c, globset.stacks, 
@@ -1051,6 +1078,9 @@ void displayBonds(int nf, int i)
 	{
 	  setColor(mgl_col[mols[nf][i].bond[nb].color].rgba, fadeFact);
 	}
+      else if (mols[nf][i].bond[nb].color==-2)
+    	setColorRGB(mols[nf][i].bond[nb].color, fadeFact, mols[nf][i].bond[nb].red,
+		    mols[nf][i].bond[nb].green, mols[nf][i].bond[nb].blue);
       else
 	{
 	  setColor(mgl_col[globset.default_col].rgba, fadeFact);
@@ -1409,7 +1439,7 @@ void print_usage(void)
   printf("| --slides/-sl <slides> | --bondtransp/-br <transparency> | --transp/-r <transparency> \n");
   printf("| --boxsize/-L <box_size> | --distance/-di <distance_offset> \n");
   printf("| --twolights/-tl | --light_pos0/-lp0 (x,y,z) | --light_pos1/-lp1 (x,y,z)\n"); 
-  printf("| --exitDelay/-ed | --nrefresh/-nr ] <input_file> \n"); 
+  printf("| --exitDelay/-ed | --nrefresh/-nr | --height <scr_height> | --width <scr_width> ] <input_file> \n"); 
 }
 /* ============================= >>> args <<< ============================= */
 void args(int argc, char* argv[])
@@ -1550,6 +1580,26 @@ void args(int argc, char* argv[])
 		}
 	      globset.diameter = atof(argv[i]);
 	      globset.NA = 1;
+	    }
+	  else if (!strcmp(argv[i],"--width"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the screen width!\n");
+		  exit(-1);
+		}
+	      globset.Width = atof(argv[i]);
+	    }
+	  else if (!strcmp(argv[i],"--height"))
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: You must supply the screen height!\n");
+		  exit(-1);
+		}
+	      globset.Height = atof(argv[i]);
 	    }
 	  else if (!strcmp(argv[i],"--semiax")|| !strcmp(argv[i],"-sa"))
 	    {
@@ -1696,11 +1746,12 @@ void args(int argc, char* argv[])
 void dropSpaces(char *S);
 int getColByName(const char* name);
 
-int parsecol(char *str, double *transp)
+int parsecol(char *str, double *transp, float *red, float *green, float *blue)
 {
   int colNum;
   char* eptr;
   char cols[128];
+  *red = *green = *blue = -1.0;
   /* guess if there is transparency */
   //printf("str:%s\n", str);
   if (sscanf(str, "%[^/]/%lf",cols,transp)==2)
@@ -1708,11 +1759,17 @@ int parsecol(char *str, double *transp)
   else
     *transp = globset.deftransp;
   //printf("deftransp:%.15G\n", globset.deftransp);
+  if (sscanf(str,"%f,%f,%f", red, green, blue)==3)
+    {
+      //printf("red=%f green=%f blue=%f\n", *red, *green, *blue);
+      /* RGB format */
+      return -2; /* -2 = rgb */
+    }
   colNum = (int) strtod(str, &eptr);
   if (eptr == str) /* not a number */
     {
       dropSpaces(str);
-      return  getColByName(str);
+      return getColByName(str);
       /* Find the number of the color named 's1'*/
       /*printf("col:%s:, %d\n", S, colIdxCol[j]);
       */
@@ -1766,7 +1823,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supquadrics.tbeg = -1.0;
       at->supquadrics.tend = -1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = parsecol(s16,&t);
+      at->common.atcol  = parsecol(s16,&t, &(at->common.atred), &(at->common.atgreen), &(at->common.atblue));
       at->common.transp = t;
 
     }
@@ -1798,7 +1855,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.tbeg = atof(s17);
       at->supellips.tend = atof(s18);
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = parsecol(s16,&t);
+      at->common.atcol  = parsecol(s16,&t,&(at->common.atred), &(at->common.atgreen), &(at->common.atblue));
       at->common.transp = t;
 
     }
@@ -1829,7 +1886,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.tbeg = -1.0;
       at->supellips.tend = -1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = parsecol(s16,&t);
+      at->common.atcol  = parsecol(s16,&t,&(at->common.atred), &(at->common.atgreen), &(at->common.atblue));
       at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15) == 15)
@@ -1898,7 +1955,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->supellips.tbeg = -1.0;
       at->supellips.tend = -1.0;
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = parsecol(s13, &t);
+      at->common.atcol  = parsecol(s13, &t,&(at->common.atred), &(at->common.atgreen), &(at->common.atblue));
       at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s %s %s %s @ %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9) == 9)
@@ -1917,7 +1974,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->disk.radius = atof(s7);
       at->disk.height = atof(s8);
       at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
-      at->common.atcol  = parsecol(s9, &t);
+      at->common.atcol  = parsecol(s9, &t,&(at->common.atred), &(at->common.atgreen), &(at->common.atblue));
       at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s %s %s %s @ %s %s", s1, s2, s3, s4, s5, s6, s7, s8) == 8)
@@ -1986,13 +2043,13 @@ void assignAtom(int nf, int i, int a, const char* L)
 	  newsp->next = *sl;
 	  sscanf(ss, "%lf %lf %lf %lf C[%[^]]] ", &newsp->n[0], &newsp->n[1], &newsp->n[2], &newsp->spotangle, s10); 
 	  //printf("scanning ss=%s\n", ss);
-	  newsp->spotcol = parsecol(s10, &t);
+	  newsp->spotcol = parsecol(s10, &t,&(newsp->red), &(newsp->green), &(newsp->blue));
 	  *sl = newsp;
 	}
       /* ------------------- */
       at->common.transp = t;
       at->common.greyLvl = 0;
-      at->common.atcol = parsecol(s5, &t);
+      at->common.atcol = parsecol(s5, &t,&(at->common.atred), &(at->common.atgreen), &(at->common.atblue));
       at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s @ %s C[%[^]]] P %s %s %s %s C[%[^]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10) == 10)
@@ -2024,10 +2081,10 @@ void assignAtom(int nf, int i, int a, const char* L)
       at->sphere_spot.c = atof(s4);
       at->sphere_spot.tbeg = atof(s9);
       at->sphere_spot.tend = atof(s9);
-      at->sphere_spot.spotcol = parsecol(s10, &t);
+      at->sphere_spot.spotcol = parsecol(s10, &t,&(at->sphere_spot.red), &(at->sphere_spot.green), &(at->sphere_spot.blue));
       at->common.transp = t;
       at->common.greyLvl = 0;
-      at->common.atcol = parsecol(s5, &t);
+      at->common.atcol = parsecol(s5, &t,&(at->common.atred), &(at->common.atgreen), &(at->common.atblue));
       at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s @ %s C[%[^]]", s1, s2, s3, s4, s5) == 5)
@@ -2041,7 +2098,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       //greylLvl[j][i] = colIdxBW[j];// default value of grey level
       at->sphere.radius = atof(s4);
       at->common.greyLvl = 0;
-      at->common.atcol = parsecol(s5, &t);
+      at->common.atcol = parsecol(s5, &t,&(at->common.atred), &(at->common.atgreen), &(at->common.atblue));
       at->common.transp = t;
     }
    else if (sscanf(L,"%s %s %s C[%[^]]", s1, s2, s3, s4) == 4 )
@@ -2055,7 +2112,7 @@ void assignAtom(int nf, int i, int a, const char* L)
       else
 	at->sphere.radius = globset.diameter/2.0;
       at->common.greyLvl = 0;
-      at->common.atcol = parsecol(s4, &t);
+      at->common.atcol = parsecol(s4, &t,&(at->common.atred), &(at->common.atgreen), &(at->common.atblue));
       at->common.transp = t;
     }
   else if (sscanf(L,"%s %s %s @ %s ", s1, s2, s3, s4) == 4 )
@@ -2170,7 +2227,11 @@ int getColByName(const char* name)
   for (nc = 0; nc < NUMCOLS; ++nc)
     {
       if (!strcmp(mgl_col[nc].name, name))
-	return nc;
+	{
+	  //printf("col name=%s %f %f %f\n", mgl_col[nc].name, mgl_col[nc].rgba[0], mgl_col[nc].rgba[1],
+	  //	 mgl_col[nc].rgba[2]);
+	  return nc;
+	}
     }
   printf("ERROR: Unrecognized color %s!\n", name);
   exit(-1);
@@ -2274,7 +2335,8 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
   char parName[1024], parVal[1024], s1[1024], s2[1024], s3[1024], s4[1024], *ns;
   int lett, j, a, nb;
   double defbondthick, t, defbondtransp;
-  int defbondcolor;
+  int defbondcolor; 
+  float defbondcolor_red, defbondcolor_green, defbondcolor_blue;
   /* Syntax:
      <parname> : <value>
      where <parname> is of the form ".<name>"
@@ -2398,17 +2460,17 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
 	      mols[*nf][*i].bond[nb-1].from = atoi(s1);
 	      mols[*nf][*i].bond[nb-1].to   = atoi(s2);
 	      mols[*nf][*i].bond[nb-1].thickness = atof(s3);
-	      mols[*nf][*i].bond[nb-1].color     = parsecol(s4,&t);
+	      mols[*nf][*i].bond[nb-1].color     = parsecol(s4,&t,&(mols[*nf][*i].bond[nb-1].red), &(mols[*nf][*i].bond[nb-1].green), &(mols[*nf][*i].bond[nb-1].blue));
 	      mols[*nf][*i].bond[nb-1].transp    = t;
 	      defbondthick = atoi(s3);
-	      defbondcolor = parsecol(s4, &t);
+	      defbondcolor = parsecol(s4, &t,&(defbondcolor_red), &(defbondcolor_green), &(defbondcolor_blue));
 	      defbondtransp = t;
 	    }
 	  else if (sscanf(ns, "[%[^,],%[^]]",s1,s2)==2)
 	    {
 	      /* [spessore,colore] */
 	      defbondthick = atof(s1);
-	      defbondcolor = parsecol(s2,&t);
+	      defbondcolor = parsecol(s2,&t,&(defbondcolor_red), &(defbondcolor_green), &(defbondcolor_blue));
 	      defbondtransp = t;
 	    }
 	  else if (sscanf(ns, "%[^-]-%s", s1, s2)==2)
@@ -2418,7 +2480,10 @@ int parseLine(const char* Line, int* nf, int* i, int *at, int alloc)
 	      mols[*nf][*i].bond[nb-1].to   = atoi(s2);
 	      mols[*nf][*i].bond[nb-1].thickness = defbondthick;
 	      mols[*nf][*i].bond[nb-1].color     = defbondcolor;
-	      mols[*nf][*i].bond[nb-1].transp    = defbondtransp;
+	      mols[*nf][*i].bond[nb-1].red = defbondcolor_red;
+	      mols[*nf][*i].bond[nb-1].green = defbondcolor_green;
+	      mols[*nf][*i].bond[nb-1].blue = defbondcolor_blue;
+	      mols[*nf][*i].bond[nb-1].transp = defbondtransp;
 #if 0
 	      printf("qui [%s,%s] bondthick:%f\n", s1,s2, mols[*nf][*i].bond[nb-1].thickness );
 #endif
