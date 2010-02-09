@@ -35,6 +35,9 @@ struct atom_common {
   double ry;
   double rz;
   int atcol;
+  float atred;
+  float atgreen;
+  float atblue;
   int greyLvl;
   double transp;
 };
@@ -80,6 +83,9 @@ struct atom_sphere_spot
   double tbeg;
   double tend;
   int spotcol;
+  float red; /* 0.0-1.0 */
+  float green;
+  float blue;
   double nx;
   double ny;
   double nz;
@@ -88,6 +94,9 @@ struct spotlst
 {
   double n[3];
   int spotcol;
+  float red;
+  float green;
+  float blue;
   double spotangle;
   struct spotlst *next;
 };
@@ -148,6 +157,9 @@ struct bond
   bond_types_e type;
   double thickness; /* spessore del bond */
   int color; /* colore del bond */ 
+  float red;
+  float green;
+  float blue;
   double transp;
 };
 typedef union atom atom_s; 
