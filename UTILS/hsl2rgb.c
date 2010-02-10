@@ -127,12 +127,79 @@ void hsl2rgb_wikipedia(double H, double S, double L)
   G = G1 + m;
   B = B1 + m;
 }
+void ConvertHSBToRGB(const double hue,const double saturation, const double brightness)
+{
+  double f, h, p, q, t;
+  /*
+    Convert HSB to RGB colorspace.
+    HSB=HSV
+  */
+  if (saturation == 0.0)
+    {
+      R=brightness;
+      G=R;
+      B=R;
+      return;
+    }
+  h=6.0*(hue-floor(hue));
+  f=h-floor((double) h);
+  p=brightness*(1.0-saturation);
+  q=brightness*(1.0-saturation*f);
+  t=brightness*(1.0-(saturation*(1.0-f)));
+  switch ((int) h)
+  {
+    case 0:
+    default:
+    {
+      R=brightness;
+      G=t;
+      B=p;
+      break;
+    }
+    case 1:
+    {
+      R=q;
+      G=brightness;
+      B=p;
+      break;
+    }
+    case 2:
+    {
+      R=p;
+      G=brightness;
+      B=t;
+      break;
+    }
+    case 3:
+    {
+      R=p;
+      G=q;
+      B=brightness;
+      break;
+    }
+    case 4:
+    {
+      R=t;
+      G=p;
+      B=brightness;
+      break;
+    }
+    case 5:
+    {
+      R=brightness;
+      G=p;
+      B=q;
+      break;
+    }
+  }
+}
+
 int main(int argc, char** argv)
 {
   double  H,S,L;
   if (argc < 4) 
     {
-      printf("SYNTAX: hsl2rgb  <H> <S> <L> <R|G|B|A=all> <algorithm (0=default=ImageMagick|1=wikipedia|2=net)>\n");
+      printf("SYNTAX: hsl2rgb  <H> <S> <L> <R|G|B|A=all> <algorithm (0=default=ImageMagick|1=wikipedia|2=net|3=HSB to RGB from IM)>\n");
       exit(-1);
     }
   H = atof(argv[1]);
@@ -151,6 +218,9 @@ int main(int argc, char** argv)
 	break;
       case 2:
 	hsl2rgb_net(H,S,L);
+	break;
+      case 3:
+	ConvertHSBToRGB(H, S, L);
       } 
   else
     ConvertHSLToRGB(H,S,L);
