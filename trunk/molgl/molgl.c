@@ -963,8 +963,10 @@ void displayAtom(int nf, int nm, int na)
 	      rotm[k1*4+k2] = 0.0;
 	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
 	  }
+	  glEnable(GL_NORMALIZE);
 	  glMultMatrixf(rotm);
        	  glutSolidSphere (1, globset.stacks, globset.slides);
+	  glDisable(GL_NORMALIZE);
 	}	  
       else
 	{
