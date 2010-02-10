@@ -73,14 +73,14 @@ int main(int argc, char** argv)
  NsphWall = 1;
  NsphWallOuter = 1;
  sigRecept = 1.0;
- sigProt = 1.0;
+ sigProt = 0.005;
  massProt = 1.0;
  massRecept = 1.0E200;
  brownian = 1;
- bufHeight = 1.1;
+ bufHeight = 0.05;
  Lx=Ly=40.0;
- sigSphWall = Lx-2.0*sigProt;
- sigSphWallOuter = sigSphWall + 2.0*sigProt;
+ sigSphWall = Lx - bufHeight;
+ sigSphWallOuter = sigSphWall + bufHeight;
  Lz=Lx/2.0+bufHeight;
  f=fopen("absorb.cnf","w");
  fprintf(f,"parnum:%d\n", Nrecept+Nprot+NsphWall+NsphWallOuter); 
