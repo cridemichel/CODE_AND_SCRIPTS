@@ -54,7 +54,9 @@ void setLight(void)
   glLightfv (GL_LIGHT1, GL_DIFFUSE, light_diffuse1);
   glLightfv (GL_LIGHT1, GL_SPECULAR, light_specular1);
   glLightfv (GL_LIGHT1, GL_POSITION, globset.light_pos1);
-
+  // tuning light spot size
+  //glLightf (GL_LIGHT0, GL_SPOT_CUTOFF, 30.f);
+  //glLightf (GL_LIGHT1, GL_SPOT_CUTOFF, 30.f);
 }
 
 /* =============================== >>> setBW <<< ===========================*/
@@ -127,6 +129,7 @@ void setColor(float col[4], double ff)
   glMaterialfv (GL_FRONT, GL_DIFFUSE, mat);
   mat[0] = sf*col[0]; mat[1] = sf*col[1]; mat[2] = sf*col[2];
   glMaterialfv (GL_FRONT, GL_SPECULAR, mat);
+  //OLD// glMaterialf (GL_FRONT, GL_SHININESS, 0.9*128.0);
   glMaterialf (GL_FRONT, GL_SHININESS, 0.9*128.0);
 }
 /* ========================== >>> setColor <<< =============================*/
@@ -146,6 +149,7 @@ void setColorRGB(int ncol, double ff, float red, float green, float blue)
       for (i=0; i < 4; i++)
 	col[i] = mgl_col[ncol].rgba[i];
     }
+  //printf("col=%f %f %f %f\n", col[0], col[1], col[2], col[3]);
   setColor(col, ff);
 }
 /* ======================== >>> calcFadeFact <<< ===========================*/
@@ -883,8 +887,10 @@ void displayAtom(int nf, int nm, int na)
 	      rotm[k1*4+k2] = 0.0;
 	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
 	  }
+	  glEnable(GL_NORMALIZE);
 	  glMultMatrixf(rotm);
        	  glutSolidSphere (1, globset.stacks, globset.slides);
+	  glDisable(GL_NORMALIZE);
 	}	  
       else
 	{
@@ -2757,9 +2763,9 @@ void default_pars(void)
   globset.deftransp = 1.0;
   globset.nrefresh=1;
   globset.exitDelay=0;/* ritardo in msec prima di fare save and quit */
-  globset.light_pos0[0]=globset.light_pos0[1]=globset.light_pos0[2]=10.0;
+  globset.light_pos0[0]=globset.light_pos0[1]=globset.light_pos0[2]=150.0;
   globset.light_pos0[3]=0.0;
-  globset.light_pos1[0]=globset.light_pos1[1]=globset.light_pos1[2]=10.0;
+  globset.light_pos1[0]=globset.light_pos1[1]=globset.light_pos1[2]=150.0;
   globset.light_pos1[3]=0.0;
   globset.twolights=0;
   globset.depthmask=1;
