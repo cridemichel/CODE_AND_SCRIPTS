@@ -38,4 +38,4 @@ cd ..
 cd ..
 done
 cat $FN | sort -k 1 -n > sorted$FN
-cat sorted$FN | LC_NUMERIC=C awk -v LA="$L" -v cfs="$CFS" -v sup="$S" '{K1=$4/($3*$6)/(1-0.0*(30.0*$4*cfs/sup-64.0*$5*cfs/sup)); K2=$5/($4*$6*(1-exp(-3.1415*144*$2))); print ($8,K1,K2,$8,$3)}' > $RA
+cat sorted$FN | LC_NUMERIC=C awk -v LA="$L" -v cf="$CF" -v cfs="$CFS" -v sup="$S" '{D=1-2*33.5*$3*cf/(LA*LA*LA); K1=$4/($3*$6)/(1.0-2.0*33.5*$3*cf/(LA*LA*LA))/(1-0.0*(30.0*$4*cfs/sup-64.0*$5*cfs/sup)); K2=$5/($4*$6*(1-exp(-3.1415*144*$2))); print ($8,K1,K2,$8,$3,D)}' > $RA

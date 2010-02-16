@@ -55,7 +55,7 @@ fi
 #i cluster più grandi avranno hue=0 e saranno rossi
 #mentre quelli più piccoli (NP=1) avranno hue dell'ordine
 # di 0.7 che corrisponde al blue (basta vedere con gimp)
-H=`echo "0.7*(1.0-$NP/$MAXSIZE)"| bc -l`
+H=`echo "0.08+(0.7-0.08)*(1.0-$NP/$MAXSIZE)"| bc -l`
 #H="0.75"
 #echo "H=" $H "ai=" $ai "NUMCLS=" $NUMCLS > /dev/stderr
 L="0.7"
