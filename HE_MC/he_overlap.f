@@ -1,8 +1,12 @@
        REAL*8 xmin, bret, TOL, LAM0, LAM1, LAM2
-       PARAMETER(TOL=1.0D-15, LAM0=0.0, LAM1=0.5, LAM2=1.0)
+       PARAMETER(TOL=1.0D-12, LAM0=0.0, LAM1=0.5, LAM2=1.0)
        REAL*8 saA(3),saB(3),RA(3,3),RB(3,3)
        REAL*8 COMA(3),COMB(3)
        INTEGER ncall
+!      RA(i,j) e RB(i,j) sono le matrici di orientazione dei 
+!      dei due ellissoidi A e B ossia sono composte 
+!      dai 3 vettori colonna che rappresentano gli assi principali
+!      dell'ellissoide
        common / SIMPAR / saA,saB,RA,RB,COMA,COMB
 !      USEDBRENT=.TRUE. to use brent with derivatives (faster)
 !      USEDIRINV=.TRUE. to use direct matrix inversion instead
@@ -13,8 +17,8 @@
        EXTERNAL Spw_wrap
        EXTERNAL SpwDer_wrap
 !      set ellipsoids positions, orientations and parameters (i.e. semiaxes) 
-       USEDBRENT=.TRUE.
-       USEDIRINV=.TRUE.
+       USEDBRENT=.FALSE.
+       USEDIRINV=.FALSE.
        if (USEDBRENT) then
           print *, 'Using DBRENT'
        else
@@ -26,12 +30,12 @@
        saB(1)=2.
        saB(2)=2.
        saB(3)=1.
-       COMA(1)=-3.0
+       COMA(1)=-2.0
        COMA(2)=0.
        COMA(3)=0.
-       COMA(1)=3.0
-       COMA(2)=0.
-       COMA(3)=0.
+       COMB(1)=2.0
+       COMB(2)=0.
+       COMB(3)=0.
        RA(1,1)=1.
        RA(1,2)=0.
        RA(1,3)=0.
@@ -50,14 +54,14 @@
        RB(3,1)=0.
        RB(3,2)=0.
        RB(3,3)=1.
-       do ncall=1,1000000
+       do ncall=1,1
        if (USEDBRENT) then
         bret=dbrent(LAM0,LAM1,LAM2,SpwDer_wrap,TOL,xmin)
        else
         bret=brent(LAM0,LAM1,LAM2,Spw_wrap,TOL,xmin)
        end if
        end do
-!       PRINT *, 'F(A,B)=', -bret 
+       PRINT *, 'F(A,B)=', -bret 
        end
        SUBROUTINE SpwDer_wrap(x,Sl,SlP,CALCSl,CALCSlP)
        EXTERNAL SpwDer
@@ -100,8 +104,8 @@
          Ainv(i,j)=0.
          Binv(i,j)=0.
          do n=1,3
-          Ainv(i,j)=Ainv(i,j)+saA(n)**2*RA(i,n)*RA(j,n) 
-          Binv(i,j)=Binv(i,j)+saB(n)**2*RB(i,n)*RB(j,n)
+          Ainv(i,j)=Ainv(i,j)+saA(n)**2*RA(n,i)*RA(n,j) 
+          Binv(i,j)=Binv(i,j)+saB(n)**2*RB(n,i)*RB(n,j)
          end do
          G(i,j)=(1.0D0 - lambda)*Ainv(i,j)+lambda*Binv(i,j) 
          if (CALCSlP) then
@@ -165,8 +169,8 @@
        Ainv(i,j)=0.
        Binv(i,j)=0.
        do n=1,3
-       Ainv(i,j)=Ainv(i,j)+saA(n)**2*RA(i,n)*RA(j,n) 
-       Binv(i,j)=Binv(i,j)+saB(n)**2*RB(i,n)*RB(j,n)
+       Ainv(i,j)=Ainv(i,j)+saA(n)**2*RA(n,i)*RA(n,j) 
+       Binv(i,j)=Binv(i,j)+saB(n)**2*RB(n,i)*RB(n,j)
        end do
        ABinv(i,j)=(1.0D0 - lambda)*Ainv(i,j)+lambda*Binv(i,j)
        end do
