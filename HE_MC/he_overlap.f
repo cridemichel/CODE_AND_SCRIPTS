@@ -1,5 +1,5 @@
        REAL*8 xmin, bret, TOL, LAM0, LAM1, LAM2
-       PARAMETER(TOL=1.0D-14, LAM0=0.0, LAM1=0.5, LAM2=1.0)
+       PARAMETER(TOL=1.0D-15, LAM0=0.0, LAM1=0.5, LAM2=1.0)
        REAL*8 saA(3),saB(3),RA(3,3),RB(3,3)
        REAL*8 COMA(3),COMB(3)
        INTEGER ncall
@@ -13,7 +13,7 @@
        EXTERNAL Spw_wrap
        EXTERNAL SpwDer_wrap
 !      set ellipsoids positions, orientations and parameters (i.e. semiaxes) 
-       USEDBRENT=.FALSE.
+       USEDBRENT=.TRUE.
        USEDIRINV=.TRUE.
        if (USEDBRENT) then
           print *, 'Using DBRENT'
