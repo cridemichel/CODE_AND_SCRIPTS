@@ -17,7 +17,7 @@
 !      of LU decomposition (2 times faster!)
        common / LOGICPAR /  USEDIRINV, USEDBRENT
        LOGICAL USEDBRENT,USEDIRINV, READFROMFILE
-!       PARAMETER(USEDBRENT=.TRUE.,USEDIRINV=.FALSE.)
+!      PARAMETER(USEDBRENT=.TRUE.,USEDIRINV=.FALSE.)
        EXTERNAL Spw_wrap
        EXTERNAL SpwDer_wrap
 !      set ellipsoids positions, orientations and parameters (i.e. semiaxes) 
