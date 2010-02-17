@@ -1,60 +1,85 @@
        REAL*8 xmin, bret, TOL, LAM0, LAM1, LAM2
-       PARAMETER(TOL=1.0D-12, LAM0=0.0, LAM1=0.5, LAM2=1.0)
+       PARAMETER(TOL=1.0D-15, LAM0=0.0, LAM1=0.5, LAM2=1.0)
        REAL*8 saA(3),saB(3),RA(3,3),RB(3,3)
        REAL*8 COMA(3),COMB(3)
-       INTEGER ncall
+       INTEGER ncall, i, j
+!      NOTA sulle matrici di orientazione RA e RB:
 !      RA(i,j) e RB(i,j) sono le matrici di orientazione dei 
 !      dei due ellissoidi A e B ossia sono composte 
-!      dai 3 vettori colonna che rappresentano gli assi principali
-!      dell'ellissoide
+!      dai 3 vettori riga che rappresentano gli assi principali
+!      dell'ellissoide. In particolare per passare dalle coordinate
+!      del sistema di rif. del laboratorio (x) a quello del corpo rigido
+!      (xp) si deve effettuare la trasformazione: xp = R*(x-xCM)
+!      dove xCM è il centro di massa del corpo rigido.
        common / SIMPAR / saA,saB,RA,RB,COMA,COMB
-!      USEDBRENT=.TRUE. to use brent with derivatives (faster)
-!      USEDIRINV=.TRUE. to use direct matrix inversion instead
-!                 of LU decomposition (make a comparison!)
+!      USEDBRENT=.TRUE. to use brent with derivatives (5 times faster)
+!      USEDIRINV=.TRUE. to use direct matrix inversion instead 
+!      of LU decomposition (2 times faster!)
        common / LOGICPAR /  USEDIRINV, USEDBRENT
-       LOGICAL USEDBRENT,USEDIRINV
+       LOGICAL USEDBRENT,USEDIRINV, READFROMFILE
 !       PARAMETER(USEDBRENT=.TRUE.,USEDIRINV=.FALSE.)
        EXTERNAL Spw_wrap
        EXTERNAL SpwDer_wrap
 !      set ellipsoids positions, orientations and parameters (i.e. semiaxes) 
-       USEDBRENT=.FALSE.
-       USEDIRINV=.FALSE.
+       USEDBRENT=.TRUE.
+       USEDIRINV=.TRUE.
+       READFROMFILE=.TRUE.
        if (USEDBRENT) then
           print *, 'Using DBRENT'
        else
           print *, 'Using BRENT' 
        end if
-       saA(1)=2.
-       saA(2)=2.
-       saA(3)=1.
-       saB(1)=2.
-       saB(2)=2.
-       saB(3)=1.
-       COMA(1)=-2.0
-       COMA(2)=0.
-       COMA(3)=0.
-       COMB(1)=2.0
-       COMB(2)=0.
-       COMB(3)=0.
-       RA(1,1)=1.
-       RA(1,2)=0.
-       RA(1,3)=0.
-       RA(2,1)=0.
-       RA(2,2)=1.
-       RA(2,3)=0.
-       RA(3,1)=0.
-       RA(3,2)=0.
-       RA(3,3)=1.
-       RB(1,1)=1.
-       RB(1,2)=0.
-       RB(1,3)=0.
-       RB(2,1)=0.
-       RB(2,2)=1.
-       RB(2,3)=0.
-       RB(3,1)=0.
-       RB(3,2)=0.
-       RB(3,3)=1.
-       do ncall=1,1
+       if (READFROMFILE) then
+       OPEN(UNIT=11,FILE='ellips.pos', STATUS='OLD', iostat=irr) 
+       if (irr.ne.0) then
+       print *, 'BOH...'
+       pause
+       end if
+       READ (11,*,IOSTAT=irr) COMA(1), COMA(2), COMA(3), 
+     *  RA(1,1), RA(1,2), RA(1,3), RA(2,1), RA(2,2), RA(2,3),
+     *  RA(3,1), RA(3,2), RA(3,3), saA(1), saA(2), saA(3)
+       READ (11,*,IOSTAT=irr) COMB(1), COMB(2), COMB(3), 
+     *  RB(1,1), RB(1,2), RB(1,3), RB(2,1), RB(2,2), RB(2,3),
+     *  RB(3,1), RB(3,2), RB(3,3), saB(1), saB(2), saB(3)
+       CLOSE(11)
+!      it should be the 6th element read 
+       print *, 'RA(1,...)=', RA(1,1), RA(1,2), RA(1,3)
+       print *, 'RA(2,...)=', RA(2,1), RA(2,2), RA(2,3)
+       print *, 'RA(3,...)=', RA(3,1), RA(3,2), RA(3,3)
+       print *, 'semiaxes=',saA(1), saA(2), saA(3)
+       else 
+        saA(1)=2.
+        saA(2)=2.
+        saA(3)=1.
+        saB(1)=2.
+        saB(2)=2.
+        saB(3)=1.
+        COMA(1)=-1.99
+        COMA(2)=0.
+        COMA(3)=0.
+        COMB(1)=1.99
+        COMB(2)=0.
+        COMB(3)=0.
+        RA(1,1)=1.
+        RA(1,2)=0.
+        RA(1,3)=0.
+        RA(2,1)=0.
+        RA(2,2)=1.
+        RA(2,3)=0.
+        RA(3,1)=0.
+        RA(3,2)=0.
+        RA(3,3)=1.
+        RB(1,1)=1.
+        RB(1,2)=0.
+        RB(1,3)=0.
+        RB(2,1)=0.
+        RB(2,2)=1.
+        RB(2,3)=0.
+        RB(3,1)=0.
+        RB(3,2)=0.
+        RB(3,3)=1.
+       end if 
+       do ncall=1,1000000
        if (USEDBRENT) then
         bret=dbrent(LAM0,LAM1,LAM2,SpwDer_wrap,TOL,xmin)
        else
@@ -430,7 +455,7 @@
        dv=dx
        dw=dx
        do iter=1,ITMAX
-!       print *, 'iter=', iter
+!      print *, 'iter=', iter
        xm=0.5*(a+b)
        tol1=tol*abs(x)+ZEPS
        tol2=2.*tol1
