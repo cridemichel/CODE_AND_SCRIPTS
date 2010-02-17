@@ -328,9 +328,239 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
   *xmin=x; /*Never get here.*/
   return fx;
 }
-
+const int USEDBRENT=1, READFROMFILE=1,USEDIRINV=1;
+void matinv(A,Ainv)
+{
+       REAL*8 A(3,3),D,Ainv(3,3)
+       INTEGER i,j,INDX(3)
+       do i=1,3 
+       do j=1,3
+         Ainv(i,j)=0.0d0
+       end do 
+       Ainv(i,i)=1.0d0
+       end do 
+       CALL ludcmp(A,3,3,INDX,D) 
+       do j=1,3
+        CALL lubksb(A,3,3,INDX,Ainv(1,j))
+	  /*     Note that FORTRAN stores two-dimensional matrices by column, so y(1,j) is the
+       address of the jth column of y.
+       end do*/
+}
+       SUBROUTINE MATINV33(A,Ainv)
+       REAL*8 A(3,3),Ainv(3,3)
+       REAL*8 DET
+       DET = A(1,1)*A(2,2)*A(3,3)-A(1,1)*A(2,3)*A(3,2)-A(1,2)*A(2,1)
+     * *A(3,3)+A(1,2)*A(2,3)*A(3,1)+A(1,3)*A(2,1)*A(3,2)-A(1,3)*A(2,2)
+     * *A(3,1)
+       Ainv(1,1)=A(2,2)*A(3,3)-A(2,3)*A(3,2)
+       Ainv(1,2)=A(1,3)*A(3,2)-A(1,2)*A(3,3)
+       Ainv(1,3)=A(1,2)*A(2,3)-A(2,2)*A(1,3)
+       Ainv(2,1)=A(2,3)*A(3,1)-A(3,3)*A(2,1)
+       Ainv(2,2)=A(1,1)*A(3,3)-A(3,1)*A(1,3)
+       Ainv(2,3)=A(1,3)*A(2,1)-A(1,1)*A(2,3)
+       Ainv(3,1)=A(2,1)*A(3,2)-A(2,2)*A(3,1)
+       Ainv(3,2)=A(1,2)*A(3,1)-A(1,1)*A(3,2)
+       Ainv(3,3)=A(1,1)*A(2,2)-A(1,2)*A(2,1)
+       do i=1, 3
+       do j=1, 3
+          Ainv(i,j)=Ainv(i,j)/DET
+       end do
+       end do
+       RETURN
+       END
+SUBROUTINE SpwDer_wrap(x,Sl,SlP,CALCSl,CALCSlP)
+       EXTERNAL SpwDer
+       REAL*8 x, Sl, SlP
+       LOGICAL CALCSl, CALCSlP
+       REAL*8 saA(3),saB(3),RA(3,3),RB(3,3)
+       REAL*8 COMA(3),COMB(3)
+       common / SIMPAR / saA,saB,RA,RB,COMA,COMB
+       CALL SpwDer(x,Sl,SlP,CALCSL,CALCSlP) 
+       RETURN
+       END
+       REAL*8 function Spw_wrap(x)
+       REAL*8 saA(3),saB(3),RA(3,3),RB(3,3)
+       REAL*8 COMA(3),COMB(3),boh, x
+       common / SIMPAR / saA,saB,RA,RB,COMA,COMB
+       Spw_wrap = Spw(x)
+!      print *,"S1=", Spw_wrap
+!       CALL SpwDer(x,Spw_wrap,boh,.TRUE.,.FALSE.) 
+!       ,saA, COMA, RA, saB, COMB, RB) 
+!      print *,'S2=', Spw_wrap
+       RETURN
+       end
+       SUBROUTINE SpwDer(lambda,Sl,SlP,CALCSl,CALCSlP)
+       EXTERNAL MATINV
+       EXTERNAL MATINV33
+       LOGICAL USEDBRENT,USEDIRINV
+       common / LOGICPAR / USEDIRINV,USEDBRENT
+       LOGICAL CALCSl,CALCSlP
+       INTEGER a,i,j,n
+       REAL*8 GinvR(3),saA(3), saB(3),B(3),H(3,3)
+       REAL*8 Ginv(3,3),G(3,3),Ainv(3,3),Binv(3,3)
+       REAL*8 R(3),RA(3,3),RB(3,3),COMA(3),COMB(3) 
+       REAL*8 lambda,Sl,SlP
+       common / SIMPAR / saA,saB,RA,RB,COMA,COMB
+       do a=1,3
+         R(a) = COMB(a)-COMA(a)
+       end do  
+       do i=1,3
+        do j=1,3
+         Ainv(i,j)=0.
+         Binv(i,j)=0.
+         do n=1,3
+          Ainv(i,j)=Ainv(i,j)+saA(n)**2*RA(n,i)*RA(n,j) 
+          Binv(i,j)=Binv(i,j)+saB(n)**2*RB(n,i)*RB(n,j)
+         end do
+         G(i,j)=(1.0D0 - lambda)*Ainv(i,j)+lambda*Binv(i,j) 
+         if (CALCSlP) then
+          H(i,j)=(1.0D0 - lambda)**2*Ainv(i,j)-lambda**2*Binv(i,j)
+         end if
+        end do
+       end do
+       if (USEDIRINV) then
+         CALL MATINV33(G,Ginv)
+       else
+         CALL MATINV(G,Ginv)
+       end if
+       do i=1,3
+        GinvR(i)=0.0d0
+        do j=1,3 
+          GinvR(i)=GinvR(i)+Ginv(i,j)*R(j)
+        end do
+       end do
+!      se il valore di Slp passato è maggiore di 0 calcola la
+!      derivata di S(lambda)
+!      print *,'GinR=', GinvR(1), GinvR(2), GinvR(3)
+       if (CALCSlP) then
+        SlP = 0.0d0
+        do i=1,3
+         do j=1,3
+          SlP = SlP + GinvR(i)*H(i,j)*GinvR(j) 
+         end do
+        end do
+        SlP = -SlP
+       end if
+!      calculate also S(lambda) if Sl > 0.0
+!      print *, 'R=', R(1), R(2), R(3)
+       if (CALCSl) then
+        Sl = 0.0d0
+        do i=1,3
+          Sl = Sl + R(i)*GinvR(i)  
+        end do
+        Sl = lambda*(1.0D0-lambda)*Sl
+        Sl = -Sl
+       end if
+!       print *,'sl=', Sl, ' Slp=', SlP, ' l=',lambda 
+       RETURN
+       END
+       REAL*8 function Spw(lambda)
+!       ,saA,COMA,RA,saB,COMB,RB)
+       LOGICAL USEDBRENT,USEDIRINV
+       common / LOGICPAR / USEDIRINV, USEDBRENT
+       INTEGER a,i,j,n
+       EXTERNAL MATINV
+       EXTERNAL MATINV33
+       REAL*8 saA(3),saB(3),B(3)
+       REAL*8 AB(3,3),ABinv(3,3),Ainv(3,3),Binv(3,3)
+       REAL*8 R(3),RA(3,3),RB(3,3),COMA(3),COMB(3) 
+       common / SIMPAR / saA,saB,RA,RB,COMA,COMB
+       REAL*8 lambda
+       do a=1,3
+       R(a) = COMB(a)-COMA(a)
+       end do  
+       do i=1,3
+       do j=1,3
+       Ainv(i,j)=0.
+       Binv(i,j)=0.
+       do n=1,3
+       Ainv(i,j)=Ainv(i,j)+saA(n)**2*RA(n,i)*RA(n,j) 
+       Binv(i,j)=Binv(i,j)+saB(n)**2*RB(n,i)*RB(n,j)
+       end do
+       ABinv(i,j)=(1.0D0 - lambda)*Ainv(i,j)+lambda*Binv(i,j)
+       end do
+       end do
+!      INVERT ABinv(3,3) matrix
+       if (USEDIRINV) then
+         CALL MATINV33(ABinv,AB)
+       else
+         CALL MATINV(ABinv,AB)
+       end if
+       Spw=0.0D0
+       do i=1,3
+       do j=1,3
+       Spw=Spw+R(i)*AB(i,j)*R(j)
+       end do
+       end do
+       Spw = Spw*lambda*(1.0D0-lambda)
+       Spw = -Spw
+       RETURN
+       END
 int main (int argc, char** argv)
 {
-
-
+  if (USEDBRENT) 
+    printf("Using DBRENT");
+  else
+    printf("Using BRENT"); 
+  if (READFROMFILE) 
+    {
+      OPEN(UNIT=11,FILE='ellips.pos', STATUS='OLD', iostat=irr) 
+	if (irr.ne.0) then
+	  print *, 'BOH...'
+	    pause
+	    end if
+	    READ (11,*,IOSTAT=irr) COMA(1), COMA(2), COMA(3), 
+		 *  RA(1,1), RA(1,2), RA(1,3), RA(2,1), RA(2,2), RA(2,3),
+		 *  RA(3,1), RA(3,2), RA(3,3), saA(1), saA(2), saA(3)
+		   READ (11,*,IOSTAT=irr) COMB(1), COMB(2), COMB(3), 
+		 *  RB(1,1), RB(1,2), RB(1,3), RB(2,1), RB(2,2), RB(2,3),
+		 *  RB(3,1), RB(3,2), RB(3,3), saB(1), saB(2), saB(3)
+		   CLOSE(11)
+		   //      it should be the 6th element read 
+		   print *, 'RA(1,...)=', RA(1,1), RA(1,2), RA(1,3)
+		   print *, 'RA(2,...)=', RA(2,1), RA(2,2), RA(2,3)
+		   print *, 'RA(3,...)=', RA(3,1), RA(3,2), RA(3,3)
+		   print *, 'semiaxes=',saA(1), saA(2), saA(3)
+    }
+  else
+    {
+      saA(1)=2.;
+	saA(2)=2.;
+	saA(3)=1.;
+	saB(1)=2.,
+	saB(2)=2.;
+	saB(3)=1.;
+	COMA(1)=-1.99;
+	COMA(2)=0.;
+	COMA(3)=0.;
+	COMB(1)=1.99;
+	COMB(2)=0.;
+	COMB(3)=0.;
+	RA(1,1)=1.;
+	RA(1,2)=0.;
+	RA(1,3)=0.;
+	RA(2,1)=0.;
+	RA(2,2)=1.;
+	RA(2,3)=0.;
+	RA(3,1)=0.;
+	RA(3,2)=0.;
+	RA(3,3)=1.;
+	RB(1,1)=1.;
+	RB(1,2)=0.;
+	RB(1,3)=0.;
+	RB(2,1)=0.;
+	RB(2,2)=1.;
+	RB(2,3)=0.;
+	RB(3,1)=0.;
+	RB(3,2)=0.;
+	RB(3,3)=1.;
+    } 
+  for (ncall=1; ncall < 1000000; ncall++)
+    {
+      if (USEDBRENT) 
+	bret=dbrent(LAM0,LAM1,LAM2,SpwDer_wrap,TOL,xmin);
+      else
+	bret=brent(LAM0,LAM1,LAM2,Spw_wrap,TOL,xmin);
+    }
+  printf("F(A,B)=%.15G", -bret); 
 }
