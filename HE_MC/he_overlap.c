@@ -11,7 +11,7 @@ void nrerror(char *msg)
   exit(-1);
 }
 int brentTooManyIter;
-const TOL=1.0E-15, LAM0=0.0, LAM1=0.5, LAM2=1.0;
+double TOL=1.0E-15, LAM0=0.0, LAM1=0.5, LAM2=1.0;
 double saA[3], saB[3], RA[3][3], RB[3][3];
 double COMA[3], COMB[3];
 void ludcmp(double a[3][3], int n,  int* indx, double* d, int *ok)
@@ -387,17 +387,17 @@ void MATINV33(double A[3][3],double Ainv[3][3])
       Ainv[i][j]=Ainv[i][j]/DET;
 
 }
-void SpwDer(double lambda,double *Sl, double *SlP);
-void SpwDer_wrap(double x, double *Sl, double *SlP)
+inline void SpwDer(double lambda,double *Sl, double *SlP);
+inline void SpwDer_wrap(double x, double *Sl, double *SlP)
 {
   SpwDer(x,Sl,SlP);
 }
-double Spw(double x);
-double Spw_wrap(double x)
+inline double Spw(double x);
+inline double Spw_wrap(double x)
 {
   return Spw(x);
 }
-void SpwDer(double lambda, double *Sl, double *SlP)
+inline void SpwDer(double lambda, double *Sl, double *SlP)
 {
   int a,i,j,n;
   double  GinvR[3], B[3],H[3][3];
@@ -447,7 +447,7 @@ void SpwDer(double lambda, double *Sl, double *SlP)
   *Sl = lambda*(1.0-lambda)*(*Sl);
   *Sl = -(*Sl);
 }
-double Spw(double lambda)
+inline double Spw(double lambda)
 {
   int a,i,j,n;
   double Spw;
@@ -485,11 +485,23 @@ double Spw(double lambda)
   Spw = Spw*lambda*(1.0-lambda);
   return -Spw;
 }
+double max3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b > m)
+    m = b;
+  if (c > m)
+    m = c;
+  return m;
+}
+
+
 int main (int argc, char** argv)
 {
   FILE *f;
   int ncall;
-  double bret, xmin;
+  double bret, xmin, OA, OB;
   if (USEDBRENT) 
     printf("Using DBRENT");
   else
@@ -545,7 +557,7 @@ int main (int argc, char** argv)
       RB[2][1]=0.;
       RB[2][2]=1.;
     } 
-  for (ncall=0; ncall < 10; ncall++)
+  for (ncall=0; ncall < 1000000; ncall++)
     {
       if (USEDBRENT) 
 	bret=dbrent(LAM0,LAM1,LAM2,SpwDer_wrap,TOL,&xmin);
