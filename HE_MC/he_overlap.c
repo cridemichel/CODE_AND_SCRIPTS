@@ -2,8 +2,16 @@
 #include<stdio.h>
 #include<math.h>
 #define TINY 1E-20
+#define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
+#define DABS fabs
+#define SHFT(a,b,c,d) (a)=(b);(b)=(c);(c)=(d); 
+void nrerror(char *msg)
+{
+  printf(msg);
+  exit(-1);
+}
 int brentTooManyIter;
-const tol=1E-15, LAM0=0.0, LAM1=0.5, LAM2=1.0;
+const TOL=1.0E-15, LAM0=0.0, LAM1=0.5, LAM2=1.0;
 double saA[3], saB[3], RA[3][3], RB[3][3];
 double COMA[3], COMB[3];
 void ludcmp(double a[3][3], int n,  int* indx, double* d, int *ok)
@@ -353,7 +361,7 @@ void MATINV(double A[3][3],double Ainv[3][3])
       for (i=0; i < 3; i++)
 	col[i]=0.0;
       col[j]=1.0;
-      lubksb(A,3,INDX,col[j]);
+      lubksb(A,3,INDX,col);
       for (i=0; i < 3; i++)
 	Ainv[i][j] = col[i];
     }
@@ -361,6 +369,7 @@ void MATINV(double A[3][3],double Ainv[3][3])
 void MATINV33(double A[3][3],double Ainv[3][3])
 {
   double DET;
+  int i, j;
   DET = A[0][0]*A[1][1]*A[2][2]-A[0][0]*A[1][2]*A[2][1]-A[0][1]*A[1][0]
     *A[2][2]+A[0][1]*A[1][2]*A[2][0]+A[0][2]*A[1][0]*A[2][1]-A[0][2]*A[1][1]
     *A[2][0];
@@ -373,19 +382,19 @@ void MATINV33(double A[3][3],double Ainv[3][3])
   Ainv[2][0]=A[1][0]*A[2][1]-A[1][1]*A[2][0];
   Ainv[2][1]=A[0][1]*A[2][0]-A[0][0]*A[2][1];
   Ainv[2][2]=A[0][0]*A[1][1]-A[0][1]*A[1][0];
-    for (i=0; i < 3; i++)
-      for (j=0; j < 3; j++)
-	Ainv[i][j]=Ainv[i][j]/DET;
+  for (i=0; i < 3; i++)
+    for (j=0; j < 3; j++)
+      Ainv[i][j]=Ainv[i][j]/DET;
 
 }
-void SpwDer(double lambda,double *Sl, double *SlP, int CALCSl, int CALCSlP);
-void SpwDer_wrap(double x, double *Sl, double *SlP, int CALCSl, int CALCSlP)
+void SpwDer(double lambda,double *Sl, double *SlP);
+void SpwDer_wrap(double x, double *Sl, double *SlP)
 {
-  SpwDer(x,Sl,SlP,CALCSL,CALCSlP);
+  SpwDer(x,Sl,SlP);
 }
+double Spw(double x);
 double Spw_wrap(double x)
 {
-  double x;
   return Spw(x);
 }
 void SpwDer(double lambda, double *Sl, double *SlP)
@@ -405,8 +414,8 @@ void SpwDer(double lambda, double *Sl, double *SlP)
  	  Binv[i][j]=0.;
  	  for (n=0; n < 3; n++)
  	    {
- 	      Ainv[i][j]=Ainv[i][j]+saA[n]**2*RA[n][i]*RA[n][j];
- 	      Binv[i][j]=Binv[i][j]+saB[n]**2*RB[n][i]*RB[n][j];
+ 	      Ainv[i][j]=Ainv[i][j]+saA[n]*saA[n]*RA[n][i]*RA[n][j];
+ 	      Binv[i][j]=Binv[i][j]+saB[n]*saB[n]*RB[n][i]*RB[n][j];
  	    }
  	  G[i][j]=(1.0 - lambda)*Ainv[i][j]+lambda*Binv[i][j];
 	  H[i][j]=(1.0 - lambda)*(1.0-lambda)*Ainv[i][j]-(lambda*lambda)*Binv[i][j];
@@ -433,7 +442,7 @@ void SpwDer(double lambda, double *Sl, double *SlP)
 
   /* calculate also S(lambda) if Sl > 0.0*/
   *Sl = 0.0;
-  for (i=0 i < 3; i++)
+  for (i=0; i < 3; i++)
     *Sl += R[i]*GinvR[i];  
   *Sl = lambda*(1.0-lambda)*(*Sl);
   *Sl = -(*Sl);
@@ -456,7 +465,7 @@ double Spw(double lambda)
 	    {
 	      Ainv[i][j]=Ainv[i][j]+saA[n]*saA[n]*RA[n][i]*RA[n][j]; 
 	      Binv[i][j]=Binv[i][j]+saB[n]*saB[n]*RB[n][i]*RB[n][j];
-	    a}
+	    }
 	  ABinv[i][j]=(1.0 - lambda)*Ainv[i][j]+lambda*Binv[i][j];
 	}
     }
@@ -479,6 +488,8 @@ double Spw(double lambda)
 int main (int argc, char** argv)
 {
   FILE *f;
+  int ncall;
+  double bret, xmin;
   if (USEDBRENT) 
     printf("Using DBRENT");
   else
@@ -486,11 +497,11 @@ int main (int argc, char** argv)
   if (READFROMFILE) 
     {
       f = fopen("ellips.pos","r"); 
-      fscanf(f,"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", 
+      fscanf(f,"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
 	     &COMA[0], &COMA[1], &COMA[2], 
 	     &RA[0][0], &RA[0][1], &RA[0][2], &RA[1][0], &RA[1][1], &RA[1][2],
 	     &RA[2][0], &RA[2][1], &RA[2][2], &saA[0], &saA[1], &saA[2]);
-      fscanf(f,"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", 
+      fscanf(f,"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
 	     &COMB[0], &COMB[1], &COMB[2], 
 	     &RB[0][0], &RB[0][1], &RB[0][2], &RB[1][0], &RB[1][1], &RB[1][2],
 	     &RB[2][0], &RB[2][1], &RB[2][2], &saB[0], &saB[1], &saB[2]);
@@ -534,12 +545,12 @@ int main (int argc, char** argv)
       RB[2][1]=0.;
       RB[2][2]=1.;
     } 
-  for (ncall=0; ncall < 1000000; ncall++)
+  for (ncall=0; ncall < 10; ncall++)
     {
       if (USEDBRENT) 
-	bret=dbrent(LAM0,LAM1,LAM2,SpwDer_wrap,TOL,xmin);
+	bret=dbrent(LAM0,LAM1,LAM2,SpwDer_wrap,TOL,&xmin);
       else
-	bret=brent(LAM0,LAM1,LAM2,Spw_wrap,TOL,xmin);
+	bret=brent(LAM0,LAM1,LAM2,Spw_wrap,TOL,&xmin);
     }
-  printf("F(A,B)=%.15G", -bret); 
+  printf("F(A,B)=%.15G\n", -bret); 
 }
