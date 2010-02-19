@@ -6,7 +6,7 @@
 #define DABS fabs
 #define SHFT(a,b,c,d) (a)=(b);(b)=(c);(c)=(d); 
 #define MAXITNR 100 //Maximum allowed number of iterations for Newton-Raphson method.
-#define TOLNR 1E-15
+#define TOLNR 1E-14
 /*METHOD=1->DBRENT, 2->NEWTON-RAPHSON, 3->BRENT */
 const int METHOD=2, READFROMFILE=1,USEDIRINV=1, MAXCALLS=1;
 void nrerror(char *msg)
@@ -408,18 +408,15 @@ void MATADJ33(double A[3][3],double Ainv[3][3])
 inline void fp(double lambda, double *SlP, double *SlPP)
 {
   int a,i,j,n;
-  double  GinvR[3], B[3], H[3][3], HP[3][3], GinvDerR[3];
+  double HG, AA,BB,AABB,GinvR[3], B[3], H[3][3], HP[3][3], GinvDerR[3];
   double Ginv[3][3],G[3][3],Ainv[3][3],Binv[3][3];
   double R[3], AiBi[3][3], MT[3][3], GinvDer[3][3];
   for (a=0; a < 3; a++)
     R[a] = COMB[a]-COMA[a];
-  /* NOTA: qui si calcola la funzione f' dell'eq. (2.8)
-     dell'articola Perram et al. PRE 54, 6565 (1996)
-     moltiplicata però per det(G)^2 poiché tanto a noi interessa
-     soltanto calcolare f'(lambda)=0, inoltre 
-     data h(lambda) = f'(lambda)*det(G)^2
-     tale funzione calcola anche h'(lambda) per poter calcolare
-     lo zero con il metodo Newton-Raphson.
+  /* NOTA: qui si calcolano la funzione f' dell'eq. (2.8)
+     dell'articolo Perram et al. PRE 54, 6565 (1996)
+     e la derivata prima rispetto a lambda per poter calcolare
+     la soluzione dell'eq. f'(lambda)=0 con il metodo Newton-Raphson.
    */
   for (i=0; i < 3; i++)
     {
@@ -433,9 +430,12 @@ inline void fp(double lambda, double *SlP, double *SlPP)
  	      Ainv[i][j]=Ainv[i][j]+saA[n]*saA[n]*RA[n][i]*RA[n][j];
  	      Binv[i][j]=Binv[i][j]+saB[n]*saB[n]*RB[n][i]*RB[n][j];
  	    }
- 	  G[i][j]=(1.0 - lambda)*Ainv[i][j]+lambda*Binv[i][j];
-	  H[i][j]=(1.0 - lambda)*(1.0-lambda)*Ainv[i][j]-(lambda*lambda)*Binv[i][j];
-	  HP[i][j] = - 2.0*(1-lambda)*Ainv[i][j] - 2.0*lambda*Binv[i][j];
+	  AA=(1.0 - lambda)*Ainv[i][j];
+	  BB=lambda*Binv[i][j];
+	  AABB = AA+BB;
+ 	  G[i][j]=AABB;
+	  H[i][j]=(1.0 - lambda)*AA-lambda*BB;
+	  HP[i][j] = -2.0*AABB;
   	}
     }
   /* GADJ = G^(-1)*det(G)*/
@@ -475,9 +475,10 @@ inline void fp(double lambda, double *SlP, double *SlPP)
   for (i=0; i < 3; i++)
     for (j=0; j < 3; j++)
       {
-	*SlP += GinvR[i]*H[i][j]*GinvR[j]; 
+	HG = H[i][j]*GinvR[j];
+	*SlP += GinvR[i]*HG; 
 	*SlPP += GinvR[i]*HP[i][j]*GinvR[j];
-	*SlPP += GinvDerR[i]*H[i][j]*GinvR[j];
+	*SlPP += GinvDerR[i]*HG;
 	*SlPP += GinvR[i]*H[i][j]*GinvDerR[j];
       }
 
@@ -593,7 +594,7 @@ inline double Spw_wrap(double x)
 inline void SpwDer(double lambda, double *Sl, double *SlP)
 {
   int a,i,j,n;
-  double  GinvR[3], B[3],H[3][3];
+  double  GinvR[3], B[3], H[3][3];
   double Ginv[3][3],G[3][3],Ainv[3][3],Binv[3][3];
   double R[3];
   for (a=0; a < 3; a++)
