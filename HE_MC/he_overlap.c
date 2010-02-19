@@ -408,12 +408,19 @@ void MATADJ33(double A[3][3],double Ainv[3][3])
 inline void fp(double lambda, double *SlP, double *SlPP)
 {
   int a,i,j,n;
-  double  GinvR[3], B[3], H[3][3], HP[3][3], GinvDerR[3];
-  double Ginv[3][3],G[3][3],Ainv[3][3],Binv[3][3];
-  double R[3], AiBi[3][3], MT[3][3], GinvDer[3][3];
+  double  GadjR[3], B[3], H[3][3], HP[3][3], GadjDerR[3];
+  double Gadj[3][3],G[3][3],Ainv[3][3],Binv[3][3];
+  double R[3], AiBi[3][3], MT[3][3], GadjDer[3][3];
   for (a=0; a < 3; a++)
     R[a] = COMB[a]-COMA[a];
-
+  /* NOTA: qui si calcola la funzione f' dell'eq. (2.8)
+     dell'articola Perram et al. PRE 54, 6565 (1996)
+     moltiplicata però per det(G)^2 poiché tanto a noi interessa
+     soltanto calcolare f'(lambda)=0, inoltre 
+     data h(lambda) = f'(lambda)*det(G)^2
+     tale funzione calcola anche h'(lambda) per poter calcolare
+     lo zero con il metodo Newton-Raphson.
+   */
   for (i=0; i < 3; i++)
     {
       for (j=0; j < 3; j++)
@@ -431,7 +438,8 @@ inline void fp(double lambda, double *SlP, double *SlPP)
 	  HP[i][j] = 2.0*(1-lambda)*Ainv[i][j] - 2*lambda*Binv[i][j];
   	}
     }
-  MATADJ33(G,Ginv);
+  /* GADJ = G^(-1)*det(G)*/
+  MATADJ33(G,Gadj);
   for (i=0; i < 3; i++)
     {
       for (j=0; j < 3; j++)
@@ -439,26 +447,26 @@ inline void fp(double lambda, double *SlP, double *SlPP)
 	  MT[i][j] = 0.0;
 	  for (n=0; n < 3; n++)
 	    {
-	      MT[i][j] += AiBi[i][n]*Ginv[n][j]; 
+	      MT[i][j] += AiBi[i][n]*Gadj[n][j]; 
 	    }
-	  GinvDer[i][j] = 0.0;
+	  GadjDer[i][j] = 0.0;
 	  for (n=0; n < 3; n++)
 	    {
-	      GinvDer[i][j] += Ginv[i][n]*MT[n][j]; 
+	      GadjDer[i][j] += Gadj[i][n]*MT[n][j]; 
 	    }
 	}
     }
   for (i=0; i < 3; i++)
     {
-      GinvDerR[i] = 0.0;
+      GadjDerR[i] = 0.0;
       for (n=0; n < 3; n++)
-	GinvDerR[i] += GinvDer[i][n]*R[n];
+	GadjDerR[i] += GadjDer[i][n]*R[n];
     }
   for (i=0; i < 3; i++)
     {
-      GinvR[i]=0.0;
+      GadjR[i]=0.0;
       for (j=0; j < 3; j++) 
-	GinvR[i]=GinvR[i]+Ginv[i][j]*R[j];
+	GadjR[i]=GadjR[i]+Gadj[i][j]*R[j];
     }
   /* se il valore di Slp passato è maggiore di 0 calcola la
      derivata di S(lambda) */
@@ -467,10 +475,10 @@ inline void fp(double lambda, double *SlP, double *SlPP)
   for (i=0; i < 3; i++)
     for (j=0; j < 3; j++)
       {
-	*SlP += GinvR[i]*H[i][j]*GinvR[j]; 
-	*SlPP += GinvR[i]*HP[i][j]*GinvR[j];
-	*SlPP += GinvDerR[i]*HP[i][j]*GinvR[j];
-	*SlPP += GinvR[i]*HP[i][j]*GinvR[j];
+	*SlP += GadjR[i]*H[i][j]*GadjR[j]; 
+	*SlPP += GadjR[i]*HP[i][j]*GadjR[j];
+	*SlPP += 2.0*GadjDerR[i]*HP[i][j]*GadjR[j];
+	//*SlPP += GinvR[i]*HP[i][j]*GinvR[j];
       }
 
   *SlP = -*SlP;
@@ -485,7 +493,7 @@ inline void fp(double lambda, double *SlP, double *SlPP)
 #endif
 }
 
-inline double rtsafe(void (*funcd)(double, double *, double *), double x1, double x2, double xacc)
+inline double rtsafe(void (*funcd)(double, double *, double *), double x1, double x2, double guess, double xacc)
 /* Using a combination of Newton-Raphson and bisection, find the root of a function bracketed
    between x1 and x2. The root, returned as the function value rtsafe, will be refined until
    its accuracy is known within ±xacc. funcd is a user-supplied routine that returns both the
@@ -510,7 +518,13 @@ inline double rtsafe(void (*funcd)(double, double *, double *), double x1, doubl
       xh=x1;
       xl=x2;
     }
-  rts=0.5*(x1+x2); //Initialize the guess for root,
+  if (guess > 0.0)
+    {
+      //printf("using guess=%.15G\n", guess);
+      rts = guess;
+    }
+  else
+    rts=0.5*(x1+x2); //Initialize the guess for root,
   dxold=fabs(x2-x1); //the “stepsize before last,”
   dx=dxold;// and the last step.
   (*funcd)(rts,&f,&df);
@@ -524,8 +538,11 @@ inline double rtsafe(void (*funcd)(double, double *, double *), double x1, doubl
   	  dx=0.5*(xh-xl);
   	  rts=xl+dx;
   	  if (xl == rts) 
-	    return rts; //Change in root is negligible.
-      	} 
+	    {
+	      printf("ITER=%d\n", j);
+	      return rts; //Change in root is negligible.
+	    }
+	} 
       else 
 	{ 
 	  //Newton step acceptable. Take it.
@@ -534,10 +551,16 @@ inline double rtsafe(void (*funcd)(double, double *, double *), double x1, doubl
 	  temp=rts;
 	  rts -= dx;
 	  if (temp == rts) 
-	    return rts;
+	    {
+	      printf("ITER=%d\n", j);
+	      return rts;
+	    }
 	}
       if (fabs(dx) < xacc) 
-	return rts; //Convergence criterion.
+	{
+	  printf("ITER=%d\n", j);
+	  return rts; //Convergence criterion.
+	}
       (*funcd)(rts,&f,&df);
       if (f < 0.0) //Maintain the bracket on the root.
 	xl=rts;
@@ -548,10 +571,14 @@ inline double rtsafe(void (*funcd)(double, double *, double *), double x1, doubl
   return 0.0; //Never get here.
 }
 inline double Spw(double x);
+double max3(double a, double b, double c);
+
 double calcMinWithNR(double L0, double L1, double L2, double tol)
 {
-  double retval;
-  retval = rtsafe(fp, L0, L1, tol);
+  double retval, lguess;
+  lguess = max3(saA[0], saA[1], saA[2])/(max3(saA[0], saA[1], saA[2])+max3(saB[0], saB[1], saB[2]));
+  //printf("L0=%.15G L1=%.15G L2=%.15G guess=%.15G\n", L0, L1, L2, lguess);
+  retval = rtsafe(fp, L0, L2, lguess, tol);
   return Spw(retval);
 }
 inline void SpwDer(double lambda,double *Sl, double *SlP);
@@ -719,7 +746,7 @@ int main (int argc, char** argv)
       RB[2][1]=0.;
       RB[2][2]=1.;
     } 
-  if (argc==2)
+  if (argc>=2)
     RMETHOD=atoi(argv[1]);
   else
     RMETHOD=METHOD;
