@@ -408,9 +408,9 @@ void MATADJ33(double A[3][3],double Ainv[3][3])
 inline void fp(double lambda, double *SlP, double *SlPP)
 {
   int a,i,j,n;
-  double  GadjR[3], B[3], H[3][3], HP[3][3], GadjDerR[3];
-  double Gadj[3][3],G[3][3],Ainv[3][3],Binv[3][3];
-  double R[3], AiBi[3][3], MT[3][3], GadjDer[3][3];
+  double  GinvR[3], B[3], H[3][3], HP[3][3], GinvDerR[3];
+  double Ginv[3][3],G[3][3],Ainv[3][3],Binv[3][3];
+  double R[3], AiBi[3][3], MT[3][3], GinvDer[3][3];
   for (a=0; a < 3; a++)
     R[a] = COMB[a]-COMA[a];
   /* NOTA: qui si calcola la funzione f' dell'eq. (2.8)
@@ -439,7 +439,7 @@ inline void fp(double lambda, double *SlP, double *SlPP)
   	}
     }
   /* GADJ = G^(-1)*det(G)*/
-  MATADJ33(G,Gadj);
+  MATINV33(G,Ginv);
   for (i=0; i < 3; i++)
     {
       for (j=0; j < 3; j++)
@@ -447,26 +447,26 @@ inline void fp(double lambda, double *SlP, double *SlPP)
 	  MT[i][j] = 0.0;
 	  for (n=0; n < 3; n++)
 	    {
-	      MT[i][j] += AiBi[i][n]*Gadj[n][j]; 
+	      MT[i][j] += AiBi[i][n]*Ginv[n][j]; 
 	    }
-	  GadjDer[i][j] = 0.0;
+	  GinvDer[i][j] = 0.0;
 	  for (n=0; n < 3; n++)
 	    {
-	      GadjDer[i][j] += Gadj[i][n]*MT[n][j]; 
+	      GinvDer[i][j] += Ginv[i][n]*MT[n][j]; 
 	    }
 	}
     }
   for (i=0; i < 3; i++)
     {
-      GadjDerR[i] = 0.0;
+      GinvDerR[i] = 0.0;
       for (n=0; n < 3; n++)
-	GadjDerR[i] += GadjDer[i][n]*R[n];
+	GinvDerR[i] += GinvDer[i][n]*R[n];
     }
   for (i=0; i < 3; i++)
     {
-      GadjR[i]=0.0;
+      GinvR[i]=0.0;
       for (j=0; j < 3; j++) 
-	GadjR[i]=GadjR[i]+Gadj[i][j]*R[j];
+	GinvR[i]=GinvR[i]+Ginv[i][j]*R[j];
     }
   /* se il valore di Slp passato è maggiore di 0 calcola la
      derivata di S(lambda) */
@@ -475,10 +475,10 @@ inline void fp(double lambda, double *SlP, double *SlPP)
   for (i=0; i < 3; i++)
     for (j=0; j < 3; j++)
       {
-	*SlP += GadjR[i]*H[i][j]*GadjR[j]; 
-	*SlPP += GadjR[i]*HP[i][j]*GadjR[j];
-	*SlPP += GadjDerR[i]*H[i][j]*GadjR[j];
-	*SlPP += GadjR[i]*H[i][j]*GadjDerR[j];
+	*SlP += GinvR[i]*H[i][j]*GinvR[j]; 
+	*SlPP += GinvR[i]*HP[i][j]*GinvR[j];
+	*SlPP += GinvDerR[i]*H[i][j]*GinvR[j];
+	*SlPP += GinvR[i]*H[i][j]*GinvDerR[j];
       }
 
   *SlP = -*SlP;
