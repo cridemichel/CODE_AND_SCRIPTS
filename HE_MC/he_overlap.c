@@ -435,7 +435,7 @@ inline void fp(double lambda, double *SlP, double *SlPP)
  	    }
  	  G[i][j]=(1.0 - lambda)*Ainv[i][j]+lambda*Binv[i][j];
 	  H[i][j]=(1.0 - lambda)*(1.0-lambda)*Ainv[i][j]-(lambda*lambda)*Binv[i][j];
-	  HP[i][j] = 2.0*(1-lambda)*Ainv[i][j] - 2*lambda*Binv[i][j];
+	  HP[i][j] = - 2.0*(1-lambda)*Ainv[i][j] - 2.0*lambda*Binv[i][j];
   	}
     }
   /* GADJ = G^(-1)*det(G)*/
@@ -477,8 +477,8 @@ inline void fp(double lambda, double *SlP, double *SlPP)
       {
 	*SlP += GadjR[i]*H[i][j]*GadjR[j]; 
 	*SlPP += GadjR[i]*HP[i][j]*GadjR[j];
-	*SlPP += 2.0*GadjDerR[i]*HP[i][j]*GadjR[j];
-	//*SlPP += GinvR[i]*HP[i][j]*GinvR[j];
+	*SlPP += GadjDerR[i]*H[i][j]*GadjR[j];
+	*SlPP += GadjR[i]*H[i][j]*GadjDerR[j];
       }
 
   *SlP = -*SlP;
@@ -539,7 +539,7 @@ inline double rtsafe(void (*funcd)(double, double *, double *), double x1, doubl
   	  rts=xl+dx;
   	  if (xl == rts) 
 	    {
-	      printf("ITER=%d\n", j);
+	      //printf("ITER=%d\n", j);
 	      return rts; //Change in root is negligible.
 	    }
 	} 
@@ -552,13 +552,13 @@ inline double rtsafe(void (*funcd)(double, double *, double *), double x1, doubl
 	  rts -= dx;
 	  if (temp == rts) 
 	    {
-	      printf("ITER=%d\n", j);
+	      //printf("ITER=%d\n", j);
 	      return rts;
 	    }
 	}
       if (fabs(dx) < xacc) 
 	{
-	  printf("ITER=%d\n", j);
+	  //printf("ITER=%d\n", j);
 	  return rts; //Convergence criterion.
 	}
       (*funcd)(rts,&f,&df);
