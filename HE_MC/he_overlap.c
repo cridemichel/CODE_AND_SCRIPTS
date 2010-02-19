@@ -5,6 +5,10 @@
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 #define DABS fabs
 #define SHFT(a,b,c,d) (a)=(b);(b)=(c);(c)=(d); 
+#define MAXITNR 100 //Maximum allowed number of iterations for Newton-Raphson method.
+#define TOLNR 1E-15
+/*METHOD=1->DBRENT, 2->NEWTON-RAPHSON, 3->BRENT */
+const int METHOD=2, READFROMFILE=1,USEDIRINV=1, MAXCALLS=1;
 void nrerror(char *msg)
 {
   printf(msg);
@@ -268,6 +272,7 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
   fuold = fv;
   for (iter=1;iter<=ITMAXBR;iter++)
     { 
+      //printf("iter=%d\n", iter);
       /*Main program loop.*/
       xm=0.5*(a+b);
       tol2=2.0*(tol1=tol*fabs(x)+ZEPSBR); 
@@ -344,7 +349,6 @@ double brent(double ax, double bx, double cx, double (*f)(double), double tol, d
   *xmin=x; /*Never get here.*/
   return fx;
 }
-const int USEDBRENT=1, READFROMFILE=1,USEDIRINV=1;
 void MATINV(double A[3][3],double Ainv[3][3])
 {
   double D, col[3];
@@ -387,12 +391,174 @@ void MATINV33(double A[3][3],double Ainv[3][3])
       Ainv[i][j]=Ainv[i][j]/DET;
 
 }
+void MATADJ33(double A[3][3],double Ainv[3][3])
+{
+  double DET;
+  int i, j;
+  Ainv[0][0]=A[1][1]*A[2][2]-A[1][2]*A[2][1];
+  Ainv[0][1]=A[0][2]*A[2][1]-A[0][1]*A[2][2];
+  Ainv[0][1]=A[0][1]*A[1][2]-A[1][1]*A[0][2];
+  Ainv[1][0]=A[1][2]*A[2][0]-A[2][2]*A[1][0];
+  Ainv[1][1]=A[0][0]*A[2][2]-A[2][0]*A[0][2];
+  Ainv[1][2]=A[0][2]*A[1][0]-A[0][0]*A[1][2];
+  Ainv[2][0]=A[1][0]*A[2][1]-A[1][1]*A[2][0];
+  Ainv[2][1]=A[0][1]*A[2][0]-A[0][0]*A[2][1];
+  Ainv[2][2]=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+}
+inline void fp(double lambda, double *SlP, double *SlPP)
+{
+  int a,i,j,n;
+  double  GinvR[3], B[3], H[3][3], HP[3][3], GinvDerR[3];
+  double Ginv[3][3],G[3][3],Ainv[3][3],Binv[3][3];
+  double R[3], AiBi[3][3], MT[3][3], GinvDer[3][3];
+  for (a=0; a < 3; a++)
+    R[a] = COMB[a]-COMA[a];
+
+  for (i=0; i < 3; i++)
+    {
+      for (j=0; j < 3; j++)
+      	{
+ 	  Ainv[i][j]=0.;
+ 	  Binv[i][j]=0.;
+	  AiBi[i][j] = Binv[i][j]-Ainv[i][j];
+ 	  for (n=0; n < 3; n++)
+ 	    {
+ 	      Ainv[i][j]=Ainv[i][j]+saA[n]*saA[n]*RA[n][i]*RA[n][j];
+ 	      Binv[i][j]=Binv[i][j]+saB[n]*saB[n]*RB[n][i]*RB[n][j];
+ 	    }
+ 	  G[i][j]=(1.0 - lambda)*Ainv[i][j]+lambda*Binv[i][j];
+	  H[i][j]=(1.0 - lambda)*(1.0-lambda)*Ainv[i][j]-(lambda*lambda)*Binv[i][j];
+	  HP[i][j] = 2.0*(1-lambda)*Ainv[i][j] - 2*lambda*Binv[i][j];
+  	}
+    }
+  MATADJ33(G,Ginv);
+  for (i=0; i < 3; i++)
+    {
+      for (j=0; j < 3; j++)
+      	{
+	  MT[i][j] = 0.0;
+	  for (n=0; n < 3; n++)
+	    {
+	      MT[i][j] += AiBi[i][n]*Ginv[n][j]; 
+	    }
+	  GinvDer[i][j] = 0.0;
+	  for (n=0; n < 3; n++)
+	    {
+	      GinvDer[i][j] += Ginv[i][n]*MT[n][j]; 
+	    }
+	}
+    }
+  for (i=0; i < 3; i++)
+    {
+      GinvDerR[i] = 0.0;
+      for (n=0; n < 3; n++)
+	GinvDerR[i] += GinvDer[i][n]*R[n];
+    }
+  for (i=0; i < 3; i++)
+    {
+      GinvR[i]=0.0;
+      for (j=0; j < 3; j++) 
+	GinvR[i]=GinvR[i]+Ginv[i][j]*R[j];
+    }
+  /* se il valore di Slp passato è maggiore di 0 calcola la
+     derivata di S(lambda) */
+  *SlP = 0.0;
+  *SlPP = 0.0;
+  for (i=0; i < 3; i++)
+    for (j=0; j < 3; j++)
+      {
+	*SlP += GinvR[i]*H[i][j]*GinvR[j]; 
+	*SlPP += GinvR[i]*HP[i][j]*GinvR[j];
+	*SlPP += GinvDerR[i]*HP[i][j]*GinvR[j];
+	*SlPP += GinvR[i]*HP[i][j]*GinvR[j];
+      }
+
+  *SlP = -*SlP;
+  *SlPP = -*SlPP;
+  /* calculate also S(lambda) if Sl > 0.0*/
+#if 0
+  *Sl = 0.0;
+  for (i=0; i < 3; i++)
+    *Sl += R[i]*GinvR[i];  
+  *Sl = lambda*(1.0-lambda)*(*Sl);
+  *Sl = -(*Sl);
+#endif
+}
+
+inline double rtsafe(void (*funcd)(double, double *, double *), double x1, double x2, double xacc)
+/* Using a combination of Newton-Raphson and bisection, find the root of a function bracketed
+   between x1 and x2. The root, returned as the function value rtsafe, will be refined until
+   its accuracy is known within ±xacc. funcd is a user-supplied routine that returns both the
+   function value and the first derivative of the function.*/
+{
+  int j;
+  double df,dx,dxold,f,fh,fl;
+  double temp,xh,xl,rts;
+  (*funcd)(x1,&fl,&df);
+  (*funcd)(x2,&fh,&df);
+  if ((fl > 0.0 && fh > 0.0) || (fl < 0.0 && fh < 0.0))
+    nrerror("Root must be bracketed in rtsafe");
+  if (fl == 0.0) return x1;
+  if (fh == 0.0) return x2;
+  if (fl < 0.0) 
+    { /* Orient the search so that f(xl) < 0.*/
+      xl=x1;
+      xh=x2;
+    } 
+  else 
+    {
+      xh=x1;
+      xl=x2;
+    }
+  rts=0.5*(x1+x2); //Initialize the guess for root,
+  dxold=fabs(x2-x1); //the “stepsize before last,”
+  dx=dxold;// and the last step.
+  (*funcd)(rts,&f,&df);
+  for (j=1;j<=MAXITNR;j++) 
+    { //Loop over allowed iterations.
+      if ((((rts-xh)*df-f)*((rts-xl)*df-f) > 0.0) //Bisect if Newton out of range,
+  	  || (fabs(2.0*f) > fabs(dxold*df))) 
+	{ 
+	  //or not decreasing fast enough.
+  	  dxold=dx;
+  	  dx=0.5*(xh-xl);
+  	  rts=xl+dx;
+  	  if (xl == rts) 
+	    return rts; //Change in root is negligible.
+      	} 
+      else 
+	{ 
+	  //Newton step acceptable. Take it.
+	  dxold=dx;
+	  dx=f/df;
+	  temp=rts;
+	  rts -= dx;
+	  if (temp == rts) 
+	    return rts;
+	}
+      if (fabs(dx) < xacc) 
+	return rts; //Convergence criterion.
+      (*funcd)(rts,&f,&df);
+      if (f < 0.0) //Maintain the bracket on the root.
+	xl=rts;
+      else
+	xh=rts;
+    }
+  nrerror("Maximum number of iterations exceeded in rtsafe");
+  return 0.0; //Never get here.
+}
+inline double Spw(double x);
+double calcMinWithNR(double L0, double L1, double L2, double tol)
+{
+  double retval;
+  retval = rtsafe(fp, L0, L1, tol);
+  return Spw(retval);
+}
 inline void SpwDer(double lambda,double *Sl, double *SlP);
 inline void SpwDer_wrap(double x, double *Sl, double *SlP)
 {
   SpwDer(x,Sl,SlP);
 }
-inline double Spw(double x);
 inline double Spw_wrap(double x)
 {
   return Spw(x);
@@ -500,12 +666,8 @@ double max3(double a, double b, double c)
 int main (int argc, char** argv)
 {
   FILE *f;
-  int ncall;
+  int ncall, RMAXCALLS, RMETHOD;
   double bret, xmin, OA, OB;
-  if (USEDBRENT) 
-    printf("Using DBRENT");
-  else
-    printf("Using BRENT"); 
   if (READFROMFILE) 
     {
       f = fopen("ellips.pos","r"); 
@@ -557,10 +719,26 @@ int main (int argc, char** argv)
       RB[2][1]=0.;
       RB[2][2]=1.;
     } 
-  for (ncall=0; ncall < 1000000; ncall++)
+  if (argc==2)
+    RMETHOD=atoi(argv[1]);
+  else
+    RMETHOD=METHOD;
+  if (argc==3)
+    RMAXCALLS = atoi(argv[2]);
+  else
+    RMAXCALLS = MAXCALLS;
+  if (RMETHOD==1) 
+    printf("Using DBRENT\n");
+  else if (RMETHOD==2)
+    printf("Using NEWTON-RAPHSON with derivatives\n"); 
+  else 
+    printf("Using BRENT method\n");
+  for (ncall=0; ncall < RMAXCALLS; ncall++)
     {
-      if (USEDBRENT) 
+      if (RMETHOD==1) 
 	bret=dbrent(LAM0,LAM1,LAM2,SpwDer_wrap,TOL,&xmin);
+      else if (RMETHOD==2)
+	bret=calcMinWithNR(LAM0, LAM1, LAM2, TOLNR);
       else
 	bret=brent(LAM0,LAM1,LAM2,Spw_wrap,TOL,&xmin);
     }
