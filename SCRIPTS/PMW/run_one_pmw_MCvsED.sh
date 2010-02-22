@@ -2,7 +2,7 @@
 SETPARAMS="../../set_params.sh"
 TEMP="$1"
 PF="PMW.par"
-LN="PMW-T$1-PR"
+LNPR="PMW-T$1-PR"
 LNEQ="PMT-T$1-EQ"
 EXEF="../../PMW"
 INIF="restart.res"
@@ -32,7 +32,7 @@ VS=`echo $TAUALPHA 100 $TRATS | awk '{printf("%d",$1/$2/$3)}'`
 #EQUILIBRATURA
 $SETPARAMS $PF  intervalSum 50.0 storerate -1.0 Dt $TRATS DtR $ROTTS stepnum  $STEPS inifile $INIF NN 1 base 1 baksteps 0 VSteps $VS temperat $TEMP
 ln -sf $EXEF $LNEQ
-./$LN -fa $PF > screenEQ 
+./$LNEQ -fa $PF > screenEQ 
 #store potential energy to later check equilibration
 cp energy.dat energyEQ.dat
 #store parameter file for equilibration
@@ -40,6 +40,6 @@ cp $PF EQ-$PF
 #PRODUZIONE
 STEPS=`echo "" | gawk -v ta=$TAUALPHA -v trats=$TRATS -v prta=$PRTA '{printf("%d",prta*ta/trats);}'` 
 $SETPARAMS $PF  intervalSum 50.0 storerate $STORERATEPR base $BASEPR NN $NNPR Dt $TRATS DtR $ROTTS stepnum  $STEPS inifile $INIF baksteps 0 VSteps $VS temperat $TEMP
-ln -sf $EXEF $LN 
-./$LN -fa $PF > screenPR
+ln -sf $EXEF $LNPR 
+./$LNPR -fa $PF > screenPR
 cd ..
