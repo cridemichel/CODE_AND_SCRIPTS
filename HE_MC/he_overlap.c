@@ -422,14 +422,14 @@ inline void fp(double lambda, double *SlP, double *SlPP)
     {
       for (j=0; j < 3; j++)
       	{
- 	  Ainv[i][j]=0.;
- 	  Binv[i][j]=0.;
-	  AiBi[i][j] = Binv[i][j]-Ainv[i][j];
+ 	  Ainv[i][j]=0.0;
+ 	  Binv[i][j]=0.0;
  	  for (n=0; n < 3; n++)
  	    {
  	      Ainv[i][j]=Ainv[i][j]+saA[n]*saA[n]*RA[n][i]*RA[n][j];
  	      Binv[i][j]=Binv[i][j]+saB[n]*saB[n]*RB[n][i]*RB[n][j];
  	    }
+	  AiBi[i][j] = Binv[i][j]-Ainv[i][j];
 	  AA=(1.0 - lambda)*Ainv[i][j];
 	  BB=lambda*Binv[i][j];
 	  AABB = AA+BB;
@@ -445,8 +445,10 @@ inline void fp(double lambda, double *SlP, double *SlPP)
       for (j=0; j < 3; j++)
       	{
 	  MT[i][j] = 0.0;
+	  //printf("AiBi[%d][%d]=%.15G\n", i, j, AiBi[i][j]);
 	  for (n=0; n < 3; n++)
 	    {
+	      //printf("Ginv[%d][%d]=%.15G\n", n, j, Ginv[n][j]);
 	      MT[i][j] += AiBi[i][n]*Ginv[n][j]; 
 	    }
 	  GinvDer[i][j] = 0.0;
@@ -454,13 +456,17 @@ inline void fp(double lambda, double *SlP, double *SlPP)
 	    {
 	      GinvDer[i][j] += Ginv[i][n]*MT[n][j]; 
 	    }
+	  //printf("GinvDer[%d][%d]=%.15G\n", i, j, GinvDer[i][j]);
 	}
     }
   for (i=0; i < 3; i++)
     {
       GinvDerR[i] = 0.0;
       for (n=0; n < 3; n++)
-	GinvDerR[i] += GinvDer[i][n]*R[n];
+	{
+	  GinvDerR[i] += GinvDer[i][n]*R[n];
+	}
+      //printf("GinvDerR[%d]=%.15G\n", i, GinvDerR[i]);
     }
   for (i=0; i < 3; i++)
     {
@@ -482,6 +488,7 @@ inline void fp(double lambda, double *SlP, double *SlPP)
 	*SlPP += GinvR[i]*H[i][j]*GinvDerR[j];
       }
 
+  //printf("Slp= %.15G SlPP=%.15G\n", *SlP, *SlPP);
   *SlP = -*SlP;
   *SlPP = -*SlPP;
   /* calculate also S(lambda) if Sl > 0.0*/
