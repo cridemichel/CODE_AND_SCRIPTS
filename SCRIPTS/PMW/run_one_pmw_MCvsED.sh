@@ -2,13 +2,13 @@
 SETPARAMS="../../set_params.sh"
 TEMP="$1"
 PF="PMW.par"
-LN="PMW-T$1"
+LN="PMW-T$1-PR"
 LNEQ="PMT-T$1-EQ"
 EXEF="../../PMW"
 INIF="restart.res"
 TAUALPHA="$2"
 # equilibration time will be TAUALPHA*EQTA
-EQTA="2"
+EQTA="1"
 # production run time will be TAUALPHA*PRTA
 PRTA="10"
 STORERATEPR="0.01"
@@ -41,5 +41,5 @@ cp $PF EQ-$PF
 STEPS=`echo "" | gawk -v ta=$TAUALPHA -v trats=$TRATS -v prta=$PRTA '{printf("%d",prta*ta/trats);}'` 
 $SETPARAMS $PF  intervalSum 50.0 storerate $STORERATEPR base $BASEPR NN $NNPR Dt $TRATS DtR $ROTTS stepnum  $STEPS inifile $INIF baksteps 0 VSteps $VS temperat $TEMP
 ln -sf $EXEF $LN 
-./$LN -fa $PF > screen 
+./$LN -fa $PF > screenPR
 cd ..
