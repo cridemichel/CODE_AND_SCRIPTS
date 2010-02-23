@@ -289,7 +289,7 @@ void BuildNebrListNoLinked(COORD_TYPE rCut, COORD_TYPE sigab[NA][NA])
 #endif 
 		  rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
 #ifdef MD_POLYDISP
-		  rcutab[a][b] = rCut*(radii[i]+radii[j])*0.5;
+		  rcutab[a][b] = rCut*(radii[0][i]+radii[0][j]);
 		  rrNebr[a][b] = Sqr(rcutab[a][b] + OprogStatus.rNebrShell);
 		  if (rrNebr[a][b] > L2SQ)
 		    {
@@ -409,7 +409,7 @@ void BuildNebrList(COORD_TYPE rCut, COORD_TYPE sigab[NA][NA])
 #endif
 	      rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
 #ifdef MD_POLYDISP
-	      rcutab[a][b] = rCut*(radii[i]+radii[j])*0.5;
+	      rcutab[a][b] = rCut*(radii[0][i]+radii[0][j]);
 	      rrNebr[a][b] = Sqr(rcutab[a][b] + OprogStatus.rNebrShell);
 #endif
 	      if ( rabSq < rrNebr[a][b] )/* 'rcut' is the cutoff for V */
@@ -471,7 +471,7 @@ void BuildNebrList(COORD_TYPE rCut, COORD_TYPE sigab[NA][NA])
 #endif
 		  rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
 #ifdef MD_POLYDISP
-    		  rcutab[a][b] = rCut*(radii[i]+radii[j])*0.5;
+    		  rcutab[a][b] = rCut*(radii[0][i]+radii[0][j]);
     		  rrNebr[a][b] = Sqr(rcutab[a][b] + OprogStatus.rNebrShell);
 #endif
 	
@@ -614,6 +614,9 @@ void LJForce(COORD_TYPE epsab[NA][NA],
     {
       loop(b, 1, NA) /* b >= a because of symmetry */
 	{
+#ifdef MD_POLYDISP
+	  Vcab[a][b] = 0.0;
+#endif
 	  /* useful ab-constants inside OUTER LOOP below */
 	  rcutab[a][b] = rcut * sigab[a][b];
 	  rcutabSq[a][b] = Sqr(rcutab[a][b]);
@@ -661,7 +664,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
   Nm = Oparams.parnum[0] + Oparams.parnum[1];
   /* Loop over cells */
   Vc = 0.0;
-
+  
   for (a = 0; a < NA; a++)
     {
       for (i = 0; i < Oparams.parnum[a]; i++)
@@ -738,7 +741,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 #endif      
       rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
 #ifdef MD_POLYDISP
-      sigabSq[a][b] = Sqr(radii[i]+radii[j])*0.5;
+      sigabSq[a][b] = Sqr(radii[0][i]+radii[0][j]);
       rcutab[a][b] = rcut*sigabSq[a][b];
       rcutabSq[a][b] = Sqr(rcutab[a][b]);
 #endif
@@ -782,7 +785,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 #ifdef MD_POLYDISP
 	  srab2 = sigabSq[a][b] / rcutabSq[a][b];
 	  vabCut = pow(srab2,PP/2.0);
-	  Vcab[a][b] -= vabCut;
+	  Vcab[a][b] += vab - vabCut;
 #endif
 #elif defined(NM_SPHERE)
 #ifdef MD_POLYDISP
@@ -803,7 +806,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 #ifdef MD_POLYDISP
     	  srab2 = sigmaFactorSq[a][b] / rcutabSq[a][b];
        	  vabCut = ((double)Oparams.MM)*pow(srab2, Oparams.NN/2.0)-((double)Oparams.NN)*pow(srab2,Oparams.MM/2.0);
-  	  Vcab[a][b] -= vabCut;
+	  Vcab[a][b] += vab - vabCut;
 #endif
 /*
         # elif defined(SOFT_SPHERE)
@@ -847,7 +850,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	  srab6 = srab2 * srab2 * srab2;
 	  srab12 = srab6 * srab6;
 	  vabCut = srab12 - srab6;
-	  Vab[a][b] -= vabCut;
+	  Vcab[a][b] += vab - vabCut;
 #endif
 #endif
 

@@ -75,7 +75,7 @@
                   vx[0], vy[0], vz[0],\
                   Fx[0], Fy[0], Fz[0],\
                   vxo1[0], vyo1[0], vzo1[0],\
-                  vxo2[0], vyo2[0], vzo2[0], radii
+                  vxo2[0], vyo2[0], vzo2[0], radii[0]
 #else
 #define SAVE_LISTA rx[0], ry[0], rz[0],\
                   vx[0], vy[0], vz[0],\
@@ -83,11 +83,19 @@
                   vxo1[0], vyo1[0], vzo1[0],\
                   vxo2[0], vyo2[0], vzo2[0]
 #endif
+#ifdef MD_POLYDISP
+#define SAVE_LISTB rx[1], ry[1], rz[1],\
+                   vx[1], vy[1], vz[1],\
+                   Fx[1], Fy[1], Fz[1],\
+                   vxo1[1], vyo1[1], vzo1[1],\
+                   vxo2[1], vyo2[1], vzo2[1], radii[1]
+#else
 #define SAVE_LISTB rx[1], ry[1], rz[1],\
                    vx[1], vy[1], vz[1],\
                    Fx[1], Fy[1], Fz[1],\
                    vxo1[1], vyo1[1], vzo1[1],\
                    vxo2[1], vyo2[1], vzo2[1]
+#endif
 #undef  EXT_SLST
 #define EXT_SLST  &s, &s1, &s2, &Vol, &Vol1, &Vol2, &Vol1o1, &s1o1, &Vol1o2,\
                   &s1o2
@@ -136,7 +144,7 @@
 		    &pcomx[0], &pcomy[0], &pcomz[0],\
 		    &xix[0], &xiy[0], &xiz[0],\
 		    &Gx[0], &Gy[0], &Gz[0],\
-		    &Hx[0], &Hy[0], &Hz[0], radii
+		    &Hx[0], &Hy[0], &Hz[0], &radii[0]
 #else
 #define ALLOC_LISTA  &rx[0], &ry[0], &rz[0],\
                     &vx[0], &vy[0], &vz[0],\
@@ -153,6 +161,22 @@
 		    &Gx[0], &Gy[0], &Gz[0],\
 		    &Hx[0], &Hy[0], &Hz[0]
 #endif
+#ifdef MD_POLYDISP
+#define ALLOC_LISTB &rx[1], &ry[1], &rz[1],\
+                    &vx[1], &vy[1], &vz[1],\
+                    &Fx[1], &Fy[1], &Fz[1],\
+                    &vxt[1], &vyt[1], &vzt[1],\
+                    &FxLJ[1], &FyLJ[1], &FzLJ[1],\
+                    &vxo1[1], &vyo1[1], &vzo1[1],\
+                    &vxo2[1], &vyo2[1], &vzo2[1],\
+                    &vxg[1],  &vyg[1],  &vzg[1],\
+                    &vxt2[1],  &vyt2[1],  &vzt2[1],\
+		    &xicomx[1], &xicomy[1], &xicomz[1],\
+		    &pcomx[1], &pcomy[1], &pcomz[1],\
+		    &xix[1], &xiy[1], &xiz[1],\
+		    &Gx[1], &Gy[1], &Gz[1],\
+		    &Hx[1], &Hy[1], &Hz[1], &radii[1]
+#else
 #define ALLOC_LISTB &rx[1], &ry[1], &rz[1],\
                     &vx[1], &vy[1], &vz[1],\
                     &Fx[1], &Fy[1], &Fz[1],\
@@ -168,6 +192,7 @@
 		    &Gx[1], &Gy[1], &Gz[1],\
 		    &Hx[1], &Hy[1], &Hz[1]
 
+#endif
 #else
 #ifdef MD_POLYDISP
 #define ALLOC_LISTA  &rx[0], &ry[0], &rz[0],\
@@ -178,7 +203,7 @@
                     &vxo1[0], &vyo1[0], &vzo1[0],\
                     &vxo2[0], &vyo2[0], &vzo2[0],\
                     &vxg[0],  &vyg[0],  &vzg[0],\
-                    &vxt2[0],  &vyt2[0],  &vzt2[0], radii
+                    &vxt2[0],  &vyt2[0],  &vzt2[0], &radii[0]
 #else
 #define ALLOC_LISTA  &rx[0], &ry[0], &rz[0],\
                     &vx[0], &vy[0], &vz[0],\
@@ -188,8 +213,19 @@
                     &vxo1[0], &vyo1[0], &vzo1[0],\
                     &vxo2[0], &vyo2[0], &vzo2[0],\
                     &vxg[0],  &vyg[0],  &vzg[0],\
-                    &vxt2[0],  &vyt2[0],  &vzt2[0]
+                    &vxt2[0],  &vyt2[0],  &vzt2[0], &radii[1]
 #endif
+#ifdef MD_POLYDISP
+#define ALLOC_LISTB &rx[1], &ry[1], &rz[1],\
+                    &vx[1], &vy[1], &vz[1],\
+                    &Fx[1], &Fy[1], &Fz[1],\
+                    &vxt[1], &vyt[1], &vzt[1],\
+                    &FxLJ[1], &FyLJ[1], &FzLJ[1],\
+                    &vxo1[1], &vyo1[1], &vzo1[1],\
+                    &vxo2[1], &vyo2[1], &vzo2[1],\
+                    &vxg[1],  &vyg[1],  &vzg[1],\
+                    &vxt2[1],  &vyt2[1],  &vzt2[1], &radii[1]
+#else
 #define ALLOC_LISTB &rx[1], &ry[1], &rz[1],\
                     &vx[1], &vy[1], &vz[1],\
                     &Fx[1], &Fy[1], &Fz[1],\
@@ -199,6 +235,7 @@
                     &vxo2[1], &vyo2[1], &vzo2[1],\
                     &vxg[1],  &vyg[1],  &vzg[1],\
                     &vxt2[1],  &vyt2[1],  &vzt2[1]
+#endif
 #endif              
 /* this is used to declare the particle variables ( see below ) 
    NOTE: rx[0][2] means the x-coordinate of the first atoms in the second 
@@ -222,7 +259,7 @@
 		    *pcomx[NA], *pcomy[NA], *pcomz[NA],\
 		    *xix[NA], *xiy[NA], *xiz[NA],\
 		    *Gx[NA], *Gy[NA], *Gz[NA],\
-		    *Hx[NA], *Hy[NA], *Hz[NA], *radii
+		    *Hx[NA], *Hy[NA], *Hz[NA], *radii[NA]
 #else
 #define DECL_LIST   *rx[NA], *ry[NA], *rz[NA],\
 		    *vx[NA], *vy[NA], *vz[NA],\
@@ -249,7 +286,7 @@
                     *vxo1[NA], *vyo1[NA], *vzo1[NA],\
                     *vxg[NA], *vyg[NA], *vzg[NA],\
                     *vxt2[NA], *vyt2[NA], *vzt2[NA],\
-                    *vxo2[NA], *vyo2[NA], *vzo2[NA], *radii
+                    *vxo2[NA], *vyo2[NA], *vzo2[NA], *radii[NA]
 #else
 #define DECL_LIST   *rx[NA], *ry[NA], *rz[NA],\
                     *vx[NA], *vy[NA], *vz[NA],\
