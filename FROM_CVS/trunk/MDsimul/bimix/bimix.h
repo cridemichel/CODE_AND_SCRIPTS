@@ -70,17 +70,24 @@
    COORD_TYPE array you want, each sizeof(COORD_TYPE)*<particles number> bytes
    long 
 */
+#ifdef MD_POLYDISP
+#define SAVE_LISTA rx[0], ry[0], rz[0],\
+                  vx[0], vy[0], vz[0],\
+                  Fx[0], Fy[0], Fz[0],\
+                  vxo1[0], vyo1[0], vzo1[0],\
+                  vxo2[0], vyo2[0], vzo2[0], radii
+#else
 #define SAVE_LISTA rx[0], ry[0], rz[0],\
                   vx[0], vy[0], vz[0],\
                   Fx[0], Fy[0], Fz[0],\
                   vxo1[0], vyo1[0], vzo1[0],\
                   vxo2[0], vyo2[0], vzo2[0]
+#endif
 #define SAVE_LISTB rx[1], ry[1], rz[1],\
                    vx[1], vy[1], vz[1],\
                    Fx[1], Fy[1], Fz[1],\
                    vxo1[1], vyo1[1], vzo1[1],\
                    vxo2[1], vyo2[1], vzo2[1]
-
 #undef  EXT_SLST
 #define EXT_SLST  &s, &s1, &s2, &Vol, &Vol1, &Vol2, &Vol1o1, &s1o1, &Vol1o2,\
                   &s1o2
@@ -115,6 +122,22 @@
    mdarray.c file).
 */
 #if defined(TAPPING) || defined(BASINS)
+#ifdef MD_POLYDISP
+#define ALLOC_LISTA  &rx[0], &ry[0], &rz[0],\
+                    &vx[0], &vy[0], &vz[0],\
+                    &Fx[0], &Fy[0], &Fz[0],\
+                    &vxt[0], &vyt[0], &vzt[0],\
+                    &FxLJ[0], &FyLJ[0], &FzLJ[0],\
+                    &vxo1[0], &vyo1[0], &vzo1[0],\
+                    &vxo2[0], &vyo2[0], &vzo2[0],\
+                    &vxg[0],  &vyg[0],  &vzg[0],\
+                    &vxt2[0],  &vyt2[0],  &vzt2[0],\
+		    &xicomx[0], &xicomy[0], &xicomz[0],\
+		    &pcomx[0], &pcomy[0], &pcomz[0],\
+		    &xix[0], &xiy[0], &xiz[0],\
+		    &Gx[0], &Gy[0], &Gz[0],\
+		    &Hx[0], &Hy[0], &Hz[0], radii
+#else
 #define ALLOC_LISTA  &rx[0], &ry[0], &rz[0],\
                     &vx[0], &vy[0], &vz[0],\
                     &Fx[0], &Fy[0], &Fz[0],\
@@ -129,7 +152,7 @@
 		    &xix[0], &xiy[0], &xiz[0],\
 		    &Gx[0], &Gy[0], &Gz[0],\
 		    &Hx[0], &Hy[0], &Hz[0]
-
+#endif
 #define ALLOC_LISTB &rx[1], &ry[1], &rz[1],\
                     &vx[1], &vy[1], &vz[1],\
                     &Fx[1], &Fy[1], &Fz[1],\
@@ -146,6 +169,17 @@
 		    &Hx[1], &Hy[1], &Hz[1]
 
 #else
+#ifdef MD_POLYDISP
+#define ALLOC_LISTA  &rx[0], &ry[0], &rz[0],\
+                    &vx[0], &vy[0], &vz[0],\
+                    &Fx[0], &Fy[0], &Fz[0],\
+                    &vxt[0], &vyt[0], &vzt[0],\
+                    &FxLJ[0], &FyLJ[0], &FzLJ[0],\
+                    &vxo1[0], &vyo1[0], &vzo1[0],\
+                    &vxo2[0], &vyo2[0], &vzo2[0],\
+                    &vxg[0],  &vyg[0],  &vzg[0],\
+                    &vxt2[0],  &vyt2[0],  &vzt2[0], radii
+#else
 #define ALLOC_LISTA  &rx[0], &ry[0], &rz[0],\
                     &vx[0], &vy[0], &vz[0],\
                     &Fx[0], &Fy[0], &Fz[0],\
@@ -155,6 +189,7 @@
                     &vxo2[0], &vyo2[0], &vzo2[0],\
                     &vxg[0],  &vyg[0],  &vzg[0],\
                     &vxt2[0],  &vyt2[0],  &vzt2[0]
+#endif
 #define ALLOC_LISTB &rx[1], &ry[1], &rz[1],\
                     &vx[1], &vy[1], &vz[1],\
                     &Fx[1], &Fy[1], &Fz[1],\
@@ -173,6 +208,22 @@
    finally the coordinate, for example consider the position: 
    coordinate(rx, ry, rz) <- atom <- molecule*/
 #if defined(TAPPING) || defined(BASINS)  
+#ifdef MD_POLYDISP
+#define DECL_LIST   *rx[NA], *ry[NA], *rz[NA],\
+		    *vx[NA], *vy[NA], *vz[NA],\
+                    *vxt[NA], *vyt[NA], *vzt[NA],\
+                    *Fx[NA], *Fy[NA], *Fz[NA],\
+                    *FxLJ[NA], *FyLJ[NA], *FzLJ[NA],\
+                    *vxo1[NA], *vyo1[NA], *vzo1[NA],\
+                    *vxg[NA], *vyg[NA], *vzg[NA],\
+                    *vxt2[NA], *vyt2[NA], *vzt2[NA],\
+                    *vxo2[NA], *vyo2[NA], *vzo2[NA],\
+		    *xicomx[NA], *xicomy[NA], *xicomz[NA],\
+		    *pcomx[NA], *pcomy[NA], *pcomz[NA],\
+		    *xix[NA], *xiy[NA], *xiz[NA],\
+		    *Gx[NA], *Gy[NA], *Gz[NA],\
+		    *Hx[NA], *Hy[NA], *Hz[NA], *radii
+#else
 #define DECL_LIST   *rx[NA], *ry[NA], *rz[NA],\
 		    *vx[NA], *vy[NA], *vz[NA],\
                     *vxt[NA], *vyt[NA], *vzt[NA],\
@@ -187,7 +238,18 @@
 		    *xix[NA], *xiy[NA], *xiz[NA],\
 		    *Gx[NA], *Gy[NA], *Gz[NA],\
 		    *Hx[NA], *Hy[NA], *Hz[NA]
-	    
+#endif
+#else
+#ifdef MD_POLYDISP
+#define DECL_LIST   *rx[NA], *ry[NA], *rz[NA],\
+                    *vx[NA], *vy[NA], *vz[NA],\
+                    *vxt[NA], *vyt[NA], *vzt[NA],\
+                    *Fx[NA], *Fy[NA], *Fz[NA],\
+                    *FxLJ[NA], *FyLJ[NA], *FzLJ[NA],\
+                    *vxo1[NA], *vyo1[NA], *vzo1[NA],\
+                    *vxg[NA], *vyg[NA], *vzg[NA],\
+                    *vxt2[NA], *vyt2[NA], *vzt2[NA],\
+                    *vxo2[NA], *vyo2[NA], *vzo2[NA], *radii
 #else
 #define DECL_LIST   *rx[NA], *ry[NA], *rz[NA],\
                     *vx[NA], *vy[NA], *vz[NA],\
@@ -198,6 +260,7 @@
                     *vxg[NA], *vyg[NA], *vzg[NA],\
                     *vxt2[NA], *vyt2[NA], *vzt2[NA],\
                     *vxo2[NA], *vyo2[NA], *vzo2[NA]
+#endif
 #endif            				   
 #undef EXT_DLST
 #define EXT_DLST    s, s1, s2, Vol, Vol1, Vol2, Vol1o1, s1o1, Vol1o2, s1o2
@@ -317,6 +380,10 @@ struct progStatus
   int quenchtol;
   int quenchend;
 #endif  
+#ifdef MD_POLYDISP
+  double polydisp;
+  double polycutoff;
+#endif
   /* ADD 13/4/2000 
      Logarithmic saving implemented for xva file */
   int xvaSaveMode;/* 0 = linear 1 = semilog 2 = bilog (not impl. yet) */
@@ -482,6 +549,10 @@ struct pascii opro_ascii[] =
   {"taptausteps",   &OS(taptausteps),              1,  1,   "%d"},
   {"quenchend",     &OS(quenchend),                1,  1,   "%d"},
   {"quenchtol",     &OS(quenchtol),                1,  1,   "%f"},
+#endif
+#ifdef MD_POLYDISP
+  {"polydisp",         &OS(polydisp),              1,   1, "%.15G"},
+  {"polycutoff",       &OS(polydisp),              1,   1, "%.15G"},
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -682,6 +753,10 @@ struct singlePar OsinglePar[] = {
   {"base",       &OprogStatus.base,         CT},
   {"NN",         &OprogStatus.NN,           INT},
   {"nRun",       OprogStatus.nRun,         STR},
+#ifdef MD_POLYDISP
+  {"polydisp",   &OprogStatus.polydisp,    CT},
+  {"polycutoff",  &OprogStatus.polycutoff, CT},
+#endif
   /* ======================================================================= */
   {"", NULL, 0} /* end of list, don't touch this !!! */
 };

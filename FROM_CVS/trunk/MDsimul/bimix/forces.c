@@ -219,12 +219,17 @@ void BuildNebrListNoLinked(COORD_TYPE rCut, COORD_TYPE sigab[NA][NA])
   COORD_TYPE rcutab[NA][NA], rcutabSq[NA][NA]; 
   COORD_TYPE rrNebr[NA][NA];
   COORD_TYPE rxa, rya, rza, rabSq, rxab, ryab, rzab;
+#ifdef MD_POLYDISP
+  double L2SQ;
+#endif
   int Nm;
 
   L = cbrt(Vol);
   invL = 1.0  / L;
   Nm = Oparams.parnum[0] + Oparams.parnum[1];
-
+#ifdef MD_POLYDISP
+  L2SQ = Sqr(L/2.0);
+#endif
   loop(a, 1, NA)
     {
       loop(b, 1, NA)
@@ -283,7 +288,17 @@ void BuildNebrListNoLinked(COORD_TYPE rCut, COORD_TYPE sigab[NA][NA])
 		  rzab = rzab - L * RINT_(rzab * invL);
 #endif 
 		  rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
+#ifdef MD_POLYDISP
+		  rcutab[a][b] = rCut*(radii[i]+radii[j])*0.5;
+		  rrNebr[a][b] = Sqr(rcutab[a][b] + OprogStatus.rNebrShell);
+		  if (rrNebr[a][b] > L2SQ)
+		    {
+		      printf("(rcutoff + rNebrShell)=%f is  too large, it exceeds L/2 = %f\n",
+			     sqrt(rrNebr[a][b]), L/2.0);
+		      exit(-1);
+		    }
 		  
+#endif
 		  if ( rabSq < rrNebr[a][b] )/* 'rcut' is the cutoff for V */
 		    {
 		       if (nebrTabLen >= nebrTabMax)
@@ -393,7 +408,10 @@ void BuildNebrList(COORD_TYPE rCut, COORD_TYPE sigab[NA][NA])
 	      rzab = rzab - L * RINT_(invL * rzab);
 #endif
 	      rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
-	     
+#ifdef MD_POLYDISP
+	      rcutab[a][b] = rCut*(radii[i]+radii[j])*0.5;
+	      rrNebr[a][b] = Sqr(rcutab[a][b] + OprogStatus.rNebrShell);
+#endif
 	      if ( rabSq < rrNebr[a][b] )/* 'rcut' is the cutoff for V */
 		{
 		  if (nebrTabLen >= nebrTabMax)
@@ -452,7 +470,11 @@ void BuildNebrList(COORD_TYPE rCut, COORD_TYPE sigab[NA][NA])
 
 #endif
 		  rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
-		  
+#ifdef MD_POLYDISP
+    		  rcutab[a][b] = rCut*(radii[i]+radii[j])*0.5;
+    		  rrNebr[a][b] = Sqr(rcutab[a][b] + OprogStatus.rNebrShell);
+#endif
+	
 		  if ( rabSq < rrNebr[a][b] )/* 'rcut' is the cutoff for V */
 		    {
 		      if (nebrTabLen >= nebrTabMax)
@@ -711,7 +733,11 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 #endif      
 #endif      
       rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
-      	     
+#ifdef MD_POLYDISP
+      sigabSq[a][b] = Sqr(radii[i]+radii[j])*0.5;
+      rcutab[a][b] = rcut*sigabSq[a][b];
+      rcutabSq[a][b] = Sqr(rcutab[a][b]);
+#endif
       if ( rabSq < rcutabSq[a][b] )/* 'rcut' is the cutoff for V */
 	{
 #ifdef SOFT_SPHERE
@@ -749,7 +775,15 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	  fxab  = fab * rxab;         
 	  fyab  = fab * ryab;
 	  fzab  = fab * rzab;
+#ifdef MD_POLYDISP
+	  srab2 = sigabSq[a][b] / rcutabSq[a][b];
+	  vabCut = pow(srab2,PP/2.0);
+	  Vcab[a][b] -= vabCut;
+#endif
 #elif defined(NM_SPHERE)
+#ifdef MD_POLYDISP
+	  sigmaFactorSq[a][b] = sigabSq[a][b]*Sqr(factor);
+#endif
 	  srab2 = sigmaFactorSq[a][b] / rabSq;
 	  vabNN = ((double)Oparams.MM)*pow(srab2, ((double)Oparams.NN)/2.0);
 	  vabMM = -((double)Oparams.NN)*pow(srab2, ((double)Oparams.MM)/2.0);
@@ -762,7 +796,13 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	  fxab  = fab * rxab;         
 	  fyab  = fab * ryab;
 	  fzab  = fab * rzab;
-#elif defined(SOFT_SPHERE)
+#ifdef MD_POLYDISP
+    	  srab2 = sigmaFactorSq[a][b] / rcutabSq[a][b];
+       	  vabCut = ((double)Oparams.MM)*pow(srab2, Oparams.NN/2.0)-((double)Oparams.NN)*pow(srab2,Oparams.MM/2.0);
+  	  Vcab[a][b] -= vabCut;
+#endif
+/*
+        # elif defined(SOFT_SPHERE)
 	  srab2 = sigabSq[a][b] /rabSq;
 	  vabNN = pow(srab2, ((double)Oparams.NN)/2.0);
 	  vabMM = -pow(srab2, ((double)Oparams.MM)/2.0);
@@ -771,10 +811,11 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	  Vab[a][b] += vab;
 	  Wab[a][b] += wab;
 	  fab   = epsab4[a][b] * wab / rabSq;
-	  /* force between two atoms */
+	  // force between two atoms 
 	  fxab  = fab * rxab;         
 	  fyab  = fab * ryab;
 	  fzab  = fab * rzab;
+	  */
 #else
 	  srab2   = sigabSq[a][b] / rabSq;
 	  srab6   = srab2 * srab2 * srab2;
@@ -796,6 +837,14 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	  fxab  = fab * rxab;         
 	  fyab  = fab * ryab;
 	  fzab  = fab * rzab;
+
+#ifdef MD_POLYDISP
+	  srab2 = sigabSq[a][b] / rcutabSq[a][b];
+	  srab6 = srab2 * srab2 * srab2;
+	  srab12 = srab6 * srab6;
+	  vabCut = srab12 - srab6;
+	  Vab[a][b] -= vabCut;
+#endif
 #endif
 
 	  /* Virial off-diagonal terms of atomic pressure tensor */
@@ -831,6 +880,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
      subtracts Vcut = V(rcut) 
      (see pag 145 A.T.) */
 #ifdef SOFT_SPHERE
+#ifndef MD_POLYDISP
   loop(a, 1, NA)
     {
       loop(b, 1, NA) /* b >= a */
@@ -842,7 +892,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	     rcutab[a][b] */ 
 	}
     }
-  
+#endif
   /* MULTIPLY FOR ENERGY FACTORS */
   loop(a, 1, NA)
     {
@@ -854,6 +904,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	}
     }
 #elif defined(NM_SPHERE)
+#ifndef MD_POLYDISP
  for (a = 0; a < NA; a++)
    for (b = 0; b < NA; b++)
      {
@@ -861,6 +912,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
        vabCut = ((double)Oparams.MM)*pow(srab2, Oparams.NN/2.0)-((double)Oparams.NN)*pow(srab2,Oparams.MM/2.0);
        Vcab[a][b] = Vab[a][b] - ((double)ncut[a][b]) * vabCut;
      }
+#endif
  /* MULTIPLY FOR ENERGY FACTORS */
   loop(a, 1, NA)
     {
@@ -873,6 +925,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
     }
 
 #else
+#ifndef MD_POLYDISP
   loop(a, 1, NA)
     {
       loop(b, 1, NA) /* b >= a */
@@ -886,7 +939,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	     rcutab[a][b] */ 
 	}
     }
-  
+#endif
   /* MULTIPLY FOR ENERGY FACTORS */
   loop(a, 1, NA)
     {

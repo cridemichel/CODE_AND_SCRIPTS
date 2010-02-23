@@ -7,7 +7,6 @@
 #define NMOLA 800
 #define KMODMAX 100 /* modulo (intero) massimo per i vettori d'onda */
 #define NKSHELL 150 /* numero di vettori d'onda con un modulo fissato */
-
 double tempei, dt, twopi;
 char filewalter[512], filename[NJOBMAX][132], pwdfilename[NJOBMAX][512];
 const double k0 = 6.12;

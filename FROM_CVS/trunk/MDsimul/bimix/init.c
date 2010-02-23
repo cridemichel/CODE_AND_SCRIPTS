@@ -546,6 +546,10 @@ void usrInitBef(void)
   OprogStatus.nebrTabFac = 150;
   OprogStatus.rNebrShell = 0.4;
   OprogStatus.noLinkedList = 0; /* Use Linked List */
+#ifdef MD_POLYDISP
+  OprogStatus.polydisp = 0.0;
+  OprogStatus.polycutoff = 5.0;
+#endif
   /* If 1 the program calculate of the corrisponding variable a mean from
      the begin of the run and not the instanteaneous value */
   OprogStatus.avnggr    = 0;
@@ -599,22 +603,42 @@ void usrInitAft(void)
   int Nm, i, sct;
   COORD_TYPE* m;
   int a, b;
-
+#ifdef MD_POLYDISP
+  double maxrad=-1.0;
+#endif
   //COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;
 
   /* initialize global varibales */
   pi = 2.0 * acos(0);
   
   M = Oparams.M;
-
+#ifdef MD_POLYDISP 
+  if (Oparams.parnum[1] > 0)
+    {
+      printf("ERROR: simulating a polydisperse system requires panrum[1]=0 (i.e. only one specie is allowed!)\b");
+      exit(-1);
+    }
+#endif
   if (M<=2) 
     {
       printf("ERROR: cellNum must be > 2 !!!\n");
       exit(-1);
     }
+
+#ifdef MD_POLYDISP
+  if (Oparams.rcut <= 0.0)
+    {
+     for (i = 0; i < Oparams.parnum[0]; i++)
+	{
+	  if (radii[i] > maxrad)
+	    maxrad = radii[i];
+	}
+      Oparams.rcut = 1.01*maxrad*2.0;
+      M = L / Oparams.rcut;
+    }
+#endif
   NCell = M * M * M;
   mapSize = 13 * NCell;
-  
   if (OprogStatus.noLinkedList)
     {
       mdMsg(ALL, NOSYS, "usrInitAft", "NOTICE", NULL,
@@ -697,6 +721,30 @@ void usrInitAft(void)
   /* Store the Center of Mass initial position for all particles */
   m = Oparams.m;
 
+#ifdef MD_POLYDISP
+  /* note that if MD_POLYSDISP is defined Oparams.parnum[1] must be 0! */
+  for (i=0; i < Oparams.parnum[0]; i++)
+    {
+      if (newSim)
+	{
+	  /* if (OprogStatus.polydisp <= 0.0)
+	     radii[i] = Oparams.sigma*0.5;
+	     else*/
+	  if (!strcmp(OprogStatus.inifile,"*"))
+	    {
+	      if (OprogStatus.polydisp > 0.0)
+		{
+		  do
+		    {
+		      radii[i] = (OprogStatus.polydisp*gauss() + 1.0)*Oparams.sigab[0][0]*0.5; 
+		    }
+		  while (radii[i] < Oparams.sigab[0][0]*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigab[0][0]*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp));
+		  //printf("%.15G\n", radii[i]);
+		}
+	    }
+	}
+    }
+#endif
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)
@@ -786,6 +834,7 @@ void usrInitAft(void)
 	  OprogStatus.hist[i] = 0;
 	}
     }
+
   printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);
 }
 
@@ -798,7 +847,11 @@ void writeAllCor(FILE* fs)
     {
       for (i = 0; i < Oparams.parnum[a]; i++)
 	{
+#ifdef MD_POLYDISP
+	  fprintf(fs, "%.15G %.15G %.15G %.15G\n", rx[a][i], ry[a][i], rz[a][i], radii[i]);
+#else
 	  fprintf(fs, "%.15G %.15G %.15G\n", rx[a][i], ry[a][i], rz[a][i]);
+#endif
 	}
     }
   for (a = 0; a < NA; a++)
@@ -832,11 +885,19 @@ void readAllCor(FILE* fs)
     {
       for (i = 0; i < Oparams.parnum[a]; i++)
 	{
+#ifdef MD_POLYDISP
+	  if (fscanf(fs, "%lf %lf %lf %lf\n", &rx[a][i], &ry[a][i], &rz[a][i], &radii[i]) < 3)
+	    {
+	      mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
+	      exit(-1);
+	    }
+#else
 	  if (fscanf(fs, "%lf %lf %lf\n", &rx[a][i], &ry[a][i], &rz[a][i]) < 3)
 	    {
 	      mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	      exit(-1);
 	    }
+#endif
 	}
     }
   for (a = 0; a < NA; a++)
