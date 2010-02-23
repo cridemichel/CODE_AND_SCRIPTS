@@ -578,7 +578,11 @@ void LJForce(COORD_TYPE epsab[NA][NA],
   int ncut[NA][NA];
   COORD_TYPE rcutab[NA][NA], rcutabSq[NA][NA]; 
 #ifdef SOFT_SPHERE
+#ifdef MD_POLYDISP
+  double PP;
+#else
   int PP;
+#endif
   double Epsab4;
 #elif defined(NM_SPHERE)
   double vabNN, vabMM, factor, sigmaFactorSq[NA][NA];
