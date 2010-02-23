@@ -441,7 +441,11 @@ struct params
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
 #ifdef SOFT_SPHERE
+#ifdef MD_POLYDISP
+  double PP; 
+#else
   int PP; 
+#endif
 #endif
 #ifdef NM_SPHERE
   int NN;
@@ -572,7 +576,11 @@ struct pascii opar_ascii[]=
   {"T",                 &OP(T),                           1,   1, "%.6G"},
   {"m",                 OP(m),                            2,   1, "%.6G"},
 #ifdef SOFT_SPHERE
+#ifdef MD_POLYDISP
+  {"PP",                &OP(PP),                          1,   1,  "%.8G"},
+#else
   {"PP",                &OP(PP),                          1,   1,  "%d"},
+#endif
 #endif
 #ifdef NM_SPHERE
   {"NN",                &OP(NN),                          1,   1,  "%d"},
@@ -726,7 +734,11 @@ struct singlePar OsinglePar[] = {
   {"epsbb",      &Oparams.epsab[1][1],      CT},
   {"epsab",      &Oparams.epsab[0][1],      CT},
 #ifdef SOFT_SPHERE
+#ifdef MD_POLYDISP
+  {"PP",         &Oparams.PP,               CT},
+#else
   {"PP",         &Oparams.PP,               INT},
+#endif
 #endif 
 #ifdef TAPPING
   {"tapping",    &OprogStatus.tapping,      INT},
