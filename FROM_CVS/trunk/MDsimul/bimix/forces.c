@@ -144,7 +144,7 @@ void  links(COORD_TYPE rcut, COORD_TYPE sigab[NA][NA])
   celli = (COORD_TYPE) M;
   cell  = 1.0 / celli;
   
-
+#ifndef MD_POLYDISP
   loop(a, 1, NA)
     {
       loop(b, 1, NA)
@@ -155,6 +155,7 @@ void  links(COORD_TYPE rcut, COORD_TYPE sigab[NA][NA])
 	    {
 	      printf("critical cutoff: %f\n", OprogStatus.rNebrShell +
 		     rcut * sigab[a][b]);
+	      printf("M=%d L*cell=%.15G\n", M, L*cell);
 	      mdMsg(ALL, NOSYS, NULL, "ERROR", NULL,
 		    "Cell size too small for cutoff",
 		    NULL);
@@ -162,7 +163,7 @@ void  links(COORD_TYPE rcut, COORD_TYPE sigab[NA][NA])
 	    }
 	}
     }
-
+#endif
   /* Sort all atoms */
   for (a = 0; a < NA; a++)
     {
