@@ -7,7 +7,8 @@ SDHDR4=bimix4.h
 
 UTIL = wtdutil heteroutil bixva 
 
-bimix:  md2asciiBM measures.o forces.o move.o init.o conjgrad.o corutil cri2fra fsk fk mediafsk basinsSerial calcdrsq calcpress calcSk calcSkAB calcSkAA calcSkBB calcSkAAallk#basins$(UTIL)
+bimix:  md2asciiBM measures.o forces.o move.o init.o conjgrad.o corutil fsk fk mediafsk basinsSerial calcdrsq calcpress calcSk calcSkAB calcSkAA calcSkBB calcSkAAallk cri2fra 
+#basins$(UTIL)
 
 link: 
 	#simuln.sh $(PERC)/bimix/$(SDHDR) 0 
