@@ -742,10 +742,18 @@ void usrInitAft(void)
 	  if (radii[0][i] > maxrad)
 	    maxrad = Oparams.rcut*radii[0][i];
 	}
-      M = L / (1.01*maxrad*2.0);
-      printf("L=%.15G M=%d rcut=%.15G\n", L, M, Oparams.rcut);
+      M = L / (1.01*(maxrad*2.0+OprogStatus.rNebrShell));
+      Oparams.M = M;
+      printf("maxrad=%.15G + 2*maxrad+nebrShell=%.15G L=%.15G M=%d rcut=%.15G\n", maxrad, 
+      maxrad*2.0+OprogStatus.rNebrShell, L, M, Oparams.rcut);
     }
   NCell = M * M * M;
+  if (M<=2) 
+    {
+      printf("ERROR: cellNum must be > 2 !!!\n");
+      exit(-1);
+    }
+
   mapSize = 13 * NCell;
   head = malloc(sizeof(int)*NCell);
   list = malloc(sizeof(int)*NA*Nm);
