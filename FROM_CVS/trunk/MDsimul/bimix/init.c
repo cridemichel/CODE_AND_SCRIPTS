@@ -93,9 +93,16 @@ void FCC(COORD_TYPE* m)
 
   if (Oparams.parnum[0] > Oparams.parnum[1])
     {
+#ifdef MD_POLYDISP
+      /* nel caso di polidispersita' Oparams.parnum[1] deve essere 0!*/
+      modA = 1;
+      modB = 0;
+      mod = modA;
+#else
       modA = rint(Oparams.parnum[0] / Oparams.parnum[1]);
       modB = 1;
       mod  = modA + modB; 
+#endif
       /* Piazzera' modA atomi A(0) e poi 1 atomo B(1) */
     }
   else
@@ -619,26 +626,18 @@ void usrInitAft(void)
       exit(-1);
     }
 #endif
+
+#ifndef MD_POLYDISP
   if (M<=2) 
-    {
+   {
       printf("ERROR: cellNum must be > 2 !!!\n");
       exit(-1);
     }
-
-#ifdef MD_POLYDISP
-  if (Oparams.rcut <= 0.0)
-    {
-     for (i = 0; i < Oparams.parnum[0]; i++)
-	{
-	  if (radii[i] > maxrad)
-	    maxrad = radii[i];
-	}
-      Oparams.rcut = 1.01*maxrad*2.0;
-      M = L / Oparams.rcut;
-    }
 #endif
+#ifndef MD_POLYDISP
   NCell = M * M * M;
   mapSize = 13 * NCell;
+#endif
   if (OprogStatus.noLinkedList)
     {
       mdMsg(ALL, NOSYS, "usrInitAft", "NOTICE", NULL,
@@ -658,10 +657,11 @@ void usrInitAft(void)
   /* Allocate arrays of integers, you must supply the array length and the
      address of the pointer to the array */
   Nm = Oparams.parnum[0]+Oparams.parnum[1];
+#ifndef MD_POLYDISP
   head = malloc(sizeof(int)*NCell);
   list = malloc(sizeof(int)*NA*Nm);
   map  = malloc(sizeof(int)*mapSize);
-
+#endif
   sct = sizeof(COORD_TYPE);
 #ifdef MD_LOADMESH 
   printf("reading mesh files:%s\n",MD_MESHDIR "/ntripl.dat");
@@ -709,20 +709,8 @@ void usrInitAft(void)
      by the Child, so if you want something that depends upon the works of both
      processes you must put their calculations in the shared memory, and 
      not in the process local memory (Not shared) */ 
-  maps();
-
-  /* Initialize variables for neighbour list method */
-  nebrTabMax = OprogStatus.nebrTabFac * Nm * NA;
-  printf("INIT nebrTabMax: %d\n", nebrTabMax);
-  nebrNow = 1;
-  nebrTab = AllocMatI(2, nebrTabMax); 
-  /* =============================================== */
-  
-  /* Store the Center of Mass initial position for all particles */
-  m = Oparams.m;
-
 #ifdef MD_POLYDISP
-  /* note that if MD_POLYSDISP is defined Oparams.parnum[1] must be 0! */
+  /* note that if MD_POLYDISP is defined Oparams.parnum[1] must be 0! */
   for (i=0; i < Oparams.parnum[0]; i++)
     {
       if (newSim)
@@ -736,15 +724,47 @@ void usrInitAft(void)
 		{
 		  do
 		    {
-		      radii[i] = (OprogStatus.polydisp*gauss() + 1.0)*Oparams.sigab[0][0]*0.5; 
+		      radii[0][i] = (OprogStatus.polydisp*gauss() + 1.0)*Oparams.sigab[0][0]*0.5; 
 		    }
-		  while (radii[i] < Oparams.sigab[0][0]*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[i] > Oparams.sigab[0][0]*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp));
+		  while (radii[0][i] < Oparams.sigab[0][0]*0.5*(1.0 - OprogStatus.polycutoff*OprogStatus.polydisp) || radii[0][i] > Oparams.sigab[0][0]*0.5*(1.0 + OprogStatus.polycutoff*OprogStatus.polydisp));
 		  //printf("%.15G\n", radii[i]);
 		}
+	      else
+		radii[0][i] = Oparams.sigab[0][0]*0.5;
 	    }
 	}
     }
+  if (Oparams.M < 0)
+    {
+     L = cbrt(Vol);
+     for (i = 0; i < Oparams.parnum[0]; i++)
+	{
+	  if (radii[0][i] > maxrad)
+	    maxrad = Oparams.rcut*radii[0][i];
+	}
+      M = L / (1.01*maxrad*2.0);
+      printf("L=%.15G M=%d rcut=%.15G\n", L, M, Oparams.rcut);
+    }
+  NCell = M * M * M;
+  mapSize = 13 * NCell;
+  head = malloc(sizeof(int)*NCell);
+  list = malloc(sizeof(int)*NA*Nm);
+  map  = malloc(sizeof(int)*mapSize);
+
 #endif
+  maps();
+
+  /* Initialize variables for neighbour list method */
+  nebrTabMax = OprogStatus.nebrTabFac * Nm * NA;
+  printf("INIT nebrTabMax: %d\n", nebrTabMax);
+  nebrNow = 1;
+  nebrTab = AllocMatI(2, nebrTabMax); 
+  /* =============================================== */
+  
+  /* Store the Center of Mass initial position for all particles */
+  m = Oparams.m;
+
+
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
   if (newSim == 1)
@@ -766,7 +786,11 @@ void usrInitAft(void)
       Oparams.PP = 6;
       mdPrintf(ALL, "WARNING: MD_STATIC_PP6 defined!\n", NULL);
 #else
+#ifdef MD_POLYDISP
+      sprintf(msgs, "WARNING: DYNAMIC PP=%.8G\n", Oparams.PP);
+#else
       sprintf(msgs, "WARNING: DYNAMIC PP=%d\n", Oparams.PP);
+#endif
       mdPrintf(ALL, msgs, NULL);
 #endif
 #endif
@@ -848,7 +872,7 @@ void writeAllCor(FILE* fs)
       for (i = 0; i < Oparams.parnum[a]; i++)
 	{
 #ifdef MD_POLYDISP
-	  fprintf(fs, "%.15G %.15G %.15G %.15G\n", rx[a][i], ry[a][i], rz[a][i], radii[i]);
+	  fprintf(fs, "%.15G %.15G %.15G %.15G\n", rx[a][i], ry[a][i], rz[a][i], radii[a][i]);
 #else
 	  fprintf(fs, "%.15G %.15G %.15G\n", rx[a][i], ry[a][i], rz[a][i]);
 #endif
@@ -886,7 +910,7 @@ void readAllCor(FILE* fs)
       for (i = 0; i < Oparams.parnum[a]; i++)
 	{
 #ifdef MD_POLYDISP
-	  if (fscanf(fs, "%lf %lf %lf %lf\n", &rx[a][i], &ry[a][i], &rz[a][i], &radii[i]) < 3)
+	  if (fscanf(fs, "%lf %lf %lf %lf\n", &rx[a][i], &ry[a][i], &rz[a][i], &radii[a][i]) < 3)
 	    {
 	      mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	      exit(-1);
