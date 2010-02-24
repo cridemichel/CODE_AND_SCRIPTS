@@ -580,7 +580,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
   COORD_TYPE rcutab[NA][NA], rcutabSq[NA][NA]; 
 #ifdef SOFT_SPHERE
 #ifdef MD_POLYDISP
-  double PP;
+  double PP, rab, fcut;
 #else
   int PP;
 #endif
@@ -743,7 +743,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
       rabSq = Sqr(rxab) + Sqr(ryab) + Sqr(rzab);
 #ifdef MD_POLYDISP
       sigabSq[a][b] = Sqr(radii[0][i]+radii[0][j]);
-      rcutab[a][b] = rcut*sigabSq[a][b];
+      rcutab[a][b] = rcut*(radii[0][i]+radii[0][j]);
       rcutabSq[a][b] = Sqr(rcutab[a][b]);
 #endif
       if ( rabSq < rcutabSq[a][b] )/* 'rcut' is the cutoff for V */
@@ -774,19 +774,27 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 	  wab = 6.0*vab;   
 #else
   	  vab = pow(srab2, ((double)PP)/2.0);
-  	  wab = ((double)PP)*vab;
+	  wab = ((double)PP)*vab;
+#endif
+#ifdef MD_POLYDISP
+	  /* N.B. small PP means long range and with small cutoff
+	     used here implies integrator instabilities, that is why
+	     we emply here potential and force shift to fix this
+	     (see Allen-Tildesley pag. 146) */
+	  srab2 = sigabSq[a][b] / rcutabSq[a][b];
+	  vabCut = pow(srab2,PP/2.0);
+	  fcut = ((double)PP)*vabCut/rcutab[a][b];
+	  rab = sqrt(rabSq);
 #endif
 	  Vab[a][b] += vab;
 	  Wab[a][b] += wab;
-	  fab   = epsab4[a][b] * wab / rabSq;
+	  fab   = epsab4[a][b] * (wab / rabSq - fcut / rab);
 	  /* force between two atoms */
 	  fxab  = fab * rxab;         
 	  fyab  = fab * ryab;
 	  fzab  = fab * rzab;
 #ifdef MD_POLYDISP
-	  srab2 = sigabSq[a][b] / rcutabSq[a][b];
-	  vabCut = pow(srab2,PP/2.0);
-	  Vcab[a][b] += vab - vabCut;
+	  Vcab[a][b] += vab - vabCut + (rab-rcutab[a][b])*fcut;
 #endif
 #elif defined(NM_SPHERE)
 #ifdef MD_POLYDISP
