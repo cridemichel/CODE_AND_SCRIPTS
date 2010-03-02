@@ -205,22 +205,13 @@ void build_orient_matrix(int i, double Rt[3][3])
   if (i < Oparams.parnumA)
     {
       for (a=0; a < 3; a++)
-       	u3[a]=R[i][a][1]-R[i][a][0];      
+	{
+  	  u3[a]=R[i][a][2];
+	  u2[a]=R[i][a][1];
+	}
       norm = calc_norm(u3);
       for (a=0; a < 3; a++)
 	u3[a] /= norm;
-      if (u3[0]==1.0 && u3[1]==1.0 && u3[2]==1.0)
-	{
-	  u2[0] = -1.0;
-	  u2[1] = -1.0;
-	  u2[2] = -1.0;
-	}	
-      else
-	{
-	  u2[0] = 1.0;
-	  u2[1] = 1.0;
-	  u2[2] = 1.0;
-	}
       wsz = scalProd(u2, u3);
       for (a=0; a < 3; a++)
 	u2[a] = u2[a]-u3[a]*wsz;
@@ -243,22 +234,13 @@ void build_orient_matrix(int i, double Rt[3][3])
   /* TODO: in tale caso ho tre vettori che vanno ortonormalizzati */
   /* caso dell'acqua e della silica */
   for (a=0; a < 3; a++)
-    u3[a]=R[i][a][1]-R[i][a][0];      
+    {
+      u3[a]=R[i][a][2];      
+      u2[a]=R[i][a][1];
+    }
   norm = calc_norm(u3);
   for (a=0; a < 3; a++)
     u3[a] /= norm;
-  if (u3[0]==1.0 && u3[1]==1.0 && u3[2]==1.0)
-    {
-      u2[0] = -1.0;
-      u2[1] = -1.0;
-      u2[2] = -1.0;
-    }	
-  else
-    {
-      u2[0] = 1.0;
-      u2[1] = 1.0;
-      u2[2] = 1.0;
-    }
   wsz = scalProd(u2, u3);
   for (a=0; a < 3; a++)
     u2[a] = u2[a]-u3[a]*wsz;
