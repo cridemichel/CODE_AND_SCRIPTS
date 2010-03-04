@@ -25,6 +25,10 @@
 #ifdef EDHE_FLEX
 extern void set_angmom_to_zero(int i);
 extern int *is_a_sphere_NNL;
+#ifdef MD_ABSORP_POLY
+extern int *oldTypeOfPart;
+#endif
+
 #endif
 #ifdef MD_PATCHY_HE
 extern int isSymItens(int i);
@@ -945,6 +949,12 @@ void handle_absorb(int ricettore, int protein)
   //printf("pos of %d %.15G %.15G %.15G\n", protein, rx[protein], ry[protein], rz[protein]); 
   /* ora la particella diventa del tipo "buffer" 
    */
+#ifdef MD_ABSORP_POLY
+  /* N.B. 03/03/10: nel caso di sistema polidisperso le particelle ghost devono essere comunque 
+     di tipo 2 e il loro diamtro come hard sphere deve essere il diametro più grande tra tutte le particelle
+     del sistema. */
+  oldTypeOfPart[protein] = typeOfPart[protein];
+#endif
   typeOfPart[protein] = 2;
   //printf("absorbed (1->2): %d\n", protein);
 #ifdef MD_SPHERICAL_WALL
@@ -1277,14 +1287,22 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       if (typeOfPart[i]==2)
 	{
 	  //printf("ghost->norm (i=%d)\n", i);
+#ifdef MD_ABSORP_POLY
+	  typeOfPart[i] = oldTypeOfPart[i];
+#else
 	  typeOfPart[i]=1;
+#endif
 	  //add_bond(i, sphWall, 1, 1);
 	  find_bonds_one(i);
 	}
       else
 	{
 	  //printf("ghost->norm (j=%d)\n", j);
+#ifdef MD_ABSORP_POLY
+	  typeOfPart[i] = oldTypeOfPart[i];
+#else
 	  typeOfPart[j]=1;
+#endif
 	  //add_bond(j, sphWall, 1, 1);
 	  find_bonds_one(j);
 	}
@@ -1322,6 +1340,26 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 #if 1
 #ifdef EDHE_FLEX
 #ifdef MD_ABSORPTION 
+#ifdef MD_ABSORP_POLY
+  /* N.B. 03/03/10: vengono assorbite tutte le particelle per cui è stata
+     definita un'interazione attrattiva con il ricettore nel file .cnf.
+     Se si vuole avere un tipo inerte basta non definire un interazione tra tale
+     tipo ed il ricettore. */
+  if (typeOfPart[i]==0 || typeOfPart[j]==0)
+    {
+      numcoll++;
+      if (typeOfPart[i]==0)
+	{
+	  handle_absorb(i,j); /* i è il ricettore in questo caso */
+	  return;
+	}
+      else
+	{
+	  handle_absorb(j,i); /* j è il ricettore in questo caso */
+	  return;
+	}
+    }
+#else
   if ((typeOfPart[i]==0 && typeOfPart[j]==1) ||
       (typeOfPart[i]==1 && typeOfPart[j]==0))
     {
@@ -1337,6 +1375,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	  return;
 	}
     }
+#endif
 #endif
 #if 0
   /* NOTA 28/10/08: la condizione precedente era:
@@ -3353,7 +3392,7 @@ int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, dou
 	  if (d > 0.0)
 	    {
 	      t = ( sqrt (d) - b) / vv;
-	      if (t > 0 || (t < 0 && distSq > sigSq))
+	      if (t > 0) // || (t < 0 && distSq > sigSq))
 		{
 		  //if ((na==170 || n==170)&&distSq>sigSq)
 		  //	printf("NONONO t=%.15G t1=%.15G t2=%.15G\n", t+Oparams.time, t1, t2);
