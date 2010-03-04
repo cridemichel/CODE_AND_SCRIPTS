@@ -71,6 +71,9 @@ double *rxNNL, *ryNNL, *rzNNL;
 #ifdef EDHE_FLEX
 int *is_a_sphere_NNL;
 int *is2saveArr;
+#ifdef MD_ABSORP_POLY
+int *oldTypeOfPart;
+#endif
 #endif
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
@@ -2679,7 +2682,7 @@ void find_bonds(void)
       {
 #ifdef MD_SPHERICAL_WALL
 	/* treat bonds with spherical walls separately */
-	if (j==sphWall || j==sphWallOuter)
+	if (((j==sphWall||j==sphWallOuter) && typeOfPart[i]==1) || (typeOfPart[i]==2 && j==sphWallOuter))
 	  {
 	    //printf("qui\n");
 	    //printf("SPHWALL i=%d j=%d numbonds[1841]=%d\n", i, j, numbonds[1841]);
@@ -3224,6 +3227,9 @@ void usrInitAft(void)
   psi0   =    malloc(sizeof(double)*Oparams.parnum);
   phi0   =    malloc(sizeof(double)*Oparams.parnum);
   angM   =    malloc(sizeof(double)*Oparams.parnum);
+#ifdef MD_ABSORP_POLY
+  oldTypeOfPart = malloc(sizeof(int)*Oparams.parnum);
+#endif
   REt = matrix(3,3);
   REtA = matrix(3,3);
   REtB = matrix(3,3);
