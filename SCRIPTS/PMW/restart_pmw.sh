@@ -1,4 +1,4 @@
-# $1 = temperature $2 = tau_alpha (in reduced units) $3 = label $4 = dt (se < 0 fattore a dividere rispetto a 0.212207) 
+# $1 = temperature $2 = tau_alpha (in reduced units) $3 = simulation label $4 = dtTra
 SETPARAMS="../../set_params.sh"
 TEMP="$1"
 PF="PMW.par"
@@ -11,7 +11,7 @@ PREEXE="/bin/mosrun"
 # equilibration time will be TAUALPHA*EQTA
 EQTA="1"
 # production run time will be TAUALPHA*PRTA
-PRTA="10"
+PRTA="50"
 STORERATEPR="0.01"
 BASEPR="1.3"
 NNPR=`echo $TAUALPHA $STORERATEPR $BASEPR | gawk '{printf("%d", 1+log($1/$2)/log($3));}'`
@@ -30,32 +30,33 @@ TRATS="$4"
 fi
 fi
 ROTTS=`echo "0.063662 0.212207 $TRATS" | awk '{print $3*$1/$2}'` 
-#"0.063662"
 #10 * tau_alpha
 STEPS=`echo "" | gawk -v ta=$TAUALPHA -v trats=$TRATS -v eqta=$EQTA '{printf("%d",eqta*ta/trats);}'` 
 echo "TEMP=$1 STEPS=$STEPS STORERATE=$STORERATEPR TAUALFA=$TAUALPHA" 
+EQFN=T${TEMP}
 if [ "$3" != "" ]
-then
+then	
 FOLN=T${TEMP}-$3
 else
-FOLN=T${TEMP}	
+FOLN=T${TEMP}-R	
 fi
 if [ ! -e $FOLN ]
 then
 mkdir $FOLN
 fi
+#choose Store file
+cd $EQFN
+RF=`ls Store-*-*  | sort -t - -k 2 -k 3 -n | tail -1`
+cp $RF ../$FOLN
+cp $PF ../$FOLN
+cd ..
 cd $FOLN
-cp ../$INIF .
-cp ../$PF .
+#remove first header
+gunzip -f $RF
+RF=`ls Store*`
+cat $RF | awk 'BEGIN {cc=0} {if (cc==1) print $0; if ($1=="@@@") cc=1;}' > $INIF
+rm $RF
 VS=`echo $TAUALPHA 100 $TRATS | awk '{printf("%d",$1/$2/$3)}'`
-#EQUILIBRATURA
-$SETPARAMS $PF  intervalSum 50.0 storerate -1.0 Dt $TRATS DtR $ROTTS stepnum  $STEPS inifile $INIF NN 1 base 1 baksteps 0 VSteps $VS temperat $TEMP
-ln -sf $EXEF $LNEQ
-$PREEXE ./$LNEQ -fa $PF > screenEQ 
-#store potential energy to later check equilibration
-cp energy.dat energyEQ.dat
-#store parameter file for equilibration
-cp $PF EQ-$PF
 #PRODUZIONE
 STEPS=`echo "" | gawk -v ta=$TAUALPHA -v trats=$TRATS -v prta=$PRTA '{printf("%d",prta*ta/trats);}'` 
 $SETPARAMS $PF  intervalSum 50.0 storerate $STORERATEPR base $BASEPR NN $NNPR Dt $TRATS DtR $ROTTS stepnum  $STEPS inifile $INIF baksteps 0 VSteps $VS temperat $TEMP
