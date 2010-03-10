@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #define MAXPTS 1000
 char **fname; 
 double time, *ccA, *ccB, *C1A, *C2A, *C4A, *C6A, *C1B, *C2B, *C4B, *C6B, C1m, C2m, C4m, C6m,
@@ -9,8 +10,21 @@ double time, *ccA, *ccB, *C1A, *C2A, *C4A, *C6A, *C1B, *C2B, *C4B, *C6B, C1m, C2
 int points, assez, NP, NPA;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-double A0, A1, B0, B1, C0, C1;
-
+double A0=-1, A1=-1, B0=-1, B1=-1, C0=-1, C1=-1;
+inline void normalize(double **u, int i)
+{
+  int a;
+  double n=0.0;
+  for (a=0; a < 3; a++)
+    {
+      n+=u[a][i]*u[a][i]; 
+    } 
+  n=sqrt(n);
+  for (a=0; a < 3; a++)
+    {
+      u[a][i]/=n; 
+    } 
+}
 void readconf(char *fname, double *ti, double *refTime, int NP, double *u[3])
 {
   FILE *f;
@@ -55,6 +69,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *u[3])
 		     &R[1][0], &R[1][1], &R[1][2], &R[2][0], &R[2][1], &R[2][2]); 
 	      for (a = 0; a < 3; a++)
 		u[a][i] = R[assez][a];
+	      normalize(u, i);
 	    }
   	  break; 
 	}
@@ -144,12 +159,19 @@ int main(int argc, char **argv)
     points = maxnp;
   if (nfiles < NN)
     points = nfiles;
-  if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
-    assez = 0;
-  else if ((B0 > A0 && B0 > C0) || (B0 < A0 && B0 < C0))
-    assez = 1;
-  else if ((C0 > A0 && C0 > B0) || (C0 < A0 && C0 < B0))
-    assez = 2;
+  if (A0==-1)
+    {
+      assez=0;
+    }
+  else
+    {
+      if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
+	assez = 0;
+      else if ((B0 > A0 && B0 > C0) || (B0 < A0 && B0 < C0))
+	assez = 1;
+      else if ((C0 > A0 && C0 > B0) || (C0 < A0 && C0 < B0))
+	assez = 2;
+    }
   if (NPA == -1)
     NPA = NP;
   fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d assez=%d maxl=%d\n", points, NN, NP, nfiles, maxnp, assez, maxl);
@@ -294,6 +316,7 @@ int main(int argc, char **argv)
 	  C4m = (35.0*C4A[ii]/ccA[ii] - 30.0*C2A[ii]/ccA[ii] + 3.0) / 8.0;
 	  C2m = (3.0*C2A[ii]/ccA[ii] - 1.0)/2.0;
 	  C1m = C1A[ii] / ccA[ii];
+	  //printf("ccA[%d]=%.15G\n", ii, ccA[ii]);
 	}
 
       if (ti[ii] > -1.0)
