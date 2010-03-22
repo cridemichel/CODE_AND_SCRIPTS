@@ -2170,6 +2170,11 @@ int are_spheres(int i, int j)
   int type1, type2;
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
+#ifdef MD_SUPERELLIPSOID
+  if (typesArr[type1].n[0]!=1.0 || typesArr[type1].n[1]!=1.0 || typesArr[type1].n[2]!=1.0 ||
+      typesArr[type2].n[0]!=1.0 || typesArr[type2].n[1]!=1.0 || typesArr[type2].n[2]!=1.0)
+    return 0;
+#endif
   if (typesArr[type1].sax[0] == typesArr[type1].sax[1] &&
       typesArr[type1].sax[1] == typesArr[type1].sax[2] &&
       typesArr[type2].sax[0] == typesArr[type2].sax[1] &&
