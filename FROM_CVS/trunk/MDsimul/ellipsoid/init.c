@@ -4216,7 +4216,11 @@ void writeAllCor(FILE* fs, int saveAll)
   char bcolor[32];
   char beadcol[2][4][32] = {{"red","green","blue","orange"},{"red","green","blue","orange"}};
 #endif
+#ifdef MD_SUPERELLIPSOID
+  const char tipodat2_mgl[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s] Q %.15G %.15G %.15G\n";
+#else
   const char tipodat2_mgl[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
+#endif
   const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
 #ifdef EDHE_FLEX
@@ -4338,10 +4342,18 @@ void writeAllCor(FILE* fs, int saveAll)
 
 #ifdef EDHE_FLEX
 #ifndef MD_FOUR_BEADS
+#ifdef MD_SUPERELLIPSOID
+	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+		  uyz[i], uzx[i], uzy[i], uzz[i], typesArr[typeOfPart[i]].sax[0], 
+		  typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],
+		  colsFlex[typeOfPart[i]%numcols], typesArr[typeOfPart[i]].n[0],
+		  typesArr[typeOfPart[i]].n[1], typesArr[typeOfPart[i]].n[2]);
+#else
       	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 		  uyz[i], uzx[i], uzy[i], uzz[i], typesArr[typeOfPart[i]].sax[0], 
 		  typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],
 		  colsFlex[typeOfPart[i]%numcols]);
+#endif
 #endif
 #else
 	  if (i < Oparams.parnumA)
