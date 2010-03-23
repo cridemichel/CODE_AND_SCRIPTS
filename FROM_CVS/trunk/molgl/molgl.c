@@ -220,12 +220,14 @@ XYZ CalcNormal(XYZ p, XYZ p1, XYZ p2)
    n.x = pa.y * pb.z - pa.z * pb.y;
    n.y = pa.z * pb.x - pa.x * pb.z;
    n.z = pa.x * pb.y - pa.y * pb.x;
+   n.x = - n.x;
+   n.y = - n.y;
+   n.z = - n.z;
    Normalise(&n);
 
    return(n);
 }
-void EvalSuperQuadrics(double t1,double t2,double p1,double p2,double p3,
-		      double a, double b, double c, XYZ *p);
+void EvalSuperQuadrics(double t1,double t2,double p1,double p2,double p3, double a, double b, double c, XYZ *p);
 void CreatePartialSuperQuadrics(double power1,double power2, double power3, 
 				double a, double b, double c,
 			int n1, int n2, int method, double thetaBeg, double thetaEnd)
@@ -257,8 +259,8 @@ void CreatePartialSuperQuadrics(double power1,double power2, double power3,
       glEnd();
       return;
    }
-   delta1 = 0.01*TWOPI / (double)n1;
-   delta2 =  0.01*TWOPI / (double)n2;
+   delta1 = 1E-5*TWOPI / (double)n1;
+   delta2 =  1E-5*TWOPI / (double)n2;
    //printf("boh=%.15G n1/2=%d thetaBeg =%.15G TWOPI=%.15G thetaBeg/TWOPI=%.15G\n", ((double)(n1/2))*thetaBeg/TWOPI, n1/2, thetaBeg, TWOPI, thetaBeg/TWOPI);
    if (thetaBeg > 0)
      n1beg = (int) rint(n1*thetaBeg/TWOPI);
@@ -272,8 +274,8 @@ void CreatePartialSuperQuadrics(double power1,double power2, double power3,
    for (j=0;j<n1/2;j++) {
       if (!(j >= n1beg && j < n1end))
 	continue;
-      theta1 = (j+1) * TWOPI / (double)n1 - PID2;
-      theta2 = j * TWOPI / (double)n1 - PID2;
+      theta1 = j * TWOPI / (double)n1 - PID2;
+      theta2 = (j+1) * TWOPI / (double)n1 - PID2;
       if (method==2)
 	glBegin(GL_TRIANGLE_FAN);
       else if (method == 0)
@@ -307,7 +309,6 @@ void CreatePartialSuperQuadrics(double power1,double power2, double power3,
       glEnd();
    }
 }
-
 void CreateSuperQuadrics(double power1,double power2,double power3,double a, double b, double c,
 			int n1, int n2, int method)
 {
@@ -337,17 +338,18 @@ void CreateSuperQuadrics(double power1,double power2,double power3,double a, dou
       glEnd();
       return;
    }
-   delta1 = 0.01*TWOPI / (double)n1;
-   delta2 =  0.01*TWOPI / (double)n2;
+   delta1 = 1E-5*TWOPI / (double)n1;
+   delta2 =  1E-5*TWOPI / (double)n2;
    for (j=0;j<(n1/2);j++) {
-      theta1 = (j+1) * TWOPI / (double)n1 - PID2;
-      theta2 = j * TWOPI / (double)n1 - PID2;
+      theta1 = j * TWOPI / (double)n1 - PID2;
+      theta2 = (j+1) * TWOPI / (double)n1 - PID2;
       if (method==2)
 	glBegin(GL_TRIANGLE_FAN);
       else if (method == 0)
-         glBegin(GL_QUAD_STRIP);
+      	glBegin(GL_QUAD_STRIP);
       else
-         glBegin(GL_TRIANGLE_STRIP);
+	glBegin(GL_TRIANGLE_STRIP);
+
       for (i=0;i<=n2;i++) {
          if (i == 0 || i == n2)
             theta3 = 0;
@@ -406,8 +408,8 @@ void CreatePartialSuperEllipse(double power1,double power2, double a, double b, 
       glEnd();
       return;
    }
-   delta1 = 0.01*TWOPI / (double)n1;
-   delta2 =  0.01*TWOPI / (double)n2;
+   delta1 = 1E-5*TWOPI / (double)n1;
+   delta2 =  1E-5*TWOPI / (double)n2;
    //printf("boh=%.15G n1/2=%d thetaBeg =%.15G TWOPI=%.15G thetaBeg/TWOPI=%.15G\n", ((double)(n1/2))*thetaBeg/TWOPI, n1/2, thetaBeg, TWOPI, thetaBeg/TWOPI);
    if (thetaBeg > 0)
      n1beg = (int) rint(n1*thetaBeg/TWOPI);
@@ -421,8 +423,8 @@ void CreatePartialSuperEllipse(double power1,double power2, double a, double b, 
    for (j=0;j<n1/2;j++) {
       if (!(j >= n1beg && j < n1end))
 	continue;
-      theta1 = (j+1) * TWOPI / (double)n1 - PID2;
-      theta2 = j * TWOPI / (double)n1 - PID2;
+      theta1 = j * TWOPI / (double)n1 - PID2;
+      theta2 = (j+1) * TWOPI / (double)n1 - PID2;
       if (method==2)
 	glBegin(GL_TRIANGLE_FAN);
       else if (method == 0)
@@ -487,11 +489,11 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
       glEnd();
       return;
    }
-   delta1 = 0.01*TWOPI / (double)n1;
-   delta2 =  0.01*TWOPI / (double)n2;
+   delta1 = 1E-5*TWOPI / (double)n1;
+   delta2 =  1E-5*TWOPI / (double)n2;
    for (j=0;j<n1/2;j++) {
-      theta1 = (j+1) * TWOPI / (double)n1 - PID2;
-      theta2 = j * TWOPI / (double)n1 - PID2;
+      theta1 = j * TWOPI / (double)n1 - PID2;
+      theta2 = (j+1) * TWOPI / (double)n1 - PID2;
       if (method==2)
 	glBegin(GL_TRIANGLE_FAN);
       else if (method == 0)
@@ -541,6 +543,36 @@ void EvalSuperEllipse(double t1,double t2,double p1,double p2,
    p->y = b * SIGN(st1) * pow(fabs(st1),p1);
    p->z = c * tmp * SIGN(st2) * pow(fabs(st2),p2);
 }
+void EvalSuperQuadricsNorm(double t1,double t2,double p1,double p2,double p3,
+		      double a, double b, double c, XYZ *p, double n[3])
+{
+  double ct1,ct2,st1,st2, tmp;
+
+  ct1 = cos(t1);
+  ct2 = cos(t2);
+  st1 = sin(t1);
+  st2 = sin(t2);
+  //p1=p2=p3=2.0;
+
+  p->x = a*SIGN2(ct1) * pow(fabs(ct1),2.0/p1) * SIGN2(ct2) * pow(fabs(ct2),2.0/p1);
+  //printf("x actual=%.15G ellips=%.15G\n", p->x, a*SIGN2(ct1) * pow(fabs(ct1),1.0/2) * SIGN2(ct2) * pow(fabs(ct2),1.0/2));
+  p->y = b*SIGN2(ct1) * pow(fabs(ct1),2.0/p2) * SIGN2(st2) * pow(fabs(st2),2.0/p2);
+  //printf("y actual=%.15G ellips=%.15G\n", p->y, b*SIGN2(ct1) * pow(fabs(ct1),1.0/2) * SIGN2(st2) * pow(fabs(st2),1.0/2));
+  p->z = c*SIGN2(st1) * pow(fabs(st1),2.0/p3);
+  //printf("z actual=%.15G ellips=%.15G\n", c*SIGN2(st1) * pow(fabs(st1),1.0/p3), c*SIGN2(st1) * pow(fabs(st1),1.0/2.0));
+  // evaluate SQ normal vector here (are actual formulas wrong?)
+  n[0] = -SIGN2(p->x)*p1*pow(fabs(p->x),p1-1.0)/a;
+  n[1] = -SIGN2(p->y)*p2*pow(fabs(p->y),p2-1.0)/b;
+  n[2] = -SIGN2(p->z)*p3*pow(fabs(p->z),p3-1.0)/c; 
+
+
+#if 0
+  tmp  = SIGN(ct1) * pow(fabs(ct1),p1);
+   p->x = a * tmp * SIGN(ct2) * pow(fabs(ct2),p2);
+   p->y = b * SIGN(st1) * pow(fabs(st1),p1);
+   p->z = c * tmp * SIGN(st2) * pow(fabs(st2),p2);
+#endif
+}
 void EvalSuperQuadrics(double t1,double t2,double p1,double p2,double p3,
 		      double a, double b, double c, XYZ *p)
 {
@@ -558,7 +590,6 @@ void EvalSuperQuadrics(double t1,double t2,double p1,double p2,double p3,
   //printf("y actual=%.15G ellips=%.15G\n", p->y, b*SIGN2(ct1) * pow(fabs(ct1),1.0/2) * SIGN2(st2) * pow(fabs(st2),1.0/2));
   p->z = c*SIGN2(st1) * pow(fabs(st1),2.0/p3);
   //printf("z actual=%.15G ellips=%.15G\n", c*SIGN2(st1) * pow(fabs(st1),1.0/p3), c*SIGN2(st1) * pow(fabs(st1),1.0/2.0));
-  
 #if 0
   tmp  = SIGN(ct1) * pow(fabs(ct1),p1);
    p->x = a * tmp * SIGN(ct2) * pow(fabs(ct2),p2);
