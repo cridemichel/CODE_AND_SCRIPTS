@@ -8,11 +8,44 @@ double REul[3][3];
 #define INIFILEGRO "inifile.gro"
 /* it is possible to fix some selected degrees of freedom */
 const int fix_r=0, fix_phi_r=1, fix_theta_r=1, fix_psi=1, fix_phi=1, fix_theta=1;
-const double boxfact=20.0;
-#define DEBUG(x) 
-#define DEBUG2(x)
+const double boxfact=2.0;
+const double boxlength=50.0;
+const double selfenergy=-20714.2;
+double orig[3];
+#define DEBUG(x) x
+#define DEBUG2(x) x
+#if 1
+#define DEVNULL " > /dev/null 2>&1"
+#else
+#define DEVNULL ""
+#endif
+/* ==== >>> GROMACS INTERFACE ==== <<< */  
+#define MYHOME "/Users/demichel/"
+//#define GROPATH MYHOME "TEMPO_DET/GROMACS/gromacs/bin/"
+#define GROPATH "/usr/local/bin/"
+#define GROCONV GROPATH "grompp_d"
+#define GROEXE GROPATH "mdrun_d"
+#define GROEDITCONF GROPATH "editconf_d"
+#define GROGENBOX GROPATH "genbox_d"
+#define MPIPATH "/usr/bin/"
+#define MPIEXE MPIPATH "mpirun -np 2 "
+#define GROENEEXE GROPATH "g_energy"
+#define GROFILE "minimized_box.gro"
+#define GROFILE0 "minimized.gro"
+#define GROMOVEDCONF "moved.gro"
+#define GROTOPOLOGY "3A3Q.top"
+#define GROBINFILE "gromd.tpr"
+#define GROMDPFILE "fullmd.mdp"
+#define GROOUTPUTGRO "md_final.gro"
+#define GROPOTENERGY "md_energy.edr"
+#define GROTRAJTRR "md_traj.trr"
+#define GROTRAJXTC "md_traj.xtc"
+#define GROENEOUT "md_ener.xvg"
+#define TMPENEFILE "_lastene_"
+/* ===================================== */
+
 char fin_name[4096], fout_name[4096];
-char foutgro_name[4096];
+//char foutgro_name[4096];
 char line[4096];
 int resnum;
 double xin[NUM_LYSO][NUM_ATOMS][3], xout[NUM_LYSO][NUM_ATOMS][3];
@@ -63,7 +96,7 @@ void write_gro_coords(void)
 {
   FILE *fout, *fin;
   int i, n, kk;  
-  fout = fopen(foutgro_name, "w");
+  fout = fopen(GROMOVEDCONF, "w");
   fin = fopen(fin_name, "r");
   /* read and write first two lines to output file */
   fscanf(fin, "%[^\n] ", line);
@@ -78,7 +111,7 @@ void write_gro_coords(void)
 	{
 	  fscanf(fin, "%d %s %s %[^\n] ", &resnum, resname, atomname, dummy_str1);
 	  //printf("i=%d n=%d resnum=%d resname=%s atomname=%s dummy=%s\n", i, n, resnum, resname, atomname, dummy_str1);
-	  fprintf(fout, "%5d%5s%5s%5d%8.3f %8.3f %8.3f\n", resnum, resname, atomname, 
+	  fprintf(fout, "%5d%-5s%5s%5d%8.3f%8.3f%8.3f\n", resnum, resname, atomname, 
 		  i*NUM_ATOMS+n+1, xout[i][n][0], xout[i][n][1], xout[i][n][2]);
 	  //printf("xout=%f %f %f\n", xout[i][n][0], xout[i][n][1], xout[i][n][2]);
 	}
@@ -130,6 +163,7 @@ void move_prot(int nprot, double xx[3], double psi, double phi, double theta)
   build_euler_matrix(psi, phi, theta, REul);
   for (n = 0; n < NUM_ATOMS; n++)
     {
+#if 1
       /* rotation */
       for (jj=0; jj < 3; jj++)
 	{
@@ -137,6 +171,12 @@ void move_prot(int nprot, double xx[3], double psi, double phi, double theta)
 	  for (kk=0; kk < 3; kk++)
 	    xout[nprot][n][jj]+=REul[jj][kk]*xin[nprot][n][kk];
 	}	 
+#else
+      for(jj=0; jj < 3; jj++)
+	{
+	  xout[nprot][n][jj] = xin[nprot][n][jj];
+	}	
+#endif
       /* translation */
       for (kk=0; kk < 3; kk++)
 	xout[nprot][n][kk] += xx[kk];	  
@@ -162,7 +202,7 @@ void calcCOM(int np, double com[3])
 }
 
 double com[2][3];
-const double RMIN=80.0, RMAX=80.1, delI=1;
+const double RMIN=6.5, RMAX=6.5, delI=0.05;
 /* euler angles */
 double phi, theta, psi;
 double PI;
@@ -172,28 +212,10 @@ void calc_pos(double r, double theta_r, double phi_r, double xx[3])
   xx[1] = r*cos(theta_r)*sin(phi_r);
   xx[2] = r*sin(theta_r);  
 }
-/* ==== >>> GROMACS INTERFACE ==== <<< */  
-#define MYHOME "/Users/demichel/"
-#define GROPATH MYHOME "TEMPO_DET/GROMACS/gromacs/bin/"
-#define GROCONV GROPATH "grompp"
-#define GROEXE GROPATH "mdrun"
-#define GROENEEXE GROPATH "g_energy"
-#define GROFILE "minimized_box.gro"
-#define GROMOVEDCONF "moved.gro"
-#define GROTOPOLOGY "3A3Q.top"
-#define GROBINFILE "gromd.tpr"
-#define GROMDPFILE "fullmd.mdp"
-#define GROOUTPUTGRO "md_final.gro"
-#define GROPOTENERGY "md_energy.edr"
-#define GROTRAJTRR "md_traj.trr"
-#define GROTRAJXTC "md_traj.xtc"
-#define GROENEOUT "md_ener.xvg"
-#define TMPENEFILE "_lastene_"
-//#define DEVNULL " > /dev/null 2>&1"
-#define DEVNULL ""
 char groconvstr[4096];
 char grorunstr[4096];
 char groenestr[4096];
+char groecstr[4096];
 void grosimulate(void)
 {
   /* delete old files */
@@ -231,7 +253,7 @@ double read_energy(void)
   double ene;
   sprintf(groenestr, "echo ""10"" | " GROENEEXE " -dp -f " GROPOTENERGY " -o " GROENEOUT DEVNULL);
   system(groenestr);
-  //DEBUG(fprintf(stderr,"%s\n", groenestr));
+  DEBUG(fprintf(stderr,"%s\n", groenestr));
   system("tail -1 " GROENEOUT " | awk '{print $2}' > " TMPENEFILE);
   f = fopen (TMPENEFILE, "r");
   if (fscanf(f,"%lf\n", &ene) < 1)
@@ -249,7 +271,7 @@ double calc_energy_gromacs(void)
 {
   write_gro_coords();
   run_gromacs();
-  return read_energy();
+  return read_energy()-selfenergy;
 }
 /* =============================== */
 void write_mesh_point_and_energy(double xx[3], double psi, double phi, double theta, double energy)
@@ -260,10 +282,22 @@ void write_mesh_point_and_energy(double xx[3], double psi, double phi, double th
   fclose(f);
 }
 char delstr[4096];
+#if 0
+void gro_genbox(void)
+{
+  sprintf(groecstr, "%s -f %s -o %s -box %f %f %f -bt cubic", GROEDITCONF, fin_name, GROFILE, boxlength,
+	  boxlength, boxlength);
+  system(groecstr);
+  sprintf(groecstr, "%s -maxsol 0 -cp %s -o %s -p %s", GROGENBOX, GROFILE, "out.gro", GROTOPOLOGY);
+  system(groecstr);
+  system("cp -f out.gro "  GROFILE);
+}
+#endif
 int main(int argc, char **argv)
 {
   double xx[3], r, theta_r, phi_r, theta, psi, phi, deltheta, delpsi, 
 	 delphi, delth_r, delphi_r;
+  int kk;
   PI = 2.0*acos(0.0);
   if (argc == 1)
     {
@@ -272,11 +306,12 @@ int main(int argc, char **argv)
     } 
   strcpy(fin_name, argv[1]);
   strcpy(fout_name, argv[2]);
-  strcpy(foutgro_name, GROMOVEDCONF);
+  //strcpy(foutgro_name, GROMOVEDCONF);
   /* delete mesh file if it exists already */
   sprintf(delstr, "rm -f %s",  fout_name);
   system(delstr);
   printf("input: %s output: %s\n", fin_name, fout_name);
+  //gro_genbox();
   read_gro_coords();  
   /* calculate geometrical center of mass of the two lysozyme proteins */
   calcCOM(0, com[0]);
@@ -285,19 +320,36 @@ int main(int argc, char **argv)
   calcCOM(1, com[1]);
   printf("com[1]=%.15G %.15G %.15G\n", com[1][0], com[1][1], com[1][2]);
   move_to_origin(0, com[0]);
-  move_to_origin(1, com[0]);
+#if 0
+  for (kk=0; kk < 3; kk++)
+    orig[kk] = com[1]-com[0];
+#else
+  for (kk=0; kk < 3; kk++)
+    orig[kk] = com[1][kk];
+#endif
+  move_to_origin(1, orig);
   calcCOM(0, com[0]);
   /* move to origin, i.e. subtract center of mass of protein #0 */
   printf("DOPO com[0]=%.15G %.15G %.15G\n", com[0][0], com[0][1], com[0][2]);
   calcCOM(1, com[1]);
   printf("DOPO com[1]=%.15G %.15G %.15G\n", com[1][0], com[1][1], com[1][2]);
  
-  theta_r = phi_r = 0.0;
-  theta=psi=phi=0.0;
+  theta_r = 0.0; 
+  phi_r = 0.0;
+  theta=psi=0.0;
+  phi=0.0;
+#if 0
+  /* just in to out */
+  move_prot_copy(0);
+  move_prot_copy(1);  
+  calcCOM(1, com[1]);
+  printf("DOPO com[1]=%.15G %.15G %.15G\n", com[1][0], com[1][1], com[1][2]);
+  write_gro_coords();
+  exit(-1);
+#endif 
   //for (r=RMAX; r >= RMIN && !fix_r; r -= delI)
   for (r=RMIN; r <= RMAX && !fix_r; r += delI)
     {
-
       calc_pos(r, theta_r, phi_r, xx);
       DEBUG2(printf("r=%.15G (MAX=%.15G MIN=%.15G)\n", r, RMAX, RMIN));
 #if 0
