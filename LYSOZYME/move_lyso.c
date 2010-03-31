@@ -6,6 +6,7 @@ double REul[3][3];
 #define MD_CALC_ITENS
 #define NUM_ATOMS 1319
 #define NUM_LYSO 2
+#define Sqr(x) ((x)*(x))
 #define INIFILEGRO "inifile.gro"
 /* it is possible to fix some selected degrees of freedom */
 const int fix_r=0, fix_phi_r=1, fix_theta_r=1, fix_psi=1, fix_phi=1, fix_theta=1;
@@ -375,6 +376,7 @@ void calcItensTot(int np, double I[3][3], double RCM[3])
     for (k=0; k < 3; k++)
       I[j][k] = 0.0;
   /* moment of inertia with respect to center of mass */
+  printf("CoM= %f %f %f\n", RCM[0], RCM[1], RCM[2]);
   for (j=0; j < 3; j++)
     for (k=0; k < 3; k++)
       {
@@ -388,36 +390,54 @@ void calcItensTot(int np, double I[3][3], double RCM[3])
 	    I[j][k] += mass[i]*(((j==k)?distSq:0.0) - ri[j]*ri[k]);
 	  }
       }
+  printf("I= %f %f %f\n", I[0][0], I[0][1], I[0][2]);
+  printf("   %f %f %f\n", I[1][0], I[1][1], I[1][2]);
+  printf("   %f %f %f\n", I[2][0], I[2][1], I[2][2]);
 }
 
-void wrap_dgesv(double a[3][3], double x[3], int *ok)
+/* find eigenvectors and eigenvalues */
+void wrap_dsyev(double a[3][3], double b[3][3], double x[3], int *ok)
 {
-  double AT[9];
-  int i, j, c1, c2, pivot[3];
+  char JOBZ, UPLO;
+  double AT[9], work[10];
+  int i, j, c1, c2, c3;
+  JOBZ='V';
+  UPLO='U';
+  extern void dsyev_(char* , char*, int*, double* , int*, double*, double*, int*, int*);
   for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
     {				/* have to transform the matrix */
       for(j=0; j<3; j++) AT[j+3*i]=a[j][i];		
     }						
   c1 = 3;
   c2 = 1;
-  dgesv_(&c1, &c2, AT, &c1, pivot, x, &c1, ok);      
+  c3 = 8;
+  dsyev_(&JOBZ, &UPLO, &c1, AT, &c1, x, work, &c3, ok);      
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) b[i][j]=AT[j+3*i];		
+    }	
+  if (*ok != 0)
+    printf("not ok (%d)\n", *ok);
 }
 
-int SolveLineq (double a[3][3], double x[3]) 
+void calcEigenVectVal(double I[3][3], double Itens[3], double R[3][3])
 {
-  int indx[3], ok;
-  double dd;
-  wrap_dgesv(a, x, &ok);
-  return 0;
+  int ok;
+  /* è la matrice con gli autovalori (=matrice di orientazione) */
+  wrap_dsyev(I, R, Itens, &ok);
+  if (ok!=0)  
+    {
+      printf("Eigenvalues calculated but some problems arose (ok=%d)\n", ok);
+      exit(-1);
+    }
 }
 
 void calcIprincAxes(int np)
 {
+  int kk;
   calcItensTot(np, ItensTot, com[np]); 
-  for (kk = 0; kk < 3; kk++)
-    omega[kk] = Mtot[kk];
   calcEigenVectVal(ItensTot, Itens, RotMat);
-
+  printf("Moments of Intertia = %.15G %.15G %.15G\n", Itens[0], Itens[1], Itens[2]);
 }
 #endif
 int main(int argc, char **argv)
@@ -447,11 +467,11 @@ int main(int argc, char **argv)
   printf("com[0]=%.15G %.15G %.15G\n", com[0][0], com[0][1], com[0][2]);
   calcCOM(1, com[1]);
   printf("com[1]=%.15G %.15G %.15G\n", com[1][0], com[1][1], com[1][2]);
-  move_to_origin(0, com[0]);
 #ifdef MD_CALC_ITENS
   /* calculate moments of inertia around principal axes */
   calcIprincAxes(0);  
 #endif
+  move_to_origin(0, com[0]);
 #if 0
   for (kk=0; kk < 3; kk++)
     orig[kk] = com[1]-com[0];
