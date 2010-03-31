@@ -10,8 +10,11 @@ double REul[3][3];
 const int fix_r=0, fix_phi_r=1, fix_theta_r=1, fix_psi=1, fix_phi=1, fix_theta=1;
 const double boxfact=2.0;
 const double boxlength=50.0;
-const double selfenergy=-20714.2;
-double orig[3];
+const double selfenergy=-20230;
+double orig[3], totq, totmass;
+double pdb_charge, pdb_mass;
+int pdb_nr, pdb_resnr, pdb_cgnr;
+char pdb_type[256], pdb_residue[256], pdb_atom[256];
 #define DEBUG(x) x
 #define DEBUG2(x) x
 #if 1
@@ -46,9 +49,10 @@ double orig[3];
 
 char fin_name[4096], fout_name[4096];
 //char foutgro_name[4096];
-char line[4096];
+char line[4096], blocktype[4096], line2[4096];
 int resnum;
 double xin[NUM_LYSO][NUM_ATOMS][3], xout[NUM_LYSO][NUM_ATOMS][3];
+double mass[NUM_ATOMS], charge[NUM_ATOMS];
 char dummy_str1[4096], dummy_str2[4096];
 char resname[10], atomname[10];
 double dummy_dbl1, dummy_dbl2, Lx, Ly, Lz;
@@ -61,6 +65,68 @@ void move_to_origin(int nprot, double oXYZ[3])
       for (kk=0; kk < 3; kk++)
 	xin[nprot][n][kk] -= oXYZ[kk];
     }
+}
+void read_masses_and_charge(void)
+{
+  FILE *f;
+  int atomsblk=0, i, ni;
+  f = fopen(GROTOPOLOGY,"r");
+  while (!feof(f))
+   {
+     fscanf(f,"%[^\n]\n", line);
+     //printf("line=%s\n", line);
+     if (!atomsblk)
+       {
+	 sscanf(line, " [ %s ] ", blocktype);
+	 if (!strcmp(blocktype, "atoms"))
+	   {
+	     atomsblk = 1;
+	     continue;
+	   }
+       }
+     if (atomsblk)
+       {
+	 sscanf(line, "%[^;]\n", line2);
+
+	 //printf("line2=%s\n", line2);
+	 pdb_mass = 0.0;
+	 pdb_charge = 0.0;
+	 ni = sscanf(line2, " %d %s %d %s %s %d %lf %lf ", 
+		    &pdb_nr, pdb_type, &pdb_resnr, pdb_residue, pdb_atom, &pdb_cgnr, &pdb_charge, &pdb_mass); 
+	 //printf("pdb_nr=%d ni=%d\n", pdb_nr, ni);
+	 if (!strcmp(line2,"") || ni < 8 )
+	   continue;
+	 if (ni == 8)
+	   {
+	     mass[pdb_nr-1] = pdb_mass; 
+	   }
+	 else 
+	   {
+	     printf("Missing Mass in Topology File (atom=%d, residue=%d)\n",pdb_nr, pdb_resnr);
+	     exit(-1);
+	   }
+     	 if (ni >= 7)
+	   {
+	     charge[pdb_nr-1] = pdb_charge;
+	   }
+	 else
+	   { 
+	     printf("Missing Charge in Topology File (atom=%d, residue=%d)\n",pdb_nr, pdb_resnr);
+	     exit(-1);
+	   }
+       }
+     if (pdb_nr == NUM_ATOMS)
+       break;
+   }
+  fclose(f);
+  totq = 0.0;
+  totmass = 0.0;
+  for (i=0; i < NUM_ATOMS; i++ )
+    {
+      totq += charge[i];
+      totmass += mass[i];
+    }
+  printf("TOTAL CHARGE=%8.5f TOTAL MASS=%8.5f\n", totq, totmass);
 }
 void read_gro_coords(void)
 {
@@ -195,14 +261,14 @@ void calcCOM(int np, double com[3])
 
   for (n=0; n < NUM_ATOMS; n++)
     for (kk=0; kk < 3; kk++)
-      com[kk] += xin[np][n][kk]; 
+      com[kk] += mass[n]*xin[np][n][kk]; 
   
   for (kk=0; kk < 3; kk++)
-    com[kk] /= NUM_ATOMS;
+    com[kk] /= totmass;
 }
 
 double com[2][3];
-const double RMIN=6.5, RMAX=6.5, delI=0.05;
+const double RMIN=3.3, RMAX=6.5, delI=0.05;
 /* euler angles */
 double phi, theta, psi;
 double PI;
@@ -308,6 +374,7 @@ int main(int argc, char **argv)
   strcpy(fout_name, argv[2]);
   //strcpy(foutgro_name, GROMOVEDCONF);
   /* delete mesh file if it exists already */
+  read_masses_and_charge();
   sprintf(delstr, "rm -f %s",  fout_name);
   system(delstr);
   printf("input: %s output: %s\n", fin_name, fout_name);
