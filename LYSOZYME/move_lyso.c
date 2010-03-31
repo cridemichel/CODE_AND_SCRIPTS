@@ -390,9 +390,9 @@ void calcItensTot(int np, double I[3][3], double RCM[3])
 	    I[j][k] += mass[i]*(((j==k)?distSq:0.0) - ri[j]*ri[k]);
 	  }
       }
-  printf("I= %f %f %f\n", I[0][0], I[0][1], I[0][2]);
-  printf("   %f %f %f\n", I[1][0], I[1][1], I[1][2]);
-  printf("   %f %f %f\n", I[2][0], I[2][1], I[2][2]);
+  printf("I= {{%f, %f, %f},\n", I[0][0], I[0][1], I[0][2]);
+  printf("    {%f, %f, %f},\n", I[1][0], I[1][1], I[1][2]);
+  printf("    {%f, %f, %f}}\n", I[2][0], I[2][1], I[2][2]);
 }
 
 /* find eigenvectors and eigenvalues */
@@ -437,6 +437,15 @@ void calcIprincAxes(int np)
   int kk;
   calcItensTot(np, ItensTot, com[np]); 
   calcEigenVectVal(ItensTot, Itens, RotMat);
+  /* il vettore RotMat[m][0..2] riga di RotMat è l'autovettore di ItensTot 
+     con autovalore Itens[m]  
+     quindi se x' sono le coordinate nel sistema di riferimento del 
+     corpo rigido e x quelle nel laboratorio abbiamo:
+     x = R x' */
+  printf("R= {{%f, %f, %f},\n", RotMat[0][0], RotMat[0][1], RotMat[0][2]);
+  printf("    {%f, %f, %f},\n", RotMat[1][0], RotMat[1][1], RotMat[1][2]);
+  printf("    {%f, %f, %f}}\n", RotMat[2][0], RotMat[2][1], RotMat[2][2]);
+
   printf("Moments of Intertia = %.15G %.15G %.15G\n", Itens[0], Itens[1], Itens[2]);
 }
 #endif
