@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 double REul[3][3];
+#define MD_CALC_ITENS
 #define NUM_ATOMS 1319
 #define NUM_LYSO 2
 #define INIFILEGRO "inifile.gro"
@@ -11,10 +12,19 @@ const int fix_r=0, fix_phi_r=1, fix_theta_r=1, fix_psi=1, fix_phi=1, fix_theta=1
 const double boxfact=2.0;
 const double boxlength=50.0;
 const double selfenergy=-20230;
-double orig[3], totq, totmass;
+double orig[3], totq, totmass; 
+#ifdef MD_CALC_ITENS
+double ItensTot[3][3], Itens[3], RotMat[3][3];
+#endif
 double pdb_charge, pdb_mass;
 int pdb_nr, pdb_resnr, pdb_cgnr;
 char pdb_type[256], pdb_residue[256], pdb_atom[256];
+double com[2][3];
+const double RMIN=3.3, RMAX=6.5, delI=0.05;
+/* euler angles */
+double phi, theta, psi;
+double PI;
+
 #define DEBUG(x) x
 #define DEBUG2(x) x
 #if 1
@@ -267,11 +277,7 @@ void calcCOM(int np, double com[3])
     com[kk] /= totmass;
 }
 
-double com[2][3];
-const double RMIN=3.3, RMAX=6.5, delI=0.05;
-/* euler angles */
-double phi, theta, psi;
-double PI;
+
 void calc_pos(double r, double theta_r, double phi_r, double xx[3])
 {
   xx[0] = r*cos(theta_r)*cos(phi_r);
@@ -359,6 +365,61 @@ void gro_genbox(void)
   system("cp -f out.gro "  GROFILE);
 }
 #endif
+#ifdef MD_CALC_ITENS
+void calcItensTot(int np, double I[3][3], double RCM[3])
+{
+  int i, j, k;
+  double distSq, ri[3], rj[3];
+  double Icom[3][3];
+  for (j=0; j < 3; j++)
+    for (k=0; k < 3; k++)
+      I[j][k] = 0.0;
+  /* moment of inertia with respect to center of mass */
+  for (j=0; j < 3; j++)
+    for (k=0; k < 3; k++)
+      {
+	I[j][k] = 0.0;
+	for (i=0; i < NUM_ATOMS; i++)
+	  {
+	    ri[0] = xin[np][i][0]-RCM[0];
+	    ri[1] = xin[np][i][1]-RCM[1];
+	    ri[2] = xin[np][i][2]-RCM[2];
+	    distSq = Sqr(ri[0])+Sqr(ri[1])+Sqr(ri[2]);
+	    I[j][k] += mass[i]*(((j==k)?distSq:0.0) - ri[j]*ri[k]);
+	  }
+      }
+}
+
+void wrap_dgesv(double a[3][3], double x[3], int *ok)
+{
+  double AT[9];
+  int i, j, c1, c2, pivot[3];
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) AT[j+3*i]=a[j][i];		
+    }						
+  c1 = 3;
+  c2 = 1;
+  dgesv_(&c1, &c2, AT, &c1, pivot, x, &c1, ok);      
+}
+
+int SolveLineq (double a[3][3], double x[3]) 
+{
+  int indx[3], ok;
+  double dd;
+  wrap_dgesv(a, x, &ok);
+  return 0;
+}
+
+void calcIprincAxes(int np)
+{
+  calcItensTot(np, ItensTot, com[np]); 
+  for (kk = 0; kk < 3; kk++)
+    omega[kk] = Mtot[kk];
+  calcEigenVectVal(ItensTot, Itens, RotMat);
+
+}
+#endif
 int main(int argc, char **argv)
 {
   double xx[3], r, theta_r, phi_r, theta, psi, phi, deltheta, delpsi, 
@@ -387,6 +448,10 @@ int main(int argc, char **argv)
   calcCOM(1, com[1]);
   printf("com[1]=%.15G %.15G %.15G\n", com[1][0], com[1][1], com[1][2]);
   move_to_origin(0, com[0]);
+#ifdef MD_CALC_ITENS
+  /* calculate moments of inertia around principal axes */
+  calcIprincAxes(0);  
+#endif
 #if 0
   for (kk=0; kk < 3; kk++)
     orig[kk] = com[1]-com[0];
