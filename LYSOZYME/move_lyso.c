@@ -15,7 +15,7 @@ const double boxlength=50.0;
 const double selfenergy=-20230;
 double orig[3], totq, totmass; 
 #ifdef MD_CALC_ITENS
-double ItensTot[3][3], Itens[3], RotMat[3][3];
+double ItensTot[3][3], Itens[NUM_LYSO][3], RotMat[NUM_LYSO][3][3];
 #endif
 double pdb_charge, pdb_mass;
 int pdb_nr, pdb_resnr, pdb_cgnr;
@@ -161,6 +161,8 @@ void read_gro_coords(void)
 	{
 	  fscanf(fin, "%s %s %lf %lf %lf %lf\n", dummy_str1, dummy_str2, &dummy_dbl1, 
 		 &xin[i][n][0], &xin[i][n][1], &xin[i][n][2]);  
+	  //if (i==1)
+	   // printf("xin=%f %f %f\n", xin[i][n][0], xin[i][n][1], xin[i][n][2]);
 	  //printf("dummstr1=%s dummy2=%s dummy dbl=%G\n", dummy_str1, dummy_str2, dummy_dbl1);
 	}
     }
@@ -388,6 +390,8 @@ void calcItensTot(int np, double I[3][3], double RCM[3])
 	    ri[2] = xin[np][i][2]-RCM[2];
 	    distSq = Sqr(ri[0])+Sqr(ri[1])+Sqr(ri[2]);
 	    I[j][k] += mass[i]*(((j==k)?distSq:0.0) - ri[j]*ri[k]);
+	    //printf("np=%d mass=%.15G x=%f %f %f\n", np, mass[i], ri[0], ri[1], ri[2]);
+	    //printf("xin= %f %f %f\n", xin[np][i][0], xin[np][i][1], xin[np][i][2]);
 	  }
       }
   printf("I= {{%f, %f, %f},\n", I[0][0], I[0][1], I[0][2]);
@@ -436,19 +440,38 @@ void calcIprincAxes(int np)
 {
   int kk;
   calcItensTot(np, ItensTot, com[np]); 
-  calcEigenVectVal(ItensTot, Itens, RotMat);
-  /* il vettore RotMat[m][0..2] riga di RotMat è l'autovettore di ItensTot 
+  calcEigenVectVal(ItensTot, Itens[np], RotMat[np]);
+  /* il vettore riga RotMat[m][0..2] di RotMat è l'autovettore di ItensTot 
      con autovalore Itens[m]  
      quindi se x' sono le coordinate nel sistema di riferimento del 
      corpo rigido e x quelle nel laboratorio abbiamo:
-     x = R x' */
-  printf("R= {{%f, %f, %f},\n", RotMat[0][0], RotMat[0][1], RotMat[0][2]);
-  printf("    {%f, %f, %f},\n", RotMat[1][0], RotMat[1][1], RotMat[1][2]);
-  printf("    {%f, %f, %f}}\n", RotMat[2][0], RotMat[2][1], RotMat[2][2]);
+     x' = R x ovvero x = Trasposta(R) x' */
+  printf("R= {{%f, %f, %f},\n", RotMat[np][0][0], RotMat[np][0][1], RotMat[np][0][2]);
+  printf("    {%f, %f, %f},\n", RotMat[np][1][0], RotMat[np][1][1], RotMat[np][1][2]);
+  printf("    {%f, %f, %f}}\n", RotMat[np][2][0], RotMat[np][2][1], RotMat[np][2][2]);
 
-  printf("Moments of Intertia = %.15G %.15G %.15G\n", Itens[0], Itens[1], Itens[2]);
+  printf("Moments of Intertia = %.15G %.15G %.15G\n", Itens[np][0], Itens[np][1], Itens[np][2]);
 }
 #endif
+void rotate_to_princaxes(int np)
+{
+  int i, m, n;
+  double xx[3];
+  for (i=0; i < NUM_ATOMS; i++) 
+    {
+      for (m=0; m < 3; m++)
+	{
+	  xx[m] = 0.0;
+	  for (n=0; n < 3; n++)
+	    {
+	      xx[m] += RotMat[np][m][n]*xin[np][i][n];
+	    }
+	}
+      for (m=0; m < 3; m++)
+	xin[np][i][m] = xx[m];
+    }
+}
+
 int main(int argc, char **argv)
 {
   double xx[3], r, theta_r, phi_r, theta, psi, phi, deltheta, delpsi, 
@@ -479,6 +502,7 @@ int main(int argc, char **argv)
 #ifdef MD_CALC_ITENS
   /* calculate moments of inertia around principal axes */
   calcIprincAxes(0);  
+  calcIprincAxes(1);
 #endif
   move_to_origin(0, com[0]);
 #if 0
@@ -494,12 +518,18 @@ int main(int argc, char **argv)
   printf("DOPO com[0]=%.15G %.15G %.15G\n", com[0][0], com[0][1], com[0][2]);
   calcCOM(1, com[1]);
   printf("DOPO com[1]=%.15G %.15G %.15G\n", com[1][0], com[1][1], com[1][2]);
- 
+
   theta_r = 0.0; 
   phi_r = 0.0;
   theta=psi=0.0;
   phi=0.0;
-#if 0
+  rotate_to_princaxes(0);
+  rotate_to_princaxes(1);
+  DEBUG(printf("Inertia tensors now should be diagonal:\n"));
+  DEBUG(calcItensTot(0, ItensTot, com[0])); 
+  DEBUG(calcItensTot(1, ItensTot, com[0])); 
+  DEBUG(printf("...are they?\n"));
+ #if 0
   /* just in to out */
   move_prot_copy(0);
   move_prot_copy(1);  
