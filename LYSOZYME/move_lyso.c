@@ -14,6 +14,7 @@ const double boxfact=2.0;
 const double boxlength=50.0;
 const double selfenergy=-20230;
 double orig[3], totq, totmass; 
+double xx_old[3], phi_old, theta_old, psi_old, energy_old;
 #ifdef MD_CALC_ITENS
 double ItensTot[3][3], Itens[NUM_LYSO][3], RotMat[NUM_LYSO][3][3];
 #endif
@@ -529,7 +530,7 @@ int main(int argc, char **argv)
   DEBUG(calcItensTot(0, ItensTot, com[0])); 
   DEBUG(calcItensTot(1, ItensTot, com[0])); 
   DEBUG(printf("...are they?\n"));
- #if 0
+#if 0
   /* just in to out */
   move_prot_copy(0);
   move_prot_copy(1);  
@@ -538,8 +539,9 @@ int main(int argc, char **argv)
   write_gro_coords();
   exit(-1);
 #endif 
-  //for (r=RMAX; r >= RMIN && !fix_r; r -= delI)
-  for (r=RMIN; r <= RMAX && !fix_r; r += delI)
+  first=1;
+  for (r=RMAX; r >= RMIN && !fix_r; r -= delI)
+  //for (r=RMIN; r <= RMAX && !fix_r; r += delI)
     {
       calc_pos(r, theta_r, phi_r, xx);
       DEBUG2(printf("r=%.15G (MAX=%.15G MIN=%.15G)\n", r, RMAX, RMIN));
@@ -561,7 +563,17 @@ int main(int argc, char **argv)
 			  /* protein 0 is fixed while protein 1 moves */
 			  move_prot(1, xx, psi, phi, theta);
 			  /* calculate interaction energy between xout coordinates */
+			  /* store old values */
 			  energy = calc_energy_gromacs();
+
+			  for (kk=0; kk < 3; kk++)
+			    xx_old[kk] = xx[kk];
+			  psi_old = psi;
+			  phi_old = phi;
+			  theta_old = theta;
+			  energy_old = energy;
+			  first = 0;
+			  /* ================ */
 			  /* write new element of potential energy mesh */
 			  write_mesh_point_and_energy(xx, psi, phi, theta, energy);
 #if 0
