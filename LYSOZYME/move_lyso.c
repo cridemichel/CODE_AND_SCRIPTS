@@ -8,9 +8,10 @@ double REul[3][3];
 #define NUM_LYSO 2
 #define Sqr(x) ((x)*(x))
 #define INIFILEGRO "inifile.gro"
+
 /* it is possible to fix some selected degrees of freedom */
-const int fix_r=0, fix_phi_r=1, fix_theta_r=1, fix_psi=1, fix_phi=1, fix_theta=1;
-const double boxfact=2.0;
+const int fix_r=0, fix_phi_r=0, fix_theta_r=0, fix_psi=0, fix_phi=0, fix_theta=0;
+const double boxfact=2.0, kb = 0.00831451, Tamb=293.16, tempFact=500.0;
 const double boxlength=50.0;
 const double selfenergy=-20230;
 double orig[3], totq, totmass; 
@@ -22,7 +23,7 @@ double pdb_charge, pdb_mass;
 int pdb_nr, pdb_resnr, pdb_cgnr;
 char pdb_type[256], pdb_residue[256], pdb_atom[256];
 double com[2][3];
-const double RMIN=3.3, RMAX=6.5, delI=0.05;
+const double RMIN=3.3, RMAX=6.5, delI=0.1;
 /* euler angles */
 double phi, theta, psi;
 double PI;
@@ -44,7 +45,7 @@ double PI;
 #define GROGENBOX GROPATH "genbox_d"
 #define MPIPATH "/usr/bin/"
 #define MPIEXE MPIPATH "mpirun -np 2 "
-#define GROENEEXE GROPATH "g_energy"
+#define GROENEEXE GROPATH "g_energy_d"
 #define GROFILE "minimized_box.gro"
 #define GROFILE0 "minimized.gro"
 #define GROMOVEDCONF "moved.gro"
@@ -477,7 +478,7 @@ int main(int argc, char **argv)
 {
   double xx[3], r, theta_r, phi_r, theta, psi, phi, deltheta, delpsi, 
 	 delphi, delth_r, delphi_r;
-  int kk;
+  int kk, first=1;
   PI = 2.0*acos(0.0);
   if (argc == 1)
     {
@@ -540,22 +541,28 @@ int main(int argc, char **argv)
   exit(-1);
 #endif 
   first=1;
+  delphi = 3.0;
+  deltheta = 3.0;
+  delpsi = 3.0;
+  delphi_r = 3.0;
+  delth_r = 3.0;
+
   for (r=RMAX; r >= RMIN && !fix_r; r -= delI)
   //for (r=RMIN; r <= RMAX && !fix_r; r += delI)
     {
-      calc_pos(r, theta_r, phi_r, xx);
+      //calc_pos(r, theta_r, phi_r, xx);
       DEBUG2(printf("r=%.15G (MAX=%.15G MIN=%.15G)\n", r, RMAX, RMIN));
-#if 0
+#if 1
       for (theta_r = -PI*0.5; theta_r < PI*0.5 && !fix_theta_r; theta_r += delth_r)
 	{
-	  for (phi_r = 0.0; phi_r < 2.0*PI && !fix_phi_r; theta_r += delphi_r)
+	  for (phi_r = 0.0; phi_r < 2.0*PI && !fix_phi_r; phi_r += delphi_r)
 	    {
 	      calc_pos(r, theta_r, phi_r, xx);
-	      for (psi = -PI; psi < PI && !fix_psi; psi = psi + delpsi)
+	      for (psi = -PI; psi < PI && !fix_psi; psi += delpsi)
 		{
-		  for (phi = -PI; phi < PI && !fix_phi; phi = phi + delphi)
+		  for (phi = -PI; phi < PI && !fix_phi; phi += delphi)
 		    {
-		      for (theta = 0.0; theta < PI && !fix_theta; theta + deltheta)
+		      for (theta = 0.0; theta < PI && !fix_theta; theta += deltheta)
 			{
 #endif
 			  /* just in to out */
@@ -565,7 +572,8 @@ int main(int argc, char **argv)
 			  /* calculate interaction energy between xout coordinates */
 			  /* store old values */
 			  energy = calc_energy_gromacs();
-
+			  if (fabs(energy) > tempFact*kb*Tamb)
+			    continue;
 			  for (kk=0; kk < 3; kk++)
 			    xx_old[kk] = xx[kk];
 			  psi_old = psi;
@@ -576,7 +584,7 @@ int main(int argc, char **argv)
 			  /* ================ */
 			  /* write new element of potential energy mesh */
 			  write_mesh_point_and_energy(xx, psi, phi, theta, energy);
-#if 0
+#if 1
 			}
 		    }
 		}
