@@ -375,9 +375,18 @@ void fdjacNeighPlane(int n, double x[], double fvec[], double **df,
   MD_DEBUG2(print_matrix(RA, 3));
 #ifdef EDHE_FLEX
   typei = typeOfPart[iA];  
-  invaSqN = 1/Sqr(typesArr[typei].sax[0]);
-  invbSqN = 1/Sqr(typesArr[typei].sax[1]);
-  invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSqN = 1/Sqr(axa[iA]);
+      invbSqN = 1/Sqr(axb[iA]);
+      invcSqN = 1/Sqr(axc[iA]);
+    }
+  else
+    {
+      invaSqN = 1/Sqr(typesArr[typei].sax[0]);
+      invbSqN = 1/Sqr(typesArr[typei].sax[1]);
+      invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #else
   invaSqN = 1/Sqr(axa[iA]);
   invbSqN = 1/Sqr(axb[iA]);
@@ -540,9 +549,18 @@ void fdjacNeigh(int n, double x[], double fvec[], double **df,
   MD_DEBUG2(print_matrix(RA, 3));
 #ifdef EDHE_FLEX
   typei = typeOfPart[iA];  
-  invaSqN = 1/Sqr(typesArr[typei].sax[0]);
-  invbSqN = 1/Sqr(typesArr[typei].sax[1]);
-  invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSqN = 1/Sqr(axa[iA]);
+      invbSqN = 1/Sqr(axb[iA]);
+      invcSqN = 1/Sqr(axc[iA]);
+    }
+  else
+    {
+      invaSqN = 1/Sqr(typesArr[typei].sax[0]);
+      invbSqN = 1/Sqr(typesArr[typei].sax[1]);
+      invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #else
   invaSqN = 1/Sqr(axa[iA]);
   invbSqN = 1/Sqr(axb[iA]);
@@ -702,9 +720,18 @@ void funcs2beZeroedNeighPlane(int n, double x[], double fvec[], int i)
   na = (i < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];  
-  invaSqN = 1/Sqr(typesArr[typei].sax[0]);
-  invbSqN = 1/Sqr(typesArr[typei].sax[1]);
-  invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSqN = 1/Sqr(axa[i]);
+      invbSqN = 1/Sqr(axb[i]);
+      invcSqN = 1/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSqN = 1/Sqr(typesArr[typei].sax[0]);
+      invbSqN = 1/Sqr(typesArr[typei].sax[1]);
+      invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #else
   invaSqN = 1.0/Sqr(axa[i]);
   invbSqN = 1.0/Sqr(axb[i]);
@@ -807,9 +834,18 @@ void funcs2beZeroedNeigh(int n, double x[], double fvec[], int i)
   na = (i < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];  
-  invaSqN = 1/Sqr(typesArr[typei].sax[0]);
-  invbSqN = 1/Sqr(typesArr[typei].sax[1]);
-  invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSqN = 1/Sqr(axa[i]);
+      invbSqN = 1/Sqr(axb[i]);
+      invcSqN = 1/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSqN = 1/Sqr(typesArr[typei].sax[0]);
+      invbSqN = 1/Sqr(typesArr[typei].sax[1]);
+      invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #else
   invaSqN = 1.0/Sqr(axa[i]);
   invbSqN = 1.0/Sqr(axb[i]);
@@ -1423,9 +1459,18 @@ void guess_distNeigh_plane(int i,
   //printf("===============>SONO QUI\n");
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];  
-  saA[0] = typesArr[typei].sax[0];
-  saA[1] = typesArr[typei].sax[1];
-  saA[2] = typesArr[typei].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      saA[0] = axa[i];
+      saA[1] = axb[i];
+      saA[2] = axc[i];
+    }
+  else
+    {
+      saA[0] = typesArr[typei].sax[0];
+      saA[1] = typesArr[typei].sax[1];
+      saA[2] = typesArr[typei].sax[2];
+    }
 #else
   saA[0] = axa[i];
   saA[1] = axb[i];
@@ -1528,9 +1573,18 @@ void guess_distNeigh(int i,
   //printf("===============>SONO QUI\n");
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];  
-  saA[0] = typesArr[typei].sax[0];
-  saA[1] = typesArr[typei].sax[1];
-  saA[2] = typesArr[typei].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      saA[0] = axa[i];
+      saA[1] = axb[i];
+      saA[2] = axc[i];
+    }
+  else
+    {
+      saA[0] = typesArr[typei].sax[0];
+      saA[1] = typesArr[typei].sax[1];
+      saA[2] = typesArr[typei].sax[2];
+    }
 #else
   saA[0] = axa[i];
   saA[1] = axb[i];
@@ -1627,9 +1681,18 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
 #endif
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];  
-  invaSqN = 1.0/Sqr(typesArr[typei].sax[0]);
-  invbSqN = 1.0/Sqr(typesArr[typei].sax[1]);
-  invcSqN = 1.0/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSqN = 1.0/Sqr(axa[i]);
+      invbSqN = 1.0/Sqr(axb[i]);
+      invcSqN = 1.0/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSqN = 1.0/Sqr(typesArr[typei].sax[0]);
+      invbSqN = 1.0/Sqr(typesArr[typei].sax[1]);
+      invcSqN = 1.0/Sqr(typesArr[typei].sax[2]);
+    }
 #else
   invaSqN = 1.0/Sqr(axa[i]);
   invbSqN = 1.0/Sqr(axb[i]);
@@ -1883,9 +1946,18 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
 #endif
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];  
-  invaSqN = 1.0/Sqr(typesArr[typei].sax[0]);
-  invbSqN = 1.0/Sqr(typesArr[typei].sax[1]);
-  invcSqN = 1.0/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSqN = 1.0/Sqr(axa[i]);
+      invbSqN = 1.0/Sqr(axb[i]);
+      invcSqN = 1.0/Sqr(axc[i]);
+    }
+  else
+    { 
+      invaSqN = 1.0/Sqr(typesArr[typei].sax[0]);
+      invbSqN = 1.0/Sqr(typesArr[typei].sax[1]);
+      invcSqN = 1.0/Sqr(typesArr[typei].sax[2]);
+    }
 #else
   invaSqN = 1.0/Sqr(axa[i]);
   invbSqN = 1.0/Sqr(axb[i]);
@@ -1905,7 +1977,10 @@ double calcDistNegNeigh(double t, double t1, int i, double *r1, double *r2, doub
     {
       //firstDist = 1;
 #ifdef EDHE_FLEX
-      return OprogStatus.rNebrShell*(min3(typesArr[typei].sax[0],typesArr[typei].sax[1],typesArr[typei].sax[2])
+      if (OprogStatus.targetPhi > 0.0)
+	return OprogStatus.rNebrShell*(min3(axa[i],axb[i],axc[i])/max3(axa[i],axb[i],axc[i]));
+      else
+  	return OprogStatus.rNebrShell*(min3(typesArr[typei].sax[0],typesArr[typei].sax[1],typesArr[typei].sax[2])
 				     /max3(typesArr[typei].sax[0],typesArr[typei].sax[1],typesArr[typei].sax[2]));
 #else
       return OprogStatus.rNebrShell*(min3(axa[i],axb[i],axc[i])/max3(axa[i],axb[i],axc[i]));
@@ -2494,9 +2569,18 @@ retryoverlap:
 	    {
 #ifdef EDHE_FLEX
 	      typej = typeOfPart[j];
-	      axaF = typesArr[typej].sax[0];
-	      axbF = typesArr[typej].sax[1];
-	      axcF = typesArr[typej].sax[2]; 
+	      if (OprogStatus.targetPhi > 0.0)
+		{
+		  axaF = axa[j];
+		  axbF = axb[j];
+		  axcF = axc[j];
+		}
+	      else
+		{
+		  axaF = typesArr[typej].sax[0];
+		  axbF = typesArr[typej].sax[1];
+		  axcF = typesArr[typej].sax[2];
+		} 
 	      g2 = OprogStatus.epsdGDO*min3(axaF,axbF,axcF)/calc_norm(vecnf); 
 #else
   	      g2 = OprogStatus.epsdGDO*min3(axa[j],axb[j],axc[j])/calc_norm(vecnf); 
@@ -3321,7 +3405,7 @@ void adjust_maxddot(int i, double *maxddot)
   double K = 1.0;
 #ifdef EDHE_FLEX
   int typei;
-  double axa, axb, axc;
+  double axaL, axbL, axcL;
 #endif
 #ifdef MD_ASYM_ITENS
   if (Mx[i] == 0.0 && My[i] == 0.0 && Mz[i] == 0.0)
@@ -3336,10 +3420,19 @@ void adjust_maxddot(int i, double *maxddot)
 #else
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
-  axa = typesArr[typei].sax[0];
-  axb = typesArr[typei].sax[1];
-  axc = typesArr[typei].sax[2];
-  if (axa == axb && axb == axc)
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      axaL = axa[i];
+      axbL = axb[i];
+      axcL = axc[i];
+    }
+  else
+    {
+      axaL = typesArr[typei].sax[0];
+      axbL = typesArr[typei].sax[1];
+      axcL = typesArr[typei].sax[2];
+    }
+  if (axaL == axbL && axbL == axcL)
     K = mddotfact;
 #else
   if (i < Oparams.parnumA)
@@ -3362,7 +3455,7 @@ void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddo
   int a;
 #ifdef EDHE_FLEX
   int typei;
-  double axa, axb, axc;
+  double axaL, axbL, axcL;
 #endif
 #ifdef MD_ASYM_ITENS
   if (Mx[i] == 0.0 && My[i] == 0.0 && Mz[i] == 0.0)
@@ -3377,10 +3470,19 @@ void adjust_maxddoti(int i, double *maxddot, double maxddotiLC[6], double maxddo
 #else
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
-  axa = typesArr[typei].sax[0];
-  axb = typesArr[typei].sax[1];
-  axc = typesArr[typei].sax[2];
-  if (axa == axb && axb == axc)
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      axaL = axa[i];
+      axbL = axb[i];
+      axcL = axc[i];
+    }
+  else
+    {
+      axaL = typesArr[typei].sax[0];
+      axbL = typesArr[typei].sax[1];
+      axcL = typesArr[typei].sax[2];
+    }
+  if (axaL == axbL && axbL == axcL)
     K = mddotfact;
 #else
   if (i < Oparams.parnumA)
@@ -3552,7 +3654,14 @@ int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2)
   //     gradplane_all[nn][0], gradplane_all[nn][1], gradplane_all[nn][2]);
   /* N.B. controllare che il gradiente sia a norma unitaria e che sia uscente rispetto 
      al parallelepipedo delle NNL! */
-  dist = fabs(scalProd(dr, gradplane)) - typesArr[typei].sax[0];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      dist = fabs(scalProd(dr, gradplane)) - axa[i];
+    }
+  else
+    {
+      dist = fabs(scalProd(dr, gradplane)) - typesArr[typei].sax[0];
+    }
   b = scalProd(dv, gradplane);
   if (b < 0)
     return 0;
@@ -3595,7 +3704,14 @@ int locate_contact_neigh_plane_HS(int i, double *evtime, double t2)
 	//     gradplane_all[nn][0], gradplane_all[nn][1], gradplane_all[nn][2]);
       /* N.B. controllare che il gradiente sia a norma unitaria e che sia uscente rispetto 
 	 al parallelepipedo delle NNL! */
-      dist = fabs(scalProd(dr, gradplane_all[nn])) - typesArr[typei].sax[0];
+      if (OprogStatus.targetPhi > 0.0)
+	{
+	  dist = fabs(scalProd(dr, gradplane_all[nn])) - axa[i];
+	}
+      else
+	{
+	  dist = fabs(scalProd(dr, gradplane_all[nn])) - typesArr[typei].sax[0];
+	}
       b = scalProd(dv, gradplane_all[nn]);
       if (b < 0)
 	continue;
@@ -5736,17 +5852,34 @@ void nextNNLupdate(int na)
 #ifndef MD_NNLPLANES
 #ifdef EDHE_FLEX
   typena = typeOfPart[na];
-  nebrTab[na].axa = OprogStatus.rNebrShell*typesArr[typena].sax[0];
-  nebrTab[na].axb = OprogStatus.rNebrShell*typesArr[typena].sax[1];
-  nebrTab[na].axc = OprogStatus.rNebrShell*typesArr[typena].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];
+      nebrTab[na].axb = OprogStatus.rNebrShell*axb[na];
+      nebrTab[na].axc = OprogStatus.rNebrShell*axc[na];
+    }
+  else
+    {
+      nebrTab[na].axa = OprogStatus.rNebrShell*typesArr[typena].sax[0];
+      nebrTab[na].axb = OprogStatus.rNebrShell*typesArr[typena].sax[1];
+      nebrTab[na].axc = OprogStatus.rNebrShell*typesArr[typena].sax[2];
+    }
 #else
   nebrTab[na].axa = OprogStatus.rNebrShell*axa[na];
   nebrTab[na].axb = OprogStatus.rNebrShell*axb[na];
   nebrTab[na].axc = OprogStatus.rNebrShell*axc[na];
 #endif
 #ifdef EDHE_FLEX
-  DelDist = max3(nebrTab[na].axa,nebrTab[na].axb,nebrTab[na].axc) -
-    max3(typesArr[typena].sax[0],typesArr[typena].sax[1],typesArr[typena].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      DelDist = max3(nebrTab[na].axa,nebrTab[na].axb,nebrTab[na].axc) -
+	max3(axa[na],axb[na],axc[na]);
+    }
+  else
+    {
+      DelDist = max3(nebrTab[na].axa,nebrTab[na].axb,nebrTab[na].axc) -
+	max3(typesArr[typena].sax[0],typesArr[typena].sax[1],typesArr[typena].sax[2]);
+    }
 #else
   DelDist = max3(nebrTab[na].axa,nebrTab[na].axb,nebrTab[na].axc) -
     max3(axa[na],axb[na],axc[na]);
@@ -5754,11 +5887,20 @@ void nextNNLupdate(int na)
 #else
   if (OprogStatus.targetPhi > 0.0)
     {
+#ifdef EDHE_FLEX
+      nnlfact = axa[na]/typesArr[typeOfPart[na]].sax[0];
+#else
 #ifdef MD_POLYDISP
       nnlfact = axa[na]/axaP[na];
 #else
       nnlfact = axa[na]/Oparams.a[na<Oparams.parnumA?0:1];
 #endif
+#endif
+      /* NOTA 12/04/10:
+	 ppsax sono in generale i semiassi per le NNL ottimizzate, ossia che tengono conto
+	 anche degli spot, tuttavia durante la crescita gli spot vengono disattivati,
+	 quindi si possono usare tranquillamente i semiassi degli ellissoidi polidispersi
+	 duraten la crescita (axa[...],axb[...],axc[...])*/
       nebrTab[na].axa = nnlfact*OprogStatus.rNebrShell+axa[na];
       nebrTab[na].axb = nnlfact*OprogStatus.rNebrShell+axb[na];
       nebrTab[na].axc = nnlfact*OprogStatus.rNebrShell+axc[na];
