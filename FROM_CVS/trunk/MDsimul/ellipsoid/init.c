@@ -40,8 +40,12 @@ extern double *lastcol;
 double *axa, *axb, *axc;
 double **Aip;
 #ifdef EDHE_FLEX
+double *a0I;
 extern int is_infinite_Itens(int i);
 extern int is_infinite_mass(int i);
+#endif
+#ifdef MD_SUPERELLIPSOID
+extern double *volSQ;
 #endif
 #ifdef MD_SPHERICAL_WALL
 int sphWall, sphWallOuter;
@@ -1724,6 +1728,7 @@ void usrInitBef(void)
 #ifdef MD_EDHEFLEX_WALL
     OprogStatus.epsdPlane=-1.0;
     OprogStatus.epsdFastPlane=-1.0;
+    OprogStatus.n_gauleg = 40;
 #endif
 #ifdef EDHE_FLEX
     Oparams.ninters = 0;
@@ -2981,6 +2986,11 @@ int nbins_rhoz;
 double *rhoz;
 extern double max3(double a, double b, double c);
 #endif
+#ifdef MD_SUPERELLIPSOID
+void init_gauleg_weights(void);
+double *SQvolPrefact;
+double calc_SQ_volprefact(int);
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -3025,12 +3035,21 @@ void usrInitAft(void)
   /* initialize global varibales */
   pi = 2.0 * acos(0);
 #ifdef EDHE_FLEX 
+#if 0
  if (OprogStatus.targetPhi > 0.0)
    {
      printf("WARNING: You can not use growth with -DEDHE_FLEX!");
      printf("Exiting...");
      exit(-1);
    } 
+#else
+ /* NOTA 120410: la crescita anche nel caso del codice ED_HEFLEX ora è stata 
+    implementata */
+ if (OprogStatus.targetPhi > 0.0)
+   {
+     printf("WARNING: Growth simulation, spots interactions will be disables\n");
+   }
+#endif
  numcols=0;
  for (i=0;;i++)
    {
@@ -3316,6 +3335,9 @@ void usrInitAft(void)
   negpairs = (int*)malloc(maxnbonds*sizeof(int));
   check_conf();
 #endif
+#ifdef MD_SUPERELLIPSOID
+  volSQ = malloc(Oparams.ntypes*sizeof(double));
+#endif
   u2R();
   if (OprogStatus.CMreset==-1)
     {
@@ -3536,10 +3558,29 @@ void usrInitAft(void)
       for (i=0; i < Oparams.parnum; i++)
 	atomTime[i] = Oparams.time;
     }
-#ifndef EDHE_FLEX
   axa = malloc(sizeof(double)*Oparams.parnum);
   axb = malloc(sizeof(double)*Oparams.parnum);
   axc = malloc(sizeof(double)*Oparams.parnum);
+#ifdef EDHE_FLEX
+#ifdef MD_SUPERELLIPSOID
+  init_gauleg_weights();
+  SQvolPrefact = malloc(sizeof(double)*Oparams.ntypes);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* to calculate geometrical factor of SQ volume
+	 we need unitary semiaxis, later (below) we will set them
+	 to proper values */
+      axa[i] = 1.0;
+      axb[i] = 1.0;
+      axc[i] = 1.0;
+    }
+  for (pt = 0; pt < Oparams.ntypes; pt++)
+    {
+      SQvolPrefact[pt] = calc_SQ_volprefact(pt);
+      printf("Volume SQ prefactor = %.15G\n", SQvolPrefact[pt]);
+    }
+#endif
+  a0I = malloc(sizeof(double)*Oparams.parnum);
 #endif
   maxax = malloc(sizeof(double)*Oparams.parnum);
   scdone = malloc(sizeof(int)*Oparams.parnum);
@@ -3670,6 +3711,14 @@ void usrInitAft(void)
 #endif
 #endif
     }
+#ifdef EDHE_FLEX
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      axa[i] = typesArr[typeOfPart[i]].sax[0];
+      axb[i] = typesArr[typeOfPart[i]].sax[1];
+      axc[i] = typesArr[typeOfPart[i]].sax[2];
+    }
+#endif
 #ifndef EDHE_FLEX
   for (i=Oparams.parnumA; i < Oparams.parnum; i++)
     {
