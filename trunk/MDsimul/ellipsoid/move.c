@@ -59,6 +59,9 @@ int *lastbump;
 extern int sphWall, sphWallOuter;
 #endif
 extern double *axa, *axb, *axc;
+#ifdef EDHE_FLEX
+extern double *a0I;
+#endif
 extern int *scdone;
 extern double *maxax;
 extern double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane);
@@ -678,7 +681,9 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
     }
   return distMin;
 }
-
+#ifdef MD_SUPERELLIPSOID
+extern double *SQvolPrefact;
+#endif
 double calc_phi(void)
 {
   double N = 0;
@@ -686,10 +691,31 @@ double calc_phi(void)
   int i ;
 #ifdef EDHE_FLEX
   int typei;
-  for (i=0; i < Oparams.parnum; i++)
+//#ifdef MD_SUPERELLIPSOID 
+  //return calcPhiSQ();
+//#endif
+  if (OprogStatus.targetPhi > 0.0)
     {
-      typei = typeOfPart[i];
-      N += typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
+      for (i=0; i < Oparams.parnum; i++)
+	{
+#ifdef MD_SUPERELLIPSOID
+	  N += axa[i]*axb[i]*axc[i]*SQvolPrefact[typeOfPart[i]];
+#else
+	  N += axa[i]*axb[i]*axc[i];
+#endif
+	}
+    }
+  else
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  typei = typeOfPart[i];
+#ifdef MD_SUPERELLIPSOID
+	  N += SQvolPrefact[typei]*typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
+#else
+	  N += typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
+#endif
+	}
     }
 #else
   for (i=0; i < Oparams.parnum; i++)
@@ -697,7 +723,9 @@ double calc_phi(void)
       N += axa[i]*axb[i]*axc[i];
     }
 #endif
+#ifndef MD_SUPERELLIPSOID
   N *= 4.0*pi/3.0;
+#endif
 #ifdef MD_LXYZ
   return N / (L[0]*L[1]*L[2]);
 #else
@@ -758,6 +786,9 @@ void restore_values(int i)
 double max_ax(int i)
 {
   double ma;
+#ifdef MD_SUPERELLIPSOID
+  return sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+#endif
   ma = 0;
   if (axa[i]>ma)
     ma = axa[i];
@@ -789,34 +820,60 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 		      double shift[3], double scalfact, double *factor, int j)
 {
   int kk;
-#ifndef EDHE_FLEX
-  int ii;
-#endif
+  int ii, typei;
   double nnlfact;
-  double C, Ccur, F, phi0, phi, fact, rAC[3], rBD[3], fact1, fact2, fact3;
+  double C, Ccur, F, phi, fact, rAC[3], rBD[3], fact1, fact2, fact3;
   double boxdiag, factNNL=1.0;
+  static double phi0;
+  static int first=1;
 #ifdef MD_LXYZ
   for (kk=0; kk < 3; kk++)
     L2[kk] = 0.5 * L[kk];
 #else
   L2 = 0.5 * L;
 #endif
+#ifndef MD_SUPERELLIPSOID
   phi = calc_phi();
+#endif
+  if (first)
+    {
+#ifdef EDHE_FLEX
+      phi0 = 0.0;
+      for (ii = 0; ii < Oparams.parnum; ii++)
+	{
+	  typei = typeOfPart[ii];
+#ifdef MD_SUPERELLIPSOID
+	  phi0 += SQvolPrefact[typei]*typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
+#else
+	  phi0 += typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
+#endif
+	}
+      //phi0 *= 4.0*pi/3.0;
+#else
 #ifdef MD_POLYDISP
-  phi0 = 0.0;
-  for (ii = 0; ii < Oparams.parnum; ii++)
-    phi0 += axaP[ii]*axbP[ii]*axcP[ii];
+      phi0 = 0.0;
+      for (ii = 0; ii < Oparams.parnum; ii++)
+	phi0 += axaP[ii]*axbP[ii]*axcP[ii];
 #else
-  phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
-  phi0 +=((double)Oparams.parnum-Oparams.parnumA)*Oparams.a[1]*Oparams.b[1]*Oparams.c[1];
+      phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
+      phi0 +=((double)Oparams.parnum-Oparams.parnumA)*Oparams.a[1]*Oparams.b[1]*Oparams.c[1];
 #endif
-  phi0 *= 4.0*pi/3.0;
+#endif
+#ifndef MD_SUPERELLIPSOID
+      phi0 *= 4.0*pi/3.0;
+#endif
 #ifdef MD_LXYZ
-  phi0 /= L[0]*L[1]*L[2];
+      phi0 /= L[0]*L[1]*L[2];
 #else
-  phi0 /= L*L*L;
+      phi0 /= L*L*L;
 #endif
+      first = 0;
+    }
+  //printf("phi0=%.15G\n", phi0);
   C = cbrt(OprogStatus.targetPhi/phi0);
+#ifdef EDHE_FLEX
+  Ccur = axa[i] / typesArr[typeOfPart[i]].sax[0];
+#else
 #ifdef MD_POLYDISP
   Ccur = axa[i] / axaP[i];
 #else
@@ -824,6 +881,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
     Ccur = axa[i]/Oparams.a[0]; 
   else
     Ccur = axa[i]/Oparams.a[1]; 
+#endif
 #endif
   F = C / Ccur;
   if (j != -1)
@@ -911,10 +969,14 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
     }
   else
     {
+#ifdef EDHE_FLEX
+      nnlfact = axa[i] / typesArr[typeOfPart[i]].sax[0];
+#else
 #ifdef MD_POLYDISP
       nnlfact = axa[i]/axaP[i];
 #else
       nnlfact = axa[i]/Oparams.a[i<Oparams.parnumA?0:1];
+#endif
 #endif
       boxdiag = 2.0*sqrt(Sqr(axa[i]+OprogStatus.rNebrShell*nnlfact)+
 			 Sqr(axb[i]+OprogStatus.rNebrShell*nnlfact)+
@@ -922,7 +984,11 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
       if ( boxdiag > Oparams.rcut)
 	Oparams.rcut = 1.01*boxdiag;
     }
+#ifndef MD_SUPERELLIPSOID
   return calc_phi();
+#else
+  return 0.0;
+#endif
 }
 #ifdef MD_EDHEFLEX_OPTNNL
 void rebuild_linked_list_NNL()
@@ -1120,28 +1186,54 @@ double check_alldist_min(char *msg)
   return distMin;
   
 }
+double calc_safe_factor(void)
+{
+  int i, iMin;
+  double axaMin;
+  axaMin = axa[0];
+  iMin = 0;
+  for (i=1; i < Oparams.parnum; i++)
+    {
+      if (axa[i] < axaMin)
+	{
+	  axaMin = axa[i];
+	  iMin = i;
+	}
+    }
+  return a0I[iMin]/axaMin;
+}
 double rcutIni;
 void scale_Phi(void)
 {
   int i, j, imin, kk, its, done=0;
   static int first = 1;
-  static double a0I, target;
+#ifndef EDHE_FLEX
+  static double a0I;
+#endif
+  static double target;
   double distMinT, distMin=1E60, rAmin[3], rBmin[3], rC[3]={0,0,0}, 
 	 rD[3]={0,0,0};
   double shift[3], phi, scalfact, factor, axai;
   if (OprogStatus.targetPhi <= 0)
     return;
-  
   if (OprogStatus.useNNL)
     rebuildNNL();
+  
   phi=calc_phi();
+  printf("Scaling Axes actual phi is %.15G\n", phi);
   if (first)
     {
       first = 0;
+#if EDHE_FLEX
+      /* usa il semiasse delle particelle di tipo 0 come valore di riferimento per la crescita */
+      for (i = 0; i < Oparams.parnum; i++)
+	a0I[i] = typesArr[typeOfPart[i]].sax[0];
+#else
 #ifdef MD_POLYDISP
       a0I = axaP[0];
 #else
       a0I = Oparams.a[0];
+#endif
 #endif
       rcutIni = Oparams.rcut;
       target = cbrt(OprogStatus.targetPhi/calc_phi());
@@ -1173,6 +1265,7 @@ void scale_Phi(void)
 	distMin = get_min_dist_NNL(i, &j, rC, rD, shift);
       else
 	distMin = get_min_dist(i, &j, rC, rD, shift);
+      
       if (calcdist_retcheck)
 	continue;
       if (j == -1 && !OprogStatus.useNNL)
@@ -1236,6 +1329,9 @@ void scale_Phi(void)
 	    }
 	}
 #endif
+#ifdef EDHE_FLEX
+      axai = typesArr[typeOfPart[i]].sax[0];
+#else
 #ifdef MD_POLYDISP
       axai = axaP[i];
 #else
@@ -1243,6 +1339,7 @@ void scale_Phi(void)
 	axai = Oparams.a[0];
       else
 	axai = Oparams.a[1];
+#endif
 #endif
       if (fabs(axa[i] / axai - target) < OprogStatus.axestol)
 	{
@@ -1263,6 +1360,9 @@ void scale_Phi(void)
 	if (axa[i]>3.0||axb[i]>3.0||axc[i]>3.0)
 	  printf("%d-(%f,%f,%f) ", i, axa[i], axb[i], axc[i]);
     }
+#endif
+#ifdef MD_SUPERELLIPSOID
+  phi = calc_phi();
 #endif
   printf("Scaled axes succesfully phi=%.8G\n", phi);
 #if 0
@@ -1292,9 +1392,22 @@ void scale_Phi(void)
   if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
     {
       R2u();
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  printf("i=%d axa=%.15G axb=%15G axc=%.15G\n", i, axa[i], axb[i], axc[i]);
+	  distMin=check_dist_min(i, NULL);
+	  if (distMin < 0.0)
+	    {
+	      printf("Prima distanza negativa per i=%d = %.15G\n", i, distMin);
+	    }
+	}
       ENDSIM = 1;
       /* riduce gli ellissoidi alle dimensioni iniziali e comprime il volume */
+#ifdef EDHE_FLEX
+      factor = calc_safe_factor();
+#else
       factor = a0I/axa[0];
+#endif
       Oparams.rcut = rcutIni;
 #if 0
       Oparams.a[0] *= factor;
@@ -1305,6 +1418,16 @@ void scale_Phi(void)
       Oparams.c[1] *= factor;
 #endif
       scale_coords(factor);
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (ENDSIM)
+	OprogStatus.targetPhi = 0.0;
+      distMin=check_dist_min(i, NULL);
+      if (distMin < 0.0)
+	{
+	  printf("distanza negativa per i=%d = %.15G\n", i, distMin);
+	}
     }
 }
 
@@ -2048,7 +2171,10 @@ void bumpHS(int i, int j, double *W)
   invmj = 1.0/typesArr[typej].m; 
 #endif 
   denom = invmi + invmj; 
-  sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 
+  if (OprogStatus.targetPhi > 0.0)
+    sigSq = Sqr(axa[i]+axa[j]); 
+  else
+    sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 
 #ifdef MD_LXYZ
   rxij = rx[i] - rx[j];
   if (fabs (rxij) > L2[0])
@@ -2171,8 +2297,8 @@ int are_spheres(int i, int j)
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
 #ifdef MD_SUPERELLIPSOID
-  if (typesArr[type1].n[0]!=1.0 || typesArr[type1].n[1]!=1.0 || typesArr[type1].n[2]!=1.0 ||
-      typesArr[type2].n[0]!=1.0 || typesArr[type2].n[1]!=1.0 || typesArr[type2].n[2]!=1.0)
+  if (typesArr[type1].n[0]!=2.0 || typesArr[type1].n[1]!=2.0 || typesArr[type1].n[2]!=2.0 ||
+      typesArr[type2].n[0]!=2.0 || typesArr[type2].n[1]!=2.0 || typesArr[type2].n[2]!=2.0)
     return 0;
 #endif
   if (typesArr[type1].sax[0] == typesArr[type1].sax[1] &&
@@ -2376,9 +2502,18 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #ifdef MD_HANDLE_INFMASS
   check_inf_mass_itens(typei, typej, &infMass_i, &infMass_j, &infItens_i, &infItens_j);
 #endif
-  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     { 
@@ -2413,9 +2548,18 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
   na = (j < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   na = 0;
-  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -4021,9 +4165,18 @@ void fdjac(int n, double x[], double fvec[], double **df,
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[iA];
-  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[iA]);
+      invbSq[na] = 1/Sqr(axb[iA]);
+      invcSq[na] = 1/Sqr(axc[iA]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -4074,9 +4227,18 @@ void fdjac(int n, double x[], double fvec[], double **df,
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[iB];
-  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[iB]);
+      invbSq[na] = 1/Sqr(axb[iB]);
+      invcSq[na] = 1/Sqr(axc[iB]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -4229,9 +4391,18 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -4268,9 +4439,18 @@ void upd2tGuess(int i, int j, double shift[3], double tGuess)
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -4379,9 +4559,18 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -4419,9 +4608,18 @@ void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, double shift
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -4598,10 +4796,22 @@ void fdjacDistNeg5(int n, double x[], double fvec[], double **df,
       for (k1 = 0; k1 < 3; k1++)
 	rDC[k1] = rD[k1] - x[k1];
 #ifdef EDHE_FLEX
-      for (kk=0; kk < 3; kk++)
+      if (OprogStatus.targetPhi > 0.0)
 	{
-	  axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
-	  axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	  axi[0] = axa[iA];
+	  axi[1] = axb[iA];
+	  axi[2] = axc[iA];
+	  axj[0] = axa[iB];
+	  axj[1] = axb[iB];
+	  axj[2] = axc[iB];
+	}
+      else
+	{
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
+	      axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	    }
 	}
       if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axi[0],axi[1],axi[2])+max3(axj[0],axj[1],axj[2])))
 	{
@@ -4722,10 +4932,22 @@ void fdjacDistNeg(int n, double x[], double fvec[], double **df,
       for (k1 = 0; k1 < 3; k1++)
 	rDC[k1] = x[k1+3] - x[k1];
 #ifdef EDHE_FLEX
-      for (kk=0; kk < 3; kk++)
+      if (OprogStatus.targetPhi > 0.0)
 	{
-	  axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
-	  axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	  axi[0] = axa[iA];
+	  axi[1] = axb[iA];
+	  axi[2] = axc[iA];
+	  axj[0] = axa[iB];
+	  axj[1] = axb[iB];
+	  axj[2] = axc[iB];
+	}
+      else
+	{
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
+	      axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	    }
 	}
       if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axi[0],axi[1],axi[2])+max3(axj[0],axj[1],axj[2])))
 	{
@@ -5154,12 +5376,24 @@ void guess_dist(int i, int j,
   int typei, typej;
   typei = typeOfPart[i];
   typej = typeOfPart[j];
-  saA[0] = typesArr[typei].sax[0];
-  saA[1] = typesArr[typei].sax[1];
-  saA[2] = typesArr[typei].sax[2];
-  saB[0] = typesArr[typej].sax[0];
-  saB[1] = typesArr[typej].sax[1];
-  saB[2] = typesArr[typej].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      saA[0] = axa[i];
+      saA[1] = axb[i];
+      saA[2] = axc[i];
+      saB[0] = axa[j];
+      saB[1] = axb[j];
+      saB[2] = axc[j];
+    }
+  else
+    {
+      saA[0] = typesArr[typei].sax[0];
+      saA[1] = typesArr[typei].sax[1];
+      saA[2] = typesArr[typei].sax[2];
+      saB[0] = typesArr[typej].sax[0];
+      saB[1] = typesArr[typej].sax[1];
+      saB[2] = typesArr[typej].sax[2];
+    }
 #else
   saA[0] = axa[i];
   saA[1] = axb[i];
@@ -5311,13 +5545,31 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
   typej = typeOfPart[j];
-  axaiF = typesArr[typei].sax[0];
-  axbiF = typesArr[typei].sax[1];
-  axciF = typesArr[typei].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      axaiF = axa[i];
+      axbiF = axb[i];
+      axciF = axc[i];
+    }
+  else
+    {
+      axaiF = typesArr[typei].sax[0];
+      axbiF = typesArr[typei].sax[1];
+      axciF = typesArr[typei].sax[2];
+    }
   minaxA = min3(axaiF,axbiF,axciF);
-  axajF = typesArr[typej].sax[0];
-  axbjF = typesArr[typej].sax[1];
-  axcjF = typesArr[typej].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      axajF = axa[j];
+      axbjF = axb[j];
+      axcjF = axc[j];
+    }
+  else
+    {
+      axajF = typesArr[typej].sax[0];
+      axbjF = typesArr[typej].sax[1];
+      axcjF = typesArr[typej].sax[2];
+    }
   minaxB = min3(axajF,axbjF,axcjF);
 #else
   minaxA = min3(axa[i],axb[i],axc[i]);
@@ -5339,11 +5591,20 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
-  if (OprogStatus.targetPhi > 0)
+  if (OprogStatus.targetPhi > 0.0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
@@ -5379,12 +5640,21 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1.0/Sqr(typesArr[typej].sax[0]);
-  MD_DEBUG50(printf("BOH semiasse a del tipo %d: %f\n",typei, typesArr[typej].sax[0]));
-  invbSq[na] = 1.0/Sqr(typesArr[typej].sax[1]);
-  invcSq[na] = 1.0/Sqr(typesArr[typej].sax[2]);
-  MD_DEBUG50(printf("sax of %d %f %f %f %f %f %f\n", i, typesArr[typei].sax[0],typesArr[typei].sax[1],
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+  else  
+    {
+      invaSq[na] = 1.0/Sqr(typesArr[typej].sax[0]);
+      MD_DEBUG50(printf("BOH semiasse a del tipo %d: %f\n",typei, typesArr[typej].sax[0]));
+      invbSq[na] = 1.0/Sqr(typesArr[typej].sax[1]);
+      invcSq[na] = 1.0/Sqr(typesArr[typej].sax[2]);
+      MD_DEBUG50(printf("sax of %d %f %f %f %f %f %f\n", i, typesArr[typei].sax[0],typesArr[typei].sax[1],
 	 typesArr[typei].sax[2], invaSq[na], invbSq[na], invbSq[na]));
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -6152,9 +6422,18 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #else
   if (OprogStatus.targetPhi > 0)
     {
@@ -6169,9 +6448,18 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+    }
 #else
   if (OprogStatus.targetPhi > 0)
     {
@@ -6804,7 +7092,10 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
   /* calcola cmq l'urto fra le due core spheres */
   typei = typeOfPart[i];
   typej = typeOfPart[j];
-  sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 
+  if (OprogStatus.targetPhi > 0.0)
+    sigSq = Sqr(axa[i]+axa[j]); 
+  else
+    sigSq = Sqr(typesArr[typei].sax[0]+typesArr[typej].sax[0]); 
   tInt = Oparams.time - atomTime[j];
   dr[0] = rx[i] - (rx[j] + vx[j] * tInt) - shift[0];	  
   dv[0] = vx[i] - vx[j];
@@ -7577,9 +7868,18 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   MD_DEBUG35(printf("i=%d nplane=%d rAC=%f %f %fi rC=%f %f %f\n", i, nplane, rAC[0], rAC[1], rAC[2], rCx, rCy, rCz));
   MD_DEBUG35(printf("r(%d)=%f %f %f time=%.15G\n", i, rx[i], ry[i], rz[i], Oparams.time));
   typei = typeOfPart[i];
-  invaSq = 1/Sqr(typesArr[typei].sax[0]);
-  invbSq = 1/Sqr(typesArr[typei].sax[1]);
-  invcSq = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq = 1/Sqr(axa[i]);
+      invbSq = 1/Sqr(axb[i]);
+      invcSq = 1/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSq = 1/Sqr(typesArr[typei].sax[0]);
+      invbSq = 1/Sqr(typesArr[typei].sax[1]);
+      invcSq = 1/Sqr(typesArr[typei].sax[2]);
+    }
   tRDiagR(i, Xa, invaSq, invbSq, invcSq, R[i]);
 #ifdef MD_ASYM_ITENS
   tRDiagR(i, Ia, typesArr[typei].I[0], typesArr[typei].I[1], typesArr[typei].I[2], R[i]);
@@ -7769,28 +8069,58 @@ int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
 	{
 	  vecg[1] = ry[na]+vy[na]*delt;
 	  vecg[2] = rz[na]+vz[na]*delt;
-    	  if (nplane==1)
-	    vecg[0] = rx[na]+vx[na]*delt+typesArr[typeOfPart[na]].sax[0];
-	  else 
-	    vecg[0] = rx[na]+vx[na]*delt-typesArr[typeOfPart[na]].sax[0];
+	  if (OprogStatus.targetPhi > 0.0)
+	    {
+	      if (nplane==1)
+		vecg[0] = rx[na]+vx[na]*delt+axa[na];
+	      else 
+		vecg[0] = rx[na]+vx[na]*delt-axa[na];
+	    }
+	  else
+	    {
+	      if (nplane==1)
+		vecg[0] = rx[na]+vx[na]*delt+typesArr[typeOfPart[na]].sax[0];
+	      else 
+		vecg[0] = rx[na]+vx[na]*delt-typesArr[typeOfPart[na]].sax[0];
+	    }	  
 	}
       else if (nplane < 4)
 	{
 	  vecg[0] = rx[na]+vx[na]*delt;
 	  vecg[2] = rz[na]+vz[na]*delt;
-    	  if (nplane==3)
-	    vecg[1] = ry[na]+vy[na]*delt+typesArr[typeOfPart[na]].sax[1];
-	  else 
-	    vecg[1] = ry[na]+vy[na]*delt-typesArr[typeOfPart[na]].sax[1];
+	  if (OprogStatus.targetPhi > 0.0)
+	    {
+	      if (nplane==3)
+		vecg[1] = ry[na]+vy[na]*delt+axb[na];
+	      else 
+		vecg[1] = ry[na]+vy[na]*delt-axb[na];
+	    }
+	  else
+	    {
+	      if (nplane==3)
+		vecg[1] = ry[na]+vy[na]*delt+typesArr[typeOfPart[na]].sax[1];
+	      else 
+		vecg[1] = ry[na]+vy[na]*delt-typesArr[typeOfPart[na]].sax[1];
+	    }	      
 	}
       else if (nplane < 6)
 	{
 	  vecg[0] = rx[na]+vx[na]*delt;
 	  vecg[1] = ry[na]+vy[na]*delt;
-	  if (nplane==3)
-	    vecg[2] = rz[na]+vz[na]*delt+typesArr[typeOfPart[na]].sax[2];
-	  else 
-	    vecg[2] = rz[na]+vz[na]*delt-typesArr[typeOfPart[na]].sax[2];
+	  if (OprogStatus.targetPhi > 0.0)
+	    {
+	      if (nplane==3)
+		vecg[2] = rz[na]+vz[na]*delt+axc[na];
+	      else 
+		vecg[2] = rz[na]+vz[na]*delt-axc[na];
+	    }
+	  else
+	    {
+	      if (nplane==3)
+		vecg[2] = rz[na]+vz[na]*delt+typesArr[typeOfPart[na]].sax[2];
+	      else 
+		vecg[2] = rz[na]+vz[na]*delt-typesArr[typeOfPart[na]].sax[2];
+	    }	      
 	}
 	  
       if (vecg[4] < tsup)
@@ -7848,11 +8178,20 @@ int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw)
       delt = vecg[4]-Oparams.time;
       vecg[0] = rx[na]+vx[na]*delt;
       vecg[1] = ry[na]+vy[na]*delt;
-      if (nplane==1)
-	vecg[2] = rz[na]+vz[na]*delt+typesArr[typeOfPart[na]].sax[0];
+      if (OprogStatus.targetPhi > 0.0)
+	{
+	  if (nplane==1)
+	    vecg[2] = rz[na]+vz[na]*delt+axa[na];
+	  else
+	    vecg[2] = rz[na]+vz[na]*delt-axa[na];
+	}
       else
-	vecg[2] = rz[na]+vz[na]*delt-typesArr[typeOfPart[na]].sax[0];
- 
+	{
+	  if (nplane==1)
+	    vecg[2] = rz[na]+vz[na]*delt+typesArr[typeOfPart[na]].sax[0];
+	  else
+	    vecg[2] = rz[na]+vz[na]*delt-typesArr[typeOfPart[na]].sax[0];
+	}
       if (vecg[4] < tsup)
 	return 1;
       return 0;
@@ -8581,6 +8920,9 @@ void PredictEvent (int na, int nb)
 		      if (OprogStatus.targetPhi > 0)
 			{
 			  sigSq = Sqr(max_ax(na)+max_ax(n)+OprogStatus.epsd);
+			  //printf("maxax[n]=%.15G max_ax(n)=%.15G\n", maxax[n], max_ax(n));
+			  //printf("sigSqHere=%.15G (%.15G)\n", sigSq, Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd));
+
 			}
 		      else
 		       {
@@ -8671,9 +9013,13 @@ void PredictEvent (int na, int nb)
 		      acHC = ac = 0;
 		      bcHC = bc = 0;
 #ifdef EDHE_FLEX
-		      if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+		      if (OprogStatus.targetPhi <= 0.0)
 			{
-			  collCode = MD_EVENT_NONE;
+			  /* during growth disable interactions between spots */
+			  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+			    {
+			      collCode = MD_EVENT_NONE;
+			    }
 			}
 		      MD_DEBUG40(if (collCode!=MD_EVENT_NONE) printf("na=%d ac=%d n=%d bc=%d\n", na, ac, n, bc));
 		      MD_DEBUG(if (collCode!=MD_EVENT_NONE) check_these_bonds(na, n, shift, evtime));

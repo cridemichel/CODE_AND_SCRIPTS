@@ -716,6 +716,7 @@ struct progStatus
   double ENmin;
   double ENmax;
 #ifdef EDHE_FLEX
+  int n_gauleg; /* ordine */
   char par2save[PAR2SAVE_LEN];
   int stripStore;
   double Tf; /* temperatura finale per il quench */
@@ -1055,6 +1056,7 @@ struct pascii opro_ascii[] =
   {"PE",           OS(PE),                 PE_POINTS,    1,  "%d"},
 #ifdef EDHE_FLEX
   {"par2save",     &OS(par2save),          1, PAR2SAVE_LEN,  "%s"},
+  {"n_gauleg",     &OS(n_gauleg),          1, 1,             "%d"},
   {"stripStore",   &OS(stripStore),        1, 1,             "%d"},
   {"Tf",           &OS(Tf),                1, 1,             "%.15G"},
   {"xi",           &OS(xi),                1, 1,             "%.15G"},
@@ -1438,6 +1440,7 @@ struct singlePar OsinglePar[] = {
   {"stripStore",  &OprogStatus.stripStore,  INT},
   {"Tf",          &OprogStatus.Tf,          CT},
   {"xi",          &OprogStatus.xi,          CT},
+  {"n_gauleg",    &OprogStatus.n_gauleg,    INT},
 #endif
   {"ENmin",      &OprogStatus.ENmin,        CT},
   {"ENmax",      &OprogStatus.ENmax,        CT},

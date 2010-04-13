@@ -85,7 +85,7 @@ int is_superellipse(int i)
 {
   return 1;
   MD_DEBUG37(return 1);
-  if (typesArr[typeOfPart[i]].n[0]==1.0 && typesArr[typeOfPart[i]].n[1]==1.0)
+  if (typesArr[typeOfPart[i]].n[0]==2.0 && typesArr[typeOfPart[i]].n[1]==2.0)
     return 0;
   else 
     return 1;
@@ -154,12 +154,21 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
 }
 
 #else
-double calcf(double *x,int i)
+double calcf(double *x, int i)
 {
   double a,b,c,n1,n2,n3;
-  a = typesArr[typeOfPart[i]].sax[0];
-  b = typesArr[typeOfPart[i]].sax[1];
-  c = typesArr[typeOfPart[i]].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      a = axa[i];
+      b = axb[i];
+      c = axc[i];
+    }
+  else
+    {
+      a = typesArr[typeOfPart[i]].sax[0];
+      b = typesArr[typeOfPart[i]].sax[1];
+      c = typesArr[typeOfPart[i]].sax[2];
+    }
   n1 = typesArr[typeOfPart[i]].n[0];
   n2 = typesArr[typeOfPart[i]].n[1];
   n3 = typesArr[typeOfPart[i]].n[2];
@@ -172,9 +181,18 @@ void calcfx(double *fx, double x, double y, double z, int i)
   double a, b, c, n1, n2, n3;
   double xa, yb, A, inve2;
   double an1, bn2, cn3;
-  a = typesArr[typeOfPart[i]].sax[0];
-  b = typesArr[typeOfPart[i]].sax[1];
-  c = typesArr[typeOfPart[i]].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      a = axa[i];
+      b = axb[i];
+      c = axc[i];
+    }
+  else
+    {
+      a = typesArr[typeOfPart[i]].sax[0];
+      b = typesArr[typeOfPart[i]].sax[1];
+      c = typesArr[typeOfPart[i]].sax[2];
+    }
   n1 = typesArr[typeOfPart[i]].n[0];
   n2 = typesArr[typeOfPart[i]].n[1];
   n3 = typesArr[typeOfPart[i]].n[2];
@@ -192,9 +210,18 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   /* calcola fxx nel riferimento del corpo rigido */
   double a, b, c, n1, n2, n3;
   double an1, bn2, cn3;
-  a = typesArr[typeOfPart[i]].sax[0];
-  b = typesArr[typeOfPart[i]].sax[1];
-  c = typesArr[typeOfPart[i]].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      a = axa[i];
+      b = axb[i];
+      c = axc[i];
+    }
+  else
+    {
+      a = typesArr[typeOfPart[i]].sax[0];
+      b = typesArr[typeOfPart[i]].sax[1];
+      c = typesArr[typeOfPart[i]].sax[2];
+    }
   n1 = typesArr[typeOfPart[i]].n[0];
   n2 = typesArr[typeOfPart[i]].n[1];
   n3 = typesArr[typeOfPart[i]].n[2];
@@ -545,11 +572,23 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
       for (k1 = 0; k1 < 3; k1++)
 	rDC[k1] = x[k1+3] - x[k1];
 #ifdef EDHE_FLEX
-      for (kk=0; kk < 3; kk++)
-	{
-	  axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
-	  axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
-	}
+	if (OprogStatus.targetPhi > 0.0)
+	  {
+	    axi[0] = axa[iA];
+	    axi[1] = axb[iA];
+	    axi[2] = axc[iA];
+	    axj[0] = axa[iB];
+	    axj[1] = axb[iB];
+	    axj[2] = axc[iB];
+	  }
+	else
+	  {
+	    for (kk=0; kk < 3; kk++)
+	      {
+		axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
+		axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	      }
+	  }
       if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axi[0],axi[1],axi[2])+max3(axj[0],axj[1],axj[2])))
 	{
 	  fdjac_disterr = 1;	
@@ -695,10 +734,22 @@ void fdjacDistNeg5SE(int n, double x[], double fvec[], double **df,
       for (k1 = 0; k1 < 3; k1++)
 	rDC[k1] = rD[k1] - x[k1];
 #ifdef EDHE_FLEX
-      for (kk=0; kk < 3; kk++)
+      if (OprogStatus.targetPhi > 0.0)
 	{
-	  axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
-	  axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	  axi[0] = axa[iA];
+	  axi[1] = axb[iA];
+	  axi[2] = axc[iA];
+	  axj[0] = axa[iB];
+	  axj[1] = axb[iB];
+	  axj[2] = axc[iB];
+	}
+      else
+	{
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      axi[kk] = typesArr[typeOfPart[iA]].sax[kk];
+	      axj[kk] = typesArr[typeOfPart[iB]].sax[kk];
+	    }
 	}
       if (scalProd(rDC, fx) < 0.0 && calc_norm(rDC) > (max3(axi[0],axi[1],axi[2])+max3(axj[0],axj[1],axj[2])))
 	{
@@ -796,9 +847,18 @@ void fdjacNeighPlaneSE(int n, double x[], double fvec[], double **df,
   MD_DEBUG2(print_matrix(RA, 3));
 #ifdef EDHE_FLEX
   typei = typeOfPart[iA];  
-  invaSqN = 1/Sqr(typesArr[typei].sax[0]);
-  invbSqN = 1/Sqr(typesArr[typei].sax[1]);
-  invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSqN = 1/Sqr(axa[iA]);
+      invbSqN = 1/Sqr(axb[iA]);
+      invcSqN = 1/Sqr(axc[iA]);
+    }
+  else
+    {
+      invaSqN = 1/Sqr(typesArr[typei].sax[0]);
+      invbSqN = 1/Sqr(typesArr[typei].sax[1]);
+      invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #else
   invaSqN = 1/Sqr(axa[iA]);
   invbSqN = 1/Sqr(axb[iA]);
@@ -919,9 +979,18 @@ void funcs2beZeroedNeighPlaneSE(int n, double x[], double fvec[], int i)
   na = (i < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];  
-  invaSqN = 1/Sqr(typesArr[typei].sax[0]);
-  invbSqN = 1/Sqr(typesArr[typei].sax[1]);
-  invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSqN = 1.0/Sqr(axa[i]);
+      invbSqN = 1.0/Sqr(axb[i]);
+      invcSqN = 1.0/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSqN = 1/Sqr(typesArr[typei].sax[0]);
+      invbSqN = 1/Sqr(typesArr[typei].sax[1]);
+      invcSqN = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #else
   invaSqN = 1.0/Sqr(axa[i]);
   invbSqN = 1.0/Sqr(axb[i]);
@@ -1519,9 +1588,18 @@ void funcs2beZeroedSE(int n, double x[], double fvec[], int i, int j, double shi
 #ifdef EDHE_FLEX
   na = 0;
   typei = typeOfPart[i];
-  invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[i]);
+      invbSq[na] = 1/Sqr(axb[i]);
+      invcSq[na] = 1/Sqr(axc[i]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typei].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typei].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typei].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -1562,9 +1640,18 @@ void funcs2beZeroedSE(int n, double x[], double fvec[], int i, int j, double shi
 #ifdef EDHE_FLEX
   na = 0;
   typej = typeOfPart[j];
-  invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
-  invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
-  invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      invaSq[na] = 1/Sqr(axa[j]);
+      invbSq[na] = 1/Sqr(axb[j]);
+      invcSq[na] = 1/Sqr(axc[j]);
+    }
+  else
+    {
+      invaSq[na] = 1/Sqr(typesArr[typej].sax[0]);
+      invbSq[na] = 1/Sqr(typesArr[typej].sax[1]);
+      invcSq[na] = 1/Sqr(typesArr[typej].sax[2]);
+    }
 #elif defined(MD_POLYDISP)
   if (OprogStatus.targetPhi > 0)
     {
@@ -2359,13 +2446,31 @@ void distSDSupEll(int i, int j, double shift[3], double *vecg, double lambda, in
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
   typej = typeOfPart[j];
-  axaiF = typesArr[typei].sax[0];
-  axbiF = typesArr[typei].sax[1];
-  axciF = typesArr[typei].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      axaiF = axa[i];
+      axbiF = axb[i];
+      axciF = axc[i];
+    }
+  else
+    {
+      axaiF = typesArr[typei].sax[0];
+      axbiF = typesArr[typei].sax[1];
+      axciF = typesArr[typei].sax[2];
+    }
   minaxicg = min3(axaiF, axbiF, axciF);
-  axajF = typesArr[typej].sax[0];
-  axbjF = typesArr[typej].sax[1];
-  axcjF = typesArr[typej].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      axajF = axa[j];
+      axbjF = axb[j];
+      axcjF = axc[j];
+    }
+  else
+    {
+      axajF = typesArr[typej].sax[0];
+      axbjF = typesArr[typej].sax[1];
+      axcjF = typesArr[typej].sax[2];
+    }  
   minaxjcg = min3(axajF, axbjF, axcjF);
 #elif defined(MD_POLYDISP)
   minaxicg = min3(axaP[i], axbP[i], axcP[i]);
@@ -2409,9 +2514,18 @@ void distSD_NNL(int i, double *vecg, double lambda, int halfspring)
   icg = i;
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
-  axaiF = typesArr[typei].sax[0];
-  axbiF = typesArr[typei].sax[1];
-  axciF = typesArr[typei].sax[2];
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      axaiF = axa[i];
+      axbiF = axb[i];
+      axciF = axc[i];
+    }
+  else
+    {
+      axaiF = typesArr[typei].sax[0];
+      axbiF = typesArr[typei].sax[1];
+      axciF = typesArr[typei].sax[2];
+    }
   minaxicg = min3(axaiF, axbiF, axciF);
 #endif
   cghalfspring = halfspring;
@@ -2484,5 +2598,425 @@ void calcfxLabSE(int i, double *x, double *r, double **Ri, double fx[3])
   lab2body(i, &x[0], xpA, r, Ri);
   calcfx(fxp, xpA[0], xpA[1], xpA[2], i);
   body2lab_fx(i, fxp, fx, Ri);
+}
+/* ======================================== */
+#define EPS 1.0e-6
+#define JMAX 20
+#define JMAXP (JMAX+1)
+#define KRI 5
+#define FUNC(x) ((*func)(x))
+int polinterrSQ, growthSQ;
+void polintSQ(double xain[KRI], double yain[KRI], int n, double x, double *y, double *dy)
+/* Given arrays xa[1..n] and ya[1..n], and given a value x, this routine returns a value y,
+ * and an error estimate dy. If P(x) is the polynomial of degree N-1 such that P(xai) = yai, 
+ * i = 1, . . . , n, then the returned value y = P(x).*/
+{ 
+  int i,m,ns=1; 
+  double den,dif,dift,ho,hp,w, xa[KRI+1], ya[KRI+1];
+  double c[KRI+1], d[KRI+1];
+  for (i=0; i < n; i++)
+    {
+      xa[i+1] = xain[i];
+      ya[i+1] = yain[i];
+    }
+  dif=fabs(x-xa[1]); 
+  //c=vector(n); 
+  //d=vector(n); 
+  for (i=1;i<=n;i++) 
+    { 
+      /* Here we find the index ns of the closest table entry,*/
+      if ( (dift=fabs(x-xa[i])) < dif) 
+	{ 
+	  ns=i; 
+	  dif=dift;
+	} 
+      c[i]=ya[i];
+      /* and initialize the tableau of c s and d s.*/
+      d[i]=ya[i]; 
+    } 
+  *y=ya[ns--];
+  /* This is the initial approximation to y.*/
+  for (m=1;m<n;m++) 
+    { 
+      /* For each column of the tableau,*/
+      for (i=1;i<=n-m;i++)
+	{
+	  /* we loop over the current c s and d s and update them.*/
+	  ho=xa[i]-x; 
+	  hp=xa[i+m]-x; 
+	  w=c[i+1]-d[i]; 
+	  if ( (den=ho-hp) == 0.0) 
+	    {
+	      polinterrSQ=1;
+	      return ;
+	      //nrerror("Error in routine polint"); 
+	    }
+	  /* This error can occur only if two input xa s are (to within roundoff)*/
+	  den=w/den; d[i]=hp*den; 
+	  /*Here the c s and d s are updated. */
+	  c[i]=ho*den; 
+	} 
+      *y += (*dy=(2*ns < (n-m) ? c[ns+1] : d[ns--])); 
+      /* After each column in the tableau is completed, we decide which correction, 
+       * c or d, we want to add to our accumulating value of y, i.e., which path to take through the tableau 
+       * forking up or down. We do this in such a way as to take the most  straight line  route through the 
+       * tableau to its apex, updating ns accordingly to keep track of where we are. 
+       * This route keeps the partial approximations centered (insofar as possible) on the target x. 
+       * The last dy added is thus the error indication. */
+    } 
+}
+double trapzdInt(double (*func)(double), double a, double b)
+/* This routine computes the nth stage of refinement of an extended trapezoidal rule. func is input
+   as a pointer to the function to be integrated between limits a and b, also input. When called with
+   n=1, the routine returns the crudest estimate of b
+   a f(x)dx. Subsequent calls with n=2,3,...
+   (in that sequential order) will improve the accuracy by adding 2n-2 additional interior points. */
+{
+  double sum,dx,x1,x2;
+  //static double s;
+  int it,j, n;
+  n=100;
+  dx = (a-b)/n;
+  sum = 0;
+  for (j = 0; j < n-1; j++)
+    { 
+      x1 = a+dx*j;
+      x2 = x1 + dx; 
+      sum+=dx*0.5*((*func)(x1)+(*func)(x2));
+    }
+  return sum;
+}
+
+
+double trapzd(double (*func)(double), double a, double b, int n)
+/* This routine computes the nth stage of refinement of an extended trapezoidal rule. func is input
+   as a pointer to the function to be integrated between limits a and b, also input. When called with
+   n=1, the routine returns the crudest estimate of b
+   a f(x)dx. Subsequent calls with n=2,3,...
+   (in that sequential order) will improve the accuracy by adding 2n-2 additional interior points. */
+{
+  double x,tnm,sum,del;
+  static double s;
+  int it,j;
+  if (n == 1) 
+    {
+      return (s=0.5*(b-a)*(FUNC(a)+FUNC(b)));
+    } 
+  else 
+    {
+      for (it=1,j=1;j<n-1;j++) it <<= 1;
+      tnm=it;
+      del=(b-a)/tnm; /* This is the spacing of the points to be added.*/
+	x=a+0.5*del;
+      for (sum=0.0,j=1;j<=it;j++,x+=del) sum += FUNC(x);
+      s=0.5*(s+(b-a)*sum/tnm); /* This replaces s by its refined value. */
+	return s;
+    }
+}
+/*Here EPS is the fractional accuracy desired, as determined by the extrapolation error estimate;
+  JMAX limits the total number of steps; K is the number of points used in the extrapolation.*/
+double qromb(double (*func)(double), double a, double b)
+/* Returns the integral of the function func from a to b. Integration is performed by Romberg’s
+   method of order 2K, where, e.g., K=2 is Simpson’s rule. */
+{
+  double ss,dss=0.0;
+  double s[JMAXP],h[JMAXP+1]; /* These store the successive trapezoidal approximations */
+  int j; /*and their relative stepsizes.*/
+  h[1]=1.0;
+  for (j=1;j<=JMAX;j++) 
+    {
+      s[j]=trapzd(func,a,b,j);
+      if (j >= KRI) 
+	{
+	  polinterrSQ=0;
+	  polintSQ(&h[j-KRI],&s[j-KRI],KRI,0.0,&ss,&dss);
+	  if (fabs(dss) <= EPS*fabs(ss)) 
+	    return ss;
+	  if (polinterrSQ)
+	    {
+	      printf("interpolation error\n");
+	      exit(-1);
+	    }
+	}
+      h[j+1]=0.25*h[j];
+      /* This is a key step: The factor is 0.25 even though the stepsize is decreased by only
+	 0.5. This makes the extrapolation a polynomial in h2 as allowed by equation (4.2.1),
+	 not just a polynomial in h.*/
+    }
+  printf("Too many steps in routine qromb");
+  exit(-1);
+  return 0.0; 
+}
+double *volSQ;
+#define GAULEG_EPS 3.0e-15 /* EPS is the relative precision.*/
+double *qgaus_w, *qgaus_x, *gauleg_w, *gauleg_x;
+void gauleg(double x1, double x2, double *x, double* w, int n)
+/* Given the lower and upper limits of integration x1 and x2, and given n, this routine returns
+   arrays x[1..n] and w[1..n] of length n, containing the abscissas and weights of the Gauss-
+   Legendre n-point quadrature formula.*/
+{
+  int m,j,i;
+  double pi, z1,z,xm,xl,pp,p3,p2,p1; /*High precision is a good idea for this routine.*/
+  pi = 2.0*acos(0.0);
+  m=(n+1)/2; /* The roots are symmetric in the interval, so*/
+  xm=0.5*(x2+x1); /* we only have to find half of them. */
+  xl=0.5*(x2-x1);
+  for (i=1;i<=m;i++) { /* Loop over the desired roots.*/
+    //z=cos(3.141592654*(i-0.25)/(n+0.5));
+      z=cos(pi*(i-0.25)/(n+0.5)); 
+    /* Starting with the above approximation to the ith root, we enter the main loop of
+       refinement by Newton’s method. */
+    do {
+      p1=1.0;
+      p2=0.0;
+      for (j=1;j<=n;j++) { /* Loop up the recurrence relation to get the*/
+	p3=p2; /* Legendre polynomial evaluated at z.*/
+	p2=p1;
+	p1=((2.0*j-1.0)*z*p2-(j-1.0)*p3)/j;
+      }
+      /*p1 is now the desired Legendre polynomial. We next compute pp, its derivative,
+	by a standard relation involving also p2, the polynomial of one lower order.
+       */
+      pp=n*(z*p1-p2)/(z*z-1.0);
+      z1=z;
+      z=z1-p1/pp; /* Newton’s method.*/
+    } while (fabs(z-z1) > GAULEG_EPS);
+    x[i]=xm-xl*z; /* Scale the root to the desired interval,*/
+    x[n+1-i]=xm+xl*z; /* and put in its symmetric counterpart.*/
+    w[i]=2.0*xl/((1.0-z*z)*pp*pp); /* Compute the weight */
+    w[n+1-i]=w[i]; /* and its symmetric counterpart.*/
+  }
+}
+void init_gauleg_weights(void)
+{
+  int n, i;
+  n = OprogStatus.n_gauleg;
+  gauleg_x = malloc(sizeof(double)*(n+1));
+  gauleg_w = malloc(sizeof(double)*(n+1));
+  qgaus_x = malloc(sizeof(double)*(n/2+1));
+  qgaus_w = malloc(sizeof(double)*(n/2+1));
+  if (n%2 != 0)
+    {
+      printf("ERROR: n_gauleg must be a multiple of 2\n");
+      exit(-1);
+    }
+  gauleg(-1.0,1.0,gauleg_x,gauleg_w, n);
+  qgaus_x[0] = 0.0;
+  qgaus_w[0] = 0.0;
+  //printf("x gaus = \n");
+  for (i = n/2+1; i <= n; i++)
+    {
+      qgaus_x[i-n/2] = gauleg_x[i];
+      qgaus_w[i-n/2] = gauleg_w[i]; 
+      //printf("qgaus_x[%d]=%.15G", i-n/2, qgaus_x[i-n/2]);
+    }
+  //printf("\n");
+  free(gauleg_x);
+  free(gauleg_w);
+}
+double qgaus(double (*func)(double), double a, double b)
+/* Returns the integral of the function func between a and b, by ten-point Gauss-Legendre integration:
+   the function is evaluated exactly ten times at interior points in the range of integration.*/
+{
+  int j;
+  double  xr,xm,dx,s;
+  /* The abscissas and weights.  First value of each array not used.*/
+#if 0 
+  static double x[]={0.0,0.1488743389,0.4333953941, 0.6794095682,0.8650633666,0.9739065285};
+  static double w[]={0.0,0.2955242247,0.2692667193, 0.2190863625,0.1494513491,0.0666713443};
+  int n=10;
+  static double w[] = {0.0,0.0775059479784209,0.0770398181639281,0.0761103619006262,0.0747231690579683,0.0728865823958041,0.0706116473912868,0.0679120458152339,0.0648040134566011,0.061306242492929,0.0574397690993916,0.0532278469839368,0.0486958076350722,0.0438709081856731,0.0387821679744716,0.0334601952825464,0.0279370069800163,0.0222458491941251,0.0164210583815049,0.0104982845214056,0.0045212770985331};
+  static double x[] = {0.0,0.0387724175060508,0.116084070675255,0.192697580701371,0.268152185007254,0.341994090825758,0.413779204371605,0.483075801686179,0.549467125095128,0.61255388966798,0.67195668461418,0.727318255189927,0.778305651426519,0.824612230833312,0.865959503212259,0.902098806968874,0.932812808278677,0.957916819213792,0.977259949983774,0.990726238699457,0.998237709710559};
+/*
+  static double w[] = {0.0,0.152753387130726,0.149172986472604,0.142096109318382,0.131688638449177,0.118194531961518,0.101930119817233,0.0832767415766291,0.0626720483330506,0.040601429767854,0.0176140071391506};
+  static double x[] = {0.0,0.0765265211334973,0.227785851141645,0.37370608871542,0.510867001950827,0.636053680726515,0.746331906460151,0.839116971822219,0.912234428251326,0.963971927277914,0.993128599185095};*/
+  int n = 40;
+#endif
+  int n;
+  n = OprogStatus.n_gauleg;
+  xm=0.5*(b+a);
+  xr=0.5*(b-a);
+  s=0; 
+  /* Will be twice the average value of the function, since the
+     ten weights (five numbers above each used twice) sum to 2.*/
+  for (j=1;j<=n/2;j++) 
+    {
+      dx=xr*qgaus_x[j];
+      s += qgaus_w[j]*((*func)(xm+dx)+(*func)(xm-dx));
+    }
+  return s *= xr; /* Scale the answer to the range of integration.*/
+}
+static double xsav;
+static double (*nrfunc)(double, double);
+double yy2(double x);
+double yy2_pf(double x);
+double KK=0.999999;
+double quad3d_pf(double (*func)(double, double), double x1, double x2)
+/*Returns the integral of a user-supplied function func over a three-dimensional region specified
+  by the limits x1, x2, and by the user-supplied functions yy1, yy2, z1, and z2, as defined in
+  (4.6.2). (The functions y1 and y2 are here called yy1 and yy2 to avoid conflict with the names
+  of Bessel functions in some C libraries). Integration is performed by calling qgaus recursively.*/
+{
+  double f1_pf(double x);
+  nrfunc=func;
+  return qgaus(f1_pf,x1,x2);
+}
+double quad3d(double (*func)(double, double), double x1, double x2)
+/*Returns the integral of a user-supplied function func over a three-dimensional region specified
+  by the limits x1, x2, and by the user-supplied functions yy1, yy2, z1, and z2, as defined in
+  (4.6.2). (The functions y1 and y2 are here called yy1 and yy2 to avoid conflict with the names
+  of Bessel functions in some C libraries). Integration is performed by calling qgaus recursively.*/
+{
+  double f1(double x);
+  nrfunc=func;
+  return qgaus(f1,x1,x2);
+}
+double f1_pf(double x) /*This is H of eq. (4.6.5).*/
+{
+  double f2(double y);
+  xsav=x;
+  return qgaus(f2,0.0,yy2_pf(x));
+}
+double f1(double x) /*This is H of eq. (4.6.5).*/
+{
+  double f2(double y);
+  xsav=x;
+  return qgaus(f2,0.0,yy2(x));
+}
+double f2(double y)
+{
+  return (*nrfunc)(xsav,y);
+}
+inline double funcSQ_pf(int t, double x, double y)
+{
+  double n1, n2, n3;
+  n1 = typesArr[t].n[0];
+  n2 = typesArr[t].n[1];
+  n3 = typesArr[t].n[2];
+  return 8.0*pow(1.0-pow(fabs(x), n1)-pow(fabs(y), n2),1.0/n3);
+}
+
+inline double funcSQ(int t, double x, double y)
+{
+  double a, b, c, n1, n2, n3;
+  if (growthSQ >= 0.0)
+    {
+      t = typeOfPart[growthSQ];
+      a = axa[growthSQ];
+      b = axb[growthSQ];
+      c = axc[growthSQ];
+    }
+  else
+    {
+      a = typesArr[t].sax[0];
+      b = typesArr[t].sax[1];
+      c = typesArr[t].sax[2];
+    }
+  n1 = typesArr[t].n[0];
+  n2 = typesArr[t].n[1];
+  n3 = typesArr[t].n[2];
+  return 8.0*c*pow(1.0-pow(fabs(x)/a, n1)-pow(fabs(y)/b, n2),1.0/n3);
+}
+int typeSQ;
+double yy2_pf(double x)
+{
+  double n1, n2;
+  int t;
+  t = typeSQ;
+  n1 = typesArr[t].n[0];
+  n2 = typesArr[t].n[1];
+  return pow(1.0-pow(x,n1),1.0/n2);
+}
+double yy2(double x)
+{
+  double a, b, n1, n2;
+  int t;
+  if (growthSQ >= 0)
+    {
+      t = typeOfPart[growthSQ];
+      a = axa[growthSQ];
+      b = axb[growthSQ];
+    }
+  else
+    {
+      t = typeSQ;
+      a = typesArr[t].sax[0];
+      b = typesArr[t].sax[1];
+    }
+  n1 = typesArr[t].n[0];
+  n2 = typesArr[t].n[1];
+  return b*pow(1.0-pow(x/a,n1),1.0/n2);
+}
+double funcSQwrap(double x, double y)
+{
+  return funcSQ(typeSQ, x, y);
+}
+double funcSQwrap_pf(double x, double y)
+{
+  return funcSQ_pf(typeSQ, x, y);
+}
+double calcVolSQ(int type)
+{
+  double vol;
+  typeSQ = type;
+  growthSQ = -1;
+  vol = quad3d(funcSQwrap, 0.0, typesArr[type].sax[0]); /* a semiaxis (along x) */
+  return vol;
+}
+double calcVolSQ_growth(int i)
+{
+  double vol;
+  growthSQ = i;
+  typeSQ = typeOfPart[i];
+  vol = quad3d(funcSQwrap, 0.0, axa[i]); /* a semiaxis (along x) */
+  return vol;
+}
+double calcVolSQ_pf(int type)
+{
+  double vol;
+  typeSQ = type;
+  vol = quad3d_pf(funcSQwrap_pf, 0.0, 1.0); /* a semiaxis (along x) */
+  return vol;
+}
+double calcPhiSQ(void);
+double calc_SQ_volprefact(int type)
+{
+  double tpo, pf;
+  tpo = OprogStatus.targetPhi;
+  OprogStatus.targetPhi = 1.0;
+  pf = calcVolSQ_pf(type);
+  OprogStatus.targetPhi = tpo;
+  return pf;
+}
+double calcPhiSQ(void)
+{
+  int typei, i, nt;
+  double N=0;
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  N += calcVolSQ_growth(i);
+	  //printf("particle=%d volume=%.15G\n", i, calcVolSQ_growth(typei));
+	}	  
+    }
+  else
+    {
+      for (nt = 0; nt < Oparams.ntypes; nt++)
+	{
+	  volSQ[nt] = calcVolSQ(nt);
+	  printf("type=%d volume=%.15G\n", nt, volSQ[nt]);
+	}
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  typei = typeOfPart[i];
+	  N += volSQ[typei];
+	}
+    }
+#ifdef MD_LXYZ
+  return N / (L[0]*L[1]*L[2]);
+#else
+  return N / (L*L*L);
+#endif
 }
 #endif
