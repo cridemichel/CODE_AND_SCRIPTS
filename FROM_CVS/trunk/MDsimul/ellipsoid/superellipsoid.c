@@ -631,7 +631,7 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
       for (k2 = 0; k2 < 3; k2++)
 	{
 	  if (k1==k2)
-	    df[k1+5][k2] = 1 + x[7]*fxx[k1][k2];
+	    df[k1+5][k2] = 1.0 + x[7]*fxx[k1][k2];
 	  else 
 	    df[k1+5][k2] = x[7]*fxx[k1][k2];
 	}
@@ -641,13 +641,13 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
       for (k2 = 0; k2 < 3; k2++)
 	{
 	  if (k1==k2)
-	    df[k1+5][k2+3] = -1;
+	    df[k1+5][k2+3] = -1.0;
 	  else 
 	    df[k1+5][k2+3] = 0;
 	}
     }
   for (k1 = 0; k1 < 3; k1++)
-    df[k1+5][6] = 0;
+    df[k1+5][6] = 0.0;
   for (k1 = 0; k1 < 3; k1++)
     df[k1+5][7] = fx[k1];
   MD_DEBUG37(printf("SUPERELLIPSE:\n"));

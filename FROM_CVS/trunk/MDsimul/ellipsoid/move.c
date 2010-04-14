@@ -5922,6 +5922,8 @@ retry:
     {
       for (k1 = 0; k1 < 8; k1++)
 	vecg[k1] = vecgsup[k1];
+      //printf("tryagain=%d supplied vecg[]=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", tryagain,
+	//     vecg[0], vecg[1], vecg[2], vecg[3], vecg[4], vecg[5], vecg[6], vecg[7]);
     }
   
   //printf(">>>>>>>>>>>> INIZIO NR\n");
@@ -6728,8 +6730,6 @@ int search_contact_faster(int i, int j, double *shift, double *t, double t1, dou
     + sqrt(Sqr(wx[j])+Sqr(wy[j])+Sqr(wz[j]))*factorj;
 #endif
   *d1 = calcDistNeg(*t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
-  //printf("quii d=%.15G\n", *d1);
-  
   timesF++;
   MD_DEBUG40(printf("Pri distances between %d-%d d1=%.12G epsd*epsdTimes:%f\n", i, j, *d1, epsdFast));
   told = *t;
@@ -7173,6 +7173,19 @@ int areGhost(int i, int j)
   return 0;
 }
 #endif
+void printvecg(double vecg[], char *msg)
+{
+  int i;
+  if (msg!=NULL)
+    printf("<<%s>> vecg[]=", msg);
+  else
+    printf("vecg[]=");
+  for (i=0; i < 8; i++)
+    {
+      printf("%.15G ", vecg[i]);
+    }
+  printf("\n");
+}
 int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5])
 {
   double h, d, dold, alpha, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
@@ -7223,7 +7236,6 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
    *   sfiorano per poi allontanarsi. 
    */
   t = 0;//t1;
-
 #ifdef MD_ASYM_ITENS
   maxddot = calc_maxddot(i, j);  
 #else
@@ -7272,7 +7284,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   MD_DEBUG(printf("Dopo distances between %d-%d d1=%.12G", i, j, d));
 #if 1
   MD_DEBUG40(printf("[LOCATE_CONTACT] INIZIO\n"));
+  //printf("cazzarola prima i=%d j=%d\n", i, j);
   d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
+  //printf("cazzarola dopo d=%.15G\n", d);
   //printf("t=%.15G t1=%.15G rA=%.15G %.15G %.15G rB=%.15G %.15G %.15G d=%.15G\n", t, t1, rx[i], ry[i], rz[i],
   //	 rx[j], ry[j], rz[j], d);
 #if 1
@@ -7358,11 +7372,13 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
       delt = epsd/maxddot;
       tini = t;
       t += delt;
+      //printf("===> t=%.15G\n", t);
       while ((d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 0))==0.0)
 	{
 	  delt *= GOLD;
 	  t = tini + delt;
 	}
+      //printf("i=%d j=%d t=%.15G d=%.15G\n", i, j, t, d);
 #ifdef MD_PARANOID_CHECKS
       if ((fabs(d-dold)==0.0))
 	{
@@ -7456,6 +7472,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
        	  for (kk=0; kk < 8; kk++)
 	    vecgroot[kk] = vecgd[kk];
+	  //printvecg(vecgroot,"1");
 #ifndef MD_NOINTERPOL  
 	 if (interpol(i, j, t1, t-delt, delt, dold, d, &troot, vecgroot, shift, 0))
 #endif
@@ -7463,6 +7480,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 	      /* vecgd2 è vecgd al tempo t-delt */
 	      for (kk=0; kk < 8; kk++)
 		vecgroot[kk] = vecgdold[kk];
+	      //printvecg(vecgroot,"2");
 	      /* forse è meglio scegliere il valore di t più grande per ridurre il rischio
 	       * di eventi coincidenti! */
 	      /* VECCHIA SOLUZIONE: troot = t + t1 - delt;*/
