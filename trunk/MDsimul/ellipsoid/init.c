@@ -2650,6 +2650,13 @@ void find_spheres_NNL(void)
 	  is_a_sphere_NNL[i] = 0;
 	  continue;
 	}
+#ifdef MD_SUPERELLIPSOID
+      if (is_superellipse(i))
+	{
+	  is_a_sphere_NNL[i] = 0;
+	  continue;
+	}
+#endif
       if (typesArr[pt].nspots > 0 && !all_spots_in_CoM(pt))
 	{
 	  is_a_sphere_NNL[i] = 0;

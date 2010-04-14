@@ -3602,8 +3602,25 @@ void InvMatrix(double **a, double **b, int NB)
 #endif
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
 #ifdef MD_NEW_NR_CHECKS
+#ifdef MD_SUPERELLIPSOID
 #define TOLX 1.0E-14//1.0e-7 /* Convergence criterion on  x.*/ 
 #define TOLXD 1.0E-14
+/* NOTA 13/04/2010: TOLXDNL sembra essere l'unico parametro critico
+   per la convergenza del NR nel caso d'urto fra una SQ ed un piano 
+   infatti accade spesso che la convergenza è su x cioè il punto non cambia
+   in maniera significativa (questo dovrebbe accadere quando uno spigolo della SQ 
+   urta un piano).
+ */
+#define TOLXDNL 3.0E-11
+
+/* NOTA 13/04/2010: per ora TOLXNL non lo uso */
+#define TOLXNL 3.0E-11
+#else
+#define TOLX 1.0E-14//1.0e-7 /* Convergence criterion on  x.*/ 
+#define TOLXD 1.0E-14
+#define TOLXDNL TOLXD
+#define TOLXNL TOLX
+#endif
 #else
 #define TOLX 1.0E-14//1.0e-7 /* Convergence criterion on  x.*/ 
 #define TOLXD 1.0E-14
@@ -3612,8 +3629,20 @@ void InvMatrix(double **a, double **b, int NB)
 #define MAXITS2 100
 /* N.B. se dovessero esserci problemi aumentare TOLF e TOLFD */
 #ifdef MD_NEW_NR_CHECKS
+#ifdef MD_SUPERELLIPSOID
+/* NOTA 13/04/2010: per ora TOLFNL e TOLXNL non li uso poiché in newtNeigh 
+   sembra che non ci siano problemi ad usare TOLF e TOLX come nell'urto tra SQ. */
 #define TOLF 1.0E-11// 1.0e-4
 #define TOLFD 1.0E-11
+#define TOLFNL 1.0E-11
+/* NOTA 13/04/2010: usando TOLFDNL come per l'urto tra SQ non ci sono problemi */
+#define TOLFDNL 1.0E-11
+#else
+#define TOLF 1.0E-11// 1.0e-4
+#define TOLFD 1.0E-11
+#define TOLFNL TOLF
+#define TOLFDNL TOLFD
+#endif
 #else
 #define TOLF 1.0E-10// 1.0e-4
 #define TOLFD 1.0E-10
@@ -3669,7 +3698,7 @@ void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], doub
 	x[i]=xold[i]+alam*p[i]; 
       *f=(*func)(x,iA); 
       if (alam < alamin) 
-	{ /* Convergence on  x. For zero  nding, the calling program 
+	{ /* Convergence on  x. For zero finding, the calling program 
 	     should verify the convergence.*/ 
 	  for (i=0;i<n;i++) 
 	    x[i]=xold[i]; 
@@ -3863,7 +3892,7 @@ void newtNeigh(double x[], int n, int *check,
 	  int iA)
 {
   int i,its,ok;
-  double d,f,stpmax,sum,test; 
+  double d,f,stpmax,sum,test, den; 
 #ifdef MD_GLOBALNRNL
   int j;
   double fold;
@@ -3888,7 +3917,7 @@ void newtNeigh(double x[], int n, int *check,
   for (i=0;i<n;i++) 
     if (fabs(fvec[i]) > test)
       test=fabs(fvec[i]); 
-  if (test < 0.01*TOLF)
+  if (test < 0.01*TOLFNL)
     {
       *check=0; 
       FREERETURN;
@@ -3928,7 +3957,7 @@ void newtNeigh(double x[], int n, int *check,
       for (i=0;i<n;i++) 
 	test +=fabs(fvec[i]); 
 #endif
-      if (test < TOLF)
+      if (test < TOLFNL)
 	{
 	  *check = 0;
 	  MD_DEBUG(printf(" test < TOLF\n"));
@@ -3945,13 +3974,13 @@ void newtNeigh(double x[], int n, int *check,
 #endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNRNL
-      lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fminNeigh,iA, TOLX); 
+      lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fminNeigh,iA, TOLXNL); 
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
 	if (fabs(fvec[i]) > test) 
 	  test=fabs(fvec[i]); 
-      if (test < TOLF) 
+      if (test < TOLFNL) 
 	{ 
 	  *check=0; 
 	  MD_DEBUG(printf("test < TOLF\n"));
@@ -3959,7 +3988,8 @@ void newtNeigh(double x[], int n, int *check,
 	}
       if (*check) 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
-#if 0
+
+#ifdef MD_SUPERELLIPSOID
 	  test=0.0; 
 	  den=FMAX(f,0.5*n);
 	  for (i=0;i<n;i++)
@@ -3970,6 +4000,30 @@ void newtNeigh(double x[], int n, int *check,
 	    } 
 	  *check=(test < TOLMIN ? 2 : 0);
 #endif
+#ifdef MD_SUPERELLIPSOID
+	  /* NOTA 13/04/2010: nel caso dei superellissoidi quando la distanza con il piano
+	     diventa negativa è molto probabile una convergenza non spuria in x
+	     quindi in tal caso ho ripristinato il check sulla convergenza spuria,
+	     inoltre ho alzato le tolleranze per permettere una più facile convergenza
+	     del NR. */
+	  if (*check==0) /* cioè se non si tratta di convergenza 
+			    spuria secondo i criteri precedenti */
+	    FREERETURND
+	  else
+	    {
+	      /* N.B. se si tratta di convergenza spuria 
+		 prova a fare un normale NR incrociando le dita :-) */
+	      //printf("CONVERGENZA SPURIA\n");
+	      for (i=0; i < n; i++)
+		{
+		  x[i] = xold[i];
+		  x[i] += p[i]; 
+		}
+	      *check = 0;
+	    }
+
+#else
+
 	  /* se c'è anche il sospetto di un minimo locale allora fai
 	   * un newton-raphson semplice */
 	  for (i=0; i < n; i++)
@@ -3978,6 +4032,7 @@ void newtNeigh(double x[], int n, int *check,
 	      x[i] += p[i]; 
 	    }
 	  *check = 0;
+#endif
 	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
   	  //FREERETURN 
 	} 
@@ -3988,7 +4043,7 @@ void newtNeigh(double x[], int n, int *check,
 	  if (temp > test) 
 	    test=temp; 
 	} 
-      if (test < TOLX) 
+      if (test < TOLXNL) 
 	{
 	  MD_DEBUG(printf("test<TOLX test=%.15f\n", test));
 	  FREERETURN;
@@ -4017,7 +4072,7 @@ void newtNeigh(double x[], int n, int *check,
 	}
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
 #endif
-      if (test < TOLX) 
+      if (test < TOLXNL) 
 	{ 
 	  *check = 0;
 	  MD_DEBUG(printf("test < TOLX\n"));
@@ -4202,7 +4257,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
   int i,its=0,ok;
   double d,stpmax,sum,test;
 #ifdef MD_GLOBALNRDNL
-  double fold,f;
+  double fold,f, den;
   int j;
 #endif
 #if 0
@@ -4231,7 +4286,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
     if (fabs(fvecD[i]) > test)
       test=fabs(fvecD[i]); 
   //printf("INI fvec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", fvecD[0], fvecD[1], fvecD[2], fvecD[3], fvecD[4], fvecD[5], fvecD[6], fvecD[7]);
-  if (test < 0.01*TOLFD)
+  if (test < 0.01*TOLFDNL)
     {
       *check=0; 
       FREERETURND;
@@ -4261,6 +4316,8 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
       } 
       for (i=0;i<n;i++) 
 	xold[i]=x[i]; /* Store x,*/ 
+       //printf("BOH PRIMA lnsrchNeigh: xold=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", x[0], x[1], x[2],
+	//      	 x[3], x[4], x[5], x[6], x[7]);
       fold=f; /* and f. */
 #else
 #ifdef MD_NEW_NR_CHECKS
@@ -4270,7 +4327,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
       for (i=0;i<n;i++) 
 	test +=fabs(fvecD[i]); 
 #endif
-      if (test < TOLFD)
+      if (test < TOLFDNL)
 	{
 	  *check = 0;
 	  MD_DEBUG(printf(" test < TOLF\n"));
@@ -4280,7 +4337,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
       for (i=0;i<n;i++) 
 	p[i] = -fvecD[i]; /* Right-hand side for linear equations.*/
 #if 0
-      printf("p=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2],
+      printf("BOH PRIMA p=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2],
 	     p[3], p[4], p[5], p[6], p[7]);
       printf("xold=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", x[0], x[1], x[2],
 	     x[3], x[4], x[5], x[6], x[7]);
@@ -4297,19 +4354,24 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 #endif 
       /* lnsrch returns new x and f. It also calculates fvec at the new x when it calls fmin.*/
 #ifdef MD_GLOBALNRDNL
-      //printf("PRIMA fvec.fvec=%.15G\n", scalProd(fvecD, fvecD));
-//      printf("xold=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", x[0], x[1], x[2],
-//	      	 x[3], x[4], x[5], x[6], x[7]);
-      
+#if 0
+      printf("PRIMA fvec.fvec=%.15G\n", scalProd(fvecD, fvecD));
+      printf("prima lnsrchNeigh: xold=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", x[0], x[1], x[2],
+	      	 x[3], x[4], x[5], x[6], x[7]);
+#endif 
       lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fminDNeigh,iA, TOLXD); 
- //     printf("check=%d xnew=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", *check, x[0], x[1], x[2],
-//	      	 x[3], x[4], x[5], x[6], x[7]);
+#if 0
+      printf("BOH (CHI CALCOLA P?) p=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2],
+	     p[3], p[4], p[5], p[6], p[7]);
+      printf("check=%d xnew=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", *check, x[0], x[1], x[2],
+            	 x[3], x[4], x[5], x[6], x[7]);
+#endif     
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
 #if 0
       printf("its=%d check=%d test = %.15f x = (%.15G, %.15G, %.15G, %.15G, %.15G, %.15G, %.15G, %.15G )\n",its, *check, test, x[0], x[1], x[2], x[3],x[4], x[5], x[6], x[7]);
       printf("fvec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", fvecD[0], fvecD[1], fvecD[2], fvecD[3], fvecD[4],
 	      fvecD[5], fvecD[6], fvecD[7]);
-      printf("gradplane=%.15G %.15G %.15G\n", gradplane[0], gradplane[1], gradplane[2]);      
+      //printf("gradplane=%.15G %.15G %.15G\n", gradplane[0], gradplane[1], gradplane[2]);      
 #endif
       test=0.0; /* Test for convergence on function values.*/
       for (i=0;i<n;i++) 
@@ -4334,7 +4396,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	  printf("DOPO fvec.fvec=%.15G\n", scalProd(fvecD, fvecD));
 	}
 #endif
-      if (test < TOLFD) 
+      if (test < TOLFDNL) 
 	{ 
 	  *check=0; 
 	  MD_DEBUG(printf("test < TOLF\n"));
@@ -4342,7 +4404,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	}
       if (*check==1) 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
-#if 0
+#ifdef MD_SUPERELLIPSOID
 	  test=0.0; 
 	  den=FMAX(f,0.5*n);
 	  for (i=0;i<n;i++)
@@ -4352,10 +4414,33 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 		test=temp; 
 	    } 
 	  *check=(test < TOLMIN ? 2 : 0);
+	  //printf("MAAAH test=%.15G\n", test);
 #endif
 	  /* se c'è anche il sospetto di un minimo locale allora fai
 	   * un newton-raphson semplice */
-	  for (i=0; i < n; i++)
+#ifdef MD_SUPERELLIPSOID
+	  /* NOTA 13/04/2010: nel caso dei superellissoidi quando la distanza con il piano
+	     diventa negativa è molto probabile una convergenza non spuria in x
+	     quindi in tal caso ho ripristinato il check sulla convergenza spuria,
+	     inoltre ho alzato le tolleranze per permettere una più facile convergenza
+	     del NR. */
+	  if (*check==0) /* cioè se non si tratta di convergenza 
+			    spuria secondo i criteri precedenti */
+	    FREERETURND
+	  else
+	    {
+	      /* N.B. se si tratta di convergenza spuria 
+		 prova a fare un normale NR incrociando le dita :-) */
+	      //printf("CONVERGENZA SPURIA\n");
+	      for (i=0; i < n; i++)
+		{
+		  x[i] = xold[i];
+		  x[i] += p[i]; 
+		}
+	      *check = 0;
+	    }
+#else
+     	  for (i=0; i < n; i++)
 	    {
 	      x[i] = xold[i];
 	      x[i] += p[i]; 
@@ -4363,6 +4448,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	  *check = 0;
  	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
   	  //FREERETURND 
+#endif
 	} 
       test=0.0; /* Test for convergence on x. */
       for (i=0;i<n;i++) 
@@ -4371,7 +4457,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	  if (temp > test) 
 	    test=temp; 
 	} 
-      if (test < TOLXD) 
+      if (test < TOLXDNL) 
 	{
 	  //printf("test====== %.15G check=%d\n", test, *check);
 	  MD_DEBUG(printf("test<TOLXD test=%.15f\n", test));
@@ -4412,7 +4498,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 #endif
       MD_DEBUG(printf("test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n", test, x[0], x[1], x[2], x[3],x[4]));
       //MD_DEBUG(printf("iA: %d iB: %d test: %f\n",iA, iB,  test));
-      if (test < TOLXD) 
+      if (test < TOLXDNL) 
 	{ 
 	  //printf("SSSSDDD test=%.15G\n", test);
 	  *check = 0;
