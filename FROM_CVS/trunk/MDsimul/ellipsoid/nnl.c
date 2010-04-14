@@ -253,6 +253,32 @@ void growth_rebuildNNL(int i)
       BuildNNL(n);
     }
 }
+double n1_bak, n2_bak, n3_bak;
+void switch_to_HE(int i)
+{
+  int t;
+  t = typeOfPart[i];
+  n1_bak = typesArr[t].n[0];
+  n2_bak = typesArr[t].n[1];
+  n3_bak = typesArr[t].n[2];
+  typesArr[t].n[0] = 2.0;
+  typesArr[t].n[1] = 2.0;
+  typesArr[t].n[2] = 2.0;
+  typesArr[t].sax[0] *= 2.0;
+  typesArr[t].sax[1] *= 2.0;
+  typesArr[t].sax[2] *= 2.0;
+}
+void back_to_SQ(int i)
+{
+  int t;
+  t = typeOfPart[i];
+  typesArr[t].n[0] = n1_bak;
+  typesArr[t].n[1] = n2_bak;
+  typesArr[t].n[2] = n3_bak;
+  typesArr[t].sax[0] /= 2.0;
+  typesArr[t].sax[1] /= 2.0;
+  typesArr[t].sax[2] /= 2.0;
+}
 #ifdef MD_EDHEFLEX_OPTNNL
 extern void rebuild_linked_list_NNL(void);
 #endif
@@ -304,6 +330,7 @@ void rebuildNNL(void)
     printf("Rebuilding NNL t=%.15G numcoll=%lld\n", Oparams.time, numcoll);
   for (i=0; i < Oparams.parnum; i++)
     {
+      //printf("Updating i=%d\n", i);
       nextNNLupdate(i);
       if (i==0 || nebrTab[i].nexttime < nltime)
 	nltime = nebrTab[i].nexttime;
@@ -1801,6 +1828,7 @@ retry:
       rDC[k1] = rD[k1] - rC[k1];
     }
 
+  //printf("boh[%d]=%.15G\n",i, scalProd(rDC,gradplane));
   if (OprogStatus.dist5NL)
     {
 #ifdef MD_SUPERELLIPSOID
@@ -1831,7 +1859,7 @@ retry:
 #else
       vecg[7] = 0.0;
 #endif
-         }
+    }
   //if (isnan(vecg[1]))
    //   printf("BEFORE vecg: %f %f %f %f %f %f\n", vecg[0], vecg[1], vecg[2], vecg[3], vecg[4], vecg[5]);
   MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
@@ -2912,6 +2940,7 @@ int interpolNeighPlane(int i, double tref, double t, double delt, double d1, dou
 	      dmin = calcDistNegNeighPlane(tmin, tref, i, r1, r2, vecg, 0, 0, &distfail, nplane);
 	      if (d1*dmin < 0.0)
 		{
+		  //printf("brcketing done d1=%.15G dmin=%.15G t1=%.15G t2=%.15G\n");
 		  t2 = tmin;
 		  t1 = t;
 		}
@@ -3512,7 +3541,6 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
   double maxddoti[6];
   int its=0, crossed[6], itsf; 
 
-  //printf("MARAMEO\n");
   *d1 = calcDistNegNeighPlaneAll(*t, t1, i, distsOld, vecgd, 1);
   //printf("SCF NNL *d1=%.15G t=%.15G\n", *d1, *t);
   MD_DEBUG36(printf("[SEARCH_CONTACT_FASTER_NNL_PARALL]t=%.15G d=%.15G\n", *t, *d1));
@@ -3777,12 +3805,14 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
       return 1;    
     }
 #endif
- calc_grad_and_point_plane_all(i, gradplane_all, rBall);
+  calc_grad_and_point_plane_all(i, gradplane_all, rBall);
   /* la collisione di una sfera con i vari piani si puo' calcolare 
      velocemente senza passare per il codice che segue */
 #ifdef EDHE_FLEX
-  if (is_sphere(i))
+  if (is_sphere(i) && !is_superellipse(i))// nel caso di superellissoidi deve anche valere che gli esponenti
+    // siano tutti (fix this bug but do some testing before)
     {
+      //printf("qui\n");
       return locate_contact_neigh_plane_HS(i, evtime, t2);
       MD_DEBUG37(printf("HS evtime=%.15G\n", *evtime));
     }
@@ -3831,6 +3861,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
       delt = epsd/maxddot;
       tini = t;
       t += delt;
+      //printf("prima i=%d d=%.15G\n", i, d);
       while ((d = calcDistNegNeighPlaneAll(t, t1, i, dists, vecgd, 0))==0.0)
 	{
 
@@ -3937,6 +3968,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 	    {
 	      for (kk=0; kk < 8; kk++)
     		vecgroot[nn][kk] = vecgd[nn][kk];
+	      //printf("TO CHECK\n");
 	      if (interpolNeighPlane(i, t1, t-delt, delt, distsOld[nn], dists[nn], 
 				     &troot, vecgroot[nn],  1, nn))
 		{
@@ -5754,6 +5786,7 @@ void updrebuildNNL(int na)
   nnltime2 = timbig;
   if (OprogStatus.paralNNL)
     {
+      //switch_to_HE(na);
       if (!locate_contact_neigh_plane_parall(na, &nnltime2, nnltime1))
 	{
 #ifndef MD_PATCHY_HE
@@ -5761,6 +5794,7 @@ void updrebuildNNL(int na)
 	  exit(-1);
 #endif
 	}
+      //back_to_SQ(na);
     }
  else
    {
@@ -5991,6 +6025,7 @@ void nextNNLupdate(int na)
   nnltime2 = timbig;
   if (OprogStatus.paralNNL)
     {
+      //switch_to_HE(na);
       if (!locate_contact_neigh_plane_parall(na, &nnltime2, nnltime1))
 	{
 #ifndef MD_PATCHY_HE
@@ -5998,6 +6033,7 @@ void nextNNLupdate(int na)
 	  exit(-1);
 #endif
 	}
+      //back_to_SQ(na);
     }
   else
     {

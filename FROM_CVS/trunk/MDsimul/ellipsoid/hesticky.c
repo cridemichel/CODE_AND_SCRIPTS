@@ -4569,14 +4569,20 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 #if 1
       calc_delt_sp(NSP, maxddoti, &delt, distsOld);
       if (check_distance_sp(NSP, maxddoti, dists, t1, t2, *t))
-	return 1;
+	{
+	  return 1;
+	  
+	}
 #else
       delt = fabs(*d1) / maxddot;
       if (*t + t1 < t2 && (t2 - (*t + t1))*maxddot < fabs(*d1) - OprogStatus.epsdSPNL)
 	return 1;
 #endif
       *t += delt;
+
+      //printf("prima i=%d *d1=%.15G (t=%.15G)\n", i, *d1, *t);
       *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
+      //printf("dopo i=%d *d1=%.15G (t=%.15G)\n", i, *d1, *t);
       MD_DEBUG45(printf("UNO *d1=%.15G t=%.15G t1=%.15G delt=%.15G\n", *d1,*t,t1,delt));
 #if 0
       if (its > 100 && its%10 == 0)
@@ -4629,6 +4635,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
       its++;
       itsFNL++;
     }
+
   return 0;
 }
 double calcDistNegOneNNL_sp(double t, double t1, int i, int nn)
