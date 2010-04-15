@@ -1707,6 +1707,7 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
   UpdateOrient(i, ti, RtA, Omega);
 #endif
 #ifdef EDHE_FLEX
+  //printf("INIZIO CALC DIST NEIGH PLABE t=%.15G\n", t);
   typei = typeOfPart[i];  
   if (OprogStatus.targetPhi > 0.0)
     {
@@ -1778,7 +1779,8 @@ retry:
     r12[k1] = rC[k1]-rD[k1]; 
   MD_DEBUG34(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
-
+  //printf("nplane=%d rC=(%f,%f,%f) rD=(%f,%f,%f) r12=%.15G\n", nplane,
+//		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2], calc_norm(r12));
 #ifdef MD_SUPERELLIPSOID
 #if 0
   if ((OprogStatus.SDmethod==1 || OprogStatus.SDmethod==4) || tryagain)
@@ -1790,7 +1792,7 @@ retry:
 	}
       for (k1=0; k1 < 3; k1++)
 	rCD[k1]=rC[k1]-rD[k1];
-      printf("PRIMA rC=%f %f %f rD=%f %f %f rCD=%.15G\n", rC[0], rC[1], rC[2], rD[0], rD[1], rD[2], calc_norm(rCD));
+      //printf("PRIMA rC=%f %f %f rD=%f %f %f rCD=%.15G\n", rC[0], rC[1], rC[2], rD[0], rD[1], rD[2], calc_norm(rCD));
       distSD_NNL(i, vecgcg, OprogStatus.springkSD, 1);
       for (k1=0; k1 < 3; k1++)
 	{
@@ -1799,9 +1801,12 @@ retry:
 	}	
       for (k1=0; k1 < 3; k1++)
 	rCD[k1]=rC[k1]-rD[k1];
-      printf("DOPO rC=%f %f %f rD=%f %f %fi rCD=%.15G\n", rC[0], rC[1], rC[2], rD[0], rD[1], rD[2], calc_norm(rCD));
+      //printf("DOPO rC=%f %f %f rD=%f %f %fi rCD=%.15G\n", rC[0], rC[1], rC[2], rD[0], rD[1], rD[2], calc_norm(rCD));
 
     }
+  //printf("DOPO SD nplane=%d rC=(%f,%f,%f) rD=(%f,%f,%f) r12=%.15G\n", nplane,
+//		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2], calc_norm(rCD));
+
 #endif
   calcfxLabSE(i, rC, rA, RtA, gradf);
 #else
@@ -1811,6 +1816,7 @@ retry:
 		  gradf[0], gradf[1], gradf[2], gradplane[0], gradplane[1], gradplane[2]));
   nf = calc_norm(gradf);
   ng = calc_norm(gradplane);
+  //printf("gradf.gradplane=%.15G\n", scalProd(gradf, gradplane)/(nf*ng));
 #if 0
   printf ("gradf=%.15G %.15G %.15G gradg=%.15G %.15G %.15G\n", gradf[0], gradf[1], gradf[2],
 	  gradplane[0], gradplane[1], gradplane[2]);
@@ -1820,6 +1826,7 @@ retry:
     vecg[3] = sqrt(nf/ng);
   else
     vecg[6] = sqrt(nf/ng);
+  //printf("alpha guess is %.15G\n", vecg[6]);
   for (k1=0; k1 < 3; k1++)
     {
       vecg[k1] = rC[k1];
@@ -1850,6 +1857,7 @@ retry:
 	vecg[7] = calc_norm(rDC)/ng;
       else
 	vecg[7] = -calc_norm(rDC)/ng;
+      //printf("beta guess is %.15G\n", vecg[7]);
 #ifdef MD_FDJAC_SYM
       if (scalProd(rDC,gradplane) >= 0)
 	vecg[6] = calc_norm(rDC)/nf;
@@ -1860,6 +1868,15 @@ retry:
       vecg[7] = 0.0;
 #endif
     }
+#ifdef MD_SUPERELLIPSOID
+#if 0
+  if (!calcguess)
+    {
+      for (k1 = 0; k1 < 8; k1++)
+	vecg[k1] = vecgsup[k1];
+    }
+#endif
+#endif
   //if (isnan(vecg[1]))
    //   printf("BEFORE vecg: %f %f %f %f %f %f\n", vecg[0], vecg[1], vecg[2], vecg[3], vecg[4], vecg[5]);
   MD_DEBUG(printf("alpha: %f beta: %f\n", vecg[6], vecg[7]));
@@ -1873,14 +1890,21 @@ retry:
 #ifdef MD_SUPERELLIPSOID
   if (retcheck != 0)
     {
+#if 0
       if (!tryagain && (OprogStatus.SDmethod == 2 || OprogStatus.SDmethod==3))
 	{
 	  tryagain=1;
 	  goto retry;
 	}
+#endif
+      if (OprogStatus.targetPhi>0)
+	{
+	  calcdist_retcheck=1;
+	  return 0.0;
+	}  
       printf("[NNL] I couldn't calculate distance between %d and its NL, calcguess=%d, exiting....\n", i, calcguess);
       //printf("vec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", vecg[0], vecg[1], vecg[2], vecg[3], vecg[4],
-	//     vecg[5], vecg[6], vecg[7]);
+      //     vecg[5], vecg[6], vecg[7]);
       exit(-1);
     }
 #else
@@ -1930,12 +1954,12 @@ retry:
     segno = vecg[7];
   if (segno > 0)
     {
-      //printf("t=%.15G distanza: %.15G\n", t, calc_norm(r12));
+      //printf("[DISTNEIGHPLANE] t=%.15G distanza: %.15G\n", t, calc_norm(r12));
       return calc_norm(r12);
     }
   else
     {
-      //printf("t=%.15G distanza: %.15G\n", t, -calc_norm(r12));
+      //printf("[DISTNEIGHPLANE] t=%.15G distanza: %.15G\n", t, -calc_norm(r12));
       return -calc_norm(r12);
     }
 }
@@ -3264,6 +3288,7 @@ int refine_contact_neigh_plane(int i, double t1, double t, double vecgd[8], doub
   vecg[4] += t1;
   if (retcheck==2)
     {
+      //printf("nplane=%d no contact point found\n", nplane);
       MD_DEBUG35(printf("newtNeigh did not find any contact point!\n"));
       return 0;
     }
@@ -3793,6 +3818,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
   t = 0;//t1;
   t1 = Oparams.time;
   //t2 = timbig;
+  //printf("inizio locate contact \n");
 #ifdef MD_HANDLE_INFMASS
   if (is_infinite_Itens(i) && is_infinite_mass(i))
     {
