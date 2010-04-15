@@ -3603,6 +3603,7 @@ void InvMatrix(double **a, double **b, int NB)
 #define ALF 1.0e-4 /* Ensures sufficient decrease in function value.*/
 #ifdef MD_NEW_NR_CHECKS
 #ifdef MD_SUPERELLIPSOID
+#define NR_DAMP_FACT 1E-2
 #define TOLX 1.0E-14//1.0e-7 /* Convergence criterion on  x.*/ 
 #define TOLXD 1.0E-14
 /* NOTA 13/04/2010: TOLXDNL sembra essere l'unico parametro critico
@@ -4024,7 +4025,7 @@ void newtNeigh(double x[], int n, int *check,
 	      for (i=0; i < n; i++)
 		{
 		  x[i] = xold[i];
-		  x[i] += p[i]; 
+		  x[i] += NR_DAMP_FACT*p[i]; 
 		}
 	      *check = 0;
 	    }
@@ -4301,6 +4302,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
   for (sum=0.0,i=0;i<n;i++) 
     sum += Sqr(x[i]); /* Calculate stpmax for line searches.*/
   stpmax=STPMX*FMAX(sqrt(sum),(double)n);
+  //printf("INIZIO newt\n");
   for (its=0;its<MAXITS3;its++)
     { /* Start of iteration loop. */
        /* ============ */
@@ -4368,10 +4370,14 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 #endif 
       lnsrchNeigh(n,xold,fold,g,p,x,&f,stpmax,check,fminDNeigh,iA, TOLXD); 
 #if 0
-      printf("BOH (CHI CALCOLA P?) p=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2],
-	     p[3], p[4], p[5], p[6], p[7]);
-      printf("check=%d xnew=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", *check, x[0], x[1], x[2],
+      //printf("BOH (CHI CALCOLA P?) p=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", p[0], p[1], p[2],
+	//     p[3], p[4], p[5], p[6], p[7]);
+      printf("its=%d check=%d xnew=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", its, *check, x[0], x[1], x[2],
             	 x[3], x[4], x[5], x[6], x[7]);
+      printf("its=%d fvec: (%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G)\n",
+	     its, fvecD[0], fvecD[1], fvecD[2], fvecD[3], 
+	     fvecD[4], fvecD[5], fvecD[6], fvecD[7]);
+
 #endif     
       MD_DEBUG(printf("check=%d test = %.15f x = (%.15f, %.15f, %.15f, %.15f, %.15f)\n",*check, test, x[0], x[1], x[2], x[3],x[4]));
 #if 0
@@ -4407,6 +4413,11 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	{ 
 	  *check=0; 
 	  MD_DEBUG(printf("test < TOLF\n"));
+#if 0
+	  printf("its=%d TOLFDNL fvec: (%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G)\n",
+			  its, fvecD[0], fvecD[1], fvecD[2], fvecD[3], 
+			  fvecD[4], fvecD[5], fvecD[6], fvecD[7]);
+#endif
 	  FREERETURND
 	}
       if (*check==1) 
@@ -4419,8 +4430,18 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	      temp=fabs(g[i])*FMAX(fabs(x[i]),1.0)/den;
 	      if (temp > test) 
 		test=temp; 
-	    } 
-	  *check=(test < TOLMINDNL ? 2 : 0);
+	    }
+#if 0 
+	  //printf("qui test=%.15G g=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
+	//	 test, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7]);
+	  printf("its=%d qui test=%.15G x=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
+		 its, test, x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]);
+	  printf("its=%d qui test=%.15G xold=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
+		 its, test, xold[0], xold[1], xold[2], xold[3], xold[4], xold[5], xold[6], xold[7]);
+#endif
+
+  	  *check=(test < TOLMINDNL ? 2 : 0);
+	  //printf("check=%d\n", *check);
 	  //printf("MAAAH test=%.15G\n", test);
 #endif
 	  /* se c'è anche il sospetto di un minimo locale allora fai
@@ -4433,16 +4454,23 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	     del NR. */
 	  if (*check==0) /* cioè se non si tratta di convergenza 
 			    spuria secondo i criteri precedenti */
-	    FREERETURND
+	    {
+	      //printf("HIPP its=%d qui test=%.15G fvec=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
+		// its, test, fvecD[0], fvecD[1], fvecD[2], fvecD[3], fvecD[4], fvecD[5], fvecD[6], fvecD[7]);
+
+
+	      FREERETURND
+	    }
 	  else
 	    {
 	      /* N.B. se si tratta di convergenza spuria 
-		 prova a fare un normale NR incrociando le dita :-) */
+		 prova a fare un normale NR però con passo "damped" 
+                 (incrociando le dita) :-) */
 	      //printf("CONVERGENZA SPURIA\n");
 	      for (i=0; i < n; i++)
 		{
 		  x[i] = xold[i];
-		  x[i] += p[i]; 
+		  x[i] += NR_DAMP_FACT*p[i]; 
 		}
 	      *check = 0;
 	    }
@@ -4471,6 +4499,11 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	  MD_DEBUG(printf("fvec: (%f,%f,%f,%f,%f,%f,%f,%f)\n",
 			  fvecD[0], fvecD[1], fvecD[2], fvecD[2], fvecD[3], 
 			  fvecD[4], fvecD[5], fvecD[6], fvecD[7]));
+#if 0
+	  printf("its=%d TOLXDNL fvec: (%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G)\n",
+			  its, fvecD[0], fvecD[1], fvecD[2], fvecD[3], 
+			  fvecD[4], fvecD[5], fvecD[6], fvecD[7]);
+#endif
 	  *check=0;
 	  FREERETURND;
 	}
