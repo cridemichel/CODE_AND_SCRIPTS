@@ -18,6 +18,7 @@
 #define MD_NEGPAIRS
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
+#undef MD_FDJAC_SYM
 #ifdef MD_ASYM_ITENS
 extern double *phi0, *psi0, *costheta0, *sintheta0, **REt, **RE0, *angM, ***RM, **REtA, **REtB, **Rdot;
 extern double cosEulAng[2][3], sinEulAng[2][3];
@@ -1021,7 +1022,6 @@ void funcs2beZeroedNeighPlaneSE(int n, double x[], double fvec[], int i)
   //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.
   MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 }
-#undef MD_FDJAC_SYM
 #ifdef MD_FDJAC_SYM
 void fdjacDistNegNeighPlaneSE(int n, double x[], double fvec[], double **df, 
     	       void (*vecfunc)(int, double [], double [], int), int iA)
@@ -2262,6 +2262,7 @@ void frprmnRyckNNLSE(double p[], int n, double ftol, int *iter, double *fret, do
   if ((OprogStatus.SDmethod == 2 || OprogStatus.SDmethod == 4) &&
       check_doneSE(fp, fpold, minax))
     {
+      //printf("BOH\n");
       callsok++;
       return;
     }

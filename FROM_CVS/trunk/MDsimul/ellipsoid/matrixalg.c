@@ -3611,10 +3611,10 @@ void InvMatrix(double **a, double **b, int NB)
    in maniera significativa (questo dovrebbe accadere quando uno spigolo della SQ 
    urta un piano).
  */
-#define TOLXDNL 3.0E-11
+#define TOLXDNL 1.0E-14
 
 /* NOTA 13/04/2010: per ora TOLXNL non lo uso */
-#define TOLXNL 3.0E-11
+#define TOLXNL 1.0E-14
 #else
 #define TOLX 1.0E-14//1.0e-7 /* Convergence criterion on  x.*/ 
 #define TOLXD 1.0E-14
@@ -3647,7 +3647,15 @@ void InvMatrix(double **a, double **b, int NB)
 #define TOLF 1.0E-10// 1.0e-4
 #define TOLFD 1.0E-10
 #endif
+#ifdef MD_SUPERELLIPSOID
+#define TOLMIN 1.0E-12
+#define TOLMINNL 1.0E-12
+#define TOLMINDNL 1.0E-14
+#else
 #define TOLMIN 1.0E-12//1.0e-6 
+#define TOLMINDNL TOLMIN
+#define TOLMINNL TOLMIN
+#endif
 #define STPMX 100.0
 void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], double x[], 
 	    double *f, double stpmax, int *check, 
@@ -3988,7 +3996,6 @@ void newtNeigh(double x[], int n, int *check,
 	}
       if (*check) 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
-
 #ifdef MD_SUPERELLIPSOID
 	  test=0.0; 
 	  den=FMAX(f,0.5*n);
@@ -3998,7 +4005,7 @@ void newtNeigh(double x[], int n, int *check,
 	      if (temp > test) 
 		test=temp; 
 	    } 
-	  *check=(test < TOLMIN ? 2 : 0);
+	  *check=(test < TOLMINNL ? 2 : 0);
 #endif
 #ifdef MD_SUPERELLIPSOID
 	  /* NOTA 13/04/2010: nel caso dei superellissoidi quando la distanza con il piano
@@ -4413,7 +4420,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	      if (temp > test) 
 		test=temp; 
 	    } 
-	  *check=(test < TOLMIN ? 2 : 0);
+	  *check=(test < TOLMINDNL ? 2 : 0);
 	  //printf("MAAAH test=%.15G\n", test);
 #endif
 	  /* se c'è anche il sospetto di un minimo locale allora fai
