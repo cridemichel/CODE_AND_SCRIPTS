@@ -4283,13 +4283,13 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   return 0;
 }
 /* -------- >>> neighbour list stuff <<< --------- */
-double get_max_deldist_sp(int nsp, double distsOld[6][NA], double dists[6][NA])
+double get_max_deldist_sp(int bsp, int nsp, double distsOld[6][NA], double dists[6][NA])
 {
   int nn, nn2, first = 1;
   double maxdd=0.0, dd;
   for (nn = 0; nn < 6; nn++)
     {
-      for (nn2 = 0; nn2 < nsp; nn2++)
+      for (nn2 = bsp; nn2 < nsp; nn2++)
 	{
 
 	  dd = fabs(dists[nn][nn2]-distsOld[nn][nn2]);
@@ -4350,13 +4350,13 @@ int interpolNeighPlane_sp(int i, double tref, double t, double delt, double d1, 
   return 1;
 }
 
-int check_cross_sp(int nsp, double distsOld[6][NA], double dists[6][NA], int crossed[6][NA])
+int check_cross_sp(int bsp, int nsp, double distsOld[6][NA], double dists[6][NA], int crossed[6][NA])
 {
   int nn, nn2;
   int retcross = 0;
   for (nn = 0; nn < 6; nn++)
     {
-      for (nn2 = 0; nn2 < nsp; nn2++)
+      for (nn2 = bsp; nn2 < nsp; nn2++)
 	{
 
 	  crossed[nn][nn2] = 0;
@@ -4372,13 +4372,13 @@ int check_cross_sp(int nsp, double distsOld[6][NA], double dists[6][NA], int cro
   return retcross;
 }
 
-int check_cross_scf_sp(int NSP, double distsOld[6][NA], double dists[6][NA], int crossed[6][NA])
+int check_cross_scf_sp(int BSP, int NSP, double distsOld[6][NA], double dists[6][NA], int crossed[6][NA])
 {
   int nn, nn2;
   int retcross = 0;
   for (nn = 0; nn < 6; nn++)
     {
-      for (nn2 = 0; nn2 < NSP; nn2++)
+      for (nn2 = BSP; nn2 < NSP; nn2++)
 	{
 	  crossed[nn][nn2] = 0;
 	  //printf("dists[%d]=%.15G distsOld[%d]:%.15G\n", nn, dists[nn], nn, distsOld[nn]);
@@ -4391,21 +4391,21 @@ int check_cross_scf_sp(int NSP, double distsOld[6][NA], double dists[6][NA], int
     }
   return retcross;
 }
-void assign_dists_sp(int nsp, double a[6][NA], double b[6][NA])
+void assign_dists_sp(int bsp, int nsp, double a[6][NA], double b[6][NA])
 {
   int k1, k2;
   //memcpy(b, a, nsp*6*sizeof(double));
   for (k1=0; k1 < 6; k1++)
-    for (k2 = 0; k2 < nsp; k2++)
+    for (k2 = bsp; k2 < nsp; k2++)
       b[k1][k2] = a[k1][k2];
 }
-int get_dists_tocheck_sp(int nsp, double distsOld[6][NA], double dists[6][NA], int tocheck[6][NA], int dorefine[6][NA])
+int get_dists_tocheck_sp(int bsp, int nsp, double distsOld[6][NA], double dists[6][NA], int tocheck[6][NA], int dorefine[6][NA])
 {
   int nn, nn2;
   int rettochk = 0;
   for (nn = 0; nn < 6; nn++)
     {
-      for (nn2 = 0; nn2 < nsp; nn2++)
+      for (nn2 = bsp; nn2 < nsp; nn2++)
 	{
 	  tocheck[nn][nn2] = 0;
 	  if (dists[nn][nn2] < OprogStatus.epsdSPNL && distsOld[nn][nn2] < OprogStatus.epsdSPNL &&
@@ -4438,7 +4438,7 @@ double calcDistNegOneNNL_sp_norient(double t, double t1, int i, int nn, double r
 #endif
 }
 
-double calcDistNegNeighPlaneAll_sp(int nsp, double t, double t1, int i, double dists[6][NA])
+double calcDistNegNeighPlaneAll_sp(int bsp, int nsp, double t, double t1, int i, double dists[6][NA])
 {
   int nn, kk, nn2;
   double dmin=0.0;
@@ -4469,7 +4469,7 @@ double calcDistNegNeighPlaneAll_sp(int nsp, double t, double t1, int i, double d
   BuildAtomPos(i, rA, RtA, ratA);
   for (nn = 0; nn < 6; nn++)
     {
-      for (nn2 = 0; nn2 < nsp; nn2++)
+      for (nn2 = bsp; nn2 < nsp; nn2++)
 	{
 	  for (kk = 0; kk < 3; kk++)
 	    {
@@ -4484,31 +4484,32 @@ double calcDistNegNeighPlaneAll_sp(int nsp, double t, double t1, int i, double d
     }
   return dmin; 
 }
-int check_distance_sp(int nsp, double maxddoti[6][NA], double dists[6][NA], double t1, double t2, double t)
+int check_distance_sp(int bsp, int nsp, double maxddoti[6][NA], double dists[6][NA], double t1, double t2, double t)
 {
   int nn, cc, nn2;
   cc = 0;
   for (nn = 0; nn < 6; nn++)
     {
-      for (nn2 = 0; nn2 < nsp; nn2++)
+      for (nn2 = bsp; nn2 < nsp; nn2++)
 	{
 	  if ((t2 - (t1 + t))*maxddoti[nn][nn2] <  dists[nn][nn2] - OprogStatus.epsdSPNL)
 	    cc++;
 	}
     }
-  if (cc == 6*nsp)
+
+  if (cc == 6*(nsp-bsp))
     return 1;
   else
     return 0;
   //printf("I chose dt=%.15G\n", *delt);
 }
-void calc_delt_sp(int nsp, double maxddoti[6][NA], double *delt, double dists[6][NA])
+void calc_delt_sp(int bsp, int nsp, double maxddoti[6][NA], double *delt, double dists[6][NA])
 {
   int nn, nn2;
   double dt;
   for (nn = 0; nn < 6; nn++)
     {
-      for (nn2 = 0; nn2 < nsp; nn2++)
+      for (nn2 = bsp; nn2 < nsp; nn2++)
 	{
 	  dt = fabs(dists[nn][nn2]) / maxddoti[nn][nn2];
 	  //printf("nn=%d dt=%.15G delt=%.15G dists=%.15G maxddoti=%15G\n", nn, dt, *delt, dists[nn][nn2], maxddoti[nn][nn2]);
@@ -4520,7 +4521,7 @@ void calc_delt_sp(int nsp, double maxddoti[6][NA], double *delt, double dists[6]
 }
 extern double max(double a, double b);
 extern const double mddotfact;
-void adjust_maxddoti_sp(int i, int NSP, double *maxddot, double maxddotiLC[6][NA], double maxddoti[6][NA])
+void adjust_maxddoti_sp(int i, int BSP, int NSP, double *maxddot, double maxddotiLC[6][NA], double maxddoti[6][NA])
 {
   double K = 1.0;
   int a, b;
@@ -4537,7 +4538,7 @@ void adjust_maxddoti_sp(int i, int NSP, double *maxddot, double maxddotiLC[6][NA
 #endif
   *maxddot *= K;
   for (a = 0; a < 6; a++)
-    for (b = 0; b < NSP; b++)
+    for (b = BSP; b < NSP; b++)
       maxddoti[a][b] = K*maxddotiLC[a][b];
 
 }
@@ -4549,20 +4550,25 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
   const double GOLD= 1.618034;
   const int MAXOPTITS = 500;
   double maxddoti[6][NA];
-  int its=0, crossed[6][NA], itsf, NSP; 
+  int its=0, crossed[6][NA], itsf, NSP, BSP; 
 #ifdef EDHE_FLEX
   NSP = typesArr[typeOfPart[i]].nspots;
+  BSP = 0;
+#ifdef MD_SUPERELLIPSOID
   if (OprogStatus.useNNL==3 || OprogStatus.useNNL==4)
     {
+      if (OprogStatus.targetPhi > 0.0)
+	BSP = NSP;
       NSP += MD_SPNNL_NUMSP;
     }
+#endif
 #else
   if (i < Oparams.parnumA)
     NSP = MD_STSPOTS_A;
   else
     NSP = MD_STSPOTS_B;
 #endif
-  *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, distsOld);
+  *d1 = calcDistNegNeighPlaneAll_sp(BSP, NSP, *t, t1, i, distsOld);
   MD_DEBUG45(printf("[search_contact_faster_neigh_plane_all_sp] t=%.15G t1=%.15G dist=%.15G\n", *t, t1, *d1));
 #if 0
   if ((t2-t1)*maxddot < *d1 - OprogStatus.epsdSPNL)
@@ -4572,15 +4578,15 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
   told = *t;
   if (fabs(*d1) < epsdFast)
     {
-      assign_dists_sp(NSP, distsOld, dists);
+      assign_dists_sp(BSP, NSP, distsOld, dists);
       return 0;
     }
-  adjust_maxddoti_sp(i, NSP, &maxddot, maxddotiLC, maxddoti);
+  adjust_maxddoti_sp(i, BSP, NSP, &maxddot, maxddotiLC, maxddoti);
   while (fabs(*d1) > epsdFast && its < MAXOPTITS)
     {
 #if 1
-      calc_delt_sp(NSP, maxddoti, &delt, distsOld);
-      if (check_distance_sp(NSP, maxddoti, dists, t1, t2, *t))
+      calc_delt_sp(BSP, NSP, maxddoti, &delt, distsOld);
+      if (check_distance_sp(BSP, NSP, maxddoti, dists, t1, t2, *t))
 	{
 	  return 1;
 	  
@@ -4593,7 +4599,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
       *t += delt;
 
       //printf("prima i=%d *d1=%.15G (t=%.15G)\n", i, *d1, *t);
-      *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
+      *d1 = calcDistNegNeighPlaneAll_sp(BSP, NSP, *t, t1, i, dists);
       //printf("dopo i=%d *d1=%.15G (t=%.15G)\n", i, *d1, *t);
       MD_DEBUG45(printf("UNO *d1=%.15G t=%.15G t1=%.15G delt=%.15G\n", *d1,*t,t1,delt));
 #if 0
@@ -4605,7 +4611,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
       //printf("d=%.15G t=%.15G\n", *d1, *t+t1);
 #if 1
       itsf = 0;
-      while (check_cross_sp(NSP, distsOld, dists, crossed)||(*d1==0.0))
+      while (check_cross_sp(BSP, NSP, distsOld, dists, crossed)||(*d1==0.0))
 	{
 	  /* reduce step size */
 	  if (itsf == 0 && delt - OprogStatus.h > 0)
@@ -4613,7 +4619,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 	  else
 	    delt /= GOLD;
 	  *t = told + delt;
-	  *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
+	  *d1 = calcDistNegNeighPlaneAll_sp(BSP, NSP, *t, t1, i, dists);
 	  MD_DEBUG45(printf("DUE *d1=%.15G t=%.15G t1=%.15G\n", *d1,*t,t1));
 	  itsf++;	
 	  if (itsf > 100)
@@ -4624,13 +4630,13 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 	    }
 	}
 #else
-     if (check_cross_sp(NSP, distsOld, dists, crossed)||(*d1==0.0))
+     if (check_cross_sp(BSP, NSP, distsOld, dists, crossed)||(*d1==0.0))
        {
 	 /* go back! */
 	 MD_DEBUG34(printf("d1<0 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	 MD_DEBUG34(printf("d1 negative in %d iterations d1= %.15f\n", its, *d1));
 	 *t = told;	  
-	 *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
+	 *d1 = calcDistNegNeighPlaneAll_sp(BSP, NSP, *t, t1, i, dists);
 	 return 0;
        }
 #endif
@@ -4639,11 +4645,11 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 	  *t = told;
 	  MD_DEBUG34(printf("t>t2 %d iterations reached t=%f t2=%f\n", its, *t, t2));
 	  MD_DEBUG34(printf("convergence t>t2\n"));
-	  *d1 = calcDistNegNeighPlaneAll_sp(NSP, *t, t1, i, dists);
+	  *d1 = calcDistNegNeighPlaneAll_sp(BSP, NSP, *t, t1, i, dists);
 	  return 1;
 	}
       told = *t;
-      assign_dists_sp(NSP, dists, distsOld);
+      assign_dists_sp(BSP, NSP, dists, distsOld);
       its++;
       itsFNL++;
     }
@@ -4854,7 +4860,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   const int MAXITS = 100;
   const double EPS=3E-8;*/ 
   /* per calcolare derivate numeriche questo è il magic number in doppia precisione (vedi Num. Rec.)*/
-  int its, foundrc, NSP;
+  int its, foundrc, NSP, BSP;
   double t1, epsd, epsdFast, epsdFastR, epsdMax; 
   int tocheck[6][NA], dorefine[6][NA], ntc, ncr, nn, gotcoll, crossed[6][NA], firstaftsf;
   epsd = OprogStatus.epsdSPNL;
@@ -4880,13 +4886,16 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 #ifdef EDHE_FLEX
 #ifdef MD_SUPERELLIPSOID
   NSP = typesArr[typeOfPart[i]].nspots;
+  BSP = 0;
   if (OprogStatus.useNNL==3 || OprogStatus.useNNL==4)
     {
+      if (OprogStatus.targetPhi > 0.0)
+	BSP = NSP;
       /* durante la crescita gli spot interattivi non vengono considerati */
       NSP += MD_SPNNL_NUMSP;
     }
-  
 #else
+  BSP = 0;
   NSP = typesArr[typeOfPart[i]].nspots;
 #endif
 #else
@@ -4911,7 +4920,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   maxddot = 0.0;
   for (nn = 0; nn < 6; nn++)
     {
-      for (nn2 = 0; nn2 < NSP; nn2++)
+      for (nn2 = BSP; nn2 < NSP; nn2++)
 	{
 	  maxddoti[nn][nn2] = calc_maxddot_nnl_sp(i, nn2, gradplane_all[nn]);
 	  //printf("maxddoti[%d][%d]=%.15G\n", nn, nn2, maxddoti[nn][nn2]);
@@ -4937,7 +4946,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   MD_DEBUG34(printf("[locate_contact_neigh_plane_parall_sp] BOH t=%.15G d=%.15G\n", t, d));
   timesSNL++;
   foundrc = 0;
-  assign_dists_sp(NSP, dists, distsOld);
+  assign_dists_sp(BSP, NSP, dists, distsOld);
   dold = d;
   firstaftsf = 1;
   its = 0;
@@ -4952,7 +4961,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
       delt = epsd/maxddot;
       tini = t;
       t += delt;
-      while ((d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists))==0.0)
+      while ((d = calcDistNegNeighPlaneAll_sp(BSP, NSP, t, t1, i, dists))==0.0)
 	{
 	  delt *= GOLD;
 	  t = tini + delt;
@@ -4964,18 +4973,18 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	  deltini = delt;
 	  delt /= GOLD;
 	  t = tini + delt;
-	  d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+	  d = calcDistNegNeighPlaneAll_sp(BSP, NSP, t, t1, i, dists);
 	  if (fabs(d-dold)!=0.0)
 	    {
 	      delt = deltini;
 	      t = tini + delt;
-	      d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+	      d = calcDistNegNeighPlaneAll_sp(BSP, NSP, t, t1, i, dists);
 	    } 
 	  while (fabs(d-dold)==0.0)
 	    {
 	      delt *= GOLD;
 	      t = tini + delt;
-	      d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+	      d = calcDistNegNeighPlaneAll_sp(BSP, NSP, t, t1, i, dists);
 	    }	
 	}
 
@@ -4983,7 +4992,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 #else
       if (!firstaftsf)
 	{
-	  deldist = get_max_deldist_sp(NSP, distsOld2, distsOld);
+	  deldist = get_max_deldist_sp(BSP, NSP, distsOld2, distsOld);
 	  normddot = fabs(deldist)/delt;
 	  /* NOTA: forse qui si potrebbe anche usare sempre delt = epsd/maxddot */
 	  if (normddot!=0)
@@ -4998,14 +5007,14 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	{
 	  delt = h;//EPS*fabs(t);
 	  firstaftsf = 0;
-	  dold2 = calcDistNegNeighPlaneAll_sp(NSP, t-delt, t1, i, distsOld2);
+	  dold2 = calcDistNegNeighPlaneAll_sp(BSP, NSP, t-delt, t1, i, distsOld2);
 	  continue;
 	}
       tini = t;
       t += delt;
-      d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+      d = calcDistNegNeighPlaneAll_sp(BSP, NSP, t, t1, i, dists);
       MD_DEBUG34(printf("[locate_contact_neigh_plane_parall_sp]t=%.15G d=%.15G\n", t, d));
-      deldist = get_max_deldist_sp(NSP, distsOld, dists);
+      deldist = get_max_deldist_sp(BSP, NSP, distsOld, dists);
       if (deldist > epsdMax)
 	{
 	  /* se la variazione di d è eccessiva 
@@ -5024,17 +5033,17 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 #endif
 	  t += delt; 
 	  itsSNL++;
-	  d = calcDistNegNeighPlaneAll_sp(NSP, t, t1, i, dists);
+	  d = calcDistNegNeighPlaneAll_sp(BSP, NSP, t, t1, i, dists);
 	  //assign_vec(vecgdold2, vecgd);
 	}
 #endif
       for (nn=0; nn < 6; nn++)
-	for (nn2=0; nn2 < NSP; nn2++)
+	for (nn2=BSP; nn2 < NSP; nn2++)
 	  dorefine[nn][nn2] = 0;
-      ncr=check_cross_sp(NSP, distsOld, dists, crossed);
+      ncr=check_cross_sp(BSP, NSP, distsOld, dists, crossed);
       for (nn = 0; nn < 6; nn++)
 	{
-	  for (nn2 = 0; nn2 < NSP; nn2++)
+	  for (nn2 = BSP; nn2 < NSP; nn2++)
 	    {
 	      t2arr[nn][nn2] = t; 
 	      dorefine[nn][nn2] = crossed[nn][nn2];
@@ -5054,11 +5063,11 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	    }
 	}
 #if 1
-      ntc = get_dists_tocheck_sp(NSP, distsOld, dists, tocheck, dorefine);
+      ntc = get_dists_tocheck_sp(BSP, NSP, distsOld, dists, tocheck, dorefine);
       for (nn = 0; nn < 6; nn++)
 	{
 	  assign_plane(nn);
-	  for (nn2 = 0; nn2 < NSP; nn2++)
+	  for (nn2 = BSP; nn2 < NSP; nn2++)
 	    {
 	      if (tocheck[nn][nn2])
 		{
@@ -5085,7 +5094,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
       firstev = 1;
       for (nn = 0; nn < 6; nn++)
 	{
-	  for (nn2 = 0; nn2 < NSP; nn2++)
+	  for (nn2 = BSP; nn2 < NSP; nn2++)
 	    {
 	      if (dorefine[nn][nn2]!=0)
 		{
@@ -5153,16 +5162,16 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	      return 0;
 	    }
 	  dold = d;
-	  assign_dists_sp(NSP, dists, distsOld);
+	  assign_dists_sp(BSP, NSP, dists, distsOld);
 	  firstaftsf = 1;
 	  its++;
 	  continue;
 	}
       dold = d;
 #ifndef MD_BASIC_DT
-      assign_dists_sp(NSP, distsOld,  distsOld2);
+      assign_dists_sp(BSP, NSP, distsOld,  distsOld2);
 #endif
-      assign_dists_sp(NSP, dists, distsOld);
+      assign_dists_sp(BSP, NSP, dists, distsOld);
       its++;
       itsSNL++;
     }

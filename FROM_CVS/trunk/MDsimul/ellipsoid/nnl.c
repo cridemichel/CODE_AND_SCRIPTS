@@ -3835,11 +3835,14 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
   /* la collisione di una sfera con i vari piani si puo' calcolare 
      velocemente senza passare per il codice che segue */
 #ifdef EDHE_FLEX
-  if (is_sphere(i) && !is_superellipse(i))// nel caso di superellissoidi deve anche valere che gli esponenti
+  if (is_sphere(i))// nel caso di superellissoidi deve anche valere che gli esponenti
     // siano tutti (fix this bug but do some testing before)
     {
-      //printf("qui\n");
-      return locate_contact_neigh_plane_HS(i, evtime, t2);
+#ifdef MD_SUPERELLIPSOID
+	if (!is_superellipse(i))
+#endif
+	  //printf("qui\n");
+	  return locate_contact_neigh_plane_HS(i, evtime, t2);
       MD_DEBUG37(printf("HS evtime=%.15G\n", *evtime));
     }
 #endif
