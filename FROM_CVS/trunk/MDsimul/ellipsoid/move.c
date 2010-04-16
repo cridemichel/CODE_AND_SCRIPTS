@@ -1392,6 +1392,7 @@ void scale_Phi(void)
   if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
     {
       R2u();
+#if 0
       for (i=0; i < Oparams.parnum; i++)
 	{
 	  printf("i=%d axa=%.15G axb=%15G axc=%.15G\n", i, axa[i], axb[i], axc[i]);
@@ -1401,6 +1402,7 @@ void scale_Phi(void)
 	      printf("Prima distanza negativa per i=%d = %.15G\n", i, distMin);
 	    }
 	}
+#endif
       ENDSIM = 1;
       /* riduce gli ellissoidi alle dimensioni iniziali e comprime il volume */
 #ifdef EDHE_FLEX
@@ -1419,6 +1421,7 @@ void scale_Phi(void)
 #endif
       scale_coords(factor);
     }
+#if 0
   for (i=0; i < Oparams.parnum; i++)
     {
       if (ENDSIM)
@@ -1429,6 +1432,7 @@ void scale_Phi(void)
 	  printf("distanza negativa per i=%d = %.15G\n", i, distMin);
 	}
     }
+#endif
 }
 
 long long itsNRdist=0, callsdistNR=0;

@@ -3650,7 +3650,7 @@ void InvMatrix(double **a, double **b, int NB)
 #endif
 #ifdef MD_SUPERELLIPSOID
 #define TOLMIN 1.0E-12
-#define TOLMINNL 1.0E-12
+#define TOLMINNL 1.0E-14
 #define TOLMINDNL 1.0E-14
 #else
 #define TOLMIN 1.0E-12//1.0e-6 
@@ -3716,7 +3716,7 @@ void lnsrchNeigh(int n, double xold[], double fold, double g[], double p[], doub
 	}
       else if (*f <= fold+ALF*alam*slope) 
 	return; 
-	/* Su cient function decrease.*/
+	/* Sufficient function decrease.*/
       else 
 	{ /* Backtrack. */
 	  if (alam == 1.0) 
@@ -4258,6 +4258,8 @@ extern double gradplane[];
 extern double calc_norm(double *vec);
 extern double scalProd(double *A, double *B);
 #endif
+extern void print_matrix(double **M, int n);
+
 void newtDistNegNeighPlane(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int),
 	  int iA)
@@ -4431,7 +4433,7 @@ void newtDistNegNeighPlane(double x[], int n, int *check,
 	      if (temp > test) 
 		test=temp; 
 	    }
-#if 0 
+#if 0
 	  //printf("qui test=%.15G g=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
 	//	 test, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7]);
 	  printf("its=%d qui test=%.15G x=%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
