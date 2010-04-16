@@ -8,7 +8,7 @@ int N;
 double x[3], R[3][3], Q[3][3];
 double r1[3], r2[3], r3[3], u1[3], u2[3], u3[3], dt;
 char fname[1024], inputfile[1024];
-int readCnf = 0, timeEvol = 0, ordmatrix=0, curStep, readLapo=0;
+int readCnf = 0, timeEvol = 0, ordmatrix=0, curStep, readLapo=0, heflex=0;
 #define Sqr(x) ((x)*(x))
 void vectProd(double r1x, double r1y, double r1z, 
 	 double r2x, double r2y, double r2z, 
@@ -39,7 +39,7 @@ void diagonalize(double M[3][3], double ev[3])
 }
 void print_usage(void)
 {
-  printf("order_param [--lapo/-l | --cnf/-c | --time/-t | --ordmatrix/-Q ] <confs_file>\n");
+  printf("order_param [--lapo/-l | --heflex/-fl |--cnf/-c | --time/-t | --ordmatrix/-Q ] <confs_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -57,6 +57,10 @@ void parse_param(int argc, char** argv)
       else if (!strcmp(argv[cc],"--cnf") || !strcmp(argv[cc],"-c" ))
 	{
 	  readCnf = 1;
+	} 
+      else if (!strcmp(argv[cc],"--heflex") || !strcmp(argv[cc],"-fl" ))
+	{
+	  heflex = 1;
 	} 
       else if (!strcmp(argv[cc],"--lapo") || !strcmp(argv[cc],"-l" ))
 	{
@@ -138,7 +142,7 @@ void build_ref_axes(double u1[3], double u2[3], double u3[3])
 int main(int argc, char** argv)
 {
   FILE *f, *f2;
-  int nf, i, a, b;
+  int nf, i, a, b, dummyint;
   double ev[3], ti, S, tref=0.0;
 #if 0
   if (argc == 1)
@@ -183,7 +187,14 @@ int main(int argc, char** argv)
   
   	}
       while (strcmp(line,"@@@"));
-
+      if (heflex)
+	{
+	  do 
+	    {
+	      fscanf(f,"%[^\n]\n",line);
+	    }
+	  while (strcmp(line,"@@@"));
+	}
       //printf("fname=%s %d ellipsoids...\n", fname, N);
       if (timeEvol)
 	{
@@ -207,6 +218,11 @@ int main(int argc, char** argv)
 		  R[2][a] = u3[a];
 		}
 	    }
+	  else if (heflex)
+	    fscanf (f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
+	  	    &(x[0]), &(x[1]), &(x[2]), 
+	  	    &(R[0][0]), &(R[0][1]), &(R[0][2]), &(R[1][0]), &(R[1][1]), 
+	  	    &(R[1][2]), &(R[2][0]), &(R[2][1]), &(R[2][2]), &dummyint);
 	  else
 	    fscanf (f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf \n",
 	  	    &(x[0]), &(x[1]), &(x[2]), 
