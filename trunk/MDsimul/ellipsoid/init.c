@@ -4553,7 +4553,7 @@ int readBinCoord_heflex(int cfd)
   int i;
   int size;
   unsigned char rerr = 0;
-#ifdef MD_SUPERELLIPSOID
+#ifdef EDHE_FLEX 
   int sizeSPNNL;
 #endif
 #ifdef MD_GHOST_IGG
