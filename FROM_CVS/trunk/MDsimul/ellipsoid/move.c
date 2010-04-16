@@ -820,6 +820,9 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 		      double shift[3], double scalfact, double *factor, int j)
 {
   int kk;
+#ifdef MD_SUPERELLIPSOID
+  int NSP;
+#endif
   int ii, typei;
   double nnlfact;
   double C, Ccur, F, phi, fact, rAC[3], rBD[3], fact1, fact2, fact3;
@@ -927,6 +930,8 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 	  //maxaxNNL = 2.0*max3(nebrTab[i].axa, nebrTab[i].axb,nebrTab[i].axc);
 	  //maxaxStore = 2.0*max3(aL,bL,cL);
 	  factNNL = min3(nebrTab[i].axa/aL, nebrTab[i].axb/bL, nebrTab[i].axc/cL); 
+	  /* NOTA 16/04/2010: il trucco qui è di evitare si scalare la particella oltre
+	     la sua NNL in questo modo non devo ricostruire le NNL dopo uno scaling degli assi */
 	}
      /*
 	 if (OprogStatus.useNNL && maxax[i] / maxaxNNL > 1.0)
@@ -1261,6 +1266,7 @@ void scale_Phi(void)
 	  done++;
 	  continue;
 	}
+      /* NOTA 16/04/2010 */
       if (OprogStatus.useNNL)
 	distMin = get_min_dist_NNL(i, &j, rC, rD, shift);
       else
@@ -1307,7 +1313,7 @@ void scale_Phi(void)
 	{
 	  restore_values(i);
 	  phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor, j);
-	  rebuild_linked_list();
+  	  rebuild_linked_list();
 	  distMinT = check_dist_min(i, "Alla fine di calc_Phi()");
 	  //printf("t=%.8G cellsx: %d rcut: %.8G imin=%d jmin=%d distMinT= %.15G phi=%.8G\n", 
 	  //     Oparams.time, cellsx, Oparams.rcut, imin, jmin, distMinT, phi);

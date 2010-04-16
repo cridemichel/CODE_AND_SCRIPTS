@@ -2472,20 +2472,25 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
   int a;
   /* l'atomo zero si suppone nell'origine */
 #ifdef EDHE_FLEX
-  int kk, same, NSP;
+  int kk, same, NSP, BSP;
   int typei;
   spotStruct *spots;
 
   typei = typeOfPart[i];
   spots = typesArr[typei].spots;
   NSP = typesArr[typei].nspots+1;
+  BSP = 0;
 #ifdef MD_SUPERELLIPSOID
   /* NOTA 16/04/2010: se BuildAtomPos viene chiamata durante la ricerca del tempo di uscita degli spot
      allora considera anche gli MD_SPNNL_NUMSP spot extra utilizzati per le SPNNL (sticky spots NNL) */
-  if (locateNNLSP)
-    NSP += MD_SPNNL_NUMSP;
+  if (locateNNLSP && (OprogStatus.useNNL==3 ||OprogStatus.useNNL==4))
+    {
+      if (OprogStatus.targetPhi > 0.0)
+	BSP = NSP;
+      NSP += MD_SPNNL_NUMSP;
+    }
 #endif
-  for (a=0; a < NSP; a++)
+  for (a=BSP; a < NSP; a++)
     {
       if (a > 0 && (same = spots[a-1].same)!=a-1)
 	{
@@ -4554,7 +4559,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 #ifdef EDHE_FLEX
   NSP = typesArr[typeOfPart[i]].nspots;
   BSP = 0;
-#ifdef MD_SUPERELLIPSOID
+#if defined(MD_SUPERELLIPSOID) 
   if (OprogStatus.useNNL==3 || OprogStatus.useNNL==4)
     {
       if (OprogStatus.targetPhi > 0.0)
@@ -4843,6 +4848,9 @@ int locate_contact_neigh_plane_parall_sphs(int i, double *evtime, double t2)
 extern int is_infinite_Itens(int i);
 extern int is_infinite_mass(int i);
 #endif
+#ifdef MD_SUPERELLIPSOID
+extern void buildSPNNL_spots_growth(int i);
+#endif
 int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 {
   /* const double minh = 1E-14;*/
@@ -4884,16 +4892,24 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   t1 = Oparams.time;
   //t2 = timbig;
 #ifdef EDHE_FLEX
-#ifdef MD_SUPERELLIPSOID
+#if defined(MD_SUPERELLIPSOID) 
   NSP = typesArr[typeOfPart[i]].nspots;
   BSP = 0;
   if (OprogStatus.useNNL==3 || OprogStatus.useNNL==4)
     {
       if (OprogStatus.targetPhi > 0.0)
-	BSP = NSP;
+	{
+	  /* NOTA 16/04/2010: durante la crescita le SQ hanno dimensioni diverse
+	     e quindi gli spot relativi alle NNL vanno calcolati ogni
+	     volta per ogni singola SQ. */
+	  BSP = NSP;
+	  buildSPNNL_spots_growth(i);
+	}
       /* durante la crescita gli spot interattivi non vengono considerati */
       NSP += MD_SPNNL_NUMSP;
     }
+
+  //printf("BSP=%d NSP=%d\n", BSP, NSP);
 #else
   BSP = 0;
   NSP = typesArr[typeOfPart[i]].nspots;

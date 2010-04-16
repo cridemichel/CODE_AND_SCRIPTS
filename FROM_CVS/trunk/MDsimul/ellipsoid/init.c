@@ -3000,6 +3000,25 @@ extern double max3(double a, double b, double c);
 void init_gauleg_weights(void);
 double *SQvolPrefact;
 double calc_SQ_volprefact(int);
+void buildSPNNL_spots_growth(int i)
+{
+  int pt, nsp, kk, k, vert[3];
+  double signArr[MD_SPNNL_NUMSP][3] = {{1,1,1},{1,1,-1},{1,-1,1},{-1,1,1},{-1,-1,1},{1,-1,-1},{-1,1,-1},{-1,-1,-1}};
+  pt = typeOfPart[i];
+  vert[0] = axa[i];
+  vert[1] = axb[i];
+  vert[2] = axc[i];
+  nsp = typesArr[pt].nspots;
+  for (k = 0; k < 8; k++)
+    {
+      /* NOTA 16/04/2010: in tal modo gli 8 spot coincidono con i vertici di un parallelepipedo
+	 che hai i lati esattamente uguali al doppio dei semiassi della SQ */
+      for (kk = 0; kk < 3; kk++)
+	typesArr[pt].spots[nsp+k].x[kk] = vert[kk]*signArr[k][kk]; 
+      typesArr[pt].spots[nsp+k].same=nsp+k;
+      typesArr[pt].spots[nsp+k].sigma = MD_SPNNL_SIGMA; 
+    }
+}
 void buildSPNNL_spots(void)
 {
   int pt, nsp, kk, k, vert[3];
@@ -3015,6 +3034,7 @@ void buildSPNNL_spots(void)
 	   che hai i lati esattamente uguali al doppio dei semiassi della SQ */
 	  for (kk = 0; kk < 3; kk++)
 	    typesArr[pt].spots[nsp+k].x[kk] = vert[kk]*signArr[k][kk]; 
+	  typesArr[pt].spots[nsp+k].same=nsp+k;
 	  typesArr[pt].spots[nsp+k].sigma = MD_SPNNL_SIGMA; 
 	}
     }
@@ -3078,6 +3098,19 @@ void usrInitAft(void)
    {
      printf("WARNING: Growth simulation, spots interactions will be disables\n");
    }
+#ifdef MD_SUPERELLIPSOID
+ if (OprogStatus.useNNL > 3 || OprogStatus.useNNL < 0)
+   {
+     printf("[-D MD_SUPERELLIPSOID] useNNL must be between 0 and 4 (3=SPNNL and 1=usual NNL)\n");
+     exit(-1);
+   }
+#else
+ if (OprogStatus.useNNL > 2 || OprogStatus.useNNL < 0)
+   {
+     printf("[HEFLEX] useNNL must be between 0 and 2 (1=usual NNL, 0=disabled)\n");
+     exit(-1);
+   }
+#endif
 #endif
  numcols=0;
  for (i=0;;i++)
