@@ -5741,6 +5741,7 @@ extern int is_infinite_mass(int i);
 #endif
 #ifdef EDHE_FLEX
 extern int *is_a_sphere_NNL;
+int locateNNLSP;
 #endif
 void updrebuildNNL(int na)
 {
@@ -5770,8 +5771,10 @@ void updrebuildNNL(int na)
     }
 #endif
 #ifdef EDHE_FLEX
-  if (OprogStatus.targetPhi <= 0.0 && typesArr[typeOfPart[na]].nspots > 0)
+  if ((OprogStatus.targetPhi <= 0.0 && typesArr[typeOfPart[na]].nspots > 0) || 
+      (OprogStatus.useNNL==3 || OprogStatus.useNNL==4))
     {
+      locateNNLSP=1;
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
 	{
 #ifdef MD_HANDLE_INFMASS
@@ -5789,6 +5792,7 @@ void updrebuildNNL(int na)
 	  exit(-1);
 #endif
 	}
+      locateNNLSP=0;
     }
   else 
     nnltime1 = timbig;
@@ -5810,51 +5814,57 @@ void updrebuildNNL(int na)
   nnltime1 = timbig;
 #endif
   nnltime2 = timbig;
-  if (OprogStatus.paralNNL)
+  if (OprogStatus.useNNL==1 || OprogStatus.useNNL==2)
     {
-      //switch_to_HE(na);
-      if (!locate_contact_neigh_plane_parall(na, &nnltime2, nnltime1))
+      if (OprogStatus.paralNNL)
 	{
+	  //switch_to_HE(na);
+	  if (!locate_contact_neigh_plane_parall(na, &nnltime2, nnltime1))
+	    {
 #ifndef MD_PATCHY_HE
-	  printf("[ERROR] failed to find escape time for ellipsoid N. %d\n", na);
-	  exit(-1);
+	      printf("[ERROR] failed to find escape time for ellipsoid N. %d\n", na);
+	      exit(-1);
+#endif
+	    }
+	  //back_to_SQ(na);
+	}
+      else
+	{
+	  nnltime2 = nnltime1;
+#ifdef EDHE_FLEX
+	  if (is_sphere(na))
+	    {
+	      calc_grad_and_point_plane_all(na, gradplane_all, rBall);
+	      if (!locate_contact_neigh_plane_HS(na, &nnltime2, nnltime1))
+		{
+		  /* do nothing */
+		}
+	    }  
+	  else
+	    {
+	      for (ip = 0; ip < 6; ip++)
+		{
+		  if (!locate_contact_neigh_plane(na, vecg, ip, nnltime1))
+		    continue;
+		  if (vecg[4] < nnltime2)
+		    nnltime2 = vecg[4];
+		}
+	    }
+#else
+	  for (ip = 0; ip < 6; ip++)
+	    {
+	      if (!locate_contact_neigh_plane(na, vecg, ip, nnltime1))
+		continue;
+	      if (vecg[4] < nnltime2)
+		nnltime2 = vecg[4];
+	    }
 #endif
 	}
-      //back_to_SQ(na);
     }
+ if (OprogStatus.useNNL==1 || OprogStatus.useNNL == 2)
+   nebrTab[na].nexttime = min(nnltime1, nnltime2);
  else
-   {
-     nnltime2 = nnltime1;
-#ifdef EDHE_FLEX
-     if (is_sphere(na))
-       {
-	 calc_grad_and_point_plane_all(na, gradplane_all, rBall);
-	 if (!locate_contact_neigh_plane_HS(na, &nnltime2, nnltime1))
-	   {
-	     /* do nothing */
-	   }
-       }  
-     else
-       {
-	 for (ip = 0; ip < 6; ip++)
-	   {
-	     if (!locate_contact_neigh_plane(na, vecg, ip, nnltime1))
-	       continue;
-	     if (vecg[4] < nnltime2)
-	       nnltime2 = vecg[4];
-	   }
-       }
-#else
-     for (ip = 0; ip < 6; ip++)
-       {
-	 if (!locate_contact_neigh_plane(na, vecg, ip, nnltime1))
-	   continue;
-	 if (vecg[4] < nnltime2)
-	   nnltime2 = vecg[4];
-       }
-#endif
-   }
- nebrTab[na].nexttime = min(nnltime1, nnltime2);
+   nebrTab[na].nexttime = nnltime1;
 #else
   if (!locate_contact_neigh(na, vecg))
     nebrTab[na].nexttime = timbig;
@@ -6019,14 +6029,17 @@ void nextNNLupdate(int na)
 #ifdef MD_PATCHY_HE
 #ifdef EDHE_FLEX
   nnltime1 = timbig;
-  if (OprogStatus.targetPhi <= 0.0 && typesArr[typeOfPart[na]].nspots > 0)
+  if ((OprogStatus.targetPhi <= 0.0 && typesArr[typeOfPart[na]].nspots > 0) ||
+      (OprogStatus.useNNL==3 || OprogStatus.useNNL==4))
     {
+      locateNNLSP = 1;
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
 	{
 	  printf("[ERROR] failed to find escape time for sticky spots\n");
 	  printf("na=%d\n", na);
 	  exit(-1);
 	}
+      locateNNLSP = 0;
     }
   else
     nnltime1 = timbig;
@@ -6049,29 +6062,35 @@ void nextNNLupdate(int na)
   nnltime1 = timbig; 
 #endif
   nnltime2 = timbig;
-  if (OprogStatus.paralNNL)
+  if (OprogStatus.useNNL==1 || OprogStatus.useNNL==2)
     {
-      //switch_to_HE(na);
-      if (!locate_contact_neigh_plane_parall(na, &nnltime2, nnltime1))
+      if (OprogStatus.paralNNL)
 	{
+	  //switch_to_HE(na);
+	  if (!locate_contact_neigh_plane_parall(na, &nnltime2, nnltime1))
+	    {
 #ifndef MD_PATCHY_HE
-	  printf("[ERROR] failed to find escape time for ellipsoid N. %d\n", na);
-	  exit(-1);
+	      printf("[ERROR] failed to find escape time for ellipsoid N. %d\n", na);
+	      exit(-1);
 #endif
+	    }
+	  //back_to_SQ(na);
 	}
-      //back_to_SQ(na);
+      else
+	{
+	  for (ip = 0; ip < 6; ip++)
+	    {
+	      if (!locate_contact_neigh_plane(na, vecg, ip, nnltime1))
+		continue;
+	      if (vecg[4] < nnltime2)
+		nnltime2 = vecg[4];
+	    }
+	}
     }
+  if (OprogStatus.useNNL==1 || OprogStatus.useNNL==2)
+    nebrTab[na].nexttime = min(nnltime1, nnltime2);
   else
-    {
-      for (ip = 0; ip < 6; ip++)
-       	{
- 	  if (!locate_contact_neigh_plane(na, vecg, ip, nnltime1))
- 	    continue;
- 	  if (vecg[4] < nnltime2)
- 	    nnltime2 = vecg[4];
-  	}
-    }
-  nebrTab[na].nexttime = min(nnltime1, nnltime2);
+    nebrTab[na].nexttime = nnltime1;
   //printf(">> nexttime=%.15G\n", nebrTab[na].nexttime);
 #else
   if (!locate_contact_neigh(na, vecg))

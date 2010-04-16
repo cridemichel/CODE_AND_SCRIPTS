@@ -75,6 +75,9 @@ void UpdateSystem(void);
 #endif
 
 #ifdef EDHE_FLEX
+/* NOTA 16/04/2010: numero di spot per l'implementazione delle NNL tramite spots */
+#define MD_SPNNL_NUMSP 8
+#define MD_SPNNL_SIGMA 1E-5
 #define PAR2SAVE_LEN 1024
 #define MD_INF_ITENS 1E199
 #define MD_INF_MASS  1E199

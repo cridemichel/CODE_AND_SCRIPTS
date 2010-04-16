@@ -2637,6 +2637,9 @@ void check_conf(void)
 #ifdef EDHE_FLEX
 extern int get_dof_flex(int filter);
 extern int all_spots_in_CoM(int pt);
+#ifdef MD_SUPERELLIPSOID
+extern int is_superellipse(int i);
+#endif
 void find_spheres_NNL(void)
 {
   int i, k1, k2, pt;
@@ -2997,6 +3000,25 @@ extern double max3(double a, double b, double c);
 void init_gauleg_weights(void);
 double *SQvolPrefact;
 double calc_SQ_volprefact(int);
+void buildSPNNL_spots(void)
+{
+  int pt, nsp, kk, k, vert[3];
+  double signArr[MD_SPNNL_NUMSP][3] = {{1,1,1},{1,1,-1},{1,-1,1},{-1,1,1},{-1,-1,1},{1,-1,-1},{-1,1,-1},{-1,-1,-1}};
+  for (pt=0; pt < Oparams.ntypes; pt++)
+    {
+      for (kk=0; kk < 3; kk++) 
+	vert[kk] = typesArr[pt].sax[kk];
+      nsp = typesArr[pt].nspots;
+      for (k = 0; k < 8; k++)
+	{
+	/* NOTA 16/04/2010: in tal modo gli 8 spot coincidono con i vertici di un parallelepipedo
+	   che hai i lati esattamente uguali al doppio dei semiassi della SQ */
+	  for (kk = 0; kk < 3; kk++)
+	    typesArr[pt].spots[nsp+k].x[kk] = vert[kk]*signArr[k][kk]; 
+	  typesArr[pt].spots[nsp+k].sigma = MD_SPNNL_SIGMA; 
+	}
+    }
+}
 #endif
 void usrInitAft(void)
 {
@@ -3585,6 +3607,10 @@ void usrInitAft(void)
     {
       SQvolPrefact[pt] = calc_SQ_volprefact(pt);
       printf("Volume SQ prefactor = %.15G\n", SQvolPrefact[pt]);
+    }
+  if (OprogStatus.useNNL == 3 || OprogStatus.useNNL == 4)  
+    { 
+      buildSPNNL_spots();
     }
 #endif
   a0I = malloc(sizeof(double)*Oparams.parnum);
@@ -4527,7 +4553,9 @@ int readBinCoord_heflex(int cfd)
   int i;
   int size;
   unsigned char rerr = 0;
-
+#ifdef MD_SUPERELLIPSOID
+  int sizeSPNNL;
+#endif
 #ifdef MD_GHOST_IGG
   size = sizeof(ghostInfo)*Oparams.parnum;
   ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
@@ -4549,7 +4577,12 @@ int readBinCoord_heflex(int cfd)
   for (i=0; i < Oparams.ntypes; i++)
     {
       size = sizeof(spotStruct)*typesArr[i].nspots;
-      typesArr[i].spots = malloc(size);
+#ifdef MD_SUPERELLIPSOID
+      sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
+#else
+      sizeSPNNL = 0;
+#endif
+      typesArr[i].spots = malloc(size+sizeSPNNL);
       rerr |= -readSegs(cfd, "Init", "Error reading spots", CONT, size, typesArr[i].spots, NULL);
     } 
   /* read interactions */
@@ -4760,7 +4793,7 @@ void readAllCor(FILE* fs)
   char sep[256];
   int j;
   char *s1, *s2;
-
+  int sizeSPNNL;
 
   s1 = malloc(sizeof(char)*65535);
   s2 = malloc(sizeof(char)*65535);
@@ -4796,7 +4829,12 @@ void readAllCor(FILE* fs)
 #endif
       /* read sticky spots parameters */
       fscanf(fs, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
-      typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots);
+#ifdef MD_SUPERELLIPSOID
+      sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
+#else
+      sizeSPNNL = 0;
+#endif
+      typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots+sizeSPNNL);
       //printf("QUI nhardobjs=%d ntypes=%d\n",typesArr[i].nhardobjs, Oparams.ntypes );
       for (j = 0; j < typesArr[i].nspots; j++)
 	fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],

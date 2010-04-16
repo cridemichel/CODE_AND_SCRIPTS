@@ -25,6 +25,7 @@
 #ifdef EDHE_FLEX
 extern void set_angmom_to_zero(int i);
 extern int *is_a_sphere_NNL;
+extern int locateNNLSP;
 #ifdef MD_ABSORP_POLY
 extern int *oldTypeOfPart;
 #endif
@@ -2471,13 +2472,20 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
   int a;
   /* l'atomo zero si suppone nell'origine */
 #ifdef EDHE_FLEX
-  int kk, same;
+  int kk, same, NSP;
   int typei;
   spotStruct *spots;
 
   typei = typeOfPart[i];
   spots = typesArr[typei].spots;
-  for (a=0; a < typesArr[typei].nspots+1; a++)
+  NSP = typesArr[typei].nspots+1;
+#ifdef MD_SUPERELLIPSOID
+  /* NOTA 16/04/2010: se BuildAtomPos viene chiamata durante la ricerca del tempo di uscita degli spot
+     allora considera anche gli MD_SPNNL_NUMSP spot extra utilizzati per le SPNNL (sticky spots NNL) */
+  if (locateNNLSP)
+    NSP += MD_SPNNL_NUMSP;
+#endif
+  for (a=0; a < NSP; a++)
     {
       if (a > 0 && (same = spots[a-1].same)!=a-1)
 	{
@@ -4457,8 +4465,8 @@ double calcDistNegNeighPlaneAll_sp(int nsp, double t, double t1, int i, double d
   UpdateOrient(i, ti, RtA, Omega);
 #endif
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
-  BuildAtomPos(i, rA, RtA, ratA);
 
+  BuildAtomPos(i, rA, RtA, ratA);
   for (nn = 0; nn < 6; nn++)
     {
       for (nn2 = 0; nn2 < nsp; nn2++)
@@ -4544,6 +4552,10 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
   int its=0, crossed[6][NA], itsf, NSP; 
 #ifdef EDHE_FLEX
   NSP = typesArr[typeOfPart[i]].nspots;
+  if (OprogStatus.useNNL==3 || OprogStatus.useNNL==4)
+    {
+      NSP += MD_SPNNL_NUMSP;
+    }
 #else
   if (i < Oparams.parnumA)
     NSP = MD_STSPOTS_A;
@@ -4866,7 +4878,17 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   t1 = Oparams.time;
   //t2 = timbig;
 #ifdef EDHE_FLEX
+#ifdef MD_SUPERELLIPSOID
   NSP = typesArr[typeOfPart[i]].nspots;
+  if (OprogStatus.useNNL==3 || OprogStatus.useNNL==4)
+    {
+      /* durante la crescita gli spot interattivi non vengono considerati */
+      NSP += MD_SPNNL_NUMSP;
+    }
+  
+#else
+  NSP = typesArr[typeOfPart[i]].nspots;
+#endif
 #else
   if (i < Oparams.parnumA)
     NSP = MD_STSPOTS_A;
@@ -4880,7 +4902,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
      spots siano posizionati nel centro di massa del core. */
 #if 1
   /* N.B. facendo dei test, questa ottimizzazione non offre in realtà vantaggi */
-  if (is_a_sphere_NNL[i])
+  if (is_a_sphere_NNL[i] && !(OprogStatus.useNNL==3 || OprogStatus.useNNL==4))
     {
       return locate_contact_neigh_plane_parall_sphs(i, evtime, t2);
     }
