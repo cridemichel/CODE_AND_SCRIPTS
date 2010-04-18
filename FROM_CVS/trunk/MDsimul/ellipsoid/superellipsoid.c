@@ -1017,8 +1017,10 @@ void funcs2beZeroedNeighPlaneSE(int n, double x[], double fvec[], int i)
     {
       fvec[4] += (x[k1]-rB[k1])*gradplane[k1];
     }
+#if 0
   for (k1=0; k1 < 3; k1++)
     fvec[k1+5] = x[k1] - x[k1+3] + gradplane[k1]*x[7];//[k1]*x[7]; 
+#endif
   //MD_DEBUG(printf("F2BZdistNeg fvec (%.12G,%.12G,%.
   MD_DEBUG(printf("F2BZ fvec (%.12f,%.12f,%.12f,%.12f,%.13f)\n", fvec[0], fvec[1], fvec[2], fvec[3], fvec[4]));
 }
@@ -1436,6 +1438,7 @@ void funcs2beZeroedDistNegNeighPlaneSE(int n, double x[], double fvec[], int i)
     {
       fvec[k1] = x[k1+3] - x[k1] - x[6]*fx[k1];
     }
+
   fvec[3] = calcf(xpA, i);
   fvec[4] = 0.0;
   for (k1 = 0; k1 < 3; k1++)

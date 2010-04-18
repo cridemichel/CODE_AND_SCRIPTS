@@ -3096,7 +3096,7 @@ void usrInitAft(void)
     implementata */
  if (OprogStatus.targetPhi > 0.0)
    {
-     printf("WARNING: Growth simulation, spots interactions will be disables\n");
+     printf("WARNING: Growth simulation, spots interactions will be disabled\n");
    }
 #ifdef MD_SUPERELLIPSOID
  if (OprogStatus.useNNL > 3 || OprogStatus.useNNL < 0)
