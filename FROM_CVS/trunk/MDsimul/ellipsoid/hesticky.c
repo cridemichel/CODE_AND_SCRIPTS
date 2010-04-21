@@ -45,6 +45,16 @@ extern long long int itsFNL, timesFNL, timesSNL, itsSNL;
 extern int do_check_negpairs;
 
 #ifdef EDHE_FLEX
+#ifdef MD_SPOT_GLOBAL_ALLOC
+double ratA[NA][3], ratB[NA][3];
+double maxddoti[6][NA], distsOld[6][NA];
+int crossed[6][NA];
+#ifndef MD_BASIC_DT
+double distsOld2[6][NA];
+#endif
+int tocheck[6][NA], dorefine[6][NA], crossed[6][NA];
+double distsSq[NA];
+#endif
 extern int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 extern double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
 extern double *t2arr, *distsOld, *dists, *distsOld2, *maxddoti;
@@ -2533,7 +2543,9 @@ extern double sigmaSqSticky;
 double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[3])
 {
   double distSq, ti;
+#ifndef MD_SPOT_GLOBAL_ALLOC
   double ratA[NA][3], ratB[NA][3];
+#endif
   int kk;
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
@@ -2623,14 +2635,20 @@ int search_dist(int i, int j, int nn, double *distsSq)
 #endif
 #endif
 /* N.B. per la silica tale routine va cambiata! */
+
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
 {
   double distmin, distSq, ti;
-  double ratA[NA][3], ratB[NA][3], dist;
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double ratA[NA][3], ratB[NA][3]; 
+#endif
+  double dist;
   int firstdist = 1, nn, kk, nbonds;
 #ifdef MD_SEARCH_DIST
+#ifndef MD_SPOT_GLOBAL_ALLOC
   double distsSq[NA];
+#endif
 #endif
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
@@ -2833,8 +2851,11 @@ void assign_distsSP(double *a, double *b)
  * sembra corretta, fare comunque dei test.*/
 double eval_maxddistSP(int i, int j, int bondpair, double t1, double *maxddotOpt)
 {
-  double ti, rA[3], rB[3], ratA[NA][3], ratB[NA][3], wri[3], wrj[3], nwri, nwrj,
+  double ti, rA[3], rB[3], wri[3], wrj[3], nwri, nwrj,
 	 r12i[3], r12j[3];//, maxddotOpt[MD_PBONDS];
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double ratA[NA][3], ratB[NA][3];
+#endif
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
 #endif
@@ -4448,7 +4469,9 @@ double calcDistNegNeighPlaneAll_sp(int bsp, int nsp, double t, double t1, int i,
   int nn, kk, nn2;
   double dmin=0.0;
   double ti;
+#ifndef MD_SPOT_GLOBAL_ALLOC
   double ratA[NA][3];
+#endif
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
 #endif
@@ -4551,11 +4574,14 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 					  double epsd, double *d1, double epsdFast, 
 					  double dists[6][NA], double maxddotiLC[6][NA], double maxddot)
 {
-  double told, delt=1E-15, distsOld[6][NA];
+  double told, delt=1E-15;
   const double GOLD= 1.618034;
   const int MAXOPTITS = 500;
-  double maxddoti[6][NA];
-  int its=0, crossed[6][NA], itsf, NSP, BSP; 
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double maxddoti[6][NA], distsOld[6][NA];
+  int crossed[6][NA];
+#endif
+  int its=0, itsf, NSP, BSP; 
 #ifdef EDHE_FLEX
   NSP = typesArr[typeOfPart[i]].nspots;
   BSP = 0;
@@ -4664,7 +4690,9 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 double calcDistNegOneNNL_sp(double t, double t1, int i, int nn)
 {
   double dist, ti;
+#ifndef MD_SPOT_GLOBAL_ALLOC
   double ratA[NA][3];
+#endif
   int kk;
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
@@ -4854,13 +4882,19 @@ extern void buildSPNNL_spots_growth(int i);
 int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 {
   /* const double minh = 1E-14;*/
-  double h, d, dold, t2arr[6][NA], t, dists[6][NA], distsOld[6][NA]; 
-  double maxddot, delt, troot, tini, maxddoti[6][NA];
+  double h, d, dold,  t; 
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double t2arr[6][NA], dists[6][NA], distsOld[6][NA], maxddoti[6][NA];
+#endif
+  double maxddot, delt, troot, tini;
 #ifdef MD_PARANOID_CHECKS
   double deltini;
 #endif
 #ifndef MD_BASIC_DT
-  double distsOld2[6][NA], dold2, normddot, deldist;
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double distsOld2[6][NA];
+#endif
+  double dold2, normddot, deldist;
 #endif
   const double GOLD = 1.618034;
   int firstev, nn2;
@@ -4870,7 +4904,10 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   /* per calcolare derivate numeriche questo è il magic number in doppia precisione (vedi Num. Rec.)*/
   int its, foundrc, NSP, BSP;
   double t1, epsd, epsdFast, epsdFastR, epsdMax; 
-  int tocheck[6][NA], dorefine[6][NA], ntc, ncr, nn, gotcoll, crossed[6][NA], firstaftsf;
+  int  ntc, ncr, nn, gotcoll, firstaftsf;
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  int tocheck[6][NA], dorefine[6][NA], crossed[6][NA];
+#endif
   epsd = OprogStatus.epsdSPNL;
   epsdFast = OprogStatus.epsdFastSPNL;
   epsdFastR= OprogStatus.epsdFastSPNL;

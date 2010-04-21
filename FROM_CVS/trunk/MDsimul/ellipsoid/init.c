@@ -4320,12 +4320,17 @@ void fprintf_ranges(FILE *f, int A, int nr, rangeStruct* r)
     fprintf(f, "%d ", A);
 }
 #endif
+#ifdef MD_SPOT_GLOBAL_ALLOC
+double ratA[NA][3];
+#endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
 {
   int i;
   int nn;
+#ifndef MD_SPOT_GLOBAL_ALLOC
   double ratA[NA][3];
+#endif
 #ifdef MD_FOUR_BEADS
   int nn2;
   char bcolor[32];

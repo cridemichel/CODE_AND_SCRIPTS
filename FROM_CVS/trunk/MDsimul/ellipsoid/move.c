@@ -9609,6 +9609,9 @@ void store_bump_neigh(int i, double *r1, double *r2)
 #ifdef MD_PATCHY_HE
 extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 #endif
+#ifdef MD_SPOT_GLOBAL_ALLOC
+  double ratA[NA][3], ratB[NA][3];
+#endif
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
@@ -9620,7 +9623,9 @@ void store_bump(int i, int j)
 #endif
 #ifdef MD_PATCHY_HE
   int nn;
+#ifndef MD_SPOT_GLOBAL_ALLOC
   double ratA[NA][3], ratB[NA][3];
+#endif
 #endif
   double Drx, Dry, Drz, RCMx, RCMy, RCMz;
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
