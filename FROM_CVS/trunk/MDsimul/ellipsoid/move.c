@@ -10398,7 +10398,9 @@ void move(void)
 	      sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
 #endif
+#ifndef MD_NO_SYSTEM
     	      system(fileop3);
+#endif	    
 	    }
 	  OprogStatus.JJ++;
 	  if (OprogStatus.JJ == OprogStatus.NN)

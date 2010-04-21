@@ -237,7 +237,12 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define MD_MAX_BOND_PER_PART 3
 #define NA 1000 /* number of atoms for each molecule (particle) */
 #else
-#define MD_SPOT_GLOBAL_ALLOC
+//#define MD_SPOT_GLOBAL_ALLOC 
+/* 21/04/2010: con questa define (MD_SPOT_GLOBAL_ALLOC) non ci sono più allocazioni nello stack (locali) 
+   dipendenti da NA tale soluzione è più sicura se si dovesse avere la necessità 
+   di simulare tantissimi spot per particellea. Tale eventualità si puo' porre 
+   per "complessi" di ellissoidi che richiedano ad es. poliedri con molte facce 
+   per le NNL. */
 #define NA 1000//50000 /* number of atoms for each molecule (particle) */
 #endif
 #endif
