@@ -115,6 +115,7 @@ void calcfx(double *fx, double x, double y, double z, int i)
   e = typesArr[typeOfPart[i]].n[0];
   n = typesArr[typeOfPart[i]].n[1];
   //printf("a=%f b=%f c=%f e=%f n=%f\n", a,b,c,e,n);
+#if 0
   inve2 = 2.0/e;	
   xa2e = pow(fabs(x)/a,inve2);
   yb2e = pow(fabs(y)/b,inve2);
@@ -122,8 +123,15 @@ void calcfx(double *fx, double x, double y, double z, int i)
   fx[0] = (2.0*xa2e*A)/(n*x);
   fx[1] = (2.0*yb2e*A)/(n*y);
   fx[2] = (2.0*pow(fabs(z)/c,2.0/n))/(n*z);
-}
+#else
+ A =  pow(pow(fabs(x)/a,2.0/e)+pow(fabs(y)/b,2.0/e),e/n-1.0)/n;
+ fx[0] = 2.0*Sign(x)*pow(fabs(x)/a,2.0/e-1.0)*A/a;
+ fx[1] = 2.0*Sign(y)*pow(fabs(y)/b,2.0/e-1.0)*A/b;
+ fx[2] = 2.0*Sign(z)*pow(fabs(z)/c,2.0/n-1.0)/(c*n);
+#endif
 
+}
+#define Power(x,y) pow(x,y)
 void calcfxx(double df[3][3], double x, double y, double z, int i)
 {
   /* calcola fxx nel riferimento del corpo rigido */
@@ -134,6 +142,7 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   c = typesArr[typeOfPart[i]].sax[2];
   e = typesArr[typeOfPart[i]].n[0];
   n = typesArr[typeOfPart[i]].n[1];
+#if 0
   inve2 = 2.0/e;
   xa2e = pow(fabs(x)/a,inve2);
   yb2e = pow(fabs(y)/b,inve2);
@@ -152,6 +161,25 @@ void calcfxx(double df[3][3], double x, double y, double z, int i)
   df[1][1] = (A*(-2.0*em2*n*xa2e*yb2e- 2.0*e*nm2*Sqr(yb2e)))/(e*Sqr(n)*Sqr(y));
   df[1][2] = df[2][0] = df[2][1] = 0.0;
   df[2][2] = -(2.0*nm2*pow(fabs(z)/c,2.0/n))/(Sqr(n)*Sqr(z)); 
+#else
+  df[0][0] = (4.0*(-1.0 + e/n)*Power(fabs(x)/a,-2.0 + 4.0/e)*
+      Power(Power(fabs(x)/a,2.0/e) + Power(fabs(y)/b,2/e),-2.0 + e/n))/
+    (a*a*e*n) + (2.0*(-1.0 + 2.0/e)*Power(fabs(x)/a,-2 + 2.0/e)*
+      Power(Power(fabs(x)/a,2.0/e) + Power(fabs(y)/b,2.0/e),-1.0 + e/n))/(a*a*n);
+  df[0][1] = Sign(x)*Sign(y)*(4*(-1 + e/n)*Power(fabs(x)/a,-1 + 2/e)*Power(fabs(y)/b,-1 + 2/e)*
+     Power(Power(fabs(x)/a,2/e) + Power(fabs(y)/b,2/e),-2 + e/n))/(a*b*e*n);
+  df[0][2] = 0.0;
+  df[1][0] = Sign(y)*Sign(x)*(4*(-1 + e/n)*Power(fabs(x)/a,-1 + 2/e)*Power(fabs(y)/b,-1 + 2/e)*
+     Power(Power(fabs(x)/a,2/e) + Power(fabs(y)/b,2/e),-2 + e/n))/(a*b*e*n);
+  df[1][1] = (4*(-1 + e/n)*Power(fabs(y)/b,-2 + 4/e)*
+      Power(Power(fabs(x)/a,2/e) + Power(fabs(y)/b,2/e),-2 + e/n))/
+    (b*b*e*n) + (2*(-1 + 2/e)*Power(fabs(y)/b,-2 + 2/e)*
+      Power(Power(fabs(x)/a,2/e) + Power(fabs(y)/b,2/e),-1 + e/n))/(b*b*n);
+  df[1][2] = 0.0;
+  df[2][0] = 0.0;
+  df[2][1] = 0.0;
+  df[2][2] =(2*Power(1/c,2/n)*(-1 + 2/n)*Power(fabs(z),-2 + 2/n))/n;
+#endif
 }
 
 #else
