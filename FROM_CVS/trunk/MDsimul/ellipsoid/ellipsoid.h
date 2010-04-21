@@ -233,8 +233,11 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define NA 10 /* number of atoms for each molecule (particle) */
 #else
 #ifdef MD_SPHERICAL_WALL
-#define NA 30000 /* number of atoms for each molecule (particle) */
+#define MD_SPOT_GLOBAL_ALLOC
+#define MD_MAX_BOND_PER_PART 3
+#define NA 1000 /* number of atoms for each molecule (particle) */
 #else
+#define MD_SPOT_GLOBAL_ALLOC
 #define NA 1000//50000 /* number of atoms for each molecule (particle) */
 #endif
 #endif

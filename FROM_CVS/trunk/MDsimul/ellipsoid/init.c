@@ -2838,9 +2838,11 @@ void allocBondsSphWall(void)
       if (typeOfPart[i]==Oparams.ntypes-1 || typeOfPart[i]==Oparams.ntypes-2)
 	{
 #ifdef MD_LL_BONDS
-	  bonds[i] = malloc(sizeof(long long int)*Oparams.parnum);
+	  /* NOTA 21/04/2010: il 3 l'ho messo per tener conto del fatto che nel caso ad esempio 
+	  con l'interazione SW i legami possono essere anche due per particella. */
+	  bonds[i] = malloc(sizeof(long long int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
 #else
-	  bonds[i] = malloc(sizeof(int)*Oparams.parnum);
+	  bonds[i] = malloc(sizeof(int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
 #endif
 	  //break;
 	}
@@ -4072,7 +4074,8 @@ void usrInitAft(void)
     {
       //printf("nbonds[1841]=%d\n",numbonds[1841]);
       find_bonds();
-    }
+   }
+
   if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
     Oparams.maxbondsSaved = OprogStatus.maxbonds;
 #elif defined(MD_PATCHY_HE)
@@ -4123,6 +4126,13 @@ void usrInitAft(void)
 #endif
 
   StartRun();
+#ifdef MD_SPHERICAL_WALL
+  printf("[SPHERICAL WALL] checking bonds\n");
+  if (OprogStatus.checkGrazing)
+    check_all_bonds();
+  printf("check done all bonds OK\n");
+#endif
+ 
   if (mgl_mode != 2)
     ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0 && mgl_mode!=2)
