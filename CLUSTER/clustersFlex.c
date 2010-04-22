@@ -10,6 +10,7 @@
 #define MD_PBONDS 10
 #define Sqr(x) ((x)*(x))
 /* get this from ellipsoid.h */
+#define EDHE_FLEX
 #ifdef EDHE_FLEX
 #define NAFLX 1000
 #define LINES_TO_SKIP 10
@@ -1048,11 +1049,11 @@ int main(int argc, char **argv)
 	    {
     	      if (color[i] == -1)
     		color[i] = curcolor;
-	      printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
+	      //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
 	      for (j=0; j < numbonds[i]; j++)
 		{
 		  jj = bonds[i][j] / ((long long int)NANA);
-		  printf("i=%d jj=%d\n", i, jj);
+		  //printf("i=%d jj=%d\n", i, jj);
 		  if (color[jj] == -1)
 		    color[jj] = color[i];
 		  else
