@@ -65,6 +65,8 @@ DT="0.05"
 NNPR=1
 BASEPR=1
 INTSUM="20.0"
+OCTAVE="octave"
+OCTFILE="script.oct"
 #============================================
 #N.B. it's supposed that we use NNL here!!
 PROL=`echo $EL | awk '{if ($0 >= 1.0) printf("1"); else printf("0");}'`
@@ -85,6 +87,28 @@ A0="1.0"
 B0="$EL" 
 C0="$EL"
 RNNL=0.3
+#============ >>> set particles number and elongation in $INIFILE <<< ==================
+cat $INIFILE | awk -v np=$PARNUM -v a=$A0 -v b=$B0  -v c=$C0 ' BEGIN {NAT=0} {if (NAT==1 && NR=NL+1) {print np;} else if (NAT==1 && NR=NL+2) { print ($a,$b,$c);} else {print $0;} if ($0="@@@") {NAT+=1; NL=NR} }'
+#============ >>> adjust spot according to $SIGMA <<< =============
+if [ "$6" != "" ]
+then
+VB="0.00706858"
+echo "function y=sphCap(h)" > $OCTFILE
+echo "y=2*acos(0)*h^2*(3*$SIGMA/2-h)/3-$VB;" >> $OCTFILE
+echo "endfunction" >> $OCTFILE
+echo "[x, info] = fsolve ("sphCap", $SIGMA/4)" >> $OCTFILE
+$OCTAVE -q $OCTFILE > _aaa_
+HVAL=`cat _aaa_ | awk '{if ($1=="h") print $3}'` 
+if [ $[$HVAL] -le 0 ]
+then
+echo "HVAL is negative ( HVAL=" $HVAL " ) exiting!"
+exit
+fi
+DEL=`echo $HVAL | awk -v el=$EL -v sig=$SIGMA '{print el-(sig-$1);}'`
+echo "DEL= " $DEL
+cat $INIFILE | awk -v del=$DEL -v sig=$SIGMA 'BEGIN {NAT=0} {if (NAT==1 && NR=NL+6) {print (del, "0.0 0.0", sig);} else if (NAT==1 && NR=NL+7) { print (-del,"0.0 0.0", sig);} else {print $0;} if ($0="@@@") {NAT+=1; NL=NR} 
+fi
+#==================================================================
 #INIL=`echo "5.0*e(1.0/3.0*l($PARNUM))*$B0" | bc -l`
 if [ $USENNL -eq 0 ]
 then
