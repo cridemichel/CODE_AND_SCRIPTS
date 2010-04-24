@@ -4834,10 +4834,10 @@ char line[4096];
 void readAllCor(FILE* fs)
 {
   int i;
+#ifdef EDHE_FLEX
 #ifdef MD_GHOST_IGG
   int size;
 #endif
-#ifdef EDHE_FLEX
   char sep[256];
   int j;
   char *s1, *s2;
@@ -4847,16 +4847,6 @@ void readAllCor(FILE* fs)
   s2 = malloc(sizeof(char)*65535);
   typeOfPart = malloc(sizeof(int)*Oparams.parnum);
   typeNP = malloc(sizeof(int)*Oparams.ntypes);
-#if 0
-  if (1)
-    {
-
-      char str[1024];
-  fscanf(fs,"%[^\n] ", str);
-  printf("str=%s\n", str);
-  exit(-1);
-    }
-#endif
   for (i=0; i < Oparams.ntypes; i++)
     {
       fscanf(fs, "%d ", &typeNP[i]);
@@ -4997,7 +4987,6 @@ void readAllCor(FILE* fs)
     }
 #endif
 #endif
-
 #endif
   for (i = 0; i < Oparams.parnum; i++)
     {
