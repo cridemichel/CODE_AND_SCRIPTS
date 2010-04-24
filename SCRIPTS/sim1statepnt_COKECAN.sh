@@ -38,18 +38,23 @@ TEMP="0.15"
 else
 TEMP="$5"
 fi
-PARFILE=ellips.par
-cp $PARFILE Phi$1
-cd Phi$1
-rm -f COORD_TMP*
-rm -f Store-*
-ELLEXE="../../ellipsoid"
-if [ "$5" == "" ]
+if [ "$6" == "" ]
 then
 SIGMA="0.9"
 else
-SIGMA="$5"
+SIGMA="$6"
 fi
+DIRSIM="sigma_${SIGMA}_Phi$1"
+PARFILE="ellipsoid_flex.par"
+if [ ! -e $DIRSIM ]
+then 
+mkdir $DIRSIM
+fi
+cp $PARFILE $DIRSIM
+cd $DIRSIM
+rm -f COORD_TMP*
+rm -f Store-*
+ELLEXE="../../ellipsoid"
 SIMRA="ell${EL}RA$1T${INITEMP}SIG$SIGMA"
 SIMGR="ell${EL}GR$1T${INITEMP}SIG$SIGMA"
 SIMEQ="ell${EL}EQ$1T${TEMP}SIG$SIGMA"
@@ -87,30 +92,6 @@ A0="1.0"
 B0="$EL" 
 C0="$EL"
 RNNL=0.3
-#============ >>> set particles number and elongation in $INIFILE <<< ==================
-cat $INIFILE | awk -v np=$PARNUM -v a=$A0 -v b=$B0  -v c=$C0 ' BEGIN {NAT=0} {if (NAT==1 && NR=NL+1) {print np;} else if (NAT==1 && NR=NL+2) { print ($a,$b,$c);} else {print $0;} if ($0="@@@") {NAT+=1; NL=NR} }' > _aaa_
-mv _aaa_ $INIFILE
-#============ >>> adjust spot according to $SIGMA <<< =============
-if [ "$6" != "" ]
-then
-VB="0.00706858"
-echo "function y=sphCap(h)" > $OCTFILE
-echo "y=2*acos(0)*h^2*(3*$SIGMA/2-h)/3-$VB;" >> $OCTFILE
-echo "endfunction" >> $OCTFILE
-echo "[x, info] = fsolve ("sphCap", $SIGMA/4)" >> $OCTFILE
-$OCTAVE -q $OCTFILE > _aaa_
-HVAL=`cat _aaa_ | awk '{if ($1=="h") print $3}'` 
-if [ $[$HVAL] -le 0 ]
-then
-echo "HVAL is negative ( HVAL=" $HVAL " ) exiting!"
-exit
-fi
-DEL=`echo $HVAL | awk -v el=$EL -v sig=$SIGMA '{print el-(sig-$1);}'`
-echo "DEL= " $DEL
-cat $INIFILE | awk -v del=$DEL -v sig=$SIGMA -v el=$EL 'BEGIN {NAT=0} {if (NAT==1 && NR=NL+6) {print (del, "0.0 0.0", sig);} else if (NAT==1 && NR=NL+7) { print (-del,"0.0 0.0", sig);} else {print $0;} if ($0="@@@") {NAT+=1; NL=NR}' > _aaa_
-mv _aaa_ $INIFILE
-fi
-#==================================================================
 #INIL=`echo "5.0*e(1.0/3.0*l($PARNUM))*$B0" | bc -l`
 if [ $USENNL -eq 0 ]
 then
@@ -118,6 +99,40 @@ RCUT=`echo "2.0*$B0*1.01" | bc -l`
 NNLPAR="0"
 fi
 fi
+cp ../$INIFILE .
+#============ >>> set particles number and elongation in $INIFILE <<< ==================
+cat $INIFILE | awk -v np=$PARNUM -v a=$A0 -v b=$B0  -v c=$C0 ' BEGIN {NAT=0} {if (NAT==1 && NR=NL+1) {print np;} else if (NAT==1 && NR=NL+2) { print ($a,$b,$c);} else {print $0;} if ($0="@@@") {NAT+=1; NL=NR} }' > _aaa_
+mv _aaa_ $INIFILE
+#============ >>> adjust spot according to $SIGMA <<< =============
+if [ "$6" != "" ]
+then
+VB="0.00706858"
+echo 'function y=sphCap(h)' > $OCTFILE
+echo 'y=2*acos(0)*h^2*(3*'$SIGMA'/2-h)/3-'$VB';' >> $OCTFILE
+echo "endfunction" >> $OCTFILE
+echo '[h, info]'"= fsolve (\"sphCap\",""$SIGMA"'/4)' >> $OCTFILE
+echo "printf(\"hh %G\n\",h);" >> $OCTFILE
+$OCTAVE -q $OCTFILE > _aaa_
+SIG2=`echo $SIGMA | awk '{print $1/2}'`
+HVAL=`cat _aaa_ | awk '{if ($1=="hh") print $2}'` 
+ISNEG=`echo $HVAL |awk '{if ($1 <= 0) print "1"; else print "0";}'`
+ISBIG=`echo $HVAL |awk -v sig2=$SIG2 '{if ($1 > sig2) print "1"; else print "2";}'`
+if [ "$ISNEG" == "1" ]
+then
+echo "HVAL is negative ( HVAL=" $HVAL " ) exiting!"
+exit
+fi
+if [ "$ISBIG" == "1" ]
+then
+echo "HVAL is too big ( HVAL=" $HVAL " ) exiting!"
+exit
+fi
+DEL=`echo $HVAL | awk -v el=$EL -v sig=$SIGMA '{print el-(sig-$1);}'`
+echo "DEL= " $DEL " HVAL= " $HVAL
+cat $INIFILE | awk -v del=$DEL -v sig=$SIGMA -v el=$EL 'BEGIN {NAT=0} {if (NAT==1 && NR==NL+6) {print (del, "0.0 0.0", sig);} else if (NAT==1 && NR==NL+7) { print (-del,"0.0 0.0", sig);} else {print $0;}; if ($0="@@@") {NAT+=1; NL=NR}}' > _aaa_
+mv _aaa_ $INIFILE
+fi
+#==================================================================
 if [ $USENNL -eq 1 ]
 then
 #usa le NNL con sticky spots!
@@ -127,6 +142,9 @@ fi
 echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
 #RANDOMIZZAZIONE INIZIALE
 cp $PARFILE rand_$PARFILE
+exit
+rm _aaa_
+rm $OCTFILE
 #echo "L:" $INIL >> rand_$PARFILE
 #>>> SET TEMPERATURE TO 1.0
 ../set_params.sh rand_$PARFILE stepnum 50 useNNL $NNLPAR temperat $INITEMP targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM inifile $INIFILE
