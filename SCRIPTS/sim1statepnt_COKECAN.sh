@@ -128,7 +128,7 @@ then
 echo "HVAL is too big ( HVAL=" $HVAL " ) exiting!"
 exit
 fi
-DEL=`echo $HVAL | awk -v el=$EL -v sig=$SIGMA '{print el-(sig-$1);}'`
+DEL=`echo $HVAL | awk -v el=$EL -v sig=$SIGMA '{print el-(sig/2-$1);}'`
 echo "DEL= " $DEL " HVAL= " $HVAL
 cat $INIFILE | awk -v del=$DEL -v sig=$SIGMA -v el=$EL 'BEGIN {NAT=0} {if (NAT==1 && NR==NL+6) {print (del, "0.0 0.0", sig);} else if (NAT==1 && NR==NL+7) { print (-del,"0.0 0.0", sig);} else {print $0;}; if ($0="@@@") {NAT+=1; NL=NR}}' > _aaa_
 mv _aaa_ $INIFILE
