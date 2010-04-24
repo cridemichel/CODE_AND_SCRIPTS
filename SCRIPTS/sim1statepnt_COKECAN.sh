@@ -55,15 +55,16 @@ cd $DIRSIM
 rm -f COORD_TMP*
 rm -f Store-*
 ELLEXE="../../ellipsoid"
+INITEMP="2.0"
 SIMRA="ell${EL}RA$1T${INITEMP}SIG$SIGMA"
 SIMGR="ell${EL}GR$1T${INITEMP}SIG$SIGMA"
 SIMEQ="ell${EL}EQ$1T${TEMP}SIG$SIGMA"
 SIMPR="ell${EL}PR$1T${TEMP}SIG$SIGMA"
+MOSRUN=""
 #per ora il salvataggio è lineare
 #=========== >>> PARAMETRI <<< =============
 STORERATE="50.0"
 USENNL=1
-INITEMP="2.0"
 INIFILE="startIniSQ.cnf"
 PARNUM=512
 DT="0.05"
@@ -142,23 +143,20 @@ fi
 echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
 #RANDOMIZZAZIONE INIZIALE
 cp $PARFILE rand_$PARFILE
-exit
-rm _aaa_
-rm $OCTFILE
+rm -f $OCTFILE
 #echo "L:" $INIL >> rand_$PARFILE
 #>>> SET TEMPERATURE TO 1.0
-../set_params.sh rand_$PARFILE stepnum 50 useNNL $NNLPAR temperat $INITEMP targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM inifile $INIFILE
+##../set_params.sh rand_$PARFILE stepnum 5 useNNL $NNLPAR temperat $INITEMP targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rescaleTime 0.1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM inifile $INIFILE
 ln -sf $ELLEXE $SIMRA
-$SIMRA -f ./rand_${PARFILE} > screen_$SIMRA 
-#exit 
+##$MOSRUN ./$SIMRA -fa ./rand_${PARFILE} > screen_$SIMRA 
 #>>> EQUILIBRATE STARTING DENSITY (I.E. RANDOMIZE)
-../set_params.sh rand_$PARFILE stepnum 200 targetPhi 0.0 storerate 0.0 intervalSum 2.0 scalevel 0 inifile ${SIMRA}.cor endfile ${SIMRA}.cor
-ln -sf $ELLEXE $SIMRA 
-$SIMRA -f ./rand_${PARFILE} >> screen_$SIMRA 
+##../set_params.sh rand_$PARFILE stepnum 200 targetPhi 0.0 storerate 0.0 intervalSum 2.0 rescaleTime 0.5 scalevel 1 inifile ${SIMRA}.cor endfile ${SIMRA}.cor
+##ln -sf $ELLEXE $SIMRA 
+##./$SIMRA -f ./rand_${PARFILE} >> screen_$SIMRA 
 #CRESCITA
-../set_params.sh $PARFILE stepnum 1000000 useNNL $NNLPAR targetPhi $1 storerate 0.0 intervalSum 0.05 rcut $RCUT rNebrShell $RNNL inifile ${SIMRA}.cor endfile ${SIMGR}.cor parnum $PARNUM 
+../set_params.sh $PARFILE stepnum 1000000 useNNL $NNLPAR targetPhi $1 scalevel 0 storerate 0.0 intervalSum 0.1 rcut $RCUT rNebrShell $RNNL inifile $INIFILE endfile ${SIMGR}.cor parnum $PARNUM 
 ln -sf $ELLEXE $SIMGR
-$SIMGR -f ./$PARFILE > screen_$SIMGR 
+$MOSRUN ./$SIMGR -fa ./$PARFILE > screen_$SIMGR 
 #exit 
 #EQUILIBRATURA
 if [ $EQSTPS -ge 0 ]
@@ -173,9 +171,9 @@ STPS=$EQSTPS
 TMSD="-1.0"
 RMSD="-1.0"
 fi
-../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0  temperat $TEMP storerate 0.0 intervalSum $INTSUM rmsd2end $RMSD tmsd2end $TMSD inifile ${SIMGR}.cor endfile ${SIMEQ}.cor
+../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0  temperat $TEMP scalevel 1 rescaleTime 20.0 storerate 0.0 intervalSum $INTSUM rmsd2end $RMSD tmsd2end $TMSD inifile ${SIMGR}.cor endfile ${SIMEQ}.cor
 ln -sf $ELLEXE $SIMEQ 
-$SIMEQ -f ./$PARFILE > screen_$SIMEQ 
+$MOSRUN ./$SIMEQ -f ./$PARFILE > screen_$SIMEQ 
 fi
 #PRODUZIONE
 if [ $2 -gt 0 ]
@@ -195,8 +193,15 @@ STCI=$2
 STPS=$2
 fi
 #NN=`echo "1+l($DT*$STCI/$STORERATE)/l(1.3)" | bc -l | awk '{printf("%d",$0)}'`
-../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 base $BASEPR storerate $STORERATE intevalSum $INTSUM rmsd2end -1.0 tmsd2end -1.0 NN $NNPR inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
+if [ $EQSTPS -lt 0 ]
+then
+STPS="100000000"
+INIFILEPR="${SIMGR}.cor"
+else
+INIFILEPR="${SIMEQ}.cor"
+fi
+../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 base $BASEPR storerate $STORERATE scalevel 1 rescaleTime 20.0 intevalSum $INTSUM rmsd2end -1.0 tmsd2end -1.0 NN $NNPR inifile $INIFILEPR endfile ${SIMPR}.cor
 ln -sf $ELLEXE $SIMPR
-$SIMPR -f ./$PARFILE > screen_$SIMPR 
+$MOSRUN ./$SIMPR -f ./$PARFILE > screen_$SIMPR 
 fi
 cd ..
