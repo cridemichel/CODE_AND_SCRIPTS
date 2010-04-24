@@ -195,7 +195,6 @@ fi
 #NN=`echo "1+l($DT*$STCI/$STORERATE)/l(1.3)" | bc -l | awk '{printf("%d",$0)}'`
 if [ $EQSTPS -lt 0 ]
 then
-STPS="100000000"
 INIFILEPR="${SIMGR}.cor"
 else
 INIFILEPR="${SIMEQ}.cor"
