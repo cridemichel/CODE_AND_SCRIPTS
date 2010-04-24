@@ -422,7 +422,9 @@ void saveFullStore(char* fname)
       sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
 #endif
+#ifndef MD_NO_SYSTEM
       system(fileop3);
+#endif
     }
   OprogStatus.stripStore = stripStoreBak;
   globSaveAll = globSaveAllBak;
