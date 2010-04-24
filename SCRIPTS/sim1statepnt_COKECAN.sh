@@ -88,7 +88,8 @@ B0="$EL"
 C0="$EL"
 RNNL=0.3
 #============ >>> set particles number and elongation in $INIFILE <<< ==================
-cat $INIFILE | awk -v np=$PARNUM -v a=$A0 -v b=$B0  -v c=$C0 ' BEGIN {NAT=0} {if (NAT==1 && NR=NL+1) {print np;} else if (NAT==1 && NR=NL+2) { print ($a,$b,$c);} else {print $0;} if ($0="@@@") {NAT+=1; NL=NR} }'
+cat $INIFILE | awk -v np=$PARNUM -v a=$A0 -v b=$B0  -v c=$C0 ' BEGIN {NAT=0} {if (NAT==1 && NR=NL+1) {print np;} else if (NAT==1 && NR=NL+2) { print ($a,$b,$c);} else {print $0;} if ($0="@@@") {NAT+=1; NL=NR} }' > _aaa_
+mv _aaa_ $INIFILE
 #============ >>> adjust spot according to $SIGMA <<< =============
 if [ "$6" != "" ]
 then
@@ -106,7 +107,8 @@ exit
 fi
 DEL=`echo $HVAL | awk -v el=$EL -v sig=$SIGMA '{print el-(sig-$1);}'`
 echo "DEL= " $DEL
-cat $INIFILE | awk -v del=$DEL -v sig=$SIGMA 'BEGIN {NAT=0} {if (NAT==1 && NR=NL+6) {print (del, "0.0 0.0", sig);} else if (NAT==1 && NR=NL+7) { print (-del,"0.0 0.0", sig);} else {print $0;} if ($0="@@@") {NAT+=1; NL=NR} 
+cat $INIFILE | awk -v del=$DEL -v sig=$SIGMA -v el=$EL 'BEGIN {NAT=0} {if (NAT==1 && NR=NL+6) {print (del, "0.0 0.0", sig);} else if (NAT==1 && NR=NL+7) { print (-del,"0.0 0.0", sig);} else {print $0;} if ($0="@@@") {NAT+=1; NL=NR}' > _aaa_
+mv _aaa_ $INIFILE
 fi
 #==================================================================
 #INIL=`echo "5.0*e(1.0/3.0*l($PARNUM))*$B0" | bc -l`
