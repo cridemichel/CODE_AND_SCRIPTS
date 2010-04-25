@@ -63,7 +63,7 @@ SIMPR="ell${EL}PR$1T${TEMP}SIG$SIGMA"
 MOSRUN=""
 #per ora il salvataggio è lineare
 #=========== >>> PARAMETRI <<< =============
-STORERATE="50.0"
+STORERATE="100.0"
 USENNL=1
 INIFILE="startIniSQ.cnf"
 PARNUM=512
@@ -147,7 +147,7 @@ rm -f $OCTFILE
 #echo "L:" $INIL >> rand_$PARFILE
 #>>> SET TEMPERATURE TO 1.0
 ##../set_params.sh rand_$PARFILE stepnum 5 useNNL $NNLPAR temperat $INITEMP targetPhi 0.0 storerate 0.0 intervalSum 0.2 scalevel 1 rescaleTime 0.1 rcut $RCUT rNebrShell $RNNL endfile ${SIMRA}.cor parnum $PARNUM inifile $INIFILE
-ln -sf $ELLEXE $SIMRA
+##ln -sf $ELLEXE $SIMRA
 ##$MOSRUN ./$SIMRA -fa ./rand_${PARFILE} > screen_$SIMRA 
 #>>> EQUILIBRATE STARTING DENSITY (I.E. RANDOMIZE)
 ##../set_params.sh rand_$PARFILE stepnum 200 targetPhi 0.0 storerate 0.0 intervalSum 2.0 rescaleTime 0.5 scalevel 1 inifile ${SIMRA}.cor endfile ${SIMRA}.cor
@@ -199,7 +199,7 @@ INIFILEPR="${SIMGR}.cor"
 else
 INIFILEPR="${SIMEQ}.cor"
 fi
-../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 base $BASEPR storerate $STORERATE scalevel 1 rescaleTime 20.0 intevalSum $INTSUM rmsd2end -1.0 tmsd2end -1.0 NN $NNPR inifile $INIFILEPR endfile ${SIMPR}.cor
+../set_params.sh $PARFILE stepnum $STPS targetPhi 0.0 base $BASEPR storerate $STORERATE scalevel 1 rescaleTime 20.0 intervalSum $INTSUM rmsd2end -1.0 tmsd2end -1.0 NN $NNPR inifile $INIFILEPR endfile ${SIMPR}.cor
 ln -sf $ELLEXE $SIMPR
 $MOSRUN ./$SIMPR -f ./$PARFILE > screen_$SIMPR 
 fi
