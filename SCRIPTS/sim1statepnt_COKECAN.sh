@@ -107,12 +107,12 @@ mv _aaa_ $INIFILE
 #============ >>> adjust spot according to $SIGMA <<< =============
 if [ "$6" != "" ]
 then
-VB="0.00706858"
+VB="0.00706858347057703"
 echo 'function y=sphCap(h)' > $OCTFILE
 echo 'y=2*acos(0)*h^2*(3*'$SIGMA'/2-h)/3-'$VB';' >> $OCTFILE
 echo "endfunction" >> $OCTFILE
 echo '[h, info]'"= fsolve (\"sphCap\",""$SIGMA"'/4)' >> $OCTFILE
-echo "printf(\"hh %G\n\",h);" >> $OCTFILE
+echo "printf(\"hh %.8G\n\",h);" >> $OCTFILE
 $OCTAVE -q $OCTFILE > _aaa_
 SIG2=`echo $SIGMA | awk '{print $1/2}'`
 HVAL=`cat _aaa_ | awk '{if ($1=="hh") print $2}'` 
@@ -128,9 +128,9 @@ then
 echo "HVAL is too big ( HVAL=" $HVAL " ) exiting!"
 exit
 fi
-DEL=`echo $HVAL | awk -v el=$EL -v sig=$SIGMA '{print el-(sig/2-$1);}'`
+DEL=`echo $HVAL | awk -v el=$EL -v sig=$SIGMA '{printf("%.8G",el-(sig/2-$1));}'`
 echo "DEL= " $DEL " HVAL= " $HVAL
-cat $INIFILE | awk -v del=$DEL -v sig=$SIGMA -v el=$EL 'BEGIN {NAT=0} {if (NAT==1 && NR==NL+6) {print (del, "0.0 0.0", sig);} else if (NAT==1 && NR==NL+7) { print (-del,"0.0 0.0", sig);} else {print $0;}; if ($0="@@@") {NAT+=1; NL=NR}}' > _aaa_
+cat $INIFILE | awk -v del=$DEL -v sig=$SIGMA -v el=$EL 'BEGIN {NAT=0} {if (NAT==1 && NR==NL+6) {printf("%.8G 0.0 0.0 %.8G\n", del, sig);} else if (NAT==1 && NR==NL+7) { printf("%.8G 0.0 0.0 %.8G\n", -del, sig);} else {print $0;}; if ($0=="@@@") {NAT+=1; NL=NR}}' > _aaa_
 mv _aaa_ $INIFILE
 fi
 #==================================================================
