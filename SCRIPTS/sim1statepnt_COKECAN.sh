@@ -44,7 +44,7 @@ SIGMA="0.9"
 else
 SIGMA="$6"
 fi
-DIRSIM="sigma_${SIGMA}_Phi$1"
+DIRSIM="sigma_${SIGMA}_Phi$1_T$TEMP"
 PARFILE="ellipsoid_flex.par"
 if [ ! -e $DIRSIM ]
 then 
