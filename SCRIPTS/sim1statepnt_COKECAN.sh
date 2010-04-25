@@ -102,7 +102,7 @@ fi
 fi
 cp ../$INIFILE .
 #============ >>> set particles number and elongation in $INIFILE <<< ==================
-cat $INIFILE | awk -v np=$PARNUM -v a=$A0 -v b=$B0  -v c=$C0 ' BEGIN {NAT=0} {if (NAT==1 && NR=NL+1) {print np;} else if (NAT==1 && NR=NL+2) { print ($a,$b,$c);} else {print $0;} if ($0="@@@") {NAT+=1; NL=NR} }' > _aaa_
+cat $INIFILE | awk -v np=$PARNUM -v a=$A0 -v b=$B0  -v c=$C0 ' BEGIN {NAT=0} {if (NAT==1 && NR==NL+1) {print np;} else if (NAT==1 && NR==NL+2) { print ($a,$b,$c);} else {print $0;} if ($0=="@@@") {NAT+=1; NL=NR} }' > _aaa_
 mv _aaa_ $INIFILE
 #============ >>> adjust spot according to $SIGMA <<< =============
 if [ "$6" != "" ]
