@@ -57,7 +57,7 @@ rm -f Store-*
 ELLEXE="../../ellipsoid"
 INITEMP="2.0"
 SIMRA="ell${EL}RA$1T${INITEMP}SIG$SIGMA"
-SIMGR="ell${EL}GR$1T${INITEMP}SIG$SIGMA"
+SIMGR="ell${EL}GR$1T${TEMP}SIG$SIGMA"
 SIMEQ="ell${EL}EQ$1T${TEMP}SIG$SIGMA"
 SIMPR="ell${EL}PR$1T${TEMP}SIG$SIGMA"
 MOSRUN=""
@@ -154,7 +154,7 @@ rm -f $OCTFILE
 ##ln -sf $ELLEXE $SIMRA 
 ##./$SIMRA -f ./rand_${PARFILE} >> screen_$SIMRA 
 #CRESCITA
-../set_params.sh $PARFILE stepnum 1000000 useNNL $NNLPAR targetPhi $1 scalevel 0 storerate 0.0 intervalSum 0.1 rcut $RCUT rNebrShell $RNNL inifile $INIFILE endfile ${SIMGR}.cor parnum $PARNUM 
+../set_params.sh $PARFILE stepnum 1000000 temperat $TEMP useNNL $NNLPAR targetPhi $1 scalevel 0 storerate 0.0 intervalSum 0.1 rcut $RCUT rNebrShell $RNNL inifile $INIFILE endfile ${SIMGR}.cor parnum $PARNUM 
 ln -sf $ELLEXE $SIMGR
 $MOSRUN ./$SIMGR -fa ./$PARFILE > screen_$SIMGR 
 #exit 
