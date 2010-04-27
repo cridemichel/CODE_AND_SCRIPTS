@@ -246,6 +246,7 @@ void CreatePartialSuperQuadrics(double power1,double power2, double power3,
    /* n1 = stacks
     * n2 = slides */
    /* Shall we just draw a point? */
+#if 0
    if (n1 < 4 && n2 < 4) {
       glBegin(GL_POINTS);
       glVertex3f(0.0,0.0,0.0);
@@ -265,6 +266,7 @@ void CreatePartialSuperQuadrics(double power1,double power2, double power3,
       glEnd();
       return;
    }
+#endif
    delta1 = DELSQ*TWOPI / (double)n1;
    delta2 =  DELSQ*TWOPI / (double)n2;
    //printf("boh=%.15G n1/2=%d thetaBeg =%.15G TWOPI=%.15G thetaBeg/TWOPI=%.15G\n", ((double)(n1/2))*thetaBeg/TWOPI, n1/2, thetaBeg, TWOPI, thetaBeg/TWOPI);
@@ -333,6 +335,7 @@ void CreateSuperQuadrics(double power1,double power2,double power3,double a, dou
    double delta1, delta2;
    /* n1 = stacks
     * n2 = slides */
+#if 0
    /* Shall we just draw a point? */
    if (n1 < 4 && n2 < 4) {
       glBegin(GL_POINTS);
@@ -353,6 +356,7 @@ void CreateSuperQuadrics(double power1,double power2,double power3,double a, dou
       glEnd();
       return;
    }
+#endif
    delta1 = DELSQ*TWOPI / (double)n1;
    delta2 =  DELSQ*TWOPI / (double)n2;
    for (j=0;j<(n1/2);j++) {
@@ -584,9 +588,9 @@ void EvalSuperQuadricsNorm(double t1,double t2,double p1,double p2,double p3,
   p->z = c*SIGN2(st1) * pow(fabs(st1),2.0/p3);
   //printf("z actual=%.15G ellips=%.15G\n", c*SIGN2(st1) * pow(fabs(st1),1.0/p3), c*SIGN2(st1) * pow(fabs(st1),1.0/2.0));
   // evaluate SQ normal vector here (are actual formulas wrong?)
-  en->x = SIGN2(p->x)*p1*pow(fabs(p->x),p1-1.0)/a;
-  en->y = SIGN2(p->y)*p2*pow(fabs(p->y),p2-1.0)/b;
-  en->z = SIGN2(p->z)*p3*pow(fabs(p->z),p3-1.0)/c; 
+  en->x = SIGN2(p->x)*p1*pow(fabs(p->x),p1-1.0)/pow(a,p1);
+  en->y = SIGN2(p->y)*p2*pow(fabs(p->y),p2-1.0)/pow(b,p2);
+  en->z = SIGN2(p->z)*p3*pow(fabs(p->z),p3-1.0)/pow(c,p3); 
   Normalise(en);
   
 #if 0
@@ -914,7 +918,7 @@ void displayAtom(int nf, int nm, int na)
 	glDepthMask (GL_FALSE);*/
       //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       /* for now disabled */
-      if (1 && atom->supellips.n1==1 && atom->supellips.n2==1)
+      if (atom->supellips.n1==1 && atom->supellips.n2==1)
 	{
 	  //printf("qui st=%d sl=%d\n", globset.stacks, globset.slides);
 	  for (k1 = 0; k1 < 4; k1++)
@@ -989,8 +993,8 @@ void displayAtom(int nf, int nm, int na)
 	glDepthMask (GL_FALSE);*/
       //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       /* for now disabled */
-      if (1 && atom->supquadrics.n1==2 && atom->supquadrics.n2==2 &&
-	       atom->supquadrics.n3==2)
+      if (atom->supquadrics.n1==2 && atom->supquadrics.n2==2 &&
+     	  atom->supquadrics.n3==2)
 	{
 	  //printf("qui st=%d sl=%d\n", globset.stacks, globset.slides);
 	  for (k1 = 0; k1 < 4; k1++)
