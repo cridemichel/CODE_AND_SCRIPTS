@@ -5809,7 +5809,9 @@ void save_fra(void)
 #else
   sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
+#ifndef MD_NO_SYSTEM
   system(fileop3);
+#endif
 #endif
   if (rerr)
     error_on_writing(f, fileop, "save_fra", "fprintf");
@@ -5960,7 +5962,9 @@ void save_coordtmp_ascii(unsigned char hdWhich)
   sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
 #endif
+#ifndef MD_NO_SYSTEM
   system(fileop3);
+#endif
 }
 extern void angvel(void);
 #ifdef MD_BIG_DT
@@ -6185,7 +6189,9 @@ void move(void)
 	  sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
 #endif
+#ifndef MD_NO_SYSTEM
 	  system(fileop3);
+#endif
 #endif
 #endif
 	  OprogStatus.JJ++;
