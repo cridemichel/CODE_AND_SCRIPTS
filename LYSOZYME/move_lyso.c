@@ -22,7 +22,7 @@ double r, theta_r, phi_r, theta, psi, phi, deltheta, delpsi,
 double ItensTot[3][3], Itens[NUM_LYSO][3], RotMat[NUM_LYSO][3][3];
 #endif
 double pdb_charge, pdb_mass;
-int pdb_nr, pdb_resnr, pdb_cgnr;
+int pdb_nr, pdb_resnr, pdb_cgnr, checkene;
 char pdb_type[256], pdb_residue[256], pdb_atom[256];
 double com[2][3];
 const double RMIN=3.3, RMAX=6.5;
@@ -478,33 +478,36 @@ void rotate_to_princaxes(int np)
 }
 /* NOTA 26/04/2010: routine che cerca di adattare il passo della mesh alla 
    ripidezza del potenziale */
-void adapt_step(int lc, double maxe)
+void adapt_step(int lc)
 {
   double GOLD = 1.618034;
-  while (delene > maxe)
+  /* 0 = r, 1= phi_r 2=theta_r, 3=psi, 4=phi, 5=theta */
+  switch (lc)
     {
-      /* 0 = r, 1= phi_r 2=theta_r, 3=psi, 4=phi, 5=theta */
-      switch (lc)
-	{
-	case 0:
-	  delr /= GOLD;
-	  break;
-	case 1:
-	  delphi_r /= GOLD;
-	  break;
-	case 2:
-	  deltheta_r /= GOLD;
-	  break;
-	case 3:
-	  delpsi /= GOLD;
-	  break;
-	case 4:
-	  delphi /= GOLD;
-	  break;
-	case 5:
-	  deltheta /=GOLD
-	  break;
-	}
+    case 0:
+      delr /= GOLD;
+      r = r_old + delr;
+      break;
+    case 1:
+      delphi_r /= GOLD;
+      phi_r = phi_r_old + delphi_r;
+      break;
+    case 2:
+      deltheta_r /= GOLD;
+      theta_r = theta_r_old + deltheta_r;
+      break;
+    case 3:
+      delpsi /= GOLD;
+      psi = psi_old + delpsi;
+      break;
+    case 4:
+      delphi /= GOLD;
+      phi = phi_old + delphi;
+      break;
+    case 5:
+      deltheta /=GOLD;
+      theta = theta_old + deltheta;  
+      break;
     }
 }
 void reset_steps(void)
@@ -519,7 +522,28 @@ void reset_steps(void)
 int check_changed_dof(void)
 {
   /* check which steps has been updated last time */
-
+  /* 0 = r, 1= phi_r 2=theta_r, 3=psi, 4=phi, 5=theta */
+  if (r_old != r) 
+    return 0;
+  if (phi_r_old != phi_r)
+    return 1;
+  if (theta_r_old != theta_r)
+    return 2;
+  if(psi_old != psi)
+    return 3;
+  if (phi_old != phi)
+    return 4;
+  if (theta_old != theta)
+    return 5;
+}
+int check_ene_func(void)
+{
+  if (fabs(energy) > tempFact*kb*Tamb)
+    return 2;
+  else if (fabs(energy-energy_old) > maxdelene)
+    return 1;
+  else
+    return 0;
 }
 int main(int argc, char **argv)
 {
@@ -619,20 +643,25 @@ int main(int argc, char **argv)
 			  /* 0 = r, 1= phi_r 2=theta_r, 3=psi, 4=phi, 5=theta */
 			  last_changed = check_changed_dof();
 			  /* just in to out */
-			  move_prot_copy(0);
-			  /* protein 0 is fixed while protein 1 moves */
-			  move_prot(1, xx, psi, phi, theta);
-			  /* calculate interaction energy between xout coordinates */
-			  /* store old values */
-			  energy = calc_energy_gromacs();
-			  /* se l'energi d'interazione è troppo alta non cercare di adattare il paso */
-			  if (fabs(energy) > tempFact*kb*Tamb)
+			  do 
 			    {
-			      reset_steps();
-			      continue;
+			      move_prot_copy(0);
+			      /* protein 0 is fixed while protein 1 moves */
+			      move_prot(1, xx, psi, phi, theta);
+			      /* calculate interaction energy between xout coordinates */
+			      /* store old values */
+			      energy = calc_energy_gromacs();
+			      /* se l'energi d'interazione è troppo alta non cercare di adattare il paso */
+			      checkene = check_ene_func();
+			      if (checkene==2)
+				{
+				  reset_steps();
+				  break;
+				}
+			      else if (checkene==1)
+				adapt_step(last_changed);
 			    }
-			  else if (fabs(energy-energy_old) > maxdelene)
-			    adapt_step(last_changed, maxdelene);
+			  while (checkene);
 			  for (kk=0; kk < 3; kk++)
 			    xx_old[kk] = xx[kk];
 			  psi_old = psi;
