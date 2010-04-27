@@ -1,4 +1,5 @@
 #include<mdsimul.h>
+
 #define SIMUL
 /* CONVENTION: 
    indices a,b are used for atoms inside a molecule , while
@@ -1986,7 +1987,9 @@ void save_init_conf(void)
    sprintf(fileop3, "/bin/gzip -f %s", fileop);
 #endif
 #endif
+#ifndef MD_NO_SYSTEM
   system(fileop3);
+#endif
 #endif
 }
 extern int bound(int na, int n, int a, int b);
