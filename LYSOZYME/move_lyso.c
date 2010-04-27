@@ -15,14 +15,14 @@ const double boxfact=2.0, kb = 0.00831451, Tamb=293.16, tempFact=500.0;
 const double boxlength=50.0;
 const double selfenergy=-20230;
 double orig[3], totq, totmass; 
-double xx_old[3], phi_old, theta_old, psi_old, energy_old, maxdelene;
-double r, theta_r, phi_r, theta, psi, phi, deltheta, delpsi, 
-       delphi, delth_r, delphi_r;
+double xx_old[3], r_old, phi_old, theta_old, psi_old, energy_old, maxdelene;
+double r, theta_r, phi_r, theta, psi, phi, deltheta, delpsi, deltheta_r, 
+       delphi, delth_r, delphi_r, phi_r_old, theta_r_old;
 #ifdef MD_CALC_ITENS
 double ItensTot[3][3], Itens[NUM_LYSO][3], RotMat[NUM_LYSO][3][3];
 #endif
 double pdb_charge, pdb_mass;
-int pdb_nr, pdb_resnr, pdb_cgnr, checkene;
+int pdb_nr, pdb_resnr, pdb_cgnr, checkene, last_changed;
 char pdb_type[256], pdb_residue[256], pdb_atom[256];
 double com[2][3];
 const double RMIN=3.3, RMAX=6.5;
@@ -485,8 +485,8 @@ void adapt_step(int lc)
   switch (lc)
     {
     case 0:
-      delr /= GOLD;
-      r = r_old + delr;
+      del_r /= GOLD;
+      r = r_old + del_r;
       break;
     case 1:
       delphi_r /= GOLD;
@@ -514,7 +514,7 @@ void reset_steps(void)
 {
   del_r = 0.1;
   delphi_r = 0.3;/* rad (0-2*PI) */
-  delth_r = 0.3;
+  deltheta_r = 0.3;
   delphi = 0.3;
   deltheta = 0.3;
   delpsi = 0.3;
@@ -628,7 +628,7 @@ int main(int argc, char **argv)
       //calc_pos(r, theta_r, phi_r, xx);
       DEBUG2(printf("r=%.15G (MAX=%.15G MIN=%.15G)\n", r, RMAX, RMIN));
 #if 1
-      for (theta_r = -PI*0.5; theta_r < PI*0.5 && !fix_theta_r; theta_r += delth_r)
+      for (theta_r = -PI*0.5; theta_r < PI*0.5 && !fix_theta_r; theta_r += deltheta_r)
 	{
 	  for (phi_r = 0.0; phi_r < 2.0*PI && !fix_phi_r; phi_r += delphi_r)
 	    {
@@ -668,7 +668,7 @@ int main(int argc, char **argv)
 			  phi_old = phi;
 			  theta_old = theta;
 			  phi_r_old = phi_r;
-			  thet_r_old = theta_r;
+			  theta_r_old = theta_r;
 			  r_old = r;
 			  energy_old = energy;
 			  first = 0;
