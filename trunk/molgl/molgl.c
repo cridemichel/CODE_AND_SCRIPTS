@@ -12,6 +12,10 @@
 #include <string.h>
 #include <math.h>
 #include "molgl.h"
+#define SQ_CALC_NORM
+/* NOTA 27/04/2010: DELSQ*TWOPI/n1 e DELSQ*TWOPI/n2 sono i passi in radianti per stimare numericamente 
+   il gradiente delle superquadriche */
+#define DELSQ 1E-5
 
 const int NUMCOLS = 746;
 float mgl_bw[NUMBW][4];
@@ -228,6 +232,8 @@ XYZ CalcNormal(XYZ p, XYZ p1, XYZ p2)
    return(n);
 }
 void EvalSuperQuadrics(double t1,double t2,double p1,double p2,double p3, double a, double b, double c, XYZ *p);
+void EvalSuperQuadricsNorm(double t1,double t2,double p1,double p2,double p3, double a, double b, double c, XYZ *p, XYZ *en);
+
 void CreatePartialSuperQuadrics(double power1,double power2, double power3, 
 				double a, double b, double c,
 			int n1, int n2, int method, double thetaBeg, double thetaEnd)
@@ -259,8 +265,8 @@ void CreatePartialSuperQuadrics(double power1,double power2, double power3,
       glEnd();
       return;
    }
-   delta1 = 1E-5*TWOPI / (double)n1;
-   delta2 =  1E-5*TWOPI / (double)n2;
+   delta1 = DELSQ*TWOPI / (double)n1;
+   delta2 =  DELSQ*TWOPI / (double)n2;
    //printf("boh=%.15G n1/2=%d thetaBeg =%.15G TWOPI=%.15G thetaBeg/TWOPI=%.15G\n", ((double)(n1/2))*thetaBeg/TWOPI, n1/2, thetaBeg, TWOPI, thetaBeg/TWOPI);
    if (thetaBeg > 0)
      n1beg = (int) rint(n1*thetaBeg/TWOPI);
@@ -288,20 +294,28 @@ void CreatePartialSuperQuadrics(double power1,double power2, double power3,
          else
             theta3 = i * TWOPI / n2;
    
+#ifndef SQ_CALC_NORM
          EvalSuperQuadrics(theta2,theta3,power1,power2,power3,a,b,c,&p);
          EvalSuperQuadrics(theta2+delta1,theta3,power1,power2,power3,a,b,c,&p1);
          EvalSuperQuadrics(theta2,theta3+delta2,power1,power2,power3,a,b,c,&p2);
          en = CalcNormal(p,p1,p2);
-         glNormal3f(en.x,en.y,en.z);
+#else
+	 EvalSuperQuadricsNorm(theta2,theta3,power1,power2,power3,a,b,c,&p,&en);
+#endif
+	 glNormal3f(en.x,en.y,en.z);
          //glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
 	 //glColor4f(1,1,1,0.1);
          glVertex3f(p.x,p.y,p.z);
 
+#ifndef SQ_CALC_NORM
          EvalSuperQuadrics(theta1,theta3,power1,power2,power3,a,b,c,&p);
          EvalSuperQuadrics(theta1+delta1,theta3,power1,power2,power3,a,b,c,&p1);
          EvalSuperQuadrics(theta1,theta3+delta2,power1,power2,power3,a,b,c,&p2);
          en = CalcNormal(p,p1,p2);
-         glNormal3f(en.x,en.y,en.z);
+#else
+	 EvalSuperQuadricsNorm(theta1,theta3,power1,power2,power3,a,b,c,&p,&en);
+#endif
+	 glNormal3f(en.x,en.y,en.z);
          //glTexCoord2f(i/(double)n,2*j/(double)n);
 	 //glColor4f(1,1,1,0.1);
          glVertex3f(p.x,p.y,p.z);
@@ -309,6 +323,7 @@ void CreatePartialSuperQuadrics(double power1,double power2, double power3,
       glEnd();
    }
 }
+
 void CreateSuperQuadrics(double power1,double power2,double power3,double a, double b, double c,
 			int n1, int n2, int method)
 {
@@ -338,8 +353,8 @@ void CreateSuperQuadrics(double power1,double power2,double power3,double a, dou
       glEnd();
       return;
    }
-   delta1 = 1E-5*TWOPI / (double)n1;
-   delta2 =  1E-5*TWOPI / (double)n2;
+   delta1 = DELSQ*TWOPI / (double)n1;
+   delta2 =  DELSQ*TWOPI / (double)n2;
    for (j=0;j<(n1/2);j++) {
       theta1 = j * TWOPI / (double)n1 - PID2;
       theta2 = (j+1) * TWOPI / (double)n1 - PID2;
@@ -356,20 +371,28 @@ void CreateSuperQuadrics(double power1,double power2,double power3,double a, dou
          else
             theta3 = i * TWOPI / n2;// - TWOPI/2.0;
    
+#ifndef SQ_CALC_NORM
          EvalSuperQuadrics(theta2,theta3,power1,power2,power3,a,b,c,&p);
          EvalSuperQuadrics(theta2+delta1,theta3,power1,power2,power3,a,b,c,&p1);
          EvalSuperQuadrics(theta2,theta3+delta2,power1,power2,power3,a,b,c,&p2);
-         en = CalcNormal(p,p1,p2);
+     	 en = CalcNormal(p,p1,p2);
+#else
+         EvalSuperQuadricsNorm(theta2,theta3,power1,power2,power3,a,b,c,&p,&en);
+#endif
          glNormal3f(en.x,en.y,en.z);
          //glTexCoord2f(i/(double)n,2*(j+1)/(double)n);
 	 //glColor4f(1,1,1,0.1);
          glVertex3f(p.x,p.y,p.z);
 
+#ifndef  SQ_CALC_NORM
          EvalSuperQuadrics(theta1,theta3,power1,power2,power3,a,b,c,&p);
          EvalSuperQuadrics(theta1+delta1,theta3,power1,power2,power3,a,b,c,&p1);
          EvalSuperQuadrics(theta1,theta3+delta2,power1,power2,power3,a,b,c,&p2);
-         en = CalcNormal(p,p1,p2);
-         glNormal3f(en.x,en.y,en.z);
+     	 en = CalcNormal(p,p1,p2);
+#else
+         EvalSuperQuadricsNorm(theta1,theta3,power1,power2,power3,a,b,c,&p,&en);
+#endif
+     	 glNormal3f(en.x,en.y,en.z);
          //glTexCoord2f(i/(double)n,2*j/(double)n);
 	 //glColor4f(1,1,1,0.1);
          glVertex3f(p.x,p.y,p.z);
@@ -408,8 +431,8 @@ void CreatePartialSuperEllipse(double power1,double power2, double a, double b, 
       glEnd();
       return;
    }
-   delta1 = 1E-5*TWOPI / (double)n1;
-   delta2 =  1E-5*TWOPI / (double)n2;
+   delta1 = 1E-6*TWOPI / (double)n1;
+   delta2 =  1E-6*TWOPI / (double)n2;
    //printf("boh=%.15G n1/2=%d thetaBeg =%.15G TWOPI=%.15G thetaBeg/TWOPI=%.15G\n", ((double)(n1/2))*thetaBeg/TWOPI, n1/2, thetaBeg, TWOPI, thetaBeg/TWOPI);
    if (thetaBeg > 0)
      n1beg = (int) rint(n1*thetaBeg/TWOPI);
@@ -489,8 +512,8 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
       glEnd();
       return;
    }
-   delta1 = 1E-5*TWOPI / (double)n1;
-   delta2 =  1E-5*TWOPI / (double)n2;
+   delta1 = 1E-6*TWOPI / (double)n1;
+   delta2 =  1E-6*TWOPI / (double)n2;
    for (j=0;j<n1/2;j++) {
       theta1 = j * TWOPI / (double)n1 - PID2;
       theta2 = (j+1) * TWOPI / (double)n1 - PID2;
@@ -544,7 +567,7 @@ void EvalSuperEllipse(double t1,double t2,double p1,double p2,
    p->z = c * tmp * SIGN(st2) * pow(fabs(st2),p2);
 }
 void EvalSuperQuadricsNorm(double t1,double t2,double p1,double p2,double p3,
-		      double a, double b, double c, XYZ *p, double n[3])
+		      double a, double b, double c, XYZ *p, XYZ *en)
 {
   double ct1,ct2,st1,st2, tmp;
 
@@ -561,11 +584,11 @@ void EvalSuperQuadricsNorm(double t1,double t2,double p1,double p2,double p3,
   p->z = c*SIGN2(st1) * pow(fabs(st1),2.0/p3);
   //printf("z actual=%.15G ellips=%.15G\n", c*SIGN2(st1) * pow(fabs(st1),1.0/p3), c*SIGN2(st1) * pow(fabs(st1),1.0/2.0));
   // evaluate SQ normal vector here (are actual formulas wrong?)
-  n[0] = -SIGN2(p->x)*p1*pow(fabs(p->x),p1-1.0)/a;
-  n[1] = -SIGN2(p->y)*p2*pow(fabs(p->y),p2-1.0)/b;
-  n[2] = -SIGN2(p->z)*p3*pow(fabs(p->z),p3-1.0)/c; 
-
-
+  en->x = SIGN2(p->x)*p1*pow(fabs(p->x),p1-1.0)/a;
+  en->y = SIGN2(p->y)*p2*pow(fabs(p->y),p2-1.0)/b;
+  en->z = SIGN2(p->z)*p3*pow(fabs(p->z),p3-1.0)/c; 
+  Normalise(en);
+  
 #if 0
   tmp  = SIGN(ct1) * pow(fabs(ct1),p1);
    p->x = a * tmp * SIGN(ct2) * pow(fabs(ct2),p2);
@@ -592,9 +615,9 @@ void EvalSuperQuadrics(double t1,double t2,double p1,double p2,double p3,
   //printf("z actual=%.15G ellips=%.15G\n", c*SIGN2(st1) * pow(fabs(st1),1.0/p3), c*SIGN2(st1) * pow(fabs(st1),1.0/2.0));
 #if 0
   tmp  = SIGN(ct1) * pow(fabs(ct1),p1);
-   p->x = a * tmp * SIGN(ct2) * pow(fabs(ct2),p2);
-   p->y = b * SIGN(st1) * pow(fabs(st1),p1);
-   p->z = c * tmp * SIGN(st2) * pow(fabs(st2),p2);
+  p->x = a * tmp * SIGN(ct2) * pow(fabs(ct2),p2);
+  p->y = b * SIGN(st1) * pow(fabs(st1),p1);
+  p->z = c * tmp * SIGN(st2) * pow(fabs(st2),p2);
 #endif
 }
 void render_one_spot(double nx, double ny, double nz, double spotradius, 
@@ -2926,6 +2949,9 @@ int main(int argc, char** argv)
   default_pars();
   args(argc, argv);
 
+#ifndef SQ_CALC_NORM
+  printf("WARNING: numerical gradient will be used for SQ and it may be inaccurate\n");
+#endif
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowPosition(100, 100);
