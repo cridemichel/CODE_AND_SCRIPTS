@@ -13,6 +13,8 @@
 #include <math.h>
 #include "molgl.h"
 #define SQ_CALC_NORM
+#define SQ_REND_SYM
+
 /* NOTA 27/04/2010: DELSQ*TWOPI/n1 e DELSQ*TWOPI/n2 sono i passi in radianti per stimare numericamente 
    il gradiente delle superquadriche */
 #define DELSQ 1E-5
@@ -359,7 +361,7 @@ void CreateSuperQuadrics(double power1,double power2,double power3,double a, dou
 #endif
    delta1 = DELSQ*TWOPI / (double)n1;
    delta2 =  DELSQ*TWOPI / (double)n2;
-   printf("n1=%d n2=%d\n", n1, n2);
+   //printf("n1=%d n2=%d\n", n1, n2);
    for (j=0;j<(n1/2);j++) {
       theta1 = j * TWOPI / (double)n1 - PID2;
       theta2 = (j+1) * TWOPI / (double)n1 - PID2;
