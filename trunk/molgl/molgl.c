@@ -359,6 +359,7 @@ void CreateSuperQuadrics(double power1,double power2,double power3,double a, dou
 #endif
    delta1 = DELSQ*TWOPI / (double)n1;
    delta2 =  DELSQ*TWOPI / (double)n2;
+   printf("n1=%d n2=%d\n", n1, n2);
    for (j=0;j<(n1/2);j++) {
       theta1 = j * TWOPI / (double)n1 - PID2;
       theta2 = (j+1) * TWOPI / (double)n1 - PID2;
@@ -570,27 +571,32 @@ void EvalSuperEllipse(double t1,double t2,double p1,double p2,
    p->y = b * SIGN(st1) * pow(fabs(st1),p1);
    p->z = c * tmp * SIGN(st2) * pow(fabs(st2),p2);
 }
+void swap_axes(double *a, double *b, double *c, double *p1, double *p2, double *p3);
+
 void EvalSuperQuadricsNorm(double t1,double t2,double p1,double p2,double p3,
 		      double a, double b, double c, XYZ *p, XYZ *en)
 {
-  double ct1,ct2,st1,st2, tmp;
-
+  double ct1,ct2,st1,st2;
+  
   ct1 = cos(t1);
   ct2 = cos(t2);
   st1 = sin(t1);
   st2 = sin(t2);
   //p1=p2=p3=2.0;
-
+#ifdef SQ_REND_SYM
+  swap_axes(&a,&b,&c,&p1,&p2,&p3);
+#endif
   p->x = a*SIGN2(ct1) * pow(fabs(ct1),2.0/p1) * SIGN2(ct2) * pow(fabs(ct2),2.0/p1);
   //printf("x actual=%.15G ellips=%.15G\n", p->x, a*SIGN2(ct1) * pow(fabs(ct1),1.0/2) * SIGN2(ct2) * pow(fabs(ct2),1.0/2));
   p->y = b*SIGN2(ct1) * pow(fabs(ct1),2.0/p2) * SIGN2(st2) * pow(fabs(st2),2.0/p2);
   //printf("y actual=%.15G ellips=%.15G\n", p->y, b*SIGN2(ct1) * pow(fabs(ct1),1.0/2) * SIGN2(st2) * pow(fabs(st2),1.0/2));
   p->z = c*SIGN2(st1) * pow(fabs(st1),2.0/p3);
   //printf("z actual=%.15G ellips=%.15G\n", c*SIGN2(st1) * pow(fabs(st1),1.0/p3), c*SIGN2(st1) * pow(fabs(st1),1.0/2.0));
-  // evaluate SQ normal vector here (are actual formulas wrong?)
+  // evaluate SQ normal vector here 
   en->x = SIGN2(p->x)*p1*pow(fabs(p->x),p1-1.0)/pow(a,p1);
   en->y = SIGN2(p->y)*p2*pow(fabs(p->y),p2-1.0)/pow(b,p2);
   en->z = SIGN2(p->z)*p3*pow(fabs(p->z),p3-1.0)/pow(c,p3); 
+
   Normalise(en);
   
 #if 0
@@ -667,15 +673,88 @@ void render_one_spot(double nx, double ny, double nz, double spotradius,
 			    globset.slides, 1, 0.0, spotangle);
   glPopMatrix(); 
 }
+#ifdef SQ_REND_SYM 
+void swap_axes(double *a, double *b, double *c, double *p1, double *p2, double *p3)
+{
+  double aL, bL, cL, p1L, p2L, p3L;
+  aL = *a;
+  bL = *b;
+  cL = *c;
+  p1L = *p1;
+  p2L = *p2;
+  p3L = *p3;
+  /* scambia i parametri in modo che l'asse di simmetria giaccia sempre lungo l'asse z */
+  if ((*p2==*p3) && (*b==*c)) 
+    {
+      *a = bL;
+      *b = cL;
+      *c = aL;
+      *p1 = p2L;
+      *p2 = p3L;
+      *p3 = p1L;
+    }
+  else if ((*p1==*p3) && (*a==*c))
+    {
+      *a = aL;
+      *c = bL;
+      *b = cL; 
+      *p1 = p1L;
+      *p3 = p2L;
+      *p2 = p3L;
+    }
+}
+int create_rotate_to_z(atom_s *atom, float rotm[16])
+{
+  /* it returns 1 if rotation is not indentity */
+  double a,b,c,p1,p2,p3;
+  int k1, k2;
+  /* ruota l'asse di simmetria z sull'asse x o y dopo che 
+     swap_axes() ha portato l'asse di simmetria sull'asse z */
+  p1 = atom->supquadrics.n1;
+  p2 = atom->supquadrics.n2;
+  p3 = atom->supquadrics.n3;
+  a = atom->supquadrics.a;
+  b = atom->supquadrics.b;
+  c = atom->supquadrics.c;
+  for (k1 = 0; k1 < 4; k1++)
+    for (k2 = 0; k2 < 4; k2++)
+      {
+	if (k1==k2)
+	  rotm[k1*4+k2] = 1.0;
+	else
+	  rotm[k1*4+k2]=0.0;
+      }
+  if (p2==p3 && b==c)
+    {
+      rotm[0] = 0.0;
+      rotm[10] = 0.0;
+      rotm[2] = -1.0;
+      rotm[8] = 1.0;
+      return 1;
+    }
+  else if (p1==p3 && a==c)
+    {
+      rotm[6] = -1.0;
+      rotm[5] = 0.0;
+      rotm[9] = 1.0;
+      rotm[10] = 0.0;
+      return 1;
+    }
+  else
+    {
+      return 0;
+    }
+}
+#endif
 /* ========================== >>> displayMol <<< ===========================*/
 void displayAtom(int nf, int nm, int na)
 {
   float fadeFact;
-  float rotm[16];
+  float rotm[16], rotz[16];
   struct spotlst *sl;
   GLUquadricObj *ss, *ss2, *ss3;
   atom_s *atom;
-  int k1, k2;
+  int k1, k2, do_rotz;
   double rax, ray, raz, rotangle, normra, normn, Pi, redrad, ang, dh;
   int ms;
   glPushMatrix();
@@ -971,6 +1050,7 @@ void displayAtom(int nf, int nm, int na)
     }
   else if (atom->common.type==MGL_ATOM_SUPQUADRICS)
     {
+
       /* qui si deve orientare il superellissoide */
       for (k1 = 0; k1 < 4; k1++)
 	for (k2 = 0; k2 < 4; k2++)
@@ -988,11 +1068,17 @@ void displayAtom(int nf, int nm, int na)
       /* notare che x' = R x quindi:
        * x = Inversa(R) x' = Trasposta(R) x'*/
       glMultTransposeMatrixf(rotm);
+      /* porta l'asse di simmetria a coincidere con l'asse z*/
       //glEnable (GL_BLEND);
       /*if (atom->common.transp < 1.0)
 	glDepthMask (GL_FALSE);*/
       //glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       /* for now disabled */
+#ifdef SQ_REND_SYM
+      do_rotz = create_rotate_to_z(atom, rotz);
+      if (do_rotz)
+	glMultMatrixf(rotz);
+#endif
       if (atom->supquadrics.n1==2 && atom->supquadrics.n2==2 &&
      	  atom->supquadrics.n3==2)
 	{
