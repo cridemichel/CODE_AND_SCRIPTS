@@ -1567,6 +1567,11 @@ void usrInitBef(void)
     OprogStatus.polycutoff = 5.0;
 #endif
 #ifdef EDHE_FLEX
+#ifdef MD_SCALEPHI_STAGES
+    /* 0 = grow all particles without any order, 1 = grow particles from type=0 to last type
+       In future we could implement a method 2 that grow particles from bigger to smaller (according to type params) */ 
+    OprogStatus.growthType = 0;
+#endif
     OprogStatus.frozenDOF = 3;
     Oparams.saveBonds = 1;
     Oparams.maxbondsSaved = -1;

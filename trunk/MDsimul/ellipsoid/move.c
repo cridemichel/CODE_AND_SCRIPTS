@@ -1199,6 +1199,21 @@ double check_alldist_min(char *msg)
   return distMin;
   
 }
+#ifdef MD_SCALEPHI_STAGES
+int check_type_done(int t)
+{
+  int i, cc=0;
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      if (scdone[i]==1 && typeOfPart[i] == t)
+	cc++;
+    }
+  if (cc==typeNP[t])
+    return 1;
+  else
+    return 0;
+}
+#endif
 double calc_safe_factor(void)
 {
   int i, iMin;
@@ -1218,6 +1233,9 @@ double calc_safe_factor(void)
 double rcutIni;
 void scale_Phi(void)
 {
+#ifdef MD_SCALEPHI_STAGES
+  static int curType=0;
+#endif
   int i, j, imin, kk, its, done=0;
   static int first = 1;
 #ifndef EDHE_FLEX
@@ -1266,8 +1284,25 @@ void scale_Phi(void)
       cellRange[2*kk+1] =   1;
     }
   imin = -1;
+#ifdef MD_SCALEPHI_STAGES
+  if (OprogStatus.growthType == 1)
+    {
+      if (check_type_done(curType))
+	{
+	  curType++;
+	}	
+      printf("[GROWTH IN STAGES]: Actual growing type is: %d\n", curType);
+    }
+#endif
   for (i = 0; i < Oparams.parnum; i++)
     {
+#ifdef MD_SCALEPHI_STAGES
+      if (OprogStatus.growthType == 1)
+	{
+	  if (typeOfPart[i] != curType)
+	    continue;
+	}
+#endif
       j = -1;
       if (scdone[i]==1)
 	{
@@ -1356,7 +1391,7 @@ void scale_Phi(void)
 	axai = Oparams.a[1];
 #endif
 #endif
-      if (fabs(axa[i] / axai - target) < OprogStatus.axestol)
+      if (fabs(axa[i] / axai / target - 1.0) < OprogStatus.axestol)
 	{
 	  done++;
 	  scdone[i] = 1;
@@ -1404,7 +1439,7 @@ void scale_Phi(void)
     ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
 #endif
   printf("Scaled successfully %d/%d ellipsoids \n", done, Oparams.parnum);
-  if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
+  if (done == Oparams.parnum || fabs(phi / OprogStatus.targetPhi - 1.0)<OprogStatus.phitol)
     {
       R2u();
 #if 0
