@@ -837,7 +837,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 #else
   L2 = 0.5 * L;
 #endif
-#ifndef MD_SUPERELLIPSOID
+#if !defined(MD_SUPERELLIPSOID) && !defined(MD_OPT_SCALEPHI)
   phi = calc_phi();
 #endif
   if (first)
@@ -953,12 +953,18 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 	    }
 	}
       else
-	fact1 = 1.0 + 0.99*(factNNL - 1.0);
+	{
+	  if (OprogStatus.useNNL)
+	    fact1 = 1.0 + 0.99*(factNNL - 1.0);
+	  else
+	    fact1 = F;
+	}
       fact2 = F;
       if (fact2 < fact1)
 	fact = fact2;
       else
 	fact = fact1;
+      //printf("i=%d j=%d fact=%.15G fact1=%.15G, fact2=%.15G factNNL=%.15G d=%.15G rAC=%.15G\n", i, j, fact, fact1, fact2, factNNL,d, calc_norm(rAC));
 
     }
   //printf("phi=%f fact1=%.8G fact2=%.8G scaling factor: %.8G\n", phi, fact1, fact2, fact);
@@ -991,7 +997,7 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
       if ( boxdiag > Oparams.rcut)
 	Oparams.rcut = 1.01*boxdiag;
     }
-#ifndef MD_SUPERELLIPSOID
+#if !defined(MD_SUPERELLIPSOID) && !defined(MD_OPT_SCALEPHI)
   return calc_phi();
 #else
   return 0.0;
@@ -1299,6 +1305,7 @@ void scale_Phi(void)
       if (distMin < OprogStatus.minDist)// || fabs(distMin)<1E-10)//OprogStatus.epsd/10.0)
 	continue;
       //printf("===> j=%d rA=(%f,%f,%f) rC=(%f,%f,%f)\n", j, rA[0], rA[1], rA[2], rC[0], rC[1], rC[2]);
+      //printf("===> i=%d\n", i);
       phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor, j);
       rebuild_linked_list();
       distMinT = check_dist_min(i, NULL);
@@ -1369,7 +1376,7 @@ void scale_Phi(void)
 	  printf("%d-(%f,%f,%f) ", i, axa[i], axb[i], axc[i]);
     }
 #endif
-#ifdef MD_SUPERELLIPSOID
+#if defined(MD_SUPERELLIPSOID) || defined(MD_OPT_SCALEPHI) 
   phi = calc_phi();
 #endif
   printf("Scaled axes succesfully phi=%.8G\n", phi);
@@ -5527,6 +5534,45 @@ void saveStore(double t);
 #ifdef MD_SUPERELLIPSOID
 extern void calcfxLabSE(int i, double *x, double *r, double **Ri, double fx[3]);
 #endif
+double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double *r1, double *r2)
+{
+  double ti, rAB[3], rABn[3], norm, rA[3], rB[3], sigma, distSq;
+  int kk;
+  ti = t + (t1 - atomTime[i]);
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  ti = t + (t1 - atomTime[j]);
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+  distSq = 0;
+  
+  for (kk = 0; kk < 3; kk++)
+    rAB[kk] = rA[kk] - rB[kk];
+  norm = calc_norm(rAB);
+  //printf("ti=%.15G rA=%f %f %f rB=%f %f %f\n", ti,rA[0], rA[1], rA[2], rB[0], rB[1], rB[2]);
+  //printf("norm=%.15G rABn=%.15G %.15G %.15G sax=%.15G i=%d j=%d\n", norm, rAB[0],rAB[1],rAB[2], typesArr[typeOfPart[i]].sax[0],
+  //i, j);
+  for (kk=0; kk < 3; kk++)
+    distSq += Sqr(rAB[kk]);
+  for (kk = 0; kk < 3; kk++)
+    rABn[kk] = rAB[kk]/norm;
+  for (kk = 0; kk < 3; kk++)
+    {
+      r1[kk] = rA[kk] - rABn[kk]*typesArr[typeOfPart[i]].sax[0];
+      r2[kk] = rB[kk] + rABn[kk]*typesArr[typeOfPart[j]].sax[0];
+    }
+#if 0
+  for (kk = 0; kk < 3; kk++)
+    rAB[kk] = r1[kk] - r2[kk];
+
+  printf("rAB norm = %.15G\n", calc_norm(rAB));
+#endif
+  sigma = typesArr[typeOfPart[i]].sax[0]+typesArr[typeOfPart[j]].sax[0];
+  //printf("sigma=%.15G\n", sigma);
+  return  sqrt(distSq) - sigma;
+}
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -5552,11 +5598,14 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double phi, psi;
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+  if (are_spheres(i, j))
+    return calcDistNegHS(t, t1, i, j, shift, r1, r2);
   ti = t + (t1 - atomTime[i]);
   MD_DEBUG50(printf("[calcDistNeg] - BEGIN");)
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
   typej = typeOfPart[j];
+     
   if (OprogStatus.targetPhi > 0.0)
     {
       axaiF = axa[i];

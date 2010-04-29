@@ -86,7 +86,8 @@ int is_superellipse(int i)
 {
   return 1;
   MD_DEBUG37(return 1);
-  if (typesArr[typeOfPart[i]].n[0]==2.0 && typesArr[typeOfPart[i]].n[1]==2.0)
+  if (typesArr[typeOfPart[i]].n[0]==2.0 && typesArr[typeOfPart[i]].n[1]==2.0 &&
+      typesArr[typeOfPart[i]].n[2]==2.0)
     return 0;
   else 
     return 1;
