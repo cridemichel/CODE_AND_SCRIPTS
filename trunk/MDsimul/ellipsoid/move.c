@@ -1300,7 +1300,11 @@ void scale_Phi(void)
       if (OprogStatus.growthType == 1)
 	{
 	  if (typeOfPart[i] != curType)
-	    continue;
+	    {
+	      if (scdone[i]==1)
+		done++;
+	      continue;
+	    }
 	}
 #endif
       j = -1;
@@ -1391,7 +1395,11 @@ void scale_Phi(void)
 	axai = Oparams.a[1];
 #endif
 #endif
+#ifdef MD_OPT_SCALEPHI
       if (fabs(axa[i] / axai / target - 1.0) < OprogStatus.axestol)
+#else
+      if (fabs(axa[i] / axai - target) < OprogStatus.axestol)
+#endif	
 	{
 	  done++;
 	  scdone[i] = 1;
@@ -1439,8 +1447,13 @@ void scale_Phi(void)
     ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
 #endif
   printf("Scaled successfully %d/%d ellipsoids \n", done, Oparams.parnum);
+#ifdef MD_OPT_SCALEPHI
   if (done == Oparams.parnum || fabs(phi / OprogStatus.targetPhi - 1.0)<OprogStatus.phitol)
+#else
+  if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
+#endif
     {
+      printf("GROWTH DONE\n");
       R2u();
 #if 0
       for (i=0; i < Oparams.parnum; i++)
