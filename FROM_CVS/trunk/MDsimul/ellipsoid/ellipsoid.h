@@ -441,6 +441,9 @@ struct progStatus
   int iniFormat; /* 0 = binary 1 = ascii 2 = both */
   int endFormat; /* 0 = binary 1 = ascii 2 = both */
 #ifdef EDHE_FLEX
+#ifdef MD_SCALEPHI_STAGES
+  int growthType;
+#endif
   int frozenDOF;
 #endif
 #ifdef MD_EDHEFLEX_WALL
@@ -839,6 +842,9 @@ struct pascii opro_ascii[] =
   {"iniFormat",    &OS(iniFormat),                  1,               1, "%d"},
   {"endFormat",    &OS(endFormat),                  1,               1, "%d"},
 #ifdef EDHE_FLEX
+#ifdef MD_SCALEPHI_STAGES
+  {"growthType",      &OS(growthType),                1,       1,  "%d" },
+#endif
   {"frozenDOF",      &OS(frozenDOF),                1,       1,  "%d" },
 #endif
 #ifdef MD_EDHEFLEX_WALL
@@ -1210,6 +1216,9 @@ struct singlePar OsinglePar[] = {
   {"inistep" ,   &Oparams.curStep,            LLINT},
   {"endFormat",  &OprogStatus.endFormat,      INT},
 #ifdef EDHE_FLEX
+#ifdef MD_SCALEPHI_STAGES
+  {"growthType",       &OprogStatus.growthType,  INT},
+#endif
   {"frozenDOF",       &OprogStatus.frozenDOF,  INT},
 #endif
 #ifdef MD_ABSORPTION
