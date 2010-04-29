@@ -4073,7 +4073,8 @@ void usrInitAft(void)
   if (Oparams.maxbondsSaved==-1)
     {
       //printf("nbonds[1841]=%d\n",numbonds[1841]);
-      find_bonds();
+      if (Oparams.ninters != 0)
+	find_bonds();
    }
 
   if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
