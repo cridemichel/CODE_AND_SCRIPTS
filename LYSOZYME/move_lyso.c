@@ -651,7 +651,7 @@ int main(int argc, char **argv)
 			      /* calculate interaction energy between xout coordinates */
 			      /* store old values */
 			      energy = calc_energy_gromacs();
-			      /* se l'energi d'interazione è troppo alta non cercare di adattare il paso */
+			      /* se l'energia d'interazione è troppo alta non cercare di adattare il paso */
 			      checkene = check_ene_func();
 			      if (checkene==2)
 				{
