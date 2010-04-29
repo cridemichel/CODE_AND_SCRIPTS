@@ -954,10 +954,17 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 	}
       else
 	{
+#if 0
+	  /* NOTA 29/04/2010: prima era così il che non aveva molto senso poiché
+	     se non si usano le NNL non serve limitare fact1, 
+	     comunque testare tale cambiamento. */
+	    fact1 = 1.0 + 0.99*(factNNL - 1.0);
+#else
 	  if (OprogStatus.useNNL)
 	    fact1 = 1.0 + 0.99*(factNNL - 1.0);
 	  else
 	    fact1 = F;
+#endif
 	}
       fact2 = F;
       if (fact2 < fact1)
