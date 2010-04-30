@@ -5592,6 +5592,7 @@ extern void calcfxLabSE(int i, double *x, double *r, double **Ri, double fx[3]);
 double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double *r1, double *r2)
 {
   double ti, rAB[3], rABn[3], norm, rA[3], rB[3], sigma, distSq;
+  double rad1, rad2;
   int kk;
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
@@ -5613,10 +5614,20 @@ double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double 
     distSq += Sqr(rAB[kk]);
   for (kk = 0; kk < 3; kk++)
     rABn[kk] = rAB[kk]/norm;
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      rad1 = axa[i];
+      rad2 = axa[j];
+    }
+  else
+    {
+      rad1 = typesArr[typeOfPart[i]].sax[0];
+      rad2 = typesArr[typeOfPart[j]].sax[0];
+    }
   for (kk = 0; kk < 3; kk++)
     {
-      r1[kk] = rA[kk] - rABn[kk]*typesArr[typeOfPart[i]].sax[0];
-      r2[kk] = rB[kk] + rABn[kk]*typesArr[typeOfPart[j]].sax[0];
+      r1[kk] = rA[kk] - rABn[kk]*rad1;
+      r2[kk] = rB[kk] + rABn[kk]*rad2;
     }
 #if 0
   for (kk = 0; kk < 3; kk++)
@@ -5624,7 +5635,7 @@ double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double 
 
   printf("rAB norm = %.15G\n", calc_norm(rAB));
 #endif
-  sigma = typesArr[typeOfPart[i]].sax[0]+typesArr[typeOfPart[j]].sax[0];
+  sigma = rad1 + rad2; 
   //printf("sigma=%.15G\n", sigma);
   return  sqrt(distSq) - sigma;
 }
@@ -7222,11 +7233,20 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
   b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
   collCode = MD_EVENT_NONE;
   evtime = timbig;
+
+#if 0
+  if ((Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2])) / sigSq < 1 - 1E-3)
+    {
+      printf("sig=%.15G\n", sqrt(sigSq));
+      printf("i=%d j=%d distanza minore di 0 d=%.15G!\n", i, j, sqrt(Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2])));
+      exit(-1);
+    }
+#endif
   if (b < 0.0) 
     {
       vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
       d = Sqr (b) - vv * 
-	(Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]) - sigSq);
+	(Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2]) - sigSq);
       if (d >= 0.) 
 	{
 	  t = - (sqrt (d) + b) / vv;
