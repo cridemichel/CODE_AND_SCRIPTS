@@ -1060,7 +1060,6 @@ void core_bump(int i, int j, double *W, double sigSq)
 
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
-
   denom = invmi + invmj; 
   
   rxij = rx[i] - rx[j];
@@ -1075,7 +1074,20 @@ void core_bump(int i, int j, double *W, double sigSq)
   factor = ( rxij * ( vx[i] - vx[j] ) +
 	     ryij * ( vy[i] - vy[j] ) +
 	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
+#if 0
+  printf("prefcat=%.15G rxij * ( vx[i] - vx[j] ):%.15G %.15G %.15G\n", factor,rxij * ( vx[i] - vx[j] ) ,
+       	    ryij * ( vy[i] - vy[j] ),  rzij * ( vz[i] - vz[j] ) );
+#endif
   factor *= 2.0 / denom;
+#if 0
+ if (factor > 0.00001)
+   { 
+     printf("v[i]=%f %f %f sig=%f\n", vx[i], vy[i], vz[i], sigSq);
+     printf("v[j]=%f %f %f sig=%f\n", vx[j], vy[j], vz[j], sigSq);
+     printf("rij=%f %f %f\n", rxij, ryij, rzij); 
+     printf("factor=%.15G denom=%.15G\n", factor, denom);
+   }
+#endif
   /* Dissipation */
   delvx = - factor * rxij;
   delvy = - factor * ryij;
@@ -3547,6 +3559,9 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
   epsdMax = OprogStatus.epsdMax;
+#ifdef MD_SPOT_OFF
+  return 0;
+#endif
 #ifdef MD_SILICA
   assign_bond_mapping(i, j);
 #endif

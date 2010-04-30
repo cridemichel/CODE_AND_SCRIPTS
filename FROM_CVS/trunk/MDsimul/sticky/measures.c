@@ -387,9 +387,15 @@ void temperat(void)
   tempTra =  2.0 * Ktra / dogTra;
   tempRot =  2.0 * Krot / dogRot;
 #else
+#ifdef MD_SPOT_OFF
+  temp = 2.0 * K / (3.0 * Oparams.parnum - 3.0);
+  tempTra =  2.0 * Ktra / (3.0 * Oparams.parnum);
+  tempRot =  0.0;
+#else
   temp = 2.0 * K / (6.0 * Oparams.parnum - 3.0);
   tempTra =  2.0 * Ktra / (3.0 * Oparams.parnum);
   tempRot =  2.0 * Krot / (3.0 * Oparams.parnum);
+#endif
 #endif
   if (OprogStatus.avngTemp == 1)
     {
