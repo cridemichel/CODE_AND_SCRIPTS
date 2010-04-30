@@ -393,7 +393,7 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
   COORD_TYPE rTemp[2] ;
   /*COORD_TYPE Px, Py, Pz;*/
   int i;
-  rTemp[0] = sqrt(temp / m[0]);  
+ rTemp[0] = sqrt(temp / m[0]);  
   rTemp[1] = sqrt(temp / m[1]);
   /* variance of the velocities distribution function, we assume k = 1 */ 
   for (i = 0; i < Oparams.parnumA; i++)
@@ -2384,7 +2384,7 @@ void usrInitAft(void)
       cellsx[nl] = L / Oparams.rcut[nl];
       cellsy[nl] = L / Oparams.rcut[nl];
       cellsz[nl] = L / Oparams.rcut[nl];
-      printf("[%d] Oparams.rcut: %f %f %f cellsx:%d cellsy: %d cellsz:%d\n", nl, 
+      printf("[%d] L=%.15G Oparams.rcut: %f %f %f cellsx:%d cellsy: %d cellsz:%d\n", nl, L,
 	     Oparams.rcut[0], Oparams.rcut[1], Oparams.rcut[2],
 	     cellsx[nl], cellsy[nl], cellsz[nl]);
     }
@@ -2589,6 +2589,7 @@ void usrInitAft(void)
     {
       numbonds[i] = 0;
     }
+#ifndef MD_SPOT_OFF
 #ifdef MD_SILICA
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i + 1; j < Oparams.parnum; j++)
@@ -2658,7 +2659,10 @@ void usrInitAft(void)
 	  }
       }
 #endif
+#endif
+#ifndef MD_SPOT_OFF
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene()/((double)Oparams.parnum));
+#endif
   //exit(-1);
   StartRun(); 
   if (OprogStatus.intervalSum > 0.0)
