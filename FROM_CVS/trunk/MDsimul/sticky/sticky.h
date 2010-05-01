@@ -88,7 +88,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #endif
 #define MD_DIST_ELECTSITES 0.45
 #define MD_DIST_HYDROSITES 0.5
-#define MAXPAR 20000      /* maximum number of simulated particles */
+#define MAXPAR 50000      /* maximum number of simulated particles */
 
 #define NUM_PAR 2000   /* Number of particles for the simulation */
 #define NUMK 99    /* number of k-points in which we must  calculate the 
