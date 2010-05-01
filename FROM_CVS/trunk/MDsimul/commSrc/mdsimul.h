@@ -2,7 +2,6 @@
    in questo file vengono definite le strutture dati necessarie alla
    simulazione, che pero' non dipendono dalla simulazione specifica.
    Le variabili specifiche vanno nel file incluso alla fine (ved. fine file) */
-
 #include<time.h>
 #include<stdlib.h>
 #include<unistd.h>
@@ -27,7 +26,6 @@
 #endif
 #endif
 /* ============================== >>> DEFINES <<< ===========================*/
-
 #ifdef CRAY
 #include<fp.h>
 /*in fp.h  c'e' rint(...) altrimenti rint non funziona*/

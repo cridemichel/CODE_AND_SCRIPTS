@@ -7234,8 +7234,8 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
   collCode = MD_EVENT_NONE;
   evtime = timbig;
 
-#if 0
-  if ((Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2])) / sigSq < 1 - 1E-3)
+#if 1
+  if ((Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2])) < sigSq*0.9)
     {
       printf("sig=%.15G\n", sqrt(sigSq));
       printf("i=%d j=%d distanza minore di 0 d=%.15G!\n", i, j, sqrt(Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2])));

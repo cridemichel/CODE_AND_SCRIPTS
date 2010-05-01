@@ -1440,6 +1440,7 @@ void readAllCor(FILE* fs)
 	      mdPrintf(STD, "ERROR[pos] reading ascii file\n", NULL);
 	      exit(-1);
 	    }
+	  //printf("pos i=%d a=%d rx=%.15G ry=%.15G rz=%.15G\n", i, a, rx[a][i], ry[a][i], rz[a][i]);
 	}
     }
   for (i = 0; i < Oparams.parnum; i++)
@@ -1448,6 +1449,7 @@ void readAllCor(FILE* fs)
 	{
 	  if (fscanf(fs, "%lf %lf %lf\n", &vx[a][i], &vy[a][i], &vz[a][i]) < 3)
 	    {
+	      //printf("i=%d a=%d\n", i, a);;
 	      mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
 	      exit(-1);
 	    }
