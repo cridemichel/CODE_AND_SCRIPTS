@@ -12,7 +12,7 @@
 /* this is the executable, you must change this to your directory */
 
 #define XTERM   "/usr/X11R6/bin/nxterm"
-#define MD_HOME "/home/demichel"
+#define MD_HOME "/Users/demichel"
 /* directory to store temporary files */ 
 #define MD_SIMDAT MD_HOME "/simdat"
 
@@ -45,7 +45,7 @@
 
 /* ====================== >>> SIMULATION DEFINES <<< ========================*/
 
-#define NA 3 /* number of atoms for each molecule (particle) */
+#define NA 20 /* number of atoms for each molecule (particle) */
 
 #define MAXPAR 15000      /* maximum number of simulated particles */
 

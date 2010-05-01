@@ -350,7 +350,8 @@ void calcAngVel(COORD_TYPE* ox, COORD_TYPE* oy, COORD_TYPE *oz)
   //exit(-1);
 }
 
-/* ========================= >>> calcOrientVect <<< ======================== */
+
+* ========================= >>> calcOrientVect <<< ======================== */
 void calcOrientVect(COORD_TYPE* u01x, COORD_TYPE* u01y, COORD_TYPE *u01z)
 {
   /* DESCRIPTION:
@@ -895,5 +896,3 @@ void main(int argc, char** argv)
   
   close(mfd);
 }
-
-
