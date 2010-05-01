@@ -647,9 +647,11 @@ void readAsciiPars(FILE* pfs, struct pascii strutt[])
          specified. 
          SPACES ARE IGNORED <---------------------- !!!! */
       fscanf(pfs, "%[^\n] ", line);
+       // fscanf(pfs, "%s ", line);
       //printf("%s\n", line);
       if (!strcmp(line, "@@@"))
 	break;
+      //printf("line=%s\n", line);
       //printf("line: %s\n", line);
       if (!strcmp(line, "")) /* If a void line */
 	continue;
