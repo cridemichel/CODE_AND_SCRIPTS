@@ -3083,7 +3083,15 @@ void usrInitAft(void)
   double stocvar;
 #endif
   int a;
- /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
+  /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
+
+#ifdef MAXPAR
+  if (Oparams.parnum >= MAXPAR)
+    {
+      printf("ERROR: Too many particles, increase MAXPAR in ellipsoid.h and recompile\n");
+      exit(-1);
+    } 
+#endif
 
 #ifdef EDHE_FLEX
   Oparams.parnumA = Oparams.parnum;
