@@ -1566,7 +1566,7 @@ accumulators initialization is crucial */
   for (i = 0; i < 2; i++)
     Oparams.I[i] = 1.0;
 #endif
-#ifdef MD_ROTDIFF_MIS
+#if defined(MD_ROTDIFF_MIS) 
   for (i = 0; i < MAXPAR; i++)
     {
       OprogStatus.lastcolltime[i] = 0.0;
@@ -2349,7 +2349,11 @@ void usrInitAft(void)
       //printf("OprogStatus.nextSumTime:%.15G", OprogStatus.nextSumTime);
     }
 #endif
- 
+  if (Oparams.parnum >= MAXPAR)
+    {
+      printf("ERROR: Too many particles, increase MAXPAR in sticky.h and recompile\n");
+      exit(-1);
+    } 
   Nm = Oparams.parnumA;
   parnumA = Oparams.parnumA;
   parnumB = Oparams.parnum - Oparams.parnumA;
@@ -2760,7 +2764,6 @@ void usrInitAft(void)
 	  OprogStatus.vcmx0[i] = vcmx;
 	  OprogStatus.vcmy0[i] = vcmy;
 	  OprogStatus.vcmz0[i] = vcmz;
-
 	}
 
       OprogStatus.sumEta   = 0.0;
