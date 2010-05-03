@@ -2349,11 +2349,13 @@ void usrInitAft(void)
       //printf("OprogStatus.nextSumTime:%.15G", OprogStatus.nextSumTime);
     }
 #endif
+#ifdef MAXPAR
   if (Oparams.parnum >= MAXPAR)
     {
       printf("ERROR: Too many particles, increase MAXPAR in sticky.h and recompile\n");
       exit(-1);
     } 
+#endif
   Nm = Oparams.parnumA;
   parnumA = Oparams.parnumA;
   parnumB = Oparams.parnum - Oparams.parnumA;
