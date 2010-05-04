@@ -48,7 +48,11 @@
 #define MPI_OUT_PROCESS 0
 //#define exit(VAL) MPI_Abort(MPI_COMM_WORLD, VAL)
 #endif
-
+/* 03/05/2010: massima lunghezza della linea nella readAsciiPars. Se si simulano molte particelle
+questo numero deve essere abbastanza grande altrimenti la ripartenza da file ascii
+da segfault. Considerare tuttavia che se MAXPAR è definita allora non viene usata questa
+define ma il valore MAXPAR*20 */
+#define MAXLINELEN 4096000 
 #define MEMBLOCK 32000000
 #define EXT_DLST          
 #define EXT_SLST NULL

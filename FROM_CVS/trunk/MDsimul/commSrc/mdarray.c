@@ -635,9 +635,16 @@ void readAsciiPars(FILE* pfs, struct pascii strutt[])
 {
   char *line;
   char str1[NAME_LENGTH], *str2;
-
-  line = malloc((256000+NAME_LENGTH)*sizeof(char));
-  str2 = malloc(256000*sizeof(char)); 
+  int ll;
+#ifdef MAXPAR
+  /* if we have an array of double MAXPAR long we assume here 20 bytes for each element (usually %.15G
+     is a sensible choice for double numbers hence 20 bytes is a safe overestimate */
+  ll = MAXPAR*20;
+#else
+  ll = MAXLINELEN;
+#endif
+  line = malloc((ll+NAME_LENGTH)*sizeof(char));
+  str2 = malloc(ll*sizeof(char)); 
   /* scanning the file for the other params */
   while (!feof(pfs))
     {
