@@ -17,6 +17,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
 #else
@@ -298,134 +299,9 @@ void scalCor(int Nm)
     }
 }
 
-#if 0
-double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
-{
-  /* na = atomo da esaminare 0 < na < Oparams.parnum 
-   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
-   *      -2 = controlla solo cell crossing e urti con pareti 
-   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
-   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
-   *      */
-  double distMin=1E10,dist,vecg[8], alpha, shift[3], d;
-  /*double cells[NDIM];*/
-  int collCode, j, kk;
-  double s, r1[3], r2[3];
-  const double EPSILON = 1E-10;
-  double mredl;
-  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
-  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
-   * in cui la forza di gravità è diretta lungo z negativo */ 
-  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
-
-  calcdist_retcheck = 0;
-  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
-    {
-      jZ = inCell[2][na] + iZ;    
-      shift[2] = 0.;
-      /* apply periodico boundary condition along z if gravitational
-       * fiels is not present */
-      if (jZ == -1) 
-	{
-	  jZ = cellsz - 1;    
-	  shift[2] = - L;
-	} 
-      else if (jZ == cellsz) 
-	{
-	  jZ = 0;    
-	  shift[2] = L;
-	}
-      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
-	{
-	  jY = inCell[1][na] + iY;    
-	  shift[1] = 0.0;
-	  if (jY == -1) 
-	    {
-	      jY = cellsy - 1;    
-	      shift[1] = -L;
-	    } 
-	  else if (jY == cellsy) 
-	    {
-	      jY = 0;    
-	      shift[1] = L;
-	    }
-	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
-	    {
-	      jX = inCell[0][na] + iX;    
-	      shift[0] = 0.0;
-	      if (jX == -1) 
-		{
-		  jX = cellsx - 1;    
-		  shift[0] = - L;
-		} 
-	      else if (jX == cellsx) 
-		{
-		  jX = 0;   
-		  shift[0] = L;
-		}
-	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
-	      for (n = cellList[n]; n > -1; n = cellList[n]) 
-		{
-		  if (n!=na) 
-		    {
-		      dist = calcDistNeg(Oparams.time, na, n, shift, r1, r2, &alpha, vecg, 1);
-		      if (calcdist_retcheck)
-			continue;
-#if 0
-		      if ((na==125||na==15) && (n==15||n==125))
-			printf("$$$$ dist: %.12G\n", dist);
-#endif
-		      if (*jmin == -1 || dist<distMin)
-			{
-			  distMin = dist;
-			  for (kk = 0; kk < 3; kk++)
-			    {
-			      rCmin[kk] = r1[kk];
-			      rDmin[kk] = r2[kk];
-			      shiftmin[kk] = shift[kk];
-			    }
-			  *jmin = n;
-			}
-		    }
-		} 
-	    }
-	}
-    }
-  return distMin;
-}
-
-double calc_phi(void)
-{
-  double N = 0;
-  //const double pi = acos(0)*2;
-  int i ;
-  for (i=0; i < Oparams.parnum; i++)
-    {
-      N += axa[i]*axb[i]*axc[i];
-    }
-  N *= 4.0*pi/3.0;
-  return N / (L*L*L);
-}
-#endif
 double calc_norm(double *vec);
 
-double rcutL, aL, bL, cL;
-#ifndef MD_SILICA
-void store_values(int i)
-{
-  rcutL = Oparams.rcut;
-  aL = axa[i];
-  bL = axb[i];
-  cL = axc[i];
-}
-void restore_values(int i)
-{
-  Oparams.rcut = rcutL;
-  axa[i] = aL;
-  axb[i] = bL;
-  axc[i] = cL;
-}
-#endif
+#if 0
 double max_ax(int i)
 {
   double ma;
@@ -437,71 +313,6 @@ double max_ax(int i)
   if (axc[i]>ma)
     ma = axc[i];
   return ma;
-}
-void scale_coords(double sf)
-{
-  int i; 
-  L *= sf;
-  for (i = 0; i < Oparams.parnum; i++)
-    {
-      rx[i] *= sf;
-      ry[i] *= sf;
-      rz[i] *= sf;
-    }
-}
-#if 0
-double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], double rD[3], 
-		  double shift[3], double scalfact, double *factor)
-{
-  int kk, a;
-  double C, Ccur, F, phi0, phi, fact, L2, rAC[3], rBD[3], fact1, fact2;
-
-  L2 = 0.5 * L;
-  phi = calc_phi();
-  phi0 = ((double)Oparams.parnumA)*Oparams.a[0]*Oparams.b[0]*Oparams.c[0];
-  phi0 +=((double)Oparams.parnum-Oparams.parnumA)*Oparams.a[1]*Oparams.b[1]*Oparams.c[1];
-  phi0 *= 4.0*pi/3.0;
-  phi0 /= L*L*L;
-  C = cbrt(OprogStatus.targetPhi/phi0);
-  if (i < Oparams.parnumA)
-    Ccur = axa[i]/Oparams.a[0]; 
-  else
-    Ccur = axa[i]/Oparams.a[1]; 
-  F = C / Ccur;
-  for (kk=0; kk < 3; kk++)
-    {
-      rAC[kk] = rA[kk] - rC[kk];
-      if (fabs (rAC[kk]) > L2)
-	rAC[kk] -= SignR(L, rAC[kk]);
-    }
-  for (kk=0; kk < 3; kk++)
-    {
-      rBD[kk] = rB[kk] - rD[kk];
-      if (fabs (rBD[kk]) > L2)
-	rBD[kk] -= SignR(L, rBD[kk]);
-    }
-  /* 0.99 serve per evitare che si tocchino */
-  if (F < 1)
-    fact = F;
-  else
-    {
-      fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
-      fact2 = F;
-      if (fact2 < fact1)
-	fact = fact2;
-      else
-	fact = fact1;
-
-    }
-  //printf("phi=%f fact1=%.8G fact2=%.8G scaling factor: %.8G\n", phi, fact1, fact2, fact);
-  axa[i] *= fact;
-  axb[i] *= fact;
-  axc[i] *= fact;
-  maxax[i] *= fact;
-  *factor = fact;
-  if (2.0*max_ax(i) > Oparams.rcut)
-    Oparams.rcut = 2.0*max_ax(i)*1.01;
-  return calc_phi();
 }
 #endif
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
@@ -587,73 +398,732 @@ void rebuild_linked_list()
     }
 }
 #endif
+#ifdef MD_GROWTH_CODE
+double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double *r1, double *r2)
+{
+  double ti, rAB[3], rABn[3], norm, rA[3], rB[3], sigma, distSq;
+  double rad1, rad2;
+  int kk;
+  ti = t + (t1 - atomTime[i]);
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  ti = t + (t1 - atomTime[j]);
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+  distSq = 0;
+  
+  for (kk = 0; kk < 3; kk++)
+    rAB[kk] = rA[kk] - rB[kk];
+  norm = calc_norm(rAB);
+  //printf("ti=%.15G rA=%f %f %f rB=%f %f %f\n", ti,rA[0], rA[1], rA[2], rB[0], rB[1], rB[2]);
+  //printf("norm=%.15G rABn=%.15G %.15G %.15G sax=%.15G i=%d j=%d\n", norm, rAB[0],rAB[1],rAB[2], typesArr[typeOfPart[i]].sax[0],
+  //i, j);
+  for (kk=0; kk < 3; kk++)
+    distSq += Sqr(rAB[kk]);
+  for (kk = 0; kk < 3; kk++)
+    rABn[kk] = rAB[kk]/norm;
+  /* 04/05/2010: questa funzione viene chiamata solo durante la crescita quindi
+     questo if è inutile, tuttavia non si sa mai che serva altrove... */
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      rad1 = axa[i];
+      rad2 = axa[j];
+    }
+  else
+    {
+      if (i < Oparams.parnumA)
+	rad1 = Oparams.sigma[0][0]*0.5;
+      else
+	rad1 = Oparams.sigma[1][1]*0.5;
+      if (j < Oparams.parnumA)
+	rad2 = Oparams.sigma[0][0]*0.5;
+      else
+	rad2 = Oparams.sigma[1][1]*0.5;
+    }
+  for (kk = 0; kk < 3; kk++)
+    {
+      r1[kk] = rA[kk] - rABn[kk]*rad1;
+      r2[kk] = rB[kk] + rABn[kk]*rad2;
+    }
 #if 0
+  for (kk = 0; kk < 3; kk++)
+    rAB[kk] = r1[kk] - r2[kk];
+
+  printf("rAB norm = %.15G\n", calc_norm(rAB));
+#endif
+  sigma = rad1 + rad2; 
+  //printf("sigma=%.15G\n", sigma);
+  return  sqrt(distSq) - sigma;
+}
+#ifdef MD_USE_SINGLE_LL
+double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
+{
+  /* na = atomo da esaminare 0 < na < Oparams.parnum 
+   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
+   *      -2 = controlla solo cell crossing e urti con pareti 
+   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
+   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
+   *      */
+  double distMin=1E10,dist,vecg[8], alpha, shift[3];
+  /*double cells[NDIM];*/
+  int kk;
+  double r1[3], r2[3];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+ /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  calcdist_retcheck = 0;
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCell[2][na] + iZ;    
+      shift[2] = 0.;
+      /* apply periodico boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	  shift[2] = - L[2];
+#else
+	  shift[2] = - L;
+#endif
+	} 
+      else if (jZ == cellsz) 
+	{
+	  jZ = 0;    
+#ifdef MD_LXYZ
+	  shift[2] = L[2];
+#else
+	  shift[2] = L;
+#endif
+	}
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCell[1][na] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsy - 1;    
+#ifdef MD_LXYZ
+	      shift[1] = -L[1];
+#else
+	      shift[1] = -L;
+#endif
+	    } 
+	  else if (jY == cellsy) 
+	    {
+	      jY = 0;    
+#ifdef MD_LXYZ
+	      shift[1] = L[1];
+#else
+	      shift[1] = L;
+#endif
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCell[0][na] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		  shift[0] = - L[0];
+#else
+		  shift[0] = - L;
+#endif
+		} 
+	      else if (jX == cellsx) 
+		{
+		  jX = 0;   
+#ifdef MD_LXYZ
+		  shift[0] = L[0];
+#else
+		  shift[0] = L;
+#endif
+		}
+	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+	      for (n = cellList[n]; n > -1; n = cellList[n]) 
+		{
+		  if (n!=na) 
+		    {
+		      dist = calcDistNegHS(Oparams.time, 0.0, na, n, shift, r1, r2);
+		      if (calcdist_retcheck)
+			continue;
+#if 0
+		      if ((na==125||na==15) && (n==15||n==125))
+			printf("$$$$ dist: %.12G\n", dist);
+#endif
+		      if (*jmin == -1 || dist<distMin)
+			{
+			  distMin = dist;
+			  for (kk = 0; kk < 3; kk++)
+			    {
+			      rCmin[kk] = r1[kk];
+			      rDmin[kk] = r2[kk];
+			      shiftmin[kk] = shift[kk];
+			    }
+			  *jmin = n;
+			}
+		    }
+		} 
+	    }
+	}
+    }
+  return distMin;
+}
+#else
+double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
+{
+  /* na = atomo da esaminare 0 < na < Oparams.parnum 
+   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
+   *      -2 = controlla solo cell crossing e urti con pareti 
+   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
+   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
+   *      */
+  int iA, nl_ignore;
+  double sigSq=0.0, dr[NDIM], dv[NDIM], shift[NDIM],  
+	 b, d, t, tInt, vv, distSq, t1=0.0, t2=0.0, evtime=0, evtimeHC;
+  int overlap, ac, bc, acHC, collCodeOld, nc;
+  /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
+  /*double cells[NDIM];*/
+  double dist, r1[3], r2[3], distMin=1E10;
+  int collCode, kk, nl;
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+#if 0
+  int evCode;
+#endif
+  MD_DEBUG29(printf("PredictEvent: %d,%d\n", na, nb));
+  MD_DEBUG(calc_energy("PredEv"));
+  /* NOTA: le linked list sono tre:
+   *  0 = lista dell'interazione AA
+   *  1 = lista dell'interazione BB
+   *  2 = lista dell'interazione AB 
+   *  inoltre inCell[ncel][dir][na] contiene 
+   *  la cella a cui appartiene la particella A 
+   *  Per ogni particella ci sono due insiemi di celle
+   *  ncel = 0 celle relative all'interazione della particella na
+   *  con particelle della stessa specie.
+   *  ncel = 1 celle relative all'interazione della particella na 
+   *  con particelle della stessa specie. */
+  iA = (na<Oparams.parnumA)?0:1;
+  nl_ignore = (na<Oparams.parnumA)?1:0;
+
+  for (nl=0; nl < 4; nl++)
+    { 
+      if (nl==nl_ignore || nl==iA+2)
+	continue;
+
+
+      if (nl < 2)
+	{
+	  nc = 0;
+	}
+      else
+	{
+	  nc = 1;
+	}
+      for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	{
+	  jZ = inCell[nc][2][na] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      jZ = cellsz[nl] - 1;    
+	      shift[2] = - L;
+	    } 
+	  else if (jZ == cellsz[nl]) 
+	    {
+	      jZ = 0;    
+	      shift[2] = L;
+	    }
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	    {
+	      jY = inCell[nc][1][na] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsy[nl] - 1;    
+		  shift[1] = -L;
+		} 
+	      else if (jY == cellsy[nl]) 
+		{
+		  jY = 0;    
+		  shift[1] = L;
+		}
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		{
+		  jX = inCell[nc][0][na] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsx[nl] - 1;    
+		      shift[0] = - L;
+		    } 
+		  else if (jX == cellsx[nl]) 
+		    {
+		      jX = 0;   
+		      shift[0] = L;
+		    }
+		  n = (jZ *cellsy[nl] + jY) * cellsx[nl] + jX + Oparams.parnum;
+		  for (n = cellList[nl][n]; n > -1; n = cellList[nl][n]) 
+		    {
+		      //printf("nl=%d cellList[nl=%d][n=%d]:%d na=%d\n", nl, nl, n, cellList[nl][n], na);
+		      if (n != na) 
+			{
+			  dist = calcDistNegHS(Oparams.time, 0.0, na, n, shift, r1, r2);
+			  if (*jmin == -1 || dist<distMin)
+			    {
+			      distMin = dist;
+			      for (kk = 0; kk < 3; kk++)
+				{
+				  rCmin[kk] = r1[kk];
+				  rDmin[kk] = r2[kk];
+				  shiftmin[kk] = shift[kk];
+				}
+			      *jmin = n;
+			    }
+			}
+		    } 
+		}
+	    }
+	}
+    }
+  return distMin;
+
+}
+#endif
+
+#ifdef MD_USE_SINGLE_LL
+double rcutIni;
+#else
+double rcutIni[4];
+#endif
+double calc_phi(void)
+{
+  double N = 0;
+  //const double pi = acos(0)*2;
+  int i ;
+  /* Anche se la miscela è non additiva la volume fraction è calcolata usando i diametri di ogni specie
+     e ignorando il diametro per l'interazione AB */
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  N += axa[i]*axa[i]*axa[i];
+	}
+    }
+  else
+    {
+      N  = Oparams.parnumA*pow(Oparams.sigma[0][0]*0.5,3);
+      N += (Oparams.parnum-Oparams.parnumA)*pow(Oparams.sigma[1][1]*0.5,3);
+    }
+  N *= 4.0*pi/3.0;
+#ifdef MD_LXYZ
+  return N / (L[0]*L[1]*L[2]);
+#else
+  return N / (L*L*L);
+#endif
+}
+double aL, bL, cL;
+#ifdef MD_USE_SINGLE_LL
+double rcutL;
+#else
+double rcutL[4];
+#endif
+void store_values(int i)
+{
+  int a;
+#ifdef MD_USE_SINGLE_LL
+  rcutL = Oparams.rcut;
+#else
+  for (a=0; a < 4; a++)
+    rcutL[a] = Oparams.rcut[a];
+#endif
+  aL = axa[i];
+#if 0
+  bL = axb[i];
+  cL = axc[i];
+#endif
+}
+void restore_values(int i)
+{
+  int a;
+#ifdef MD_USE_SINGLE_LL
+  Oparams.rcut= rcutL;
+#else
+  for (a=0; a < 4; a++)
+      Oparams.rcut[a] = rcutL[a];
+#endif
+  axa[i] = aL;
+#if 0
+  axb[i] = bL;
+  axc[i] = cL;
+#endif
+}
+void scale_coords(double sf)
+{
+  int i; 
+#ifdef MD_LXYZ
+  for (i=0; i < 3; i++)
+    L[i] *= sf;
+#else
+  L *= sf;
+#endif
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      rx[i] *= sf;
+      ry[i] *= sf;
+      rz[i] *= sf;
+    }
+}
+double max3(double a, double b, double c);
+#if !defined(MD_USE_SINGLE_LL)
+void calc_rcut(void)
+{
+  int i;
+  double rc, mA=0.0, mB=0.0;
+  /* rcut[2] = rcut[3] = max_i{axb[i]}+max_j{axb[i]}, 
+     dove i è di tipo A e j di tipo B,
+     mentre rcut[0] = max_i{axa[i]} con i di tipo A 
+     rcut[1] = max_j{axa[j]} con j di tipo B
+     chiaramente queste ultime sono sovrastime 
+   */ 
+  for (i=0; i < Oparams.parnumA; i++)
+    {
+      if (i==0)
+	mA = axa[i];
+      else
+	{
+	  if (axa[i] > mA)
+	    mA = axa[i];
+	}
+    }
+
+  if (mA*2.0 > Oparams.rcut[0])
+    Oparams.rcut[0] = mA*2.0*1.01;
+  
+  for (i=Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      if (i==Oparams.parnumA)
+	mB = axa[i];
+      else
+	{
+	  if (axa[i] > mB)
+	    mB = axa[i];
+	}
+    }
+
+  if (mB*2.0 > Oparams.rcut[1])
+    Oparams.rcut[1] = mB*2.0*1.01;
+
+  if ((mA+mB) > Oparams.rcut[2])
+    Oparams.rcut[2]=Oparams.rcut[3]=(mA+mB)*1.01;
+}
+#endif
+double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], double rD[3], 
+		      double shift[3], double scalfact, double *factor, int j)
+{
+  int kk;
+  int ii, typei, a;
+  double nnlfact, rmix;
+  double C, Ccur, F, phi, fact, rAC[3], rBD[3], fact1, fact2;
+  double boxdiag, factNNL=1.0;
+  static double phi0;
+  static int first=1;
+#ifdef MD_LXYZ
+  for (kk=0; kk < 3; kk++)
+    L2[kk] = 0.5 * L[kk];
+#else
+  L2 = 0.5 * L;
+#endif
+#if !defined(MD_OPT_SCALEPHI)
+  phi = calc_phi();
+#endif
+  if (first)
+    {
+      phi0 = ((double)Oparams.parnumA)*pow(Oparams.sigma[0][0]*0.5,3);
+      phi0 +=((double)Oparams.parnum-Oparams.parnumA)*pow(Oparams.sigma[1][1]*0.5,3);
+      phi0 *= 4.0*pi/3.0;
+#ifdef MD_LXYZ
+      phi0 /= L[0]*L[1]*L[2];
+#else
+      phi0 /= L*L*L;
+#endif
+      first = 0;
+    }
+  //printf("phi0=%.15G\n", phi0);
+  C = cbrt(OprogStatus.targetPhi/phi0);
+
+  if (i < Oparams.parnumA)
+    Ccur = axa[i]*2.0/Oparams.sigma[0][0]; 
+  else
+    Ccur = axa[i]*2.0/Oparams.sigma[1][1]; 
+  F = C / Ccur;
+  if (j != -1)
+    {
+      for (kk=0; kk < 3; kk++)
+	{
+	  rAC[kk] = rA[kk] - rC[kk];
+#ifdef MD_LXYZ
+	  if (fabs (rAC[kk]) > L2[kk])
+	    rAC[kk] -= SignR(L[kk], rAC[kk]);
+#else
+	  if (fabs (rAC[kk]) > L2)
+	    rAC[kk] -= SignR(L, rAC[kk]);
+#endif
+	}
+      for (kk=0; kk < 3; kk++)
+	{
+	  rBD[kk] = rB[kk] - rD[kk];
+#ifdef MD_LXYZ
+	  if (fabs (rBD[kk]) > L2[kk])
+	    rBD[kk] -= SignR(L[kk], rBD[kk]);
+#else
+	  if (fabs (rBD[kk]) > L2)
+	    rBD[kk] -= SignR(L, rBD[kk]);
+#endif
+	}
+    }
+  /* 0.99 serve per evitare che si tocchino */
+  if (F < 1)
+    fact = F;
+  else
+    {
+     /*
+	 if (OprogStatus.useNNL && maxax[i] / maxaxNNL > 1.0)
+	 fact1 = 1.0 + scalfact*(maxaxNNL / maxaxStore - 1.0);
+	 else
+	 */	 
+      if (j != -1)
+	{
+	  //printf("===> d=%.15G norm(rAC):%.15G scalfact=%.15G\n", d, calc_norm(rAC), scalfact);
+	  fact1 = 1 + scalfact*(d / (calc_norm(rAC)));//+calc_norm(rBD)));
+	}
+      else
+	{
+#if 0
+	  /* NOTA 29/04/2010: prima era così il che non aveva molto senso poiché
+	     se non si usano le NNL non serve limitare fact1, 
+	     comunque testare tale cambiamento. */
+	    fact1 = 1.0 + 0.99*(factNNL - 1.0);
+#else
+	    fact1 = F;
+#endif
+	}
+      fact2 = F;
+      if (fact2 < fact1)
+	fact = fact2;
+      else
+	fact = fact1;
+      //printf("i=%d j=%d fact=%.15G fact1=%.15G, fact2=%.15G factNNL=%.15G d=%.15G rAC=%.15G\n", i, j, fact, fact1, fact2, factNNL,d, calc_norm(rAC));
+
+    }
+ // printf("phi=%f fact1=%.8G fact2=%.8G scaling factor: %.8G\n", phi, fact1, fact2, fact);
+  axa[i] *= fact;
+  //axb[i] *= fact;
+  *factor = fact;
+#if !defined(MD_USE_SINGLE_LL)
+  /* rcut[2] e rcut[3] sono le dimensioni delle celle per 
+     le LL relative alle interazioni AB, per cui deve essere:
+     rcut[2] > max_i{axa[i]}+max_i{axa[j]} (1)
+     con i è una particella di tipo A e j di tipo B.
+     Data la (1) allora se axa[i] > max_i{axa[i]} allora 
+     il nuovo rcut sarà:
+     rcut_new[2] = axa[i] + max_i{axa[j]}
+   */
+  calc_rcut();
+#if 0
+  Oparams.rcut[2] = rmix;
+  Oparams.rcut[3] = rmix;
+    
+  if (i < Oparams.parnumA)
+    {
+
+      if (axa[i]*2.0 > Oparams.rcut[0])
+	{
+	  Oparams.rcut[0] = axa[i]*2.02;
+	}
+    }
+  else 
+    {
+      if (axa[i]*2.0 > Oparams.rcut[1]) 
+	{
+	  Oparams.rcut[1] = axa[i]*2.0*1.01;
+	}
+    }
+#endif
+#else
+  if (axa[i]*2.0 > Oparams.rcut)
+    Oparams.rcut = 2.0*axa[i]*1.01;
+#endif
+#if !defined(MD_OPT_SCALEPHI)
+  return calc_phi();
+#else
+  return 0.0;
+#endif
+}
+int check_type_done(int t)
+{
+  int i, cc=0;
+  if (t == 0)
+    {
+      for (i = 0; i < Oparams.parnumA; i++)
+	{
+	  if (scdone[i]==1)
+	    cc++;
+	}
+      if (cc==Oparams.parnumA)
+	return 1;
+      else
+	return 0;
+    }
+  else
+    {
+      for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+	{
+	  if (scdone[i]==1)
+	    cc++;
+	}
+      if (cc==Oparams.parnum-Oparams.parnumA)
+	return 1;
+      else
+	return 0;
+    }
+
+}
 double check_dist_min(int i, char *msg)
 {
-  int imin, j;
-  double distMin=1E60, dist, rC[3], rD[3], shift[3];
-
+  int j;
+  double distMin=1E60, rC[3], rD[3], shift[3];
+  
   j = -1;
   distMin = get_min_dist(i, &j, rC, rD, shift);
 
   if (msg)
-    printf("[check_dist_min] %s distMin: %.12G\n", msg, distMin);
+    printf("[check_dist_min] %s distMin: %.12G i=%d j=%d\n", msg, distMin, i, j);
 
   return distMin;
 } 
-double check_alldist_min(char *msg)
-{
-  int j, i;
-  double distMin=1E60, dist;
-  double rC[3], rD[3], shift[3];
-  for (i=0; i < Oparams.parnum; i++)
-    {
-      j = -1;
-      dist = get_min_dist(i, &j, rC, rD, shift);
-      if (j != -1 && dist < distMin)
-	distMin = dist;
-    }
-  if (msg)
-    printf("[dist all] %s: %.10G\n", msg, distMin);
-  return distMin;
+extern double *a0I;
 
+double calc_safe_factor(void)
+{
+  int i, iMin;
+  double axaMin;
+  axaMin = axa[0];
+  iMin = 0;
+  for (i=1; i < Oparams.parnum; i++)
+    {
+      if (axa[i] < axaMin)
+	{
+	  axaMin = axa[i];
+	  iMin = i;
+	}
+    }
+  return a0I[iMin]/axaMin;
 }
+
 void scale_Phi(void)
 {
-  int i, j, imin, jmin=-1, kk, n, its, done=0;
+#ifdef MD_SCALEPHI_STAGES
+  static int curType=0;
+#endif
+  int a;
+  int i, j, imin, kk, its, done=0;
   static int first = 1;
-  static double a0I, target;
-  double dist, distMinT, distMin=1E60, rCmin[3], rDmin[3], rAmin[3], rBmin[3], rC[3], rD[3];
-  double L2, shift[3], shiftmin[3], phi, scalfact, factorold, factor, axai;
+#if 0
+  static double a0I;
+#endif  
+  static double target;
+  double distMinT, distMin=1E60, rAmin[3], rBmin[3], rC[3]={0,0,0}, 
+	 rD[3]={0,0,0};
+  double shift[3], phi, scalfact, factor, axai;
   if (OprogStatus.targetPhi <= 0)
     return;
-
   phi=calc_phi();
+  printf("Scaling Axes actual phi is %.15G\n", phi);
   if (first)
     {
       first = 0;
-      a0I = Oparams.a[0];
+#if 1
+      for (i = 0; i < Oparams.parnumA; i++)
+	{
+	  a0I[i] = Oparams.sigma[0][0]*0.5;
+	}
+      for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+	{
+	  a0I[i] = Oparams.sigma[1][1]*0.5;
+	}
+#else
+      a0I = Oparams.sigma[0][0]*0.5;
+#endif
+#if defined(MD_USE_SINGLE_LL)
+      rcutIni = Oparams.rcut;
+#else
+      for (a=0; a < 4; a++)
+       	rcutIni[a] = Oparams.rcut[a];
+#endif
       target = cbrt(OprogStatus.targetPhi/calc_phi());
     }
   //UpdateSystem();   
+#ifdef MD_LXYZ
+  for (kk=0; kk < 3; kk++)
+    L2[kk] = 0.5 * L[kk];
+#else
   L2 = 0.5 * L;
+#endif
   /* get the minimum distance in the system */
-  phi = calc_phi();
+  //phi = calc_phi();
   for (kk = 0;  kk < 3; kk++)
     {
       cellRange[2*kk]   = - 1;
       cellRange[2*kk+1] =   1;
     }
   imin = -1;
+#ifdef MD_SCALEPHI_STAGES
+  if (OprogStatus.growthType == 1)
+    {
+      if (check_type_done(curType))
+	{
+	  curType++;
+	}	
+      printf("[GROWTH IN STAGES]: Actual growing type is: %d\n", curType);
+    }
+#endif
   for (i = 0; i < Oparams.parnum; i++)
     {
+#ifdef MD_SCALEPHI_STAGES
+      if (OprogStatus.growthType == 1)
+	{
+	  if (curType==0 && i >= Oparams.parnumA)
+	    {
+	      if (scdone[i]==1)
+		done++;
+	      continue;
+	    }
+	  else if (curType == 1 && i < Oparams.parnumA)
+	    {
+	      if (scdone[i]==1)
+		done++;
+	      continue;
+	    }
+	}
+#endif
       j = -1;
       if (scdone[i]==1)
 	{
 	  done++;
 	  continue;
 	}
+      /* NOTA 16/04/2010 */
       distMin = get_min_dist(i, &j, rC, rD, shift);
+      //printf("distMin[%d]:%.15G\n", i, distMin);
       if (calcdist_retcheck)
 	continue;
       if (j == -1)
@@ -662,16 +1132,29 @@ void scale_Phi(void)
       rAmin[0] = rx[i];
       rAmin[1] = ry[i];
       rAmin[2] = rz[i];
-      rBmin[0] = rx[j];
-      rBmin[1] = ry[j];
-      rBmin[2] = rz[j];
+      if (j>-1)
+	{
+	  rBmin[0] = rx[j];
+	  rBmin[1] = ry[j];
+	  rBmin[2] = rz[j];
+	}
+      else
+	{
+	  rBmin[0] = 0.0;
+	  rBmin[1] = 0.0;
+	  rBmin[2] = 0.0;
+	}
       scalfact = OprogStatus.scalfact;
       store_values(i);
-      if (distMin < OprogStatus.epsd/10.0)
+      if (distMin < OprogStatus.minDist)// || fabs(distMin)<1E-10)//OprogStatus.epsd/10.0)
 	continue;
-      phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor);
+      //printf("===> j=%d rA=(%f,%f,%f) rC=(%f,%f,%f)\n", j, rA[0], rA[1], rA[2], rC[0], rC[1], rC[2]);
+      //printf("===> i=%d\n", i);
+      phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor, j);
       rebuild_linked_list();
       distMinT = check_dist_min(i, NULL);
+      //printf("i=%d jmin=%d distMinT[%d]=%.15G\n", i, j, i, distMinT);
+      //printf("axb[%d]=%.15g axb[%d]=%.15G\n", i, axb[i], j, axb[j]);
       if (calcdist_retcheck)
 	{
 	  restore_values(i);
@@ -679,18 +1162,19 @@ void scale_Phi(void)
 	  continue;
 	}
       its = 0;
-      while (distMinT < 0)
+      while ( j != -1 && (distMinT < 0 || 
+	     (distMinT > distMin && factor > 1.0) ||
+	     (distMinT < distMin && factor < 1.0)) )
 	{
 	  restore_values(i);
-	  phi = scale_axes(i, distMin, rAmin, rCmin, rBmin, rDmin, shiftmin, scalfact, &factor);
-	  rebuild_linked_list();
-	  distMinT = check_dist_min(i, "Alla fine di calc_Phi()");
+	  phi = scale_axes(i, distMin, rAmin, rC, rBmin, rD, shift, scalfact, &factor, j);
+  	  rebuild_linked_list();
+  	  distMinT = check_dist_min(i, "Alla fine di calc_Phi()");
 	  //printf("t=%.8G cellsx: %d rcut: %.8G imin=%d jmin=%d distMinT= %.15G phi=%.8G\n", 
 	  //     Oparams.time, cellsx, Oparams.rcut, imin, jmin, distMinT, phi);
 	  scalfact *= OprogStatus.reducefact;
 	  its++;
 	}
-
 
 #if 0
       if (dist < distMin)
@@ -707,10 +1191,14 @@ void scale_Phi(void)
 	}
 #endif
       if (i < Oparams.parnumA)
-	axai = Oparams.a[0];
+	axai = Oparams.sigma[0][0]*0.5;
       else
-	axai = Oparams.a[1];
+	axai = Oparams.sigma[1][1]*0.5;
+#ifdef MD_OPT_SCALEPHI
+      if (fabs(axa[i] / axai / target - 1.0) < OprogStatus.axestol)
+#else
       if (fabs(axa[i] / axai - target) < OprogStatus.axestol)
+#endif	
 	{
 	  done++;
 	  scdone[i] = 1;
@@ -718,40 +1206,69 @@ void scale_Phi(void)
 	    break;
 	  continue;
 	}
-
+     
     }
 
   //check_alldist_min("DOPO");
+#if 0
   if (phi > 0.7)
     {
       for (i=0; i < Oparams.parnum; i++)
 	if (axa[i]>3.0||axb[i]>3.0||axc[i]>3.0)
 	  printf("%d-(%f,%f,%f) ", i, axa[i], axb[i], axc[i]);
     }
-  printf("Scaled axes succesfully phi=%.8G\n", phi);
-#if 0
-  if (fabs(phi - OprogStatus.targetPhi)<1E-8)
-    {
-      for (i=0; i < Oparams.parnum; i++)
-	printf("axes of %d (%.15f,%.15f,%.15f)\n", i, axa[i], axb[i], axc[i]);
-    }
 #endif
+#if defined(MD_OPT_SCALEPHI) 
+  phi = calc_phi();
+#endif
+  printf("Scaled axes succesfully phi=%.8G\n", phi);
   //check_dist_min("PRIMA");
   rebuild_linked_list();
   rebuildCalendar();
-  ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.intervalSum > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
-  ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  if (OprogStatus.scalevel)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+#ifdef MD_BIG_DT
+  if (OprogStatus.bigDt > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
+#endif
   printf("Scaled successfully %d/%d ellipsoids \n", done, Oparams.parnum);
+#ifdef MD_OPT_SCALEPHI
+  if (done == Oparams.parnum || fabs(phi / OprogStatus.targetPhi - 1.0)<OprogStatus.phitol)
+#else
   if (done == Oparams.parnum || fabs(phi - OprogStatus.targetPhi)<OprogStatus.phitol)
+#endif
     {
+      printf("GROWTH DONE\n");
       R2u();
+#if 0
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  printf("i=%d axa=%.15G axb=%15G axc=%.15G\n", i, axa[i], axb[i], axc[i]);
+	  distMin=check_dist_min(i, NULL);
+	  if (distMin < 0.0)
+	    {
+	      printf("Prima distanza negativa per i=%d = %.15G\n", i, distMin);
+	    }
+	}
+#endif
       ENDSIM = 1;
       /* riduce gli ellissoidi alle dimensioni iniziali e comprime il volume */
+#if 1
+      factor = calc_safe_factor();
+#else
       factor = a0I/axa[0];
-      Oparams.rcut *= factor;
+#endif
+#ifdef MD_USE_SINGLE_LL
+      Oparams.rcut = rcutIni;
+#else
+      for (a=0; a < 4; a++)
+	Oparams.rcut[a] = rcutIni[a];
+#endif
 #if 0
       Oparams.a[0] *= factor;
       Oparams.b[0] *= factor;
@@ -762,7 +1279,20 @@ void scale_Phi(void)
 #endif
       scale_coords(factor);
     }
+#if 0
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (ENDSIM)
+	OprogStatus.targetPhi = 0.0;
+      distMin=check_dist_min(i, NULL);
+      if (distMin < 0.0)
+	{
+	  printf("distanza negativa per i=%d = %.15G\n", i, distMin);
+	}
+    }
+#endif
 }
+
 #endif
 void outputSummary(void)
 {
@@ -784,6 +1314,8 @@ void outputSummary(void)
   if (OprogStatus.checkGrazing)
     check_all_bonds();
   //scale_Phi();
+  if (!ENDSIM)
+    scale_Phi();
 #ifdef MD_GRAVITY
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
 	 (2.0*K/(3.0*Oparams.parnum-3.0)), Vz);
@@ -1216,6 +1748,29 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   double sigmaSticky;
   int na, a, kk;
 #if 1
+#ifdef MD_GROWTH_CODE
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      sigmai = axa[i]+axa[j];
+    }
+  else
+    {
+      if (i < Oparams.parnumA && j < Oparams.parnumA)
+	{
+	  /* qui si assume che ci possano essere due specie e che i diametri degli atomi
+	   * componenti la molecola possano avere diametri diversi */ 
+	  sigmai = Oparams.sigma[0][0];
+	}
+      else if (i >= parnumA &&  j >= Oparams.parnumA)
+	{
+	  sigmai = Oparams.sigma[1][1];
+	}
+      else
+	{
+	  sigmai = Oparams.sigma[0][1];
+	}
+    }
+#else
   if (i < Oparams.parnumA && j < Oparams.parnumA)
     {
       /* qui si assume che ci possano essere due specie e che i diametri degli atomi
@@ -1230,6 +1785,7 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
     {
       sigmai = Oparams.sigma[0][1];
     }
+#endif
 #endif
 #ifdef MD_AB41
   if (i < Oparams.parnumA && j < Oparams.parnumA)
@@ -1415,20 +1971,24 @@ void bump (int i, int j, int ata, int atb, double* W, int bt)
   MD_DEBUG(printf("\n"));
   /* calcola tensore d'inerzia e le matrici delle due quadriche */
   na = (i < Oparams.parnumA)?0:1;
+#if 0
   if (OprogStatus.targetPhi > 0)
     {
       /* scalare tutti i raggi qui */
     }
+#endif
 #ifdef MD_ASYM_ITENS
   RDiagtR(i, Ia, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[i]);
 #else
   Ia = Oparams.I[na];
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#if 0
   if (OprogStatus.targetPhi > 0)
     {
       /* scalare tutti i raggi qui */
     }
+#endif
 #ifdef MD_ASYM_ITENS
   RDiagtR(j, Ib, ItensD[na][0], ItensD[na][1], ItensD[na][2], R[j]);
 #else
@@ -2535,10 +3095,12 @@ double calcDistNegOne(double t, double t1, int i, int j, int nn, double shift[3]
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
   na = (i < Oparams.parnumA)?0:1;
+#if 0
   if (OprogStatus.targetPhi > 0)
     {
       /* qui deve scalare i raggi degli atomi che compongono la molecola */
     }
+#endif
   ti = t + (t1 - atomTime[j]);
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
@@ -2546,10 +3108,12 @@ double calcDistNegOne(double t, double t1, int i, int j, int nn, double shift[3]
   UpdateOrient(j, ti, RtB, Omega, mapbondsb[nn]);
   na = (j < Oparams.parnumA)?0:1;
   BuildAtomPos(j, rB, RtB, ratB);
+#if 0
   if (OprogStatus.targetPhi > 0)
     {
       /* qui deve scalare i raggi degli atomi che compongono la molecola */
     }
+#endif
   /* calcola sigmaSq[][]!!! */
   distSq = 0;
   for (kk=0; kk < 3; kk++)
@@ -2596,10 +3160,12 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
   na = (i < Oparams.parnumA)?0:1;
+#if 0
   if (OprogStatus.targetPhi > 0)
     {
       /* qui deve scalare i raggi degli atomi che compongono la molecola */
     }
+#endif
   ti = t + (t1 - atomTime[j]);
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
@@ -2608,10 +3174,12 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], int *amin
   UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
   na = (j < Oparams.parnumA)?0:1;
   BuildAtomPos(j, rB, RtB, ratB);
+#if 0
   if (OprogStatus.targetPhi > 0)
     {
       /* qui deve scalare i raggi degli atomi che compongono la molecola */
     }
+#endif
   /* calcola sigmaSq[][]!!! */
   distmin = 0;
   npbonds = set_pbonds(i, j);
@@ -2671,23 +3239,30 @@ int vc_is_pos(int i, int j, double rCx, double rCy, double rCz,
   na = (i < Oparams.parnumA)?0:1;
 
   UpdateOrient(i, t-atomTime[i], RA, OmegaA, -1);
+#if 0
+  /* durante la crescita gli spot vengono disattivati
+     quindi questo if non serve */
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[i]);
       invbSq[na] = 1/Sqr(axb[i]);
       invcSq[na] = 1/Sqr(axc[i]);
     }
-
+#endif
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RA);
 
   na = (j < Oparams.parnumA)?0:1;
   UpdateOrient(j, t-atomTime[j], RB, OmegaB, -1);
+#if 0
+  /* durante la crescita gli spot vengono disattivati
+     quindi questo if non serve */
   if (OprogStatus.targetPhi > 0)
     {
       invaSq[na] = 1/Sqr(axa[j]);
       invbSq[na] = 1/Sqr(axb[j]);
       invcSq[na] = 1/Sqr(axc[j]);
     }
+#endif
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RB);
   for (a=0; a < 3; a++)
     {
@@ -3562,6 +4137,11 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2,
 #ifdef MD_SPOT_OFF
   return 0;
 #endif
+#ifdef MD_GROWTH_CODE
+  /* switch off spots during growth */
+  if (OprogStatus.targetPhi > 0.0)
+    return 0;
+#endif
 #ifdef MD_SILICA
   assign_bond_mapping(i, j);
 #endif
@@ -4333,6 +4913,11 @@ void PredictCellCross(int na, int nc)
 }
 int sticky_bump(int n, int na, int nl)
 {
+#ifdef MD_GROWTH_CODE
+  /* gli spot sono disattivi durante la crescita */	
+  if (OprogStatus.targetPhi > 0.0)
+    return 0;
+#endif
 #ifdef MD_THREESPOTS
   return 1;
 #elif defined(MD_AB41)
@@ -4475,21 +5060,16 @@ void PredictColl (int na, int nb, int nl)
 		      /* N.B. 2 e 3 sono le liste per urti tra specie diverse */
 		      if (sticky_bump(n,na,nl))
 			{
+			  /* NOTA 040510: notare che qui non c'entra se stiamo facendo una crescita 
+			     poiché gli spot vengono disattivati durante la crescita */	
 			  /* maxax[...] è il diametro dei centroidi dei due tipi
 			   * di ellissoidi */
-			  if (OprogStatus.targetPhi > 0)
-			    {
-			      //sigSq = Sqr(max_ax(na)+max_ax(n));
-			    }
+		      	  if (na < parnumA && n < parnumA)
+	    		    sigSq = Sqr(maxax[na]);
+    			  else if (na >= parnumA && n >= parnumA)
+			    sigSq = Sqr(maxax[na]);
 			  else
-			    {
-			      if (na < parnumA && n < parnumA)
-				sigSq = Sqr(maxax[na]);
-			      else if (na >= parnumA && n >= parnumA)
-				sigSq = Sqr(maxax[na]);
-			      else
-				sigSq = Sqr((maxax[n]+maxax[na])*0.5);
-			    }
+			    sigSq = Sqr((maxax[n]+maxax[na])*0.5);
 			  MD_DEBUG2(printf("sigSq: %f\n", sigSq));
  			  d = Sqr (b) - vv * (distSq - sigSq);
 
@@ -4538,12 +5118,30 @@ void PredictColl (int na, int nb, int nl)
 			  //printf("t1=%.15G t2=%.15G\n",t1,t2);
 			  /* calcola cmq l'urto fra le due core spheres */
 			}
+#ifdef MD_GROWTH_CODE
+		      if (OprogStatus.targetPhi > 0.0)
+			{
+			  /* N.B. nel caso della crescita per ora si assume che il diametro misto sia additivo
+			     cioè sigma_ij = (sigma_i + sigma_j)*0.5 per ogni possibile coppia i,j */	  
+			  sigSq = Sqr(axa[na]+axa[n]);
+			}
+		      else
+			{
+			  if (na < parnumA && n < parnumA)
+			    sigSq = Sqr(Oparams.sigma[0][0]);
+			  else if (na >= parnumA && n >= parnumA)
+			    sigSq = Sqr(Oparams.sigma[1][1]);
+			  else
+			    sigSq = Sqr(Oparams.sigma[0][1]);
+			}
+#else
 		      if (na < parnumA && n < parnumA)
 			sigSq = Sqr(Oparams.sigma[0][0]);
 		      else if (na >= parnumA && n >= parnumA)
 			sigSq = Sqr(Oparams.sigma[1][1]);
 		      else
 			sigSq = Sqr(Oparams.sigma[0][1]);
+#endif
 		      if (b < 0.0) 
 			{
 			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
@@ -4652,7 +5250,7 @@ void PredictEvent (int na, int nb)
    *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
    *      */
   double sigSq=0.0, dr[NDIM], dv[NDIM], shift[NDIM], tm[NDIM],  
-	 b, d, t, tInt, vv, distSq, t1, t2, evtime=0, evtimeHC;
+	 b, d, t, tInt, vv, distSq, t1=0.0, t2=0.0, evtime=0, evtimeHC;
   int overlap, ac, bc, acHC, collCodeOld;
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cells[NDIM];*/
@@ -4796,21 +5394,7 @@ void PredictEvent (int na, int nb)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
-		      /* maxax[...] è il diametro dei centroidi dei due tipi
-		       * di ellissoidi */
-		      if (OprogStatus.targetPhi > 0)
-			{
-			  //sigSq = Sqr(max_ax(na)+max_ax(n));
-			}
-		      else
-			{
-			  if (na < parnumA && n < parnumA)
-			    sigSq = Sqr(maxax[na]);
-			  else if (na >= parnumA && n >= parnumA)
-			    sigSq = Sqr(maxax[na]);
-			  else
-			    sigSq = Sqr((maxax[n]+maxax[na])*0.5);
-			}
+		      collCode = MD_EVENT_NONE;
 		      MD_DEBUG2(printf("sigSq: %f\n", sigSq));
 		      tInt = Oparams.time - atomTime[n];
 		      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
@@ -4819,62 +5403,93 @@ void PredictEvent (int na, int nb)
 		      dv[1] = vy[na] - vy[n];
 		      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
 		      dv[2] = vz[na] - vz[n];
-
 		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
-		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
-		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-		      d = Sqr (b) - vv * (distSq - sigSq);
+	    	      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+    		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+#ifdef MD_GROWTH_CODE 
+	            if (OprogStatus.targetPhi <= 0.0)
+			{
+#endif
+    			  /* maxax[...] è il diametro dei centroidi dei due tipi
+    			   * di ellissoidi */
+    			  if (na < parnumA && n < parnumA)
+    			    sigSq = Sqr(maxax[na]);
+    			  else if (na >= parnumA && n >= parnumA)
+    			    sigSq = Sqr(maxax[na]);
+    			  else
+    			    sigSq = Sqr((maxax[n]+maxax[na])*0.5);
 
-		      collCode = MD_EVENT_NONE;
-		      if (d < 0 || (b > 0.0 && distSq > sigSq)) 
-			{
-			  /* i centroidi non collidono per cui non ci può essere
-			   * nessun urto sotto tali condizioni */
-			  continue;
-			}
-		      MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
-		      if (vv==0.0)
-			{
-			  if (distSq >= sigSq)
-			    continue;
-			  /* la vel relativa è zero e i centroidi non si overlappano quindi
-			   * non si possono urtare! */
-			  t1 = t = 0;
-			  t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
-				       urtare ruotando */
-			}
-		      else if (distSq >= sigSq)
-			{
-			  t = t1 = - (sqrt (d) + b) / vv;
-			  t2 = (sqrt (d) - b) / vv;
-			  MD_DEBUG29(printf("NOT OVERLAP t1=%.15G t2=%.15G\n", t1, t2));
-			  overlap = 0;
-			}
-		      else 
-			{
-			  MD_DEBUG29(printf("Centroids overlap!\n"));
-			  t2 = t = (sqrt (d) - b) / vv;
-			  t1 = 0;//-OprogStatus.h;
-			  overlap = 1;
-			  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
-			  MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
-			}
-		      //printf("na=%d j=%d type=%d t1=%.15G\n", na, lastbump[na].mol,
-			//     lastbump[na].type, 
+			  d = Sqr (b) - vv * (distSq - sigSq);
+			  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+			    {
+			      /* i centroidi non collidono per cui non ci può essere
+			       * nessun urto sotto tali condizioni */
+			      continue;
+			    }
+			  MD_DEBUG(printf("PREDICTING na=%d n=%d\n", na , n));
+			  if (vv==0.0)
+			    {
+			      if (distSq >= sigSq)
+				continue;
+			      /* la vel relativa è zero e i centroidi non si overlappano quindi
+			       * non si possono urtare! */
+			      t1 = t = 0;
+			      t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+					   urtare ruotando */
+			    }
+			  else if (distSq >= sigSq)
+			    {
+			      t = t1 = - (sqrt (d) + b) / vv;
+			      t2 = (sqrt (d) - b) / vv;
+			      MD_DEBUG29(printf("NOT OVERLAP t1=%.15G t2=%.15G\n", t1, t2));
+			      overlap = 0;
+			    }
+			  else 
+			    {
+			      MD_DEBUG29(printf("Centroids overlap!\n"));
+			      t2 = t = (sqrt (d) - b) / vv;
+			      t1 = 0;//-OprogStatus.h;
+			      overlap = 1;
+			      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+			      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+			    }
+			  //printf("na=%d j=%d type=%d t1=%.15G\n", na, lastbump[na].mol,
+			  //     lastbump[na].type, 
 			  //   t1);
-		      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
-		      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
-		      //t += Oparams.time; 
-		      t2 += Oparams.time;
-		      t1 += Oparams.time;
+			  MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
+			  MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
+			  //t += Oparams.time; 
+			  t2 += Oparams.time;
+			  t1 += Oparams.time;
+#ifdef MD_GROWTH_CODE
+			}
+#endif
 		      //printf("t1=%.15G t2=%.15G\n",t1,t2);
 		      /* calcola cmq l'urto fra le due core spheres */
+#ifdef MD_GROWTH_CODE
+		      if (OprogStatus.targetPhi > 0.0)
+			{
+			  /* N.B. nel caso della crescita per ora si assume che il diametro misto sia additivo
+			     cioè sigma_ij = (sigma_i + sigma_j)*0.5 per ogni possibile coppia i,j */	  
+			  sigSq = Sqr(axa[na]+axa[n]);
+			}
+		      else
+			{
+			  if (na < parnumA && n < parnumA)
+			    sigSq = Sqr(Oparams.sigma[0][0]);
+			  else if (na >= parnumA && n >= parnumA)
+			    sigSq = Sqr(Oparams.sigma[1][1]);
+			  else
+			    sigSq = Sqr(Oparams.sigma[0][1]);
+			}
+#else
 		      if (na < parnumA && n < parnumA)
 			sigSq = Sqr(Oparams.sigma[0][0]);
 		      else if (na >= parnumA && n >= parnumA)
 			sigSq = Sqr(Oparams.sigma[1][1]);
 		      else
 			sigSq = Sqr(Oparams.sigma[0][1]);
+#endif
 		      if (b < 0.0) 
 			{
 			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
