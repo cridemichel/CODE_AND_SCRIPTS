@@ -1340,6 +1340,9 @@ void scalevels(double temp, double K)
 {
   int i; 
   double sf;
+#ifdef MD_SPOT_OFF
+  sf = sqrt( ( (3.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
+#else
 #ifdef MD_THREESPOTS
   double dogTot, dogTra, dogRot;
   dogTra = 3.0*Oparams.parnum-3;
@@ -1348,6 +1351,7 @@ void scalevels(double temp, double K)
   sf = sqrt( dogTot * temp / (2.0*K) );
 #else
   sf = sqrt( ( (6.0*((double)Oparams.parnum)-3.0) * temp ) / (2.0*K) );
+#endif
 #endif
   for (i = 0; i < Oparams.parnumA; i++)
     {
