@@ -18,7 +18,8 @@ void setToZero(COORD_TYPE* ptr, ...);
 double **radat, **deltat, *maxax;
 extern struct LastBumpS *lastbump;
 extern double *lastcol;
-double *axa, *axb, *axc;
+double *axa,*axb,*axc;
+double *a0I;
 double **Aip;
 #ifdef MD_SILICA
 #ifdef MD_THREESPOTS
@@ -2364,6 +2365,13 @@ void usrInitAft(void)
   if (OprogStatus.bigDt <= 0.0)
     OprogStatus.bigDt = 0.0;
 #endif
+#ifdef MD_GROWTH_CODE
+ if (OprogStatus.targetPhi > 0.0)
+   {
+     printf("[GROWTH SIMULATION] WARNING: during growth spots will be disabled and sphere are additive\n");
+     printf("sigma_ij = (sigma_i + sigma_j)*0.5 for every possible pair i,j\n");
+   } 
+#endif
   invL = 1.0/L;
   L2 = 0.5*L;
   poolSize = OprogStatus.eventMult*Oparams.parnum;
@@ -2510,8 +2518,31 @@ void usrInitAft(void)
     }
   radat = matrix(Oparams.parnum,NA);
   deltat = matrix(Oparams.parnum,NA);
-  maxax = malloc(sizeof(double)*Oparams.parnum);
+  a0I = malloc(sizeof(double)*Oparams.parnum);
 
+  maxax = malloc(sizeof(double)*Oparams.parnum);
+#ifdef MD_GROWTH_CODE
+  axa = malloc(sizeof(double)*Oparams.parnum);
+  /* axb is used for interactions between A and B */
+#if 0
+  axb = malloc(sizeof(double)*Oparams.parnum);
+#endif
+  for (i=0; i < Oparams.parnumA; i++)
+    {
+      axa[i] = Oparams.sigma[0][0]*0.5;
+#if 0
+      axb[i] = Oparams.sigma[0][1]*0.5;
+#endif
+    } 
+  for (i=Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      axa[i] = Oparams.sigma[1][1]*0.5;
+#if 0
+      axb[i] = Oparams.sigma[0][1]*0.5;
+#endif
+    } 
+
+#endif
   scdone = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnumA; i++)
     {
@@ -2546,7 +2577,7 @@ void usrInitAft(void)
     {
       printf("CONSTANT ENERGY SIMULATION MOLS=%d MOLA=%d\n", Oparams.parnum, Oparams.parnum-Oparams.parnumA);
     }
-
+  printf("INITIAL PHI=%.15G\n", calc_phi());
 #ifdef MD_SILICA
   /* write code for silica here!! */
   /* maxax è il diametro del centroide, notare che nel caso della

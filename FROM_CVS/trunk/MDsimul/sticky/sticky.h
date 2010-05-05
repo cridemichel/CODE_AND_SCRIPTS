@@ -220,6 +220,9 @@ struct progStatus
   char inifile[NAME_LENGTH];
   int iniFormat; /* 0 = binary 1 = ascii 2 = both */
   int endFormat; /* 0 = binary 1 = ascii 2 = both */
+#ifdef MD_SCALEPHI_STAGES
+  int growthType;
+#endif
 
 #ifdef MD_BILOG
   double basew;
@@ -369,6 +372,7 @@ struct progStatus
   double scalfact;
   double reducefact;
   double phitol;
+  double minDist;
   double axestol;
 #ifdef MD_GRAVITY
   double taptau;
@@ -509,6 +513,9 @@ struct pascii opro_ascii[] =
   {"endFile",      OS(endfile),                     1,   NAME_LENGTH,   "%s"},
   {"iniFormat",    &OS(iniFormat),                  1,               1, "%d"},
   {"endFormat",    &OS(endFormat),                  1,               1, "%d"},
+#ifdef MD_SCALEPHI_STAGES
+  {"growthType",      &OS(growthType),                1,       1,  "%d" },
+#endif
   {"dataFiles",    OS(dataFiles),         NUM_MISURE,     NAME_LENGTH, "%s"},
   {"xvaSteps",     &OS(xvaSteps),                  1,               1, MDINTFMT},
   {"bakSteps",     &OS(bakSteps),                  1,               1, MDINTFMT},
@@ -612,6 +619,7 @@ struct pascii opro_ascii[] =
   {"rescaleTime",  &OS(rescaleTime),                1,  1,    "%.10G"},
   {"phitol",       &OS(phitol),                     1,  1,    "%.14G"},
   {"axestol",      &OS(axestol),                    1,  1,    "%.14G"},
+  {"minDist",      &OS(minDist),                    1,  1,    "%.14G"},
   {"endtime",      &OS(endtime),                    1,  1,    "%.15G"},
   {"nextcheckTime",&OS(nextcheckTime),              1,  1,    "%.15G"},
   {"nextSumTime"  ,&OS(nextSumTime),                1,  1,    "%.15G"},
@@ -759,6 +767,9 @@ struct singlePar OsinglePar[] = {
   {"xvafile" ,   &OprogStatus.xvafile,        STR},
   {"inistep" ,   &Oparams.curStep,            LLINT},
   {"endFormat",  &OprogStatus.endFormat,      INT},
+#ifdef MD_SCALEPHI_STAGES
+  {"growthType",       &OprogStatus.growthType,  INT},
+#endif
   {"iniFormat",  &OprogStatus.iniFormat,      INT},
   {"tapeTimes",  &OprogStatus.tapeTimes,      LLINT},
   {"bakSteps",   &OprogStatus.bakSteps,       LLINT},
@@ -835,6 +846,7 @@ struct singlePar OsinglePar[] = {
   {"reducefact", &OprogStatus.reducefact,     CT},
   {"phitol",      &OprogStatus.phitol,        CT},
   {"axestol",     &OprogStatus.axestol,       CT},
+  {"minDist",     &OprogStatus.minDist,       CT},
   {"W",          &OprogStatus.W,              CT},
   {"P",          &Oparams.P,                  CT},
   {"L",          &L,                          CT},
