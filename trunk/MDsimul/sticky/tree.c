@@ -156,6 +156,9 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
   treeIdE[idNew] = idcollcode;
   treeLeft[idNew] = treeRight[idNew] = -1;
   treeUp[idNew] = id;
+#ifdef MD_CALENDAR_HYBRID
+  evIdHQ = idNew;
+#endif
 }
 #else
 void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent) 
@@ -246,6 +249,10 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
   treeIdE[idNew] = idcollcode;
   treeLeft[idNew] = treeRight[idNew] = -1;
   treeUp[idNew] = id;
+#ifdef MD_CALENDAR_HYBRID
+  evIdHQ = idNew;
+#endif
+
 }
 #endif
 void ScheduleEvent(int IdA, int IdB, double tEvent)
@@ -614,5 +621,142 @@ void InitEventList (void)
       treeCircAL[id] = treeCircBL[id] = id;
       treeCircAR[id] = treeCircBR[id] = id;
     }
+}
+#endif
+
+#ifdef MD_CALENDAR_HYBRID
+extern eventQEntry *eventQEntries;
+
+double baseIndex;
+int *CBT; /* complete binary tree implemented in an array of
+	      2*N integers */
+int NP; /*current number of particles = Oparams.parnum */
+int linearLists[nlists+1];/*+1 for overflow*/ 
+int currentIndex;
+int evIdHQ;
+void Insert(int p)
+{
+  eventQEntry *pt;
+  /* hqe is pth entries */
+  pt = eventQEntries+p;
+  ScheduleEventBarr(pt->idA, pt->idB, pt->idata, pt->idatb, pt->idcollcode, pt->t);
+  pt->evId = evIdHQ;
+}
+
+int insertInEventQ(int p)
+{
+  int i, oldFirst;
+  eventQEntry * pt;
+  pt=eventQEntries+p; /* use pth entry */
+  i=(int)(scale*pt->t-baseIndex);
+  if(i>(nlists-1)) /* account for wrap */
+    {
+      i-=nlists;
+      if(i>=currentIndex-1)
+	{
+	  i=nlists; /* store in overflow list */
+	}
+    }
+  pt->qIndex=i;
+  if(i==currentIndex)
+    {
+      Insert(p); /* insert in PQ */
+    }
+  else
+    {
+      /* insert in linked list */
+      oldFirst=linearLists[i];
+      pt->previous=-1;
+      pt->next=oldFirst;
+      linearLists[i]=p;
+      if(oldFirst!=-1)
+	eventQEntries[oldFirst].previous=p;
+    }
+  return p;
+}
+void addEventHQ(int idA, int idB, int idata, int idatb, int idcollcode, double tEvent)
+{
+  eventQEntry *pt;
+  pt=eventQEntries+currentIndex; /* use pth entry */
+  /* fill event fields */
+  pt->IdA = idA;
+  pt->IdB = idB;
+  pt->idata = idata;
+  pt->idatb = idatb;
+  pt->idcollcode = idcollcode;
+  pt->t = tEvent;
+  pt->evId = -1; /* -1 = not inserted in binary tree */
+  insertInEventQ(p);
+}
+void processOverflowList(void)
+{
+  int i,e,eNext;
+  i=nlists; /* overflow list */
+  e=linearLists[i];
+  linearLists[i]=-1; /* mark empty; we will treat all entries and may re-add some */
+  while(e!=-1)
+    {
+      eNext=eventQEntries[e].next; /* save next */
+      insertInEventQ(e); /* try add to regular list now */
+      e=eNext;
+    }
+}
+
+void Delete(int e)
+{
+  /* delete from binary tree here */
+  eventQEntry *pt;
+  pt = eventQEntries+e;
+  /* delete from binary tree */
+  DeleteEvent(pt->evId);
+}
+void deleteFromEventQ(int e)
+{
+  int prev,next,i;
+  eventQEntry * pt=eventQEntries+e;
+  i=pt->qIndex;
+  if(i==currentIndex)
+    {
+      Delete(e); /* delete from pq */
+    }
+  else
+    {
+      /* remove from linked list */
+      prev=pt->previous;
+      next=pt->next;
+      if(prev==-1)
+	linearLists[i]=pt->next;
+      else
+	eventQEntries[prev].next=next;
+      if(next!=-1)
+	eventQEntries[next].previous=prev;
+    }
+}
+int deleteFirstFromEventQ()
+{
+  int e;
+  while(NP==0)/*if priority queue exhausted*/
+    {
+      /* change current index */
+      currentIndex++;
+      if(currentIndex==nlists)
+	{
+	  currentIndex=0;
+	  baseIndex+=nlists;
+	  processOverflowList();
+	}
+      /* populate pq */
+      e=linearLists[currentIndex];
+      while(e!=-1)
+	{
+	  Insert(e);
+	  e=eventQEntries[e].next;
+	}
+      linearLists[currentIndex]=-1;
+    }
+  /* delete from binary tree here! */
+  e=CBT[1]; /* root contains shortest time entry */
+  Delete(CBT[1]);
+  return e;
 }
 #endif
