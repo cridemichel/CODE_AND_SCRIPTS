@@ -575,6 +575,10 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
   return distMin;
 }
 #else
+/* NOTA 06/05/2010: voidLL[0] = 0 se la lista AA o BB ha almeno una particelle
+   mentre voidLL[1] = 0 se la lista AB contiene almeno una particella.
+   Lascio tale array poiché potrebbe tornare anche utile, chissà... */
+int voidLL[2];
 double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -610,7 +614,7 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
    *  con particelle della stessa specie. */
   iA = (na<Oparams.parnumA)?0:1;
   nl_ignore = (na<Oparams.parnumA)?1:0;
-
+  voidLL[0] = voidLL[1] = 0;
   for (nl=0; nl < 4; nl++)
     { 
       if (nl==nl_ignore || nl==iA+2)
@@ -688,6 +692,7 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
 				}
 			      *jmin = n;
 			    }
+			  voidLL[nc] = 1; 
 			}
 		    } 
 		}
@@ -913,9 +918,11 @@ double scale_axes(int i, double d, double rA[3], double rC[3], double rB[3], dou
 	     comunque testare tale cambiamento. */
 	    fact1 = 1.0 + 0.99*(factNNL - 1.0);
 #else
+	    /* prova il massimo se non va bene tanto poi riduce la crescita fino ad evitare overlap */
 	    fact1 = F;
 #endif
 	}
+
       fact2 = F;
       if (fact2 < fact1)
 	fact = fact2;
@@ -1006,8 +1013,10 @@ double check_dist_min(int i, char *msg)
   distMin = get_min_dist(i, &j, rC, rD, shift);
 
   if (msg)
-    printf("[check_dist_min] %s distMin: %.12G i=%d j=%d\n", msg, distMin, i, j);
-
+    {
+      printf("[check_dist_min] %s distMin: %.12G i=%d j=%d\n", msg, distMin, i, j);
+      //printf("rcut=%.15G %.15G %.15G\n", Oparams.rcut[0], Oparams.rcut[1], Oparams.rcut[2]);
+    }
   return distMin;
 } 
 extern double *a0I;
