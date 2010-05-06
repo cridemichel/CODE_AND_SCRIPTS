@@ -7,7 +7,9 @@
 NOTE: The box edge length is unity, so every length must be referred to 
 the this quantity.
  */
-
+#ifdef MD_CALENDAR_HYBRID
+eventQEntry *eventQEntries;
+#endif
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 extern double max(double a, double b);
 #define MD_DEBUG10(x) 
@@ -2432,6 +2434,9 @@ void usrInitAft(void)
   inCell[2] = malloc(sizeof(int)*Oparams.parnum);
 #endif
   tree = AllocMatI(12, poolSize);
+#ifdef MD_CALENDAR_HYBRID
+  eventQEntries = malloc(sizeof(eventQEntry)*(nlists+1));
+#endif
   bonds = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   bonds0 = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
