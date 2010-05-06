@@ -196,6 +196,30 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeIdD    tree[10]
 #define treeIdE    tree[11]
 #endif
+#ifdef MD_CALENDAR_HYBRID
+#define nlists 50000
+#define scale 50
+typedef struct
+{
+  int next;
+  int previous;
+  int p;
+  int q;
+  int c;
+  double t;
+  //unsigned int qMarker;
+  int qIndex;
+  //statusType status;
+  /* 06/05/2010: my fields */
+  int evId;
+  int evIdA;
+  int evIdB;
+  int idata;
+  int idatb;
+  int idcollcode;
+} eventQEntry;
+
+#endif
 struct LastBumpS 
 {
   int mol;
