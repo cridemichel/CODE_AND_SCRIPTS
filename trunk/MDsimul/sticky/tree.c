@@ -31,7 +31,10 @@ extern double rxC, ryC, rzC;
 #ifdef MD_CALENDAR_HYBRID
 int linearLists[nlists+1];/*+1 for overflow*/ 
 int currentIndex=0;
+int populatePQ(void);
 double baseIndex=0;
+void deleteFromEventQ(int e);
+int insertInEventQ(int p);
 #endif
 void ErrExit(char *str)
 {
@@ -80,7 +83,7 @@ int get_new_node(int idA, int idB, int idata)
       idNew = treeIdA[0];
       MD_DEBUG2(
       if (idB >= ATOM_LIMIT + 2 * NDIM)
-	printf("idNew: %d tEvent: %.15f\n", idNew, tEvent));
+	printf("idNew: %d tEvent: %.15f\n", idNew, treeTime[idNew]));
       /* all'inizio treeCircAR[treeIdA[0]] = treeIdA[0]+1 quindi è un nodo 
        * non utilizzato nel pool */
       treeIdA[0] = treeCircAR[treeIdA[0]];
@@ -121,6 +124,7 @@ void InsertPQ(int idNew)
   double tEvent;
   id = 0;
   tEvent = treeTime[idNew];
+  MD_DEBUG2(printf("InsertPQ tEvent=%.15G idA=%d idB=%d\n", tEvent, treeIdA[idNew], treeIdB[idNew]);)
   /* treeRight[id] == -1 => il calendario è vuoto */
   if (treeRight[id] == -1) 
     treeRight[id] = idNew;
@@ -177,7 +181,7 @@ void insertInCircularLists(int idNew)
       treeCircBL[treeCircBR[idB + 1]] = idNew;
       treeCircBR[idB + 1] = idNew;
     }
-  }
+}
 #ifdef MD_CALENDAR_HYBRID
 void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent) 
 {
@@ -719,9 +723,12 @@ void DeleteEvent(int id)
 #ifdef MD_CALENDAR_HYBRID
 void initHQlist(void)
 {
+  int i;
   baseIndex = 0;
   currentIndex = 0;
   /* inizializzare anche le linked lists lineari? */
+  for (i=0; i < nlists+1; i++)
+    linearLists[i] = -1;
 }
 #endif
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
@@ -798,6 +805,10 @@ int insertInEventQ(int p)
   //eventQEntry * pt;
   //pt=eventQEntries+p; /* use pth entry */
   i=(int)(scale*treeTime[p]-baseIndex);
+
+  //i=currentIndex;
+
+  //printf("baseIndex=%.15G p=%d i=%d\n", baseIndex, p, i);
   if(i>(nlists-1)) /* account for wrap */
     {
       i-=nlists;
@@ -811,19 +822,21 @@ int insertInEventQ(int p)
   if(i==currentIndex)
     {
       InsertPQ(p); /* insert in PQ */
-      return -1;
+      return p;
     }
   else
     {
       /* insert in linked list */
       oldFirst=linearLists[i];
-      treeLeft[p] = -1; /* treeLeft = previous */
+      MD_DEBUG2(printf("Inserting in linked lists oldFirst=%d p=%d idA=%d idB=%d\n", oldFirst,p,treeIdA[p],
+		       treeIdB[p]));
+      treePrev[p] = -1; /* treeLeft = previous */
       //pt->previous=-1;
-      treeRight[p] = oldFirst; /* treeRight = next */
+      treeNext[p] = oldFirst; /* treeRight = next */
       //pt->next=oldFirst;
       linearLists[i]=p;
       if(oldFirst!=-1)
-	treeLeft[oldFirst] = p;
+	treePrev[oldFirst] = p;
 	//eventQEntries[oldFirst].previous=p;
     }
   return p;
@@ -837,7 +850,7 @@ void processOverflowList(void)
   linearLists[i]=-1; /* mark empty; we will treat all entries and may re-add some */
   while(e!=-1)
     {
-      eNext = treeRight[e];
+      eNext = treeNext[e];
       //eNext=eventQEntries[e].next; /* save next */
       insertInEventQ(e); /* try add to regular list now */
       e=eNext;
@@ -851,35 +864,38 @@ void deleteFromEventQ(int e)
   i = treeQIndex[e];
   if(i==currentIndex)
     {
+      MD_DEBUG2(printf("[delete] e=%d PQ node\n", e));
       DeletePQ(e); /* delete from pq */
     }
   else
     {
       /* remove from linked list */
-      prev = treeLeft[e];
-      next = treeRight[e];
+      MD_DEBUG(printf("[delete] e=%d PQ node\n", e));
+      prev = treePrev[e];
+      next = treeNext[e];
       //prev=pt->previous;
       //next=pt->next;
       if(prev==-1)
-	linearLists[i] = treeRight[e];
+	linearLists[i] = treeNext[e];
 	//linearLists[i]=pt->next;
       else
-	treeRight[prev]=next;
+	treeNext[prev]=next;
 	//eventQEntries[prev].next=next;
       if(next!=-1)
-	treeLeft[next] = prev;
+	treePrev[next] = prev;
 	//eventQEntries[next].previous=prev;
     }
 }
 //int deleteFirstFromEventQ()
 int populatePQ(void)
 {
-  int e;
+  int e=-1;
   while(treeRight[0]==-1)
     /*if priority queue exhausted, i.e. if binary tree calendar is void */
     {
       /* change current index */
       currentIndex++;
+      MD_DEBUG2(printf("currentIndex=%d feeding PQ linearLists[]=%d\n", currentIndex, linearLists[currentIndex]));
       if(currentIndex==nlists)
 	{
 	  currentIndex=0;
@@ -891,7 +907,7 @@ int populatePQ(void)
       while(e!=-1)
 	{
 	  InsertPQ(e);
-	  e = treeRight[e];
+	  e = treeNext[e];
 	  //e=eventQEntries[e].next;
 	}
       linearLists[currentIndex]=-1;
