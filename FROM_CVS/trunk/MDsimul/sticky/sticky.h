@@ -200,8 +200,8 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeNext   tree[12]
 #define treePrev   tree[13]
 #define treeQIndex tree[14]
-#define nlists 1000000
-#define scale 200000
+//#define nlists 1000000
+//#define scale 200000
 #if 0
 typedef struct
 {
@@ -337,6 +337,11 @@ struct progStatus
   double sumoy[MAXPAR];
   double sumoz[MAXPAR];
   double lastcolltime[MAXPAR];
+#endif
+#ifdef MD_CALENDAR_HYBRID
+  int nlistsHQ;
+  int scaleHQ;
+  int adjustHQ;
 #endif
   /* Accumulator for the radial distribution function */
   int hist[MAXBIN];
@@ -594,6 +599,11 @@ struct pascii opro_ascii[] =
   {"sumox",        OS(sumox),                       -MAXPAR,        1, "%.15G"},
   {"sumoy",        OS(sumoy),                       -MAXPAR,        1, "%.15G"},
   {"sumoz",        OS(sumoz),                       -MAXPAR,        1, "%.15G"},
+#endif
+#ifdef MD_CALENDAR_HYBRID
+  {"nlistsHQ",     &OS(nlistsHQ),                    1,   1,  "%d"},
+  {"scaleHQ",      &OS(scaleHQ),                    1,   1,  "%d"},
+  {"adjustHQ",     &OS(adjustHQ),                   1,   1,  "%d"},
 #endif
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
@@ -873,6 +883,11 @@ struct singlePar OsinglePar[] = {
   {"scalfact",   &OprogStatus.scalfact,       CT},
   {"reducefact", &OprogStatus.reducefact,     CT},
   {"phitol",      &OprogStatus.phitol,        CT},
+#ifdef MD_CALENDAR_HYBRID
+  {"scaleHQ",  &OprogStatus.scaleHQ,          INT},
+  {"nlistsHQ", &OprogStatus.nlistsHQ,         INT},
+  {"adjustHQ", &OprogStatus.adjustHQ,         INT},
+#endif
   {"axestol",     &OprogStatus.axestol,       CT},
   {"minDist",     &OprogStatus.minDist,       CT},
   {"W",          &OprogStatus.W,              CT},

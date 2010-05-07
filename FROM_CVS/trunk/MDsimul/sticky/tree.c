@@ -29,7 +29,9 @@ extern double rxC, ryC, rzC;
 /* NOTA: treeIdA[0] punta al primo nodo della lista dei nodi liberi nel pool 
  */
 #ifdef MD_CALENDAR_HYBRID
-int linearLists[nlists+1];/*+1 for overflow*/ 
+int numevPQ=0; /* numero di eventi nella PQ (i.e. binary tree) */
+//int linearLists[nlists+1];/*+1 for overflow*/ /* dynamically allocated */
+int *linearLists; /* dynamically allocated */
 int currentIndex=0;
 int populatePQ(void);
 double baseIndex=0;
@@ -123,6 +125,7 @@ void InsertPQ(int idNew)
 {
   int more, id;
   double tEvent;
+  numevPQ++;
   id = 0;
   tEvent = treeTime[idNew];
   MD_DEBUG2(printf("InsertPQ tEvent=%.15G idA=%d idB=%d\n", tEvent, treeIdA[idNew], treeIdB[idNew]);)
@@ -345,6 +348,8 @@ void InsertPQ(int idNew)
 {
   int more, id;
   double tEvent;
+
+  numevPQ++;
   id = 0;
   tEvent = treeTime[idNew];
 
@@ -785,6 +790,7 @@ void DeletePQ (int id)
 {
   int idp, idq, idr;
 
+  numevPQ--;
   MD_DEBUG2(printf("[ DeleteEvent ] deleting node #%d\n", id));
   idr = treeRight[id];
   if (idr == -1)
@@ -849,7 +855,7 @@ void initHQlist(void)
   baseIndex = 0;
   currentIndex = 0;
   /* inizializzare anche le linked lists lineari? */
-  for (i=0; i < nlists+1; i++)
+  for (i=0; i < OprogStatus.nlistsHQ+1; i++)
     linearLists[i] = -1;
 }
 #endif
@@ -926,17 +932,17 @@ int insertInEventQ(int p)
   int i, oldFirst;
   //eventQEntry * pt;
   //pt=eventQEntries+p; /* use pth entry */
-  i=(int)(scale*treeTime[p]-baseIndex);
+  i=(int)(OprogStatus.scaleHQ*treeTime[p]-baseIndex);
 
   //i=currentIndex;
 
   //printf("baseIndex=%.15G p=%d i=%d\n", baseIndex, p, i);
-  if(i>(nlists-1)) /* account for wrap */
+  if(i>(OprogStatus.nlistsHQ-1)) /* account for wrap */
     {
-      i-=nlists;
+      i-=OprogStatus.nlistsHQ;
       if(i>=currentIndex-1)
 	{
-	  i=nlists; /* store in overflow list */
+	  i=OprogStatus.nlistsHQ; /* store in overflow list */
 	}
     }
   //pt->qIndex=i;
@@ -967,7 +973,7 @@ int insertInEventQ(int p)
 void processOverflowList(void)
 {
   int i,e,eNext;
-  i=nlists; /* overflow list */
+  i=OprogStatus.nlistsHQ; /* overflow list */
   e=linearLists[i];
   linearLists[i]=-1; /* mark empty; we will treat all entries and may re-add some */
   while(e!=-1)
@@ -1018,10 +1024,10 @@ int populatePQ(void)
       /* change current index */
       currentIndex++;
       MD_DEBUG2(printf("currentIndex=%d feeding PQ linearLists[]=%d\n", currentIndex, linearLists[currentIndex]));
-      if(currentIndex==nlists)
+      if(currentIndex==OprogStatus.nlistsHQ)
 	{
 	  currentIndex=0;
-	  baseIndex+=nlists;
+	  baseIndex+=OprogStatus.nlistsHQ;
 	  processOverflowList();
 	}
       /* populate pq */
