@@ -73,7 +73,6 @@ void UpdateSystem(void);
 #define MDINT int
 #define MDINTFMT "%d"
 #endif
-
 #ifdef EDHE_FLEX
 /* NOTA 16/04/2010: numero di spot per l'implementazione delle NNL tramite spots */
 #define MD_SPNNL_NUMSP 8
@@ -251,7 +250,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #else
 #define NANA (NA*NA)
 #endif
-#define MAXPAR 50000      /* maximum number of simulated particles */
+#define MAXPAR 100000      /* maximum number of simulated particles */
 #ifdef MD_PATCHY_HE
 #define MD_STSPOTS_A 5
 #define MD_STSPOTS_B 2
@@ -402,7 +401,22 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeIdC    tree[9]
 #define treeIdD    tree[10]
 #define treeIdE    tree[11]
+#ifdef MD_CALENDAR_HYBRID
+#define treeNext   tree[12]
+#define treePrev   tree[13]
+#define treeQIndex tree[14]
 #endif
+#else
+#ifdef MD_CALENDAR_HYBRID
+#define treeNext   tree[9]
+#define treePrev   tree[10]
+#define treeQIndex tree[11]
+#endif
+#endif
+#endif
+#ifdef MD_CALENDAR_HYBRID
+#define nlists 1000000
+#define scale 200000
 #endif
 #ifdef MD_PATCHY_HE
 struct LastBumpS 
