@@ -197,9 +197,11 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeIdE    tree[11]
 #endif
 #ifdef MD_CALENDAR_HYBRID
-#define treeQIndex tree[12]
-#define nlists 50000
-#define scale 50
+#define treeNext   tree[12]
+#define treePrev   tree[13]
+#define treeQIndex tree[14]
+#define nlists 50 //50000
+#define scale 5
 typedef struct
 {
   int next;
