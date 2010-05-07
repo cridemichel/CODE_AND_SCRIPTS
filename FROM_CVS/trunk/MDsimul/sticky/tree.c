@@ -28,6 +28,11 @@ extern double rxC, ryC, rzC;
 #endif
 /* NOTA: treeIdA[0] punta al primo nodo della lista dei nodi liberi nel pool 
  */
+#ifdef MD_CALENDAR_HYBRID
+int linearLists[nlists+1];/*+1 for overflow*/ 
+int currentIndex=0;
+double baseIndex=0;
+#endif
 void ErrExit(char *str)
 {
   printf(str);
@@ -61,14 +66,10 @@ int check_node(char* str, int id, int idNew, int idUp)
 }
 
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
-void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent) 
+int get_new_node(int idA, int idB, int idata)
 {
-  int id, idNew, more;
-  id = 0;
-
-  MD_DEBUG2(printf("#%lld ScheduleEvent() idA:%d idB:%d evtime:%.15f\n", 
-		   (long long int)Oparams.curStep, idA, idB,
-		  tEvent));
+  /* get_new_node(): questa funzione ottiene un nodo libero */
+  int idNew;
   if ((idB < ATOM_LIMIT ||
       idB >= ATOM_LIMIT + 2 * NDIM) && idB < ATOM_LIMIT + 100)
     {
@@ -83,6 +84,8 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
       /* all'inizio treeCircAR[treeIdA[0]] = treeIdA[0]+1 quindi è un nodo 
        * non utilizzato nel pool */
       treeIdA[0] = treeCircAR[treeIdA[0]];
+      /* essendo qui si tratta di un urto quindi bisobna valutare se inserire
+	 tale evento nella BSPQ (i.e. Hybrid Queue o nella PQ) */
     }
   else 
     { /* NOTA: siccome nel caso della silica 
@@ -99,6 +102,139 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
 	    crossevtodel[idA] = idNew;  
 	  }
     }
+  return idNew;
+
+}
+void setPQnode(int idNew, int idA, int idB, int idata, int idatb, int idcollcode, double tEvent)
+{
+  /* assegna i dati relativi all'evento al nodo idNew */
+  treeTime[idNew] = tEvent;
+  treeIdA[idNew] = idA;    
+  treeIdB[idNew] = idB;
+  treeIdC[idNew] = idata;
+  treeIdD[idNew] = idatb;
+  treeIdE[idNew] = idcollcode;
+}
+void InsertPQ(int idNew) 
+{
+  int more, id;
+  double tEvent;
+  id = 0;
+  tEvent = treeTime[idNew];
+  /* treeRight[id] == -1 => il calendario è vuoto */
+  if (treeRight[id] == -1) 
+    treeRight[id] = idNew;
+  else 
+    {
+      /* Cerca la giusta collocazione nell'albero per l'evento da
+       * schedulare */
+      more = 1; 
+      id = treeRight[id];
+      while (more) 
+	{
+	  if (tEvent <= treeTime[id]) 
+	    {
+	      if (treeLeft[id] > -1) 
+		id = treeLeft[id];
+	      else 
+		{
+		  more = 0;    
+		  treeLeft[id] = idNew;
+		}
+	    } 
+	  else
+	    {
+	      if (treeRight[id] > -1) 
+		id = treeRight[id];
+	      else 
+		{
+		  more = 0;    
+		  treeRight[id] = idNew;
+		} 
+	    }
+	} 
+    }
+  treeUp[idNew] = id;
+  treeLeft[idNew] = treeRight[idNew] = -1;
+}
+void insertInCircularLists(int idNew)
+{
+  int idA, idB;
+  idA = treeIdA[idNew];
+  idB = treeIdB[idNew];
+  if (idB < ATOM_LIMIT) 
+    {
+      /* Chiaramente ad idNew sono associate le particelle idA e idB
+       * relative all'evento che si sta schedulando */
+      /* inserisce idNew nella circular list della particelle idA */
+      treeCircAR[idNew] = treeCircAR[idA + 1];
+      treeCircAL[idNew] = idA + 1;
+      treeCircAL[treeCircAR[idA + 1]] = idNew;
+      treeCircAR[idA + 1] = idNew;
+      /* inserisce idNew nella circular list di idB */
+      treeCircBR[idNew] = treeCircBR[idB + 1];
+      treeCircBL[idNew] = idB + 1;
+      treeCircBL[treeCircBR[idB + 1]] = idNew;
+      treeCircBR[idB + 1] = idNew;
+    }
+  }
+#ifdef MD_CALENDAR_HYBRID
+void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent) 
+{
+  int idNew;
+  idNew = get_new_node(idA, idB, idata);
+  /* assegna i dati al nodo relativi all'evento */
+  setPQnode(idNew, idA, idB, idata, idatb, idcollcode, tEvent);
+  insertInEventQ(idNew);
+  /* 07/05/2010: le liste circolari servono per eliminare tutti gli urti in cui è coinvolta
+     una certa particella.
+     Notare anche se l'evento è stato inserito nelle liste lineari va comunque inserito
+     nelle liste circolari per poter essere rimosso dopo un urto.
+   */
+  insertInCircularLists(idNew);
+}
+#else
+void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent) 
+{
+  int id, idNew, more;
+  id = 0;
+
+  MD_DEBUG2(printf("#%lld ScheduleEvent() idA:%d idB:%d evtime:%.15f\n", 
+		   (long long int)Oparams.curStep, idA, idB,
+		  tEvent));
+ if ((idB < ATOM_LIMIT ||
+      idB >= ATOM_LIMIT + 2 * NDIM) && idB < ATOM_LIMIT + 100)
+    {
+      /* urto con altra particella o altro evento (misura o output)*/
+      if (treeIdA[0] == -1)
+	ErrExit ("empty event pool");
+      /* treeIdA[0] è un puntatore ad un nodo utilizzabile nel pool */
+      idNew = treeIdA[0];
+      MD_DEBUG2(
+      if (idB >= ATOM_LIMIT + 2 * NDIM)
+	printf("idNew: %d tEvent: %.15f\n", idNew, tEvent));
+      /* all'inizio treeCircAR[treeIdA[0]] = treeIdA[0]+1 quindi è un nodo 
+       * non utilizzato nel pool */
+      treeIdA[0] = treeCircAR[treeIdA[0]];
+      /* essendo qui si tratta di un urto quindi bisobna valutare se inserire
+	 tale evento nella BSPQ (i.e. Hybrid Queue o nella PQ) */
+    }
+  else 
+    { /* NOTA: siccome nel caso della silica 
+	 ogni molecola appartiene a due linked list 
+	 non basta un solo slot ma ne servono due qui! */
+      /* Se qui vuol dire che si tratta di un cell-crossing o 
+	 di un urto con parete
+         NOTA: urto con parete e cell-crossing sono esclusivi, per cui basta un nodo 
+         inoltre c'è sempre un evento di tale tipo associato con ogni particella 
+	 */
+       	idNew = 1 + (Oparams.parnum*idata + idA);
+	if (idata)
+	  {
+	    crossevtodel[idA] = idNew;  
+	  }
+    }
+  
   /* treeRight[id] == -1 => il calendario è vuoto */
   if (treeRight[id] == -1) 
     treeRight[id] = idNew;
@@ -156,14 +292,13 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
   treeIdE[idNew] = idcollcode;
   treeLeft[idNew] = treeRight[idNew] = -1;
   treeUp[idNew] = id;
-#ifdef MD_CALENDAR_HYBRID
-  evIdHQ = idNew;
-#endif
 }
+#endif
 #else
 void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent) 
 {
   int id, idNew, more;
+
   id = 0;
 
   MD_DEBUG2(printf("#%lld ScheduleEvent() idA:%d idB:%d evtime:%.15f\n", 
@@ -249,10 +384,6 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
   treeIdE[idNew] = idcollcode;
   treeLeft[idNew] = treeRight[idNew] = -1;
   treeUp[idNew] = id;
-#ifdef MD_CALENDAR_HYBRID
-  evIdHQ = idNew;
-#endif
-
 }
 #endif
 void ScheduleEvent(int IdA, int IdB, double tEvent)
@@ -391,7 +522,9 @@ void NextEvent (void)
   /* Il nodo root (0), a cui non è associato alcun evento,
    * è linkato con il suo right pointer al primo nodo che contiene
    * un evento */
-
+#ifdef MD_CALENDAR_HYBRID
+  populatePQ();
+#endif
   idNow = treeRight[0];  
   /* Cerca l'evento con tempo minore 
    * NOTA: l'albero è ordinato e ogni nodo sinistro ha un tempo inferiore */
@@ -451,8 +584,9 @@ void NextEvent (void)
 	   * di cell-crossing magari con un loop */
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 	  if (crossevtodel[id-1]!=-1)
-	    DeleteEvent (id+Oparams.parnum);
-	  
+	    {
+  	      DeleteEvent (id+Oparams.parnum);
+	    }
 	  /* notare che la condizione crossevtodel[id-1]!=-1 è necessaria in quanto 
 	   * in quanto se una particella attraversa le pareti del box l'evento con nc==1
 	   * non viene schedulato visto che ProcessCellCrossing si occupa di entrambi gli eventi
@@ -521,8 +655,7 @@ void NextEvent (void)
     
   /*printf("Next event evIdA: %d, evIdB:%d\n", evIdA, evIdB);*/
 }
-
-void DeleteEvent (int id)
+void DeletePQ (int id)
 {
   int idp, idq, idr;
 
@@ -572,6 +705,25 @@ void DeleteEvent (int id)
 		   treeUp[idp], treeLeft[id], treeRight[id],
 		   treeLeft[treeUp[idp]], treeRight[treeUp[idp]]));
 }
+#ifdef MD_CALENDAR_HYBRID
+void DeleteEvent(int id)
+{
+  deleteFromEventQ(id);
+}
+#else
+void DeleteEvent(int id)
+{
+  DeletePQ(id);
+}
+#endif
+#ifdef MD_CALENDAR_HYBRID
+void initHQlist(void)
+{
+  baseIndex = 0;
+  currentIndex = 0;
+  /* inizializzare anche le linked lists lineari? */
+}
+#endif
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 void InitEventList (void) 
 {
@@ -601,6 +753,9 @@ void InitEventList (void)
       treeCircBR[id] = id+Oparams.parnum;
 #endif
     }
+#ifdef MD_CALENDAR_HYBRID
+  initHQlist();
+#endif
 }
 #else
 void InitEventList (void) 
@@ -621,34 +776,28 @@ void InitEventList (void)
       treeCircAL[id] = treeCircBL[id] = id;
       treeCircAR[id] = treeCircBR[id] = id;
     }
+#ifdef MD_CALENDAR_HYBRID
+  initHQlist();
+#endif
 }
 #endif
 
 #ifdef MD_CALENDAR_HYBRID
+#if 0
 extern eventQEntry *eventQEntries;
 
-double baseIndex;
 int *CBT; /* complete binary tree implemented in an array of
-	      2*N integers */
-int NP; /*current number of particles = Oparams.parnum */
-int linearLists[nlists+1];/*+1 for overflow*/ 
-int currentIndex;
-int evIdHQ;
-void Insert(int p)
-{
-  eventQEntry *pt;
-  /* hqe is pth entries */
-  pt = eventQEntries+p;
-  ScheduleEventBarr(pt->idA, pt->idB, pt->idata, pt->idatb, pt->idcollcode, pt->t);
-  pt->evId = evIdHQ;
-}
+	     2*N integers */
+int NP=0; /*current number of events */
+int evIdHQ, noinsertHQ;
+#endif
 
 int insertInEventQ(int p)
 {
   int i, oldFirst;
-  eventQEntry * pt;
-  pt=eventQEntries+p; /* use pth entry */
-  i=(int)(scale*pt->t-baseIndex);
+  //eventQEntry * pt;
+  //pt=eventQEntries+p; /* use pth entry */
+  i=(int)(scale*treeTime[p]-baseIndex);
   if(i>(nlists-1)) /* account for wrap */
     {
       i-=nlists;
@@ -657,37 +806,29 @@ int insertInEventQ(int p)
 	  i=nlists; /* store in overflow list */
 	}
     }
-  pt->qIndex=i;
+  //pt->qIndex=i;
+  treeQIndex[p] = i;
   if(i==currentIndex)
     {
-      Insert(p); /* insert in PQ */
+      InsertPQ(p); /* insert in PQ */
+      return -1;
     }
   else
     {
       /* insert in linked list */
       oldFirst=linearLists[i];
-      pt->previous=-1;
-      pt->next=oldFirst;
+      treeLeft[p] = -1; /* treeLeft = previous */
+      //pt->previous=-1;
+      treeRight[p] = oldFirst; /* treeRight = next */
+      //pt->next=oldFirst;
       linearLists[i]=p;
       if(oldFirst!=-1)
-	eventQEntries[oldFirst].previous=p;
+	treeLeft[oldFirst] = p;
+	//eventQEntries[oldFirst].previous=p;
     }
   return p;
 }
-void addEventHQ(int idA, int idB, int idata, int idatb, int idcollcode, double tEvent)
-{
-  eventQEntry *pt;
-  pt=eventQEntries+currentIndex; /* use pth entry */
-  /* fill event fields */
-  pt->IdA = idA;
-  pt->IdB = idB;
-  pt->idata = idata;
-  pt->idatb = idatb;
-  pt->idcollcode = idcollcode;
-  pt->t = tEvent;
-  pt->evId = -1; /* -1 = not inserted in binary tree */
-  insertInEventQ(p);
-}
+
 void processOverflowList(void)
 {
   int i,e,eNext;
@@ -696,46 +837,46 @@ void processOverflowList(void)
   linearLists[i]=-1; /* mark empty; we will treat all entries and may re-add some */
   while(e!=-1)
     {
-      eNext=eventQEntries[e].next; /* save next */
+      eNext = treeRight[e];
+      //eNext=eventQEntries[e].next; /* save next */
       insertInEventQ(e); /* try add to regular list now */
       e=eNext;
     }
 }
-
-void Delete(int e)
-{
-  /* delete from binary tree here */
-  eventQEntry *pt;
-  pt = eventQEntries+e;
-  /* delete from binary tree */
-  DeleteEvent(pt->evId);
-}
 void deleteFromEventQ(int e)
 {
   int prev,next,i;
-  eventQEntry * pt=eventQEntries+e;
-  i=pt->qIndex;
+  //eventQEntry *pt=eventQEntries+e;
+  //i=pt->qIndex;
+  i = treeQIndex[e];
   if(i==currentIndex)
     {
-      Delete(e); /* delete from pq */
+      DeletePQ(e); /* delete from pq */
     }
   else
     {
       /* remove from linked list */
-      prev=pt->previous;
-      next=pt->next;
+      prev = treeLeft[e];
+      next = treeRight[e];
+      //prev=pt->previous;
+      //next=pt->next;
       if(prev==-1)
-	linearLists[i]=pt->next;
+	linearLists[i] = treeRight[e];
+	//linearLists[i]=pt->next;
       else
-	eventQEntries[prev].next=next;
+	treeRight[prev]=next;
+	//eventQEntries[prev].next=next;
       if(next!=-1)
-	eventQEntries[next].previous=prev;
+	treeLeft[next] = prev;
+	//eventQEntries[next].previous=prev;
     }
 }
-int deleteFirstFromEventQ()
+//int deleteFirstFromEventQ()
+int populatePQ(void)
 {
   int e;
-  while(NP==0)/*if priority queue exhausted*/
+  while(treeRight[0]==-1)
+    /*if priority queue exhausted, i.e. if binary tree calendar is void */
     {
       /* change current index */
       currentIndex++;
@@ -749,14 +890,20 @@ int deleteFirstFromEventQ()
       e=linearLists[currentIndex];
       while(e!=-1)
 	{
-	  Insert(e);
-	  e=eventQEntries[e].next;
+	  InsertPQ(e);
+	  e = treeRight[e];
+	  //e=eventQEntries[e].next;
 	}
       linearLists[currentIndex]=-1;
     }
   /* delete from binary tree here! */
+#if 0
   e=CBT[1]; /* root contains shortest time entry */
   Delete(CBT[1]);
+  /* a prendere l'evento successivo ci pensa NextEvent() 
+     all'interno della quale all'inizio viene chiamata deleteFirstFromEventQ()
+     per popolare il binary tree se vuoto */
+#endif
   return e;
 }
 #endif
