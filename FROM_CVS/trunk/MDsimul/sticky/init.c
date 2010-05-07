@@ -1726,6 +1726,8 @@ void StartRun(void)
 	}
     }
 #endif
+  //printf("L'albero e le liste ora dovrebbero essere popolate\n");
+  //exit(-1);
 }
 #else
 void StartRun(void)
@@ -2433,7 +2435,11 @@ void usrInitAft(void)
   inCell[1]= malloc(sizeof(int)*Oparams.parnum);
   inCell[2] = malloc(sizeof(int)*Oparams.parnum);
 #endif
+#ifdef MD_CALENDAR_HYBRID
+  tree = AllocMatI(15, poolSize);
+#else
   tree = AllocMatI(12, poolSize);
+#endif
 #ifdef MD_CALENDAR_HYBRID
   eventQEntries = malloc(sizeof(eventQEntry)*(nlists+1));
 #endif
