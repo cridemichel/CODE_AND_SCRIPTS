@@ -17,7 +17,9 @@ extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
-
+#ifdef MD_CALENDAR_HYBRID
+extern int numevPQ;
+#endif
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
 #else
@@ -1319,12 +1321,22 @@ void outputSummary(void)
   if (callsprojonto>0)
     printf("Average iterations in projonto: %.8G\n", ((double) itsprojonto)/callsprojonto);
   printf("Number of collisions: %lld\n", numcoll);
-
+#ifdef MD_CALENDAR_HYBRID
+#if 0
+  if (OprogStatus.adjustHQ)
+    {
+      //printf("Average number of events in binary tree: %d (Actual is %d)\n", sumnumevPQ/callsAdjsuHQ, numevPQ);
+      adjust_HQ_params();
+    }
+#endif
+  printf("Actual number of events in binary tree: %d\n", numevPQ);
+#endif
   if (OprogStatus.checkGrazing)
     check_all_bonds();
   //scale_Phi();
   if (!ENDSIM)
     scale_Phi();
+
 #ifdef MD_GRAVITY
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
 	 (2.0*K/(3.0*Oparams.parnum-3.0)), Vz);
