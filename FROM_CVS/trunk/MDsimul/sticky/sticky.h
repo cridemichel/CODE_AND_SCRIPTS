@@ -200,8 +200,9 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeNext   tree[12]
 #define treePrev   tree[13]
 #define treeQIndex tree[14]
-#define nlists 50 //50000
-#define scale 5
+#define nlists 1000000
+#define scale 200000
+#if 0
 typedef struct
 {
   int next;
@@ -221,7 +222,7 @@ typedef struct
   int idatb;
   int idcollcode;
 } eventQEntry;
-
+#endif
 #endif
 struct LastBumpS 
 {
