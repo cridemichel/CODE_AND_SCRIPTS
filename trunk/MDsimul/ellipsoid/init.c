@@ -3235,7 +3235,11 @@ void usrInitAft(void)
   if (my_rank == 0)
     tree = AllocMatI(9, poolSize);
 #else
+#ifdef MD_CALENDAR_HYBRID
+  tree = AllocMatI(15, poolSize);
+#else
   tree = AllocMatI(12, poolSize);
+#endif
 #endif
 #ifdef EDHE_FLEX
   //printf("maxbonds=%d\n", OprogStatus.maxbonds);
@@ -3277,7 +3281,11 @@ void usrInitAft(void)
   if (my_rank == 0)
     tree = AllocMatI(9, poolSize);
 #else
+#ifdef MD_CALENDAR_HYBRID
+  tree = AllocMatI(12, poolSize);
+#else
   tree = AllocMatI(9, poolSize);
+#endif
 #endif
 #endif
 #ifdef MD_HE_PARALL
