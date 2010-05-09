@@ -1597,6 +1597,7 @@ accumulators initialization is crucial */
   OprogStatus.scaleHQ = 50;
   OprogStatus.nlistsHQ = 50000;  
   OprogStatus.adjustHQ = 0;
+  OprogStatus.baseIndex = 0;
 #endif
   OprogStatus.nextSumTime = 0.0;
   OprogStatus.nextcheckTime = 0.0;
@@ -2368,10 +2369,9 @@ void estimate_HQ_params(double phi)
 #if 0
 void adjust_HQ_params(void)
 {
-  int targetNE = 20, del=5;
-  double GOLD = 1.618034, dtmax;
-  dtmax = calc_dtmax();
-  if (targetNE - del < numevPQ && target + del > numevPQ)
+  int targetNE = 15, del=5;
+  double GOLD = 1.3;
+  if (targetNE - del < numevPQ && target + del > numevPQ)// && numovHQ < totevHQ/OprogStatus.nlistsHQ)
     {
       printf("Hybrid Calendar parameters adjusted!\n");
       OprogStatus.adjustHQ = 0;
@@ -2381,12 +2381,10 @@ void adjust_HQ_params(void)
       if (numevPQ > targetNE)
 	{
 	  OprogStatus.scaleHQ *= GOLD;
-	  OprogStatus.nlistsHQ *= GOLD;
 	 }
       else
 	{
 	  OprogStatus.scaleHQ /= GOLD;
-	  OprogStatus.nlistsHQ /= GOLD;
 	}
     }
   linearLists = realloc(sizoeof(int)*OprogStatus.nlistsHQ);
@@ -2669,7 +2667,7 @@ void usrInitAft(void)
       /* automagically estimate scaleHQ and nlistsHQ parameter */
       estimate_HQ_params(phiIni);
     }
-  printf("Using Bunder Increasing Priority Queue, scale=%d nlists=%d\n",OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
+  printf("Using Bounded Increasing Priority Queue, scale=%d nlists=%d\n",OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
   linearLists = malloc(sizeof(int)*(OprogStatus.nlistsHQ+1));
 #endif
 

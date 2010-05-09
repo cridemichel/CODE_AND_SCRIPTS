@@ -18,6 +18,7 @@ extern int *equilibrated;
 #endif 
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 #ifdef MD_CALENDAR_HYBRID
+extern int *linearLists;
 extern int numevPQ;
 #endif
 #ifdef MD_ASYM_ITENS
@@ -6386,15 +6387,28 @@ void timeshift_variables(void)
 #endif
     }
 }
+#ifdef MD_CALENDAR_HYBRID
+extern int insertInEventQ(int p);
+extern int currentIndex;
+void insertInCircularLists(int idNew);
+void initHQlist(void);
+#endif
 void timeshift_calendar(void)
 {
-  int poolSize, id;
+  int poolSize, id, idB, idA;
+#ifdef MD_CALENDAR_HYBRID
+  int k, e;
+#endif
   poolSize = Oparams.parnum*OprogStatus.eventMult;
   /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
   for (id=1; id < poolSize; id++) 
     {
       if (treeUp[id] != -1)
-	treeTime[id] -= OprogStatus.bigDt;
+	{
+	  //if (id > 145000)
+	    //printf("Aid=%d/%d\n", id, poolSize);
+	  treeTime[id] -= OprogStatus.bigDt;
+	}
 #if 0
       if (treeTime[id] < 0.0)
 	treeTime[id] = 0.0;
