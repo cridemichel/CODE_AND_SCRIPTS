@@ -34,7 +34,7 @@ int numevPQ=0; /* numero di eventi nella PQ (i.e. binary tree) */
 int *linearLists; /* dynamically allocated */
 int currentIndex=0;
 int populatePQ(void);
-double baseIndex=0;
+//double baseIndex=0;//in OprogStatus
 void deleteFromEventQ(int e);
 int insertInEventQ(int p);
 #endif
@@ -674,6 +674,7 @@ void NextEvent (void)
   ryC = treeRyC[idNow];
   rzC = treeRzC[idNow];
 #endif
+  //printf("INIZIO evtime = %.15G\n", Oparams.time);
   evIdA = treeIdA[idNow];    
   evIdB = treeIdB[idNow];
   evIdC = treeIdC[idNow];
@@ -692,6 +693,7 @@ void NextEvent (void)
      * qui in sostanza si considerano solo gli eventi che cambiano lo stato 
      * della particella, cioè la sua velocità */
     {
+      //printf("QUI evtime = %.15G\n", Oparams.time);
       /* qui incrementa di 1 poiché il nodo root non contiene eventi */
       if (evIdA < evIdB) 
 	{
@@ -755,6 +757,7 @@ void NextEvent (void)
 	    }
 	  treeCircBL[id] = treeCircBR[id] = id;
 	}
+      
     } 
   else 
     {
@@ -777,6 +780,7 @@ void NextEvent (void)
 	}
 #endif
     }
+
   /*check_node("next event", 0, -1, 0);*/
   if (Oparams.time < 0)  
     { 
@@ -852,7 +856,9 @@ void DeleteEvent(int id)
 void initHQlist(void)
 {
   int i;
-  baseIndex = 0;
+  /* base index non deve essere azzerato se non all'inizio della simulazione quando
+     t = 0 o quando si fa un bigDt (08/05/10: Anche se di ciò ancora non sono sicurao al 100%) */
+  //OprogStatus.baseIndex = 0;
   currentIndex = 0;
   /* inizializzare anche le linked lists lineari? */
   for (i=0; i < OprogStatus.nlistsHQ+1; i++)
@@ -932,9 +938,11 @@ int insertInEventQ(int p)
   int i, oldFirst;
   //eventQEntry * pt;
   //pt=eventQEntries+p; /* use pth entry */
-  i=(int)(OprogStatus.scaleHQ*treeTime[p]-baseIndex);
+  /* NOTA baseIndex va messo in OprogStatus! */
+  i=(int)(OprogStatus.scaleHQ*treeTime[p]-OprogStatus.baseIndex);
 
-  //i=currentIndex;
+  /* O(1) is disabled forcing i to be currentIndex
+     i=currentIndex;*/
 
   //printf("baseIndex=%.15G p=%d i=%d\n", baseIndex, p, i);
   if(i>(OprogStatus.nlistsHQ-1)) /* account for wrap */
@@ -954,6 +962,7 @@ int insertInEventQ(int p)
     }
   else
     {
+      //numevLL++; /* numero eventi nelle linked lists*/
       /* insert in linked list */
       oldFirst=linearLists[i];
       MD_DEBUG2(printf("Inserting in linked lists oldFirst=%d p=%d idA=%d idB=%d\n", oldFirst,p,treeIdA[p],
@@ -1024,10 +1033,13 @@ int populatePQ(void)
       /* change current index */
       currentIndex++;
       MD_DEBUG2(printf("currentIndex=%d feeding PQ linearLists[]=%d\n", currentIndex, linearLists[currentIndex]));
+      //printf("currentIndex=%d feeding PQ linearLists[]=%d baseIndex=%d\n", currentIndex, linearLists[currentIndex],
+	//     OprogStatus.baseIndex);
       if(currentIndex==OprogStatus.nlistsHQ)
 	{
 	  currentIndex=0;
-	  baseIndex+=OprogStatus.nlistsHQ;
+	  OprogStatus.baseIndex+=OprogStatus.nlistsHQ;
+	  //printf("baseIndex=%f\n", baseIndex);
 	  processOverflowList();
 	}
       /* populate pq */

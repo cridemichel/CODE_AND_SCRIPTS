@@ -58,7 +58,7 @@ extern void UpdateSystem(void);
 
 #define NDIM 3
 #define MD_DEBUG(X)  
-#define MD_DEBUG2(X)     
+#define MD_DEBUG2(X)  
 #define MD_DEBUG3(X) 
 #define MD_DEBUG4(X) 
 /* ========================================================================= */
@@ -342,6 +342,7 @@ struct progStatus
   int nlistsHQ;
   int scaleHQ;
   int adjustHQ;
+  int baseIndex;
 #endif
   /* Accumulator for the radial distribution function */
   int hist[MAXBIN];
@@ -604,6 +605,7 @@ struct pascii opro_ascii[] =
   {"nlistsHQ",     &OS(nlistsHQ),                    1,   1,  "%d"},
   {"scaleHQ",      &OS(scaleHQ),                    1,   1,  "%d"},
   {"adjustHQ",     &OS(adjustHQ),                   1,   1,  "%d"},
+  {"baseIndex",    &OS(baseIndex),                  1,   1,  "%d"},
 #endif
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
