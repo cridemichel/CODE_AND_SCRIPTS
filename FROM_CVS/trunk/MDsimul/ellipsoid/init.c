@@ -1714,6 +1714,13 @@ void usrInitBef(void)
     OprogStatus.forceguess = 1;
     OprogStatus.phitol = 1E-12;
     OprogStatus.axestol = 1E-8;
+#ifdef MD_CALENDAR_HYBRID
+    OprogStatus.scaleHQ = 50;
+    OprogStatus.nlistsHQ = 50000;  
+    OprogStatus.adjustHQ = 0;
+    OprogStatus.baseIndex = 0;
+    OprogStatus.curIndex = 0;
+#endif
     OprogStatus.minDist = 4E-8;
     OprogStatus.tmsd2end = -1.0;
     OprogStatus.rmsd2end = -1.0;
@@ -3047,6 +3054,79 @@ void buildSPNNL_spots(void)
     }
 }
 #endif
+#ifdef MD_CALENDAR_HYBRID
+extern int *linearLists;
+void estimate_HQ_params(double phi)
+{
+  /* linear approximation for linear dependence on N */
+  double scalevsNfact[4]={0.0877,0.04862,0.9408,7.532}; 
+  double nlistsvsNfact[4]={48.67,97.34,244.7,564.182};
+  double volfact[4] = {0.01,0.12,0.4,0.7}, msc, mnl, qsc, qnl, scf, nlf;
+  int k, k1=-1, k2=-1;
+  /* From Gerald Paul J. Comp. Phys. 221, 615 (2006) */
+
+  if (phi < volfact[0])
+    {
+      /* do not choose values below those for phi=0.01 */
+      OprogStatus.scaleHQ = Oparams.parnum*scalevsNfact[0];
+      OprogStatus.nlistsHQ = Oparams.parnum*nlistsvsNfact[0];
+      return;
+    }
+
+  if (phi > volfact[3])
+    {
+      k1 = 2;
+      k2 = 3;
+    }
+  else
+    {
+      for (k = 0; k < 3; k++)
+	if (phi > volfact[k] && phi < volfact[k+1])
+	  {
+	    k1 = k;
+	    k2 = k+1;
+	    break;
+	  }
+    }
+  /* pendenze */
+  msc = (scalevsNfact[k2] - scalevsNfact[k1])/(volfact[k2]-volfact[k1]);
+  mnl  = (nlistsvsNfact[k2] - nlistsvsNfact[k1])/(volfact[k2]-volfact[k1]);
+  /* ordinata all'origine */ 
+  qsc = scalevsNfact[k1]-msc*volfact[k1];
+  qnl = nlistsvsNfact[k1]-mnl*volfact[k2];
+  scf = msc*phi+qsc; 
+  nlf = mnl*phi+qnl;
+  OprogStatus.scaleHQ = (int) scf*Oparams.parnum;
+  OprogStatus.nlistsHQ = (int) nlf*Oparams.parnum;
+}
+#if 0
+void adjust_HQ_params(void)
+{
+  int targetNE = 15, del=5;
+  double GOLD = 1.3;
+  if (targetNE - del < numevPQ && target + del > numevPQ)// && numovHQ < totevHQ/OprogStatus.nlistsHQ)
+    {
+      printf("Hybrid Calendar parameters adjusted!\n");
+      OprogStatus.adjustHQ = 0;
+    } 
+  else
+    {
+      if (numevPQ > targetNE)
+	{
+	  OprogStatus.scaleHQ *= GOLD;
+	 }
+      else
+	{
+	  OprogStatus.scaleHQ /= GOLD;
+	}
+    }
+  linearLists = realloc(sizoeof(int)*OprogStatus.nlistsHQ);
+  InitEventList();
+  rebuildCalendar();
+}
+#endif
+#endif
+
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -3236,7 +3316,7 @@ void usrInitAft(void)
     tree = AllocMatI(9, poolSize);
 #else
 #ifdef MD_CALENDAR_HYBRID
-  tree = AllocMatI(15, poolSize);
+  tree = AllocMatI(16, poolSize);
 #else
   tree = AllocMatI(12, poolSize);
 #endif
@@ -3282,7 +3362,7 @@ void usrInitAft(void)
     tree = AllocMatI(9, poolSize);
 #else
 #ifdef MD_CALENDAR_HYBRID
-  tree = AllocMatI(12, poolSize);
+  tree = AllocMatI(13, poolSize);
 #else
   tree = AllocMatI(9, poolSize);
 #endif
@@ -3863,6 +3943,15 @@ void usrInitAft(void)
       ItensD[a][2] = 1.0;//(1.0/5.0)*Oparams.m[a]*(Sqr(Oparams.a[a])+Sqr(Oparams.b[a]));
 #endif
     };
+#ifdef MD_CALENDAR_HYBRID
+  if (!(OprogStatus.nlistsHQ > 0 && OprogStatus.scaleHQ > 0))
+    {
+      /* automagically estimate scaleHQ and nlistsHQ parameter */
+      estimate_HQ_params(phiIni);
+    }
+  printf("Using Bounded Increasing Priority Queue, scale=%d nlists=%d\n",OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
+  linearLists = malloc(sizeof(int)*(OprogStatus.nlistsHQ+1));
+#endif
 
   /* maxax e' il diametro del centroide */
 #if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
