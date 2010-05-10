@@ -10370,6 +10370,39 @@ void rebuild_all_events(void)
 double calcJustDistNegSP(double t, int i, int j, double* dists);
 #endif
 /* ============================ >>> move<<< =================================*/
+#ifdef MD_CALENDAR_HYBRID
+void rebuildCalend_TS(void)
+{
+  int j, k, n, nl, nc, iA, nl_ignore, i;
+
+  /* for safety reset linked lists */
+  for (i=0; i < Oparams.parnum; i++)
+    crossevtodel[i] = -1;
+  rebuild_linked_list();
+  OprogStatus.baseIndex = 0;
+  OprogStatus.curIndex = 0;
+  InitEventList();
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  rebuildCalendar();
+  if (OprogStatus.intervalSum > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+  if (OprogStatus.scalevel > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+#ifdef MD_DOUBLE_DT
+  if (OprogStatus.brownian)
+    ScheduleEvent(-1, ATOM_LIMIT+12,OprogStatus.nextDtR);
+#endif
+}
+#endif
+
+/* ============================ >>> move<<< =================================*/
 void move(void)
 {
   char fileop[1024], fileop2[1024]; 
