@@ -200,6 +200,8 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeNext   tree[12]
 #define treePrev   tree[13]
 #define treeQIndex tree[14]
+/* serve per realizzare il timeshift */
+#define treeStatus tree[15] 
 //#define nlists 1000000
 //#define scale 200000
 #if 0
