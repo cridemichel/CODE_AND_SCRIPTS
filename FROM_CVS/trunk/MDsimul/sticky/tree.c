@@ -128,6 +128,9 @@ void InsertPQ(int idNew)
   numevPQ++;
   id = 0;
   tEvent = treeTime[idNew];
+#ifdef MD_CALENDAR_HYBRID
+  treeStatus[idNew] = 2; /* 2 = belonging to binary tree */
+#endif
   MD_DEBUG2(printf("InsertPQ tEvent=%.15G idA=%d idB=%d\n", tEvent, treeIdA[idNew], treeIdB[idNew]);)
   /* treeRight[id] == -1 => il calendario è vuoto */
   if (treeRight[id] == -1) 
@@ -684,6 +687,14 @@ void NextEvent (void)
      printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
      (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time);
   */
+#if 0
+  if ( 0 && OprogStatus.refTime > 0.0)
+    {
+      printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f treeRight[0]=%d(idA=%d idB=%d)\n", (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time, treeRight[0], treeIdA[treeRight[0]], treeIdB[treeRight[0]]);
+      printf("idNow=%d idA=%d idB=%d time=%.15G\n",idNow, treeIdA[idNow], treeIdB[idNow], treeTime[idNow]);
+	printf("treeQindex[%d]=%d\n", treeRight[0], treeQIndex[treeRight[0]]);
+    }
+#endif
   MD_DEBUG2(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
   MD_DEBUG(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
@@ -794,7 +805,9 @@ void DeletePQ (int id)
 {
   int idp, idq, idr;
 
+#if MD_CALENDAR_HYBRID
   numevPQ--;
+#endif
   MD_DEBUG2(printf("[ DeleteEvent ] deleting node #%d\n", id));
   idr = treeRight[id];
   if (idr == -1)
@@ -863,6 +876,8 @@ void initHQlist(void)
   /* inizializzare anche le linked lists lineari? */
   for (i=0; i < OprogStatus.nlistsHQ+1; i++)
     linearLists[i] = -1;
+  for (i=1; i < Oparams.parnum*OprogStatus.eventMult; i++) 
+    treeStatus[i] = 0;/* 0 = free node */
 }
 #endif
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
@@ -964,6 +979,7 @@ int insertInEventQ(int p)
     {
       //numevLL++; /* numero eventi nelle linked lists*/
       /* insert in linked list */
+      treeStatus[p] = 1; /* 1 = belonging to linked lists of HQ */
       oldFirst=linearLists[i];
       MD_DEBUG2(printf("Inserting in linked lists oldFirst=%d p=%d idA=%d idB=%d\n", oldFirst,p,treeIdA[p],
 		       treeIdB[p]));
@@ -999,6 +1015,7 @@ void deleteFromEventQ(int e)
   //eventQEntry *pt=eventQEntries+e;
   //i=pt->qIndex;
   i = treeQIndex[e];
+  treeStatus[e] = 0; /* free node */
   if(i==currentIndex)
     {
       MD_DEBUG2(printf("[delete] e=%d PQ node\n", e));
@@ -1032,6 +1049,10 @@ int populatePQ(void)
     {
       /* change current index */
       currentIndex++;
+#if 0
+      if (OprogStatus.refTime > 0.0)
+    	printf("currentIndex=%d feeding PQ linearLists[]=%d\n", currentIndex, linearLists[currentIndex]);
+#endif
       MD_DEBUG2(printf("currentIndex=%d feeding PQ linearLists[]=%d\n", currentIndex, linearLists[currentIndex]));
       //printf("currentIndex=%d feeding PQ linearLists[]=%d baseIndex=%d\n", currentIndex, linearLists[currentIndex],
 	//     OprogStatus.baseIndex);
@@ -1050,6 +1071,9 @@ int populatePQ(void)
 	  e = treeNext[e];
 	  //e=eventQEntries[e].next;
 	}
+      /* 10/05/2010: notare che appena inserite gli eventi nell'albero
+	 binario questi non sono più raggiungibili tramite le linked lists
+	 anche se hanno treeQIndex[]=currentIndex */
       linearLists[currentIndex]=-1;
     }
   /* delete from binary tree here! */

@@ -2511,7 +2511,7 @@ void usrInitAft(void)
   inCell[2] = malloc(sizeof(int)*Oparams.parnum);
 #endif
 #ifdef MD_CALENDAR_HYBRID
-  tree = AllocMatI(15, poolSize);
+  tree = AllocMatI(16, poolSize);
 #else
   tree = AllocMatI(12, poolSize);
 #endif
@@ -2578,6 +2578,18 @@ void usrInitAft(void)
 	{
 	  comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
 	  angvel(); 
+	  calc_energy(NULL);
+	  scalevels(Oparams.T, K);
+	}
+      else if (OprogStatus.CMreset==-3)
+	{
+	  /* 10/05/2010: assegna le velocità da una gaussiana a temperatura Oparams.T 
+	     azzerando la velocità del centro di massa e riscalando poi le velocità
+	     per avere una temperatura esattamente uguale a Oparams.T */
+	  comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+#ifndef MD_SPOT_OFF
+	  angvel();
+#endif 
 	  calc_energy(NULL);
 	  scalevels(Oparams.T, K);
 	}

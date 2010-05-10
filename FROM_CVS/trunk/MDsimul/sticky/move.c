@@ -6397,23 +6397,86 @@ void timeshift_calendar(void)
 {
   int poolSize, id, idB, idA;
 #ifdef MD_CALENDAR_HYBRID
-  int k, e;
+  int k, e, i, j;
+  int *linearListsTmp;
 #endif
   poolSize = Oparams.parnum*OprogStatus.eventMult;
   /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
+#ifndef MD_CALENDAR_HYBRID
   for (id=1; id < poolSize; id++) 
     {
       if (treeUp[id] != -1)
 	{
-	  //if (id > 145000)
-	    //printf("Aid=%d/%d\n", id, poolSize);
+	  treeTime[id] -= OprogStatus.bigDt;
+	  
+	}
+    }
+#else
+  for (id=1; id < poolSize; id++) 
+    {
+      if (treeStatus[id] != 0) /* 1 or 2 mean "node not free", i.e. used */ 
+	{
 	  treeTime[id] -= OprogStatus.bigDt;
 	}
+    }
+#if 0
+  printf("treeRight[0]:%d currentIndex=%d linearList[]=%d BIG DT=================\n", treeRight[0], currentIndex,
+ 	 linearLists[currentIndex]);
+#endif
+  /* N.B. 10/05/2010: Nel caso del calendario ibrido O(1) siccome dopo un timeshift (bigDt)
+   il tempo viene posto a 0 e conseguentemente currentIndex=0 e baseIndex=0
+   allora bisogna shiftare anche l'array linearLists in modo che linearLists[0] 
+   corrisponda a linearLists[currentIndex], linearLists[currentIndex+1]->linearLists[1]
+   ...  linearLists[currentIndex-1]->linearLists[nlists-1] e linearLists[nlists] non deve
+   essere "rimappato". Inoltre si noti che l'albero binario non è raggiungibile mai tramite
+   le linear lists poiché linearLists[currenIndex]=-1 sempre! */
+  linearListsTmp = malloc(sizeof(int)*(OprogStatus.nlistsHQ+1));
+  for (i=0; i < OprogStatus.nlistsHQ + 1; i++)
+    {
+      j = currentIndex + i;
+      if(j>(OprogStatus.nlistsHQ-1)) /* account for wrap */
+	{
+	  j-=OprogStatus.nlistsHQ;
+	}
+      linearListsTmp[i] = linearLists[j];
+    }
+  linearListsTmp[OprogStatus.nlistsHQ] = linearLists[OprogStatus.nlistsHQ];
+#if 0  
+  printf("linearListsTmp[0] = %d linearLists[currentIndex=%d]=%d\n", linearListsTmp[0], currentIndex, linearLists[currentIndex]);
+#endif
+  for (i=0; i < OprogStatus.nlistsHQ + 1; i++)
+    {
+      linearLists[i] = linearListsTmp[i];
+      e = linearLists[i];
+      while (e!=-1)
+	{
+	  treeQIndex[e] = i;
+	  e = treeNext[e];
+	}
+    }
+  /* NOTA 10/05/2010: il ciclo for che segue è necessario per settare il nuovo treeQIndex[] dei nodi 
+     appartenenti al binary tree poichè 
+     i nodi nell'albero binaro ora non sono mai raggiungibili tramite linearLists
+     poiché appena messi nell'albero tramite populatePQ() viene fatta la seguente assegnazione 
+     linearLists[currentIndex] = -1, inoltre insertInEventQ() non aggiorna la linked lists
+     relativa a currentIndex se i==currentIndex e l'evento viene messo nel binary tree tramite InsertPQ().
+   */  
+  OprogStatus.baseIndex = 0; 
+  currentIndex = 0;
+
+  for (id=1; id < poolSize; id++) 
+    {
+      if (treeStatus[id] == 2) /* 1 or 2 mean "node not free", i.e. used */ 
+	{
+	  treeQIndex[id] = currentIndex;
+	}
+    }	
+  free(linearListsTmp);
+#endif
 #if 0
       if (treeTime[id] < 0.0)
 	treeTime[id] = 0.0;
 #endif
-    } 
 }
 #endif
 #ifdef MD_SAVEFRA
@@ -7086,7 +7149,9 @@ void move(void)
 	  timeshift_variables();
 	  //Oparams.time -= OprogStatus.bigDt;
 	  OprogStatus.refTime += OprogStatus.bigDt;
+	  //printf("boh\n");
        	  ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
+	  //exit(-1);
 #if 0
 	  rebuid_all_events();
 #endif
