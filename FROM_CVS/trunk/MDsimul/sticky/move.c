@@ -1,4 +1,5 @@
 #include<mdsimul.h>
+#define MD_BIGDT_REBUILD
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG09(x) 
@@ -4775,6 +4776,7 @@ double estimate_tmin(double t, int na, int nb)
 }
 #endif
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
+//extern int currentIndex;
 void PredictCellCross(int na, int nc)
 {
   int ignorecross[3], k, evCode, signDir[NDIM]={0,0,0}, iA, nl;
@@ -4902,7 +4904,9 @@ void PredictCellCross(int na, int nc)
       tm[k] = 0.0;
       printf("real cells: %d %d %d\n", (int)((rx[na] + L2) * cellsx[nl] / L),
 	     (int)((ry[na] + L2) * cellsy[nl] / L), (int)((rz[na] + L2)  * cellsz[nl] / L));
-#if 0
+#if 1
+      printf("idA=%d idB=%d treeQIndex[%d]=%d treeStatus[]=%d\n ", treeIdA[na+1], treeIdB[na+1], na+1, treeQIndex[na+1], treeStatus[na+1]);
+      printf("currentIndex=%d\n", OprogStatus.curIndex);
       printf("nc=%d na=%d nl=%d\n",nc,na,nl);
       printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
       printf("Cells(%d,%d,%d)\n", inCell[nc][0][na], inCell[nc][1][na], 
@@ -6377,19 +6381,35 @@ void timeshift_variables(void)
     OprogStatus.nextStoreTime -= OprogStatus.bigDt;
   for (i = 0; i < Oparams.parnum; i++)
     {
+      /* NOTA 10/05/2010: se si definisce MD_BIDGT_REBUILD ad ogni passo bigDt il calendario viene
+	 ricostruito completamente predicendo di nuovo tutti gli eventi (è l'extrema ratio se 
+	 l'altra soluzione attualmente di default non dovesse funzionare) */
+#ifdef MD_CALENDAR_HYBRID
+#ifdef MD_BIGDT_REBUILD
+      /* nel caso del calendario ibrido (e se si definisce MD_BIGDT_REBUILD) si fa un UpdateSystem()
+	 cosicché tutto gli atomi vengono portati al tempo attuale che corrisponde 
+	 ad un passo bigDt e quindi si puo' tranquillamente porre a 0 il tempo di ogni atomo */
+
+      atomTime[i] = 0.0;
+#else
       atomTime[i] -= OprogStatus.bigDt;
+#endif
+#else
+      atomTime[i] -= OprogStatus.bigDt;
+#endif
       lastcol[i] -= OprogStatus.bigDt;
 #ifdef MD_ROTDIFF_MIS
       OprogStatus.lastcolltime[i] -= OprogStatus.bigDt;
 #endif
-#ifdef MD_HSVISCO
-      OprogStatus.lastcoll -= OprogStatus.bigDt;
-#endif
     }
+#ifdef MD_HSVISCO
+  OprogStatus.lastcoll -= OprogStatus.bigDt;
+#endif
+
 }
 #ifdef MD_CALENDAR_HYBRID
 extern int insertInEventQ(int p);
-extern int currentIndex;
+//extern int currentIndex;
 void insertInCircularLists(int idNew);
 void initHQlist(void);
 #endif
@@ -6419,59 +6439,22 @@ void timeshift_calendar(void)
 	  treeTime[id] -= OprogStatus.bigDt;
 	}
     }
-#if 0
-  printf("treeRight[0]:%d currentIndex=%d linearList[]=%d BIG DT=================\n", treeRight[0], currentIndex,
- 	 linearLists[currentIndex]);
-#endif
-  /* N.B. 10/05/2010: Nel caso del calendario ibrido O(1) siccome dopo un timeshift (bigDt)
-   il tempo viene posto a 0 e conseguentemente currentIndex=0 e baseIndex=0
-   allora bisogna shiftare anche l'array linearLists in modo che linearLists[0] 
-   corrisponda a linearLists[currentIndex], linearLists[currentIndex+1]->linearLists[1]
-   ...  linearLists[currentIndex-1]->linearLists[nlists-1] e linearLists[nlists] non deve
-   essere "rimappato". Inoltre si noti che l'albero binario non è raggiungibile mai tramite
-   le linear lists poiché linearLists[currenIndex]=-1 sempre! */
-  linearListsTmp = malloc(sizeof(int)*(OprogStatus.nlistsHQ+1));
-  for (i=0; i < OprogStatus.nlistsHQ + 1; i++)
-    {
-      j = currentIndex + i;
-      if(j>(OprogStatus.nlistsHQ-1)) /* account for wrap */
-	{
-	  j-=OprogStatus.nlistsHQ;
-	}
-      linearListsTmp[i] = linearLists[j];
-    }
-  linearListsTmp[OprogStatus.nlistsHQ] = linearLists[OprogStatus.nlistsHQ];
-#if 0  
-  printf("linearListsTmp[0] = %d linearLists[currentIndex=%d]=%d\n", linearListsTmp[0], currentIndex, linearLists[currentIndex]);
-#endif
-  for (i=0; i < OprogStatus.nlistsHQ + 1; i++)
-    {
-      linearLists[i] = linearListsTmp[i];
-      e = linearLists[i];
-      while (e!=-1)
-	{
-	  treeQIndex[e] = i;
-	  e = treeNext[e];
-	}
-    }
-  /* NOTA 10/05/2010: il ciclo for che segue è necessario per settare il nuovo treeQIndex[] dei nodi 
-     appartenenti al binary tree poichè 
-     i nodi nell'albero binaro ora non sono mai raggiungibili tramite linearLists
-     poiché appena messi nell'albero tramite populatePQ() viene fatta la seguente assegnazione 
-     linearLists[currentIndex] = -1, inoltre insertInEventQ() non aggiorna la linked lists
-     relativa a currentIndex se i==currentIndex e l'evento viene messo nel binary tree tramite InsertPQ().
-   */  
+  /* svuota l'albero binario */
+  treeLeft[0] = treeRight[0] = -1;
+  /*treeIdA[0] = 2*Oparams.parnum + 1;  questa non serve poiche' il nodo libero rimane invariato */
+  /* azzera le linked lists che vanno ripopolate */
+  for (i=0; i < OprogStatus.nlistsHQ+1; i++)
+    linearLists[i] = -1;
   OprogStatus.baseIndex = 0; 
-  currentIndex = 0;
-
+  OprogStatus.curIndex = 0;
   for (id=1; id < poolSize; id++) 
     {
-      if (treeStatus[id] == 2) /* 1 or 2 mean "node not free", i.e. used */ 
+      if (treeStatus[id] != 0) /* 1 or 2 mean "node not free", i.e. used */ 
 	{
-	  treeQIndex[id] = currentIndex;
+	  /* ripopola le linked lists e l'albero binario con i nodi preesistenti */
+       	  insertInEventQ(id);
 	}
-    }	
-  free(linearListsTmp);
+    }
 #endif
 #if 0
       if (treeTime[id] < 0.0)
@@ -6804,6 +6787,36 @@ void readBinBak(char *fn)
 }
 #endif
 /* ============================ >>> move<<< =================================*/
+#ifdef MD_CALENDAR_HYBRID
+void rebuildCalend_TS(void)
+{
+  int j, k, n, nl, nc, iA, nl_ignore, i;
+
+  /* for safety reset linked lists */
+  for (i=0; i < Oparams.parnum; i++)
+    crossevtodel[i] = -1;
+  rebuild_linked_list();
+  OprogStatus.baseIndex = 0;
+  InitEventList();
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  rebuildCalendar();
+  if (OprogStatus.intervalSum > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+  if (OprogStatus.scalevel > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+#ifdef MD_DOUBLE_DT
+  if (OprogStatus.brownian)
+    ScheduleEvent(-1, ATOM_LIMIT+12,OprogStatus.nextDtR);
+#endif
+}
+#endif
 void move(void)
 {
 #ifdef MD_SAVE_REALLY_ALL
@@ -7145,16 +7158,26 @@ void move(void)
       else if (evIdB == ATOM_LIMIT + 11)
 	{
 	  //UpdateSystem();
+	  //printf("BIG DT!\n");
+#ifndef MD_CALENDAR_HYBRID
 	  timeshift_calendar();
-	  timeshift_variables();
-	  //Oparams.time -= OprogStatus.bigDt;
-	  OprogStatus.refTime += OprogStatus.bigDt;
-	  //printf("boh\n");
-       	  ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
-	  //exit(-1);
-#if 0
-	  rebuid_all_events();
+#else
+#ifdef MD_BIGDT_REBUILD
+	  UpdateSystem();
+#else
+	  //UpdateSystem();
+	  /* N.B. se si pone atomTime[i] = 0 in timeshif_variables() bisogna scommentare questa riga */
+	  timeshift_calendar();
 #endif
+#endif
+	  timeshift_variables();
+	  OprogStatus.refTime += OprogStatus.bigDt;
+#if defined(MD_CALENDAR_HYBRID) && defined(MD_BIGDT_REBUILD)
+	  /* reinitialize linke lists and predict all event again */
+	  rebuildCalend_TS();
+#endif
+       	  ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
+	  //printf("FINE BIG DT\n");
 	}
 #endif
 #ifdef MD_DOUBLE_DT
