@@ -1598,6 +1598,7 @@ accumulators initialization is crucial */
   OprogStatus.nlistsHQ = 50000;  
   OprogStatus.adjustHQ = 0;
   OprogStatus.baseIndex = 0;
+  OprogStatus.curIndex = 0;
 #endif
   OprogStatus.nextSumTime = 0.0;
   OprogStatus.nextcheckTime = 0.0;
