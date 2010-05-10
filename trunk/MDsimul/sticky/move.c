@@ -1,5 +1,5 @@
 #include<mdsimul.h>
-#define MD_BIGDT_REBUILD
+//#define MD_BIGDT_REBUILD
 #define SIMUL
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG09(x) 
