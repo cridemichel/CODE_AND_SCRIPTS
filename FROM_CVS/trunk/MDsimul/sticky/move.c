@@ -6392,7 +6392,7 @@ void timeshift_variables(void)
 
       atomTime[i] = 0.0;
 #else
-      atomTime[i] -= OprogStatus.bigDt;
+      atomTime[i] = 0.0;//OprogStatus.bigDt;
 #endif
 #else
       atomTime[i] -= OprogStatus.bigDt;
@@ -6796,6 +6796,7 @@ void rebuildCalend_TS(void)
     crossevtodel[i] = -1;
   rebuild_linked_list();
   OprogStatus.baseIndex = 0;
+  OprogStatus.curIndex = 0;
   InitEventList();
   for (k = 0;  k < NDIM; k++)
     {
@@ -7164,7 +7165,7 @@ void move(void)
 #ifdef MD_BIGDT_REBUILD
 	  UpdateSystem();
 #else
-	  //UpdateSystem();
+	  UpdateSystem();
 	  /* N.B. se si pone atomTime[i] = 0 in timeshif_variables() bisogna scommentare questa riga */
 	  timeshift_calendar();
 #endif
