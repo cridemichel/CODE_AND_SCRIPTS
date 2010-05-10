@@ -6418,7 +6418,6 @@ void timeshift_calendar(void)
   int poolSize, id, idB, idA;
 #ifdef MD_CALENDAR_HYBRID
   int k, e, i, j;
-  int *linearListsTmp;
 #endif
   poolSize = Oparams.parnum*OprogStatus.eventMult;
   /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
