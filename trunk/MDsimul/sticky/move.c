@@ -6392,7 +6392,7 @@ void timeshift_variables(void)
 
       atomTime[i] = 0.0;
 #else
-      atomTime[i] = 0.0;//OprogStatus.bigDt;
+      atomTime[i] -= OprogStatus.bigDt;
 #endif
 #else
       atomTime[i] -= OprogStatus.bigDt;
@@ -7165,7 +7165,7 @@ void move(void)
 #ifdef MD_BIGDT_REBUILD
 	  UpdateSystem();
 #else
-	  UpdateSystem();
+	  //UpdateSystem();
 	  /* N.B. se si pone atomTime[i] = 0 in timeshif_variables() bisogna scommentare questa riga */
 	  timeshift_calendar();
 #endif
