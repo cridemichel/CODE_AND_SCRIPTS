@@ -10376,8 +10376,6 @@ void rebuildCalend_TS(void)
   int j, k, n, nl, nc, iA, nl_ignore, i;
 
   /* for safety reset linked lists */
-  for (i=0; i < Oparams.parnum; i++)
-    crossevtodel[i] = -1;
   rebuild_linked_list();
   OprogStatus.baseIndex = 0;
   OprogStatus.curIndex = 0;
@@ -10387,6 +10385,8 @@ void rebuildCalend_TS(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
+  if (OprogStatus.useNNL)
+    rebuildNNL();
   rebuildCalendar();
   if (OprogStatus.intervalSum > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
@@ -10827,9 +10827,23 @@ void move(void)
       else if (evIdB == ATOM_LIMIT + 11)
 	{
 	  //UpdateSystem();
+#ifndef MD_CALENDAR_HYBRID
 	  timeshift_calendar();
+#else
+#ifdef MD_BIGDT_REBUILD
+	  UpdateSystem();
+#else
+	  //UpdateSystem();
+	  /* N.B. se si pone atomTime[i] = 0 in timeshif_variables() bisogna scommentare questa riga */
+	  timeshift_calendar();
+#endif
+#endif
 	  timeshift_variables();
 	  OprogStatus.refTime += OprogStatus.bigDt;
+#if defined(MD_CALENDAR_HYBRID) && defined(MD_BIGDT_REBUILD)
+	  /* reinitialize linke lists and predict all event again */
+	  rebuildCalend_TS();
+#endif
 	  ScheduleEvent(-1, ATOM_LIMIT + 11, OprogStatus.bigDt);
           //rebuild_all_events();
 	}
