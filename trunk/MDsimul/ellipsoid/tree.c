@@ -101,7 +101,9 @@ int InsertPQ(int idNew)
 {
   int more, id;
   tEvent = treeTime[idNew];
-
+#ifdef MD_CALENDAR_HYBRID
+  treeStatus[idNew] = 2; /* 2 = belonging to binary tree */
+#endif
   id = 0;
   /* treeRight[id] == -1 => il calendario è vuoto */
   if (treeRight[id] == -1) 
@@ -672,11 +674,12 @@ void DeleteEvent(int id)
 void initHQlist(void)
 {
   int i;
-  baseIndex = 0;
-  currentIndex = 0;
+  OprogStatus.curIndex = 0;
   /* inizializzare anche le linked lists lineari? */
   for (i=0; i < nlists+1; i++)
     linearLists[i] = -1;
+  for (i=1; i < Oparams.parnum*OprogStatus.eventMult; i++) 
+    treeStatus[i] = 0;/* 0 = free node */
 }
 #endif
 
@@ -730,6 +733,7 @@ int insertInEventQ(int p)
     }
   else
     {
+      treeStatus[p] = 1; /* 1 = belonging to linked lists of HQ */
       /* insert in linked list */
       oldFirst=linearLists[i];
       MD_DEBUG2(printf("Inserting in linked lists oldFirst=%d p=%d idA=%d idB=%d\n", oldFirst,p,treeIdA[p],
@@ -766,6 +770,7 @@ void deleteFromEventQ(int e)
   //eventQEntry *pt=eventQEntries+e;
   //i=pt->qIndex;
   i = treeQIndex[e];
+  treeStatus[e] = 0;
 #ifdef MD_SPHERICAL_WALL
   /* N.B. sphWall+1 è l'evento di cell-crossing del 
      muro sferico ma tale evento non viene schedulato affatto

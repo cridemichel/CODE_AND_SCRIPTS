@@ -1536,6 +1536,17 @@ void outputSummary(void)
   if (numcalldist && OprogStatus.SDmethod)
     printf("Percentage of failed dist=%.6f%%\n", 100.0*(((double) numdisttryagain) / numcalldist));
   printf("Number of collisions: %lld\n", numcoll);
+#ifdef MD_CALENDAR_HYBRID
+#if 0
+  if (OprogStatus.adjustHQ)
+    {
+      //printf("Average number of events in binary tree: %d (Actual is %d)\n", sumnumevPQ/callsAdjsuHQ, numevPQ);
+      adjust_HQ_params();
+    }
+#endif
+  printf("Actual number of events in binary tree: %d\n", numevPQ);
+#endif
+
 #ifdef MD_PATCHY_HE 
   if (OprogStatus.checkGrazing)
     check_all_bonds();
@@ -10196,7 +10207,21 @@ void timeshift_variables(void)
     {
       if (OprogStatus.useNNL)
 	nebrTab[i].nexttime -= OprogStatus.bigDt;
+      /* NOTA 10/05/2010: se si definisce MD_BIDGT_REBUILD ad ogni passo bigDt il calendario viene
+	 ricostruito completamente predicendo di nuovo tutti gli eventi (è l'extrema ratio se 
+	 l'altra soluzione attualmente di default non dovesse funzionare) */
+#ifdef MD_CALENDAR_HYBRID
+#ifdef MD_BIGDT_REBUILD
+      /* nel caso del calendario ibrido (e se si definisce MD_BIGDT_REBUILD) si fa un UpdateSystem()
+	 cosicché tutto gli atomi vengono portati al tempo attuale che corrisponde 
+	 ad un passo bigDt e quindi si puo' tranquillamente porre a 0 il tempo di ogni atomo */
+      atomTime[i] = 0.0;
+#else
       atomTime[i] -= OprogStatus.bigDt;
+#endif
+#else
+      atomTime[i] -= OprogStatus.bigDt;
+#endif
       lastcol[i] -= OprogStatus.bigDt;
       OprogStatus.lastcolltime[i] -= OprogStatus.bigDt;
 #ifdef MD_HSVISCO
@@ -10204,16 +10229,53 @@ void timeshift_variables(void)
 #endif
     }
 }
+#ifdef MD_CALENDAR_HYBRID
+extern int insertInEventQ(int p);
+//extern int currentIndex;
+void insertInCircularLists(int idNew);
+void initHQlist(void);
+#endif
+
 void timeshift_calendar(void)
 {
   int poolSize, id;
+#ifdef MD_CALENDAR_HYBRID
+  int k, e, i, j;
+#endif
+
   poolSize = Oparams.parnum*OprogStatus.eventMult;
+#ifndef MD_CALENDAR_HYBRID
   /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
   for (id=1; id < poolSize; id++) 
     {
       if (treeUp[id] != -1)
 	treeTime[id] -= OprogStatus.bigDt;
     } 
+#else
+  for (id=1; id < poolSize; id++) 
+    {
+      if (treeStatus[id] != 0) /* 1 or 2 mean "node not free", i.e. used */ 
+	{
+	  treeTime[id] -= OprogStatus.bigDt;
+	}
+    }
+  /* svuota l'albero binario */
+  treeLeft[0] = treeRight[0] = -1;
+  /*treeIdA[0] = 2*Oparams.parnum + 1;  questa non serve poiche' il nodo libero rimane invariato */
+  /* azzera le linked lists che vanno ripopolate */
+  for (i=0; i < OprogStatus.nlistsHQ+1; i++)
+    linearLists[i] = -1;
+  OprogStatus.baseIndex = 0; 
+  OprogStatus.curIndex = 0;
+  for (id=1; id < poolSize; id++) 
+    {
+      if (treeStatus[id] != 0) /* 1 or 2 mean "node not free", i.e. used */ 
+	{
+	  /* ripopola le linked lists e l'albero binario con i nodi preesistenti */
+       	  insertInEventQ(id);
+	}
+    }
+#endif
 }
 #endif
 #ifdef EDHE_FLEX

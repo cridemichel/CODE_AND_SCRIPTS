@@ -405,12 +405,14 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeNext   tree[12]
 #define treePrev   tree[13]
 #define treeQIndex tree[14]
+#define treeStatus tree[15]
 #endif
 #else
 #ifdef MD_CALENDAR_HYBRID
 #define treeNext   tree[9]
 #define treePrev   tree[10]
 #define treeQIndex tree[11]
+#define treeStatus tree[12]
 #endif
 #endif
 #endif
@@ -563,6 +565,13 @@ struct progStatus
   double lastu3z[MAXPAR];
 #endif
   double lastcolltime[MAXPAR];
+#ifdef MD_CALENDAR_HYBRID
+  int nlistsHQ;
+  int scaleHQ;
+  int adjustHQ;
+  int baseIndex;
+  int curIndex;
+#endif
   double springkSD;
   int SDmethod;
   double toldxNR;
@@ -916,6 +925,13 @@ struct pascii opro_ascii[] =
   {"sumox",        OS(sumox),                       -MAXPAR,        1, "%.15G"},
   {"sumoy",        OS(sumoy),                       -MAXPAR,        1, "%.15G"},
   {"sumoz",        OS(sumoz),                       -MAXPAR,        1, "%.15G"},
+#ifdef MD_CALENDAR_HYBRID
+  {"nlistsHQ",     &OS(nlistsHQ),                    1,   1,  "%d"},
+  {"scaleHQ",      &OS(scaleHQ),                    1,   1,  "%d"},
+  {"adjustHQ",     &OS(adjustHQ),                   1,   1,  "%d"},
+  {"baseIndex",    &OS(baseIndex),                  1,   1,  "%d"},
+  {"curIndex", &OS(curIndex),               1,   1,  "%d"},
+#endif
 #ifdef MD_CALC_DPP
   {"sumdx",        OS(sumdx),                       -MAXPAR,        1, "%.15G"},
   {"sumdy",        OS(sumdy),                       -MAXPAR,        1, "%.15G"},
@@ -1356,6 +1372,11 @@ struct singlePar OsinglePar[] = {
   {"scalfact",   &OprogStatus.scalfact,       CT},
   {"reducefact", &OprogStatus.reducefact,     CT},
   {"phitol",      &OprogStatus.phitol,        CT},
+#ifdef MD_CALENDAR_HYBRID
+  {"scaleHQ",  &OprogStatus.scaleHQ,          INT},
+  {"nlistsHQ", &OprogStatus.nlistsHQ,         INT},
+  {"adjustHQ", &OprogStatus.adjustHQ,         INT},
+#endif
   {"axestol",     &OprogStatus.axestol,       CT},
   {"minDist",     &OprogStatus.minDist,       CT},
   {"tmsd2end",    &OprogStatus.tmsd2end,      CT},
