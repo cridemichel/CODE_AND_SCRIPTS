@@ -874,7 +874,7 @@ void initHQlist(void)
      t = 0 o quando si fa un bigDt (08/05/10: Anche se di ciò ancora non sono sicurao al 100%) */
   //OprogStatus.baseIndex = 0;
   //currentIndex = 0;
-  OprogStatus.curIndex = 0;
+  //OprogStatus.curIndex = 0;
   /* inizializzare anche le linked lists lineari? */
   for (i=0; i < OprogStatus.nlistsHQ+1; i++)
     linearLists[i] = -1;
