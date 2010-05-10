@@ -32,7 +32,7 @@ extern double rxC, ryC, rzC;
 int numevPQ=0; /* numero di eventi nella PQ (i.e. binary tree) */
 //int linearLists[nlists+1];/*+1 for overflow*/ /* dynamically allocated */
 int *linearLists; /* dynamically allocated */
-int currentIndex=0;
+//int currentIndex=0;
 int populatePQ(void);
 //double baseIndex=0;//in OprogStatus
 void deleteFromEventQ(int e);
@@ -660,6 +660,7 @@ void NextEvent (void)
   populatePQ();
 #endif
   idNow = treeRight[0];  
+
   /* Cerca l'evento con tempo minore 
    * NOTA: l'albero è ordinato e ogni nodo sinistro ha un tempo inferiore */
   while (treeLeft[idNow] > -1) 
@@ -688,7 +689,7 @@ void NextEvent (void)
      (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time);
   */
 #if 0
-  if ( 0 && OprogStatus.refTime > 0.0)
+  if (treeIdA[idNow] == 20446 && treeIdB[idNow] == ATOM_LIMIT+102)
     {
       printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f treeRight[0]=%d(idA=%d idB=%d)\n", (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time, treeRight[0], treeIdA[treeRight[0]], treeIdB[treeRight[0]]);
       printf("idNow=%d idA=%d idB=%d time=%.15G\n",idNow, treeIdA[idNow], treeIdB[idNow], treeTime[idNow]);
@@ -872,7 +873,8 @@ void initHQlist(void)
   /* base index non deve essere azzerato se non all'inizio della simulazione quando
      t = 0 o quando si fa un bigDt (08/05/10: Anche se di ciò ancora non sono sicurao al 100%) */
   //OprogStatus.baseIndex = 0;
-  currentIndex = 0;
+  //currentIndex = 0;
+  OprogStatus.curIndex = 0;
   /* inizializzare anche le linked lists lineari? */
   for (i=0; i < OprogStatus.nlistsHQ+1; i++)
     linearLists[i] = -1;
@@ -955,7 +957,7 @@ int insertInEventQ(int p)
   //pt=eventQEntries+p; /* use pth entry */
   /* NOTA baseIndex va messo in OprogStatus! */
   i=(int)(OprogStatus.scaleHQ*treeTime[p]-OprogStatus.baseIndex);
-
+  
   /* O(1) is disabled forcing i to be currentIndex
      i=currentIndex;*/
 
@@ -963,14 +965,14 @@ int insertInEventQ(int p)
   if(i>(OprogStatus.nlistsHQ-1)) /* account for wrap */
     {
       i-=OprogStatus.nlistsHQ;
-      if(i>=currentIndex-1)
+      if(i>=OprogStatus.curIndex-1)
 	{
 	  i=OprogStatus.nlistsHQ; /* store in overflow list */
 	}
     }
   //pt->qIndex=i;
   treeQIndex[p] = i;
-  if(i==currentIndex)
+  if(i==OprogStatus.curIndex)
     {
       InsertPQ(p); /* insert in PQ */
       return p;
@@ -980,6 +982,7 @@ int insertInEventQ(int p)
       //numevLL++; /* numero eventi nelle linked lists*/
       /* insert in linked list */
       treeStatus[p] = 1; /* 1 = belonging to linked lists of HQ */
+    
       oldFirst=linearLists[i];
       MD_DEBUG2(printf("Inserting in linked lists oldFirst=%d p=%d idA=%d idB=%d\n", oldFirst,p,treeIdA[p],
 		       treeIdB[p]));
@@ -1016,7 +1019,7 @@ void deleteFromEventQ(int e)
   //i=pt->qIndex;
   i = treeQIndex[e];
   treeStatus[e] = 0; /* free node */
-  if(i==currentIndex)
+  if(i==OprogStatus.curIndex)
     {
       MD_DEBUG2(printf("[delete] e=%d PQ node\n", e));
       DeletePQ(e); /* delete from pq */
@@ -1048,7 +1051,7 @@ int populatePQ(void)
     /*if priority queue exhausted, i.e. if binary tree calendar is void */
     {
       /* change current index */
-      currentIndex++;
+      OprogStatus.curIndex++;
 #if 0
       if (OprogStatus.refTime > 0.0)
     	printf("currentIndex=%d feeding PQ linearLists[]=%d\n", currentIndex, linearLists[currentIndex]);
@@ -1056,15 +1059,15 @@ int populatePQ(void)
       MD_DEBUG2(printf("currentIndex=%d feeding PQ linearLists[]=%d\n", currentIndex, linearLists[currentIndex]));
       //printf("currentIndex=%d feeding PQ linearLists[]=%d baseIndex=%d\n", currentIndex, linearLists[currentIndex],
 	//     OprogStatus.baseIndex);
-      if(currentIndex==OprogStatus.nlistsHQ)
+      if(OprogStatus.curIndex==OprogStatus.nlistsHQ)
 	{
-	  currentIndex=0;
+	  OprogStatus.curIndex=0;
 	  OprogStatus.baseIndex+=OprogStatus.nlistsHQ;
 	  //printf("baseIndex=%f\n", baseIndex);
 	  processOverflowList();
 	}
       /* populate pq */
-      e=linearLists[currentIndex];
+      e=linearLists[OprogStatus.curIndex];
       while(e!=-1)
 	{
 	  InsertPQ(e);
@@ -1074,7 +1077,7 @@ int populatePQ(void)
       /* 10/05/2010: notare che appena inserite gli eventi nell'albero
 	 binario questi non sono più raggiungibili tramite le linked lists
 	 anche se hanno treeQIndex[]=currentIndex */
-      linearLists[currentIndex]=-1;
+      linearLists[OprogStatus.curIndex]=-1;
     }
   /* delete from binary tree here! */
 #if 0

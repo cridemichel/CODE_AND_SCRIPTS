@@ -345,6 +345,7 @@ struct progStatus
   int scaleHQ;
   int adjustHQ;
   int baseIndex;
+  int curIndex;
 #endif
   /* Accumulator for the radial distribution function */
   int hist[MAXBIN];
@@ -608,6 +609,7 @@ struct pascii opro_ascii[] =
   {"scaleHQ",      &OS(scaleHQ),                    1,   1,  "%d"},
   {"adjustHQ",     &OS(adjustHQ),                   1,   1,  "%d"},
   {"baseIndex",    &OS(baseIndex),                  1,   1,  "%d"},
+  {"curIndex", &OS(curIndex),               1,   1,  "%d"},
 #endif
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
