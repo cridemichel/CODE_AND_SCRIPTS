@@ -674,7 +674,7 @@ void DeleteEvent(int id)
 void initHQlist(void)
 {
   int i;
-  OprogStatus.curIndex = 0;
+  //OprogStatus.curIndex = 0;
   /* inizializzare anche le linked lists lineari? */
   for (i=0; i < nlists+1; i++)
     linearLists[i] = -1;
