@@ -2422,7 +2422,7 @@ void adjust_HQ_params(void)
     }
   printf("Adjusting HQ params: scaleHQ=%G nlistsHQ=%d\n", OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
   free(linearLists);
-  linearLists = malloc(sizeof(int)*OprogStatus.nlistsHQ);
+  linearLists = malloc(sizeof(int)*(OprogStatus.nlistsHQ+1));
   UpdateSystem();
   for (k = 0;  k < NDIM; k++)
     {
