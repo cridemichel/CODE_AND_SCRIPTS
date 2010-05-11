@@ -4907,7 +4907,7 @@ void PredictCellCross(int na, int nc)
       tm[k] = 0.0;
       printf("real cells: %d %d %d\n", (int)((rx[na] + L2) * cellsx[nl] / L),
 	     (int)((ry[na] + L2) * cellsy[nl] / L), (int)((rz[na] + L2)  * cellsz[nl] / L));
-#if 1
+#if 0
       printf("idA=%d idB=%d treeQIndex[%d]=%d treeStatus[]=%d\n ", treeIdA[na+1], treeIdB[na+1], na+1, treeQIndex[na+1], treeStatus[na+1]);
       printf("currentIndex=%d\n", OprogStatus.curIndex);
       printf("nc=%d na=%d nl=%d\n",nc,na,nl);
