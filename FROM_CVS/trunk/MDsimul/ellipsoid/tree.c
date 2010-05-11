@@ -738,7 +738,9 @@ int insertInEventQ(int p)
 
   /* se si scommenta questa riga di fatto si disattiva il calendario O(1) */
   //printf("curIndex=%d baseIndex=%d\n", OprogStatus.curIndex, OprogStatus.baseIndex);
-  //i=OprogStatus.curIndex;
+  /* disable O(1) if scaleHQ < 0 */
+  if (OprogStatus.scaleHQ < 0)
+    i=OprogStatus.curIndex;
 
   //printf("baseIndex=%.15G p=%d i=%d\n", baseIndex, p, i);
   if(i>(OprogStatus.nlistsHQ-1)) /* account for wrap */
