@@ -30,6 +30,8 @@ extern double rxC, ryC, rzC;
  */
 #ifdef MD_CALENDAR_HYBRID
 int numevPQ=0; /* numero di eventi nella PQ (i.e. binary tree) */
+int totevHQ=0;
+int overevHQ=0;
 //int linearLists[nlists+1];/*+1 for overflow*/ /* dynamically allocated */
 int *linearLists; /* dynamically allocated */
 //int currentIndex=0;
@@ -880,7 +882,8 @@ void initHQlist(void)
     linearLists[i] = -1;
   for (i=1; i < Oparams.parnum*OprogStatus.eventMult; i++) 
     treeStatus[i] = 0;/* 0 = free node */
-  
+
+  numevPQ = overevHQ = totevHQ = 0; 
   OprogStatus.curIndex=0;
   /* NOTA 11/10/2010: l'importante è che: baseIndex < OprogStatus.scaleHQ*Oparams.time */  
   OprogStatus.baseIndex = Oparams.time*OprogStatus.scaleHQ;
@@ -974,9 +977,11 @@ int insertInEventQ(int p)
       if(i>=OprogStatus.curIndex-1)
 	{
 	  i=OprogStatus.nlistsHQ; /* store in overflow list */
+	  overevHQ++;
 	}
     }
   //pt->qIndex=i;
+  totevHQ++;
   treeQIndex[p] = i;
   if(i==OprogStatus.curIndex)
     {
@@ -1010,6 +1015,8 @@ void processOverflowList(void)
   i=OprogStatus.nlistsHQ; /* overflow list */
   e=linearLists[i];
   linearLists[i]=-1; /* mark empty; we will treat all entries and may re-add some */
+
+  overevHQ=0;
   while(e!=-1)
     {
       eNext = treeNext[e];
@@ -1023,6 +1030,7 @@ void deleteFromEventQ(int e)
   int prev,next,i;
   //eventQEntry *pt=eventQEntries+e;
   //i=pt->qIndex;
+  totevHQ--;
   i = treeQIndex[e];
   treeStatus[e] = 0; /* free node */
   if(i==OprogStatus.curIndex)

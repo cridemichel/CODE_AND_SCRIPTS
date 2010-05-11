@@ -35,6 +35,8 @@ extern int sphWall, sphWallOuter;
  */
 #ifdef MD_CALENDAR_HYBRID
 int numevPQ=0; /* numero di eventi nella PQ (i.e. binary tree) */
+int totevHQ=0;
+int overevHQ=0;
 //int linearLists[nlists+1];/*+1 for overflow*/ /* dynamically allocated */
 int *linearLists; /* dynamically allocated */
 //int currentIndex=0;
@@ -695,6 +697,8 @@ void initHQlist(void)
     linearLists[i] = -1;
   for (i=1; i < Oparams.parnum*OprogStatus.eventMult; i++) 
     treeStatus[i] = 0;/* 0 = free node */
+  numevPQ = overevHQ = totevHQ = 0; 
+ 
 #ifdef MD_CALENDAR_HYBRID
   /* sembra che sia necessario per ricostruire il calendario, boh...*/
   OprogStatus.curIndex=0;
@@ -735,7 +739,7 @@ int insertInEventQ(int p)
   //eventQEntry * pt;
   //pt=eventQEntries+p; /* use pth entry */
   i=(int)(OprogStatus.scaleHQ*treeTime[p]-OprogStatus.baseIndex);
-
+  totevHQ++;
   /* se si scommenta questa riga di fatto si disattiva il calendario O(1) */
   //printf("curIndex=%d baseIndex=%d\n", OprogStatus.curIndex, OprogStatus.baseIndex);
   /* disable O(1) if scaleHQ < 0 */
@@ -749,6 +753,7 @@ int insertInEventQ(int p)
       if(i>=OprogStatus.curIndex-1)
 	{
 	  i=OprogStatus.nlistsHQ; /* store in overflow list */
+	  overevHQ++;
 	}
     }
   //pt->qIndex=i;
@@ -783,6 +788,7 @@ void processOverflowList(void)
   i=OprogStatus.nlistsHQ; /* overflow list */
   e=linearLists[i];
   linearLists[i]=-1; /* mark empty; we will treat all entries and may re-add some */
+  overevHQ = 0;
   while(e!=-1)
     {
       eNext = treeNext[e];
@@ -798,6 +804,7 @@ void deleteFromEventQ(int e)
   //i=pt->qIndex;
   i = treeQIndex[e];
   treeStatus[e] = 0;
+  totevHQ--;
 #ifdef MD_SPHERICAL_WALL
   /* N.B. sphWall+1 è l'evento di cell-crossing del 
      muro sferico ma tale evento non viene schedulato affatto

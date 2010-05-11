@@ -22,7 +22,7 @@ double *a0I;
 double **Aip;
 #ifdef MD_CALENDAR_HYBRID
 extern int *linearLists;
-extern int numevPQ;
+extern int numevPQ, totevHQ, overevHQ;
 #endif
 #ifdef MD_SILICA
 #ifdef MD_THREESPOTS
@@ -1603,6 +1603,7 @@ accumulators initialization is crucial */
   OprogStatus.adjustHQ = 0;
   OprogStatus.baseIndex = 0;
   OprogStatus.curIndex = 0;
+  OprogStatus.overthrHQ = 10;
 #endif
   OprogStatus.nextSumTime = 0.0;
   OprogStatus.nextcheckTime = 0.0;
@@ -2328,6 +2329,8 @@ extern void readBinBak(char *fn);
 #endif
 #ifdef MD_CALENDAR_HYBRID
 extern int *linearLists;
+extern void rebuild_linked_list(void);
+extern void rebuildCalendar(void);
 void estimate_HQ_params(double phi)
 {
   /* linear approximation for linear dependence on N */
@@ -2372,11 +2375,14 @@ void estimate_HQ_params(double phi)
   OprogStatus.nlistsHQ = (int) nlf*Oparams.parnum;
 }
 #if 1
+void rebuild_linked_list();
 void adjust_HQ_params(void)
 {
   int targetNE = 15, del=5;
+  int k, i;
   double GOLD = 1.3;
-  if (targetNE - del < numevPQ && targetNE + del > numevPQ)// && numovHQ < totevHQ/OprogStatus.nlistsHQ)
+  if (targetNE - del <= numevPQ && targetNE + del >= numevPQ && 
+      (overevHQ <= OprogStatus.overthrHQ) )// && numovHQ < totevHQ/OprogStatus.nlistsHQ)
     {
       printf("Hybrid Calendar parameters adjusted!\n");
       OprogStatus.adjustHQ = 0;
@@ -2386,15 +2392,43 @@ void adjust_HQ_params(void)
       if (numevPQ > targetNE)
 	{
 	  OprogStatus.scaleHQ *= GOLD;
+	  //OprogStatus.nlistsHQ *=GOLD;
 	 }
       else
 	{
 	  OprogStatus.scaleHQ /= GOLD;
+	  //OprogStatus.nlistsHQ /=GOLD;
 	}
+      if (overevHQ > OprogStatus.overthrHQ) 
+	OprogStatus.nlistsHQ *= GOLD;
     }
-  //linearLists = realloc(sizeof(int)*OprogStatus.nlistsHQ);
-  //InitEventList();
-  //rebuildCalendar();
+  printf("Adjusting HQ params: scaleHQ=%G nlistsHQ=%d\n", OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
+  free(linearLists);
+  linearLists = malloc(sizeof(int)*OprogStatus.nlistsHQ);
+  UpdateSystem();
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+   for (i=0; i < Oparams.parnum; i++)
+    crossevtodel[i] = -1;
+
+  rebuild_linked_list();
+
+  rebuildCalendar();
+  if (OprogStatus.intervalSum > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+  if (OprogStatus.scalevel > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+#ifdef MD_DOUBLE_DT
+  if (OprogStatus.brownian)
+    ScheduleEvent(-1, ATOM_LIMIT+12,OprogStatus.nextDtR);
+#endif
+
 }
 #endif
 #endif
