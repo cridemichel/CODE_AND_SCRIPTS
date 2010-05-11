@@ -1307,6 +1307,9 @@ void scale_Phi(void)
 }
 
 #endif
+#ifdef MD_CALENDAR_HYBRID
+void adjust_HQ_params(void);
+#endif
 void outputSummary(void)
 {
   /* mettere qualcosa qui */
@@ -1324,7 +1327,7 @@ void outputSummary(void)
     printf("Average iterations in projonto: %.8G\n", ((double) itsprojonto)/callsprojonto);
   printf("Number of collisions: %lld\n", numcoll);
 #ifdef MD_CALENDAR_HYBRID
-#if 0
+#if 1
   if (OprogStatus.adjustHQ)
     {
       //printf("Average number of events in binary tree: %d (Actual is %d)\n", sumnumevPQ/callsAdjsuHQ, numevPQ);
