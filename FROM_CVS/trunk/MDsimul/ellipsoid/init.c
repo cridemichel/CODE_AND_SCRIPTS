@@ -79,6 +79,9 @@ int *is2saveArr;
 int *oldTypeOfPart;
 #endif
 #endif
+#ifdef MD_CALENDAR_HYBRID
+extern int numevPQ, totevHQ, overevHQ;
+#endif
 /* neighbour list method variables */
 extern COORD_TYPE dispHi;
 extern const double timbig;
@@ -1720,6 +1723,7 @@ void usrInitBef(void)
     OprogStatus.adjustHQ = 0;
     OprogStatus.baseIndex = 0;
     OprogStatus.curIndex = 0;
+    OprogStatus.overthrHQ = 20;
 #endif
     OprogStatus.minDist = 4E-8;
     OprogStatus.tmsd2end = -1.0;
@@ -3099,12 +3103,15 @@ void estimate_HQ_params(double phi)
   OprogStatus.scaleHQ = (int) scf*Oparams.parnum;
   OprogStatus.nlistsHQ = (int) nlf*Oparams.parnum;
 }
-#if 0
+#if 1
 void adjust_HQ_params(void)
 {
   int targetNE = 15, del=5;
+  int k, i;
   double GOLD = 1.3;
-  if (targetNE - del < numevPQ && target + del > numevPQ)// && numovHQ < totevHQ/OprogStatus.nlistsHQ)
+  double overthr = 0.10;
+  if (targetNE - del <= numevPQ && targetNE + del >= numevPQ && 
+      ((double)overevHQ) <= OprogStatus.overthrHQ)
     {
       printf("Hybrid Calendar parameters adjusted!\n");
       OprogStatus.adjustHQ = 0;
@@ -3114,15 +3121,43 @@ void adjust_HQ_params(void)
       if (numevPQ > targetNE)
 	{
 	  OprogStatus.scaleHQ *= GOLD;
+	  //OprogStatus.nlistsHQ *=GOLD;
 	 }
       else
 	{
 	  OprogStatus.scaleHQ /= GOLD;
+	  //OprogStatus.nlistsHQ /=GOLD;
 	}
+      /* OprogStatus.overthrHQ è il numero massimo di eventi nella overflow list che viene considerato
+	 accettabile */ 
+      if (((double)overevHQ) > OprogStatus.overthrHQ) 
+	OprogStatus.nlistsHQ *= GOLD;
     }
-  linearLists = realloc(sizoeof(int)*OprogStatus.nlistsHQ);
-  InitEventList();
+  printf("ADJUSTING HQ PARAMS: scaleHQ=%G nlistsHQ=%d\n", OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
+  free(linearLists);
+  linearLists = malloc(sizeof(int)*OprogStatus.nlistsHQ);
+  UpdateSystem();
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  rebuild_linked_list();
+
+  if (OprogStatus.useNNL)
+    rebuildNNL();
   rebuildCalendar();
+  if (OprogStatus.intervalSum > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+  if (OprogStatus.scalevel > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+#ifdef MD_BIG_DT
+  if (OprogStatus.bigDt > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
+#endif
 }
 #endif
 #endif
