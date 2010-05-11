@@ -573,6 +573,7 @@ struct progStatus
   int adjustHQ;
   double baseIndex;
   int curIndex;
+  int overthrHQ;
 #endif
   double springkSD;
   int SDmethod;
@@ -931,6 +932,7 @@ struct pascii opro_ascii[] =
   {"nlistsHQ",     &OS(nlistsHQ),                    1,   1,  "%d"},
   {"scaleHQ",      &OS(scaleHQ),                    1,   1,  "%.15G"},
   {"adjustHQ",     &OS(adjustHQ),                   1,   1,  "%d"},
+  {"overthrHQ",    &OS(overthrHQ),                  1,   1,  "%d"},
 #if 0
   /* questi non serve salvarli poichè li inizializza ogni volta in InitEventList() */
   {"baseIndex",    &OS(baseIndex),                  1,   1,  "%.15G"},
@@ -1381,6 +1383,7 @@ struct singlePar OsinglePar[] = {
   {"scaleHQ",  &OprogStatus.scaleHQ,          CT},
   {"nlistsHQ", &OprogStatus.nlistsHQ,         INT},
   {"adjustHQ", &OprogStatus.adjustHQ,         INT},
+  {"overthrHQ",&OprogStatus.overthrHQ,        INT},
 #endif
   {"axestol",     &OprogStatus.axestol,       CT},
   {"minDist",     &OprogStatus.minDist,       CT},
