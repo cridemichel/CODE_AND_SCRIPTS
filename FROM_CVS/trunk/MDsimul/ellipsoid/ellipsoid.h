@@ -569,9 +569,9 @@ struct progStatus
   double lastcolltime[MAXPAR];
 #ifdef MD_CALENDAR_HYBRID
   int nlistsHQ;
-  int scaleHQ;
+  double scaleHQ;
   int adjustHQ;
-  int baseIndex;
+  double baseIndex;
   int curIndex;
 #endif
   double springkSD;
@@ -929,10 +929,13 @@ struct pascii opro_ascii[] =
   {"sumoz",        OS(sumoz),                       -MAXPAR,        1, "%.15G"},
 #ifdef MD_CALENDAR_HYBRID
   {"nlistsHQ",     &OS(nlistsHQ),                    1,   1,  "%d"},
-  {"scaleHQ",      &OS(scaleHQ),                    1,   1,  "%d"},
+  {"scaleHQ",      &OS(scaleHQ),                    1,   1,  "%.15G"},
   {"adjustHQ",     &OS(adjustHQ),                   1,   1,  "%d"},
-  {"baseIndex",    &OS(baseIndex),                  1,   1,  "%d"},
-  {"curIndex", &OS(curIndex),               1,   1,  "%d"},
+#if 0
+  /* questi non serve salvarli poichè li inizializza ogni volta in InitEventList() */
+  {"baseIndex",    &OS(baseIndex),                  1,   1,  "%.15G"},
+  {"curIndex", &OS(curIndex),               1,   1,  "%.15G"},
+#endif
 #endif
 #ifdef MD_CALC_DPP
   {"sumdx",        OS(sumdx),                       -MAXPAR,        1, "%.15G"},
@@ -1375,7 +1378,7 @@ struct singlePar OsinglePar[] = {
   {"reducefact", &OprogStatus.reducefact,     CT},
   {"phitol",      &OprogStatus.phitol,        CT},
 #ifdef MD_CALENDAR_HYBRID
-  {"scaleHQ",  &OprogStatus.scaleHQ,          INT},
+  {"scaleHQ",  &OprogStatus.scaleHQ,          CT},
   {"nlistsHQ", &OprogStatus.nlistsHQ,         INT},
   {"adjustHQ", &OprogStatus.adjustHQ,         INT},
 #endif

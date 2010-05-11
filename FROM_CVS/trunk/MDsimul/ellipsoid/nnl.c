@@ -326,7 +326,7 @@ void rebuildNNL(void)
   int i;
   double nltime=timbig;
   UpdateSystem();
-  if (OprogStatus.useNNL==2)
+  if (OprogStatus.useNNL==2||OprogStatus.useNNL==4)
     printf("Rebuilding NNL t=%.15G numcoll=%lld\n", Oparams.time, numcoll);
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -352,7 +352,7 @@ void rebuildNNL(void)
  
   /* next complete update */
   nextNNLrebuild = nltime;
-  if (OprogStatus.useNNL==2)
+  if (OprogStatus.useNNL==2||OprogStatus.useNNL==4)
     printf("nextNNLrebuild=%.15G\n", nextNNLrebuild);
   //ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 }

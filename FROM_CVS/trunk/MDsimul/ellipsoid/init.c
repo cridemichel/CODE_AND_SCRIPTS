@@ -1829,7 +1829,7 @@ void StartRun(void)
     }
 #if 0
     {
-      double dist, rC[3], rD[3], shift[3];
+      
       int i, j;
       for (i = 0; i < Oparams.parnum; i++)
 	{
@@ -3195,7 +3195,7 @@ void usrInitAft(void)
      printf("WARNING: Growth simulation, spots interactions will be disabled\n");
    }
 #ifdef MD_SUPERELLIPSOID
- if (OprogStatus.useNNL > 3 || OprogStatus.useNNL < 0)
+ if (OprogStatus.useNNL > 4  || OprogStatus.useNNL < 0)
    {
      printf("[-D MD_SUPERELLIPSOID] useNNL must be between 0 and 4 (3=SPNNL and 1=usual NNL)\n");
      exit(-1);
@@ -3950,7 +3950,7 @@ void usrInitAft(void)
       /* automagically estimate scaleHQ and nlistsHQ parameter */
       estimate_HQ_params(phiIni);
     }
-  printf("Using Bounded Increasing Priority Queue, scale=%d nlists=%d\n",OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
+  printf("Using Bounded Increasing Priority Queue, scale=%G nlists=%d\n",OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
   linearLists = malloc(sizeof(int)*(OprogStatus.nlistsHQ+1));
 #endif
 
