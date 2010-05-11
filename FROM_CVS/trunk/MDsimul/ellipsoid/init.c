@@ -3137,6 +3137,7 @@ void usrInitAft(void)
 #ifdef MD_LXYZ
   int kk;
 #endif
+  double phiIni;
   int Nm, i, sct, overlap;
   COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
 #ifndef EDHE_FLEX
@@ -3916,17 +3917,17 @@ void usrInitAft(void)
 #endif
 #ifndef EDHE_FLEX
 #ifdef MD_LXYZ
-  printf(">>>> phi=%.12G L=%f %f %f (%f,%f,%f)\n", calc_phi(), L[0], L[1], L[2], Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
+  printf(">>>> phi=%.12G L=%f %f %f (%f,%f,%f)\n", phiIni=calc_phi(), L[0], L[1], L[2], Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
 #else
-  printf(">>>> phi=%.12G L=%f (%f,%f,%f)\n", calc_phi(), L, Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
+  printf(">>>> phi=%.12G L=%f (%f,%f,%f)\n", phiIni=calc_phi(), L, Oparams.a[0], Oparams.b[0], Oparams.c[0]); 
 #endif
   if (Oparams.parnumA < Oparams.parnum)
     printf("semi-axes of B (%f, %f ,%f)\n",Oparams.a[1], Oparams.b[1], Oparams.c[1]);
 #else
 #ifdef MD_LXYZ
-  printf("[FLEX] phi=%.12G L=%f %f %f\n", calc_phi(), L[0], L[1], L[2]); 
+  printf("[FLEX] phi=%.12G L=%f %f %f\n", phiIni=calc_phi(), L[0], L[1], L[2]); 
 #else
-  printf("[FLEX] phi=%.12G L=%f\n", calc_phi(), L); 
+  printf("[FLEX] phi=%.12G L=%f\n", phiIni=calc_phi(), L); 
 #endif
 #endif
   /* evaluation of principal inertia moments*/ 

@@ -33,6 +33,17 @@ extern int sphWall, sphWallOuter;
 #endif
 /* NOTA: treeIdA[0] punta al primo nodo della lista dei nodi liberi nel pool 
  */
+#ifdef MD_CALENDAR_HYBRID
+int numevPQ=0; /* numero di eventi nella PQ (i.e. binary tree) */
+//int linearLists[nlists+1];/*+1 for overflow*/ /* dynamically allocated */
+int *linearLists; /* dynamically allocated */
+//int currentIndex=0;
+int populatePQ(void);
+//double baseIndex=0;//in OprogStatus
+void deleteFromEventQ(int e);
+int insertInEventQ(int p);
+#endif
+
 void ErrExit(char *str)
 {
   printf(str);
@@ -97,9 +108,11 @@ int get_new_node(int idA, int idB)
      */
   return idNew;
 }
-int InsertPQ(int idNew)
+void InsertPQ(int idNew)
 {
   int more, id;
+  double tEvent;
+  numevPQ++;
   tEvent = treeTime[idNew];
 #ifdef MD_CALENDAR_HYBRID
   treeStatus[idNew] = 2; /* 2 = belonging to binary tree */
@@ -603,7 +616,9 @@ void NextEvent (void)
 void DeletePQ (int id)
 {
   int idp, idq, idr;
-
+#ifdef MD_CALENDAR_HYBRID
+  numevPQ--;
+#endif
 #ifdef MD_SPHERICAL_WALL
   /* N.B. sphWall+1 è l'evento di cell-crossing del 
      muro sferico ma tale evento non viene schedulato affatto
@@ -676,7 +691,7 @@ void initHQlist(void)
   int i;
   //OprogStatus.curIndex = 0;
   /* inizializzare anche le linked lists lineari? */
-  for (i=0; i < nlists+1; i++)
+  for (i=0; i < OprogStatus.nlistsHQ+1; i++)
     linearLists[i] = -1;
   for (i=1; i < Oparams.parnum*OprogStatus.eventMult; i++) 
     treeStatus[i] = 0;/* 0 = free node */
@@ -711,22 +726,24 @@ int insertInEventQ(int p)
   int i, oldFirst;
   //eventQEntry * pt;
   //pt=eventQEntries+p; /* use pth entry */
-  i=(int)(scale*treeTime[p]-baseIndex);
+  i=(int)(OprogStatus.scaleHQ*treeTime[p]-OprogStatus.baseIndex);
 
-  //i=currentIndex;
+  /* se si scommenta questa riga di fatto si disattiva il calendario O(1) */
+  //printf("curIndex=%d baseIndex=%d\n", OprogStatus.curIndex, OprogStatus.baseIndex);
+  //i=OprogStatus.curIndex;
 
   //printf("baseIndex=%.15G p=%d i=%d\n", baseIndex, p, i);
-  if(i>(nlists-1)) /* account for wrap */
+  if(i>(OprogStatus.nlistsHQ-1)) /* account for wrap */
     {
-      i-=nlists;
-      if(i>=currentIndex-1)
+      i-=OprogStatus.nlistsHQ;
+      if(i>=OprogStatus.curIndex-1)
 	{
-	  i=nlists; /* store in overflow list */
+	  i=OprogStatus.nlistsHQ; /* store in overflow list */
 	}
     }
   //pt->qIndex=i;
   treeQIndex[p] = i;
-  if(i==currentIndex)
+  if(i==OprogStatus.curIndex)
     {
       InsertPQ(p); /* insert in PQ */
       return p;
@@ -753,7 +770,7 @@ int insertInEventQ(int p)
 void processOverflowList(void)
 {
   int i,e,eNext;
-  i=nlists; /* overflow list */
+  i=OprogStatus.nlistsHQ; /* overflow list */
   e=linearLists[i];
   linearLists[i]=-1; /* mark empty; we will treat all entries and may re-add some */
   while(e!=-1)
@@ -781,7 +798,7 @@ void deleteFromEventQ(int e)
     return; 
 #endif
 
-  if(i==currentIndex)
+  if(i==OprogStatus.curIndex)
     {
       MD_DEBUG2(printf("[delete] e=%d PQ node\n", e));
       DeletePQ(e); /* delete from pq */
@@ -813,23 +830,23 @@ int populatePQ(void)
     /*if priority queue exhausted, i.e. if binary tree calendar is void */
     {
       /* change current index */
-      currentIndex++;
+      OprogStatus.curIndex++;
       MD_DEBUG2(printf("currentIndex=%d feeding PQ linearLists[]=%d\n", currentIndex, linearLists[currentIndex]));
-      if(currentIndex==nlists)
+      if(OprogStatus.curIndex==OprogStatus.nlistsHQ)
 	{
-	  currentIndex=0;
-	  baseIndex+=nlists;
+	  OprogStatus.curIndex=0;
+	  OprogStatus.baseIndex+=OprogStatus.nlistsHQ;
 	  processOverflowList();
 	}
       /* populate pq */
-      e=linearLists[currentIndex];
+      e=linearLists[OprogStatus.curIndex];
       while(e!=-1)
 	{
 	  InsertPQ(e);
 	  e = treeNext[e];
 	  //e=eventQEntries[e].next;
 	}
-      linearLists[currentIndex]=-1;
+      linearLists[OprogStatus.curIndex]=-1;
     }
   /* delete from binary tree here! */
 #if 0

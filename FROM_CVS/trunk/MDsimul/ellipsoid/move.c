@@ -33,6 +33,11 @@ extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+#ifdef MD_CALENDAR_HYBRID
+extern int *linearLists;
+extern int numevPQ;
+#endif
+
 extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
 double minaxA, minaxB, minaxAB;
 int do_check_negpairs = 0;
