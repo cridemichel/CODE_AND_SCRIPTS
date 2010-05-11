@@ -880,6 +880,11 @@ void initHQlist(void)
     linearLists[i] = -1;
   for (i=1; i < Oparams.parnum*OprogStatus.eventMult; i++) 
     treeStatus[i] = 0;/* 0 = free node */
+  
+  OprogStatus.curIndex=0;
+  /* NOTA 11/10/2010: l'importante è che: baseIndex < OprogStatus.scaleHQ*Oparams.time */  
+  OprogStatus.baseIndex = Oparams.time*OprogStatus.scaleHQ;
+
 }
 #endif
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
