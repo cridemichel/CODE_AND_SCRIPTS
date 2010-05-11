@@ -695,6 +695,14 @@ void initHQlist(void)
     linearLists[i] = -1;
   for (i=1; i < Oparams.parnum*OprogStatus.eventMult; i++) 
     treeStatus[i] = 0;/* 0 = free node */
+#ifdef MD_CALENDAR_HYBRID
+  /* sembra che sia necessario per ricostruire il calendario, boh...*/
+  OprogStatus.curIndex=0;
+  /* NOTA 11/10/2010: l'importante è che: baseIndex < OprogStatus.scaleHQ*Oparams.time */  
+  OprogStatus.baseIndex = Oparams.time*OprogStatus.scaleHQ;
+  //printf("currentIndex=%d baseIndex=%d\n", OprogStatus.curIndex, OprogStatus.baseIndex);
+#endif
+	
 }
 #endif
 
@@ -831,6 +839,7 @@ int populatePQ(void)
     {
       /* change current index */
       OprogStatus.curIndex++;
+      //printf("currentIndex=%d feeding PQ linearLists[]=%d nlists=%d\n", OprogStatus.curIndex, linearLists[OprogStatus.curIndex], OprogStatus.nlistsHQ);
       MD_DEBUG2(printf("currentIndex=%d feeding PQ linearLists[]=%d\n", currentIndex, linearLists[currentIndex]));
       if(OprogStatus.curIndex==OprogStatus.nlistsHQ)
 	{
