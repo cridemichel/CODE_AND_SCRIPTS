@@ -342,9 +342,9 @@ struct progStatus
 #endif
 #ifdef MD_CALENDAR_HYBRID
   int nlistsHQ;
-  int scaleHQ;
+  double scaleHQ;
   int adjustHQ;
-  int baseIndex;
+  double baseIndex;
   int curIndex;
 #endif
   /* Accumulator for the radial distribution function */
@@ -606,10 +606,13 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef MD_CALENDAR_HYBRID
   {"nlistsHQ",     &OS(nlistsHQ),                    1,   1,  "%d"},
-  {"scaleHQ",      &OS(scaleHQ),                    1,   1,  "%d"},
+  {"scaleHQ",      &OS(scaleHQ),                    1,   1,  "%.15G"},
   {"adjustHQ",     &OS(adjustHQ),                   1,   1,  "%d"},
-  {"baseIndex",    &OS(baseIndex),                  1,   1,  "%d"},
+#if 0
+  /* non serve salvarli in quanto vengono sempre inizializzati */
+  {"baseIndex",    &OS(baseIndex),                  1,   1,  "%.15G"},
   {"curIndex", &OS(curIndex),               1,   1,  "%d"},
+#endif
 #endif
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
@@ -890,7 +893,7 @@ struct singlePar OsinglePar[] = {
   {"reducefact", &OprogStatus.reducefact,     CT},
   {"phitol",      &OprogStatus.phitol,        CT},
 #ifdef MD_CALENDAR_HYBRID
-  {"scaleHQ",  &OprogStatus.scaleHQ,          INT},
+  {"scaleHQ",  &OprogStatus.scaleHQ,          CT},
   {"nlistsHQ", &OprogStatus.nlistsHQ,         INT},
   {"adjustHQ", &OprogStatus.adjustHQ,         INT},
 #endif
