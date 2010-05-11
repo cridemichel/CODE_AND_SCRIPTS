@@ -963,7 +963,7 @@ int insertInEventQ(int p)
   int oldFirst;
   long long int i;
   double idbl;
-  double IBIG = 1.0E18;
+  double IBIG = 1.0E18; /* il massimo long long int = +9,223,372,036,854,775,807 > IBIG */	
   //eventQEntry * pt;
   //pt=eventQEntries+p; /* use pth entry */
   /* NOTA baseIndex va messo in OprogStatus! */
