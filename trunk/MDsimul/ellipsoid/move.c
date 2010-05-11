@@ -1542,8 +1542,8 @@ void outputSummary(void)
     printf("Percentage of failed dist=%.6f%%\n", 100.0*(((double) numdisttryagain) / numcalldist));
   printf("Number of collisions: %lld\n", numcoll);
 #ifdef MD_CALENDAR_HYBRID
-#if 0
-  if (OprogStatus.adjustHQ)
+#if 1
+  if (OprogStatus.adjustHQ > 0)
     {
       //printf("Average number of events in binary tree: %d (Actual is %d)\n", sumnumevPQ/callsAdjsuHQ, numevPQ);
       adjust_HQ_params();
