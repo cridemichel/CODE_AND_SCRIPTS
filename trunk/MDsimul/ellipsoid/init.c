@@ -3945,7 +3945,10 @@ void usrInitAft(void)
 #endif
     };
 #ifdef MD_CALENDAR_HYBRID
-  if (!(OprogStatus.nlistsHQ > 0 && OprogStatus.scaleHQ > 0))
+  /* se scaleHQ == 0 stima automaticamente i parametri 
+     se scaleHQ < 0 disabilita il calendario O(1) */
+
+  if (OprogStatus.scaleHQ == 0)
     {
       /* automagically estimate scaleHQ and nlistsHQ parameter */
       estimate_HQ_params(phiIni);

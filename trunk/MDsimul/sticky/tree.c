@@ -965,7 +965,8 @@ int insertInEventQ(int p)
   
   /* O(1) is disabled forcing i to be currentIndex
      i=currentIndex;*/
-
+  if (OprogStatus.scaleHQ  < 0)
+    i = OprogStatus.curIndex;
   //printf("baseIndex=%.15G p=%d i=%d\n", baseIndex, p, i);
   if(i>(OprogStatus.nlistsHQ-1)) /* account for wrap */
     {
