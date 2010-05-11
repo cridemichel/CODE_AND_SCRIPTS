@@ -416,9 +416,11 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #endif
 #endif
 #endif
+#if 0
 #ifdef MD_CALENDAR_HYBRID
 #define nlists 1000000
 #define scale 200000
+#endif
 #endif
 #ifdef MD_PATCHY_HE
 struct LastBumpS 
