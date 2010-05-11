@@ -10449,8 +10449,12 @@ void move(void)
 	  if (Oparams.time >= nextNNLrebuild)
 	    {
 	      Oparams.time = nextNNLrebuild;
+	      //UpdateSystem();
+#if 1
+	      //OprogStatus.baseIndex =0;
 	      InitEventList();
 	      rebuildNNL();
+	      
 	      for (k = 0;  k < 3; k++)
 		{
 		  cellRange[2*k]   = - 1;
@@ -10461,6 +10465,7 @@ void move(void)
 		  PredictEventNNL(n, -2); 
 		}
 	      //rebuildCalendar();
+#endif
 	      if (OprogStatus.intervalSum > 0.0)
 		ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
 	      if (OprogStatus.storerate > 0.0)
