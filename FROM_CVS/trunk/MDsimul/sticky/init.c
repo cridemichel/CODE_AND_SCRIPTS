@@ -2379,17 +2379,35 @@ void rebuild_linked_list();
 void adjust_HQ_params(void)
 {
   int targetNE = 15, del=5;
-  int k, i;
+  int k, i, NAVG=10;
   double GOLD = 1.3;
-  if (targetNE - del <= numevPQ && targetNE + del >= numevPQ && 
-      (overevHQ <= OprogStatus.overthrHQ) )// && numovHQ < totevHQ/OprogStatus.nlistsHQ)
+  static int calls=0, sumNumevPQ=0, sumOverevHQ=0;
+  double overevHQavg, numevPQavg;
+
+  calls++;
+  sumNumevPQ += numevPQ;
+  sumOverevHQ += overevHQ;
+
+  if (calls < NAVG)
+    return;
+  numevPQavg = ((double)sumNumevPQ) / calls;
+  overevHQavg= ((double)sumOverevHQ) / calls; 
+
+  /* reset accumulators */
+  calls = 0;
+  sumNumevPQ = 0;
+  sumOverevHQ = 0;
+
+  printf("average values over %d calls: numevPQ=%G overevHQ=%G\n", NAVG, numevPQavg, overevHQavg);
+  if (targetNE - del <= numevPQavg && targetNE + del >= numevPQavg && 
+      (overevHQavg <= OprogStatus.overthrHQ) )// && numovHQ < totevHQ/OprogStatus.nlistsHQ)
     {
       printf("Hybrid Calendar parameters adjusted!\n");
       OprogStatus.adjustHQ = 0;
     } 
   else
     {
-      if (numevPQ > targetNE)
+      if (numevPQavg > targetNE)
 	{
 	  OprogStatus.scaleHQ *= GOLD;
 	  //OprogStatus.nlistsHQ *=GOLD;
@@ -2399,7 +2417,7 @@ void adjust_HQ_params(void)
 	  OprogStatus.scaleHQ /= GOLD;
 	  //OprogStatus.nlistsHQ /=GOLD;
 	}
-      if (overevHQ > OprogStatus.overthrHQ) 
+      if (overevHQavg > OprogStatus.overthrHQ) 
 	OprogStatus.nlistsHQ *= GOLD;
     }
   printf("Adjusting HQ params: scaleHQ=%G nlistsHQ=%d\n", OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
