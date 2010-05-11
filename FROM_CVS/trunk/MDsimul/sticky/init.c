@@ -20,6 +20,10 @@ extern double *lastcol;
 double *axa,*axb,*axc;
 double *a0I;
 double **Aip;
+#ifdef MD_CALENDAR_HYBRID
+extern int *linearLists;
+extern int numevPQ;
+#endif
 #ifdef MD_SILICA
 #ifdef MD_THREESPOTS
 extern int mapbondsaAB[MD_PBONDS_AB];
@@ -2367,12 +2371,12 @@ void estimate_HQ_params(double phi)
   OprogStatus.scaleHQ = (int) scf*Oparams.parnum;
   OprogStatus.nlistsHQ = (int) nlf*Oparams.parnum;
 }
-#if 0
+#if 1
 void adjust_HQ_params(void)
 {
   int targetNE = 15, del=5;
   double GOLD = 1.3;
-  if (targetNE - del < numevPQ && target + del > numevPQ)// && numovHQ < totevHQ/OprogStatus.nlistsHQ)
+  if (targetNE - del < numevPQ && targetNE + del > numevPQ)// && numovHQ < totevHQ/OprogStatus.nlistsHQ)
     {
       printf("Hybrid Calendar parameters adjusted!\n");
       OprogStatus.adjustHQ = 0;
@@ -2388,9 +2392,9 @@ void adjust_HQ_params(void)
 	  OprogStatus.scaleHQ /= GOLD;
 	}
     }
-  linearLists = realloc(sizoeof(int)*OprogStatus.nlistsHQ);
-  InitEventList();
-  rebuildCalendar();
+  //linearLists = realloc(sizeof(int)*OprogStatus.nlistsHQ);
+  //InitEventList();
+  //rebuildCalendar();
 }
 #endif
 #endif
@@ -2680,7 +2684,7 @@ void usrInitAft(void)
       /* automagically estimate scaleHQ and nlistsHQ parameter */
       estimate_HQ_params(phiIni);
     }
-  printf("Using Bounded Increasing Priority Queue, scale=%d nlists=%d\n",OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
+  printf("Using Bounded Increasing Priority Queue, scale=%G nlists=%d\n",OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
   linearLists = malloc(sizeof(int)*(OprogStatus.nlistsHQ+1));
 #endif
 
