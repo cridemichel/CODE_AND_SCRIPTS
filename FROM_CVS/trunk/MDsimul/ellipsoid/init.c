@@ -3107,18 +3107,36 @@ void estimate_HQ_params(double phi)
 void adjust_HQ_params(void)
 {
   int targetNE = 15, del=5;
-  int k, i;
+  int k, i, NAVG=10;
   double GOLD = 1.3;
-  double overthr = 0.10;
-  if (targetNE - del <= numevPQ && targetNE + del >= numevPQ && 
-      ((double)overevHQ) <= OprogStatus.overthrHQ)
+  static int calls=0, sumNumevPQ=0, sumOverevHQ=0;
+  double overevHQavg, numevPQavg;
+
+  calls++;
+  sumNumevPQ += numevPQ;
+  sumOverevHQ += overevHQ;
+
+  if (calls < NAVG)
+    return;
+  numevPQavg = ((double)sumNumevPQ) / calls;
+  overevHQavg= ((double)sumOverevHQ) / calls; 
+
+  /* reset accumulators */
+  calls = 0;
+  sumNumevPQ = 0;
+  sumOverevHQ = 0;
+
+  printf("average values over %d calls: numevPQ=%G overevHQ=%G\n", NAVG, numevPQavg, overevHQavg);
+
+  if (targetNE - del <= numevPQavg && targetNE + del >= numevPQavg && 
+      ((double)overevHQavg) <= OprogStatus.overthrHQ)
     {
       printf("Hybrid Calendar parameters adjusted!\n");
       OprogStatus.adjustHQ = 0;
     } 
   else
     {
-      if (numevPQ > targetNE)
+      if (numevPQavg > targetNE)
 	{
 	  OprogStatus.scaleHQ *= GOLD;
 	  //OprogStatus.nlistsHQ *=GOLD;
@@ -3130,7 +3148,7 @@ void adjust_HQ_params(void)
 	}
       /* OprogStatus.overthrHQ è il numero massimo di eventi nella overflow list che viene considerato
 	 accettabile */ 
-      if (((double)overevHQ) > OprogStatus.overthrHQ) 
+      if (((double)overevHQavg) > OprogStatus.overthrHQ) 
 	OprogStatus.nlistsHQ *= GOLD;
     }
   printf("ADJUSTING HQ PARAMS: scaleHQ=%G nlistsHQ=%d\n", OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
@@ -3158,6 +3176,8 @@ void adjust_HQ_params(void)
   if (OprogStatus.bigDt > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
 #endif
+  if (OprogStatus.adjustHQ == 2)
+    ENDSIM=1;
 }
 #endif
 #endif
