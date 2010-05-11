@@ -960,24 +960,40 @@ int evIdHQ, noinsertHQ;
 
 int insertInEventQ(int p)
 {
-  int i, oldFirst;
+  int oldFirst;
+  long long int i;
+  double idbl;
+  double IBIG = 1.0E18;
   //eventQEntry * pt;
   //pt=eventQEntries+p; /* use pth entry */
   /* NOTA baseIndex va messo in OprogStatus! */
-  i=(int)(OprogStatus.scaleHQ*treeTime[p]-OprogStatus.baseIndex);
-  
-  /* O(1) is disabled forcing i to be currentIndex
-     i=currentIndex;*/
-  if (OprogStatus.scaleHQ  < 0)
-    i = OprogStatus.curIndex;
-  //printf("baseIndex=%.15G p=%d i=%d\n", baseIndex, p, i);
-  if(i>(OprogStatus.nlistsHQ-1)) /* account for wrap */
+  idbl=(OprogStatus.scaleHQ*treeTime[p]-OprogStatus.baseIndex);
+
+  /* very big numbers go to overflow list directly avoiding long long int overflows
+     and segfaults */
+  if (idbl > IBIG)
     {
-      i-=OprogStatus.nlistsHQ;
-      if(i>=OprogStatus.curIndex-1)
+      i=OprogStatus.nlistsHQ; /* store in overflow list */
+      overevHQ++;
+    }
+  else
+    {
+      i = (long long int) idbl;
+      /* N.B. se scaleHQ è grande un int qui puo' non bastare e ci si becca
+	 un segfault! */
+      /* O(1) is disabled forcing i to be currentIndex
+	 i=currentIndex;*/
+      if (OprogStatus.scaleHQ  < 0)
+	i = OprogStatus.curIndex;
+      //printf("baseIndex=%.15G p=%d i=%d\n", baseIndex, p, i);
+      if(i>(OprogStatus.nlistsHQ-1)) /* account for wrap */
 	{
-	  i=OprogStatus.nlistsHQ; /* store in overflow list */
-	  overevHQ++;
+	  i-=OprogStatus.nlistsHQ;
+	  if(i>=OprogStatus.curIndex-1)
+	    {
+	      i=OprogStatus.nlistsHQ; /* store in overflow list */
+	      overevHQ++;
+	    }
 	}
     }
   //pt->qIndex=i;

@@ -20,7 +20,7 @@ extern int *equilibrated;
 extern double **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 #ifdef MD_CALENDAR_HYBRID
 extern int *linearLists;
-extern int numevPQ;
+extern int numevPQ, overevHQ, totevHQ;
 #endif
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb;
@@ -1334,7 +1334,7 @@ void outputSummary(void)
       adjust_HQ_params();
     }
 #endif
-  printf("Actual number of events in binary tree: %d\n", numevPQ);
+  printf("Actual number of events in binary tree: %d (of %d, overflows: %d)\n", numevPQ, totevHQ, overevHQ);
 #endif
   if (OprogStatus.checkGrazing)
     check_all_bonds();
