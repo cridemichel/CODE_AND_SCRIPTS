@@ -2337,6 +2337,8 @@ void estimate_HQ_params(double phi)
   double scalevsNfact[4]={0.0877,0.04862,0.9408,7.532}; 
   double nlistsvsNfact[4]={48.67,97.34,244.7,564.182};
   double volfact[4] = {0.01,0.12,0.4,0.7}, msc, mnl, qsc, qnl, scf, nlf;
+  int MAXINT = 500000000;
+  long long int nlsize;
   int k, k1=-1, k2=-1;
   /* From Gerald Paul J. Comp. Phys. 221, 615 (2006) */
 
@@ -2368,11 +2370,41 @@ void estimate_HQ_params(double phi)
   mnl  = (nlistsvsNfact[k2] - nlistsvsNfact[k1])/(volfact[k2]-volfact[k1]);
   /* ordinata all'origine */ 
   qsc = scalevsNfact[k1]-msc*volfact[k1];
-  qnl = nlistsvsNfact[k1]-mnl*volfact[k2];
+  qnl = nlistsvsNfact[k1]-mnl*volfact[k1];
   scf = msc*phi+qsc; 
   nlf = mnl*phi+qnl;
-  OprogStatus.scaleHQ = (int) scf*Oparams.parnum;
-  OprogStatus.nlistsHQ = (int) nlf*Oparams.parnum;
+  if (nlf <= 0.0 || scf <= 0.0)
+    {
+#if 0
+      printf("phi=%.15G k1=%d k2=%d\n", phi, k1, k2);
+      printf("msc=%.15G qsc=%.15G\n", msc, qsc);
+#endif
+      printf("[WARNING] estimate of HQ params using default values\n");
+      printf("perfomance may be far from optimal, please check\n");
+      OprogStatus.scaleHQ = 50;
+      OprogStatus.nlistsHQ = 50000;
+      printf("scaleHQ=%G nlistsHQ=%d\n", OprogStatus.scaleHQ, OprogStatus.nlistsHQ);
+      //exit(-1);
+    }
+  else
+    {
+      OprogStatus.scaleHQ = scf*Oparams.parnum;
+  
+      nlsize = (long long int) (nlf*Oparams.parnum);
+      /* evita allocazioni eccessive (oltre i 2Gb) */
+      if (nlsize >= (long long int) MAXINT)
+	{
+	  printf("[WARNING] nlistsHQ will be limited to %d\n", MAXINT);
+	  printf("check performance monitoring number of overflows\n");
+	  OprogStatus.nlistsHQ = MAXINT;
+	}
+      else
+	OprogStatus.nlistsHQ = (int) nlsize;
+    }
+#if 0
+  printf("nlf=%G BOH nlsize=%lld nlistsHQ=%d\n", nlf, nlsize, OprogStatus.nlistsHQ);
+  exit(-1);
+#endif	
 }
 #if 1
 void rebuild_linked_list();
