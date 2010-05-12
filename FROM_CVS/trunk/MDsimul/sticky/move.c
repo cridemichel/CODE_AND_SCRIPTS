@@ -2494,6 +2494,7 @@ void UpdateAtom(int i)
   ry[i] += vy[i]*ti;
   rz[i] += vz[i]*ti;
   /* ...and now orientations */
+#ifndef MD_SPOT_OFF
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
   w = sqrt(wSq);
   if (w != 0.0) 
@@ -2589,6 +2590,7 @@ void UpdateAtom(int i)
 	}
 #endif
     }
+#endif
   atomTime[i] = Oparams.time;
 }
 void UpdateSystem(void)
@@ -4946,6 +4948,9 @@ void PredictCellCross(int na, int nc)
 }
 int sticky_bump(int n, int na, int nl)
 {
+#ifdef MD_SPOT_OFF
+  return 0;
+#endif
 #ifdef MD_GROWTH_CODE
   /* gli spot sono disattivi durante la crescita */	
   if (OprogStatus.targetPhi > 0.0)
@@ -5088,8 +5093,10 @@ void PredictColl (int na, int nb, int nl)
 		      dv[2] = vz[na] - vz[n];
 		      
 	    	      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+#ifndef MD_SPOT_OFF
     		      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
     		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+#endif
 		      /* N.B. 2 e 3 sono le liste per urti tra specie diverse */
 		      if (sticky_bump(n,na,nl))
 			{
@@ -5177,9 +5184,22 @@ void PredictColl (int na, int nb, int nl)
 #endif
 		      if (b < 0.0) 
 			{
+#ifdef MD_SPOT_OFF
+			  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+#if 0
+			  if (distSq < 0.99*sigSq)
+			    {
+			      printf("[WARNING] Significant overlap: %.15G (%d-%d)\n", distSq/sigSq, na, n);
+			    }
+#endif
 			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+#endif
+#if 1
+			  d = Sqr (b) - vv * (distSq - sigSq);
+#else
 			  d = Sqr (b) - vv * 
 			    (Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]) - sigSq);
+#endif
 			  if (d >= 0.) 
 			    {
 			      t = - (sqrt (d) + b) / vv;
@@ -5437,8 +5457,12 @@ void PredictEvent (int na, int nb)
 		      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
 		      dv[2] = vz[na] - vz[n];
 		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+#ifndef MD_SPOT_OFF
 	    	      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
     		      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+#endif
+#ifndef MD_SPOT_OFF
+		      /* N.B. 12/05/2010: se gli spot sono disattivi non ha senso usare i centroidi */
 #ifdef MD_GROWTH_CODE 
 	            if (OprogStatus.targetPhi <= 0.0)
 			{
@@ -5497,6 +5521,7 @@ void PredictEvent (int na, int nb)
 #ifdef MD_GROWTH_CODE
 			}
 #endif
+#endif
 		      //printf("t1=%.15G t2=%.15G\n",t1,t2);
 		      /* calcola cmq l'urto fra le due core spheres */
 #ifdef MD_GROWTH_CODE
@@ -5525,9 +5550,16 @@ void PredictEvent (int na, int nb)
 #endif
 		      if (b < 0.0) 
 			{
+#ifdef MD_SPOT_OFF
+			  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
 			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+#endif
+#if 1
+			  d = Sqr (b) - vv * (distSq - sigSq);
+#else
 			  d = Sqr (b) - vv * 
 			    (Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]) - sigSq);
+#endif
 			  if (d >= 0.) 
 			    {
 			      t = - (sqrt (d) + b) / vv;
@@ -7194,7 +7226,9 @@ void move(void)
 	      OprogStatus.lastcolltime[i] = Oparams.time;
 	    }
 #endif
+#ifndef MD_SPOT_OFF
 	  angvel();
+#endif
 	  rebuildCalendar();		  
 #ifdef MD_BIG_DT
 	  if (OprogStatus.bigDt > 0.0)
