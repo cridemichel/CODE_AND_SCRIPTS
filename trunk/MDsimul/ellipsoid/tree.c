@@ -752,7 +752,7 @@ int insertInEventQ(int p)
     }
   else
     {
-      i (long long int) idbl;
+      i = (long long int) idbl;
       /* se si scommenta questa riga di fatto si disattiva il calendario O(1) */
       //printf("curIndex=%d baseIndex=%d\n", OprogStatus.curIndex, OprogStatus.baseIndex);
       /* disable O(1) if scaleHQ < 0 */
