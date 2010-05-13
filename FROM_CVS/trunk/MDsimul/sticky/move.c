@@ -1335,6 +1335,8 @@ void outputSummary(void)
     }
 #endif
   printf("Actual number of events in binary tree: %d (of %d, overflows: %d)\n", numevPQ, totevHQ, overevHQ);
+  //if (OprogStatus.curIndex > 0)
+    //printf("lists[%d-1]=%d\n", OprogStatus.curIndex,linearLists[OprogStatus.curIndex-1]);
 #endif
   if (OprogStatus.checkGrazing)
     check_all_bonds();

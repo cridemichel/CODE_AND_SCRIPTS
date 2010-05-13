@@ -508,7 +508,7 @@ struct params
   double sigmaSticky;
 #endif
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
-  double rcut[3];
+  double rcut[4];
 #else
   double rcut;
 #endif
