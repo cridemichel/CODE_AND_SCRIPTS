@@ -1249,6 +1249,11 @@ void scale_Phi(void)
   if (OprogStatus.bigDt > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
 #endif
+#ifdef MD_DOUBLE_DT
+  if (OprogStatus.brownian)
+    ScheduleEvent(-1, ATOM_LIMIT+12,OprogStatus.nextDtR);
+#endif
+
   printf("Scaled successfully %d/%d ellipsoids \n", done, Oparams.parnum);
 #ifdef MD_OPT_SCALEPHI
   if (done == Oparams.parnum || fabs(phi / OprogStatus.targetPhi - 1.0)<OprogStatus.phitol)
