@@ -818,6 +818,8 @@ void deleteFromEventQ(int e)
   //eventQEntry *pt=eventQEntries+e;
   //i=pt->qIndex;
   i = treeQIndex[e];
+  if (i==OprogStatus.nlistsHQ)
+    overevHQ--;
   treeStatus[e] = 0;
   totevHQ--;
 #ifdef MD_SPHERICAL_WALL
