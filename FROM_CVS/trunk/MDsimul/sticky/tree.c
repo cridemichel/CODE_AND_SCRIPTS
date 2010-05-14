@@ -1048,6 +1048,8 @@ void deleteFromEventQ(int e)
   //i=pt->qIndex;
   totevHQ--;
   i = treeQIndex[e];
+  if (i==OprogStatus.nlistsHQ)
+    overevHQ--;
   treeStatus[e] = 0; /* free node */
   if(i==OprogStatus.curIndex)
     {
