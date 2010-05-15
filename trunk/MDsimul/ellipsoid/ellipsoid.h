@@ -549,6 +549,25 @@ struct progStatus
   COORD_TYPE PxyArr[5];
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
+#ifdef MD_DYNAMIC_OPROG
+  void *ptr;
+  int len;
+  int (*dyn_alloc_oprog)(void);
+  void (*set_dyn_ascii)(void);
+  double *sumox;
+  double *sumoy;
+  double *sumoz;
+  double *lastcolltime;
+  double *vcmx0;
+  double *vcmy0;
+  double *vcmz0;
+  double *rxCMi; /* initial coordinates of center of mass */
+  double *ryCMi; /* MAXPAR is the maximum number of particles */
+  double *rzCMi;
+  double **DR;
+#endif
+
+#ifndef MD_DYNAMIC_OPROG
   double sumox[MAXPAR];
   double sumoy[MAXPAR];
   double sumoz[MAXPAR];
@@ -567,6 +586,7 @@ struct progStatus
   double lastu3z[MAXPAR];
 #endif
   double lastcolltime[MAXPAR];
+#endif
 #ifdef MD_CALENDAR_HYBRID
   int nlistsHQ;
   double scaleHQ;
@@ -606,6 +626,7 @@ struct progStatus
   COORD_TYPE sumTemp;
   COORD_TYPE sumPress;
   
+#ifndef MD_DYNAMIC_OPROG
   COORD_TYPE vcmx0[MAXPAR];
   COORD_TYPE vcmy0[MAXPAR];
   COORD_TYPE vcmz0[MAXPAR];
@@ -614,6 +635,7 @@ struct progStatus
   COORD_TYPE ryCMi[MAXPAR]; /* MAXPAR is the maximum number of particles */
   COORD_TYPE rzCMi[MAXPAR];
   COORD_TYPE DR[MAXPAR][3];
+#endif
   COORD_TYPE W;
 
   int savedXva; 
@@ -925,9 +947,15 @@ struct pascii opro_ascii[] =
   {"PxyArr",       OS(PxyArr),                      5,              1, "%.10G"},
   {"PyzArr",       OS(PyzArr),                      5,              1, "%.10G"},
   {"PzxArr",       OS(PzxArr),                      5,              1, "%.10G"},
+#ifdef MD_DYNAMIC_OPROG
+  {"sumox",        NULL,                       -MAXPAR,        1, "%.15G"},
+  {"sumoy",        NULL,                       -MAXPAR,        1, "%.15G"},
+  {"sumoz",        NULL,                       -MAXPAR,        1, "%.15G"},
+#else
   {"sumox",        OS(sumox),                       -MAXPAR,        1, "%.15G"},
   {"sumoy",        OS(sumoy),                       -MAXPAR,        1, "%.15G"},
   {"sumoz",        OS(sumoz),                       -MAXPAR,        1, "%.15G"},
+#endif
 #ifdef MD_CALENDAR_HYBRID
   {"nlistsHQ",     &OS(nlistsHQ),                    1,   1,  "%d"},
   {"scaleHQ",      &OS(scaleHQ),                    1,   1,  "%.15G"},
@@ -939,6 +967,7 @@ struct pascii opro_ascii[] =
   {"curIndex", &OS(curIndex),               1,   1,  "%.15G"},
 #endif
 #endif
+#ifndef MD_DYNAMIC_OPROG
 #ifdef MD_CALC_DPP
   {"sumdx",        OS(sumdx),                       -MAXPAR,        1, "%.15G"},
   {"sumdy",        OS(sumdy),                       -MAXPAR,        1, "%.15G"},
@@ -953,10 +982,34 @@ struct pascii opro_ascii[] =
   {"lastu3y",       OS(lastu3y),                      -MAXPAR,        1, "%.15G"},
   {"lastu3z",       OS(lastu3z),                      -MAXPAR,        1, "%.15G"},
 #endif
+#endif
+#ifdef MD_DYNAMIC_OPROG
+  {"rxCMi",        NULL,                       -MAXPAR,        1, "%.15G"},
+  {"ryCMi",        NULL,                       -MAXPAR,        1, "%.15G"},
+  {"rzCMi",        NULL,                       -MAXPAR,        1, "%.15G"},
+  {"DR",           NULL,                       -MAXPAR,        3, "%.15G"}, 
+  {"lastcolltime", NULL,                       -MAXPAR,        1, "%.15G"},    
+#ifdef MD_CALC_DPP
+  {"sumdx",        NULL,                       -MAXPAR,        1, "%.15G"},
+  {"sumdy",        NULL,                       -MAXPAR,        1, "%.15G"},
+  {"sumdz",        NULL,                       -MAXPAR,        1, "%.15G"},
+  {"lastu1x",      NULL,                      -MAXPAR,        1, "%.15G"},
+  {"lastu1y",      NULL,                      -MAXPAR,        1, "%.15G"},
+  {"lastu1z",      NULL,                      -MAXPAR,        1, "%.15G"},
+  {"lastu2x",      NULL,                      -MAXPAR,        1, "%.15G"},
+  {"lastu2y",      NULL,                      -MAXPAR,        1, "%.15G"},
+  {"lastu2z",      NULL,                      -MAXPAR,        1, "%.15G"},
+  {"lastu3x",      NULL,                      -MAXPAR,        1, "%.15G"},
+  {"lastu3y",      NULL,                      -MAXPAR,        1, "%.15G"},
+  {"lastu3z",      NULL,                      -MAXPAR,        1, "%.15G"},
+#endif
+#else
   {"rxCMi",        OS(rxCMi),                       -MAXPAR,        1, "%.15G"},
   {"ryCMi",        OS(ryCMi),                       -MAXPAR,        1, "%.15G"},
   {"rzCMi",        OS(rzCMi),                       -MAXPAR,        1, "%.15G"},
   {"DR",           OS(DR),                          -MAXPAR,        3, "%.15G"}, 
+  {"lastcolltime", OS(lastcolltime),                -MAXPAR,        1, "%.15G"},
+#endif
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
   {"histMB",       OS(histMB),                  NUMV,               1, "%d"},
