@@ -88,7 +88,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #endif
 #define MD_DIST_ELECTSITES 0.45
 #define MD_DIST_HYDROSITES 0.5
-#define MAXPAR 100000      /* maximum number of simulated particles */
+#define MAXPAR 200000      /* maximum number of simulated particles */
 
 #define NUM_PAR 2000   /* Number of particles for the simulation */
 #define NUMK 99    /* number of k-points in which we must  calculate the 
@@ -236,6 +236,7 @@ struct LastBumpS
 void calcrotMSD(void);
 #endif
 #define ATOM_LIMIT 10000000
+
 /* ======================== >>> struct progStatus <<< =======================*/
 struct progStatus
 {
@@ -334,11 +335,34 @@ struct progStatus
   COORD_TYPE PxyArr[5];
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
+#ifdef MD_DYNAMIC_OPROG
+  void *ptr;
+  int len;
+  int (*dyn_alloc_oprog)(void);
+  void (*set_dyn_ascii)(void);
 #ifdef MD_ROTDIFF_MIS
+  double *sumox;
+  double *sumoy;
+  double *sumoz;
+  double *lastcolltime;
+#endif
+  double *vcmx0;
+  double *vcmy0;
+  double *vcmz0;
+  
+  double *rxCMi; /* initial coordinates of center of mass */
+  double *ryCMi; /* MAXPAR is the maximum number of particles */
+  double *rzCMi;
+  double **DR;
+#endif
+
+#ifdef MD_ROTDIFF_MIS
+#ifndef MD_DYNAMIC_OPROG
   double sumox[MAXPAR];
   double sumoy[MAXPAR];
   double sumoz[MAXPAR];
   double lastcolltime[MAXPAR];
+#endif
 #endif
 #ifdef MD_CALENDAR_HYBRID
   int nlistsHQ;
@@ -365,14 +389,15 @@ struct progStatus
   COORD_TYPE sumTemp;
   COORD_TYPE sumPress;
   
+#ifndef MD_DYNAMIC_OPROG
   COORD_TYPE vcmx0[MAXPAR];
   COORD_TYPE vcmy0[MAXPAR];
   COORD_TYPE vcmz0[MAXPAR];
-  
   COORD_TYPE rxCMi[MAXPAR]; /* initial coordinates of center of mass */
   COORD_TYPE ryCMi[MAXPAR]; /* MAXPAR is the maximum number of particles */
   COORD_TYPE rzCMi[MAXPAR];
   COORD_TYPE DR[MAXPAR][3];
+#endif
   COORD_TYPE W;
 
   int savedXva; 
@@ -540,6 +565,9 @@ extern struct params Oparams;
 #define OS(_A_) OprogStatus._A_
 #define OP(_A_) Oparams._A_
 
+#ifdef MD_DYNAMIC_OPROG
+#define DOS(_A_) OprogStatusDyn._A_
+#endif
 /* ======================== >>> opro_ascii <<< =========================== */
 #ifdef MAIN
 struct pascii opro_ascii[] =
@@ -600,6 +628,7 @@ struct pascii opro_ascii[] =
   {"PxyArr",       OS(PxyArr),                      5,              1, "%.10G"},
   {"PyzArr",       OS(PyzArr),                      5,              1, "%.10G"},
   {"PzxArr",       OS(PzxArr),                      5,              1, "%.10G"},
+
 #ifdef MD_ROTDIFF_MIS
   {"sumox",        OS(sumox),                       -MAXPAR,        1, "%.15G"},
   {"sumoy",        OS(sumoy),                       -MAXPAR,        1, "%.15G"},
@@ -619,10 +648,19 @@ struct pascii opro_ascii[] =
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
 #if 1
+#ifdef MD_DYNAMIC_OPROG
+  /* qui vengo inizializzati con NULL poiché il puntatore verrà poi assegnato correttamente
+     dal metodo OprogStatus.set_dyn_ascii() */
+  {"DR",           NULL,                  -MAXPAR,              3, "%.10G"},
+  {"rxCMi",        NULL,                  -MAXPAR,              1, "%.10G"},
+  {"ryCMi",        NULL,                  -MAXPAR,              1, "%.10G"},
+  {"rzCMi",        NULL,                  -MAXPAR,              1, "%.10G"},
+#else
   {"DR",           OS(DR),                     -MAXPAR,              3, "%.10G"},
   {"rxCMi",        OS(rxCMi),                  -MAXPAR,              1, "%.10G"},
   {"ryCMi",        OS(ryCMi),                  -MAXPAR,              1, "%.10G"},
   {"rzCMi",        OS(rzCMi),                  -MAXPAR,              1, "%.10G"},
+#endif
 #endif
   {"histMB",       OS(histMB),                  NUMV,               1, "%d"},
   {"sumTemp",      &OS(sumTemp),                    1,              1, "%.6G"},
