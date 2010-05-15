@@ -1510,7 +1510,10 @@ void initCoord(void)
   buildTetrahedras();
   //wrap_initCoord();
 }
-
+#ifdef MD_DYNAMIC_OPROG
+int dyn_alloc_oprog(void);
+void set_dyn_ascii(void);
+#endif
 /* =========================== >>> usrInitBef <<< ========================== */
 void usrInitBef(void)
 {
@@ -1529,10 +1532,18 @@ accumulators initialization is crucial */
 
   V = 0.0;
   L = 9.4;
+#ifdef MD_DYNAMIC_OPROG
+  OprogStatus.ptr = NULL;
+  OprogStatus.len = 0;
+#endif
 #if MD_AB41
   Oparams.bheightAA = Oparams.bheightAB = 0.0;
 #else
   Oparams.bheight = 0.0;
+#endif
+#ifdef MD_DYNAMIC_OPROG
+  OprogStatus.dyn_alloc_oprog = dyn_alloc_oprog;
+  OprogStatus.set_dyn_ascii = set_dyn_ascii;
 #endif
   OprogStatus.maxbonds = 20;
   Oparams.T = 2.0;
@@ -2482,6 +2493,62 @@ void adjust_HQ_params(void)
 }
 #endif
 #endif
+#ifdef MD_DYNAMIC_OPROG
+int dyn_alloc_oprog(void)
+{
+  int np, i;  
+  void *last_ptr;
+  if (OprogStatus.ptr)
+    return OprogStatus.len;
+  np = Oparams.parnum;
+#ifdef MD_ROTDIFF_MIS
+  OprogStatus.len = sizeof(double)*13*Oparams.parnum;
+#else
+  OprogStatus.len = sizeof(double)*9*Oparams.parnum;
+#endif
+  OprogStatus.ptr = malloc(OprogStatus.len);
+  last_ptr = OprogStatus.ptr;
+#ifdef MD_ROTDIFF_MIS
+  OprogStatus.sumox = (double*)last_ptr;
+  OprogStatus.sumoy = OprogStatus.sumox + np;
+  OprogStatus.sumoz = OprogStatus.sumoy + np;
+  OprogStatus.lastcolltime = OprogStatus.sumoz + np;
+  last_ptr = (void*) (OprogStatus.lastcolltime + np);
+#endif
+  OprogStatus.rxCMi = ((double*)last_ptr);
+  OprogStatus.ryCMi = OprogStatus.rxCMi + np;
+  OprogStatus.rzCMi = OprogStatus.ryCMi + np;
+  OprogStatus.DR = malloc(sizeof(double*)*np);
+  for (i=0; i < np; i++)
+    {
+      OprogStatus.DR[i] = OprogStatus.rzCMi + np + i*3;
+    }
+  OprogStatus.vcmx0 = OprogStatus.DR[np-1] + 3;
+  OprogStatus.vcmy0 = OprogStatus.vcmx0 + np;
+  OprogStatus.vcmz0 = OprogStatus.vcmy0 + np;
+  return OprogStatus.len;
+}
+void set_dyn_ascii(void)
+{
+  int k;
+  OprogStatus.dyn_alloc_oprog();
+  k=0;
+  do
+    {
+      if (!strcmp(opro_ascii[k].parName,"rxCMi"))
+	opro_ascii[k].ptr = OprogStatus.rxCMi;
+      if (!strcmp(opro_ascii[k].parName,"ryCMi"))
+	opro_ascii[k].ptr = OprogStatus.ryCMi;
+      if (!strcmp(opro_ascii[k].parName,"rzCMi"))
+	opro_ascii[k].ptr = OprogStatus.rzCMi;
+      if (!strcmp(opro_ascii[k].parName,"DR"))
+	opro_ascii[k].ptr = &(OprogStatus.DR[0][0]);
+      k++;
+    }
+  while (strcmp(opro_ascii[k].parName,""));
+
+}
+#endif
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -2518,12 +2585,15 @@ void usrInitAft(void)
       //printf("OprogStatus.nextSumTime:%.15G", OprogStatus.nextSumTime);
     }
 #endif
-#ifdef MAXPAR
+#if defined(MAXPAR) && !defined(MD_DYNAMIC_OPROG)
   if (Oparams.parnum >= MAXPAR)
     {
       printf("ERROR: Too many particles, increase MAXPAR in sticky.h and recompile\n");
       exit(-1);
     } 
+#endif
+#ifdef MD_DYNAMIC_OPROG
+  OprogStatus.dyn_alloc_oprog();
 #endif
   Nm = Oparams.parnumA;
   parnumA = Oparams.parnumA;
@@ -2534,11 +2604,11 @@ void usrInitAft(void)
     OprogStatus.bigDt = 0.0;
 #endif
 #ifdef MD_GROWTH_CODE
- if (OprogStatus.targetPhi > 0.0)
-   {
-     printf("[GROWTH SIMULATION] WARNING: during growth spots will be disabled and sphere are additive\n");
-     printf("sigma_ij = (sigma_i + sigma_j)*0.5 for every possible pair i,j\n");
-   } 
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      printf("[GROWTH SIMULATION] WARNING: during growth spots will be disabled and sphere are additive\n");
+      printf("sigma_ij = (sigma_i + sigma_j)*0.5 for every possible pair i,j\n");
+    } 
 #endif
   invL = 1.0/L;
   L2 = 0.5*L;
