@@ -1509,6 +1509,11 @@ void calc_omega(int i, double *wwx, double *wwy, double *wwz);
 #ifdef MD_PROTEIN_DESIGN
 void read_native_conf(void);
 #endif
+#ifdef MD_DYNAMIC_OPROG
+int dyn_alloc_oprog(void);
+void set_dyn_ascii(void);
+#endif
+
 void usrInitBef(void)
 {
   int i;
@@ -1528,6 +1533,15 @@ void usrInitBef(void)
     Dtrans = 0.0; /* DtransOld should become a field of OprogStatus */
 
     V = 0.0;
+#ifdef MD_DYNAMIC_OPROG
+  OprogStatus.ptr = NULL;
+  OprogStatus.len = 0;
+#endif
+#ifdef MD_DYNAMIC_OPROG
+  OprogStatus.dyn_alloc_oprog = dyn_alloc_oprog;
+  OprogStatus.set_dyn_ascii = set_dyn_ascii;
+#endif
+ 
 #ifdef MD_LXYZ
     L[0] = L[1] = L[2] = 9.4;
 #else
@@ -3209,6 +3223,99 @@ void adjust_HQ_params(void)
 }
 #endif
 #endif
+#ifdef MD_DYNAMIC_OPROG
+int dyn_alloc_oprog(void)
+{
+  int np, i;  
+  void *last_ptr;
+  if (OprogStatus.ptr)
+    return OprogStatus.len;
+  np = Oparams.parnum;
+#ifdef MD_CALC_DPP
+  OprogStatus.len = sizeof(double)*25*Oparams.parnum;
+#else
+  OprogStatus.len = sizeof(double)*13*Oparams.parnum;
+#endif
+  OprogStatus.ptr = malloc(OprogStatus.len);
+  last_ptr = OprogStatus.ptr;
+#ifdef MD_CALC_DPP
+  OprogStatus.sumdx = (double*)last_ptr;
+  OprogStatus.sumdy = OprogStatus.sumdx + np;
+  OprogStatus.sumdz = OprogStatus.sumdy + np;
+  OprogStatus.lastu1x = OprogStatus.sumdz + np;
+  OprogStatus.lastu1y = OprogStatus.lastu1x + np;
+  OprogStatus.lastu1z = OprogStatus.lastu1y + np;
+  OprogStatus.lastu2x = OprogStatus.lastu1z + np;
+  OprogStatus.lastu2y = OprogStatus.lastu2x + np;
+  OprogStatus.lastu2z = OprogStatus.lastu2y + np;
+  OprogStatus.lastu3x = OprogStatus.lastu2z + np;
+  OprogStatus.lastu3y = OprogStatus.lastu3x + np;
+  OprogStatus.lastu3z = OprogStatus.lastu3y + np;
+  last_ptr = (void*) OprogStatus.lastu3z + np;
+#endif
+  OprogStatus.sumox = (double*)last_ptr;
+  OprogStatus.sumoy = OprogStatus.sumox + np;
+  OprogStatus.sumoz = OprogStatus.sumoy + np;
+  OprogStatus.lastcolltime = OprogStatus.sumoz + np;
+  OprogStatus.rxCMi = OprogStatus.lastcolltime + np;
+  OprogStatus.ryCMi = OprogStatus.rxCMi + np;
+  OprogStatus.rzCMi = OprogStatus.ryCMi + np;
+  OprogStatus.DR = malloc(sizeof(double*)*np);
+  for (i=0; i < np; i++)
+    {
+      OprogStatus.DR[i] = OprogStatus.rzCMi + np + i*3;
+    }
+  OprogStatus.vcmx0 = OprogStatus.DR[np-1] + 3;
+  OprogStatus.vcmy0 = OprogStatus.vcmx0 + np;
+  OprogStatus.vcmz0 = OprogStatus.vcmy0 + np;
+  return OprogStatus.len;
+}
+void set_dyn_ascii(void)
+{
+  int k;
+  OprogStatus.dyn_alloc_oprog();
+  k=0;
+  do
+    {
+      if (!strcmp(opro_ascii[k].parName,"rxCMi"))
+	opro_ascii[k].ptr = OprogStatus.rxCMi;
+      if (!strcmp(opro_ascii[k].parName,"ryCMi"))
+	opro_ascii[k].ptr = OprogStatus.ryCMi;
+      if (!strcmp(opro_ascii[k].parName,"rzCMi"))
+	opro_ascii[k].ptr = OprogStatus.rzCMi;
+      if (!strcmp(opro_ascii[k].parName,"DR"))
+	opro_ascii[k].ptr = &(OprogStatus.DR[0][0]);
+#ifdef MD_CALC_DPP
+      if (!strcmp(opro_ascii[k].parName,"sumdx"))
+	opro_ascii[k].ptr = OprogStatus.sumdx;
+      if (!strcmp(opro_ascii[k].parName,"sumdy"))
+	opro_ascii[k].ptr = OprogStatus.sumdy;
+      if (!strcmp(opro_ascii[k].parName,"sumdz"))
+	opro_ascii[k].ptr = OprogStatus.sumdz;
+      if (!strcmp(opro_ascii[k].parName,"lastu1x"))
+	opro_ascii[k].ptr = OprogStatus.lastu1x;
+      if (!strcmp(opro_ascii[k].parName,"lastu1y"))
+	opro_ascii[k].ptr = OprogStatus.lastu1y;
+      if (!strcmp(opro_ascii[k].parName,"lastu1z"))
+	opro_ascii[k].ptr = OprogStatus.lastu1z;
+      if (!strcmp(opro_ascii[k].parName,"lastu2x"))
+	opro_ascii[k].ptr = OprogStatus.lastu2x;
+      if (!strcmp(opro_ascii[k].parName,"lastu2y"))
+	opro_ascii[k].ptr = OprogStatus.lastu2y;
+      if (!strcmp(opro_ascii[k].parName,"lastu2z"))
+	opro_ascii[k].ptr = OprogStatus.lastu2z;
+      if (!strcmp(opro_ascii[k].parName,"lastu3x"))
+	opro_ascii[k].ptr = OprogStatus.lastu3x;
+      if (!strcmp(opro_ascii[k].parName,"lastu3y"))
+	opro_ascii[k].ptr = OprogStatus.lastu3y;
+      if (!strcmp(opro_ascii[k].parName,"lastu3z"))
+	opro_ascii[k].ptr = OprogStatus.lastu3z;
+#endif
+      k++;
+    }
+  while (strcmp(opro_ascii[k].parName,""));
+}
+#endif
 
 void usrInitAft(void)
 {
@@ -3249,12 +3356,15 @@ void usrInitAft(void)
   int a;
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 
-#ifdef MAXPAR
+#if defined(MAXPAR) && !defined(MD_DYNAMIC_OPROG)
   if (Oparams.parnum >= MAXPAR)
     {
       printf("ERROR: Too many particles, increase MAXPAR in ellipsoid.h and recompile\n");
       exit(-1);
     } 
+#endif
+#ifdef MD_DYNAMIC_OPROG
+  OprogStatus.dyn_alloc_oprog();
 #endif
 
 #ifdef EDHE_FLEX
