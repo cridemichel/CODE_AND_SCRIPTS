@@ -5189,6 +5189,13 @@ void PredictColl (int na, int nb, int nl)
 		      else
 			sigSq = Sqr(Oparams.sigma[0][1]);
 #endif
+#if 0
+		      if ((distSq=Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2])) < 0.99*sigSq)
+	    		{
+    			  printf("[WARNING] Significant overlap: %.15G (%d-%d)\n", distSq/sigSq, na, n);
+			}
+#endif
+
 		      if (b < 0.0) 
 			{
 #ifdef MD_SPOT_OFF
