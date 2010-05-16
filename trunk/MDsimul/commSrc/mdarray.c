@@ -462,7 +462,9 @@ int readBak(int bfd)
      whose file descriptor is 'bfd'. 
      NOTE: nel salvataggio rispettare l'ordine di caricamento <---------!!!!!
      Attualmente non viene effettuato nessun controllo sugli fread <----!!!!!*/
-  
+#ifdef MD_DYNAMIC_OPROG
+  int size;
+#endif 
   /* Ensure to start reading from begin of file */
   lseek(bfd, 0, SEEK_SET);
   
@@ -493,7 +495,12 @@ int readBak(int bfd)
   /* reads filenames structure ( see TECH_INFO for details) */
   br = mdRead(bfd, "Restore",  "Error reading the program status.", CONT, 
 	      sizeof(struct progStatus), &OprogStatus);
-  
+#ifdef MD_DYNAMIC_OPROG
+  OprogStatus.ptr = NULL;
+  size = OprogStatus.dyn_alloc_oprog(); 
+  br = mdRead(bfd, "Restore",  "Error reading the program dynamic status.", CONT, 
+	    size, OprogStatus.ptr);
+#endif 
  if (br == -1)
     { 
       return 1; /* 1 = ERROR */
@@ -629,7 +636,64 @@ void asciiParsing(struct pascii strutt[],
 	NULL);
   //exit(-1);
 }
+void read_parnum(FILE *pfs)
+{
+  char *line;
+  char str1[NAME_LENGTH], *str2;
+  int ll, cpos;
+  int atc=0;
 
+  cpos = ftell(pfs);
+#ifdef MAXPAR
+  /* if we have an array of double MAXPAR long we assume here 20 bytes for each element (usually %.15G
+     is a sensible choice for double numbers hence 20 bytes is a safe overestimate */
+  ll = MAXPAR*20;
+#else
+  ll = MAXLINELEN;
+#endif
+  line = malloc((ll+NAME_LENGTH)*sizeof(char));
+  str2 = malloc(ll*sizeof(char)); 
+  /* scanning the file for the other params */
+  while (!feof(pfs))
+    {
+      /* The syntax must be <parameter>:<value> 
+         if <value>  is a '*' then it use the default value or 
+         the value loaded from the coordinates file inifile, if
+         specified. 
+         SPACES ARE IGNORED <---------------------- !!!! */
+      fscanf(pfs, "%[^\n] ", line);
+       // fscanf(pfs, "%s ", line);
+      //printf("%s\n", line);
+      if (!strcmp(line, "@@@"))
+	{
+	  atc++;
+	  if (atc==2)
+	    break;
+	}
+      if (atc==0)
+	continue;
+      //printf("line=%s\n", line);
+      //printf("line: %s\n", line);
+      if (!strcmp(line, "")) /* If a void line */
+	continue;
+      
+      if (sscanf(line, "%[^:# ] : %[^\n#] ", str1, str2) < 2)
+	continue;
+     
+      if (!strcmp(str1,"parnum"))
+	{
+	  Oparams.parnum = atoi(str2);
+	  printf("[readBakAscii()->read_parnum()]: Oparams.parnum=%d\n", Oparams.parnum);
+	  fseek(pfs, cpos, SEEK_SET);
+	  return;
+	}	
+    }
+  fseek(pfs, cpos, SEEK_SET);
+  free(line);
+  free(str2);
+  printf("[WARNING] parnum not found in ascii file\n");
+  exit(-1);
+}
 /* ======================== >>> readAsciiPars <<< ========================= */
 void readAsciiPars(FILE* pfs, struct pascii strutt[])
 {
@@ -665,7 +729,7 @@ void readAsciiPars(FILE* pfs, struct pascii strutt[])
       
       if (sscanf(line, "%[^:# ] : %[^\n#] ", str1, str2) < 2)
 	continue;
-      
+     
       //fscanf(pfs, " %[^: ] : %[^'\n' ]", str1, str2);
       /* analyzes the parameter just read 
          This function depends strongly upon simulation */
@@ -885,6 +949,9 @@ void readCorAscii(char *fn)
 void readBakAscii(char* fn)
 {
   FILE* fs; 
+#ifdef MD_DYNAMIC_OPROG
+  int cpos;
+#endif
   if ((fs = fopenMPI(fn, "r")) == NULL)
     {
       sprintf(msgStrA, "Problem opening restart file %s ", fn);
@@ -893,9 +960,14 @@ void readBakAscii(char* fn)
 	    NULL);
       exit(-1);
     }
-
+  /* N.B. 16/05/2010: prima parnum non era stato assegnato quando si chiamava readAsciiPars()! */
+  read_parnum(fs);
+#ifdef MD_DYNAMIC_OPROG
+  OprogStatus.dyn_alloc_oprog();
+#endif
   readAsciiPars(fs, opro_ascii);
   readAsciiPars(fs, opar_ascii);
+ 
   /* Entrambe queste macro sono definite nel file mono_DPT.h */
   /* read up to coordinates begin */
 
@@ -992,7 +1064,9 @@ void saveBak(char *fileName)
 {
   /* Write restore file, it choose not the last file written (see TECH_INFO) */
   int bf; /* restore file descriptor */
-
+#ifdef MD_DYNAMIC_OPROG
+  int size;
+#endif
   /* <---------------------------------------------------- OPEN RESTORE FILE */
   
   /* 6/5/99 ADD
@@ -1010,6 +1084,12 @@ void saveBak(char *fileName)
   /* write the progStatus struct (see TECH_INFO file) */
   mdWrite(bf, NULL, "Error writing the program status.", EXIT,
 	  sizeof (struct progStatus), &OprogStatus);
+#ifdef MD_DYNAMIC_OPROG
+  size = OprogStatus.len; 
+  mdWrite(bf, NULL,  "Error writing the program dynamic status.", EXIT, 
+	  size, OprogStatus.ptr);
+#endif 
+ 
 #ifdef EDHE_FLEX
   writeBinCoord_heflex(bf);
 #endif
