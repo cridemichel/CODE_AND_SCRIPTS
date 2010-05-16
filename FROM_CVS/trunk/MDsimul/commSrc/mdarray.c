@@ -538,8 +538,10 @@ void asciiParsing(struct pascii strutt[],
   char *bc, *subs;
   char *bs;
   
-  for  (i=0; strutt[i].ptr != NULL; i++) /* parname=NULL menas END */
+  for  (i=0; strutt[i].ptr != NULL && strcmp(strutt[i].parName,""); i++) /* parname="" and ptr=NULL means END */
     {
+      /* 16/05/2010: ptr puo' essere nullo anche in caso di allocazione dinamica quindi controllo anche parName che
+	 sia diverso dalla stringa vuota "" */
       //if (!strcmp(stringA, "inifile"))
       //	printf("stringA: %s stringB: %s i: %d name: %s %s\n",
       //	     stringA, stringB, i, strutt[i].parName, strutt[i].type);
@@ -679,11 +681,15 @@ void read_parnum(FILE *pfs)
       
       if (sscanf(line, "%[^:# ] : %[^\n#] ", str1, str2) < 2)
 	continue;
-     
       if (!strcmp(str1,"parnum"))
 	{
+#ifdef BIMIX
+	  sscanf(str2,"%d %d", &(Oparams.parnum[0]), &(Oparams.parnum[1]));
+	  printf("[readBakAscii()->read_parnum()]: Oparams.parnum=%d %d\n", Oparams.parnum[0], Oparams.parnum[1]);
+#else
 	  Oparams.parnum = atoi(str2);
 	  printf("[readBakAscii()->read_parnum()]: Oparams.parnum=%d\n", Oparams.parnum);
+#endif
 	  fseek(pfs, cpos, SEEK_SET);
 	  return;
 	}	
@@ -949,9 +955,6 @@ void readCorAscii(char *fn)
 void readBakAscii(char* fn)
 {
   FILE* fs; 
-#ifdef MD_DYNAMIC_OPROG
-  int cpos;
-#endif
   if ((fs = fopenMPI(fn, "r")) == NULL)
     {
       sprintf(msgStrA, "Problem opening restart file %s ", fn);
@@ -960,9 +963,12 @@ void readBakAscii(char* fn)
 	    NULL);
       exit(-1);
     }
-  /* N.B. 16/05/2010: prima parnum non era stato assegnato quando si chiamava readAsciiPars()! */
+  /* N.B. 16/05/2010: prima parnum non era stato assegnato quando si chiamava readAsciiPars()!
+     read_parnum() legge il numero di particelle dal file di restart ascii. */
   read_parnum(fs);
 #ifdef MD_DYNAMIC_OPROG
+  /* N.B. 16/05/2010: alloca la memoria dinamica per OprogStatus e inizializza i puntatori della struttura
+     opro_ascii con i puntatori ottenuti */	
   OprogStatus.dyn_alloc_oprog();
 #endif
   readAsciiPars(fs, opro_ascii);
