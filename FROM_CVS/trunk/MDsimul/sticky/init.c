@@ -2526,12 +2526,12 @@ int dyn_alloc_oprog(void)
   OprogStatus.vcmx0 = OprogStatus.DR[np-1] + 3;
   OprogStatus.vcmy0 = OprogStatus.vcmx0 + np;
   OprogStatus.vcmz0 = OprogStatus.vcmy0 + np;
+  OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
 }
 void set_dyn_ascii(void)
 {
   int k;
-  OprogStatus.dyn_alloc_oprog();
   k=0;
   do
     {
@@ -2542,7 +2542,9 @@ void set_dyn_ascii(void)
       if (!strcmp(opro_ascii[k].parName,"rzCMi"))
 	opro_ascii[k].ptr = OprogStatus.rzCMi;
       if (!strcmp(opro_ascii[k].parName,"DR"))
-	opro_ascii[k].ptr = &(OprogStatus.DR[0][0]);
+	{
+	  opro_ascii[k].ptr = OprogStatus.DR[0];
+	}
       k++;
     }
   while (strcmp(opro_ascii[k].parName,""));
