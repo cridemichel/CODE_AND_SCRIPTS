@@ -1511,6 +1511,9 @@ void scale_Phi(void)
 }
 
 long long itsNRdist=0, callsdistNR=0;
+#ifdef MD_CALENDAR_HYBRID
+void adjust_HQ_params(void);
+#endif
 void outputSummary(void)
 {
 #if 0

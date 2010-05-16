@@ -3240,6 +3240,7 @@ int dyn_alloc_oprog(void)
 #else
   OprogStatus.len = sizeof(double)*13*Oparams.parnum;
 #endif
+  //printf("DYNAMIC ALLOCATION of %d bytes\n", OprogStatus.len);
   OprogStatus.ptr = malloc(OprogStatus.len);
   last_ptr = OprogStatus.ptr;
 #ifdef MD_CALC_DPP
@@ -3255,7 +3256,7 @@ int dyn_alloc_oprog(void)
   OprogStatus.lastu3x = OprogStatus.lastu2z + np;
   OprogStatus.lastu3y = OprogStatus.lastu3x + np;
   OprogStatus.lastu3z = OprogStatus.lastu3y + np;
-  last_ptr = (void*) OprogStatus.lastu3z + np;
+  last_ptr = (void*) (OprogStatus.lastu3z + np);
 #endif
   OprogStatus.sumox = (double*)last_ptr;
   OprogStatus.sumoy = OprogStatus.sumox + np;
@@ -3289,6 +3290,14 @@ void set_dyn_ascii(void)
 	opro_ascii[k].ptr = OprogStatus.rzCMi;
       if (!strcmp(opro_ascii[k].parName,"DR"))
 	opro_ascii[k].ptr = OprogStatus.DR[0];
+      if (!strcmp(opro_ascii[k].parName,"sumox"))
+	opro_ascii[k].ptr = OprogStatus.sumox;
+      if (!strcmp(opro_ascii[k].parName,"sumoy"))
+	opro_ascii[k].ptr = OprogStatus.sumoy;
+      if (!strcmp(opro_ascii[k].parName,"sumoz"))
+	opro_ascii[k].ptr = OprogStatus.sumoz;
+      if (!strcmp(opro_ascii[k].parName,"lastcolltime"))
+	opro_ascii[k].ptr = OprogStatus.lastcolltime;
 #ifdef MD_CALC_DPP
       if (!strcmp(opro_ascii[k].parName,"sumdx"))
 	opro_ascii[k].ptr = OprogStatus.sumdx;
@@ -3315,6 +3324,7 @@ void set_dyn_ascii(void)
       if (!strcmp(opro_ascii[k].parName,"lastu3z"))
 	opro_ascii[k].ptr = OprogStatus.lastu3z;
 #endif
+
       k++;
     }
   while (strcmp(opro_ascii[k].parName,""));
@@ -3371,7 +3381,7 @@ void usrInitAft(void)
   OprogStatus.dyn_alloc_oprog();
 #endif
 #ifdef MD_DYNAMIC_OPROG
-  for (i = 0; i < MAXPAR; i++)
+  for (i = 0; i < Oparams.parnum; i++)
       {
 	OprogStatus.lastcolltime[i] = 0.0;
 	OprogStatus.sumox[i] = 0.0;
@@ -4452,6 +4462,9 @@ void usrInitAft(void)
       printf("[GHOST SIMULATION]: Initializing structures...\n");    
       init_ghostArr();
     }
+  /* comunque alloca l'array poiché writeBinCoord_heflex() lo usa per scrivere!*/
+  if (ghostInfoArr==NULL)
+    ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
 #endif
 #ifdef MD_GRAZING_TRYHARDER
   printf("[INFO] Grazing Try-Harder code ENABLED!\n");
@@ -4943,11 +4956,11 @@ int readBinCoord_heflex(int cfd)
   ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
   rerr |= readSegs(cfd, "Init", "Error reading ghostInfoArr", CONT, size, ghostInfoArr, NULL);
 #endif
-
+  //printf("status:%d\n", ghostInfoArr[Oparams.parnum-1].ghost_status);
   size = sizeof(int)*Oparams.parnum;
   typeOfPart = malloc(size);
   rerr |= -readSegs(cfd, "Init", "Error reading typeNP", CONT, size, typeOfPart, NULL);
- 
+
   size = sizeof(int)*Oparams.ntypes;
   typeNP = malloc(size);
   rerr |= -readSegs(cfd, "Init", "Error reading typeNP", CONT, size, typeNP, NULL);
@@ -4955,38 +4968,46 @@ int readBinCoord_heflex(int cfd)
   size = sizeof(partType)*Oparams.ntypes; 
   typesArr = malloc(size);
   rerr |= -readSegs(cfd, "Init", "Error reading typesArr", CONT, size, typesArr, NULL);
-
   for (i=0; i < Oparams.ntypes; i++)
     {
       size = sizeof(spotStruct)*typesArr[i].nspots;
 #ifdef MD_SUPERELLIPSOID
+     /*  16/05/2010: notare che nel caso si abbiano spot per le NNL bisogna allocare più spazio
+	ma questi non vengono salvati, quindi il numero di spot letti non ne deve tener conto */ 
       sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
+      typesArr[i].spots = malloc(size+sizeSPNNL);
+      if (typesArr[i].nspots == 0)
+	continue;
 #else
       sizeSPNNL = 0;
-#endif
+      if (typesArr[i].nspots == 0)
+	continue;
       typesArr[i].spots = malloc(size+sizeSPNNL);
+#endif
       rerr |= -readSegs(cfd, "Init", "Error reading spots", CONT, size, typesArr[i].spots, NULL);
     } 
   /* read interactions */
-  intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
-  size = sizeof(interStruct)*Oparams.ninters;
-  rerr |= -readSegs(cfd, "Init", "Error reading intersArr", CONT, size, intersArr, NULL);
-  for (i=0; i < Oparams.ninters; i++)
+  if (Oparams.ninters > 0)
     {
-      if (intersArr[i].type1==-2)
+      intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
+      size = sizeof(interStruct)*Oparams.ninters;
+      rerr |= -readSegs(cfd, "Init", "Error reading intersArr", CONT, size, intersArr, NULL);
+      for (i=0; i < Oparams.ninters; i++)
 	{
-	  size = sizeof(rangeStruct)*intersArr[i].nr1;
-	  intersArr[i].r1 = malloc(size);
-	  rerr |= readSegs(cfd, "Init", "Error reading ranges", CONT, size, intersArr[i].r1, NULL);
-	}
-      if (intersArr[i].type2==-2)
-	{
-	  size = sizeof(rangeStruct)*intersArr[i].nr2;
-	  intersArr[i].r2 = malloc(size);
-	  rerr |=readSegs(cfd, "Init", "Error reading ranges", CONT, size, intersArr[i].r2, NULL);
+	  if (intersArr[i].type1==-2)
+	    {
+	      size = sizeof(rangeStruct)*intersArr[i].nr1;
+	      intersArr[i].r1 = malloc(size);
+	      rerr |= readSegs(cfd, "Init", "Error reading ranges", CONT, size, intersArr[i].r1, NULL);
+	    }
+	  if (intersArr[i].type2==-2)
+	    {
+	      size = sizeof(rangeStruct)*intersArr[i].nr2;
+	      intersArr[i].r2 = malloc(size);
+	      rerr |=readSegs(cfd, "Init", "Error reading ranges", CONT, size, intersArr[i].r2, NULL);
+	    }
 	}
     }
-
   if (Oparams.nintersIJ > 0)
     {
       intersArrIJ = malloc(sizeof(interStructIJ)*Oparams.nintersIJ);
@@ -5060,24 +5081,29 @@ void writeBinCoord_heflex(int cfd)
 
   for (i=0; i < Oparams.ntypes; i++)
     {
+      if (typesArr[i].nspots == 0)
+	continue;
       size = sizeof(spotStruct)*typesArr[i].nspots;
       writeSegs(cfd, "Init", "Error writing spots", CONT, size, typesArr[i].spots, NULL);
     } 
-  size = sizeof(interStruct)*Oparams.ninters;
-  /* write interactions */
-  writeSegs(cfd, "Init", "Error writing intersArr", CONT, size, intersArr, NULL);
-  /* writing all ranges here */
-  for (i=0; i < Oparams.ninters; i++)
+  if (Oparams.ninters > 0)
     {
-      if (intersArr[i].type1==-2)
+      size = sizeof(interStruct)*Oparams.ninters;
+      /* write interactions */
+      writeSegs(cfd, "Init", "Error writing intersArr", CONT, size, intersArr, NULL);
+      /* writing all ranges here */
+      for (i=0; i < Oparams.ninters; i++)
 	{
-	  size = sizeof(rangeStruct)*intersArr[i].nr1;
-	  writeSegs(cfd, "Init", "Error writing ranges", CONT, size, intersArr[i].r1, NULL);
-	}
-      if (intersArr[i].type2==-2)
-	{
-	  size = sizeof(rangeStruct)*intersArr[i].nr2;
-	  writeSegs(cfd, "Init", "Error writing ranges", CONT, size, intersArr[i].r2, NULL);
+	  if (intersArr[i].type1==-2)
+	    {
+	      size = sizeof(rangeStruct)*intersArr[i].nr1;
+	      writeSegs(cfd, "Init", "Error writing ranges", CONT, size, intersArr[i].r1, NULL);
+	    }
+	  if (intersArr[i].type2==-2)
+	    {
+	      size = sizeof(rangeStruct)*intersArr[i].nr2;
+	      writeSegs(cfd, "Init", "Error writing ranges", CONT, size, intersArr[i].r2, NULL);
+	    }
 	}
     }
   if (Oparams.nintersIJ > 0)
