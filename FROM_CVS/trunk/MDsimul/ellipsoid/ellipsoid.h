@@ -550,6 +550,20 @@ struct progStatus
   COORD_TYPE PyzArr[5];
   COORD_TYPE PzxArr[5];
 #ifdef MD_DYNAMIC_OPROG
+#ifdef MD_CALC_DPP
+  double *sumdx;
+  double *sumdy;
+  double *sumdz;
+  double *lastu1x;
+  double *lastu1y;
+  double *lastu1z;
+  double *lastu2x;
+  double *lastu2y;
+  double *lastu2z;
+  double *lastu3x;
+  double *lastu3y;
+  double *lastu3z;
+#endif
   void *ptr;
   int len;
   int (*dyn_alloc_oprog)(void);

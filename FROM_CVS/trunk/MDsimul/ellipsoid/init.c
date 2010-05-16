@@ -1660,6 +1660,7 @@ void usrInitBef(void)
       for (n = 0; n < 3; n++)
 	Oparams.I[i][n] = 1.0;
 #endif
+#ifndef MD_DYNAMIC_OPROG
     for (i = 0; i < MAXPAR; i++)
       {
 	OprogStatus.lastcolltime[i] = 0.0;
@@ -1681,6 +1682,7 @@ void usrInitBef(void)
 	OprogStatus.lastu3z[i] = 0.0;
 #endif
       }
+#endif
     OprogStatus.eventMult = 100;
     OprogStatus.overlaptol = 0.0001;
     /* Il promo step inizia con un tapping a temperatura T */
@@ -3146,6 +3148,8 @@ void estimate_HQ_params(double phi)
     }
 }
 #if 1
+void rebuild_linked_list(void);
+void rebuildCalendar(void);
 void adjust_HQ_params(void)
 {
   int targetNE = 15, del=5;
@@ -3366,7 +3370,29 @@ void usrInitAft(void)
 #ifdef MD_DYNAMIC_OPROG
   OprogStatus.dyn_alloc_oprog();
 #endif
-
+#ifdef MD_DYNAMIC_OPROG
+  for (i = 0; i < MAXPAR; i++)
+      {
+	OprogStatus.lastcolltime[i] = 0.0;
+	OprogStatus.sumox[i] = 0.0;
+	OprogStatus.sumoy[i] = 0.0;
+	OprogStatus.sumoz[i] = 0.0;
+#ifdef MD_CALC_DPP
+	OprogStatus.sumdx[i] = 0.0;
+	OprogStatus.sumdy[i] = 0.0;
+	OprogStatus.sumdz[i] = 0.0;
+	OprogStatus.lastu1x[i] = 0.0;
+	OprogStatus.lastu1y[i] = 0.0;
+	OprogStatus.lastu1z[i] = 0.0;
+	OprogStatus.lastu2x[i] = 0.0;
+	OprogStatus.lastu2y[i] = 0.0;
+	OprogStatus.lastu2z[i] = 0.0;
+	OprogStatus.lastu3x[i] = 0.0;
+	OprogStatus.lastu3y[i] = 0.0;
+	OprogStatus.lastu3z[i] = 0.0;
+#endif
+      }
+#endif
 #ifdef EDHE_FLEX
   Oparams.parnumA = Oparams.parnum;
 #endif
