@@ -35,7 +35,7 @@ extern int *equilibrated;
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 #ifdef MD_CALENDAR_HYBRID
 extern int *linearLists;
-extern int numevPQ;
+extern int numevPQ, totevHQ, overevHQ;
 #endif
 
 extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
@@ -1552,7 +1552,7 @@ void outputSummary(void)
       adjust_HQ_params();
     }
 #endif
-  printf("Actual number of events in binary tree: %d\n", numevPQ);
+  printf("Actual number of events in binary tree: %d (of %d, overflows: %d)\n", numevPQ, totevHQ, overevHQ);
 #endif
 
 #ifdef MD_PATCHY_HE 
