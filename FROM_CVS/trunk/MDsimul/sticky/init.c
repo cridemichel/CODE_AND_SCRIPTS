@@ -1594,9 +1594,11 @@ accumulators initialization is crucial */
 #ifndef MD_DYNAMIC_OPROG
   for (i = 0; i < MAXPAR; i++)
     {
+#if 0
       OprogStatus.vcmx0[i] = 0.0;
       OprogStatus.vcmy0[i] = 0.0;
       OprogStatus.vcmz0[i] = 0.0;
+#endif
       for (k=0; k < 3; k++)
 	OprogStatus.DR[i][k] = 0.0;
     }
@@ -2513,9 +2515,9 @@ int dyn_alloc_oprog(void)
     return OprogStatus.len;
   np = Oparams.parnum;
 #ifdef MD_ROTDIFF_MIS
-  OprogStatus.len = sizeof(double)*13*Oparams.parnum;
+  OprogStatus.len = sizeof(double)*10*Oparams.parnum;
 #else
-  OprogStatus.len = sizeof(double)*9*Oparams.parnum;
+  OprogStatus.len = sizeof(double)*6*Oparams.parnum;
 #endif
   OprogStatus.ptr = malloc(OprogStatus.len);
   last_ptr = OprogStatus.ptr;
@@ -2534,9 +2536,11 @@ int dyn_alloc_oprog(void)
     {
       OprogStatus.DR[i] = OprogStatus.rzCMi + np + i*3;
     }
+#if 0
   OprogStatus.vcmx0 = OprogStatus.DR[np-1] + 3;
   OprogStatus.vcmy0 = OprogStatus.vcmx0 + np;
   OprogStatus.vcmz0 = OprogStatus.vcmy0 + np;
+#endif
   OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
 }
@@ -3093,10 +3097,11 @@ void usrInitAft(void)
 	  vcmz = vz[i];
 	  for (k=0; k < 3; k++)
 	    OprogStatus.DR[i][k] = 0.0;
-
+#if 0
 	  OprogStatus.vcmx0[i] = vcmx;
 	  OprogStatus.vcmy0[i] = vcmy;
 	  OprogStatus.vcmz0[i] = vcmz;
+#endif
 	}
 
       OprogStatus.sumEta   = 0.0;
