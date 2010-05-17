@@ -4048,7 +4048,8 @@ void usrInitAft(void)
 	{
 	  nebrTab[i].len = 0;
 	  nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
-	  nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
+	  //nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
+	  nebrTab[i].shift = NULL;
 	  nebrTab[i].R = matrix(3, 3);
 	}
 #else
@@ -4056,7 +4057,9 @@ void usrInitAft(void)
 	{
 	  nebrTab[i].len = 0;
 	  nebrTab[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
-	  nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
+	  //nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
+	  /* tanto shift non viene usata per cui è inutile sprecare memoria*/ 
+	  nebrTab[i].shift = NULL;
 	  nebrTab[i].R = matrix(3, 3);
 	}
 #endif
