@@ -1681,6 +1681,11 @@ void usrInitBef(void)
 	OprogStatus.lastu3y[i] = 0.0;
 	OprogStatus.lastu3z[i] = 0.0;
 #endif
+	OprogStatus.vcmx0[i] = 0.0;
+	OprogStatus.vcmy0[i] = 0.0;
+	OprogStatus.vcmz0[i] = 0.0;
+	for (k=0; k < 3; k++)
+	  OprogStatus.DR[i][k] = 0.0;
       }
 #endif
     OprogStatus.eventMult = 100;
@@ -3342,7 +3347,7 @@ void usrInitAft(void)
   int kk;
 #endif
   double phiIni;
-  int Nm, i, sct, overlap;
+  int Nm, i, sct, overlap, k;
   COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
 #ifndef EDHE_FLEX
   COORD_TYPE *m;
@@ -3379,29 +3384,6 @@ void usrInitAft(void)
 #endif
 #ifdef MD_DYNAMIC_OPROG
   OprogStatus.dyn_alloc_oprog();
-#endif
-#ifdef MD_DYNAMIC_OPROG
-  for (i = 0; i < Oparams.parnum; i++)
-      {
-	OprogStatus.lastcolltime[i] = 0.0;
-	OprogStatus.sumox[i] = 0.0;
-	OprogStatus.sumoy[i] = 0.0;
-	OprogStatus.sumoz[i] = 0.0;
-#ifdef MD_CALC_DPP
-	OprogStatus.sumdx[i] = 0.0;
-	OprogStatus.sumdy[i] = 0.0;
-	OprogStatus.sumdz[i] = 0.0;
-	OprogStatus.lastu1x[i] = 0.0;
-	OprogStatus.lastu1y[i] = 0.0;
-	OprogStatus.lastu1z[i] = 0.0;
-	OprogStatus.lastu2x[i] = 0.0;
-	OprogStatus.lastu2y[i] = 0.0;
-	OprogStatus.lastu2z[i] = 0.0;
-	OprogStatus.lastu3x[i] = 0.0;
-	OprogStatus.lastu3y[i] = 0.0;
-	OprogStatus.lastu3z[i] = 0.0;
-#endif
-      }
 #endif
 #ifdef EDHE_FLEX
   Oparams.parnumA = Oparams.parnum;
@@ -3632,9 +3614,9 @@ void usrInitAft(void)
   Ibtmp = matrix(3,3);
   invIa = matrix(3, 3);
   invIb = matrix(3, 3);
-  angM = malloc(sizeof(double)*Oparams.parnum);
-  phi0 = malloc(sizeof(double)*Oparams.parnum);
-  psi0 = malloc(sizeof(double)*Oparams.parnum);
+  //angM = malloc(sizeof(double)*Oparams.parnum);
+  //phi0 = malloc(sizeof(double)*Oparams.parnum);
+  //psi0 = malloc(sizeof(double)*Oparams.parnum);
   costheta0 = malloc(sizeof(double)*Oparams.parnum);
   sintheta0 = malloc(sizeof(double)*Oparams.parnum);
   theta0 =    malloc(sizeof(double)*Oparams.parnum);
@@ -3723,7 +3705,7 @@ void usrInitAft(void)
   distsOld2= (double*)malloc(maxnbonds*sizeof(double));
   t2arr    = (double*)malloc(maxnbonds*sizeof(double));
   maxddoti = (double*)malloc(maxnbonds*sizeof(double));
-  crossed  = (int*)malloc(maxnbonds*sizeof(int));
+  //crossed  = (int*)malloc(maxnbonds*sizeof(int));
   tocheck  = (int*)malloc(maxnbonds*sizeof(int));
   dorefine = (int*)malloc(maxnbonds*sizeof(int));
   crossed  = (int*)malloc(maxnbonds*sizeof(int));
@@ -4290,6 +4272,20 @@ void usrInitAft(void)
   par2saveArr();
 #endif/* Calcoliamo rcut assumendo che si abbian tante celle quante sono 
    * le particelle */
+#ifdef EDHE_FLEX
+  if (!OprogStatus.useNNL)
+    {
+      /* giusto per inizializzare tali vettore ed evitare che valgrind si lamenti */
+      for (i=0; i < Oparams.ntypes; i++)
+	{
+	  for (k=0; k < 3; k++)
+	    {
+	      typesArr[i].ppsax[k] = 0.0;
+	      typesArr[i].ppr[k] = 0.0;
+	    }
+	}
+    }
+#endif
   if (newSim)
     {
       if (OprogStatus.useNNL)
@@ -4540,7 +4536,28 @@ void usrInitAft(void)
 	  OprogStatus.vcmx0[i] = vcmx;
 	  OprogStatus.vcmy0[i] = vcmy;
 	  OprogStatus.vcmz0[i] = vcmz;
-
+#ifdef MD_DYNAMIC_OPROG
+	  OprogStatus.lastcolltime[i] = 0.0;
+	  OprogStatus.sumox[i] = 0.0;
+	  OprogStatus.sumoy[i] = 0.0;
+	  OprogStatus.sumoz[i] = 0.0;
+#ifdef MD_CALC_DPP
+	  OprogStatus.sumdx[i] = 0.0;
+	  OprogStatus.sumdy[i] = 0.0;
+	  OprogStatus.sumdz[i] = 0.0;
+	  OprogStatus.lastu1x[i] = 0.0;
+	  OprogStatus.lastu1y[i] = 0.0;
+	  OprogStatus.lastu1z[i] = 0.0;
+	  OprogStatus.lastu2x[i] = 0.0;
+	  OprogStatus.lastu2y[i] = 0.0;
+	  OprogStatus.lastu2z[i] = 0.0;
+	  OprogStatus.lastu3x[i] = 0.0;
+	  OprogStatus.lastu3y[i] = 0.0;
+	  OprogStatus.lastu3z[i] = 0.0;
+#endif
+	  for (k=0; k < 3; k++)
+	    OprogStatus.DR[i][k] = 0.0;
+#endif
 	}
 
       OprogStatus.sumEta   = 0.0;
@@ -5072,10 +5089,10 @@ void writeBinCoord_heflex(int cfd)
 
   size = sizeof(int)*Oparams.parnum;
   writeSegs(cfd, "Init", "Error writing typeOfPart", CONT, size, typeOfPart, NULL);
- 
+
   size = sizeof(int)*Oparams.ntypes;
   writeSegs(cfd, "Init", "Error writing typeNP", CONT, size, typeNP, NULL);
- 
+
   size = sizeof(partType)*Oparams.ntypes; 
   writeSegs(cfd, "Init", "Error writing typesArr", CONT, size, typesArr, NULL);
 
@@ -5232,12 +5249,20 @@ void readAllCor(FILE* fs)
 #else
       sizeSPNNL = 0;
 #endif
-      typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots+sizeSPNNL);
+      if (sizeSPNNL > 0 || typesArr[i].nspots > 0)
+	typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots+sizeSPNNL);
+      else
+	typesArr[i].spots = NULL;
       //printf("QUI nhardobjs=%d ntypes=%d\n",typesArr[i].nhardobjs, Oparams.ntypes );
       for (j = 0; j < typesArr[i].nspots; j++)
 	fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],
 	       &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
       /* hard objects (for now super-ellipsoids) */
+      if (typesArr[i].nhardobjs > 0)
+	typesArr[i].hardobjs = malloc(sizeof(hardobjsStruct)*typesArr[i].nhardobjs);
+      else
+	typesArr[i].hardobjs = NULL;
+	  
       for (j = 0; j < typesArr[i].nhardobjs; j++)
 	fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lf ", 
 	       &typesArr[i].hardobjs[j].x[0],&typesArr[i].hardobjs[j].x[1], &typesArr[i].hardobjs[j].x[2], 
@@ -5246,7 +5271,10 @@ void readAllCor(FILE* fs)
     } 
   //printf("qui nintersIJ=%d\n", Oparams.nintersIJ);
   /* read interactions */
-  intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
+  if (Oparams.ninters > 0)
+    intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
+  else
+    intersArr = NULL;
 #if 0
   for (i=0; i < Oparams.ninters; i++)
    {
