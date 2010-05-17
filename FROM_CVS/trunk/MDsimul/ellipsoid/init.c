@@ -160,7 +160,7 @@ int numcols;
 int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
 double *t2arr, *distsOld, *dists, *distsOld2, *maxddoti;
-int *crossed, *tocheck, *dorefine, *crossed, *negpairs, dofTot;
+int *crossed, *tocheck, *dorefine, *negpairs, dofTot;
 #endif
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
@@ -1516,7 +1516,7 @@ void set_dyn_ascii(void);
 
 void usrInitBef(void)
 {
-  int i;
+  int i, k;
 #ifdef MD_ASYM_ITENS
   int n;
 #endif
@@ -1541,7 +1541,30 @@ void usrInitBef(void)
   OprogStatus.dyn_alloc_oprog = dyn_alloc_oprog;
   OprogStatus.set_dyn_ascii = set_dyn_ascii;
 #endif
- 
+#if 1
+#ifdef MD_SPOT_GLOBAL_ALLOC
+  /* inizializzo questi array globali per evitare (comunque inutili) lamentele di valgrind */
+  printf("QUI===============================================>\n");
+  for (i=0; i < NA; i++)
+    {
+      dstsSq[i] = 0.0;
+      for (k=0; k < 3; k++)
+	{
+	  ratA[i][k] = ratB[i][k] = 0;
+
+	}
+      for (k = 0; k < 6; k++)
+	{
+
+	  t2arrP[k][i] = distsP[k][i] = maxddotiP[k][i] = distsOldP[k][i] = 0.0;
+#ifdef MD_BASIC_DT
+	  distsOld2P[k][i] = 0.0;
+#endif
+	  crossedP[k][i] = tocheckP[k][i] = dorefineP[k][i] = crossedP[k][i] = 0;
+	}
+    }
+#endif
+#endif 
 #ifdef MD_LXYZ
     L[0] = L[1] = L[2] = 9.4;
 #else
@@ -3339,7 +3362,7 @@ void set_dyn_ascii(void)
   while (strcmp(opro_ascii[k].parName,""));
 }
 #endif
-
+#define MD_MATRIX_CONTIGOUS
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -3637,7 +3660,27 @@ void usrInitAft(void)
   Rdot = matrix(3,3);
   RM = malloc(sizeof(double**)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++) 
-    RM[i] = matrix(3, 3);
+    {
+#ifdef MD_MATRIX_CONTIGOUS
+      /* alloca R in maniera contigua */
+      if (i==0)
+	{
+  	  RM[i] = malloc(sizeof(double*)*3);
+	  RM[i][0] = malloc(sizeof(double)*Oparams.parnum*9);
+	  RM[i][1] = RM[i][0] + 3;
+	  RM[i][2] = RM[i][1] + 3;
+	}
+      else
+	{
+	  RM[i] = malloc(sizeof(double*)*3);
+	  RM[i][0] = RM[i-1][2] + 3;
+	  RM[i][1] = RM[i][0] + 3;
+	  RM[i][2] = RM[i][1] + 3;
+	}
+#else
+      RM[i] = matrix(3, 3);
+#endif
+    }
 #endif
   powdirs = matrix(6,6);
 #if 0
@@ -3658,6 +3701,7 @@ void usrInitAft(void)
   RtB = matrix(3, 3);
   Aip = matrix(3,3);
   R = malloc(sizeof(double**)*Oparams.parnum);
+  
   for (i=0; i < Oparams.parnum; i++)
     {
 #if 0
@@ -3671,7 +3715,25 @@ void usrInitAft(void)
       //else if (i > 1 && dist > 19.0)
 	//fprintf(stderr,"%.15G %.15G %.15G @ 0.5\n", rx[i], ry[i], rz[i]);
 #endif
+#ifdef MD_MATRIX_CONTIGOUS
+      /* alloca R in maniera contigua */
+      if (i==0)
+	{
+  	  R[i] = malloc(sizeof(double*)*3);
+	  R[i][0] = malloc(sizeof(double)*Oparams.parnum*9);
+	  R[i][1] = R[i][0] + 3;
+	  R[i][2] = R[i][1] + 3;
+	}
+      else
+	{
+	  R[i] = malloc(sizeof(double*)*3);
+	  R[i][0] = R[i-1][2] + 3;
+	  R[i][1] = R[i][0] + 3;
+	  R[i][2] = R[i][1] + 3;
+	}
+#else
       R[i] = matrix(3, 3);
+#endif
 #if defined(MD_PATCHY_HE)||defined(EDHE_FLEX)
       lastbump[i].mol = -1;
       lastbump[i].at = -1;

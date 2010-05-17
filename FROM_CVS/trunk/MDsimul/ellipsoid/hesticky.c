@@ -4516,6 +4516,7 @@ int check_distance_sp(int bsp, int nsp, double maxddoti[6][NA], double dists[6][
 {
   int nn, cc, nn2;
   cc = 0;
+  //printf("t1=%f t2=%f t=%f nsp=%d bsp=%d\n", t1, t2, t, nsp, bsp);
   for (nn = 0; nn < 6; nn++)
     {
       for (nn2 = bsp; nn2 < nsp; nn2++)
@@ -4617,7 +4618,9 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
     {
 #if 1
       calc_delt_sp(BSP, NSP, maxddotiP, &delt, distsOldP);
-      if (check_distance_sp(BSP, NSP, maxddotiP, dists, t1, t2, *t))
+      /* BUG?!??!: qui avevo messo erroneamente dists (che non è inizializzata!!)
+	 anziché distsOldP */
+      if (check_distance_sp(BSP, NSP, maxddotiP, distsOldP, t1, t2, *t))
 	{
 	  return 1;
 	  
@@ -4989,7 +4992,6 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   MD_DEBUG34(printf("BEGIN [locate_contact_neigh_plane_parall_sp] maxddot=%.15G\n", maxddot));
   h = OprogStatus.h; /* last resort time increment */
   delt = h;
-  
   if (search_contact_faster_neigh_plane_all_sp(i, &t, t1, t2, epsd, &d, epsdFast, 
 					       distsP, maxddotiP, maxddot))
     {
