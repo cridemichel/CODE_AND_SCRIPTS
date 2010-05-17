@@ -498,6 +498,7 @@ int readBak(int bfd)
 #ifdef MD_DYNAMIC_OPROG
   OprogStatus.ptr = NULL;
   size = OprogStatus.dyn_alloc_oprog(); 
+  //printf("parnum=%d size=%d\n", Oparams.parnum, size);
   br = mdRead(bfd, "Restore",  "Error reading the program dynamic status.", CONT, 
 	    size, OprogStatus.ptr);
 #endif 
@@ -691,6 +692,9 @@ void read_parnum(FILE *pfs)
 	  printf("[readBakAscii()->read_parnum()]: Oparams.parnum=%d\n", Oparams.parnum);
 #endif
 	  fseek(pfs, cpos, SEEK_SET);
+	  /* 17/05/2010: qui bisognava fare la free! a valgrind non sfugge nulla! */
+	  free(line);
+	  free(str2);
 	  return;
 	}	
     }
@@ -1086,7 +1090,6 @@ void saveBak(char *fileName)
   
   mdWrite(bf, NULL, "Error writing the params struct.", EXIT,
 	  sizeof(struct params), &Oparams);
-
   /* write the progStatus struct (see TECH_INFO file) */
   mdWrite(bf, NULL, "Error writing the program status.", EXIT,
 	  sizeof (struct progStatus), &OprogStatus);

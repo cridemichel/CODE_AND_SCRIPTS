@@ -389,7 +389,13 @@ int whichCorrupted(char* absFileName, int (*readFunc)(int),
 	  mdMsg(ALL, NOSYS, "Choose", "WARNING", NULL,
 		"Most recent file not readable so I try the older one.",
 		NULL);
+	  /* here which is older restore file */	
 	  which = TryOlderFile(bf1, readFunc, which);
+	  printf("Older file is ok, most recent one it is not, delete most recent file %s%d,", BAK_FILE_NAME, which);
+	  printf("then restart simulation with -c option\n");
+	  /* esco poichè avendo chiamato a questo punto readFunc due volte è meglio uscire, in quanto 
+	     ha allocato tutto due volte! */
+	  exit(-1);
 	  /* AGGIUNTO 07/05/2001 */
 	  //close(bf0);
 	}
@@ -401,6 +407,11 @@ int whichCorrupted(char* absFileName, int (*readFunc)(int),
 		"Error closing most recent measure file",
 		NULL);
 	  which = TryOlderFile(bf1, readFunc, which);
+	  printf("Older file is ok, most recent one it is not, delete most recent file %s%d,", BAK_FILE_NAME, which);
+	  printf("then restart simulation with -c option\n");
+	  /* esco poichè avendo chiamato a questo punto readFunc due volte è meglio uscire, in quanto 
+	     ha allocato tutto due volte! */
+	  exit(-1);
 	}
       
       /* If reach this point the newer file was regularly opened, read and 
