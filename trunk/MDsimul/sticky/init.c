@@ -1517,7 +1517,7 @@ void set_dyn_ascii(void);
 /* =========================== >>> usrInitBef <<< ========================== */
 void usrInitBef(void)
 {
-  int i;
+  int i, k;
   /* DESCRIPTION:
      This function is called before any other initialization, put here 
      yours, for example initialize accumulators ! 
@@ -1581,13 +1581,24 @@ accumulators initialization is crucial */
   for (i = 0; i < 2; i++)
     Oparams.I[i] = 1.0;
 #endif
-#if defined(MD_ROTDIFF_MIS) 
+
+#if defined(MD_ROTDIFF_MIS) && !defined(MD_DYNAMIC_OPROG)
   for (i = 0; i < MAXPAR; i++)
     {
       OprogStatus.lastcolltime[i] = 0.0;
       OprogStatus.sumox[i] = 0.0;
       OprogStatus.sumoy[i] = 0.0;
       OprogStatus.sumoz[i] = 0.0;
+    }
+#endif
+#ifndef MD_DYNAMIC_OPROG
+  for (i = 0; i < MAXPAR; i++)
+    {
+      OprogStatus.vcmx0[i] = 0.0;
+      OprogStatus.vcmy0[i] = 0.0;
+      OprogStatus.vcmz0[i] = 0.0;
+      for (k=0; k < 3; k++)
+	OprogStatus.DR[i][k] = 0.0;
     }
 #endif
   OprogStatus.eventMult = 100;
@@ -2545,6 +2556,16 @@ void set_dyn_ascii(void)
 	{
 	  opro_ascii[k].ptr = OprogStatus.DR[0];
 	}
+#ifdef MD_ROTDIFF_MIS
+      if (!strcmp(opro_ascii[k].parName,"sumox"))
+	opro_ascii[k].ptr = OprogStatus.sumox;
+      if (!strcmp(opro_ascii[k].parName,"sumoy"))
+	opro_ascii[k].ptr = OprogStatus.sumoy;
+      if (!strcmp(opro_ascii[k].parName,"sumoz"))
+	opro_ascii[k].ptr = OprogStatus.sumoz;
+      if (!strcmp(opro_ascii[k].parName,"lastcolltime"))
+	opro_ascii[k].ptr = OprogStatus.lastcolltime;
+#endif
       k++;
     }
   while (strcmp(opro_ascii[k].parName,""));
@@ -2558,7 +2579,7 @@ void usrInitAft(void)
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
   double dist, phiIni;
-  int nn, aa, bb, Nm, i, sct, overlap, amin, bmin;
+  int nn, aa, bb, Nm, k, i, sct, overlap, amin, bmin;
   COORD_TYPE vcmx, vcmy, vcmz;
   COORD_TYPE *m;
   double drx, dry, drz, shift[3], dists[MD_PBONDS];
@@ -2596,6 +2617,15 @@ void usrInitAft(void)
 #endif
 #ifdef MD_DYNAMIC_OPROG
   OprogStatus.dyn_alloc_oprog();
+#endif
+#if defined(MD_ROTDIFF_MIS) && defined(MD_DYNAMIC_OPROG)
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      OprogStatus.lastcolltime[i] = 0.0;
+      OprogStatus.sumox[i] = 0.0;
+      OprogStatus.sumoy[i] = 0.0;
+      OprogStatus.sumoz[i] = 0.0;
+    }
 #endif
   Nm = Oparams.parnumA;
   parnumA = Oparams.parnumA;
@@ -2711,7 +2741,6 @@ void usrInitAft(void)
       lastcol[i] = 0.0;
     }
   u2R();
-  save_init_conf();
   if (Oparams.curStep == 1)
     {
       check (&overlap, &K, &V);
@@ -3062,6 +3091,8 @@ void usrInitAft(void)
 	  vcmx = vx[i];
 	  vcmy = vy[i];
 	  vcmz = vz[i];
+	  for (k=0; k < 3; k++)
+	    OprogStatus.DR[i][k] = 0.0;
 
 	  OprogStatus.vcmx0[i] = vcmx;
 	  OprogStatus.vcmy0[i] = vcmy;
@@ -3082,6 +3113,10 @@ void usrInitAft(void)
 	  OprogStatus.hist[i] = 0;
 	}
     }
+
+  /* save_init_conf()  puo' stare anche qui senza alcun problema (così 
+     mi evito un po' d'unsulti da parte di valgrind :-) */
+  save_init_conf();
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 #ifdef MD_GRAZING_TRYHARDER
   printf("Grazing try harder code ENABLED!\n");
