@@ -572,9 +572,11 @@ struct progStatus
   double *sumoy;
   double *sumoz;
   double *lastcolltime;
+#if 0
   double *vcmx0;
   double *vcmy0;
   double *vcmz0;
+#endif  
   double *rxCMi; /* initial coordinates of center of mass */
   double *ryCMi; /* MAXPAR is the maximum number of particles */
   double *rzCMi;
@@ -641,10 +643,11 @@ struct progStatus
   COORD_TYPE sumPress;
   
 #ifndef MD_DYNAMIC_OPROG
+#if 0
   COORD_TYPE vcmx0[MAXPAR];
   COORD_TYPE vcmy0[MAXPAR];
   COORD_TYPE vcmz0[MAXPAR];
-  
+#endif
   COORD_TYPE rxCMi[MAXPAR]; /* initial coordinates of center of mass */
   COORD_TYPE ryCMi[MAXPAR]; /* MAXPAR is the maximum number of particles */
   COORD_TYPE rzCMi[MAXPAR];

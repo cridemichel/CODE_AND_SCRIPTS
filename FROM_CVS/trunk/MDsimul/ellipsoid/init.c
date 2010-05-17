@@ -1681,9 +1681,11 @@ void usrInitBef(void)
 	OprogStatus.lastu3y[i] = 0.0;
 	OprogStatus.lastu3z[i] = 0.0;
 #endif
+#if 0
 	OprogStatus.vcmx0[i] = 0.0;
 	OprogStatus.vcmy0[i] = 0.0;
 	OprogStatus.vcmz0[i] = 0.0;
+#endif
 	for (k=0; k < 3; k++)
 	  OprogStatus.DR[i][k] = 0.0;
       }
@@ -3241,9 +3243,9 @@ int dyn_alloc_oprog(void)
     return OprogStatus.len;
   np = Oparams.parnum;
 #ifdef MD_CALC_DPP
-  OprogStatus.len = sizeof(double)*25*Oparams.parnum;
+  OprogStatus.len = sizeof(double)*22*Oparams.parnum;
 #else
-  OprogStatus.len = sizeof(double)*13*Oparams.parnum;
+  OprogStatus.len = sizeof(double)*10*Oparams.parnum;
 #endif
   //printf("DYNAMIC ALLOCATION of %d bytes\n", OprogStatus.len);
   OprogStatus.ptr = malloc(OprogStatus.len);
@@ -3275,9 +3277,11 @@ int dyn_alloc_oprog(void)
     {
       OprogStatus.DR[i] = OprogStatus.rzCMi + np + i*3;
     }
+#if 0
   OprogStatus.vcmx0 = OprogStatus.DR[np-1] + 3;
   OprogStatus.vcmy0 = OprogStatus.vcmx0 + np;
   OprogStatus.vcmz0 = OprogStatus.vcmy0 + np;
+#endif
   OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
 }
@@ -4533,9 +4537,11 @@ void usrInitAft(void)
 	  vcmy = vy[i];
 	  vcmz = vz[i];
 
+#if 0
 	  OprogStatus.vcmx0[i] = vcmx;
 	  OprogStatus.vcmy0[i] = vcmy;
 	  OprogStatus.vcmz0[i] = vcmz;
+#endif
 #ifdef MD_DYNAMIC_OPROG
 	  OprogStatus.lastcolltime[i] = 0.0;
 	  OprogStatus.sumox[i] = 0.0;
