@@ -15,9 +15,10 @@ const double boxfact=2.0, kb = 0.00831451, Tamb=293.16, tempFact=500.0;
 const double boxlength=50.0;
 const double selfenergy=-20230;
 double orig[3], totq, totmass; 
-double xx_old[3], r_old, phi_old, theta_old, psi_old, energy_old, maxdelene;
+double xx_old[3], r_old, phi_old, theta_old, psi_old, energy_old, maxdelene, mindelene;
 double r, theta_r, phi_r, theta, psi, phi, deltheta, delpsi, deltheta_r, 
        delphi, delth_r, delphi_r, phi_r_old, theta_r_old;
+double min_del_r, min_deltheta_r, min_delphi_r, min_deltheta, min_delphi, min_delpsi;
 #ifdef MD_CALC_ITENS
 double ItensTot[3][3], Itens[NUM_LYSO][3], RotMat[NUM_LYSO][3][3];
 #endif
@@ -25,7 +26,7 @@ double pdb_charge, pdb_mass;
 int pdb_nr, pdb_resnr, pdb_cgnr, checkene, last_changed;
 char pdb_type[256], pdb_residue[256], pdb_atom[256];
 double com[2][3];
-const double RMIN=3.3, RMAX=6.5;
+const double RMIN=3.3, RMAX=7.5;
 double del_r=0.1;
 /* euler angles */
 double phi, theta, psi;
@@ -476,12 +477,81 @@ void rotate_to_princaxes(int np)
 	xin[np][i][m] = xx[m];
     }
 }
+int check_min_step(int lc)
+{
+  switch (lc)
+    {
+    case 0:
+      if (del_r < min_del_r)
+	{
+	  del_r = min_del_r;
+	  r = r_old + del_r;
+	}
+      break;
+    case 1:
+      if (delphi_r < min_delphi_r)
+	{
+	  delphi_r = min_delphi_r;
+	  phi_r = phi_r_old + delphi_r;
+	}	  
+      break;
+    case 2:
+      if (deltheta_r < min_deltheta_r)
+	{
+	  deltheta_r = min_deltheta_r;
+  	  theta_r = theta_r_old + deltheta_r;
+	}
+      break;
+    case 3:
+      if (delpsi < min_delpsi)
+	{
+	  delpsi = min_delpsi;
+	  psi = psi_old + delpsi;
+	}
+      break;
+    case 4:
+      if (delphi < min_delphi)
+	{
+	  delphi = min_delphi;
+	  phi = phi_old + delphi;
+	}
+      break;
+    case 5:
+	if (deltheta < min_deltheta)
+	  {
+	    deltheta = min_deltheta;
+	    theta = theta_old + deltheta;
+	  }  
+      break;
+    }
+
+}
 /* NOTA 26/04/2010: routine che cerca di adattare il passo della mesh alla 
    ripidezza del potenziale */
-void adapt_step(int lc)
+void adapt_step(int lc, int todo) /* todo=1 increase todo=0 decrease */ 
 {
+  const double CGOLD = 1.618034;
+  static double sf = 1.618034; 
   double GOLD = 1.618034;
+  static int lasttodo=-1, lastlc=-1;
   /* 0 = r, 1= phi_r 2=theta_r, 3=psi, 4=phi, 5=theta */
+  if (lastlc!=-1 && lasttodo!=-1)
+    {
+      if (lastlc==lc && lasttodo!=todo)
+	if (todo==1)
+	  sf /= CGOLD;
+	else
+	  sf *= CGOLD;
+    }
+  else
+    sf = CGOLD;
+  lasttodo = todo;
+  lastlc = lc;
+  if (todo==1)
+    GOLD = 1.0/sf;
+  else
+    GOLD = sf;
+  printf("delphi=%.15G lastlc=%d lc=%d lasttodo=%d todo=%d GOLD=%.15G\n", delphi, lastlc, lc, lasttodo, todo, GOLD);
   switch (lc)
     {
     case 0:
@@ -519,10 +589,12 @@ void reset_steps(void)
   deltheta = 0.3;
   delpsi = 0.3;
 }
+double r_ini, theta_r_ini, phi_r_ini, psi_ini, theta_ini, phi_ini;
 int check_changed_dof(void)
 {
   /* check which steps has been updated last time */
   /* 0 = r, 1= phi_r 2=theta_r, 3=psi, 4=phi, 5=theta */
+  
   if (r_old != r) 
     return 0;
   if (phi_r_old != phi_r)
@@ -536,14 +608,86 @@ int check_changed_dof(void)
   if (theta_old != theta)
     return 5;
 }
+int first_check_ene;
+
 int check_ene_func(void)
 {
   if (fabs(energy) > tempFact*kb*Tamb)
     return 2;
+  if (first_check_ene)
+    {
+      return 0;
+    }
   else if (fabs(energy-energy_old) > maxdelene)
     return 1;
+  else if (fabs(energy-energy_old) < mindelene)
+    /* if energy change is too small reset steps */
+    return 3;
+  else if (fabs(energy-energy_old) > mindelene && fabs(energy-energy_old) < maxdelene)
+    return 0;
   else
     return 0;
+}
+int check_first_ene(int lc)
+{
+  switch (lc)
+    {
+    case 0:
+      if (r == r_ini)
+	return 1;
+      else
+	return 0;
+      break;
+    case 1:
+      if (phi_r == phi_r_ini)
+	return 1;
+      else
+	return 0;
+      break;
+    case 2:
+      if (theta_r == theta_r_ini)
+	return 1;
+      else
+	return 0;
+      break;
+    case 3:
+      if (psi == psi_ini)
+	return 1;
+      else
+	return 0; 
+      break;
+    case 4:
+      if (phi == phi_ini)
+	return 1;
+      else
+	return 0; 
+      break;
+    case 5:
+      if (theta == theta_ini)
+	return 1;
+      else
+	return 0; 
+      break;
+    }
+}
+void set_inivalues(void)
+{
+  r_ini=RMAX;
+  theta_r_ini=-PI*0.5;
+  phi_r_ini=0.0; 
+  psi_ini=-PI; 
+  theta_ini=0.0; 
+  phi_ini=-PI;
+}
+void set_min_steps(void)
+{
+  double F = 100.0;
+  min_del_r = del_r / F;
+  min_delphi_r = delphi_r / F;
+  min_deltheta_r = deltheta_r / F;
+  min_deltheta = deltheta / F;
+  min_delpsi = delpsi / F;
+  min_delphi = delphi / F;  
 }
 int main(int argc, char **argv)
 {
@@ -621,27 +765,32 @@ int main(int argc, char **argv)
 #endif
  /* assign default values to steps */
   reset_steps();
-  maxdelene = 0.1;/* in kbT! */
+  set_inivalues();
+  set_min_steps();
+  maxdelene = 10.0;/* in kJ/mol (unità di gromacs) */
+  mindelene = 0.1;
   for (r=RMAX; r >= RMIN && !fix_r; r -= del_r)
   //for (r=RMIN; r <= RMAX && !fix_r; r += del_r)
     {
       //calc_pos(r, theta_r, phi_r, xx);
       DEBUG2(printf("r=%.15G (MAX=%.15G MIN=%.15G)\n", r, RMAX, RMIN));
 #if 1
-      for (theta_r = -PI*0.5; theta_r < PI*0.5 && !fix_theta_r; theta_r += deltheta_r)
+      for (theta_r = theta_r_ini; theta_r < PI*0.5 && !fix_theta_r; theta_r += deltheta_r)
 	{
-	  for (phi_r = 0.0; phi_r < 2.0*PI && !fix_phi_r; phi_r += delphi_r)
+	  for (phi_r = phi_r_ini; phi_r < 2.0*PI && !fix_phi_r; phi_r += delphi_r)
 	    {
 	      calc_pos(r, theta_r, phi_r, xx);
-	      for (psi = -PI; psi < PI && !fix_psi; psi += delpsi)
+	      for (psi = psi_ini; psi < PI && !fix_psi; psi += delpsi)
 		{
-		  for (phi = -PI; phi < PI && !fix_phi; phi += delphi)
+		  for (phi = phi_ini; phi < PI && !fix_phi; phi += delphi)
 		    {
-		      for (theta = 0.0; theta < PI && !fix_theta; theta += deltheta)
+		      for (theta = theta_ini; theta < PI && !fix_theta; theta += deltheta)
 			{
 #endif
 			  /* 0 = r, 1= phi_r 2=theta_r, 3=psi, 4=phi, 5=theta */
 			  last_changed = check_changed_dof();
+			  first_check_ene = check_first_ene(last_changed);
+			  //printf("first_check_ene:%d last_changed: %d\n", first_check_ene, last_changed);
 			  /* just in to out */
 			  do 
 			    {
@@ -653,13 +802,16 @@ int main(int argc, char **argv)
 			      energy = calc_energy_gromacs();
 			      /* se l'energia d'interazione è troppo alta non cercare di adattare il paso */
 			      checkene = check_ene_func();
+			      printf("checkene: %d\n", checkene);
 			      if (checkene==2)
 				{
-				  reset_steps();
+				  //reset_steps();
 				  break;
 				}
-			      else if (checkene==1)
-				adapt_step(last_changed);
+			      else if (checkene==1||checkene==3)
+				adapt_step(last_changed, (checkene==3)?1:0);
+			      if (check_min_step(last_changed))
+				break;
 			    }
 			  while (checkene);
 			  for (kk=0; kk < 3; kk++)
