@@ -293,8 +293,8 @@ void calcV(void)
 #ifdef MD_PROTEIN_DESIGN
   double ordp;	
 #endif
-  double ti;
 #ifdef MD_RABBIT
+  double ti;
   int bulk, mono, bi, k, i;
 #endif
 #ifdef MD_PATCHY_HE
@@ -320,7 +320,6 @@ void calcV(void)
   V = 0;
 #endif
 #ifdef MD_RABBIT
-  
   mf = fopenMPI(absMisHD("bi-mono-bonds.dat"),"a");
   get_bimono_bonds(&bulk, &mono, &bi);
 #ifdef MD_BIG_DT
@@ -992,13 +991,13 @@ void temperat(void)
 {
   double dof;
 #ifdef EDHE_FLEX
-  int kk;
+  //int kk;
 #ifndef MD_FOUR_BEADS
   static double *Kt=NULL;
   static int *doft=NULL;
   int nt=0;
 #endif
-  double P[3];
+  //double P[3];
 #endif
 #if defined(MD_INELASTIC) || defined(MD_FOUR_BEADS)
   double dofTra, dofRot, tempRot, tempTra;
