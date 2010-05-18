@@ -9755,7 +9755,7 @@ void store_bump_neigh(int i, double *r1, double *r2)
 extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 #endif
 #ifdef MD_SPOT_GLOBAL_ALLOC
-  double ratA[NA][3], ratB[NA][3];
+extern double ratA[NA][3], ratB[NA][3];
 #endif
 void store_bump(int i, int j)
 {

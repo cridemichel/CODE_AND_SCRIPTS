@@ -51,6 +51,16 @@ extern double *volSQ;
 int sphWall, sphWallOuter;
 #endif
 int *scdone;
+#ifdef MD_SPOT_GLOBAL_ALLOC
+extern double ratA[NA][3], ratB[NA][3];
+extern double t2arrP[6][NA], distsP[6][NA], maxddotiP[6][NA], distsOldP[6][NA];
+extern int crossedP[6][NA];
+#ifndef MD_BASIC_DT
+extern double distsOld2P[6][NA];
+#endif
+extern int tocheckP[6][NA], dorefineP[6][NA], crossedP[6][NA];
+extern double distsSq[NA];
+#endif
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
  in the move function and in the measuring functions, note that the variables 
@@ -1544,10 +1554,10 @@ void usrInitBef(void)
 #if 1
 #ifdef MD_SPOT_GLOBAL_ALLOC
   /* inizializzo questi array globali per evitare (comunque inutili) lamentele di valgrind */
-  printf("QUI===============================================>\n");
+  printf("[INFO] GLOBAL ALLOCATION OF SPOTS VARIABLES\n");
   for (i=0; i < NA; i++)
     {
-      dstsSq[i] = 0.0;
+      distsSq[i] = 0.0;
       for (k=0; k < 3; k++)
 	{
 	  ratA[i][k] = ratB[i][k] = 0;
@@ -1557,7 +1567,7 @@ void usrInitBef(void)
 	{
 
 	  t2arrP[k][i] = distsP[k][i] = maxddotiP[k][i] = distsOldP[k][i] = 0.0;
-#ifdef MD_BASIC_DT
+#ifndef MD_BASIC_DT
 	  distsOld2P[k][i] = 0.0;
 #endif
 	  crossedP[k][i] = tocheckP[k][i] = dorefineP[k][i] = crossedP[k][i] = 0;
@@ -4764,9 +4774,6 @@ void fprintf_ranges(FILE *f, int A, int nr, rangeStruct* r)
   else
     fprintf(f, "%d ", A);
 }
-#endif
-#ifdef MD_SPOT_GLOBAL_ALLOC
-double ratA[NA][3];
 #endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
