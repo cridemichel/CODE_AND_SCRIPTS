@@ -794,7 +794,19 @@ double max_ax(int i)
 {
   double ma;
 #ifdef MD_SUPERELLIPSOID
-  return sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  if (is_superellipse(i))
+    return sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  else
+    {
+      ma = 0;
+      if (axa[i]>ma)
+	ma = axa[i];
+      if (axb[i]>ma)
+	ma = axb[i];
+      if (axc[i]>ma)
+	ma = axc[i];
+      return ma;
+    }
 #endif
   ma = 0;
   if (axa[i]>ma)
@@ -5521,38 +5533,56 @@ void guess_dist(int i, int j,
     }
 #endif
 #ifdef MD_SUPERELLIPSOID
-  sfA = sfB = 0.0;	
-  for (k1=0; k1 < 3; k1++)
+  if (is_superellipse(i) || is_superellipse(j))
     {
-      sfA += Sqr(saA[k1]); 
+      sfA = sfB = 0.0;	
+      for (k1=0; k1 < 3; k1++)
+	{
+	  sfA += Sqr(saA[k1]); 
       sfB += Sqr(saB[k1]);
-    }
-  sfA = sqrt(sfA);
-  sfB = sqrt(sfB);
-  for (k1=0; k1 < 3; k1++)
-    {
-      dA[k1] = rA[k1];
-      dB[k1] = rB[k1];
-      /* il punto con la direzione ottimizzata deve cmq essere
+	}
+      sfA = sqrt(sfA);
+      sfB = sqrt(sfB);
+      for (k1=0; k1 < 3; k1++)
+	{
+	  dA[k1] = rA[k1];
+	  dB[k1] = rB[k1];
+	  /* il punto con la direzione ottimizzata deve cmq essere
          fuori dal super-ellissoide altrimenti non va */
-      DdA[k1]=DdB[k1]=0.0;
+	  DdA[k1]=DdB[k1]=0.0;
+	  for (n=0; n < 3;n++)
+	    {
+	      DdA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+	      DdB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
+	    }
+	}
+
+      nDdA = calc_norm(DdA);
+      nDdB = calc_norm(DdB);
+
+      for (k1=0; k1 < 3; k1++)
+	{
+	  dA[k1] = sfA*DdA[k1]/nDdA + dA[k1]; 
+	  dB[k1] = sfB*DdB[k1]/nDdB + dB[k1];
+	}
+      calc_intersecSE(i, dA, rA, RA, rC);
+      calc_intersecSE(j, dB, rB, RB, rD);
+    }
+  else
+    {
+      for (k1=0; k1 < 3; k1++)
+	{
+	  dA[k1] = rA[k1];
+	  dB[k1] = rB[k1];
       for (n=0; n < 3;n++)
 	{
-	  DdA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
-	  DdB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
+	  dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+	  dB[k1] += gradaxB[n]*RB[n][k1]*saB[n]/2.0;
 	}
+	}
+      calc_intersec(dA, rA, Xa, rC);
+      calc_intersec(dB, rB, Xb, rD);
     }
-
-  nDdA = calc_norm(DdA);
-  nDdB = calc_norm(DdB);
-
-  for (k1=0; k1 < 3; k1++)
-    {
-      dA[k1] = sfA*DdA[k1]/nDdA + dA[k1]; 
-      dB[k1] = sfB*DdB[k1]/nDdB + dB[k1];
-    }
-  calc_intersecSE(i, dA, rA, RA, rC);
-  calc_intersecSE(j, dB, rB, RB, rD);
 #else
   for (k1=0; k1 < 3; k1++)
     {
@@ -5772,6 +5802,9 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #endif
 #ifndef MD_SUPERELLIPSOID
   tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
+#else
+  if (!is_superellipse(i))
+    tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
 #endif
   ti = t + (t1 - atomTime[j]);
   rB[0] = rx[j] + vx[j]*ti + shift[0];
@@ -5824,6 +5857,9 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #endif
 #ifndef MD_SUPERELLIPSOID
   tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
+#else
+  if (!is_superellipse(j))
+    tRDiagR(j, Xb, invaSq[na], invbSq[na], invcSq[na], RtB);
 #endif
 #ifndef MD_SUPERELLIPSOID
   if (OprogStatus.dist5)
@@ -5838,6 +5874,20 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 	    }
 	}
     }
+#else
+  if (OprogStatus.dist5 && !(is_superellipse(i) || is_superellipse(j)))
+    {
+      for (k1 = 0; k1 < 3; k1++)
+    	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      XbXa[k1][k2] = 0;
+	      for (k3 = 0; k3 < 3; k3++)
+		XbXa[k1][k2] += Xb[k1][k3]*Xa[k3][k2];
+	    }
+	}
+    }
+
 #endif
   //printf(">>>>>>> BOHHHHHHHHHHHHHHHHH\n");
 #ifdef MC_SIMUL
@@ -5878,8 +5928,14 @@ retry:
       else
 	{
 #ifdef MD_SUPERELLIPSOID
-	  calc_intersecSE(i, rB, rA, RtA, rC);
-	  calc_intersecSE(j, rA, rB, RtB, rD);
+	  if (is_superellipse(i)) 
+	      calc_intersecSE(i, rB, rA, RtA, rC);
+	  else
+	    calc_intersec(rB, rA, Xa, rC);
+	  if (is_superellipse(j))
+	    calc_intersecSE(j, rA, rB, RtB, rD);
+	  else
+	    calc_intersec(rA, rB, Xb, rD);
 #else
 	  calc_intersec(rB, rA, Xa, rC);
 	  calc_intersec(rA, rB, Xb, rD);
@@ -5912,7 +5968,10 @@ retry:
 		     calc_sign_SE(j, rB, RtB, rD, Xa));
 #endif
 #ifdef MD_SUPERELLIPSOID
-	  distSDSupEll(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+	   if (is_superellipse(i) || is_superellipse(j))
+     	     distSDSupEll(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
+	   else
+	     distSD(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
 #else
 	  distSD(i, j, shift, vecgcg, OprogStatus.springkSD, 1);
 #endif
@@ -5945,8 +6004,14 @@ retry:
       MD_DEBUG50(printf("rC=(%f,%f,%f) rD=(%f,%f,%f)\n",
 		      rC[0], rC[1], rC[2], rD[0], rD[1], rD[2]));
 #ifdef MD_SUPERELLIPSOID
-      calcfxLabSE(i, rC, rA, RtA, gradf);
-      calcfxLabSE(j, rD, rB, RtB, gradg);
+      if (is_superellipse(i))
+	calcfxLabSE(i, rC, rA, RtA, gradf);
+      else
+	calc_grad(rC, rA, Xa, gradf);
+      if (is_superellipse(j))
+	calcfxLabSE(j, rD, rB, RtB, gradg);
+      else
+	calc_grad(rD, rB, Xb, gradg);
 #else
       calc_grad(rC, rA, Xa, gradf);
       calc_grad(rD, rB, Xb, gradg);
@@ -6160,7 +6225,16 @@ retry:
       if (OprogStatus.dist5)// && !tryagain)
 	{
 #ifdef MD_SUPERELLIPSOID
-	  calcfxLabSE(i, r1, rA, RtA, fx);
+	  if (is_superellipse(i))
+	    calcfxLabSE(i, r1, rA, RtA, fx);
+	  else
+	    {
+	      fx[k1] = 0;
+	      for (k2 = 0; k2 < 3; k2++)
+		{
+		  fx[k1] += 2.0*Xa[k1][k2]*(r1[k2]-rA[k2]);
+		}
+	    }
 #else
     	  fx[k1] = 0;
 	  for (k2 = 0; k2 < 3; k2++)
