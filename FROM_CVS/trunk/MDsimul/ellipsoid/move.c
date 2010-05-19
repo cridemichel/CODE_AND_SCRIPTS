@@ -2504,7 +2504,7 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #ifdef EDHE_FLEX
   if (are_spheres(i, j))
     {
-      numcoll++;
+      //numcoll++;
       bumpHS(i, j, W);
       return;
     } 
