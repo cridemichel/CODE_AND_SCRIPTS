@@ -1874,7 +1874,7 @@ retry:
   if (OprogStatus.dist5NL)
     {
 #ifdef MD_SUPERELLIPSOID
-      if (is_superellipse(i) || is_superellipse(j))
+      if (is_superellipse(i))
 	{
 	  if (scalProd(rDC,gradplane) >= 0)
 	    vecg[4] = calc_norm(rDC)/ng;
@@ -3793,7 +3793,7 @@ int locate_contact_neigh_plane_HS_one(int i, double *evtime, double t2)
 int locate_contact_neigh_plane_HS(int i, double *evtime, double t2)
 {
   int nn, typei, first=1;
-  double t1, b, dist, dr[3], colltime=0.0, dv[3];
+  double t1, b, dist, dr[3], ti, t, colltime=0.0, dv[3];
   typei = typeOfPart[i];
   t1 = Oparams.time;
 
@@ -6392,6 +6392,13 @@ void BuildNNL(int na)
 			  //for (kk=0; kk < 3; kk++)
 			  //nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
 			  nebrTab[na].len++;
+			  if (nebrTab[na].len >= OprogStatus.nebrTabFac)
+			    {
+			      printf("[CRITICAL ERROR] neighbor lists size exceed memory allocation of %d elements\n", 
+				     OprogStatus.nebrTabFac);
+			      printf("Increase nebrTabFac parameter in parameter file and restart simulation\n");
+			      exit(-1);
+			    }
 			}
 		    }
 		} 
