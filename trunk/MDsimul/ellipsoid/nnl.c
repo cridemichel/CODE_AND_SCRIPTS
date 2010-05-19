@@ -160,6 +160,7 @@ double calc_maxddot_nnl(int i, double *gradplane, double epsd)
   double Iamin;
 #endif
   double factori;
+  double A, B;
   factori = 0.5*maxax[i]+epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 #if 0
   na = i<Oparams.parnumA?0:1;
@@ -167,8 +168,16 @@ double calc_maxddot_nnl(int i, double *gradplane, double epsd)
   return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
      angM[i]*factori/Iamin;
 #else
-  return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
-     sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+  A = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2]);
+  B = sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+  /* 19/05/2010: se la velocità angolare è nulla (entro gli errori di macchina) 
+     allora A è esattamente la velocità d'avvicinamento alla parete e non 
+     più una sovrastima per quello moltiplico A per ADJ_MAXDDOT_NL!
+     Notare che se vale la seguente condizione A + B = A quindi bisogna correggere A */
+  if (B / A < MAXDDOT_NNL_THR)
+    return A*ADJ_MAXDDOT_NL + B;
+  else
+    return A + B;
 #endif
 }
 #endif
@@ -226,6 +235,9 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
   MD_DEBUG39(printf("i=%d lati parallel %f %f %f\n", i, nebrTab[i].axa, nebrTab[i].axb, nebrTab[i].axc));
   /* NOTA: epsdNL+epsd viene usato come buffer per evitare problemi numerici 
    * nell'update delle NNL. */
+  /* 19/05/2010 prima usavo OprogStatus.epsd (non epsdFastNL) ma se la SQ o l'HE 
+     non ha velocità angolare in locate_contact_neigh_plane_parall_sp() il passo delt=epsd/maxddot 
+     porta lo spot esattamente sul piano creando problemi. */
   del -= OprogStatus.epsdNL+OprogStatus.epsd;
   for (kk=0; kk < 3; kk++)
     {
@@ -1479,7 +1491,7 @@ void guess_distNeigh_plane(int i,
 #ifdef EDHE_FLEX
   int typei;
 #endif
- #ifdef MD_SUPERELLIPSOID
+#ifdef MD_SUPERELLIPSOID
   double DdA[3], sfA, nDdA;
 #endif
 
@@ -1512,26 +1524,40 @@ void guess_distNeigh_plane(int i,
 	gradaxA[n] += gradA[k1]*RA[n][k1];
     }
 #ifdef MD_SUPERELLIPSOID
-  sfA = 0.0;	
-  for (k1=0; k1 < 3; k1++)
+  if (is_superellipse(i))
     {
-      sfA += Sqr(saA[k1]); 
-    }
-  sfA = sqrt(sfA)+OprogStatus.epsdNL+OprogStatus.epsd;
-  for (k1=0; k1 < 3; k1++)
-    {
-      dA[k1] = rA[k1];
-      DdA[k1] = 0;
-      for (n=0; n < 3;n++)
-	DdA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
-    }
-  nDdA = calc_norm(DdA);
-  for (k1=0; k1 < 3; k1++)
-    {
-      dA[k1] = sfA*DdA[k1]/nDdA + dA[k1]; 
-    }
+      sfA = 0.0;	
+      for (k1=0; k1 < 3; k1++)
+	{
+	  sfA += Sqr(saA[k1]); 
+	}
+      sfA = sqrt(sfA)+OprogStatus.epsdNL+OprogStatus.epsd;
+      for (k1=0; k1 < 3; k1++)
+	{
+	  dA[k1] = rA[k1];
+	  DdA[k1] = 0;
+	  for (n=0; n < 3;n++)
+	    DdA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+	}
+      nDdA = calc_norm(DdA);
+      for (k1=0; k1 < 3; k1++)
+	{
+	  dA[k1] = sfA*DdA[k1]/nDdA + dA[k1]; 
+	}
 
-  calc_intersec_neighSE(i, dA, rA, RA, rC);
+      calc_intersec_neighSE(i, dA, rA, RA, rC);
+    }
+  else
+    {
+      for (k1=0; k1 < 3; k1++)
+	{
+	  dA[k1] = rA[k1];
+	  for (n=0; n < 3;n++)
+	dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+	}
+
+      calc_intersec_neigh(dA, rA, Xa, rC, 1);
+    }
 #else
   for (k1=0; k1 < 3; k1++)
     {
@@ -1728,6 +1754,9 @@ double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2,
 #endif
 #ifndef MD_SUPERELLIPSOID
   tRDiagR(i, Xa, invaSqN, invbSqN, invcSqN, RtA);
+#else
+  if (!is_superellipse(i))
+    tRDiagR(i, Xa, invaSqN, invbSqN, invcSqN, RtA);
 #endif
   //printf("ti= %.15G rNebrShell: %f\n", ti, OprogStatus.rNebrShell);
   ti = 0.0;
@@ -1750,7 +1779,10 @@ retry:
   else
     {
 #ifdef MD_SUPERELLIPSOID
-      calc_intersec_neigh_planeSE(i, rA, rB, RtA, gradplane, rC, rD);
+      if (is_superellipse(i))
+	calc_intersec_neigh_planeSE(i, rA, rB, RtA, gradplane, rC, rD);
+      else
+	calc_intersec_neigh_plane(rA, rB, Xa, gradplane, rC, rD);
 #else
       calc_intersec_neigh_plane(rA, rB, Xa, gradplane, rC, rD);
 #endif
@@ -1808,7 +1840,10 @@ retry:
 //		  rC[0], rC[1], rC[2], rD[0], rD[1], rD[2], calc_norm(rCD));
 
 #endif
-  calcfxLabSE(i, rC, rA, RtA, gradf);
+  if (is_superellipse(i))
+    calcfxLabSE(i, rC, rA, RtA, gradf);
+  else
+    calc_grad(rC, rA, Xa, gradf);
 #else
   calc_grad(rC, rA, Xa, gradf);
 #endif
@@ -1839,10 +1874,15 @@ retry:
   if (OprogStatus.dist5NL)
     {
 #ifdef MD_SUPERELLIPSOID
-      if (scalProd(rDC,gradplane) >= 0)
-	vecg[4] = calc_norm(rDC)/ng;
+      if (is_superellipse(i) || is_superellipse(j))
+	{
+	  if (scalProd(rDC,gradplane) >= 0)
+	    vecg[4] = calc_norm(rDC)/ng;
+	  else
+	    vecg[4] = -calc_norm(rDC)/ng;
+	}
       else
-	vecg[4] = -calc_norm(rDC)/ng;
+	vecg[4] = 0.0;
 #else
       vecg[4] = 0.0;
 #endif
@@ -1853,17 +1893,22 @@ retry:
   else
     {
 #ifdef MD_SUPERELLIPSOID
-      if (scalProd(rDC,gradplane) >= 0)
-	vecg[7] = calc_norm(rDC)/ng;
-      else
-	vecg[7] = -calc_norm(rDC)/ng;
-      //printf("beta guess is %.15G\n", vecg[7]);
+      if (is_superellipse(i))
+	{
+	  if (scalProd(rDC,gradplane) >= 0)
+	    vecg[7] = calc_norm(rDC)/ng;
+	  else
+	    vecg[7] = -calc_norm(rDC)/ng;
+	  //printf("beta guess is %.15G\n", vecg[7]);
 #ifdef MD_FDJAC_SYM
-      if (scalProd(rDC,gradplane) >= 0)
-	vecg[6] = calc_norm(rDC)/nf;
-      else
-	vecg[6] = -calc_norm(rDC)/nf;
+	  if (scalProd(rDC,gradplane) >= 0)
+	    vecg[6] = calc_norm(rDC)/nf;
+	  else
+	    vecg[6] = -calc_norm(rDC)/nf;
 #endif
+	}
+      else
+	vecg[7] = 0.0;
 #else
       vecg[7] = 0.0;
 #endif
@@ -3173,8 +3218,14 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
 #ifdef MD_ASYM_ITENS
   maxddot = calc_maxddot_nnl(i, gradplane, epsd);
 #else
-  maxddot = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+  A = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2]);
+  B = sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+  if (B/A < MAXDDOT_NNL_THR)
+    maxddot = A*ADJ_MAXDDOT_NL + B;
+  else
+    maxddot = A + B;
+ // maxddot = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
+   // sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 #endif
 #endif
   adjust_maxddot(i, &maxddot);
@@ -3745,6 +3796,7 @@ int locate_contact_neigh_plane_HS(int i, double *evtime, double t2)
   double t1, b, dist, dr[3], colltime=0.0, dv[3];
   typei = typeOfPart[i];
   t1 = Oparams.time;
+
   for (nn = 0; nn < 6; nn++)
     {
       dr[0] = rx[i] - rBall[nn][0];
@@ -3790,7 +3842,7 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 {
   /* const double minh = 1E-14;*/
   double h, d, dold, t2arr[6], t, dists[6], distsOld[6], 
-	 vecg[5], vecgroot[6][8], vecgd[6][8], vecgdold[6][8], factori; 
+	 vecg[5], vecgroot[6][8], vecgd[6][8], vecgdold[6][8], factori, A, B; 
 #ifndef MD_BASIC_DT
   double normddot, distsOld2[6], vecgdold2[6][8], dold2, deldist;
 #endif
@@ -3853,8 +3905,15 @@ int locate_contact_neigh_plane_parall(int i, double *evtime, double t2)
 #ifdef MD_ASYM_ITENS
       maxddoti[nn] = calc_maxddot_nnl(i, gradplane_all[nn], epsd);
 #else
-      maxddoti[nn] = fabs(vx[i]*gradplane_all[nn][0]+vy[i]*gradplane_all[nn][1]+vz[i]*gradplane_all[nn][2])+
-	sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+      A = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2]);
+      B = sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+      /* 19/05/2010: se vale questa condizione A + B = A quindi bisogna correggere A */
+      if (B / A < MAXDDOT_NNL_THR)
+	maxddoti[nn] = A*ADJ_MAXDDOT_NL + B;
+      else
+	maxddoti[nn] = A + B;
+      //maxddoti[nn] = fabs(vx[i]*gradplane_all[nn][0]+vy[i]*gradplane_all[nn][1]+vz[i]*gradplane_all[nn][2])+
+	//sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 #endif
       if (nn==0 || maxddoti[nn] > maxddot)
 	maxddot = maxddoti[nn];
@@ -4138,7 +4197,7 @@ extern struct LastBumpS *lastbump;
 int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
 {
   double h, d, dold, vecgd[8], vecgdold[8], t, r1[3], r2[3]; 
-  double dtmp, t1, t2, maxddot, delt, troot, vecgroot[8];
+  double dtmp, t1, t2, maxddot, delt, troot, vecgroot[8], A, B;
   //const int MAXOPTITS = 4;
   const double GOLD= 1.618034;
 #ifndef MD_BASIC_DT
@@ -4245,8 +4304,14 @@ int locate_contact_neigh_plane(int i, double vecg[5], int nplane, double tsup)
   maxddot = calc_maxddot_nnl(i, gradplane, epsd);
 #else
   factori = 0.5*maxax[i]+epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
-  maxddot = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+  A = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2]);
+  B = sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+  if (B / A < MAXDDOT_NNL_THR)
+    maxddot =  A*ADJ_MAXDDOT_NL + B;
+  else
+    maxddot =  A + B;
+  //maxddot = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
+    //sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 #endif
   h = OprogStatus.h; /* last resort time increment */
 #ifdef MD_EDHEFLEX_WALL
@@ -6039,7 +6104,7 @@ void nextNNLupdate(int na)
       if (!locate_contact_neigh_plane_parall_sp(na, &nnltime1, timbig))
 	{
 	  printf("[ERROR] failed to find escape time for sticky spots\n");
-	  printf("na=%d\n", na);
+	  printf("typeOfPart[%d]=%d\n", na, typeOfPart[na]);
 	  exit(-1);
 	}
       locateNNLSP = 0;
