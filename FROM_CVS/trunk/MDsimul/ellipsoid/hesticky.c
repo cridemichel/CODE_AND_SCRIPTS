@@ -19,7 +19,8 @@
 #define MD_DEBUG41(x) 
 #define MD_DEBUG45(x)  
 #define MD_NEGPAIRS
-#define ZBRENTTOL 1.0E-16
+/* ZBRENTTOL set to floating point precision */
+#define ZBRENTTOL 2.0E-16
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
 #ifdef EDHE_FLEX
@@ -2490,7 +2491,7 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
   spots = typesArr[typei].spots;
   NSP = typesArr[typei].nspots+1;
   BSP = 0;
-#ifdef MD_SUPERELLIPSOID
+#if 1 //defined(MD_SUPERELLIPSOID)
   /* NOTA 16/04/2010: se BuildAtomPos viene chiamata durante la ricerca del tempo di uscita degli spot
      allora considera anche gli MD_SPNNL_NUMSP spot extra utilizzati per le SPNNL (sticky spots NNL) */
   if (locateNNLSP && (OprogStatus.useNNL==3 ||OprogStatus.useNNL==4))
@@ -4586,7 +4587,7 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 #ifdef EDHE_FLEX
   NSP = typesArr[typeOfPart[i]].nspots;
   BSP = 0;
-#if defined(MD_SUPERELLIPSOID) 
+#if 1 //defined(MD_SUPERELLIPSOID) 
   if (OprogStatus.useNNL==3 || OprogStatus.useNNL==4)
     {
       if (OprogStatus.targetPhi > 0.0)
@@ -4608,6 +4609,10 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 #endif
   timesFNL++;
   told = *t;
+
+  //if (i==361)
+    //printf("INIZIO *d1=%.15G maxddot[2][10]=%.15G dists[2][10]=%.15G\n", *d1, maxddotiP[1][10], distsOldP[1][10]);
+
   if (fabs(*d1) < epsdFast)
     {
       assign_dists_sp(BSP, NSP, distsOldP, dists);
@@ -4618,6 +4623,8 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
     {
 #if 1
       calc_delt_sp(BSP, NSP, maxddotiP, &delt, distsOldP);
+      //if (i==361)
+	//printf("delt=%.15G\n", delt);
       /* BUG?!??!: qui avevo messo erroneamente dists (che non è inizializzata!!)
 	 anziché distsOldP */
       if (check_distance_sp(BSP, NSP, maxddotiP, distsOldP, t1, t2, *t))
@@ -4634,6 +4641,9 @@ int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double
 
       //printf("prima i=%d *d1=%.15G (t=%.15G)\n", i, *d1, *t);
       *d1 = calcDistNegNeighPlaneAll_sp(BSP, NSP, *t, t1, i, dists);
+     // if (i==361)
+//	printf("*d1=%.15G t=%.15G\n", *d1, *t);
+
       //printf("dopo i=%d *d1=%.15G (t=%.15G)\n", i, *d1, *t);
       MD_DEBUG45(printf("UNO *d1=%.15G t=%.15G t1=%.15G delt=%.15G\n", *d1,*t,t1,delt));
 #if 0
@@ -4772,7 +4782,7 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
   int na;
   double Iamin;
 #endif
-  double factori;
+  double factori, A, B;
 #if 0
   factori = 0.5*maxax[i]+OprogStatus.epsdSP;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
 #else
@@ -4792,8 +4802,18 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
   return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
      angM[i]*factori/Iamin;
 #else
-  return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+  A = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2]); 
+  B = sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+  /* 19/05/2010: se la velocità angolare è nulla (entro gli errori di macchina) 
+   allora A è esattamente la velocità d'avvicinamento alla parete e non 
+   più una sovrastima per quello moltiplico A per 1.001! 
+   Notare che se vale la seguente condizione A + B = A quindi bisogna correggere A */
+  if (B / A < MAXDDOT_NNL_THR)
+    {
+       return A*ADJ_MAXDDOT_NL + B;
+    }
+  else
+    return A + B;  
 #endif
 }
 #else
@@ -4813,8 +4833,20 @@ double calc_maxddot_nnl_sp(int i, int nn, double *gradplane)
     factori = calc_norm(spXYZ_B[nn]) + 0.5*Oparams.sigmaSticky + OprogStatus.epsdSP;
 #endif
 #endif
-  return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
-    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
+  A = fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2]); 
+  B = sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;
+  /* 19/05/2010: se la velocità angolare è nulla (entro gli errori di macchina) 
+   allora A è esattamente la velocità d'avvicinamento alla parete e non 
+   più una sovrastima per quello moltiplico A per 1.001! 
+   Notare che se vale la seguente condizione A + B = A quindi bisogna correggere A */
+  if (B / A < MAXDDOT_NNL_THR)
+    {
+       return A*ADJ_MAXDDOT_NL + B;
+    }
+  else
+    return A + B; 
+  //return fabs(vx[i]*gradplane[0]+vy[i]*gradplane[1]+vz[i]*gradplane[2])+
+    //sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
 }
 #endif
 #ifdef EDHE_FLEX
@@ -4879,8 +4911,11 @@ int locate_contact_neigh_plane_parall_sphs(int i, double *evtime, double t2)
 extern int is_infinite_Itens(int i);
 extern int is_infinite_mass(int i);
 #endif
-#ifdef MD_SUPERELLIPSOID
+#if defined(EDHE_FLEX) //defined(MD_SUPERELLIPSOID)
 extern void buildSPNNL_spots_growth(int i);
+#endif
+#ifdef MD_SUPERELLIPSOID
+extern int is_superellipse(int i);
 #endif
 int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 {
@@ -4931,8 +4966,28 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   t = 0;//t1;
   t1 = Oparams.time;
   //t2 = timbig;
+  calc_grad_and_point_plane_all(i, gradplane_all, rBall);
+  //factori = 0.5*maxax[i]+OprogStatus.epsdSPNL;
 #ifdef EDHE_FLEX
-#if defined(MD_SUPERELLIPSOID) 
+  /* NOTA: in realta is_a_sphere_NNL richiede che il core sia sferico e che tutti gli sticky
+     spots siano posizionati nel centro di massa del core. */
+#ifdef MD_SUPERELLIPSOID
+  if (is_a_sphere_NNL[i] && !is_superellipse(i))//&& !(OprogStatus.useNNL==3 || OprogStatus.useNNL==4))
+    {
+      return locate_contact_neigh_plane_parall_sphs(i, evtime, t2);
+    }
+  //printf("i=%d QUI<<<\n", i);
+#else
+  /* N.B. facendo dei test, questa ottimizzazione non offre in realtà vantaggi */
+  if (is_a_sphere_NNL[i])//&& !(OprogStatus.useNNL==3 || OprogStatus.useNNL==4))
+    {
+      return locate_contact_neigh_plane_parall_sphs(i, evtime, t2);
+    }
+#endif
+#endif
+#ifdef EDHE_FLEX
+#if 1 //defined(MD_SUPERELLIPSOID) 
+  /* N.B. 19/05/2010: le NNL con gli spots sono più efficienti anche con gli ellissoidi */
   NSP = typesArr[typeOfPart[i]].nspots;
   BSP = 0;
   if (OprogStatus.useNNL==3 || OprogStatus.useNNL==4)
@@ -4948,7 +5003,6 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
       /* durante la crescita gli spot interattivi non vengono considerati */
       NSP += MD_SPNNL_NUMSP;
     }
-
   //printf("BSP=%d NSP=%d\n", BSP, NSP);
 #else
   BSP = 0;
@@ -4960,26 +5014,14 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
   else
     NSP = MD_STSPOTS_B;
 #endif
-  calc_grad_and_point_plane_all(i, gradplane_all, rBall);
-  //factori = 0.5*maxax[i]+OprogStatus.epsdSPNL;
-#ifdef EDHE_FLEX
-  /* NOTA: in realta is_a_sphere_NNL richiede che il core sia sferico e che tutti gli sticky
-     spots siano posizionati nel centro di massa del core. */
-#if 1
-  /* N.B. facendo dei test, questa ottimizzazione non offre in realtà vantaggi */
-  if (is_a_sphere_NNL[i] && !(OprogStatus.useNNL==3 || OprogStatus.useNNL==4))
-    {
-      return locate_contact_neigh_plane_parall_sphs(i, evtime, t2);
-    }
-#endif
-#endif
+
   maxddot = 0.0;
   for (nn = 0; nn < 6; nn++)
     {
       for (nn2 = BSP; nn2 < NSP; nn2++)
 	{
 	  maxddotiP[nn][nn2] = calc_maxddot_nnl_sp(i, nn2, gradplane_all[nn]);
-	  //printf("maxddoti[%d][%d]=%.15G\n", nn, nn2, maxddoti[nn][nn2]);
+		     //printf("maxddoti[%d][%d]=%.15G\n", nn, nn2, maxddoti[nn][nn2]);
 #if 0
 	  maxddoti[nn][nn2] = fabs(vx[i]*gradplane_all[nn][0]+vy[i]*gradplane_all[nn][1]+vz[i]*gradplane_all[nn][2])+
 	    sqrt(Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]))*factori;  
@@ -5013,6 +5055,9 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 #endif
       //normddot = calcvecF(i, j, t, r1, r2, ddot, shift);
 #ifdef MD_BASIC_DT
+      /* N.B. notare che se si usa uno spot dista dal piano de bounding box 
+	 esattamente epsd e la velocità angolare è nulla allora possono insorgere problemi
+	 poiché con il seguente delt si va a finire esattamente sul piano. */
       delt = epsd/maxddot;
       tini = t;
       t += delt;
@@ -5103,6 +5148,13 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 	      t2arrP[nn][nn2] = t; 
 	      dorefineP[nn][nn2] = crossedP[nn][nn2];
 #if 0
+	      if (i==909 && dorefineP[nn][nn2])
+		{
+		  printf("distsP[%d][%d](%.16G)=%.16G distsOldP[][](%.16G)=%.16G\n", nn, nn2, t, distsP[nn][nn2], t-delt, distsOldP[nn][nn2]);
+
+		}
+#endif
+#if 0
 	      if (dorefine[nn][nn2])
 		{
 		  printf("nn=%d nn2=%d t-delt=%.15G t2arr=%.15G\n", nn, nn2, t-delt, t2arr[nn][nn2]);
@@ -5134,7 +5186,7 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 		  else 
 		    {
 		      MD_DEBUG34(printf("qui-1 t-delt=%.15G t=%.15G t2arr=%.15G\n", t-delt,t, troot));
-		      dorefineP[nn][nn2] = 1;
+     		      dorefineP[nn][nn2] = 1;
 		      t2arrP[nn][nn2] = troot-t1;
 		    }
 		}
@@ -5196,7 +5248,11 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 		      if (!tocheckP[nn][nn2])
 #endif
 			mdPrintf(ALL,"[locate_contact_nnl_sp] can't find contact point!\n",NULL);
-
+		      printf("typeOfPart[%d]=%d nn=%d nn2=%d\n", i, typeOfPart[i], nn, nn2);
+		      //printf("BSP=%d NSP=%d\n", BSP, NSP);
+		      printf("v=%f %f %f w=%.15G %.15G %.15G\n", vx[i], vy[i], vz[i],
+			     wx[i], wy[i], wz[i]);
+	
 		      MD_DEBUG45(if (!tocheckP[nn][nn2]) printf("t1=%.15G t2=%.15G delt=%.15G dists[%d][%d]: %.15G distsOld[%d][%d]:%.15G\n", t-delt, t2arrP[nn][nn2], delt, nn, nn2, distsP[nn][nn2], nn, nn2, distsOldP[nn][nn2]));
 		      /* Se refine_contact fallisce deve cmq continuare a cercare 
 		       * non ha senso smettere...almeno credo */

@@ -84,7 +84,7 @@ extern void tRDiagR(int i, double **M, double a, double b, double c, double **Ri
 extern void lab2body(int i, double x[], double xp[], double *rO, double **R);
 int is_superellipse(int i)
 {
-  return 1;
+  //return 1;
   MD_DEBUG37(return 1);
   if (typesArr[typeOfPart[i]].n[0]==2.0 && typesArr[typeOfPart[i]].n[1]==2.0 &&
       typesArr[typeOfPart[i]].n[2]==2.0)
@@ -1560,11 +1560,13 @@ double calc_sign_SE(int i, double *r, double **R, double *x, double **X)
   double a,b,c,e,n;
   int k1, k2;
   double xp[3], segno;
+#ifdef MD_TWOPARAMSE
   a = typesArr[typeOfPart[i]].sax[0];
   b = typesArr[typeOfPart[i]].sax[1];
   c = typesArr[typeOfPart[i]].sax[2];
   e = typesArr[typeOfPart[i]].n[0];
   n = typesArr[typeOfPart[i]].n[1];
+#endif
   if (!is_superellipse(i))
     {
       segno = -1;

@@ -3074,6 +3074,8 @@ extern double max3(double a, double b, double c);
 void init_gauleg_weights(void);
 double *SQvolPrefact;
 double calc_SQ_volprefact(int);
+#endif
+#ifdef EDHE_FLEX
 void buildSPNNL_spots_growth(int i)
 {
   int pt, nsp, kk, k, vert[3];
@@ -3449,7 +3451,7 @@ void usrInitAft(void)
      exit(-1);
    }
 #else
- if (OprogStatus.useNNL > 2 || OprogStatus.useNNL < 0)
+ if (OprogStatus.useNNL > 4 || OprogStatus.useNNL < 0)
    {
      printf("[HEFLEX] useNNL must be between 0 and 2 (1=usual NNL, 0=disabled)\n");
      exit(-1);
@@ -4029,14 +4031,21 @@ void usrInitAft(void)
     }
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
-      SQvolPrefact[pt] = calc_SQ_volprefact(pt);
-      printf("Volume SQ prefactor = %.15G\n", SQvolPrefact[pt]);
+      /* se non si tratta di una superquadrica alloca il prefattore è semlicemente
+	 4*pi/3 */
+      if (typesArr[pt].n[0]==2.0 && typesArr[pt].n[1]==2.0 &&
+	      typesArr[pt].n[2]==2.0)
+	SQvolPrefact[pt] = 8.0*acos(0.0)/3.0;
+      else
+	SQvolPrefact[pt] = calc_SQ_volprefact(pt);
+      printf("[type=%d] Volume SQ prefactor = %.15G\n", pt, SQvolPrefact[pt]);
     }
+#endif
+	
   if (OprogStatus.useNNL == 3 || OprogStatus.useNNL == 4)  
     { 
       buildSPNNL_spots();
     }
-#endif
   a0I = malloc(sizeof(double)*Oparams.parnum);
 #endif
   maxax = malloc(sizeof(double)*Oparams.parnum);
@@ -5074,10 +5083,17 @@ int readBinCoord_heflex(int cfd)
       if (typesArr[i].nspots == 0)
 	continue;
 #else
+#if 1
+      sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
+      typesArr[i].spots = malloc(size+sizeSPNNL);
+      if (typesArr[i].nspots == 0)
+	continue;
+#else
       sizeSPNNL = 0;
       if (typesArr[i].nspots == 0)
 	continue;
       typesArr[i].spots = malloc(size+sizeSPNNL);
+#endif
 #endif
       rerr |= -readSegs(cfd, "Init", "Error reading spots", CONT, size, typesArr[i].spots, NULL);
     } 
@@ -5325,7 +5341,8 @@ void readAllCor(FILE* fs)
 #ifdef MD_SUPERELLIPSOID
       sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
 #else
-      sizeSPNNL = 0;
+      sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
+      //sizeSPNNL = 0;
 #endif
       if (sizeSPNNL > 0 || typesArr[i].nspots > 0)
 	typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots+sizeSPNNL);

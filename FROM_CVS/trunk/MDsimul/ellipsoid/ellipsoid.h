@@ -80,6 +80,8 @@ void UpdateSystem(void);
 #define PAR2SAVE_LEN 1024
 #define MD_INF_ITENS 1E199
 #define MD_INF_MASS  1E199
+#define MAXDDOT_NNL_THR 1.0E-8
+#define ADJ_MAXDDOT_NL 1.001
 #define MD_HANDLE_INFMASS
 #ifdef MD_GHOST_IGG
 typedef struct {

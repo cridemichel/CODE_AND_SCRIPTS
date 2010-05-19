@@ -3026,7 +3026,7 @@ int zbrac(double (*func)(double), double *x1, double *x2)
 
 #define ITMAXZB 100 
 /* Maximum allowed number of iterations.*/
-#define EPSP 3.0e-16 /* Machine floating-point precision.*/
+#define EPSP 1.11e-16 /* Machine floating-point precision (see http://en.wikipedia.org/wiki/Machine_epsilon).*/
 void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], double xb2[], 
 	   int *nb)
 /* Given a function fx defined on the interval from x1-x2 subdivide the interval into n equally
@@ -3133,7 +3133,7 @@ double zbrentRyck(double (*func)(double), double x1, double x2, double tol)
   //nrerror("Maximum number of iterations exceeded in zbrent"); 
   return 0.0; /* Never get here.*/ 
 }
-
+extern int ibr;
 double zbrent(double (*func)(double), double x1, double x2, double tol)
 /* Using Brent s method, find the root of a function func known to lie between x1 and x2. 
  * The root, returned as zbrent, will be refined until its accuracy is tol.*/
@@ -3144,7 +3144,6 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
   if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) 
     {
       MD_DEBUG(printf("BRENT BAD BRACKETING fa(%.15G)=%.15G fb(%.15G)=%.15G\n", a, fa, b, fb));
-      //printf("BRENT BAD BRACKETING fa(%.15G)=%.15G fb(%.15G)=%.15G\n", a, fa, b, fb);
       polinterr = 1;
       return 0.0;
       //nrerror("Root must be bracketed in zbrent");
@@ -3162,6 +3161,7 @@ double zbrent(double (*func)(double), double x1, double x2, double tol)
 	  a=b; b=c; c=a; fa=fb; fb=fc; fc=fa;
 	}
       tol1=2.0*EPSP*fabs(b)+0.5*tol;
+      
       /* Convergence check. */
       xm=0.5*(c-b); 
       if (fabs(xm) <= tol1 || fb == 0.0) 
