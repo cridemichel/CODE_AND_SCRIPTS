@@ -296,6 +296,7 @@ void store_bump(int i, int j);
 void check_shift(int i, int j, double *shift)
 {
   double drx, dry, drz;
+
   if (cellsx <= 2)
     {
       drx = rx[i] - rx[j];

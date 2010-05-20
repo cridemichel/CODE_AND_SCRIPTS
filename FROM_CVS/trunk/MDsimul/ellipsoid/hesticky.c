@@ -2636,7 +2636,54 @@ int search_dist(int i, int j, int nn, double *distsSq)
 #endif
 #endif
 /* N.B. per la silica tale routine va cambiata! */
-
+double calcDistNegSPsph(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
+		   double *dists, int bondpair)
+{
+  double ti, distSq, dist, distmin=0.0;
+  int firstdist=1, nn;
+  ti = t + (t1 - atomTime[i]);
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+  
+  ti = t + (t1 - atomTime[j]);
+#if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
+  rB[0] = rx[j] + vx[j]*ti;
+  rB[1] = ry[j] + vy[j]*ti;
+  rB[2] = rz[j] + vz[j]*ti;
+  if (j!=sphWallOuter && j!=sphWall && i!=sphWall && i!= sphWallOuter)
+    {
+      rB[0] += shift[0];
+      rB[1] += shift[1];
+      rB[2] += shift[2];
+    }
+#else
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+#endif
+  distSq = Sqr(rB[0]-rA[0])+Sqr(rB[1]-rA[1])+Sqr(rB[2]-rA[2]);
+  //if ((i==25001 && j==19)|| (i==19 && j==25001))
+    //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+  for (nn = 0; nn < nbondsFlex; nn++)
+    {
+      if (bondpair != -1 && bondpair != nn)
+	{
+	  //printf("qui in calcDistNeg\n");
+	  continue;
+	}
+      dists[nn] = dist = sqrt(distSq) - mapSigmaFlex[nn];
+      if (firstdist || fabs(dist) < fabs(distmin))
+	{
+	  MD_DEBUG38(printf("firstdist=%d dist=%.15G distmin=%.15G\n", firstdist, dist, distmin));
+	  firstdist = 0;
+	  distmin = dist;
+	  *amin = mapbondsa[nn];
+	  *bmin = mapbondsb[nn];
+	}
+    }
+  return distmin;
+}
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
 {
@@ -2657,6 +2704,11 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   int na;
 #ifdef MD_ASYM_ITENS
   double phi, psi;
+#endif
+#ifdef EDHE_FLEX
+  /* se si tratta di due particelle a simmetria sferica ottimizza il calcolo */
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j])
+    return calcDistNegSPsph(t, t1, i, j, shift, amin, bmin, dists, bondpair);
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   ti = t + (t1 - atomTime[i]);
