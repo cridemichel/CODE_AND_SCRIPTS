@@ -174,8 +174,10 @@ void enlarge_queue_size(void)
      to a available node */
   treeIdA[0] = oldps;
   /* reset status of new nodes 0 = free (this is needed for timeshift_calendar()) */
+#ifdef MD_CALENDAR_HYBRID
   for (id=oldps; id < poolSize; id++)
     treeStatus[id] = 0;
+#endif
 }
 #ifdef MD_CALENDAR_HYBRID
 int get_new_node(int idA, int idB)
