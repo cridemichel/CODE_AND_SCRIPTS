@@ -3518,6 +3518,11 @@ void usrInitAft(void)
   rcmz = -Lz*0.5;
   Lz2 = Lz*0.5;
 #endif
+  if (OprogStatus.eventMult==1)
+    {
+      printf("[ERROR] eventMult parameter must be greater than 1, typical values are 20-30\n");
+      exit(-1);
+    }
 #ifdef MD_SPHERICAL_WALL
   poolSize = OprogStatus.eventMult*Oparams.parnum+2*Oparams.parnum;
 #else
