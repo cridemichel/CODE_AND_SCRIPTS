@@ -5080,6 +5080,13 @@ int readBinCoord_heflex(int cfd)
   for (i=0; i < Oparams.ntypes; i++)
     {
       size = sizeof(spotStruct)*typesArr[i].nspots;
+      if (typesArr[i].nspots > NA)
+	{
+	  printf("[ERROR] too many spots (%d) for type %d increase NA (actual value is %d) in ellipsoid.h and recompile\n",
+		 typesArr[i].nspots, i, NA);
+	  exit(-1);
+	}
+
 #ifdef MD_SUPERELLIPSOID
      /*  16/05/2010: notare che nel caso si abbiano spot per le NNL bisogna allocare più spazio
 	ma questi non vengono salvati, quindi il numero di spot letti non ne deve tener conto */ 
@@ -5343,6 +5350,12 @@ void readAllCor(FILE* fs)
 #endif
       /* read sticky spots parameters */
       fscanf(fs, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
+      if (typesArr[i].nspots > NA)
+	{
+	  printf("[ERROR] too many spots (%d) for type %d increase NA (actual value is %d) in ellipsoid.h and recompile\n",
+		 typesArr[i].nspots, i, NA);
+	  exit(-1);
+	}
 #ifdef MD_SUPERELLIPSOID
       sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
 #else
