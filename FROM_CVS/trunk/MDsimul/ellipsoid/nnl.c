@@ -6256,6 +6256,36 @@ int may_interact_all(int i, int j)
   return 0;
 }
 #endif
+void check_nnl_size(int na)
+{
+  int i;
+  double dblsize;
+  int nnlsize;
+
+  if (nebrTab[na].len < OprogStatus.nebrTabFac - 1)
+    return;
+  
+  dblsize = (double)OprogStatus.nebrTabFac;
+  while (((int)dblsize)==OprogStatus.nebrTabFac)
+    {
+      dblsize *= 1.10; /* try 10% increment */
+    }
+
+  OprogStatus.nebrTabFac = (int) dblsize;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      nnlsize = OprogStatus.nebrTabFac*sizeof(int); 
+      nebrTab[i].list = (int*)realloc(nebrTab[i].list, nnlsize);
+      if (nebrTab[i].list==NULL)
+	{
+	  printf("[CRITICAL ERROR] neighbor lists size exceed memory allocation of %d elements\n", OprogStatus.nebrTabFac);
+	  printf("and realloc() to enlarge nebrTabFac array failed\n");
+	  exit(-1);
+	}
+    }
+  printf("[INFO]  neighbor lists exceed allocated memory I have just enlarged it with realloc()\n");
+  printf("new size (nebrTabFac) is %d\n", OprogStatus.nebrTabFac);
+}
 void BuildNNL(int na) 
 {
   double shift[NDIM];
@@ -6392,13 +6422,7 @@ void BuildNNL(int na)
 			  //for (kk=0; kk < 3; kk++)
 			  //nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
 			  nebrTab[na].len++;
-			  if (nebrTab[na].len >= OprogStatus.nebrTabFac)
-			    {
-			      printf("[CRITICAL ERROR] neighbor lists size exceed memory allocation of %d elements\n", 
-				     OprogStatus.nebrTabFac);
-			      printf("Increase nebrTabFac parameter in parameter file and restart simulation\n");
-			      exit(-1);
-			    }
+			  check_nnl_size(na);
 			}
 		    }
 		} 

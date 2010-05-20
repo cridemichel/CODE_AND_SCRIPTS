@@ -10324,8 +10324,11 @@ void timeshift_calendar(void)
 #ifdef MD_CALENDAR_HYBRID
   int k, e, i, j;
 #endif
-
-  poolSize = Oparams.parnum*OprogStatus.eventMult;
+#ifdef MD_SPHERICAL_WALL
+  poolSize = OprogStatus.eventMult*Oparams.parnum+2*Oparams.parnum;
+#else
+  poolSize = OprogStatus.eventMult*Oparams.parnum;
+#endif
 #ifndef MD_CALENDAR_HYBRID
   /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
   for (id=1; id < poolSize; id++) 

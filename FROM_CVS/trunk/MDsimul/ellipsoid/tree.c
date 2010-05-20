@@ -45,11 +45,14 @@ int populatePQ(void);
 void deleteFromEventQ(int e);
 int insertInEventQ(int p);
 #endif
+void enlarge_queue_size(void);
 
 void ErrExit(char *str)
 {
   printf(str);
-  exit(-1);
+  printf("\n");
+  enlarge_queue_size();
+  //exit(-1);
 }
 int check_node(char* str, int id, int idNew, int idUp)
 {
@@ -80,6 +83,99 @@ int check_node(char* str, int id, int idNew, int idUp)
 	return 1;
     }
   return 0;
+}
+/* Allocate memory for a matrix of integers */
+int** ReallocMatI(int **v, int size1, int size2, int size2old)
+{
+  int k, kk;
+  int **vaux;
+  vaux = (int **) malloc(sizeof(int*)*size1);
+  vaux[0] = (int*) malloc(size1 * size2 * sizeof(int));
+  if (!vaux || !vaux[0])
+    {
+      printf("[CRITICAL ERROR] I tried to enlarge event queue but malloc() failed\n");
+      exit(-1);
+    }
+
+  for (k = 1; k < size1; k++)
+    vaux[k] = vaux[k-1] + size2;
+    /* copy old tree onto new one */
+  for (k = 0; k < size1; k++)
+    for (kk = 0; kk < size2old; kk++)
+      vaux[k][kk] = v[k][kk];
+  /* free old allocated memory */  
+  free(v[0]);
+  free(v);
+  
+  return vaux;
+}
+
+void enlarge_queue_size(void)
+{
+  double dblps;
+  int oldps, id;
+  oldps = poolSize;
+  dblps = (double) poolSize;
+  while (((int)dblps)==poolSize)
+   dblps *= 1.10; /* 10% increment */ 
+  poolSize = (int) dblps;
+//  printf("treeCircAR[oldps-1]=%d treeCircAR[%d]=%d\n", treeCircAR[oldps-1],idd, treeCircAR[idd]);
+
+#if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    tree = ReallocMatI(9, poolSize, oldps);
+#else
+#ifdef MD_CALENDAR_HYBRID
+  tree = ReallocMatI(tree, 16, poolSize, oldps);
+#else
+  tree = ReallocMatI(tree, 12, poolSize, oldps);
+#endif
+#endif
+#else
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    tree = RellocMatI(tree, 9, poolSize, oldps);
+#else
+#ifdef MD_CALENDAR_HYBRID
+  tree = RellocMatI(tree, 13, poolSize, oldps);
+#else
+  tree = ReallocMatI(tree, 9, poolSize, oldps);
+#endif
+#endif
+#endif  
+
+#ifdef MD_HE_PARALL
+  if (my_rank == 0)
+    {
+      treeTime = realloc(treeTime,sizeof(double)*poolSize);
+      treeRxC  = realloc(treeRxC,sizeof(double)*poolSize);
+      treeRyC  = realloc(treeRyC,sizeof(double)*poolSize);
+      treeRzC  = realloc(treeRzC,sizeof(double)*poolSize);
+    }
+#else
+  treeTime = realloc(treeTime,sizeof(double)*poolSize);
+  treeRxC  = realloc(treeRxC,sizeof(double)*poolSize);
+  treeRyC  = realloc(treeRyC,sizeof(double)*poolSize);
+  treeRzC  = realloc(treeRzC,sizeof(double)*poolSize);
+#endif
+  if (treeTime==NULL || treeRxC==NULL || treeRyC == NULL || treeRzC == NULL)
+    {
+      printf("[CRITICAL ERROR] I tried to enlarge queue but realloc() failed\n");
+      exit(-1);
+    }
+  else
+    printf("[INFO] I have just enlarged event queue to %d nodes (old size was %d)\n", poolSize, oldps);
+  /* inizializza opportunamente i nuovi nodi, ossia li inserisce tutti nel pool di quelli liberi */
+  for (id=oldps; id <= poolSize-2; id++) 
+    treeCircAR[id] = id + 1;
+  treeCircAR[poolSize-1]=-1;
+  /* oldps is a newly allocated free node, hence now treeIdA[0] is no more -1 but points 
+     to a available node */
+  treeIdA[0] = oldps;
+  /* reset status of new nodes 0 = free (this is needed for timeshift_calendar()) */
+  for (id=oldps; id < poolSize; id++)
+    treeStatus[id] = 0;
 }
 #ifdef MD_CALENDAR_HYBRID
 int get_new_node(int idA, int idB)
@@ -240,7 +336,6 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
      NOTA: urto con parete e cell-crossing sono esclusivi, per cui basta un nodo 
      inoltre c'è sempre un evento di tale tipo associato con ogni particella 
      */
-  
   /* treeRight[id] == -1 => il calendario è vuoto */
   if (treeRight[id] == -1) 
     treeRight[id] = idNew;
@@ -695,7 +790,7 @@ void initHQlist(void)
   /* inizializzare anche le linked lists lineari? */
   for (i=0; i < OprogStatus.nlistsHQ+1; i++)
     linearLists[i] = -1;
-  for (i=1; i < Oparams.parnum*OprogStatus.eventMult; i++) 
+  for (i=1; i < poolSize; i++) 
     treeStatus[i] = 0;/* 0 = free node */
   numevPQ = overevHQ = totevHQ = 0; 
  
