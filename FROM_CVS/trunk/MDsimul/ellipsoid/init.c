@@ -5080,7 +5080,7 @@ int readBinCoord_heflex(int cfd)
   for (i=0; i < Oparams.ntypes; i++)
     {
       size = sizeof(spotStruct)*typesArr[i].nspots;
-      if (typesArr[i].nspots > NA)
+      if (typesArr[i].nspots >= NA)
 	{
 	  printf("[ERROR] too many spots (%d) for type %d increase NA (actual value is %d) in ellipsoid.h and recompile\n",
 		 typesArr[i].nspots, i, NA);
@@ -5350,7 +5350,7 @@ void readAllCor(FILE* fs)
 #endif
       /* read sticky spots parameters */
       fscanf(fs, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
-      if (typesArr[i].nspots > NA)
+      if (typesArr[i].nspots >= NA)
 	{
 	  printf("[ERROR] too many spots (%d) for type %d increase NA (actual value is %d) in ellipsoid.h and recompile\n",
 		 typesArr[i].nspots, i, NA);
