@@ -368,9 +368,7 @@ void check_all_bonds(void)
 	break;
       nb = 0;
 #if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
-      if (i==sphWallOuter)
-	continue;
-      if (i==sphWall)
+      if (i==sphWall || i==sphWallOuter)
 	{
   	  for (j = 0; j < Oparams.parnum; j++)
 	    {
@@ -380,13 +378,16 @@ void check_all_bonds(void)
 	      if (nbondsFlex == 0)
 		continue;
     	      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-	      if (dist >= 0)
+	      if ( (i==sphWall && dist >= 0 && typeOfPart[j] == 1)
+		   || (i==sphWallOuter && dist >=0 && typeOfPart[j] == 2))
 		{
-		  printf("[ERROR] In initial configuration particle %d is outside inner spherical wall\n", j);
+		  printf("[ERROR] In initial configuration particle %d (type=%d) is outside spherical wall\n", j,
+			 typeOfPart[j]);
 		  printf("dist=%f r=%f %f %f\n", dist, rx[j], ry[j], rz[j]);
 		  exit(-1);	
 		}
 	    }
+	  continue;
 	}
 #endif
       for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
