@@ -355,7 +355,7 @@ void check_all_bonds(void)
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
- for (k = 0;  k < NDIM; k++)
+  for (k = 0;  k < NDIM; k++)
     {
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
@@ -367,6 +367,28 @@ void check_all_bonds(void)
       if (warn)
 	break;
       nb = 0;
+#if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
+      if (i==sphWallOuter)
+	continue;
+      if (i==sphWall)
+	{
+  	  for (j = 0; j < Oparams.parnum; j++)
+	    {
+	      if (j==sphWall || j==sphWallOuter)
+		continue;
+	      assign_bond_mapping(i,j);
+	      if (nbondsFlex == 0)
+		continue;
+    	      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+	      if (dist >= 0)
+		{
+		  printf("[ERROR] In initial configuration particle %d is outside inner spherical wall\n", j);
+		  printf("dist=%f r=%f %f %f\n", dist, rx[j], ry[j], rz[j]);
+		  exit(-1);	
+		}
+	    }
+	}
+#endif
       for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 #ifdef MD_EDHEFLEX_WALL
       if (inCell[2][i] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
@@ -495,6 +517,7 @@ void check_all_bonds(void)
 			      printf("wrong number of bonds between %d(%d) and %d(%d) nbonds=%d nn=%d\n",
 				     i, mapbondsa[nn], j, mapbondsb[nn], nbonds, nn);
 
+			      printf("r=%f %f %f - %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
 			      printf("[dist>0]dists[%d]:%.15G\n", nn, dists[nn]);
 			      if (OprogStatus.checkGrazing==1)
 				{
