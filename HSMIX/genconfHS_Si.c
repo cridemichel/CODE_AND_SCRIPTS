@@ -85,7 +85,7 @@ void FCC(FILE *f)
 		}
 	      if (type != -1)
 		{
-		  fprintf(f, "%f %f %f 1 0 0 0 1 0 0 0 1 %d\n", rx[cc], ry[cc], rz[cc], type);
+		  fprintf(f, "%f %f %f 1 0 0 0 1 0 0 0 1\n", rx[cc], ry[cc], rz[cc]);
 		  cc++;
 		}
 	    }
@@ -181,6 +181,9 @@ int main(int argc, char** argv)
   vx = malloc(ds*N);
   vy = malloc(ds*N);
   vz = malloc(ds*N);
+  printf("parnum:%d\n", N1+N2);
+  printf("parnumA: %d\n", N1);
+  printf("@@@\n");	
   FCC(stdout);
   vels(stdout);
   fprintf(stdout, "%.15G\n", L[0]);

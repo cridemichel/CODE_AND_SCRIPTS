@@ -1,10 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#define MAXTYPES 1000
 double T=1.0, m=1.0, L[3];
-int N1, N2, N;
+int N;
 double *rx, *ry, *rz, *vx, *vy, *vz;
 double ranf(void);
+int NT, NN[MAXTYPES], cct[MAXTYPES];
 
 void FCC(FILE *f)
 {
@@ -23,14 +25,14 @@ void FCC(FILE *f)
        COORD_TYPE    ex, ey, ez           half of vector joining atom a and b 
                                           in a molecule 
        COORD_TYPE    rRoot3               1.0 / sqrt ( 3.0 ) */
-  int cc, deli, Nc, cc1, cc2, type;
+  int cc, deli, Nc, type;
   double Cell[3], Cell2[3];
-  int i, ix, iy, iz, ii;
+  int i, ix, iy, iz, ii, nt;
   Nc = ceil(  pow( ((double)N), 1.0/3.0 )  );
   fprintf(stderr,"Nc: %d\n", Nc);
   /* Calculate the side of the unit cell */
-  cc=cc1=cc2=0;
-  L[0]=L[1]=L[2]=Nc*1.5;
+  cc=0;
+  L[0]=L[1]=L[2]=20;//;Nc*1.5;
 
   for (ii=0; ii < 3; ii++)
     {
@@ -39,8 +41,13 @@ void FCC(FILE *f)
     }
   /* Construct the lattice from the unit cell */
   /* assumiamo N2 > N1 */
-  deli = N2 / N1;  
   ii = 0;
+  type = 0;
+
+  for (nt = 0; nt < NT; nt++)
+   {
+      cct[nt] = 0;
+   }
   for(iz = 0; iz < Nc; iz++) /* loops over unit cells (that are simply cubes) */ 
     {
       for(iy = 0; iy < Nc; iy++)
@@ -56,37 +63,16 @@ void FCC(FILE *f)
 	      rx[cc] = rx[cc] - 0.5 * L[0] + ranf()*1E-7; 
 	      ry[cc] = ry[cc] - 0.5 * L[1] + ranf()*1E-7;
 	      rz[cc] = rz[cc] - 0.5 * L[2] + ranf()*1E-7;
-	      type = -1;
-	      if (cc % deli == 0) 
-		{
-		  if (cc1 < N1)
-		    {
-		      cc1++;
-		      type = 0;
-		    }
-		  else if (cc2 < N2)
-		    {
-		      cc2++;
-		      type = 1;
-		    }
-		}
-	      else 
-		{
-		  if (cc2 < N2)
-		    {
-		      cc2++;
-		      type = 1;
-		    }
-		  else if (cc1 < N1)
-		    {
-		      cc1++;
-		      type = 0;
-		    }
-		}
 	      if (type != -1)
 		{
 		  fprintf(f, "%f %f %f 1 0 0 0 1 0 0 0 1 %d\n", rx[cc], ry[cc], rz[cc], type);
-		  cc++;
+ 		  (cct[type])++;
+                  if (cct[type] >= NN[type])
+		   {
+	             type++;
+  		     //printf("new type=%d NN[%d]=%d\n", type, type, NN[type]);	
+		   }
+                   cc++;
 		}
 	    }
 	}
@@ -170,9 +156,11 @@ void vels(FILE *f)
 int main(int argc, char** argv)
 {
   int i, M, i1, i2, i3, ds;
-  N1 = atoi(argv[1]);
-  N2 = atoi(argv[2]);
-  N=N1+N2;
+  N = atoi(argv[1]);
+  NT= atoi(argv[2]);
+  for (i=0; i < NT-1; i++)
+   NN[i] = N/NT;
+  NN[NT-1] = N-(NT-1)*NN[0];
   fprintf(stderr,"N=%d\n", N);
   ds=sizeof(double);
   rx = malloc(ds*N);
