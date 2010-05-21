@@ -228,6 +228,11 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE,MD_WALL}
 #else
 enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #endif
+#ifdef MD_LL_BONDS
+#define MAX_ALLOWED_INT LLONG_MAX 
+#else
+#define MAX_ALLOWED_INT INT_MAX
+#endif
 #define C_T COORD_TYPE
 #define NK 10000
 #ifndef EDHE_FLEX
@@ -235,7 +240,11 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #else
 #ifdef MD_SPHERICAL_WALL
 #define MD_SPOT_GLOBAL_ALLOC
-#define NA 1000 /* number of atoms for each molecule (particle) */
+#if defined(MD_SPOT_GLOBAL_ALLOC) && defined(MD_LL_BONDS)
+#define NA 1000000 /* number of atoms for each molecule (particle) */
+#else
+#define NA 1000
+#endif
 #else
 #define MD_SPOT_GLOBAL_ALLOC 
 /* 21/04/2010: con questa define (MD_SPOT_GLOBAL_ALLOC) non ci sono più allocazioni nello stack (locali) 
@@ -243,7 +252,11 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
    di simulare tantissimi spot per particellea. Tale eventualità si puo' porre 
    per "complessi" di ellissoidi che richiedano ad es. poliedri con molte facce 
    per le NNL. */
+#if defined(MD_SPOT_GLOBAL_ALLOC) && defined(MD_LL_BONDS)
+#define NA 1000000
+#else
 #define NA 1000//50000 /* number of atoms for each molecule (particle) */
+#endif
 #endif
 #endif
 #ifdef MD_LL_BONDS
