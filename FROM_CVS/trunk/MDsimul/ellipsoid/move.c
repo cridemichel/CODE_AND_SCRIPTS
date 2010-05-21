@@ -37,6 +37,9 @@ extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 extern int *linearLists;
 extern int numevPQ, totevHQ, overevHQ;
 #endif
+#ifdef MD_SPOT_GLOBAL_ALLOC
+extern double **ratA, **ratB;
+#endif
 
 extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
 double minaxA, minaxB, minaxAB;
@@ -342,8 +345,14 @@ void check_shift(int i, int j, double *shift)
 extern int *is_a_sphere_NNL;
 void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j);
 #ifdef MD_SAVE_SPOTS
+#ifdef MD_SPOT_GLOBAL_ALLOC
+void BuildAtomPos(int i, double *rO, double **R, double **rat);
+#else
 void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
+#endif
+#ifndef MD_SPOT_GLOBAL_ALLOC
 double ratSS[NA][3];
+#endif
 void saveSpotsPos(char *fname)
 {
   int spots, a, i;
@@ -364,12 +373,20 @@ void saveSpotsPos(char *fname)
       r[0] = rx[i];
       r[1] = ry[i];
       r[2] = rz[i];
+#ifdef MD_SPOT_GLOBAL_ALLOC
+      BuildAtomPos(i, r, R[i], ratA);
+#else
       BuildAtomPos(i, r, R[i], ratSS);
+#endif
       spots = typesArr[typeOfPart[i]].nspots;
       //printf("spots[i=%d]=%d\n", i, spots);
       for (a = 1; a < spots+1; a++)
 	{
+#ifdef MD_SPOT_GLOBAL_ALLOC
+	  fprintf(bf, "%d %d %.15G %.15G %.15G\n", i, a, ratA[a][0], ratA[a][1], ratA[a][2]);
+#else
 	  fprintf(bf, "%d %d %.15G %.15G %.15G\n", i, a, ratSS[a][0], ratSS[a][1], ratSS[a][2]);
+#endif
 	}
     }
   fclose(bf); 
@@ -9827,10 +9844,11 @@ void store_bump_neigh(int i, double *r1, double *r2)
 
 }
 #ifdef MD_PATCHY_HE
+#ifdef MD_SPOT_GLOBAL_ALLOC
+extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
+#else
 extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 #endif
-#ifdef MD_SPOT_GLOBAL_ALLOC
-extern double ratA[NA][3], ratB[NA][3];
 #endif
 void store_bump(int i, int j)
 {

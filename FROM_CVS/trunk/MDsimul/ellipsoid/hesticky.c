@@ -24,6 +24,7 @@
 #define MD_NO_STRICT_CHECK
 #define MD_OPTDDIST
 #ifdef EDHE_FLEX
+extern int MD_MAX_BOND_PER_PART;
 extern void set_angmom_to_zero(int i);
 extern int *is_a_sphere_NNL;
 extern int locateNNLSP;
@@ -47,6 +48,7 @@ extern int do_check_negpairs;
 
 #ifdef EDHE_FLEX
 #ifdef MD_SPOT_GLOBAL_ALLOC
+#if 0
 double ratA[NA][3], ratB[NA][3];
 double t2arrP[6][NA], distsP[6][NA], maxddotiP[6][NA], distsOldP[6][NA];
 int crossedP[6][NA];
@@ -55,6 +57,16 @@ double distsOld2P[6][NA];
 #endif
 int tocheckP[6][NA], dorefineP[6][NA], crossedP[6][NA];
 double distsSq[NA];
+#else
+double **ratA, **ratB;
+double *t2arrP[6], *distsP[6], *maxddotiP[6], *distsOldP[6];
+int *crossedP[6];
+#ifndef MD_BASIC_DT
+double *distsOld2P[6];
+#endif
+int *tocheckP[6], *dorefineP[6], *crossedP[6];
+double *distsSq;
+#endif
 #endif
 extern int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 extern double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
@@ -2363,7 +2375,79 @@ void assign_bond_mapping(int i, int j)
     }
 }
 #endif
+/* Allocate memory for a matrix of integers */
+long long int** ReallocMatLLI(long long int **v, int size1, int size2, int size2old)
+{
+  int k, kk;
+  long long int **vaux;
+  vaux = (long long int **) malloc(sizeof(long long int*)*size1);
+  vaux[0] = (long long int*) malloc(size1 * size2 * sizeof(long long int));
+  if (!vaux || !vaux[0])
+    {
+      printf("[CRITICAL ERROR] I tried to enlarge bonds array but malloc() failed\n");
+      exit(-1);
+    }
 
+  for (k = 1; k < size1; k++)
+    vaux[k] = vaux[k-1] + size2;
+    /* copy old tree onto new one */
+  for (k = 0; k < size1; k++)
+    for (kk = 0; kk < size2old; kk++)
+      vaux[k][kk] = v[k][kk];
+  /* free old allocated memory */  
+  free(v[0]);
+  free(v);
+  
+  return vaux;
+}
+
+inline void check_bonds_size(int i)
+{
+  double dbls;
+  int olds;
+#ifdef MD_SPHERICAL_WALL
+  if (i==sphWall || i==sphWallOuter)
+    {
+      if (numbonds[i] >= MD_MAX_BOND_PER_PART*Oparams.parnum)
+	{
+	  dbls = olds = MD_MAX_BOND_PER_PART;
+	  while (((int) dbls) == MD_MAX_BOND_PER_PART)
+	    dbls *= 1.10; /* 10% increase */
+	  MD_MAX_BOND_PER_PART = (int) dbls;
+#ifdef MD_LL_BONDS
+	  bonds[i] = realloc(bonds[i], sizeof(long long int)*MD_MAX_BOND_PER_PART*Oparams.parnum);
+	  bondscache = realloc(bondscache, sizeof(long long int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
+#else
+	  bonds[i] = realloc(bonds[i], sizeof(int)*MD_MAX_BOND_PER_PART*Oparams.parnum);
+	  bondscache = realloc(bondscache, sizeof(int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
+#endif
+	  return;
+	}
+      else
+	return;
+    }
+#endif
+  if (numbonds[i] >= OprogStatus.maxbonds)
+    {
+      dbls = olds = OprogStatus.maxbonds;
+      while (((int) dbls) == OprogStatus.maxbonds)
+	dbls *= 1.10; /* 10% increase */
+      OprogStatus.maxbonds = (int) dbls;
+#ifdef MD_LL_BONDS
+      bonds = ReallocMatLLI(bonds, Oparams.parnum, OprogStatus.maxbonds, olds);
+#ifndef MD_SPHERICAL_WALL
+      bondscache = (long long int*) realloc(bondscache, sizeof(long long int)*OprogStatus.maxbonds);      
+#endif
+#else
+      bonds = ReallocMatI(bonds, Oparams.parnum, OprogStatus.maxbonds, olds);
+#ifndef MD_SPHERICAL_WALL
+      bondscache = (int*) realloc(bondscache, sizeof(int)*OprogStatus.maxbonds);      
+#endif
+#endif
+      printf("[INFO] bonds array overflow I have just increased OprogStatus.maxbonds (old: %d new:%d)\n",
+	     olds, OprogStatus.maxbonds);
+    }
+}
 int bound(int na, int n, int a, int b);
 void add_bond(int na, int n, int a, int b)
 {
@@ -2384,6 +2468,7 @@ void add_bond(int na, int n, int a, int b)
   bonds[na][numbonds[na]] = n*(NANA)+a*NA+b;
 #endif
   numbonds[na]++;
+  check_bonds_size(na); 
   MD_DEBUG31(printf("numbonds[%d]=%d bonds[][numbonds-1]:%d a=%d b=%d\n", na, numbonds[na],bonds[na][numbonds[na]-1],
   a, b));
   //printf("[ADDING BOND] (%d,%d)-(%d,%d) numbonds[]=%d bonds[][numbonds-1]:%lld\n", na, a, n, b, numbonds[na],bonds[na][numbonds[na]-1]);
@@ -2477,7 +2562,11 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
     }
   
 }
+#ifdef MD_SPOT_GLOBAL_ALLOC
+void BuildAtomPos(int i, double *rO, double **R, double **rat)
+#else
 void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
+#endif
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
   int a;
@@ -4362,7 +4451,11 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   return 0;
 }
 /* -------- >>> neighbour list stuff <<< --------- */
+#ifdef MD_SPOT_GLOBAL_ALLOC
+double get_max_deldist_sp(int bsp, int nsp, double *distsOld[6], double *dists[6])
+#else
 double get_max_deldist_sp(int bsp, int nsp, double distsOld[6][NA], double dists[6][NA])
+#endif
 {
   int nn, nn2, first = 1;
   double maxdd=0.0, dd;
@@ -4429,7 +4522,11 @@ int interpolNeighPlane_sp(int i, double tref, double t, double delt, double d1, 
   return 1;
 }
 
+#ifdef MD_SPOT_GLOBAL_ALLOC
+int check_cross_sp(int bsp, int nsp, double *distsOld[6], double *dists[6], int *crossed[6])
+#else
 int check_cross_sp(int bsp, int nsp, double distsOld[6][NA], double dists[6][NA], int crossed[6][NA])
+#endif
 {
   int nn, nn2;
   int retcross = 0;
@@ -4450,8 +4547,11 @@ int check_cross_sp(int bsp, int nsp, double distsOld[6][NA], double dists[6][NA]
     }
   return retcross;
 }
-
+#ifdef MD_SPOT_GLOBAL_ALLOC
+int check_cross_scf_sp(int BSP, int NSP, double *distsOld[6], double *dists[6], int *crossed[6])
+#else
 int check_cross_scf_sp(int BSP, int NSP, double distsOld[6][NA], double dists[6][NA], int crossed[6][NA])
+#endif
 {
   int nn, nn2;
   int retcross = 0;
@@ -4470,7 +4570,11 @@ int check_cross_scf_sp(int BSP, int NSP, double distsOld[6][NA], double dists[6]
     }
   return retcross;
 }
+#ifdef MD_SPOT_GLOBAL_ALLOC
+void assign_dists_sp(int bsp, int nsp, double *a[6], double *b[6])
+#else
 void assign_dists_sp(int bsp, int nsp, double a[6][NA], double b[6][NA])
+#endif
 {
   int k1, k2;
   //memcpy(b, a, nsp*6*sizeof(double));
@@ -4478,7 +4582,11 @@ void assign_dists_sp(int bsp, int nsp, double a[6][NA], double b[6][NA])
     for (k2 = bsp; k2 < nsp; k2++)
       b[k1][k2] = a[k1][k2];
 }
+#ifdef MD_SPOT_GLOBAL_ALLOC
+int get_dists_tocheck_sp(int bsp, int nsp, double *distsOld[6], double *dists[6], int *tocheck[6], int *dorefine[6])
+#else
 int get_dists_tocheck_sp(int bsp, int nsp, double distsOld[6][NA], double dists[6][NA], int tocheck[6][NA], int dorefine[6][NA])
+#endif
 {
   int nn, nn2;
   int rettochk = 0;
@@ -4497,7 +4605,11 @@ int get_dists_tocheck_sp(int bsp, int nsp, double distsOld[6][NA], double dists[
     }
   return rettochk;
 }
+#ifdef MD_SPOT_GLOBAL_ALLOC
+double calcDistNegOneNNL_sp_norient(double t, double t1, int i, int nn, double **ratA)
+#else
 double calcDistNegOneNNL_sp_norient(double t, double t1, int i, int nn, double ratA[NA][3])
+#endif
 {
   double dist;
   int kk;
@@ -4516,8 +4628,11 @@ double calcDistNegOneNNL_sp_norient(double t, double t1, int i, int nn, double r
   return dist - Oparams.sigmaSticky*0.5;
 #endif
 }
-
+#ifdef MD_SPOT_GLOBAL_ALLOC
+double calcDistNegNeighPlaneAll_sp(int bsp, int nsp, double t, double t1, int i, double *dists[6])
+#else
 double calcDistNegNeighPlaneAll_sp(int bsp, int nsp, double t, double t1, int i, double dists[6][NA])
+#endif
 {
   int nn, kk, nn2;
   double dmin=0.0;
@@ -4565,7 +4680,11 @@ double calcDistNegNeighPlaneAll_sp(int bsp, int nsp, double t, double t1, int i,
     }
   return dmin; 
 }
+#ifdef MD_SPOT_GLOBAL_ALLOC
+int check_distance_sp(int bsp, int nsp, double *maxddoti[6], double *dists[6], double t1, double t2, double t)
+#else
 int check_distance_sp(int bsp, int nsp, double maxddoti[6][NA], double dists[6][NA], double t1, double t2, double t)
+#endif
 {
   int nn, cc, nn2;
   cc = 0;
@@ -4585,7 +4704,11 @@ int check_distance_sp(int bsp, int nsp, double maxddoti[6][NA], double dists[6][
     return 0;
   //printf("I chose dt=%.15G\n", *delt);
 }
+#ifdef MD_SPOT_GLOBAL_ALLOC
+void calc_delt_sp(int bsp, int nsp, double *maxddoti[6], double *delt, double *dists[6])
+#else
 void calc_delt_sp(int bsp, int nsp, double maxddoti[6][NA], double *delt, double dists[6][NA])
+#endif
 {
   int nn, nn2;
   double dt;
@@ -4603,7 +4726,11 @@ void calc_delt_sp(int bsp, int nsp, double maxddoti[6][NA], double *delt, double
 }
 extern double max(double a, double b);
 extern const double mddotfact;
+#ifdef MD_SPOT_GLOBAL_ALLOC
+void adjust_maxddoti_sp(int i, int BSP, int NSP, double *maxddot, double *maxddotiLC[6], double *maxddoti[6])
+#else
 void adjust_maxddoti_sp(int i, int BSP, int NSP, double *maxddot, double maxddotiLC[6][NA], double maxddoti[6][NA])
+#endif
 {
   double K = 1.0;
   int a, b;
@@ -4624,9 +4751,11 @@ void adjust_maxddoti_sp(int i, int BSP, int NSP, double *maxddot, double maxddot
       maxddoti[a][b] = K*maxddotiLC[a][b];
 
 }
-int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double t2, 
-					  double epsd, double *d1, double epsdFast, 
-					  double dists[6][NA], double maxddotiLC[6][NA], double maxddot)
+#ifdef MD_SPOT_GLOBAL_ALLOC
+int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double *dists[6], double *maxddotiLC[6], double maxddot)
+#else
+int search_contact_faster_neigh_plane_all_sp(int i, double *t, double t1, double t2, double epsd, double *d1, double epsdFast, double dists[6][NA], double maxddotiLC[6][NA], double maxddot)
+#endif
 {
   double told, delt=1E-15;
   const double GOLD= 1.618034;
