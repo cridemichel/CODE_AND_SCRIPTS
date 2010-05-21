@@ -8,6 +8,9 @@
 */
 #define MD_DEBUG31(x) 
 /* Allocate memory for a matrix of integers */
+#ifdef EDHE_FLEX
+int MD_MAX_BOND_PER_PART = 3;
+#endif
 long long int** AllocMatLLI(int size1, int size2)
 {
   long long int** v;
@@ -52,6 +55,7 @@ int sphWall, sphWallOuter;
 #endif
 int *scdone;
 #ifdef MD_SPOT_GLOBAL_ALLOC
+#if 0
 extern double ratA[NA][3], ratB[NA][3];
 extern double t2arrP[6][NA], distsP[6][NA], maxddotiP[6][NA], distsOldP[6][NA];
 extern int crossedP[6][NA];
@@ -60,6 +64,16 @@ extern double distsOld2P[6][NA];
 #endif
 extern int tocheckP[6][NA], dorefineP[6][NA], crossedP[6][NA];
 extern double distsSq[NA];
+#else
+extern double **ratA, **ratB;
+extern double *t2arrP[6], *distsP[NA], *maxddotiP[NA], *distsOldP[NA];
+extern int *crossedP[6];
+#ifndef MD_BASIC_DT
+extern double *distsOld2P[6];
+#endif
+extern int *tocheckP[6], *dorefineP[6], *crossedP[6];
+extern double *distsSq;
+#endif
 #endif
 /* ============ >>> MOVE PROCEDURE AND MEASURING FUNCTIONS VARS <<< =========
  Here you can put all the variable that you use only in this file, that is 
@@ -1575,30 +1589,7 @@ void usrInitBef(void)
   OprogStatus.dyn_alloc_oprog = dyn_alloc_oprog;
   OprogStatus.set_dyn_ascii = set_dyn_ascii;
 #endif
-#if 1
-#ifdef MD_SPOT_GLOBAL_ALLOC
-  /* inizializzo questi array globali per evitare (comunque inutili) lamentele di valgrind */
-  printf("[INFO] GLOBAL ALLOCATION OF SPOTS VARIABLES\n");
-  for (i=0; i < NA; i++)
-    {
-      distsSq[i] = 0.0;
-      for (k=0; k < 3; k++)
-	{
-	  ratA[i][k] = ratB[i][k] = 0;
 
-	}
-      for (k = 0; k < 6; k++)
-	{
-
-	  t2arrP[k][i] = distsP[k][i] = maxddotiP[k][i] = distsOldP[k][i] = 0.0;
-#ifndef MD_BASIC_DT
-	  distsOld2P[k][i] = 0.0;
-#endif
-	  crossedP[k][i] = tocheckP[k][i] = dorefineP[k][i] = crossedP[k][i] = 0;
-	}
-    }
-#endif
-#endif 
 #ifdef MD_LXYZ
     L[0] = L[1] = L[2] = 9.4;
 #else
@@ -3431,6 +3422,7 @@ void usrInitAft(void)
 #endif
 #ifdef EDHE_FLEX
   double maxSpots;
+  int maxsp=-1, first=1;
 #endif
 #if defined(MD_POLYDISP) 
   double stocvar;
@@ -3625,9 +3617,9 @@ void usrInitAft(void)
 #endif
 #ifdef MD_SPHERICAL_WALL
 #ifdef MD_LL_BONDS
-  bondscache = malloc(sizeof(long long int)*Oparams.parnum);
+  bondscache = malloc(sizeof(long long int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
 #else
-  bondscache = malloc(sizeof(int)*Oparams.parnum);
+  bondscache = malloc(sizeof(int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
 #endif
 #else
 #ifdef MD_LL_BONDS
@@ -3784,6 +3776,61 @@ void usrInitAft(void)
       lastcol[i] = 0.0;
     }
 #ifdef EDHE_FLEX
+#ifdef MD_SPOT_GLOBAL_ALLOC
+  for (pt = 0; pt < Oparams.ntypes; pt++)
+    {
+      if (first || maxsp > typesArr[pt].nspots)
+	{
+	  maxsp = typesArr[pt].nspots;
+	  first = 0;
+	}
+    }
+  maxsp += MD_SPNNL_NUMSP+1;
+  printf("maxsp=%d\n", maxsp);
+  distsSq = malloc(sizeof(double)*maxsp);
+  ratA = (double**)malloc(sizeof(double*)*maxsp);
+  ratA[0] = (double*)malloc(sizeof(double)*3*maxsp);
+  ratB = (double**)malloc(sizeof(double*)*maxsp);
+  ratB[0] = (double*)malloc(sizeof(double)*3*maxsp);
+  for (k = 1; k < maxsp; k++)
+    {
+      ratA[k] = ratA[k-1] + 3;
+      ratB[k] = ratB[k-1] + 3;
+    }
+  for (k = 0; k < 6; k++)
+    {
+      tocheckP[k] = malloc(sizeof(int)*maxsp);
+      dorefineP[k] = malloc(sizeof(int)*maxsp);
+      crossedP[k]  = malloc(sizeof(int)*maxsp);
+      distsOldP[k] = malloc(sizeof(double)*maxsp);
+      distsP[k]    = malloc(sizeof(double)*maxsp);
+      t2arrP[k]    = malloc(sizeof(double)*maxsp);
+      maxddotiP[k]  = malloc(sizeof(double)*maxsp);
+#ifndef MD_BASIC_DT
+      distsOld2P[k] = malloc(sizeof(double)*maxsp);
+#endif
+    }
+  /* inizializzo questi array globali per evitare (comunque inutili) lamentele di valgrind */
+  printf("[INFO] GLOBAL ALLOCATION OF SPOTS VARIABLES\n");
+  for (i=0; i < maxsp; i++)
+    {
+      distsSq[i] = 0.0;
+      for (k=0; k < 3; k++)
+	{
+	  ratA[i][k] = ratB[i][k] = 0;
+
+	}
+      for (k = 0; k < 6; k++)
+	{
+
+	  t2arrP[k][i] = distsP[k][i] = maxddotiP[k][i] = distsOldP[k][i] = 0.0;
+#ifndef MD_BASIC_DT
+	  distsOld2P[k][i] = 0.0;
+#endif
+	  crossedP[k][i] = tocheckP[k][i] = dorefineP[k][i] = crossedP[k][i] = 0;
+	}
+    }
+#endif
   /* check moments of inertia */
   for (pt=0; pt < Oparams.ntypes; pt++)
     {
@@ -4749,7 +4796,11 @@ int is_valid_parname_params(char *pn)
 }
 #endif
 #ifdef MD_PATCHY_HE
+#ifdef MD_SPOT_GLOBAL_ALLOC
+void BuildAtomPos(int i, double *rO, double **R, double **rat);
+#else
 void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
+#endif
 #endif
 #ifdef EDHE_FLEX
 void par2saveArr(void)
