@@ -3787,7 +3787,7 @@ void usrInitAft(void)
 	}
     }
   maxsp += MD_SPNNL_NUMSP+1;
-  printf("maxsp=%d\n", maxsp);
+  //printf("maxsp=%d\n", maxsp);
   distsSq = malloc(sizeof(double)*maxsp);
   ratA = (double**)malloc(sizeof(double*)*maxsp);
   ratA[0] = (double*)malloc(sizeof(double)*3*maxsp);
@@ -3851,7 +3851,7 @@ void usrInitAft(void)
   //printf("NA*maxsp+maxsp=%d\n", NA*maxsp+maxsp);
   if (maxnbonds > 0 && Oparams.parnum > maxp)
     {
-      printf("I am sorry but actually I can not simulate more than %d particles\n");
+      printf("I am sorry but actually I can not simulate more than %lld particles\n", maxp);
       printf("If you want you can decrease NA=%lld in ellipsoid.h to increase maximum number of possible particles\n",
 	     (long long int) NA);
       exit(-1);
