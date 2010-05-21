@@ -3392,6 +3392,7 @@ void set_dyn_ascii(void)
 #define MD_MATRIX_CONTIGOUS
 void usrInitAft(void)
 {
+  long long int maxp;
   /* DESCRIPTION:
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
@@ -3844,6 +3845,20 @@ void usrInitAft(void)
 			typesArr[pt].sax[2]);)
     } 
   maxnbonds = get_max_nbonds();
+
+  /* l'array bonds è al massimo long long int e quindi bisogna evitare overflow */
+  maxp = (MAX_ALLOWED_INT - (NA*maxsp + maxsp)) / ((long long int) NANA);
+  //printf("NA*maxsp+maxsp=%d\n", NA*maxsp+maxsp);
+  if (maxnbonds > 0 && Oparams.parnum > maxp)
+    {
+      printf("I am sorry but actually I can not simulate more than %d particles\n");
+      printf("If you want you can decrease NA=%lld in ellipsoid.h to increase maximum number of possible particles\n",
+	     (long long int) NA);
+      exit(-1);
+
+    }
+  else if (maxnbonds > 0)
+    printf("[INFO] maximum number of allowed particles is %lld\n", maxp);
   //printf("maxnbonds:%d\n OprogStatus.maxbonds: %d\n", maxnbonds, OprogStatus.maxbonds);
   //if (OprogStatus.maxbonds > maxnbonds)
     //maxnbonds = OprogStatus.maxbonds;
