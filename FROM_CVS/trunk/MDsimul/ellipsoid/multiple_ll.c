@@ -1,4 +1,18 @@
 #include<mdsimul.h>
+/* NOTA: nel caso della silica si avevano 4 linked lists in verità ossia:
+   0 è la lista della specie A per l'interazione A-A
+   1 è la lista della specie B per l'interazione B-B
+   2 è la lista costituita da molecole B per l'interazione A-B
+   3 è la lista costituita da molecole A per l'interazione B-A
+   ossia per due tipi ho 2*2 linked lists.
+   Qui invece vorrei implementare le linked in modo che 
+   se ntypes è il numero di tipi il numero di linked lists  
+   sia (ntypes+1)*ntypes/2 (nel caso della silica ad es. ne avremmo 3).
+   Per ottenere questo le liste miste conterranno sia particelle di un tipo 
+   che di un altro e quando si dovranno predire gli eventi si dovrà considerare
+   che solo l'interazione mista va considerata scartando quella diretta.
+*/
+extern double rxC, ryC, rzC;
 int is_superellips_type(int pt)
 {
   if (typesArr[pt].n[0]==2.0 && typesArr[pt].n[1]==2.0 &&
@@ -183,10 +197,62 @@ int check_boxwall(int k, int nc, int nl)
     return 0;
 }
 extern void DeleteEvent(int id);
+void docellcross2MLL(int k, double velk, int cellsk, int nc)
+{
+  if (velk > 0.0)
+    {
+      inCellMLL[nc][k][evIdA] = inCellMLL[nc][k][evIdA] + 1;
+      cellRange[2 * k] = 1;
+      if (inCellMLL[nc][k][evIdA] == cellsk) 
+	inCellMLL[nc][k][evIdA] = 0;
+    }
+  else
+    { 
+      cellRange[2 * k + 1] = -1;
+      inCellMLL[nc][k][evIdA] = inCellMLL[nc][k][evIdA] - 1;
+      if (inCellMLL[nc][k][evIdA] == -1) 
+	inCellMLL[nc][k][evIdA] = cellsk - 1;
+    }
+}
+void docellcrossMLL(int k, double velk, double *rkptr, int cellsk, int nc)
+{
+  if (velk > 0.0)
+    {
+      inCellMLL[nc][k][evIdA] = inCellMLL[nc][k][evIdA] + 1;
+      cellRange[2 * k] = 1;
+      if (inCellMLL[nc][k][evIdA] == cellsk) 
+	{
+	  inCellMLL[nc][k][evIdA] = 0;
+#ifdef MD_LXYZ
+	  *rkptr = -L2[k];
+#else
+	  *rkptr = -L2;
+#endif
+	  OprogStatus.DR[evIdA][k]++;
+	}
+
+    }
+  else
+    { 
+      cellRange[2 * k + 1] = -1;
+      inCell[nc][k][evIdA] = inCell[nc][k][evIdA] - 1;
+      if (inCell[nc][k][evIdA] == -1) 
+	{
+	  inCell[nc][k][evIdA] = cellsk - 1;
+#ifdef MD_LXYZ
+	  *rkptr = L2[k];
+#else
+	  *rkptr = L2;
+#endif
+	  OprogStatus.DR[evIdA][k]--;
+	}
+    }
+}
+
 void ProcessCellCrossingMLL(void)
 {
   int kk, n, k, nl, numll;
-  int nc, boxwall, nlcoll, nc_bw, nlcross_bw, nlcoll_bw;
+  int nc, boxwall, nlcoll, nc_bw, nlcross_bw;//nlcoll, nlcoll_bw;
   int typei;
 
   UpdateAtom(evIdA);
@@ -286,17 +352,17 @@ void ProcessCellCrossingMLL(void)
   switch (kk)
     {
     case 0: 
-      docellcross(0, vx[evIdA], &(rx[evIdA]), cellsxMLL[nl], nc);
+      docellcrossMLL(0, vx[evIdA], &(rx[evIdA]), cellsxMLL[nl], nc);
       break;
     case 1: 
-      docellcross(1, vy[evIdA], &(ry[evIdA]), cellsyMLL[nl], nc);
+      docellcrossMLL(1, vy[evIdA], &(ry[evIdA]), cellsyMLL[nl], nc);
       break;
     case 2:
-      docellcross(2, vz[evIdA], &(rz[evIdA]), cellszMLL[nl], nc);
+      docellcrossMLL(2, vz[evIdA], &(rz[evIdA]), cellszMLL[nl], nc);
       break;
     }
   PredictCellCrossMLL(evIdA, nc);
-  PredictCollMLL(evIdA, evIdB, nlcoll);
+  PredictCollMLL(evIdA, evIdB, nl);
   n = (inCellMLL[nc][2][evIdA] * cellsyMLL[nl] + inCellMLL[nc][1][evIdA])*cellsxMLL[nl] + 
     inCellMLL[nc][0][evIdA] + Oparams.parnum;
   /* Inserimento di evIdA nella nuova cella (head) */
@@ -321,13 +387,13 @@ void ProcessCellCrossingMLL(void)
 	  switch (kk)
 	    {
 	    case 0: 
-	      docellcross2(0, vx[evIdA], cellsxMLL[nlcross_bw], nc_bw);
+	      docellcross2MLL(0, vx[evIdA], cellsxMLL[nlcross_bw], nc_bw);
 	      break;
 	    case 1: 
-	      docellcross2(1, vy[evIdA], cellsyMLL[nlcross_bw], nc_bw);
+	      docellcross2MLL(1, vy[evIdA], cellsyMLL[nlcross_bw], nc_bw);
 	      break;
 	    case 2:
-	      docellcross2(2, vz[evIdA], cellszMLL[nlcross_bw], nc_bw);
+	      docellcross2MLL(2, vz[evIdA], cellszMLL[nlcross_bw], nc_bw);
 	      break;
 	    }
 	  /* crossevtodel[0...Oparams.ntypes-1] deve contenere gli eventi di cell crossing per ogni tipo  
@@ -340,7 +406,7 @@ void ProcessCellCrossingMLL(void)
 	      crossevtodel[nc_bw][evIdA] = -1;
 	    }
 	  PredictCellCrossMLL(evIdA, nc_bw);
-	  PredictCollMLL(evIdA, evIdB, nlcoll_bw);
+	  PredictCollMLL(evIdA, evIdB, nlcross_bw);
 	  n = (inCellMLL[nc_bw][2][evIdA] * cellsyMLL[nlcross_bw] + inCellMLL[nc_bw][1][evIdA])*cellsxMLL[nlcross_bw] + 
 	    inCellMLL[nc_bw][0][evIdA] + Oparams.parnum;
 	  /* Inserimento di evIdA nella nuova cella (head) */
@@ -349,14 +415,84 @@ void ProcessCellCrossingMLL(void)
 	}
     }
 }
-
+#if defined(MD_EDHEFLEX_WALL)
+void PredictHardWall(int na, int evCode, double cctime)
+{
+  double vecg[5];
+  int typena, nplane=-1, hwcell;
+  /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
+  if (OprogStatus.hardwall)
+    {
+      typena = typeOfPart[na];
+#if defined(MD_ABSORPTION) 
+      if (OprogStatus.bufHeight > 0.0)
+	{
+#if !defined(MD_SPHERICAL_WALL)
+	  if (vz[na] != 0.0)
+	    {
+#ifdef MD_LXYZ
+	      hwcell = (L[2]-OprogStatus.bufHeight)*cellsz[typena]/L[2];
+#else
+	      hwcell = (L-OprogStatus.bufHeight)*cellsz[typena]/L;
+#endif
+#if 1
+	      if (hwcell-inCell[typena][2][na] < 2)
+		{
+		  /* the semi-permeable plane is just one (nplane=0) */
+		  if (locateHardWall(na, 0, cctime, vecg, 2))
+		    {
+		      rxC = vecg[0];
+		      ryC = vecg[1];
+		      rzC = vecg[2];
+		      MD_DEBUG38(printf("SEMIPERM Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
+		      MD_DEBUG38(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
+		      ScheduleEventBarr (na, ATOM_LIMIT+50, 0, 0, MD_WALL, vecg[4]);
+		    }
+		}
+#endif
+	    }
+#endif
+	}
+#endif
+      /* spostare in PredictColl con opportuno if (... )*/
+      if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+      /* ========= */
+      if (inCell[typena][2][na] == 0)
+	nplane = 0;
+      else if (inCell[typena][2][na] == cellsz[typena]-1)
+	nplane = 1;
+      //if (na==955)
+	//printf("na=%d cella:%d\n", na, inCell[2][na]);
+      if (nplane!=-1 && locateHardWall(na, nplane, cctime, vecg, 1))
+	{
+	  rxC = vecg[0];
+	  ryC = vecg[1];
+	  rzC = vecg[2];
+	  MD_DEBUG38(printf("scheduled collision with wall na=%d nplane=%d evtime=%.15G\n", na, nplane, vecg[4]));
+	  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
+	}
+      else
+	{
+	  MD_DEBUG38(printf("scheduled cell-crossing with wall na=%d evtime=%.15G\n", na, cctime));
+	  ScheduleEventBarr (na, ATOM_LIMIT + evCode, typena, 0, MD_EVENT_NONE, cctime);
+	}
+   }
+  else
+    ScheduleEventBarr (na, ATOM_LIMIT + evCode, typena, 0, MD_EVENT_NONE, cctime);
+}
+#endif
 /* 21/05/2010: nc indica la linked lists da considerare ossia se nc=typeOfPart[na]=interazione con lo stesso tipo
    mentre valori diversi si riferiscono alle interazioni con gli altri tipi, 
    ad es. se ci sono 4 tipi la particella na è tipo 1 allora nc=1 sono le celle per l'interazione
    con lo stesso tipo mentre 0 = interazione con particelle di tipo 0, 2 interazione con particelle di tipo 2
    3 con quelle di tipo 3. */
-double PredictCellCross(int na, int nc)
+
+double PredictCellCross(int na, int nc, int *ignore)
 {
+#ifdef EDHE_FLEX
+  double cctime=-1.0;
+#endif
   int ignorecross[3], k, evCode, signDir[NDIM]={0,0,0}, iA, nl;
   double tm[3], cctime=timbig;
 
@@ -502,12 +638,23 @@ double PredictCellCross(int na, int nc)
   MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
 
+  *ignore = ignorecross[k];
   if (!ignorecross[k])
     {
-      ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, Oparams.time + tm[k]);
+#ifdef MD_EDHEFLEX_WALL 
       cctime = Oparams.time + tm[kk];
+      if (nc == typeOfPart[na])
+	{
+	  PredictHardWall(na, evCode, cctime);
+	}
+      else
+	{
+  	  ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, cctime);
+	}
+#else
+      ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, Oparams.time + tm[k]);
+#endif
     }
-  return cctime;
 }
 
 void rebuildMultipleLL(void)
@@ -570,11 +717,161 @@ void rebuildMultipleLL(void)
 	}
     }
 }
-
-
-PredictEventMLL()
+void PredictCollMLL(int na, int nb, int nl, double cctime) 
 {
+  /* na = atomo da esaminare 0 < na < Oparams.parnum 
+   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
+   *      -2 = controlla solo cell crossing e urti con pareti 
+   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
+   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
+   *      */
+  double sigSq=0.0, dr[NDIM], dv[NDIM], shift[NDIM],  
+	 b, d, t, tInt, vv, distSq, t1=0.0, t2=0.0;
+  int overlap, nc, nl;
+#ifdef MD_ABSORPTION
+  int hwcell;
+#endif
+#ifdef MD_PATCHY_HE
+  int ac, bc, collCode, collCodeOld, acHC, bcHC;
+  double evtime, evtimeHC;
+  int nplane=-1;
+#endif
+  double vecg[5];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n, typena;
+#ifdef MD_SPHERICAL_WALL
+  if (na==sphWall|| nb==sphWall)
+    return;
+  if (na==sphWallOuter|| nb==sphWallOuter)
+    return;
+#endif
+#ifdef MD_SPHERICAL_WALL
+  /* inner wall */
+  locate_spherical_wall(na, 0);
+  /* outer wall */
+  locate_spherical_wall(na, 1);
+#endif
 
+  /* se il tipo della particella na è relativo alla linked lists nl 
+     allora procedi nel predire le collisioni altrimenti non ha ovviamente
+     senso ed esci da tale routine. */
+  get_types_from_nl(nl, &t1, &t2);
+  typena = typeOfPart[na]; 
+  if (typena==t1)
+    nc = t2;
+  else if (typena==t2)
+    nc = t1;
+  else 
+    return;
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCellMLL[nc][2][na] + iZ;    
+      shift[2] = 0.;
+      /* apply periodico boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  jZ = cellszMLL[nl] - 1;    
+#ifdef MD_LXYZ
+	  shift[2] = - L[2];
+#else
+	  shift[2] = - L;
+#endif
+	} 
+      else if (jZ == cellszMLL[nl]) 
+	{
+	  jZ = 0;    
+#ifdef MD_LXYZ
+	  shift[2] = L[2];
+#else
+	  shift[2] = L;
+#endif
+	}
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCellMLL[nc][1][na] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsyMLL[nl] - 1;    
+#ifdef MD_LXYZ
+	      shift[1] = -L[1];
+#else
+	      shift[1] = -L;
+#endif
+	    } 
+	  else if (jY == cellsyMLL[nl]) 
+	    {
+	      jY = 0;    
+#ifdef MD_LXYZ
+	      shift[1] = L[1];
+#else
+	      shift[1] = L;
+#endif
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCellMLL[nc][0][na] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsxMLL[nl] - 1;    
+#ifdef MD_LXYZ
+		  shift[0] = - L[0];
+#else
+		  shift[0] = - L;
+#endif
+		} 
+	      else if (jX == cellsxMLL[nl]) 
+		{
+		  jX = 0;   
+#ifdef MD_LXYZ
+		  shift[0] = L[0];
+#else
+		  shift[0] = L;
+#endif
+		}
+	      n = (jZ *cellsyMLL[nl] + jY) * cellsxMLL[nl] + jX + Oparams.parnum;
+	      for (n = cellListMLL[nl][n]; n > -1; n = cellListMLL[nl][n]) 
+		{
+		  /* se si tratta di una lista mista e il tipo della particella n è uguale 
+		     a quello della particella na allora non considerare tale coppia
+		     (questo è necessario poiché diversamente dalla silica qui si considera una solo linked list
+		     mista e non due) */
+		  if (nl >= Oparams.ntypes && typeOfPart[n] == typena)
+		    continue;
+#ifdef EDHE_FLEX
+		  if (!may_interact_all(na, n))
+		    continue;
+#endif
+		  if (n != na && n != nb && (nb >= -1 || n < na)) 
+		    {
+
+		    }
+		} 
+	    }
+	}
+    }
+}
+
+void PredictEventMLL(void)
+{
+  int nc, nl;
+  double mintA, mintB, tA, tB;
+  for (nc = 0; nc < Oparams.ntypes; nc++)
+    {
+      PredictCellCross(evIdA, nc);
+      PredictCellCross(evIdB, nc);
+    }
+  numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
+  for (nl = 0; nl < numll; nl++)
+    {
+      PredictCollMLL(evIdA, -1, nl);
+    }
+  for (nl = 0; nl < numll; nl++)
+    {
+      PredictCollMLL(evIdB, evIdA, nl);
+    }
 }
 
 BuildNNLwithMLL()
