@@ -1,11 +1,12 @@
 #include<mdsimul.h>
-
-void set_cells_size(void)
+int is_superellips_type(int pt)
 {
-
+  if (typesArr[pt].n[0]==2.0 && typesArr[pt].n[1]==2.0 &&
+      typesArr[pt].n[2]==2.0)
+    return 0;
+  else 
+    return 1;
 }
-ProcessCollision()
-{}
 
 inline int get_linked_list(int na, int nc)
 {
@@ -57,6 +58,280 @@ inline int get_linked_list(int na, int nc)
       typena=1 nc=2 => 4*2 + 2 - 3 = 7 OK
    */
 }
+int is_a_sphere_NNL_type(int pt)
+{
+  int i, k1, k2, is_sph;
+  if (!(typesArr[pt].sax[0] == typesArr[pt].sax[1] && 
+	typesArr[pt].sax[1] == typesArr[pt].sax[2] )) 
+    {
+      return 0;
+    }
+#ifdef MD_SUPERELLIPSOID
+  if (is_superellipse(pt))
+    {
+      return 0;
+    }
+#endif
+  if (typesArr[pt].nspots > 0 && !all_spots_in_CoM(pt))
+    {
+      return 0;
+    }
+  return 1;
+}
+void get_types_from_nl(int nl, int *t1, int *t2)
+{
+  int ta, tb;
+  /* funzione inversa di get_linked_list */
+  for (ta = 0; ta < Oparams.ntypes; ta++)
+    for (tb = 0; tb < Oparams.ntypes; tb++)
+      {
+	if (ta >= tb)
+	  continue;
+	if (nl==get_linked_list(ta, tb))
+	  {
+	    *t1 = ta;
+	    *t2 = tb;
+	    return;
+	  }
+      }
+}
+double calc_rcut_type(int t)
+{
+  double rcutA;
+  int kk;
+  double ax[3], del;
+  int i;
+  for (kk=0; kk < 3; kk++)
+    ax[kk] = typesArr[t].ppsax[kk];
+  if (OprogStatus.useNNL)  
+    del = OprogStatus.rNebrShell;
+  else
+    del = 0.0;
+  /* nel caso si tratti di un oggetto a simmetria sferica l'orientazione rimane della NNL (che è un cubo) rimane invariata
+     nel tempo per cui si può prendere rcut appena più grande del lato della NNL cubica*/
+  if (is_a_sphere_NNL_type(t))
+    rcutA = 2.0*max3(ax[0]+del,ax[1]+del,ax[2]+del);
+  else
+    rcutA = 2.0*sqrt(Sqr(ax[0]+del)+Sqr(ax[1]+del)+Sqr(ax[2]+del));
+  return OprogStatus.rcutfactMLL*rcutA;
+}
+
+double calc_rcut(int nl)
+{
+  int t1, t2;
+  double rc, rc1, rc2;
+  /* le celle liste per ora vengono sempre scelte automaticamente */
+  get_types_from_nl(nl, &t1, &t2);
+  rc1 = calc_rcut_type(t1);
+  rc2 = calc_rcut_type(t2);
+  rc = (rc1 + rc2)*0.5;
+  return rc;
+}
+void set_cells_size(void)
+{
+  int nl, numll;
+  double rcut;
+  
+  numll = Oparams.ntype*(Oparams.ntypes+1)/2;
+  for (nl = 0; nl < numll; nl++)
+    {
+      //if (Oparams.rcut[nl] <= 0.0)
+	//Oparams.rcut[nl] = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+      rcut = calc_rcut(nl);
+#ifdef MD_LXYZ
+      cellsx[nl] = L[0] / rcut;
+      cellsy[nl] = L[1] / rcut;
+      cellsz[nl] = L[2] / rcut;
+#else
+      cellsx[nl] = L / rcut;
+      cellsy[nl] = L / rcut;
+      cellsz[nl] = L / rcut;
+#endif
+#ifdef MD_LXYZ
+      printf("[%d] L=%.15G %.15G %.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", nl, L[0], L[1], L[2],
+	     rcut, cellsx[nl], cellsy[nl], cellsz[nl]);
+#else
+      printf("[%d] L=%.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", nl, L,
+	     rcut, cellsx[nl], cellsy[nl], cellsz[nl]);
+#endif
+    }
+
+}
+int check_boxwall(int k, int nc, int nl)
+{
+  int cellsk=0;
+  double vel=0.0;
+  switch (k)
+    {
+    case 0:
+      cellsk = cellsxMLL[nl];
+      vel = vx[evIdA];
+      break;
+    case 1:
+      cellsk = cellsyMLL[nl];
+      vel = vy[evIdA];
+      break;
+    case 2:
+      cellsk = cellszMLL[nl];
+      vel = vz[evIdA];
+      break;
+    }
+  //printf("CHECK BOXWALL k=%d inCell[%d][%d][%d]:%d\n", k, nc, k, evIdA, inCell[nc][k][evIdA]);
+  if ((vel < 0 && inCellMLL[nc][k][evIdA]==0) || (vel > 0 && inCellMLL[nc][k][evIdA]==cellsk-1))
+    return 1;
+  else 
+    return 0;
+}
+extern void DeleteEvent(int id);
+void ProcessCellCrossingMLL(void)
+{
+  int kk, n, k, nl;
+  int nc, boxwall, nlcoll, nlcross, nc_bw, nlcross_bw, nlcoll_bw;
+  int typei;
+
+  UpdateAtom(evIdA);
+  /* kk ci da la direzione lungo cui si sta realizzando il cell crossing */
+  kk = evIdB - 100 - ATOM_LIMIT; 
+  /* evIdC è semplicemente nc cioè ci dice il tipo di cella attraversata dalla particella evIdA, ossia
+     nc = cella per interazine con tipo nc */
+  nc = evIdC;
+
+  typei = typeOfPart[evIdA];
+
+  nl = get_linked_list(typei, nc);
+#if 0
+  if (iA == 0 && nc == 0)
+    {
+      nlcoll = 0;
+      nlcross = 0;
+      nlcoll_bw = 3;
+      nlcross_bw = 2;
+      nc_bw = 1;
+    }
+  else if (iA == 1 && nc == 0)
+    { 
+      nlcoll = 1;
+      nlcross = 1;
+      nlcoll_bw = 2;
+      nlcross_bw = 3;
+      nc_bw = 1; 
+    }
+  else if (iA == 0 && nc == 1)
+    {
+      nlcoll = 3;
+      nlcross = 2;
+      nlcoll_bw = 0;
+      nlcross_bw = 0;
+      nc_bw = 0;
+    }
+  else /* iA == 1 && nc == 1 */
+    {
+      nlcoll = 2;
+      nlcross = 3;
+      nlcoll_bw = 1;
+      nlcross_bw = 1;
+      nc_bw = 0;
+    }
+#endif 
+  boxwall = check_boxwall(kk, nc, nlcross);
+  /* questa condizione non si dovrebbe *mai* verificare, quindi 
+   * in linea di principio le due linee che seguono potrebbero anche essere eliminate */
+  if (nc==1 && boxwall)
+    {
+      printf("nc=1 and boxwall!!!! <===!!!\n");
+      return;
+    }
+  //printf("ProcellCellCross nl=%d nc=%d k=%d\n", nl, nc, k);
+  /* NOTA: cellList[i] con 0 < i < Oparams.parnum è la cella in cui si trova la particella
+   * i-esima mentre cellList[j] con 
+   * Oparams.parnum <= j < cellsx*cellsy*cellsz+Oparams.parnum
+   * è la prima particella che si trova nella cella j-esima
+   */
+  n = (inCellMLL[nc][2][evIdA] * cellsyMLL[nl] + inCellMLL[nc][1][evIdA])*cellsxMLL[nl] + 
+    inCellMLL[nc][0][evIdA] + Oparams.parnum;
+#if 0
+  printf("nc=%d n=%d cellList[%d][%d]:%d\n",nc, n, nlcross, n, cellList[nlcross][n]);
+  printf("vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
+#endif
+  while (cellList[nlcross][n] != evIdA) 
+    n = cellList[nlcross][n];
+  /* Eliminazione di evIdA dalla lista della cella n-esima */
+  cellList[nlcross][n] = cellList[nlcross][evIdA];
+  for (k = 0; k < NDIM; k++)
+    { 
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+
+  if (boxwall)
+    {
+      //printf("BOXWALL nc=%d nc2=%d nl=%d nl2=%d evIdA=%d time=%.15G\n", nc, nc2, nl, nl2, evIdA, Oparams.time);
+      n = (inCell[nc_bw][2][evIdA] * cellsy[nlcross_bw] + inCell[nc_bw][1][evIdA])*cellsx[nlcross_bw] + 
+	inCell[nc_bw][0][evIdA]
+	+ Oparams.parnum;
+      while (cellList[nlcross_bw][n] != evIdA) 
+	n = cellList[nlcross_bw][n];
+      /* Eliminazione di evIdA dalla lista della cella n-esima della lista nl2 */
+      cellList[nlcross_bw][n] = cellList[nlcross_bw][evIdA];
+    }
+  switch (kk)
+    {
+    case 0: 
+      docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nlcross], nc);
+      break;
+    case 1: 
+      docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nlcross], nc);
+      break;
+    case 2:
+      docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nlcross], nc);
+      break;
+    }
+  PredictCellCross(evIdA, nc);
+  PredictColl(evIdA, evIdB, nlcoll);
+  n = (inCell[nc][2][evIdA] * cellsy[nlcross] + inCell[nc][1][evIdA])*cellsx[nlcross] + 
+    inCell[nc][0][evIdA] + Oparams.parnum;
+  /* Inserimento di evIdA nella nuova cella (head) */
+  cellList[nlcross][evIdA] = cellList[nlcross][n];
+  cellList[nlcross][n] = evIdA;
+  for (k = 0; k < NDIM; k++)
+    { 
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+#if 0
+  printf("DOPO boxwall=%d nc=%d n=%d cellList[%d][%d]:%d\n",boxwall, nc, n, nlcross, n, cellList[nlcross][n]);
+  printf("DOPO vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
+#endif
+  if (boxwall)
+    {
+      switch (kk)
+	{
+	case 0: 
+	  docellcross2(0, vx[evIdA], cellsx[nlcross_bw], nc_bw);
+	  break;
+	case 1: 
+	  docellcross2(1, vy[evIdA], cellsy[nlcross_bw], nc_bw);
+	  break;
+      	case 2:
+	  docellcross2(2, vz[evIdA], cellsz[nlcross_bw], nc_bw);
+	  break;
+	}
+      if (crossevtodel[evIdA]!=-1)
+	{
+	  //printf("DELETING CROSS EVENT evIdA=%d\n", evIdA);
+	  DeleteEvent(crossevtodel[evIdA]);
+	  crossevtodel[evIdA] = -1;
+	}
+      PredictCellCross(evIdA, nc_bw);
+      PredictColl(evIdA, evIdB, nlcoll_bw);
+      n = (inCell[nc_bw][2][evIdA] * cellsy[nlcross_bw] + inCell[nc_bw][1][evIdA])*cellsx[nlcross_bw] + 
+	inCell[nc_bw][0][evIdA] + Oparams.parnum;
+      /* Inserimento di evIdA nella nuova cella (head) */
+      cellList[nlcross_bw][evIdA] = cellList[nlcross_bw][n];
+      cellList[nlcross_bw][n] = evIdA;
+    }
+}
+
 /* 21/05/2010: nc indica la linked lists da considerare ossia se nc=typeOfPart[na]=interazione con lo stesso tipo
    mentre valori diversi si riferiscono alle interazioni con gli altri tipi, 
    ad es. se ci sono 4 tipi la particella na è tipo 1 allora nc=1 sono le celle per l'interazione
@@ -80,7 +355,7 @@ double PredictCellCross(int na, int nc)
       if (vz[na] > 0.0) 
 	{
 	  signDir[2] = 0;/* direzione positiva */
-	  if (nc > 0 && inCellMLL[nc][2][na]==cellszMLL[nl]-1)
+	  if (nc != typeOfPart[na] && inCellMLL[nc][2][na]==cellszMLL[nl]-1)
 	    ignorecross[2] = 1;
 	  else
 	    ignorecross[2] = 0;
@@ -88,7 +363,7 @@ double PredictCellCross(int na, int nc)
       else 
 	{
 	  signDir[2] = 1;/* direzione negativa */
-	  if (nc > 0 && inCellMLL[nc][2][na]==0)
+	  if (nc != typeOfPart[na] && inCellMLL[nc][2][na]==0)
 	    ignorecross[2] = 1;
 	  else
 	    ignorecross[2] = 0;
@@ -117,7 +392,7 @@ double PredictCellCross(int na, int nc)
     {
       if (vx[na] > 0.0) 
 	{
-	  if (nc > 0 && inCellMLL[nc][0][na]==cellsxMLL[nl]-1)
+	  if (nc != typeOfPart[na] && inCellMLL[nc][0][na]==cellsxMLL[nl]-1)
 	    ignorecross[0] = 1;
 	  else
 	    ignorecross[0] = 0;
@@ -125,7 +400,7 @@ double PredictCellCross(int na, int nc)
 	}
       else
 	{
-	  if (nc > 0 && inCellMLL[nc][0][na]==0)
+	  if (nc != typeOfPart[na] && inCellMLL[nc][0][na]==0)
 	    ignorecross[0] = 1;
 	  else
 	    ignorecross[0] = 0;
@@ -149,7 +424,7 @@ double PredictCellCross(int na, int nc)
     {
       if (vy[na] > 0.) 
 	{
-	  if (nc > 0 && inCellMLL[nc][1][na]==cellsyMLL[nl]-1)
+	  if (nc != typeOfPart[na] && inCellMLL[nc][1][na]==cellsyMLL[nl]-1)
 	    ignorecross[1] = 1;
 	  else
 	    ignorecross[1] = 0;
@@ -157,7 +432,7 @@ double PredictCellCross(int na, int nc)
 	}
       else
 	{
-	  if (nc > 0 && inCellMLL[nc][1][na]==0)
+	  if (nc != typeOfPart[na] && inCellMLL[nc][1][na]==0)
 	    ignorecross[1] = 1;
 	  else
 	    ignorecross[1] = 0;
@@ -193,28 +468,13 @@ double PredictCellCross(int na, int nc)
     }
   /* Se un errore numerico fa si che tm[k] < 0 allora lo poniamo uguale a 0
    * (ved. articolo Lubachevsky) */
-#if 1
   if (tm[k]<0.0)
     {
       printf("tm[%d]: %.15G\n", k, tm[k]);
       tm[k] = 0.0;
       printf("real cells: %d %d %d\n", (int)((rx[na] + L2) * cellsxMLL[nl] / L),
 	     (int)((ry[na] + L2) * cellsyMLL[nl] / L), (int)((rz[na] + L2)  * cellszMLL[nl] / L));
-#if 0
-      printf("idA=%d idB=%d treeQIndex[%d]=%d treeStatus[]=%d\n ", treeIdA[na+1], treeIdB[na+1], na+1, treeQIndex[na+1], treeStatus[na+1]);
-      printf("currentIndex=%d\n", OprogStatus.curIndex);
-      printf("nc=%d na=%d nl=%d\n",nc,na,nl);
-      printf("tm[%d]<0 step %lld na=%d\n", k, (long long int)Oparams.curStep, na);
-      printf("Cells(%d,%d,%d)\n", inCell[nc][0][na], inCell[nc][1][na], 
-	     inCell[nc][2][na]);
-      printf("cells= (%d,%d,%d)\n", cellsx[nl], cellsy[nl], cellsz[nl]);
-      printf("signDir[0]:%d signDir[1]: %d signDir[2]: %d\n", signDir[0], signDir[1],
-	     signDir[2]);
-      exit(-1);
-      /*tm[k] = 0.0;*/
-#endif
     }
-#endif
   /* 100+0 = attraversamento cella lungo x
    * 100+1 =       "           "     "   y
    * 100+2 =       "           "     "   z */
@@ -226,16 +486,9 @@ double PredictCellCross(int na, int nc)
 
   if (!ignorecross[k])
     {
-#if 0
-      printf("<<< NOT IGNORE >>> evIdA=%d nc=%d time=%.15G k=%d\n", na, nc, Oparams.time+tm[k],k);
-      printf("inCell = %d %d %d <=>\n", inCell[nc][k][na], inCell[nc][k][na], inCell[nc][k][na]);
-#endif
       ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, Oparams.time + tm[k]);
       cctime = Oparams.time + tm[kk];
     }
-  //printf("===>crossevtodel[%d]:%d\n", na, crossevtodel[na]);
-  //printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.16G time=%.15G evCode:%d\n", 
-//	 na, ATOM_LIMIT+evCode, k, tm[k], tm[k]+Oparams.time, evCode);
   return cctime;
 }
 
@@ -301,11 +554,14 @@ void rebuildMultipleLL(void)
 }
 
 
-PredictEventMulLL()
-{}
+PredictEventMLL()
+{
+
+}
+
+BuildNNLwithMLL()
+{
 
 
-PredictEventMulLL_NNL()
-{}
-
+}
 
