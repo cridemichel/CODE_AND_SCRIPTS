@@ -257,7 +257,7 @@ double  DQxxOld, DQyyOld, DQzzOld, DQxyOld, DQyzOld, DQzxOld, DQxxOldKin,
 /*  Patxy, Patyz, Patzx, Patxx, Patyy, Patzz,
     T1myz, T1mzx, T1mxx, T1myy, T1mzz;  */
 double DrSq = 0.0; 
-const double timbig = 1E12;
+const double timbig = 1.0E12;
 /* used by linked list routines */
 #ifdef MD_GRAVITY
 extern double g2, mgA, mgB;
