@@ -41,7 +41,7 @@ extern int numevPQ, totevHQ, overevHQ;
 extern double **ratA, **ratB;
 #endif
 extern void ProcessCellCrossingMLL(void);
-extern void PredictEventMLL(void);
+extern void PredictEventMLL(int na, int nb);
 extern void PredictEventMLL_NLL(void);
 
 extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
@@ -8692,7 +8692,7 @@ void PredictEvent (int na, int nb)
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
-      PredictEventMLL();
+      PredictEventMLL(na, nb);
       return;
     }
 #endif
