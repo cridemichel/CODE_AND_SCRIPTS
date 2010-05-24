@@ -830,6 +830,8 @@ struct progStatus
 #ifdef MD_PROTEIN_DESIGN
   char nativeConf[NAME_LENGTH];
 #endif
+  int multipleLL;
+  double rcutfactMLL;
   /* ======================================================================= */
 };
 
@@ -1183,6 +1185,8 @@ struct pascii opro_ascii[] =
   {"dofA",         &OS(dofA),                        1,  1, "%d"},
   {"dofB",         &OS(dofB),                        1,  1, "%d"},
   {"base",         &OS(base),                       1,  1, "%.6G"},
+  {"multipleLL",   &OS(multipleLL),                 1,  1, "%d"},
+  {"rcutfactMLL",  &OS(rcutfactMLL),                1,  1, "%.15G"},
 #ifdef MD_BILOG
   {"basew",        &OS(basew),                      1,  1, "%.6G"},
   {"lastbilogsaved",&OS(lastbilogsaved),            1,  1, "%d"},
@@ -1584,6 +1588,8 @@ struct singlePar OsinglePar[] = {
   {"tmpPath",    OprogStatus.tmpPath,        STR},
   {"misPath",    OprogStatus.misPath,       STR},
   {"base",       &OprogStatus.base,         CT},
+  {"multipleLL", &OprogStatus.multipleLL,   INT},
+  {"rcutfactMLL", &OprogStatus.rcutfactMLL, CT},
   {"NN",         &OprogStatus.NN,           INT},
 #ifdef MD_BILOG
   {"basew",     &OprogStatus.basew,         CT},

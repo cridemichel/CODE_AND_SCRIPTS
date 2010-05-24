@@ -30,10 +30,17 @@ extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 void setToZero(COORD_TYPE* ptr, ...);
 double *maxax;
+#ifdef MD_MULTIPLE_LL
 extern void ProcessCellCrossingMLL(void);
 extern void PredictEventMLL(void);
 extern void PredictEventMLL_NLL(void);
-
+extern void rebuildMultipleLL(void);
+extern int ***inCellMLL;
+extern int **cellListMLL;
+extern double *rcutMLL;
+extern void set_cells_size(void);
+extern int *cellsxMLL, *cellsyMLL, *cellszMLL;
+#endif
 double calc_norm(double *vec);
 #ifdef MD_PATCHY_HE
 extern struct LastBumpS *lastbump;
@@ -107,6 +114,7 @@ int *is2saveArr;
 int *oldTypeOfPart;
 #endif
 #endif
+
 #ifdef MD_CALENDAR_HYBRID
 extern int numevPQ, totevHQ, overevHQ;
 #endif
@@ -128,7 +136,9 @@ int MPIpid;
 int my_rank;
 int numOfProcs; /* number of processeses in a communicator */
 #endif 
-
+#ifdef MD_MULTIPLE_LL
+extern int **crossevtodel;
+#endif
 #ifdef EDHE_FLEX
 char colsFlex[][256] = {"red","green","blue", "snow","gainsboro","OldLace","linen","PapayaWhip","blanched almond",
 "BlanchedAlmond","bisque","peach puff","PeachPuff","navajo white","moccasin","cornsilk","ivory","lemon chiffon",
@@ -1834,6 +1844,10 @@ void usrInitBef(void)
 #endif
     OprogStatus.bufHeight = 1.2;
 #endif
+#ifdef MD_MULTIPLE_LL
+    OprogStatus.multipleLL = 0;
+    OprogStatus.rcutfactMLL = 1.01;
+#endif
 }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
@@ -1842,6 +1856,7 @@ extern void InitEventList(void);
 void StartRun(void)
 {
   int j, k, n;
+#ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
      rebuildMultipleLL(); 
@@ -1896,6 +1911,55 @@ void StartRun(void)
 	  cellList[j] = n;
 	}
     }
+#else
+  for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
+    cellList[j] = -1;
+  /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
+  for (n = 0; n < Oparams.parnum; n++)
+    {
+#ifdef MD_SPHERICAL_WALL
+      if (n==sphWall)
+	{
+	  cellList[sphWall]=-1;
+	  continue;
+	}
+      if (n==sphWallOuter)
+	{
+	  cellList[sphWallOuter]=-1;
+	  continue;
+	}
+#endif
+      atomTime[n] = Oparams.time;
+      //printf("qui n=%d %.15G %.15G %.15G\n", n, rx[n], ry[n], rz[n]);
+#ifdef MD_LXYZ
+      inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
+      inCell[1][n] =  (ry[n] + L2[1]) * cellsy / L[1];
+      inCell[2][n] =  (rz[n] + L2[2]) * cellsz / L[2];
+#else
+      inCell[0][n] =  (rx[n] + L2) * cellsx / L;
+      inCell[1][n] =  (ry[n] + L2) * cellsy / L;
+#ifdef MD_GRAVITY
+      inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+#else
+      inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+#endif
+#endif
+      //printf("inCell: %d, %d, %d\n", inCell[0][n], inCell[1][n], inCell[2][n]);
+      //printf("n=%d(%f,%f,%f)\n",n,rx[n], ry[n], rz[n]);
+#if 0
+      if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
+	{
+	  printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
+	  printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
+		 inCell[0][n],inCell[1][n], inCell[2][n]);
+	}
+#endif	  
+      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+	inCell[0][n] + Oparams.parnum;
+      cellList[n] = cellList[j];
+      cellList[j] = n;
+    }
+#endif
   InitEventList();
   for (k = 0;  k < NDIM; k++)
     {
@@ -3431,6 +3495,7 @@ void set_dyn_ascii(void)
 void usrInitAft(void)
 {
   long long int maxp;
+  int numll;
   /* DESCRIPTION:
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
@@ -3439,10 +3504,11 @@ void usrInitAft(void)
 #ifdef MD_LXYZ
   int kk;
 #endif
+  int k1, k2;
   double phiIni;
   int Nm, i, sct, overlap, k;
   COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
-  int mls, ls;
+  int mls=0, ls;
 #ifndef EDHE_FLEX
   COORD_TYPE *m;
 #else
@@ -4573,23 +4639,34 @@ void usrInitAft(void)
     }
   printf("MAXAX: %.15G rcut: %.15G\n", MAXAX, Oparams.rcut);
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+#ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
-      numll = Oparams.ntype*(Oparams.ntypes+1)/2;
+      numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
       rcutMLL = malloc(sizeof(double)*numll);
       set_cells_size();
-      for (k = 0; k < numll; k++)
+      cellListMLL = malloc(sizeof(int*)*numll);
+      for (k1 = 0; k1 < numll; k1++)
 	{
-	  ls = cellsxMLL[k]*cellsyMLL[k]*cellszMLL[k];
-	  cellListMLL[k] = malloc(sizeof(int)*(mls+Oparams.parnum));
-	  if (k==0|| ls > mls)
+	  ls = cellsxMLL[k1]*cellsyMLL[k1]*cellszMLL[k1];
+	  cellListMLL[k1] = malloc(sizeof(int)*(ls+Oparams.parnum));
+	  if (k1==0|| ls > mls)
 	    mls = ls;
 	}
-      for (k = 0; k < Oparams.ntypes; k++)
+      inCellMLL = malloc(sizeof(int**)*Oparams.ntypes);
+      for (k1 = 0; k1 < Oparams.ntypes; k1++)
 	{
-	  inCellMLL[k][0] = malloc(sizeof(int)*Oparams.parnum);
-	  inCellMLL[k][1] = malloc(sizeof(int)*Oparams.parnum);
-	  inCellMLL[k][2] = malloc(sizeof(int)*Oparams.parnum);
+	  inCellMLL[k1] = malloc(sizeof(int*)*3);
+	}
+      for (k1=0; k1 < Oparams.ntypes; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    inCellMLL[k1][k2] = malloc(sizeof(int)*Oparams.parnum);
+	  }
+      crossevtodel = malloc(sizeof(int*)*Oparams.ntypes);
+      for (k1=0; k1 < Oparams.ntypes; k1++)
+	{
+	  crossevtodel[k1] = malloc(sizeof(int)*Oparams.parnum);
 	}
 #ifdef MD_EDHEFLEX_OPTNNL
       cellList_NNL = malloc(sizeof(int)*(mls+Oparams.parnum));
@@ -4616,7 +4693,7 @@ void usrInitAft(void)
       cellsz = L / Oparams.rcut;
 #endif 
 #endif
-      printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
+     printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
 	     cellsx, cellsy, cellsz);
       cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
       inCell[0] = malloc(sizeof(int)*Oparams.parnum);
@@ -4632,6 +4709,38 @@ void usrInitAft(void)
       rzNNL = malloc(sizeof(double)*Oparams.parnum);
 #endif
     }
+#else
+#ifdef MD_LXYZ
+      cellsx = L[0] / Oparams.rcut;
+      cellsy = L[1] / Oparams.rcut;
+      cellsz = L[2] / Oparams.rcut;
+#else
+      cellsx = L / Oparams.rcut;
+      cellsy = L / Oparams.rcut;
+#ifdef MD_GRAVITY
+      cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
+#else
+      cellsz = L / Oparams.rcut;
+#endif 
+#endif
+     printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
+	     cellsx, cellsy, cellsz);
+      cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+      inCell[0] = malloc(sizeof(int)*Oparams.parnum);
+      inCell[1]= malloc(sizeof(int)*Oparams.parnum);
+      inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MD_EDHEFLEX_OPTNNL
+      cellList_NNL = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+      inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
+      inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
+      inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
+      rxNNL = malloc(sizeof(double)*Oparams.parnum);
+      ryNNL = malloc(sizeof(double)*Oparams.parnum);
+      rzNNL = malloc(sizeof(double)*Oparams.parnum);
+#endif
+
+#endif
+ 
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
 #ifdef EDHE_FLEX
   if (Oparams.maxbondsSaved==-1)
