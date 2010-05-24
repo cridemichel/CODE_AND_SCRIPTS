@@ -77,7 +77,20 @@ extern int *scdone;
 extern double *maxax;
 extern double calcDistNegNeighPlane(double t, double t1, int i, double *r1, double *r2, double *vecgsup, int calcguess, int calcgradandpoint, int *err, int nplane);
 void calc_energy(char *msg);
-
+#ifdef EDHE_FLEX
+extern int *is_a_sphere_NNL;
+#endif
+int use_bounding_spheres(int na, int n)
+{
+#ifdef EDHE_FLEX
+  if (is_a_sphere_NNL[na] && is_a_sphere_NNL[n])
+    return 0;
+  else
+    return 1;
+#else
+  return 1;
+#endif
+}
 extern double min3(double a, double b, double c);
 extern double min(double a, double b);
 extern double max3(double a, double b, double c);
@@ -1145,6 +1158,9 @@ void rebuild_linked_list_NNL()
     }
 }
 #endif
+#ifdef MD_MULTIPLE_LL
+extern void rebuildMultipleLL(void);
+#endif
 void rebuild_linked_list()
 {
   //double L2;
@@ -1152,11 +1168,13 @@ void rebuild_linked_list()
   int kk;
 #endif
   int j, n;
+#ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
       rebuildMultipleLL();
       return;
     }
+#endif
 #ifdef MD_LXYZ
   for (kk = 0; kk < 3; kk++)
     L2[kk] = 0.5 * L[kk];
@@ -8671,12 +8689,13 @@ void PredictEvent (int na, int nb)
 #endif
   int cellRangeT[2 * NDIM], signDir[NDIM]={0,0,0}, evCode,
   iX, iY, iZ, jX, jY, jZ, k, n;
-
+#ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
       PredictEventMLL();
       return;
     }
+#endif
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall|| nb==sphWall)
     return;
@@ -9380,10 +9399,10 @@ void PredictEvent (int na, int nb)
 		      if (t < Oparams.time)
 			{
 #if 1
-			  printf("time:%.15f tInt:%.15f\n", Oparams.time,
-				 tInt);
-			  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-	     					      Sqr(dr[2]))-1.0 );
+			  
+			  printf("time:%.15f\n", Oparams.time);
+			  //printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+	     		//			      Sqr(dr[2]))-1.0 );
 			  printf("STEP: %lld\n", (long long int)Oparams.curStep);
 			  printf("atomTime: %.10f \n", atomTime[n]);
 			  printf("n:%d na:%d\n", n, na);
@@ -9398,8 +9417,8 @@ void PredictEvent (int na, int nb)
 #if 1
 			  printf("time:%.15f tInt:%.15f\n", Oparams.time,
 				 tInt);
-			  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-	     					      Sqr(dr[2]))-1.0 );
+			  //printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+	     		//			      Sqr(dr[2]))-1.0 );
 			  printf("STEP: %lld\n", (long long int)Oparams.curStep);
 			  printf("atomTime: %.10f \n", atomTime[n]);
 			  printf("n:%d na:%d\n", n, na);
@@ -10151,11 +10170,13 @@ void ProcessCellCrossing(void)
   int j; 
 #endif
   int k, n;
+#ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
       ProcessCellCrossingMLL();
       return;
     }
+#endif
   UpdateAtom(evIdA);
   /* NOTA: cellList[i] con 0 < i < Oparams.parnum è la cella in cui si trova la particella
    * i-esima mentre cellList[j] con 
@@ -10282,10 +10303,29 @@ void rebuildLinkedList(void)
       cellList[j] = n;
     }
 }
+#ifdef MD_MULTIPLE_LL
+extern int **crossevtodel;
+void reset_croessev(void)
+{
+  int nc, i;
+  if (OprogStatus.multipleLL)
+    {
+      for (nc = 0; nc < Oparams.ntypes; nc++)
+	{
+	  for (i=0; i < Oparams.parnum; i++)
+	    {
+	      crossevtodel[nc][i] = -1;
+	    } 
+	}
+    }
+}
+#endif
 void rebuildCalendar(void)
 {
   int k, n;
-  
+#ifdef MD_MULTIPLE_LL
+  reset_croessev();
+#endif 
   InitEventList();
   for (k = 0;  k < 3; k++)
     {
@@ -10505,7 +10545,6 @@ double calcJustDistNegSP(double t, int i, int j, double* dists);
 void rebuildCalend_TS(void)
 {
   int j, k, n, nl, nc, iA, nl_ignore, i;
-
   /* for safety reset linked lists */
   rebuild_linked_list();
   OprogStatus.baseIndex = 0;
@@ -10578,6 +10617,9 @@ void move(void)
 	      //UpdateSystem();
 #if 1
 	      //OprogStatus.baseIndex =0;
+#ifdef MD_MULTIPLE_LL
+	      reset_croessev();
+#endif
 	      InitEventList();
 	      rebuildNNL();
 	      

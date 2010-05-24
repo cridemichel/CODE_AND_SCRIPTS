@@ -252,6 +252,9 @@ void calc_grad_and_point_plane(int i, double *grad, double *point, int nplane)
   MD_DEBUG39(printf("i=%d del=%f point=%f %f %f grad =%f %f %f\n", i, del, point[0], point[1], point[2], grad[0], grad[1], grad[2] ));
   MD_DEBUG39(printf("nplane=%d pos=%f %f %f\n", nplane, rx[i], ry[i], rz[i]));
 }
+#ifdef MD_EDHEFLEX_OPTNNL
+extern void rebuild_linked_list_NNL();
+#endif
 void growth_rebuildNNL(int i)
 {
   int ii, n;
@@ -352,6 +355,7 @@ void rebuildNNL(void)
       if (i==0 || nebrTab[i].nexttime < nltime)
 	nltime = nebrTab[i].nexttime;
     }
+#ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
       BuildAllNNL_MLL();
@@ -368,6 +372,17 @@ void rebuildNNL(void)
 	  BuildNNL(i);
 	}
     }
+#else
+#ifdef MD_EDHEFLEX_OPTNNL
+  /* il centro di massa del parallelepipedo può non coincidere con quello dell'ellissoide
+     in tal caso per cui le linked lists vanno generate ad hoc */
+  rebuild_linked_list_NNL();
+#endif
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      BuildNNL(i);
+    }
+#endif
 #ifdef MD_GHOST_IGG
   /* if ghostsim=1/2 allow transition from 3 to 1 */	
   if (OprogStatus.ghostsim)
@@ -5235,11 +5250,13 @@ void PredictEventNNL(int na, int nb)
   int missing, num_work_request, njob, njob2i[512];
 #endif
 
+#ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
       PredictEventMLL_NLL();
       return;
     }
+#endif
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
