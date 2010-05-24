@@ -48,9 +48,9 @@ int is_superellips_type(int pt)
     return 1;
 }
 
-inline int get_linked_list(int na, int nc)
+inline int get_linked_list_type(int typena, int nc)
 {
-  int typena, sum, t1, nc1;
+  int sum, t1, nc1;
   /* per N tipi le linked lists sono N*(N+1)/2. 
      typeOfPart[na]-nc -> nl
      consideriamo il caso ntypes=4
@@ -74,8 +74,8 @@ inline int get_linked_list(int na, int nc)
      6 = 1 + 2 + 3 = 3*(3+1)/2 = (typena+1)*(typena+2)/2
      inoltre 2=typne 4=ntypes e 3=nc e con questo si ottiene la formula riportata sotto
    */
-  typena = typeOfPart[na];
-  if (nc==typeOfPart[na])
+  //typena = typeOfPart[na];
+  if (nc==typena)
     return nc;
   else 
     {
@@ -97,6 +97,11 @@ inline int get_linked_list(int na, int nc)
       typena=3 nc=2 => 3 + 3*(4 - (2+2)/2) / 2 = 9 OK  
       typena=1 nc=2 => 4*2 + 2 - 3 = 7 OK
    */
+}
+int get_linked_list(int na, int nc)
+{
+  return get_linked_list_type(typeOfPart[na], nc);
+
 }
 extern int all_spots_in_CoM(int pt);
 #ifdef MD_SUPERELLIPSOID
@@ -131,7 +136,7 @@ void get_types_from_nl(int nl, int *t1, int *t2)
 	if (ta > tb)
 	  continue;
 
-	if (nl==get_linked_list(ta, tb))
+	if (nl==get_linked_list_type(ta, tb))
 	  {
 	    *t1 = ta;
 	    *t2 = tb;
@@ -255,6 +260,13 @@ void docellcrossMLL(int k, double velk, double *rkptr, int cellsk, int nc)
 #else
 	  *rkptr = -L2;
 #endif
+#ifdef MD_LXYZ
+	  if (OprogStatus.useNNL)
+	    nebrTab[evIdA].r[k] -= L[k];
+#else
+	  if (OprogStatus.useNNL)
+	    nebrTab[evIdA].r[k] -= L;
+#endif
 	  OprogStatus.DR[evIdA][k]++;
 	}
 
@@ -266,6 +278,13 @@ void docellcrossMLL(int k, double velk, double *rkptr, int cellsk, int nc)
       if (inCellMLL[nc][k][evIdA] == -1) 
 	{
 	  inCellMLL[nc][k][evIdA] = cellsk - 1;
+	  if (OprogStatus.useNNL)
+#ifdef MD_LXYZ
+	    nebrTab[evIdA].r[k] += L[k];
+#else
+	    nebrTab[evIdA].r[k] += L;
+#endif
+
 #ifdef MD_LXYZ
 	  *rkptr = L2[k];
 #else
@@ -296,7 +315,7 @@ void ProcessCellCrossingMLL(void)
 
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
 
-  nl = get_linked_list(typei, nc);
+  nl = get_linked_list_type(typei, nc);
   //nc_bw = ;
 #if 0
   if (iA == 0 && nc == 0)
@@ -369,7 +388,7 @@ void ProcessCellCrossingMLL(void)
        	{
 	  if (nc_bw == nc)
 	    continue;
-	  nlcross_bw = get_linked_list(typei, nc_bw);
+	  nlcross_bw = get_linked_list_type(typei, nc_bw);
 	  n = (inCellMLL[nc_bw][2][evIdA] * cellsyMLL[nlcross_bw] + inCellMLL[nc_bw][1][evIdA])*cellsxMLL[nlcross_bw] + 
 	    inCellMLL[nc_bw][0][evIdA]
 	    + Oparams.parnum;
@@ -393,16 +412,19 @@ void ProcessCellCrossingMLL(void)
     }
   PredictCellCross(evIdA, nc);
   PredictCollMLL(evIdA, evIdB, nl);
+
   n = (inCellMLL[nc][2][evIdA] * cellsyMLL[nl] + inCellMLL[nc][1][evIdA])*cellsxMLL[nl] + 
     inCellMLL[nc][0][evIdA] + Oparams.parnum;
   /* Inserimento di evIdA nella nuova cella (head) */
   cellListMLL[nl][evIdA] = cellListMLL[nl][n];
   cellListMLL[nl][n] = evIdA;
+#if 0
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
+#endif
 #if 0
   printf("DOPO boxwall=%d nc=%d n=%d cellList[%d][%d]:%d\n",boxwall, nc, n, nlcross, n, cellList[nlcross][n]);
   printf("DOPO vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
@@ -413,7 +435,7 @@ void ProcessCellCrossingMLL(void)
 	{
 	  if (nc_bw == nc)
 	    continue;
-	  nlcross_bw = get_linked_list(nc, nc_bw);
+	  nlcross_bw = get_linked_list(evIdA, nc_bw);
 	  switch (kk)
 	    {
 	    case 0: 
@@ -726,7 +748,7 @@ void rebuildMultipleLL(void)
 #else
 	  inCellMLL[nc][0][n] =  (rx[n] + L2) * cellsxMLL[nl] / L;
 	  inCellMLL[nc][1][n] =  (ry[n] + L2) * cellsyMLL[nl] / L;
-	  inCellMLL[nc][2][n] =  (rz[n] + L2)  * cellszMLL[nl] / L;
+	  inCellMLL[nc][2][n] =  (rz[n] + L2) * cellszMLL[nl] / L;
 #endif
 	  /*printf("nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
 	    nl, nc, n, inCell[nc][0][n], inCell[nc][1][n], inCell[nc][2][n],
@@ -888,7 +910,9 @@ void PredictCollMLL(int na, int nb, int nl)
 		     (questo è necessario poiché diversamente dalla silica qui si considera una solo linked list
 		     mista e non due) */
 		  if (nl >= Oparams.ntypes && typeOfPart[n] == typena)
-		    continue;
+		    {
+		      continue;
+		    }
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
 #ifdef EDHE_FLEX
