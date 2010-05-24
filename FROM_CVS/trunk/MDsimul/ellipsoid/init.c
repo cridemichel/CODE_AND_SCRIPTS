@@ -383,6 +383,11 @@ void check_all_bonds(void)
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
+#ifdef MD_MULTIPLE_LL
+  /* N.B. 24/05/10: questa funzione va riscritta in multiple_ll.c */
+  if (OprogStatus.multipleLL)
+    return;
+#endif
   for (k = 0;  k < NDIM; k++)
     {
       cellRange[2*k]   = - 1;
@@ -4644,8 +4649,21 @@ void usrInitAft(void)
     {
       numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
       rcutMLL = malloc(sizeof(double)*numll);
-      set_cells_size();
       cellListMLL = malloc(sizeof(int*)*numll);
+      cellsxMLL = malloc(sizeof(int)*numll);
+      cellsyMLL = malloc(sizeof(int)*numll);
+      cellszMLL = malloc(sizeof(int)*numll);
+      set_cells_size();
+      for (k1=0; k1 < numll; k1++)
+	{
+#ifdef MD_LXYZ
+	  printf("[%d] L=%.15G %.15G %.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", k1, L[0], L[1], L[2],
+		 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1]);
+#else
+	  printf("[%d] L=%.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", k1, L,
+	     	 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1]);
+#endif
+	}
       for (k1 = 0; k1 < numll; k1++)
 	{
 	  ls = cellsxMLL[k1]*cellsyMLL[k1]*cellszMLL[k1];

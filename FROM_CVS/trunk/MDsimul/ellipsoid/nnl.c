@@ -5250,14 +5250,7 @@ void PredictEventNNL(int na, int nb)
   int missing, num_work_request, njob, njob2i[512];
 #endif
 
-#ifdef MD_MULTIPLE_LL
-  if (OprogStatus.multipleLL)
-    {
-      PredictEventMLL_NLL();
-      return;
-    }
-#endif
-  if (vz[na] != 0.0) 
+ if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
 	signDir[2] = 0;/* direzione positiva */
@@ -5455,7 +5448,9 @@ extern int sphWall, sphWallOuter;
 extern void locate_spherical_wall(int na, int outer);
 #endif
 extern int use_bounding_spheres(int na, int n);
-
+#ifdef MD_MULTIPLE_LL
+void PredictEventNNL_MLL(int na, int nb);
+#endif
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
@@ -5472,6 +5467,14 @@ void PredictEventNNL(int na, int nb)
 #ifdef MD_ABSORPTION
   int hwcell;
 #endif
+#ifdef MD_MULTIPLE_LL
+  if (OprogStatus.multipleLL)
+    {
+      PredictEventNNL_MLL(na, nb);
+      return;
+    }
+#endif
+ 
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall|| nb==sphWall)
     return;

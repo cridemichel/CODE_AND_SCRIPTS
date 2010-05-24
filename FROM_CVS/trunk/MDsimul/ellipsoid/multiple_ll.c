@@ -1,5 +1,6 @@
 #ifdef MD_MULTIPLE_LL
 #include<mdsimul.h>
+#define MD_NNLPLANES
 
 /* NOTA: nel caso della silica si avevano 4 linked lists in verità ossia:
    0 è la lista della specie A per l'interazione A-A
@@ -14,14 +15,23 @@
    che di un altro e quando si dovranno predire gli eventi si dovrà considerare
    che solo l'interazione mista va considerata scartando quella diretta.
 */
+#ifdef MD_EDHEFLEX_OPTNNL
+extern int *inCell_NNL[3], *cellList_NNL;
+extern double *rxNNL, *ryNNL, *rzNNL;
+#endif
+extern double nextNNLrebuild;
+
+extern struct nebrTabStruct *nebrTab;
+extern int cellRange[2*NDIM];
 int **crossevtodel;
+extern const double timbig;
 #ifdef MD_LXYZ
 extern double L2[3];
 #else
 extern double L2;
 #endif 
 #ifdef MD_PATCHY_HE
-int evIdC, evIdD, evIdE;
+extern int evIdC, evIdD, evIdE;
 extern double *treeRxC, *treeRyC, *treeRzC;
 extern double rxC, ryC, rzC;
 #endif
@@ -94,7 +104,6 @@ extern int is_superellipse(int i);
 #endif
 int is_a_sphere_NNL_type(int pt)
 {
-  int i, k1, k2, is_sph;
   if (!(typesArr[pt].sax[0] == typesArr[pt].sax[1] && 
 	typesArr[pt].sax[1] == typesArr[pt].sax[2] )) 
     {
@@ -119,8 +128,9 @@ void get_types_from_nl(int nl, int *t1, int *t2)
   for (ta = 0; ta < Oparams.ntypes; ta++)
     for (tb = 0; tb < Oparams.ntypes; tb++)
       {
-	if (ta >= tb)
+	if (ta > tb)
 	  continue;
+
 	if (nl==get_linked_list(ta, tb))
 	  {
 	    *t1 = ta;
@@ -136,7 +146,6 @@ double calc_rcut_type(int t)
   double rcutA;
   int kk;
   double ax[3], del;
-  int i;
   for (kk=0; kk < 3; kk++)
     ax[kk] = typesArr[t].ppsax[kk];
   if (OprogStatus.useNNL)  
@@ -154,10 +163,11 @@ double calc_rcut_type(int t)
 
 double calc_rcut(int nl)
 {
-  int t1, t2;
+  int t1=-1, t2=-1;
   double rc, rc1, rc2;
   /* le celle liste per ora vengono sempre scelte automaticamente */
   get_types_from_nl(nl, &t1, &t2);
+  //printf("t1=%d t2=%d\n", t1, t2);
   rc1 = calc_rcut_type(t1);
   rc2 = calc_rcut_type(t2);
   rc = (rc1 + rc2)*0.5;
@@ -183,18 +193,11 @@ void set_cells_size(void)
       cellsyMLL[nl] = L / rcut;
       cellszMLL[nl] = L / rcut;
 #endif
-#ifdef MD_LXYZ
-      printf("[%d] L=%.15G %.15G %.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", nl, L[0], L[1], L[2],
-	     rcut, cellsxMLL[nl], cellsyMLL[nl], cellszMLL[nl]);
-#else
-      printf("[%d] L=%.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", nl, L,
-	     rcut, cellsxMLL[nl], cellsyMLL[nl], cellszMLL[nl]);
-#endif
-    }
+   }
 
 }
 extern int evIdA, evIdB;
-extern double cellRange[2*NDIM];
+extern int cellRange[2*NDIM];
 int check_boxwall(int k, int nc, int nl)
 {
   int cellsk=0;
@@ -273,14 +276,13 @@ void docellcrossMLL(int k, double velk, double *rkptr, int cellsk, int nc)
     }
 }
 extern void UpdateAtom(int i);
-double PredictCellCross(int na, int nc);
-double PredictCellCross(int na, int nc);
+void PredictCellCross(int na, int nc);
 void PredictCollMLL(int na, int nb, int nl);
 
 void ProcessCellCrossingMLL(void)
 {
   int kk, n, k, nl, numll;
-  int nc, boxwall, nlcoll, nc_bw, nlcross_bw;//nlcoll, nlcoll_bw;
+  int nc, boxwall, nc_bw, nlcross_bw;//nlcoll, nlcoll_bw;
   int typei;
 
   UpdateAtom(evIdA);
@@ -443,15 +445,20 @@ void ProcessCellCrossingMLL(void)
 	}
     }
 }
+extern int locateHardWall(int na, int nplane, double tsup, double vecg[5], int ghw);
+void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent); 
+
 #if defined(MD_EDHEFLEX_WALL)
 void PredictHardWall(int na, int evCode, double cctime)
 {
   double vecg[5];
   int nl, typena, nplane=-1, hwcell;
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
+  //for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  typena = typeOfPart[na];
   if (OprogStatus.hardwall)
     {
-      typena = typeOfPart[na];
 #if defined(MD_ABSORPTION) 
       if (OprogStatus.bufHeight > 0.0)
 	{
@@ -472,8 +479,6 @@ void PredictHardWall(int na, int evCode, double cctime)
 		      rxC = vecg[0];
 		      ryC = vecg[1];
 		      rzC = vecg[2];
-		      MD_DEBUG38(printf("SEMIPERM Located Contact with WALL rC=%f %f %f time=%.15G i=%d\n", rxC, ryC, rzC, vecg[4], na));
-		      MD_DEBUG38(printf("r=%f %f %f\n", rx[na], ry[na], rz[na]));
 		      ScheduleEventBarr (na, ATOM_LIMIT+50, 0, 0, MD_WALL, vecg[4]);
 		    }
 		}
@@ -484,12 +489,12 @@ void PredictHardWall(int na, int evCode, double cctime)
 #endif
       /* spostare in PredictColl con opportuno if (... )*/
       nl = get_linked_list(na, typena);
-      if (inCellMLL[typena][2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
-      if (inCellMLL[typena][2][na] + cellRangeT[2 * 2 + 1] == cellszMLL[nl]) cellRangeT[2 * 2 + 1] = 0;
+      //if (inCellMLL[typena][2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      //if (inCellMLL[typena][2][na] + cellRangeT[2 * 2 + 1] == cellszMLL[nl]) cellRangeT[2 * 2 + 1] = 0;
       /* ========= */
-      if (inCell[typena][2][na] == 0)
+      if (inCellMLL[typena][2][na] == 0)
 	nplane = 0;
-      else if (inCell[typena][2][na] == cellszMLL[nl]-1)
+      else if (inCellMLL[typena][2][na] == cellszMLL[nl]-1)
 	nplane = 1;
       //if (na==955)
 	//printf("na=%d cella:%d\n", na, inCell[2][na]);
@@ -498,17 +503,17 @@ void PredictHardWall(int na, int evCode, double cctime)
 	  rxC = vecg[0];
 	  ryC = vecg[1];
 	  rzC = vecg[2];
-	  MD_DEBUG38(printf("scheduled collision with wall na=%d nplane=%d evtime=%.15G\n", na, nplane, vecg[4]));
 	  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
 	}
       else
 	{
-	  MD_DEBUG38(printf("scheduled cell-crossing with wall na=%d evtime=%.15G\n", na, cctime));
 	  ScheduleEventBarr (na, ATOM_LIMIT + evCode, typena, 0, MD_EVENT_NONE, cctime);
 	}
    }
   else
-    ScheduleEventBarr (na, ATOM_LIMIT + evCode, typena, 0, MD_EVENT_NONE, cctime);
+    {
+      ScheduleEventBarr (na, ATOM_LIMIT + evCode, typena, 0, MD_EVENT_NONE, cctime);
+    }
 }
 #endif
 /* 21/05/2010: nc indica la linked lists da considerare ossia se nc=typeOfPart[na]=interazione con lo stesso tipo
@@ -517,12 +522,9 @@ void PredictHardWall(int na, int evCode, double cctime)
    con lo stesso tipo mentre 0 = interazione con particelle di tipo 0, 2 interazione con particelle di tipo 2
    3 con quelle di tipo 3. */
 
-double PredictCellCross(int na, int nc)
+void PredictCellCross(int na, int nc)
 {
-#ifdef EDHE_FLEX
-  double cctime=-1.0;
-#endif
-  int ignorecross[3], k, evCode, signDir[NDIM]={0,0,0}, iA, nl;
+  int ignorecross[3], k, evCode, signDir[NDIM]={0,0,0}, nl;
   double tm[3], cctime=timbig;
 
   ignorecross[0] = ignorecross[1] = ignorecross[2] = 1;
@@ -553,7 +555,7 @@ double PredictCellCross(int na, int nc)
 	}
 #ifdef MD_EDHEFLEX_WALL
       /* il muro attualmente è solo lungo l'asse z */
-      if (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[2][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[2][na]==0)))
+      if (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[nc][2][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[nc][2][na]==0)))
 	ignorecross[2] = 1;
 #endif
       if (ignorecross[2])
@@ -666,8 +668,6 @@ double PredictCellCross(int na, int nc)
   evCode = 100 + k;// + 3*nc;
   /* urto con le pareti, il che vuol dire:
    * se lungo z e rz = -L/2 => urto con parete */ 
-  MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
-		    na, ATOM_LIMIT+evCode, k, tm[k]));
 
   if (!ignorecross[k])
     {
@@ -686,12 +686,12 @@ double PredictCellCross(int na, int nc)
 #endif
     }
 }
-
+extern double *atomTime;
 void rebuildMultipleLL(void)
 {
-  int nl, numll, maxnc;
+  int nl, numll, maxnc, j, nc, n;
   
-  numll = Oparams.ntype*(Oparams.ntypes+1)/2;
+  numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
   for (nl=0; nl < numll; nl++)
     {
       for (j = 0; j < cellsxMLL[nl]*cellsyMLL[nl]*cellszMLL[nl] + Oparams.parnum; j++)
@@ -748,6 +748,12 @@ void rebuildMultipleLL(void)
     }
 }
 extern int use_bounding_spheres(int na, int n);
+extern int may_interact_all(int i, int j);
+extern double *maxax;
+extern double max_ax(int i);
+extern int locate_contactSP(int i, int j, double shift[3], double t1, double t2, double *evtime, int *ata, int *atb, int *collCode);
+extern int locate_contact(int i, int j, double shift[3], double t1, double t2, double vecg[5]);
+
 void PredictCollMLL(int na, int nb, int nl) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -758,17 +764,18 @@ void PredictCollMLL(int na, int nb, int nl)
    *      */
   double sigSq=0.0, dr[NDIM], dv[NDIM], shift[NDIM],  
 	 b, d, t, tInt, vv, distSq, t1=0.0, t2=0.0;
-  int overlap, nc, nl;
+  int ty1=-1, ty2=-1;
+  int overlap, nc;
+  int cellRangeT[2 * NDIM];
 #ifdef MD_ABSORPTION
   int hwcell;
 #endif
 #ifdef MD_PATCHY_HE
   int ac, bc, collCode, collCodeOld, acHC, bcHC;
   double evtime, evtimeHC;
-  int nplane=-1;
 #endif
   double vecg[5];
-  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n, typena;
+  int iX, iY, iZ, jX, jY, jZ, k, n, typena;
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall|| nb==sphWall)
     return;
@@ -785,15 +792,26 @@ void PredictCollMLL(int na, int nb, int nl)
   /* se il tipo della particella na è relativo alla linked lists nl 
      allora procedi nel predire le collisioni altrimenti non ha ovviamente
      senso ed esci da tale routine. */
-  get_types_from_nl(nl, &t1, &t2);
+  get_types_from_nl(nl, &ty1, &ty2);
   typena = typeOfPart[na]; 
-  if (typena==t1)
-    nc = t2;
-  else if (typena==t2)
-    nc = t1;
+  if (typena==ty1)
+    nc = ty2;
+  else if (typena==ty2)
+    nc = ty1;
   else 
     return;
+#ifdef MD_EDHEFLEX_WALL
+  if (OprogStatus.hardwall)
+    {
+      if (inCellMLL[nc][2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (inCellMLL[nc][2][na] + cellRangeT[2 * 2 + 1] == cellszMLL[nl]) cellRangeT[2 * 2 + 1] = 0;
+    }
+  else
+    for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+#else
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+#endif
+  //for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
     {
       jZ = inCellMLL[nc][2][na] + iZ;    
@@ -902,8 +920,6 @@ void PredictCollMLL(int na, int nb, int nl)
 				sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
 #endif
 			    }
-			  MD_DEBUG20(printf("sigSq: %f maxax[%d]:%.15G maxax[%d]:%.15G\n", sigSq, na, maxax[na],
-					    n, maxax[n]));
 			  tInt = Oparams.time - atomTime[n];
 			  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
 			  dv[0] = vx[na] - vx[n];
@@ -929,7 +945,6 @@ void PredictCollMLL(int na, int nb, int nl)
 			       * nessun urto sotto tali condizioni */
 			      continue;
 			    }
-			  MD_DEBUG40(printf("PREDICTING na=%d n=%d\n", na , n));
 			  if (vv==0.0)
 			    {
 			      if (distSq >= sigSq)
@@ -945,19 +960,15 @@ void PredictCollMLL(int na, int nb, int nl)
 			      t = t1 = - (sqrt (d) + b) / vv;
 			      t2 = (sqrt (d) - b) / vv;
 			      overlap = 0;
-			      MD_DEBUG40(printf("qui..boh sig:%.15G dist=%.15G\n", sqrt(sigSq), sqrt(distSq)));
 			    }
 			  else 
 			    {
-			      MD_DEBUG40(printf("Centroids overlap!\n"));
 			      t2 = t = (sqrt (d) - b) / vv;
 			      t1 = 0.0; 
 			      overlap = 1;
 			      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
 			      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
 			    }
-			  MD_DEBUG40(printf("t=%f curtime: %f b=%f d=%f t1=%.15G t2=%.15G\n", t, Oparams.time, b ,d, t1, t2));
-			  MD_DEBUG40(printf("dr=(%f,%f,%f) sigSq: %f\n", dr[0], dr[1], dr[2], sigSq));
 			  //t += Oparams.time; 
 			  t2 += Oparams.time;
 			  t1 += Oparams.time;
@@ -976,9 +987,6 @@ void PredictCollMLL(int na, int nb, int nl)
 		      evtime = t2;
 		      collCode = MD_EVENT_NONE;
 		      rxC = ryC = rzC = 0.0;
-		      MD_DEBUG20(printf("time=%.15G t1=%.15G t2=%.15G maxax[%d]:%.15G maxax[%d]:%.15G\n", 
-					Oparams.time, t1, t2, na, maxax[na], n, maxax[n]));
-		      MD_DEBUG20(printf("t1=%.15G t2=%.15G\n", t1, t2));
 		      collCodeOld = collCode;
 		      evtimeHC = evtime;
 		      acHC = ac = 0;
@@ -992,7 +1000,6 @@ void PredictCollMLL(int na, int nb, int nl)
 			      collCode = MD_EVENT_NONE;
 			    }
 			}
-		      MD_DEBUG40(if (collCode!=MD_EVENT_NONE) printf("na=%d ac=%d n=%d bc=%d\n", na, ac, n, bc));
 		      MD_DEBUG(if (collCode!=MD_EVENT_NONE) check_these_bonds(na, n, shift, evtime));
 #else
 		      if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
@@ -1043,10 +1050,6 @@ void PredictCollMLL(int na, int nb, int nl)
 			}
 
 		      t = evtime;
-		      MD_DEBUG40(printf("(%d,%d)-(%d,%d) troot=%.15G\n", na, ac, n, bc, evtime));
-		      MD_DEBUG40(printf("evtimeHC=%.15G",evtimeHC));
-		      MD_DEBUG40(printf("dist(t=%.15G,%d-%d):%.15G dist(t=%.15G)=%.15G\n", evtimeHC, na, n, 
-					calc_dist_ij(na, n, evtimeHC), evtime, calc_dist_ij(na, n, evtime)));
 #else
 		      if (!locate_contact(na, n, shift, t1, t2, vecg))
 		      	continue;
@@ -1064,10 +1067,7 @@ void PredictCollMLL(int na, int nb, int nl)
 		      if (t < Oparams.time)
 			{
 #if 1
-			  printf("time:%.15f tInt:%.15f\n", Oparams.time,
-				 tInt);
-			  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-	     					      Sqr(dr[2]))-1.0 );
+			  printf("time:%.15f \n",Oparams.time);
 			  printf("STEP: %lld\n", (long long int)Oparams.curStep);
 			  printf("atomTime: %.10f \n", atomTime[n]);
 			  printf("n:%d na:%d\n", n, na);
@@ -1094,15 +1094,12 @@ void PredictCollMLL(int na, int nb, int nl)
 #endif
 		      /* il tempo restituito da newt() è già un tempo assoluto */
 #ifdef MD_PATCHY_HE
-		      MD_DEBUG40(printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc));
 		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 		      //printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc);
 
 #else
 		      ScheduleEvent (na, n, t);
 #endif
-		      MD_DEBUG40(printf("schedule event [collision](%d,%d)-(%d,%d) collCode=%d\n", na, ac, n, bc, collCode));
-
 		    }
 		} 
 	    }
@@ -1110,23 +1107,17 @@ void PredictCollMLL(int na, int nb, int nl)
     }
 }
 
-void PredictEventMLL(void)
+void PredictEventMLL(int na, int nb)
 {
-  int nc, nl;
-  double mintA, mintB, tA, tB;
+  int nc, nl, numll;
   for (nc = 0; nc < Oparams.ntypes; nc++)
     {
-      PredictCellCross(evIdA, nc);
-      PredictCellCross(evIdB, nc);
+      PredictCellCross(na, nc);
     }
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
   for (nl = 0; nl < numll; nl++)
     {
-      PredictCollMLL(evIdA, -1, nl);
-    }
-  for (nl = 0; nl < numll; nl++)
-    {
-      PredictCollMLL(evIdB, evIdA, nl);
+      PredictCollMLL(na, nb, nl);
     }
 }
 #ifdef MD_EDHEFLEX_OPTNNL
@@ -1140,8 +1131,9 @@ void rebuildMultipleLL_NLL(int nl)
 #ifdef MD_LXYZ
   int kk;
 #endif
-  int j, n, numll, nl;
-  numll = Oparams.ntype*(Oparams.ntypes+1)/2;
+  int j, n, numll;
+  double invL, L2;
+  numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
 #ifdef MD_LXYZ
   for (kk = 0; kk < 3; kk++)
     {
@@ -1155,7 +1147,7 @@ void rebuildMultipleLL_NLL(int nl)
 #endif
   set_cells_size();
   for (j = 0; j < cellsxMLL[nl]*cellsyMLL[nl]*cellszMLL[nl] + Oparams.parnum; j++)
-    cellList_NLL[j] = -1;
+    cellList_NNL[j] = -1;
     
   /* NOTA: rcut delle LL per le NNL e' uguale a quello delle LL per gli ellissoidi
      ma quest'ultimo potrebbe essere scelto ad hoc. Inoltre le LL per gli ellissoidi 
@@ -1217,6 +1209,10 @@ void rebuildMultipleLL_NLL(int nl)
     }
 }
 #endif
+extern void check_nnl_size(int na);
+extern double calcDistNegNNLoverlap(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
+extern double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3]);
+
 void BuildNNL_MLL(int na, int nl) 
 {
   double shift[NDIM];
@@ -1230,7 +1226,6 @@ void BuildNNL_MLL(int na, int nl)
   /*double cels[NDIM];*/
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
   nebrTab[na].len = 0;
-  MD_DEBUG32(printf("Building NNL...\n"));
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall || na==sphWallOuter)
     return;
@@ -1344,14 +1339,12 @@ void BuildNNL_MLL(int na, int nl)
 #ifdef MD_NNLPLANES
 		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift); 
 #else
-		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift,
-						   r1, r2, &alpha, vecgsup, 1); 
+		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecgsup, 1); 
 #endif
 		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
 		       * in OprogStatus */
 		      if (dist < 0)
 			{
-			  MD_DEBUG32(printf("Adding ellipsoid N. %d to NNL of %d\n", n, na));
  			  nebrTab[na].list[nebrTab[na].len] = n;
 			  //for (kk=0; kk < 3; kk++)
 			  //nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
@@ -1367,8 +1360,11 @@ void BuildNNL_MLL(int na, int nl)
 
 void BuildAllNNL_MLL(void)
 {
-  int nl, i;
-  for (nl = 0; nl < maxnll; nl++)
+  int nl, i, numll;
+  
+  numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
+
+  for (nl = 0; nl < numll; nl++)
     {
 #ifdef MD_EDHEFLEX_OPTNNL
       rebuildMultipleLL_NLL(nl);
@@ -1379,9 +1375,21 @@ void BuildAllNNL_MLL(void)
 	}
     }
 }
+
 void PredictCollMLL_NLL(int na, int nb, int nl)
 {
-  int i;
+  int i, n;
+  double vecg[5], shift[3], t1, t2, t;
+  double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
+  int overlap;
+#ifdef MD_PATCHY_HE
+  int ac, bc, collCode, collCodeOld, acHC, bcHC;
+  double evtime, evtimeHC;
+#endif
+#ifdef MD_ABSORPTION
+  int hwcell;
+#endif
+
 #ifdef MD_SPHERICAL_WALL
   locate_spherical_wall(na, 0);
   locate_spherical_wall(na, 1);
@@ -1452,7 +1460,6 @@ void PredictCollMLL_NLL(int na, int nb, int nl)
 #endif
 #endif
 	    }
-	  MD_DEBUG32(printf("n=%d na=%d maxaxes=%f %f sigSq: %f\n", n, na, maxax[n], maxax[na], sigSq));
 	  tInt = Oparams.time - atomTime[n];
 	  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
 	  dv[0] = vx[na] - vx[n];
@@ -1476,7 +1483,6 @@ void PredictCollMLL_NLL(int na, int nb, int nl)
 	       * nessun urto sotto tali condizioni */
 	      continue;
 	    }
-	  MD_DEBUG32(printf("PREDICTING na=%d n=%d\n", na , n));
 	  if (vv==0.0)
 	    {
 	      if (distSq >= sigSq)
@@ -1527,13 +1533,10 @@ void PredictCollMLL_NLL(int na, int nb, int nl)
       // t1 = Oparams.time;
       // t2 = nebrTab[na].nexttime;//,nebrTab[n].nexttime);
 
-      MD_DEBUG32(printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime));
-      MD_DEBUG32(printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2));
 #ifdef MD_PATCHY_HE
       evtime = t2;
       collCode = MD_EVENT_NONE;
       rxC = ryC = rzC = 0.0;
-      MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
       collCodeOld = collCode;
       evtimeHC = evtime;
       acHC = ac = 0;
@@ -1592,7 +1595,6 @@ void PredictCollMLL_NLL(int na, int nb, int nl)
       t = vecg[4];
 #endif
 #ifdef MD_PATCHY_HE
-      MD_DEBUG32(printf("Scheduling collision between %d and %d ac=%d bc=%d at t=%.15G\n", na, n, ac, bc, t));
       //printf("Scheduling collision between %d and %d ac=%d bc=%d at t=%.15G\n", na, n, ac, bc, t);
       ScheduleEventBarr (na, n,  ac, bc, collCode, t);
 #else
@@ -1600,24 +1602,25 @@ void PredictCollMLL_NLL(int na, int nb, int nl)
 #endif
     }
 }
-void PredictEventNLL_MLL(int na, int nb)
+void PredictEventNNL_MLL(int na, int nb)
 {
-  int nc, nl;
-  double mintA, mintB, tA, tB;
+  int nc, nl, numll;
   for (nc = 0; nc < Oparams.ntypes; nc++)
     {
-      PredictCellCross(evIdA, nc);
-      PredictCellCross(evIdB, nc);
+      PredictCellCross(na, nc);
+      //PredictCellCross(evIdB, nc);
     }
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
   for (nl = 0; nl < numll; nl++)
     {
-      PredictCollMLL_NLL(evIdA, -1, nl);
+      PredictCollMLL_NLL(na, nb, nl);
     }
+#if 0
   for (nl = 0; nl < numll; nl++)
     {
       PredictCollMLL_NLL(evIdB, evIdA, nl);
     }
+#endif
 
 }
 #endif
