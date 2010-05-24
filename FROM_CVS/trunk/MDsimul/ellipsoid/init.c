@@ -30,6 +30,10 @@ extern int ENDSIM;
 extern char msgStrA[MSG_LEN];
 void setToZero(COORD_TYPE* ptr, ...);
 double *maxax;
+extern void ProcessCellCrossingMLL(void);
+extern void PredictEventMLL(void);
+extern void PredictEventMLL_NLL(void);
+
 double calc_norm(double *vec);
 #ifdef MD_PATCHY_HE
 extern struct LastBumpS *lastbump;
@@ -1838,53 +1842,59 @@ extern void InitEventList(void);
 void StartRun(void)
 {
   int j, k, n;
-
-  for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
-    cellList[j] = -1;
-  /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
-  for (n = 0; n < Oparams.parnum; n++)
+  if (OprogStatus.multipleLL)
     {
+     rebuildMultipleLL(); 
+    }
+  else
+    {
+      for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
+	cellList[j] = -1;
+      /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
+      for (n = 0; n < Oparams.parnum; n++)
+	{
 #ifdef MD_SPHERICAL_WALL
-      if (n==sphWall)
-	{
-	  cellList[sphWall]=-1;
-	  continue;
-	}
-      if (n==sphWallOuter)
-	{
-	  cellList[sphWallOuter]=-1;
-	  continue;
-	}
+	  if (n==sphWall)
+	    {
+	      cellList[sphWall]=-1;
+	      continue;
+	    }
+	  if (n==sphWallOuter)
+	    {
+	      cellList[sphWallOuter]=-1;
+	      continue;
+	    }
 #endif
-      atomTime[n] = Oparams.time;
-      //printf("qui n=%d %.15G %.15G %.15G\n", n, rx[n], ry[n], rz[n]);
+	  atomTime[n] = Oparams.time;
+	  //printf("qui n=%d %.15G %.15G %.15G\n", n, rx[n], ry[n], rz[n]);
 #ifdef MD_LXYZ
-      inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
-      inCell[1][n] =  (ry[n] + L2[1]) * cellsy / L[1];
-      inCell[2][n] =  (rz[n] + L2[2]) * cellsz / L[2];
+	  inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
+	  inCell[1][n] =  (ry[n] + L2[1]) * cellsy / L[1];
+	  inCell[2][n] =  (rz[n] + L2[2]) * cellsz / L[2];
 #else
-      inCell[0][n] =  (rx[n] + L2) * cellsx / L;
-      inCell[1][n] =  (ry[n] + L2) * cellsy / L;
+	  inCell[0][n] =  (rx[n] + L2) * cellsx / L;
+	  inCell[1][n] =  (ry[n] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
-      inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+	  inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
 #else
-      inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+	  inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
 #endif
 #endif
-      //printf("inCell: %d, %d, %d\n", inCell[0][n], inCell[1][n], inCell[2][n]);
-      //printf("n=%d(%f,%f,%f)\n",n,rx[n], ry[n], rz[n]);
+	  //printf("inCell: %d, %d, %d\n", inCell[0][n], inCell[1][n], inCell[2][n]);
+	  //printf("n=%d(%f,%f,%f)\n",n,rx[n], ry[n], rz[n]);
 #if 0
-      if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
-	{
-	  printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
-	  printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
-		 inCell[0][n],inCell[1][n], inCell[2][n]);
-	}
+	  if (inCell[0][n]>=cellsx ||inCell[1][n]>= cellsy||inCell[2][n]>= cellsz) 
+	    {
+	      printf("BOH?!?L:%f L2:%f n:%d rx[n]:%f\n", L, L2, n, rx[n]);
+	      printf("(%d,%d,%d) (%d,%d,%d)\n",cellsx , cellsy,cellsz,
+		     inCell[0][n],inCell[1][n], inCell[2][n]);
+	    }
 #endif	  
-      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
-	inCell[0][n] + Oparams.parnum;
-      cellList[n] = cellList[j];
-      cellList[j] = n;
+	  j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+	    inCell[0][n] + Oparams.parnum;
+	  cellList[n] = cellList[j];
+	  cellList[j] = n;
+	}
     }
   InitEventList();
   for (k = 0;  k < NDIM; k++)
@@ -2331,23 +2341,41 @@ void calc_encpp(void)
 	continue;
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
-      com[0] = 0.0;
-      com[1] = 0.0;
-      com[2] = 0.0;
-      for (sp = 0; sp < typesArr[pt].nspots; sp++) 
-	{	
+      /* N.B. 24/05/10: per usare l'rcut ottimizzato senza l'NNL bisognerebbe
+	 predire il crossing del centro della NNL e non del centro di massa
+	 dell'ellissoid/SQ.
+	 Nel caso infatti in cui si usano le NNL le linked list ottimizzate
+	 vengono ricostruite prima di ogni rebuild delle NNL tenendo conto dello 
+	 shift del centro geometrico. Nel caso però in cui non si usino le NNL
+	 per tener conto di tale shift si dovrebbe predire l'attraversamento 
+	 delle celle per tale centro e non per il centro degli ellissoidi/SQ, ma ancora 
+	 questo non viene fatto.
+       */
+      if (OprogStatus.useNNL)
+	{
+	  com[0] = 0.0;
+	  com[1] = 0.0;
+	  com[2] = 0.0;
+	  for (sp = 0; sp < typesArr[pt].nspots; sp++) 
+	    {	
+	      for (kk=0; kk < 3; kk++)
+		com[kk] += typesArr[pt].spots[sp].x[kk];
+	    }
 	  for (kk=0; kk < 3; kk++)
-	    com[kk] += typesArr[pt].spots[sp].x[kk];
+	    com[kk] /= ((double)(typesArr[pt].nspots+1.0));
+	  for (kk=0; kk < 3; kk++)
+	    typesArr[pt].ppr[kk] = com[kk];
+	  for (kk = 0; kk < 3; kk++)
+	    typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk]+fabs(com[kk]);
+	  MD_DEBUG31(printf("typesArr.sax= %f %f %f .ppsax=%f %f %f\n", typesArr[pt].sax[0],typesArr[pt].sax[1],typesArr[pt].sax[2],
+			    typesArr[pt].ppsax[0],typesArr[pt].ppsax[1],typesArr[pt].ppsax[2]));
+	  //printf("pt=%d com=%f %f %f\n", pt, com[0], com[1], com[2]);
 	}
-      for (kk=0; kk < 3; kk++)
-	com[kk] /= ((double)(typesArr[pt].nspots+1.0));
-      for (kk=0; kk < 3; kk++)
-	typesArr[pt].ppr[kk] = com[kk];
-      for (kk = 0; kk < 3; kk++)
-	typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk]+fabs(com[kk]);
-      MD_DEBUG31(printf("typesArr.sax= %f %f %f .ppsax=%f %f %f\n", typesArr[pt].sax[0],typesArr[pt].sax[1],typesArr[pt].sax[2],
-	                                                 typesArr[pt].ppsax[0],typesArr[pt].ppsax[1],typesArr[pt].ppsax[2]));
-      //printf("pt=%d com=%f %f %f\n", pt, com[0], com[1], com[2]);
+      else
+	{
+	  for (kk = 0; kk < 3; kk++)
+	    typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk];
+	}
 #else
       for (kk = 0; kk < 3; kk++)
 	typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk];
@@ -2357,8 +2385,16 @@ void calc_encpp(void)
 	{
 	  //norm = calc_norm(typesArr[pt].spots[sp].x);
 #ifdef MD_EDHEFLEX_OPTNNL
-	  for (kk=0; kk < 3; kk++)
-    	    v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]-com[kk]);
+	  if (OprogStatus.useNNL)
+	    {
+	      for (kk=0; kk < 3; kk++)
+		v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]-com[kk]);
+	    }
+	  else
+	    {
+	      for (kk=0; kk < 3; kk++)
+		v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]);
+	    }
 #else
 	  for (kk=0; kk < 3; kk++)
     	    v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]);
@@ -2445,7 +2481,7 @@ double calc_shell(void)
 }
 double calc_nnl_rcut(void)
 {
-  double rcutA, rcutB;
+  double rcutA, rcutB, del;
 #ifdef EDHE_FLEX
   int kk;
   double ax[3];
@@ -2454,13 +2490,23 @@ double calc_nnl_rcut(void)
   int i;
   double rcutMax=0.0;
 #endif 
+  /* nel caso in cui sono si usino le NNL è inutile aggiungere rNebrShell 
+     per il calcolo di rcut. */
+  if (OprogStatus.useNNL)
+    {
+      del = OprogStatus.rNebrShell;
+    }
+  else
+    {
+      del = 0.0;
+    }
 #ifdef EDHE_FLEX
   for (i = 0; i < Oparams.parnum; i++)
     {
 #ifdef MD_SPHERICAL_WALL
-      if (typeOfPart[i] == Oparams.ntypes-1)
+      if (typeOfPart[i] == sphWall)
 	continue;
-      if (typeOfPart[i] == Oparams.ntypes-2)
+      if (typeOfPart[i] == sphWallOuter)
 	continue;
 #endif
       for (kk=0; kk < 3; kk++)
@@ -2468,11 +2514,9 @@ double calc_nnl_rcut(void)
       /* nel caso si tratti di un oggetto a simmetria sferica l'orientazione rimane della NNL (che è un cubo) rimane invariata
 	 nel tempo per cui si può prendere rcut appena più grande del lato della NNL cubica*/
       if (is_a_sphere_NNL[i])
-	rcutA = 2.0*max3(ax[0]+OprogStatus.rNebrShell,ax[1]+OprogStatus.rNebrShell,ax[2]+OprogStatus.rNebrShell);
+	rcutA = 2.0*max3(ax[0]+del,ax[1]+del,ax[2]+del);
       else
-	rcutA = 2.0*sqrt(Sqr(ax[0]+OprogStatus.rNebrShell)+
-	      		 Sqr(ax[1]+OprogStatus.rNebrShell)+
-	      		 Sqr(ax[2]+OprogStatus.rNebrShell));
+	rcutA = 2.0*sqrt(Sqr(ax[0]+del)+Sqr(ax[1]+del)+Sqr(ax[2]+del));
       if  (rcutA  > rcutMax)
 	rcutMax = rcutA;
     }
@@ -2481,20 +2525,14 @@ double calc_nnl_rcut(void)
 #elif defined(MD_POLYDISP) 
  for (i = 0; i < Oparams.parnum; i++)
     {
-      rcutA = 2.0*sqrt(Sqr(axaP[i]+OprogStatus.rNebrShell)+
-		   Sqr(axbP[i]+OprogStatus.rNebrShell)+
-		   Sqr(axcP[i]+OprogStatus.rNebrShell));
+      rcutA = 2.0*sqrt(Sqr(axaP[i]+del)+Sqr(axbP[i]+del)+Sqr(axcP[i]+del));
       if  (rcutA  > rcutMax)
 	rcutMax = rcutA;
     }
   return 1.01*rcutMax;
 #else
-  rcutA = 2.0*sqrt(Sqr(Oparams.a[0]+OprogStatus.rNebrShell)+
-		   Sqr(Oparams.b[0]+OprogStatus.rNebrShell)+
-		   Sqr(Oparams.c[0]+OprogStatus.rNebrShell));
-  rcutB = 2.0*sqrt(Sqr(Oparams.a[1]+OprogStatus.rNebrShell)+
-		   Sqr(Oparams.b[1]+OprogStatus.rNebrShell)+
-		   Sqr(Oparams.c[1]+OprogStatus.rNebrShell));
+  rcutA = 2.0*sqrt(Sqr(Oparams.a[0]+del)+Sqr(Oparams.b[0]+del)+Sqr(Oparams.c[0]+del));
+  rcutB = 2.0*sqrt(Sqr(Oparams.a[1]+del)+Sqr(Oparams.b[1]+del)+Sqr(Oparams.c[1]+del));
   return 1.01*max(rcutA, rcutB);
 #endif
 }
@@ -3404,6 +3442,7 @@ void usrInitAft(void)
   double phiIni;
   int Nm, i, sct, overlap, k;
   COORD_TYPE vcmx, vcmy, vcmz, MAXAX;
+  int mls, ls;
 #ifndef EDHE_FLEX
   COORD_TYPE *m;
 #else
@@ -4534,34 +4573,65 @@ void usrInitAft(void)
     }
   printf("MAXAX: %.15G rcut: %.15G\n", MAXAX, Oparams.rcut);
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+  if (OprogStatus.multipleLL)
+    {
+      numll = Oparams.ntype*(Oparams.ntypes+1)/2;
+      rcutMLL = malloc(sizeof(double)*numll);
+      set_cells_size();
+      for (k = 0; k < numll; k++)
+	{
+	  ls = cellsxMLL[k]*cellsyMLL[k]*cellszMLL[k];
+	  cellListMLL[k] = malloc(sizeof(int)*(mls+Oparams.parnum));
+	  if (k==0|| ls > mls)
+	    mls = ls;
+	}
+      for (k = 0; k < Oparams.ntypes; k++)
+	{
+	  inCellMLL[k][0] = malloc(sizeof(int)*Oparams.parnum);
+	  inCellMLL[k][1] = malloc(sizeof(int)*Oparams.parnum);
+	  inCellMLL[k][2] = malloc(sizeof(int)*Oparams.parnum);
+	}
+#ifdef MD_EDHEFLEX_OPTNNL
+      cellList_NNL = malloc(sizeof(int)*(mls+Oparams.parnum));
+      inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
+      inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
+      inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
+      rxNNL = malloc(sizeof(double)*Oparams.parnum);
+      ryNNL = malloc(sizeof(double)*Oparams.parnum);
+      rzNNL = malloc(sizeof(double)*Oparams.parnum);
+#endif
+    }
+  else
+    {
 #ifdef MD_LXYZ
-  cellsx = L[0] / Oparams.rcut;
-  cellsy = L[1] / Oparams.rcut;
-  cellsz = L[2] / Oparams.rcut;
+      cellsx = L[0] / Oparams.rcut;
+      cellsy = L[1] / Oparams.rcut;
+      cellsz = L[2] / Oparams.rcut;
 #else
-  cellsx = L / Oparams.rcut;
-  cellsy = L / Oparams.rcut;
+      cellsx = L / Oparams.rcut;
+      cellsy = L / Oparams.rcut;
 #ifdef MD_GRAVITY
-  cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
+      cellsz = (Lz+OprogStatus.extraLz) / Oparams.rcut;
 #else
-  cellsz = L / Oparams.rcut;
+      cellsz = L / Oparams.rcut;
 #endif 
 #endif
-  printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
-	 cellsx, cellsy, cellsz);
-  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
-  inCell[0] = malloc(sizeof(int)*Oparams.parnum);
-  inCell[1]= malloc(sizeof(int)*Oparams.parnum);
-  inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+      printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
+	     cellsx, cellsy, cellsz);
+      cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+      inCell[0] = malloc(sizeof(int)*Oparams.parnum);
+      inCell[1]= malloc(sizeof(int)*Oparams.parnum);
+      inCell[2] = malloc(sizeof(int)*Oparams.parnum);
 #ifdef MD_EDHEFLEX_OPTNNL
-  cellList_NNL = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
-  inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
-  inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
-  inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
-  rxNNL = malloc(sizeof(double)*Oparams.parnum);
-  ryNNL = malloc(sizeof(double)*Oparams.parnum);
-  rzNNL = malloc(sizeof(double)*Oparams.parnum);
+      cellList_NNL = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+      inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
+      inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
+      inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
+      rxNNL = malloc(sizeof(double)*Oparams.parnum);
+      ryNNL = malloc(sizeof(double)*Oparams.parnum);
+      rzNNL = malloc(sizeof(double)*Oparams.parnum);
 #endif
+    }
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
 #ifdef EDHE_FLEX
   if (Oparams.maxbondsSaved==-1)
