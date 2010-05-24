@@ -13,6 +13,7 @@
    che solo l'interazione mista va considerata scartando quella diretta.
 */
 extern double rxC, ryC, rzC;
+double *rcutMLL;
 int is_superellips_type(int pt)
 {
   if (typesArr[pt].n[0]==2.0 && typesArr[pt].n[1]==2.0 &&
@@ -151,7 +152,7 @@ void set_cells_size(void)
     {
       //if (Oparams.rcut[nl] <= 0.0)
 	//Oparams.rcut[nl] = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
-      rcut = calc_rcut(nl);
+      rcut = rcutMLL[nl] = calc_rcut(nl);
 #ifdef MD_LXYZ
       cellsx[nl] = L[0] / rcut;
       cellsy[nl] = L[1] / rcut;
@@ -361,7 +362,7 @@ void ProcessCellCrossingMLL(void)
       docellcrossMLL(2, vz[evIdA], &(rz[evIdA]), cellszMLL[nl], nc);
       break;
     }
-  PredictCellCrossMLL(evIdA, nc);
+  PredictCellCross(evIdA, nc);
   PredictCollMLL(evIdA, evIdB, nl);
   n = (inCellMLL[nc][2][evIdA] * cellsyMLL[nl] + inCellMLL[nc][1][evIdA])*cellsxMLL[nl] + 
     inCellMLL[nc][0][evIdA] + Oparams.parnum;
@@ -405,7 +406,7 @@ void ProcessCellCrossingMLL(void)
 	      DeleteEvent(crossevtodel[nc_bw][evIdA]);
 	      crossevtodel[nc_bw][evIdA] = -1;
 	    }
-	  PredictCellCrossMLL(evIdA, nc_bw);
+	  PredictCellCross(evIdA, nc_bw);
 	  PredictCollMLL(evIdA, evIdB, nlcross_bw);
 	  n = (inCellMLL[nc_bw][2][evIdA] * cellsyMLL[nlcross_bw] + inCellMLL[nc_bw][1][evIdA])*cellsxMLL[nlcross_bw] + 
 	    inCellMLL[nc_bw][0][evIdA] + Oparams.parnum;
@@ -488,7 +489,7 @@ void PredictHardWall(int na, int evCode, double cctime)
    con lo stesso tipo mentre 0 = interazione con particelle di tipo 0, 2 interazione con particelle di tipo 2
    3 con quelle di tipo 3. */
 
-double PredictCellCross(int na, int nc, int *ignore)
+double PredictCellCross(int na, int nc)
 {
 #ifdef EDHE_FLEX
   double cctime=-1.0;
@@ -638,7 +639,6 @@ double PredictCellCross(int na, int nc, int *ignore)
   MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
 
-  *ignore = ignorecross[k];
   if (!ignorecross[k])
     {
 #ifdef MD_EDHEFLEX_WALL 
@@ -716,6 +716,17 @@ void rebuildMultipleLL(void)
 	  cellListMLL[nl][j] = n;
 	}
     }
+}
+int use_bounding_spheres(int na, int n)
+{
+#ifdef EDHE_FLEX
+  if (is_a_sphere_NNL[na] && is_a_sphere_NNL[n])
+    return 0;
+  else
+    return 1;
+#else
+  return 1;
+#endif
 }
 void PredictCollMLL(int na, int nb, int nl, double cctime) 
 {
@@ -840,12 +851,237 @@ void PredictCollMLL(int na, int nb, int nl, double cctime)
 		     mista e non due) */
 		  if (nl >= Oparams.ntypes && typeOfPart[n] == typena)
 		    continue;
-#ifdef EDHE_FLEX
-		  if (!may_interact_all(na, n))
-		    continue;
-#endif
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
+#ifdef EDHE_FLEX
+    		      if (!may_interact_all(na, n))
+    			continue;
+#endif
+		      /* maxax[...] è il diametro dei centroidi dei due tipi
+		       * di ellissoidi */
+
+		      if (use_bounding_spheres(na, n))
+			{
+			  if (OprogStatus.targetPhi > 0)
+			    {
+			      sigSq = Sqr(max_ax(na)+max_ax(n)+OprogStatus.epsd);
+			      //printf("maxax[n]=%.15G max_ax(n)=%.15G\n", maxax[n], max_ax(n));
+			      //printf("sigSqHere=%.15G (%.15G)\n", sigSq, Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd));
+
+			    }
+			  else
+			    {
+#if defined(MD_POLYDISP) || defined(EDHE_FLEX)
+			      sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
+			      if (na < parnumA && n < parnumA)
+				sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+			      else if (na >= parnumA && n >= parnumA)
+				sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+			      else
+				sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#endif
+			    }
+			  MD_DEBUG20(printf("sigSq: %f maxax[%d]:%.15G maxax[%d]:%.15G\n", sigSq, na, maxax[na],
+					    n, maxax[n]));
+			  tInt = Oparams.time - atomTime[n];
+			  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+			  dv[0] = vx[na] - vx[n];
+			  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+			  dv[1] = vy[na] - vy[n];
+#ifdef MD_GRAVITY
+			  dr[2] = rz[na] - 
+			    (rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
+			  dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
+#else
+			  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+			  dv[2] = vz[na] - vz[n];
+
+#endif
+			  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+			  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+			  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+			  d = Sqr (b) - vv * (distSq - sigSq);
+
+			  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+			    {
+			      /* i centroidi non collidono per cui non ci può essere
+			       * nessun urto sotto tali condizioni */
+			      continue;
+			    }
+			  MD_DEBUG40(printf("PREDICTING na=%d n=%d\n", na , n));
+			  if (vv==0.0)
+			    {
+			      if (distSq >= sigSq)
+				continue;
+			      /* la vel relativa è zero e i centroidi non si overlappano quindi
+			       * non si possono urtare! */
+			      t1 = t = 0;
+			      t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+					   urtare ruotando */
+			    }
+			  else if (distSq >= sigSq)
+			    {
+			      t = t1 = - (sqrt (d) + b) / vv;
+			      t2 = (sqrt (d) - b) / vv;
+			      overlap = 0;
+			      MD_DEBUG40(printf("qui..boh sig:%.15G dist=%.15G\n", sqrt(sigSq), sqrt(distSq)));
+			    }
+			  else 
+			    {
+			      MD_DEBUG40(printf("Centroids overlap!\n"));
+			      t2 = t = (sqrt (d) - b) / vv;
+			      t1 = 0.0; 
+			      overlap = 1;
+			      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+			      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+			    }
+			  MD_DEBUG40(printf("t=%f curtime: %f b=%f d=%f t1=%.15G t2=%.15G\n", t, Oparams.time, b ,d, t1, t2));
+			  MD_DEBUG40(printf("dr=(%f,%f,%f) sigSq: %f\n", dr[0], dr[1], dr[2], sigSq));
+			  //t += Oparams.time; 
+			  t2 += Oparams.time;
+			  t1 += Oparams.time;
+			}
+		      else
+			{
+			  t1 = 0.0;
+			  t2 = timbig;
+			}
+#if 0 
+			  calcDist(Oparams.time, na, n, shift, r1, r2);
+			  continue;
+			  exit(-1);
+#endif
+#ifdef MD_PATCHY_HE
+		      evtime = t2;
+		      collCode = MD_EVENT_NONE;
+		      rxC = ryC = rzC = 0.0;
+		      MD_DEBUG20(printf("time=%.15G t1=%.15G t2=%.15G maxax[%d]:%.15G maxax[%d]:%.15G\n", 
+					Oparams.time, t1, t2, na, maxax[na], n, maxax[n]));
+		      MD_DEBUG20(printf("t1=%.15G t2=%.15G\n", t1, t2));
+		      collCodeOld = collCode;
+		      evtimeHC = evtime;
+		      acHC = ac = 0;
+		      bcHC = bc = 0;
+#ifdef EDHE_FLEX
+		      if (OprogStatus.targetPhi <= 0.0)
+			{
+			  /* during growth disable interactions between spots */
+			  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+			    {
+			      collCode = MD_EVENT_NONE;
+			    }
+			}
+		      MD_DEBUG40(if (collCode!=MD_EVENT_NONE) printf("na=%d ac=%d n=%d bc=%d\n", na, ac, n, bc));
+		      MD_DEBUG(if (collCode!=MD_EVENT_NONE) check_these_bonds(na, n, shift, evtime));
+#else
+		      if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
+							(na >= Oparams.parnumA && n < Oparams.parnumA)))
+			{
+			  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+			    {
+			      collCode = MD_EVENT_NONE;
+			    }
+			}
+#endif
+		      if (collCode!=MD_EVENT_NONE)
+			t2 = evtime+1E-7;
+#ifdef ED_HESW
+		      /* per ora assumiamo un solo corpo rigido extra che serve per avere 
+			 la buca quadrata, l'urto tra le buche ellissoidali viene considerato
+			 come un urto tra gli spot 0 (per semplicità) */
+		      if (typesArr[typeOfPart[na]].nhardobjs == 1 &&
+			  typesArr[typeOfPart[n]].nhardobjs == 1)
+			{
+			  if (!locate_contact_hesw(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+			    { 
+			      collCode = MD_EVENT_NONE;
+			    }
+			}
+#endif
+
+		      if (locate_contact(na, n, shift, t1, t2, vecg))
+			{
+			  if (collCode == MD_EVENT_NONE || (collCode!=MD_EVENT_NONE && vecg[4] <= evtime))
+			    {
+			      collCode = MD_CORE_BARRIER;
+			      ac = bc = 0;
+			      evtime = vecg[4];
+			      rxC = vecg[0];
+			      ryC = vecg[1];
+			      rzC = vecg[2];
+			    }
+#ifdef MD_SAVE_DISTANCE
+    			  printf("found collision exiting...\n");
+    			  //exit(-1);
+#endif
+			}
+		      else
+			{
+			  if (collCode == MD_EVENT_NONE)
+			    continue;
+			}
+
+		      t = evtime;
+		      MD_DEBUG40(printf("(%d,%d)-(%d,%d) troot=%.15G\n", na, ac, n, bc, evtime));
+		      MD_DEBUG40(printf("evtimeHC=%.15G",evtimeHC));
+		      MD_DEBUG40(printf("dist(t=%.15G,%d-%d):%.15G dist(t=%.15G)=%.15G\n", evtimeHC, na, n, 
+					calc_dist_ij(na, n, evtimeHC), evtime, calc_dist_ij(na, n, evtime)));
+#else
+		      if (!locate_contact(na, n, shift, t1, t2, vecg))
+		      	continue;
+
+		      rxC = vecg[0];
+		      ryC = vecg[1];
+		      rzC = vecg[2];
+		      MD_DEBUG(printf("A x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)-B x(%.15f,%.15f,%.15f) v(%.15f,%.15f,%.15f)",
+				      rx[na], ry[na], rz[na], vx[na], vy[na], vz[na],
+				      rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]));
+		      t = vecg[4];
+
+#endif
+#ifdef MD_PATCHY_HE
+		      if (t < Oparams.time)
+			{
+#if 1
+			  printf("time:%.15f tInt:%.15f\n", Oparams.time,
+				 tInt);
+			  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+	     					      Sqr(dr[2]))-1.0 );
+			  printf("STEP: %lld\n", (long long int)Oparams.curStep);
+			  printf("atomTime: %.10f \n", atomTime[n]);
+			  printf("n:%d na:%d\n", n, na);
+			  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
+#endif
+			  t = Oparams.time;
+			}
+
+#else
+		      if (t < 0)
+			{
+#if 1
+			  printf("time:%.15f tInt:%.15f\n", Oparams.time,
+				 tInt);
+			  printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+	     					      Sqr(dr[2]))-1.0 );
+			  printf("STEP: %lld\n", (long long int)Oparams.curStep);
+			  printf("atomTime: %.10f \n", atomTime[n]);
+			  printf("n:%d na:%d\n", n, na);
+			  printf("jZ: %d jY:%d jX: %d n:%d\n", jZ, jY, jX, n);
+#endif
+			  t = 0;
+			}
+#endif
+		      /* il tempo restituito da newt() è già un tempo assoluto */
+#ifdef MD_PATCHY_HE
+		      MD_DEBUG40(printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc));
+		      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
+		      //printf("time: %f Adding collision (%d,%d)-(%d,%d)\n", t, na, ac, n, bc);
+
+#else
+		      ScheduleEvent (na, n, t);
+#endif
+		      MD_DEBUG40(printf("schedule event [collision](%d,%d)-(%d,%d) collCode=%d\n", na, ac, n, bc, collCode));
 
 		    }
 		} 
@@ -873,10 +1109,491 @@ void PredictEventMLL(void)
       PredictCollMLL(evIdB, evIdA, nl);
     }
 }
-
-BuildNNLwithMLL()
+#ifdef MD_EDHEFLEX_OPTNNL
+void rebuildMultipleLL_NLL(int nl)
 {
+  /* N.B. Se si usano le NNL ottimizzate il centro di massa geometrico delle NNL non coincide con il 
+     centro di massa degli ellissoidi, in tale caso quindi le linked lists degli ellissoidi vengono usate 
+     per avere una sovrastima in caso di urti con la parete dura e per mantenere gli ellissoidi nella
+     first box. */
+  //double L2, invL;
+#ifdef MD_LXYZ
+  int kk;
+#endif
+  int j, n, numll, nl;
+  numll = Oparams.ntype*(Oparams.ntypes+1)/2;
+#ifdef MD_LXYZ
+  for (kk = 0; kk < 3; kk++)
+    {
+      L2[kk] = 0.5 * L[kk];
+      invL[kk] = 1.0/L[kk];
+    }
+#else
 
-
+  L2 = 0.5 * L;
+  invL = 1.0/L;
+#endif
+  set_cells_size();
+  for (j = 0; j < cellsxMLL[nl]*cellsyMLL[nl]*cellszMLL[nl] + Oparams.parnum; j++)
+    cellList_NLL[j] = -1;
+    
+  /* NOTA: rcut delle LL per le NNL e' uguale a quello delle LL per gli ellissoidi
+     ma quest'ultimo potrebbe essere scelto ad hoc. Inoltre le LL per gli ellissoidi 
+     vengono solo usate per avere una upper limit per il tempo di collisione contro la pareti dure */  
+  /* rebuild event calendar */
+ 
+  for (n = 0; n < Oparams.parnum; n++)
+    {
+#ifdef MD_SPHERICAL_WALL
+      if (n==sphWall)
+	{
+	  cellList_NNL[sphWall]=-1;
+	  continue;
+	}
+      if (n==sphWallOuter)
+	{
+	  cellList_NNL[sphWallOuter]=-1;
+	  continue;
+	}
+#endif
+      /* reduce to first box */
+#ifdef MD_LXYZ
+      rxNNL[n] = nebrTab[n].r[0] - L[0]*rint(nebrTab[n].r[0]*invL[0]);
+      ryNNL[n] = nebrTab[n].r[1] - L[1]*rint(nebrTab[n].r[1]*invL[1]);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	rzNNL[n] = nebrTab[n].r[2] - L[2]*rint(nebrTab[n].r[2]*invL[2]);
+      else
+	rzNNL[n] = nebrTab[n].r[2];
+#else
+      rzNNL[n] = nebrTab[n].r[2] - L[2]*rint(nebrTab[n].r[2]*invL[2]);
+#endif
+      inCell_NNL[0][n] =  (rxNNL[n] + L2[0]) * cellsxMLL[nl] / L[0];
+      inCell_NNL[1][n] =  (ryNNL[n] + L2[1]) * cellsyMLL[nl] / L[1];
+      inCell_NNL[2][n] =  (rzNNL[n] + L2[2]) * cellszMLL[nl] / L[2];
+#else
+      rxNNL[n] = nebrTab[n].r[0] - L*rint(nebrTab[n].r[0]*invL);
+      ryNNL[n] = nebrTab[n].r[1] - L*rint(nebrTab[n].r[1]*invL);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	rzNNL[n] = nebrTab[n].r[2] - L*rint(nebrTab[n].r[2]*invL);
+      else
+	rzNNL[n] = nebrTab[n].r[2];
+#else
+      rzNNL[n] = nebrTab[n].r[2] - L*rint(nebrTab[n].r[2]*invL);
+#endif
+      inCell_NNL[0][n] =  (rxNNL[n] + L2) * cellsxMLL[nl] / L;
+      inCell_NNL[1][n] =  (ryNNL[n] + L2) * cellsyMLL[nl] / L;
+#ifdef MD_GRAVITY
+      inCell_NNL[2][n] =  (rzNNL[n] + Lz2) * cellszMLL[nl] / (Lz+OprogStatus.extraLz);
+#else
+      inCell_NNL[2][n] =  (rzNNL[n] + L2)  * cellszMLL[nl] / L;
+#endif
+#endif
+      j = (inCell_NNL[2][n]*cellsyMLL[nl] + inCell_NNL[1][n])*cellsxMLL[nl] + 
+       inCell_NNL[0][n] + Oparams.parnum;
+      cellList_NNL[n] = cellList_NNL[j];
+      cellList_NNL[j] = n;
+    }
+}
+#endif
+void BuildNNL_MLL(int na, int nl) 
+{
+  double shift[NDIM];
+  int kk;
+  double dist;
+  int *inCellL[3], *cellListL;
+#ifndef MD_NNLPLANES
+  double vecgsup[8], alpha;
+#endif
+  /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
+  /*double cels[NDIM];*/
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  nebrTab[na].len = 0;
+  MD_DEBUG32(printf("Building NNL...\n"));
+#ifdef MD_SPHERICAL_WALL
+  if (na==sphWall || na==sphWallOuter)
+    return;
+#endif
+  for (k = 0; k < NDIM; k++)
+    { 
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  for (kk=0; kk < 3; kk++)
+    shift[kk] = 0;
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+#ifdef MD_EDHEFLEX_OPTNNL
+  for (k=0; k < 3; k++)
+    inCellL[k] = inCell_NNL[k];
+  cellListL = cellList_NNL;
+#else
+  for (k=0; k < 3; k++)
+    inCellL[k] = inCellMLL[nl][k];
+  cellListL = cellListMLL[nl];
+#endif
+#if defined(MD_EDHEFLEX_WALL)
+  /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
+  if (OprogStatus.hardwall)
+    {
+      if (inCellL[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (inCellL[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+    }
+#endif
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCellL[2][na] + iZ;    
+      shift[2] = 0.;
+      /* apply periodic boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	  shift[2] = - L[2];
+#else
+	  shift[2] = - L;
+#endif
+	} 
+      else if (jZ == cellsz) 
+	{
+	  jZ = 0;    
+#ifdef MD_LXYZ
+	  shift[2] = L[2];
+#else
+	  shift[2] = L;
+#endif
+	}
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCellL[1][na] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsy - 1;    
+#ifdef MD_LXYZ
+	      shift[1] = -L[1];
+#else
+	      shift[1] = -L;
+#endif
+	    } 
+	  else if (jY == cellsy) 
+	    {
+	      jY = 0;    
+#ifdef MD_LXYZ
+	      shift[1] = L[1];
+#else
+	      shift[1] = L;
+#endif
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCellL[0][na] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		  shift[0] = - L[0];
+#else
+		  shift[0] = - L;
+#endif
+		} 
+	      else if (jX == cellsx) 
+		{
+		  jX = 0;   
+#ifdef MD_LXYZ
+		  shift[0] = L[0];
+#else
+		  shift[0] = L;
+#endif
+		}
+	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+	      for (n = cellListL[n]; n > -1; n = cellListL[n]) 
+		{
+		  if (n != na)// && n != nb && (nb >= -1 || n < na)) 
+		    {
+#ifdef EDHE_FLEX
+		      if (!may_interact_all(na, n))
+			continue;
+#endif
+		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
+#ifdef MD_NNLPLANES
+		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift); 
+#else
+		      dist = calcDistNegNNLoverlap(Oparams.time, 0.0, na, n, shift,
+						   r1, r2, &alpha, vecgsup, 1); 
+#endif
+		      /* 0.1 è un buffer per evitare problemi, deve essere un parametro 
+		       * in OprogStatus */
+		      if (dist < 0)
+			{
+			  MD_DEBUG32(printf("Adding ellipsoid N. %d to NNL of %d\n", n, na));
+ 			  nebrTab[na].list[nebrTab[na].len] = n;
+			  //for (kk=0; kk < 3; kk++)
+			  //nebrTab[na].shift[nebrTab[na].len][kk] = shift[kk];
+			  nebrTab[na].len++;
+			  check_nnl_size(na);
+			}
+		    }
+		} 
+	    }
+	}
+    }
 }
 
+void BuildAllNNL_MLL(void)
+{
+  int nl, i;
+  for (nl = 0; nl < maxnll; nl++)
+    {
+#ifdef MD_EDHEFLEX_OPTNNL
+      rebuildMultipleLL_NLL(nl);
+#endif
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  BuildNNL_MLL(i, nl);
+	}
+    }
+}
+void PredictCollMLL_NLL(int na, int nb, int nl)
+{
+  int i;
+#ifdef MD_SPHERICAL_WALL
+  locate_spherical_wall(na, 0);
+  locate_spherical_wall(na, 1);
+#endif 
+  /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni (visto che in tal caso stiamo 
+     usando le NNL */
+  if (nb >= ATOM_LIMIT+2*NDIM)
+    return;
+  for (i=0; i < nebrTab[na].len; i++)
+    {
+      n = nebrTab[na].list[i]; 
+#if 0
+      if (na==35 || na==16)
+	printf("[PredictEventNNL] na=%d n=%d nb=%d\n",na,  n, nb);
+#endif
+      if (!(n != na && n!=nb && (nb >= -1 || n < na)))
+	continue;
+      	
+      //
+      // for (kk=0; kk < 3; kk++)
+      //	shift[kk] = nebrTab[na].shift[i][kk];
+#ifdef MD_LXYZ
+      shift[0] = L[0]*rint((rx[na]-rx[n])/L[0]);
+      shift[1] = L[1]*rint((ry[na]-ry[n])/L[1]);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+      else
+	shift[2] = 0.0;
+#else
+      shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+#endif
+#else
+      shift[0] = L*rint((rx[na]-rx[n])/L);
+      shift[1] = L*rint((ry[na]-ry[n])/L);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	shift[2] = L*rint((rz[na]-rz[n])/L);
+      else
+	shift[2] = 0.0;
+#else
+      shift[2] = L*rint((rz[na]-rz[n])/L);
+#endif
+#endif
+      /* maxax[...] è il diametro dei centroidi dei due tipi
+       * di ellissoidi */
+      if (use_bounding_spheres(na, n))
+	{
+	  if (OprogStatus.targetPhi > 0)
+	    {
+	      sigSq = Sqr(max_ax(na)+max_ax(n)+OprogStatus.epsd);
+	    }
+	  else
+	    {
+#ifdef MD_POLYDISP
+	      sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
+#ifdef EDHE_FLEX
+	      sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+	      //printf("max=(%d)%.15G (%d)%.15G\n", n, maxax[n], na, maxax[na]);
+#else
+	      if (na < parnumA && n < parnumA)
+		sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+	      else if (na >= parnumA && n >= parnumA)
+		sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+	      else
+		sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#endif
+#endif
+	    }
+	  MD_DEBUG32(printf("n=%d na=%d maxaxes=%f %f sigSq: %f\n", n, na, maxax[n], maxax[na], sigSq));
+	  tInt = Oparams.time - atomTime[n];
+	  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+	  dv[0] = vx[na] - vx[n];
+	  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+	  dv[1] = vy[na] - vy[n];
+#ifdef MD_GRAVITY
+	  dr[2] = rz[na] - 
+	    (rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
+	  dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
+#else
+	  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+	  dv[2] = vz[na] - vz[n];
+#endif
+	  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+	  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+	  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+	  d = Sqr (b) - vv * (distSq - sigSq);
+	  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+	    {
+	      /* i centroidi non collidono per cui non ci può essere
+	       * nessun urto sotto tali condizioni */
+	      continue;
+	    }
+	  MD_DEBUG32(printf("PREDICTING na=%d n=%d\n", na , n));
+	  if (vv==0.0)
+	    {
+	      if (distSq >= sigSq)
+		{
+		  continue;
+		}
+	      /* la vel relativa è zero e i centroidi non si overlappano quindi
+	       * non si possono urtare! */
+	      t1 = t = 0;
+	      t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+			   urtare ruotando */
+	    }
+	  else if (distSq >= sigSq)
+	    {
+	      t = t1 = - (sqrt (d) + b) / vv;
+	      t2 = (sqrt (d) - b) / vv;
+	      overlap = 0;
+	    }
+	  else 
+	    {
+	      MD_DEBUG(printf("Centroids overlap!\n"));
+	      t2 = t = (sqrt (d) - b) / vv;
+	      t1 = 0.0; 
+	      overlap = 1;
+	      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+	      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+	    }
+	  MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
+	  MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
+	  //t += Oparams.time; 
+	  t2 += Oparams.time;
+	  t1 += Oparams.time;
+	}
+     else
+       {
+	 t1 = 0.0;
+	 t2 = timbig;
+       } 
+#if 0
+      tnnl = min(nebrTab[na].nexttime,nebrTab[n].nexttime);
+      if (tnnl < t2)
+	t2 = tnnl;
+#else      
+      /* WARNING: OprogStatus.h è un buffer di sicurezza */
+      if (nextNNLrebuild < t2)
+	t2 = nextNNLrebuild + OprogStatus.h;
+#endif
+      // t1 = Oparams.time;
+      // t2 = nebrTab[na].nexttime;//,nebrTab[n].nexttime);
+
+      MD_DEBUG32(printf("nexttime[%d]:%.15G\n", n, nebrTab[n].nexttime));
+      MD_DEBUG32(printf("locating contact between %d and %d t1=%.15G t2=%.15G\n", na, n, t1, t2));
+#ifdef MD_PATCHY_HE
+      evtime = t2;
+      collCode = MD_EVENT_NONE;
+      rxC = ryC = rzC = 0.0;
+      MD_DEBUG31(printf("t1=%.15G t2=%.15G\n", t1, t2));
+      collCodeOld = collCode;
+      evtimeHC = evtime;
+      acHC = ac = 0;
+      bcHC = bc = 0;
+#ifdef EDHE_FLEX
+      if (OprogStatus.targetPhi <=0 && typesArr[typeOfPart[na]].nspots > 0 && typesArr[typeOfPart[n]].nspots > 0)
+	{
+	  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+	    {
+	      collCode = MD_EVENT_NONE;
+	    }
+	}
+#else
+      if (OprogStatus.targetPhi <=0 && ((na < Oparams.parnumA && n >= Oparams.parnumA)|| 
+					(na >= Oparams.parnumA && n < Oparams.parnumA)))
+	{
+	  if (!locate_contactSP(na, n, shift, t1, t2, &evtime, &ac, &bc, &collCode))
+	    {
+	      collCode = MD_EVENT_NONE;
+	    }
+	}
+#endif
+      if (collCode!=MD_EVENT_NONE)
+	t2 = evtime+1E-7;
+      if (locate_contact(na, n, shift, t1, t2, vecg))
+	{
+	  if (collCode == MD_EVENT_NONE || (collCode!=MD_EVENT_NONE && vecg[4] <= evtime))
+	    {
+	      collCode = MD_CORE_BARRIER;
+	      ac = bc = 0;
+	      evtime = vecg[4];
+	      rxC = vecg[0];
+	      ryC = vecg[1];
+	      rzC = vecg[2];
+	    }
+#ifdef MD_SAVE_DISTANCE
+	  printf("found collision exiting...\n");
+	  //exit(-1);
+#endif
+	}
+      else
+	{
+	  if (collCode == MD_EVENT_NONE)
+	    continue;
+	}
+
+      t = evtime;
+#else
+      if (!locate_contact(na, n, shift, t1, t2, vecg))
+	{
+	  continue;
+	}
+      rxC = vecg[0];
+      ryC = vecg[1];
+      rzC = vecg[2];
+      t = vecg[4];
+#endif
+#ifdef MD_PATCHY_HE
+      MD_DEBUG32(printf("Scheduling collision between %d and %d ac=%d bc=%d at t=%.15G\n", na, n, ac, bc, t));
+      //printf("Scheduling collision between %d and %d ac=%d bc=%d at t=%.15G\n", na, n, ac, bc, t);
+      ScheduleEventBarr (na, n,  ac, bc, collCode, t);
+#else
+      ScheduleEvent (na, n, t);
+#endif
+    }
+}
+void PredictEventNLL_MLL(int na, int nb)
+{
+  int nc, nl;
+  double mintA, mintB, tA, tB;
+  for (nc = 0; nc < Oparams.ntypes; nc++)
+    {
+      PredictCellCross(evIdA, nc);
+      PredictCellCross(evIdB, nc);
+    }
+  numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
+  for (nl = 0; nl < numll; nl++)
+    {
+      PredictCollMLL_NLL(evIdA, -1, nl);
+    }
+  for (nl = 0; nl < numll; nl++)
+    {
+      PredictCollMLL_NLL(evIdB, evIdA, nl);
+    }
+
+}
