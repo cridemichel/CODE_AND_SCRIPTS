@@ -19,6 +19,10 @@ extern double rxC, ryC, rzC;
 #ifdef MD_SPHERICAL_WALL
 extern int sphWall, sphWallOuter;
 #endif
+#if defined(MD_MULTIPLE_LL) 
+extern int **crossevtodel;
+#endif
+
 #define MD_DEBUG20(x) 
 #if 0
 #define treeLeft   tree[0]
@@ -180,7 +184,7 @@ void enlarge_queue_size(void)
 #endif
 }
 #ifdef MD_CALENDAR_HYBRID
-int get_new_node(int idA, int idB)
+int get_new_node(int idA, int idB, int idata)
 {
   int idNew;
   if ((idB < ATOM_LIMIT ||
@@ -199,7 +203,15 @@ int get_new_node(int idA, int idB)
       treeIdA[0] = treeCircAR[treeIdA[0]];
     }
   else 
-    idNew = idA + 1;
+    {
+      idNew = idA + 1;
+#ifdef MD_MULTIPLE_LL
+      /* notare comunque che se idata=typeOfPart[idA] allora
+	 l'assegnazione è inutile */
+      if (OprogStatus.multipleLL)
+	crossevtodel[idata][idA] = idNew;  
+#endif
+    }
   MD_DEBUG34(printf("idNew=%d\n", idNew));
   /* Se qui vuol dire che si tratta di un cell-crossing o 
      di un urto con parete
@@ -295,7 +307,7 @@ void setPQnode(int idNew, int idA, int idB, int idata, int idatb, int idcollcode
 void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent)
 {
   int idNew;
-  idNew = get_new_node(idA, idB);
+  idNew = get_new_node(idA, idB, idata);
   /* assegna i dati al nodo relativi all'evento */
   setPQnode(idNew, idA, idB, idata, idatb, idcollcode, tEvent, rxC, ryC, rzC);
   insertInEventQ(idNew);
@@ -331,7 +343,15 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
       treeIdA[0] = treeCircAR[treeIdA[0]];
     }
   else 
-    idNew = idA + 1;
+    {
+#ifdef MD_MULTIPLE_LL
+      /* notare comunque che se idata=typeOfPart[idA] allora
+	 l'assegnazione è inutile */
+      if (OprogStatus.multipleLL)
+	crossevtodel[idata][idA] = idNew;  
+#endif
+      idNew = idA + 1;
+    }
   MD_DEBUG34(printf("idNew=%d\n", idNew));
   /* Se qui vuol dire che si tratta di un cell-crossing o 
      di un urto con parete
@@ -421,7 +441,7 @@ void setPQnode(int idNew, int idA, int idB, int idata, int idatb, int idcollcode
 void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, double tEvent)
 {
   int idNew;
-  idNew = get_new_node(idA, idB);
+  idNew = get_new_node(idA, idB, idata);
   /* assegna i dati al nodo relativi all'evento */
   setPQnode(idNew, idA, idB, idata, idatb, idcollcode, tEvent);
   insertInEventQ(idNew);
@@ -601,6 +621,9 @@ void NextEvent (void)
   /* Il nodo root (0), a cui non è associato alcun evento,
    * è linkato con il suo right pointer al primo nodo che contiene
    * un evento */
+#ifdef MD_MULTIPLE_LL
+  int nc;
+#endif
 #ifdef MD_CALENDAR_HYBRID
   populatePQ();
 #endif
@@ -662,6 +685,27 @@ void NextEvent (void)
 #endif
 	  DeleteEvent (id);
 	  MD_DEBUG34(printf("deleted event #%d\n", id));
+#if defined(MD_MULTIPLE_LL) 
+	  if (OprogStatus.multipleLL)
+	    {
+	      for (nc = 0; nc < Oparams.ntypes; nc++)
+		{
+		  /* id-1 poiché idAx = evIdA (vedi sopra) */
+		  if (crossevtodel[nc][id-1]!=-1 && nc != typeOfPart[id-1])
+		    {
+		      DeleteEvent (id+nc*Oparams.parnum);
+		    }
+		  /* notare che la condizione crossevtodel[id-1]!=-1 è necessaria in quanto 
+		   * in quanto se una particella attraversa le pareti del box l'evento con nc==1
+		   * non viene schedulato visto che ProcessCellCrossing si occupa di entrambi gli eventi
+		   * (nc==0 e nc==1) */
+		  /* Serve assolutamente porre crossevtodel a -1  per evitare che ProcessCellCross 
+		   * tenti di rimuovere un evento già rimosso. */
+		  crossevtodel[nc][id-1] = -1;
+		}
+	    }
+#endif
+
 	  for (idd = treeCircAL[id]; idd != id; idd = treeCircAL[idd]) 
 	    {
 	      /* il successivo (R) del precedente (L) diviene il successivo 
@@ -696,11 +740,21 @@ void NextEvent (void)
     {
       /* L'evento è un cell-crossing o un evento generico (output o misura) */
       DeleteEvent (idNow);
+#ifdef MD_MULTIPLE_LL
       if (evIdB < ATOM_LIMIT + 100) 
 	{
 	  treeCircAR[idNow] = treeIdA[0];
 	  treeIdA[0] = idNow;
 	} 
+      if (OprogStatus.multipleLL && evIdC==typeOfPart[evIdA])
+	crossevtodel[evIdC][evIdA] = -1;
+#else
+      if (evIdB < ATOM_LIMIT + 100) 
+	{
+	  treeCircAR[idNow] = treeIdA[0];
+	  treeIdA[0] = idNow;
+	} 
+#endif
     }
   /*check_node("next event", 0, -1, 0);*/
   if (Oparams.time < 0)  
@@ -811,7 +865,14 @@ void InitEventList (void)
 {
   int id;
   treeLeft[0] = treeRight[0] = -1;
+#ifdef MD_MULTIPLE_LL
+  if (OprogStatus.multipleLL)
+    treeIdA[0] = Oparams.ntypes*Oparams.parnum + 1;
+  else
+    treeIdA[0] = Oparams.parnum + 1;
+#else
   treeIdA[0] = Oparams.parnum + 1;
+#endif
   /* i nodi da Oparams.parnum + 1 (compreso) in poi sono il pool (cioè quelli dinamici) */
   for (id = treeIdA[0]; id <= poolSize - 2; id++) 
     treeCircAR[id] = id + 1;
@@ -820,11 +881,31 @@ void InitEventList (void)
     treeUp[id] = -1;
 #endif
   treeCircAR[poolSize-1] = -1;
+#ifdef MD_MULTIPLE_LL
+  if (OprogStatus.multipleLL)
+    {
+      for (id = 1; id <= Oparams.parnum*Oparams.ntypes; id++) 
+	{
+	  treeCircAL[id] = treeCircBL[id] = id;
+	  treeCircAR[id] = treeCircBR[id] = id;
+	}
+    }
+  else
+    {
+      for (id = 1; id <= Oparams.parnum; id++) 
+	{
+	  treeCircAL[id] = treeCircBL[id] = id;
+	  treeCircAR[id] = treeCircBR[id] = id;
+	}
+    }
+
+#else
   for (id = 1; id <= Oparams.parnum; id++) 
     {
       treeCircAL[id] = treeCircBL[id] = id;
       treeCircAR[id] = treeCircBR[id] = id;
     }
+#endif
 #ifdef MD_CALENDAR_HYBRID
   initHQlist();
 #endif

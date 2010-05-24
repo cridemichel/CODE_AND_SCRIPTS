@@ -1,4 +1,6 @@
+#ifdef MD_MULTIPLE_LL
 #include<mdsimul.h>
+
 /* NOTA: nel caso della silica si avevano 4 linked lists in verità ossia:
    0 è la lista della specie A per l'interazione A-A
    1 è la lista della specie B per l'interazione B-B
@@ -12,8 +14,21 @@
    che di un altro e quando si dovranno predire gli eventi si dovrà considerare
    che solo l'interazione mista va considerata scartando quella diretta.
 */
+int **crossevtodel;
+#ifdef MD_LXYZ
+extern double L2[3];
+#else
+extern double L2;
+#endif 
+#ifdef MD_PATCHY_HE
+int evIdC, evIdD, evIdE;
+extern double *treeRxC, *treeRyC, *treeRzC;
 extern double rxC, ryC, rzC;
+#endif
 double *rcutMLL;
+int ***inCellMLL;
+int **cellListMLL;
+int *cellsxMLL, *cellsyMLL, *cellszMLL;
 int is_superellips_type(int pt)
 {
   if (typesArr[pt].n[0]==2.0 && typesArr[pt].n[1]==2.0 &&
@@ -73,6 +88,10 @@ inline int get_linked_list(int na, int nc)
       typena=1 nc=2 => 4*2 + 2 - 3 = 7 OK
    */
 }
+extern int all_spots_in_CoM(int pt);
+#ifdef MD_SUPERELLIPSOID
+extern int is_superellipse(int i);
+#endif
 int is_a_sphere_NNL_type(int pt)
 {
   int i, k1, k2, is_sph;
@@ -110,6 +129,8 @@ void get_types_from_nl(int nl, int *t1, int *t2)
 	  }
       }
 }
+extern double max3(double a, double b, double c);
+
 double calc_rcut_type(int t)
 {
   double rcutA;
@@ -154,24 +175,26 @@ void set_cells_size(void)
 	//Oparams.rcut[nl] = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
       rcut = rcutMLL[nl] = calc_rcut(nl);
 #ifdef MD_LXYZ
-      cellsx[nl] = L[0] / rcut;
-      cellsy[nl] = L[1] / rcut;
-      cellsz[nl] = L[2] / rcut;
+      cellsxMLL[nl] = L[0] / rcut;
+      cellsyMLL[nl] = L[1] / rcut;
+      cellszMLL[nl] = L[2] / rcut;
 #else
-      cellsx[nl] = L / rcut;
-      cellsy[nl] = L / rcut;
-      cellsz[nl] = L / rcut;
+      cellsxMLL[nl] = L / rcut;
+      cellsyMLL[nl] = L / rcut;
+      cellszMLL[nl] = L / rcut;
 #endif
 #ifdef MD_LXYZ
       printf("[%d] L=%.15G %.15G %.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", nl, L[0], L[1], L[2],
-	     rcut, cellsx[nl], cellsy[nl], cellsz[nl]);
+	     rcut, cellsxMLL[nl], cellsyMLL[nl], cellszMLL[nl]);
 #else
       printf("[%d] L=%.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", nl, L,
-	     rcut, cellsx[nl], cellsy[nl], cellsz[nl]);
+	     rcut, cellsxMLL[nl], cellsyMLL[nl], cellszMLL[nl]);
 #endif
     }
 
 }
+extern int evIdA, evIdB;
+extern double cellRange[2*NDIM];
 int check_boxwall(int k, int nc, int nl)
 {
   int cellsk=0;
@@ -236,10 +259,10 @@ void docellcrossMLL(int k, double velk, double *rkptr, int cellsk, int nc)
   else
     { 
       cellRange[2 * k + 1] = -1;
-      inCell[nc][k][evIdA] = inCell[nc][k][evIdA] - 1;
-      if (inCell[nc][k][evIdA] == -1) 
+      inCellMLL[nc][k][evIdA] = inCellMLL[nc][k][evIdA] - 1;
+      if (inCellMLL[nc][k][evIdA] == -1) 
 	{
-	  inCell[nc][k][evIdA] = cellsk - 1;
+	  inCellMLL[nc][k][evIdA] = cellsk - 1;
 #ifdef MD_LXYZ
 	  *rkptr = L2[k];
 #else
@@ -249,6 +272,10 @@ void docellcrossMLL(int k, double velk, double *rkptr, int cellsk, int nc)
 	}
     }
 }
+extern void UpdateAtom(int i);
+double PredictCellCross(int na, int nc);
+double PredictCellCross(int na, int nc);
+void PredictCollMLL(int na, int nb, int nl);
 
 void ProcessCellCrossingMLL(void)
 {
@@ -268,7 +295,7 @@ void ProcessCellCrossingMLL(void)
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
 
   nl = get_linked_list(typei, nc);
-  nc_bw = ;
+  //nc_bw = ;
 #if 0
   if (iA == 0 && nc == 0)
     {
@@ -303,10 +330,10 @@ void ProcessCellCrossingMLL(void)
       nc_bw = 0;
     }
 #endif 
-  boxwall = check_boxwall(kk, nc, nlcross);
+  boxwall = check_boxwall(kk, nc, nl);
   /* questa condizione non si dovrebbe *mai* verificare, quindi 
    * in linea di principio le due linee che seguono potrebbero anche essere eliminate */
-  if (nc!=type1 && boxwall)
+  if (nc!=typei && boxwall)
     {
       printf("nc=1 and boxwall!!!! <===!!!\n");
       return;
@@ -340,7 +367,7 @@ void ProcessCellCrossingMLL(void)
        	{
 	  if (nc_bw == nc)
 	    continue;
-	  nlcross_bw = get_linked_list(type1, nc_bw);
+	  nlcross_bw = get_linked_list(typei, nc_bw);
 	  n = (inCellMLL[nc_bw][2][evIdA] * cellsyMLL[nlcross_bw] + inCellMLL[nc_bw][1][evIdA])*cellsxMLL[nlcross_bw] + 
 	    inCellMLL[nc_bw][0][evIdA]
 	    + Oparams.parnum;
@@ -420,7 +447,7 @@ void ProcessCellCrossingMLL(void)
 void PredictHardWall(int na, int evCode, double cctime)
 {
   double vecg[5];
-  int typena, nplane=-1, hwcell;
+  int nl, typena, nplane=-1, hwcell;
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
   if (OprogStatus.hardwall)
     {
@@ -456,12 +483,13 @@ void PredictHardWall(int na, int evCode, double cctime)
 	}
 #endif
       /* spostare in PredictColl con opportuno if (... )*/
-      if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
-      if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+      nl = get_linked_list(na, typena);
+      if (inCellMLL[typena][2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (inCellMLL[typena][2][na] + cellRangeT[2 * 2 + 1] == cellszMLL[nl]) cellRangeT[2 * 2 + 1] = 0;
       /* ========= */
       if (inCell[typena][2][na] == 0)
 	nplane = 0;
-      else if (inCell[typena][2][na] == cellsz[typena]-1)
+      else if (inCell[typena][2][na] == cellszMLL[nl]-1)
 	nplane = 1;
       //if (na==955)
 	//printf("na=%d cella:%d\n", na, inCell[2][na]);
@@ -611,8 +639,10 @@ double PredictCellCross(int na, int nc)
   k = -1; /* giusto per dare un valore ed evitare una warning */
   if (tm[1] <= tm[2]) 
     {
-      if (tm[0] <= tm[1]) k = 0;
-      else k = 1;
+      if (tm[0] <= tm[1]) 
+	k = 0;
+      else 
+	k = 1;
     } 
   else
     {
@@ -642,7 +672,7 @@ double PredictCellCross(int na, int nc)
   if (!ignorecross[k])
     {
 #ifdef MD_EDHEFLEX_WALL 
-      cctime = Oparams.time + tm[kk];
+      cctime = Oparams.time + tm[k];
       if (nc == typeOfPart[na])
 	{
 	  PredictHardWall(na, evCode, cctime);
@@ -717,18 +747,8 @@ void rebuildMultipleLL(void)
 	}
     }
 }
-int use_bounding_spheres(int na, int n)
-{
-#ifdef EDHE_FLEX
-  if (is_a_sphere_NNL[na] && is_a_sphere_NNL[n])
-    return 0;
-  else
-    return 1;
-#else
-  return 1;
-#endif
-}
-void PredictCollMLL(int na, int nb, int nl, double cctime) 
+extern int use_bounding_spheres(int na, int n);
+void PredictCollMLL(int na, int nb, int nl) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
    * nb = -2,-1, 0 ... (Oparams.parnum - 1)
@@ -1201,7 +1221,7 @@ void BuildNNL_MLL(int na, int nl)
 {
   double shift[NDIM];
   int kk;
-  double dist;
+  double dist, cellsx, cellsy, cellsz;
   int *inCellL[3], *cellListL;
 #ifndef MD_NNLPLANES
   double vecgsup[8], alpha;
@@ -1232,6 +1252,9 @@ void BuildNNL_MLL(int na, int nl)
     inCellL[k] = inCellMLL[nl][k];
   cellListL = cellListMLL[nl];
 #endif
+  cellsx = cellsxMLL[nl];
+  cellsy = cellsyMLL[nl];
+  cellsz = cellszMLL[nl];
 #if defined(MD_EDHEFLEX_WALL)
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
   if (OprogStatus.hardwall)
@@ -1597,3 +1620,4 @@ void PredictEventNLL_MLL(int na, int nb)
     }
 
 }
+#endif
