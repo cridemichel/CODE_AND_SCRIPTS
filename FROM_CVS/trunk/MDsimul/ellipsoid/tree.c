@@ -209,7 +209,9 @@ int get_new_node(int idA, int idB, int idata)
       /* notare comunque che se idata=typeOfPart[idA] allora
 	 l'assegnazione è inutile */
       if (OprogStatus.multipleLL)
-	crossevtodel[idata][idA] = idNew;  
+	{
+	  crossevtodel[idata][idA] = idNew;  
+	}
 #endif
     }
   MD_DEBUG34(printf("idNew=%d\n", idNew));
@@ -638,6 +640,7 @@ void NextEvent (void)
   rzC = treeRzC[idNow];
   evIdA = treeIdA[idNow];    
   evIdB = treeIdB[idNow];
+  //printf("evIdA=%d evIDB=%d time=%.15G\n", evIdA, evIdB, treeTime[idNow]);
 #ifdef MD_PATCHY_HE
   evIdC = treeIdC[idNow];
   evIdD = treeIdD[idNow];
@@ -690,6 +693,8 @@ void NextEvent (void)
 	    {
 	      for (nc = 0; nc < Oparams.ntypes; nc++)
 		{
+		  if (nc == typeOfPart[id-1])
+		    continue;
 		  /* id-1 poiché idAx = evIdA (vedi sopra) */
 		  if (crossevtodel[nc][id-1]!=-1 && nc != typeOfPart[id-1])
 		    {

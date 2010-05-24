@@ -3317,7 +3317,7 @@ void rebuildCalendar(void);
 void adjust_HQ_params(void)
 {
   int targetNE = 15, del=5;
-  int k, i, NAVG=10;
+  int k, i, NAVG=10, k1, k2;
   double GOLD = 1.3;
   static int calls=0, sumNumevPQ=0, sumOverevHQ=0;
   double overevHQavg, numevPQavg;
@@ -4685,6 +4685,11 @@ void usrInitAft(void)
       for (k1=0; k1 < Oparams.ntypes; k1++)
 	{
 	  crossevtodel[k1] = malloc(sizeof(int)*Oparams.parnum);
+	}
+      for (k1 = 0; k1 < Oparams.ntypes; k1++)
+	{
+	  for (k2 = 0; k2 < Oparams.parnum; k2++)
+	    crossevtodel[k1][k2] = -1;
 	}
 #ifdef MD_EDHEFLEX_OPTNNL
       cellList_NNL = malloc(sizeof(int)*(mls+Oparams.parnum));
