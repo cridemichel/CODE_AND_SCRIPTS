@@ -256,6 +256,11 @@ void growth_rebuildNNL(int i)
 {
   int ii, n;
   nextNNLupdate(i);
+#ifdef MD_EDHEFLEX_OPTNNL
+  /* il centro di massa del parallelepipedo può non coincidere con quello dell'ellissoide
+     in tal caso per cui le linked lists vanno generate ad hoc */
+  rebuild_linked_list_NNL();
+#endif
   BuildNNL(i);
   if (nebrTab[i].nexttime < nextNNLrebuild)
     nextNNLrebuild = nebrTab[i].nexttime;
@@ -347,14 +352,21 @@ void rebuildNNL(void)
       if (i==0 || nebrTab[i].nexttime < nltime)
 	nltime = nebrTab[i].nexttime;
     }
-#ifdef MD_EDHEFLEX_OPTNNL
-  /* il centro di massa del parallelepipedo può non coincidere con quello dell'ellissoide
-     in tal caso per cui le linked lists vanno generate ad hoc */
-  rebuild_linked_list_NNL();
-#endif
-  for (i=0; i < Oparams.parnum; i++)
+  if (OprogStatus.multipleLL)
     {
-      BuildNNL(i);
+      BuildAllNNL_MLL();
+    }
+  else
+    {
+#ifdef MD_EDHEFLEX_OPTNNL
+      /* il centro di massa del parallelepipedo può non coincidere con quello dell'ellissoide
+	 in tal caso per cui le linked lists vanno generate ad hoc */
+      rebuild_linked_list_NNL();
+#endif
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  BuildNNL(i);
+	}
     }
 #ifdef MD_GHOST_IGG
   /* if ghostsim=1/2 allow transition from 3 to 1 */	
@@ -5223,6 +5235,11 @@ void PredictEventNNL(int na, int nb)
   int missing, num_work_request, njob, njob2i[512];
 #endif
 
+  if (OprogStatus.multipleLL)
+    {
+      PredictEventMLL_NLL();
+      return;
+    }
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -5420,6 +5437,8 @@ void PredictEventNNL(int na, int nb)
 extern int sphWall, sphWallOuter;
 extern void locate_spherical_wall(int na, int outer);
 #endif
+extern int use_bounding_spheres(int na, int n);
+
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
@@ -5635,86 +5654,93 @@ void PredictEventNNL(int na, int nb)
 #endif
       /* maxax[...] è il diametro dei centroidi dei due tipi
        * di ellissoidi */
-      if (OprogStatus.targetPhi > 0)
+      if (use_bounding_spheres(na, n))
 	{
-	  sigSq = Sqr(max_ax(na)+max_ax(n)+OprogStatus.epsd);
+	  if (OprogStatus.targetPhi > 0)
+	    {
+	      sigSq = Sqr(max_ax(na)+max_ax(n)+OprogStatus.epsd);
+	    }
+	  else
+	    {
+#ifdef MD_POLYDISP
+	      sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#else
+#ifdef EDHE_FLEX
+	      sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+	      //printf("max=(%d)%.15G (%d)%.15G\n", n, maxax[n], na, maxax[na]);
+#else
+	      if (na < parnumA && n < parnumA)
+		sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+	      else if (na >= parnumA && n >= parnumA)
+		sigSq = Sqr(maxax[na]+OprogStatus.epsd);
+	      else
+		sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+#endif
+#endif
+	    }
+	  MD_DEBUG32(printf("n=%d na=%d maxaxes=%f %f sigSq: %f\n", n, na, maxax[n], maxax[na], sigSq));
+	  tInt = Oparams.time - atomTime[n];
+	  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+	  dv[0] = vx[na] - vx[n];
+	  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+	  dv[1] = vy[na] - vy[n];
+#ifdef MD_GRAVITY
+	  dr[2] = rz[na] - 
+	    (rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
+	  dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
+#else
+	  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+	  dv[2] = vz[na] - vz[n];
+#endif
+	  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+	  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+	  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+	  d = Sqr (b) - vv * (distSq - sigSq);
+	  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+	    {
+	      /* i centroidi non collidono per cui non ci può essere
+	       * nessun urto sotto tali condizioni */
+	      continue;
+	    }
+	  MD_DEBUG32(printf("PREDICTING na=%d n=%d\n", na , n));
+	  if (vv==0.0)
+	    {
+	      if (distSq >= sigSq)
+		{
+		  continue;
+		}
+	      /* la vel relativa è zero e i centroidi non si overlappano quindi
+	       * non si possono urtare! */
+	      t1 = t = 0;
+	      t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+			   urtare ruotando */
+	    }
+	  else if (distSq >= sigSq)
+	    {
+	      t = t1 = - (sqrt (d) + b) / vv;
+	      t2 = (sqrt (d) - b) / vv;
+	      overlap = 0;
+	    }
+	  else 
+	    {
+	      MD_DEBUG(printf("Centroids overlap!\n"));
+	      t2 = t = (sqrt (d) - b) / vv;
+	      t1 = 0.0; 
+	      overlap = 1;
+	      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+	      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+	    }
+	  MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
+	  MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
+	  //t += Oparams.time; 
+	  t2 += Oparams.time;
+	  t1 += Oparams.time;
 	}
       else
 	{
-#ifdef MD_POLYDISP
-	  sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
-#else
-#ifdef EDHE_FLEX
-	  sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
-	  //printf("max=(%d)%.15G (%d)%.15G\n", n, maxax[n], na, maxax[na]);
-#else
-	  if (na < parnumA && n < parnumA)
-	    sigSq = Sqr(maxax[na]+OprogStatus.epsd);
-	  else if (na >= parnumA && n >= parnumA)
-	    sigSq = Sqr(maxax[na]+OprogStatus.epsd);
-	  else
-	    sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
-#endif
-#endif
-	}
-      MD_DEBUG32(printf("n=%d na=%d maxaxes=%f %f sigSq: %f\n", n, na, maxax[n], maxax[na], sigSq));
-      tInt = Oparams.time - atomTime[n];
-      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
-      dv[0] = vx[na] - vx[n];
-      dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
-      dv[1] = vy[na] - vy[n];
-#ifdef MD_GRAVITY
-      dr[2] = rz[na] - 
-	(rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
-      dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
-#else
-      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
-      dv[2] = vz[na] - vz[n];
-#endif
-      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
-      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
-      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-      d = Sqr (b) - vv * (distSq - sigSq);
-      if (d < 0 || (b > 0.0 && distSq > sigSq)) 
-	{
-	  /* i centroidi non collidono per cui non ci può essere
-	   * nessun urto sotto tali condizioni */
-	  continue;
-	}
-      MD_DEBUG32(printf("PREDICTING na=%d n=%d\n", na , n));
-      if (vv==0.0)
-	{
-	  if (distSq >= sigSq)
-	    {
-	      continue;
-	    }
-	  /* la vel relativa è zero e i centroidi non si overlappano quindi
-	   * non si possono urtare! */
-	  t1 = t = 0;
-	  t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
-		       urtare ruotando */
-	}
-      else if (distSq >= sigSq)
-	{
-	  t = t1 = - (sqrt (d) + b) / vv;
-	  t2 = (sqrt (d) - b) / vv;
-	  overlap = 0;
-	}
-      else 
-	{
-	  MD_DEBUG(printf("Centroids overlap!\n"));
-	  t2 = t = (sqrt (d) - b) / vv;
-	  t1 = 0.0; 
-	  overlap = 1;
-	  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
-	  MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
-	}
-      MD_DEBUG(printf("t=%f curtime: %f b=%f d=%f\n", t, Oparams.time, b ,d));
-      MD_DEBUG(printf("dr=(%f,%f,%f) sigSq: %f", dr[0], dr[1], dr[2], sigSq));
-      //t += Oparams.time; 
-      t2 += Oparams.time;
-      t1 += Oparams.time;
-     
+	  t1 = 0.0;
+	  t2 = timbig;
+	}     
 #if 0
       tnnl = min(nebrTab[na].nexttime,nebrTab[n].nexttime);
       if (tnnl < t2)
