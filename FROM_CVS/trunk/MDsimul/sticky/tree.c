@@ -784,7 +784,7 @@ void NextEvent (void)
 	  treeCircAR[idNow] = treeIdA[0];
 	  treeIdA[0] = idNow;
 	} 
-      if (evIdC==1)
+      if (evIdA >=0 && evIdA < ATOM_LIMIT && evIdC==1)
 	crossevtodel[evIdA] = -1;
 #else
       if (evIdB < ATOM_LIMIT + 100) 
