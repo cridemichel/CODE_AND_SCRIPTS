@@ -2485,7 +2485,7 @@ void adjust_HQ_params(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
-   for (i=0; i < Oparams.parnum; i++)
+  for (i=0; i < Oparams.parnum; i++)
     crossevtodel[i] = -1;
 
   rebuild_linked_list();
