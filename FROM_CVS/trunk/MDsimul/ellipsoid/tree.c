@@ -204,14 +204,18 @@ int get_new_node(int idA, int idB, int idata)
     }
   else 
     {
-      idNew = idA + 1;
 #ifdef MD_MULTIPLE_LL
       /* notare comunque che se idata=typeOfPart[idA] allora
 	 l'assegnazione è inutile */
-      if (OprogStatus.multipleLL)
+      /* idata si riferisce al tipo d'interazione relativa al cell crossing attuale
+	 ossia la cella attraversata è quella relativa all'interazione tra typeOfPart[idA] e idata. */
+      idNew = idA + 1 + idata*Oparams.ntypes;
+      if (OprogStatus.multipleLL && idata != typeOfPart[idA])
 	{
 	  crossevtodel[idata][idA] = idNew;  
 	}
+#else
+      idNew = idA + 1;
 #endif
     }
   MD_DEBUG34(printf("idNew=%d\n", idNew));
@@ -349,10 +353,16 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
 #ifdef MD_MULTIPLE_LL
       /* notare comunque che se idata=typeOfPart[idA] allora
 	 l'assegnazione è inutile */
-      if (OprogStatus.multipleLL)
-	crossevtodel[idata][idA] = idNew;  
-#endif
+      /* idata si riferisce al tipo d'interazione relativa al cell crossing attuale
+	 ossia la cella attraversata è quella relativa all'interazione tra typeOfPart[idA] e idata. */
+      idNew = idA + 1 + idata*Oparams.ntypes;
+      if (OprogStatus.multipleLL && idata != typeOfPart[idA])
+	{
+	  crossevtodel[idata][idA] = idNew;  
+	}
+#else
       idNew = idA + 1;
+#endif
     }
   MD_DEBUG34(printf("idNew=%d\n", idNew));
   /* Se qui vuol dire che si tratta di un cell-crossing o 
@@ -686,21 +696,24 @@ void NextEvent (void)
 	  if (id==sphWallOuter+1)
 	    continue; 
 #endif
-	  DeleteEvent (id);
 	  MD_DEBUG34(printf("deleted event #%d\n", id));
 #if defined(MD_MULTIPLE_LL) 
 	  if (OprogStatus.multipleLL)
 	    {
+	      /* cancella tutti gli eventi di cell-crossing */
+
+	      /* prima cancella cell-crossing per le liste relative a particelle dello stesso tipo*/
+	      DeleteEvent(id + typeOfPart[id-1]*Oparams.ntypes);
 	      for (nc = 0; nc < Oparams.ntypes; nc++)
 		{
 		  if (nc == typeOfPart[id-1])
 		    continue;
 		  /* id-1 poiché idAx = evIdA (vedi sopra) */
-		  if (crossevtodel[nc][id-1]!=-1 && nc != typeOfPart[id-1])
+		  if (crossevtodel[nc][id-1]!=-1)
 		    {
 		      DeleteEvent (id+nc*Oparams.parnum);
 		    }
-		  /* notare che la condizione crossevtodel[id-1]!=-1 è necessaria in quanto 
+		  /* notare che la condizione crossevtodel[id-1]!=-1 è necessaria 
 		   * in quanto se una particella attraversa le pareti del box l'evento con nc==1
 		   * non viene schedulato visto che ProcessCellCrossing si occupa di entrambi gli eventi
 		   * (nc==0 e nc==1) */
@@ -709,6 +722,11 @@ void NextEvent (void)
 		  crossevtodel[nc][id-1] = -1;
 		}
 	    }
+	  else
+	    DeleteEvent(id);
+#else
+	  /* cancella l'evento di cell-crossing */
+	  DeleteEvent (id);
 #endif
 
 	  for (idd = treeCircAL[id]; idd != id; idd = treeCircAL[idd]) 
@@ -751,8 +769,11 @@ void NextEvent (void)
 	  treeCircAR[idNow] = treeIdA[0];
 	  treeIdA[0] = idNow;
 	} 
-      if (OprogStatus.multipleLL && evIdC==typeOfPart[evIdA])
-	crossevtodel[evIdC][evIdA] = -1;
+      //printf("evIdA=%d typeOfPart[]=%d\n", evIdA, typeOfPart[evIdA]);
+      if (OprogStatus.multipleLL && evIdA >=0 && evIdA < ATOM_LIMIT && evIdC != typeOfPart[evIdA])
+	{
+    	  crossevtodel[evIdC][evIdA] = -1;
+	}
 #else
       if (evIdB < ATOM_LIMIT + 100) 
 	{

@@ -251,6 +251,10 @@ void docellcrossMLL(int k, double velk, double *rkptr, int cellsk, int nc)
   if (velk > 0.0)
     {
       inCellMLL[nc][k][evIdA] = inCellMLL[nc][k][evIdA] + 1;
+#if 0
+      if (evIdA==511)
+	printf("QUI nc=%d k=%d inCellMLL=%d %d %d cellsk=%d\n", nc, k, inCellMLL[nc][0][evIdA], inCellMLL[nc][1][evIdA], inCellMLL[nc][2][evIdA],cellsk);
+#endif
       cellRange[2 * k] = 1;
       if (inCellMLL[nc][k][evIdA] == cellsk) 
 	{
@@ -381,6 +385,10 @@ void ProcessCellCrossingMLL(void)
       cellRange[2*k+1] =   1;
     }
 
+#if 0
+  if (evIdA==511)
+    printf("===> na=%d boxwall=%d time=%.15G\n",evIdA, boxwall, Oparams.time);
+#endif
   if (boxwall)
     {
       /* se si è attraversata la scatola allora processa l'attraversamento per tutte le linked lists */ 
@@ -548,7 +556,6 @@ void PredictCellCross(int na, int nc)
 {
   int ignorecross[3], k, evCode, signDir[NDIM]={0,0,0}, nl;
   double tm[3], cctime=timbig;
-
   ignorecross[0] = ignorecross[1] = ignorecross[2] = 1;
 
   nl =  get_linked_list(na, nc);
@@ -564,7 +571,6 @@ void PredictCellCross(int na, int nc)
 	  signDir[2] = 0;/* direzione positiva */
 	  if (nc != typeOfPart[na] && inCellMLL[nc][2][na]==cellszMLL[nl]-1)
 	    ignorecross[2] = 1;
-	  else
 	    ignorecross[2] = 0;
 	}
       else 
@@ -575,21 +581,30 @@ void PredictCellCross(int na, int nc)
 	  else
 	    ignorecross[2] = 0;
 	}
-#ifdef MD_EDHEFLEX_WALL
-      /* il muro attualmente è solo lungo l'asse z */
-      if (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[nc][2][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[nc][2][na]==0)))
-	ignorecross[2] = 1;
-#endif
-      if (ignorecross[2])
+#ifdef MD_LXYZ
+#if defined(MD_EDHEFLEX_WALL) 
+      if (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[2][nc][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[nc][2][na]==0)))
 	tm[2] = timbig;
       else
-#ifdef MD_LXYZ
 	tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L[2] /
-  		 cellszMLL[nl] - rz[na] - L2[2]) / vz[na];
+		 cellszMLL[nl] - rz[na] - L2[2]) / vz[na];
 #else
-	tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L /
-  		 cellszMLL[nl] - rz[na] - L2) / vz[na];
+      tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L[2]/
+	       cellszMLL[nc] - rz[na] - L2[2]) / vz[na];
 #endif
+#else
+#if defined(MD_EDHEFLEX_WALL) 
+      if (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[nc][2][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[nc][2][na]==0)))
+	tm[2] = timbig;
+      else
+	tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L /
+		 cellszMLL[nl] - rz[na] - L2) / vz[na];
+#else
+      tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L /
+	       cellszMLL[nl] - rz[na] - L2) / vz[na];
+#endif
+#endif
+
     } 
   else 
     tm[2] = timbig;
@@ -681,6 +696,7 @@ void PredictCellCross(int na, int nc)
     {
       printf("tm[%d]: %.15G\n", k, tm[k]);
       tm[k] = 0.0;
+      printf("k=%d nc=%d na=%d\n", k, nc, na);
       printf("real cells: %d %d %d\n", (int)((rx[na] + L2) * cellsxMLL[nl] / L),
 	     (int)((ry[na] + L2) * cellsyMLL[nl] / L), (int)((rz[na] + L2)  * cellszMLL[nl] / L));
     }
@@ -695,13 +711,23 @@ void PredictCellCross(int na, int nc)
     {
 #ifdef MD_EDHEFLEX_WALL 
       cctime = Oparams.time + tm[k];
-      if (nc == typeOfPart[na])
+      if (nc == typeOfPart[na] && OprogStatus.hardwall==1)
 	{
 	  PredictHardWall(na, evCode, cctime);
 	}
       else
 	{
-  	  ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, cctime);
+#if 0
+	  if (na==511)
+	    {
+	      printf("scheduling na=511 at t=%.15G k=%d curtime=%.15G\n", cctime, k, Oparams.time);
+	      printf("r=%f %f %f v=%f %f %f\n", rx[na], ry[na], rz[na], vx[na], vy[na], vz[na]);
+	      printf("inCell[511]==============%d %d %d\n", inCellMLL[0][0][511],inCellMLL[0][1][511],inCellMLL[0][2][511]);
+
+
+	    }
+#endif
+	  ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, cctime);
 	}
 #else
       ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, Oparams.time + tm[k]);
@@ -750,7 +776,17 @@ void rebuildMultipleLL(void)
 	  inCellMLL[nc][1][n] =  (ry[n] + L2) * cellsyMLL[nl] / L;
 	  inCellMLL[nc][2][n] =  (rz[n] + L2) * cellszMLL[nl] / L;
 #endif
-	  /*printf("nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
+#if 0
+	  if (n==511)
+	    {
+	      printf("BOHBOH scheduling na=511 curtime=%.15G\n",Oparams.time);
+	      printf("r=%f %f %f v=%f %f %f\n", rx[n], ry[n], rz[n], vx[n], vy[n], vz[n]);
+	      printf("inCell[511]==============%d %d %d\n", inCellMLL[0][0][511],inCellMLL[0][1][511],inCellMLL[0][2][511]);
+
+
+	    }
+#endif
+/*printf("nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
 	    nl, nc, n, inCell[nc][0][n], inCell[nc][1][n], inCell[nc][2][n],
 	    cellsx[nl], cellsy[nl], cellsz[nl]);
 	   */
@@ -764,6 +800,8 @@ void rebuildMultipleLL(void)
 #endif	  
 	  j = (inCellMLL[nc][2][n]*cellsyMLL[nl] + inCellMLL[nc][1][n])*cellsxMLL[nl] + 
 	    inCellMLL[nc][0][n] + Oparams.parnum;
+	  //if (n==511)
+	    //printf("inCell==============%d %d %d\n", inCellMLL[nc][0][n],inCellMLL[nc][1][n],inCellMLL[nc][2][n]);
 	  cellListMLL[nl][n] = cellListMLL[nl][j];
 	  cellListMLL[nl][j] = n;
 	}
