@@ -5240,7 +5240,7 @@ void parall_get_data_and_schedule(parall_event_struct parall_event)
 /* PredicEventNNL parallelizzata */
 const int iwtagEvent = 1, iwtagPair = 2;
 
-void PredictEventNNL(int na, int nb) 
+void PredictEventNNL_PARALL(int na, int nb) 
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
   double  tm[NDIM];
