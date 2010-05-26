@@ -209,7 +209,7 @@ int get_new_node(int idA, int idB, int idata)
 	 l'assegnazione è inutile */
       /* idata si riferisce al tipo d'interazione relativa al cell crossing attuale
 	 ossia la cella attraversata è quella relativa all'interazione tra typeOfPart[idA] e idata. */
-      idNew = idA + 1 + idata*Oparams.ntypes;
+      idNew = idA + 1 + idata*Oparams.parnum;
       if (OprogStatus.multipleLL && idata != typeOfPart[idA])
 	{
 	  crossevtodel[idata][idA] = idNew;  
@@ -355,7 +355,7 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
 	 l'assegnazione è inutile */
       /* idata si riferisce al tipo d'interazione relativa al cell crossing attuale
 	 ossia la cella attraversata è quella relativa all'interazione tra typeOfPart[idA] e idata. */
-      idNew = idA + 1 + idata*Oparams.ntypes;
+      idNew = idA + 1 + idata*Oparams.parnum;
       if (OprogStatus.multipleLL && idata != typeOfPart[idA])
 	{
 	  crossevtodel[idata][idA] = idNew;  
@@ -703,7 +703,7 @@ void NextEvent (void)
 	      /* cancella tutti gli eventi di cell-crossing */
 
 	      /* prima cancella cell-crossing per le liste relative a particelle dello stesso tipo*/
-	      DeleteEvent(id + typeOfPart[id-1]*Oparams.ntypes);
+	      DeleteEvent(id + typeOfPart[id-1]*Oparams.parnum);
 	      for (nc = 0; nc < Oparams.ntypes; nc++)
 		{
 		  if (nc == typeOfPart[id-1])
