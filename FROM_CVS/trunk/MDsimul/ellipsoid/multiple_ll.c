@@ -243,8 +243,16 @@ double calc_rcut_type(int t)
   double rcutA;
   int kk;
   double ax[3], del;
-  for (kk=0; kk < 3; kk++)
-    ax[kk] = typesArr[t].ppsax[kk];
+  if (OprogStatus.useNNL)
+    {
+      for (kk=0; kk < 3; kk++)
+	ax[kk] = typesArr[t].ppsax[kk]
+    }
+  else
+    {
+      for (kk=0; kk < 3; kk++)
+	ax[kk] = typesArr[t].sax[kk]
+    }
   if (OprogStatus.useNNL)  
     del = OprogStatus.rNebrShell;
   else
