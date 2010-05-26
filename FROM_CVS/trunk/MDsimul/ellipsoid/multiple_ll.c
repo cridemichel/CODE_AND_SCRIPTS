@@ -396,7 +396,7 @@ void ProcessCellCrossingMLL(void)
   /* questa condizione non si dovrebbe *mai* verificare, quindi 
    * in linea di principio le due linee che seguono potrebbero anche essere eliminate */
 #if 0
-  if (evIdA==18998)
+  if (evIdA==870)
     {
       printf("[PROCCELLCROSS] type=%d inCell=%d %d %d\n", typeOfPart[evIdA], inCellMLL[nc][0][evIdA],inCellMLL[nc][1][evIdA],inCellMLL[nc][2][evIdA]);
       printf("[PROCESS CELL CROSS]kk=%d nc=%d nl=%d time=%.15G\n", kk, nc, nl, Oparams.time);
@@ -582,7 +582,8 @@ void PredictHardWall(int na, int evCode, double cctime)
 	  rxC = vecg[0];
 	  ryC = vecg[1];
 	  rzC = vecg[2];
-	  ScheduleEventBarr (na, ATOM_LIMIT + nplane, 0, 0, MD_WALL, vecg[4]);
+	  /* l'urto con il muro riguarda le LL relative all'interazione della particella con se stessa */
+	  ScheduleEventBarr (na, ATOM_LIMIT + nplane, typena, 0, MD_WALL, vecg[4]);
 	}
       else
 	{
@@ -784,7 +785,7 @@ void PredictCellCross(int na, int nc)
 	    }
 #endif
 #if 0
-	  if (na==18998 && nc!=typeOfPart[na])
+	  if (na==870 && nc!=typeOfPart[na])
 	    {
 	      printf("[PREDICT CELL CROSS]\n");
 	      printf("nc=%d nl=%d typeOfPart[%d]=%d\n", nc, nl, na, typeOfPart[na]);
@@ -932,6 +933,7 @@ void PredictCollMLL(int na, int nb, int nl)
 #ifdef MD_EDHEFLEX_WALL
   if (OprogStatus.hardwall)
     {
+      for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
       if (inCellMLL[nc][2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
       if (inCellMLL[nc][2][na] + cellRangeT[2 * 2 + 1] == cellszMLL[nl]) cellRangeT[2 * 2 + 1] = 0;
     }
