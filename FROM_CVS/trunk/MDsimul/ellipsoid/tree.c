@@ -650,11 +650,14 @@ void NextEvent (void)
   rzC = treeRzC[idNow];
   evIdA = treeIdA[idNow];    
   evIdB = treeIdB[idNow];
-  //printf("evIdA=%d evIDB=%d time=%.15G\n", evIdA, evIdB, treeTime[idNow]);
 #ifdef MD_PATCHY_HE
   evIdC = treeIdC[idNow];
   evIdD = treeIdD[idNow];
   evIdE = treeIdE[idNow];
+#endif
+#if 0
+  if (evIdA==870)
+    printf("evIdA=%d evIDB=%d evIdC=%d evIdD=%d time=%.15G\n", evIdA, evIdB, evIdC, evIdD, treeTime[idNow]);
 #endif
   MD_DEBUG34(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%.15G id=%d\n", (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time, idNow));
   MD_DEBUG20(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
