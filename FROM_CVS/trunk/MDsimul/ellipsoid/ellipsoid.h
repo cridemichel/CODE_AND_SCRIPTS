@@ -61,6 +61,7 @@ void UpdateSystem(void);
 #define MD_TAPE_XVA "/iomega/xvafiles/"
 #ifdef EDHE_FLEX
 #define MD_EDHEFLEX_OPTNNL
+#define MD_OPT_MULTLL
 #endif
 #define MD_LL_BONDS
 #define NUM_MISURE 30         /* maximum number of measure done during simulation */

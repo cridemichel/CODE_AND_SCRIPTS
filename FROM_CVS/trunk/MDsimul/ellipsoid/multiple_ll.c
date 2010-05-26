@@ -38,7 +38,63 @@ extern double rxC, ryC, rzC;
 double *rcutMLL;
 int ***inCellMLL;
 int **cellListMLL;
-int *cellsxMLL, *cellsyMLL, *cellszMLL;
+int *cellsxMLL, *cellsyMLL, *cellszMLL, *ignoreMLL;
+/* con questo switch si puo' disabilitare l'ottimizzazione delle LL multiple
+   con la quale le LL tra tipi non interagenti non vengono utilizzate. */
+
+#if defined(EDHE_FLEX) && defined(MD_OPT_MULTLL)
+extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
+int may_interact_core_type(int typei, int typej)
+{
+  if (!typesArr[typei].ignoreCore && 
+      !typesArr[typej].ignoreCore)
+   return 1;
+ else
+   return 0; 
+}
+int may_interact_spots_type(int type1, int type2)
+{
+  int ni;
+#if 0
+  rangeStruct *r1, *r2;
+  int nr1, nr2, inti, intj;
+#endif
+  if (typesArr[type1].nspots == 0 || typesArr[type2].nspots == 0)
+    return 0;
+  for (ni = 0; ni < Oparams.ninters; ni++)
+    {
+      if (is_in_ranges(type1, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	  is_in_ranges(type2, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
+	{
+	  return 1;
+	}	
+      else if (is_in_ranges(type2, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	       is_in_ranges(type1, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
+	{
+	  return 1;
+	}
+    }
+  /* nintersIJ sono le interazioni specifiche tra particelle, se ci sono 
+     non possiamo a priori scartare tutte le interazioni tra due tipi */
+  if (Oparams.nintersIJ > 0)
+    {
+      return 1;
+    }
+  return 0;
+}
+int may_interact_all_type(int t1, int t2)
+{
+  if (t1==t2)
+    return 1;
+  if (may_interact_core_type(t1, t2))
+    return 1;
+  if (may_interact_spots_type(t1, t2))
+    return 1;
+	
+  return 0;
+}
+#endif
+
 int is_superellips_type(int pt)
 {
   if (typesArr[pt].n[0]==2.0 && typesArr[pt].n[1]==2.0 &&
@@ -357,6 +413,8 @@ void ProcessCellCrossingMLL(void)
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
 
   nl = get_linked_list_type(typei, nc);
+
+ // printf("CELL CROSSING DI evIdA=%d nl=%d nc=%d typei=%d\n",evIdA, nl, nc, typei);
   //nc_bw = ;
 #if 0
   if (iA == 0 && nc == 0)
@@ -441,8 +499,19 @@ void ProcessCellCrossingMLL(void)
       /* se si è attraversata la scatola allora processa l'attraversamento per tutte le linked lists */ 
       for (nc_bw = 0; nc_bw < Oparams.ntypes; nc_bw++)
        	{
+	  /* notare che se si tratta di un boxwall per forza di cose
+	     deve essere nc = typeOfPart[na]. */
 	  if (nc_bw == nc)
 	    continue;
+#ifdef MD_OPT_MULTLL
+#if 0
+	  if (!may_interact_all_type(nc, nc_bw))
+	      continue;
+#else
+	  if (ignoreMLL[get_linked_list_type(nc, nc_bw)])
+	    continue;
+#endif
+#endif 
 	  nlcross_bw = get_linked_list_type(typei, nc_bw);
 	  n = (inCellMLL[nc_bw][2][evIdA] * cellsyMLL[nlcross_bw] + inCellMLL[nc_bw][1][evIdA])*cellsxMLL[nlcross_bw] + 
 	    inCellMLL[nc_bw][0][evIdA]
@@ -491,6 +560,15 @@ void ProcessCellCrossingMLL(void)
 	{
 	  if (nc_bw == nc)
 	    continue;
+#ifdef MD_OPT_MULTLL
+#if 0
+	  if (!may_interact_all_type(nc, nc_bw))
+	      continue;
+#else
+	  if (ignoreMLL[get_linked_list_type(nc, nc_bw)])
+	      continue;
+#endif
+#endif
 	  nlcross_bw = get_linked_list(evIdA, nc_bw);
 	  switch (kk)
 	    {
@@ -609,6 +687,18 @@ void PredictCellCross(int na, int nc)
   ignorecross[0] = ignorecross[1] = ignorecross[2] = 1;
 
   nl =  get_linked_list(na, nc);
+#ifdef MD_OPT_MULTLL
+#if 0
+  if (!may_interact_all_type(typeOfPart[na], nc) && typeOfPart[na] != nc)
+    {
+      //printf("ignoring typeOfPart[%d]=%d-nc=%d\n", na, typeOfPart[na], nc);    
+      return;
+    }
+#else
+  if (ignoreMLL[nl])
+    return;
+#endif
+#endif
 #if 0
   printf("[PredictCellCross ]time=%f nl=%d nc=%d n=%d inCell: %d %d %d cells: %d %d %d\n",
 	 Oparams.time, nl, nc, na, inCell[nc][0][na], inCell[nc][1][na], inCell[nc][2][na],
@@ -812,6 +902,10 @@ void rebuildMultipleLL(void)
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
   for (nl=0; nl < numll; nl++)
     {
+#ifdef MD_OPT_MULTLL
+      if (ignoreMLL[nl])
+	continue;
+#endif
       for (j = 0; j < cellsxMLL[nl]*cellsyMLL[nl]*cellszMLL[nl] + Oparams.parnum; j++)
 	cellListMLL[nl][j] = -1;
     }
@@ -822,6 +916,24 @@ void rebuildMultipleLL(void)
       /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
       for (n = 0; n < Oparams.parnum; n++)
 	{
+	  nl = get_linked_list(n, nc);
+#ifdef MD_OPT_MULTLL
+#if 0
+	  if (!may_interact_all_type(typeOfPart[n], nc) && typeOfPart[n] != nc)
+	    {
+	      /* questa assegnazione non dovrebbe serivire...*/
+	      atomTime[n] = Oparams.time;
+	      continue;
+	    }
+#else
+	  if (ignoreMLL[nl])
+	    {
+	      atomTime[n] = Oparams.time;
+	      continue;
+	    }
+#endif
+#endif
+
 #ifdef MD_SPHERICAL_WALL
     	  if (n==sphWall)
     	    {
@@ -834,8 +946,6 @@ void rebuildMultipleLL(void)
 	      continue;
 	    }
 #endif
- 
-	  nl = get_linked_list(n, nc);
 	  atomTime[n] = Oparams.time;
 #ifdef MD_LXYZ
 	  inCellMLL[nc][0][n] =  (rx[n] + L2) * cellsxMLL[nl] / L[0];
@@ -912,6 +1022,7 @@ void PredictCollMLL(int na, int nb, int nl)
   if (na==sphWallOuter|| nb==sphWallOuter)
     return;
 #endif
+
 #ifdef MD_SPHERICAL_WALL
   /* inner wall */
   locate_spherical_wall(na, 0);
@@ -924,12 +1035,26 @@ void PredictCollMLL(int na, int nb, int nl)
      senso ed esci da tale routine. */
   get_types_from_nl(nl, &ty1, &ty2);
   typena = typeOfPart[na]; 
+
   if (typena==ty1)
     nc = ty2;
   else if (typena==ty2)
     nc = ty1;
   else 
     return;
+#ifdef MD_OPT_MULTLL
+#if 0
+  if (!may_interact_all_type(typena, nc) && typena != nc)
+    {
+      //printf("ignoring typeOfPart[%d]=%d-nc=%d\n", na, typeOfPart[na], nc);    
+      return;
+    }
+#else
+  if (ignoreMLL[nl])
+    return;
+#endif
+#endif
+
 #ifdef MD_EDHEFLEX_WALL
   if (OprogStatus.hardwall)
     {
@@ -1242,7 +1367,7 @@ void PredictCollMLL(int na, int nb, int nl)
 
 void PredictEventMLL(int na, int nb)
 {
-  int nc, nl, numll, t1, t2;
+  int nc, nl, numll, t1=-1, t2=-1;
   for (nc = 0; nc < Oparams.ntypes; nc++)
     {
       PredictCellCross(na, nc);
@@ -1267,7 +1392,7 @@ void rebuildMultipleLL_NLL(int nl)
 #ifdef MD_LXYZ
   int kk;
 #endif
-  int t1, t2;
+  int t1=-1, t2=-1;
   int j, n, numll;
   double invL, L2;
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
@@ -1359,7 +1484,7 @@ void BuildNNL_MLL(int na, int nl)
   double shift[NDIM];
   int kk;
   double dist, cellsx, cellsy, cellsz;
-  int *inCellL[3], *cellListL, t1, t2, nc;
+  int *inCellL[3], *cellListL, t1=-1, t2=-1, nc;
 #ifndef MD_NNLPLANES
   double vecgsup[8], alpha;
 #endif
@@ -1373,6 +1498,7 @@ void BuildNNL_MLL(int na, int nl)
   if (na==sphWall || na==sphWallOuter)
     return;
 #endif
+
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
@@ -1381,6 +1507,25 @@ void BuildNNL_MLL(int na, int nl)
   for (kk=0; kk < 3; kk++)
     shift[kk] = 0;
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+#ifdef MD_OPT_MULTLL
+#if 0
+  get_types_from_nl(nl, &t1, &t2);
+  if (t1==typeOfPart[na])
+    nc = t2;
+  else if (t2==typeOfPart[na])
+    nc = t1;
+  else
+    return;
+  if (!may_interact_all_type(typeOfPart[na], nc) && nc!=typeOfPart[na])
+    {
+      return;
+    }
+#else
+  if (ignoreMLL[nl])
+    return;
+#endif
+#endif
 #ifdef MD_EDHEFLEX_OPTNNL
   if (OprogStatus.optnnl)
     {
@@ -1579,6 +1724,8 @@ void PredictCollMLL_NLL(int na, int nb)
      usando le NNL */
   if (nb >= ATOM_LIMIT+2*NDIM)
     return;
+
+
   for (i=0; i < nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 

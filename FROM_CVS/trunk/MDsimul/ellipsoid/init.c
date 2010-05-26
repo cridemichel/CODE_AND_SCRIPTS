@@ -39,7 +39,7 @@ extern int ***inCellMLL;
 extern int **cellListMLL;
 extern double *rcutMLL;
 extern void set_cells_size(void);
-extern int *cellsxMLL, *cellsyMLL, *cellszMLL;
+extern int *cellsxMLL, *cellsyMLL, *cellszMLL, *ignoreMLL;
 #endif
 double calc_norm(double *vec);
 #ifdef MD_PATCHY_HE
@@ -3503,6 +3503,9 @@ void set_dyn_ascii(void)
 extern void get_types_from_nl(int nl, int *t1, int *t2);
 #endif
 #define MD_MATRIX_CONTIGOUS
+#if defined(MD_MULTIPLE_LL) && defined(MD_OPT_MULTLL)
+extern int may_interact_all_type(int t1, int t2);
+#endif
 void usrInitAft(void)
 {
   long long int maxp;
@@ -4668,10 +4671,22 @@ void usrInitAft(void)
       cellsxMLL = malloc(sizeof(int)*numll);
       cellsyMLL = malloc(sizeof(int)*numll);
       cellszMLL = malloc(sizeof(int)*numll);
+      ignoreMLL = malloc(sizeof(int)*numll);
       set_cells_size();
       for (k1=0; k1 < numll; k1++)
 	{
 	  get_types_from_nl(k1, &t1, &t2);
+
+	  if (!may_interact_all_type(t1, t2))
+	    {
+	      ignoreMLL[k1] = 1;
+	      printf("Types %d and %d are different and they do not interact hence I ignore this linked list\n", t1, t2);
+	      continue;
+	    }
+	  else
+	    {
+	      ignoreMLL[k1] = 0;
+	    }
 #ifdef MD_LXYZ
 	  printf("[%d] L=%.15G %.15G %.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", k1, L[0], L[1], L[2],
 		 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1]);
@@ -4682,6 +4697,8 @@ void usrInitAft(void)
 	}
       for (k1 = 0; k1 < numll; k1++)
 	{
+	  if (ignoreMLL[k1])
+	    continue;
 	  ls = cellsxMLL[k1]*cellsyMLL[k1]*cellszMLL[k1];
 	  cellListMLL[k1] = malloc(sizeof(int)*(ls+Oparams.parnum));
 	  if (k1==0|| ls > mls)
@@ -4794,7 +4811,7 @@ void usrInitAft(void)
       cellsz = L / Oparams.rcut;
 #endif 
 #endif
-     printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
+      printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
 	     cellsx, cellsy, cellsz);
       cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
       inCell[0] = malloc(sizeof(int)*Oparams.parnum);
