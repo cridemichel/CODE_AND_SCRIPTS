@@ -5627,6 +5627,7 @@ void PredictEventNNL(int na, int nb)
 #else
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]);
 #endif
+
 #ifdef MD_SPHERICAL_WALL
   locate_spherical_wall(na, 0);
   locate_spherical_wall(na, 1);
