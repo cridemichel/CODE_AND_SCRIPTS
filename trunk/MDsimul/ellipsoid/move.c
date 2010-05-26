@@ -1074,6 +1074,12 @@ void rebuild_linked_list_NNL()
 #endif
   int j, n;
 #ifdef MD_LXYZ
+#ifdef MD_MULTIPLE_LL
+  if (OprogStatus.multipleLL)
+    {
+      return;
+    }
+#endif
   for (kk = 0; kk < 3; kk++)
     {
       L2[kk] = 0.5 * L[kk];
