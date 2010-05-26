@@ -3499,6 +3499,9 @@ void set_dyn_ascii(void)
   while (strcmp(opro_ascii[k].parName,""));
 }
 #endif
+#ifdef MD_MULTIPLE_LL
+extern void get_types_from_nl(int nl, int *t1, int *t2);
+#endif
 #define MD_MATRIX_CONTIGOUS
 void usrInitAft(void)
 {
