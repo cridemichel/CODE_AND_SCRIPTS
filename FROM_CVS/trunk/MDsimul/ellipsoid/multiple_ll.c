@@ -126,6 +126,41 @@ int is_a_sphere_NNL_type(int pt)
     }
   return 1;
 }
+#if 0
+void get_types_from_nl(int nl, int *t1, int *t2)
+{
+  int ta, tb, numll, l;
+  /* funzione inversa di get_linked_list */
+  static int *mat[2]={NULL,NULL};
+
+  if (mat[0]==NULL)
+    {
+      numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
+      mat[0] = malloc(sizeof(int)*numll);
+      mat[1] = malloc(sizeof(int)*numll);
+      for (l=0; l < numll; l++)
+	{
+	  for (ta = 0; ta < Oparams.ntypes; ta++)
+	    for (tb = 0; tb < Oparams.ntypes; tb++)
+	      {
+		if (ta > tb)
+		  continue;
+
+		if (l==get_linked_list_type(ta, tb))
+		  {
+		    mat[0][l] = ta;
+		    mat[1][l] = tb;
+		    //*t1 = ta;
+		    //*t2 = tb;
+		    break;
+		  }
+	      }
+	}
+    }
+  *t1 = mat[0][nl];
+  *t2 = mat[1][nl];
+}
+#else
 void get_types_from_nl(int nl, int *t1, int *t2)
 {
   int ta, tb;
@@ -144,6 +179,7 @@ void get_types_from_nl(int nl, int *t1, int *t2)
 	  }
       }
 }
+#endif
 extern double max3(double a, double b, double c);
 
 double calc_rcut_type(int t)
@@ -358,9 +394,19 @@ void ProcessCellCrossingMLL(void)
   boxwall = check_boxwall(kk, nc, nl);
   /* questa condizione non si dovrebbe *mai* verificare, quindi 
    * in linea di principio le due linee che seguono potrebbero anche essere eliminate */
+#if 0
+  if (evIdA==18998)
+    {
+      printf("[PROCCELLCROSS] type=%d inCell=%d %d %d\n", typeOfPart[evIdA], inCellMLL[nc][0][evIdA],inCellMLL[nc][1][evIdA],inCellMLL[nc][2][evIdA]);
+      printf("[PROCESS CELL CROSS]kk=%d nc=%d nl=%d time=%.15G\n", kk, nc, nl, Oparams.time);
+    }
+#endif
   if (nc!=typei && boxwall)
     {
-      printf("nc=1 and boxwall!!!! <===!!!\n");
+      
+      printf("[PROCCELLCROSS] evIdA=%d\n",evIdA);
+      printf("[PROCCELLCROSS] nc=%d and boxwall!!!! <===!!! typei=%d nl=%d kk=%d\n", nc, typei, nl, kk);
+      exit(-1);
       return;
     }
   //printf("ProcellCellCross nl=%d nc=%d k=%d\n", nl, nc, k);
@@ -571,6 +617,7 @@ void PredictCellCross(int na, int nc)
 	  signDir[2] = 0;/* direzione positiva */
 	  if (nc != typeOfPart[na] && inCellMLL[nc][2][na]==cellszMLL[nl]-1)
 	    ignorecross[2] = 1;
+	  else
 	    ignorecross[2] = 0;
 	}
       else 
@@ -583,25 +630,31 @@ void PredictCellCross(int na, int nc)
 	}
 #ifdef MD_LXYZ
 #if defined(MD_EDHEFLEX_WALL) 
-      if (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[2][nc][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[nc][2][na]==0)))
+      if (ignorecross[2] || (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[2][nc][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[nc][2][na]==0))))
 	tm[2] = timbig;
       else
 	tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L[2] /
 		 cellszMLL[nl] - rz[na] - L2[2]) / vz[na];
 #else
-      tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L[2]/
-	       cellszMLL[nc] - rz[na] - L2[2]) / vz[na];
+      if (ignorecross[2])
+	tm[2] = timbig;
+      else
+	tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L[2]/
+	      	 cellszMLL[nc] - rz[na] - L2[2]) / vz[na];
 #endif
 #else
 #if defined(MD_EDHEFLEX_WALL) 
-      if (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[nc][2][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[nc][2][na]==0)))
+      if (ignorecross[2] || (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[nc][2][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[nc][2][na]==0))))
 	tm[2] = timbig;
       else
 	tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L /
 		 cellszMLL[nl] - rz[na] - L2) / vz[na];
 #else
-      tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L /
-	       cellszMLL[nl] - rz[na] - L2) / vz[na];
+      if (ignorecross[2])
+	tm[2] = timbig;
+      else
+	tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L /
+	      	 cellszMLL[nl] - rz[na] - L2) / vz[na];
 #endif
 #endif
 
@@ -642,9 +695,9 @@ void PredictCellCross(int na, int nc)
   else 
     tm[0] = timbig;
 
-  if (vy[na] != 0.) 
+  if (vy[na] != 0.0) 
     {
-      if (vy[na] > 0.) 
+      if (vy[na] > 0.0) 
 	{
 	  if (nc != typeOfPart[na] && inCellMLL[nc][1][na]==cellsyMLL[nl]-1)
 	    ignorecross[1] = 1;
@@ -725,6 +778,19 @@ void PredictCellCross(int na, int nc)
 	      printf("inCell[511]==============%d %d %d\n", inCellMLL[0][0][511],inCellMLL[0][1][511],inCellMLL[0][2][511]);
 
 
+	    }
+#endif
+#if 0
+	  if (na==18998 && nc!=typeOfPart[na])
+	    {
+	      printf("[PREDICT CELL CROSS]\n");
+	      printf("nc=%d nl=%d typeOfPart[%d]=%d\n", nc, nl, na, typeOfPart[na]);
+	      printf("cells = %d %d %d\n", cellsxMLL[nl], cellsyMLL[nl], cellszMLL[nl]);
+	      printf("inCell=%d %d %d\n", inCellMLL[nc][0][na],inCellMLL[nc][1][na],inCellMLL[nc][2][na]);
+	      printf("k=%d v=%f %f %f\n", k, vx[na], vy[na], vz[na]);
+	      printf("ignorecross[k]=%d\n", ignorecross[k]);
+	      printf("cctime=%.15G\n", cctime);
+	      printf("[PREDICT CELL CROSS]-END\n");
 	    }
 #endif
 	  ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, cctime);
@@ -1171,7 +1237,7 @@ void PredictCollMLL(int na, int nb, int nl)
 
 void PredictEventMLL(int na, int nb)
 {
-  int nc, nl, numll;
+  int nc, nl, numll, t1, t2;
   for (nc = 0; nc < Oparams.ntypes; nc++)
     {
       PredictCellCross(na, nc);
@@ -1179,6 +1245,9 @@ void PredictEventMLL(int na, int nb)
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
   for (nl = 0; nl < numll; nl++)
     {
+      get_types_from_nl(nl, &t1, &t2);
+      if (typeOfPart[na]!=t1 && typeOfPart[na]!=t2)
+	continue;
       PredictCollMLL(na, nb, nl);
     }
 }

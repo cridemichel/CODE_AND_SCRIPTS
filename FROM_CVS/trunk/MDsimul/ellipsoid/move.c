@@ -2222,6 +2222,10 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 void update_MSDrot(int i)
 {
   double ti;
+#ifdef EDHE_FLEX
+  if (is_a_sphere_NNL[i])
+    return;
+#endif
   ti = Oparams.time - OprogStatus.lastcolltime[i];
   /* sumox, sumoy e sumoz sono gli integrali nel tempo delle componenti della velocità
    * angolare lungo gli assi dell'ellissoide */
@@ -3517,12 +3521,16 @@ void UpdateAtom(int i)
       return;
     }
 #endif
-  symtop_evolve_orient(i, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
-  for (k1=0; k1 < 3; k1++)
-    for (k2=0; k2 < 3; k2++)
-      R[i][k1][k2] = RA[k1][k2];
-  phi0[i] = phi;
-  psi0[i] = psi;
+  /* se l'oggetto ha simmetria sferica non puo' ruotare intorno al centro di massa*/
+  if (!is_a_sphere_NNL[i])
+    {
+      symtop_evolve_orient(i, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  R[i][k1][k2] = RA[k1][k2];
+      phi0[i] = phi;
+      psi0[i] = psi;
+    }
   //adjust_norm(R[i]);
   atomTime[i] = Oparams.time;
 }
@@ -10096,7 +10104,7 @@ void ProcessCollision(void)
     }
   do_check_negpairs = 0;
 }
-void docellcross(int k, double velk, double *rkptr, int cellsk)
+inline void docellcross(int k, double velk, double *rkptr, int cellsk)
 {
 #if 0
   if (inCell[0][evIdA]+1> cellsx ||inCell[1][evIdA]+1> cellsy||inCell[2][evIdA]+1> cellsz) 

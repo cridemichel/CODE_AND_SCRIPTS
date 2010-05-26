@@ -3297,7 +3297,7 @@ void estimate_HQ_params(double phi)
     }
   else
     {
-      OprogStatus.scaleHQ = (int) scf*Oparams.parnum;
+      OprogStatus.scaleHQ = (int) (scf*Oparams.parnum);
 
       nlsize = (long long int) (nlf*Oparams.parnum);
       /* evita allocazioni eccessive (oltre i 2Gb) */
@@ -3500,7 +3500,7 @@ void set_dyn_ascii(void)
 void usrInitAft(void)
 {
   long long int maxp;
-  int numll;
+  int numll, k1old, k2old;
   /* DESCRIPTION:
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
@@ -3890,14 +3890,14 @@ void usrInitAft(void)
 #ifdef MD_SPOT_GLOBAL_ALLOC
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
-      if (first || maxsp > typesArr[pt].nspots)
+      if (first || typesArr[pt].nspots > maxsp)
 	{
 	  maxsp = typesArr[pt].nspots;
 	  first = 0;
 	}
     }
   maxsp += MD_SPNNL_NUMSP+1;
-  //printf("maxsp=%d\n", maxsp);
+  printf("============>maxsp=%d\n", maxsp);
   distsSq = malloc(sizeof(double)*maxsp);
   ratA = (double**)malloc(sizeof(double*)*maxsp);
   ratA[0] = (double*)malloc(sizeof(double)*3*maxsp);
@@ -3956,8 +3956,10 @@ void usrInitAft(void)
     } 
   maxnbonds = get_max_nbonds();
 
+#ifdef MD_SPOT_GLOBAL_ALLOC
   /* l'array bonds è al massimo long long int e quindi bisogna evitare overflow */
-  maxp = (MAX_ALLOWED_INT - (NA*maxsp + maxsp)) / ((long long int) NANA);
+  maxp = ((long long int)MAX_ALLOWED_INT - (((long long int)NA)*maxsp + maxsp)) / ((long long int) NANA);
+  //printf("MAX_ALLOWED_INT=%lld maxsp=%ld NA=%ld", MAX_ALLOWED_INT, maxsp, NA);
   //printf("NA*maxsp+maxsp=%d\n", NA*maxsp+maxsp);
   if (maxnbonds > 0 && Oparams.parnum > maxp)
     {
@@ -3969,6 +3971,7 @@ void usrInitAft(void)
     }
   else if (maxnbonds > 0)
     printf("[INFO] maximum number of allowed particles is %lld\n", maxp);
+#endif
   //printf("maxnbonds:%d\n OprogStatus.maxbonds: %d\n", maxnbonds, OprogStatus.maxbonds);
   //if (OprogStatus.maxbonds > maxnbonds)
     //maxnbonds = OprogStatus.maxbonds;
@@ -4671,6 +4674,7 @@ void usrInitAft(void)
 	  if (k1==0|| ls > mls)
 	    mls = ls;
 	}
+#if 1
       inCellMLL = malloc(sizeof(int**)*Oparams.ntypes);
       for (k1 = 0; k1 < Oparams.ntypes; k1++)
 	{
@@ -4681,6 +4685,30 @@ void usrInitAft(void)
 	  {
 	    inCellMLL[k1][k2] = malloc(sizeof(int)*Oparams.parnum);
 	  }
+#else
+      inCellMLL = malloc(sizeof(int**)*Oparams.ntypes);
+      for (k1 = 0; k1 < Oparams.ntypes; k1++)
+	{
+	  inCellMLL[k1] = malloc(sizeof(int*)*3);
+	}
+     inCellMLL[0][0] = malloc(sizeof(int)*Oparams.parnum*3*Oparams.ntypes); 
+     for (k1 = 0; k1 < Oparams.ntypes; k1++)
+       for (k2 = 0; k2 < 3; k2++)
+	 {
+	   if (k1==0 && k2==0)
+	     continue;
+	   k2old = k2-1;
+	   k1old = k1;
+	   if (k2old < 0)
+	     {	
+	       k2old = 2;
+	       k1old = k1-1;
+	       if (k1old < 0)
+		 k1old = Oparams.ntypes-1;
+	     }
+	   inCellMLL[k1][k2] = inCellMLL[k1old][k2old] + Oparams.parnum;
+	 }	 
+#endif
       crossevtodel = malloc(sizeof(int*)*Oparams.ntypes);
       for (k1=0; k1 < Oparams.ntypes; k1++)
 	{
