@@ -342,6 +342,9 @@ void update_ghost_status(void)
     }
 }
 #endif
+#ifdef MD_MULTIPLE_LL
+extern void BuildAllNNL_MLL(void);
+#endif
 void rebuildNNL(void)
 {
   int i;
@@ -6357,6 +6360,9 @@ void check_nnl_size(int na)
   printf("[INFO]  neighbor lists exceed allocated memory I have just enlarged it with realloc()\n");
   printf("new size (nebrTabFac) is %d\n", OprogStatus.nebrTabFac);
 }
+#ifdef MD_MULTIPLE_LL
+extern void BuildAllNNL_MLL_one(int i);
+#endif
 void BuildNNL(int na) 
 {
   double shift[NDIM];
