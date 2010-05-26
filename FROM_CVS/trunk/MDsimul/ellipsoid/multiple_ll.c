@@ -337,6 +337,7 @@ void docellcrossMLL(int k, double velk, double *rkptr, int cellsk, int nc)
 extern void UpdateAtom(int i);
 void PredictCellCross(int na, int nc);
 void PredictCollMLL(int na, int nb, int nl);
+void PredictCollMLL_NLL(int na, int nb);
 
 void ProcessCellCrossingMLL(void)
 {
@@ -465,7 +466,8 @@ void ProcessCellCrossingMLL(void)
       break;
     }
   PredictCellCross(evIdA, nc);
-  PredictCollMLL(evIdA, evIdB, nl);
+  if (OprogStatus.useNNL==0)
+    PredictCollMLL(evIdA, evIdB, nl);
 
   n = (inCellMLL[nc][2][evIdA] * cellsyMLL[nl] + inCellMLL[nc][1][evIdA])*cellsxMLL[nl] + 
     inCellMLL[nc][0][evIdA] + Oparams.parnum;
@@ -512,7 +514,8 @@ void ProcessCellCrossingMLL(void)
 	      crossevtodel[nc_bw][evIdA] = -1;
 	    }
 	  PredictCellCross(evIdA, nc_bw);
-	  PredictCollMLL(evIdA, evIdB, nlcross_bw);
+	  if (OprogStatus.useNNL==0)
+	    PredictCollMLL(evIdA, evIdB, nlcross_bw);
 	  n = (inCellMLL[nc_bw][2][evIdA] * cellsyMLL[nlcross_bw] + inCellMLL[nc_bw][1][evIdA])*cellsxMLL[nlcross_bw] + 
 	    inCellMLL[nc_bw][0][evIdA] + Oparams.parnum;
 	  /* Inserimento di evIdA nella nuova cella (head) */
@@ -528,7 +531,7 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
 void PredictHardWall(int na, int evCode, double cctime)
 {
   double vecg[5];
-  int nl, typena, nplane=-1, hwcell;
+  int nl, typena, nplane=-1;
   /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
   //for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 
@@ -1272,7 +1275,6 @@ void rebuildMultipleLL_NLL(int nl)
       invL[kk] = 1.0/L[kk];
     }
 #else
-
   L2 = 0.5 * L;
   invL = 1.0/L;
 #endif
@@ -1349,14 +1351,16 @@ void BuildNNL_MLL(int na, int nl)
   double shift[NDIM];
   int kk;
   double dist, cellsx, cellsy, cellsz;
-  int *inCellL[3], *cellListL;
+  int *inCellL[3], *cellListL, t1, t2, nc;
 #ifndef MD_NNLPLANES
   double vecgsup[8], alpha;
 #endif
   /*N.B. questo deve diventare un paramtetro in OprogStatus da settare nel file .par!*/
   /*double cels[NDIM];*/
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
-  nebrTab[na].len = 0;
+  /* reset list only on first call*/
+  if (nl==0)
+    nebrTab[na].len = 0;
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall || na==sphWallOuter)
     return;
@@ -1374,8 +1378,15 @@ void BuildNNL_MLL(int na, int nl)
     inCellL[k] = inCell_NNL[k];
   cellListL = cellList_NNL;
 #else
+  get_types_from_nl(nl, &t1, &t2);
+  if (t1==typeOfPart[na])
+    nc = t2;
+  else if (t2==typeOfPart[na])
+    nc = t1;
+  else
+    return;
   for (k=0; k < 3; k++)
-    inCellL[k] = inCellMLL[nl][k];
+    inCellL[k] = inCellMLL[nc][k];
   cellListL = cellListMLL[nl];
 #endif
   cellsx = cellsxMLL[nl];
@@ -1507,7 +1518,7 @@ void BuildAllNNL_MLL(void)
     }
 }
 
-void PredictCollMLL_NLL(int na, int nb, int nl)
+void PredictCollMLL_NLL(int na, int nb)
 {
   int i, n;
   double vecg[5], shift[3], t1, t2, t;
@@ -1735,17 +1746,23 @@ void PredictCollMLL_NLL(int na, int nb, int nl)
 }
 void PredictEventNNL_MLL(int na, int nb)
 {
-  int nc, nl, numll;
+  int nc;
   for (nc = 0; nc < Oparams.ntypes; nc++)
     {
       PredictCellCross(na, nc);
       //PredictCellCross(evIdB, nc);
     }
+#if 0
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
   for (nl = 0; nl < numll; nl++)
     {
-      PredictCollMLL_NLL(na, nb, nl);
+      get_types_from_nl(nl, &t1, &t2);
+      if (typeOfPart[na]!=t1 && typeOfPart[na]!=t2)
+    	continue;
+      PredictCollMLL_NLL(na, nb);
     }
+#endif     
+  PredictCollMLL_NLL(na, nb);
 #if 0
   for (nl = 0; nl < numll; nl++)
     {

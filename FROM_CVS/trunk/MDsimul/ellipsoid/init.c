@@ -4650,6 +4650,7 @@ void usrInitAft(void)
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
+      int t1, t2;
       numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
       rcutMLL = malloc(sizeof(double)*numll);
       cellListMLL = malloc(sizeof(int*)*numll);
@@ -4659,12 +4660,13 @@ void usrInitAft(void)
       set_cells_size();
       for (k1=0; k1 < numll; k1++)
 	{
+	  get_types_from_nl(k1, &t1, &t2);
 #ifdef MD_LXYZ
 	  printf("[%d] L=%.15G %.15G %.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", k1, L[0], L[1], L[2],
 		 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1]);
 #else
-	  printf("[%d] L=%.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", k1, L,
-	     	 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1]);
+	  printf("[%d] L=%.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d t1=%d t2=%d\n", k1, L,
+	     	 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1], t1, t2);
 #endif
 	}
       for (k1 = 0; k1 < numll; k1++)
@@ -4720,6 +4722,7 @@ void usrInitAft(void)
 	    crossevtodel[k1][k2] = -1;
 	}
 #ifdef MD_EDHEFLEX_OPTNNL
+      printf("====>mls=%d\n", mls);
       cellList_NNL = malloc(sizeof(int)*(mls+Oparams.parnum));
       inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
       inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
