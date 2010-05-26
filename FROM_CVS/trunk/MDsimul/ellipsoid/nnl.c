@@ -6347,6 +6347,13 @@ void BuildNNL(int na)
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
   nebrTab[na].len = 0;
   MD_DEBUG32(printf("Building NNL...\n"));
+#ifdef MD_MULTIPLE_LL
+  if (OprogStatus.multipleLL)
+    {
+      BuildAllNNL_MLL_one(na);
+      return;
+    }
+#endif
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall || na==sphWallOuter)
     return;

@@ -1265,6 +1265,7 @@ void rebuildMultipleLL_NLL(int nl)
 #ifdef MD_LXYZ
   int kk;
 #endif
+  int t1, t2;
   int j, n, numll;
   double invL, L2;
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
@@ -1286,9 +1287,12 @@ void rebuildMultipleLL_NLL(int nl)
      ma quest'ultimo potrebbe essere scelto ad hoc. Inoltre le LL per gli ellissoidi 
      vengono solo usate per avere una upper limit per il tempo di collisione contro la pareti dure */  
   /* rebuild event calendar */
- 
+
+  get_types_from_nl(nl, &t1, &t2); 
   for (n = 0; n < Oparams.parnum; n++)
     {
+      if (typeOfPart[n]!=t1 && typeOfPart[n]!=t2)
+	continue;
 #ifdef MD_SPHERICAL_WALL
       if (n==sphWall)
 	{
@@ -1327,6 +1331,8 @@ void rebuildMultipleLL_NLL(int nl)
 #else
       rzNNL[n] = nebrTab[n].r[2] - L*rint(nebrTab[n].r[2]*invL);
 #endif
+      //printf("com %d = %f %f %f nebrtag.r=%f %f %f\n", n, rx[n], ry[n], rx[n], rxNNL[n], ryNNL[n],
+	//    rzNNL[n]);
       inCell_NNL[0][n] =  (rxNNL[n] + L2) * cellsxMLL[nl] / L;
       inCell_NNL[1][n] =  (ryNNL[n] + L2) * cellsyMLL[nl] / L;
 #ifdef MD_GRAVITY
@@ -1499,7 +1505,22 @@ void BuildNNL_MLL(int na, int nl)
 	}
     }
 }
+void BuildAllNNL_MLL_one(int i)
+{
+  int nl, numll;
+  
+  numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
 
+  for (nl = 0; nl < numll; nl++)
+    {
+#ifdef MD_EDHEFLEX_OPTNNL
+      rebuildMultipleLL_NLL(nl);
+#endif
+      BuildNNL_MLL(i, nl);
+    }
+
+
+}
 void BuildAllNNL_MLL(void)
 {
   int nl, i, numll;
