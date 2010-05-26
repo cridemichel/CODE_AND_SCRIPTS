@@ -821,6 +821,9 @@ struct progStatus
   double Tf; /* temperatura finale per il quench */
   double xi; /* rate di riduzione durante il quench per il folding */
 #endif
+#ifdef MD_EDHEFLEX_OPTNNL
+  int optnnl;
+#endif
 #ifdef MD_RABBIT
   double first_time;
   double time_limit;
@@ -1208,6 +1211,9 @@ struct pascii opro_ascii[] =
   {"stripStore",   &OS(stripStore),        1, 1,             "%d"},
   {"Tf",           &OS(Tf),                1, 1,             "%.15G"},
   {"xi",           &OS(xi),                1, 1,             "%.15G"},
+#endif
+#ifdef MD_EDHEFLEX_OPTNNL
+  {"optnnl",       &OS(optnnl),            1, 1,              "%d"},
 #endif
 #ifdef MD_RABBIT
   {"time_limit",           &OS(time_limit),                1, 1,             "%.15G"},
@@ -1600,6 +1606,9 @@ struct singlePar OsinglePar[] = {
   {"Tf",          &OprogStatus.Tf,          CT},
   {"xi",          &OprogStatus.xi,          CT},
   {"n_gauleg",    &OprogStatus.n_gauleg,    INT},
+#endif
+#ifdef MD_EDHEFLEX_OPTNNL
+  {"optnnl",      &OprogStatus.optnnl,      INT},
 #endif
   {"ENmin",      &OprogStatus.ENmin,        CT},
   {"ENmax",      &OprogStatus.ENmax,        CT},

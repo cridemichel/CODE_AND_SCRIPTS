@@ -1380,9 +1380,25 @@ void BuildNNL_MLL(int na, int nl)
     shift[kk] = 0;
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 #ifdef MD_EDHEFLEX_OPTNNL
-  for (k=0; k < 3; k++)
-    inCellL[k] = inCell_NNL[k];
-  cellListL = cellList_NNL;
+  if (OprogStatus.optnnl)
+    {
+      for (k=0; k < 3; k++)
+	inCellL[k] = inCell_NNL[k];
+      cellListL = cellList_NNL;
+    }
+  else
+    {
+      get_types_from_nl(nl, &t1, &t2);
+      if (t1==typeOfPart[na])
+	nc = t2;
+      else if (t2==typeOfPart[na])
+	nc = t1;
+      else
+	return;
+      for (k=0; k < 3; k++)
+	inCellL[k] = inCellMLL[nc][k];
+      cellListL = cellListMLL[nl];
+    }
 #else
   get_types_from_nl(nl, &t1, &t2);
   if (t1==typeOfPart[na])
@@ -1514,12 +1530,11 @@ void BuildAllNNL_MLL_one(int i)
   for (nl = 0; nl < numll; nl++)
     {
 #ifdef MD_EDHEFLEX_OPTNNL
-      rebuildMultipleLL_NLL(nl);
+      if (OprogStatus.optnnl)
+	rebuildMultipleLL_NLL(nl);
 #endif
       BuildNNL_MLL(i, nl);
     }
-
-
 }
 void BuildAllNNL_MLL(void)
 {
@@ -1530,7 +1545,8 @@ void BuildAllNNL_MLL(void)
   for (nl = 0; nl < numll; nl++)
     {
 #ifdef MD_EDHEFLEX_OPTNNL
-      rebuildMultipleLL_NLL(nl);
+      if (OprogStatus.optnnl)
+	rebuildMultipleLL_NLL(nl);
 #endif
       for (i=0; i < Oparams.parnum; i++)
 	{

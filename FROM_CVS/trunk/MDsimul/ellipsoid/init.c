@@ -1676,6 +1676,9 @@ void usrInitBef(void)
        the begin of the run and not the instanteaneous value */
     OprogStatus.avnggr    = 0;
     Oparams.Dt = 0.01;
+#ifdef MD_EDHEFLEX_OPTNNL
+    OprogStatus.optnnl = 0;
+#endif
 #ifdef EDHE_FLEX
     OprogStatus.stripStore = 0;
     strcpy(OprogStatus.par2save, "ALL"); 
@@ -2420,7 +2423,7 @@ void calc_encpp(void)
 	 delle celle per tale centro e non per il centro degli ellissoidi/SQ, ma ancora 
 	 questo non viene fatto.
        */
-      if (OprogStatus.useNNL)
+      if (OprogStatus.useNNL && OprogStatus.optnnl)
 	{
 	  com[0] = 0.0;
 	  com[1] = 0.0;
@@ -2454,7 +2457,7 @@ void calc_encpp(void)
 	{
 	  //norm = calc_norm(typesArr[pt].spots[sp].x);
 #ifdef MD_EDHEFLEX_OPTNNL
-	  if (OprogStatus.useNNL)
+	  if (OprogStatus.useNNL && OprogStatus.optnnl)
 	    {
 	      for (kk=0; kk < 3; kk++)
 		v[kk] = typesArr[pt].spots[sp].sigma*0.5 + fabs(typesArr[pt].spots[sp].x[kk]-com[kk]);
@@ -3955,7 +3958,12 @@ void usrInitAft(void)
 			typesArr[pt].sax[2]);)
     } 
   maxnbonds = get_max_nbonds();
-
+#ifdef MD_EDHEFLEX_OPTNNL
+  if (OprogStatus.optnnl)
+    {
+      printf("[INFO] Enabling optimal choice of linked lists cutoff for NNL\n");
+    }
+#endif
 #ifdef MD_SPOT_GLOBAL_ALLOC
   /* l'array bonds è al massimo long long int e quindi bisogna evitare overflow */
   maxp = ((long long int)MAX_ALLOWED_INT - (((long long int)NA)*maxsp + maxsp)) / ((long long int) NANA);
@@ -4722,14 +4730,17 @@ void usrInitAft(void)
 	    crossevtodel[k1][k2] = -1;
 	}
 #ifdef MD_EDHEFLEX_OPTNNL
-      printf("====>mls=%d\n", mls);
-      cellList_NNL = malloc(sizeof(int)*(mls+Oparams.parnum));
-      inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
-      inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
-      inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
-      rxNNL = malloc(sizeof(double)*Oparams.parnum);
-      ryNNL = malloc(sizeof(double)*Oparams.parnum);
-      rzNNL = malloc(sizeof(double)*Oparams.parnum);
+      if (OprogStatus.optnnl)
+	{
+	  //printf("====>mls=%d\n", mls);
+	  cellList_NNL = malloc(sizeof(int)*(mls+Oparams.parnum));
+	  inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
+	  inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
+	  inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
+	  rxNNL = malloc(sizeof(double)*Oparams.parnum);
+	  ryNNL = malloc(sizeof(double)*Oparams.parnum);
+	  rzNNL = malloc(sizeof(double)*Oparams.parnum);
+	}
 #endif
     }
   else
@@ -4754,13 +4765,16 @@ void usrInitAft(void)
       inCell[1]= malloc(sizeof(int)*Oparams.parnum);
       inCell[2] = malloc(sizeof(int)*Oparams.parnum);
 #ifdef MD_EDHEFLEX_OPTNNL
-      cellList_NNL = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
-      inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
-      inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
-      inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
-      rxNNL = malloc(sizeof(double)*Oparams.parnum);
-      ryNNL = malloc(sizeof(double)*Oparams.parnum);
-      rzNNL = malloc(sizeof(double)*Oparams.parnum);
+      if (OprogStatus.optnnl)
+	{
+	  cellList_NNL = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+	  inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
+	  inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
+	  inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
+	  rxNNL = malloc(sizeof(double)*Oparams.parnum);
+	  ryNNL = malloc(sizeof(double)*Oparams.parnum);
+	  rzNNL = malloc(sizeof(double)*Oparams.parnum);
+	}
 #endif
     }
 #else
@@ -4784,13 +4798,16 @@ void usrInitAft(void)
       inCell[1]= malloc(sizeof(int)*Oparams.parnum);
       inCell[2] = malloc(sizeof(int)*Oparams.parnum);
 #ifdef MD_EDHEFLEX_OPTNNL
-      cellList_NNL = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
-      inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
-      inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
-      inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
-      rxNNL = malloc(sizeof(double)*Oparams.parnum);
-      ryNNL = malloc(sizeof(double)*Oparams.parnum);
-      rzNNL = malloc(sizeof(double)*Oparams.parnum);
+      if (OprogStatus.optnnl)
+	{
+	  cellList_NNL = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+	  inCell_NNL[0] = malloc(sizeof(int)*Oparams.parnum);
+	  inCell_NNL[1]= malloc(sizeof(int)*Oparams.parnum);
+	  inCell_NNL[2] = malloc(sizeof(int)*Oparams.parnum);
+	  rxNNL = malloc(sizeof(double)*Oparams.parnum);
+	  ryNNL = malloc(sizeof(double)*Oparams.parnum);
+	  rzNNL = malloc(sizeof(double)*Oparams.parnum);
+	}
 #endif
 
 #endif

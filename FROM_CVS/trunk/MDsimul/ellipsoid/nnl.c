@@ -262,7 +262,8 @@ void growth_rebuildNNL(int i)
 #ifdef MD_EDHEFLEX_OPTNNL
   /* il centro di massa del parallelepipedo può non coincidere con quello dell'ellissoide
      in tal caso per cui le linked lists vanno generate ad hoc */
-  rebuild_linked_list_NNL();
+  if (OprogStatus.optnnl)
+    rebuild_linked_list_NNL();
 #endif
   BuildNNL(i);
   if (nebrTab[i].nexttime < nextNNLrebuild)
@@ -365,7 +366,8 @@ void rebuildNNL(void)
 #ifdef MD_EDHEFLEX_OPTNNL
       /* il centro di massa del parallelepipedo può non coincidere con quello dell'ellissoide
 	 in tal caso per cui le linked lists vanno generate ad hoc */
-      rebuild_linked_list_NNL();
+      if (OprogStatus.optnnl)
+	rebuild_linked_list_NNL();
 #endif
       for (i=0; i < Oparams.parnum; i++)
 	{
@@ -376,7 +378,8 @@ void rebuildNNL(void)
 #ifdef MD_EDHEFLEX_OPTNNL
   /* il centro di massa del parallelepipedo può non coincidere con quello dell'ellissoide
      in tal caso per cui le linked lists vanno generate ad hoc */
-  rebuild_linked_list_NNL();
+  if (OprogStatus.optnnl)
+    rebuild_linked_list_NNL();
 #endif
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -2371,12 +2374,24 @@ double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shif
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
 #ifdef MD_EDHEFLEX_OPTNNL
-  rA[0] = rxNNL[i];
-  rA[1] = ryNNL[i];
-  rA[2] = rzNNL[i];
-  rB[0] = rxNNL[j] + shift[0];
-  rB[1] = ryNNL[j] + shift[1];
-  rB[2] = rzNNL[j] + shift[2];
+  if (OprogStatus.optnnl)
+    {
+      rA[0] = rxNNL[i];
+      rA[1] = ryNNL[i];
+      rA[2] = rzNNL[i];
+      rB[0] = rxNNL[j] + shift[0];
+      rB[1] = ryNNL[j] + shift[1];
+      rB[2] = rzNNL[j] + shift[2];
+    }
+  else
+    {
+      rA[0] = nebrTab[i].r[0];
+      rA[1] = nebrTab[i].r[1];
+      rA[2] = nebrTab[i].r[2];
+      rB[0] = nebrTab[j].r[0] + shift[0];
+      rB[1] = nebrTab[j].r[1] + shift[1];
+      rB[2] = nebrTab[j].r[2] + shift[2];
+    }
 #else
   rA[0] = nebrTab[i].r[0];
   rA[1] = nebrTab[i].r[1];
@@ -6127,10 +6142,19 @@ void nextNNLupdate(int na)
   /* calcola il tempo a cui si deve ricostruire la NNL */
 #ifdef EDHE_FLEX
 #ifdef MD_EDHEFLEX_OPTNNL
-  body2labR(na, typesArr[typena].ppr, xl, NULL, nebrTab[na].R);
-  nebrTab[na].r[0] = rx[na]+xl[0];
-  nebrTab[na].r[1] = ry[na]+xl[1];
-  nebrTab[na].r[2] = rz[na]+xl[2];
+  if (OprogStatus.optnnl)
+    {
+      body2labR(na, typesArr[typena].ppr, xl, NULL, nebrTab[na].R);
+      nebrTab[na].r[0] = rx[na]+xl[0];
+      nebrTab[na].r[1] = ry[na]+xl[1];
+      nebrTab[na].r[2] = rz[na]+xl[2];
+    }
+  else
+    {
+      nebrTab[na].r[0] = rx[na];
+      nebrTab[na].r[1] = ry[na];
+      nebrTab[na].r[2] = rz[na];
+    }
   //if (Oparams.curStep > 2690 && na <= 4)
   //printf("r[%d]=%f %f %f nebrTab.r=%f %f %f xl=%f %f %f\n", na, rx[na], ry[na], rz[na], nebrTab[na].r[0], nebrTab[na].r[1], nebrTab[na].r[2], xl[0], xl[1], xl[2]);
 #else
@@ -6367,9 +6391,18 @@ void BuildNNL(int na)
     shift[kk] = 0;
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 #ifdef MD_EDHEFLEX_OPTNNL
-  for (k=0; k < 3; k++)
-    inCellL[k] = inCell_NNL[k];
-  cellListL = cellList_NNL;
+  if (OprogStatus.optnnl)
+    {
+      for (k=0; k < 3; k++)
+	inCellL[k] = inCell_NNL[k];
+      cellListL = cellList_NNL;
+    }
+  else
+    {
+      for (k=0; k < 3; k++)
+	inCellL[k] = inCell[k];
+      cellListL = cellList;
+    }
 #else
   for (k=0; k < 3; k++)
     inCellL[k] = inCell[k];
