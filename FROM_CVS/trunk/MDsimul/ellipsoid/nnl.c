@@ -16,6 +16,9 @@
 #define MD_DEBUG37(x) 
 #define MD_DEBUG38(x) 
 #define MD_DEBUG39(x) 
+#ifdef MD_ABSORPTION
+extern int *listtmp;
+#endif
 #ifdef EDHE_FLEX
 extern int is_sphere(int i);
 extern int *is_a_sphere_NNL;
@@ -275,6 +278,7 @@ void growth_rebuildNNL(int i)
     }
 }
 double n1_bak, n2_bak, n3_bak;
+#ifdef EDHE_FLEX
 void switch_to_HE(int i)
 {
   int t;
@@ -300,6 +304,7 @@ void back_to_SQ(int i)
   typesArr[t].sax[1] /= 2.0;
   typesArr[t].sax[2] /= 2.0;
 }
+#endif
 #ifdef MD_EDHEFLEX_OPTNNL
 extern void rebuild_linked_list_NNL(void);
 #endif
@@ -3248,7 +3253,7 @@ int search_contact_faster_neigh_plane(int i, double *t, double t1, double t2,
    * MAXOPTITS è il numero massimo di iterazioni al di sopra del quale esce */
   double maxddot, told, delt, normddot, ddot[3];
   const int MAXOPTITS = 500;
-  double factori;
+  double factori, A, B;
   int its=0, distfailed, itsf=0; 
   const double GOLD= 1.618034;  
   factori = 0.5*maxax[i]+epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
@@ -6279,13 +6284,25 @@ int may_interact_core(int i, int j)
  else
    return 0; 
 }
+#ifdef EDHE_FLEX
+extern int *nbondsFlexS;
+extern int get_linked_list_type(int type1, int type2);
+#endif
 int may_interact_spots(int i, int j)
 {
-  int type1, type2, ni;
+  int type1, type2, ni, nl, numll;
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
   if (typesArr[type1].nspots == 0 || typesArr[type2].nspots == 0)
     return 0;
+#ifdef EDHE_FLEX
+  if (OprogStatus.optbm)
+    {
+      nl = get_linked_list_type(type1, type2);
+      if (nbondsFlexS[nl] > 0)
+	return 1;
+    }
+#endif
   for (ni = 0; ni < Oparams.ninters; ni++)
     {
       if (is_in_ranges(type1, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
@@ -6350,6 +6367,9 @@ void check_nnl_size(int na)
     {
       nnlsize = OprogStatus.nebrTabFac*sizeof(int); 
       nebrTab[i].list = (int*)realloc(nebrTab[i].list, nnlsize);
+#ifdef MD_ABSORPTION
+      listtmp = (int*) realloc(listtmp, nnlsize);
+#endif
       if (nebrTab[i].list==NULL)
 	{
 	  printf("[CRITICAL ERROR] neighbor lists size exceed memory allocation of %d elements\n", OprogStatus.nebrTabFac);
