@@ -74,6 +74,8 @@ void UpdateSystem(void);
 #define MDINT int
 #define MDINTFMT "%d"
 #endif
+#define MAXDDOT_NNL_THR 1.0E-8
+#define ADJ_MAXDDOT_NL 1.001
 #ifdef EDHE_FLEX
 /* NOTA 16/04/2010: numero di spot per l'implementazione delle NNL tramite spots */
 #define MD_SPNNL_NUMSP 8
@@ -81,8 +83,6 @@ void UpdateSystem(void);
 #define PAR2SAVE_LEN 1024
 #define MD_INF_ITENS 1E199
 #define MD_INF_MASS  1E199
-#define MAXDDOT_NNL_THR 1.0E-8
-#define ADJ_MAXDDOT_NL 1.001
 #define MD_HANDLE_INFMASS
 #ifdef MD_GHOST_IGG
 typedef struct {
@@ -129,6 +129,9 @@ typedef struct
   spotStruct* spots; 
   int nhardobjs; /* one can add other sub-objects to build a super-object made of 
 		   several super-ellipsoids with their spots */
+#ifdef MD_MULTIPLE_LL
+  double rcutFact;
+#endif
   hardobjsStruct* hardobjs;
 } partType;
 
@@ -480,6 +483,7 @@ struct progStatus
   int iniFormat; /* 0 = binary 1 = ascii 2 = both */
   int endFormat; /* 0 = binary 1 = ascii 2 = both */
 #ifdef EDHE_FLEX
+  int optbm;
 #ifdef MD_SCALEPHI_STAGES
   int growthType;
 #endif
@@ -834,8 +838,10 @@ struct progStatus
 #ifdef MD_PROTEIN_DESIGN
   char nativeConf[NAME_LENGTH];
 #endif
+#ifdef MD_MULTIPLE_LL
   int multipleLL;
   double rcutfactMLL;
+#endif
   /* ======================================================================= */
 };
 
@@ -933,6 +939,7 @@ struct pascii opro_ascii[] =
   {"iniFormat",    &OS(iniFormat),                  1,               1, "%d"},
   {"endFormat",    &OS(endFormat),                  1,               1, "%d"},
 #ifdef EDHE_FLEX
+  {"optbm",        &OS(optbm),                      1,               1, "%d"},
 #ifdef MD_SCALEPHI_STAGES
   {"growthType",      &OS(growthType),                1,       1,  "%d" },
 #endif
@@ -1189,8 +1196,10 @@ struct pascii opro_ascii[] =
   {"dofA",         &OS(dofA),                        1,  1, "%d"},
   {"dofB",         &OS(dofB),                        1,  1, "%d"},
   {"base",         &OS(base),                       1,  1, "%.6G"},
+#ifdef MD_MULTIPLE_LL
   {"multipleLL",   &OS(multipleLL),                 1,  1, "%d"},
   {"rcutfactMLL",  &OS(rcutfactMLL),                1,  1, "%.15G"},
+#endif
 #ifdef MD_BILOG
   {"basew",        &OS(basew),                      1,  1, "%.6G"},
   {"lastbilogsaved",&OS(lastbilogsaved),            1,  1, "%d"},
@@ -1354,6 +1363,7 @@ struct singlePar OsinglePar[] = {
   {"inistep" ,   &Oparams.curStep,            LLINT},
   {"endFormat",  &OprogStatus.endFormat,      INT},
 #ifdef EDHE_FLEX
+  {"optbm",      &OprogStatus.optbm,          INT},
 #ifdef MD_SCALEPHI_STAGES
   {"growthType",       &OprogStatus.growthType,  INT},
 #endif
@@ -1595,8 +1605,10 @@ struct singlePar OsinglePar[] = {
   {"tmpPath",    OprogStatus.tmpPath,        STR},
   {"misPath",    OprogStatus.misPath,       STR},
   {"base",       &OprogStatus.base,         CT},
+#ifdef MD_MULTIPLE_LL
   {"multipleLL", &OprogStatus.multipleLL,   INT},
   {"rcutfactMLL", &OprogStatus.rcutfactMLL, CT},
+#endif
   {"NN",         &OprogStatus.NN,           INT},
 #ifdef MD_BILOG
   {"basew",     &OprogStatus.basew,         CT},

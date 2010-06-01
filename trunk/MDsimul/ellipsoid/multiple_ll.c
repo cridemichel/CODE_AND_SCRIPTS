@@ -1,7 +1,74 @@
-#ifdef MD_MULTIPLE_LL
 #include<mdsimul.h>
-#define MD_NNLPLANES
+#ifdef EDHE_FLEX
+/* questa serve anche se non si usano le LL multiple
+   per la funzione assign_bond_mapping ottimizzata */
+extern double *dists;
+extern void assign_bond_mapping(int i, int j);
+extern int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
+extern int bound(int na, int n, int a, int b);
+extern double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
+extern void check_shift(int i, int j, double *shift);
+inline int get_linked_list_type(int typena, int nc)
+{
+  int sum, t1, nc1;
+  /* per N tipi le linked lists sono N*(N+1)/2. 
+     typeOfPart[na]-nc -> nl
+     consideriamo il caso ntypes=4
+     0-0 -> 0
+     1-1 -> 1
+     2-2 -> 2
+     3-3 -> 3
+     0-0 -> X
+     0-1 -> 4 = 4 + 1 - 1
+     0-2 -> 5 = 4 + 2 - 1
+     0-3 -> 6 = 4 + 3 - 1
+     1-0 -> X
+     1-1 -> X
+     1-2 -> 7 = 4 + 4*1 + 2 - 3 
+     1-3 -> 8 = 4 + 4*1 + 3 - 3  
+     2-0 -> X
+     2-1 -> X
+     2-2 -> X
+     2-3 -> 9 = 4 + 4*2 + 3 - 6
+     in quest'ultimo caso il numero da sottrarre è pari alla somma delle X ossia
+     6 = 1 + 2 + 3 = 3*(3+1)/2 = (typena+1)*(typena+2)/2
+     inoltre 2=typne 4=ntypes e 3=nc e con questo si ottiene la formula riportata sotto
+   */
+  //typena = typeOfPart[na];
+  if (nc==typena)
+    return nc;
+  else 
+    {
+      if (typena < nc)
+	{
+	  t1 = typena+1;
+	  sum = t1*(t1+1)/2;
+	  return Oparams.ntypes*t1 + (nc-sum);
 
+	}
+      else
+	{
+	  /* lo scambio serve poiché ad es. la lista 3-2 deve essere identica alla lista 2-3 */
+	  nc1 = nc+1;
+	  sum = nc1*(nc1+1)/2;
+	  return Oparams.ntypes*nc1 + (typena-sum);
+	}
+    }
+      /*
+      typena=3 nc=2 => 3 + 3*(4 - (2+2)/2) / 2 = 9 OK  
+      typena=1 nc=2 => 4*2 + 2 - 3 = 7 OK
+   */
+}
+#endif
+#ifdef MD_MULTIPLE_LL
+#define MD_NNLPLANES
+#ifdef MD_ABSORPTION
+extern int *listtmp;
+#ifdef MD_SPHERICAL_WALL
+extern int sphWall, sphWallOuter;
+extern void locate_spherical_wall(int na, int outer);
+#endif
+#endif
 /* NOTA: nel caso della silica si avevano 4 linked lists in verità ossia:
    0 è la lista della specie A per l'interazione A-A
    1 è la lista della specie B per l'interazione B-B
@@ -20,7 +87,6 @@ extern int *inCell_NNL[3], *cellList_NNL;
 extern double *rxNNL, *ryNNL, *rzNNL;
 #endif
 extern double nextNNLrebuild;
-
 extern struct nebrTabStruct *nebrTab;
 extern int cellRange[2*NDIM];
 int **crossevtodel;
@@ -104,56 +170,6 @@ int is_superellips_type(int pt)
     return 1;
 }
 
-inline int get_linked_list_type(int typena, int nc)
-{
-  int sum, t1, nc1;
-  /* per N tipi le linked lists sono N*(N+1)/2. 
-     typeOfPart[na]-nc -> nl
-     consideriamo il caso ntypes=4
-     0-0 -> 0
-     1-1 -> 1
-     2-2 -> 2
-     3-3 -> 3
-     0-0 -> X
-     0-1 -> 4 = 4 + 1 - 1
-     0-2 -> 5 = 4 + 2 - 1
-     0-3 -> 6 = 4 + 3 - 1
-     1-0 -> X
-     1-1 -> X
-     1-2 -> 7 = 4 + 4*1 + 2 - 3 
-     1-3 -> 8 = 4 + 4*1 + 3 - 3  
-     2-0 -> X
-     2-1 -> X
-     2-2 -> X
-     2-3 -> 9 = 4 + 4*2 + 3 - 6
-     in quest'ultimo caso il numero da sottrarre è pari alla somma delle X ossia
-     6 = 1 + 2 + 3 = 3*(3+1)/2 = (typena+1)*(typena+2)/2
-     inoltre 2=typne 4=ntypes e 3=nc e con questo si ottiene la formula riportata sotto
-   */
-  //typena = typeOfPart[na];
-  if (nc==typena)
-    return nc;
-  else 
-    {
-      if (typena < nc)
-	{
-	  t1 = typena+1;
-	  sum = t1*(t1+1)/2;
-	  return Oparams.ntypes*t1 + (nc-sum);
-	}
-      else
-	{
-	  /* lo scambio serve poiché ad es. la lista 3-2 deve essere identica alla lista 2-3 */
-	  nc1 = nc+1;
-	  sum = nc1*(nc1+1)/2;
-	  return Oparams.ntypes*nc1 + (typena-sum);
-	}
-    }
-      /*
-      typena=3 nc=2 => 3 + 3*(4 - (2+2)/2) / 2 = 9 OK  
-      typena=1 nc=2 => 4*2 + 2 - 3 = 7 OK
-   */
-}
 int get_linked_list(int na, int nc)
 {
   return get_linked_list_type(typeOfPart[na], nc);
@@ -243,16 +259,9 @@ double calc_rcut_type(int t)
   double rcutA;
   int kk;
   double ax[3], del;
-  if (OprogStatus.useNNL)
-    {
-      for (kk=0; kk < 3; kk++)
-	ax[kk] = typesArr[t].ppsax[kk];
-    }
-  else
-    {
-      for (kk=0; kk < 3; kk++)
-	ax[kk] = typesArr[t].sax[kk];
-    }
+  for (kk=0; kk < 3; kk++)
+    ax[kk] = typesArr[t].ppsax[kk];
+
   if (OprogStatus.useNNL)  
     del = OprogStatus.rNebrShell;
   else
@@ -263,7 +272,11 @@ double calc_rcut_type(int t)
     rcutA = 2.0*max3(ax[0]+del,ax[1]+del,ax[2]+del);
   else
     rcutA = 2.0*sqrt(Sqr(ax[0]+del)+Sqr(ax[1]+del)+Sqr(ax[2]+del));
-  return OprogStatus.rcutfactMLL*rcutA;
+  //printf("rcutFact[%d]=%f\n", t, typesArr[t].rcutFact);
+  if (typesArr[t].rcutFact > 1.0)
+    return typesArr[t].rcutFact*rcutA;
+  else
+    return OprogStatus.rcutfactMLL*rcutA;
 }
 
 double calc_rcut(int nl)
@@ -272,12 +285,29 @@ double calc_rcut(int nl)
   double rc, rc1, rc2;
   /* le celle liste per ora vengono sempre scelte automaticamente */
   get_types_from_nl(nl, &t1, &t2);
-  //printf("t1=%d t2=%d\n", t1, t2);
   rc1 = calc_rcut_type(t1);
   rc2 = calc_rcut_type(t2);
   rc = (rc1 + rc2)*0.5;
   return rc;
 }
+#if 0
+void check_equal(int nl)
+{
+  int k;
+  for (k=0; k < nl; k++)
+    {
+      if (cellsxMLL[nl]==cellsxMLL[k] &&
+	  cellsyMLL[nl]==cellsyMLL[k] &&
+	  cellszMLL[nl]==cellszMLL[k] && MLLremapto[k]==k)
+	{
+	  /* rimappa la linked list attual nl ad una esistente uguale
+	     rimappando a linked list che non sono state già rimappate (condizione
+	     MLLremapto[k]=k) */
+	  MLLremapto[nl] = k;
+	}
+    } 
+}
+#endif
 void set_cells_size(void)
 {
   int nl, numll;
@@ -421,7 +451,6 @@ void ProcessCellCrossingMLL(void)
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
 
   nl = get_linked_list_type(typei, nc);
-
  // printf("CELL CROSSING DI evIdA=%d nl=%d nc=%d typei=%d\n",evIdA, nl, nc, typei);
   //nc_bw = ;
 #if 0
@@ -694,7 +723,7 @@ void PredictCellCross(int na, int nc)
   double tm[3], cctime=timbig;
   ignorecross[0] = ignorecross[1] = ignorecross[2] = 1;
 
-  nl =  get_linked_list(na, nc);
+  nl = get_linked_list(na, nc);
 #ifdef MD_OPT_MULTLL
 #if 0
   if (!may_interact_all_type(typeOfPart[na], nc) && typeOfPart[na] != nc)
@@ -852,8 +881,13 @@ void PredictCellCross(int na, int nc)
       printf("tm[%d]: %.15G\n", k, tm[k]);
       tm[k] = 0.0;
       printf("k=%d nc=%d na=%d\n", k, nc, na);
+#ifdef MD_LXYZ      
+      printf("real cells: %d %d %d\n", (int)((rx[na] + L2[0]) * cellsxMLL[nl] / L[0]),
+	     (int)((ry[na] + L2[1]) * cellsyMLL[nl] / L[1]), (int)((rz[na] + L2[2])  * cellszMLL[nl] / L[2]));
+#else
       printf("real cells: %d %d %d\n", (int)((rx[na] + L2) * cellsxMLL[nl] / L),
 	     (int)((ry[na] + L2) * cellsyMLL[nl] / L), (int)((rz[na] + L2)  * cellszMLL[nl] / L));
+#endif
     }
   /* 100+0 = attraversamento cella lungo x
    * 100+1 =       "           "     "   y
@@ -956,9 +990,9 @@ void rebuildMultipleLL(void)
 #endif
 	  atomTime[n] = Oparams.time;
 #ifdef MD_LXYZ
-	  inCellMLL[nc][0][n] =  (rx[n] + L2) * cellsxMLL[nl] / L[0];
-	  inCellMLL[nc][1][n] =  (ry[n] + L2) * cellsyMLL[nl] / L[1];
-	  inCellMLL[nc][2][n] =  (rz[n] + L2)  * cellszMLL[nl] / L[2];
+	  inCellMLL[nc][0][n] =  (rx[n] + L2[0]) * cellsxMLL[nl] / L[0];
+	  inCellMLL[nc][1][n] =  (ry[n] + L2[1]) * cellsyMLL[nl] / L[1];
+	  inCellMLL[nc][2][n] =  (rz[n] + L2[2])  * cellszMLL[nl] / L[2];
 #else
 	  inCellMLL[nc][0][n] =  (rx[n] + L2) * cellsxMLL[nl] / L;
 	  inCellMLL[nc][1][n] =  (ry[n] + L2) * cellsyMLL[nl] / L;
@@ -1015,9 +1049,6 @@ void PredictCollMLL(int na, int nb, int nl)
   int ty1=-1, ty2=-1;
   int overlap, nc;
   int cellRangeT[2 * NDIM];
-#ifdef MD_ABSORPTION
-  int hwcell;
-#endif
 #ifdef MD_PATCHY_HE
   int ac, bc, collCode, collCodeOld, acHC, bcHC;
   double evtime, evtimeHC;
@@ -1029,13 +1060,6 @@ void PredictCollMLL(int na, int nb, int nl)
     return;
   if (na==sphWallOuter|| nb==sphWallOuter)
     return;
-#endif
-
-#ifdef MD_SPHERICAL_WALL
-  /* inner wall */
-  locate_spherical_wall(na, 0);
-  /* outer wall */
-  locate_spherical_wall(na, 1);
 #endif
 
   /* se il tipo della particella na è relativo alla linked lists nl 
@@ -1381,6 +1405,14 @@ void PredictEventMLL(int na, int nb)
       PredictCellCross(na, nc);
     }
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
+
+#ifdef MD_SPHERICAL_WALL
+  /* inner wall */
+  locate_spherical_wall(na, 0);
+  /* outer wall */
+  locate_spherical_wall(na, 1);
+#endif
+
   for (nl = 0; nl < numll; nl++)
     {
       get_types_from_nl(nl, &t1, &t2);
@@ -1402,7 +1434,11 @@ void rebuildMultipleLL_NLL(int nl)
 #endif
   int t1=-1, t2=-1;
   int j, n, numll;
+#ifdef MD_LXYZ
+  double invL[NDIM], L2[NDIM];
+#else
   double invL, L2;
+#endif
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
 #ifdef MD_LXYZ
   for (kk = 0; kk < 3; kk++)
@@ -1491,7 +1527,8 @@ void BuildNNL_MLL(int na, int nl)
 {
   double shift[NDIM];
   int kk;
-  double dist, cellsx, cellsy, cellsz;
+  double dist; 
+  int cellsx, cellsy, cellsz;
   int *inCellL[3], *cellListL, t1=-1, t2=-1, nc;
 #ifndef MD_NNLPLANES
   double vecgsup[8], alpha;
@@ -1720,9 +1757,6 @@ void PredictCollMLL_NLL(int na, int nb)
   int ac, bc, collCode, collCodeOld, acHC, bcHC;
   double evtime, evtimeHC;
 #endif
-#ifdef MD_ABSORPTION
-  int hwcell;
-#endif
 
 #ifdef MD_SPHERICAL_WALL
   locate_spherical_wall(na, 0);
@@ -1732,7 +1766,6 @@ void PredictCollMLL_NLL(int na, int nb)
      usando le NNL */
   if (nb >= ATOM_LIMIT+2*NDIM)
     return;
-
 
   for (i=0; i < nebrTab[na].len; i++)
     {
@@ -1964,5 +1997,694 @@ void PredictEventNNL_MLL(int na, int nb)
     }
 #endif
 
+}
+extern int calcdist_retcheck;
+extern double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
+	      		  double *vecgsup, int calcguess);
+
+double get_min_dist_MLL(int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
+{
+  /* na = atomo da esaminare 0 < na < Oparams.parnum 
+   * nb = -2,-1, 0 ... (Oparams.parnum - 1)
+   *      -2 = controlla solo cell crossing e urti con pareti 
+   *      -1 = controlla urti con tutti gli atomi nelle celle vicine e in quella attuale 
+   *      0 < nb < Oparams.parnum = controlla urto tra na e n < na 
+   *      */
+  int cellsx, cellsy, cellsz, numll;
+  int t1=-1, t2=-1, nc;
+  double distMin=1E10,dist,vecg[8], alpha, shift[3];
+  /*double cells[NDIM];*/
+  int kk, nl;
+  double r1[3], r2[3];
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
+  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+   * in cui la forza di gravità è diretta lungo z negativo */ 
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
+
+  for (nl = 0; nl < numll; nl++)
+    {
+      if (ignoreMLL[nl])
+	continue;
+
+      calcdist_retcheck = 0;
+
+      get_types_from_nl(nl, &t1, &t2);
+      if (t1==typeOfPart[na])
+	nc = t2;
+      else if (t2==typeOfPart[na])
+	nc = t1;
+      else
+	continue;
+
+      cellsx = cellsxMLL[nl];
+      cellsy = cellsyMLL[nl];
+      cellsz = cellszMLL[nl];
+#if defined(MD_EDHEFLEX_WALL)
+      /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
+      if (OprogStatus.hardwall)
+	{
+	  if (inCellMLL[nc][2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+	  if (inCellMLL[nc][2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+	}
+#endif
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	{
+	  jZ = inCellMLL[nc][2][na] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	      shift[2] = - L[2];
+#else
+	      shift[2] = - L;
+#endif
+	    } 
+	  else if (jZ == cellsz) 
+	    {
+	      jZ = 0;    
+#ifdef MD_LXYZ
+	      shift[2] = L[2];
+#else
+	      shift[2] = L;
+#endif
+	    }
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	    {
+	      jY = inCellMLL[nc][1][na] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsy - 1;    
+#ifdef MD_LXYZ
+		  shift[1] = -L[1];
+#else
+		  shift[1] = -L;
+#endif
+		} 
+	      else if (jY == cellsy) 
+		{
+		  jY = 0;    
+#ifdef MD_LXYZ
+		  shift[1] = L[1];
+#else
+		  shift[1] = L;
+#endif
+		}
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		{
+		  jX = inCellMLL[nc][0][na] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		      shift[0] = - L[0];
+#else
+		      shift[0] = - L;
+#endif
+		    } 
+		  else if (jX == cellsx) 
+		    {
+		      jX = 0;   
+#ifdef MD_LXYZ
+		      shift[0] = L[0];
+#else
+		      shift[0] = L;
+#endif
+		    }
+		  n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+		  for (n = cellListMLL[nl][n]; n > -1; n = cellListMLL[nl][n]) 
+		    {
+		      if (n!=na) 
+			{
+			  dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
+			  if (calcdist_retcheck)
+			    continue;
+#if 0
+			  if ((na==125||na==15) && (n==15||n==125))
+			    printf("$$$$ dist: %.12G\n", dist);
+#endif
+			  if (*jmin == -1 || dist<distMin)
+			    {
+			      distMin = dist;
+			      for (kk = 0; kk < 3; kk++)
+				{
+				  rCmin[kk] = r1[kk];
+				  rDmin[kk] = r2[kk];
+				  shiftmin[kk] = shift[kk];
+				}
+			      *jmin = n;
+			    }
+			}
+		    } 
+		}
+	    }
+	}
+    }
+  return distMin;
+}
+
+
+#ifdef MD_SPHERICAL_WALL
+void reinsert_protein_MLL(int protein, int oldtype)
+{
+  int nl, n, ty1=-1, ty2=-1, typena, nc, numll;
+  int j, kk, k, i, ii;
+
+  numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
+  typena = typeOfPart[protein];
+  
+  for (nl = 0; nl < numll; nl++)
+    {
+#ifdef MD_OPT_MULTLL
+      if (ignoreMLL[nl])
+	continue;
+#endif
+      get_types_from_nl(nl, &ty1, &ty2);
+      //printf("[REINSERT PROTEIN MLL] resinserting protein %d typena=%d nl=%d type1=%d type2=%d\n", protein, typena, nl, ty1, ty2);
+      /* N.B. 27/05/2010: al momento dell'assorbimento la particella è non-ghost ma appena dopo è ghost quindi 
+	 va tolta con il vecchio tipo e reinserita con il nuovo, analogamente nel caso di urto
+	 con la membrana semipermeabile la particella da ghost diventa non-ghost e questo richiede un aggiornamento 
+	 delle linked lists. */
+      if (ty1==oldtype)
+	nc = ty2;
+      else if (ty2==oldtype)
+	nc = ty1;
+      else 
+	continue;
+      n = (inCellMLL[nc][2][protein] * cellsyMLL[nl] + inCellMLL[nc][1][protein] )*cellsxMLL[nl] + inCellMLL[nc][0][protein]
+	+ Oparams.parnum;
+
+      while (cellListMLL[nl][n] != protein) 
+	n = cellListMLL[nl][n];
+      /* Eliminazione di protein dalla lista della cella n-esima */
+      cellListMLL[nl][n] = cellListMLL[nl][protein];
+    }
+  /* inserimento nella nuova cella */
+  for (nl = 0; nl < numll; nl++)
+    {
+      if (ignoreMLL[nl])
+	continue;
+      get_types_from_nl(nl, &ty1, &ty2);
+      if (ty1==typena)
+	nc = ty2;
+      else if (ty2==typena)
+	nc = ty1;
+      else 
+	continue;
+#ifdef MD_LXYZ
+      inCellMLL[nc][0][protein] =  (rx[protein] + L2[0]) * cellsxMLL[nl] / L[0];
+      inCellMLL[nc][1][protein] =  (ry[protein] + L2[1]) * cellsyMLL[nl] / L[1];
+      inCellMLL[nc][2][protein] =  (rz[protein] + L2[2]) * cellszMLL[nl] / L[2];
+#else
+      inCellMLL[nc][0][protein] =  (rx[protein] + L2) * cellsxMLL[nl] / L;
+      inCellMLL[nc][1][protein] =  (ry[protein] + L2) * cellsyMLL[nl] / L;
+#ifdef MD_GRAVITY
+      inCellMLL[nc][2][protein] =  (rz[protein] + Lz2) * cellszMLL[nl] / (Lz+OprogStatus.extraLz);
+#else
+      inCellMLL[nc][2][protein] =  (rz[protein] + L2)  * cellszMLL[nl] / L;
+#endif
+#endif
+      j = (inCellMLL[nc][2][protein]*cellsyMLL[nl] + inCellMLL[nc][1][protein])*cellsxMLL[nl] + 
+	inCellMLL[nc][0][protein] + Oparams.parnum;
+      cellListMLL[nl][protein] = cellListMLL[nl][j];
+      cellListMLL[nl][j] = protein;
+      //printf("QUI2\n");
+    }
+  if (OprogStatus.useNNL)
+    {
+      //listtmp = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+      /* rimuove protein da tutte le NNL delle particelle nella NNL 
+	 di protein attuale */
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  kk=0;
+	  for (k = 0; k < nebrTab[i].len; k++)
+	    {
+	      n = nebrTab[i].list[k];
+	      if (n!=protein)
+		{
+		  listtmp[kk] = nebrTab[i].list[k]; 
+		  kk++;
+		}
+	    }
+	  nebrTab[i].len = kk;
+	  for (k = 0; k < nebrTab[i].len; k++) 
+	    {
+	      nebrTab[i].list[k] = listtmp[k];
+	    }
+	}
+      BuildAllNNL_MLL_one(protein);
+      /* ricostruisce le NNL per tutte le particelle nella NNL di protein */
+      for (ii=0; ii < nebrTab[protein].len; ii++)
+	{
+	  n = nebrTab[protein].list[ii]; 
+	  BuildAllNNL_MLL_one(n);
+	}
+      //free(listtmp);
+    }
+}
+#endif
+extern int *mapbondsa;
+extern int *mapbondsb;
+extern void remove_bond(int na, int n, int a, int b);
+
+int check_bonds_ij(int i, int j, double shift[3])
+{
+  int nn, warn, amin, bmin, nbonds;
+  double dist;
+  dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+  nbonds = nbondsFlex;
+  warn = 0;
+  for (nn=0; nn < nbonds; nn++)
+    {
+      if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
+	  && !bound(i,j,mapbondsa[nn], mapbondsb[nn]) )
+	{
+	  warn=1;
+	}
+      else if (dists[nn]>0.0 && 
+	       fabs(dists[nn]) > OprogStatus.epsd && 
+	       bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+	{
+	  warn = 2;
+	  printf("wrong number of bonds between %d(%d) and %d(%d) nbonds=%d nn=%d\n",
+		 i, mapbondsa[nn], j, mapbondsb[nn], nbonds, nn);
+
+	  printf("r=%f %f %f - %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+	  printf("[dist>0]dists[%d]:%.15G\n", nn, dists[nn]);
+	  if (OprogStatus.checkGrazing==1)
+	    {
+	      remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
+	    }
+	}
+    }
+  return warn;
+}
+extern char TXT[MSG_LEN];
+#ifdef MD_LL_BONDS
+extern long long int *bondscache, **bonds;
+extern int *numbonds;
+#else
+extern int *bondscache, *numbonds, **bonds;
+#endif
+void check_all_bonds_MLL(void)
+{
+  int warn, j;
+  int i, cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
+  int *cellListL, *inCellL[3], cellsx, cellsy, cellsz;
+  int nc, t1=-1, t2=-1, nl, numll;
+  double shift[3]={0.0,0.0,0.0};
+
+  numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
+  warn = 0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+#if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
+      if (i==sphWall || i==sphWallOuter)
+	{
+	  for (j = 0; j < Oparams.parnum; j++)
+	    {
+	      if (j==sphWall || j==sphWallOuter)
+		continue;
+	      assign_bond_mapping(i,j);
+	      if (nbondsFlex == 0)
+		continue;
+	      warn = check_bonds_ij(i, j, shift); 
+	    }
+	  continue;
+	}
+#endif
+
+      for (nl = 0; nl < numll; nl++)
+	{
+	  //printf("find bonds one i=%d nl=%d ignore=%d numll=%d\n",i,  nl, ignoreMLL[nl], numll);
+	  if (ignoreMLL[nl])
+	    continue;
+	  get_types_from_nl(nl, &t1, &t2);
+	  if (t1==typeOfPart[i])
+	    nc = t2;
+	  else if (t2==typeOfPart[i])
+	    nc = t1;
+	  else
+	    continue;
+	  for (k=0; k < 3; k++)
+	    inCellL[k] = inCellMLL[nc][k];
+	  cellListL = cellListMLL[nl];
+	  cellsx = cellsxMLL[nl];
+	  cellsy = cellsyMLL[nl];
+	  cellsz = cellszMLL[nl];
+	  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+#ifdef MD_EDHEFLEX_WALL
+	  if (OprogStatus.hardwall==1)
+	    {
+	      if (inCellL[2][i] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+	      if (inCellL[2][i] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+	    }
+#endif 
+	  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	    {
+	      jZ = inCellL[2][i] + iZ;    
+	      shift[2] = 0.;
+	      /* apply periodico boundary condition along z if gravitational
+	       * fiels is not present */
+	      if (jZ == -1) 
+		{
+		  //printf("BOHHHH\n");
+		  jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+		  shift[2] = - L[2];
+#else
+		  shift[2] = - L;
+#endif
+		} 
+	      else if (jZ == cellsz) 
+		{
+		  jZ = 0;    
+#ifdef MD_LXYZ
+		  shift[2] = L[2];
+#else
+		  shift[2] = L;
+#endif
+		}
+	      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+		{
+		  jY = inCellL[1][i] + iY;    
+		  shift[1] = 0.0;
+		  if (jY == -1) 
+		    {
+		      jY = cellsy - 1;    
+#ifdef MD_LXYZ
+		      shift[1] = -L[1];
+#else
+		      shift[1] = -L;
+#endif
+		    } 
+		  else if (jY == cellsy) 
+		    {
+		      jY = 0;    
+#ifdef MD_LXYZ
+		      shift[1] = L[1];
+#else
+		      shift[1] = L;
+#endif
+		    }
+		  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		    {
+		      jX = inCellL[0][i] + iX;    
+		      shift[0] = 0.0;
+		      if (jX == -1) 
+			{
+			  jX = cellsx - 1;    
+#ifdef MD_LXYZ
+			  shift[0] = - L[0];
+#else
+			  shift[0] = - L;
+#endif
+			} 
+		      else if (jX == cellsx) 
+			{
+			  jX = 0;   
+#ifdef MD_LXYZ
+			  shift[0] = L[0];
+#else
+			  shift[0] = L;
+#endif
+			}
+		      j = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+		      for (j = cellListL[j]; j > -1; j = cellListL[j]) 
+			{
+			  if (i == j)
+			    continue;
+#ifdef MD_SPHERICAL_WALL
+			  if (j==sphWall || j==sphWallOuter)
+			    continue;
+#endif
+			  check_shift(i, j, shift);
+			  assign_bond_mapping(i, j);
+#ifdef EDHE_FLEX
+			  if (nbondsFlex==0)
+			    continue;
+#endif 
+			  warn = check_bonds_ij(i, j, shift);  
+			}
+		    }
+		}
+	    }
+	}
+#ifdef MD_ALLOW_ONE_IGG_BOND
+      if (warn==1 && get_igg_bonds(i, j)==1)
+	continue;
+#endif
+
+      if (warn)
+	{
+	  mdPrintf(ALL, "[WARNING] wrong number of bonds\n", NULL);
+	  sprintf(TXT,"[WARNING] Number of bonds for molecules %d incorrect\n", i);
+	  mdPrintf(ALL, TXT, NULL);
+	  sprintf(TXT,"Step N. %d time=%.15G\n", Oparams.curStep, Oparams.time);
+	  mdPrintf(ALL, TXT, NULL);
+#ifdef MD_LL_BONDS
+	  printf("numbonds[%d]:%d bonds[][]:%lld\n", i, numbonds[i], bonds[i][0]);
+#else
+	  printf("numbonds[%d]:%d bonds[][]:%d\n", i, numbonds[i], bonds[i][0]);
+#endif
+	  if (warn==1)
+	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n",NULL);
+	  else
+	    mdPrintf(ALL,"Distance > 0 but bonded, probably a collision has been missed\n", NULL);
+	  //printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
+	  //	 numbonds[i], nb);
+	  //printf("I've adjusted the number of bonds\n");
+	  //printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
+	  //store_bump(i,j);
+	  if (warn==2)
+	    {
+	      if (OprogStatus.checkGrazing==2)
+		exit(-1);
+	      else
+		mdPrintf(ALL,"I adjusted the number of bonds...energy won't conserve!", NULL);
+	    }
+	}
+    }
+}
+#endif
+#ifdef EDHE_FLEX
+void check_all_bonds_NLL(void)
+{
+  int i, k, j, warn;
+  double shift[3]={0.0,0.0,0.0};
+  warn = 0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      //if (warn)
+	//break;
+#if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
+      if (i==sphWall || i==sphWallOuter)
+	{
+  	  for (j = 0; j < Oparams.parnum; j++)
+	    {
+	      if (j==sphWall || j==sphWallOuter)
+		continue;
+	      assign_bond_mapping(i,j);
+	      if (nbondsFlex == 0)
+		continue;
+	     warn = check_bonds_ij(i, j, shift); 
+	    }
+	  continue;
+	}
+#endif
+      for (k=0; k < nebrTab[i].len; k++)
+	{
+	  j = nebrTab[i].list[k];
+	  if (i == j)
+	    continue;
+#ifdef MD_SPHERICAL_WALL
+	  if (j==sphWall || j==sphWallOuter)
+	    continue;
+#endif
+	  check_shift(i, j, shift);
+	  assign_bond_mapping(i,j);
+	  if (nbondsFlex==0)
+	    continue;
+	  warn = check_bonds_ij(i,j,shift); 
+	}
+#ifdef MD_ALLOW_ONE_IGG_BOND
+      if (warn==1 && get_igg_bonds(i, j)==1)
+	continue;
+#endif
+
+      if (warn)
+	{
+	  mdPrintf(ALL, "[WARNING] wrong number of bonds\n", NULL);
+	  sprintf(TXT,"[WARNING] Number of bonds for molecules %d incorrect\n", i);
+	  mdPrintf(ALL, TXT, NULL);
+	  sprintf(TXT,"Step N. %d time=%.15G\n", Oparams.curStep, Oparams.time);
+	  mdPrintf(ALL, TXT, NULL);
+#ifdef MD_LL_BONDS
+	  printf("numbonds[%d]:%d bonds[][]:%lld\n", i, numbonds[i], bonds[i][0]);
+#else
+	  printf("numbonds[%d]:%d bonds[][]:%d\n", i, numbonds[i], bonds[i][0]);
+#endif
+	  if (warn==1)
+	    mdPrintf(ALL,"Distance < 0 but not bonded, probably a grazing collision occurred\n",NULL);
+	  else
+	    mdPrintf(ALL,"Distance > 0 but bonded, probably a collision has been missed\n", NULL);
+	  //printf("time=%.15G current value: %d real value: %d\n", Oparams.time,
+	  //	 numbonds[i], nb);
+	  //printf("I've adjusted the number of bonds\n");
+	  //printf("Probably a grazing collisions occurred, try to reduce epsd...\n");
+	  //store_bump(i,j);
+	  if (warn==2)
+	    {
+	      if (OprogStatus.checkGrazing==2)
+		exit(-1);
+	      else
+		mdPrintf(ALL,"I adjusted the number of bonds...energy won't conserve!", NULL);
+	    }
+	}
+    }
+}
+
+extern void add_bond(int na, int n, int a, int b);
+
+void find_bonds_one_MLL(int i)
+{
+  int nn,  amin, bmin, j, nbonds;
+  double shift[3], dist;
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
+  int *cellListL, *inCellL[3], cellsx, cellsy, cellsz;
+  int nc, t1=-1, t2=-1, nl, numll;
+
+  numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
+  for (nl = 0; nl < numll; nl++)
+    {
+      //printf("find bonds one i=%d nl=%d ignore=%d numll=%d\n",i,  nl, ignoreMLL[nl], numll);
+      if (ignoreMLL[nl])
+	continue;
+      get_types_from_nl(nl, &t1, &t2);
+      if (t1==typeOfPart[i])
+	nc = t2;
+      else if (t2==typeOfPart[i])
+	nc = t1;
+      else
+	continue;
+      for (k=0; k < 3; k++)
+	inCellL[k] = inCellMLL[nc][k];
+      cellListL = cellListMLL[nl];
+      cellsx = cellsxMLL[nl];
+      cellsy = cellsyMLL[nl];
+      cellsz = cellszMLL[nl];
+      for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall==1)
+	{
+	  if (inCellL[2][i] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+	  if (inCellL[2][i] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+	}
+#endif 
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	{
+	  jZ = inCellL[2][i] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      //printf("BOHHHH\n");
+	      jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	      shift[2] = - L[2];
+#else
+	      shift[2] = - L;
+#endif
+	    } 
+	  else if (jZ == cellsz) 
+	    {
+	      jZ = 0;    
+#ifdef MD_LXYZ
+	      shift[2] = L[2];
+#else
+	      shift[2] = L;
+#endif
+	    }
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	    {
+	      jY = inCellL[1][i] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsy - 1;    
+#ifdef MD_LXYZ
+		  shift[1] = -L[1];
+#else
+		  shift[1] = -L;
+#endif
+		} 
+	      else if (jY == cellsy) 
+		{
+		  jY = 0;    
+#ifdef MD_LXYZ
+		  shift[1] = L[1];
+#else
+		  shift[1] = L;
+#endif
+		}
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		{
+		  jX = inCellL[0][i] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		      shift[0] = - L[0];
+#else
+		      shift[0] = - L;
+#endif
+		    } 
+		  else if (jX == cellsx) 
+		    {
+		      jX = 0;   
+#ifdef MD_LXYZ
+		      shift[0] = L[0];
+#else
+		      shift[0] = L;
+#endif
+		    }
+		  j = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+		  for (j = cellListL[j]; j > -1; j = cellListL[j]) 
+		    {
+		      if (i == j)
+			continue;
+#ifdef MD_SPHERICAL_WALL
+		      if (j==sphWall || j==sphWallOuter)
+			continue;
+#endif
+		      check_shift(i, j, shift);
+		      assign_bond_mapping(i,j);
+		      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+		      nbonds = nbondsFlex;
+		      //printf("nbondsFlex=%d checking i=%d j=%d\n", nbondsFlex, i, j);
+		      for (nn=0; nn < nbonds; nn++)
+			{
+			  if (dists[nn]<0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
+			    {
+			      //printf("[find_bonds_one] found bond between ghost particles! i=%d j=%d typei=%d typej=%d\n",
+			      //	 i, j, typeOfPart[i], typeOfPart[j]);
+			      add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
+			      add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
+			    }
+			}
+		    }
+		}
+	    }
+	}
+    }
 }
 #endif

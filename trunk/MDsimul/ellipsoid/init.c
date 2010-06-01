@@ -50,6 +50,9 @@ extern int *lastbump;
 #ifdef MD_PROTEIN_DESIGN
 extern int nativeConfYN;
 #endif
+#ifdef MD_ABSORPTION
+int *listtmp;
+#endif
 extern double *lastcol;
 double *axa, *axb, *axc;
 double **Aip;
@@ -199,6 +202,8 @@ int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
 double *t2arr, *distsOld, *dists, *distsOld2, *maxddoti;
 int *crossed, *tocheck, *dorefine, *negpairs, dofTot;
+int **mapbondsaFlexS, **mapbondsbFlexS, *nbondsFlexS;
+double **mapBheightFlexS, **mapBhinFlexS, **mapBhoutFlexS, **mapSigmaFlexS; 
 #endif
 extern double **matrix(int n, int m);
 extern int *ivector(int n);
@@ -373,20 +378,34 @@ void restart_from_check_point(void)
 #ifdef MD_GHOST_IGG
 extern int areGhost(int i, int j);
 #endif
+#ifdef MD_MULTIPLE_LL
+extern void check_all_bonds_MLL(void);
+#endif
+extern void check_all_bonds_NLL(void);
+
 void check_all_bonds(void)
 {
   int nn, warn, amin, bmin, i, j, nb, nbonds;
-  double shift[3], dist;
+  double shift[3]={0.0,0.0,0.0}, dist;
 #ifndef EDHE_FLEX
   double dists[MD_PBONDS];
 #endif
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
+
+  if (OprogStatus.useNNL)
+    {
+      check_all_bonds_NLL();
+      return;
+    }
 #ifdef MD_MULTIPLE_LL
   /* N.B. 24/05/10: questa funzione va riscritta in multiple_ll.c */
   if (OprogStatus.multipleLL)
-    return;
+    {
+      check_all_bonds_MLL();
+      return;
+    }
 #endif
   for (k = 0;  k < NDIM; k++)
     {
@@ -397,8 +416,6 @@ void check_all_bonds(void)
   warn = 0;
   for ( i = 0; i < Oparams.parnum; i++)
     {
-      if (warn)
-	break;
       nb = 0;
 #if defined(MD_ABSORPTION) && defined(MD_SPHERICAL_WALL)
       if (i==sphWall || i==sphWallOuter)
@@ -410,15 +427,7 @@ void check_all_bonds(void)
 	      assign_bond_mapping(i,j);
 	      if (nbondsFlex == 0)
 		continue;
-    	      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-	      if ( (i==sphWall && dist >= 0 && typeOfPart[j] == 1)
-		   || (i==sphWallOuter && dist >=0 && typeOfPart[j] == 2))
-		{
-		  printf("[ERROR] In initial configuration particle %d (type=%d) is outside spherical wall\n", j,
-			 typeOfPart[j]);
-		  printf("dist=%f r=%f %f %f\n", dist, rx[j], ry[j], rz[j]);
-		  exit(-1);	
-		}
+	     warn = check_bonds_ij(i, j, shift); 
 	    }
 	  continue;
 	}
@@ -531,7 +540,7 @@ void check_all_bonds(void)
 			      //printf("dists[1]:%.15G\n", dists[1]);
 			      printf("[dist<0]dists[%d]:%.15G\n", nn, dists[nn]);
 			      printf("i=%d j=%d %d %d\n", i, j, mapbondsa[nn], mapbondsb[nn]);
-			      printf("NA*NA*i+a*NA+b=%d\n", NANA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
+			      printf("NA*NA*i+a*NA+b=%lld\n", NANA*i+mapbondsa[nn]*NA+mapbondsb[nn]);
 			      )
 
 #if 0
@@ -597,6 +606,9 @@ void check_all_bonds(void)
 		mdPrintf(ALL,"I adjusted the number of bonds...energy won't conserve!", NULL);
 	    }
 	}
+    //  if (warn)
+//	break;
+
     }
 #ifdef MD_CHECK_POINT
   saveFullStore("ED_CHECK_POINT\n");
@@ -1676,6 +1688,9 @@ void usrInitBef(void)
        the begin of the run and not the instanteaneous value */
     OprogStatus.avnggr    = 0;
     Oparams.Dt = 0.01;
+#ifdef EDHE_FLEX
+    OprogStatus.optbm = 1;
+#endif
 #ifdef MD_EDHEFLEX_OPTNNL
     OprogStatus.optnnl = 0;
 #endif
@@ -1861,6 +1876,9 @@ extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
 extern void PredictEvent(int, int);
 extern void InitEventList(void);
+void find_conciding_spots(void);
+void find_bonds(void);
+
 void StartRun(void)
 {
   int j, k, n;
@@ -1976,6 +1994,26 @@ void StartRun(void)
     }
   if (OprogStatus.useNNL)
     rebuildNNL();
+#ifdef EDHE_FLEX
+  /* N.B. 28/05/2010: notare che gli spot vanno cercati 
+     dopo l'inizializzazione delle NNL e delle LL 
+     ma prima di costruire il calendario (altrimenti
+     mancherebbero tutti gli eventi relativi alle collisioni
+     tra gli spot! */
+  find_conciding_spots();
+  if (Oparams.maxbondsSaved==-1)
+    {
+      //printf("nbonds[1841]=%d\n",numbonds[1841]);
+      printf("[INFO] finding spots\n");
+      if (Oparams.ninters != 0)
+	find_bonds();
+   }
+
+  if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
+    Oparams.maxbondsSaved = OprogStatus.maxbonds;
+#elif defined(MD_PATCHY_HE)
+  find_bonds();
+#endif
 
   for (n = 0; n < Oparams.parnum; n++)
     {
@@ -2402,7 +2440,7 @@ void calc_encpp(void)
   int kk;
   double v[3], norm;
   int pt, sp;
-  double com[3];
+  double com[3]={0.0,0.0,0.0};
 
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
@@ -2880,6 +2918,45 @@ void set_angmom_to_zero(int i)
 }
 #endif
 #if defined(EDHE_FLEX) || defined(MD_PATCHY_HE)
+extern void find_bonds_one(int i);
+extern void find_bonds_one_NLL(int i);
+
+void find_bonds_flex_all(void)
+{
+  int i;
+  printf("===========================>QUI\n");
+  for (i=0; i < Oparams.parnum; i++)
+    find_bonds_one(i); 
+}
+void find_bonds_flex_NNL(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    find_bonds_one_NLL(i); 
+}
+void find_bonds_flex(void)
+{
+#ifdef MD_SPHERICAL_WALL
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (typeOfPart[i]==1 || typeOfPart[i]==2)
+	  {
+	    if (typeOfPart[i]==1)
+	      add_bond(i, sphWall, 1, 1);
+	    add_bond(i, sphWallOuter, 1, 1);
+	  }
+    } 
+#endif
+  if (OprogStatus.useNNL)
+    {
+      find_bonds_flex_NNL();
+    }
+  else
+    {
+      find_bonds_flex_all();
+    }
+}
 void find_bonds(void)
 {
 #ifndef EDHE_FLEX
@@ -2889,6 +2966,10 @@ void find_bonds(void)
   double drx, dry, drz, dist, shift[3];
   int amin, bmin;
   //printf("INIZIO CERCO BOND\n");
+#ifdef EDHE_FLEX
+  find_bonds_flex();
+  return;
+#endif
   for ( i = 0; i < Oparams.parnum-1; i++)
     for ( j = i+1; j < Oparams.parnum; j++)
       {
@@ -3509,7 +3590,7 @@ extern int may_interact_all_type(int t1, int t2);
 void usrInitAft(void)
 {
   long long int maxp;
-  int numll, k1old, k2old;
+  int numll, k1old, k2old, nl;
   /* DESCRIPTION:
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
@@ -3593,6 +3674,14 @@ void usrInitAft(void)
      exit(-1);
    }
 #endif
+#endif
+#if defined(MD_ABSORPTION) && defined(MD_EDHEFLEX_OPTNNL)
+ if (OprogStatus.optnnl)
+   {
+     printf("[WARNING] you can not use optimal NNL with -DMD_ABSORPTION, I disabled optimal NNL\n");
+     OprogStatus.optnnl = 0;
+   }
+ listtmp = malloc(sizeof(int)*OprogStatus.nebrTabFac);
 #endif
  numcols=0;
  for (i=0;;i++)
@@ -3996,6 +4085,29 @@ void usrInitAft(void)
   mapBhinFlex    = (double*)malloc(sizeof(double)*maxnbonds);
   mapBhoutFlex   = (double*)malloc(sizeof(double)*maxnbonds);
   mapSigmaFlex   = (double*)malloc(sizeof(double)*maxnbonds);
+  if (OprogStatus.optbm)
+    {
+      printf("[INFO] Optimizing assign_bond_mapping(i,j) function\n");
+      numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
+      nbondsFlexS = malloc(sizeof(int)*numll);
+      mapbondsaFlexS = malloc(sizeof(int*)*numll);
+      mapbondsbFlexS = malloc(sizeof(int*)*numll);
+      mapBheightFlexS = malloc(sizeof(double*)*numll);
+      mapBhinFlexS = malloc(sizeof(double*)*numll);
+      mapBhoutFlexS = malloc(sizeof(double*)*numll);
+      mapSigmaFlexS = malloc(sizeof(double*)*numll);
+      for (nl = 0; nl < numll; nl++)
+	{
+	  nbondsFlexS[nl] = -1;
+	  mapbondsaFlexS[nl] = malloc(sizeof(int)*maxnbonds);
+	  mapbondsbFlexS[nl] = malloc(sizeof(int)*maxnbonds); 
+	  mapBheightFlexS[nl] = malloc(sizeof(double)*maxnbonds);
+	  mapBhinFlexS[nl] = malloc(sizeof(double)*maxnbonds);
+	  mapBhoutFlexS[nl] = malloc(sizeof(double)*maxnbonds);
+	  mapSigmaFlexS[nl] = malloc(sizeof(double)*maxnbonds);
+	}
+    }
+
   dists    = (double*)malloc(maxnbonds*sizeof(double));
   distsOld = (double*)malloc(maxnbonds*sizeof(double));
   distsOld2= (double*)malloc(maxnbonds*sizeof(double));
@@ -4636,7 +4748,11 @@ void usrInitAft(void)
 	      Oparams.rcut = MAXAX*1.01;
 	    }
 #else
-	  if (Oparams.rcut <= 0.0)
+	  if (Oparams.rcut <= 0.0 
+#ifdef MD_MULTIPLE_LL
+	      || OprogStatus.multipleLL
+#endif
+ 	     )
 	    {
 #ifdef EDHE_FLEX
 	      calc_encpp();
@@ -4655,7 +4771,11 @@ void usrInitAft(void)
   else 
     {
 #ifdef EDHE_FLEX
-      if (OprogStatus.useNNL)
+      if (OprogStatus.useNNL
+#ifdef MD_MULTIPLE_LL
+	  ||OprogStatus.multipleLL
+#endif
+	 )
 	calc_encpp();
 #endif
     }
@@ -4673,10 +4793,19 @@ void usrInitAft(void)
       cellszMLL = malloc(sizeof(int)*numll);
       ignoreMLL = malloc(sizeof(int)*numll);
       set_cells_size();
+
       for (k1=0; k1 < numll; k1++)
 	{
 	  get_types_from_nl(k1, &t1, &t2);
-
+#ifdef MD_SPHERICAL_WALL
+	  if (t1==typeOfPart[sphWall] || t1==typeOfPart[sphWallOuter] ||
+	      t2==typeOfPart[sphWall] || t2==typeOfPart[sphWallOuter])
+	    {
+	      ignoreMLL[k1] = 1;
+	      printf("I ignore list related to spherical walls (types=%d-%d)\n", t1, t2);
+	      continue;
+	    }
+#endif
 	  if (!may_interact_all_type(t1, t2))
 	    {
 	      ignoreMLL[k1] = 1;
@@ -4688,11 +4817,11 @@ void usrInitAft(void)
 	      ignoreMLL[k1] = 0;
 	    }
 #ifdef MD_LXYZ
-	  printf("[%d] L=%.15G %.15G %.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", k1, L[0], L[1], L[2],
-		 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1]);
+    	  printf("[%d] L=%.15G %.15G %.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d t1=%d t2=%d\n", k1, L[0], L[1], L[2],
+		 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1], t1, t2);
 #else
 	  printf("[%d] L=%.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d t1=%d t2=%d\n", k1, L,
-	     	 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1], t1, t2);
+		 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1], t1, t2);
 #endif
 	}
       for (k1 = 0; k1 < numll; k1++)
@@ -4778,7 +4907,7 @@ void usrInitAft(void)
       cellsz = L / Oparams.rcut;
 #endif 
 #endif
-     printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
+      printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
 	     cellsx, cellsy, cellsz);
       cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
       inCell[0] = malloc(sizeof(int)*Oparams.parnum);
@@ -4856,20 +4985,6 @@ void usrInitAft(void)
 #if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
   printf("sigmaSticky=%.15G\n", Oparams.sigmaSticky);
 #endif
-#ifdef EDHE_FLEX
-  find_conciding_spots();
-  if (Oparams.maxbondsSaved==-1)
-    {
-      //printf("nbonds[1841]=%d\n",numbonds[1841]);
-      if (Oparams.ninters != 0)
-	find_bonds();
-   }
-
-  if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
-    Oparams.maxbondsSaved = OprogStatus.maxbonds;
-#elif defined(MD_PATCHY_HE)
-  find_bonds();
-#endif
 #ifdef MD_ASYM_ITENS
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -4918,6 +5033,7 @@ void usrInitAft(void)
 #endif
 
   StartRun();
+
 #ifdef MD_SPHERICAL_WALL
   printf("[SPHERICAL WALL] checking bonds\n");
   if (OprogStatus.checkGrazing)
@@ -5174,6 +5290,12 @@ void writeAllCor(FILE* fs, int saveAll)
   int j;
   if (!mgl_mode && !OprogStatus.stripStore)
     {
+#ifdef MD_MULTIPLE_LL
+      fprintf(fs, "RF ");
+      for (i=0; i < Oparams.ntypes; i++)
+	fprintf(fs, "%.8G ", typesArr[i].rcutFact);
+      fprintf(fs, "\n");
+#endif
       for (i=0; i < Oparams.ntypes; i++)
 	fprintf(fs, "%d ", typeNP[i]);
       fprintf(fs, "\n");
@@ -5681,6 +5803,9 @@ void readAllCor(FILE* fs)
 #ifdef MD_GHOST_IGG
   int size;
 #endif
+#ifdef MD_MULTIPLE_LL
+  int beg;
+#endif
   char sep[256];
   int j;
   char *s1, *s2;
@@ -5690,13 +5815,41 @@ void readAllCor(FILE* fs)
   s2 = malloc(sizeof(char)*65535);
   typeOfPart = malloc(sizeof(int)*Oparams.parnum);
   typeNP = malloc(sizeof(int)*Oparams.ntypes);
+
+  typesArr = malloc(sizeof(partType)*Oparams.ntypes);
+#ifdef MD_MULTIPLE_LL
+  fscanf(fs, "%s ", line);
+  if (!strcmp(line, "RF"))
+    { 
+      //printf("line=%s\n", line);
+      beg=0;
+      for (i=0; i < Oparams.ntypes; i++)
+	{
+	  fscanf(fs, "%lf ", &(typesArr[i].rcutFact));
+	  printf("typeArr[%d].rcutFact=%f\n", i, typesArr[i].rcutFact);
+	}
+    }
+  else
+    {
+      sscanf(line, "%d", &typeNP[0]);
+      beg=1;
+      for (i=0; i < Oparams.ntypes; i++)
+	typesArr[i].rcutFact = -1.0;
+ 
+    }
+  for (i=beg; i < Oparams.ntypes; i++)
+    {
+      fscanf(fs, "%d ", &typeNP[i]);
+      //printf("typeNP[%d]=%d\n", i, typeNP[i]);
+    }
+
+#else
   for (i=0; i < Oparams.ntypes; i++)
     {
       fscanf(fs, "%d ", &typeNP[i]);
       //printf("typeNP[%d]=%d\n", i, typeNP[i]);
     }  
-
-  typesArr = malloc(sizeof(partType)*Oparams.ntypes);
+#endif
     
   for (i=0; i < Oparams.ntypes; i++)
     {

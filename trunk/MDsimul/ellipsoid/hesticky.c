@@ -47,6 +47,10 @@ extern long long int itsFNL, timesFNL, timesSNL, itsSNL;
 extern int do_check_negpairs;
 
 #ifdef EDHE_FLEX
+void check_shift(int i, int j, double *shift);
+void assign_bond_mapping(int i, int j);
+double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
+extern void find_bonds_one_MLL(int i);
 #ifdef MD_SPOT_GLOBAL_ALLOC
 #if 0
 double ratA[NA][3], ratB[NA][3];
@@ -72,6 +76,8 @@ extern int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 extern double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
 extern double *t2arr, *distsOld, *dists, *distsOld2, *maxddoti;
 extern int *crossed, *tocheck, *dorefine, *crossed, *negpairs;
+extern int **mapbondsaFlexS, **mapbondsbFlexS, *nbondsFlexS;
+extern double **mapBheightFlexS, **mapBhinFlexS, **mapBhoutFlexS, **mapSigmaFlexS; 
 #endif
 #ifdef MD_ASYM_ITENS
 extern double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp, *angM;
@@ -674,17 +680,22 @@ void bumpSPHS(int i, int j, double *W, int bt)
 
 }	
 #endif
-#if defined(EDHE_FLEX) && defined(MD_ABSORPTION)
-void check_shift(int i, int j, double *shift);
-void assign_bond_mapping(int i, int j);
-double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
-
+#ifdef EDHE_FLEX
 void find_bonds_one(int i)
 {
   int nn,  amin, bmin, j, nbonds;
   double shift[3], dist;
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
+
+#ifdef MD_MULTIPLE_LL
+  if (OprogStatus.multipleLL)
+    {
+      find_bonds_one_MLL(i);
+      return;
+    }
+#endif
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
 #ifdef MD_EDHEFLEX_WALL
   if (OprogStatus.hardwall==1)
     {
@@ -766,8 +777,10 @@ void find_bonds_one(int i)
 		{
 		  if (i == j)
 		    continue;
+#ifdef MD_SPHERICAL_WALL
 		  if (j==sphWall || j==sphWallOuter)
 		    continue;
+#endif
 		  check_shift(i, j, shift);
 		  assign_bond_mapping(i,j);
 		  dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
@@ -789,6 +802,12 @@ void find_bonds_one(int i)
     }
 }
 
+
+#endif
+#if defined(EDHE_FLEX) && defined(MD_ABSORPTION)
+#ifdef MD_MULTIPLE_LL
+extern void reinsert_protein_MLL(int protein, int oldtype);
+#endif
 extern double ranf(void);
 extern void rebuild_linked_list();
 extern double calcpotene(void);
@@ -831,8 +850,12 @@ void rand_angle(double oo[3])
 }
 #endif
 #endif
+void find_bonds_one_NLL(int i);
 void handle_absorb(int ricettore, int protein)
 {
+#ifdef MD_MULTIPLE_LL
+  int oldtype;
+#endif
 #ifdef MD_EDHEFLEX_ISOCUBE
   double segno, xx, yy, zz, Lloc[3];
   int rr; 
@@ -979,6 +1002,9 @@ void handle_absorb(int ricettore, int protein)
      del sistema. */
   oldTypeOfPart[protein] = typeOfPart[protein];
 #endif
+#ifdef MD_MULTIPLE_LL
+  oldtype = typeOfPart[protein];
+#endif
   typeOfPart[protein] = 2;
   //printf("absorbed (1->2): %d\n", protein);
 #ifdef MD_SPHERICAL_WALL
@@ -1000,6 +1026,43 @@ void handle_absorb(int ricettore, int protein)
   /* 19/01/10: deve sempre rimanere il bond con il muro sferico esterno! */
   add_bond(protein, sphWallOuter, 1, 1);
 #endif
+  //printf("[HANDLE ABSORB t=%.15G]REINSERTING PROTEIN %d\n", Oparams.time, protein);
+#ifdef MD_MULTIPLE_LL
+  if (OprogStatus.multipleLL)
+    {
+      reinsert_protein_MLL(protein, oldtype);
+    }
+  else
+    {
+      MD_DEBUG38(printf("time=%.15G i=%d switched to type 2\n", Oparams.time, protein)); 
+      n = (inCell[2][protein] * cellsy + inCell[1][protein] )*cellsx + inCell[0][protein]
+	+ Oparams.parnum;
+
+      while (cellList[n] != protein) 
+	n = cellList[n];
+      /* Eliminazione di protein dalla lista della cella n-esima */
+      cellList[n] = cellList[protein];
+
+#ifdef MD_LXYZ
+      inCell[0][protein] =  (rx[protein] + L2[0]) * cellsx / L[0];
+      inCell[1][protein] =  (ry[protein] + L2[1]) * cellsy / L[1];
+      inCell[2][protein] =  (rz[protein] + L2[2]) * cellsz / L[2];
+#else
+      inCell[0][protein] =  (rx[protein] + L2) * cellsx / L;
+      inCell[1][protein] =  (ry[protein] + L2) * cellsy / L;
+#ifdef MD_GRAVITY
+      inCell[2][protein] =  (rz[protein] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+#else
+      inCell[2][protein] =  (rz[protein] + L2)  * cellsz / L;
+#endif
+#endif
+      j = (inCell[2][protein]*cellsy + inCell[1][protein])*cellsx + 
+	inCell[0][protein] + Oparams.parnum;
+      cellList[protein] = cellList[j];
+      cellList[j] = protein;
+    }
+#else
+
   MD_DEBUG38(printf("time=%.15G i=%d switched to type 2\n", Oparams.time, protein)); 
   n = (inCell[2][protein] * cellsy + inCell[1][protein] )*cellsx + inCell[0][protein]
     + Oparams.parnum;
@@ -1026,12 +1089,55 @@ void handle_absorb(int ricettore, int protein)
     inCell[0][protein] + Oparams.parnum;
   cellList[protein] = cellList[j];
   cellList[j] = protein;
+#endif
 #ifdef MD_SPHERICAL_WALL
   //printf("numbonds[%d]=%d\n", protein, numbonds[protein]);
-  find_bonds_one(protein);
+  if (OprogStatus.useNNL)
+    find_bonds_one_NLL(protein);
+  else
+    find_bonds_one(protein);
 #endif
 }
 #endif
+#ifdef EDHE_FLEX
+extern struct nebrTabStruct *nebrTab;
+
+void find_bonds_one_NLL(int i)
+{
+  int k, j, amin, bmin, nn;
+  double shift[3], dist;
+  int nbonds; 
+  for (k=0; k < nebrTab[i].len; k++)
+    {
+      j = nebrTab[i].list[k];
+      if (i == j)
+	continue;
+#ifdef MD_SPHERICAL_WALL
+      if (j==sphWall || j==sphWallOuter)
+	continue;
+#endif
+      check_shift(i, j, shift);
+      assign_bond_mapping(i,j);
+      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+      nbonds = nbondsFlex;
+      //printf("nbondsFlex=%d checking i=%d j=%d\n", nbondsFlex, i, j);
+      for (nn=0; nn < nbonds; nn++)
+	{
+	  if (dists[nn]<0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
+	    {
+	      //printf("[find_bonds_one] found bond between ghost particles! i=%d j=%d typei=%d typej=%d\n",
+	      //	 i, j, typeOfPart[i], typeOfPart[j]);
+	      add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
+	      add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
+	    }
+	}
+
+    }
+
+}
+
+#endif
+
 #if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
 extern void check_inf_mass_itens(int typei, int typej, int *infMass_i, int *infMass_j, int *infItens_i, int *infItens_j);
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
@@ -1279,6 +1385,9 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   double ratA[3], ratB[3], norm[3];
   double bhin=-1, bhout=-1, bheight=-1;
   int nmax=-1;
+#ifdef MD_MULTIPLE_LL
+  int oldtype;
+#endif
 #ifdef MD_HSVISCO
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
@@ -1311,24 +1420,42 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       if (typeOfPart[i]==2)
 	{
 	  //printf("ghost->norm (i=%d)\n", i);
+#ifdef MD_MULTIPLE_LL
+	  oldtype = typeOfPart[i];
+#endif
 #ifdef MD_ABSORP_POLY
 	  typeOfPart[i] = oldTypeOfPart[i];
 #else
 	  typeOfPart[i]=1;
 #endif
 	  //add_bond(i, sphWall, 1, 1);
-	  find_bonds_one(i);
+#ifdef MD_MULTIPLE_LL
+	  reinsert_protein_MLL(i, oldtype);
+#endif
+	  if (OprogStatus.useNNL)
+	    find_bonds_one_NLL(i);
+	  else
+	    find_bonds_one(i);
 	}
       else
 	{
 	  //printf("ghost->norm (j=%d)\n", j);
+#ifdef MD_MULTIPLE_LL
+	  oldtype = typeOfPart[i];
+#endif
 #ifdef MD_ABSORP_POLY
 	  typeOfPart[i] = oldTypeOfPart[i];
 #else
 	  typeOfPart[j]=1;
 #endif
 	  //add_bond(j, sphWall, 1, 1);
-	  find_bonds_one(j);
+#ifdef MD_MULTIPLE_LL
+	  reinsert_protein_MLL(j, oldtype);
+#endif
+	  if (OprogStatus.useNNL)
+	    find_bonds_one_NLL(j);
+	  else
+	    find_bonds_one(j);
 	}
       /* find_bonds_on() adjusts bonds, because becoming a particle of type 1 (=not-in_buffer) 
 	 it may overlap with other particle of same type */
@@ -1361,6 +1488,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       MD_DEBUG36(printf("time=%.15G collision type= %d %d-%d %d-%d ata=%d atb=%d\n",Oparams.time, bt, i, j, j, i, ata, atb));
       return;
     }
+
 #if 1
 #ifdef EDHE_FLEX
 #ifdef MD_ABSORPTION 
@@ -2229,20 +2357,151 @@ int is_in_ranges(int A, int B, int nr, rangeStruct* r)
     }
   return 0;
 }
+#ifdef EDHE_FLEX
+extern int get_linked_list_type(int typena, int nc);
+#endif
 void assign_bond_mapping(int i, int j)
 {
-  int ni, type1, type2, a;
+  int ni, type1, type2, a, k, nl;
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
   a=0;
   MD_DEBUG41(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
+  
+  /* nl is a unique number assigned to each type1-type2 pair */
+  nl = get_linked_list_type(type1, type2);
+  if (OprogStatus.optbm == 0 || nbondsFlexS[nl] == -1)
+    {
+      for (ni=0; ni < Oparams.ninters; ni++)
+	{
+#if 1
+#ifdef MD_FOUR_BEADS
+	  if (ignore_interaction(i, j, ni))
+	    continue;	
+#endif
+#endif
+	  if (is_in_ranges(type1, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	      is_in_ranges(type2, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
+	    {
+	      /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
+	      mapbondsaFlex[a] = intersArr[ni].spot1+1;
+	      mapbondsbFlex[a] = intersArr[ni].spot2+1;
+	      mapBheightFlex[a] = intersArr[ni].bheight;
+	      mapBhinFlex[a] = intersArr[ni].bhin;
+	      mapBhoutFlex[a] = intersArr[ni].bhout;
+	      mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
+				     + typesArr[type2].spots[intersArr[ni].spot2].sigma);
+	      MD_DEBUG38(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
+	      MD_DEBUG38(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
+				typesArr[type2].spots[intersArr[ni].spot2].sigma));
+	      MD_DEBUG38(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
+	      a++;
+	      if (type1 == type2 && intersArr[ni].spot1 != intersArr[ni].spot2)
+		{
+		  mapbondsaFlex[a] = intersArr[ni].spot2+1;
+		  mapbondsbFlex[a] = intersArr[ni].spot1+1;
+		  mapBheightFlex[a] = mapBheightFlex[a-1];
+		  mapBhinFlex[a] = mapBhinFlex[a-1];
+		  mapBhoutFlex[a] = mapBhoutFlex[a-1];
+		  mapSigmaFlex[a] = mapSigmaFlex[a-1];
+		  a++;
+		}
+	    }	
+	  else if (is_in_ranges(type2, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+		   is_in_ranges(type1, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
+	    {
+	      /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
+	      mapbondsaFlex[a] = intersArr[ni].spot2+1;
+	      mapbondsbFlex[a] = intersArr[ni].spot1+1;
+	      mapBheightFlex[a] = intersArr[ni].bheight;
+	      mapBhinFlex[a] = intersArr[ni].bhin;
+	      mapBhoutFlex[a] = intersArr[ni].bhout;
+	      mapSigmaFlex[a] = 0.5*(typesArr[type2].spots[intersArr[ni].spot1].sigma
+				     + typesArr[type1].spots[intersArr[ni].spot2].sigma);
+	      MD_DEBUG38(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
+	      MD_DEBUG38(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
+				typesArr[type2].spots[intersArr[ni].spot2].sigma));
+	      MD_DEBUG38(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
+	      a++;
+#if 0
+	      if (type1 == type2 && intersArr[ni].spot1 != intersArr[ni].spot2)
+		{
+		  mapbondsaFlex[a] = intersArr[ni].spot1+1;
+		  mapbondsbFlex[a] = intersArr[ni].spot2+1;
+		  mapBheightFlex[a] = mapBheightFlex[a-1];
+		  mapBhinFlex[a] = mapBhinFlex[a-1];
+		  mapBhoutFlex[a] = mapBhoutFlex[a-1];
+		  mapSigmaFlex[a] = mapSigmaFlex[a-1];
+		  a++;
+		}
+#endif
+	    }
+#ifdef MD_FOUR_BEADS
+	  /* all with all */
+	  else if (intersArr[ni].type1==-1 && intersArr[ni].type2==-1)
+	    {
+	      mapbondsaFlex[a] = intersArr[ni].spot1+1;
+	      mapbondsbFlex[a] = intersArr[ni].spot2+1;
+	      mapBheightFlex[a] = intersArr[ni].bheight;
+	      mapBhinFlex[a] = intersArr[ni].bhin;
+	      mapBhoutFlex[a] = intersArr[ni].bhout;
+	      mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
+				     + typesArr[type2].spots[intersArr[ni].spot2].sigma);
+	      a++;
+	      if (intersArr[ni].spot1 != intersArr[ni].spot2)
+		{
+		  mapbondsaFlex[a] = intersArr[ni].spot2+1;
+		  mapbondsbFlex[a] = intersArr[ni].spot1+1;
+		  mapBheightFlex[a] = mapBheightFlex[a-1];
+		  mapBhinFlex[a] = mapBhinFlex[a-1];
+		  mapBhoutFlex[a] = mapBhoutFlex[a-1];
+		  mapSigmaFlex[a] = mapSigmaFlex[a-1];
+		  a++;
+		}
+	    }
+#endif
+	}
+    }
+#if 1
+  if (OprogStatus.optbm == 1)
+    {
+      if (nbondsFlexS[nl] == -1)
+	{
+	  nbondsFlexS[nl] = a;
+	  for (k=0; k < a; k++)
+	    {
+	      mapbondsaFlexS[nl][k] = mapbondsaFlex[k];
+	      mapbondsbFlexS[nl][k] = mapbondsbFlex[k]; 
+	      mapBheightFlexS[nl][k] = mapBheightFlex[k];
+	      mapBhinFlexS[nl][k] = mapBhinFlex[k];
+	      mapBhoutFlexS[nl][k] = mapBhoutFlex[k];
+	      mapSigmaFlexS[nl][k] = mapSigmaFlex[k];
+	    }
+	}
+      else
+	{
+	  a=nbondsFlexS[nl];
+	  for (k=0; k < a; k++)
+	    {
+	      mapbondsaFlex[k] = mapbondsaFlexS[nl][k];
+	      mapbondsbFlex[k] = mapbondsbFlexS[nl][k]; 
+	      mapBheightFlex[k] = mapBheightFlexS[nl][k];
+	      mapBhinFlex[k] = mapBhinFlexS[nl][k];
+	      mapBhoutFlex[k] = mapBhoutFlexS[nl][k];
+	      mapSigmaFlex[k] = mapSigmaFlexS[nl][k];
+	    }
+	}
+    }
+#endif
+  /* qui assenga le interazioni specifiche tra particelle i-j 
+     (queste non le ottimizziamo) */
   for (ni=0; ni < Oparams.nintersIJ; ni++)
     {
       if (is_in_ranges(i, intersArrIJ[ni].i, intersArrIJ[ni].nr1, intersArrIJ[ni].r1) && 
 	  is_in_ranges(j, intersArrIJ[ni].j, intersArrIJ[ni].nr2, intersArrIJ[ni].r2))
 	{
 	  mapbondsaFlex[a] = intersArrIJ[ni].spot1+1;
-          mapbondsbFlex[a] = intersArrIJ[ni].spot2+1;
+	  mapbondsbFlex[a] = intersArrIJ[ni].spot2+1;
 	  mapBheightFlex[a] = intersArrIJ[ni].bheight;
 	  mapBhinFlex[a] = intersArrIJ[ni].bhin;
           mapBhoutFlex[a] = intersArrIJ[ni].bhout;
@@ -2263,97 +2522,9 @@ void assign_bond_mapping(int i, int j)
 	 a++;	 
        } 
     }
-  for (ni=0; ni < Oparams.ninters; ni++)
-    {
-#if 1
-#ifdef MD_FOUR_BEADS
-      if (ignore_interaction(i, j, ni))
-	continue;	
-#endif
-#endif
-      if (is_in_ranges(type1, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
-	  is_in_ranges(type2, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
-	{
-	  /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
-	  mapbondsaFlex[a] = intersArr[ni].spot1+1;
-          mapbondsbFlex[a] = intersArr[ni].spot2+1;
-	  mapBheightFlex[a] = intersArr[ni].bheight;
-	  mapBhinFlex[a] = intersArr[ni].bhin;
-          mapBhoutFlex[a] = intersArr[ni].bhout;
-          mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
-				 + typesArr[type2].spots[intersArr[ni].spot2].sigma);
-	  MD_DEBUG38(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
-	  MD_DEBUG38(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
-			    typesArr[type2].spots[intersArr[ni].spot2].sigma));
-	  MD_DEBUG38(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
-	  a++;
-	  if (type1 == type2 && intersArr[ni].spot1 != intersArr[ni].spot2)
-	    {
-	      mapbondsaFlex[a] = intersArr[ni].spot2+1;
-	      mapbondsbFlex[a] = intersArr[ni].spot1+1;
-	      mapBheightFlex[a] = mapBheightFlex[a-1];
-	      mapBhinFlex[a] = mapBhinFlex[a-1];
-	      mapBhoutFlex[a] = mapBhoutFlex[a-1];
-	      mapSigmaFlex[a] = mapSigmaFlex[a-1];
-	      a++;
-	    }
-	}	
-      else if (is_in_ranges(type2, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
-	       is_in_ranges(type1, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
-	{
-	  /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
-	  mapbondsaFlex[a] = intersArr[ni].spot2+1;
-	  mapbondsbFlex[a] = intersArr[ni].spot1+1;
-	  mapBheightFlex[a] = intersArr[ni].bheight;
-	  mapBhinFlex[a] = intersArr[ni].bhin;
-          mapBhoutFlex[a] = intersArr[ni].bhout;
-          mapSigmaFlex[a] = 0.5*(typesArr[type2].spots[intersArr[ni].spot1].sigma
-				 + typesArr[type1].spots[intersArr[ni].spot2].sigma);
-	  MD_DEBUG38(printf("mapSigmaFlex[%d]:%f\n", a, mapSigmaFlex[a]));
-	  MD_DEBUG38(printf("sigma1=%f sigma2=%f\n",typesArr[type1].spots[intersArr[ni].spot1].sigma,
-			    typesArr[type2].spots[intersArr[ni].spot2].sigma));
-	  MD_DEBUG38(printf("a=%d ni=%d spot1=%d spot2=%d\n", a, ni, intersArr[ni].spot1, intersArr[ni].spot2));
-	  a++;
-#if 0
-	  if (type1 == type2 && intersArr[ni].spot1 != intersArr[ni].spot2)
-	    {
-	      mapbondsaFlex[a] = intersArr[ni].spot1+1;
-	      mapbondsbFlex[a] = intersArr[ni].spot2+1;
-	      mapBheightFlex[a] = mapBheightFlex[a-1];
-	      mapBhinFlex[a] = mapBhinFlex[a-1];
-	      mapBhoutFlex[a] = mapBhoutFlex[a-1];
-	      mapSigmaFlex[a] = mapSigmaFlex[a-1];
-	      a++;
-	    }
-#endif
-	}
-#ifdef MD_FOUR_BEADS
-      /* all with all */
-      else if (intersArr[ni].type1==-1 && intersArr[ni].type2==-1)
-	{
-	  mapbondsaFlex[a] = intersArr[ni].spot1+1;
-          mapbondsbFlex[a] = intersArr[ni].spot2+1;
-	  mapBheightFlex[a] = intersArr[ni].bheight;
-	  mapBhinFlex[a] = intersArr[ni].bhin;
-          mapBhoutFlex[a] = intersArr[ni].bhout;
-          mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
-				 + typesArr[type2].spots[intersArr[ni].spot2].sigma);
-	  a++;
-	  if (intersArr[ni].spot1 != intersArr[ni].spot2)
-	    {
-	      mapbondsaFlex[a] = intersArr[ni].spot2+1;
-	      mapbondsbFlex[a] = intersArr[ni].spot1+1;
-	      mapBheightFlex[a] = mapBheightFlex[a-1];
-	      mapBhinFlex[a] = mapBhinFlex[a-1];
-	      mapBhoutFlex[a] = mapBhoutFlex[a-1];
-	      mapSigmaFlex[a] = mapSigmaFlex[a-1];
-	      a++;
-	    }
-	}
-#endif
-    }
-  nbondsFlex = a;
   //printf(">>>>quii nbonds=%d\n", nbondsFlex);
+
+  nbondsFlex = a;
   mapbondsa = mapbondsaFlex;
   mapbondsb = mapbondsbFlex;
 } 
@@ -3509,17 +3680,20 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
 }
 #endif
 #ifdef MD_OPTIMIZE_NSPHSPOT
-int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, double t2, double *evtime, int* ata, int *atb, 
-			int *collCode)
+int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, double t2, double *evtime, int* ata, int *atb, int *collCode)
 {
   double dr[NDIM], dv[NDIM], b, d, t=0.0, tInt, vv;
   double distSq, sigSq, tmin=0.0;
   int collCodeL, nbonds, nb, aa=-1, bb=-1, collCodeMin;
+  int sptocheck[2];
+  int last, first, k;
 
   nbonds = nbondsFlex;
   if (nbonds==0)
     return 0;
 
+  //if (typeOfPart[na] ==0 || typeOfPart[n]==0)
+    //printf("===>types= %d %d\n", typeOfPart[na], typeOfPart[n]);
   //printf("QUI\n");
   collCodeMin = MD_EVENT_NONE;
   //printf("sigma=%.15G\n", mapSigmaFlex[0]);
@@ -3544,8 +3718,51 @@ int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, dou
     printf("distSq: %.15G sigSq=%.15G\n", distSq, sigSq);
 #endif
   vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+
+  /* cerca i primi due spot a e b tali che con a è non legato e con b e legato,
+     gli altri così si possono trascurare */
+  first = -1;
+  last = -1;
   for (nb = 0; nb < nbonds; nb++)
     {
+      /* cerca la coppia di spot più grande non legata */
+      if (!bound(na, n, mapbondsa[nb], mapbondsb[nb]))
+	{
+	  if (first==-1 || mapSigmaFlex[nb] > mapSigmaFlex[first])
+	    {
+	      first = nb;
+	    }
+	}
+      /* cerca la più piccola coppia di spot legata */
+      if (bound(na, n, mapbondsa[nb], mapbondsb[nb]))
+	{
+	  if (last==-1 || mapSigmaFlex[nb] < mapSigmaFlex[last])
+	    {
+	      last = nb;
+	    }
+	}
+    }
+#if 0
+  if (first!=-1 && last!=-1)
+    {
+      printf("i=%d j=%d first=%d last=%d\n", na, n, first, last);
+      if (first!=-1)
+	printf("mapSigmaFlex[first]=%f\n", mapSigmaFlex[first]);
+      if (last!=-1)
+	printf("mapSigmaFlex[last]=%f\n", mapSigmaFlex[last]);
+    }
+#endif
+  sptocheck[0] = first;
+  sptocheck[1] = last; 
+  for (k = 0; k < 2; k++)
+    {
+      nb = sptocheck[k];
+      if (nb == -1)
+	continue;
+
+#if 0
+      for (nb=0; nb < nbonds; nb++)
+#endif
       sigSq = Sqr(mapSigmaFlex[nb]);
       collCodeL = MD_EVENT_NONE;
       /* per ora tale ottimizzazione assume un solo spot per particella */ 
@@ -3593,6 +3810,8 @@ int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, dou
     }
   if (collCodeMin != MD_EVENT_NONE && tmin > t1 && tmin < t2)
     {
+      //if (typeOfPart[na] ==0 || typeOfPart[n]==0)
+	//printf("found collision ===>types= %d %d %d-%d\n", typeOfPart[na], typeOfPart[n], aa, bb);
       *collCode = collCodeMin;
       *ata = aa;
       *atb = bb;
