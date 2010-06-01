@@ -1029,6 +1029,7 @@ void deleteFromEventQ(int e)
     overevHQ--;
   treeStatus[e] = 0;
   totevHQ--;
+#if 0
 #ifdef MD_SPHERICAL_WALL
   /* N.B. sphWall+1 è l'evento di cell-crossing del 
      muro sferico ma tale evento non viene schedulato affatto
@@ -1038,7 +1039,7 @@ void deleteFromEventQ(int e)
   if (id == sphWallOuter+1)
     return; 
 #endif
-
+#endif
   if(i==OprogStatus.curIndex)
     {
       MD_DEBUG2(printf("[delete] e=%d PQ node\n", e));

@@ -605,7 +605,9 @@ double get_min_dist_NNL (int na, int *jmin, double *rCmin, double *rDmin, double
     } 
   return distMin;
 }
-
+#ifdef MD_MULTIPLE_LL
+double get_min_dist_MLL(int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin);
+#endif
 double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *shiftmin) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -619,8 +621,14 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
   int kk;
   double r1[3], r2[3];
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k, n;
- /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
+  /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
+#ifdef MD_MULTIPLE_LL
+  if (OprogStatus.multipleLL)
+    {
+      return get_min_dist_MLL(na, jmin, rCmin, rDmin, shiftmin);
+    }
+#endif
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
 
   calcdist_retcheck = 0;
@@ -1244,6 +1252,8 @@ double check_dist_min(int i, char *msg)
   
   j = -1;
   if (OprogStatus.useNNL)
+    /* notare che anche nel caso di linked list multiple si puo' usare
+       get_min_dist_NNL pari pari */
     distMin = get_min_dist_NNL(i, &j, rC, rD, shift);
   else
     distMin = get_min_dist(i, &j, rC, rD, shift);
@@ -1288,6 +1298,7 @@ int check_type_done(int t)
     return 0;
 }
 #endif
+#ifdef EDHE_FLEX
 double calc_safe_factor(void)
 {
   int i, iMin;
@@ -1304,6 +1315,7 @@ double calc_safe_factor(void)
     }
   return a0I[iMin]/axaMin;
 }
+#endif
 double rcutIni;
 void scale_Phi(void)
 {
@@ -5728,8 +5740,13 @@ double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double 
     }
   else
     {
+#ifdef EDHE_FLEX
       rad1 = typesArr[typeOfPart[i]].sax[0];
       rad2 = typesArr[typeOfPart[j]].sax[0];
+#else
+      rad1 = (i<Oparams.parnumA)?Oparams.a[0]:Oparams.a[1];
+      rad2 = (j<Oparams.parnumA)?Oparams.a[0]:Oparams.a[1];
+#endif
     }
   for (kk = 0; kk < 3; kk++)
     {
@@ -5771,8 +5788,10 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double phi, psi;
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+#ifdef EDHE_FLEX
   if (are_spheres(i, j))
     return calcDistNegHS(t, t1, i, j, shift, r1, r2);
+#endif
   ti = t + (t1 - atomTime[i]);
   MD_DEBUG50(printf("[calcDistNeg] - BEGIN");)
 #ifdef EDHE_FLEX
@@ -6142,18 +6161,29 @@ retry:
 		}
 	      else
 		{
-#if 1
+#if 0
 		  if (scalProd(gradf, rDC) < 0.0)
 		    vecg[4] = 0.0;
 		  else
 		    vecg[4] = calc_norm(rDC)/nf;  
 #else
+		  /* UPDATE 01/06/2010: il guess migliore rimane il seguente, nel caso degli 
+		    ellissoidi con tale guess si può arrivare ad elongazioni oltre 3.0 senza 
+		    steepest descent (questo vale anche se dist5=0)*/ 
 		  vecg[4] = 0.0;
 #endif
 		}
 	    }
 #endif
 	//   vecg[4] = 0.0;
+#if 0
+	if (i==55&&j==42)
+	  {
+	    printf("time=%.15G %d-%d initial guess=%f %f %f %f %f\n", Oparams.time, i, j, vecg[0], vecg[1],
+	  	   vecg[2], vecg[3], vecg[4]);
+	    exit(-1);
+	  }
+#endif
 	}
       else
 	{
@@ -6358,7 +6388,7 @@ retry:
 	      calcdist_retcheck = 1;
 	      return 0.0;
 	    } 
-	  printf("[calcDistNeg] segno: %.8G vecg[7]: %.8G dist=%.15G\n", segno, vecg[4], calc_norm(r12));
+	  printf("[calcDistNeg] segno: %.8G vecg[4]: %.8G dist=%.15G\n", segno, vecg[4], calc_norm(r12));
 	  return calcDist(t, t1, i, j, shift, r1, r2, alpha, vecgsup, 1);
 	  //exit(-1);
 	}
@@ -8549,70 +8579,78 @@ void locate_spherical_wall(int na, int outer)
     n=sphWallOuter;
   else
     n=sphWall;
-  sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
-  tInt = Oparams.time - atomTime[n];
-  dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
-  dv[0] = vx[na] - vx[n];
-  dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
-  dv[1] = vy[na] - vy[n];
-  dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
-  dv[2] = vz[na] - vz[n];
+  if (use_bounding_spheres(na, n))
+    {
+      sigSq = Sqr((maxax[n]+maxax[na])*0.5+OprogStatus.epsd);
+      tInt = Oparams.time - atomTime[n];
+      dr[0] = rx[na] - (rx[n] + vx[n] * tInt) - shift[0];	  
+      dv[0] = vx[na] - vx[n];
+      dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
+      dv[1] = vy[na] - vy[n];
+      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
+      dv[2] = vz[na] - vz[n];
 
-  b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
-  distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
-  vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
-  d = Sqr (b) - vv * (distSq - sigSq);
+      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
+      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
+      vv = Sqr(dv[0]) + Sqr (dv[1]) + Sqr (dv[2]);
+      d = Sqr (b) - vv * (distSq - sigSq);
 
 #if 0
-  if (na==170)
-    {
-      printf("time=%.15G rSW %f %f %f r[%d] %f %f %f\n", Oparams.time,rx[sphWall], ry[sphWall], rz[sphWall], na, rx[na], ry[na], rz[na]);
-      printf("d=%.15G distSq:%.15G sigSq=%.15G MAH\n", d, distSq, sigSq);
-    }
+      if (na==170)
+	{
+	  printf("time=%.15G rSW %f %f %f r[%d] %f %f %f\n", Oparams.time,rx[sphWall], ry[sphWall], rz[sphWall], na, rx[na], ry[na], rz[na]);
+	  printf("d=%.15G distSq:%.15G sigSq=%.15G MAH\n", d, distSq, sigSq);
+	}
 #endif
-  if (d < 0 || (b > 0.0 && distSq > sigSq)) 
-    {
-      /* i centroidi non collidono per cui non ci può essere
-       * nessun urto sotto tali condizioni */
+      if (d < 0 || (b > 0.0 && distSq > sigSq)) 
+	{
+	  /* i centroidi non collidono per cui non ci può essere
+	   * nessun urto sotto tali condizioni */
 #if 0
-	printf("time=%.15G rSW %f %f %f r[%d] %f %f %f\n", Oparams.time, rx[sphWall], ry[sphWall], rz[sphWall], na, rx[na], ry[na], rz[na]);
-      printf("d=%.15G distSq:%.15G sigSq=%.15G MAH\n", d, distSq, sigSq);
-      exit(-1);
+	  printf("time=%.15G rSW %f %f %f r[%d] %f %f %f\n", Oparams.time, rx[sphWall], ry[sphWall], rz[sphWall], na, rx[na], ry[na], rz[na]);
+	  printf("d=%.15G distSq:%.15G sigSq=%.15G MAH\n", d, distSq, sigSq);
+	  exit(-1);
 #endif
-      return; 
+	  return; 
+	}
+      MD_DEBUG40(printf("PREDICTING na=%d n=%d\n", na , n));
+      if (vv==0.0)
+	{
+	  if (distSq >= sigSq)
+	    return;
+	  /* la vel relativa è zero e i centroidi non si overlappano quindi
+	   * non si possono urtare! */
+	  t1 = t = 0;
+	  t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
+		       urtare ruotando */
+	}
+      else if (distSq >= sigSq)
+	{
+	  t = t1 = - (sqrt (d) + b) / vv;
+	  t2 = (sqrt (d) - b) / vv;
+	  overlap = 0;
+	  MD_DEBUG40(printf("qui..boh sig:%.15G dist=%.15G\n", sqrt(sigSq), sqrt(distSq)));
+	}
+      else 
+	{
+	  MD_DEBUG40(printf("Centroids overlap!\n"));
+	  t2 = t = (sqrt (d) - b) / vv;
+	  t1 = 0.0; 
+	  overlap = 1;
+	  MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
+	  MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
+	}
+      MD_DEBUG40(printf("t=%f curtime: %f b=%f d=%f t1=%.15G t2=%.15G\n", t, Oparams.time, b ,d, t1, t2));
+      MD_DEBUG40(printf("dr=(%f,%f,%f) sigSq: %f\n", dr[0], dr[1], dr[2], sigSq));
+      //t += Oparams.time; 
+      t2 += Oparams.time;
+      t1 += Oparams.time;
     }
-  MD_DEBUG40(printf("PREDICTING na=%d n=%d\n", na , n));
-  if (vv==0.0)
+  else
     {
-      if (distSq >= sigSq)
-	return;
-      /* la vel relativa è zero e i centroidi non si overlappano quindi
-       * non si possono urtare! */
-      t1 = t = 0;
-      t2 = 10.0;/* anche se sono fermi l'uno rispetto all'altro possono 
-		   urtare ruotando */
+      t1 = 0.0;
+      t2 = timbig;
     }
-  else if (distSq >= sigSq)
-    {
-      t = t1 = - (sqrt (d) + b) / vv;
-      t2 = (sqrt (d) - b) / vv;
-      overlap = 0;
-      MD_DEBUG40(printf("qui..boh sig:%.15G dist=%.15G\n", sqrt(sigSq), sqrt(distSq)));
-    }
-  else 
-    {
-      MD_DEBUG40(printf("Centroids overlap!\n"));
-      t2 = t = (sqrt (d) - b) / vv;
-      t1 = 0.0; 
-      overlap = 1;
-      MD_DEBUG(printf("altro d=%f t=%.15f\n", d, (-sqrt (d) - b) / vv));
-      MD_DEBUG(printf("vv=%f dv[0]:%f\n", vv, dv[0]));
-    }
-  MD_DEBUG40(printf("t=%f curtime: %f b=%f d=%f t1=%.15G t2=%.15G\n", t, Oparams.time, b ,d, t1, t2));
-  MD_DEBUG40(printf("dr=(%f,%f,%f) sigSq: %f\n", dr[0], dr[1], dr[2], sigSq));
-  //t += Oparams.time; 
-  t2 += Oparams.time;
-  t1 += Oparams.time;
   evtime = t2;
   collCode = MD_EVENT_NONE;
   rxC = ryC = rzC = 0.0;
@@ -8631,10 +8669,9 @@ void locate_spherical_wall(int na, int outer)
   if (t < Oparams.time)
     {
 #if 1
-      printf("time:%.15f tInt:%.15f\n", Oparams.time,
-	     tInt);
-      printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
-				  Sqr(dr[2]))-1.0 );
+      printf("time:%.15f\n", Oparams.time);
+      //printf("dist:%.15f\n", sqrt(Sqr(dr[0])+Sqr(dr[1])+
+	//			  Sqr(dr[2]))-1.0 );
       printf("STEP: %lld\n", (long long int)Oparams.curStep);
       printf("atomTime: %.10f \n", atomTime[n]);
       printf("n:%d na:%d\n", n, na);
@@ -11107,7 +11144,14 @@ void move(void)
 			  rz[ii] += OprogStatus.rzup;
 			  vz[ii] += OprogStatus.vztap; 
 			}
-		      rebuildLinkedList();
+#ifdef MD_MULTIPLE_LL
+    		      if (OprogStatus.multipleLL)
+    			rebuildMultipleLL();
+    		      else
+    			rebuildLinkedList();
+#else
+	      	      rebuildLinkedList();
+#endif
 		      MD_DEBUG3(distanza(996, 798));
 		      if (OprogStatus.useNNL)
 			rebuildNNL();
@@ -11131,7 +11175,14 @@ void move(void)
 		  calcKVz();
 		  MD_DEBUG4(printf("SCALVEL #%lld Vz: %.15f\n", (long long int) Oparams.curStep,Vz));
 		  scalevels(Oparams.T, K, Vz);
+#ifdef MD_MULTIPLE_LL
+		  if (OprogStatus.multipleLL)
+		    rebuildMultipleLL();
+		  else
+		    rebuildLinkedList();
+#else
 		  rebuildLinkedList();
+#endif
 		  if (OprogStatus.useNNL)
 		    rebuildNNL();
 		  rebuildCalendar();
