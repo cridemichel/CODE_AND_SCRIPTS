@@ -48,7 +48,7 @@ extern void vectProd(double r1x, double r1y, COORD_TYPE r1z,
 extern int *inCell[3], cellsx, cellsy, cellsz;
 extern int *cellList;
 extern int bound(int na, int n);
-int *numbonds;
+extern int *numbonds;
 double calcpotene(void)
 {
 #ifdef MD_MIXWDEPTH

@@ -1,9 +1,9 @@
 #bimixhs Makefile
 SDHDR=bimix.h
 
-UTIL = wtdutil heteroutil xvautil corutil jumps
+UTIL = wtdutil heteroutil xvautil jumps
 
-ellipsoid: link measures.o move.o init.o corutil tree.o# $(UTIL)
+ellipsoid: link measures.o move.o init.o tree.o# $(UTIL)
 
 link:
 	rm $(COMM)/mdsimdep.h ; ln -s $(PERC)/bimixhs/$(SDHDR) $(COMM)/mdsimdep.h 

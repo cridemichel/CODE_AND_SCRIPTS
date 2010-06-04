@@ -32,7 +32,7 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
 extern COORD_TYPE dispHi;
 extern const double timbig;
 int poolSize;
-int parnumA, parnumB;
+extern int parnumA, parnumB;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 int *bondscache, *numbonds, **bonds, *numbonds0, **bonds0;
 #endif
@@ -610,102 +610,103 @@ void initCoord(void)
 
 /* =========================== >>> usrInitBef <<< ========================== */
 void usrInitBef(void)
-  {
-    int i;
-    /* DESCRIPTION:
-       This function is called before any other initialization, put here 
-       yours, for example initialize accumulators ! 
-       NOTE: You should supply parameters value in parameters file, so this 
-	     initilization are quite fictitiuos for parameters, anyway 
-	     accumulators initialization is crucial */
-    
-    /* ===================== >>> INIT PARAMETERS <<< ======================== 
+{
+  int i;
+  /* DESCRIPTION:
+     This function is called before any other initialization, put here 
+     yours, for example initialize accumulators ! 
+NOTE: You should supply parameters value in parameters file, so this 
+initilization are quite fictitiuos for parameters, anyway 
+accumulators initialization is crucial */
+
+  /* ===================== >>> INIT PARAMETERS <<< ======================== 
      All the values set here for Oparams structure are taken as defaults if you
      don't specify corresponding parameters in the parameters file  */
-    Dtrans = 0.0; /* DtransOld should become a field of OprogStatus */
+  Dtrans = 0.0; /* DtransOld should become a field of OprogStatus */
 
-    V = 0.0;
-    L = 9.4;
+  V = 0.0;
+  L = 9.4;
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
-    Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
+  Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
 #ifdef MD_MIXWDEPTH
-    Oparams.bheight[0][0]=Oparams.bheight[0][1]=Oparams.bheight[1][0]=Oparams.bheight[1][1]=0.0;
+  Oparams.bheight[0][0]=Oparams.bheight[0][1]=Oparams.bheight[1][0]=Oparams.bheight[1][1]=0.0;
 #else
-    Oparams.bheight = 0.0;
+  Oparams.bheight = 0.0;
 #endif
-    OprogStatus.maxbonds = 20;
+  OprogStatus.maxbonds = 20;
 #endif
 #ifdef MD_GRAVITY
-    Lz = 9.4;
+  Lz = 9.4;
 #endif
-    Oparams.T = 2.0;
-    Oparams.P = 1.0;
-    Oparams.M = 5; /* cells in each direction for linked lists */
-    
-    Oparams.time = 0.0;
-    OprogStatus.tolT = 0.0;
-    OprogStatus.nebrTabFac = 150;
-    OprogStatus.rNebrShell = 0.4;
-    /* If 1 the program calculate of the corrisponding variable a mean from
-       the begin of the run and not the instanteaneous value */
-    OprogStatus.avnggr    = 0;
-    Oparams.Dt = 0.01;
-    OprogStatus.avngS     = 0;
-    OprogStatus.avngPress = 0;
-    OprogStatus.avngTemp  = 0;
-    OprogStatus.scalevel = 0;
-    OprogStatus.endtime = 0;
-    OprogStatus.rescaleTime = 1.0;
-    OprogStatus.brownian = 0;
+  Oparams.T = 2.0;
+  Oparams.P = 1.0;
+  Oparams.M = 5; /* cells in each direction for linked lists */
+
+  Oparams.time = 0.0;
+  OprogStatus.tolT = 0.0;
+  OprogStatus.nebrTabFac = 150;
+  OprogStatus.rNebrShell = 0.4;
+  /* If 1 the program calculate of the corrisponding variable a mean from
+     the begin of the run and not the instanteaneous value */
+  OprogStatus.avnggr    = 0;
+  Oparams.Dt = 0.01;
+  OprogStatus.avngS     = 0;
+  OprogStatus.avngPress = 0;
+  OprogStatus.avngTemp  = 0;
+  OprogStatus.scalevel = 0;
+  OprogStatus.endtime = 0;
+  OprogStatus.rescaleTime = 1.0;
+  OprogStatus.brownian = 0;
 #ifdef MD_GRAVITY
-    OprogStatus.taptau = 0.0;
-    OprogStatus.rzup = 0.0;
-    OprogStatus.expandFact= 1.0;
-    OprogStatus.quenchend = 0.0;
-    OprogStatus.tc = 1E-5;
-    OprogStatus.accrcmz = 0.0;
-    OprogStatus.wallcollCount = 0;
-    OprogStatus.checkquenchTime = 1.0;
-    OprogStatus.numquench = 0;
-    OprogStatus.maxquench = 0;
-    OprogStatus.rescaleTime = 0.0;
-    OprogStatus.extraLz = 10.0;
-    OprogStatus.rhobh = 0.0;
-    OprogStatus.vztap = 10.0;
+  OprogStatus.taptau = 0.0;
+  OprogStatus.rzup = 0.0;
+  OprogStatus.expandFact= 1.0;
+  OprogStatus.quenchend = 0.0;
+  OprogStatus.tc = 1E-5;
+  OprogStatus.accrcmz = 0.0;
+  OprogStatus.wallcollCount = 0;
+  OprogStatus.checkquenchTime = 1.0;
+  OprogStatus.numquench = 0;
+  OprogStatus.maxquench = 0;
+  OprogStatus.rescaleTime = 0.0;
+  OprogStatus.extraLz = 10.0;
+  OprogStatus.rhobh = 0.0;
+  OprogStatus.vztap = 10.0;
 #endif
-    OprogStatus.eventMult = 100;
-    OprogStatus.overlaptol = 0.0001;
-    /* Il promo step inizia con un tapping a temperatura T */
-    Oparams.m[0] = Oparams.m[1] = 1.0;
-    Oparams.sigma[0][0] = Oparams.sigma[1][1] = Oparams.sigma[1][0]= Oparams.sigma[0][1]=1.0;
-    OprogStatus.collCount = 0;
-    OprogStatus.crossCount = 0;
-    OprogStatus.nextSumTime = 0.0;
-    OprogStatus.nextcheckTime = 0.0;
-    OprogStatus.intervalSum = 1.0;
-    OprogStatus.storerate = 0.01;
-    OprogStatus.KK = 0;
-    OprogStatus.JJ = 0;
-    /* Parameters relative to Ruocco AC force
-       See: cond-mat/00001311, Ruocco et al. */
-    OprogStatus.rNebrShell = 2.7; /* the radius of neighbour list shell */
-    for (i = 0; i < PE_POINTS; i++)
-      OprogStatus.PE[i] = 0;
-    /* ======================================================================= */
-  }
-  extern void check (int *overlap, double *K, double *V);
-  double *atomTime, *treeTime;
-  int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
-  extern void PredictEvent(int, int);
-  extern void InitEventList(void);
-  void StartRun(void)
-  {
-    int j, k, n;
+  OprogStatus.eventMult = 100;
+  OprogStatus.overlaptol = 0.0001;
+  /* Il promo step inizia con un tapping a temperatura T */
+  Oparams.m[0] = Oparams.m[1] = 1.0;
+  Oparams.sigma[0][0] = Oparams.sigma[1][1] = Oparams.sigma[1][0]= Oparams.sigma[0][1]=1.0;
+  OprogStatus.collCount = 0;
+  OprogStatus.crossCount = 0;
+  OprogStatus.nextSumTime = 0.0;
+  OprogStatus.nextcheckTime = 0.0;
+  OprogStatus.intervalSum = 1.0;
+  OprogStatus.storerate = 0.01;
+  OprogStatus.KK = 0;
+  OprogStatus.JJ = 0;
+  /* Parameters relative to Ruocco AC force
+See: cond-mat/00001311, Ruocco et al. */
+  OprogStatus.rNebrShell = 2.7; /* the radius of neighbour list shell */
+  for (i = 0; i < PE_POINTS; i++)
+    OprogStatus.PE[i] = 0;
+  /* ======================================================================= */
+}
+extern void check (int *overlap, double *K, double *V);
+extern double *atomTime;
+double *treeTime;
+extern int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
+extern void PredictEvent(int, int);
+extern void InitEventList(void);
+void StartRun(void)
+{
+  int j, k, n;
 #ifdef MD_INFBARRIER
-    int i, numbonds;
+  int i, numbonds;
 #endif
-    for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
-      cellList[j] = -1;
+  for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
+    cellList[j] = -1;
     /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
     for (n = 0; n < Oparams.parnum; n++)
       {
