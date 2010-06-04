@@ -420,8 +420,10 @@ int whichCorrupted(char* absFileName, int (*readFunc)(int),
 		     newer file */
     }
 
-  close(bf0);
-  close(bf1);
+  if (bf0!=-1)
+    close(bf0);
+  if (bf1!=-1)
+    close(bf1);
   return which; /* 'which' is the file corrupted (0/1) */
 
 }
