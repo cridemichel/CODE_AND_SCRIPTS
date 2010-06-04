@@ -16,6 +16,7 @@
 #include<math.h>
 #include<stdarg.h>
 #include<errno.h>
+#include<limits.h>
 #if defined(MPI)
 #if defined(ORIGIN) || defined(CRAY)
 #undef alpha
