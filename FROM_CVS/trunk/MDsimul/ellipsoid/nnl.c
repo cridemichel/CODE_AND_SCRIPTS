@@ -1591,7 +1591,7 @@ void guess_distNeigh_plane(int i,
 	{
 	  dA[k1] = rA[k1];
 	  for (n=0; n < 3;n++)
-	dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
+    	    dA[k1] += gradaxA[n]*RA[n][k1]*saA[n]/2.0; 
 	}
 
       calc_intersec_neigh(dA, rA, Xa, rC, 1);
