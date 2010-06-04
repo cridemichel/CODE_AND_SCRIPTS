@@ -2615,7 +2615,7 @@ int calc_intersecSE(int i, double *rB, double *rA, double **Ri, double* rI)
   xSE = rB;  /* a partire da rA, rArB è la direzione lungo la quale calcolare il punto d'intersezione 
 	        con il SE*/
   //printf("func_to_zero_zb(0)=%.15G func_to_zero_zb(1):%.15G\n", func_to_zero_zb(0), func_to_zero_zb(1));
-  chsi = zbrent(func_to_zero_intersec_zb, chsi1, chsi2, 1E-14);
+  chsi = zbrent(func_to_zero_intersec_zb, chsi1, chsi2, 1.0E-14);
   //printf("i=%d chsi=%.15G\n", i, chsi);
   for (kk=0; kk < 3; kk++)
     rI[kk] = rA[kk] + chsi*(rB[kk]-rA[kk]);
