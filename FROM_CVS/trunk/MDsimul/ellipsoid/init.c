@@ -394,11 +394,13 @@ void check_all_bonds(void)
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
 
+#if 1
   if (OprogStatus.useNNL)
     {
       check_all_bonds_NLL();
       return;
     }
+#endif
 #ifdef MD_MULTIPLE_LL
   /* N.B. 24/05/10: questa funzione va riscritta in multiple_ll.c */
   if (OprogStatus.multipleLL)
@@ -1882,6 +1884,8 @@ void find_bonds(void);
 void StartRun(void)
 {
   int j, k, n;
+  
+  find_conciding_spots();
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
@@ -2000,7 +2004,6 @@ void StartRun(void)
      ma prima di costruire il calendario (altrimenti
      mancherebbero tutti gli eventi relativi alle collisioni
      tra gli spot! */
-  find_conciding_spots();
   if (Oparams.maxbondsSaved==-1)
     {
       //printf("nbonds[1841]=%d\n",numbonds[1841]);
@@ -3069,7 +3072,9 @@ void find_conciding_spots(void)
   int nt, ns1, ns2;
   for (nt=0; nt < Oparams.ntypes; nt++)
     {
-      for (ns1=0; ns1 < typesArr[nt].nspots; ns1++)
+      /* 10/06/2010: qui comunque inizializzao anche gli spot utilizzati per le NNL
+      ossia quelli che vanno da typesArr[nt].nspots a typesArr[nt].nspots + MD_SPNNL_SP */
+      for (ns1=0; ns1 < typesArr[nt].nspots + MD_SPNNL_SP; ns1++)
 	typesArr[nt].spots[ns1].same=ns1;
       for (ns1=0; ns1 < typesArr[nt].nspots; ns1++)
 	{
@@ -5572,13 +5577,13 @@ int readBinCoord_heflex(int cfd)
 #ifdef MD_SUPERELLIPSOID
      /*  16/05/2010: notare che nel caso si abbiano spot per le NNL bisogna allocare più spazio
 	ma questi non vengono salvati, quindi il numero di spot letti non ne deve tener conto */ 
-      sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
+      sizeSPNNL = sizeof(spotStruct)*(MD_SPNNL_NUMSP+1);
       typesArr[i].spots = malloc(size+sizeSPNNL);
       if (typesArr[i].nspots == 0)
 	continue;
 #else
 #if 1
-      sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
+      sizeSPNNL = sizeof(spotStruct)*(MD_SPNNL_NUMSP+1);
       typesArr[i].spots = malloc(size+sizeSPNNL);
       if (typesArr[i].nspots == 0)
 	continue;

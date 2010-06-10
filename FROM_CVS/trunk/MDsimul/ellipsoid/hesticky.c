@@ -1116,7 +1116,32 @@ void find_bonds_one_NLL(int i)
       if (j==sphWall || j==sphWallOuter)
 	continue;
 #endif
-      check_shift(i, j, shift);
+      // check_shift(i, j, shift);
+      /* calculate shift */
+#ifdef MD_LXYZ
+      shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+      shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+      else
+	shift[2] = 0.0;
+#else
+      shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#endif
+#else
+      shift[0] = L*rint((rx[i]-rx[j])/L);
+      shift[1] = L*rint((ry[i]-ry[j])/L);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	shift[2] = L*rint((rz[i]-rz[j])/L);
+      else
+	shift[2] = 0.0;
+#else
+      shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+#endif
+
       assign_bond_mapping(i,j);
       dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
       nbonds = nbondsFlex;
@@ -2525,6 +2550,8 @@ void assign_bond_mapping(int i, int j)
   //printf(">>>>quii nbonds=%d\n", nbondsFlex);
 
   nbondsFlex = a;
+  //if (i==257||j==257)
+  //printf("i=%d j=%d type1=%d type2=%d nl=%d nbondsFlex=%d\n", i, j, type1, type2, nl, nbondsFlex);
   mapbondsa = mapbondsaFlex;
   mapbondsb = mapbondsbFlex;
 } 
