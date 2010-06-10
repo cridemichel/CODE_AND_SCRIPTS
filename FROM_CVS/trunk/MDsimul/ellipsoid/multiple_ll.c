@@ -1574,6 +1574,9 @@ void BuildNNL_MLL(int na, int nl)
 #ifdef MD_EDHEFLEX_OPTNNL
   if (OprogStatus.optnnl)
     {
+      get_types_from_nl(nl, &t1, &t2);
+      if (t1!=typeOfPart[na]&&t2!=typeOfPart[na])
+        return;
       for (k=0; k < 3; k++)
 	inCellL[k] = inCell_NNL[k];
       cellListL = cellList_NNL;
@@ -1691,6 +1694,7 @@ void BuildNNL_MLL(int na, int nl)
 		      if (!may_interact_all(na, n))
 			continue;
 #endif
+		      //assign_bond_mapping(na, n);
 		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 #ifdef MD_NNLPLANES
 		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift); 
@@ -2253,7 +2257,9 @@ void reinsert_protein_MLL(int protein, int oldtype)
 extern int *mapbondsa;
 extern int *mapbondsb;
 extern void remove_bond(int na, int n, int a, int b);
-
+#ifdef MD_GHOST_IGG
+extern int areGhost(int i, int j);
+#endif
 int check_bonds_ij(int i, int j, double shift[3])
 {
   int nn, warn, amin, bmin, nbonds;
@@ -2261,6 +2267,14 @@ int check_bonds_ij(int i, int j, double shift[3])
   dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
   nbonds = nbondsFlex;
   warn = 0;
+#ifdef MD_GHOST_IGG
+  if (OprogStatus.ghostsim)
+    {
+     if (areGhost(i,j))
+       return warn;
+    }
+#endif
+
   for (nn=0; nn < nbonds; nn++)
     {
       if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
@@ -2508,7 +2522,31 @@ void check_all_bonds_NLL(void)
 	  if (j==sphWall || j==sphWallOuter)
 	    continue;
 #endif
-	  check_shift(i, j, shift);
+	  /* calculate shift */
+#ifdef MD_LXYZ
+	  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+	  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+#ifdef MD_EDHEFLEX_WALL
+	  if (!OprogStatus.hardwall)
+	    shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+	  else
+	    shift[2] = 0.0;
+#else
+	  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#endif
+#else
+	  shift[0] = L*rint((rx[i]-rx[j])/L);
+	  shift[1] = L*rint((ry[i]-ry[j])/L);
+#ifdef MD_EDHEFLEX_WALL
+	  if (!OprogStatus.hardwall)
+	    shift[2] = L*rint((rz[i]-rz[j])/L);
+	  else
+	    shift[2] = 0.0;
+#else
+	  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+#endif
+	  //check_shift(i, j, shift);
 	  assign_bond_mapping(i,j);
 	  if (nbondsFlex==0)
 	    continue;
