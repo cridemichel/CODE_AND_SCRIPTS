@@ -3687,7 +3687,9 @@ int search_contact_faster_neigh_plane_all(int i, double *t, double t1, double t2
     {
 #if 1
       calc_delt(maxddoti, &delt, distsOld);
-      if (check_distance(maxddoti, dists, t1, t2, *t))
+      /* 10/06/2010 a check_distance prima passavo erroneamente dists e non distsOld 
+	 ma dists poteva non essere inizializzato!! grazie valgrind! :-)*/
+      if (check_distance(maxddoti, distsOld, t1, t2, *t))
 	{
 	  return 1;
 	}
@@ -6519,6 +6521,7 @@ void BuildNNL(int na)
 		      if (!may_interact_all(na, n))
 			continue;
 #endif
+		      //assign_bond_mapping(na, n);
 		      //dist = calcDistNeg(Oparams.time, 0.0, na, n, shift, r1, r2, &alpha, vecg, 1);
 #ifdef MD_NNLPLANES
 		      dist = calcDistNegNNLoverlapPlane(Oparams.time, 0.0, na, n, shift); 
