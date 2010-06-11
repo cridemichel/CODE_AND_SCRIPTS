@@ -3148,12 +3148,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
 #ifdef MD_ASYM_ITENS
 #if defined(EDHE_FLEX) 
-  if (!infItens_i && !is_a_sphere_NNL[i])
+  if (!infItens_i && !is_a_sphere_NNL[i] && !isSymItens(i))
     {
       calc_angmom(i, Ia);
       upd_refsysM(i);
     }
-  if (!infItens_j && !is_a_sphere_NNL[j])
+  if (!infItens_j && !is_a_sphere_NNL[j] && !isSymItens(j))
     {
       calc_angmom(j, Ib);
       upd_refsysM(j);
@@ -8317,8 +8317,11 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
       //wz[i] += factorinvIa*rACn[2];
 #endif
 #ifdef MD_ASYM_ITENS
-      calc_angmom(i, Ia);
-      upd_refsysM(i);
+      if (!isSymItens(i))
+	{
+	  calc_angmom(i, Ia);
+	  upd_refsysM(i);
+	}
 #endif
     }
 }
