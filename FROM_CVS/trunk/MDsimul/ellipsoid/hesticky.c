@@ -2213,12 +2213,12 @@ MD_DEBUG40(
 );
 #ifdef MD_ASYM_ITENS
 #if defined(EDHE_FLEX) 
-  if (!infItens_i && !is_a_sphere_NNL[i])
+  if (!infItens_i && !is_a_sphere_NNL[i] && !isSymItens(i))
     {
       calc_angmom(i, Ia);
       upd_refsysM(i);
     }
-  if (!infItens_j && !is_a_sphere_NNL[j])
+  if (!infItens_j && !is_a_sphere_NNL[j] && !isSymItens(j))
     {
       calc_angmom(j, Ib);
       upd_refsysM(j);

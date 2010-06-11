@@ -3074,7 +3074,7 @@ void find_conciding_spots(void)
     {
       /* 10/06/2010: qui comunque inizializzao anche gli spot utilizzati per le NNL
       ossia quelli che vanno da typesArr[nt].nspots a typesArr[nt].nspots + MD_SPNNL_SP */
-      for (ns1=0; ns1 < typesArr[nt].nspots + MD_SPNNL_SP; ns1++)
+      for (ns1=0; ns1 < typesArr[nt].nspots + MD_SPNNL_NUMSP; ns1++)
 	typesArr[nt].spots[ns1].same=ns1;
       for (ns1=0; ns1 < typesArr[nt].nspots; ns1++)
 	{
