@@ -2213,12 +2213,12 @@ MD_DEBUG40(
 );
 #ifdef MD_ASYM_ITENS
 #if defined(EDHE_FLEX) 
-  if (!infItens_i && !is_a_sphere_NNL[i] && !isSymItens(i))
+  if (!infItens_i && !is_a_sphere_NNL[i])
     {
       calc_angmom(i, Ia);
       upd_refsysM(i);
     }
-  if (!infItens_j && !is_a_sphere_NNL[j] && !isSymItens(j))
+  if (!infItens_j && !is_a_sphere_NNL[j])
     {
       calc_angmom(j, Ib);
       upd_refsysM(j);
@@ -2385,6 +2385,10 @@ int is_in_ranges(int A, int B, int nr, rangeStruct* r)
 #ifdef EDHE_FLEX
 extern int get_linked_list_type(int typena, int nc);
 #endif
+inline int get_inter_pair(int t1, int t2)
+{
+  return t1*Oparams.ntypes+t2;
+}
 void assign_bond_mapping(int i, int j)
 {
   int ni, type1, type2, a, k, nl;
@@ -2394,7 +2398,7 @@ void assign_bond_mapping(int i, int j)
   MD_DEBUG41(printf("ASSIGNBB type(%d)=%d type(%d)%d\n", i, type1, j, type2));
   
   /* nl is a unique number assigned to each type1-type2 pair */
-  nl = get_linked_list_type(type1, type2);
+  nl = get_inter_pair(type1, type2);
   if (OprogStatus.optbm == 0 || nbondsFlexS[nl] == -1)
     {
       for (ni=0; ni < Oparams.ninters; ni++)

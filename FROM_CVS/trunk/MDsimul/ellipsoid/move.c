@@ -3148,12 +3148,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #endif
 #ifdef MD_ASYM_ITENS
 #if defined(EDHE_FLEX) 
-  if (!infItens_i && !is_a_sphere_NNL[i] && !isSymItens(i))
+  if (!infItens_i && !is_a_sphere_NNL[i])
     {
       calc_angmom(i, Ia);
       upd_refsysM(i);
     }
-  if (!infItens_j && !is_a_sphere_NNL[j] && !isSymItens(j))
+  if (!infItens_j && !is_a_sphere_NNL[j])
     {
       calc_angmom(j, Ib);
       upd_refsysM(j);
@@ -8147,7 +8147,7 @@ int globalHW = 0;
 void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
 {
   double factor, invmi;
-  double wrx, wry, wrz, rACn[3] ;
+  double wrx, wry, wrz, rACn[3];
   double rAC[3], vCA[3], vc;
   double norm[3];
   double denom;
@@ -8260,7 +8260,7 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   vc = vCA[2]*norm[2];
   rACn[0] = rAC[1]*norm[2];
   rACn[1] = -rAC[0]*norm[2];
-
+  rACn[2] = 0.0;
 #ifdef MD_ASYM_ITENS 
   if (!isSymItens(i))
     {
@@ -8317,11 +8317,8 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
       //wz[i] += factorinvIa*rACn[2];
 #endif
 #ifdef MD_ASYM_ITENS
-      if (!isSymItens(i))
-	{
-	  calc_angmom(i, Ia);
-	  upd_refsysM(i);
-	}
+      calc_angmom(i, Ia);
+      upd_refsysM(i);
 #endif
     }
 }

@@ -3595,7 +3595,7 @@ extern int may_interact_all_type(int t1, int t2);
 void usrInitAft(void)
 {
   long long int maxp;
-  int numll, k1old, k2old, nl;
+  int numll, k1old, k2old, nl, numbm;
   /* DESCRIPTION:
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
@@ -4093,15 +4093,15 @@ void usrInitAft(void)
   if (OprogStatus.optbm)
     {
       printf("[INFO] Optimizing assign_bond_mapping(i,j) function\n");
-      numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
-      nbondsFlexS = malloc(sizeof(int)*numll);
-      mapbondsaFlexS = malloc(sizeof(int*)*numll);
-      mapbondsbFlexS = malloc(sizeof(int*)*numll);
-      mapBheightFlexS = malloc(sizeof(double*)*numll);
-      mapBhinFlexS = malloc(sizeof(double*)*numll);
-      mapBhoutFlexS = malloc(sizeof(double*)*numll);
-      mapSigmaFlexS = malloc(sizeof(double*)*numll);
-      for (nl = 0; nl < numll; nl++)
+      numbm = Oparams.ntypes*Oparams.ntypes;
+      nbondsFlexS = malloc(sizeof(int)*numbm);
+      mapbondsaFlexS = malloc(sizeof(int*)*numbm);
+      mapbondsbFlexS = malloc(sizeof(int*)*numbm);
+      mapBheightFlexS = malloc(sizeof(double*)*numbm);
+      mapBhinFlexS = malloc(sizeof(double*)*numbm);
+      mapBhoutFlexS = malloc(sizeof(double*)*numbm);
+      mapSigmaFlexS = malloc(sizeof(double*)*numbm);
+      for (nl = 0; nl < numbm; nl++)
 	{
 	  nbondsFlexS[nl] = -1;
 	  mapbondsaFlexS[nl] = malloc(sizeof(int)*maxnbonds);

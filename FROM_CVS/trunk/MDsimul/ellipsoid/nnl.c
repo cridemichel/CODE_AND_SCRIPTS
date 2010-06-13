@@ -5630,7 +5630,6 @@ void PredictEventNNL(int na, int nb)
 	    }
 	}
 #endif
-
       if (inCell[2][na] == 0)
 	nplane = 0;
       else if (inCell[2][na] == cellsz-1)
