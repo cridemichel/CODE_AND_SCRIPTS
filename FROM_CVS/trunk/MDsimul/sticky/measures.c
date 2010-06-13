@@ -762,9 +762,22 @@ void Ptensor(void)
 /* ========================== >>> DQtensor <<< ============================= */
 void DQtensor(void)
 {
+#ifdef MD_HSVISCO
+  mf = fopenMPI(absMisHD("DQtens.dat"),"a");
+#endif
   DQtens[0] = OprogStatus.DQxy;
   DQtens[1] = OprogStatus.DQyz;
   DQtens[2] = OprogStatus.DQzx;
+#ifdef MD_HSVISCO
+#ifdef MD_BIG_DT
+  fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, OprogStatus.DQxy, OprogStatus.DQyz,  OprogStatus.DQzx);
+#else
+  fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time, OprogStatus.DQxy, OprogStatus.DQyz,  OprogStatus.DQzx);
+#endif
+  fclose(mf);
+#endif
+
+
 }
 
 
