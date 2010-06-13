@@ -1976,7 +1976,7 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 	}
     }
 }
-double calc_phi(void);
+extern double calc_phi(void);
 #ifdef MD_SILICA
 extern void assign_bond_mapping(int i, int j);
 #endif
@@ -3050,6 +3050,8 @@ void usrInitAft(void)
       f = fopenMPI(absMisHD("Ptens.dat"), "w+");
       fclose(f);
       f = fopenMPI(absMisHD("press.dat"), "w+");
+      fclose(f);
+      f = fopenMPI(absMisHD("DQtens.dat"), "w+");
       fclose(f);
       OprogStatus.DQTxy = 0.0;
       OprogStatus.DQTyz = 0.0;
