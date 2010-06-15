@@ -7529,7 +7529,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   if (typesArr[typeOfPart[i]].ignoreCore || typesArr[typeOfPart[j]].ignoreCore)
     return 0;
 #ifdef MD_GHOST_IGG
-  if (OprogStatus.ghostsim && areGhost(i, j))
+  if (Oparams.ghostsim && areGhost(i, j))
     return 0;
 #endif
   if (are_spheres(i, j))

@@ -2269,7 +2269,7 @@ int check_bonds_ij(int i, int j, double shift[3])
   nbonds = nbondsFlex;
   warn = 0;
 #ifdef MD_GHOST_IGG
-  if (OprogStatus.ghostsim)
+  if (Oparams.ghostsim)
     {
      if (areGhost(i,j))
        return warn;
