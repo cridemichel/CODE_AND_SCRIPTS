@@ -3,6 +3,7 @@
 /* questa serve anche se non si usano le LL multiple
    per la funzione assign_bond_mapping ottimizzata */
 extern double *dists;
+extern int **tree;
 extern void assign_bond_mapping(int i, int j);
 extern int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 extern int bound(int na, int n, int a, int b);
@@ -673,7 +674,7 @@ void PredictHardWall(int na, int evCode, double cctime)
 		      rxC = vecg[0];
 		      ryC = vecg[1];
 		      rzC = vecg[2];
-		      ScheduleEventBarr (na, ATOM_LIMIT+50, 0, 0, MD_WALL, vecg[4]);
+		      ScheduleEventBarr (na, ATOM_LIMIT+50, typena, 0, MD_WALL, vecg[4]);
 		    }
 		}
 #endif
@@ -704,7 +705,7 @@ void PredictHardWall(int na, int evCode, double cctime)
 	{
 	  ScheduleEventBarr (na, ATOM_LIMIT + evCode, typena, 0, MD_EVENT_NONE, cctime);
 	}
-   }
+    }
   else
     {
       ScheduleEventBarr (na, ATOM_LIMIT + evCode, typena, 0, MD_EVENT_NONE, cctime);
