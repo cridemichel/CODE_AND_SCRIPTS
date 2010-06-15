@@ -314,7 +314,7 @@ void update_ghost_status(void)
   int i, curnigg, a, notransition, np;
 
   /* ghostsim=3 means that all IgG are ghost forever (i.e. forever in state 3) */
-  if (OprogStatus.ghostsim==3)
+  if (Oparams.ghostsim==3)
     return;
   np = 0;
   for (a=0; a < 4; a++)
@@ -396,7 +396,7 @@ void rebuildNNL(void)
 #endif
 #ifdef MD_GHOST_IGG
   /* if ghostsim=1/2 allow transition from 3 to 1 */	
-  if (OprogStatus.ghostsim)
+  if (Oparams.ghostsim)
     update_ghost_status();
 #endif
  

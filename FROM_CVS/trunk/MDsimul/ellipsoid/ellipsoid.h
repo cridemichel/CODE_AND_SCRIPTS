@@ -491,9 +491,6 @@ struct progStatus
 #ifdef MD_EDHEFLEX_WALL
   int hardwall;
 #endif
-#ifdef MD_GHOST_IGG
-  int ghostsim;
-#endif
 #ifdef MD_BILOG
   double basew;
   int lastbilogsaved;
@@ -885,7 +882,10 @@ struct params
   int maxbondsSaved;
   int nintersIJ;
 #endif
-  double a[2];
+#ifdef MD_GHOST_IGG
+  int ghostsim;
+#endif
+double a[2];
   double b[2];
   double c[2];
   double rcut;
@@ -946,9 +946,6 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef MD_EDHEFLEX_WALL
   {"hardwall",     &OS(hardwall),                   1,               1, "%d"},
-#endif
-#ifdef MD_GHOST_IGG
-  {"ghostsim",     &OS(ghostsim),                   1,               1, "%d"},
 #endif
   {"dataFiles",    OS(dataFiles),         NUM_MISURE,     NAME_LENGTH, "%s"},
   {"xvaSteps",     &OS(xvaSteps),                  1,               1, MDINTFMT},
@@ -1258,6 +1255,9 @@ struct pascii opar_ascii[]=
   {"b",                 OP(b),                             2,   1, "%.8G"},
   {"c",                 OP(c),                             2,   1, "%.8G"},
 #endif
+#ifdef MD_GHOST_IGG
+  {"ghostsim",          &OP(ghostsim),                   1,               1, "%d"},
+#endif
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
@@ -1378,7 +1378,7 @@ struct singlePar OsinglePar[] = {
   {"hardwall",   &OprogStatus.hardwall,       INT},
 #endif
 #ifdef MD_GHOST_IGG
-  {"ghostsim",   &OprogStatus.ghostsim,       INT},
+  {"ghostsim",   &Oparams.ghostsim,       INT},
 #endif
   {"iniFormat",  &OprogStatus.iniFormat,      INT},
   {"tapeTimes",  &OprogStatus.tapeTimes,      LLINT},
