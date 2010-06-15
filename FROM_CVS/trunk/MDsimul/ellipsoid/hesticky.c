@@ -1186,7 +1186,7 @@ int get_rabbit_bonds(int ifebA, int tA, int ifebB, int tB)
 void make_ghosts(int inc, int nb, int i, int typei, int j, int typej)
 {
   int a, ibeg;
-  if (OprogStatus.ghostsim==3)
+  if (Oparams.ghostsim==3)
     return;
   if ( (inc > 0.0 && nb == 1) 
        || (inc < 0.0 && nb == 0) )
@@ -1246,7 +1246,7 @@ void update_rates(int i, int j, int ata, int atb, double inc)
     return;
 #ifdef MD_GHOST_IGG
   /* if ghostsim==2 do not accept only transition 2->3 and 3->1 */
-  if (OprogStatus.ghostsim==1)
+  if (Oparams.ghostsim==1)
     make_ghosts(inc, nb, i, typei, j, typej);
 #endif
   if (inc > 0.0)
@@ -4135,7 +4135,7 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   epsdMax = OprogStatus.epsdSP;
   assign_bond_mapping(i, j);
 #ifdef MD_GHOST_IGG
-  if (OprogStatus.ghostsim && areGhost(i, j))
+  if (Oparams.ghostsim && areGhost(i, j))
     {
       //printf("locate_contactSP: they are ghost i=%d j=%d\n", i, j);
       return 0; 

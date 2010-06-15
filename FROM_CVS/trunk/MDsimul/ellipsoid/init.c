@@ -515,7 +515,7 @@ void check_all_bonds(void)
 			continue;
 #ifdef MD_GHOST_IGG
 		      /* do not check ghost particles, it is meaningless! */
-		      if (OprogStatus.ghostsim && areGhost(i, j))
+		      if (Oparams.ghostsim && areGhost(i, j))
 			continue;
 #endif
 #ifndef EDHE_FLEX
@@ -1703,7 +1703,7 @@ void usrInitBef(void)
     OprogStatus.Tf = 0.01;
 #endif
 #ifdef MD_GHOST_IGG
-    OprogStatus.ghostsim = 0; /* 0 = no ghost IgG when they are bound, 1 = ghost */
+    Oparams.ghostsim = 0; /* 0 = no ghost IgG when they are bound, 1 = ghost */
 #endif
 #ifdef MD_RABBIT
     OprogStatus.time_limit = 100000000000.0;
@@ -3159,7 +3159,7 @@ void init_ghostArr(void)
       /* if ghostsim == 2 accept only transition 3->1, i.e. all antibody
 	 will be in status 3 and only transition from 3 to 1 will be accepted.-
 	 if ghostsim==2 all igg will be ghost and the will remain forever in state 3 (=ghost) */
-      if (OprogStatus.ghostsim == 2 || OprogStatus.ghostsim == 3)
+      if (Oparams.ghostsim == 2 || Oparams.ghostsim == 3)
 	{
 	  iggStatus = 3;
 	}
@@ -5022,14 +5022,17 @@ void usrInitAft(void)
   slave_task();
 #endif
 #ifdef MD_GHOST_IGG
-  if (OprogStatus.ghostsim)
+  if (Oparams.ghostsim)
     {
       printf("[GHOST SIMULATION]: Initializing structures...\n");    
       init_ghostArr();
     }
-  /* comunque alloca l'array poiché writeBinCoord_heflex() lo usa per scrivere!*/
+#if 0
+  /* comunque alloca l'array poiché writeBinCoord_heflex() lo usa per scrivere!
+     uso la calloc per inizializzare tutto a 0 ed evitare insulti da parte di valgrind */
   if (ghostInfoArr==NULL)
-    ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
+    ghostInfoArr = calloc(Oparams.parnum, sizeof(ghostInfo));
+#endif
 #endif
 #ifdef MD_GRAZING_TRYHARDER
   printf("[INFO] Grazing Try-Harder code ENABLED!\n");
@@ -5382,7 +5385,7 @@ void writeAllCor(FILE* fs, int saveAll)
     }
 #if 0
 #ifdef MD_GHOST_IGG
-  if (OprogStatus.ghostsim)
+  if (Oparams.ghostsim)
     {
       for (i=0; i < Oparams.parnum; i++)
 	{
@@ -5548,9 +5551,12 @@ int readBinCoord_heflex(int cfd)
   int sizeSPNNL;
 #endif
 #ifdef MD_GHOST_IGG
-  size = sizeof(ghostInfo)*Oparams.parnum;
-  ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
-  rerr |= readSegs(cfd, "Init", "Error reading ghostInfoArr", CONT, size, ghostInfoArr, NULL);
+  if (Oparams.ghostsim)
+    {
+      size = sizeof(ghostInfo)*Oparams.parnum;
+      ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
+      rerr |= readSegs(cfd, "Init", "Error reading ghostInfoArr", CONT, size, ghostInfoArr, NULL);
+    }
 #endif
   //printf("status:%d\n", ghostInfoArr[Oparams.parnum-1].ghost_status);
   size = sizeof(int)*Oparams.parnum;
@@ -5676,8 +5682,11 @@ void writeBinCoord_heflex(int cfd)
   int size;
 
 #ifdef MD_GHOST_IGG
-  size = sizeof(ghostInfo)*Oparams.parnum;
-  writeSegs(cfd, "Init", "Error writing ghostInfoArr", CONT, size, ghostInfoArr, NULL);
+  if (Oparams.ghostsim)
+    {
+      size = sizeof(ghostInfo)*Oparams.parnum;
+      writeSegs(cfd, "Init", "Error writing ghostInfoArr", CONT, size, ghostInfoArr, NULL);
+    }
 #endif
 
   size = sizeof(int)*Oparams.parnum;
