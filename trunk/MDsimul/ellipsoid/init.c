@@ -7,6 +7,7 @@
          the this quantity.
 */
 #define MD_DEBUG31(x) 
+#define MD_USE_CALLOC
 /* Allocate memory for a matrix of integers */
 #ifdef EDHE_FLEX
 int MD_MAX_BOND_PER_PART = 3;
@@ -2487,7 +2488,12 @@ void calc_encpp(void)
       else
 	{
 	  for (kk = 0; kk < 3; kk++)
-	    typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk];
+	    {
+	      typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk];
+	      /* N.B. 15/06/10: inizializza anche ppr anche se in teoria non serve 
+		 poiché non lo usa se optnnl=0 */
+	      typesArr[pt].ppr[kk] = 0.0;
+	    }
 	}
 #else
       for (kk = 0; kk < 3; kk++)
@@ -2636,7 +2642,7 @@ double calc_nnl_rcut(void)
   return 1.01*rcutMax;
 
 #elif defined(MD_POLYDISP) 
- for (i = 0; i < Oparams.parnum; i++)
+  for (i = 0; i < Oparams.parnum; i++)
     {
       rcutA = 2.0*sqrt(Sqr(axaP[i]+del)+Sqr(axbP[i]+del)+Sqr(axcP[i]+del));
       if  (rcutA  > rcutMax)
@@ -3073,7 +3079,7 @@ void find_conciding_spots(void)
   for (nt=0; nt < Oparams.ntypes; nt++)
     {
       /* 10/06/2010: qui comunque inizializzao anche gli spot utilizzati per le NNL
-      ossia quelli che vanno da typesArr[nt].nspots a typesArr[nt].nspots + MD_SPNNL_SP */
+      ossia quelli che vanno da typesArr[nt].nspots a typesArr[nt].nspots + MD_SPNNL_NUMSP */
       for (ns1=0; ns1 < typesArr[nt].nspots + MD_SPNNL_NUMSP; ns1++)
 	typesArr[nt].spots[ns1].same=ns1;
       for (ns1=0; ns1 < typesArr[nt].nspots; ns1++)
@@ -5554,7 +5560,11 @@ int readBinCoord_heflex(int cfd)
   if (Oparams.ghostsim)
     {
       size = sizeof(ghostInfo)*Oparams.parnum;
+#ifdef MD_USE_CALLOC
+      ghostInfoArr = calloc(Oparams.parnum, sizeof(ghostInfo));
+#else
       ghostInfoArr = malloc(sizeof(ghostInfo)*Oparams.parnum);
+#endif
       rerr |= readSegs(cfd, "Init", "Error reading ghostInfoArr", CONT, size, ghostInfoArr, NULL);
     }
 #endif
@@ -5567,8 +5577,13 @@ int readBinCoord_heflex(int cfd)
   typeNP = malloc(size);
   rerr |= -readSegs(cfd, "Init", "Error reading typeNP", CONT, size, typeNP, NULL);
  
+
   size = sizeof(partType)*Oparams.ntypes; 
+#ifdef MD_USE_CALLOC
+  typesArr = calloc(Oparams.ntypes, sizeof(partType));
+#else
   typesArr = malloc(size);
+#endif
   rerr |= -readSegs(cfd, "Init", "Error reading typesArr", CONT, size, typesArr, NULL);
   for (i=0; i < Oparams.ntypes; i++)
     {
@@ -5583,21 +5598,33 @@ int readBinCoord_heflex(int cfd)
 #ifdef MD_SUPERELLIPSOID
      /*  16/05/2010: notare che nel caso si abbiano spot per le NNL bisogna allocare più spazio
 	ma questi non vengono salvati, quindi il numero di spot letti non ne deve tener conto */ 
-      sizeSPNNL = sizeof(spotStruct)*(MD_SPNNL_NUMSP+1);
+      sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
+#ifdef MD_USE_CALLOC
+      typesArr[i].spots = calloc(MD_SPNNL_NUMSP+typesArr[i].nspots,sizeof(spotStruct));
+#else
       typesArr[i].spots = malloc(size+sizeSPNNL);
+#endif
       if (typesArr[i].nspots == 0)
 	continue;
 #else
 #if 1
-      sizeSPNNL = sizeof(spotStruct)*(MD_SPNNL_NUMSP+1);
+      sizeSPNNL = sizeof(spotStruct)*MD_SPNNL_NUMSP;
+#ifdef MD_USE_CALLOC
+      typesArr[i].spots = calloc(MD_SPNNL_NUMSP+typesArr[i].nspots,sizeof(spotStruct));
+#else
       typesArr[i].spots = malloc(size+sizeSPNNL);
+#endif
       if (typesArr[i].nspots == 0)
 	continue;
 #else
       sizeSPNNL = 0;
       if (typesArr[i].nspots == 0)
 	continue;
+#ifdef MD_USE_CALLOC
+      typesArr[i].spots = calloc(typesArr[i].nspots,sizeof(spotStruct));
+#else
       typesArr[i].spots = malloc(size+sizeSPNNL);
+#endif
 #endif
 #endif
       rerr |= -readSegs(cfd, "Init", "Error reading spots", CONT, size, typesArr[i].spots, NULL);
@@ -5605,7 +5632,11 @@ int readBinCoord_heflex(int cfd)
   /* read interactions */
   if (Oparams.ninters > 0)
     {
+#ifdef MD_USE_CALLOC
+      intersArr = calloc(Oparams.ninters, sizeof(interStruct));
+#else
       intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
+#endif
       size = sizeof(interStruct)*Oparams.ninters;
       rerr |= -readSegs(cfd, "Init", "Error reading intersArr", CONT, size, intersArr, NULL);
       for (i=0; i < Oparams.ninters; i++)
@@ -5626,7 +5657,11 @@ int readBinCoord_heflex(int cfd)
     }
   if (Oparams.nintersIJ > 0)
     {
+#ifdef MD_USE_CALLOC
+      intersArrIJ = calloc(Oparams.nintersIJ, sizeof(interStructIJ));
+#else
       intersArrIJ = malloc(sizeof(interStructIJ)*Oparams.nintersIJ);
+#endif
       size = sizeof(interStructIJ)*Oparams.nintersIJ;
       rerr |= -readSegs(cfd, "Init", "Error reading intersArrIJ", CONT, size, intersArrIJ, NULL);
       for (i=0; i < Oparams.nintersIJ; i++)
@@ -5830,7 +5865,11 @@ void readAllCor(FILE* fs)
   typeOfPart = malloc(sizeof(int)*Oparams.parnum);
   typeNP = malloc(sizeof(int)*Oparams.ntypes);
 
+#ifdef MD_USE_CALLOC
+  typesArr = calloc(Oparams.ntypes, sizeof(partType));
+#else
   typesArr = malloc(sizeof(partType)*Oparams.ntypes);
+#endif
 #ifdef MD_MULTIPLE_LL
   fscanf(fs, "%s ", line);
   if (!strcmp(line, "RF"))
@@ -5890,7 +5929,13 @@ void readAllCor(FILE* fs)
       //sizeSPNNL = 0;
 #endif
       if (sizeSPNNL > 0 || typesArr[i].nspots > 0)
-	typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots+sizeSPNNL);
+	{
+#ifdef MD_USE_CALLOC
+	  typesArr[i].spots = calloc(typesArr[i].nspots+MD_SPNNL_NUMSP,sizeof(spotStruct));
+#else
+	  typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots+sizeSPNNL);
+#endif
+	}
       else
 	typesArr[i].spots = NULL;
       //printf("QUI nhardobjs=%d ntypes=%d\n",typesArr[i].nhardobjs, Oparams.ntypes );
@@ -5899,7 +5944,13 @@ void readAllCor(FILE* fs)
 	       &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
       /* hard objects (for now super-ellipsoids) */
       if (typesArr[i].nhardobjs > 0)
-	typesArr[i].hardobjs = malloc(sizeof(hardobjsStruct)*typesArr[i].nhardobjs);
+	{
+#ifdef MD_USE_CALLOC
+	  typesArr[i].hardobjs = calloc(typesArr[i].nhardobjs,sizeof(hardobjsStruct));
+#else
+	  typesArr[i].hardobjs = malloc(sizeof(hardobjsStruct)*typesArr[i].nhardobjs);
+#endif
+	}
       else
 	typesArr[i].hardobjs = NULL;
 	  
@@ -5912,7 +5963,13 @@ void readAllCor(FILE* fs)
   //printf("qui nintersIJ=%d\n", Oparams.nintersIJ);
   /* read interactions */
   if (Oparams.ninters > 0)
-    intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
+    {
+#ifdef MD_USE_CALLOC
+      intersArr = calloc(Oparams.ninters, sizeof(interStruct));
+#else
+      intersArr = malloc(sizeof(interStruct)*Oparams.ninters);
+#endif
+    }
   else
     intersArr = NULL;
 #if 0
@@ -5938,7 +5995,11 @@ void readAllCor(FILE* fs)
   /* read interactions */
   if (Oparams.nintersIJ > 0)
     {
+#ifdef MD_USE_CALLOC
+      intersArrIJ = calloc(Oparams.nintersIJ, sizeof(interStructIJ));
+#else
       intersArrIJ = malloc(sizeof(interStructIJ)*Oparams.nintersIJ);
+#endif
       for (i=0; i < Oparams.nintersIJ; i++)
 	{
 #if 0
