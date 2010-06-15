@@ -10470,7 +10470,7 @@ void timeshift_calendar(void)
   /* parte da 1 perché tree[0] è solo l'inzio dell'albero e non un evento */
   for (id=1; id < poolSize; id++) 
     {
-      if (treeUp[id] != -1)
+      if (treeStatus[id] != 0) /* 2 mean "node not free", i.e. used  0 = not inserted in PQ */
 	treeTime[id] -= OprogStatus.bigDt;
     } 
 #else

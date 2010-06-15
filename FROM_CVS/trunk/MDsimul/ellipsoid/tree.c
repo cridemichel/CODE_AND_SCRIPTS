@@ -178,10 +178,8 @@ void enlarge_queue_size(void)
      to a available node */
   treeIdA[0] = oldps;
   /* reset status of new nodes 0 = free (this is needed for timeshift_calendar()) */
-#ifdef MD_CALENDAR_HYBRID
   for (id=oldps; id < poolSize; id++)
     treeStatus[id] = 0;
-#endif
 }
 #ifdef MD_CALENDAR_HYBRID
 int get_new_node(int idA, int idB, int idata)
@@ -232,9 +230,7 @@ void InsertPQ(int idNew)
   double tEvent;
   numevPQ++;
   tEvent = treeTime[idNew];
-#ifdef MD_CALENDAR_HYBRID
   treeStatus[idNew] = 2; /* 2 = belonging to binary tree */
-#endif
   id = 0;
   /* treeRight[id] == -1 => il calendario è vuoto */
   if (treeRight[id] == -1) 
@@ -371,6 +367,8 @@ void ScheduleEventBarr (int idA, int idB, int idata, int idatb, int idcollcode, 
      inoltre c'è sempre un evento di tale tipo associato con ogni particella 
      */
   /* treeRight[id] == -1 => il calendario è vuoto */
+  treeStatus[idNew] = 2; /* node belonging to binary tree */
+
   if (treeRight[id] == -1) 
     treeRight[id] = idNew;
   else 
@@ -703,15 +701,25 @@ void NextEvent (void)
 #if defined(MD_MULTIPLE_LL) 
 	  if (OprogStatus.multipleLL)
 	    {
-	      /* cancella tutti gli eventi di cell-crossing */
+	      /* cancella tutti gli eventi di cell-crossing se si tratta di una particella */
 
 	      /* prima cancella cell-crossing per le liste relative a particelle dello stesso tipo*/
+#if 0
+	      if (treeStatus[id + typeOfPart[id-1]*Oparams.parnum]==0)
+		{
+		  printf("evIdA=%d evIdB=%d id=%d I should delete event not in PQ?!?\n", evIdA, evIdB, id);
+		  exit(-1);
+		}
+#endif
 	      DeleteEvent(id + typeOfPart[id-1]*Oparams.parnum);
 	      for (nc = 0; nc < Oparams.ntypes; nc++)
 		{
 		  if (nc == typeOfPart[id-1])
 		    continue;
 		  /* id-1 poiché idAx = evIdA (vedi sopra) */
+		  /* avendo messo la condizione in delete event su treeStatus[id]
+		     ossia se treeStatus[id]==0 non tenta di eliminare il nodo dalla PQ
+		     visto che non è inserito, la condizione seguente è in realtà inutile */
 		  if (crossevtodel[nc][id-1]!=-1)
 		    {
 		      DeleteEvent (id+nc*Oparams.parnum);
@@ -722,7 +730,7 @@ void NextEvent (void)
 		   * (nc==0 e nc==1) */
 		  /* Serve assolutamente porre crossevtodel a -1  per evitare che ProcessCellCross 
 		   * tenti di rimuovere un evento già rimosso. */
-		  crossevtodel[nc][id-1] = -1;
+		      crossevtodel[nc][id-1] = -1;
 		}
 	    }
 	  else
@@ -775,7 +783,7 @@ void NextEvent (void)
       //printf("evIdA=%d typeOfPart[]=%d\n", evIdA, typeOfPart[evIdA]);
       if (OprogStatus.multipleLL && evIdA >=0 && evIdA < ATOM_LIMIT && evIdC != typeOfPart[evIdA])
 	{
-    	  crossevtodel[evIdC][evIdA] = -1;
+	  crossevtodel[evIdC][evIdA] = -1;
 	}
 #else
       if (evIdB < ATOM_LIMIT + 100) 
@@ -859,11 +867,20 @@ void DeletePQ (int id)
 #ifdef MD_CALENDAR_HYBRID
 void DeleteEvent(int id)
 {
+  /* event not inserted in PQ hence it has not to be deleted this may happen
+     for cell crossings of infinite mass particles!*/
+  if (treeStatus[id]==0) /* 0 means not inserted in PQ */
+    return;
   deleteFromEventQ(id);
 }
 #else
 void DeleteEvent(int id)
 {
+  /* event not inserted in PQ hence it has not to be deleted, this may happen
+     for cell crossings of infinite mass particles! */
+  if (treeStatus[id] == 0) /* 0 means not inserted in PQ */
+    return;
+  treeStatus[id] = 0;
   DeletePQ(id);
 }
 #endif
@@ -875,8 +892,10 @@ void initHQlist(void)
   /* inizializzare anche le linked lists lineari? */
   for (i=0; i < OprogStatus.nlistsHQ+1; i++)
     linearLists[i] = -1;
+#if 0
   for (i=1; i < poolSize; i++) 
     treeStatus[i] = 0;/* 0 = free node */
+#endif
   numevPQ = overevHQ = totevHQ = 0; 
  
 #ifdef MD_CALENDAR_HYBRID
@@ -892,7 +911,7 @@ void initHQlist(void)
 
 void InitEventList (void) 
 {
-  int id;
+  int id, i;
   treeLeft[0] = treeRight[0] = -1;
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
@@ -909,6 +928,8 @@ void InitEventList (void)
   for (id = 1; id < poolSize; id++) 
     treeUp[id] = -1;
 #endif
+  for (i=1; i < poolSize; i++) 
+    treeStatus[i] = 0;/* 0 = free node */
   treeCircAR[poolSize-1] = -1;
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)

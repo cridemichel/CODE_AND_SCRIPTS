@@ -3799,12 +3799,12 @@ void usrInitAft(void)
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
 #ifdef MD_HE_PARALL
   if (my_rank == 0)
-    tree = AllocMatI(9, poolSize);
+    tree = AllocMatI(10, poolSize);
 #else
 #ifdef MD_CALENDAR_HYBRID
   tree = AllocMatI(16, poolSize);
 #else
-  tree = AllocMatI(12, poolSize);
+  tree = AllocMatI(13, poolSize);
 #endif
 #endif
 #ifdef EDHE_FLEX
@@ -3845,12 +3845,12 @@ void usrInitAft(void)
 #else
 #ifdef MD_HE_PARALL
   if (my_rank == 0)
-    tree = AllocMatI(9, poolSize);
+    tree = AllocMatI(10, poolSize);
 #else
 #ifdef MD_CALENDAR_HYBRID
   tree = AllocMatI(13, poolSize);
 #else
-  tree = AllocMatI(9, poolSize);
+  tree = AllocMatI(10, poolSize);
 #endif
 #endif
 #endif

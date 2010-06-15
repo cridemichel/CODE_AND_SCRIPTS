@@ -421,22 +421,21 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define treeCircBR tree[6]
 #define treeIdA    tree[7]
 #define treeIdB    tree[8]
+#define treeStatus tree[9]
 #ifdef MD_PATCHY_HE
-#define treeIdC    tree[9]
-#define treeIdD    tree[10]
-#define treeIdE    tree[11]
+#define treeIdC    tree[10]
+#define treeIdD    tree[11]
+#define treeIdE    tree[12]
 #ifdef MD_CALENDAR_HYBRID
-#define treeNext   tree[12]
-#define treePrev   tree[13]
-#define treeQIndex tree[14]
-#define treeStatus tree[15]
+#define treeNext   tree[13]
+#define treePrev   tree[14]
+#define treeQIndex tree[15]
 #endif
 #else
 #ifdef MD_CALENDAR_HYBRID
-#define treeNext   tree[9]
-#define treePrev   tree[10]
-#define treeQIndex tree[11]
-#define treeStatus tree[12]
+#define treeNext   tree[10]
+#define treePrev   tree[11]
+#define treeQIndex tree[12]
 #endif
 #endif
 #endif
