@@ -47,7 +47,7 @@ if [ "$6" == "" ]
 then
 USEMLL="1"
 else
-USEMLL="$0"
+USEMLL="$6"
 fi
 if [ "$7" == "" ]
 then
@@ -78,9 +78,9 @@ rm -f COORD_TMP*
 rm -f Store-*
 if [ "$USEMLL" == "1" ]
 then 
-BMHSEXE="../stickyMLL"
+BMEXE="../stickyMLL"
 else
-BMHSEXE="../stickyLL"
+BMEXE="../stickyLL"
 fi
 SIMPR="bmhs_N_$1_Q_$Q_Phi${PHI}_${EXTLAB}_PR"
 SIMEQ="bmhs_N_$1_Q_$Q_Phi${PHI}_${EXTLAB}_EQ"
@@ -99,12 +99,13 @@ RCUTAB=`echo "$SIGAB*1.01"| bc -l`
 #growth run
 if [ "$GRSTP" != "0" ]
 then
-$SETPARAMS $PARFILE Dt $DT stepnum $GRSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcutOO $RCUTAA rcutSiSi $RCUTBB rcutSiO $RCUTAB rotMSDCalc 0 inifile $INIFILE endfile ${SIMEQ}.cor
-ln -sf $ELLEXE $SIMEQ
+$SETPARAMS $PARFILE Dt $DT stepnum $GRSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcutOO $RCUTAA rcutSiSi $RCUTBB rcutSiO $RCUTAB inifile $INIFILE endfile ${SIMEQ}.cor
+ln -sf $BMEXE $SIMEQ
 ./$SIMEQ -fa $PARFILE > screen_$SIMEQ 
 #
-$SETPARAMS $PARFILE Dt $DT stepnum 500000000 VSteps 0 temperat $TEMP scalevel 0 rescaleTime 0.0 targetPhi $PHI storerate $STORERATE intervalSum $INTSUMGR DtrCalc 0 rcut $RCUT rotMSDCalc 0 rmsd2end -1.0 tmsd2end -1.0 inifile ${SIMEQ}.cor endfile ${SIMEQ}.cor
-ln -sf $ELLEXE $SIMEQ
+exit
+$SETPARAMS $PARFILE Dt $DT stepnum 500000000 VSteps 0 temperat $TEMP scalevel 0 rescaleTime 0.0 targetPhi $PHI storerate $STORERATE intervalSum $INTSUMGR DtrCalc 0 rcut $RCUT  rmsd2end -1.0 tmsd2end -1.0 inifile ${SIMEQ}.cor endfile ${SIMEQ}.cor
+ln -sf $BMEXE $SIMEQ
 ./$SIMEQ -f $PARFILE > screen_$SIMEQ 
 INIFEQ="${SIMEQ}.cor"
 FPAR="-f"
@@ -116,14 +117,14 @@ fi
 #INIFEQ="$INIFLOC"
 #fi
 #equilibration run
-$SETPARAMS $PARFILE Dt $DT stepnum $EQSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcutOO $RCUTAA rcutSiSi $RCUTBB rcutSiO $RCUTAB rotMSDCalc 0 inifile $INIFEQ endfile ${SIMEQ}.cor
-ln -sf $ELLEXE $SIMEQ
+$SETPARAMS $PARFILE Dt $DT stepnum $EQSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcutOO $RCUTAA rcutSiSi $RCUTBB rcutSiO $RCUTAB inifile $INIFEQ endfile ${SIMEQ}.cor
+ln -sf $BMEXE $SIMEQ
 ./$SIMEQ $FPAR $PARFILE > screen_$SIMEQ 
 #
 #
 #production run
-$SETPARAMS $PARFILE useNNL $USENNL stepnum $TOTSTP scalevel 0 Steps 0 temperat $TEMP targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 rcut $RCUT rotMSDCalc 0 inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
-ln -sf $ELLEXE $SIMPR
+$SETPARAMS $PARFILE Dt $DT stepnum $TOTSTP scalevel 0 Steps 0 temperat $TEMP targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 rcut $RCUT inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
+ln -sf $BMEXE $SIMPR
 if [ -e /Applications ]
 then
 $TIMEEXE -p ./$SIMPR -f $PARFILE > screen_$SIMPR 2> PRtime
