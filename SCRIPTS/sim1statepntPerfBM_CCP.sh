@@ -103,8 +103,8 @@ $SETPARAMS $PARFILE Dt $DT stepnum $GRSTP VSteps 0 temperat $TEMP scalevel 1 res
 ln -sf $BMEXE $SIMEQ
 ./$SIMEQ -fa $PARFILE > screen_$SIMEQ 
 #
-exit
-$SETPARAMS $PARFILE Dt $DT stepnum 500000000 VSteps 0 temperat $TEMP scalevel 0 rescaleTime 0.0 targetPhi $PHI storerate $STORERATE intervalSum $INTSUMGR DtrCalc 0 rcut $RCUT  rmsd2end -1.0 tmsd2end -1.0 inifile ${SIMEQ}.cor endfile ${SIMEQ}.cor
+#exit
+$SETPARAMS $PARFILE Dt $DT stepnum 500000000 VSteps 0 temperat $TEMP scalevel 0 rescaleTime 0.0 targetPhi $PHI storerate $STORERATE intervalSum $INTSUMGR DtrCalc 0 inifile ${SIMEQ}.cor endfile ${SIMEQ}.cor
 ln -sf $BMEXE $SIMEQ
 ./$SIMEQ -f $PARFILE > screen_$SIMEQ 
 INIFEQ="${SIMEQ}.cor"
@@ -113,6 +113,7 @@ else
 INIFEQ="$INIFILE"
 FPAR="-fa"
 fi
+exit
 #else
 #INIFEQ="$INIFLOC"
 #fi
