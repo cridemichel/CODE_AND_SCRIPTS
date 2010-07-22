@@ -99,7 +99,7 @@ RCUTAB=`echo "$SIGAB*1.01"| bc -l`
 #growth run
 if [ "$GRSTP" != "0" ]
 then
-$SETPARAMS $PARFILE Dt $DT stepnum $GRSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcutOO $RCUTAA rcutSiSi $RCUTBB rcutSiO $RCURAB rotMSDCalc 0 inifile $INIFILE endfile ${SIMEQ}.cor
+$SETPARAMS $PARFILE Dt $DT stepnum $GRSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcutOO $RCUTAA rcutSiSi $RCUTBB rcutSiO $RCUTAB rotMSDCalc 0 inifile $INIFILE endfile ${SIMEQ}.cor
 ln -sf $ELLEXE $SIMEQ
 ./$SIMEQ -fa $PARFILE > screen_$SIMEQ 
 #
@@ -116,7 +116,7 @@ fi
 #INIFEQ="$INIFLOC"
 #fi
 #equilibration run
-$SETPARAMS $PARFILE Dt $DT stepnum $EQSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcutOO $RCUTAA rcutSiSi $RCUTBB rcutSiO $RCURAB rotMSDCalc 0 inifile $INIFEQ endfile ${SIMEQ}.cor
+$SETPARAMS $PARFILE Dt $DT stepnum $EQSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcutOO $RCUTAA rcutSiSi $RCUTBB rcutSiO $RCUTAB rotMSDCalc 0 inifile $INIFEQ endfile ${SIMEQ}.cor
 ln -sf $ELLEXE $SIMEQ
 ./$SIMEQ $FPAR $PARFILE > screen_$SIMEQ 
 #
