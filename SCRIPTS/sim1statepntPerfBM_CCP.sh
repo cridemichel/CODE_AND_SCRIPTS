@@ -1,11 +1,12 @@
-# $1 = initial configuration
+# $1 = number of particles
 # $2 = total steps 
 # $3 = equilibration steps
-# $4 = rcut
+# $4 = Q (size ratio big/small)
 # $5 = extra label
-# $6 = USENNL
+# $6 = USEMLL
 # $7 = pre-growth steps (if 0 then do not grow)
-# $8 = volume fraction
+# $8 = volume fraction 
+# 
 if [ "$1" = "" ]
 then
 echo "Syntax: sim1statepnt <initial conf> <steps> <equilibration steps> <rcut>"
@@ -25,29 +26,28 @@ fi
 EQSTP="$3"
 if [ "$4" = "" ]
 then
-RCUT="-1"
+Q="1.0"
 else
-RCUT="$4"
+Q="$4"
 fi
 if [ "$5" = "" ]
 then
-EXTLAB="SE"
+EXTLAB="BMHS"
 else
 EXTLAB="$5"
 fi
-INIFILE="$1"
+GENF="./genconfHS"
+#we fix number of big particles
 TEMP="1.0"
 TIMEEXE="/usr/bin/time"
-PARFILE=ellipsoid_flex.par
+PARFILE="silica_growth.par"
 INTSUM="0.2"
 INTSUMGR="0.05"
-#get elongation from directory name
-EL=`pwd | awk -F 'X0_' '{print $2}'`
 if [ "$6" == "" ]
 then
-USENNL="3"
+USEMLL="1"
 else
-USENNL="$6"
+USEMLL="$0"
 fi
 if [ "$7" == "" ]
 then
@@ -67,15 +67,23 @@ if [ ! -e $PD ]
 then
 mkdir $PD
 fi
-INIFLOC="start.cnf"
+N1=250
+N2=`echo "$1-$N1" | bc`
+INIFILE="start.cnf"
+$GENF $N1 $N2 > $INIFILE
 cp $PARFILE $PD
-cp $INIFILE $PD/$INIFLOC
+cp $INIFILE $PD
 cd $PD
 rm -f COORD_TMP*
 rm -f Store-*
-ELLEXE="../ellipsoid"
-SIMPR="supell_X0_${EL}_Phi${PHI}_${EXTLAB}_PR"
-SIMEQ="supell_X0_${EL}_Phi${PHI}_${EXTLAB}_EQ"
+if [ "$USEMLL" == "1" ]
+then 
+BMHSEXE="../stickyMLL"
+else
+BMHSEXE="../stickyLL"
+fi
+SIMPR="bmhs_N_$1_Q_$Q_Phi${PHI}_${EXTLAB}_PR"
+SIMEQ="bmhs_N_$1_Q_$Q_Phi${PHI}_${EXTLAB}_EQ"
 STORERATE="0.0"
 #PARNUM=512
 #PARNUMA=512
