@@ -41,7 +41,7 @@ GENF="./genconfHS"
 TEMP="1.0"
 TIMEEXE="/usr/bin/time"
 PARFILE="silica_growth.par"
-INTSUM="0.2"
+INTSUM="2.0"
 INTSUMGR="0.05"
 if [ "$6" == "" ]
 then
@@ -103,7 +103,7 @@ $SETPARAMS $PARFILE Dt $DT stepnum $GRSTP VSteps 0 temperat $TEMP scalevel 1 res
 ln -sf $BMEXE $SIMEQ
 ./$SIMEQ -fa $PARFILE > screen_$SIMEQ 
 #
-#exit
+exit
 $SETPARAMS $PARFILE Dt $DT stepnum 500000000 VSteps 0 temperat $TEMP scalevel 0 rescaleTime 0.0 targetPhi $PHI storerate $STORERATE intervalSum $INTSUMGR DtrCalc 0 inifile ${SIMEQ}.cor endfile ${SIMEQ}.cor
 ln -sf $BMEXE $SIMEQ
 ./$SIMEQ -f $PARFILE > screen_$SIMEQ 
@@ -113,7 +113,7 @@ else
 INIFEQ="$INIFILE"
 FPAR="-fa"
 fi
-exit
+#exit
 #else
 #INIFEQ="$INIFLOC"
 #fi
@@ -124,7 +124,7 @@ ln -sf $BMEXE $SIMEQ
 #
 #
 #production run
-$SETPARAMS $PARFILE Dt $DT stepnum $TOTSTP scalevel 0 Steps 0 temperat $TEMP targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 rcut $RCUT inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
+$SETPARAMS $PARFILE Dt $DT stepnum $TOTSTP scalevel 0 Steps 0 temperat $TEMP targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
 ln -sf $BMEXE $SIMPR
 if [ -e /Applications ]
 then
