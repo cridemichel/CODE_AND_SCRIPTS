@@ -11337,7 +11337,14 @@ void move(void)
       printf("[MSDcheck] steps %d time %.15G\n", Oparams.curStep, Oparams.time);
       ENDSIM=1;
     }
-
+  /* termina la simulazione dopo un certo numero di collisioni
+     OprogStatus.maxcoll > 0
+   */
+   if (maxcoll > 0)
+     {
+       if (numcoll >= maxcoll)
+	 ENDSIM=1;
+     }
 #ifdef MD_SAVE_SPOTS
   if (ENDSIM==1 || Oparams.curStep == Oparams.totStep)
     saveSpotsPos("spots.pos");

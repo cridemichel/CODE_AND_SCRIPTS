@@ -1307,6 +1307,7 @@ of the object, and elsewhere we put only extern declarations */
 #ifdef MAIN
 COORD_TYPE DECL_LIST;
 COORD_TYPE EXT_DLST;
+int maxcoll=-1;
 #ifdef EDHE_FLEX
 int MD_DECL_INT;
 partType* typesArr;
@@ -1315,6 +1316,7 @@ int *typeNP, *typeOfPart;
 interStructIJ* intersArrIJ;
 #endif
 #else
+extern int maxcoll;
 extern COORD_TYPE DECL_LIST; 
 extern COORD_TYPE EXT_DLST;
 #ifdef EDHE_FLEX
@@ -1629,6 +1631,7 @@ struct singlePar OsinglePar[] = {
   {"time_limit",  &OprogStatus.time_limit,   CT},
   {"rhozBinSize", &OprogStatus.rhozBinSize,  CT},
 #endif
+  {"maxcoll",     &maxcoll,                 INT},
   /* ======================================================================= */
 
   {"", NULL, 0} /* end of list, don't touch this !!! */
