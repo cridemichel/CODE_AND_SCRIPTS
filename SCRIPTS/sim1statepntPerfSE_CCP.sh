@@ -5,7 +5,8 @@
 # $5 = extra label
 # $6 = USENNL
 # $7 = pre-growth steps (if 0 then do not grow)
-# $8 = volume fraction
+# $8 = RNNL
+# $9 = volume fraction
 if [ "$1" = "" ]
 then
 echo "Syntax: sim1statepnt <initial conf> <steps> <equilibration steps> <rcut>"
@@ -57,15 +58,26 @@ GRSTP="$7"
 fi
 if [ "$8" == "" ]
 then
+RNNL="-1"
+else
+RNNL="$8"
+fi
+if [ "$9" == "" ]
+then
 PHI=`echo $INIFILE | awk -F 'Phi' '{print $2}'| awk -F _ '{print $1}'`
 else
-PHI="$8"
+PHI="$9"
 fi
 SETPARAMS="../../set_params.sh"
 PD="PHI_${PHI}"
 if [ ! -e $PD ]
 then
 mkdir $PD
+fi
+if [ "$RNNL" == "-1" ]
+then
+#fit quadratico dei dati presi dal mio J. Comp. Phys. su HRB
+RNNL=`echo "2.75-9.44*$PHI+8.55*$PHI*$PHI" | bc -l`
 fi
 INIFLOC="start.cnf"
 cp $PARFILE $PD
@@ -80,7 +92,7 @@ STORERATE="0.0"
 #PARNUM=512
 #PARNUMA=512
 DT="0.05"
-RNNL="0.12"
+#RNNL="0.12"
 #
 #
 #growth run
