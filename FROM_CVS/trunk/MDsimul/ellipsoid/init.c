@@ -1874,6 +1874,7 @@ void usrInitBef(void)
     OprogStatus.multipleLL = 0;
     OprogStatus.rcutfactMLL = 1.01;
 #endif
+    maxcoll=-1;
 }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
