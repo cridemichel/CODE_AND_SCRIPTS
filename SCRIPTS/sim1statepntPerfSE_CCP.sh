@@ -86,7 +86,7 @@ RNNL="0.12"
 #growth run
 if [ "$GRSTP" != "0" ]
 then
-$SETPARAMS $PARFILE useNNL $USENNL Dt $DT stepnum $GRSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 rcut $RCUT rotMSDCalc 0 rmsd2end -1.0 tmsd2end -1.0 inifile $INIFLOC endfile ${SIMEQ}.cor
+$SETPARAMS $PARFILE rNebrShell $RNNL useNNL $USENNL Dt $DT stepnum $GRSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 rcut $RCUT rotMSDCalc 0 rmsd2end -1.0 tmsd2end -1.0 inifile $INIFLOC endfile ${SIMEQ}.cor
 ln -sf $ELLEXE $SIMEQ
 ./$SIMEQ -fa $PARFILE > screen_$SIMEQ 
 #
@@ -101,7 +101,7 @@ fi
 #INIFEQ="$INIFLOC"
 #fi
 #equilibration run
-$SETPARAMS $PARFILE useNNL $USENNL Dt $DT stepnum $EQSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 rcut $RCUT rotMSDCalc 0 rmsd2end -1.0 tmsd2end -1.0 inifile $INIFEQ endfile ${SIMEQ}.cor
+$SETPARAMS $PARFILE rNebrShell $RNNL useNNL $USENNL Dt $DT stepnum $EQSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 rcut $RCUT rotMSDCalc 0 rmsd2end -1.0 tmsd2end -1.0 inifile $INIFEQ endfile ${SIMEQ}.cor
 ln -sf $ELLEXE $SIMEQ
 ./$SIMEQ -fa $PARFILE > screen_$SIMEQ 
 #
