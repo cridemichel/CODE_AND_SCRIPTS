@@ -1,5 +1,5 @@
 # $1 = number of particles
-# $2 = total steps 
+# $2 = total collisions 
 # $3 = equilibration steps
 # $4 = Q (size ratio big/small)
 # $5 = extra label
@@ -17,7 +17,7 @@ then
 echo "You have to supply total steps"
 exit 0
 fi
-TOTSTP="$2"
+TOTCOLL="$2"
 if [ "$3" = "" ]
 then
 echo "You have to supply equilibration steps"
@@ -124,7 +124,7 @@ ln -sf $BMEXE $SIMEQ
 #
 #
 #production run
-$SETPARAMS $PARFILE Dt $DT stepnum $TOTSTP scalevel 0 Steps 0 temperat $TEMP targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
+$SETPARAMS $PARFILE Dt $DT stepnum 100000000 maxcoll $TOTCOLL scalevel 0 Steps 0 temperat $TEMP targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 inifile ${SIMEQ}.cor endfile ${SIMPR}.cor
 ln -sf $BMEXE $SIMPR
 if [ -e /Applications ]
 then
