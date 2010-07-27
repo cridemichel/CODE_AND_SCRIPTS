@@ -10990,6 +10990,11 @@ void move(void)
 		ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
 	      if (OprogStatus.scalevel)
 		ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+#ifdef MD_BIG_DT
+	      if (OprogStatus.bigDt > 0.0)
+		ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
+#endif
+
 	    }
 #ifdef MD_HSVISCO
 	  else
