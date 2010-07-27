@@ -9,7 +9,7 @@
 # 
 if [ "$1" = "" ]
 then
-echo "Syntax: sim1statepnt <initial conf> <steps> <equilibration steps> <rcut>"
+echo "Syntax: sim1statepnt <number of particles> <total collisions> <equilibration steps> <size ratio> <extra label> <USEMLL> <pre-growth steps> <total vol. fraction>"
 exit 0
 fi
 if [ "$2" = "" ]
@@ -88,6 +88,7 @@ STORERATE="0.0"
 #PARNUM=512
 #PARNUMA=512
 DT="0.05"
+#SIGAA è il diametro delle particelle grandi
 SIGAA="1.0"
 SIGBB=`echo "$SIGAA/$Q"| bc -l`
 SIGAB=`echo "($SIGAA+$SIGBB)/2.0"| bc -l`
@@ -99,11 +100,16 @@ RCUTAB=`echo "$SIGAB*1.01"| bc -l`
 #growth run
 if [ "$GRSTP" != "0" ]
 then
+if [ "$USEMLL" == "0" ]
+then
+$SETPARAMS $PARFILE Dt $DT stepnum $GRSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcut $RCUTAA inifile $INIFILE endfile ${SIMEQ}.cor
+else
 $SETPARAMS $PARFILE Dt $DT stepnum $GRSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcutOO $RCUTAA rcutSiSi $RCUTBB rcutSiO $RCUTAB inifile $INIFILE endfile ${SIMEQ}.cor
+fi
 ln -sf $BMEXE $SIMEQ
 ./$SIMEQ -fa $PARFILE > screen_$SIMEQ 
 #
-exit
+#exit
 $SETPARAMS $PARFILE Dt $DT stepnum 500000000 VSteps 0 temperat $TEMP scalevel 0 rescaleTime 0.0 targetPhi $PHI storerate $STORERATE intervalSum $INTSUMGR DtrCalc 0 inifile ${SIMEQ}.cor endfile ${SIMEQ}.cor
 ln -sf $BMEXE $SIMEQ
 ./$SIMEQ -f $PARFILE > screen_$SIMEQ 
@@ -118,7 +124,12 @@ fi
 #INIFEQ="$INIFLOC"
 #fi
 #equilibration run
+if [ "$USEMLL" == "0" ]
+then
+$SETPARAMS $PARFILE Dt $DT stepnum $EQSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcut $RCUTAA inifile $INIFEQ endfile ${SIMEQ}.cor
+else
 $SETPARAMS $PARFILE Dt $DT stepnum $EQSTP VSteps 0 temperat $TEMP scalevel 1 rescaleTime 0.5 targetPhi 0.0 storerate $STORERATE intervalSum $INTSUM DtrCalc 0 sigmaOO $SIGAA sigmaSiSi $SIGBB sigmaSiO $SIGAB rcutOO $RCUTAA rcutSiSi $RCUTBB rcutSiO $RCUTAB inifile $INIFEQ endfile ${SIMEQ}.cor
+fi
 ln -sf $BMEXE $SIMEQ
 ./$SIMEQ $FPAR $PARFILE > screen_$SIMEQ 
 #
