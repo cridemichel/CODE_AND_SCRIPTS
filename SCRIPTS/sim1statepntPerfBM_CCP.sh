@@ -82,8 +82,8 @@ BMEXE="../stickyMLL"
 else
 BMEXE="../stickyLL"
 fi
-SIMPR="bmhs_N_$1_Q_$Q_Phi${PHI}_${EXTLAB}_PR"
-SIMEQ="bmhs_N_$1_Q_$Q_Phi${PHI}_${EXTLAB}_EQ"
+SIMPR="bmhs_N_$1_Q_${Q}_Phi${PHI}_${EXTLAB}_PR"
+SIMEQ="bmhs_N_$1_Q_${Q}_Phi${PHI}_${EXTLAB}_EQ"
 STORERATE="0.0"
 #PARNUM=512
 #PARNUMA=512
