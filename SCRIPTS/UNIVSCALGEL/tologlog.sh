@@ -1,8 +1,14 @@
-if [ "$3" == "" ]
+if [ \( "$3" == "" \) -o \(  "$3" == "def" \) ]
+then
+TAUFACT=`echo "e(-2.45*l(10))" | bc -l`   
+else
+TAUFACT="$3"
+fi
+if [ "$4" == "" ]
 then
 MODE="loglog"
 else
-MODE="$3"
+MODE="$4"
 fi
 if [ "$2" == "" ]
 then
@@ -19,11 +25,11 @@ fi
 #per awk log(x) = logaritmo naturale di x
 if [ "$MODE" == "loglog" ]
 then
-cat $1 | LC_NUMERIC=C awk -v ug2=${UG} '{print (log(1.0/$1)/log(10.0)+log(ug2)/log(10.0),log($2)/log(10))}'
+cat $1 | LC_NUMERIC=C awk -v tf=$TAUFACT -v ug2=${UG} '{print (log(1.0/$1)/log(10.0)+log(ug2)/log(10.0),log(tf*$2)/log(10))}'
 elif [ "$MODE" == "linlog" ]
 then
-cat $1 | LC_NUMERIC=C awk -v ug2=${UG} '{print (ug2/$1,log($2)/log(10))}'
+cat $1 | LC_NUMERIC=C awk -v tf=$TAUFACT -v ug2=${UG} '{print (ug2/$1,log(tf*$2)/log(10))}'
 elif [ "$MODE" == "linlin" ]
 then
-cat $1 | LC_NUMERIC=C awk -v ug2=${UG} '{print (ug2/$1,$2)}'
+cat $1 | LC_NUMERIC=C awk -v tf=$TAUFACT -v ug2=${UG} '{print (ug2/$1,tf*$2)}'
 fi
