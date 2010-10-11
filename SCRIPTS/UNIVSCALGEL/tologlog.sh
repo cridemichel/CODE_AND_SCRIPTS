@@ -2,8 +2,9 @@ if [ \( "$3" == "" \) -o \(  "$3" == "def" \) ]
 then
 TAUFACT=`echo "e(-2.45*l(10))" | bc -l`   
 else
-TAUFACT="$3"
+TAUFACT=`echo "e($3*l(10))"| bc -l`
 fi
+#echo "TAUFACT=" $TAUFACT
 if [ "$4" == "" ]
 then
 MODE="loglog"
@@ -20,8 +21,9 @@ if [ "$UGFACT" == "-1.0" ]
 then
 UG="1.0"
 else  
-UG=`echo "${UGFACT}*0.129^2" | bc -l`
+UG=`echo "(${UGFACT}*0.129)^2" | bc -l`
 fi
+#echo "UG=" $UG "FACT="${UGFACT}
 #per awk log(x) = logaritmo naturale di x
 if [ "$MODE" == "loglog" ]
 then
