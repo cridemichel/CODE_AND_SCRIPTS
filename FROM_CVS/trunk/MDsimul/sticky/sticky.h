@@ -301,7 +301,8 @@ struct progStatus
   COORD_TYPE DQxy;
   COORD_TYPE DQyz;
   COORD_TYPE DQzx;
-  
+  double tmsd2endA;
+  double tmsd2endB; 
 #ifdef MD_HSVISCO
   double DQxx;
   double DQyy;
@@ -595,6 +596,8 @@ struct pascii opro_ascii[] =
   {"initCalc",     OS(initCalc),          NUM_MISURE,               1, MDINTFMT},
   {"initStep",     OS(initStep),          NUM_MISURE,               1, MDINTFMT},
   {"sumEta",       &OS(sumEta),                     1,              1, "%.10G"},
+  {"tmsd2endA",    &OS(tmsd2endA),                  1,              1, "%.10G"},
+  {"tmsd2endB",    &OS(tmsd2endB),                  1,              1, "%.10G"},
   {"DQxy",         &OS(DQxy),                       1,              1, "%.10G"},
   {"DQyz",         &OS(DQyz),                       1,              1, "%.10G"},
   {"DQzx",         &OS(DQzx),                       1,              1, "%.10G"},
@@ -822,9 +825,11 @@ extern struct pascii opar_ascii[];
 /* MAIN is a macro defined only in mdsimul.c, so there we put the instance
 of the object, and elsewhere we put only extern declarations */
 #ifdef MAIN
+int maxcoll=-1;
 COORD_TYPE DECL_LIST;
 COORD_TYPE EXT_DLST;
 #else
+extern int maxcoll;
 extern COORD_TYPE DECL_LIST; 
 extern COORD_TYPE EXT_DLST;
 #endif 
@@ -875,6 +880,8 @@ struct singlePar OsinglePar[] = {
   {"DtrCalc",    &OprogStatus.measCalc[1],    LLINT}, /* steps between measure
 						       calculation */
   {"DtrName",    &OprogStatus.dataFiles[1],   STR},
+  {"tmsd2endA",  &OprogStatus.tmsd2endA,      CT},
+  {"tmsd2endB",  &OprogStatus.tmsd2endB,      CT},
   {"brownian",   &OprogStatus.brownian,       INT},
   {"checkGrazing",  &OprogStatus.checkGrazing, INT},
   //{"tryharder",     &OprogStatus.tryharder,    INT},
@@ -1044,7 +1051,7 @@ struct singlePar OsinglePar[] = {
   {"iniTree",        &OprogStatus.iniTree,        STR},
   {"iniBak",         &OprogStatus.iniBak,         STR},
 #endif
-  
+  {"maxcoll",    &maxcoll,                        INT},  
   /* ======================================================================= */
 
   {"", NULL, 0} /* end of list, don't touch this !!! */
@@ -1080,13 +1087,13 @@ extern struct singlePar OsinglePar[];
 #ifdef MAIN
 COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs, press,
   press_m, press_at, rcmz, rho, ItensD[2][3], pressST, pressHS, pressKin;
-COORD_TYPE Ptens[3], DQtens[3], DphiSq, DphiSqA, DphiSqB, Ktra, Krot, sqrtdr2, Aa, V, DrSqTot, temp_transl;
+COORD_TYPE Ptens[3], DQtens[3], DphiSq, DphiSqA, DphiSqB, Ktra, Krot, sqrtdr2, Aa, V, DrSqTot, temp_transl, DrSqTotA, DrSqTotB;
 int MB[NUMV];
 #else 
 extern COORD_TYPE E, Dtrans, temp, S[NUMK], dummy, eta, gr[MAXBIN], invs,
   press, press_m, press_at, temp_transl, rcmz, rho, pressST, pressHS, pressKin;
 extern COORD_TYPE Ptens[3], DQtens[3], sqrtdr2, V, Aa, DrSqTot, Krot, Ktra,
-  DphiSq, ItensD[2][3], DphiSqA, DphiSqB;
+  DphiSq, ItensD[2][3], DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
 extern int MB[NUMV];
 #endif
 

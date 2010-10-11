@@ -7297,6 +7297,24 @@ void move(void)
 #endif
 	    }
 	}
+      /* termina la simulazione se si supera un certo MSD totale */
+      if ( ( ( OprogStatus.tmsd2endA > 0.0 &&
+	   DrSqTotA > Sqr(OprogStatus.tmsd2endA) ) || OprogStatus.tmsd2endA <= 0.0 ) &&
+	   ( ( OprogStatus.tmsd2endB > 0.0  && 
+	    DrSqTotB > Sqr(OprogStatus.tmsd2endB)) || OprogStatus.tmsd2endB <= 0.0 ) &&
+	   (OprogStatus.tmsd2endA > 0.0 || OprogStatus.tmsd2endB > 0.0) )
+	{
+	  printf("[MSDcheck] steps %d time %.15G\n", Oparams.curStep, Oparams.time);
+	  ENDSIM=1;
+	}
+      /* termina la simulazione dopo un certo numero di collisioni
+	 OprogStatus.maxcoll > 0
+	 */
+      if (maxcoll > 0)
+	{
+	  if (numcoll >= maxcoll)
+	    ENDSIM=1;
+	}
 #ifdef MD_BIG_DT
       if (OprogStatus.endtime > 0 && Oparams.time + OprogStatus.refTime > OprogStatus.endtime)
 	ENDSIM = 1;
@@ -7304,6 +7322,11 @@ void move(void)
       if (OprogStatus.endtime > 0 && Oparams.time > OprogStatus.endtime)
 	ENDSIM = 1;
 #endif
+      if (ENDSIM)
+	{
+	  outputSummary();
+	}
+
 #if 0
       if (Oparams.curStep == Oparams.totStep)
 	{
