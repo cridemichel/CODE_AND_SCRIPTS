@@ -1541,6 +1541,9 @@ accumulators initialization is crucial */
 #else
   Oparams.bheight = 0.0;
 #endif
+  OprogStatus.tmsd2endA = -1.0;
+  OprogStatus.tmsd2endB = -1.0;
+     
 #ifdef MD_DYNAMIC_OPROG
   OprogStatus.dyn_alloc_oprog = dyn_alloc_oprog;
   OprogStatus.set_dyn_ascii = set_dyn_ascii;
@@ -3106,8 +3109,6 @@ void usrInitAft(void)
 	  OprogStatus.vcmz0[i] = vcmz;
 #endif
 	}
-      OprogStatus.tmsd2endA = -1.0;
-      OprogStatus.tmsd2endB = -1.0;
       OprogStatus.sumEta   = 0.0;
       OprogStatus.sumTemp  = 0.0;
       OprogStatus.sumPress = 0.0;
