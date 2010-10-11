@@ -1647,6 +1647,7 @@ accumulators initialization is crucial */
   strcpy(OprogStatus.iniTree,"SaveTree");
   strcpy(OprogStatus.iniBak,"BinaryBak");
 #endif
+  maxcoll=-1;
 }
 extern void check (int *overlap, double *K, double *V);
 extern double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
@@ -3105,7 +3106,8 @@ void usrInitAft(void)
 	  OprogStatus.vcmz0[i] = vcmz;
 #endif
 	}
-
+      OprogStatus.tmsd2endA = -1.0;
+      OprogStatus.tmsd2endB = -1.0;
       OprogStatus.sumEta   = 0.0;
       OprogStatus.sumTemp  = 0.0;
       OprogStatus.sumPress = 0.0;

@@ -304,6 +304,7 @@ void transDiff(void)
     Dr4 / Sqr(DrSqTot) / 5.0 - 1.0; /* Non-Gaussian parameter */  
 #endif
   DrSqTot /= ((double) Oparams.parnumA);
+  DrSqTotA = DrSqTot;
 #if 1
   mf = fopenMPI(absMisHD("msdA.dat"),"a");
 #ifdef MD_BIG_DT
@@ -336,6 +337,7 @@ void transDiff(void)
 #else
       fprintf(mf, "%15G %.15G\n", Oparams.time, DrSqTot / ((double)(Oparams.parnum-Oparams.parnumA)));
 #endif
+      DrSqTotB = DrSqTot / ((double)(Oparams.parnum-Oparams.parnumA));
       fclose(mf);
     }
 #endif
