@@ -285,17 +285,228 @@ void rollback_init()
 
 void rollback_save(void)
 {
+  int dblparnum, intparnum, i;
+  dblparnum = sizeof(double)*Oparams.parnum;
+  intparnum = sizeof(int)*Oparams.parnum;
   memcpy(rb_Oparams,Oparams,sizeof(struct params));
   memcpy(rb_OprogStatus,OprogStatus,sizeof(struct progStatus));
   memcpy(rb_OprogStatus.ptr,OprogStatus.ptr, OprogStatus.len);
   memcpy(dd_coord_ptr_rb,dd_coord_ptr,dd_totBytes);
+  memcpy(lastcol_rb,lastcol,dblparnum);
+  memcpy(atomTime_rb,atomTime,dblparnum);
+#ifdef MD_PATCHY_HE
+  memcpy(lastbump_rb,lastbump,sizeof(struct LastBumpS)*Oparams.parnum);
+#else
+  memcpy(lastbump_rb,lastbump,intparnum);
+#endif
+  memcpy(cellList_rb, cellList, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  memcpy(inCell_rb[0], inCell[0], intparnum);
+  memcpy(inCell_rb[1], inCell[1], intparnum);
+  memcpy(inCell_rb[2], inCell[2], intparnum);
+#ifdef MD_LL_BONDS
+  memcpy(bonds_rb[0], bonds[0], sizeof(long long int)*Oparams.parnum*OprogStatus.maxbonds);
+#else
+  memcpy(bonds_rb[0], bonds[0], intparnum*OprogStatus.maxbonds);
+#endif
+  memcpy(numbonds_rb, numbonds, intparnum);
+#ifdef MD_SPHERICAL_WALL
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* gli ultimi due tipi devono essere i "muri" sferici */
+      if (typeOfPart[i]==Oparams.ntypes-1 || typeOfPart[i]==Oparams.ntypes-2)
+	{
+#ifdef MD_LL_BONDS
+	  /* NOTA 21/04/2010: il 3 l'ho messo per tener conto del fatto che nel caso ad esempio 
+	  con l'interazione SW i legami possono essere anche due per particella. */
+	  memcpy(bonds_rb[i], bonds[i], sizeof(long long int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
+#else
+	  memcpy(bonds_rb[i], bonds[i], intparnum*MD_MAX_BOND_PER_PART);
+#endif
+	}
+    }
+#endif
+#if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
+#ifdef MD_CALENDAR_HYBRID
+  memcpy(tree_rb[0], tree[0], 16*poolSize*sizeof(int));
+#else
+  memcpy(tree_rb[0], tree[0], 13*poolSize*sizeof(int));
+#endif
+#else
+#ifdef MD_CALENDAR_HYBRID
+  memcpy(tree_rb[0], tree[0], 13*poolSize*sizeof(int));
+#else
+  memcpy(tree_rb[0], tree[0], 10*poolSize*sizeof(int));
+#endif
+#endif
+  memcpy(treeTime_rb, treeTime, sizeof(double)*poolSize);
+  memcpy(treeRxC_rb, treeRxC,   sizeof(double)*poolSize);
+  memcpy(treeRyC_rb, treeRyC,   sizeof(double)*poolSize);
+  memcpy(treeRzC_rb, treeRzC,   sizeof(double)*poolSize);
+#ifdef MD_ABSORP_POLY
+  memcpy(oldTypeOfPart_rb, oldTypeOfPart, intparnum);
+#endif
+#ifdef MD_GHOST_IGG
+  memcpy(ghostInfoArr_rb, ghostInfoArr, sizeof(ghostInfo)*Oparams.parnum);
+#endif
+  memcpy(typeOfPart_rb, typeOfPart, intparnum);
+  memcpy(typeNP_rb, typeNP, sizeof(int)*Oparams.ntypes);
+  if (OprogStatus.useNNL)
+    {  
+      memcpy(nebrTab_rb, nebrTab, sizeof(struct nebrTabStruct)*Oparams.parnum);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+    	  memcpy(nebrTab_rb[i].list, nebrTab[i].list, sizeof(int)*nebrTab[i].len);
+	}
+    }
+#ifdef MD_MATRIX_CONTIGOUS
+  memcpy(RM_rb[0], RM[0], dblparnum*9);
+#else
+  for (i=0; i < Oparams.parnum; i++) 
+    {
+      memcpy(RM_rb[i], RM[i], 9*sizeof(double));
+    }
+#endif
+#ifdef MD_MATRIX_CONTIGOUS
+  memcpy(R_rb[0], R[0], dblparnum*9);
+#else
+  for (i=0; i < Oparams.parnum; i++) 
+    {
+      memcpy(R_rb[i], R[i], 9*sizeof(double));
+    }
+#endif
+#ifdef MD_ASYM_ITENS
+  memcpy(costheta0_rb, costhet0, dblparnum);
+  memcpy(sintheta0_rb, sintheta0, dblparnum);
+  memcpy(theta0_rb, theta0, dblparnum);
+  memcpy(psi0_rb, psi0, dblparnum);
+  memcpy(phi0_rb, phi0, dblparnum);
+  memcpy(angM_rb, angM, dblparnum);
+#endif
+  memcpy(axa_rb, axa, dblparnum);
+  memcpy(axb_rb, axb, dblparnum);
+  memcpy(axc_rb, axc, dblparnum);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      memcpy(a0I_rb, a0I, dblparnum);
+      memcpy(maxax_rb, maxax, dblparnum);
+      memcpy(scdone_rb, scdone, intparnum);
+    }
+#ifdef MD_CALENDAR_HYBRID
+  memcpy(linearLists_rb, linearLists, sizeof(int)*(OprogStatus.nlistsHQ+1));
+#endif
 }
 
 void rollback_load(void)
 {
-
-
-
+  int dblparnum, intparnum, i;
+  memcpy(Oparams,rb_Oparams,sizeof(struct params));
+  memcpy(OprogStatus,rb_OprogStatus,sizeof(struct progStatus));
+  memcpy(OprogStatus.ptr,rb_OprogStatus.ptr, OprogStatus_rb.len);
+  memcpy(dd_coord_ptr,dd_coord_ptr_rb,dd_totBytes);
+  dblparnum = sizeof(double)*Oparams.parnum;
+  intparnum = sizeof(int)*Oparams.parnum; 
+  memcpy(lastcol,lastcol_rb,dblparnum);
+  memcpy(atomTime,atomTime_rb,dblparnum);
+#ifdef MD_PATCHY_HE
+  memcpy(lastbump,lastbump_rb,sizeof(struct LastBumpS)*Oparams.parnum);
+#else
+  memcpy(lastbump,lastbump_rb,intparnum);
+#endif
+  memcpy(cellList, cellList_rb, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  memcpy(inCell[0], inCell_rb[0], intparnum);
+  memcpy(inCell[1], inCell_rb[1], intparnum);
+  memcpy(inCell[2], inCell_rb[2], intparnum);
+#ifdef MD_LL_BONDS
+  memcpy(bonds[0], bonds_rb[0], sizeof(long long int)*Oparams.parnum*OprogStatus.maxbonds);
+#else
+  memcpy(bonds[0], bonds_rb[0], intparnum*OprogStatus.maxbonds);
+#endif
+  memcpy(numbonds, numbonds_rb, intparnum);
+#ifdef MD_SPHERICAL_WALL
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* gli ultimi due tipi devono essere i "muri" sferici */
+      if (typeOfPart[i]==Oparams.ntypes-1 || typeOfPart[i]==Oparams.ntypes-2)
+	{
+#ifdef MD_LL_BONDS
+	  /* NOTA 21/04/2010: il 3 l'ho messo per tener conto del fatto che nel caso ad esempio 
+	  con l'interazione SW i legami possono essere anche due per particella. */
+	  memcpy(bonds[i], bonds_rb[i], sizeof(long long int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
+#else
+	  memcpy(bonds[i], bonds_rb[i], intparnum*MD_MAX_BOND_PER_PART);
+#endif
+	}
+    }
+#endif
+#if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
+#ifdef MD_CALENDAR_HYBRID
+  memcpy(tree[0], tree_rb[0], 16*poolSize*sizeof(int));
+#else
+  memcpy(tree[0], tree_rb[0], 13*poolSize*sizeof(int));
+#endif
+#else
+#ifdef MD_CALENDAR_HYBRID
+  memcpy(tree[0], tree_rb[0], 13*poolSize*sizeof(int));
+#else
+  memcpy(tree[0], tree_rb[0], 10*poolSize*sizeof(int));
+#endif
+#endif
+  memcpy(treeTime, treeTime_rb, sizeof(double)*poolSize);
+  memcpy(treeRxC, treeRxC_rb,   sizeof(double)*poolSize);
+  memcpy(treeRyC, treeRyC_rb,   sizeof(double)*poolSize);
+  memcpy(treeRzC, treeRzC_rb,   sizeof(double)*poolSize);
+#ifdef MD_ABSORP_POLY
+  memcpy(oldTypeOfPart, oldTypeOfPart_rb, intparnum);
+#endif
+#ifdef MD_GHOST_IGG
+  memcpy(ghostInfoArr, ghostInfoArr_rb, sizeof(ghostInfo)*Oparams.parnum);
+#endif
+  memcpy(typeOfPart, typeOfPart_rb, intparnum);
+  memcpy(typeNP, typeNP_rb, sizeof(int)*Oparams.ntypes);
+  if (OprogStatus.useNNL)
+    {  
+      memcpy(nebrTab, nebrTab_rb, sizeof(struct nebrTabStruct)*Oparams.parnum);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+    	  memcpy(nebrTab[i].list, nebrTab_rb[i].list, sizeof(int)*nebrTab[i].len);
+	}
+    }
+#ifdef MD_MATRIX_CONTIGOUS
+  memcpy(RM[0], RM_rb[0], dblparnum*9);
+#else
+  for (i=0; i < Oparams.parnum; i++) 
+    {
+      memcpy(RM[i], RM_rb[i], 9*sizeof(double));
+    }
+#endif
+#ifdef MD_MATRIX_CONTIGOUS
+  memcpy(R[0], R_rb[0], dblparnum*9);
+#else
+  for (i=0; i < Oparams.parnum; i++) 
+    {
+      memcpy(R[i], R_rb[i], 9*sizeof(double));
+    }
+#endif
+#ifdef MD_ASYM_ITENS
+  memcpy(costheta0, costhet0_rb, dblparnum);
+  memcpy(sintheta0, sintheta0_rb, dblparnum);
+  memcpy(theta0, theta0_rb, dblparnum);
+  memcpy(psi0, psi0_rb, dblparnum);
+  memcpy(phi0, phi0_rb, dblparnum);
+  memcpy(angM, angM_rb, dblparnum);
+#endif
+  memcpy(axa, axa_rb, dblparnum);
+  memcpy(axb, axb_rb, dblparnum);
+  memcpy(axc, axc_rb, dblparnum);
+  if (OprogStatus.targetPhi > 0.0)
+    {
+      memcpy(a0I, a0I_rb, dblparnum);
+      memcpy(maxax, maxax_rb, dblparnum);
+      memcpy(scdone, scdone_rb, intparnum);
+    }
+#ifdef MD_CALENDAR_HYBRID
+  memcpy(linearLists, linearLists_rb, sizeof(int)*(OprogStatus.nlistsHQ+1));
+#endif
 }
 
 #endif
