@@ -47,6 +47,7 @@ int cellToRegion(unsigned long long int cell)
 	return i;
     }
 }
+void rollback_init(void);
 void dd_init(void)
 {
   /* queste dichiarazioni vanno poi rese globali */
@@ -54,7 +55,7 @@ void dd_init(void)
   /* 08/10/10: nel caso di codice parallelo è meglio non usare le multiple linked list poiche'
      il tutto si complica significativamente */
   /* numero totale di regioni (1 regione = 1 processo) */
-  dd_numreg = num_of_processes;
+  dd_numreg = numOfProcs; /* numOfProcs viene definita se si usa MPI */
   /* number of regions per process */
   ncp = (int) pow(2,(int)log2(cellsx*cellsy*cellsz/dd_numreg));
   if (OprogStatus.dd_numcells_per_proc == 0)
@@ -93,7 +94,50 @@ void dd_init(void)
 	  cellnum = calc_cellnum(iX,iY,iZ);
 	  inRegion[cellnum] = cellToRegion(cellnum);
 	}
+  rollback_init();
 }
+
 /* ==== >>> rollback <<< ==== */
+struct params rb_Oparams;
+struct progStatus rb_OprogStatus;
+int dd_totBytes; 
+void *dd_coord_ptr, *dd_coord_ptr_rb;
+double *lastcol_rb, *atomTime_rb, *lastbump_rb;
+int *inCell_rb[3], **tree_rb, *cellList_rb;
+double *treeRxC_rb, *treeRyC_rb, *treeRzC_rb, *treeTime_rb;
+int *numbonds_rb, **bonds_rb, *oldTypeOfPart_rb;
+double **R_rb, **RM_rb;
+struct nebrTabStruct *nebrTab_rb;
+ghostInfo *ghostInfoArr_rb;
+int *typeOfPart_rb, *typeNP;
+int *linearLists_rb;
+/* dd_coord_ptr viene inizializzato a seguito dell'allocazione
+   della memoria per le coordinate, tramite la funzione mdarray.c:AllocCoord().
+   Invece dd_coord_ptr_rb è un puntatore alla memoria usata per il memorizzare 
+   i dati puntati da dd_coord_ptr. */
+void rollback_init()
+{
+  int SEGSIZE;
+  /* allocate memory for saving rollback data */
+#ifdef MD_DYNAMIC_OPROG
+  rb_OprogStatus.ptr = malloc(OprogStatus.len);
+#endif 
+  dd_coord_ptr_rb = malloc(dd_totBytes); 
+}
+
+void rollback_save(void)
+{
+  memcpy(rb_Oparams,Oparams,sizeof(struct params));
+  memcpy(rb_OprogStatus,OprogStatus,sizeof(struct progStatus));
+  memcpy(rb_OprogStatus.ptr,OprogStatus.ptr, OprogStatus.len);
+  memcpy(dd_coord_ptr_rb,dd_coord_ptr,dd_totBytes);
+}
+
+void rollback_load(void)
+{
+
+
+
+}
 
 #endif
