@@ -2,6 +2,34 @@
 #ifdef ED_PARALL_DD
 /* ==== >>> routines to initialize structures <<< ==== */
 extern int cellsx, cellsy, cellsz;
+void calc_xyz(unsigned long long int cellnum, unsigned int *ix, unsigned int *iy, unsigned int *iz) 
+{
+  /* è la funzione inversa di calc_cellnum(...) */
+  int i, k, km;
+  const int maxk=60;
+  unsigned int ni[3] = {0x0,0x0,0x0};
+  unsigned long long int cn;
+  cn = cellnum;
+  /* km sarà il numero di bit non nulli di cellnum */
+  for (k=0; k < maxk; k++)
+    {
+      if (cn==0x0)
+	{
+	  km = k;
+	  break;
+	}
+      cn = cn >> 1;
+    }
+  for (k=0; k < km; k++)
+    {
+      ni[k % 3] |= (cellnum & 0x1) << (k/3);
+      *iz |= (cellnum & 0x1) << k;
+      cellnum = cellnum >> 1; 
+    } 
+  *ix = ni[0];
+  *iy = ni[1];
+  *iz = ni[2];
+}
 unsigned long long int calc_cellnum(int ix, int iy, int iz)
 {
   /* N.B. interleaving cells coordinates in binary represantion a unique cell  
@@ -70,6 +98,9 @@ void dd_init(void)
      tramite interleaving dei bit (vedi Sec. 3.1 S. Miller and S. Luding J. Comput. Phys. 193, 
      306-316 (2003) */
   regionsArr = malloc(sizeof(int)*dd_numreg);
+
+  border_cells_first = malloc(sizeof(int)*dd_numreg);
+  border_cells_ll = malloc(sizeof(int)*cellsx*cellsy*cellsz);
   /* le regioni sono in generale dei parallelepipedi contenenti un numero intero 
      di celle ed individuati da 6 numeri (x1,x2), (y1,y2), (z1,z2) ossia x1i e x2i, all'inizio
      i parallelepipedi vengono scelti tutti uguali (a parte gli ultimi se il numero di regioni
@@ -565,5 +596,48 @@ void rollback_load(void)
   accngB = accngB_rb;
 }
 /* ===== >>>> border zone <<< ===== */
+void build_border_zone_list(int regnum)
+{
+  unsigned int ix, iy, iz, c, inicell;
+  int ixp, iyp, izp, isbordercell;
+  unsigned long long int nc;
+  int relc[6][3] = {{0,0,1},{0,0,-1},{0,-1,0},{0,1,0},{1,0,0},{-1,0,0}}; 
+  /* nc sono le sei neighbour cells lungo gli assi x, y, z */
+  /* le border cells sono tutte quelle che hanno vicini in altre regioni */
+  inicell = (regnum==0)?0:regionsArr[regnum-1];
+  for (c = inicell; c < regionsArr[regnum]; c++)
+    {
+      isbordercell = 0;
+      calc_xyz(c, &ix, &iy, &iz);
+      for (i = 0; i < 6; i++)
+	{
+	  ixp = ix + relc[i][0];
+	  iyp = iy + relc[i][1];
+	  izp = iz + relc[i][2];
+	  if (ixp >= cellsz)
+	    ixp = 0;
+	  else if (ixp <= 0)
+	    ixp = cellsx-1;
+	  if (iyp >= cellsy)
+	    iyp = 0;
+	  else if (iyp <= 0)
+	    iyp = cellsy-1;
+	  if (izp >= cellsz)
+	    izp = 0;
+	  else if (izp <= 0)
+	    izp = cellsz-1;
+	  nc = calc_cellnum(ixp, iyp, izp); 
+	  if (inRegion[nc] != numreg)
+	    {
+	      isbordercell = 1;
+	      break;
+	    }
+	}	
+      if (isbordercell == 1)
+	{
+	  /* add to border cells list */
+	}
+    }
+}
 
 #endif
