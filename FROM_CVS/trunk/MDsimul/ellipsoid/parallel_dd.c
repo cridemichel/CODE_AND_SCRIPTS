@@ -1,6 +1,7 @@
 #include<mdsimul.h>
 #ifdef ED_PARALL_DD
 /* ==== >>> routines to initialize structures <<< ==== */
+extern int cellsx, cellsy, cellsz;
 unsigned long long int calc_cellnum(int ix, int iy, int iz)
 {
   /* N.B. interleaving cells coordinates in binary represantion a unique cell  
@@ -111,18 +112,175 @@ struct nebrTabStruct *nebrTab_rb;
 ghostInfo *ghostInfoArr_rb;
 int *typeOfPart_rb, *typeNP;
 int *linearLists_rb;
+long long int itsF_rb, timesF_rb, itsS_rb, timesS_rb, numcoll_rb, itsFNL_rb, timesFNL_rb, 
+     timesSNL_rb, itsSNL_rb, numcalldist_rb, numdisttryagain_rb;
+long long int itsfrprmn_rb, callsfrprmn_rb, callsok_rb, callsprojonto_rb, itsprojonto_rb;
+long long int accngA_rb, accngB_rb;
+#ifdef MD_ASYM_ITENS
+double *theta0_rb, *phi0_rb, *psi0_rb, *costheta0_rb, *sintheta0_rb, *angM_rb, ***RM_rb;
+#endif
+double *axa_rb, *axb_rb, *axc_rb;
+double *a0I_rb, *maxax_rb;
+int *scdone_rb;
 /* dd_coord_ptr viene inizializzato a seguito dell'allocazione
    della memoria per le coordinate, tramite la funzione mdarray.c:AllocCoord().
    Invece dd_coord_ptr_rb è un puntatore alla memoria usata per il memorizzare 
    i dati puntati da dd_coord_ptr. */
+#ifdef MD_SPHERICAL_WALL
+void allocBondsSphWall_rb(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* gli ultimi due tipi devono essere i "muri" sferici */
+      if (typeOfPart[i]==Oparams.ntypes-1 || typeOfPart[i]==Oparams.ntypes-2)
+	{
+#ifdef MD_LL_BONDS
+	  /* NOTA 21/04/2010: il 3 l'ho messo per tener conto del fatto che nel caso ad esempio 
+	  con l'interazione SW i legami possono essere anche due per particella. */
+	  bonds_rb[i] = malloc(sizeof(long long int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
+#else
+	  bonds_rb[i] = malloc(sizeof(int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
+#endif
+	  //break;
+	}
+    }
+}
+#endif
+
 void rollback_init()
 {
-  int SEGSIZE;
+  int SEGSIZE, poolSize;
   /* allocate memory for saving rollback data */
 #ifdef MD_DYNAMIC_OPROG
   rb_OprogStatus.ptr = malloc(OprogStatus.len);
 #endif 
   dd_coord_ptr_rb = malloc(dd_totBytes); 
+  lastcol_rb= malloc(sizeof(double)*Oparams.parnum);
+  atomTime_rb = malloc(sizeof(double)*Oparams.parnum);
+#ifdef MD_PATCHY_HE
+  lastbump_rb =  malloc(sizeof(struct LastBumpS)*Oparams.parnum);
+#else
+  lastbump_rb = malloc(sizeof(int)*Oparams.parnum);
+#endif
+  cellList_rb = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  inCell_rb[0] = malloc(sizeof(int)*Oparams.parnum);
+  inCell_rb[1] = malloc(sizeof(int)*Oparams.parnum);
+  inCell_rb[2] = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MD_LL_BONDS
+  bonds_rb = AllocMatLLI(Oparams.parnum, OprogStatus.maxbonds);
+#else
+  bonds_rb = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+#endif
+  numbonds_rb = (int *) malloc(Oparams.parnum*sizeof(int));
+#ifdef MD_SPHERICAL_WALL
+  allocBondsSphWall_rb();
+#endif
+#ifdef MD_SPHERICAL_WALL
+  poolSize = OprogStatus.eventMult*Oparams.parnum+2*Oparams.parnum;
+#else
+  poolSize = OprogStatus.eventMult*Oparams.parnum;
+#endif
+#if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
+#ifdef MD_CALENDAR_HYBRID
+  tree_rb = AllocMatI(16, poolSize);
+#else
+  tree_rb = AllocMatI(13, poolSize);
+#endif
+#else
+#ifdef MD_CALENDAR_HYBRID
+  tree_rb = AllocMatI(13, poolSize);
+#else
+  tree_rb = AllocMatI(10, poolSize);
+#endif
+#endif
+  treeTime_rb = malloc(sizeof(double)*poolSize);
+  treeRxC_rb  = malloc(sizeof(double)*poolSize);
+  treeRyC_rb  = malloc(sizeof(double)*poolSize);
+  treeRzC_rb  = malloc(sizeof(double)*poolSize);
+#ifdef MD_ABSORP_POLY
+  oldTypeOfPart_rb = malloc(sizeof(int)*Oparams.parnum);
+#endif
+#ifdef MD_GHOST_IGG
+  ghostInfoArr_rb = malloc(sizeof(ghostInfo)*Oparams.parnum);
+#endif
+  typeOfPart_rb = malloc(sizeof(int)*Oparams.parnum);
+  typeNP_rb=malloc(sizeof(int)*Oparams.ntypes);
+  if (OprogStatus.useNNL)
+    {  
+      nebrTab_rb = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+    	  nebrTab_rb[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+	}
+    }
+  RM_rb = malloc(sizeof(double**)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++) 
+    {
+#ifdef MD_MATRIX_CONTIGOUS
+      /* alloca R in maniera contigua */
+      if (i==0)
+	{
+  	  RM_rb[i] = malloc(sizeof(double*)*3);
+	  RM_rb[i][0] = malloc(sizeof(double)*Oparams.parnum*9);
+	  RM_rb[i][1] = RM[i][0] + 3;
+	  RM_rb[i][2] = RM[i][1] + 3;
+	}
+      else
+	{
+	  RM_rb[i] = malloc(sizeof(double*)*3);
+	  RM_rb[i][0] = RM_rb[i-1][2] + 3;
+	  RM_rb[i][1] = RM_rb[i][0] + 3;
+	  RM_rb[i][2] = RM_rb[i][1] + 3;
+	}
+#else
+      RM_rb[i] = matrix(3, 3);
+#endif
+    }
+#endif
+  R_rb = malloc(sizeof(double**)*Oparams.parnum);
+  
+  for (i=0; i < Oparams.parnum; i++)
+    {
+#ifdef MD_MATRIX_CONTIGOUS
+      /* alloca R in maniera contigua */
+      if (i==0)
+	{
+  	  R_rb[i] = malloc(sizeof(double*)*3);
+	  R_rb[i][0] = malloc(sizeof(double)*Oparams.parnum*9);
+	  R_rb[i][1] = R_rb[i][0] + 3;
+	  R_rb[i][2] = R_rb[i][1] + 3;
+	}
+      else
+	{
+	  R_rb[i] = malloc(sizeof(double*)*3);
+	  R_rb[i][0] = R_rb[i-1][2] + 3;
+	  R_rb[i][1] = R_rb[i][0] + 3;
+	  R_rb[i][2] = R_rb[i][1] + 3;
+	}
+#else
+      R_rb[i] = matrix(3, 3);
+#endif
+    }
+#ifdef MD_ASYM_ITENS
+  costheta0_rb = malloc(sizeof(double)*Oparams.parnum);
+  sintheta0_rb = malloc(sizeof(double)*Oparams.parnum);
+  theta0_rb =    malloc(sizeof(double)*Oparams.parnum);
+  psi0_rb   =    malloc(sizeof(double)*Oparams.parnum);
+  phi0_rb   =    malloc(sizeof(double)*Oparams.parnum);
+  angM_rb   =    malloc(sizeof(double)*Oparams.parnum);
+#endif
+  axa_rb = malloc(sizeof(double)*Oparams.parnum);
+  axb_rb = malloc(sizeof(double)*Oparams.parnum);
+  axc_rb = malloc(sizeof(double)*Oparams.parnum);
+  /* these array are for growth simulations and in this implementation
+     growth is not allowed in parallel... (?!?) */
+  a0I_rb = malloc(sizeof(double)*Oparams.parnum);
+  maxax_rb = malloc(sizeof(double)*Oparams.parnum);
+  scdone_rb = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MD_CALENDAR_HYBRID
+  linearLists_rb = malloc(sizeof(int)*(OprogStatus.nlistsHQ+1));
+#endif
 }
 
 void rollback_save(void)
