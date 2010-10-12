@@ -101,6 +101,26 @@ void dd_init(void)
 /* ==== >>> rollback <<< ==== */
 struct params rb_Oparams;
 struct progStatus rb_OprogStatus;
+extern double *lastcol, *atomTime, *lastbump;
+extern int *inCell[3], **tree, *cellList;
+extern double *treeRxC, *treeRyC, *treeRzC, *treeTime;
+extern int *numbonds, **bonds, *oldTypeOfPart;
+extern double **R, **RM;
+extern struct nebrTabStruct *nebrTab;
+extern ghostInfo *ghostInfoArr;
+extern int *typeOfPart, *typeNP;
+extern int *linearLists;
+extern long long int itsF, timesF, itsS, timesS, numcoll, itsFNL, timesFNL, 
+     timesSNL, itsSNL, numcalldist, numdisttryagain;
+extern long long int itsfrprmn, callsfrprmn, callsok, callsprojonto, itsprojonto;
+extern long long int accngA, accngB;
+#ifdef MD_ASYM_ITENS
+extern double *theta0, *phi0, *psi0, *costheta0, *sintheta0, *angM, ***RM;
+#endif
+extern double *axa, *axb, *axc;
+extern double *a0I, *maxax;
+extern int *scdone;
+
 int dd_totBytes; 
 void *dd_coord_ptr, *dd_coord_ptr_rb;
 double *lastcol_rb, *atomTime_rb, *lastbump_rb;
@@ -110,7 +130,7 @@ int *numbonds_rb, **bonds_rb, *oldTypeOfPart_rb;
 double **R_rb, **RM_rb;
 struct nebrTabStruct *nebrTab_rb;
 ghostInfo *ghostInfoArr_rb;
-int *typeOfPart_rb, *typeNP;
+int *typeOfPart_rb, *typeNP_rb;
 int *linearLists_rb;
 long long int itsF_rb, timesF_rb, itsS_rb, timesS_rb, numcoll_rb, itsFNL_rb, timesFNL_rb, 
      timesSNL_rb, itsSNL_rb, numcalldist_rb, numdisttryagain_rb;
@@ -394,6 +414,24 @@ void rollback_save(void)
 #ifdef MD_CALENDAR_HYBRID
   memcpy(linearLists_rb, linearLists, sizeof(int)*(OprogStatus.nlistsHQ+1));
 #endif
+  itsF_rb = itsF;
+  timeF_rb = timesF;
+  itsS_rb = itsS;
+  timesS_rb =  timesS;
+  numcoll_rb = numcoll;
+  itsFNL_rb =  itsFNL;
+  timesFNL_rb = timesFNL; 
+  timesSNL_rb = timesSNL;
+  itsSNL_rb = itsSNL; 
+  numcalldist_rb = numcalldist; 
+  numdisttryagain_rb = numdisttryagain;
+  itsfrprmn_rb = itsfrprmn;
+  callsfrprmn_rb = callsfrprmn;
+  callsok_rb = callsok;
+  callsprojonto_rb = callsprojonto;
+  itsprojonto_rb = itsprojonto;
+  accngA_rb = accngA;
+  accngB_rb = accngB;
 }
 
 void rollback_load(void)
@@ -507,6 +545,25 @@ void rollback_load(void)
 #ifdef MD_CALENDAR_HYBRID
   memcpy(linearLists, linearLists_rb, sizeof(int)*(OprogStatus.nlistsHQ+1));
 #endif
+  itsF = itsF_rb;
+  timeF = timesF_rb;
+  itsS = itsS_rb;
+  timesS =  timesS_rb;
+  numcoll = numcoll_rb;
+  itsFNL =  itsFNL_rb;
+  timesFNL = timesFNL_rb; 
+  timesSNL = timesSNL_rb;
+  itsSNL = itsSNL_rb; 
+  numcalldist = numcalldist_rb; 
+  numdisttryagain = numdisttryagain_rb;
+  itsfrprmn = itsfrprmn_rb;
+  callsfrprmn = callsfrprmn_rb;
+  callsok = callsok_rb;
+  callsprojonto = callsprojonto_rb;
+  itsprojonto = itsprojonto_rb;
+  accngA = accngA_rb;
+  accngB = accngB_rb;
 }
+/* ===== >>>> border zone <<< ===== */
 
 #endif
