@@ -77,6 +77,7 @@ int cellToRegion(unsigned long long int cell)
     }
 }
 void rollback_init(void);
+int *border_cells_head, *border_cells_ll;
 void dd_init(void)
 {
   /* queste dichiarazioni vanno poi rese globali */
@@ -99,7 +100,7 @@ void dd_init(void)
      306-316 (2003) */
   regionsArr = malloc(sizeof(int)*dd_numreg);
 
-  border_cells_first = malloc(sizeof(int)*dd_numreg);
+  border_cells_head = malloc(sizeof(int)*dd_numreg);
   border_cells_ll = malloc(sizeof(int)*cellsx*cellsy*cellsz);
   /* le regioni sono in generale dei parallelepipedi contenenti un numero intero 
      di celle ed individuati da 6 numeri (x1,x2), (y1,y2), (z1,z2) ossia x1i e x2i, all'inizio
@@ -598,13 +599,14 @@ void rollback_load(void)
 /* ===== >>>> border zone <<< ===== */
 void build_border_zone_list(int regnum)
 {
-  unsigned int ix, iy, iz, c, inicell;
+  unsigned int ix, iy, iz, c, inicell, oldc;
   int ixp, iyp, izp, isbordercell;
   unsigned long long int nc;
   int relc[6][3] = {{0,0,1},{0,0,-1},{0,-1,0},{0,1,0},{1,0,0},{-1,0,0}}; 
   /* nc sono le sei neighbour cells lungo gli assi x, y, z */
   /* le border cells sono tutte quelle che hanno vicini in altre regioni */
   inicell = (regnum==0)?0:regionsArr[regnum-1];
+  border_cells_head[regnum] = -1;
   for (c = inicell; c < regionsArr[regnum]; c++)
     {
       isbordercell = 0;
@@ -622,10 +624,28 @@ void build_border_zone_list(int regnum)
 	    iyp = 0;
 	  else if (iyp <= 0)
 	    iyp = cellsy-1;
+#ifdef MD_EDHEFLEX_WALL
+	  if (OprogStatus.hardwall)
+	    {
+	      /* se c'è il muro non ci sarà un processo adiacente che "scambia" particelle
+		 con quello corrente quindi, possiamo evitare di considerare tale cella
+		 come appartenente alla border zone */
+	      if (izp >= cellsz || izp <= 0)
+		izp = iz;
+	    }  
+	  else
+	    {
+	      if (izp >= cellsz)
+		izp = 0;
+	      else if (izp <= 0)
+		izp = cellsz-1;
+	    }
+#else
 	  if (izp >= cellsz)
 	    izp = 0;
 	  else if (izp <= 0)
 	    izp = cellsz-1;
+#endif
 	  nc = calc_cellnum(ixp, iyp, izp); 
 	  if (inRegion[nc] != numreg)
 	    {
@@ -636,8 +656,117 @@ void build_border_zone_list(int regnum)
       if (isbordercell == 1)
 	{
 	  /* add to border cells list */
+	  oldc = border_cells_head[regnum];
+	  border_cells_head[regnum] = c;
+	  border_cells_ll[c] = oldc;
 	}
     }
 }
+extern int cellRange[2 * NDIM];
+int in_vborder_list(unsigned long long int cell, unsigned int regnum)
+{
+  int c;
+  c = vborder_cells_head[regnum];
+  while (c!=-1)
+    {
+      if (c == cell)
+	return 1;
+      c = vborder_cells_head[c];
+    }
+  return 0;
+}
+void build_vborder_zone_list(int regnum)
+{
+  unsigned int ix, iy, iz, c, oldc;
+  int ixp, iyp, izp, isvbordercell, dx, dy, dz;
+  unsigned long long int nc;
+  int cellRangeT[2 * NDIM], k;
+  /* nc sono le sei neighbour cells lungo gli assi x, y, z */
+  /* le border cells sono tutte quelle che hanno vicini in altre regioni */
+  vborder_cells_head[regnum] = -1;
 
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+  /* scorre tutte le celle della border zone e costruisce
+     la lista delle celle della virtual border zone */
+  c=vborder_cells_head[regnum];
+  while (c!=-1)
+    {
+      isvbordercell = 0;
+      calc_xyz(c, &ix, &iy, &iz);
+#ifdef MD_EDHEFLEX_WALL
+      if (OprogStatus.hardwall)
+	{
+	  if (iz + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+	  if (iz + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+	}
+#endif
+      /* check 26 neighbour cells */
+      for (dz = cellRangeT[4]; dz <= cellRangeT[5]; dz++) 
+	{
+	  izp = iz + dz;  
+	  if (izp == -1) 
+	    {
+	      izp = cellsz - 1;    
+	    } 
+	  else if (izp == cellsz) 
+	    {
+	      izp = 0;    
+	    }
+	  for (dy = cellRangeT[2]; dy <= cellRangeT[3]; dy++) 
+	    {
+	      iyp = iy + dy;    
+	      if (iyp == -1) 
+		{
+		  iyp = cellsy - 1;    
+		} 
+	      else if (iyp == cellsy) 
+		{
+		  iyp = 0;    
+		}
+	      for (dx = cellRangeT[0]; dx <= cellRangeT[1]; dx++) 
+		{
+		  ixp = ix + dx;    
+
+		  if (ixp == -1) 
+		    {
+		      ixp = cellsx - 1;    
+		    } 
+		  else if (ixp == cellsx) 
+		    {
+		      ixp = 0;   
+		    }
+		  nc = calc_cellnum(ixp, iyp, izp); 
+		  if (inRegion[nc] != numreg)
+		    {
+		      if (!in_vborder_list(c, regnum))
+			{
+			  /* se non è stata già inserita inserisci la cella
+			     nella virtual border zone */
+			  oldc = vborder_cells_head[regnum];
+			  vborder_cells_head[regnum] = c;
+			  vborder_cells_ll[c] = oldc;
+			}
+		    }
+		}	
+	    }
+	}
+      c = vborder_cells_head_ll[c];
+    }
+}
+void add_border_zone_event(int idA, int idB, double tEvent)
+{
+  unsigned int cn, ix, iy, iz;
+  ix = inCell[idA][0];
+  iy = inCell[idA][1];
+  iz = inCell[idA][2];
+  cn = calc_cellnum(ix, iy, iz);
+  idd = cn+1;
+  if (tEvent < treeBZ[2][idd])
+    {
+      /* replace event for cell */
+      DeleteEventBZ(idd);
+      ScheduleEventBZ();
+    }
+}
 #endif
