@@ -802,12 +802,128 @@ void schedule_border_zone_event(int idA, int idB, double tEvent, unsigned int de
   else if (idB < ATOM_LIMIT + 2*NDIM)
     {
       /* calc destination cell cn here*/
-      idd = cn+1;
-      if (is_border_zone_cell(cn))
+      idd = dest_cell+1;
+      if (is_border_zone_cell(dest_cell))
 	{
 	  if (tEvent < treeTimeBZ[idd])
-	    ScheduleEventBZ(cn, tEvent);
+	    ScheduleEventBZ(dest_cell, tEvent);
 	}
     }
+}
+
+void send_min_cell_time(void)
+{
+
+
+
+
+}
+void receive_min_cell_time(void)
+{
+
+
+
+}
+void send_celltime_request_to_region(int regnum, int cellnum, double tEvent)
+{
+
+
+}
+void request_cell_times(unsigned int cellnum, double tEvent)
+{
+  unsigned int ix, iy, iz, c, oldc;
+  int ixp, iyp, izp, isvbordercell, dx, dy, dz;
+  unsigned long long int nc;
+  int cellRangeT[2 * NDIM], k;
+  
+  /* request lesser cell time for neighboring cells of cellnum in region regnum */
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+  calc_xyz(cellnum, &ix, &iy, &iz);
+#ifdef MD_EDHEFLEX_WALL
+  if (OprogStatus.hardwall)
+    {
+      if (iz + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (iz + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+    }
+#endif
+  /* check 26 neighbour cells */
+  for (dz = cellRangeT[4]; dz <= cellRangeT[5]; dz++) 
+    {
+      izp = iz + dz;  
+      if (izp == -1) 
+	{
+	  izp = cellsz - 1;    
+	} 
+      else if (izp == cellsz) 
+	{
+	  izp = 0;    
+	}
+      for (dy = cellRangeT[2]; dy <= cellRangeT[3]; dy++) 
+	{
+	  iyp = iy + dy;    
+	  if (iyp == -1) 
+	    {
+	      iyp = cellsy - 1;    
+	    } 
+	  else if (iyp == cellsy) 
+	    {
+	      iyp = 0;    
+	    }
+	  for (dx = cellRangeT[0]; dx <= cellRangeT[1]; dx++) 
+	    {
+	      ixp = ix + dx;    
+
+	      if (ixp == -1) 
+		{
+		  ixp = cellsx - 1;    
+		} 
+	      else if (ixp == cellsx) 
+		{
+		  ixp = 0;   
+		}
+	      nc = calc_cellnum(ixp, iyp, izp); 
+	      /* if not current process */
+	      if (inRegion[nc]!=my_rank)
+		{
+		  send_celltime_request_to_region(cellnum, tEvent)
+		}
+	    }
+	}
+    }
+
+}
+void dd_calc_superstep(void)
+{
+#if 0
+#ifdef MPI
+  /* syncronize all processes, now using MPI */
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+#endif
+  NextEventBZ();
+  request_cell_time(evCellBZ, evTimeBZ);
+
+}
+void send_vparticles_to_region(int regnum)
+{
+
+
+
+}
+void receive_vparticles(void)
+{
+
+
+
+} 
+void dd_syncronize(void)
+{
+
+
+}
+void dd_collect_particles(void)
+{
+
+
 }
 #endif
