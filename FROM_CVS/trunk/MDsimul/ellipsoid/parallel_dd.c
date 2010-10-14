@@ -78,6 +78,7 @@ int cellToRegion(unsigned long long int cell)
 }
 void rollback_init(void);
 int *border_cells_head, *border_cells_ll;
+enum {DD_REAL=0, DD_BORDER_ZONE, DD_VIRTUAL};
 void dd_init(void)
 {
   /* queste dichiarazioni vanno poi rese globali */
@@ -126,6 +127,7 @@ void dd_init(void)
 	{
 	  cellnum = calc_cellnum(iX,iY,iZ);
 	  inRegion[cellnum] = cellToRegion(cellnum);
+	  cell_type[cellnum] = DD_REAL;
 	}
   rollback_init();
 }
@@ -659,6 +661,7 @@ void build_border_zone_list(int regnum)
 	  oldc = border_cells_head[regnum];
 	  border_cells_head[regnum] = c;
 	  border_cells_ll[c] = oldc;
+	  cell_type[c] = DD_BORDER_ZONE;
 	}
     }
 }
@@ -746,6 +749,8 @@ void build_vborder_zone_list(int regnum)
 			  oldc = vborder_cells_head[regnum];
 			  vborder_cells_head[regnum] = c;
 			  vborder_cells_ll[c] = oldc;
+			  /* VIRTUAL_CELL */
+			  cell_type[c] = DD_VIRTUAL;
 			}
 		    }
 		}	
@@ -754,19 +759,55 @@ void build_vborder_zone_list(int regnum)
       c = vborder_cells_head_ll[c];
     }
 }
-void add_border_zone_event(int idA, int idB, double tEvent)
+int is_border_zone_cell(unsigned int cn)
 {
+  if (cell_type[cn]==DD_BORDER_ZONE)
+    return 1;
+  else
+    return 0;
+}
+void schedule_border_zone_event(int idA, int idB, double tEvent, unsigned int dest_cell)
+{
+  /* according to Luding and Miller we associate an event to each particle */
   unsigned int cn, ix, iy, iz;
-  ix = inCell[idA][0];
-  iy = inCell[idA][1];
-  iz = inCell[idA][2];
-  cn = calc_cellnum(ix, iy, iz);
-  idd = cn+1;
-  if (tEvent < treeBZ[2][idd])
+  int idd;
+ 
+  if (idB < ATOM_LIMIT) /* urto fra due particelle */
     {
-      /* replace event for cell */
-      DeleteEventBZ(idd);
-      ScheduleEventBZ();
+      ix = inCell[idd][0];
+      iy = inCell[idd][1];
+      iz = inCell[idd][2];
+      cn = calc_cellnum(ix, iy, iz);
+      idd = cn+1;
+
+      if (is_border_zone_cell(cn))
+	{
+	  if (tEvent < treeTimeBZ[idd])
+	    ScheduleEventBZ(cn, tEvent); 
+	}
+      else
+       	{
+    	  ix = inCell[idd][0];
+	  iy = inCell[idd][1];
+	  iz = inCell[idd][2];
+	  cn = calc_cellnum(ix, iy, iz);
+	  idd = cn+1;
+	  if (is_border_zone_cell(cn))
+	    {
+	      if (tEvent < treeTimeBZ[idd])
+		ScheduleEventBZ(cn, tEvent);
+	    }
+	}
+    }
+  else if (idB < ATOM_LIMIT + 2*NDIM)
+    {
+      /* calc destination cell cn here*/
+      idd = cn+1;
+      if (is_border_zone_cell(cn))
+	{
+	  if (tEvent < treeTimeBZ[idd])
+	    ScheduleEventBZ(cn, tEvent);
+	}
     }
 }
 #endif
