@@ -41,7 +41,8 @@ unsigned long long int calc_cellnum(int ix, int iy, int iz)
   ixl = ix;
   iyl = iy;
   izl = iz;
-
+  if (dd_inCell[ix][iy][iz] != -1)
+    return dd_inCell[ix][iy][iz];
   /* se n_bits(i) è il numero massimo di bits dell'unsigned int i
      allora di seguito si valuta max{n_bits(ix),n_bits(iy), n_bits(iz)}*/
   for (k=0; k < maxk; k++)
@@ -64,6 +65,7 @@ unsigned long long int calc_cellnum(int ix, int iy, int iz)
       res |= (bitz << (2*k+2)) | (bity << (2*k+1)) | (bitx << (2*k)); 
       im = im << 1;
     }
+  dd_inCell[ix][iy][iz] = res;
   return res;
 }
 int cellToRegion(unsigned long long int cell)
@@ -77,8 +79,16 @@ int cellToRegion(unsigned long long int cell)
     }
 }
 void rollback_init(void);
-int *border_cells_head, *border_cells_ll;
+int *border_cells_head, *border_cells_ll, *dd_inCell;
+int *neigh_regions_of_cell_list_head, *neigh_regions_of_cell_list;
 enum {DD_REAL=0, DD_BORDER_ZONE, DD_VIRTUAL};
+void calc_dd_inCell(int i, int ix, int iy, int iz)
+{
+  /* questa funzione va chiamata ogni volta che si costruiscono
+     le linked cell list ed ogni volta che viene processato un 
+     evento di cell-crossing */
+  dd_inCell[i] = calc_cellnum(ix, iy, iz);
+}  
 void dd_init(void)
 {
   /* queste dichiarazioni vanno poi rese globali */
@@ -100,9 +110,13 @@ void dd_init(void)
      tramite interleaving dei bit (vedi Sec. 3.1 S. Miller and S. Luding J. Comput. Phys. 193, 
      306-316 (2003) */
   regionsArr = malloc(sizeof(int)*dd_numreg);
+  /* dd_inCell contiene la cella associata ad ogni particella (calcolata tramite interleaving come 
+     spiegato da Luding and Miller, J. Comp. Phys. 2003) */
+  dd_inCell = malloc(sizeof(int)*Oparams.parnum);
 
   border_cells_head = malloc(sizeof(int)*dd_numreg);
   border_cells_ll = malloc(sizeof(int)*cellsx*cellsy*cellsz);
+
   /* le regioni sono in generale dei parallelepipedi contenenti un numero intero 
      di celle ed individuati da 6 numeri (x1,x2), (y1,y2), (z1,z2) ossia x1i e x2i, all'inizio
      i parallelepipedi vengono scelti tutti uguali (a parte gli ultimi se il numero di regioni
@@ -831,37 +845,6 @@ void schedule_border_zone_event(int idA, int idB, double tEvent, unsigned int de
 	}
     }
 }
-void send_message(void)
-{
-
-
-}
-void receive_message(void)
-{
-#ifdef MPI
-  MPI_Receive();
-#endif
-}
-
-void send_min_cell_time(void)
-{
-
-
-
-
-}
-void reply_to_celltime_request(void)
-{
-
-
-}
-void receive_min_cell_time(void)
-{
-#ifdef MPI
-  MPI_Receive(MPI_COMM_WORLD,);
-#endif
-}
-
 void send_celltime_request_to_region(int regnum, int cellnum, double tEvent)
 {
 #ifdef MPI
@@ -869,7 +852,17 @@ void send_celltime_request_to_region(int regnum, int cellnum, double tEvent)
   MPI_Isend(MPI_COMM_WORLD);
 #endif
 }
-double request_cell_times(unsigned int cellnum, double tEvent)
+unsigned int num_stored_replies;
+struct struct_strep {
+  double t_replied; 
+  double t_received;
+} stored_replies[26];
+void store_adj_min_time(int p, double trep, double trec)
+{
+  stored_replies[p].t_replied=trep;
+  stored_replies[p].t_received=trec;
+}
+double request_cell_time(unsigned int cellnum, double tEvent)
 {
   unsigned int ix, iy, iz, c, oldc;
   int ixp, iyp, izp, isvbordercell, dx, dy, dz;
@@ -954,18 +947,21 @@ double request_cell_times(unsigned int cellnum, double tEvent)
   for (r=0; r < max_neigh_regions; r++)
     send_celltime_request_to_region(all_neighregions[r], -1, 0.0); /* -1 means: "no more messages" from me */
   completed = 0;
+  num_stored_replies = 0;
   do
     {
 #ifdef MPI
       /* receive all pending messages (requests of cell times)*/
       MPI_Receive(MPI_COMM_WORLD);
 #endif
-      if (cellnum != -1)
+      if (cellnum_star != -1)
 	{
 	  /* memorizza tutti i reply alla query del tempo minimo nelle celle adiacenti
-	     cellnum */
+	     cellnum (notare che memorizza anche il tempo minimo inviato dal processo richiedente
+	     cellnum_star_min_time poiche' questo tempo servirà poi per stabilire se e' necessario
+	     un rollback (vedi articolo Comp. Phys. Comm.,I. Marin (1997)) */
 	  adj_min_time = check_adjacent_cells(cellnum_star);
-	  store_adj_min_time(adj_min_time);
+	  store_adj_min_time(num_stored_replies++, adj_min_time, cellnum_star_min_time);
 #ifdef MPI
     	  MPI_Isend(MPI_COMM_WORLD); /* send adj_min_time */
 #endif
@@ -983,8 +979,9 @@ double request_cell_times(unsigned int cellnum, double tEvent)
       if (adj_min_time < min_time)
 	min_time = adj_min_time;
     } 
+  return min_time;
 }
-void dd_calc_superstep(void)
+double dd_calc_tstep(void)
 {
 #if 0
 #ifdef MPI
@@ -993,27 +990,31 @@ void dd_calc_superstep(void)
 #endif
 #endif
   NextEventBZ();
-  request_cell_time(evCellBZ, evTimeBZ);
-
+  return request_cell_time(evCellBZ, evTimeBZ);
 }
-void send_vparticles_to_region(int regnum)
+void send_vparticle_to_region(int i)
 {
-
-
-
+  unsigned int cn, r; 
+  /* i is the index of particle to send to process regnum */
+  
+  if (is_border_zone_cell[cn=dd_inCell[i]])
+    {
+      /* send particle state to neighboring processes */
+      r = neigh_regions_of_cell_list_head[cn];
+      while (r!=-1)
+	{
+	  MPI_Isend(MPI_COMM_WORLD); /* send message to neighboring region r */
+	  r = neigh_regions_of_cell_list[r];
+	}    
+    }
 }
-void receive_vparticles(void)
+void receive_vparticle(void)
 {
 
 
 
 } 
 void dd_syncronize(void)
-{
-
-
-}
-void dd_collect_particles(void)
 {
 
 
