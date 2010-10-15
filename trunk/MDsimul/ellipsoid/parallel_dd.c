@@ -599,6 +599,26 @@ void rollback_load(void)
   accngB = accngB_rb;
 }
 /* ===== >>>> border zone <<< ===== */
+/* max_neigh_regions contiene il numero di neighboring regions, mentre 
+   l'array all_neighregions contiene tutte le "max_neigh_regions" neighboring regions */
+int max_neigh_regions=0; 
+int all_neighregions[26];
+void add_to_neigh_regions_arr(int reg)
+{
+  int r, isnew=1;
+ 
+  for (r = 0; r < max_neigh_regions; r++)
+    {
+      if (reg == all_neighregions[r])
+      {
+	isnew=0;
+      }
+    }
+  if (isnew)
+    {
+      all_neighregions[max_neigh_regions++] = reg;
+    }
+}
 void build_border_zone_list(int regnum)
 {
   unsigned int ix, iy, iz, c, inicell, oldc;
@@ -652,6 +672,7 @@ void build_border_zone_list(int regnum)
 	  if (inRegion[nc] != numreg)
 	    {
 	      isbordercell = 1;
+	      add_to_neigh_regions_arr(inRegion[nc]);
 	      break;
 	    }
 	}	
@@ -810,6 +831,17 @@ void schedule_border_zone_event(int idA, int idB, double tEvent, unsigned int de
 	}
     }
 }
+void send_message(void)
+{
+
+
+}
+void receive_message(void)
+{
+#ifdef MPI
+  MPI_Receive();
+#endif
+}
 
 void send_min_cell_time(void)
 {
@@ -818,24 +850,35 @@ void send_min_cell_time(void)
 
 
 }
+void reply_to_celltime_request(void)
+{
+
+
+}
 void receive_min_cell_time(void)
 {
-
-
-
+#ifdef MPI
+  MPI_Receive(MPI_COMM_WORLD,);
+#endif
 }
+
 void send_celltime_request_to_region(int regnum, int cellnum, double tEvent)
 {
-
-
+#ifdef MPI
+  /* non-blocking send for request */
+  MPI_Isend(MPI_COMM_WORLD);
+#endif
 }
-void request_cell_times(unsigned int cellnum, double tEvent)
+double request_cell_times(unsigned int cellnum, double tEvent)
 {
   unsigned int ix, iy, iz, c, oldc;
   int ixp, iyp, izp, isvbordercell, dx, dy, dz;
   unsigned long long int nc;
-  int cellRangeT[2 * NDIM], k;
-  
+  int cellRangeT[2 * NDIM], k, newregion, completed=0;
+  unsigned int neighregions[26], cr, r, numregions=0, cellnum_star;
+  double min_time, cellnum_star_time, adj_min_time;
+
+  min_time = tEvent;
   /* request lesser cell time for neighboring cells of cellnum in region regnum */
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
   calc_xyz(cellnum, &ix, &iy, &iz);
@@ -883,14 +926,63 @@ void request_cell_times(unsigned int cellnum, double tEvent)
 		}
 	      nc = calc_cellnum(ixp, iyp, izp); 
 	      /* if not current process */
-	      if (inRegion[nc]!=my_rank)
+	      if ((cr=inRegion[nc])!=my_rank)
 		{
-		  send_celltime_request_to_region(cellnum, tEvent)
+		  /* build a list of all neighboring processes */
+		  newregion = 1;
+		  for (r=0; r < numregions; r++)
+		    {
+		      if (cr == neighregions[r])
+			{
+			  newregion=0;
+			  break;
+			}
+		    }
+		  if (newregion)
+		    {
+		      neighregions[numregions++] = cr;
+		    }
 		}
 	    }
 	}
     }
+  /* send requests to all neighboring processes */
+  for (r = 0; r < numregions; r++)
+    send_celltime_request_to_region(neighregions[r], cellnum, tEvent);
+  /* each process send a non-blocking broadcast message to all neighboring processes to tell them 
+     that there no more mesages to process */
+  for (r=0; r < max_neigh_regions; r++)
+    send_celltime_request_to_region(all_neighregions[r], -1, 0.0); /* -1 means: "no more messages" from me */
+  completed = 0;
+  do
+    {
+#ifdef MPI
+      /* receive all pending messages (requests of cell times)*/
+      MPI_Receive(MPI_COMM_WORLD);
+#endif
+      if (cellnum != -1)
+	{
+	  /* memorizza tutti i reply alla query del tempo minimo nelle celle adiacenti
+	     cellnum */
+	  adj_min_time = check_adjacent_cells(cellnum_star);
+	  store_adj_min_time(adj_min_time);
+#ifdef MPI
+    	  MPI_Isend(MPI_COMM_WORLD); /* send adj_min_time */
+#endif
+	}
+      else
+	completed++;
+    }
+  while (completed==max_neigh_regions);
 
+  for (r = 0; r < numregions; r++)
+    {
+#ifdef MPI
+      MPI_Receive(MPI_COMM_WORLD);
+#endif
+      if (adj_min_time < min_time)
+	min_time = adj_min_time;
+    } 
 }
 void dd_calc_superstep(void)
 {
