@@ -30,7 +30,7 @@ void calc_xyz(unsigned long long int cellnum, unsigned int *ix, unsigned int *iy
   *iy = ni[1];
   *iz = ni[2];
 }
-unsigned long long int calc_cellnum(int ix, int iy, int iz)
+inline unsigned long long int calc_cellnum(int ix, int iy, int iz)
 {
   /* N.B. interleaving cells coordinates in binary represantion a unique cell  
      number can be calculated (see Miller and Luding J. Comp. Phys. 2003) */
@@ -41,8 +41,9 @@ unsigned long long int calc_cellnum(int ix, int iy, int iz)
   ixl = ix;
   iyl = iy;
   izl = iz;
-  if (dd_inCell[ix][iy][iz] != -1)
-    return dd_inCell[ix][iy][iz];
+  idx = ix*cellsy*cellsz + iy*cellsz + iz;
+  if (dd_inCell[idx] != -1)
+    return dd_inCell[idx];
   /* se n_bits(i) è il numero massimo di bits dell'unsigned int i
      allora di seguito si valuta max{n_bits(ix),n_bits(iy), n_bits(iz)}*/
   for (k=0; k < maxk; k++)
@@ -65,7 +66,7 @@ unsigned long long int calc_cellnum(int ix, int iy, int iz)
       res |= (bitz << (2*k+2)) | (bity << (2*k+1)) | (bitx << (2*k)); 
       im = im << 1;
     }
-  dd_inCell[ix][iy][iz] = res;
+  dd_inCell[idx] = res;
   return res;
 }
 int cellToRegion(unsigned long long int cell)
@@ -79,16 +80,11 @@ int cellToRegion(unsigned long long int cell)
     }
 }
 void rollback_init(void);
-int *border_cells_head, *border_cells_ll, *dd_inCell;
+int *border_cells_head, *border_cells_ll;
+int *dd_inCell;
 int *neigh_regions_of_cell_list_head, *neigh_regions_of_cell_list;
 enum {DD_REAL=0, DD_BORDER_ZONE, DD_VIRTUAL};
-void calc_dd_inCell(int i, int ix, int iy, int iz)
-{
-  /* questa funzione va chiamata ogni volta che si costruiscono
-     le linked cell list ed ogni volta che viene processato un 
-     evento di cell-crossing */
-  dd_inCell[i] = calc_cellnum(ix, iy, iz);
-}  
+
 void dd_init(void)
 {
   /* queste dichiarazioni vanno poi rese globali */
@@ -110,10 +106,14 @@ void dd_init(void)
      tramite interleaving dei bit (vedi Sec. 3.1 S. Miller and S. Luding J. Comput. Phys. 193, 
      306-316 (2003) */
   regionsArr = malloc(sizeof(int)*dd_numreg);
-  /* dd_inCell contiene la cella associata ad ogni particella (calcolata tramite interleaving come 
+  /* dd_inCell contiene l'indice di cella calcolato tramite interleaving (come 
      spiegato da Luding and Miller, J. Comp. Phys. 2003) */
-  dd_inCell = malloc(sizeof(int)*Oparams.parnum);
-
+  dd_inCell =   malloc(sizeof(int)*cellsx*cellsy*cellsz);
+  for (i=0; i < cellsx*cellsy*cellsz; i++)
+    dd_inCell[i] = -1;
+  part_to_send = malloc(sizeof(int)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    part_to_send[i] = 0;
   border_cells_head = malloc(sizeof(int)*dd_numreg);
   border_cells_ll = malloc(sizeof(int)*cellsx*cellsy*cellsz);
 
@@ -992,21 +992,29 @@ double dd_calc_tstep(void)
   NextEventBZ();
   return request_cell_time(evCellBZ, evTimeBZ);
 }
-void send_vparticle_to_region(int i)
+void bz_particle_to_send(int i)
 {
   unsigned int cn, r; 
-  /* i is the index of particle to send to process regnum */
+  /* i is the index of particle to send to process regnum,
+     set all BZ particles to send at the end of parallel phase. */
   
-  if (is_border_zone_cell[cn=dd_inCell[i]])
+  if (is_border_zone_cell[cn=calc_cellnum(inCell[0][i],inCell[1][i],inCell[2][i])])
     {
       /* send particle state to neighboring processes */
       r = neigh_regions_of_cell_list_head[cn];
       while (r!=-1)
 	{
-	  MPI_Isend(MPI_COMM_WORLD); /* send message to neighboring region r */
+	  part_to_send[i] = 1;
 	  r = neigh_regions_of_cell_list[r];
 	}    
     }
+}
+void send_bz_particles(void)
+{
+  /* send all border zones particles updated during parallel phase 
+     (use a unique mpi call for optimizing this stage) */
+
+
 }
 void receive_vparticle(void)
 {
