@@ -508,7 +508,7 @@ struct params
 /* ======================== >>> params instance <<< ========================
    MAIN is a macro defined only in mdsimul.c, so there we put the instance
    of the object, and elsewhere we put only extern declarations */
-#ifndef MAIN
+#ifdef MAIN
 struct params Oparams;
 #else
 extern struct params Oparams;

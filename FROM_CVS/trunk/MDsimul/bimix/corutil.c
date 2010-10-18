@@ -1,5 +1,4 @@
 #include<mdsimul.h>
-
 /* GLOBAL VARIABLES */
 char outFile[NAME_LENGTH];  /* output file (ascii file) name */
 char inputFile[NAME_LENGTH];/* input file (measures file) */
