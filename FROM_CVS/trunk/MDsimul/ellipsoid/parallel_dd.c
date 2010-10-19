@@ -1136,23 +1136,44 @@ void send_bz_particles(void)
       MPI_Isend(MPI_COMM_WORLD);
     }
 }
-
+void process_causality_error(void)
+{
+  do_rollback();
+}
+int causality_error = 0;
+void update_particles_state(void)
+{
+  int i;
+  for (i=0; i < numOfParticlesReceived; i++)
+    {
+      updateParticleState(i);
+      if (check_causality_error_for_particle(i))
+	{
+	  causality_error=1;
+	}
+    }
+}
 void receive_vparticle(void)
 {
   int completed = 0;
+  causality_error = 0;
   do
     {
 #ifdef MPI
       MPI_Receive(MPI_COMM_WORLD);
 #endif
+      update_particles_state();
       if (i==-1)
 	completed++;
     }
   while (completed < 26); /* se la particella è -1 vuol dire che i messaggi sono finiti */
+  if (causality_error)
+    process_causality_error();
 } 
 void dd_syncronize(void)
 {
-
-
+#ifdef MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
 #endif
