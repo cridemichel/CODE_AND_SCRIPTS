@@ -643,6 +643,10 @@ void NextEvent (void)
   while (treeLeft[idNow] > -1) 
     idNow = treeLeft[idNow];
   Oparams.time = treeTime[idNow];   
+#ifdef ED_PARALL_DD
+  if (check_tstep(Oparams.time))
+    return;
+#endif
   rxC = treeRxC[idNow];
   ryC = treeRyC[idNow];
   rzC = treeRzC[idNow];
