@@ -2,6 +2,8 @@
 #ifdef ED_PARALL_DD
 /* ==== >>> routines to initialize structures <<< ==== */
 extern int cellsx, cellsy, cellsz;
+int *part_to_send_per_region[26], part_to_send_per_region_head;
+int **neigh_processes_per_cell, neigh_processes_per_cell_head[26];
 void calc_xyz(unsigned long long int cellnum, unsigned int *ix, unsigned int *iy, unsigned int *iz) 
 {
   /* è la funzione inversa di calc_cellnum(...) */
@@ -84,7 +86,7 @@ int *border_cells_head, *border_cells_ll;
 int *dd_inCell;
 int *neigh_regions_of_cell_list_head, *neigh_regions_of_cell_list;
 enum {DD_REAL=0, DD_BORDER_ZONE, DD_VIRTUAL};
-
+int num_part_to_send, head_part_to_send;
 void dd_init(void)
 {
   /* queste dichiarazioni vanno poi rese globali */
@@ -111,9 +113,9 @@ void dd_init(void)
   dd_inCell =   malloc(sizeof(int)*cellsx*cellsy*cellsz);
   for (i=0; i < cellsx*cellsy*cellsz; i++)
     dd_inCell[i] = -1;
-  part_to_send = malloc(sizeof(int)*Oparams.parnum);
-  for (i=0; i < Oparams.parnum; i++)
-    part_to_send[i] = 0;
+  part_to_send = malloc(sizeof(int)*(Oparams.parnum+1));
+  num_part_to_send= 0;
+  head_part_to_send = -1;
   border_cells_head = malloc(sizeof(int)*dd_numreg);
   border_cells_ll = malloc(sizeof(int)*cellsx*cellsy*cellsz);
 
@@ -143,7 +145,20 @@ void dd_init(void)
 	  inRegion[cellnum] = cellToRegion(cellnum);
 	  cell_type[cellnum] = DD_REAL;
 	}
+  for (k=0; k < 26; k++)
+    {
+      part_to_send_per_region[k] = malloc(sizeof(int)*Oparams.parnum);
+      part_to_send_per_region_head[k] = -1;
+    }
   rollback_init();
+  neigh_processes_per_cell_head = malloc(sizeof(int)*cellsx*cellsy*cellsz);
+  neigh_processes_per_cell = malloc(sizeof(int*)*cellsx*cellsy*cellsz);   
+  for (k=0; k < cellsx*cellsy*cellsz; k++)
+    {
+      neigh_processes_per_cell[k] = malloc(sizeof(int)*26);
+      neigh_processes_per_cell_head[k] = -1;
+    }
+  inv_all_neighregions = malloc(sizeof(int)*numOfProcs);
 }
 
 /* ==== >>> rollback <<< ==== */
@@ -617,6 +632,7 @@ void rollback_load(void)
    l'array all_neighregions contiene tutte le "max_neigh_regions" neighboring regions */
 int max_neigh_regions=0; 
 int all_neighregions[26];
+int *inv_all_neighregions;
 void add_to_neigh_regions_arr(int reg)
 {
   int r, isnew=1;
@@ -631,8 +647,76 @@ void add_to_neigh_regions_arr(int reg)
   if (isnew)
     {
       all_neighregions[max_neigh_regions++] = reg;
+      /*questa di seguito è la funzione inversa */
+      inv_all_neighregions[reg] = max_neigh_regions;
     }
 }
+
+void build_neigh_processes_list_of_cell(int ix, int iy, int iz, int numreg)
+{
+  unsigned int cn, k;
+  int cellRangeT[2 * NDIM], doneReg[26];
+  for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+  for (k = 0; k < 26; kèè)
+   doneReg[k] = 0; 
+#ifdef MD_EDHEFLEX_WALL
+  if (OprogStatus.hardwall)
+    {
+      if (iz + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+      if (iz + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+    }
+#endif
+
+  cn = calc_cellnum(ix,iy,iz);
+  /* check 26 neighbour cells */
+  for (dz = cellRangeT[4]; dz <= cellRangeT[5]; dz++) 
+    {
+      izp = iz + dz;  
+      if (izp == -1) 
+	{
+	  izp = cellsz - 1;    
+	} 
+      else if (izp == cellsz) 
+	{
+	  izp = 0;    
+	}
+      for (dy = cellRangeT[2]; dy <= cellRangeT[3]; dy++) 
+	{
+	  iyp = iy + dy;    
+	  if (iyp == -1) 
+	    {
+	      iyp = cellsy - 1;    
+	    } 
+	  else if (iyp == cellsy) 
+	    {
+	      iyp = 0;    
+	    }
+	  for (dx = cellRangeT[0]; dx <= cellRangeT[1]; dx++) 
+	    {
+	      ixp = ix + dx;    
+
+	      if (ixp == -1) 
+		{
+		  ixp = cellsx - 1;    
+		} 
+	      else if (ixp == cellsx) 
+		{
+		  ixp = 0;   
+		}
+	      nc = calc_cellnum(ixp, iyp, izp); 
+	      nr = inRegion[nc]
+	      if (!doneReg[inv_all_neighregions[nr]])
+		{
+		  doneReg[inv_all_neighregions[nr]] = 1;
+		  /* all_inv_neighregions[] associa alle regioni vicine un numero tra 0 e max_neighregions */
+		  neigh_processes_per_cell[cn][inv_all_neighregions[nr]] = neigh_processes_per_cell_head[cn];
+		  neigh_processes_per_cell_head[cn] = inv_all_neighregions[nr];
+		}	      
+	    }
+	}
+    }
+}
+
 void build_border_zone_list(int regnum)
 {
   unsigned int ix, iy, iz, c, inicell, oldc;
@@ -687,6 +771,7 @@ void build_border_zone_list(int regnum)
 	    {
 	      isbordercell = 1;
 	      add_to_neigh_regions_arr(inRegion[nc]);
+	      build_neigh_processes_list_of_cell(ix, iy, iz, inRegion[nc]);
 	      break;
 	    }
 	}	
@@ -809,9 +894,9 @@ void schedule_border_zone_event(int idA, int idB, double tEvent, unsigned int de
  
   if (idB < ATOM_LIMIT) /* urto fra due particelle */
     {
-      ix = inCell[idd][0];
-      iy = inCell[idd][1];
-      iz = inCell[idd][2];
+      ix = inCell[0][idd];
+      iy = inCell[1][idd];
+      iz = inCell[2][idd];
       cn = calc_cellnum(ix, iy, iz);
       idd = cn+1;
 
@@ -822,9 +907,9 @@ void schedule_border_zone_event(int idA, int idB, double tEvent, unsigned int de
 	}
       else
        	{
-    	  ix = inCell[idd][0];
-	  iy = inCell[idd][1];
-	  iz = inCell[idd][2];
+    	  ix = inCell[0][idd];
+	  iy = inCell[1][idd];
+	  iz = inCell[2][idd];
 	  cn = calc_cellnum(ix, iy, iz);
 	  idd = cn+1;
 	  if (is_border_zone_cell(cn))
@@ -857,11 +942,13 @@ struct struct_strep {
   double t_replied; 
   double t_received;
 } stored_replies[26];
+
 void store_adj_min_time(int p, double trep, double trec)
 {
   stored_replies[p].t_replied=trep;
   stored_replies[p].t_received=trec;
 }
+
 double request_cell_time(unsigned int cellnum, double tEvent)
 {
   unsigned int ix, iy, iz, c, oldc;
@@ -1000,27 +1087,68 @@ void bz_particle_to_send(int i)
   
   if (is_border_zone_cell[cn=calc_cellnum(inCell[0][i],inCell[1][i],inCell[2][i])])
     {
-      /* send particle state to neighboring processes */
-      r = neigh_regions_of_cell_list_head[cn];
-      while (r!=-1)
-	{
-	  part_to_send[i] = 1;
-	  r = neigh_regions_of_cell_list[r];
-	}    
+      /* update linked list of particles to send */
+      part_to_send[i] = head_part_to_send; 
+      head_part_to_send = i;
+      num_part_to_send++;
     }
 }
 void send_bz_particles(void)
 {
+  int i, k;
+  unsigned int cn, p;
+
   /* send all border zones particles updated during parallel phase 
      (use a unique mpi call for optimizing this stage) */
-
-
+  i = part_to_send_head;
+  while (i!=-1)
+    {
+      /* part_to_send_per_region_head[k] indica la prima particella della linked list da mandara
+	 alla regione k */
+      cn = calc_cellnum(inCell[0][i], inCell[1][i], inCell[2][i]);
+      /* notare che p è un numero compreso tra 0 e max_neighregions */
+      p = neigh_processes_per_cell_head[cn];
+      while (p != -1)
+	{
+	  part_to_send_per_region[p][i] = part_to_send_per_region_head[p];
+	  part_to_send_per_region_head[p] = i;
+	  p = neigh_processes_per_cell[cn][p];
+	}
+      i = part_to_send[i];
+    }
+  for (p = 0; p < max_neighregions; p++)
+    {
+      i = part_to_send_per_region_head[p];
+      while (i!=-1)
+	{
+	  add_part_to_mpi_buffer(i);
+	  i = part_to_send_per_region[p][i];
+	}
+#ifdef MPI
+      /* send particles to process all_neighregions[p] */
+      MPI_Isend(MPI_COMM_WORLD);
+#endif
+    }
+  for (p = 0; p < 26; p++)
+    {
+      /* send a message to all neighbors processes with number of particle = -1
+	 meaning "end of messages" */
+      MPI_Isend(MPI_COMM_WORLD);
+    }
 }
+
 void receive_vparticle(void)
 {
-
-
-
+  int completed = 0;
+  do
+    {
+#ifdef MPI
+      MPI_Receive(MPI_COMM_WORLD);
+#endif
+      if (i==-1)
+	completed++;
+    }
+  while (completed < 26); /* se la particella è -1 vuol dire che i messaggi sono finiti */
 } 
 void dd_syncronize(void)
 {
