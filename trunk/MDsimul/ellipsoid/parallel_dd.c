@@ -1136,11 +1136,28 @@ void send_bz_particles(void)
       MPI_Isend(MPI_COMM_WORLD);
     }
 }
+double do_rollback(void)
+{
+
+
+}
+void schedule_syncronization(double t)
+{
+
+}
+
 void process_causality_error(void)
 {
-  do_rollback();
+  double t;
+  t = do_rollback();
+  schedule_syncronization(t);
 }
 int causality_error = 0;
+void updateParticleState(int i)
+{
+
+
+}
 void update_particles_state(void)
 {
   int i;
@@ -1153,7 +1170,7 @@ void update_particles_state(void)
 	}
     }
 }
-void receive_vparticle(void)
+void receive_vparticles(void)
 {
   int completed = 0;
   causality_error = 0;
@@ -1167,9 +1184,21 @@ void receive_vparticle(void)
 	completed++;
     }
   while (completed < 26); /* se la particella è -1 vuol dire che i messaggi sono finiti */
-  if (causality_error)
-    process_causality_error();
+  
 } 
+void check_tstep(double t)
+{
+  if (t >= dd_tstep)
+    {
+      /* end of parallel phase */
+      send_bz_particles();
+      receive_vparticles();
+      check_causality_error_bzevents();
+      if (causality_error)
+	process_causality_error();
+    }
+
+}
 void dd_syncronize(void)
 {
 #ifdef MPI
