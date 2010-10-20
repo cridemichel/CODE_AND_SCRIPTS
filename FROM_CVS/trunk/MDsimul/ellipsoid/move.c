@@ -10771,6 +10771,9 @@ void move(void)
 	}
       else if (evIdB == ATOM_LIMIT + 8)
 	{
+#ifdef ED_PARALL_DD
+	  dd_syncronize();
+#endif
 	  sprintf(fileop2 ,"Store-%d-%d", 
       		  OprogStatus.KK, OprogStatus.JJ);
 	  /* store conf */
@@ -11057,10 +11060,22 @@ void move(void)
 	  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 	  break;
 	}
+#ifdef ED_PARALL_DD
+     else if (evIdB = ATOM_LIMIT + 20)
+       {
+	 /* syncronization event */
+#ifdef MPI
+	 dd_syncronize();
+#endif
+       }
+#endif
 #ifdef MD_BIG_DT
       else if (evIdB == ATOM_LIMIT + 11)
 	{
 	  //UpdateSystem();
+#ifdef ED_PARALL_DD
+	  dd_syncronize();
+#endif
 #ifndef MD_CALENDAR_HYBRID
 	  timeshift_calendar();
 #else
