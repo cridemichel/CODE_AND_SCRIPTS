@@ -453,8 +453,8 @@ void CreatePartialSuperEllipse(double power1,double power2, double a, double b, 
    for (j=0;j<n1/2;j++) {
       if (!(j >= n1beg && j < n1end))
 	continue;
-      theta1 = j * TWOPI / (double)n1 - PID2;
-      theta2 = (j+1) * TWOPI / (double)n1 - PID2;
+      theta1 = (j+1) * TWOPI / (double)n1 - PID2;
+      theta2 = j * TWOPI / (double)n1 - PID2;
       if (method==2)
 	glBegin(GL_TRIANGLE_FAN);
       else if (method == 0)
@@ -522,8 +522,8 @@ void CreateSuperEllipse(double power1,double power2, double a, double b, double 
    delta1 = 1E-6*TWOPI / (double)n1;
    delta2 =  1E-6*TWOPI / (double)n2;
    for (j=0;j<n1/2;j++) {
-      theta1 = j * TWOPI / (double)n1 - PID2;
-      theta2 = (j+1) * TWOPI / (double)n1 - PID2;
+      theta1 = (j+1) * TWOPI / (double)n1 - PID2;
+      theta2 = j * TWOPI / (double)n1 - PID2;
       if (method==2)
 	glBegin(GL_TRIANGLE_FAN);
       else if (method == 0)
@@ -3048,7 +3048,7 @@ int main(int argc, char** argv)
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowPosition(100, 100);
   glutInitWindowSize(globset.Width,globset.Height);
-  glutCreateWindow("MOLGL by Cristiano De Michele (C) 1998-2006");
+  glutCreateWindow("MOLGL by Cristiano De Michele (C) 1998-2010");
   myinit();
   loadAtomPos();
 #ifdef MGL_USELIST
