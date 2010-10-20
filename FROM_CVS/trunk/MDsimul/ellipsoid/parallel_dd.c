@@ -5,6 +5,7 @@ extern int cellsx, cellsy, cellsz;
 int *part_to_send_per_region[26], part_to_send_per_region_head;
 int **neigh_processes_per_cell, neigh_processes_per_cell_head[26];
 double dd_tstep;
+int *causality_error_arr, causality_error=0;
 void calc_xyz(unsigned long long int cellnum, unsigned int *ix, unsigned int *iy, unsigned int *iz) 
 {
   /* è la funzione inversa di calc_cellnum(...) */
@@ -1143,7 +1144,6 @@ void broadcast_causality_error(void)
 }
 double do_rollback(void)
 {
-  broadcast_causality_error();
   rollback_load();
 }
 void schedule_syncronization(double t)
@@ -1156,7 +1156,6 @@ void process_causality_error(double t)
   do_rollback();
   schedule_syncronization(t);
 }
-int causality_error = 0;
 void dd_updateCalendar(int i)
 {
   if (OprogStatus.useNNL)
@@ -1184,14 +1183,14 @@ void dd_update_particles_state(void)
       dd_updateCalendar(i);
       if (check_causality_error_for_particle(i))
 	{
-	  causality_error=1;
+	  causality_error_arr[my_rank]=1;
 	}
     }
 }
 void receive_vparticles(void)
 {
   int completed = 0;
-  causality_error = 0;
+  causality_error_arr[my_rank] = 0;
   do
     {
 #ifdef MPI
@@ -1204,20 +1203,45 @@ void receive_vparticles(void)
   while (completed < 26); /* se la particella è -1 vuol dire che i messaggi sono finiti */
   
 } 
+void check_causality_error_messages(void)
+{ 
+  int p;
+  for (p=0; p < numOfProcess; p++)
+    {
+      if (causality_error_arr[p])
+	causality_error=1;
+    }
+  if (causality_error)
+    {
+      /* causality_error_processed serve per evitare che in caso
+	 di errori causali multipli tali errori vengano processati più volte
+	 da uno stesso processore */
+      dd_syncronize();
+      process_causality_error();
+      causality_error_processed=1;
+    }
+}
+void check_causality_error_bzevents(void)
+{
+  if (error_detected)
+    causality_error_arr[my_rank]=1;
+  else
+    causality_error_arr[my_rank]=0;
+}
 void check_tstep(double t)
 {
+  causality_error_arr[my_rank] = 0;
   if (t >= dd_tstep)
     {
       /* end of parallel phase */
       send_bz_particles();
       receive_vparticles();
+      /* la funzione check_causality_error_bzevents() setta la variabile globale causality_error */
       check_causality_error_bzevents();
-      if (causality_error)
-	{
-	  causality_error=0;
-	  process_causality_error();
-	}
-      check_causality_error_message();
+#ifdef MPI
+      MPI_Allgather(MPI_COMM_WORLD, causality_error_arr);
+#endif
+      check_causality_error_messages();
     }
 
 }
