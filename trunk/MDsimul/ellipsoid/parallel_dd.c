@@ -4,6 +4,7 @@
 extern int cellsx, cellsy, cellsz;
 int *part_to_send_per_region[26], part_to_send_per_region_head;
 int **neigh_processes_per_cell, neigh_processes_per_cell_head[26];
+double dd_tstep;
 void calc_xyz(unsigned long long int cellnum, unsigned int *ix, unsigned int *iy, unsigned int *iz) 
 {
   /* è la funzione inversa di calc_cellnum(...) */
@@ -1136,34 +1137,51 @@ void send_bz_particles(void)
       MPI_Isend(MPI_COMM_WORLD);
     }
 }
-double do_rollback(void)
+void broadcast_causality_error(void)
 {
 
-
+}
+double do_rollback(void)
+{
+  broadcast_causality_error();
+  rollback_load();
 }
 void schedule_syncronization(double t)
 {
-
+  ScheduleEvent(-1, ATOM_LIMIT+20, t);
 }
 
-void process_causality_error(void)
+void process_causality_error(double t)
 {
-  double t;
-  t = do_rollback();
+  do_rollback();
   schedule_syncronization(t);
 }
 int causality_error = 0;
-void updateParticleState(int i)
+void dd_updateCalendar(int i)
+{
+  if (OprogStatus.useNNL)
+    {
+      /* ricalcola i tempi di collisione con la NL */
+      updrebuildNNL(i);
+      PredictEventNNL(i, -1);
+    }
+  else
+    {
+      PredictEvent(i, -1);
+    }
+}
+void dd_updateParticleState(int i)
 {
 
 
 }
-void update_particles_state(void)
+void dd_update_particles_state(void)
 {
   int i;
   for (i=0; i < numOfParticlesReceived; i++)
     {
-      updateParticleState(i);
+      dd_updateParticleState(i);
+      dd_updateCalendar(i);
       if (check_causality_error_for_particle(i))
 	{
 	  causality_error=1;
@@ -1195,7 +1213,11 @@ void check_tstep(double t)
       receive_vparticles();
       check_causality_error_bzevents();
       if (causality_error)
-	process_causality_error();
+	{
+	  causality_error=0;
+	  process_causality_error();
+	}
+      check_causality_error_message();
     }
 
 }
@@ -1204,5 +1226,6 @@ void dd_syncronize(void)
 #ifdef MPI
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
+  rollback_save();
 }
 #endif
