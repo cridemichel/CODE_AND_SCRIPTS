@@ -645,7 +645,19 @@ void NextEvent (void)
   Oparams.time = treeTime[idNow];   
 #ifdef ED_PARALL_DD
   if (check_tstep(Oparams.time))
-    return;
+    {
+      /* after check_tstep calendar may be different, hence
+	 reread next event from it */
+#ifdef MD_CALENDAR_HYBRID
+      populatePQ();
+#endif
+      idNow = treeRight[0];  
+      /* Cerca l'evento con tempo minore 
+       * NOTA: l'albero è ordinato e ogni nodo sinistro ha un tempo inferiore */
+      while (treeLeft[idNow] > -1) 
+	idNow = treeLeft[idNow];
+      Oparams.time = treeTime[idNow]; 
+    }
 #endif
   rxC = treeRxC[idNow];
   ryC = treeRyC[idNow];
