@@ -1980,7 +1980,9 @@ void build_mesh(MESHXYZ** mesh, double a, double b, double c)
 	}
     }
 }
+#ifdef MD_GROWTH_CODE
 extern double calc_phi(void);
+#endif
 #ifdef MD_SILICA
 extern void assign_bond_mapping(int i, int j);
 #endif
@@ -2870,7 +2872,9 @@ void usrInitAft(void)
     {
       printf("CONSTANT ENERGY SIMULATION MOLS=%d MOLA=%d\n", Oparams.parnum, Oparams.parnum-Oparams.parnumA);
     }
+#ifdef MD_GROWTH_CODE
   printf("INITIAL PHI=%.15G\n", phiIni=calc_phi());
+#endif
 #ifdef MD_CALENDAR_HYBRID
   /* se scaleHQ == 0 stima automaticamente i parametri 
      se scaleHQ < 0 disabilita il calendario O(1) */
