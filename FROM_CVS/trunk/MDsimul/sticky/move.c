@@ -1346,9 +1346,10 @@ void outputSummary(void)
   if (OprogStatus.checkGrazing)
     check_all_bonds();
   //scale_Phi();
+#ifdef MD_GROWTH_CODE
   if (!ENDSIM)
     scale_Phi();
-
+#endif
 #ifdef MD_GRAVITY
   printf("K= %.15f V=%.15f T=%.15f Vz: %f\n", K, V, 
 	 (2.0*K/(3.0*Oparams.parnum-3.0)), Vz);
