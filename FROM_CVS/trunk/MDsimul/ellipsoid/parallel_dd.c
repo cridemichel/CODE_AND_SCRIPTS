@@ -4,9 +4,15 @@
 extern int cellsx, cellsy, cellsz;
 int *part_to_send_per_region[26], part_to_send_per_region_head;
 int **neigh_processes_per_cell, neigh_processes_per_cell_head[26];
-struct pstate {double x[3]; double v[3]; double inCell[3];} *part_state;
 double dd_tstep;
 int causality_error=0, global_causality_error=0;
+#ifdef MPI
+void mpi_check_status(MPI_Status *status)
+{
+
+
+}
+#endif
 void calc_xyz(unsigned long long int cellnum, unsigned int *ix, unsigned int *iy, unsigned int *iz) 
 {
   /* è la funzione inversa di calc_cellnum(...) */
@@ -92,6 +98,42 @@ enum {DD_REAL=0, DD_BORDER_ZONE, DD_VIRTUAL};
 /* tags for mpi messages */
 enum {MPI_END_OF_MSGS=0, DD_PART_STATE, DD_BZ_EVENT};
 int num_part_to_send, head_part_to_send;
+#ifdef MPI
+MPI_Dataype MPI_PART_STATE;
+struct pstate {int i; double x[3]; double v[3]; int inCell[3];} *part_state;
+const int pstate_fields=4;
+void create_mpi_pstate_datatype(struct pstate *ps)
+{
+  int block_lengths[pstate_fields];
+  MPI_Aint displacements[pstate_fields];
+  MPI_Aint addresses[pstate_fields+1];
+  MPI_Datatype typelist[pstate_fields];
+  typelist[0] = MPI_INT;
+  typelist[1] = MPI_DOUBLE;
+  typelist[2] = MPI_DOUBLE;
+  typelist[3] = MPI_INT;
+  block_lengths[0] = 1;
+  block_lengths[1] = 3;
+  block_lengths[2] = 3;
+  block_lengths[3] = 3;
+  MPI_Address(ps, &adresses[0]);  
+  MPI_Address(&(ps->i),&addresses[1]);
+  MPI_Address(&(ps->x),&addresses[2]);
+  MPI_Address(&(ps->v),&addresses[3]);
+  MPI_Address(&(ps->inCell),&addresses[4]);
+  displacements[0] = addresses[1]-addresses[0];
+  displacements[1] = addresses[2]-addresses[0];
+  displacements[2] = addresses[3]-addresses[0];
+  displacements[3] = addresses[4]-addresses[0]; 
+  MPI_Create_type_struct(pstate_fields, block_lengths, displacements, typelist, &MPI_PART_STATE);
+  MPI_Type_commit(MPI_PART_STATE);	
+} 
+void create_mpi_derived_datatypes(void)
+{
+  struct pstate ps;
+  create_mpi_pstate_datatype(&ps);
+}
+#endif
 void dd_init(void)
 {
   /* queste dichiarazioni vanno poi rese globali */
@@ -107,6 +149,9 @@ void dd_init(void)
       printf("ERROR: less than a cell per region, exiting...!\n");
       exit(-1);
     }
+#ifdef MPI
+  create_mpi_derived_datatypes();
+#endif
   /* inRegion[c] gives region associated to cell c */
   inRegion = malloc(sizeof(int)*cellsx*cellsy*cellsx);
   /* array contenente la fine di ogni regione nella sequenza associata alle celle
@@ -1103,7 +1148,14 @@ int npart_in_buf=0;
 void add_part_to_mpi_buffer(int ipart)
 {
   struct pstate *ps;
+  if (ipart==-1)
+    {
+      ps = &(part_state[npart_in_buf++]);
+      ps->i = -1;
+      return;
+    }
   ps = &(part_state[npart_in_buf++]);
+  ps->i = ipart;
   ps->x[0] = rx[ipart];
   ps->x[1] = ry[ipart];
   ps->x[2] = rz[ipart];
@@ -1117,7 +1169,6 @@ void add_part_to_mpi_buffer(int ipart)
 
 void send_bz_particles(void)
 {
-  char eom = "E";
   int i, k;
   unsigned int cn, p;
 #ifdef MPI
@@ -1150,18 +1201,21 @@ void send_bz_particles(void)
 	  add_part_to_mpi_buffer(i);
 	  i = part_to_send_per_region[p][i];
 	}
+      add_part_to_mpi_buffer(-1); /* to mark end of particles */
 #ifdef MPI
       /* send particles to region (processor) all_neighregions[p] */
-      MPI_Isend(part_state, npart_in_buf, mpi_part_state, 
+      MPI_Isend(part_state, npart_in_buf, MPI_PART_STATE, 
 		all_neighregions[p], DD_PART_STATE, MPI_COMM_WORLD, &request);
 #endif
     }
+#if 0
   for (p = 0; p < 26; p++)
     {
       /* send a message to all neighbors processes with mpi tag=MPI_END_OF_MSGS
 	 meaning "end of messages" */
       MPI_Isend(&eom, 1, MPI_CHAR, all_neighregions[p], MPI_END_OF_MSGS, MPI_COMM_WORLD, &request);
     }
+#endif
 }
 double do_rollback(void)
 {
@@ -1212,14 +1266,18 @@ void receive_vparticles(void)
 {
   int completed = 0;
   causality_error = 0;
+#ifdef MPI
+  MPI_Status status;
+#endif
   do
     {
 #ifdef MPI
-      MPI_Receive(MPI_COMM_WORLD);
+      MPI_Receive(part_state, Oparams.parnum, MPI_PART_STATE, MPI_ANY_SOURCE, MPI_ANY_TAG, 
+		  MPI_COMM_WORLD, &status);
+      mpi_check_status(status);
 #endif
       update_particles_state();
-      if (i==-1)
-	completed++;
+      completed++;
     }
   while (completed < 26); /* se la particella è -1 vuol dire che i messaggi sono finiti */
   
@@ -1246,9 +1304,9 @@ void check_causality_error_messages(void)
 void check_causality_error_bzevents(void)
 {
   if (error_detected)
-    causality_error_arr[my_rank]=1;
+    causality_error=1;
   else
-    causality_error_arr[my_rank]=0;
+    causality_error=0;
 }
 void check_tstep(double t)
 {
