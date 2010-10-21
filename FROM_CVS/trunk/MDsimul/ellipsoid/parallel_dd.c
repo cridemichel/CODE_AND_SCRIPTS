@@ -1244,19 +1244,38 @@ void dd_updateCalendar(int i)
       PredictEvent(i, -1);
     }
 }
-void dd_updateParticleState(int i)
+
+inline int check_causality_error_for_particle(int i)
 {
+  /* verificare se basta questa condizione e se è giusta */
+  if (atomTime[i] < Oparams.time)
+    return 1;
+  else
+    return 0;
+}
 
-
+inline void dd_updateParticleState(int i)
+{ 
+  int ipart, k; 
+  ipart = part_state[i]->i;
+  rx[ipart] = part_state[i].x[0];
+  ry[ipart] = part_state[i].x[1];
+  rz[ipart] = part_state[i].x[2];
+  vx[ipart] = part_state[i].v[0];
+  vy[ipart] = part_state[i].v[1];
+  vz[ipart] = part_state[i].v[2];
+  for (k = 0; k < 3; k++)
+    inCell[k][ipart] = part_state[i].inCell[k];
+  atomTime[ipart] = part_state[i].time;
 }
 void dd_update_particles_state(void)
 {
   int i;
-  for (i=0; i < numOfParticlesReceived; i++)
+  for (i=0; part_state[i].i != -1; i++)
     {
       dd_updateParticleState(i);
-      dd_updateCalendar(i);
-      if (check_causality_error_for_particle(i))
+      dd_updateCalendar(part_state[i].i);
+      if (check_causality_error_for_particle(part_state[i].i))
 	{
 	  causality_error=1;
 	}
@@ -1265,7 +1284,6 @@ void dd_update_particles_state(void)
 void receive_vparticles(void)
 {
   int completed = 0;
-  causality_error = 0;
 #ifdef MPI
   MPI_Status status;
 #endif
@@ -1276,7 +1294,7 @@ void receive_vparticles(void)
 		  MPI_COMM_WORLD, &status);
       mpi_check_status(status);
 #endif
-      update_particles_state();
+      dd_update_particles_state();
       completed++;
     }
   while (completed < 26); /* se la particella è -1 vuol dire che i messaggi sono finiti */
@@ -1303,6 +1321,8 @@ void check_causality_error_messages(void)
 }
 void check_causality_error_bzevents(void)
 {
+  /* TODO: qui deve controllare che i tempi di cella mandati in risposta
+     ad altri processi siano corretti */
   if (error_detected)
     causality_error=1;
   else
@@ -1310,7 +1330,7 @@ void check_causality_error_bzevents(void)
 }
 void check_tstep(double t)
 {
-  causality_error_arr[my_rank] = 0;
+  causality_error = 0;
   if (t >= dd_tstep)
     {
       /* end of parallel phase */
@@ -1325,7 +1345,6 @@ void check_tstep(double t)
 #endif
       check_causality_error_messages();
     }
-
 }
 void dd_syncronize(void)
 {
