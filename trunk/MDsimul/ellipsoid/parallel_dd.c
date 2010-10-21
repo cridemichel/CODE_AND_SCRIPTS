@@ -4,8 +4,9 @@
 extern int cellsx, cellsy, cellsz;
 int *part_to_send_per_region[26], part_to_send_per_region_head;
 int **neigh_processes_per_cell, neigh_processes_per_cell_head[26];
+struct pstate {double x[3]; double v[3]; double inCell[3];} *part_state;
 double dd_tstep;
-int *causality_error_arr, causality_error=0;
+int causality_error=0, global_causality_error=0;
 void calc_xyz(unsigned long long int cellnum, unsigned int *ix, unsigned int *iy, unsigned int *iz) 
 {
   /* è la funzione inversa di calc_cellnum(...) */
@@ -88,6 +89,8 @@ int *border_cells_head, *border_cells_ll;
 int *dd_inCell;
 int *neigh_regions_of_cell_list_head, *neigh_regions_of_cell_list;
 enum {DD_REAL=0, DD_BORDER_ZONE, DD_VIRTUAL};
+/* tags for mpi messages */
+enum {MPI_END_OF_MSGS=0, DD_PART_STATE, DD_BZ_EVENT};
 int num_part_to_send, head_part_to_send;
 void dd_init(void)
 {
@@ -152,6 +155,7 @@ void dd_init(void)
       part_to_send_per_region[k] = malloc(sizeof(int)*Oparams.parnum);
       part_to_send_per_region_head[k] = -1;
     }
+  part_state = malloc(sizeof(struct pstate)*Oparams.parnum);
   rollback_init();
   neigh_processes_per_cell_head = malloc(sizeof(int)*cellsx*cellsy*cellsz);
   neigh_processes_per_cell = malloc(sizeof(int*)*cellsx*cellsy*cellsz);   
@@ -1095,11 +1099,30 @@ void bz_particle_to_send(int i)
       num_part_to_send++;
     }
 }
+int npart_in_buf=0;
+void add_part_to_mpi_buffer(int ipart)
+{
+  struct pstate *ps;
+  ps = &(part_state[npart_in_buf++]);
+  ps->x[0] = rx[ipart];
+  ps->x[1] = ry[ipart];
+  ps->x[2] = rz[ipart];
+  ps->v[0] = vx[ipart];
+  ps->v[1] = vy[ipart];
+  ps->v[2] = vz[ipart];
+  ps->inCell[0] = inCell[0][ipart];
+  ps->inCell[1] = inCell[1][ipart];
+  ps->inCell[2] = inCell[2][ipart];
+}
+
 void send_bz_particles(void)
 {
+  char eom = "E";
   int i, k;
   unsigned int cn, p;
-
+#ifdef MPI
+  MPI_Request request;
+#endif
   /* send all border zones particles updated during parallel phase 
      (use a unique mpi call for optimizing this stage) */
   i = part_to_send_head;
@@ -1120,6 +1143,7 @@ void send_bz_particles(void)
     }
   for (p = 0; p < max_neighregions; p++)
     {
+      npart_in_buf = 0;
       i = part_to_send_per_region_head[p];
       while (i!=-1)
 	{
@@ -1127,20 +1151,17 @@ void send_bz_particles(void)
 	  i = part_to_send_per_region[p][i];
 	}
 #ifdef MPI
-      /* send particles to process all_neighregions[p] */
-      MPI_Isend(MPI_COMM_WORLD);
+      /* send particles to region (processor) all_neighregions[p] */
+      MPI_Isend(part_state, npart_in_buf, mpi_part_state, 
+		all_neighregions[p], DD_PART_STATE, MPI_COMM_WORLD, &request);
 #endif
     }
   for (p = 0; p < 26; p++)
     {
-      /* send a message to all neighbors processes with number of particle = -1
+      /* send a message to all neighbors processes with mpi tag=MPI_END_OF_MSGS
 	 meaning "end of messages" */
-      MPI_Isend(MPI_COMM_WORLD);
+      MPI_Isend(&eom, 1, MPI_CHAR, all_neighregions[p], MPI_END_OF_MSGS, MPI_COMM_WORLD, &request);
     }
-}
-void broadcast_causality_error(void)
-{
-
 }
 double do_rollback(void)
 {
@@ -1183,14 +1204,14 @@ void dd_update_particles_state(void)
       dd_updateCalendar(i);
       if (check_causality_error_for_particle(i))
 	{
-	  causality_error_arr[my_rank]=1;
+	  causality_error=1;
 	}
     }
 }
 void receive_vparticles(void)
 {
   int completed = 0;
-  causality_error_arr[my_rank] = 0;
+  causality_error = 0;
   do
     {
 #ifdef MPI
@@ -1206,19 +1227,20 @@ void receive_vparticles(void)
 void check_causality_error_messages(void)
 { 
   int p;
+#if 0
   for (p=0; p < numOfProcess; p++)
     {
       if (causality_error_arr[p])
 	causality_error=1;
     }
-  if (causality_error)
+#endif
+  if (global_causality_error)
     {
       /* causality_error_processed serve per evitare che in caso
 	 di errori causali multipli tali errori vengano processati più volte
 	 da uno stesso processore */
       dd_syncronize();
       process_causality_error();
-      causality_error_processed=1;
     }
 }
 void check_causality_error_bzevents(void)
@@ -1239,7 +1261,9 @@ void check_tstep(double t)
       /* la funzione check_causality_error_bzevents() setta la variabile globale causality_error */
       check_causality_error_bzevents();
 #ifdef MPI
-      MPI_Allgather(MPI_COMM_WORLD, causality_error_arr);
+      //MPI_Allgather(MPI_COMM_WORLD, causality_error_arr);
+      /* check if at least one regione raised a causality error */
+      MPI_Allreduce(&causality_error, &global_causality_error, 1, MPI_INTEGER, MPI_LOR, MPI_COMM_WORLD);
 #endif
       check_causality_error_messages();
     }
