@@ -625,6 +625,10 @@ int check_next_event(void)
   return 0;
 }
 #endif
+#ifdef ED_PARALL_DD
+extern int check_tstep(double time);
+extern int check_BZ_event(int i);
+#endif
 void NextEvent (void) 
 {
   int id, idAx, idBx, idd, idNow, idtx;
@@ -644,7 +648,7 @@ void NextEvent (void)
     idNow = treeLeft[idNow];
   Oparams.time = treeTime[idNow];   
 #ifdef ED_PARALL_DD
-  if (check_tstep(Oparams.time))
+  if ( check_tstep(Oparams.time) || (check_BZ_event(evIdA)||check_BZ_event(evIdB)) )
     {
       /* after check_tstep calendar may be different, hence
 	 reread next event from it */
