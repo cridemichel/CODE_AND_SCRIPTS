@@ -2575,7 +2575,6 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       return;
     } 
 #endif
-
   MD_DEBUG36(calc_energy("dentro bump1"));
   numcoll++;
   MD_DEBUG36(printf("[BUMP] numcoll:%lld\n", numcoll));
@@ -8701,6 +8700,9 @@ void locate_spherical_wall(int na, int outer)
     }
 }
 #endif
+#if ED_PARALL_DD
+extern int dd_is_virtual(int i);
+#endif
 void PredictEvent (int na, int nb) 
 {
   /* NOTA 19/01/10 [ABSORPTION]: questa routine ora è stata adattata al caso di buffer su tutte
@@ -8746,6 +8748,10 @@ void PredictEvent (int na, int nb)
       PredictEventMLL(na, nb);
       return;
     }
+#endif
+#ifdef ED_PARALL_DD
+  if (dd_is_virtual(na))
+    return;
 #endif
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall|| nb==sphWall)
@@ -9257,6 +9263,11 @@ void PredictEvent (int na, int nb)
 	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 	      for (n = cellList[n]; n > -1; n = cellList[n]) 
 		{
+#ifdef ED_PARALL_DD
+		  /* avoid to predict twice collision time of updated partcles */
+		  if (doing_rollback_load && rb_since_load_changed[n] && n >= na)
+		    continue;
+#endif
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
 #ifdef EDHE_FLEX
@@ -10065,6 +10076,14 @@ void ProcessCollision(void)
   int k;
   UpdateAtom(evIdA);
   UpdateAtom(evIdB);
+
+#ifdef ED_PARALL_DD
+  rb_particle_state_changed(evIdA);
+  rb_particle_state_changed(evIdB);
+  bz_particle_to_send(evIdA);
+  bz_particle_to_send(evIdB);
+#endif
+ 
   for (k = 0;  k < NDIM; k++)
     {
       cellRange[2*k]   = - 1;
@@ -10221,6 +10240,12 @@ void ProcessCellCrossing(void)
   int j; 
 #endif
   int k, n;
+
+#ifdef ED_PARALL_DD
+  rb_particle_state_changed(evIdA);
+  bz_particle_to_send(evIdA);
+#endif
+ 
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {

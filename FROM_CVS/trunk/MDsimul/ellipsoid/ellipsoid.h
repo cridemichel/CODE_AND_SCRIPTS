@@ -227,6 +227,9 @@ void md_mpi_finalize(void);
 /* ========================================================================= */
 
 /* ====================== >>> SIMULATION DEFINES <<< ========================*/
+#ifdef ED_PARALL_DD
+enum {DD_COLLISION=0, DD_CELLCROSSING};
+#endif
 #ifdef MD_EDHEFLEX_WALL
 enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE,MD_WALL};
 #else

@@ -2,10 +2,12 @@
 #ifdef ED_PARALL_DD
 /* ==== >>> routines to initialize structures <<< ==== */
 extern int cellsx, cellsy, cellsz;
-int *part_to_send_per_region[26], part_to_send_per_region_head;
+int *part_to_send_per_region[26], part_to_send_per_region_head, *part_region;
 int **neigh_processes_per_cell, neigh_processes_per_cell_head[26];
-double dd_tstep;
+double dd_tstep, rb_save_time;
+int num_particles; /* number of particles including virtual ones belonging to current region (process) */ 
 int causality_error=0, global_causality_error=0;
+int *part_global_idx;
 #ifdef MPI
 void mpi_check_status(MPI_Status *status)
 {
@@ -92,16 +94,18 @@ int cellToRegion(unsigned long long int cell)
 }
 void rollback_init(void);
 int *border_cells_head, *border_cells_ll;
-int *dd_inCell;
+int *dd_inCell, *global_part_idx, *local_part_idx, bz_old_cellnum;
 int *neigh_regions_of_cell_list_head, *neigh_regions_of_cell_list;
 enum {DD_REAL=0, DD_BORDER_ZONE, DD_VIRTUAL};
 /* tags for mpi messages */
 enum {MPI_END_OF_MSGS=0, DD_PART_STATE, DD_BZ_EVENT};
+/* BZ event type to communicate to neighboring processes */
+enum {BZ_PART_REMOVE=0, BZ_PART_ADD, BZ_REG_EV};
 int num_part_to_send, head_part_to_send;
 #ifdef MPI
-MPI_Dataype MPI_PART_STATE;
-struct pstate {int i; double x[3]; double v[3]; int inCell[3];} *part_state;
-const int pstate_fields=4;
+MPI_Datatype MPI_PART_STATE;
+struct pstate {int i; double x[3]; double v[3]; int inCell[3]; double time; int evtype} *part_state;
+const int pstate_fields=6;
 void create_mpi_pstate_datatype(struct pstate *ps)
 {
   int block_lengths[pstate_fields];
@@ -112,26 +116,58 @@ void create_mpi_pstate_datatype(struct pstate *ps)
   typelist[1] = MPI_DOUBLE;
   typelist[2] = MPI_DOUBLE;
   typelist[3] = MPI_INT;
+  typelist[4] = MPI_DOUBLE;
+  typelist[5] = MPI_INT;
   block_lengths[0] = 1;
   block_lengths[1] = 3;
   block_lengths[2] = 3;
   block_lengths[3] = 3;
+  block_lengths[4] = 1;
+  block_lengths[5] = 1;
   MPI_Address(ps, &adresses[0]);  
   MPI_Address(&(ps->i),&addresses[1]);
   MPI_Address(&(ps->x),&addresses[2]);
   MPI_Address(&(ps->v),&addresses[3]);
   MPI_Address(&(ps->inCell),&addresses[4]);
+  MPI_Address(&(ps->time),&addresses[5]);
+  MPI_Address(&(ps->evtype),&addresses[6]);
   displacements[0] = addresses[1]-addresses[0];
   displacements[1] = addresses[2]-addresses[0];
   displacements[2] = addresses[3]-addresses[0];
   displacements[3] = addresses[4]-addresses[0]; 
+  displacements[4] = addresses[5]-addresses[0];
+  displacements[5] = addresses[6]-addresses[0];
   MPI_Create_type_struct(pstate_fields, block_lengths, displacements, typelist, &MPI_PART_STATE);
   MPI_Type_commit(MPI_PART_STATE);	
+} 
+MPI_Datatype MPI_CELL_TIME;
+struct ct_struct {unsigned int cellnum; double mintime;} *cell_time_msgs;
+const int ct_struct_fields=2;
+
+void create_cell_time_event_datatype(struct ct_struct *cs)
+{
+  int block_lengths[ct_struct_fields];
+  MPI_Aint displacements[ct_struct_fields];
+  MPI_Aint addresses[ct_struct_fields+1];
+  MPI_Datatype typelist[ct_struct_fields];
+  typelist[0] = MPI_UINT;
+  typelist[1] = MPI_DOUBLE;
+  block_lengths[0] = 1;
+  block_lengths[1] = 1;
+  MPI_Address(ps, &adresses[0]);  
+  MPI_Address(&(cs->cellnum),&addresses[1]);
+  MPI_Address(&(cs->time),&addresses[2]);
+  displacements[0] = addresses[1]-addresses[0];
+  displacements[1] = addresses[2]-addresses[0];
+  MPI_Create_type_struct(ct_struct_fields, block_lengths, displacements, typelist, &MPI_CELL_TIME);
+  MPI_Type_commit(MPI_CELL_TIME);	
 } 
 void create_mpi_derived_datatypes(void)
 {
   struct pstate ps;
+  struct ct_struct cs;
   create_mpi_pstate_datatype(&ps);
+  create_cell_time_event_datatype(&cs);
 }
 #endif
 void dd_init(void)
@@ -152,6 +188,25 @@ void dd_init(void)
 #ifdef MPI
   create_mpi_derived_datatypes();
 #endif
+  rb_since_save_changed = malloc(sizeof(int)*Oparams.parnum);
+  rb_since_load_changed = malloc(sizeof(int)*Oparams.parnum);
+  /* global_part_idx[i] da l'indice globale della particella il cui indice locale è i */
+  global_part_idx = malloc(sizeof(int)*Oparams.parnum);
+  /* local_part_idx[i]  da l'indice locale della particella il cui indice globale è i (quindi 
+     è la funzione inversa di global_part_idx[...] */
+  local_part_idx = malloc(sizeof(int)*Oparams.parnum);
+  /* valore della cella all'inizio della parallel phase: tale 
+     valore viene usato per capire quali sono le particelle rimaste nella border
+     zone o quali quelle da aggiungere o togliere.
+   */
+  bz_old_cellnum =  malloc(sizeof(int)*Oparams.parnum);
+
+  for (i=0; i < Oparams.parnum; i++)
+   {
+     rb_since_load_changed[i] = rb_since_save_changed[i] = 0;
+     global_part_idx[i] = i;
+     local_part_idx[i] = i;
+   }
   /* inRegion[c] gives region associated to cell c */
   inRegion = malloc(sizeof(int)*cellsx*cellsy*cellsx);
   /* array contenente la fine di ogni regione nella sequenza associata alle celle
@@ -164,6 +219,8 @@ void dd_init(void)
   for (i=0; i < cellsx*cellsy*cellsz; i++)
     dd_inCell[i] = -1;
   part_to_send = malloc(sizeof(int)*(Oparams.parnum+1));
+  /* part_global_idx[i] gives the global index of particle i */
+  part_global_idx = malloc(sizeof(int)*Oparams.parnum);
   num_part_to_send= 0;
   head_part_to_send = -1;
   border_cells_head = malloc(sizeof(int)*dd_numreg);
@@ -195,6 +252,14 @@ void dd_init(void)
 	  inRegion[cellnum] = cellToRegion(cellnum);
 	  cell_type[cellnum] = DD_REAL;
 	}
+  cell_time_msgs = malloc(sizeof(ct_struct)*max_neigh_regions);
+  /* part_region[i] = regione (processo) a cui appartiene la particella i-esima */
+  part_region = malloc(sizeof(int)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      cellnum = calc_cellnum(inCell[0][i], inCell[1][i], inCell[2][i]);
+      part_region[i] = inRegion[cellnum];
+    }
   for (k=0; k < 26; k++)
     {
       part_to_send_per_region[k] = malloc(sizeof(int)*Oparams.parnum);
@@ -281,7 +346,7 @@ void allocBondsSphWall_rb(void)
     }
 }
 #endif
-
+#if 0
 void rollback_init()
 {
   int SEGSIZE, poolSize;
@@ -416,12 +481,93 @@ void rollback_init()
   linearLists_rb = malloc(sizeof(int)*(OprogStatus.nlistsHQ+1));
 #endif
 }
-
+#else
+void rollback_init()
+{
+  int SEGSIZE, poolSize;
+  /* allocate memory for saving rollback data */
+#ifdef MD_DYNAMIC_OPROG
+  rb_OprogStatus.ptr = malloc(OprogStatus.len);
+#endif 
+  dd_coord_ptr_rb = malloc(dd_totBytes); 
+  lastcol_rb= malloc(sizeof(double)*Oparams.parnum);
+  atomTime_rb = malloc(sizeof(double)*Oparams.parnum);
+#ifdef MD_PATCHY_HE
+  lastbump_rb =  malloc(sizeof(struct LastBumpS)*Oparams.parnum);
+#else
+  lastbump_rb = malloc(sizeof(int)*Oparams.parnum);
+#endif
+  cellList_rb = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  inCell_rb[0] = malloc(sizeof(int)*Oparams.parnum);
+  inCell_rb[1] = malloc(sizeof(int)*Oparams.parnum);
+  inCell_rb[2] = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MD_LL_BONDS
+  bonds_rb = AllocMatLLI(Oparams.parnum, OprogStatus.maxbonds);
+#else
+  bonds_rb = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+#endif
+  numbonds_rb = (int *) malloc(Oparams.parnum*sizeof(int));
+#ifdef MD_SPHERICAL_WALL
+  allocBondsSphWall_rb();
+#endif
+#ifdef MD_GHOST_IGG
+  ghostInfoArr_rb = malloc(sizeof(ghostInfo)*Oparams.parnum);
+#endif
+  typeOfPart_rb = malloc(sizeof(int)*Oparams.parnum);
+  if (OprogStatus.useNNL)
+    {  
+      nebrTab_rb = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+    	  nebrTab_rb[i].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+	}
+    }
+  R_rb = malloc(sizeof(double**)*Oparams.parnum);
+  
+  for (i=0; i < Oparams.parnum; i++)
+    {
+#ifdef MD_MATRIX_CONTIGOUS
+      /* alloca R in maniera contigua */
+      if (i==0)
+	{
+  	  R_rb[i] = malloc(sizeof(double*)*3);
+	  R_rb[i][0] = malloc(sizeof(double)*Oparams.parnum*9);
+	  R_rb[i][1] = R_rb[i][0] + 3;
+	  R_rb[i][2] = R_rb[i][1] + 3;
+	}
+      else
+	{
+	  R_rb[i] = malloc(sizeof(double*)*3);
+	  R_rb[i][0] = R_rb[i-1][2] + 3;
+	  R_rb[i][1] = R_rb[i][0] + 3;
+	  R_rb[i][2] = R_rb[i][1] + 3;
+	}
+#else
+      R_rb[i] = matrix(3, 3);
+#endif
+    }
+  axa_rb = malloc(sizeof(double)*Oparams.parnum);
+  axb_rb = malloc(sizeof(double)*Oparams.parnum);
+  axc_rb = malloc(sizeof(double)*Oparams.parnum);
+  /* these array are for growth simulations and in this implementation
+     growth is not allowed in parallel... (?!?) */
+}
+#endif
+void rb_particle_state_changed(int i)
+{
+  rb_since_save_changed[i] = rb_since_load_changed[i] = 1;
+}
+#if 0
 void rollback_save(void)
 {
   int dblparnum, intparnum, i;
-  dblparnum = sizeof(double)*Oparams.parnum;
-  intparnum = sizeof(int)*Oparams.parnum;
+#if 1
+  parnum = num_particles;
+#else
+  parnum = Oparams.parnum;
+#endif
+  dblparnum = sizeof(double)*parnum;
+  intparnum = sizeof(int)*parnum;
   memcpy(rb_Oparams,Oparams,sizeof(struct params));
   memcpy(rb_OprogStatus,OprogStatus,sizeof(struct progStatus));
   memcpy(rb_OprogStatus.ptr,OprogStatus.ptr, OprogStatus.len);
@@ -429,22 +575,22 @@ void rollback_save(void)
   memcpy(lastcol_rb,lastcol,dblparnum);
   memcpy(atomTime_rb,atomTime,dblparnum);
 #ifdef MD_PATCHY_HE
-  memcpy(lastbump_rb,lastbump,sizeof(struct LastBumpS)*Oparams.parnum);
+  memcpy(lastbump_rb,lastbump,sizeof(struct LastBumpS)*parnum);
 #else
   memcpy(lastbump_rb,lastbump,intparnum);
 #endif
-  memcpy(cellList_rb, cellList, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+  memcpy(cellList_rb, cellList, sizeof(int)*(cellsx*cellsy*cellsz+parnum));
   memcpy(inCell_rb[0], inCell[0], intparnum);
   memcpy(inCell_rb[1], inCell[1], intparnum);
   memcpy(inCell_rb[2], inCell[2], intparnum);
 #ifdef MD_LL_BONDS
-  memcpy(bonds_rb[0], bonds[0], sizeof(long long int)*Oparams.parnum*OprogStatus.maxbonds);
+  memcpy(bonds_rb[0], bonds[0], sizeof(long long int)*parnum*OprogStatus.maxbonds);
 #else
   memcpy(bonds_rb[0], bonds[0], intparnum*OprogStatus.maxbonds);
 #endif
   memcpy(numbonds_rb, numbonds, intparnum);
 #ifdef MD_SPHERICAL_WALL
-  for (i=0; i < Oparams.parnum; i++)
+  for (i=0; i < parnum; i++)
     {
       /* gli ultimi due tipi devono essere i "muri" sferici */
       if (typeOfPart[i]==Oparams.ntypes-1 || typeOfPart[i]==Oparams.ntypes-2)
@@ -452,12 +598,17 @@ void rollback_save(void)
 #ifdef MD_LL_BONDS
 	  /* NOTA 21/04/2010: il 3 l'ho messo per tener conto del fatto che nel caso ad esempio 
 	  con l'interazione SW i legami possono essere anche due per particella. */
-	  memcpy(bonds_rb[i], bonds[i], sizeof(long long int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
+	  memcpy(bonds_rb[i], bonds[i], sizeof(long long int)*parnum*MD_MAX_BOND_PER_PART);
 #else
 	  memcpy(bonds_rb[i], bonds[i], intparnum*MD_MAX_BOND_PER_PART);
 #endif
 	}
     }
+#endif
+#ifdef MD_SPHERICAL_WALL
+  poolSize = OprogStatus.eventMult*parnum+2*parnum;
+#else
+  poolSize = OprogStatus.eventMult*parnum;
 #endif
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
 #ifdef MD_CALENDAR_HYBRID
@@ -480,14 +631,14 @@ void rollback_save(void)
   memcpy(oldTypeOfPart_rb, oldTypeOfPart, intparnum);
 #endif
 #ifdef MD_GHOST_IGG
-  memcpy(ghostInfoArr_rb, ghostInfoArr, sizeof(ghostInfo)*Oparams.parnum);
+  memcpy(ghostInfoArr_rb, ghostInfoArr, sizeof(ghostInfo)*parnum);
 #endif
   memcpy(typeOfPart_rb, typeOfPart, intparnum);
   memcpy(typeNP_rb, typeNP, sizeof(int)*Oparams.ntypes);
   if (OprogStatus.useNNL)
     {  
-      memcpy(nebrTab_rb, nebrTab, sizeof(struct nebrTabStruct)*Oparams.parnum);
-      for (i=0; i < Oparams.parnum; i++)
+      memcpy(nebrTab_rb, nebrTab, sizeof(struct nebrTabStruct)*parnum);
+      for (i=0; i < parnum; i++)
 	{
     	  memcpy(nebrTab_rb[i].list, nebrTab[i].list, sizeof(int)*nebrTab[i].len);
 	}
@@ -495,7 +646,7 @@ void rollback_save(void)
 #ifdef MD_MATRIX_CONTIGOUS
   memcpy(RM_rb[0], RM[0], dblparnum*9);
 #else
-  for (i=0; i < Oparams.parnum; i++) 
+  for (i=0; i < parnum; i++) 
     {
       memcpy(RM_rb[i], RM[i], 9*sizeof(double));
     }
@@ -547,7 +698,84 @@ void rollback_save(void)
   accngA_rb = accngA;
   accngB_rb = accngB;
 }
+#else
+void rollback_save(void)
+{
+  int i, k, k1, k2;
+  rb_save_time = Oparams.time; 
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* salva lo stato solo delle particelle
+	 aggiornate dall'ultimo salvataggio di stato */
+      if (rb_since_save_changed[i])
+	{
+	  atomTime_rb[i] = atomTime[i];
+	  rx_rb[i] = rx[i];
+	  ry_rb[i] = ry[i];
+	  rz_rb[i] = rz[i];
+	  vx_rb[i] = vx[i];
+	  vy_rb[i] = vy[i];
+	  vz_rb[i] = vz[i];
+	  wx_rb[i] = wx[i];
+	  wy_rb[i] = wy[i];
+	  wz_rb[i] = wz[i];
+	  /* i semi assi durante una crescita possono cambiare */
+	  axa_rb[i] = axa[i];
+	  axb_rb[i] = axb[i];
+	  axc_rb[i] = axc[i];
+	  for (k=0; k < 3; k++)
+	    inCell_rb[k][i] = inCell[k][i];
+	  rb_since_save_changed[i] = 0;
+	  DR_rb[i] = OprogStatus.DR[i]; 
+	  Mx_rb[i] = Mx[i];
+	  My_rb[i] = My[i];
+	  Mz_rb[i] = Mz[i];
+	  numbonds_rb[i] = numbonds[i];
+	  for (k=0; k < numbonds[i]; k++)
+	    bonds_rb[i][k] = bonds[i][k];
+	  typeOfPart_rb[i] = typeOfPart[i];
+	  oldTypeOfPart_rb[i] = oldTypeOfPart[i];
+	  if (Oparams.ghostsim)
+	    memcpy(&(ghostInfoArr_rb[i]), &(ghostInfoArr[i]), sizeof(ghostInfo));
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      {
+		R_rb[i][k1][k2] = R[i][k1][k2];  
+	      }
+	}
+    }
+  /* salva tutte le neighbor list */
+  if (OprogStatus.useNNL)
+    {  
+      memcpy(nebrTab_rb, nebrTab, sizeof(struct nebrTabStruct)*parnum);
+      for (i=0; i < parnum; i++)
+	{
+    	  memcpy(nebrTab_rb[i].list, nebrTab[i].list, sizeof(int)*nebrTab[i].len);
+	}
+    }
 
+  /* accumulatori vari */
+  itsF_rb = itsF;
+  timeF_rb = timesF;
+  itsS_rb = itsS;
+  timesS_rb =  timesS;
+  numcoll_rb = numcoll;
+  itsFNL_rb =  itsFNL;
+  timesFNL_rb = timesFNL; 
+  timesSNL_rb = timesSNL;
+  itsSNL_rb = itsSNL; 
+  numcalldist_rb = numcalldist; 
+  numdisttryagain_rb = numdisttryagain;
+  itsfrprmn_rb = itsfrprmn;
+  callsfrprmn_rb = callsfrprmn;
+  callsok_rb = callsok;
+  callsprojonto_rb = callsprojonto;
+  itsprojonto_rb = itsprojonto;
+  accngA_rb = accngA;
+  accngB_rb = accngB;
+}
+#endif
+#if 0
 void rollback_load(void)
 {
   int dblparnum, intparnum, i;
@@ -678,6 +906,165 @@ void rollback_load(void)
   accngA = accngA_rb;
   accngB = accngB_rb;
 }
+#else
+int doing_rollback_load=0;
+void delete_all_events(int i)
+{
+  int id, idd;
+  id=i+1;
+#ifdef MD_ABSORPTION
+  if (id==sphWall+1)
+    continue; 
+  if (id==sphWallOuter+1)
+    continue; 
+#endif
+#if 0
+  /* TODO: capire meglio come trattare questi eventi */
+#ifdef MD_ABSORPTION
+  /* NOTA: questo problema si pone solo se non si usa il buffer sferico */
+  /* NOTA: gli id che vanno da 0...Oparams.parnum sono riservati ai cell crossing
+     o agli urti con le pareti della scatola, nel caso di urto con la membrana 
+     semi-permeabile tale evento va rimosso esplicitamente altrimentri rimane nel calendario 
+	 degli eventi */
+  if (evIdB==ATOM_LIMIT+50)
+    DeleteEvent(idNow);
+#endif
+#endif
+  /* delete cell-crossing event*/
+  DeleteEvent(id);
+  /* delete collisions from calendar and circular lists */
+  for (idd = treeCircAL[id]; idd != id; idd = treeCircAL[idd]) 
+    {
+      /* il successivo (R) del precedente (L) diviene il successivo 
+       * del nodo corrente poiché il nodo corrente è stato eliminato */
+      treeCircBR[treeCircBL[idd]] = treeCircBR[idd];
+      /* il precedente del successivo diviene il precedente del nodo
+       * corrente */
+      treeCircBL[treeCircBR[idd]] = treeCircBL[idd];
+      DeleteEvent (idd);
+    }
+  /* treeIdA[0] punta al primo nodo della lista dei nodi liberi 
+   * nel pool, quindi qui inserisce la lista di nodi appena liberati fra i nodi 
+   * non utilizzati del pool */
+  treeCircAR[treeCircAL[id]] = treeIdA[0];
+  treeIdA[0] = treeCircAR[id];
+  /* tutte le liste circolari vengono svuotate */
+  treeCircAL[id] = treeCircAR[id] = id;
+  for (idd = treeCircBL[id]; idd != id; idd = treeCircBL[idd]) 
+    {
+      /* vedere sopra infatti è lo stesso solo per la lista in cui
+       * la particella è la prima della coppia (A) */
+      treeCircAR[treeCircAL[idd]] = treeCircAR[idd];
+      treeCircAL[treeCircAR[idd]] = treeCircAL[idd];
+      DeleteEvent (idd);
+      treeCircAR[idd] = treeIdA[0];    
+      treeIdA[0] = idd;
+    }
+  treeCircBL[id] = treeCircBR[id] = id;
+}
+inline int dd_is_virtual(int i)
+{
+  return !(part_region[i] == my_rank);
+}
+void rollback_load(void)
+{
+  int i, k, k1, k2, na;
+  Oparams.time =  rb_save_time; 
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      /* salva lo stato solo delle particelle
+	 aggiornate dall'ultimo salvataggio di stato */
+      if (rb_since_save_changed[i])
+	{
+	  atomTime[i] = atomTime_rb[i];
+	  rx[i] = rx_rb[i];
+	  ry[i] = ry_rb[i];
+	  rz[i] = rz_rb[i];
+	  vx[i] = vx_rb[i];
+	  vy[i] = vy_rb[i];
+	  vz[i] = vz_rb[i];
+	  wx[i] = wx_rb[i];
+	  wy[i] = wy_rb[i];
+	  wz[i] = wz_rb[i];
+	  /* i semi assi durante una crescita possono cambiare */
+	  axa[i] = axa_rb[i];
+	  axb[i] = axb_rb[i];
+	  axc[i] = axc_rb[i];
+	  for (k=0; k < 3; k++)
+	    inCell[k][i] = inCell_rb[k][i];
+	  OprogStatus.DR[i] = DR_rb[i]; 
+	  Mx[i] = Mx_rb[i];
+	  My[i] = My_rb[i];
+	  Mz[i] = Mz_rb[i];
+	  numbonds[i] = numbonds_rb[i];
+	  for (k=0; k < numbonds[i]; k++)
+	    bonds[i][k] = bonds_rb[i][k];
+	  typeOfPart[i] = typeOfPart_rb[i];
+	  oldTypeOfPart[i] = oldTypeOfPart_rb[i];
+	  if (Oparams.ghostsim)
+	    memcpy(&(ghostInfoArr[i]), &(ghostInfoArr_rb[i]), sizeof(ghostInfo));
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      {
+		R[i][k1][k2] = R_rb[i][k1][k2];  
+	      }
+	  /* TODO: setta scdone e maxax per la crescita */
+	  upd_refsysM(i);
+	  angM[i] = sqrt(Sqr(Mx[i])+Sqr(My[i])+Sqr(Mz[i]));
+	}
+    }
+
+  doing_rollback_load=1;
+  /* cancella tutti gli eventi in cui sono coinvolte le particelle aggiornate */
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (rb_since_load_changed[i] && !dd_is_virtual(i))
+	delete_all_events(i);
+    }
+
+  /* predice i nuovi eventi per le particelle aggiornate */
+  if (OprogStatus.useNNL)
+    {  
+      memcpy(nebrTab, nebrTab_rb, sizeof(struct nebrTabStruct)*Oparams.parnum);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+    	  memcpy(nebrTab[i].list, nebrTab_rb[i].list, sizeof(int)*nebrTab[i].len);
+	}
+    }
+
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (OprogStatus.useNNL)
+	PredictEventNNL(n, -1);
+      else
+	PredictEvent(n, -1);
+    }
+  doing_rollback_load=0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (rb_since_load_changed[i])
+	rb_since_load_changed[i] = 0;
+    }
+  itsF = itsF_rb;
+  timeF = timesF_rb;
+  itsS = itsS_rb;
+  timesS =  timesS_rb;
+  numcoll = numcoll_rb;
+  itsFNL =  itsFNL_rb;
+  timesFNL = timesFNL_rb; 
+  timesSNL = timesSNL_rb;
+  itsSNL = itsSNL_rb; 
+  numcalldist = numcalldist_rb; 
+  numdisttryagain = numdisttryagain_rb;
+  itsfrprmn = itsfrprmn_rb;
+  callsfrprmn = callsfrprmn_rb;
+  callsok = callsok_rb;
+  callsprojonto = callsprojonto_rb;
+  itsprojonto = itsprojonto_rb;
+  accngA = accngA_rb;
+  accngB = accngB_rb;
+}
+#endif
 /* ===== >>>> border zone <<< ===== */
 /* max_neigh_regions contiene il numero di neighboring regions, mentre 
    l'array all_neighregions contiene tutte le "max_neigh_regions" neighboring regions */
@@ -937,17 +1324,66 @@ int is_border_zone_cell(unsigned int cn)
   else
     return 0;
 }
+inline int ax_get_nc(int idA, int k, double velk, int cellsk)
+{
+  int nc;
+  if (velk > 0.0)
+    {
+      nc = inCell[k][idA] + 1;
+      if (nc == cellsk) 
+	{
+	  nc = 0;
+	}
+    }
+  else
+    { 
+      nc = inCell[k][idA] - 1;
+      if (nc == -1) 
+	{
+	  nc = cellsk - 1;
+	}
+    }
+  return nc;
+}
+inline int calc_dest_cell(int idA, int idB)
+{
+  int k;
+  k = idB - 100 - ATOM_LIMIT; 
+  switch (k)
+    {
+    case 0: 
+      return ax_get_nc(idA, 0, vx[idA], &(rx[idA]), cellsx);
+      break;
+    case 1: 
+      return ax_get_nc(idA, 1, vy[idA], &(ry[idA]), cellsy);
+      break;
+    case 2:
+      return ax_get_nc(idA, 2, vz[idA], &(rz[idA]), cellsz);
+      break;
+    }
+}
 void schedule_border_zone_event(int idA, int idB, double tEvent, unsigned int dest_cell)
 {
   /* according to Luding and Miller we associate an event to each particle */
   unsigned int cn, ix, iy, iz;
   int idd;
- 
+  ix = inCell[0][idA];
+  iy = inCell[1][idA];
+  iz = inCell[2][idA];
+  cn = calc_cellnum(ix, iy, iz);
+  idd = cn+1;
+
+  if (is_border_zone_cell(cn))
+    {
+      if (tEvent < treeTimeBZ[idd])
+	ScheduleEventBZ(cn, tEvent); 
+    }
+
   if (idB < ATOM_LIMIT) /* urto fra due particelle */
     {
-      ix = inCell[0][idd];
-      iy = inCell[1][idd];
-      iz = inCell[2][idd];
+      ix = inCell[0][idB];
+      iy = inCell[1][idB];
+      iz = inCell[2][idB];
       cn = calc_cellnum(ix, iy, iz);
       idd = cn+1;
 
@@ -956,23 +1392,11 @@ void schedule_border_zone_event(int idA, int idB, double tEvent, unsigned int de
 	  if (tEvent < treeTimeBZ[idd])
 	    ScheduleEventBZ(cn, tEvent); 
 	}
-      else
-       	{
-    	  ix = inCell[0][idd];
-	  iy = inCell[1][idd];
-	  iz = inCell[2][idd];
-	  cn = calc_cellnum(ix, iy, iz);
-	  idd = cn+1;
-	  if (is_border_zone_cell(cn))
-	    {
-	      if (tEvent < treeTimeBZ[idd])
-		ScheduleEventBZ(cn, tEvent);
-	    }
-	}
     }
   else if (idB < ATOM_LIMIT + 2*NDIM)
     {
-      /* calc destination cell cn here*/
+      /* TODO: calc destination cell cn here*/
+      dest_cell = calc_dest_cell(idA, idB);
       idd = dest_cell+1;
       if (is_border_zone_cell(dest_cell))
 	{
@@ -984,18 +1408,22 @@ void schedule_border_zone_event(int idA, int idB, double tEvent, unsigned int de
 void send_celltime_request_to_region(int regnum, int cellnum, double tEvent)
 {
 #ifdef MPI
+  MPI_Request request;
+  struct ct_struct min_cell_time;
   /* non-blocking send for request */
-  MPI_Isend(MPI_COMM_WORLD);
+  MPI_Isend(min_cell_time, 1, MPI_CELL_TIME, regnum, DD_BZ_EVENT, MPI_COMM_WORLD, &request);
 #endif
 }
 unsigned int num_stored_replies;
 struct struct_strep {
+  unsigned int cellnum;
   double t_replied; 
   double t_received;
 } stored_replies[26];
 
-void store_adj_min_time(int p, double trep, double trec)
+void store_adj_min_time(int p, double trep, double trec, unsigned int cn)
 {
+  stored_replies[p].cellnume = cn;
   stored_replies[p].t_replied=trep;
   stored_replies[p].t_received=trec;
 }
@@ -1003,12 +1431,15 @@ void store_adj_min_time(int p, double trep, double trec)
 double request_cell_time(unsigned int cellnum, double tEvent)
 {
   unsigned int ix, iy, iz, c, oldc;
-  int ixp, iyp, izp, isvbordercell, dx, dy, dz;
+  int ixp, iyp, izp, isvbordercell, dx, dy, dz, source_process;
   unsigned long long int nc;
   int cellRangeT[2 * NDIM], k, newregion, completed=0;
   unsigned int neighregions[26], cr, r, numregions=0, cellnum_star;
   double min_time, cellnum_star_time, adj_min_time;
-
+#ifdef MPI
+  MPI_Status status;
+  MPI_Request request;
+#endif
   min_time = tEvent;
   /* request lesser cell time for neighboring cells of cellnum in region regnum */
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
@@ -1086,12 +1517,18 @@ double request_cell_time(unsigned int cellnum, double tEvent)
     send_celltime_request_to_region(all_neighregions[r], -1, 0.0); /* -1 means: "no more messages" from me */
   completed = 0;
   num_stored_replies = 0;
+  num_ct_received=0;
   do
     {
 #ifdef MPI
       /* receive all pending messages (requests of cell times)*/
-      MPI_Receive(MPI_COMM_WORLD);
+      MPI_Receive(&(cell_time_msgs[num_ct_received++]), MPI_BZ_EVENT, MPI_ANY_SOURCE, DD_BZ_EVENT, 
+		  MPI_COMM_WORLD, &status);
+      mpi_check_status(status);
+      source_process=status.MPI_SOURCE;
 #endif
+      cellnum_star = cell_time_msgs[num_ct_received].cellnum;
+      cellnum_star_min_time = cell_time_msgs[num_ct_received].mintime;
       if (cellnum_star != -1)
 	{
 	  /* memorizza tutti i reply alla query del tempo minimo nelle celle adiacenti
@@ -1099,9 +1536,10 @@ double request_cell_time(unsigned int cellnum, double tEvent)
 	     cellnum_star_min_time poiche' questo tempo servirà poi per stabilire se e' necessario
 	     un rollback (vedi articolo Comp. Phys. Comm.,I. Marin (1997)) */
 	  adj_min_time = check_adjacent_cells(cellnum_star);
-	  store_adj_min_time(num_stored_replies++, adj_min_time, cellnum_star_min_time);
+	  store_adj_min_time(num_stored_replies++, adj_min_time, cellnum_star_min_time, cellnum_star);
 #ifdef MPI
-    	  MPI_Isend(MPI_COMM_WORLD); /* send adj_min_time */
+	  MPI_Isend(min_cell_time, 1, DD_BZ_EVENT, source_process, 
+		    MPI_COMM_WORLD, &request); /* send adj_min_time */
 #endif
 	}
       else
@@ -1112,7 +1550,7 @@ double request_cell_time(unsigned int cellnum, double tEvent)
   for (r = 0; r < numregions; r++)
     {
 #ifdef MPI
-      MPI_Receive(MPI_COMM_WORLD);
+      MPI_Receive(MPI_COMM_WORLD,status);
 #endif
       if (adj_min_time < min_time)
 	min_time = adj_min_time;
@@ -1135,7 +1573,8 @@ void bz_particle_to_send(int i)
   unsigned int cn, r; 
   /* i is the index of particle to send to process regnum,
      set all BZ particles to send at the end of parallel phase. */
-  
+  /* TODO: meglio sarebbe un flag anziché la lista altrimenti rischio di 
+     avere più particelle uguali nella lista! */
   if (is_border_zone_cell[cn=calc_cellnum(inCell[0][i],inCell[1][i],inCell[2][i])])
     {
       /* update linked list of particles to send */
@@ -1144,10 +1583,12 @@ void bz_particle_to_send(int i)
       num_part_to_send++;
     }
 }
+
 int npart_in_buf=0;
 void add_part_to_mpi_buffer(int ipart)
 {
   struct pstate *ps;
+  unsigned int cn, oldcn;
   if (ipart==-1)
     {
       ps = &(part_state[npart_in_buf++]);
@@ -1155,7 +1596,8 @@ void add_part_to_mpi_buffer(int ipart)
       return;
     }
   ps = &(part_state[npart_in_buf++]);
-  ps->i = ipart;
+  /* send the local absolute identifier of particle ipart */
+  ps->i = global_part_idx[ipart];
   ps->x[0] = rx[ipart];
   ps->x[1] = ry[ipart];
   ps->x[2] = rz[ipart];
@@ -1165,6 +1607,20 @@ void add_part_to_mpi_buffer(int ipart)
   ps->inCell[0] = inCell[0][ipart];
   ps->inCell[1] = inCell[1][ipart];
   ps->inCell[2] = inCell[2][ipart];
+  ps->time = atomTime[ipart];
+  cn = calc_cellnum(inCell[0][ipart], inCell[1][ipart], inCell[2][ipart]); 
+  oldcn = bz_old_cellnum[ipart];
+  if (is_border_zone_cell[cn] && is_border_zone_cell[oldcn])
+    ps->evtype = BZ_REG_EV;
+  else if (is_border_zone_cell[cn] && !is_border_zone_cell[oldcn])
+    ps->evtype = BZ_PART_ADD;
+  /* rimuove la particella se passa da una border zone cell del processo corrente
+     ad una cella non border zone, poiché in tal caso non sarà più una particella
+     virtuale per il neighboring process */
+  else if (inRegion[cn] == my_rank && !is_border_zone_cell[cn] && is_border_zone_cell[oldcn])
+    ps->evtype = BZ_PART_REMOVE; 
+  else /* in quest'ultimo caso la particella è diventata reale in una neighboring region */
+    ps->evtype = BZ_REG_EV;
 }
 
 void send_bz_particles(void)
@@ -1233,31 +1689,51 @@ void process_causality_error(double t)
 }
 void dd_updateCalendar(int i)
 {
+  int ipart;
+  ipart = local_part_idx[part_state[i].i];
   if (OprogStatus.useNNL)
     {
       /* ricalcola i tempi di collisione con la NL */
-      updrebuildNNL(i);
-      PredictEventNNL(i, -1);
+      updrebuildNNL(ipart);
+      PredictEventNNL(ipart, -1);
     }
   else
     {
-      PredictEvent(i, -1);
+      PredictEvent(ipart, -1);
     }
 }
 
 inline int check_causality_error_for_particle(int i)
 {
+  int ipart;
   /* verificare se basta questa condizione e se è giusta */
-  if (atomTime[i] < Oparams.time)
+  ipart = local_part_idx[part_state[i].i];
+  if (atomTime[ipart] < Oparams.time)
     return 1;
   else
     return 0;
 }
 
+void bz_remove_particle(int i)
+{
+  /* mark particle to remove during particles sorting (-1 means "remove") */
+  local_part_idx[global_part_idx[i]] = -1;
+  global_part_idx[i] = -1; 
+}
+inline int bz_add_particle(int glob_idx)
+{
+  Oparams.parnum++;
+  local_part_idx[glob_idx] = Oparams.parnum-1;
+  global_part_idx[Oparams.parnum-1] = glob_idx;
+}
 inline void dd_updateParticleState(int i)
 { 
-  int ipart, k; 
-  ipart = part_state[i]->i;
+  int ipart, k, evtype;
+  unsigned int cellnum; 
+  if (part_state[i].evtype == BZ_PART_REMOVE)
+    return;
+  ipart = local_part_idx[part_state[i].i];
+  cellnum = calc_cellnum(part_state[i].inCell[0], part_state[i].inCell[1], part_state[i].inCell[2]);
   rx[ipart] = part_state[i].x[0];
   ry[ipart] = part_state[i].x[1];
   rz[ipart] = part_state[i].x[2];
@@ -1268,18 +1744,65 @@ inline void dd_updateParticleState(int i)
     inCell[k][ipart] = part_state[i].inCell[k];
   atomTime[ipart] = part_state[i].time;
 }
+
 void dd_update_particles_state(void)
 {
-  int i;
+  int i, j, ipart;
+
+  for (i=0; part_state[i].i != -1; i++)
+    {
+      /* mark particles to remove */
+      if (part_state[i].evtype == BZ_PART_REMOVE)
+	{
+	  ipart = local_part_idx[part_state[i].i];
+	  /* elimina dal calendario tutti gli eventi in cui è coinvolta
+	     la particella rimossa */
+	  delete_all_events(ipart);
+	  bz_remove_particle(ipart);
+	  part_to_remove++;
+	}
+    }
+  j=0;
+  /* inserisce le nuove particelle negli "slot" lasciati liberi dalle particelle rimosse,
+     se non sono abbastanza accoda le particelle nuove a quelle già presenti nella regione attuale */
+  for (i=0; part_state[i].i != -1 && j < Oparams.parnum; i++)
+    {
+      if (part_state[i].evtype == BZ_PART_ADD)
+	{
+	  while (j < Oparams.parnum && global_part_idx[j] != -1)
+	    j++; 
+	  if (j < Oparams.parnum)
+	    {
+	      global_part_idx[j] = part_state[i].i;
+	      local_part_idx[part_state[i].i] = j;
+	    }
+	}
+    }
+  /* add remaining particles received */
+  for (; part_state[i].i != -1; i++)
+    {
+      if (part_state[i].evtype == BZ_PART_ADD)
+	{
+	  bz_add_particle(part_state[i].i);
+	}
+    }	
+  /* aggiorna lo stato delle particelle nuove e di quelle da aggiornare soltanto */
   for (i=0; part_state[i].i != -1; i++)
     {
       dd_updateParticleState(i);
-      dd_updateCalendar(part_state[i].i);
-      if (check_causality_error_for_particle(part_state[i].i))
+    }
+
+  /* Predice i nuovi eventi relativi alle particelle ricevute (nuove ed esistenti) */
+  for (i=0; part_state[i].i != -1; i++)
+    {
+      if (part_state[i].evtype == BZ_PART_REMOVE)
+	continue;
+      dd_updateCalendar(i);
+      if (check_causality_error_for_particle(i))
 	{
 	  causality_error=1;
 	}
-    }
+    } 
 }
 void receive_vparticles(void)
 {
@@ -1312,28 +1835,55 @@ void check_causality_error_messages(void)
 #endif
   if (global_causality_error)
     {
-      /* causality_error_processed serve per evitare che in caso
-	 di errori causali multipli tali errori vengano processati più volte
-	 da uno stesso processore */
       dd_syncronize();
       process_causality_error();
     }
 }
 void check_causality_error_bzevents(void)
 {
+  int kk, error_detected=0;
+  double adj_min_time;
   /* TODO: qui deve controllare che i tempi di cella mandati in risposta
      ad altri processi siano corretti */
+  for (k=0; k < num_stored_replies; k++)
+    {
+      adj_min_time = check_adjacent_cells(stored_replies[k].cn);
+      if (stored_replied[k].trep >= stored_replies[k].trec && adj_min_time < stored_replies[k].trec) 
+	{
+	  error_detected = 1;
+	  break;
+	}
+    }
   if (error_detected)
     causality_error=1;
   else
     causality_error=0;
 }
-void check_tstep(double t)
+int check_BZ_event(int i, int evIdB)
+{
+  int dest_cell;
+  if (i < ATOM_LIMIT)
+    {
+      /* following conditions means that a BZ event has not been anticipated
+	 hence stop parallel phase immediately in order to avoid a causality error */
+      if (evIdB >= ATOM_LIMIT && evIdB < ATOM_LIMIT + 2*NDIM)
+	{
+	  /* TODO: calculate destination cell here */
+	  dest_cell = calc_dest_cell(evIdA, evIdB);
+	  if (is_border_zone_cell(dest_cell) && Oparams.time < dd_step)
+	    return 1;
+	}
+      if (is_border_zone_cell[calc_cellnum(inCell[0][i],inCell[1][i],inCell[2][i])] && Oparams.time < dd_tstep)
+	return 1;
+    }
+  return 0;
+}
+int check_tstep(double t)
 {
   causality_error = 0;
   if (t >= dd_tstep)
     {
-      /* end of parallel phase */
+      /* ==== >>> END OF PARALLEL PHASE <<< ==== */
       send_bz_particles();
       receive_vparticles();
       /* la funzione check_causality_error_bzevents() setta la variabile globale causality_error */
@@ -1344,7 +1894,16 @@ void check_tstep(double t)
       MPI_Allreduce(&causality_error, &global_causality_error, 1, MPI_INTEGER, MPI_LOR, MPI_COMM_WORLD);
 #endif
       check_causality_error_messages();
+      /* initialize list of BZ particles to send */
+      head_part_to_send = -1;
+      /* store current cell numbers associated to particles */
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  bz_old_cellnum[i] = calc_cellnum(inCell[0][i], inCell[1][i], inCell[2][i]);
+	}
+      return 1;
     }
+  return 0;
 }
 void dd_syncronize(void)
 {
@@ -1353,4 +1912,28 @@ void dd_syncronize(void)
 #endif
   rollback_save();
 }
+/* ================ >>> BZ event calendar <<< ================= */
+void InitCalendarBZ(void)
+{
+
+
+}
+void DeleteEventBZ(int idd)
+{
+
+
+}
+void ScheduleEventBZ(void)
+{
+
+
+}
+void NextEventBZ(void)
+{
+
+
+
+
+}
+/* ============================================================ */
 #endif
