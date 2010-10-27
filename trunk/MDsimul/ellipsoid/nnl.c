@@ -5476,6 +5476,10 @@ extern int use_bounding_spheres(int na, int n);
 #ifdef MD_MULTIPLE_LL
 void PredictEventNNL_MLL(int na, int nb);
 #endif
+#if ED_PARALL_DD
+extern int dd_is_virtual(int i);
+#endif
+
 void PredictEventNNL(int na, int nb) 
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;
@@ -5491,6 +5495,10 @@ void PredictEventNNL(int na, int nb)
 #endif
 #ifdef MD_ABSORPTION
   int hwcell;
+#endif
+#ifdef ED_PARALL_DD
+  if (dd_is_virtual(na))
+    return;
 #endif
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
@@ -5670,7 +5678,12 @@ void PredictEventNNL(int na, int nb)
 #endif
       if (!(n != na && n!=nb && (nb >= -1 || n < na)))
 	continue;
-      	
+#ifdef ED_PARALL_DD
+      /* avoid to predict twice collision time of updated partcles */
+
+      if (doing_rollback_load && rb_since_load_changed[n] && n >= na)
+	continue;
+#endif
       //
       // for (kk=0; kk < 3; kk++)
       //	shift[kk] = nebrTab[na].shift[i][kk];
