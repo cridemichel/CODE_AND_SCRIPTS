@@ -582,7 +582,7 @@ void LJForce(COORD_TYPE epsab[NA][NA],
 #ifdef MD_POLYDISP
   double PP, rab, fcut;
 #else
-  int PP;
+  int PP, rab=1.0, fcut=0.0;
 #endif
   double Epsab4;
 #elif defined(NM_SPHERE)
