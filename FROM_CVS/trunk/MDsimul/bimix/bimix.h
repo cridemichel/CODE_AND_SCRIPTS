@@ -213,7 +213,7 @@
                     &vxo1[0], &vyo1[0], &vzo1[0],\
                     &vxo2[0], &vyo2[0], &vzo2[0],\
                     &vxg[0],  &vyg[0],  &vzg[0],\
-                    &vxt2[0],  &vyt2[0],  &vzt2[0], &radii[1]
+                    &vxt2[0],  &vyt2[0],  &vzt2[0] 
 #endif
 #ifdef MD_POLYDISP
 #define ALLOC_LISTB &rx[1], &ry[1], &rz[1],\
