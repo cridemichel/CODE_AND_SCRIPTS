@@ -414,6 +414,12 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define EXT_DLST  L 
 #endif
 #endif
+#ifdef ED_PARALL_DD
+#define treeLeftBZ   treeBZ[0]
+#define treeRightBZ  treeBZ[1]
+#define treeUpBZ     treeBZ[2]
+#define treeIdABZ    treeBZ[3]
+#endif
 #if 1
 #define treeLeft   tree[0]
 #define treeRight  tree[1]
