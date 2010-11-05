@@ -4,7 +4,8 @@
 extern int cellsx, cellsy, cellsz;
 int *part_to_send_per_region[26], part_to_send_per_region_head, *part_region;
 int **neigh_processes_per_cell, neigh_processes_per_cell_head[26];
-double dd_tstep, rb_save_time;
+double dd_tstep, rb_save_time, *treeTimeBZ;
+int **treeBZ;
 int num_particles; /* number of particles including virtual ones belonging to current region (process) */ 
 int causality_error=0, global_causality_error=0;
 int *part_global_idx;
@@ -173,7 +174,7 @@ void create_mpi_derived_datatypes(void)
 void dd_init(void)
 {
   /* queste dichiarazioni vanno poi rese globali */
-  int *inRegion, dd_numreg, cc, iX, iY, iZ, ncp;
+  int *inRegion, dd_numreg, cc, iX, iY, iZ, ncp, BZcalsize;
   /* 08/10/10: nel caso di codice parallelo è meglio non usare le multiple linked list poiche'
      il tutto si complica significativamente */
   /* numero totale di regioni (1 regione = 1 processo) */
@@ -266,6 +267,11 @@ void dd_init(void)
       part_to_send_per_region_head[k] = -1;
     }
   part_state = malloc(sizeof(struct pstate)*Oparams.parnum);
+  /* BZ event calendar allocations */
+  BZcalsize = cellsx*cellsy*cellsz+1;
+  treeTimeBZ = malloc(sizeof(double)*BZcalsize);
+  treeBZ = AllocMatI(4,BZcalsize);	  
+  /* ============================== */
   rollback_init();
   neigh_processes_per_cell_head = malloc(sizeof(int)*cellsx*cellsy*cellsz);
   neigh_processes_per_cell = malloc(sizeof(int*)*cellsx*cellsy*cellsz);   
@@ -1913,27 +1919,121 @@ void dd_syncronize(void)
   rollback_save();
 }
 /* ================ >>> BZ event calendar <<< ================= */
+double timeBZ;
+int evIdABZ;
 void InitCalendarBZ(void)
 {
-
-
+  int id, i;
+  treeLeftBZ[0] = treeRightBZ[0] = -1;
+  //treeIdABZ[0] = 1;
+  /* i nodi da Oparams.parnum + 1 (compreso) in poi sono il pool (cioè quelli dinamici) */
 }
 void DeleteEventBZ(int idd)
 {
-
-
+  int idp, idq, idr;
+  idr = treeRightBZ[id];
+  if (idr == -1)
+    idq = treeLeftBZ[id];
+  else 
+    {
+      if (treeLeftBZ[id] == -1) 
+	idq = idr;
+      else 
+	{
+	  if (treeLeftBZ[idr] == -1) 
+	    idq = idr;
+	  else 
+	    {
+	      idq = treeLeftBZ[idr];
+	      while (treeLeftBZ[idq] > -1)
+		{
+		  idr = idq;    
+		  idq = treeLeftBZ[idr];
+		}
+	      treeLeftBZ[idr] = treeRightBZ[idq];
+	      if (treeRightBZ[idq]>-1)
+	        treeUpBZ[treeRightBZ[idq]] = idr;
+	      treeRightBZ[idq] = treeRightBZ[id];
+	      if (treeRightBZ[id]>-1)
+	        treeUpBZ[treeRightBZ[id]] = idq;
+	    }
+	  treeUpBZ[treeLeftBZ[id]] = idq;
+	  treeLeftBZ[idq] = treeLeftBZ[id];
+	} 
+    }
+  idp = treeUpBZ[id];    
+  if (idq > -1)
+    treeUpBZ[idq] = idp;
+  if (treeRightBZ[idp] != id)
+    treeLeftBZ[idp] = idq;
+  else 
+    treeRightBZ[idp] = idq;
 }
-void ScheduleEventBZ(void)
+void ScheduleEventBZ(int idA, double tEvent)
 {
+  int id, idNew, more;
+  id = 0;
+  /* N.B. il numero di eventi in tale calendario di BZ è pari 
+     al numero di celle, cioè si ha un evento per cella per cui 
+     non è necessaria alcuna gestione dinamica (ad es. liste circolari) */
+  idNew = idA + 1;
+  MD_DEBUG34(printf("idNew=%d\n", idNew));
 
-
+  if (treeRightBZ[id] == -1) 
+    treeRightBZ[id] = idNew;
+  else 
+    {
+      /* Cerca la giusta collocazione nell'albero per l'evento da
+       * schedulare */
+      more = 1; 
+      id = treeRightBZ[id];
+      while (more) 
+	{
+	  if (tEvent <= treeTimeBZ[id]) 
+	    {
+	      if (treeLeftBZ[id] > -1) 
+		id = treeLeftBZ[id];
+	      else 
+		{
+		  more = 0;    
+		  treeLeftBZ[id] = idNew;
+		}
+	    } 
+	  else
+	    {
+	      if (treeRightBZ[id] > -1) 
+		id = treeRightBZ[id];
+	      else 
+		{
+		  more = 0;    
+		  treeRightBZ[id] = idNew;
+		} 
+	    }
+	} 
+    }
+    
+  treeTimeBZ[idNew] = tEvent;
+  treeIdABZ[idNew] = idA;    
+  treeLeftBZ[idNew] = treeRightBZ[idNew] = -1;
+  treeUpBZ[idNew] = id;
 }
 void NextEventBZ(void)
 {
-
-
-
-
+  int id, idAx, idBx, idd, idNow, idtx;
+  /* Il nodo root (0), a cui non è associato alcun evento,
+   * è linkato con il suo right pointer al primo nodo che contiene
+   * un evento */
+  idNow = treeRightBZ[0];  
+  /* Cerca l'evento con tempo minore 
+   * NOTA: l'albero è ordinato e ogni nodo sinistro ha un tempo inferiore */
+  while (treeLeftBZ[idNow] > -1) 
+    idNow = treeLeftBZ[idNow];
+  timeBZ = treeTimeBZ[idNow];   
+  evIdABZ = treeIdABZ[idNow];    
+     
+  /* L'evento è un cell-crossing o un evento generico (output o misura) */
+  DeleteEvent (idNow);
+  treeIdABZ[0] = idNow;
 }
 /* ============================================================ */
 #endif
