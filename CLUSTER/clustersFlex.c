@@ -19,7 +19,9 @@
 /* NOTA: 
  * particles_type == 0 ( DGEBA - sticky ellipsoid), 1 (sticky 2-3), 2 (bimixhs) */
 char **fname; 
-
+int **typeNP=NULL;
+struct partType *typesArr=NULL;
+int *typeOfPart;
 const int NUMREP = 8;
 int MAXBONDS = 10;
 double L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
@@ -177,6 +179,61 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
+      else if (particles_type==3 && nat < 3)
+	{
+	  double rcutFact;
+	  /* read spots in HRB ref. system */
+	  fscanf(fs, "%s ", line);
+	  if (!typeNP)
+	    {
+	      /* è sufficiente leggere le informazioni sugli spot una sola volta */
+	      typeNP = malloc(sizeof(int)*Oparams.ntypes);
+	      typesArr = malloc(sizeof(partType)*Oparams.ntypes);
+	      if (!strcmp(line, "RF"))
+		{ 
+		  //printf("line=%s\n", line);
+		  beg=0;
+		  for (i=0; i < Oparams.ntypes; i++)
+		    {
+		      fscanf(fs, "%lf ", &rcutFact);
+		    }
+		}
+	      else
+		{
+		  sscanf(line, "%d", &typeNP[0]);
+		}
+	      for (i=beg; i < Oparams.ntypes; i++)
+		{
+		  fscanf(fs, "%d ", &typeNP[i]);
+		}
+	      for (i=0; i < Oparams.ntypes; i++)
+		{
+		  /* read particles parameters */
+		  fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
+		  fscanf(fs, "%lf %lf %lf ", &typesArr[i].n[0], &typesArr[i].n[1], &typesArr[i].n[2]);
+		  fscanf(fs, "%lf %lf %lf %lf %d %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
+			 &typesArr[i].I[2], &typesArr[i].brownian, &typesArr[i].ignoreCore);
+		  /* read sticky spots parameters */
+		  fscanf(fs, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
+		  if (typesArr[i].nspots >= NA)
+		    {
+		      printf("[ERROR] too many spots (%d) for type %d increase NA (actual value is %d) in ellipsoid.h and recompile\n",
+			     typesArr[i].nspots, i, NA);
+		      exit(-1);
+		    }
+		  if (typesArr[i].nspots > 0)
+		    {
+		      typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots);
+		    }
+		  else
+		    typesArr[i].spots = NULL;
+		  for (j = 0; j < typesArr[i].nspots; j++)
+		    fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],
+			   &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
+
+		}
+	    }
+	}
       else
 	{
 	  for (i = 0; i < NP; i++) 
@@ -185,6 +242,11 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	      if (particles_type == 2)
 		sscanf(line, "%lf %lf %lf\n", 
 		       &r[0][i], &r[1][i], &r[2][i]); 
+	      else if (particles_type == 3)
+	      	sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %[^\n]\n", 
+		       &r[0][i], &r[1][i], &r[2][i], 
+		       &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
+		       &R[2][0][i], &R[2][1][i], &R[2][2][i], &(typeOfPart[i]), dummy); 
 	      else
 		sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %[^\n]\n", 
 		       &r[0][i], &r[1][i], &r[2][i], 
@@ -354,11 +416,54 @@ void BuildAtomPosAt32(int i, int ata, double rO[3], double R[3][3], double rat[3
 	rat[kk] = rO[kk] - r3[kk]; 
     }
 }
+void BuildAtomPosAtDNAD(int i, int ata, double *rO, double **R, double rat[3])
+{
+  /* QUESTA VA RISCRITTA PER GLI ELLISSOIDI STICKY!!! */
+  /* calcola le coordinate nel laboratorio di uno specifico atomo */
+  int k1, k2;
+  double *spXYZ=NULL;
+  //double radius; 
+  /* l'atomo zero si suppone nell'origine 
+   * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
+   * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
+   * a partire da questi. */
+
+  if (ata > 0)
+    {
+      spXYZ = typesArr[typeOfPart[i]].spots[ata-1].x;
+    }
+  //radius = Oparams.sigma[0][1] / 2.0;
+  if (ata == 0)
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	rat[k1] = rO[k1];
+      //printf("%f %f %f @ 0.5 C[red]\n", rat[0], rat[1], rat[2]);
+    }
+  else 
+    {
+      for (k1 = 0; k1 < 3; k1++)
+	{ 
+	  rat[k1] = rO[k1];
+	  for (k2 = 0; k2 < 3; k2++)
+	    rat[k1] += R[k2][k1]*spXYZ[k2]; 
+	}
+      //printf("ata= %d rat= %f %f %f\n", ata, rat[0], rat[1], rat[2]);
+      //printf("rO = %f %f %f \n", rO[0], rO[1], rO[2]);
+      //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
+      //printf("ata=%d %f %f %f @ 0.075 C[blue]\n", ata, R[0][ata-1], R[1][ata-1], R[2][ata-1]);
+    }
+  
+}
+
 void BuildAtomPosSQ(int i, double rO[3], double rat[1][3])
 {
   int a;
+#if 0
   for (a = 0; a < 3; a++)
     rat[1][a] = rO[a];
+#endif   
+  for (a=0; a < typesArr[typeOfPart[i]].nspots+1; a++)
+    BuildAtomPosAtDNAD(i, a, rO, R, rat[a]);
 }
 void BuildAtomPos32(int i, double rO[3], double R[3][3], double rat[5][3])
 {
@@ -825,8 +930,20 @@ long long int** AllocMatLLI(int size1, int size2)
     v[k] = v[k-1] + size2;
   return v;
 }
+double eval_max_dist_for_spots(int pt)
+{
+  int ns;
+  double dist, distMax=0.0;
+  for (ns=0; ns < typesArr[pt].nspots; ns++)
+    {
+      dist = calc_norm(typesArr[pt].spots[ns].x) + typesArr[pt].spots[ns].sigma*0.5;
+      if (dist > distMax)
+	distMax = dist;
+    }
+  return distMax;
+}
 
-
+double MAXAX, maxax, maxSpots;
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
@@ -839,7 +956,7 @@ int main(int argc, char **argv)
   pi = acos(0.0)*2.0;
     /* parse arguments */
   parse_params(argc, argv);
-
+  
   f2 = fopen(inputfile, "r");
   c2 = 0;
   maxl = 0;
@@ -985,6 +1102,23 @@ int main(int argc, char **argv)
       if (maxsaxBB > maxsax)
 	maxsax = maxsaxBB;
     }
+  else if (particles_type==3)
+    {
+      typeOfPart = malloc(sizeof(int)*Oparams.parnum);
+      /* CALCOLA I MAXAX QUI !!! servono per la costruzione delle LL */
+      MAXAX = 0.0;
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  maxax = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
+		       Sqr(typesArr[typeOfPart[i]].sax[2]));
+	  maxSpots = eval_max_dist_for_spots(typeOfPart[i]);
+	  if (maxSpots > maxax)
+	    maxax = maxSpots;
+	  maxax *= 2.0;
+	  if (i==0 || maxax > MAXAX)
+	    MAXAX=maxax;
+	}
+    }  
   /* WARNING: se i diametri sono diversi va cambiato qua!! */ 
   if (particles_type == 1)
     RCUT = maxsax;
@@ -992,6 +1126,8 @@ int main(int argc, char **argv)
     RCUT = maxsaxAA*1.01;
   else if (particles_type == 2)
     RCUT = maxsax*1.01;
+  else if (particles_type == 3)
+    RCUT = MAXAX*1.01;
   if (!saveBonds)
     {
       for (a = 0; a < 3; a++)
