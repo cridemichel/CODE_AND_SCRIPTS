@@ -18,9 +18,46 @@
 #endif
 /* NOTA: 
  * particles_type == 0 ( DGEBA - sticky ellipsoid), 1 (sticky 2-3), 2 (bimixhs) */
+typedef struct {
+  double x[3];
+  double sax[3];
+  double ppsax[3]; /* semi-lati di un parallelepipedo che circoscrive l'ellissoide con tutti i suoi sticky spots */
+  double ppr[3];
+  double n[3];	
+#if 0
+  double R[3][3]; /* orientazione relativa al sistema di riferimento del corpo rigido */
+#endif
+} hardobjsStruct;
+typedef struct {
+  double x[3];
+  double sigma;
+  int same;
+} spotStruct;
+typedef struct 
+{
+  double sax[3];
+  double ppsax[3]; /* semi-lati di un parallelepipedo che circoscrive l'ellissoide con tutti i suoi sticky spots */
+  double ppr[3];
+  double n[3];/*super-ellipsoids double parameters (as in Povray, i.e. only n[0] and n[1] are used, n[2] is a place holder 
+		for now) */
+  double m;
+  double I[3];
+#if 0
+  double xoff[3];
+#endif
+  int ignoreCore;/* if 1 ignore collisions of the core object */
+  int brownian;
+  int nspots;
+  spotStruct* spots; 
+  int nhardobjs; /* one can add other sub-objects to build a super-object made of 
+		   several super-ellipsoids with their spots */
+  double rcutFact;
+  hardobjsStruct* hardobjs;
+} partType;
+
 char **fname; 
-int **typeNP=NULL;
-struct partType *typesArr=NULL;
+int *typeNP=NULL;
+partType *typesArr=NULL;
 int *typeOfPart;
 const int NUMREP = 8;
 int MAXBONDS = 10;
@@ -38,7 +75,7 @@ int *numbonds, **bonds;
 #endif
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int NP, NPA=-1, ncNV, ncNV2, START, END;
+int NP, NPA=-1, ncNV, ncNV2, START, END, NT;
 int check_percolation = 1, *nspots, particles_type=1, output_bonds=0, mix_type=-1, saveBonds=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
@@ -116,7 +153,7 @@ void readconfBonds(char *fname, double *ti, double *refTime, int NP, double *r[3
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *DR[3], double *R[3][3])
 {
   FILE *f;
-  int nat=0, i, cpos;
+  int nat=0, i, cpos, j;
   f = fopen(fname, "r");
   while (!feof(f) && nat < 2) 
     {
@@ -183,38 +220,37 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	{
 	  double rcutFact;
 	  /* read spots in HRB ref. system */
-	  fscanf(fs, "%s ", line);
+	  fscanf(f, "%s ", line);
 	  if (!typeNP)
 	    {
 	      /* è sufficiente leggere le informazioni sugli spot una sola volta */
-	      typeNP = malloc(sizeof(int)*Oparams.ntypes);
-	      typesArr = malloc(sizeof(partType)*Oparams.ntypes);
+	      typeNP = malloc(sizeof(int)*NP);
+	      typesArr = malloc(sizeof(partType)*NT);
 	      if (!strcmp(line, "RF"))
 		{ 
 		  //printf("line=%s\n", line);
-		  beg=0;
-		  for (i=0; i < Oparams.ntypes; i++)
+		  for (i=0; i < NT; i++)
 		    {
-		      fscanf(fs, "%lf ", &rcutFact);
+		      fscanf(f, "%lf ", &rcutFact);
 		    }
 		}
 	      else
 		{
 		  sscanf(line, "%d", &typeNP[0]);
 		}
-	      for (i=beg; i < Oparams.ntypes; i++)
+	      for (i=0; i < NT; i++)
 		{
-		  fscanf(fs, "%d ", &typeNP[i]);
+		  fscanf(f, "%d ", &typeNP[i]);
 		}
-	      for (i=0; i < Oparams.ntypes; i++)
+	      for (i=0; i < NT; i++)
 		{
 		  /* read particles parameters */
-		  fscanf(fs, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
-		  fscanf(fs, "%lf %lf %lf ", &typesArr[i].n[0], &typesArr[i].n[1], &typesArr[i].n[2]);
-		  fscanf(fs, "%lf %lf %lf %lf %d %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
+		  fscanf(f, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
+		  fscanf(f, "%lf %lf %lf ", &typesArr[i].n[0], &typesArr[i].n[1], &typesArr[i].n[2]);
+		  fscanf(f, "%lf %lf %lf %lf %d %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
 			 &typesArr[i].I[2], &typesArr[i].brownian, &typesArr[i].ignoreCore);
 		  /* read sticky spots parameters */
-		  fscanf(fs, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
+		  fscanf(f, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
 		  if (typesArr[i].nspots >= NA)
 		    {
 		      printf("[ERROR] too many spots (%d) for type %d increase NA (actual value is %d) in ellipsoid.h and recompile\n",
@@ -228,7 +264,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 		  else
 		    typesArr[i].spots = NULL;
 		  for (j = 0; j < typesArr[i].nspots; j++)
-		    fscanf(fs, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],
+		    fscanf(f, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],
 			   &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
 
 		}
@@ -243,7 +279,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 		sscanf(line, "%lf %lf %lf\n", 
 		       &r[0][i], &r[1][i], &r[2][i]); 
 	      else if (particles_type == 3)
-	      	sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %[^\n]\n", 
+	      	sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %[^\n]\n", 
 		       &r[0][i], &r[1][i], &r[2][i], 
 		       &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
 		       &R[2][0][i], &R[2][1][i], &R[2][2][i], &(typeOfPart[i]), dummy); 
@@ -416,7 +452,7 @@ void BuildAtomPosAt32(int i, int ata, double rO[3], double R[3][3], double rat[3
 	rat[kk] = rO[kk] - r3[kk]; 
     }
 }
-void BuildAtomPosAtDNAD(int i, int ata, double *rO, double **R, double rat[3])
+void BuildAtomPosAtDNAD(int i, int ata, double *rO, double R[3][3], double rat[3])
 {
   /* QUESTA VA RISCRITTA PER GLI ELLISSOIDI STICKY!!! */
   /* calcola le coordinate nel laboratorio di uno specifico atomo */
@@ -455,7 +491,7 @@ void BuildAtomPosAtDNAD(int i, int ata, double *rO, double **R, double rat[3])
   
 }
 
-void BuildAtomPosSQ(int i, double rO[3], double rat[1][3])
+void BuildAtomPosSQ(int i, double rO[3], double R[3][3], double rat[NA][3])
 {
   int a;
 #if 0
@@ -1022,6 +1058,8 @@ int main(int argc, char **argv)
 	theta = atof(parval);
       else if (nat==1 && !strcmp(parname,"Dr"))
 	Dr = atof(parval);
+      else if (nat==1 && !strcmp(parname,"ntypes"))
+	NT = atoi(parval);
     }
   fclose(f);
   /* default = ellipsoids */
@@ -1104,10 +1142,10 @@ int main(int argc, char **argv)
     }
   else if (particles_type==3)
     {
-      typeOfPart = malloc(sizeof(int)*Oparams.parnum);
+      typeOfPart = malloc(sizeof(int)*NP);
       /* CALCOLA I MAXAX QUI !!! servono per la costruzione delle LL */
       MAXAX = 0.0;
-      for (i = 0; i < Oparams.parnum; i++)
+      for (i = 0; i < NP; i++)
 	{
 	  maxax = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
 		       Sqr(typesArr[typeOfPart[i]].sax[2]));
@@ -1247,7 +1285,7 @@ int main(int argc, char **argv)
 	      else if (particles_type == 0)
 		BuildAtomPos32(i, r0L, RL, ratL);
 	      else if (particles_type == 2) 
-		BuildAtomPosSQ(i, r0L, ratL);
+		BuildAtomPosSQ(i, r0L, RL, ratL);
 	      for (a = 0; a < NA; a++)
 		for (b = 0; b < 3; b++)
 		  rat[a][b][i] = ratL[a][b];
@@ -1753,8 +1791,8 @@ int main(int argc, char **argv)
 	    {
 	      fprintf(f,"%d %d\n", i+1, numbonds[i]);
 	      for (c = 0; c < numbonds[i]-1; c++)
-	    fprintf(f, "%d ", bonds[i][c]+1);
-	      fprintf(f, "%d\n", bonds[i][numbonds[i]-1]+1);
+	    fprintf(f, "%lld ", bonds[i][c]+1);
+	      fprintf(f, "%lld\n", bonds[i][numbonds[i]-1]+1);
 	    }
 	  fclose(f);
 	}
