@@ -1,10 +1,11 @@
+/* NOTA 09/11/10: questo programma per ora non supporta le interazioni specifiche tra particelle intersIJ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #define MAXPTS 10000
 #define MAXFILES 10000
-#define NA 6
+#define NA 100
 #define MD_STSPOTS_A 5
 #define MD_STSPOTS_B 2
 #define MD_PBONDS 10
@@ -18,6 +19,18 @@
 #endif
 /* NOTA: 
  * particles_type == 0 ( DGEBA - sticky ellipsoid), 1 (sticky 2-3), 2 (bimixhs) */
+int *mapbondsa, *mapbondsb, only_average_clsdistro=0;
+int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
+double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
+int **mapbondsaFlexS, **mapbondsbFlexS, *nbondsFlexS;
+double **mapBheightFlexS, **mapBhinFlexS, **mapBhoutFlexS, **mapSigmaFlexS; 
+
+typedef struct 
+{
+  int min;
+  int max;
+} rangeStruct;
+
 typedef struct {
   double x[3];
   double sax[3];
@@ -54,13 +67,31 @@ typedef struct
   double rcutFact;
   hardobjsStruct* hardobjs;
 } partType;
+typedef struct 
+{
+  int type1; /* se type1 == -2 usa i range r1 */
+  int spot1; 
+  int type2; /* se type2 == -2 usa i range r2 */
+  int spot2;
+  double bheight;
+  double bhin;
+  double bhout;
+  int nmax;
+  int nr1; /* numero di range */
+  rangeStruct* r1;
+  int nr2; /* numero di range */
+  rangeStruct* r2;
+} interStruct;
 
+
+interStruct* intersArr;
+double MAXAX, maxax, maxSpots;
 char **fname; 
 int *typeNP=NULL;
 partType *typesArr=NULL;
 int *typeOfPart;
 const int NUMREP = 8;
-int MAXBONDS = 10;
+int MAXBONDS = 100;
 double L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
@@ -75,8 +106,8 @@ int *numbonds, **bonds;
 #endif
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int NP, NPA=-1, ncNV, ncNV2, START, END, NT;
-int check_percolation = 1, *nspots, particles_type=1, output_bonds=0, mix_type=-1, saveBonds=0;
+int NP, NPA=-1, ncNV, ncNV2, START, END, NT, NI;
+int check_percolation = 1, *nspots, particles_type=1, output_bonds=0, mix_type=-1, saveBonds=-1;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
@@ -153,9 +184,10 @@ void readconfBonds(char *fname, double *ti, double *refTime, int NP, double *r[3
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *DR[3], double *R[3][3])
 {
   FILE *f;
+  static first=1;
   int nat=0, i, cpos, j;
   f = fopen(fname, "r");
-  while (!feof(f) && nat < 2) 
+  while (!feof(f) && nat < 3) 
     {
       cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
@@ -216,61 +248,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
-      else if (particles_type==3 && nat < 3)
-	{
-	  double rcutFact;
-	  /* read spots in HRB ref. system */
-	  fscanf(f, "%s ", line);
-	  if (!typeNP)
-	    {
-	      /* è sufficiente leggere le informazioni sugli spot una sola volta */
-	      typeNP = malloc(sizeof(int)*NP);
-	      typesArr = malloc(sizeof(partType)*NT);
-	      if (!strcmp(line, "RF"))
-		{ 
-		  //printf("line=%s\n", line);
-		  for (i=0; i < NT; i++)
-		    {
-		      fscanf(f, "%lf ", &rcutFact);
-		    }
-		}
-	      else
-		{
-		  sscanf(line, "%d", &typeNP[0]);
-		}
-	      for (i=0; i < NT; i++)
-		{
-		  fscanf(f, "%d ", &typeNP[i]);
-		}
-	      for (i=0; i < NT; i++)
-		{
-		  /* read particles parameters */
-		  fscanf(f, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
-		  fscanf(f, "%lf %lf %lf ", &typesArr[i].n[0], &typesArr[i].n[1], &typesArr[i].n[2]);
-		  fscanf(f, "%lf %lf %lf %lf %d %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
-			 &typesArr[i].I[2], &typesArr[i].brownian, &typesArr[i].ignoreCore);
-		  /* read sticky spots parameters */
-		  fscanf(f, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
-		  if (typesArr[i].nspots >= NA)
-		    {
-		      printf("[ERROR] too many spots (%d) for type %d increase NA (actual value is %d) in ellipsoid.h and recompile\n",
-			     typesArr[i].nspots, i, NA);
-		      exit(-1);
-		    }
-		  if (typesArr[i].nspots > 0)
-		    {
-		      typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots);
-		    }
-		  else
-		    typesArr[i].spots = NULL;
-		  for (j = 0; j < typesArr[i].nspots; j++)
-		    fscanf(f, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],
-			   &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
-
-		}
-	    }
-	}
-      else
+      else if (!(particles_type==3) || ((particles_type==3) && (nat==3)))
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
@@ -483,10 +461,12 @@ void BuildAtomPosAtDNAD(int i, int ata, double *rO, double R[3][3], double rat[3
 	  for (k2 = 0; k2 < 3; k2++)
 	    rat[k1] += R[k2][k1]*spXYZ[k2]; 
 	}
-      //printf("ata= %d rat= %f %f %f\n", ata, rat[0], rat[1], rat[2]);
-      //printf("rO = %f %f %f \n", rO[0], rO[1], rO[2]);
-      //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
-      //printf("ata=%d %f %f %f @ 0.075 C[blue]\n", ata, R[0][ata-1], R[1][ata-1], R[2][ata-1]);
+#if 0
+      printf("ata= %d rat= %f %f %f\n", ata, rat[0], rat[1], rat[2]);
+      printf("rO = %f %f %f \n", rO[0], rO[1], rO[2]);
+      printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
+      printf("ata=%d %f %f %f @ 0.075 C[blue]\n", ata, R[0][ata-1], R[1][ata-1], R[2][ata-1]);
+#endif
     }
   
 }
@@ -561,6 +541,10 @@ int check_distance(int i, int j, double Dx, double Dy, double Dz)
       else
 	ma = maxsaxAB;
     }
+  else if (particles_type==3)
+    {
+      ma = MAXAX;
+    }
   if (DxL > ma || DyL > ma || DzL > ma)
     return 1;
   else 
@@ -570,9 +554,9 @@ int check_distance(int i, int j, double Dx, double Dy, double Dz)
 
 double distance(int i, int j)
 {
-  int a, b;
+  int a, b, nn, kk;
   int maxa=0, maxb=0;
-  double imgx, imgy, imgz;
+  double imgx, imgy, imgz, dist, distSq, imga[3];
   double Dx, Dy, Dz;
   double wellWidth;
 
@@ -582,10 +566,10 @@ double distance(int i, int j)
   imgx = -L*rint(Dx/L);
   imgy = -L*rint(Dy/L);
   imgz = -L*rint(Dz/L);
-
+#if 1
   if (check_distance(i, j, Dx+imgx, Dy+imgy, Dz+imgz))
     return 1;
-
+#endif
   if (particles_type == 1)
     {
       maxa = MD_STSPOTS_A;
@@ -637,16 +621,57 @@ double distance(int i, int j)
 	  wellWidth = sigmaAB+deltaAB;
 	}
     }
-  for (a = 1; a < maxa+1; a++)
+  else if (particles_type==3)
     {
-      for (b = 1; b < maxb+1; b++)
+#if 0
+      maxa=2;
+      maxb=2;
+      wellWidth = typesArr[0].spots[0].sigma;
+      for (a = 1; a < maxa+1; a++)
 	{
-	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
-	    //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
-	  //printf("[DISTANCE] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + imgz -rat[b][2][j])));
-	  if (Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j])
-    	      +Sqr(rat[a][2][i] + imgz -rat[b][2][j]) < Sqr(wellWidth))	  
-	    return -1;
+	  for (b = 1; b < maxb+1; b++)
+	    {
+	      if (Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j])
+		  +Sqr(rat[a][2][i] + imgz -rat[b][2][j]) < Sqr(wellWidth))	  
+		{
+		  return -1;
+		}
+	    }
+	}
+#else
+      //printf("wellWidth=%f\n", wellWidth);
+      for (nn = 0; nn < nbondsFlex; nn++)
+	{
+	  distSq = 0;
+	  imga[0] = imgx;
+	  imga[1] = imgy;
+	  imga[2] = imgz;
+       	  for (kk=0; kk < 3; kk++)
+	    distSq += Sqr(rat[mapbondsa[nn]][kk][i]+imga[kk]-rat[mapbondsb[nn]][kk][j]);
+	  dist = sqrt(distSq) - mapSigmaFlex[nn];
+	  //printf("mapSigmaFlex=%f nbondsFlex=%d\n", mapSigmaFlex[nn], nbondsFlex);
+	  if (dist < 0.0)
+	    {
+	      return -1;
+	    }
+	}
+#endif
+    }
+  else
+    {
+      for (a = 1; a < maxa+1; a++)
+	{
+	  for (b = 1; b < maxb+1; b++)
+	    {
+	      //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
+	      //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
+	      //printf("[DISTANCE] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + imgz -rat[b][2][j])));
+	      if (Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j])
+		  +Sqr(rat[a][2][i] + imgz -rat[b][2][j]) < Sqr(wellWidth))	  
+		{
+		  return -1;
+		}
+	    }
 	}
     }
   return 1;
@@ -762,10 +787,117 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
     }
   return 1;
 }
+int is_in_ranges(int A, int B, int nr, rangeStruct* r)
+{
+  int kk;
+  if (A==-1 && B==-1)
+    return 0;
+  if (A==B)
+    return 1;
+  if (B==-2)
+    {
+      for (kk=0; kk < nr; kk++)  
+	{
+	  if (A >= r[kk].min && A <= r[kk].max)
+	    {
+	      return 1;
+	    }
+	}
+    }
+  return 0;
+}
 
+void assign_bond_mapping(int i, int j)
+{
+  int ni, type1, type2, a, k, nl;
+  type1 = typeOfPart[i];
+  type2 = typeOfPart[j];
+  a=0;
+  
+  /* nl is a unique number assigned to each type1-type2 pair */
+  for (ni=0; ni < NI; ni++)
+    {
+      if (is_in_ranges(type1, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	  is_in_ranges(type2, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
+	{
+	  /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
+	  mapbondsaFlex[a] = intersArr[ni].spot1+1;
+	  mapbondsbFlex[a] = intersArr[ni].spot2+1;
+	  mapBheightFlex[a] = intersArr[ni].bheight;
+	  mapBhinFlex[a] = intersArr[ni].bhin;
+	  mapBhoutFlex[a] = intersArr[ni].bhout;
+	  mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArr[ni].spot1].sigma
+				 + typesArr[type2].spots[intersArr[ni].spot2].sigma);
+	  a++;
+	  if (type1 == type2 && intersArr[ni].spot1 != intersArr[ni].spot2)
+	    {
+	      mapbondsaFlex[a] = intersArr[ni].spot2+1;
+	      mapbondsbFlex[a] = intersArr[ni].spot1+1;
+	      mapBheightFlex[a] = mapBheightFlex[a-1];
+	      mapBhinFlex[a] = mapBhinFlex[a-1];
+	      mapBhoutFlex[a] = mapBhoutFlex[a-1];
+	      mapSigmaFlex[a] = mapSigmaFlex[a-1];
+	      a++;
+	    }
+	}	
+      else if (is_in_ranges(type2, intersArr[ni].type1, intersArr[ni].nr1, intersArr[ni].r1) && 
+	       is_in_ranges(type1, intersArr[ni].type2, intersArr[ni].nr2, intersArr[ni].r2))
+	{
+	  /* N.B. il +1 c'è poiché mapbondsa[]=0 si riferisce all'atomo centrato nell'origine (il core) */
+	  mapbondsaFlex[a] = intersArr[ni].spot2+1;
+	  mapbondsbFlex[a] = intersArr[ni].spot1+1;
+	  mapBheightFlex[a] = intersArr[ni].bheight;
+	  mapBhinFlex[a] = intersArr[ni].bhin;
+	  mapBhoutFlex[a] = intersArr[ni].bhout;
+	  mapSigmaFlex[a] = 0.5*(typesArr[type2].spots[intersArr[ni].spot1].sigma
+				 + typesArr[type1].spots[intersArr[ni].spot2].sigma);
+	  a++;
+	}
+    }
+#if 0
+  /* qui assenga le interazioni specifiche tra particelle i-j 
+     (queste non le ottimizziamo) */
+  for (ni=0; ni < Oparams.nintersIJ; ni++)
+    {
+      if (is_in_ranges(i, intersArrIJ[ni].i, intersArrIJ[ni].nr1, intersArrIJ[ni].r1) && 
+	  is_in_ranges(j, intersArrIJ[ni].j, intersArrIJ[ni].nr2, intersArrIJ[ni].r2))
+	{
+	  mapbondsaFlex[a] = intersArrIJ[ni].spot1+1;
+	  mapbondsbFlex[a] = intersArrIJ[ni].spot2+1;
+	  mapBheightFlex[a] = intersArrIJ[ni].bheight;
+	  mapBhinFlex[a] = intersArrIJ[ni].bhin;
+          mapBhoutFlex[a] = intersArrIJ[ni].bhout;
+	  mapSigmaFlex[a] = 0.5*(typesArr[type1].spots[intersArrIJ[ni].spot1].sigma
+				 + typesArr[type2].spots[intersArrIJ[ni].spot2].sigma);
+	  a++;
+       	}	 
+     else if (is_in_ranges(j, intersArrIJ[ni].i, intersArrIJ[ni].nr1, intersArrIJ[ni].r1) && 
+	      is_in_ranges(i, intersArrIJ[ni].j, intersArrIJ[ni].nr2, intersArrIJ[ni].r2)) 
+       {
+	 mapbondsaFlex[a] = intersArrIJ[ni].spot2+1;
+	 mapbondsbFlex[a] = intersArrIJ[ni].spot1+1;
+	 mapBheightFlex[a] = intersArrIJ[ni].bheight;
+	 mapBhinFlex[a] = intersArrIJ[ni].bhin;
+	 mapBhoutFlex[a] = intersArrIJ[ni].bhout;
+	 mapSigmaFlex[a] = 0.5*(typesArr[type2].spots[intersArrIJ[ni].spot1].sigma
+				+ typesArr[type1].spots[intersArrIJ[ni].spot2].sigma);
+	 a++;	 
+       } 
+    }
+#endif
+  nbondsFlex = a;
+  mapbondsa = mapbondsaFlex;
+  mapbondsb = mapbondsbFlex;
+} 
 
 int bond_found(int i, int j)
 {
+  if (particles_type==3)
+    {
+      assign_bond_mapping(i, j);
+      if (nbondsFlex==0)
+	return 0;
+    }
   if (distance(i, j) < 0.0)
     return 1;
   else
@@ -848,7 +980,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--maxbonds] <listafile>\n");
+  printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--average/-av] [--maxbonds] <listafile>\n");
   exit(0);
 }
 
@@ -876,6 +1008,10 @@ void parse_params(int argc, char** argv)
 	{
 	  check_percolation = 0;
 	} 
+      else if (!strcmp(argv[cc],"--average") || !strcmp(argv[cc],"-av" ))
+	{
+	  only_average_clsdistro = 1;
+	}
       else if (!strcmp(argv[cc],"--bonds") || !strcmp(argv[cc],"-b" ))
 	{
 	  output_bonds = 1;
@@ -905,6 +1041,7 @@ void build_linked_list(void)
   for (j = 0; j < cellsx*cellsy*cellsz + NP; j++)
     cellList[j] = -1;
 
+  //printf("START=%d END=%d L=%f NP=%d cells=%d %d %d\n", START, END, L, NP, cellsx, cellsy, cellsz);
   for (n = START; n < END; n++)
     {
       inCell[0][n] =  (rat[0][0][n] + L2) * cellsx / L;
@@ -912,6 +1049,9 @@ void build_linked_list(void)
       inCell[2][n] =  (rat[0][2][n] + L2) * cellsz / L;
       j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
 	inCell[0][n] + NP;
+      //printf("n=%d incells=%d %d %d (%f %f %f) j=%d cellList=%d\n",n, inCell[0][n], inCell[1][n], inCell[2][n], 
+	//     rat[0][0][n], rat[0][1][n], rat[0][2][n], j, cellList[j]);
+
       cellList[n] = cellList[j];
       cellList[j] = n;
     }
@@ -978,11 +1118,95 @@ double eval_max_dist_for_spots(int pt)
     }
   return distMax;
 }
+void parse_one_range(char *s, int *A, int *nr, rangeStruct **r)
+{
+  int m, M;
+  if (sscanf(s, "%d-%d", &m, &M)==2)
+    {
+      *A = -2;
+      if (*nr == 0)
+	*r = malloc(sizeof(rangeStruct)*(*nr+1));
+      else
+	*r = realloc(*r, sizeof(rangeStruct)*(*nr+1));
+      (*r)[*nr].min = m;
+      (*r)[*nr].max = M;
+      (*nr)++;
+    }
+  else
+    {
+      *A = atoi(s);
+      *r = NULL;
+      *nr = 0;
+    }
+}
+void parse_ranges(char *s, int *A, int *nr, rangeStruct **r)
+{
+  char *ns;
+  ns = strtok(s, ",");
 
-double MAXAX, maxax, maxSpots;
+  *nr = 0;
+  if (!ns)
+    {
+      parse_one_range(s, A, nr, r);
+      return;
+    }
+  while (ns)
+    {
+      parse_one_range(ns, A, nr, r);
+      ns = strtok(NULL, ",");
+    } 
+}
+int get_max_nbonds(void)
+{
+  int pt1, pt2, i, maxijbonds=0;
+  int ni, type1, type2, a, maxpbonds=0;
+  int *intersI;
+  for (pt1=0; pt1 < NT; pt1++)
+    {
+      for (pt2=pt1; pt2 < NT; pt2++)
+	{
+	  type1 = pt1;
+	  type2 = pt2;
+	  a=0;
+	  for (ni=0; ni < NI; ni++)
+	    {
+	      if ((intersArr[ni].type1 == type1 && intersArr[ni].type2 == type2) ||
+		  (intersArr[ni].type1 == type2 && intersArr[ni].type2 == type1))
+		{
+		  a+=2;
+		}	
+	    }
+	  if (a > maxpbonds)
+	    maxpbonds = a;
+	}
+    }
+#if 0
+  intersI = malloc(sizeof(int)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    intersI[i] = 0;
+  for (ni=0; ni < Oparams.nintersIJ; ni++)
+    {
+      (intersI[intersArrIJ[ni].i])+=2; 
+      (intersI[intersArrIJ[ni].j])+=2;
+    }
+  maxijbonds=0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (intersI[i] > maxijbonds)
+	maxijbonds = intersI[i];
+    }
+  free(intersI);
+#else
+  maxijbonds = 0;
+#endif
+  return maxpbonds+maxijbonds;
+}
+
+int maxnbonds;
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
+  char *s1, *s2;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, jj;
@@ -992,7 +1216,9 @@ int main(int argc, char **argv)
   pi = acos(0.0)*2.0;
     /* parse arguments */
   parse_params(argc, argv);
-  
+ 
+  if (only_average_clsdistro)
+   check_percolation = 0; 
   f2 = fopen(inputfile, "r");
   c2 = 0;
   maxl = 0;
@@ -1014,18 +1240,87 @@ int main(int argc, char **argv)
   fclose(f2);
   f = fopen(fname[0], "r");
   nat = 0;
-  while (!feof(f) && nat < 2) 
+  while (!feof(f) && nat < 3) 
     {
       fscanf(f, "%[^\n]\n)", line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
-	  if ((nat==2 && saveBonds==0) ||
+	  if (particles_type==3 && nat==2 && saveBonds==0)
+	    {
+	      double rcutFact;
+	      /* read spots in HRB ref. system */
+	      if (!typeNP)
+		{
+		  typeNP = malloc(sizeof(int)*NP);
+		  typesArr = malloc(sizeof(partType)*NT);
+		}
+	      printf("NT=%d\n", NT);
+	      for (i=0; i < NT; i++)
+		{
+		  fscanf(f, "%d ", &typeNP[i]);
+		}
+	      for (i=0; i < NT; i++)
+		{
+		  /* read particles parameters */
+		  fscanf(f, "%lf %lf %lf ", &typesArr[i].sax[0], &typesArr[i].sax[1], &typesArr[i].sax[2]); 
+		  printf("sax[%d]= %f %f %f\n", i, typesArr[i].sax[0], typesArr[i].sax[1], typesArr[i].sax[2]);
+		  fscanf(f, "%lf %lf %lf ", &typesArr[i].n[0], &typesArr[i].n[1], &typesArr[i].n[2]);
+		  fscanf(f, "%lf %lf %lf %lf %d %d ", &typesArr[i].m, &typesArr[i].I[0], &typesArr[i].I[1],
+			 &typesArr[i].I[2], &typesArr[i].brownian, &typesArr[i].ignoreCore);
+		  /* read sticky spots parameters */
+		  fscanf(f, "%d %d ", &typesArr[i].nspots, &typesArr[i].nhardobjs);
+		  if (typesArr[i].nspots >= NA)
+		    {
+		      printf("[ERROR] too many spots (%d) for type %d increase NA (actual value is %d) in ellipsoid.h and recompile\n",
+			     typesArr[i].nspots, i, NA);
+		      exit(-1);
+		    }
+		  if (typesArr[i].nspots > 0)
+		    {
+		      typesArr[i].spots = malloc(sizeof(spotStruct)*typesArr[i].nspots);
+		    }
+		  else
+		    typesArr[i].spots = NULL;
+		  for (j = 0; j < typesArr[i].nspots; j++)
+		    fscanf(f, "%lf %lf %lf %lf ", &typesArr[i].spots[j].x[0],&typesArr[i].spots[j].x[1],
+			   &typesArr[i].spots[j].x[2], &typesArr[i].spots[j].sigma);
+
+		}
+	      if (NI > 0)
+		{
+		  intersArr = malloc(sizeof(interStruct)*NI);
+		  maxnbonds = get_max_nbonds();
+		  mapbondsaFlex = (int*)malloc(sizeof(int)*maxnbonds);
+		  mapbondsbFlex = (int*)malloc(sizeof(int)*maxnbonds);
+		  mapBheightFlex = (double*) malloc(sizeof(double)*maxnbonds);
+		  mapBhinFlex    = (double*)malloc(sizeof(double)*maxnbonds);
+		  mapBhoutFlex   = (double*)malloc(sizeof(double)*maxnbonds);
+		  mapSigmaFlex   = (double*)malloc(sizeof(double)*maxnbonds);
+		}
+	      else
+		intersArr = NULL;
+	      s1 = malloc(sizeof(char)*65535);
+	      s2 = malloc(sizeof(char)*65535);
+
+	      for (i=0; i < NI; i++)
+		{
+		  fscanf(f, "%s %d %s %d %lf %lf %lf %d ", s1, &intersArr[i].spot1, s2, 
+			 &intersArr[i].spot2, 
+			 &intersArr[i].bheight, &intersArr[i].bhin, &intersArr[i].bhout, &intersArr[i].nmax);
+		  parse_ranges(s1, &intersArr[i].type1, &intersArr[i].nr1, &intersArr[i].r1);
+		  parse_ranges(s2, &intersArr[i].type2, &intersArr[i].nr2, &intersArr[i].r2);
+		} 
+	      free(s1);
+	      free(s2);
+	    }
+	  if ((particles_type==3 && nat==3) || (nat==2 && saveBonds==-1) ||
 	      (nat==3 && saveBonds==1))
 	    {
 	      for (i=0; i < 2*NP; i++)
 		fscanf(f, "%[^\n]\n", line);
 	      fscanf(f, "%lf\n", &L);
+	      printf("====> L=%f\n", L);
 	      break;
 	    }
 	  continue;
@@ -1060,6 +1355,8 @@ int main(int argc, char **argv)
 	Dr = atof(parval);
       else if (nat==1 && !strcmp(parname,"ntypes"))
 	NT = atoi(parval);
+      else if (nat==1 && !strcmp(parname,"ninters"))
+	NI = atoi(parval);
     }
   fclose(f);
   /* default = ellipsoids */
@@ -1085,6 +1382,7 @@ int main(int argc, char **argv)
      	START=NPA;
         END=NP;
      }
+	  
   color = malloc(sizeof(int)*NP);
   color2= malloc(sizeof(int)*NP*NUMREP);
   clsdim2=malloc(sizeof(int)*NP*NUMREP);
@@ -1140,15 +1438,32 @@ int main(int argc, char **argv)
       if (maxsaxBB > maxsax)
 	maxsax = maxsaxBB;
     }
-  else if (particles_type==3)
+  if (!saveBonds)
+    {
+      for (a = 0; a < 3; a++)
+	{
+	  for (b = 0; b < NA; b++)
+	    rat[b][a] = malloc(sizeof(double)*NP);
+	  r0[a] = malloc(sizeof(double)*NP);
+	  DR0[a] = malloc(sizeof(double)*NP);
+	  for (b = 0; b < 3; b++)
+	    {
+	      R[a][b] = malloc(sizeof(double)*NP);
+	    }
+	}
+    }
+  if (particles_type==3)
     {
       typeOfPart = malloc(sizeof(int)*NP);
       /* CALCOLA I MAXAX QUI !!! servono per la costruzione delle LL */
+      readconf(fname[0], &time, &refTime, NP, r0, DR0, R);
       MAXAX = 0.0;
       for (i = 0; i < NP; i++)
 	{
+	  
 	  maxax = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
 		       Sqr(typesArr[typeOfPart[i]].sax[2]));
+	  //printf("i=%d, typeOfPart=%d maxax=%f\n", i, typeOfPart[i], maxax);
 	  maxSpots = eval_max_dist_for_spots(typeOfPart[i]);
 	  if (maxSpots > maxax)
 	    maxax = maxSpots;
@@ -1166,20 +1481,8 @@ int main(int argc, char **argv)
     RCUT = maxsax*1.01;
   else if (particles_type == 3)
     RCUT = MAXAX*1.01;
-  if (!saveBonds)
-    {
-      for (a = 0; a < 3; a++)
-	{
-	  for (b = 0; b < NA; b++)
-	    rat[b][a] = malloc(sizeof(double)*NP);
-	  r0[a] = malloc(sizeof(double)*NP);
-	  DR0[a] = malloc(sizeof(double)*NP);
-	  for (b = 0; b < 3; b++)
-	    {
-	      R[a][b] = malloc(sizeof(double)*NP);
-	    }
-	}
-    }
+
+  printf("====> RCUT=%G\n", RCUT);
   if (particles_type==1)
     {
       build_atom_positions();
@@ -1278,18 +1581,27 @@ int main(int argc, char **argv)
 		  r0L[a] = r0[a][i];
 		  for (b = 0; b < 3; b++)
 		    RL[a][b] = R[a][b][i];
+		  //printf("r0=%f %f %f R=%f %f %f\n", r0L[0], r0L[1], r0L[2], RL[0][0], RL[0][1], RL[0][2]);
 		}
 	      //printf("r0L[%d]=%.15G %.15G %.15G\n", i, r0L[0], r0L[1], r0L[2]);
 	      if (particles_type == 1)
 		BuildAtomPos(i, r0L, RL, ratL);
 	      else if (particles_type == 0)
 		BuildAtomPos32(i, r0L, RL, ratL);
-	      else if (particles_type == 2) 
+	      else if (particles_type == 3) 
 		BuildAtomPosSQ(i, r0L, RL, ratL);
-	      for (a = 0; a < NA; a++)
-		for (b = 0; b < 3; b++)
-		  rat[a][b][i] = ratL[a][b];
-
+	      if (particles_type == 3)
+		{
+		  for (a = 0; a < typesArr[typeOfPart[i]].nspots+1; a++)
+		    for (b = 0; b < 3; b++)
+		      rat[a][b][i] = ratL[a][b];
+		}
+	      else
+		{
+		  for (a = 0; a < NA; a++)
+		    for (b = 0; b < 3; b++)
+		      rat[a][b][i] = ratL[a][b];
+		}
 	      //printf("rat[]=%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
 	    }
 	}
@@ -1307,13 +1619,13 @@ int main(int argc, char **argv)
       //coppie = 0;
       if (!saveBonds)
 	build_linked_list();
-
+      //printf("cellList[0]=%d\n", cellList[0]);
       if (particles_type == 1)
 	{
 	  jbeg = NPA;
 	  ifin = NPA;
 	}
-      else if (particles_type == 0 || particles_type == 2)
+      else if (particles_type == 0 || particles_type == 2 || particles_type==3)
 	{
 	  jbeg = 0; 
 	  ifin = NP;
@@ -1387,6 +1699,10 @@ int main(int argc, char **argv)
 			      if (j <= i) 
 				continue;
 			      break;
+			    case 3:
+			      if (j <= i)
+				continue;
+			      break;
 			    }
 			  if (bond_found(i, j))  
 			    {
@@ -1395,6 +1711,7 @@ int main(int argc, char **argv)
 				  add_bond(i, j);
 				  add_bond(j, i);
 				}
+			      //printf("i=%d j=%d ene=%f\n", i, j, ene);
 			      ene=ene+1.0;
 			      if (color[j] == -1)
 				color[j] = color[i];
@@ -1446,8 +1763,11 @@ int main(int argc, char **argv)
 	}
       ncls = curcolor;
       //printf("curcolor:%d\n", curcolor);
-      sprintf(fncls, "%s.clusters", fname[nr1]);
-      f = fopen(fncls, "w+");
+      if (!only_average_clsdistro)
+	{
+	  sprintf(fncls, "%s.clusters", fname[nr1]);
+	  f = fopen(fncls, "w+");
+	}
       for (nc = 0; nc < ncls; nc++)
 	{
 	  clsdim[nc] = 0; 
@@ -1732,52 +2052,63 @@ int main(int argc, char **argv)
 	}
       //printf("coppie PERC=%d\n", coppie);
       almenouno = 0;
-
-      sprintf(fn, "perc%s.dat", fname[nr1]);
-      f2 = fopen(fn, "w");
-      fclose(f2);
-      for (nc = 0; nc < ncls; nc++)
+      if (!only_average_clsdistro)
 	{
-	  //if (cluster_sort[nc].dim >= 2)
-	    //almenouno = 1;
-	  if (percola[cluster_sort[nc].color])
+	  if (check_percolation)
 	    {
 	      sprintf(fn, "perc%s.dat", fname[nr1]);
-	      f2 = fopen(fn, "a");
-	      fprintf(f2, "%d %d\n", nc, cluster_sort[nc].dim);
+	      f2 = fopen(fn, "w");
 	      fclose(f2);
 	    }
-	  if (percola[cluster_sort[nc].color])
-	    fprintf(f, "1 ");
-	  else
-	    fprintf(f, "0 ");
-	      
-	  for (i = 0; i < NP; i++)
+	  for (nc = 0; nc < ncls; nc++)
 	    {
-	      if (color[i]==cluster_sort[nc].color)
+	      //if (cluster_sort[nc].dim >= 2)
+	      //almenouno = 1;
+	      if (check_percolation)
 		{
-		  fprintf(f, "%d ", i);
+		  if (percola[cluster_sort[nc].color])
+		    {
+		      sprintf(fn, "perc%s.dat", fname[nr1]);
+		      f2 = fopen(fn, "a");
+		      fprintf(f2, "%d %d\n", nc, cluster_sort[nc].dim);
+		      fclose(f2);
+		    }
+
+		  if (percola[cluster_sort[nc].color])
+		    fprintf(f, "1 ");
+		  else
+		    fprintf(f, "0 ");
+		}	      
+	      for (i = 0; i < NP; i++)
+		{
+		  if (color[i]==cluster_sort[nc].color)
+		    {
+		      fprintf(f, "%d ", i);
+		    }
 		}
+	      fprintf(f, "\n");
 	    }
-	  fprintf(f, "\n");
+	  //if (almenouno==0)
+	  //fprintf(f, "WARNING: No clusters found!\n");
+	  fclose(f);
 	}
-      //if (almenouno==0)
-	//fprintf(f, "WARNING: No clusters found!\n");
-      fclose(f);
       for (nc = 0; nc < ncls; nc++)
 	{
 	  //printf("cluster_sort[%d].dim=%d color=%d\n", nc, cluster_sort[nc].dim, cluster_sort[nc].color);
 	  clssizedst[cluster_sort[nc].dim]++;
 	  clssizedstAVG[cluster_sort[nc].dim] += 1.0;
 	}
-      sprintf(fncls, "%s.clsdst", fname[nr1]);
-      f = fopen(fncls, "w+");
-      for (i = 1; i < NP; i++)
+      if (!only_average_clsdistro)
 	{
-	  if (clssizedst[i] != 0)
+	  sprintf(fncls, "%s.clsdst", fname[nr1]);
+	  f = fopen(fncls, "w+");
+	  for (i = 1; i < NP; i++)
+	    {
+	      if (clssizedst[i] != 0)
 	    fprintf(f, "%d %d\n", i, clssizedst[i]);
+	    }
+	  fclose(f);
 	}
-      fclose(f);
       if (output_bonds)
 	{
 	  sprintf(fn, "%s.bonds", fname[nr1]);
