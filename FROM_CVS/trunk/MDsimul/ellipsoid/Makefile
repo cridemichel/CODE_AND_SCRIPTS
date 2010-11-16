@@ -3,7 +3,8 @@ SDHDR=ellipsoid.h
 
 UTIL = wtdutil heteroutil xvautil corutil jumps
 
-ellipsoid: link measures.o move.o init.o corutil tree.o matrixalg.o nnl.o hesticky.o superellipsoid.o multiple_ll.o parallel_ed.o # $(UTIL)
+ellipsoid: link measures.o move.o init.o corutil tree.o matrixalg.o nnl.o hesticky.o superellipsoid.o multiple_ll.o 
+#parallel_ed.o # $(UTIL)
 
 link:
 	ln -sf $(PERC)/ellipsoid/$(SDHDR) $(COMM)/mdsimdep.h 
