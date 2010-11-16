@@ -4199,7 +4199,10 @@ void newt(double x[], int n, int *check,
 	      x[i] = xold[i];
 	      x[i] += p[i]; 
 	    }
+	  //printf("QUIIIII <========\n");
 	  *check = 0;
+	  /* WARNING */
+	  //continue;
 	  //FREERETURN 
 	} 
       test=0.0; /* Test for convergence on x. */
@@ -4949,7 +4952,7 @@ void newtDistNeg(double x[], int n, int *check,
 	  MD_DEBUG(printf("test < TOLF\n"));
 	  FREERETURND
 	}
-      if (*check==1) 
+      if (*check) 
 	{ /* Check for gradient of f zero, i.e., spurious convergence.*/
 #if 0
 	  test=0.0; 
@@ -4969,8 +4972,11 @@ void newtDistNeg(double x[], int n, int *check,
 	      x[i] = xold[i];
 	      x[i] += p[i]; 
 	    }
+	  //printf("=========> QUI *check=%d\n", *check);
 	  *check = 0;
  	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
+	  /* WARNING */
+	  //continue;
   	  //FREERETURND 
 	} 
       test=0.0; /* Test for convergence on x. */
@@ -5158,6 +5164,8 @@ void newtDist(double x[], int n, int *check,
 	    }
 	  *check = 0;
 	  MD_DEBUG(printf("*check:%d test=%f\n", *check, test));
+	  /* WARNING */
+	  //continue;
   	  //FREERETURND 
 	} 
       test=0.0; /* Test for convergence on x. */
