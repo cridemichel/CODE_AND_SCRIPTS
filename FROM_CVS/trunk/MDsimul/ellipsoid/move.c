@@ -2981,7 +2981,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
       printf("relative velocity (vc=%.15G) at contact point is negative! I ignore this event...\n", vc);
       MD_DEBUG(store_bump(i,j));
       MD_DEBUG(exit(-1));
+#if 1
+      store_bump(i,j);
+      exit(-1);
+#else
       return;
+#endif
     }
   vectProd(rAC[0], rAC[1], rAC[2], norm[0], norm[1], norm[2], &rACn[0], &rACn[1], &rACn[2]);
 #ifdef MD_ASYM_ITENS 
