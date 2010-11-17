@@ -4979,15 +4979,36 @@ void newtDistNeg(double x[], int n, int *check,
 	  //continue;
   	  //FREERETURND 
 	} 
+#if 0
       test=0.0; /* Test for convergence on x. */
       for (i=0;i<n;i++) 
 	{
 	  temp=(fabs(x[i]-xold[i]))/FMAX(fabs(x[i]),1.0); 
 	  if (temp > test) 
 	    test=temp; 
-	} 
+	}
+#else
+      test=0.0; /* Test for convergence on x using standard NR step and not
+		   those obtained by lnsrch that can be a local minimum. */
+      for (i=0;i<n;i++) 
+	{
+	  temp=(fabs(p[i]))/FMAX(fabs(xold[i]+p[i]),1.0); 
+	  if (temp > test) 
+	    test=temp; 
+	}
+
+#endif 
+#if 1
       if (test < TOLXD) 
 	{
+#if 0
+    	  test=0.0; /* Test for convergence on function values.*/
+	  for (i=0;i<n;i++) 
+	    if (fabs(fvecD[i]) > test) 
+	      test=fabs(fvecD[i]); 
+ 
+	  printf("QUI testTOLF=%.15G?!?\n", test);
+#endif
 	  MD_DEBUG(printf("test<TOLXD test=%.15f\n", test));
 	  MD_DEBUG(printf("fvec: (%f,%f,%f,%f,%f,%f,%f,%f)\n",
 			  fvecD[0], fvecD[1], fvecD[2], fvecD[2], fvecD[3], 
@@ -4997,6 +5018,7 @@ void newtDistNeg(double x[], int n, int *check,
 #endif
 	  FREERETURND;
 	}
+#endif
 #if 1
       if (*check==2)
 	{
