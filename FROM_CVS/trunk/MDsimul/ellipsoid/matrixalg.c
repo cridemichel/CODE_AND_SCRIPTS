@@ -4206,12 +4206,21 @@ void newt(double x[], int n, int *check,
 	  //FREERETURN 
 	} 
       test=0.0; /* Test for convergence on x. */
+#if 0
       for (i=0;i<n;i++) 
 	{
 	  temp=(fabs(x[i]-xold[i]))/FMAX(fabs(x[i]),1.0); 
 	  if (temp > test) 
 	    test=temp; 
 	} 
+#else
+      for (i=0;i<n;i++) 
+	{
+	  temp=(fabs(p[i]))/FMAX(fabs(xold[i]+p[i]),1.0); 
+	  if (temp > test) 
+	    test=temp; 
+	} 
+#endif
       if (test < TOLX) 
 	{
 	  MD_DEBUG(printf("test<TOLX test=%.15f\n", test));
