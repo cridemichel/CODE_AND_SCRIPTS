@@ -1,4 +1,4 @@
-# $1 = temperature $2 = tau_alpha (in reduced units) $3 = simulation label $4 = dtTra
+# $1 = temperature $2 = tau_alpha (in reduced units) $3 = simulation label $4 = dtTra $5=initial file
 SETPARAMS="../../set_params.sh"
 TEMP="$1"
 PF="PMW.par"
@@ -8,10 +8,11 @@ EXEF="../../PMW"
 INIF="restart.res"
 TAUALPHA="$2"
 PREEXE="/bin/mosrun"
+#PREEXE=""
 # equilibration time will be TAUALPHA*EQTA
 EQTA="1"
 # production run time will be TAUALPHA*PRTA
-PRTA="50"
+PRTA="1000"
 STORERATEPR="0.01"
 BASEPR="1.3"
 NNPR=`echo $TAUALPHA $STORERATEPR $BASEPR | gawk '{printf("%d", 1+log($1/$2)/log($3));}'`
@@ -45,17 +46,27 @@ then
 mkdir $FOLN
 fi
 #choose Store file
+if [ "$5" == "" ]
+then
 cd $EQFN
 RF=`ls Store-*-*  | sort -t - -k 2 -k 3 -n | tail -1`
 cp $RF ../$FOLN
 cp $PF ../$FOLN
 cd ..
+else
+INIF="$5"
+cp $PF $FOLN
+cp $INIF $FOLN
+fi
 cd $FOLN
 #remove first header
+if [ "$INIF" == "" ]
+then
 gunzip -f $RF
 RF=`ls Store*`
 cat $RF | awk 'BEGIN {cc=0} {if (cc==1) print $0; if ($1=="@@@") cc=1;}' > $INIF
 rm $RF
+fi
 VS=`echo $TAUALPHA 100 $TRATS | awk '{printf("%d",$1/$2/$3)}'`
 #PRODUZIONE
 STEPS=`echo "" | gawk -v ta=$TAUALPHA -v trats=$TRATS -v prta=$PRTA '{printf("%d",prta*ta/trats);}'` 
