@@ -138,7 +138,10 @@ if [ $USENNL -eq 1 ]
 then
 #usa le NNL con sticky spots!
 NNLPAR="3"
-RCUT=`echo "2.0*e(0.5*l(($A0+$RNNL)*($A0+$RNNL)+($B0+$RNNL)*($B0+$RNNL)+($C0+$RNNL)*($C0+$RNNL)))" | bc -l`
+#RCUT=`echo "2.0*e(0.5*l(($A0+$RNNL)*($A0+$RNNL)+($B0+$RNNL)*($B0+$RNNL)+($C0+$RNNL)*($C0+$RNNL)))" | bc -l`
+#la scelta migliore in tal caso e' di far calcolare al programma rcut poiche' tiene 
+#conto correttamente degli spot
+RCUT=-1 
 fi
 echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
 #RANDOMIZZAZIONE INIZIALE
