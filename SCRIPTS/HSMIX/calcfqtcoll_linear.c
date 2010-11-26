@@ -189,13 +189,12 @@ int main(int argc, char **argv)
   else
     points = NN;
 #endif
-  NN=1;
   printf("points:%d components=%d\n", points, comps);
   c2 = 0;
   if (comps==2)
-    sprintf(fname[0], "RHOTMPA/ro.00.k=%03d", qmin);
+    sprintf(fname[0], "RHOTMPLINA/ro.00.k=%03d", qmin);
   else
-    sprintf(fname[0], "RHOTMP/ro.00.k=%03d", qmin);
+    sprintf(fname[0], "RHOTMPLIN/ro.00.k=%03d", qmin);
   f2 = fopen(fname[0], "r");
   while (!feof(f2))
     {
@@ -206,9 +205,9 @@ int main(int argc, char **argv)
       c2++;
     }
   if (comps==2)
-    sprintf(fname[0], "RHOTMPA/NN.dat");
+    sprintf(fname[0], "RHOTMPLINA/NN.dat");
   else
-    sprintf(fname[0], "RHOTMP/NN.dat");
+    sprintf(fname[0], "RHOTMPLIN/NN.dat");
   if (!(f = fopen(fname[0],"r")))
     {
       printf("ERROR: file %s does not exist\n", fname[0]);
@@ -224,7 +223,7 @@ int main(int argc, char **argv)
   //printf("argv[3]:%s points=%d maxnp=%d c2=%d NN=%d\n", argv[3], points, maxnp, c2, NN);
   fprintf(stderr, "allocating %d items points=%d NN=%d\n", nlines, points, NN);
 #if 0
-  if ((f4 = fopen("RHOTMP/components.dat","r"))==NULL)
+  if ((f4 = fopen("RHOTMPLIN/components.dat","r"))==NULL)
     comps = 1; /* monodisperse system (one component) */
   else
     {
@@ -275,9 +274,9 @@ int main(int argc, char **argv)
 	{
 	  c2 = 0;
 	  if (comps==2)
-	    sprintf(fname[0], "RHOTMP%c/ro.00.k=%03d", AB[c],nq);
+	    sprintf(fname[0], "RHOTMPLIN%c/ro.00.k=%03d", AB[c],nq);
 	  else
-	    sprintf(fname[0], "RHOTMP/ro.00.k=%03d", nq);
+	    sprintf(fname[0], "RHOTMPLIN/ro.00.k=%03d", nq);
 	  //printf("Opening fname=%s\n", fname[0]);
 	  f2 = fopen(fname[0], "r");
 	  while (!feof(f2))
@@ -361,9 +360,9 @@ int main(int argc, char **argv)
 	    }
 
 	}
-      sprintf(fname[0], "sqt-lin.k=%03d",nq);
+      sprintf(fname[0], "sqt.k=%03d",nq);
       f = fopen(fname[0], "w+");
-      sprintf(fname[0], "N-sqt-lin.k=%03d", nq);
+      sprintf(fname[0], "N-sqt.k=%03d", nq);
       f2 = fopen(fname[0], "w+");
       Cav = CavAA0 = CavBB0 = CavAB0 = CavBA0 = 0.0;
       for (i = 0; i < NQarr[nq]; i++)
