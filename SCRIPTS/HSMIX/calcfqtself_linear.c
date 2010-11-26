@@ -591,7 +591,7 @@ int main(int argc, char **argv)
     }
   for (qmod = qmin; qmod <= qmax; qmod++)
     {
-      sprintf(fname2, "Fqs-%d",qmod);
+      sprintf(fname2, "Fqs-lin-%d",qmod);
       if (!(f = fopen (fname2, "w+")))
 	{
 	  printf("ERROR: I can not open file %s\n", fname2);
