@@ -13,5 +13,5 @@ SKIP="-s $2"
 fi
 #$PERC/calcACV $FL 1000
 $PERC/calcfqtself_linear $SKIP $FL 1000 0 99 
-$PERC/calcrho $FL 0 99
+$PERC/calcrho_linear $FL 0 99
 $PERC/calcfqtcoll_linear 0 99 1000

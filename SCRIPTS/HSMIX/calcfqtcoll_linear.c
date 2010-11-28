@@ -360,9 +360,9 @@ int main(int argc, char **argv)
 	    }
 
 	}
-      sprintf(fname[0], "sqt.k=%03d",nq);
+      sprintf(fname[0], "sqt-lin.k=%03d",nq);
       f = fopen(fname[0], "w+");
-      sprintf(fname[0], "N-sqt.k=%03d", nq);
+      sprintf(fname[0], "N-sqt-lin.k=%03d", nq);
       f2 = fopen(fname[0], "w+");
       Cav = CavAA0 = CavBB0 = CavAB0 = CavBA0 = 0.0;
       for (i = 0; i < NQarr[nq]; i++)
