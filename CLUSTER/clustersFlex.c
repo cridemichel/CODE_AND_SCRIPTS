@@ -1207,7 +1207,7 @@ int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   char *s1, *s2;
-  int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
+  int beg, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, jj;
   //int coppie;
@@ -1256,10 +1256,37 @@ int main(int argc, char **argv)
 		  typesArr = malloc(sizeof(partType)*NT);
 		}
 	      printf("NT=%d\n", NT);
+	      fscanf(f, "%s ", line);
+  	      if (!strcmp(line, "RF"))
+    		{ 
+      		  //printf("line=%s\n", line);
+      		  beg=0;
+      	          for (i=0; i < NT; i++)
+		    {
+	  	      fscanf(f, "%lf ", &(typesArr[i].rcutFact));
+	  	      printf("typeArr[%d].rcutFact=%f\n", i, typesArr[i].rcutFact);
+		    }
+    	    	}
+  	      else
+    		{
+     		   sscanf(line, "%d", &typeNP[0]);
+      		   beg=1;
+                   for (i=0; i < NT; i++)
+	             typesArr[i].rcutFact = -1.0;
+ 
+                }
+  	      for (i=beg; i < NT; i++)
+    	         {
+      		   fscanf(f, "%d ", &typeNP[i]);
+      		   //printf("typeNP[%d]=%d\n", i, typeNP[i]);
+    		 }
+
+#if 0
 	      for (i=0; i < NT; i++)
 		{
-		  fscanf(f, "%d ", &typeNP[i]);
+		  sscanf(f, "%d ", &typeNP[i]);
 		}
+#endif
 	      for (i=0; i < NT; i++)
 		{
 		  /* read particles parameters */
