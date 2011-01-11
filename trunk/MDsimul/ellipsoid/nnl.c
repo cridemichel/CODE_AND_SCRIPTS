@@ -5507,13 +5507,17 @@ void PredictEventNNL(int na, int nb)
       return;
     }
 #endif
- 
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall|| nb==sphWall)
     return;
   if (na==sphWallOuter|| nb==sphWallOuter)
     return;
 #endif
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=0;
+#endif
+
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -5666,8 +5670,15 @@ void PredictEventNNL(int na, int nb)
 #endif 
   /* NOTA: nel caso di attraversamento di una cella non deve predire le collisioni (visto che in tal caso stiamo 
      usando le NNL */
+
   if (nb >= ATOM_LIMIT+2*NDIM)
-    return;
+    {
+ #ifdef MD_SOLVENT_NOHW
+      if (typeOfPart[na]==4)
+	OprogStatus.hardwall=1;
+#endif
+      return;
+    }
   MD_DEBUG32(printf("nebrTab[%d].len=%d\n", na, nebrTab[na].len));
   for (i=0; i < nebrTab[na].len; i++)
     {
@@ -5883,6 +5894,10 @@ void PredictEventNNL(int na, int nb)
       ScheduleEvent (na, n, t);
 #endif
     }
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=1;
+#endif
 }
 #endif
 #ifdef MD_PATCHY_HE
@@ -6422,6 +6437,12 @@ void BuildNNL(int na)
   if (na==sphWall || na==sphWallOuter)
     return;
 #endif
+
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=0;
+#endif
+ 
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
@@ -6557,4 +6578,9 @@ void BuildNNL(int na)
 	    }
 	}
     }
+
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=1;
+#endif
 }
