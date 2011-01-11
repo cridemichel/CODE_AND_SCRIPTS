@@ -1401,6 +1401,11 @@ void PredictCollMLL(int na, int nb, int nl)
 void PredictEventMLL(int na, int nb)
 {
   int nc, nl, numll, t1=-1, t2=-1;
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=0;
+#endif
+
   for (nc = 0; nc < Oparams.ntypes; nc++)
     {
       PredictCellCross(na, nc);
@@ -1421,6 +1426,11 @@ void PredictEventMLL(int na, int nb)
 	continue;
       PredictCollMLL(na, nb, nl);
     }
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=1;
+#endif
+
 }
 #ifdef MD_EDHEFLEX_OPTNNL
 void rebuildMultipleLL_NLL(int nl)
@@ -1544,8 +1554,7 @@ void BuildNNL_MLL(int na, int nl)
   if (na==sphWall || na==sphWallOuter)
     return;
 #endif
-
-  for (k = 0; k < NDIM; k++)
+ for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
@@ -1572,6 +1581,11 @@ void BuildNNL_MLL(int na, int nl)
     return;
 #endif
 #endif
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=0;
+#endif
+ 
 #ifdef MD_EDHEFLEX_OPTNNL
   if (OprogStatus.optnnl)
     {
@@ -1717,13 +1731,17 @@ void BuildNNL_MLL(int na, int nl)
 	    }
 	}
     }
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=1;
+#endif
+ 
 }
 void BuildAllNNL_MLL_one(int i)
 {
   int nl, numll;
   
   numll = Oparams.ntypes*(Oparams.ntypes+1)/2;
-
   for (nl = 0; nl < numll; nl++)
     {
 #ifdef MD_EDHEFLEX_OPTNNL
@@ -1979,6 +1997,10 @@ void PredictCollMLL_NLL(int na, int nb)
 void PredictEventNNL_MLL(int na, int nb)
 {
   int nc;
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=0;
+#endif
   for (nc = 0; nc < Oparams.ntypes; nc++)
     {
       PredictCellCross(na, nc);
@@ -2001,7 +2023,10 @@ void PredictEventNNL_MLL(int na, int nb)
       PredictCollMLL_NLL(evIdB, evIdA, nl);
     }
 #endif
-
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=1;
+#endif
 }
 extern int calcdist_retcheck;
 extern double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,

@@ -8758,6 +8758,10 @@ void PredictEvent (int na, int nb)
   if (dd_is_virtual(na))
     return;
 #endif
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=0;
+#endif
 #ifdef MD_SPHERICAL_WALL
   if (na==sphWall|| nb==sphWall)
     return;
@@ -9509,6 +9513,10 @@ void PredictEvent (int na, int nb)
 	    }
 	}
     }
+#ifdef MD_SOLVENT_NOHW
+  if (typeOfPart[na]==4)
+    OprogStatus.hardwall=1;
+#endif
 }
 
 #ifdef MD_GRAVITY
