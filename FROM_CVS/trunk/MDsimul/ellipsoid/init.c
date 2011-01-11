@@ -3599,6 +3599,160 @@ extern void get_types_from_nl(int nl, int *t1, int *t2);
 #if defined(MD_MULTIPLE_LL) && defined(MD_OPT_MULTLL)
 extern int may_interact_all_type(int t1, int t2);
 #endif
+#ifdef MD_CALC_VBONDING
+/* ============================ >>> ranf <<< =============================== */
+double ranf_vb(void)
+{
+  /*  Returns a uniform random variate in the range 0 to 1.         
+      Good random number generators are machine specific.
+      please use the one recommended for your machine. */
+  return random() / ( (double) RAND_MAX );
+  //return random() / (2**31-1); 
+}
+
+
+void orient(double *omx, double *omy, double* omz)
+{
+  int i;
+  //double inert;                 /* momentum of inertia of the molecule */
+  //double norm, dot, osq, o, mean;
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, osq, norm;
+  
+  //Mtot = m; /* total mass of molecule */
+
+  //inert = I; /* momentum of inertia */
+ 
+  //mean = 3.0*temp / inert;
+
+  xisq = 1.0;
+
+  while (xisq >= 1.0)
+    {
+      xi1  = ranf_vb() * 2.0 - 1.0;
+      xi2  = ranf_vb() * 2.0 - 1.0;
+      xisq = xi1 * xi1 + xi2 * xi2;
+    }
+
+  xi = sqrt (fabs(1.0 - xisq));
+  ox = 2.0 * xi1 * xi;
+  oy = 2.0 * xi2 * xi;
+  oz = 1.0 - 2.0 * xisq;
+
+  /* Renormalize */
+  osq   = ox * ox + oy * oy + oz * oz;
+  norm  = sqrt(fabs(osq));
+  ox    = ox / norm;
+  oy    = oy / norm;
+  oz    = oz / norm;
+
+  *omx = ox;
+  *omy = oy;
+  *omz = oz; 
+#if 0
+  /* Choose the magnitude of the angular velocity
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+
+  osq   = - mean * log(ranf());
+  o     = sqrt(fabs(osq));
+  ox    = o * ox;
+      oy    = o * oy;
+      oz    = o * oz;
+      *wx = ox;
+      *wy = oy;
+      *wz = oz;
+#endif 
+}
+void versor_to_R(double ox, double oy, double oz, double R[3][3])
+{
+  int k;
+  double u[3], sp, norm;
+  /* first row vector */
+  R[0][0] = ox;
+  R[0][1] = oy;
+  R[0][2] = oz;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 1; u[1] = 1; u[2] = 1;
+  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
+    {
+      u[0] = -1; u[1] = -1; u[2] = 1;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[0][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[0][k];
+  norm = calc_norm(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[1][k] = u[k]/norm;
+
+  /* third row vector */
+  vectProdVec(R[0], R[1], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+}
+double calcDistNeg_vb(int i, int j)
+{
+  double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
+  double d, r1[3], r2[3], alpha;
+#ifdef MD_LXYZ
+  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+  shift[0] = L*rint((rx[i]-rx[j])/L);
+  shift[1] = L*rint((ry[i]-ry[j])/L);
+  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+  OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
+  d=calcDistNeg(t, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
+  return d;
+}
+
+void calc_vbonding(void)
+{
+  FILE *fi;
+  int k1, k2, count, i, maxtrials;
+  double L, R[3][3], rx, ry, rz, ox, oy, oz, d, ene;
+  double totene=0.0;
+
+  fi = fopen("vbonding.conf", "r");
+  fscanf(fi, "%d ", &maxtrials);
+  fclose(fi);
+  srandomdev();
+  i=0;
+  while (i < maxtrials)
+    {
+      rx = L*(ranf_vb()-0.5);
+      ry = L*(ranf_vb()-0.5);
+      rz = L*(ranf_vb()-0.5);
+#if 0
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  R[k1][k2] = (k1==k2)?1:0;
+#endif
+      orient(&ox, &oy, &oz);
+#if 0
+      rx=10; ry=0; rz=0;
+      ox=-1.0/sqrt(2); oy=1.0/sqrt(2); oz=0;
+#endif
+      versor_to_R(ox, oy, oz, R);
+      d = calcDistNeg_vb(0,1);
+      if (calcdist_retcheck!=1 && d >= 0.0)
+	{
+	  totene += fabs(calcpotene());
+	}
+      i++;
+    }
+  printf("Vbonding=%f\n", (totene/((double)i))*(L*L*L));
+  exit(-1);
+}
+
+#endif
 void usrInitAft(void)
 {
   long long int maxp;
@@ -5170,6 +5324,9 @@ void usrInitAft(void)
     }
 #endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
+#ifdef MD_CALC_VBONDING
+  calc_vbonding();
+#endif
 }
 extern double rA[3], rB[3];
 #ifdef EDHE_FLEX
