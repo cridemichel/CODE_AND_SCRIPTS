@@ -3695,10 +3695,24 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
 }
-double calcDistNeg_vb(int i, int j)
+void set_semiaxes_vb(double fx, double fy, double fz)
 {
-  double shift[3] = {0,0,0}, vecg[8], vecgNeg[8];
-  double d, r1[3], r2[3], alpha;
+  int ii;
+  for (ii=0; ii < Oparams.parnum; ii++)
+    {
+      nebrTab[ii].axa = fx;//typesArr[typeOfPart[ii]].sax[0]+typesArr[typeOfPart[ii]].spots[0].sigma*0.5;
+      nebrTab[ii].axb = fy;//typesArr[typeOfPart[ii]].sax[1];
+      nebrTab[ii].axc = fz;//typesArr[typeOfPart[ii]].sax[2];
+    }
+}
+
+extern double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3]);
+extern double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
+extern int calcdist_retcheck;
+double calcDistNeg_vb(int i, int j, double shift[3])
+{
+  double vecg[8], vecgNeg[8];
+  double d, r1[3], r2[3], alpha, d0;
 #ifdef MD_LXYZ
   shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
   shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
@@ -3708,28 +3722,80 @@ double calcDistNeg_vb(int i, int j)
   shift[1] = L*rint((ry[i]-ry[j])/L);
   shift[2] = L*rint((rz[i]-rz[j])/L);
 #endif
+  //printf("semiax=%f %f %f\n", typesArr[typeOfPart[0]].sax[0],typesArr[typeOfPart[0]].sax[1], typesArr[typeOfPart[0]].sax[2]);
+  set_semiaxes_vb(typesArr[typeOfPart[0]].sax[0]+typesArr[typeOfPart[0]].spots[0].sigma*0.5+1.0,
+		  typesArr[typeOfPart[0]].sax[1]+1.0, 
+		  typesArr[typeOfPart[0]].sax[2]+1.0);
+
+  d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
+  /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
+  if (d0 > 0.0)
+    {
+      return -1.0;
+    }
+ 
+  set_semiaxes_vb((1.35/1.5)*typesArr[typeOfPart[0]].sax[0],
+		  0.9*typesArr[typeOfPart[0]].sax[1], 
+		  0.9*typesArr[typeOfPart[0]].sax[2]);
+
+  d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
+  /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
+  if (d0 < 0.0)
+    {
+      return -1.0;
+    }
+
   OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
-  d=calcDistNeg(t, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
+  calcdist_retcheck = 0;
+  d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
+
+  printf("QUI d=%f\n", d);
   return d;
 }
-
 void calc_vbonding(void)
 {
   FILE *fi;
-  int k1, k2, count, i, maxtrials;
-  double L, R[3][3], rx, ry, rz, ox, oy, oz, d, ene;
-  double totene=0.0;
-
+  int k1, k2, count, i, ii, maxtrials;
+  int amin, bmin, nn;
+  double Rl[3][3], ox, oy, oz, d, ene, dist;
+  double totene=0.0, shift[3];
   fi = fopen("vbonding.conf", "r");
   fscanf(fi, "%d ", &maxtrials);
   fclose(fi);
   srandomdev();
+  OprogStatus.optnnl = 0;
+  assign_bond_mapping(0,1);
   i=0;
+  nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+  for (ii= 0; ii < Oparams.parnum; ii++)
+    nebrTab[ii].R = matrix(3,3);
+
+  for (k1=0; k1 < 3; k1++)
+    nebrTab[0].r[k1] = 0.0;
+  rx[0] = ry[0] = rz[0] = 0.0;
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+     	R[0][k1][k2] = (k1==k2)?1:0;
+	nebrTab[0].R[k1][k2] = R[0][k1][k2];
+      }
   while (i < maxtrials)
     {
-      rx = L*(ranf_vb()-0.5);
-      ry = L*(ranf_vb()-0.5);
-      rz = L*(ranf_vb()-0.5);
+#ifdef MD_LXYZ
+      rx[1] = L[0]*(ranf_vb()-0.5);
+      ry[1] = L[1]*(ranf_vb()-0.5);
+      rz[1] = L[2]*(ranf_vb()-0.5);
+#else
+      rx[1] = L*(ranf_vb()-0.5);
+      ry[1] = L*(ranf_vb()-0.5);
+      rz[1] = L*(ranf_vb()-0.5);
+#endif      
+      if (Sqr(rx[1])+Sqr(ry[1])+Sqr(rz[1]) >= Sqr(2.0*typesArr[typeOfPart[1]].sax[0]+typesArr[typeOfPart[1]].spots[0].sigma)) 
+	{
+	  //printf("1)i=%d\n", i);
+	  i++;
+	  continue;
+	}
 #if 0
       for (k1=0; k1 < 3; k1++)
 	for (k2=0; k2 < 3; k2++)
@@ -3740,15 +3806,42 @@ void calc_vbonding(void)
       rx=10; ry=0; rz=0;
       ox=-1.0/sqrt(2); oy=1.0/sqrt(2); oz=0;
 #endif
-      versor_to_R(ox, oy, oz, R);
-      d = calcDistNeg_vb(0,1);
+      versor_to_R(ox, oy, oz, Rl);
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    nebrTab[1].R[k1][k2] = Rl[k1][k2];
+	    R[1][k1][k2] = Rl[k1][k2];
+	  }
+      nebrTab[1].r[0] = rx[1];
+      nebrTab[1].r[1] = ry[1];
+      nebrTab[1].r[2] = rz[1];
+      if (i%100==0)
+	printf("prima i=%d\n", i);
+      d = calcDistNeg_vb(0, 1, shift);
+      if (i%100==0)
+	printf("i=%d d=%f calcdist_retcheck=%d\n", i, d, calcdist_retcheck);
       if (calcdist_retcheck!=1 && d >= 0.0)
 	{
-	  totene += fabs(calcpotene());
+	  dist = calcDistNegSP(0.0, 0.0, 0, 1, shift, &amin, &bmin, dists, -1);
+	  //printf("dist=%f d=%f nbondsFlex=%d\n", dist, d, nbondsFlex);
+	  ene = 0;
+
+	  for (nn=0; nn < nbondsFlex; nn++)
+	    {
+	      //printf("dists[%d]=%f\n", nn, dists[nn]);
+	      if (dists[nn]<0.0)
+		{	
+		  ene=1.0;
+		  break;
+		}
+	    }
+	  totene += ene;
 	}
       i++;
+	  //printf("2)i=%d\n", i);
     }
-  printf("Vbonding=%f\n", (totene/((double)i))*(L*L*L));
+  printf("Vbonding=%f (totene=%f)\n", (totene/((double)i))*(L*L*L), totene);
   exit(-1);
 }
 
