@@ -3723,9 +3723,9 @@ double calcDistNeg_vb(int i, int j, double shift[3])
   shift[2] = L*rint((rz[i]-rz[j])/L);
 #endif
   //printf("semiax=%f %f %f\n", typesArr[typeOfPart[0]].sax[0],typesArr[typeOfPart[0]].sax[1], typesArr[typeOfPart[0]].sax[2]);
-  set_semiaxes_vb(typesArr[typeOfPart[0]].sax[0]+typesArr[typeOfPart[0]].spots[0].sigma*0.5+1.0,
-		  typesArr[typeOfPart[0]].sax[1]+1.0, 
-		  typesArr[typeOfPart[0]].sax[2]+1.0);
+  set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]+typesArr[typeOfPart[0]].spots[0].sigma*0.5),
+		  1.01*(typesArr[typeOfPart[0]].sax[1]), 
+		  1.01*(typesArr[typeOfPart[0]].sax[2]));
 
   d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
@@ -3734,7 +3734,7 @@ double calcDistNeg_vb(int i, int j, double shift[3])
       return -1.0;
     }
  
-  set_semiaxes_vb((1.35/1.5)*typesArr[typeOfPart[0]].sax[0],
+  set_semiaxes_vb(0.9*typesArr[typeOfPart[0]].sax[0],
 		  0.9*typesArr[typeOfPart[0]].sax[1], 
 		  0.9*typesArr[typeOfPart[0]].sax[2]);
 
@@ -3749,7 +3749,7 @@ double calcDistNeg_vb(int i, int j, double shift[3])
   calcdist_retcheck = 0;
   d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
 
-  printf("QUI d=%f\n", d);
+  //printf("QUI d=%f\n", d);
   return d;
 }
 void calc_vbonding(void)
@@ -3816,10 +3816,10 @@ void calc_vbonding(void)
       nebrTab[1].r[0] = rx[1];
       nebrTab[1].r[1] = ry[1];
       nebrTab[1].r[2] = rz[1];
-      if (i%100==0)
-	printf("prima i=%d\n", i);
+      //if (i%1000==0)
+	//printf("prima i=%d\n", i);
       d = calcDistNeg_vb(0, 1, shift);
-      if (i%100==0)
+      if (i%10000==0)
 	printf("i=%d d=%f calcdist_retcheck=%d\n", i, d, calcdist_retcheck);
       if (calcdist_retcheck!=1 && d >= 0.0)
 	{
