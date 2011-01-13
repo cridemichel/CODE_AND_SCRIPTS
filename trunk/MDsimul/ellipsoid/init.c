@@ -3664,6 +3664,8 @@ NOTE: consider that it is an exponential distribution
       *wz = oz;
 #endif 
 }
+
+int type;
 void versor_to_R(double ox, double oy, double oz, double R[3][3])
 {
   int k;
@@ -3688,7 +3690,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
   for (k=0; k < 3 ; k++)
     R[1][k] = u[k]/norm;
-  if (typesArr[0].nspots==3)
+  if (typesArr[0].nspots==3 && type==0)
     {
       for (k=0; k < 3 ; k++)
 	u[k] = R[1][k];
@@ -3719,10 +3721,11 @@ void set_semiaxes_vb(double fx, double fy, double fz)
       nebrTab[ii].axc = fz;//typesArr[typeOfPart[ii]].sax[2];
     }
 }
-
 extern double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3]);
 extern double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
 extern int calcdist_retcheck;
+extern int are_spheres(int i, int j);
+
 double calcDistNeg_vb(int i, int j, double shift[3])
 {
   double vecg[8], vecgNeg[8];
@@ -3740,15 +3743,22 @@ double calcDistNeg_vb(int i, int j, double shift[3])
   if (!are_spheres(0,1))
     {
 #if 1
-      set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]+typesArr[typeOfPart[0]].spots[0].sigma),
-	    	      1.01*(typesArr[typeOfPart[0]].sax[1]), 
-	    	      1.01*(typesArr[typeOfPart[0]].sax[2]));
-
+      if (type==0)
+	set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]+typesArr[typeOfPart[0]].spots[0].sigma),
+	  		1.01*(typesArr[typeOfPart[0]].sax[1]), 
+	    		1.01*(typesArr[typeOfPart[0]].sax[2]));
+      else
+	set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
+			1.01*(typesArr[typeOfPart[0]].sax[1]), 
+			1.01*(typesArr[typeOfPart[0]].sax[2]));
       d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
       /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
       if (d0 > 0.0)
 	{
-	  return -1.0;
+	  if (type==0)
+	    return -1.0;
+	  else
+	    return 1.0;
 	}
 #endif
 #if 1
@@ -3780,7 +3790,9 @@ void calc_vbonding(void)
   double Rl[3][3], ox, oy, oz, d, ene, dist;
   double totene=0.0, shift[3];
   fi = fopen("vbonding.conf", "r");
-  fscanf(fi, "%lld ", &maxtrials);
+  fscanf(fi, "%lld %d", &maxtrials, &type);
+  /* type = 0 -> calculate bonding volume 
+     type = 1 -> calculate co-volume */
   fclose(fi);
   srandomdev();
   OprogStatus.optnnl = 0;
@@ -3841,7 +3853,9 @@ void calc_vbonding(void)
       d = calcDistNeg_vb(0, 1, shift);
       if (i%100000==0)
 	printf("i=%lld d=%f calcdist_retcheck=%d\n", i, d, calcdist_retcheck);
-      if (calcdist_retcheck==0 && d >= 0.0)
+      if (calcdist_retcheck == 0 && d <= 0 && type==1)
+	totene += 1.0;
+      if (calcdist_retcheck==0 && d >= 0.0 && type==0)
 	{
 	  dist = calcDistNegSP(0.0, 0.0, 0, 1, shift, &amin, &bmin, dists, -1);
 	  //printf("dist=%f d=%f nbondsFlex=%d\n", dist, d, nbondsFlex);
@@ -3860,7 +3874,10 @@ void calc_vbonding(void)
       i++;
 	  //printf("2)i=%d\n", i);
     }
-  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
+  if (type==0)
+    printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
+  else
+    printf("co-volume=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L), totene);
   exit(-1);
 }
 
