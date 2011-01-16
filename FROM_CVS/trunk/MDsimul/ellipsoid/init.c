@@ -3648,9 +3648,9 @@ void orient_onsager(double *omx, double *omy, double* omz, double alpha)
   phi = 2.0*pi*ranf_vb();
   verso = (ranf_vb()<0.5)?1:-1;
 
-  ox = verso*sin(theta)*cos(phi);
-  oy = verso*sin(theta)*sin(phi);
-  oz = verso*cos(theta); 
+  *omx = verso*sin(thons)*cos(phi);
+  *omy = verso*sin(thons)*sin(phi);
+  *omz = verso*cos(thons); 
 
 }
 void orient(double *omx, double *omy, double* omz)
@@ -3830,10 +3830,13 @@ void calc_vbonding(void)
   int k1, k2, count, ii;
   long long int maxtrials, i;
   int amin, bmin, nn;
-  double Rl[3][3], ox, oy, oz, d, ene, dist;
+  double alpha, Rl[3][3], ox, oy, oz, d, ene, dist;
   double totene=0.0, shift[3];
   fi = fopen("vbonding.conf", "r");
-  fscanf(fi, "%lld %d", &maxtrials, &type);
+  fscanf(fi, "%lld %d ", &maxtrials, &type);
+  if (type==4)
+    fscanf(fi, " %lf", &alpha);
+
   /* type = 0 -> calculate bonding volume 
      type = 1 -> calculate co-volume 
      type = 2 -> calc. bonding volume for fixed orientation (aligned)
@@ -3886,7 +3889,7 @@ void calc_vbonding(void)
 	  R[k1][k2] = (k1==k2)?1:0;
 #endif
       if (type==4)
-	orient_onsager(&ox, &oy, &oz);
+	orient_onsager(&ox, &oy, &oz, alpha);
       else
 	orient(&ox, &oy, &oz);
 #if 0
