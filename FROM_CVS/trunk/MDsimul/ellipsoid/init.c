@@ -3636,7 +3636,7 @@ double theta_onsager(double alpha)
   while (y >= f);
   return theta;
 }
-
+double *distro;
 void orient_onsager(double *omx, double *omy, double* omz, double alpha)
 {
   double thons;
@@ -3645,13 +3645,14 @@ void orient_onsager(double *omx, double *omy, double* omz, double alpha)
   pi = acos(0.0)*2.0;
   /* random angle from onsager distribution */
   thons = theta_onsager(alpha);
+  //printf("thos=%f\n", thons);
+  distro[(int) (thons/(pi/1000.0))] += 1.0;
   phi = 2.0*pi*ranf_vb();
   verso = (ranf_vb()<0.5)?1:-1;
-
   *omx = verso*sin(thons)*cos(phi);
   *omy = verso*sin(thons)*sin(phi);
   *omz = verso*cos(thons); 
-
+  //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
 }
 void orient(double *omx, double *omy, double* omz)
 {
@@ -3768,7 +3769,6 @@ extern double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, doub
 extern double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
 extern int calcdist_retcheck;
 extern int are_spheres(int i, int j);
-
 double calcDistNeg_vb(int i, int j, double shift[3])
 {
   double vecg[8], vecgNeg[8];
@@ -3832,6 +3832,7 @@ void calc_vbonding(void)
   int amin, bmin, nn;
   double alpha, Rl[3][3], ox, oy, oz, d, ene, dist;
   double totene=0.0, shift[3];
+  int n=1000;
   fi = fopen("vbonding.conf", "r");
   fscanf(fi, "%lld %d ", &maxtrials, &type);
   if (type==4)
@@ -3852,6 +3853,12 @@ void calc_vbonding(void)
   for (ii= 0; ii < Oparams.parnum; ii++)
     nebrTab[ii].R = matrix(3,3);
 
+  if (type==4)
+    {
+      distro=malloc(sizeof(double)*n);
+      for (i=0; i < n; i++)
+	distro[i] = 0.0;
+    }
   for (k1=0; k1 < 3; k1++)
     nebrTab[0].r[k1] = 0.0;
   rx[0] = ry[0] = rz[0] = 0.0;
@@ -3888,8 +3895,11 @@ void calc_vbonding(void)
 	for (k2=0; k2 < 3; k2++)
 	  R[k1][k2] = (k1==k2)?1:0;
 #endif
+//printf ("alpha=%f\n", alpha);
       if (type==4)
-	orient_onsager(&ox, &oy, &oz, alpha);
+	{
+	  orient_onsager(&ox, &oy, &oz, alpha);
+	}
       else
 	orient(&ox, &oy, &oz);
 #if 0
@@ -3904,6 +3914,17 @@ void calc_vbonding(void)
 	      {
 		nebrTab[1].R[k1][k2] = Rl[k1][k2];
 		R[1][k1][k2] = Rl[k1][k2];
+	      }
+	}
+      if (type==4)
+	{
+	  orient_onsager(&ox, &oy, &oz, alpha);
+	  versor_to_R(ox, oy, oz, Rl);
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      {
+	      	R[0][k1][k2] = Rl[k1][k2];
+		nebrTab[0].R[k1][k2] = Rl[k1][k2];
 	      }
 	}
       nebrTab[1].r[0] = rx[1];
@@ -3939,6 +3960,28 @@ void calc_vbonding(void)
     printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
   else if (type==1 || type == 3 || type == 4)
     printf("co-volume=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L), totene);
+  if (type==4)
+    {
+      double norm, dtheta, pi;
+      FILE *F;
+      pi=2.0*acos(0.0);
+      norm=0.0;
+      dtheta = pi/n;
+      for (i=0; i < n; i++)
+	norm += sin(i*dtheta)*distro[i]*2*pi*dtheta;
+      for (i=0; i < n; i++)
+	distro[i]/= norm;
+
+      F=fopen("fons.dat", "w");  
+      for (i=0; i < n; i++)
+	fprintf(F, "%.15G %.15G\n",i*dtheta,distro[i]); 
+      fclose(F);
+
+      F=fopen("fonsExact.dat", "w");  
+      for (i=0; i < n; i++)
+	fprintf(F, "%.15G %.15G\n",i*dtheta,fons(i*dtheta,alpha)); 
+      fclose(F);
+    }
   exit(-1);
 }
 
