@@ -3609,8 +3609,50 @@ double ranf_vb(void)
   return random() / ( (double) RAND_MAX );
   //return random() / (2**31-1); 
 }
+double fons(double theta, double alpha)
+{
+  double pi;
+  pi = acos(0.0)*2.0;
+  return cosh(alpha*cos(theta))*alpha/(4.0*pi*sinh(alpha));
+}
+/* return an angle theta sampled from an Onsager angular distribution */
+double theta_onsager(double alpha)
+{
+  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
+     using rejection method */
+  /* the comparison function g(theta) is just g(theta)=1 */ 
+  double pi, y, f, theta, dtheta;
+  pi = acos(0.0)*2.0;
+  
+  do 
+    {
+      /* uniform theta between 0 and pi */
+      theta = pi*ranf_vb();
+      /* uniform y between 0 and 1 */
+      y = ranf_vb();
+      f = fons(theta,alpha);
+      //printf("theta=%f y=%f\n", theta, y);
+    }
+  while (y >= f);
+  return theta;
+}
 
+void orient_onsager(double *omx, double *omy, double* omz, double alpha)
+{
+  double thons;
+  double pi, phi, verso;
 
+  pi = acos(0.0)*2.0;
+  /* random angle from onsager distribution */
+  thons = theta_onsager(alpha);
+  phi = 2.0*pi*ranf_vb();
+  verso = (ranf_vb()<0.5)?1:-1;
+
+  ox = verso*sin(theta)*cos(phi);
+  oy = verso*sin(theta)*sin(phi);
+  oz = verso*cos(theta); 
+
+}
 void orient(double *omx, double *omy, double* omz)
 {
   int i;
@@ -3670,6 +3712,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
 {
   int k;
   double angle, u[3], sp, norm, up[3], xx, yy;
+
   /* first row vector */
   R[0][0] = ox;
   R[0][1] = oy;
@@ -3743,7 +3786,7 @@ double calcDistNeg_vb(int i, int j, double shift[3])
   if (!are_spheres(0,1))
     {
 #if 1
-      if (type==0)
+      if (type==0||type==2)
 	set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]+typesArr[typeOfPart[0]].spots[0].sigma),
 	  		1.01*(typesArr[typeOfPart[0]].sax[1]), 
 	    		1.01*(typesArr[typeOfPart[0]].sax[2]));
@@ -3755,7 +3798,7 @@ double calcDistNeg_vb(int i, int j, double shift[3])
       /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
       if (d0 > 0.0)
 	{
-	  if (type==0)
+	  if (type==0 || type==2)
 	    return -1.0;
 	  else
 	    return 1.0;
@@ -3763,8 +3806,8 @@ double calcDistNeg_vb(int i, int j, double shift[3])
 #endif
 #if 1
       set_semiaxes_vb(0.9*typesArr[typeOfPart[0]].sax[0],
-	    	      0.9*typesArr[typeOfPart[0]].sax[1], 
-	    	      0.9*typesArr[typeOfPart[0]].sax[2]);
+	    	      0.7*typesArr[typeOfPart[0]].sax[1], 
+	    	      0.7*typesArr[typeOfPart[0]].sax[2]);
 
       d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
       /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
@@ -3792,7 +3835,11 @@ void calc_vbonding(void)
   fi = fopen("vbonding.conf", "r");
   fscanf(fi, "%lld %d", &maxtrials, &type);
   /* type = 0 -> calculate bonding volume 
-     type = 1 -> calculate co-volume */
+     type = 1 -> calculate co-volume 
+     type = 2 -> calc. bonding volume for fixed orientation (aligned)
+     type = 3 -> calc. co-volume for fixed orientation (aligned)
+   */
+  
   fclose(fi);
   srandomdev();
   OprogStatus.optnnl = 0;
@@ -3810,6 +3857,11 @@ void calc_vbonding(void)
       {
      	R[0][k1][k2] = (k1==k2)?1:0;
 	nebrTab[0].R[k1][k2] = R[0][k1][k2];
+	if (type==2 || type==3 || type == 4)
+	  {
+	    nebrTab[1].R[k1][k2] = R[0][k1][k2];
+	    R[1][k1][k2] = R[0][k1][k2];
+	  }
       }
   while (i < maxtrials)
     {
@@ -3833,18 +3885,24 @@ void calc_vbonding(void)
 	for (k2=0; k2 < 3; k2++)
 	  R[k1][k2] = (k1==k2)?1:0;
 #endif
-      orient(&ox, &oy, &oz);
+      if (type==4)
+	orient_onsager(&ox, &oy, &oz);
+      else
+	orient(&ox, &oy, &oz);
 #if 0
       rx=10; ry=0; rz=0;
       ox=-1.0/sqrt(2); oy=1.0/sqrt(2); oz=0;
 #endif
-      versor_to_R(ox, oy, oz, Rl);
-      for (k1=0; k1 < 3; k1++)
-	for (k2=0; k2 < 3; k2++)
-	  {
-	    nebrTab[1].R[k1][k2] = Rl[k1][k2];
-	    R[1][k1][k2] = Rl[k1][k2];
-	  }
+      if (type==0 || type==1 || type==4)
+	{
+	  versor_to_R(ox, oy, oz, Rl);
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      {
+		nebrTab[1].R[k1][k2] = Rl[k1][k2];
+		R[1][k1][k2] = Rl[k1][k2];
+	      }
+	}
       nebrTab[1].r[0] = rx[1];
       nebrTab[1].r[1] = ry[1];
       nebrTab[1].r[2] = rz[1];
@@ -3853,9 +3911,9 @@ void calc_vbonding(void)
       d = calcDistNeg_vb(0, 1, shift);
       if (i%100000==0)
 	printf("i=%lld d=%f calcdist_retcheck=%d\n", i, d, calcdist_retcheck);
-      if (calcdist_retcheck == 0 && d <= 0 && type==1)
+      if (calcdist_retcheck == 0 && d < 0 && ( type==1 || type == 3 || type==4))
 	totene += 1.0;
-      if (calcdist_retcheck==0 && d >= 0.0 && type==0)
+      if (calcdist_retcheck==0 && d >= 0.0 && ( type==0 || type == 2))
 	{
 	  dist = calcDistNegSP(0.0, 0.0, 0, 1, shift, &amin, &bmin, dists, -1);
 	  //printf("dist=%f d=%f nbondsFlex=%d\n", dist, d, nbondsFlex);
@@ -3874,9 +3932,9 @@ void calc_vbonding(void)
       i++;
 	  //printf("2)i=%d\n", i);
     }
-  if (type==0)
+  if (type==0 || type ==2)
     printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
-  else
+  else if (type==1 || type == 3 || type == 4)
     printf("co-volume=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L), totene);
   exit(-1);
 }
