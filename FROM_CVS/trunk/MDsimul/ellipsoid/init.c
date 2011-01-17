@@ -3629,7 +3629,7 @@ double theta_onsager(double alpha)
       /* uniform theta between 0 and pi */
       theta = pi*ranf_vb();
       /* uniform y between 0 and 1 */
-      y = ranf_vb();
+      y = 1.01*fons(0.0,alpha)*ranf_vb();
       f = fons(theta,alpha);
       //printf("theta=%f y=%f\n", theta, y);
     }
@@ -3845,7 +3845,11 @@ void calc_vbonding(void)
    */
   
   fclose(fi);
+#ifdef MD_MAC
   srandomdev();
+#else
+  srandom((int)(time(NULL)));
+#endif
   OprogStatus.optnnl = 0;
   assign_bond_mapping(0,1);
   i=0;
@@ -3959,7 +3963,10 @@ void calc_vbonding(void)
   if (type==0 || type ==2)
     printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
   else if (type==1 || type == 3 || type == 4)
-    printf("co-volume=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L), totene);
+    {
+      printf("co-volume=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L), totene);
+      printf("%.15G\n",(totene/((double)i))*(L*L*L));
+    }
   if (type==4)
     {
       double norm, dtheta, pi;
