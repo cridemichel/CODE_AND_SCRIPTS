@@ -3648,7 +3648,8 @@ void orient_onsager(double *omx, double *omy, double* omz, double alpha)
   //printf("thos=%f\n", thons);
   distro[(int) (thons/(pi/1000.0))] += 1.0;
   phi = 2.0*pi*ranf_vb();
-  verso = (ranf_vb()<0.5)?1:-1;
+  //verso = (ranf_vb()<0.5)?1:-1;
+  verso=1;
   *omx = verso*sin(thons)*cos(phi);
   *omy = verso*sin(thons)*sin(phi);
   *omz = verso*cos(thons); 
@@ -3786,7 +3787,7 @@ double calcDistNeg_vb(int i, int j, double shift[3])
   if (!are_spheres(0,1))
     {
 #if 1
-      if (type==0||type==2)
+      if (type==0||type==2||type==5)
 	set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]+typesArr[typeOfPart[0]].spots[0].sigma),
 	  		1.01*(typesArr[typeOfPart[0]].sax[1]), 
 	    		1.01*(typesArr[typeOfPart[0]].sax[2]));
@@ -3798,7 +3799,7 @@ double calcDistNeg_vb(int i, int j, double shift[3])
       /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
       if (d0 > 0.0)
 	{
-	  if (type==0 || type==2)
+	  if (type==0 || type==2 || type==5)
 	    return -1.0;
 	  else
 	    return 1.0;
@@ -3806,7 +3807,7 @@ double calcDistNeg_vb(int i, int j, double shift[3])
 #endif
 #if 1
       set_semiaxes_vb(0.9*typesArr[typeOfPart[0]].sax[0],
-	    	      0.7*typesArr[typeOfPart[0]].sax[1], 
+		      0.7*typesArr[typeOfPart[0]].sax[1], 
 	    	      0.7*typesArr[typeOfPart[0]].sax[2]);
 
       d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
@@ -3835,13 +3836,15 @@ void calc_vbonding(void)
   int n=1000;
   fi = fopen("vbonding.conf", "r");
   fscanf(fi, "%lld %d ", &maxtrials, &type);
-  if (type==4)
+  if (type==4 || type==5)
     fscanf(fi, " %lf", &alpha);
 
   /* type = 0 -> calculate bonding volume 
      type = 1 -> calculate co-volume 
      type = 2 -> calc. bonding volume for fixed orientation (aligned)
      type = 3 -> calc. co-volume for fixed orientation (aligned)
+     type = 4 -> covolume using Onsager trial function
+     type = 5 -> bonding volume using Onsager trial function
    */
   
   fclose(fi);
@@ -3857,7 +3860,7 @@ void calc_vbonding(void)
   for (ii= 0; ii < Oparams.parnum; ii++)
     nebrTab[ii].R = matrix(3,3);
 
-  if (type==4)
+  if (type==4 || type==5)
     {
       distro=malloc(sizeof(double)*n);
       for (i=0; i < n; i++)
@@ -3900,7 +3903,7 @@ void calc_vbonding(void)
 	  R[k1][k2] = (k1==k2)?1:0;
 #endif
 //printf ("alpha=%f\n", alpha);
-      if (type==4)
+      if (type==4 || type==5)
 	{
 	  orient_onsager(&ox, &oy, &oz, alpha);
 	}
@@ -3910,7 +3913,7 @@ void calc_vbonding(void)
       rx=10; ry=0; rz=0;
       ox=-1.0/sqrt(2); oy=1.0/sqrt(2); oz=0;
 #endif
-      if (type==0 || type==1 || type==4)
+      if (type==0 || type==1 || type==4 || type==5)
 	{
 	  versor_to_R(ox, oy, oz, Rl);
 	  for (k1=0; k1 < 3; k1++)
@@ -3920,7 +3923,8 @@ void calc_vbonding(void)
 		R[1][k1][k2] = Rl[k1][k2];
 	      }
 	}
-      if (type==4)
+
+      if (type==4 || type==5)
 	{
 	  orient_onsager(&ox, &oy, &oz, alpha);
 	  versor_to_R(ox, oy, oz, Rl);
@@ -3931,6 +3935,26 @@ void calc_vbonding(void)
 		nebrTab[0].R[k1][k2] = Rl[k1][k2];
 	      }
 	}
+#if 0
+      if (type==2)
+	{
+	  double s;
+	  s=ranf_vb();
+	  if (s < 0.5)
+	    {ox=1;oy=0;oz=0;}
+	  else
+	    {ox=-1;oy=0;oz=0;}
+	  versor_to_R(ox, oy, oz, Rl);
+
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      {
+	      	R[1][k1][k2] = Rl[k1][k2];
+		nebrTab[1].R[k1][k2] = Rl[k1][k2];
+	      }
+	  //print_matrix(R[1],3);
+	}
+#endif
       nebrTab[1].r[0] = rx[1];
       nebrTab[1].r[1] = ry[1];
       nebrTab[1].r[2] = rz[1];
@@ -3941,7 +3965,7 @@ void calc_vbonding(void)
 	printf("i=%lld d=%f calcdist_retcheck=%d\n", i, d, calcdist_retcheck);
       if (calcdist_retcheck == 0 && d < 0 && ( type==1 || type == 3 || type==4))
 	totene += 1.0;
-      if (calcdist_retcheck==0 && d >= 0.0 && ( type==0 || type == 2))
+      if (calcdist_retcheck==0 && d >= 0.0 && ( type==0 || type == 2 || type == 5))
 	{
 	  dist = calcDistNegSP(0.0, 0.0, 0, 1, shift, &amin, &bmin, dists, -1);
 	  //printf("dist=%f d=%f nbondsFlex=%d\n", dist, d, nbondsFlex);
@@ -3960,14 +3984,18 @@ void calc_vbonding(void)
       i++;
 	  //printf("2)i=%d\n", i);
     }
-  if (type==0 || type ==2)
+  if (type==0)
     printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
+  else if (type==2)
+    printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/typesArr[0].nspots, totene);
+  else if (type==5)
+    printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/typesArr[0].nspots, totene);
   else if (type==1 || type == 3 || type == 4)
     {
       printf("co-volume=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L), totene);
       printf("%.15G\n",(totene/((double)i))*(L*L*L));
     }
-  if (type==4)
+  if (type==4||type==5)
     {
       double norm, dtheta, pi;
       FILE *F;
