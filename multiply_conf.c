@@ -64,7 +64,7 @@ int main(int argc, char **argv)
   for (i=0; i < parnum; i++)
     {
       fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
-	    &rx, &ry, &ry, &R[0][0], &R[0][1], &R[0][2], &R[1][0], &R[1][1], &R[1][2], 
+	    &rx, &ry, &rz, &R[0][0], &R[0][1], &R[0][2], &R[1][0], &R[1][1], &R[1][2], 
 	    &R[2][0], &R[2][1], &R[2][2], &type); 
       for (jx = 0; jx < fact; jx++)
 	{
