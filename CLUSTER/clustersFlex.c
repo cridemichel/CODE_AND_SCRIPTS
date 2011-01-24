@@ -113,6 +113,7 @@ char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
     *clsdimsort, *clssizedst, *percola;
 double *clssizedstAVG;
+int media_log=0;
 double calc_norm(double *vec)
 {
   int k1;
@@ -1008,6 +1009,10 @@ void parse_params(int argc, char** argv)
 	{
 	  check_percolation = 0;
 	} 
+      else if (!strcmp(argv[cc],"--medialog") || !strcmp(argv[cc],"-ml" ))
+	{
+	   media_log = 1;
+	}
       else if (!strcmp(argv[cc],"--average") || !strcmp(argv[cc],"-av" ))
 	{
 	  only_average_clsdistro = 1;
@@ -1202,9 +1207,15 @@ int get_max_nbonds(void)
   return maxpbonds+maxijbonds;
 }
 
+#define npmax 10001
+const int nlin=20;
+int l1[npmax], l2[npmax];
+double dlog[npmax], xlog[npmax];
 int maxnbonds;
 int main(int argc, char **argv)
 {
+  int kk, nlin, kmax, kj;
+  double am, xmed;
   FILE *f, *f2, *f3;
   char *s1, *s2;
   int beg, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
@@ -2158,9 +2169,53 @@ int main(int argc, char **argv)
   f = fopen("avg_cluster_size_distr.dat", "w+");
   for (i = 1; i < NP; i++)
     {
-      if (clssizedstAVG[i] != 0.0)
-	fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
+      /* fa la media log delle cluster size distributions (codice passato da Francesco) */
+      if (media_log)
+	{
+	  if (clssizedstAVG[i] != 0.0)
+	    {
+	      for (kk=1; kk <= 51; kk++)
+		l1[kk]=(int) nlin*pow(1.25,kk-1);
+
+	      for(kk=1; kk <= 50; kk++)
+		{
+		  l2[kk]=l1[kk+1]-1;
+		  if (l2[kk] < npmax) 
+		    kmax=kk;
+		}
+	      for(kk=1; kk <= kmax; kk++)
+		{
+		  dlog[kk]=0.0;
+		  xlog[kk]=0.0;
+		  for (kj=l1[kk]; kj <= l2[kk]; kj++)
+		    {
+		      dlog[kk]=dlog[kk]+clssizedstAVG[kj];
+		      xlog[kk]=xlog[kk]+kj;
+		    }
+		}
+	      for (i=0; i < nlin; i++)
+		{
+		  if (clssizedstAVG[i] != 0) fprintf(f,"%d %.15G\n", i,((double)clssizedstAVG[i])/((double)(nfiles)));
+		}
+	      for (kk=1; kk <= kmax; kk++)
+		{
+		  if (dlog[kk]!=0) 
+		    {
+		      am=l2[kk]-l1[kk]+1; 
+		      xmed=xlog[kk]/am;
+		      dlog[kk]=dlog[kk]/am; 
+		      fprintf(f,"%%.15G %.15G\n", xmed,((double) dlog[kk])/((double)nfiles));
+		    }
+		}
+	    }
+	}
+      else
+	{
+	  if (clssizedstAVG[i] != 0.0)
+	    fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
+	}
     }
+
   fclose(f);
   return 0;
 }
