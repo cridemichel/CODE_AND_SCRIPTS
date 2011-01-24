@@ -6,6 +6,7 @@ int main(int argc, char **argv)
 {
   int numat, parnum;
   double rx, ry, rz, rCMx, rCMy, rCMz, R[3][3], L, Lnew;
+  double vx, vy, vz, wx, wy, wz;
   FILE *f;
   long pos;
   int type, jx, jy, jz, i, k1, k2;
@@ -28,7 +29,7 @@ int main(int argc, char **argv)
 	  parnum = atoi(val);
 	  printf("parnum: %d\n", atoi(val)*fact3);
 	}
-      if (!strcmp(par,"@@@"))
+      else if (!strcmp(par,"@@@"))
 	{
 	  numat++;
 	  printf("@@@\n");
@@ -63,7 +64,7 @@ int main(int argc, char **argv)
   for (i=0; i < parnum; i++)
     {
       fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
-	    &rx, &rx, &ry, &R[0][0], &R[0][1], &R[0][2], &R[1][0], &R[1][1], &R[1][2], 
+	    &rx, &ry, &ry, &R[0][0], &R[0][1], &R[0][2], &R[1][0], &R[1][1], &R[1][2], 
 	    &R[2][0], &R[2][1], &R[2][2], &type); 
       for (jx = 0; jx < fact; jx++)
 	{
@@ -79,5 +80,23 @@ int main(int argc, char **argv)
 	    }
 	}
     }
+  for (i=0; i < parnum; i++)
+    {
+      fscanf(f, "%lf %lf %lf %lf %lf %lf\n",
+	    &vx, &vy, &wz, &wx, &wy, &wz); 
+      for (jx = 0; jx < fact; jx++)
+	{
+	  for (jy = 0; jy < fact; jy++)
+	    {
+	      for (jz = 0; jz < fact; jz++)
+		{
+		  printf("%.15G %.15G %.15G %.15G %.15G %.15G\n",
+			 vx, vy, vz, wx, wy, wz); 
+		}
+	    }
+	}
+
+    } 
+  printf("%.15G\n", Lnew);
   fclose(f);
 }
