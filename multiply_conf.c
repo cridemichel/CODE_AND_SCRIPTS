@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	  if (numat==1)
 	    {
 	      fscanf(f, "%[^\n] ", line);
-	      printf("%d\n", fact3);
+	      printf("%d\n", parnum*fact3);
 	    }
 	}
       else
