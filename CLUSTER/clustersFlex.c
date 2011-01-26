@@ -2249,7 +2249,7 @@ int main(int argc, char **argv)
 	  xlog[kk]=0.0;
 	  for (kj=l1[kk]; kj <= l2[kk]; kj++)
 	    {
-	      if (clssizedstAVG[i] !=0 && kj < NP)
+	      if (clssizedstAVG[kj] !=0 && kj < NP)
 		{   
 		  dlog[kk]=dlog[kk]+clssizedstAVG[kj];
 		}		  
