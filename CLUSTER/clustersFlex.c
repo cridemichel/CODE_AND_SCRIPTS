@@ -108,6 +108,7 @@ char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2, START, END, NT, NI;
 int check_percolation = 1, *nspots, particles_type=1, output_bonds=0, mix_type=-1, saveBonds=-1;
+int calcordparam=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
@@ -981,7 +982,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--average/-av] [--maxbonds] <listafile>\n");
+  printf("Usage: clusters [--ordpar/-op] [--medialog/-ml] [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--average/-av] [--maxbonds] <listafile>\n");
   exit(0);
 }
 
@@ -1012,6 +1013,10 @@ void parse_params(int argc, char** argv)
       else if (!strcmp(argv[cc],"--medialog") || !strcmp(argv[cc],"-ml" ))
 	{
 	   media_log = 1;
+	}
+      else if (!strcmp(argv[cc],"--ordpar") || !strcmp(argv[cc],"-op" ))
+	{
+	   calcordparam = 1;
 	}
       else if (!strcmp(argv[cc],"--average") || !strcmp(argv[cc],"-av" ))
 	{
@@ -1212,9 +1217,29 @@ const int nlin=20;
 int l1[npmax], l2[npmax];
 double dlog[npmax], xlog[npmax];
 int maxnbonds;
+
+void diagonalize(double M[3][3], double ev[3])
+{
+  double a[9], work[45];
+  char jobz, uplo;
+  int info, i, j, lda, lwork;
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) a[j+3*i]=M[j][i];		
+      //for(j=0; j<3; j++) a[j][i]=M[j][i];		
+    }	
+  lda = 3;
+  jobz='N';
+  uplo='U';
+  lwork = 45;
+  dsyev_(&jobz, &uplo, &lda, a, &lda, ev, work, &lwork,  &info);  
+}
+
 int main(int argc, char **argv)
 {
-  int kk, nlin, kmax, kj;
+  int kk, kmax, kj, i3;
+  double *Q[3][3], Snem, *normQ;
+  double ev[3];
   double am, xmed;
   FILE *f, *f2, *f3;
   char *s1, *s2;
@@ -1227,7 +1252,8 @@ int main(int argc, char **argv)
   pi = acos(0.0)*2.0;
     /* parse arguments */
   parse_params(argc, argv);
- 
+
+   
   if (only_average_clsdistro)
    check_percolation = 0; 
   f2 = fopen(inputfile, "r");
@@ -1420,7 +1446,13 @@ int main(int argc, char **argv)
      	START=NPA;
         END=NP;
      }
-	  
+  if (calcordparam)
+    {
+      for (a=0; a<3; a++)
+	for (b=0; b<3; b++)
+	  Q[a][b] = malloc(sizeof(double)*NP);
+      normQ = malloc(sizeof(double)*NP);
+    }  
   color = malloc(sizeof(int)*NP);
   color2= malloc(sizeof(int)*NP*NUMREP);
   clsdim2=malloc(sizeof(int)*NP*NUMREP);
@@ -1548,6 +1580,16 @@ int main(int argc, char **argv)
     {
       clssizedstAVG[i] = 0.0;
     }      
+  if (calcordparam)
+    {
+      for (i = 0; i < NP; i++)
+	{
+	  for (a=0; a < 3; a++)
+	    for (b=0; b < 3; b++)
+	      Q[a][b][i] = 0;
+	  normQ[i] = 0;
+	}
+    }
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       if (saveBonds)
@@ -2117,15 +2159,19 @@ int main(int argc, char **argv)
 		  else
 		    fprintf(f, "0 ");
 		}	      
+	     
 	      for (i = 0; i < NP; i++)
 		{
 		  if (color[i]==cluster_sort[nc].color)
 		    {
+		    
 		      fprintf(f, "%d ", i);
+
 		    }
 		}
 	      fprintf(f, "\n");
 	    }
+	  
 	  //if (almenouno==0)
 	  //fprintf(f, "WARNING: No clusters found!\n");
 	  fclose(f);
@@ -2135,6 +2181,24 @@ int main(int argc, char **argv)
 	  //printf("cluster_sort[%d].dim=%d color=%d\n", nc, cluster_sort[nc].dim, cluster_sort[nc].color);
 	  clssizedst[cluster_sort[nc].dim]++;
 	  clssizedstAVG[cluster_sort[nc].dim] += 1.0;
+	  if (calcordparam)
+	    {
+	      int a, b;
+	      for (i=0; i < NP; i++)
+		{
+		  if (color[i] == cluster_sort[nc].color) 
+		    {
+		      for (a=0; a < 3; a++)
+			for (b=0; b < 3; b++)
+			  {
+			    Q[a][b][cluster_sort[nc].dim] += 1.5 * R[0][a][i]*R[0][b][i];
+			    if (a==b)
+			      Q[a][a][cluster_sort[nc].dim] -= 0.5;
+			  }
+		      normQ[cluster_sort[nc].dim]+=1.0;
+		    }
+		}
+	    } 
 	}
       if (!only_average_clsdistro)
 	{
@@ -2160,62 +2224,87 @@ int main(int argc, char **argv)
 	    {
 	      fprintf(f,"%d %d\n", i+1, numbonds[i]);
 	      for (c = 0; c < numbonds[i]-1; c++)
-	    fprintf(f, "%lld ", bonds[i][c]+1);
+	    	fprintf(f, "%lld ", bonds[i][c]+1);
 	      fprintf(f, "%lld\n", bonds[i][numbonds[i]-1]+1);
 	    }
 	  fclose(f);
 	}
     }
   f = fopen("avg_cluster_size_distr.dat", "w+");
-  for (i = 1; i < NP; i++)
+  /* fa la media log delle cluster size distributions (codice passato da Francesco) */
+  if (media_log)
     {
-      /* fa la media log delle cluster size distributions (codice passato da Francesco) */
-      if (media_log)
-	{
-	  if (clssizedstAVG[i] != 0.0)
-	    {
-	      for (kk=1; kk <= 51; kk++)
-		l1[kk]=(int) nlin*pow(1.25,kk-1);
+      for (kk=1; kk <= 51; kk++)
+	l1[kk]=(int) nlin*pow(1.25,kk-1);
 
-	      for(kk=1; kk <= 50; kk++)
-		{
-		  l2[kk]=l1[kk+1]-1;
-		  if (l2[kk] < npmax) 
-		    kmax=kk;
-		}
-	      for(kk=1; kk <= kmax; kk++)
-		{
-		  dlog[kk]=0.0;
-		  xlog[kk]=0.0;
-		  for (kj=l1[kk]; kj <= l2[kk]; kj++)
-		    {
-		      dlog[kk]=dlog[kk]+clssizedstAVG[kj];
-		      xlog[kk]=xlog[kk]+kj;
-		    }
-		}
-	      for (i=0; i < nlin; i++)
-		{
-		  if (clssizedstAVG[i] != 0) fprintf(f,"%d %.15G\n", i,((double)clssizedstAVG[i])/((double)(nfiles)));
-		}
-	      for (kk=1; kk <= kmax; kk++)
-		{
-		  if (dlog[kk]!=0) 
-		    {
-		      am=l2[kk]-l1[kk]+1; 
-		      xmed=xlog[kk]/am;
-		      dlog[kk]=dlog[kk]/am; 
-		      fprintf(f,"%%.15G %.15G\n", xmed,((double) dlog[kk])/((double)nfiles));
-		    }
-		}
+      for(kk=1; kk <= 50; kk++)
+	{
+	  l2[kk]=l1[kk+1]-1;
+	  if (l2[kk] < npmax) 
+	    kmax=kk;
+	}
+      for(kk=1; kk <= kmax; kk++)
+	{
+	  dlog[kk]=0.0;
+	  xlog[kk]=0.0;
+	  for (kj=l1[kk]; kj <= l2[kk]; kj++)
+	    {
+	      if (clssizedstAVG[i] !=0 && kj < NP)
+		{   
+		  dlog[kk]=dlog[kk]+clssizedstAVG[kj];
+		}		  
+	      xlog[kk]=xlog[kk]+kj;
 	    }
 	}
-      else
+      for (i3=0; i3 < nlin; i3++)
+	{
+	  if (clssizedstAVG[i3] != 0) fprintf(f,"%d %.15G\n", i3,((double)clssizedstAVG[i3])/((double)(nfiles)));
+	}
+      for (kk=1; kk <= kmax; kk++)
+	{
+	  if (dlog[kk]!=0) 
+	    {
+	      am=l2[kk]-l1[kk]+1; 
+	      xmed=xlog[kk]/am;
+	      dlog[kk]=dlog[kk]/am; 
+	      fprintf(f,"%.15G %.15G\n", xmed,((double) dlog[kk])/((double)nfiles));
+	    }
+	}
+    }
+  else
+    {
+      for (i = 1; i < NP; i++)
 	{
 	  if (clssizedstAVG[i] != 0.0)
 	    fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
 	}
     }
+  if (calcordparam)
+    {
+      int a, b;
+      double Ql[3][3];
 
+      f2 = fopen("SnemCls.dat","w");      
+      for (i=0; i < NP; i++)
+	{
+	  if (normQ[i] == 0)
+	    continue;
+	  for (a=0; a < 3; a++)
+	    for (b=0; b < 3; b++)
+	      {
+		Ql[a][b] = Q[a][b][i] / normQ[i]; 
+	      }
+  	  diagonalize(Ql, ev);
+	  if (fabs(ev[0]) > fabs(ev[1]))
+	    Snem = ev[0];
+	  else
+	    Snem = ev[1];  
+	  if (fabs(ev[2]) > Snem)
+	    Snem = ev[2];
+	  fprintf(f2, "%d %.15G\n", i, Snem);
+	}
+      fclose(f2);
+    }
   fclose(f);
   return 0;
 }
