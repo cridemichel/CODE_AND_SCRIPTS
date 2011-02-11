@@ -8,7 +8,7 @@ int N;
 double x[3], R[3][3], Q[3][3];
 double r1[3], r2[3], r3[3], u1[3], u2[3], u3[3], dt;
 char fname[1024], inputfile[1024];
-int readCnf = 0, timeEvol = 0, ordmatrix=0, curStep, readLapo=0, heflex=0;
+int readCnf = 0, timeEvol = 0, ordmatrix=0, eigenvectors=0, curStep, readLapo=0, heflex=0;
 #define Sqr(x) ((x)*(x))
 void vectProd(double r1x, double r1y, double r1z, 
 	 double r2x, double r2y, double r2z, 
@@ -20,7 +20,7 @@ void vectProd(double r1x, double r1y, double r1z,
   *r3y = r1z * r2x - r1x * r2z;
   *r3z = r1x * r2y - r1y * r2x;
 }
-
+double eigvec[3][3];
 void diagonalize(double M[3][3], double ev[3])
 {
   double a[9], work[45];
@@ -32,10 +32,19 @@ void diagonalize(double M[3][3], double ev[3])
       //for(j=0; j<3; j++) a[j][i]=M[j][i];		
     }	
   lda = 3;
-  jobz='N';
+  if (eigenvectors)
+    jobz='V';
+  else
+    jobz='N';
   uplo='U';
   lwork = 45;
   dsyev_(&jobz, &uplo, &lda, a, &lda, ev, work, &lwork,  &info);  
+  if (!eigenvectors)
+    return;
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) eigvec[i][j]=a[j+3*i];		
+    }	
 }
 void print_usage(void)
 {
@@ -73,6 +82,10 @@ void parse_param(int argc, char** argv)
       else if (!strcmp(argv[cc],"--ordmatrix") || !strcmp(argv[cc],"-Q"))
 	{
 	  ordmatrix = 1;
+	}
+      else if (!strcmp(argv[cc],"--eigenvec") || !strcmp(argv[cc],"-ev"))
+	{
+	  eigenvectors = 1;
 	}
       else if (cc == argc)
 	print_usage();
@@ -284,6 +297,29 @@ int main(int argc, char** argv)
 		printf("%.15f,", Q[a][b]);	  
 	      else
 		printf("%.15f",Q[a][b]);
+	    }
+	  if (a < 2)
+	    printf("},\n");
+	  else if (b < 2)
+	    printf("}\n");
+	  else 
+	    printf("}");
+	}
+      printf("}\n");
+    }
+  if (!timeEvol && eigenvectors)
+    {
+      printf("Eigenvectors matrix:\n");
+      printf("{");
+      for (a=0; a < 3; a++)
+	{
+	  printf("{");
+	  for (b=0; b < 3; b++)
+	    {
+	      if (b < 2)
+		printf("%.15f,", eigvec[a][b]);	  
+	      else
+		printf("%.15f", eigvec[a][b]);
 	    }
 	  if (a < 2)
 	    printf("},\n");
