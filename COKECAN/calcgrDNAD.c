@@ -116,7 +116,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 
 void print_usage(void)
 {
-  printf("calcgr <confs_file> [points]\n");
+  printf("calcgr [--nemvector/-nv (x,y,z) ] <confs_file> [points]\n");
   exit(0);
 }
 double threshold=0.05;

@@ -310,25 +310,10 @@ int main(int argc, char** argv)
   if (!timeEvol && eigenvectors)
     {
       printf("Eigenvectors matrix:\n");
-      printf("{");
       for (a=0; a < 3; a++)
 	{
-	  printf("{");
-	  for (b=0; b < 3; b++)
-	    {
-	      if (b < 2)
-		printf("%.15f,", eigvec[a][b]);	  
-	      else
-		printf("%.15f", eigvec[a][b]);
-	    }
-	  if (a < 2)
-	    printf("},\n");
-	  else if (b < 2)
-	    printf("}\n");
-	  else 
-	    printf("}");
-	}
-      printf("}\n");
+	  printf("lambda=%.15G {%.15f,%.15G,%.15G}\n",ev[a], eigvec[a][0], eigvec[a][1], eigvec[a][2]);	  
+       	}
     }
 #endif
 }
