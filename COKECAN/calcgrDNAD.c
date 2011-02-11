@@ -5,7 +5,7 @@
 #define Sqr(x) ((x)*(x))
 char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
-int N, particles_type=1;
+int N, particles_type=1, k1, k2;
 double *x[3], L, ti, *w[3], storerate;
 double nv[3], vecx[3], vecy[3], vecz[3];
 double *DR[3], deltaAA=-1.0, deltaBB=-1.0, deltaAB=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0, 
@@ -122,8 +122,8 @@ void print_usage(void)
 double threshold=0.05;
 void parse_param(int argc, char** argv)
 {
+  int extraparam=0;  
   int cc=1;
-  
   points=100;
   if (argc==1)
     {
@@ -150,16 +150,16 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  sscanf(argv[cc],"(%lf,%lf,%lf)", &(nv[0]), &(nv[1]), &(nv[2]));
 	}
-      else if (cc==argc|| extraparm==2)
+      else if (cc==argc|| extraparam==2)
 	print_usage();
-      else if (extraparm == 0)
+      else if (extraparam == 0)
 	{
-	  extraparm++;
+	  extraparam++;
 	  strcpy(inputfile,argv[1]);
 	}
-      else if (extraparm==1)
+      else if (extraparam==1)
 	{
-	  extraparm++;
+	  extraparam++;
 	  points=atoi(argv[2]);
 	}
     }
@@ -224,11 +224,12 @@ void lab2nem(double v[3], double vp[3])
 }
 int main(int argc, char** argv)
 {
-  FILE *f, *f2;
-  int nf, i, a, b, nat, NN, j, ii, bin;
-  double g0para, g0perp;
-  double r, delr, tref=0.0, Dx[3], DxNem[3], *g0, g0m, distSq, rlower, rupper, cost, nIdeal;
-  double time, refTime, RCUT;
+  FILE *f, *f2, *f1;
+  int binx, biny, binz;
+  int k, nf, i, a, b, nat, NN, j, ii, bin;
+  double rx, ry, rz, norm, g0para, g0perp;
+  double r, delr, tref=0.0, Dx[3], DxNem[3], *g0, **g0Perp, **g0Parall, g0m, distSq, rlower, rupper, cost, nIdeal;
+  double sp, time, refTime, RCUT;
   int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
   double shift[3];
   double ene=0.0;
@@ -390,8 +391,14 @@ int main(int argc, char** argv)
   inCell[2] = malloc(sizeof(int)*NP);
 #endif
   printf("L=%.15G\n", L);
-  g0Perp = malloc(sizeof(double)*points*points);
-  g0Parall= malloc(sizeof(double)*points*points);
+  g0Perp = malloc(sizeof(double*)*points);
+  g0Parall= malloc(sizeof(double*)*points);
+
+  for (k1=0; k1 < points; k1++)
+    {
+      g0Perp[k1] = malloc(sizeof(double)*points);
+      g0Parall[k1] = malloc(sizeof(double)*points);
+    }
   g0 = malloc(sizeof(double)*points);
   for (k1=0; k1 < points; k1++)
     {
@@ -506,16 +513,16 @@ int main(int argc, char** argv)
       for (k2 = 0; k2 < points; k2++)
 	{
 	  //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
-	  g0perp = cost*g0Perp[ii]/((double)nf);
-	  g0para = cost*g0Parall[ii]/((double)nf);
+	  g0perp = cost*g0Perp[k1][k2]/((double)nf);
+	  g0para = cost*g0Parall[k1][k2]/((double)nf);
 #if 0
 	  g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
 	  g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
 	  g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
 	  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
 #endif
-	  rx = (((double)k1)+0.5)*delr
-	  ry = (((double)k2)+0.5)*delr
+	  rx = (((double)k1)+0.5)*delr;
+	  ry = (((double)k2)+0.5)*delr;
 	  fprintf(f1, "%.15G %.15G %.15G\n", rx, ry, g0para);
 	  fprintf(f2, "%.15G %.15G %.15G\n", rx, ry, g0perp);
 	}
