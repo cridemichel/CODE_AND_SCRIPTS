@@ -4021,6 +4021,55 @@ void calc_vbonding(void)
 }
 
 #endif
+#ifdef MC_SIMUL
+double MC_funcSQ(double x, double z, double sa[3], double ee[3])
+{
+  return sa[1]*pow(1.0-(pow(x/a,ee[0])+pow(z/a,ee[2])),1/ee[1]);
+}
+void build_parallelepipeds(void)
+{
+  double sa[3], dx;
+  int tt, kk, k1, k2;
+
+  mbox = malloc(sizeof(struct mbox*)*Oparams.ntypes);
+ 
+  /* 2 multibox per tipo */
+  for (tt=0; tt < Oparams.ntypes; tt++)
+   mbox[tt] = malloc(sizeof(struct mboxstr)*2); 
+
+  for (tt=0; tt < Oparams.ntypes; tt++)
+    {
+      /* il primo set di parallelepipedi è costituito 
+	 da un solo parallelepipedo */
+      mbox[tt][0].nbox=1;
+      for (kk = 0; kk < 3; kk++)
+	{
+	  mbox[tt][0].dr[kk] = 0.0;
+	}
+
+      for (kk = 0; kk < 3; kk++)
+	sa[kk] = typesArr[tt].sax[kk]; 
+      mbox[tt][0].sa[0] = 0.9*sa[0];
+      mbox[tt][0].sa[1] = 0.7*sa[1];
+      mbox[tt][0].sa[2] = 0.7*sa[2]; 
+      /* secondo set di parallelepipedi: approssimazione stepwise
+	 della forma della superquadrica (molto più accurata) */
+      lastx=x=0.0;
+      while (!fine)
+	{
+	  dx=sa[0]/OprogStatus.MC_nmboxmax;
+	  for (ix=0; ix < 1000; ix++)
+	    {
+	      if (fabs(MC_funcSQ(x)-MC_funcSQ(lastx)) > OprogStatus.MC_deltambox)
+		{
+
+		}
+	      x+=dx;
+	    }
+	}
+    }
+}
+#endif
 void usrInitAft(void)
 {
   long long int maxp;

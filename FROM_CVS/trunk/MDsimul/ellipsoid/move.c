@@ -5971,7 +5971,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 
 #endif
   //printf(">>>>>>> BOHHHHHHHHHHHHHHHHH\n");
-#ifdef MC_SIMUL
+#if defined(MC_SIMUL) && 0
   /* N.B. se si fa un Monte Carlo di ellissoidi queste condizioni evitano problemi nel calcolo 
    * della distanza qualora ci sia un overlap tale che il centro dell'ellissoide A sia all'interno
    * di B o viceversa. 
@@ -10660,7 +10660,19 @@ void rebuildCalend_TS(void)
 #endif
 }
 #endif
+#ifdef MC_SIMUL
+void move(void)
+{
+  int i;
+  /* 1 passo monte carlo = num. particelle tentativi di mossa */
+  for (i=0; i < Oparams.parnum; i++)
+    {
 
+
+    }
+
+}
+#else
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -11416,3 +11428,4 @@ void move(void)
       R2u();
     }
 }
+#endif
