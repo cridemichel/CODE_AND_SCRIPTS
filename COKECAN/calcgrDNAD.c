@@ -22,16 +22,19 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
   int curstp=-1;
   *ti = -1.0;
   f = fopen(fname, "r");
-  while (!feof(f) && nat < 2) 
+  while (!feof(f)) 
     {
       cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
-      fscanf(f, "%[^\n]\n",line);
+      fscanf(f, "%[^\n] ",line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
+	  //printf("qui nat=%d\n", nat);
+	  continue;
 	}
-      if (nat < 3)
+	//printf("line=%s\n", line);
+      if (nat < 2)
 	{
 	  fseek(f, cpos, SEEK_SET);
 	  fscanf(f, "%[^:]:", parname);
@@ -93,8 +96,9 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
-      else
+      else if (nat==3)
 	{
+	  fseek(f, cpos, SEEK_SET);
 	  for (i = 0; i < NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
@@ -102,6 +106,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 		{
 		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
 		}
+	      //printf("r[%d]=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
 	    }
 	  break; 
 	}
@@ -132,11 +137,13 @@ void parse_param(int argc, char** argv)
     }
   while (cc < argc)
     {
+
+      printf("argc=%d argv[argc]=%s cc=%d\n", argc, argv[cc], cc);
       if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
 	{
 	  print_usage();
 	}
-      if (!strcmp(argv[cc],"--threshold")||!strcmp(argv[cc],"-t"))
+      else if (!strcmp(argv[cc],"--threshold")||!strcmp(argv[cc],"-t"))
 	{
 	  cc++;
 	  if (cc==argc)
@@ -155,13 +162,16 @@ void parse_param(int argc, char** argv)
       else if (extraparam == 0)
 	{
 	  extraparam++;
-	  strcpy(inputfile,argv[1]);
+	  strcpy(inputfile,argv[cc]);
 	}
       else if (extraparam==1)
 	{
 	  extraparam++;
-	  points=atoi(argv[2]);
+	  points=atoi(argv[cc]);
 	}
+      else 
+	print_usage();
+      cc++;
     }
 }
 double pi;
@@ -244,13 +254,13 @@ int main(int argc, char** argv)
   pi = acos(0)*2.0;
   nat = 0;
   f = fopen(fname,"r");
-  while (!feof(f) && nat < 2) 
+  while (!feof(f) && nat < 3) 
     {
       fscanf(f, "%[^\n]\n)", line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
-	  if (nat==2)
+	  if (nat==3)
 	    {
 	      for (i=0; i < 2*NP; i++)
 		fscanf(f, "%[^\n]\n", line);
@@ -406,7 +416,7 @@ int main(int argc, char** argv)
       for (k2=0; k2 < points; k2++)
 	{
 	  g0Perp[k1][k2] = 0.0;
-	  g0Parall[k1][k1] = 0.0;
+	  g0Parall[k1][k2] = 0.0;
 	}
     }
   for (ii = 0; ii < 3; ii++)
@@ -425,6 +435,7 @@ int main(int argc, char** argv)
   vecz[0] = nv[0];
   vecz[1] = nv[1];
   vecz[2] = nv[2];
+  printf("nematic=%f %f %f\n", nv[0], nv[1], nv[2]);
   vecx[0] = 1.0;
   vecx[1] = 0;
   vecx[2] = 0;
@@ -442,7 +453,7 @@ int main(int argc, char** argv)
   norm = calc_norm(vecx);
   for (k=0; k < 3 ; k++)
     vecx[k] = vecx[k]/norm;
-  vectProdVec(vecx, vecy, vecz);
+  vectProdVec(vecz, vecx, vecy);
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
@@ -462,9 +473,9 @@ int main(int argc, char** argv)
 	    distSq = 0.0;
 	    for (a = 0; a < 3; a++)
 	      distSq += Sqr(Dx[a]);
-	    binx = (int) (fabs(DxNem[0]) / delr);
-	    biny = (int) (fabs(DxNem[1]) / delr);
-	    binz = (int) (fabs(DxNem[2]) / delr);
+	    binx = (int) (fabs(DxNem[0]+L*0.5) / delr);
+	    biny = (int) (fabs(DxNem[1]+L*0.5) / delr);
+	    binz = (int) (fabs(DxNem[2]+L*0.5) / delr);
 	    bin = (int) (sqrt(distSq)/delr);
 	    //printf("(%d-%d) bin=%d\n", i, j, bin);
 	    if (binx < points && biny < points && binz < points && 
