@@ -125,6 +125,7 @@ void print_usage(void)
   exit(0);
 }
 double threshold=0.05;
+int gnuplot=0;
 void parse_param(int argc, char** argv)
 {
   int extraparam=0;  
@@ -143,12 +144,9 @@ void parse_param(int argc, char** argv)
 	{
 	  print_usage();
 	}
-      else if (!strcmp(argv[cc],"--threshold")||!strcmp(argv[cc],"-t"))
+      else if (!strcmp(argv[cc],"--gnuplot")||!strcmp(argv[cc],"-gp"))
 	{
-	  cc++;
-	  if (cc==argc)
-	    print_usage();
-	  threshold=atof(argv[cc]);
+	  gnuplot=1;
 	}
       else if (!strcmp(argv[cc],"--nemvector")||!strcmp(argv[cc],"-nv"))
 	{
@@ -221,23 +219,25 @@ void lab2nem(double v[3], double vp[3])
 
   for (k1=0; k1 < 3; k1++)
     {
-      R[k1][0] = vecx[k1];
-      R[k1][1] = vecy[k1];
-      R[k1][2] = vecz[k1];
+      R[0][k1] = vecx[k1];
+      R[1][k1] = vecy[k1];
+      R[2][k1] = vecz[k1];
     } 
   for (k1=0; k1 < 3; k1++)
     {
       vp[k1] = 0.0;
       for (k2=0; k2 < 3; k2++)
-	vp[k1] += R[k2][k1]*v[k2];
+	vp[k1] += R[k1][k2]*v[k2];
     }
+//  printf("vp=%f %f %f\n", vp[0], vp[1], vp[2]);
+  //printf("v=%f %f %f\n", v[0], v[1], v[2]);
 }
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *f1;
   int binx, biny, binz;
   int k, nf, i, a, b, nat, NN, j, ii, bin;
-  double rx, ry, rz, norm, g0para, g0perp;
+  double rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
   double r, delr, tref=0.0, Dx[3], DxNem[3], *g0, **g0Perp, **g0Parall, g0m, distSq, rlower, rupper, cost, nIdeal;
   double sp, time, refTime, RCUT;
   int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
@@ -401,19 +401,19 @@ int main(int argc, char** argv)
   inCell[2] = malloc(sizeof(int)*NP);
 #endif
   printf("L=%.15G\n", L);
-  g0Perp = malloc(sizeof(double*)*points);
-  g0Parall= malloc(sizeof(double*)*points);
+  g0Perp = malloc(sizeof(double*)*4*points);
+  g0Parall= malloc(sizeof(double*)*4*points);
 
-  for (k1=0; k1 < points; k1++)
+  for (k1=0; k1 < 4*points; k1++)
     {
-      g0Perp[k1] = malloc(sizeof(double)*points);
-      g0Parall[k1] = malloc(sizeof(double)*points);
+      g0Perp[k1] = malloc(sizeof(double)*points*4);
+      g0Parall[k1] = malloc(sizeof(double)*points*4);
     }
-  g0 = malloc(sizeof(double)*points);
-  for (k1=0; k1 < points; k1++)
+  g0 = malloc(sizeof(double)*points*4);
+  for (k1=0; k1 < 4*points; k1++)
     {
       g0[k1] = 0.0;
-      for (k2=0; k2 < points; k2++)
+      for (k2=0; k2 < 4*points; k2++)
 	{
 	  g0Perp[k1][k2] = 0.0;
 	  g0Parall[k1][k2] = 0.0;
@@ -435,15 +435,15 @@ int main(int argc, char** argv)
   vecz[0] = nv[0];
   vecz[1] = nv[1];
   vecz[2] = nv[2];
-  printf("nematic=%f %f %f\n", nv[0], nv[1], nv[2]);
+  printf("delr=%.15G nematic=%f %f %f\n", delr, nv[0], nv[1], nv[2]);
   vecx[0] = 1.0;
-  vecx[1] = 0;
-  vecx[2] = 0;
+  vecx[1] = 1.0;
+  vecx[2] = 1.0;
   if (vecx[0] == vecz[0] && vecx[1]==vecz[1] && vecx[2]==vecz[2])
     {
-      vecx[0] = 0.0;
-      vecx[1] = 1.0;
-      vecx[2] = 0.0;
+      vecx[0] = 1.0;
+      vecx[1] = -1.0;
+      vecx[2] = 1.0;
     }
   sp = 0;
   for (k=0; k < 3 ; k++)
@@ -454,6 +454,10 @@ int main(int argc, char** argv)
   for (k=0; k < 3 ; k++)
     vecx[k] = vecx[k]/norm;
   vectProdVec(vecz, vecx, vecy);
+  printf("{{%f,%f,%f},\n", vecx[0], vecx[1], vecx[2]);
+  printf("{%f,%f,%f},\n", vecy[0], vecy[1], vecy[2]);
+  printf("{%f,%f,%f}}\n", vecz[0], vecz[1], vecz[2]);
+ 
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
@@ -467,27 +471,37 @@ int main(int argc, char** argv)
 	      {
 		Dx[a] = x[a][i] - x[a][j];
 	      }
+
 	    for (a = 0; a < 3; a++)
 	      Dx[a] = Dx[a] - L * rint(Dx[a]/L);
 	    lab2nem(Dx,DxNem);
+	    //printf("DxNem=%f %f %f\n", DxNem[0], DxNem[1], DxNem[2]);
 	    distSq = 0.0;
 	    for (a = 0; a < 3; a++)
 	      distSq += Sqr(Dx[a]);
-	    binx = (int) (fabs(DxNem[0]+L*0.5) / delr);
-	    biny = (int) (fabs(DxNem[1]+L*0.5) / delr);
-	    binz = (int) (fabs(DxNem[2]+L*0.5) / delr);
+	    binx = (int) floor(DxNem[0] / delr);
+	    biny = (int) floor(DxNem[1] / delr);
+	    binz = (int) floor(DxNem[2] / delr);
 	    bin = (int) (sqrt(distSq)/delr);
 	    //printf("(%d-%d) bin=%d\n", i, j, bin);
-	    if (binx < points && biny < points && binz < points && 
-		binx >= 0 && biny >= 0  && binz >=0)
+	    //printf("(%d-%d) %d %d %d\n", i, j, binx, biny, binz);
+	    //printf("DrNemSq=%f Dr=%f\n", calc_norm(DxNem), calc_norm(Dx));
+	    if (binx < -2*points )
+	      printf("boh=%d\n", binx+2*points);
+	    if (binx < 2*points && biny < 2*points && binz < 2*points && 
+		binx >= -2*points && biny >= -2*points  && binz >= -2*points)
 	      {
-		if (binx==0)
-		  g0Parall[biny][binz] += 2.0;
-		else if (binz==0)
-		  g0Perp[binx][biny] += 2.0;
-		//printf("g0[%d]=%.15G\n", bin, g0[bin]);
+		if (binx==0 || binx==-1)
+		  g0Parall[biny+2*points][binz+2*points] += 2.0;
+		if (binz==0 || binz==-1)
+		  {
+		    g0Perp[binx+2*points][biny+2*points] += 2.0;
+		    //if (binx < 5)	
+		    //  printf("binx=%d biny=%d\n", binx, biny);
+		  }
+	       	//printf("g0[%d]=%.15G\n", bin, g0[bin]);
 	      }
-	    if (bin >=0 && bin < points)
+	    if (bin >=0 && bin < 4*points)
 	      g0[bin] += 2.0;
     	    //printf("bin=%d\n", bin);
 	    //exit(1);
@@ -498,7 +512,7 @@ int main(int argc, char** argv)
   f = fopen("gr.dat", "w+");
   r = delr*0.5;
   cost = 4.0 * pi * NP / 3.0 / (L*L*L);
-  for (ii = 0; ii < points; ii++)
+  for (ii = 0; ii < 2*points; ii++)
     {
       rlower = ( (double) ii) * delr;
       rupper = rlower + delr;
@@ -518,10 +532,10 @@ int main(int argc, char** argv)
   f1 = fopen("grpara.dat", "w+");
   f2 = fopen("grperp.dat", "w+");
   r = delr*0.5;
-  cost = (L*L*L)/((double)NP)/((double)NP);
-  for (k1 = 0; k1 < points; k1++)
+  cost = (L*L*L)/((double)NP)/((double)NP)/(delr*delr*delr);
+  for (k1 = 0; k1 < 4*points; k1++)
     {
-      for (k2 = 0; k2 < points; k2++)
+      for (k2 = 0; k2 < 4*points; k2++)
 	{
 	  //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
 	  g0perp = cost*g0Perp[k1][k2]/((double)nf);
@@ -532,14 +546,39 @@ int main(int argc, char** argv)
 	  g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
 	  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
 #endif
-	  rx = (((double)k1)+0.5)*delr;
-	  ry = (((double)k2)+0.5)*delr;
+	  rx = (((double)k1)-2*points)*delr;
+	  ry = (((double)k2)-2*points)*delr;
 	  fprintf(f1, "%.15G %.15G %.15G\n", rx, ry, g0para);
 	  fprintf(f2, "%.15G %.15G %.15G\n", rx, ry, g0perp);
+	  if (k2==0 && k1==0)
+	    {
+	      minpara = maxpara = g0para;
+	      minperp = maxperp =g0perp;
+	    }
+	  else
+	    {
+	      if (g0para < minpara)
+		minpara = g0para;
+	      if (g0para > maxpara)
+		maxpara = g0para;
+	      if (g0perp < minperp)
+		minperp = g0perp;
+	      if (g0perp > maxperp)
+		maxperp = g0perp;
+	    }
+
+	}
+      if (gnuplot && k1 < 4*points-1)
+	{
+	  fprintf(f1, "\n");
+	  fprintf(f2, "\n");
 	}
     }
+  //printf("gnuplot=%d\n", gnuplot);
   fclose(f1);
   fclose(f2);
+  printf("Parallel Range [%.15G:%.15G]\n", minpara, maxpara);
+  printf("Perpendicular Range [%.15G:%.15G]\n", minperp, maxperp);
   return 0;
 }
 

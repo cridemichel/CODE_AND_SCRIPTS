@@ -6,7 +6,7 @@
 char **fname; 
 double time, *ccA, *ccB, *GA, *GB, Gm,
        GmA, GmB, costh2, *ti, *u0[3], *ut[3], L, refTime;
-int points, assez, NP, NPA;
+int points, assez, NP, NPA=-1;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 double A0=-1, A1=-1, B0=-1, B1=-1, C0=-1, C1=-1;
@@ -203,6 +203,7 @@ int main(int argc, char **argv)
   for (ii=0; ii < points; ii++)
     {
       GA[ii] = 0.0;
+      ccA[ii] = 0.0;
       if (NPA < NP)
 	{
 	  GB[ii] = 0.0;
