@@ -533,6 +533,8 @@ int main(int argc, char** argv)
   f2 = fopen("grperp.dat", "w+");
   r = delr*0.5;
   cost = (L*L*L)/((double)NP)/((double)NP)/(delr*delr*delr);
+  cost /= 2; /* N.B. divido per due poiché sto considerando in realtà due piani: uno appena
+		sopra e uno appena sotto (z=0 o x=0) */
   for (k1 = 0; k1 < 4*points; k1++)
     {
       for (k2 = 0; k2 < 4*points; k2++)
