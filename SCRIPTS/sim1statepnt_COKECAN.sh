@@ -5,6 +5,8 @@
 #      $4 passi di equilibratura ( 0 = default ) 
 # $5 = temperatura
 # $6 = sigma
+# $7 = 2 model B / 1 fix bonding volume / 0 = do not fix bonding volume
+FIXVB="1"
 if [ "$1" = "" ]
 then
 echo "Syntax: sim1statepnt <Volume_Fraction> <production_cycles> [elongation] [equilibration_steps] [temperature] [sigma]"
@@ -44,7 +46,23 @@ SIGMA="0.9"
 else
 SIGMA="$6"
 fi
+if [ "$7" != "" ]
+then
+FIXVB="$7"
+fi
+if [ "$FIXVB" == "0" ]
+then
+DIRSIM="sigma_${SIGMA}_noFixVb_Phi$1_T$TEMP"
+elif [ "$FIXVB" == "2" ]
+then
+DIRSIM="sigma_${SIGMA}_modB_Phi$1_T$TEMP"
+if [ "$SIGMA" == "-1" ]
+then
+SIGMA="0.608333"
+fi
+else
 DIRSIM="sigma_${SIGMA}_Phi$1_T$TEMP"
+fi
 PARFILE="ellipsoid_flex.par"
 if [ ! -e $DIRSIM ]
 then 
@@ -60,10 +78,10 @@ SIMRA="ell${EL}RA$1T${INITEMP}SIG$SIGMA"
 SIMGR="ell${EL}GR$1T${TEMP}SIG$SIGMA"
 SIMEQ="ell${EL}EQ$1T${TEMP}SIG$SIGMA"
 SIMPR="ell${EL}PR$1T${TEMP}SIG$SIGMA"
-MOSRUN=""
+MOSRUN="mosrun"
 #per ora il salvataggio è lineare
 #=========== >>> PARAMETRI <<< =============
-STORERATE="100.0"
+STORERATE="50.0"
 USENNL=1
 INIFILE="startIniSQ.cnf"
 PARNUM=512
@@ -128,7 +146,15 @@ then
 echo "HVAL is too big ( HVAL=" $HVAL " ) exiting!"
 exit
 fi
+if [ "$FIXVB" == "0" ]
+then
+DEL="$EL"
+elif [ "$FIXVB" == "2" ]
+then
+DEL=`echo "0.15"|awk -v el=$EL -v sig=$SIGMA '{printf("%.8G",el-(sig/2-$1));}'`
+else
 DEL=`echo $HVAL | awk -v el=$EL -v sig=$SIGMA '{printf("%.8G",el-(sig/2-$1));}'`
+fi
 echo "DEL= " $DEL " HVAL= " $HVAL
 cat $INIFILE | awk -v del=$DEL -v sig=$SIGMA -v el=$EL 'BEGIN {NAT=0} {if (NAT==1 && NR==NL+6) {printf("%.8G 0.0 0.0 %.8G\n", del, sig);} else if (NAT==1 && NR==NL+7) { printf("%.8G 0.0 0.0 %.8G\n", -del, sig);} else {print $0;}; if ($0=="@@@") {NAT+=1; NL=NR}}' > _aaa_
 mv _aaa_ $INIFILE
@@ -139,13 +165,11 @@ then
 #usa le NNL con sticky spots!
 NNLPAR="3"
 #RCUT=`echo "2.0*e(0.5*l(($A0+$RNNL)*($A0+$RNNL)+($B0+$RNNL)*($B0+$RNNL)+($C0+$RNNL)*($C0+$RNNL)))" | bc -l`
-#la scelta migliore in tal caso e' di far calcolare al programma rcut poiche' tiene 
-#conto correttamente degli spot
-RCUT=-1 
+RCUT="-1"
 fi
 echo "RCUT=" $RCUT " " "A=" $A0 "B=" $B0 "C=" $C0 "RNNL=" $RNNL "EL=" $EL
 #RANDOMIZZAZIONE INIZIALE
-cp $PARFILE rand_$PARFILE
+#cp $PARFILE rand_$PARFILE
 rm -f $OCTFILE
 #echo "L:" $INIL >> rand_$PARFILE
 #>>> SET TEMPERATURE TO 1.0
