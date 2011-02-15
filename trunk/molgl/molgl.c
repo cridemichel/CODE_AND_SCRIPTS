@@ -3039,12 +3039,12 @@ void key(unsigned char k, int x, int y)
 int main(int argc, char** argv)
 {
   default_pars();
-  args(argc, argv);
 
 #ifndef SQ_CALC_NORM
   printf("WARNING: numerical gradient will be used for SQ and it may be inaccurate\n");
 #endif
   glutInit(&argc, argv);
+  args(argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowPosition(100, 100);
   glutInitWindowSize(globset.Width,globset.Height);
