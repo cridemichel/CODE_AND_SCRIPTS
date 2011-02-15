@@ -5,9 +5,9 @@
 #define MAXPTS 1000
 char **fname; 
 double time, *ccA, *ccB, *GA, *GB, Gm,
-       GmA, GmB, costh2, *ti, *u0[3], *ut[3], L, refTime;
-int points, assez, NP, NPA=-1;
-char parname[128], parval[256000], line[256000];
+       GmA, GmB, costh2, *ti, *u0[3], *ut[3], L, refTime, *rr[3];
+int points=-1, assez, NP, NPA=-1, type=0;
+char inputfile[2048], parname[128], parval[256000], line[256000];
 char dummy[2048];
 double A0=-1, A1=-1, B0=-1, B1=-1, C0=-1, C1=-1;
 inline void normalize(double **u, int i)
@@ -69,7 +69,12 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *u[3])
 
 	      //printf("%f %f %f\n",r0, r1, r2);
 	      for (a = 0; a < 3; a++)
-		u[a][i] = R[assez][a];
+		{
+		  u[a][i] = R[assez][a];
+		}
+	      rr[0][i] = r0;
+	      rr[1][i] = r1;
+	      rr[2][i] = r2; 
 	      normalize(u, i);
 	    }
   	  break; 
@@ -78,21 +83,71 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *u[3])
     }
   fclose(f);
 }
+void print_usage(void)
+{
+  printf("Usage: calcPersist [--type/-t <0|1>] <lista_file> [points] \n");
+  printf("where points is the number of points of the correlation function\n");
+  exit(-1);
+}
+void parse_params(int argc, char** argv)
+{
+  int extraparam=0;  
+  int cc=1;
+  if (argc==1)
+    {
+      print_usage();
+      exit(1);
+    }
+  while (cc < argc)
+    {
 
+      printf("argc=%d argv[argc]=%s cc=%d\n", argc, argv[cc], cc);
+      if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
+	{
+	  print_usage();
+	}
+      else if (!strcmp(argv[cc],"--type")||!strcmp(argv[cc],"-t"))
+	{
+	  cc++;
+	  if (cc==argc)
+	    print_usage();
+	  type=atoi(argv[cc]);
+	}
+      else if (cc==argc|| extraparam==2)
+	print_usage();
+      else if (extraparam == 0)
+	{
+	  extraparam++;
+	  strcpy(inputfile,argv[cc]);
+	}
+      else if (extraparam==1)
+	{
+	  extraparam++;
+	  points=atoi(argv[cc]);
+	}
+      else 
+	print_usage();
+      cc++;
+    }
+}
+#define Sqr(x) ((x)*(x))
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *fA, *fB;
-  int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a, j;
+  int del, first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a, j;
   int NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
-  if (argc <= 1)
-    {
-      printf("Usage: calcPersist <lista_file> [points] \n");
-      printf("where points is the number of points of the correlation function\n");
-      exit(-1);
-    }
- 
+  double Ri[3], Rj[3], normi, normj;
+  parse_params(argc, argv); 
   c2 = 0;
-  f2 = fopen(argv[1], "r");
+  f2 = fopen(inputfile, "r");
   maxl = 0;
   while (!feof(f2))
     {
@@ -154,11 +209,8 @@ int main(int argc, char **argv)
 	}
     }
   fclose(f);
-  if (argc == 3)
-    points = atoi(argv[2]);
-  else
+  if (points==-1)
     points = NP;
-
   if (A0==-1)
     {
       assez=0;
@@ -184,6 +236,7 @@ int main(int argc, char **argv)
     {
       u0[a] = malloc(sizeof(double)*NP);
       ut[a] = malloc(sizeof(double)*NP);
+      rr[a] = malloc(sizeof(double)*NP);
     }
 
   ccA = malloc(sizeof(double)*points);
@@ -212,21 +265,47 @@ int main(int argc, char **argv)
     }
   c2 = 0;
   JJ = 0;
+  if (type==1)
+    del = 1;
+  else
+    del = 0;
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+1)
     {	
       readconf(fname[nr1], &time, &refTime, NP, u0);
-      for (i=0; i < NP; i++) 
+      for (i=0; i < NP-del-1; i++) 
 	{
-	  for (j=i+1; j < NP; j++) 
+	  for (j=i+1; j < NP-del; j++) 
 	    {
 	      costh2 = 0.0;
 	      np = abs(j-i);
 	      if (np > points) 
 		continue;
 	      ti[np] = np;
-	      for (a = 0; a < 3; a++)
+	      if (type==1)
 		{
-		  costh2 += u0[a][i]*u0[a][j];
+		  for (a=0; a < 3; a++)
+		    {
+		      Ri[a] = rr[a][i+1]-rr[a][i];
+		      Rj[a] = rr[a][j+1]-rr[a][j]; 
+		    }
+		  normi=calc_norm(Ri);
+		  normj=calc_norm(Rj);
+		  for (a=0; a < 3; a++)
+		    {
+		      Ri[a] /= normi;
+		      Rj[a] /= normj;
+		    } 
+		  for (a=0; a < 3; a++)
+		    {
+		      costh2 += Ri[a]*Rj[a]; 
+		    }	
+		}
+	      else
+		{  
+		  for (a = 0; a < 3; a++)
+		    {
+		      costh2 += u0[a][i]*u0[a][j];
+		    }
 		}
 	      //printf("costh2=%.15G\n", costh2);
 	      if (i < NPA)
