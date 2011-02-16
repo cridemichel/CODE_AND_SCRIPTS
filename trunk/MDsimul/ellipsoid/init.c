@@ -1130,6 +1130,50 @@ void comvel_brown (COORD_TYPE temp, COORD_TYPE *m)
 #endif 
 }
 #ifdef EDHE_FLEX
+double ranfRandom(void)
+{
+  /*  Returns a uniform random variate in the range 0 to 1 (excluding 0).         
+      Good random number generators are machine specific.
+      please use the one recommended for your machine. */
+  return (1.0-(((double)rand()) / (((double) RAND_MAX) + 1)));
+}
+
+void angvelMB(void)
+{
+  /* NOTA 16/02/11: questa routine ora presuppone che il corpo
+     rigido sia simmetrico rispetto 
+     all'asse x nel riferimento del corpo rigido
+     cosicché in tale rif. la vel. ang. intorno a tale asse sia zero 
+     (l'ho scritta per le cokecan) */
+  int i, a;
+  double sp, pi, inert;                 /* momentum of inertia of the molecule */
+  double norm, osq, o, mean, symax[3];
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, ww[3], wsz;
+  invL = 1.0 / L;
+  pi = acos(0)*2; 
+
+  /* N.B. QUESTO E' SBAGLIATO PERCHE' LA DISTRIBUZIONE
+     E' COME QUELLA TRASLAZIONALE (VEDI LANDAU) 
+     CORREGGERE!!!! */
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      inert = typesArr[typeOfPart[i]].I[0];
+      mean = sqrt(Oparams.T / inert);
+      wx[i] = mean*gauss();
+      wy[i] = mean*gauss();
+      wz[i] = mean*gauss();
+      sp = wx[i]*R[i][0][0]+wy[i]*R[i][0][1]+wz[i]*R[i][0][2];
+      wx[i] -= sp*R[i][0][0];
+      wy[i] -= sp*R[i][0][1];
+      wz[i] -= sp*R[i][0][2];
+      Mx[i] = wx[i]*inert;
+      My[i] = wy[i]*inert;
+      Mz[i] = wz[i]*inert;
+      //printf("w=%f %f %f\n", wx[i], wy[i], wz[i]);
+    }
+}
+
 /* ========================== >>> comvel <<< =============================== */
 void comvel (int Nm, COORD_TYPE temp, COORD_TYPE *m, int resetCM)
 {
@@ -4620,6 +4664,14 @@ void usrInitAft(void)
    {
       resetCM(0);
    }
+  else if (OprogStatus.CMreset==-4)
+    {
+      printf("[INFO] setting translational and angular velocities\n");
+      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+      angvelMB();
+    }
+
+
 #if defined(EDHE_FLEX) && defined(MD_HANDLE_INFMASS)
 #ifdef MD_SPHERICAL_WALL
   for (i=0; i < Oparams.parnum; i++)
