@@ -10350,6 +10350,9 @@ MD_DEBUG34(printf("OLD cellCrossing evIdA=%d k=%d inCells=%d %d %d\n", evIdA, k,
 void velsBrown(double T)
 {
   comvel_brown(T, Oparams.m); 
+#ifdef ED_HEFLEX
+  angvelMB();
+#endif
 }
 
 void rebuildLinkedList(void)
