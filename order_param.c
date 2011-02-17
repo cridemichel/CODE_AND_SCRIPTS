@@ -48,7 +48,7 @@ void diagonalize(double M[3][3], double ev[3])
 }
 void print_usage(void)
 {
-  printf("order_param [--lapo/-l | --heflex/-fl |--cnf/-c | --time/-t | --ordmatrix/-Q ] <confs_file>\n");
+  printf("order_param [--lapo/-l | --heflex/-fl |--cnf/-c | --time/-t | --ordmatrix/-Q ] [--eigenvec/-ev] <confs_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
