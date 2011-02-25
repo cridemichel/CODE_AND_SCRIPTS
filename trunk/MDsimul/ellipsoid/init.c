@@ -1150,7 +1150,7 @@ void angvelMB(void)
   double norm, osq, o, mean, symax[3];
   double  xisq, xi1, xi2, xi;
   double ox, oy, oz, ww[3], wsz;
-  invL = 1.0 / L;
+
   pi = acos(0)*2; 
 
   /* N.B. QUESTO E' SBAGLIATO PERCHE' LA DISTRIBUZIONE
@@ -3814,6 +3814,121 @@ extern double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, doub
 extern double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
 extern int calcdist_retcheck;
 extern int are_spheres(int i, int j);
+extern void readAsciiPars(FILE* pfs, struct pascii strutt[]);
+extern void AllocCoord(int size, COORD_TYPE** pointer, ...);
+
+void initsa(double sax[3], double p[3])
+{
+  FILE* fs;
+  int k1, ii;
+  char fn[256];
+  usrInitBef();
+  strcpy(fn,"sq.par");
+  if ((fs = fopenMPI(fn, "r")) == NULL)
+    {
+      sprintf(msgStrA, "Problem opening restart file %s ", fn);
+      mdMsg(ALL, NOSYS, "initsa", "ERROR", NULL,
+	    msgStrA,
+	    NULL);
+    }
+
+  readAsciiPars(fs, opar_ascii);
+  fclose(fs);
+  OprogStatus.optnnl = 0;
+  nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+  for (ii= 0; ii < Oparams.parnum; ii++)
+    nebrTab[ii].R = matrix(3,3);
+  Oparams.parnum=2;
+
+  typeOfPart = malloc(sizeof(int)*Oparams.parnum);
+  typeOfPart[0]=typeOfPart[1]=0;
+  typesArr = malloc(sizeof(partType)*Oparams.ntypes);
+  typeNP=malloc(sizeof(int));
+  typeNP[0]=2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      typesArr[0].sax[k1]=sax[k1];
+      typesArr[1].sax[k1]=sax[k1];
+      typesArr[0].n[k1]=p[k1];
+      typesArr[1].n[k1]=p[k1];
+      typesArr[0].I[k1]=1.0;
+      typesArr[1].I[k1]=1.0;
+    }
+ typesArr[0].m=1.0;
+  typesArr[1].m=1.0;
+  typesArr[0].ignoreCore=0;
+  typesArr[1].ignoreCore=0;
+  typesArr[0].nspots=0;
+  typesArr[1].nspots=0;
+  typesArr[0].nhardobjs=0;
+  typesArr[1].nhardobjs=0;
+  Oparams.ninters=0;
+  Oparams.nintersIJ=0;
+  OprogStatus.maxbonds=0;
+  numbonds= (int *) malloc(Oparams.parnum*sizeof(int));
+  numbonds[0] = numbonds[1] = 0;
+  AllocCoord(sizeof(double)*Oparams.parnum, ALLOC_LIST, NULL);
+}
+double calcdistsa(double ra[3], double rb[3], double u1a[3], double u2a[3], double u3a[3], double u1b[3], double u2b[3], double u3b[3], double LL[3])
+{
+  /* N.B. u1, u2 ed u3 sono i vettori del sistema di riferimento solidale con il corpo rigido 
+     espressi nel riferminto del laboratorio */
+  int k1, k2;
+  double vecg[8], vecgNeg[8], shift[3];
+  double d, r1[3], r2[3], alpha, d0;
+  for (k1=0; k1 < 3; k1++)
+    L[k1]=LL[k1];
+   /* set positions and orientations */
+  rx[0] = nebrTab[0].r[0] = ra[0];
+  ry[0] = nebrTab[0].r[1] = ra[1];
+  rz[0] = nebrTab[0].r[2] = ra[2];
+  rx[1] = nebrTab[1].r[0] = rb[0];
+  ry[1] = nebrTab[1].r[0] = rb[1];
+  rz[1] = nebrTab[1].r[0] = rb[2];
+  shift[0] = L[0]*rint((rx[0]-rx[1])/L[0]);
+  shift[1] = L[1]*rint((ry[0]-ry[1])/L[1]);
+  shift[2] = L[2]*rint((rz[0]-rz[1])/L[2]);
+ 
+  for (k1=0; k1 < 3; k1++)
+      {
+	R[0][0][k1] = u1a[k1];
+	R[0][1][k1] = u2a[k1];
+	R[0][2][k1] = u3a[k1];
+	R[1][0][k1] = u1a[k1];
+	R[1][1][k1] = u2a[k1];
+	R[1][2][k1] = u3a[k1];
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    nebrTab[0].R[k1][k2] = R[0][k1][k2];
+	    nebrTab[1].R[k1][k2] = R[1][k1][k2];
+	  }
+      }
+
+  set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
+		  1.01*(typesArr[typeOfPart[0]].sax[1]), 
+		  1.01*(typesArr[typeOfPart[0]].sax[2]));
+  d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, 0, 1, shift);
+  /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
+  if (d0 > 0.0)
+    {
+      return 1.0;
+    }
+  set_semiaxes_vb(0.9*typesArr[typeOfPart[0]].sax[0],
+		  0.7*typesArr[typeOfPart[0]].sax[1], 
+		  0.7*typesArr[typeOfPart[0]].sax[2]);
+
+  d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, 0, 1, shift);
+  /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
+  if (d0 < 0.0)
+    {
+      return -1.0;
+    }
+  OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
+  calcdist_retcheck = 0;
+  d=calcDistNeg(0.0, 0.0, 0, 1, shift, r1, r2, &alpha, vecg, 1);
+  //printf("QUI d=%f\n", d);
+  return d;
+}
 double calcDistNeg_vb(int i, int j, double shift[3])
 {
   double vecg[8], vecgNeg[8];
@@ -3869,26 +3984,206 @@ double calcDistNeg_vb(int i, int j, double shift[3])
   //printf("QUI d=%f\n", d);
   return d;
 }
+
+#ifdef  MD_CHAIN_SIM
+double chainlen;
+void save_conf(int i)
+{
+  char fileop2[512], fileop[512];
+  sprintf(fileop2 ,"Store-%d-%d", 
+	  i, 0);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+      exit(-1);
+    }
+  UpdateSystem();
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      update_MSDrot(i);
+#ifdef MD_CALC_DPP
+      update_MSD(i);
+      store_last_u(i);
+#endif
+      OprogStatus.lastcolltime[i] = Oparams.time;
+    }
+  R2u();
+#ifdef MD_SAVE_DISTANCE
+  if (mgl_mode==1)
+    {
+      FILE *f;
+#if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
+      double dists[MD_PBONDS], d;
+      int i;
+#endif
+      f = fopen("distance.dat", "a");
+#if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
+      d=calcJustDistNegSP(Oparams.time, 0, 1, dists);
+      fprintf(f, "%.15G %.15G ", Oparams.time + OprogStatus.refTime, calcJustDistNeg(Oparams.time, 0, 1));
+#if 1
+      for (i=0; i < MD_PBONDS; i++)
+	{
+	  fprintf(f, "%.15G ", dists[i]);
+	}
+#else
+      fprintf(f, "%.15G ", dists[1]);
+      printf("mapbonds[0]:%d mapbondsb[1]:%d\n", mapbondsa[0], mapbondsb[1]);
+#endif
+      fprintf(f, "\n");
+#else
+      fprintf(f, "%.15G %.15G\n", Oparams.time + OprogStatus.refTime, calcJustDistNeg(Oparams.time, 0, 1));
+#endif
+      fclose(f);
+    }
+#endif
+
+  if (mgl_mode==0)
+    {
+      writeAsciiPars(bf, opro_ascii);
+      fprintf(bf, sepStr);
+      writeAsciiPars(bf, opar_ascii);
+      fprintf(bf, sepStr);
+    }	      
+  MD_DEBUG(printf("[Store event]: %.15G JJ=%d KK=%d\n", Oparams.time, OprogStatus.JJ, OprogStatus.KK));
+  //fprintf(bf, ".semiAxes: %f %f %f, %f %f %f\n",
+  //	  Oparams.a[0], Oparams.b[0], Oparams.c[0],
+  //  Oparams.a[1], Oparams.b[1], Oparams.c[1]);
+  writeAllCor(bf, 0);
+  fclose(bf);
+  if (mgl_mode==0)
+    {
+#ifdef MPI
+#ifdef MD_MAC
+      sprintf(fileop3, "/usr/bin/gzip -f %s_R%d", fileop, my_rank);
+#else
+      sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+#endif
+#else 
+#ifdef MD_MAC
+      sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+#else
+      sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
+#endif
+#ifndef MD_NO_SYSTEM
+      system(fileop3);
+#endif	    
+    }
+}
+void insert_sq(int j)
+{
+  double rp[3], rl[3], Rl[3][3];
+  double ox, oy, oz, ene;
+  int k1, k2, bonded=0;
+  double rangexp[2][3];
+  double rangexl[2][3];
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double ratA[NA][3], ratB[NA][3]; 
+#endif
+  if (j==0)
+    {
+      for (k1=0; k1 < 3; k1++)
+	nebrTab[0].r[k1] = 0.0;
+      rx[0] = ry[0] = rz[0] = 0.0;
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    R[0][k1][k2] = (k1==k2)?1:0;
+	    nebrTab[0].R[k1][k2] = R[0][k1][k2];
+	  }
+    }
+  else
+    {
+      rA[0] = rx[j-1];
+      rA[1] = ry[j-1];
+      rA[2] = rz[j-1];
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  RtA[k1][k2] = R[j-1][k1][k2];
+      /* il semi-asse x è quello lungo */
+      rangexp[0][0] = 2.0*typesArr[0].sax[0]-0.15;
+      rangexp[1][0] = 2.0*typesArr[0].sax[0]+0.15;
+      rangexp[0][1] = -1.0;
+      rangexp[1][1] = 1.0;
+      rangexp[0][2] = -1.0;
+      rangexp[1][2] = 1.0;
+      //body2lab(rangexp[0], rangexl[0], rA, RtA);
+      //body2lab(rangexp[1], rangexl[1], rA, RtA); 
+      bonded=0;
+      do
+	{
+	  /* random position insider a box */
+	  rp[0] = rangexp[0][0] + ranf_vb()*(rangexp[1][0]-rangexp[0][0]);
+	  rp[1] = rangexp[0][1] + ranf_vb()*(rangexp[1][1]-rangexp[0][1]);
+	  rp[2] = rangexp[0][2] + ranf_vb()*(rangexp[1][2]-rangexp[0][2]);
+	  body2lab(rp, rl, rA, RtA);
+	  rx[j] = rl[0];
+	  ry[j] = rl[1];
+	  rz[j] = rl[2];
+	  orient(&ox, &oy, &oz);
+	  versor_to_R(ox, oy, oz, Rl);
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      {
+		nebrTab[j].R[k1][k2] = Rl[k1][k2];
+		R[j][k1][k2] = Rl[k1][k2];
+	      }
+	  assign_bond_mapping(j-1, j);
+	  d = calcDistNeg_vb(j-1, j, shift);
+	  if (calcdist_retcheck==0 && d >= 0.0)
+	    {
+	      dist = calcDistNegSP(0.0, 0.0, j-1, j, shift, &amin, &bmin, dists, -1);
+	      //printf("dist=%f d=%f nbondsFlex=%d\n", dist, d, nbondsFlex);
+	      for (nn=0; nn < nbondsFlex; nn++)
+		{
+		  //printf("dists[%d]=%f\n", nn, dists[nn]);
+		  if (dists[nn]<0.0)
+		    {	
+		      return;
+		    }
+		}
+	    }
+	}	
+      while (!bonded);
+    }
+}
+void calc_persist_len(int maxtrials)
+{
+  int i=0, j;
+  OprogStatus.optnnl = 0;
+  while (i < maxtrials)
+    {
+      for (j=0; j < Oparams.parnum; j++)
+	{
+	  insert_sq(j);
+	}
+      i++;
+      save_conf();
+    }
+}
+#endif
 void calc_vbonding(void)
 {
   FILE *fi;
   int k1, k2, count, ii;
   long long int maxtrials, i;
   int amin, bmin, nn;
-  double alpha, Rl[3][3], ox, oy, oz, d, ene, dist;
+  double Lb, alpha, Rl[3][3], ox, oy, oz, d, ene, dist;
   double totene=0.0, shift[3];
   int n=1000;
   fi = fopen("vbonding.conf", "r");
   fscanf(fi, "%lld %d ", &maxtrials, &type);
   if (type==4 || type==5)
     fscanf(fi, " %lf", &alpha);
-
   /* type = 0 -> calculate bonding volume 
      type = 1 -> calculate co-volume 
      type = 2 -> calc. bonding volume for fixed orientation (aligned)
      type = 3 -> calc. co-volume for fixed orientation (aligned)
      type = 4 -> covolume using Onsager trial function
      type = 5 -> bonding volume using Onsager trial function
+     type = 6 -> persistence length
    */
   
   fclose(fi);
@@ -3896,6 +4191,13 @@ void calc_vbonding(void)
   srandomdev();
 #else
   srandom((int)(time(NULL)));
+#endif
+#ifdef MD_CHECK_POINT
+  if (type==6)
+    {
+      calc_persist_len(maxtrials);
+      exit(-1);
+    }
 #endif
   OprogStatus.optnnl = 0;
   assign_bond_mapping(0,1);
@@ -4028,16 +4330,21 @@ void calc_vbonding(void)
       i++;
 	  //printf("2)i=%d\n", i);
     }
+#ifdef MD_LXYZ
+  Lb = L[0];
+#else
+  Lb = L;
+#endif
   if (type==0)
-    printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
+    printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(Lb*Lb*Lb)/Sqr(typesArr[0].nspots), totene);
   else if (type==2)
-    printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/typesArr[0].nspots, totene);
+    printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(Lb*Lb*Lb)/typesArr[0].nspots, totene);
   else if (type==5)
-    printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L)/typesArr[0].nspots, totene);
+    printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)i))*(Lb*Lb*Lb)/typesArr[0].nspots, totene);
   else if (type==1 || type == 3 || type == 4)
     {
-      printf("co-volume=%.10f (totene=%f)\n", (totene/((double)i))*(L*L*L), totene);
-      printf("%.15G\n",(totene/((double)i))*(L*L*L));
+      printf("co-volume=%.10f (totene=%f)\n", (totene/((double)i))*(Lb*Lb*Lb), totene);
+      printf("%.15G\n",(totene/((double)i))*(Lb*Lb*Lb));
     }
   if (type==4||type==5)
     {
@@ -4741,7 +5048,11 @@ void usrInitAft(void)
     read_native_conf();
 #endif
 #ifdef MD_RABBIT
+#ifdef MD_LXYZ
+  nbins_rhoz = L[2] / OprogStatus.rhozBinSize; 
+#else
   nbins_rhoz = L / OprogStatus.rhozBinSize; 
+#endif
   rhoz = malloc(sizeof(double)*nbins_rhoz);
 #endif
   if (newSim)

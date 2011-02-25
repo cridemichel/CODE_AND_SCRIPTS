@@ -7529,6 +7529,10 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
 #endif
   int dorefine, sumnegpairs=0;
   int its, foundrc, kk;
+#ifdef MD_CHAIN_SIM
+  if (abs(i-j) > 1)
+    return 0;
+#endif
 #ifdef EDHE_FLEX
   if (typesArr[typeOfPart[i]].ignoreCore || typesArr[typeOfPart[j]].ignoreCore)
     return 0;
