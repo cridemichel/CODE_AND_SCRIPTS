@@ -3872,12 +3872,12 @@ void initsa(double sax[3], double p[3])
   AllocCoord(sizeof(double)*Oparams.parnum, ALLOC_LIST, NULL);
 
 }
-double calcdistsa(double ra[3], double rb[3], double u1a[3], double u2a[3], double u3a[3], double u1b[3], double u2b[3], double u3b[3], double LL[3])
+double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], double LL[3])
 {
   /* N.B. u1, u2 ed u3 sono i vettori del sistema di riferimento solidale con il corpo rigido 
      espressi nel riferminto del laboratorio */
   int k1, k2;
-  double vecg[8], vecgNeg[8], shift[3];
+  double nn, vecg[8], vecgNeg[8], shift[3], Rla[3][3], Rlb[3][3];
   double d, r1[3], r2[3], alpha, d0;
   for (k1=0; k1 < 3; k1++)
     L[k1]=LL[k1];
@@ -3891,21 +3891,25 @@ double calcdistsa(double ra[3], double rb[3], double u1a[3], double u2a[3], doub
   shift[0] = L[0]*rint((rx[0]-rx[1])/L[0]);
   shift[1] = L[1]*rint((ry[0]-ry[1])/L[1]);
   shift[2] = L[2]*rint((rz[0]-rz[1])/L[2]);
- 
+
+  nn = calc_norm(uxa);
   for (k1=0; k1 < 3; k1++)
-      {
-	R[0][0][k1] = u1a[k1];
-	R[0][1][k1] = u2a[k1];
-	R[0][2][k1] = u3a[k1];
-	R[1][0][k1] = u1a[k1];
-	R[1][1][k1] = u2a[k1];
-	R[1][2][k1] = u3a[k1];
-	for (k2=0; k2 < 3; k2++)
-	  {
-	    nebrTab[0].R[k1][k2] = R[0][k1][k2];
-	    nebrTab[1].R[k1][k2] = R[1][k1][k2];
-	  }
-      }
+    uxa[k1] /= nn;
+
+  nn = calc_norm(uxb);
+  for (k1=0; k1 < 3; k1++)
+    uxb[k1] /= nn;
+
+  versor_to_R(uxa[0], uxa[1], uxa[2], Rla);
+  versor_to_R(uxb[0], uxb[1], uxb[2], Rlb);
+  for (k1=0; k1 < 3; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	{
+	  nebrTab[0].R[k1][k2] = R[0][k1][k2];
+	  nebrTab[1].R[k1][k2] = R[1][k1][k2];
+	}
+    }
 
   set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
 		  1.01*(typesArr[typeOfPart[0]].sax[1]), 
