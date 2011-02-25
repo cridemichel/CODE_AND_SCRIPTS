@@ -3816,35 +3816,35 @@ extern int calcdist_retcheck;
 extern int are_spheres(int i, int j);
 extern void readAsciiPars(FILE* pfs, struct pascii strutt[]);
 extern void AllocCoord(int size, COORD_TYPE** pointer, ...);
-
+extern void Newsimul(char *argom);
+extern void usrInitAft(void);
+extern int iniCorFormat;
 void initsa(double sax[3], double p[3])
 {
   FILE* fs;
   int k1, ii;
   char fn[256];
-  usrInitBef();
-  strcpy(fn,"sq.par");
-  if ((fs = fopenMPI(fn, "r")) == NULL)
-    {
-      sprintf(msgStrA, "Problem opening restart file %s ", fn);
-      mdMsg(ALL, NOSYS, "initsa", "ERROR", NULL,
-	    msgStrA,
-	    NULL);
-    }
-
-  readAsciiPars(fs, opar_ascii);
-  fclose(fs);
+  iniCorFormat = 1; /* 1 = ascii */
+	 
+  //usrInitBef();
+  strcpy(fn,"./sq.par");
+  //printf("qui\n");
+  Newsimul(fn);
+  usrInitAft();
   OprogStatus.optnnl = 0;
+  assign_bond_mapping(0,1);
   nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
   for (ii= 0; ii < Oparams.parnum; ii++)
     nebrTab[ii].R = matrix(3,3);
+#if 0
   Oparams.parnum=2;
 
   typeOfPart = malloc(sizeof(int)*Oparams.parnum);
   typeOfPart[0]=typeOfPart[1]=0;
   typesArr = malloc(sizeof(partType)*Oparams.ntypes);
-  typeNP=malloc(sizeof(int));
+  typeNP= malloc(sizeof(int));
   typeNP[0]=2;
+#endif
   for (k1=0; k1 < 3; k1++)
     {
       typesArr[0].sax[k1]=sax[k1];
@@ -3854,7 +3854,7 @@ void initsa(double sax[3], double p[3])
       typesArr[0].I[k1]=1.0;
       typesArr[1].I[k1]=1.0;
     }
- typesArr[0].m=1.0;
+  typesArr[0].m=1.0;
   typesArr[1].m=1.0;
   typesArr[0].ignoreCore=0;
   typesArr[1].ignoreCore=0;
@@ -3862,12 +3862,15 @@ void initsa(double sax[3], double p[3])
   typesArr[1].nspots=0;
   typesArr[0].nhardobjs=0;
   typesArr[1].nhardobjs=0;
+
   Oparams.ninters=0;
   Oparams.nintersIJ=0;
   OprogStatus.maxbonds=0;
   numbonds= (int *) malloc(Oparams.parnum*sizeof(int));
   numbonds[0] = numbonds[1] = 0;
+
   AllocCoord(sizeof(double)*Oparams.parnum, ALLOC_LIST, NULL);
+
 }
 double calcdistsa(double ra[3], double rb[3], double u1a[3], double u2a[3], double u3a[3], double u1b[3], double u2b[3], double u3b[3], double LL[3])
 {
@@ -4472,6 +4475,7 @@ void usrInitAft(void)
       exit(-1);
     } 
 #endif
+
 #ifdef MD_DYNAMIC_OPROG
   OprogStatus.dyn_alloc_oprog();
 #endif
@@ -4658,6 +4662,7 @@ void usrInitAft(void)
 #endif  
   numbonds = (int *) malloc(Oparams.parnum*sizeof(int));
 #endif
+
 #ifdef MD_SPHERICAL_WALL
 #ifdef MD_LL_BONDS
   bondscache = malloc(sizeof(long long int)*Oparams.parnum*MD_MAX_BOND_PER_PART);
@@ -6004,7 +6009,7 @@ void usrInitAft(void)
     }
 #endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
-#ifdef MD_CALC_VBONDING
+#if defined(MD_CALC_VBONDING) && !defined(MD_STANDALONE)
   calc_vbonding();
 #endif
 }
