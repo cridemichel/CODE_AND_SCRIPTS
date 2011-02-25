@@ -90,7 +90,9 @@ typedef struct {
   int ghost_status; /* 1 (bulk) o 2 (legto) */
 } ghostInfo;
 #endif
-
+#ifdef MD_STANDALONE
+#define  MD_CALC_VBONDING
+#endif
 typedef struct {
   double x[3];
   double sigma;

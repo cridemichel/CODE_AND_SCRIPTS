@@ -4134,6 +4134,10 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
   epsdFastR= OprogStatus.epsdFastSP;
   epsdMax = OprogStatus.epsdSP;
   assign_bond_mapping(i, j);
+#ifdef MD_CHAIN_SIM
+  if (abs(i-j) > 1)
+    return 0;
+#endif
 #ifdef MD_GHOST_IGG
   if (Oparams.ghostsim && areGhost(i, j))
     {
