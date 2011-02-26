@@ -383,7 +383,6 @@ extern int areGhost(int i, int j);
 extern void check_all_bonds_MLL(void);
 #endif
 extern void check_all_bonds_NLL(void);
-
 void check_all_bonds(void)
 {
   int nn, warn, amin, bmin, i, j, nb, nbonds;

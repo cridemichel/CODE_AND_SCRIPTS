@@ -6257,8 +6257,10 @@ retry:
       newtDistNeg(vecg, 5, &retcheck, funcs2beZeroedDistNeg5, i, j, shift, tryagain); 
     }
   else 
-    newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift, tryagain); 
-  numcalldist++;
+    {
+      newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift, tryagain); 
+    }
+    numcalldist++;
   if (retcheck != 0)
     {
       if (tryagain && OprogStatus.targetPhi <= 0.0)
@@ -10704,8 +10706,8 @@ void random_move(int ip)
   /* pick a random rotation angle */
   theta= dtheta*ranf();
   thetaSq=Sqr(theta);
-  sinw = sin(theta)/theta;
-  cosw = (1.0 - cos(theta))/thetaSq;
+  sinw = sin(theta);
+  cosw = (1.0 - cos(theta));
   Omega[0][0] = 0;
   Omega[0][1] = -oz;
   Omega[0][2] = oy;
@@ -10751,25 +10753,36 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   int k1, k2;
   double vecg[8], vecgNeg[8];
   double d, d0, r1[3], r2[3], alpha; 
-  nebrTab[0].r[0] = rx[i];
-  nebrTab[0].r[1] = ry[i];
-  nebrTab[0].r[2] = rz[i];
-  nebrTab[1].r[0] = rx[j];
-  nebrTab[1].r[0] = ry[j];
-  nebrTab[1].r[0] = rz[j];
+  nebrTab[i].r[0] = rx[i];
+  nebrTab[i].r[1] = ry[i];
+  nebrTab[i].r[2] = rz[i];
+  nebrTab[j].r[0] = rx[j];
+  nebrTab[j].r[1] = ry[j];
+  nebrTab[j].r[2] = rz[j];
   for (k1=0; k1 < 3; k1++)
     {
       for (k2=0; k2 < 3; k2++)
 	{
-	  nebrTab[0].R[k1][k2] = R[i][k1][k2];
-	  nebrTab[1].R[k1][k2] = R[j][k1][k2];
+	  nebrTab[i].R[k1][k2] = R[i][k1][k2];
+	  nebrTab[j].R[k1][k2] = R[j][k1][k2];
 	}
     }
+  set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
+		  1.01*(typesArr[typeOfPart[0]].sax[1]), 
+		  1.01*(typesArr[typeOfPart[0]].sax[2]));
+  
+  d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
+  /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
+  if (d0 > 0.0)
+    {
+      return 1.0;
+    }
+
   set_semiaxes_vb(0.9*typesArr[typeOfPart[0]].sax[0],
 		  0.7*typesArr[typeOfPart[0]].sax[1], 
 		  0.7*typesArr[typeOfPart[0]].sax[2]);
 
-  d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, 0, 1, shift);
+  d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
   if (d0 < 0.0)
     {
@@ -10778,7 +10791,7 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
   calcdist_retcheck = 0;
   
-  d=calcDistNeg(0.0, 0.0, 0, 1, shift, r1, r2, &alpha, vecg, 1);
+  d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
   *errchk = calcdist_retcheck;
   //printf("QUI d=%f\n", d);
   return d;
@@ -10900,17 +10913,24 @@ void move(void)
 {
   int i,ip, err;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
+  printf("Doing MC step #%d\n", Oparams.curStep);
   for (i=0; i < Oparams.parnum; i++)
     {
       /* pick a particle at random */
       ip=(Oparams.parnum-1)*ranf();
       store_coord(ip);
       random_move(ip);
-      if (overlap(ip, &err))
-	restore_coord(ip);
       update_LL(ip);
+      rebuildLinkedList();
+      printf("i=%d\n", i);
+      if (overlap(ip, &err))
+	{
+  	  restore_coord(ip);
+	  update_LL(ip);
+	  rebuildLinkedList();
+	}
+      printf("done\n");
     }
-
 }
 #else
 /* ============================ >>> move<<< =================================*/
