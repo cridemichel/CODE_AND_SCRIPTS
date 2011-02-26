@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.17 2008-06-18 08:48:41 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.18 2011-02-26 14:22:44 demichel Exp $     */
 #ifndef lint
-//static char vcid[] = "$Id: mdsimul.c,v 1.17 2008-06-18 08:48:41 demichel Exp $";
+//static char vcid[] = "$Id: mdsimul.c,v 1.18 2011-02-26 14:22:44 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -403,8 +403,8 @@ void build_bilog_arr(void)
 }
 #endif
 extern void scanFile(char* argom);
-
 /* =============================== >>> MAIN <<< ============================*/
+#if !defined(MD_STANDALONE) || defined(MC_SIMUL) 
 int main(int argc, char *argv[])
 {
 #if defined(MPI)  
@@ -507,3 +507,4 @@ int main(int argc, char *argv[])
 #endif 
   return 0;
 }
+#endif

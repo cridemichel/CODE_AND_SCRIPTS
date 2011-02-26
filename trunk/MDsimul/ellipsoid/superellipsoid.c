@@ -2361,7 +2361,9 @@ void frprmnRyckNNLSE(double p[], int n, double ftol, int *iter, double *fret, do
 	  return;
 	}
     } 
+#ifndef MD_CALC_VBONDING
   printf("[Steepest Descent NNL LOOP] TOO MANY ITERATIONS\n");
+#endif
   return; 
   //nrerror("Too many iterations in frprmn");
   
@@ -2461,7 +2463,9 @@ void frprmnRyckSE(double p[], int n, double ftol, int *iter, double *fret, doubl
 	  return;
 	}
     } 
+#ifndef MD_CALC_VBONDING
   printf("[Steepest Descent LOOP] TOO MANY ITERATIONS\n");
+#endif
   return; 
   //nrerror("Too many iterations in frprmn");
   
