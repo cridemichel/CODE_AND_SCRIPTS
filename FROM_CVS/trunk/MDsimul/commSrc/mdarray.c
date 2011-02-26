@@ -33,6 +33,11 @@ extern void writeAllCor(FILE* );
 extern void readAllCor(FILE* );
 
 const char sepStr[] = "@@@\n";
+#ifdef ED_PARALL_DD
+extern int dd_totBytes;
+extern void *dd_coord_ptr;
+#endif
+
 #ifdef MD_ALLOC_POLY
 /* ============================ >>> AllocCoord <<< ==========================*/
 void AllocCoordPoly(int size, COORD_TYPE** pointer, ...)
@@ -50,6 +55,9 @@ void AllocCoordPoly(int size, COORD_TYPE** pointer, ...)
   num[0] = va_arg(ap, int); 
   offs[0] = 0;
   totBytes = size*num[0];
+#ifdef ED_PARALL_DD
+  dd_totBytes = totBytes;
+#endif
   for (i=1; (ptrs[i] = va_arg(ap, COORD_TYPE**)) != NULL; ++i)
     { 
       num[i] = va_arg(ap, int);
@@ -61,6 +69,9 @@ void AllocCoordPoly(int size, COORD_TYPE** pointer, ...)
   totArr = i; /* total number of arrays to allocate */
   
   sa = (COORD_TYPE*)malloc(totBytes);
+#ifdef ED_PARALL_DD
+  dd_coord_ptr = sa; 
+#endif
   //intf("totBytes = %d size: %d\n", totBytes, size);
   for (i = 0; i < totArr; ++i)
     {
@@ -92,9 +103,16 @@ void AllocCoord(int size, COORD_TYPE** pointer, ...)
     { 
       totBytes += size; /* total bytes to allocate */
     }
+#ifdef ED_PARALL_DD
+  dd_totBytes = totBytes;
+#endif
   totArr = i; /* total number of arrays to allocate */
   
   *ptrs[0] = malloc(totBytes);
+#ifdef ED_PARALL_DD
+  dd_coord_ptr = *ptrs[0]; 
+#endif
+ 
   //intf("totBytes = %d size: %d\n", totBytes, size);
   for (i = 1; i < totArr; ++i)
     {
@@ -739,7 +757,6 @@ void readAsciiPars(FILE* pfs, struct pascii strutt[])
       
       if (sscanf(line, "%[^:# ] : %[^\n#] ", str1, str2) < 2)
 	continue;
-     
       //fscanf(pfs, " %[^: ] : %[^'\n' ]", str1, str2);
       /* analyzes the parameter just read 
          This function depends strongly upon simulation */

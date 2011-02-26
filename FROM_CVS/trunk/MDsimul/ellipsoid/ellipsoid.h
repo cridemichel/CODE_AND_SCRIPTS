@@ -90,6 +90,9 @@ typedef struct {
   int ghost_status; /* 1 (bulk) o 2 (legto) */
 } ghostInfo;
 #endif
+#ifdef MC_SIMUL
+#define MD_STANDALONE
+#endif
 #ifdef MD_STANDALONE
 #define  MD_CALC_VBONDING
 #endif

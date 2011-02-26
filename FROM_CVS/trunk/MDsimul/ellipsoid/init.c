@@ -3870,17 +3870,23 @@ void initsa(double sax[3], double p[3])
   numbonds[0] = numbonds[1] = 0;
 
   AllocCoord(sizeof(double)*Oparams.parnum, ALLOC_LIST, NULL);
-
+  //build_parallelepipeds();
 }
-double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], double LL[3])
+void initsa_(double sax[3], double p[3])
+{
+  initsa(sax,p);
+}
+double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], double *Lx, double *Ly, double *Lz,int *errchk)
 {
   /* N.B. u1, u2 ed u3 sono i vettori del sistema di riferimento solidale con il corpo rigido 
      espressi nel riferminto del laboratorio */
   int k1, k2;
   double nn, vecg[8], vecgNeg[8], shift[3], Rla[3][3], Rlb[3][3];
   double d, r1[3], r2[3], alpha, d0;
-  for (k1=0; k1 < 3; k1++)
-    L[k1]=LL[k1];
+  L[0]=*Lx;
+  L[1]=*Ly;
+  L[2]=*Lz;
+
    /* set positions and orientations */
   rx[0] = nebrTab[0].r[0] = ra[0];
   ry[0] = nebrTab[0].r[1] = ra[1];
@@ -3933,8 +3939,14 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
   OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
   calcdist_retcheck = 0;
   d=calcDistNeg(0.0, 0.0, 0, 1, shift, r1, r2, &alpha, vecg, 1);
+  *errchk = calcdist_retcheck;
   //printf("QUI d=%f\n", d);
   return d;
+}
+
+double calcdistsa_(double ra[3], double rb[3], double uxa[3], double uxb[3], double *Lx, double *Ly, double *Lz, int *errchk)
+{
+  return calcdistsa(ra, rb, uxa, uxb, Lx, Ly, Lz, errchk);
 }
 double calcDistNeg_vb(int i, int j, double shift[3])
 {
@@ -3982,12 +3994,33 @@ double calcDistNeg_vb(int i, int j, double shift[3])
 	{
 	  return -1.0;
 	}
+#if 0
+      set_semiaxes_vb(0.9*typesArr[typeOfPart[0]].sax[0],
+		      0.3*typesArr[typeOfPart[0]].sax[1], 
+		      0.95*typesArr[typeOfPart[0]].sax[2]);
+      d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
+      /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
+      if (d0 < 0.0)
+	{
+	  return -1.0;
+	}
+      set_semiaxes_vb(0.9*typesArr[typeOfPart[0]].sax[0],
+		      0.95*typesArr[typeOfPart[0]].sax[1], 
+		      0.3*typesArr[typeOfPart[0]].sax[2]);
+      d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
+      /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
+      if (d0 < 0.0)
+	{
+	  return -1.0;
+	}
+#endif
 #endif
     }
   OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
   calcdist_retcheck = 0;
   d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
-
+  if (calcdist_retcheck)
+    printf("NR failure\n");
   //printf("QUI d=%f\n", d);
   return d;
 }
@@ -4379,18 +4412,24 @@ void calc_vbonding(void)
 }
 
 #endif
-#ifdef MC_SIMUL
+#if (defined(MC_SIMUL) || defined(MD_STANDALONE)) && 0
 double MC_funcSQ(double x, double z, double sa[3], double ee[3])
 {
   return sa[1]*pow(1.0-(pow(x/a,ee[0])+pow(z/a,ee[2])),1/ee[1]);
 }
+struct mboxstr 
+{
+  double sax[3];
+  double dr[3];
+  int nbox;
+} **mbox;
 void build_parallelepipeds(void)
 {
   double sa[3], dx;
   int tt, kk, k1, k2;
 
-  mbox = malloc(sizeof(struct mbox*)*Oparams.ntypes);
- 
+  mbox = malloc(sizeof(struct mboxstr*)*Oparams.ntypes);
+  nmbox = 5;
   /* 2 multibox per tipo */
   for (tt=0; tt < Oparams.ntypes; tt++)
    mbox[tt] = malloc(sizeof(struct mboxstr)*2); 
@@ -4410,12 +4449,13 @@ void build_parallelepipeds(void)
       mbox[tt][0].sa[0] = 0.9*sa[0];
       mbox[tt][0].sa[1] = 0.7*sa[1];
       mbox[tt][0].sa[2] = 0.7*sa[2]; 
+      mbox[tt][1]=nmbox;
       /* secondo set di parallelepipedi: approssimazione stepwise
 	 della forma della superquadrica (molto più accurata) */
       lastx=x=0.0;
       while (!fine)
 	{
-	  dx=sa[0]/OprogStatus.MC_nmboxmax;
+	  dx=sa[0]/nmboxmax;
 	  for (ix=0; ix < 1000; ix++)
 	    {
 	      if (fabs(MC_funcSQ(x)-MC_funcSQ(lastx)) > OprogStatus.MC_deltambox)
@@ -6013,7 +6053,7 @@ void usrInitAft(void)
     }
 #endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
-#if defined(MD_CALC_VBONDING) && !defined(MD_STANDALONE)
+#if defined(MD_CALC_VBONDING) && !defined(MD_STANDALONE) && !defined(MC_SIMUL)
   calc_vbonding();
 #endif
 }

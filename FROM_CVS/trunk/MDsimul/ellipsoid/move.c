@@ -5971,7 +5971,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 
 #endif
   //printf(">>>>>>> BOHHHHHHHHHHHHHHHHH\n");
-#if defined(MC_SIMUL) && 0
+#if 0
   /* N.B. se si fa un Monte Carlo di ellissoidi queste condizioni evitano problemi nel calcolo 
    * della distanza qualora ci sia un overlap tale che il centro dell'ellissoide A sia all'interno
    * di B o viceversa. 
@@ -10668,14 +10668,247 @@ void rebuildCalend_TS(void)
 }
 #endif
 #ifdef MC_SIMUL
+double rxold, ryold,rzold, Rold[3][3];
+void store_coord(int ip)
+{
+  int k1, k2;
+  rxold=rx[ip];
+  ryold=ry[ip];
+  rzold=rz[ip];
+  for (k1=0; k1<3; k1++)
+    for (k2=0; k2<3; k2++)
+      Rold[k1][k2]=R[ip][k1][k2]; 
+}
+void restore_coord(int ip)
+{
+  int k1, k2;
+  rx[ip]=rxold;
+  ry[ip]=ryold;
+  rz[ip]=rzold;
+  for (k1=0; k1<3; k1++)
+    for (k2=0; k2<3; k2++)
+      R[ip][k1][k2]=Rold[k1][k2]; 
+}
+extern double ranf(void);
+extern void orient(double *ox, double *oy, double *oz);
+void random_move(int ip)
+{
+  double theta, thetaSq, dtheta=0.05, delta=0.05, sinw, cosw;
+  double ox, oy, oz, OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
+  int k1, k2, k3;
+  rx[ip]+=delta*ranf(); 
+  ry[ip]+=delta*ranf();
+  rz[ip]+=delta*ranf();
+  /* pick a random orientation */
+  orient(&ox,&oy,&oz);
+  /* pick a random rotation angle */
+  theta= dtheta*ranf();
+  thetaSq=Sqr(theta);
+  sinw = sin(theta)/theta;
+  cosw = (1.0 - cos(theta))/thetaSq;
+  Omega[0][0] = 0;
+  Omega[0][1] = -oz;
+  Omega[0][2] = oy;
+  Omega[1][0] = oz;
+  Omega[1][1] = 0;
+  Omega[1][2] = -ox;
+  Omega[2][0] = -oy;
+  Omega[2][1] = ox;
+  Omega[2][2] = 0;
+  OmegaSq[0][0] = -Sqr(oy) - Sqr(oz);
+  OmegaSq[0][1] = ox*oy;
+  OmegaSq[0][2] = ox*oz;
+  OmegaSq[1][0] = ox*oy;
+  OmegaSq[1][1] = -Sqr(ox) - Sqr(oz);
+  OmegaSq[1][2] = oy*oz;
+  OmegaSq[2][0] = ox*oz;
+  OmegaSq[2][1] = oy*oz;
+  OmegaSq[2][2] = -Sqr(ox) - Sqr(oy);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Ro[k1][k2] = R[ip][k1][k2];
+	for (k3 = 0; k3 < 3; k3++)
+	  Ro[k1][k2] += R[ip][k1][k3]*M[k3][k2];
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+     R[ip][k1][k2] = Ro[k1][k2]; 
+}
+extern void set_semiaxes_vb(double fx, double fy, double fz);
+extern double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3]);
+
+double check_overlap(int i, int j, double shift[3], int *errchk)
+{
+  int k1, k2;
+  double vecg[8], vecgNeg[8];
+  double d, d0, r1[3], r2[3], alpha; 
+  nebrTab[0].r[0] = rx[i];
+  nebrTab[0].r[1] = ry[i];
+  nebrTab[0].r[2] = rz[i];
+  nebrTab[1].r[0] = rx[j];
+  nebrTab[1].r[0] = ry[j];
+  nebrTab[1].r[0] = rz[j];
+  for (k1=0; k1 < 3; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	{
+	  nebrTab[0].R[k1][k2] = R[i][k1][k2];
+	  nebrTab[1].R[k1][k2] = R[j][k1][k2];
+	}
+    }
+  set_semiaxes_vb(0.9*typesArr[typeOfPart[0]].sax[0],
+		  0.7*typesArr[typeOfPart[0]].sax[1], 
+		  0.7*typesArr[typeOfPart[0]].sax[2]);
+
+  d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, 0, 1, shift);
+  /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
+  if (d0 < 0.0)
+    {
+      return -1.0;
+    }
+  OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
+  calcdist_retcheck = 0;
+  
+  d=calcDistNeg(0.0, 0.0, 0, 1, shift, r1, r2, &alpha, vecg, 1);
+  *errchk = calcdist_retcheck;
+  //printf("QUI d=%f\n", d);
+  return d;
+}
+int overlap(int ip, int *err)
+{
+  int nb, k, iZ, jZ, iX, jX, iY, jY, n, na;
+  int cellRangeT[6];
+  double shift[3];
+  na=ip;
+  nb=-1;
+  for (k = 0; k < 6; k++) cellRangeT[k] = cellRange[k];
+
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCell[2][na] + iZ;    
+      shift[2] = 0.;
+      /* apply periodico boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  jZ = cellsz - 1;    
+#ifdef MD_LXYZ
+	  shift[2] = - L[2];
+#else
+	  shift[2] = - L;
+#endif
+	} 
+      else if (jZ == cellsz) 
+	{
+	  jZ = 0;    
+#ifdef MD_LXYZ
+	  shift[2] = L[2];
+#else
+	  shift[2] = L;
+#endif
+	}
+      
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCell[1][na] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsy - 1;    
+#ifdef MD_LXYZ
+	      shift[1] = -L[1];
+#else
+	      shift[1] = -L;
+#endif
+	    } 
+	  else if (jY == cellsy) 
+	    {
+	      jY = 0;    
+#ifdef MD_LXYZ
+	      shift[1] = L[1];
+#else
+	      shift[1] = L;
+#endif
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCell[0][na] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsx - 1;    
+#ifdef MD_LXYZ
+		  shift[0] = - L[0];
+#else
+		  shift[0] = - L;
+#endif
+		} 
+	      else if (jX == cellsx) 
+		{
+		  jX = 0;   
+#ifdef MD_LXYZ
+		  shift[0] = L[0];
+#else
+		  shift[0] = L;
+#endif
+		}
+	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+	      for (n = cellList[n]; n > -1; n = cellList[n]) 
+		{
+		  if (n != na && n != nb && (nb >= -1 || n < na)) 
+		    {
+#if defined(EDHE_FLEX) && 0
+		      if (!may_interact_all(na, n))
+			continue;
+#endif
+
+		      if (check_overlap(na, n, shift, err)<0.0)
+			return 1;
+		    }
+		} 
+	    }
+	}
+    }
+  return 0;
+}
+void update_LL(int n)
+{
+#ifdef MD_LXYZ
+	  inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
+	  inCell[1][n] =  (ry[n] + L2[1]) * cellsy / L[1];
+	  inCell[2][n] =  (rz[n] + L2[2]) * cellsz / L[2];
+#else
+	  inCell[0][n] =  (rx[n] + L2) * cellsx / L;
+	  inCell[1][n] =  (ry[n] + L2) * cellsy / L;
+#ifdef MD_GRAVITY
+	  inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+#else
+	  inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+#endif
+#endif
+}
 void move(void)
 {
-  int i;
+  int i,ip, err;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   for (i=0; i < Oparams.parnum; i++)
     {
-
-
+      /* pick a particle at random */
+      ip=(Oparams.parnum-1)*ranf();
+      store_coord(ip);
+      random_move(ip);
+      if (overlap(ip, &err))
+	restore_coord(ip);
+      update_LL(ip);
     }
 
 }
