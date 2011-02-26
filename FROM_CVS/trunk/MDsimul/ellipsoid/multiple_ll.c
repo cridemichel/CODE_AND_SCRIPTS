@@ -2,6 +2,20 @@
 #ifdef EDHE_FLEX
 /* questa serve anche se non si usano le LL multiple
    per la funzione assign_bond_mapping ottimizzata */
+extern char TXT[MSG_LEN];
+#ifdef MD_GHOST_IGG
+extern int areGhost(int i, int j);
+#endif
+
+#ifdef MD_LL_BONDS
+extern long long int *bondscache, **bonds;
+extern int *numbonds;
+#else
+extern int *bondscache, *numbonds, **bonds;
+#endif
+extern int *mapbondsa;
+extern int *mapbondsb;
+
 extern double *dists;
 extern int **tree;
 extern void assign_bond_mapping(int i, int j);
@@ -61,6 +75,7 @@ inline int get_linked_list_type(int typena, int nc)
    */
 }
 #endif
+extern struct nebrTabStruct *nebrTab;
 #ifdef MD_MULTIPLE_LL
 #define MD_NNLPLANES
 #ifdef MD_ABSORPTION
@@ -88,7 +103,6 @@ extern int *inCell_NNL[3], *cellList_NNL;
 extern double *rxNNL, *ryNNL, *rzNNL;
 #endif
 extern double nextNNLrebuild;
-extern struct nebrTabStruct *nebrTab;
 extern int cellRange[2*NDIM];
 int **crossevtodel;
 extern const double timbig;
@@ -2280,59 +2294,7 @@ void reinsert_protein_MLL(int protein, int oldtype)
     }
 }
 #endif
-extern int *mapbondsa;
-extern int *mapbondsb;
 extern void remove_bond(int na, int n, int a, int b);
-#ifdef MD_GHOST_IGG
-extern int areGhost(int i, int j);
-#endif
-int check_bonds_ij(int i, int j, double shift[3])
-{
-  int nn, warn, amin, bmin, nbonds;
-  double dist;
-  dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
-  nbonds = nbondsFlex;
-  warn = 0;
-#ifdef MD_GHOST_IGG
-  if (Oparams.ghostsim)
-    {
-     if (areGhost(i,j))
-       return warn;
-    }
-#endif
-
-  for (nn=0; nn < nbonds; nn++)
-    {
-      if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
-	  && !bound(i,j,mapbondsa[nn], mapbondsb[nn]) )
-	{
-	  warn=1;
-	}
-      else if (dists[nn]>0.0 && 
-	       fabs(dists[nn]) > OprogStatus.epsd && 
-	       bound(i,j,mapbondsa[nn], mapbondsb[nn]))
-	{
-	  warn = 2;
-	  printf("wrong number of bonds between %d(%d) and %d(%d) nbonds=%d nn=%d\n",
-		 i, mapbondsa[nn], j, mapbondsb[nn], nbonds, nn);
-
-	  printf("r=%f %f %f - %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
-	  printf("[dist>0]dists[%d]:%.15G\n", nn, dists[nn]);
-	  if (OprogStatus.checkGrazing==1)
-	    {
-	      remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
-	    }
-	}
-    }
-  return warn;
-}
-extern char TXT[MSG_LEN];
-#ifdef MD_LL_BONDS
-extern long long int *bondscache, **bonds;
-extern int *numbonds;
-#else
-extern int *bondscache, *numbonds, **bonds;
-#endif
 void check_all_bonds_MLL(void)
 {
   int warn, j;
@@ -2514,7 +2476,47 @@ void check_all_bonds_MLL(void)
     }
 }
 #endif
-#ifdef EDHE_FLEX
+int check_bonds_ij(int i, int j, double shift[3])
+{
+  int nn, warn, amin, bmin, nbonds;
+  double dist;
+  dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+  nbonds = nbondsFlex;
+  warn = 0;
+#ifdef MD_GHOST_IGG
+  if (Oparams.ghostsim)
+    {
+     if (areGhost(i,j))
+       return warn;
+    }
+#endif
+
+  for (nn=0; nn < nbonds; nn++)
+    {
+      if (dists[nn]<0.0 && fabs(dists[nn])>OprogStatus.epsd 
+	  && !bound(i,j,mapbondsa[nn], mapbondsb[nn]) )
+	{
+	  warn=1;
+	}
+      else if (dists[nn]>0.0 && 
+	       fabs(dists[nn]) > OprogStatus.epsd && 
+	       bound(i,j,mapbondsa[nn], mapbondsb[nn]))
+	{
+	  warn = 2;
+	  printf("wrong number of bonds between %d(%d) and %d(%d) nbonds=%d nn=%d\n",
+		 i, mapbondsa[nn], j, mapbondsb[nn], nbonds, nn);
+
+	  printf("r=%f %f %f - %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+	  printf("[dist>0]dists[%d]:%.15G\n", nn, dists[nn]);
+	  if (OprogStatus.checkGrazing==1)
+	    {
+	      remove_bond(i, j, mapbondsa[nn], mapbondsb[nn]);
+	    }
+	}
+    }
+  return warn;
+}
+#if defined(EDHE_FLEX) 
 void check_all_bonds_NLL(void)
 {
   int i, k, j, warn;
@@ -2617,6 +2619,7 @@ void check_all_bonds_NLL(void)
 
 extern void add_bond(int na, int n, int a, int b);
 
+#ifdef MD_MULTIPLE_LL
 void find_bonds_one_MLL(int i)
 {
   int nn,  amin, bmin, j, nbonds;
@@ -2751,4 +2754,5 @@ void find_bonds_one_MLL(int i)
 	}
     }
 }
+#endif
 #endif
