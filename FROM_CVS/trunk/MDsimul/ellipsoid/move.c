@@ -10908,22 +10908,58 @@ int overlapMC(int ip, int *err)
     }
   return 0;
 }
+void remove_from_current_cell(int i)
+{
+  int n;
+  n = (inCell[2][i] * cellsy + inCell[1][i] )*cellsx + inCell[0][i]
+    + Oparams.parnum;
+  
+  while (cellList[n] != i) 
+    n = cellList[n];
+  /* Eliminazione di evIdA dalla lista della cella n-esima */
+  cellList[n] = cellList[i];
+}
+
+void insert_in_new_cell(int i)
+{
+  int n;
+  n = (inCell[2][i] * cellsy + inCell[1][i])*cellsx + 
+    inCell[0][i] + Oparams.parnum;
+  /* Inserimento di evIdA nella nuova cella (head) */
+  cellList[i] = cellList[n];
+  cellList[n] = i;
+}
 void update_LL(int n)
 {
+  int cox, coy, coz, cx, cy, cz;
+
+  cox=inCell[0][n];
+  coy=inCell[1][n];
+  coz=inCell[2][n];
+
 #ifdef MD_LXYZ
-	  inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
-	  inCell[1][n] =  (ry[n] + L2[1]) * cellsy / L[1];
-	  inCell[2][n] =  (rz[n] + L2[2]) * cellsz / L[2];
+  cx =  (rx[n] + L2[0]) * cellsx / L[0];
+  cy =  (ry[n] + L2[1]) * cellsy / L[1];
+  cz =  (rz[n] + L2[2]) * cellsz / L[2];
 #else
-	  inCell[0][n] =  (rx[n] + L2) * cellsx / L;
-	  inCell[1][n] =  (ry[n] + L2) * cellsy / L;
+  cx =  (rx[n] + L2) * cellsx / L;
+  cy =  (ry[n] + L2) * cellsy / L;
 #ifdef MD_GRAVITY
-	  inCell[2][n] =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+  cz =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
 #else
-	  inCell[2][n] =  (rz[n] + L2)  * cellsz / L;
+  cz =  (rz[n] + L2)  * cellsz / L;
 #endif
 #endif
+  if (cx!=cox || cy!=coy || cz!=coz)
+    {
+      remove_from_current_cell(n);
+      inCell[0][n] = cx;
+      inCell[1][n] = cy;
+      inCell[2][n] = cz;
+      insert_in_new_cell(n);
+    }
 }
+
 void pbc(int ip)
 {
   double L2[3], Ll[3];
@@ -10965,7 +11001,7 @@ void move(void)
       random_move(ip);
       pbc(ip);
       update_LL(ip);
-      rebuildLinkedList();
+      //rebuildLinkedList();
       //printf("i=%d\n", i);
       if (overlapMC(ip, &err))
 	{
@@ -10975,7 +11011,7 @@ void move(void)
 	    }
   	  restore_coord(ip);
 	  update_LL(ip);
-	  rebuildLinkedList();
+	  //rebuildLinkedList();
 	}
       //printf("done\n");
     }
