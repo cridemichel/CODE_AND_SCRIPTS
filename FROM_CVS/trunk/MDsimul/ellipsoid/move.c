@@ -10696,18 +10696,19 @@ void restore_coord(int ip)
 }
 extern double ranf(void);
 extern void orient(double *ox, double *oy, double *oz);
+double dthetaMC=0.01, deltaMC=0.01;
 void random_move(int ip)
 {
-  double theta, thetaSq, dtheta=0.01, delta=0.01, sinw, cosw;
+  double theta, thetaSq, sinw, cosw;
   double ox, oy, oz, OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
   int k1, k2, k3;
-  rx[ip]+=delta*ranf(); 
-  ry[ip]+=delta*ranf();
-  rz[ip]+=delta*ranf();
+  rx[ip]+=deltaMC*ranf(); 
+  ry[ip]+=deltaMC*ranf();
+  rz[ip]+=deltaMC*ranf();
   /* pick a random orientation */
   orient(&ox,&oy,&oz);
   /* pick a random rotation angle */
-  theta= dtheta*ranf();
+  theta= dthetaMC*ranf();
   thetaSq=Sqr(theta);
   sinw = sin(theta);
   cosw = (1.0 - cos(theta));
@@ -10990,6 +10991,8 @@ void pbc(int ip)
 }
 void move(void)
 {
+  static long long int rejectedMC=0, totmoves;
+  double acceptance;
   int i,ip, err;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   printf("Doing MC step #%d\n", Oparams.curStep);
@@ -11005,6 +11008,7 @@ void move(void)
       //printf("i=%d\n", i);
       if (overlapMC(ip, &err))
 	{
+	  rejectedMC++;
 	  if(err)
 	    {
 	      printf("NR failed...I ignore this error...\n");
@@ -11014,6 +11018,22 @@ void move(void)
 	  //rebuildLinkedList();
 	}
       //printf("done\n");
+    }
+  if (Oparams.curStep%10==0)
+    {
+      totmoves=((long long int)Oparams.parnum*(long long int)Oparams.curStep);
+      acceptance=((double)(totmoves-rejectedMC))/totmoves;
+      if (acceptance > 0.5)
+	{
+	  deltaMC /= 1.1;
+	  dthetaMC /=1.1;
+	}
+      else
+	{
+	  deltaMC *= 1.1;
+	  dthetaMC *= 1.1;
+	}
+      printf("Acceptance=%.15G deltaMC=%.15G dthetaMC=%.15G\n", acceptance, deltaMC, dthetaMC);
     }
 }
 #else
