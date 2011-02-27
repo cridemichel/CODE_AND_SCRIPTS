@@ -11025,13 +11025,13 @@ void move(void)
       acceptance=((double)(totmoves-rejectedMC))/totmoves;
       if (acceptance > 0.5)
 	{
-	  deltaMC /= 1.1;
-	  dthetaMC /=1.1;
+	  deltaMC *= 1.1;
+	  dthetaMC *=1.1;
 	}
       else
 	{
-	  deltaMC *= 1.1;
-	  dthetaMC *= 1.1;
+	  deltaMC /= 1.1;
+	  dthetaMC /= 1.1;
 	}
       printf("Acceptance=%.15G deltaMC=%.15G dthetaMC=%.15G\n", acceptance, deltaMC, dthetaMC);
     }
