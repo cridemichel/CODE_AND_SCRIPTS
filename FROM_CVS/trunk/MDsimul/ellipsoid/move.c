@@ -10991,7 +10991,7 @@ void pbc(int ip)
 }
 void move(void)
 {
-  static long long int rejectedMC=0, totmoves;
+  static long long int rejectedMC=0, totmoves=0;
   double acceptance;
   int i,ip, err;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
@@ -11006,6 +11006,7 @@ void move(void)
       update_LL(ip);
       //rebuildLinkedList();
       //printf("i=%d\n", i);
+      totmoves++;
       if (overlapMC(ip, &err))
 	{
 	  rejectedMC++;
@@ -11021,7 +11022,7 @@ void move(void)
     }
   if (Oparams.curStep%10==0)
     {
-      totmoves=((long long int)Oparams.parnum*(long long int)Oparams.curStep);
+      //totmoves=((long long int)Oparams.parnum*(long long int)Oparams.curStep);
       acceptance=((double)(totmoves-rejectedMC))/totmoves;
       if (acceptance > 0.5)
 	{
@@ -11033,6 +11034,7 @@ void move(void)
 	  deltaMC /= 1.1;
 	  dthetaMC /= 1.1;
 	}
+      totmoves=rejectedMC=0;
       printf("Acceptance=%.15G deltaMC=%.15G dthetaMC=%.15G\n", acceptance, deltaMC, dthetaMC);
     }
 }
