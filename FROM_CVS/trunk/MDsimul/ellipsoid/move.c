@@ -3514,7 +3514,10 @@ void UpdateAtom(int i)
 {
   double ti, phi, psi;
   int k1, k2;
-
+#ifdef MC_SIMUL
+  return;
+#endif
+ 
 #if 0
   double dist;
   if (typeOfPart[i]==2 && (dist=Sqr(rx[i])+Sqr(ry[i])+Sqr(rz[i])) > 1.05*(60.05/2.0+0.75)*(60.05/2.0+0.75))
@@ -3676,7 +3679,7 @@ void UpdateSystem(void)
 {
   int i;
   /* porta tutte le particelle allo stesso tempo */
-  for (i=0; i < Oparams.parnum; i++)
+ for (i=0; i < Oparams.parnum; i++)
     {
       UpdateAtom(i);
 #if 0
@@ -10695,7 +10698,7 @@ extern double ranf(void);
 extern void orient(double *ox, double *oy, double *oz);
 void random_move(int ip)
 {
-  double theta, thetaSq, dtheta=0.05, delta=0.05, sinw, cosw;
+  double theta, thetaSq, dtheta=0.01, delta=0.01, sinw, cosw;
   double ox, oy, oz, OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
   int k1, k2, k3;
   rx[ip]+=delta*ranf(); 
@@ -10753,6 +10756,8 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   int k1, k2;
   double vecg[8], vecgNeg[8];
   double d, d0, r1[3], r2[3], alpha; 
+  OprogStatus.optnnl = 0;
+
   nebrTab[i].r[0] = rx[i];
   nebrTab[i].r[1] = ry[i];
   nebrTab[i].r[2] = rz[i];
@@ -10796,13 +10801,19 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   //printf("QUI d=%f\n", d);
   return d;
 }
-int overlap(int ip, int *err)
+int overlapMC(int ip, int *err)
 {
-  int nb, k, iZ, jZ, iX, jX, iY, jY, n, na;
+  int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na;
   int cellRangeT[6];
   double shift[3];
   na=ip;
   nb=-1;
+  for (kk = 0;  kk < 3; kk++)
+    {
+      cellRange[2*kk]   = - 1;
+      cellRange[2*kk+1] =   1;
+    }
+
   for (k = 0; k < 6; k++) cellRangeT[k] = cellRange[k];
 
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
@@ -10885,7 +10896,11 @@ int overlap(int ip, int *err)
 #endif
 
 		      if (check_overlap(na, n, shift, err)<0.0)
-			return 1;
+			{
+			  //printf("checking i=%d j=%d: ", na, n);
+			  //printf("overlap!\n");
+		  	  return 1;
+			}
 		    }
 		} 
 	    }
@@ -10909,7 +10924,7 @@ void update_LL(int n)
 #endif
 #endif
 }
-void pdbc(int ip)
+void pbc(int ip)
 {
   double L2[3], Ll[3];
   
@@ -10951,14 +10966,18 @@ void move(void)
       pbc(ip);
       update_LL(ip);
       rebuildLinkedList();
-      printf("i=%d\n", i);
-      if (overlap(ip, &err))
+      //printf("i=%d\n", i);
+      if (overlapMC(ip, &err))
 	{
+	  if(err)
+	    {
+	      printf("NR failed...I ignore this error...\n");
+	    }
   	  restore_coord(ip);
 	  update_LL(ip);
 	  rebuildLinkedList();
 	}
-      printf("done\n");
+      //printf("done\n");
     }
 }
 #else

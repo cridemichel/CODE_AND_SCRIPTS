@@ -6201,6 +6201,9 @@ void writeAllCor(FILE* fs, int saveAll)
 #ifdef EDHE_FLEX
   const char tipodat2_flex[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n";
   int j;
+#ifdef MC_SIMUL
+  R2u();
+#endif
   if (!mgl_mode && !OprogStatus.stripStore)
     {
 #ifdef MD_MULTIPLE_LL
