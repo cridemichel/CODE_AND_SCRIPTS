@@ -10909,6 +10909,34 @@ void update_LL(int n)
 #endif
 #endif
 }
+void pdbc(int ip)
+{
+  double L2[3], Ll[3];
+  
+#ifdef MD_LXYZ
+  L2[0] = L[0]*0.5;
+  L2[1] = L[1]*0.5;
+  L2[2] = L[2]*0.5;
+  Ll[0] = L[0];
+  Ll[1] = L[1];
+  Ll[2] = L[2];
+#else
+  L2[0] = L2[1] = L2[2] = L*0.5;
+  Ll[0] = Ll[1] = Ll[2] = L;
+#endif
+  if (rx[ip] > L2[0])
+    rx[ip] -= L[0];
+  else if (rx[ip] < -L2[0])
+    rx[ip] += L[0];
+  if (ry[ip] > L2[1])
+    ry[ip] -= L[1];
+  else if (ry[ip] < -L2[1])
+    ry[ip] += L[1];
+  if (rz[ip] > L2[2])
+    rz[ip] -= L[2];
+  else if (rz[ip] < -L2[2])
+    rz[ip] += L[2];
+}
 void move(void)
 {
   int i,ip, err;
@@ -10920,6 +10948,7 @@ void move(void)
       ip=(Oparams.parnum-1)*ranf();
       store_coord(ip);
       random_move(ip);
+      pbc(ip);
       update_LL(ip);
       rebuildLinkedList();
       printf("i=%d\n", i);
