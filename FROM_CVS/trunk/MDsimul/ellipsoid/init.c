@@ -3886,6 +3886,7 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
   L[1]=*Ly;
   L[2]=*Lz;
 
+  //printf("vec1=%f %f %f vec2=%f %f %f\n", ra[0], ra[1], ra[2], rb[0], rb[1], rb[2]);
    /* set positions and orientations */
   rx[0] = nebrTab[0].r[0] = ra[0];
   ry[0] = nebrTab[0].r[1] = ra[1];
@@ -3904,9 +3905,18 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
   nn = calc_norm(uxb);
   for (k1=0; k1 < 3; k1++)
     uxb[k1] /= nn;
-
+  type=-1;
   versor_to_R(uxa[0], uxa[1], uxa[2], Rla);
   versor_to_R(uxb[0], uxb[1], uxb[2], Rlb);
+  for (k1=0; k1 < 3; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	{
+	  R[0][k1][k2] = Rla[k1][k2];
+	  R[1][k1][k2] = Rlb[k1][k2];
+	}
+    }
+
   for (k1=0; k1 < 3; k1++)
     {
       for (k2=0; k2 < 3; k2++)
