@@ -856,7 +856,7 @@ COORD_TYPE ranf(void)
 #ifdef MD_RAND48
   return drand48();
 #else
-  return rand() / ( (COORD_TYPE) RAND_MAX );
+  return rand() / ( (COORD_TYPE) RAND_MAX + 1);
 #endif
 }
 
@@ -1924,6 +1924,9 @@ void usrInitBef(void)
     OprogStatus.deltaMC=0.1;
     OprogStatus.ensembleMC=0; /* 0 = NVT 1=NPT */
     OprogStatus.vmax=0.01;
+    OprogStatus.resetaccept=10;
+    OprogStatus.resetacceptVol=100;
+    OprogStatus.outMC = 10;
 #endif
 }
 extern void check (int *overlap, double *K, double *V);
@@ -2984,7 +2987,7 @@ extern void find_bonds_one_NLL(int i);
 void find_bonds_flex_all(void)
 {
   int i;
-  printf("===========================>QUI\n");
+  //printf("===========================>QUI\n");
   for (i=0; i < Oparams.parnum; i++)
     find_bonds_one(i); 
 }

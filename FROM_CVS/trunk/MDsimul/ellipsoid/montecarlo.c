@@ -542,6 +542,7 @@ void move_box(int *ierr)
   int i, ii;
 #if 1
   double vo, lnvn, vn, Lfact, enn, eno, arg;
+  //printf("moving box\n");
 #ifdef MD_LXYZ
   vo = L[0]*L[1]*L[2];
 #else
@@ -627,17 +628,17 @@ void update_bonds_MC(int ip)
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept;
-  int movetype, i,ip, err, dorej, enn;
+  int ran, movetype, i,ip, err, dorej, enn;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   printf("Doing MC step #%d\n", Oparams.curStep);
   for (i=0; i < Oparams.parnum; i++)
     {
       /* pick a particle at random */
-      if (OprogStatus.ensembleMC==0)
-	ip=(Oparams.parnum-1)*ranf();
-      else
-	ip=(Oparams.parnum)*ranf();
-      if (ip==Oparams.parnum)
+      if (OprogStatus.ensembleMC==1)
+	ran=(Oparams.parnum+1)*ranf();
+      else 
+	ran = 0;
+      if (ran==Oparams.parnum)
 	{
 	  move_box(&err);
 	  movetype=3; /* 0 = tra; 1 = rot 2 = tra and rot; 3 = box */
@@ -645,6 +646,7 @@ void move(void)
 	}
       else
 	{
+	  ip = Oparams.parnum*ranf();
 	  eno = calcpotene();
 	  store_coord(ip);
 	  movetype=random_move(ip);
@@ -699,38 +701,46 @@ void move(void)
 	}
       //printf("done\n");
     }
-  if (Oparams.curStep%10==0)
+  if (Oparams.curStep%OprogStatus.outMC==0)
     {
       //totmoves=((long long int)Oparams.parnum*(long long int)Oparams.curStep);
       acceptance=((double)(totmovesMC-totrejMC))/totmovesMC;
       traaccept = ((double)(tramoveMC-trarejMC))/tramoveMC;
       rotaccept = ((double)(rotmoveMC-rotrejMC))/rotmoveMC; 
-      if (OprogStatus.ensembleMC==1)
+      if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
 	volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
-      if (traaccept > 0.5)
-	OprogStatus.deltaMC *= 1.1;
-      else
-	OprogStatus.deltaMC /= 1.1;
-      if (rotaccept > 0.5)
-	OprogStatus.dthetaMC *= 1.1;
-      else
-	OprogStatus.dthetaMC /= 1.1;
-      if (OprogStatus.ensembleMC==1)
+      if (Oparams.curStep % OprogStatus.resetaccept==0)
+	{
+	  if (traaccept > 0.5)
+	    OprogStatus.deltaMC *= 1.1;
+	  else
+	    OprogStatus.deltaMC /= 1.1;
+	  if (rotaccept > 0.5)
+	    OprogStatus.dthetaMC *= 1.1;
+	  else
+	    OprogStatus.dthetaMC /= 1.1;
+	}
+      if (OprogStatus.ensembleMC==1 && (Oparams.curStep % OprogStatus.resetacceptVol==0))
 	{
 	  if (volaccept > 0.5)
 	    OprogStatus.vmax *= 1.1;
 	  else
 	    OprogStatus.vmax /= 1.1;
 	}
-      totmovesMC=totrejMC=0;
-      tramoveMC=trarejMC=0;
-      rotmoveMC=trarejMC=0;
-      if (OprogStatus.ensembleMC==1)
-	volmoveMC=volrejMC=0;
+      printf("pressure=%f temperature=%f\n", Oparams.P, Oparams.T);
       printf("Acceptance=%.15G (tra=%.15G rot=%.15G) deltaMC=%.15G dthetaMC=%.15G\n", acceptance, traaccept, 
 	     rotaccept, OprogStatus.deltaMC, OprogStatus.dthetaMC);
-      if (OprogStatus.ensembleMC==1)
+      if (OprogStatus.ensembleMC==1 && volmoveMC>0)
 	printf("Volume moves acceptance = %.15G vmax = %.15G\n", volaccept, OprogStatus.vmax);
+      if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
+	volmoveMC=volrejMC=0;
+      if (Oparams.curStep % OprogStatus.resetaccept==0)
+	{
+	  totmovesMC=totrejMC=0;
+	  tramoveMC=trarejMC=0;
+	  rotmoveMC=trarejMC=0;
+	}
+
     }
 }
 #endif
