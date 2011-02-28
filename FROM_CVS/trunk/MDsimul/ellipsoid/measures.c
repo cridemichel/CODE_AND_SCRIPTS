@@ -302,6 +302,15 @@ void calcV(void)
   radius_of_gyration();
 #endif
   V = calcpotene();
+#ifdef MC_SIMUL
+  mf = fopenMPI(absMisHD("volume.dat"),"a");
+#ifdef MD_LXYZ
+  fprintf(mf, "%d %.15G\n", Oparams.curStep, L[0]*L[1]*L[2]);
+#else
+  fprintf(mf, "%d %.15G\n", Oparams.curStep, L*L*L);
+#endif
+  fclose(mf);
+#endif
   mf = fopenMPI(absMisHD("energy.dat"),"a");
 #if 0
   if (Oparams.parnumA < Oparams.parnum)
