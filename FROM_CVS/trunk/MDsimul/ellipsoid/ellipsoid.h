@@ -859,6 +859,9 @@ struct progStatus
   double deltaMC;
   int ensembleMC;
   double vmax;
+  int outMC;
+  int resetacceptVol;
+  int resetaccept;
 #endif
 };
 
@@ -1257,6 +1260,9 @@ struct pascii opro_ascii[] =
   {"dthetaMC",     &OS(dthetaMC),                            1,  1, "%.12G"},
   {"deltaMC" ,     &OS(deltaMC),                             1,  1, "%.12G"},
   {"vmax",        &OS(vmax),                                1,  1, "%.12G"},        
+  {"resetaccept", &OS(resetaccept),                         1, 1, "%d"},
+  {"resetacceptVol", &OS(resetacceptVol),                   1, 1, "%d"},
+  {"outMC",          &OS(outMC),                            1, 1, "%d"},
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -1397,6 +1403,9 @@ struct singlePar OsinglePar[] = {
   {"ensembleMC",&OprogStatus.ensembleMC,      INT},
   {"vmax",      &OprogStatus.vmax,            CT},
   {"adjuststepMC", &OprogStatus.adjuststepMC,    INT},
+  {"resetaccept",  &OprogStatus.resetaccept,    INT},
+  {"resetacceptVol", &OprogStatus.resetacceptVol, INT},
+  {"outMC",          &OprogStatus.outMC,      INT},
 #endif
 #ifdef EDHE_FLEX
   {"optbm",      &OprogStatus.optbm,          INT},
