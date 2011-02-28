@@ -645,7 +645,7 @@ void move(void)
   double acceptance, traaccept, ene, eno, rotaccept, volaccept;
   int ran, movetype, i,ip, err, dorej, enn;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
-  printf("Doing MC step #%d\n", Oparams.curStep);
+  //printf("Doing MC step #%d\n", Oparams.curStep);
   for (i=0; i < Oparams.parnum; i++)
     {
       /* pick a particle at random */
@@ -737,12 +737,13 @@ void move(void)
 	}
       if (OprogStatus.ensembleMC==1 && (Oparams.curStep % OprogStatus.resetacceptVol==0))
 	{
+	  //printf("sono qui volaccept=%.15G\n", volaccept);
 	  if (volaccept > 0.5)
 	    OprogStatus.vmax *= 1.1;
 	  else
 	    OprogStatus.vmax /= 1.1;
 	}
-      printf("pressure=%f temperature=%f\n", Oparams.P, Oparams.T);
+      printf("MC Step #%d pressure=%f temperature=%f\n", Oparams.curStep, Oparams.P, Oparams.T);
       printf("Acceptance=%.15G (tra=%.15G rot=%.15G) deltaMC=%.15G dthetaMC=%.15G\n", acceptance, traaccept, 
 	     rotaccept, OprogStatus.deltaMC, OprogStatus.dthetaMC);
       if (OprogStatus.ensembleMC==1 && volmoveMC>0)
