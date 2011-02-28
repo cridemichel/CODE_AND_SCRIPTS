@@ -853,6 +853,12 @@ struct progStatus
   double rcutfactMLL;
 #endif
   /* ======================================================================= */
+#ifdef MC_SIMUL
+  int adjuststepMC;
+  double dthetaMC;
+  double deltaMC;
+  int ensembleMC;
+#endif
 };
 
 /* ======================== >>> filenames instance <<< ======================= 
@@ -1243,6 +1249,12 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef MD_PROTEIN_DESIGN
   {"nativeConf",           &OS(nativeConf),                  1, NAME_LENGTH, "%s"},
+#endif
+#ifdef MC_SIMUL
+  {"adjuststepMC", &OS(adjuststepMC),                        1,  1, "%d"},
+  {"ensembleMC",   &OS(ensembleMC),                        1,  1, "%d"},
+  {"dthetaMC",     &OS(dthetaMC),                            1,  1, "%.12G"},
+  {"deltaMC" ,     &OS(deltaMC),                             1,  1, "%.12G"},
 #endif
   {"", NULL, 0, 0, ""}
 };
