@@ -557,6 +557,13 @@ void move_box(int *ierr)
       rx[i] *= Lfact;
       ry[i] *= Lfact;
       rz[i] *= Lfact; 
+#ifdef MD_LXYZ
+      L[0] *= Lfact;
+      L[1] *= Lfact;
+      L[2] *= Lfact;
+#else
+      L *= Lfact;
+#endif
       pbc(i);
     }
   rebuildLinkedList();
@@ -568,9 +575,17 @@ void move_box(int *ierr)
 	  /* move rejected restore old positions */
 	  for (ii=0; ii < Oparams.parnum; ii++)
 	    {
-	      rx[ii] *= Lfact;
-	      ry[ii] *= Lfact;
-	      rz[ii] *= Lfact; 
+	      rx[ii] /= Lfact;
+	      ry[ii] /= Lfact;
+	      rz[ii] /= Lfact; 
+#ifdef MD_LXYZ
+	      L[0] /= Lfact;
+	      L[1] /= Lfact;
+	      L[2] /= Lfact;
+#else
+	      L /= Lfact;
+#endif
+
 	      pbc(ii);
 	    }
 	  volrejMC++;
