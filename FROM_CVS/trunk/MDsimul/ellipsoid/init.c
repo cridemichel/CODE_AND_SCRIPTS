@@ -1918,6 +1918,12 @@ void usrInitBef(void)
     OprogStatus.rcutfactMLL = 1.01;
 #endif
     maxcoll=-1;
+#ifdef MC_SIMUL
+    OprogStatus.adjuststepMC=1;
+    OprogStatus.dthetaMC=0.1;
+    OprogStatus.deltaMC=0.1;
+    OprogStatus.ensembleMC=0; /* 0 = NVT 1=NPT */
+#endif
 }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
@@ -3875,6 +3881,7 @@ void initsa_(double sax[3], double p[3])
 {
   initsa(sax,p);
 }
+extern const double saxfactMC[3];
 double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], double *Lx, double *Ly, double *Lz,int *errchk)
 {
   /* N.B. u1, u2 ed u3 sono i vettori del sistema di riferimento solidale con il corpo rigido 
@@ -3935,9 +3942,9 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
     {
       return 1.0;
     }
-  set_semiaxes_vb(0.9*typesArr[typeOfPart[0]].sax[0],
-		  0.7*typesArr[typeOfPart[0]].sax[1], 
-		  0.7*typesArr[typeOfPart[0]].sax[2]);
+  set_semiaxes_vb(saxfactMC[0]*typesArr[typeOfPart[0]].sax[0],
+		  saxfactMC[1]*typesArr[typeOfPart[0]].sax[1], 
+		  saxfactMC[2]*typesArr[typeOfPart[0]].sax[2]);
 
   d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, 0, 1, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
@@ -3993,9 +4000,9 @@ double calcDistNeg_vb(int i, int j, double shift[3])
 	}
 #endif
 #if 1
-      set_semiaxes_vb(0.9*typesArr[typeOfPart[0]].sax[0],
-		      0.7*typesArr[typeOfPart[0]].sax[1], 
-	    	      0.7*typesArr[typeOfPart[0]].sax[2]);
+      set_semiaxes_vb(saxfactMC[0]*typesArr[typeOfPart[0]].sax[0],
+		      saxfactMC[1]*typesArr[typeOfPart[0]].sax[1], 
+	    	      saxfactMC[2]*typesArr[typeOfPart[0]].sax[2]);
 
       d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
       /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
@@ -4455,9 +4462,9 @@ void build_parallelepipeds(void)
 
       for (kk = 0; kk < 3; kk++)
 	sa[kk] = typesArr[tt].sax[kk]; 
-      mbox[tt][0].sa[0] = 0.9*sa[0];
-      mbox[tt][0].sa[1] = 0.7*sa[1];
-      mbox[tt][0].sa[2] = 0.7*sa[2]; 
+      mbox[tt][0].sa[0] = saxfactMC[0]*sa[0];
+      mbox[tt][0].sa[1] = saxfactMC[1]*sa[1];
+      mbox[tt][0].sa[2] = saxfactMC[2]*sa[2]; 
       mbox[tt][1]=nmbox;
       /* secondo set di parallelepipedi: approssimazione stepwise
 	 della forma della superquadrica (molto più accurata) */
