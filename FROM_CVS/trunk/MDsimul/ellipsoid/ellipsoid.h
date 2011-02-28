@@ -854,7 +854,8 @@ struct progStatus
 #endif
   /* ======================================================================= */
 #ifdef MC_SIMUL
-  int adjuststepMC;
+  double targetAccept;
+  double targetAcceptVol;
   double dthetaMC;
   double deltaMC;
   int ensembleMC;
@@ -1255,7 +1256,8 @@ struct pascii opro_ascii[] =
   {"nativeConf",           &OS(nativeConf),                  1, NAME_LENGTH, "%s"},
 #endif
 #ifdef MC_SIMUL
-  {"adjuststepMC", &OS(adjuststepMC),                        1,  1, "%d"},
+  {"targetAccept", &OS(targetAccept),                        1, 1, "%.15G"},
+  {"targetAcceptvol", &OS(targetAcceptVol),                  1, 1, "%.15G"},
   {"ensembleMC",   &OS(ensembleMC),                        1,  1, "%d"},
   {"dthetaMC",     &OS(dthetaMC),                            1,  1, "%.12G"},
   {"deltaMC" ,     &OS(deltaMC),                             1,  1, "%.12G"},
@@ -1402,10 +1404,11 @@ struct singlePar OsinglePar[] = {
   {"dthetaMC",  &OprogStatus.dthetaMC,        CT},
   {"ensembleMC",&OprogStatus.ensembleMC,      INT},
   {"vmax",      &OprogStatus.vmax,            CT},
-  {"adjuststepMC", &OprogStatus.adjuststepMC,    INT},
   {"resetaccept",  &OprogStatus.resetaccept,    INT},
   {"resetacceptVol", &OprogStatus.resetacceptVol, INT},
   {"outMC",          &OprogStatus.outMC,      INT},
+  {"targetAccept",   &OprogStatus.targetAccept,           CT},
+  {"targetAcceptVol",&OprogStatus.targetAcceptVol,        CT},
 #endif
 #ifdef EDHE_FLEX
   {"optbm",      &OprogStatus.optbm,          INT},

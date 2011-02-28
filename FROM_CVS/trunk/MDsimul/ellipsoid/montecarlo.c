@@ -724,21 +724,22 @@ void move(void)
       rotaccept = ((double)(rotmoveMC-rotrejMC))/rotmoveMC; 
       if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
 	volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
-      if (Oparams.curStep % OprogStatus.resetaccept==0)
+      if (OprogStatus.targetAccept > 0.0 && Oparams.curStep % OprogStatus.resetaccept==0)
 	{
-	  if (traaccept > 0.5)
+	  if (traaccept > OprogStatus.targetAccept)
 	    OprogStatus.deltaMC *= 1.1;
 	  else
 	    OprogStatus.deltaMC /= 1.1;
-	  if (rotaccept > 0.5)
+	  if (rotaccept > OprogStatus.targetAccept)
 	    OprogStatus.dthetaMC *= 1.1;
 	  else
 	    OprogStatus.dthetaMC /= 1.1;
 	}
-      if (OprogStatus.ensembleMC==1 && (Oparams.curStep % OprogStatus.resetacceptVol==0))
+      if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1
+	  && (Oparams.curStep % OprogStatus.resetacceptVol==0))
 	{
 	  //printf("sono qui volaccept=%.15G\n", volaccept);
-	  if (volaccept > 0.5)
+	  if (volaccept > OprogStatus.targetAcceptVol)
 	    OprogStatus.vmax *= 1.1;
 	  else
 	    OprogStatus.vmax /= 1.1;
@@ -754,7 +755,7 @@ void move(void)
 	{
 	  totmovesMC=totrejMC=0;
 	  tramoveMC=trarejMC=0;
-	  rotmoveMC=trarejMC=0;
+	  rotmoveMC=rotrejMC=0;
 	}
 
     }

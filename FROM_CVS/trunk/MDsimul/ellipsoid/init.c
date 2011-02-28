@@ -1919,7 +1919,6 @@ void usrInitBef(void)
 #endif
     maxcoll=-1;
 #ifdef MC_SIMUL
-    OprogStatus.adjuststepMC=1;
     OprogStatus.dthetaMC=0.1;
     OprogStatus.deltaMC=0.1;
     OprogStatus.ensembleMC=0; /* 0 = NVT 1=NPT */
@@ -1927,6 +1926,8 @@ void usrInitBef(void)
     OprogStatus.resetaccept=10;
     OprogStatus.resetacceptVol=100;
     OprogStatus.outMC = 10;
+    OprogStatus.targetAccept=0.5;
+    OprogStatus.targetAcceptVol=0.5;
 #endif
 }
 extern void check (int *overlap, double *K, double *V);
