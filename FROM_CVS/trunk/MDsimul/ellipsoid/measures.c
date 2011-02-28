@@ -66,6 +66,7 @@ extern int *cellList;
 extern int bound(int na, int n);
 extern int *numbonds;
 #ifdef EDHE_FLEX
+extern double calc_phi(void);
 extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
 #endif
 #ifdef MD_SPHERICAL_WALL
@@ -305,9 +306,9 @@ void calcV(void)
 #ifdef MC_SIMUL
   mf = fopenMPI(absMisHD("volume.dat"),"a");
 #ifdef MD_LXYZ
-  fprintf(mf, "%d %.15G\n", Oparams.curStep, L[0]*L[1]*L[2]);
+  fprintf(mf, "%d %.15G %.15G\n", Oparams.curStep, calc_phi(), L[0]*L[1]*L[2]);
 #else
-  fprintf(mf, "%d %.15G\n", Oparams.curStep, L*L*L);
+  fprintf(mf, "%d %.15G %.15G\n", Oparams.curStep, calc_phi(), L*L*L);
 #endif
   fclose(mf);
 #endif
@@ -515,8 +516,12 @@ void energy(void)
 	  E, Px, Py, Pz, Vz);
 #else
 #ifdef MD_PATCHY_HE
+#ifdef MC_SIMUL
+  sprintf(TXTA[1], "step=%d V=%.15f\n", Oparams.curStep, V);
+#else
   sprintf(TXTA[1], "t=%f E=%.15f V=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time + tref,
 	  E, V, Px, Py, Pz);
+#endif
 #else
    sprintf(TXTA[1], "t=%f E=%.15f P=(%.14G,%.14G,%.14G)\n", Oparams.time + tref,
 	  E, Px, Py, Pz);
@@ -1147,8 +1152,10 @@ void temperat(void)
       press = OprogStatus.sumPress / NUMCALCS;
     }
 #ifdef EDHE_FLEX
+#ifndef MC_SIMUL
   sprintf(TXT, "DOF:%.15G T:%.15G", dof, temp);
   mdMsg(STD,NOSYS, NULL, "NOTICE", NULL,  TXT, NULL);
+#endif
 #endif
 #if 0
   sprintf(TXT, "P:%.10f T:%.10f W: %10f\n", press, temp, W);
