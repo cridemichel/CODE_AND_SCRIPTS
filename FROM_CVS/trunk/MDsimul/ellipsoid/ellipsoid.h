@@ -858,6 +858,7 @@ struct progStatus
   double dthetaMC;
   double deltaMC;
   int ensembleMC;
+  double vmax;
 #endif
 };
 
@@ -1255,6 +1256,7 @@ struct pascii opro_ascii[] =
   {"ensembleMC",   &OS(ensembleMC),                        1,  1, "%d"},
   {"dthetaMC",     &OS(dthetaMC),                            1,  1, "%.12G"},
   {"deltaMC" ,     &OS(deltaMC),                             1,  1, "%.12G"},
+  {"vmax",        &OS(vmax),                                1,  1, "%.12G"},        
 #endif
   {"", NULL, 0, 0, ""}
 };
@@ -1389,6 +1391,13 @@ struct singlePar OsinglePar[] = {
   {"xvafile" ,   &OprogStatus.xvafile,        STR},
   {"inistep" ,   &Oparams.curStep,            LLINT},
   {"endFormat",  &OprogStatus.endFormat,      INT},
+#ifdef MC_SIMUL
+  {"deltaMC",   &OprogStatus.deltaMC,         CT},
+  {"dthetaMC",  &OprogStatus.dthetaMC,        CT},
+  {"ensembleMC",&OprogStatus.ensembleMC,      INT},
+  {"vmax",      &OprogStatus.vmax,            CT},
+  {"adjuststepMC", &OprogStatus.adjuststepMC,    INT},
+#endif
 #ifdef EDHE_FLEX
   {"optbm",      &OprogStatus.optbm,          INT},
 #ifdef MD_SCALEPHI_STAGES

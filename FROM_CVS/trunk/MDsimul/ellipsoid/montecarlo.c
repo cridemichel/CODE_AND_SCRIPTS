@@ -214,7 +214,7 @@ void restore_coord(int ip)
 }
 extern double ranf(void);
 extern void orient(double *ox, double *oy, double *oz);
-long long int rotmoveMC=0, tramoveMC=0, totmovesMC=0, trarejMC=0, rotrejMC=0, totrejMC=0;
+long long int rotmoveMC=0, tramoveMC=0, totmovesMC=0, trarejMC=0, rotrejMC=0, totrejMC=0, volrejMC=0, volmoveMC=0;
 void tra_move(int ip)
 {
   rx[ip]+=OprogStatus.deltaMC*ranf(); 
@@ -338,6 +338,10 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   
   d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
   *errchk = calcdist_retcheck;
+  if (*errchk)
+    {
+      return -1.0;
+    }
   //printf("QUI d=%f\n", d);
   return d;
 }
@@ -528,26 +532,102 @@ void pbc(int ip)
   else if (rz[ip] < -L2[2])
     rz[ip] += L[2];
 }
+void update_bonds_MC(int ip);
+extern void find_bonds_flex_all(void);
+extern double calcpotene(void);
+extern void rebuildLinkedList(void);
 
-void move_box(void)
+void move_box(int *ierr)
 {
-#if 0
-  double vo, lnvn, vn, boxn;
+  int i, ii;
+#if 1
+  double vo, lnvn, vn, Lfact, enn, eno, arg;
 #ifdef MD_LXYZ
   vo = L[0]*L[1]*L[2];
 #else
   vo = L*L*L;
 #endif
-  lnvn = log(vo) + (ranf()-0.5)*OprogStatus.vnmax;
+  eno = calcpotene();
+  lnvn = log(vo) + (ranf()-0.5)*OprogStatus.vmax;
   vn = exp(lnvn);
-  boxn = pow(vn,1.0/3.0);
-  /* .... FINIRE */
+  Lfact = pow(vn/vo,1.0/3.0);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      rx[i] *= Lfact;
+      ry[i] *= Lfact;
+      rz[i] *= Lfact; 
+      pbc(i);
+    }
+  rebuildLinkedList();
+ 
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (overlapMC(i, ierr))
+	{
+	  /* move rejected restore old positions */
+	  for (ii=0; ii < Oparams.parnum; ii++)
+	    {
+	      rx[ii] *= Lfact;
+	      ry[ii] *= Lfact;
+	      rz[ii] *= Lfact; 
+	      pbc(ii);
+	    }
+	  volrejMC++;
+	  rebuildLinkedList();
+	  return;
+	}
+    }
+  /* update all bonds with new positions */
+  for (i=0; i < Oparams.parnum; i++)
+    numbonds[i] = 0;
+  find_bonds_flex_all();
+  enn = calcpotene();
+  arg = -(1.0/Oparams.T)*(enn-eno)+Oparams.P*(vn-vo) - (Oparams.parnum+1)*log(vn/vo)*Oparams.T;
+  if (ranf() > exp(arg))
+    {
+      /* move rejected restore old positions */
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  rx[i] *= Lfact;
+	  ry[i] *= Lfact;
+	  rz[i] *= Lfact; 
+	  pbc(i);
+	}
+      volrejMC++;
+      rebuildLinkedList();
+      /* restore all bonds*/
+      for (i=0; i < Oparams.parnum; i++)
+	numbonds[i] = 0;
+      find_bonds_flex_all();
+    }
 #endif
+}
+extern void remove_bond(int , int , int , int);
+void find_bonds_one(int ip);
+void update_bonds_MC(int ip)
+{
+#ifdef MD_LL_BONDS
+  int nb, nn, kk;
+  long long int jj, jj2, aa, bb;
+#else
+  int nb, jj, jj2, kk, nn, aa, bb;
+#endif  
+  nb = numbonds[ip];
+  for (kk = 0; kk < nb; kk++)
+    {
+      jj = bonds[ip][kk] / (NANA);
+      jj2 = bonds[ip][kk] % (NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      remove_bond(jj, ip, bb, aa);
+    }
+  numbonds[ip] = 0;
+  find_bonds_one(ip);
 }
 void move(void)
 {
-  double acceptance, traaccept, rotaccept;
-  int movetype, i,ip, err;
+  double acceptance, traaccept, ene, eno, rotaccept, volaccept;
+  int movetype, i,ip, err, dorej, enn;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   printf("Doing MC step #%d\n", Oparams.curStep);
   for (i=0; i < Oparams.parnum; i++)
@@ -559,11 +639,13 @@ void move(void)
 	ip=(Oparams.parnum)*ranf();
       if (ip==Oparams.parnum)
 	{
-	  move_box();
+	  move_box(&err);
 	  movetype=3; /* 0 = tra; 1 = rot 2 = tra and rot; 3 = box */
+	  volmoveMC++;
 	}
       else
 	{
+	  eno = calcpotene();
 	  store_coord(ip);
 	  movetype=random_move(ip);
 	  pbc(ip);
@@ -571,19 +653,47 @@ void move(void)
 	  //rebuildLinkedList();
 	  //printf("i=%d\n", i);
 	  totmovesMC++;
-	  if (overlapMC(ip, &err))
+	  /* overlapMC() aggiorna anche i bond */
+	  dorej = overlapMC(ip, &err);
+	  if (!dorej)
 	    {
+	      update_bonds_MC(ip);
+	      enn=calcpotene();
+	      if (enn <= eno)
+		{
+		  //	  if (abs(enn-eno) >=1 )
+		  //	    printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
+		  dorej=0;
+		}
+	      else
+		{
+		  if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
+		    dorej=0;
+		  else
+		    dorej=2;
+		 // if (dorej==0)
+		   // printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
+		}
+	    }
+
+	  if (dorej != 0)
+	    {
+	      /* move rejected */
 	      totrejMC++;
 	      if (movetype==0)
 		trarejMC++;
 	      else 
 		rotrejMC++;
+	      //printf("restoring coords\n");
 	      if(err)
 		{
-		  printf("NR failed...I ignore this error...\n");
+		  printf("NR failed...I rejected this trial move...\n");
 		}
 	      restore_coord(ip);
 	      update_LL(ip);
+	      if (dorej==2)
+		update_bonds_MC(ip);
+	      //printf("restoring finished\n");
 	      //rebuildLinkedList();
 	    }
 	}
@@ -595,17 +705,32 @@ void move(void)
       acceptance=((double)(totmovesMC-totrejMC))/totmovesMC;
       traaccept = ((double)(tramoveMC-trarejMC))/tramoveMC;
       rotaccept = ((double)(rotmoveMC-rotrejMC))/rotmoveMC; 
+      if (OprogStatus.ensembleMC==1)
+	volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
       if (traaccept > 0.5)
 	OprogStatus.deltaMC *= 1.1;
       else
-      	OprogStatus.deltaMC /= 1.1;
+	OprogStatus.deltaMC /= 1.1;
       if (rotaccept > 0.5)
 	OprogStatus.dthetaMC *= 1.1;
       else
 	OprogStatus.dthetaMC /= 1.1;
+      if (OprogStatus.ensembleMC==1)
+	{
+	  if (volaccept > 0.5)
+	    OprogStatus.vmax *= 1.1;
+	  else
+	    OprogStatus.vmax /= 1.1;
+	}
       totmovesMC=totrejMC=0;
+      tramoveMC=trarejMC=0;
+      rotmoveMC=trarejMC=0;
+      if (OprogStatus.ensembleMC==1)
+	volmoveMC=volrejMC=0;
       printf("Acceptance=%.15G (tra=%.15G rot=%.15G) deltaMC=%.15G dthetaMC=%.15G\n", acceptance, traaccept, 
 	     rotaccept, OprogStatus.deltaMC, OprogStatus.dthetaMC);
+      if (OprogStatus.ensembleMC==1)
+	printf("Volume moves acceptance = %.15G vmax = %.15G\n", volaccept, OprogStatus.vmax);
     }
 }
 #endif
