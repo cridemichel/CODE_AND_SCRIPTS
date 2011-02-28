@@ -5143,6 +5143,10 @@ void usrInitAft(void)
       fclose(f);
       f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
+#ifdef MC_SIMUL
+      f = fopenMPI(absMisHD("volume.dat"), "w+");
+      fclose(f);
+#endif
 #ifdef MD_PROTEIN_DESIGN
       if (strcmp(OprogStatus.nativeConf,""))
 	{
