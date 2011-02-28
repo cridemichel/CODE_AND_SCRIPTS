@@ -1923,6 +1923,7 @@ void usrInitBef(void)
     OprogStatus.dthetaMC=0.1;
     OprogStatus.deltaMC=0.1;
     OprogStatus.ensembleMC=0; /* 0 = NVT 1=NPT */
+    OprogStatus.vmax=0.01;
 #endif
 }
 extern void check (int *overlap, double *K, double *V);
