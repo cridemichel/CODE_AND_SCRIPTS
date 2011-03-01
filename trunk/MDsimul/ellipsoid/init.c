@@ -3904,8 +3904,8 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
   ry[0] = nebrTab[0].r[1] = ra[1];
   rz[0] = nebrTab[0].r[2] = ra[2];
   rx[1] = nebrTab[1].r[0] = rb[0];
-  ry[1] = nebrTab[1].r[0] = rb[1];
-  rz[1] = nebrTab[1].r[0] = rb[2];
+  ry[1] = nebrTab[1].r[1] = rb[1];
+  rz[1] = nebrTab[1].r[2] = rb[2];
   shift[0] = L[0]*rint((rx[0]-rx[1])/L[0]);
   shift[1] = L[1]*rint((ry[0]-ry[1])/L[1]);
   shift[2] = L[2]*rint((rz[0]-rz[1])/L[2]);
