@@ -10370,6 +10370,7 @@ void rebuildLinkedList(void)
   for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
     cellList[j] = -1;
   /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
+ 
   for (n = 0; n < Oparams.parnum; n++)
     {
 #ifdef MD_SPHERICAL_WALL
