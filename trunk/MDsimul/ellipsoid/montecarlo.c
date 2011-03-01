@@ -480,18 +480,17 @@ void update_LL(int n)
   cox=inCell[0][n];
   coy=inCell[1][n];
   coz=inCell[2][n];
-
 #ifdef MD_LXYZ
-  cx =  (rx[n] + L2[0]) * cellsx / L[0];
-  cy =  (ry[n] + L2[1]) * cellsy / L[1];
-  cz =  (rz[n] + L2[2]) * cellsz / L[2];
+  cx =  (rx[n] + 0.5*L[0]) * cellsx / L[0];
+  cy =  (ry[n] + 0.5*L[1]) * cellsy / L[1];
+  cz =  (rz[n] + 0.5*L[2]) * cellsz / L[2];
 #else
-  cx =  (rx[n] + L2) * cellsx / L;
-  cy =  (ry[n] + L2) * cellsy / L;
+  cx =  (rx[n] + 0.5*L) * cellsx / L;
+  cy =  (ry[n] + 0.5*L) * cellsy / L;
 #ifdef MD_GRAVITY
   cz =  (rz[n] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
 #else
-  cz =  (rz[n] + L2)  * cellsz / L;
+  cz =  (rz[n] + 0.5*L)  * cellsz / L;
 #endif
 #endif
   if (cx!=cox || cy!=coy || cz!=coz)
@@ -536,7 +535,18 @@ void update_bonds_MC(int ip);
 extern void find_bonds_flex_all(void);
 extern double calcpotene(void);
 extern void rebuildLinkedList(void);
-
+void update_numcells(void)
+{
+#ifdef MD_LXYZ
+      cellsx = L[0] / Oparams.rcut;
+      cellsy = L[1] / Oparams.rcut;
+      cellsz = L[2] / Oparams.rcut;
+#else
+      cellsx = L / Oparams.rcut;
+      cellsy = L / Oparams.rcut;
+      cellsz = L / Oparams.rcut;
+#endif
+}
 void move_box(int *ierr)
 {
   int i, ii;
@@ -552,20 +562,21 @@ void move_box(int *ierr)
   lnvn = log(vo) + (ranf()-0.5)*OprogStatus.vmax;
   vn = exp(lnvn);
   Lfact = pow(vn/vo,1.0/3.0);
+#ifdef MD_LXYZ
+  L[0] *= Lfact;
+  L[1] *= Lfact;
+  L[2] *= Lfact;
+#else
+  L *= Lfact;
+#endif
   for (i=0; i < Oparams.parnum; i++)
     {
       rx[i] *= Lfact;
       ry[i] *= Lfact;
       rz[i] *= Lfact; 
-#ifdef MD_LXYZ
-      L[0] *= Lfact;
-      L[1] *= Lfact;
-      L[2] *= Lfact;
-#else
-      L *= Lfact;
-#endif
       pbc(i);
     }
+  update_numcells();
   rebuildLinkedList();
  
   for (i=0; i < Oparams.parnum; i++)
@@ -573,22 +584,22 @@ void move_box(int *ierr)
       if (overlapMC(i, ierr))
 	{
 	  /* move rejected restore old positions */
+#ifdef MD_LXYZ
+	  L[0] /= Lfact;
+	  L[1] /= Lfact;
+	  L[2] /= Lfact;
+#else
+	  L /= Lfact;
+#endif
 	  for (ii=0; ii < Oparams.parnum; ii++)
 	    {
 	      rx[ii] /= Lfact;
 	      ry[ii] /= Lfact;
 	      rz[ii] /= Lfact; 
-#ifdef MD_LXYZ
-	      L[0] /= Lfact;
-	      L[1] /= Lfact;
-	      L[2] /= Lfact;
-#else
-	      L /= Lfact;
-#endif
-
 	      pbc(ii);
 	    }
 	  volrejMC++;
+	  update_numcells();
 	  rebuildLinkedList();
 	  return;
 	}
@@ -602,14 +613,22 @@ void move_box(int *ierr)
   if (ranf() > exp(arg))
     {
       /* move rejected restore old positions */
+#ifdef MD_LXYZ
+      L[0] /= Lfact;
+      L[1] /= Lfact;
+      L[2] /= Lfact;
+#else
+      L /= Lfact;
+#endif
       for (i=0; i < Oparams.parnum; i++)
 	{
-	  rx[i] *= Lfact;
-	  ry[i] *= Lfact;
-	  rz[i] *= Lfact; 
+	  rx[i] /= Lfact;
+	  ry[i] /= Lfact;
+	  rz[i] /= Lfact; 
 	  pbc(i);
 	}
       volrejMC++;
+      update_numcells();
       rebuildLinkedList();
       /* restore all bonds*/
       for (i=0; i < Oparams.parnum; i++)
@@ -707,6 +726,7 @@ void move(void)
 		  printf("NR failed...I rejected this trial move...\n");
 		}
 	      restore_coord(ip);
+	      //rebuildLinkedList();
 	      update_LL(ip);
 	      if (dorej==2)
 		update_bonds_MC(ip);
@@ -747,6 +767,7 @@ void move(void)
       printf("MC Step #%d pressure=%f temperature=%f\n", Oparams.curStep, Oparams.P, Oparams.T);
       printf("Acceptance=%.15G (tra=%.15G rot=%.15G) deltaMC=%.15G dthetaMC=%.15G\n", acceptance, traaccept, 
 	     rotaccept, OprogStatus.deltaMC, OprogStatus.dthetaMC);
+      printf("rotmoveMC:%d rotrefMC: %d cells= %d %d %d\n", rotmoveMC, rotrejMC, cellsx, cellsy, cellsz);
       if (OprogStatus.ensembleMC==1 && volmoveMC>0)
 	printf("Volume moves acceptance = %.15G vmax = %.15G\n", volaccept, OprogStatus.vmax);
       if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
