@@ -1,4 +1,57 @@
 const double saxfactMC[3]={0.85,0.68,0.68};
+#if (defined(MC_SIMUL) || defined(MD_STANDALONE)) && 0
+struct mboxstr 
+{
+  double sax[3];
+  double dr[3];
+  int nbox;
+} **mbox;
+void build_parallelepipeds(void)
+{
+  double sa[3], dx;
+  int tt, kk, k1, k2;
+
+  mbox = malloc(sizeof(struct mboxstr*)*Oparams.ntypes);
+  nmbox = 5;
+  /* 2 multibox per tipo */
+  for (tt=0; tt < Oparams.ntypes; tt++)
+   mbox[tt] = malloc(sizeof(struct mboxstr)*2); 
+
+  for (tt=0; tt < Oparams.ntypes; tt++)
+    {
+      /* il primo set di parallelepipedi è costituito 
+	 da un solo parallelepipedo */
+      mbox[tt][0].nbox=1;
+      for (kk = 0; kk < 3; kk++)
+	{
+	  mbox[tt][0].dr[kk] = 0.0;
+	}
+
+      for (kk = 0; kk < 3; kk++)
+	sa[kk] = typesArr[tt].sax[kk]; 
+      mbox[tt][0].sa[0] = saxfactMC[0]*sa[0];
+      mbox[tt][0].sa[1] = saxfactMC[1]*sa[1];
+      mbox[tt][0].sa[2] = saxfactMC[2]*sa[2]; 
+      mbox[tt][1]=nmbox;
+      /* secondo set di parallelepipedi: approssimazione stepwise
+	 della forma della superquadrica (molto più accurata) */
+      lastx=x=0.0;
+      while (!fine)
+	{
+	  dx=sa[0]/nmboxmax;
+	  for (ix=0; ix < 1000; ix++)
+	    {
+	      if (fabs(MC_funcSQ(x)-MC_funcSQ(lastx)) > OprogStatus.MC_deltambox)
+		{
+
+		}
+	      x+=dx;
+	    }
+	}
+    }
+}
+#endif
+
 #ifdef MC_SIMUL
 #include<mdsimul.h>
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
@@ -222,6 +275,37 @@ void tra_move(int ip)
   rz[ip]+=OprogStatus.deltaMC*ranf();
   tramoveMC++; 
 }
+extern double calc_norm(double *v);
+extern double scalProd(double *, double *);
+void remove_parall(int ip, double *ox, double *oy, double *oz)
+{
+  double sp, vp[3], v[3], nn;
+  int k;
+  v[0]=*ox;
+  v[1]=*oy;
+  v[2]=*oz;
+  sp = 0;
+  for (k=0; k < 3; k++)
+   {
+     vp[k] = R[ip][0][k];
+     sp += vp[k]*v[k];
+   }
+  
+  for (k=0; k < 3; k++)
+    {
+      v[k] -= vp[k]*sp;
+    }
+  nn = calc_norm(v);
+  for (k=0; k < 3; k++)
+    {
+      v[k] /= nn;
+    } 
+  *ox = v[0];
+  *oy = v[1];
+  *oz = v[2];
+  //printf("DOPO o=%f %f %f\n", *ox,*oy,*oz);
+  //printf("sp=%f\n", scalProd(v,vp));
+}
 void rot_move(int ip)
 {
   double theta, thetaSq, sinw, cosw;
@@ -229,6 +313,7 @@ void rot_move(int ip)
   int k1, k2, k3;
   /* pick a random orientation */
   orient(&ox,&oy,&oz);
+  remove_parall(ip, &ox, &oy, &oz);
   /* pick a random rotation angle */
   theta= OprogStatus.dthetaMC*ranf();
   thetaSq=Sqr(theta);
