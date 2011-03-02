@@ -1,56 +1,4 @@
 const double saxfactMC[3]={0.85,0.68,0.68};
-#if (defined(MC_SIMUL) || defined(MD_STANDALONE)) && 0
-struct mboxstr 
-{
-  double sax[3];
-  double dr[3];
-  int nbox;
-} **mbox;
-void build_parallelepipeds(void)
-{
-  double sa[3], dx;
-  int tt, kk, k1, k2;
-
-  mbox = malloc(sizeof(struct mboxstr*)*Oparams.ntypes);
-  nmbox = 5;
-  /* 2 multibox per tipo */
-  for (tt=0; tt < Oparams.ntypes; tt++)
-   mbox[tt] = malloc(sizeof(struct mboxstr)*2); 
-
-  for (tt=0; tt < Oparams.ntypes; tt++)
-    {
-      /* il primo set di parallelepipedi è costituito 
-	 da un solo parallelepipedo */
-      mbox[tt][0].nbox=1;
-      for (kk = 0; kk < 3; kk++)
-	{
-	  mbox[tt][0].dr[kk] = 0.0;
-	}
-
-      for (kk = 0; kk < 3; kk++)
-	sa[kk] = typesArr[tt].sax[kk]; 
-      mbox[tt][0].sa[0] = saxfactMC[0]*sa[0];
-      mbox[tt][0].sa[1] = saxfactMC[1]*sa[1];
-      mbox[tt][0].sa[2] = saxfactMC[2]*sa[2]; 
-      mbox[tt][1]=nmbox;
-      /* secondo set di parallelepipedi: approssimazione stepwise
-	 della forma della superquadrica (molto più accurata) */
-      lastx=x=0.0;
-      while (!fine)
-	{
-	  dx=sa[0]/nmboxmax;
-	  for (ix=0; ix < 1000; ix++)
-	    {
-	      if (fabs(MC_funcSQ(x)-MC_funcSQ(lastx)) > OprogStatus.MC_deltambox)
-		{
-
-		}
-	      x+=dx;
-	    }
-	}
-    }
-}
-#endif
 
 #ifdef MC_SIMUL
 #include<mdsimul.h>
@@ -243,8 +191,84 @@ extern void newt(double x[], int n, int *check,
 extern void rebuildCalendar(void);
 extern void R2u(void);
 extern void store_bump(int i, int j);
+#endif
+#if (defined(MC_SIMUL) || defined(MD_STANDALONE)) && 1
+struct mboxstr 
+{
+  double sa[3];
+  double dr[3];
+  int nbox;
+} **mbox;
+const int nmboxMC=4;
+
+void build_parallelepipeds(void)
+{
+  double sa[3], dx;
+  int tt, kk, k1, k2, nmbox;
+
+  mbox = malloc(sizeof(struct mboxstr*)*Oparams.ntypes);
+  nmbox = nmboxMC;
+  /* 2 multibox per tipo */
+  for (tt=0; tt < Oparams.ntypes; tt++)
+   mbox[tt] = malloc(sizeof(struct mboxstr)*2); 
+
+  for (tt=0; tt < Oparams.ntypes; tt++)
+    {
+      /* il primo set di parallelepipedi è costituito 
+	 da un solo parallelepipedo */
+      mbox[tt][0].nbox=1;
+      for (kk = 0; kk < 3; kk++)
+	{
+	  mbox[tt][0].dr[kk] = 0.0;
+	}
+
+      for (kk = 0; kk < 3; kk++)
+	sa[kk] = typesArr[tt].sax[kk]; 
+      mbox[tt][0].sa[0] = saxfactMC[0]*sa[0];
+      mbox[tt][0].sa[1] = saxfactMC[1]*sa[1];
+      mbox[tt][0].sa[2] = saxfactMC[2]*sa[2]; 
+      /* secondo set di parallelepipedi: 
+	 ne considero 4 che sono lungo x lunghi quanto il precedente ma che vanno a rimepire
+	 i "buchi" lungo y e z. Per ora li costruisco a mano "ad hoc" */
+      mbox[tt][1].nbox=nmbox;
+      mbox[tt][1].dr[0]=0;
+      mbox[tt][1].dr[1]=0;
+      mbox[tt][1].dr[2]=(saxfactMC[2]+0.15*0.5)*sa[2];
+      mbox[tt][1].sa[0]=0.9*sa[0];
+      mbox[tt][1].sa[1]=0.52*sa[1]; 
+      mbox[tt][1].sa[2]=0.15*0.5*sa[2];
+      mbox[tt][1].dr[0]=0;
+      mbox[tt][1].dr[1]=0;
+      mbox[tt][1].dr[2]=-(saxfactMC[2]+0.15*0.5)*sa[2];
+      mbox[tt][1].sa[0]=0.9*sa[0];
+      mbox[tt][1].sa[1]=0.52*sa[1]; 
+      mbox[tt][1].sa[2]=0.15*0.5*sa[2];
+      mbox[tt][1].dr[0]=0;
+      mbox[tt][1].dr[1]=-(saxfactMC[2]+0.15*0.5)*sa[2];
+      mbox[tt][1].dr[2]=0;
+      mbox[tt][1].sa[0]=0.9*sa[0];
+      mbox[tt][1].sa[1]=0.15*0.5*sa[2];
+      mbox[tt][1].sa[2]=0.52*sa[1]; 
+      mbox[tt][1].dr[0]=0;
+      mbox[tt][1].dr[1]=+(saxfactMC[2]+0.15*0.5)*sa[2];
+      mbox[tt][1].dr[2]=0;
+      mbox[tt][1].sa[0]=0.9*sa[0];
+      mbox[tt][1].sa[1]=0.15*0.5*sa[2];
+      mbox[tt][1].sa[2]=0.52*sa[1]; 
+    }
+}
+#endif
+
+#ifdef MC_SIMUL
 /* MONTE CARLO CODE START HERE */
 double rxold, ryold,rzold, Rold[3][3];
+void set_semiaxes_vb_mc(int ii, double fx, double fy, double fz)
+{
+  nebrTab[ii].axa = fx;//typesArr[typeOfPart[ii]].sax[0]+typesArr[typeOfPart[ii]].spots[0].sigma*0.5;
+  nebrTab[ii].axb = fy;//typesArr[typeOfPart[ii]].sax[1];
+  nebrTab[ii].axc = fz;//typesArr[typeOfPart[ii]].sax[2];
+}
+
 void store_coord(int ip)
 {
   int k1, k2;
@@ -372,10 +396,41 @@ int random_move(int ip)
       return 1;
     } 
 }
-extern void set_semiaxes_vb(double fx, double fy, double fz);
 extern double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3]);
 extern double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
+double overlap_using_multibox(int nmb, int i, int j, double shift[3])
+{
+  /* per ora ci sono due livelli di multibox quindi nmb=0 o 1,
+     a livello 0 c'è un solo multibox a livello 1 ce ne sono 4 */
+  int k1, k2, nmbox, typei, typej, nmboxi, nmboxj;
+  double d0;  
 
+  typei=typeOfPart[i];
+  typej=typeOfPart[j];
+  nmboxi=mbox[typei][nmb].nbox;  
+  nmboxj=mbox[typej][nmb].nbox;
+  for (k1=0; k1 < nmboxi; k1++)
+    {
+      for (k2=0; k2 < nmboxj; k2++)
+	{
+	  set_semiaxes_vb_mc(i, mbox[typei][k1].sa[0],
+			        mbox[typei][k1].sa[1],
+	    		        mbox[typei][k1].sa[2]);
+	  set_semiaxes_vb_mc(i, mbox[typej][k2].sa[0],
+			        mbox[typej][k2].sa[1],
+	    		        mbox[typej][k2].sa[2]);
+	  nebrTab[i].r[0] = rx[i] + mbox[typei][k1].dr[0];
+	  nebrTab[i].r[1] = ry[i] + mbox[typei][k1].dr[1];
+	  nebrTab[i].r[2] = rz[i] + mbox[typei][k1].dr[2];
+	  nebrTab[j].r[0] = rx[j] + mbox[typej][k2].dr[0];
+	  nebrTab[j].r[1] = ry[j] + mbox[typej][k2].dr[1];
+	  nebrTab[j].r[2] = rz[j] + mbox[typej][k2].dr[2];
+	  if ((d0=calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift)) < 0)
+	    return d0;
+	}
+    }
+  return 1.0;
+}
 double check_overlap(int i, int j, double shift[3], int *errchk)
 {
   int k1, k2;
@@ -397,21 +452,37 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
 	  nebrTab[j].R[k1][k2] = R[j][k1][k2];
 	}
     }
-  set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
+#if 1
+  set_semiaxes_vb_mc(i, 1.01*(typesArr[typeOfPart[i]].sax[0]),
+		  1.01*(typesArr[typeOfPart[i]].sax[1]), 
+		  1.01*(typesArr[typeOfPart[i]].sax[2]));
+  set_semiaxes_vb_mc(j, 1.01*(typesArr[typeOfPart[j]].sax[0]),
+		  1.01*(typesArr[typeOfPart[j]].sax[1]), 
+		  1.01*(typesArr[typeOfPart[j]].sax[2]));
+#else
+ set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
 		  1.01*(typesArr[typeOfPart[0]].sax[1]), 
 		  1.01*(typesArr[typeOfPart[0]].sax[2]));
-  
-  d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
+#endif 
+ d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
   if (d0 > 0.0)
     {
       return 1.0;
     }
 
+#if 1
+  set_semiaxes_vb_mc(i, saxfactMC[0]*typesArr[typeOfPart[i]].sax[0],
+		  saxfactMC[1]*typesArr[typeOfPart[i]].sax[1], 
+		  saxfactMC[2]*typesArr[typeOfPart[i]].sax[2]);
+  set_semiaxes_vb_mc(j, saxfactMC[0]*typesArr[typeOfPart[j]].sax[0],
+		  saxfactMC[1]*typesArr[typeOfPart[j]].sax[1], 
+		  saxfactMC[2]*typesArr[typeOfPart[j]].sax[2]);
+#else
   set_semiaxes_vb(saxfactMC[0]*typesArr[typeOfPart[0]].sax[0],
 		  saxfactMC[1]*typesArr[typeOfPart[0]].sax[1], 
 		  saxfactMC[2]*typesArr[typeOfPart[0]].sax[2]);
-
+#endif
   d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
   if (d0 < 0.0)
@@ -425,6 +496,13 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   *errchk = calcdist_retcheck;
   if (*errchk)
     {
+      d0=overlap_using_multibox(1, i, j, shift);
+      printf("QUI d0=%f\n", d0);
+      if (d0 < 0)
+	{
+	  *errchk=0;
+	  return d0;
+	}
       return -1.0;
     }
   //printf("QUI d=%f\n", d);
@@ -780,7 +858,7 @@ void update_bonds_MC(int ip)
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept;
-  int ran, movetype, i,ip, err, dorej, enn;
+  int ran, movetype, i,ip, err=0, dorej, enn;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   //printf("Doing MC step #%d\n", Oparams.curStep);
   if (cxini==-1)
@@ -798,8 +876,14 @@ void move(void)
 	ran = 0;
       if (ran==Oparams.parnum)
 	{
+	  //err=0;
 	  move_box(&err);
 	  movetype=3; /* 0 = tra; 1 = rot 2 = tra and rot; 3 = box */
+    	  if(err)
+    	    {
+	      printf("[move_box] NR failed...I rejected this trial move...\n");
+	      err=0;
+	    }
 	  volmoveMC++;
 	}
       else
@@ -814,6 +898,7 @@ void move(void)
 	  //printf("i=%d\n", i);
 	  totmovesMC++;
 	  /* overlapMC() aggiorna anche i bond */
+	  //err=0;
 	  dorej = overlapMC(ip, &err);
 	  if (!dorej)
 	    {
@@ -847,7 +932,8 @@ void move(void)
 	      //printf("restoring coords\n");
 	      if(err)
 		{
-		  printf("NR failed...I rejected this trial move...\n");
+		  printf("[random_move] NR failed...I rejected this trial move...\n");
+		  err=0;
 		}
 	      restore_coord(ip);
 	      //rebuildLinkedList();
