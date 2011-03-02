@@ -1,0 +1,29 @@
+parnum: 512 
+totStep: 10000000 
+time: 10 
+curStep: 1000 
+P: 1 
+T: 0.2 
+ghostsim: 0 
+rcut: 6.187435091 
+equilibrat: 0 
+Dt: 0.05 
+M: 5 
+tol: 0 
+ninters: 3 
+nintersIJ: 0 
+ntypes: 1 
+saveBonds: 0 
+maxbondsSaved: -1 
+@@@
+512 
+2 1 1
+16 2 2
+1 1 1 1 2 0
+2 0
+1.541665 0 0 1.21667
+-1.541665 0 0 1.21667
+0 0 0 0 1 0 0 100000
+0 0 0 1 1 0 0 100000
+0 1 0 1 1 0 0 100000
+@@@

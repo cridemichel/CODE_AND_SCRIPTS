@@ -30,7 +30,7 @@ void FCC(FILE *f)
   fprintf(stderr,"Nc: %d\n", Nc);
   /* Calculate the side of the unit cell */
   cc=cc1=cc2=0;
-  L[0]=L[1]=L[2]=Nc*30;
+  L[0]=L[1]=L[2]=Nc*5;
 
   for (ii=0; ii < 3; ii++)
     {
@@ -52,9 +52,9 @@ void FCC(FILE *f)
 	      rx[cc] = Cell[0] * ((double) ix);
 	      ry[cc] = Cell[1] * ((double) iy);
 	      rz[cc] = Cell[2] * ((double) iz);
-	      rx[cc] = rx[cc] - 0.5 * L[0] + ranf()*1E-7; 
-	      ry[cc] = ry[cc] - 0.5 * L[1] + ranf()*1E-7;
-	      rz[cc] = rz[cc] - 0.5 * L[2] + ranf()*1E-7;
+	      rx[cc] = rx[cc] - 0.5 * L[0] + ranf()*1E-7+0.1; 
+	      ry[cc] = ry[cc] - 0.5 * L[1] + ranf()*1E-7+0.1;
+	      rz[cc] = rz[cc] - 0.5 * L[2] + ranf()*1E-7+0.1;
 	      fprintf(f, "%f %f %f 1 0 0 0 1 0 0 0 1 0\n", rx[cc], ry[cc], rz[cc]);
 	    }
 	}
