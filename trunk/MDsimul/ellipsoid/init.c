@@ -1941,7 +1941,7 @@ void StartRun(void)
 {
   int j, k, n;
   
-#ifndef MD_STANDALONE
+#if !defined(MD_STANDALONE) || defined(MC_SIMUL)
   find_conciding_spots();
 #endif
 #ifdef MD_MULTIPLE_LL
@@ -3850,16 +3850,15 @@ void initsa(double sax[3], double p[3])
   strcpy(fn,"./sq.par");
   //printf("qui\n");
   Newsimul(fn);
-#if 1
-  Oparams.ntypes=1;
-  Oparams.parnum=2;
+#if 0
   typeOfPart = malloc(sizeof(int)*Oparams.parnum);
-  typeOfPart[0]=typeOfPart[1]=0;
   typesArr = malloc(sizeof(partType)*Oparams.ntypes);
   typeNP= malloc(sizeof(int));
-  typeNP[0]=2;
+  Oparams.ntypes=1;
+  Oparams.parnum=2;
 #endif
-
+  typeNP[0]=2;
+  typeOfPart[0]=typeOfPart[1]=0;
   for (k1=0; k1 < 3; k1++)
     {
       typesArr[0].sax[k1]=sax[k1];
@@ -3874,16 +3873,18 @@ void initsa(double sax[3], double p[3])
   Oparams.ninters=0;
   Oparams.nintersIJ=0;
   OprogStatus.maxbonds=0;
-  numbonds= (int *) malloc(Oparams.parnum*sizeof(int));
-  numbonds[0] = numbonds[1] = 0;
+  //numbonds= (int *) malloc(Oparams.parnum*sizeof(int));
   OprogStatus.useNNL=0;
   usrInitAft();
+  numbonds[0] = numbonds[1] = 0;
   OprogStatus.optnnl = 0;
-  assign_bond_mapping(0,1);
+  //assign_bond_mapping(0,1);
   nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
   for (ii= 0; ii < Oparams.parnum; ii++)
     nebrTab[ii].R = matrix(3,3);
-   AllocCoord(sizeof(double)*Oparams.parnum, ALLOC_LIST, NULL);
+   //AllocCoord(sizeof(double)*Oparams.parnum, ALLOC_LIST, NULL);
+   //for (ii=0; ii < Oparams.parnum; ii++)
+     //vx[ii]=vy[ii]=vz[ii]=wx[ii]=wy[ii]=wz[ii]=0.0;
   //build_parallelepipeds();
 }
 void initsa_(double sax[3], double p[3])
@@ -3968,7 +3969,7 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
 	  nebrTab[1].R[k1][k2] = R[1][k1][k2];
 	}
     }
-#if 0
+#if 1
   set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
 		  1.01*(typesArr[typeOfPart[0]].sax[1]), 
 		  1.01*(typesArr[typeOfPart[0]].sax[2]));
@@ -4464,6 +4465,9 @@ void calc_vbonding(void)
   exit(-1);
 }
 
+#endif
+#ifdef MC_SIMUL
+void build_parallelepipeds(void);
 #endif
 void usrInitAft(void)
 {
@@ -6052,6 +6056,9 @@ void usrInitAft(void)
     {
       saveFullStore("StoreInit");
     }
+#endif
+#ifdef MC_SIMUL
+  build_parallelepipeds();
 #endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 #if defined(MD_CALC_VBONDING) && !defined(MD_STANDALONE) && !defined(MC_SIMUL)
