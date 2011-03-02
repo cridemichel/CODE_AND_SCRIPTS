@@ -319,10 +319,14 @@ void calcV(void)
   else
     fprintf(mf, "%15G %.15G\n", Oparams.time, V/((double)Oparams.parnum));
 #else
-#ifdef MD_BIG_DT
-  fprintf(mf, "%15G %.15G\n", Oparams.time + OprogStatus.refTime, V);
+#ifdef MC_SIMUL
+  fprintf(mf, "%d %.15G\n", Oparams.curStep, V);
 #else
-  fprintf(mf, "%15G %.15G\n", Oparams.time, V);
+#ifdef MD_BIG_DT
+  fprintf(mf, "%.15G %.15G\n", Oparams.time + OprogStatus.refTime, V);
+#else
+  fprintf(mf, "%.15G %.15G\n", Oparams.time, V);
+#endif
 #endif
 #endif
  fclose(mf);

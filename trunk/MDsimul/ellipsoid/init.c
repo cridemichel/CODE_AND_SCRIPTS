@@ -1941,7 +1941,9 @@ void StartRun(void)
 {
   int j, k, n;
   
+#ifndef MD_STANDALONE
   find_conciding_spots();
+#endif
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
@@ -3807,6 +3809,14 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
  
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
+#if 0
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    Rt[k1][k2]=R[k2][k1];
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    R[k1][k2]=Rt[k1][k2];
+#endif
 
   //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
 }
@@ -3840,46 +3850,40 @@ void initsa(double sax[3], double p[3])
   strcpy(fn,"./sq.par");
   //printf("qui\n");
   Newsimul(fn);
-  usrInitAft();
-  OprogStatus.optnnl = 0;
-  assign_bond_mapping(0,1);
-  nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
-  for (ii= 0; ii < Oparams.parnum; ii++)
-    nebrTab[ii].R = matrix(3,3);
-#if 0
+#if 1
+  Oparams.ntypes=1;
   Oparams.parnum=2;
-
   typeOfPart = malloc(sizeof(int)*Oparams.parnum);
   typeOfPart[0]=typeOfPart[1]=0;
   typesArr = malloc(sizeof(partType)*Oparams.ntypes);
   typeNP= malloc(sizeof(int));
   typeNP[0]=2;
 #endif
+
   for (k1=0; k1 < 3; k1++)
     {
       typesArr[0].sax[k1]=sax[k1];
-      typesArr[1].sax[k1]=sax[k1];
       typesArr[0].n[k1]=p[k1];
-      typesArr[1].n[k1]=p[k1];
       typesArr[0].I[k1]=1.0;
-      typesArr[1].I[k1]=1.0;
     }
   typesArr[0].m=1.0;
-  typesArr[1].m=1.0;
   typesArr[0].ignoreCore=0;
-  typesArr[1].ignoreCore=0;
   typesArr[0].nspots=0;
-  typesArr[1].nspots=0;
   typesArr[0].nhardobjs=0;
-  typesArr[1].nhardobjs=0;
 
   Oparams.ninters=0;
   Oparams.nintersIJ=0;
   OprogStatus.maxbonds=0;
   numbonds= (int *) malloc(Oparams.parnum*sizeof(int));
   numbonds[0] = numbonds[1] = 0;
-
-  AllocCoord(sizeof(double)*Oparams.parnum, ALLOC_LIST, NULL);
+  OprogStatus.useNNL=0;
+  usrInitAft();
+  OprogStatus.optnnl = 0;
+  assign_bond_mapping(0,1);
+  nebrTab = malloc(sizeof(struct nebrTabStruct)*Oparams.parnum);
+  for (ii= 0; ii < Oparams.parnum; ii++)
+    nebrTab[ii].R = matrix(3,3);
+   AllocCoord(sizeof(double)*Oparams.parnum, ALLOC_LIST, NULL);
   //build_parallelepipeds();
 }
 void initsa_(double sax[3], double p[3])
@@ -3894,10 +3898,26 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
   int k1, k2;
   double nn, vecg[8], vecgNeg[8], shift[3], Rla[3][3], Rlb[3][3];
   double d, r1[3], r2[3], alpha, d0;
+#if 0
+  double rrA[3]={-10.40315,-4.69092,2.05752}, RRA[3][3]={{0.61016,0.14819,-0.77830},{0.58442,0.57910,0.56842},{0.53494,-0.80168,0.26674}};
+  double rrB[3]={-8.52262,-6.97041,0.46901}, RRB[3][3]={{0.36276,-0.93186,0.00669},{0.73496,0.29051,0.61272},{-0.57292,-0.21735,0.79027}};
+  for (k1=0; k1 < 3; k1++)
+    {
+      ra[k1] = rrA[k1];
+      rb[k1] = rrB[k1];
+    }
+#endif
+#ifdef MD_LXYZ
   L[0]=*Lx;
   L[1]=*Ly;
   L[2]=*Lz;
-
+  L2[0]=*Lx*0.5;
+  L2[1]=*Ly*0.5;
+  L2[2]=*Lz*0.5;
+#else
+  L = *Lx;
+  L2= *Lx*0.5;
+#endif
   //printf("vec1=%f %f %f vec2=%f %f %f\n", ra[0], ra[1], ra[2], rb[0], rb[1], rb[2]);
    /* set positions and orientations */
   rx[0] = nebrTab[0].r[0] = ra[0];
@@ -3910,6 +3930,7 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
   shift[1] = L[1]*rint((ry[0]-ry[1])/L[1]);
   shift[2] = L[2]*rint((rz[0]-rz[1])/L[2]);
 
+  //printf("u1=%f %f %f u2=%f %f %f\n", uxa[0], uxa[1], uxa[2], uxb[0], uxb[1], uxb[2]);
   nn = calc_norm(uxa);
   for (k1=0; k1 < 3; k1++)
     uxa[k1] /= nn;
@@ -3920,6 +3941,14 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
   type=-1;
   versor_to_R(uxa[0], uxa[1], uxa[2], Rla);
   versor_to_R(uxb[0], uxb[1], uxb[2], Rlb);
+#if 0
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	Rla[k1][k2] = RRA[k1][k2];
+	Rlb[k1][k2] = RRB[k1][k2];
+      }
+#endif
   for (k1=0; k1 < 3; k1++)
     {
       for (k2=0; k2 < 3; k2++)
@@ -3929,6 +3958,8 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
 	}
     }
 
+  //print_matrix(R[0],3);
+  //print_matrix(R[1],3);
   for (k1=0; k1 < 3; k1++)
     {
       for (k2=0; k2 < 3; k2++)
@@ -3937,7 +3968,7 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
 	  nebrTab[1].R[k1][k2] = R[1][k1][k2];
 	}
     }
-
+#if 0
   set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
 		  1.01*(typesArr[typeOfPart[0]].sax[1]), 
 		  1.01*(typesArr[typeOfPart[0]].sax[2]));
@@ -3957,6 +3988,7 @@ double calcdistsa(double ra[3], double rb[3], double uxa[3], double uxb[3], doub
     {
       return -1.0;
     }
+#endif
   OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
   calcdist_retcheck = 0;
   d=calcDistNeg(0.0, 0.0, 0, 1, shift, r1, r2, &alpha, vecg, 1);
@@ -4432,62 +4464,6 @@ void calc_vbonding(void)
   exit(-1);
 }
 
-#endif
-#if (defined(MC_SIMUL) || defined(MD_STANDALONE)) && 0
-double MC_funcSQ(double x, double z, double sa[3], double ee[3])
-{
-  return sa[1]*pow(1.0-(pow(x/a,ee[0])+pow(z/a,ee[2])),1/ee[1]);
-}
-struct mboxstr 
-{
-  double sax[3];
-  double dr[3];
-  int nbox;
-} **mbox;
-void build_parallelepipeds(void)
-{
-  double sa[3], dx;
-  int tt, kk, k1, k2;
-
-  mbox = malloc(sizeof(struct mboxstr*)*Oparams.ntypes);
-  nmbox = 5;
-  /* 2 multibox per tipo */
-  for (tt=0; tt < Oparams.ntypes; tt++)
-   mbox[tt] = malloc(sizeof(struct mboxstr)*2); 
-
-  for (tt=0; tt < Oparams.ntypes; tt++)
-    {
-      /* il primo set di parallelepipedi è costituito 
-	 da un solo parallelepipedo */
-      mbox[tt][0].nbox=1;
-      for (kk = 0; kk < 3; kk++)
-	{
-	  mbox[tt][0].dr[kk] = 0.0;
-	}
-
-      for (kk = 0; kk < 3; kk++)
-	sa[kk] = typesArr[tt].sax[kk]; 
-      mbox[tt][0].sa[0] = saxfactMC[0]*sa[0];
-      mbox[tt][0].sa[1] = saxfactMC[1]*sa[1];
-      mbox[tt][0].sa[2] = saxfactMC[2]*sa[2]; 
-      mbox[tt][1]=nmbox;
-      /* secondo set di parallelepipedi: approssimazione stepwise
-	 della forma della superquadrica (molto più accurata) */
-      lastx=x=0.0;
-      while (!fine)
-	{
-	  dx=sa[0]/nmboxmax;
-	  for (ix=0; ix < 1000; ix++)
-	    {
-	      if (fabs(MC_funcSQ(x)-MC_funcSQ(lastx)) > OprogStatus.MC_deltambox)
-		{
-
-		}
-	      x+=dx;
-	    }
-	}
-    }
-}
 #endif
 void usrInitAft(void)
 {
