@@ -197,64 +197,40 @@ struct mboxstr
 {
   double sa[3];
   double dr[3];
-  int nbox;
 } **mbox;
-const int nmboxMC=4;
+const int nmboxMC=2;
 
 void build_parallelepipeds(void)
 {
   double sa[3], dx;
-  int tt, kk, k1, k2, nmbox;
+  int tt, kk, k1, k2;
 
   mbox = malloc(sizeof(struct mboxstr*)*Oparams.ntypes);
-  nmbox = nmboxMC;
   /* 2 multibox per tipo */
   for (tt=0; tt < Oparams.ntypes; tt++)
-   mbox[tt] = malloc(sizeof(struct mboxstr)*2); 
-
+    mbox[tt] = malloc(sizeof(struct mboxstr)*nmboxMC); 
   for (tt=0; tt < Oparams.ntypes; tt++)
     {
-      /* il primo set di parallelepipedi è costituito 
-	 da un solo parallelepipedo */
-      mbox[tt][0].nbox=1;
-      for (kk = 0; kk < 3; kk++)
-	{
-	  mbox[tt][0].dr[kk] = 0.0;
-	}
-
       for (kk = 0; kk < 3; kk++)
 	sa[kk] = typesArr[tt].sax[kk]; 
-      mbox[tt][0].sa[0] = saxfactMC[0]*sa[0];
-      mbox[tt][0].sa[1] = saxfactMC[1]*sa[1];
-      mbox[tt][0].sa[2] = saxfactMC[2]*sa[2]; 
       /* secondo set di parallelepipedi: 
-	 ne considero 4 che sono lungo x lunghi quanto il precedente ma che vanno a rimepire
+	 ne considero 2 che sono lungo x lunghi quanto il precedente ma che vanno a rimepire
 	 i "buchi" lungo y e z. Per ora li costruisco a mano "ad hoc" */
-      mbox[tt][1].nbox=nmbox;
+      mbox[tt][0].dr[0]=0.0;
+      mbox[tt][0].dr[1]=0.0;
+      //mbox[tt][1].dr[2]=(saxfactMC[2]+0.1*0.5)*sa[2];
+      mbox[tt][0].dr[2]=0.0;
+      mbox[tt][0].sa[0]=saxfactMC[0]*sa[0];
+      mbox[tt][0].sa[1]=0.48*sa[1]; 
+      mbox[tt][0].sa[2]=0.83*sa[2];
+
       mbox[tt][1].dr[0]=0;
       mbox[tt][1].dr[1]=0;
-      mbox[tt][1].dr[2]=(saxfactMC[2]+0.15*0.5)*sa[2];
-      mbox[tt][1].sa[0]=0.9*sa[0];
-      mbox[tt][1].sa[1]=0.52*sa[1]; 
-      mbox[tt][1].sa[2]=0.15*0.5*sa[2];
-      mbox[tt][1].dr[0]=0;
-      mbox[tt][1].dr[1]=0;
-      mbox[tt][1].dr[2]=-(saxfactMC[2]+0.15*0.5)*sa[2];
-      mbox[tt][1].sa[0]=0.9*sa[0];
-      mbox[tt][1].sa[1]=0.52*sa[1]; 
-      mbox[tt][1].sa[2]=0.15*0.5*sa[2];
-      mbox[tt][1].dr[0]=0;
-      mbox[tt][1].dr[1]=-(saxfactMC[2]+0.15*0.5)*sa[2];
-      mbox[tt][1].dr[2]=0;
-      mbox[tt][1].sa[0]=0.9*sa[0];
-      mbox[tt][1].sa[1]=0.15*0.5*sa[2];
-      mbox[tt][1].sa[2]=0.52*sa[1]; 
-      mbox[tt][1].dr[0]=0;
-      mbox[tt][1].dr[1]=+(saxfactMC[2]+0.15*0.5)*sa[2];
-      mbox[tt][1].dr[2]=0;
-      mbox[tt][1].sa[0]=0.9*sa[0];
-      mbox[tt][1].sa[1]=0.15*0.5*sa[2];
-      mbox[tt][1].sa[2]=0.52*sa[1]; 
+      //mbox[tt][1].dr[2]=-(saxfactMC[2]+0.1*0.5)*sa[2];
+      mbox[tt][1].dr[2]=0.0;
+      mbox[tt][1].sa[0]=saxfactMC[0]*sa[0];
+      mbox[tt][1].sa[1]=0.83*sa[1]; 
+      mbox[tt][1].sa[2]=0.48*sa[2];
     }
 }
 #endif
@@ -398,7 +374,7 @@ int random_move(int ip)
 }
 extern double calcDistNegNNLoverlapPlane(double t, double t1, int i, int j, double shift[3]);
 extern double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha, double *vecgsup, int calcguess);
-double overlap_using_multibox(int nmb, int i, int j, double shift[3])
+double overlap_using_multibox(int i, int j, double shift[3])
 {
   /* per ora ci sono due livelli di multibox quindi nmb=0 o 1,
      a livello 0 c'è un solo multibox a livello 1 ce ne sono 4 */
@@ -407,16 +383,16 @@ double overlap_using_multibox(int nmb, int i, int j, double shift[3])
 
   typei=typeOfPart[i];
   typej=typeOfPart[j];
-  nmboxi=mbox[typei][nmb].nbox;  
-  nmboxj=mbox[typej][nmb].nbox;
+  nmboxi=nmboxMC;
+  nmboxj=nmboxMC;
   for (k1=0; k1 < nmboxi; k1++)
     {
-      for (k2=0; k2 < nmboxj; k2++)
+      for (k2=k1; k2 < nmboxj; k2++)
 	{
 	  set_semiaxes_vb_mc(i, mbox[typei][k1].sa[0],
 			        mbox[typei][k1].sa[1],
 	    		        mbox[typei][k1].sa[2]);
-	  set_semiaxes_vb_mc(i, mbox[typej][k2].sa[0],
+	  set_semiaxes_vb_mc(j, mbox[typej][k2].sa[0],
 			        mbox[typej][k2].sa[1],
 	    		        mbox[typej][k2].sa[2]);
 	  nebrTab[i].r[0] = rx[i] + mbox[typei][k1].dr[0];
@@ -489,6 +465,14 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
     {
       return -1.0;
     }
+
+#if 0
+  d0=overlap_using_multibox(i, j, shift);
+  if (d0 < 0)
+    {
+      return d0;
+    }
+#endif
   OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
   calcdist_retcheck = 0;
   
@@ -496,8 +480,8 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   *errchk = calcdist_retcheck;
   if (*errchk)
     {
-      d0=overlap_using_multibox(1, i, j, shift);
-      printf("QUI d0=%f\n", d0);
+      d0=overlap_using_multibox(i, j, shift);
+      printf("I used multibox routing and d0=%f\n", d0);
       if (d0 < 0)
 	{
 	  *errchk=0;
