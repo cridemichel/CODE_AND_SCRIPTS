@@ -2054,8 +2054,10 @@ void StartRun(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
+#ifndef MC_SIMUL
   if (OprogStatus.useNNL)
     rebuildNNL();
+#endif
 #ifdef EDHE_FLEX
   /* N.B. 28/05/2010: notare che gli spot vanno cercati 
      dopo l'inizializzazione delle NNL e delle LL 
@@ -2075,7 +2077,7 @@ void StartRun(void)
 #elif defined(MD_PATCHY_HE)
   find_bonds();
 #endif
-
+#ifndef MC_SIMUL
   for (n = 0; n < Oparams.parnum; n++)
     {
       if (OprogStatus.useNNL)
@@ -2095,7 +2097,7 @@ void StartRun(void)
 	}
     }
 #endif
-
+#endif
 }
 #ifdef EDHE_FLEX
 int get_num_pbonds(int i, int j)
@@ -3014,6 +3016,9 @@ void find_bonds_flex(void)
 	  }
     } 
 #endif
+#ifdef MC_SIMUL
+  find_bonds_flex_all();
+#else
   if (OprogStatus.useNNL)
     {
       find_bonds_flex_NNL();
@@ -3022,6 +3027,7 @@ void find_bonds_flex(void)
     {
       find_bonds_flex_all();
     }
+#endif
 }
 void find_bonds(void)
 {
@@ -5912,9 +5918,6 @@ void usrInitAft(void)
       upd_refsysM(i);
     }
 #endif
-#ifdef MD_PATCHY_HE
-  printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
-#endif
   //exit(-1);
 #ifdef MD_HE_PARALL
   slave_task();
@@ -6057,6 +6060,10 @@ void usrInitAft(void)
       saveFullStore("StoreInit");
     }
 #endif
+#ifdef MD_PATCHY_HE
+  printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
+#endif
+ 
 #ifdef MC_SIMUL
   build_parallelepipeds();
 #endif
@@ -6416,6 +6423,7 @@ void writeAllCor(FILE* fs, int saveAll)
     }
   if (mgl_mode==0)
     {
+#ifndef MC_SIMUL
       for (i = 0; i < Oparams.parnum; i++)
 	{
 #ifdef EDHE_FLEX
@@ -6431,6 +6439,7 @@ void writeAllCor(FILE* fs, int saveAll)
 	  fprintf(fs, tipodat, vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
 #endif
 	}
+#endif
 #ifdef MD_POLYDISP
       for (i = 0; i < Oparams.parnum; i++)
 	{
@@ -6748,7 +6757,7 @@ char line[4096];
 
 void readAllCor(FILE* fs)
 {
-  int i;
+  int i, pos;
 #ifdef EDHE_FLEX
 #ifdef MD_GHOST_IGG
   int size;
@@ -7005,38 +7014,64 @@ void readAllCor(FILE* fs)
 #endif
       //printf("%d r=(%f,%f,%f) type=%d\n", i, rx[i], ry[i], rz[i], typeOfPart[i]);
     }
-  
-  for (i = 0; i < Oparams.parnum; i++)
+#ifndef MC_SIMUL 
+  pos=ftell(fs);
+  for (i=0; !feof(fs); i++)
     {
-      if (fscanf(fs, "%lf %lf %lf ", &vx[i], &vy[i], &vz[i]) < 3)
-	{
-	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
-	  exit(-1);
-	}
-#ifdef MD_ASYM_ITENS
-      if (fscanf(fs, "%lf %lf %lf\n", &Mx[i], &My[i], &Mz[i]) < 3)
-	{
-	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
-	  exit(-1);
-	}
-#else
-      if (fscanf(fs, "%lf %lf %lf\n", &wx[i], &wy[i], &wz[i]) < 3)
-	{
-	  mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
-	  exit(-1);
-	}
-#endif
-      //printf("%d v=(%f,%f,%f)\n", i, vx[i], vy[i], vz[i]);
+      fscanf(fs, "%[^\n] ", line);
     }
+  //printf("i=%d\n", i);
+  fseek(fs,pos,SEEK_SET);
+  if (i==1)
+    {
+      /* assign velocity from a gaussian */
+      comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+    }
+  else
+    {
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  if (fscanf(fs, "%lf %lf %lf ", &vx[i], &vy[i], &vz[i]) < 3)
+	    {
+	      mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
+	      exit(-1);
+	    }
+#ifdef MD_ASYM_ITENS
+	  if (fscanf(fs, "%lf %lf %lf\n", &Mx[i], &My[i], &Mz[i]) < 3)
+	    {
+	      mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
+	      exit(-1);
+	    }
+#else
+	  if (fscanf(fs, "%lf %lf %lf\n", &wx[i], &wy[i], &wz[i]) < 3)
+	    {
+	      mdPrintf(STD, "ERROR[vel] reading ascii file\n", NULL);
+	      exit(-1);
+	    }
+#endif
+	  //printf("%d v=(%f,%f,%f)\n", i, vx[i], vy[i], vz[i]);
+	}
+    }
+#endif
 #ifdef MD_POLYDISP
   for (i = 0; i < Oparams.parnum; i++)
     {
       fscanf(fs, "%lf %lf %lf\n", &axaP[i], &axbP[i], &axcP[i]);
     }
 #endif
+#ifdef MC_SIMUL
+  pos=ftell(fs);
+  for (i=0; i < Oparams.parnum && !feof(fs); i++)
+    {
+      fscanf(fs, "%[^\n] ", line);
+    }
+  //printf("i=%d\n", i);
+  if (i==1)
+    fseek(fs,pos,SEEK_SET);
+#endif
 #ifdef MD_LXYZ
   fscanf(fs, "%[^\n]", line);
-
+  printf("line=%s\n", line);
   if (sscanf(line, "%lf %lf %lf\n", &L[0], &L[1], &L[2]) < 3)
     {
       if (sscanf(line, "%lf\n",  &L[0]) == 1)
