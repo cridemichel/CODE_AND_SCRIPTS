@@ -270,9 +270,9 @@ extern void orient(double *ox, double *oy, double *oz);
 long long int rotmoveMC=0, tramoveMC=0, totmovesMC=0, trarejMC=0, rotrejMC=0, totrejMC=0, volrejMC=0, volmoveMC=0;
 void tra_move(int ip)
 {
-  rx[ip]+=OprogStatus.deltaMC*ranf(); 
-  ry[ip]+=OprogStatus.deltaMC*ranf();
-  rz[ip]+=OprogStatus.deltaMC*ranf();
+  rx[ip]+=OprogStatus.deltaMC*(ranf()-0.5); 
+  ry[ip]+=OprogStatus.deltaMC*(ranf()-0.5);
+  rz[ip]+=OprogStatus.deltaMC*(ranf()-0.5);
   tramoveMC++; 
 }
 extern double calc_norm(double *v);
@@ -315,7 +315,7 @@ void rot_move(int ip)
   orient(&ox,&oy,&oz);
   remove_parall(ip, &ox, &oy, &oz);
   /* pick a random rotation angle */
-  theta= OprogStatus.dthetaMC*ranf();
+  theta= OprogStatus.dthetaMC*(ranf()-0.5);
   thetaSq=Sqr(theta);
   sinw = sin(theta);
   cosw = (1.0 - cos(theta));
