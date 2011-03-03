@@ -481,7 +481,7 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   if (*errchk)
     {
       d0=overlap_using_multibox(i, j, shift);
-      printf("I used multibox routing and d0=%f\n", d0);
+      printf("I used multibox routine and d0=%f\n", d0);
       if (d0 < 0)
 	{
 	  *errchk=0;
