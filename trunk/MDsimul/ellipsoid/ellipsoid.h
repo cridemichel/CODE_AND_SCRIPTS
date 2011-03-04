@@ -854,6 +854,7 @@ struct progStatus
 #endif
   /* ======================================================================= */
 #ifdef MC_SIMUL
+  double lastNNLrebuildMC;
   double targetAccept;
   double targetAcceptVol;
   double dthetaMC;
@@ -1256,6 +1257,7 @@ struct pascii opro_ascii[] =
   {"nativeConf",           &OS(nativeConf),                  1, NAME_LENGTH, "%s"},
 #endif
 #ifdef MC_SIMUL
+  {"lastNNLrebuildMC", &OS(lastNNLrebuildMC),                1, 1, "%d"},
   {"targetAccept", &OS(targetAccept),                        1, 1, "%.15G"},
   {"targetAcceptvol", &OS(targetAcceptVol),                  1, 1, "%.15G"},
   {"ensembleMC",   &OS(ensembleMC),                        1,  1, "%d"},
