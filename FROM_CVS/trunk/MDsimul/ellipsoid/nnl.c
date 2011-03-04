@@ -354,6 +354,7 @@ void rebuildNNL(void)
 {
   int i;
   double nltime=timbig;
+#ifndef MC_SIMUL
   UpdateSystem();
   if (OprogStatus.useNNL==2||OprogStatus.useNNL==4)
     printf("Rebuilding NNL t=%.15G numcoll=%lld\n", Oparams.time, numcoll);
@@ -364,6 +365,10 @@ void rebuildNNL(void)
       if (i==0 || nebrTab[i].nexttime < nltime)
 	nltime = nebrTab[i].nexttime;
     }
+#else
+  if (OprogStatus.useNNL==2||OprogStatus.useNNL==4)
+    printf("Rebuilding NNL step=%d\n", Oparams.curStep);
+#endif
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
@@ -400,10 +405,12 @@ void rebuildNNL(void)
     update_ghost_status();
 #endif
  
+#ifndef MC_SIMUL
   /* next complete update */
   nextNNLrebuild = nltime;
   if (OprogStatus.useNNL==2||OprogStatus.useNNL==4)
     printf("nextNNLrebuild=%.15G\n", nextNNLrebuild);
+#endif
   //ScheduleEvent(-1, ATOM_LIMIT + 11, nltime); 
 }
 #ifdef MD_SUPERELLIPSOID

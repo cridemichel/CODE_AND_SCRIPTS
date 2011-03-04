@@ -4474,6 +4474,8 @@ void calc_vbonding(void)
 #endif
 #ifdef MC_SIMUL
 void build_parallelepipeds(void);
+double *max_step_MC;
+double *overestimate_of_displ;
 #endif
 void usrInitAft(void)
 {
@@ -6065,6 +6067,17 @@ void usrInitAft(void)
 #endif
  
 #ifdef MC_SIMUL
+  if (OprogStatus.useNNL)
+    {
+      max_step_MC = malloc(sizeof(double)*Oparams.parnum);
+      overestimate_of_displ =  malloc(sizeof(double)*Oparams.parnum);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+  	  max_step_MC[i] = calc_maxstep_MC(i);
+	  overestimate_of_displ[i] = 0.0;
+	}
+      OprogStatus.lastNNLrebuildMC = Oparams.curStep;
+    }
   build_parallelepipeds();
 #endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/

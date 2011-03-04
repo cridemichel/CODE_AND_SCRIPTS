@@ -193,6 +193,7 @@ extern void R2u(void);
 extern void store_bump(int i, int j);
 #endif
 #if (defined(MC_SIMUL) || defined(MD_STANDALONE)) && 1
+double scalProd(double *A, double *B);
 struct mboxstr 
 {
   double sa[3];
@@ -236,6 +237,187 @@ void build_parallelepipeds(void)
 #endif
 
 #ifdef MC_SIMUL
+extern double *max_step_MC;
+double calc_maxstep_MC(int i)
+{
+  double factori;
+  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
+  return OprogStatus.deltaMC*0.5  + OprogStatus.dthetaMC*0.5*factori;
+}
+double calcDistBox(int i, int j, double rbi[3], double rbj[3], double saxi[3], double saxj[3], double shift[3])
+{
+  double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
+  double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
+  int k, k1, k2, existsParallelPair = 0;
+  /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
+   * maniera molto efficiente */ 
+  for (k=0; k < 3; k++)
+    {
+      rA[k] = rbi[k];
+      rB[k] = rbj[k]+shift[k];
+      EA[k] = saxi[k];
+      EB[k] = saxj[k];
+    }
+#if 0
+  /* riportare qua anche l'analogo routin per sfere se servirà */
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j])
+    return calcDistNegNNLoverlapPlaneHS(i, j, rA, rB);
+#endif
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  AA[k1][k2] = R[i][k1][k2];
+	  BB[k1][k2] = R[j][k1][k2];
+	}
+    	DD[k1] = rA[k1] - rB[k1];
+    }
+  /* axis C0+s*A0 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[0][k1] =  scalProd(AA[0], BB[k1]);
+      fabscij[0][k1] = fabs(cij[0][k1]);
+      if ( fabscij[0][k1] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[0] = scalProd(AA[0],DD);
+  RR = fabs(AD[0]);
+  R1 = EB[0]*fabscij[0][0]+EB[1]*fabscij[0][1]+EB[2]*fabscij[0][2];
+  R01 = EA[0] + R1;
+  if ( RR > R01 )
+    return 1.0; /* non si intersecano */
+  /* axis C0+s*A1 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[1][k1] = scalProd(AA[1],BB[k1]);
+      fabscij[1][k1] = fabs(cij[1][k1]);
+      if ( fabscij[1][k1] == 1.0  )
+	existsParallelPair = 1;
+    }
+  AD[1] = scalProd(AA[1],DD);
+  RR = fabs(AD[1]);
+  R1 = EB[0]*fabscij[1][0]+EB[1]*fabscij[1][1]+EB[2]*fabscij[1][2];
+  R01 = EA[1] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*A2 */
+  for (k1= 0; k1 < 3; k1++)
+    {
+      cij[2][k1] = scalProd(AA[2], BB[k1]);
+      fabscij[2][k1] = fabs(cij[2][k1]);
+      if ( fabscij[2][k1] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[2] = scalProd(AA[2],DD);
+  RR = fabs(AD[2]);
+  R1 = EB[0]*fabscij[2][0]+EB[1]*fabscij[2][1]+EB[2]*fabscij[2][2];
+  R01 = EA[2] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*B0 */
+  RR = fabs(scalProd(BB[0],DD));
+  R0 = EA[0]*fabscij[0][0]+EA[1]*fabscij[1][0]+EA[2]*fabscij[2][0];
+  R01 = R0 + EB[0];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*B1 */
+  RR = fabs(scalProd(BB[1],DD));
+  R0 = EA[0]*fabscij[0][1]+EA[1]*fabscij[1][1]+EA[2]*fabscij[2][1];
+  R01 = R0 + EB[1];
+  if ( RR > R01 )
+    return 1.0;
+  
+  /* axis C0+s*B2 */
+  RR = fabs(scalProd(BB[2],DD));
+  R0 = EA[0]*fabscij[0][2]+EA[1]*fabscij[1][2]+EA[2]*fabscij[2][2];
+  R01 = R0 + EB[2];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* At least one pair of box axes was parallel, therefore the separation is
+   * effectively in 2D, i.e. checking the "edge" normals is sufficient for
+   * the separation of the boxes. 
+   */
+  if ( existsParallelPair )
+    return -1.0;
+
+  /* axis C0+s*A0xB0 */
+  RR = fabs(AD[2]*cij[1][0]-AD[1]*cij[2][0]);
+  R0 = EA[1]*fabscij[2][0] + EA[2]*fabscij[1][0];
+  R1 = EB[1]*fabscij[0][2] + EB[2]*fabscij[0][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A0xB1 */
+  RR = fabs(AD[2]*cij[1][1]-AD[1]*cij[2][1]);
+  R0 = EA[1]*fabscij[2][1] + EA[2]*fabscij[1][1];
+  R1 = EB[0]*fabscij[0][2] + EB[2]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A0xB2 */
+  RR = fabs(AD[2]*cij[1][2]-AD[1]*cij[2][2]);
+  R0 = EA[1]*fabscij[2][2] + EA[2]*fabscij[1][2];
+  R1 = EB[0]*fabscij[0][1] + EB[1]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB0 */
+  RR = fabs(AD[0]*cij[2][0]-AD[2]*cij[0][0]);
+  R0 = EA[0]*fabscij[2][0] + EA[2]*fabscij[0][0];
+  R1 = EB[1]*fabscij[1][2] + EB[2]*fabscij[1][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB1 */
+  RR = fabs(AD[0]*cij[2][1]-AD[2]*cij[0][1]);
+  R0 = EA[0]*fabscij[2][1] + EA[2]*fabscij[0][1];
+  R1 = EB[0]*fabscij[1][2] + EB[2]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB2 */
+  RR = fabs(AD[0]*cij[2][2]-AD[2]*cij[0][2]);
+  R0 = EA[0]*fabscij[2][2] + EA[2]*fabscij[0][2];
+  R1 = EB[0]*fabscij[1][1] + EB[1]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB0 */
+  RR = fabs(AD[1]*cij[0][0]-AD[0]*cij[1][0]);
+  R0 = EA[0]*fabscij[1][0] + EA[1]*fabscij[0][0];
+  R1 = EB[1]*fabscij[2][2] + EB[2]*fabscij[2][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB1 */
+  RR = fabs(AD[1]*cij[0][1]-AD[0]*cij[1][1]);
+  R0 = EA[0]*fabscij[1][1] + EA[1]*fabscij[0][1];
+  R1 = EB[0]*fabscij[2][2] + EB[2]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB2 */
+  RR = fabs(AD[1]*cij[0][2]-AD[0]*cij[1][2]);
+  R0 = EA[0]*fabscij[1][2] + EA[1]*fabscij[0][2];
+  R1 = EB[0]*fabscij[2][1] + EB[1]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  return -1.0;
+}
+
 /* MONTE CARLO CODE START HERE */
 double rxold, ryold,rzold, Rold[3][3];
 void set_semiaxes_vb_mc(int ii, double fx, double fy, double fz)
@@ -379,29 +561,39 @@ double overlap_using_multibox(int i, int j, double shift[3])
   /* per ora ci sono due livelli di multibox quindi nmb=0 o 1,
      a livello 0 c'è un solo multibox a livello 1 ce ne sono 4 */
   int k1, k2, nmbox, typei, typej, nmboxi, nmboxj;
+  double rA[3], rB[3];
   double d0;  
 
   typei=typeOfPart[i];
   typej=typeOfPart[j];
   nmboxi=nmboxMC;
   nmboxj=nmboxMC;
+  /* N.B. non sommo il  mbox[typei][k1].dr[0] poichè so che è zero, se così
+     non fosse bisogna ricordarsi di spostare tali assegnazioni nel doppio loop sotto e 
+     che il displacemente dr è definito nel sistema
+     di riferimento del corpo rigido quindi va trasformato nel laboratorio moltiplicandolo per la
+     trasposta di R[i][...][...] (usare la funzione body2labR(...)) */
+	
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+  rB[0] = rx[j];
+  rB[1] = ry[j];
+  rB[2] = rz[j];
+
   for (k1=0; k1 < nmboxi; k1++)
     {
       for (k2=k1; k2 < nmboxj; k2++)
 	{
+#if 0
 	  set_semiaxes_vb_mc(i, mbox[typei][k1].sa[0],
 			        mbox[typei][k1].sa[1],
 	    		        mbox[typei][k1].sa[2]);
 	  set_semiaxes_vb_mc(j, mbox[typej][k2].sa[0],
 			        mbox[typej][k2].sa[1],
 	    		        mbox[typej][k2].sa[2]);
-	  nebrTab[i].r[0] = rx[i] + mbox[typei][k1].dr[0];
-	  nebrTab[i].r[1] = ry[i] + mbox[typei][k1].dr[1];
-	  nebrTab[i].r[2] = rz[i] + mbox[typei][k1].dr[2];
-	  nebrTab[j].r[0] = rx[j] + mbox[typej][k2].dr[0];
-	  nebrTab[j].r[1] = ry[j] + mbox[typej][k2].dr[1];
-	  nebrTab[j].r[2] = rz[j] + mbox[typej][k2].dr[2];
-	  if ((d0=calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift)) < 0)
+#endif	  
+	  if ((d0=calcDistBox(i, j, rA, rB, mbox[typei][k1].sa, mbox[typej][k2].sa, shift))<0)
 	    return d0;
 	}
     }
@@ -409,11 +601,11 @@ double overlap_using_multibox(int i, int j, double shift[3])
 }
 double check_overlap(int i, int j, double shift[3], int *errchk)
 {
-  int k1, k2;
-  double vecg[8], vecgNeg[8];
+  int k, k1, k2;
+  double vecg[8], vecgNeg[8], rA[3], rB[3], saxi[3], saxj[3];
   double d, d0, r1[3], r2[3], alpha; 
   OprogStatus.optnnl = 0;
-
+#if 0
   nebrTab[i].r[0] = rx[i];
   nebrTab[i].r[1] = ry[i];
   nebrTab[i].r[2] = rz[i];
@@ -428,6 +620,8 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
 	  nebrTab[j].R[k1][k2] = R[j][k1][k2];
 	}
     }
+#endif
+#if 0
 #if 1
   set_semiaxes_vb_mc(i, 1.01*(typesArr[typeOfPart[i]].sax[0]),
 		  1.01*(typesArr[typeOfPart[i]].sax[1]), 
@@ -439,14 +633,27 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
  set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
 		  1.01*(typesArr[typeOfPart[0]].sax[1]), 
 		  1.01*(typesArr[typeOfPart[0]].sax[2]));
+#endif
 #endif 
- d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
+ for (k=0; k < 3; k++)
+   {
+     saxi[k] = 1.01* typesArr[typeOfPart[i]].sax[k];
+     saxj[k] = 1.01* typesArr[typeOfPart[j]].sax[k];
+   }  
+ rA[0] = rx[i];
+ rA[1] = ry[i];
+ rA[2] = rz[i];
+ rB[0] = rx[j];
+ rB[1] = ry[j];
+ rB[2] = rz[j];
+ d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
+ //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
   if (d0 > 0.0)
     {
       return 1.0;
     }
-
+#if 0
 #if 1
   set_semiaxes_vb_mc(i, saxfactMC[0]*typesArr[typeOfPart[i]].sax[0],
 		  saxfactMC[1]*typesArr[typeOfPart[i]].sax[1], 
@@ -459,7 +666,14 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
 		  saxfactMC[1]*typesArr[typeOfPart[0]].sax[1], 
 		  saxfactMC[2]*typesArr[typeOfPart[0]].sax[2]);
 #endif
-  d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
+#endif
+  for (k=0; k < 3; k++)
+    {
+      saxi[k] = saxfactMC[k]*typesArr[typeOfPart[i]].sax[k];
+      saxj[k] = saxfactMC[k]*typesArr[typeOfPart[j]].sax[k];
+    }  
+ d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
+ //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
   if (d0 < 0.0)
     {
@@ -838,13 +1052,29 @@ void update_bonds_MC(int ip)
   numbonds[ip] = 0;
   find_bonds_one(ip);
 }
-
+double get_max_step_MC(void)
+{
+  int i;
+  double max=0.0;
+  for (i=0; i<Oparams.parnum; i++)
+    {
+      if (i==0 || max_step_MC[i] > max)
+	max = max_step_MC[i];
+    }
+  return max;
+}
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept;
   int ran, movetype, i,ip, err=0, dorej, enn;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   //printf("Doing MC step #%d\n", Oparams.curStep);
+  
+  if (OprogStatus.useNNL && (1+Oparams.curStep-OprogStatus.lastNNLrebuildMC)*get_max_step_MC() > OprogStatus.rNebrShell)
+    {
+      rebuildNNL();
+      OprogStatus.lastNNLrebuildMC = Oparams.curStep;
+    }
   if (cxini==-1)
     {
       cxini=cellsx;

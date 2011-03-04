@@ -3678,6 +3678,9 @@ void UpdateAtom(int i)
 void UpdateSystem(void)
 {
   int i;
+#ifdef MC_SIMUL
+  return;
+#endif
   /* porta tutte le particelle allo stesso tempo */
  for (i=0; i < Oparams.parnum; i++)
     {
