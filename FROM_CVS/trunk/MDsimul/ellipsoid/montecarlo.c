@@ -739,6 +739,7 @@ int overlapMC_NNL(int na, int *err)
     }
 #endif
   nb=-1;
+  //printf("num par=%d\n", nebrTab[na].len);
   for (i=0; i < nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
@@ -1171,7 +1172,7 @@ double get_max_displ_MC(void)
 	}
       else
 	ms = max_step_MC[i];
-      //printf("i=%d ms=%.15G ov=%.15G\n", i, ms, overestimate_of_displ[i]);
+      //printf("maxax=%f i=%d ms=%.15G ov=%.15G\n", maxax[i], i, ms, overestimate_of_displ[i]);
       displ = overestimate_of_displ[i]+ms;
       if (i==0 || displ > max)
 	{
@@ -1184,7 +1185,7 @@ double calc_maxstep_MC(int i)
 {
   double vo, d1, d2, d3, d4, nn;
   d1 = OprogStatus.deltaMC;
-  d2 = OprogStatus.dthetaMC*0.5001*maxax[i];
+  d2 = OprogStatus.dthetaMC*0.25001*maxax[i];
   if (OprogStatus.ensembleMC==0)
     return (d1>d2)?d1:d2;
   else 
@@ -1235,7 +1236,7 @@ void move(void)
   
   if (OprogStatus.useNNL && do_nnl_rebuild())
     {
-      printf("Step #%d Rebuilding NNL\n", Oparams.curStep);
+      //printf("Step #%d Rebuilding NNL\n", Oparams.curStep);
       for (i=0; i < Oparams.parnum; i++)
 	overestimate_of_displ[i]=0.0;
       rebuildNNL();
