@@ -366,6 +366,12 @@ void rebuildNNL(void)
 	nltime = nebrTab[i].nexttime;
     }
 #else
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      //printf("Updating i=%d\n", i);
+      nextNNLupdate(i);
+    }
+
   if (OprogStatus.useNNL==2||OprogStatus.useNNL==4)
     printf("Rebuilding NNL step=%d\n", Oparams.curStep);
 #endif
@@ -6208,6 +6214,9 @@ void nextNNLupdate(int na)
 #endif
 #endif
   MD_DEBUG31(printf("BUILDING NNL FOR i=%d\n",na));
+#ifdef MC_SIMUL
+  return;
+#endif
 #ifdef MD_NNLPLANES
 #ifdef MD_PATCHY_HE
 #ifdef EDHE_FLEX
