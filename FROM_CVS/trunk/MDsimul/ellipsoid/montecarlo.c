@@ -238,12 +238,7 @@ void build_parallelepipeds(void)
 
 #ifdef MC_SIMUL
 extern double *max_step_MC;
-double calc_maxstep_MC(int i)
-{
-  double factori;
-  factori = 0.5*maxax[i]+OprogStatus.epsd;//sqrt(Sqr(axa[i])+Sqr(axb[i])+Sqr(axc[i]));
-  return OprogStatus.deltaMC*0.5  + OprogStatus.dthetaMC*0.5*factori;
-}
+extern double *overestimate_of_displ;
 double calcDistBox(int i, int j, double rbi[3], double rbj[3], double saxi[3], double saxj[3], double shift[3])
 {
   double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
@@ -452,9 +447,17 @@ extern void orient(double *ox, double *oy, double *oz);
 long long int rotmoveMC=0, tramoveMC=0, totmovesMC=0, trarejMC=0, rotrejMC=0, totrejMC=0, volrejMC=0, volmoveMC=0;
 void tra_move(int ip)
 {
-  rx[ip]+=OprogStatus.deltaMC*(ranf()-0.5); 
-  ry[ip]+=OprogStatus.deltaMC*(ranf()-0.5);
-  rz[ip]+=OprogStatus.deltaMC*(ranf()-0.5);
+  double dx, dy, dz;
+  dx = OprogStatus.deltaMC*(ranf()-0.5);
+  dy = OprogStatus.deltaMC*(ranf()-0.5);
+  dz = OprogStatus.deltaMC*(ranf()-0.5);
+  rx[ip]+= dx;
+  ry[ip]+= dy;
+  rz[ip]+= dz;
+  if (OprogStatus.useNNL)
+    {
+      overestimate_of_displ[ip]+=sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz))*1.001; 
+    }
   tramoveMC++; 
 }
 extern double calc_norm(double *v);
@@ -498,6 +501,10 @@ void rot_move(int ip)
   remove_parall(ip, &ox, &oy, &oz);
   /* pick a random rotation angle */
   theta= OprogStatus.dthetaMC*(ranf()-0.5);
+  if (OprogStatus.useNNL)
+    {
+      overestimate_of_displ[ip] += abs(theta)*0.5001*maxax[ip]; 
+    }
   thetaSq=Sqr(theta);
   sinw = sin(theta);
   cosw = (1.0 - cos(theta));
@@ -706,7 +713,70 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   //printf("QUI d=%f\n", d);
   return d;
 }
-int overlapMC(int ip, int *err)
+extern void find_bonds_one_NLL(int i);
+
+int overlapMC_NNL(int na, int *err)
+{
+  int i, signDir[NDIM]={0,0,0}, evCode, k, n;
+  double vecg[5], shift[3], t1, t2, t, tm[NDIM];
+  double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
+  int overlap;
+#ifdef MD_PATCHY_HE
+  int nb, ac, bc, collCode, collCodeOld, acHC, bcHC;
+  double evtime, evtimeHC;
+#ifdef MD_EDHEFLEX_WALL
+  int nplane=-1;
+#endif
+#endif
+#ifdef MD_ABSORPTION
+  int hwcell;
+#endif
+#ifdef MD_MULTIPLE_LL
+  if (OprogStatus.multipleLL)
+    {
+      PredictEventNNL_MLL(na, nb);
+      return;
+    }
+#endif
+  nb=-1;
+  for (i=0; i < nebrTab[na].len; i++)
+    {
+      n = nebrTab[na].list[i]; 
+      if (!(n != na && n!=nb && (nb >= -1 || n < na)))
+	continue;
+#ifdef MD_LXYZ
+      shift[0] = L[0]*rint((rx[na]-rx[n])/L[0]);
+      shift[1] = L[1]*rint((ry[na]-ry[n])/L[1]);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+      else
+	shift[2] = 0.0;
+#else
+      shift[2] = L[2]*rint((rz[na]-rz[n])/L[2]);
+#endif
+#else
+      shift[0] = L*rint((rx[na]-rx[n])/L);
+      shift[1] = L*rint((ry[na]-ry[n])/L);
+#ifdef MD_EDHEFLEX_WALL
+      if (!OprogStatus.hardwall)
+	shift[2] = L*rint((rz[na]-rz[n])/L);
+      else
+	shift[2] = 0.0;
+#else
+      shift[2] = L*rint((rz[na]-rz[n])/L);
+#endif
+#endif
+      if (check_overlap(na, n, shift, err)<0.0)
+	{
+	  //printf("checking i=%d j=%d: ", na, n);
+	  //printf("overlap!\n");
+	  return 1;
+	}
+    }
+  return 0;
+}
+int overlapMC_LL(int ip, int *err)
 {
   int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na;
   int cellRangeT[6];
@@ -812,6 +882,13 @@ int overlapMC(int ip, int *err)
 	}
     }
   return 0;
+}
+int overlapMC(int ip, int *err)
+{
+  if (OprogStatus.useNNL)
+    return overlapMC_NNL(ip, err);
+  else
+    return overlapMC_LL(ip, err);
 }
 void remove_from_current_cell(int i)
 {
@@ -925,11 +1002,14 @@ void update_numcells(void)
       cellList = realloc(cellList, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
     } 
 }
+void find_bonds_flex_NNL(void);
+
 void move_box(int *ierr)
 {
   int i, ii;
+  double nn;
 #if 1
-  double vo, lnvn, vn, Lfact, enn, eno, arg;
+  double vo, lnvn, vn, Lfact, enn, eno, arg, delv=0.0;
   //printf("moving box\n");
 #ifdef MD_LXYZ
   vo = L[0]*L[1]*L[2];
@@ -940,6 +1020,9 @@ void move_box(int *ierr)
   lnvn = log(vo) + (ranf()-0.5)*OprogStatus.vmax;
   vn = exp(lnvn);
   Lfact = pow(vn/vo,1.0/3.0);
+  if (OprogStatus.useNNL)
+    delv = (Lfact - 1.0); /* FINISH HERE */
+ 
 //	Lfact=1;
 #ifdef MD_LXYZ
   L[0] *= Lfact;
@@ -995,9 +1078,13 @@ void move_box(int *ierr)
   /* update all bonds with new positions */
   for (i=0; i < Oparams.parnum; i++)
     numbonds[i] = 0;
-  find_bonds_flex_all();
+  if (OprogStatus.useNNL)
+    find_bonds_flex_NNL();
+  else
+    find_bonds_flex_all();
   enn = calcpotene();
-  arg = -(1.0/Oparams.T)*(enn-eno)+Oparams.P*(vn-vo) - (Oparams.parnum+1)*log(vn/vo)*Oparams.T;
+  //printf("enn-eno/T=%f\n", (enn-eno)/Oparams.T);
+  arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-(Oparams.parnum+1)*log(vn/vo)*Oparams.T);
   if (ranf() > exp(arg))
     {
       /* move rejected restore old positions */
@@ -1026,9 +1113,21 @@ void move_box(int *ierr)
       /* restore all bonds*/
       for (i=0; i < Oparams.parnum; i++)
 	numbonds[i] = 0;
-      find_bonds_flex_all();
+      if (OprogStatus.useNNL)
+	find_bonds_flex_NNL();
+      else
+	find_bonds_flex_all();
     }
 #endif
+  if (OprogStatus.useNNL)
+    {
+      /* move accepted update displacements */
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  nn = sqrt(Sqr(rx[i])+Sqr(ry[i])+Sqr(rz[i]));
+	  overestimate_of_displ[i] += nn*delv; 
+	}
+    }
 }
 extern void remove_bond(int , int , int , int);
 void find_bonds_one(int ip);
@@ -1050,28 +1149,95 @@ void update_bonds_MC(int ip)
       remove_bond(jj, ip, bb, aa);
     }
   numbonds[ip] = 0;
-  find_bonds_one(ip);
+  if (OprogStatus.useNNL)
+    find_bonds_one_NLL(ip);
+  else
+    find_bonds_one(ip);
 }
-double get_max_step_MC(void)
+double calc_maxstep_MC(int i);
+
+double get_max_displ_MC(void)
 {
   int i;
-  double max=0.0;
-  for (i=0; i<Oparams.parnum; i++)
+  double max=0.0, displ, ms;
+  for (i=0; i < Oparams.parnum; i++)
     {
-      if (i==0 || max_step_MC[i] > max)
-	max = max_step_MC[i];
+      if (OprogStatus.ensembleMC==1)
+	{
+	  /* nel caso di simulazione NPT il passo massimo
+	     dipende dalla posizione della particella e quindi
+	     va ricalcolata ogni volta qua */
+	  ms = calc_maxstep_MC(i);
+	}
+      else
+	ms = max_step_MC[i];
+      //printf("i=%d ms=%.15G ov=%.15G\n", i, ms, overestimate_of_displ[i]);
+      displ = overestimate_of_displ[i]+ms;
+      if (i==0 || displ > max)
+	{
+	  max = displ;
+	}
     }
   return max;
 }
+double calc_maxstep_MC(int i)
+{
+  double vo, d1, d2, d3, d4, nn;
+  d1 = OprogStatus.deltaMC;
+  d2 = OprogStatus.dthetaMC*0.5001*maxax[i];
+  if (OprogStatus.ensembleMC==0)
+    return (d1>d2)?d1:d2;
+  else 
+    {
+#ifdef MD_LXYZ
+      vo = L[0]*L[1]*L[2];
+#else
+      vo = L*L*L;
+#endif
+      d3 = (d1>d2)?d1:d2;
+      nn = sqrt(rx[i]+ry[i]+rz[i]);
+      d4 = nn*(pow(1.0 + exp(0.5*OprogStatus.vmax)/vo,1.0/3.0)-1.0);	
+      return (d4>d3)?d4:d3;
+    }
+}
+#if 1
+void calc_all_maxsteps(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      max_step_MC[i] = calc_maxstep_MC(i);
+    }
+
+}
+#endif
+int do_nnl_rebuild(void)
+{
+  int i=0; 
+  double displ; 
+  displ = get_max_displ_MC();
+  /* NOTA: ms è il massimo displacemente finora mentre 
+   max_step_MC[i] è il displacement massimo che ci potrà essere successiva mossa */
+  if (displ > OprogStatus.rNebrShell)
+    return 1;
+  else
+    return 0;
+}
 void move(void)
 {
-  double acceptance, traaccept, ene, eno, rotaccept, volaccept;
+  double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0;
+#ifdef MD_LXYZ
+  double avL;
+#endif
   int ran, movetype, i,ip, err=0, dorej, enn;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   //printf("Doing MC step #%d\n", Oparams.curStep);
   
-  if (OprogStatus.useNNL && (1+Oparams.curStep-OprogStatus.lastNNLrebuildMC)*get_max_step_MC() > OprogStatus.rNebrShell)
+  if (OprogStatus.useNNL && do_nnl_rebuild())
     {
+      printf("Step #%d Rebuilding NNL\n", Oparams.curStep);
+      for (i=0; i < Oparams.parnum; i++)
+	overestimate_of_displ[i]=0.0;
       rebuildNNL();
       OprogStatus.lastNNLrebuildMC = Oparams.curStep;
     }
@@ -1178,6 +1344,17 @@ void move(void)
 	    OprogStatus.dthetaMC *= 1.1;
 	  else
 	    OprogStatus.dthetaMC /= 1.1;
+#ifdef MD_LXYZ
+	  if (OprogStatus.deltaMC > (avL=pow(L[0]*L[1]*L[2],1.0/3.0))*0.1)
+	    OprogStatus.deltaMC = avL*0.1;
+#else
+	  if (OprogStatus.deltaMC > L*0.1)
+	    OprogStatus.deltaMC = L*0.1;
+#endif
+	  if (OprogStatus.dthetaMC > 3.14)
+	    OprogStatus.dthetaMC = 3.14;
+	if (OprogStatus.useNNL)
+	  calc_all_maxsteps();
 	}
       if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1
 	  && (Oparams.curStep % OprogStatus.resetacceptVol==0))
