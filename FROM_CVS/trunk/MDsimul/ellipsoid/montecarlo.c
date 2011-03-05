@@ -442,9 +442,18 @@ void restore_coord(int ip)
     for (k2=0; k2<3; k2++)
       R[ip][k1][k2]=Rold[k1][k2]; 
 }
+void rebuild_nnl_MC(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    overestimate_of_displ[i]=0.0;
+  rebuildNNL();
+  OprogStatus.lastNNLrebuildMC = Oparams.curStep;
+}
 extern double ranf(void);
 extern void orient(double *ox, double *oy, double *oz);
 long long int rotmoveMC=0, tramoveMC=0, totmovesMC=0, trarejMC=0, rotrejMC=0, totrejMC=0, volrejMC=0, volmoveMC=0;
+double displMC;
 void tra_move(int ip)
 {
   double dx, dy, dz;
@@ -456,7 +465,7 @@ void tra_move(int ip)
   rz[ip]+= dz;
   if (OprogStatus.useNNL)
     {
-      overestimate_of_displ[ip]+=sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz))*1.001; 
+      displMC = sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz))*1.001;
     }
   tramoveMC++; 
 }
@@ -502,9 +511,7 @@ void rot_move(int ip)
   /* pick a random rotation angle */
   theta= OprogStatus.dthetaMC*(ranf()-0.5);
   if (OprogStatus.useNNL)
-    {
-      overestimate_of_displ[ip] += abs(theta)*0.5001*maxax[ip]; 
-    }
+    displMC = abs(theta)*0.5001*maxax[ip]; 
   thetaSq=Sqr(theta);
   sinw = sin(theta);
   cosw = (1.0 - cos(theta));
@@ -739,7 +746,6 @@ int overlapMC_NNL(int na, int *err)
     }
 #endif
   nb=-1;
-  //printf("num par=%d\n", nebrTab[na].len);
   for (i=0; i < nebrTab[na].len; i++)
     {
       n = nebrTab[na].list[i]; 
@@ -1046,7 +1052,6 @@ void move_box(int *ierr)
     }
   update_numcells();
   rebuildLinkedList();
- 
   for (i=0; i < Oparams.parnum; i++)
     {
       if (overlapMC(i, ierr))
@@ -1118,6 +1123,7 @@ void move_box(int *ierr)
 	find_bonds_flex_NNL();
       else
 	find_bonds_flex_all();
+      return;
     }
 #endif
   if (OprogStatus.useNNL)
@@ -1184,7 +1190,7 @@ double get_max_displ_MC(void)
 double calc_maxstep_MC(int i)
 {
   double vo, d1, d2, d3, d4, nn;
-  d1 = OprogStatus.deltaMC;
+  d1 = 0.5*OprogStatus.deltaMC;
   d2 = OprogStatus.dthetaMC*0.25001*maxax[i];
   if (OprogStatus.ensembleMC==0)
     return (d1>d2)?d1:d2;
@@ -1233,15 +1239,16 @@ void move(void)
   int ran, movetype, i,ip, err=0, dorej, enn;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   //printf("Doing MC step #%d\n", Oparams.curStep);
-  
+#if 1 
   if (OprogStatus.useNNL && do_nnl_rebuild())
     {
-      //printf("Step #%d Rebuilding NNL\n", Oparams.curStep);
+      printf("Step #%d Rebuilding NNL\n", Oparams.curStep);
       for (i=0; i < Oparams.parnum; i++)
 	overestimate_of_displ[i]=0.0;
       rebuildNNL();
       OprogStatus.lastNNLrebuildMC = Oparams.curStep;
     }
+#endif
   if (cxini==-1)
     {
       cxini=cellsx;
@@ -1323,6 +1330,10 @@ void move(void)
 		update_bonds_MC(ip);
 	      //printf("restoring finished\n");
 	      //rebuildLinkedList();
+	    }
+	  if (OprogStatus.useNNL && dorej==0 )
+	    {
+	      overestimate_of_displ[ip] += displMC; 
 	    }
 	}
       //printf("done\n");
