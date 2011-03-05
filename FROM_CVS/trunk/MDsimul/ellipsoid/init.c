@@ -2054,10 +2054,10 @@ void StartRun(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
-#ifndef MC_SIMUL
+//#ifndef MC_SIMUL
   if (OprogStatus.useNNL)
     rebuildNNL();
-#endif
+//#endif
 #ifdef EDHE_FLEX
   /* N.B. 28/05/2010: notare che gli spot vanno cercati 
      dopo l'inizializzazione delle NNL e delle LL 
@@ -4476,6 +4476,9 @@ void calc_vbonding(void)
 void build_parallelepipeds(void);
 double *max_step_MC;
 double *overestimate_of_displ;
+#endif
+#ifdef MC_SIMUL
+extern double calc_maxstep_MC(int i);
 #endif
 void usrInitAft(void)
 {
