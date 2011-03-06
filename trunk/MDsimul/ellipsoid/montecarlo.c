@@ -1010,7 +1010,59 @@ void update_numcells(void)
     } 
 }
 void find_bonds_flex_NNL(void);
-
+#ifdef MC_GRANDCAN
+void mcexc(int *ierr)
+{
+  int o;
+  double enn, eno, arg, vol;
+  double xn[3]; 
+#ifdef MD_LXYZ
+  vol = L[0]*L[1]*L[2];
+#else
+  vol = L*L*L;
+#endif
+ 
+  /* grand canonical ensemble */
+  if (ranf() < 0.5)
+    {
+      if (Oparams.parnum==0)
+	return;
+      o = Oparams.parnum*ranf();
+      eno=calcpotene();
+      arg = Oparans.parnum*exp((1.0/Oparams.T)*eno/(OprogStatus.zetaGC*vol));
+      if (ranf() < arg)
+	{
+	  remove_par_GC(o);
+	  Oparams.parnum--;
+	}
+    }
+  else
+    {
+      /* nella seguente routine deve aggiungere la particella nelle LL e nelle NNL se usate */
+      insert_particle_GC();
+      Oparams.parnum++;
+      if (overlapMC(Oparams.parnum-1, ierr))
+	{
+	  /* reject insertion */
+	  remove_from_LL(Oparams.parnum-1);
+	  Oparams.parnum--;
+	  excrejMC++;
+	  return;
+	}	
+      update_bonds_MC(Oparams.parnum-1);
+      enn=calcpotene();
+      arg = OprogStatus.zetaMC*vol*exp(-(1.0/Oparams.T)*enn)/(Oparms.parnum+1);
+      if (ranf() >= arg)
+	{
+	  /* insertion rejected */
+	  remove_from_LL(Oparams.parnum-1);
+	  Oparams.parnum--;
+	  excrejMC++;
+	  return;
+	}
+    }
+}
+#endif
 void move_box(int *ierr)
 {
   int i, ii;
@@ -1258,11 +1310,30 @@ void move(void)
   for (i=0; i < Oparams.parnum; i++)
     {
       /* pick a particle at random */
+#ifdef MC_GRANDCAN
+      if (OprogStatus.ensembleMC==2) /* grand canonical */
+	ran = (OprogStatus.npav+OprogStatus.nexc)*ranf();
+      else
+#endif
       if (OprogStatus.ensembleMC==1)
 	ran=(Oparams.parnum+1)*ranf();
       else 
 	ran = 0;
-      if (ran==Oparams.parnum)
+#ifdef MC_GRANDCAN
+      if (OprogStatus.ensembleMC==2 && ran >= Oparams.parnum)
+	{
+	  mcexc(&err);
+	  movetype=4; /* 4 = insert/remove particle */
+	  if(err)
+    	    {
+	      printf("[move_box] NR failed...I rejected this trial move...\n");
+	      err=0;
+	    }
+	  excmoveMC++;
+	}
+      else
+#endif
+      if (OprogStatus.ensembleMC==1 && ran==Oparams.parnum)
 	{
 	  //err=0;
 	  move_box(&err);
