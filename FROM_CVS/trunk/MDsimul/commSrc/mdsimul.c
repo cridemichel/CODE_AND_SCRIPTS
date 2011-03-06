@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.18 2011-02-26 14:22:44 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.19 2011-03-06 13:44:44 demichel Exp $     */
 #ifndef lint
-//static char vcid[] = "$Id: mdsimul.c,v 1.18 2011-02-26 14:22:44 demichel Exp $";
+//static char vcid[] = "$Id: mdsimul.c,v 1.19 2011-03-06 13:44:44 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -62,7 +62,6 @@ extern void saveBakAscii(char *fn);
 extern void saveCorAscii(void);
 extern int chkBakAsciiSteps(void);
 extern void doubleSaveMeasure(int PN, int misNum, int* times, int tapeTimes);
-
 void commMD(void)
 {
   int i;   
@@ -229,6 +228,7 @@ void commMD(void)
       ++Oparams.curStep;
     }
 
+
   Oparams.curStep--;
 
   /* <-------------------------------------------- MAIN LOOP END(FATHER) */
@@ -260,10 +260,10 @@ void commMD(void)
 	}
       if (OprogStatus.endFormat == 1 || OprogStatus.endFormat == 2)
 	{
-	  printf("salvo le coordinate in formato ascii");
 	  UPDATE_SYSTEM;
 	  ADJUST_LASTCOL;
 	  saveCorAscii(); 
+	  printf("salvo le coordinate in formato ascii\n");
 	}
     }
   /* take coords from restore files on HD and write them to the
