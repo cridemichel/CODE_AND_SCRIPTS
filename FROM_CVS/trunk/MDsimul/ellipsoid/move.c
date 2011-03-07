@@ -3873,6 +3873,9 @@ void symtop_evolve_orient(int i, double ti, double **Ro, double **REt, double co
 	  {
 	    Ro[k1][k2] = R[i][k1][k2];
 	  }
+#ifdef MC_SIMUL
+      return;
+#endif
       cosea[0] = cos(phi0[i]);
       cosea[1] = costheta0[i];
       cosea[2] = cos(psi0[i]);

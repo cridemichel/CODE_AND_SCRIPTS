@@ -21,7 +21,8 @@ long long int** AllocMatLLI(int size1, int size2)
   for (k = 1; k < size1; k++)
     v[k] = v[k-1] + size2;
   return v;
-}/* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
+}
+/* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs, int saveAll);
 void scalevels(double temp, double K);
@@ -4476,6 +4477,9 @@ void calc_vbonding(void)
 void build_parallelepipeds(void);
 double *max_step_MC;
 double *overestimate_of_displ;
+#ifdef MC_GRANDCAN
+extern int allocnpGC;
+#endif
 #endif
 #ifdef MC_SIMUL
 extern double calc_maxstep_MC(int i);
@@ -6070,6 +6074,12 @@ void usrInitAft(void)
 #endif
  
 #ifdef MC_SIMUL
+#ifdef MC_GRANDCAN
+  if (OprogStatus.ensembleMC==2)
+    {
+      allocnpGC=Oparams.parnum;
+    }
+#endif
   if (OprogStatus.useNNL)
     {
       max_step_MC = malloc(sizeof(double)*Oparams.parnum);
@@ -6081,6 +6091,7 @@ void usrInitAft(void)
 	}
       OprogStatus.lastNNLrebuildMC = Oparams.curStep;
     }
+ 
   build_parallelepipeds();
 #endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
