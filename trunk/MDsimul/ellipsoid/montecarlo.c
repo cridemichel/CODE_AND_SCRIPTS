@@ -239,6 +239,9 @@ void build_parallelepipeds(void)
 #ifdef MC_SIMUL
 extern double *max_step_MC;
 extern double *overestimate_of_displ;
+#ifdef MC_GRANDCAN
+int allocnpGC;
+#endif
 double calcDistBox(int i, int j, double rbi[3], double rbj[3], double saxi[3], double saxj[3], double shift[3])
 {
   double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
@@ -597,7 +600,7 @@ double overlap_using_multibox(int i, int j, double shift[3])
 
   for (k1=0; k1 < nmboxi; k1++)
     {
-      for (k2=k1; k2 < nmboxj; k2++)
+      for (k2=0; k2 < nmboxj; k2++)
 	{
 #if 0
 	  set_semiaxes_vb_mc(i, mbox[typei][k1].sa[0],
@@ -1011,6 +1014,165 @@ void update_numcells(void)
 }
 void find_bonds_flex_NNL(void);
 #ifdef MC_GRANDCAN
+void remove_par_GC(int ip)
+{
+  int lp, k, k1, k2;
+  lp = Oparams.parnum-1;
+  /* copy all data from particle lp to ip */
+  rx[ip] = rx[lp];
+  ry[ip] = ry[lp];
+  rz[ip] = rz[lp];
+  typeOfPart[ip] = typeOfpart[lp];
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	R[ip][k1][k2] = R[lp][k1][k2];
+      }
+  nebrTab[ip].len = nebrTab[lp].len;
+  memcpy(nebrTab[ip].list, nebrTab[lp].list, sizeof(int)*OprogStatus.nebrTabFac);
+  maxax[ip] = maxaxp[lp]; 
+  remove_from_current_cell(lp);
+  for (k=0; k < 3; k++)
+    inCell[ip][k] = inCell[lp][k];
+  insert_in_new_cell(ip);
+  
+  Oparams.parnum--;
+}
+int dyn_realloc_oprog(int np)
+{
+  int np, i;  
+  void *last_ptr;
+#ifdef MD_CALC_DPP
+  OprogStatus.len = sizeof(double)*22*np;
+#else
+  OprogStatus.len = sizeof(double)*10*np;
+#endif
+  //printf("DYNAMIC ALLOCATION of %d bytes\n", OprogStatus.len);
+  OprogStatus.ptr = realloc(OprogStatus.ptr, OprogStatus.len);
+  last_ptr = OprogStatus.ptr;
+#ifdef MD_CALC_DPP
+  OprogStatus.sumdx = (double*)last_ptr;
+  OprogStatus.sumdy = OprogStatus.sumdx + np;
+  OprogStatus.sumdz = OprogStatus.sumdy + np;
+  OprogStatus.lastu1x = OprogStatus.sumdz + np;
+  OprogStatus.lastu1y = OprogStatus.lastu1x + np;
+  OprogStatus.lastu1z = OprogStatus.lastu1y + np;
+  OprogStatus.lastu2x = OprogStatus.lastu1z + np;
+  OprogStatus.lastu2y = OprogStatus.lastu2x + np;
+  OprogStatus.lastu2z = OprogStatus.lastu2y + np;
+  OprogStatus.lastu3x = OprogStatus.lastu2z + np;
+  OprogStatus.lastu3y = OprogStatus.lastu3x + np;
+  OprogStatus.lastu3z = OprogStatus.lastu3y + np;
+  last_ptr = (void*) (OprogStatus.lastu3z + np);
+#endif
+  OprogStatus.sumox = (double*)last_ptr;
+  OprogStatus.sumoy = OprogStatus.sumox + np;
+  OprogStatus.sumoz = OprogStatus.sumoy + np;
+  OprogStatus.lastcolltime = OprogStatus.sumoz + np;
+  OprogStatus.rxCMi = OprogStatus.lastcolltime + np;
+  OprogStatus.ryCMi = OprogStatus.rxCMi + np;
+  OprogStatus.rzCMi = OprogStatus.ryCMi + np;
+  OprogStatus.DR = realloc(OprogStatus.DR, sizeof(double*)*np);
+  for (i=0; i < np; i++)
+    {
+      OprogStatus.DR[i] = OprogStatus.rzCMi + np + i*3;
+    }
+#if 0
+  OprogStatus.vcmx0 = OprogStatus.DR[np-1] + 3;
+  OprogStatus.vcmy0 = OprogStatus.vcmx0 + np;
+  OprogStatus.vcmz0 = OprogStatus.vcmy0 + np;
+#endif
+  OprogStatus.set_dyn_ascii();
+  return OprogStatus.len;
+}
+void check_alloc_GC(void)
+{
+  int size, allocnpGCold;
+  if (Oparams.parnum > allocnpGC)
+    {
+      allocnpGCold=allocnpGC;
+      allocnpGC = (int) (1.1*allocnpGC);
+      rx = realloc(rx, allocnpGC*sizeof(double));
+      ry = realloc(ry, allocnpGC*sizeof(double));
+      rz = realloc(ry, allocnpGC*sizeof(double));
+      numbonds = realloc(numbonds,allocnpGC*sizeof(int));
+#ifdef MD_LL_BONDS
+      bonds = realloc(bonds, allocnpGC*sizeof(long long int*));
+      size = sizeof(long long int);
+#else
+      bonds = realloc(bonds, allocnpGC*sizeof(int *));
+      size = sizeof(int);
+#endif
+      for (k=allocnpGCold; k < allocnpGC; k++)
+	bonds[k] = malloc(bonds[k], size*OprogStatus.maxbonds);
+      typeOfPart = realloc(typeOfPart, sizeof(int)*allocnpGC);
+      uxx = realloc(uxx, sizeof(double)*allocnpGC);
+      uxy = realloc(uxy, sizeof(double)*allocnpGC);
+      uxz = realloc(uxz, sizeof(double)*allocnpGC);
+      uyx = realloc(uyx, sizeof(double)*allocnpGC);
+      uyy = realloc(uyy, sizeof(double)*allocnpGC);
+      uyz = realloc(uyz, sizeof(double)*allocnpGC);
+      uzx = realloc(uzx, sizeof(double)*allocnpGC);
+      uzy = realloc(uzy, sizeof(double)*allocnpGC);
+      uzz = realloc(uzz, sizeof(double)*allocnpGC);
+      R = realloc(R,sizeof(double**)*allocnpGC);
+#ifdef MD_MATRIX_CONTIGOUS
+      R[0] = malloc(sizeof(double*)*3);
+      R[0][0] = realloc(R[k][0], sizeof(double)*allocnpGC*9);
+      R[0][1] = R[0][0] + 3;
+      R[0][2] = R[0][1] + 3;
+      for (k=1; k < allocnpGC; k++)
+	{
+	  R[k] = malloc(sizeof(double*)*3);
+	  R[k][0] = R[k-1][2] + 3;
+	  R[k][1] = R[k][0] + 3;
+	  R[k][2] = R[k][1] + 3;
+	}
+#else
+      for (k=allocnpGCold; k < allocnpGC; k++)
+	{
+    	  R[k] = matrix(3, 3);
+	}
+#endif
+      maxax = realloc(maxax, allocnpGC*sizeof(double));
+      for (k=allocnpGCold; k < allocnpGC; k++)
+	{
+	  /* per ora presuppone tutte le particelle uguali */
+	  maxax[k] = maxax[0];
+	}
+      if (OprogStatus.useNNL)
+	{
+	  nebrTab = realloc(nebrTab, sizeof(nebrTabStruct)*allocnpGC);
+	  for (k=allocnpGCold; k <  allocnpGC; k++)
+	    {
+	      nebrTab[k].len = 0;
+	      nebrTab[k].list = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+	      //nebrTab[i].shift = matrix(OprogStatus.nebrTabFac, 3);
+	      /* tanto shift non viene usata per cui è inutile sprecare memoria*/ 
+	      nebrTab[k].shift = NULL;
+	      nebrTab[k].R = matrix(3, 3);
+	    }
+	}
+      cellList = realloc(cellList, cellsx*cellsy*cellsz+allocnpGC);
+      inCell[0] = realloc(sizeof(int)*allocnpGC);
+      inCell[1] = realloc(sizeof(int)*allocnpGC);
+      inCell[2] = realloc(sizeof(int)*allocnpGC);
+      dyn_realloc_oprog(allocnpGC);
+    }
+}
+void insert_particle_GC(void)
+{
+  int np;
+  np = Oparams.parnum;
+  /* controlla se c'è abbastanza allocazione se no espandere
+     tutto ciò che va espanso */
+  check_alloc_GC();
+  update_LL(np);
+  /* choose a random position to insert particle */
+  Oparams.parnum++;
+  /* presuppone per ora che ci sia solo un tipo di particelle */
+  typeNP[0]++;
+}
 void mcexc(int *ierr)
 {
   int o;
@@ -1033,18 +1195,16 @@ void mcexc(int *ierr)
       if (ranf() < arg)
 	{
 	  remove_par_GC(o);
-	  Oparams.parnum--;
 	}
     }
   else
     {
       /* nella seguente routine deve aggiungere la particella nelle LL e nelle NNL se usate */
       insert_particle_GC();
-      Oparams.parnum++;
       if (overlapMC(Oparams.parnum-1, ierr))
 	{
 	  /* reject insertion */
-	  remove_from_LL(Oparams.parnum-1);
+	  remove_from_current_cell(Oparams.parnum-1);
 	  Oparams.parnum--;
 	  excrejMC++;
 	  return;
@@ -1055,7 +1215,7 @@ void mcexc(int *ierr)
       if (ranf() >= arg)
 	{
 	  /* insertion rejected */
-	  remove_from_LL(Oparams.parnum-1);
+	  remove_from_current_cell(Oparams.parnum-1);
 	  Oparams.parnum--;
 	  excrejMC++;
 	  return;
