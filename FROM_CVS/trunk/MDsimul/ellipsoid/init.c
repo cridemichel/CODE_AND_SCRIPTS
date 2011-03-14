@@ -4265,9 +4265,13 @@ void calc_persist_len(int maxtrials)
     }
 }
 #endif
+#define MD_VB_SAVE_PTS
 void calc_vbonding(void)
 {
   FILE *fi;
+#ifdef MD_VB_SAVE_PTS
+  FILE *fc;
+#endif
   int k1, k2, count, ii;
   long long int maxtrials, i;
   int amin, bmin, nn;
@@ -4327,6 +4331,9 @@ void calc_vbonding(void)
 	    R[1][k1][k2] = R[0][k1][k2];
 	  }
       }
+#ifdef MD_VB_SAVE_PTS
+  fc = fopen("clouds.dat","w+");
+#endif
   while (i < maxtrials)
     {
 #ifdef MD_LXYZ
@@ -4423,6 +4430,10 @@ void calc_vbonding(void)
 	      if (dists[nn]<0.0)
 		{	
 		  ene=1.0;
+#ifdef MD_VB_SAVE_PTS
+		  if (rx[1] > 0.0)
+		    fprintf(fc,"%.15G %.15G %.15G\n", rx[1], ry[1], rz[1]);
+#endif
 		  break;
 		}
 	    }
@@ -4469,6 +4480,9 @@ void calc_vbonding(void)
 	fprintf(F, "%.15G %.15G\n",i*dtheta,fons(i*dtheta,alpha)); 
       fclose(F);
     }
+#ifdef MD_VB_SAVE_PTS
+  fclose(fc);
+#endif
   exit(-1);
 }
 
