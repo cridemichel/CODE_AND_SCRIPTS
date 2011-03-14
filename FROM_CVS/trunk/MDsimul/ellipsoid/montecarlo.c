@@ -1014,6 +1014,7 @@ void update_numcells(void)
 }
 void find_bonds_flex_NNL(void);
 #ifdef MC_GRANDCAN
+void remove_from_nnl_MC(int ip);
 void remove_par_GC(int ip)
 {
   int lp, k, k1, k2;
@@ -1023,14 +1024,20 @@ void remove_par_GC(int ip)
   ry[ip] = ry[lp];
   rz[ip] = rz[lp];
   typeOfPart[ip] = typeOfpart[lp];
+  remove_bonds_MC(ip);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       {
 	R[ip][k1][k2] = R[lp][k1][k2];
       }
-  nebrTab[ip].len = nebrTab[lp].len;
-  memcpy(nebrTab[ip].list, nebrTab[lp].list, sizeof(int)*OprogStatus.nebrTabFac);
-  maxax[ip] = maxaxp[lp]; 
+  if (OprogStatus.useNNL)
+    {
+      /* rimuove ip da tutte le NNL del sistema */
+      remove_from_nnl_MC(ip);
+      nebrTab[ip].len = nebrTab[lp].len;
+      memcpy(nebrTab[ip].list, nebrTab[lp].list, sizeof(int)*OprogStatus.nebrTabFac);
+    }
+  maxax[ip] = maxax[lp]; 
   remove_from_current_cell(lp);
   for (k=0; k < 3; k++)
     inCell[ip][k] = inCell[lp][k];
@@ -1160,15 +1167,64 @@ void check_alloc_GC(void)
       dyn_realloc_oprog(allocnpGC);
     }
 }
+void remove_bonds_GC(int ip)
+{
+  int kk;
+#ifdef MD_LL_BONDS
+  int i, nb;
+  long long int aa, bb, ii, jj, jj2;
+#else
+  int i, nb, ii, jj, aa, bb, jj2;
+#endif
+  for (kk=0; kk < numbonds[ip]; kk++)
+    {
+      jj = bonds[ip] / (NANA);
+      jj2 = bonds[ip] % (NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      remove_bond(jj2,bb,jj,aa);
+    }
+}
+extern void BuildNNL(int na);
+void build_one_nnl_GC(int ip)
+{
+  nextNNLupdate(ip);
+  BuildNNL(ip);
+}
 void insert_particle_GC(void)
 {
   int np;
+  double Rl[3][3];
   np = Oparams.parnum;
   /* controlla se c'è abbastanza allocazione se no espandere
      tutto ciò che va espanso */
   check_alloc_GC();
-  update_LL(np);
   /* choose a random position to insert particle */
+#ifdef MD_LXYZ
+  rx[np] = L[0]*(ranf()-0.5);
+  ry[np] = L[1]*(ranf()-0.5);
+  rz[np] = L[2]*(ranf()-0.5);
+#else
+  rx[np] = L*(ranf()-0.5);
+  ry[np] = L*(ranf()-0.5);
+  rz[np] = L*(ranf()-0.5);
+#endif
+  orient(&ox,&oy,&oz);
+  versor_to_R(ox, oy, oz, Rl);
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	R[np][k1][k2] = Rl[k1][k2];
+      }
+  update_LL(np);
+  if (OprogStatus.useNNL)
+    {
+      build_one_nnl_GC(np);
+    }
+  if (OprogStatus.useNNL)
+    find_bonds_one_NLL(ip);
+  else
+    find_bonds_one(ip);
   Oparams.parnum++;
   /* presuppone per ora che ci sia solo un tipo di particelle */
   typeNP[0]++;
