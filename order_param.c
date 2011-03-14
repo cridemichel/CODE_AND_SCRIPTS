@@ -4,7 +4,7 @@
 #include <string.h>
 //#include <lapack.h>
 char line[100000], parname[124], parval[256000];
-int N;
+int N, mcsim=0;
 double x[3], R[3][3], Q[3][3];
 double r1[3], r2[3], r3[3], u1[3], u2[3], u3[3], dt;
 char fname[1024], inputfile[1024];
@@ -48,7 +48,7 @@ void diagonalize(double M[3][3], double ev[3])
 }
 void print_usage(void)
 {
-  printf("order_param [--lapo/-l | --heflex/-fl |--cnf/-c | --time/-t | --ordmatrix/-Q ] [--eigenvec/-ev] <confs_file>\n");
+  printf("order_param [ -mc | --lapo/-l | --heflex/-fl |--cnf/-c | --time/-t | --ordmatrix/-Q ] [--eigenvec/-ev] <confs_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -63,6 +63,10 @@ void parse_param(int argc, char** argv)
 	{
 	  print_usage();
 	}
+      else if (!strcmp(argv[cc],"-mc"))
+	{
+	  mcsim = 1;
+	} 
       else if (!strcmp(argv[cc],"--cnf") || !strcmp(argv[cc],"-c" ))
 	{
 	  readCnf = 1;
@@ -156,7 +160,7 @@ int main(int argc, char** argv)
 {
   FILE *f, *f2;
   int nf, i, a, b, dummyint;
-  double ev[3], ti, S, tref=0.0;
+  double ev[3], ti=-1, S, tref=0.0;
 #if 0
   if (argc == 1)
     {
@@ -193,7 +197,7 @@ int main(int argc, char** argv)
 	    N = atoi(parval);
 	  if (!strcmp(parname,"time"))
 	    ti = atof(parval);
-	  if (readLapo && !strcmp(parname,"curStep"))
+	  if ((readLapo||mcsim) && !strcmp(parname,"curStep"))
 	    curStep = atoi(parval);
 	  if (readLapo && !strcmp(parname,"steplength"))
 	    dt = atof(parval);
@@ -260,7 +264,9 @@ int main(int argc, char** argv)
 	    for (b=0; b < 3; b++)
 	      Q[a][b] /= ((double)N); 
 	  diagonalize(Q, ev);
-	  if (readLapo)
+	  if (mcsim)
+	    printf("%d %.15G %.15G %.15G\n", curStep, ev[0], ev[1], ev[2]); 
+	  else if (readLapo)
 	    printf("%.15G %.15G %.15G %.15G\n", curStep*dt, ev[0], ev[1], ev[2]); 
 	  else
 	    printf("%.15G %.15G %.15G %.15G\n", ti+tref, ev[0], ev[1], ev[2]); 
