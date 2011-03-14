@@ -52,7 +52,7 @@ extern int *lastbump;
 #ifdef MD_PROTEIN_DESIGN
 extern int nativeConfYN;
 #endif
-#ifdef MD_ABSORPTION
+#if defined(MD_ABSORPTION)||defined(MC_GRANDCAN)
 int *listtmp;
 #endif
 extern double *lastcol;
@@ -1920,6 +1920,11 @@ void usrInitBef(void)
 #endif
     maxcoll=-1;
 #ifdef MC_SIMUL
+#ifdef MC_GRANDCAN
+    OprogStatus.zetaMC=0.05;
+    OprogStatus.npav=1000;
+    OprogStatus.nexc=1;
+#endif
     OprogStatus.dthetaMC=0.1;
     OprogStatus.deltaMC=0.1;
     OprogStatus.ensembleMC=0; /* 0 = NVT 1=NPT */
@@ -4594,7 +4599,10 @@ void usrInitAft(void)
      OprogStatus.optnnl = 0;
    }
  listtmp = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+#elif defined(MC_GRANDCAN)
+ listtmp = malloc(sizeof(int)*OprogStatus.nebrTabFac);
 #endif
+
  numcols=0;
  for (i=0;;i++)
    {
