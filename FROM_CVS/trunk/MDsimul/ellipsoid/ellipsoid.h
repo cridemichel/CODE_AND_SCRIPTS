@@ -854,6 +854,11 @@ struct progStatus
 #endif
   /* ======================================================================= */
 #ifdef MC_SIMUL
+#ifdef MC_GRANDCAN
+  double zetaMC;
+  int npav;
+  int nexc;
+#endif
   double lastNNLrebuildMC;
   double targetAccept;
   double targetAcceptVol;
@@ -1257,6 +1262,11 @@ struct pascii opro_ascii[] =
   {"nativeConf",           &OS(nativeConf),                  1, NAME_LENGTH, "%s"},
 #endif
 #ifdef MC_SIMUL
+#ifdef MC_GRANDCAN
+  {"zetaMC",     &OS(zetaMC),                            1,  1, "%.12G"},
+  {"npav" ,     &OS(npav),                             1,  1, "%d"},
+  {"nexc" ,     &OS(nexc),                             1,  1, "%d"},
+#endif
   {"lastNNLrebuildMC", &OS(lastNNLrebuildMC),                1, 1, "%d"},
   {"targetAccept", &OS(targetAccept),                        1, 1, "%.15G"},
   {"targetAcceptvol", &OS(targetAcceptVol),                  1, 1, "%.15G"},
@@ -1402,6 +1412,11 @@ struct singlePar OsinglePar[] = {
   {"inistep" ,   &Oparams.curStep,            LLINT},
   {"endFormat",  &OprogStatus.endFormat,      INT},
 #ifdef MC_SIMUL
+#ifdef MD_GRANDCAN
+  {"zetaMC",   &OprogStatus.zetaMC,         CT},
+  {"npav",  &OprogStatus.npav,        INT},
+  {"nexc",&OprogStatus.nexc,        INT},
+#endif
   {"deltaMC",   &OprogStatus.deltaMC,         CT},
   {"dthetaMC",  &OprogStatus.dthetaMC,        CT},
   {"ensembleMC",&OprogStatus.ensembleMC,      INT},

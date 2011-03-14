@@ -455,7 +455,7 @@ void rebuild_nnl_MC(void)
 }
 extern double ranf(void);
 extern void orient(double *ox, double *oy, double *oz);
-long long int rotmoveMC=0, tramoveMC=0, totmovesMC=0, trarejMC=0, rotrejMC=0, totrejMC=0, volrejMC=0, volmoveMC=0;
+long long int rotmoveMC=0, tramoveMC=0, totmovesMC=0, trarejMC=0, rotrejMC=0, totrejMC=0, volrejMC=0, volmoveMC=0, excrejMC=0, excmoveMC=0;
 double displMC;
 void tra_move(int ip)
 {
@@ -559,6 +559,7 @@ void rot_move(int ip)
 int random_move(int ip)
 {
   double p;
+  //printf("random move ip=%d\n", ip);
   p=ranf();
   if (p <= 0.5)
    {
@@ -1014,17 +1015,41 @@ void update_numcells(void)
 }
 void find_bonds_flex_NNL(void);
 #ifdef MC_GRANDCAN
-void remove_from_nnl_MC(int ip);
+extern int *listtmp;
+void remove_from_nnl_MC(int ip)
+{ 
+  int k1, k2, len, p;
+
+  for (k1=0; k1 < nebrTab[ip].len; k1++)
+    {
+      p = nebrTab[ip].list[k1];
+      len = nebrTab[p].len;
+      memcpy(listtmp, nebrTab[p].list, nebrTab[p].len*sizeof(int));
+      nebrTab[p].len=0;
+      for (k2=0; k2 < len; k2++)
+	{
+	  if (nebrTab[p].list[k2]!=ip)
+	    {
+	      nebrTab[p].list[nebrTab[p].len] = listtmp[k2];
+	      nebrTab[p].len++;
+	    }
+	}
+    }
+}
+void remove_bonds_GC(int ip);
+
 void remove_par_GC(int ip)
 {
   int lp, k, k1, k2;
   lp = Oparams.parnum-1;
   /* copy all data from particle lp to ip */
+  remove_bonds_GC(ip);
+  //remove_from_current_cell(ip);
   rx[ip] = rx[lp];
   ry[ip] = ry[lp];
   rz[ip] = rz[lp];
-  typeOfPart[ip] = typeOfpart[lp];
-  remove_bonds_MC(ip);
+  typeOfPart[ip] = typeOfPart[lp];
+
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       {
@@ -1038,16 +1063,16 @@ void remove_par_GC(int ip)
       memcpy(nebrTab[ip].list, nebrTab[lp].list, sizeof(int)*OprogStatus.nebrTabFac);
     }
   maxax[ip] = maxax[lp]; 
-  remove_from_current_cell(lp);
   for (k=0; k < 3; k++)
-    inCell[ip][k] = inCell[lp][k];
-  insert_in_new_cell(ip);
-  
+    inCell[k][ip] = inCell[k][lp];
+  typeNP[0]++;
   Oparams.parnum--;
+  //insert_in_new_cell(ip);
+  rebuildLinkedList(); 
 }
 int dyn_realloc_oprog(int np)
 {
-  int np, i;  
+  int i;  
   void *last_ptr;
 #ifdef MD_CALC_DPP
   OprogStatus.len = sizeof(double)*22*np;
@@ -1092,9 +1117,11 @@ int dyn_realloc_oprog(int np)
   OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
 }
+extern double **matrix(int n, int m);
+
 void check_alloc_GC(void)
 {
-  int size, allocnpGCold;
+  int size, allocnpGCold, k;
   if (Oparams.parnum > allocnpGC)
     {
       allocnpGCold=allocnpGC;
@@ -1103,6 +1130,7 @@ void check_alloc_GC(void)
       ry = realloc(ry, allocnpGC*sizeof(double));
       rz = realloc(ry, allocnpGC*sizeof(double));
       numbonds = realloc(numbonds,allocnpGC*sizeof(int));
+      
 #ifdef MD_LL_BONDS
       bonds = realloc(bonds, allocnpGC*sizeof(long long int*));
       size = sizeof(long long int);
@@ -1111,7 +1139,7 @@ void check_alloc_GC(void)
       size = sizeof(int);
 #endif
       for (k=allocnpGCold; k < allocnpGC; k++)
-	bonds[k] = malloc(bonds[k], size*OprogStatus.maxbonds);
+	bonds[k] = malloc(size*OprogStatus.maxbonds);
       typeOfPart = realloc(typeOfPart, sizeof(int)*allocnpGC);
       uxx = realloc(uxx, sizeof(double)*allocnpGC);
       uxy = realloc(uxy, sizeof(double)*allocnpGC);
@@ -1149,7 +1177,7 @@ void check_alloc_GC(void)
 	}
       if (OprogStatus.useNNL)
 	{
-	  nebrTab = realloc(nebrTab, sizeof(nebrTabStruct)*allocnpGC);
+	  nebrTab = realloc(nebrTab, sizeof(struct nebrTabStruct)*allocnpGC);
 	  for (k=allocnpGCold; k <  allocnpGC; k++)
 	    {
 	      nebrTab[k].len = 0;
@@ -1161,12 +1189,14 @@ void check_alloc_GC(void)
 	    }
 	}
       cellList = realloc(cellList, cellsx*cellsy*cellsz+allocnpGC);
-      inCell[0] = realloc(sizeof(int)*allocnpGC);
-      inCell[1] = realloc(sizeof(int)*allocnpGC);
-      inCell[2] = realloc(sizeof(int)*allocnpGC);
+      inCell[0] = realloc(inCell[0],sizeof(int)*allocnpGC);
+      inCell[1] = realloc(inCell[1],sizeof(int)*allocnpGC);
+      inCell[2] = realloc(inCell[2],sizeof(int)*allocnpGC);
       dyn_realloc_oprog(allocnpGC);
     }
 }
+extern void remove_bond(int na, int n, int a, int b);
+
 void remove_bonds_GC(int ip)
 {
   int kk;
@@ -1178,23 +1208,36 @@ void remove_bonds_GC(int ip)
 #endif
   for (kk=0; kk < numbonds[ip]; kk++)
     {
-      jj = bonds[ip] / (NANA);
-      jj2 = bonds[ip] % (NANA);
+      jj = bonds[ip][kk] / (NANA);
+      jj2 = bonds[ip][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
       remove_bond(jj2,bb,jj,aa);
     }
 }
 extern void BuildNNL(int na);
+extern void nextNNLupdate(int na);
+
 void build_one_nnl_GC(int ip)
 {
+  int p, k1;
   nextNNLupdate(ip);
   BuildNNL(ip);
+  /* and now add ip to neighbor lists of exisisting particles */
+  for (k1=0; k1 < nebrTab[ip].len; k1++)
+    {
+      p=nebrTab[ip].list[k1];
+      nebrTab[p].list[nebrTab[p].len] = ip;
+      nebrTab[p].len++;
+    }
 }
+extern void versor_to_R(double ox, double oy, double oz, double R[3][3]);
+extern void find_bonds_one(int i);
+
 void insert_particle_GC(void)
 {
-  int np;
-  double Rl[3][3];
+  int np, k1, k2;
+  double ox, oy, oz, Rl[3][3];
   np = Oparams.parnum;
   /* controlla se c'è abbastanza allocazione se no espandere
      tutto ciò che va espanso */
@@ -1216,18 +1259,19 @@ void insert_particle_GC(void)
       {
 	R[np][k1][k2] = Rl[k1][k2];
       }
-  update_LL(np);
+  //update_LL(np);
+  typeNP[0]++;
+  Oparams.parnum++;
+  rebuildLinkedList();
   if (OprogStatus.useNNL)
     {
       build_one_nnl_GC(np);
     }
   if (OprogStatus.useNNL)
-    find_bonds_one_NLL(ip);
+    find_bonds_one_NLL(np);
   else
-    find_bonds_one(ip);
-  Oparams.parnum++;
+    find_bonds_one(np);
   /* presuppone per ora che ci sia solo un tipo di particelle */
-  typeNP[0]++;
 }
 void mcexc(int *ierr)
 {
@@ -1247,32 +1291,36 @@ void mcexc(int *ierr)
 	return;
       o = Oparams.parnum*ranf();
       eno=calcpotene();
-      arg = Oparans.parnum*exp((1.0/Oparams.T)*eno/(OprogStatus.zetaGC*vol));
+      arg = Oparams.parnum*exp((1.0/Oparams.T)*eno/(OprogStatus.zetaMC*vol));
       if (ranf() < arg)
 	{
+	  printf("removing #%d\n", o);
 	  remove_par_GC(o);
 	}
     }
   else
     {
       /* nella seguente routine deve aggiungere la particella nelle LL e nelle NNL se usate */
+      printf("Inserting #%d\n", Oparams.parnum);
       insert_particle_GC();
       if (overlapMC(Oparams.parnum-1, ierr))
 	{
 	  /* reject insertion */
-	  remove_from_current_cell(Oparams.parnum-1);
+	  //remove_from_current_cell(Oparams.parnum-1);
 	  Oparams.parnum--;
+	  rebuildLinkedList();
 	  excrejMC++;
 	  return;
 	}	
       update_bonds_MC(Oparams.parnum-1);
       enn=calcpotene();
-      arg = OprogStatus.zetaMC*vol*exp(-(1.0/Oparams.T)*enn)/(Oparms.parnum+1);
+      arg = OprogStatus.zetaMC*vol*exp(-(1.0/Oparams.T)*enn)/(Oparams.parnum+1);
       if (ranf() >= arg)
 	{
 	  /* insertion rejected */
-	  remove_from_current_cell(Oparams.parnum-1);
+	  //remove_from_current_cell(Oparams.parnum-1);
 	  Oparams.parnum--;
+	  rebuildLinkedList();
 	  excrejMC++;
 	  return;
 	}
