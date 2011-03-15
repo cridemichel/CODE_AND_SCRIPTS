@@ -237,7 +237,6 @@ void build_parallelepipeds(void)
 #endif
 
 #ifdef MC_SIMUL
-extern double *max_step_MC;
 extern double *overestimate_of_displ;
 #ifdef MC_GRANDCAN
 int allocnpGC;
@@ -1122,7 +1121,7 @@ int dyn_realloc_oprog(int np)
 }
 extern double **matrix(int n, int m);
 extern void AllocCoord(int size, COORD_TYPE** pointer, ...);
-
+extern double *max_step_MC;
 void check_alloc_GC(void)
 {
   int size, allocnpGCold, k, i;
@@ -1206,6 +1205,8 @@ void check_alloc_GC(void)
 	      nebrTab[k].shift = NULL;
 	      nebrTab[k].R = matrix(3, 3);
 	    }
+	  overestimate_of_displ = realloc(overestimate_of_displ, sizeof(double)*allocnpGC);
+	  max_step_MC = realloc(max_step_MC, sizeof(double)*allocnpGC);
 	}
       cellList = realloc(cellList, sizeof(int)*(cellsx*cellsy*cellsz+allocnpGC));
       inCell[0] = realloc(inCell[0],sizeof(int)*allocnpGC);
@@ -1252,7 +1253,7 @@ void build_one_nnl_GC(int ip)
 }
 extern void versor_to_R(double ox, double oy, double oz, double R[3][3]);
 extern void find_bonds_one(int i);
-
+double calc_maxstep_MC(int i);
 int insert_particle_GC(void)
 {
   int np, k1, k2;
@@ -1277,6 +1278,7 @@ int insert_particle_GC(void)
   typeOfPart[np]=0;
   vx[np]=vy[np]=vz[np]=wx[np]=wy[np]=wz[np]=Mx[np]=My[np]=Mz[np]=0.0;
   is_a_sphere_NNL[np] = is_a_sphere_NNL[0]; 
+  maxax[np] = maxax[0];
   axa[np]=axa[0];
   axb[np]=axb[0];
   axc[np]=axc[0];
@@ -1293,6 +1295,8 @@ int insert_particle_GC(void)
   if (OprogStatus.useNNL)
     {
       build_one_nnl_GC(np);
+      overestimate_of_displ[np]=0.0;
+      max_step_MC[np] = calc_maxstep_MC(np);
     }
   return np;
 }
@@ -1647,6 +1651,7 @@ void calc_all_maxsteps(void)
 
 }
 #endif
+
 int do_nnl_rebuild(void)
 {
   int i=0; 
@@ -1813,8 +1818,9 @@ void move(void)
 #endif
 	  if (OprogStatus.dthetaMC > 3.14)
 	    OprogStatus.dthetaMC = 3.14;
-	if (OprogStatus.useNNL)
-	  calc_all_maxsteps();
+	  /*NOTA: questo credo che si possa eliminare */
+	  if (OprogStatus.useNNL)
+	    calc_all_maxsteps();
 	}
       if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1
 	  && (Oparams.curStep % OprogStatus.resetacceptVol==0))
