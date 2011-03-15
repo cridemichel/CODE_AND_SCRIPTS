@@ -1384,7 +1384,7 @@ void mcexc(int *ierr)
       //printf("arg=%.15G zetaMC=%.15G \n", arg, OprogStatus.zetaMC);
       if (ranf() < arg)
 	{
-	  printf("removing #%d\n", o);
+	  //printf("removing #%d\n", o);
 	  remove_par_GC(o);
 	}
     }
@@ -1692,7 +1692,7 @@ void move(void)
 	  movetype=4; /* 4 = insert/remove particle */
 	  if(err)
     	    {
-	      printf("[move_box] NR failed...I rejected this trial move...\n");
+	      printf("[mcexc] NR failed...I rejected this trial move...\n");
 	      err=0;
 	    }
 	  excmoveMC++;
