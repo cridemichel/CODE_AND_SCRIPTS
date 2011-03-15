@@ -6215,6 +6215,7 @@ void nextNNLupdate(int na)
 #endif
   MD_DEBUG31(printf("BUILDING NNL FOR i=%d\n",na));
 #ifdef MC_SIMUL
+  nebrTab[na].len=0; /* WARNING: check this for MC sims! */
   return;
 #endif
 #ifdef MD_NNLPLANES
