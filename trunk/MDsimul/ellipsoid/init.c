@@ -5977,7 +5977,6 @@ void usrInitAft(void)
 #endif
 
   StartRun();
-
 #ifdef MD_SPHERICAL_WALL
   printf("[SPHERICAL WALL] checking bonds\n");
   if (OprogStatus.checkGrazing)
