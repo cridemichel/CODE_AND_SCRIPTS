@@ -1862,6 +1862,8 @@ void usrInitBef(void)
     OprogStatus.tolAngSD = 0.0;
     OprogStatus.springkSD = 1.0;
     OprogStatus.toldxNR = 0.0;
+    /* con SDmethod=2 o 3 usa toldxNRta anziché toldxNR nel secondo tentativo */
+    OprogStatus.toldxNRta = -1.0;
     OprogStatus.tolAngNR = 0.0;
     OprogStatus.SDmethod = 0;
     OprogStatus.stepSDA = 1.0;
