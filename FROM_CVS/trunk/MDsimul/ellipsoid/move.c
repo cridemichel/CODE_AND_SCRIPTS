@@ -5805,7 +5805,11 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   if (are_spheres(i, j))
     return calcDistNegHS(t, t1, i, j, shift, r1, r2);
 #endif
+#ifdef MC_SIMUL
+  ti = 0;
+#else
   ti = t + (t1 - atomTime[i]);
+#endif
   MD_DEBUG50(printf("[calcDistNeg] - BEGIN");)
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
@@ -5842,9 +5846,15 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   minaxB = min3(axa[j],axb[j],axc[j]);
 #endif
   minaxAB = min(minaxA,minaxB);
+#ifdef MC_SIMUL
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+#else
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
+#endif
   MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
 
@@ -5896,10 +5906,16 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   if (!is_superellipse(i))
     tRDiagR(i, Xa, invaSq[na], invbSq[na], invcSq[na], RtA);
 #endif
+#ifdef MC_SIMUL
+  rB[0] = rx[j] + shift[0];
+  rB[1] = ry[j] + shift[1];
+  rB[2] = rz[j] + shift[2];
+#else
   ti = t + (t1 - atomTime[j]);
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
+#endif
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
@@ -10396,7 +10412,9 @@ void rebuildLinkedList(void)
 	  continue;
 	}
 #endif
+#ifndef MC_SIMUL
       atomTime[n] = Oparams.time;
+#endif
 #ifdef MD_LXYZ
       inCell[0][n] =  (rx[n] + L2[0]) * cellsx / L[0];
       inCell[1][n] =  (ry[n] + L2[1]) * cellsy / L[1];

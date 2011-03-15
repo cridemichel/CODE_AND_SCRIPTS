@@ -1412,7 +1412,7 @@ struct singlePar OsinglePar[] = {
   {"inistep" ,   &Oparams.curStep,            LLINT},
   {"endFormat",  &OprogStatus.endFormat,      INT},
 #ifdef MC_SIMUL
-#ifdef MD_GRANDCAN
+#ifdef MC_GRANDCAN
   {"zetaMC",   &OprogStatus.zetaMC,         CT},
   {"npav",  &OprogStatus.npav,        INT},
   {"nexc",&OprogStatus.nexc,        INT},
