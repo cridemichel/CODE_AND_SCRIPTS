@@ -5946,7 +5946,9 @@ void usrInitAft(void)
       else
 	calc_omega(i, &(wx[i]), &(wy[i]), &(wz[i]));
       angM[i] = sqrt(Sqr(Mx[i])+Sqr(My[i])+Sqr(Mz[i]));
+#ifndef MC_SIMUL
       upd_refsysM(i);
+#endif
     }
 #endif
   //exit(-1);

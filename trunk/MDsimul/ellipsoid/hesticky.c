@@ -3002,10 +3002,20 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
     return calcDistNegSPsph(t, t1, i, j, shift, amin, bmin, dists, bondpair);
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+#ifdef MC_SIMUL
+  ti = 0;
+#else  
   ti = t + (t1 - atomTime[i]);
+#endif
+#ifdef MC_SIMUL
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+#else
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
+#endif
   MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
@@ -3017,10 +3027,20 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
   na = (i < Oparams.parnumA)?0:1;
+#ifdef MC_SIMUL
+  ti = 0;
+#else
   ti = t + (t1 - atomTime[j]);
+#endif
+#ifdef MC_SIMUL
+  rB[0] = rx[j] + shift[0];
+  rB[1] = ry[j] + shift[1];
+  rB[2] = rz[j] + shift[2];
+#else
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
+#endif
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else

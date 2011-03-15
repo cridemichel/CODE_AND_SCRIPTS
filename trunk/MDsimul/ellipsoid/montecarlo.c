@@ -1049,7 +1049,10 @@ void remove_par_GC(int ip)
   ry[ip] = ry[lp];
   rz[ip] = rz[lp];
   typeOfPart[ip] = typeOfPart[lp];
-
+  is_a_sphere_NNL[ip] = is_a_sphere_NNL[lp];
+  axa[ip] = axa[lp];
+  axb[ip] = axb[lp];
+  axc[ip] = axb[lp];
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       {
@@ -1118,19 +1121,36 @@ int dyn_realloc_oprog(int np)
   return OprogStatus.len;
 }
 extern double **matrix(int n, int m);
+extern void AllocCoord(int size, COORD_TYPE** pointer, ...);
 
 void check_alloc_GC(void)
 {
-  int size, allocnpGCold, k;
-  if (Oparams.parnum > allocnpGC)
+  int size, allocnpGCold, k, i;
+  double *rt[3];
+  if (Oparams.parnum+1 > allocnpGC)
     {
       allocnpGCold=allocnpGC;
-      allocnpGC = (int) (1.1*allocnpGC);
-      rx = realloc(rx, allocnpGC*sizeof(double));
-      ry = realloc(ry, allocnpGC*sizeof(double));
-      rz = realloc(ry, allocnpGC*sizeof(double));
+      allocnpGC = (int) (1.2*((double)allocnpGC));
+      printf("new allocnpGC=%d old=%d\n", allocnpGC, allocnpGCold);
+      rt[0] = malloc(sizeof(double)*Oparams.parnum);
+      rt[1] = malloc(sizeof(double)*Oparams.parnum);
+      rt[2] = malloc(sizeof(double)*Oparams.parnum);
+      is_a_sphere_NNL = realloc(is_a_sphere_NNL, sizeof(int)*allocnpGC);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  rt[0][i] = rx[i];
+	  rt[1][i] = ry[i];
+	  rt[2][i] = rz[i];
+	}	  
+      free(rx);
+      AllocCoord(allocnpGC*sizeof(double), ALLOC_LIST, NULL); 
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  rx[i] = rt[0][i];
+	  ry[i] = rt[1][i];
+	  rz[i] = rt[2][i];
+	}
       numbonds = realloc(numbonds,allocnpGC*sizeof(int));
-      
 #ifdef MD_LL_BONDS
       bonds = realloc(bonds, allocnpGC*sizeof(long long int*));
       size = sizeof(long long int);
@@ -1141,15 +1161,6 @@ void check_alloc_GC(void)
       for (k=allocnpGCold; k < allocnpGC; k++)
 	bonds[k] = malloc(size*OprogStatus.maxbonds);
       typeOfPart = realloc(typeOfPart, sizeof(int)*allocnpGC);
-      uxx = realloc(uxx, sizeof(double)*allocnpGC);
-      uxy = realloc(uxy, sizeof(double)*allocnpGC);
-      uxz = realloc(uxz, sizeof(double)*allocnpGC);
-      uyx = realloc(uyx, sizeof(double)*allocnpGC);
-      uyy = realloc(uyy, sizeof(double)*allocnpGC);
-      uyz = realloc(uyz, sizeof(double)*allocnpGC);
-      uzx = realloc(uzx, sizeof(double)*allocnpGC);
-      uzy = realloc(uzy, sizeof(double)*allocnpGC);
-      uzz = realloc(uzz, sizeof(double)*allocnpGC);
       R = realloc(R,sizeof(double**)*allocnpGC);
 #ifdef MD_MATRIX_CONTIGOUS
       R[0] = malloc(sizeof(double*)*3);
@@ -1170,6 +1181,9 @@ void check_alloc_GC(void)
 	}
 #endif
       maxax = realloc(maxax, allocnpGC*sizeof(double));
+      axa   = realloc(axa,   allocnpGC*sizeof(double));
+      axb   = realloc(axb,   allocnpGC*sizeof(double));
+      axc   = realloc(axc,   allocnpGC*sizeof(double));
       for (k=allocnpGCold; k < allocnpGC; k++)
 	{
 	  /* per ora presuppone tutte le particelle uguali */
@@ -1188,7 +1202,7 @@ void check_alloc_GC(void)
 	      nebrTab[k].R = matrix(3, 3);
 	    }
 	}
-      cellList = realloc(cellList, cellsx*cellsy*cellsz+allocnpGC);
+      cellList = realloc(cellList, sizeof(int)*(cellsx*cellsy*cellsz+allocnpGC));
       inCell[0] = realloc(inCell[0],sizeof(int)*allocnpGC);
       inCell[1] = realloc(inCell[1],sizeof(int)*allocnpGC);
       inCell[2] = realloc(inCell[2],sizeof(int)*allocnpGC);
@@ -1234,7 +1248,7 @@ void build_one_nnl_GC(int ip)
 extern void versor_to_R(double ox, double oy, double oz, double R[3][3]);
 extern void find_bonds_one(int i);
 
-void insert_particle_GC(void)
+int insert_particle_GC(void)
 {
   int np, k1, k2;
   double ox, oy, oz, Rl[3][3];
@@ -1254,6 +1268,14 @@ void insert_particle_GC(void)
 #endif
   orient(&ox,&oy,&oz);
   versor_to_R(ox, oy, oz, Rl);
+  /* per ora assumiamo un solo tipo di particelle nel GC */
+  typeOfPart[np]=0;
+  vx[np]=vy[np]=vz[np]=wx[np]=wy[np]=wz[np]=Mx[np]=My[np]=Mz[np]=0.0;
+  is_a_sphere_NNL[np] = is_a_sphere_NNL[0]; 
+  axa[np]=axa[0];
+  axb[np]=axb[0];
+  axc[np]=axc[0];
+  //printf("np=%d v=%f %f %f\n", np, vx[np], vy[np], vz[np]);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       {
@@ -1267,15 +1289,82 @@ void insert_particle_GC(void)
     {
       build_one_nnl_GC(np);
     }
-  if (OprogStatus.useNNL)
-    find_bonds_one_NLL(np);
-  else
-    find_bonds_one(np);
-  /* presuppone per ora che ci sia solo un tipo di particelle */
+  return np;
 }
+void find_bonds_GC(int ip);
+extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
+double calcpotene_GC(int ip)
+{
+  double Epot; 
+  int na;
+#ifdef EDHE_FLEX
+#ifdef MD_LL_BONDS
+  long long int jj, jj2, aa, bb;
+  int kk, kk2;
+#else
+  int kk2, jj, kk, jj2, aa, bb;
+#endif
+#endif
+  Epot = 0;
+#ifdef EDHE_FLEX
+  na=ip;
+  for (kk=0; kk < numbonds[na]; kk++)
+    {
+      jj = bonds[na][kk]/(NANA);
+      jj2 = bonds[na][kk]%(NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      //printf("numbonds[%d]=%d aa=%lld bb=%lld ninters:%d\n", na, numbonds[na], aa, bb, Oparams.ninters);
+      for (kk2 = 0; kk2 < Oparams.ninters; kk2++)
+	{
+	  //printf("type[%d]=%d type[%lld]=%d \n", na, typeOfPart[na], jj, typeOfPart[jj]);
+	  if ( (is_in_ranges(typeOfPart[na], intersArr[kk2].type1, intersArr[kk2].nr1, intersArr[kk2].r1) && 
+		is_in_ranges(typeOfPart[jj], intersArr[kk2].type2, intersArr[kk2].nr2, intersArr[kk2].r2) &&
+		intersArr[kk2].spot1 == aa-1 && intersArr[kk2].spot2 == bb-1) || 
+	       (is_in_ranges(typeOfPart[jj], intersArr[kk2].type1, intersArr[kk2].nr1, intersArr[kk2].r1) && 
+		is_in_ranges(typeOfPart[na], intersArr[kk2].type2, intersArr[kk2].nr2, intersArr[kk2].r2) &&
+		intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
+	    {
+	      Epot -= intersArr[kk2].bheight;
+#ifdef MD_SPHERICAL_WALL
+	      /* 14/07/08 NOTA: i muri sferici hanno sempre numbonds[sphWall/sphWallOuter]=0 quindi
+		 si considerano doppie le interazioni tra una certa particella ed un muro sferico,
+		 poiché il potenziale viene calcolato considerando che per ogni interazione ce n'è una simmetrica */ 
+	      if (jj==sphWall || jj==sphWallOuter)
+		Epot -= intersArr[kk2].bheight;
+#endif
+
+	    }		 
+	}
+#ifdef MD_SWDUMBBELL
+      Epot+=swdb_adjust_Epot(na);
+#endif
+      if (Oparams.nintersIJ > 0)
+	{
+	  for (kk2 = 0; kk2 < Oparams.nintersIJ; kk2++)
+	    {
+	      if ( (is_in_ranges(na, intersArrIJ[kk2].i, intersArrIJ[kk2].nr1, intersArrIJ[kk2].r1) && 
+		    is_in_ranges(jj, intersArrIJ[kk2].j, intersArrIJ[kk2].nr2, intersArrIJ[kk2].r2) &&
+		    intersArrIJ[kk2].spot1 == aa-1 && intersArrIJ[kk2].spot2 == bb-1) || 
+		   (is_in_ranges(jj, intersArrIJ[kk2].i, intersArrIJ[kk2].nr1, intersArrIJ[kk2].r1) && 
+		    is_in_ranges(na, intersArrIJ[kk2].j, intersArrIJ[kk2].nr2, intersArrIJ[kk2].r2) &&
+		    intersArrIJ[kk2].spot1 == bb-1 && intersArrIJ[kk2].spot2 == aa-1) )  
+		{
+		  Epot -= intersArrIJ[kk2].bheight;
+		}
+	    }	
+	}
+    }
+  //Epot -= numbonds[na];
+#else
+  Epot -= numbonds[na];
+#endif
+  return Epot;
+}
+
 void mcexc(int *ierr)
 {
-  int o;
+  int o, np;
   double enn, eno, arg, vol;
   double xn[3]; 
 #ifdef MD_LXYZ
@@ -1290,8 +1379,9 @@ void mcexc(int *ierr)
       if (Oparams.parnum==0)
 	return;
       o = Oparams.parnum*ranf();
-      eno=calcpotene();
-      arg = Oparams.parnum*exp((1.0/Oparams.T)*eno/(OprogStatus.zetaMC*vol));
+      eno=calcpotene_GC(o);
+      arg = Oparams.parnum*exp((1.0/Oparams.T)*eno)/(OprogStatus.zetaMC*vol);
+      //printf("arg=%.15G zetaMC=%.15G \n", arg, OprogStatus.zetaMC);
       if (ranf() < arg)
 	{
 	  printf("removing #%d\n", o);
@@ -1301,24 +1391,28 @@ void mcexc(int *ierr)
   else
     {
       /* nella seguente routine deve aggiungere la particella nelle LL e nelle NNL se usate */
-      printf("Inserting #%d\n", Oparams.parnum);
-      insert_particle_GC();
-      if (overlapMC(Oparams.parnum-1, ierr))
+      //printf("Inserting #%d\n", Oparams.parnum);
+      np=insert_particle_GC();
+      if (overlapMC(np, ierr))
 	{
 	  /* reject insertion */
 	  //remove_from_current_cell(Oparams.parnum-1);
+	  //printf("overlap Insertion rejected #%d\n", Oparams.parnum-1);
 	  Oparams.parnum--;
 	  rebuildLinkedList();
 	  excrejMC++;
 	  return;
 	}	
-      update_bonds_MC(Oparams.parnum-1);
-      enn=calcpotene();
-      arg = OprogStatus.zetaMC*vol*exp(-(1.0/Oparams.T)*enn)/(Oparams.parnum+1);
+      find_bonds_GC(np);
+      enn=calcpotene_GC(np);
+      //printf("enn=%.15G\n", enn);
+      arg = OprogStatus.zetaMC*vol*exp(-(1.0/Oparams.T)*enn)/Oparams.parnum;
       if (ranf() >= arg)
 	{
+	  //printf("Insertion rejected #%d\n", np);
 	  /* insertion rejected */
 	  //remove_from_current_cell(Oparams.parnum-1);
+	  remove_bonds_GC(np);
 	  Oparams.parnum--;
 	  rebuildLinkedList();
 	  excrejMC++;
@@ -1471,6 +1565,14 @@ void update_bonds_MC(int ip)
       bb = jj2 % NA;
       remove_bond(jj, ip, bb, aa);
     }
+  numbonds[ip] = 0;
+  if (OprogStatus.useNNL)
+    find_bonds_one_NLL(ip);
+  else
+    find_bonds_one(ip);
+}
+void find_bonds_GC(int ip)
+{
   numbonds[ip] = 0;
   if (OprogStatus.useNNL)
     find_bonds_one_NLL(ip);
@@ -1712,7 +1814,7 @@ void move(void)
 	  else
 	    OprogStatus.vmax /= 1.1;
 	}
-      printf("MC Step #%d pressure=%f temperature=%f\n", Oparams.curStep, Oparams.P, Oparams.T);
+      printf("MC Step #%d pressure=%f temperature=%f Npar=%d\n", Oparams.curStep, Oparams.P, Oparams.T, Oparams.parnum);
       printf("Acceptance=%.15G (tra=%.15G rot=%.15G) deltaMC=%.15G dthetaMC=%.15G\n", acceptance, traaccept, 
 	     rotaccept, OprogStatus.deltaMC, OprogStatus.dthetaMC);
       printf("rotmoveMC:%lld rotrefMC: %lld cells= %d %d %d\n", rotmoveMC, rotrejMC, cellsx, cellsy, cellsz);
