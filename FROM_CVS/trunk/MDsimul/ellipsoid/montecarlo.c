@@ -1405,6 +1405,9 @@ void mcexc(int *ierr)
 	  //printf("overlap Insertion rejected #%d\n", Oparams.parnum-1);
 	  Oparams.parnum--;
 	  rebuildLinkedList();
+	  /* rimuove ip da tutte le NNL del sistema */
+	  if (OprogStatus.useNNL)
+	    remove_from_nnl_MC(np);
 	  excrejMC++;
 	  return;
 	}	
@@ -1420,6 +1423,9 @@ void mcexc(int *ierr)
 	  remove_bonds_GC(np);
 	  Oparams.parnum--;
 	  rebuildLinkedList();
+	  /* rimuove ip da tutte le NNL del sistema */
+	  if (OprogStatus.useNNL)
+	    remove_from_nnl_MC(np);
 	  excrejMC++;
 	  return;
 	}
