@@ -1697,7 +1697,7 @@ void move(void)
       else 
 	ran = 0;
 #ifdef MC_GRANDCAN
-      if (OprogStatus.ensembleMC==2 && ran >= Oparams.parnum)
+      if (OprogStatus.ensembleMC==2 && ran >= OprogStatus.npav)
 	{
 	  mcexc(&err);
 	  movetype=4; /* 4 = insert/remove particle */
