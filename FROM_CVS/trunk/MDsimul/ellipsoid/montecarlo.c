@@ -1163,6 +1163,9 @@ void check_alloc_GC(void)
       typeOfPart = realloc(typeOfPart, sizeof(int)*allocnpGC);
       R = realloc(R,sizeof(double**)*allocnpGC);
 #ifdef MD_MATRIX_CONTIGOUS
+      //printf("prima: "); 
+      //print_matrix(R[10], 3);
+
       R[0] = malloc(sizeof(double*)*3);
       R[0][0] = realloc(R[k][0], sizeof(double)*allocnpGC*9);
       R[0][1] = R[0][0] + 3;
@@ -1180,6 +1183,8 @@ void check_alloc_GC(void)
     	  R[k] = matrix(3, 3);
 	}
 #endif
+      //printf("dopo: "); 
+      //print_matrix(R[10], 3);
       maxax = realloc(maxax, allocnpGC*sizeof(double));
       axa   = realloc(axa,   allocnpGC*sizeof(double));
       axb   = realloc(axb,   allocnpGC*sizeof(double));
@@ -1660,7 +1665,7 @@ void move(void)
 #if 1 
   if (OprogStatus.useNNL && do_nnl_rebuild())
     {
-      printf("Step #%d Rebuilding NNL\n", Oparams.curStep);
+      //printf("Step #%d Rebuilding NNL\n", Oparams.curStep);
       for (i=0; i < Oparams.parnum; i++)
 	overestimate_of_displ[i]=0.0;
       rebuildNNL();

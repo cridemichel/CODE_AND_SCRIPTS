@@ -5792,6 +5792,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double axaiF, axbiF, axciF;
   double axajF, axbjF, axcjF;
 #endif
+  double toldxNR;
 #ifndef MD_ASYM_ITENS
   double Omega[3][3];
 #endif
@@ -5805,6 +5806,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   if (are_spheres(i, j))
     return calcDistNegHS(t, t1, i, j, shift, r1, r2);
 #endif
+  toldxNR=OprogStatus.toldxNR;
 #ifdef MC_SIMUL
   ti = 0;
 #else
@@ -6256,6 +6258,11 @@ retry:
   
   //printf(">>>>>>>>>>>> INIZIO NR\n");
   MD_DEBUG(printf(">>>>>>> alpha: %f beta: %f\n", vecg[6], vecg[7]));
+  if (tryagain)
+    {
+      if (OprogStatus.toldxNRta > 0.0)
+	OprogStatus.toldxNR=OprogStatus.toldxNRta;
+    }
   if (OprogStatus.dist5)
     {
       double vecg8[8];
@@ -6285,7 +6292,10 @@ retry:
     {
       newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift, tryagain); 
     }
-    numcalldist++;
+  numcalldist++;
+
+  /* ripristina il valore iniziale */
+  OprogStatus.toldxNR = toldxNR;
   if (retcheck != 0)
     {
       if (tryagain && OprogStatus.targetPhi <= 0.0)
@@ -6368,7 +6378,6 @@ retry:
       MD_DEBUG38(printf("r1 %.15G %.15G %.15G r2 %.15G %.15G %.15G \n", r1[0], r1[1], r1[2], r2[0], r2[1], r2[2]));
       MD_DEBUG38(printf("r12=%.15G\n", calc_norm(r12)));
     } 
-  
   *alpha = vecg[3];
 #ifdef MD_SUPERELLIPSOID
   segno = calc_sign_SE(i, rA, RtA, r2, Xa);

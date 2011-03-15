@@ -649,6 +649,9 @@ struct progStatus
   double springkSD;
   int SDmethod;
   double toldxNR;
+  /* toldx da usare come secondo tentativo se fallisce la prima volta il calcolo della distanza 
+     con SDmethod=2 */
+  double toldxNRta;
   double tolAngNR;
   double stepSDA;
   double stepSDB;
@@ -1164,6 +1167,7 @@ struct pascii opro_ascii[] =
   {"SDmethod",     &OS(SDmethod),               1,   1, "%d"},
   {"stepSDA",       &OS(stepSDA),                1,   1, "%.12G"},
   {"toldxNR",       &OS(toldxNR),                1,   1, "%.15G"}, 
+  {"toldxNRta",     &OS(toldxNRta),              1,   1, "%.15G"},
   {"tolAngNR",      &OS(tolAngNR),               1,   1, "%.15G"},
   {"stepSDB",       &OS(stepSDB),                1,   1, "%.12G"},
   {"maxitsSD",     &OS(maxitsSD),              1,   1, "%d"},
@@ -1542,6 +1546,7 @@ struct singlePar OsinglePar[] = {
   {"springkSD",  &OprogStatus.springkSD,    CT},
   {"SDmethod",    &OprogStatus.SDmethod,     INT},
   {"toldxNR",    &OprogStatus.toldxNR,  CT},
+  {"toldxNRta",  &OprogStatus.toldxNRta,  CT},
   {"tolAngNR",   &OprogStatus.tolAngNR, CT},
 #ifdef EDHE_FLEX
   {"stepSD",      &OprogStatus.stepSDA,         CT},
