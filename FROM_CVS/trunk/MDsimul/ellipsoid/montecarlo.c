@@ -1730,7 +1730,12 @@ void move(void)
       else
 	{
 	  ip = Oparams.parnum*ranf();
+	  /* qui basta calcolare l'energia della particella che sto muovendo */
+#if 0
 	  eno = calcpotene();
+#else
+	  eno = calcpotene_GC(ip);
+#endif
 	  store_coord(ip);
 	  movetype=random_move(ip);
 	  pbc(ip);
@@ -1744,7 +1749,12 @@ void move(void)
 	  if (!dorej)
 	    {
 	      update_bonds_MC(ip);
+	      /* qui basta calcolare l'energia della particella che sto muovendo */
+#if 0
 	      enn=calcpotene();
+#else
+	      enn=calcpotene_GC(ip);
+#endif
 	      if (enn <= eno)
 		{
 		  //	  if (abs(enn-eno) >=1 )
