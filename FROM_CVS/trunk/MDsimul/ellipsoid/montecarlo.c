@@ -1735,11 +1735,12 @@ int is_bonded_mc(int ip, int numb)
 void calc_cov_additive(void)
 {
   FILE *fi;
-  double totene = 0.0, alpha;
-  int size1, size2, nb, tt, k1, k2, overlap, ierr, maxtrials, type;
+  double totene = 0.0, alpha, shift[3];
+  int i, j, size1, size2, nb, tt, k1, k2, overlap, ierr, type;
+  long long int maxtrials;
   double ox, oy, oz, Rl[3][3];
   fi = fopen("covmc.conf", "r");
-  fscanf(fi, "%lld %d", &maxtrials, &type, &size1);
+  fscanf(fi, "%lld %d %d", &maxtrials, &type, &size1);
   if (type==1)
     fscanf(fi, " %lf", &alpha);
   /* type = 0 -> covolume 
@@ -1824,7 +1825,16 @@ void calc_cov_additive(void)
 	  overlap = 0;
 	  for (j=0; j < size1; j++)
 	    {
-	      if (check_overlap(i, j, &ierr))
+#ifdef MD_LXYZ
+	      shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+	      shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+	      shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+	      shift[0] = L*rint((rx[i]-rx[j])/L);
+	      shift[1] = L*rint((ry[i]-ry[j])/L);
+	      shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+	      if (check_overlap(i, j, shift, &ierr))
 		{
 		  overlap=1;
 		  break;
