@@ -1667,13 +1667,45 @@ int do_nnl_rebuild(void)
 extern void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3]);
 extern double **RtA;
 extern double ranf_vb(void);
+extern double *dists;
+extern int bound(int na, int n, int a, int b);
+extern void add_bond(int na, int n, int a, int b);
 
+extern int nbondsFlex;
+extern int *mapbondsaFlex, *mapbondsbFlex; 
+extern double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
+
+void find_bonds_covadd(int i, int j)
+{
+  int nn,  amin, bmin, nbonds;
+  double shift[3], dist;
+#ifdef MD_LXYZ
+  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+  shift[0] = L*rint((rx[i]-rx[j])/L);
+  shift[1] = L*rint((ry[i]-ry[j])/L);
+  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+  assign_bond_mapping(i, j);  
+  dist = calcDistNegSP(0.0, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+  nbonds = nbondsFlex;
+  for (nn=0; nn < nbonds; nn++)
+    {
+      if (dists[nn]<0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
+	{
+	  add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
+	  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
+	}
+    }
+}
 void mcin(int i, int j, int nb)
 {
   double rA[3], rat[3], norm, sax, cc[3];
   double Rl[3][3], vv[3];
   double ox, oy, oz;
-  int k1, k2;
+  int bonded, k1, k2;
   /* place particle i bonded to bond nb of particle j */
   rA[0] = rx[j];
   rA[1] = ry[j];
@@ -1694,25 +1726,32 @@ void mcin(int i, int j, int nb)
   sax = typesArr[typeOfPart[j]].sax[0];
   for (k1=0; k1 < 3; k1++)
     cc[k1] = rA[k1] + vv[k1]*sax*2.0;
-  /* chose a random position inside */
-  orient(&ox, &oy, &oz);
-  norm = ranf_vb()*sax;
-  rx[i] = cc[0]+ox*norm;
-  ry[i] = cc[1]+oy*norm;
-  rz[i] = cc[2]+oz*norm;
-  pbc(i);
-  orient(&ox, &oy, &oz);
-  versor_to_R(ox, oy, oz, Rl);
-  for (k1 = 0; k1 < 3; k1++)
+  bonded=0;
+  while (!bonded)
     {
-      for (k2=0; k2 < 3; k2++)
+      /* chose a random position inside */
+      orient(&ox, &oy, &oz);
+      norm = ranf_vb()*sax;
+      rx[i] = cc[0]+ox*norm;
+      ry[i] = cc[1]+oy*norm;
+      rz[i] = cc[2]+oz*norm;
+      pbc(i);
+      orient(&ox, &oy, &oz);
+      versor_to_R(ox, oy, oz, Rl);
+      for (k1 = 0; k1 < 3; k1++)
 	{
-	  R[i][k1][k2] = Rl[k1][k2]; 
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      R[i][k1][k2] = Rl[k1][k2]; 
+	    }
 	}
+      find_bonds_covadd(i, j);
+      if (calcpotene_GC(i) < 0)
+	bonded=1;
     }
 }
 int is_bonded_mc(int ip, int numb)
-{
+    {
   int kk;
 #ifdef MD_LL_BONDS
   int i, nb;
@@ -1773,8 +1812,12 @@ void calc_cov_additive(void)
   while (tt < maxtrials) 
     {
       /* place first cluster */
-      if (tt%10000==0)
+      if (tt%100==0)
 	printf("tt=%d\n", tt);
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  numbonds[i] = 0;
+	}
       for (i=1; i < size1; i++)
 	{
 	  while (1)
