@@ -1735,14 +1735,14 @@ int is_bonded_mc(int ip, int numb)
 void calc_cov_additive(void)
 {
   FILE *fi;
-  double totene = 0.0, alpha, shift[3];
+  double Lb, totene = 0.0, alpha, shift[3];
   int i, j, size1, size2, nb, tt, k1, k2, overlap, ierr, type;
   long long int maxtrials;
   double ox, oy, oz, Rl[3][3];
   fi = fopen("covmc.conf", "r");
-  fscanf(fi, "%lld %d %d", &maxtrials, &type, &size1);
+  fscanf(fi, "%lld %d %d ", &maxtrials, &type, &size1);
   if (type==1)
-    fscanf(fi, " %lf", &alpha);
+    fscanf(fi, " %lf ", &alpha);
   /* type = 0 -> covolume 
      type = 1 -> covolume nematic
    */
@@ -1773,7 +1773,7 @@ void calc_cov_additive(void)
   while (tt < maxtrials) 
     {
       /* place first cluster */
-      if (tt%1000000==0)
+      if (tt%10000==0)
 	printf("tt=%d\n", tt);
       for (i=1; i < size1; i++)
 	{
@@ -1843,10 +1843,18 @@ void calc_cov_additive(void)
 	  if (overlap)
 	    break;
 	}
-      if (!overlap)
+      if (overlap)
 	totene += 1.0;
       tt++;
     }
+#ifdef MD_LXYZ
+  Lb = L[0];
+#else
+  Lb = L;
+#endif
+ 
+  printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(Lb*Lb*Lb), totene);
+  printf("%.15G\n",(totene/((double)tt))*(Lb*Lb*Lb));
 }
 #endif
 void move(void)
@@ -1859,8 +1867,6 @@ void move(void)
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   //printf("Doing MC step #%d\n", Oparams.curStep);
 #if 1 
-
-
 #ifdef MC_CALC_COVADD
   calc_cov_additive();
   exit(-1);
