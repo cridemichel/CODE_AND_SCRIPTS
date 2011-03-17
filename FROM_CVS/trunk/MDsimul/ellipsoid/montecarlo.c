@@ -1664,6 +1664,156 @@ int do_nnl_rebuild(void)
   else
     return 0;
 }
+
+void mcin(int i, int j, int nb)
+{
+  double rA[3], RtA[3][3], rat[3], norm, sax, cc[3];
+  double Rl[3][3];
+  double ox, oy, oz;
+  int k1, k2;
+  /* place particle i bonded to bond nb of particle j */
+  rA[0] = rx[j];
+  rA[1] = ry[j];
+  rA[2] = rz[j];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	{
+	  RtA[k1][k2] = R[j][k1][k2];
+	}
+    }
+  BuildAtomPosAt(j, nb+1, rA, RtA, rat);
+  for (k1=0; k1 < 3; k1++)
+    vv[k1] = rat[k1] - rA[k1];
+  norm = calc_norm(vv);
+  for (k1=0; k1 < 3; k1++)
+    vv[k1] /=norm;
+  sax = typesArr[typeOfPart[j]].sax[0];
+  for (k1=0; k1 < 3; k1++)
+    cc[k1] = rA[k1] + vv[k1]*sax*2.0;
+  /* chose a random position inside */
+  orient(&ox, &oy, &oz);
+  norm = ranf_vb()*sax;
+  rx[i] = cc[0]+ox*norm;
+  ry[i] = cc[1]+oy*norm;
+  rz[i] = cc[2]+oz*norm;
+  pbc(i);
+  orient(&ox, &oy, &oz);
+  versor_to_R(ox, oy, oz, Rl);
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	{
+	  R[i][k1][k2] = Rl[k1][k2]; 
+	}
+    }
+}
+#ifdef MC_CALC_COVADD
+void calc_cov_additive(void)
+{
+  FILE *fi;
+  double totene = 0.0, alpha;
+  int size1, size2, nb, tt, k1, k2, overlap, ierr, maxtrials, type;
+  double ox, oy, oz, Rl[3][3];
+  fi = fopen("covmc.conf", "r");
+  fscanf(fi, "%lld %d", &maxtrials, &type, &size1);
+  if (type==1)
+    fscanf(fi, " %lf", &alpha);
+  /* type = 0 -> covolume 
+     type = 1 -> covolume nematic
+   */
+  if (size1 >= Oparams.parnum)
+    {
+      printf("size1=%d must be less than parnum=%d\n", size1, Oparams.parnum);
+      exit(-1);
+    } 
+  fclose(fi);
+#ifdef MD_MAC
+  srandomdev();
+#else
+  srandom((int)(time(NULL)));
+#endif
+  OprogStatus.optnnl = 0;
+  tt=0;
+  size2 = Oparams.parnum-size1;
+  /* first particle is always in the center of the box with the same orientation */
+  rx[0] = 0;
+  ry[0] = 0;
+  rz[0] = 0;
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+     	R[0][k1][k2] = (k1==k2)?1:0;
+      }
+
+  while (tt < maxtrials) 
+    {
+      /* place first cluster */
+      for (i=1; i < size1; i++)
+	{
+	  while (1)
+	    {
+	      nb = (int)(ranf_vb()*2.0);
+	      j = (int) (ranf_vb()*i);
+	      if (is_bonded_mc(j, nb))
+		continue;
+	      else
+		break;
+	    }
+	  mcin(i, j, nb);
+	}
+      /* place second cluster */
+      for (i=size1; i < Oparams.parnum; i++)
+	{
+	  if (i==size1)
+	    {
+#ifdef MD_LXYZ
+	      rx[i] = L[0]*(ranf_vb()-0.5);
+	      ry[i] = L[1]*(ranf_vb()-0.5); 
+	      rz[i] = L[2]*(ranf_vb()-0.5); 
+#else
+    	      rx[i] = L*(ranf_vb()-0.5);
+    	      ry[i] = L*(ranf_vb()-0.5); 
+    	      rz[i] = L*(ranf_vb()-0.5); 
+#endif
+    	      orient(&ox, &oy, &oz);
+    	      versor_to_R(ox, oy, oz, Rl);
+    	      for (k1=0; k1 < 3; k1++)
+    		for (k2=0; k2 < 3; k2++)
+    		  R[i][k1][k2] = Rl[k1][k2];
+	    }
+	  else
+	    {
+	      while (1)
+		{
+		  nb = (int)(ranf_vb()*2.0);
+		  j = ((int) (ranf_vb()*size2))+size1;
+		  if (is_bonded_mc(j, nb))
+		    continue;
+		  else
+		    break;
+		}
+	      /* mette la particella i legata a j con posizione ed orientazione a casa */
+	      mcin(i, j, nb);
+	    }	    
+	  overlap = 0;
+	  for (j=0; j < size1; j++)
+	    {
+	      if (check_overlap(i, j, &ierr))
+		{
+		  overlap=1;
+		  break;
+		}
+	    }
+	  if (overlap)
+	    break;
+	}
+      if (!overlap)
+	totene += 1.0;
+      tt++;
+    }
+}
+#endif
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0;
@@ -1674,6 +1824,12 @@ void move(void)
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   //printf("Doing MC step #%d\n", Oparams.curStep);
 #if 1 
+
+
+#ifdef MC_CALC_COVADD
+  calc_cov_additive();
+  exit(-1);
+#endif
   if (OprogStatus.useNNL && do_nnl_rebuild())
     {
       //printf("Step #%d Rebuilding NNL\n", Oparams.curStep);
