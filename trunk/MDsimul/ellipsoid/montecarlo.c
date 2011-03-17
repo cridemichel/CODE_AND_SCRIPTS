@@ -1664,11 +1664,14 @@ int do_nnl_rebuild(void)
   else
     return 0;
 }
+extern void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3]);
+extern double **RtA;
+extern double ranf_vb(void);
 
 void mcin(int i, int j, int nb)
 {
-  double rA[3], RtA[3][3], rat[3], norm, sax, cc[3];
-  double Rl[3][3];
+  double rA[3], rat[3], norm, sax, cc[3];
+  double Rl[3][3], vv[3];
   double ox, oy, oz;
   int k1, k2;
   /* place particle i bonded to bond nb of particle j */
@@ -1707,6 +1710,26 @@ void mcin(int i, int j, int nb)
 	  R[i][k1][k2] = Rl[k1][k2]; 
 	}
     }
+}
+int is_bonded_mc(int ip, int numb)
+{
+  int kk;
+#ifdef MD_LL_BONDS
+  int i, nb;
+  long long int aa, bb, ii, jj, jj2;
+#else
+  int i, nb, ii, jj, aa, bb, jj2;
+#endif
+  for (kk=0; kk < numbonds[ip]; kk++)
+    {
+      jj = bonds[ip][kk] / (NANA);
+      jj2 = bonds[ip][kk] % (NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      if (aa==numb+1)
+	return 1;
+    }
+  return 0;
 }
 #ifdef MC_CALC_COVADD
 void calc_cov_additive(void)
@@ -1749,6 +1772,8 @@ void calc_cov_additive(void)
   while (tt < maxtrials) 
     {
       /* place first cluster */
+      if (tt%1000000==0)
+	printf("tt=%d\n", tt);
       for (i=1; i < size1; i++)
 	{
 	  while (1)
