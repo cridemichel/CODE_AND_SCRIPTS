@@ -3780,6 +3780,63 @@ NOTE: consider that it is an exponential distribution
 }
 
 int type;
+#if 0
+void versor_to_R(double ox, double oy, double oz, double R[3][3])
+{
+  int k;
+  double angle, u[3], sp, norm, up[3], xx, yy;
+
+  /* first row vector */
+  R[1][0] = ox;
+  R[1][1] = oy;
+  R[1][2] = oz;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 1; u[1] = 1; u[2] = 1;
+  if (u[0]==R[1][0] && u[1]==R[1][1] && u[2]==R[1][2])
+    {
+      u[0] = -1; u[1] = -1; u[2] = 1;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[1][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[1][k];
+  norm = calc_norm(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[0][k] = u[k]/norm;
+  if (typesArr[0].nspots==3 && type==0)
+    {
+      for (k=0; k < 3 ; k++)
+	u[k] = R[1][k];
+      vectProdVec(R[0], u, up);
+      /* rotate randomly second axis */
+      angle=4.0*acos(0.0)*ranf_vb();
+      xx = cos(angle);
+      yy = sin(angle);
+      for (k=0; k < 3 ; k++)
+	R[1][k] = u[k]*xx + up[k]*yy;
+      //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
+    }
+  /* third row vector */
+  vectProdVec(R[0], R[1], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+#if 0
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    Rt[k1][k2]=R[k2][k1];
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    R[k1][k2]=Rt[k1][k2];
+#endif
+
+  //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
+}
+#endif
+
 void versor_to_R(double ox, double oy, double oz, double R[3][3])
 {
   int k;
@@ -4043,6 +4100,12 @@ double calcDistNeg_vb(int i, int j, double shift[3])
 			1.01*(typesArr[typeOfPart[0]].sax[2]));
       d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
       /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
+#if 0
+      if (d0 < 0)
+	return -1.0;
+      else
+	return 1.0;
+#endif     
       if (d0 > 0.0)
 	{
 	  if (type==0 || type==2 || type==5)
@@ -4352,12 +4415,14 @@ void calc_vbonding(void)
       ry[1] = L*(ranf_vb()-0.5);
       rz[1] = L*(ranf_vb()-0.5);
 #endif      
-      if (Sqr(rx[1])+Sqr(ry[1])+Sqr(rz[1]) >= Sqr(2.0*typesArr[typeOfPart[1]].sax[0]+typesArr[typeOfPart[1]].spots[0].sigma)) 
+#if 1
+      if (Sqr(rx[1])+Sqr(ry[1])+Sqr(rz[1]) >= 4.0*(Sqr(typesArr[typeOfPart[1]].sax[0]+typesArr[typeOfPart[1]].spots[0].sigma)+Sqr(typesArr[typeOfPart[1]].sax[1]) + Sqr(typesArr[typeOfPart[1]].sax[2])))
 	{
 	  //printf("1)i=%d\n", i);
 	  i++;
 	  continue;
 	}
+#endif
 #if 0
       for (k1=0; k1 < 3; k1++)
 	for (k2=0; k2 < 3; k2++)
@@ -4425,7 +4490,12 @@ void calc_vbonding(void)
       if (i%100000==0)
 	printf("i=%lld d=%f calcdist_retcheck=%d\n", i, d, calcdist_retcheck);
       if (calcdist_retcheck == 0 && d < 0 && ( type==1 || type == 3 || type==4))
-	totene += 1.0;
+	{
+	  totene += 1.0;
+#ifdef MD_VB_SAVE_PTS
+	  //fprintf(fc,"%.15G %.15G %.15G\n", rx[1], ry[1], rz[1]);
+#endif
+	}
       if (calcdist_retcheck==0 && d >= 0.0 && ( type==0 || type == 2 || type == 5))
 	{
 	  dist = calcDistNegSP(0.0, 0.0, 0, 1, shift, &amin, &bmin, dists, -1);
@@ -4513,7 +4583,9 @@ void usrInitAft(void)
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
-
+#ifdef MD_CALC_VBONDING
+  OprogStatus.targetPhi=1.0;
+#endif
 #ifdef MD_LXYZ
   int kk;
 #endif
