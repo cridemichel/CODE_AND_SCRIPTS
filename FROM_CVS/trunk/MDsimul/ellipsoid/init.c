@@ -4583,7 +4583,7 @@ void usrInitAft(void)
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
-#ifdef MD_CALC_VBONDING
+#if defined(MD_CALC_VBONDING) && !defined(MC_SIMUL)
   OprogStatus.targetPhi=1.0;
 #endif
 #ifdef MD_LXYZ
@@ -6192,7 +6192,7 @@ void usrInitAft(void)
   build_parallelepipeds();
 #endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
-#if defined(MD_CALC_VBONDING) && !defined(MD_STANDALONE) && !defined(MC_SIMUL)
+#if defined(MC_CALC_COVADD) || (defined(MD_CALC_VBONDING) && !defined(MD_STANDALONE) && !defined(MC_SIMUL))
   calc_vbonding();
 #endif
 }
