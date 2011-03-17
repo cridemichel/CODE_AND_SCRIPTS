@@ -1778,7 +1778,7 @@ void calc_cov_additive(void)
 {
   FILE *fi;
   double Lb, totene = 0.0, alpha, shift[3];
-  int i, j, size1, size2, nb, tt, k1, k2, overlap, ierr, type;
+  int i, j, size1, size2, nb, tt, k1, k2, overlap=0, ierr, type;
   long long int maxtrials;
   double ox, oy, oz, Rl[3][3];
   fi = fopen("covmc.conf", "r");
@@ -1815,7 +1815,7 @@ void calc_cov_additive(void)
   while (tt < maxtrials) 
     {
       /* place first cluster */
-      if (tt%100==0)
+      if (tt%5000==0)
 	printf("tt=%d\n", tt);
       for (i=0; i < Oparams.parnum; i++)
 	{
@@ -1835,6 +1835,7 @@ void calc_cov_additive(void)
 	  mcin(i, j, nb);
 	}
       /* place second cluster */
+      overlap=0;
       for (i=size1; i < Oparams.parnum; i++)
 	{
 	  if (i==size1)
