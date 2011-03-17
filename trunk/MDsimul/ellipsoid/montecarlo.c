@@ -1705,7 +1705,7 @@ void mcin(int i, int j, int nb)
   double rA[3], rat[3], norm, sax, cc[3];
   double Rl[3][3], vv[3];
   double ox, oy, oz;
-  int bonded, k1, k2;
+  int bonded, k1, k2, trials;
   /* place particle i bonded to bond nb of particle j */
   rA[0] = rx[j];
   rA[1] = ry[j];
@@ -1727,6 +1727,7 @@ void mcin(int i, int j, int nb)
   for (k1=0; k1 < 3; k1++)
     cc[k1] = rA[k1] + vv[k1]*sax*2.0;
   bonded=0;
+  trials=0;
   while (!bonded)
     {
       /* chose a random position inside */
@@ -1748,7 +1749,9 @@ void mcin(int i, int j, int nb)
       find_bonds_covadd(i, j);
       if (calcpotene_GC(i) < 0)
 	bonded=1;
+      trials++;
     }
+  //printf("trials=%d\n", trials);
 }
 int is_bonded_mc(int ip, int numb)
     {
@@ -1862,7 +1865,7 @@ void calc_cov_additive(void)
 		  else
 		    break;
 		}
-	      /* mette la particella i legata a j con posizione ed orientazione a casa */
+	      /* mette la particella i legata a j con posizione ed orientazione a caso */
 	      mcin(i, j, nb);
 	    }	    
 	  overlap = 0;
@@ -1877,9 +1880,12 @@ void calc_cov_additive(void)
 	      shift[1] = L*rint((ry[i]-ry[j])/L);
 	      shift[2] = L*rint((rz[i]-rz[j])/L);
 #endif
-	      if (check_overlap(i, j, shift, &ierr))
+	      if (check_overlap(i, j, shift, &ierr)<0.0)
 		{
 		  overlap=1;
+		  //printf("i=%d j=%d overlap!\n", i, j);
+		  //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+		  //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
 		  break;
 		}
 	    }
