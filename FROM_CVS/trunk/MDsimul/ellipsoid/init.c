@@ -4574,6 +4574,14 @@ extern int allocnpGC;
 #endif
 #ifdef MC_SIMUL
 extern double calc_maxstep_MC(int i);
+#ifdef MC_STOREBONDS
+#ifdef MD_LL_BONDS
+extern long long int **bondsMC;
+extern int *numbondsMC;
+#else
+extern int *numbondsMC, **bondsMC;
+#endif
+#endif
 #endif
 void usrInitAft(void)
 {
@@ -6188,7 +6196,14 @@ void usrInitAft(void)
 	}
       OprogStatus.lastNNLrebuildMC = Oparams.curStep;
     }
- 
+#ifdef MC_STOREBONDS
+#ifdef MD_LL_BONDS
+  bondsMC = AllocMatLLI(Oparams.parnum, OprogStatus.maxbonds);
+#else
+  bondsMC = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+#endif 
+  numbondsMC = (int *) malloc(Oparams.parnum*sizeof(int));
+#endif
   build_parallelepipeds();
 #endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/

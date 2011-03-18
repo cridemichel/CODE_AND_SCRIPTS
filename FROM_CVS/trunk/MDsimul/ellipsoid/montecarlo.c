@@ -1,7 +1,14 @@
-const double saxfactMC[3]={0.85,0.68,0.68};
-
-#ifdef MC_SIMUL
 #include<mdsimul.h>
+const double saxfactMC[3]={0.85,0.68,0.68};
+#ifdef MC_SIMUL
+#ifdef MC_STOREBONDS
+#ifdef MD_LL_BONDS
+long long int **bondsMC;
+int *numbondsMC;
+#else
+int *numbondsMC, **bondsMC;
+#endif
+#endif
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG10(x) 
 #define MD_DEBUG11(x) 
@@ -903,7 +910,7 @@ int overlapMC(int ip, int *err)
 void remove_from_current_cell(int i)
 {
   int n;
-  n = (inCell[2][i] * cellsy + inCell[1][i] )*cellsx + inCell[0][i]
+  n = (inCell[2][i] * cellsy + inCell[1][i])*cellsx + inCell[0][i]
     + Oparams.parnum;
   
   while (cellList[n] != i) 
@@ -1036,10 +1043,11 @@ void remove_from_nnl_MC(int ip)
     }
 }
 void remove_bonds_GC(int ip);
+#ifdef MCGC_OPTLLREBUILD
 void adjLinkedListRemove(void)
 {
   int k;
-  for (k = Oparams.parnum-1; k < cellsx*cellsy*cellsz + Oparams.parnum-1; k++)
+  for (k = Oparams.parnum; k < cellsx*cellsy*cellsz + Oparams.parnum; k++)
     {
       cellList[k] = cellList[k+1];
     }
@@ -1048,11 +1056,12 @@ void adjLinkedListRemove(void)
 void adjLinkedListInsert(void)
 {
   int k;
-  for (k = cellsx*cellsy*cellsz + Oparams.parnum - 1; k > Oparams.parnum; k--)
+  for (k = cellsx*cellsy*cellsz + Oparams.parnum - 1; k >= Oparams.parnum; k--)
     {
       cellList[k] = cellList[k-1];
     }
 }
+#endif
 void remove_par_GC(int ip)
 {
   int lp, k, k1, k2;
@@ -1081,15 +1090,16 @@ void remove_par_GC(int ip)
       memcpy(nebrTab[ip].list, nebrTab[lp].list, sizeof(int)*OprogStatus.nebrTabFac);
     }
   maxax[ip] = maxax[lp]; 
+#ifdef MCGC_OPTLLREBUILD
+  remove_from_current_cell(ip);
+  remove_from_current_cell(lp);
+#endif
   for (k=0; k < 3; k++)
     inCell[k][ip] = inCell[k][lp];
   typeNP[0]++;
-#if 0
-  remove_from_current_cell(lp);
-  adjLinkedListRemove();
-#endif
   Oparams.parnum--;
-#if 0
+#ifdef MCGC_OPTLLREBUILD
+  adjLinkedListRemove();
   insert_in_new_cell(ip);
 #else
   rebuildLinkedList(); 
@@ -1173,15 +1183,29 @@ void check_alloc_GC(void)
 	  rz[i] = rt[2][i];
 	}
       numbonds = realloc(numbonds,allocnpGC*sizeof(int));
+#ifdef MC_STOREBONDS
+      numbondsMC = realloc(numbondsMC,allocnpGC*sizeof(int));
+#endif
 #ifdef MD_LL_BONDS
       bonds = realloc(bonds, allocnpGC*sizeof(long long int*));
+#ifdef MC_STOREBONDS
+      bondsMC = realloc(bondsMC, allocnpGC*sizeof(long long int*));
+#endif
       size = sizeof(long long int);
 #else
       bonds = realloc(bonds, allocnpGC*sizeof(int *));
+#ifdef MC_STOREBONDS
+      bondsMC = realloc(bondsMC, allocnpGC*sizeof(int *));
+#endif
       size = sizeof(int);
 #endif
       for (k=allocnpGCold; k < allocnpGC; k++)
-	bonds[k] = malloc(size*OprogStatus.maxbonds);
+	{
+  	  bonds[k] = malloc(size*OprogStatus.maxbonds);
+#ifdef MC_STOREBONDS
+	  bondsMC[k] = malloc(size*OprogStatus.maxbonds);
+#endif
+	}
       typeOfPart = realloc(typeOfPart, sizeof(int)*allocnpGC);
       R = realloc(R,sizeof(double**)*allocnpGC);
 #ifdef MD_MATRIX_CONTIGOUS
@@ -1277,6 +1301,24 @@ void build_one_nnl_GC(int ip)
 extern void versor_to_R(double ox, double oy, double oz, double R[3][3]);
 extern void find_bonds_one(int i);
 double calc_maxstep_MC(int i);
+#ifdef MCGC_OPTLLREBUILD
+void assign_cell_GC(int np)
+{
+#ifdef MD_LXYZ
+  inCell[0][np] =  (rx[np] + L2[0]) * cellsx / L[0];
+  inCell[1][np] =  (ry[np] + L2[1]) * cellsy / L[1];
+  inCell[2][np] =  (rz[np] + L2[2]) * cellsz / L[2];
+#else
+  inCell[0][np] =  (rx[np] + L2) * cellsx / L;
+  inCell[1][np] =  (ry[np] + L2) * cellsy / L;
+#ifdef MD_GRAVITY
+  inCell[2][np] =  (rz[np] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+#else
+  inCell[2][np] =  (rz[np] + L2)  * cellsz / L;
+#endif
+#endif
+}
+#endif
 int insert_particle_GC(void)
 {
   int np, k1, k2;
@@ -1314,21 +1356,9 @@ int insert_particle_GC(void)
   //update_LL(np);
   typeNP[0]++;
   Oparams.parnum++;
-#if 0
+#ifdef MCGC_OPTLLREBUILD
   adjLinkedListInsert();
-#ifdef MD_LXYZ
-  inCell[0][np] =  (rx[np] + L2[0]) * cellsx / L[0];
-  inCell[1][np] =  (ry[np] + L2[1]) * cellsy / L[1];
-  inCell[2][np] =  (rz[np] + L2[2]) * cellsz / L[2];
-#else
-  inCell[0][np] =  (rx[np] + L2) * cellsx / L;
-  inCell[1][np] =  (ry[np] + L2) * cellsy / L;
-#ifdef MD_GRAVITY
-  inCell[2][np] =  (rz[np] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
-#else
-  inCell[2][np] =  (rz[np] + L2)  * cellsz / L;
-#endif
-#endif
+  assign_cell_GC(np);
   insert_in_new_cell(np);
 #else
   rebuildLinkedList();
@@ -1448,8 +1478,17 @@ void mcexc(int *ierr)
 	  /* reject insertion */
 	  //remove_from_current_cell(Oparams.parnum-1);
 	  //printf("overlap Insertion rejected #%d\n", Oparams.parnum-1);
+#ifdef MCGC_OPTLLREBUILD
+	  remove_from_current_cell(np);
+#endif
 	  Oparams.parnum--;
+#ifdef MCGC_OPTLLREBUILD
+	  //printf("Celllist[parnum]=%d\n", cellList[Oparams.parnum+1]);
+	  adjLinkedListRemove();
+	  //printf("Celllist[parnum+1]=%d\n", cellList[Oparams.parnum]);
+#else
 	  rebuildLinkedList();
+#endif
 	  /* rimuove ip da tutte le NNL del sistema */
 	  if (OprogStatus.useNNL)
 	    remove_from_nnl_MC(np);
@@ -1466,13 +1505,101 @@ void mcexc(int *ierr)
 	  /* insertion rejected */
 	  //remove_from_current_cell(Oparams.parnum-1);
 	  remove_bonds_GC(np);
+#ifdef MCGC_OPTLLREBUILD
+	  remove_from_current_cell(np);
+#endif
 	  Oparams.parnum--;
+#ifdef MCGC_OPTLLREBUILD
+	  adjLinkedListRemove();
+#else
 	  rebuildLinkedList();
+#endif
 	  /* rimuove ip da tutte le NNL del sistema */
 	  if (OprogStatus.useNNL)
 	    remove_from_nnl_MC(np);
 	  excrejMC++;
 	  return;
+	}
+    }
+}
+#endif
+#ifdef MC_STOREBONDS
+void store_bonds_mc(int ip)
+{
+#ifdef MD_LL_BONDS
+  int kk;
+  long long int jj, jj2, aa, bb;
+#else
+  int jj, jj2, kk, nn, aa, bb;
+#endif  
+  int i, k;
+  /* ip=-1 means all bonds */
+  if (ip!=-1)
+    {
+      numbondsMC[ip] = numbonds[ip];
+      for (k=0; k < numbonds[ip]; k++)
+	{
+  	  bondsMC[ip][k] = bonds[ip][k]; 
+	  /* ...and store all bonds of bonded particles */
+	  jj = bonds[ip][k] / (NANA);
+	  //jj2 = bonds[ip][kk] % (NANA);
+	  //aa = jj2 / NA;
+	  //bb = jj2 % NA;
+	  numbondsMC[jj] = numbonds[jj];
+	  for (kk=0; kk < numbonds[jj]; kk++)
+	    {
+	      bondsMC[jj][kk] = bonds[jj][kk];
+	    } 
+
+	}
+    }
+  else
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  numbondsMC[i] = numbonds[i];
+	  for (k=0; k < numbonds[i]; k++)
+	    bondsMC[i][k] = bonds[i][k]; 
+	}
+    }
+}
+void restore_bonds_mc(int ip)
+{
+  int i, k;
+#ifdef MD_LL_BONDS
+  int nb, nn, kk;
+  long long int jj, jj2, aa, bb;
+#else
+  int nb, jj, jj2, kk, nn, aa, bb;
+#endif  
+
+  /* ip=-1 means all bonds */
+  if (ip!=-1)
+    {
+      numbonds[ip] = numbondsMC[ip];
+      for (k=0; k < numbondsMC[ip]; k++)
+	{
+	  bonds[ip][k] = bondsMC[ip][k]; 
+	  /* ...and restore all bonds of bonded particles */
+	  jj = bonds[ip][k] / (NANA);
+	  //jj2 = bonds[ip][kk] % (NANA);
+	  //aa = jj2 / NA;
+	  //bb = jj2 % NA;
+	  numbonds[jj] = numbondsMC[jj];
+	  for (kk=0; kk < numbondsMC[jj]; kk++)
+	    {
+	      bonds[jj][kk] = bondsMC[jj][kk];
+	    } 
+	}
+    }
+  else
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  numbonds[i] = numbondsMC[i];
+	  for (k=0; k < numbondsMC[i]; k++)
+	    bonds[i][k] = bondsMC[i][k]; 
+
 	}
     }
 }
@@ -1547,6 +1674,9 @@ void move_box(int *ierr)
 	  return;
 	}
     }
+#ifdef MC_STOREBONDS
+  store_bonds_mc(-1);
+#endif
   /* update all bonds with new positions */
   for (i=0; i < Oparams.parnum; i++)
     numbonds[i] = 0;
@@ -1582,13 +1712,18 @@ void move_box(int *ierr)
       volrejMC++;
       update_numcells();
       rebuildLinkedList();
+
       /* restore all bonds*/
+#ifdef MC_STOREBONDS
+	restore_bonds_mc(-1);
+#else
       for (i=0; i < Oparams.parnum; i++)
 	numbonds[i] = 0;
       if (OprogStatus.useNNL)
 	find_bonds_flex_NNL();
       else
 	find_bonds_flex_all();
+#endif
       return;
     }
 #endif
@@ -2037,6 +2172,9 @@ void move(void)
 	  dorej = overlapMC(ip, &err);
 	  if (!dorej)
 	    {
+#ifdef MC_STOREBONDS
+	      store_bonds_mc(ip);
+#endif
 	      update_bonds_MC(ip);
 	      /* qui basta calcolare l'energia della particella che sto muovendo */
 #if 0
@@ -2079,7 +2217,13 @@ void move(void)
 	      //rebuildLinkedList();
 	      update_LL(ip);
 	      if (dorej==2)
-		update_bonds_MC(ip);
+		{
+#ifdef MC_STOREBONDS
+		  restore_bonds_mc(ip);
+#else
+  		  update_bonds_MC(ip);
+#endif
+		}
 	      //printf("restoring finished\n");
 	      //rebuildLinkedList();
 	    }
