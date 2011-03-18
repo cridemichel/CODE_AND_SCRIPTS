@@ -4582,6 +4582,9 @@ extern int *numbondsMC;
 extern int *numbondsMC, **bondsMC;
 #endif
 #endif
+#ifdef MC_STORELL
+extern int *cellListMC;
+#endif
 #endif
 void usrInitAft(void)
 {
@@ -6203,6 +6206,9 @@ void usrInitAft(void)
   bondsMC = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
 #endif 
   numbondsMC = (int *) malloc(Oparams.parnum*sizeof(int));
+#endif
+#if defined(MC_STORELL)
+  cellListMC = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
 #endif
   build_parallelepipeds();
 #endif
