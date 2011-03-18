@@ -7,6 +7,8 @@
                     DECL_LIST ) */
 
 /* ================== >>> PROGRAM DEFINES(CUSTOMIZE!) <<< ===================*/
+/* flags per varie ottimizzazioni del codice Monte Carlo */
+#undef MC_STORELL
 #define MC_STOREBONDS
 #define MCGC_OPTLLREBUILD
 #define MD_RAND48

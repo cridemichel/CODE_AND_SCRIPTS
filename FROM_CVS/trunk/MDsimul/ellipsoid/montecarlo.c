@@ -1,6 +1,9 @@
 #include<mdsimul.h>
 const double saxfactMC[3]={0.85,0.68,0.68};
 #ifdef MC_SIMUL
+#ifdef MC_STORELL
+int *cellListMC;
+#endif
 #ifdef MC_STOREBONDS
 #ifdef MD_LL_BONDS
 long long int **bondsMC;
@@ -1099,6 +1102,9 @@ void remove_par_GC(int ip)
   typeNP[0]++;
   Oparams.parnum--;
 #ifdef MCGC_OPTLLREBUILD
+  /* N.B. essendo cambiato Oparams.parnum le linked list vanno aggiustate (poichè
+     le linked lists head stanno da Oparams.parnum compreso in poi quindi vanno shiftate, 
+     in questo caso vanno spostate di uno a sinistra) */
   adjLinkedListRemove();
   insert_in_new_cell(ip);
 #else
@@ -1357,6 +1363,9 @@ int insert_particle_GC(void)
   typeNP[0]++;
   Oparams.parnum++;
 #ifdef MCGC_OPTLLREBUILD
+  /* N.B. essendo cambiato Oparams.parnum le linked list vanno aggiustate (poichè
+     le linked lists head stanno da Oparams.parnum compreso in poi  vanno shiftate, 
+     in questo caso vanno spostate di uno a destra) */
   adjLinkedListInsert();
   assign_cell_GC(np);
   insert_in_new_cell(np);
@@ -1523,6 +1532,26 @@ void mcexc(int *ierr)
     }
 }
 #endif
+#ifdef MC_STORELL
+/* queste routine vengono eventualmente usate (#ifdef MC_STORELL)
+   in move_box() per il ripristino delle LL se la mossa di volume viene rifiutata */
+void store_ll_mc(void)
+{
+  int k;
+  for (k=0; k < Oparams.parnum + cellsx*cellsy*cellsz; k++)
+    {
+      cellListMC[k] = cellList[k];
+    }
+}
+void restore_ll_mc(void)
+{
+  int k;
+  for (k=0; k < Oparams.parnum + cellsx*cellsy*cellsz; k++)
+    {
+      cellList[k] = cellListMC[k];
+    }
+}
+#endif
 #ifdef MC_STOREBONDS
 void store_bonds_mc(int ip)
 {
@@ -1644,6 +1673,9 @@ void move_box(int *ierr)
       pbc(i);
     }
   update_numcells();
+#ifdef MC_STORELL
+  store_ll_mc();
+#endif
   rebuildLinkedList();
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -1670,7 +1702,11 @@ void move_box(int *ierr)
 	    }
 	  volrejMC++;
 	  update_numcells();
+#ifdef MC_STORELL
+	  restore_ll_mc();
+#else
 	  rebuildLinkedList();
+#endif
 	  return;
 	}
     }
@@ -1711,11 +1747,14 @@ void move_box(int *ierr)
 	}
       volrejMC++;
       update_numcells();
+#ifdef MC_STORELL
+      restore_ll_mc();
+#else
       rebuildLinkedList();
-
+#endif
       /* restore all bonds*/
 #ifdef MC_STOREBONDS
-	restore_bonds_mc(-1);
+      restore_bonds_mc(-1);
 #else
       for (i=0; i < Oparams.parnum; i++)
 	numbonds[i] = 0;
@@ -1878,10 +1917,10 @@ void find_bonds_covadd(int i, int j)
 }
 void mcin(int i, int j, int nb)
 {
-  double rA[3], rat[3], norm, sax, cc[3];
-  double Rl[3][3], vv[3];
-  double ox, oy, oz;
-  int bonded, k1, k2, trials;
+  double rA[3], rat[3], norm, sax, cc[3], ene;
+  double shift[3], Rl[3][3], vv[3];
+  double ox, oy, oz, d;
+  int ierr, bonded, k1, k2, trials;
   /* place particle i bonded to bond nb of particle j */
   rA[0] = rx[j];
   rA[1] = ry[j];
@@ -1904,16 +1943,28 @@ void mcin(int i, int j, int nb)
     cc[k1] = rA[k1] + vv[k1]*sax*2.0;
   bonded=0;
   trials=0;
+
+  numbonds[i]=0;
   while (!bonded)
     {
-      /* chose a random position inside */
+#if 0
+      /* chose a random position inside a cube*/
+      rx[i] = cc[0]+2.0*sax*(ranf_vb()-0.5);
+      ry[i] = cc[1]+2.0*sax*(ranf_vb()-0.5);
+      rz[i] = cc[2]+2.0*sax*(ranf_vb()-0.5);
+      pbc(i);
+#else
+      /* chose a random position inside a sphere (this is of course more efficient than
+       using a cube as above) */
       orient(&ox, &oy, &oz);
       /* elevando alla 1/3 ci assicuriamo che la distribuzione è uniforme nella sfera di raggio sax */
       norm = pow(ranf_vb(),1.0/3.0)*sax;
       rx[i] = cc[0]+ox*norm;
       ry[i] = cc[1]+oy*norm;
       rz[i] = cc[2]+oz*norm;
+      typeOfPart[i]=0;
       pbc(i);
+#endif
       orient(&ox, &oy, &oz);
       versor_to_R(ox, oy, oz, Rl);
       for (k1 = 0; k1 < 3; k1++)
@@ -1923,9 +1974,32 @@ void mcin(int i, int j, int nb)
 	      R[i][k1][k2] = Rl[k1][k2]; 
 	    }
 	}
+      store_bonds_mc(j);
       find_bonds_covadd(i, j);
-      if (calcpotene_GC(i) < 0)
-	bonded=1;
+      if ((ene=calcpotene_GC(i)) < 0)
+	{
+#ifdef MD_LXYZ
+	  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+	  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+	  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+	  shift[0] = L*rint((rx[i]-rx[j])/L);
+	  shift[1] = L*rint((ry[i]-ry[j])/L);
+	  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+	  if ((d=check_overlap(i, j, shift, &ierr))>0.0)
+	    {
+	      bonded=1;
+	    }
+	  else
+	    {
+	      restore_bonds_mc(j);
+	      numbonds[i]=0;
+	    }
+	 // printf("d=%.15G trials #%d\n", d, trials);
+	}
+
+      //printf("i=%d j=%d ene=%f\n", i, j, ene);
       trials++;
     }
   //printf("trials=%d\n", trials);
@@ -1951,6 +2025,93 @@ int is_bonded_mc(int ip, int numb)
   return 0;
 }
 #ifdef MC_CALC_COVADD
+extern const char sepStr[];
+void save_conf_mc(int i)
+{
+  char fileop2[512], fileop[512], fileop3[512];
+  FILE* bf;
+  sprintf(fileop2 ,"Store-%d-%d", 
+	  i, 0);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+      exit(-1);
+    }
+  UpdateSystem();
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      update_MSDrot(i);
+#ifdef MD_CALC_DPP
+      update_MSD(i);
+      store_last_u(i);
+#endif
+      OprogStatus.lastcolltime[i] = Oparams.time;
+    }
+  R2u();
+#ifdef MD_SAVE_DISTANCE
+  if (mgl_mode==1)
+    {
+      FILE *f;
+#if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
+      double dists[MD_PBONDS], d;
+      int i;
+#endif
+      f = fopen("distance.dat", "a");
+#if defined(MD_PATCHY_HE) && !defined(EDHE_FLEX)
+      d=calcJustDistNegSP(Oparams.time, 0, 1, dists);
+      fprintf(f, "%.15G %.15G ", Oparams.time + OprogStatus.refTime, calcJustDistNeg(Oparams.time, 0, 1));
+#if 1
+      for (i=0; i < MD_PBONDS; i++)
+	{
+	  fprintf(f, "%.15G ", dists[i]);
+	}
+#else
+      fprintf(f, "%.15G ", dists[1]);
+      printf("mapbonds[0]:%d mapbondsb[1]:%d\n", mapbondsa[0], mapbondsb[1]);
+#endif
+      fprintf(f, "\n");
+#else
+      fprintf(f, "%.15G %.15G\n", Oparams.time + OprogStatus.refTime, calcJustDistNeg(Oparams.time, 0, 1));
+#endif
+      fclose(f);
+    }
+#endif
+
+  if (mgl_mode==0)
+    {
+      writeAsciiPars(bf, opro_ascii);
+      fprintf(bf, sepStr);
+      writeAsciiPars(bf, opar_ascii);
+      fprintf(bf, sepStr);
+    }	      
+  MD_DEBUG(printf("[Store event]: %.15G JJ=%d KK=%d\n", Oparams.time, OprogStatus.JJ, OprogStatus.KK));
+  //fprintf(bf, ".semiAxes: %f %f %f, %f %f %f\n",
+  //	  Oparams.a[0], Oparams.b[0], Oparams.c[0],
+  //  Oparams.a[1], Oparams.b[1], Oparams.c[1]);
+  writeAllCor(bf, 0);
+  fclose(bf);
+  if (mgl_mode==0)
+    {
+#ifdef MPI
+#ifdef MD_MAC
+      sprintf(fileop3, "/usr/bin/gzip -f %s_R%d", fileop, my_rank);
+#else
+      sprintf(fileop3, "/bin/gzip -f %s_R%d", fileop, my_rank);
+#endif
+#else 
+#ifdef MD_MAC
+      sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+#else
+      sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
+#endif
+#ifndef MD_NO_SYSTEM
+      system(fileop3);
+#endif	    
+    }
+}
 void calc_cov_additive(void)
 {
   FILE *fi;
@@ -1992,8 +2153,13 @@ void calc_cov_additive(void)
   while (tt < maxtrials) 
     {
       /* place first cluster */
-      if (tt%5000==0)
-	printf("tt=%d\n", tt);
+      if (tt%200==0)
+	{
+	  printf("tt=%d\n", tt);
+#if 1
+     	  save_conf_mc(tt); 
+#endif
+	}
       for (i=0; i < Oparams.parnum; i++)
 	{
 	  numbonds[i] = 0;
@@ -2037,13 +2203,14 @@ void calc_cov_additive(void)
 	      while (1)
 		{
 		  nb = (int)(ranf_vb()*2.0);
-		  j = ((int) (ranf_vb()*size2))+size1;
+		  j = ((int) (ranf_vb()*(i-size1)))+size1;
 		  if (is_bonded_mc(j, nb))
 		    continue;
 		  else
 		    break;
 		}
 	      /* mette la particella i legata a j con posizione ed orientazione a caso */
+	      //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
 	      mcin(i, j, nb);
 	    }	    
 	  overlap = 0;
@@ -2073,7 +2240,7 @@ void calc_cov_additive(void)
       if (overlap)
 	totene += 1.0;
       tt++;
-    }
+   }
 #ifdef MD_LXYZ
   Lb = L[0];
 #else
