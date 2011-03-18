@@ -1036,7 +1036,23 @@ void remove_from_nnl_MC(int ip)
     }
 }
 void remove_bonds_GC(int ip);
+void adjLinkedListRemove(void)
+{
+  int k;
+  for (k = Oparams.parnum-1; k < cellsx*cellsy*cellsz + Oparams.parnum-1; k++)
+    {
+      cellList[k] = cellList[k+1];
+    }
 
+}
+void adjLinkedListInsert(void)
+{
+  int k;
+  for (k = cellsx*cellsy*cellsz + Oparams.parnum - 1; k > Oparams.parnum; k--)
+    {
+      cellList[k] = cellList[k-1];
+    }
+}
 void remove_par_GC(int ip)
 {
   int lp, k, k1, k2;
@@ -1068,9 +1084,16 @@ void remove_par_GC(int ip)
   for (k=0; k < 3; k++)
     inCell[k][ip] = inCell[k][lp];
   typeNP[0]++;
+#if 0
+  remove_from_current_cell(lp);
+  adjLinkedListRemove();
+#endif
   Oparams.parnum--;
-  //insert_in_new_cell(ip);
+#if 0
+  insert_in_new_cell(ip);
+#else
   rebuildLinkedList(); 
+#endif
 }
 int dyn_realloc_oprog(int np)
 {
@@ -1291,7 +1314,25 @@ int insert_particle_GC(void)
   //update_LL(np);
   typeNP[0]++;
   Oparams.parnum++;
+#if 0
+  adjLinkedListInsert();
+#ifdef MD_LXYZ
+  inCell[0][np] =  (rx[np] + L2[0]) * cellsx / L[0];
+  inCell[1][np] =  (ry[np] + L2[1]) * cellsy / L[1];
+  inCell[2][np] =  (rz[np] + L2[2]) * cellsz / L[2];
+#else
+  inCell[0][np] =  (rx[np] + L2) * cellsx / L;
+  inCell[1][np] =  (ry[np] + L2) * cellsy / L;
+#ifdef MD_GRAVITY
+  inCell[2][np] =  (rz[np] + Lz2) * cellsz / (Lz+OprogStatus.extraLz);
+#else
+  inCell[2][np] =  (rz[np] + L2)  * cellsz / L;
+#endif
+#endif
+  insert_in_new_cell(np);
+#else
   rebuildLinkedList();
+#endif
   if (OprogStatus.useNNL)
     {
       build_one_nnl_GC(np);
@@ -1732,7 +1773,8 @@ void mcin(int i, int j, int nb)
     {
       /* chose a random position inside */
       orient(&ox, &oy, &oz);
-      norm = ranf_vb()*sax;
+      /* elevando alla 1/3 ci assicuriamo che la distribuzione è uniforme nella sfera di raggio sax */
+      norm = pow(ranf_vb(),1.0/3.0)*sax;
       rx[i] = cc[0]+ox*norm;
       ry[i] = cc[1]+oy*norm;
       rz[i] = cc[2]+oz*norm;
