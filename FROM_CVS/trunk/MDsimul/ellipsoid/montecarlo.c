@@ -2112,12 +2112,116 @@ void save_conf_mc(int i)
 #endif	    
     }
 }
+
+void build_ll(int *pl)
+{
+  int i, i0=-1, iold, in0, in1;
+  //printf("build ll\n");
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if ( numbonds[i]==1) 
+	{
+  	  i0 = i;
+	  break;
+	}
+    }
+  for (i=0; i < Oparams.parnum+1; i++)
+    pl[i] = -1;
+  pl[Oparams.parnum] = i0; /* list head */
+  iold = i0;
+  i =  bonds[i0][0] / (NANA);
+  while (1)
+    {
+      pl[i] = pl[Oparams.parnum]; 
+      pl[Oparams.parnum] = i;
+      if (numbonds[i]==1)
+	break;
+      in0 = bonds[i][0]/(NANA);
+      in1 = bonds[i][1]/(NANA);
+      if (in1==iold)
+	{
+	  iold = i;
+	  i = in0;
+	}
+      else
+	{
+	  iold = i;
+	  i = in1;
+	}
+    }
+
+  //printf("done build ll\n");
+}
+void accum_persist_len(int *parlist, double *pl, double *cc)
+{
+  double Ri[3], Rj[3];
+  int a, i, j, NP, np, in, jn;
+  double costh2, normi, normj;
+
+  NP=Oparams.parnum;
+  build_ll(parlist);
+  i = Oparams.parnum;
+  //printf("INIZIO\n");
+  while ((i=parlist[i])!=-1) 
+    {
+  //    printf("i=%d\n", i);
+      j=i;
+      np=0;
+      in = parlist[i];
+      if (in==-1)
+	break;
+      Ri[0] = rx[in] - rx[j];
+      Ri[1] = ry[in] - ry[j];
+      Ri[2] = rz[in] - rz[j];
+      normi=calc_norm(Ri);
+      for (a=0; a < 3; a++)
+	{
+	  Ri[a] /= normi;
+	} 
+			 
+
+      while ((j=parlist[j])!=-1)
+	{
+	  //printf("i=%d j=%d\n", i, j);
+	  costh2 = 0.0;
+	  np++;
+	  jn = parlist[j];
+	  if (jn==-1)
+	    break;
+	  Rj[0] = rx[jn] - rx[j];
+	  Rj[1] = ry[jn] - ry[j];
+	  Rj[2] = rz[jn] - rz[j];
+	  normj=calc_norm(Rj);
+	  for (a=0; a < 3; a++)
+	    {
+	      Rj[a] /= normj;
+	    } 
+	
+	  //printf("j=%d bonds[%d]/NANA=%lld %lld\n", j, i, bonds[i][0]/NANA, bonds[i][1]/NANA);
+	  for (a = 0; a < 3; a++)
+    	    {
+	      costh2 += Ri[a]*Rj[a];
+	    }
+	  pl[np] += costh2;
+	  //printf("np=%d costh2=%.15G pl=%f\n", np, costh2, pl[np]);
+	  cc[np] += 1.0;
+	}
+    }
+}
 void calc_persistence_length_mc(int maxtrials)
 {
-  int i, j, nb, k1, k2, tt;
+  int *parlist, i, j, nb, k1, k2, tt;
+  double *pl, *cc;
+  FILE *fi;
   /* first particle is always in the center of the box with the same orientation */
   printf("calculating persistence length\n");
-
+  cc = malloc(sizeof(double)*Oparams.parnum);
+  pl = malloc(sizeof(double)*Oparams.parnum);
+  parlist = malloc(sizeof(int)*(Oparams.parnum+1));
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      cc[i] = pl[i] = 0;
+    }
   rx[0] = 0;
   ry[0] = 0;
   rz[0] = 0;
@@ -2156,8 +2260,18 @@ void calc_persistence_length_mc(int maxtrials)
 	    }
 	  mcin(i, j, nb);
 	}
+#if 0
       save_conf_mc(tt);
+#else
+      accum_persist_len(parlist, pl, cc);
+#endif
     }
+  fi = fopen("persist.dat","w+");
+  for (i=1; i < Oparams.parnum; i++)
+    {
+      fprintf(fi, "%d %.15G\n", i, pl[i]/cc[i]);
+    }
+  fclose(fi);	
 }
 void calc_cov_additive(void)
 {
