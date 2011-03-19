@@ -2267,7 +2267,7 @@ void calc_persistence_length_mc(int maxtrials)
 #endif
     }
   fi = fopen("persist.dat","w+");
-  for (i=1; i < Oparams.parnum; i++)
+  for (i=1; i < Oparams.parnum-1; i++)
     {
       fprintf(fi, "%d %.15G\n", i, pl[i]/cc[i]);
     }
