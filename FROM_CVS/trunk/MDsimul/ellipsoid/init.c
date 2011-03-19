@@ -1949,7 +1949,7 @@ void StartRun(void)
 {
   int j, k, n;
   
-#if !defined(MD_STANDALONE) || defined(MC_SIMUL)
+#if !defined(MD_STANDALONE) || defined(MC_SIMUL) 
   find_conciding_spots();
 #endif
 #ifdef MD_MULTIPLE_LL
