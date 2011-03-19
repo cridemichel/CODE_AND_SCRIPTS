@@ -2121,6 +2121,11 @@ void calc_cov_additive(void)
   double ox, oy, oz, Rl[3][3];
   fi = fopen("covmc.conf", "r");
   fscanf(fi, "%lld %d %d ", &maxtrials, &type, &size1);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      numbonds[i]=0;
+    }
+  printf("ene iniziale=%f\n", calcpotene());
   if (type==1)
     fscanf(fi, " %lf ", &alpha);
   /* type = 0 -> covolume 
@@ -2153,10 +2158,10 @@ void calc_cov_additive(void)
   while (tt < maxtrials) 
     {
       /* place first cluster */
-      if (tt%200==0)
+      if (tt%1000==0)
 	{
 	  printf("tt=%d\n", tt);
-#if 1
+#if 0
      	  save_conf_mc(tt); 
 #endif
 	}
@@ -2170,6 +2175,11 @@ void calc_cov_additive(void)
 	    {
 	      nb = (int)(ranf_vb()*2.0);
 	      j = (int) (ranf_vb()*i);
+	      if (numbonds[j]==2)
+		{
+		  printf("j=%d has 2 bonds!\n");
+		  exit(-1);
+		}
 	      if (is_bonded_mc(j, nb))
 		continue;
 	      else
@@ -2204,6 +2214,11 @@ void calc_cov_additive(void)
 		{
 		  nb = (int)(ranf_vb()*2.0);
 		  j = ((int) (ranf_vb()*(i-size1)))+size1;
+	    	  if (numbonds[j]==2)
+	    	    {
+	    	      printf("j=%d has 2 bonds!\n");
+	    	      exit(-1);
+	    	    }
 		  if (is_bonded_mc(j, nb))
 		    continue;
 		  else
