@@ -2112,6 +2112,53 @@ void save_conf_mc(int i)
 #endif	    
     }
 }
+void calc_persistence_length_mc(int maxtrials)
+{
+  int i, j, nb, k1, k2, tt;
+  /* first particle is always in the center of the box with the same orientation */
+  printf("calculating persistence length\n");
+
+  rx[0] = 0;
+  ry[0] = 0;
+  rz[0] = 0;
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+     	R[0][k1][k2] = (k1==k2)?1:0;
+      }
+
+
+  for (tt=0; tt < maxtrials; tt++)
+    {
+      if (tt%100==0)
+	{
+	  printf("tt=%d\n", tt); 
+	}
+      for (i=0; i < Oparams.parnum; i++)
+	numbonds[i]=0;
+      for (i=1; i < Oparams.parnum; i++)
+	{
+	  while (1)
+	    {
+	      nb = (int)(ranf_vb()*2.0);
+	      j = (int) (ranf_vb()*i);
+#if 0
+	      if (numbonds[j]==2)
+		{
+		  printf("j=%d has 2 bonds!\n", j);
+		  exit(-1);
+		}
+#endif
+	      if (is_bonded_mc(j, nb))
+		continue;
+	      else
+	    break;
+	    }
+	  mcin(i, j, nb);
+	}
+      save_conf_mc(tt);
+    }
+}
 void calc_cov_additive(void)
 {
   FILE *fi;
@@ -2130,7 +2177,10 @@ void calc_cov_additive(void)
     fscanf(fi, " %lf ", &alpha);
   /* type = 0 -> covolume 
      type = 1 -> covolume nematic
+     type = 2 -> persistence length
+     type = 3 -> bonding volume
    */
+  
   if (size1 >= Oparams.parnum)
     {
       printf("size1=%d must be less than parnum=%d\n", size1, Oparams.parnum);
@@ -2145,6 +2195,11 @@ void calc_cov_additive(void)
   OprogStatus.optnnl = 0;
   tt=0;
   size2 = Oparams.parnum-size1;
+  if (type==2)
+    {
+      calc_persistence_length_mc(maxtrials);
+      exit(-1);
+    }
   /* first particle is always in the center of the box with the same orientation */
   rx[0] = 0;
   ry[0] = 0;
@@ -2177,7 +2232,7 @@ void calc_cov_additive(void)
 	      j = (int) (ranf_vb()*i);
 	      if (numbonds[j]==2)
 		{
-		  printf("j=%d has 2 bonds!\n");
+		  printf("j=%d has 2 bonds!\n", j);
 		  exit(-1);
 		}
 	      if (is_bonded_mc(j, nb))
@@ -2216,7 +2271,7 @@ void calc_cov_additive(void)
 		  j = ((int) (ranf_vb()*(i-size1)))+size1;
 	    	  if (numbonds[j]==2)
 	    	    {
-	    	      printf("j=%d has 2 bonds!\n");
+	    	      printf("j=%d has 2 bonds!\n", j);
 	    	      exit(-1);
 	    	    }
 		  if (is_bonded_mc(j, nb))
