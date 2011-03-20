@@ -1974,8 +1974,17 @@ void mcin(int i, int j, int nb)
 	      R[i][k1][k2] = Rl[k1][k2]; 
 	    }
 	}
-      store_bonds_mc(j);
+      store_bonds_mc(-1);
       find_bonds_covadd(i, j);
+#if 0
+      find_bonds_GC(i);
+      if (numbonds[i] > 1)
+	{
+	  restore_bonds_mc(-1);
+	  numbonds[i]=0;
+	  continue;
+	}
+#endif
       if ((ene=calcpotene_GC(i)) < 0)
 	{
 #ifdef MD_LXYZ
@@ -1993,7 +2002,7 @@ void mcin(int i, int j, int nb)
 	    }
 	  else
 	    {
-	      restore_bonds_mc(j);
+	      restore_bonds_mc(-1);
 	      numbonds[i]=0;
 	    }
 	 // printf("d=%.15G trials #%d\n", d, trials);
@@ -2210,8 +2219,8 @@ void accum_persist_len(int *parlist, double *pl, double *cc)
 }
 void calc_persistence_length_mc(int maxtrials)
 {
-  int *parlist, i, j, nb, k1, k2, tt;
-  double *pl, *cc;
+  int *parlist, i, j, nb, k1, k2, tt, ierr, jj;
+  double *pl, *cc, shift[3];
   FILE *fi;
   /* first particle is always in the center of the box with the same orientation */
   printf("calculating persistence length\n");
@@ -2221,6 +2230,7 @@ void calc_persistence_length_mc(int maxtrials)
   for (i=0; i < Oparams.parnum; i++)
     {
       cc[i] = pl[i] = 0;
+      numbonds[i] = 0;
     }
   rx[0] = 0;
   ry[0] = 0;
@@ -2256,9 +2266,47 @@ void calc_persistence_length_mc(int maxtrials)
 	      if (is_bonded_mc(j, nb))
 		continue;
 	      else
-	    break;
+		break;
 	    }
 	  mcin(i, j, nb);
+#if 1
+	  /* qui controlla che non ci siano overlap con le particelle
+	     già inserite e che mcin abbia formato un solo legame */
+	  for (jj=0; jj < i; jj++)
+	    {
+	      if (jj==j)
+		continue;
+	      find_bonds_covadd(i, jj);
+	    }
+	  if (numbonds[i] > 1)
+	    {
+	      restore_bonds_mc(-1);
+	      numbonds[i]=0;
+	      i--;
+	      continue;
+	    }
+	  for (jj=0; jj < i; jj++)
+	    {
+	      if (jj==j) 
+		continue;
+#ifdef MD_LXYZ
+	      shift[0] = L[0]*rint((rx[i]-rx[jj])/L[0]);
+	      shift[1] = L[1]*rint((ry[i]-ry[jj])/L[1]);
+	      shift[2] = L[2]*rint((rz[i]-rz[jj])/L[2]);
+#else
+	      shift[0] = L*rint((rx[i]-rx[jj])/L);
+	      shift[1] = L*rint((ry[i]-ry[jj])/L);
+	      shift[2] = L*rint((rz[i]-rz[jj])/L);
+#endif
+	      if (check_overlap(i, jj, shift, &ierr) < 0.0)
+		{
+		  restore_bonds_mc(-1);
+		  numbonds[i]=0;
+		  i--;
+		  break;
+		}
+	    }
+#endif
 	}
 #if 0
       save_conf_mc(tt);
@@ -2355,6 +2403,9 @@ void calc_cov_additive(void)
 		break;
 	    }
 	  mcin(i, j, nb);
+	  /* N.B. per non controlla il self-overlap della catena 
+	     e la formazione dopo mcin di legami multipli poiché
+	     si presuppone che al massimo stiamo considerando dimeri */
 	}
       /* place second cluster */
       overlap=0;
@@ -2396,6 +2447,9 @@ void calc_cov_additive(void)
 	      /* mette la particella i legata a j con posizione ed orientazione a caso */
 	      //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
 	      mcin(i, j, nb);
+	      /* N.B. per non controlla il self-overlap della catena 
+		 e la formazione dopo mcin di legami multipli poiché
+		 si presuppone che al massimo stiamo considerando dimeri */
 	    }	    
 	  overlap = 0;
 	  for (j=0; j < size1; j++)
