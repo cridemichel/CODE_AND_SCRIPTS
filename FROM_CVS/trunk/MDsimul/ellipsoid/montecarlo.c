@@ -209,7 +209,7 @@ struct mboxstr
   double sa[3];
   double dr[3];
 } **mbox;
-const int nmboxMC=2;
+const int nmboxMC=3;
 
 void build_parallelepipeds(void)
 {
@@ -242,6 +242,16 @@ void build_parallelepipeds(void)
       mbox[tt][1].sa[0]=saxfactMC[0]*sa[0];
       mbox[tt][1].sa[1]=0.83*sa[1]; 
       mbox[tt][1].sa[2]=0.48*sa[2];
+
+      /* con questo ultimo multibox si evitano configurazioni molto overlapped
+	 con asse x quasi parallelo nel caso di grandi elongazioni */
+      mbox[tt][2].dr[0]=0;
+      mbox[tt][2].dr[1]=0;
+      //mbox[tt][1].dr[2]=-(saxfactMC[2]+0.1*0.5)*sa[2];
+      mbox[tt][2].dr[2]=0.0;
+      mbox[tt][2].sa[0]=0.94*sa[0];
+      mbox[tt][2].sa[1]=0.55*sa[1]; 
+      mbox[tt][2].sa[2]=0.55*sa[2];
     }
 }
 #endif
@@ -631,6 +641,7 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   int k, k1, k2;
   double vecg[8], vecgNeg[8], rA[3], rB[3], saxi[3], saxj[3];
   double d, d0, r1[3], r2[3], alpha; 
+  *errchk=0;
   OprogStatus.optnnl = 0;
 #if 0
   nebrTab[i].r[0] = rx[i];
@@ -722,7 +733,9 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   if (*errchk)
     {
       d0=overlap_using_multibox(i, j, shift);
-      printf("I used multibox routine and d0=%f\n", d0);
+      if (d0 > 0)
+	printf("I used multibox routine and d0=%f\n", d0);
+      //printf("errcheck=%d\n", *errchk);
       if (d0 < 0)
 	{
 	  *errchk=0;
@@ -1998,12 +2011,28 @@ void mcin(int i, int j, int nb)
 #endif
 	  if ((d=check_overlap(i, j, shift, &ierr))>0.0)
 	    {
-	      bonded=1;
+	      if (ierr==0)
+		bonded=1;
+	      else 
+		{
+		  printf("[mcin] NR failure\n");
+		  restore_bonds_mc(-1);
+		  numbonds[i]=0;
+		}
 	    }
 	  else
 	    {
 	      restore_bonds_mc(-1);
 	      numbonds[i]=0;
+#if 0
+	      if (ierr!=0)
+		{
+		  printf("u%d.u%d=%.10G\n", i, j, R[i][0][0]*R[j][0][0]+R[i][0][1]*R[j][0][1]+R[i][0][2]*R[j][0][2]);
+		  printf("distRM=%.15G\n", sqrt(Sqr(rx[i]-rx[j]-shift[0])+Sqr(ry[i]-ry[j]-shift[1])+Sqr(rz[i]-rz[j]-shift[2])));
+		  printf("[mcin] NR failure\n");
+		  store_bump(i, j);
+		}
+#endif
 	    }
 	 // printf("d=%.15G trials #%d\n", d, trials);
 	}
@@ -2463,6 +2492,7 @@ void calc_cov_additive(void)
 	      shift[1] = L*rint((ry[i]-ry[j])/L);
 	      shift[2] = L*rint((rz[i]-rz[j])/L);
 #endif
+	      ierr=0;
 	      if (check_overlap(i, j, shift, &ierr)<0.0)
 		{
 		  overlap=1;
@@ -2475,8 +2505,10 @@ void calc_cov_additive(void)
 	  if (overlap)
 	    break;
 	}
-      if (overlap)
+      if (overlap && ierr==0)
 	totene += 1.0;
+      if (ierr!=0)
+	printf("COV main loop NR failure\n");
       tt++;
    }
 #ifdef MD_LXYZ
