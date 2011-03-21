@@ -1899,6 +1899,7 @@ extern double *dists;
 extern int bound(int na, int n, int a, int b);
 extern void add_bond(int na, int n, int a, int b);
 
+extern void orient_onsager(double *omx, double *omy, double* omz, double alpha);
 extern int nbondsFlex;
 extern int *mapbondsaFlex, *mapbondsbFlex; 
 extern double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
@@ -1928,8 +1929,10 @@ void find_bonds_covadd(int i, int j)
 	}
     }
 }
-void mcin(int i, int j, int nb)
+void mcin(int i, int j, int nb, int dist_type, double alpha)
 {
+  /* dist_type=0 -> isotropic
+     dist_type=1 -> onsager */
   double rA[3], rat[3], norm, sax, cc[3], ene;
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d;
@@ -1978,7 +1981,10 @@ void mcin(int i, int j, int nb)
       typeOfPart[i]=0;
       pbc(i);
 #endif
-      orient(&ox, &oy, &oz);
+      if (dist_type==0)
+	orient(&ox, &oy, &oz);
+      else 
+	orient_onsager(&ox, &oy, &oz, alpha);
       versor_to_R(ox, oy, oz, Rl);
       for (k1 = 0; k1 < 3; k1++)
 	{
@@ -2297,7 +2303,7 @@ void calc_persistence_length_mc(int maxtrials)
 	      else
 		break;
 	    }
-	  mcin(i, j, nb);
+	  mcin(i, j, nb, 0, 0.0);
 #if 1
 	  /* qui controlla che non ci siano overlap con le particelle
 	     già inserite e che mcin abbia formato un solo legame */
@@ -2424,11 +2430,11 @@ void calc_cov_additive(void)
 {
   FILE *fi;
   double Lb, totene = 0.0, alpha, shift[3];
-  int i, j, size1, size2, nb, tt, k1, k2, overlap=0, ierr, type;
+  int i, j, size1, size2, nb, tt, k1, k2, overlap=0, ierr, type, outits;
   long long int maxtrials;
   double ox, oy, oz, Rl[3][3];
   fi = fopen("covmc.conf", "r");
-  fscanf(fi, "%lld %d %d ", &maxtrials, &type, &size1);
+  fscanf(fi, "%lld %d %d %d ", &maxtrials, &type, &size1, &outits);
   for (i=0; i < Oparams.parnum; i++)
     {
       numbonds[i]=0;
@@ -2466,20 +2472,37 @@ void calc_cov_additive(void)
       calc_persistence_length_mc(maxtrials);
       exit(-1);
     }
-  /* first particle is always in the center of the box with the same orientation */
-  rx[0] = 0;
-  ry[0] = 0;
-  rz[0] = 0;
-  for (k1=0; k1 < 3; k1++)
-    for (k2=0; k2 < 3; k2++)
-      {
-     	R[0][k1][k2] = (k1==k2)?1:0;
-      }
+  if (type==1)
+    {
+      /* first particle is always in the center of the box with the same orientation */
+      rx[0] = 0;
+      ry[0] = 0;
+      rz[0] = 0;
+      orient_onsager(&ox, &oy, &oz, alpha); 
+      versor_to_R(ox, oy, oz, Rl);
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    R[0][k1][k2] = Rl[k1][k2];
+	  }
 
+    }
+  else
+    {
+      /* first particle is always in the center of the box with the same orientation */
+      rx[0] = 0;
+      ry[0] = 0;
+      rz[0] = 0;
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    R[0][k1][k2] = (k1==k2)?1:0;
+	  }
+    }
   while (tt < maxtrials) 
     {
       /* place first cluster */
-      if (tt%1000==0)
+      if (tt%outits==0)
 	{
 	  printf("tt=%d\n", tt);
 #if 0
@@ -2506,7 +2529,7 @@ void calc_cov_additive(void)
 	      else
 		break;
 	    }
-	  mcin(i, j, nb);
+	  mcin(i, j, nb, type, alpha);
 	  /* N.B. per non controlla il self-overlap della catena 
 	     e la formazione dopo mcin di legami multipli poiché
 	     si presuppone che al massimo stiamo considerando dimeri */
@@ -2526,7 +2549,10 @@ void calc_cov_additive(void)
     	      ry[i] = L*(ranf_vb()-0.5); 
     	      rz[i] = L*(ranf_vb()-0.5); 
 #endif
-    	      orient(&ox, &oy, &oz);
+	      if (type==1)
+		orient_onsager(&ox, &oy, &oz, alpha);
+	      else
+		orient(&ox, &oy, &oz);
     	      versor_to_R(ox, oy, oz, Rl);
     	      for (k1=0; k1 < 3; k1++)
     		for (k2=0; k2 < 3; k2++)
@@ -2550,7 +2576,7 @@ void calc_cov_additive(void)
 		}
 	      /* mette la particella i legata a j con posizione ed orientazione a caso */
 	      //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
-	      mcin(i, j, nb);
+	      mcin(i, j, nb, type, alpha);
 	      /* N.B. per non controlla il self-overlap della catena 
 		 e la formazione dopo mcin di legami multipli poiché
 		 si presuppone che al massimo stiamo considerando dimeri */
@@ -2583,7 +2609,11 @@ void calc_cov_additive(void)
       if (overlap && ierr==0)
 	totene += 1.0;
       if (ierr!=0)
-	printf("COV main loop NR failure\n");
+	{
+	  printf("COV main loop NR failure\n");
+	  printf("i=%d j=%d scalp=%.15G\n", i, j, R[i][0][0]*R[j][0][0]+R[i][0][1]*R[j][0][1]+R[i][0][2]*R[j][0][2]);
+	  store_bump(i,j);
+	}
       tt++;
    }
 #ifdef MD_LXYZ
