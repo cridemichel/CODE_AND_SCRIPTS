@@ -10027,7 +10027,11 @@ void store_bump(int i, int j)
 #endif
 #endif
   double Drx, Dry, Drz, RCMx, RCMy, RCMz;
+#ifdef MD_SUPERELLIPSOID
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s] Q %.15G %.15G %.15G\n";
+#else
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
+#endif
 #ifdef MD_BIG_DT
   sprintf(fileop2 ,"StoreBump-%d-%d-t%.8f", i, j, Oparams.time + OprogStatus.refTime);
 #else
@@ -10076,11 +10080,20 @@ void store_bump(int i, int j)
       axi[kk] = typesArr[typeOfPart[i]].sax[kk];
       axj[kk] = typesArr[typeOfPart[j]].sax[kk];
     }
+#ifdef MD_SUPERELLIPSOID
+  fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	  uyz[i], uzx[i], uzy[i], uzz[i], axi[0], axi[1], axi[2], "red", typesArr[typeOfPart[i]].n[0],
+	  typesArr[typeOfPart[i]].n[1], typesArr[typeOfPart[i]].n[2]);
+
+  fprintf(bf, tipodat2,rx[j]+Drx-RCMx, ry[j]+Dry-RCMy, rz[j]+Drz-RCMz, uxx[j], uxy[j], uxz[j], uyx[j], uyy[j], 
+	  uyz[j], uzx[j], uzy[j], uzz[j], axj[0], axj[1], axj[2], "blue",typesArr[typeOfPart[j]].n[0],
+	  typesArr[typeOfPart[j]].n[1], typesArr[typeOfPart[j]].n[2]);
+#else
   fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 	  uyz[i], uzx[i], uzy[i], uzz[i], axi[0], axi[1], axi[2], "red");
   fprintf(bf, tipodat2,rx[j]+Drx-RCMx, ry[j]+Dry-RCMy, rz[j]+Drz-RCMz, uxx[j], uxy[j], uxz[j], uyx[j], uyy[j], 
 	  uyz[j], uzx[j], uzy[j], uzz[j], axj[0], axj[1], axj[2], "blue");
-
+#endif
 #elif defined(MD_POLYDISP)
   fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 	  uyz[i], uzx[i], uzy[i], uzz[i], axaP[i], axbP[i], axcP[i], "red");
