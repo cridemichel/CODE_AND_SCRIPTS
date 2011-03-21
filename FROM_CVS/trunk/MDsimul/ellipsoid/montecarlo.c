@@ -2407,7 +2407,7 @@ void calc_bonding_volume_mc(int maxtrials)
 		}
 	    } 
 	}
-      if (tt%100000==0)
+      if (tt%500000==0)
 	{
 	  printf("tt=%d\n", tt); 
 	}
