@@ -2350,6 +2350,76 @@ void calc_persistence_length_mc(int maxtrials)
     }
   fclose(fi);	
 }
+
+void calc_bonding_volume_mc(int maxtrials)
+{
+  int tt, k1, k2, ierr;
+  double shift[3], Lb, totene=0.0, ox, oy, oz, Rl[3][3];
+  rx[0] = 0;
+  ry[0] = 0;
+  rz[0] = 0;
+  printf("calc vbonding MC\n");
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+     	R[0][k1][k2] = (k1==k2)?1:0;
+      }
+
+  for (tt=0; tt < maxtrials; tt++)
+    {
+      numbonds[1] = numbonds[0] = 0;
+#ifdef MD_LXYZ
+      rx[1] = (ranf_vb()-0.5)*L[0];
+      ry[1] = (ranf_vb()-0.5)*L[1];
+      rz[1] = (ranf_vb()-0.5)*L[2];	
+#else
+      rx[1] = (ranf_vb()-0.5)*L;
+      ry[1] = (ranf_vb()-0.5)*L;
+      rz[1] = (ranf_vb()-0.5)*L;	
+#endif
+      orient(&ox, &oy, &oz);
+      versor_to_R(ox, oy, oz, Rl);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      R[1][k1][k2] = Rl[k1][k2]; 
+	    }
+	}
+      find_bonds_covadd(0, 1);
+      if (numbonds[0] > 0)
+	{	
+#ifdef MD_LXYZ
+	  shift[0] = L[0]*rint((rx[0]-rx[1])/L[0]);
+	  shift[1] = L[1]*rint((ry[0]-ry[1])/L[1]);
+	  shift[2] = L[2]*rint((rz[0]-rz[1])/L[2]);
+#else
+	  shift[0] = L*rint((rx[0]-rx[1])/L);
+	  shift[1] = L*rint((ry[0]-ry[1])/L);
+	  shift[2] = L*rint((rz[0]-rz[1])/L);
+#endif
+
+	  if (check_overlap(0,1, shift, &ierr) > 0.0)
+	    {
+	      if (ierr==0)
+		{
+		  totene += 1.0;
+		}
+	    } 
+	}
+      if (tt%100000==0)
+	{
+	  printf("tt=%d\n", tt); 
+	}
+    }
+#ifdef MD_LXYZ
+  Lb = L[0];
+#else
+  Lb = L;
+#endif
+  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(Lb*Lb*Lb)/Sqr(typesArr[0].nspots), totene);
+
+}
 void calc_cov_additive(void)
 {
   FILE *fi;
@@ -2386,6 +2456,11 @@ void calc_cov_additive(void)
   OprogStatus.optnnl = 0;
   tt=0;
   size2 = Oparams.parnum-size1;
+  if (type==3)
+    {
+      calc_bonding_volume_mc(maxtrials);
+      exit(-1);
+    }
   if (type==2)
     {
       calc_persistence_length_mc(maxtrials);
