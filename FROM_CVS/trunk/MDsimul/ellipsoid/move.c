@@ -10129,7 +10129,7 @@ void store_bump(int i, int j)
 #ifdef EDHE_FLEX
   for (nn = 1; nn < typesArr[typeOfPart[j]].nspots+1; nn++)
     fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
-	    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[j]].spots[nn-1].sigma*0.5);
+	    ratB[nn][0], ratB[nn][1], ratB[nn][2], typesArr[typeOfPart[j]].spots[nn-1].sigma*0.5);
 #else
   for (nn = 1; nn < ((j < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
     fprintf(bf,"%.15f %.15f %.15f @ %.15G C[brown]\n",
