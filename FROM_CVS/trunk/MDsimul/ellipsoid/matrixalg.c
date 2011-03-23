@@ -4833,6 +4833,9 @@ void adjust_step_dist8(double *x, double *dx, double *fx, double *gx)
 }
 extern long long itsNRdist, callsdistNR;
 extern int fdjac_disterr;
+#if 0
+extern int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB);
+#endif
 void newtDistNeg(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3], int tryagain)
@@ -4899,6 +4902,15 @@ void newtDistNeg(double x[], int n, int *check,
 	  *check = 2;
 	  FREERETURND;
 	}
+#if 0
+      /* se 1 vuol dire che almeno un punto di una SQ è dentro l'altra */ 
+      if (check_overlp_in_calcdist(x, fx, gx, iA, iB))
+	{
+	  //printf("CHECK OVER its=%d\n", its);
+	  *check=0;
+	  FREERETURND;
+	}
+#endif
       /* If analytic Jacobian is available, you can 
 	 replace the routine fdjac below with your own routine.*/
 #ifdef MD_GLOBALNRD

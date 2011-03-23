@@ -209,7 +209,7 @@ struct mboxstr
   double sa[3];
   double dr[3];
 } **mbox;
-const int nmboxMC=3;
+const int nmboxMC=5;
 
 void build_parallelepipeds(void)
 {
@@ -252,6 +252,24 @@ void build_parallelepipeds(void)
       mbox[tt][2].sa[0]=0.94*sa[0];
       mbox[tt][2].sa[1]=0.55*sa[1]; 
       mbox[tt][2].sa[2]=0.55*sa[2];
+     
+      mbox[tt][3].dr[0]=0;
+      mbox[tt][3].dr[1]=0;
+      //mbox[tt][1].dr[2]=-(saxfactMC[2]+0.1*0.5)*sa[2];
+      mbox[tt][3].dr[2]=0.0;
+      mbox[tt][3].sa[0]=0.99*sa[0];
+      mbox[tt][3].sa[1]=0.27*sa[1]; 
+      mbox[tt][3].sa[2]=0.27*sa[2];
+
+#if 1
+      mbox[tt][4].dr[0]=0;
+      mbox[tt][4].dr[1]=0;
+      //mbox[tt][1].dr[2]=-(saxfactMC[2]+0.1*0.5)*sa[2];
+      mbox[tt][4].dr[2]=0.0;
+      mbox[tt][4].sa[0]=0.999*sa[0];
+      mbox[tt][4].sa[1]=0.08*sa[1]; 
+      mbox[tt][4].sa[2]=0.08*sa[2];
+#endif
     }
 }
 #endif
@@ -2254,7 +2272,7 @@ void accum_persist_len(int *parlist, double *pl, double *cc)
 }
 void calc_persistence_length_mc(int maxtrials)
 {
-  int *parlist, i, j, nb, k1, k2, tt, ierr, jj;
+  int abort=0, *parlist, i, j, nb, k1, k2, tt, ierr, jj;
   double *pl, *cc, shift[3];
   FILE *fi;
   /* first particle is always in the center of the box with the same orientation */
@@ -2279,6 +2297,7 @@ void calc_persistence_length_mc(int maxtrials)
 
   for (tt=0; tt < maxtrials; tt++)
     {
+      abort=0;
       if (tt%100==0)
 	{
 	  printf("tt=%d\n", tt); 
@@ -2315,10 +2334,16 @@ void calc_persistence_length_mc(int maxtrials)
 	    }
 	  if (numbonds[i] > 1)
 	    {
+#if 0
 	      restore_bonds_mc(-1);
 	      numbonds[i]=0;
 	      i--;
 	      continue;
+#else
+	      /* scarta tale configurazione "chiusa" (loop) */
+	      abort=1;
+	      break;
+#endif
 	    }
 	  for (jj=0; jj < i; jj++)
 	    {
@@ -2335,18 +2360,25 @@ void calc_persistence_length_mc(int maxtrials)
 #endif
 	      if (check_overlap(i, jj, shift, &ierr) < 0.0)
 		{
+#if 0
 		  restore_bonds_mc(-1);
 		  numbonds[i]=0;
 		  i--;
+#endif
+		  /* scarta la conf self-overlapping */
+		  abort=1; 
 		  break;
 		}
 	    }
 #endif
+	  if (abort)
+	    break;
 	}
 #if 0
       save_conf_mc(tt);
 #else
-      accum_persist_len(parlist, pl, cc);
+      if (!abort)
+	accum_persist_len(parlist, pl, cc);
 #endif
     }
   fi = fopen("persist.dat","w+");
@@ -2430,7 +2462,7 @@ void calc_cov_additive(void)
 {
   FILE *fi;
   double Lb, totene = 0.0, alpha, shift[3];
-  int i, j, size1, size2, nb, tt, k1, k2, overlap=0, ierr, type, outits;
+  int i, j=-1, size1, size2, nb, tt, k1, k2, overlap=0, ierr, type, outits;
   long long int maxtrials;
   double ox, oy, oz, Rl[3][3];
   fi = fopen("covmc.conf", "r");
@@ -2606,7 +2638,7 @@ void calc_cov_additive(void)
 	  if (overlap)
 	    break;
 	}
-      if (overlap && ierr==0)
+      if (overlap)// && ierr==0)
 	totene += 1.0;
       if (ierr!=0)
 	{
@@ -2624,6 +2656,56 @@ void calc_cov_additive(void)
  
   printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(Lb*Lb*Lb), totene);
   printf("%.15G\n",(totene/((double)tt))*(Lb*Lb*Lb));
+}
+#endif
+#if 0
+double calcfLab(int i, double *x, double *rA, double **Ri);
+int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
+{
+  double rA[3], rB[3], rmid[3], shift[3];
+  int kk;
+  double A, B;
+  return 0;
+  rA[0] = rx[iA];
+  rA[1] = ry[iA];
+  rA[2] = rz[iA];
+#if 0
+  if (!OprogStatus.dist5)
+    rB=&(x[3]);
+#endif
+#ifdef MD_LXYZ
+  shift[0] = L[0]*rint((rx[iA]-rx[iB])/L[0]);
+  shift[1] = L[1]*rint((ry[iA]-ry[iB])/L[1]);
+  shift[2] = L[2]*rint((rz[iA]-rz[iB])/L[2]);
+#else
+  shift[0] = L*rint((rx[iA]-rx[iB])/L);
+  shift[1] = L*rint((ry[iA]-ry[iB])/L);
+  shift[2] = L*rint((rz[iA]-rz[iB])/L);
+#endif
+  rB[0] = rx[iB]+shift[0];
+  rB[1] = ry[iB]+shift[1];
+  rB[2] = rz[iB]+shift[2];
+
+  for (kk=0; kk < 3; kk++)
+    {
+      if (OprogStatus.dist5)
+	rmid[kk] = x[kk] - x[4]*fx[kk]*0.5;
+      else
+	rmid[kk] = x[kk] - x[7]*fx[kk]*0.5;
+    }
+  //printf("rmid=%f %f %f rA=%f %f %f x[]=%.15G %.15G\n", rmid[0], rmid[1], rmid[2], rA[0], rA[1], rA[2],x[6], x[7]);
+  //printf("iA=%d iB=%d\n", iA, iB);
+  A=calcfLab(iA, rmid, rA, R[iA]);
+  B=calcfLab(iB, rmid, rB, R[iB]);
+  
+  if (A<=0 && B<=0)
+    {
+      printf("rmid=%f %f %f rA=%f %f %f x[]=%.15G %.15G\n", rmid[0], rmid[1], rmid[2], rA[0], rA[1], rA[2],x[6], x[7]);
+      printf("beccato! A=%.15G B=%.15G\n", A, B);
+      return 1;
+    }
+  else
+    return 0;
 }
 #endif
 void move(void)
