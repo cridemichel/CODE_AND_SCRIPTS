@@ -2270,11 +2270,12 @@ void accum_persist_len(int *parlist, double *pl, double *cc)
 	}
     }
 }
-void calc_persistence_length_mc(int maxtrials)
+void calc_persistence_length_mc(long long int maxtrials, int outits)
 {
-  int abort=0, *parlist, i, j, nb, k1, k2, tt, ierr, jj;
+  int abort=0, *parlist, i, j, nb, k1, k2, ierr, jj;
+  long long int tt;
   double *pl, *cc, shift[3];
-  FILE *fi;
+  FILE *fi, *f;
   /* first particle is always in the center of the box with the same orientation */
   printf("calculating persistence length\n");
   cc = malloc(sizeof(double)*Oparams.parnum);
@@ -2294,13 +2295,21 @@ void calc_persistence_length_mc(int maxtrials)
      	R[0][k1][k2] = (k1==k2)?1:0;
       }
 
-
+  f = fopen("perslenlast.dat","w+");
+  fclose(f);
   for (tt=0; tt < maxtrials; tt++)
     {
       abort=0;
-      if (tt%100==0)
+      if (tt%outits==0)
 	{
-	  printf("tt=%d\n", tt); 
+	  printf("tt=%lld\n", tt); 
+	  if (tt!=0 && cc[Oparams.parnum-2]!=0)
+	    {
+	      f = fopen("perslenlast.dat", "w");
+	      fprintf(f, "%lld %.15G\n", tt, pl[Oparams.parnum-2]/cc[Oparams.parnum-2]);
+	      sync();
+	      fclose(f);
+	    }
 	}
       for (i=0; i < Oparams.parnum; i++)
 	numbonds[i]=0;
@@ -2389,9 +2398,11 @@ void calc_persistence_length_mc(int maxtrials)
   fclose(fi);	
 }
 
-void calc_bonding_volume_mc(int maxtrials)
+void calc_bonding_volume_mc(long long int maxtrials, int outits)
 {
-  int tt, k1, k2, ierr;
+  FILE *f;	
+  int k1, k2, ierr;
+  long long int tt;
   double shift[3], Lb, totene=0.0, ox, oy, oz, Rl[3][3];
   rx[0] = 0;
   ry[0] = 0;
@@ -2403,8 +2414,22 @@ void calc_bonding_volume_mc(int maxtrials)
      	R[0][k1][k2] = (k1==k2)?1:0;
       }
 
+  f = fopen("vbonding.dat","w+");
+  fclose(f);
   for (tt=0; tt < maxtrials; tt++)
     {
+      if (tt%outits==0)
+	{
+	  printf("tt=%lld\n", tt); 
+	  f=fopen("vbonding.dat", "w");
+#ifdef MD_LXYZ
+	  fprintf(f, "%lld %.15G\n", tt, (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots));
+#else
+	  fprintf(f, "%lld %.15G\n", tt, (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots));
+#endif
+	  sync();
+	  fclose(f);
+	}
       numbonds[1] = numbonds[0] = 0;
 #ifdef MD_LXYZ
       rx[1] = (ranf_vb()-0.5)*L[0];
@@ -2445,25 +2470,27 @@ void calc_bonding_volume_mc(int maxtrials)
 		}
 	    } 
 	}
+#if 0
       if (tt%500000==0)
 	{
-	  printf("tt=%d\n", tt); 
+	  printf("tt=%lld\n", tt); 
 	}
+#endif
     }
 #ifdef MD_LXYZ
-  Lb = L[0];
+  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots), totene);
 #else
-  Lb = L;
+  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
 #endif
-  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(Lb*Lb*Lb)/Sqr(typesArr[0].nspots), totene);
 
+  //fclose(f);
 }
 void calc_cov_additive(void)
 {
-  FILE *fi;
-  double Lb, totene = 0.0, alpha, shift[3];
-  int i, j=-1, size1, size2, nb, tt, k1, k2, overlap=0, ierr, type, outits;
-  long long int maxtrials;
+  FILE *fi, *f=NULL;
+  double cov, Lb, totene = 0.0, alpha, shift[3];
+  int i, j=-1, size1, size2, nb, k1, k2, overlap=0, ierr, type, outits;
+  long long int maxtrials, tt;
   double ox, oy, oz, Rl[3][3];
   fi = fopen("covmc.conf", "r");
   fscanf(fi, "%lld %d %d %d ", &maxtrials, &type, &size1, &outits);
@@ -2496,12 +2523,12 @@ void calc_cov_additive(void)
   size2 = Oparams.parnum-size1;
   if (type==3)
     {
-      calc_bonding_volume_mc(maxtrials);
+      calc_bonding_volume_mc(maxtrials, outits);
       exit(-1);
     }
   if (type==2)
     {
-      calc_persistence_length_mc(maxtrials);
+      calc_persistence_length_mc(maxtrials, outits);
       exit(-1);
     }
   if (type==1)
@@ -2531,12 +2558,30 @@ void calc_cov_additive(void)
 	    R[0][k1][k2] = (k1==k2)?1:0;
 	  }
     }
+  if (type==0)
+    f = fopen("covolume.dat","w+");
+  else if (type==1)
+    f = fopen("covolume-nem.dat","w+");
+  fclose(f);
   while (tt < maxtrials) 
     {
       /* place first cluster */
       if (tt%outits==0)
 	{
-	  printf("tt=%d\n", tt);
+	  if (tt!=0)
+	    {
+#ifdef MD_LXYZ
+	      cov = (totene/((double)tt))*(L[0]*L[1]*L[2]);
+	    
+#else
+	      cov = (totene/((double)tt))*(L*L*L);
+#endif
+	      f=fopen("covolume.dat", "w");
+	      printf("co-volume=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+	      fprintf(f, "%lld %.15G\n", tt, cov);
+	      fclose(f);
+	      sync();
+	    }
 #if 0
      	  save_conf_mc(tt); 
 #endif
@@ -2551,11 +2596,13 @@ void calc_cov_additive(void)
 	    {
 	      nb = (int)(ranf_vb()*2.0);
 	      j = (int) (ranf_vb()*i);
+#if 0
 	      if (numbonds[j]==2)
 		{
 		  printf("j=%d has 2 bonds!\n", j);
 		  exit(-1);
 		}
+#endif
 	      if (is_bonded_mc(j, nb))
 		continue;
 	      else
@@ -2596,11 +2643,13 @@ void calc_cov_additive(void)
 		{
 		  nb = (int)(ranf_vb()*2.0);
 		  j = ((int) (ranf_vb()*(i-size1)))+size1;
+#if 0
 	    	  if (numbonds[j]==2)
 	    	    {
 	    	      printf("j=%d has 2 bonds!\n", j);
 	    	      exit(-1);
 	    	    }
+#endif
 		  if (is_bonded_mc(j, nb))
 		    continue;
 		  else
@@ -2648,14 +2697,14 @@ void calc_cov_additive(void)
 	}
       tt++;
    }
+  //fclose(f);	
 #ifdef MD_LXYZ
-  Lb = L[0];
-#else
-  Lb = L;
+  printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2]), totene);
+  printf("%.15G\n",(totene/((double)tt))*(L[0]*L[1]*L[2]));
+#else 
+  printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L), totene);
+  printf("%.15G\n",(totene/((double)tt))*(L*L*L));
 #endif
- 
-  printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(Lb*Lb*Lb), totene);
-  printf("%.15G\n",(totene/((double)tt))*(Lb*Lb*Lb));
 }
 #endif
 #if 0
