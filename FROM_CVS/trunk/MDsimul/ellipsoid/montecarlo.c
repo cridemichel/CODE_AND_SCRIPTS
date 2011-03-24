@@ -2305,7 +2305,7 @@ void calc_persistence_length_mc(long long int maxtrials, int outits)
 	  printf("tt=%lld\n", tt); 
 	  if (tt!=0 && cc[Oparams.parnum-2]!=0)
 	    {
-	      f = fopen("perslenlast.dat", "w");
+	      f = fopen("perslenlast.dat", "a");
 	      fprintf(f, "%lld %.15G\n", tt, pl[Oparams.parnum-2]/cc[Oparams.parnum-2]);
 	      sync();
 	      fclose(f);
@@ -2576,7 +2576,10 @@ void calc_cov_additive(void)
 #else
 	      cov = (totene/((double)tt))*(L*L*L);
 #endif
-	      f=fopen("covolume.dat", "w");
+	      if (type==0)
+		f=fopen("covolume.dat", "a");
+	      else
+		f=fopen("covolume-nem.dat", "a");
 	      printf("co-volume=%.10f (totene=%f/%lld)\n", cov, totene, tt);
 	      fprintf(f, "%lld %.15G\n", tt, cov);
 	      fclose(f);
