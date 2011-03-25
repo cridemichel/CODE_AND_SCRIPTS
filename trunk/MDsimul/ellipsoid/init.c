@@ -3676,7 +3676,7 @@ double ranf_vb(void)
   /*  Returns a uniform random variate in the range 0 to 1.         
       Good random number generators are machine specific.
       please use the one recommended for your machine. */
-  return random() / ( (double) RAND_MAX );
+  return random() / ( (double) RAND_MAX + 1);
   //return random() / (2**31-1); 
 }
 double fons(double theta, double alpha)
