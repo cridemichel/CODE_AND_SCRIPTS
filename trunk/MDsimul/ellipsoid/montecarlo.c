@@ -2418,10 +2418,10 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
   fclose(f);
   for (tt=0; tt < maxtrials; tt++)
     {
-      if (tt%outits==0)
+      if (tt%outits==0 && tt!=0)
 	{
 	  printf("tt=%lld\n", tt); 
-	  f=fopen("vbonding.dat", "w");
+	  f=fopen("vbonding.dat", "a");
 #ifdef MD_LXYZ
 	  fprintf(f, "%lld %.15G\n", tt, (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots));
 #else
