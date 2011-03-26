@@ -2307,8 +2307,15 @@ void calc_persistence_length_mc(long long int maxtrials, int outits)
 	    {
 	      f = fopen("perslenlast.dat", "a");
 	      fprintf(f, "%lld %.15G\n", tt, pl[Oparams.parnum-2]/cc[Oparams.parnum-2]);
-	      sync();
 	      fclose(f);
+	      fi = fopen("persist.dat","w+");
+	      for (i=1; i < Oparams.parnum-1; i++)
+		{
+		  if (cc[i]!=0)
+		    fprintf(fi, "%d %.15G\n", i, pl[i]/cc[i]);
+		}
+	      fclose(fi);	
+	      sync();
 	    }
 	}
       for (i=0; i < Oparams.parnum; i++)
@@ -2661,7 +2668,7 @@ void calc_cov_additive(void)
 	      /* mette la particella i legata a j con posizione ed orientazione a caso */
 	      //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
 	      mcin(i, j, nb, type, alpha);
-	      /* N.B. per non controlla il self-overlap della catena 
+	      /* N.B. per ora non controlla il self-overlap della catena 
 		 e la formazione dopo mcin di legami multipli poiché
 		 si presuppone che al massimo stiamo considerando dimeri */
 	    }	    
@@ -2692,6 +2699,7 @@ void calc_cov_additive(void)
 	}
       if (overlap)// && ierr==0)
 	totene += 1.0;
+
       if (ierr!=0)
 	{
 	  printf("COV main loop NR failure\n");
@@ -2708,6 +2716,7 @@ void calc_cov_additive(void)
   printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L), totene);
   printf("%.15G\n",(totene/((double)tt))*(L*L*L));
 #endif
+  exit(-1);
 }
 #endif
 #if 0
@@ -2772,7 +2781,6 @@ void move(void)
 #if 1 
 #ifdef MC_CALC_COVADD
   calc_cov_additive();
-  exit(-1);
 #endif
   if (OprogStatus.useNNL && do_nnl_rebuild())
     {
