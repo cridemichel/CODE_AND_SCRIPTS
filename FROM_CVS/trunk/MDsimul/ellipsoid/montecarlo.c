@@ -1947,10 +1947,11 @@ void find_bonds_covadd(int i, int j)
 	}
     }
 }
-void mcin(int i, int j, int nb, int dist_type, double alpha)
+void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
 {
   /* dist_type=0 -> isotropic
      dist_type=1 -> onsager */
+  const int maxtrials=1000000;
   double rA[3], rat[3], norm, sax, cc[3], ene;
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d;
@@ -1979,6 +1980,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha)
   trials=0;
 
   numbonds[i]=0;
+  *merr=0;
   while (!bonded)
     {
 #if 0
@@ -1999,7 +2001,13 @@ void mcin(int i, int j, int nb, int dist_type, double alpha)
       typeOfPart[i]=0;
       pbc(i);
 #endif
-      if (dist_type==0)
+      if (dist_type==4)
+	{
+	  ox = 1;
+	  oy = 0;
+	  oz = 0;
+	}
+      else if (dist_type==0)
 	orient(&ox, &oy, &oz);
       else 
 	orient_onsager(&ox, &oy, &oz, alpha);
@@ -2063,6 +2071,11 @@ void mcin(int i, int j, int nb, int dist_type, double alpha)
 
       //printf("i=%d j=%d ene=%f\n", i, j, ene);
       trials++;
+      if (trials > maxtrials)
+	{
+	  *merr=1;
+	  return;
+	}
     }
   //printf("trials=%d\n", trials);
 }
@@ -2272,7 +2285,7 @@ void accum_persist_len(int *parlist, double *pl, double *cc)
 }
 void calc_persistence_length_mc(long long int maxtrials, int outits)
 {
-  int abort=0, *parlist, i, j, nb, k1, k2, ierr, jj;
+  int abort=0, *parlist, i, j, nb, k1, k2, ierr, merr, jj;
   long long int tt;
   double *pl, *cc, shift[3];
   FILE *fi, *f;
@@ -2338,7 +2351,14 @@ void calc_persistence_length_mc(long long int maxtrials, int outits)
 	      else
 		break;
 	    }
-	  mcin(i, j, nb, 0, 0.0);
+	  mcin(i, j, nb, 0, 0.0, &merr);
+	  if (merr!=0)
+	    {
+	      printf("[mcin] attempt to add a bonded particle failed!\n");
+	      /* mc in ha fallito scarta tale conf */
+	      abort=1;
+	      break;
+	    }
 #if 1
 	  /* qui controlla che non ci siano overlap con le particelle
 	     già inserite e che mcin abbia formato un solo legame */
@@ -2492,11 +2512,12 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
 
   //fclose(f);
 }
+extern double *distro;
 void calc_cov_additive(void)
 {
   FILE *fi, *f=NULL;
   double cov, Lb, totene = 0.0, alpha, shift[3];
-  int i, j=-1, size1, size2, nb, k1, k2, overlap=0, ierr, type, outits;
+  int bt=0, merr=0, i, j=-1, size1, size2, nb, k1, k2, overlap=0, ierr, type, outits;
   long long int maxtrials, tt;
   double ox, oy, oz, Rl[3][3];
   fi = fopen("covmc.conf", "r");
@@ -2512,7 +2533,15 @@ void calc_cov_additive(void)
      type = 1 -> covolume nematic
      type = 2 -> persistence length
      type = 3 -> bonding volume
+     type = 4 -> covolume if perfectly aligned (i.e. alpha -> infinity)
    */
+  if (type==1)
+    {
+      const int n=1000;
+      distro=malloc(sizeof(double)*n);
+      for (i=0; i < n; i++)
+	distro[i] = 0.0;
+    }
   
   if (size1 >= Oparams.parnum)
     {
@@ -2565,13 +2594,14 @@ void calc_cov_additive(void)
 	    R[0][k1][k2] = (k1==k2)?1:0;
 	  }
     }
-  if (type==0)
+  if (type==0||type==4)
     f = fopen("covolume.dat","w+");
   else if (type==1)
     f = fopen("covolume-nem.dat","w+");
   fclose(f);
   while (tt < maxtrials) 
     {
+      merr=0;
       /* place first cluster */
       if (tt%outits==0)
 	{
@@ -2583,7 +2613,7 @@ void calc_cov_additive(void)
 #else
 	      cov = (totene/((double)tt))*(L*L*L);
 #endif
-	      if (type==0)
+	      if (type==0||type==4)
 		f=fopen("covolume.dat", "a");
 	      else
 		f=fopen("covolume-nem.dat", "a");
@@ -2602,26 +2632,43 @@ void calc_cov_additive(void)
 	}
       for (i=1; i < size1; i++)
 	{
+	  bt = 0;
 	  while (1)
 	    {
 	      nb = (int)(ranf_vb()*2.0);
 	      j = (int) (ranf_vb()*i);
-#if 0
-	      if (numbonds[j]==2)
+#if 1
+	      if (bt > Oparams.parnum*1000)
 		{
-		  printf("j=%d has 2 bonds!\n", j);
-		  exit(-1);
+    		  if (calcpotene()==-Oparams.parnum*2.0)
+		    {
+		      save_conf_mc(0);
+		      printf("During insertion of #1 cluster: every particle has 2 bonds! i=%d\n", i);
+		      exit(-1);
+		    }
 		}
 #endif
 	      if (is_bonded_mc(j, nb))
 		continue;
 	      else
 		break;
+	      bt++;
 	    }
-	  mcin(i, j, nb, type, alpha);
+	  mcin(i, j, nb, type, alpha, &merr);
+	  if (merr!=0)
+	    {
+	      save_conf_mc(0);
+	      printf("[mcin] attemp to add a bonded particle failed!\n");
+	      break;
+	    }
 	  /* N.B. per non controlla il self-overlap della catena 
 	     e la formazione dopo mcin di legami multipli poiché
 	     si presuppone che al massimo stiamo considerando dimeri */
+	}
+      if (merr)
+	{
+	  tt++;
+	  continue;
 	}
       /* place second cluster */
       overlap=0;
@@ -2638,7 +2685,13 @@ void calc_cov_additive(void)
     	      ry[i] = L*(ranf_vb()-0.5); 
     	      rz[i] = L*(ranf_vb()-0.5); 
 #endif
-	      if (type==1)
+	      if (type==4)
+		{
+		  ox = 1;
+		  oy = 0;
+		  oz = 0;
+		}
+	      else if (type==1)
 		orient_onsager(&ox, &oy, &oz, alpha);
 	      else
 		orient(&ox, &oy, &oz);
@@ -2649,29 +2702,43 @@ void calc_cov_additive(void)
 	    }
 	  else
 	    {
+	      bt = 0;
 	      while (1)
 		{
 		  nb = (int)(ranf_vb()*2.0);
 		  j = ((int) (ranf_vb()*(i-size1)))+size1;
-#if 0
-	    	  if (numbonds[j]==2)
+
+#if 1
+	    	  if (bt > Oparams.parnum*1000)
 	    	    {
-	    	      printf("j=%d has 2 bonds!\n", j);
-	    	      exit(-1);
+		      if (calcpotene()==-Oparams.parnum*2.0)
+			{
+			  save_conf_mc(0);
+			  printf("During insertion of #2 cluster: every particle has 2 bonds! i=%d\n", i);
+			  exit(-1);
+			}
 	    	    }
 #endif
 		  if (is_bonded_mc(j, nb))
 		    continue;
 		  else
 		    break;
+		  bt++;
 		}
 	      /* mette la particella i legata a j con posizione ed orientazione a caso */
 	      //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
-	      mcin(i, j, nb, type, alpha);
+	      mcin(i, j, nb, type, alpha, &merr);
+	      if (merr!=0)
+		{
+		  save_conf_mc(0);
+		  printf("[mcin] attemp to add a bonded particle failed!\n");
+		  break;
+		}
+	 
 	      /* N.B. per ora non controlla il self-overlap della catena 
 		 e la formazione dopo mcin di legami multipli poiché
 		 si presuppone che al massimo stiamo considerando dimeri */
-	    }	    
+	    }
 	  overlap = 0;
 	  for (j=0; j < size1; j++)
 	    {
@@ -2696,6 +2763,11 @@ void calc_cov_additive(void)
 	    }
 	  if (overlap)
 	    break;
+	}
+      if (merr)
+	{
+	  tt++;
+	  continue;
 	}
       if (overlap)// && ierr==0)
 	totene += 1.0;
