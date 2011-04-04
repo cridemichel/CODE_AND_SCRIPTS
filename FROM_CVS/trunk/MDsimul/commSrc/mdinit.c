@@ -66,16 +66,20 @@ void Continue(void)
   printf("setting seed:%d time:%d\n", OprogStatus.mdseed, (int)time(NULL));
   if (OprogStatus.mdseed>=0) 
     {
-#ifdef MD_RAND48      
+#if defined(MD_RAND48)      
       srand48(OprogStatus.mdseed);
+#elif defined(MD_RANDOM)
+      srandom(OprogStatus.mdseed);
 #else
       srand(OprogStatus.mdseed);
 #endif
     }
   else
     {
-#ifdef MD_RAND48
+#if defined(MD_RAND48)
       srand48(((long int)time(NULL)));
+#elif defined(MD_RANDOM)
+      srandom(((int)time(NULL)));
 #else
       srand(((int)time(NULL)));
 #endif
