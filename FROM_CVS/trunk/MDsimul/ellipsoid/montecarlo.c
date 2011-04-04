@@ -1954,7 +1954,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
   const int maxtrials=1000000;
   double rA[3], rat[3], norm, sax, cc[3], ene;
   double shift[3], Rl[3][3], vv[3];
-  double ox, oy, oz, d;
+  double ox, oy, oz, d, dx, dy, dz;
   int ierr, bonded, k1, k2, trials;
   /* place particle i bonded to bond nb of particle j */
   rA[0] = rx[j];
@@ -1983,11 +1983,17 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
   *merr=0;
   while (!bonded)
     {
-#if 0
-      /* chose a random position inside a cube*/
-      rx[i] = cc[0]+2.0*sax*(ranf_vb()-0.5);
-      ry[i] = cc[1]+2.0*sax*(ranf_vb()-0.5);
-      rz[i] = cc[2]+2.0*sax*(ranf_vb()-0.5);
+#if 1
+      /* chose a random position inside a sphere or cube (removing do...while loop)*/
+      do {
+	dx = 2.0*(ranf_vb()-0.5);
+	dy = 2.0*(ranf_vb()-0.5);
+	dz = 2.0*(ranf_vb()-0.5);
+      } 
+      while (dx*dx+dy*dy+dz*dz > 1);
+      rx[i] = cc[0]+dx*sax;
+      ry[i] = cc[1]+dy*sax;
+      rz[i] = cc[2]+dz*sax;
       pbc(i);
 #else
       /* chose a random position inside a sphere (this is of course more efficient than
@@ -2640,7 +2646,8 @@ void calc_cov_additive(void)
 #if 1
 	      if (bt > Oparams.parnum*1000)
 		{
-    		  if (calcpotene()==-Oparams.parnum*2.0)
+		  printf("insertion cluster #1: maximum number of iteration reached\n");
+    		  if (fabs(calcpotene()+i*2.0) < 1E-10)
 		    {
 		      save_conf_mc(0);
 		      printf("During insertion of #1 cluster: every particle has 2 bonds! i=%d\n", i);
@@ -2711,7 +2718,8 @@ void calc_cov_additive(void)
 #if 1
 	    	  if (bt > Oparams.parnum*1000)
 	    	    {
-		      if (calcpotene()==-Oparams.parnum*2.0)
+		      printf("insertion cluster #2: maximum number of iteration reached\n");
+		      if (fabs(calcpotene()+(i-size1)*2.0) < 1E-10)
 			{
 			  save_conf_mc(0);
 			  printf("During insertion of #2 cluster: every particle has 2 bonds! i=%d\n", i);
