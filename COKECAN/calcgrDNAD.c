@@ -5,6 +5,7 @@
 #define Sqr(x) ((x)*(x))
 char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
+int mcsim=0;
 int N, particles_type=1, k1, k2;
 double *x[3], L, ti, *w[3], storerate;
 double nv[3], vecx[3], vecy[3], vecz[3];
@@ -121,7 +122,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 
 void print_usage(void)
 {
-  printf("calcgr [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
+  printf("calcgr [--mcsim/-mc] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
   exit(0);
 }
 double threshold=0.05;
@@ -143,6 +144,10 @@ void parse_param(int argc, char** argv)
       if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
 	{
 	  print_usage();
+	}
+       else if (!strcmp(argv[cc],"--mcsim")||!strcmp(argv[cc],"-mc"))
+	{
+	  mcsim=1;
 	}
       else if (!strcmp(argv[cc],"--gnuplot")||!strcmp(argv[cc],"-gp"))
 	{
@@ -262,10 +267,20 @@ int main(int argc, char** argv)
 	  nat++;
 	  if (nat==3)
 	    {
-	      for (i=0; i < 2*NP; i++)
-		fscanf(f, "%[^\n]\n", line);
-	      fscanf(f, "%lf\n", &L);
-	      break;
+	      if (mcsim==1)
+	       {
+	         for (i=0; i < NP; i++)
+		   fscanf(f, "%[^\n]\n", line);
+	         fscanf(f, "%lf\n", &L);
+	         break;
+               }
+              else
+               {
+	         for (i=0; i < 2*NP; i++)
+		   fscanf(f, "%[^\n]\n", line);
+	         fscanf(f, "%lf\n", &L);
+	         break;
+                }
 	    }
 	  continue;
 	}
