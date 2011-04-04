@@ -854,10 +854,12 @@ COORD_TYPE ranf(void)
   /*  Returns a uniform random variate in the range 0 to 1.         
       Good random number generators are machine specific.
       please use the one recommended for your machine. */
-#ifdef MD_RAND48
+#if defined(MD_RAND48)
   return drand48();
+#elif defined(MD_RANDOM)
+  return random() / ( ((COORD_TYPE) RAND_MAX) + 1);
 #else
-  return rand() / ( (COORD_TYPE) RAND_MAX + 1);
+  return rand() / ( ((COORD_TYPE) RAND_MAX) + 1);
 #endif
 }
 
@@ -3676,7 +3678,13 @@ double ranf_vb(void)
   /*  Returns a uniform random variate in the range 0 to 1.         
       Good random number generators are machine specific.
       please use the one recommended for your machine. */
-  return random() / ( (double) RAND_MAX + 1);
+#if defined(MD_RAND48)
+  return drand48();
+#elif defined(MD_RANDOM)
+  return random() / ( ((double) RAND_MAX) + 1);
+#else
+  return rand() / ( ((double) RAND_MAX) + 1);
+#endif
   //return random() / (2**31-1); 
 }
 double fons(double theta, double alpha)
@@ -4362,10 +4370,16 @@ void calc_vbonding(void)
    */
   
   fclose(fi);
+#if defined(MD_RAND48)
+  srand48(((int)time(NULL)));
+#elif defined(MD_RANDOM)
 #ifdef MD_MAC
   srandomdev();
 #else
   srandom((int)(time(NULL)));
+#endif
+#else
+  srand((int)(time(NULL)));
 #endif
 #ifdef MD_CHECK_POINT
   if (type==6)
