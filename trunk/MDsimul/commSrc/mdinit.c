@@ -731,9 +731,8 @@ void init_rng(int mdseed, int mpi, int my_rank)
       srand48(fact*mdseed);
 #elif defined(MD_RANDOM)
 #if 1
-      for (k=0; k < 256; k++)
-	rng_array[k] = k;
       initstate(fact*mdseed, rng_array, 256);
+      setstate(rng_array);
 #else
       srandom(fact*mdseed);
 #endif
@@ -747,9 +746,8 @@ void init_rng(int mdseed, int mpi, int my_rank)
       srand48(fact*((long int)time(NULL)));
 #elif defined(MD_RANDOM)
 #if 1
-      for (k=0; k < 256; k++)
-	rng_array[k] = (char) (fact*(int)time(NULL))%256;
       initstate(fact*((int)time(NULL)), rng_array, 256);
+      setstate(rng_array);
 #else
       srandom(fact*((int)time(NULL)));
 #endif
