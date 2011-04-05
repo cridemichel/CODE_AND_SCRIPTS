@@ -1,5 +1,6 @@
 #include<mdsimul.h>
 const double saxfactMC[3]={0.85,0.68,0.68};
+extern void init_rng(int mdseed, int mpi, int my_rank);
 #ifdef MC_SIMUL
 #ifdef MC_STORELL
 int *cellListMC;
@@ -2555,17 +2556,7 @@ void calc_cov_additive(void)
       exit(-1);
     } 
   fclose(fi);
-#if defined(MD_RAND48)
-  srand48((int)(time(NULL)));
-#elif defined(MD_RANDOM)
-#ifdef MD_MAC
-  srandomdev();
-#else
-  srandom((int)(time(NULL)));
-#endif
-#else
-  srand((int)(time(NULL)));
-#endif
+  init_rng(-1, 0, -1);
   OprogStatus.optnnl = 0;
   tt=0;
   size2 = Oparams.parnum-size1;
