@@ -50,9 +50,8 @@ void Continue(void)
   /* Load restore file using an algorithm explained in the TECH_INFO
      file */
   FILE* il;
-  char ss[256];
   char firest[NAME_LENGTH];
-  int i, rnk, kk; 
+  int i, rnk; 
   char perc[NAME_LENGTH];
 
    /* Opens the restore file that contains all informations
@@ -717,10 +716,10 @@ void scanFile(char* argom)
       initCoord();
     }
 }
+char rng_array[256];
 void init_rng(int mdseed, int mpi, int my_rank)
 {
-  int fact, kk;
-  char ss[256];
+  int fact, k;
   printf("Initializing RNG...\n");
   if (mpi==0)
     fact = 1;
@@ -733,8 +732,8 @@ void init_rng(int mdseed, int mpi, int my_rank)
 #elif defined(MD_RANDOM)
 #if 1
       for (k=0; k < 256; k++)
-	ss[k] = k;
-      initstate(fact*mdseed, ss, 256);
+	rng_array[k] = k;
+      initstate(fact*mdseed, rng_array, 256);
 #else
       srandom(fact*mdseed);
 #endif
@@ -749,8 +748,8 @@ void init_rng(int mdseed, int mpi, int my_rank)
 #elif defined(MD_RANDOM)
 #if 1
       for (k=0; k < 256; k++)
-	ss[k] = (char) (fact*(int)time(NULL))%256;
-      initstate(fact*((int)time(NULL)), ss, 256);
+	rng_array[k] = (char) (fact*(int)time(NULL))%256;
+      initstate(fact*((int)time(NULL)), rng_array, 256);
 #else
       srandom(fact*((int)time(NULL)));
 #endif
