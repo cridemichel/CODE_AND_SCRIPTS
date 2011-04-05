@@ -1,6 +1,6 @@
-/*      $Id: mdsimul.c,v 1.19 2011-03-06 13:44:44 demichel Exp $     */
+/*      $Id: mdsimul.c,v 1.20 2011-04-05 07:48:25 demichel Exp $     */
 #ifndef lint
-//static char vcid[] = "$Id: mdsimul.c,v 1.19 2011-03-06 13:44:44 demichel Exp $";
+//static char vcid[] = "$Id: mdsimul.c,v 1.20 2011-04-05 07:48:25 demichel Exp $";
 #endif /* lint */
 /* Sintassi: mdsimul -f <nomefile> 
    dove <nomefile> e' il nome del file contenente i parametri della 
@@ -404,6 +404,7 @@ void build_bilog_arr(void)
 #endif
 extern void scanFile(char* argom);
 /* =============================== >>> MAIN <<< ============================*/
+extern void init_rng(int mdseed, int mpi, int my_rank);
 #if !defined(MD_STANDALONE) || defined(MC_SIMUL) 
 int main(int argc, char *argv[])
 {
@@ -421,12 +422,29 @@ int main(int argc, char *argv[])
     exit(-1);
     }*/      
 
-
 #if defined(MPI) 
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numOfProcs);
+
+  init_rng(-1, 1, my_rank);
+#if 0
+#if defined(MD_RAND48)
+  srand48(my_rank*((long int)time(NULL)));
+#elif defined(MD_RANDOM)
+#if 1
+  for (k=0; k < 256; k++)
+    ss[k] = (char) ((int)time(NULL))%256;
+  initstate(my_rank*((int)time(NULL)), ss, 256);
+#else
+  srandom(my_rank*((int)time(NULL)));
+#endif
+#else
   srand(my_rank*((int)time(NULL)));
+#endif
+
+  //srand(my_rank*((int)time(NULL)));
+#endif
   equilibrated = malloc(sizeof(int)*numOfProcs);
   for (i=0; i < numOfProcs; i++)
     equilibrated[i] = 0;

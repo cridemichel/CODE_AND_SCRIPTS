@@ -42,6 +42,7 @@ char iniBakListFile[NAME_LENGTH];
 
 /* ADDED [reread] 07/05/01 */
 int rereadbool = 0;
+void init_rng(int mdseed, int mpi, int my_rank);
 
 /* ============================= >>> Continue <<< ===========================*/
 void Continue(void)
@@ -49,8 +50,9 @@ void Continue(void)
   /* Load restore file using an algorithm explained in the TECH_INFO
      file */
   FILE* il;
+  char ss[256];
   char firest[NAME_LENGTH];
-  int i, rnk; 
+  int i, rnk, kk; 
   char perc[NAME_LENGTH];
 
    /* Opens the restore file that contains all informations
@@ -64,29 +66,8 @@ void Continue(void)
 		 previously interrupted one */
 #if !defined(MPI)
   printf("setting seed:%d time:%d\n", OprogStatus.mdseed, (int)time(NULL));
-  if (OprogStatus.mdseed>=0) 
-    {
-#if defined(MD_RAND48)      
-      srand48(OprogStatus.mdseed);
-#elif defined(MD_RANDOM)
-      srandom(OprogStatus.mdseed);
-#else
-      srand(OprogStatus.mdseed);
-#endif
-    }
-  else
-    {
-#if defined(MD_RAND48)
-      srand48(((long int)time(NULL)));
-#elif defined(MD_RANDOM)
-      srandom(((int)time(NULL)));
-#else
-      srand(((int)time(NULL)));
-#endif
-    }
-#endif
-
-  
+  init_rng(OprogStatus.mdseed, 0, -1);
+#endif  
   /* 30/10/2005: aggiunta l'inizializzazione anche quando si continua!
    *             Verificare che funzioni! */  
   initBefore();		/* initialize Oparams with default settings */
@@ -736,6 +717,48 @@ void scanFile(char* argom)
       initCoord();
     }
 }
+void init_rng(int mdseed, int mpi, int my_rank)
+{
+  int fact, kk;
+  char ss[256];
+  printf("Initializing RNG...\n");
+  if (mpi==0)
+    fact = 1;
+  else
+    fact = my_rank + 1;
+ if (mdseed>=0) 
+    {
+#if defined(MD_RAND48)      
+      srand48(fact*mdseed);
+#elif defined(MD_RANDOM)
+#if 1
+      for (k=0; k < 256; k++)
+	ss[k] = k;
+      initstate(fact*mdseed, ss, 256);
+#else
+      srandom(fact*mdseed);
+#endif
+#else
+      srand(fact*mdseed);
+#endif
+    }
+  else
+    {
+#if defined(MD_RAND48)
+      srand48(fact*((long int)time(NULL)));
+#elif defined(MD_RANDOM)
+#if 1
+      for (k=0; k < 256; k++)
+	ss[k] = (char) (fact*(int)time(NULL))%256;
+      initstate(fact*((int)time(NULL)), ss, 256);
+#else
+      srandom(fact*((int)time(NULL)));
+#endif
+#else
+      srand(fact*((int)time(NULL)));
+#endif
+    }
+}
 
 /* ============================= >>> Newsimul <<< ===========================*/
 void Newsimul (char *argom)
@@ -752,10 +775,13 @@ void Newsimul (char *argom)
 #if !defined(MPI)
   getseed(argom);
   printf("setting seed:%d time:%d\n", OprogStatus.mdseed, (int)time(NULL));
+  init_rng(OprogStatus.mdseed, 0, -1); 
+#if 0
   if (OprogStatus.mdseed>=0) 
     srand(OprogStatus.mdseed);
   else
     srand(((int)time(NULL)));
+#endif
 #endif
 
   /* <------------------------------------------------ INITIALIZE STRUCTURES */
