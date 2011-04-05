@@ -4370,17 +4370,7 @@ void calc_vbonding(void)
    */
   
   fclose(fi);
-#if defined(MD_RAND48)
-  srand48(((int)time(NULL)));
-#elif defined(MD_RANDOM)
-#ifdef MD_MAC
-  srandomdev();
-#else
-  srandom((int)(time(NULL)));
-#endif
-#else
-  srand((int)(time(NULL)));
-#endif
+  init_rng(-1, 0, -1);
 #ifdef MD_CHECK_POINT
   if (type==6)
     {
