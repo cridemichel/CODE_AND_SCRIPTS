@@ -1311,13 +1311,14 @@ void remove_bonds_GC(int ip)
 #else
   int i, nb, ii, jj, aa, bb, jj2;
 #endif
-  for (kk=0; kk < numbonds[ip]; kk++)
+  nb = numbonds[ip];
+  for (kk=0; kk < nb; kk++)
     {
       jj = bonds[ip][kk] / (NANA);
       jj2 = bonds[ip][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
-      remove_bond(jj2,bb,jj,aa);
+      remove_bond(jj, ip, bb, aa);
     }
 }
 extern void BuildNNL(int na);
@@ -1328,7 +1329,7 @@ void build_one_nnl_GC(int ip)
   int p, k1;
   nextNNLupdate(ip);
   BuildNNL(ip);
-  /* and now add ip to neighbor lists of exisisting particles */
+  /* and now add ip to neighbor lists of existing particles */
   for (k1=0; k1 < nebrTab[ip].len; k1++)
     {
       p=nebrTab[ip].list[k1];
@@ -1948,7 +1949,8 @@ void find_bonds_covadd(int i, int j)
 	}
     }
 }
-void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
+double find_bonds_fake(int i, int j);
+void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
   /* dist_type=0 -> isotropic
      dist_type=1 -> onsager */
@@ -1957,6 +1959,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz;
   int ierr, bonded, k1, k2, trials, nbold;
+  /* N.B. questa routine dipende dalla geometria degli spot, in particolare il volume
+     in cui inserire va scelto in relazione alla geometria adottata, per ora qui assumiamo
+     due spot sulle basi di uno pseudo-cilindro di elongazione data elongazione (sax, vedi sotto) */
   /* place particle i bonded to bond nb of particle j */
   rA[0] = rx[j];
   rA[1] = ry[j];
@@ -1979,8 +1984,8 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
     cc[k1] = rA[k1] + vv[k1]*sax*2.0;
   bonded=0;
   trials=0;
-
-  numbonds[i]=0;
+  if (!fake)
+    numbonds[i]=0;
   *merr=0;
   while (!bonded)
     {
@@ -2032,7 +2037,15 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
       //store_bonds_mc(j);
       nbold = numbonds[j];
 #endif
-      find_bonds_covadd(i, j);
+      if (fake)
+	{
+	  ene = find_bonds_fake(i, j);
+	}
+      else
+	{
+	  find_bonds_covadd(i, j);
+	  ene = calcpotene_GC(i);
+	}
 #if 0
       find_bonds_GC(i);
       if (numbonds[i] > 1)
@@ -2042,7 +2055,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
 	  continue;
 	}
 #endif
-      if ((ene=calcpotene_GC(i)) < 0)
+      if (ene < 0)
 	{
 #ifdef MD_LXYZ
 	  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
@@ -2063,10 +2076,14 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
 #if 0
 		  restore_bonds_mc(-1);
 #else
-		  numbonds[j]=nbold;
-		  //restore_bonds_mc(j);
+		  if (!fake)
+		    {
+		      numbonds[j]=nbold;
+		    }
+		      //restore_bonds_mc(j);
 #endif
-		  numbonds[i]=0;
+		  if (!fake)
+		    numbonds[i]=0;
 		}
 	    }
 	  else
@@ -2074,10 +2091,12 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
 #if 0
 	      restore_bonds_mc(-1);
 #else
-	      numbonds[j]=nbold;
+	      if (!fake)
+		numbonds[j]=nbold;
 	      //restore_bonds_mc(j);
 #endif
-	      numbonds[i]=0;
+	      if (!fake)
+		numbonds[i]=0;
 #if 0
 	      if (ierr!=0)
 		{
@@ -2128,6 +2147,8 @@ int are_bonded(int i, int j)
 }
 extern double vnonbond;
 int is_bonded_mc(int ip, int numb);
+void remove_allbonds_ij(int ip, int j);
+
 void mcoutin(double beta, double pbias)
 {
   int j, i, l, nout, ierr, k1, k2, dorej, nb;
@@ -2137,11 +2158,12 @@ void mcoutin(double beta, double pbias)
   j=(int) (ranf()*Oparams.parnum);
   epotenoldj=calcpotene_GC(j);  
   nbj = numbonds[j];
+  //printf("[mcoutin]-enter\n");
   if (numbonds[j]==Oparams.parnum)
     return;
   if (numbonds[j]==typesArr[typeOfPart[j]].nspots)
     return; /* tutti i siti sono occupati (assumendo che ogni sito è legato al massimo con un altro sito )*/
-  /* sceglia una particella esterna */
+  /* sceglie una particella esterna */
   done = 0;
   while (!done)
     {    
@@ -2153,6 +2175,7 @@ void mcoutin(double beta, double pbias)
 	{
 	  continue;
 	}
+      else break;
     }
   /*numero di particelle esterne a Vb */
   nout = Oparams.parnum-1-nbj;
@@ -2166,44 +2189,54 @@ void mcoutin(double beta, double pbias)
   /* cerca un bond libero */
   while (1)
     {
-      nb = (int)(ranf_vb()*2.0);
-      //j = (int) (ranf_vb()*i);
+      nb = (int)(ranf_vb()*typesArr[typeOfPart[j]].nspots);
+      /* N.B. qui assumo che al massimo ogni patch abbia un solo legame! */
       if (is_bonded_mc(j, nb))
 	continue;
       else
 	break;
     }
   /* rimuove i vecchi legami */
-  remove_bonds_GC(i);
-  if (OprogStatus.useNNL)
-    {
-      remove_from_nnl_MC(i);
-    }
-  /* inserisce la particella la particella legata a j con il bond nb appena scelto */
-  mcin(i, j, nb, 0, -1, &ierr); 
+  //printf("[mcoutin]-1\n");
+  /* inserisce la particella la particella legata a j con il bond nb appena scelto.
+     Notare che passando 1 (=fake) come ultimo argomento mcin cambia la posizione e l'orientazione
+     della particella ma non aggiorna i legami di i e j.*/
+  mcin(i, j, nb, 0, -1, &ierr, 1); 
   update_LL(i);
   if (OprogStatus.useNNL)
     {
+      remove_from_nnl_MC(i);
       build_one_nnl_GC(i);
       overestimate_of_displ[i]=0.0;
       max_step_MC[i] = calc_maxstep_MC(i);
     }
 
-  epotennewi = calcpotene_GC(i);
   dorej = overlapMC(i, &ierr);
   if (dorej)
     {
-      restore_bonds_mc(i);
+      //remove_allbonds_ij(i, -2);
+      //restore_bonds_mc(i);
+      //numbonds[j] = nbj;
       restore_coord(i);
       update_LL(i);
       if (OprogStatus.useNNL)
 	{
+	  remove_from_nnl_MC(i);
 	  build_one_nnl_GC(i);
 	  overestimate_of_displ[i]=0.0;
 	  max_step_MC[i] = calc_maxstep_MC(i);
 	}
+      //printf("[mcoutin]-exit\n");
       return;
     }
+
+#if 0
+  remove_allbonds_ij(i, -2);
+  find_bonds_GC(i);
+#else
+  update_bonds_MC(i);
+#endif
+  epotennewi = calcpotene_GC(i);
   ideltae=epotennewi-epotenoldi;
   re = (1.0-pbias)/pbias*(OprogStatus.vbond/vnonbond)*exp(-beta*ideltae);
   re = re*((double) nout)/(nin+1.0); 
@@ -2211,23 +2244,92 @@ void mcoutin(double beta, double pbias)
   accetto = (rcn < re)?1:0;
   if (!accetto)
     {
+#ifdef MC_STOREBONDS
+      remove_allbonds_ij(i, -2);
       restore_bonds_mc(i);
+#else
+      update_bonds_MC(i);
+#endif
       restore_coord(i);
       update_LL(i);
+      numbonds[j] = nbj;
       if (OprogStatus.useNNL)
 	{
+	  remove_from_nnl_MC(i);
 	  build_one_nnl_GC(i);
 	  overestimate_of_displ[i]=0.0;
 	  max_step_MC[i] = calc_maxstep_MC(i);
 	}
+      //printf("[mcoutin]-exit\n");
       return;
     }
+}
+void remove_allbonds_ij(int ip, int j)
+{
+  int kk;
+#ifdef MD_LL_BONDS
+  int i, nb;
+  long long int aa, bb, ii, jj, jj2;
+#else
+  int i, nb, ii, jj, aa, bb, jj2;
+#endif
+  /* NOTA: se j > 0 rimuove tutti i legami trai i e j
+           se j==-1 rimuove tutti i legami di i (anche dalle particelle legate)
+	   se j==-2 rimuove tutti i legami di i solo dalle particelle legate ad i e non da i stessa
+   */
+  nb = numbonds[ip];
+  for (kk=0; kk < nb; kk++)
+    {
+      jj = bonds[ip][kk] / (NANA);
+      
+      if (j < 0 || jj==j)
+	{
+	  jj2 = bonds[ip][kk] % (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  if (j==-1|| j > 0)
+	    remove_bond(ip, jj, aa, bb);
+	  remove_bond(jj, ip, bb, aa);
+	}
+    }
+}
+double find_bonds_fake(int i, int j)
+{
+  int nn,  amin, bmin, nbonds;
+  double ene, shift[3], dist;
+#ifdef MD_LXYZ
+  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+  shift[0] = L*rint((rx[i]-rx[j])/L);
+  shift[1] = L*rint((ry[i]-ry[j])/L);
+  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+  assign_bond_mapping(i, j);  
+  dist = calcDistNegSP(0.0, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+  nbonds = nbondsFlex;
+  ene=0;
+  for (nn=0; nn < nbonds; nn++)
+    {
+      if (dists[nn]<0.0)
+	{
+	  ene -= 1.0;
+	}
+    }
+  return ene;
+
 }
 void mcout(int i, int j, int nb)
 {
   double ene, ox, oy, oz, Rl[3][3];
   int k1, k2, bonded=1, nbjold;
 
+  //store_bonds_mc(i);
+  //store_bonds_mc(j);
+
+  //numbonds[i]=0;
+  //numbonds[j]=0;
   while (bonded)
     {
 #ifdef MD_LXYZ
@@ -2248,18 +2350,16 @@ void mcout(int i, int j, int nb)
 	      R[i][k1][k2] = Rl[k1][k2]; 
 	    }
 	}
-      nbjold = numbonds[j];
-      find_bonds_covadd(i, j);
-      if ((ene=calcpotene_GC(i))==0)
+      ene=find_bonds_fake(i, j);
+      if (ene==0)
 	{
 	  bonded=0;
 	}
-      else
-	{
-	  numbonds[j] = nbjold;
-	  numbonds[i] = 0;
-	}
     }
+  //restore_bonds_mc(j);
+  //numbonds[i]=0;
+  /* rimuove da j tutti i bond tra i e j */
+  //remove_all_bonds(j, i);
 }
 void mcinout(double beta, double pbias)
 {
@@ -2273,35 +2373,54 @@ void mcinout(double beta, double pbias)
   nbt = numbonds[j];
   if (nbt==0)
     return; /* nessuna particella legata esci */
+  /* N.B. sceglie a caso un legame da rompere, 
+     assumendo una sola particella per legame */
   l = ranf()*nbt;
   i = bonds[j][l] / (NANA);  
   nout = Oparams.parnum-nbt-1;
   nin = nbt;
   epotenoldi = calcpotene_GC(i);
   store_coord(i);
+#ifdef MC_STOREBONDS
+  store_bonds_mc(i);
+  //store_bonds_mc(j);
+#endif
+  /* N.B.: notare che mcout posiziona la particella ma non aggiorna i legami */
   mcout(i, j, l);
+  /* rimuove dai bond di j tutti i bond tra j ed i */
+  //printf("boh numbonds[%d]=%d numbonds[%d]=%d\n", i, numbonds[i], j, numbonds[j]);
   update_LL(i);
+  //printf("[mcinout]-enter\n");
   if (OprogStatus.useNNL)
     {
+      /* rimuove i da tutte le NNL del sistema */
+      remove_from_nnl_MC(i);
       build_one_nnl_GC(i);
       overestimate_of_displ[i]=0.0;
       max_step_MC[i] = calc_maxstep_MC(i);
     }
-  epotennewi = calcpotene_GC(i);
   dorej = overlapMC(i, &ierr);
   if (dorej)
     {
-      restore_bonds_mc(i);
+      /* rimuove tutti i legami di i */
       restore_coord(i);
       update_LL(i);
+      //numbonds[j] = nbt;
       if (OprogStatus.useNNL)
 	{
+	  /* rimuove i da tutte le NNL del sistema */
+	  remove_from_nnl_MC(i);
 	  build_one_nnl_GC(i);
 	  overestimate_of_displ[i]=0.0;
 	  max_step_MC[i] = calc_maxstep_MC(i);
 	}
+      //printf("[mcinout]-exit\n");
       return;
     }
+
+  update_bonds_MC(i);
+  epotennewi = calcpotene_GC(i);
+ 
   ideltae=epotennewi-epotenoldi;
   re = pbias/(1.0-pbias)*(vnonbond/OprogStatus.vbond)*exp(-beta*ideltae);
   re = re*((double) nout)/(nin+1.0); 
@@ -2309,15 +2428,26 @@ void mcinout(double beta, double pbias)
   accetto = (rcn < re)?1:0;
   if (!accetto)
     {
+#ifdef MC_STOREBONDS
+      remove_allbonds_ij(i, -2);
       restore_bonds_mc(i);
+      //restore_bonds_mc(j);
+#else
+      update_bonds_MC(i);
+      //update_bonds_MC(j);
+#endif
       restore_coord(i);
       update_LL(i);
+      //numbonds[j] = nbt;
       if (OprogStatus.useNNL)
 	{
+	  /* rimuove i da tutte le NNL del sistema */
+	  remove_from_nnl_MC(i);
 	  build_one_nnl_GC(i);
 	  overestimate_of_displ[i]=0.0;
 	  max_step_MC[i] = calc_maxstep_MC(i);
 	}
+      //printf("[mcinout]-exit\n");
       return;
     }
 }
@@ -2593,7 +2723,7 @@ void calc_persistence_length_mc(long long int maxtrials, int outits)
 	      else
 		break;
 	    }
-	  mcin(i, j, nb, 0, 0.0, &merr);
+	  mcin(i, j, nb, 0, 0.0, &merr, 0);
 	  if (merr!=0)
 	    {
 	      printf("[mcin] attempt to add a bonded particle failed!\n");
@@ -2893,7 +3023,7 @@ void calc_cov_additive(void)
 		break;
 	      bt++;
 	    }
-	  mcin(i, j, nb, type, alpha, &merr);
+	  mcin(i, j, nb, type, alpha, &merr, 0);
 	  if (merr!=0)
 	    {
 	      save_conf_mc(0);
@@ -2967,7 +3097,7 @@ void calc_cov_additive(void)
 		}
 	      /* mette la particella i legata a j con posizione ed orientazione a caso */
 	      //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
-	      mcin(i, j, nb, type, alpha, &merr);
+	      mcin(i, j, nb, type, alpha, &merr, 0);
 	      if (merr!=0)
 		{
 		  save_conf_mc(0);
@@ -3151,6 +3281,7 @@ int mcmotion(void)
       if (dorej==2)
 	{
 #ifdef MC_STOREBONDS
+	  remove_allbonds_ij(ip, -2);
 	  restore_bonds_mc(ip);
 #else
 	  update_bonds_MC(ip);
@@ -3209,7 +3340,7 @@ void move(void)
     ntot=Oparams.parnum;
   for (i=0; i < ntot; i++)
     {
-      if (OprogStatus.ensembleMC==0)
+      if (OprogStatus.ensembleMC==0 && deln==0)
 	ran = 0;
       else
 	ran = ntot*ranf();
