@@ -1929,6 +1929,10 @@ void usrInitBef(void)
     OprogStatus.npav=1000;
     OprogStatus.nexc=1;
 #endif
+    OprogStatus.pbias=0.5;
+    OprogStatus.nvbbias=100;
+    /* qui si assumono 2 bond per particella con vbonding pari a 0.147... */
+    OprogStatus.vbond=4*0.147;
     OprogStatus.dthetaMC=0.1;
     OprogStatus.deltaMC=0.1;
     OprogStatus.ensembleMC=0; /* 0 = NVT 1=NPT */
@@ -4570,6 +4574,7 @@ void calc_vbonding(void)
 #endif
 #ifdef MC_SIMUL
 void build_parallelepipeds(void);
+double vnonbond;
 double *max_step_MC;
 double *overestimate_of_displ;
 #ifdef MC_GRANDCAN
@@ -6186,6 +6191,11 @@ void usrInitAft(void)
 #endif
  
 #ifdef MC_SIMUL
+#ifdef MD_LXYZ
+  vnonbond = L[0]*L[1]*L[2] - OprogStatus.vbond;
+#else
+  vnonbond = L*L*L - OprogStatus.vbond;
+#endif
 #ifdef MC_GRANDCAN
   if (OprogStatus.ensembleMC==2)
     {
