@@ -1930,9 +1930,9 @@ void usrInitBef(void)
     OprogStatus.nexc=1;
 #endif
     OprogStatus.pbias=0.5;
-    OprogStatus.nvbbias=100;
+    OprogStatus.nvbbias=-1;
     /* qui si assumono 2 bond per particella con vbonding pari a 0.147... */
-    OprogStatus.vbond=4*0.147;
+    OprogStatus.vbond=4*0.0154266804;
     OprogStatus.dthetaMC=0.1;
     OprogStatus.deltaMC=0.1;
     OprogStatus.ensembleMC=0; /* 0 = NVT 1=NPT */
