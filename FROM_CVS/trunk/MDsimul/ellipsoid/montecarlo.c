@@ -1956,7 +1956,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
   double rA[3], rat[3], norm, sax, cc[3], ene;
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz;
-  int ierr, bonded, k1, k2, trials;
+  int ierr, bonded, k1, k2, trials, nbold;
   /* place particle i bonded to bond nb of particle j */
   rA[0] = rx[j];
   rA[1] = ry[j];
@@ -2026,7 +2026,12 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
 	      R[i][k1][k2] = Rl[k1][k2]; 
 	    }
 	}
+#if 0
       store_bonds_mc(-1);
+#else
+      //store_bonds_mc(j);
+      nbold = numbonds[j];
+#endif
       find_bonds_covadd(i, j);
 #if 0
       find_bonds_GC(i);
@@ -2055,13 +2060,23 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
 	      else 
 		{
 		  printf("[mcin] NR failure\n");
+#if 0
 		  restore_bonds_mc(-1);
+#else
+		  numbonds[j]=nbold;
+		  //restore_bonds_mc(j);
+#endif
 		  numbonds[i]=0;
 		}
 	    }
 	  else
 	    {
+#if 0
 	      restore_bonds_mc(-1);
+#else
+	      numbonds[j]=nbold;
+	      //restore_bonds_mc(j);
+#endif
 	      numbonds[i]=0;
 #if 0
 	      if (ierr!=0)
@@ -2086,8 +2101,228 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr)
     }
   //printf("trials=%d\n", trials);
 }
-int is_bonded_mc(int ip, int numb)
+/* bonding moves */
+int are_bonded(int i, int j)
+{
+  int kk;
+#ifdef MD_LL_BONDS
+  int nb;
+  long long int aa, bb, ii, jj, jj2;
+#else
+  int nb, ii, jj, aa, bb, jj2;
+#endif
+  for (kk=0; kk < numbonds[i]; kk++)
     {
+      jj = bonds[i][kk] / (NANA);
+#if 0
+      jj2 = bonds[ip][kk] % (NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+#endif
+      if (jj==j)
+	return 1;
+    }
+  return 0;
+
+
+}
+extern double vnonbond;
+int is_bonded_mc(int ip, int numb);
+void mcoutin(double beta, double pbias)
+{
+  int j, i, l, nout, ierr, k1, k2, dorej, nb;
+  double rcn, re, epotenoldj, epotenoldi, ideltae, epotennewi;
+  int nbj, done, nin, accetto;
+  /* select a molecule j=0...Oparams.parnum-1 */
+  j=(int) (ranf()*Oparams.parnum);
+  epotenoldj=calcpotene_GC(j);  
+  nbj = numbonds[j];
+  if (numbonds[j]==Oparams.parnum)
+    return;
+  if (numbonds[j]==typesArr[typeOfPart[j]].nspots)
+    return; /* tutti i siti sono occupati (assumendo che ogni sito è legato al massimo con un altro sito )*/
+  /* sceglia una particella esterna */
+  done = 0;
+  while (!done)
+    {    
+      i = ranf()*Oparams.parnum;
+      if (i==j)
+	continue;
+      /* controlla che i non sia già bondata a j */ 
+      if (are_bonded(i, j))
+	{
+	  continue;
+	}
+    }
+  /*numero di particelle esterne a Vb */
+  nout = Oparams.parnum-1-nbj;
+  /*numero di particelle interne a Vb */
+  nin = nbj;
+  store_coord(i);
+  epotenoldi=calcpotene_GC(i);
+#ifdef MC_STOREBONDS
+  store_bonds_mc(i);
+#endif
+  /* cerca un bond libero */
+  while (1)
+    {
+      nb = (int)(ranf_vb()*2.0);
+      //j = (int) (ranf_vb()*i);
+      if (is_bonded_mc(j, nb))
+	continue;
+      else
+	break;
+    }
+  /* rimuove i vecchi legami */
+  remove_bonds_GC(i);
+  if (OprogStatus.useNNL)
+    {
+      remove_from_nnl_MC(i);
+    }
+  /* inserisce la particella la particella legata a j con il bond nb appena scelto */
+  mcin(i, j, nb, 0, -1, &ierr); 
+  update_LL(i);
+  if (OprogStatus.useNNL)
+    {
+      build_one_nnl_GC(i);
+      overestimate_of_displ[i]=0.0;
+      max_step_MC[i] = calc_maxstep_MC(i);
+    }
+
+  epotennewi = calcpotene_GC(i);
+  dorej = overlapMC(i, &ierr);
+  if (dorej)
+    {
+      restore_bonds_mc(i);
+      restore_coord(i);
+      update_LL(i);
+      if (OprogStatus.useNNL)
+	{
+	  build_one_nnl_GC(i);
+	  overestimate_of_displ[i]=0.0;
+	  max_step_MC[i] = calc_maxstep_MC(i);
+	}
+      return;
+    }
+  ideltae=epotennewi-epotenoldi;
+  re = (1.0-pbias)/pbias*(OprogStatus.vbond/vnonbond)*exp(-beta*ideltae);
+  re = re*((double) nout)/(nin+1.0); 
+  rcn = ranf();
+  accetto = (rcn < re)?1:0;
+  if (!accetto)
+    {
+      restore_bonds_mc(i);
+      restore_coord(i);
+      update_LL(i);
+      if (OprogStatus.useNNL)
+	{
+	  build_one_nnl_GC(i);
+	  overestimate_of_displ[i]=0.0;
+	  max_step_MC[i] = calc_maxstep_MC(i);
+	}
+      return;
+    }
+}
+void mcout(int i, int j, int nb)
+{
+  double ene, ox, oy, oz, Rl[3][3];
+  int k1, k2, bonded=1, nbjold;
+
+  while (bonded)
+    {
+#ifdef MD_LXYZ
+      rx[i] = L[0]*(ranf_vb()-0.5);
+      ry[i] = L[1]*(ranf_vb()-0.5); 
+      rz[i] = L[2]*(ranf_vb()-0.5); 
+#else
+      rx[i] = L*(ranf_vb()-0.5);
+      ry[i] = L*(ranf_vb()-0.5); 
+      rz[i] = L*(ranf_vb()-0.5); 
+#endif
+      orient(&ox, &oy, &oz);
+      versor_to_R(ox, oy, oz, Rl);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      R[i][k1][k2] = Rl[k1][k2]; 
+	    }
+	}
+      nbjold = numbonds[j];
+      find_bonds_covadd(i, j);
+      if ((ene=calcpotene_GC(i))==0)
+	{
+	  bonded=0;
+	}
+      else
+	{
+	  numbonds[j] = nbjold;
+	  numbonds[i] = 0;
+	}
+    }
+}
+void mcinout(double beta, double pbias)
+{
+  int i, l, j, nbt;
+  int dorej, accetto, ierr, nout, nin;
+  double re, rcn, epotenoldj, epotenoldi, epotennewi, ideltae;
+  j = (int) (ranf()*Oparams.parnum);
+  if (j >= Oparams.parnum)
+    j=Oparams.parnum-1;
+  epotenoldj = calcpotene_GC(j);
+  nbt = numbonds[j];
+  if (nbt==0)
+    return; /* nessuna particella legata esci */
+  l = ranf()*nbt;
+  i = bonds[j][l] / (NANA);  
+  nout = Oparams.parnum-nbt-1;
+  nin = nbt;
+  epotenoldi = calcpotene_GC(i);
+  store_coord(i);
+  mcout(i, j, l);
+  update_LL(i);
+  if (OprogStatus.useNNL)
+    {
+      build_one_nnl_GC(i);
+      overestimate_of_displ[i]=0.0;
+      max_step_MC[i] = calc_maxstep_MC(i);
+    }
+  epotennewi = calcpotene_GC(i);
+  dorej = overlapMC(i, &ierr);
+  if (dorej)
+    {
+      restore_bonds_mc(i);
+      restore_coord(i);
+      update_LL(i);
+      if (OprogStatus.useNNL)
+	{
+	  build_one_nnl_GC(i);
+	  overestimate_of_displ[i]=0.0;
+	  max_step_MC[i] = calc_maxstep_MC(i);
+	}
+      return;
+    }
+  ideltae=epotennewi-epotenoldi;
+  re = pbias/(1.0-pbias)*(vnonbond/OprogStatus.vbond)*exp(-beta*ideltae);
+  re = re*((double) nout)/(nin+1.0); 
+  rcn = ranf();
+  accetto = (rcn < re)?1:0;
+  if (!accetto)
+    {
+      restore_bonds_mc(i);
+      restore_coord(i);
+      update_LL(i);
+      if (OprogStatus.useNNL)
+	{
+	  build_one_nnl_GC(i);
+	  overestimate_of_displ[i]=0.0;
+	  max_step_MC[i] = calc_maxstep_MC(i);
+	}
+      return;
+    }
+}
+int is_bonded_mc(int ip, int numb)
+{
   int kk;
 #ifdef MD_LL_BONDS
   int i, nb;
@@ -2846,13 +3081,97 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
     return 0;
 }
 #endif
+int mcmotion(void)
+{
+  int ip, dorej, movetype, err;
+  double enn, eno;
+  ip = Oparams.parnum*ranf();
+  /* qui basta calcolare l'energia della particella che sto muovendo */
+#if 0
+  eno = calcpotene();
+#else
+  eno = calcpotene_GC(ip);
+#endif
+  store_coord(ip);
+  movetype=random_move(ip);
+  pbc(ip);
+  update_LL(ip);
+  //rebuildLinkedList();
+  //printf("i=%d\n", i);
+  totmovesMC++;
+  /* overlapMC() aggiorna anche i bond */
+  //err=0;
+  dorej = overlapMC(ip, &err);
+  if (!dorej)
+    {
+#ifdef MC_STOREBONDS
+      store_bonds_mc(ip);
+#endif
+      update_bonds_MC(ip);
+      /* qui basta calcolare l'energia della particella che sto muovendo */
+#if 0
+      enn=calcpotene();
+#else
+      enn=calcpotene_GC(ip);
+#endif
+      if (enn <= eno)
+	{
+	  //	  if (abs(enn-eno) >=1 )
+	  //	    printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
+	  dorej=0;
+	}
+      else
+	{
+	  if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
+	    dorej=0;
+	  else
+	    dorej=2;
+	  // if (dorej==0)
+	  // printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
+	}
+    }
+
+  if (dorej != 0)
+    {
+      /* move rejected */
+      totrejMC++;
+      if (movetype==0)
+	trarejMC++;
+      else 
+	rotrejMC++;
+      //printf("restoring coords\n");
+      if(err)
+	{
+	  printf("[random_move] NR failed...I rejected this trial move...\n");
+	  err=0;
+	}
+      restore_coord(ip);
+      //rebuildLinkedList();
+      update_LL(ip);
+      if (dorej==2)
+	{
+#ifdef MC_STOREBONDS
+	  restore_bonds_mc(ip);
+#else
+	  update_bonds_MC(ip);
+#endif
+	}
+      //printf("restoring finished\n");
+      //rebuildLinkedList();
+    }
+  if (OprogStatus.useNNL && dorej==0 )
+    {
+      overestimate_of_displ[ip] += displMC; 
+    }
+  return movetype;
+}
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0;
 #ifdef MD_LXYZ
   double avL;
 #endif
-  int ran, movetype, i,ip, err=0, dorej, enn;
+  int ran, movetype, i, ip, err=0, dorej, enn, ntot, deln;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   //printf("Doing MC step #%d\n", Oparams.curStep);
 #if 1 
@@ -2874,124 +3193,84 @@ void move(void)
       cyini=cellsy;
       czini=cellsz;
     }
-  for (i=0; i < Oparams.parnum; i++)
-    {
-      /* pick a particle at random */
+  if (OprogStatus.nvbbias > 0)
+    deln=OprogStatus.nvbbias;
+  else
+    deln=0;
+  if (OprogStatus.ensembleMC==0)
+    ntot = Oparams.parnum+deln;
+  else if (OprogStatus.ensembleMC==1)
+    ntot = Oparams.parnum+1+deln;
 #ifdef MC_GRANDCAN
-      if (OprogStatus.ensembleMC==2) /* grand canonical */
-	ran = (OprogStatus.npav+OprogStatus.nexc)*ranf();
-      else
+  else if (OprogStatus.ensembleMC==2)
+    ntot = OprogStatus.npav+OprogStatus.nexc+deln;
 #endif
-      if (OprogStatus.ensembleMC==1)
-	ran=(Oparams.parnum+1)*ranf();
-      else 
+  else
+    ntot=Oparams.parnum;
+  for (i=0; i < ntot; i++)
+    {
+      if (OprogStatus.ensembleMC==0)
 	ran = 0;
+      else
+	ran = ntot*ranf();
+
 #ifdef MC_GRANDCAN
       if (OprogStatus.ensembleMC==2 && ran >= OprogStatus.npav)
 	{
-	  mcexc(&err);
-	  movetype=4; /* 4 = insert/remove particle */
-	  if(err)
-    	    {
-	      printf("[mcexc] NR failed...I rejected this trial move...\n");
-	      err=0;
-	    }
-	  excmoveMC++;
-	}
-      else
-#endif
-      if (OprogStatus.ensembleMC==1 && ran==Oparams.parnum)
-	{
-	  //err=0;
-	  move_box(&err);
-	  movetype=3; /* 0 = tra; 1 = rot 2 = tra and rot; 3 = box */
-    	  if(err)
-    	    {
-	      printf("[move_box] NR failed...I rejected this trial move...\n");
-	      err=0;
-	    }
-	  volmoveMC++;
-	}
-      else
-	{
-	  ip = Oparams.parnum*ranf();
-	  /* qui basta calcolare l'energia della particella che sto muovendo */
-#if 0
-	  eno = calcpotene();
-#else
-	  eno = calcpotene_GC(ip);
-#endif
-	  store_coord(ip);
-	  movetype=random_move(ip);
-	  pbc(ip);
-	  update_LL(ip);
-	  //rebuildLinkedList();
-	  //printf("i=%d\n", i);
-	  totmovesMC++;
-	  /* overlapMC() aggiorna anche i bond */
-	  //err=0;
-	  dorej = overlapMC(ip, &err);
-	  if (!dorej)
+	  if (ran >= OprogStatus.npav + OprogStatus.nexc)
 	    {
-#ifdef MC_STOREBONDS
-	      store_bonds_mc(ip);
-#endif
-	      update_bonds_MC(ip);
-	      /* qui basta calcolare l'energia della particella che sto muovendo */
-#if 0
-	      enn=calcpotene();
-#else
-	      enn=calcpotene_GC(ip);
-#endif
-	      if (enn <= eno)
-		{
-		  //	  if (abs(enn-eno) >=1 )
-		  //	    printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
-		  dorej=0;
-		}
+	      if (ranf() < OprogStatus.pbias)
+		mcoutin(1.0/Oparams.T,OprogStatus.pbias);
 	      else
-		{
-		  if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
-		    dorej=0;
-		  else
-		    dorej=2;
-		 // if (dorej==0)
-		   // printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
-		}
+		mcinout(1.0/Oparams.T,OprogStatus.pbias);
 	    }
-
-	  if (dorej != 0)
+	  else
 	    {
-	      /* move rejected */
-	      totrejMC++;
-	      if (movetype==0)
-		trarejMC++;
-	      else 
-		rotrejMC++;
-	      //printf("restoring coords\n");
+	      mcexc(&err);
+	      movetype=4; /* 4 = insert/remove particle */
 	      if(err)
 		{
-		  printf("[random_move] NR failed...I rejected this trial move...\n");
+		  printf("[mcexc] NR failed...I rejected this trial move...\n");
 		  err=0;
 		}
-	      restore_coord(ip);
-	      //rebuildLinkedList();
-	      update_LL(ip);
-	      if (dorej==2)
-		{
-#ifdef MC_STOREBONDS
-		  restore_bonds_mc(ip);
-#else
-  		  update_bonds_MC(ip);
+	      excmoveMC++;
+	    }
+	}
+      else
 #endif
-		}
-	      //printf("restoring finished\n");
-	      //rebuildLinkedList();
-	    }
-	  if (OprogStatus.useNNL && dorej==0 )
+      if (OprogStatus.ensembleMC==1 && ran>=Oparams.parnum)
+	{
+	  //err=0;
+	  if (ran > Oparams.parnum)
 	    {
-	      overestimate_of_displ[ip] += displMC; 
+	      if (ranf() < OprogStatus.pbias)
+		mcoutin(1.0/Oparams.T,OprogStatus.pbias);
+	      else
+		mcinout(1.0/Oparams.T,OprogStatus.pbias);
 	    }
+	  else
+	    {
+	      move_box(&err);
+	      movetype=3; /* 0 = tra; 1 = rot 2 = tra and rot; 3 = box */
+	      if(err)
+		{
+		  printf("[move_box] NR failed...I rejected this trial move...\n");
+		  err=0;
+		}
+	      volmoveMC++;
+	    }
+	}
+      else
+	{
+	  if (ran >= Oparams.parnum)
+	    {
+	      if (ranf() < OprogStatus.pbias)
+		mcoutin(1.0/Oparams.T,OprogStatus.pbias);
+	      else
+		mcinout(1.0/Oparams.T,OprogStatus.pbias);
+	    }
+	  else
+	    movetype=mcmotion();
 	}
       //printf("done\n");
     }

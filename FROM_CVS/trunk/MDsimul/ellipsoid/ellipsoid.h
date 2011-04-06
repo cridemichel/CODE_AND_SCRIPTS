@@ -866,7 +866,10 @@ struct progStatus
   int npav;
   int nexc;
 #endif
+  int nvbbias;
+  double pbias;
   double lastNNLrebuildMC;
+  double vbond;
   double targetAccept;
   double targetAcceptVol;
   double dthetaMC;
@@ -1275,6 +1278,9 @@ struct pascii opro_ascii[] =
   {"npav" ,     &OS(npav),                             1,  1, "%d"},
   {"nexc" ,     &OS(nexc),                             1,  1, "%d"},
 #endif
+  {"nvbbias",   &OS(nvbbias),                           1, 1,  "%d"},
+  {"vbond",     &OS(vbond),                            1,  1, "%.15G"},
+  {"pbias",     &OS(pbias),                            1,  1, "%.15G"},
   {"lastNNLrebuildMC", &OS(lastNNLrebuildMC),                1, 1, "%d"},
   {"targetAccept", &OS(targetAccept),                        1, 1, "%.15G"},
   {"targetAcceptvol", &OS(targetAcceptVol),                  1, 1, "%.15G"},
@@ -1425,6 +1431,8 @@ struct singlePar OsinglePar[] = {
   {"npav",  &OprogStatus.npav,        INT},
   {"nexc",&OprogStatus.nexc,        INT},
 #endif
+  {"nvbbias",  &OprogStatus.nvbbias,          INT},
+  {"pbias",    &OprogStatus.pbias,            CT},
   {"deltaMC",   &OprogStatus.deltaMC,         CT},
   {"dthetaMC",  &OprogStatus.dthetaMC,        CT},
   {"ensembleMC",&OprogStatus.ensembleMC,      INT},
@@ -1434,6 +1442,7 @@ struct singlePar OsinglePar[] = {
   {"outMC",          &OprogStatus.outMC,      INT},
   {"targetAccept",   &OprogStatus.targetAccept,           CT},
   {"targetAcceptVol",&OprogStatus.targetAcceptVol,        CT},
+  {"vbond",          &OprogStatus.vbond,                  CT},
 #endif
 #ifdef EDHE_FLEX
   {"optbm",      &OprogStatus.optbm,          INT},
