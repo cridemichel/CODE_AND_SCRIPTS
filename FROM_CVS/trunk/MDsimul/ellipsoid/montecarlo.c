@@ -2423,7 +2423,7 @@ void mcinout(double beta, double pbias)
  
   ideltae=epotennewi-epotenoldi;
   re = pbias/(1.0-pbias)*(vnonbond/OprogStatus.vbond)*exp(-beta*ideltae);
-  re = re*((double) nout)/(nin+1.0); 
+  re = re*((double) nin)/(nout+1.0); 
   rcn = ranf();
   accetto = (rcn < re)?1:0;
   if (!accetto)
