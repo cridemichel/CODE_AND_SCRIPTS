@@ -2238,21 +2238,22 @@ void mcoutin(double beta, double pbias)
 #endif
   epotennewi = calcpotene_GC(i);
   ideltae=epotennewi-epotenoldi;
-  re = (1.0-pbias)/pbias*(OprogStatus.vbond/vnonbond)*exp(-beta*ideltae);
+  re = ((1.0-pbias)/pbias)*(OprogStatus.vbond/vnonbond)*exp(-beta*ideltae);
+  //printf("vbond=%.15G vnonbond: %.15G\n", OprogStatus.vbond, vnonbond);
   re = re*((double) nout)/(nin+1.0); 
   rcn = ranf();
   accetto = (rcn < re)?1:0;
   if (!accetto)
     {
+      restore_coord(i);
+      update_LL(i);
 #ifdef MC_STOREBONDS
       remove_allbonds_ij(i, -2);
       restore_bonds_mc(i);
 #else
       update_bonds_MC(i);
 #endif
-      restore_coord(i);
-      update_LL(i);
-      numbonds[j] = nbj;
+      //numbonds[j] = nbj;
       if (OprogStatus.useNNL)
 	{
 	  remove_from_nnl_MC(i);
@@ -2422,7 +2423,7 @@ void mcinout(double beta, double pbias)
   epotennewi = calcpotene_GC(i);
  
   ideltae=epotennewi-epotenoldi;
-  re = pbias/(1.0-pbias)*(vnonbond/OprogStatus.vbond)*exp(-beta*ideltae);
+  re = (pbias/(1.0-pbias))*(vnonbond/OprogStatus.vbond)*exp(-beta*ideltae);
   re = re*((double) nin)/(nout+1.0); 
   rcn = ranf();
   accetto = (rcn < re)?1:0;
