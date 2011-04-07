@@ -51,6 +51,7 @@ extern int numevPQ, totevHQ, overevHQ;
 #endif
 #ifdef MD_SPOT_GLOBAL_ALLOC
 extern double **ratA, **ratB;
+extern double **ratAll;
 #endif
 extern void ProcessCellCrossingMLL(void);
 extern void PredictEventMLL(int na, int nb);
@@ -1950,6 +1951,141 @@ void find_bonds_covadd(int i, int j)
     }
 }
 double find_bonds_fake(int i, int j);
+#ifdef MD_SPOT_GLOBAL_ALLOC
+extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
+#else
+extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
+#endif
+int is_bonded_mc(int ip, int numb);
+int mcinAVB(int i, int j, int dist_type, double alpha, int *merr)
+{
+  /* dist_type=0 -> isotropic
+     dist_type=1 -> onsager */
+  static double calls=0.0, tottrials=0.0;
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double ratAll[NA][3]; 
+#endif
+  const int maxtrials=1000000;
+  double rA[3], rat[3], norm, sax, cc[3], ene;
+  double shift[3], Rl[3][3], vv[3];
+  double ox, oy, oz, d, dx, dy, dz;
+  int nb, ierr, bonded, k1, k2, trials, nbold;
+  /* N.B. questa routine dipende dalla geometria degli spot, in particolare il volume
+     in cui inserire va scelto in relazione alla geometria adottata, per ora qui assumiamo
+     due spot sulle basi di uno pseudo-cilindro di elongazione data elongazione (sax, vedi sotto) */
+  /* place particle i bonded to bond nb of particle j */
+  rA[0] = rx[j];
+  rA[1] = ry[j];
+  rA[2] = rz[j];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	{
+	  RtA[k1][k2] = R[j][k1][k2];
+	}
+    }
+  BuildAtomPos(j, rA, RtA, ratAll);
+  sax = typesArr[typeOfPart[j]].sax[0];
+  bonded=0;
+  trials=0;
+
+  *merr=0;
+  /* choose randmoly a spot */
+  /* ================================================= */
+   while (!bonded)
+    {
+      nb = ranf()*typesArr[typeOfPart[j]].nspots;
+      /* we assume here that at most there is one bond per spot */
+      //if (is_bonded_mc(j, nb))
+	//return 0;
+
+      for (k1=0; k1 < 3; k1++)
+	vv[k1] = ratAll[nb+1][k1] - rA[k1];
+      norm = calc_norm(vv);
+      for (k1=0; k1 < 3; k1++)
+	vv[k1] /= norm;
+      for (k1=0; k1 < 3; k1++)
+	cc[k1] = rA[k1] + vv[k1]*sax*2.0;
+#if 1
+      /* chose a random position inside a sphere or cube (removing do...while loop)*/
+      do {
+	dx = 2.0*(ranf_vb()-0.5);
+	dy = 2.0*(ranf_vb()-0.5);
+	dz = 2.0*(ranf_vb()-0.5);
+      } 
+      while (dx*dx+dy*dy+dz*dz > 1);
+      rx[i] = cc[0]+dx*sax;
+      ry[i] = cc[1]+dy*sax;
+      rz[i] = cc[2]+dz*sax;
+      pbc(i);
+#else
+      /* chose a random position inside a sphere (this is of course more efficient than
+       using a cube as above) */
+      orient(&ox, &oy, &oz);
+      /* elevando alla 1/3 ci assicuriamo che la distribuzione è uniforme nella sfera di raggio sax */
+      norm = pow(ranf_vb(),1.0/3.0)*sax;
+      rx[i] = cc[0]+ox*norm;
+      ry[i] = cc[1]+oy*norm;
+      rz[i] = cc[2]+oz*norm;
+      typeOfPart[i]=0;
+      pbc(i);
+#endif
+      if (dist_type==4)
+	{
+	  ox = 1;
+	  oy = 0;
+	  oz = 0;
+	}
+      else if (dist_type==0)
+	orient(&ox, &oy, &oz);
+      else 
+	orient_onsager(&ox, &oy, &oz, alpha);
+      versor_to_R(ox, oy, oz, Rl);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      R[i][k1][k2] = Rl[k1][k2]; 
+	    }
+	}
+      ene = find_bonds_fake(i, j);
+      if (ene < 0)
+	{
+#ifdef MD_LXYZ
+	  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+	  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+	  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+	  shift[0] = L*rint((rx[i]-rx[j])/L);
+	  shift[1] = L*rint((ry[i]-ry[j])/L);
+	  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+	  if ((d=check_overlap(i, j, shift, &ierr))>0.0)
+	    {
+	      if (ierr==0)
+		bonded=1;
+	      else 
+		{
+		  printf("[mcin] NR failure\n");
+		}
+	    }
+	}
+
+      //printf("i=%d j=%d ene=%f\n", i, j, ene);
+      trials++;
+      if (trials > maxtrials)
+	{
+	  *merr=1;
+	  /* mcinAVB failed */
+	  exit(-1);
+	  //return 0;
+	}
+    }
+  tottrials += trials;
+  calls += 1.0;
+  //printf("trials=%d nb=%d avgtrials=%.15G\n", trials,nb, tottrials/calls);
+  return nb;
+}
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
   /* dist_type=0 -> isotropic
@@ -1959,6 +2095,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz;
   int ierr, bonded, k1, k2, trials, nbold;
+  static double tottrials=0, calls=0;
   /* N.B. questa routine dipende dalla geometria degli spot, in particolare il volume
      in cui inserire va scelto in relazione alla geometria adottata, per ora qui assumiamo
      due spot sulle basi di uno pseudo-cilindro di elongazione data elongazione (sax, vedi sotto) */
@@ -2118,7 +2255,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  return;
 	}
     }
-  //printf("trials=%d\n", trials);
+  tottrials += trials;
+  calls += 1.0;
+  //printf("trials=%d avg_trials=%.15G\n", trials, tottrials/calls);
 }
 /* bonding moves */
 int are_bonded(int i, int j)
@@ -2151,7 +2290,7 @@ void remove_allbonds_ij(int ip, int j);
 
 void mcoutin(double beta, double pbias)
 {
-  int j, i, l, nout, ierr, k1, k2, dorej, nb;
+  int j, i, l, nout, ierr, k1, k2, dorej, nb, nbc;
   double rcn, re, epotenoldj, epotenoldi, ideltae, epotennewi;
   int nbj, done, nin, accetto;
   /* select a molecule j=0...Oparams.parnum-1 */
@@ -2186,22 +2325,37 @@ void mcoutin(double beta, double pbias)
 #ifdef MC_STOREBONDS
   store_bonds_mc(i);
 #endif
-  /* cerca un bond libero */
-  while (1)
-    {
-      nb = (int)(ranf_vb()*typesArr[typeOfPart[j]].nspots);
-      /* N.B. qui assumo che al massimo ogni patch abbia un solo legame! */
-      if (is_bonded_mc(j, nb))
-	continue;
-      else
-	break;
-    }
-  /* rimuove i vecchi legami */
-  //printf("[mcoutin]-1\n");
+  /* cerca un bond libero. NOTA: se fossero possibili più legami per spot allora 
+     bisogna usare una routine che inserisca a caso fra tutti i bond, ossia bisogna usare una routine
+     come mcinAVB che sceglie ad ogni tentativo un bond a caso. Infatti mcin inserisce nel bond prescelto 
+     (a caso). */
+#ifndef MC_USE_MCINAVB
+  nb = (int)(ranf_vb()*typesArr[typeOfPart[j]].nspots);
+  /* N.B. qui assumo che al massimo ogni patch abbia un solo legame! */
+  if (is_bonded_mc(j, nb))
+    return;
+#endif
   /* inserisce la particella la particella legata a j con il bond nb appena scelto.
      Notare che passando 1 (=fake) come ultimo argomento mcin cambia la posizione e l'orientazione
      della particella ma non aggiorna i legami di i e j.*/
-  mcin(i, j, nb, 0, -1, &ierr, 1); 
+#ifdef MC_USE_MCINAVB
+  nbc=mcinAVB(i, j, 0, -1, &ierr); 
+  if (is_bonded_mc(j, nbc))
+    {
+      restore_coord(i);
+      update_LL(i);
+      if (OprogStatus.useNNL)
+	{
+	  remove_from_nnl_MC(i);
+	  build_one_nnl_GC(i);
+	  overestimate_of_displ[i]=0.0;
+	  max_step_MC[i] = calc_maxstep_MC(i);
+	}
+      return;
+    }
+#else
+  mcin(i, j, nb, 0, -1, &ierr, 1);
+#endif
   update_LL(i);
   if (OprogStatus.useNNL)
     {
@@ -2429,6 +2583,8 @@ void mcinout(double beta, double pbias)
   accetto = (rcn < re)?1:0;
   if (!accetto)
     {
+      restore_coord(i);
+      update_LL(i);
 #ifdef MC_STOREBONDS
       remove_allbonds_ij(i, -2);
       restore_bonds_mc(i);
@@ -2437,8 +2593,6 @@ void mcinout(double beta, double pbias)
       update_bonds_MC(i);
       //update_bonds_MC(j);
 #endif
-      restore_coord(i);
-      update_LL(i);
       //numbonds[j] = nbt;
       if (OprogStatus.useNNL)
 	{

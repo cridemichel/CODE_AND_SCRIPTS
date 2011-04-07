@@ -63,6 +63,9 @@ int tocheckP[6][NA], dorefineP[6][NA], crossedP[6][NA];
 double distsSq[NA];
 #else
 double **ratA, **ratB;
+#ifdef MC_SIMUL
+double **ratAll;
+#endif
 double *t2arrP[6], *distsP[6], *maxddotiP[6], *distsOldP[6];
 int *crossedP[6];
 #ifndef MD_BASIC_DT
