@@ -82,6 +82,9 @@ extern int tocheckP[6][NA], dorefineP[6][NA], crossedP[6][NA];
 extern double distsSq[NA];
 #else
 extern double **ratA, **ratB;
+#ifdef MC_SIMUL
+extern double **ratAll;
+#endif
 extern double *t2arrP[6], *distsP[NA], *maxddotiP[NA], *distsOldP[NA];
 extern int *crossedP[6];
 #ifndef MD_BASIC_DT
@@ -4348,6 +4351,7 @@ void calc_persist_len(int maxtrials)
 }
 #endif
 #define MD_VB_SAVE_PTS
+extern void init_rng(int mdseed, int mpi, int my_rank);
 void calc_vbonding(void)
 {
   FILE *fi;
@@ -5016,10 +5020,17 @@ void usrInitAft(void)
   ratA[0] = (double*)malloc(sizeof(double)*3*maxsp);
   ratB = (double**)malloc(sizeof(double*)*maxsp);
   ratB[0] = (double*)malloc(sizeof(double)*3*maxsp);
+#ifdef MC_SIMUL
+  ratAll = (double**)malloc(sizeof(double*)*maxsp);
+  ratAll[0] = (double*)malloc(sizeof(double)*3*maxsp);
+#endif
   for (k = 1; k < maxsp; k++)
     {
       ratA[k] = ratA[k-1] + 3;
       ratB[k] = ratB[k-1] + 3;
+#ifdef MC_SIMUL
+      ratAll[k] = ratAll[k-1] + 3;
+#endif
     }
   for (k = 0; k < 6; k++)
     {
