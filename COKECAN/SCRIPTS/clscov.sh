@@ -23,7 +23,7 @@ then
 mkdir $s1-$s2
 fi
 cd $s1-$s2
-pnm1=$[$pn-1]
+pnm1=$[$s2]
 echo "100000000000 0 $pnm1 5000" > covmc.conf
 cp ../ellipsoid_flex.par .
 ../set_params.sh ellipsoid_flex.par parnum $pn inifile $fn
