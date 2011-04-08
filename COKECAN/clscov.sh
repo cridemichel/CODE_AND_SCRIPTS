@@ -24,10 +24,10 @@ mkdir $s1-$s2
 fi
 cd $s1-$s2
 pnm1=$[$pn-1]
-echo "100000000000 0 $pnm1 1000" > covmc.cnf
+echo "100000000000 0 $pnm1 5000" > covmc.conf
 cp ../ellipsoid_flex.par .
 ../set_params.sh ellipsoid_flex.par parnum $pn inifile $fn
 cp ../$fn .
-ln -sf ../ellipsCOVMC ellCOV-$s1-$s2
-#mosrun ./ellCOV-$s1-$s2 -fa ellipsoid_flex.par > screen
+ln -sf ../ellipsCOVMC ellCOVlin-$s1-$s2
+mosrun ./ellCOVlin-$s1-$s2 -fa ellipsoid_flex.par > screen &
 cd ..
