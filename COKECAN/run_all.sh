@@ -5,7 +5,7 @@ do
 j=1
 while [ $[j] -le 6 ]
 do
-if [ $[i] -eq $[j] ]
+if [ $[i] -ge $[j] ]
 then
 j=$[$j+1]
 continue

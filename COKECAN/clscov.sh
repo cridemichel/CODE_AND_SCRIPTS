@@ -27,7 +27,7 @@ pnm1=$[$pn-1]
 echo "100000000000 0 $pnm1 5000" > covmc.conf
 cp ../ellipsoid_flex.par .
 ../set_params.sh ellipsoid_flex.par parnum $pn inifile $fn
-cp ../$fn .
+mv ../$fn .
 ln -sf ../ellipsCOVMC ellCOVlin-$s1-$s2
 mosrun ./ellCOVlin-$s1-$s2 -fa ellipsoid_flex.par > screen &
 cd ..
