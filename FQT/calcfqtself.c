@@ -8,11 +8,11 @@ char **fname;
 int *isPercPart;
 double time, *ti, *r0[3], *r1[3], L, refTime;
 int points=-1, assez, NP, NPA, clusters=0;
-char parname[128], parval[256000], line[256000];
-char dummy[2048], cluststr[2048];
+char parname[128], parval[25600000], line[25600000];
+char dummy[2048000], cluststr[2048000];
 char *pnum;
 double A0, A1, B0, B1, C0, C1, storerate=-1.0;
-int bakSaveMode = -1, eventDriven=0, skip=0;
+int delq=1, bakSaveMode = -1, eventDriven=0, skip=0;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
   FILE *f;
@@ -99,7 +99,7 @@ int mesh[][NKSHELL][3]=
 double twopi;
 void print_usage(void)
 {
-  printf("calcfqtself [ --skip/-s | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --clusters/-c ] <lista_files> [points] [qmin] [qmax]\n");
+  printf("calcfqtself [ --deltaq/-dq | --skip/-s | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --clusters/-c ] <lista_files> [points] [qmin] [qmax]\n");
   printf("where points is the number of points of the correlation function\n");
   exit(0);
 }
@@ -137,6 +137,13 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  qmax = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--deltaq") || !strcmp(argv[cc],"-dq"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  delq = atoi(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--skip") || !strcmp(argv[cc],"-s"))
 	{
@@ -387,7 +394,7 @@ int main(int argc, char **argv)
     }
 
   //fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
-  for (qmod = qmin; qmod <= qmax; qmod++)
+  for (qmod = qmin; qmod <= qmax; qmod+=delq)
     {
       sqReA[qmod] = malloc(sizeof(double)*points);
       sqImA[qmod] = malloc(sizeof(double)*points);
@@ -420,7 +427,7 @@ int main(int argc, char **argv)
     ti[ii] = -1.0;
   first = 0;
   fclose(f2);
-  for (qmod = qmin; qmod <= qmax; qmod++)
+  for (qmod = qmin; qmod <= qmax; qmod+=delq)
     {
       for (ii=0; ii < points; ii++)
 	{
@@ -507,7 +514,7 @@ int main(int argc, char **argv)
 	      //if (nr2 == nr1)
 		//continue;
 
-	      for (qmod = qmin; qmod <= qmax; qmod++)
+	      for (qmod = qmin; qmod <= qmax; qmod+=delq)
 		{
 		  for(iq=0; iq < ntripl[qmod]; iq++)
 		    {
@@ -563,7 +570,7 @@ int main(int argc, char **argv)
 	}
     }
 
-  for (qmod = qmin; qmod <= qmax; qmod++)
+  for (qmod = qmin; qmod <= qmax; qmod+=delq)
     {
       for (ii=0; ii < points; ii++)
 	{
@@ -587,7 +594,7 @@ int main(int argc, char **argv)
 	//	 cc[qmod][ii]);
 	}
     }
-  for (qmod = qmin; qmod <= qmax; qmod++)
+  for (qmod = qmin; qmod <= qmax; qmod+=delq)
     {
       sprintf(fname2, "Fqs-%d",qmod);
       if (!(f = fopen (fname2, "w+")))
@@ -617,7 +624,7 @@ int main(int argc, char **argv)
     }
   if (clusters)
     {
-      for (qmod = qmin; qmod <= qmax; qmod++)
+      for (qmod = qmin; qmod <= qmax; qmod+=delq)
 	{
 	  sprintf(fname2, "FqsClsPerc-%d",qmod);
 	  if (!(f = fopen (fname2, "w+")))

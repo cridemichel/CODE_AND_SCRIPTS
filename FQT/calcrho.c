@@ -10,11 +10,11 @@
 char **fname; 
 double time, *r0[3], L, refTime;
 int points, assez, NP, NPA;
-char parname[128], parval[256000], line[256000];
-char dummy[2048], inputfile[1024];
+char parname[128], parval[25600000], line[25600000];
+char dummy[2048000], inputfile[1024000];
 double A0, A1, B0, B1, C0, C1;
 double storerate=-1.0;
-int eventDriven=0, bakSaveMode=-1;
+int delq=1, eventDriven=0, bakSaveMode=-1;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
   FILE *f;
@@ -102,7 +102,7 @@ int mesh[][NKSHELL][3]=
 double twopi;
 void print_usage(void)
 {
-  printf("calcrho [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] <lista_files> [qmin] [qmax]\n");
+  printf("calcrho [ --delq/-dq | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] <lista_files> [qmin] [qmax]\n");
   exit(0);
 }
 double qavg[KMODMAX];
@@ -121,6 +121,13 @@ void parse_param(int argc, char** argv)
       if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
 	{
 	  print_usage();
+	}
+      else if (!strcmp(argv[cc],"--delq") || !strcmp(argv[cc],"-dq"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  delq = atoi(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--qmin") || !strcmp(argv[cc],"-qm"))
 	{
@@ -408,7 +415,7 @@ int main(int argc, char **argv)
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0);
-      for (qmod = qmin; qmod <= qmax; qmod++)
+      for (qmod = qmin; qmod <= qmax; qmod+=delq)
 	{
 	  if (nr1 == 0)
 	    strcpy(mode,"w");
