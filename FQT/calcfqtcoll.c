@@ -27,11 +27,11 @@ double time, Cav, Cav0, CavAA0, CavBB0, CavAB0,
        *rhoRt[MAXCOMPS][MAXQ], 
        *rhoIt[MAXCOMPS][MAXQ], *tiall;
 int *NQarr;
-int qmin, qmax, points=-1, comps=2;
+int  delq=1,qmin, qmax, points=-1, comps=2;
 char AB[2]={'A','B'};
 void print_usage(void)
 {
-  printf("calcfqtcoll [--qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] [qmin] [qmax] [points]\n");
+  printf("calcfqtcoll [ --delq/-dq | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h] [qmin] [qmax] [points]\n");
   printf("where points is the number of points of the correlation function\n");
   exit(0);
 }
@@ -67,6 +67,13 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  qmin = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--delq") || !strcmp(argv[cc],"-dq"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  delq = atoi(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--qmax") || !strcmp(argv[cc],"-qM"))
 	{
@@ -259,7 +266,7 @@ int main(int argc, char **argv)
     tiall[ii] = -1.0;
   first = 0;
   fclose(f2);
-  for (nq = qmin; nq <= qmax; nq++)
+  for (nq = qmin; nq <= qmax; nq+=delq)
     {
       for (i=0; i < MAXQ; i++)
 	for (ii=0; ii < points; ii++)
