@@ -13,7 +13,7 @@ double *DR[3], deltaAA=-1.0, deltaBB=-1.0, deltaAB=-1.0, sigmaAA=-1.0, sigmaAB=-
        Dr, theta, sigmaSticky=-1.0, sa[2], sb[2], sc[2], maxax0, maxax1, maxax, maxsax, maxsaxAA, maxsaxAB, maxsaxBB;
 char fname[1024], inputfile[1024];
 int eventDriven=0;
-int points;
+int points, angpoints=-1;
 int foundDRs=0, foundrot=0;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double *DR[3], double *u[3])
 {
@@ -103,7 +103,8 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  for (i = 0; i < NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
-	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
+	      if (!sscanf(line, "%lf %lf %lf %lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i], &u[0][i], &u[1][i],
+			 &u[2][i])==6)
 		{
 		  sscanf(line, "%lf %lf %lf %lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], &u[0][i], &u[1][i],
 			 &u[2][i], dummy); 
@@ -123,8 +124,8 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 
 void print_usage(void)
 {
-  printf("calcgr [--mcsim/-mc] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
-  exit(0);
+  printf("calcgr [--angpoints/ap <number>] [--mcsim/-mc] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
+  exit(0); 
 }
 double threshold=0.05;
 int gnuplot=0;
@@ -160,6 +161,13 @@ void parse_param(int argc, char** argv)
 	  if (cc==argc)
 	    print_usage();
 	  sscanf(argv[cc],"(%lf,%lf,%lf)", &(nv[0]), &(nv[1]), &(nv[2]));
+	}
+      else if (!strcmp(argv[cc],"--angpoints")||!strcmp(argv[cc],"-ap"))
+	{
+	  cc++;
+	  if (cc==argc)
+	    print_usage();
+	  angpoints=atoi(argv[cc]);
 	}
       else if (cc==argc|| extraparam==2)
 	print_usage();
@@ -241,10 +249,10 @@ void lab2nem(double v[3], double vp[3])
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *f1;
-  int binx, biny, binz;
+  int jj, bina, binx, biny, binz;
   int k, nf, i, a, b, nat, NN, j, ii, bin;
-  double rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
-  double sp, r, delr, tref=0.0, Dx[3], DxNem[3], *g0, **g0Perp, **g0Parall, g0m, distSq, rlower, rupper, cost, nIdeal;
+  double pi, rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
+  double dtheta, angle, sp, r, delr, tref=0.0, Dx[3], DxNem[3], **g0, **g0Perp, **g0Parall, g0m, distSq, rlower, rupper, cost, nIdeal;
   double time, refTime, RCUT;
   int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
   double shift[3];
@@ -430,12 +438,18 @@ int main(int argc, char** argv)
   delr = L / 2.0 / ((double)points);
   rewind(f2);
   nf = 0;
-  g0 = malloc(sizeof(double)*points*4);
+  if (angpoints==-1)
+    angpoints = points;
+ 
+  g0 = malloc(sizeof(double*)*points*4);
   for (k1=0; k1 < 4*points; k1++)
     {
-      g0[k1] = 0.0;
+      g0[k1] = malloc(sizeof(double)*angpoints);
+	for (k2=0; k2 < angpoints; k2++)
+	  g0[k1][k2] = 0.0;
     }
- 
+  pi = acos(0.0)*2.0;
+  dtheta = pi/angpoints; 
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
@@ -459,8 +473,10 @@ int main(int argc, char** argv)
 	    sp = 0.0;
 	    for (a=0; a < 3; a++)
 	      sp += u[a][i]*u[a][j];
-	    if (bin >=0 && bin < 4*points && sp < 0.1)
-	      g0[bin] += 2.0;
+	    angle = acos(sp);
+	    bina = (int) (angle/dtheta); 
+	    if (bin >=0 && bin < 4*points && bina < angpoints)
+	      g0[bin][bina] += 2.0;
     	    //printf("bin=%d\n", bin);
 	    //exit(1);
 	      
@@ -470,21 +486,28 @@ int main(int argc, char** argv)
   f = fopen("grang.dat", "w+");
   r = delr*0.5;
   cost = 4.0 * pi * NP / 3.0 / (L*L*L);
-  for (ii = 0; ii < 2*points; ii++)
+  angle = dtheta*0.5;
+  for (jj=0; jj < angpoints; jj++)
     {
-      rlower = ( (double) ii) * delr;
-      rupper = rlower + delr;
-      nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower);
-      //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
-      g0m = g0[ii]/((double)nf)/((double)NP)/nIdeal;
+      for (ii = 0; ii < 2*points; ii++)
+	{
+	  rlower = ( (double) ii) * delr;
+	  rupper = rlower + delr;
+	  nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower)*(dtheta*dtheta);
+	  //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
+	  g0m = g0[ii][jj]/((double)nf)/((double)NP)/nIdeal;
 #if 0
-      g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
-      g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
-      g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
-      fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
+	  g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
+	  g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
+	  g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
+	  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
 #endif
-      fprintf(f, "%.15G %.15G %.15G\n", r, g0m, g0[ii]);
-      r += delr;
+	  fprintf(f, "%.15G %.15G %.15G\n", r, angle, g0m);
+	  r += delr;
+    	}
+      angle += dtheta;
+      if (jj < angpoints-1) 
+	fprintf(f,"&\n");
     }
   fclose(f);
   return 0;
