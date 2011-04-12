@@ -5,15 +5,15 @@
 #define Sqr(x) ((x)*(x))
 char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
-int mcsim=0;
+int mcsim=0, calciso=0;
 int N, particles_type=1, k1, k2;
 double *x[3], L, ti, *w[3], storerate;
-double nv[3], vecx[3], vecy[3], vecz[3], *u[3];
+double rv[3], vecx[3], vecy[3], vecz[3], *u[3];
 double *DR[3], deltaAA=-1.0, deltaBB=-1.0, deltaAB=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0, 
        Dr, theta, sigmaSticky=-1.0, sa[2], sb[2], sc[2], maxax0, maxax1, maxax, maxsax, maxsaxAA, maxsaxAB, maxsaxBB;
 char fname[1024], inputfile[1024];
 int eventDriven=0;
-int points, angpoints=-1;
+int points, angpoints=-1, perppoints=10;
 int foundDRs=0, foundrot=0;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double *DR[3], double *u[3])
 {
@@ -121,10 +121,53 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
     *ti = ((double)curstp)*dt;
   fclose(f);
 }
+double calc_norm(double *vec);
+void vectProdVec(double *A, double *B, double *C);
+void versor_to_R(double ox, double oy, double oz, double R[3][3])
+{
+  int k;
+  double angle, u[3], sp, norm, up[3], xx, yy;
+
+  /* first row vector */
+  R[0][0] = ox;
+  R[0][1] = oy;
+  R[0][2] = oz;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 1; u[1] = 1; u[2] = 1;
+  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
+    {
+      u[0] = -1; u[1] = -1; u[2] = 1;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[0][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[0][k];
+  norm = calc_norm(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[1][k] = u[k]/norm;
+  /* third row vector */
+  vectProdVec(R[0], R[1], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+#if 0
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    Rt[k1][k2]=R[k2][k1];
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    R[k1][k2]=Rt[k1][k2];
+#endif
+
+  //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
+}
 
 void print_usage(void)
 {
-  printf("calcgr [--angpoints/ap <number>] [--mcsim/-mc] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
+  printf("calcgr [ --calciso/-ci <0|1> ] [ --perppoints/-pp <number> ] [ --angpoints/ap <number>] [--mcsim/-mc] [--rversor/-rv (x,y,z) ] <confs_file> [points]\n");
   exit(0); 
 }
 double threshold=0.05;
@@ -141,8 +184,7 @@ void parse_param(int argc, char** argv)
     }
   while (cc < argc)
     {
-
-      printf("argc=%d argv[argc]=%s cc=%d\n", argc, argv[cc], cc);
+      //printf("argc=%d argv[argc]=%s cc=%d\n", argc, argv[cc], cc);
       if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
 	{
 	  print_usage();
@@ -151,16 +193,22 @@ void parse_param(int argc, char** argv)
 	{
 	  mcsim=1;
 	}
-      else if (!strcmp(argv[cc],"--gnuplot")||!strcmp(argv[cc],"-gp"))
+      //else if (!strcmp(argv[cc],"--gnuplot")||!strcmp(argv[cc],"-gp"))
+	//{
+	  //gnuplot=1;
+	//}
+      else if (!strcmp(argv[cc], "--calciso")||!strcmp(argv[cc],"-ci"))
 	{
-	  gnuplot=1;
-	}
-      else if (!strcmp(argv[cc],"--nemvector")||!strcmp(argv[cc],"-nv"))
+	  calciso = 1;
+	} 
+      else if (!strcmp(argv[cc],"--rversor")||!strcmp(argv[cc],"-rv"))
 	{
+	  /* rv è la direzione lungo la quale calcolare la g(r,\Omega_12) vettoriale nel 
+	     riferimento del corpo rigido (cioè quello individuato dai suoi assi principali) */
 	  cc++;
 	  if (cc==argc)
 	    print_usage();
-	  sscanf(argv[cc],"(%lf,%lf,%lf)", &(nv[0]), &(nv[1]), &(nv[2]));
+	  sscanf(argv[cc],"(%lf,%lf,%lf)", &(rv[0]), &(rv[1]), &(rv[2]));
 	}
       else if (!strcmp(argv[cc],"--angpoints")||!strcmp(argv[cc],"-ap"))
 	{
@@ -226,17 +274,14 @@ void vectProdVec(double *A, double *B, double *C)
   C[1] = A[2] * B[0] - A[0] * B[2];
   C[2] = A[0] * B[1] - A[1] * B[0];
 }
-void lab2nem(double v[3], double vp[3])
+void lab2body(int i, double v[3], double vp[3])
 {
   int k1, k2;
-  double R[3][3];
+  double R[3][3], uL[3];
 
   for (k1=0; k1 < 3; k1++)
-    {
-      R[0][k1] = vecx[k1];
-      R[1][k1] = vecy[k1];
-      R[2][k1] = vecz[k1];
-    } 
+    uL[k1] = u[k1][i];
+  versor_to_R(uL[0], uL[1], uL[2], R);
   for (k1=0; k1 < 3; k1++)
     {
       vp[k1] = 0.0;
@@ -246,18 +291,40 @@ void lab2nem(double v[3], double vp[3])
 //  printf("vp=%f %f %f\n", vp[0], vp[1], vp[2]);
   //printf("v=%f %f %f\n", v[0], v[1], v[2]);
 }
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
+
+void projectVec(double DxP[3], double vec[3], int *binx, int *biny, int *binz, double delr, double delrp)
+{
+  double Rl[3][3], vec2[3];
+  int kk;
+  /* il vettore vec viene assunto come asse lungo cui calcolare la g(r) vettoriale */
+  *binx = (int) floor(scalProd(DxP, vec)/delr);
+  versor_to_R(vec[0], vec[1], vec[2], Rl);
+  vectProdVec(DxP, vec, vec2);
+  *biny = (int) floor(scalProd(vec2, Rl[1])/delrp);
+  *binz = (int) floor(scalProd(vec2, Rl[2])/delrp);  
+}
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *f1;
   int jj, bina, binx, biny, binz;
   int k, nf, i, a, b, nat, NN, j, ii, bin;
-  double pi, rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
-  double dtheta, angle, sp, r, delr, tref=0.0, Dx[3], DxNem[3], **g0, **g0Perp, **g0Parall, g0m, distSq, rlower, rupper, cost, nIdeal;
+  double delrp, pi, rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
+  double dtheta, angle, sp, r, delr, tref=0.0, DxP[3], Dx[3], DxNem[3], **g0, **gav, **g0Perp, **g0Parall, g0m, distSq, rlower, rupper, cost, nIdeal, cost2;
   double time, refTime, RCUT;
   int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
   double shift[3];
   double ene=0.0;
 
+  rv[0]=1;
+  rv[1]=rv[2]=0;
 #if 0
   double g2m, g4m, g6m;
   double *g2, *g4, *g6;
@@ -436,17 +503,31 @@ int main(int argc, char** argv)
   g6 = malloc(sizeof(double)*points);
 #endif
   delr = L / 2.0 / ((double)points);
+  delrp= L / 2.0 / ((double)perppoints);
+  norm = calc_norm(rv);
+  for (k=0; k < 3; k++)
+    {
+      rv[k] /= norm;
+    }
   rewind(f2);
   nf = 0;
   if (angpoints==-1)
     angpoints = points;
  
   g0 = malloc(sizeof(double*)*points*4);
+  if (calciso)
+    gav = malloc(sizeof(double*)*points*4);
   for (k1=0; k1 < 4*points; k1++)
     {
       g0[k1] = malloc(sizeof(double)*angpoints);
+      if (calciso)
+	gav[k1] = malloc(sizeof(double)*angpoints);
 	for (k2=0; k2 < angpoints; k2++)
-	  g0[k1][k2] = 0.0;
+	  {
+	    g0[k1][k2] = 0.0;
+	    if (calciso)
+	      gav[k1][k1] = 0.0;
+	  }
     }
   pi = acos(0.0)*2.0;
   dtheta = pi/angpoints; 
@@ -466,50 +547,84 @@ int main(int argc, char** argv)
 
 	    for (a = 0; a < 3; a++)
 	      Dx[a] = Dx[a] - L * rint(Dx[a]/L);
-	    distSq = 0.0;
-	    for (a = 0; a < 3; a++)
-	      distSq += Sqr(Dx[a]);
-	    bin = (int) (sqrt(distSq)/delr);
+	    if (calciso)
+	      {
+		distSq = 0.0;
+		for (a = 0; a < 3; a++)
+		  distSq += Sqr(Dx[a]);
+		bin = (int) (sqrt(distSq)/delr);
+	      }
+	    lab2body(i, Dx, DxP);
+	    projectVec(DxP, rv, &binx, &biny, &binz, delr, delrp);
+	    //printf("P bin=%d %d %d\n", binx, biny, binz);
+	    //binx = (int) floor(DxP[0] / delr);
+	    //biny = (int) floor(DxP[1] / delrp);
+	    //binz = (int) floor(DxP[2] / delrp);
+	    //printf("D bin=%d %d %d\n", binx, biny, binz);
+	    //printf("bin=%d %d %d\n", binx, biny, binz);
 	    sp = 0.0;
 	    for (a=0; a < 3; a++)
 	      sp += u[a][i]*u[a][j];
 	    angle = acos(sp);
 	    bina = (int) (angle/dtheta); 
-	    if (bin >=0 && bin < 4*points && bina < angpoints)
-	      g0[bin][bina] += 2.0;
+	    if (bina < angpoints)
+	      {
+		if ((biny==0 || biny==-1) && (binz==0 || binz==-1))
+		  g0[binx+2*points][bina] += 2.0;
+		if (calciso && bin >= 0 && bin < 4*points)
+		  gav[bin][bina] += 2.0;
+	      }
     	    //printf("bin=%d\n", bin);
 	    //exit(1);
 	      
 	  }
     }
   fclose(f2); 
-  f = fopen("grang.dat", "w+");
-  r = delr*0.5;
-  cost = 4.0 * pi * NP / 3.0 / (L*L*L);
+  //cost = 4.0 * pi * NP / 3.0 / (L*L*L);
   angle = dtheta*0.5;
+  cost = (L*L*L)/((double)NP)/((double)NP)/(delrp*delrp*delr);
+  cost /= 2;
+  cost2 = 4.0 * pi * NP / 3.0 / (L*L*L);
+
   for (jj=0; jj < angpoints; jj++)
     {
-      for (ii = 0; ii < 2*points; ii++)
+      r = delr*0.5;
+      sprintf(fname, "gr_theta%f.dat", angle);
+      f = fopen(fname, "w+");
+      for (ii = 0; ii < 4*points; ii++)
 	{
-	  rlower = ( (double) ii) * delr;
-	  rupper = rlower + delr;
-	  nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower)*(dtheta*dtheta);
-	  //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
-	  g0m = g0[ii][jj]/((double)nf)/((double)NP)/nIdeal;
-#if 0
-	  g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
-	  g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
-	  g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
-	  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
-#endif
-	  fprintf(f, "%.15G %.15G %.15G\n", r, angle, g0m);
-	  r += delr;
+	  g0m = cost*g0[ii][jj]/((double)nf)/sin(angle)/dtheta;
+	  r = (((double)ii)-2*points)*delr;
+	 
+	  fprintf(f, "%.15G %.15G\n", r, g0m);
+	  //r += delr;
     	}
+      fclose(f);
+      if (calciso)
+	{
+	  sprintf(fname, "griso_theta%f.dat", angle);
+	  f = fopen(fname, "w+");
+	  r = 0.5*delr;
+	  for (ii = 0; ii < 4*points; ii++)
+	    {
+	      rlower = ( (double) ii) * delr;
+	      rupper = rlower + delr;
+	      nIdeal = cost2 * (Sqr(rupper)*rupper - Sqr(rlower)*rlower);
+	      g0m = gav[ii][jj]/((double)nf)/((double)NP)/sin(angle)/dtheta/nIdeal;
+	      //g0m = g0[ii][jj]/((double)nf)/((double)NP)/nIdeal;
+#if 0
+	      g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
+	      g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
+	      g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
+	      fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
+#endif
+	      fprintf(f, "%.15G %.15G\n", r, g0m);
+	      r += delr;
+	    }
+	}
+      fclose(f);
       angle += dtheta;
-      if (jj < angpoints-1) 
-	fprintf(f,"&\n");
     }
-  fclose(f);
   return 0;
 }
 
