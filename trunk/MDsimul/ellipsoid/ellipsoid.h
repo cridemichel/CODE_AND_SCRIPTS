@@ -11,7 +11,7 @@
 #undef MC_STORELL
 #define MC_STOREBONDS
 #define MCGC_OPTLLREBUILD
-#define MD_RANDOM
+#define MD_RAND48
 #define MD_HARDSPHERES
 //#undef MD_SAVE_DISTANCE
 #ifdef EDHE_FLEX
