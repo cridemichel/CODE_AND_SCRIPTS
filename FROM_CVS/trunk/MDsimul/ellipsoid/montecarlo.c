@@ -663,6 +663,16 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   double d, d0, r1[3], r2[3], alpha; 
   *errchk=0;
   OprogStatus.optnnl = 0;
+  if (are_spheres(i,j))
+    {
+      OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
+      calcdist_retcheck = 0;
+
+      d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
+      *errchk = calcdist_retcheck;
+  
+      return d;
+    }
 #if 0
   nebrTab[i].r[0] = rx[i];
   nebrTab[i].r[1] = ry[i];
@@ -3040,11 +3050,43 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
   //fclose(f);
 }
 extern double *distro;
+int check_self_overlap(int i0, int i)
+{
+  int j;
+  double shift[3];	
+  int overlap, ierr;
+  overlap = 0;
+  for (j=i0; j < i; j++)
+    {
+#ifdef MD_LXYZ
+      shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+      shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+      shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+      shift[0] = L*rint((rx[i]-rx[j])/L);
+      shift[1] = L*rint((ry[i]-ry[j])/L);
+      shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+      ierr=0;
+      if (check_overlap(i, j, shift, &ierr)<0.0)
+	{
+	  overlap=1;
+	  //printf("i=%d j=%d overlap!\n", i, j);
+	  //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+	  //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+	  printf("self overlap!\n");
+	  return 1;
+	}
+    }
+   return 0; 
+}
+
+
 void calc_cov_additive(void)
 {
   FILE *fi, *f=NULL;
   double cov, Lb, totene = 0.0, alpha, shift[3];
-  int bt=0, merr=0, i, j=-1, size1, size2, nb, k1, k2, overlap=0, ierr, type, outits;
+  int bt=0, merr=0, i, j=-1, selfoverlap=0, size1, size2, nb, k1, k2, overlap=0, ierr, type, outits;
   long long int maxtrials, tt;
   double ox, oy, oz, Rl[3][3];
   fi = fopen("covmc.conf", "r");
@@ -3125,6 +3167,7 @@ void calc_cov_additive(void)
   while (tt < maxtrials) 
     {
       merr=0;
+      selfoverlap=0;
       /* place first cluster */
       if (tt%outits==0)
 	{
@@ -3185,11 +3228,17 @@ void calc_cov_additive(void)
 	      printf("[mcin] attemp to add a bonded particle failed!\n");
 	      break;
 	    }
-	  /* N.B. per non controlla il self-overlap della catena 
+	  if (check_self_overlap(0, i))
+	    {
+	      selfoverlap = 1;
+	      break;
+	    }
+	  /* N.B. per ora non controlla il self-overlap della catena 
 	     e la formazione dopo mcin di legami multipli poiché
 	     si presuppone che al massimo stiamo considerando dimeri */
 	}
-      if (merr)
+
+      if (selfoverlap)
 	{
 	  tt++;
 	  continue;
@@ -3259,10 +3308,20 @@ void calc_cov_additive(void)
 		  printf("[mcin] attemp to add a bonded particle failed!\n");
 		  break;
 		}
-	 
+	      if (check_self_overlap(size1, i))
+		{
+		  selfoverlap = 1;
+		  break;
+		}
+
 	      /* N.B. per ora non controlla il self-overlap della catena 
 		 e la formazione dopo mcin di legami multipli poiché
 		 si presuppone che al massimo stiamo considerando dimeri */
+	    }
+	  if (selfoverlap||merr)
+	    {
+	      tt++;
+	      continue;
 	    }
 	  overlap = 0;
 	  for (j=0; j < size1; j++)
