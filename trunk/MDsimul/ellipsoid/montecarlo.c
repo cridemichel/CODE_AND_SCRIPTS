@@ -3074,7 +3074,7 @@ int check_self_overlap(int i0, int i)
 	  //printf("i=%d j=%d overlap!\n", i, j);
 	  //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
 	  //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
-	  printf("self overlap!\n");
+	  //printf("self overlap!\n");
 	  return 1;
 	}
     }
