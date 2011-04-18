@@ -2961,11 +2961,72 @@ void calc_persistence_length_mc(long long int maxtrials, int outits)
     }
   fclose(fi);	
 }
+int check_overlap_all(int i0, int i_ini, int i_fin);
+int insert_remaining_particles(void)
+{
+  int i, j, tt2, maxattempts = 1000000000;
+  int k1, k2;
+  double ox, oy, oz, Rl[3][3];
+  /* insert all remaining size1-1  particles randomly */
+  for (i=2; i < Oparams.parnum; i++)
+    {
+      for (tt2=0; tt2 < maxattempts; tt2++)
+	{
+	  orient(&ox, &oy, &oz);
+	  versor_to_R(ox, oy, oz, Rl);
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      {
+		R[i][k1][k2] = Rl[k1][k2];
+	      }
+	  numbonds[i] = 0;
+#ifdef MD_LXYZ
+	  rx[i] = (ranf_vb()-0.5)*L[0];
+	  ry[i] = (ranf_vb()-0.5)*L[1];
+	  rz[i] = (ranf_vb()-0.5)*L[2];	
+#else
+	  rx[i] = (ranf_vb()-0.5)*L;
+	  ry[i] = (ranf_vb()-0.5)*L;
+	  rz[i] = (ranf_vb()-0.5)*L;	
+#endif
+	  if (!check_overlap_all(i, 1, i-1))
+	    break;
+	}
+      if (tt2==maxattempts)
+	return 0;/* 0 =failed */
+    }
+  return 1;
+}
+int check_overlap_all(int i0, int i_ini, int i_fin)
+{
+  double shift[3];
+  int i, ierr;
+  for (i=i_ini; i <= i_fin; i++)
+    {
+#ifdef MD_LXYZ
+      shift[0] = L[0]*rint((rx[i0]-rx[i])/L[0]);
+      shift[1] = L[1]*rint((ry[i0]-ry[i])/L[1]);
+      shift[2] = L[2]*rint((rz[i0]-rz[i])/L[2]);
+#else
+      shift[0] = L*rint((rx[i0]-rx[i])/L);
+      shift[1] = L*rint((ry[i0]-ry[i])/L);
+      shift[2] = L*rint((rz[i0]-rz[i])/L);
+#endif
 
+      if (check_overlap(i0, i, shift, &ierr) < 0.0)
+	{
+	  if (ierr==0)
+	    {
+	      return 1;
+	    }
+	} 
+    }
+  return 0;
+}
 void calc_bonding_volume_mc(long long int maxtrials, int outits)
 {
   FILE *f;	
-  int k1, k2, ierr;
+  int k1, k2, ierr, i;
   long long int tt;
   double shift[3], Lb, totene=0.0, ox, oy, oz, Rl[3][3];
   rx[0] = 0;
@@ -2977,7 +3038,6 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
       {
      	R[0][k1][k2] = (k1==k2)?1:0;
       }
-
   f = fopen("vbonding.dat","w+");
   fclose(f);
   for (tt=0; tt < maxtrials; tt++)
@@ -3013,26 +3073,55 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
 	      R[1][k1][k2] = Rl[k1][k2]; 
 	    }
 	}
-      find_bonds_covadd(0, 1);
+      if (Oparams.parnum > 2)
+	{
+	  if (!insert_remaining_particles())
+	    {
+	      /* se arriva qui vuold dire che non è riuscito a creare
+		 la conf alla volume di size1 particelle */
+	      printf("Failed to create background configuration\n");
+	      exit(-1);
+	    }
+	}
+
+      if (Oparams.parnum > 2)
+	{
+	  for (i=1; i < Oparams.parnum; i++) 
+	    {
+	      find_bonds_covadd(0, i);
+	    }
+	}
+      else
+	  find_bonds_covadd(0, 1);
       if (numbonds[0] > 0)
 	{	
+	  if (Oparams.parnum > 2)
+	    {
+	      if (!check_overlap_all(0, 1, Oparams.parnum-1))
+		{
+		  totene += numbonds[0];		  
+		}
+	    }
+	  else
+	    {
 #ifdef MD_LXYZ
-	  shift[0] = L[0]*rint((rx[0]-rx[1])/L[0]);
-	  shift[1] = L[1]*rint((ry[0]-ry[1])/L[1]);
-	  shift[2] = L[2]*rint((rz[0]-rz[1])/L[2]);
+	      shift[0] = L[0]*rint((rx[0]-rx[1])/L[0]);
+	      shift[1] = L[1]*rint((ry[0]-ry[1])/L[1]);
+	      shift[2] = L[2]*rint((rz[0]-rz[1])/L[2]);
 #else
-	  shift[0] = L*rint((rx[0]-rx[1])/L);
-	  shift[1] = L*rint((ry[0]-ry[1])/L);
-	  shift[2] = L*rint((rz[0]-rz[1])/L);
+    	      shift[0] = L*rint((rx[0]-rx[1])/L);
+    	      shift[1] = L*rint((ry[0]-ry[1])/L);
+    	      shift[2] = L*rint((rz[0]-rz[1])/L);
 #endif
 
-	  if (check_overlap(0,1, shift, &ierr) > 0.0)
-	    {
-	      if (ierr==0)
+	      if (check_overlap(0,1, shift, &ierr) > 0.0)
 		{
-		  totene += 1.0;
-		}
-	    } 
+		  if (ierr==0)
+		    {
+		      totene += 1.0;
+		    }
+		} 
+	    }
 	}
 #if 0
       if (tt%500000==0)
@@ -3041,12 +3130,22 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
 	}
 #endif
     }
+  if (Oparams.parnum > 2)
+    {
 #ifdef MD_LXYZ
-  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots), totene);
+      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots)/Oparams.parnum, totene);
 #else
-  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
+      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots)/Oparams.parnum, totene);
 #endif
-
+    }
+  else
+    {
+#ifdef MD_LXYZ
+      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots), totene);
+#else
+      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
+#endif
+    }
   //fclose(f);
 }
 extern double *distro;
