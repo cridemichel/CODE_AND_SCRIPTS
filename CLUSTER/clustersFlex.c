@@ -25,6 +25,7 @@ double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex;
 int **mapbondsaFlexS, **mapbondsbFlexS, *nbondsFlexS;
 double **mapBheightFlexS, **mapBhinFlexS, **mapBhoutFlexS, **mapSigmaFlexS; 
 
+double totdist=0.0, distcc=0.0;
 typedef struct 
 {
   int min;
@@ -108,7 +109,7 @@ char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2, START, END, NT, NI;
 int check_percolation = 1, *nspots, particles_type=1, output_bonds=0, mix_type=-1, saveBonds=-1;
-int calcordparam=0;
+int avgbondlen=1, calcordparam=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
@@ -654,7 +655,7 @@ double distance(int i, int j)
 	  //printf("mapSigmaFlex=%f nbondsFlex=%d\n", mapSigmaFlex[nn], nbondsFlex);
 	  if (dist < 0.0)
 	    {
-	      return -1;
+	      return dist;
 	    }
 	}
 #endif
@@ -894,14 +895,19 @@ void assign_bond_mapping(int i, int j)
 
 int bond_found(int i, int j)
 {
+  double d;
   if (particles_type==3)
     {
       assign_bond_mapping(i, j);
       if (nbondsFlex==0)
 	return 0;
     }
-  if (distance(i, j) < 0.0)
-    return 1;
+  if ((d=distance(i, j)) < 0.0)
+    {
+      totdist += d;
+      distcc += 1.0;
+      return 1;
+    }
   else
     return 0;
 }
@@ -1238,6 +1244,7 @@ void diagonalize(double M[3][3], double ev[3])
 int main(int argc, char **argv)
 {
   int kk, kmax, kj, i3;
+  long long int jj2, aa, bb;
   double *Q[3][3], Snem, *normQ;
   double ev[3];
   double am, xmed;
@@ -1466,7 +1473,7 @@ int main(int argc, char **argv)
   clssizedstAVG = malloc(sizeof(double)*NP);
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
   percola = malloc(sizeof(int)*NP);
-  if (output_bonds || saveBonds)
+  if (avgbondlen || output_bonds || saveBonds)
     {
 #ifdef EDHE_FLEX
       numbonds  = malloc(sizeof(int)*NP); 
@@ -1645,6 +1652,8 @@ int main(int argc, char **argv)
       for (i = 0; i < NP; i++)
 	{
 	  percola[i] = 0; 
+	  if (avgbondlen || saveBonds || output_bonds)
+	    numbonds[i] = 0;
 	}
 
       if (!saveBonds)
@@ -1786,7 +1795,7 @@ int main(int argc, char **argv)
 			    }
 			  if (bond_found(i, j))  
 			    {
-			      if (output_bonds)
+			      if (output_bonds || avgbondlen)
 				{
 				  add_bond(i, j);
 				  add_bond(j, i);
@@ -1861,6 +1870,45 @@ int main(int argc, char **argv)
 		clscol[nc] = color[a];
 	      }
 	}
+#if 0
+      if (avgbondlen)
+	{
+	  double Dx, Dy, Dz, shift[3];
+	  for (i=0; i < NP; i++)
+	    {
+	      if (numbonds[i] > 2)
+		{
+		  printf("boh numbods[%d]=%d\n", i, numbonds[i]);
+		  exit(-1);	
+		}
+	      for (jj=0; jj < numbonds[i]; jj++)
+		{
+		  dist = 0;
+		  j = bonds[i][jj] / ((long long int)NANA);
+		  jj2 = bonds[i][jj] % ((long long int)NANA); 
+		  aa = jj2 / NA;
+		  bb = jj2 % NA;
+		  Dx = rat[aa][0][i] - rat[bb][0][j];
+		  Dy = rat[aa][1][i] - rat[bb][1][j];
+		  Dz = rat[aa][2][i] - rat[bb][2][j];
+	printf("aa=%lld bb=%lld\n", aa, bb);
+    		  shift[0] = L*rint(Dx/L);
+    		  shift[1] = L*rint(Dy/L);
+    		  shift[2] = L*rint(Dz/L);
+		  //assign_bond_mapping(i, j); 
+		  for (kk=0; kk < 3; kk++)
+		    dist += Sqr(rat[aa][kk][i]-rat[bb][kk][j]-shift[kk]);
+		  dist = sqrt(dist);
+		  dist = dist - 2.0*(2.0-1.541665);
+		  totdist += dist;
+		  distcc += 1.0;
+		}
+	    }
+	  printf("Average Bond Distance=%.15G\n", totdist/distcc);
+	}
+#endif
+
+      printf("Average Bond Distance=%.15G\n", totdist/distcc);
       //printf("NP=%d ncls=%d\n", NP, ncls);
       /*  ==== >>> REMOVE VOIDS <<< ==== */
       ncNV=0;
