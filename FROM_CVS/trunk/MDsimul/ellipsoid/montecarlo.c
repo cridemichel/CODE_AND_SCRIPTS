@@ -212,7 +212,7 @@ struct mboxstr
   double dr[3];
 } **mbox;
 const int nmboxMC=5;
-
+double totdist=0.0, distcc=0.0;
 void build_parallelepipeds(void)
 {
   double sa[3], dx;
@@ -1935,7 +1935,7 @@ extern int nbondsFlex;
 extern int *mapbondsaFlex, *mapbondsbFlex; 
 extern double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
 
-void find_bonds_covadd(int i, int j)
+double find_bonds_covadd(int i, int j)
 {
   int nn,  amin, bmin, nbonds;
   double shift[3], dist;
@@ -1950,6 +1950,7 @@ void find_bonds_covadd(int i, int j)
 #endif
   assign_bond_mapping(i, j);  
   dist = calcDistNegSP(0.0, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+  
   nbonds = nbondsFlex;
   for (nn=0; nn < nbonds; nn++)
     {
@@ -1959,6 +1960,11 @@ void find_bonds_covadd(int i, int j)
 	  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
 	}
     }
+
+  //if (dist < 0)
+    //printf("inside dist=%.15G\n", dist);
+  return dist;
+  
 }
 double find_bonds_fake(int i, int j);
 #ifdef MD_SPOT_GLOBAL_ALLOC
@@ -2101,7 +2107,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   /* dist_type=0 -> isotropic
      dist_type=1 -> onsager */
   const int maxtrials=1000000;
-  double rA[3], rat[3], norm, sax, cc[3], ene;
+  double dist=0.0, rA[3], rat[3], norm, sax, cc[3], ene;
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz;
   int ierr, bonded, k1, k2, trials, nbold;
@@ -2190,7 +2196,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	}
       else
 	{
-	  find_bonds_covadd(i, j);
+	  dist=find_bonds_covadd(i, j);
 	  ene = calcpotene_GC(i);
 	}
 #if 0
@@ -2267,6 +2273,12 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     }
   tottrials += trials;
   calls += 1.0;
+  if (dist < 0.0)
+    {
+      totdist += dist;
+      distcc += 1.0;
+    }
+
   //printf("trials=%d avg_trials=%.15G\n", trials, tottrials/calls);
 }
 /* bonding moves */
@@ -2824,7 +2836,7 @@ void calc_persistence_length_mc(long long int maxtrials, int outits)
 {
   int abort=0, *parlist, i, j, nb, k1, k2, ierr, merr, jj;
   long long int tt;
-  double *pl, *cc, shift[3];
+  double dist, *pl, *cc, shift[3];
   FILE *fi, *f;
   /* first particle is always in the center of the box with the same orientation */
   printf("calculating persistence length\n");
@@ -2852,7 +2864,10 @@ void calc_persistence_length_mc(long long int maxtrials, int outits)
       abort=0;
       if (tt%outits==0)
 	{
-	  printf("tt=%lld\n", tt); 
+	  
+	  printf("tt=%lld\n", tt);
+	  if (distcc > 0)
+	    printf("average bond distance=%.15G\n", totdist/distcc); 
 	  if (tt!=0 && cc[Oparams.parnum-2]!=0)
 	    {
 	      f = fopen("perslenlast.dat", "a");
@@ -2904,7 +2919,7 @@ void calc_persistence_length_mc(long long int maxtrials, int outits)
 	      if (jj==j)
 		continue;
 	      find_bonds_covadd(i, jj);
-	    }
+      	    }
 	  if (numbonds[i] > 1)
 	    {
 #if 0
@@ -2965,6 +2980,7 @@ int check_overlap_all(int i0, int i_ini, int i_fin);
 int insert_remaining_particles(void)
 {
   int i, j, tt2, maxattempts = 1000000000;
+  long long int totattempts=0;
   int k1, k2;
   double ox, oy, oz, Rl[3][3];
   /* insert all remaining size1-1  particles randomly */
@@ -2992,9 +3008,11 @@ int insert_remaining_particles(void)
 	  if (!check_overlap_all(i, 1, i-1))
 	    break;
 	}
+      totattempts+=tt2+1;
       if (tt2==maxattempts)
 	return 0;/* 0 =failed */
     }
+  //printf("average attempts = %f\n", ((double)totattempts)/(Oparams.parnum-2));
   return 1;
 }
 int check_overlap_all(int i0, int i_ini, int i_fin)
@@ -3028,7 +3046,8 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
   FILE *f;	
   int k1, k2, ierr, i;
   long long int tt;
-  double shift[3], Lb, totene=0.0, ox, oy, oz, Rl[3][3];
+  double deldistcc=0.0, deltotdist=0.0, dist, fact, shift[3], Lb, totene=0.0, ox, oy, oz, Rl[3][3];
+
   rx[0] = 0;
   ry[0] = 0;
   rz[0] = 0;
@@ -3045,11 +3064,16 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
       if (tt%outits==0 && tt!=0)
 	{
 	  printf("tt=%lld\n", tt); 
+	  if (distcc > 0)
+	    {
+	      printf("Bonding distance=%.15G\n", totdist/distcc);
+	    }
 	  f=fopen("vbonding.dat", "a");
+	  fact=Oparams.parnum-1;
 #ifdef MD_LXYZ
-	  fprintf(f, "%lld %.15G\n", tt, (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots));
+	  fprintf(f, "%lld %.15G %G\n", tt, (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots)/fact, totene);
 #else
-	  fprintf(f, "%lld %.15G\n", tt, (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots));
+	  fprintf(f, "%lld %.15G %G\n", tt, (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots)/fact, totene);
 #endif
 	  sync();
 	  fclose(f);
@@ -3086,9 +3110,16 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
 
       if (Oparams.parnum > 2)
 	{
+	  deltotdist=0.0;
+	  deldistcc=0.0;
 	  for (i=1; i < Oparams.parnum; i++) 
 	    {
-	      find_bonds_covadd(0, i);
+	      dist=find_bonds_covadd(0, i);
+	      if (dist < 0.0)
+		{
+		  deltotdist += dist;
+		  deldistcc += 1.0;
+		}
 	    }
 	}
       else
@@ -3100,6 +3131,8 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
 	      if (!check_overlap_all(0, 1, Oparams.parnum-1))
 		{
 		  totene += numbonds[0];		  
+		  totdist += deltotdist;
+		  distcc += deldistcc;
 		}
 	    }
 	  else
@@ -3133,9 +3166,9 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
   if (Oparams.parnum > 2)
     {
 #ifdef MD_LXYZ
-      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots)/Oparams.parnum, totene);
+      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots)/Oparams.parnum-1, totene);
 #else
-      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots)/Oparams.parnum, totene);
+      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots)/Oparams.parnum-1, totene);
 #endif
     }
   else
