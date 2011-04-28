@@ -3751,61 +3751,62 @@ void move(void)
 	}
       //printf("done\n");
     }
+  if (OprogStatus.targetAccept > 0.0 && Oparams.curStep % OprogStatus.resetaccept==0)
+    {
+      if (traaccept > OprogStatus.targetAccept)
+	OprogStatus.deltaMC *= 1.1;
+      else
+	OprogStatus.deltaMC /= 1.1;
+      if (rotaccept > OprogStatus.targetAccept)
+	OprogStatus.dthetaMC *= 1.1;
+      else
+	OprogStatus.dthetaMC /= 1.1;
+#ifdef MD_LXYZ
+      if (OprogStatus.deltaMC > (avL=pow(L[0]*L[1]*L[2],1.0/3.0))*0.1)
+	OprogStatus.deltaMC = avL*0.1;
+#else
+      if (OprogStatus.deltaMC > L*0.1)
+	OprogStatus.deltaMC = L*0.1;
+#endif
+      if (OprogStatus.dthetaMC > 3.14)
+	OprogStatus.dthetaMC = 3.14;
+      /*NOTA: questo credo che si possa eliminare */
+      if (OprogStatus.useNNL)
+	calc_all_maxsteps();
+    }
+  if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1
+      && (Oparams.curStep % OprogStatus.resetacceptVol==0))
+    {
+      //printf("sono qui volaccept=%.15G\n", volaccept);
+      if (volaccept > OprogStatus.targetAcceptVol)
+	OprogStatus.vmax *= 1.1;
+      else
+	OprogStatus.vmax /= 1.1;
+    }
+  if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
+    volmoveMC=volrejMC=0;
+  if (Oparams.curStep % OprogStatus.resetaccept==0)
+    {
+      totmovesMC=totrejMC=0;
+      tramoveMC=trarejMC=0;
+      rotmoveMC=rotrejMC=0;
+    }
+
   if (Oparams.curStep%OprogStatus.outMC==0)
     {
+      if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
+	volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
       //totmoves=((long long int)Oparams.parnum*(long long int)Oparams.curStep);
       acceptance=((double)(totmovesMC-totrejMC))/totmovesMC;
       traaccept = ((double)(tramoveMC-trarejMC))/tramoveMC;
       rotaccept = ((double)(rotmoveMC-rotrejMC))/rotmoveMC; 
-      if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
-	volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
-      if (OprogStatus.targetAccept > 0.0 && Oparams.curStep % OprogStatus.resetaccept==0)
-	{
-	  if (traaccept > OprogStatus.targetAccept)
-	    OprogStatus.deltaMC *= 1.1;
-	  else
-	    OprogStatus.deltaMC /= 1.1;
-	  if (rotaccept > OprogStatus.targetAccept)
-	    OprogStatus.dthetaMC *= 1.1;
-	  else
-	    OprogStatus.dthetaMC /= 1.1;
-#ifdef MD_LXYZ
-	  if (OprogStatus.deltaMC > (avL=pow(L[0]*L[1]*L[2],1.0/3.0))*0.1)
-	    OprogStatus.deltaMC = avL*0.1;
-#else
-	  if (OprogStatus.deltaMC > L*0.1)
-	    OprogStatus.deltaMC = L*0.1;
-#endif
-	  if (OprogStatus.dthetaMC > 3.14)
-	    OprogStatus.dthetaMC = 3.14;
-	  /*NOTA: questo credo che si possa eliminare */
-	  if (OprogStatus.useNNL)
-	    calc_all_maxsteps();
-	}
-      if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1
-	  && (Oparams.curStep % OprogStatus.resetacceptVol==0))
-	{
-	  //printf("sono qui volaccept=%.15G\n", volaccept);
-	  if (volaccept > OprogStatus.targetAcceptVol)
-	    OprogStatus.vmax *= 1.1;
-	  else
-	    OprogStatus.vmax /= 1.1;
-	}
+     
       printf("MC Step #%d pressure=%f temperature=%f Npar=%d\n", Oparams.curStep, Oparams.P, Oparams.T, Oparams.parnum);
       printf("Acceptance=%.15G (tra=%.15G rot=%.15G) deltaMC=%.15G dthetaMC=%.15G\n", acceptance, traaccept, 
 	     rotaccept, OprogStatus.deltaMC, OprogStatus.dthetaMC);
       printf("rotmoveMC:%lld rotrefMC: %lld cells= %d %d %d\n", rotmoveMC, rotrejMC, cellsx, cellsy, cellsz);
-      if (OprogStatus.ensembleMC==1 && volmoveMC>0)
+      if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
 	printf("Volume moves acceptance = %.15G vmax = %.15G\n", volaccept, OprogStatus.vmax);
-      if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
-	volmoveMC=volrejMC=0;
-      if (Oparams.curStep % OprogStatus.resetaccept==0)
-	{
-	  totmovesMC=totrejMC=0;
-	  tramoveMC=trarejMC=0;
-	  rotmoveMC=rotrejMC=0;
-	}
-
     }
 }
 #endif
