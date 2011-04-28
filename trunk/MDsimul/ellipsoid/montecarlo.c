@@ -948,6 +948,7 @@ int overlapMC_LL(int ip, int *err)
 }
 int overlapMC(int ip, int *err)
 {
+  *err=0;
   if (OprogStatus.useNNL)
     return overlapMC_NNL(ip, err);
   else
@@ -3018,7 +3019,7 @@ int insert_remaining_particles(void)
 int check_overlap_all(int i0, int i_ini, int i_fin)
 {
   double shift[3];
-  int i, ierr;
+  int i, ierr=0;
   for (i=i_ini; i <= i_fin; i++)
     {
 #ifdef MD_LXYZ
@@ -3788,15 +3789,6 @@ void move(void)
       else
 	OprogStatus.vmax /= 1.1;
     }
-  if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
-    volmoveMC=volrejMC=0;
-  if (Oparams.curStep % OprogStatus.resetaccept==0)
-    {
-      totmovesMC=totrejMC=0;
-      tramoveMC=trarejMC=0;
-      rotmoveMC=rotrejMC=0;
-    }
-
   if (Oparams.curStep%OprogStatus.outMC==0)
     {
       if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
@@ -3813,5 +3805,14 @@ void move(void)
       if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
 	printf("Volume moves acceptance = %.15G vmax = %.15G\n", volaccept, OprogStatus.vmax);
     }
+  if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
+    volmoveMC=volrejMC=0;
+  if (Oparams.curStep % OprogStatus.resetaccept==0)
+    {
+      totmovesMC=totrejMC=0;
+      tramoveMC=trarejMC=0;
+      rotmoveMC=rotrejMC=0;
+    }
+
 }
 #endif
