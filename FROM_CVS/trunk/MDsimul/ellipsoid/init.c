@@ -6202,7 +6202,22 @@ void usrInitAft(void)
 #endif
  
 #ifdef MC_SIMUL
-#ifdef MD_LXYZ
+  if (OprogStatus.nvbbias > 0)
+    printf("AVB-");
+  printf("Monte Carlo Simulation - ");
+  switch (OprogStatus.ensembleMC)
+    {
+    case 0:
+      printf("NVT ensemble\n");
+      break;
+    case 1: 
+      printf("NPT ensemble\n");
+      break;
+    case 2:
+      printf("Grand-canonical ensemble\n");
+      break;
+    }
+  #ifdef MD_LXYZ
   vnonbond = L[0]*L[1]*L[2] - OprogStatus.vbond;
 #else
   vnonbond = L*L*L - OprogStatus.vbond;
