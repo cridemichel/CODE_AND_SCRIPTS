@@ -69,6 +69,7 @@ PHI="$1"
 ELLEXE="../../ellipsMC"
 INITEMP="2.0"
 SIMPR="ellMC-NVT${EL}PR-PHI$1T${TEMP}"
+SIMEQ="ellMC-NVT${EL}EQ-PHI$1T${TEMP}"
 MOSRUN="mosrun"
 #per ora il salvataggio è lineare
 #=========== >>> PARAMETRI <<< =============
@@ -168,8 +169,8 @@ then
 VBOND="0.0617067216" #questo è per X0=2.0
 RESACC=`echo $7 100| awk '{printf("%d",$1/$2)}'`
 ../set_params.sh $PARFILE resetaccept $RESACC vbond $VBOND temperat $TEMP nvbbias 100 targetAccept 0.5 ensembleMC 0 bakStepsAscii 10000 stepnum $7 inifile $INIFILE endfile equilib.cor
-ln -sf $ELLEXE $SIMPR
-$MOSRUN ./$SIMPR -fa ./$PARFILE > screenEQ
+ln -sf $ELLEXE $SIMEQ
+$MOSRUN ./$SIMEQ -fa ./$PARFILE > screenEQ
 DELTRA=`cat screenEQ|awk '{if ($1=="deltrafin") print $2}'`
 DELROT=`cat screenEQ|awk '{if ($1=="delrotfin") print $2}'`
 cp CorFinal start.cnf
