@@ -3815,9 +3815,12 @@ void move(void)
     }
   if (Oparams.curStep==Oparams.totStep)
     {
-      printf("deltrafin %.15G\n", OprogStatus.deltaMC);
-      printf("delrotfin %.15G\n", OprogStatus.dthetaMC);
-      if (OprogStatus.ensembleMC==1)
+      if (OprogStatus.targetAccept > 0.0)
+	{
+	  printf("deltrafin %.15G\n", OprogStatus.deltaMC);
+	  printf("delrotfin %.15G\n", OprogStatus.dthetaMC);
+	}
+      if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1)
 	printf("delvolfin %.15G\n", OprogStatus.vmax);
     }
 }
