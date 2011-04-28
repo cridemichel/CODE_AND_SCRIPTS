@@ -166,14 +166,20 @@ rm -f $OCTFILE
 if [ "$7" != "" ]
 then
 VBOND="0.0617067216" #questo è per X0=2.0
-../set_params.sh $PARFILE vbond $VBOND temperat $TEMP nvbias 100 targetAccept 0.5 ensembleMC 0 bakStepAscii 10000 stepnum $7 inifile $INIFILE endfile equilib.cor
+RESACC=`echo $7 100| awk '{printf("%d",$1/$2)}'`
+../set_params.sh $PARFILE resetaccept $RESACC vbond $VBOND temperat $TEMP nvbbias 100 targetAccept 0.5 ensembleMC 0 bakStepsAscii 10000 stepnum $7 inifile $INIFILE endfile equilib.cor
 ln -sf $ELLEXE $SIMPR
 $MOSRUN ./$SIMPR -fa ./$PARFILE > screenEQ
+DELTRA=`cat screenEQ|awk '{if ($1=="deltrafin") print $2}'`
+DELROT=`cat screenEQ|awk '{if ($1=="delrotfin") print $2}'`
 cp CorFinal start.cnf
 else
+DELTRA="0.1"
+DELROT="0.1"
 cp startPhi${PHI}.cnf start.cnf
 fi
-../set_params.sh $PARFILE temperat $TEMP ensembleMC 0 nvbias 0 targetAccept -1.0 bakStepAscii 10000 stepnum $2 inifile start.cnf endfile ${SIMPR}.cor
+BSA=`echo $2 500|awk '{printf("%d",$1/$2)}'`
+../set_params.sh $PARFILE deltaMC $DELTRA dthetaMC $DELROT resetaccept 10000 temperat $TEMP ensembleMC 0 nvbbias 0 targetAccept -1.0 bakStepsAscii $BSA stepnum $2 inifile start.cnf endfile ${SIMPR}.cor
 ln -sf $ELLEXE $SIMPR
 $MOSRUN ./$SIMPR -fa ./$PARFILE > screen_$SIMPR 
 cd ..
