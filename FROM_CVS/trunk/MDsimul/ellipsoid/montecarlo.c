@@ -3753,6 +3753,10 @@ void move(void)
     }
   if (OprogStatus.targetAccept > 0.0 && Oparams.curStep % OprogStatus.resetaccept==0)
     {
+      acceptance=((double)(totmovesMC-totrejMC))/totmovesMC;
+      traaccept = ((double)(tramoveMC-trarejMC))/tramoveMC;
+      rotaccept = ((double)(rotmoveMC-rotrejMC))/rotmoveMC; 
+ 
       if (traaccept > OprogStatus.targetAccept)
 	OprogStatus.deltaMC *= 1.1;
       else
@@ -3774,9 +3778,10 @@ void move(void)
       if (OprogStatus.useNNL)
 	calc_all_maxsteps();
     }
-  if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1
+  if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1 && volmoveMC > 0 
       && (Oparams.curStep % OprogStatus.resetacceptVol==0))
     {
+      volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
       //printf("sono qui volaccept=%.15G\n", volaccept);
       if (volaccept > OprogStatus.targetAcceptVol)
 	OprogStatus.vmax *= 1.1;
