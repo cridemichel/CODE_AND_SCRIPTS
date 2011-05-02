@@ -3213,7 +3213,7 @@ int check_self_overlap(int i0, int i)
     }
    return 0; 
 }
-
+extern double fons(double theta, double alpha);
 
 void calc_cov_additive(void)
 {
@@ -3497,6 +3497,30 @@ void calc_cov_additive(void)
 	}
       tt++;
    }
+  if (type==1)
+    {
+      int n=1000;
+      double norm, dtheta, pi;
+      FILE *F;
+      pi=2.0*acos(0.0);
+      norm=0.0;
+      dtheta = pi/n;
+      for (i=0; i < n; i++)
+	norm += distro[i]*2*pi*dtheta;
+      for (i=0; i < n; i++)
+	distro[i]/= norm;
+
+      F=fopen("fons.dat", "w");  
+      for (i=0; i < n; i++)
+	fprintf(F, "%.15G %.15G\n",i*dtheta,distro[i]); 
+      fclose(F);
+
+      F=fopen("fonsExact.dat", "w");  
+      for (i=0; i < n; i++)
+	fprintf(F, "%.15G %.15G\n",i*dtheta,fons(i*dtheta,alpha)); 
+      fclose(F);
+    }
+
   //fclose(f);	
 #ifdef MD_LXYZ
   printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2]), totene);
