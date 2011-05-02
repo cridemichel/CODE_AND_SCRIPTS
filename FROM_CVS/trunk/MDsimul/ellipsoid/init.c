@@ -3698,6 +3698,8 @@ double fons(double theta, double alpha)
 {
   double pi;
   pi = acos(0.0)*2.0;
+  /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
+     di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
   return cosh(alpha*cos(theta))*alpha/(4.0*pi*sinh(alpha));
 }
 /* return an angle theta sampled from an Onsager angular distribution */
@@ -3713,9 +3715,9 @@ double theta_onsager(double alpha)
     {
       /* uniform theta between 0 and pi */
       theta = pi*ranf_vb();
-      /* uniform y between 0 and 1 */
+      /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
       y = 1.01*fons(0.0,alpha)*ranf_vb();
-      f = fons(theta,alpha);
+      f = sin(theta)*fons(theta,alpha);
       //printf("theta=%f y=%f\n", theta, y);
     }
   while (y >= f);
@@ -3778,6 +3780,8 @@ void orient(double *omx, double *omy, double* omz)
   *omx = ox;
   *omy = oy;
   *omz = oz; 
+  //distro[(int) (acos(oz)/(pi/1000.0))] += 1.0;
+
 #if 0
   /* Choose the magnitude of the angular velocity
 NOTE: consider that it is an exponential distribution 
@@ -4555,7 +4559,7 @@ void calc_vbonding(void)
       norm=0.0;
       dtheta = pi/n;
       for (i=0; i < n; i++)
-	norm += sin(i*dtheta)*distro[i]*2*pi*dtheta;
+	norm += distro[i]*2*pi*dtheta;
       for (i=0; i < n; i++)
 	distro[i]/= norm;
 
