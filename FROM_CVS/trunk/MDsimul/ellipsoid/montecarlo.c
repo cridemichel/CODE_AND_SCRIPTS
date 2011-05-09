@@ -56,6 +56,7 @@ extern double **ratAll;
 extern void ProcessCellCrossingMLL(void);
 extern void PredictEventMLL(int na, int nb);
 extern void PredictEventMLL_NLL(void);
+extern double *mapBheightFlex, *mapBhinFlex, *mapBhoutFlex, *mapSigmaFlex; 
 
 extern double DphiSqA, DphiSqB, DrSqTotA, DrSqTotB;
 extern double minaxA, minaxB, minaxAB;
@@ -2108,7 +2109,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   /* dist_type=0 -> isotropic
      dist_type=1 -> onsager */
   const int maxtrials=1000000;
-  double dist=0.0, rA[3], rat[3], norm, sax, cc[3], ene;
+  double bondlen, dist=0.0, rA[3], rat[3], norm, sax, cc[3], ene;
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz;
   int ierr, bonded, k1, k2, trials, nbold;
@@ -2136,6 +2137,14 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   sax = typesArr[typeOfPart[j]].sax[0];
   for (k1=0; k1 < 3; k1++)
     cc[k1] = rA[k1] + vv[k1]*sax*2.0;
+  
+  assign_bond_mapping(i,j);
+  /* N.B. here we assume one bond per pair */
+  if (are_spheres(i,j))
+    bondlen = mapSigmaFlex[0];
+  else 
+    bondlen = 1.05*2.0*(norm+0.5*mapSigmaFlex[0]-sax); /* overestimate */
+  //printf("bondlen=%.15G norm=%.15G mapSismaFlex=%.15G\n", bondlen, norm, mapSigmaFlex[0]);
   bonded=0;
   trials=0;
   if (!fake)
@@ -2144,16 +2153,32 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   while (!bonded)
     {
 #if 1
-      /* chose a random position inside a sphere or cube (removing do...while loop)*/
-      do {
-	dx = 2.0*(ranf_vb()-0.5);
-	dy = 2.0*(ranf_vb()-0.5);
-	dz = 2.0*(ranf_vb()-0.5);
-      } 
-      while (dx*dx+dy*dy+dz*dz > 1);
+      if (are_spheres(i,j))
+	{
+	  dx = 2.0*(ranf_vb()-0.5);
+	  dy = 2.0*(ranf_vb()-0.5);
+      	  dz = 2.0*(ranf_vb()-0.5);
+	}
+      else
+	{
+	  /* chose a random position inside a sphere or cube (removing do...while loop)*/
+	  do {
+	    dx = 2.0*(ranf_vb()-0.5);
+	    dy = 2.0*(ranf_vb()-0.5);
+	    dz = 2.0*(ranf_vb()-0.5);
+	  } 
+	  while (dx*dx+dy*dy+dz*dz > 1);
+	}
       rx[i] = cc[0]+dx*sax;
       ry[i] = cc[1]+dy*sax;
       rz[i] = cc[2]+dz*sax;
+#if 1
+      if (Sqr(rx[j]-rx[i])+Sqr(ry[j]-ry[i])+Sqr(rz[j]-rz[i]) > Sqr(2.0*sax+bondlen))
+	{
+	  trials++;
+  	  continue;
+	}
+#endif
       pbc(i);
 #else
       /* chose a random position inside a sphere (this is of course more efficient than
