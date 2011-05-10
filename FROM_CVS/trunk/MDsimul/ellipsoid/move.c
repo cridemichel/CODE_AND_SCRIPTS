@@ -5726,14 +5726,29 @@ double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double 
   double ti, rAB[3], rABn[3], norm, rA[3], rB[3], sigma, distSq;
   double rad1, rad2;
   int kk;
+
+#ifdef MC_SIMUL
+  ti = 0.0;
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+#else
   ti = t + (t1 - atomTime[i]);
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
+#endif  
+#ifdef MC_SIMUL
+  ti = 0.0;
+  rB[0] = rx[j] + shift[0];
+  rB[1] = ry[j] + shift[1];
+  rB[2] = rz[j] + shift[2];
+#else
   ti = t + (t1 - atomTime[j]);
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
+#endif
   distSq = 0;
   
   for (kk = 0; kk < 3; kk++)

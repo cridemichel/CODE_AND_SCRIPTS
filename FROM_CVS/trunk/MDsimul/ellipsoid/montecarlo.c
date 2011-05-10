@@ -664,16 +664,16 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   double d, d0, r1[3], r2[3], alpha; 
   *errchk=0;
   OprogStatus.optnnl = 0;
+
   if (are_spheres(i,j))
     {
       OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
       calcdist_retcheck = 0;
-
       d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
       *errchk = calcdist_retcheck;
-  
       return d;
     }
+
 #if 0
   nebrTab[i].r[0] = rx[i];
   nebrTab[i].r[1] = ry[i];
@@ -3429,6 +3429,7 @@ void calc_cov_additive(void)
     {
       numbonds[i]=0;
     }
+  
   printf("ene iniziale=%f\n", calcpotene());
   if (type==1)
     fscanf(fi, " %lf ", &alpha);
@@ -3479,7 +3480,6 @@ void calc_cov_additive(void)
 	  {
 	    R[0][k1][k2] = Rl[k1][k2];
 	  }
-
     }
   else
     {
