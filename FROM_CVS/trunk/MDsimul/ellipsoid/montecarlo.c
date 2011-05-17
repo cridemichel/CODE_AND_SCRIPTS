@@ -212,6 +212,9 @@ struct mboxstr
   double sa[3];
   double dr[3];
 } **mbox;
+double toteneini=0.0;
+long long int ttini=0;
+int covrestart = 0;
 const int nmboxMC=5;
 double totdist=0.0, distcc=0.0;
 void build_parallelepipeds(void)
@@ -3261,7 +3264,8 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
       }
   f = fopen("vbonding.dat","w+");
   fclose(f);
-  for (tt=0; tt < maxtrials; tt++)
+  totene = toteneini;
+  for (tt=ttini; tt < maxtrials; tt++)
     {
       if (tt%outits==0 && tt!=0)
 	{
@@ -3415,7 +3419,6 @@ int check_self_overlap(int i0, int i)
    return 0; 
 }
 extern double fons(double theta, double alpha);
-
 void calc_cov_additive(void)
 {
   FILE *fi, *f=NULL;
@@ -3433,6 +3436,14 @@ void calc_cov_additive(void)
   printf("ene iniziale=%f\n", calcpotene());
   if (type==1)
     fscanf(fi, " %lf ", &alpha);
+  /* if it is a restart put info initial values here */
+  covrestart = 0;
+  if (!feof(fi))
+    {
+      covrestart=1;
+      fscanf(fi, "%lf %lld ", &toteneini, &ttini);
+    }
+    
   /* type = 0 -> covolume 
      type = 1 -> covolume nematic
      type = 2 -> persistence length
@@ -3455,7 +3466,8 @@ void calc_cov_additive(void)
   fclose(fi);
   init_rng(-1, 0, -1);
   OprogStatus.optnnl = 0;
-  tt=0;
+  tt = ttini;
+  totene = toteneini;
   size2 = Oparams.parnum-size1;
   if (type==3)
     {
@@ -3467,13 +3479,11 @@ void calc_cov_additive(void)
       calc_persistence_length_mc(maxtrials, outits, size1);
       exit(-1);
     }
-  if (type==1)
+  if (type==4)
     {
-      /* first particle is always in the center of the box with the same orientation */
-      rx[0] = 0;
-      ry[0] = 0;
-      rz[0] = 0;
-      orient_onsager(&ox, &oy, &oz, alpha); 
+      ox=1;
+      oy=0;
+      oz=0; 
       versor_to_R(ox, oy, oz, Rl);
       for (k1=0; k1 < 3; k1++)
 	for (k2=0; k2 < 3; k2++)
@@ -3498,10 +3508,26 @@ void calc_cov_additive(void)
   else if (type==1)
     f = fopen("covolume-nem.dat","w+");
   fclose(f);
+    
   while (tt < maxtrials) 
     {
-      merr=0;
+      merr=ierr=0;
       selfoverlap=0;
+      
+      if (type==1)
+	{
+	  /* first particle is always in the center of the box with the same orientation */
+	  rx[0] = 0;
+	  ry[0] = 0;
+	  rz[0] = 0;
+	  orient_onsager(&ox, &oy, &oz, alpha); 
+	  versor_to_R(ox, oy, oz, Rl);
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      {
+		R[0][k1][k2] = Rl[k1][k2];
+	      }
+	}
       /* place first cluster */
       if (tt%outits==0)
 	{
@@ -3518,7 +3544,7 @@ void calc_cov_additive(void)
 	      else
 		f=fopen("covolume-nem.dat", "a");
 	      printf("co-volume=%.10f (totene=%f/%lld)\n", cov, totene, tt);
-	      fprintf(f, "%lld %.15G\n", tt, cov);
+	      fprintf(f, "%lld %.15G %.15G\n", tt, cov, totene);
 	      fclose(f);
 	      sync();
 	    }
