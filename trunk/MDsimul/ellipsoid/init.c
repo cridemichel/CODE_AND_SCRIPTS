@@ -3737,9 +3737,15 @@ void orient_onsager(double *omx, double *omy, double* omz, double alpha)
   phi = 2.0*pi*ranf_vb();
   //verso = (ranf_vb()<0.5)?1:-1;
   verso=1;
+#if 1 /* along z */
   *omx = verso*sin(thons)*cos(phi);
   *omy = verso*sin(thons)*sin(phi);
   *omz = verso*cos(thons); 
+#else /* or along x (but it has to be same of course!) */
+  *omy = verso*sin(thons)*cos(phi);
+  *omz = verso*sin(thons)*sin(phi);
+  *omx = verso*cos(thons); 
+#endif
   //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
 }
 void orient(double *omx, double *omy, double* omz)
@@ -3866,10 +3872,10 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   R[0][1] = oy;
   R[0][2] = oz;
   //printf("orient=%f %f %f\n", ox, oy, oz);
-  u[0] = 1; u[1] = 1; u[2] = 1;
+  u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
   if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
     {
-      u[0] = -1; u[1] = -1; u[2] = 1;
+      u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
     }
   /* second row vector */
   sp = 0;
