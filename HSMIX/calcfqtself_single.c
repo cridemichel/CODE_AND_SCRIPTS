@@ -367,6 +367,8 @@ int main(int argc, char **argv)
   JJ = 0;
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN+skip)
     {	
+      if (nr1 % (nfiles/10) == 0)
+	printf("Doing block %d of %d\n", nr1, nfiles);
       readconf(fname[nr1], &time, &refTime, NP, r0);
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
