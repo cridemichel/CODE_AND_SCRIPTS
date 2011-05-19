@@ -1,5 +1,6 @@
 #include<mdsimul.h>
 const double saxfactMC[3]={0.85,0.68,0.68};
+const int nfons=200;
 extern void init_rng(int mdseed, int mpi, int my_rank);
 #ifdef MC_SIMUL
 #ifdef MC_STORELL
@@ -3726,25 +3727,25 @@ void calc_cov_additive(void)
    }
   if (type==1)
     {
-      int n=1000;
       double norm, dtheta, pi;
       FILE *F;
       pi=2.0*acos(0.0);
       norm=0.0;
-      dtheta = pi/n;
-      for (i=0; i < n; i++)
+      dtheta = pi/nfons;
+      for (i=0; i < nfons; i++)
 	norm += distro[i]*2*pi*dtheta;
-      for (i=0; i < n; i++)
+      for (i=0; i < nfons; i++)
 	distro[i]/= norm;
 
       F=fopen("fons.dat", "w");  
-      for (i=0; i < n; i++)
-	fprintf(F, "%.15G %.15G\n",i*dtheta,distro[i]); 
+      for (i=0; i < nfons; i++)
+	fprintf(F, "%.15G %.15G\n",(i+0.5)*dtheta,distro[i]); 
       fclose(F);
 
+      dtheta=pi/1000;
       F=fopen("fonsExact.dat", "w");  
-      for (i=0; i < n; i++)
-	fprintf(F, "%.15G %.15G\n",i*dtheta,fons(i*dtheta,alpha)); 
+      for (i=0; i < 1000; i++)
+	fprintf(F, "%.15G %.15G\n",i*dtheta,sin(i*dtheta)*fons(i*dtheta,alpha)); 
       fclose(F);
     }
 
