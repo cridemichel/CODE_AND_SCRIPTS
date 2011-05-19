@@ -734,7 +734,7 @@ void init_rng(int mdseed, int mpi, int my_rank)
 #elif defined(MD_RANDOM)
 #if 1
       printf("[RANDOM] Initializing RNG with prefixed seed...\n");
-      initstate(fact*mdseed, rng_array, 256);
+      initstate(fact*mdseed, rng_array, 128);
       setstate(rng_array);
 #else
       srandom(fact*mdseed);
