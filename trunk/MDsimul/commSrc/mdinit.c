@@ -720,7 +720,8 @@ char rng_array[256];
 void init_rng(int mdseed, int mpi, int my_rank)
 {
   int fact, k;
-  printf("Initializing RNG...\n");
+  long rngseed;
+
   if (mpi==0)
     fact = 1;
   else
@@ -728,31 +729,40 @@ void init_rng(int mdseed, int mpi, int my_rank)
  if (mdseed>=0) 
     {
 #if defined(MD_RAND48)      
+      printf("[RAND48] Initializing RNG with prefixed seed...\n");
       srand48(fact*mdseed);
 #elif defined(MD_RANDOM)
 #if 1
+      printf("[RANDOM] Initializing RNG with prefixed seed...\n");
       initstate(fact*mdseed, rng_array, 256);
       setstate(rng_array);
 #else
       srandom(fact*mdseed);
 #endif
 #else
+      printf("[RAND] Initializing RNG with prefixed seed...\n");
       srand(fact*mdseed);
 #endif
     }
   else
     {
 #if defined(MD_RAND48)
-      srand48(fact*((long int)time(NULL)));
+      rngseed=fact*((int)time(NULL));
+      printf("[RAND48] Initializing RNG with random seed (=%ld)...\n", rngseed);
+      srand48(rngseed);
 #elif defined(MD_RANDOM)
 #if 1
-      initstate(fact*((int)time(NULL)), rng_array, 256);
+      rngseed=fact*((int)time(NULL));
+      printf("[RANDOM] Initializing RNG with random seed (=%ld)...\n",rngseed);
+      initstate(rngseed, rng_array, 32);
       setstate(rng_array);
 #else
       srandom(fact*((int)time(NULL)));
 #endif
 #else
-      srand(fact*((int)time(NULL)));
+      rngseed=fact*((int)time(NULL));
+      printf("[RAND] Initializing RNG with random seed (=%ld)...\n", rngseed);
+      srand(rngseed);
 #endif
     }
 }
