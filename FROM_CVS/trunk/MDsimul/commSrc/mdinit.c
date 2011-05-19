@@ -754,7 +754,12 @@ void init_rng(int mdseed, int mpi, int my_rank)
 #if 1
       rngseed=fact*((int)time(NULL));
       printf("[RANDOM] Initializing RNG with random seed (=%ld)...\n",rngseed);
-      initstate(rngseed, rng_array, 32);
+	/* se 8 < size < 32 allora random usa un algoritmo simile a drand48 mentre 
+	  se size > 32 ne usa uno differente, il default è size=128.
+	  Dai test effettuati al 19/05/11 sembrerebbe che o la distribuzione non è uniforme o comunque 
+	  che numeri successivi siano un po' correlati se si usano 256 byte, da 128 bytes in giù le cose 
+	  migliorano molto. */ 
+      initstate(rngseed, rng_array, 128);
       setstate(rng_array);
 #else
       srandom(fact*((int)time(NULL)));
