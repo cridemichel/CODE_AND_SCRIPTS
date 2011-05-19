@@ -341,7 +341,7 @@ int main(int argc, char **argv)
     ti[ii] = -1.0;
   first = 0;
   fclose(f2);
-  for (ip = 0; ip <= NP; ip++)
+  for (ip = 0; ip < NP; ip++)
     {
       for (ii=0; ii < points; ii++)
 	{
@@ -397,15 +397,15 @@ int main(int argc, char **argv)
 		{
 		  sumReA=sumReB=0.0;
 		  sumImA=sumImB=0.0;
-		  for (i=0; i < NP; i++)
+		  for (ip=0; ip < NP; ip++)
 		    {
-		      rxdummy = scalFact*((r0[0][i]-r1[0][i])*mesh[qmod][iq][0]
-					  +(r0[1][i]-r1[1][i])*mesh[qmod][iq][1]
-					  +(r0[2][i]-r1[2][i])*mesh[qmod][iq][2]);
+		      rxdummy = scalFact*((r0[0][ip]-r1[0][ip])*mesh[qmod][iq][0]
+					  +(r0[1][ip]-r1[1][ip])*mesh[qmod][iq][1]
+					  +(r0[2][ip]-r1[2][ip])*mesh[qmod][iq][2]);
 		      //printf("dummy:%.15G\n", rxdummy);
 		      costmp = cos(rxdummy);
 		      sintmp = sin(rxdummy);
-		      if (i < NPA)
+		      if (ip < NPA)
 			{
 			  sumReA += costmp;
 			  sumImA += sintmp;
