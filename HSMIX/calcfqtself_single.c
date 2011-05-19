@@ -164,7 +164,7 @@ int main(int argc, char **argv)
   FILE *f, *f2;
   int ip, first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
-  int qmod, NP1, NP2, kk, isperc; 
+  int NP1, NP2, kk, isperc; 
   double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
   double costmp, sintmp;
   twopi = acos(0)*4.0;	  
@@ -367,14 +367,14 @@ int main(int argc, char **argv)
   JJ = 0;
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN+skip)
     {	
-      if (nr1 % (nfiles/10) == 0)
-	printf("Doing block %d of %d\n", nr1, nfiles);
       readconf(fname[nr1], &time, &refTime, NP, r0);
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
 	{
 	  for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
 	    {
+	      if (JJ==0 && nr2 == nr1)
+		printf("Doing block %d of %d\n", nr1, nfiles);
 	      /* N.B. considera NN punti in maniera logaritmica e poi calcola i punti in maniera lineare 
 	       * distanziati di NN punti. */
               np = (JJ == 0)?nr2-nr1:NN-1+JJ;	      
