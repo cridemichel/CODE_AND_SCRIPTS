@@ -3724,6 +3724,7 @@ double theta_onsager(double alpha)
   return theta;
 }
 double *distro;
+extern const int nfons;
 void orient_onsager(double *omx, double *omy, double* omz, double alpha)
 {
   double thons;
@@ -3733,7 +3734,7 @@ void orient_onsager(double *omx, double *omy, double* omz, double alpha)
   /* random angle from onsager distribution */
   thons = theta_onsager(alpha);
   //printf("thos=%f\n", thons);
-  distro[(int) (thons/(pi/1000.0))] += 1.0;
+  distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
   phi = 2.0*pi*ranf_vb();
   //verso = (ranf_vb()<0.5)?1:-1;
   verso=1;
@@ -3872,10 +3873,10 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   R[0][1] = oy;
   R[0][2] = oz;
   //printf("orient=%f %f %f\n", ox, oy, oz);
-  u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
+  u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
   if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
     {
-      u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
+      u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
     }
   /* second row vector */
   sp = 0;
@@ -4373,7 +4374,6 @@ void calc_vbonding(void)
   int amin, bmin, nn;
   double Lb, alpha, Rl[3][3], ox, oy, oz, d, ene, dist;
   double totene=0.0, shift[3];
-  int n=1000;
   fi = fopen("vbonding.conf", "r");
   fscanf(fi, "%lld %d ", &maxtrials, &type);
   if (type==4 || type==5)
@@ -4405,8 +4405,8 @@ void calc_vbonding(void)
 
   if (type==4 || type==5)
     {
-      distro=malloc(sizeof(double)*n);
-      for (i=0; i < n; i++)
+      distro=malloc(sizeof(double)*nfons);
+      for (i=0; i < nfons; i++)
 	distro[i] = 0.0;
     }
   for (k1=0; k1 < 3; k1++)
@@ -4563,19 +4563,19 @@ void calc_vbonding(void)
       FILE *F;
       pi=2.0*acos(0.0);
       norm=0.0;
-      dtheta = pi/n;
-      for (i=0; i < n; i++)
+      dtheta = pi/nfons;
+      for (i=0; i < nfons; i++)
 	norm += distro[i]*2*pi*dtheta;
-      for (i=0; i < n; i++)
+      for (i=0; i < nfons; i++)
 	distro[i]/= norm;
 
       F=fopen("fons.dat", "w");  
-      for (i=0; i < n; i++)
+      for (i=0; i < nfons; i++)
 	fprintf(F, "%.15G %.15G\n",i*dtheta,distro[i]); 
       fclose(F);
 
       F=fopen("fonsExact.dat", "w");  
-      for (i=0; i < n; i++)
+      for (i=0; i < nfons; i++)
 	fprintf(F, "%.15G %.15G\n",i*dtheta,fons(i*dtheta,alpha)); 
       fclose(F);
     }
