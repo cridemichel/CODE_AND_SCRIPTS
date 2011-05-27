@@ -1,5 +1,8 @@
 #include<mdsimul.h>
 const double saxfactMC[3]={0.85,0.68,0.68};
+#ifdef MC_QUASI_CUBE
+const double saxfactMC_QC[3]={0.832,0.832,0.832};
+#endif
 const int nfons=200;
 extern void init_rng(int mdseed, int mpi, int my_rank);
 #ifdef MC_SIMUL
@@ -194,9 +197,6 @@ extern int *bondscache, *numbonds, **bonds;
 extern void newtDist(double x[], int n, int *check, 
 	  void (*vecfunc)(int, double [], double [], int, int, double []),
 	  int iA, int iB, double shift[3]);
-extern void newtDistNeg(double x[], int n, int *check, 
-	  void (*vecfunc)(int, double [], double [], int, int, double []),
-	  int iA, int iB, double shift[3],int);
 extern void zbrak(double (*fx)(double), double x1, double x2, int n, double xb1[], double xb2[], 
 	   int *nb);
 extern void newt(double x[], int n, int *check, 
@@ -742,9 +742,14 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
 #endif
   for (k=0; k < 3; k++)
     {
+#ifdef MC_QUASI_CUBE
+      saxi[k] = saxfactMC_QC[k]*typesArr[typeOfPart[i]].sax[k];
+      saxj[k] = saxfactMC_QC[k]*typesArr[typeOfPart[j]].sax[k];
+#else
       saxi[k] = saxfactMC[k]*typesArr[typeOfPart[i]].sax[k];
       saxj[k] = saxfactMC[k]*typesArr[typeOfPart[j]].sax[k];
-    }  
+#endif    
+}  
  d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
  //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
@@ -765,6 +770,7 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   
   d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
   *errchk = calcdist_retcheck;
+#ifndef MC_QUASI_CUBE
   if (*errchk)
     {
       d0=overlap_using_multibox(i, j, shift);
@@ -778,11 +784,51 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
 	}
       return -1.0;
     }
+#endif
   //printf("QUI d=%f\n", d);
   return d;
 }
 extern void find_bonds_one_NLL(int i);
+#ifdef MC_QUASI_CUBE
+double calcdistsaQC(double ra[3], double rb[3], double u1a[3], double u2a[3], double u1b[3], double u2b[3], double shift[3], int *errchk)
+{
+  /* N.B. u1, u2 ed u3 sono i vettori del sistema di riferimento solidale con il corpo rigido 
+     espressi nel riferminto del laboratorio */
+  int k1, k2;
+  double nn, vecg[8], vecgNeg[8], Rla[3][3], Rlb[3][3];
+  double d, r1[3], r2[3], alpha, d0;
+  rx[0] = ra[0];
+  ry[0] = ra[1];
+  rz[0] = ra[2];
+  rx[1] = rb[0];
+  ry[1] = rb[1];
+  rz[1] = rb[2];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      Rla[0][k1] = u1a[k1];
+      Rlb[0][k1] = u1b[k1];
+      Rla[1][k1] = u2b[k1];
+      Rlb[1][k1] = u2b[k1];
+    }
+  
+  vectProdVec(u1a, u2a, Rla[2]);
+  vectProdVec(u1b, u2b, Rlb[2]);
+  
+  for (k1=0; k1 < 3; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	{
+	  R[0][k1][k2] = Rla[k1][k2];
+	  R[1][k1][k2] = Rlb[k1][k2];
+	}
+    }
 
+  OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
+  calcdist_retcheck = 0;
+  d = check_overlap(0, 1, shift, errchk);
+  return d;
+}
+#endif
 int overlapMC_NNL(int na, int *err)
 {
   int i, signDir[NDIM]={0,0,0}, evCode, k, n;

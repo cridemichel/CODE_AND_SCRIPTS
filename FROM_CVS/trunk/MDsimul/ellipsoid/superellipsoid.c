@@ -579,12 +579,18 @@ void fdjacDistNegSE(int n, double x[], double fvec[], double **df,
   calcfx(gxp, xpB[0], xpB[1], xpB[2], iB);
   calcfxx(fxxp, xpA[0], xpA[1], xpA[2], iA);
   calcfxx(gxxp, xpB[0], xpB[1], xpB[2], iB);
+#if 0
+  printf("fxxp=%f %f %f %f %f %f %f %f %f\n", fxxp[0][0], fxxp[0][1], fxxp[0][2],
+	 fxxp[1][0], fxxp[1][1], fxxp[1][2], fxxp[2][0], fxxp[2][1], fxxp[2][2]);
+#endif
   /* ...and now we have to go back to laboratory reference system */
   body2lab_fx(iA, fxp, fx, RtA);
   body2lab_fx(iB, gxp, gx, RtB);  
   body2lab_fxx(iA, fxxp, fxx, RtA);
   body2lab_fxx(iB, gxxp, gxx, RtB);
+ 
   MD_DEBUG37(printf("NEW fx=%.15G %.15G %.15G gx=%.15G %.15G %.15G\n", fx[0], fx[1], fx[2], gx[0], gx[1], gx[2]));
+
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
