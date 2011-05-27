@@ -6156,6 +6156,7 @@ retry:
 	    vecg[k1+5] = rD[k1];
 	  rDC[k1] = rD[k1] - rC[k1];
 	}
+
       if (OprogStatus.epsdGDO > 0.0)
 	{
 	  g1 = calc_norm(rDC)/nf;
@@ -6237,7 +6238,11 @@ retry:
 	  if ((OprogStatus.SDmethod==1 || OprogStatus.SDmethod==4) || tryagain)
 	    {
 	      if (scalProd(gradf, rDC) < 0.0)
-		vecg[7] = 0.0;//-calc_norm(rDC)/nf;
+#ifdef MC_SIMUL
+		vecg[7] = -calc_norm(rDC)/nf;
+#else
+	        vecg[7] = 0;
+#endif
 	      else
 		vecg[7] = calc_norm(rDC)/nf;  
 #if 0
@@ -6278,6 +6283,8 @@ retry:
       if (OprogStatus.toldxNRta > 0.0)
 	OprogStatus.toldxNR=OprogStatus.toldxNRta;
     }
+
+ 
   if (OprogStatus.dist5)
     {
       double vecg8[8];
@@ -6308,7 +6315,6 @@ retry:
       newtDistNeg(vecg, 8, &retcheck, funcs2beZeroedDistNeg, i, j, shift, tryagain); 
     }
   numcalldist++;
-
   /* ripristina il valore iniziale */
   OprogStatus.toldxNR = toldxNR;
   if (retcheck != 0)

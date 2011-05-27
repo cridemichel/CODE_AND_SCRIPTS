@@ -3457,7 +3457,9 @@ void ludcmp(double **a, int n,  int* indx, double* d, int *ok)
 	}
       if (big == 0.0)
 	{
+#ifndef MC_SIMUL
 	  printf("ERROR: Singular matrix in routine ludcmp\n"); 
+#endif
 	  *ok = 1;
 	  return;
 	}
@@ -4872,7 +4874,7 @@ void newtDistNeg(double x[], int n, int *check,
   for (i=0;i<n;i++) 
     if (fabs(fvecD[i]) > test)
       test=fabs(fvecD[i]); 
-  //printf("newtDistNeg BEGIN: fvec= %.15G %.15G %.15G %.15G %.15G\n", fvecD[0], fvecD[1], fvecD[2], fvecD[3], fvecD[4]);
+  //printf("newtDistNeg BEGIN: fvec= %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", fvecD[0], fvecD[1], fvecD[2], fvecD[3], fvecD[4], fvecD[5], fvecD[6], fvecD[7]);
   if (test < 0.01*TOLFD)
     {
       *check=0; 
@@ -4947,6 +4949,14 @@ void newtDistNeg(double x[], int n, int *check,
 #if 1
       ludcmp(fjac,n,indx,&d, &ok); /* Solve linear equations by LU decomposition.*/
       lubksb(fjac,n,indx,p);
+#ifdef MC_SIMUL
+      if (ok)
+	{
+	  *check=2;
+	  FREERETURN;
+	}
+#endif
+
 #else
       gaussj(fjac,n,p);
 #endif
