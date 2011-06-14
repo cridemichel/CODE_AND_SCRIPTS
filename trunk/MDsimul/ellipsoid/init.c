@@ -1946,6 +1946,9 @@ void usrInitBef(void)
     OprogStatus.targetAccept=0.5;
     OprogStatus.targetAcceptVol=0.5;
 #endif
+#ifdef MD_SURV_PROB
+    OprogStatus.spdeltat = 10.0;
+#endif
 }
 extern void check (int *overlap, double *K, double *V);
 double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
@@ -4609,6 +4612,30 @@ extern int *numbondsMC, **bondsMC;
 extern int *cellListMC;
 #endif
 #endif
+#ifdef MD_SURV_PROB
+int *sp_has_collided, sp_equilib;
+double *sp_firstcolltime, sp_start_time;
+int sp_tot_collisions;
+void sp_reset_fct(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      sp_has_collided[i] = 0;
+    }
+  sp_tot_collisions = 0;
+}
+void save_sp(void)
+{
+  FILE *f;
+  int i;
+  f = fopen("surv_prob.dat","a");
+  for (i=0; i < Oparams.parnum; i++)
+    fprintf(f, "%.15G\n", sp_firstcolltime[i]);
+  //fprintf(f, "\n"); 
+  fclose(f);
+}
+#endif
 void usrInitAft(void)
 {
   long long int maxp;
@@ -4684,6 +4711,7 @@ void usrInitAft(void)
     implementata */
  if (OprogStatus.targetPhi > 0.0)
    {
+     //printf("targetPhi=%.15G\n", OprogStatus.targetPhi);
      printf("WARNING: Growth simulation, spots interactions will be disabled\n");
    }
 #ifdef MD_SUPERELLIPSOID
@@ -4812,6 +4840,13 @@ void usrInitAft(void)
   /*    
    ** CHECK FOR PARTICLE OVERLAPS **
    ** CALCULATE ENERGY            ** */
+#ifdef MD_SURV_PROB
+  sp_firstcolltime = malloc(sizeof(double)*Oparams.parnum);
+  sp_has_collided = malloc(sizeof(int)*Oparams.parnum);
+  sp_reset_fct();
+  sp_equilib=1;
+  sp_start_time = Oparams.time;
+#endif
   lastcol= malloc(sizeof(double)*Oparams.parnum);
   atomTime = malloc(sizeof(double)*Oparams.parnum);
 #ifdef MD_PATCHY_HE
@@ -5276,6 +5311,10 @@ void usrInitAft(void)
       fclose(f);
       f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
+#ifdef MD_SURV_PROB
+      f = fopenMPI(absMisHD("surv_prob.dat"), "w+");
+      fclose(f);
+#endif
 #ifdef MC_SIMUL
       f = fopenMPI(absMisHD("volume.dat"), "w+");
       fclose(f);

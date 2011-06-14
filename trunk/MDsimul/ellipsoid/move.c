@@ -2324,7 +2324,6 @@ void bumpHS(int i, int j, double *W)
 
   typei = typeOfPart[i];
   typej = typeOfPart[j];
-
   numcoll++;
 #ifdef MD_HANDLE_INFMASS
   check_inf_mass(typei, typej, &infMass_i, &infMass_j);
@@ -10163,6 +10162,13 @@ void store_bump(int i, int j)
 }
 
 extern void delete_events(int evIdA);
+#ifdef MD_SURV_PROB
+extern double *sp_firstcolltime, sp_start_time;
+extern int *sp_has_collided, sp_equilib;
+extern int sp_tot_collisions;
+extern void sp_reset_fct(void);
+extern void save_sp(void);
+#endif
 void ProcessCollision(void)
 {
   int k;
@@ -10205,6 +10211,39 @@ void ProcessCollision(void)
   MD_DEBUG(store_bump(evIdA, evIdB));
   //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
+#ifdef MD_SURV_PROB
+  if (!sp_equilib)  
+    {
+      if (!sp_has_collided[evIdA])
+	{
+	  sp_firstcolltime[evIdA] = Oparams.time - sp_start_time;
+	  sp_has_collided[evIdA] = 1;
+	  sp_tot_collisions++;
+	}
+      if (!sp_has_collided[evIdB])
+	{
+	  sp_firstcolltime[evIdB] = Oparams.time - sp_start_time;
+	  sp_has_collided[evIdB] = 1;
+	  sp_tot_collisions++;
+	}
+      if (sp_tot_collisions == Oparams.parnum)
+	{
+	  save_sp();
+	  sp_reset_fct();
+	  //sp_start_time = Oparams.time;
+	  sp_equilib = 1;
+	}
+    }
+  else 
+    {
+      if (fabs(Oparams.time - sp_start_time) >= OprogStatus.spdeltat)
+	{
+  	  sp_equilib = 0;
+	  sp_start_time = Oparams.time;
+	}
+    }
+
+#endif
 #ifdef MD_GRAVITY
   lastcol[evIdA] = lastcol[evIdB] = Oparams.time;
 #else
@@ -10563,6 +10602,10 @@ void timeshift_variables(void)
 #endif
 #else
       atomTime[i] -= OprogStatus.bigDt;
+#endif
+#ifdef MD_SURV_PROB
+      sp_firstcolltime[i] -= OprogStatus.bigDt;
+      sp_start_time -= OprogStatus.bigDt;
 #endif
       lastcol[i] -= OprogStatus.bigDt;
       OprogStatus.lastcolltime[i] -= OprogStatus.bigDt;
