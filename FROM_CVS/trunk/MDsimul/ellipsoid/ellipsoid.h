@@ -880,6 +880,9 @@ struct progStatus
   int resetacceptVol;
   int resetaccept;
 #endif
+#ifdef MD_SURV_PROB
+  double spdeltat;
+#endif
 };
 
 /* ======================== >>> filenames instance <<< ======================= 
@@ -1292,6 +1295,9 @@ struct pascii opro_ascii[] =
   {"resetacceptVol", &OS(resetacceptVol),                   1, 1, "%d"},
   {"outMC",          &OS(outMC),                            1, 1, "%d"},
 #endif
+#ifdef MD_SURV_PROB
+  {"spdeltat",          &OS(spdeltat),                       1,   1, "%.15G"},
+#endif
   {"", NULL, 0, 0, ""}
 };
 #else
@@ -1356,7 +1362,7 @@ struct pascii opar_ascii[]=
   {"theta",              &OP(theta),                         1,   1, "%.15G"},
   {"nmax",               &OP(nmax),                          1,   1, "%d"},
 #endif
-  {"", NULL, 0, 0, ""}
+ {"", NULL, 0, 0, ""}
 };
 #else
 extern struct pascii opar_ascii[];
@@ -1714,6 +1720,9 @@ struct singlePar OsinglePar[] = {
   {"rhozBinSize", &OprogStatus.rhozBinSize,  CT},
 #endif
   {"maxcoll",     &maxcoll,                 INT},
+#ifdef MD_SURV_PROB
+  {"spdeltat",    &OprogStatus.spdeltat,    CT},
+#endif
   /* ======================================================================= */
 
   {"", NULL, 0} /* end of list, don't touch this !!! */

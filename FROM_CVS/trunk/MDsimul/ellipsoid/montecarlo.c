@@ -3490,7 +3490,7 @@ void calc_cov_additive(void)
       covrestart=1;
       fscanf(fi, "%lf %lld ", &toteneini, &ttini);
     }
-    
+   
   /* type = 0 -> covolume 
      type = 1 -> covolume nematic
      type = 2 -> persistence length
