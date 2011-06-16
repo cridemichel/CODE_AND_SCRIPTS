@@ -1150,6 +1150,7 @@ void angvelMB(void)
      all'asse x nel riferimento del corpo rigido
      cosicché in tale rif. la vel. ang. intorno a tale asse sia zero 
      (l'ho scritta per le cokecan) */
+  int zax;
   int i, a;
   double sp, pi, inert;                 /* momentum of inertia of the molecule */
   double norm, osq, o, mean, symax[3];
@@ -1161,6 +1162,11 @@ void angvelMB(void)
   /* N.B. QUESTO E' SBAGLIATO PERCHE' LA DISTRIBUZIONE
      E' COME QUELLA TRASLAZIONALE (VEDI LANDAU) 
      CORREGGERE!!!! */
+#ifdef MD_SUPERELLIPSOID
+  zax = 0;
+#else
+  zax = 2;
+#endif
   for (i = 0; i < Oparams.parnum; i++)
     {
       inert = typesArr[typeOfPart[i]].I[0];
@@ -1168,10 +1174,10 @@ void angvelMB(void)
       wx[i] = mean*gauss();
       wy[i] = mean*gauss();
       wz[i] = mean*gauss();
-      sp = wx[i]*R[i][0][0]+wy[i]*R[i][0][1]+wz[i]*R[i][0][2];
-      wx[i] -= sp*R[i][0][0];
-      wy[i] -= sp*R[i][0][1];
-      wz[i] -= sp*R[i][0][2];
+      sp = wx[i]*R[i][zax][0]+wy[i]*R[i][zax][1]+wz[i]*R[i][zax][2];
+      wx[i] -= sp*R[i][zax][0];
+      wy[i] -= sp*R[i][zax][1];
+      wz[i] -= sp*R[i][zax][2];
       Mx[i] = wx[i]*inert;
       My[i] = wy[i]*inert;
       Mz[i] = wz[i]*inert;
@@ -4630,8 +4636,16 @@ void save_sp(void)
   FILE *f;
   int i;
   f = fopen("surv_prob.dat","a");
-  for (i=0; i < Oparams.parnum; i++)
-    fprintf(f, "%.15G\n", sp_firstcolltime[i]);
+  
+  if (Oparams.ntypes==1)
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  fprintf(f, "%.15G\n", sp_firstcolltime[i]);
+	}
+    }
+  else
+    fprintf(f, "%.15G\n", Oparams.time-sp_start_time);
   //fprintf(f, "\n"); 
   fclose(f);
 }
