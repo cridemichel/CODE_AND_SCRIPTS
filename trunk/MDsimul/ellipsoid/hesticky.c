@@ -1177,7 +1177,11 @@ int get_rabbit_bonds(int ifebA, int tA, int ifebB, int tB)
   int nb;
   interStruct ts;
   ts.type1 = tA;
+#ifdef MD_IGG_EDBD
+  ts.type2 = 4;
+#else
   ts.type2 = 5;
+#endif
   ts.spot1 = 1;
   ts.spot2 = 0; 
   nb = getnumbonds(ifebA, &ts, 0);
@@ -1233,17 +1237,22 @@ void make_ghosts(int inc, int nb, int i, int typei, int j, int typej)
 #endif
 void update_rates(int i, int j, int ata, int atb, double inc)
 {
-  int typei, typej, nb;
+  int typei, typej, nb, antigene_type;
   typei = typeOfPart[i];
   typej = typeOfPart[j];
 
-  if (typei == 0 && typej == 5)
+#ifdef MD_IGG_EDBD
+  antigene_type=4;
+#else
+  antigene_type=5;
+#endif
+  if (typei == 0 && typej == antigene_type)
     nb = get_rabbit_bonds(i, 0, i+1, 1);
-  else if (typei == 1 && typej == 5)
+  else if (typei == 1 && typej == antigene_type)
     nb = get_rabbit_bonds(i-1, 0, i, 1);
-  else if (typej == 0 && typei == 5)
+  else if (typej == 0 && typei == antigene_type)
     nb = get_rabbit_bonds(j, 0, j+1, 1);
-  else if (typej == 1 && typei == 5)
+  else if (typej == 1 && typei == antigene_type)
     nb = get_rabbit_bonds(j-1, 0, j, 1);
   else
     return;

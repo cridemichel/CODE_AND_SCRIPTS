@@ -10168,9 +10168,35 @@ extern int *sp_has_collided, sp_equilib;
 extern int sp_tot_collisions;
 extern void sp_reset_fct(void);
 extern void save_sp(void);
+extern double ranf(void);
+void sp_update_cal(int ip)
+{
+#if 0
+  if (ip!=evIdA && ip!=evIdB)
+    PredictEvent(ip, -1);
+#else
+  UpdateSystem();
+  rebuildCalendar();
+  if (OprogStatus.intervalSum > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
+  if (OprogStatus.storerate > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT+8, OprogStatus.nextStoreTime);
+  if (OprogStatus.scalevel)
+    ScheduleEvent(-1, ATOM_LIMIT+9, OprogStatus.nextcheckTime);
+#ifdef MD_BIG_DT
+  if (OprogStatus.bigDt > 0.0)
+    ScheduleEvent(-1, ATOM_LIMIT + 11,OprogStatus.bigDt);
 #endif
+#endif
+  ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
+
+#endif
+}
 void ProcessCollision(void)
 {
+#ifdef MD_SURV_PROB
+  int rebuilt_cal;
+#endif
   int k;
   UpdateAtom(evIdA);
   UpdateAtom(evIdB);
@@ -10212,26 +10238,71 @@ void ProcessCollision(void)
   //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
 #ifdef MD_SURV_PROB
+  rebuilt_cal=0;
   if (!sp_equilib)  
     {
-      if (!sp_has_collided[evIdA])
+      int ip, ii, cur_trap=-1;
+      if (Oparams.ntypes==2)
 	{
-	  sp_firstcolltime[evIdA] = Oparams.time - sp_start_time;
-	  sp_has_collided[evIdA] = 1;
-	  sp_tot_collisions++;
+	  /* Particelle di tipo 0 = assorbite
+	     Particelle di tipo 1 = trappole, quindi se typeNP[1] == 1 allora TARGET problem
+	     altrimenti se typeNP[0]=1 allora TRAPPING problem */
+	  if (typeNP[1]==1)
+	    {
+	      /* TARGET */
+	      if (typeOfPart[evIdA]==1 || typeOfPart[evIdB]==1)
+		{
+	    	  save_sp();
+		  sp_reset_fct();
+		  //sp_start_time = Oparams.time;
+		  sp_equilib = 1;
+		  if (typeOfPart[evIdA] == 1)
+		    cur_trap=evIdA;
+		  else
+		    cur_trap=evIdB;
+		  do
+		    ip = (int) (Oparams.parnum*ranf());
+		  while (typeOfPart[ip]==1 || ip==evIdA||ip==evIdB);
+		 /* la particella scelta diventa una trappola e la trappola corrente
+		    diventa una particella normale (cioè di tipo 0)*/ 
+		  typeOfPart[ip] = 1;
+		  typeOfPart[cur_trap] = 0;
+		  if (ip!=evIdA && ip!=evIdB)
+		    UpdateAtom(ip);
+		  vx[ip] = 0.0; vy[ip]=0.0; vz[ip]=0.0;
+		  sp_update_cal(ip);
+		  rebuilt_cal=1;
+		}
+	    }
+	  else
+	    {
+	      /* TRAPPING */
+	    }
 	}
-      if (!sp_has_collided[evIdB])
+      else
 	{
-	  sp_firstcolltime[evIdB] = Oparams.time - sp_start_time;
-	  sp_has_collided[evIdB] = 1;
-	  sp_tot_collisions++;
+	  if (!sp_has_collided[evIdA])
+	    {
+	      sp_firstcolltime[evIdA] = Oparams.time - sp_start_time;
+	      sp_has_collided[evIdA] = 1;
+	      sp_tot_collisions++;
+	    }
+	  if (!sp_has_collided[evIdB])
+	    {
+	      sp_firstcolltime[evIdB] = Oparams.time - sp_start_time;
+	      sp_has_collided[evIdB] = 1;
+	      sp_tot_collisions++;
+	    }
 	}
-      if (sp_tot_collisions == Oparams.parnum)
+       if (Oparams.ntypes==1)
 	{
-	  save_sp();
-	  sp_reset_fct();
-	  //sp_start_time = Oparams.time;
-	  sp_equilib = 1;
+	  if (sp_tot_collisions == Oparams.parnum)
+	    {
+	      save_sp();
+	      sp_reset_fct();
+	      //sp_start_time = Oparams.time;
+	      sp_equilib = 1;
+	    }
 	}
     }
   else 
@@ -10270,6 +10341,13 @@ void ProcessCollision(void)
 #ifdef MD_HSVISCO
   OprogStatus.lastcoll = Oparams.time;
 #endif
+#ifdef MD_SURV_PROB
+  if (rebuilt_cal)
+    {
+      do_check_negpairs=0;
+      return;
+    }
+#endif 
   if (OprogStatus.useNNL)
     {
       /* ricalcola i tempi di collisione con la NL */
