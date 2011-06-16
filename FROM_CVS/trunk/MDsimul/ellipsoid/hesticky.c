@@ -367,9 +367,15 @@ int one_is_bonded(int i, int a, int j, int b, int nmax)
   type1 = typeOfPart[i];
   type2 = typeOfPart[j];
 #ifdef MD_RABBIT
+#ifdef MD_IGG_EDBD 
+  if ((type1==4 && (type2==0 || type2==1) && numbonds[i]==1)||
+      (type2==4 && (type1==0 || type1==1) && numbonds[j]==1))
+    return 1;
+#else
   if ((type1==5 && (type2==0 || type2==1) && numbonds[i]==1)||
       (type2==5 && (type1==0 || type1==1) && numbonds[j]==1))
     return 1;
+#endif
 #endif
  
 #if 1
