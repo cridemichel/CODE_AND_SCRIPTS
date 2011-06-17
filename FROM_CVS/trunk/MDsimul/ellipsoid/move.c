@@ -10240,7 +10240,7 @@ void ProcessCollision(void)
   rebuilt_cal=0;
   if (!sp_equilib)  
     {
-      int ip, ii, cur_trap=-1;
+      int ip, ii, cur_trap=-1, cur_part=-1;
       if (Oparams.ntypes==2)
 	{
 	  /* Particelle di tipo 0 = assorbite
@@ -10276,6 +10276,29 @@ void ProcessCollision(void)
 	  else
 	    {
 	      /* TRAPPING */
+	      if (typeOfPart[evIdA]==1 || typeOfPart[evIdB]==1)
+		{
+		  save_sp();
+		  sp_reset_fct();
+		  //sp_start_time = Oparams.time;
+		  sp_equilib = 1;
+		  if (typeOfPart[evIdA] == 0)
+		    cur_part=evIdA;
+		  else
+		    cur_part=evIdB;
+		  do
+		    ip = (int) (Oparams.parnum*ranf());
+		  while (typeOfPart[ip]==0 || ip==evIdA||ip==evIdB);
+		 /* la particella scelta diventa una trappola e la trappola corrente
+		    diventa una particella normale (cioè di tipo 0)*/ 
+		  typeOfPart[ip] = 0;
+		  typeOfPart[cur_part] = 1;
+		  if (ip!=evIdA && ip!=evIdB)
+		    UpdateAtom(ip);
+		  vx[ip] = 0.0; vy[ip]=0.0; vz[ip]=0.0;
+		  sp_update_cal(ip);
+		  rebuilt_cal=1;
+		}
 	    }
 	}
       else
@@ -10756,12 +10779,20 @@ int termination(void)
   return 0;
 #endif
   ts.type1 = 0;
+#ifdef MD_IGG_EDBD
+  ts.type2 = 4;
+#else
   ts.type2 = 5;
+#endif
   ts.spot1 = 1;
   ts.spot2 = 0;
   nb = getnumbonds(0,&ts, 0);
   ts.type1 = 1;
+#ifdef MD_IGG_EDBD
+  ts.type2 = 4;
+#else
   ts.type2 = 5;
+#endif
   ts.spot1 = 1;
   ts.spot2 = 0;
   nb += getnumbonds(1, &ts, 0);			

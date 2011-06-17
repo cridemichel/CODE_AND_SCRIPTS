@@ -4858,6 +4858,15 @@ void usrInitAft(void)
   sp_firstcolltime = malloc(sizeof(double)*Oparams.parnum);
   sp_has_collided = malloc(sizeof(int)*Oparams.parnum);
   sp_reset_fct();
+  if (Oparams.ntypes==2)
+    {
+      for (i=0; i < Oparams.parnum; i++)
+	if (typeOfPart[i]==1)
+	  {
+	    /* particles of type 1 are immobile */
+	    vx[i]=vy[i]=vz[i]=0;
+	  }
+    }
   sp_equilib=1;
   sp_start_time = Oparams.time;
 #endif
