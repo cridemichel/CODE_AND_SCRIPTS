@@ -10189,9 +10189,8 @@ void sp_update_cal(int ip)
 #endif
 #endif
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
-
-#endif
 }
+#endif
 void ProcessCollision(void)
 {
 #ifdef MD_SURV_PROB
