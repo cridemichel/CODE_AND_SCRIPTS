@@ -239,7 +239,11 @@ void get_bimono_bonds(int *bulk, int *mono, int *bi)
       if (ti==0 || ti==1)
 	{
 	  ts.type1 = ti;
+#ifdef MD_IGG_EDBD
+	  ts.type2 = 4;
+#else
 	  ts.type2 = 5;
+#endif
 	  ts.spot1 = 1;
 	  ts.spot2 = 0; 
 	  if (ti==0)
