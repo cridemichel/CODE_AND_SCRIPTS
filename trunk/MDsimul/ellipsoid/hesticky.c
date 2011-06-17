@@ -1262,6 +1262,7 @@ void update_rates(int i, int j, int ata, int atb, double inc)
     nb = get_rabbit_bonds(j-1, 0, j, 1);
   else
     return;
+  //printf("antigene_type=%d nb=%d rate[1]=%d rate[2]=$d ", antigene_type, nb);
 #ifdef MD_GHOST_IGG
   /* if ghostsim==2 do not accept only transition 2->3 and 3->1 */
   if (Oparams.ghostsim==1)
@@ -2028,6 +2029,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
       factor *= mredl;
       break;
     case MD_OUTIN_BARRIER:
+      //printf("i=%d j=%d OUTIN\n", i, j);
       if (bheight < 0)
 	{
 	  if (one_is_bonded(i, ata, j, atb, nmax) || Sqr(vc) < 2.0*(-bheight+bhin)/mredl)
@@ -2048,6 +2050,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	}
       else
 	{
+	  //printf("bheight > 0 i=%d j=%d one_is_bonded=%d\n", i, j, one_is_bonded(i, ata, j, atb, nmax));
 	  if (one_is_bonded(i, ata, j, atb, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
 	    {
 	      MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
@@ -2061,6 +2064,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	      add_bond(j, i, atb, ata);
 	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
 #ifdef MD_RABBIT
+	      //printf("updating rates!\n");
 	      update_rates(i, j, ata, atb, +1.0);
 #endif
 	    }
