@@ -1061,7 +1061,6 @@ void temperat(void)
   dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
     OprogStatus.dofB*((double) (Oparams.parnum-Oparams.parnumA));
 #endif
-
   if (OprogStatus.brownian==1)
     temp = 2.0 * K / dof;
   else
