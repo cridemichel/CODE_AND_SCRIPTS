@@ -10167,6 +10167,7 @@ extern double *sp_firstcolltime, sp_start_time;
 extern int *sp_has_collided, sp_equilib;
 extern int sp_tot_collisions;
 extern void sp_reset_fct(void);
+extern double gauss(void);
 extern void save_sp(void);
 extern double ranf(void);
 void sp_update_cal(int ip)
@@ -10240,7 +10241,8 @@ void ProcessCollision(void)
   rebuilt_cal=0;
   if (!sp_equilib)  
     {
-      int ip, ii, cur_trap=-1, cur_part=-1;
+      int i,ip, ii, cur_trap=-1, cur_part=-1;
+      double rTemp, mass;
       if (Oparams.ntypes==2)
 	{
 	  /* Particelle di tipo 0 = assorbite
@@ -10254,6 +10256,7 @@ void ProcessCollision(void)
 	    	  save_sp();
 		  sp_reset_fct();
 		  //sp_start_time = Oparams.time;
+		  sp_start_time = Oparams.time;
 		  sp_equilib = 1;
 		  if (typeOfPart[evIdA] == 1)
 		    cur_trap=evIdA;
@@ -10276,28 +10279,41 @@ void ProcessCollision(void)
 	  else
 	    {
 	      /* TRAPPING */
-	      if (typeOfPart[evIdA]==1 || typeOfPart[evIdB]==1)
+	      if (typeOfPart[evIdA]==0 || typeOfPart[evIdB]==0)
 		{
 		  save_sp();
 		  sp_reset_fct();
 		  //sp_start_time = Oparams.time;
-		  sp_equilib = 1;
 		  if (typeOfPart[evIdA] == 0)
 		    cur_part=evIdA;
 		  else
 		    cur_part=evIdB;
 		  do
 		    ip = (int) (Oparams.parnum*ranf());
-		  while (typeOfPart[ip]==0 || ip==evIdA||ip==evIdB);
+		  while (ip==evIdA||ip==evIdB);
 		 /* la particella scelta diventa una trappola e la trappola corrente
 		    diventa una particella normale (cioè di tipo 0)*/ 
 		  typeOfPart[ip] = 0;
 		  typeOfPart[cur_part] = 1;
-		  if (ip!=evIdA && ip!=evIdB)
-		    UpdateAtom(ip);
-		  vx[ip] = 0.0; vy[ip]=0.0; vz[ip]=0.0;
-		  sp_update_cal(ip);
+		  printf("sp_equilib=%d time=%.15G cur_part=%d ip=%d\n", sp_equilib, Oparams.time, cur_part, ip);
+		  sp_start_time=Oparams.time;
+		  sp_equilib = 1;
+		  //if (ip!=evIdA && ip!=evIdB)
+		    //UpdateAtom(ip);
+		 //vx[cur_part] = 0.0; vy[cur_part]=0.0; vz[cur_part]=0.0;
+		  typesArr[1].brownian = 1;
+#if 0
+		  for (i=0; i < Oparams.parnum; i++)
+		    {
+		      mass = typesArr[typeOfPart[i]].m;
+		      rTemp = sqrt(Oparams.T / mass);  
+		      vx[i] = rTemp * gauss(); 
+		      vy[i] = rTemp * gauss();
+		      vz[i] = rTemp * gauss();
+		    }
+		  sp_update_cal(cur_part);
 		  rebuilt_cal=1;
+#endif		  
 		}
 	    }
 	}
@@ -10316,24 +10332,26 @@ void ProcessCollision(void)
 	      sp_tot_collisions++;
 	    }
 	}
-       if (Oparams.ntypes==1)
+      if (Oparams.ntypes==1)
 	{
 	  if (sp_tot_collisions == Oparams.parnum)
 	    {
 	      save_sp();
 	      sp_reset_fct();
-	      //sp_start_time = Oparams.time;
+	      sp_start_time = Oparams.time;
 	      sp_equilib = 1;
 	    }
 	}
     }
   else 
     {
-      if (fabs(Oparams.time - sp_start_time) >= OprogStatus.spdeltat)
+      double rTemp, mass;
+      if ((Oparams.ntypes==1 || (Oparams.ntypes==2 && typeNP[1]==1)) && fabs(Oparams.time - sp_start_time) >= OprogStatus.spdeltat)
 	{
+	  int i;
   	  sp_equilib = 0;
 	  sp_start_time = Oparams.time;
-	}
+  	}
     }
 
 #endif
@@ -11196,6 +11214,26 @@ void move(void)
 #endif
 	      OprogStatus.lastcolltime[i] = Oparams.time;
 	    }
+#ifdef MD_SURV_PROB
+	  if (sp_equilib && Oparams.ntypes==2 && typeNP[0]==1 && fabs(Oparams.time - sp_start_time) >= OprogStatus.spdeltat)
+	    {
+	      sp_equilib=0;
+	      sp_start_time = Oparams.time;
+	      /* TRAPPING */
+	      typesArr[1].brownian = 0;
+#if 1
+	      for (i=0; i < Oparams.parnum; i++)
+		{
+		  if (typeOfPart[i]==1)
+		    {
+		      vx[i] = vy[i] = vz[i] = 0;
+		      //typesArr[1].m = 1E200;
+		    }
+		}
+#endif
+	    }
+
+#endif
 	  if (OprogStatus.brownian)
 	    {
 #ifdef MD_HSVISCO

@@ -4858,8 +4858,9 @@ void usrInitAft(void)
   sp_firstcolltime = malloc(sizeof(double)*Oparams.parnum);
   sp_has_collided = malloc(sizeof(int)*Oparams.parnum);
   sp_reset_fct();
-  if (Oparams.ntypes==2)
+  if (Oparams.ntypes==2 && typeNP[0]==1)
     {
+      /* if TRAPPING problem */
       for (i=0; i < Oparams.parnum; i++)
 	if (typeOfPart[i]==1)
 	  {
