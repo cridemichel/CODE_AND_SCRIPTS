@@ -115,7 +115,7 @@ char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
     *clsdimsort, *clssizedst, *percola;
 double *clssizedstAVG;
-int media_log=0;
+int media_log=0, mc_sim=0;
 double calc_norm(double *vec)
 {
   int k1;
@@ -988,7 +988,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [--ordpar/-op] [--medialog/-ml] [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--average/-av] [--maxbonds] <listafile>\n");
+  printf("Usage: clusters [-mc] [--ordpar/-op] [--medialog/-ml] [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--average/-av] [--maxbonds] <listafile>\n");
   exit(0);
 }
 
@@ -1019,6 +1019,10 @@ void parse_params(int argc, char** argv)
       else if (!strcmp(argv[cc],"--medialog") || !strcmp(argv[cc],"-ml" ))
 	{
 	   media_log = 1;
+	}
+      else if (!strcmp(argv[cc],"--montecarlo") || !strcmp(argv[cc],"-mc" ))
+	{
+	   mc_sim = 1;
 	}
       else if (!strcmp(argv[cc],"--ordpar") || !strcmp(argv[cc],"-op" ))
 	{
@@ -1388,9 +1392,21 @@ int main(int argc, char **argv)
 	  if ((particles_type==3 && nat==3) || (nat==2 && saveBonds==-1) ||
 	      (nat==3 && saveBonds==1))
 	    {
-	      for (i=0; i < 2*NP; i++)
+	      int l2s;
+	      double dummy1, dummy2;
+	      if (mc_sim)
+		l2s=NP;
+	      else
+		l2s=2*NP;
+	      for (i=0; i < l2s; i++)
+               {
 		fscanf(f, "%[^\n]\n", line);
-	      fscanf(f, "%lf\n", &L);
+                //printf("(mc_sim=%d) line=%s\n", mc_sim, line);
+               }
+              if (mc_sim)	
+                fscanf(f, "%lf %lf %lf\n", &L, &dummy1, &dummy2);
+              else
+                fscanf(f, "%lf\n", &L);
 	      printf("====> L=%f\n", L);
 	      break;
 	    }
