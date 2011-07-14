@@ -441,10 +441,14 @@ struct progStatus
   double phitol;
   double minDist;
   double axestol;
-#ifdef MD_GRAVITY
+
+#if defined(MD_GRAVITY)
+#if 0
   double taptau;
   int tapampl;
   double checkquenchTime;
+#endif
+  double extraLz;
 #endif
   double nextcheckTime;
   double nextSumTime;
@@ -520,6 +524,10 @@ struct params
   double DtR;
 #endif
   double Dt;
+#ifdef MD_GRAVITY
+  double ggrav;
+#endif
+ 
   /* ======================================================================= */
  
   /* ==================== >>> PUT HERE YOUR PARAMS <<< ===================== */
@@ -541,6 +549,7 @@ struct params
 #else
   double rcut;
 #endif
+
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
@@ -681,7 +690,8 @@ struct pascii opro_ascii[] =
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
   {"rNebrShell",   &OS(rNebrShell),                 1,   1, "%.6G"},
   {"tolT",         &OS(tolT),                       1,   1, "%.8G"},
-#ifdef MD_GRAVITY
+#if defined(MD_GRAVITY)
+#if 0
   {"tc",           &OS(tc),                          1,              1, "%.15G"},
   {"quenchtol",    &OS(quenchtol),                  1,   1, "%.10G"},
   {"rhobh",        &OS(rhobh),                  1,   1, "%.10G"},
@@ -692,8 +702,9 @@ struct pascii opro_ascii[] =
   {"expandFact",   &OS(expandFact),            1,   1, "%.15G"},
   {"numquench",    &OS(numquench),             1,   1, "%d"},
   {"maxquench",    &OS(maxquench),             1,   1, "%d"},
-  {"extraLz",      &OS(extraLz),                    1,   1, "%.15G"},
   {"checkquechTime",&OS(checkquenchTime),           1,  1,    "%.15G"},
+#endif  
+  {"extraLz",      &OS(extraLz),                    1,   1, "%.15G"},
 #endif
   {"scalevel",     &OS(scalevel),              1,   1, "%d"},
   {"equilibrated", &OS(equilibrated),          1,   1, "%d"},
@@ -798,6 +809,9 @@ struct pascii opar_ascii[]=
   {"rcut",              OP(rcut),                        3,   1, "%.10G"},
 #else
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
+#endif
+#ifdef MD_GRAVITY
+  {"ggrav",             &OP(ggrav),                       1,   1,   "%f"},
 #endif
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
 #ifdef MD_DOUBLE_DT
@@ -1008,6 +1022,11 @@ struct singlePar OsinglePar[] = {
   {"avngS",      &OprogStatus.avngS,          INT},
   {"avnggr",     &OprogStatus.avnggr,         INT},
   {"avngMB",     &OprogStatus.avngMB,         INT},
+#ifdef MD_GRAVITY
+  {"ggrav",      &Oparams.ggrav,            CT},
+  {"Lz",         &Lz,                       CT},
+  {"extraLz",    &OprogStatus.extraLz,      CT},
+#endif
   /* ======================================================================= */
  
   /* ==================== >>> PUT HERE YOUR PARAMS <<< ===================== */
