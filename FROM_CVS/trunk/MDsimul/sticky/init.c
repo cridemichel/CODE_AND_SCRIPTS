@@ -2654,6 +2654,9 @@ void usrInitAft(void)
 #endif
   invL = 1.0/L;
   L2 = 0.5*L;
+#ifdef MD_GRAVITY
+  Lz2 = Lz*0.5;
+#endif
   poolSize = OprogStatus.eventMult*Oparams.parnum;
   m = Oparams.m;
   Mtot = Oparams.m[0]*parnumA+Oparams.m[1]*parnumB;
@@ -2677,7 +2680,11 @@ void usrInitAft(void)
 	Oparams.rcut[nl] = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
       cellsx[nl] = L / Oparams.rcut[nl];
       cellsy[nl] = L / Oparams.rcut[nl];
+#ifdef MD_GRAVITY
+      cellsz[nl] = (Lz+OprogStatus.extraLz) / Oparams.rcut[nl];
+#else
       cellsz[nl] = L / Oparams.rcut[nl];
+#endif
       printf("[%d] L=%.15G Oparams.rcut: %f %f %f cellsx:%d cellsy: %d cellsz:%d\n", nl, L,
 	     Oparams.rcut[0], Oparams.rcut[1], Oparams.rcut[2],
 	     cellsx[nl], cellsy[nl], cellsz[nl]);
@@ -2691,6 +2698,12 @@ void usrInitAft(void)
   printf("Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcut,
 	 cellsx, cellsy, cellsz);
 #endif
+#if defined(MD_GRAVITY)
+  g2 = 0.5*Oparams.ggrav;
+  mgA = Oparams.m[0]*Oparams.ggrav; 
+  mgB = Oparams.m[1]*Oparams.ggrav;
+#endif
+
   lastcol= malloc(sizeof(double)*Oparams.parnum);
   atomTime = malloc(sizeof(double)*Oparams.parnum);
   lastbump = malloc(sizeof(struct LastBumpS)*Oparams.parnum);

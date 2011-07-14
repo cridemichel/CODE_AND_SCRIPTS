@@ -149,6 +149,13 @@ double calcpotene(void)
 #endif
    }
 #endif
+#ifdef MD_GRAVITY
+ for (na = 0; na < Oparams.parnum; na++)
+   {
+     /* add gravitational potential energy */
+     Epot += 2.0*Oparams.m[(na < Oparams.parnumA)?0:1]*Oparams.ggrav*rz[na];
+   }
+#endif
  return 0.5*Epot;
 }
 void calcV(void)
@@ -166,7 +173,7 @@ void calcV(void)
    fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V);
 #else
 #ifdef MD_AB41
- fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum));
+   fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum));
 #else
  if (Oparams.parnumA < Oparams.parnum)
    fprintf(mf, "%15G %.15G\n", Oparams.time + tref, V/((double)Oparams.parnum-Oparams.parnumA));
