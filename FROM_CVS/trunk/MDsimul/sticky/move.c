@@ -1650,8 +1650,10 @@ void core_bump(int i, int j, double *W, double sigSq)
   if (fabs (ryij) > L2)
     ryij = ryij - SignR(L, ryij);
   rzij = rz[i] - rz[j];
+#ifndef MD_GRAVITY
   if (fabs (rzij) > L2)
     rzij = rzij - SignR(L, rzij);
+#endif
   factor = ( rxij * ( vx[i] - vx[j] ) +
 	     ryij * ( vy[i] - vy[j] ) +
 	     rzij * ( vz[i] - vz[j] ) ) / sigSq;
@@ -1659,6 +1661,10 @@ void core_bump(int i, int j, double *W, double sigSq)
   printf("prefcat=%.15G rxij * ( vx[i] - vx[j] ):%.15G %.15G %.15G\n", factor,rxij * ( vx[i] - vx[j] ) ,
        	    ryij * ( vy[i] - vy[j] ),  rzij * ( vz[i] - vz[j] ) );
 #endif
+  //if (!((Oparams.time - lastcol[i] < 1E-5)||
+//	(Oparams.time - lastcol[j] < 1E-5)))
+  //  factor *= (1+0.9)*0.5;
+
   factor *= 2.0 / denom;
 #if 0
  if (factor > 0.00001)
@@ -2513,14 +2519,6 @@ void UpdateAtom(int i)
   double Omega[3][3], OmegaSq[3][3], Rtmp[3][3], M[3][3];
   int k1, k2, k3;
   ti = Oparams.time - atomTime[i];
-#if 0 && defined(MD_GRAVITY)
-  if (i==13)
-    {
-      printf("time=%.15G inCells[%d]=%d %d %d\n", Oparams.time, 13, inCell[0][0][13],inCell[0][1][13],inCell[0][2][13]);
-      printf("BAHBAH real cells: %d %d %d\n", (int)((rx[i] + L2) * cellsx[0] / L),
-	     (int)((ry[i] + L2) * cellsy[0] / L), (int)((rz[i] + Lz2)  * cellsz[0] / (Lz+OprogStatus.extraLz)));
-    }
-#endif
   rx[i] += vx[i]*ti;
   ry[i] += vy[i]*ti;
 #ifdef MD_GRAVITY
@@ -2530,6 +2528,17 @@ void UpdateAtom(int i)
   rz[i] += vz[i]*ti;
 #endif
   /* ...and now orientations */
+#if 0 && defined(MD_GRAVITY)
+  if (i==24)
+    {
+      printf("[UPDATE ATOM] time=%.15G inCells[%d]=%d %d %d\n", Oparams.time, i, inCell[0][0][i],inCell[0][1][i],inCell[0][2][i]);
+      printf("relpos=%.15G vz=%.15G\n", rz[i]+Lz2-0.5, vz[i]);
+      printf("BAHBAH real cells: %d %d %d\n", (int)((rx[i] + L2) * cellsx[0] / L),
+	     (int)((ry[i] + L2) * cellsy[0] / L), (int)((rz[i] + Lz2)  * cellsz[0] / (Lz+OprogStatus.extraLz)));
+      printf("[END UPD ATOM]\n");
+    }
+#endif
+ 
 #ifndef MD_SPOT_OFF
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
   w = sqrt(wSq);
@@ -4850,14 +4859,16 @@ void PredictCellCross(int na, int nc)
   /* NOTA: Il muro inferiore è posto a Lz / 2 cioè sul fondo del box,
    * in questo modo la base di ogni sfera poggia esattamente 
    * sul fondo della scatola */
-  if (inCell[nc][2][na] == 0)
+  if (nc==0 && inCell[nc][2][na] == 0)
     {
       hh1 =  vz[na] * vz[na] + 2.0 * Oparams.ggrav * (rz[na] + Lz2);
       if (OprogStatus.targetPhi > 0.0)
-	sigma = 2.0*axa[na];
+	{
+	  sigma = 2.0*axa[na];
+	}
       else
 	{
-	  if (na < parnumA)
+    	  if (na < parnumA)
 	    sigma = Oparams.sigma[0][0];
 	  else if (na >= parnumA)
 	    sigma = Oparams.sigma[1][1];
@@ -4880,11 +4891,14 @@ void PredictCellCross(int na, int nc)
       h2 = hh1 - 2.0 * Oparams.ggrav * Lzx  / cellsz[nl];
       if (h2 > 0.0) 
 	{
-	  tm[2] =  (vz[na] - sqrt (h2)) / Oparams.ggrav;
+       	  tm[2] =  (vz[na] - sqrt (h2)) / Oparams.ggrav;
 	  signDir[2] = 0;/* signDir = 0 vuol dire che la direzione è
 			    positiva (faccia superiore in questo caso) */
 	  if (nc==1 && inCell[nc][2][na]==cellsz[nl]-1)
-	    ignorecross[2] = 1;
+	    {
+	      tm[2] = timbig;
+	      ignorecross[2] = 1;
+	    }
 	  else
 	    ignorecross[2] = 0;
 	} 
@@ -4893,7 +4907,10 @@ void PredictCellCross(int na, int nc)
 	  tm[2] =  (vz[na] + sqrt (h1)) / Oparams.ggrav;
 	  signDir[2] = 1;/* direzione negativa (faccia inferiore in questo caso) */
 	  if (nc==1 && inCell[nc][2][na]==0)
-	    ignorecross[2] = 1;
+	    {
+	      tm[2] = timbig;
+	      ignorecross[2] = 1;
+	    }
 	  else
 	    ignorecross[2] = 0;
 
@@ -4904,7 +4921,10 @@ void PredictCellCross(int na, int nc)
       tm[2] =  (vz[na] + sqrt (h1)) / Oparams.ggrav;
       signDir[2] = 1;
       if (nc==1 && inCell[nc][2][na]==0)
-	ignorecross[2] = 1;
+	{
+	  ignorecross[2] = 1;
+	  tm[2] = timbig;
+	}
       else
 	ignorecross[2] = 0;
     }
@@ -5010,7 +5030,7 @@ void PredictCellCross(int na, int nc)
 #if 1
   if (tm[k]<0.0)
     {
-      printf("[NEGATIVE TIME] tm[%d]: %.15G\n", k, tm[k]);
+      printf(">>>[PRED. CELL CROSS NEG. TIME] tm[%d]: %.15G time=%.15G\n", k, tm[k], Oparams.time);
       tm[k] = 0.0;
       printf("Cells(%d,%d,%d)\n", inCell[nc][0][na], inCell[nc][1][na], 
 	     inCell[nc][2][na]);
@@ -5018,8 +5038,9 @@ void PredictCellCross(int na, int nc)
 #ifdef MD_GRAVITY
       printf("na=%d real cells: %d %d %d\n", na, (int)((rx[na] + L2) * cellsx[nl] / L),
 	     (int)((ry[na] + L2) * cellsy[nl] / L), (int)((rz[na] + Lz2)  * cellsz[nl] / (Lz+OprogStatus.extraLz)));
-      printf("vz[na]=%.15G pos=%f %f %f h1=%.15G sqrt(h1)=%.15G relpos=%.15G\n", vz[na], rx[na], ry[na], rz[na], h1, sqrt(h1), rz[na]+0.5+Lz2);
+      printf("vz[na]=%.15G pos=%f %f %f h1=%.15G sqrt(h1)=%.15G relpos=%.15G h2=%.15G Lzx=%.15G\n", vz[na], rx[na], ry[na], rz[na], h1, sqrt(h1), rz[na]-0.5+Lz2, h2, Lzx);
 
+      printf("<<< ===== \n");
 #else 
       printf("real cells: %d %d %d\n", (int)((rx[na] + L2) * cellsx[nl] / L),
 	     (int)((ry[na] + L2) * cellsy[nl] / L), (int)((rz[na] + L2)  * cellsz[nl] / L));
@@ -5050,9 +5071,22 @@ void PredictCellCross(int na, int nc)
       evCode = 4;/* sarebbe 2*k con k=2 (z) e per me vuol dire urto con parete in basso
 		    che è anche l'unica nel presente caso */
       MD_DEBUG2(printf("wall!!! (evIdA: %d)\n", na));
+#if 0
+      if (na==24)
+	{
+	  printf("[PRED COLL WALL ]coll wall na=%d time=%.15G\n", na, Oparams.time+tm[k]);
+	  printf("<<< ==== \n");
+	}
+#endif
     }
 #endif
-
+#if 0
+  if (na==24)
+    {
+      printf("[PRED CELL CROSS] coll wall na=%d time=%.15G\n", na, Oparams.time+tm[k]);
+      printf("<<< ==== \n");
+    }
+#endif
   /* urto con le pareti, il che vuol dire:
    * se lungo z e rz = -L/2 => urto con parete */ 
   MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
@@ -5060,6 +5094,10 @@ void PredictCellCross(int na, int nc)
 
   if (!ignorecross[k])
     {
+#if 0
+      if (na==24 && nc==1 && inCell[nc][2][na]==0 && signDir[2]==1 && k==2)
+	printf("????????ma che cazzo succede? evCode=%d k=%d\n", evCode, k);
+#endif	
       ScheduleEventBarr (na, ATOM_LIMIT + evCode, nc, 0, MD_EVENT_NONE, Oparams.time + tm[k]);
     }
   //printf("===>crossevtodel[%d]:%d\n", na, crossevtodel[na]);
@@ -5438,32 +5476,63 @@ void PredictColl (int na, int nb, int nl)
 #ifdef MD_GRAVITY
 void ProcessCollWall(void)
 {
+  double sigma;
+  int iA, nl_ignore, k, nc, nl;
   /* Dissipation */
   MD_DEBUG2(printf("Collision with wall evIdA: %d vz: %.15f\n", evIdA, vz[evIdA]));
-#if 0
-  printf("timeNow-lastcol[%d]:%.15f\n", evIdA, OprogStatus.time - lastcol[evIdA]);
-  printf("walldiss:%.15f vz:%.10f\n", Oparams.wallDiss, vz[evIdA]);
-  printf("timeNow:%.10f lastcol:%.10f\n", OprogStatus.time, lastcol[evIdA]);
-#endif
-#if 0
-  if (OprogStatus.time - lastcol[evIdA] < OprogStatus.tc)
+  UpdateAtom(evIdA);
+  for (k = 0;  k < NDIM; k++)
     {
-      vz[evIdA] = -vz[evIdA];
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
     }
-  else
-    {
-      vz[evIdA] = -Oparams.wallDiss*vz[evIdA];
-    }
-#endif	 
+
   vz[evIdA] = -vz[evIdA];
   lastcol[evIdA] = Oparams.time;
+  iA = (evIdA<Oparams.parnumA)?0:1;
+  nl_ignore = (evIdA<Oparams.parnumA)?1:0;
+  for (nc = 0; nc < 2; nc++)
+    {
+      PredictCellCross(evIdA, nc);
+    }
+  for (nl = 0; nl < 4; nl++)
+    {
+      if (nl==nl_ignore || nl==iA+2)
+	continue;
+      PredictColl(evIdA, -1, nl);
+    }
 }
 
 #endif
 
 #else
+#ifdef MD_GRAVITY
+void PredictEvent (int na, int nb);
+void ProcessCollWall(void)
+{
+  double sigma;
+  int k;
+  /* Dissipation */
+  MD_DEBUG2(printf("Collision with wall evIdA: %d vz: %.15f\n", evIdA, vz[evIdA]));
+  UpdateAtom(evIdA);
+  for (k = 0;  k < NDIM; k++)
+    {
+      cellRange[2*k]   = - 1;
+      cellRange[2*k+1] =   1;
+    }
+  vz[evIdA] = -vz[evIdA];
+  lastcol[evIdA] = Oparams.time;
+  PredictEvent(evIdA, -1);
+  PredictEvent(evIdB, evIdA);
+}
+
+#endif
+
 void PredictEvent (int na, int nb) 
 {
+#ifdef MD_GRAVITY
+  double Lzx, h1, h2, sig, hh1;
+#endif
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
    * nb = -2,-1, 0 ... (Oparams.parnum - 1)
    *      -2 = controlla solo cell crossing e urti con pareti 
@@ -5484,6 +5553,52 @@ void PredictEvent (int na, int nb)
   MD_DEBUG(calc_energy("PredEv"));
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
+#ifdef MD_GRAVITY
+  Lzx = OprogStatus.extraLz + Lz;
+  if (na < parnumA)
+    sig = Oparams.sigma[0][0];
+  else
+    sig = Oparams.sigma[1][1];
+  /* NOTA: Il muro inferiore è posto a Lz / 2 cioè sul fondo del box,
+   * in questo modo la base di ogni sfera poggia esattamente 
+   * sul fondo della scatola */
+  if (inCell[2][na] == 0)
+    {
+      hh1 =  vz[na] * vz[na] + 2.0 * Oparams.ggrav *
+	(rz[na] + Lz2);
+      h1 = hh1 -  Oparams.ggrav * sig;
+    }
+  else
+    h1 = hh1 = vz[na] * vz[na] + 2.0 * Oparams.ggrav *
+      (rz[na] + Lz2 - inCell[2][na] * (Lzx) / cellsz);
+  if (vz[na] > 0.0) 
+    {
+      /* h1 è il Discriminante dell'intersezione con la faccia 
+       * inferiore della cella lungo z, h2 di quella superiore,
+       * per cui se vz > 0 e h2 > 0 allora si la particella attraverserà
+       * la faccia superiore poiché h2 < h1 => t_h2 < t_h1
+       * (si noti che la soluzione con tempo positivo se vz > 0 è quella
+       * con il + nella formula per la risoluz. di un'eq. di secondo grado */
+      h2 = hh1 - 2.0 * Oparams.ggrav * Lzx  / cellsz;
+      if (h2 > 0.0) 
+	{
+	  tm[2] =  (vz[na] - sqrt (h2)) / Oparams.ggrav;
+	  signDir[2] = 0;/* signDir = 0 vuol dire che la direzione è
+	  		    positiva (faccia superiore in questo caso) */
+	} 
+      else 
+	{
+	  tm[2] =  (vz[na] + sqrt (h1)) / Oparams.ggrav;
+	  signDir[2] = 1;/* direzione negativa (faccia inferiore in questo caso) */
+	}
+    } 
+  else 
+    {
+      tm[2] =  (vz[na] + sqrt (h1)) / Oparams.ggrav;
+      signDir[2] = 1;
+    }
+
+#else
   if (vz[na] != 0.0) 
     {
       if (vz[na] > 0.0) 
@@ -5496,7 +5611,7 @@ void PredictEvent (int na, int nb)
   else 
     tm[2] = timbig;
   /* end forcefield[k] != 0*/
-
+#endif
   if (vx[na] != 0.0) 
     {
       if (vx[na] > 0.0) 
@@ -5560,8 +5675,23 @@ void PredictEvent (int na, int nb)
   MD_DEBUG15(printf("schedule event [WallCrossing](%d,%d) tm[%d]: %.8G\n", 
 		    na, ATOM_LIMIT+evCode, k, tm[k]));
 
+#ifdef MD_GRAVITY
+  if (k == 2 && inCell[2][na] == 0 && signDir[2] == 1) 
+    {
+      evCode = 4;/* sarebbe 2*k con k=2 (z) e per me vuol dire urto con parete in basso
+  		    che è anche l'unica nel presente caso */
+      MD_DEBUG2(printf("wall!!! (evIdA: %d)\n", na));
+    }
+#endif
+
   ScheduleEvent (na, ATOM_LIMIT + evCode, Oparams.time + tm[k]); 
   for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+#ifdef MD_GRAVITY
+      /* k = 2 : lungo z con la gravita' non ci sono condizioni periodiche */
+  if (inCell[2][na] + cellRangeT[2 * 2] < 0) cellRangeT[2 * 2] = 0;
+  if (inCell[2][na] + cellRangeT[2 * 2 + 1] == cellsz) cellRangeT[2 * 2 + 1] = 0;
+#endif
+
 #if 0
   /* no collisions at all! */
   return;
@@ -5572,6 +5702,7 @@ void PredictEvent (int na, int nb)
       shift[2] = 0.;
       /* apply periodico boundary condition along z if gravitational
        * fiels is not present */
+#ifndef MD_GRAVITY
       if (jZ == -1) 
 	{
 	  jZ = cellsz - 1;    
@@ -5582,6 +5713,7 @@ void PredictEvent (int na, int nb)
 	  jZ = 0;    
 	  shift[2] = L;
 	}
+#endif
       for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
 	{
 	  jY = inCell[1][na] + iY;    
@@ -5622,8 +5754,14 @@ void PredictEvent (int na, int nb)
 		      dv[0] = vx[na] - vx[n];
 		      dr[1] = ry[na] - (ry[n] + vy[n] * tInt) - shift[1];
 		      dv[1] = vy[na] - vy[n];
+#ifdef MD_GRAVITY
+		      dr[2] = rz[na] - 
+			(rz[n] + (vz[n] - 0.5 * Oparams.ggrav * tInt) * tInt) - shift[2];
+		      dv[2] = vz[na] - (vz[n] - Oparams.ggrav * tInt);
+#else
 		      dr[2] = rz[na] - (rz[n] + vz[n] * tInt) - shift[2];
 		      dv[2] = vz[na] - vz[n];
+#endif
 		      b = dr[0] * dv[0] + dr[1] * dv[1] + dr[2] * dv[2];
 #ifndef MD_SPOT_OFF
 	    	      distSq = Sqr (dr[0]) + Sqr (dr[1]) + Sqr(dr[2]);
@@ -6230,6 +6368,15 @@ void docellcross(int k, double velk, double *rkptr, int cellsk)
 	  if (inCell[k][evIdA] == cellsk) 
 	    {
 	      inCell[k][evIdA] = 0;
+#ifdef MD_GRAVITY
+    	      if (k==2)
+    		{
+    		  printf("Un particella ha superato la massima altezza consentita (%.15f)\n",
+    			 Lz2 + OprogStatus.extraLz);
+    		  printf("Aumentare il parametro extraLz e rilanciare la simulazione\n");
+    		  exit(-1);
+		}
+#endif
 	      *rkptr = -L2;
 	      OprogStatus.DR[evIdA][k]++;
 	    }
@@ -6288,19 +6435,14 @@ void ProcessCellCrossing(void)
 {
   int kk, n, iA, k;
   int nc, boxwall, nlcoll, nlcross, nc_bw, nlcross_bw, nlcoll_bw;
-#ifdef MD_GRAVITY
-  int j, nl, nl_ignore, ncL;
+#if 0
+  if (evIdA==24)
+    printf("[PROCESS CELL CROSSIN] time=%.15G\n", Oparams.time);
 #endif
   UpdateAtom(evIdA);
   kk = evIdB - 100 - ATOM_LIMIT; 
   /* trattandosi di due specie qui c'è un due */
   nc = evIdC;
-#if 0 && defined(MD_GRAVITY)
-  if (nc==1 && kk==2 && vz[evIdA]< 0 && inCell[nc][2][evIdA]==0)
-    {
-      printf("rz[%d]=%.15G >Boh exit...\n", evIdA, rz[evIdA]);
-    }
-#endif
   //printf("time=%.15G Proc CellCrossing nc=%d kk=%d evIdA=%d\n", Oparams.time, nc, kk, evIdA);
   iA = (evIdA < Oparams.parnumA)?0:1;
   if (iA == 0 && nc == 0)
@@ -6356,20 +6498,10 @@ void ProcessCellCrossing(void)
   printf("nc=%d n=%d cellList[%d][%d]:%d\n",nc, n, nlcross, n, cellList[nlcross][n]);
   printf("vel=(%f,%f,%f) inCell= %d %d %d\n", vx[evIdA], vy[evIdA], vz[evIdA], inCell[nc][0][evIdA],inCell[nc][1][evIdA], inCell[nc][2][evIdA]);
 #endif
-#ifdef MD_GRAVITY
-  if (kk >= 0)
-    {
-      while (cellList[nlcross][n] != evIdA) 
-	n = cellList[nlcross][n];
-      /* Eliminazione di evIdA dalla lista della cella n-esima */
-      cellList[nlcross][n] = cellList[nlcross][evIdA];
-    }
-#else
   while (cellList[nlcross][n] != evIdA) 
     n = cellList[nlcross][n];
   /* Eliminazione di evIdA dalla lista della cella n-esima */
   cellList[nlcross][n] = cellList[nlcross][evIdA];
-#endif  
   for (k = 0; k < NDIM; k++)
     { 
       cellRange[2*k]   = - 1;
@@ -6387,34 +6519,6 @@ void ProcessCellCrossing(void)
       /* Eliminazione di evIdA dalla lista della cella n-esima della lista nl2 */
       cellList[nlcross_bw][n] = cellList[nlcross_bw][evIdA];
     }
-#ifdef MD_GRAVITY
-  if (kk < 0)
-    {
-      j = (evIdB-ATOM_LIMIT) / 2;
-      cellRange[j] = 0;
-      ProcessCollWall();
-    }
-  else
-    {
-      switch (kk)
-	{
-    	case 0: 
-	  docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx[nlcross], nc);
-	  break;
-	case 1: 
-	  docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy[nlcross], nc);
-	  break;
-	case 2:
-#if 0
-	  if (inCell[nc][2][evIdA]==0)
-	    printf("evIdA=%d crossing incells=%d %d %d!\n", evIdA, inCell[nc][0][evIdA], inCell[nc][1][evIdA],
-		 inCell[nc][2][evIdA]);
-#endif
-	  docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nlcross], nc);
-	  break;
-	}
-    }
-#else
   switch (kk)
     {
     case 0: 
@@ -6427,43 +6531,8 @@ void ProcessCellCrossing(void)
       docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz[nlcross], nc);
       break;
     }
-#endif
-#ifdef MD_GRAVITY
- if (kk < 0)
-   {
-     //iA = (evIdA<Oparams.parnumA)?0:1;
-     nl_ignore = (evIdA<Oparams.parnumA)?1:0;
-     for (ncL = 0; ncL < 2; ncL++)
-       {
-	 PredictCellCross(evIdA, ncL);
-       }
-     for (nl = 0; nl < 4; nl++)
-       {
-	 if (nl==nl_ignore || nl==iA+2)
-	   continue;
-	 PredictColl(evIdA, -1, nl);
-       }
-   } 
- else
-   {
-     PredictCellCross(evIdA, nc);
-     PredictColl(evIdA, evIdB, nlcoll);
-   }
-#else
   PredictCellCross(evIdA, nc);
   PredictColl(evIdA, evIdB, nlcoll);
-#endif
-#ifdef MD_GRAVITY
-  if (kk < 0)
-    {
-      for (k = 0; k < NDIM; k++)
-	{ 
-	  cellRange[2*k]   = - 1;
-	  cellRange[2*k+1] =   1;
-	}
-      return;
-    }
-#endif
   n = (inCell[nc][2][evIdA] * cellsy[nlcross] + inCell[nc][1][evIdA])*cellsx[nlcross] + 
     inCell[nc][0][evIdA] + Oparams.parnum;
   /* Inserimento di evIdA nella nuova cella (head) */
@@ -6511,7 +6580,6 @@ void ProcessCellCrossing(void)
 void ProcessCellCrossing(void)
 {
   int k, n;
-
   UpdateAtom(evIdA);
   /* NOTA: cellList[i] con 0 < i < Oparams.parnum è la cella in cui si trova la particella
    * i-esima mentre cellList[j] con 
@@ -6530,36 +6598,7 @@ void ProcessCellCrossing(void)
       cellRange[2*k]   = - 1;
       cellRange[2*k+1] =   1;
     }
-#ifdef MD_GRAVITY
-  j = evIdB - ATOM_LIMIT;
-  if (j >= 100)
-    {
-      k = j - 100; 
-      switch (k)
-	{
-	case 0: 
-	  docellcross(0, vx[evIdA], &(rx[evIdA]), cellsx);
-	  break;
-	case 1: 
-	  docellcross(1, vy[evIdA], &(ry[evIdA]), cellsy);
-	  break;
-	case 2:
-	  docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz);
-	  break;
-	}
-    }
-  else
-    {
-      k = j / 2;
-      cellRange[j] = 0;
-      ProcessCollWall();
-    }
-#else
   k = evIdB - 100 - ATOM_LIMIT; 
-#if 0
-  if (inCell[0][evIdA]> cellsx ||inCell[1][evIdA]> cellsy||inCell[2][evIdA]> cellsz) 
-    printf("Cells(%d,%d,%d)\n", inCell[0][evIdA],inCell[1][evIdA],inCell[2][evIdA]);
-#endif
   switch (k)
     {
     case 0: 
@@ -6572,7 +6611,6 @@ void ProcessCellCrossing(void)
       docellcross(2, vz[evIdA], &(rz[evIdA]), cellsz);
       break;
     }
-#endif
   PredictEvent(evIdA, evIdB);
   n = (inCell[2][evIdA] * cellsy + inCell[1][evIdA])*cellsx + 
     inCell[0][evIdA] + Oparams.parnum;
@@ -7171,7 +7209,10 @@ void move(void)
 #ifdef MD_GRAVITY
       else if (evIdB >= ATOM_LIMIT + 100 || evIdB < ATOM_LIMIT + NDIM * 2)
 	{
-	  ProcessCellCrossing();
+	  if (evIdB < ATOM_LIMIT + NDIM * 2)
+	    ProcessCollWall();
+	  else
+	    ProcessCellCrossing();
 	  OprogStatus.crossCount++;
 	}
 #else
