@@ -698,6 +698,15 @@ void NextEvent (void)
 	printf("treeQindex[%d]=%d\n", treeRight[0], treeQIndex[treeRight[0]]);
     }
 #endif
+#if 0
+  if (evIdA==24||evIdB==24)
+    {
+  printf("[ NextEvent ] #%lld event(%d,%d) curtime:%.15G treeRight[0]=%d(idA=%d idB=%d)\n", (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time, treeRight[0], treeIdA[treeRight[0]], treeIdB[treeRight[0]]);
+      printf("idNow=%d idA=%d idB=%d time=%.15G\n",idNow, treeIdA[idNow], treeIdB[idNow], treeTime[idNow]);
+	printf("treeQindex[%d]=%d\n", treeRight[0], treeQIndex[treeRight[0]]);
+    }
+
+#endif
   MD_DEBUG2(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
 		   (long long int)Oparams.curStep, evIdA, evIdB, Oparams.time));
   MD_DEBUG(printf("[ NextEvent ] #%lld event(%d,%d) curtime:%f\n", 
@@ -732,7 +741,13 @@ void NextEvent (void)
 #if defined(MD_SILICA) && !defined(MD_USE_SINGLE_LL)
 	  if (crossevtodel[id-1]!=-1)
 	    {
-  	      DeleteEvent (id+Oparams.parnum);
+#ifdef MD_GRAVITY
+#if 0
+	      if (evIdA==24)
+		printf("part. N. %d time=%.15G idA=%d idB=%d deleting crossevtodel\n", id-1,Oparams.time, evIdA, evIdB);
+#endif
+#endif
+	      DeleteEvent (id+Oparams.parnum);
 	    }
 	  /* notare che la condizione crossevtodel[id-1]!=-1 è necessaria in quanto 
 	   * in quanto se una particella attraversa le pareti del box l'evento con nc==1
