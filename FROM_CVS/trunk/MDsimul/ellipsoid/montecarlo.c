@@ -661,6 +661,7 @@ double overlap_using_multibox(int i, int j, double shift[3])
     }
   return 1.0;
 }
+#undef MC_OF_BOXES
 double check_overlap(int i, int j, double shift[3], int *errchk)
 {
   int k, k1, k2;
@@ -710,9 +711,14 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
 #endif 
  for (k=0; k < 3; k++)
    {
+#ifdef MC_OF_BOXES
+     saxi[k] = typesArr[typeOfPart[i]].sax[k];
+     saxj[k] = typesArr[typeOfPart[j]].sax[k];
+#else
      saxi[k] = 1.01* typesArr[typeOfPart[i]].sax[k];
      saxj[k] = 1.01* typesArr[typeOfPart[j]].sax[k];
-   }  
+#endif
+}  
  rA[0] = rx[i];
  rA[1] = ry[i];
  rA[2] = rz[i];
@@ -726,6 +732,10 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
     {
       return 1.0;
     }
+#ifdef MC_OF_BOXES
+   else
+     return -1;
+#endif
 #if 0
 #if 1
   set_semiaxes_vb_mc(i, saxfactMC[0]*typesArr[typeOfPart[i]].sax[0],
@@ -3293,17 +3303,24 @@ int check_overlap_all(int i0, int i_ini, int i_fin)
     }
   return 0;
 }
-void calc_bonding_volume_mc(long long int maxtrials, int outits)
+#undef MC_VB_PLOT
+void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, double alpha)
 {
   FILE *f;	
   int k1, k2, ierr, i;
   long long int tt;
   double deldistcc=0.0, deltotdist=0.0, dist, fact, shift[3], Lb, totene=0.0, ox, oy, oz, Rl[3][3];
-
+#ifdef MC_VB_PLOT
+  FILE *vbf;
+#endif
   rx[0] = 0;
   ry[0] = 0;
   rz[0] = 0;
+#ifdef MC_VB_PLOT
+  vbf = fopen("bonding-volume.dat", "w+");
+#endif
   printf("calc vbonding MC\n");
+  
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       {
@@ -3341,7 +3358,23 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
       ry[1] = (ranf_vb()-0.5)*L;
       rz[1] = (ranf_vb()-0.5)*L;	
 #endif
-      orient(&ox, &oy, &oz);
+      if (type==5)
+	{
+	  orient_onsager(&ox,&oy,&oz,alpha);
+	  versor_to_R(ox, oy, oz, Rl);
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      for (k2=0; k2 < 3; k2++)
+		{
+		  R[0][k1][k2] = Rl[k1][k2]; 
+		}
+	    }
+	}
+
+      if (type==5)
+	orient_onsager(&ox,&oy,&oy,alpha);
+      else
+	orient(&ox, &oy, &oz);
       versor_to_R(ox, oy, oz, Rl);
       for (k1 = 0; k1 < 3; k1++)
 	{
@@ -3404,6 +3437,9 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
 		{
 		  if (ierr==0)
 		    {
+#ifdef MC_VB_PLOT
+		      fprintf(vbf, "%.15G %.15G %.15G\n", rx[1], ry[1], rz[1]);
+#endif
 		      totene += 1.0;
 		    }
 		} 
@@ -3433,6 +3469,10 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits)
 #endif
     }
   //fclose(f);
+#ifdef MC_VB_PLOT
+  fclose(vbf);
+#endif
+ 
 }
 extern double *distro;
 int check_self_overlap(int i0, int i)
@@ -3481,7 +3521,7 @@ void calc_cov_additive(void)
     }
   
   printf("ene iniziale=%f\n", calcpotene());
-  if (type==1)
+  if (type==1||type==5)
     fscanf(fi, " %lf ", &alpha);
   /* if it is a restart put info initial values here */
   covrestart = 0;
@@ -3496,8 +3536,9 @@ void calc_cov_additive(void)
      type = 2 -> persistence length
      type = 3 -> bonding volume
      type = 4 -> covolume if perfectly aligned (i.e. alpha -> infinity)
+     type = 5 -> bonding volume using onsager trial function
    */
-  if (type==1)
+  if (type==1||type==5)
     {
       const int n=1000;
       distro=malloc(sizeof(double)*n);
@@ -3516,9 +3557,9 @@ void calc_cov_additive(void)
   tt = ttini;
   totene = toteneini;
   size2 = Oparams.parnum-size1;
-  if (type==3)
+  if (type==3||type==5)
     {
-      calc_bonding_volume_mc(maxtrials, outits);
+      calc_bonding_volume_mc(maxtrials, outits, type, alpha);
       exit(-1);
     }
   if (type==2)
