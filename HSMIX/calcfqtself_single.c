@@ -348,11 +348,13 @@ int main(int argc, char **argv)
 	  sqReA[ip][ii] = 0.0;
 	  sqImA[ip][ii] = 0.0;
 	  cc[ip][ii] = 0.0;
+#if 0
 	  if (NPA < NP)
 	    {
 	      sqReB[ip][ii] = 0.0;
 	      sqImB[ip][ii] = 0.0;
 	    }
+#endif
 	  //ccB[qmod][ii] = 0.0;
 
 	}
@@ -369,12 +371,12 @@ int main(int argc, char **argv)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0);
       fine = 0;
+
+      printf("Doing file %d of %d\n", nr1, nfiles);
       for (JJ = 0; fine == 0; JJ++)
 	{
 	  for (nr2 = nr1 + JJ*NN; nr2-nr1-JJ*NN < NN; nr2++)
 	    {
-	      if (JJ==0 && nr2 == nr1)
-		printf("Doing block %d of %d\n", nr1, nfiles);
 	      /* N.B. considera NN punti in maniera logaritmica e poi calcola i punti in maniera lineare 
 	       * distanziati di NN punti. */
               np = (JJ == 0)?nr2-nr1:NN-1+JJ;	      
@@ -397,9 +399,7 @@ int main(int argc, char **argv)
 
 	      for(iq=0; iq < ntripl[qmod]; iq++)
 		{
-		  sumReA=sumReB=0.0;
-		  sumImA=sumImB=0.0;
-		  for (ip=0; ip < NP; ip++)
+		 for (ip=0; ip < NP; ip++)
 		    {
 		      rxdummy = scalFact*((r0[0][ip]-r1[0][ip])*mesh[qmod][iq][0]
 					  +(r0[1][ip]-r1[1][ip])*mesh[qmod][iq][1]
@@ -407,23 +407,15 @@ int main(int argc, char **argv)
 		      //printf("dummy:%.15G\n", rxdummy);
 		      costmp = cos(rxdummy);
 		      sintmp = sin(rxdummy);
-		      if (ip < NPA)
-			{
-			  sumReA += costmp;
-			  sumImA += sintmp;
-			}
-		      else
-			{
-			  sumReB += costmp;
-			  sumImB += sintmp;
-			}  
-		      sqReA[ip][np] += sumReA;
-		      sqImA[ip][np] += sumImA;
+		      sqReA[ip][np] += costmp;
+		      sqImA[ip][np] += sintmp;
+#if 0
 		      if (NPA < NP)
 			{
 			  sqReB[ip][np] += sumReB;
 			  sqImB[ip][np] += sumImB;
 			}
+#endif
 		      cc[ip][np] += 1.0;
 		    }
 		}
@@ -440,11 +432,13 @@ int main(int argc, char **argv)
 	  //printf("cc[%d][%d]:%.15G\n", qmod, ii, cc[qmod][ii]);
 	  sqReA[ip][ii] = sqReA[ip][ii]/cc[ip][ii];
 	  sqImA[ip][ii] = sqImA[ip][ii]/cc[ip][ii];
+#if 0
 	  if (NPA  < NP)
 	    {
 	      sqReB[ip][ii] = sqReB[ip][ii]/cc[ip][ii];
 	      sqImB[ip][ii] = sqImB[ip][ii]/cc[ip][ii];
 	    }
+#endif
 	 // printf("qmod=%d ii=%d sqre=%.15G sqIm=%.15G cc=%.15G\n",  qmod, ii, sqRe[qmod][ii], sqIm[qmod][ii],
 	//	 cc[qmod][ii]);
 	}
@@ -460,20 +454,9 @@ int main(int argc, char **argv)
       //printf("SqReA[%d][0]:%.15G SqReB[][0]: %.15G\n", qmod, sqReA[qmod][0], sqReB[qmod][0]);
       for (ii = 1; ii < points; ii++)
 	{
-	  if (NPA == NP)
-	    {
-	      if ((sqReA[ip][ii]!=0.0 || sqImA[ip][ii]!=0.0) && (ti[ii]> -1.0))
-		fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqReA[ip][ii]/sqReA[ip][0],
-			sqImA[ip][ii]);
-	    }
-	  else
-	    {
-	      if ((sqReA[ip][ii]!=0.0 || sqImA[ip][ii]!=0.0) && (ti[ii]> -1.0))
-		fprintf(f, "%15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], sqReA[ip][ii]/sqReA[ip][0],
-			sqReB[ip][ii]/sqReB[ip][0], 
-			(sqReA[ip][ii]+sqReB[ip][ii])/(sqReA[ip][0]+sqReB[ip][0]), 
-			sqImA[ip][ii]+sqImB[ip][ii]);
-	    }
+	  if ((sqReA[ip][ii]!=0.0 || sqImA[ip][ii]!=0.0) && (ti[ii]> -1.0))
+    	    fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqReA[ip][ii]/sqReA[ip][0],
+		    sqImA[ip][ii]);
 	}
       fclose(f);
     }
