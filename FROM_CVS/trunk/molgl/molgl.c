@@ -12,6 +12,7 @@
 #include <string.h>
 #include <math.h>
 #include "molgl.h"
+#include <zlib.h>
 #define SQ_CALC_NORM
 #define SQ_REND_SYM
 
