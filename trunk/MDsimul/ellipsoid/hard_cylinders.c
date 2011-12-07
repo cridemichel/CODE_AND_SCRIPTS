@@ -241,7 +241,9 @@ double calcDistNegHC(int i, int j, double shift[3])
   double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
   double DjUini, DjUi[3], normDjUi, AiDj[3], AiDjnj, AiDjnjvec, TjNew[3], TjNewCi[3], TjNewCini;
   double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3];
+  double normCiCj;	
   int kk;
+
   for (kk=0; kk < 3; kk++)
     {
       ni[kk] = R[i][0][kk];
@@ -257,6 +259,11 @@ double calcDistNegHC(int i, int j, double shift[3])
   D = 2.0*typesArr[typeOfPart[i]].sax[1];
   for (kk=0; kk < 3; kk++)
     {
+      CiCj[kk] = Ci[kk] - Cj[kk];
+    }
+
+  for (kk=0; kk < 3; kk++)
+    {
       /* center of masses of disks */
       Di[0][kk]=Ci[kk]+0.5*L*ni[kk];
       Di[1][kk]=Ci[kk]-0.5*L*ni[kk];
@@ -267,6 +274,19 @@ double calcDistNegHC(int i, int j, double shift[3])
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
   if (ni[0]==nj[0] && ni[1]==ni[1] && ni[2]==ni[2])
     {
+      /* special case of collinear cylinders */
+      normCiCj = calcnorm(CiCj);
+      for (kk=0; kk < 3; kk++)
+	VV[kk] = CiCj[kk]/normCiCj;
+
+      if (scalProd(VV,ni)==1.0)
+	{
+	  if (normCiCj <= L)
+	    return -1;
+	  else
+	    return 1;
+	}
+
       /* parallel disks */
       for (j1=0; j1 < 2; j1++)
 	for (j2=j1; j2 < 2; j2++)
@@ -279,46 +299,47 @@ double calcDistNegHC(int i, int j, double shift[3])
 	      }
 	    if (sp == 0 && calc_norm(VV) < D)
 	      return -1;
-	    else
-	      return 1;
 	  }
     }
-  vectProdVec(ni, nj, N);
-  DiN = scalProd(Di,N);
-  DjN = scalProd(ji,N);
-  Dini = scalProd(Di,ni);
-  Djnj = scalProd(Dj,nj);
-  vectProd(ni,N,niN);
-  vectProd(nj,N,njN);
-  normN=calcnorm(N);
-  for (kk=0; kk < 3; kk++)
-    { 
-      Pi[kk] = (DiN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
-      Pj[kk] = (DjN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
-    }
-  for (kk=0; kk < 3; kk++)
+  else 
     {
-      PiDi[kk] = Pi[kk] - Di[kk];
-      PjDj[kk] = Pj[kk] - Dj[kk];
-    }
-  normPiDi = calcnorm(PiDi);
-  normPjDj = calcnorm(PjDj);
-  if (normPiDi <= 0.5*D && normPjDj <= 0.5*D)
-    {
-      Q1 = sqrt(Sqr(D)/4.0-Sqr(normPiDi));
-      Q2 = sqrt(Sqr(D)/4.0-Sqr(normPjDj));
+      vectProdVec(ni, nj, N);
+      DiN = scalProd(Di,N);
+      DjN = scalProd(ji,N);
+      Dini = scalProd(Di,ni);
+      Djnj = scalProd(Dj,nj);
+      vectProd(ni,N,niN);
+      vectProd(nj,N,njN);
+      normN=calcnorm(N);
+      for (kk=0; kk < 3; kk++)
+	{ 
+	  Pi[kk] = (DiN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
+	  Pj[kk] = (DjN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
+	}
       for (kk=0; kk < 3; kk++)
 	{
-	  PiPj[kk] = Pi[kk] - Pj[kk];
+	  PiDi[kk] = Pi[kk] - Di[kk];
+	  PjDj[kk] = Pj[kk] - Dj[kk];
 	}
-      normPiPj = calcnorm(PiPj);
-      if (normPiPj <= Q1 + Q2)
-	return -1;
-      //else 
-	//return 1;
-    }
+      normPiDi = calcnorm(PiDi);
+      normPjDj = calcnorm(PjDj);
+      if (normPiDi <= 0.5*D && normPjDj <= 0.5*D)
+	{
+	  Q1 = sqrt(Sqr(D)/4.0-Sqr(normPiDi));
+	  Q2 = sqrt(Sqr(D)/4.0-Sqr(normPjDj));
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      PiPj[kk] = Pi[kk] - Pj[kk];
+	    }
+	  normPiPj = calcnorm(PiPj);
+	  if (normPiPj <= Q1 + Q2)
+	    return -1;
+	  //else 
+	  //return 1;
+	}
   //else 
     //return 1;
+    }
   /* case A.2 overlap of rim and disk */
   for (kk=0; kk < 3; kk++)
     DiCi[kk] = Di[kk] - Ci[kk];
@@ -390,18 +411,14 @@ double calcDistNegHC(int i, int j, double shift[3])
   if ( (calcnorm(Tjp_para) <= L*0.5 && calcnorm(Tjp_perp) >= D*0.5)||
       (calcnorm(Tjm_para) <= L*0.5 && calcnorm(Tjm_perp) >= D*0.5) )
     return -1;
-  /* case A.3 rim-rim overlap */
 
-  for (kk=0; kk < 3; kk++)
-    {
-      CiCj[kk] = Ci[kk] - Cj[kk];
-    }
+  /* case A.3 rim-rim overlap */
   CiCjni = scalProd(CiCj,ni);
   CiCjnj = scalProd(CiCj,nj);
   detA = Sqr(ninj)-1;
-  /* check this!!! */
-  lambdai = (-Cijni + Cijnj*njni)/detA;
-  lambdaj = ( Cijnj - Cijni*ninj)/detA;
+
+  lambdai = ( Cijni - Cijnj*ninj)/detA;
+  lambdaj = (-Cijnj + Cijni*ninj)/detA;
 
   for (kk=0; kk < 3; kk++)
     {
