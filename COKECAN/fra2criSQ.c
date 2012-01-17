@@ -267,6 +267,9 @@ int main(int argc, char **argv)
 #endif		
   if (argc==4)	
    nummol=atoi(argv[3]);
+#ifdef MKCNF
+  fprintf(f2,"ensembleMC:0\n@@@\n");
+#endif
   fprintf(f2,"parnum: %d\n", nummol);
   //fprintf(f2,"parnumA: %d\n", nummol);
   //fprintf(f2,"T:%.15G\n",temp);
