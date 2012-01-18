@@ -1952,6 +1952,11 @@ void usrInitBef(void)
     OprogStatus.targetAccept=0.5;
     OprogStatus.targetAcceptVol=0.5;
 #endif
+#ifdef MC_SUS
+    /* if OprogStatus.nmin=0 or nmax=0 it is a usual grand canonical sim */
+    OprogStatus.susnmin=OprogStatus.npav;
+    OprogStatus.susnmax=OprogStatus.npav+1;
+#endif
 #ifdef MD_SURV_PROB
     OprogStatus.spdeltat = 10.0;
 #endif
@@ -3588,6 +3593,9 @@ int dyn_alloc_oprog(void)
 #else
   OprogStatus.len = sizeof(double)*10*Oparams.parnum;
 #endif
+#ifdef MC_SUS
+  OprogStatus.len += sizeof(double)*(OprogStatus.susnmax-OprogStatus.susnmin+1);
+#endif
   //printf("DYNAMIC ALLOCATION of %d bytes\n", OprogStatus.len);
   OprogStatus.ptr = malloc(OprogStatus.len);
   last_ptr = OprogStatus.ptr;
@@ -3622,6 +3630,9 @@ int dyn_alloc_oprog(void)
   OprogStatus.vcmx0 = OprogStatus.DR[np-1] + 3;
   OprogStatus.vcmy0 = OprogStatus.vcmx0 + np;
   OprogStatus.vcmz0 = OprogStatus.vcmy0 + np;
+#endif
+#ifdef MC_SUS
+  OprogStatus.sushisto = OprogStatus.DR[np]+3;
 #endif
   OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
@@ -3674,7 +3685,10 @@ void set_dyn_ascii(void)
       if (!strcmp(opro_ascii[k].parName,"lastu3z"))
 	opro_ascii[k].ptr = OprogStatus.lastu3z;
 #endif
-
+#ifdef MC_SUS
+      if (!strcmp(opro_ascii[k].parName,"sushisto"))
+	opro_ascii[k].ptr = OprogStatus.sushisto;
+#endif
       k++;
     }
   while (strcmp(opro_ascii[k].parName,""));
@@ -4751,6 +4765,7 @@ void usrInitAft(void)
  listtmp = malloc(sizeof(int)*OprogStatus.nebrTabFac);
 #elif defined(MC_GRANDCAN)
  listtmp = malloc(sizeof(int)*OprogStatus.nebrTabFac);
+
 #endif
 
  numcols=0;
@@ -6181,6 +6196,10 @@ void usrInitAft(void)
      positions, so wwe must initialize them! */  
   if (newSim == 1)
     {
+#ifdef MC_SUS
+      for (j=0; j < OprogStatus.susnmax-OprogStatus.susnmin+1; j++)
+     	OprogStatus.sushisto[j] = 0;
+#endif
       /* truncate file to zero lenght */
 #ifdef MD_GRAVITY
       FILE *f;

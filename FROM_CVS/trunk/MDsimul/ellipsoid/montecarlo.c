@@ -1580,7 +1580,15 @@ void mcexc(int *ierr)
       if (ranf() < arg)
 	{
 	  //printf("removing #%d\n", o);
+#ifdef MC_SUS	  
+	  if (Oparams.parnum >= OprogStatus.nmin)
+	    {
+	      remove_par_GC(o);
+	    }
+	  sushisto[Oparams.parnum]++;
+#else
 	  remove_par_GC(o);
+#endif
 	}
     }
   else
@@ -1614,7 +1622,12 @@ void mcexc(int *ierr)
       enn=calcpotene_GC(np);
       //printf("enn=%.15G\n", enn);
       arg = OprogStatus.zetaMC*vol*exp(-(1.0/Oparams.T)*enn)/Oparams.parnum;
-      if (ranf() >= arg)
+
+      if (ranf() >= arg
+#ifdef MC_SUS
+	  || Oparams.parnum > OprogStatus.nmax
+#endif
+	  )
 	{
 	  //printf("Insertion rejected #%d\n", np);
 	  /* insertion rejected */
@@ -1635,6 +1648,9 @@ void mcexc(int *ierr)
 	  excrejMC++;
 	  return;
 	}
+#ifdef MC_SUS
+      sushisto[Oparams.parnum]++;
+#endif
     }
 }
 #endif
