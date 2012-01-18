@@ -287,6 +287,9 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #define NANA (NA*NA)
 #endif
 #define MAXPAR 100000      /* maximum number of simulated particles */
+#ifdef MC_SUS
+#define MAXSUSWINDOW 1000
+#endif
 #ifdef MD_PATCHY_HE
 #define MD_STSPOTS_A 5
 #define MD_STSPOTS_B 2
@@ -694,6 +697,9 @@ struct progStatus
   COORD_TYPE ryCMi[MAXPAR]; /* MAXPAR is the maximum number of particles */
   COORD_TYPE rzCMi[MAXPAR];
   COORD_TYPE DR[MAXPAR][3];
+#ifdef MC_SUS
+  double sushisto[MAXSUSWINDOW];
+#endif
 #endif
   COORD_TYPE W;
 
@@ -865,6 +871,10 @@ struct progStatus
   double zetaMC;
   int npav;
   int nexc;
+#ifdef MC_SUS
+  int susnmax;
+  int susnmin;
+#endif
 #endif
   int nvbbias;
   double pbias;
@@ -1093,12 +1103,19 @@ struct pascii opro_ascii[] =
   {"lastu3y",      NULL,                      -MAXPAR,        1, "%.15G"},
   {"lastu3z",      NULL,                      -MAXPAR,        1, "%.15G"},
 #endif
+#ifdef MC_SUS
+  {"sushisto",     NULL,                      -MAXSUSWINDOW,        1, "%.15G"},
+#endif
 #else
   {"rxCMi",        OS(rxCMi),                       -MAXPAR,        1, "%.15G"},
   {"ryCMi",        OS(ryCMi),                       -MAXPAR,        1, "%.15G"},
   {"rzCMi",        OS(rzCMi),                       -MAXPAR,        1, "%.15G"},
   {"DR",           OS(DR),                          -MAXPAR,        3, "%.15G"}, 
   {"lastcolltime", OS(lastcolltime),                -MAXPAR,        1, "%.15G"},
+#ifdef MC_SUS
+  {"sushisto",     OS(sushisto),                      -MAXSUSWINDOW,       1, "%.15G"},
+#endif
+
 #endif
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
@@ -1280,6 +1297,10 @@ struct pascii opro_ascii[] =
   {"zetaMC",     &OS(zetaMC),                            1,  1, "%.12G"},
   {"npav" ,     &OS(npav),                             1,  1, "%d"},
   {"nexc" ,     &OS(nexc),                             1,  1, "%d"},
+#ifdef MC_SUS
+  {"susnmin",     &OS(susnmin),                    1, 1, "%d"},
+  {"susnmax",     &OS(susnmax),                    1, 1, "%d"},
+#endif
 #endif
   {"nvbbias",   &OS(nvbbias),                           1, 1,  "%d"},
   {"vbond",     &OS(vbond),                            1,  1, "%.15G"},
@@ -1436,6 +1457,10 @@ struct singlePar OsinglePar[] = {
   {"zetaMC",   &OprogStatus.zetaMC,         CT},
   {"npav",  &OprogStatus.npav,        INT},
   {"nexc",&OprogStatus.nexc,        INT},
+#ifdef MC_SUS
+  {"susnmin", &OprogStatus.susnmin, INT},
+  {"susnmax", &OprogStatus.susnmax, INT},
+#endif
 #endif
   {"nvbbias",  &OprogStatus.nvbbias,          INT},
   {"pbias",    &OprogStatus.pbias,            CT},
