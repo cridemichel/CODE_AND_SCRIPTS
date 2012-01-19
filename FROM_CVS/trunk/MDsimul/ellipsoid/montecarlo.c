@@ -1572,7 +1572,12 @@ void mcexc(int *ierr)
   if (ranf() < 0.5)
     {
       if (Oparams.parnum==0)
-	return;
+	{
+#ifdef MC_SUS	  
+	  sushisto[Oparams.parnum]++;
+#endif
+	  return;
+	}
       o = Oparams.parnum*ranf();
       eno=calcpotene_GC(o);
       arg = Oparams.parnum*exp((1.0/Oparams.T)*eno)/(OprogStatus.zetaMC*vol);
@@ -1581,15 +1586,17 @@ void mcexc(int *ierr)
 	{
 	  //printf("removing #%d\n", o);
 #ifdef MC_SUS	  
-	  if (Oparams.parnum >= OprogStatus.nmin)
+	  if (Oparams.parnum > OprogStatus.nmin)
 	    {
 	      remove_par_GC(o);
 	    }
-	  sushisto[Oparams.parnum]++;
 #else
 	  remove_par_GC(o);
 #endif
 	}
+#ifdef MC_SUS
+      sushisto[Oparams.parnum]++;
+#endif
     }
   else
     {
@@ -1616,6 +1623,9 @@ void mcexc(int *ierr)
 	  if (OprogStatus.useNNL)
 	    remove_from_nnl_MC(np);
 	  excrejMC++;
+#ifdef MC_SUS	  
+	  sushisto[Oparams.parnum]++;
+#endif
 	  return;
 	}	
       find_bonds_GC(np);
@@ -1646,6 +1656,9 @@ void mcexc(int *ierr)
 	  if (OprogStatus.useNNL)
 	    remove_from_nnl_MC(np);
 	  excrejMC++;
+#ifdef MC_SUS	  
+	  sushisto[Oparams.parnum]++;
+#endif
 	  return;
 	}
 #ifdef MC_SUS
