@@ -1574,7 +1574,7 @@ void mcexc(int *ierr)
       if (Oparams.parnum==0)
 	{
 #ifdef MC_SUS	  
-	  if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+	  if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
 	    OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
 #endif
 	  return;
@@ -1587,16 +1587,17 @@ void mcexc(int *ierr)
 	{
 	  //printf("removing #%d\n", o);
 #ifdef MC_SUS	  
-	  if (Oparams.parnum > OprogStatus.susnmin)
+	  if ((OprogStatus.susnmin < 0 || OprogStatus.susnmax <= 0) || Oparams.parnum > OprogStatus.susnmin)
 	    {
 	      remove_par_GC(o);
 	    }
+
 #else
 	  remove_par_GC(o);
 #endif
 	}
 #ifdef MC_SUS
-      if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+      if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
 	OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
 #endif
       //printf("FINE MCEXC\n"); 
@@ -1629,7 +1630,7 @@ void mcexc(int *ierr)
 	    remove_from_nnl_MC(np);
 	  excrejMC++;
 #ifdef MC_SUS	  
-	  if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+	  if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
 	    OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
 #endif
 	  return;
@@ -1641,7 +1642,7 @@ void mcexc(int *ierr)
 
       if (ranf() >= arg
 #ifdef MC_SUS
-	  || Oparams.parnum > OprogStatus.susnmax
+	  || (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0 && Oparams.parnum > OprogStatus.susnmax)
 #endif
 	  )
 	{
@@ -1663,13 +1664,13 @@ void mcexc(int *ierr)
 	    remove_from_nnl_MC(np);
 	  excrejMC++;
 #ifdef MC_SUS	  
-	  if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+	  if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
 	    OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
 #endif
 	  return;
 	}
 #ifdef MC_SUS
-      if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+      if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
 	OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
 #endif
     }
