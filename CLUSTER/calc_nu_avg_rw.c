@@ -8,12 +8,20 @@ double PN[maxlenpn];
 int Nthr, N1, N2;
 double norm, weight;
 char fn[256], fake[256];
+#define npmax maxlen
+
+const int nlin=50;
+int l1[npmax], l2[npmax];
+double dlog[npmax], xlog[npmax];
+int media_log=0;
+
 void main(int argc, char** argv)
 {
   /* NOTA: calc_nu_avg_rw <listafiles> <file con PN rw> <threshold 1/2-1/2> */  
   FILE *f, *f2;
   int i, len, eml=0;
-  double val, val0;
+  double val, val0, xmed, am;
+  int kmax, kj, i3, kk;
   f = fopen(argv[2], "r");
   
   Nthr = atof(argv[3]); 
@@ -70,9 +78,52 @@ void main(int argc, char** argv)
       fclose(f2);
    }
 
-
   fclose(f);
-  for (i=0; i <= eml; i++)
-    if (count[i]!=0)
-       printf("%i %.15G\n", i, avgcls[i]);
+  if (media_log)
+    {
+      for (kk=1; kk <= 51; kk++)
+	l1[kk]=(int) nlin*pow(1.25,kk-1);
+
+      for(kk=1; kk <= 50; kk++)
+	{
+	  l2[kk]=l1[kk+1]-1;
+	  if (l2[kk] < npmax) 
+	    kmax=kk;
+	  //printf("l1=%d l2=%d kmax=%d\n", l1[kk], l2[kk], kmax);	
+	}
+      for(kk=1; kk <= kmax; kk++)
+	{
+	  dlog[kk]=0.0;
+	  xlog[kk]=0.0;
+	  for (kj=l1[kk]; kj <= l2[kk]; kj++)
+	    {
+	      if (avgcls[kj] !=0 && kj < npmax)
+		{   
+		  dlog[kk]=dlog[kk]+avgcls[kj];
+		}		  
+	      xlog[kk]=xlog[kk]+kj;
+	    }
+	}
+      for (i3=0; i3 < nlin; i3++)
+	{
+	  if (avgcls[i3] != 0) printf("%d %.15G\n", i3,(double)avgcls[i3]);
+	}
+      for (kk=1; kk <= kmax; kk++)
+	{
+	  if (dlog[kk]!=0) 
+	    {
+	      am=l2[kk]-l1[kk]+1; 
+	      xmed=xlog[kk]/am;
+	      dlog[kk]=dlog[kk]/am; 
+	      //printf("xmed=%f am=%f\n", xmed, am);
+	      printf("%.15G %.15G\n", xmed,((double)dlog[kk]));
+	    }
+	}
+    }
+  else
+    {
+      for (i=0; i <= eml; i++)
+	if (count[i]!=0)
+	  printf("%i %.15G\n", i, avgcls[i]);
+    }
 }
