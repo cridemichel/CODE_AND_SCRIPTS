@@ -5346,6 +5346,10 @@ void usrInitAft(void)
       fclose(f);
 #endif
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
+#ifdef MC_SUS
+      f = fopenMPI(absMisHD("histo.dat"), "w+");
+      fclose(f);
+#endif
       f = fopenMPI(absMisHD("radius_of_gyration.dat"), "w+");
       fclose(f);
       f = fopenMPI(absMisHD("energy.dat"), "w+");

@@ -316,6 +316,12 @@ void calcV(void)
 #endif
   fclose(mf);
 #endif
+#ifdef MC_SUS
+  mf=fopenMPI(absMisHD("histo.dat"),"w+");
+  for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
+  fprintf(mf,"%d %.15G\n", i+OprogStatus.susnmin, OprogStatus.sushisto[i]);
+  fclose(mf);
+#endif
   mf = fopenMPI(absMisHD("energy.dat"),"a");
 #if 0
   if (Oparams.parnumA < Oparams.parnum)
