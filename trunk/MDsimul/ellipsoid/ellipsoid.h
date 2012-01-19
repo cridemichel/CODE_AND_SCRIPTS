@@ -623,6 +623,9 @@ struct progStatus
   double *ryCMi; /* MAXPAR is the maximum number of particles */
   double *rzCMi;
   double **DR;
+#ifdef MC_SUS
+  double *sushisto;
+#endif
 #endif
 
 #ifndef MD_DYNAMIC_OPROG
