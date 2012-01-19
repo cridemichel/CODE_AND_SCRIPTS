@@ -1567,14 +1567,15 @@ void mcexc(int *ierr)
 #else
   vol = L*L*L;
 #endif
- 
+  //printf("INIZIO MCEXC\n"); 
   /* grand canonical ensemble */
   if (ranf() < 0.5)
     {
       if (Oparams.parnum==0)
 	{
 #ifdef MC_SUS	  
-	  sushisto[Oparams.parnum]++;
+	  if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+	    OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
 #endif
 	  return;
 	}
@@ -1586,7 +1587,7 @@ void mcexc(int *ierr)
 	{
 	  //printf("removing #%d\n", o);
 #ifdef MC_SUS	  
-	  if (Oparams.parnum > OprogStatus.nmin)
+	  if (Oparams.parnum > OprogStatus.susnmin)
 	    {
 	      remove_par_GC(o);
 	    }
@@ -1595,14 +1596,17 @@ void mcexc(int *ierr)
 #endif
 	}
 #ifdef MC_SUS
-      sushisto[Oparams.parnum]++;
+      if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+	OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
 #endif
+      //printf("FINE MCEXC\n"); 
     }
   else
     {
       /* nella seguente routine deve aggiungere la particella nelle LL e nelle NNL se usate */
       //printf("Inserting #%d\n", Oparams.parnum);
       np=insert_particle_GC();
+      //printf("FINE-2 MCEXC\n"); 
       if (overlapMC(np, ierr))
 	{
 	  /* reject insertion */
@@ -1619,12 +1623,14 @@ void mcexc(int *ierr)
 #else
 	  rebuildLinkedList();
 #endif
+	  //printf("FINE-3 MCEXC\n"); 
 	  /* rimuove ip da tutte le NNL del sistema */
 	  if (OprogStatus.useNNL)
 	    remove_from_nnl_MC(np);
 	  excrejMC++;
 #ifdef MC_SUS	  
-	  sushisto[Oparams.parnum]++;
+	  if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+	    OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
 #endif
 	  return;
 	}	
@@ -1635,7 +1641,7 @@ void mcexc(int *ierr)
 
       if (ranf() >= arg
 #ifdef MC_SUS
-	  || Oparams.parnum > OprogStatus.nmax
+	  || Oparams.parnum > OprogStatus.susnmax
 #endif
 	  )
 	{
@@ -1657,14 +1663,17 @@ void mcexc(int *ierr)
 	    remove_from_nnl_MC(np);
 	  excrejMC++;
 #ifdef MC_SUS	  
-	  sushisto[Oparams.parnum]++;
+	  if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+	    OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
 #endif
 	  return;
 	}
 #ifdef MC_SUS
-      sushisto[Oparams.parnum]++;
+      if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+	OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
 #endif
     }
+  //printf("MCEXC FINE\n");
 }
 #endif
 #ifdef MC_STORELL
@@ -4043,6 +4052,7 @@ void move(void)
     deln=OprogStatus.nvbbias;
   else
     deln=0;
+  //printf("deln=%d\n", deln);
   if (OprogStatus.ensembleMC==0)
     ntot = Oparams.parnum+deln;
   else if (OprogStatus.ensembleMC==1)
@@ -4108,7 +4118,7 @@ void move(void)
 	}
       else
 	{
-	  if (ran >= Oparams.parnum)
+	  if (OprogStatus.ensembleMC==0 && ran >= Oparams.parnum)
 	    {
 	      if (ranf() < OprogStatus.pbias)
 		mcoutin(1.0/Oparams.T,OprogStatus.pbias);

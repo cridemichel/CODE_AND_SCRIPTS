@@ -6194,11 +6194,22 @@ void usrInitAft(void)
   MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
+#ifdef MC_SUS
+  if (Oparams.parnum > OprogStatus.susnmax || Oparams.parnum < OprogStatus.susnmin)
+    {
+      printf("[ERROR SUS] Inconsitent initial configurations\n");
+      printf("parnum: %d nmin: %d nmax: %d\n", Oparams.parnum, OprogStatus.susnmin, OprogStatus.susnmax);
+      exit(-1);	
+    }
+#endif
   if (newSim == 1)
     {
 #ifdef MC_SUS
-      for (j=0; j < OprogStatus.susnmax-OprogStatus.susnmin+1; j++)
-     	OprogStatus.sushisto[j] = 0;
+      if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+	{
+	  for (j=0; j < OprogStatus.susnmax-OprogStatus.susnmin+1; j++)
+	    OprogStatus.sushisto[j] = 0;
+	}
 #endif
       /* truncate file to zero lenght */
 #ifdef MD_GRAVITY
