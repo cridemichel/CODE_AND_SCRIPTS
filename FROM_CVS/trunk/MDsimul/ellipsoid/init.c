@@ -6195,7 +6195,8 @@ void usrInitAft(void)
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
      positions, so wwe must initialize them! */  
 #ifdef MC_SUS
-  if (Oparams.parnum > OprogStatus.susnmax || Oparams.parnum < OprogStatus.susnmin)
+  if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0 && 
+      (Oparams.parnum > OprogStatus.susnmax || Oparams.parnum < OprogStatus.susnmin))
     {
       printf("[ERROR SUS] Inconsitent initial configurations\n");
       printf("parnum: %d nmin: %d nmax: %d\n", Oparams.parnum, OprogStatus.susnmin, OprogStatus.susnmax);
@@ -6205,7 +6206,7 @@ void usrInitAft(void)
   if (newSim == 1)
     {
 #ifdef MC_SUS
-      if (OprogStatus.susnmin > 0 && OprogStatus.susnmax > 0)
+      if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
 	{
 	  for (j=0; j < OprogStatus.susnmax-OprogStatus.susnmin+1; j++)
 	    OprogStatus.sushisto[j] = 0;
