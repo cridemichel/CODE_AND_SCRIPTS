@@ -3632,7 +3632,7 @@ int dyn_alloc_oprog(void)
   OprogStatus.vcmz0 = OprogStatus.vcmy0 + np;
 #endif
 #ifdef MC_SUS
-  OprogStatus.sushisto = OprogStatus.DR[np]+3;
+  OprogStatus.sushisto = OprogStatus.DR[np-1]+3;
 #endif
   OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
