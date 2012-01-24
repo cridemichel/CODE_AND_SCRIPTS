@@ -355,6 +355,127 @@ void resetCM()
 	}
     }
 }
+void gaussvels (COORD_TYPE temp, COORD_TYPE m[NA], int resetCM)
+{
+  /*
+    Translational velocities from maxwell-boltzmann distribution  
+    The routine put in vx, vy, vz a velocity choosen from a M.-B. 
+    distribution.
+    
+    The distribution is determined by temperature and (unit) mass.
+    This routine is general, and can be used for atoms, linear    
+    molecules, and non-linear molecules.                          
+    
+    ROUTINE REFERENCED:                                          
+    
+    COORD_TYPE gauss(void)
+    Returns a uniform random normal variate from a           
+    distribution with zero mean and unit variance.           
+    
+    VARIABLES 
+    COORD_TYPE temp       Temperature 
+    m[NA]                 Masses of atoms (NA is the number of atoms)
+    int  Nm               Number of molecules  
+  */
+  COORD_TYPE rTemp[NA], sumx, sumy, sumz, RCMx, RCMy, RCMz;
+  double MTOT;
+  //COORD_TYPE Px, Py, Pz;
+  int i, a;
+  
+  rTemp[0] = sqrt(temp / Oparams.m[0]);
+  rTemp[1] = sqrt(temp / Oparams.m[1]);
+  /* variance of the velocities distribution function, we assume k = 1 */ 
+
+  for (a = 0; a < NA; a++)
+    {
+      for(i = 0; i < Oparams.parnum[a]; i++)
+	{
+	  vx[a][i] = rTemp[a] * gauss(); 
+	  vy[a][i] = rTemp[a] * gauss();
+	  vz[a][i] = rTemp[a] * gauss();
+	  /* gauss() is a gaussian variable with mean = 0 and variance = 1, 
+	     that is
+	     2
+	     1                X
+        ----------- * exp( - --- )         
+	 sqrt(2*PI)           2     */
+	}
+    }
+  /* Remove net momentum, to have a total momentum equals to zero */
+  sumx = 0.0;
+  sumy = 0.0;
+  sumz = 0.0;
+  MTOT = 0.0;
+  for (a = 0;  a < NA; a++)
+    {
+      for(i = 0; i < Oparams.parnum[a]; i++)
+	{
+	  /* (sumx, sumy, sumz) is the total momentum */ 
+	  sumx = sumx + m[a] * vx[a][i];
+	  sumy = sumy + m[a] * vy[a][i];
+	  sumz = sumz + m[a] * vz[a][i];
+	  MTOT += m[a];
+	}
+    }
+  sumx = sumx / MTOT; 
+  sumy = sumy / MTOT;
+  sumz = sumz / MTOT;
+
+  //Px=0.0; Py=0.0; Pz=0.0;
+  /* Now (sumx, sumy, sumz) is the total momentum per atom (Ptot/(2*Nm)) */
+  
+  for (a = 0;  a < NA; a++)
+    {
+      for(i = 0; i < Oparams.parnum[a]; i++)
+	{
+	  vx[a][i] = vx[a][i] - sumx;
+	  vy[a][i] = vy[a][i] - sumy;
+	  vz[a][i] = vz[a][i] - sumz;
+	  //printf("([%d,%d]: %.5f %.5f %.5f)\n",a , i, vx[a][i], vy[a][i],
+	  // vz[a][i]);
+	  /* In this way the total (net) momentum of the system of 
+	     molecules is zero */
+	}
+    }
+  if (resetCM==0)
+    return;
+  
+  /* ADD 27/1/1998:
+     And Now we put the center of mass of the box in the origin of axis
+     because otherwise int NPT method the total momentum is not zero */
+  RCMx = 0.0;
+  RCMy = 0.0;
+  RCMz = 0.0;
+
+  for (a = 0;  a < NA; a++)
+    {
+      for(i = 0; i < Oparams.parnum[a]; i++)
+	{
+	  
+	  RCMx += m[a] * rx[a][i];/*Here RCM is the center of mass of the box*/
+	  RCMy += m[a] * ry[a][i];
+	  RCMz += m[a] * rz[a][i];
+	}
+    }
+  
+  RCMx /= MTOT;
+  RCMy /= MTOT;
+#if !defined(MD_GRAVITY)
+  RCMz /= MTOT;
+#endif
+  for (a = 0; a < NA; a++)
+    {
+      for(i = 0; i < Oparams.parnum[a]; i++)
+	{
+	  rx[a][i] -= RCMx;
+	  ry[a][i] -= RCMy;
+#if !defined(MD_GRAVITY)
+	  rz[a][i] -= RCMz;
+#endif
+	}
+    }
+  /* Now the center of mass of the box is in the origin */
+}
 
 /* ========================== >>> comvel <<< =============================== */
 void comvel (COORD_TYPE temp, COORD_TYPE m[NA])
@@ -866,7 +987,14 @@ void usrInitAft(void)
 	  OprogStatus.hist[i] = 0;
 	}
     }
-
+  if (OprogStatus.CMreset==-1)
+    {
+      gaussvels(Oparams.T,Oparams.m, 0);
+    }
+  else if (OprogStatus.CMreset==-2)
+    {
+      gaussvels(Oparams.T,Oparams.m, 1);
+    }
   printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);
 }
 
