@@ -870,6 +870,7 @@ struct progStatus
 #endif
   /* ======================================================================= */
 #ifdef MC_SIMUL
+  int restrmove; /* 0=no restriction (default) 1=fixed rot */
 #ifdef MC_GRANDCAN
   double zetaMC;
   int npav;
@@ -1296,6 +1297,7 @@ struct pascii opro_ascii[] =
   {"nativeConf",           &OS(nativeConf),                  1, NAME_LENGTH, "%s"},
 #endif
 #ifdef MC_SIMUL
+  {"restrmove",      &OS(restrmove),                     1,  1, "%d"},
 #ifdef MC_GRANDCAN
   {"zetaMC",     &OS(zetaMC),                            1,  1, "%.12G"},
   {"npav" ,     &OS(npav),                             1,  1, "%d"},
@@ -1456,6 +1458,7 @@ struct singlePar OsinglePar[] = {
   {"inistep" ,   &Oparams.curStep,            LLINT},
   {"endFormat",  &OprogStatus.endFormat,      INT},
 #ifdef MC_SIMUL
+  {"restrmove",  &OprogStatus.restrmove,    INT},
 #ifdef MC_GRANDCAN
   {"zetaMC",   &OprogStatus.zetaMC,         CT},
   {"npav",  &OprogStatus.npav,        INT},
