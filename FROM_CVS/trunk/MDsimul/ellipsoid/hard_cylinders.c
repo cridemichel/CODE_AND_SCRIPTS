@@ -1,3 +1,4 @@
+#ifdef MC_HC
 #include<mdsimul.h>
 const double saxfactMC[3]={0.85,0.68,0.68};
 #ifdef MC_QUASI_CUBE
@@ -31,6 +32,8 @@ int *numbondsMC, **bondsMC;
 #define MD_DEBUG38(x) 
 #define MD_DEBUG39(x) 
 #define MD_DEBUG40(x) 
+extern double calc_norm(double *vec);
+extern void vectProdVec(double *A, double *B, double *C);
 extern void print_matrix(double **M, int n);
 extern void update_MSDrot(int i);
 extern void update_MSD(int i);
@@ -213,6 +216,8 @@ long long int ttini=0;
 int covrestart = 0;
 const int nmboxMC=5;
 double totdist=0.0, distcc=0.0;
+static double maxarg1,maxarg2;
+
 #define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
         (maxarg1) : (maxarg2))
 
@@ -232,17 +237,25 @@ int check_convergence(double Told[3], double Tnew[3])
   else 
     return 0;
 }
+
 double calcDistNegHC(int i, int j, double shift[3])
 {
   const int MAX_ITERATIONS = 1000;
-  double Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
-  double N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
-  double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi;
+  int it;
+  double ViVj[3], lambdai, lambdaj;
+  double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
+  double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
+  double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
   double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
-  double DjUini, DjUi[3], normDjUi, AiDj[3], AiDjnj, AiDjnjvec, TjNew[3], TjNewCi[3], TjNewCini;
-  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3];
+  double DjUini, DjUi[3], normDjUi, AiDj[3], AiDjnj, AiDjnjvec[3], TjNew[3], TjNewCi[3], TjNewCini;
+  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3], TipCjnj, TimCjnj;
+  double Aj[3], AjDini, AjDinivec[3], AjDi[3], Tip[3], Tim[3], TipCj[3], TimCj[3], Dini;
+  double DiCj[3], normDiCj, DiCjnj, Uj[3], DiUj[3], normDiUj, DiUjnj;
+  double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
+  double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp;
+  double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj;	
   double normCiCj;	
-  int kk;
+  int kk, j1, j2;
 
   for (kk=0; kk < 3; kk++)
     {
@@ -252,9 +265,9 @@ double calcDistNegHC(int i, int j, double shift[3])
   Ci[0] = rx[i];
   Ci[1] = ry[i];
   Ci[2] = rz[i]; 
-  Ci[0] = rx[j] + shift[0];
-  Ci[1] = ry[j] + shift[1];
-  Ci[2] = rz[j] + shift[2]; 
+  Cj[0] = rx[j] + shift[0];
+  Cj[1] = ry[j] + shift[1];
+  Cj[2] = rz[j] + shift[2]; 
   L = 2.0*typesArr[typeOfPart[i]].sax[0];
   D = 2.0*typesArr[typeOfPart[i]].sax[1];
   for (kk=0; kk < 3; kk++)
@@ -275,7 +288,7 @@ double calcDistNegHC(int i, int j, double shift[3])
   if (ni[0]==nj[0] && ni[1]==ni[1] && ni[2]==ni[2])
     {
       /* special case of collinear cylinders */
-      normCiCj = calcnorm(CiCj);
+      normCiCj = calc_norm(CiCj);
       for (kk=0; kk < 3; kk++)
 	VV[kk] = CiCj[kk]/normCiCj;
 
@@ -303,122 +316,204 @@ double calcDistNegHC(int i, int j, double shift[3])
     }
   else 
     {
-      vectProdVec(ni, nj, N);
-      DiN = scalProd(Di,N);
-      DjN = scalProd(ji,N);
-      Dini = scalProd(Di,ni);
-      Djnj = scalProd(Dj,nj);
-      vectProd(ni,N,niN);
-      vectProd(nj,N,njN);
-      normN=calcnorm(N);
-      for (kk=0; kk < 3; kk++)
-	{ 
-	  Pi[kk] = (DiN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
-	  Pj[kk] = (DjN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
-	}
-      for (kk=0; kk < 3; kk++)
-	{
-	  PiDi[kk] = Pi[kk] - Di[kk];
-	  PjDj[kk] = Pj[kk] - Dj[kk];
-	}
-      normPiDi = calcnorm(PiDi);
-      normPjDj = calcnorm(PjDj);
-      if (normPiDi <= 0.5*D && normPjDj <= 0.5*D)
-	{
-	  Q1 = sqrt(Sqr(D)/4.0-Sqr(normPiDi));
-	  Q2 = sqrt(Sqr(D)/4.0-Sqr(normPjDj));
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      PiPj[kk] = Pi[kk] - Pj[kk];
-	    }
-	  normPiPj = calcnorm(PiPj);
-	  if (normPiPj <= Q1 + Q2)
-	    return -1;
-	  //else 
-	  //return 1;
-	}
-  //else 
-    //return 1;
+      for (j1=0; j1 < 2; j1++)
+	for (j2=0; j2 < 2; j2++)
+	  {
+	    vectProdVec(ni, nj, N);
+	    DiN = scalProd(Di[j1],N);
+	    DjN = scalProd(Dj[j2],N);
+	    Dini = scalProd(Di[j1],ni);
+	    Djnj = scalProd(Dj[j2],nj);
+	    vectProdVec(ni,N,niN);
+	    vectProdVec(nj,N,njN);
+	    normN=calcnorm(N);
+	    for (kk=0; kk < 3; kk++)
+	      { 
+		Pi[kk] = (DiN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
+		Pj[kk] = (DjN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
+	      }
+	    for (kk=0; kk < 3; kk++)
+	      {
+		PiDi[kk] = Pi[kk] - Di[j1][kk];
+		PjDj[kk] = Pj[kk] - Dj[j2][kk];
+	      }
+	    normPiDi = calcnorm(PiDi);
+	    normPjDj = calcnorm(PjDj);
+	    if (normPiDi <= 0.5*D && normPjDj <= 0.5*D)
+	      {
+		Q1 = sqrt(Sqr(D)/4.0-Sqr(normPiDi));
+		Q2 = sqrt(Sqr(D)/4.0-Sqr(normPjDj));
+		for (kk=0; kk < 3; kk++)
+		  {
+		    PiPj[kk] = Pi[kk] - Pj[kk];
+		  }
+		normPiPj = calcnorm(PiPj);
+		if (normPiPj <= Q1 + Q2)
+		  return -1;
+		//else 
+		//return 1;
+	      }
+	    //else 
+	    //return 1;
+	  }
     }
   /* case A.2 overlap of rim and disk */
-  for (kk=0; kk < 3; kk++)
-    DiCi[kk] = Di[kk] - Ci[kk];
-  normDiCi = calcnorm(DiCi);
-  DiCini = scalProd(DiCi,ni);
-  for (kk=0; kk < 3; kk++)
-    {
-      Ui[kk] = Ci[kk] + DiCini*ni[kk];
-      DjUi[kk] = Dj[kk] - Ui[kk];
-    }
 
-  DjUini = scalProd(DjUi,ni);
-  normDjUi = calcnorm(DjUi);
+  for (j2=0; j2 < 2; j2++)
+    {
+      for (kk=0; kk < 3; kk++)
+	DjCi[kk] = Dj[j2][kk] - Ci[kk];
+      normDjCi = calcnorm(DjCi);
+      DjCini = scalProd(DjCi,ni);
+      for (kk=0; kk < 3; kk++)
+	{
+	  Ui[kk] = Ci[kk] + DjCini*ni[kk];
+	  DjUi[kk] = Dj[j2][kk] - Ui[kk];
+	}
 
-  if (DjUi <= D*0.5 && DjUini > L*0.5)
-    return -1;
- 
-  for (kk=0; kk < 3; kk++)
-    {
-      Ai[kk] = Ci[kk];
-    }
-  for (it = 0; it < MAX_ITERATIONS; it++);
-    {
+      DjUini = scalProd(DjUi,ni);
+      normDjUi = calcnorm(DjUi);
+
+      if (normDjUi <= D*0.5 && DjUini > L*0.5)
+	return -1;
+
       for (kk=0; kk < 3; kk++)
 	{
-	  AiDj[kk] = Ai[kk] - Dj[kk];
+	  Ai[kk] = Ci[kk];
 	}
-      AiDjnj = scalProd(AiDj,nj);
-      vectProd(AiDj,nj,AiDjnjvec);
-      for (kk=0; kk < 3; kk++)
-	VV[kk] =  0.5*D*(Ai[kk]-Dj[kk]-AiDjnj*nj[kk])/calcnorm(AiDjnjvec);
-      for (kk=0; kk < 3; kk++)
+      for (it = 0; it < MAX_ITERATIONS; it++);
 	{
-	  Tjp[kk] = Dj[kk] + VV[kk];
-	  Tjm[kk] = Dj[kk] - VV[kk];
-	  TjpCi[kk] = Tjp[kk] - Ci[kk];
-	  TjmCi[kk] = Tjm[kk] - Ci[kk];
-	}
-      TjpCini = scalProd(TjpCi,ni);  
-      TjmCini = scalProd(Tjmci,ni);
-      for (kk=0; kk < 3; kk++)
-	{
-	  Tjp_perp[kk] = TjpCi[kk]-TjpCini*ni[kk];
-	  Tjp_para[kk] = TjpCini*ni[kk];
-	  Tjm_perp[kk] = TjmCi[kk]-TjmCini*ni[kk];
-	  Tjm_para[kk] = TjmCini*ni[kk];
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      AiDj[kk] = Ai[kk] - Dj[j2][kk];
+	    }
+	  AiDjnj = scalProd(AiDj,nj);
+	  vectProdVec(AiDj,nj,AiDjnjvec);
+	  for (kk=0; kk < 3; kk++)
+	    VV[kk] =  0.5*D*(Ai[kk]-Dj[j2][kk]-AiDjnj*nj[kk])/calcnorm(AiDjnjvec);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Tjp[kk] = Dj[j2][kk] + VV[kk];
+	      Tjm[kk] = Dj[j2][kk] - VV[kk];
+	      TjpCi[kk] = Tjp[kk] - Ci[kk];
+	      TjmCi[kk] = Tjm[kk] - Ci[kk];
+	    }
+	  TjpCini = scalProd(TjpCi,ni);  
+	  TjmCini = scalProd(TjmCi,ni);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Tjp_perp[kk] = TjpCi[kk]-TjpCini*ni[kk];
+	      Tjp_para[kk] = TjpCini*ni[kk];
+	      Tjm_perp[kk] = TjmCi[kk]-TjmCini*ni[kk];
+	      Tjm_para[kk] = TjmCini*ni[kk];
+	    } 
+	  normTjm_perp = calcnorm(Tjp_perp);
+	  for (kk=0; kk < 3; kk++)
+	    TjOld[kk] = TjNew[kk];
+	  if (calcnorm(Tjm_perp) < calcnorm(Tjp_perp))
+	    {
+	      for (kk=0; kk < 3; kk++)
+		TjNew[kk] = Tjm[kk];
+	    }	  
+	  else
+	    {
+	      for (kk=0; kk < 3; kk++)
+		TjNew[kk] = Tjp[kk];
+	    }
+
+	  for (kk=0; kk < 3; kk++)
+	    TjNewCi[kk] = TjNew[kk] - Ci[kk];
+	  TjNewCini = scalProd(TjNewCi,ni);
+	  Ai[kk] = TjNewCini*ni[kk] + Ci[kk]; 
+	  if ( it > 0 && check_convergence(TjOld,TjNew) ) 
+	    break;
 	} 
-      normTjm_perp = calcnorm(Tjp_perp);
+      if ( (calcnorm(Tjp_para) <= L*0.5 && calcnorm(Tjp_perp) >= D*0.5)||
+	   (calcnorm(Tjm_para) <= L*0.5 && calcnorm(Tjm_perp) >= D*0.5) )
+	return -1;
+    }
+
+  for (j1=0; j1 < 2; j1++)
+    {
       for (kk=0; kk < 3; kk++)
-	TjOld[kk] = TjNew[kk];
-      if (calcnorm(Tjm_perp) < calcnorm(Tjp_perp))
+	DiCj[kk] = Di[j1][kk] - Cj[kk];
+      normDiCj = calcnorm(DiCj);
+      DiCjnj = scalProd(DiCj,nj);
+      for (kk=0; kk < 3; kk++)
 	{
-	  for (kk=0; kk < 3; kk++)
-	    TjNew[kk] = Tjm[kk];
-	}	  
-      else
-	{
-	  for (kk=0; kk < 3; kk++)
-	    TjNew[kk] = Tjp[kk];
+	  Uj[kk] = Cj[kk] + DiCjnj*nj[kk];
+	  DiUj[kk] = Di[j1][kk] - Uj[kk];
 	}
 
-      for (kk=0; kk < 3; kk++)
-	TjNewCi[kk] = TjNew[kk] - Ci[kk];
-      TjNewCini = scalProd(TjNewCini,ni);
-      Ai[kk] = TjNewCini*ni[kk] + Ci[kk]; 
-      if ( it > 0 && check_convergence(TjOld,TjNew) ) 
-	break;
-    } 
-  if ( (calcnorm(Tjp_para) <= L*0.5 && calcnorm(Tjp_perp) >= D*0.5)||
-      (calcnorm(Tjm_para) <= L*0.5 && calcnorm(Tjm_perp) >= D*0.5) )
-    return -1;
+      DiUjnj = scalProd(DiUj,nj);
+      normDiUj = calcnorm(DiUj);
 
+      if (normDiUj <= D*0.5 && DiUjnj > L*0.5)
+	return -1;
+
+      for (kk=0; kk < 3; kk++)
+	{
+	  Aj[kk] = Cj[kk];
+	}
+      for (it = 0; it < MAX_ITERATIONS; it++);
+	{
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      AjDi[kk] = Aj[kk] - Di[j1][kk];
+	    }
+	  AjDini = scalProd(AjDi,ni);
+	  vectProdVec(AjDi,nj,AjDinivec);
+	  for (kk=0; kk < 3; kk++)
+	    VV[kk] =  0.5*D*(Aj[kk]-Di[j1][kk]-AjDini*ni[kk])/calcnorm(AjDinivec);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Tip[kk] = Di[j2][kk] + VV[kk];
+	      Tim[kk] = Di[j2][kk] - VV[kk];
+	      TipCj[kk] = Tip[kk] - Cj[kk];
+	      TimCj[kk] = Tim[kk] - Cj[kk];
+	    }
+	  TipCjnj = scalProd(TipCj,nj);  
+	  TimCjnj = scalProd(TimCj,nj);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Tip_perp[kk] = TipCj[kk]-TipCjnj*nj[kk];
+	      Tip_para[kk] = TipCjnj*nj[kk];
+	      Tim_perp[kk] = TimCj[kk]-TimCjnj*nj[kk];
+	      Tim_para[kk] = TimCjnj*nj[kk];
+	    } 
+	  normTim_perp = calcnorm(Tip_perp);
+	  for (kk=0; kk < 3; kk++)
+	    TiOld[kk] = TiNew[kk];
+	  if (calcnorm(Tim_perp) < calcnorm(Tip_perp))
+	    {
+	      for (kk=0; kk < 3; kk++)
+		TiNew[kk] = Tim[kk];
+	    }	  
+	  else
+	    {
+	      for (kk=0; kk < 3; kk++)
+		TiNew[kk] = Tip[kk];
+	    }
+
+	  for (kk=0; kk < 3; kk++)
+	    TiNewCj[kk] = TiNew[kk] - Cj[kk];
+	  TiNewCjnj = scalProd(TiNewCj,nj);
+	  Aj[kk] = TiNewCjnj*nj[kk] + Cj[kk]; 
+	  if ( it > 0 && check_convergence(TiOld,TiNew) ) 
+	    break;
+	} 
+      if ( (calcnorm(Tip_para) <= L*0.5 && calcnorm(Tip_perp) >= D*0.5)||
+	   (calcnorm(Tim_para) <= L*0.5 && calcnorm(Tim_perp) >= D*0.5) )
+	return -1;
+
+    }
   /* case A.3 rim-rim overlap */
   CiCjni = scalProd(CiCj,ni);
   CiCjnj = scalProd(CiCj,nj);
   detA = Sqr(ninj)-1;
 
-  lambdai = ( Cijni - Cijnj*ninj)/detA;
-  lambdaj = (-Cijnj + Cijni*ninj)/detA;
+  lambdai = ( CiCjni - CiCjnj*ninj)/detA;
+  lambdaj = (-CiCjnj + CiCjni*ninj)/detA;
 
   for (kk=0; kk < 3; kk++)
     {
@@ -431,6 +526,5 @@ double calcDistNegHC(int i, int j, double shift[3])
 
   return 1;
 }
-
-
-
+#endif
+#endif
