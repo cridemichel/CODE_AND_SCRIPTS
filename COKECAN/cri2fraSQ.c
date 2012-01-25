@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #define MAXPTS 10000
+#define NA 10
 #define MAXFILES 5000
 #define Sqr(x) ((x)*(x))
 int NP, NPA=-1, MCsim=0, dummyint, reorder=-1;
@@ -70,17 +71,16 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
       //printf("ata=%d %f %f %f @ 0.075 C[blue]\n", ata, R[0][ata-1], R[1][ata-1], R[2][ata-1]);
     }
 }
-void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
+void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
   int a, NUMAT;
   /* l'atomo zero si suppone nell'origine */
-  NUMAT=2;
+  NUMAT=3;
   for (a=0; a < NUMAT; a++)
     BuildAtomPosAt(i, a, rO, R, rat[a]);
 }
 double **Rt;
-#define NA 3
 void save_fra(char *fname)
 {
   char fileop[1024], fileop2[1024], fileop3[1024];
@@ -93,8 +93,28 @@ void save_fra(char *fname)
   f = fopen(fileop2,"w");
   fprintf(f, "%d 0 %d %d 2\n", curStep, NP, NP);
   fprintf(f, "%.15G %.15G %.15G 0 0 0\n", Lx, Ly, Lz);
-  for (i = NPA; i < NP; i++)
+  if (MCsim)
     {
+      for (i = 0; i < NP; i++)
+	{
+	  //printf("i=%d\n",i);
+	  rcm[0] = r0[0][i];
+	  rcm[1] = r0[1][i];
+	  rcm[2] = r0[2][i];
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      Rt[k1][k2] = R[i][k1][k2];
+	  BuildAtomPos(i, rcm, Rt, rat);
+	  fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
+	  fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
+	  fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+	}
+
+    }
+  else
+    {
+      for (i = NPA; i < NP; i++)
+	{
       //printf("i=%d\n",i);
       rcm[0] = r0[0][i];
       rcm[1] = r0[1][i];
@@ -107,18 +127,19 @@ void save_fra(char *fname)
       fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
       fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
     }
-  for (i = 0; i < NPA; i++)
-    {
-      rcm[0] = r0[0][i];
-      rcm[1] = r0[1][i];
-      rcm[2] = r0[2][i];
-      for (k1=0; k1 < 3; k1++)
-	for (k2=0; k2 < 3; k2++)
+      for (i = 0; i < NPA; i++)
+	{
+	  rcm[0] = r0[0][i];
+	  rcm[1] = r0[1][i];
+	  rcm[2] = r0[2][i];
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
 	  Rt[k1][k2] = R[i][k1][k2];
-      BuildAtomPos(i, rcm, Rt, rat);
-      fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
-      fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
-      fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+	  BuildAtomPos(i, rcm, Rt, rat);
+	  fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
+	  fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
+	  fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+	}
     }
 #if 0
   for (i = Oparams.parnumA; i < Oparams.parnum; i++)
@@ -144,7 +165,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 
   *ti = -1.0;
   f = fopen(fname, "r");
-  while (!feof(f) && nat < 2) 
+  while (!feof(f)) 
     {
       cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
@@ -152,7 +173,9 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
+	  cpos =ftell(f);
 	}
+      printf("nat=%d line=%s\n", nat, line);
       if (nat < 2)
 	{
 	  fseek(f, cpos, SEEK_SET);
@@ -215,7 +238,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
-      else
+      else if (nat==3)
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
@@ -502,8 +525,8 @@ int main(int argc, char **argv)
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0, w0, DR, R);
-      if (reorder!=-1)
-	reorder_conf(reorder);
+     // if (reorder!=-1)
+//	reorder_conf(reorder);
       save_fra(fname[nr1]);
     }
   return 0;
