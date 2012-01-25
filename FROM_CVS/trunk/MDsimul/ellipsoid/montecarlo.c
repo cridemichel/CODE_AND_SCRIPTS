@@ -1173,10 +1173,73 @@ void adjLinkedListInsert(void)
     }
 }
 #endif
+void update_bonds_GC(int oldi, int newi)
+{
+  int kk;
+#ifdef MD_LL_BONDS
+  int i, nb;
+  long long int aa, bb, ii, jj, jj2;
+#else
+  int i, nb, ii, jj, aa, bb, jj2;
+#endif
+ 
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      nb = numbonds[i];
+      if (i==newi)
+	continue;
+      for (kk=0; kk < nb; kk++)
+	{
+	  jj = bonds[i][kk] / (NANA);
+	  jj2 = bonds[i][kk] % (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  if (jj==oldi)
+	    {
+	      //printf("QUIIIIII\n");
+#ifdef MD_LL_BONDS
+	      bonds[i][kk] = newi*(((long long int)NA)*NA)+aa*((long long int)NA)+bb;
+#else
+	      bonds[i][kk] = newi*(NANA)+aa*NA+bb;
+#endif
+	    }
+	}
+    }
+
+}
 void remove_par_GC(int ip)
 {
   int lp, k, k1, k2;
+
   lp = Oparams.parnum-1;
+  
+  if (lp==ip)
+    {
+      //printf("1) [#%d] i=%d Oparams.parnum=%d\n QUI\n", Oparams.curStep, ip,  Oparams.parnum);
+      remove_bonds_GC(ip);
+
+#ifdef MCGC_OPTLLREBUILD
+      remove_from_current_cell(ip);
+#endif
+      if (OprogStatus.useNNL)
+	{
+	  /* rimuove ip da tutte le NNL del sistema */
+	  remove_from_nnl_MC(ip);
+	}
+      Oparams.parnum--;
+      typeNP[0]--;
+#ifdef MCGC_OPTLLREBUILD
+      /* N.B. essendo cambiato Oparams.parnum le linked list vanno aggiustate (poichè
+	 le linked lists head stanno da Oparams.parnum compreso in poi quindi vanno shiftate, 
+	 in questo caso vanno spostate di uno a sinistra) */
+      adjLinkedListRemove();
+#else
+      rebuildLinkedList(); 
+#endif
+      return;
+    }
+
+  //printf("2) [#%d] i=%d Oparams.parnum=%d\n QUI\n", Oparams.curStep, ip,  Oparams.parnum);
   /* copy all data from particle lp to ip */
   remove_bonds_GC(ip);
   //remove_from_current_cell(ip);
@@ -1185,6 +1248,12 @@ void remove_par_GC(int ip)
   rz[ip] = rz[lp];
   typeOfPart[ip] = typeOfPart[lp];
   is_a_sphere_NNL[ip] = is_a_sphere_NNL[lp];
+  numbonds[ip] = numbonds[lp];
+#ifdef MD_LL_BONDS
+  memcpy( (void*) bonds[ip], (void*) bonds[lp], sizeof(long long int)*numbonds[lp]);
+#else
+  memcpy( (void*) bonds[ip], (void*) bonds[lp], sizeof(int)*numbonds[lp]);
+#endif
   axa[ip] = axa[lp];
   axb[ip] = axb[lp];
   axc[ip] = axb[lp];
@@ -1209,6 +1278,7 @@ void remove_par_GC(int ip)
     inCell[k][ip] = inCell[k][lp];
   typeNP[0]--;
   Oparams.parnum--;
+  update_bonds_GC(lp, ip);
 #ifdef MCGC_OPTLLREBUILD
   /* N.B. essendo cambiato Oparams.parnum le linked list vanno aggiustate (poichè
      le linked lists head stanno da Oparams.parnum compreso in poi quindi vanno shiftate, 
@@ -1465,6 +1535,7 @@ int insert_particle_GC(void)
       Rl[0][1]=Rl[0][2]=Rl[1][0]=Rl[1][2]=Rl[2][0]=Rl[2][1]=0.0;
     }
   /* per ora assumiamo un solo tipo di particelle nel GC */
+  numbonds[np] = 0;
   typeOfPart[np]=0;
   vx[np]=vy[np]=vz[np]=wx[np]=wy[np]=wz[np]=Mx[np]=My[np]=Mz[np]=0.0;
   is_a_sphere_NNL[np] = is_a_sphere_NNL[0]; 
