@@ -64,28 +64,11 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
     }
   else if (ata <= 3)
     {
-      for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk] + R[kk][ata-1]; 
+      for (kk=0; kk < 3; kk++) 
+	rat[kk] = rO[kk] + ((ata==1)?+1.0:-1.0)*spdist*R[0][kk]; 
       //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
       //printf("ata=%d %f %f %f @ 0.075 C[blue]\n", ata, R[0][ata-1], R[1][ata-1], R[2][ata-1]);
     }
-  else
-    {
-      /* l'atomo restante ? un electron site */
-      for (kk = 0; kk < 3; kk++)
-	{
-	  r1[kk] = R[kk][1]-R[kk][0];
-	  r2[kk] = R[kk][2]-R[kk][0];
-	}
-      vectProdVec(r1, r2, r3);
-      nr = calc_norm(r3);
-      for (kk = 0; kk < 3; kk++)
-	r3[kk] *= radius/nr;
-      for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk] - r3[kk]; 
-      //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
-    }
-
 }
 void BuildAtomPos(int i, double *rO, double **R, double rat[5][3])
 {
@@ -313,6 +296,8 @@ void parse_param(int argc, char** argv)
 }
 void reorder_conf(int reord)
 {
+  int cc, i, k1, k2;
+  double r0tmp[3], Rtmp[3][3];
   /* reord=0->x-axis 1->y-axis 2->z-axis */
   switch (reord)
     {
@@ -326,7 +311,35 @@ void reorder_conf(int reord)
       L2 = Lz*0.5;
       break;
     }
-
+  cc=0;
+  for (i=1; i < NP; i++)
+    {
+      if (r0[reord][i] < L2)
+	{
+	  /* fai in modo che le particelle con i=0...N/2 siano nella metà (0, L2] della scatola */ 
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      r0tmp[k1] = r0[k1][0];
+	      for (k2=0; k2 < 3; k2++)
+		Rtmp[k1][k2] = R[i][k1][k2];
+	    }
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      r0[k1][0] = r0[k1][i];
+	      for (k2=0; k2 < 3; k2++)
+		R[0][k1][k2] = R[i][k1][k2];
+		    }
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      for (k2=0; k2 < 3; k2++)
+		R[i][k1][k2] = Rtmp[k1][k2];
+	      r0[k1][i] = r0tmp[k1];
+	    }
+	  cc++
+	}
+	if (cc==N/2)
+	  break;
+    }
 
 }
 int main(int argc, char **argv)
