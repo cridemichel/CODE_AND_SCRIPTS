@@ -5790,6 +5790,9 @@ double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double 
   //printf("sigma=%.15G\n", sigma);
   return  sqrt(distSq) - sigma;
 }
+#ifdef MC_HC
+extern double calcDistNegHC(int i, int j, double shift[3]);
+#endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -5816,6 +5819,9 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double phi, psi;
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+#ifdef MC_HC
+  return calcDistNegHC(i, j, shift);
+#endif
 #ifdef EDHE_FLEX
   if (are_spheres(i, j))
     return calcDistNegHS(t, t1, i, j, shift, r1, r2);
