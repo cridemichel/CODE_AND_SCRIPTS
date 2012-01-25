@@ -91,7 +91,7 @@ void save_fra(char *fname)
   sprintf(fileop2 ,"%s.fra", fname);
   /* store conf */
   f = fopen(fileop2,"w");
-  fprintf(f, "%d 0 %d %d 2\n", curStep, NP, NP-NPA);
+  fprintf(f, "%d 0 %d %d 2\n", curStep, NP, NP);
   fprintf(f, "%.15G %.15G %.15G 0 0 0\n", Lx, Ly, Lz);
   for (i = NPA; i < NP; i++)
     {
@@ -375,7 +375,7 @@ int main(int argc, char **argv)
   fclose(f2);
   f = fopen(fname[0], "r");
   nat = 0;
-  while (!feof(f) && nat < 3) 
+  while (!feof(f) && nat < 4) 
     {
       if (MCsim && nat==2)
 	{
@@ -394,7 +394,8 @@ int main(int argc, char **argv)
 	  for (i=0; i < 8; i++)
 	    fscanf(f, "%[^\n]\n", line);
 	  X0 = sax/say;
-	  continue;
+	  //printf("X0=%f\n", X0);
+	  fscanf(f, "%[^\n]\n)", line);
 	}
       else
 	fscanf(f, "%[^\n]\n)", line);
@@ -404,6 +405,7 @@ int main(int argc, char **argv)
 	  nat++;
 	  if (nat==3)
 	    {
+	      //printf("NP=%d\n", NP);
 	      if (MCsim)
 		{
 		  for (i=0; i < NP; i++)
@@ -475,7 +477,7 @@ int main(int argc, char **argv)
   else
     printf("[MONODISPERSE] points=%d files=%d NP = %d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, L, NN, maxl);
   if (MCsim==1)
-    printf("[MC] Monte Carlo Simulation\n");
+    printf("[MC] Monte Carlo Simulation X0=%f\n", X0);
   else if (eventDriven)
     printf("[ED] Event-Driven simulation\n");
   else
