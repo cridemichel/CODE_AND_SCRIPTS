@@ -5,7 +5,7 @@
 #define MAXPTS 10000
 #define MAXFILES 5000
 #define Sqr(x) ((x)*(x))
-int NP, NPA=-1, MCsim=0. dummyint. reorder==-1;
+int NP, NPA=-1, MCsim=0, dummyint, reorder=-1;
 char **fname; 
 double sax, say, saz;
 double X0, L, Lx, Ly, Lz, time, *ti, *rotMSD, *MSD, *rotMSDA, *MSDA, *rotMSDB, *MSDB, *cc, *rotMSDcls[2], *MSDcls[2], *cc_cls[2];
@@ -48,7 +48,7 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
   /* calcola le coordinate nel laboratorio di uno specifico atomo */
   int kk;
   double r1[3], r2[3], r3[3], nr;
-  double radius; 
+  double radius, spdist; 
   /* l'atomo zero si suppone nell'origine 
    * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
    * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
@@ -297,7 +297,7 @@ void parse_param(int argc, char** argv)
 void reorder_conf(int reord)
 {
   int cc, i, k1, k2;
-  double r0tmp[3], Rtmp[3][3];
+  double L2, r0tmp[3], Rtmp[3][3];
   /* reord=0->x-axis 1->y-axis 2->z-axis */
   switch (reord)
     {
@@ -335,9 +335,9 @@ void reorder_conf(int reord)
 		R[i][k1][k2] = Rtmp[k1][k2];
 	      r0[k1][i] = r0tmp[k1];
 	    }
-	  cc++
+	  cc++;
 	}
-	if (cc==N/2)
+	if (cc==NP/2)
 	  break;
     }
 
