@@ -1207,7 +1207,7 @@ void remove_par_GC(int ip)
 #endif
   for (k=0; k < 3; k++)
     inCell[k][ip] = inCell[k][lp];
-  typeNP[0]++;
+  typeNP[0]--;
   Oparams.parnum--;
 #ifdef MCGC_OPTLLREBUILD
   /* N.B. essendo cambiato Oparams.parnum le linked list vanno aggiustate (poichè
@@ -1630,6 +1630,7 @@ void mcexc(int *ierr)
 	  remove_from_current_cell(np);
 #endif
 	  Oparams.parnum--;
+	  typeNP[0]--;
 #ifdef MCGC_OPTLLREBUILD
 	  //printf("Celllist[parnum]=%d\n", cellList[Oparams.parnum+1]);
 	  adjLinkedListRemove();
@@ -1667,6 +1668,7 @@ void mcexc(int *ierr)
 	  remove_from_current_cell(np);
 #endif
 	  Oparams.parnum--;
+	  typeNP[0]--;
 #ifdef MCGC_OPTLLREBUILD
 	  adjLinkedListRemove();
 #else
