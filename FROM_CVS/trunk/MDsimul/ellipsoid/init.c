@@ -1933,6 +1933,7 @@ void usrInitBef(void)
 #endif
     maxcoll=-1;
 #ifdef MC_SIMUL
+    OprogStatus.restrmove = 0;
 #ifdef MC_GRANDCAN
     OprogStatus.zetaMC=0.05;
     OprogStatus.npav=1000;
