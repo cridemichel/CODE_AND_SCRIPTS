@@ -2327,7 +2327,9 @@ void remove_bond(int na, int n, int a, int b)
     }
   
   if (nb==numbonds[na])
-    printf("nessun bond rimosso fra %d,%d\n", n, na);
+    {
+      printf("nessun bond rimosso fra %d,%d\n", n, na);
+    }
 #if 0
   if (abs(nb - numbonds[na])==2)
     printf("rimossi due bond boh...\n");
