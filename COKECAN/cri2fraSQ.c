@@ -175,7 +175,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  nat++;
 	  cpos =ftell(f);
 	}
-      printf("nat=%d line=%s\n", nat, line);
+     // printf("nat=%d line=%s\n", nat, line);
       if (nat < 2)
 	{
 	  fseek(f, cpos, SEEK_SET);
@@ -319,9 +319,10 @@ void parse_param(int argc, char** argv)
 }
 void reorder_conf(int reord)
 {
-  int cc, i, k1, k2;
+  int ifree, cc, i, k1, k2;
   double L2, r0tmp[3], Rtmp[3][3];
   /* reord=0->x-axis 1->y-axis 2->z-axis */
+#if 0
   switch (reord)
     {
     case 0:
@@ -334,23 +335,33 @@ void reorder_conf(int reord)
       L2 = Lz*0.5;
       break;
     }
+#endif
   cc=0;
-  for (i=1; i < NP; i++)
+  for (i=0; i < NP; i++)
     {
-      if (r0[reord][i] < L2)
+      if (r0[reord][i] < 0.0)
 	{
-	  /* fai in modo che le particelle con i=0...N/2 siano nella metà (0, L2] della scatola */ 
+	  ifree = 0;
+	  while (r0[reord][ifree] < 0.0)
+	    {
+	      ifree++;
+	      if (ifree >= i)
+		break;
+	    }
+	  if (ifree >= i)
+	    continue;
+	  /* fai in modo che le particelle con i=0...N/2 siano nella metà (-L2,0] della scatola */ 
 	  for (k1=0; k1 < 3; k1++)
 	    {
-	      r0tmp[k1] = r0[k1][0];
+	      r0tmp[k1] = r0[k1][ifree];
 	      for (k2=0; k2 < 3; k2++)
-		Rtmp[k1][k2] = R[i][k1][k2];
+		Rtmp[k1][k2] = R[ifree][k1][k2];
 	    }
 	  for (k1=0; k1 < 3; k1++)
 	    {
-	      r0[k1][0] = r0[k1][i];
+	      r0[k1][ifree] = r0[k1][i];
 	      for (k2=0; k2 < 3; k2++)
-		R[0][k1][k2] = R[i][k1][k2];
+		R[ifree][k1][k2] = R[i][k1][k2];
 		    }
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -500,7 +511,7 @@ int main(int argc, char **argv)
   else
     printf("[MONODISPERSE] points=%d files=%d NP = %d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, L, NN, maxl);
   if (MCsim==1)
-    printf("[MC] Monte Carlo Simulation X0=%f\n", X0);
+    printf("[MC] Monte Carlo Simulation X0=%f reorder=%d\n", X0, reorder);
   else if (eventDriven)
     printf("[ED] Event-Driven simulation\n");
   else
@@ -525,8 +536,8 @@ int main(int argc, char **argv)
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       readconf(fname[nr1], &time, &refTime, NP, r0, w0, DR, R);
-     // if (reorder!=-1)
-//	reorder_conf(reorder);
+      if (reorder!=-1)
+	reorder_conf(reorder);
       save_fra(fname[nr1]);
     }
   return 0;
