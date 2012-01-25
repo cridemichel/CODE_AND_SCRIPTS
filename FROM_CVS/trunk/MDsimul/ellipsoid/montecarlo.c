@@ -605,6 +605,9 @@ int random_move(int ip)
   double p;
   //printf("random move ip=%d\n", ip);
   p=ranf();
+  if (OprogStatus.restrmove==1)
+    p=0.0;
+  
   if (p <= 0.5)
    {
      tra_move(ip);
@@ -1274,6 +1277,8 @@ void check_alloc_GC(void)
     {
       allocnpGCold=allocnpGC;
       allocnpGC = (int) (1.2*((double)allocnpGC));
+      if (allocnpGC==allocnpGCold)
+	allocnpGC *= 2;
       printf("new allocnpGC=%d old=%d\n", allocnpGC, allocnpGCold);
       rt[0] = malloc(sizeof(double)*Oparams.parnum);
       rt[1] = malloc(sizeof(double)*Oparams.parnum);
@@ -1449,8 +1454,16 @@ int insert_particle_GC(void)
   ry[np] = L*(ranf()-0.5);
   rz[np] = L*(ranf()-0.5);
 #endif
-  orient(&ox,&oy,&oz);
-  versor_to_R(ox, oy, oz, Rl);
+  if (OprogStatus.restrmove==0)
+    {
+      orient(&ox,&oy,&oz);
+      versor_to_R(ox, oy, oz, Rl);
+    }
+  else
+    {
+      Rl[0][0]=Rl[1][1]=Rl[2][2]=1.0;
+      Rl[0][1]=Rl[0][2]=Rl[1][0]=Rl[1][2]=Rl[2][0]=Rl[2][1]=0.0;
+    }
   /* per ora assumiamo un solo tipo di particelle nel GC */
   typeOfPart[np]=0;
   vx[np]=vy[np]=vz[np]=wx[np]=wy[np]=wz[np]=Mx[np]=My[np]=Mz[np]=0.0;
@@ -4141,10 +4154,13 @@ void move(void)
 	OprogStatus.deltaMC *= 1.1;
       else
 	OprogStatus.deltaMC /= 1.1;
-      if (rotaccept > OprogStatus.targetAccept)
-	OprogStatus.dthetaMC *= 1.1;
-      else
-	OprogStatus.dthetaMC /= 1.1;
+      if (OprogStatus.restrmove==0)
+	{
+	  if (rotaccept > OprogStatus.targetAccept)
+	    OprogStatus.dthetaMC *= 1.1;
+	  else
+	    OprogStatus.dthetaMC /= 1.1;
+	}
 #ifdef MD_LXYZ
       if (OprogStatus.deltaMC > (avL=pow(L[0]*L[1]*L[2],1.0/3.0))*0.1)
 	OprogStatus.deltaMC = avL*0.1;
@@ -4175,8 +4191,10 @@ void move(void)
       //totmoves=((long long int)Oparams.parnum*(long long int)Oparams.curStep);
       acceptance=((double)(totmovesMC-totrejMC))/totmovesMC;
       traaccept = ((double)(tramoveMC-trarejMC))/tramoveMC;
-      rotaccept = ((double)(rotmoveMC-rotrejMC))/rotmoveMC; 
-     
+      if (rotmoveMC!=0)
+	rotaccept = ((double)(rotmoveMC-rotrejMC))/rotmoveMC; 
+      else
+	rotaccept = -1.0;
       printf("MC Step #%d pressure=%f temperature=%f Npar=%d\n", Oparams.curStep, Oparams.P, Oparams.T, Oparams.parnum);
       printf("Acceptance=%.15G (tra=%.15G rot=%.15G) deltaMC=%.15G dthetaMC=%.15G\n", acceptance, traaccept, 
 	     rotaccept, OprogStatus.deltaMC, OprogStatus.dthetaMC);
