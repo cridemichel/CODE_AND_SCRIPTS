@@ -55,7 +55,7 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
    * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
    * a partire da questi. */
   /* WARNING: se le particelle che interagiscono hanno diametro diverso da sigma[0][1] qui va cambiato!!!! */ 
-  spdist = X0-(2.0-1.541665);
+  spdist = 0.5;/*X0-(2.0-1.541665);*/
   radius=1.21667;
   if (ata == 0)
     {
