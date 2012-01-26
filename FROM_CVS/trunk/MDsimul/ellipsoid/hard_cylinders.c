@@ -233,14 +233,18 @@ int check_convergence(double Told[3], double Tnew[3])
 	test=temp; 
     }
   if (test < 1.0E-8)
-    return 1;
+    {
+      //printf("convergence reached! test=%.15G\n", test);
+      return 1;
+    }
   else 
     return 0;
 }
-
-double calcDistNegHC(int i, int j, double shift[3])
+double totitsHC = 0.0;
+double numcallsHC = 0.0;
+double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 {
-  const int MAX_ITERATIONS = 1000;
+  const int MAX_ITERATIONS = 100000;
   int it;
   double ViVj[3], lambdai, lambdaj;
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
@@ -257,7 +261,9 @@ double calcDistNegHC(int i, int j, double shift[3])
   double normCiCj;	
   int kk, j1, j2;
 
-  printf("[MCHC] calcDistNegHC\n");
+  *retchk = 0; 
+  //printf("[MCHC] calcDistNegHC\n");
+
   for (kk=0; kk < 3; kk++)
     {
       ni[kk] = R[i][0][kk];
@@ -383,7 +389,7 @@ double calcDistNegHC(int i, int j, double shift[3])
 	{
 	  Ai[kk] = Ci[kk];
 	}
-      for (it = 0; it < MAX_ITERATIONS; it++);
+      for (it = 0; it < MAX_ITERATIONS; it++)
 	{
 	  for (kk=0; kk < 3; kk++)
 	    {
@@ -392,7 +398,7 @@ double calcDistNegHC(int i, int j, double shift[3])
 	  AiDjnj = scalProd(AiDj,nj);
 	  vectProdVec(AiDj,nj,AiDjnjvec);
 	  for (kk=0; kk < 3; kk++)
-	    VV[kk] =  0.5*D*(Ai[kk]-Dj[j2][kk]-AiDjnj*nj[kk])/calc_norm(AiDjnjvec);
+	    VV[kk] =  0.5*D*(AiDj[kk]-AiDjnj*nj[kk])/calc_norm(AiDjnjvec);
 	  for (kk=0; kk < 3; kk++)
 	    {
 	      Tjp[kk] = Dj[j2][kk] + VV[kk];
@@ -426,10 +432,18 @@ double calcDistNegHC(int i, int j, double shift[3])
 	  for (kk=0; kk < 3; kk++)
 	    TjNewCi[kk] = TjNew[kk] - Ci[kk];
 	  TjNewCini = scalProd(TjNewCi,ni);
+	  //printf("it=%d TjNew=%.15G %.15G %.15G\n", it, TjNew[0], TjNew[1], TjNew[2]);
 	  Ai[kk] = TjNewCini*ni[kk] + Ci[kk]; 
 	  if ( it > 0 && check_convergence(TjOld,TjNew) ) 
 	    break;
-	} 
+	}
+      totitsHC += it;
+      //printf("#1 number of iterations=%d\n",it);
+      if (it >= MAX_ITERATIONS)
+       {
+	 *retchk=1;
+	 return -1;
+       }
       if ( (calc_norm(Tjp_para) <= L*0.5 && calc_norm(Tjp_perp) >= D*0.5)||
 	   (calc_norm(Tjm_para) <= L*0.5 && calc_norm(Tjm_perp) >= D*0.5) )
 	return -1;
@@ -457,7 +471,7 @@ double calcDistNegHC(int i, int j, double shift[3])
 	{
 	  Aj[kk] = Cj[kk];
 	}
-      for (it = 0; it < MAX_ITERATIONS; it++);
+      for (it = 0; it < MAX_ITERATIONS; it++)
 	{
 	  for (kk=0; kk < 3; kk++)
 	    {
@@ -466,7 +480,7 @@ double calcDistNegHC(int i, int j, double shift[3])
 	  AjDini = scalProd(AjDi,ni);
 	  vectProdVec(AjDi,ni,AjDinivec);
 	  for (kk=0; kk < 3; kk++)
-	    VV[kk] =  0.5*D*(Aj[kk]-Di[j1][kk]-AjDini*ni[kk])/calc_norm(AjDinivec);
+	    VV[kk] =  0.5*D*(AjDi[kk]-AjDini*ni[kk])/calc_norm(AjDinivec);
 	  for (kk=0; kk < 3; kk++)
 	    {
 	      Tip[kk] = Di[j2][kk] + VV[kk];
@@ -504,11 +518,19 @@ double calcDistNegHC(int i, int j, double shift[3])
 	  if ( it > 0 && check_convergence(TiOld,TiNew) ) 
 	    break;
 	} 
+      totitsHC += it;
+      if (it >= MAX_ITERATIONS)
+       	{
+ 	  *retchk=1;
+ 	  return -1;
+  	}
+      
+     // printf("#2 number of iterations=%d\n",it);
       if ( (calc_norm(Tip_para) <= L*0.5 && calc_norm(Tip_perp) >= D*0.5)||
 	   (calc_norm(Tim_para) <= L*0.5 && calc_norm(Tim_perp) >= D*0.5) )
 	return -1;
-
     }
+  numcallsHC += 4.0; 
   /* case A.3 rim-rim overlap */
   CiCjni = scalProd(CiCj,ni);
   CiCjnj = scalProd(CiCj,nj);
