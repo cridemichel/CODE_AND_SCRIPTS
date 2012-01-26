@@ -1,5 +1,9 @@
 #include<mdsimul.h>
+#ifdef MC_HC
+const double saxfactMC[3]={0.999,0.7071,0.7071};
+#else
 const double saxfactMC[3]={0.85,0.68,0.68};
+#endif
 #ifdef MC_QUASI_CUBE
 const double saxfactMC_QC[3]={0.832,0.832,0.832};
 #endif
@@ -4113,6 +4117,8 @@ int mcmotion(void)
     }
   return movetype;
 }
+extern double totitsHC, numcallsHC;
+
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0;
@@ -4280,6 +4286,9 @@ void move(void)
       printf("rotmoveMC:%lld rotrefMC: %lld cells= %d %d %d\n", rotmoveMC, rotrejMC, cellsx, cellsy, cellsz);
       if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
 	printf("Volume moves acceptance = %.15G vmax = %.15G\n", volaccept, OprogStatus.vmax);
+#ifdef MC_HC
+      printf("Average iterations in case A.2:%G\n", totitsHC/numcallsHC);
+#endif
     }
   if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
     volmoveMC=volrejMC=0;
