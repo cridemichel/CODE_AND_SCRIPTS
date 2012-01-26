@@ -232,7 +232,7 @@ int check_convergence(double Told[3], double Tnew[3])
       if (temp > test) 
 	test=temp; 
     }
-  if (test < 1.0E-8)
+  if (test < 1.0E-14)
     {
       //printf("convergence reached! test=%.15G\n", test);
       return 1;
