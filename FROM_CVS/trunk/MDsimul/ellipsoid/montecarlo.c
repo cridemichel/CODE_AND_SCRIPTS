@@ -664,6 +664,7 @@ double overlap_using_multibox(int i, int j, double shift[3])
     }
   return 1.0;
 }
+#undef DEBUG_HCMC
 #undef MC_OF_BOXES
 double check_overlap(int i, int j, double shift[3], int *errchk)
 {
@@ -673,6 +674,11 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   *errchk=0;
   OprogStatus.optnnl = 0;
 
+#ifdef DEBUG_HCMC
+  d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
+  printf("d=%f\n",d);
+  exit(-1);
+#endif
   if (are_spheres(i,j))
     {
       OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */

@@ -1,10 +1,10 @@
 #ifdef MC_HC
 #include<mdsimul.h>
-const double saxfactMC[3]={0.85,0.68,0.68};
+extern const double saxfactMC[3];
 #ifdef MC_QUASI_CUBE
-const double saxfactMC_QC[3]={0.832,0.832,0.832};
+extern const double saxfactMC_QC[3];
 #endif
-const int nfons=200;
+extern const int nfons;
 extern void init_rng(int mdseed, int mpi, int my_rank);
 #ifdef MC_SIMUL
 #ifdef MC_STORELL
@@ -211,11 +211,11 @@ extern void store_bump(int i, int j);
 #endif
 #if (defined(MC_SIMUL) || defined(MD_STANDALONE)) && 1
 double scalProd(double *A, double *B);
-double toteneini=0.0;
-long long int ttini=0;
-int covrestart = 0;
-const int nmboxMC=5;
-double totdist=0.0, distcc=0.0;
+extern double toteneini;
+extern long long int ttini;
+extern int covrestart;
+extern const int nmboxMC;
+extern double totdist, distcc;
 static double maxarg1,maxarg2;
 
 #define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
@@ -257,6 +257,7 @@ double calcDistNegHC(int i, int j, double shift[3])
   double normCiCj;	
   int kk, j1, j2;
 
+  printf("[MCHC] calcDistNegHC\n");
   for (kk=0; kk < 3; kk++)
     {
       ni[kk] = R[i][0][kk];
@@ -287,7 +288,7 @@ double calcDistNegHC(int i, int j, double shift[3])
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
   if (ni[0]==nj[0] && ni[1]==ni[1] && ni[2]==ni[2])
     {
-      /* special case of collinear cylinders */
+      /* special case of collinear cylinders (parallel disks) */
       normCiCj = calc_norm(CiCj);
       for (kk=0; kk < 3; kk++)
 	VV[kk] = CiCj[kk]/normCiCj;
@@ -316,6 +317,7 @@ double calcDistNegHC(int i, int j, double shift[3])
     }
   else 
     {
+      /* loop over all disk pairs (they are 4) */
       for (j1=0; j1 < 2; j1++)
 	for (j2=0; j2 < 2; j2++)
 	  {
@@ -326,7 +328,7 @@ double calcDistNegHC(int i, int j, double shift[3])
 	    Djnj = scalProd(Dj[j2],nj);
 	    vectProdVec(ni,N,niN);
 	    vectProdVec(nj,N,njN);
-	    normN=calcnorm(N);
+	    normN=calc_norm(N);
 	    for (kk=0; kk < 3; kk++)
 	      { 
 		Pi[kk] = (DiN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
@@ -337,8 +339,8 @@ double calcDistNegHC(int i, int j, double shift[3])
 		PiDi[kk] = Pi[kk] - Di[j1][kk];
 		PjDj[kk] = Pj[kk] - Dj[j2][kk];
 	      }
-	    normPiDi = calcnorm(PiDi);
-	    normPjDj = calcnorm(PjDj);
+	    normPiDi = calc_norm(PiDi);
+	    normPjDj = calc_norm(PjDj);
 	    if (normPiDi <= 0.5*D && normPjDj <= 0.5*D)
 	      {
 		Q1 = sqrt(Sqr(D)/4.0-Sqr(normPiDi));
@@ -347,7 +349,7 @@ double calcDistNegHC(int i, int j, double shift[3])
 		  {
 		    PiPj[kk] = Pi[kk] - Pj[kk];
 		  }
-		normPiPj = calcnorm(PiPj);
+		normPiPj = calc_norm(PiPj);
 		if (normPiPj <= Q1 + Q2)
 		  return -1;
 		//else 
@@ -363,7 +365,7 @@ double calcDistNegHC(int i, int j, double shift[3])
     {
       for (kk=0; kk < 3; kk++)
 	DjCi[kk] = Dj[j2][kk] - Ci[kk];
-      normDjCi = calcnorm(DjCi);
+      normDjCi = calc_norm(DjCi);
       DjCini = scalProd(DjCi,ni);
       for (kk=0; kk < 3; kk++)
 	{
@@ -372,7 +374,7 @@ double calcDistNegHC(int i, int j, double shift[3])
 	}
 
       DjUini = scalProd(DjUi,ni);
-      normDjUi = calcnorm(DjUi);
+      normDjUi = calc_norm(DjUi);
 
       if (normDjUi <= D*0.5 && DjUini > L*0.5)
 	return -1;
@@ -390,7 +392,7 @@ double calcDistNegHC(int i, int j, double shift[3])
 	  AiDjnj = scalProd(AiDj,nj);
 	  vectProdVec(AiDj,nj,AiDjnjvec);
 	  for (kk=0; kk < 3; kk++)
-	    VV[kk] =  0.5*D*(Ai[kk]-Dj[j2][kk]-AiDjnj*nj[kk])/calcnorm(AiDjnjvec);
+	    VV[kk] =  0.5*D*(Ai[kk]-Dj[j2][kk]-AiDjnj*nj[kk])/calc_norm(AiDjnjvec);
 	  for (kk=0; kk < 3; kk++)
 	    {
 	      Tjp[kk] = Dj[j2][kk] + VV[kk];
@@ -407,10 +409,10 @@ double calcDistNegHC(int i, int j, double shift[3])
 	      Tjm_perp[kk] = TjmCi[kk]-TjmCini*ni[kk];
 	      Tjm_para[kk] = TjmCini*ni[kk];
 	    } 
-	  normTjm_perp = calcnorm(Tjp_perp);
+	  normTjm_perp = calc_norm(Tjp_perp);
 	  for (kk=0; kk < 3; kk++)
 	    TjOld[kk] = TjNew[kk];
-	  if (calcnorm(Tjm_perp) < calcnorm(Tjp_perp))
+	  if (calc_norm(Tjm_perp) < calc_norm(Tjp_perp))
 	    {
 	      for (kk=0; kk < 3; kk++)
 		TjNew[kk] = Tjm[kk];
@@ -428,8 +430,8 @@ double calcDistNegHC(int i, int j, double shift[3])
 	  if ( it > 0 && check_convergence(TjOld,TjNew) ) 
 	    break;
 	} 
-      if ( (calcnorm(Tjp_para) <= L*0.5 && calcnorm(Tjp_perp) >= D*0.5)||
-	   (calcnorm(Tjm_para) <= L*0.5 && calcnorm(Tjm_perp) >= D*0.5) )
+      if ( (calc_norm(Tjp_para) <= L*0.5 && calc_norm(Tjp_perp) >= D*0.5)||
+	   (calc_norm(Tjm_para) <= L*0.5 && calc_norm(Tjm_perp) >= D*0.5) )
 	return -1;
     }
 
@@ -437,7 +439,7 @@ double calcDistNegHC(int i, int j, double shift[3])
     {
       for (kk=0; kk < 3; kk++)
 	DiCj[kk] = Di[j1][kk] - Cj[kk];
-      normDiCj = calcnorm(DiCj);
+      normDiCj = calc_norm(DiCj);
       DiCjnj = scalProd(DiCj,nj);
       for (kk=0; kk < 3; kk++)
 	{
@@ -446,7 +448,7 @@ double calcDistNegHC(int i, int j, double shift[3])
 	}
 
       DiUjnj = scalProd(DiUj,nj);
-      normDiUj = calcnorm(DiUj);
+      normDiUj = calc_norm(DiUj);
 
       if (normDiUj <= D*0.5 && DiUjnj > L*0.5)
 	return -1;
@@ -462,9 +464,9 @@ double calcDistNegHC(int i, int j, double shift[3])
 	      AjDi[kk] = Aj[kk] - Di[j1][kk];
 	    }
 	  AjDini = scalProd(AjDi,ni);
-	  vectProdVec(AjDi,nj,AjDinivec);
+	  vectProdVec(AjDi,ni,AjDinivec);
 	  for (kk=0; kk < 3; kk++)
-	    VV[kk] =  0.5*D*(Aj[kk]-Di[j1][kk]-AjDini*ni[kk])/calcnorm(AjDinivec);
+	    VV[kk] =  0.5*D*(Aj[kk]-Di[j1][kk]-AjDini*ni[kk])/calc_norm(AjDinivec);
 	  for (kk=0; kk < 3; kk++)
 	    {
 	      Tip[kk] = Di[j2][kk] + VV[kk];
@@ -481,10 +483,10 @@ double calcDistNegHC(int i, int j, double shift[3])
 	      Tim_perp[kk] = TimCj[kk]-TimCjnj*nj[kk];
 	      Tim_para[kk] = TimCjnj*nj[kk];
 	    } 
-	  normTim_perp = calcnorm(Tip_perp);
+	  normTim_perp = calc_norm(Tip_perp);
 	  for (kk=0; kk < 3; kk++)
 	    TiOld[kk] = TiNew[kk];
-	  if (calcnorm(Tim_perp) < calcnorm(Tip_perp))
+	  if (calc_norm(Tim_perp) < calc_norm(Tip_perp))
 	    {
 	      for (kk=0; kk < 3; kk++)
 		TiNew[kk] = Tim[kk];
@@ -502,8 +504,8 @@ double calcDistNegHC(int i, int j, double shift[3])
 	  if ( it > 0 && check_convergence(TiOld,TiNew) ) 
 	    break;
 	} 
-      if ( (calcnorm(Tip_para) <= L*0.5 && calcnorm(Tip_perp) >= D*0.5)||
-	   (calcnorm(Tim_para) <= L*0.5 && calcnorm(Tim_perp) >= D*0.5) )
+      if ( (calc_norm(Tip_para) <= L*0.5 && calc_norm(Tip_perp) >= D*0.5)||
+	   (calc_norm(Tim_para) <= L*0.5 && calc_norm(Tim_perp) >= D*0.5) )
 	return -1;
 
     }
@@ -512,6 +514,7 @@ double calcDistNegHC(int i, int j, double shift[3])
   CiCjnj = scalProd(CiCj,nj);
   detA = Sqr(ninj)-1;
 
+  /* WARNING: solution given in Ibarra et al. Mol. Sim. 33,505 (2007) is wrong */
   lambdai = ( CiCjni - CiCjnj*ninj)/detA;
   lambdaj = (-CiCjnj + CiCjni*ninj)/detA;
 
@@ -521,7 +524,7 @@ double calcDistNegHC(int i, int j, double shift[3])
       Vj[kk] = Cj[kk] + lambdaj*nj[kk];
       ViVj[kk] = Vi[kk] - Vj[kk];
     }
-  if (calcnorm(ViVj) < D && fabs(lambdai) < 0.5*L && fabs(lambdaj) < 0.5*L)
+  if (calc_norm(ViVj) < D && fabs(lambdai) < 0.5*L && fabs(lambdaj) < 0.5*L)
     return -1;
 
   return 1;
