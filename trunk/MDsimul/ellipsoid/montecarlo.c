@@ -10,6 +10,7 @@ const double saxfactMC_QC[3]={0.832,0.832,0.832};
 const int nfons=200;
 extern void init_rng(int mdseed, int mpi, int my_rank);
 #ifdef MC_SIMUL
+int dostorebump=0;
 #ifdef MC_STORELL
 int *cellListMC;
 #endif
@@ -1011,6 +1012,8 @@ int overlapMC_LL(int ip, int *err)
 			{
 			  //printf("checking i=%d j=%d: ", na, n);
 			  //printf("overlap!\n");
+			  if (dostorebump)
+			    store_bump(na, n);
 		  	  return 1;
 			}
 		    }
@@ -1886,6 +1889,7 @@ void move_box(int *ierr)
 #else
   vo = L*L*L;
 #endif
+
   eno = calcpotene();
   lnvn = log(vo) + (ranf()-0.5)*OprogStatus.vmax;
   vn = exp(lnvn);
@@ -1922,6 +1926,7 @@ void move_box(int *ierr)
     {
       if (overlapMC(i, ierr))
 	{
+	  //printf("overlap di %d Lfact=%.15G\n", i, Lfact);
 	  /* move rejected restore old positions */
 #ifdef MD_LXYZ
 	  L[0] /= Lfact;
@@ -4118,7 +4123,6 @@ int mcmotion(void)
   return movetype;
 }
 extern double totitsHC, numcallsHC;
-
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0;
@@ -4132,6 +4136,27 @@ void move(void)
 #ifdef MC_CALC_COVADD
   calc_cov_additive();
 #endif
+#if 0
+    {int overlap=0, ierr; 
+
+      dostorebump=1;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (overlapMC(i, &ierr))
+	{ 
+	  overlap=1;
+	  printf("PRIMA overlap di %d\n", i);
+	}
+    }
+  dostorebump=0;
+  if (overlap)
+    {
+      printf("MC step=%d\n", Oparams.curStep);
+      exit(-1);
+    }
+    }
+#endif
+
   if (OprogStatus.useNNL && do_nnl_rebuild())
     {
       //printf("Step #%d Rebuilding NNL\n", Oparams.curStep);
