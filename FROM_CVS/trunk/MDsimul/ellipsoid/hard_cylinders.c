@@ -242,6 +242,8 @@ int check_convergence(double Told[3], double Tnew[3])
 }
 double totitsHC = 0.0;
 double numcallsHC = 0.0;
+
+extern int dostorebump;
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 {
   const int MAX_ITERATIONS = 100000;
@@ -292,7 +294,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
     }
 
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
-  if (ni[0]==nj[0] && ni[1]==ni[1] && ni[2]==ni[2])
+  if (ni[0]==nj[0] && ni[1]==nj[1] && ni[2]==nj[2])
     {
       /* special case of collinear cylinders (parallel disks) */
       normCiCj = calc_norm(CiCj);
@@ -357,7 +359,11 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 		  }
 		normPiPj = calc_norm(PiPj);
 		if (normPiPj <= Q1 + Q2)
-		  return -1;
+		  {
+		    if (dostorebump)
+		      printf("disk-disk\n");
+		    return -1;
+		  }
 		//else 
 		//return 1;
 	      }
@@ -383,8 +389,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
       normDjUi = calc_norm(DjUi);
 
       if (normDjUi <= D*0.5 && DjUini > L*0.5)
-	return -1;
-
+	continue;
       for (kk=0; kk < 3; kk++)
 	{
 	  Ai[kk] = Ci[kk];
@@ -446,7 +451,12 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
        }
       if ( (calc_norm(Tjp_para) <= L*0.5 && calc_norm(Tjp_perp) >= D*0.5)||
 	   (calc_norm(Tjm_para) <= L*0.5 && calc_norm(Tjm_perp) >= D*0.5) )
-	return -1;
+	{
+	  if (dostorebump)
+	    printf("disk-rim\n");
+		   
+	  return -1;
+	}
     }
 
   for (j1=0; j1 < 2; j1++)
@@ -465,7 +475,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
       normDiUj = calc_norm(DiUj);
 
       if (normDiUj <= D*0.5 && DiUjnj > L*0.5)
-	return -1;
+	continue;
 
       for (kk=0; kk < 3; kk++)
 	{
@@ -528,7 +538,12 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
      // printf("#2 number of iterations=%d\n",it);
       if ( (calc_norm(Tip_para) <= L*0.5 && calc_norm(Tip_perp) >= D*0.5)||
 	   (calc_norm(Tim_para) <= L*0.5 && calc_norm(Tim_perp) >= D*0.5) )
-	return -1;
+	{
+	  if (dostorebump)
+	    printf("disk-rim\n");
+		
+	  return -1;
+	}
     }
   numcallsHC += 4.0; 
   /* case A.3 rim-rim overlap */
@@ -547,8 +562,12 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
       ViVj[kk] = Vi[kk] - Vj[kk];
     }
   if (calc_norm(ViVj) < D && fabs(lambdai) < 0.5*L && fabs(lambdaj) < 0.5*L)
-    return -1;
-
+    {
+      if (dostorebump)
+	printf("rim-rim\n");
+		
+      return -1;
+    }
   return 1;
 }
 #endif
