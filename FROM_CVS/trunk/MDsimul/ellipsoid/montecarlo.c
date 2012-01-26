@@ -4136,7 +4136,7 @@ void move(void)
 #ifdef MC_CALC_COVADD
   calc_cov_additive();
 #endif
-#if 0
+#if 1
     {int overlap=0, ierr; 
 
       dostorebump=1;
