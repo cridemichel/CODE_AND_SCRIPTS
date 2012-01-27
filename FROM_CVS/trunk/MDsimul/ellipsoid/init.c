@@ -5498,11 +5498,15 @@ void usrInitAft(void)
     {
       /* se non si tratta di una superquadrica alloca il prefattore è semlicemente
 	 4*pi/3 */
+#ifdef MC_HC
+      SQvolPrefact[pt] = 4.0*acos(0.0);
+#else
       if (typesArr[pt].n[0]==2.0 && typesArr[pt].n[1]==2.0 &&
 	      typesArr[pt].n[2]==2.0)
 	SQvolPrefact[pt] = 8.0*acos(0.0)/3.0;
       else
 	SQvolPrefact[pt] = calc_SQ_volprefact(pt);
+#endif
       printf("[type=%d] Volume SQ prefactor = %.15G\n", pt, SQvolPrefact[pt]);
     }
 #endif
