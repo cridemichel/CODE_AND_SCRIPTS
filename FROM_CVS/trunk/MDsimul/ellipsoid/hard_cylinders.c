@@ -1,4 +1,5 @@
 #ifdef MC_HC
+#undef DEBUG_HCMC
 #include<mdsimul.h>
 extern const double saxfactMC[3];
 #ifdef MC_QUASI_CUBE
@@ -242,12 +243,13 @@ int check_convergence(double Told[3], double Tnew[3])
 }
 double totitsHC = 0.0;
 double numcallsHC = 0.0;
-
+#ifdef DEBUG_HCMC
 extern int dostorebump;
+#endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 {
   const int MAX_ITERATIONS = 100000;
-  int it;
+  int it, k2;
   double ViVj[3], lambdai, lambdaj;
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
@@ -261,6 +263,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp;
   double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj;	
   double normCiCj;	
+  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3];
   int kk, j1, j2;
 
   *retchk = 0; 
@@ -360,8 +363,10 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 		normPiPj = calc_norm(PiPj);
 		if (normPiPj <= Q1 + Q2)
 		  {
+#ifdef DEBUG_HCMC
 		    if (dostorebump)
 		      printf("disk-disk\n");
+#endif
 		    return -1;
 		  }
 		//else 
@@ -373,6 +378,26 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
     }
   /* case A.2 overlap of rim and disk */
 
+  /* =================================== >>> Part A <<< ========================= */
+  for (j1=0; j1 < 2; j1++)
+  {
+    if (j1==1)
+      {
+	for (kk=0; kk < 3; kk++)
+	  {
+	    for (k2=0; k2 < 2; k2++)
+	      DjTmp[k2][kk] = Dj[k2][kk];
+	    CiTmp[kk] = Ci[kk];
+	    niTmp[kk] = ni[kk];
+	    njTmp[kk] = nj[kk];
+	    /* exhange the two particles */	
+	    for (k2=0; k2 < 2; k2++)
+	      Dj[k2][kk] = Di[k2][kk];
+	    Ci[kk] = Cj[kk];
+	    ni[kk] = nj[kk];
+	    nj[kk] = niTmp[kk];
+	  }
+      }
   for (j2=0; j2 < 2; j2++)
     {
       for (kk=0; kk < 3; kk++)
@@ -387,13 +412,44 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 
       DjUini = scalProd(DjUi,ni);
       normDjUi = calc_norm(DjUi);
-
-      if (normDjUi <= D*0.5 && DjUini > L*0.5)
-	continue;
-      for (kk=0; kk < 3; kk++)
+#if 0
+      if (dostorebump)
 	{
-	  Ai[kk] = Ci[kk];
+	  printf("normDjUi=%.15G DjUini=%.15G\n", normDjUi, DjUini);
+	  printf("Ci=%f %f %f Dj=%f %f %f\n", Ci[0], Ci[1], Ci[2], Dj[0], Dj[1], Dj[2]);
+	  printf("DjUi=%.15G %.15G %.15G\n", DjUi[0], DjUi[1], DjUi[2]); 
+	  printf("Uj=%.15G %.15G %.15G\n", Ui[0], Ui[1], Ui[2]); 
+	  printf("nj=%.15G %.15G %.15G\n", ni[0], ni[1], ni[2]);
+	  printf("DjCini= %.15G\n", DjCini);
 	}
+#endif 
+      if (normDjUi > D)
+	continue;
+
+	/* NOTE: in Ibarra et al. Mol. Phys. 33, 505 (2007) 
+	   there is some mess about following conditions:
+	   The second and third condition on right column of page 514 
+	   should read (D=sigma):
+	    |Di-Ui| < D/2  && |(Dj-Ci).ni| > L/2
+             
+	    |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
+
+	 */
+      if (normDjUi < D*0.5 && fabs(DjCini) > L*0.5)
+	continue;
+
+      if (normDjUi < D*0.5 && fabs(DjCini) <= L*0.5)
+	{
+#ifdef DEBUG_HCMC
+	  if (dostorebump)
+	    printf("A #1 disk-rim NP=%d\n", Oparams.parnum);
+#endif	
+	  return -1;
+	}
+      for (kk=0; kk < 3; kk++)
+  	{
+ 	  Ai[kk] = Ci[kk];
+  	}
       for (it = 0; it < MAX_ITERATIONS; it++)
 	{
 	  for (kk=0; kk < 3; kk++)
@@ -437,28 +493,57 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	  for (kk=0; kk < 3; kk++)
 	    TjNewCi[kk] = TjNew[kk] - Ci[kk];
 	  TjNewCini = scalProd(TjNewCi,ni);
-	  //printf("it=%d TjNew=%.15G %.15G %.15G\n", it, TjNew[0], TjNew[1], TjNew[2]);
-	  Ai[kk] = TjNewCini*ni[kk] + Ci[kk]; 
+
+#ifdef DEBUG_HCMC
+	  printf("j1=%d A it=%d Aiold=%.15G %.15G %.15G\n", j1, it, Ai[0], Ai[1], Ai[2]);
+#endif
+	  for (kk=0; kk < 3; kk++)
+	    Ai[kk] = TjNewCini*ni[kk] + Ci[kk]; 
+#ifdef DEBUG_HCMC
+	  printf("A it=%d Ainew=%.15G %.15G %.15G TjNewCini=%.15G\n", it, Ai[0], Ai[1], Ai[2], TjNewCini);
+	  printf("A Ci=%.15G %.15G %.15G\n", Ci[0], Ci[1], Ci[2]);
+	  printf("A ni=%.15G %.15G %.15G\n", ni[0], ni[1], ni[2]);
+#endif
 	  if ( it > 0 && check_convergence(TjOld,TjNew) ) 
 	    break;
 	}
       totitsHC += it;
-      //printf("#1 number of iterations=%d\n",it);
+#ifdef DEBUG_HCMC
+      printf("A #1 number of iterations=%d Tjold=%.15G %.15G %.15G Tjnew=%.15G %.15G %.15G\n",it, 
+	     TjOld[0], TjOld[1], TjOld[2], TjNew[0], TjNew[1], TjNew[2]);
+#endif
       if (it >= MAX_ITERATIONS)
        {
+	 printf("MAX ITERATIONS REACHED in A!\n");
 	 *retchk=1;
 	 return -1;
        }
-      if ( (calc_norm(Tjp_para) <= L*0.5 && calc_norm(Tjp_perp) >= D*0.5)||
-	   (calc_norm(Tjm_para) <= L*0.5 && calc_norm(Tjm_perp) >= D*0.5) )
+      if ( (calc_norm(Tjp_para) <= L*0.5 && calc_norm(Tjp_perp) <= D*0.5)||
+	   (calc_norm(Tjm_para) <= L*0.5 && calc_norm(Tjm_perp) <= D*0.5) )
 	{
+#ifdef DEBUG_HCMC
 	  if (dostorebump)
-	    printf("disk-rim\n");
-		   
+	    printf("A #2 disk-rim\n");
+#endif	   
 	  return -1;
 	}
     }
+     if (j1==1)
+      {
+	for (kk=0; kk < 3; kk++)
+	  {
+	    /* restore particles*/
+	    for (k2=0; k2 < 2; k2++)
+  	      Dj[k2][kk] = DjTmp[k2][kk];
+	    Ci[kk] = CiTmp[kk];
+	    ni[kk] = niTmp[kk];
+	    nj[kk] = njTmp[kk];
+	  }
+      }
 
+  }
+  /* =================================== >>> Part B <<< ========================= */
+#if 0
   for (j1=0; j1 < 2; j1++)
     {
       for (kk=0; kk < 3; kk++)
@@ -473,10 +558,32 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 
       DiUjnj = scalProd(DiUj,nj);
       normDiUj = calc_norm(DiUj);
-
-      if (normDiUj <= D*0.5 && DiUjnj > L*0.5)
+#ifdef DEBUG_HCMC
+      if (dostorebump)
+	{
+	  printf("B normDiUj=%.15G DiUjnj=%.15G\n", normDiUj, DiUjnj);
+	  printf("B Cj=%f %f %f Di=%f %f %f\n", Cj[0], Cj[1], Cj[2], Di[j1][0], Di[j1][1], Di[j1][2]);
+	  printf("B DiUj=%.15G %.15G %.15G\n", DiUj[0], DiUj[1], DiUj[2]); 
+	  printf("B Uj=%.15G %.15G %.15G\n", Uj[0], Uj[1], Uj[2]); 
+	  printf("B nj=%.15G %.15G %.15G\n", nj[0], nj[1], nj[2]);
+	  printf("DjCini= %.15G\n", DjCini);
+	}
+#endif 
+ 
+      if (normDiUj > D)
 	continue;
 
+      if (normDiUj < D*0.5 && fabs(DiCjnj) > L*0.5)
+	continue;
+
+      if (normDiUj < D*0.5 && fabs(DiCjnj) <= L*0.5)
+	{
+#ifdef DEBUG_HCMC
+	  if (dostorebump)
+	    printf("B #1 disk-rim NP=%d\n", Oparams.parnum);
+#endif	
+	  return -1;
+	}      
       for (kk=0; kk < 3; kk++)
 	{
 	  Aj[kk] = Cj[kk];
@@ -524,31 +631,58 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	  for (kk=0; kk < 3; kk++)
 	    TiNewCj[kk] = TiNew[kk] - Cj[kk];
 	  TiNewCjnj = scalProd(TiNewCj,nj);
-	  Aj[kk] = TiNewCjnj*nj[kk] + Cj[kk]; 
+#ifdef DEBUG_HCMC
+	  printf("B it=%d Ajold=%.15G %.15G %.15G\n", it, Aj[0], Aj[1], Aj[2]);
+#endif
+	  for (kk=0; kk < 3; kk++)
+	    Aj[kk] = TiNewCjnj*nj[kk] + Cj[kk]; 
+#ifdef DEBUG_HCMC
+	  printf("B it=%d Ajnew=%.15G %.15G %.15G TiNewCjnj=%.15G\n", it, Aj[0], Aj[1], Aj[2], TiNewCjnj);
+	  printf("B Ci=%.15G %.15G %.15G\n", Cj[0], Cj[1], Cj[2]);
+	  printf("B ni=%.15G %.15G %.15G\n", nj[0], nj[1], nj[2]);
+	  printf("B #1 number of iterations=%d Tiold=%.15G %.15G %.15G Tinew=%.15G %.15G %.15G\n",it, 
+	     TiOld[0], TiOld[1], TiOld[2], TiNew[0], TiNew[1], TiNew[2]);
+
+#endif
+	
 	  if ( it > 0 && check_convergence(TiOld,TiNew) ) 
-	    break;
+	    {
+	      break;
+	    }
 	} 
       totitsHC += it;
+#ifdef DEBUG_HCMC
+      printf("B #1 number of iterations=%d Tiold=%.15G %.15G %.15G Tinew=%.15G %.15G %.15G\n",it, 
+	     TiOld[0], TiOld[1], TiOld[2], TiNew[0], TiNew[1], TiNew[2]);
+#endif
+ 
       if (it >= MAX_ITERATIONS)
        	{
- 	  *retchk=1;
+ 	  printf("MAX ITERATIONS REACHED IN B\n");
+	  *retchk=1;
+#ifdef DEBUG_HCMC
+	  //exit(-1);
+#endif
  	  return -1;
   	}
       
      // printf("#2 number of iterations=%d\n",it);
-      if ( (calc_norm(Tip_para) <= L*0.5 && calc_norm(Tip_perp) >= D*0.5)||
-	   (calc_norm(Tim_para) <= L*0.5 && calc_norm(Tim_perp) >= D*0.5) )
+      if ( (calc_norm(Tip_para) <= L*0.5 && calc_norm(Tip_perp) <= D*0.5)||
+	   (calc_norm(Tim_para) <= L*0.5 && calc_norm(Tim_perp) <= D*0.5) )
 	{
+#ifdef DEBUG_HCMC
 	  if (dostorebump)
-	    printf("disk-rim\n");
-		
+	    printf("B #2 disk-rim NP=%d\n", Oparams.parnum);
+#endif	
 	  return -1;
 	}
     }
+#endif
   numcallsHC += 4.0; 
   /* case A.3 rim-rim overlap */
   CiCjni = scalProd(CiCj,ni);
   CiCjnj = scalProd(CiCj,nj);
+  ninj = scalProd(ni, nj);
   detA = Sqr(ninj)-1;
 
   /* WARNING: solution given in Ibarra et al. Mol. Sim. 33,505 (2007) is wrong */
@@ -563,9 +697,10 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
     }
   if (calc_norm(ViVj) < D && fabs(lambdai) < 0.5*L && fabs(lambdaj) < 0.5*L)
     {
+#ifdef DEBUG_HCMC
       if (dostorebump)
-	printf("rim-rim\n");
-		
+	printf("rim-rim NP=%d\n", Oparams.parnum);
+#endif	
       return -1;
     }
   return 1;
