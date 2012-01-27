@@ -1,4 +1,5 @@
 #include<mdsimul.h>
+#undef DEBUG_HCMC
 #ifdef MC_HC
 const double saxfactMC[3]={0.999,0.7071,0.7071};
 #else
@@ -669,7 +670,6 @@ double overlap_using_multibox(int i, int j, double shift[3])
     }
   return 1.0;
 }
-#undef DEBUG_HCMC
 #undef MC_OF_BOXES
 double check_overlap(int i, int j, double shift[3], int *errchk)
 {
@@ -679,7 +679,7 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   *errchk=0;
   OprogStatus.optnnl = 0;
 
-#ifdef DEBUG_HCMC
+#if defined(DEBUG_HCMCMC) && 0
   d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
   printf("d=%f\n",d);
   exit(-1);
@@ -914,6 +914,7 @@ int overlapMC_NNL(int na, int *err)
     }
   return 0;
 }
+
 int overlapMC_LL(int ip, int *err)
 {
   int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na;
@@ -1012,9 +1013,11 @@ int overlapMC_LL(int ip, int *err)
 			{
 			  //printf("checking i=%d j=%d: ", na, n);
 			  //printf("overlap!\n");
+#ifdef DEBUG_HCMC
 			  if (dostorebump)
 			    store_bump(na, n);
-		  	  return 1;
+#endif
+			  return 1;
 			}
 		    }
 		} 
@@ -4123,6 +4126,7 @@ int mcmotion(void)
   return movetype;
 }
 extern double totitsHC, numcallsHC;
+
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0;
@@ -4136,7 +4140,7 @@ void move(void)
 #ifdef MC_CALC_COVADD
   calc_cov_additive();
 #endif
-#if 1
+#if 0 || defined(DEBUG_HCMC)
     {int overlap=0, ierr; 
 
       dostorebump=1;
