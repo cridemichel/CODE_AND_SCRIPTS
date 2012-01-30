@@ -248,7 +248,7 @@ extern int dostorebump;
 #endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 {
-  const int MAX_ITERATIONS = 100000;
+  const int MAX_ITERATIONS = 1000000;
   int it, k2;
   double ViVj[3], lambdai, lambdaj;
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
@@ -267,7 +267,6 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   int kk, j1, j2;
 
   *retchk = 0; 
-  //printf("[MCHC] calcDistNegHC\n");
 
   for (kk=0; kk < 3; kk++)
     {
@@ -383,6 +382,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   {
     if (j1==1)
       {
+	//break;
 	for (kk=0; kk < 3; kk++)
 	  {
 	    for (k2=0; k2 < 2; k2++)
@@ -600,8 +600,8 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	    VV[kk] =  0.5*D*(AjDi[kk]-AjDini*ni[kk])/calc_norm(AjDinivec);
 	  for (kk=0; kk < 3; kk++)
 	    {
-	      Tip[kk] = Di[j2][kk] + VV[kk];
-	      Tim[kk] = Di[j2][kk] - VV[kk];
+	      Tip[kk] = Di[j1][kk] + VV[kk];
+	      Tim[kk] = Di[j1][kk] - VV[kk];
 	      TipCj[kk] = Tip[kk] - Cj[kk];
 	      TimCj[kk] = Tim[kk] - Cj[kk];
 	    }

@@ -1954,9 +1954,9 @@ void usrInitBef(void)
     OprogStatus.targetAcceptVol=0.5;
 #endif
 #ifdef MC_SUS
-    /* if OprogStatus.nmin=0 or nmax=0 it is a usual grand canonical sim */
-    OprogStatus.susnmin=OprogStatus.npav;
-    OprogStatus.susnmax=OprogStatus.npav+1;
+    /* if OprogStatus.susnmin=0 or susnmax=0 it is a usual grand canonical sim */
+    OprogStatus.susnmin=-1;
+    OprogStatus.susnmax=-1;
 #endif
 #ifdef MD_SURV_PROB
     OprogStatus.spdeltat = 10.0;
