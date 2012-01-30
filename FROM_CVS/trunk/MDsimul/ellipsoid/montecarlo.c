@@ -3665,7 +3665,10 @@ void calc_cov_additive(void)
   
   printf("ene iniziale=%f\n", calcpotene());
   if (type==1||type==5)
-    fscanf(fi, " %lf ", &alpha);
+    {
+      fscanf(fi, " %lf ", &alpha);
+      printf("type=%d alpha=%.15G\n", type, alpha);
+    }
   /* if it is a restart put info initial values here */
   covrestart = 0;
   if (!feof(fi))
@@ -3673,7 +3676,6 @@ void calc_cov_additive(void)
       covrestart=1;
       fscanf(fi, "%lf %lld ", &toteneini, &ttini);
     }
-   
   /* type = 0 -> covolume 
      type = 1 -> covolume nematic
      type = 2 -> persistence length
@@ -4337,5 +4339,11 @@ void move(void)
       if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1)
 	printf("delvolfin %.15G\n", OprogStatus.vmax);
     }
+#ifdef MC_SUS
+  /* If susnmin == -1 and susnmax > 0 then susnmax is used to end the simulations: this is useful
+     if we want to use GC MC to grow a system */
+  if (OprogStatus.susnmin==-1 && OprogStatus.susnmax > 0 && Oparams.parnum >= OprogStatus.susnmax)
+    ENDSIM=1;
+#endif
 }
 #endif
