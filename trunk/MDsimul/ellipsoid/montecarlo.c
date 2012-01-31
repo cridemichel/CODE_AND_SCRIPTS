@@ -679,7 +679,7 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   *errchk=0;
   OprogStatus.optnnl = 0;
 
-#if defined(DEBUG_HCMCMC) && 0
+#if defined(DEBUG_HCMC) && 0
   d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
   printf("d=%f\n",d);
   exit(-1);
