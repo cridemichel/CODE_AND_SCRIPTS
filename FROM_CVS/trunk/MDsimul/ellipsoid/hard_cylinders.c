@@ -448,7 +448,8 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	}
       for (kk=0; kk < 3; kk++)
   	{
- 	  Ai[kk] = Ci[kk];
+ 	  //Ai[kk] = Ci[kk];
+	  Ai[kk] = Ui[kk];  
   	}
       for (it = 0; it < MAX_ITERATIONS; it++)
 	{

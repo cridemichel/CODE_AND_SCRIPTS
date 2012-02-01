@@ -4146,6 +4146,7 @@ void move(void)
     {int overlap=0, ierr; 
 
       dostorebump=1;
+      printf("checking overlaps\n");
   for (i=0; i < Oparams.parnum; i++)
     {
       if (overlapMC(i, &ierr))
@@ -4154,6 +4155,9 @@ void move(void)
 	  printf("PRIMA overlap di %d\n", i);
 	}
     }
+  //store_bump(0, 1);
+
+  printf("...done overlap=%d\n", overlap);
   dostorebump=0;
   if (overlap)
     {
