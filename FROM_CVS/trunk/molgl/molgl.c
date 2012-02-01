@@ -939,12 +939,13 @@ void displayAtom(int nf, int nm, int na)
 #endif
       glRotatef(rotangle, rax, ray, raz);
       glPushMatrix();
-      glTranslatef(0, 0, atom->disk.height);
+      glTranslatef(0, 0, atom->disk.height*0.5);
       gluDisk(ss2, 0, atom->disk.radius, globset.stacks, globset.slides);
       glPopMatrix();
       /*
       if (atom->common.transp < 1.0)
 	glDepthMask (GL_FALSE);*/
+      glTranslatef(0, 0, -atom->disk.height*0.5);
       gluCylinder(ss, atom->disk.radius, 
 		      atom->disk.radius, 
 		      atom->disk.height, 
