@@ -275,9 +275,9 @@ inline void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj
 
   for (nn=0; nn < 8; nn++)
     {
-      xp[0] = D*0.5*mesh[nn][0];
-      xp[1] = D*0.5*mesh[nn][1];
-      xp[2] = 0.0;
+      xp[0] = 0.0;
+      xp[1] = D*0.5*mesh[nn][0];
+      xp[2] = D*0.5*mesh[nn][1];
       body2labHC(0, xp, Pj, Dj, Rj);    
       for (kk=0; kk < 3; kk++)
 	PjCi[kk] = Pj[kk] - Ci[kk];
