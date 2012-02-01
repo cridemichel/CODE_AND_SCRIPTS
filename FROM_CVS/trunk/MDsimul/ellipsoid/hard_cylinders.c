@@ -246,6 +246,65 @@ double numcallsHC = 0.0;
 #ifdef DEBUG_HCMC
 extern int dostorebump;
 #endif
+extern double calc_norm(double *vec);
+extern void versor_to_R(double ox, double oy, double oz, double R[3][3]);
+void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+      x[k1] += rO[k1];
+    }
+}
+
+inline void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
+{
+  double Pj[3], Rj[3][3], AiCi[3];
+  int kk, k1, k2, nn;
+  double xp[3], Ui[3], UiPj[3];
+  double mesh[8][3] = {{1,0},{0.707106781186547, 0.707106781186547},{0,1},
+      {-0.707106781186547,0.707106781186547},{-1,0},{-0.707106781186547,-0.707106781186547},
+      {0,-1},{0.707106781186547,-0.707106781186547}};
+  double PjCini, PjCi[3], normPjCi, d, mindist; 
+  versor_to_R(nj[0],nj[1],nj[2], Rj); 
+
+  for (nn=0; nn < 8; nn++)
+    {
+      xp[0] = D*0.5*mesh[nn][0];
+      xp[1] = D*0.5*mesh[nn][1];
+      xp[2] = 0.0;
+      body2labHC(0, xp, Pj, Dj, Rj);    
+      for (kk=0; kk < 3; kk++)
+	PjCi[kk] = Pj[kk] - Ci[kk];
+      //normPjCi = calc_norm(PjCi);
+      PjCini = scalProd(PjCi,ni);
+      for (kk=0; kk < 3; kk++)
+	{
+	  Ui[kk] = Ci[kk] + PjCini*ni[kk];
+	  UiPj[kk] = Ui[kk]-Pj[kk];
+	}
+      if (nn==0 || (d=calc_norm(UiPj)) < mindist)
+	{
+	 // printf("nn=%d mindist=%.15G d=%.15G\n", nn, mindist, d);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Ai[kk] = Ui[kk];
+    	    }
+	  mindist=d;
+	 // printf("Ui=%f %f %f Pi=%f %f %f\n", Ui[0],Ui[1], Ui[2], Pj[0], Pj[1], Pj[2]);
+	}
+    }
+#if 0
+   for (kk=0; kk < 3; kk++)
+     AiCi[kk]  = Ai[kk] - Ci[kk]; 
+  printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,ni)/calc_norm(AiCi));
+#endif 
+}
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 {
   const int MAX_ITERATIONS = 1000000;
@@ -446,11 +505,16 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 #endif	
 	  return -1;
 	}
+#if 1
+      find_initial_guess(Ai, Ci, ni, Dj[j2], nj, D);
+
+#else
       for (kk=0; kk < 3; kk++)
   	{
  	  //Ai[kk] = Ci[kk];
 	  Ai[kk] = Ui[kk];  
   	}
+#endif
       for (it = 0; it < MAX_ITERATIONS; it++)
 	{
 	  for (kk=0; kk < 3; kk++)
