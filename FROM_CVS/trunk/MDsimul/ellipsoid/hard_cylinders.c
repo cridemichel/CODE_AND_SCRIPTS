@@ -273,7 +273,7 @@ inline void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj
   static double **mesh; /* {{1,0},{0.707106781186547, 0.707106781186547},{0,1},
       {-0.707106781186547,0.707106781186547},{-1,0},{-0.707106781186547,-0.707106781186547},
       {0,-1},{0.707106781186547,-0.707106781186547}};*/
-  double PjCini, PjCi[3], normPjCi, d, mindist; 
+  double PjCini, PjCi[3], normPjCi, d, mindist=-1.0; 
   versor_to_R(nj[0],nj[1],nj[2], Rj); 
 #if 1
   if (firstcall)
@@ -308,17 +308,18 @@ inline void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj
 	  Ui[kk] = Ci[kk] + PjCini*ni[kk];
 	  UiPj[kk] = Ui[kk]-Pj[kk];
 	}
-      if (nn==0 || (d=calc_norm(UiPj)) < mindist)
+      if ((d=calc_norm(UiPj)) < mindist || nn==0)
 	{
-	 // printf("nn=%d mindist=%.15G d=%.15G\n", nn, mindist, d);
 	  for (kk=0; kk < 3; kk++)
 	    {
 	      Ai[kk] = Ui[kk];
     	    }
 	  mindist=d;
-	 // printf("Ui=%f %f %f Pi=%f %f %f\n", Ui[0],Ui[1], Ui[2], Pj[0], Pj[1], Pj[2]);
+	  //printf("nn=%d mindist=%.15G d=%.15G\n", nn, mindist, d);
+	  //printf("Ui=%f %f %f Pi=%f %f %f\n", Ui[0],Ui[1], Ui[2], Pj[0], Pj[1], Pj[2]);
 	}
     }
+  //printf("done\n");
 #if 0
    for (kk=0; kk < 3; kk++)
      AiCi[kk]  = Ai[kk] - Ci[kk]; 
