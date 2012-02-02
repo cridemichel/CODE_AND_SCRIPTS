@@ -254,7 +254,8 @@ void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
   for (k1=0; k1 < 3; k1++)
     {
       x[k1] = 0;
-      for (k2=0; k2 < 3; k2++)
+      /* NOTE: k2 starts from 1 because xp[0] = 0.0 see function find_initial_guess() below */
+      for (k2=1; k2 < 3; k2++)
 	{
 	  x[k1] += R[k2][k1]*xp[k2];
        	} 
@@ -264,18 +265,37 @@ void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
 
 inline void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
 {
+  const int meshpts = 8;
   double Pj[3], Rj[3][3], AiCi[3];
   int kk, k1, k2, nn;
-  double xp[3], Ui[3], UiPj[3];
-  double mesh[8][3] = {{1,0},{0.707106781186547, 0.707106781186547},{0,1},
+  static int firstcall=1;
+  double th, dth, xp[3], Ui[3], UiPj[3];
+  static double **mesh; /* {{1,0},{0.707106781186547, 0.707106781186547},{0,1},
       {-0.707106781186547,0.707106781186547},{-1,0},{-0.707106781186547,-0.707106781186547},
-      {0,-1},{0.707106781186547,-0.707106781186547}};
+      {0,-1},{0.707106781186547,-0.707106781186547}};*/
   double PjCini, PjCi[3], normPjCi, d, mindist; 
   versor_to_R(nj[0],nj[1],nj[2], Rj); 
-
-  for (nn=0; nn < 8; nn++)
+#if 1
+  if (firstcall)
     {
-      xp[0] = 0.0;
+      mesh = malloc(sizeof(double*)*meshpts);
+      for (nn=0; nn < meshpts; nn++)
+	mesh[nn] = malloc(sizeof(double)*3);
+      firstcall=0;
+      dth = acos(0)*4.0/((double)meshpts);
+
+      th=0.0;
+      for (nn=0; nn < meshpts; nn++)
+	{
+	  mesh[nn][0] = cos(th);
+	  mesh[nn][1] = sin(th);
+	  th += dth;
+	}
+    }
+#endif
+  for (nn=0; nn < meshpts; nn++)
+    {
+      //xp[0] = 0.0;
       xp[1] = D*0.5*mesh[nn][0];
       xp[2] = D*0.5*mesh[nn][1];
       body2labHC(0, xp, Pj, Dj, Rj);    
@@ -303,6 +323,10 @@ inline void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj
    for (kk=0; kk < 3; kk++)
      AiCi[kk]  = Ai[kk] - Ci[kk]; 
   printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,ni)/calc_norm(AiCi));
+  for (kk=0; kk < 3; kk++)
+    AiCi[kk]  = Pj[kk] - Dj[kk]; 
+
+  printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,nj));
 #endif 
 }
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)
