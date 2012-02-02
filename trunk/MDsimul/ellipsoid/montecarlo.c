@@ -311,7 +311,7 @@ double calcDistBox(int i, int j, double rbi[3], double rbj[3], double saxi[3], d
   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j])
     return calcDistNegNNLoverlapPlaneHS(i, j, rA, rB);
 #endif
-
+  
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
@@ -671,18 +671,20 @@ double overlap_using_multibox(int i, int j, double shift[3])
   return 1.0;
 }
 #undef MC_OF_BOXES
+extern int are_spheres(int i, int j);
 double check_overlap(int i, int j, double shift[3], int *errchk)
 {
-  int k, k1, k2;
+  int k, k1, k2, kk;
   double vecg[8], vecgNeg[8], rA[3], rB[3], saxi[3], saxj[3];
-  double d, d0, r1[3], r2[3], alpha; 
+  double daSq, drSq, d, d0, r1[3], r2[3], alpha; 
   *errchk=0;
   OprogStatus.optnnl = 0;
 
 #if defined(DEBUG_HCMC) && 0
   d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
-  printf("d=%f\n",d);
-  exit(-1);
+  //printf("d=%f\n",d);
+  return d;
+  //exit(-1);
 #endif
   if (are_spheres(i,j))
     {
@@ -732,13 +734,25 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
      saxi[k] = 1.01* typesArr[typeOfPart[i]].sax[k];
      saxj[k] = 1.01* typesArr[typeOfPart[j]].sax[k];
 #endif
-}  
+   }  
  rA[0] = rx[i];
  rA[1] = ry[i];
  rA[2] = rz[i];
  rB[0] = rx[j];
  rB[1] = ry[j];
  rB[2] = rz[j];
+
+ /* if bounding spheres do not overlap parallelepiped will not overlap */
+ daSq = drSq = 0.0;
+ for (kk=0; kk < 3; kk++)
+   {
+     daSq += Sqr(typesArr[typeOfPart[i]].sax[kk]+typesArr[typeOfPart[j]].sax[kk]);
+     drSq += Sqr(rA[kk]-rB[kk]-shift[kk]);
+   } 
+
+ if (drSq > daSq)
+   return 1.0;
+ 
  d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
  //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
@@ -4146,7 +4160,7 @@ void move(void)
     {int overlap=0, ierr; 
 
       dostorebump=1;
-      printf("checking overlaps\n");
+      //printf("checking overlaps\n");
   for (i=0; i < Oparams.parnum; i++)
     {
       if (overlapMC(i, &ierr))
@@ -4157,7 +4171,7 @@ void move(void)
     }
   //store_bump(0, 1);
 
-  printf("...done overlap=%d\n", overlap);
+  //printf("...done overlap=%d\n", overlap);
   dostorebump=0;
   if (overlap)
     {
