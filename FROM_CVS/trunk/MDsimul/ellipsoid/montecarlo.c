@@ -751,7 +751,7 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
    } 
 
  if (drSq > daSq)
-  return 1.0;
+   return 1.0;
  
  d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
  //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
