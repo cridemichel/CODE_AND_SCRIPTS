@@ -751,7 +751,7 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
    } 
 
  if (drSq > daSq)
-   return 1.0;
+  return 1.0;
  
  d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
  //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
@@ -4157,8 +4157,10 @@ void move(void)
   calc_cov_additive();
 #endif
 #if 0 || defined(DEBUG_HCMC)
-    {int overlap=0, ierr; 
+    {int overlap, ierr; 
 
+      overlap=0;
+      ierr=0;
       dostorebump=1;
       //printf("checking overlaps\n");
   for (i=0; i < Oparams.parnum; i++)
@@ -4167,6 +4169,7 @@ void move(void)
 	{ 
 	  overlap=1;
 	  printf("PRIMA overlap di %d\n", i);
+	  exit(-1);
 	}
     }
   //store_bump(0, 1);
