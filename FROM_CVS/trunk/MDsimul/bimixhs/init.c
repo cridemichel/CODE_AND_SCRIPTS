@@ -629,8 +629,16 @@ accumulators initialization is crucial */
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   Oparams.delta[0][0] = Oparams.delta[1][1] = Oparams.delta[0][1] = Oparams.delta[1][0] = 0.0;
 #ifdef MD_MIXWDEPTH
+#ifdef MD_FINBARRIER
+  Oparams.bhin[0][0]=Oparams.bhin[0][1]=Oparams.bhin[1][0]=Oparams.bhin[1][1]=0.0;
+  Oparams.bhout[0][0]=Oparams.bhout[0][1]=Oparams.bhout[1][0]=Oparams.bhout[1][1]=0.0;
+#endif
   Oparams.bheight[0][0]=Oparams.bheight[0][1]=Oparams.bheight[1][0]=Oparams.bheight[1][1]=0.0;
 #else
+#ifdef MD_FINBARRIER
+  Oparams.bhout = 0.0;
+  Oparams.bhin = 0.0;
+#endif
   Oparams.bheight = 0.0;
 #endif
   OprogStatus.maxbonds = 20;
@@ -934,6 +942,10 @@ void usrInitAft(void)
     Oparams.sigma[1][0] = Oparams.sigma[0][1];
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
 #ifdef MD_MIXWDEPTH
+#ifdef MD_FINBARRIER
+    Oparams.bhin[1][0] = Oparams.bhin[0][1];
+    Oparams.bhout[1][0] = Oparams.bhout[0][1];
+#endif
     Oparams.bheight[1][0] = Oparams.bheight[0][1];
 #endif
     Oparams.delta[1][0] = Oparams.delta[0][1];

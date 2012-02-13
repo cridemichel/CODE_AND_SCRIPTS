@@ -346,6 +346,9 @@ void bump (int i, int j, double* W, int bt)
   double taus;
 #endif
    double bheight;
+#ifdef MD_FINBARRIER
+   double bhout, bhin;
+#endif
 #ifndef MD_MIXWDEPTH
    bheight = Oparams.bheight;
 #endif
@@ -400,6 +403,11 @@ void bump (int i, int j, double* W, int bt)
   invmi = (i<Oparams.parnumA)?invmA:invmB;
   invmj = (j<Oparams.parnumA)?invmA:invmB;
   factor = 0.0;
+#if defined(MD_FINBARRIER)
+  bhout = Oparams.bhout;
+  bhin  = Oparams.bhin;
+#endif
+
   //printf("bump(%d,%d):%d distSq: %.20f b:%f\n", i, j, bt, distSq, b);
   switch (bt)
     {
@@ -414,6 +422,37 @@ void bump (int i, int j, double* W, int bt)
 #ifdef MD_INFBARRIER
       factor = -2.0*b;
 #elif defined(MD_SQWELL)
+#if defined(MD_FINBARRIER)
+      if (bheight < 0)
+	{
+	  if (bhout >= 0.0 && Sqr(b) < 2.0*sigDeltaSq*bhout/mredl)
+	    {
+	      factor = -2.0*b;
+	      //printf("BOND NOT BROKEN bump i=%d j=%d ata=%d atb=%d\n", i, j, ata, atb);
+	    }
+	  else
+	    {
+	      factor = -b + sqrt(Sqr(b) - 2.0*bheight/mredl);
+	      MD_DEBUG40(printf("[MD_INOUT_BARRIER] qui factor=%.15G\n", factor));
+	      //printf("BOND BROKEN bump i=%d j=%d ata=%d atb=%d\n", i, j, ata, atb);
+	      remove_bond(i, j);
+	      remove_bond(j, i);
+	    }
+	}
+      else
+	{
+	  if (Sqr(b) < 2.0*sigDeltaSq*(bheight+bhout)/mredl)
+	    {
+	      factor = -2.0*b;
+	    }
+	  else
+	    {
+	      factor = -b + sqrt(Sqr(b) - 2.0*bheight/mredl);
+	      remove_bond(i, j);
+	      remove_bond(j, i);
+	    }
+	}
+#else
       if (Sqr(b) < 2.0*sigDeltaSq*bheight/mredl)
 	{
 	  factor = -2.0*b;
@@ -425,6 +464,7 @@ void bump (int i, int j, double* W, int bt)
 	  remove_bond(j, i);
 	}
 #endif
+#endif
       factor *= mredl / sigDeltaSq;
 #if 0
       if (fabs(distSq - sigDeltaSq)>1E-12)    
@@ -435,9 +475,38 @@ void bump (int i, int j, double* W, int bt)
 #ifdef MD_INFBARRIER
       factor = -2.0*b;
 #elif defined(MD_SQWELL)
+#ifdef MD_FINBARRIER
+      if (bheight < 0)
+	{
+	  if (Sqr(b) < 2.0*sigDeltaSq*(-bheight+bhin)/mredl)
+	    {
+	      factor = -2.0*b;
+	    }
+	  else 
+	    {
+	      factor = -b - sqrt(Sqr(b) + 2.0*sigDeltaSq*bheight/mredl);
+	      add_bond(i, j);
+	      add_bond(j, i);
+	    }
+	}
+      else
+	{
+	  if (bhin >= 0.0 && Sqr(b) < 2.0*sigDeltaSq*bhin/mredl)
+	    {
+	      factor = -2.0*b;
+    	    }
+	  else
+	    {
+	      add_bond(i, j);
+	      add_bond(j, i);
+	      factor = -b - sqrt(Sqr(b) + 2.0*sigDeltaSq*bheight/mredl);
+	    }
+	}
+#else
       add_bond(i, j);
       add_bond(j, i);
       factor = -b - sqrt(Sqr(b) + 2.0*sigDeltaSq*bheight/mredl);
+#endif
 #endif
       factor *= mredl / sigDeltaSq;
       break;

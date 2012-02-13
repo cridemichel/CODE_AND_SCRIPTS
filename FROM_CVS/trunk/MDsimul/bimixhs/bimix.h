@@ -396,9 +396,18 @@ struct params
 
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   double delta[2][2]; /* ampiezza della buca */
+
 #ifdef MD_MIXWDEPTH
+#ifdef MD_FINBARRIER
+  double bhin[2][2];
+  double bhout[2][2];
+#endif 
   double bheight[2][2];
 #else
+#ifdef MD_FINBARRIER
+  double bhin;
+  double bhout;
+#endif
   double bheight;
 #endif
 #endif
@@ -558,8 +567,16 @@ struct pascii opar_ascii[]=
 #if defined(MD_SQWELL) || defined(MD_INFBARRIER)
   {"delta",             &OP(delta),                       2,   2, "%.15G"},
 #ifdef MD_MIXWDEPTH
+#ifdef MD_FINBARRIER
+  {"bhin",           &OP(bhin),                     2,   2, "%.15G"},
+  {"bhout",          &OP(bhout),                    2,   2, "%.15G"},
+#endif
   {"bheight",           &OP(bheight),                     2,   2, "%.15G"},
 #else
+#ifdef MD_FINBARRIER
+  {"bhin",           &OP(bhin),                     1,   1, "%.15G"},
+  {"bhout",          &OP(bhoout),                     1,   1, "%.15G"},
+#endif
   {"bheight",           &OP(bheight),                     1,   1, "%.15G"},
 #endif
 #endif
@@ -678,11 +695,23 @@ struct singlePar OsinglePar[] = {
   {"deltaBB",    &Oparams.delta[1][1],            CT},
   {"deltaAB",    &Oparams.delta[0][1],            CT},
 #ifdef MD_MIXWDEPTH
+#ifdef MD_FINBARRIER
+  {"bhinAA",    &Oparams.bhin[0][0],          CT},
+  {"bhinAB",    &Oparams.bhin[0][1],          CT},
+  {"bhinBB",    &Oparams.bhin[1][1],          CT},
+  {"bhoutAA",    &Oparams.bhout[0][0],          CT},
+  {"bhoutAB",    &Oparams.bhout[0][1],          CT},
+  {"bhoutBB",    &Oparams.bhout[1][1],          CT},
+#endif
   {"bheightAA",    &Oparams.bheight[0][0],          CT},
   {"bheightAB",    &Oparams.bheight[0][1],          CT},
   {"bheightBB",    &Oparams.bheight[1][1],          CT},
 #else
-  {"bheight",    &Oparams.bheight,          CT},
+#ifdef MD_FINBARRIER
+   {"bhin",     &Oparams.bhin,          CT},
+   {"bhout",    &Oparams.bhout,          CT},
+#endif
+   {"bheight",    &Oparams.bheight,          CT},
 #endif
 #endif
   {"avngTemp",   &OprogStatus.avngTemp,       INT},
