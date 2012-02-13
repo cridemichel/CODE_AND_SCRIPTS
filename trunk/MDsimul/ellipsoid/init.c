@@ -1712,6 +1712,9 @@ void usrInitBef(void)
     Oparams.time = 0.0;
     OprogStatus.tolT = 0.0;
     OprogStatus.targetPhi = 0.0;
+#ifdef MC_SIMUL
+    OprogStatus.targetPhiMC = -1.0;
+#endif
 #ifdef MD_POLYDISP
 #ifdef MD_POLYDISP_XYZ
     OprogStatus.polydispX = OprogStatus.polydispY = OprogStatus.polydispZ = 0.0;

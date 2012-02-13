@@ -4142,10 +4142,10 @@ int mcmotion(void)
   return movetype;
 }
 extern double totitsHC, numcallsHC;
-
+extern double calc_phi(void);
 void move(void)
 {
-  double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0;
+  double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0, volfrac;
 #ifdef MD_LXYZ
   double avL;
 #endif
@@ -4323,6 +4323,8 @@ void move(void)
     }
   if (Oparams.curStep%OprogStatus.outMC==0)
     {
+      if (OprogStatus.targetPhiMC > 0.0)
+	printf("Current Phi=%.12G\n", calc_phi());
       if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
 	volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
       //totmoves=((long long int)Oparams.parnum*(long long int)Oparams.curStep);
@@ -4365,6 +4367,16 @@ void move(void)
      if we want to use GC MC to grow a system */
   if (OprogStatus.susnmin==-1 && OprogStatus.susnmax > 0 && Oparams.parnum >= OprogStatus.susnmax)
     ENDSIM=1;
+#endif
+#if 1
+  if (OprogStatus.targetPhiMC > 0.0)
+    { 
+      volfrac = calc_phi();
+      if (fabs((volfrac - OprogStatus.targetPhiMC)/OprogStatus.targetPhiMC) < OprogStatus.phitol)
+	{
+	  ENDSIM=1;
+	} 
+    }
 #endif
 }
 #endif
