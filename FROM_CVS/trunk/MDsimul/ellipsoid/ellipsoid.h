@@ -766,6 +766,9 @@ struct progStatus
   int guessDistOpt;
   int forceguess;
   double targetPhi;
+#ifdef MC_SIMUL
+  double targetPhiMC;
+#endif
 #ifdef MD_POLYDISP
 #ifdef MD_POLYDISP_XYZ
   double polydispX;
@@ -1141,6 +1144,9 @@ struct pascii opro_ascii[] =
 #endif
   {"polycutoff",   &OS(polycutoff),                1,          1, "%.8G"},
   {"targetPhi",    &OS(targetPhi),                 1,          1, "%.12G"},
+#ifdef MC_SIMUL
+  {"targetPhiMC",  &OS(targetPhiMC),               1,          1, "%.12G"},
+#endif
 #endif
   {"savedXva",     &OS(savedXva),                   1,   1,   "%d"},
   {"CMreset",      &OS(CMreset),                    1,   1,  "%d"},
@@ -1672,6 +1678,9 @@ struct singlePar OsinglePar[] = {
   {"C1",      &Oparams.c[1],      CT},
 #endif
   {"targetPhi", &OprogStatus.targetPhi, CT},
+#ifdef MC_SIMUL
+  {"targetPhiMC", &OprogStatus.targetPhiMC, CT},
+#endif
 #ifdef MD_POLYDISP
 #ifdef MD_POLYDISP_XYZ
   {"polydispX",  &OprogStatus.polydispX, CT},  
