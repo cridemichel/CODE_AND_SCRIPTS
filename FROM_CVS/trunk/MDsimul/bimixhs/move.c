@@ -404,8 +404,26 @@ void bump (int i, int j, double* W, int bt)
   invmj = (j<Oparams.parnumA)?invmA:invmB;
   factor = 0.0;
 #if defined(MD_FINBARRIER)
+#ifdef MD_MIXWDEPTH
+  if (i < Oparams.parnumA && j < Oparams.parnumA)  
+    {
+      bhin = Oparams.bhin[0][0];
+      bhout= Oparams.bhout[0][0];
+    }
+  else if (i >= Oparams.parnumA && j >= Oparams.parnumA)
+    {
+      bhin = Oparams.bhin[1][1];
+      bhout= Oparams.bhout[1][1];
+    }
+  else 
+    {
+      bhin = Oparams.bhin[0][1];
+      bhout= Oparams.bhout[0][1];
+    } 
+#else
   bhout = Oparams.bhout;
   bhin  = Oparams.bhin;
+#endif
 #endif
 
   //printf("bump(%d,%d):%d distSq: %.20f b:%f\n", i, j, bt, distSq, b);
@@ -433,7 +451,6 @@ void bump (int i, int j, double* W, int bt)
 	  else
 	    {
 	      factor = -b + sqrt(Sqr(b) - 2.0*bheight/mredl);
-	      MD_DEBUG40(printf("[MD_INOUT_BARRIER] qui factor=%.15G\n", factor));
 	      //printf("BOND BROKEN bump i=%d j=%d ata=%d atb=%d\n", i, j, ata, atb);
 	      remove_bond(i, j);
 	      remove_bond(j, i);
@@ -933,6 +950,8 @@ int bound(int na, int n)
 }
 #endif
 void rebuildCalendar(void);
+extern void ScheduleEventBarr (int idA, int idB, int idC, double tEvent); 
+
 void PredictEvent (int na, int nb) 
 {
   /* na = atomo da esaminare 0 < na < Oparams.parnum 
@@ -1518,6 +1537,8 @@ void ProcessCellCrossing(void)
   cellList[evIdA] = cellList[n];
   cellList[n] = evIdA;
 }
+extern void comvel_brown (COORD_TYPE temp, COORD_TYPE *m);
+
 void velsBrown(double T)
 {
   comvel_brown(T, Oparams.m); 
@@ -1711,6 +1732,8 @@ void rebuildLinkedList(void)
       cellList[j] = n;
     }
 }
+extern void InitEventList (void);
+
 void rebuildCalendar(void)
 {
   int k, n;
@@ -1740,6 +1763,85 @@ extern int **bonds0, *numbonds0;
 int bondhist[3]={0,0,0};
 extern double corrnorm, corrini3, corrini1, corrini2, *lastbreak1, *lastbreak2;
 #endif
+#ifdef MD_SAVEFRA
+extern void error_on_writing(FILE* f, char* filename, char *where, char *command);
+void save_fra(void)
+{
+  char fileop[1024], fileop2[1024], fileop3[1024];
+  double rat[5][3];
+  double rcm[3];	
+  int i, ret, rerr;
+  FILE* f;
+  sprintf(fileop2 ,"Cnf-%d-%d", 
+	  OprogStatus.KK, OprogStatus.JJ);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (f = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Error saving store file!\n", NULL);
+      exit(-1);
+    }
+  rerr = 0;
+#ifdef MD_BIG_DT
+  ret = fprintf(f, "%lld 0 %d %d 0\n", 
+		(long long int)((Oparams.time+OprogStatus.refTime)*1000.0/Oparams.Dt), 
+		Oparams.parnum, Oparams.parnum-Oparams.parnumA);
+#else
+  ret = fprintf(f, "%lld 0 %d %d 0\n", (long long int)(Oparams.time*1000.0/Oparams.Dt), 
+		Oparams.parnum, Oparams.parnum-Oparams.parnumA); 
+#endif
+  rerr |= (ret < 0)?1:0;  
+  ret = fprintf(f, "%.15G %.15G %.15G 0 0 %.15G\n", L, L, L, Oparams.Dt/1000.0);
+  rerr |= (ret < 0)?1:0;  
+  for (i = Oparams.parnumA; i < Oparams.parnum; i++)
+    {
+      //printf("i=%d\n",i);
+      rcm[0] = rx[i]+L*OprogStatus.DR[i][0];
+      rcm[1] = ry[i]+L*OprogStatus.DR[i][1];
+      rcm[2] = rz[i]+L*OprogStatus.DR[i][2];
+#if 0
+      BuildAtomPos(i, rcm, R[i], rat);
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
+      rerr |= (ret < 0)?1:0;  
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
+      rerr |= (ret < 0)?1:0;  
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+#endif
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rcm[0], rcm[1], rcm[2]);
+      rerr |= (ret < 0)?1:0;  
+    }
+  for (i = 0; i < Oparams.parnumA; i++)
+    {
+      rcm[0] = rx[i]+L*OprogStatus.DR[i][0];
+      rcm[1] = ry[i]+L*OprogStatus.DR[i][1];
+      rcm[2] = rz[i]+L*OprogStatus.DR[i][2];
+#if 0
+      BuildAtomPos(i, rcm, R[i], rat);
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
+      rerr |= (ret < 0)?1:0;  
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[2][0], rat[2][1], rat[2][2]);
+      rerr |= (ret < 0)?1:0;  
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rat[0][0], rat[0][1], rat[0][2]);
+#endif
+      ret = fprintf(f, "%.15G %.15G %.15G\n", rcm[0], rcm[1], rcm[2]);
+      rerr |= (ret < 0)?1:0;  
+    }
+#ifdef MD_SAVEFRA_COMPRESSED
+#ifdef MD_MAC
+  sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
+#else
+  sprintf(fileop3, "/bin/gzip -f %s", fileop);
+#endif
+#ifndef MD_NO_SYSTEM
+  system(fileop3);
+#endif
+#endif
+  if (rerr)
+    error_on_writing(f, fileop, "save_fra", "fprintf");
+  fclose(f);
+}
+#endif
+
 /* ============================ >>> move<<< =================================*/
 void move(void)
 {
@@ -1902,6 +2004,9 @@ void move(void)
 	      exit(-1);
 	    }
 	  UpdateSystem();
+#ifdef MD_SAVEFRA
+	  save_fra();
+#else
 	  writeAsciiPars(bf, opro_ascii);
 	  fprintf(bf, sepStr);
 	  writeAsciiPars(bf, opar_ascii);
@@ -1922,6 +2027,7 @@ void move(void)
 #endif
 #endif
 	  system(fileop3);
+#endif
 #endif
 	  OprogStatus.JJ++;
 	  if (OprogStatus.JJ == OprogStatus.NN)
