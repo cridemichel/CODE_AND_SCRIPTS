@@ -1994,6 +1994,7 @@ void move(void)
 	    fprintf(bf, "%.15f %.8f\n", Oparams.time, cb/corrnorm);
 	  fclose(bf);
 #else
+#ifndef MD_SAVEFRA
 	  sprintf(fileop2 ,"Store-%d-%d", 
 		  OprogStatus.KK, OprogStatus.JJ);
 	  /* store conf */
@@ -2003,6 +2004,7 @@ void move(void)
 	      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
 	      exit(-1);
 	    }
+#endif
 	  UpdateSystem();
 #ifdef MD_SAVEFRA
 	  save_fra();
