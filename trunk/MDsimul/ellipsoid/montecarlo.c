@@ -108,7 +108,7 @@ extern double min3(double a, double b, double c);
 extern double min(double a, double b);
 extern double max3(double a, double b, double c);
 extern double *lastupdNNL, *totDistDispl;
-double rA[3], rB[3];
+extern double rA[3], rB[3];
 /* Routines for LU decomposition from Numerical Recipe online */
 extern void ludcmpR(double **a, int* indx, double* d, int n);
 extern void lubksbR(double **a, int* indx, double *b, int n);
@@ -741,7 +741,7 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
  rB[0] = rx[j];
  rB[1] = ry[j];
  rB[2] = rz[j];
-
+#if 1
  /* if bounding spheres do not overlap parallelepiped will not overlap */
  daSq = drSq = 0.0;
  for (kk=0; kk < 3; kk++)
@@ -752,7 +752,7 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
 
  if (drSq > daSq)
    return 1.0;
- 
+#endif 
  d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
  //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
