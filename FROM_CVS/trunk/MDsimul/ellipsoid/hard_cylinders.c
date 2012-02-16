@@ -1,5 +1,6 @@
 #ifdef MC_HC
 #undef DEBUG_HCMC
+#undef MC_HC_SPHERO_OPT
 #include<mdsimul.h>
 extern const double saxfactMC[3];
 #ifdef MC_QUASI_CUBE
@@ -10,14 +11,6 @@ extern void init_rng(int mdseed, int mpi, int my_rank);
 #ifdef MC_SIMUL
 #ifdef MC_STORELL
 int *cellListMC;
-#endif
-#ifdef MC_STOREBONDS
-#ifdef MD_LL_BONDS
-long long int **bondsMC;
-int *numbondsMC;
-#else
-int *numbondsMC, **bondsMC;
-#endif
 #endif
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG10(x) 
@@ -106,7 +99,7 @@ extern double min3(double a, double b, double c);
 extern double min(double a, double b);
 extern double max3(double a, double b, double c);
 extern double *lastupdNNL, *totDistDispl;
-double rA[3], rB[3];
+extern double rA[3], rB[3];
 /* Routines for LU decomposition from Numerical Recipe online */
 extern void ludcmpR(double **a, int* indx, double* d, int n);
 extern void lubksbR(double **a, int* indx, double *b, int n);
@@ -330,11 +323,17 @@ inline void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj
   printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,nj));
 #endif 
 }
+#ifdef MC_HC_SPHERO_OPT
+int check_spherocyl(double CiCj[3], double D, double L, double Di[2][3], double *Ci, double *ni, double Dj[2][3], double *Cj, double *nj, int *rim);
+#endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 {
   const int MAX_ITERATIONS = 1000000;
+#ifdef MC_HC_SPHERO_OPT
+  int rim;
+#endif
   int it, k2;
-  double ViVj[3], lambdai, lambdaj;
+  double normNSq, ViVj[3], lambdai, lambdaj;
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
   double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
@@ -378,7 +377,12 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
       Dj[0][kk]=Cj[kk]+0.5*L*nj[kk];
       Dj[1][kk]=Cj[kk]-0.5*L*nj[kk];
     }
-
+#ifdef MC_HC_SPHERO_OPT
+  if (check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim) > 0)
+    return 1;
+  if (rim < 0)
+    return rim;
+#endif
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
   if (ni[0]==nj[0] && ni[1]==nj[1] && ni[2]==nj[2])
     {
@@ -412,21 +416,22 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   else 
     {
       /* loop over all disk pairs (they are 4) */
+      vectProdVec(ni, nj, N);
+      vectProdVec(ni,N,niN);
+      vectProdVec(nj,N,njN);
+      normN=calc_norm(N);
+      normNSq=Sqr(normN);
       for (j1=0; j1 < 2; j1++)
 	for (j2=0; j2 < 2; j2++)
 	  {
-	    vectProdVec(ni, nj, N);
 	    DiN = scalProd(Di[j1],N);
 	    DjN = scalProd(Dj[j2],N);
 	    Dini = scalProd(Di[j1],ni);
 	    Djnj = scalProd(Dj[j2],nj);
-	    vectProdVec(ni,N,niN);
-	    vectProdVec(nj,N,njN);
-	    normN=calc_norm(N);
 	    for (kk=0; kk < 3; kk++)
 	      { 
-		Pi[kk] = (DiN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
-		Pj[kk] = (DjN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/Sqr(normN);
+		Pi[kk] = (DiN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/normNSq;
+		Pj[kk] = (DjN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/normNSq;
 	      }
 	    for (kk=0; kk < 3; kk++)
 	      {
@@ -769,6 +774,9 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
     }
 #endif
   numcallsHC += 4.0; 
+#ifdef MC_HC_SPHERO_OPT
+  return rim;
+#else
   /* case A.3 rim-rim overlap */
   CiCjni = scalProd(CiCj,ni);
   CiCjnj = scalProd(CiCj,nj);
@@ -794,6 +802,147 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
       return -1;
     }
   return 1;
+#endif
 }
+#ifdef MC_HC_SPHERO_OPT
+/*
+ Revision of
+ Carlos Vega & Santiago Lago
+ Computers Chem. 18, 55-59, 1994
+
+ Subrutine to evaluate the shortest distance between two rods of
+ different length
+
+ The original code did not give the symmetry property of the distance for almost parallel rods.
+ The coordinates of the centers of the rods should be given in a periodic system
+
+ r1,r2: centers of rods
+ w1,w2: unit orientation vectors of rods
+ lh1,lh2: halves of the length of rods
+ Lv.x,Lv.y,Lv.z the edges of the periodic simulation cell
+*/
+
+//----------------- VECTOR operations: -----------------------------------------------------
+
+#define VECT_COMMA ,
+#define VECT_PAR (
+#define VECT_PSEQ(_,SEP) (_ x)) SEP (_ y)) SEP (_ z))
+
+#define VECT_COMP(x) .x
+#define VECT_OP(A,COMP,OP,x) A COMP(x) OP
+#define VECT_A_OP_B(A,OP,B,x) VECT_OP(A,VECT_COMP,OP,x) VECT_OP(B,VECT_COMP,,x)
+
+#define VECT_OSEQ_(A,OP,B,SEP,_) \
+ VECT_PSEQ(VECT_A_OP_B VECT_PAR A VECT_COMMA OP VECT_COMMA B VECT_COMMA,SEP##_)
+
+#define VECT_OSEQ(A,OP,B,SEP) VECT_OSEQ_(A,OP,B,SEP,)
+#define VECT_PROD(A,B) VECT_OSEQ(A,*,B,+)  /* product of A and B */
+#define VECT_NORM2(A) VECT_PROD(A,A)  /* square of the norm of A */
+
+#define VECT_OLIST(A,OP,B) VECT_OSEQ_(A,OP,B,VECT_COMMA,) /* (A.x OP B.x), ... */
+
+#define VECT_SEQ(V,SEP) V(x) SEP V(y) SEP V(z)  /* because of the single macro expansion */
+#define VECT_LIST(V) VECT_SEQ(V,VECT_COMMA)  /* V(x), ... */
+
+typedef struct { double VECT_LIST(); } coo_t;
+
+//---------------------------------------------------------------------------------------
+
+extern coo_t Lv;
+
+
+// Minimum distance in the periodic system:
+
+#define MIN_RIJ(x) \
+ ( FX= fabs(rij.x),(FX<Lv.x-FX)?rij.x:(rij.x-((rij.x >0)?Lv.x:-Lv.x) ) )
+
+
+#define PW2(x) (x*x)
+
+static inline double sign(double a,double b) { return a= fabs(a),(b<0)?-a:a; }
+
+
+//---------------- Distance of two rods: -------------------------------------
+
+double dist2_rods(coo_t r1, coo_t r2, coo_t w1, coo_t w2,double lh1,double lh2)
+{
+ coo_t rij= { VECT_OLIST(r2,-,r1) };
+ register double FX;
+ coo_t min_rij= { VECT_LIST(MIN_RIJ) };
+ double
+  xla,xmu,
+  rr= VECT_NORM2(min_rij),
+  rw1= VECT_PROD(min_rij,w1),
+  rw2= VECT_PROD(min_rij,w2),
+  w1w2= VECT_PROD(w1,w2),
+  cc= 1-PW2(w1w2);
+
+// Checking whether the rods are or not parallel:
+// The original code is modified to have symmetry:
+
+ if(cc<1e-6) {
+  if(rw1 && rw2) {
+   xla= rw1/2;
+   xmu= -rw2/2;
+  }
+  else return rr;
+ }
+
+ else {
+
+// Step 1
+
+  xla= (rw1-w1w2*rw2)/cc;
+  xmu= (-rw2+w1w2*rw1)/cc;
+ }
+
+// Step 2
+
+if( fabs(xla)>lh1 || fabs(xmu)>lh2 ) {
+
+// Step 3 - 7
+
+  if(fabs(xla)-lh1>fabs(xmu)-lh2) {
+   xla= sign(lh1,xla);
+   xmu= xla*w1w2-rw2;
+   if( fabs(xmu)>lh2 ) xmu= sign(lh2,xmu);
+  }
+  else {
+   xmu= sign(lh2,xmu);
+   xla= xmu*w1w2+rw1;
+   if( fabs(xla)>lh1 ) xla= sign(lh1,xla);
+  }
+ }
+
+// Step 8
+
+ return rr+PW2(xla)+PW2(xmu) + 2*(xmu*rw2 -xla*(rw1+xmu*w1w2));
+}
+int check_spherocyl(double CiCj[3], double D, double L, double Di[2][3], double *Ci, double *ni, double Dj[2][3], double *Cj, double *nj, int *rim)
+{
+  coo_t r1, r2, w1, w2;
+  double sum;
+  int kk, j1, j2, sphov;
+
+  if (dist2_rods(r1, r2, w1, w2, L, L) < 0.0) 
+    {
+      *rim=-1;
+      return -1;
+    }
+  *rim = 1;
+  for (j1=0; j1 < 2; j1++)
+    for (j2=0; j2 < 2; j2++)
+      {
+	sum=0.0;
+	for (kk=0; kk < 3; kk++)
+	  sum += Sqr(Di[j1][kk]-Dj[j2][kk]);
+	if (sum < Sqr(D))
+	  return -1;
+      }
+
+  return 1;
+}
+#endif
+
 #endif
 #endif
