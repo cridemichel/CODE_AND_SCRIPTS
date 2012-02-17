@@ -324,7 +324,7 @@ inline void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj
 #endif 
 }
 #ifdef MC_HC_SPHERO_OPT
-int check_spherocyl(double CiCj[3], double D, double L, double Di[2][3], double *Ci, double *ni, double Dj[2][3], double *Cj, double *nj, int *rim);
+double check_spherocyl(double CiCj[3], double D, double L, double Di[2][3], double *Ci, double *ni, double Dj[2][3], double *Cj, double *nj, int *rim);
 #endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 {
@@ -371,17 +371,14 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 
   for (kk=0; kk < 3; kk++)
     {
-      /* center of masses of disks */
+      /* centers of mass of disks */
       Di[0][kk]=Ci[kk]+0.5*L*ni[kk];
       Di[1][kk]=Ci[kk]-0.5*L*ni[kk];
       Dj[0][kk]=Cj[kk]+0.5*L*nj[kk];
       Dj[1][kk]=Cj[kk]-0.5*L*nj[kk];
     }
 #ifdef MC_HC_SPHERO_OPT
-  if (check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim) > 0)
-    return 1;
-  if (rim < 0)
-    return rim;
+  sphov=check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim);
 #endif
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
   if (ni[0]==nj[0] && ni[1]==nj[1] && ni[2]==nj[2])
@@ -410,7 +407,9 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 		sp += ni[kk]*VV[kk];
 	      }
 	    if (sp == 0 && calc_norm(VV) < D)
-	      return -1;
+	      {
+		return -1;
+	      }
 	  }
     }
   else 
@@ -774,9 +773,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
     }
 #endif
   numcallsHC += 4.0; 
-#ifdef MC_HC_SPHERO_OPT
-  return rim;
-#else
+
   /* case A.3 rim-rim overlap */
   CiCjni = scalProd(CiCj,ni);
   CiCjnj = scalProd(CiCj,nj);
@@ -802,7 +799,6 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
       return -1;
     }
   return 1;
-#endif
 }
 #ifdef MC_HC_SPHERO_OPT
 /*
@@ -823,6 +819,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 */
 
 //----------------- VECTOR operations: -----------------------------------------------------
+
 
 #define VECT_COMMA ,
 #define VECT_PAR (
@@ -848,14 +845,15 @@ typedef struct { double VECT_LIST(); } coo_t;
 
 //---------------------------------------------------------------------------------------
 
-extern coo_t Lv;
+
+coo_t Lv;
 
 
 // Minimum distance in the periodic system:
 
-#define MIN_RIJ(x) \
- ( FX= fabs(rij.x),(FX<Lv.x-FX)?rij.x:(rij.x-((rij.x >0)?Lv.x:-Lv.x) ) )
-
+//#define MIN_RIJ(x) \
+ //( FX= fabs(rij.x),(FX<Lv.x-FX)?rij.x:(rij.x-((rij.x >0)?Lv.x:-Lv.x) ) )
+#define MIN_RIJ(x) (rij.x)
 
 #define PW2(x) (x*x)
 
@@ -918,18 +916,34 @@ if( fabs(xla)>lh1 || fabs(xmu)>lh2 ) {
 
  return rr+PW2(xla)+PW2(xmu) + 2*(xmu*rw2 -xla*(rw1+xmu*w1w2));
 }
-int check_spherocyl(double CiCj[3], double D, double L, double Di[2][3], double *Ci, double *ni, double Dj[2][3], double *Cj, double *nj, int *rim)
+double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], double *Ci, double *ni, double Dj[2][3], double *Cj, double *nj, int *rim)
 {
   coo_t r1, r2, w1, w2;
-  double sum;
+  double sum, d, normDiCj, normDjCi, DiCj[3], DjCi[3], Ui[3], Uj[3], DjUi[3], DiUj[3], DjCini, DiCjnj;
   int kk, j1, j2, sphov;
 
-  if (dist2_rods(r1, r2, w1, w2, L, L) < 0.0) 
-    {
-      *rim=-1;
-      return -1;
-    }
-  *rim = 1;
+  r1.x = Ci[0];
+  r1.y = Ci[1];
+  r1.z = Ci[2];
+  r2.x = Cj[0];
+  r2.y = Cj[1];
+  r2.z = Cj[2];
+  w1.x = ni[0];
+  w1.y = ni[1];
+  w1.z = ni[2];
+  w2.x = nj[0];
+  w2.y = nj[1];
+  w2.z = nj[2];
+
+#ifdef MD_LXYZ
+  Lv.x = L[0];
+  Lv.y = L[1];
+  Lv.z = L[2];
+#else
+  Lv.x = Lv.y = Lv.z = L;
+#endif
+
+  sphov=0;
   for (j1=0; j1 < 2; j1++)
     for (j2=0; j2 < 2; j2++)
       {
@@ -937,9 +951,55 @@ int check_spherocyl(double CiCj[3], double D, double L, double Di[2][3], double 
 	for (kk=0; kk < 3; kk++)
 	  sum += Sqr(Di[j1][kk]-Dj[j2][kk]);
 	if (sum < Sqr(D))
-	  return -1;
+	  {
+	    //printf("qui -1\n");
+	    return -1;
+	  }
       }
 
+  for (j2=0; j2 < 2; j2++)
+    {
+      for (kk=0; kk < 3; kk++)
+	DjCi[kk] = Dj[j2][kk] - Ci[kk];
+      normDjCi = calc_norm(DjCi);
+      DjCini = scalProd(DjCi,ni);
+      for (kk=0; kk < 3; kk++)
+	{
+	  Ui[kk] = Ci[kk] + DjCini*ni[kk];
+	  DjUi[kk] = Dj[j2][kk] - Ui[kk];
+	}
+      if (calc_norm(DjUi) < D && fabs(DjCini) <= Lc*0.5)
+	{
+	  //printf("qui0\n");
+	  return -1;
+	}
+    }
+  for (j1=0; j1 < 2; j1++)
+    {
+      for (kk=0; kk < 3; kk++)
+	DiCj[kk] = Di[j1][kk] - Cj[kk];
+      normDiCj = calc_norm(DiCj);
+      DiCjnj = scalProd(DiCj,nj);
+      for (kk=0; kk < 3; kk++)
+	{
+	  Uj[kk] = Cj[kk] + DiCjnj*nj[kk];
+	  DiUj[kk] = Di[j1][kk] - Uj[kk];
+	}
+      if (calc_norm(DiUj) < D && fabs(DiCjnj) <= Lc*0.5)
+	{
+	  //printf("SC qui1\n");
+	  return -1;
+	}
+    }
+
+
+  if ((d=dist2_rods(r1, r2, w1, w2, Lc*0.5, Lc*0.5)) <= D) 
+    {
+      *rim=-1;
+      return -1;
+    }
+
+  *rim = 1;
   return 1;
 }
 #endif
