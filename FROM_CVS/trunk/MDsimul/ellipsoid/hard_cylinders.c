@@ -331,6 +331,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   const int MAX_ITERATIONS = 1000000;
 #ifdef MC_HC_SPHERO_OPT
   int rim;
+  double sphov;
 #endif
   int it, k2;
   double normNSq, ViVj[3], lambdai, lambdaj;
@@ -378,7 +379,8 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
       Dj[1][kk]=Cj[kk]-0.5*L*nj[kk];
     }
 #ifdef MC_HC_SPHERO_OPT
-  sphov=check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim);
+  if (sphov=check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim) > 0.0)
+    return 1;
 #endif
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
   if (ni[0]==nj[0] && ni[1]==nj[1] && ni[2]==nj[2])
@@ -796,6 +798,8 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
       if (dostorebump)
 	printf("rim-rim NP=%d\n", Oparams.parnum);
 #endif	
+//      if (sphov > 0.0)
+//	printf("boh\n");
       return -1;
     }
   return 1;
@@ -851,8 +855,7 @@ coo_t Lv;
 
 // Minimum distance in the periodic system:
 
-//#define MIN_RIJ(x) \
- //( FX= fabs(rij.x),(FX<Lv.x-FX)?rij.x:(rij.x-((rij.x >0)?Lv.x:-Lv.x) ) )
+//#define MIN_RIJ(x) ( FX= fabs(rij.x),(FX<Lv.x-FX)?rij.x:(rij.x-((rij.x >0)?Lv.x:-Lv.x) ) )
 #define MIN_RIJ(x) (rij.x)
 
 #define PW2(x) (x*x)
@@ -878,7 +881,7 @@ double dist2_rods(coo_t r1, coo_t r2, coo_t w1, coo_t w2,double lh1,double lh2)
 // Checking whether the rods are or not parallel:
 // The original code is modified to have symmetry:
 
- if(cc<1e-6) {
+ if(cc<1e-15) {
   if(rw1 && rw2) {
    xla= rw1/2;
    xmu= -rw2/2;
@@ -920,7 +923,7 @@ double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], dou
 {
   coo_t r1, r2, w1, w2;
   double sum, d, normDiCj, normDjCi, DiCj[3], DjCi[3], Ui[3], Uj[3], DjUi[3], DiUj[3], DjCini, DiCjnj;
-  int kk, j1, j2, sphov;
+  int kk, j1, j2;
 
   r1.x = Ci[0];
   r1.y = Ci[1];
@@ -943,7 +946,6 @@ double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], dou
   Lv.x = Lv.y = Lv.z = L;
 #endif
 
-  sphov=0;
   for (j1=0; j1 < 2; j1++)
     for (j2=0; j2 < 2; j2++)
       {
@@ -992,14 +994,15 @@ double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], dou
 	}
     }
 
+  *rim = 1;
 
-  if ((d=dist2_rods(r1, r2, w1, w2, Lc*0.5, Lc*0.5)) <= D) 
+  if ((d=dist2_rods(r1, r2, w1, w2, Lc*0.5, Lc*0.5)) <= Sqr(D)) 
     {
       *rim=-1;
       return -1;
     }
 
-  *rim = 1;
+  
   return 1;
 }
 #endif
