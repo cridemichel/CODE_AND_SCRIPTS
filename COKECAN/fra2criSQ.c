@@ -364,7 +364,7 @@ int main(int argc, char **argv)
       	wx[i], wy[i], wz[i]);
     }	
 #endif
-  fprintf(f2,"%f %f %f\n", bx, bx, bx); // lato scatola
+  fprintf(f2,"%f %f %f\n", bx, by, bz); // lato scatola
   fclose(f2); 
 #if 0
   free(vx);

@@ -5,9 +5,10 @@
 #define Sqr(x) ((x)*(x))
 char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
-int mcsim=0;
+int mcsim=0, cubic_box=1;
 int N, particles_type=1, k1, k2;
-double *x[3], L, ti, *w[3], storerate;
+double *x[3], L, ti, *w[3], storerate; 
+double Lx, Ly, Lz;
 double nv[3], vecx[3], vecy[3], vecz[3];
 double *DR[3], deltaAA=-1.0, deltaBB=-1.0, deltaAB=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0, 
        Dr, theta, sigmaSticky=-1.0, sa[2], sb[2], sc[2], maxax0, maxax1, maxax, maxsax, maxsaxAA, maxsaxAB, maxsaxBB;
@@ -237,6 +238,17 @@ void lab2nem(double v[3], double vp[3])
 //  printf("vp=%f %f %f\n", vp[0], vp[1], vp[2]);
   //printf("v=%f %f %f\n", v[0], v[1], v[2]);
 }
+double min3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b < m)
+    m = b;
+  if (c < m)
+    m = c;
+  return m;
+}
+
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *f1;
@@ -269,9 +281,19 @@ int main(int argc, char** argv)
 	    {
 	      if (mcsim==1)
 	       {
-	         for (i=0; i < NP; i++)
-		   fscanf(f, "%[^\n]\n", line);
-	         fscanf(f, "%lf\n", &L);
+		 for (i=0; i < NP; i++)
+		   {
+		     fscanf(f, "%[^\n]\n", line);
+		   }
+		 if (fscanf(f, "%lf %lf %lf\n", &Lx, &Ly, &Lz)==1)
+		   {
+		     cubic_box=1;
+		     L=Lx;
+		   }
+		 else
+		   {
+		     cubic_box=0;
+		   }
 	         break;
                }
               else
@@ -415,7 +437,10 @@ int main(int argc, char** argv)
   inCell[1] = malloc(sizeof(int)*NP);
   inCell[2] = malloc(sizeof(int)*NP);
 #endif
-  printf("L=%.15G\n", L);
+  if (cubic_box)
+    printf("L=%.15G\n", L);
+  else
+    printf("Lx=%.15G Ly=%.15G Lz=%.15G\n", Lx, Ly, Lz);
   g0Perp = malloc(sizeof(double*)*4*points);
   g0Parall= malloc(sizeof(double*)*4*points);
 
@@ -443,7 +468,14 @@ int main(int argc, char** argv)
   g4 = malloc(sizeof(double)*points);
   g6 = malloc(sizeof(double)*points);
 #endif
-  delr = L / 2.0 / ((double)points);
+  if (cubic_box)
+    {
+      delr = L / 2.0 / ((double)points);
+    }
+  else
+    {
+      delr = min3(Lx,Ly,Lz)/2.0/((double)points);
+    }
   rewind(f2);
   nf = 0;
   /* build the nematic reference system */
@@ -487,22 +519,42 @@ int main(int argc, char** argv)
 		Dx[a] = x[a][i] - x[a][j];
 	      }
 
-	    for (a = 0; a < 3; a++)
-	      Dx[a] = Dx[a] - L * rint(Dx[a]/L);
+	    if (cubic_box)
+	      {
+		for (a = 0; a < 3; a++)
+		  Dx[a] = Dx[a] - L * rint(Dx[a]/L);
+	      }
+	    else
+	      {
+		Dx[0] = Dx[0] - Lx * rint(Dx[0]/Lx);
+	      	Dx[1] = Dx[1] - Ly * rint(Dx[1]/Ly);
+      		Dx[2] = Dx[2] - Lz * rint(Dx[2]/Lz);
+	      }
 	    lab2nem(Dx,DxNem);
 	    //printf("DxNem=%f %f %f\n", DxNem[0], DxNem[1], DxNem[2]);
 	    distSq = 0.0;
 	    for (a = 0; a < 3; a++)
 	      distSq += Sqr(Dx[a]);
-	    binx = (int) floor(DxNem[0] / delr);
-	    biny = (int) floor(DxNem[1] / delr);
-	    binz = (int) floor(DxNem[2] / delr);
+	    if (cubic_box)
+	      {
+		binx = (int) floor(DxNem[0] / delr);
+		biny = (int) floor(DxNem[1] / delr);
+		binz = (int) floor(DxNem[2] / delr);
+	      }
+	    else
+	      {
+		binx = (int) floor(DxNem[0] / delr);
+		biny = (int) floor(DxNem[1] / delr);
+		binz = (int) floor(DxNem[2] / delr);
+	      }
 	    bin = (int) (sqrt(distSq)/delr);
 	    //printf("(%d-%d) bin=%d\n", i, j, bin);
 	    //printf("(%d-%d) %d %d %d\n", i, j, binx, biny, binz);
 	    //printf("DrNemSq=%f Dr=%f\n", calc_norm(DxNem), calc_norm(Dx));
+#if 0
 	    if (binx < -2*points )
 	      printf("boh=%d\n", binx+2*points);
+#endif
 	    if (binx < 2*points && biny < 2*points && binz < 2*points && 
 		binx >= -2*points && biny >= -2*points  && binz >= -2*points)
 	      {
@@ -526,7 +578,14 @@ int main(int argc, char** argv)
   fclose(f2); 
   f = fopen("gr.dat", "w+");
   r = delr*0.5;
-  cost = 4.0 * pi * NP / 3.0 / (L*L*L);
+  if (cubic_box)
+    {
+      cost = 4.0 * pi * NP / 3.0 / (L*L*L);
+    }
+  else
+    {
+      cost = 4.0 * pi * NP / 3.0 / (Lx*Ly*Lz);
+    }
   for (ii = 0; ii < 2*points; ii++)
     {
       rlower = ( (double) ii) * delr;
@@ -547,7 +606,10 @@ int main(int argc, char** argv)
   f1 = fopen("grpara.dat", "w+");
   f2 = fopen("grperp.dat", "w+");
   r = delr*0.5;
-  cost = (L*L*L)/((double)NP)/((double)NP)/(delr*delr*delr);
+  if (cubic_box)
+    cost = (L*L*L)/((double)NP)/((double)NP)/(delr*delr*delr);
+  else
+    cost = (Lx*Ly*Lz)/((double)NP)/((double)NP)/(delr*delr*delr);
   cost /= 2; /* N.B. divido per due poiché sto considerando in realtà due piani: uno appena
 		sopra e uno appena sotto (z=0 o x=0) */
   for (k1 = 0; k1 < 4*points; k1++)
@@ -563,8 +625,16 @@ int main(int argc, char** argv)
 	  g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
 	  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
 #endif
-	  rx = (((double)k1)-2*points)*delr;
-	  ry = (((double)k2)-2*points)*delr;
+	  if (cubic_box)
+	    {
+	      rx = (((double)k1)-2*points)*delr;
+	      ry = (((double)k2)-2*points)*delr;
+	    }
+	  else
+	    {
+	      rx = (((double)k1)-2*points)*delr;
+	      ry = (((double)k2)-2*points)*delr;
+	    }
 	  fprintf(f1, "%.15G %.15G %.15G\n", rx, ry, g0para);
 	  fprintf(f2, "%.15G %.15G %.15G\n", rx, ry, g0perp);
 	  if (k2==0 && k1==0)
