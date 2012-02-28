@@ -16,12 +16,12 @@ char fname[1024], inputfile[1024];
 int eventDriven=0;
 int points;
 int foundDRs=0, foundrot=0;
-void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double *DR[3])
+void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, double *r[3], double *w[3], double *DR[3])
 {
   FILE *f;
   int nat=0, i, cpos;
   double dt=-1;
-  int curstp=-1;
+  int curstp=-1, NP1, NP2;
   *ti = -1.0;
   f = fopen(fname, "r");
   while (!feof(f)) 
@@ -41,9 +41,24 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  fseek(f, cpos, SEEK_SET);
 	  fscanf(f, "%[^:]:", parname);
 	  //printf("[%s] parname=%s\n", fname, parname);
-	  if (!strcmp(parname,"DR"))
+	  if (!strcmp(parname,"parnum"))
 	    {
-	      for (i=0; i < NP; i++)
+	      fscanf(f, "%[^\n]\n", parval);
+	      if (sscanf(parval, "%d %d ", &NP1, &NP2) < 2)
+		{
+		  *NP = atoi(parval);
+		}
+	      else
+		{
+		  *NP = NP1+NP2;
+		  *NPA = NP1;
+		}
+	    }
+	  else if (!strcmp(parname,"parnumA"))
+	    *NPA = atoi(parval);
+	  else if (!strcmp(parname,"DR"))
+	    {
+	      for (i=0; i < *NP; i++)
 		{
 		  fscanf(f, " %lf %lf %lf ", &DR[0][i], &DR[1][i], &DR[2][i]);
 		}
@@ -51,7 +66,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	    }
 	  else if (!strcmp(parname,"sumox"))
 	    {
-	      for (i=0; i < NP; i++)
+	      for (i=0; i < *NP; i++)
 		{
 		  fscanf(f, " %lf ", &w[0][i]); 
 		}
@@ -59,14 +74,14 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	    }
 	  else if (!strcmp(parname,"sumoy"))
 	    {
-	      for (i=0; i < NP; i++)
+	      for (i=0; i < *NP; i++)
 		{
 		  fscanf(f, " %lf ", &w[1][i]); 
 		}
 	    }
 	  else if (!strcmp(parname,"sumoz"))
 	    {
-	      for (i=0; i < NP; i++)
+	      for (i=0; i < *NP; i++)
 		{
 		  fscanf(f, " %lf ", &w[2][i]); 
 		}
@@ -100,8 +115,10 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	}
       else if (nat==3)
 	{
+	  if (*NPA==-1)
+	    *NPA = *NP;
 	  fseek(f, cpos, SEEK_SET);
-	  for (i = 0; i < NP; i++) 
+	  for (i = 0; i < *NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
 	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
@@ -110,6 +127,27 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 		}
 	      //printf("r[%d]=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
 	    }
+	  if (mcsim==1)
+	    {
+	      if (fscanf(f, "%lf %lf %lf\n", &Lx, &Ly, &Lz)==1)
+		{
+		  L=Lx;
+		}
+	      break;
+	    }
+	  else
+	    {
+	      /* if MD read vels */	
+	      for (i=0; i < *NP; i++)
+		fscanf(f, "%[^\n]\n", line);
+	      // fscanf(f, "%lf\n", &L);
+	      if (fscanf(f, "%lf %lf %lf\n", &Lx, &Ly, &Lz)==1)
+		{
+		  L=Lx;
+		}
+	      break;
+	    }
+
 	  break; 
 	}
     }
@@ -362,6 +400,9 @@ int main(int argc, char** argv)
       printf("[MIXTURE] NP=%d NPA=%d\n", NP, NPA);
     }
 
+  /* max sus window */
+  NP+=100;
+  NPA+=100;
   for (a = 0; a < 3; a++)
     {
       x[a] = malloc(sizeof(double)*NP);
@@ -510,7 +551,9 @@ int main(int argc, char** argv)
       fscanf(f2, "%[^\n]\n", fname);
       //printf("fname=%s argv[2]=%s\n",fname, argv[2]);
       nf++;
-      readconf(fname, &time, &refTime, NP, x, w, DR);
+      NPA = -1;
+      readconf(fname, &time, &refTime, &NP, &NPA, x, w, DR);
+      //printf("NP=%d NPA=%d\n", NP, NPA);
       for (i=0; i < NP-1; i++)
 	for (j = i+1; j < NP; j++)
 	  {
