@@ -2185,7 +2185,7 @@ double find_bonds_covadd(int i, int j)
   return dist;
   
 }
-double find_bonds_fake(int i, int j);
+double find_bonds_fake(int i, int j, int *nbf);
 #ifdef MD_SPOT_GLOBAL_ALLOC
 extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
 #else
@@ -2204,7 +2204,7 @@ int mcinAVB(int i, int j, int dist_type, double alpha, int *merr)
   double rA[3], rat[3], norm, sax, cc[3], ene;
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz;
-  int nb, ierr, bonded, k1, k2, trials, nbold;
+  int nb, ierr, bonded, k1, k2, trials, nbold, nbf;
   /* N.B. questa routine dipende dalla geometria degli spot, in particolare il volume
      in cui inserire va scelto in relazione alla geometria adottata, per ora qui assumiamo
      due spot sulle basi di uno pseudo-cilindro di elongazione data elongazione (sax, vedi sotto) */
@@ -2283,7 +2283,7 @@ int mcinAVB(int i, int j, int dist_type, double alpha, int *merr)
 	      R[i][k1][k2] = Rl[k1][k2]; 
 	    }
 	}
-      ene = find_bonds_fake(i, j);
+      ene = find_bonds_fake(i, j, &nbf);
       if (ene < 0)
 	{
 #ifdef MD_LXYZ
@@ -2321,15 +2321,38 @@ int mcinAVB(int i, int j, int dist_type, double alpha, int *merr)
   //printf("trials=%d nb=%d avgtrials=%.15G\n", trials,nb, tottrials/calls);
   return nb;
 }
+#ifdef MC_HC
+int check_bond_added(int j, int nb)
+{
+#ifdef MD_LL_BONDS
+  long long int aa, bb, ii, jj, jj2;
+#else
+  int ii, jj, aa, bb, jj2;
+#endif
+  /* controlla che il bond aggiunto sia effettivamente il bond nb della particella j */
+  jj = bonds[j][numbonds[j]-1] / (NANA);
+  jj2 = bonds[j][numbonds[j]-1] % (NANA);
+  aa = jj2 / NA;
+  bb = jj2 % NA;
+  if (aa-1!=nb)
+    {
+      return 0;
+    }
+  return 1;
+}
+#endif
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
   /* dist_type=0 -> isotropic
      dist_type=1 -> onsager */
+#ifdef MC_HC
+  double sphrad;
+#endif
   const int maxtrials=1000000;
   double bondlen, dist=0.0, rA[3], rat[3], norm, sax, cc[3], ene;
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz;
-  int ierr, bonded, k1, k2, trials, nbold;
+  int nbf, ierr, bonded, k1, k2, trials, nbold;
   static double tottrials=0, calls=0;
   /* N.B. questa routine dipende dalla geometria degli spot, in particolare il volume
      in cui inserire va scelto in relazione alla geometria adottata, per ora qui assumiamo
@@ -2360,7 +2383,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   if (are_spheres(i,j))
     bondlen = mapSigmaFlex[0];
   else 
-    bondlen = 1.05*2.0*(norm+0.5*mapSigmaFlex[0]-sax); /* overestimate */
+    {
+      bondlen = 1.05*2.0*(norm+0.5*mapSigmaFlex[0]-sax); /* overestimate */
+    }
   //printf("bondlen=%.15G norm=%.15G mapSismaFlex=%.15G\n", bondlen, norm, mapSigmaFlex[0]);
   bonded=0;
   trials=0;
@@ -2370,6 +2395,34 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   while (!bonded)
     {
 #if 1
+#ifdef MC_HC
+      if (are_spheres(i,j))
+	{
+	  dx = 2.0*(ranf_vb()-0.5);
+	  dy = 2.0*(ranf_vb()-0.5);
+      	  dz = 2.0*(ranf_vb()-0.5);
+	}
+      else
+	{
+	  /* chose a random position inside a sphere */
+	  do {
+	    dx = 2.0*(ranf_vb()-0.5);
+	    dy = 2.0*(ranf_vb()-0.5);
+	    dz = 2.0*(ranf_vb()-0.5);
+	  } 
+	  while (dx*dx+dy*dy+dz*dz > 1);
+	}
+
+      sphrad = (norm+mapSigmaFlex[0])*1.05;
+      //printf("sphrad=%.15G\n", sphrad);
+      dx *= sphrad;
+      dy *= sphrad;
+      dz *= sphrad;
+      rx[i] = rat[0]+dx;
+      ry[i] = rat[1]+dy;
+      rz[i] = rat[2]+dz;
+
+#else
       if (are_spheres(i,j))
 	{
 	  dx = 2.0*(ranf_vb()-0.5);
@@ -2389,12 +2442,15 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       rx[i] = cc[0]+dx*sax;
       ry[i] = cc[1]+dy*sax;
       rz[i] = cc[2]+dz*sax;
+#endif
 #if 1
+#if !defined(MC_HC)
       if (Sqr(rx[j]-rx[i])+Sqr(ry[j]-ry[i])+Sqr(rz[j]-rz[i]) > Sqr(2.0*sax+bondlen))
 	{
 	  trials++;
   	  continue;
 	}
+#endif
 #endif
       pbc(i);
 #else
@@ -2435,13 +2491,14 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #endif
       if (fake)
 	{
-	  ene = find_bonds_fake(i, j);
+	  ene = find_bonds_fake(i, j, &nbf);
 	}
       else
 	{
 	  dist=find_bonds_covadd(i, j);
 	  ene = calcpotene_GC(i);
 	}
+
 #if 0
       find_bonds_GC(i);
       if (numbonds[i] > 1)
@@ -2503,6 +2560,22 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 		}
 #endif
 	    }
+#ifdef MC_HC
+	  if (fake)
+	    {
+	      if (nbf != nb)
+	       bonded=0;	
+	    }
+	  else
+	    {
+	      if (!check_bond_added(j, nb))
+		{
+		  numbonds[j] = nbold;
+		  numbonds[i] = 0;
+		  bonded=0;
+		}
+	    }
+#endif 
 	 // printf("d=%.15G trials #%d\n", d, trials);
 	}
 
@@ -2713,7 +2786,7 @@ void remove_allbonds_ij(int ip, int j)
 	}
     }
 }
-double find_bonds_fake(int i, int j)
+double find_bonds_fake(int i, int j, int *nbf)
 {
   int nn,  amin, bmin, nbonds;
   double ene, shift[3], dist;
@@ -2735,6 +2808,7 @@ double find_bonds_fake(int i, int j)
       if (dists[nn]<0.0)
 	{
 	  ene -= 1.0;
+	  *nbf = mapbondsbFlex[nn]-1;
 	}
     }
   return ene;
@@ -2744,7 +2818,7 @@ void mcout(int i, int j, int nb)
 {
   double ene, ox, oy, oz, Rl[3][3];
   int k1, k2, bonded=1, nbjold;
-
+  int nbf;
   //store_bonds_mc(i);
   //store_bonds_mc(j);
 
@@ -2770,7 +2844,7 @@ void mcout(int i, int j, int nb)
 	      R[i][k1][k2] = Rl[k1][k2]; 
 	    }
 	}
-      ene=find_bonds_fake(i, j);
+      ene=find_bonds_fake(i, j, &nbf);
       if (ene==0)
 	{
 	  bonded=0;
@@ -3038,7 +3112,6 @@ void accum_persist_len_mono_orient(int *parlist, double *pl, double *cc)
   NP=Oparams.parnum;
   build_ll(parlist);
   i = Oparams.parnum;
-  //printf("INIZIO\n");
 
   ip = -1;
   while ((i=parlist[i])!=-1) 
