@@ -379,7 +379,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
       Dj[1][kk]=Cj[kk]-0.5*L*nj[kk];
     }
 #ifdef MC_HC_SPHERO_OPT
-  if (sphov=check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim) > 0.0)
+  if ((sphov=check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim)) > 0.0)
     return 1;
 #endif
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
