@@ -2561,20 +2561,23 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #endif
 	    }
 #ifdef MC_HC
-	  if (fake)
-	    {
-	      if (nbf != nb)
-	       bonded=0;	
-	    }
-	  else
-	    {
-	      if (!check_bond_added(j, nb))
-		{
-		  numbonds[j] = nbold;
-		  numbonds[i] = 0;
-		  bonded=0;
-		}
-	    }
+	if (bonded)
+	  {
+	    if (fake)
+	      {
+		if (nbf != nb)
+		  bonded=0;	
+	      }
+	    else
+	      {
+		if (!check_bond_added(j, nb))
+		  {
+		    numbonds[j] = nbold;
+		    numbonds[i] = 0;
+		    bonded=0;
+		  }
+	      }
+	  }
 #endif 
 	 // printf("d=%.15G trials #%d\n", d, trials);
 	}
