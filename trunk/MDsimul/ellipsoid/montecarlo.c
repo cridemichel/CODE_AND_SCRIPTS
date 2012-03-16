@@ -2396,6 +2396,8 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     {
 #if 1
 #ifdef MC_HC
+	/* N.B. qui si assume che gli spot sia uguali per tutte le particelle, che siano lungo x 
+	   e che siano simmetrici rispetto al centro di massa della particella */
       if (are_spheres(i,j))
 	{
 	  dx = 2.0*(ranf_vb()-0.5);
@@ -2570,13 +2572,16 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	      }
 	    else
 	      {
+#if 1
 		if (!check_bond_added(j, nb))
 		  {
 		    numbonds[j] = nbold;
 		    numbonds[i] = 0;
 		    bonded=0;
 		  }
+#endif
 	      }
+
 	  }
 #endif 
 	 // printf("d=%.15G trials #%d\n", d, trials);
