@@ -5,7 +5,7 @@
 #define Sqr(x) ((x)*(x))
 char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
-int mcsim=0, cubic_box=1;
+int mcsim=0, cubic_box=1, nonem=0;
 int N, particles_type=1, k1, k2;
 double *x[3], L, ti, *w[3], storerate; 
 double Lx, Ly, Lz;
@@ -16,6 +16,7 @@ char fname[1024], inputfile[1024];
 int eventDriven=0;
 int points;
 int foundDRs=0, foundrot=0;
+
 void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, double *r[3], double *w[3], double *DR[3])
 {
   FILE *f;
@@ -161,7 +162,7 @@ void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, doubl
 
 void print_usage(void)
 {
-  printf("calcgr [--mcsim/-mc] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
+  printf("calcgr [--nonem/-nn] [--mcsim/-mc] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
   exit(0);
 }
 double threshold=0.05;
@@ -191,6 +192,10 @@ void parse_param(int argc, char** argv)
       else if (!strcmp(argv[cc],"--gnuplot")||!strcmp(argv[cc],"-gp"))
 	{
 	  gnuplot=1;
+	}
+      else if (!strcmp(argv[cc],"--nonem")||!strcmp(argv[cc],"-nn"))
+	{
+	  nonem=1;
 	}
       else if (!strcmp(argv[cc],"--nemvector")||!strcmp(argv[cc],"-nv"))
 	{
@@ -482,22 +487,29 @@ int main(int argc, char** argv)
     printf("L=%.15G\n", L);
   else
     printf("Lx=%.15G Ly=%.15G Lz=%.15G\n", Lx, Ly, Lz);
-  g0Perp = malloc(sizeof(double*)*4*points);
-  g0Parall= malloc(sizeof(double*)*4*points);
-
-  for (k1=0; k1 < 4*points; k1++)
+  if (!nonem)
     {
-      g0Perp[k1] = malloc(sizeof(double)*points*4);
-      g0Parall[k1] = malloc(sizeof(double)*points*4);
+      g0Perp = malloc(sizeof(double*)*4*points);
+      g0Parall= malloc(sizeof(double*)*4*points);
+
+
+      for (k1=0; k1 < 4*points; k1++)
+	{
+	  g0Perp[k1] = malloc(sizeof(double)*points*4);
+	  g0Parall[k1] = malloc(sizeof(double)*points*4);
+	}
     }
   g0 = malloc(sizeof(double)*points*4);
   for (k1=0; k1 < 4*points; k1++)
     {
       g0[k1] = 0.0;
-      for (k2=0; k2 < 4*points; k2++)
+      if (!nonem)
 	{
-	  g0Perp[k1][k2] = 0.0;
-	  g0Parall[k1][k2] = 0.0;
+	  for (k2=0; k2 < 4*points; k2++)
+	    {
+	      g0Perp[k1][k2] = 0.0;
+	      g0Parall[k1][k2] = 0.0;
+	    }
 	}
     }
   for (ii = 0; ii < 3; ii++)
@@ -519,33 +531,36 @@ int main(int argc, char** argv)
     }
   rewind(f2);
   nf = 0;
-  /* build the nematic reference system */
-  vecz[0] = nv[0];
-  vecz[1] = nv[1];
-  vecz[2] = nv[2];
-  printf("delr=%.15G nematic=%f %f %f\n", delr, nv[0], nv[1], nv[2]);
-  vecx[0] = 1.0;
-  vecx[1] = 1.0;
-  vecx[2] = 1.0;
-  if (vecx[0] == vecz[0] && vecx[1]==vecz[1] && vecx[2]==vecz[2])
+
+  if (!nonem)
     {
+      /* build the nematic reference system */
+      vecz[0] = nv[0];
+      vecz[1] = nv[1];
+      vecz[2] = nv[2];
+      printf("delr=%.15G nematic=%f %f %f\n", delr, nv[0], nv[1], nv[2]);
       vecx[0] = 1.0;
-      vecx[1] = -1.0;
+      vecx[1] = 1.0;
       vecx[2] = 1.0;
+      if (vecx[0] == vecz[0] && vecx[1]==vecz[1] && vecx[2]==vecz[2])
+	{
+	  vecx[0] = 1.0;
+	  vecx[1] = -1.0;
+	  vecx[2] = 1.0;
+	}
+      sp = 0;
+      for (k=0; k < 3 ; k++)
+	sp+=vecx[k]*vecz[k];
+      for (k=0; k < 3 ; k++)
+	vecx[k] -= sp*vecz[k];
+      norm = calc_norm(vecx);
+      for (k=0; k < 3 ; k++)
+	vecx[k] = vecx[k]/norm;
+      vectProdVec(vecz, vecx, vecy);
+      printf("{{%f,%f,%f},\n", vecx[0], vecx[1], vecx[2]);
+      printf("{%f,%f,%f},\n", vecy[0], vecy[1], vecy[2]);
+      printf("{%f,%f,%f}}\n", vecz[0], vecz[1], vecz[2]);
     }
-  sp = 0;
-  for (k=0; k < 3 ; k++)
-    sp+=vecx[k]*vecz[k];
-  for (k=0; k < 3 ; k++)
-    vecx[k] -= sp*vecz[k];
-  norm = calc_norm(vecx);
-  for (k=0; k < 3 ; k++)
-    vecx[k] = vecx[k]/norm;
-  vectProdVec(vecz, vecx, vecy);
-  printf("{{%f,%f,%f},\n", vecx[0], vecx[1], vecx[2]);
-  printf("{%f,%f,%f},\n", vecy[0], vecy[1], vecy[2]);
-  printf("{%f,%f,%f}}\n", vecz[0], vecz[1], vecz[2]);
- 
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
@@ -573,22 +588,28 @@ int main(int argc, char** argv)
 	      	Dx[1] = Dx[1] - Ly * rint(Dx[1]/Ly);
       		Dx[2] = Dx[2] - Lz * rint(Dx[2]/Lz);
 	      }
-	    lab2nem(Dx,DxNem);
+	    if (!nonem)
+	      {
+		lab2nem(Dx,DxNem);
+	      }	      
 	    //printf("DxNem=%f %f %f\n", DxNem[0], DxNem[1], DxNem[2]);
 	    distSq = 0.0;
 	    for (a = 0; a < 3; a++)
 	      distSq += Sqr(Dx[a]);
-	    if (cubic_box)
+	    if (!nonem)
 	      {
-		binx = (int) floor(DxNem[0] / delr);
-		biny = (int) floor(DxNem[1] / delr);
-		binz = (int) floor(DxNem[2] / delr);
-	      }
-	    else
-	      {
-		binx = (int) floor(DxNem[0] / delr);
-		biny = (int) floor(DxNem[1] / delr);
-		binz = (int) floor(DxNem[2] / delr);
+		if (cubic_box)
+		  {
+		    binx = (int) floor(DxNem[0] / delr);
+		    biny = (int) floor(DxNem[1] / delr);
+		    binz = (int) floor(DxNem[2] / delr);
+		  }
+		else
+		  {
+		    binx = (int) floor(DxNem[0] / delr);
+		    biny = (int) floor(DxNem[1] / delr);
+		    binz = (int) floor(DxNem[2] / delr);
+		  }
 	      }
 	    bin = (int) (sqrt(distSq)/delr);
 	    //printf("(%d-%d) bin=%d\n", i, j, bin);
@@ -598,22 +619,25 @@ int main(int argc, char** argv)
 	    if (binx < -2*points )
 	      printf("boh=%d\n", binx+2*points);
 #endif
-	    if (binx < 2*points && biny < 2*points && binz < 2*points && 
-		binx >= -2*points && biny >= -2*points  && binz >= -2*points)
+	    if (!nonem)
 	      {
-		if (binx==0 || binx==-1)
-		  g0Parall[biny+2*points][binz+2*points] += 2.0;
-		if (binz==0 || binz==-1)
+		if (binx < 2*points && biny < 2*points && binz < 2*points && 
+		    binx >= -2*points && biny >= -2*points  && binz >= -2*points)
 		  {
-		    g0Perp[binx+2*points][biny+2*points] += 2.0;
-		    //if (binx < 5)	
-		    //  printf("binx=%d biny=%d\n", binx, biny);
+		    if (binx==0 || binx==-1)
+		      g0Parall[biny+2*points][binz+2*points] += 2.0;
+		    if (binz==0 || binz==-1)
+		      {
+			g0Perp[binx+2*points][biny+2*points] += 2.0;
+			//if (binx < 5)	
+			//  printf("binx=%d biny=%d\n", binx, biny);
+		      }
+		    //printf("g0[%d]=%.15G\n", bin, g0[bin]);
 		  }
-	       	//printf("g0[%d]=%.15G\n", bin, g0[bin]);
 	      }
-	    if (bin >=0 && bin < 4*points)
+    	    if (bin >=0 && bin < 4*points)
 	      g0[bin] += 2.0;
-    	    //printf("bin=%d\n", bin);
+		//printf("bin=%d\n", bin);
 	    //exit(1);
 	      
 	  }
@@ -644,8 +668,20 @@ int main(int argc, char** argv)
 #endif
       fprintf(f, "%.15G %.15G %.15G\n", r, g0m, g0[ii]);
       r += delr;
+      if (cubic_box)
+	{
+	  if (r > L*0.5)
+	    break;
+	}
+      else
+	{
+	  if (r > min3(Lx,Ly,Lz)*0.5) 
+	    break;
+	}
     }
   fclose(f);
+  if (nonem)
+    return 0;
   f1 = fopen("grpara.dat", "w+");
   f2 = fopen("grperp.dat", "w+");
   r = delr*0.5;
