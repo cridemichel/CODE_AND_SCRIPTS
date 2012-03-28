@@ -2271,7 +2271,7 @@ int mcinAVB(int i, int j, int dist_type, double alpha, int *merr)
 	  oy = 0;
 	  oz = 0;
 	}
-      else if (dist_type==0)
+      else if (dist_type==0||dist_type==6)
 	orient(&ox, &oy, &oz);
       else 
 	orient_onsager(&ox, &oy, &oz, alpha);
@@ -2374,11 +2374,19 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   norm = calc_norm(vv);
   for (k1=0; k1 < 3; k1++)
     vv[k1] /=norm;
-  sax = typesArr[typeOfPart[j]].sax[0];
-  for (k1=0; k1 < 3; k1++)
-    cc[k1] = rA[k1] + vv[k1]*sax*2.0;
-  
   assign_bond_mapping(i,j);
+  if (are_spheres(i, j))
+    {
+      sax = (norm+mapSigmaFlex[0])*1.05;
+      for (k1=0; k1 < 3; k1++)
+	cc[k1] = rat[k1];
+    }
+  else
+    {
+      sax = typesArr[typeOfPart[j]].sax[0];
+      for (k1=0; k1 < 3; k1++)
+	cc[k1] = rA[k1] + vv[k1]*sax*2.0;
+    }
   /* N.B. here we assume one bond per pair */
   if (are_spheres(i,j))
     bondlen = mapSigmaFlex[0];
@@ -2447,7 +2455,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #endif
 #if 1
 #if !defined(MC_HC)
-      if (Sqr(rx[j]-rx[i])+Sqr(ry[j]-ry[i])+Sqr(rz[j]-rz[i]) > Sqr(2.0*sax+bondlen))
+      if (!are_spheres(i,j) && Sqr(rx[j]-rx[i])+Sqr(ry[j]-ry[i])+Sqr(rz[j]-rz[i]) > Sqr(2.0*sax+bondlen))
 	{
 	  trials++;
   	  continue;
@@ -2473,7 +2481,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  oy = 0;
 	  oz = 0;
 	}
-      else if (dist_type==0)
+      else if (dist_type==0||dist_type==6)
 	orient(&ox, &oy, &oz);
       else 
 	orient_onsager(&ox, &oy, &oz, alpha);
@@ -2975,12 +2983,12 @@ int is_bonded_mc(int ip, int numb)
 }
 #ifdef MC_CALC_COVADD
 extern const char sepStr[];
-void save_conf_mc(int i)
+void save_conf_mc(int i, int ii)
 {
   char fileop2[512], fileop[512], fileop3[512];
   FILE* bf;
   sprintf(fileop2 ,"Store-%d-%d", 
-	  i, 0);
+	  i, ii);
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
   if ( (bf = fopenMPI(fileop, "w")) == NULL)
@@ -3437,7 +3445,7 @@ void calc_persistence_length_mc(long long int maxtrials, int outits, int size1)
 	    break;
 	}
 #if 0
-      save_conf_mc(tt);
+      save_conf_mc(tt, 0);
 #else
       if (!abort)
 	{
@@ -3743,6 +3751,347 @@ int check_self_overlap(int i0, int i)
     }
    return 0; 
 }
+#define MC_COV_SIG
+#ifdef MC_COV_SIG
+double check_over(int size1, int size2, double xi, double rhx, double rhy, double rhz)
+{
+  int i, j, overlap, ierr;  
+  double shift[3], posx, posy, posz, rCMx, rCMy, rCMz;
+  /* check overlaps */
+  rCMx = rCMy = rCMz = 0;
+  for (i=size1; i < Oparams.parnum; i++)
+    {
+      rCMx += rx[i];
+      rCMy += ry[i];
+      rCMz += rz[i];
+    }	
+  rCMx /= size2;
+  rCMy /= size2;
+  rCMz /= size2;
+
+  posx = rhx*xi;
+  posy = rhy*xi;
+  posz = rhz*xi;
+
+  for (i=size1; i < Oparams.parnum; i++)
+    {
+      rx[i] = (rx[i] - rCMx) + posx;
+      ry[i] = (ry[i] - rCMy) + posy;
+      rz[i] = (rz[i] - rCMz) + posz;
+    }	
+  for (i=size1; i < Oparams.parnum; i++)
+    { 
+      overlap = 0;
+      for (j=0; j < size1; j++)
+	{
+#ifdef MD_LXYZ
+	  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+	  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+	  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+	  shift[0] = L*rint((rx[i]-rx[j])/L);
+	  shift[1] = L*rint((ry[i]-ry[j])/L);
+	  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+	  ierr=0;
+	  if (check_overlap(i, j, shift, &ierr)<0.0)
+	    {
+	      overlap=1;
+	      //printf("i=%d j=%d overlap!\n", i, j);
+	      //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+	      //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+	      break;
+	    }
+	}
+      if (overlap)
+	break;
+    }
+  if (overlap)
+    return -1;
+  else
+    return 1;
+}
+double do_bisection(double rmin, double rmax, int size1, int size2, double rhx, double rhy, double rhz, int *found)
+{
+  /* if odd = 1 look for odd solutions */
+  const int maxit=500;
+  int cc;
+  double rmid; // I am looking for E such that Psi(xmax)=0
+  double k1,k2,k3; // values of Psi(xmax) for Emin,Emax,E
+  double tol=1.0e-6; // tolerance in finding a root
+
+  k1 = check_over(size1, size2, rmin, rhx, rhy, rhz);
+  k2 = check_over(size1, size2, rmax, rhx, rhy, rhz);
+  if( k1*k2 > 0.0 )
+    {
+      //fprintf(stderr,"Don't know if there is  a zero in [%g,%g]\n",Emin,Emax);
+      //fprintf(stderr, "k1=%-15G k2=%.15G\n", k1, k2);
+      //fflush(stderr); 
+      printf("no bracketing in bisect.\n");
+      *found = 0;
+      return 0.0; 
+    }
+
+  cc=0;
+  do
+    {
+      rmid = 0.5*(rmin+rmax); k3 = check_over(size1, size2, rmid, rhx, rhy, rhz);
+      if( k3*k2 < 0.0 ) rmin=rmid; 
+      else rmax=rmid;
+      cc++;    
+      if (cc > maxit)
+	{
+	  printf("Too many iterations in bisections\n");
+	  *found = 0;
+	  return 0;
+	}
+    } 
+  while(fabs(rmax-rmin)>tol);
+
+  //printf("Bisection finished after %d iterations\n", cc);
+  *found=1;
+  return rmid;
+}
+
+void calc_sigma_parsons(int size1, int size2, double alpha, int type, int outits, int maxtrials)
+{
+  FILE *f;	 
+  long long int tt=0;
+  int ttt;
+  double A, Aold;
+  double Rl[3][3], posx, posy, posz, xi, xiold, sigma, sumsigma=0.0;
+  int found_contact, selfoverlap, k1, k2, i, j;
+  double rCMx, rCMy, rCMz, ox, oy, oz, rhx, rhy, rhz, rmin, rmax, rmid;
+  int merr, ierr, bt=0, nb, found, overlap;
+
+  f = fopen("sigma_parsons.dat","w+");
+  fclose(f);
+  
+  while (tt < maxtrials) 
+    {
+      merr=ierr=0;
+      selfoverlap=0;
+      //printf("parsons tt=%d\n", tt);
+      /* first particle is always in the center of the box with the same orientation */
+      rx[0] = 0;
+      ry[0] = 0;
+      rz[0] = 0;
+      if (type==7)
+	orient_onsager(&ox, &oy, &oz, alpha); 
+      else
+	orient(&ox, &oy, &oz); 
+      versor_to_R(ox, oy, oz, Rl);
+      orient(&rhx, &rhy, &rhz); 
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    R[0][k1][k2] = Rl[k1][k2];
+	  }
+
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  numbonds[i] = 0;
+	}
+      for (i=1; i < size1; i++)
+	{
+	  bt = 0;
+	  while (1)
+	    {
+	      nb = (int)(ranf_vb()*2.0);
+	      j = (int) (ranf_vb()*i);
+#if 1
+	      if (bt > Oparams.parnum*1000)
+		{
+		  printf("insertion cluster #1: maximum number of iteration reached\n");
+    		  if (fabs(calcpotene()+i*2.0) < 1E-10)
+		    {
+		      save_conf_mc(0, 0);
+		      printf("During insertion of #1 cluster: every particle has 2 bonds! i=%d\n", i);
+		      exit(-1);
+		    }
+		}
+#endif
+	      if (is_bonded_mc(j, nb))
+		continue;
+	      else
+		break;
+	      bt++;
+	    }
+	  mcin(i, j, nb, type, alpha, &merr, 0);
+	  if (merr!=0)
+	    {
+	      save_conf_mc(0, 0);
+	      printf("[mcin] attemp to add a bonded particle failed!\n");
+	      break;
+	    }
+	  if (check_self_overlap(0, i))
+	    {
+	      selfoverlap = 1;
+	      break;
+	    }
+	  /* N.B. per ora non controlla il self-overlap della catena 
+	     e la formazione dopo mcin di legami multipli poiché
+	     si presuppone che al massimo stiamo considerando dimeri */
+	}
+      /* place first cluster with the center of mass in the center
+	 of the box */
+      rCMx = rCMy = rCMz = 0;
+      for (i=0; i < size1; i++)
+	{
+	  rCMx += rx[i];
+	  rCMy += ry[i];
+	  rCMz += rz[i];
+	}	
+      rCMx /= size1;
+      rCMy /= size1;
+      rCMz /= size1;
+      for (i=0; i < size1; i++)
+	{
+     	  rx[i] = (rx[i] - rCMx);
+	  ry[i] = (ry[i] - rCMy);
+	  rz[i] = (rz[i] - rCMz);
+	}	
+      if (selfoverlap)
+	{
+	  printf("self overlap!\n");
+	}
+      /* place second cluster */
+      overlap=0;
+      for (i=size1; i < Oparams.parnum; i++)
+	{
+	  if (i==size1)
+	    {
+#if 0
+#ifdef MD_LXYZ
+	      rx[i] = L[0]*(ranf_vb()-0.5);
+	      ry[i] = L[1]*(ranf_vb()-0.5); 
+	      rz[i] = L[2]*(ranf_vb()-0.5); 
+#else
+    	      rx[i] = L*(ranf_vb()-0.5);
+    	      ry[i] = L*(ranf_vb()-0.5); 
+    	      rz[i] = L*(ranf_vb()-0.5); 
+#endif
+#endif
+	      rx[i] = 0;
+	      ry[i] = 0;
+	      rz[i] = 0;
+    
+	      if (type==7)
+		orient_onsager(&ox, &oy, &oz, alpha);
+	      else
+		orient(&ox, &oy, &oz);
+    	      versor_to_R(ox, oy, oz, Rl);
+    	      for (k1=0; k1 < 3; k1++)
+    		for (k2=0; k2 < 3; k2++)
+    		  R[i][k1][k2] = Rl[k1][k2];
+	    }
+	  else
+	    {
+	      bt = 0;
+	      while (1)
+		{
+		  nb = (int)(ranf_vb()*2.0);
+		  j = ((int) (ranf_vb()*(i-size1)))+size1;
+
+#if 1
+	    	  if (bt > Oparams.parnum*1000)
+	    	    {
+		      printf("insertion cluster #2: maximum number of iteration reached\n");
+		      if (fabs(calcpotene()+(i-size1)*2.0) < 1E-10)
+			{
+			  save_conf_mc(0, 0);
+			  printf("During insertion of #2 cluster: every particle has 2 bonds! i=%d\n", i);
+			  exit(-1);
+			}
+	    	    }
+#endif
+		  if (is_bonded_mc(j, nb))
+		    continue;
+		  else
+		    break;
+		  bt++;
+		}
+	      /* mette la particella i legata a j con posizione ed orientazione a caso */
+	      //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
+	      mcin(i, j, nb, type, alpha, &merr, 0);
+	      if (merr!=0)
+		{
+		  save_conf_mc(0, 0);
+		  printf("[mcin] attemp to add a bonded particle failed!\n");
+		  break;
+		}
+	      if (check_self_overlap(size1, i))
+		{
+		  selfoverlap = 1;
+		  break;
+		}
+
+	      /* N.B. per ora non controlla il self-overlap della catena 
+		 e la formazione dopo mcin di legami multipli poiché
+		 si presuppone che al massimo stiamo considerando dimeri */
+	    }
+	  if (selfoverlap||merr)
+	    {
+	      printf("self overlap!\n");
+	    }	  
+	}
+
+      /* place first cluster */
+      if (tt%outits==0)
+	{
+	  if (tt!=0)
+	    {
+	      f=fopen("sigma_parsons.dat", "a");
+	      printf("sigma=%.10f (tries=%lld)\n", 4.0*acos(0.0)*2*sumsigma / tt, tt);
+	      fprintf(f, "%lld %.15G\n", tt, 4.0*acos(0.0)*2*sumsigma / tt);
+	      fclose(f);
+	      sync();
+	    }
+#if 0
+     	  save_conf_mc(tt, 0); 
+#endif
+	}
+      // tt++;
+      // continue;
+      xi = Oparams.parnum*(typesArr[typeOfPart[0]].sax[0]+mapSigmaFlex[0])*2.0;
+      xiold = xi - 0.5*typesArr[typeOfPart[0]].sax[0]; 
+
+      Aold = A = 0.0;
+      found_contact=0;
+      ttt=0;
+      do
+	{
+	  //printf("found=%d xi=%.15G dxi=%.15G\n", found_contact, xi, typesArr[typeOfPart[0]].sax[0]);
+	  if (xi < 0.0)
+	    {
+	      printf("contact bracketing not found...boh!\n");
+	      //exit(-1);
+	      break;
+	    }
+	 
+	  Aold = A;
+ 	  if ((A=check_over(size1, size2, xi, rhx, rhy, rhz)) < 0.0)
+	    {
+	      //printf("A=%f Aold=%f\n", A, Aold);
+	      sigma=do_bisection(xiold, xi, size1, size2, rhx, rhy, rhz, &found);
+	      found_contact = 1;
+	      break;
+	    }
+#if 0
+	  save_conf_mc(tt, ttt);
+#endif
+	  xiold = xi;
+	  xi -= 0.5*typesArr[typeOfPart[0]].sax[0]; 
+	  ttt++;
+	}
+      while (!found_contact);
+      tt++;
+      sumsigma += sigma*sigma*sigma/3.0; 
+   }
+
+  printf("sigma=%.15G\n", 4.0*acos(0.0)*2*sumsigma / tt);
+}
+#endif
 extern double fons(double theta, double alpha);
 void calc_cov_additive(void)
 {
@@ -3753,6 +4102,7 @@ void calc_cov_additive(void)
   double ox, oy, oz, Rl[3][3];
   fi = fopen("covmc.conf", "r");
   fscanf(fi, "%lld %d %d %d ", &maxtrials, &type, &size1, &outits);
+  printf("type=%d\n", type);
   for (i=0; i < Oparams.parnum; i++)
     {
       numbonds[i]=0;
@@ -3778,7 +4128,7 @@ void calc_cov_additive(void)
      type = 4 -> covolume if perfectly aligned (i.e. alpha -> infinity)
      type = 5 -> bonding volume using onsager trial function
    */
-  if (type==1||type==5)
+  if (type==1||type==5||type==7)
     {
       const int n=1000;
       distro=malloc(sizeof(double)*n);
@@ -3797,6 +4147,14 @@ void calc_cov_additive(void)
   tt = ttini;
   totene = toteneini;
   size2 = Oparams.parnum-size1;
+#ifdef MC_COV_SIG
+  if (type==6||type==7)
+    {
+      calc_sigma_parsons(size1, size2, alpha, type, outits, maxtrials);
+      exit(-1);
+    }
+#endif
+ 
   if (type==3||type==5)
     {
       calc_bonding_volume_mc(maxtrials, outits, type, alpha);
@@ -3877,7 +4235,7 @@ void calc_cov_additive(void)
 	      sync();
 	    }
 #if 0
-     	  save_conf_mc(tt); 
+     	  save_conf_mc(tt, 0); 
 #endif
 	}
       for (i=0; i < Oparams.parnum; i++)
@@ -3897,7 +4255,7 @@ void calc_cov_additive(void)
 		  printf("insertion cluster #1: maximum number of iteration reached\n");
     		  if (fabs(calcpotene()+i*2.0) < 1E-10)
 		    {
-		      save_conf_mc(0);
+		      save_conf_mc(0, 0);
 		      printf("During insertion of #1 cluster: every particle has 2 bonds! i=%d\n", i);
 		      exit(-1);
 		    }
@@ -3912,7 +4270,7 @@ void calc_cov_additive(void)
 	  mcin(i, j, nb, type, alpha, &merr, 0);
 	  if (merr!=0)
 	    {
-	      save_conf_mc(0);
+	      save_conf_mc(0, 0);
 	      printf("[mcin] attemp to add a bonded particle failed!\n");
 	      break;
 	    }
@@ -3975,7 +4333,7 @@ void calc_cov_additive(void)
 		      printf("insertion cluster #2: maximum number of iteration reached\n");
 		      if (fabs(calcpotene()+(i-size1)*2.0) < 1E-10)
 			{
-			  save_conf_mc(0);
+			  save_conf_mc(0, 0);
 			  printf("During insertion of #2 cluster: every particle has 2 bonds! i=%d\n", i);
 			  exit(-1);
 			}
@@ -3992,7 +4350,7 @@ void calc_cov_additive(void)
 	      mcin(i, j, nb, type, alpha, &merr, 0);
 	      if (merr!=0)
 		{
-		  save_conf_mc(0);
+		  save_conf_mc(0, 0);
 		  printf("[mcin] attemp to add a bonded particle failed!\n");
 		  break;
 		}
