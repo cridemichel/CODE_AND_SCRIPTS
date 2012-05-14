@@ -2345,11 +2345,16 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 {
   /* dist_type=0 -> isotropic
      dist_type=1 -> onsager */
-#ifdef MC_HC
-  double sphrad;
-#endif
+  double sphrad, rmin1, rmin2, rmin, rmax, drSq;
   const int maxtrials=1000000;
-  double bondlen, dist=0.0, rA[3], rat[3], norm, sax, cc[3], ene;
+  double bondlen, dist=0.0, rA[3], rat[3], norm, normB, sax, cc[3], ene;
+#ifdef MCIN_OPT
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double ratAll[NA][3];
+#endif
+  double rB[3], normo;
+  int nbB;
+#endif
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz;
   int nbf, ierr, bonded, k1, k2, trials, nbold;
@@ -2361,13 +2366,24 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   rA[0] = rx[j];
   rA[1] = ry[j];
   rA[2] = rz[j];
+#ifdef MCIN_OPT
+  rB[0] = rx[i];
+  rB[1] = ry[i];
+  rB[2] = rz[i];
+#endif
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2=0; k2 < 3; k2++)
 	{
 	  RtA[k1][k2] = R[j][k1][k2];
+#ifdef MCIN_OPT
+	  RtB[k1][k2] = R[i][k1][k2];
+#endif
 	}
     }
+#ifdef MCINT_OPT
+  BuildAtomPos(j, rB, RtB, ratAll);
+#endif
   BuildAtomPosAt(j, nb+1, rA, RtA, rat);
   for (k1=0; k1 < 3; k1++)
     vv[k1] = rat[k1] - rA[k1];
@@ -2402,36 +2418,69 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   *merr=0;
   while (!bonded)
     {
+#ifdef MCIN_OPT
+      nbB = ranf()*typesArr[typeOfPart[i]].nspots;
+      for (k1=0; k1 < 3; k1++)
+	vv[k1] = ratAll[nb+1][k1] - rB[k1];
+      normB = calc_norm(vv);
+#endif
 #if 1
-#ifdef MC_HC
-	/* N.B. qui si assume che gli spot sia uguali per tutte le particelle, che siano lungo x 
+#ifdef MCIN_OPT
+      do {
+	dx = 2.0*(ranf_vb()-0.5);
+	dy = 2.0*(ranf_vb()-0.5);
+	dz = 2.0*(ranf_vb()-0.5);
+      } 
+      while (dx*dx+dy*dy+dz*dz > 1);
+      dx = dx*mapSigmaFlex[0];
+      dy = dy*mapSigmaFlex[0];
+      dz = dz*mapSigmaFlex[0];
+#else
+#if 0
+	/* N.B. qui si assume che gli spot siano uguali per tutte le particelle, che siano lungo x 
 	   e che siano simmetrici rispetto al centro di massa della particella */
+
       if (are_spheres(i,j))
 	{
-	  dx = 2.0*(ranf_vb()-0.5);
-	  dy = 2.0*(ranf_vb()-0.5);
-      	  dz = 2.0*(ranf_vb()-0.5);
-	}
-      else
-	{
-	  /* chose a random position inside a sphere */
+      	  rmax = (norm+mapSigmaFlex[0])*1.01;
+	  //rmin1 = 0.5*(typesArr[typeOfPart[i]].sax[0]+typesArr[typeOfPart[j]].sax[0])*0.99;
+       	  rmin = (norm-mapSigmaFlex[0])*0.99;
+	  //rmin = max(rmin1, rmin2);
+	  //printf("rmin=%.15G rmax=%.15G\n", rmin, rmax);
 	  do {
 	    dx = 2.0*(ranf_vb()-0.5);
 	    dy = 2.0*(ranf_vb()-0.5);
 	    dz = 2.0*(ranf_vb()-0.5);
-	  } 
-	  while (dx*dx+dy*dy+dz*dz > 1);
+	    //printf("sphrad=%.15G\n", sphrad);
+	    dx *= rmax;
+	    dy *= rmax;
+	    dz *= rmax;
+	    drSq = Sqr(dx)+Sqr(dy)+Sqr(dz);
+	  }
+	  while (drSq > Sqr(rmax) || drSq < Sqr(rmin));
+	  
 	}
-
-      sphrad = (norm+mapSigmaFlex[0])*1.05;
-      //printf("sphrad=%.15G\n", sphrad);
-      dx *= sphrad;
-      dy *= sphrad;
-      dz *= sphrad;
+      else
+	{
+	  rmax = (norm+mapSigmaFlex[0])*1.01;
+	  //rmin = (typesArr[typeOfPart[i]].sax[0]+typesArr[typeOfPart[j]].sax[0])*0.99;
+       	  rmin = (norm-mapSigmaFlex[0])*0.99;
+	  //rmin = max(rmin1, rmin2);
+	  do {
+	    dx = 2.0*(ranf_vb()-0.5);
+	    dy = 2.0*(ranf_vb()-0.5);
+	    dz = 2.0*(ranf_vb()-0.5);
+	    //printf("sphrad=%.15G\n", sphrad);
+	    dx *= rmax;
+	    dy *= rmax;
+	    dz *= rmax;
+	    drSq = Sqr(dx)+Sqr(dy)+Sqr(dz);
+	  }
+	  while (drSq > Sqr(rmax) || drSq < Sqr(rmin));
+	}
       rx[i] = rat[0]+dx;
       ry[i] = rat[1]+dy;
       rz[i] = rat[2]+dz;
-
 #else
       if (are_spheres(i,j))
 	{
@@ -2453,6 +2502,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       ry[i] = cc[1]+dy*sax;
       rz[i] = cc[2]+dz*sax;
 #endif
+#endif
 #if 1
 #if !defined(MC_HC)
       if (!are_spheres(i,j) && Sqr(rx[j]-rx[i])+Sqr(ry[j]-ry[i])+Sqr(rz[j]-rz[i]) > Sqr(2.0*sax+bondlen))
@@ -2462,7 +2512,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	}
 #endif
 #endif
+#ifndef MCIN_OPT
       pbc(i);
+#endif
 #else
       /* chose a random position inside a sphere (this is of course more efficient than
        using a cube as above) */
@@ -2485,6 +2537,25 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	orient(&ox, &oy, &oz);
       else 
 	orient_onsager(&ox, &oy, &oz, alpha);
+#ifdef MCIN_OPT
+      rx[i] = dx + ox*norm + rat[0];
+      ry[i] = dy + oy*norm + rat[1];
+      rz[i] = dz + oz*norm + rat[2];
+#if 0
+      ox = rat[0] + dx - rx[i];
+      oy = rat[1] + dy - ry[i];
+      oz = rat[2] + dz - rz[i];
+      normo = sqrt(Sqr(ox)+Sqr(oy)+Sqr(oz));
+      ox /= normo;
+      oy /= normo;
+      oz /= normo;
+#else
+      ox = -ox;
+      oy = -oy;
+      oz = -oz;
+#endif
+      pbc(i);
+#endif
       versor_to_R(ox, oy, oz, Rl);
       for (k1 = 0; k1 < 3; k1++)
 	{
