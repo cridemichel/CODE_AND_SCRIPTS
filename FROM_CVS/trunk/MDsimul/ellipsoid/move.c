@@ -5788,7 +5788,12 @@ double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double 
 #endif
   sigma = rad1 + rad2; 
   //printf("sigma=%.15G\n", sigma);
+#ifdef MC_SIMUL
   return  sqrt(distSq) - sigma;
+  //return  distSq - Sqr(sigma);
+#else
+  return  sqrt(distSq) - sigma;
+#endif
 }
 #ifdef MC_HC
 extern double calcDistNegHC(int i, int j, double shift[3], int *retchk);
