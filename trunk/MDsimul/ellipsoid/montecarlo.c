@@ -2570,9 +2570,16 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       //store_bonds_mc(j);
       nbold = numbonds[j];
 #endif
+
       if (fake)
 	{
+#ifndef MCIN_OPT
 	  ene = find_bonds_fake(i, j, &nbf);
+#else
+	  /* N.B. the optimized version always create a bonded conf
+	     we have only to check for overlaps between hard cores */
+	  ene = -1;
+#endif
 	}
       else
 	{
@@ -2681,8 +2688,11 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       totdist += dist;
       distcc += 1.0;
     }
-
-  //printf("trials=%d avg_trials=%.15G\n", trials, tottrials/calls);
+#if 0
+// DEBUGGING STUFF
+  if (Oparams.curStep%200==0)
+    printf("trials=%d avg_trials=%.15G\n", trials, tottrials/calls);
+#endif
 }
 /* bonding moves */
 int are_bonded(int i, int j)
