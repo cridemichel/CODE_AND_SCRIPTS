@@ -277,7 +277,7 @@ enum {MD_CORE_BARRIER=0,MD_INOUT_BARRIER,MD_OUTIN_BARRIER,MD_EVENT_NONE};
 #if defined(MD_SPOT_GLOBAL_ALLOC) && defined(MD_LL_BONDS)
 #define NA 1000000
 #else
-#define NA 1000//50000 /* number of atoms for each molecule (particle) */
+#define NA 100//50000 /* number of atoms for each molecule (particle) */
 #endif
 #endif
 #endif

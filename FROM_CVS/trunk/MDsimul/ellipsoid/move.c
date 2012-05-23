@@ -3925,7 +3925,7 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
   double wSq, w, OmegaSq[3][3], M[3][3];
   double sinw, cosw;
   int k1, k2, k3;
-#ifdef MD_HANDLE_INFMASS
+#if defined(MD_HANDLE_INFMASS) && !defined(MC_SIMUL)
   if (is_infinite_Itens(i))
     {
       Omega[0][0] = 0;
@@ -3945,8 +3945,10 @@ void UpdateOrient(int i, double ti, double **Ro, double Omega[3][3])
       return;
     }
 #endif
+#ifndef MC_SIMUL
   wSq = Sqr(wx[i])+Sqr(wy[i])+Sqr(wz[i]);
   w = sqrt(wSq);
+#endif
   if (ti != 0.0 && w != 0.0) 
     {
 #if 0
@@ -5789,8 +5791,8 @@ double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double 
   sigma = rad1 + rad2; 
   //printf("sigma=%.15G\n", sigma);
 #ifdef MC_SIMUL
-  return  sqrt(distSq) - sigma;
-  //return  distSq - Sqr(sigma);
+  //return  sqrt(distSq) - sigma;
+  return  distSq - Sqr(sigma);
 #else
   return  sqrt(distSq) - sigma;
 #endif

@@ -2775,12 +2775,24 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
     }
   else 
     {
+#ifdef MC_OPT_BUILDATOMPOS
+      /* ottimizzazione ad hoc per sfere patchy */
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  if (ata==1)
+	    rat[k1] = rO[k1] + R[0][k1]*0.5; 
+	  else
+	    rat[k1] = rO[k1] - R[0][k1]*0.5; 
+	} 
+	
+#else
       for (k1 = 0; k1 < 3; k1++)
 	{ 
 	  rat[k1] = rO[k1];
 	  for (k2 = 0; k2 < 3; k2++)
 	    rat[k1] += R[k2][k1]*spXYZ[k2]; 
 	}
+#endif
       //printf("ata= %d rat= %f %f %f\n", ata, rat[0], rat[1], rat[2]);
       //printf("rO = %f %f %f \n", rO[0], rO[1], rO[2]);
       //printf("%f %f %f @ 0.075 C[blue]\n", rat[0], rat[1], rat[2]);
@@ -2999,6 +3011,8 @@ double calcDistNegSPsph(double t, double t1, int i, int j, double shift[3], int 
     }
   return distmin;
 }
+extern int are_spheres(int i, int j);
+
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
 {
@@ -3065,6 +3079,27 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
 #endif
+
+#ifdef MC_SIMUL
+  if (are_spheres(i,j))
+    {
+      if (Sqr(rA[0]-rB[0])+Sqr(rA[1]-rB[1])+Sqr(rA[2]-rB[2]) > Sqr(0.5*(maxax[i]+maxax[j])))
+	{
+#ifdef EDHE_FLEX
+	  nbonds = nbondsFlex;
+#else
+	  nbonds = MD_PBONDS;
+#endif
+	  for (nn = 0; nn < nbonds; nn++)
+	    {
+	      dists[nn] = 1.0;
+	      //*amin = mapbondsa[nn];
+	      //*bmin = mapbondsb[nn];
+	    }
+	  return 1.0;
+	}
+    }
+#endif
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
@@ -3104,7 +3139,11 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #else
       for (kk=0; kk < 3; kk++)
     	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+#ifdef MC_SIMUL
+      dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
+#else
       dists[nn] = dist = sqrt(distSq) - mapSigmaFlex[nn];
+#endif
       MD_DEBUG38(printf("dists[%d]:%.15G mapSigmaFlex[]:%f\n", nn, dists[nn], mapSigmaFlex[nn]));
       MD_DEBUG38(printf("i=%d mapbondsa[%d]:%d j=%d mapbondsb[%d]:%d\n", i, nn, mapbondsa[nn], j, nn, mapbondsb[nn])); 
 #endif

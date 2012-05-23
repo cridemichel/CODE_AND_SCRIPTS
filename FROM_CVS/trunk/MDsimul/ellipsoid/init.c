@@ -5780,10 +5780,28 @@ void usrInitAft(void)
       maxax[i] = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
 	Sqr(typesArr[typeOfPart[i]].sax[2]));
 #endif
+#ifdef MC_SIMUL
+      /* se è una sfera setta maxax pari al raggio della stessa */
+      if (typesArr[typeOfPart[i]].sax[0] == typesArr[typeOfPart[i]].sax[1] && 
+	    typesArr[typeOfPart[i]].sax[1] == typesArr[typeOfPart[i]].sax[2]) 
+	{
+#ifdef MD_SUPERELLIPSOID
+    	  if (!is_superellipse(i))
+    	    {
+	      maxax[i] = typesArr[typeOfPart[i]].sax[0];
+    	    }
+#else
+	  maxax[i] = typesArr[typeOfPart[i]].sax[0];
+#endif
+	}
+#endif
       maxSpots = eval_max_dist_for_spots(typeOfPart[i]);
       if (maxSpots > maxax[i])
 	maxax[i] = maxSpots;
-      //printf("maxax[%d]:%f maxSpots:%f\n", i, maxax[i], maxSpots);
+#ifdef MC_SIMUL
+      maxax[i] *= 1.0001;
+#endif
+      //printf("maxax[%d]:%f maxSpots:%f\n", i, 2.0*maxax[i], 2.0*maxSpots);
 #else
       a=(i<Oparams.parnumA)?0:1;
       if (Oparams.a[a] > maxax[i])
