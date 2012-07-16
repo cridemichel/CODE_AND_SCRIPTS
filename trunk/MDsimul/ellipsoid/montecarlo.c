@@ -2363,6 +2363,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
      in cui inserire va scelto in relazione alla geometria adottata, per ora qui assumiamo
      due spot sulle basi di uno pseudo-cilindro di elongazione data elongazione (sax, vedi sotto) */
   /* place particle i bonded to bond nb of particle j */
+  /* N.B. Questa routine presuppone di avere due spot lungo l'asse di simmetria della particella
+    e che tutte le particelle siano uguali */
+
   rA[0] = rx[j];
   rA[1] = ry[j];
   rA[2] = rz[j];
@@ -2381,8 +2384,10 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #endif
 	}
     }
-#ifdef MCINT_OPT
-  BuildAtomPos(j, rB, RtB, ratAll);
+#if 0
+#ifdef MCIN_OPT
+  BuildAtomPos(i, rB, RtB, ratAll);
+#endif
 #endif
   BuildAtomPosAt(j, nb+1, rA, RtA, rat);
   for (k1=0; k1 < 3; k1++)
@@ -2419,10 +2424,13 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   while (!bonded)
     {
 #ifdef MCIN_OPT
-      nbB = ranf()*typesArr[typeOfPart[i]].nspots;
+      //nbB = ranf()*typesArr[typeOfPart[i]].nspots;
+      nbB = (ranf()>0.5)?1:-1;
+#if 0
       for (k1=0; k1 < 3; k1++)
-	vv[k1] = ratAll[nb+1][k1] - rB[k1];
+	vv[k1] = ratAll[nbB+1][k1] - rB[k1];
       normB = calc_norm(vv);
+#endif
 #endif
 #if 1
 #ifdef MCIN_OPT
@@ -2550,9 +2558,10 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       oy /= normo;
       oz /= normo;
 #else
-      ox = -ox;
-      oy = -oy;
-      oz = -oz;
+      /* nbB = +1 o -1 così viene scelta a caso uno dei due spot */
+      ox = nbB*ox;
+      oy = nbB*oy;
+      oz = nbB*oz;
 #endif
       pbc(i);
 #endif
@@ -2578,7 +2587,15 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #else
 	  /* N.B. the optimized version always create a bonded conf
 	     we have only to check for overlaps between hard cores */
+#if 0
+	  ene = find_bonds_fake(i, j, &nbf);
+	  if (ene >= 0)
+	    exit(-1);
+	  else
+	    printf("ene=%f nbB=%d\n", ene,nbB);
+#else
 	  ene = -1;
+#endif
 #endif
 	}
       else
@@ -2736,7 +2753,7 @@ void mcoutin(double beta, double pbias)
   if (numbonds[j]==Oparams.parnum)
     return;
   if (numbonds[j]==typesArr[typeOfPart[j]].nspots)
-    return; /* tutti i siti sono occupati (assumendo che ogni sito è legato al massimo con un altro sito )*/
+    return; /* tutti i siti sono occupati ( assumendo che ogni sito è legato al massimo con un altro sito )*/
   /* sceglie una particella esterna */
   done = 0;
   while (!done)
