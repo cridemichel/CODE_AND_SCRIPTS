@@ -1397,7 +1397,9 @@ int swdumbbell_bump_routine(int i, int j, int ata, int atb, int bt)
   return 0;
 }
 #endif
-/* 26/01/10: calcola la barriere in ingresso per tener 
+
+/* >>> DGEBA AUTOCATALISI <<<
+   26/01/10: calcola la barriere in ingresso per tener 
    conto di meccanismi autocatalitici.
    Discutere l'implementazione della reazione autocatalitica
    con emanuela e francesco. */
