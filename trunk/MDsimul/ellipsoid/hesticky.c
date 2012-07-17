@@ -1404,6 +1404,24 @@ int swdumbbell_bump_routine(int i, int j, int ata, int atb, int bt)
    Discutere l'implementazione della reazione autocatalitica
    con emanuela e francesco. */
 extern double calcpotene(void);
+#ifdef EDHE_AUTOCAT
+double eval_bhin_correction(void)
+{
+  double ener, enermax, p, k0, k1, mac;
+  enermax = MD_STSPOTS_A*Oparams.parnumA;
+  ener = calcpotene();
+  p = ener/enermax;
+  k0 = OprogStatus.k0;
+  k1 = OprogStatus.k1;/* k1 is not used for now */
+  mac = OprogStatus.mac;
+  /* k0 nell'espressione seguente deve essere >= 1 */
+  if (OprogStatus.autocat==1)
+    return -log(1+k0*pow(p,mac))*Oparams.T;
+  else 
+    return 0.0;
+}
+
+#endif
 double eval_bhin(void)
 {
   double ener, enermax, p, k0, k1, mac;
@@ -1956,6 +1974,13 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
   mredl = 1.0 / denom;
 #ifdef EDHE_FLEX
   get_inter_bheights(i, j, ata, atb, &bheight, &bhin, &bhout, &nmax);
+  /* N.B. AGGIUNGERE AUTOCATALISI QUI */
+#ifdef EDHE_AUTOCAT
+  if (OprogStatus.autocat)
+    {
+      bhin += eval_bhin_correction();
+    }
+#endif
 #else
   bheight = Oparams.bheight; 
   if (OprogStatus.autocat)
