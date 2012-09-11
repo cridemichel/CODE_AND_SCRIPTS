@@ -642,7 +642,7 @@ int main(int argc, char** argv)
 		    if (binx==0 || binx==-1)
 		      {
 		    	g0Parall[biny+2*points][binz+2*points] += 2.0;
-			if (isoav)
+			if (isoav && (biny==0 || biny==-1))
 			  {
 			    binParaAv = (int) sqrt(Sqr(Dx[1])+Sqr(Dx[2]));
 			    g0ParaAv[binParaAv]+=2.0;
