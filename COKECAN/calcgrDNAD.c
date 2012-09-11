@@ -162,11 +162,11 @@ void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, doubl
 
 void print_usage(void)
 {
-  printf("calcgr [--nonem/-nn] [--mcsim/-mc] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
+  printf("calcgr [--nonem/-nn] [--mcsim/-mc] [--isoav/-ia] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
   exit(0);
 }
 double threshold=0.05;
-int gnuplot=0;
+int gnuplot=0, isoav=0;
 void parse_param(int argc, char** argv)
 {
   int extraparam=0;  
@@ -192,6 +192,10 @@ void parse_param(int argc, char** argv)
       else if (!strcmp(argv[cc],"--gnuplot")||!strcmp(argv[cc],"-gp"))
 	{
 	  gnuplot=1;
+	}
+      else if (!strcmp(argv[cc],"--isoav")||!strcmp(argv[cc],"-ia"))
+	{
+	  isoav=1;
 	}
       else if (!strcmp(argv[cc],"--nonem")||!strcmp(argv[cc],"-nn"))
 	{
@@ -296,9 +300,10 @@ int main(int argc, char** argv)
 {
   FILE *f, *f2, *f1;
   int binx, biny, binz;
-  int k, nf, i, a, b, nat, NN, j, ii, bin;
+  int k, nf, i, a, b, nat, NN, j, ii, bin, binParaAv, binPerpAv;
   double rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
-  double r, delr, tref=0.0, Dx[3], DxNem[3], *g0, **g0Perp, **g0Parall, g0m, distSq, rlower, rupper, cost, nIdeal;
+  double r, delr, tref=0.0, Dx[3], DxNem[3], *g0, **g0Perp, **g0Parall, *g0ParaAv, *g0PerpAv,
+	 g0m, distSq, rlower, rupper, cost, nIdeal;
   double sp, time, refTime, RCUT;
   int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
   double shift[3];
@@ -500,9 +505,19 @@ int main(int argc, char** argv)
 	}
     }
   g0 = malloc(sizeof(double)*points*4);
+  if (isoav)
+    {
+      g0ParaAv = malloc(sizeof(double)*points*4);
+      g0PerpAv = malloc(sizeof(double)*points*4);
+    }
   for (k1=0; k1 < 4*points; k1++)
     {
       g0[k1] = 0.0;
+      if (isoav)
+	{
+	  g0ParaAv[k1] = 0;
+	  g0PerpAv[k1] = 0;
+	}
       if (!nonem)
 	{
 	  for (k2=0; k2 < 4*points; k2++)
@@ -625,12 +640,24 @@ int main(int argc, char** argv)
 		    binx >= -2*points && biny >= -2*points  && binz >= -2*points)
 		  {
 		    if (binx==0 || binx==-1)
-		      g0Parall[biny+2*points][binz+2*points] += 2.0;
+		      {
+		    	g0Parall[biny+2*points][binz+2*points] += 2.0;
+			if (isoav)
+			  {
+			    binParaAv = (int) sqrt(Sqr(Dx[1])+Sqr(Dx[2]));
+			    g0ParaAv[binParaAv]+=2.0;
+ 			  }
+		      }
 		    if (binz==0 || binz==-1)
 		      {
 			g0Perp[binx+2*points][biny+2*points] += 2.0;
 			//if (binx < 5)	
 			//  printf("binx=%d biny=%d\n", binx, biny);
+			if (isoav)
+			  {
+			    binPerpAv = (int) sqrt(Sqr(Dx[0])+Sqr(Dx[0]));
+			    g0PerpAv[binPerpAv]+=2.0;
+ 			  }
 		      }
 		    //printf("g0[%d]=%.15G\n", bin, g0[bin]);
 		  }
@@ -644,6 +671,11 @@ int main(int argc, char** argv)
     }
   fclose(f2); 
   f = fopen("gr.dat", "w+");
+  if (isoav)
+    {
+      f1 = fopen("grParaAv.dat", "w+");
+      f2 = fopen("grPerpAv.dat", "w+");
+    }
   r = delr*0.5;
   if (cubic_box)
     {
@@ -667,6 +699,11 @@ int main(int argc, char** argv)
       fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
 #endif
       fprintf(f, "%.15G %.15G %.15G\n", r, g0m, g0[ii]);
+      if (isoav)
+	{
+	  fprintf(f1, "%.15G %.15G\n", r, g0ParaAv[ii]);
+	  fprintf(f2, "%.15G %.15G\n", r, g0PerpAv[ii]);
+	}
       r += delr;
       if (cubic_box)
 	{
@@ -680,6 +717,11 @@ int main(int argc, char** argv)
 	}
     }
   fclose(f);
+  if (isoav)
+    {
+      fclose(f1);
+      fclose(f2);
+    }
   if (nonem)
     return 0;
   f1 = fopen("grpara.dat", "w+");
@@ -691,6 +733,15 @@ int main(int argc, char** argv)
     cost = (Lx*Ly*Lz)/((double)NP)/((double)NP)/(delr*delr*delr);
   cost /= 2; /* N.B. divido per due poiché sto considerando in realtà due piani: uno appena
 		sopra e uno appena sotto (z=0 o x=0) */
+
+  if (isoav)
+    {
+      for (k1 = 0; k1 < 2*points; k1++)
+	{
+	  g0PerpAv[k1] *= cost/((double)nf);
+	  g0ParaAv[k1] *= cost/((double)nf);
+	}   
+    }
   for (k1 = 0; k1 < 4*points; k1++)
     {
       for (k2 = 0; k2 < 4*points; k2++)
