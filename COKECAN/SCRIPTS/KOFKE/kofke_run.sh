@@ -4,6 +4,7 @@
 # Pcur.dat: initial pressure
 # VolIniIso.dat: initial volume for iso phase
 # VolIniNem.dat: initial volume for nem phase
+# echo "predictor" > $KFN
 NP="1000"
 EXES="../sim1statepnt_HC_MCNPT.sh"
 CNFCURI="startCurIso.cnf"
@@ -20,7 +21,6 @@ EQSTEPS="50000"
 PARF="ellipsoid_flex_mc.par"
 VINI_ISO=`cat VolIniIso.dat`
 VINI_NEM=`cat VolIniNem.dat`
-echo "predictor" > $KSFN 
 BETACUR=`cat $BFN`
 BETAEND=`cat BetaEnd.dat`
 while [ $BCUR -lt $BETAEND ]
@@ -125,7 +125,15 @@ NS=`cat $NEMD/status.dat`
 sleep 30
 while [ "$IS" == "running" -o "$NS" == "running" ]
 #calculate running averages here and update Kofke file
-
+N1="wc -l $ISOD/energy.dat"
+FACT="echo "2.0/3.0"| bc -l"
+AVENEISO=`cat $ISOD/energy.dat|awk -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; ene+=$2};} END { printf("%.15G\n",ene/cc)}'`
+N1="wc -l $NEMD/energy.dat"
+AVENENEM=`cat $NEMD/energy.dat |awk -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; ene+=$2}; } END { printf("%.15G\n",ene/cc)}'`
+N1="wc -l $ISOD/volume.dat"
+AVVOLISO=`cat $ISOD/volume.dat|awk -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; vol+=$2}; } END { printf("%.15G\n",vol/cc)}'`
+N1="wc -l $NEMD/volume.dat"
+AVVOLNEM=`cat $NEMD/volume.dat|awk -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; vol+=$2}; } END { printf("%.15G\n",vol/cc)}'`
 #calculate new pressure here according to some integration scheme (e.g. trapezoid, midpoint, etc.)
 #KFN:
 #<beta> <pressure> <av. volume ISO> <av. energy ISO> <av. vol. NEM> <av. energy NEM> <#particles> 
