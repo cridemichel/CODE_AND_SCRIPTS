@@ -243,11 +243,12 @@ double calc_energy(int nummol)
 }
 int nummolmax;
 double R[3][3];
+char line[4096];
 int main(int argc, char **argv)
 {
   FILE* f, *f2;
   int i, kk, nummol, junki1, junki2, junki3, passi;
-  double sf, radius, junkd1, junkd2, junkd3;
+  double sf, radius, junkd1, junkd2, junkd3, trad, patch-radius, patch-pos, tlen;
   double r1[3], r2[3], r3[3], r21[3], r31[3], nn[3], norm, rO[3];
   double K, r4[3], bx, by, bz, r41[3], sumx, sumy, sumz;
   //double  rTemp;
@@ -255,8 +256,9 @@ int main(int argc, char **argv)
   //scanf("%lf",&temp);
   f2 = fopen(argv[2],"w");
   f = fopen(argv[1], "r");
-  fscanf(f, "%d %d %d %d %d\n", &passi, &junki1, &nummol, &junki2, &junki3);
-  fscanf(f, "%lf %lf %lf %lf %lf %lf\n", &bx, &by, &bz, &junkd1, &junkd2, &junkd3);
+  fscanf(f, "[^\n]\n", line);
+  fscanf(f, "%d %lf %lf %lf %lf %lf\n", &nummol, &bx, &trad, &tlen, &patchRad, &patchPos);
+  by = bz = bx;
 #if 0
   vx = malloc(sizeof(double)*nummol);
   vy = malloc(sizeof(double)*nummol);
@@ -273,28 +275,46 @@ int main(int argc, char **argv)
   fprintf(f2,"parnum: %d\n", nummol);
   //fprintf(f2,"parnumA: %d\n", nummol);
   //fprintf(f2,"T:%.15G\n",temp);
+/* HARD CYLINDERS WITH PARTCHES:
+tol: 0
+ninters: 3
+nintersIJ: 0
+ntypes: 1
+saveBonds: 0
+maxbondsSaved: -1
+@@@
+850
+1 1 1
+2 2 2
+1 1 1 1 2 0
+2 0
+1.15 0 0 0.5
+-1.15 0 0 0.5
+0 0 0 0 1 0 0 100000
+0 0 0 1 1 0 0 100000
+0 1 0 1 1 0 0 100000
+   
+*/
   fprintf(f2,"ninters: 3\nnintersIJ: 0\nntypes: 1\nsaveBonds: 0\nmaxbondsSaved: -1\n@@@\n");
   fprintf(f2,"%d\n", nummol);	
-  fprintf(f2,"2 1 1\n");	
-  fprintf(f2,"16 2 2\n");
-  fprintf(f2,"1 1 1 1 1 0\n");
+  fprintf(f2,"%G %G %G\n", tlen*0.5, trad, trad);	
+  fprintf(f2,"2 2 2\n");
+  fprintf(f2,"1 1 1 1 2 0\n");
   fprintf(f2,"2 0\n");
-  fprintf(f2,"1.541665 0 0 1.21667\n");
-  fprintf(f2,"-1.541665 0 0 1.21667\n");
+  fprintf(f2,"%.15G 0 0 %.15G\n", tlen*0.5+patchPos, patchRad*2.0);
+  fprintf(f2,"%.15G 0 0 %.15G\n", -tlen*0.5-patchPos, patchRad*2.0);
   fprintf(f2,"0 0 0 0 1 0 0 100000\n");
   fprintf(f2,"0 0 0 1 1 0 0 100000\n");
   fprintf(f2,"0 1 0 1 1 0 0 100000\n");
   fprintf(f2,"@@@\n");
   for (i=0; i < nummol; i++)
     {
-      fscanf(f, "%lf %lf %lf\n", &r2[0], &r2[1], &r2[2]);
-      fscanf(f, "%lf %lf %lf\n", &r3[0], &r3[1], &r3[2]);
       fscanf(f, "%lf %lf %lf\n", &r1[0], &r1[1], &r1[2]);
+      fscanf(f, "%lf %lf %lf\n", &r2[0], &r2[1], &r2[2]);
       for (kk=0; kk < 3; kk++)
 	{
-	  r21[kk] = r2[kk] - r1[kk];
-	  r31[kk] = r3[kk] - r1[kk];
-	  rO[kk] = r1[kk];  
+	  rO[kk] = r1[kk]
+	  r21[kk] = r2[kk];
 	}
       norm = calc_norm(r21);
       for (kk=0; kk < 3; kk++)
