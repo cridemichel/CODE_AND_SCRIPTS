@@ -1,7 +1,6 @@
 # $1 =pressure
 # $2 = temperature 
 # $3 = steps
-FIXVB="1"
 if [ "$1" = "" ]
 then
 echo "Syntax: sim1statepnt <pressure> <temperature> <steps>"
@@ -22,17 +21,11 @@ STEPS="$3"
 fi
 PARFILE="ellipsoid_flex_mc.par"
 DIRSIM="P-$PRESS"
-if [ ! -e $DIRSIM ]
-then 
-mkdir $DIRSIM
-fi
-cp $PARFILE $DIRSIM
-cd $DIRSIM
+cp ../$PARFILE .
 rm -f COORD_TMP*
 rm -f Store-*
 PRESS="$1"
 ELLEXE="../ellipsHC"
-INITEMP="2.0"
 SIMPR="HCNPT-X0-P${PRESS}-T${TEMP}"
 MOSRUN="mosrun"
 #per ora il salvataggio è lineare
@@ -51,4 +44,3 @@ echo "Simulating T=" $TEMP " P=" $PRESS
 ln -sf $ELLEXE $SIMPR
 $MOSRUN ./$SIMPR -fa ./$PARFILE > screen_$SIMPR &
 sleep 1
-cd ..

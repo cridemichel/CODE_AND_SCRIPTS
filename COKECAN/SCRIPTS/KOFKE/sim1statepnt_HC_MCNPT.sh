@@ -1,7 +1,6 @@
 # $1 =pressure
 # $2 = temperature 
 # $3 = steps
-FIXVB="1"
 if [ "$1" = "" ]
 then
 echo "Syntax: sim1statepnt <pressure> <temperature> <steps>"
