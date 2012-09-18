@@ -8,9 +8,9 @@
 DEBUG="1"
 NP="1000"
 alias awk='LANG=C awk'
-EXES="../sim1statepnt_HC_MCNPT.sh"
-CNFCURI="startCurIso.cnf"
-CNFCURN="startCurNem.cnf"
+EXES="../sim1statepnt_HC_MCNPTK.sh"
+CNFCURI="startIso.cnf"
+CNFCURN="startNem.cnf"
 INIFILEI="startIso.cnf"
 INIFILEN="startNem.cnf"
 SCNF="start.cnf"
@@ -54,35 +54,38 @@ U0I=`echo $LAST | awk '{print $4}'`
 V0N=`echo $LAST | awk '{print $5}'`
 U0N=`echo $LAST | awk '{print $6}'`
 BETA0=`echo $LAST | awk '{print $1}'`
-F0=`echo "-($U0N-$U0I + $P0*($V0N-$V0I))/($BETA0*$P0*($V0N-$V0I))"|bc -l`
+F0=`echo "-((${U0N})-(${U0I}) + (${P0})*(${V0N}-${V0I}))/(${BETA0}*(${P0})*(${V0N}-${V0I}))"|bc -l`
+//echo "-((${U0N})-(${U0I}) + (${P0})*(${V0N}-${V0I}))/(${BETA0}*(${P0})*(${V0N}-${V0I}))"
+//echo "F0="$F0
+//exit
 Pm1=`echo $PREV | awk '{print $2}'`
 Vm1I=`echo $PREV | awk '{print $3}'`
 Um1I=`echo $PREV | awk '{print $4}'`
 Vm1N=`echo $PREV | awk '{print $5}'`
 Um1N=`echo $PREV | awk '{print $6}'`
 BETAm1=`echo $PREV | awk '{print $1}'`
-Fm1=`echo "-($Um1N-$Um1I + $Pm1*($Vm1N-$Vm1I))/($BETAm1*$Pm1*($Vm1N-$Vm1I))"|bc -l`
+Fm1=`echo "-((${Um1N})-(${Um1I}) + ${Pm1}*(${Vm1N}-${Vm1I}))/(${BETAm1}*${Pm1}*(${Vm1N}-${Vm1I}))"|bc -l`
 Pm2=`echo $PREV | awk '{print $2}'`
 Vm2I=`echo $PREV | awk '{print $3}'`
 Um2I=`echo $PREV | awk '{print $4}'`
 Vm2N=`echo $PREV | awk '{print $5}'`
 Um2N=`echo $PREV | awk '{print $6}'`
 BETAm2=`echo $PREV | awk '{print $1}'`
-Fm2=`echo "-($Um2N-$Um2I + $Pm2*($Vm2N-$Vm2I))/($BETAm2*$Pm2*($Vm2N-$Vm2I))"|bc -l`
+Fm2=`echo "-((${Um2N})-(${Um2I}) + ${Pm2}*(${Vm2N}-${Vm2I}))/(${BETAm2}*${Pm2}*(${Vm2N}-${Vm2I}))"|bc -l`
 if [ "$KSTAT" == "predictor" ]
 then
 if [ "$PREV" == "" ]
 then
 #use trapezoid formula at begin
-NEWP=`echo "$P0*e($DELB*$F0*0.5)" | bc -l`
+NEWP=`echo "${P0}*e((${DELB})*(${F0})*0.5)" | bc -l`
 echo $NEWP > $PFN
-NEWBETA=`echo "$BETA0+$DELB"| bc -l`
+NEWBETA=`echo "(${BETA0})+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
 else
 #use midpoint formula 
-NEWP=`echo "$Pm1*e($DELB*$Fm1*2.0)" | bc -l`
+NEWP=`echo "${Pm1}*e((${DELB})*(${Fm1})*2.0)" | bc -l`
 echo $NEWP > $PFN
-NEWBETA=`echo "$BETA0+($DELB)"| bc -l`
+NEWBETA=`echo "${BETA0}+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
 fi
 else
@@ -94,16 +97,16 @@ Vp1I=`echo $KFNPRED | awk '{print $3}'`
 Up1I=`echo $KFNPRED | awk '{print $4}'`
 Vp1N=`echo $KFNPRED | awk '{print $5}'`
 Up1N=`echo $KFNPRED | awk '{print $6}'`
-Fp1=`echo "-($Up1N-$Up1I + $Pp1*($Vp1N-$Vp1I))/($BETAp1*$Pp1*($Vp1N-$Vp1I))"|bc -l`
+Fp1=`echo "-((${Up1N})-(${Up1I}) + ${Pp1}*(${Vp1N}-${Vp1I}))/(${BETAp1}*${Pp1}*(${Vp1N}-${Vp1I}))"|bc -l`
 if [ "$PREV" == "" ]
 then
 #use trapezoid formula at begin
-NEWP=`echo "$P0*e($DELB*($Fp1+$F0)*0.5)" | bc -l`
+NEWP=`echo "$P0*e(($DELB)*(($Fp1)+($F0))*0.5)" | bc -l`
 echo $NEWP > $PFN
 #NOTE: beta is the same as in predictor stage 
 else
 #use midpoint formula 
-NEWP=`echo "$Pm1*e($DELB*($Fp1+4.0*$F0+$Fm1)/3.0)" | bc -l`
+NEWP=`echo "${Pm1}*e(${DELB}*((${Fp1})+4.0*(${F0})+(${Fm1}))/3.0)" | bc -l`
 echo $NEWP > $PFN
 #NOTE: beta is the same as in predictor stage 
 fi
@@ -121,6 +124,7 @@ if [ ! -e $ISOD ]
 then
 mkdir $ISOD
 fi
+cd $ISOD
 if [ "$RUNI" == "" ] 
 then
 if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
