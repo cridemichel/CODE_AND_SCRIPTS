@@ -21,8 +21,8 @@ KFN="EneVolKofke.dat"
 KFNPRED="EneVolKofkePred.dat"
 cp $KFN Ini-$KFN # backup
 KSFN="kstat.dat"
-NPI=`cat $INIFILEI| awk -F : '{if ($1=="parnum") print $2}'`
-NPN=`cat $INIFILEN| awk -F : '{if ($1=="parnum") print $2}'`
+NPI=`cat $INIFILEI| awk -F : '{if ($1=="parnum") printf("%d",$2)}'`
+NPN=`cat $INIFILEN| awk -F : '{if ($1=="parnum") printf("%d",$2)}'`
 PARF="ellipsoid_flex_mc.par"
 #VINI_ISO=`cat VolIniIso.dat`
 #VINI_NEM=`cat VolIniNem.dat`
@@ -47,6 +47,7 @@ do
 LAST=`tail -1 $KFN`
 PREV=`tail -2 $KFN | head -1`
 PPREV=`tail -3 $KFN | head -1`
+NLKF=`wc -l $KFN | awk '{print $1}'`
 P0=`echo $LAST | awk '{print $2}'`
 V0I=`echo $LAST | awk '{print $3}'`
 U0I=`echo $LAST | awk '{print $4}'`
@@ -73,7 +74,7 @@ Fm2=`echo "-((${Um2N})-(${Um2I}) + ${Pm2}*(${Vm2N}-${Vm2I}))/(${BETAm2}*${Pm2}*(
 KSTAT=`cat $KSFN`
 if [ "$KSTAT" == "predictor" ]
 then
-if [ "$PREV" == "" ]
+if [ "$NLKF" == "1" ]
 then
 #use trapezoid formula at begin
 NEWP=`echo "${P0}*e((${DELB})*(${F0})*0.5)" | bc -l`
@@ -90,23 +91,27 @@ fi
 echo "NEWP=" $NEWP "F0=" $F0
 else
 #CORRECTOR HERE
+#echo "CORRECTOR OK"
 PPREV="`tail -3 $KFN | head -1`"
-BETAp1=`echo $KFNPRED | awk '{print $1}'`
-Pp1=`echo $KFNPRED | awk '{print $2}'`
-Vp1I=`echo $KFNPRED | awk '{print $3}'`
-Up1I=`echo $KFNPRED | awk '{print $4}'`
-Vp1N=`echo $KFNPRED | awk '{print $5}'`
-Up1N=`echo $KFNPRED | awk '{print $6}'`
+BETAp1=`cat $KFNPRED | awk '{print $1}'`
+Pp1=`cat $KFNPRED | awk '{print $2}'`
+Vp1I=`cat $KFNPRED | awk '{print $3}'`
+Up1I=`cat $KFNPRED | awk '{print $4}'`
+Vp1N=`cat $KFNPRED | awk '{print $5}'`
+Up1N=`cat $KFNPRED | awk '{print $6}'`
 Fp1=`echo "-((${Up1N})-(${Up1I}) + ${Pp1}*(${Vp1N}-${Vp1I}))/(${BETAp1}*${Pp1}*(${Vp1N}-${Vp1I}))"|bc -l`
-if [ "$PREV" == "" ]
+#echo "LAST=" $LAST " PREV=" $PREV
+if [ "$NLKF" == "1" ]
 then
+echo "NEWP=" $NEWP "P0=" $P0 "Fp1=" $Fp1 " F0=" $F0 
+echo "ECCOCI"
 #use trapezoid formula at begin
 NEWP=`echo "$P0*e(($DELB)*(($Fp1)+($F0))*0.5)" | bc -l`
 echo $NEWP > $PFN
 #NOTE: beta is the same as in predictor stage 
 else
 #use midpoint formula 
-NEWP=`echo "${Pm1}*e(${DELB}*((${Fp1})+4.0*(${F0})+(${Fm1}))/3.0)" | bc -l`
+NEWP=`echo "${Pm1}*e((${DELB})*((${Fp1})+4.0*(${F0})+(${Fm1}))/3.0)" | bc -l`
 echo $NEWP > $PFN
 #NOTE: beta is the same as in predictor stage 
 fi
@@ -121,7 +126,8 @@ RUNI=`cat psout.txt | grep $EXEI`
 RUNN=`cat psout.txt | grep $EXEN`
 rm psout.txt
 PCUR=`cat $PFN`
-echo "RUNI=" $RUNI " RUNN=" $RUNN
+echo "PCUR=" $PCUR
+#echo "RUNI=" $RUNI " RUNN=" $RUNN
 #KSTAT=`cat $KSFN`
 if [ ! -e $ISOD ]
 then
@@ -141,7 +147,7 @@ $EXES $PCUR $BETACUR $EXEI $EQSTEPS
 fi
 fi
 cd ..
-echo "QUIIIII"
+#echo "QUIIIII"
 if [ ! -e $NEMD ]
 then
 mkdir $NEMD
@@ -190,26 +196,28 @@ fi
 sleep $WTIME
 done
 #calculate running averages here and update Kofke file
-N1=`wc -l $ISOD/energy.dat | awk '{print $1}'`
+NPTS=`wc -l $ISOD/energy.dat | awk '{print $1}'`
 FACT=`echo "2.0/3.0"| bc -l`
-echo "FACT=" $FACT " nump=" $NPI " " $NPN "n1=" $N1  
-AVENEISO=`cat $ISOD/energy.dat|awk -v nump=$NPI -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; ene+=$2};} END { printf("%.15G\n",ene/cc/nump)}'`
-N1=`wc -l $NEMD/energy.dat | awk '{print $1}'`
-AVENENEM=`cat $NEMD/energy.dat |awk -v nump=$NPN -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; ene+=$2}; } END { printf("%.15G\n",ene/cc/nump)}'`
-N1=`wc -l $ISOD/volume.dat | awk '{print $1}'`
-AVVOLISO=`cat $ISOD/volume.dat|awk -v nump=$NPI -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; vol+=$2}; } END { printf("%.15G\n",vol/cc/nump)}'`
-N1=`wc -l $NEMD/volume.dat | awk '{print $1}'`
-AVVOLNEM=`cat $NEMD/volume.dat|awk -v nump=$NPN -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; vol+=$2}; } END { printf("%.15G\n",vol/cc/nump)}'`
+echo "FACT=" $FACT " nump=" $NPI " " $NPN "npts=" $NPTS  
+AVENEISO=`cat $ISOD/energy.dat|awk -v nump=$NPI -v fact=$FACT -v npt=$NPTS '{if (NR > fact*npt) {cc++; ene+=$2};} END { printf("%.15G\n",ene/cc/nump)}'`
+NPTS=`wc -l $NEMD/energy.dat | awk '{print $1}'`
+AVENENEM=`cat $NEMD/energy.dat |awk -v nump=$NPN -v fact=$FACT -v npt=$NPTS '{if (NR > fact*npt) {cc++; ene+=$2}; } END { printf("%.15G\n",ene/cc/nump)}'`
+NPTS=`wc -l $ISOD/volume.dat | awk '{print $1}'`
+AVVOLISO=`cat $ISOD/volume.dat|awk -v nump=$NPI -v fact=$FACT -v npt=$NPTS '{if (NR > fact*npt) {cc++; vol+=$3}; } END { printf("%.15G\n",vol/cc/nump)}'`
+NPTS=`wc -l $NEMD/volume.dat | awk '{print $1}'`
+AVVOLNEM=`cat $NEMD/volume.dat|awk -v nump=$NPN -v fact=$FACT -v npt=$NPTS '{if (NR > fact*npt) {cc++; vol+=$3}; } END { printf("%.15G\n",vol/cc/nump)}'`
 #calculate new pressure here according to some integration scheme (e.g. trapezoid, midpoint, etc.)
 #KFN:
 #<beta> <pressure> <av. volume ISO> <av. energy ISO> <av. vol. NEM> <av. energy NEM> <#particles> 
 if [ "$KSTAT" == "predictor" ]
 then
 echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" > $KFNPRED
-echo "corrector" > $KSTAT
+echo "corrector" > $KSFN
 else
 echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" >> $KFN
-echo "predictor" > $KSTAT
+echo "predictor" > $KSFN
 fi
-fine=`echo $BETAINI $BETAEND $BETACUR| awk '{if ($1 < $2) {if ($3 <= $2) printf("0"); else printf("1")}  else if ($3 <= $2) printf("1"); else printf("0");}'`
+echo "kstat=" $KSTAT
+fine=`echo $BETAINI $BETAEND $BETACUR $KSTAT | awk '{if ($1 < $2) {if ($3 <= $2 && $4 == "predictor") printf("0"); else printf("1")}  else if ($3 <= $2 && $4 == "corrector") printf("1"); else printf("0");}'`
+#echo "fine=" $fine
 done
