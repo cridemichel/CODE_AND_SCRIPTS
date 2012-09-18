@@ -248,7 +248,7 @@ int main(int argc, char **argv)
 {
   FILE* f, *f2;
   int i, kk, nummol, junki1, junki2, junki3, passi;
-  double sf, radius, junkd1, junkd2, junkd3, trad, patch-radius, patch-pos, tlen;
+  double sf, radius, junkd1, junkd2, junkd3, trad, patchRad, patchPos, tlen;
   double r1[3], r2[3], r3[3], r21[3], r31[3], nn[3], norm, rO[3];
   double K, r4[3], bx, by, bz, r41[3], sumx, sumy, sumz;
   //double  rTemp;
@@ -256,9 +256,10 @@ int main(int argc, char **argv)
   //scanf("%lf",&temp);
   f2 = fopen(argv[2],"w");
   f = fopen(argv[1], "r");
-  fscanf(f, "[^\n]\n", line);
+  fscanf(f, "%[^\n]\n", line);
   fscanf(f, "%d %lf %lf %lf %lf %lf\n", &nummol, &bx, &trad, &tlen, &patchRad, &patchPos);
   by = bz = bx;
+  printf("NUMMOL: %d\n", nummol);
 #if 0
   vx = malloc(sizeof(double)*nummol);
   vy = malloc(sizeof(double)*nummol);
@@ -313,7 +314,7 @@ maxbondsSaved: -1
       fscanf(f, "%lf %lf %lf\n", &r2[0], &r2[1], &r2[2]);
       for (kk=0; kk < 3; kk++)
 	{
-	  rO[kk] = r1[kk]
+	  rO[kk] = r1[kk];
 	  r21[kk] = r2[kk];
 	}
       norm = calc_norm(r21);

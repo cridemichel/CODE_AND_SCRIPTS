@@ -21,7 +21,7 @@ else
 STEPS="$3"
 fi
 PARFILE="ellipsoid_flex_mc.par"
-DIRSIM="T-$TEMP"
+DIRSIM="P-$PRESS"
 if [ ! -e $DIRSIM ]
 then 
 mkdir $DIRSIM
@@ -31,9 +31,9 @@ cd $DIRSIM
 rm -f COORD_TMP*
 rm -f Store-*
 PRESS="$1"
-ELLEXE="../../ellipsoid"
+ELLEXE="../ellipsHC"
 INITEMP="2.0"
-SIMPR="HCNPT-X0-${EL}-P${PRESS}-T${TEMP}"
+SIMPR="HCNPT-X0-P${PRESS}-T${TEMP}"
 MOSRUN="mosrun"
 #per ora il salvataggio è lineare
 #=========== >>> PARAMETRI <<< =============
@@ -45,8 +45,10 @@ PARNUM="1000"
 #N.B. it's supposed that we use NNL here!!
 cp ../$INIFILE .
 #==================================================================
-echo "Simulating T=" $TEMP
-../set_params.sh $PARFILE temperat $TEMP ensembleMC 1 useNNL 0 rcut $RCUT P $PRESS bakStepAscii 5000 stepnum $STEPS inifile $INIFILE endfile ${SIMPR}.cor
+echo "Simulating T=" $TEMP " P=" $PRESS
+../set_params.sh $PARFILE temperat $TEMP ensembleMC 1 useNNL 0 rcut -1 P $PRESS bakStepsAscii 5000 stepnum $STEPS inifile $INIFILE endfile ${SIMPR}.cor
+#../set_params.sh $PARFILE inifile start.cnf
 ln -sf $ELLEXE $SIMPR
-$MOSRUN ./$SIMPR -fa ./$PARFILE > screen_$SIMPR 
+$MOSRUN ./$SIMPR -fa ./$PARFILE > screen_$SIMPR &
+sleep 1
 cd ..
