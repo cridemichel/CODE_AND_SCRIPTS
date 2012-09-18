@@ -9,8 +9,6 @@ DEBUG="1"
 NP="1000"
 alias awk='LANG=C awk'
 EXES="../sim1statepnt_HC_MCNPTK.sh"
-CNFCURI="startIso.cnf"
-CNFCURN="startNem.cnf"
 INIFILEI="startIso.cnf"
 INIFILEN="startNem.cnf"
 SCNF="start.cnf"
@@ -23,7 +21,7 @@ cp $KFN Ini-$KFN # backup
 KSFN="kstat.dat"
 NPI=`cat $INIFILEI| awk -F : '{if ($1=="parnum") print $2}'`
 NPN=`cat $INIFILEN| awk -F : '{if ($1=="parnum") print $2}'`
-EQSTEPS="50000"
+EQSTEPS="500"
 PARF="ellipsoid_flex_mc.par"
 #VINI_ISO=`cat VolIniIso.dat`
 #VINI_NEM=`cat VolIniNem.dat`
@@ -55,9 +53,8 @@ V0N=`echo $LAST | awk '{print $5}'`
 U0N=`echo $LAST | awk '{print $6}'`
 BETA0=`echo $LAST | awk '{print $1}'`
 F0=`echo "-((${U0N})-(${U0I}) + (${P0})*(${V0N}-${V0I}))/(${BETA0}*(${P0})*(${V0N}-${V0I}))"|bc -l`
-//echo "-((${U0N})-(${U0I}) + (${P0})*(${V0N}-${V0I}))/(${BETA0}*(${P0})*(${V0N}-${V0I}))"
-//echo "F0="$F0
-//exit
+#echo "-((${U0N})-(${U0I}) + (${P0})*(${V0N}-${V0I}))/(${BETA0}*(${P0})*(${V0N}-${V0I}))"
+#echo "F0="$F0
 Pm1=`echo $PREV | awk '{print $2}'`
 Vm1I=`echo $PREV | awk '{print $3}'`
 Um1I=`echo $PREV | awk '{print $4}'`
@@ -72,6 +69,7 @@ Vm2N=`echo $PREV | awk '{print $5}'`
 Um2N=`echo $PREV | awk '{print $6}'`
 BETAm2=`echo $PREV | awk '{print $1}'`
 Fm2=`echo "-((${Um2N})-(${Um2I}) + ${Pm2}*(${Vm2N}-${Vm2I}))/(${BETAm2}*${Pm2}*(${Vm2N}-${Vm2I}))"|bc -l`
+KSTAT=`cat $KSFN`
 if [ "$KSTAT" == "predictor" ]
 then
 if [ "$PREV" == "" ]
@@ -88,6 +86,7 @@ echo $NEWP > $PFN
 NEWBETA=`echo "${BETA0}+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
 fi
+echo "NEWP=" $NEWP "F0=" $F0
 else
 #CORRECTOR HERE
 PPREV="`tail -3 $KFN | head -1`"
@@ -116,10 +115,13 @@ ISOD="ISO-Beta-$BETACUR"
 NEMD="NEM-Beta-$BETACUR"
 EXEI="kofkeI-$BETACUR"
 EXEN="kofkeN-$BETACUR"
-RUNI=`ps ax | grep $EXEI`
-RUNN=`ps ax | grep $EXEN`
+ps ax > psout.txt
+RUNI=`cat psout.txt | grep $EXEI`
+RUNN=`cat psout.txt | grep $EXEN`
+rm psout.txt
 PCUR=`cat $PFN`
-KSTAT=`cat $KSFN`
+echo "RUNI=" $RUNI " RUNN=" $RUNN
+#KSTAT=`cat $KSFN`
 if [ ! -e $ISOD ]
 then
 mkdir $ISOD
@@ -131,12 +133,14 @@ if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
 then
 $EXEI -c >> screen
 else
-cp ../$CNFCURI $SCNF
+cp ../$INIFILEI $SCNF
+rm -f CorFinal
 TCUR=`echo "1.0/$BETACUR"| bc -l`
-$EXES $PCUR $TCUR $EQSTEPS
+$EXES $PCUR $BETACUR $EXEI $EQSTEPS
 fi
 fi
 cd ..
+echo "QUIIIII"
 if [ ! -e $NEMD ]
 then
 mkdir $NEMD
@@ -148,9 +152,10 @@ if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
 then
 $EXEM -c >> screen
 else
-cp ../$CNFCURN $SCNF
-rm CorFinal
-$EXES $PCUR $TCUR $EQSTEPS
+cp ../$INIFILEN $SCNF
+rm -f CorFinal
+TCUR=`echo "1.0/$BETACUR"| bc -l`
+$EXES $PCUR $BETACUR $EXEN $EQSTEPS
 fi
 fi
 cd ..
