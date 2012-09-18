@@ -104,7 +104,7 @@ Fp1=`echo "-((${Up1N})-(${Up1I}) + ${Pp1}*(${Vp1N}-${Vp1I}))/(${BETAp1}*${Pp1}*(
 if [ "$NLKF" == "1" ]
 then
 echo "NEWP=" $NEWP "P0=" $P0 "Fp1=" $Fp1 " F0=" $F0 
-echo "ECCOCI"
+#echo "ECCOCI"
 #use trapezoid formula at begin
 NEWP=`echo "$P0*e(($DELB)*(($Fp1)+($F0))*0.5)" | bc -l`
 echo $NEWP > $PFN
