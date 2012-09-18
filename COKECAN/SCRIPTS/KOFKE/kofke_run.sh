@@ -7,6 +7,7 @@
 # echo "predictor" > $KSFN
 DEBUG="1"
 NP="1000"
+alias awk='LANG=C awk'
 EXES="../sim1statepnt_HC_MCNPT.sh"
 CNFCURI="startCurIso.cnf"
 CNFCURN="startCurNem.cnf"
@@ -14,30 +15,35 @@ INIFILEI="startIso.cnf"
 INIFILEN="startNem.cnf"
 SCNF="start.cnf"
 BFN="betaCur.dat"
+BEFN="betaEnd.dat"
 PFN="Pcur.dat"
-if [ "$1" == "" ]
-then
-DELB="-0.1" #delta beta = h in kofke paper
-else
-DELB="$1"
-fi
 KFN="EneVolKofke.dat"
 KFNPRED="EneVolKofkePred.dat"
+cp $KFN Ini-$KFN # backup
 KSFN="kstat.dat"
 NPI=`cat $INIFILEI| awk -F : '{if ($1=="parnum") print $2}'`
 NPN=`cat $INIFILEN| awk -F : '{if ($1=="parnum") print $2}'`
-echo "NPI= " $NPI " NPN=" $NPN
 EQSTEPS="50000"
 PARF="ellipsoid_flex_mc.par"
 #VINI_ISO=`cat VolIniIso.dat`
 #VINI_NEM=`cat VolIniNem.dat`
-BETAEND=`cat betaEnd.dat`
+BETAEND=`cat $BEFN`
 #faccio così solo per fargli passare il while
 #poi infatti betaCur.dat viene settato opportunamente
 #in base al contenuto del file $KFN
-BETACUR=`echo "${BETAEND}-${DELB}"| bc -l` 
-echo $BETACUR > $BFN
-while [ $BCUR -lt $BETAEND ]
+LAST=`tail -1 $KFN`
+BETAINI=`echo $LAST | awk '{print $1}'`
+if [ "$1" == "" ]
+then
+DELBMOD="0.1"
+DELB=`echo $BETAINI $BETAEND | awk -v delb=$DELBMOD '{if ($1 > $2) {printf("-%s",delb);} else {printf("%s",delb);}}'`
+else
+DELB="$1"
+fi
+fine="0"
+echo "NPI= " $NPI " NPN=" $NPN " BETAINI=" $BETAINI " BETAEND=" $BETAEND " DELB=" $DELB
+#exit 
+while [ "$fine" == "0" ]
 do 
 LAST=`tail -1 $KFN`
 PREV=`tail -2 $KFN | head -1`
@@ -76,7 +82,7 @@ else
 #use midpoint formula 
 NEWP=`echo "$Pm1*e($DELB*$Fm1*2.0)" | bc -l`
 echo $NEWP > $PFN
-NEWBETA=`echo "$BETA0+$DELB"| bc -l`
+NEWBETA=`echo "$BETA0+($DELB)"| bc -l`
 echo "$NEWBETA" > $BFN
 fi
 else
@@ -104,14 +110,17 @@ fi
 fi
 BETACUR=`cat $BFN`
 ISOD="ISO-Beta-$BETACUR"
-NEMD="ISO-Beta-$BETACUR"
+NEMD="NEM-Beta-$BETACUR"
 EXEI="kofkeI-$BETACUR"
 EXEN="kofkeN-$BETACUR"
 RUNI=`ps ax | grep $EXEI`
 RUNN=`ps ax | grep $EXEN`
 PCUR=`cat $PFN`
 KSTAT=`cat $KSFN`
-cd $ISOD
+if [ ! -e $ISOD ]
+then
+mkdir $ISOD
+fi
 if [ "$RUNI" == "" ] 
 then
 if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
@@ -124,24 +133,50 @@ $EXES $PCUR $TCUR $EQSTEPS
 fi
 fi
 cd ..
+if [ ! -e $NEMD ]
+then
+mkdir $NEMD
+fi
 cd $NEMD
-if [ "$RUNM" == "" ] then
+if [ "$RUNM" == "" ] 
+then
 if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
 then
 $EXEM -c >> screen
 else
 cp ../$CNFCURN $SCNF
+rm CorFinal
 $EXES $PCUR $TCUR $EQSTEPS
 fi
 fi
 cd ..
 #wait for current iso and nem sims to finish here
-IS=`cat $ISOD/status.dat`
-NS=`cat $NEMD/status.dat`
+if [ ! -e "$ISOD/CorFinal" ]
+then
+IS="running"
+else
+IS="finished"
+fi
+if [ ! -e "$NEMD/CorFinal" ]
+then
+NS="running"
+else
+NS="finished"
+fi
 while [ \( "$IS" == "running" \) -o \( "$NS" == "running" \) ]
 do
-IS=`cat $ISOD/status.dat`
-NS=`cat $NEMD/status.dat`
+if [ ! -e "$ISOD/CorFinal" ]
+then
+IS="running"
+else
+IS="finished"
+fi
+if [ ! -e "$NEMD/CorFinal" ]
+then
+NS="running"
+else
+NS="finished"
+fi
 sleep 30
 done
 #calculate running averages here and update Kofke file
@@ -165,4 +200,5 @@ else
 echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" >> $KFN
 echo "predictor" > $KSTAT
 fi
+fine=`echo $BETAINI $BETAEND $BETACUR| awk '{if ($1 < $2) {if ($3 <= $2) printf("0"); else printf("1")}  else if ($3 <= $2) printf("1"); else printf("0");}'`
 done
