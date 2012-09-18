@@ -1,6 +1,7 @@
 # $1 =pressure
 # $2 = temperature 
 # $3 = steps
+VSTEPS="1"
 alias awk='LANG=C awk'
 if [ "$1" = "" ]
 then
@@ -48,7 +49,7 @@ PARNUM="1000"
 #==================================================================
 echo "Simulating BETA=" $BETA " P=" $PRESS
 TEMP=`echo "1.0/$BETA"| bc -l`
-../set_params.sh $PARFILE temperat $TEMP ensembleMC 1 useNNL 0 rcut -1 P $PRESS bakStepsAscii 5000 stepnum $STEPS inifile $INIFILE endfile ${EXENAME}.cor
+../set_params.sh $PARFILE temperat $TEMP ensembleMC 1 useNNL 0 rcut -1 P $PRESS bakStepsAscii 5000 stepnum $STEPS inifile $INIFILE endfile ${EXENAME}.cor VSteps $VSTEPS
 #../set_params.sh $PARFILE inifile start.cnf
 ln -sf $ELLEXE $EXENAME
 $MOSRUN ./$EXENAME -fa ./$PARFILE > screen_$SIMPR &

@@ -6,6 +6,8 @@
 # $1 è il passo d'integrazione in 1/T (default: -0.1, cioè si aumenta la temparatura)
 # echo "predictor" > $KSFN
 DEBUG="1"
+WTIME="1" #waiting time between two successive checks in seconds
+EQSTEPS="50"
 NP="1000"
 alias awk='LANG=C awk'
 EXES="../sim1statepnt_HC_MCNPTK.sh"
@@ -21,7 +23,6 @@ cp $KFN Ini-$KFN # backup
 KSFN="kstat.dat"
 NPI=`cat $INIFILEI| awk -F : '{if ($1=="parnum") print $2}'`
 NPN=`cat $INIFILEN| awk -F : '{if ($1=="parnum") print $2}'`
-EQSTEPS="500"
 PARF="ellipsoid_flex_mc.par"
 #VINI_ISO=`cat VolIniIso.dat`
 #VINI_NEM=`cat VolIniNem.dat`
@@ -186,18 +187,19 @@ NS="running"
 else
 NS="finished"
 fi
-sleep 30
+sleep $WTIME
 done
 #calculate running averages here and update Kofke file
-N1="wc -l $ISOD/energy.dat"
-FACT="echo "2.0/3.0"| bc -l"
-AVENEISO=`cat $ISOD/energy.dat|awk -v NN=$NPI -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; ene+=$2};} END { printf("%.15G\n",ene/cc/NN)}'`
-N1="wc -l $NEMD/energy.dat"
-AVENENEM=`cat $NEMD/energy.dat |awk -v NN=$NPN -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; ene+=$2}; } END { printf("%.15G\n",ene/cc/NN)}'`
-N1="wc -l $ISOD/volume.dat"
-AVVOLISO=`cat $ISOD/volume.dat|awk -v NN=$NPI -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; vol+=$2}; } END { printf("%.15G\n",vol/cc/NN)}'`
-N1="wc -l $NEMD/volume.dat"
-AVVOLNEM=`cat $NEMD/volume.dat|awk -v NN=$NPN -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; vol+=$2}; } END { printf("%.15G\n",vol/cc/NN)}'`
+N1=`wc -l $ISOD/energy.dat | awk '{print $1}'`
+FACT=`echo "2.0/3.0"| bc -l`
+echo "FACT=" $FACT " nump=" $NPI " " $NPN "n1=" $N1  
+AVENEISO=`cat $ISOD/energy.dat|awk -v nump=$NPI -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; ene+=$2};} END { printf("%.15G\n",ene/cc/nump)}'`
+N1=`wc -l $NEMD/energy.dat | awk '{print $1}'`
+AVENENEM=`cat $NEMD/energy.dat |awk -v nump=$NPN -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; ene+=$2}; } END { printf("%.15G\n",ene/cc/nump)}'`
+N1=`wc -l $ISOD/volume.dat | awk '{print $1}'`
+AVVOLISO=`cat $ISOD/volume.dat|awk -v nump=$NPI -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; vol+=$2}; } END { printf("%.15G\n",vol/cc/nump)}'`
+N1=`wc -l $NEMD/volume.dat | awk '{print $1}'`
+AVVOLNEM=`cat $NEMD/volume.dat|awk -v nump=$NPN -v fact=$FACT -v n1=$N1 '{if (NR > fact*n1) {cc++; vol+=$2}; } END { printf("%.15G\n",vol/cc/nump)}'`
 #calculate new pressure here according to some integration scheme (e.g. trapezoid, midpoint, etc.)
 #KFN:
 #<beta> <pressure> <av. volume ISO> <av. energy ISO> <av. vol. NEM> <av. energy NEM> <#particles> 
