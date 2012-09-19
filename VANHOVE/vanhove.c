@@ -93,7 +93,8 @@ void print_usage(void)
   exit(0);
 }
 
-double delr=0.01, rmin = 0, rmax = 10.0; 
+double delr=0.01, rmin = 0, rmax = 10.0;
+int tmax; 
 void parse_param(int argc, char** argv)
 {
   int cc=1, extraparam=0;
@@ -127,6 +128,13 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  rmin = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--tmax") || !strcmp(argv[cc],"-tM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  tmax = atoi(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--rmax") || !strcmp(argv[cc],"-rM"))
 	{
@@ -166,29 +174,30 @@ void parse_param(int argc, char** argv)
       cc++;
     }
 }
-int ntimes=2;
+int ntimes=2, Gsnr;
 double Deltar;
 void saveGself(char* fileName, COORD_TYPE** gs)
 {
   FILE* afs;
   int j, t;
   COORD_TYPE r;
-  char fmtStr[128];
+  char fn[1024];
 
-  afs = fopen(fileName, "w+");
   /* save every vhgap steps */
-  for(t = tBeg; t < tCor; t += vhgap )
+  for(t = tBeg; t < tmax; t += skip )
     {
+      afs = fopen(fileName, "w+");
+      sprintf(fn, "%s-t_%f\n", fileName, ti[t]);
       if (t == 0) continue;
-			
+      fopen(fn, "w+");      
       for(j = 0; j < Gsnr; ++j) /* Loop over angles */
 	{ 
 	  r = ((COORD_TYPE)j + 0.5) * (GsrMax /  Gsnr);/* In degree !!! */ 
 	  fprintf(afs, fmtStr, r, gs[t][j]);
 	}
-      fprintf(afs, "&\n"); /* This indicates to xmgr that begins a new set */
+      //fprintf(afs, "&\n"); /* This indicates to xmgr that begins a new set */
+      fclose(afs);
     }
-  fclose(afs);
 
 }
 char *GselfFile[]="Gself.dat";
@@ -197,7 +206,7 @@ int main(int argc, char **argv)
   FILE *f, *f2;
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
-  int qmod, NP1, NP2, kk, isperc; 
+  int NP1, NP2, kk, isperc; 
   double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
   double costmp, sintmp;
   twopi = acos(0)*4.0;	  
@@ -337,6 +346,7 @@ int main(int argc, char **argv)
     {
       printf("[MIXTURE] NP=%d NPA=%d\n", NP, NPA);
     }
+  Gsnr = rmax / delr;
   Gself = (double**) malloc(ntimes*sizeof(double));
   if (NPA!=NP)
     {  
@@ -358,7 +368,7 @@ int main(int argc, char **argv)
   fclose(f2);
   c2 = 0;
   JJ = 0;
-  for (t=0; t < ntimes; ++t)
+  for (t=0; t < tmax; ++t)
     {
       for (j = 0; j < Gsnr; ++j) 
 	{
@@ -389,6 +399,8 @@ int main(int argc, char **argv)
 		}
 	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
+	      if (np > tmax) 
+		continue;
 	      readconf(fname[nr2], &time, &refTime, NP, r1);
 	      if (np < points && ti[np] == -1.0)
 		{
@@ -398,10 +410,12 @@ int main(int argc, char **argv)
   
 	      //if (nr2 == nr1)
 		//continue;
+
     	      Deltar = sqrt(Sqr(r1[i][0] - r0[i][0]) + 
 			    Sqr(r1[i][1] - r0[i][1]) +
 			    Sqr(r1[i][2] - r0[i][2]));
-	      j = (int) (Gsnr * deltar / GsrMax); 
+	      t=np;
+	      j = (int) (Gsnr * Deltar / rmax); 
 	      if (j < Gsnr)
 	       	Gself[t][j] += 1.0;
 	      
@@ -409,6 +423,17 @@ int main(int argc, char **argv)
 	}
     }
 
+  /* Normalization */
+  for(t = tBeg; t < tmax; ++t)
+    {
+      for (j = 0; j < Gsnr; ++j)
+	{
+	  r = ((COORD_TYPE) j + 0.5) * (GsrMax / Gsnr);
+	  Gself[t][j] *= Gsnr/ GsrMax;/* Gs is a density of probability */
+	  Gself[t][j] /= Normv * Sqr(r) * 4.0 * pi;
+	}
+    }
+  /* save Gself */
   saveGself(GselfFile, Gself);
 
   return 0;
