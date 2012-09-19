@@ -164,7 +164,7 @@ void parse_param(int argc, char** argv)
       cc++;
     }
 }
-int ntimes=2, Gsnr;
+int Gsnr;
 double Deltar;
 void saveGself(char* fileName, COORD_TYPE** gs)
 {
@@ -342,14 +342,15 @@ int main(int argc, char **argv)
       printf("[MIXTURE] NP=%d NPA=%d\n", NP, NPA);
     }
   Gsnr = rmax / delr;
-  Gself = (double**) malloc(ntimes*sizeof(double));
+  Gself = (double**) malloc(tmax*sizeof(double));
   if (NPA!=NP)
     {  
-      GselfA = (double**) malloc(ntimes*sizeof(double));
-      GselfB = (double**) malloc(ntimes*sizeof(double));
-      ccav = (double*) malloc(ntimes*sizeof(double));
+      GselfA = (double**) malloc(tmax*sizeof(double));
+      GselfB = (double**) malloc(tmax*sizeof(double));
+      ccav = (double*) malloc(tmax*sizeof(double));
+      ti = (double*) malloc(tmax*sizeof(double));
     }
-  for (j = 0; j < ntimes; ++j)
+  for (j = 0; j < tmax; ++j)
     {
       Gself[j] = (COORD_TYPE*) malloc(Gsnr*sizeof(double));
       if (NPA!=NP)
@@ -358,7 +359,7 @@ int main(int argc, char **argv)
 	  GselfB[j] = (COORD_TYPE*) malloc(Gsnr*sizeof(double));
 	}
     } 
-  for (ii=0; ii < points; ii++)
+  for (ii=0; ii < tmax; ii++)
     ti[ii] = -1.0;
   first = 0;
   fclose(f2);
