@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#define COORD_TYPE double
 #define MAXPTS 1000
 #define Sqr(x) ((x)*(x))
 char **fname; 
@@ -158,17 +159,6 @@ void parse_param(int argc, char** argv)
 	  points = atoi(argv[cc]);
 	  //printf("points:%d\n", points);
 	}
-      else if (extraparam == 2)
-	{
-	  extraparam++;
-	  qmin = atoi(argv[cc]);
-	  //printf("qmin=%d\n", qmin);
-	}
-      else if (extraparam == 3)
-	{
-	  extraparam++;
-	  qmax = atoi(argv[cc]);
-	}
       else
 	print_usage();
       cc++;
@@ -184,7 +174,7 @@ void saveGself(char* fileName, COORD_TYPE** gs)
   char fn[1024];
 
   /* save every vhgap steps */
-  for(t = tBeg; t < tmax; t += skip )
+  for(t = 0; t < tmax; t += skip )
     {
       afs = fopen(fileName, "w+");
       sprintf(fn, "%s-t_%f\n", fileName, ti[t]);
@@ -192,8 +182,8 @@ void saveGself(char* fileName, COORD_TYPE** gs)
       fopen(fn, "w+");      
       for(j = 0; j < Gsnr; ++j) /* Loop over angles */
 	{ 
-	  r = ((COORD_TYPE)j + 0.5) * (GsrMax /  Gsnr);/* In degree !!! */ 
-	  fprintf(afs, fmtStr, r, gs[t][j]);
+	  r = ((COORD_TYPE)j + 0.5) * (rmax /  Gsnr);/* In degree !!! */ 
+	  fprintf(afs, "%.15G %.15G\n", r, gs[t][j]);
 	}
       //fprintf(afs, "&\n"); /* This indicates to xmgr that begins a new set */
       fclose(afs);
@@ -201,6 +191,10 @@ void saveGself(char* fileName, COORD_TYPE** gs)
 
 }
 char *GselfFile[]="Gself.dat";
+char *GselfAFile[]="GselfA.dat";
+char *GselfBFile[]="GselfB.dat";
+double twopi;
+double **Gself, **GselfA, **GselfB;
 int main(int argc, char **argv)
 {
   FILE *f, *f2;
@@ -330,7 +324,7 @@ int main(int argc, char **argv)
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
-  printf("qmin=%d qmax=%d invL=%.15G NN=%d points=%d\n", qmin, qmax, invL, NN, points);
+  printf("rmax=%f invL=%.15G NN=%d points=%d\n", rmax, invL, NN, points);
   //printf("maxnp=%d points=%d\n",maxnp, points);
   if (NPA == -1)
     NPA = NP;
@@ -424,17 +418,29 @@ int main(int argc, char **argv)
     }
 
   /* Normalization */
-  for(t = tBeg; t < tmax; ++t)
+  for(t = 0; t < tmax; ++t)
     {
       for (j = 0; j < Gsnr; ++j)
 	{
-	  r = ((COORD_TYPE) j + 0.5) * (GsrMax / Gsnr);
-	  Gself[t][j] *= Gsnr/ GsrMax;/* Gs is a density of probability */
+	  r = ((COORD_TYPE) j + 0.5) * (rmax / Gsnr);
+	  Gself[t][j] *= Gsnr/ rmax;/* Gs is a density of probability */
 	  Gself[t][j] /= Normv * Sqr(r) * 4.0 * pi;
+	  if (NPA!=NP)
+	    {
+	      GselfA[t][j] *= Gsnr/ rmax;/* Gs is a density of probability */
+	      GselfA[t][j] /= Normv * Sqr(r) * 4.0 * pi;
+	      GselfB[t][j] *= Gsnr/ rmax;/* Gs is a density of probability */
+	      GselfB[t][j] /= Normv * Sqr(r) * 4.0 * pi;
+	  
+	    }
 	}
     }
   /* save Gself */
   saveGself(GselfFile, Gself);
-
+  if (NPA!=NP)
+    {
+      saveGself(GselfFileA, GselfA);
+      saveGself(GselfFileB, GselfB);
+    }
   return 0;
 }
