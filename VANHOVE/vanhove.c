@@ -376,7 +376,6 @@ int main(int argc, char **argv)
 	      GselfB[t][j] = 0.0;
 	    }
 	}
-
     }
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN+skip)
     {	
@@ -450,7 +449,6 @@ int main(int argc, char **argv)
 	      GselfA[t][j] /= Normv * Sqr(r) * 4.0 * pi;
 	      GselfB[t][j] *= Gsnr/ rmax;/* Gs is a density of probability */
 	      GselfB[t][j] /= Normv * Sqr(r) * 4.0 * pi;
-	  
 	    }
 	}
     }
