@@ -301,7 +301,7 @@ int main(int argc, char** argv)
   FILE *f, *f2, *f1;
   int binx, biny, binz;
   int k, nf, i, a, b, nat, NN, j, ii, bin, binParaAv, binPerpAv;
-  double rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
+  double normPerpAv=0.0, normParaAv=0.0, rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
   double r, delr, tref=0.0, Dx[3], DxNem[3], *g0, **g0Perp, **g0Parall, *g0ParaAv, *g0PerpAv,
 	 g0m, distSq, rlower, rupper, cost, nIdeal;
   double sp, time, refTime, RCUT;
@@ -584,6 +584,7 @@ int main(int argc, char** argv)
       NPA = -1;
       readconf(fname, &time, &refTime, &NP, &NPA, x, w, DR);
       //printf("NP=%d NPA=%d\n", NP, NPA);
+      normPerpAv = normParaAv = 0.0;
       for (i=0; i < NP-1; i++)
 	for (j = i+1; j < NP; j++)
 	  {
@@ -646,6 +647,7 @@ int main(int argc, char** argv)
 			  {
 			    binParaAv = (int) sqrt(Sqr(Dx[1])+Sqr(Dx[2]));
 			    g0ParaAv[binParaAv]+=2.0;
+			    normParaAv += 1.0;
  			  }
 		      }
 		    if (binz==0 || binz==-1)
@@ -657,6 +659,7 @@ int main(int argc, char** argv)
 			  {
 			    binPerpAv = (int) sqrt(Sqr(Dx[0])+Sqr(Dx[0]));
 			    g0PerpAv[binPerpAv]+=2.0;
+			    normPerpAv = 0.0;
  			  }
 		      }
 		    //printf("g0[%d]=%.15G\n", bin, g0[bin]);

@@ -36,6 +36,7 @@ rm -f Store-*
 rm -f CorFinal
 PRESS="$1"
 ELLEXE="../ellipsHC"
+TEMP=`echo "1.0/$BETA"| bc -l`
 SIMPR=`echo $PRESS $TEMP | awk '{printf("HCNPT-X0-P%.5f-T%.4f",$1,$2)}'`
 MOSRUN=""
 #per ora il salvataggio è lineare
@@ -48,7 +49,6 @@ PARNUM="1000"
 #cp ../$INIFILE .
 #==================================================================
 echo "Simulating BETA=" $BETA " P=" $PRESS
-TEMP=`echo "1.0/$BETA"| bc -l`
 ../set_params.sh $PARFILE temperat $TEMP ensembleMC 1 useNNL 0 rcut -1 P $PRESS bakStepsAscii 5000 stepnum $STEPS inifile $INIFILE endfile ${EXENAME}.cor VSteps $VSTEPS
 #../set_params.sh $PARFILE inifile start.cnf
 ln -sf $ELLEXE $EXENAME

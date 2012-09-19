@@ -6,13 +6,16 @@
 # $1 è il passo d'integrazione in 1/T (default: -0.1, cioè si aumenta la temparatura)
 # echo "predictor" > $KSFN
 DEBUG="1"
-WTIME="1" #waiting time between two successive checks in seconds
-EQSTEPS="50"
+WTIME="5" #waiting time between two successive checks in seconds
+EQSTEPS="100000"
 NP="1000"
 alias awk='LANG=C awk'
 EXES="../sim1statepnt_HC_MCNPTK.sh"
+FINFILE="CorFinal"
 INIFILEI="startIso.cnf"
 INIFILEN="startNem.cnf"
+INIFPREVI="startIsoPrev.cnf"
+INIFPREVN="startNemPrev.cnf"
 SCNF="start.cnf"
 BFN="betaCur.dat"
 BEFN="betaEnd.dat"
@@ -32,7 +35,7 @@ BETAEND=`cat $BEFN`
 #in base al contenuto del file $KFN
 LAST=`tail -1 $KFN`
 BETAINI=`echo $LAST | awk '{print $1}'`
-if [ "$1" == "" ]
+if [ "$1" = "" ]
 then
 DELBMOD="0.1"
 DELB=`echo $BETAINI $BETAEND | awk -v delb=$DELBMOD '{if ($1 > $2) {printf("-%s",delb);} else {printf("%s",delb);}}'`
@@ -42,7 +45,7 @@ fi
 fine="0"
 echo "NPI= " $NPI " NPN=" $NPN " BETAINI=" $BETAINI " BETAEND=" $BETAEND " DELB=" $DELB
 #exit 
-while [ "$fine" == "0" ]
+while [ "$fine" = "0" ]
 do 
 LAST=`tail -1 $KFN`
 PREV=`tail -2 $KFN | head -1`
@@ -72,9 +75,9 @@ Um2N=`echo $PREV | awk '{print $6}'`
 BETAm2=`echo $PREV | awk '{print $1}'`
 Fm2=`echo "-((${Um2N})-(${Um2I}) + ${Pm2}*(${Vm2N}-${Vm2I}))/(${BETAm2}*${Pm2}*(${Vm2N}-${Vm2I}))"|bc -l`
 KSTAT=`cat $KSFN`
-if [ "$KSTAT" == "predictor" ]
+if [ "$KSTAT" = "predictor" ]
 then
-if [ "$NLKF" == "1" ]
+if [ "$NLKF" = "1" ]
 then
 #use trapezoid formula at begin
 NEWP=`echo "${P0}*e((${DELB})*(${F0})*0.5)" | bc -l`
@@ -134,14 +137,19 @@ then
 mkdir $ISOD
 fi
 cd $ISOD
-if [ "$RUNI" == "" ] 
+if [ "$RUNI" = "" ] 
 then
 if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
 then
 $EXEI -c >> screen
 else
+if [ "$NLKF" = "1" ]
+then
 cp ../$INIFILEI $SCNF
-rm -f CorFinal
+else
+cp ../$INIFPREVI $SCNF
+fi
+rm -f $FINFILE
 TCUR=`echo "1.0/$BETACUR"| bc -l`
 $EXES $PCUR $BETACUR $EXEI $EQSTEPS
 fi
@@ -153,45 +161,54 @@ then
 mkdir $NEMD
 fi
 cd $NEMD
-if [ "$RUNM" == "" ] 
+if [ "$RUNM" = "" ] 
 then
 if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
 then
 $EXEM -c >> screen
 else
+if [ "$NLKF" = "1" ]
+then
 cp ../$INIFILEN $SCNF
-rm -f CorFinal
+else
+cp ../$INIFPREVN $SCNF
+fi
+rm -f $FINFILE
 TCUR=`echo "1.0/$BETACUR"| bc -l`
 $EXES $PCUR $BETACUR $EXEN $EQSTEPS
 fi
 fi
 cd ..
 #wait for current iso and nem sims to finish here
-if [ ! -e "$ISOD/CorFinal" ]
+if [ ! -e "$ISOD/$FINFILE" ]
 then
 IS="running"
 else
 IS="finished"
+cp $ISOD/$FINFILE ../$INIFPREVI
 fi
-if [ ! -e "$NEMD/CorFinal" ]
+if [ ! -e "$NEMD/$FINFILE" ]
 then
 NS="running"
 else
 NS="finished"
+cp $NEMD/$FINFILE ../$INIFPREVN
 fi
-while [ \( "$IS" == "running" \) -o \( "$NS" == "running" \) ]
+while [ \( "$IS" = "running" \) -o \( "$NS" = "running" \) ]
 do
 if [ ! -e "$ISOD/CorFinal" ]
 then
 IS="running"
 else
 IS="finished"
+cp $ISOD/$FINFILE ../$INIFPREVI
 fi
 if [ ! -e "$NEMD/CorFinal" ]
 then
 NS="running"
 else
 NS="finished"
+cp $NEMD/$FINFILE ../$INIFPREVN
 fi
 sleep $WTIME
 done
@@ -209,7 +226,7 @@ AVVOLNEM=`cat $NEMD/volume.dat|awk -v nump=$NPN -v fact=$FACT -v npt=$NPTS '{if 
 #calculate new pressure here according to some integration scheme (e.g. trapezoid, midpoint, etc.)
 #KFN:
 #<beta> <pressure> <av. volume ISO> <av. energy ISO> <av. vol. NEM> <av. energy NEM> <#particles> 
-if [ "$KSTAT" == "predictor" ]
+if [ "$KSTAT" = "predictor" ]
 then
 echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" > $KFNPRED
 echo "corrector" > $KSFN
