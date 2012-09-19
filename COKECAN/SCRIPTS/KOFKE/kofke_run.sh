@@ -104,7 +104,7 @@ Vp1N=`cat $KFNPRED | awk '{print $5}'`
 Up1N=`cat $KFNPRED | awk '{print $6}'`
 Fp1=`echo "-((${Up1N})-(${Up1I}) + ${Pp1}*(${Vp1N}-${Vp1I}))/(${BETAp1}*${Pp1}*(${Vp1N}-${Vp1I}))"|bc -l`
 #echo "LAST=" $LAST " PREV=" $PREV
-if [ "$NLKF" == "1" ]
+if [ "$NLKF" = "1" ]
 then
 echo "NEWP=" $NEWP "P0=" $P0 "Fp1=" $Fp1 " F0=" $F0 
 #echo "ECCOCI"
@@ -143,7 +143,7 @@ if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
 then
 $EXEI -c >> screen
 else
-if [ "$NLKF" = "1" ]
+if [ \( "$NLKF" = "1" \) -a \( "$KSTAT" = "predictor" \) ]
 then
 cp ../$INIFILEI $SCNF
 else
@@ -167,7 +167,7 @@ if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
 then
 $EXEM -c >> screen
 else
-if [ "$NLKF" = "1" ]
+if [ \( "$NLKF" = "1" \) -a \( "$KSTAT" = "predictor" \) ]
 then
 cp ../$INIFILEN $SCNF
 else
@@ -185,14 +185,14 @@ then
 IS="running"
 else
 IS="finished"
-cp $ISOD/$FINFILE ../$INIFPREVI
+cp $ISOD/$FINFILE $INIFPREVI
 fi
 if [ ! -e "$NEMD/$FINFILE" ]
 then
 NS="running"
 else
 NS="finished"
-cp $NEMD/$FINFILE ../$INIFPREVN
+cp $NEMD/$FINFILE $INIFPREVN
 fi
 while [ \( "$IS" = "running" \) -o \( "$NS" = "running" \) ]
 do
@@ -201,14 +201,14 @@ then
 IS="running"
 else
 IS="finished"
-cp $ISOD/$FINFILE ../$INIFPREVI
+cp $ISOD/$FINFILE $INIFPREVI
 fi
 if [ ! -e "$NEMD/CorFinal" ]
 then
 NS="running"
 else
 NS="finished"
-cp $NEMD/$FINFILE ../$INIFPREVN
+cp $NEMD/$FINFILE $INIFPREVN
 fi
 sleep $WTIME
 done
@@ -234,7 +234,7 @@ else
 echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" >> $KFN
 echo "predictor" > $KSFN
 fi
-echo "kstat=" $KSTAT
+echo "last run was:" $KSTAT
 fine=`echo $BETAINI $BETAEND $BETACUR $KSTAT | awk '{if ($1 < $2) {if ($3 <= $2 && $4 == "predictor") printf("0"); else printf("1")}  else if ($3 <= $2 && $4 == "corrector") printf("1"); else printf("0");}'`
 #echo "fine=" $fine
 done
