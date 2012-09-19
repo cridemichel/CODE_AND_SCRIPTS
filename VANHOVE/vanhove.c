@@ -12,7 +12,7 @@ int points=-1, assez, NP, NPA, clusters=0;
 char parname[128], parval[25600000], line[25600000];
 char dummy[2048000], cluststr[2048000];
 char *pnum;
-double A0, A1, B0, B1, C0, C1, storerate=-1.0;
+double A0, A1, B0, B1, C0, C1, storerate=-1.0, *ccav;
 int bakSaveMode = -1, eventDriven=0, skip=0;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
@@ -190,20 +190,21 @@ void saveGself(char* fileName, COORD_TYPE** gs)
     }
 
 }
-char *GselfFile[]="Gself.dat";
-char *GselfAFile[]="GselfA.dat";
-char *GselfBFile[]="GselfB.dat";
-double twopi;
+char GselfFile[]="Gself.dat";
+char GselfFileA[]="GselfA.dat";
+char GselfFileB[]="GselfB.dat";
+double twopi, pi;
 double **Gself, **GselfA, **GselfB;
 int main(int argc, char **argv)
 {
   FILE *f, *f2;
-  int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
+  int t, j, first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
   int NP1, NP2, kk, isperc; 
-  double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
-  double costmp, sintmp;
+  double Normv, invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
+  double r, costmp, sintmp;
   twopi = acos(0)*4.0;	  
+  pi = twopi*0.5;
 #if 0
   if (argc <= 1)
     {
@@ -346,6 +347,7 @@ int main(int argc, char **argv)
     {  
       GselfA = (double**) malloc(ntimes*sizeof(double));
       GselfB = (double**) malloc(ntimes*sizeof(double));
+      ccav = (double*) malloc(ntimes*sizeof(double));
     }
   for (j = 0; j < ntimes; ++j)
     {
@@ -364,6 +366,7 @@ int main(int argc, char **argv)
   JJ = 0;
   for (t=0; t < tmax; ++t)
     {
+      ccav[t] = 0.0;
       for (j = 0; j < Gsnr; ++j) 
 	{
 	  Gself[t][j] = 0.0;
@@ -404,15 +407,30 @@ int main(int argc, char **argv)
   
 	      //if (nr2 == nr1)
 		//continue;
-
-    	      Deltar = sqrt(Sqr(r1[i][0] - r0[i][0]) + 
-			    Sqr(r1[i][1] - r0[i][1]) +
-			    Sqr(r1[i][2] - r0[i][2]));
+	      ccav[t] += 1.0;
 	      t=np;
-	      j = (int) (Gsnr * Deltar / rmax); 
-	      if (j < Gsnr)
-	       	Gself[t][j] += 1.0;
-	      
+	      for (i=0; i < NP; i++)
+		{
+		  Deltar = sqrt(Sqr(r1[i][0] - r0[i][0]) + 
+				Sqr(r1[i][1] - r0[i][1]) +
+				Sqr(r1[i][2] - r0[i][2]));
+		  j = (int) (Gsnr * Deltar / rmax); 
+		  if (j < Gsnr)
+		    {
+		      Gself[t][j] += 1.0;
+		      if (NPA != NP)
+			{
+			  if (i < NPA)
+			    {
+			      GselfA[t][j] +=1.0;
+			    }
+			  else
+			    {
+			      GselfB[t][j] += 1.0;
+			    }
+			}
+		    }
+		}
 	    }
 	}
     }
@@ -423,6 +441,7 @@ int main(int argc, char **argv)
       for (j = 0; j < Gsnr; ++j)
 	{
 	  r = ((COORD_TYPE) j + 0.5) * (rmax / Gsnr);
+	  Normv = ccav[t];
 	  Gself[t][j] *= Gsnr/ rmax;/* Gs is a density of probability */
 	  Gself[t][j] /= Normv * Sqr(r) * 4.0 * pi;
 	  if (NPA!=NP)
