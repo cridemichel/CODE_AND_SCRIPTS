@@ -77,6 +77,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 		{
 		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
 		}
+	      //printf("fn=%s r[%d]=(%f,%f,%f)\n", fname, i, r[0][i], r[1][i], r[2][i]);
 	    }
  	  break; 
 	}
@@ -89,13 +90,13 @@ char fname2[512];
 char inputfile[1024];
 void print_usage(void)
 {
-  printf("calcfqtself [ --deltar/-dr | --skip/-s | --rmin/-rm | --rmax/-rM ] <lista_files> [points]\n");
+  printf("vanhove [ --deltar/-dr | --skip/-s | --rmax/-rM | --tmin/-tm | --tmax/-tM ] <lista_files> [points]\n");
   printf("where points is the number of points of the correlation function\n");
   exit(0);
 }
 
-double delr=0.01, rmin = 0, rmax = 10.0;
-int tmax; 
+double delr=0.01, rmax = 10.0;
+int tmax=100, tmin=0; 
 void parse_param(int argc, char** argv)
 {
   int cc=1, extraparam=0;
@@ -114,7 +115,7 @@ void parse_param(int argc, char** argv)
 	  cc++;
 	  if (cc == argc)
 	    print_usage();
-	  delr = atoi(argv[cc]);
+	  delr = atof(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--skip") || !strcmp(argv[cc],"-s"))
 	{
@@ -123,19 +124,19 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  skip = atoi(argv[cc]);
 	}
-      else if (!strcmp(argv[cc],"--rmin") || !strcmp(argv[cc],"-rm"))
-	{
-	  cc++;
-	  if (cc == argc)
-	    print_usage();
-	  rmin = atof(argv[cc]);
-	}
       else if (!strcmp(argv[cc],"--tmax") || !strcmp(argv[cc],"-tM"))
 	{
 	  cc++;
 	  if (cc == argc)
 	    print_usage();
 	  tmax = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--tmin") || !strcmp(argv[cc],"-tm"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  tmin = atoi(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--rmax") || !strcmp(argv[cc],"-rM"))
 	{
@@ -166,21 +167,20 @@ void parse_param(int argc, char** argv)
 }
 int Gsnr;
 double Deltar;
+char fn[1024];
 void saveGself(char* fileName, COORD_TYPE** gs)
 {
   FILE* afs;
   int j, t;
   COORD_TYPE r;
-  char fn[1024];
 
   /* save every vhgap steps */
-  for(t = 0; t < tmax; t += skip )
+  for(t = 0; t < tmax; t++)
     {
-      afs = fopen(fileName, "w+");
-      sprintf(fn, "%s-t_%f\n", fileName, ti[t]);
       if (t == 0) continue;
-      fopen(fn, "w+");      
-      for(j = 0; j < Gsnr; ++j) /* Loop over angles */
+      sprintf(fn, "t-%f-%s", ti[t], fileName);
+      afs = fopen(fn, "w+");
+      for(j = 0; j < Gsnr; j++) /* Loop over angles */
 	{ 
 	  r = ((COORD_TYPE)j + 0.5) * (rmax /  Gsnr);/* In degree !!! */ 
 	  fprintf(afs, "%.15G %.15G\n", r, gs[t][j]);
@@ -342,15 +342,22 @@ int main(int argc, char **argv)
       printf("[MIXTURE] NP=%d NPA=%d\n", NP, NPA);
     }
   Gsnr = rmax / delr;
-  Gself = (double**) malloc(tmax*sizeof(double));
+  printf("Gsnr=%d rmax=%f delr=%f\n", Gsnr, rmax, delr);
+  Gself = (double**) malloc(tmax*sizeof(double*));
+  for (a=0; a < 3; a++)
+    {
+      r0[a] = malloc(sizeof(double)*NP);
+      r1[a] = malloc(sizeof(double)*NP);
+    }
+
   if (NPA!=NP)
     {  
-      GselfA = (double**) malloc(tmax*sizeof(double));
-      GselfB = (double**) malloc(tmax*sizeof(double));
+      GselfA = (double**) malloc(tmax*sizeof(double*));
+      GselfB = (double**) malloc(tmax*sizeof(double*));
       ccav = (double*) malloc(tmax*sizeof(double));
       ti = (double*) malloc(tmax*sizeof(double));
     }
-  for (j = 0; j < tmax; ++j)
+  for (j = 0; j < tmax; j++)
     {
       Gself[j] = (COORD_TYPE*) malloc(Gsnr*sizeof(double));
       if (NPA!=NP)
@@ -368,7 +375,7 @@ int main(int argc, char **argv)
   for (t=0; t < tmax; ++t)
     {
       ccav[t] = 0.0;
-      for (j = 0; j < Gsnr; ++j) 
+      for (j = 0; j < Gsnr; j++) 
 	{
 	  Gself[t][j] = 0.0;
 	  if (NPA!=NP)
@@ -380,6 +387,7 @@ int main(int argc, char **argv)
     }
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN+skip)
     {	
+      //printf("nr1=%d fname=%s nfiles=%d\n", nr1, fname[nr1], nfiles);
       readconf(fname[nr1], &time, &refTime, NP, r0);
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
@@ -389,17 +397,21 @@ int main(int argc, char **argv)
 	      /* N.B. considera NN punti in maniera logaritmica e poi calcola i punti in maniera lineare 
 	       * distanziati di NN punti. */
               np = (JJ == 0)?nr2-nr1:NN-1+JJ;	      
-	      if (nr2 >= nfiles || np >= points)
+	      //printf("nr2=%d fname=%s nfiles=%d\n", nr2, fname[nr2], nfiles);
+	      if (nr2 >= nfiles || np >= tmax)
 		{
 		  fine = 1;
+		  //printf("qui3\n");
 		  break;
 		}
 	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
-	      if (np > tmax) 
+	      if (np >= tmax) 
 		continue;
+	      //printf("qui1\n");
 	      readconf(fname[nr2], &time, &refTime, NP, r1);
-	      if (np < points && ti[np] == -1.0)
+      	      //printf("qui2\n");
+	      if (np < tmax && ti[np] == -1.0)
 		{
 		  ti[np] = time + refTime;
 		  //printf("np=%d time=%.15G\n", np, ti[np]);
@@ -407,26 +419,29 @@ int main(int argc, char **argv)
   
 	      //if (nr2 == nr1)
 		//continue;
-	      ccav[t] += 1.0;
 	      t=np;
+	      ccav[t] += 1.0;
+	      //printf("qui B\n");
 	      for (i=0; i < NP; i++)
 		{
-		  Deltar = sqrt(Sqr(r1[i][0] - r0[i][0]) + 
-				Sqr(r1[i][1] - r0[i][1]) +
-				Sqr(r1[i][2] - r0[i][2]));
-		  j = (int) (Gsnr * Deltar / rmax); 
+		  Deltar = sqrt(Sqr(r1[0][i] - r0[0][i]) + 
+				Sqr(r1[1][i] - r0[1][i]) +
+				Sqr(r1[2][i] - r0[2][i]));
+		  j = (int) ((((double)Gsnr) * Deltar) / rmax); 
+		  //printf("qui C t=%d j=%d i=%d\n", t, j, i);
+
 		  if (j < Gsnr)
 		    {
-		      Gself[t][j] += 1.0;
+		      Gself[t][j] += 2.0;
 		      if (NPA != NP)
 			{
 			  if (i < NPA)
 			    {
-			      GselfA[t][j] +=1.0;
+			      GselfA[t][j] +=2.0;
 			    }
 			  else
 			    {
-			      GselfB[t][j] += 1.0;
+			      GselfB[t][j] += 2.0;
 			    }
 			}
 		    }
@@ -434,25 +449,31 @@ int main(int argc, char **argv)
 	    }
 	}
     }
-
   /* Normalization */
-  for(t = 0; t < tmax; ++t)
+  for(t = 0; t < tmax; t++)
     {
-      for (j = 0; j < Gsnr; ++j)
+      for (j = 0; j < Gsnr; j++)
 	{
-	  r = ((COORD_TYPE) j + 0.5) * (rmax / Gsnr);
+	  r = ((COORD_TYPE) j + 0.5) * delr;
 	  Normv = ccav[t];
-	  Gself[t][j] *= Gsnr/ rmax;/* Gs is a density of probability */
-	  Gself[t][j] /= Normv * Sqr(r) * 4.0 * pi;
+	  printf("Normv=%f\n", Normv);
+	  Gself[t][j] /= delr ;/* Gs is a density of probability */
+	  Gself[t][j] /= Normv * NP;
+	  //Gself[t][j] /= Normv * Sqr(r) * 4.0 * pi * NP;
 	  if (NPA!=NP)
 	    {
-	      GselfA[t][j] *= Gsnr/ rmax;/* Gs is a density of probability */
-	      GselfA[t][j] /= Normv * Sqr(r) * 4.0 * pi;
-	      GselfB[t][j] *= Gsnr/ rmax;/* Gs is a density of probability */
-	      GselfB[t][j] /= Normv * Sqr(r) * 4.0 * pi;
+	      GselfA[t][j] /= delr;/* Gs is a density of probability */
+	      GselfA[t][j] /= Normv * NPA;
+	      //GselfA[t][j] /= Normv * Sqr(r) * 4.0 * pi * NPA;
+
+	      GselfB[t][j] /= delr;/* Gs is a density of probability */
+	      GselfB[t][j] /= Normv * (NP-NPA);
+	      //GselfB[t][j] /= Normv * Sqr(r) * 4.0 * pi * (NP-NPA);
 	    }
 	}
     }
+
+  //printf("eccoci\n");
   /* save Gself */
   saveGself(GselfFile, Gself);
   if (NPA!=NP)
