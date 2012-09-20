@@ -432,16 +432,16 @@ int main(int argc, char **argv)
 
 		  if (j < Gsnr)
 		    {
-		      Gself[t][j] += 2.0;
+		      Gself[t][j] += 1.0;
 		      if (NPA != NP)
 			{
 			  if (i < NPA)
 			    {
-			      GselfA[t][j] +=2.0;
+			      GselfA[t][j] += 1.0;
 			    }
 			  else
 			    {
-			      GselfB[t][j] += 2.0;
+			      GselfB[t][j] += 1.0;
 			    }
 			}
 		    }
