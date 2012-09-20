@@ -456,7 +456,7 @@ int main(int argc, char **argv)
 	{
 	  r = ((COORD_TYPE) j + 0.5) * delr;
 	  Normv = ccav[t];
-	  printf("Normv=%f\n", Normv);
+	  //printf("Normv=%f\n", Normv);
 	  Gself[t][j] /= delr ;/* Gs is a density of probability */
 	  Gself[t][j] /= Normv * NP;
 	  //Gself[t][j] /= Normv * Sqr(r) * 4.0 * pi * NP;
