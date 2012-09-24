@@ -5,8 +5,8 @@ char par[16384], val[16384];
 int main(int argc, char **argv)
 {
   int numat, parnum;
-  double rx, ry, rz, rCMx, rCMy, rCMz, R[3][3], L, Lnew;
-  double vx, vy, vz, wx, wy, wz;
+  double rx, ry, rz, rCMx, rCMy, rCMz, R[3][3], L, Lnew, Lxnew, Lynew, Lznew;
+  double Lx, Ly, Lz, vx, vy, vz, wx, wy, wz;
   FILE *f;
   long pos;
   int type, jx, jy, jz, i, k1, k2;
@@ -14,7 +14,7 @@ int main(int argc, char **argv)
   f = fopen(argv[1],"r");
   while (!feof(f))
     fscanf(f, "%[^\n] ", line);
-  L = atof(line);
+  sscanf(line, "%lf %lf %lf\n", &Lx, &Ly, &Lz);
   fclose(f);
   f = fopen(argv[1],"r");
   numat = 0;
@@ -42,9 +42,11 @@ int main(int argc, char **argv)
       else
 	printf("%s\n", line);
     }
-  Lnew = L*fact;
+  Lxnew = Lx*fact;
+  Lynew = Ly*fact;
+  Lznew = Lz*fact;
   pos = ftell(f);
- 
+   
   rCMx = rCMy= rCMz = 0;
   for (jx = 0; jx < fact; jx++)
     {
@@ -52,9 +54,9 @@ int main(int argc, char **argv)
       	{
 	  for (jz = 0; jz < fact; jz++)
 	    {
-	      rCMx += L*jx;
-	      rCMy += L*jy;
-	      rCMz += L*jz;
+	      rCMx += Lx*jx;
+	      rCMy += Ly*jy;
+	      rCMz += Lz*jz;
 	    }
 	}
     }
@@ -73,7 +75,7 @@ int main(int argc, char **argv)
 	      for (jz = 0; jz < fact; jz++)
 		{
 		  printf("%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n",
-			 rx+L*jx-rCMx, ry+L*jy-rCMy, rz+L*jz-rCMz,
+			 rx+Lx*jx-rCMx, ry+Ly*jy-rCMy, rz+Lz*jz-rCMz,
 			 R[0][0], R[0][1], R[0][2], R[1][0], R[1][1], R[1][2], 
 			 R[2][0], R[2][1], R[2][2], type); 
 		}
@@ -99,6 +101,6 @@ int main(int argc, char **argv)
 
     }
 #endif 
-  printf("%.15G %.15G %.15G\n", Lnew, Lnew, Lnew);
+  printf("%.15G %.15G %.15G\n", Lxnew, Lynew, Lznew);
   fclose(f);
 }

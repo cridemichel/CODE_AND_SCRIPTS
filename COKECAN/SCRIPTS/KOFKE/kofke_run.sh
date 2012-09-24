@@ -5,9 +5,11 @@
 #
 # $1 è il passo d'integrazione in 1/T (default: -0.1, cioè si aumenta la temparatura)
 # echo "predictor" > $KSFN
+echo "$PPID" > kofke_run_PID
 DEBUG="1"
 WTIME="5" #waiting time between two successive checks in seconds
 EQSTEPS="100000"
+FACT="0.5" # prende un fattore pari a $FACT di tutta la simulazione per fare le medie
 NP="1000"
 alias awk='LANG=C awk'
 EXES="../sim1statepnt_HC_MCNPTK.sh"
@@ -214,7 +216,6 @@ sleep $WTIME
 done
 #calculate running averages here and update Kofke file
 NPTS=`wc -l $ISOD/energy.dat | awk '{print $1}'`
-FACT=`echo "2.0/3.0"| bc -l`
 echo "FACT=" $FACT " nump=" $NPI " " $NPN "npts=" $NPTS  
 AVENEISO=`cat $ISOD/energy.dat|awk -v nump=$NPI -v fact=$FACT -v npt=$NPTS '{if (NR > fact*npt) {cc++; ene+=$2};} END { printf("%.15G\n",ene/cc/nump)}'`
 NPTS=`wc -l $NEMD/energy.dat | awk '{print $1}'`

@@ -177,7 +177,7 @@ void saveGself(char* fileName, COORD_TYPE** gs)
   /* save every vhgap steps */
   for(t = 0; t < tmax; t++)
     {
-      if (t == 0) continue;
+      if (t == 0 || ti[t]==-1.0) continue;
       sprintf(fn, "t-%f-%s", ti[t], fileName);
       afs = fopen(fn, "w+");
       for(j = 0; j < Gsnr; j++) /* Loop over angles */
