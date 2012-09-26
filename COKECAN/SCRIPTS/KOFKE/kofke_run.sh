@@ -5,12 +5,11 @@
 #
 # $1 è il passo d'integrazione in 1/T (default: -0.1, cioè si aumenta la temparatura)
 # echo "predictor" > $KSFN
-echo "$PPID" > kofke_run_PID
+echo "$BASHPID" > kofke_run_PID
 DEBUG="1"
 WTIME="5" #waiting time between two successive checks in seconds
 EQSTEPS="100000"
-FACT="0.5" # prende un fattore pari a $FACT di tutta la simulazione per fare le medie
-NP="1000"
+FACT="0.666666" # prende un fattore pari a $FACT di tutta la simulazione per fare le medie
 alias awk='LANG=C awk'
 EXES="../sim1statepnt_HC_MCNPTK.sh"
 FINFILE="CorFinal"
@@ -39,7 +38,7 @@ LAST=`tail -1 $KFN`
 BETAINI=`echo $LAST | awk '{print $1}'`
 if [ "$1" = "" ]
 then
-DELBMOD="0.1"
+DELBMOD="0.2"
 DELB=`echo $BETAINI $BETAEND | awk -v delb=$DELBMOD '{if ($1 > $2) {printf("-%s",delb);} else {printf("%s",delb);}}'`
 else
 DELB="$1"
@@ -69,12 +68,12 @@ Vm1N=`echo $PREV | awk '{print $5}'`
 Um1N=`echo $PREV | awk '{print $6}'`
 BETAm1=`echo $PREV | awk '{print $1}'`
 Fm1=`echo "-((${Um1N})-(${Um1I}) + ${Pm1}*(${Vm1N}-${Vm1I}))/(${BETAm1}*${Pm1}*(${Vm1N}-${Vm1I}))"|bc -l`
-Pm2=`echo $PREV | awk '{print $2}'`
-Vm2I=`echo $PREV | awk '{print $3}'`
-Um2I=`echo $PREV | awk '{print $4}'`
-Vm2N=`echo $PREV | awk '{print $5}'`
-Um2N=`echo $PREV | awk '{print $6}'`
-BETAm2=`echo $PREV | awk '{print $1}'`
+Pm2=`echo $PPREV | awk '{print $2}'`
+Vm2I=`echo $PPREV | awk '{print $3}'`
+Um2I=`echo $PPREV | awk '{print $4}'`
+Vm2N=`echo $PPREV | awk '{print $5}'`
+Um2N=`echo $PPREV | awk '{print $6}'`
+BETAm2=`echo $PPREV | awk '{print $1}'`
 Fm2=`echo "-((${Um2N})-(${Um2I}) + ${Pm2}*(${Vm2N}-${Vm2I}))/(${BETAm2}*${Pm2}*(${Vm2N}-${Vm2I}))"|bc -l`
 KSTAT=`cat $KSFN`
 if [ "$KSTAT" = "predictor" ]
@@ -82,7 +81,7 @@ then
 if [ "$NLKF" = "1" ]
 then
 #use trapezoid formula at begin
-NEWP=`echo "${P0}*e((${DELB})*(${F0})*0.5)" | bc -l`
+NEWP=`echo "${P0}*e((${DELB})*(${F0}))" | bc -l`
 echo $NEWP > $PFN
 NEWBETA=`echo "(${BETA0})+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
