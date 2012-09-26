@@ -1,3 +1,4 @@
+#!/bin/bash
 #To start Kofke run create the following files:
 # BetaEnd.dat : 1/(final temparature)
 # si deve anche creare il file $KFN con dentro i valori per gli stati iniziali, ossia:
@@ -96,7 +97,7 @@ echo "NEWP=" $NEWP "F0=" $F0
 else
 #CORRECTOR HERE
 #echo "CORRECTOR OK"
-PPREV="`tail -3 $KFN | head -1`"
+#PPREV="`tail -3 $KFN | head -1`"
 BETAp1=`cat $KFNPRED | awk '{print $1}'`
 Pp1=`cat $KFNPRED | awk '{print $2}'`
 Vp1I=`cat $KFNPRED | awk '{print $3}'`
