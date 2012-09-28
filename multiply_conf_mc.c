@@ -2,6 +2,7 @@
 #include <stdio.h>
 char line[16384];
 char par[16384], val[16384];
+int factx, facty, factz;
 int main(int argc, char **argv)
 {
   int numat, parnum;
@@ -18,8 +19,25 @@ int main(int argc, char **argv)
   fclose(f);
   f = fopen(argv[1],"r");
   numat = 0;
-  fact=atoi(argv[2]);
-  fact3=fact*fact*fact;
+  if (argc==3)
+    {
+      factx = facty = factz =atoi(argv[2]);
+
+    }
+  else if (argc==5)
+    {
+      factx = atoi(argv[2]);
+      facty = atoi(argv[3]);
+      factz = atoi(argv[4]); 
+    }
+  else 
+    {
+      printf("multiply_conf_mc <conf file> <fact_x> <fact_y> <fact_z>\n");
+      exit-(1);
+    }
+  
+  fact3 = factx*facty*factz;
+	
   for (;numat < 2;)
     {
       fscanf(f,"%[^\n] ", line);
@@ -42,17 +60,18 @@ int main(int argc, char **argv)
       else
 	printf("%s\n", line);
     }
-  Lxnew = Lx*fact;
-  Lynew = Ly*fact;
-  Lznew = Lz*fact;
+
+  Lxnew = Lx*factx;
+  Lynew = Ly*facty;
+  Lznew = Lz*factz;
   pos = ftell(f);
    
   rCMx = rCMy= rCMz = 0;
-  for (jx = 0; jx < fact; jx++)
+  for (jx = 0; jx < factx; jx++)
     {
-      for (jy = 0; jy < fact; jy++)
+      for (jy = 0; jy < facty; jy++)
       	{
-	  for (jz = 0; jz < fact; jz++)
+	  for (jz = 0; jz < factz; jz++)
 	    {
 	      rCMx += Lx*jx;
 	      rCMy += Ly*jy;
@@ -68,11 +87,11 @@ int main(int argc, char **argv)
       fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
 	    &rx, &ry, &rz, &R[0][0], &R[0][1], &R[0][2], &R[1][0], &R[1][1], &R[1][2], 
 	    &R[2][0], &R[2][1], &R[2][2], &type); 
-      for (jx = 0; jx < fact; jx++)
+      for (jx = 0; jx < factx; jx++)
 	{
-	  for (jy = 0; jy < fact; jy++)
+	  for (jy = 0; jy < facty; jy++)
 	    {
-	      for (jz = 0; jz < fact; jz++)
+	      for (jz = 0; jz < factz; jz++)
 		{
 		  printf("%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n",
 			 rx+Lx*jx-rCMx, ry+Ly*jy-rCMy, rz+Lz*jz-rCMz,

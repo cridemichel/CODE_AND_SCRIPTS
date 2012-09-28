@@ -236,6 +236,6 @@ echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" >> $KFN
 echo "predictor" > $KSFN
 fi
 echo "last run was:" $KSTAT
-fine=`echo $BETAINI $BETAEND $BETACUR $KSTAT | awk '{if ($1 < $2) {if ($3 <= $2 && $4 == "predictor") printf("0"); else printf("1")}  else if ($3 <= $2 && $4 == "corrector") printf("1"); else printf("0");}'`
+fine=`echo $BETAINI $BETAEND $BETACUR $KSTAT | awk '{if ($1 < $2) {if ($3 >= $2 && $4 == "corrector") printf("1"); else printf("0")}  else if ($3 <= $2 && $4 == "corrector") printf("1"); else printf("0");}'`
 #echo "fine=" $fine
 done
