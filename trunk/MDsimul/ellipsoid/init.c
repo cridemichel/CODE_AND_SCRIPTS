@@ -1953,13 +1953,16 @@ void usrInitBef(void)
     OprogStatus.resetaccept=10;
     OprogStatus.resetacceptVol=100;
     OprogStatus.outMC = 10;
-    OprogStatus.targetAccept=0.5;
-    OprogStatus.targetAcceptVol=0.5;
+    OprogStatus.targetAccept=-1;
+    OprogStatus.targetAcceptVol=-1;
 #endif
 #ifdef MC_SUS
     /* if OprogStatus.susnmin=0 or susnmax=0 it is a usual grand canonical sim */
     OprogStatus.susnmin=-1;
     OprogStatus.susnmax=-1;
+#endif
+#ifdef MC_FLIP_MOVE
+    OprogStatus.flip_prob = -1.0; /* disable by default */
 #endif
 #ifdef MD_SURV_PROB
     OprogStatus.spdeltat = 10.0;
@@ -3029,7 +3032,10 @@ void find_bonds_flex_all(void)
   int i;
   //printf("===========================>QUI\n");
   for (i=0; i < Oparams.parnum; i++)
-    find_bonds_one(i); 
+    {
+      //printf("pos=%.15G %.15G %.15G\n", rx[i], ry[i], rz[i]);
+      find_bonds_one(i);
+    } 
 }
 void find_bonds_flex_NNL(void)
 {
@@ -3598,9 +3604,10 @@ int dyn_alloc_oprog(void)
   OprogStatus.len = sizeof(double)*10*Oparams.parnum;
 #endif
 #ifdef MC_SUS
-  OprogStatus.len += sizeof(double)*(OprogStatus.susnmax-OprogStatus.susnmin+1);
+  if (OprogStatus.susnmax > 0 && OprogStatus.susnmin >= 0) 
+    OprogStatus.len += sizeof(double)*(OprogStatus.susnmax-OprogStatus.susnmin+1);
 #endif
-  //printf("DYNAMIC ALLOCATION of %d bytes\n", OprogStatus.len);
+  printf("DYNAMIC ALLOCATION of %d bytes\n", OprogStatus.len);
   OprogStatus.ptr = malloc(OprogStatus.len);
   last_ptr = OprogStatus.ptr;
 #ifdef MD_CALC_DPP
@@ -3636,7 +3643,8 @@ int dyn_alloc_oprog(void)
   OprogStatus.vcmz0 = OprogStatus.vcmy0 + np;
 #endif
 #ifdef MC_SUS
-  OprogStatus.sushisto = OprogStatus.DR[np-1]+3;
+  if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
+    OprogStatus.sushisto = OprogStatus.DR[np-1]+3;
 #endif
   OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
@@ -3889,12 +3897,66 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
 }
 #endif
+#ifdef MC_BENT_DBLCYL
+/* apply a random rotation around the supplied axis because 
+   bent cylinders do not have azimuthal symmetry */
+void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3], double Rout[3][3])
+{
+  double theta, thetaSq, sinw, cosw;
+  double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
+  int k1, k2, k3;
+  /* pick a random rotation angle between 0 and 2*pi*/
+  theta = 4.0*acos(0.0)*ranf();
+  thetaSq=Sqr(theta);
+  sinw = sin(theta);
+  cosw = (1.0 - cos(theta));
+  Omega[0][0] = 0;
+  Omega[0][1] = -oz;
+  Omega[0][2] = oy;
+  Omega[1][0] = oz;
+  Omega[1][1] = 0;
+  Omega[1][2] = -ox;
+  Omega[2][0] = -oy;
+  Omega[2][1] = ox;
+  Omega[2][2] = 0;
+  OmegaSq[0][0] = -Sqr(oy) - Sqr(oz);
+  OmegaSq[0][1] = ox*oy;
+  OmegaSq[0][2] = ox*oz;
+  OmegaSq[1][0] = ox*oy;
+  OmegaSq[1][1] = -Sqr(ox) - Sqr(oz);
+  OmegaSq[1][2] = oy*oz;
+  OmegaSq[2][0] = ox*oz;
+  OmegaSq[2][1] = oy*oz;
+  OmegaSq[2][2] = -Sqr(ox) - Sqr(oy);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Ro[k1][k2] = Rin[k1][k2];
+	for (k3 = 0; k3 < 3; k3++)
+	  Ro[k1][k2] += Rin[k1][k3]*M[k3][k2];
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+     Rout[k1][k2] = Ro[k1][k2]; 
+}
+#endif
 
 void versor_to_R(double ox, double oy, double oz, double R[3][3])
 {
   int k;
   double angle, u[3], sp, norm, up[3], xx, yy;
-
+#ifdef MC_BENT_DBLCYL
+  double Rout[3][3];
+  int k1, k2;
+#endif
   /* first row vector */
   R[0][0] = ox;
   R[0][1] = oy;
@@ -3933,6 +3995,13 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
  
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
+#ifdef MC_BENT_DBLCYL
+  /* add a random rotation around the axis (ox, oy, oz) */
+  add_rotation_around_axis(ox, oy, oz, R, Rout);
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      R[k1][k2] = Rout[k1][k2];
+#endif
 #if 0
   for (k1=0; k1 < 3 ; k1++)
     for (k2=0; k2 < 3 ; k2++)
@@ -3941,7 +4010,6 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
     for (k2=0; k2 < 3 ; k2++)
     R[k1][k2]=Rt[k1][k2];
 #endif
-
   //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
 }
 void set_semiaxes_vb(double fx, double fy, double fz)
@@ -4713,7 +4781,6 @@ void usrInitAft(void)
 #endif
   int a;
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
-
 #if defined(MAXPAR) && !defined(MD_DYNAMIC_OPROG)
   if (Oparams.parnum >= MAXPAR)
     {
@@ -4721,7 +4788,6 @@ void usrInitAft(void)
       exit(-1);
     } 
 #endif
-
 #ifdef MD_DYNAMIC_OPROG
   OprogStatus.dyn_alloc_oprog();
 #endif
@@ -5050,7 +5116,6 @@ void usrInitAft(void)
   RtB = matrix(3, 3);
   Aip = matrix(3,3);
   R = malloc(sizeof(double**)*Oparams.parnum);
-  
   for (i=0; i < Oparams.parnum; i++)
     {
 #if 0
@@ -5238,6 +5303,15 @@ void usrInitAft(void)
   volSQ = malloc(Oparams.ntypes*sizeof(double));
 #endif
   u2R();
+#if 0
+    {int na;
+  for (na=0; na < Oparams.parnum; na++)
+    printf("i=%d pos=%.15G %.15G %.15G R=%f %f %f %f %f %f %f %f %f\n",na,  rx[na], ry[na], rz[na], R[na][0][0],
+	   R[na][0][1], R[na][0][2], R[na][1][0],
+	   R[na][1][1], R[na][1][2], R[na][2][0],
+	   R[na][2][1], R[na][2][2]);
+    }
+#endif
   if (OprogStatus.CMreset==-1)
     {
       comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
@@ -6351,7 +6425,7 @@ void usrInitAft(void)
       printf("Grand-canonical ensemble\n");
       break;
     }
-  #ifdef MD_LXYZ
+#ifdef MD_LXYZ
   vnonbond = L[0]*L[1]*L[2] - OprogStatus.vbond;
 #else
   vnonbond = L*L*L - OprogStatus.vbond;
@@ -6503,6 +6577,11 @@ void fprintf_ranges(FILE *f, int A, int nr, rangeStruct* r)
     fprintf(f, "%d ", A);
 }
 #endif
+#ifdef MC_BENT_DBLCYL
+extern void load_pos_R(int i, double xi[3], double Ri[3][3]);
+extern void save_pos_R(int i, double xi[3], double Ri[3][3]);
+extern void set_pos_R_ho(int i, int a);
+#endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
 {
@@ -6530,6 +6609,10 @@ void writeAllCor(FILE* fs, int saveAll)
 #ifdef EDHE_FLEX
   const char tipodat2_flex[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n";
   int j;
+#ifdef MC_BENT_DBLCYL
+  double xi[3], Ri[3][3];
+  int k1;
+#endif
 #ifdef MC_SIMUL
   R2u();
 #endif
@@ -6560,10 +6643,22 @@ void writeAllCor(FILE* fs, int saveAll)
 	    fprintf(fs, "%.15G %.15G %.15G %.15G\n", typesArr[i].spots[j].x[0],typesArr[i].spots[j].x[1],
 		    typesArr[i].spots[j].x[2], typesArr[i].spots[j].sigma);
 	  for (j = 0; j < typesArr[i].nhardobjs; j++)
-	    fprintf(fs, "%.15G %.15G %.15G % .15G %.15G %.15G %.15G %.15G %.15G\n", 
-		   typesArr[i].hardobjs[j].x[0],typesArr[i].hardobjs[j].x[1],typesArr[i].hardobjs[j].x[2], 
-		   typesArr[i].hardobjs[j].sax[0],typesArr[i].hardobjs[j].sax[1],typesArr[i].hardobjs[j].sax[2],
-		   typesArr[i].hardobjs[j].n[0],typesArr[i].hardobjs[j].n[1],typesArr[i].hardobjs[j].n[2]);
+	    {
+	      fprintf(fs, "%.15G %.15G %.15G\n%.15G %.15G %.15G\n%.15G %.15G %.15G\n", 
+	   	      typesArr[i].hardobjs[j].x[0],typesArr[i].hardobjs[j].x[1],typesArr[i].hardobjs[j].x[2], 
+	   	      typesArr[i].hardobjs[j].sax[0],typesArr[i].hardobjs[j].sax[1],typesArr[i].hardobjs[j].sax[2],
+	   	      typesArr[i].hardobjs[j].n[0],typesArr[i].hardobjs[j].n[1],typesArr[i].hardobjs[j].n[2]);
+	      /* orientazione dell'hard object nel body reference system */
+	      fprintf(fs, "%.15G %.15G %.15G\n",
+		      typesArr[i].hardobjs[j].R[0][0], typesArr[i].hardobjs[j].R[0][1], typesArr[i].hardobjs[j].R[0][2]
+		     );
+	      fprintf(fs, "%.15G %.15G %.15G\n",
+		      typesArr[i].hardobjs[j].R[1][0], typesArr[i].hardobjs[j].R[1][1], typesArr[i].hardobjs[j].R[1][2]
+		     );
+	      fprintf(fs, "%.15G %.15G %.15G\n",
+		      typesArr[i].hardobjs[j].R[2][0], typesArr[i].hardobjs[j].R[2][1], typesArr[i].hardobjs[j].R[2][2]
+		     );
+	    }
 	} 
       /* write interactions */
       for (i=0; i < Oparams.ninters; i++)
@@ -6653,8 +6748,35 @@ void writeAllCor(FILE* fs, int saveAll)
 #endif
 #endif
 #ifdef MC_HC
+#ifdef MC_BENT_DBLCYL
+	  if (typesArr[typeOfPart[i]].nhardobjs==0)
+	    fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
+		    2.0*typesArr[typeOfPart[i]].sax[0], colsFlex[typeOfPart[i]%numcols]);
+	  else
+	    {
+	      for (k1 = 0; k1 < typesArr[typeOfPart[i]].nhardobjs; k1++)
+		{
+	  	  save_pos_R(i, xi, Ri);
+		  set_pos_R_ho(i, k1);
+	    	  uxx[i] = R[i][0][0];
+		  uxy[i] = R[i][0][1];
+		  uxz[i] = R[i][0][2];
+		  uyx[i] = R[i][1][0];
+		  uyy[i] = R[i][1][1];
+		  uyz[i] = R[i][1][2];
+		  uzx[i] = R[i][2][0];
+		  uzy[i] = R[i][2][1];
+		  uzz[i] = R[i][2][2];
+
+		  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].hardobjs[k1].sax[1], 
+			  2.0*typesArr[typeOfPart[i]].hardobjs[k1].sax[0], colsFlex[typeOfPart[i]%numcols]);
+	  	  load_pos_R(i, xi, Ri);
+		}
+	    }
+#else
 	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
 		  2.0*typesArr[typeOfPart[i]].sax[0], colsFlex[typeOfPart[i]%numcols]);
+#endif
 #else
 #ifdef EDHE_FLEX
 #ifndef MD_FOUR_BEADS
@@ -7035,6 +7157,7 @@ void writeBinCoord_heflex(int cfd)
 	  writeSegs(cfd, "Init", "Error writing bonds", CONT, size, bonds[i], NULL);
 	}
     }
+  //printf("OprogStatus.targetPhi=%f\n", OprogStatus.targetPhi);
 }
 
 #endif
@@ -7190,12 +7313,25 @@ void readAllCor(FILE* fs)
 	}
       else
 	typesArr[i].hardobjs = NULL;
-	  
+ 
       for (j = 0; j < typesArr[i].nhardobjs; j++)
-	fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lf ", 
+	{
+	  fscanf(fs, "%lf %lf %lf %lf %lf %lf %lf %lf %lf ", 
 	       &typesArr[i].hardobjs[j].x[0],&typesArr[i].hardobjs[j].x[1], &typesArr[i].hardobjs[j].x[2], 
 	       &typesArr[i].hardobjs[j].sax[0],&typesArr[i].hardobjs[j].sax[1], &typesArr[i].hardobjs[j].sax[2],
-	       &typesArr[i].hardobjs[j].n[0], &typesArr[i].hardobjs[j].n[1], &typesArr[i].hardobjs[j].n[2]);
+	       &typesArr[i].hardobjs[j].n[0], &typesArr[i].hardobjs[j].n[1], &typesArr[i].hardobjs[j].n[2]
+      	      );
+	  /* orientazione dell'hard object nel body reference system */
+	  fscanf(fs, "%lf %lf %lf ",
+		 &typesArr[i].hardobjs[j].R[0][0], &typesArr[i].hardobjs[j].R[0][1], &typesArr[i].hardobjs[j].R[0][2]
+		 );
+	  fscanf(fs, "%lf %lf %lf ",
+		 &typesArr[i].hardobjs[j].R[1][0], &typesArr[i].hardobjs[j].R[1][1], &typesArr[i].hardobjs[j].R[1][2]
+		 );
+	  fscanf(fs, "%lf %lf %lf ",
+	     	 &typesArr[i].hardobjs[j].R[2][0], &typesArr[i].hardobjs[j].R[2][1], &typesArr[i].hardobjs[j].R[2][2]
+		 );
+	}
     } 
   //printf("qui nintersIJ=%d\n", Oparams.nintersIJ);
   /* read interactions */

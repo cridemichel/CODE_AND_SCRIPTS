@@ -317,10 +317,13 @@ void calcV(void)
   fclose(mf);
 #endif
 #ifdef MC_SUS
-  mf=fopenMPI(absMisHD("histo.dat"),"w+");
-  for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
-  fprintf(mf,"%d %.15G\n", i+OprogStatus.susnmin, OprogStatus.sushisto[i]);
-  fclose(mf);
+  if (OprogStatus.susnmin >=0 && OprogStatus.susnmax > 0)
+    {
+      mf=fopenMPI(absMisHD("histo.dat"),"w+");
+      for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
+	fprintf(mf,"%d %.15G\n", i+OprogStatus.susnmin, OprogStatus.sushisto[i]);
+      fclose(mf);
+    }
 #endif
   mf = fopenMPI(absMisHD("energy.dat"),"a");
 #if 0
