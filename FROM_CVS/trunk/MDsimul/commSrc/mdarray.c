@@ -470,7 +470,10 @@ void saveCoord(char* fileName)
 	"Final coordinates file successfully saved",
 	NULL);
 }
-  
+#ifdef MD_DYNAMIC_OPROG
+extern int dyn_alloc_oprog(void);
+extern void set_dyn_ascii(void);
+#endif 
 /* ======================== >>> ReadBak <<< ================================*/ 
 int readBak(int bfd)
 {	
@@ -514,6 +517,8 @@ int readBak(int bfd)
   br = mdRead(bfd, "Restore",  "Error reading the program status.", CONT, 
 	      sizeof(struct progStatus), &OprogStatus);
 #ifdef MD_DYNAMIC_OPROG
+  OprogStatus.dyn_alloc_oprog = dyn_alloc_oprog;
+  OprogStatus.set_dyn_ascii = set_dyn_ascii;
   OprogStatus.ptr = NULL;
   size = OprogStatus.dyn_alloc_oprog(); 
   //printf("parnum=%d size=%d\n", Oparams.parnum, size);
@@ -1110,6 +1115,7 @@ void saveBak(char *fileName)
   /* write the progStatus struct (see TECH_INFO file) */
   mdWrite(bf, NULL, "Error writing the program status.", EXIT,
 	  sizeof (struct progStatus), &OprogStatus);
+  //printf("sizeof progStatus=%d\n", sizeof(struct progStatus));
 #ifdef MD_DYNAMIC_OPROG
   size = OprogStatus.len; 
   mdWrite(bf, NULL,  "Error writing the program dynamic status.", EXIT, 
@@ -1142,8 +1148,11 @@ void saveBak(char *fileName)
   /* Save on disk the restore file */
   sync();/* <--------------------------------------------------------  SYNC */
 }
-
+extern double *rx, *ry, *rz, ***R;
 /* ========================= >>> doubleBufferBak <<< =======================*/
+#ifdef EDHE_FLEX
+extern void R2u(void);
+#endif
 void doubleBufBak(unsigned char* hdWhich, unsigned char* tapeWhich,
 		     int* times, int tapeTimes)
 {
@@ -1164,6 +1173,9 @@ void doubleBufBak(unsigned char* hdWhich, unsigned char* tapeWhich,
   /* absTmpHD operator build an absolute name for restore file, 
      that is path + BAK_FILE_NAME ( see mdsimul.h ), while 
      appSw operator append 0 or 1 to the name */
+#ifdef EDHE_FLEX
+    R2u();
+#endif
     saveBak(appSw( absTmpHD(BAK_FILE_NAME), *hdWhich )  );
 #ifdef MD_COORDTMP_ASCII
     MD_COORDTMP_ASCII(*hdWhich);

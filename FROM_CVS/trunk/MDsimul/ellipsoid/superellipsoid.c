@@ -3031,6 +3031,7 @@ double calc_SQ_volprefact(int type)
   OprogStatus.targetPhi = 1.0;
   pf = calcVolSQ_pf(type);
   OprogStatus.targetPhi = tpo;
+  //printf("targetPhi=%f\n", OprogStatus.targetPhi);
   return pf;
 }
 double calcPhiSQ(void)

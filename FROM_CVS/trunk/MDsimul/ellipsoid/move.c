@@ -737,7 +737,10 @@ double calc_phi(void)
 {
   double N = 0;
   //const double pi = acos(0)*2;
-  int i ;
+  int i;
+#ifdef MC_BENT_DBLCYL
+  int k;
+#endif
 #ifdef EDHE_FLEX
   int typei;
 //#ifdef MD_SUPERELLIPSOID 
@@ -760,7 +763,19 @@ double calc_phi(void)
 	{
 	  typei = typeOfPart[i];
 #ifdef MD_SUPERELLIPSOID
+#if defined(MC_HC) && defined(MC_BENT_DBLCYL)
+	  if (typesArr[typeOfPart[i]].nhardobjs == 0)
+	    N += axa[i]*axb[i]*axc[i]*SQvolPrefact[typeOfPart[i]];
+	  else
+	    {
+	      for (k=0; k < typesArr[typeOfPart[i]].nhardobjs; k++)
+		N += typesArr[typeOfPart[i]].sax[0]*typesArr[typeOfPart[i]].sax[1]*typesArr[typeOfPart[i]].sax[2]*
+		  SQvolPrefact[typeOfPart[i]];
+	    }
+#else
+
 	  N += SQvolPrefact[typei]*typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
+#endif
 #else
 	  N += typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
 #endif
@@ -10269,10 +10284,12 @@ void ProcessCollision(void)
 	{
 	  /* Particelle di tipo 0 = assorbite
 	     Particelle di tipo 1 = trappole, quindi se typeNP[1] == 1 allora TARGET problem
-	     altrimenti se typeNP[0]=1 allora TRAPPING problem */
+	     altrimenti se typeNP[0]=1 allora TRAPPING problem 
+	     le TRAPPOLE sono IMMOBILI, dopo ogni assorbimento si fa andare la simulazione
+	     per un tempo pari a OprogStatus.spdeltat per randomizzare il sistema */
 	  if (typeNP[1]==1)
 	    {
-	      /* TARGET */
+	      /* Una sola trappola fissa (le trappole sono fisse) => TARGET problem */
 	      if (typeOfPart[evIdA]==1 || typeOfPart[evIdB]==1)
 		{
 	    	  save_sp();
@@ -10300,7 +10317,7 @@ void ProcessCollision(void)
 	    }
 	  else
 	    {
-	      /* TRAPPING */
+	      /* Oparams.parnum-1 trappole fisse => TRAPPING */
 	      if (typeOfPart[evIdA]==0 || typeOfPart[evIdB]==0)
 		{
 		  save_sp();

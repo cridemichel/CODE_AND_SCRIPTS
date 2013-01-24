@@ -553,16 +553,40 @@ void remove_parall(int ip, double *ox, double *oy, double *oz)
   //printf("DOPO o=%f %f %f\n", *ox,*oy,*oz);
   //printf("sp=%f\n", scalProd(v,vp));
 }
-void rot_move(int ip)
+void rot_move(int ip, int flip)
 {
   double theta, thetaSq, sinw, cosw;
   double ox, oy, oz, OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
   int k1, k2, k3;
   /* pick a random orientation */
+#ifdef MC_ALT_ROT
+  double thor, xp[3], xl[3];
+  thor = 4.0*acos(0.0)*ranf(); /* random angle between 0 and 2*pi */
+  xp[0] = 0.0;
+  xp[1] = cos(thor);
+  xp[2] = sin(thor);
+  body2labR(ip, xp, xl, NULL, R[ip]); 
+  ox = xl[0];
+  oy = xl[1];
+  oz = xl[2];
+#else
   orient(&ox,&oy,&oz);
+#ifdef MC_BENT_DBLCYL
+  if (typesArr[typeOfPart[ip]].nhardobjs == 0)
+    remove_parall(ip, &ox, &oy, &oz);
+#else
   remove_parall(ip, &ox, &oy, &oz);
+#endif
+#endif
   /* pick a random rotation angle */
+#ifdef MC_FLIP_MOVE
+  if (flip==1)
+    theta = acos(0.0); /* 90 degree rotation */
+  else
+    theta= OprogStatus.dthetaMC*(ranf()-0.5);
+#else
   theta= OprogStatus.dthetaMC*(ranf()-0.5);
+#endif
   if (OprogStatus.useNNL)
     displMC = abs(theta)*0.5001*maxax[ip]; 
   thetaSq=Sqr(theta);
@@ -606,12 +630,13 @@ void rot_move(int ip)
      R[ip][k1][k2] = Ro[k1][k2]; 
   rotmoveMC++;
 }
+
 int random_move(int ip)
 {
   double p;
   //printf("random move ip=%d\n", ip);
   p=ranf();
-  if (OprogStatus.restrmove==1)
+  if (OprogStatus.restrmove==1|| OprogStatus.restrmove==2)
     p=0.0;
   
   if (p <= 0.5)
@@ -621,7 +646,17 @@ int random_move(int ip)
    }
   else
     {
-      rot_move(ip);
+#ifdef MC_FLIP_MOVE
+      /* flip_prob must be between 0 and 1 
+	 (in Blaak, Frenkel and Mulder, J. Chem. Phys., Vol. 110, (1999) 
+	 they suggest 0.1=1/10) */
+      if (OprogStatus.flip_prob > 0.0 && ranf()< OprogStatus.flip_prob)
+	rot_move(ip, 1);
+      else
+	rot_move(ip, 0);
+#else
+      rot_move(ip, 0);
+#endif
       return 1;
     } 
 }
@@ -672,10 +707,93 @@ double overlap_using_multibox(int i, int j, double shift[3])
 }
 #undef MC_OF_BOXES
 extern int are_spheres(int i, int j);
-double check_overlap(int i, int j, double shift[3], int *errchk)
+double check_overlap(int i, int j, double shift[3], int *errchk);
+
+#ifdef MC_BENT_DBLCYL
+void save_pos_R(int i, double xi[3], double Ri[3][3])
+{
+  int a, b;
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      Ri[a][b] = R[i][a][b];
+  xi[0] = rx[i]; 
+  xi[1] = ry[i];
+  xi[2] = rz[i];
+}
+
+void load_pos_R(int i, double xi[3], double Ri[3][3])
+{
+  int a, b;
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      R[i][a][b] = Ri[a][b];
+  rx[i] = xi[0]; 
+  ry[i] = xi[1];
+  rz[i] = xi[2];
+}
+void set_pos_R_ho(int i, int a)
+{
+  int k1, k2, k3;
+  double Rho[3][3], xl[3], rA[3];
+  /* NOTA: La posizione dell'hard object è riferita al laboratory
+     reference system e così pure l'orientazione */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      typesArr[typeOfPart[i]].sax[k1] = typesArr[typeOfPart[i]].hardobjs[a].sax[k1]; 
+    }
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+  
+  body2lab(i, typesArr[typeOfPart[i]].hardobjs[a].x, xl, rA, R[i]);
+  rx[i] = xl[0];
+  ry[i] = xl[1];
+  rz[i] = xl[2];
+  /* i campi hardobjs[].n[] vengono usati come orientazioni degli HC */
+  /* multiply Rho=R[i]*hardobjs[a].R */
+  /* la matrice di rotazione del hard object è una rotazione ulteriore 
+     rispetto al body reference system */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  Rho[k1][k2] = 0.0;//R[i][k1][k2];
+#if 1
+	  //printf("(%d,%d) %f\n", k1, k2,typesArr[typeOfPart[i]].hardobjs[a].R[k1][k2]);
+	  for (k3 = 0; k3 < 3; k3++)
+	    {
+	      /* matrix multiplication: riga * colonna */
+	      Rho[k1][k2] += typesArr[typeOfPart[i]].hardobjs[a].R[k1][k3]*R[i][k3][k2];
+	    }  
+#endif
+	}
+    }
+  for (k1 =0; k1 < 3; k1++)
+    {
+      for (k2 =0; k2 < 3; k2++)
+	{
+	  R[i][k1][k2] = Rho[k1][k2];
+	}
+    }
+  /* first apply rotatation then transform the traslation which is given in the body 
+     reference system to laboratory coordinates */	  
+  /* hard object position is relative to the body reference system */
+#if 0
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+  
+  body2lab(i, typesArr[typeOfPart[i]].hardobjs[a].x, xl, rA, R[i]);
+  rx[i] = xl[0];
+  ry[i] = xl[1];
+  rz[i] = xl[2];
+#endif
+}
+#endif
+double check_overlap_ij(int i, int j, double shift[3], int *errchk)
 {
   int k, k1, k2, kk;
-  double vecg[8], vecgNeg[8], rA[3], rB[3], saxi[3], saxj[3];
+  double tpo, vecg[8], vecgNeg[8], rA[3], rB[3], saxi[3], saxj[3];
   double daSq, drSq, d, d0, r1[3], r2[3], alpha; 
   *errchk=0;
   OprogStatus.optnnl = 0;
@@ -688,10 +806,12 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
 #endif
   if (are_spheres(i,j))
     {
+      tpo = OprogStatus.targetPhi;
       OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
       calcdist_retcheck = 0;
       d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
       *errchk = calcdist_retcheck;
+      OprogStatus.targetPhi = tpo;
       return d;
     }
 
@@ -714,64 +834,64 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
 #if 0
 #if 1
   set_semiaxes_vb_mc(i, 1.01*(typesArr[typeOfPart[i]].sax[0]),
-		  1.01*(typesArr[typeOfPart[i]].sax[1]), 
-		  1.01*(typesArr[typeOfPart[i]].sax[2]));
+		     1.01*(typesArr[typeOfPart[i]].sax[1]), 
+		     1.01*(typesArr[typeOfPart[i]].sax[2]));
   set_semiaxes_vb_mc(j, 1.01*(typesArr[typeOfPart[j]].sax[0]),
-		  1.01*(typesArr[typeOfPart[j]].sax[1]), 
-		  1.01*(typesArr[typeOfPart[j]].sax[2]));
+		     1.01*(typesArr[typeOfPart[j]].sax[1]), 
+		     1.01*(typesArr[typeOfPart[j]].sax[2]));
 #else
- set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
+  set_semiaxes_vb(1.01*(typesArr[typeOfPart[0]].sax[0]),
 		  1.01*(typesArr[typeOfPart[0]].sax[1]), 
 		  1.01*(typesArr[typeOfPart[0]].sax[2]));
 #endif
 #endif 
- for (k=0; k < 3; k++)
-   {
+  for (k=0; k < 3; k++)
+    {
 #ifdef MC_OF_BOXES
-     saxi[k] = typesArr[typeOfPart[i]].sax[k];
-     saxj[k] = typesArr[typeOfPart[j]].sax[k];
+      saxi[k] = typesArr[typeOfPart[i]].sax[k];
+      saxj[k] = typesArr[typeOfPart[j]].sax[k];
 #else
-     saxi[k] = 1.01* typesArr[typeOfPart[i]].sax[k];
-     saxj[k] = 1.01* typesArr[typeOfPart[j]].sax[k];
+      saxi[k] = 1.01* typesArr[typeOfPart[i]].sax[k];
+      saxj[k] = 1.01* typesArr[typeOfPart[j]].sax[k];
 #endif
-   }  
- rA[0] = rx[i];
- rA[1] = ry[i];
- rA[2] = rz[i];
- rB[0] = rx[j];
- rB[1] = ry[j];
- rB[2] = rz[j];
+    }  
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+  rB[0] = rx[j];
+  rB[1] = ry[j];
+  rB[2] = rz[j];
 #if 1
- /* if bounding spheres do not overlap parallelepiped will not overlap */
- daSq = drSq = 0.0;
- for (kk=0; kk < 3; kk++)
-   {
-     daSq += Sqr(typesArr[typeOfPart[i]].sax[kk]+typesArr[typeOfPart[j]].sax[kk]);
-     drSq += Sqr(rA[kk]-rB[kk]-shift[kk]);
-   } 
+  /* if bounding spheres do not overlap parallelepiped will not overlap */
+  daSq = drSq = 0.0;
+  for (kk=0; kk < 3; kk++)
+    {
+      daSq += Sqr(typesArr[typeOfPart[i]].sax[kk]+typesArr[typeOfPart[j]].sax[kk]);
+      drSq += Sqr(rA[kk]-rB[kk]-shift[kk]);
+    } 
 
- if (drSq > daSq)
-   return 1.0;
+  if (drSq > daSq)
+    return 1.0;
 #endif 
- d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
- //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
+  d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
+  //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
   if (d0 > 0.0)
     {
       return 1.0;
     }
 #ifdef MC_OF_BOXES
-   else
-     return -1;
+  else
+    return -1;
 #endif
 #if 0
 #if 1
   set_semiaxes_vb_mc(i, saxfactMC[0]*typesArr[typeOfPart[i]].sax[0],
-		  saxfactMC[1]*typesArr[typeOfPart[i]].sax[1], 
-		  saxfactMC[2]*typesArr[typeOfPart[i]].sax[2]);
+		     saxfactMC[1]*typesArr[typeOfPart[i]].sax[1], 
+		     saxfactMC[2]*typesArr[typeOfPart[i]].sax[2]);
   set_semiaxes_vb_mc(j, saxfactMC[0]*typesArr[typeOfPart[j]].sax[0],
-		  saxfactMC[1]*typesArr[typeOfPart[j]].sax[1], 
-		  saxfactMC[2]*typesArr[typeOfPart[j]].sax[2]);
+		     saxfactMC[1]*typesArr[typeOfPart[j]].sax[1], 
+		     saxfactMC[2]*typesArr[typeOfPart[j]].sax[2]);
 #else
   set_semiaxes_vb(saxfactMC[0]*typesArr[typeOfPart[0]].sax[0],
 		  saxfactMC[1]*typesArr[typeOfPart[0]].sax[1], 
@@ -787,9 +907,9 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
       saxi[k] = saxfactMC[k]*typesArr[typeOfPart[i]].sax[k];
       saxj[k] = saxfactMC[k]*typesArr[typeOfPart[j]].sax[k];
 #endif    
-}  
- d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
- //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
+    }  
+  d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
+  //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
   if (d0 < 0.0)
     {
@@ -803,11 +923,13 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
       return d0;
     }
 #endif
+  tpo = OprogStatus.targetPhi;
   OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
   calcdist_retcheck = 0;
-  
+
   d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
   *errchk = calcdist_retcheck;
+  OprogStatus.targetPhi = tpo;
 #ifndef MC_QUASI_CUBE
   if (*errchk)
     {
@@ -826,6 +948,49 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
   //printf("QUI d=%f\n", d);
   return d;
 }
+#ifdef MC_BENT_DBLCYL
+double check_overlap_bent_dblcyl(int i, int j, double shift[3], int *errchk)
+{
+  int a, b;
+  double Ri[3][3], Rj[3][3], xi[3], xj[3], d=0.0;
+  /* NOTE: check overlaps only for all pairs of hard objects,
+     hence in the configuration file two hard cylinders have to be provided
+     with given position and orientation */
+
+  for (a=0; a < typesArr[typeOfPart[i]].nhardobjs; a++)
+    for (b=0; b < typesArr[typeOfPart[j]].nhardobjs; b++)
+      {
+	save_pos_R(i, xi, Ri);
+	save_pos_R(j, xj, Rj);
+	set_pos_R_ho(i, a);
+	set_pos_R_ho(j, b);
+	d=check_overlap_ij(i, j, shift, errchk);
+	load_pos_R(i, xi, Ri);
+	load_pos_R(j, xj, Rj);
+	if (d < 0)
+	  return d;
+      }
+  return d;
+}
+#endif
+double check_overlap(int i, int j, double shift[3], int *errchk)
+{
+#if 0
+  int k, k1, k2, kk;
+  double vecg[8], vecgNeg[8], rA[3], rB[3], saxi[3], saxj[3];
+  double daSq, drSq, d, d0, r1[3], r2[3], alpha; 
+#endif
+#ifdef MC_BENT_DBLCYL
+  //printf("nhard %d %d\n", typesArr[typeOfPart[i]].nhardobjs, typesArr[typeOfPart[i]].nhardobjs);
+  if (typesArr[typeOfPart[i]].nhardobjs > 0 && typesArr[typeOfPart[j]].nhardobjs > 0)
+    return check_overlap_bent_dblcyl(i, j, shift, errchk);
+  else
+    return check_overlap_ij(i, j, shift, errchk);
+#else
+    return check_overlap_ij(i, j, shift, errchk);
+#endif
+}
+
 extern void find_bonds_one_NLL(int i);
 #ifdef MC_QUASI_CUBE
 double calcdistsaQC(double ra[3], double rb[3], double u1a[3], double u2a[3], double u1b[3], double u2b[3], double shift[3], int *errchk)
@@ -1319,6 +1484,7 @@ void remove_par_GC(int ip)
   rebuildLinkedList(); 
 #endif
 }
+#ifdef MD_DYNAMIC_OPROG
 int dyn_realloc_oprog(int np)
 {
   int i;  
@@ -1366,6 +1532,7 @@ int dyn_realloc_oprog(int np)
   OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
 }
+#endif
 extern double **matrix(int n, int m);
 extern void AllocCoord(int size, COORD_TYPE** pointer, ...);
 extern double *max_step_MC;
@@ -1475,7 +1642,9 @@ void check_alloc_GC(void)
       inCell[0] = realloc(inCell[0],sizeof(int)*allocnpGC);
       inCell[1] = realloc(inCell[1],sizeof(int)*allocnpGC);
       inCell[2] = realloc(inCell[2],sizeof(int)*allocnpGC);
+#ifdef MD_DYNAMIC_OPROG
       dyn_realloc_oprog(allocnpGC);
+#endif
     }
 }
 extern void remove_bond(int na, int n, int a, int b);
@@ -1545,15 +1714,49 @@ int insert_particle_GC(void)
      tutto ciò che va espanso */
   check_alloc_GC();
   /* choose a random position to insert particle */
+  if (OprogStatus.restrmove == 2)
+    {
+      if (Oparams.parnum < OprogStatus.susnmax/2)
+	{
+	  /* insert nematic particles in half box z > 0 */
 #ifdef MD_LXYZ
-  rx[np] = L[0]*(ranf()-0.5);
-  ry[np] = L[1]*(ranf()-0.5);
-  rz[np] = L[2]*(ranf()-0.5);
+    	  rx[np] = L[0]*(ranf()-0.5);
+	  ry[np] = L[1]*(ranf()-0.5);
+	  rz[np] = L[2]*(ranf()*0.5);
 #else
-  rx[np] = L*(ranf()-0.5);
-  ry[np] = L*(ranf()-0.5);
-  rz[np] = L*(ranf()-0.5);
+	  rx[np] = L*(ranf()-0.5);
+	  ry[np] = L*(ranf()-0.5);
+	  rz[np] = L*(ranf()*0.5);
 #endif
+	}
+      else
+	{
+	  /* insert isotropic particles in half box z < 0 */
+#ifdef MD_LXYZ
+	  rx[np] = L[0]*(ranf()-0.5);
+	  ry[np] = L[1]*(ranf()-0.5);
+	  rz[np] = -L[2]*(ranf()*0.5);
+#else
+	  rx[np] = L*(ranf()-0.5);
+	  ry[np] = L*(ranf()-0.5);
+	  rz[np] = -L*(ranf()*0.5);
+#endif
+
+	}
+
+    }
+  else 
+    {
+#ifdef MD_LXYZ
+      rx[np] = L[0]*(ranf()-0.5);
+      ry[np] = L[1]*(ranf()-0.5);
+      rz[np] = L[2]*(ranf()-0.5);
+#else
+      rx[np] = L*(ranf()-0.5);
+      ry[np] = L*(ranf()-0.5);
+      rz[np] = L*(ranf()-0.5);
+#endif
+    }
   if (OprogStatus.restrmove==0)
     {
       orient(&ox,&oy,&oz);
@@ -1561,8 +1764,21 @@ int insert_particle_GC(void)
     }
   else
     {
-      Rl[0][0]=Rl[1][1]=Rl[2][2]=1.0;
-      Rl[0][1]=Rl[0][2]=Rl[1][0]=Rl[1][2]=Rl[2][0]=Rl[2][1]=0.0;
+      orient(&ox,&oy,&oz);
+      versor_to_R(ox, oy, oz, Rl);
+      if (OprogStatus.restrmove == 2)
+	{
+	  if (Oparams.parnum < OprogStatus.susnmax/2)
+	    {
+	      Rl[0][0]=Rl[1][1]=Rl[2][2]=1.0;
+	      Rl[0][1]=Rl[0][2]=Rl[1][0]=Rl[1][2]=Rl[2][0]=Rl[2][1]=0.0;
+	    }
+	}
+      else
+	{
+	  Rl[0][0]=Rl[1][1]=Rl[2][2]=1.0;
+	  Rl[0][1]=Rl[0][2]=Rl[1][0]=Rl[1][2]=Rl[2][0]=Rl[2][1]=0.0;
+	}
     }
   /* per ora assumiamo un solo tipo di particelle nel GC */
   numbonds[np] = 0;
@@ -1695,6 +1911,7 @@ void mcexc(int *ierr)
 	}
       o = Oparams.parnum*ranf();
       eno=calcpotene_GC(o);
+      /* zetaMC= exp(mu/kBT)/lambda^3 (vedi Frenkel pag. 132) */
       arg = Oparams.parnum*exp((1.0/Oparams.T)*eno)/(OprogStatus.zetaMC*vol);
       //printf("arg=%.15G zetaMC=%.15G \n", arg, OprogStatus.zetaMC);
       if (ranf() < arg)
@@ -1720,6 +1937,9 @@ void mcexc(int *ierr)
     {
       /* nella seguente routine deve aggiungere la particella nelle LL e nelle NNL se usate */
       //printf("Inserting #%d\n", Oparams.parnum);
+      if (OprogStatus.susnmin==-1 && OprogStatus.susnmax > 0 && Oparams.parnum >= OprogStatus.susnmax)
+	return;
+
       np=insert_particle_GC();
       //printf("FINE-2 MCEXC\n"); 
       if (overlapMC(np, ierr))

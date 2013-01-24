@@ -115,7 +115,7 @@ typedef struct {
   double ppsax[3]; /* semi-lati di un parallelepipedo che circoscrive l'ellissoide con tutti i suoi sticky spots */
   double ppr[3];
   double n[3];	
-#if 0
+#if 1
   double R[3][3]; /* orientazione relativa al sistema di riferimento del corpo rigido */
 #endif
 } hardobjsStruct;
@@ -883,6 +883,9 @@ struct progStatus
   int susnmin;
 #endif
 #endif
+#ifdef MC_FLIP_MOVE
+  double flip_prob;
+#endif
   int nvbbias;
   double pbias;
   double lastNNLrebuildMC;
@@ -1143,11 +1146,11 @@ struct pascii opro_ascii[] =
   {"polydisp",     &OS(polydisp),                  1,          1, "%.15G"}, 
 #endif
   {"polycutoff",   &OS(polycutoff),                1,          1, "%.8G"},
-  {"targetPhi",    &OS(targetPhi),                 1,          1, "%.12G"},
+#endif
 #ifdef MC_SIMUL
   {"targetPhiMC",  &OS(targetPhiMC),               1,          1, "%.12G"},
 #endif
-#endif
+  {"targetPhi",    &OS(targetPhi),                 1,          1, "%.12G"},
   {"savedXva",     &OS(savedXva),                   1,   1,   "%d"},
   {"CMreset",      &OS(CMreset),                    1,   1,  "%d"},
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
@@ -1313,6 +1316,9 @@ struct pascii opro_ascii[] =
   {"susnmax",     &OS(susnmax),                    1, 1, "%d"},
 #endif
 #endif
+#ifdef MC_FLIP_MOVE
+  {"flip_prob",    &OS(flip_prob),                1, 1,   "%.12G"},
+#endif
   {"nvbbias",   &OS(nvbbias),                           1, 1,  "%d"},
   {"vbond",     &OS(vbond),                            1,  1, "%.15G"},
   {"pbias",     &OS(pbias),                            1,  1, "%.15G"},
@@ -1473,6 +1479,9 @@ struct singlePar OsinglePar[] = {
   {"susnmin", &OprogStatus.susnmin, INT},
   {"susnmax", &OprogStatus.susnmax, INT},
 #endif
+#endif
+#ifdef MC_FLIP_MOVE
+  {"flip_prob",  &OprogStatus.flip_prob,     CT},
 #endif
   {"nvbbias",  &OprogStatus.nvbbias,          INT},
   {"pbias",    &OprogStatus.pbias,            CT},
