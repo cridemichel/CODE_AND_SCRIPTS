@@ -1410,7 +1410,7 @@ double eval_bhin_correction(void)
   double ener, enermax, p, k0, k1, mac;
   enermax = MD_STSPOTS_A*Oparams.parnumA;
   ener = calcpotene();
-  p = ener/enermax;
+  p = -ener/enermax;
   k0 = OprogStatus.k0;
   k1 = OprogStatus.k1;/* k1 is not used for now */
   mac = OprogStatus.mac;
@@ -1427,7 +1427,8 @@ double eval_bhin(void)
   double ener, enermax, p, k0, k1, mac;
   enermax = MD_STSPOTS_A*Oparams.parnumA;
   ener = calcpotene();
-  p = ener/enermax;
+  /* FIX 20/12/2012: p has to be positive! */
+  p = -ener/enermax;
   k0 = OprogStatus.k0;
   k1 = OprogStatus.k1;
   mac = OprogStatus.mac;
@@ -2713,8 +2714,13 @@ void add_bond(int na, int n, int a, int b)
       //printf("il bond (%d,%d),(%d,%d) esiste gia'!\n", na, a, n, b);
       return;
     }
-  //printf("ADDING BOND (%d,%d)-(%d,%d) bonds=%lld\n", na, a, n, b, n*(((long long int)NA)*NA)+a*((long long int)NA)+b);
-
+#if 0
+  printf("ADDING BOND (%d,%d)-(%d,%d) bonds=%lld\n", na, a, n, b, n*(((long long int)NA)*NA)+a*((long long int)NA)+b);
+  printf("pos=%.15G %.15G %.15G R=%f %f %f %f %f %f %f %f %f\n", rx[na], ry[na], rz[na], R[na][0][0],
+	 R[na][0][1], R[na][0][2], R[na][1][0],
+	 R[na][1][1], R[na][1][2], R[na][2][0],
+	 R[na][2][1], R[na][2][2]);
+#endif
 #ifdef MD_LL_BONDS
   bonds[na][numbonds[na]] = n*(((long long int)NA)*NA)+a*((long long int)NA)+b;
 #else

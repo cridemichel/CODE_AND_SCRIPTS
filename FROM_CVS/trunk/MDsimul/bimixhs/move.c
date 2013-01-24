@@ -464,7 +464,7 @@ void bump (int i, int j, double* W, int bt)
 	    }
 	  else
 	    {
-	      factor = -b + sqrt(Sqr(b) - 2.0*bheight/mredl);
+	      factor = -b + sqrt(Sqr(b) - 2.0*sigDeltaSq*bheight/mredl);
 	      remove_bond(i, j);
 	      remove_bond(j, i);
 	    }
@@ -1796,9 +1796,9 @@ void save_fra(void)
   for (i = Oparams.parnumA; i < Oparams.parnum; i++)
     {
       //printf("i=%d\n",i);
-      rcm[0] = rx[i]+L*OprogStatus.DR[i][0];
-      rcm[1] = ry[i]+L*OprogStatus.DR[i][1];
-      rcm[2] = rz[i]+L*OprogStatus.DR[i][2];
+      rcm[0] = rx[i];//+L*OprogStatus.DR[i][0];
+      rcm[1] = ry[i];//+L*OprogStatus.DR[i][1];
+      rcm[2] = rz[i];//+L*OprogStatus.DR[i][2];
 #if 0
       BuildAtomPos(i, rcm, R[i], rat);
       ret = fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
@@ -1812,9 +1812,9 @@ void save_fra(void)
     }
   for (i = 0; i < Oparams.parnumA; i++)
     {
-      rcm[0] = rx[i]+L*OprogStatus.DR[i][0];
-      rcm[1] = ry[i]+L*OprogStatus.DR[i][1];
-      rcm[2] = rz[i]+L*OprogStatus.DR[i][2];
+      rcm[0] = rx[i];//+L*OprogStatus.DR[i][0];
+      rcm[1] = ry[i];//+L*OprogStatus.DR[i][1];
+      rcm[2] = rz[i];//+L*OprogStatus.DR[i][2];
 #if 0
       BuildAtomPos(i, rcm, R[i], rat);
       ret = fprintf(f, "%.15G %.15G %.15G\n", rat[1][0], rat[1][1], rat[1][2]);
@@ -1826,6 +1826,12 @@ void save_fra(void)
       ret = fprintf(f, "%.15G %.15G %.15G\n", rcm[0], rcm[1], rcm[2]);
       rerr |= (ret < 0)?1:0;  
     }
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      ret = fprintf(f, "%.15G %.15G %.15G\n", vx[i], vy[i], vz[i]);
+      rerr |= (ret < 0)?1:0;  
+    }
+
 #ifdef MD_SAVEFRA_COMPRESSED
 #ifdef MD_MAC
   sprintf(fileop3, "/usr/bin/gzip -f %s", fileop);
