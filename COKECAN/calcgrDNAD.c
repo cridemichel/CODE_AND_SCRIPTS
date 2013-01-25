@@ -301,9 +301,9 @@ int main(int argc, char** argv)
   FILE *f, *f2, *f1;
   int binx, biny, binz;
   int k, nf, i, a, b, nat, NN, j, ii, bin, binParaAv, binPerpAv;
-  double normPerpAv=0.0, normParaAv=0.0, rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
+  double rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
   double r, delr, tref=0.0, Dx[3], DxNem[3], *g0, **g0Perp, **g0Parall, *g0ParaAv, *g0PerpAv,
-	 g0m, distSq, rlower, rupper, cost, nIdeal;
+	 g0m, distSq, rlower, rupper, cost, nIdeal, costParaAv, costPerpAv;
   double sp, time, refTime, RCUT;
   int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
   double shift[3];
@@ -509,6 +509,8 @@ int main(int argc, char** argv)
     {
       g0ParaAv = malloc(sizeof(double)*points*4);
       g0PerpAv = malloc(sizeof(double)*points*4);
+      //normPerpAv = malloc(sizeof(double)*points*4);
+      //normParaAv = malloc(sizeof(double)*points*4);
     }
   for (k1=0; k1 < 4*points; k1++)
     {
@@ -517,6 +519,8 @@ int main(int argc, char** argv)
 	{
 	  g0ParaAv[k1] = 0;
 	  g0PerpAv[k1] = 0;
+	  //normPerpAv[k1] = normParaAv[k1] = 0.0;
+ 
 	}
       if (!nonem)
 	{
@@ -584,7 +588,6 @@ int main(int argc, char** argv)
       NPA = -1;
       readconf(fname, &time, &refTime, &NP, &NPA, x, w, DR);
       //printf("NP=%d NPA=%d\n", NP, NPA);
-      normPerpAv = normParaAv = 0.0;
       for (i=0; i < NP-1; i++)
 	for (j = i+1; j < NP; j++)
 	  {
@@ -640,15 +643,14 @@ int main(int argc, char** argv)
 		if (binx < 2*points && biny < 2*points && binz < 2*points && 
 		    binx >= -2*points && biny >= -2*points  && binz >= -2*points)
 		  {
+		    if (isoav && (binx==0 || binx==-1) && (biny==0 || biny==-1))
+		      {
+			binParaAv = (int) (fabs(DxNem[2])/delr);
+    			g0ParaAv[binParaAv]+=2.0;
+		      } 
 		    if (binx==0 || binx==-1)
 		      {
 		    	g0Parall[biny+2*points][binz+2*points] += 2.0;
-			if (isoav && (biny==0 || biny==-1))
-			  {
-			    binParaAv = (int) sqrt(Sqr(Dx[1])+Sqr(Dx[2]));
-			    g0ParaAv[binParaAv]+=2.0;
-			    normParaAv += 1.0;
- 			  }
 		      }
 		    if (binz==0 || binz==-1)
 		      {
@@ -657,9 +659,8 @@ int main(int argc, char** argv)
 			//  printf("binx=%d biny=%d\n", binx, biny);
 			if (isoav)
 			  {
-			    binPerpAv = (int) sqrt(Sqr(Dx[0])+Sqr(Dx[0]));
+			    binPerpAv = (int) (sqrt(Sqr(DxNem[0])+Sqr(DxNem[1]))/delr);
 			    g0PerpAv[binPerpAv]+=2.0;
-			    normPerpAv = 0.0;
  			  }
 		      }
 		    //printf("g0[%d]=%.15G\n", bin, g0[bin]);
@@ -680,6 +681,34 @@ int main(int argc, char** argv)
       f2 = fopen("grPerpAv.dat", "w+");
     }
   r = delr*0.5;
+  if (cubic_box)
+    {
+      costPerpAv = (L*L*L)/((double)NP)/((double)NP);// /(delr*delr*delr);
+      costParaAv = (L*L*L)/((double)NP)/((double)NP)/(delr*delr*delr);
+    }
+  else
+    {
+      costPerpAv = (Lx*Ly*Lz)/((double)NP)/((double)NP);// /(delr*delr*delr);
+      costParaAv = (Lx*Ly*Lz)/((double)NP)/((double)NP)/(delr*delr*delr);
+    }	
+  
+  costParaAv /= 8.0; /* 4 poichè ho considerato un "tubo" 2x2 ossia binx=-1,0 e biny=-1,0 inoltre
+			sopra e sotto sono equivalenti (vedi il fabs() nel loop sopra) quindi un altro due */
+  costPerpAv /= 2.0;
+  printf("Lx=%f NP=%d delr=%f\n", Lx, NP, delr);
+  if (isoav)
+    {
+      for (k1 = 0; k1 < 2*points; k1++)
+	{
+	  rlower = ( (double) k1) * delr;
+	  rupper = rlower + delr;
+	  nIdeal =  pi * delr * (Sqr(rupper) - Sqr(rlower));
+	  g0PerpAv[k1] *= costPerpAv / nIdeal / ((double)nf);
+	  g0ParaAv[k1] *= costParaAv / ((double) nf);
+	  //printf("normPerpAv[%d]=%f\n", k1, normPerpAv[k1]);
+	}   
+    }
+
   if (cubic_box)
     {
       cost = 4.0 * pi * NP / 3.0 / (L*L*L);
@@ -737,14 +766,6 @@ int main(int argc, char** argv)
   cost /= 2; /* N.B. divido per due poiché sto considerando in realtà due piani: uno appena
 		sopra e uno appena sotto (z=0 o x=0) */
 
-  if (isoav)
-    {
-      for (k1 = 0; k1 < 2*points; k1++)
-	{
-	  g0PerpAv[k1] *= cost/((double)nf);
-	  g0ParaAv[k1] *= cost/((double)nf);
-	}   
-    }
   for (k1 = 0; k1 < 4*points; k1++)
     {
       for (k2 = 0; k2 < 4*points; k2++)

@@ -8,8 +8,8 @@
 # echo "predictor" > $KSFN
 echo "$BASHPID" > kofke_run_PID
 DEBUG="1"
-WTIME="5" #waiting time between two successive checks in seconds
-EQSTEPS="100000"
+WTIME="10" #waiting time between two successive checks in seconds
+EQSTEPS="1000000"
 FACT="0.666666" # prende un fattore pari a $FACT di tutta la simulazione per fare le medie
 alias awk='LANG=C awk'
 EXES="../sim1statepnt_HC_MCNPTK.sh"
@@ -97,7 +97,7 @@ echo "NEWP=" $NEWP "F0=" $F0
 else
 #CORRECTOR HERE
 #echo "CORRECTOR OK"
-#PPREV="`tail -3 $KFN | head -1`"
+PPREV="`tail -3 $KFN | head -1`"
 BETAp1=`cat $KFNPRED | awk '{print $1}'`
 Pp1=`cat $KFNPRED | awk '{print $2}'`
 Vp1I=`cat $KFNPRED | awk '{print $3}'`
@@ -130,6 +130,9 @@ ps ax > psout.txt
 RUNI=`cat psout.txt | grep $EXEI`
 RUNN=`cat psout.txt | grep $EXEN`
 rm psout.txt
+#se ci sono più run kofke questo crea problemi
+RUNI=""
+RUNN=""
 PCUR=`cat $PFN`
 echo "PCUR=" $PCUR
 #echo "RUNI=" $RUNI " RUNN=" $RUNN
@@ -143,7 +146,8 @@ if [ "$RUNI" = "" ]
 then
 if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
 then
-$EXEI -c >> screen
+#echo "pwd=" `pwd` " EXE=" $EXEI
+./$EXEI -c >> screen &
 else
 if [ \( "$NLKF" = "1" \) -a \( "$KSTAT" = "predictor" \) ]
 then
@@ -167,7 +171,8 @@ if [ "$RUNM" = "" ]
 then
 if [ \( -e "COORD_TMP0" \) -o \( -e "COORD_TMP1" \) ]
 then
-$EXEM -c >> screen
+FN=`ls -rt COORD_TMP_ASCII* | tail -1`
+./$EXEN -ca $FN >> screen &
 else
 if [ \( "$NLKF" = "1" \) -a \( "$KSTAT" = "predictor" \) ]
 then
