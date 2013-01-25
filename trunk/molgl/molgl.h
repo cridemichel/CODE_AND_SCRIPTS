@@ -1,7 +1,7 @@
 #define MAXN 25000 /* maximum number of molecules to plot */
 #define NUMBW 256
 #define MAXAT 16 /* maximum number of aroms per molecule allowed (equal to the number of greys) */
-
+#define MGL_USELIST
 #define PI 2.0*acos(0.0)
 #define TWOPI (4.0*acos(0.0))
 #define PID2 acos(0.0)
@@ -175,6 +175,9 @@ struct global_settings
 {
   int saved_counter;
   /*int saveimage=0, savedimg=0;*/
+#ifdef MGL_USELIST
+  int mgl_uselist;
+#endif
   int saveandquit;
   char *savefile;
   int drawcube;

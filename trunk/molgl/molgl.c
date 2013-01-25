@@ -15,7 +15,6 @@
 #include <zlib.h>
 #define SQ_CALC_NORM
 #define SQ_REND_SYM
-
 /* NOTA 27/04/2010: DELSQ*TWOPI/n1 e DELSQ*TWOPI/n2 sono i passi in radianti per stimare numericamente 
    il gradiente delle superquadriche */
 #define DELSQ 1E-5
@@ -967,6 +966,7 @@ void displayAtom(int nf, int nm, int na)
       normn = sqrt(Sqr(atom->disk.nx)+Sqr(atom->disk.ny)+Sqr(atom->disk.nz));
       rotangle = 180.0*acos(atom->disk.nz/normn)/Pi; 	
       glRotatef(rotangle, rax, ray, raz);
+      glTranslatef(0, 0, -atom->disk.height*0.5);
       /*
 	 if (atom->common.transp < 1.0)
 	 glDepthMask (GL_FALSE);*/
@@ -1446,9 +1446,7 @@ void display (void)
 {
   static int count=0;
   int nf;
-#ifndef MGL_USELIST
   int i, j;
-#endif
   /*
    * double fadeFact;
    */
@@ -1503,7 +1501,19 @@ void display (void)
 	}
 #endif
 #ifdef MGL_USELIST
-      glCallList(atomsList[nf]);
+      if (globset.mgl_uselist)
+	{
+	  glCallList(atomsList[nf]);
+	}
+      else
+	{
+	  for(i = 0; i < globset.NumMols[nf]; ++i)
+	    {
+	      for (j=0; j < mols[nf][i].numat; j++)
+		displayAtom(nf, i, j);
+	      displayBonds(nf, i);
+	    }
+	}
 #else
       for(i = 0; i < globset.NumMols[nf]; ++i)
 	{
@@ -1587,7 +1597,7 @@ void myReshape(int w, int h)
 void print_usage(void)
 {
   printf ("USAGE:\n");
-  printf("molgl [-h/--help | --saveandquit/-sq | --pngfile/-f <filename> \n");
+  printf("molgl [-h/--help | --uselist/-ul | --saveandquit/-sq | --pngfile/-f <filename> \n");
   printf("| --viewpoint/-vp (x,y,z) | --diameter/-d <atoms_diameter> | --noinfos/-ni\n");
   printf("| --nobox|-nb | --semiax/-sa (a,b,c) | --stacks/-st <stacks>\n");
   printf("| --slides/-sl <slides> | --degreesx/-dgx <rotation_angle>\n");
@@ -1621,6 +1631,12 @@ void args(int argc, char* argv[])
 	      print_usage();
 	      exit(-1);
 	    }  
+#ifdef MGL_USELIST
+	  else if (!strcmp(argv[i],"--uselist") || !strcmp(argv[i],"-ul"))
+	    {
+	      globset.mgl_uselist = 1;
+	    }
+#endif
 	  else if (!strcmp(argv[i],"--saveandquit") || !strcmp(argv[i],"-sq"))
 	    {
 	      globset.saveandquit = 1;
@@ -2872,6 +2888,9 @@ void default_pars(void)
   globset.L = 14.0;
   globset.saved_counter = 0;
   globset.saveandquit = 0;
+#ifdef MGL_USELIST 
+  globset.mgl_uselist = 0;
+#endif
   globset.savefile = NULL;
   globset.drawcube = 1;
   globset.sig = NULL;
@@ -3054,7 +3073,8 @@ int main(int argc, char** argv)
   myinit();
   loadAtomPos();
 #ifdef MGL_USELIST
-  buildAtomsList();
+  if (globset.mgl_uselist)
+    buildAtomsList();
 #endif
   glutDisplayFunc(display);
   glutReshapeFunc(myReshape);
