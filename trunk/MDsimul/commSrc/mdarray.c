@@ -788,8 +788,11 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[])
   int *bi;
   char *bc;
   char *bs;
-  
-  for  (i=0; strutt[i].ptr != NULL; ++i) /* parname=NULL menas END */
+#ifdef MD_DYNAMIC_OPROG
+  for  (i=0; strutt[i].qty!=0 && strlen(strutt[i].type)!=0; ++i) 
+#else 
+  for  (i=0; strutt[i].ptr != NULL; ++i) /* parname=NULL means END */
+#endif
     {
 #ifdef EDHE_FLEX
       if (OprogStatus.stripStore && strutt == opro_ascii)
