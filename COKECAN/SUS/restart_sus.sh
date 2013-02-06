@@ -28,6 +28,7 @@ NMIN=$[$[N]-$[DELN]]
 NMAX=$N
 DN="N_${NMIN}_${NMAX}"
 cd $DN
+# FIND THE LATEST COORD_TMP_ASCII FILE (and check that it is not corrupted)
 CFO=`ls -rt COORD_TMP_ASCII*| head -1`
 CFN=`ls -rt COORD_TMP_ASCII*| tail -1`
 PNO=`cat $CFO| awk -F : '{if ($1=="parnum") {print $2; exit;}}'`
@@ -56,20 +57,17 @@ cd ..
 N=$[${N}-${DELN}]
 continue
 fi
-cd ..
-N=$[${N}-${DELN}]
-continue
-####rm -f Cnf*
-####rm -f COORD_TMP[0,1]
-####EN="HC_$DN"
+rm -f Cnf*
+rm -f COORD_TMP[0,1]
+EN="HC_$DN"
 #ln -sf ../$EHC $EN
 #NPAV=$NMIN
 #NEXC=`echo 5.0*$NPAV/100.0|bc -l| awk '{printf("%d",$1)}'`
 #echo "NPAV=" $NPAV " NEXC=" $NEXC
-####$SP $PF zetaMC $ACT flip_prob -0.1 bakSteps $BAKSTEPS
+$SP $PF zetaMC $ACT flip_prob -0.1 bakSteps $BAKSTEPS
 #ADD FLIP MOVE
 #echo "flip_prob: 0.1" >> $PF
-####$MR ./$EN -fa $PF > screen &
+$MR ./$EN -fa $PF > screen &
 sleep $WT
 cd ..
 N=$[${N}-${DELN}]
