@@ -52,7 +52,7 @@ do
 LAST=`tail -1 $KFN`
 PREV=`tail -2 $KFN | head -1`
 PPREV=`tail -3 $KFN | head -1`
-PPPREV=`tail -4 $KFN : head -1`
+PPPREV=`tail -4 $KFN | head -1`
 NLKF=`wc -l $KFN | awk '{print $1}'`
 P0=`echo $LAST | awk '{print $2}'`
 V0I=`echo $LAST | awk '{print $3}'`
@@ -95,6 +95,7 @@ echo $NEWP > $PFN
 NEWBETA=`echo "(${BETA0})+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
 elif [ $[NLKF] -lt 4 ]
+then
 #use midpoint formula 
 NEWP=`echo "${Pm1}*e((${DELB})*(${F0})*2.0)" | bc -l`
 echo $NEWP > $PFN
@@ -102,7 +103,7 @@ NEWBETA=`echo "${BETA0}+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
 else
 #use Adams formula
-NEWP=`echo "${Pm1}*e(${DELB}*(55.0*${Fm0}) /24.0   )" | bc -l`
+NEWP=`echo "${P0}*e(${DELB}*(55.0*${Fm0}-59.0*${Fm1}+37.0*${Fm2}-9.0*${Fm3})/24.0)" | bc -l`
 echo $NEWP > $PFN
 NEWBETA=`echo "${BETA0}+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
@@ -128,11 +129,16 @@ echo "NEWP=" $NEWP "P0=" $P0 "Fp1=" $Fp1 " F0=" $F0
 NEWP=`echo "$P0*e(($DELB)*(($Fp1)+($F0))*0.5)" | bc -l`
 echo $NEWP > $PFN
 #NOTE: beta is the same as in predictor stage 
-else
+elif [ $[NLKF] -lt 4 ] 
+then
 #use midpoint formula 
 NEWP=`echo "${Pm1}*e((${DELB})*((${Fp1})+4.0*(${F0})+(${Fm1}))/3.0)" | bc -l`
 echo $NEWP > $PFN
 #NOTE: beta is the same as in predictor stage 
+else
+#use Adams formula
+NEWP=`echo "${P0}*e((${DELB})*(9.0*${Fp1}+19.0*${F0}-5.0*${Fm1}+${Fm2})/24.0)" | bc -l`
+echo $NEWP > $PFN
 fi
 fi
 BETACUR=`cat $BFN`
