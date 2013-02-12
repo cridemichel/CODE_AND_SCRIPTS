@@ -52,6 +52,7 @@ do
 LAST=`tail -1 $KFN`
 PREV=`tail -2 $KFN | head -1`
 PPREV=`tail -3 $KFN | head -1`
+PPPREV=`tail -4 $KFN : head -1`
 NLKF=`wc -l $KFN | awk '{print $1}'`
 P0=`echo $LAST | awk '{print $2}'`
 V0I=`echo $LAST | awk '{print $3}'`
@@ -76,6 +77,13 @@ Vm2N=`echo $PPREV | awk '{print $5}'`
 Um2N=`echo $PPREV | awk '{print $6}'`
 BETAm2=`echo $PPREV | awk '{print $1}'`
 Fm2=`echo "-((${Um2N})-(${Um2I}) + ${Pm2}*(${Vm2N}-${Vm2I}))/(${BETAm2}*${Pm2}*(${Vm2N}-${Vm2I}))"|bc -l`
+Pm3=`echo $PPPREV | awk '{print $2}'`
+Vm3I=`echo $PPPREV | awk '{print $3}'`
+Um3I=`echo $PPPREV | awk '{print $4}'`
+Vm3N=`echo $PPPREV | awk '{print $5}'`
+Um3N=`echo $PPPREV | awk '{print $6}'`
+BETAm3=`echo $PPPREV | awk '{print $1}'`
+Fm3=`echo "-((${Um3N})-(${Um3I}) + ${Pm3}*(${Vm3N}-${Vm3I}))/(${BETAm3}*${Pm3}*(${Vm3N}-${Vm3I}))"|bc -l`
 KSTAT=`cat $KSFN`
 if [ "$KSTAT" = "predictor" ]
 then
@@ -86,9 +94,15 @@ NEWP=`echo "${P0}*e((${DELB})*(${F0}))" | bc -l`
 echo $NEWP > $PFN
 NEWBETA=`echo "(${BETA0})+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
-else
+elif [ $[NLKF] -lt 4 ]
 #use midpoint formula 
 NEWP=`echo "${Pm1}*e((${DELB})*(${F0})*2.0)" | bc -l`
+echo $NEWP > $PFN
+NEWBETA=`echo "${BETA0}+(${DELB})"| bc -l`
+echo "$NEWBETA" > $BFN
+else
+#use Adams formula
+NEWP=`echo "${Pm1}*e(${DELB}*(55.0*${Fm0}) /24.0   )" | bc -l`
 echo $NEWP > $PFN
 NEWBETA=`echo "${BETA0}+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
