@@ -8,8 +8,8 @@
 # echo "predictor" > $KSFN
 echo "$BASHPID" > kofke_run_PID
 DEBUG="1"
-WTIME="10" #waiting time between two successive checks in seconds
-EQSTEPS="1000000"
+WTIME="2" #waiting time between two successive checks in seconds
+EQSTEPS="100"
 FACT="0.666666" # prende un fattore pari a $FACT di tutta la simulazione per fare le medie
 alias awk='LANG=C awk'
 EXES="../sim1statepnt_HC_MCNPTK.sh"
@@ -90,6 +90,7 @@ then
 if [ "$NLKF" = "1" ]
 then
 #use trapezoid formula at begin
+[ $DEBUG = "1" ] && echo "PREDICTOR Using trapezoid formula BETA0=" ${BETA0} " P0= " ${P0} " V0I= " ${V0I} " V0N=" ${V0N} 
 NEWP=`echo "${P0}*e((${DELB})*(${F0}))" | bc -l`
 echo $NEWP > $PFN
 NEWBETA=`echo "(${BETA0})+(${DELB})"| bc -l`
@@ -97,13 +98,15 @@ echo "$NEWBETA" > $BFN
 elif [ $[NLKF] -lt 4 ]
 then
 #use midpoint formula 
+[ $DEBUG = "1" ] && echo "PREDICTOR Using midpoint formula BETAm1=" ${BETAm1} " Pm1= " ${Pm3} " Vm1I= " ${Vm1I} " Vm1N=" ${Vm1N} 
 NEWP=`echo "${Pm1}*e((${DELB})*(${F0})*2.0)" | bc -l`
 echo $NEWP > $PFN
 NEWBETA=`echo "${BETA0}+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
 else
 #use Adams formula
-NEWP=`echo "${P0}*e(${DELB}*(55.0*${Fm0}-59.0*${Fm1}+37.0*${Fm2}-9.0*${Fm3})/24.0)" | bc -l`
+[ $DEBUG = "1" ] && echo "PREDICTOR Using Adams formula BETAm3=" ${BETAm3} " Pm3= " ${Pm3} " Vm3I= " ${Vm3I} " Vm3N=" ${Vm3N} 
+NEWP=`echo "${P0}*e(${DELB}*(55.0*${F0}-59.0*${Fm1}+37.0*${Fm2}-9.0*${Fm3})/24.0)" | bc -l`
 echo $NEWP > $PFN
 NEWBETA=`echo "${BETA0}+(${DELB})"| bc -l`
 echo "$NEWBETA" > $BFN
@@ -126,17 +129,21 @@ then
 echo "NEWP=" $NEWP "P0=" $P0 "Fp1=" $Fp1 " F0=" $F0 
 #echo "ECCOCI"
 #use trapezoid formula at begin
+[ $DEBUG = "1" ] && echo "CORRECTOR Using trapezoid formula BETA0=" ${BETA0} " P0= " ${P0} " V0= " ${V0I} " V0N=" ${V0N} 
 NEWP=`echo "$P0*e(($DELB)*(($Fp1)+($F0))*0.5)" | bc -l`
 echo $NEWP > $PFN
 #NOTE: beta is the same as in predictor stage 
 elif [ $[NLKF] -lt 4 ] 
 then
 #use midpoint formula 
+[ $DEBUG = "1" ] && echo "CORRECTOR Using midpoint formula BETAm1=" ${BETAm1} " Pm1= " ${Pm1} " Vm1I= " ${Vm1I} " Vm3N=" ${Vm1N} 
 NEWP=`echo "${Pm1}*e((${DELB})*((${Fp1})+4.0*(${F0})+(${Fm1}))/3.0)" | bc -l`
 echo $NEWP > $PFN
 #NOTE: beta is the same as in predictor stage 
 else
 #use Adams formula
+[ $DEBUG = "1" ] && echo "CORRECTOR Using Adams Formula BETAm3=" ${BETAm2} " Pm3= " ${Pm2} " Vm2I= " ${Vm2I} " Vm3N=" ${Vm2N} 
+[ $DEBUG = "1" ] && echo "CORRECTOR Using Adams Formula BETAp1=" ${BETAp1} " Pp1= " ${Pp1} " Vp1I= " ${Vp1I} " Vp1N=" ${Vp1N} 
 NEWP=`echo "${P0}*e((${DELB})*(9.0*${Fp1}+19.0*${F0}-5.0*${Fm1}+${Fm2})/24.0)" | bc -l`
 echo $NEWP > $PFN
 fi
