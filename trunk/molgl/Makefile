@@ -1,4 +1,4 @@
-MGL_LIBS=-L/usr/X11/lib -L/usr/local/lib -L/usr/X11R6/lib -L/usr/lib -lm -lXmu -lXi  -lX11 -L/sw/lib -lGLU -lGL -lglut -lX11 -lXext -L/sw/lib 
+MGL_LIBS=-L/usr/X11/lib -L/usr/local/lib -L/usr/X11R6/lib -L/usr/lib -lm -lXmu -lXi  -lX11 -L/sw/lib -lGLU -lGL -lglut -lX11 -lXext -L/sw/lib  -lpng
 EXTRA_OPTIONS_FOR_MAC=-dylib_file /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib: /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib
 
 MGL_INCLUDE= -I$(MD)/include -I/usr/X11R6/include -I/usr/local/include -UMGL_USELIST -I/sw/include
