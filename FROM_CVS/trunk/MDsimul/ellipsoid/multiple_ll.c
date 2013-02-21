@@ -2476,6 +2476,7 @@ void check_all_bonds_MLL(void)
     }
 }
 #endif
+#ifdef EDHE_FLEX
 int check_bonds_ij(int i, int j, double shift[3])
 {
   int nn, warn, amin, bmin, nbonds;
@@ -2516,6 +2517,7 @@ int check_bonds_ij(int i, int j, double shift[3])
     }
   return warn;
 }
+#endif
 #if defined(EDHE_FLEX) 
 void check_all_bonds_NLL(void)
 {

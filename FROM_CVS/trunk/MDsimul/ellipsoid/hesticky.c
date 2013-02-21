@@ -2996,6 +2996,7 @@ int search_dist(int i, int j, int nn, double *distsSq)
 #endif
 #endif
 /* N.B. per la silica tale routine va cambiata! */
+#ifdef EDHE_FLEX
 double calcDistNegSPsph(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
 {
@@ -3044,6 +3045,7 @@ double calcDistNegSPsph(double t, double t1, int i, int j, double shift[3], int 
     }
   return distmin;
 }
+#endif
 extern int are_spheres(int i, int j);
 
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
@@ -5809,7 +5811,9 @@ int locate_contact_neigh_plane_parall_sp(int i, double *evtime, double t2)
 		      if (!tocheckP[nn][nn2])
 #endif
 			mdPrintf(ALL,"[locate_contact_nnl_sp] can't find contact point!\n",NULL);
+#ifdef EDHE_FLEX
 		      printf("typeOfPart[%d]=%d nn=%d nn2=%d\n", i, typeOfPart[i], nn, nn2);
+#endif
 		      //printf("BSP=%d NSP=%d\n", BSP, NSP);
 		      printf("v=%f %f %f w=%.15G %.15G %.15G\n", vx[i], vy[i], vz[i],
 			     wx[i], wy[i], wz[i]);
