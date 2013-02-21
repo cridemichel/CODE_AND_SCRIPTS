@@ -398,7 +398,7 @@ void check_all_bonds(void)
   /* Attraversamento cella inferiore, notare che h1 > 0 nel nostro caso
    * in cui la forza di gravità è diretta lungo z negativo */ 
 
-#if 1
+#ifdef EDHE_FLEX
   if (OprogStatus.useNNL)
     {
       check_all_bonds_NLL();
@@ -1979,8 +1979,10 @@ void StartRun(void)
 {
   int j, k, n;
   
+#ifdef EDHE_FLEX
 #if !defined(MD_STANDALONE) || defined(MC_SIMUL) 
   find_conciding_spots();
+#endif
 #endif
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
@@ -3026,7 +3028,7 @@ void set_angmom_to_zero(int i)
 #if defined(EDHE_FLEX) || defined(MD_PATCHY_HE)
 extern void find_bonds_one(int i);
 extern void find_bonds_one_NLL(int i);
-
+#ifdef EDHE_FLEX
 void find_bonds_flex_all(void)
 {
   int i;
@@ -3037,12 +3039,16 @@ void find_bonds_flex_all(void)
       find_bonds_one(i);
     } 
 }
+#endif
+#ifdef EDHE_FLEX
 void find_bonds_flex_NNL(void)
 {
   int i;
   for (i=0; i < Oparams.parnum; i++)
     find_bonds_one_NLL(i); 
 }
+#endif
+#ifdef EDHE_FLEX
 void find_bonds_flex(void)
 {
 #ifdef MD_SPHERICAL_WALL
@@ -3070,6 +3076,7 @@ void find_bonds_flex(void)
     }
 #endif
 }
+#endif
 void find_bonds(void)
 {
 #ifndef EDHE_FLEX
@@ -3177,6 +3184,7 @@ int same_position(double x1[3], double x2[3])
       return 0;
   return 1;
 }
+#ifdef EDHE_FLEX
 void find_conciding_spots(void)
 {
   int nt, ns1, ns2;
@@ -3203,6 +3211,7 @@ void find_conciding_spots(void)
     }
 
 }
+#endif
 #endif
 #ifdef EDHE_FLEX
 void boh(void)
@@ -5329,7 +5338,9 @@ void usrInitAft(void)
     {
       printf("[INFO] setting translational and angular velocities\n");
       comvel(Oparams.parnum, Oparams.T, Oparams.m, 0);
+#ifdef EDHE_FLEX
       angvelMB();
+#endif
     }
 
 

@@ -3561,6 +3561,7 @@ void UpdateAtom(int i)
     }
 #endif
   /* se l'oggetto ha simmetria sferica non puo' ruotare intorno al centro di massa*/
+#ifdef EDHE_FLEX
   if (!is_a_sphere_NNL[i])
     {
       symtop_evolve_orient(i, ti, RA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
@@ -3570,6 +3571,7 @@ void UpdateAtom(int i)
       phi0[i] = phi;
       psi0[i] = psi;
     }
+#endif
   //adjust_norm(R[i]);
   atomTime[i] = Oparams.time;
 }
@@ -10625,7 +10627,7 @@ MD_DEBUG34(printf("OLD cellCrossing evIdA=%d k=%d inCells=%d %d %d\n", evIdA, k,
 void velsBrown(double T)
 {
   comvel_brown(T, Oparams.m); 
-#ifdef ED_HEFLEX
+#ifdef EDHE_FLEX
   angvelMB();
 #endif
 }
