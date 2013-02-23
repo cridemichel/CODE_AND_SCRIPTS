@@ -4745,6 +4745,18 @@ void save_sp(void)
   fclose(f);
 }
 #endif
+#ifdef MC_RESTR_MATRIX
+double restrMatrix[3][3];
+#endif
+#ifdef MC_RESTR_MATRIX
+void get_restr_matrix(void)
+{
+  sscanf(OprogStatus.restrMatrix, "%lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
+	 &(restrMatrix[0][0]), &(restrMatrix[0][1]), &(restrMatrix[0][2]), 
+	 &(restrMatrix[1][0]), &(restrMatrix[1][1]), &(restrMatrix[1][2]), 
+	 &(restrMatrix[2][0]), &(restrMatrix[2][1]), &(restrMatrix[2][2]));
+}
+#endif
 void usrInitAft(void)
 {
   long long int maxp;
@@ -6470,6 +6482,9 @@ void usrInitAft(void)
   cellListMC = malloc(sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
 #endif
   build_parallelepipeds();
+#endif
+#ifdef MC_RESTR_MATRIX
+  get_restr_matrix();
 #endif
   /* printf("Vol: %.15f Vol1: %.15f s: %.15f s1: %.15f\n", Vol, Vol1, s, s1);*/
 #if defined(MD_CALC_VBONDING) && !defined(MD_STANDALONE) && !defined(MC_SIMUL) 
