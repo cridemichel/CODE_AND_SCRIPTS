@@ -8,6 +8,7 @@
 
 /* ================== >>> PROGRAM DEFINES(CUSTOMIZE!) <<< ===================*/
 /* flags per varie ottimizzazioni del codice Monte Carlo */
+//#define MC_RESTR_MATRIX
 #undef MC_STORELL
 #define MC_STOREBONDS
 #define MCGC_OPTLLREBUILD
@@ -766,6 +767,9 @@ struct progStatus
   int guessDistOpt;
   int forceguess;
   double targetPhi;
+#ifdef MC_RESTR_MATRIX
+  char restrMatrix[NAME_LENGTH];
+#endif
 #ifdef MC_SIMUL
   double targetPhiMC;
 #endif
@@ -1151,6 +1155,9 @@ struct pascii opro_ascii[] =
   {"targetPhiMC",  &OS(targetPhiMC),               1,          1, "%.12G"},
 #endif
   {"targetPhi",    &OS(targetPhi),                 1,          1, "%.12G"},
+#ifdef MC_RESTR_MATRIX
+  {"restrmat",   &OS(restrMatrix),                 1,          NAME_LENGTH,  "%s"},
+#endif
   {"savedXva",     &OS(savedXva),                   1,   1,   "%d"},
   {"CMreset",      &OS(CMreset),                    1,   1,  "%d"},
   {"nebrTabFac",   &OS(nebrTabFac),                 1,   1,   "%d"},
@@ -1687,6 +1694,9 @@ struct singlePar OsinglePar[] = {
   {"C1",      &Oparams.c[1],      CT},
 #endif
   {"targetPhi", &OprogStatus.targetPhi, CT},
+#ifdef MC_RESTR_MATRIX
+  {"restrmat",  &OprogStatus.restrMatrix, STR},
+#endif
 #ifdef MC_SIMUL
   {"targetPhiMC", &OprogStatus.targetPhiMC, CT},
 #endif

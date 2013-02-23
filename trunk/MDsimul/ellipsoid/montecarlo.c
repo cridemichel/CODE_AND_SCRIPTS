@@ -1705,6 +1705,10 @@ void assign_cell_GC(int np)
 #endif
 }
 #endif
+
+#ifdef MC_RESTR_MATRIX
+extern double restrMatrix[3][3];
+#endif
 int insert_particle_GC(void)
 {
   int np, k1, k2;
@@ -1774,6 +1778,14 @@ int insert_particle_GC(void)
 	      Rl[0][1]=Rl[0][2]=Rl[1][0]=Rl[1][2]=Rl[2][0]=Rl[2][1]=0.0;
 	    }
 	}
+#ifdef MC_RESTR_MATRIX
+      if (OprogStatus.restrmove == 3)
+	{
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      Rl[k1][k2] = restrMatrix[k1][k2];
+	}
+#endif
       else
 	{
 	  Rl[0][0]=Rl[1][1]=Rl[2][2]=1.0;
