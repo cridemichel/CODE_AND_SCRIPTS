@@ -9,6 +9,7 @@
 /* ================== >>> PROGRAM DEFINES(CUSTOMIZE!) <<< ===================*/
 /* flags per varie ottimizzazioni del codice Monte Carlo */
 //#define MC_RESTR_MATRIX
+//#define MD_DGEBA_NMAX
 #undef MC_STORELL
 #define MC_STOREBONDS
 #define MCGC_OPTLLREBUILD
