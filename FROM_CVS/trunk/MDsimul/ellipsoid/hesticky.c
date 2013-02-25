@@ -299,13 +299,41 @@ int getnumbonds(int np, interStruct *ts, int inverted)
 	//continue;
       if (!inverted)
 	{
+#ifdef MD_DGEBA_NMAX
+	  /* N.B. 25/02/13: se Oparmas.nmax==1 allora conta il numero totale di legami per spot a 
+	     prescindere dalla coppia ( ossia (tipo1,atomo1)-(tipo2,atomo2) ) */
+	  if (Oparams.nmax != 0)
+	    {
+	      if  (aa == ts->spot1+1)
+		nb++;
+	    }
+	  else
+	    {
+	      if (aa == ts->spot1+1 && typeOfPart[jj]==ts->type2 && bb == ts->spot2+1)  
+		nb++;
+	    }
+#else
 	  if (aa == ts->spot1+1 && typeOfPart[jj]==ts->type2 && bb == ts->spot2+1)
 	    nb++;
+#endif
 	}
       else
 	{
+#ifdef MD_DGEBA_NMAX
+	  if (Oparams.nmax != 0)
+	    {
+	      if  (aa == ts->spot2+1)
+		nb++;
+	    }
+	  else
+	    {
+	      if (aa == ts->spot2+1 && typeOfPart[jj]==ts->type1 && bb == ts->spot1+1)  
+		nb++;
+	    }
+#else
 	  if (aa == ts->spot2+1 && typeOfPart[jj]==ts->type1 && bb == ts->spot1+1)  
 	    nb++;
+#endif
 	}
     }
   return nb;
@@ -348,7 +376,7 @@ int one_is_bonded(int i, int a, int j, int b, int nmax)
   //return 0;
   int type1, type2;
   interStruct ts;
-
+  //printf("nmax=%d\n",nmax);
 #if defined(MD_ALLOW_ONE_DUMBBELL_BOND)
   /* N.B. limita ad 1 il numero massimo di legami
      per ogni spot del dumbbell */
@@ -460,7 +488,14 @@ void get_inter_bheights(int i, int j, int ata, int atb, double *bheight, double 
 	  *bheight = intersArr[pt].bheight;
 	  *bhin    = intersArr[pt].bhin;
 	  *bhout   = intersArr[pt].bhout;
+#ifdef MD_DGEBA_NMAX
+	  if (Oparams.nmax!=0)
+	    *nmax = Oparams.nmax;
+	  else
+	    *nmax = intersArr[pt].nmax;
+#else
 	  *nmax    = intersArr[pt].nmax;
+#endif
 	  //ijinter  = 0;
 	  return;
 	} 
