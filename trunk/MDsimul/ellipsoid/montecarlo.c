@@ -636,7 +636,11 @@ int random_move(int ip)
   double p;
   //printf("random move ip=%d\n", ip);
   p=ranf();
-  if (OprogStatus.restrmove==1|| OprogStatus.restrmove==2)
+  if (OprogStatus.restrmove==1|| OprogStatus.restrmove==2
+#ifdef MC_RESTR_MATRIX
+      || OprogStatus.restrmove==3
+#endif
+      )
     p=0.0;
   
   if (p <= 0.5)
@@ -1779,11 +1783,14 @@ int insert_particle_GC(void)
 	    }
 	}
 #ifdef MC_RESTR_MATRIX
-      if (OprogStatus.restrmove == 3)
+      else if (OprogStatus.restrmove == 3)
 	{
 	  for (k1=0; k1 < 3; k1++)
 	    for (k2=0; k2 < 3; k2++)
-	      Rl[k1][k2] = restrMatrix[k1][k2];
+	      {
+		Rl[k1][k2] = restrMatrix[k1][k2];
+		//printf("Rl[%d][%d]=%f\n", k1, k2, restrMatrix[k1][k2]);
+	      }
 	}
 #endif
       else

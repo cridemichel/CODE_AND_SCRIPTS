@@ -4751,10 +4751,15 @@ double restrMatrix[3][3];
 #ifdef MC_RESTR_MATRIX
 void get_restr_matrix(void)
 {
-  sscanf(OprogStatus.restrMatrix, "%lf %lf %lf %lf %lf %lf %lf %lf %lf\n", 
+  int k1, k2;
+  sscanf(OprogStatus.restrMatrix, "%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf\n", 
 	 &(restrMatrix[0][0]), &(restrMatrix[0][1]), &(restrMatrix[0][2]), 
 	 &(restrMatrix[1][0]), &(restrMatrix[1][1]), &(restrMatrix[1][2]), 
 	 &(restrMatrix[2][0]), &(restrMatrix[2][1]), &(restrMatrix[2][2]));
+  printf("restrmatrix=%s\n", OprogStatus.restrMatrix);
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      printf("Rl[%d][%d]=%f\n", k1, k2, restrMatrix[k1][k2]);
 }
 #endif
 void usrInitAft(void)
