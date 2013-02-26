@@ -23,6 +23,11 @@ int *numbondsMC;
 int *numbondsMC, **bondsMC;
 #endif
 #endif
+#ifdef MC_CLUSTER_NPT
+extern int *color, *clsdim, *nbcls;  
+extern double *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
+#endif
+
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG10(x) 
 #define MD_DEBUG11(x) 
@@ -211,6 +216,122 @@ extern void newt(double x[], int n, int *check,
 extern void rebuildCalendar(void);
 extern void R2u(void);
 extern void store_bump(int i, int j);
+#endif
+#ifdef MC_CLUSTER_NPT
+void change_all_colors(int NP, int* color, int colorsrc, int colordst)
+{
+  int ii;
+  for (ii = 0; ii < NP; ii++)
+    {
+      if (color[ii] == colorsrc)
+	color[ii] = colordst;
+    }
+}
+
+int findmaxColor(int NP, int *color)
+{
+  int i, maxc=-1;
+  for (i = 0; i < NP; i++) 
+    {
+      if (color[i] > maxc)
+	maxc = color[i];
+    }
+  return maxc;
+}
+
+#if 0
+struct cluster_sort_struct { 
+  int dim;
+  int color;
+};
+struct cluster_sort_struct *cluster_sort;
+int compare_func (const void *aa, const void *bb)
+{
+  int ai, bi;
+  int temp;
+  struct cluster_sort_struct *a, *b;
+  a = (struct cluster_sort_struct*) aa;
+  b = (struct cluster_sort_struct*) bb;
+  ai = a->dim;
+  bi = b->dim;
+  temp = ai - bi;
+  if (temp < 0)
+    return 1;
+  else if (temp > 0)
+    return -1;
+  else
+    return 0;
+}
+#endif
+int is_percolating(int ncls)
+{
+  /* nel caso di catene: cluster di lunghezza l 
+     è percolante se e solo se il numero totale di bond è pari a 2*l */
+  int nc;
+  for (nc=0; nc < ncls; nc++)
+    {
+      if (nbcls[nc] == clsdim[nc]*2)
+	return 1;
+    }
+  return 0;
+}
+void build_clusters(int *Ncls, int *percolating)
+{
+  int NP, i, j, ncls, nc, a, curcolor;
+  long long int jj;
+  NP = Oparams.parnum;
+  curcolor=0;
+  for (i=0; i < NP; i++)
+    {
+      if (color[i] == -1)
+	color[i] = curcolor;
+      //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
+      for (j=0; j < numbonds[i]; j++)
+	{
+	  jj = bonds[i][j] / (NANA);
+	  //printf("i=%d jj=%d\n", i, jj);
+	  if (color[jj] == -1)
+	    color[jj] = color[i];
+	  else
+	    {
+	      if (color[i] < color[jj])
+		change_all_colors(NP, color, color[jj], color[i]);
+	      else if (color[i] > color[jj])
+		change_all_colors(NP, color, color[i], color[jj]);
+	    }
+	}
+      curcolor = findmaxColor(NP, color)+1;
+    }
+  /* considera la particelle singole come cluster da 1 */
+  for (i = 0; i < NP; i++)
+    {
+      if (color[i]==-1)
+	{	    
+	  color[i] = curcolor;
+	  curcolor++;
+	} 
+      //printf("color[%d]=%d\n", i, color[i]);
+    }
+  ncls = curcolor;
+  for (nc = 0; nc < ncls; nc++)
+    {
+      clsdim[nc] = 0; 
+      /* nbcls è il numero di bond nel cluster color[a] */
+      nbcls[nc] = 0;
+    }
+  for (nc = 0; nc < ncls; nc++)
+    {
+      for (a = 0; a < NP; a++)
+	if (color[a] == nc)
+	  {
+	    clsdim[color[a]]++;
+	    //clscol[nc] = color[a];
+	    nbcls[color[a]] += numbonds[a];
+	  }
+    }
+  *percolating = is_percolating(ncls);
+  *Ncls = ncls;
+}
 #endif
 #if (defined(MC_SIMUL) || defined(MD_STANDALONE)) && 1
 double scalProd(double *A, double *B);
@@ -2129,6 +2250,202 @@ void restore_bonds_mc(int ip)
 	  for (k=0; k < numbondsMC[i]; k++)
 	    bonds[i][k] = bondsMC[i][k]; 
 
+	}
+    }
+}
+#endif
+#ifdef MC_CLUSTER_NPT
+void move_box_cluster(int *ierr)
+{
+  int i, ii, k, nc, ncls=0, percolating=0;
+  double nn;
+#if 1
+  double vo, vn, Lfact, enn, eno, arg, delv=0.0, lastrx=0, lastry=0, lastrz=0, Dx, Dy, Dz;
+  //printf("moving box\n");
+#ifdef MD_LXYZ
+  vo = L[0]*L[1]*L[2];
+#else
+  vo = L*L*L;
+#endif
+  eno = calcpotene();
+  vn = vo + (2.0*ranf()-1.0)*OprogStatus.vmax;
+  Lfact = pow(vn/vo,1.0/3.0);
+  if (OprogStatus.useNNL)
+    delv = (Lfact - 1.0); /* FINISH HERE */
+ 
+  // Lfact=1;
+  build_clusters(&ncls, &percolating);
+  /* calcola i centri di massa dei cluster */
+ 
+  for (nc=0; nc < ncls; nc++)
+    {
+      for (k=0; k < 3; k++)
+	clsCoM[k][nc] = 0.0;
+      for (i=0; i < Oparams.parnum; i++)
+       	{
+	  if (color[i]==nc)
+	    {
+	      if (i>0)
+		{
+#ifdef MD_LXYZ
+		  Dx = L[0]*rint((rx[i]-lastrx)/L[0]);
+		  Dy = L[1]*rint((ry[i]-lastry)/L[1]);
+		  Dz = L[2]*rint((rz[i]-lastrz)/L[2]); 
+#else
+		  Dx = L*rint((rx[i]-lastrx)/L);
+		  Dy = L*rint((ry[i]-lastry)/L);
+		  Dz = L*rint((rz[i]-lastrz)/L); 
+
+#endif
+		}
+	      else 
+		{
+		  Dx=Dy=Dz=0.0;
+		}
+	      clsCoM[0][nc] += rx[i]-Dx;
+	      clsCoM[1][nc] += ry[i]-Dy;
+	      clsCoM[2][nc] += rz[i]-Dz; 
+	    }
+	}
+      lastrx = rx[i];
+      lastry = ry[i];
+      lastrz = rz[i];
+    }
+#ifdef MD_LXYZ
+  L[0] *= Lfact;
+  L[1] *= Lfact;
+  L[2] *= Lfact;
+  L2[0] = L[0]*0.5;
+  L2[1] = L[1]*0.5;
+  L2[2] = L[2]*0.5;
+#else
+  L *= Lfact;
+  L2 = L*0.5;
+#endif
+
+  for (nc=0; nc < ncls; nc++)
+    {
+      for (k=0; k < 3; k++)
+	clsCoM[k][nc] /= clsdim[nc];
+      Dxcls[nc]=(Lfact-1.0)*clsCoM[0][nc];
+      Dycls[nc]=(Lfact-1.0)*clsCoM[1][nc];
+      Dzcls[nc]=(Lfact-1.0)*clsCoM[2][nc];
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    {  
+      rx[i] += Dxcls[color[i]];
+      ry[i] += Dycls[color[i]];
+      rz[i] += Dzcls[color[i]]; 
+      pbc(i);
+    }
+  update_numcells();
+#ifdef MC_STORELL
+  store_ll_mc();
+#endif
+  rebuildLinkedList();
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (overlapMC(i, ierr))
+	{
+	  //printf("overlap di %d Lfact=%.15G\n", i, Lfact);
+	  /* move rejected restore old positions */
+#ifdef MD_LXYZ
+	  L[0] /= Lfact;
+	  L[1] /= Lfact;
+	  L[2] /= Lfact;
+	  L2[0] = L[0]*0.5;
+	  L2[1] = L[1]*0.5;
+	  L2[2] = L[2]*0.5;
+#else
+	  L /= Lfact;
+	  L2 = L*0.5;
+#endif
+	  for (ii=0; ii < Oparams.parnum; ii++)
+	    {
+	      rx[i] -= Dxcls[color[i]];
+	      ry[i] -= Dycls[color[i]];
+	      rz[i] -= Dzcls[color[i]]; 
+	      pbc(ii);
+	    }
+	  volrejMC++;
+	  update_numcells();
+#ifdef MC_STORELL
+	  restore_ll_mc();
+#else
+	  rebuildLinkedList();
+#endif
+	  return;
+	}
+    }
+#ifdef MC_STOREBONDS
+  store_bonds_mc(-1);
+#endif
+  /* update all bonds with new positions */
+  for (i=0; i < Oparams.parnum; i++)
+    numbonds[i] = 0;
+  if (OprogStatus.useNNL)
+    find_bonds_flex_NNL();
+  else
+    find_bonds_flex_all();
+  enn = calcpotene();
+
+  if (enn > eno)
+    {
+      printf("CRITICAL: a cluster breaks, exiting...\n");
+      exit(-1);
+    }
+  //printf("enn-eno/T=%f\n", (enn-eno)/Oparams.T);
+  arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-ncls*log(vn/vo)*Oparams.T);
+  /* enn < eno means that a new bonds form, actually we have to reject such move */
+  if (ranf() > exp(arg) || enn < eno)
+    {
+      /* move rejected restore old positions */
+#ifdef MD_LXYZ
+      L[0] /= Lfact;
+      L[1] /= Lfact;
+      L[2] /= Lfact;
+      L2[0] = L[0]*0.5;
+      L2[1] = L[1]*0.5;
+      L2[2] = L[2]*0.5;
+#else
+      L /= Lfact;
+      L2 = L*0.5;
+#endif
+      for (i=0; i < Oparams.parnum; i++)
+	{
+      	  rx[i] -= Dxcls[color[i]];
+	  ry[i] -= Dycls[color[i]];
+	  rz[i] -= Dzcls[color[i]]; 
+	  pbc(i);
+	}
+      volrejMC++;
+      update_numcells();
+#ifdef MC_STORELL
+      restore_ll_mc();
+#else
+      rebuildLinkedList();
+#endif
+      /* restore all bonds*/
+#ifdef MC_STOREBONDS
+      restore_bonds_mc(-1);
+#else
+      for (i=0; i < Oparams.parnum; i++)
+	numbonds[i] = 0;
+      if (OprogStatus.useNNL)
+	find_bonds_flex_NNL();
+      else
+	find_bonds_flex_all();
+#endif
+      return;
+    }
+#endif
+  if (OprogStatus.useNNL)
+    {
+      /* move accepted update displacements */
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  nn = sqrt(Sqr(rx[i])+Sqr(ry[i])+Sqr(rz[i]));
+	  overestimate_of_displ[i] += nn*delv; 
 	}
     }
 }
@@ -5021,7 +5338,12 @@ void move(void)
 	}
       else
 #endif
-      if (OprogStatus.ensembleMC==1 && ran>=Oparams.parnum)
+      if ((OprogStatus.ensembleMC==1 
+#ifdef MC_CLUSTER_NPT
+	   || OprogStatus.ensembleMC==3
+#endif
+	   )
+	  && ran>=Oparams.parnum)
 	{
 	  //err=0;
 	  if (ran > Oparams.parnum)
@@ -5033,7 +5355,14 @@ void move(void)
 	    }
 	  else
 	    {
+#ifdef MC_CLUSTER_NPT
+	      if  (OprogStatus.ensembleMC==3)
+		move_box_cluster(&err);
+	      else
+		move_box(&err);
+#else
 	      move_box(&err);
+#endif
 	      movetype=3; /* 0 = tra; 1 = rot 2 = tra and rot; 3 = box */
 	      if(err)
 		{

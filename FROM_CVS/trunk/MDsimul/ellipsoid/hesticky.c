@@ -376,7 +376,6 @@ int one_is_bonded(int i, int a, int j, int b, int nmax)
   //return 0;
   int type1, type2;
   interStruct ts;
-  //printf("nmax=%d\n",nmax);
 #if defined(MD_ALLOW_ONE_DUMBBELL_BOND)
   /* N.B. limita ad 1 il numero massimo di legami
      per ogni spot del dumbbell */
