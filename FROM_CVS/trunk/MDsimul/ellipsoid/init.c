@@ -241,6 +241,12 @@ extern double spXYZ_B[MD_STSPOTS_B][3];
 #endif
 #endif
 struct nebrTabStruct *nebrTab;
+
+#ifdef MC_CLUSTER_NPT
+int *color, *clsdim, *nbcls;  
+double *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
+#endif
+
 /* ================================= */
 
 /* ========================================================================= */
@@ -1162,7 +1168,7 @@ void angvelMB(void)
   /* N.B. QUESTO E' SBAGLIATO PERCHE' LA DISTRIBUZIONE
      E' COME QUELLA TRASLAZIONALE (VEDI LANDAU) 
      CORREGGERE!!!! */
-#ifdef MD_SUPERELLIPSOID
+#if defined(MD_SUPERELLIPSOID)
   zax = 0;
 #else
   zax = 2;
@@ -6452,7 +6458,26 @@ void usrInitAft(void)
     case 2:
       printf("Grand-canonical ensemble\n");
       break;
+#ifdef MC_CLUSTER_NPT
+    case 3: 
+      printf("cluster-NPT ensemble\n");
+      break;
+#endif
     }
+#ifdef MC_CLUSTER_NPT
+  if (OprogStatus.ensembleMC == 3)
+    {
+      color  = malloc(sizeof(int)*Oparams.parnum);
+      clsdim = malloc(sizeof(int)*Oparams.parnum);
+      nbcls  = malloc(sizeof(int)*Oparams.parnum);
+      Dxcls =  malloc(sizeof(double)*Oparams.parnum);
+      Dycls =  malloc(sizeof(double)*Oparams.parnum);
+      Dzcls =  malloc(sizeof(double)*Oparams.parnum);
+      for (k=0; k < 3; k++)
+	clsCoM[k] = malloc(sizeof(double)*Oparams.parnum);
+    }
+#endif
+ 
 #ifdef MD_LXYZ
   vnonbond = L[0]*L[1]*L[2] - OprogStatus.vbond;
 #else
@@ -6475,6 +6500,7 @@ void usrInitAft(void)
 	}
       OprogStatus.lastNNLrebuildMC = Oparams.curStep;
     }
+
 #ifdef MC_STOREBONDS
 #ifdef MD_LL_BONDS
   bondsMC = AllocMatLLI(Oparams.parnum, OprogStatus.maxbonds);
