@@ -2636,7 +2636,11 @@ double get_max_displ_MC(void)
   double max=0.0, displ, ms;
   for (i=0; i < Oparams.parnum; i++)
     {
+#ifdef MC_CLUSTER_NPT
+      if (OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3)
+#else
       if (OprogStatus.ensembleMC==1)
+#endif
 	{
 	  /* nel caso di simulazione NPT il passo massimo
 	     dipende dalla posizione della particella e quindi
@@ -5299,8 +5303,13 @@ void move(void)
   //printf("deln=%d\n", deln);
   if (OprogStatus.ensembleMC==0)
     ntot = Oparams.parnum+deln;
+#ifdef MC_CLUSTER_NPT
+  else if (OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3)
+    ntot = Oparams.parnum+1+deln;
+#else
   else if (OprogStatus.ensembleMC==1)
     ntot = Oparams.parnum+1+deln;
+#endif
 #ifdef MC_GRANDCAN
   else if (OprogStatus.ensembleMC==2)
     ntot = OprogStatus.npav+OprogStatus.nexc+deln;
@@ -5416,8 +5425,14 @@ void move(void)
       if (OprogStatus.useNNL)
 	calc_all_maxsteps();
     }
+#ifdef MC_CLUSTER_NPT
+if (OprogStatus.targetAcceptVol > 0.0 && (OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3) && volmoveMC > 0 
+      && (Oparams.curStep % OprogStatus.resetacceptVol==0))
+
+#else
   if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1 && volmoveMC > 0 
       && (Oparams.curStep % OprogStatus.resetacceptVol==0))
+#endif
     {
       volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
       //printf("sono qui volaccept=%.15G\n", volaccept);
@@ -5430,8 +5445,13 @@ void move(void)
     {
       if (OprogStatus.targetPhiMC > 0.0)
 	printf("Current Phi=%.12G\n", calc_phi());
+#ifdef MC_CLUSTER_NPT
+      if ((OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3) && volmoveMC > 0)
+	volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
+#else
       if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
 	volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
+#endif
       //totmoves=((long long int)Oparams.parnum*(long long int)Oparams.curStep);
       acceptance=((double)(totmovesMC-totrejMC))/totmovesMC;
       traaccept = ((double)(tramoveMC-trarejMC))/tramoveMC;
@@ -5443,14 +5463,24 @@ void move(void)
       printf("Acceptance=%.15G (tra=%.15G rot=%.15G) deltaMC=%.15G dthetaMC=%.15G\n", acceptance, traaccept, 
 	     rotaccept, OprogStatus.deltaMC, OprogStatus.dthetaMC);
       printf("rotmoveMC:%lld rotrefMC: %lld cells= %d %d %d\n", rotmoveMC, rotrejMC, cellsx, cellsy, cellsz);
+#ifdef MC_CLUSTER_NPT
+      if ((OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3) && volmoveMC > 0)
+	printf("Volume moves acceptance = %.15G vmax = %.15G\n", volaccept, OprogStatus.vmax);
+#else
       if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
 	printf("Volume moves acceptance = %.15G vmax = %.15G\n", volaccept, OprogStatus.vmax);
+#endif
 #ifdef MC_HC
       printf("Average iterations in case A.2:%G\n", totitsHC/numcallsHC);
 #endif
     }
+#ifdef MC_CLUSTER_NPT
+  if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && (OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3))
+    volmoveMC=volrejMC=0;
+#else
   if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
     volmoveMC=volrejMC=0;
+#endif
   if (Oparams.curStep % OprogStatus.resetaccept==0)
     {
       totmovesMC=totrejMC=0;
@@ -5464,8 +5494,13 @@ void move(void)
 	  printf("deltrafin %.15G\n", OprogStatus.deltaMC);
 	  printf("delrotfin %.15G\n", OprogStatus.dthetaMC);
 	}
+#ifdef MC_CLUSTER_NPT
+      if (OprogStatus.targetAcceptVol > 0.0 && (OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3))
+	printf("delvolfin %.15G\n", OprogStatus.vmax);
+#else
       if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1)
 	printf("delvolfin %.15G\n", OprogStatus.vmax);
+#endif
     }
 #ifdef MC_SUS
   /* If susnmin == -1 and susnmax > 0 then susnmax is used to end the simulations: this is useful
