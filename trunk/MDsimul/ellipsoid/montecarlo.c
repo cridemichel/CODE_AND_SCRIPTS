@@ -218,27 +218,6 @@ extern void R2u(void);
 extern void store_bump(int i, int j);
 #endif
 #ifdef MC_CLUSTER_NPT
-void change_all_colors(int NP, int* color, int colorsrc, int colordst)
-{
-  int ii;
-  for (ii = 0; ii < NP; ii++)
-    {
-      if (color[ii] == colorsrc)
-	color[ii] = colordst;
-    }
-}
-
-int findmaxColor(int NP, int *color)
-{
-  int i, maxc=-1;
-  for (i = 0; i < NP; i++) 
-    {
-      if (color[i] > maxc)
-	maxc = color[i];
-    }
-  return maxc;
-}
-
 #if 0
 struct cluster_sort_struct { 
   int dim;
@@ -263,6 +242,77 @@ int compare_func (const void *aa, const void *bb)
     return 0;
 }
 #endif
+
+void change_all_colors(int NP, int* color, int colorsrc, int colordst)
+{
+  int ii;
+  for (ii = 0; ii < NP; ii++)
+    {
+      if (color[ii] == colorsrc)
+	color[ii] = colordst;
+    }
+}
+
+int findmaxColor(int NP, int *color)
+{
+  int i, maxc=-1;
+  for (i = 0; i < NP; i++) 
+    {
+      if (color[i] > maxc)
+	maxc = color[i];
+    }
+  return maxc;
+}
+
+
+struct freecolstk
+{
+  int idx;
+  int *arr;
+  int ncls;
+};
+typedef struct freecolstk freecolT;
+freecolT fcstack;
+
+void init_freecolor(freecolT *stack, int nitems)
+{
+  if (stack->arr==NULL)
+    stack->arr = malloc(sizeof(int)*nitems);
+  stack->idx=0;
+}
+void push_freecolor(freecolT *stack, int col)
+{
+  int oldcol, ii;
+
+  /* NOTA stack->idx da l'indice dello stack che è libero */
+  stack->arr[stack->idx] = col;
+  if (stack->idx > 0)
+    {
+      ii=stack->idx;
+      while (stack->arr[ii] > stack->arr[ii-1])
+	{
+	  /* keep array ordered */
+	  //printf("qui?!? col=%d stack=%d -2=%d\n", stack->arr[ii], stack->arr[ii-1], stack->arr[ii-2]);
+	  /* scambia il valore attuale con quello precedente più piccolo */
+	  oldcol = stack->arr[ii-1];
+	  stack->arr[ii-1] = stack->arr[ii];
+	  stack->arr[ii] = oldcol;
+	  ii--;
+	}
+    }
+  (stack->idx)++; 
+  //printf("push idx=%d\n", stack->idx);
+}
+
+int pop_freecolor(freecolT *stack)
+{
+  int val;
+  /* NOTA stack->idx da l'indice dello stack che è libero */
+  (stack->idx)--;
+  val = stack->arr[stack->idx];
+  //printf("pop idx=%d\n", stack->idx);
+  return val;
+}
 int is_percolating(int ncls)
 {
   /* nel caso di catene: cluster di lunghezza l 
@@ -277,14 +327,30 @@ int is_percolating(int ncls)
 }
 void build_clusters(int *Ncls, int *percolating)
 {
-  int NP, i, j, ncls, nc, a, curcolor;
+  int NP, i, j, ncls, nc, a, curcolor, maxc=-1;
   long long int jj;
+  int freecolor;
   NP = Oparams.parnum;
   curcolor=0;
+
+  init_freecolor(&fcstack, NP);
+
+  for (i=0; i < NP; i++)
+    {
+      color[i] = -1;
+    }
+  for (i=NP-1; i >= 0; i--)
+    {
+      push_freecolor(&fcstack, i);
+      //printf("i=%d stackidx=%d fcstack=%d\n", i, fcstack.idx-1, fcstack.arr[fcstack.idx-1]);
+    }
   for (i=0; i < NP; i++)
     {
       if (color[i] == -1)
-	color[i] = curcolor;
+	{
+	  color[i] = pop_freecolor(&fcstack);
+	  //printf("pop i=%d idx=%d col=%d\n", i, fcstack.idx+1, color[i]);
+	}
       //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
       for (j=0; j < numbonds[i]; j++)
 	{
@@ -295,24 +361,41 @@ void build_clusters(int *Ncls, int *percolating)
 	  else
 	    {
 	      if (color[i] < color[jj])
-		change_all_colors(NP, color, color[jj], color[i]);
+		{
+		  //printf("1) color[%d]=%d to color[%d]=%d\n", jj, color[jj], i, color[i]);
+		  //printf("push 1) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], jj, fcstack.idx, color[jj]);
+		  push_freecolor(&fcstack, color[jj]);
+		  change_all_colors(NP, color, color[jj], color[i]);
+		}	
 	      else if (color[i] > color[jj])
-		change_all_colors(NP, color, color[i], color[jj]);
+		{
+		  //printf("2) color[%d]=%d to color[%d]=%d\n", i, color[i], jj, color[jj]);
+		 // printf("push 2) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], fcstack.idx, jj, color[jj]);
+		  push_freecolor(&fcstack, color[i]);
+		  change_all_colors(NP, color, color[i], color[jj]);
+		}
 	    }
 	}
-      curcolor = findmaxColor(NP, color)+1;
+      //curcolor = pop_freecolor(&fcstack);
+      //printf("curcolor=%d\n", curcolor);
     }
   /* considera la particelle singole come cluster da 1 */
   for (i = 0; i < NP; i++)
     {
       if (color[i]==-1)
 	{	    
-	  color[i] = curcolor;
-	  curcolor++;
-	} 
-      //printf("color[%d]=%d\n", i, color[i]);
+	  color[i] = pop_freecolor(&fcstack);
+	}
     }
-  ncls = curcolor;
+  ncls = -1;
+  for (i = 0; i < NP; i++)
+    {
+      if (i==0 || ncls < color[i])
+	ncls = color[i];
+      //printf("color[%d]=%d\n", i, color[i]);
+    } 
+  //printf("ncls = %d\n", ncls+1);
+  //exit(-1);
   for (nc = 0; nc < ncls; nc++)
     {
       clsdim[nc] = 0; 
@@ -329,6 +412,8 @@ void build_clusters(int *Ncls, int *percolating)
 	    nbcls[color[a]] += numbonds[a];
 	  }
     }
+  for (nc=0; nc < ncls; nc++)
+    printf("cls dim[%d]=%d\n", nc, clsdim[nc]);
   *percolating = is_percolating(ncls);
   *Ncls = ncls;
 }
@@ -2275,6 +2360,7 @@ void move_box_cluster(int *ierr)
  
   // Lfact=1;
   build_clusters(&ncls, &percolating);
+  printf("ncls=%d percolating=%d\n", ncls, percolating);
   /* calcola i centri di massa dei cluster */
  
   for (nc=0; nc < ncls; nc++)
