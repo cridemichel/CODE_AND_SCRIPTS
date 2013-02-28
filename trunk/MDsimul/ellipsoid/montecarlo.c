@@ -24,7 +24,7 @@ int *numbondsMC, **bondsMC;
 #endif
 #endif
 #ifdef MC_CLUSTER_NPT
-extern int *color, *clsdim, *nbcls;  
+extern int *color, *color_dup, *clsdim, *nbcls;  
 extern double *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 #endif
 
@@ -224,16 +224,14 @@ struct cluster_sort_struct {
   int color;
 };
 struct cluster_sort_struct *cluster_sort;
+#endif
 int compare_func (const void *aa, const void *bb)
 {
-  int ai, bi;
+  int *a, *b;
   int temp;
-  struct cluster_sort_struct *a, *b;
-  a = (struct cluster_sort_struct*) aa;
-  b = (struct cluster_sort_struct*) bb;
-  ai = a->dim;
-  bi = b->dim;
-  temp = ai - bi;
+  a = (int*) aa;
+  b = (int*) bb;
+  temp = *b - *a;
   if (temp < 0)
     return 1;
   else if (temp > 0)
@@ -241,7 +239,6 @@ int compare_func (const void *aa, const void *bb)
   else
     return 0;
 }
-#endif
 
 void change_all_colors(int NP, int* color, int colorsrc, int colordst)
 {
@@ -264,7 +261,7 @@ int findmaxColor(int NP, int *color)
   return maxc;
 }
 
-
+#if 0
 struct freecolstk
 {
   int idx;
@@ -313,6 +310,7 @@ int pop_freecolor(freecolT *stack)
   //printf("pop idx=%d\n", stack->idx);
   return val;
 }
+#endif
 int is_percolating(int ncls)
 {
   /* nel caso di catene: cluster di lunghezza l 
@@ -333,22 +331,24 @@ void build_clusters(int *Ncls, int *percolating)
   NP = Oparams.parnum;
   curcolor=0;
 
-  init_freecolor(&fcstack, NP);
+  //init_freecolor(&fcstack, NP);
 
   for (i=0; i < NP; i++)
     {
       color[i] = -1;
     }
+#if 0
   for (i=NP-1; i >= 0; i--)
     {
       push_freecolor(&fcstack, i);
       //printf("i=%d stackidx=%d fcstack=%d\n", i, fcstack.idx-1, fcstack.arr[fcstack.idx-1]);
     }
+#endif
   for (i=0; i < NP; i++)
     {
       if (color[i] == -1)
 	{
-	  color[i] = pop_freecolor(&fcstack);
+	  color[i] = curcolor;
 	  //printf("pop i=%d idx=%d col=%d\n", i, fcstack.idx+1, color[i]);
 	}
       //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
@@ -364,19 +364,19 @@ void build_clusters(int *Ncls, int *percolating)
 		{
 		  //printf("1) color[%d]=%d to color[%d]=%d\n", jj, color[jj], i, color[i]);
 		  //printf("push 1) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], jj, fcstack.idx, color[jj]);
-		  push_freecolor(&fcstack, color[jj]);
+		  //push_freecolor(&fcstack, color[jj]);
 		  change_all_colors(NP, color, color[jj], color[i]);
 		}	
 	      else if (color[i] > color[jj])
 		{
 		  //printf("2) color[%d]=%d to color[%d]=%d\n", i, color[i], jj, color[jj]);
 		 // printf("push 2) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], fcstack.idx, jj, color[jj]);
-		  push_freecolor(&fcstack, color[i]);
+		  //push_freecolor(&fcstack, color[i]);
 		  change_all_colors(NP, color, color[i], color[jj]);
 		}
 	    }
 	}
-      //curcolor = pop_freecolor(&fcstack);
+      curcolor = findmaxColor(NP, color)+1;
       //printf("curcolor=%d\n", curcolor);
     }
   /* considera la particelle singole come cluster da 1 */
@@ -384,18 +384,32 @@ void build_clusters(int *Ncls, int *percolating)
     {
       if (color[i]==-1)
 	{	    
-	  color[i] = pop_freecolor(&fcstack);
+	  color[i] = curcolor;//pop_freecolor(&fcstack);
+	  curcolor++;
 	}
     }
-  ncls = -1;
+  memcpy(color_dup,color,sizeof(int)*NP);
+  qsort(color_dup,NP,sizeof(int),compare_func);
+#if 0
   for (i = 0; i < NP; i++)
     {
-      if (i==0 || ncls < color[i])
-	ncls = color[i];
-      //printf("color[%d]=%d\n", i, color[i]);
+      printf("color_dup[%d]=%d\n",i, color_dup[i]);
+    }
+#endif
+  ncls = 1;
+  if (color_dup[0]!=0)
+    change_all_colors(NP, color, color_dup[0], 0);
+  for (i = 1; i < NP; i++)
+    {
+      //clsdim[color_dup[i]]++;
+      if (color_dup[i]!=color_dup[i-1])
+	{
+	  if (color_dup[i]!=ncls)
+	    change_all_colors(NP, color, color_dup[i], ncls);
+	  ncls++;
+	}
     } 
-  //printf("ncls = %d\n", ncls+1);
-  //exit(-1);
+  //printf("ncls = %d\n", ncls);
   for (nc = 0; nc < ncls; nc++)
     {
       clsdim[nc] = 0; 
@@ -412,10 +426,12 @@ void build_clusters(int *Ncls, int *percolating)
 	    nbcls[color[a]] += numbonds[a];
 	  }
     }
-  for (nc=0; nc < ncls; nc++)
-    printf("cls dim[%d]=%d\n", nc, clsdim[nc]);
+  //for (nc=0; nc < ncls; nc++)
+    //printf("cls dim[%d]=%d\n", nc, clsdim[nc]);
+  //exit(-1);
   *percolating = is_percolating(ncls);
   *Ncls = ncls;
+  //exit(-1);
 }
 #endif
 #if (defined(MC_SIMUL) || defined(MD_STANDALONE)) && 1

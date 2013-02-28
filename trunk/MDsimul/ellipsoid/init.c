@@ -243,7 +243,7 @@ extern double spXYZ_B[MD_STSPOTS_B][3];
 struct nebrTabStruct *nebrTab;
 
 #ifdef MC_CLUSTER_NPT
-int *color, *clsdim, *nbcls;  
+int *color, *color_dup, *clsdim, *nbcls;  
 double *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 #endif
 
@@ -6468,6 +6468,7 @@ void usrInitAft(void)
   if (OprogStatus.ensembleMC == 3)
     {
       color  = malloc(sizeof(int)*Oparams.parnum);
+      color_dup = malloc(sizeof(int)*Oparams.parnum);
       clsdim = malloc(sizeof(int)*Oparams.parnum);
       nbcls  = malloc(sizeof(int)*Oparams.parnum);
       Dxcls =  malloc(sizeof(double)*Oparams.parnum);
