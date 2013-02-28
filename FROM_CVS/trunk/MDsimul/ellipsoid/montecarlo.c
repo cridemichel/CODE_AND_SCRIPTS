@@ -24,7 +24,7 @@ int *numbondsMC, **bondsMC;
 #endif
 #endif
 #ifdef MC_CLUSTER_NPT
-extern int *color, *color_dup, *clsdim, *nbcls;  
+extern int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls;  
 extern double *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 #endif
 
@@ -327,7 +327,7 @@ void build_clusters(int *Ncls, int *percolating)
 {
   int NP, i, j, ncls, nc, a, curcolor, maxc=-1;
   long long int jj;
-  int freecolor;
+  int freecolor, cidx, first;
   NP = Oparams.parnum;
   curcolor=0;
 
@@ -419,16 +419,38 @@ void build_clusters(int *Ncls, int *percolating)
   for (nc = 0; nc < ncls; nc++)
     {
       for (a = 0; a < NP; a++)
-	if (color[a] == nc)
-	  {
-	    clsdim[color[a]]++;
-	    //clscol[nc] = color[a];
-	    nbcls[color[a]] += numbonds[a];
-	  }
+	{
+	  if (color[a] == nc)
+	    {
+	      clsdim[color[a]]++;
+	      //clscol[nc] = color[a];
+	      nbcls[color[a]] += numbonds[a];
+	    }
+	}
     }
-  //for (nc=0; nc < ncls; nc++)
-    //printf("cls dim[%d]=%d\n", nc, clsdim[nc]);
+  cidx=0;
+  for (nc=0; nc < ncls; nc++)
+    {
+      first=1;
+      for (a=0; a < NP; a++)
+	{
+	  if (color[a]==nc)
+	    {
+	      clsarr[cidx] = a;
+	      if (first)
+		firstofcls[nc] = cidx; 
+	      cidx++;
+	      first = 0;
+	    }
+	}
+    }
+#if 0
+  for (i = 0; i < NP; i++)
+    printf("clsarr[%d]=%d\n", i, clsarr[i]);
+  for (nc=0; nc < ncls; nc++)
+    printf("cls dim[%d]=%d firstofcls=%d\n", nc, clsdim[nc], firstofcls[nc]);
   //exit(-1);
+#endif
   *percolating = is_percolating(ncls);
   *Ncls = ncls;
   //exit(-1);
@@ -2358,9 +2380,8 @@ void restore_bonds_mc(int ip)
 #ifdef MC_CLUSTER_NPT
 void move_box_cluster(int *ierr)
 {
-  int i, ii, k, nc, ncls=0, percolating=0;
+  int i0, i, ii, k, nc, ncls=0, percolating=0, np_in_cls, np, in0, in1, iold;
   double nn;
-#if 1
   double vo, vn, Lfact, enn, eno, arg, delv=0.0, lastrx=0, lastry=0, lastrz=0, Dx, Dy, Dz;
   //printf("moving box\n");
 #ifdef MD_LXYZ
@@ -2373,46 +2394,82 @@ void move_box_cluster(int *ierr)
   Lfact = pow(vn/vo,1.0/3.0);
   if (OprogStatus.useNNL)
     delv = (Lfact - 1.0); /* FINISH HERE */
- 
+  //printf("Lfact=%.15G vmax=%f vn=%f vo=%f\n", Lfact, OprogStatus.vmax, vn, vo); 
   // Lfact=1;
   build_clusters(&ncls, &percolating);
-  printf("ncls=%d percolating=%d\n", ncls, percolating);
+  //printf("ncls=%d percolating=%d\n", ncls, percolating);
   /* calcola i centri di massa dei cluster */
  
   for (nc=0; nc < ncls; nc++)
     {
       for (k=0; k < 3; k++)
 	clsCoM[k][nc] = 0.0;
-      for (i=0; i < Oparams.parnum; i++)
-       	{
-	  if (color[i]==nc)
+      /* if it is percolating all particles have 2 bonds, 
+	 hence we have to initialize i0 */
+      i0 =  clsarr[firstofcls[nc]];
+      for (np=0; np < clsdim[nc]; np++)
+    	{
+	  i =  clsarr[firstofcls[nc]+np];
+	  if ( numbonds[i]==1) 
 	    {
-	      if (i>0)
-		{
-#ifdef MD_LXYZ
-		  Dx = L[0]*rint((rx[i]-lastrx)/L[0]);
-		  Dy = L[1]*rint((ry[i]-lastry)/L[1]);
-		  Dz = L[2]*rint((rz[i]-lastrz)/L[2]); 
-#else
-		  Dx = L*rint((rx[i]-lastrx)/L);
-		  Dy = L*rint((ry[i]-lastry)/L);
-		  Dz = L*rint((rz[i]-lastrz)/L); 
-
-#endif
-		}
-	      else 
-		{
-		  Dx=Dy=Dz=0.0;
-		}
-	      clsCoM[0][nc] += rx[i]-Dx;
-	      clsCoM[1][nc] += ry[i]-Dy;
-	      clsCoM[2][nc] += rz[i]-Dz; 
+	      i0 = i;
+	      //printf("qui i0=%d\n", i0);
+	      break;
 	    }
 	}
-      lastrx = rx[i];
-      lastry = ry[i];
-      lastrz = rz[i];
-    }
+
+      np_in_cls=1;
+      i =  bonds[i0][0] / (NANA);
+      iold=i0;	
+      clsCoM[0][nc] = rx[i0];
+      clsCoM[1][nc] = ry[i0];
+      clsCoM[2][nc] = rz[i0]; 
+      /* if particles has no bond we have to check... */ 
+      while (numbonds[i0]>0)
+	{
+	  lastrx = rx[iold];
+	  lastry = ry[iold];
+	  lastrz = rz[iold];
+#ifdef MD_LXYZ
+	  Dx = L[0]*rint((rx[i]-lastrx)/L[0]);
+	  Dy = L[1]*rint((ry[i]-lastry)/L[1]);
+	  Dz = L[2]*rint((rz[i]-lastrz)/L[2]); 
+#else
+	  Dx = L*rint((rx[i]-lastrx)/L);
+	  Dy = L*rint((ry[i]-lastry)/L);
+	  Dz = L*rint((rz[i]-lastrz)/L); 
+#endif
+	  clsCoM[0][nc] += rx[i]-Dx;
+	  clsCoM[1][nc] += ry[i]-Dy;
+	  clsCoM[2][nc] += rz[i]-Dz; 
+	  np_in_cls++;
+	  if(numbonds[i]==1 || np_in_cls == clsdim[nc])
+	    {
+	      //printf("numbonds[i=%d]=%d numbonds[i0=%d]=%d", i, numbonds[i], i0, numbonds[i0]);
+	      break;
+	    }	   
+	  in0 = bonds[i][0]/(NANA);
+	  in1 = bonds[i][1]/(NANA);
+	  if (in1==iold)
+	    {
+	      iold = i;
+	      i = in0;
+	    }
+	  else
+	    {
+	      iold = i;
+	      i = in1;
+	    }
+	}
+#if 1
+      if (np_in_cls != clsdim[nc])
+	{
+	  printf("we got a problem np_in_cls=%d  but clsdim[%d]=%d\n", np_in_cls, nc, clsdim[nc]);
+	  printf("percolating=%d\n", percolating);
+	  exit(-1);
+	}
+#endif
+    } 
 #ifdef MD_LXYZ
   L[0] *= Lfact;
   L[1] *= Lfact;
@@ -2424,7 +2481,6 @@ void move_box_cluster(int *ierr)
   L *= Lfact;
   L2 = L*0.5;
 #endif
-
   for (nc=0; nc < ncls; nc++)
     {
       for (k=0; k < 3; k++)
@@ -2464,9 +2520,9 @@ void move_box_cluster(int *ierr)
 #endif
 	  for (ii=0; ii < Oparams.parnum; ii++)
 	    {
-	      rx[i] -= Dxcls[color[i]];
-	      ry[i] -= Dycls[color[i]];
-	      rz[i] -= Dzcls[color[i]]; 
+	      rx[ii] -= Dxcls[color[ii]];
+	      ry[ii] -= Dycls[color[ii]];
+	      rz[ii] -= Dzcls[color[ii]]; 
 	      pbc(ii);
 	    }
 	  volrejMC++;
@@ -2490,12 +2546,16 @@ void move_box_cluster(int *ierr)
   else
     find_bonds_flex_all();
   enn = calcpotene();
-
+#if 0
   if (enn > eno)
     {
       printf("CRITICAL: a cluster breaks, exiting...\n");
+      printf("enn=%f eno=%f\n", enn, eno);
+      build_clusters(&ncls, &percolating);
+      printf("ncls=%d\n", ncls);
       exit(-1);
     }
+#endif
   //printf("enn-eno/T=%f\n", (enn-eno)/Oparams.T);
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-ncls*log(vn/vo)*Oparams.T);
   /* enn < eno means that a new bonds form, actually we have to reject such move */
@@ -2540,7 +2600,6 @@ void move_box_cluster(int *ierr)
 #endif
       return;
     }
-#endif
   if (OprogStatus.useNNL)
     {
       /* move accepted update displacements */
