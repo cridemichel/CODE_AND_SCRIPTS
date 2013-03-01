@@ -10100,7 +10100,12 @@ void store_bump(int i, int j)
     }
   UpdateSystem();
   R2u();
+
+#if 1
   fprintf(bf, ".Vol: %f\n", Oparams.rcut*Oparams.rcut*Oparams.rcut);
+#else
+  fprintf(bf, ".Vol: %f\n", L[0]*L[1]*L[2]);
+#endif
   MD_DEBUG(printf("[Store bump]: %.15G\n", Oparams.time));
 #ifdef MD_LXYZ
   Drx = L[0]*rint((rx[i]-rx[j])/L[0]);
@@ -10129,6 +10134,9 @@ void store_bump(int i, int j)
   RCMy = (ry[i]+ry[j]+Dry)*0.5;
   RCMz = (rz[i]+rz[j]+Drz)*0.5;
 #ifdef EDHE_FLEX
+#if 0
+  RCMx=RCMy=RCMz=Drx=Dry=Drz=0.0;
+#endif
   for (kk=0; kk < 3; kk++)
     {
       axi[kk] = typesArr[typeOfPart[i]].sax[kk];
