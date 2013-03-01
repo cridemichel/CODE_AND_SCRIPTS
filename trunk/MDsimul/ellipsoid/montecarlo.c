@@ -2410,7 +2410,7 @@ void move_box_cluster(int *ierr)
 #else
   vo = L*L*L;
 #endif
-#if 1
+#if 0
   for (i=0; i < Oparams.parnum; i++)
     numbonds[i] = 0;
  
