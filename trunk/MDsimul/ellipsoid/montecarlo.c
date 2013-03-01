@@ -25,7 +25,7 @@ int *numbondsMC, **bondsMC;
 #endif
 #ifdef MC_CLUSTER_NPT
 extern int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls;  
-extern double *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
+extern double *Dx_cls, *Dy_cls, *Dz_cls, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 #endif
 
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
@@ -1511,7 +1511,27 @@ void update_LL(int n)
       insert_in_new_cell(n);
     }
 }
-
+#if 1 
+void pbc(int ip)
+{
+  double L2[3], Ll[3];
+  
+#ifdef MD_LXYZ
+  L2[0] = L[0]*0.5;
+  L2[1] = L[1]*0.5;
+  L2[2] = L[2]*0.5;
+  Ll[0] = L[0];
+  Ll[1] = L[1];
+  Ll[2] = L[2];
+#else
+  L2[0] = L2[1] = L2[2] = L*0.5;
+  Ll[0] = Ll[1] = Ll[2] = L;
+#endif
+  rx[ip] -= L[0]*rint(rx[ip]/L[0]); 
+  ry[ip] -= L[1]*rint(ry[ip]/L[1]);
+  rz[ip] -= L[2]*rint(rz[ip]/L[2]);
+}
+#else
 void pbc(int ip)
 {
   double L2[3], Ll[3];
@@ -1552,6 +1572,7 @@ void pbc(int ip)
       rz[ip] += L[2];
     }
 }
+#endif
 void update_bonds_MC(int ip);
 extern void find_bonds_flex_all(void);
 extern double calcpotene(void);
@@ -2381,13 +2402,19 @@ void restore_bonds_mc(int ip)
 void move_box_cluster(int *ierr)
 {
   int i0, i, ii, k, nc, ncls=0, percolating=0, np_in_cls, np, in0, in1, iold;
-  double nn;
+  double nn, distance;
   double vo, vn, Lfact, enn, eno, arg, delv=0.0, lastrx=0, lastry=0, lastrz=0, Dx, Dy, Dz;
   //printf("moving box\n");
 #ifdef MD_LXYZ
   vo = L[0]*L[1]*L[2];
 #else
   vo = L*L*L;
+#endif
+#if 1
+  for (i=0; i < Oparams.parnum; i++)
+    numbonds[i] = 0;
+ 
+  find_bonds_flex_all();
 #endif
   eno = calcpotene();
   vn = vo + (2.0*ranf()-1.0)*OprogStatus.vmax;
@@ -2399,7 +2426,8 @@ void move_box_cluster(int *ierr)
   build_clusters(&ncls, &percolating);
   //printf("ncls=%d percolating=%d\n", ncls, percolating);
   /* calcola i centri di massa dei cluster */
- 
+  if (percolating)
+    return;
   for (nc=0; nc < ncls; nc++)
     {
       for (k=0; k < 3; k++)
@@ -2424,25 +2452,36 @@ void move_box_cluster(int *ierr)
       clsCoM[0][nc] = rx[i0];
       clsCoM[1][nc] = ry[i0];
       clsCoM[2][nc] = rz[i0]; 
+      Dx_cls[i0]=Dy_cls[i0]=Dz_cls[i0]=0;
       /* if particles has no bond we have to check... */ 
       while (numbonds[i0]>0)
 	{
+	  /* rebuild the cluster as a whole */
 	  lastrx = rx[iold];
 	  lastry = ry[iold];
 	  lastrz = rz[iold];
 #ifdef MD_LXYZ
-	  Dx = L[0]*rint((rx[i]-lastrx)/L[0]);
-	  Dy = L[1]*rint((ry[i]-lastry)/L[1]);
-	  Dz = L[2]*rint((rz[i]-lastrz)/L[2]); 
+	  Dx_cls[i] = L[0]*rint((rx[i]-lastrx)/L[0]);
+	  Dy_cls[i] = L[1]*rint((ry[i]-lastry)/L[1]);
+	  Dz_cls[i] = L[2]*rint((rz[i]-lastrz)/L[2]); 
 #else
-	  Dx = L*rint((rx[i]-lastrx)/L);
-	  Dy = L*rint((ry[i]-lastry)/L);
-	  Dz = L*rint((rz[i]-lastrz)/L); 
+	  Dx_cls[i] = L*rint((rx[i]-lastrx)/L);
+	  Dy_cls[i] = L*rint((ry[i]-lastry)/L);
+	  Dz_cls[i] = L*rint((rz[i]-lastrz)/L); 
 #endif
-	  clsCoM[0][nc] += rx[i]-Dx;
-	  clsCoM[1][nc] += ry[i]-Dy;
-	  clsCoM[2][nc] += rz[i]-Dz; 
+    	  rx[i] -= Dx_cls[i];
+	  ry[i] -= Dy_cls[i];
+	  rz[i] -= Dz_cls[i];
+	  clsCoM[0][nc] += rx[i];
+	  clsCoM[1][nc] += ry[i];
+	  clsCoM[2][nc] += rz[i];
 	  np_in_cls++;
+#if 0
+	  if (numbonds[i] > 2)
+	    {
+	      printf("more than 2 bonds (%d) for particle %d!\n", numbonds[i], i);
+	    }
+#endif
 	  if(numbonds[i]==1 || np_in_cls == clsdim[nc])
 	    {
 	      //printf("numbonds[i=%d]=%d numbonds[i0=%d]=%d", i, numbonds[i], i0, numbonds[i0]);
@@ -2461,7 +2500,7 @@ void move_box_cluster(int *ierr)
 	      i = in1;
 	    }
 	}
-#if 1
+#if 0
       if (np_in_cls != clsdim[nc])
 	{
 	  printf("we got a problem np_in_cls=%d  but clsdim[%d]=%d\n", np_in_cls, nc, clsdim[nc]);
@@ -2469,7 +2508,7 @@ void move_box_cluster(int *ierr)
 	  exit(-1);
 	}
 #endif
-    } 
+    }
 #ifdef MD_LXYZ
   L[0] *= Lfact;
   L[1] *= Lfact;
@@ -2481,6 +2520,7 @@ void move_box_cluster(int *ierr)
   L *= Lfact;
   L2 = L*0.5;
 #endif
+
   for (nc=0; nc < ncls; nc++)
     {
       for (k=0; k < 3; k++)
@@ -2489,18 +2529,104 @@ void move_box_cluster(int *ierr)
       Dycls[nc]=(Lfact-1.0)*clsCoM[1][nc];
       Dzcls[nc]=(Lfact-1.0)*clsCoM[2][nc];
     }
+#if 0
+  for (nc=0; nc < ncls; nc++)
+    {
+      for (np=0; np < clsdim[nc]; np++)
+	{
+	  i = clsarr[firstofcls[nc]+np];
+	  rx[i] += Dxcls[color[i]];
+	  ry[i] += Dycls[color[i]];
+	  rz[i] += Dzcls[color[i]]; 
+	  pbc(i);	
+	}
+    }
+#else
   for (i=0; i < Oparams.parnum; i++)
     {  
-      rx[i] += Dxcls[color[i]];
-      ry[i] += Dycls[color[i]];
-      rz[i] += Dzcls[color[i]]; 
+      rx[i] += Dxcls[color[i]];//-Dx_cls[i];
+      ry[i] += Dycls[color[i]];//-Dy_cls[i];
+      rz[i] += Dzcls[color[i]];//-Dz_cls[i]; 
       pbc(i);
     }
-  update_numcells();
+#endif
+     update_numcells();
 #ifdef MC_STORELL
   store_ll_mc();
 #endif
   rebuildLinkedList();
+ 
+#if 0
+    {
+      double distance, Dx, Dy, Dz;
+      int i1=1056, i4=389, i3=1246, i2=976;
+      
+i3=1041; i2=900;
+Dx=rx[i3]-rx[i2]; 
+      Dx = L[0]*rint(Dx/L[0]);
+      Dy = ry[i3]-ry[i2];
+      Dy = L[1]*rint(Dy/L[1]);
+      Dz = rz[i3]-rz[i2];
+      Dz = L[2]*rint(Dz/L[2]);
+
+      printf("^^^Dr=%f %f %f\n", Dx, Dy, Dz);
+
+  distance=sqrt(Sqr(rx[i3]-rx[i2]-Dx) + Sqr(ry[i3]-ry[i2]-Dy) + Sqr(rz[i3]-rz[i2]-Dz));
+
+printf("BBBBdist???? %d-%d=%.15G\n", i3, i2, distance);
+ 
+    }
+#endif
+#if 0
+{int i1, i2, i3, i4;
+
+     int cc=0, parts[2],*numbonds_old;
+    double enl;
+      printf("bonds[1056][0]=%d bonds[1056][1]=%d\n", i1=bonds[1056][0]/(NANA), i2=bonds[1056][1]/(NANA));
+  printf("bonds[1246][0]=%d bonds[1246][1]=%d\n", i3=bonds[1246][0]/(NANA), i4=bonds[1246][1]/(NANA));
+  store_bump(i1, i2);
+  printf("cells=%d %d %d\n", cellsx, cellsy, cellsz);
+  store_bump(i3,i4);
+     
+
+      printf("PRIMA eno=%f\n", eno);
+      numbonds_old=malloc(sizeof(int)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      numbonds_old[i]=numbonds[i];
+      numbonds[i] = 0;
+    }
+  if (OprogStatus.useNNL)
+    find_bonds_flex_NNL();
+  else
+    find_bonds_flex_all();
+ enl=calcpotene();
+ for (i=0; i < Oparams.parnum; i++)
+    {
+      if (numbonds[i]!=numbonds_old[i])
+	{
+	  printf("found %d numbondsold=%d numbonds=%d\n", i, numbonds_old[i], numbonds[i]);
+	  printf("pos=%f %f %f\n", rx[i], ry[i], rz[i]);
+	  parts[cc]=i;
+	  cc++;
+	}
+    } 
+ //if (cc>0)
+   //store_bump(parts[0], parts[1]);	
+  printf("DOPO eno=%f Lfact-1=%.15G\n", enl, Lfact-1.0);
+  free(numbonds_old);
+  distance=sqrt(Sqr(rx[i1]-Dx_cls[i1]-rx[i4]) + Sqr(ry[i1]-Dy_cls[i1]-ry[i4]) + Sqr(rz[i1]-Dz_cls[i1]-rz[i4]));
+printf("dist %d-%d=%.15G\n", i1, i4, distance);
+
+  distance=sqrt(Sqr(rx[i3]-Dx_cls[i3]-rx[i2]) + Sqr(ry[i3]-Dy_cls[i3]-ry[i2]) + Sqr(rz[i3]-Dz_cls[i3]-rz[i2]));
+
+printf("dist %d-%d=%.15G\n", i3, i2, distance);
+numbonds[1056]=0;
+find_bonds_one(1056);
+printf("numbonds[1056]=%d\n", numbonds[1056]);
+    }
+#endif
+  
   for (i=0; i < Oparams.parnum; i++)
     {
       if (overlapMC(i, ierr))
@@ -2520,9 +2646,14 @@ void move_box_cluster(int *ierr)
 #endif
 	  for (ii=0; ii < Oparams.parnum; ii++)
 	    {
-	      rx[ii] -= Dxcls[color[ii]];
-	      ry[ii] -= Dycls[color[ii]];
-	      rz[ii] -= Dzcls[color[ii]]; 
+	      rx[ii] -= Dxcls[color[ii]];//-Dx_cls[ii];
+	      ry[ii] -= Dycls[color[ii]];//-Dy_cls[ii];
+	      rz[ii] -= Dzcls[color[ii]];//-Dz_cls[ii]; 
+	      
+	      rx[ii] += Dx_cls[ii];
+	      ry[ii] += Dy_cls[ii];
+	      rz[ii] += Dz_cls[ii]; 
+	
 	      pbc(ii);
 	    }
 	  volrejMC++;
@@ -2546,10 +2677,17 @@ void move_box_cluster(int *ierr)
   else
     find_bonds_flex_all();
   enn = calcpotene();
-#if 0
+#if 1
   if (enn > eno)
     {
-      printf("CRITICAL: a cluster breaks, exiting...\n");
+      int *clsarr_bak, NP;
+      int *clsdim_bak, kk;
+      NP=Oparams.parnum;
+      clsarr_bak = malloc(sizeof(int)*NP);
+      clsdim_bak = malloc(sizeof(int)*NP);
+      memcpy(clsarr_bak,clsarr,sizeof(int)*NP);
+      memcpy(clsdim_bak,clsdim,sizeof(int)*NP);
+      printf("CRITICAL: a cluster breaks, exiting... percolating=%d\n", percolating);
       printf("enn=%f eno=%f\n", enn, eno);
       build_clusters(&ncls, &percolating);
       printf("ncls=%d\n", ncls);
@@ -2559,7 +2697,7 @@ void move_box_cluster(int *ierr)
   //printf("enn-eno/T=%f\n", (enn-eno)/Oparams.T);
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-ncls*log(vn/vo)*Oparams.T);
   /* enn < eno means that a new bonds form, actually we have to reject such move */
-  if (ranf() > exp(arg) || enn < eno)
+  if (ranf() > exp(arg) || enn != eno)
     {
       /* move rejected restore old positions */
 #ifdef MD_LXYZ
@@ -2575,9 +2713,12 @@ void move_box_cluster(int *ierr)
 #endif
       for (i=0; i < Oparams.parnum; i++)
 	{
-      	  rx[i] -= Dxcls[color[i]];
-	  ry[i] -= Dycls[color[i]];
-	  rz[i] -= Dzcls[color[i]]; 
+      	  rx[i] -= Dxcls[color[i]];//-Dx_cls[i];
+	  ry[i] -= Dycls[color[i]];//-Dy_cls[i];
+	  rz[i] -= Dzcls[color[i]];//-Dz_cls[i]; 
+	  rx[i] += Dx_cls[i];
+	  ry[i] += Dy_cls[i];
+	  rz[i] += Dz_cls[i]; 
 	  pbc(i);
 	}
       volrejMC++;
