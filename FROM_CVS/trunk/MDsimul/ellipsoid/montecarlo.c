@@ -2427,7 +2427,10 @@ void move_box_cluster(int *ierr)
   //printf("ncls=%d percolating=%d\n", ncls, percolating);
   /* calcola i centri di massa dei cluster */
   if (percolating)
-    return;
+    {
+      volrejMC++;
+      return;
+    }
   for (nc=0; nc < ncls; nc++)
     {
       for (k=0; k < 3; k++)
