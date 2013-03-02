@@ -244,7 +244,7 @@ struct nebrTabStruct *nebrTab;
 
 #ifdef MC_CLUSTER_NPT
 int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls;  
-double *Dx_cls, *Dy_cls, *Dz_cls, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
+double *Dxpar, *Dypar, *Dzpar, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 #endif
 
 /* ================================= */
@@ -6473,9 +6473,11 @@ void usrInitAft(void)
       firstofcls = malloc(sizeof(int)*Oparams.parnum);
       clsdim = malloc(sizeof(int)*Oparams.parnum);
       nbcls  = malloc(sizeof(int)*Oparams.parnum);
-      Dx_cls =  malloc(sizeof(double)*Oparams.parnum);
-      Dy_cls =  malloc(sizeof(double)*Oparams.parnum);
-      Dz_cls =  malloc(sizeof(double)*Oparams.parnum);
+#if !defined(MC_STORE_ALL_COORDS)
+      Dxpar =  malloc(sizeof(double)*Oparams.parnum);
+      Dypar=  malloc(sizeof(double)*Oparams.parnum);
+      Dzpar =  malloc(sizeof(double)*Oparams.parnum);
+#endif
       Dxcls =  malloc(sizeof(double)*Oparams.parnum);
       Dycls =  malloc(sizeof(double)*Oparams.parnum);
       Dzcls =  malloc(sizeof(double)*Oparams.parnum);

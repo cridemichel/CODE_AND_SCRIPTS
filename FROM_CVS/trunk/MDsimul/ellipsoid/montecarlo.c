@@ -14,6 +14,7 @@ extern void init_rng(int mdseed, int mpi, int my_rank);
 int dostorebump=0;
 #ifdef MC_STORELL
 int *cellListMC;
+int cellsxMC, cellsyMC, cellszMC;
 #endif
 #ifdef MC_STOREBONDS
 #ifdef MD_LL_BONDS
@@ -25,7 +26,7 @@ int *numbondsMC, **bondsMC;
 #endif
 #ifdef MC_CLUSTER_NPT
 extern int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls;  
-extern double *Dx_cls, *Dy_cls, *Dz_cls, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
+extern double *Dxpar, *Dypar, *Dzpar, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 #endif
 
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
@@ -1511,6 +1512,33 @@ void update_LL(int n)
       insert_in_new_cell(n);
     }
 }
+#ifdef MC_CLUSTER_NPT
+void pbccls(int ip)
+{
+  double L2[3], Ll[3];
+  double Dx, Dy, Dz;  
+#ifdef MD_LXYZ
+  L2[0] = L[0]*0.5;
+  L2[1] = L[1]*0.5;
+  L2[2] = L[2]*0.5;
+  Ll[0] = L[0];
+  Ll[1] = L[1];
+  Ll[2] = L[2];
+#else
+  L2[0] = L2[1] = L2[2] = L*0.5;
+  Ll[0] = Ll[1] = Ll[2] = L;
+#endif
+  Dx =  L[0]*rint(rx[ip]/L[0]); 
+  Dy =  L[1]*rint(ry[ip]/L[1]);
+  Dz =  L[2]*rint(rz[ip]/L[2]);
+  Dxpar[ip] += Dx;
+  Dypar[ip] += Dy;
+  Dzpar[ip] += Dz;
+  rx[ip] -= Dx; 
+  ry[ip] -= Dy;
+  rz[ip] -= Dz;
+}
+#endif
 #if 1 
 void pbc(int ip)
 {
@@ -2303,6 +2331,15 @@ void mcexc(int *ierr)
 void store_ll_mc(void)
 {
   int k;
+  printf("Current code for storing/restoring linked lists in volume change move is broken!\n");
+  printf("Please compile with -UMC_STORELL flag\n");
+  exit(-1);
+#ifdef MC_CLUSTER_NPT
+  cellsxMC = cellsx;
+  cellsyMC = cellsy;
+  cellszMC = cellsz;
+#endif 
+
   for (k=0; k < Oparams.parnum + cellsx*cellsy*cellsz; k++)
     {
       cellListMC[k] = cellList[k];
@@ -2311,6 +2348,11 @@ void store_ll_mc(void)
 void restore_ll_mc(void)
 {
   int k;
+#ifdef MC_CLUSTER_NPT
+  cellsx = cellsxMC;
+  cellsy = cellsyMC;
+  cellsz = cellszMC; 
+#endif
   for (k=0; k < Oparams.parnum + cellsx*cellsy*cellsz; k++)
     {
       cellList[k] = cellListMC[k];
@@ -2398,26 +2440,57 @@ void restore_bonds_mc(int ip)
     }
 }
 #endif
+#if 1
+void check_bonds_mc(char *txt)
+{
+  int i;
+  double enoo, eno;
+  enoo=calcpotene();
+
+  for (i=0; i < Oparams.parnum; i++)
+    numbonds[i] = 0;
+
+  find_bonds_flex_all();
+  eno=calcpotene();
+  if (eno!=enoo)
+    {
+      if (txt) 
+	printf("%s\n", txt);
+      printf("boh eno=%f enoo=%f\n", eno, enoo);
+      exit(-1);
+    }
+}
+#endif
+
 #ifdef MC_CLUSTER_NPT
+//#define MC_CLSNPT_LOG
 void move_box_cluster(int *ierr)
 {
-  int i0, i, ii, k, nc, ncls=0, percolating=0, np_in_cls, np, in0, in1, iold;
-  double nn, distance;
+  int i0, i, ii, k, nc, ncls=0, percolating=0, np_in_cls, np, in0, in1, iold, kk;
+  double nn, distance, lnvn;
   double vo, vn, Lfact, enn, eno, arg, delv=0.0, lastrx=0, lastry=0, lastrz=0, Dx, Dy, Dz;
+#ifdef MC_STORE_ALL_COORDS
+#ifdef MD_LXYZ
+  double Lold[3];
+#else
+  double Lold;
+#endif
+#endif
   //printf("moving box\n");
 #ifdef MD_LXYZ
   vo = L[0]*L[1]*L[2];
 #else
   vo = L*L*L;
 #endif
-#if 0
-  for (i=0; i < Oparams.parnum; i++)
-    numbonds[i] = 0;
- 
-  find_bonds_flex_all();
-#endif
+
   eno = calcpotene();
+      
+#ifdef MC_CLSNPT_LOG
+  lnvn = log(vo) + (ranf()-0.5)*OprogStatus.vmax;
+  vn = exp(lnvn);
+#else
   vn = vo + (2.0*ranf()-1.0)*OprogStatus.vmax;
+#endif
   Lfact = pow(vn/vo,1.0/3.0);
   if (OprogStatus.useNNL)
     delv = (Lfact - 1.0); /* FINISH HERE */
@@ -2431,6 +2504,12 @@ void move_box_cluster(int *ierr)
       volrejMC++;
       return;
     }
+#ifdef MC_STORE_ALL_COORDS
+  /* I use velocity arrays to store coordinates, in MC simulations they are unused! */
+  memcpy(vx, rx, sizeof(double)*Oparams.parnum);
+  memcpy(vy, ry, sizeof(double)*Oparams.parnum);
+  memcpy(vz, rz, sizeof(double)*Oparams.parnum);
+#endif
   for (nc=0; nc < ncls; nc++)
     {
       for (k=0; k < 3; k++)
@@ -2455,7 +2534,9 @@ void move_box_cluster(int *ierr)
       clsCoM[0][nc] = rx[i0];
       clsCoM[1][nc] = ry[i0];
       clsCoM[2][nc] = rz[i0]; 
-      Dx_cls[i0]=Dy_cls[i0]=Dz_cls[i0]=0;
+#if !defined(MC_STORE_ALL_COORDS)
+      Dxpar[i0]=Dypar[i0]=Dzpar[i0]=0;
+#endif
       /* if particles has no bond we have to check... */ 
       while (numbonds[i0]>0)
 	{
@@ -2463,18 +2544,24 @@ void move_box_cluster(int *ierr)
 	  lastrx = rx[iold];
 	  lastry = ry[iold];
 	  lastrz = rz[iold];
-#ifdef MD_LXYZ
-	  Dx_cls[i] = L[0]*rint((rx[i]-lastrx)/L[0]);
-	  Dy_cls[i] = L[1]*rint((ry[i]-lastry)/L[1]);
-	  Dz_cls[i] = L[2]*rint((rz[i]-lastrz)/L[2]); 
+#ifdef MC_STORE_ALL_COORDS
+	  rx[i] -= L[0]*rint((rx[i]-lastrx)/L[0]);
+	  ry[i] -= L[1]*rint((ry[i]-lastry)/L[1]);
+	  rz[i] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
 #else
-	  Dx_cls[i] = L*rint((rx[i]-lastrx)/L);
-	  Dy_cls[i] = L*rint((ry[i]-lastry)/L);
-	  Dz_cls[i] = L*rint((rz[i]-lastrz)/L); 
+#ifdef MD_LXYZ
+	  Dxpar[i] = L[0]*rint((rx[i]-lastrx)/L[0]);
+	  Dypar[i] = L[1]*rint((ry[i]-lastry)/L[1]);
+	  Dzpar[i] = L[2]*rint((rz[i]-lastrz)/L[2]); 
+#else
+	  Dxpar[i] = L*rint((rx[i]-lastrx)/L);
+	  Dypar[i] = L*rint((ry[i]-lastry)/L);
+	  Dzpar[i] = L*rint((rz[i]-lastrz)/L); 
 #endif
-    	  rx[i] -= Dx_cls[i];
-	  ry[i] -= Dy_cls[i];
-	  rz[i] -= Dz_cls[i];
+    	  rx[i] -= Dxpar[i];
+	  ry[i] -= Dypar[i];
+	  rz[i] -= Dzpar[i];
+#endif
 	  clsCoM[0][nc] += rx[i];
 	  clsCoM[1][nc] += ry[i];
 	  clsCoM[2][nc] += rz[i];
@@ -2512,6 +2599,14 @@ void move_box_cluster(int *ierr)
 	}
 #endif
     }
+#ifdef MC_STORE_ALL_COORDS
+#ifdef MD_LXYZ
+  for (kk=0; kk < 3; kk++)
+    Lold[kk] = L[kk];
+#else
+  Lold = L;
+#endif
+#endif
 #ifdef MD_LXYZ
   L[0] *= Lfact;
   L[1] *= Lfact;
@@ -2547,95 +2642,41 @@ void move_box_cluster(int *ierr)
 #else
   for (i=0; i < Oparams.parnum; i++)
     {  
-      rx[i] += Dxcls[color[i]];//-Dx_cls[i];
-      ry[i] += Dycls[color[i]];//-Dy_cls[i];
-      rz[i] += Dzcls[color[i]];//-Dz_cls[i]; 
+      rx[i] += Dxcls[color[i]];
+      ry[i] += Dycls[color[i]];
+      rz[i] += Dzcls[color[i]];
+#ifdef MC_STORE_ALL_COORDS
       pbc(i);
+#else
+      pbccls(i);
+#endif
     }
 #endif
-     update_numcells();
+
 #ifdef MC_STORELL
   store_ll_mc();
 #endif
+  update_numcells();
   rebuildLinkedList();
  
-#if 0
-    {
-      double distance, Dx, Dy, Dz;
-      int i1=1056, i4=389, i3=1246, i2=976;
-      
-i3=1041; i2=900;
-Dx=rx[i3]-rx[i2]; 
-      Dx = L[0]*rint(Dx/L[0]);
-      Dy = ry[i3]-ry[i2];
-      Dy = L[1]*rint(Dy/L[1]);
-      Dz = rz[i3]-rz[i2];
-      Dz = L[2]*rint(Dz/L[2]);
-
-      printf("^^^Dr=%f %f %f\n", Dx, Dy, Dz);
-
-  distance=sqrt(Sqr(rx[i3]-rx[i2]-Dx) + Sqr(ry[i3]-ry[i2]-Dy) + Sqr(rz[i3]-rz[i2]-Dz));
-
-printf("BBBBdist???? %d-%d=%.15G\n", i3, i2, distance);
- 
-    }
-#endif
-#if 0
-{int i1, i2, i3, i4;
-
-     int cc=0, parts[2],*numbonds_old;
-    double enl;
-      printf("bonds[1056][0]=%d bonds[1056][1]=%d\n", i1=bonds[1056][0]/(NANA), i2=bonds[1056][1]/(NANA));
-  printf("bonds[1246][0]=%d bonds[1246][1]=%d\n", i3=bonds[1246][0]/(NANA), i4=bonds[1246][1]/(NANA));
-  store_bump(i1, i2);
-  printf("cells=%d %d %d\n", cellsx, cellsy, cellsz);
-  store_bump(i3,i4);
-     
-
-      printf("PRIMA eno=%f\n", eno);
-      numbonds_old=malloc(sizeof(int)*Oparams.parnum);
-  for (i=0; i < Oparams.parnum; i++)
-    {
-      numbonds_old[i]=numbonds[i];
-      numbonds[i] = 0;
-    }
-  if (OprogStatus.useNNL)
-    find_bonds_flex_NNL();
-  else
-    find_bonds_flex_all();
- enl=calcpotene();
- for (i=0; i < Oparams.parnum; i++)
-    {
-      if (numbonds[i]!=numbonds_old[i])
-	{
-	  printf("found %d numbondsold=%d numbonds=%d\n", i, numbonds_old[i], numbonds[i]);
-	  printf("pos=%f %f %f\n", rx[i], ry[i], rz[i]);
-	  parts[cc]=i;
-	  cc++;
-	}
-    } 
- //if (cc>0)
-   //store_bump(parts[0], parts[1]);	
-  printf("DOPO eno=%f Lfact-1=%.15G\n", enl, Lfact-1.0);
-  free(numbonds_old);
-  distance=sqrt(Sqr(rx[i1]-Dx_cls[i1]-rx[i4]) + Sqr(ry[i1]-Dy_cls[i1]-ry[i4]) + Sqr(rz[i1]-Dz_cls[i1]-rz[i4]));
-printf("dist %d-%d=%.15G\n", i1, i4, distance);
-
-  distance=sqrt(Sqr(rx[i3]-Dx_cls[i3]-rx[i2]) + Sqr(ry[i3]-Dy_cls[i3]-ry[i2]) + Sqr(rz[i3]-Dz_cls[i3]-rz[i2]));
-
-printf("dist %d-%d=%.15G\n", i3, i2, distance);
-numbonds[1056]=0;
-find_bonds_one(1056);
-printf("numbonds[1056]=%d\n", numbonds[1056]);
-    }
-#endif
-  
   for (i=0; i < Oparams.parnum; i++)
     {
       if (overlapMC(i, ierr))
 	{
 	  //printf("overlap di %d Lfact=%.15G\n", i, Lfact);
 	  /* move rejected restore old positions */
+#ifdef MC_STORE_ALL_COORDS
+#ifdef MD_LXYZ
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      L[kk] = Lold[kk];
+	      L2[kk] = 0.5*Lold[kk];
+	    }
+#else
+	  L = Lold;
+	  L2 = L*0.5;
+#endif
+#else
 #ifdef MD_LXYZ
 	  L[0] /= Lfact;
 	  L[1] /= Lfact;
@@ -2647,23 +2688,32 @@ printf("numbonds[1056]=%d\n", numbonds[1056]);
 	  L /= Lfact;
 	  L2 = L*0.5;
 #endif
+#endif
+#if !defined(MC_STORE_ALL_COORDS)
 	  for (ii=0; ii < Oparams.parnum; ii++)
 	    {
-	      rx[ii] -= Dxcls[color[ii]];//-Dx_cls[ii];
-	      ry[ii] -= Dycls[color[ii]];//-Dy_cls[ii];
-	      rz[ii] -= Dzcls[color[ii]];//-Dz_cls[ii]; 
+	      rx[ii] -= Dxcls[color[ii]];
+	      ry[ii] -= Dycls[color[ii]];
+	      rz[ii] -= Dzcls[color[ii]];
 	      
-	      rx[ii] += Dx_cls[ii];
-	      ry[ii] += Dy_cls[ii];
-	      rz[ii] += Dz_cls[ii]; 
+	      rx[ii] += Dxpar[ii];
+	      ry[ii] += Dypar[ii];
+	      rz[ii] += Dzpar[ii]; 
 	
 	      pbc(ii);
 	    }
+#else
+	  memcpy(rx, vx, sizeof(double)*Oparams.parnum);
+	  memcpy(ry, vy, sizeof(double)*Oparams.parnum);
+	  memcpy(rz, vz, sizeof(double)*Oparams.parnum);
+
+#endif
+
 	  volrejMC++;
-	  update_numcells();
 #ifdef MC_STORELL
 	  restore_ll_mc();
 #else
+	  update_numcells();
 	  rebuildLinkedList();
 #endif
 	  return;
@@ -2698,11 +2748,27 @@ printf("numbonds[1056]=%d\n", numbonds[1056]);
     }
 #endif
   //printf("enn-eno/T=%f\n", (enn-eno)/Oparams.T);
+#ifdef MC_CLSNPT_LOG
+  arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-(ncls+1.0)*log(vn/vo)*Oparams.T);
+#else
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-ncls*log(vn/vo)*Oparams.T);
+#endif
   /* enn < eno means that a new bonds form, actually we have to reject such move */
   if (ranf() > exp(arg) || enn != eno)
     {
       /* move rejected restore old positions */
+#ifdef MC_STORE_ALL_COORDS
+#ifdef MD_LXYZ
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      L[kk] = Lold[kk];
+	      L2[kk] = 0.5*Lold[kk];
+	    }
+#else
+	  L = Lold;
+	  L2 = L*0.5;
+#endif
+#else
 #ifdef MD_LXYZ
       L[0] /= Lfact;
       L[1] /= Lfact;
@@ -2714,21 +2780,28 @@ printf("numbonds[1056]=%d\n", numbonds[1056]);
       L /= Lfact;
       L2 = L*0.5;
 #endif
+#endif
+#if !defined(MC_STORE_ALL_COORDS)
       for (i=0; i < Oparams.parnum; i++)
 	{
-      	  rx[i] -= Dxcls[color[i]];//-Dx_cls[i];
-	  ry[i] -= Dycls[color[i]];//-Dy_cls[i];
-	  rz[i] -= Dzcls[color[i]];//-Dz_cls[i]; 
-	  rx[i] += Dx_cls[i];
-	  ry[i] += Dy_cls[i];
-	  rz[i] += Dz_cls[i]; 
+      	  rx[i] -= Dxcls[color[i]];
+	  ry[i] -= Dycls[color[i]];
+	  rz[i] -= Dzcls[color[i]];
+	  rx[i] += Dxpar[i];
+	  ry[i] += Dypar[i];
+	  rz[i] += Dzpar[i]; 
 	  pbc(i);
 	}
+#else
+      memcpy(rx, vx, sizeof(double)*Oparams.parnum);
+      memcpy(ry, vy, sizeof(double)*Oparams.parnum);
+      memcpy(rz, vz, sizeof(double)*Oparams.parnum);
+#endif
       volrejMC++;
-      update_numcells();
 #ifdef MC_STORELL
       restore_ll_mc();
 #else
+      update_numcells();
       rebuildLinkedList();
 #endif
       /* restore all bonds*/
@@ -5670,6 +5743,7 @@ void move(void)
 	  else
 	    {
 #ifdef MC_CLUSTER_NPT
+	      //check_bonds_mc("boh");
 	      if  (OprogStatus.ensembleMC==3)
 		move_box_cluster(&err);
 	      else
@@ -5696,7 +5770,10 @@ void move(void)
 		mcinout(1.0/Oparams.T,OprogStatus.pbias);
 	    }
 	  else
-	    movetype=mcmotion();
+	    {
+	      
+	      movetype=mcmotion();
+	    }
 	}
       //printf("done\n");
     }
