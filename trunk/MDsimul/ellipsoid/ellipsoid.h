@@ -12,6 +12,7 @@
 //#define MD_DGEBA_NMAX
 #undef MC_STORELL
 #define MC_STOREBONDS
+#define MC_STORE_ALL_COORDS
 #define MCGC_OPTLLREBUILD
 #define MD_RAND48
 #define MD_HARDSPHERES
