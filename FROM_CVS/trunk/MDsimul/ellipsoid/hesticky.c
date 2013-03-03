@@ -850,6 +850,7 @@ void find_bonds_one(int i)
 			  /* se trova un solo bond termina */
 			  if (clsNPT==1)
 			    {
+			      clsNPT=2;
 			      return;
 			    }
 #endif
