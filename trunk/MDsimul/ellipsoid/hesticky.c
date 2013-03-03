@@ -1203,7 +1203,16 @@ void find_bonds_one_NLL(int i)
       shift[2] = L*rint((rz[i]-rz[j])/L);
 #endif
 #endif
-
+#if defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)
+      /* se una delle due particelle ha due bond è inutile controllare i bond
+	 perché non potranno esserci bond tra i e j */
+      if (clsNPT==1)
+	{
+	  /* nel caso di un cambio di volume nel clusterNPT i legami si possono solo formare e non rompere */
+	  if (numbonds[i]==2 || numbonds[j]==2)
+	    continue;
+	}
+#endif
       assign_bond_mapping(i,j);
       dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
       nbonds = nbondsFlex;
@@ -1214,6 +1223,14 @@ void find_bonds_one_NLL(int i)
 	    {
 	      //printf("[find_bonds_one] found bond between ghost particles! i=%d j=%d typei=%d typej=%d\n",
 	      //	 i, j, typeOfPart[i], typeOfPart[j]);
+#if defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)
+	      /* se trova un solo bond termina */
+	      if (clsNPT==1)
+		{
+		  clsNPT=2;
+		  return;
+		}
+#endif
 	      add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
 	      add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
 	    }
