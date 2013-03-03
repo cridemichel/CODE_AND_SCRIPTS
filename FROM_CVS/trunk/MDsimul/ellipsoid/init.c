@@ -3043,6 +3043,10 @@ void find_bonds_flex_all(void)
     {
       //printf("pos=%.15G %.15G %.15G\n", rx[i], ry[i], rz[i]);
       find_bonds_one(i);
+#ifdef MC_OPT_CLSNPT
+      if (clsNPT==2)
+	return;
+#endif
     } 
 }
 #endif
