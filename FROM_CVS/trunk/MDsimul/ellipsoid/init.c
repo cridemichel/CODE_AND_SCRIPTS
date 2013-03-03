@@ -3035,6 +3035,9 @@ void set_angmom_to_zero(int i)
 extern void find_bonds_one(int i);
 extern void find_bonds_one_NLL(int i);
 #ifdef EDHE_FLEX
+#ifdef MC_OPT_CLSNPT
+extern int clsNPT;
+#endif
 void find_bonds_flex_all(void)
 {
   int i;
@@ -3055,7 +3058,13 @@ void find_bonds_flex_NNL(void)
 {
   int i;
   for (i=0; i < Oparams.parnum; i++)
-    find_bonds_one_NLL(i); 
+    {
+      find_bonds_one_NLL(i);
+#ifdef MC_OPT_CLSNPT
+      if (clsNPT==2)
+	return;
+#endif
+    } 
 }
 #endif
 #ifdef EDHE_FLEX
