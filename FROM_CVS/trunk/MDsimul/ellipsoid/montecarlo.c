@@ -2463,7 +2463,8 @@ void check_bonds_mc(char *txt)
 #endif
 
 #ifdef MC_CLUSTER_NPT
-//#define MC_CLSNPT_LOG
+#define MC_CLSNPT_LOG
+int clsNPT=0;
 void move_box_cluster(int *ierr)
 {
   int i0, i, ii, k, nc, ncls=0, percolating=0, np_in_cls, np, in0, in1, iold, kk;
@@ -2652,7 +2653,6 @@ void move_box_cluster(int *ierr)
 #endif
     }
 #endif
-
 #ifdef MC_STORELL
   store_ll_mc();
 #endif
@@ -2719,17 +2719,34 @@ void move_box_cluster(int *ierr)
 	  return;
 	}
     }
+#ifndef MC_OPT_CLSNPT
 #ifdef MC_STOREBONDS
   store_bonds_mc(-1);
 #endif
+#endif
   /* update all bonds with new positions */
+#ifndef MC_OPT_CLSNPT
   for (i=0; i < Oparams.parnum; i++)
-    numbonds[i] = 0;
+    {
+      numbonds[i] = 0;
+    }
+#endif
+#ifdef MC_OPT_CLSNPT
+  clsNPT=1;
+#endif
   if (OprogStatus.useNNL)
     find_bonds_flex_NNL();
   else
     find_bonds_flex_all();
+#ifdef MC_OPT_CLSNPT
+  if (clsNPT==2)
+    enn=eno-1;
+  else
+    enn=eno;
+  clsNPT=0;
+#else
   enn = calcpotene();
+#endif
 #if 1
   if (enn > eno)
     {
@@ -2805,6 +2822,7 @@ void move_box_cluster(int *ierr)
       rebuildLinkedList();
 #endif
       /* restore all bonds*/
+#ifndef MC_OPT_CLSNPT
 #ifdef MC_STOREBONDS
       restore_bonds_mc(-1);
 #else
@@ -2814,6 +2832,7 @@ void move_box_cluster(int *ierr)
 	find_bonds_flex_NNL();
       else
 	find_bonds_flex_all();
+#endif
 #endif
       return;
     }
