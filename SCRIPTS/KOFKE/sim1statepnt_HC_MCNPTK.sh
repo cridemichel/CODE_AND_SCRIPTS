@@ -34,11 +34,11 @@ STEPS="10000"
 else
 STEPS="$4"
 fi
-if [ "$4 = "" ]
+if [ "$5" = "" ]
 then
 DOADJ="1"
 else
-DOADJ="$4"
+DOADJ="$5"
 fi
 PARFILE="ellipsoid_flex_mc.par"
 DIRSIM="P-$PRESS"
