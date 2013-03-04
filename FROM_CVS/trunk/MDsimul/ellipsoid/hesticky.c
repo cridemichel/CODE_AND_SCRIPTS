@@ -729,7 +729,7 @@ extern int clsNPT;
 #endif
 void find_bonds_one(int i)
 {
-  int nn,  amin, bmin, j, nbonds;
+  int nn,  amin, bmin, j, nbonds, bonded;
   double shift[3], dist;
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
 
@@ -837,6 +837,23 @@ void find_bonds_one(int i)
 			continue;
 		    }
 #endif
+		  if (OprogStatus.assumeOneBond==1)
+		    {
+		      bonded=0;
+		      for (nn=0; nn < numbonds[i]; nn++)
+			{
+			  /* assuming one bond if i and j are already bonded
+			     we do not have to check further... */
+			  if (bonds[i][nn]/(NANA)==j)
+			    {
+			      //printf("qui\n");
+			      bonded=1;
+			      break;
+			    }
+			}
+		      if (bonded)
+			continue;
+		    }
 		  check_shift(i, j, shift);
 		  assign_bond_mapping(i,j);
 		  dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
