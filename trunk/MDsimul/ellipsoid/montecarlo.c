@@ -3808,6 +3808,14 @@ void mcoutin(double beta, double pbias)
 #endif
   epotennewi = calcpotene_GC(i);
   ideltae=epotennewi-epotenoldi;
+  if (OprogStatus.ensembleMC==1 || OprogStatus.ensembleMC ==3)
+    {
+#ifdef MD_LXYZ
+      vnonbond = L[0]*L[1]*L[2] - OprogStatus.vbond;
+#else
+      vnonbond = L*L*L - OprogStatus.vbond;
+#endif
+    }
   re = ((1.0-pbias)/pbias)*(OprogStatus.vbond/vnonbond)*exp(-beta*ideltae);
   //printf("vbond=%.15G vnonbond: %.15G\n", OprogStatus.vbond, vnonbond);
   re = re*((double) nout)/(nin+1.0); 
@@ -3994,6 +4002,14 @@ void mcinout(double beta, double pbias)
   epotennewi = calcpotene_GC(i);
  
   ideltae=epotennewi-epotenoldi;
+  if (OprogStatus.ensembleMC==1 || OprogStatus.ensembleMC ==3)
+    {
+#ifdef MD_LXYZ
+      vnonbond = L[0]*L[1]*L[2] - OprogStatus.vbond;
+#else
+      vnonbond = L*L*L - OprogStatus.vbond;
+#endif
+    }
   re = (pbias/(1.0-pbias))*(vnonbond/OprogStatus.vbond)*exp(-beta*ideltae);
   re = re*((double) nin)/(nout+1.0); 
   rcn = ranf();
