@@ -5819,51 +5819,57 @@ void move(void)
 	}
       //printf("done\n");
     }
-  if (OprogStatus.targetAccept > 0.0 && Oparams.curStep % OprogStatus.resetaccept==0)
+  if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
     {
-      acceptance=((double)(totmovesMC-totrejMC))/totmovesMC;
-      traaccept = ((double)(tramoveMC-trarejMC))/tramoveMC;
-      rotaccept = ((double)(rotmoveMC-rotrejMC))/rotmoveMC; 
- 
-      if (traaccept > OprogStatus.targetAccept)
-	OprogStatus.deltaMC *= 1.1;
-      else
-	OprogStatus.deltaMC /= 1.1;
-      if (OprogStatus.restrmove==0)
+      if (OprogStatus.targetAccept > 0.0 && Oparams.curStep % OprogStatus.resetaccept==0)
 	{
-	  if (rotaccept > OprogStatus.targetAccept)
-	    OprogStatus.dthetaMC *= 1.1;
+	  acceptance=((double)(totmovesMC-totrejMC))/totmovesMC;
+	  traaccept = ((double)(tramoveMC-trarejMC))/tramoveMC;
+	  rotaccept = ((double)(rotmoveMC-rotrejMC))/rotmoveMC; 
+
+      	  if (traaccept > OprogStatus.targetAccept)
+	    OprogStatus.deltaMC *= 1.1;
 	  else
-	    OprogStatus.dthetaMC /= 1.1;
-	}
+	    OprogStatus.deltaMC /= 1.1;
+	  if (OprogStatus.restrmove==0)
+	    {
+	      if (rotaccept > OprogStatus.targetAccept)
+		OprogStatus.dthetaMC *= 1.1;
+	      else
+		OprogStatus.dthetaMC /= 1.1;
+	    }
 #ifdef MD_LXYZ
-      if (OprogStatus.deltaMC > (avL=pow(L[0]*L[1]*L[2],1.0/3.0))*0.1)
-	OprogStatus.deltaMC = avL*0.1;
+	  if (OprogStatus.deltaMC > (avL=pow(L[0]*L[1]*L[2],1.0/3.0))*0.1)
+	    OprogStatus.deltaMC = avL*0.1;
 #else
-      if (OprogStatus.deltaMC > L*0.1)
-	OprogStatus.deltaMC = L*0.1;
+	  if (OprogStatus.deltaMC > L*0.1)
+	    OprogStatus.deltaMC = L*0.1;
 #endif
-      if (OprogStatus.dthetaMC > 3.14)
-	OprogStatus.dthetaMC = 3.14;
-      /*NOTA: questo credo che si possa eliminare */
-      if (OprogStatus.useNNL)
-	calc_all_maxsteps();
+	  if (OprogStatus.dthetaMC > 3.14)
+	    OprogStatus.dthetaMC = 3.14;
+	  /*NOTA: questo credo che si possa eliminare */
+	  if (OprogStatus.useNNL)
+	    calc_all_maxsteps();
+	}
     }
+  if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
+    { 
 #ifdef MC_CLUSTER_NPT
-if (OprogStatus.targetAcceptVol > 0.0 && (OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3) && volmoveMC > 0 
-      && (Oparams.curStep % OprogStatus.resetacceptVol==0))
+      if (OprogStatus.targetAcceptVol > 0.0 && (OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3) && volmoveMC > 0 
+	  && (Oparams.curStep % OprogStatus.resetacceptVol==0))
 
 #else
-  if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1 && volmoveMC > 0 
-      && (Oparams.curStep % OprogStatus.resetacceptVol==0))
+	if (OprogStatus.targetAcceptVol > 0.0 && OprogStatus.ensembleMC==1 && volmoveMC > 0 
+	    && (Oparams.curStep % OprogStatus.resetacceptVol==0))
 #endif
-    {
-      volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
-      //printf("sono qui volaccept=%.15G\n", volaccept);
-      if (volaccept > OprogStatus.targetAcceptVol)
-	OprogStatus.vmax *= 1.1;
-      else
-	OprogStatus.vmax /= 1.1;
+	  {
+	    volaccept = ((double)(volmoveMC-volrejMC))/volmoveMC;
+	    //printf("sono qui volaccept=%.15G\n", volaccept);
+	    if (volaccept > OprogStatus.targetAcceptVol)
+	      OprogStatus.vmax *= 1.1;
+	    else
+	      OprogStatus.vmax /= 1.1;
+	  }
     }
   if (Oparams.curStep%OprogStatus.outMC==0)
     {
@@ -5898,18 +5904,21 @@ if (OprogStatus.targetAcceptVol > 0.0 && (OprogStatus.ensembleMC==1||OprogStatus
       printf("Average iterations in case A.2:%G\n", totitsHC/numcallsHC);
 #endif
     }
-#ifdef MC_CLUSTER_NPT
-  if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && (OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3))
-    volmoveMC=volrejMC=0;
-#else
-  if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
-    volmoveMC=volrejMC=0;
-#endif
-  if (Oparams.curStep % OprogStatus.resetaccept==0)
+  if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
     {
-      totmovesMC=totrejMC=0;
-      tramoveMC=trarejMC=0;
-      rotmoveMC=rotrejMC=0;
+#ifdef MC_CLUSTER_NPT
+      if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && (OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3))
+	volmoveMC=volrejMC=0;
+#else
+      if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
+	volmoveMC=volrejMC=0;
+#endif
+      if (Oparams.curStep % OprogStatus.resetaccept==0)
+	{
+	  totmovesMC=totrejMC=0;
+	  tramoveMC=trarejMC=0;
+	  rotmoveMC=rotrejMC=0;
+	}
     }
   if (Oparams.curStep==Oparams.totStep)
     {

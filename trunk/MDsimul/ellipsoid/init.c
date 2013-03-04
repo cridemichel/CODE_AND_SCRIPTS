@@ -1959,6 +1959,7 @@ void usrInitBef(void)
     OprogStatus.resetaccept=10;
     OprogStatus.resetacceptVol=100;
     OprogStatus.outMC = 10;
+    OprogStatus.adjstepsMC=-1;
     OprogStatus.targetAccept=-1;
     OprogStatus.targetAcceptVol=-1;
 #endif
