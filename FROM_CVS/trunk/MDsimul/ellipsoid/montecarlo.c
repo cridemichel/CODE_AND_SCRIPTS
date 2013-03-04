@@ -3400,6 +3400,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       dx = dx*mapSigmaFlex[0];
       dy = dy*mapSigmaFlex[0];
       dz = dz*mapSigmaFlex[0];
+      //printf("nbB=%d dx=%f %f %f\n",nbB, dx, dy, dz);
 #else
 #if 0
 	/* N.B. qui si assume che gli spot siano uguali per tutte le particelle, che siano lungo x 
@@ -3499,7 +3500,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  oz = 0;
 	}
       else if (dist_type==0||dist_type==6)
-	orient(&ox, &oy, &oz);
+	{
+  	  orient(&ox, &oy, &oz);
+	}
       else 
 	orient_onsager(&ox, &oy, &oz, alpha);
 #ifdef MCIN_OPT
@@ -3551,6 +3554,8 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  else
 	    printf("ene=%f nbB=%d\n", ene,nbB);
 #else
+	  /* con il metodo ottimizzato il legame si forma sempre quindi non
+	     si devono controllare i legami */
 	  ene = -1;
 #endif
 #endif
@@ -3622,15 +3627,10 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 		}
 #endif
 	    }
-#ifdef MC_HC
+#if defined(MC_HC)
 	if (bonded)
 	  {
-	    if (fake)
-	      {
-		if (nbf != nb)
-		  bonded=0;	
-	      }
-	    else
+	    if (!fake)
 	      {
 #if 1
 		if (!check_bond_added(j, nb))
@@ -3640,8 +3640,15 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 		    bonded=0;
 		  }
 #endif
+#ifndef MCIN_OPT
+    		else
+     		  {
+		    /* se il bond trovato non è quello prescelto allora continua a provare */
+    		    if (nbf != nb)
+    		      bonded=0;	
+     		  } 
+#endif
 	      }
-
 	  }
 #endif 
 	 // printf("d=%.15G trials #%d\n", d, trials);
@@ -3664,7 +3671,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     }
 #if 0
 // DEBUGGING STUFF
-  if (Oparams.curStep%200==0)
+  if (Oparams.curStep%10==0)
     printf("trials=%d avg_trials=%.15G\n", trials, tottrials/calls);
 #endif
 }
