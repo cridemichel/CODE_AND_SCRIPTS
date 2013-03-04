@@ -904,6 +904,7 @@ struct progStatus
   int ensembleMC;
   double vmax;
   int outMC;
+  int adjstepsMC;
   int resetacceptVol;
   int resetaccept;
 #endif
@@ -1342,6 +1343,7 @@ struct pascii opro_ascii[] =
   {"resetaccept", &OS(resetaccept),                         1, 1, "%d"},
   {"resetacceptVol", &OS(resetacceptVol),                   1, 1, "%d"},
   {"outMC",          &OS(outMC),                            1, 1, "%d"},
+  {"adjstepsMC",     &OS(adjstepsMC),                       1, 1, "%d"},
 #endif
 #ifdef MD_SURV_PROB
   {"spdeltat",          &OS(spdeltat),                       1,   1, "%.15G"},
@@ -1502,6 +1504,7 @@ struct singlePar OsinglePar[] = {
   {"resetaccept",  &OprogStatus.resetaccept,    INT},
   {"resetacceptVol", &OprogStatus.resetacceptVol, INT},
   {"outMC",          &OprogStatus.outMC,      INT},
+  {"adjstepsMC",     &OprogStatus.adjstepsMC, INT},
   {"targetAccept",   &OprogStatus.targetAccept,           CT},
   {"targetAcceptVol",&OprogStatus.targetAcceptVol,        CT},
   {"vbond",          &OprogStatus.vbond,                  CT},
