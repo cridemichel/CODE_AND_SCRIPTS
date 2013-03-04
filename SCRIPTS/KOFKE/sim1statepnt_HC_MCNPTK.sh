@@ -64,12 +64,12 @@ PARNUM="1000"
 echo "[ " EXE:$EXENAME " ] Simulating BETA=" $BETA " P=" $PRESS
 if [ "$DOADJ" == "1" ]
 then
-../set_params.sh $PARFILE temperat $TEMP adjstepsMC $ADJSTEPS targetAccept $TARGVOL targetAcceptVol $TARGRT ensembleMC 1 useNNL 0 rcut -1 P $PRESS bakStepsAscii 100000 stepnum $STEPS resetacceptVol $RESETVOL resetaccept $RESETRT inifile $INIFILE endfile ${EXENAME}.cor VSteps $VSTEPS
+../set_params.sh $PARFILE temperat $TEMP adjstepsMC $ADJSTEPS targetAccept $TARGVOL targetAcceptVol $TARGRT ensembleMC 3 useNNL 0 rcut -1 P $PRESS bakStepsAscii 100000 stepnum $STEPS resetacceptVol $RESETVOL resetaccept $RESETRT inifile $INIFILE endfile ${EXENAME}.cor VSteps $VSTEPS
 #../set_params.sh $PARFILE inifile start.cnf
 ln -sf $ELLEXE $EXENAME
-$MOSRUN ./$EXENAME -fa ./$PARFILE > screen_$SIMPR 
+$MOSRUN ./$EXENAME -fa ./$PARFILE > screen_$SIMPR &
 else
-../set_params.sh $PARFILE temperat $TEMP targetAccept -1 targetAcceptVol -1 ensembleMC 1 useNNL 0 rcut -1 P $PRESS bakStepsAscii 100000 stepnum $STEPS inifile $INIFILE endfile ${EXENAME}.cor VSteps $VSTEPS
+../set_params.sh $PARFILE temperat $TEMP targetAccept -1 targetAcceptVol -1 ensembleMC 3 useNNL 0 rcut -1 P $PRESS bakStepsAscii 100000 stepnum $STEPS inifile $INIFILE endfile ${EXENAME}.cor VSteps $VSTEPS
 #../set_params.sh $PARFILE inifile start.cnf
 ln -sf $ELLEXE $EXENAME
 $MOSRUN ./$EXENAME -fa ./$PARFILE > screen_$SIMPR &
