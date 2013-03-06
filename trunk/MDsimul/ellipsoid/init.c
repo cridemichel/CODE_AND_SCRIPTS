@@ -130,6 +130,9 @@ extern int numevPQ, totevHQ, overevHQ;
 extern COORD_TYPE dispHi;
 extern const double timbig;
 double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB, **powdirs;
+#ifdef MC_CLUSTER_MOVE
+double ***RoldAll;
+#endif
 #ifdef MD_ASYM_ITENS
 double **Ia, **Ib, **invIa, **invIb, **Iatmp, **Ibtmp;
 #else
@@ -1943,6 +1946,11 @@ void usrInitBef(void)
     maxcoll=-1;
 #ifdef MC_SIMUL
     OprogStatus.restrmove = 0;
+#ifdef MC_CLUSTER_MOVE
+    OprogStatus.clsmovprob = 0.0;
+    OprogStatus.delRclsMC = 0.2;
+    OprogStatus.delTclsMC = 0.2;
+#endif
 #ifdef MC_GRANDCAN
     OprogStatus.zetaMC=0.05;
     OprogStatus.npav=1000;
@@ -5162,6 +5170,9 @@ void usrInitAft(void)
   RtB = matrix(3, 3);
   Aip = matrix(3,3);
   R = malloc(sizeof(double**)*Oparams.parnum);
+#ifdef MC_CLUSTER_MOVE
+  RoldAll = malloc(sizeof(double**)*Oparams.parnum);
+#endif
   for (i=0; i < Oparams.parnum; i++)
     {
 #if 0
@@ -5176,6 +5187,24 @@ void usrInitAft(void)
 	//fprintf(stderr,"%.15G %.15G %.15G @ 0.5\n", rx[i], ry[i], rz[i]);
 #endif
 #ifdef MD_MATRIX_CONTIGOUS
+#ifdef MC_CLUSTER_MOVE
+      /* alloca R in maniera contigua */
+      if (i==0)
+	{
+  	  RoldAll[i] = malloc(sizeof(double*)*3);
+	  RoldAll[i][0] = malloc(sizeof(double)*Oparams.parnum*9);
+	  RoldAll[i][1] = RoldAll[i][0] + 3;
+	  RoldAll[i][2] = RoldAll[i][1] + 3;
+	}
+      else
+	{
+	  RoldAll[i] = malloc(sizeof(double*)*3);
+	  RoldAll[i][0] = RoldAll[i-1][2] + 3;
+	  RoldAll[i][1] = RoldAll[i][0] + 3;
+	  RoldAll[i][2] = RoldAll[i][1] + 3;
+	}
+
+#endif
       /* alloca R in maniera contigua */
       if (i==0)
 	{
@@ -5192,6 +5221,9 @@ void usrInitAft(void)
 	  R[i][2] = R[i][1] + 3;
 	}
 #else
+#ifdef MC_CLUSTER_MOVE
+      RoldAll[i] = matrix(3,3);
+#endif
       R[i] = matrix(3, 3);
 #endif
 #if defined(MD_PATCHY_HE)||defined(EDHE_FLEX)
