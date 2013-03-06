@@ -880,6 +880,11 @@ struct progStatus
 #endif
   /* ======================================================================= */
 #ifdef MC_SIMUL
+#ifdef MC_CLUSTER_MOVE
+  double clsmovprob;
+  double delTclsMC;
+  double delRclsMC;
+#endif
   int restrmove; /* 0=no restriction (default) 1=fixed rot */
 #ifdef MC_GRANDCAN
   double zetaMC;
@@ -1318,6 +1323,11 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef MC_SIMUL
   {"restrmove",      &OS(restrmove),                     1,  1, "%d"},
+#ifdef MC_CLUSTER_MOVE
+  {"clsmovprob",      &OS(clsmovprob),                  1, 1, "%.12G"},
+  {"delTclsMC",       &OS(delTclsMC),                   1, 1, "%.12G"},
+  {"delRclsMC",       &OS(delRclsMC),                   1, 1, "%.12G"},
+#endif
 #ifdef MC_GRANDCAN
   {"zetaMC",     &OS(zetaMC),                            1,  1, "%.12G"},
   {"npav" ,     &OS(npav),                             1,  1, "%d"},
@@ -1483,6 +1493,11 @@ struct singlePar OsinglePar[] = {
   {"endFormat",  &OprogStatus.endFormat,      INT},
 #ifdef MC_SIMUL
   {"restrmove",  &OprogStatus.restrmove,    INT},
+#ifdef MC_CLUSTER_MOVE
+  {"clsmovprob", &OprogStatus.clsmovprob,   CT},
+  {"delTclsMC",  &OprogStatus.delTclsMC,    CT},
+  {"delRclsMC",  &OprogStatus.delRclsMC,    CT},
+#endif
 #ifdef MC_GRANDCAN
   {"zetaMC",   &OprogStatus.zetaMC,         CT},
   {"npav",  &OprogStatus.npav,        INT},

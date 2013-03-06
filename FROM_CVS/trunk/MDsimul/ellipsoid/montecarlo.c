@@ -61,6 +61,9 @@ extern int numOfProcs; /* number of processeses in a communicator */
 extern int *equilibrated;
 #endif 
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
+#ifdef MC_CLUSTER_MOVE
+extern double ***RoldAll;
+#endif
 #ifdef MD_CALENDAR_HYBRID
 extern int *linearLists;
 extern int numevPQ, totevHQ, overevHQ;
@@ -752,6 +755,9 @@ extern double ranf(void);
 extern void orient(double *ox, double *oy, double *oz);
 long long int rotmoveMC=0, tramoveMC=0, totmovesMC=0, trarejMC=0, rotrejMC=0, totrejMC=0, volrejMC=0, volmoveMC=0, excrejMC=0, excmoveMC=0;
 double displMC;
+#ifdef MC_CLUSTER_MOVE
+long long int totclsrejMC=0, totclsmovesMC=0, rotclsmoveMC=0, traclsmoveMC=0, rotclsrejMC=0, traclsrejMC=0;
+#endif
 void tra_move(int ip)
 {
   double dx, dy, dz;
@@ -5660,6 +5666,347 @@ int mcmotion(void)
 }
 extern double totitsHC, numcallsHC;
 extern double calc_phi(void);
+#ifdef MC_CLUSTER_MOVE
+void tra_cls_move(int nc)
+{
+  int ip, np;
+  double dx, dy, dz;
+  dx = OprogStatus.delTclsMC*(ranf()-0.5);
+  dy = OprogStatus.delTclsMC*(ranf()-0.5);
+  dz = OprogStatus.delTclsMC*(ranf()-0.5);
+  for (np=0; np < clsdim[nc]; np++)
+    {
+
+      ip = clsarr[firstofcls[nc]+np]; 
+      rx[ip]+= dx;
+      ry[ip]+= dy;
+      rz[ip]+= dz;
+    }
+  if (OprogStatus.useNNL)
+    {
+      displMC = sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz))*1.001;
+    }
+  traclsmoveMC++; 
+}
+
+int is_cls_percolating(int nc)
+{
+  if (nbcls[nc]==clsdim[nc]*2)
+    return 1;
+  else 
+    return 0;
+}
+void rot_cls_move(int nc, int flip)
+{
+  double theta, thetaSq, sinw, cosw;
+  double ox, oy, oz, OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
+  double rhb[3], rhbn[3];
+  int k1, k2, k3, ip, np;
+  /* pick a random orientation */
+  orient(&ox,&oy,&oz);
+  /* pick a random rotation angle */
+#ifdef MC_FLIP_MOVE
+  if (flip==1)
+    theta = acos(0.0); /* 90 degree rotation */
+  else
+    theta= OprogStatus.delRclsMC*(ranf()-0.5);
+#else
+  theta= OprogStatus.delRclsMC*(ranf()-0.5);
+#endif
+  if (OprogStatus.useNNL)
+    {
+      for (np=0; np < clsdim[nc]; np++)
+	{ 
+	  ip = clsarr[firstofcls[nc]+np];
+	  displMC = abs(theta)*0.5001*maxax[ip];
+	} 
+    }
+  thetaSq=Sqr(theta);
+  sinw = sin(theta);
+  cosw = (1.0 - cos(theta));
+  Omega[0][0] = 0;
+  Omega[0][1] = -oz;
+  Omega[0][2] = oy;
+  Omega[1][0] = oz;
+  Omega[1][1] = 0;
+  Omega[1][2] = -ox;
+  Omega[2][0] = -oy;
+  Omega[2][1] = ox;
+  Omega[2][2] = 0;
+  OmegaSq[0][0] = -Sqr(oy) - Sqr(oz);
+  OmegaSq[0][1] = ox*oy;
+  OmegaSq[0][2] = ox*oz;
+  OmegaSq[1][0] = ox*oy;
+  OmegaSq[1][1] = -Sqr(ox) - Sqr(oz);
+  OmegaSq[1][2] = oy*oz;
+  OmegaSq[2][0] = ox*oz;
+  OmegaSq[2][1] = oy*oz;
+  OmegaSq[2][2] = -Sqr(ox) - Sqr(oy);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	}
+    }
+  for (np=0; np < clsdim[nc]; np++)
+    {
+      /* rotate all particles within cluster */
+      ip = clsarr[firstofcls[nc]+np];
+      rhb[0] = rx[ip]-clsCoM[0][nc];
+      rhb[1] = ry[ip]-clsCoM[1][nc];
+      rhb[2] = rz[ip]-clsCoM[2][nc];
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  rhbn[k1] = 0;
+	  for (k2 = 0; k2 < 3; k2++)
+	    rhbn[k1] +=  R[ip][k2][k1]*rhb[k2];
+	}
+      rx[ip] = rhbn[0] + clsCoM[0][nc];
+      ry[ip] = rhbn[1] + clsCoM[1][nc];
+      rz[ip] = rhbn[2] + clsCoM[2][nc];
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  {
+	    Ro[k1][k2] = R[ip][k1][k2];
+	    for (k3 = 0; k3 < 3; k3++)
+	      Ro[k1][k2] += R[ip][k1][k3]*M[k3][k2];
+	  }
+      for (k1 = 0; k1 < 3; k1++)
+	for (k2 = 0; k2 < 3; k2++)
+	  R[ip][k1][k2] = Ro[k1][k2]; 
+    }
+  rotclsmoveMC++;
+}
+
+int random_cls_move(int nc)
+{
+  double p;
+  //printf("random move ip=%d\n", ip);
+  p=ranf();
+  if (OprogStatus.restrmove==1|| OprogStatus.restrmove==2
+#ifdef MC_RESTR_MATRIX
+      || OprogStatus.restrmove==3
+#endif
+     )
+    p=0.0;
+
+  if (p <= 0.5)
+    {
+      tra_cls_move(nc);
+      return 0;
+    }
+  else
+    {
+#ifdef MC_FLIP_MOVE
+      /* flip_prob must be between 0 and 1 
+	 (in Blaak, Frenkel and Mulder, J. Chem. Phys., Vol. 110, (1999) 
+	 they suggest 0.1=1/10) */
+      if (OprogStatus.flip_prob > 0.0 && ranf()< OprogStatus.flip_prob)
+	rot_cls_move(nc, 1);
+      else
+	rot_cls_move(nc, 0);
+#else
+      rot_cls_move(nc, 0);
+#endif
+      return 1;
+    } 
+}
+void find_clsbonds_MC(int ip)
+{
+  if (OprogStatus.useNNL)
+    find_bonds_one_NLL(ip);
+  else
+    find_bonds_one(ip);
+}
+
+void store_cls_coord(int nc)
+{
+  int np, ip, k1, k2;
+  for (np = 0; np < clsdim[nc]; np++)
+    {
+      ip = clsarr[firstofcls[nc]+np];
+      vx[ip]=rx[ip];
+      vy[ip]=ry[ip];
+      vz[ip]=rz[ip];
+      for (k1=0; k1<3; k1++)
+	for (k2=0; k2<3; k2++)
+	  RoldAll[np][k1][k2]=R[ip][k1][k2];
+    } 
+}
+void restore_cls_coord(int nc)
+{
+  int np, ip, k1, k2;
+
+  for (np = 0; np < clsdim[nc]; np++)
+    {
+      ip = clsarr[firstofcls[nc]+np];
+      rx[ip]=vx[ip];
+      ry[ip]=vy[ip];
+      rz[ip]=vz[ip];
+      for (k1=0; k1<3; k1++)
+	for (k2=0; k2<3; k2++)
+	  R[ip][k1][k2]=RoldAll[ip][k1][k2]; 
+    }
+}
+
+int cluster_move(void)
+{
+  int ncls, percolating, nc;
+  int iold, k, i, np, ip, dorej, movetype, err, in0, in1, np_in_cls, i0;
+  double enn, eno;
+  double lastrx, lastry, lastrz;
+  build_clusters(&ncls, &percolating);
+  /* pick randomly a cluster */
+  nc = ranf()*ncls;
+  /* discard move if the cluster is percolating */ 
+  if (is_cls_percolating(nc))
+    return -1;
+  /* qui basta calcolare l'energia della particella che sto muovendo */
+  eno = calcpotene();
+  store_cls_coord(nc);
+
+  for (k=0; k < 3; k++)
+    clsCoM[k][nc] = 0.0;
+  /* if it is percolating all particles have 2 bonds, 
+     hence we have to initialize i0 */
+  i0 =  clsarr[firstofcls[nc]];
+  for (np=0; np < clsdim[nc]; np++)
+    {
+      i =  clsarr[firstofcls[nc]+np];
+      if ( numbonds[i]==1) 
+	{
+	  i0 = i;
+	  //printf("qui i0=%d\n", i0);
+	  break;
+	}
+    }
+
+  np_in_cls=1;
+  i =  bonds[i0][0] / (NANA);
+  iold=i0;	
+  clsCoM[0][nc] = rx[i0];
+  clsCoM[1][nc] = ry[i0];
+  clsCoM[2][nc] = rz[i0]; 
+  /* if particles has no bond we have to check... */ 
+  while (numbonds[i0]>0)
+    {
+      /* rebuild the cluster as a whole */
+      lastrx = rx[iold];
+      lastry = ry[iold];
+      lastrz = rz[iold];
+      rx[i] -= L[0]*rint((rx[i]-lastrx)/L[0]);
+      ry[i] -= L[1]*rint((ry[i]-lastry)/L[1]);
+      rz[i] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
+      clsCoM[0][nc] += rx[i];
+      clsCoM[1][nc] += ry[i];
+      clsCoM[2][nc] += rz[i];
+      np_in_cls++;
+#if 0
+      if (numbonds[i] > 2)
+	{
+	  printf("more than 2 bonds (%d) for particle %d!\n", numbonds[i], i);
+	}
+#endif
+      if(numbonds[i]==1 || np_in_cls == clsdim[nc])
+	{
+	  //printf("numbonds[i=%d]=%d numbonds[i0=%d]=%d", i, numbonds[i], i0, numbonds[i0]);
+	  break;
+	}	   
+      in0 = bonds[i][0]/(NANA);
+      in1 = bonds[i][1]/(NANA);
+      if (in1==iold)
+	{
+	  iold = i;
+	  i = in0;
+	}
+      else
+	{
+	  iold = i;
+	  i = in1;
+	}
+    }
+#if 0
+  if (np_in_cls != clsdim[nc])
+    {
+      printf("we got a problem np_in_cls=%d  but clsdim[%d]=%d\n", np_in_cls, nc, clsdim[nc]);
+      printf("percolating=%d\n", percolating);
+      exit(-1);
+    }
+#endif
+  for (k=0; k < 3; k++)
+    clsCoM[k][nc] /= clsdim[nc];
+ 
+  movetype=random_cls_move(nc);
+
+  for (np=0; np < clsdim[nc]; np++)
+    {
+      ip = clsarr[firstofcls[nc]+np];
+      pbc(ip);
+      update_LL(ip);
+    };
+  //rebuildLinkedList();
+  //printf("i=%d\n", i);
+  totclsmovesMC++;
+  /* overlapMC() aggiorna anche i bond */
+  //err=0;
+  dorej=0;
+  for (np=0; np < clsdim[nc]; np++)
+    {
+      ip = clsarr[firstofcls[nc]+np];
+      dorej = overlapMC(ip, &err);
+      if (dorej!=0)
+	break;
+    }
+  if (!dorej)
+    {
+      clsNPT=1;
+      find_clsbonds_MC(nc);
+      if (clsNPT==2)
+	enn=eno-1;
+      else
+	enn=eno;
+      clsNPT=0;
+      if (enn != eno)
+	{
+	  dorej=1;
+	}
+    }
+
+  if (dorej != 0)
+    {
+      /* move rejected */
+      totclsrejMC++;
+      if (movetype==0)
+	traclsrejMC++;
+      else 
+	rotclsrejMC++;
+      //printf("restoring coords\n");
+      if(err)
+	{
+	  printf("[random_move] NR failed...I rejected this trial move...\n");
+	  err=0;
+	}
+      restore_cls_coord(nc);
+      //rebuildLinkedList();
+      for (np=0; np < clsdim[nc]; np++)
+	{
+	  ip = clsarr[firstofcls[nc]+np];
+	  update_LL(ip);
+	}
+    }
+  if (OprogStatus.useNNL && dorej==0 )
+    {
+      for (np = 0; np < clsdim[nc]; np++)
+	{	  
+	  ip =  clsarr[firstofcls[nc]+np];
+	  overestimate_of_displ[ip] += displMC; 
+	}
+    }
+  return movetype;
+}
+#endif
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0, volfrac;
@@ -5738,6 +6085,13 @@ void move(void)
     ntot=Oparams.parnum;
   for (i=0; i < ntot; i++)
     {
+#ifdef MC_CLUSTER_MOVE
+      if (OprogStatus.clsmovprob > 0.0 && ranf() < OprogStatus.clsmovprob)
+	{
+	  movetype=cluster_move();
+	  continue;
+	}
+#endif
       if (OprogStatus.ensembleMC==0 && deln==0)
 	ran = 0;
       else
