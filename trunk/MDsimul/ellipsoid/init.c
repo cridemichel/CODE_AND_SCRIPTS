@@ -4842,6 +4842,13 @@ void usrInitAft(void)
       exit(-1);
     } 
 #endif
+#ifdef MC_CLUSTER_MOVE
+  if (OprogStatus.useNNL)
+    {
+      printf("NNL can not be used with cluster moves!\n");
+      exit(-1);
+    }
+#endif
 #ifdef MD_DYNAMIC_OPROG
   OprogStatus.dyn_alloc_oprog();
 #endif
