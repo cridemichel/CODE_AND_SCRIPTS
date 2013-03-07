@@ -2447,7 +2447,7 @@ void restore_bonds_mc(int ip)
 }
 #endif
 #if 1
-void check_bonds_mc(char *txt)
+int check_bonds_mc(char *txt)
 {
   int i;
   double enoo, eno;
@@ -2462,9 +2462,11 @@ void check_bonds_mc(char *txt)
     {
       if (txt) 
 	printf("%s\n", txt);
-      printf("boh eno=%f enoo=%f\n", eno, enoo);
-      exit(-1);
+      printf("[step #%d] boh eno=%f enoo=%f\n", Oparams.curStep, eno, enoo);
+      return 1;
+      //exit(-1);
     }
+  return 0;
 }
 #endif
 
@@ -5674,13 +5676,13 @@ void tra_cls_move(int nc)
   dx = OprogStatus.delTclsMC*(ranf()-0.5);
   dy = OprogStatus.delTclsMC*(ranf()-0.5);
   dz = OprogStatus.delTclsMC*(ranf()-0.5);
+  //  printf("dr=%f %f %f\n", dx, dy, dz);
   for (np=0; np < clsdim[nc]; np++)
     {
-
       ip = clsarr[firstofcls[nc]+np]; 
-      rx[ip]+= dx;
-      ry[ip]+= dy;
-      rz[ip]+= dz;
+      rx[ip] += dx;
+      ry[ip] += dy;
+      rz[ip] += dz;
     }
   if (OprogStatus.useNNL)
     {
@@ -5757,15 +5759,27 @@ void rot_cls_move(int nc, int flip)
       rhb[0] = rx[ip]-clsCoM[0][nc];
       rhb[1] = ry[ip]-clsCoM[1][nc];
       rhb[2] = rz[ip]-clsCoM[2][nc];
+      /* note that I+M is the orthogonal matrix associated to the rotation around axiz (ox, oy, oz)
+	 (see my J. Comp. Phys. 2010 on cond-mat pag. 4)
+       */
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  rhbn[k1] = 0;
 	  for (k2 = 0; k2 < 3; k2++)
-	    rhbn[k1] +=  R[ip][k2][k1]*rhb[k2];
+	    {
+	      if (k1==k2)
+		rhbn[k1] += (1.0+M[k2][k1])*rhb[k2];
+	      else
+		rhbn[k1] += M[k2][k1]*rhb[k2];
+	    }
 	}
+       //    printf("r[%d]=%f %f %f rhb=%f %f %f\n", ip, rx[ip], ry[ip], rz[ip], rhbn[0], rhbn[1], rhbn[2]);
+#if 1
       rx[ip] = rhbn[0] + clsCoM[0][nc];
       ry[ip] = rhbn[1] + clsCoM[1][nc];
       rz[ip] = rhbn[2] + clsCoM[2][nc];
+#endif
+#if 1
       for (k1 = 0; k1 < 3; k1++)
 	for (k2 = 0; k2 < 3; k2++)
 	  {
@@ -5776,6 +5790,24 @@ void rot_cls_move(int nc, int flip)
       for (k1 = 0; k1 < 3; k1++)
 	for (k2 = 0; k2 < 3; k2++)
 	  R[ip][k1][k2] = Ro[k1][k2]; 
+#if 0
+      printf("{");
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  printf("{");
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      printf("%.15G", M[k1][k2]);
+	      if (k2 < 3 - 1)
+		printf(", ");
+	    }
+	  printf("}");
+      if (k1 < 3-1)
+	printf(",\n");
+	}
+      printf("}\n");
+#endif
+#endif
     }
   rotclsmoveMC++;
 }
@@ -5790,8 +5822,7 @@ int random_cls_move(int nc)
       || OprogStatus.restrmove==3
 #endif
      )
-    p=0.0;
-
+  p=0.0;
   if (p <= 0.5)
     {
       tra_cls_move(nc);
@@ -5813,12 +5844,19 @@ int random_cls_move(int nc)
       return 1;
     } 
 }
-void find_clsbonds_MC(int ip)
+void find_clsbonds_MC(int nc)
 {
-  if (OprogStatus.useNNL)
-    find_bonds_one_NLL(ip);
-  else
-    find_bonds_one(ip);
+  int ip, np;
+  for (np=0; np < clsdim[nc]; np++)
+    {
+      ip = clsarr[firstofcls[nc]+np];
+      if (OprogStatus.useNNL)
+	find_bonds_one_NLL(ip);
+      else
+	find_bonds_one(ip);
+      if (clsNPT==2)
+	break;
+    }
 }
 
 void store_cls_coord(int nc)
@@ -5832,7 +5870,7 @@ void store_cls_coord(int nc)
       vz[ip]=rz[ip];
       for (k1=0; k1<3; k1++)
 	for (k2=0; k2<3; k2++)
-	  RoldAll[np][k1][k2]=R[ip][k1][k2];
+	  RoldAll[ip][k1][k2]=R[ip][k1][k2];
     } 
 }
 void restore_cls_coord(int nc)
@@ -5850,11 +5888,74 @@ void restore_cls_coord(int nc)
 	  R[ip][k1][k2]=RoldAll[ip][k1][k2]; 
     }
 }
+void store_particles_cls(int nc)
+{
+  char fileop2[512], fileop[512];
+  FILE *bf;
+  int i, na, np;
+#ifdef EDHE_FLEX
+  int kk;
+  double axi[3], axj[3];
+#endif
+#ifdef MD_PATCHY_HE
+  int nn;
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double ratA[NA][3], ratB[NA][3];
+#endif
+#endif
+  double Drx, Dry, Drz, RCMx, RCMy, RCMz;
+  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G C[%s]\n";
+  sprintf(fileop2 ,"StoreBump-cls-%d", nc);
+  /* store conf */
+  strcpy(fileop, absTmpAsciiHD(fileop2));
+  if ( (bf = fopenMPI(fileop, "w")) == NULL)
+    {
+      mdPrintf(STD, "Errore nella fopen in saveBakAscii!\n", NULL);
+      exit(-1);
+    }
+  UpdateSystem();
+  R2u();
 
+#if 1
+  fprintf(bf, ".Vol: %f\n", Oparams.rcut*Oparams.rcut*Oparams.rcut);
+#else
+  fprintf(bf, ".Vol: %f\n", L[0]*L[1]*L[2]);
+#endif
+  MD_DEBUG(printf("[Store bump]: %.15G\n", Oparams.time));
+  RCMx = clsCoM[0][nc];
+  RCMy = clsCoM[1][nc];
+  RCMz = clsCoM[2][nc];
+  for (np = 0; np < clsdim[nc]; np++)
+    {
+      i = clsarr[firstofcls[nc]+np]; 
+      for (kk=0; kk < 3; kk++)
+	{
+	  axi[kk] = typesArr[typeOfPart[i]].sax[kk];
+	}
+      fprintf(bf, tipodat2,rx[i]-RCMx, ry[i]-RCMy, rz[i]-RCMz, uxx[i], uxy[i], uxz[i],  axi[1], 2*axi[0], "red");
+      //writeAllCor(bf);
+#ifdef MD_PATCHY_HE
+      rA[0] = rx[i]-RCMx;
+      rA[1] = ry[i]-RCMy;
+      rA[2] = rz[i]-RCMz;
+      BuildAtomPos(i, rA, R[i], ratA);
+#ifdef EDHE_FLEX
+      for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
+	fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+		ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+#else
+      for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
+	fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+		ratA[nn][0], ratA[nn][1], ratA[nn][2], Oparams.sigmaSticky*0.5);
+#endif
+#endif
+    }
+  fclose(bf);
+}
 int cluster_move(void)
 {
   int ncls, percolating, nc;
-  int iold, k, i, np, ip, dorej, movetype, err, in0, in1, np_in_cls, i0;
+  int iold, k, i, np, ip, dorej, movetype, err, in0, in1, np_in_cls, i0, ret;
   double enn, eno;
   double lastrx, lastry, lastrz;
   build_clusters(&ncls, &percolating);
@@ -5866,7 +5967,7 @@ int cluster_move(void)
   /* qui basta calcolare l'energia della particella che sto muovendo */
   eno = calcpotene();
   store_cls_coord(nc);
-
+  //printf("BEG eno=%f\n", eno);
   for (k=0; k < 3; k++)
     clsCoM[k][nc] = 0.0;
   /* if it is percolating all particles have 2 bonds, 
@@ -5939,7 +6040,14 @@ int cluster_move(void)
     clsCoM[k][nc] /= clsdim[nc];
  
   movetype=random_cls_move(nc);
-
+  
+#if 0
+for (np=0; np < clsdim[nc]; np++)
+    {
+      ip = clsarr[firstofcls[nc]+np];
+      printf("PRIMAnumbonds[%d]=%d\n", ip, numbonds[ip]);
+    }
+#endif
   for (np=0; np < clsdim[nc]; np++)
     {
       ip = clsarr[firstofcls[nc]+np];
@@ -5947,11 +6055,25 @@ int cluster_move(void)
       update_LL(ip);
     };
   //rebuildLinkedList();
+#if 0
+  ret=check_bonds_mc("boh");
+  for (np=0; np < clsdim[nc]; np++)
+    {
+      ip = clsarr[firstofcls[nc]+np];
+      printf("DOPOnumbonds[%d]=%d\n", ip, numbonds[ip]);
+    } 
+  if (ret)
+    {
+      store_particles_cls(nc);
+      exit(-1);
+    }
+#endif
   //printf("i=%d\n", i);
   totclsmovesMC++;
   /* overlapMC() aggiorna anche i bond */
   //err=0;
   dorej=0;
+  //printf("clsdim=%d\n", clsdim[nc]);
   for (np=0; np < clsdim[nc]; np++)
     {
       ip = clsarr[firstofcls[nc]+np];
@@ -5962,6 +6084,7 @@ int cluster_move(void)
   if (!dorej)
     {
       clsNPT=1;
+
       find_clsbonds_MC(nc);
       if (clsNPT==2)
 	enn=eno-1;
@@ -5973,7 +6096,7 @@ int cluster_move(void)
 	  dorej=1;
 	}
     }
-
+  
   if (dorej != 0)
     {
       /* move rejected */
@@ -5982,7 +6105,6 @@ int cluster_move(void)
 	traclsrejMC++;
       else 
 	rotclsrejMC++;
-      //printf("restoring coords\n");
       if(err)
 	{
 	  printf("[random_move] NR failed...I rejected this trial move...\n");
@@ -5995,6 +6117,10 @@ int cluster_move(void)
 	  ip = clsarr[firstofcls[nc]+np];
 	  update_LL(ip);
 	}
+    }
+  else
+    {
+   //   printf("step=%d cluster move accettata\n", Oparams.curStep);
     }
   if (OprogStatus.useNNL && dorej==0 )
     {
