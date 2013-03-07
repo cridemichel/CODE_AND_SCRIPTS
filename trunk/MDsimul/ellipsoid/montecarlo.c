@@ -1348,7 +1348,9 @@ int overlapMC_NNL(int na, int *err)
     }
   return 0;
 }
-
+#if defined(MC_CLUSTER_MOVE)|| MC_CLUSTER_NPT
+int clsNPT=0;
+#endif
 int overlapMC_LL(int ip, int *err)
 {
   int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na;
@@ -1443,6 +1445,14 @@ int overlapMC_LL(int ip, int *err)
 			continue;
 #endif
 
+#if defined(MC_CLUSTER_MOVE) || defined(MC_CLUSTER_NPT)
+		      /* nel caso di cluster move particelle appartenenti allo stesso cluster
+			 non possono overlapparsi dopo la cluster move */
+		      if (clsNPT==1 && color[na] == color[n])
+			{
+			  continue;
+			}
+#endif
 		      if (check_overlap(na, n, shift, err)<0.0)
 			{
 			  //printf("checking i=%d j=%d: ", na, n);
@@ -2472,7 +2482,6 @@ int check_bonds_mc(char *txt)
 
 #ifdef MC_CLUSTER_NPT
 #define MC_CLSNPT_LOG
-int clsNPT=0;
 void move_box_cluster(int *ierr)
 {
   int i0, i, ii, k, nc, ncls=0, percolating=0, np_in_cls, np, in0, in1, iold, kk;
@@ -2669,6 +2678,7 @@ void move_box_cluster(int *ierr)
  
   for (i=0; i < Oparams.parnum; i++)
     {
+      clsNPT=1;
       if (overlapMC(i, ierr))
 	{
 	  //printf("overlap di %d Lfact=%.15G\n", i, Lfact);
@@ -2724,8 +2734,10 @@ void move_box_cluster(int *ierr)
 	  update_numcells();
 	  rebuildLinkedList();
 #endif
+	  clsNPT=0;
 	  return;
 	}
+      clsNPT=0;
     }
 #ifndef MC_OPT_CLSNPT
 #ifdef MC_STOREBONDS
@@ -6077,7 +6089,9 @@ for (np=0; np < clsdim[nc]; np++)
   for (np=0; np < clsdim[nc]; np++)
     {
       ip = clsarr[firstofcls[nc]+np];
+      clsNPT=1;
       dorej = overlapMC(ip, &err);
+      clsNPT=0;
       if (dorej!=0)
 	break;
     }
