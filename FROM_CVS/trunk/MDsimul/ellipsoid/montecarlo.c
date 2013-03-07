@@ -6330,6 +6330,31 @@ void move(void)
 	  /*NOTA: questo credo che si possa eliminare */
 	  if (OprogStatus.useNNL)
 	    calc_all_maxsteps();
+#ifdef MC_CLUSTER_MOVE
+	  acceptance=((double)(totclsmovesMC-totclsrejMC))/totclsmovesMC;
+	  traaccept = ((double)(traclsmoveMC-traclsrejMC))/traclsmoveMC;
+	  rotaccept = ((double)(rotmoveMC-rotrejMC))/rotmoveMC; 
+	  if (traaccept > OprogStatus.targetAccept)
+	    OprogStatus.delTclsMC *= 1.1;
+	  else
+	    OprogStatus.delTclsMC /= 1.1;
+	  if (OprogStatus.restrmove==0)
+	    {
+	      if (rotaccept > OprogStatus.targetAccept)
+		OprogStatus.delRclsMC *= 1.1;
+	      else
+		OprogStatus.delRclsMC /= 1.1;
+	    }
+#ifdef MD_LXYZ
+	  if (OprogStatus.delTclsMC > (avL=pow(L[0]*L[1]*L[2],1.0/3.0))*0.1)
+	    OprogStatus.delTclsMC = avL*0.1;
+#else
+	  if (OprogStatus.delTclsMC > L*0.1)
+	    OprogStatus.delTclsMC = L*0.1;
+#endif
+	  if (OprogStatus.delRclsMC > 3.14)
+	    OprogStatus.delRclsMC = 3.14;
+#endif
 	}
     }
   if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
@@ -6350,7 +6375,7 @@ void move(void)
 	    else
 	      OprogStatus.vmax /= 1.1;
 	  }
-    }
+   }
   if (Oparams.curStep%OprogStatus.outMC==0)
     {
       if (OprogStatus.targetPhiMC > 0.0)
@@ -6380,6 +6405,18 @@ void move(void)
       if (OprogStatus.ensembleMC==1 && volmoveMC > 0)
 	printf("Volume moves acceptance = %.15G vmax = %.15G\n", volaccept, OprogStatus.vmax);
 #endif
+#ifdef MC_CLUSTER_MOVE
+      if (OprogStatus.clsmovprob > 0.0)
+	{
+	  acceptance = ((double)(totclsmovesMC-totclsrejMC))/totclsmovesMC;
+	  traaccept = ((double)(traclsmoveMC-traclsrejMC))/traclsmoveMC;
+	  if (rotclsmoveMC!=0)
+	    rotaccept = ((double)(rotclsmoveMC-rotclsrejMC))/rotclsmoveMC;
+	  else 
+	    rotaccept = -1;	  
+	  printf("Cluster move acceptance: %.15G (tra=%.15G rot=%.15G) delTcls=%.12G delRcls=%.12G\n", acceptance, traaccept, rotaccept, OprogStatus.delTclsMC, OprogStatus.delRclsMC);
+	}
+#endif
 #ifdef MC_HC
       printf("Average iterations in case A.2:%G\n", totitsHC/numcallsHC);
 #endif
@@ -6393,9 +6430,14 @@ void move(void)
       if ((Oparams.curStep % OprogStatus.resetacceptVol == 0) && OprogStatus.ensembleMC==1)
 	volmoveMC=volrejMC=0;
 #endif
-      if (Oparams.curStep % OprogStatus.resetaccept==0)
+     if (Oparams.curStep % OprogStatus.resetaccept==0)
 	{
-	  totmovesMC=totrejMC=0;
+#ifdef MC_CLUSTER_MOVE
+    	  totclsmovesMC = totclsrejMC = 0;
+	  traclsmoveMC = traclsrejMC = 0;
+	  rotclsmoveMC = rotclsrejMC = 0;
+#endif
+ 	  totmovesMC=totrejMC=0;
 	  tramoveMC=trarejMC=0;
 	  rotmoveMC=rotrejMC=0;
 	}
