@@ -257,9 +257,9 @@ int main(int argc, char **argv)
   f2 = fopen(argv[2],"w");
   f = fopen(argv[1], "r");
   fscanf(f, "%[^\n]\n", line);
-  fscanf(f, "%d %lf %lf %lf %lf %lf\n", &nummol, &bx, &by, &bz, &trad, &tlen, &patchRad, &patchPos);
+  fscanf(f, "%d %lf %lf %lf %lf %lf %lf %lf\n", &nummol, &bx, &by, &bz, &trad, &tlen, &patchRad, &patchPos);
   //by = bz = bx;
-  printf("NUMMOL: %d\n", nummol);
+  printf("NUMMOL: %d box=%f %f %f R=%f L=%f patchRad=%f patchyPos=%f\n", nummol, bx, by, bz, trad, tlen, patchRad, patchPos);
 #if 0
   vx = malloc(sizeof(double)*nummol);
   vy = malloc(sizeof(double)*nummol);
