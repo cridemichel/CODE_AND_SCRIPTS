@@ -40,7 +40,7 @@ LAST=`tail -1 $KFN`
 BETAINI=`echo $LAST | awk '{print $1}'`
 if [ "$1" = "" ]
 then
-DELBMOD="0.05"
+DELBMOD="0.2"
 DELB=`echo $BETAINI $BETAEND | awk -v delb=$DELBMOD '{if ($1 > $2) {printf("-%s",delb);} else {printf("%s",delb);}}'`
 else
 DELB="$1"
@@ -125,6 +125,7 @@ Vp1N=`cat $KFNPRED | awk '{print $5}'`
 Up1N=`cat $KFNPRED | awk '{print $6}'`
 Fp1=`echo "-((${Up1N})-(${Up1I}) + ${Pp1}*(${Vp1N}-${Vp1I}))/(${BETAp1}*${Pp1}*(${Vp1N}-${Vp1I}))"|bc -l`
 #echo "LAST=" $LAST " PREV=" $PREV
+echo "CORRECTOR ITERATION #" $ITER
 if [ "$NLKF" = "1" ]
 then
 echo "NEWP=" $NEWP "P0=" $P0 "Fp1=" $Fp1 " F0=" $F0 
@@ -263,10 +264,11 @@ AVVOLNEM=`cat $NEMD/volume.dat|awk -v nump=$NPN -v fact=$FACT -v npt=$NPTS '{if 
 if [ "$KSTAT" = "predictor" ]
 then
 echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" > $KFNPRED
+ITER="1"
 echo "corrector" > $KSFN
 else
 POLD=`cat $KFNPRED | awk '{print $2}'`
-CONVERGED=`echo ($PCUR-$POLD)/$POLD | gawk -v delp=$DELPTHR '{if ($1 < delp && $1 > -delp) print("1"); else print ("0");}'`
+CONVERGED=`echo "${PCUR}/${POLD}-1" | bc -l | gawk -v delp=$DELPTHR '{if ($1 < delp && $1 > -delp) print("1"); else print ("0");}'`
 if [ "$CONVERGED" == "1" ]
 then
 #update the kofke file and go to next step
@@ -275,6 +277,7 @@ echo "predictor" > $KSFN
 else
 #=============== <<< ITERATE TO CONVERGENCE >>> ================== 
 echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" > $KFNPRED
+ITER=$[$[ITER]+1]
 fi
 fi
 echo "last run was:" $KSTAT
