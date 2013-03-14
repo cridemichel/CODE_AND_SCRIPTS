@@ -8,9 +8,9 @@
 # echo "predictor" > $KSFN
 echo "$BASHPID" > kofke_run_PID
 DEBUG="1"
-WTIME="2" #waiting time between two successive checks in seconds
-EQSTEPS="100"
-FACT="0.666666" # prende un fattore pari a $FACT di tutta la simulazione per fare le medie
+WTIME="20" #waiting time between two successive checks in seconds
+EQSTEPS="200000"
+FACT="0.6666" # prende un fattore pari a $FACT di tutta la simulazione per fare le medie
 alias awk='LANG=C awk'
 EXES="../sim1statepnt_HC_MCNPTK.sh"
 FINFILE="CorFinal"
@@ -39,7 +39,7 @@ LAST=`tail -1 $KFN`
 BETAINI=`echo $LAST | awk '{print $1}'`
 if [ "$1" = "" ]
 then
-DELBMOD="0.2"
+DELBMOD="0.05"
 DELB=`echo $BETAINI $BETAEND | awk -v delb=$DELBMOD '{if ($1 > $2) {printf("-%s",delb);} else {printf("%s",delb);}}'`
 else
 DELB="$1"
