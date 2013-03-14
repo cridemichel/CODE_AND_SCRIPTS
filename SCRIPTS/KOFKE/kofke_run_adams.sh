@@ -9,7 +9,8 @@
 echo "$BASHPID" > kofke_run_PID
 DEBUG="1"
 WTIME="20" #waiting time between two successive checks in seconds
-EQSTEPS="200000"
+DELPTHR="0.00001" # variazione relativa della pressione per cui si ha convergenza (1E-5 è come lo setta kofke)
+EQSTEPS="100000"
 FACT="0.6666" # prende un fattore pari a $FACT di tutta la simulazione per fare le medie
 alias awk='LANG=C awk'
 EXES="../sim1statepnt_HC_MCNPTK.sh"
@@ -113,7 +114,7 @@ echo "$NEWBETA" > $BFN
 fi
 echo "NEWP=" $NEWP "F0=" $F0
 else
-#CORRECTOR HERE
+#================= <<< CORRECTOR HERE >>> ===============
 #echo "CORRECTOR OK"
 PPREV="`tail -3 $KFN | head -1`"
 BETAp1=`cat $KFNPRED | awk '{print $1}'`
@@ -264,8 +265,17 @@ then
 echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" > $KFNPRED
 echo "corrector" > $KSFN
 else
+POLD=`cat $KFNPRED | awk '{print $2}'`
+CONVERGED=`echo ($PCUR-$POLD)/$POLD | gawk -v delp=$DELPTHR '{if ($1 < delp && $1 > -delp) print("1"); else print ("0");}'`
+if [ "$CONVERGED" == "1" ]
+then
+#update the kofke file and go to next step
 echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" >> $KFN
 echo "predictor" > $KSFN
+else
+#=============== <<< ITERATE TO CONVERGENCE >>> ================== 
+echo "$BETACUR $PCUR $AVVOLISO $AVENEISO $AVVOLNEM $AVENENEM" > $KFNPRED
+fi
 fi
 echo "last run was:" $KSTAT
 fine=`echo $BETAINI $BETAEND $BETACUR $KSTAT | awk '{if ($1 < $2) {if ($3 >= $2 && $4 == "corrector") printf("1"); else printf("0")}  else if ($3 <= $2 && $4 == "corrector") printf("1"); else printf("0");}'`
