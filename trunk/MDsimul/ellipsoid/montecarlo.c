@@ -327,6 +327,7 @@ int is_percolating(int ncls)
     }
   return 0;
 }
+
 void build_clusters(int *Ncls, int *percolating)
 {
   int NP, i, j, ncls, nc, a, curcolor, maxc=-1;
@@ -336,7 +337,6 @@ void build_clusters(int *Ncls, int *percolating)
   curcolor=0;
 
   //init_freecolor(&fcstack, NP);
-
   for (i=0; i < NP; i++)
     {
       color[i] = -1;
@@ -380,6 +380,7 @@ void build_clusters(int *Ncls, int *percolating)
 		}
 	    }
 	}
+
       curcolor = findmaxColor(NP, color)+1;
       //printf("curcolor=%d\n", curcolor);
     }
@@ -5974,6 +5975,7 @@ int cluster_move(void)
   /* pick randomly a cluster */
   nc = ranf()*ncls;
   /* discard move if the cluster is percolating */ 
+  //printf("clsdim[%d]=%d\n", nc, clsdim[nc]);
   if (is_cls_percolating(nc))
     return -1;
   /* qui basta calcolare l'energia della particella che sto muovendo */
@@ -6159,6 +6161,25 @@ void move(void)
 #if 1 
 #ifdef MC_CALC_COVADD
   calc_cov_additive();
+#endif
+  
+#if 0
+    {
+      int ncls, perc, nc, ii;
+      FILE *f;
+      check_bonds_mc("boh");
+      build_clusters(&ncls, &perc);
+      f=fopen("clusters.txt", "w+");
+      fprintf(f,"ncls=%d perc=%d\n", ncls, perc);
+      for (nc=0; nc < ncls; nc++)
+	{
+	  for (ii=0; ii < clsdim[nc]; ii++)
+	    fprintf(f,"%d ", clsarr[firstofcls[nc]+ii]);
+	  fprintf(f,"\n");
+	}
+      fclose(f);
+      exit(-1);
+    }
 #endif
 #if 0 || defined(DEBUG_HCMC)
     {int overlap, ierr; 
