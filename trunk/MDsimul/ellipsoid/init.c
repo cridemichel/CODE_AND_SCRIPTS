@@ -1946,6 +1946,9 @@ void usrInitBef(void)
     maxcoll=-1;
 #ifdef MC_SIMUL
     OprogStatus.restrmove = 0;
+#ifdef MC_FREEZE_BONDS
+    freezebonds=0;
+#endif
 #ifdef MC_CLUSTER_MOVE
     OprogStatus.clsmovprob = 0.0;
     OprogStatus.delRclsMC = 0.2;
