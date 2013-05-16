@@ -2915,6 +2915,10 @@ void move_box(int *ierr)
   rebuildLinkedList();
   for (i=0; i < Oparams.parnum; i++)
     {
+#if !defined(MC_BENT_DBLCYL)
+      if (Lfact > 1.0)
+	break;
+#endif
       if (overlapMC(i, ierr))
 	{
 	  //printf("overlap di %d Lfact=%.15G\n", i, Lfact);
@@ -2960,7 +2964,13 @@ void move_box(int *ierr)
   enn = calcpotene();
   //printf("enn-eno/T=%f\n", (enn-eno)/Oparams.T);
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-(Oparams.parnum+1)*log(vn/vo)*Oparams.T);
-  if (ranf() > exp(arg))
+  if (
+#ifdef MC_FREEZE_BONDS
+      (OprogStatus.freezebonds && enn!=eno)||(ranf()>exp(arg))
+#else
+      ranf() > exp(arg)
+#endif
+     )
     {
       /* move rejected restore old positions */
 #ifdef MD_LXYZ
@@ -5627,6 +5637,33 @@ int mcmotion(void)
 #else
       enn=calcpotene_GC(ip);
 #endif
+#ifdef MC_FREEZE_BONDS
+      if (OprogStatus.freezebonds)
+	{
+	  if (enn!=eno)
+	    dorej==2;
+	  else
+	    dorej==0;
+	}
+      else
+	{
+     	  if (enn <= eno)
+    	    {
+    	      //	  if (abs(enn-eno) >=1 )
+    	      //	    printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
+    	      dorej=0;
+    	    }
+	  else
+	    {
+	      if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
+		dorej=0;
+	      else
+		dorej=2;
+	      // if (dorej==0)
+	      // printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
+	    }
+	}
+#else
       if (enn <= eno)
 	{
 	  //	  if (abs(enn-eno) >=1 )
@@ -5642,6 +5679,7 @@ int mcmotion(void)
 	  // if (dorej==0)
 	  // printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
 	}
+#endif
     }
 
   if (dorej != 0)
