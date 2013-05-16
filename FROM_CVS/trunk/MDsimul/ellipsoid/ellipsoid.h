@@ -880,6 +880,9 @@ struct progStatus
 #endif
   /* ======================================================================= */
 #ifdef MC_SIMUL
+#ifdef MC_FREEZE_BONDS
+  int freezebonds;
+#endif
 #ifdef MC_CLUSTER_MOVE
   double clsmovprob;
   double delTclsMC;
@@ -1323,6 +1326,9 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef MC_SIMUL
   {"restrmove",      &OS(restrmove),                     1,  1, "%d"},
+#ifdef MC_FREEZE_BONDS
+  {"freezebonds",  &OS(freezebonds),                     1, 1, "%d"},
+#endif
 #ifdef MC_CLUSTER_MOVE
   {"clsmovprob",      &OS(clsmovprob),                  1, 1, "%.12G"},
   {"delTclsMC",       &OS(delTclsMC),                   1, 1, "%.12G"},
@@ -1493,6 +1499,9 @@ struct singlePar OsinglePar[] = {
   {"endFormat",  &OprogStatus.endFormat,      INT},
 #ifdef MC_SIMUL
   {"restrmove",  &OprogStatus.restrmove,    INT},
+#ifdef MC_FREEZE_BONDS
+  {"freezebonds", &OprogStatus.freezebonds,  INT},
+#endif
 #ifdef MC_CLUSTER_MOVE
   {"clsmovprob", &OprogStatus.clsmovprob,   CT},
   {"delTclsMC",  &OprogStatus.delTclsMC,    CT},
