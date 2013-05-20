@@ -727,16 +727,75 @@ void bumpSPHS(int i, int j, double *W, int bt)
 #ifdef MC_CLUSTER_NPT
 extern int clsNPT;
 #endif
+#ifdef MC_FREEZE_BONDS
+extern int refFB, fakeFB;
+#endif
 void find_bonds_one(int i)
 {
   int nn,  amin, bmin, j, nbonds, bonded;
   double shift[3], dist;
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
+#ifdef MC_FREEZE_BONDS
+  int nb, kk;
+  double drx, dry, drz;
+#ifdef MD_LL_BONDS
+  long long int jj, jj2, aa, bb;
+#else
+  int jj, jj2, aa, bb;
+#endif
+#endif
 
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
       find_bonds_one_MLL(i);
+      return;
+    }
+#endif
+#ifdef MC_FREEZE_BONDS
+  if (OprogStatus.freezebonds && fakeFB==1)
+    {
+      for (nb=0; nb < numbonds[i]; nb++)
+	{
+	  jj = bonds[i][nb] / (NANA);
+	  jj2 = bonds[i][nb] % (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  drx=rx[i]-rx[jj];
+	  dry=ry[i]-ry[jj];
+	  drz=rz[i]-rz[jj];
+#ifdef MD_LXYZ
+	  shift[0] = L[0]*rint(drx/L[0]);
+	  shift[1] = L[1]*rint(dry/L[1]);
+	  shift[2] = L[2]*rint(drz/L[2]);
+#else
+	  shift[0] = L*rint(drx/L);
+	  shift[1] = L*rint(dry/L);
+	  shift[2] = L*rint(drz/L);
+#endif
+	  check_shift(i, jj, shift);
+	  assign_bond_mapping(i,jj);
+	  dist=-1E10;
+	  for (nn=0; nn < nbondsFlex; nn++)
+	    {
+	      if (mapbondsa[nn]==aa && mapbondsb[nn]==bb)
+		{
+		  dist = calcDistNegOneSP(Oparams.time, 0.0, i, jj, nn, shift);
+		  break;
+		}
+	    }
+	  if (nn==nbondsFlex)
+	    {
+//	      printf("boh?!?\n");
+	    }
+	  /* NOTA 16/05/2013: se si rompe un legame rigetta la mossa */
+	  if (dist >= 0.0)
+	    {
+	      //printf("qui dist=%f i=%d\n", dist, i);
+	      refFB=1;
+	      return;
+	    }
+	}
       return;
     }
 #endif
@@ -861,7 +920,7 @@ void find_bonds_one(int i)
 		  //printf("nbondsFlex=%d checking i=%d j=%d\n", nbondsFlex, i, j);
 		  for (nn=0; nn < nbonds; nn++)
 		    {
-		      if (dists[nn]<0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
+		      if (dists[nn] < 0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			{
 #if defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)
 			  /* se trova un solo bond termina */
@@ -3003,12 +3062,22 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
   double phi, psi;
 #endif
   assign_bond_mapping(i, j);
+#ifdef MC_SIMUL
+  ti=0;
+#else
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
   MD_DEBUG(printf("BRENT nn=%d\n", nn));
   ti = t + (t1 - atomTime[i]);
+#endif
+#ifdef MC_SIMUL
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+#else
   rA[0] = rx[i] + vx[i]*ti;
   rA[1] = ry[i] + vy[i]*ti;
   rA[2] = rz[i] + vz[i]*ti;
+#endif 
   MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
 #ifdef MD_ASYM_ITENS
@@ -3024,10 +3093,20 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
   BuildAtomPosAt(i, mapbondsa[nn], rA, RtA, ratA[mapbondsa[nn]]);
 #endif  
   na = (i < Oparams.parnumA)?0:1;
+#ifdef MC_SIMUL
+  ti = 0;
+#else
   ti = t + (t1 - atomTime[j]);
+#endif
+#ifdef MC_SIMUL
+  rB[0] = rx[j] + shift[0];
+  rB[1] = ry[j] + shift[1];
+  rB[2] = rz[j] + shift[2];
+#else
   rB[0] = rx[j] + vx[j]*ti + shift[0];
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
+#endif
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
@@ -3046,7 +3125,11 @@ double calcDistNegOneSP(double t, double t1, int i, int j, int nn, double shift[
     distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
   MD_DEBUG(printf("dist= %.15G\n", sqrt(distSq)-Oparams.sigmaSticky));
 #ifdef EDHE_FLEX
+#ifdef MC_SIMUL
+  return distSq - Sqr(mapSigmaFlex[nn]);
+#else
   return sqrt(distSq) - mapSigmaFlex[nn];
+#endif
 #else
   return sqrt(distSq) - Oparams.sigmaSticky;
 #endif

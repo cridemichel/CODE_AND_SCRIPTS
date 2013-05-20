@@ -456,11 +456,11 @@ void check_all_bonds(void)
 	{
 	  jZ = inCell[2][i] + iZ;    
 	  shift[2] = 0.;
-	  /* apply periodico boundary condition along z if gravitational
-	   * fiels is not present */
+	  /* apply periodic boundary condition along z if gravitational
+	   * field is not present */
 	  if (jZ == -1) 
 	    {
-	      printf("BOHHHH\n");
+	      //printf("BOHHHH\n");
 	      jZ = cellsz - 1;    
 #ifdef MD_LXYZ
 	      shift[2] = - L[2];
@@ -551,6 +551,10 @@ void check_all_bonds(void)
 			  // && fabs(dists[nn]-Oparams.sigmaSticky)>1E-4)
 			    {
 			      warn=1;
+#ifdef MC_FREEZE_BONDS
+			      if (OprogStatus.freezebonds)
+				warn=0;
+#endif
 		  	      MD_DEBUG31(
 			      //printf("dists[1]:%.15G\n", dists[1]);
 			      printf("[dist<0]dists[%d]:%.15G\n", nn, dists[nn]);
@@ -621,6 +625,8 @@ void check_all_bonds(void)
 		mdPrintf(ALL,"I adjusted the number of bonds...energy won't conserve!", NULL);
 	    }
 	}
+////      if (warn)
+////	exit(-1);
     //  if (warn)
 //	break;
 
@@ -1947,7 +1953,7 @@ void usrInitBef(void)
 #ifdef MC_SIMUL
     OprogStatus.restrmove = 0;
 #ifdef MC_FREEZE_BONDS
-    freezebonds=0;
+    OprogStatus.freezebonds=0;
 #endif
 #ifdef MC_CLUSTER_MOVE
     OprogStatus.clsmovprob = 0.0;
@@ -3050,6 +3056,9 @@ extern void find_bonds_one_NLL(int i);
 #ifdef MC_OPT_CLSNPT
 extern int clsNPT;
 #endif
+#ifdef MC_FREEZE_BONDS
+int refFB, fakeFB;
+#endif
 void find_bonds_flex_all(void)
 {
   int i;
@@ -3058,6 +3067,12 @@ void find_bonds_flex_all(void)
     {
       //printf("pos=%.15G %.15G %.15G\n", rx[i], ry[i], rz[i]);
       find_bonds_one(i);
+#ifdef MC_FREEZE_BONDS
+      if (fakeFB==1 && refFB==1)
+	{
+	  return;
+	}
+#endif
 #ifdef MC_OPT_CLSNPT
       if (clsNPT==2)
 	return;
