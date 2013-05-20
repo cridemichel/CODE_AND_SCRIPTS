@@ -2868,6 +2868,10 @@ void move_box_cluster(int *ierr)
     }
 }
 #endif
+#ifdef MC_FREEZE_BONDS
+extern int refFB, fakeFB;
+#endif
+
 void move_box(int *ierr)
 {
   int i, ii;
@@ -2951,26 +2955,47 @@ void move_box(int *ierr)
 	  return;
 	}
     }
+#ifdef MC_FREEZE_BONDS
+  if (!OprogStatus.freezebonds)
+    {
+#ifdef MC_STOREBONDS
+      store_bonds_mc(-1);
+#endif
+      /* update all bonds with new positions */
+      for (i=0; i < Oparams.parnum; i++)
+	numbonds[i] = 0;
+    }
+#else
 #ifdef MC_STOREBONDS
   store_bonds_mc(-1);
 #endif
   /* update all bonds with new positions */
   for (i=0; i < Oparams.parnum; i++)
     numbonds[i] = 0;
+#endif  
+#ifdef MC_FREEZE_BONDS
+  if (OprogStatus.freezebonds)
+    { 
+      refFB=0;
+      fakeFB=1;
+    }
+#endif
   if (OprogStatus.useNNL)
     find_bonds_flex_NNL();
   else
     find_bonds_flex_all();
+#ifdef MC_FREEZE_BONDS
+  if (OprogStatus.freezebonds==1)
+    fakeFB=0;
+#endif
   enn = calcpotene();
   //printf("enn-eno/T=%f\n", (enn-eno)/Oparams.T);
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-(Oparams.parnum+1)*log(vn/vo)*Oparams.T);
-  if (
 #ifdef MC_FREEZE_BONDS
-      (OprogStatus.freezebonds && enn!=eno)||(ranf()>exp(arg))
+  if (ranf() > exp(arg)|| (OprogStatus.freezebonds && refFB==1))
 #else
-      ranf() > exp(arg)
+  if (ranf() > exp(arg))
 #endif
-     )
     {
       /* move rejected restore old positions */
 #ifdef MD_LXYZ
@@ -2999,6 +3024,35 @@ void move_box(int *ierr)
 #else
       rebuildLinkedList();
 #endif
+#ifdef MC_FREEZE_BONDS
+      if (OprogStatus.freezebonds)
+	refFB=0;
+      if (!OprogStatus.freezebonds)
+	{
+	  /* restore all bonds*/
+#ifdef MC_STOREBONDS
+	  restore_bonds_mc(-1);
+#else
+ 	  for (i=0; i < Oparams.parnum; i++)
+ 	    numbonds[i] = 0;
+ 	  if (OprogStatus.useNNL)
+ 	    find_bonds_flex_NNL();
+ 	  else
+ 	    find_bonds_flex_all();
+#endif
+  	}
+#if 0
+      else
+   	{
+ 	  for (i=0; i < Oparams.parnum; i++)
+ 	    numbonds[i] = 0;
+ 	  if (OprogStatus.useNNL)
+	    find_bonds_flex_NNL();
+ 	  else
+ 	    find_bonds_flex_all();
+  	}
+#endif
+#else
       /* restore all bonds*/
 #ifdef MC_STOREBONDS
       restore_bonds_mc(-1);
@@ -3009,6 +3063,7 @@ void move_box(int *ierr)
 	find_bonds_flex_NNL();
       else
 	find_bonds_flex_all();
+#endif
 #endif
       return;
     }
@@ -3033,6 +3088,22 @@ void update_bonds_MC(int ip)
 #else
   int nb, jj, jj2, kk, nn, aa, bb;
 #endif  
+
+#ifdef MC_FREEZE_BONDS
+  if (!OprogStatus.freezebonds)
+    {
+      nb = numbonds[ip];
+      for (kk = 0; kk < nb; kk++)
+	{
+	  jj = bonds[ip][kk] / (NANA);
+	  jj2 = bonds[ip][kk] % (NANA);
+    	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  remove_bond(jj, ip, bb, aa);
+	}
+      numbonds[ip] = 0;
+    }
+#else
   nb = numbonds[ip];
   for (kk = 0; kk < nb; kk++)
     {
@@ -3043,6 +3114,7 @@ void update_bonds_MC(int ip)
       remove_bond(jj, ip, bb, aa);
     }
   numbonds[ip] = 0;
+#endif
   if (OprogStatus.useNNL)
     find_bonds_one_NLL(ip);
   else
@@ -5610,6 +5682,7 @@ int mcmotion(void)
   double enn, eno;
   ip = Oparams.parnum*ranf();
   /* qui basta calcolare l'energia della particella che sto muovendo */
+  //return;
 #if 0
   eno = calcpotene();
 #else
@@ -5624,26 +5697,47 @@ int mcmotion(void)
   totmovesMC++;
   /* overlapMC() aggiorna anche i bond */
   //err=0;
+#ifdef MC_FREEZE_BONDS
+  //check_all_bonds();
+#endif
   dorej = overlapMC(ip, &err);
   if (!dorej)
     {
 #ifdef MC_STOREBONDS
-      store_bonds_mc(ip);
+#ifdef MC_FREEZE_BONDS
+      if (!OprogStatus.freezebonds)
+#endif
+	store_bonds_mc(ip);
+#endif
+#ifdef MC_FREEZE_BONDS
+      if (OprogStatus.freezebonds==1)
+	{
+	  refFB=0;
+	  fakeFB=1;
+	}
 #endif
       update_bonds_MC(ip);
+	
       /* qui basta calcolare l'energia della particella che sto muovendo */
+#ifdef MC_FREEZE_BONDS
+      if (OprogStatus.freezebonds==1)
+	fakeFB=0;
+#endif
 #if 0
       enn=calcpotene();
 #else
       enn=calcpotene_GC(ip);
 #endif
 #ifdef MC_FREEZE_BONDS
+ //exit(-1);
       if (OprogStatus.freezebonds)
 	{
-	  if (enn!=eno)
-	    dorej==2;
+	  if (refFB==1)
+	    {
+	      dorej=2;
+	    }
 	  else
-	    dorej==0;
+	    dorej=0;
 	}
       else
 	{
@@ -5681,7 +5775,10 @@ int mcmotion(void)
 	}
 #endif
     }
-
+#ifdef MC_FREEZE_BONDS
+  if (OprogStatus.freezebonds)
+    refFB=0;
+#endif
   if (dorej != 0)
     {
       /* move rejected */
@@ -5699,7 +5796,11 @@ int mcmotion(void)
       restore_coord(ip);
       //rebuildLinkedList();
       update_LL(ip);
+#ifdef MC_FREEZE_BONDS
+      if (dorej==2 && !OprogStatus.freezebonds)
+#else
       if (dorej==2)
+#endif
 	{
 #ifdef MC_STOREBONDS
 	  remove_allbonds_ij(ip, -2);
@@ -6282,6 +6383,7 @@ void move(void)
 #endif
   else
     ntot=Oparams.parnum;
+  //check_all_bonds();
   for (i=0; i < ntot; i++)
     {
 #ifdef MC_CLUSTER_MOVE
