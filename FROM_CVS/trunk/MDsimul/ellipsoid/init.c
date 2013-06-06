@@ -1955,6 +1955,9 @@ void usrInitBef(void)
 #ifdef MC_FREEZE_BONDS
     OprogStatus.freezebonds=0;
 #endif
+#ifdef MC_NVE
+    OprogStatus.Ed = 0.0;
+#endif
 #ifdef MC_CLUSTER_MOVE
     OprogStatus.clsmovprob = 0.0;
     OprogStatus.delRclsMC = 0.2;

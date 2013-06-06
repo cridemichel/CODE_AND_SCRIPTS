@@ -3854,7 +3854,7 @@ void mcoutin(double beta, double pbias)
   if (is_bonded_mc(j, nb))
     return;
 #endif
-  /* inserisce la particella la particella legata a j con il bond nb appena scelto.
+  /* inserisce la particella legata a j con il bond nb appena scelto.
      Notare che passando 1 (=fake) come ultimo argomento mcin cambia la posizione e l'orientazione
      della particella ma non aggiorna i legami di i e j.*/
 #ifdef MC_USE_MCINAVB
@@ -5676,6 +5676,7 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
     return 0;
 }
 #endif
+
 int mcmotion(void)
 {
   int ip, dorej, movetype, err;
@@ -5746,13 +5747,37 @@ int mcmotion(void)
     	      //	  if (abs(enn-eno) >=1 )
     	      //	    printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
     	      dorej=0;
+#ifdef MC_NVE
+	      if (OprogStatus.ensembleMC==4)
+		OprogStatus.Ed += (enn-eno);
+#endif
     	    }
 	  else
 	    {
+#ifdef MC_NVE
+	      if (OprogStatus.ensembleMC==4)
+		{ 
+		  if (OprogStatus.Ed >= (enn-eno))
+		    {
+		      OprogStatuts.Ed -= (enn-eno);
+		      dorej = 0;
+		    }
+		  else 
+		    dorej = 2;
+		}
+	      else
+		{
+		  if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
+		    dorej=0;
+		  else
+		    dorej=2;
+		}
+#else
 	      if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
 		dorej=0;
 	      else
 		dorej=2;
+#endif
 	      // if (dorej==0)
 	      // printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
 	    }
@@ -5763,13 +5788,40 @@ int mcmotion(void)
 	  //	  if (abs(enn-eno) >=1 )
 	  //	    printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
 	  dorej=0;
+#ifdef MC_NVE
+	  if (OprogStatus.ensembleMC==4)
+	    {
+	      //printf("OprogStatus.Ed=%f step=%d\n", OprogStatus.Ed, Oparams.curStep);
+	      OprogStatus.Ed += (eno-enn);
+	    }
+#endif
 	}
       else
 	{
+#ifdef MC_NVE
+	  if (OprogStatus.ensembleMC==4)
+	    { 
+	      if (OprogStatus.Ed >= (enn-eno))
+		{
+		  OprogStatus.Ed -= (enn-eno);
+		  dorej = 0;
+		}
+	      else 
+		dorej = 2;
+	    }
+	  else
+	    {
+	      if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
+		dorej=0;
+	      else
+		dorej=2;
+	    }
+#else
 	  if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
 	    dorej=0;
 	  else
 	    dorej=2;
+#endif
 	  // if (dorej==0)
 	  // printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
 	}
@@ -6367,8 +6419,16 @@ void move(void)
     deln=OprogStatus.nvbbias;
   else
     deln=0;
+#ifdef MC_NVE
+  if (OprogStatus.ensembleMC==4)
+    deln=0;
+#endif
   //printf("deln=%d\n", deln);
-  if (OprogStatus.ensembleMC==0)
+  if (OprogStatus.ensembleMC==0
+#ifdef MC_NVE
+      || OprogStatus.ensembleMC==4
+#endif
+      )
     ntot = Oparams.parnum+deln;
 #ifdef MC_CLUSTER_NPT
   else if (OprogStatus.ensembleMC==1||OprogStatus.ensembleMC==3)
@@ -6397,7 +6457,12 @@ void move(void)
 	ran = 0;
       else
 	ran = ntot*ranf();
-
+#ifdef MC_NVE
+      if (OprogStatus.ensembleMC == 4)
+	{
+	  movetype = mcmotion();
+	}	
+#endif
 #ifdef MC_GRANDCAN
       if (OprogStatus.ensembleMC==2 && ran >= OprogStatus.npav)
 	{
@@ -6468,7 +6533,6 @@ void move(void)
 	    }
 	  else
 	    {
-	      
 	      movetype=mcmotion();
 	    }
 	}
