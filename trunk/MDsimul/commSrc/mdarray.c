@@ -562,7 +562,7 @@ void asciiParsing(struct pascii strutt[],
   char *bc, *subs;
   char *bs;
   
-  for  (i=0; strutt[i].ptr != NULL && strcmp(strutt[i].parName,""); i++) /* parname="" and ptr=NULL means END */
+  for  (i=0; strcmp(strutt[i].parName,""); i++) /* parname="" and ptr=NULL means END */
     {
       /* 16/05/2010: ptr puo' essere nullo anche in caso di allocazione dinamica quindi controllo anche parName che
 	 sia diverso dalla stringa vuota "" */
@@ -656,7 +656,7 @@ void asciiParsing(struct pascii strutt[],
 
   /* no one paremeter defined in the singlePar array matches the read one =>
      ERROR */
-  sprintf(msgStrA, "Paramater %s is not valid", stringA);
+  sprintf(msgStrA, "Parameter %s is not valid", stringA);
   mdMsg(ALL, NOSYS, "Parsing", "ERROR", NULL,
 	msgStrA,
 	NULL);
