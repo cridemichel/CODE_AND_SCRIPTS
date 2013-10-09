@@ -1951,6 +1951,9 @@ void usrInitBef(void)
 #endif
     maxcoll=-1;
 #ifdef MC_SIMUL
+#ifdef MC_BENT_DBLCYL
+    strcpy(OprogStatus.restrMatrix, "1,0,0,0,1,0,0,0,1");
+#endif
     OprogStatus.restrmove = 0;
 #ifdef MC_FREEZE_BONDS
     OprogStatus.freezebonds=0;

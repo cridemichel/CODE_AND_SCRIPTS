@@ -3401,6 +3401,10 @@ int check_bond_added(int j, int nb)
   return 1;
 }
 #endif
+
+#ifdef MC_BENT_DBLCYL
+void addRestrMatrix(double Rl[3][3]);
+#endif
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
   /* dist_type=0 -> isotropic
@@ -3635,27 +3639,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
       if (dist_type != 0 && dist_type != 4 && dist_type !=6)
 	{
-	  int k1, k2, k3;
-	  for (k1 = 0; k1 < 3; k1++)
-	    for (k2 = 0; k2 < 3; k2++)
-	      {
-		R[i][k1][k2] = 0;
-		for (k3 = 0; k3 < 3; k3++)
-		  //Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
-		  R[i][k1][k2] += restrMatrix[k1][k3]*Rl[k3][k2];
-	  }
+  	  addRestrMatrix(Rl);
 	}
-      else
-	{
-	  for (k1 = 0; k1 < 3; k1++)
-	    {
-	      for (k2=0; k2 < 3; k2++)
-		{
-		  R[i][k1][k2] = Rl[k1][k2]; 
-		}
-	    }
-	}
-#else
+#endif
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  for (k2=0; k2 < 3; k2++)
@@ -3663,7 +3649,6 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	      R[i][k1][k2] = Rl[k1][k2]; 
 	    }
 	}
-#endif
 #if 0
       store_bonds_mc(-1);
 #else
@@ -5302,6 +5287,7 @@ void calc_sigma_parsons(int size1, int size2, double alpha, int type, int outits
 #endif
 extern double fons(double theta, double alpha);
 #ifdef MC_BENT_DBLCYL
+
 extern double thetaGlobalBondangle;
 void calc_stddev_angle(double alpha, long long int maxtrials, int outits, int size1)
 {
@@ -5478,6 +5464,23 @@ void calc_stddev_angle(double alpha, long long int maxtrials, int outits, int si
     }
 }
 #endif
+void addRestrMatrix(double Rl[3][3])
+{
+  int k1, k2, k3;
+  double Rll[3][3];
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Rll[k1][k2] = 0;
+	for (k3 = 0; k3 < 3; k3++)
+	  //Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
+	   Rll[k1][k2] += restrMatrix[k1][k3]*Rl[k3][k2];
+	  //Rll[k1][k2] += Rl[k1][k3]*restrMatrix[k3][k2];
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      Rl[k1][k2] = Rll[k1][k2];
+}
 void calc_cov_additive(void)
 {
   FILE *fi, *f=NULL;
@@ -5592,7 +5595,7 @@ void calc_cov_additive(void)
     {
       merr=ierr=0;
       selfoverlap=0;
-      
+
       if (type==1)
 	{
 	  /* first particle is always in the center of the box with the same orientation */
@@ -5600,7 +5603,11 @@ void calc_cov_additive(void)
 	  ry[0] = 0;
 	  rz[0] = 0;
 	  orient_onsager(&ox, &oy, &oz, alpha); 
+	  //ox = 0; oy=0; oz=1;
 	  versor_to_R(ox, oy, oz, Rl);
+#if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
+	  addRestrMatrix(Rl);
+#endif
 	  for (k1=0; k1 < 3; k1++)
 	    for (k2=0; k2 < 3; k2++)
 	      {
@@ -5627,9 +5634,6 @@ void calc_cov_additive(void)
 	      fclose(f);
 	      sync();
 	    }
-#if 0
-     	  save_conf_mc(tt, 0); 
-#endif
 	}
       for (i=0; i < Oparams.parnum; i++)
 	{
@@ -5708,7 +5712,10 @@ void calc_cov_additive(void)
 	      else
 		orient(&ox, &oy, &oz);
     	      versor_to_R(ox, oy, oz, Rl);
-    	      for (k1=0; k1 < 3; k1++)
+#if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
+    	      addRestrMatrix(Rl);
+#endif
+	      for (k1=0; k1 < 3; k1++)
     		for (k2=0; k2 < 3; k2++)
     		  R[i][k1][k2] = Rl[k1][k2];
 	    }
@@ -5794,6 +5801,10 @@ void calc_cov_additive(void)
 	}
       if (overlap)// && ierr==0)
 	totene += 1.0;
+#if 0
+      if (tt!=0 && tt%outits==0)
+	save_conf_mc(tt, 0); 
+#endif
 
       if (ierr!=0)
 	{
