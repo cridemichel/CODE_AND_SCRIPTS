@@ -1,0 +1,306 @@
+0. OVERVIEW
+
+
+Mdsimul is a program to make molecular dynamic simulation, that can take full
+advantage of a SMP2 architecture under Linux OS.
+It use System V shared memory and semaphores to implement parallelism and 
+syncronization, this features are used by a library, named 'share', that makes 
+things simpler.
+Future release will support SMP4 architectures, without performance degrading 
+in SMP2 or SMP1 machine.
+
+
+1. START
+
+
+1.1 Command Line 
+
+To start a simulation you must supply the simulation dependent code and 
+recompile the program making 'make' ( see Simulation dependent code chapter).
+After this you can invoke mdsimul with opportune arguments.
+The general syntax is:
+
+mdsimul [ <option1> [<option2>] ]
+
+the possible options are (one only):
+
+'-del'	   : delete all temporary files used by simulation.
+'-f <name>': load parameters from the file named <name> 
+	     ( see Parameters section)
+'-c'       : continue a previuosly interrupted simulation 
+	     (see Restore section).
+'-dst'     : delete status files 
+	     (see status file section) 
+
+'-list'    : list all the valid paramters for the parameters file ( -f <name> )
+
+1.2 Parameters 
+
+If you begin a new simulation you must supply a parameters file of this kind:
+
+<parameter_name> : <value> 
+
+Parameters are of two types : alphanumeric (strings) and numeric.
+Numeric parameters are:
+ - steplength : temporal step length in seconds.	
+ - parnum     : particles nnumber.
+ - inistep    : initial step number.
+ - stepnum    : total number of step the simulation must do.
+ - measNsteps : steps between two savings of the N-th (N = 0..5) measure
+ - bakSteps   : steps between two restore file savings.
+ - xvaSteps   : steps between two tape file (xva file) savings.
+ - staSteps   : steps between two status file savings.
+ - tapeTimes  : save measures (including tape file) and restore file on tape
+	        every 'tapeTimes * <HD steps>', that is taprTimes is a 
+	        multiplicative factor for savings on tape.    
+ - measNcalc  : steps between two calculation of the N-th measure, generally 
+                this value is identical to the corrisponding 'measNsteps'
+                value.
+NOTE: if 'measNsteps' is 0 and 'measNcalc' not you can perform calculations
+      without saving them; this could be useful if you want only print some
+      simulation value, in fact you can print value inside 'measuring 
+      functions' using the 'mdShow()' macro (see later).   
+  
+and all simulaiton dependent parameters ...
+ 
+Alphanumeric parameters are:
+ - inifile     : file with initial coordinates, if here we put a '*', then 
+	         the program generate the initial coordinates by self.
+ - endfile     : file to put the last set of coordinates.
+ 
+ - measNname   : name of the file to store the N-th measure (not an absolute
+                 name, that is you must not specify the path!).
+
+Every <value> could be a number or a '*', if you put a '*' this means:
+'use a default value'.
+Generally this is not really useful if you don't specify
+an initial coordinates file, in fact in this case it choose not meaningful
+values.
+Anyway if you supply a coordinate file (inifile), it contains in its header
+all simulation parameters, except obviously all file names ('inifile', 
+'endfile' and 'dataFiles', See filenames structure in TECH_INFO).
+So if you put a '*' in this case it means:
+'use values stored in the inifile'
+In this case this is crucial because if you intend to use the output of a
+simulation to start a new one, you probaly use mostly the same parameters.
+
+If you restart a simulation by 'mdsimul -c', then all the parameters are 
+resumed from the temporary restore files.
+ 
+
+2. SIMULATION DEPENDENT CODE 
+
+
+If you would do your own simulation you must supply the simulation dependent
+code, this code is stored in the following files:
+
+- HEADER FILE: mdsimdep.h
+- CODE FILE  : mdfuncSD.c
+ 
+When you have done you must recompile typeing 'make'.
+ 
+2.1 HEADER FILE 
+
+Here you must give a lot of informations to let the simulation work, follows 
+all what you must do:
+
+1) Set all the directories used by the simulation:
+
+MD_HD_TMP  : directory on Hard Disk to put temporary files.
+MD_HD_MIS  : directory on Hard Disk to put measure files.
+MD_TAPE_TMP: directory on Tape to put temporary files. 
+MD_TAPE_MIS: directory on Tape to put temporary files.
+
+2) Put your '#define'-s where you find 'SIMULATION DEFINES'.
+
+3) Give your coordinates list, there are four lists you must create:
+    - COORD_LIST : list of all coordinate you use, each coordinate is an array
+	           for all particles in the simulation.
+    - XVA_LIST   : restrcted set of coordinate to save on tape file. 
+    - XVA_NUM    : number of coordinates specified in XVA_LIST.
+    - COORD_LISTP: like COORD_LIST but with each coordinate with and '&' 
+	           put before.
+    - COORD_LISTD: list of all variable to declare, if you want to use 
+	           array you can declare them there, but remeber that in 
+                   COORD_LIST and COORD_LISTP you must put each element of 
+	           all the arrays declared.
+	           So if you declare for example 'rx[2]' because you have a 
+                   biatomic molecules and 'rx[0]' is the x-position of the 
+                   first atom and 'rx[1]' is the position of the second one, 
+                   then you must have in you COORD_LIST:
+                    ..., rx[0], rx[1], ...
+                   and in your COORD_LISTP:
+                     ..., &rx[0], &rx[1], ...
+                   While in COORD_LISTD you have:
+                     ..., rx[2], ...   
+
+4) You can also edit the 'progStatus' structure, this contains all the 
+   informations needed bu the program but not by the simulation strictly.
+   The simulation infos include all the physical aspects of the program,
+   and progStatus contains all the rest.
+   Obviuosly you can add what you need for your purposes, for example if you 
+   need "accumulators" you should put them here because if a system crash  
+   occurrs, in this way you don't loose their values, in fact the 'progStatus'
+   is store in the restore files together with all the coordinates and the 
+   'params' structure.
+
+5) The 'params' structure contains all infos related strictly to the 
+   simulation, you can add your fields here; for example if you need a 
+   particular simulation paramter, say 'alpha' you can put it here, that 
+   you will have:
+   
+   struct params 
+   {
+        .
+        .
+        .
+    COORD_TYPE alpha;
+   }
+   
+   The params structure is put in the restore files and in the coordinate 
+   files. 
+
+6) The 'singlePar' structure array, contains a list of this form:
+   {
+     { <par name>, <pointer to structure field>, <type> },
+      .
+      .
+      .
+   }
+    
+   Where <par name> is the name you can use in the paramter file
+   (that specified for a new simulation with the '-f' option) to give a value
+   to a parameter, for example in the parameter file you could write:
+   <par name>: <value>.
+   Type could be:
+     STR  = string
+     UINT = unsigned integer
+     INT  = integer 
+     FLT  = floating point value
+   The pointer should be the memory address of the variable where you would 
+   put the <value> read from the parameter file.
+
+7) Now you can set all your variables, used for the mesaures or for the 
+   "movement" of the system. 
+   Note that you must furnish the variables twice, one time with and the 
+   second time without the 'extern' modifier.
+
+8) Now comes the measure structure, it is a list of this form: 
+   {
+     { <address>, <size>, <mesuring function> },
+     .
+     .
+     .
+   }
+   The <address> is an address to a set of data to store on disk (measure), 
+   <size> bytes long.
+   The <function> could be NULL, that is 'no function' or a pointer to function
+   (its name in C: addrees of 'pippo()' is simply 'pippo') the performs all the
+   calculations needed by the measure.
+
+9) Finally you could find useful to set your 'converter functions' but usually
+   you shouldn't edit this lines (ADD ADD <-------------------------------!!!).
+
+2.2 CODE FILE
+
+The code file is named mdfuncSD.c, here you must put your code for the 
+simulation, that is you must edit the move() function and you must give 
+your 'mesuring function'.
+The code in the 'move function' can be parallelized using the parallel loop 
+macro 'loopShr()'.
+The general form of the move function is as follows:
+  
+  int i,j; 
+  .
+  .
+  .
+  loopShr(i, 1, 100) <----- equivalent to for(i=0; i<100; ++i) but 
+                            PARALLELIZED, that is FASTER !
+    {
+       loop(i, 1, 100)
+	{
+          ...
+        }
+    }
+  
+  loopShr(i, 1, 200)
+    {
+       loop(j, 1, 200) <----- macro equivalent to 'for(i=0; i<200; ++i)' 
+         {      
+            ...
+         }
+    }
+
+WARNING: 'parallel loops' can not be nested !!!!!!!!!!!!!!!!!!
+
+There is a last thing to say, in the function 'userInitStruct' you can put
+your initializations.
+
+2.3 VIEWING VARIABLES VALUE
+
+Inside 'move()' or the various 'meaasuring functions' you can use the macro
+'mdShow(FMT, MDVAR);' where 'FMT' is the printf format string(e.g. "%f") and
+MDVAR is the variable to show.
+
+NOTE: The 'mdShow()' macro use the 'mdMsg()' to print. 
+
+
+3. UTILITIES 
+
+
+3.1 'log' utility 
+
+log is a simple utilities to view log files of simulation and chkStatus.
+It uses 'less', so if you can use arrows keys to move and 'q' to quit, for
+more informatiocs type 'man less'.   
+The syntax is:
+'log md' --> view mdsimul log file.
+'log chk' --> view chkStatus logo file
+
+3.2 'md2ascii' utility
+
+The measure file format is explained in TECH_INFO file and is not suitable to bbe used with plot package like 'xmgr', so you must convert it.
+This utility convert the measure file in the forma specified as argument.
+Some examples :
+1) 'md2ascii -t float -o pippo.xmgr pippo0.1'
+
+convert the input measures file pippo to pippo.xmgr which is of the following
+form:
+	<step number>  <float value> 
+        .
+        .
+        .
+
+2) 'md2ascii -t vector -o pippo.vec pippo0.1'
+convert the input measures file to a file of this form:
+
+<step number>  <Y1 vector1>  <Y1 vector2> ...
+<step number>  <Y2 vector1>  <Y2 vector2> ...
+.
+.
+.
+.
+
+suitable to use with xmgr.
+In the last case each measure must consist of an array of COORD_TYPE numbers, 
+that is the masures file look like this:
+                         _____________________________ 
+                     	|   _______________________   |
+                        |  |   struct measHead     |  |
+                        |  |_______________________|  | 
+                        |   _______________________   |
+                        |  |    ________________   |  |
+			|  |   | single mesasure|  |  |
+                        |  |   |________________|  |  |
+		        |  |    ________________   |  |
+			|  |   | single measure |  |  |
+                        |  |   |________________|  |  |
+      		        |  |    .                  |  |
+			|  |    .                  |  |
+			|  |    .                  |  |
+			|  |_______________________|  |
+                        |_____________________________|
+
+where single measure should be an array of COORD_TYPE numbers 
+If you specify the option '-p <value>' then it uses for floating point number 
+<value> number of digits after comma. 
