@@ -3607,7 +3607,10 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   	  orient(&ox, &oy, &oz);
 	}
       else 
-	orient_onsager(&ox, &oy, &oz, alpha);
+	{
+  	  //orient(&ox, &oy, &oz);
+	  orient_onsager(&ox, &oy, &oz, alpha);
+	}
 #ifdef MCIN_OPT
       rx[i] = dx + ox*norm + rat[0];
       ry[i] = dy + oy*norm + rat[1];
@@ -3629,6 +3632,30 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       pbc(i);
 #endif
       versor_to_R(ox, oy, oz, Rl);
+#if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
+      if (dist_type != 0 && dist_type != 4 && dist_type !=6)
+	{
+	  int k1, k2, k3;
+	  for (k1 = 0; k1 < 3; k1++)
+	    for (k2 = 0; k2 < 3; k2++)
+	      {
+		R[i][k1][k2] = 0;
+		for (k3 = 0; k3 < 3; k3++)
+		  //Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
+		  R[i][k1][k2] += restrMatrix[k1][k3]*Rl[k3][k2];
+	  }
+	}
+      else
+	{
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      for (k2=0; k2 < 3; k2++)
+		{
+		  R[i][k1][k2] = Rl[k1][k2]; 
+		}
+	    }
+	}
+#else
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  for (k2=0; k2 < 3; k2++)
@@ -3636,6 +3663,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	      R[i][k1][k2] = Rl[k1][k2]; 
 	    }
 	}
+#endif
 #if 0
       store_bonds_mc(-1);
 #else
@@ -4511,7 +4539,6 @@ void calc_persistence_length_mc(long long int maxtrials, int outits, int size1)
       abort=0;
       if (tt%outits==0)
 	{
-	  
 	  printf("tt=%lld\n", tt);
 	  if (distcc > 0)
 	    printf("average bond distance=%.15G\n", totdist/distcc); 
@@ -5274,6 +5301,183 @@ void calc_sigma_parsons(int size1, int size2, double alpha, int type, int outits
 }
 #endif
 extern double fons(double theta, double alpha);
+#ifdef MC_BENT_DBLCYL
+extern double thetaGlobalBondangle;
+void calc_stddev_angle(double alpha, long long int maxtrials, int outits, int size1)
+{
+  FILE *f, *f1;	
+  int k1, k2, ierr, i, abort=0, nb, j, merr, jj;
+  long long int tt;
+  double deldistcc=0.0, deltotdist=0.0, dist, fact, shift[3], Lb, totene=0.0, ox, oy, oz, Rl[3][3];
+  double *ad, deltheta, avgangle=0.0, stddevangle=0.0, sum=0.0, norm=0.0;
+  int num_bins = 100;
+  if (size1 > 0)
+    num_bins=size1;
+  printf("calculating bonding angle\n");
+  rx[0] = 0;
+  ry[0] = 0;
+  rz[0] = 0;
+  ox = 0; 
+  oy = 0;
+  oz = 1;
+#if 0
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+     	R[0][k1][k2] = (k1==k2)?1:0;
+      }
+#endif
+//   versor_to_R(ox, oy, oz, Rl);
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	Rl[k1][k2] = restrMatrix[k1][k2];
+	//printf("Rl[%d][%d]=%f\n", k1, k2, restrMatrix[k1][k2]);
+      }
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	{
+	  R[0][k1][k2] = Rl[k1][k2]; 
+	}
+    }
+  f = fopen("bondingangle.dat","w+");
+  fclose(f);
+  totene = toteneini;
+  if (Oparams.parnum > 2 )
+    {
+      printf("For calculating the bonding azimuthal angle 2 particles are enough!\n");
+      exit(-1);
+    }
+  //cc = malloc(sizeof(double)*num_bins);
+  ad = malloc(sizeof(double)*(num_bins+1));
+  for (i=0; i < num_bins; i++)
+    {
+      ad[i] = 0;
+    }
+  deltheta = 4.0*acos(0.0)/100.0;
+  for (tt=0; tt < maxtrials; tt++)
+    {
+      abort=0;
+      if (tt%outits==0)
+	{
+	  printf("trials=%lld\n", tt);
+	  if (tt!=0)
+	    {
+	      f = fopen("bondingangle.dat", "a");
+	      fprintf(f, "%lld %.15G %.15G\n", tt, avgangle/((double)tt), 
+		      stddevangle/((double)tt)-Sqr(avgangle/((double)tt)));
+	      fclose(f);
+	    }
+	  if (tt!=0)
+	    {
+	      f1 = fopen("bonddistro.dat", "w+");
+	      norm=0.0;
+	      for (i=0; i < num_bins; i++)
+		norm += ad[i]*deltheta;
+	      for (i=0; i < num_bins; i++)
+		fprintf(f1,"%.15G %.15G\n", i*deltheta, ad[i]/norm);
+	      fclose(f1);
+	    }
+	}
+      for (i=0; i < Oparams.parnum; i++)
+	numbonds[i]=0;
+      for (i=1; i < Oparams.parnum; i++)
+	{
+	  while (1)
+	    {
+	      nb = (int)(ranf_vb()*2.0);
+	      j = (int) (ranf_vb()*i);
+#if 0
+	      if (numbonds[j]==2)
+		{
+		  printf("j=%d has 2 bonds!\n", j);
+		  exit(-1);
+		}
+#endif
+	      if (is_bonded_mc(j, nb))
+		continue;
+	      else
+		break;
+	    }
+	  mcin(i, j, nb, 1, alpha, &merr, 0);
+	  if (merr!=0)
+	    {
+	      printf("[mcin] attempt to add a bonded particle failed!\n");
+	      /* mc in ha fallito scarta tale conf */
+	      abort=1;
+	      break;
+	    }
+	  /* qui controlla che non ci siano overlap con le particelle
+	     già inserite e che mcin abbia formato un solo legame */
+#if 0
+	  for (jj=0; jj < i; jj++)
+	    {
+	      if (jj==j)
+		continue;
+	      find_bonds_covadd(i, jj);
+      	    }
+#endif
+#if 0
+	  if (numbonds[i] > 1)
+	    {
+#if 0
+	      restore_bonds_mc(-1);
+	      numbonds[i]=0;
+	      i--;
+	      continue;
+#else
+	      /* scarta tale configurazione "chiusa" (loop) */
+	      abort=1;
+	      break;
+#endif
+	    }
+#endif
+#if 0
+#ifdef MD_LXYZ
+	  shift[0] = L[0]*rint((rx[0]-rx[1])/L[0]);
+	  shift[1] = L[1]*rint((ry[0]-ry[1])/L[1]);
+	  shift[2] = L[2]*rint((rz[0]-rz[1])/L[2]);
+#else
+	  shift[0] = L*rint((rx[0]-rx[1])/L);
+	  shift[1] = L*rint((ry[0]-ry[1])/L);
+	  shift[2] = L*rint((rz[0]-rz[1])/L);
+#endif
+	  if (check_overlap(0, 1, shift, &ierr) < 0.0)
+	    {
+#if 0
+	      restore_bonds_mc(-1);
+	      numbonds[i]=0;
+	      i--;
+#endif
+	      printf("qui\n");
+	      /* scarta la conf self-overlapping */
+	      abort=1; 
+	    }
+#endif
+	  if (abort)
+	    break;
+	}
+#if 0
+      save_conf_mc(tt, 0);
+#else
+      if (!abort)
+	{
+	  /* N.B. size1 viene solo usato per scegliere il modo in cui viene calcolata 
+	     la funzione di correlazione dei bond */
+	  /* >>>calc_angle_avg_stddev <<< */
+	  //printf("numbonds[...]=%d %d\n", numbonds[0], numbonds[1]);
+	  i = (int) (thetaGlobalBondangle/deltheta);
+	  ad[i]++;
+	  //save_conf_mc(tt,0);
+	  avgangle += thetaGlobalBondangle;
+	  stddevangle += Sqr(thetaGlobalBondangle);
+	}
+#endif
+    }
+}
+#endif
 void calc_cov_additive(void)
 {
   FILE *fi, *f=NULL;
@@ -5290,7 +5494,7 @@ void calc_cov_additive(void)
     }
   
   printf("ene iniziale=%f\n", calcpotene());
-  if (type==1||type==5)
+  if (type==1||type==5||type==8)
     {
       fscanf(fi, " %lf ", &alpha);
       printf("type=%d alpha=%.15G\n", type, alpha);
@@ -5308,8 +5512,9 @@ void calc_cov_additive(void)
      type = 3 -> bonding volume
      type = 4 -> covolume if perfectly aligned (i.e. alpha -> infinity)
      type = 5 -> bonding volume using onsager trial function
+     type = 8 -> standard deviation of bonding angle in the nematic phase
    */
-  if (type==1||type==5||type==7)
+ if (type==1||type==5||type==7||type==8)
     {
       const int n=1000;
       distro=malloc(sizeof(double)*n);
@@ -5317,7 +5522,7 @@ void calc_cov_additive(void)
 	distro[i] = 0.0;
     }
   
-  if (size1 >= Oparams.parnum)
+  if (size1 >= Oparams.parnum && !type==8)
     {
       printf("size1=%d must be less than parnum=%d\n", size1, Oparams.parnum);
       exit(-1);
@@ -5332,6 +5537,13 @@ void calc_cov_additive(void)
   if (type==6||type==7)
     {
       calc_sigma_parsons(size1, size2, alpha, type, outits, maxtrials);
+      exit(-1);
+    }
+#endif
+#ifdef MC_BENT_DBLCYL
+  if (type == 8) 
+    {
+      calc_stddev_angle(alpha, maxtrials, outits, size1);
       exit(-1);
     }
 #endif
