@@ -3958,6 +3958,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
 #ifdef MC_BENT_DBLCYL
 /* apply a random rotation around the supplied axis because 
    bent cylinders do not have azimuthal symmetry */
+double thetaGlobalBondangle;
 void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3], double Rout[3][3])
 {
   double theta, thetaSq, sinw, cosw;
@@ -3965,6 +3966,9 @@ void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3],
   int k1, k2, k3;
   /* pick a random rotation angle between 0 and 2*pi*/
   theta = 4.0*acos(0.0)*ranf();
+  /* set to be used in az. angle distro calculation */
+  thetaGlobalBondangle = theta;
+
   thetaSq=Sqr(theta);
   sinw = sin(theta);
   cosw = (1.0 - cos(theta));

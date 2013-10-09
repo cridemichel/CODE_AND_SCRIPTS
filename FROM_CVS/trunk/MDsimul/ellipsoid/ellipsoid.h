@@ -1144,7 +1144,6 @@ struct pascii opro_ascii[] =
 #ifdef MC_SUS
   {"sushisto",     OS(sushisto),                      -MAXSUSWINDOW,       1, "%.15G"},
 #endif
-
 #endif
   {"hist",         OS(hist),                  MAXBIN,               1, "%d"},
   {"sumS",         OS(sumS),                    NUMK,               1, "%.6G"},
