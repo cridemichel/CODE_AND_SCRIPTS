@@ -4303,6 +4303,166 @@ void build_ll(int *pl)
 
   //printf("done build ll\n");
 }
+#ifdef MC_BENT_DBLCYL
+void adjust_r1r2(int i, double rcom[3], double r1[3], double r2[3])
+{
+  double dr1[3], dr2[3], norm1, norm2;
+  int k;
+  for (k=0; k < 3; k++)
+    {
+      dr1[k] = r1[k] - rA[k];
+      dr2 [k] = r2[k] - rA[k]; 
+    }
+  norm1= calc_norm(dr1);
+  norm2= calc_norm(dr2);
+  for (k=0; k < 3; k++)
+    {
+      dr1[k] *= typesArr[typeOfPart[i]].sax[0]/norm1;
+      dr2[k] *= typesArr[typeOfPart[i]].sax[0]/norm2;
+    }
+  for (k=0; k < 3; k++)
+    {
+      dr1[k] += rcom[k];
+      dr2[k] += rcom[k];
+    }
+}
+void accum_persist_len_mono_orient_base_base(int *parlist, double *pl, double *cc)
+{
+#ifdef MD_LL_BONDS
+  int nb;
+  long long int aa, bb, ii, jj, jj2, a1=-1, a2=-1;
+#else
+  int nb, ii, jj, aa, bb, jj2, a1=-1, a2=-1;
+#endif
+  double Ri[3], Rj[3], norm;
+  double rA[3], r2[3], r1[3];	
+  int k, a, i, j, NP, np, in, jn, k1, k2, kk, ip, jp;
+  double costh2, normi, normj;
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double ratAll[NA][3]; 
+#endif
+ 
+  NP=Oparams.parnum;
+  build_ll(parlist);
+  i = Oparams.parnum;
+
+  ip = -1;
+  while ((i=parlist[i])!=-1) 
+    {
+      // printf("i=%d\n", i);
+      j=i;
+      np=0;
+      in = parlist[i];
+      if (in==-1)
+	break;
+      rA[0] = rx[i];
+      rA[1] = ry[i];
+      rA[2] = rz[i];
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      RtA[k1][k2] = R[i][k1][k2];
+	    }
+    	}
+      BuildAtomPos(i, rA, RtA, ratAll);
+      for (kk = 0; kk < numbonds[i]; kk++)
+	{
+	  jj = bonds[i][kk] / (NANA);
+    	  jj2 = bonds[i][kk] % (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  /* we assume two bonds max here */
+      	  if (in!=-1 && jj==in)
+	    {
+	      a2 = aa;
+	      a1 = (aa==1)?2:1;
+	    }
+	  else if (ip == jj)
+	    {
+	      a1 = aa;
+	      a2 = (aa==1)?2:1; 
+	    }
+	  /* we assume two bonds max here */
+	}
+      for (k1=0; k1 < 3; k1++)
+	{
+	  r2[k1] = ratAll[a2][k1];
+	  r1[k1] = ratAll[a1][k1];
+	} 
+      adjust_r1r2(i, rA, r1, r2);  
+      for (k1=0; k1 < 3; k1++)
+	Ri[k1] = r2[k1]-r1[k1];
+
+      norm=calc_norm(Ri);
+      for (k1=0; k1 < 3; k1++)
+	Ri[k1] /= norm; 
+      jp = j;
+      while ((j=parlist[j])!=-1)
+	{
+	  //printf("i=%d j=%d\n", i, j);
+	  costh2 = 0.0;
+	  np++;
+	  jn = parlist[j];
+	  if (jn==-1)
+	    break;
+	  rA[0] = rx[j];
+	  rA[1] = ry[j];
+	  rA[2] = rz[j];
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      for (k2=0; k2 < 3; k2++)
+		{
+		  RtA[k1][k2] = R[j][k1][k2];
+		}
+	    }
+	  BuildAtomPos(j, rA, RtA, ratAll);
+
+	  for (kk = 0; kk < numbonds[j]; kk++)
+	    {
+	      jj = bonds[j][kk] / (NANA);
+	      jj2 = bonds[j][kk] % (NANA);
+	      aa = jj2 / NA;
+	      bb = jj2 % NA;
+	      /* we assume two bonds max here (aa=1,2) */
+	      if (jn!=-1 && jj==jn)
+		{
+		  a2 = aa;
+		  a1 = (aa==1)?2:1;
+		}
+	      else if (jp == jj)
+		{
+		  a1 = aa;
+		  a2 = (aa==1)?2:1; 
+		}
+	    }
+	  for (k1=0; k1 < 3; k1++)
+    	    {
+	      r2[k1] = ratAll[a2][k1];
+	      r1[k1] = ratAll[a1][k1];
+	    } 
+
+	  adjust_r1r2(j, rA, r1, r2);  
+	  for (k1=0; k1 < 3; k1++)
+	    Rj[k1] = r2[k1] - r1[k1];
+	  norm=calc_norm(Rj);
+	  for (k1=0; k1 < 3; k1++)
+	    Rj[k1] /= norm; 
+     
+	  for (a = 0; a < 3; a++)
+	    {
+	      costh2 += Ri[a]*Rj[a];
+	    }
+	  pl[np] += costh2;
+	  //printf("np=%d costh2=%.15G pl=%f\n", np, costh2, pl[np]);
+	  cc[np] += 1.0;
+	  jp = j;
+	}
+      ip = i;
+    }
+}
+#endif
+
 void accum_persist_len_mono_orient(int *parlist, double *pl, double *cc)
 {
 #ifdef MD_LL_BONDS
@@ -4367,6 +4527,7 @@ void accum_persist_len_mono_orient(int *parlist, double *pl, double *cc)
 	  r2[k1] = ratAll[a2][k1];
 	  r1[k1] = ratAll[a1][k1];
 	} 
+
       for (k1=0; k1 < 3; k1++)
 	Ri[k1] = r2[k1]-r1[k1];
       norm=calc_norm(Ri);
@@ -4630,6 +4791,7 @@ void calc_persistence_length_mc(long long int maxtrials, int outits, int size1)
 #endif
 		  /* scarta la conf self-overlapping */
 		  abort=1; 
+		  //save_conf_mc(tt, 0);
 		  break;
 		}
 	    }
@@ -4638,14 +4800,24 @@ void calc_persistence_length_mc(long long int maxtrials, int outits, int size1)
 	    break;
 	}
 #if 0
-      save_conf_mc(tt, 0);
+	if (!abort)
+	  save_conf_mc(tt, 0);
 #else
       if (!abort)
 	{
 	  /* N.B. size1 viene solo usato per scegliere il modo in cui viene calcolata 
 	     la funzione di correlazione dei bond */
 	  if (size1!=0)
-	    accum_persist_len_mono_orient(parlist, pl, cc);
+	    {
+#ifdef MC_BENT_DBLCYL
+	      if (size1==2)
+		accum_persist_len_mono_orient_base_base(parlist, pl, cc);
+	      else
+		accum_persist_len_mono_orient(parlist, pl, cc);
+#else
+	      accum_persist_len_mono_orient(parlist, pl, cc);
+#endif
+	    }
 	  else
 	    accum_persist_len(parlist, pl, cc);
 	}
