@@ -295,6 +295,17 @@ double min3(double a, double b, double c)
     m = c;
   return m;
 }
+double max3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b > m)
+    m = b;
+  if (c > m)
+    m = c;
+  return m;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -546,7 +557,7 @@ int main(int argc, char** argv)
     }
   else
     {
-      delr = min3(Lx,Ly,Lz)/2.0/((double)points);
+      delr = max3(Lx,Ly,Lz)/2.0/((double)points);
     }
   rewind(f2);
   nf = 0;
@@ -744,7 +755,7 @@ int main(int argc, char** argv)
 	}
       else
 	{
-	  if (r > min3(Lx,Ly,Lz)*0.5) 
+	  if (r > max3(Lx,Ly,Lz)*0.5) 
 	    break;
 	}
     }
