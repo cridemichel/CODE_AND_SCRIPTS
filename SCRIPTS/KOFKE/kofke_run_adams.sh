@@ -268,6 +268,7 @@ ITER="1"
 echo "corrector" > $KSFN
 else
 POLD=`cat $KFNPRED | awk '{print $2}'`
+[ $DEBUG = "1" ] && echo "[ITER CHECK] PCUR=" $PCUR " POLD=" $POLD "REL DIFF=" `echo ${PCUR}/${POLD}-1|bc -l`
 CONVERGED=`echo "${PCUR}/${POLD}-1" | bc -l | gawk -v delp=$DELPTHR '{if ($1 < delp && $1 > -delp) print("1"); else print ("0");}'`
 if [ "$CONVERGED" == "1" ]
 then
