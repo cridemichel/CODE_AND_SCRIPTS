@@ -119,7 +119,7 @@ int main(int argc, char** argv)
 	}
       tt++;
     }
-  sprintf(fn, "volume-deg%3.0f.dat",angle);
+  sprintf(fn, "volume-deg%s.dat",argv[1]);
   f = fopen(fn, "w+");
   fprintf(f, "%.15G\n", (((double)overlaps)/((double)tt))*Lx*Ly*Lz);
   fclose(f);
