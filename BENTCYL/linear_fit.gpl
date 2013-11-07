@@ -1,0 +1,2 @@
+f(x)=a+b*x
+fit f(x) 'cov_vs_s.dat' using 1:($2/$1) via a,b
