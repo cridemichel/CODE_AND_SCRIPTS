@@ -3409,6 +3409,10 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 {
   /* dist_type=0 -> isotropic
      dist_type=1 -> onsager */
+#ifdef MC_BENT_DBLCYL
+  double *spXYZ=NULL;
+  double splab[3], spR[3];
+#endif
   double sphrad, rmin1, rmin2, rmin, rmax, drSq;
   const int maxtrials=1000000;
   double bondlen, dist=0.0, rA[3], rat[3], norm, normB, sax, cc[3], ene;
@@ -3616,9 +3620,24 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  orient_onsager(&ox, &oy, &oz, alpha);
 	}
 #ifdef MCIN_OPT
+#ifdef MC_BENT_DBLCYL 
+      /* pick one spot */
+      spXYZ = typesArr[typeOfPart[i]].spots[0].x;
+      /* we want the position of the spot bonded to spot of particle j */
+      body2labR(i, spXYZ, spR, NULL, R[i]);
+      splab[0] = dx + rat[0];
+      splab[1] = dy + rat[1];
+      splab[2] = dz + rat[2];
+      /* center of mass position rcm has to be consistent with the position of the spot 
+	 i.e  spot_position_Lab = R*spot_position_Body + rcm => rcm = spot_position_Lab - R*spot_position_Body  */
+      rx[i] = splab[0] - spR[0];
+      ry[i] = splab[1] - spR[1];
+      rz[i] = splab[2] - spR[2];
+#else
       rx[i] = dx + ox*norm + rat[0];
       ry[i] = dy + oy*norm + rat[1];
       rz[i] = dz + oz*norm + rat[2];
+#endif
 #if 0
       ox = rat[0] + dx - rx[i];
       oy = rat[1] + dy - ry[i];
@@ -5646,7 +5665,7 @@ void addRestrMatrix(double Rl[3][3])
 	Rll[k1][k2] = 0;
 	for (k3 = 0; k3 < 3; k3++)
 	  //Ro[k1][k2] += M[k1][k3]*R[i][k3][k2];
-	   Rll[k1][k2] += restrMatrix[k1][k3]*Rl[k3][k2];
+	  Rll[k1][k2] += restrMatrix[k1][k3]*Rl[k3][k2];
 	  //Rll[k1][k2] += Rl[k1][k3]*restrMatrix[k3][k2];
       }
   for (k1 = 0; k1 < 3; k1++)
@@ -5775,7 +5794,7 @@ void calc_cov_additive(void)
 	  ry[0] = 0;
 	  rz[0] = 0;
 	  orient_onsager(&ox, &oy, &oz, alpha); 
-	  //ox = 0; oy=0; oz=1;
+	  //ox = 1; oy=0; oz=0;
 	  versor_to_R(ox, oy, oz, Rl);
 #if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
 	  addRestrMatrix(Rl);
@@ -5969,6 +5988,9 @@ void calc_cov_additive(void)
       if (merr)
 	{
 	  tt++;
+#if 0	  
+	  save_conf_mc(tt, 0); 
+#endif
 	  continue;
 	}
       if (overlap)// && ierr==0)
