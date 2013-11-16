@@ -3411,7 +3411,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
      dist_type=1 -> onsager */
 #ifdef MC_BENT_DBLCYL
   double *spXYZ=NULL;
-  double splab[3], spR[3];
+  double splab[3], spR[3], rO[3];
 #endif
   double sphrad, rmin1, rmin2, rmin, rmax, drSq;
   const int maxtrials=1000000;
@@ -3620,24 +3620,10 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  orient_onsager(&ox, &oy, &oz, alpha);
 	}
 #ifdef MCIN_OPT
-#ifdef MC_BENT_DBLCYL 
-      /* pick one spot */
-      spXYZ = typesArr[typeOfPart[i]].spots[0].x;
-      /* we want the position of the spot bonded to spot of particle j */
-      body2labR(i, spXYZ, spR, NULL, R[i]);
-      splab[0] = dx + rat[0];
-      splab[1] = dy + rat[1];
-      splab[2] = dz + rat[2];
-      /* center of mass position rcm has to be consistent with the position of the spot 
-	 i.e  spot_position_Lab = R*spot_position_Body + rcm => rcm = spot_position_Lab - R*spot_position_Body  */
-      rx[i] = splab[0] - spR[0];
-      ry[i] = splab[1] - spR[1];
-      rz[i] = splab[2] - spR[2];
-#else
+#ifndef MC_BENT_DBLCYL
       rx[i] = dx + ox*norm + rat[0];
       ry[i] = dy + oy*norm + rat[1];
       rz[i] = dz + oz*norm + rat[2];
-#endif
 #if 0
       ox = rat[0] + dx - rx[i];
       oy = rat[1] + dy - ry[i];
@@ -3654,6 +3640,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #endif
       pbc(i);
 #endif
+#endif
       versor_to_R(ox, oy, oz, Rl);
 #if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
       if (dist_type != 0 && dist_type != 4 && dist_type !=6)
@@ -3668,6 +3655,22 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	      R[i][k1][k2] = Rl[k1][k2]; 
 	    }
 	}
+#ifdef MC_BENT_DBLCYL 
+      /* pick one spot randomly */
+      nbB =(ranf()>0.5)?0:1;
+      spXYZ = typesArr[typeOfPart[i]].spots[nbB].x;
+      /* we want the position of the spot bonded to spot of particle j */
+      body2labR(i, spXYZ, spR, NULL, R[i]);
+      splab[0] = dx + rat[0];
+      splab[1] = dy + rat[1];
+      splab[2] = dz + rat[2];
+      /* center of mass position rcm has to be consistent with the position of the spot 
+	 i.e  spot_position_Lab = R*spot_position_Body + rcm => rcm = spot_position_Lab - R*spot_position_Body  */
+      rx[i] = splab[0] - spR[0];
+      ry[i] = splab[1] - spR[1];
+      rz[i] = splab[2] - spR[2];
+      pbc(i);
+#endif
 #if 0
       store_bonds_mc(-1);
 #else
@@ -3697,8 +3700,40 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	}
       else
 	{
+#ifdef MCIN_OPT
+	  /* con il metodo ottimizzato creiamo un legame tra gli spot
+          (i, nbB) e (j, nb) */
+	  ene = -1;
+	  add_bond(i, j, nbB+1, nb+1);
+	  add_bond(j, i, nb+1, nbB+1);
+#if 0
+	  if (numbonds[i] > 1)
+	    printf("BOH numbonds=%d nbold=%d\n", numbonds[i], nbold);
+	  dist=find_bonds_fake(i, j, &nbf);
+	  if (dist > 0)
+	    {
+    	      printf("[WARNING] MCIN FAILED PARTICLES NOT BONDED!\n");
+	    }
+#endif	    
+#else
 	  dist=find_bonds_covadd(i, j);
 	  ene = calcpotene_GC(i);
+	  if (ene >= 0)
+	    {
+	      printf("[WARNING] MCIN FAILED PARTICLES NOT BONDED!\n");
+	      //exit(-1);
+#if 0
+	      rO[0] = rx[i];
+	      rO[1] = ry[i];
+	      rO[2] = rz[i];
+	      body2lab(i, spXYZ, spR, rO, R[i]);
+	      printf("spot i=%f %f %f spot j= %f %f %f dist=%f\n", rat[0], rat[1], rat[2], spR[0], spR[1], spR[2], sqrt(Sqr(rat[0]-spR[0])+
+															Sqr(rat[1]-spR[1])+Sqr(rat[2]-spR[2])) );
+	      printf("dx=%f dy=%f dz=%f\n", dx, dy, dz);
+	      printf("qui ene=%f\n", ene);
+#endif
+	    }
+#endif
 	}
 
 #if 0
@@ -3767,12 +3802,15 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  {
 	    if (!fake)
 	      {
-#if 1
+		/* 16/11/13: nel metodo ottimizzato formo un legame sicuramente tra (j,nb) e uno dei due spot di i 
+		   quindi non si deve controllare nulla */
+#ifndef MCIN_OPT
 		if (!check_bond_added(j, nb))
 		  {
 		    numbonds[j] = nbold;
 		    numbonds[i] = 0;
 		    bonded=0;
+		    //printf("BOH\n");
 		  }
 #endif
 #ifndef MCIN_OPT
@@ -5794,7 +5832,8 @@ void calc_cov_additive(void)
 	  ry[0] = 0;
 	  rz[0] = 0;
 	  orient_onsager(&ox, &oy, &oz, alpha); 
-	  //ox = 1; oy=0; oz=0;
+	  //ox = 0; oy=0; oz=1;
+	  //printf("alpha=%f ox=%f oy=%f oz=%f norm=%f\n", alpha, ox, oy, oz, sqrt(Sqr(ox)+ Sqr(oy)+Sqr(oz)));
 	  versor_to_R(ox, oy, oz, Rl);
 #if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
 	  addRestrMatrix(Rl);
