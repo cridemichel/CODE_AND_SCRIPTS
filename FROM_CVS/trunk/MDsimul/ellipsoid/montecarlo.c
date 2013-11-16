@@ -3844,7 +3844,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     }
 #if 0
 // DEBUGGING STUFF
-  if (Oparams.curStep%10==0)
+   if (Oparams.curStep%10==0)
     printf("trials=%d avg_trials=%.15G\n", trials, tottrials/calls);
 #endif
 }
