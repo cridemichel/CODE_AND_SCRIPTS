@@ -10464,7 +10464,7 @@ void ProcessCollision(void)
     }
   do_check_negpairs = 0;
 }
-inline void docellcross(int k, double velk, double *rkptr, int cellsk)
+void docellcross(int k, double velk, double *rkptr, int cellsk)
 {
 #if 0
   if (inCell[0][evIdA]+1> cellsx ||inCell[1][evIdA]+1> cellsy||inCell[2][evIdA]+1> cellsz) 
