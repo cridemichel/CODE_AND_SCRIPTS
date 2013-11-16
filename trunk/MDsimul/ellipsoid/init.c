@@ -3798,21 +3798,30 @@ double fons(double theta, double alpha)
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
   return cosh(alpha*cos(theta))*alpha/(4.0*pi*sinh(alpha));
 }
+
 /* return an angle theta sampled from an Onsager angular distribution */
 double theta_onsager(double alpha)
 {
   /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
      using rejection method */
   /* the comparison function g(theta) is just g(theta)=1 */ 
+  static int first = 1;
+  static double f0;
   double pi, y, f, theta, dtheta;
+  //printf("alpha=%f\n", alpha);
   pi = acos(0.0)*2.0;
-  
+  if (first == 1)
+    {
+      first=0;
+      f0 = 1.01*fons(0.0,alpha);
+    }
+
   do 
     {
       /* uniform theta between 0 and pi */
       theta = pi*ranf_vb();
       /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
-      y = 1.01*fons(0.0,alpha)*ranf_vb();
+      y = f0*ranf_vb();
       f = sin(theta)*fons(theta,alpha);
       //printf("theta=%f y=%f\n", theta, y);
     }
