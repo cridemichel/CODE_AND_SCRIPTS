@@ -23,7 +23,7 @@ extern int *mapbondsaFlex, *mapbondsbFlex, nbondsFlex;
 extern int bound(int na, int n, int a, int b);
 extern double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
 extern void check_shift(int i, int j, double *shift);
-inline int get_linked_list_type(int typena, int nc)
+int get_linked_list_type(int typena, int nc)
 {
   int sum, t1, nc1;
   /* per N tipi le linked lists sono N*(N+1)/2. 
