@@ -256,7 +256,7 @@ void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
     }
 }
 
-inline void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
+void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
 {
   const int meshpts = 8;
   double Pj[3], Rj[3][3], AiCi[3];
