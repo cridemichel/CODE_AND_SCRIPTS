@@ -3405,6 +3405,7 @@ int check_bond_added(int j, int nb)
 #ifdef MC_BENT_DBLCYL
 void addRestrMatrix(double Rl[3][3]);
 #endif
+void save_conf_mc(int i, int ii);
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
   /* dist_type=0 -> isotropic
@@ -3705,7 +3706,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
           (i, nbB) e (j, nb) */
 	  ene = -1;
 	  add_bond(i, j, nbB+1, nb+1);
-	  add_bond(j, i, nb+1, nbB+1);
+      	  add_bond(j, i, nb+1, nbB+1);
 #if 0
 	  if (numbonds[i] > 1)
 	    printf("BOH numbonds=%d nbold=%d\n", numbonds[i], nbold);
