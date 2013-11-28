@@ -3,6 +3,10 @@ FN="end2end_vs_t.dat"
 print "" > FN
 } 
 { 
+if ($11=="t=") 
+  {
+    time=$12;
+  }
 if ($3=="P" && $5==2+ndna*24) 
   {
     PA1[0]=$6; PA1[1]=$7; PA1[2]=$8;
@@ -28,10 +32,10 @@ if ($3=="P" && $5==24+ndna*24)
  }; 
   if ($1=="ENDMDL") 
     {
-        printf("%.15G %.15G\n",frame*dt, eeoc/ndna) >> FN;
+        printf("%.15G %.15G\n",time, eeoc/ndna/10) >> FN;
         frame++;
         eeoc=0;
 	ndna=0;
     }
 } 
-END { print ("AVG END2END = ", eedist/nee, "( ", nee, ")")}
+END { print ("AVG END2END = ", eedist/nee/10, "( ", nee, ")")}
