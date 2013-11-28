@@ -1,11 +1,11 @@
-BEGIN {frame=0; ndna=0; nee=0; eedist=0; eeoc=0; dt=200;
+BEGIN {frame=0; ndna=0; nee=0; eedist=0; eeoc=0; 
 FN="end2end_vs_t.dat"
-print "" > FN
+printf("") > FN
 } 
 { 
-if ($11=="t=") 
+if ($0~".*t=.*") 
   {
-    time=$12;
+    time=$NF;
   }
 if ($3=="P" && $5==2+ndna*24) 
   {
