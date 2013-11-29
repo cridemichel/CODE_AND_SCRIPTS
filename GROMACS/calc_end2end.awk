@@ -1,4 +1,12 @@
 BEGIN {frame=0; ndna=0; nee=0; eedist=0; eeoc=0; 
+if (ti > 0)
+{
+  tbeg=ti;
+}
+else
+{
+  tbeg = 0;
+}
 FN="end2end_vs_t.dat"
 printf("") > FN
 } 
@@ -19,7 +27,7 @@ if ($3=="P" && $5==14+ndna*24)
   {
     PB2[0]=$6; PB2[1]=$7; PB2[2]=$8;
   }; 
-if ($3=="P" && $5==24+ndna*24) 
+if ($3=="P" && $5==24+ndna*24 && time >= tbeg) 
   {
     PA2[0]=$6; PA2[1]=$7; PA2[2]=$8; 
     for (i=0; i < 3; i++) CM1[i]=0.5*(PA1[i]+PA2[i]); 
@@ -32,7 +40,8 @@ if ($3=="P" && $5==24+ndna*24)
  }; 
   if ($1=="ENDMDL") 
     {
-        printf("%.15G %.15G\n",time, eeoc/ndna/10) >> FN;
+        if (time >= tbeg)
+           printf("%.15G %.15G\n",time, eeoc/ndna/10) >> FN;
         frame++;
         eeoc=0;
 	ndna=0;
