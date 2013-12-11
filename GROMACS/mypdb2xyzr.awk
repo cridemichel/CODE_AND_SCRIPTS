@@ -1,19 +1,33 @@
 BEGIN {
+  print "";
   #angstrom units (radius)
-  Orad=1.52;
+  Orad=1.5;
   Hrad=1.2;
-  Crad=1.7;
+  Crad=1.85;
   Prad=1.8;
   Nrad=1.55;
- msms=1;
+  msms=1;
+  comx= 13.933;
+  comy= 16.4632;
+  comz= 67.8486;
 }
 {
+ format="%7.5G    %7.5G    %7.5G  %G";
  got=0;
- if ($3~"^H.*") {printf("  %s   %s    %s %G ",$6,$7,$8,Hrad); got=1};
- if ($3~"^O.*") {printf("  %s   %s    %s %G ",$6,$7,$8,Orad)  ; got=1};
- if ($3~"^P.*") {printf("  %s   %s    %s %G ",$6,$7,$8,Prad)  ; got=1};
- if ($3~"^C.*") {printf("  %s   %s    %s %G ",$6,$7,$8,Crad)  ; got=1};
- if ($3~"^N.*") {printf("  %s   %s    %s %G ",$6,$7,$8,Nrad)  ; got=1};
+
+ rx = $6;
+ ry = $7;
+ rz = $8;
+ #rx = rx - comx;
+ #ry = ry - comy;
+ #rz = rz - comz; 
+ if ($3~"^H.*") {printf(format, rx,ry,rz,Hrad); got=1};
+ if ($3~"^O.*") {printf(format, rx,ry,rz,Orad)  ; got=1};
+ if ($3~"^P.*") {printf(format, rx,ry,rz,Prad)  ; got=1};
+ if ($3~"^C.*") {printf(format, rx,ry,rz,Crad)  ; got=1};
+ if ($3~"^N.*") {printf(format, rx,ry,rz,Nrad)  ; got=1};
+ if ($3~"^1H.*"){printf(format, rx,ry,rz,Hrad)  ; got=1};
+ if ($3~"^2H.*"){printf(format, rx,ry,rz,Hrad)  ; got=1};
  if (got==1)
   {
     if (msms==0)
