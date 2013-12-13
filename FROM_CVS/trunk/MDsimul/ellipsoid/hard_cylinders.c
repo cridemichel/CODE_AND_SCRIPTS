@@ -469,175 +469,175 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 
   /* =================================== >>> Part A <<< ========================= */
   for (j1=0; j1 < 2; j1++)
-  {
-    if (j1==1)
-      {
-	//break;
-	for (kk=0; kk < 3; kk++)
-	  {
-	    for (k2=0; k2 < 2; k2++)
-	      DjTmp[k2][kk] = Dj[k2][kk];
-	    CiTmp[kk] = Ci[kk];
-	    niTmp[kk] = ni[kk];
-	    njTmp[kk] = nj[kk];
-	    /* exhange the two particles */	
-	    for (k2=0; k2 < 2; k2++)
-	      Dj[k2][kk] = Di[k2][kk];
-	    Ci[kk] = Cj[kk];
-	    ni[kk] = nj[kk];
-	    nj[kk] = niTmp[kk];
-	  }
-      }
-  for (j2=0; j2 < 2; j2++)
     {
-      for (kk=0; kk < 3; kk++)
-	DjCi[kk] = Dj[j2][kk] - Ci[kk];
-      normDjCi = calc_norm(DjCi);
-      DjCini = scalProd(DjCi,ni);
-      for (kk=0; kk < 3; kk++)
+      if (j1==1)
 	{
-	  Ui[kk] = Ci[kk] + DjCini*ni[kk];
-	  DjUi[kk] = Dj[j2][kk] - Ui[kk];
+	  //break;
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      for (k2=0; k2 < 2; k2++)
+		DjTmp[k2][kk] = Dj[k2][kk];
+	      CiTmp[kk] = Ci[kk];
+	      niTmp[kk] = ni[kk];
+	      njTmp[kk] = nj[kk];
+	      /* exhange the two particles */	
+	      for (k2=0; k2 < 2; k2++)
+		Dj[k2][kk] = Di[k2][kk];
+	      Ci[kk] = Cj[kk];
+	      ni[kk] = nj[kk];
+	      nj[kk] = niTmp[kk];
+	    }
 	}
+      for (j2=0; j2 < 2; j2++)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    DjCi[kk] = Dj[j2][kk] - Ci[kk];
+	  normDjCi = calc_norm(DjCi);
+	  DjCini = scalProd(DjCi,ni);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Ui[kk] = Ci[kk] + DjCini*ni[kk];
+	      DjUi[kk] = Dj[j2][kk] - Ui[kk];
+	    }
 
-      DjUini = scalProd(DjUi,ni);
-      normDjUi = calc_norm(DjUi);
+	  DjUini = scalProd(DjUi,ni);
+	  normDjUi = calc_norm(DjUi);
 #if 0
-      if (dostorebump)
-	{
-	  printf("normDjUi=%.15G DjUini=%.15G\n", normDjUi, DjUini);
-	  printf("Ci=%f %f %f Dj=%f %f %f\n", Ci[0], Ci[1], Ci[2], Dj[0], Dj[1], Dj[2]);
-	  printf("DjUi=%.15G %.15G %.15G\n", DjUi[0], DjUi[1], DjUi[2]); 
-	  printf("Uj=%.15G %.15G %.15G\n", Ui[0], Ui[1], Ui[2]); 
-	  printf("nj=%.15G %.15G %.15G\n", ni[0], ni[1], ni[2]);
-	  printf("DjCini= %.15G\n", DjCini);
-	}
-#endif 
-      if (normDjUi > D)
-	continue;
-
-	/* NOTE: in Ibarra et al. Mol. Phys. 33, 505 (2007) 
-	   there is some mess about following conditions:
-	   The second and third condition on right column of page 514 
-	   should read (D=sigma):
-	    |Di-Ui| < D/2  && |(Dj-Ci).ni| > L/2
-             
-	    |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
-
-	 */
-      if (normDjUi < D*0.5 && fabs(DjCini) > L*0.5)
-	continue;
-
-      if (normDjUi < D*0.5 && fabs(DjCini) <= L*0.5)
-	{
-#ifdef DEBUG_HCMC
 	  if (dostorebump)
-	    printf("A #1 disk-rim NP=%d\n", Oparams.parnum);
+	    {
+	      printf("normDjUi=%.15G DjUini=%.15G\n", normDjUi, DjUini);
+	      printf("Ci=%f %f %f Dj=%f %f %f\n", Ci[0], Ci[1], Ci[2], Dj[0], Dj[1], Dj[2]);
+	      printf("DjUi=%.15G %.15G %.15G\n", DjUi[0], DjUi[1], DjUi[2]); 
+	      printf("Uj=%.15G %.15G %.15G\n", Ui[0], Ui[1], Ui[2]); 
+	      printf("nj=%.15G %.15G %.15G\n", ni[0], ni[1], ni[2]);
+	      printf("DjCini= %.15G\n", DjCini);
+	    }
+#endif 
+	  if (normDjUi > D)
+	    continue;
+
+	  /* NOTE: in Ibarra et al. Mol. Phys. 33, 505 (2007) 
+	     there is some mess about following conditions:
+	     The second and third condition on right column of page 514 
+	     should read (D=sigma):
+	     |Di-Ui| < D/2  && |(Dj-Ci).ni| > L/2
+
+	     |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
+
+	   */
+	  if (normDjUi < D*0.5 && fabs(DjCini) > L*0.5)
+	    continue;
+
+	  if (normDjUi < D*0.5 && fabs(DjCini) <= L*0.5)
+	    {
+#ifdef DEBUG_HCMC
+	      if (dostorebump)
+		printf("A #1 disk-rim NP=%d\n", Oparams.parnum);
 #endif	
-	  return -1;
-	}
+	      return -1;
+	    }
 #if 1
-      find_initial_guess(Ai, Ci, ni, Dj[j2], nj, D);
+	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, D);
 
 #else
-      for (kk=0; kk < 3; kk++)
-  	{
- 	  //Ai[kk] = Ci[kk];
-	  Ai[kk] = Ui[kk];  
-  	}
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      //Ai[kk] = Ci[kk];
+	      Ai[kk] = Ui[kk];  
+	    }
 #endif
-      for (it = 0; it < MAX_ITERATIONS; it++)
-	{
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      AiDj[kk] = Ai[kk] - Dj[j2][kk];
-	    }
-	  AiDjnj = scalProd(AiDj,nj);
-	  vectProdVec(AiDj,nj,AiDjnjvec);
-	  for (kk=0; kk < 3; kk++)
-	    VV[kk] =  0.5*D*(AiDj[kk]-AiDjnj*nj[kk])/calc_norm(AiDjnjvec);
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      Tjp[kk] = Dj[j2][kk] + VV[kk];
-	      Tjm[kk] = Dj[j2][kk] - VV[kk];
-	      TjpCi[kk] = Tjp[kk] - Ci[kk];
-	      TjmCi[kk] = Tjm[kk] - Ci[kk];
-	    }
-	  TjpCini = scalProd(TjpCi,ni);  
-	  TjmCini = scalProd(TjmCi,ni);
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      Tjp_perp[kk] = TjpCi[kk]-TjpCini*ni[kk];
-	      Tjp_para[kk] = TjpCini*ni[kk];
-	      Tjm_perp[kk] = TjmCi[kk]-TjmCini*ni[kk];
-	      Tjm_para[kk] = TjmCini*ni[kk];
-	    } 
-	  normTjm_perp = calc_norm(Tjp_perp);
-	  for (kk=0; kk < 3; kk++)
-	    TjOld[kk] = TjNew[kk];
-	  if (calc_norm(Tjm_perp) < calc_norm(Tjp_perp))
+	  for (it = 0; it < MAX_ITERATIONS; it++)
 	    {
 	      for (kk=0; kk < 3; kk++)
-		TjNew[kk] = Tjm[kk];
-	    }	  
-	  else
-	    {
+		{
+		  AiDj[kk] = Ai[kk] - Dj[j2][kk];
+		}
+	      AiDjnj = scalProd(AiDj,nj);
+	      vectProdVec(AiDj,nj,AiDjnjvec);
 	      for (kk=0; kk < 3; kk++)
-		TjNew[kk] = Tjp[kk];
+		VV[kk] =  0.5*D*(AiDj[kk]-AiDjnj*nj[kk])/calc_norm(AiDjnjvec);
+	      for (kk=0; kk < 3; kk++)
+		{
+		  Tjp[kk] = Dj[j2][kk] + VV[kk];
+		  Tjm[kk] = Dj[j2][kk] - VV[kk];
+		  TjpCi[kk] = Tjp[kk] - Ci[kk];
+		  TjmCi[kk] = Tjm[kk] - Ci[kk];
+		}
+	      TjpCini = scalProd(TjpCi,ni);  
+	      TjmCini = scalProd(TjmCi,ni);
+	      for (kk=0; kk < 3; kk++)
+		{
+		  Tjp_perp[kk] = TjpCi[kk]-TjpCini*ni[kk];
+		  Tjp_para[kk] = TjpCini*ni[kk];
+		  Tjm_perp[kk] = TjmCi[kk]-TjmCini*ni[kk];
+		  Tjm_para[kk] = TjmCini*ni[kk];
+		} 
+	      normTjm_perp = calc_norm(Tjp_perp);
+	      for (kk=0; kk < 3; kk++)
+		TjOld[kk] = TjNew[kk];
+	      if (calc_norm(Tjm_perp) < calc_norm(Tjp_perp))
+		{
+		  for (kk=0; kk < 3; kk++)
+		    TjNew[kk] = Tjm[kk];
+		}	  
+	      else
+		{
+		  for (kk=0; kk < 3; kk++)
+		    TjNew[kk] = Tjp[kk];
+		}
+
+	      for (kk=0; kk < 3; kk++)
+		TjNewCi[kk] = TjNew[kk] - Ci[kk];
+	      TjNewCini = scalProd(TjNewCi,ni);
+
+#ifdef DEBUG_HCMC
+	      printf("j1=%d A it=%d Aiold=%.15G %.15G %.15G\n", j1, it, Ai[0], Ai[1], Ai[2]);
+#endif
+	      for (kk=0; kk < 3; kk++)
+		Ai[kk] = TjNewCini*ni[kk] + Ci[kk]; 
+#ifdef DEBUG_HCMC
+	      printf("A it=%d Ainew=%.15G %.15G %.15G TjNewCini=%.15G\n", it, Ai[0], Ai[1], Ai[2], TjNewCini);
+	      printf("A Ci=%.15G %.15G %.15G\n", Ci[0], Ci[1], Ci[2]);
+	      printf("A ni=%.15G %.15G %.15G\n", ni[0], ni[1], ni[2]);
+#endif
+	      if ( it > 0 && check_convergence(TjOld,TjNew) ) 
+		break;
 	    }
-
-	  for (kk=0; kk < 3; kk++)
-	    TjNewCi[kk] = TjNew[kk] - Ci[kk];
-	  TjNewCini = scalProd(TjNewCi,ni);
-
+	  totitsHC += it;
 #ifdef DEBUG_HCMC
-	  printf("j1=%d A it=%d Aiold=%.15G %.15G %.15G\n", j1, it, Ai[0], Ai[1], Ai[2]);
+	  printf("A #1 number of iterations=%d Tjold=%.15G %.15G %.15G Tjnew=%.15G %.15G %.15G\n",it, 
+		 TjOld[0], TjOld[1], TjOld[2], TjNew[0], TjNew[1], TjNew[2]);
 #endif
-	  for (kk=0; kk < 3; kk++)
-	    Ai[kk] = TjNewCini*ni[kk] + Ci[kk]; 
+	  if (it >= MAX_ITERATIONS)
+	    {
+	      printf("MAX ITERATIONS REACHED in A!\n");
+	      *retchk=1;
+	      return -1;
+	    }
+	  if ( (calc_norm(Tjp_para) <= L*0.5 && calc_norm(Tjp_perp) <= D*0.5)||
+	       (calc_norm(Tjm_para) <= L*0.5 && calc_norm(Tjm_perp) <= D*0.5) )
+	    {
 #ifdef DEBUG_HCMC
-	  printf("A it=%d Ainew=%.15G %.15G %.15G TjNewCini=%.15G\n", it, Ai[0], Ai[1], Ai[2], TjNewCini);
-	  printf("A Ci=%.15G %.15G %.15G\n", Ci[0], Ci[1], Ci[2]);
-	  printf("A ni=%.15G %.15G %.15G\n", ni[0], ni[1], ni[2]);
-#endif
-	  if ( it > 0 && check_convergence(TjOld,TjNew) ) 
-	    break;
-	}
-      totitsHC += it;
-#ifdef DEBUG_HCMC
-      printf("A #1 number of iterations=%d Tjold=%.15G %.15G %.15G Tjnew=%.15G %.15G %.15G\n",it, 
-	     TjOld[0], TjOld[1], TjOld[2], TjNew[0], TjNew[1], TjNew[2]);
-#endif
-      if (it >= MAX_ITERATIONS)
-       {
-	 printf("MAX ITERATIONS REACHED in A!\n");
-	 *retchk=1;
-	 return -1;
-       }
-      if ( (calc_norm(Tjp_para) <= L*0.5 && calc_norm(Tjp_perp) <= D*0.5)||
-	   (calc_norm(Tjm_para) <= L*0.5 && calc_norm(Tjm_perp) <= D*0.5) )
-	{
-#ifdef DEBUG_HCMC
-	  if (dostorebump)
-	    printf("A #2 disk-rim\n");
+	      if (dostorebump)
+		printf("A #2 disk-rim\n");
 #endif	   
-	  return -1;
+	      return -1;
+	    }
 	}
-    }
-     if (j1==1)
-      {
-	for (kk=0; kk < 3; kk++)
-	  {
-	    /* restore particles*/
-	    for (k2=0; k2 < 2; k2++)
-  	      Dj[k2][kk] = DjTmp[k2][kk];
-	    Ci[kk] = CiTmp[kk];
-	    ni[kk] = niTmp[kk];
-	    nj[kk] = njTmp[kk];
-	  }
-      }
+      if (j1==1)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      /* restore particles*/
+	      for (k2=0; k2 < 2; k2++)
+		Dj[k2][kk] = DjTmp[k2][kk];
+	      Ci[kk] = CiTmp[kk];
+	      ni[kk] = niTmp[kk];
+	      nj[kk] = njTmp[kk];
+	    }
+	}
 
-  }
+    }
   /* =================================== >>> Part B <<< ========================= */
 #if 0
   for (j1=0; j1 < 2; j1++)

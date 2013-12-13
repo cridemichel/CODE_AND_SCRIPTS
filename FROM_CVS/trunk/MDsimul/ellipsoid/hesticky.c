@@ -730,6 +730,10 @@ extern int clsNPT;
 #ifdef MC_FREEZE_BONDS
 extern int refFB, fakeFB;
 #endif
+#ifdef MC_KERN_FRENKEL
+int rejectMove, checkMoveKF=0;
+#endif
+
 void find_bonds_one(int i)
 {
   int nn,  amin, bmin, j, nbonds, bonded;
@@ -920,8 +924,24 @@ void find_bonds_one(int i)
 		  //printf("nbondsFlex=%d checking i=%d j=%d\n", nbondsFlex, i, j);
 		  for (nn=0; nn < nbonds; nn++)
 		    {
+		      //printf("aa=%d bb=%d uno=%d due=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn], i/4, j/4);
+#ifdef MC_KERN_FRENKEL
+		      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
+			  && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
+			{
+		  	  rejectMove = 1;
+			  continue;
+			}
+#endif
 		      if (dists[nn] < 0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			{
+#ifdef MC_KERN_FRENKEL
+			  if (checkMoveKF==1 && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
+			    {
+	  		      rejectMove = 1;
+			      continue;
+			    }
+#endif
 #if defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)
 			  /* se trova un solo bond termina */
 			  if (clsNPT==1)
@@ -3217,10 +3237,14 @@ double calcDistNegSPsph(double t, double t1, int i, int j, double shift[3], int 
 }
 #endif
 extern int are_spheres(int i, int j);
+extern double scalProd(double *A, double *B);
 
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
 {
+#ifdef MC_KERN_FRENKEL
+  double drA[3], drB[3], drAB[3], costhKF, distCoMSq;
+#endif
   double distmin, distSq, ti;
 #ifndef MD_SPOT_GLOBAL_ALLOC
   double ratA[NA][3], ratB[NA][3]; 
@@ -3345,7 +3369,31 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
       for (kk=0; kk < 3; kk++)
     	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
 #ifdef MC_SIMUL
+// *** KERN-FRENKEL MODEL FOR PATCH #3 (the other two ones are used for covalent bonds) ***
+#ifdef MC_KERN_FRENKEL
+      if (mapbondsa[nn]==3 && mapbondsb[nn]==3)
+	{
+	  distCoMSq=0.0;
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      distCoMSq += Sqr(ratA[0][kk]-ratB[0][kk]);
+	      drA[kk] = ratA[nn][kk] - ratA[0][kk];
+	      drB[kk] = ratB[nn][kk] - ratB[0][kk];
+	      drAB[kk] = ratB[nn][kk] - ratA[0][kk];
+	    }
+	  costhKF = OprogStatus.costhKF;
+	  if (distCoMSq < Sqr(OprogStatus.distKF) &&
+	      scalProd(drA,drAB) > costhKF && -scalProd(drB, drAB) > costhKF)
+	    dists[nn] = -1.0;
+	  else
+	    dists[nn] = 1.0; 
+	}
+      else 
+	 dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
+#else
       dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
+#endif
+
 #else
       dists[nn] = dist = sqrt(distSq) - mapSigmaFlex[nn];
 #endif

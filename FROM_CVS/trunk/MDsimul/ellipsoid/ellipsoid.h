@@ -773,6 +773,10 @@ struct progStatus
 #ifdef MC_RESTR_MATRIX
   char restrMatrix[NAME_LENGTH];
 #endif
+#ifdef MC_KERN_FRENKEL
+  double costhKF;
+  double distKF;
+#endif
 #ifdef MC_SIMUL
   double targetPhiMC;
 #endif
@@ -1164,6 +1168,10 @@ struct pascii opro_ascii[] =
   {"polydisp",     &OS(polydisp),                  1,          1, "%.15G"}, 
 #endif
   {"polycutoff",   &OS(polycutoff),                1,          1, "%.8G"},
+#endif
+#ifdef MC_KERN_FRENKEL
+  {"costhKF",   &OS(costhKF),                       1,         1, "%.8G"},
+  {"distKF" ,   &OS(distKF),                        1,         1, "%.8G"},
 #endif
 #ifdef MC_SIMUL
   {"targetPhiMC",  &OS(targetPhiMC),               1,          1, "%.12G"},
@@ -1734,6 +1742,10 @@ struct singlePar OsinglePar[] = {
   {"targetPhi", &OprogStatus.targetPhi, CT},
 #ifdef MC_RESTR_MATRIX
   {"restrmat",  &OprogStatus.restrMatrix, STR},
+#endif
+#ifdef MC_KERN_FRENKEL
+  {"costhKF",   &OprogStatus.costhKF, CT},
+  {"distKF",    &OprogStatus.distKF,  CT},
 #endif
 #ifdef MC_SIMUL
   {"targetPhiMC", &OprogStatus.targetPhiMC, CT},
