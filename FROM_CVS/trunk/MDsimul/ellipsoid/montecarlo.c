@@ -3080,6 +3080,9 @@ void move_box(int *ierr)
 }
 extern void remove_bond(int , int , int , int);
 void find_bonds_one(int ip);
+#ifdef MC_KERN_FRENKEL
+extern int checkMoveKF;
+#endif
 void update_bonds_MC(int ip)
 {
 #ifdef MD_LL_BONDS
@@ -3111,9 +3114,27 @@ void update_bonds_MC(int ip)
       jj2 = bonds[ip][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
+#ifdef MC_KERN_FRENKEL
+      if (checkMoveKF)
+	{
+	  if (aa==3 && bb==3)
+	    {
+	      remove_bond(ip, jj, aa, bb);
+	      remove_bond(jj, ip, bb, aa);
+	    }
+	}
+      else
+	remove_bond(jj, ip, bb, aa);
+#else
       remove_bond(jj, ip, bb, aa);
+#endif
     }
+#ifdef MC_KERN_FRENKEL
+  if (!checkMoveKF)
+    numbonds[ip] = 0;
+#else  
   numbonds[ip] = 0;
+#endif
 #endif
   if (OprogStatus.useNNL)
     find_bonds_one_NLL(ip);
@@ -6133,7 +6154,9 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
     return 0;
 }
 #endif
-
+#ifdef MC_KERN_FRENKEL
+extern int rejectMove, checkMoveKF;
+#endif
 int mcmotion(void)
 {
   int ip, dorej, movetype, err;
@@ -6174,8 +6197,14 @@ int mcmotion(void)
 	  fakeFB=1;
 	}
 #endif
+#ifdef MC_KERN_FRENKEL
+      rejectMove = 0;
+      checkMoveKF=1;
+#endif
       update_bonds_MC(ip);
-	
+#ifdef MC_KERN_FRENKEL
+      checkMoveKF = 0;
+#endif	
       /* qui basta calcolare l'energia della particella che sto muovendo */
 #ifdef MC_FREEZE_BONDS
       if (OprogStatus.freezebonds==1)
@@ -6240,6 +6269,13 @@ int mcmotion(void)
 	    }
 	}
 #else
+#ifdef MC_KERN_FRENKEL
+      if (rejectMove==1)
+	{
+	  dorej=2;
+	}
+      else
+#endif
       if (enn <= eno)
 	{
 	  //	  if (abs(enn-eno) >=1 )
