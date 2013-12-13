@@ -1727,6 +1727,10 @@ void usrInitBef(void)
     Oparams.time = 0.0;
     OprogStatus.tolT = 0.0;
     OprogStatus.targetPhi = 0.0;
+#ifdef MC_KERN_FRENKEL
+    OprogStatus.costhKF = 0.1;
+    OprogStatus.distKF = 1.2;
+#endif
 #ifdef MC_SIMUL
     OprogStatus.targetPhiMC = -1.0;
 #endif
@@ -6929,6 +6933,13 @@ void writeAllCor(FILE* fs, int saveAll)
 		}
 	    }
 #else
+	if ( typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[0] &&
+	     typesArr[typeOfPart[i]].sax[0] ==  typesArr[typeOfPart[i]].sax[1])
+	  {
+	    fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], typesArr[typeOfPart[i]].sax[0], 
+		    colsFlex[typeOfPart[i]%numcols]);
+	  }
+	else
 	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
 		  2.0*typesArr[typeOfPart[i]].sax[0], colsFlex[typeOfPart[i]%numcols]);
 #endif
