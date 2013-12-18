@@ -6,10 +6,11 @@ int full, ibeg, numpoly;
 int main(int argc, char **argv)
 {
   FILE *f;
-  double del, del0, maxL;
+  double Diam, del0, maxL;
   int parnum=2800, i, j, polylen=4;
   f = fopen(argv[1], "w+");
   L = 30.75;
+  Diam=2.0;
   printf("argc=%d\n", argc);
   if (argc==3)
     parnum=atoi(argv[2]);
@@ -19,11 +20,10 @@ int main(int argc, char **argv)
   rxc =malloc(sizeof(double)*polylen);
   ryc =malloc(sizeof(double)*polylen);
   rzc =malloc(sizeof(double)*polylen);
-  del=1.51;
-  del0 = 0.01;
+  del0 = Diam*0.5+0.00001;
   for (i=0; i < polylen; i++)
     {
-      rxc[i] = i;
+      rxc[i] = i*Diam;
       ryc[i] = 0.0;
       rzc[i] = 0.0;
     }
@@ -34,13 +34,13 @@ int main(int argc, char **argv)
   fprintf(f,"saveBonds: 0\n");
   fprintf(f, "@@@\n");
   fprintf(f, "%d\n", parnum);
-  fprintf(f,"0.5 0.5 0.5\n");
+  fprintf(f,"1 1 1\n");
   fprintf(f,"2 2 2\n");
   fprintf(f, "1 1 1 1 2 0\n");
   fprintf(f,"3 0\n");
-  fprintf(f,"0.5 0 0 0.5\n");
-  fprintf(f,"-0.5 0 0 0.5\n");
-  fprintf(f,"0.0 0.5 0 0.25\n");
+  fprintf(f,"1 0 0 0.5\n");
+  fprintf(f,"-1 0 0 0.5\n");
+  fprintf(f,"0.0 1 0 0.25\n");
   fprintf(f,"0 0 0 0 0.0001 1000000000 10000000000 100000\n");
   fprintf(f,"0 0 0 1 0.0001 1000000000 10000000000 100000\n");
   fprintf(f,"0 1 0 1 0.0001 1000000000 10000000000 100000\n");
@@ -52,9 +52,9 @@ int main(int argc, char **argv)
   maxL = L;
   numpoly=parnum/polylen;
   printf("numpoly=%d numpoly*polylen=%d\n", numpoly, numpoly*polylen);
-  drx = 5.6;
-  dry = 1.01;
-  drz = 1.01;
+  drx = Diam*4.0; //0.500000000001;
+  dry = Diam;
+  drz = Diam;
   if (parnum%polylen != 0)
     {
       printf("number of particles must a multiple of %d\n", polylen);
@@ -63,24 +63,23 @@ int main(int argc, char **argv)
   for (i=0; i < numpoly; i++)
     {
       rxl = rxc[polylen-1]+nx*drx+del0;
-      if (rxl >= maxL)
+      if (rxl+Diam*0.5 > L)
 	{
 	  ny++;
 	  nx=0;
 	  rxl = rxc[polylen-1]+nx*drx+del0;
 	}
       ryl = ryc[polylen-1]+ny*dry+del0;
-      if (ryl >= L-1.0)
+      if (ryl+Diam*0.5 > L)
 	{
 	  nz++;
 	  ny=0;
 	  ryl = ryc[polylen-1]+ny*dry+del0;
       	}
       rzl = rzc[polylen-1]+nz*drz+del0;
-      if (rzl >= L-1.0)
+      if (rzl+Diam*0.5 > L)
 	{
 	  full=1;
-	  break;
 	}
 
       for (j = 0; j < polylen; j++)
