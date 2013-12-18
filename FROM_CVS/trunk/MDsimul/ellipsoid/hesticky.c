@@ -3382,8 +3382,8 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	  for (kk=0; kk < 3; kk++)
 	    {
 	      distCoMSq += Sqr(ratA[0][kk]-ratB[0][kk]);
-	      drA[kk] = ratA[nn][kk] - ratA[0][kk];
-	      drB[kk] = ratB[nn][kk] - ratB[0][kk];
+	      drA[kk] = ratA[mapbondsa[nn]][kk] - ratA[0][kk];
+	      drB[kk] = ratB[mapbondsb[nn]][kk] - ratB[0][kk];
 	      drAB[kk] = ratB[0][kk] - ratA[0][kk];
 	    }
 	  costhKF = OprogStatus.costhKF;
