@@ -1730,6 +1730,7 @@ void usrInitBef(void)
 #ifdef MC_KERN_FRENKEL
     OprogStatus.costhKF = 0.1;
     OprogStatus.distKF = 1.2;
+    OprogStatus.polylen = 4;
 #endif
 #ifdef MC_SIMUL
     OprogStatus.targetPhiMC = -1.0;

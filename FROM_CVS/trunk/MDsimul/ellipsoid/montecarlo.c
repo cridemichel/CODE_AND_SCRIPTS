@@ -3114,27 +3114,9 @@ void update_bonds_MC(int ip)
       jj2 = bonds[ip][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
-#ifdef MC_KERN_FRENKEL
-      if (checkMoveKF)
-	{
-	  if (aa==3 && bb==3)
-	    {
-	      remove_bond(ip, jj, aa, bb);
-	      remove_bond(jj, ip, bb, aa);
-	    }
-	}
-      else
-	remove_bond(jj, ip, bb, aa);
-#else
       remove_bond(jj, ip, bb, aa);
-#endif
     }
-#ifdef MC_KERN_FRENKEL
-  if (!checkMoveKF)
-    numbonds[ip] = 0;
-#else  
   numbonds[ip] = 0;
-#endif
 #endif
   if (OprogStatus.useNNL)
     find_bonds_one_NLL(ip);
