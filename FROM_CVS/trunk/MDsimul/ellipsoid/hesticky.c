@@ -936,9 +936,10 @@ void find_bonds_one(int i)
 		      if (dists[nn] < 0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			{
 #ifdef MC_KERN_FRENKEL
-			  if (checkMoveKF==1 && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
+			  if (i/OprogStatus.polylen != j/OprogStatus.polylen && 
+			      mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
 			    {
-	  		      rejectMove = 1;
+			      rejectMove = 1;
 			      continue;
 			    }
 #endif
@@ -950,6 +951,7 @@ void find_bonds_one(int i)
 			      return;
 			    }
 #endif
+			  //printf("mapbondsaFlex=%d mapbondsbFlex=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn]);
 			  add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
 			  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
 			}
@@ -2523,6 +2525,7 @@ void remove_bond(int na, int n, int a, int b)
   if (nb==numbonds[na])
     {
       printf("nessun bond rimosso fra %d,%d\n", n, na);
+      printf("aa=%d bb=%d\n",aa, bb);
     }
 #if 0
   if (abs(nb - numbonds[na])==2)
@@ -3379,9 +3382,11 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	      distCoMSq += Sqr(ratA[0][kk]-ratB[0][kk]);
 	      drA[kk] = ratA[nn][kk] - ratA[0][kk];
 	      drB[kk] = ratB[nn][kk] - ratB[0][kk];
-	      drAB[kk] = ratB[nn][kk] - ratA[0][kk];
+	      drAB[kk] = ratB[0][kk] - ratA[0][kk];
 	    }
 	  costhKF = OprogStatus.costhKF;
+	  //if (distCoMSq < Sqr(OprogStatus.distKF))
+	    //printf("dist= %f\n", sqrt(distCoMSq));
 	  if (distCoMSq < Sqr(OprogStatus.distKF) &&
 	      scalProd(drA,drAB) > costhKF && -scalProd(drB, drAB) > costhKF)
 	    dists[nn] = -1.0;

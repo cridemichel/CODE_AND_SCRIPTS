@@ -774,6 +774,7 @@ struct progStatus
   char restrMatrix[NAME_LENGTH];
 #endif
 #ifdef MC_KERN_FRENKEL
+  int polylen;
   double costhKF;
   double distKF;
 #endif
@@ -1172,6 +1173,7 @@ struct pascii opro_ascii[] =
 #ifdef MC_KERN_FRENKEL
   {"costhKF",   &OS(costhKF),                       1,         1, "%.8G"},
   {"distKF" ,   &OS(distKF),                        1,         1, "%.8G"},
+  {"polylen",   &OS(polylen),                       1,         1, "%d"},
 #endif
 #ifdef MC_SIMUL
   {"targetPhiMC",  &OS(targetPhiMC),               1,          1, "%.12G"},
@@ -1746,6 +1748,7 @@ struct singlePar OsinglePar[] = {
 #ifdef MC_KERN_FRENKEL
   {"costhKF",   &OprogStatus.costhKF, CT},
   {"distKF",    &OprogStatus.distKF,  CT},
+  {"polylen",   &OprogStatus.polylen, INT},
 #endif
 #ifdef MC_SIMUL
   {"targetPhiMC", &OprogStatus.targetPhiMC, CT},
