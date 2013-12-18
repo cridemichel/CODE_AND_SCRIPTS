@@ -222,8 +222,14 @@ int parnumA, parnumB;
 #ifdef MD_LL_BONDS
 long long int *bondscache, **bonds;
 int *numbonds;
+#ifdef MC_KERN_FRENKEL
+long long int *bondscache2;
+#endif
 #else
 int *bondscache, *numbonds, **bonds;
+#ifdef MC_KERN_FRENKEL
+int *bondscache2;
+#endif
 #endif
 double *treeRxC, *treeRyC, *treeRzC;
 extern int *mapbondsa;
@@ -3064,7 +3070,7 @@ void set_angmom_to_zero(int i)
 extern void find_bonds_one(int i);
 extern void find_bonds_one_NLL(int i);
 #ifdef EDHE_FLEX
-#ifdef MC_OPT_CLSNPT
+#if defined(MC_OPT_CLSNPT) && defined(MC_CLUSTER_NPT)
 extern int clsNPT;
 #endif
 #ifdef MC_FREEZE_BONDS
@@ -3084,7 +3090,7 @@ void find_bonds_flex_all(void)
 	  return;
 	}
 #endif
-#ifdef MC_OPT_CLSNPT
+#if defined(MC_OPT_CLSNPT) && defined(MC_CLUSTER_NPT)
       if (clsNPT==2)
 	return;
 #endif
@@ -3098,7 +3104,7 @@ void find_bonds_flex_NNL(void)
   for (i=0; i < Oparams.parnum; i++)
     {
       find_bonds_one_NLL(i);
-#ifdef MC_OPT_CLSNPT
+#if defined(MC_OPT_CLSNPT) && defined(MC_CLUSTER_NPT)
       if (clsNPT==2)
 	return;
 #endif
@@ -5109,8 +5115,14 @@ void usrInitAft(void)
 #else
 #ifdef MD_LL_BONDS
   bondscache = (long long int *) malloc(sizeof(long long int)*OprogStatus.maxbonds);
+#ifdef MC_KERN_FRENKEL
+  bondscache2 = (long long int *) malloc(sizeof(long long int)*OprogStatus.maxbonds);
+#endif
 #else
   bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
+#ifdef MC_KERN_FRENKEL
+  bondscache2 = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
+#endif
 #endif
 #endif  
 #else
