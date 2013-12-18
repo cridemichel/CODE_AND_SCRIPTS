@@ -204,9 +204,15 @@ extern int evIdC, evIdD, evIdE;
 extern double *treeRxC, *treeRyC, *treeRzC;
 #ifdef MD_LL_BONDS
 extern long long int *bondscache, **bonds;
+#ifdef MC_KERN_FRENKEL
+extern long long int *bondscache2;
+#endif
 extern int *numbonds;
 #else
 extern int *bondscache, *numbonds, **bonds;
+#ifdef MC_KERN_FRENKEL
+extern int *bondscache2;
+#endif
 #endif
 #endif
 extern void newtDist(double x[], int n, int *check, 
@@ -2874,6 +2880,14 @@ extern int refFB, fakeFB;
 
 void move_box(int *ierr)
 {
+#ifdef MC_KERN_FRENKEL
+#ifdef MD_LL_BONDS
+  int nb, kk;
+  long long int jj, jj2, aa, bb;
+#else
+  int nb, jj, jj2, kk, aa, bb;
+#endif  
+#endif
   int i, ii;
   double nn;
 #if 1
@@ -2970,8 +2984,27 @@ void move_box(int *ierr)
   store_bonds_mc(-1);
 #endif
   /* update all bonds with new positions */
+#ifdef MC_KERN_FRENKEL
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      nb = numbonds[i];
+      for (kk = 0; kk < nb; kk++)
+	{
+	  jj = bonds[i][kk] / (NANA);
+	  jj2 = bonds[i][kk] % (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  if (aa == 3 && bb == 3)
+    	    {
+	      //remove_bond(jj, i, bb, aa);
+	      remove_bond(i, jj, aa, bb);
+	    }
+	}
+    }
+#else
   for (i=0; i < Oparams.parnum; i++)
     numbonds[i] = 0;
+#endif
 #endif  
 #ifdef MC_FREEZE_BONDS
   if (OprogStatus.freezebonds)
@@ -3108,15 +3141,48 @@ void update_bonds_MC(int ip)
     }
 #else
   nb = numbonds[ip];
+
+#ifdef MC_KERN_FRENKEL
+
+#ifdef MD_LL_BONDS
+  memcpy(bondscache2, bonds[ip], sizeof(long long int)*numbonds[ip]);
+#else
+  memcpy(bondscache2, bonds[ip], sizeof(int)*numbonds[ip]);
+#endif
+  for (kk = 0; kk < nb; kk++)
+    {
+      jj = bondscache2[kk] / (NANA);
+      jj2 = bondscache2[kk] % (NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      if (checkMoveKF==1)
+	{
+	  if (aa == 3 && bb == 3)
+	    {
+	      remove_bond(jj, ip, bb, aa);
+	      remove_bond(ip, jj, aa, bb);
+	    }
+	}
+      else
+	remove_bond(jj, ip, bb, aa);
+    }
+#else
   for (kk = 0; kk < nb; kk++)
     {
       jj = bonds[ip][kk] / (NANA);
       jj2 = bonds[ip][kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
-      remove_bond(jj, ip, bb, aa);
+      remove_bond(jj, ip, bb, aa);     
     }
+#endif
+    
+#ifdef MC_KERN_FRENKEL
+  if (!checkMoveKF)
+    numbonds[ip] = 0;
+#else
   numbonds[ip] = 0;
+#endif
 #endif
   if (OprogStatus.useNNL)
     find_bonds_one_NLL(ip);

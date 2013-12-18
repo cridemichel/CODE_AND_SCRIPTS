@@ -936,7 +936,8 @@ void find_bonds_one(int i)
 		      if (dists[nn] < 0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			{
 #ifdef MC_KERN_FRENKEL
-			  if (i/OprogStatus.polylen != j/OprogStatus.polylen && 
+			  //printf("polylen=%d ncls=%d\n", OprogStatus.polylen, i/OprogStatus.polylen);
+			  if ((i/OprogStatus.polylen != j/OprogStatus.polylen) && 
 			      mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
 			    {
 			      rejectMove = 1;
@@ -2525,7 +2526,7 @@ void remove_bond(int na, int n, int a, int b)
   if (nb==numbonds[na])
     {
       printf("nessun bond rimosso fra %d,%d\n", n, na);
-      printf("aa=%d bb=%d\n",aa, bb);
+      printf("a=%d b=%d\n",a, b);
     }
 #if 0
   if (abs(nb - numbonds[na])==2)
@@ -3247,6 +3248,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 {
 #ifdef MC_KERN_FRENKEL
   double drA[3], drB[3], drAB[3], costhKF, distCoMSq;
+  double normdrA, normdrB, normdrAB;
 #endif
   double distmin, distSq, ti;
 #ifndef MD_SPOT_GLOBAL_ALLOC
@@ -3387,11 +3389,25 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	  costhKF = OprogStatus.costhKF;
 	  //if (distCoMSq < Sqr(OprogStatus.distKF))
 	    //printf("dist= %f\n", sqrt(distCoMSq));
+	  normdrA = calc_norm(drA);
+   	  normdrB = calc_norm(drB);
+	  normdrAB= calc_norm(drAB);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      drA[kk] /= normdrA;
+	      drB[kk] /= normdrB;
+	      drAB[kk] /= normdrAB;
+	    } 
 	  if (distCoMSq < Sqr(OprogStatus.distKF) &&
 	      scalProd(drA,drAB) > costhKF && -scalProd(drB, drAB) > costhKF)
-	    dists[nn] = -1.0;
+	    {
+	      dists[nn] = -1.0;
+	    }
 	  else
-	    dists[nn] = 1.0; 
+	    {
+	      //printf("qui drA.drAB)=%f -drB.drAB=%f\n", scalProd(drA, drAB), -scalProd(drB, drAB));
+	      dists[nn] = 1.0; 
+	    }
 	}
       else 
 	 dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
