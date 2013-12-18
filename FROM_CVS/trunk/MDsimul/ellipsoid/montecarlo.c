@@ -6320,12 +6320,14 @@ int mcmotion(void)
 #ifdef MC_KERN_FRENKEL
       if (rejectMove==1)
 	{
+	  //printf("qui?!?\n");
 	  dorej=2;
 	}
       else
 #endif
       if (enn <= eno)
 	{
+	  //printf("ene=%f (old=%f)\n", enn, eno);
 	  //	  if (abs(enn-eno) >=1 )
 	  //	    printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
 	  dorej=0;
@@ -6371,6 +6373,14 @@ int mcmotion(void)
 #ifdef MC_FREEZE_BONDS
   if (OprogStatus.freezebonds)
     refFB=0;
+#endif
+#if 0
+#ifdef MC_KERN_FRENKEL
+  if (dorej && abs(enn-eno) >= 1)
+    {
+      printf("ene=%f (old=%f)\n", enn, eno);
+    }
+#endif
 #endif
   if (dorej != 0)
     {
