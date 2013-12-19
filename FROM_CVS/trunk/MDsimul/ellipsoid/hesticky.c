@@ -940,7 +940,7 @@ void find_bonds_one(int i)
 			  if ((i/OprogStatus.polylen != j/OprogStatus.polylen) && 
 			      mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
 			    {
-			      rejectMove = 1;
+			      //rejectMove = 1;
 			      continue;
 			    }
 #endif
