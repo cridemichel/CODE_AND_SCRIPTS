@@ -1,19 +1,41 @@
 #include<stdlib.h>
 #include<stdio.h>
+#include<math.h>
 double nx, ny, nz, L, *rx, *ry, *rz;
 double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
 int full, ibeg, numpoly;
 int main(int argc, char **argv)
 {
   FILE *f;
-  double Diam, del0, maxL;
+  double phi, Diam, del0, maxL, pi;
   int parnum=2800, i, j, polylen=4;
+
+  if (argc == 1)
+   {
+
+     printf("create_KFpoly_conf <conf_file_name> <num. polymers> <volume fraction> <polymer length>\n"); 
+     exit(-1);
+   }
   f = fopen(argv[1], "w+");
-  L = 30.75;
   Diam=2.0;
-  printf("argc=%d\n", argc);
-  if (argc==3)
-    parnum=atoi(argv[2]);
+  pi = acos(0.0)*2.0;
+
+  if (argc > 4) 
+    polylen = atoi(argv[4]);
+
+  if (argc > 2)
+    parnum=atoi(argv[2])*polylen;
+  else
+    parnum =2000*polylen; 
+ 
+  if (argc > 3)
+    {
+      phi = atof(argv[3]);
+      L= pow(((double)2.0),2.0/3.0)*pow(((double)parnum),1.0/3.0)*pow(pi/3.0,1.0/3.0)*pow(((double)polylen),1.0/3.0)/pow(phi,1.0/3.0);
+    }
+  else
+    L=50.0;
+  printf("L=%f phi=%f argc=%d\n", L, phi, argc);
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
   rz = malloc(sizeof(double)*parnum);
