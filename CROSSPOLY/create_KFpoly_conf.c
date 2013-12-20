@@ -8,7 +8,7 @@ int main(int argc, char **argv)
 {
   FILE *f;
   double phi, Diam, del0, maxL, pi;
-  int parnum=2800, i, j, polylen=4;
+  int numpoly, parnum=2800, i, j, polylen=4;
 
   if (argc == 1)
    {
@@ -23,19 +23,22 @@ int main(int argc, char **argv)
   if (argc > 4) 
     polylen = atoi(argv[4]);
 
+  numpoly=2000;
   if (argc > 2)
-    parnum=atoi(argv[2])*polylen;
+    {
+      numpoly = atoi(argv[2]);
+      parnum=numpoly*polylen;
+    }
   else
     parnum =2000*polylen; 
- 
   if (argc > 3)
     {
       phi = atof(argv[3]);
-      L= pow(((double)2.0),2.0/3.0)*pow(((double)parnum),1.0/3.0)*pow(pi/3.0,1.0/3.0)*pow(((double)polylen),1.0/3.0)/pow(phi,1.0/3.0);
+      L= pow(((double)2.0),2.0/3.0)*pow(((double)numpoly),1.0/3.0)*pow(pi/3.0,1.0/3.0)*pow(((double)polylen),1.0/3.0)/pow(phi,1.0/3.0);
     }
   else
     L=50.0;
-  printf("L=%f phi=%f argc=%d\n", L, phi, argc);
+  printf("L=%f phi=%f argc=%d polylen=%d\n", L, phi, argc, polylen);
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
   rz = malloc(sizeof(double)*parnum);
@@ -74,7 +77,7 @@ int main(int argc, char **argv)
   maxL = L;
   numpoly=parnum/polylen;
   printf("numpoly=%d numpoly*polylen=%d\n", numpoly, numpoly*polylen);
-  drx = Diam*4.0; //0.500000000001;
+  drx = Diam*((double)polylen); //0.500000000001;
   dry = Diam;
   drz = Diam;
   if (parnum%polylen != 0)
