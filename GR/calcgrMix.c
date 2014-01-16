@@ -159,12 +159,12 @@ void build_linked_list(void)
     }
 }
 #endif
-
+double *g0AA, *g0AB, *g0BB;
 int main(int argc, char** argv)
 {
   FILE *f, *f2;
   int nf, i, a, b, nat, NN, j, ii, bin;
-  double r, delr, tref=0.0, Dx[3], *g0AA, *g0AB, *g0BB, g0m, distSq, rlower, rupper, cost, nIdeal;
+  double r, delr, tref=0.0, Dx[3], g0m, distSq, rlower, rupper, cost, nIdeal;
   double time, refTime, RCUT;
   int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
   double shift[3];
@@ -367,18 +367,28 @@ int main(int argc, char** argv)
 	    for (a = 0; a < 3; a++)
 	      distSq += Sqr(Dx[a]);
 	    bin = ((int) (sqrt(distSq) / delr)); 
+	    
+	    //printf("nf=%d i=%d j=%d g0BB[0,1]=%f %f\n", nf, i, j, g0BB[0], g0BB[1]);
+	    //if (sqrt(distSq) < 0.2|| bin<=10)
+	      //{
+		//printf("bin=%d, i=%d j=%d dist=%f delr=%f\n", bin, i, j, sqrt(distSq), delr); 
+		//printf("g0BB[0,1]=%f %f\n", g0BB[0], g0BB[1]);
+	     // }
 	    //printf("(%d-%d) bin=%d\n", i, j, bin);
-	    if (bin < points || bin >= 0)
+	    if (bin < points && bin >= 0)
 	      {
 		if (i < NPA && j < NPA)
 		  g0AA[bin] += 2.0;
 		else if (i < NPA && j >= NPA)
 		  g0AB[bin] += 2.0;
-		else if (i >= NPA && j >= NPA)
-		  g0BB[bin] += 2.0;	  
+                else if (i >= NPA && j >= NPA)
+		  {
+		    //printf("i=%d j=%d g0BB=%f\n", i, j, g0BB[bin]);
+		    g0BB[bin] += 2.0;	
+		  }  
 		//printf("g0[%d]=%.15G\n", bin, g0[bin]);
-		else 
-		  printf("qui boh?!?\n");
+		//	else 
+		//	  printf("qui boh?!?\n");
 	      }
 	    else 
 	      {
@@ -419,7 +429,7 @@ int main(int argc, char** argv)
       rupper = rlower + delr;
       nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower);
       //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
-      g0m = g0AB[ii]/((double)nf)/((double)NPA)/nIdeal;
+      g0m = g0AB[ii]/((double)nf)/((double)NPA)/nIdeal/2;
 #if 0
       g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
       g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
