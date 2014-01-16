@@ -263,7 +263,6 @@ int main(int argc, char** argv)
     particles_type = 2; /* 2 means square well system*/
   else if (sigmaAA != -1.0)
     particles_type = 0;
-  
 
    if (particles_type == 1)
     {
@@ -346,6 +345,7 @@ int main(int argc, char** argv)
   g6 = malloc(sizeof(double)*points);
 #endif
   delr = L / 2.0 / ((double)points);
+  printf("delr=%f\n", delr); 
   rewind(f2);
   nf = 0;
   while (!feof(f2))
