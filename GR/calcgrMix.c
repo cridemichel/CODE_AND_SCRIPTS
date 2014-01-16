@@ -329,7 +329,7 @@ int main(int argc, char** argv)
   printf("L=%.15G\n", L);
   g0AA = malloc(sizeof(double)*points);
   g0AB = malloc(sizeof(double)*points);
-  g0BB = malloc(sizeof(double)*points)
+  g0BB = malloc(sizeof(double)*points);
   for (ii=0; ii < points; ii++)
     {
       g0AA[ii] = 0.0;
@@ -372,7 +372,7 @@ int main(int argc, char** argv)
 	      {
 		if (i < NPA && j < NPA)
 		  g0AA[bin] += 2.0;
-		else if ((i < NPA && j >= NPA)
+		else if (i < NPA && j >= NPA)
 		  g0AB[bin] += 2.0;
 		else if (i >= NPA && j >= NPA)
 		  g0BB[bin] += 2.0;	  
@@ -396,35 +396,35 @@ int main(int argc, char** argv)
       rupper = rlower + delr;
       nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower);
       //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
-      g0m = g0[ii]/((double)nf)/((double)NPA)/nIdeal;
+      g0m = g0AA[ii]/((double)nf)/((double)NPA)/nIdeal;
 #if 0
       g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
       g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
       g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
       fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
 #endif
-      fprintf(f, "%.15G %.15G %.15G\n", r, g0m, g0[ii]);
+      fprintf(f, "%.15G %.15G %.15G\n", r, g0m, g0AA[ii]);
       r += delr;
     }
   fclose(f);
 
   f = fopen("grAB.dat", "w+");
   r = delr*0.5;
-  cost = 4.0 * pi * NPB / 3.0 / (L*L*L);
+  cost = 4.0 * pi * (NP-NPA) / 3.0 / (L*L*L);
   for (ii = 0; ii < points; ii++)
     {
       rlower = ( (double) ii) * delr;
       rupper = rlower + delr;
       nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower);
       //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
-      g0m = g0[ii]/((double)nf)/((double)NPA)/nIdeal;
+      g0m = g0AB[ii]/((double)nf)/((double)NPA)/nIdeal;
 #if 0
       g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
       g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
       g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
       fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
 #endif
-      fprintf(f, "%.15G %.15G %.15G\n", r, g0m, g0[ii]);
+      fprintf(f, "%.15G %.15G %.15G\n", r, g0m, g0AB[ii]);
       r += delr;
     }
   fclose(f);
@@ -439,14 +439,14 @@ int main(int argc, char** argv)
       rupper = rlower + delr;
       nIdeal = cost * (Sqr(rupper)*rupper - Sqr(rlower)*rlower);
       //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
-      g0m = g0[ii]/((double)nf)/((double)(NP-NPA))/nIdeal;
+      g0m = g0BB[ii]/((double)nf)/((double)(NP-NPA))/nIdeal;
 #if 0
       g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
       g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
       g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
       fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
 #endif
-      fprintf(f, "%.15G %.15G %.15G\n", r, g0m, g0[ii]);
+      fprintf(f, "%.15G %.15G %.15G\n", r, g0m, g0BB[ii]);
       r += delr;
     }
   fclose(f);
