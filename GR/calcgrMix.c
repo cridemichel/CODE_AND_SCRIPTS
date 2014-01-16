@@ -377,6 +377,8 @@ int main(int argc, char** argv)
 		else if (i >= NPA && j >= NPA)
 		  g0BB[bin] += 2.0;	  
 		//printf("g0[%d]=%.15G\n", bin, g0[bin]);
+		else 
+		  printf("qui boh?!?\n");
 	      }
 	    else 
 	      {
