@@ -277,7 +277,7 @@ maxbondsSaved: -1
   fprintf(f2,"3 0\n");
   fprintf(f2, "1.0 0 0 0.5\n");
   fprintf(f2, "-1.0 0 0 0.5\n");
-  fprintf(f2, "0 1.0 0 %f\n", permrange);
+  fprintf(f2, "0 1.0 0 %f\n", permrange*2.0);
   fprintf(f2, "0 0 0 0 0.0001 1000000000 10000000000 100000\n");
   fprintf(f2, "0 0 0 1 0.0001 1000000000 10000000000 100000\n");
   fprintf(f2, "0 1 0 1 0.0001 1000000000 10000000000 100000\n");
