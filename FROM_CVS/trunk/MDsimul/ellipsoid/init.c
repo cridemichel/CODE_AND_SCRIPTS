@@ -6920,7 +6920,8 @@ void writeAllCor(FILE* fs, int saveAll)
 #endif
 #endif
 #ifdef MC_HC
-#ifdef MC_BENT_DBLCYL
+	  
+#if defined(MC_BENT_DBLCYL)
 	  if (typesArr[typeOfPart[i]].nhardobjs==0)
 	    fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
 		    2.0*typesArr[typeOfPart[i]].sax[0], colsFlex[typeOfPart[i]%numcols]);
@@ -6946,8 +6947,10 @@ void writeAllCor(FILE* fs, int saveAll)
 		}
 	    }
 #else
+	  //printf("sax= %.15G %.15G %.15G\n",  typesArr[typeOfPart[i]].sax[0],  typesArr[typeOfPart[i]].sax[1],
+ //typesArr[typeOfPart[i]].sax[2]   );
 	if ( typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[0] &&
-	     typesArr[typeOfPart[i]].sax[0] ==  typesArr[typeOfPart[i]].sax[1])
+	     typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[2])
 	  {
 	    fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], typesArr[typeOfPart[i]].sax[0], 
 		    colsFlex[typeOfPart[i]%numcols]);
@@ -6960,13 +6963,28 @@ void writeAllCor(FILE* fs, int saveAll)
 #ifdef EDHE_FLEX
 #ifndef MD_FOUR_BEADS
 #ifdef MD_SUPERELLIPSOID
+	if ( typesArr[typeOfPart[i]].n[0] == 2 && typesArr[typeOfPart[i]].n[1] == 2 && typesArr[typeOfPart[i]].n[2] == 2 &&
+	     typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[0] &&
+	     typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[2])
+	  {
+	    fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], typesArr[typeOfPart[i]].sax[0], 
+		    colsFlex[typeOfPart[i]%numcols]);
+	  }
+	else
 	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 		  uyz[i], uzx[i], uzy[i], uzz[i], typesArr[typeOfPart[i]].sax[0], 
 		  typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],
 		  colsFlex[typeOfPart[i]%numcols], typesArr[typeOfPart[i]].n[0],
 		  typesArr[typeOfPart[i]].n[1], typesArr[typeOfPart[i]].n[2]);
 #else
-      	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
+	if ( typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[0] &&
+	     typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[2])
+	  {
+	    fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], typesArr[typeOfPart[i]].sax[0], 
+		    colsFlex[typeOfPart[i]%numcols]);
+	  }
+	else
+	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], uyx[i], uyy[i], 
 		  uyz[i], uzx[i], uzy[i], uzz[i], typesArr[typeOfPart[i]].sax[0], 
 		  typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],
 		  colsFlex[typeOfPart[i]%numcols]);
