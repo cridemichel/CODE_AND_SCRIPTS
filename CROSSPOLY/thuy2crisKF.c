@@ -230,7 +230,7 @@ int main(int argc, char **argv)
   f2 = fopen(argv[2],"w");
   f = fopen(argv[1], "r");
   fscanf(f, "%[^\n]\n", line);
-  fscanf(f, "%d %d %lf %lf %lf %lf %lf %lf %lf\n", &nummol, &polylen, &bx, &by, &bz, &prad, &patchrange, &permrange);
+  fscanf(f, "%d %d %lf %lf %lf %lf %lf %lf\n", &nummol, &polylen, &bx, &by, &bz, &prad, &patchrange, &permrange);
   //by = bz = bx;
   printf("NUMMOL: %d polylen=%d box=%f %f %f radius=%f patchrange=%f permrange=%f\n", nummol, polylen, bx, by, bz, prad, patchrange, permrange);
 #if 0
