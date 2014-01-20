@@ -953,6 +953,8 @@ void find_bonds_one(int i)
 			    }
 #endif
 			  //printf("mapbondsaFlex=%d mapbondsbFlex=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn]);
+//if (mapbondsaFlex[nn]==3 && mapbondsbFlex[nn])
+  //printf("%d %d\n", i, j);
 			  add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
 			  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
 			}
@@ -3314,7 +3316,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   rB[2] = rz[j] + vz[j]*ti + shift[2];
 #endif
 
-#ifdef MC_SIMUL
+#if defined(MC_SIMUL) && !defined(MC_KERN_FRENKEL)
   if (are_spheres(i,j))
     {
       if (Sqr(rA[0]-rB[0])+Sqr(rA[1]-rB[1])+Sqr(rA[2]-rB[2]) > Sqr(0.5*(maxax[i]+maxax[j])))
@@ -3398,6 +3400,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	      drB[kk] /= normdrB;
 	      drAB[kk] /= normdrAB;
 	    } 
+	  //printf("distance: %.15G costheta=%.15G", sqrt(distCoMSq), scalProd(drA,drAB));
 	  if (distCoMSq < Sqr(OprogStatus.distKF) &&
 	      scalProd(drA,drAB) > costhKF && -scalProd(drB, drAB) > costhKF)
 	    {
