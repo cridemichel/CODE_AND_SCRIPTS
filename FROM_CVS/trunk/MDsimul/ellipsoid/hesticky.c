@@ -3244,6 +3244,7 @@ double calcDistNegSPsph(double t, double t1, int i, int j, double shift[3], int 
 #endif
 extern int are_spheres(int i, int j);
 extern double scalProd(double *A, double *B);
+extern double check_overlap_ij(int i, int j, double shift[3], int *errchk);
 
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
@@ -3421,15 +3422,27 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
       /* first patch is the "cylindrical" one */
       if (mapbondsa[nn] == 1 && mapbondsb[nn] == 1)
 	{
+#if 0
+	  printf("sax=%f %f %f mapsigmaFlex=%f qui mapbondsa=%d mapbondsb=%d dist=%f\n", 
+typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],  
+		 mapSigmaFlex[nn], mapbondsa[nn], mapbondsb[nn], dists[nn]);
+#endif
 	  typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn]/2.0;
 	  typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn]/2.0;
-	  if (calcDistNegHC(i, j, shift, &retchk) < 0.0)
-	    dists[nn] = -1.0; 
-	  else
+	  typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn]/2.0;
+	  if (check_overlap_ij(i, j, shift, &retchk) < 0.0)
+	    {
+	      //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
+	      dists[nn] = -1.0; 
+   	    }
+   	  else
 	    dists[nn] = 1.0;
+	  //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
 	  typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn]/2.0;
 	  typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn]/2.0;
+	  typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn]/2.0;
 	}
+
       else
 	dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
 #else
