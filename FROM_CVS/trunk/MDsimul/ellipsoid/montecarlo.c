@@ -5763,6 +5763,7 @@ void calc_stddev_angle(double alpha, long long int maxtrials, int outits, int si
     }
 }
 #endif
+#ifdef MC_BENT_DBLCYL
 void addRestrMatrix(double Rl[3][3])
 {
   int k1, k2, k3;
@@ -5780,6 +5781,7 @@ void addRestrMatrix(double Rl[3][3])
     for (k2 = 0; k2 < 3; k2++)
       Rl[k1][k2] = Rll[k1][k2];
 }
+#endif
 void calc_cov_additive(void)
 {
   FILE *fi, *f=NULL;

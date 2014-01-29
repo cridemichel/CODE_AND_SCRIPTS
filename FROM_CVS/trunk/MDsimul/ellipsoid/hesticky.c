@@ -3427,9 +3427,9 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],  
 		 mapSigmaFlex[nn], mapbondsa[nn], mapbondsb[nn], dists[nn]);
 #endif
-	  typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn]/2.0;
-	  typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn]/2.0;
-	  typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn]/2.0;
+	  typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn];
 	  if (check_overlap_ij(i, j, shift, &retchk) < 0.0)
 	    {
 	      //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
@@ -3438,9 +3438,9 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
    	  else
 	    dists[nn] = 1.0;
 	  //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
-	  typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn]/2.0;
-	  typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn]/2.0;
-	  typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn]/2.0;
+	  typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
 	}
 
       else
