@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #define Sqr(x) ((x)*(x))
+int Aonly=0;
 char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
 int N, particles_type=1;
@@ -115,24 +116,54 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 
 void print_usage(void)
 {
-  printf("calcgr <confs_file> [points]\n");
+  printf("calcgr [-Aonly|-Ao] <confs_file> [points]\n");
   exit(0);
 }
-
 void parse_param(int argc, char** argv)
 {
   int cc=1;
-  
+  int extraparam=0;
   if (argc==1)
     {
       print_usage();
       exit(1);
     }
-  strcpy(inputfile,argv[1]);
+  
+  while (cc < argc)
+    {
+      if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
+        {
+          print_usage();
+        }
+      else if (!strcmp(argv[cc],"--Aonly") || !strcmp(argv[cc],"-Ao" ))
+        {
+          Aonly = 1;
+        }
+      else if (cc == argc || extraparam == 2)
+        print_usage();
+      else if (extraparam == 0)
+        { 
+          extraparam = 1;
+          strcpy(inputfile,argv[cc]);
+        }
+      else if (extraparam == 1)
+        {
+          extraparam = 2;
+          //printf("qui2 argv[%d]:%s\n",cc, argv[cc]);
+          points = atoi(argv[cc]);
+          //printf("qmin:%d\n", qmin);
+        }
+      else
+        print_usage();
+   cc++;
+  };
+#if 0  
+  strcpy(inputfile,argv[cc]);
   if (argc == 3)
     points=atoi(argv[2]);
   else
     points=100;
+#endif
 }
 double pi;
 int *inCell[3]={NULL,NULL,NULL}, *cellList=NULL, cellsx, cellsy, cellsz;
@@ -166,7 +197,7 @@ int main(int argc, char** argv)
   int nf, i, a, b, nat, NN, j, ii, bin;
   double r, delr, tref=0.0, Dx[3], g0m, distSq, rlower, rupper, cost, nIdeal;
   double time, refTime, RCUT;
-  int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
+  int iZ, jZ, iX, jX, iY, jY, NP1, NP2, NPL;
   double shift[3];
   double ene=0.0;
 
@@ -348,14 +379,20 @@ int main(int argc, char** argv)
   printf("delr=%f\n", delr); 
   rewind(f2);
   nf = 0;
+  
+  if (Aonly==1)
+    NPL=NPA;
+  else
+    NPL=NP;
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
       //printf("fname=%s argv[2]=%s\n",fname, argv[2]);
       nf++;
       readconf(fname, &time, &refTime, NP, x, w, DR);
-      for (i=0; i < NP-1; i++)
-	for (j = i+1; j < NP; j++)
+  
+     for (i=0; i < NPL-1; i++)
+	for (j = i+1; j < NPL; j++)
 	  {
 	    for (a = 0; a < 3; a++)
 	      {
@@ -420,6 +457,8 @@ int main(int argc, char** argv)
     }
   fclose(f);
 
+  if (Aonly==1)  
+     return 0;
   f = fopen("grAB.dat", "w+");
   r = delr*0.5;
   cost = 4.0 * pi * (NP-NPA) / 3.0 / (L*L*L);
