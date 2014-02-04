@@ -9898,6 +9898,9 @@ void calc_energy(char *msg)
   K = Ktra = Krot = 0;
   for (i=0; i < Oparams.parnum; i++)
     {
+#ifdef MC_SIMUL
+      wx[i] = wy[i] = wz[i] = 0.0;
+#endif
       if (i<Oparams.parnumA)
 	{
 	  /* calcola tensore d'inerzia e le matrici delle due quadriche */

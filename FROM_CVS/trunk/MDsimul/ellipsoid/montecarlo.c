@@ -1807,12 +1807,45 @@ void remove_par_GC(int ip)
 #ifdef MD_DYNAMIC_OPROG
 int dyn_realloc_oprog(int np)
 {
-  int i;  
+#ifdef MC_SUS
+  double *sushisto;
+#endif
+  double **DRold;
+  double *rxCMiold, *ryCMiold, *rzCMiold;
+  int i, aa;  
   void *last_ptr;
 #ifdef MD_CALC_DPP
   OprogStatus.len = sizeof(double)*22*np;
 #else
   OprogStatus.len = sizeof(double)*10*np;
+#endif
+   
+  DRold = malloc(sizeof(double*)*Oparams.parnum);
+  for (i=0; i < np; i++)
+    {
+      DRold[i] = malloc(sizeof(double)*3);
+    }
+  rxCMiold = malloc(sizeof(double)*Oparams.parnum);
+  ryCMiold = malloc(sizeof(double)*Oparams.parnum);
+  rzCMiold = malloc(sizeof(double)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      rxCMiold[i] = OprogStatus.rxCMi[i];
+      ryCMiold[i] = OprogStatus.ryCMi[i];
+      rzCMiold[i] = OprogStatus.rzCMi[i];
+      for (aa=0; aa < 3; aa++)
+	DRold[i][aa] = OprogStatus.DR[i][aa];
+    } 
+#ifdef MC_SUS
+
+  sushisto = malloc(sizeof(double)*(OprogStatus.susnmax-OprogStatus.susnmin+1));
+
+  /* salva l'istogramma prima della realloc */
+  for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
+    sushisto[i] = OprogStatus.sushisto[i];
+
+  if (OprogStatus.susnmax > 0 && OprogStatus.susnmin >= 0) 
+    OprogStatus.len += sizeof(double)*(OprogStatus.susnmax-OprogStatus.susnmin+1);
 #endif
   //printf("DYNAMIC ALLOCATION of %d bytes\n", OprogStatus.len);
   OprogStatus.ptr = realloc(OprogStatus.ptr, OprogStatus.len);
@@ -1848,6 +1881,52 @@ int dyn_realloc_oprog(int np)
   OprogStatus.vcmx0 = OprogStatus.DR[np-1] + 3;
   OprogStatus.vcmy0 = OprogStatus.vcmx0 + np;
   OprogStatus.vcmz0 = OprogStatus.vcmy0 + np;
+#endif
+#ifdef MC_SIMUL
+  for (i=0; i < np; i++)
+    {
+      OprogStatus.DR[i][0] = DRold[i][0];
+      OprogStatus.DR[i][1] = DRold[i][1];
+      OprogStatus.DR[i][2] = DRold[i][2];
+      OprogStatus.rxCMi[i] = rxCMiold[i];
+      OprogStatus.ryCMi[i] = ryCMiold[i];
+      OprogStatus.rzCMi[i] = rzCMiold[i];
+#ifdef MD_CALC_DPP
+      OprogStatus.sumdx[i] = 0;
+      OprogStatus.sumdy[i] = 0;
+      OprogStatus.sumdz[i] = 0;
+      OprogStatus.lastu1x[i] = 0;
+      OprogStatus.lastu1y[i] = 0;
+      OprogStatus.lastu1z[i] = 0;
+      OprogStatus.lastu2x[i] = 0;
+      OprogStatus.lastu2y[i] = 0;
+      OprogStatus.lastu2z[i] = 0;
+      OprogStatus.lastu3x[i] = 0;
+      OprogStatus.lastu3y[i] = 0;
+      OprogStatus.lastu3z[i] = 0;
+#endif
+      OprogStatus.lastcolltime[i] = 0;
+      OprogStatus.sumox[i] = 0;
+      OprogStatus.sumoy[i] = 0;
+      OprogStatus.sumoz[i] = 0;
+    } 
+  free(rxCMiold);
+  free(ryCMiold);
+  free(rzCMiold);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      free(DRold[i]);
+    };
+  free(DRold);
+#endif
+#ifdef MC_SUS
+  /* reinizializza tutto fregandosene per ora */
+ if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
+    OprogStatus.sushisto = OprogStatus.DR[np-1]+3;
+  /* ripristina l'istogramma */
+  for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
+    OprogStatus.sushisto[i] = sushisto[i];
+  free(sushisto);
 #endif
   OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
@@ -6211,6 +6290,8 @@ int mcmotion(void)
 {
   int ip, dorej, movetype, err;
   double enn, eno;
+  if (Oparams.parnum==0)
+    return 0;
   ip = Oparams.parnum*ranf();
   /* qui basta calcolare l'energia della particella che sto muovendo */
   //return;
