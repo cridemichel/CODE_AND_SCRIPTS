@@ -1821,7 +1821,7 @@ int dyn_realloc_oprog(int np)
 #endif
    
   DRold = malloc(sizeof(double*)*Oparams.parnum);
-  for (i=0; i < np; i++)
+  for (i=0; i < Oparams.parnum; i++)
     {
       DRold[i] = malloc(sizeof(double)*3);
     }
@@ -1885,12 +1885,24 @@ int dyn_realloc_oprog(int np)
 #ifdef MC_SIMUL
   for (i=0; i < np; i++)
     {
-      OprogStatus.DR[i][0] = DRold[i][0];
-      OprogStatus.DR[i][1] = DRold[i][1];
-      OprogStatus.DR[i][2] = DRold[i][2];
-      OprogStatus.rxCMi[i] = rxCMiold[i];
-      OprogStatus.ryCMi[i] = ryCMiold[i];
-      OprogStatus.rzCMi[i] = rzCMiold[i];
+      if (i < Oparams.parnum)
+	{
+	  OprogStatus.DR[i][0] = DRold[i][0];
+	  OprogStatus.DR[i][1] = DRold[i][1];
+	  OprogStatus.DR[i][2] = DRold[i][2];
+	  OprogStatus.rxCMi[i] = rxCMiold[i];
+	  OprogStatus.ryCMi[i] = ryCMiold[i];
+	  OprogStatus.rzCMi[i] = rzCMiold[i];
+	}
+      else
+	{
+	  OprogStatus.DR[i][0] = 0;
+	  OprogStatus.DR[i][1] = 0;
+	  OprogStatus.DR[i][2] = 0;
+	  OprogStatus.rxCMi[i] = 0;
+	  OprogStatus.ryCMi[i] = 0;
+	  OprogStatus.rzCMi[i] = 0;
+	}
 #ifdef MD_CALC_DPP
       OprogStatus.sumdx[i] = 0;
       OprogStatus.sumdy[i] = 0;
@@ -1956,13 +1968,50 @@ void check_alloc_GC(void)
 	  rt[1][i] = ry[i];
 	  rt[2][i] = rz[i];
 	}	  
+      /* un array contiguo facendo la free di rx dealloca tutte la variabili
+	 in  ALLOC_LIST */
       free(rx);
       AllocCoord(allocnpGC*sizeof(double), ALLOC_LIST, NULL); 
-      for (i=0; i < Oparams.parnum; i++)
+      for (i=0; i < allocnpGC; i++)
 	{
-	  rx[i] = rt[0][i];
-	  ry[i] = rt[1][i];
-	  rz[i] = rt[2][i];
+	  if (i < Oparams.parnum)
+	    {
+	      rx[i] = rt[0][i];
+	      ry[i] = rt[1][i];
+	      rz[i] = rt[2][i];
+	    }
+	  else
+	    {
+	      rx[i] = 0;
+	      ry[i] = 0;
+	      rz[i] = 0;
+	    }
+#ifndef MD_ASYM_ITENS
+	  lastcol[i] = 0;
+#endif
+	  uxx[i] = 0;
+	  uxy[i] = 0;
+	  uxz[i] = 0;
+	  uyx[i] = 0;
+	  uyy[i] = 0;
+	  uyz[i] = 0;
+	  uzx[i] = 0;
+	  uzy[i] = 0;
+	  uzz[i] = 0;
+	  wx[i] = 0;
+	  wy[i] = 0;
+	  wz[i] = 0;
+	  Mx[i] = 0;
+	  My[i] = 0;
+	  Mz[i] = 0;
+	  vx[i] = 0;
+	  vy[i] = 0;
+	  vz[i] = 0;
+#ifdef MD_POLYDISP
+	  axaP[i] = 0;
+	  axbP[i] = 0;
+	  axcP[i] = 0;
+#endif
 	}
       numbonds = realloc(numbonds,allocnpGC*sizeof(int));
 #ifdef MC_STOREBONDS
