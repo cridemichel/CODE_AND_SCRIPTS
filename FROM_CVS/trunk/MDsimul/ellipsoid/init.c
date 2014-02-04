@@ -6609,14 +6609,7 @@ void usrInitAft(void)
 #ifdef MC_GRANDCAN
   if (OprogStatus.ensembleMC==2)
     {
-#ifdef MC_SUS
-      if (OprogStatus.susnmax > 0)
-	allocnpGC = OprogStatus.susnmax+1;
-      else
-	allocnpGC = Oparams.parnum;
-#else
       allocnpGC=Oparams.parnum;
-#endif
     }
 #endif
   if (OprogStatus.useNNL)
