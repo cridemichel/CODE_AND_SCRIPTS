@@ -3669,11 +3669,16 @@ int dyn_alloc_oprog(void)
   void *last_ptr;
   if (OprogStatus.ptr)
     return OprogStatus.len;
+#ifdef MC_SUS
+  if (OprogStatus.susnmax > 0)
+    np = OprogStatus.susnmax+1;
+#else
+#endif
   np = Oparams.parnum;
 #ifdef MD_CALC_DPP
-  OprogStatus.len = sizeof(double)*22*Oparams.parnum;
+  OprogStatus.len = sizeof(double)*22*np;
 #else
-  OprogStatus.len = sizeof(double)*10*Oparams.parnum;
+  OprogStatus.len = sizeof(double)*10*np;
 #endif
 #ifdef MC_SUS
   if (OprogStatus.susnmax > 0 && OprogStatus.susnmin >= 0) 
@@ -6377,6 +6382,9 @@ void usrInitAft(void)
 	  else
 	    II=Oparams.I[1][0];
 #endif
+#ifdef MC_SIMUL
+	  Mx[i] = My[i] = Mz[i] = 0.0;
+#endif
 	  wx[i]=Mx[i]/II;
 	  wy[i]=My[i]/II;
 	  wz[i]=Mz[i]/II;
@@ -6601,7 +6609,14 @@ void usrInitAft(void)
 #ifdef MC_GRANDCAN
   if (OprogStatus.ensembleMC==2)
     {
+#ifdef MC_SUS
+      if (OprogStatus.susnmax > 0)
+	allocnpGC = OprogStatus.susnmax+1;
+      else
+	allocnpGC = Oparams.parnum;
+#else
       allocnpGC=Oparams.parnum;
+#endif
     }
 #endif
   if (OprogStatus.useNNL)
