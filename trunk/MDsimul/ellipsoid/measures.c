@@ -681,6 +681,10 @@ void transDiff(void)
   int i;
   DrSqTot = 0.0;
   Dr4 = 0.0;
+#ifdef MC_SIMUL
+  OprogStatus.refTime = 0.0;
+  Oparams.time = Oparams.curStep;
+#endif
   f = fopen(absMisHD("MSDA.dat"), "a");
   for(i=0; i < Oparams.parnumA; i++)
     {
