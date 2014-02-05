@@ -577,12 +577,14 @@ void energy(void)
       RCMx += mass * rx[i];
       RCMy += mass * ry[i];
       RCMz += mass * rz[i];
+      Mtot += mass;
 #else 
       RCMx += rx[i]*Oparams.m[1];
       RCMy += ry[i]*Oparams.m[1];
       RCMz += rz[i]*Oparams.m[1];
 #endif
     }
+  //printf("Mtot=%f Oparams.parnum=%d Oparams.parnumA:%d\n", Mtot, Oparams.parnum, Oparams.parnumA);
 #ifdef EDHE_FLEX
   RCMx /= Mtot;
   RCMy /= Mtot;

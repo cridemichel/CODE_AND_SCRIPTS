@@ -1934,10 +1934,15 @@ int dyn_realloc_oprog(int np)
 #ifdef MC_SUS
   /* reinizializza tutto fregandosene per ora */
  if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
-    OprogStatus.sushisto = OprogStatus.DR[np-1]+3;
-  /* ripristina l'istogramma */
+   {
+     if (np==0)
+       OprogStatus.sushisto = OprogStatus.ptr;
+     else
+       OprogStatus.sushisto = OprogStatus.DR[np-1]+3;
+   }
+ /* ripristina l'istogramma */
   for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
-    OprogStatus.sushisto[i] = sushisto[i];
+      OprogStatus.sushisto[i] = sushisto[i];
   free(sushisto);
 #endif
   OprogStatus.set_dyn_ascii();
@@ -1957,6 +1962,8 @@ void check_alloc_GC(void)
       allocnpGC = (int) (1.2*((double)allocnpGC));
       if (allocnpGC==allocnpGCold)
 	allocnpGC *= 2;
+      if (allocnpGC == 0)
+	allocnpGC = 1;
       printf("new allocnpGC=%d old=%d\n", allocnpGC, allocnpGCold);
       rt[0] = malloc(sizeof(double)*Oparams.parnum);
       rt[1] = malloc(sizeof(double)*Oparams.parnum);
