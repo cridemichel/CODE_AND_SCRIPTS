@@ -2129,7 +2129,9 @@ void StartRun(void)
       cellList[j] = n;
     }
 #endif
+#ifndef MC_SIMUL
   InitEventList();
+#endif
   for (k = 0;  k < NDIM; k++)
     {
       cellRange[2*k]   = - 1;
@@ -2152,7 +2154,6 @@ void StartRun(void)
       if (Oparams.ninters != 0)
 	find_bonds();
    }
-
   if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
     Oparams.maxbondsSaved = OprogStatus.maxbonds;
 #elif defined(MD_PATCHY_HE)
@@ -3669,12 +3670,9 @@ int dyn_alloc_oprog(void)
   void *last_ptr;
   if (OprogStatus.ptr)
     return OprogStatus.len;
-#ifdef MC_SUS
-  if (OprogStatus.susnmax > 0)
-    np = OprogStatus.susnmax+1;
-#else
-#endif
   np = Oparams.parnum;
+  if (np==0)
+    np=1;
 #ifdef MD_CALC_DPP
   OprogStatus.len = sizeof(double)*22*np;
 #else
@@ -3721,7 +3719,13 @@ int dyn_alloc_oprog(void)
 #endif
 #ifdef MC_SUS
   if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
-    OprogStatus.sushisto = OprogStatus.DR[np-1]+3;
+    {
+      if (np==0)
+	OprogStatus.sushisto = OprogStatus.ptr;
+      else
+	OprogStatus.sushisto = OprogStatus.DR[np-1]+3;
+      //printf("qui OprogStatus.sushisto:%p\n", OprogStatus.sushisto);
+    }
 #endif
   OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
@@ -5070,6 +5074,7 @@ void usrInitAft(void)
   sp_equilib=1;
   sp_start_time = Oparams.time;
 #endif
+#ifndef MC_SIMUL
   lastcol= malloc(sizeof(double)*Oparams.parnum);
   atomTime = malloc(sizeof(double)*Oparams.parnum);
 #ifdef MD_PATCHY_HE
@@ -5077,7 +5082,9 @@ void usrInitAft(void)
 #else
   lastbump = malloc(sizeof(int)*Oparams.parnum);
 #endif
+#endif
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
+#ifndef MC_SIMUL
 #ifdef MD_HE_PARALL
   if (my_rank == 0)
     tree = AllocMatI(10, poolSize);
@@ -5088,6 +5095,8 @@ void usrInitAft(void)
   tree = AllocMatI(13, poolSize);
 #endif
 #endif
+#endif
+
 #ifdef EDHE_FLEX
   //printf("maxbonds=%d\n", OprogStatus.maxbonds);
   if (Oparams.maxbondsSaved==-1)
@@ -5142,6 +5151,7 @@ void usrInitAft(void)
 #endif
 #endif
 #endif
+#ifndef MC_SIMUL
 #ifdef MD_HE_PARALL
   if (my_rank == 0)
     {
@@ -5155,6 +5165,7 @@ void usrInitAft(void)
   treeRxC  = malloc(sizeof(double)*poolSize);
   treeRyC  = malloc(sizeof(double)*poolSize);
   treeRzC  = malloc(sizeof(double)*poolSize);
+#endif
 #endif
   Xa = matrix(3, 3);
   Xb = matrix(3, 3);
@@ -5179,6 +5190,7 @@ void usrInitAft(void)
   //angM = malloc(sizeof(double)*Oparams.parnum);
   //phi0 = malloc(sizeof(double)*Oparams.parnum);
   //psi0 = malloc(sizeof(double)*Oparams.parnum);
+#ifndef MC_SIMUL
   costheta0 = malloc(sizeof(double)*Oparams.parnum);
   sintheta0 = malloc(sizeof(double)*Oparams.parnum);
   theta0 =    malloc(sizeof(double)*Oparams.parnum);
@@ -5187,6 +5199,7 @@ void usrInitAft(void)
   angM   =    malloc(sizeof(double)*Oparams.parnum);
 #ifdef MD_ABSORP_POLY
   oldTypeOfPart = malloc(sizeof(int)*Oparams.parnum);
+#endif
 #endif
   REt = matrix(3,3);
   REtA = matrix(3,3);
@@ -6427,7 +6440,7 @@ void usrInitAft(void)
     check_all_bonds();
   printf("check done all bonds OK\n");
 #endif
- 
+#ifndef MC_SIMUL 
   if (mgl_mode != 2)
     ScheduleEvent(-1, ATOM_LIMIT+7, OprogStatus.nextSumTime);
   if (OprogStatus.storerate > 0.0 && mgl_mode!=2)
@@ -6443,6 +6456,7 @@ void usrInitAft(void)
 #ifdef MD_BIG_DT
   if (OprogStatus.bigDt > 0.0)
     ScheduleEvent(-1, ATOM_LIMIT+11,OprogStatus.bigDt);
+#endif
 #endif
   MD_DEBUG(printf("scheduled rebuild at %.15G\n", nltime));
   /* The fields rxCMi, ... of OprogStatus must contain the centers of mass 
