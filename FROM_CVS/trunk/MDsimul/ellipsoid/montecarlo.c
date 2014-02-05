@@ -1837,13 +1837,13 @@ int dyn_realloc_oprog(int np)
 	DRold[i][aa] = OprogStatus.DR[i][aa];
     } 
 #ifdef MC_SUS
-
-  sushisto = malloc(sizeof(double)*(OprogStatus.susnmax-OprogStatus.susnmin+1));
-
-  /* salva l'istogramma prima della realloc */
-  for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
-    sushisto[i] = OprogStatus.sushisto[i];
-
+  if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
+    {
+      sushisto = malloc(sizeof(double)*(OprogStatus.susnmax-OprogStatus.susnmin+1));
+      /* salva l'istogramma prima della realloc */
+      for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
+	sushisto[i] = OprogStatus.sushisto[i];
+    }
   if (OprogStatus.susnmax > 0 && OprogStatus.susnmin >= 0) 
     OprogStatus.len += sizeof(double)*(OprogStatus.susnmax-OprogStatus.susnmin+1);
 #endif
@@ -1941,9 +1941,12 @@ int dyn_realloc_oprog(int np)
        OprogStatus.sushisto = OprogStatus.DR[np-1]+3;
    }
  /* ripristina l'istogramma */
-  for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
-      OprogStatus.sushisto[i] = sushisto[i];
-  free(sushisto);
+ if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0)
+   {
+     for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
+       OprogStatus.sushisto[i] = sushisto[i];
+     free(sushisto);
+   }
 #endif
   OprogStatus.set_dyn_ascii();
   return OprogStatus.len;
