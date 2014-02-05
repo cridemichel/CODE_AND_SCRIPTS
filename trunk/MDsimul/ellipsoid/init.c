@@ -5074,7 +5074,6 @@ void usrInitAft(void)
   sp_equilib=1;
   sp_start_time = Oparams.time;
 #endif
-#ifndef MC_SIMUL
   lastcol= malloc(sizeof(double)*Oparams.parnum);
   atomTime = malloc(sizeof(double)*Oparams.parnum);
 #ifdef MD_PATCHY_HE
@@ -5082,9 +5081,7 @@ void usrInitAft(void)
 #else
   lastbump = malloc(sizeof(int)*Oparams.parnum);
 #endif
-#endif
 #if defined(MD_PATCHY_HE) || defined(EDHE_FLEX)
-#ifndef MC_SIMUL
 #ifdef MD_HE_PARALL
   if (my_rank == 0)
     tree = AllocMatI(10, poolSize);
@@ -5093,7 +5090,6 @@ void usrInitAft(void)
   tree = AllocMatI(16, poolSize);
 #else
   tree = AllocMatI(13, poolSize);
-#endif
 #endif
 #endif
 
@@ -5151,7 +5147,6 @@ void usrInitAft(void)
 #endif
 #endif
 #endif
-#ifndef MC_SIMUL
 #ifdef MD_HE_PARALL
   if (my_rank == 0)
     {
@@ -5165,7 +5160,6 @@ void usrInitAft(void)
   treeRxC  = malloc(sizeof(double)*poolSize);
   treeRyC  = malloc(sizeof(double)*poolSize);
   treeRzC  = malloc(sizeof(double)*poolSize);
-#endif
 #endif
   Xa = matrix(3, 3);
   Xb = matrix(3, 3);
@@ -5190,7 +5184,6 @@ void usrInitAft(void)
   //angM = malloc(sizeof(double)*Oparams.parnum);
   //phi0 = malloc(sizeof(double)*Oparams.parnum);
   //psi0 = malloc(sizeof(double)*Oparams.parnum);
-#ifndef MC_SIMUL
   costheta0 = malloc(sizeof(double)*Oparams.parnum);
   sintheta0 = malloc(sizeof(double)*Oparams.parnum);
   theta0 =    malloc(sizeof(double)*Oparams.parnum);
@@ -5199,7 +5192,6 @@ void usrInitAft(void)
   angM   =    malloc(sizeof(double)*Oparams.parnum);
 #ifdef MD_ABSORP_POLY
   oldTypeOfPart = malloc(sizeof(int)*Oparams.parnum);
-#endif
 #endif
   REt = matrix(3,3);
   REtA = matrix(3,3);
