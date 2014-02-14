@@ -295,6 +295,9 @@ void calcrhoz(double *rhoz, int nbins)
 #endif
 void calcV(void)
 {
+#ifdef MC_SUS
+  double sustot;
+#endif
 #ifdef MD_PROTEIN_DESIGN
   double ordp;	
 #endif
@@ -320,8 +323,11 @@ void calcV(void)
   if (OprogStatus.susnmin >=0 && OprogStatus.susnmax > 0)
     {
       mf=fopenMPI(absMisHD("histo.dat"),"w+");
+      sustot=0.0;
       for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
-	fprintf(mf,"%d %.15G\n", i+OprogStatus.susnmin, OprogStatus.sushisto[i]);
+	sustot += OprogStatus.sushisto[i];
+      for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
+	fprintf(mf,"%d %.15G\n", i+OprogStatus.susnmin, OprogStatus.sushisto[i]/sustot);
       fclose(mf);
     }
 #endif
