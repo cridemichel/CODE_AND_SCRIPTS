@@ -3255,6 +3255,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #ifdef MC_KERN_FRENKEL
   double drA[3], drB[3], drAB[3], costhKF, distCoMSq;
   double normdrA, normdrB, normdrAB;
+  double bhin, bhout, nmax, bheight, distKF, distKFSQ;;
 #endif
   double distmin, distSq, ti;
 #ifndef MD_SPOT_GLOBAL_ALLOC
@@ -3382,7 +3383,14 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #ifdef MC_SIMUL
 // *** KERN-FRENKEL MODEL FOR PATCH #3 (the other two ones are used for covalent bonds) ***
 #ifdef MC_KERN_FRENKEL
-      if (mapbondsa[nn]==3 && mapbondsb[nn]==3)
+      if (
+#ifdef MC_AMYLOID_FIBRILS
+	  /* gli spot >=2 sono tutti kern frenkel, mentre i primi due sono permanenti e sferici */
+	  mapbondsa[nn]>=3 && mapbondsb[nn]>=3
+#else	  
+	  mapbondsa[nn]==3 && mapbondsb[nn]==3
+#endif
+	  )
 	{
 	  distCoMSq=0.0;
 	  for (kk=0; kk < 3; kk++)
@@ -3392,7 +3400,15 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	      drB[kk] = ratB[mapbondsb[nn]][kk] - ratB[0][kk];
 	      drAB[kk] = ratB[0][kk] - ratA[0][kk];
 	    }
+#ifdef MC_AMYLOID_FIBRILS
+	  /* uso bhin e bhout come costheta e distKF per il modello di kern frenkel */
+	  get_inter_bheights(i, j, mapbondsa[nn], mapbondsb[nn], &bheight, &bhin, &bhout, &nmax);
+	  costhKF = bhin;
+	  distKFSQ = Sqr(bhout);
+#else
 	  costhKF = OprogStatus.costhKF;
+	  distKFSQ = Sqr(OprogStatus.distKF);
+#endif
 	  //if (distCoMSq < Sqr(OprogStatus.distKF))
 	    //printf("dist= %f\n", sqrt(distCoMSq));
 	  normdrA = calc_norm(drA);
@@ -3405,7 +3421,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	      drAB[kk] /= normdrAB;
 	    } 
 	  //printf("distance: %.15G costheta=%.15G", sqrt(distCoMSq), scalProd(drA,drAB));
-	  if (distCoMSq < Sqr(OprogStatus.distKF) &&
+	  if (distCoMSq < distKFSQ &&
 	      scalProd(drA,drAB) > costhKF && -scalProd(drB, drAB) > costhKF)
 	    {
 	      dists[nn] = -1.0;

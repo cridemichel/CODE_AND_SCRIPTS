@@ -2291,6 +2291,40 @@ int insert_particle_GC(void)
 }
 void find_bonds_GC(int ip);
 extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
+#ifdef MC_AMYLOID_FIBRILS
+double calc_elastic_torsional_energy(int ip)
+{
+  int nextip, previp, nn, ncov, covmonomers[2];
+  double elene; 
+#ifdef MD_LL_BONDS
+  int i, nb;
+  long long int aa, bb, ii, jj, jj2;
+#else
+  int i, nb, ii, jj, aa, bb, jj2;
+#endif
+  ncov = 0;
+  elene = 0;
+  /* fine previsous (if any) and next (if any) particles which
+     are covalently bonded */
+  for (nn = 0; nn < numbonds[ip]; nn)
+    {
+      jj = bonds[ip][nn] / (NANA);
+      jj2 = bonds[ip][nn] % (NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      if (aa == 1 || aa == 2)
+	{
+	  covmonomers[ncov] = jj;
+	  ncov++;
+	}
+    }
+  for (nn = 0; nn < 2; nn++)
+    {
+      elene += calc_el_ij(ip, covmonomers[nn]);
+    }
+  return elene;
+}
+#endif
 double calcpotene_GC(int ip)
 {
   double Epot; 
@@ -2356,6 +2390,10 @@ double calcpotene_GC(int ip)
   //Epot -= numbonds[na];
 #else
   Epot -= numbonds[na];
+#endif
+#ifdef MC_AMYLOID_FIBRILS
+  /* add torsional elastic energy here! */
+  Epot += calc_elastic_torsional_energy(ip);
 #endif
   return Epot;
 }
@@ -3420,7 +3458,41 @@ extern void orient_onsager(double *omx, double *omy, double* omz, double alpha);
 extern int nbondsFlex;
 extern int *mapbondsaFlex, *mapbondsbFlex; 
 extern double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
+#ifdef MC_KERN_FRENKEL
+double find_bonds_covadd_kf(int i, int j)
+{
+  int nn,  amin, bmin, nbonds;
+  double shift[3], dist;
+#ifdef MD_LXYZ
+  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+  shift[0] = L*rint((rx[i]-rx[j])/L);
+  shift[1] = L*rint((ry[i]-ry[j])/L);
+  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+  assign_bond_mapping(i, j);  
+  dist = calcDistNegSP(0.0, 0.0, i, j, shift, &amin, &bmin, dists, -1);
+  
+  nbonds = nbondsFlex;
+  for (nn=0; nn < nbonds; nn++)
+    {
+      /* consider only kerne-frenkel bonds */
+      if (dists[nn] < 0.0 && mapbondsaFlex[nn] == 3 && mapbondsbFlex[nn] == 3)
+	{
+	  add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
+	  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
+	}
+    }
 
+  //if (dist < 0)
+    //printf("inside dist=%.15G\n", dist);
+  return dist;
+  
+}
+
+#endif
 double find_bonds_covadd(int i, int j)
 {
   int nn,  amin, bmin, nbonds;
@@ -4420,6 +4492,7 @@ void mcinout(double beta, double pbias)
       return;
     }
 }
+
 int is_bonded_mc(int ip, int numb)
 {
   int kk;
@@ -4990,6 +5063,7 @@ void calc_persistence_length_mc(long long int maxtrials, int outits, int size1)
 	{
 	  while (1)
 	    {
+	      /* we assume here that bonds 0 and 1 are permanent ones! */
 	      nb = (int)(ranf_vb()*2.0);
 	      j = (int) (ranf_vb()*i);
 #if 0
@@ -5180,6 +5254,253 @@ int check_overlap_all(int i0, int i_ini, int i_fin)
   return 0;
 }
 #undef MC_VB_PLOT
+#ifdef MC_KERN_FRENKEL
+int insert_two_polymers_kf(int size1, int size2)
+{
+  int i, j, nb, bt;
+  /* insert firs cluster */
+  for (i=1; i < size1; i++)
+    {
+      bt = 0;
+      while (1)
+	{
+	  nb = (int)(ranf_vb()*2.0);
+	  j = (int) (ranf_vb()*i);
+#if 1
+	  if (bt > Oparams.parnum*1000)
+	    {
+	      printf("insertion cluster #1: maximum number of iteration reached\n");
+	      if (fabs(calcpotene()+i*2.0) < 1E-10)
+		{
+		  save_conf_mc(0, 0);
+		  printf("During insertion of #1 cluster: every particle has 2 bonds! i=%d\n", i);
+		  exit(-1);
+		}
+	    }
+#endif
+	  if (is_bonded_mc(j, nb))
+	    continue;
+	  else
+	    break;
+	  bt++;
+	}
+      mcin(i, j, nb, type, alpha, &merr, 0);
+      if (merr!=0)
+	{
+	  save_conf_mc(0, 0);
+	  printf("[mcin] attemp to add a bonded particle failed!\n");
+	  break;
+	}
+      if (check_self_overlap(0, i))
+	{
+	  selfoverlap = 1;
+	  break;
+	}
+      /* N.B. per ora non controlla il self-overlap della catena 
+	 e la formazione dopo mcin di legami multipli poiché
+	 si presuppone che al massimo stiamo considerando dimeri */
+    }
+  /* place second cluster */
+  overlap=0;
+  for (i=size1; i < Oparams.parnum; i++)
+    {
+      if (i==size1)
+	{
+#ifdef MD_LXYZ
+	  rx[i] = L[0]*(ranf_vb()-0.5);
+	  ry[i] = L[1]*(ranf_vb()-0.5); 
+	  rz[i] = L[2]*(ranf_vb()-0.5); 
+#else
+	  rx[i] = L*(ranf_vb()-0.5);
+	  ry[i] = L*(ranf_vb()-0.5); 
+	  rz[i] = L*(ranf_vb()-0.5); 
+#endif
+	  orient(&ox, &oy, &oz);
+	  versor_to_R(ox, oy, oz, Rl);
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      R[i][k1][k2] = Rl[k1][k2];
+	}
+      else
+	{
+	  bt = 0;
+	  while (1)
+	    {
+	      nb = (int)(ranf_vb()*2.0);
+	      j = ((int) (ranf_vb()*(i-size1)))+size1;
+
+#if 1
+	      if (bt > Oparams.parnum*1000)
+		{
+		  printf("insertion cluster #2: maximum number of iteration reached\n");
+		  if (fabs(calcpotene()+(i-size1)*2.0) < 1E-10)
+		    {
+		      save_conf_mc(0, 0);
+		      printf("During insertion of #2 cluster: every particle has 2 bonds! i=%d\n", i);
+		      exit(-1);
+		    }
+		}
+#endif
+	      if (is_bonded_mc(j, nb))
+		continue;
+	      else
+		break;
+	      bt++;
+	    }
+	  /* mette la particella i legata a j con posizione ed orientazione a caso */
+	  //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
+	  mcin(i, j, nb, type, alpha, &merr, 0);
+	  if (merr!=0)
+	    {
+	      save_conf_mc(0, 0);
+	      printf("[mcin] attemp to add a bonded particle failed!\n");
+	      break;
+	    }
+	  if (check_self_overlap(size1, i))
+	    {
+	      selfoverlap = 1;
+	      break;
+	    }
+
+	  /* N.B. per ora non controlla il self-overlap della catena 
+	     e la formazione dopo mcin di legami multipli poiché
+	     si presuppone che al massimo stiamo considerando dimeri */
+	}
+      if (selfoverlap||merr)
+	{
+	  return 0;
+	}
+      overlap = 0;
+      for (j=0; j < size1; j++)
+	{
+#ifdef MD_LXYZ
+	  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+	  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+	  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+	  shift[0] = L*rint((rx[i]-rx[j])/L);
+	  shift[1] = L*rint((ry[i]-ry[j])/L);
+	  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+	  ierr=0;
+	  if (check_overlap(i, j, shift, &ierr)<0.0)
+	    {
+	      overlap=1;
+	      //printf("i=%d j=%d overlap!\n", i, j);
+	      //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+	      //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+	      break;
+	    }
+	}
+      if (overlap)
+	break;
+    }
+
+  /* 0 means failed, i.e. overlap */
+  if (selfoverlap||merr||overlap)
+    return 0;
+  else
+    return 1;
+}
+
+void calc_bonding_volume_kf(long long int maxtrials, int outits, int type, double alpha)
+{
+  /* BONDING VOLUME BETWEEN TWO SEMI-FLEXIBLE POLYMERS */
+  FILE *f;	
+  int k1, k2, ierr, i;
+  long long int tt;
+  double deldistcc=0.0, deltotdist=0.0, dist, fact, shift[3], Lb, totbonds=0.0, totene=0.0, ox, oy, oz, Rl[3][3];
+#ifdef MC_VB_PLOT
+  FILE *vbf;
+#endif
+  rx[0] = 0;
+  ry[0] = 0;
+  rz[0] = 0;
+#ifdef MC_VB_PLOT
+  vbf = fopen("bonding-volume.dat", "w+");
+#endif
+  printf("calc vbonding MC\n");
+  
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+     	R[0][k1][k2] = (k1==k2)?1:0;
+      }
+  f = fopen("vbonding.dat","w+");
+  fclose(f);
+  totene = toteneini;
+  for (tt=ttini; tt < maxtrials; tt++)
+    {
+      if (tt%outits==0 && tt!=0)
+	{
+	  printf("tt=%lld\n", tt); 
+	  if (distcc > 0)
+	    {
+	      printf("Bonding distance=%.15G\n", totdist/distcc);
+	    }
+	  f=fopen("vbonding.dat", "a");
+#ifdef MD_LXYZ
+	  fprintf(f, "%lld %.15G %G\n", tt, (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(size1), totene);
+#else
+	  fprintf(f, "%lld %.15G %G\n", tt, (totene/((double)tt))*(L*L*L)/Sqr(size1), totene);
+#endif
+	  sync();
+	  fclose(f);
+	}
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  numbonds[i] = 0;
+	}
+      if (insert_two_polymers_kf(size1, size2)==0)
+	{
+	  tt++;
+	  continue;
+	}
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  numbonds[i] = 0;
+	}
+      deltotdist=0.0;
+      deldistcc=0.0;
+      for (i=0; i < size1; i++) 
+	{
+	  for (j=i+1; j < Oparams.parnum; j++) 
+	    dist=find_bonds_covadd_kf(i, j);
+	  if (dist < 0.0)
+	    {
+	      deltotdist += dist;
+    	      deldistcc += 1.0;
+	    }
+	}
+      totbonds=0;
+      for (i=0; i < Oparams.parnum; i++)
+	totbonds+=numbonds[i]; 
+      
+      if (totbonds > 0)
+	{	
+    	  totene += totbonds/2.0;		  
+	  totdist += deltotdist;
+	  distcc += deldistcc;
+	}
+#if 0
+      if (tt%500000==0)
+	{
+	  printf("tt=%lld\n", tt); 
+	}
+#endif
+      /* we are calculating the avaerage bonding volume per sphere */
+#ifdef MD_LXYZ
+      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(size1), totene);
+#else
+      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(size1), totene);
+#endif
+      //fclose(f);
+#ifdef MC_VB_PLOT
+      fclose(vbf);
+#endif
+    }
+#endif
+}
 void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, double alpha)
 {
   FILE *f;	
@@ -5224,6 +5545,8 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, doubl
 	  sync();
 	  fclose(f);
 	}
+      /* nel seguito deve inserire due polimeri di uguale lunghezza */
+      
       numbonds[1] = numbonds[0] = 0;
 #ifdef MD_LXYZ
       rx[1] = (ranf_vb()-0.5)*L[0];
@@ -5992,8 +6315,14 @@ void calc_cov_additive(void)
  
   if (type==3||type==5)
     {
+#ifdef MC_KERN_FRENKEL
+	  /* calc_poly_bonding_volume */
+      calc_bonding_volume_kf(maxtrials, outits, type, alpha);
+      exit(-1);
+#else
       calc_bonding_volume_mc(maxtrials, outits, type, alpha);
       exit(-1);
+#endif
     }
   if (type==2)
     {
