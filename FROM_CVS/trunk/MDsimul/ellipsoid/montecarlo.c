@@ -2292,6 +2292,31 @@ int insert_particle_GC(void)
 void find_bonds_GC(int ip);
 extern int is_in_ranges(int A, int B, int nr, rangeStruct* r);
 #ifdef MC_AMYLOID_FIBRILS
+double calc_el_ij(int i, int j)
+{
+  double norm, theta, sp, uxi[3], uyi[3], uzi[3], uxj[3], uyj[3], uzj[3];
+  int kk;
+  for (kk=0; kk < 3; kk++)
+    {
+      /* permanent patches are along x-axis */
+      uxi[kk] = R[i][0][kk];
+      uxi[kk] = R[i][0][kk];
+      uyj[kk] = R[j][1][kk];
+      uyj[kk] = R[j][1][kk];
+    }
+#if 0
+  sp=scalProd(uyj,uxi);
+  for (kk=0; kk < 3; kk++)
+    uyj[kk] = uyj[kk] - sp*uxi[kk];
+  norm = calc_norm(uyj);
+  for (kk=0; kk < 3; kk++)
+    uyj[kk] /= norm;
+#endif  
+  sp = scalProd(uyi,uyj);
+  /* theta in gradi */
+  theta = fabs(90.0*arccos(sp)/acos(0.0));
+  return OprogStatus.tors_k*Sqr(theta - OprogStatus.tors_theta0);
+}
 double calc_elastic_torsional_energy(int ip)
 {
   int nextip, previp, nn, ncov, covmonomers[2];
