@@ -4,7 +4,7 @@
 #include <string.h>
 //#include <lapack.h>
 #define Sqr(x) ((x)*(x))
-char line[1000000], parname[124], parval[2560000];
+char line[10000000], parname[124], parval[25600000];
 int N, NA=-1;
 double x[3], *r[3];
 char fname[1024], inputfile[1024];
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
   FILE *f, *f2, *of;
   int nf, i, a, b, n, mp;
   double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4, Ly, Lz;
-  int qmod, first = 1, NP1, NP2;
+  int qmod, first = 1, NP1, NP2, Nalloc;
 #if 0
   if (argc == 1)
     {
@@ -240,12 +240,22 @@ int main(int argc, char** argv)
        
       if (first)
 	{
-	  for (a = 0; a < 3; a++)
+	  Nalloc = N;
+          for (a = 0; a < 3; a++)
 	    {
 	      r[a] = malloc(sizeof(double)*N);
 	    }
 	  //first = 0;
 	}
+       else if (Nalloc < N)
+       {
+          Nalloc = N;
+          for (a = 0; a < 3; a++)
+            {
+              r[a] = realloc(r[a], sizeof(double)*N);
+            }
+	}
+ 	
       for (i=0; i < N; i++)
 	{
 	   fscanf(f, "%[^\n]\n", line); 
