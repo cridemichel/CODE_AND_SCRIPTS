@@ -23,7 +23,7 @@ void main(int argc, char **argv)
   //printf("cm=%s\n", cm);
   chdir(dn);
   f = fopen("histo.dat", "r");
- while (!feof(f))
+  while (!feof(f))
     {
       fscanf(f, "%d %lf\n", &N, &pn);
 //       printf("N=%d pn=%f\n", N, pn);
