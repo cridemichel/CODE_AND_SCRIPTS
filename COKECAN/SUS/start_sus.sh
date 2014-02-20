@@ -15,20 +15,23 @@ SAVESTPS="2000"
 CT="cnftool "
 MR="nohup mosrun -J$JOBID "
 DELN="1"
+if [ "$3" == "1" ]
+then
 if [ "$MR" != "" ] 
 then
 echo $JOBID > MOS_JOB_ID
 else
 rm MOS_JOB_ID
 fi
+fi
 EHC="SWHC"
 PF="ellipsoid_flex_mc.par"
-SP="../set_params.sh"
+SP="./set_params.sh"
 WT="0.1"
 N=$NINI
 NPCNF=`cat $INICNF| awk -F : '{if ($1=="parnum") print $2}'` 
-T="0.546"
-ACT="0.000957"
+T="0.548"
+ACT="0.000919"
 BL="T-$T-z-$ACT"
 STOP="0"
 while [ $STOP -eq 0 ]
@@ -54,12 +57,15 @@ cp $INICNF $DN/
 # REORDER CONF AND REMOVE PARTICLES HERE
 cp $PF $DN
 cd $DN
+cp ../set_params.py ../set_params.sh ../set_one_param.sh .
+cp ../$CT .
 rm -f COORD_TMP*
-../$CT -rp $DELP $INICNF > _aaa_
+./$CT -rp $DELP $INICNF > _aaa_
 cp _aaa_ $INICNF
 EN="HC_$DN"
 rm _aaa_
-ln -sf ../$EHC $EN
+cp ../$EHC .
+ln -sf ./$EHC $EN
 NPAV=$NMIN
 if [ "$NPAV" == "0" ] 
 then

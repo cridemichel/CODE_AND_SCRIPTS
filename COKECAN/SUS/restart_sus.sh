@@ -15,15 +15,18 @@ TOTSTPS="20000"
 SAVESTPS="2000"
 BAKSTEPSASCII="500000"
 MR="nohup mosrun -J$JOBID "
+if [ "$3" == "1" ] 
+then
 if [ "$MR" != "" ] 
 then
 echo $JOBID > MOS_JOB_ID
 else
 rm MOS_JOB_ID
 fi
+fi
 EHC="ellipsHC"
 PF="ellipsoid_flex_mc.par"
-SP="../set_params.sh"
+SP="./set_params.sh"
 WT="0.1"
 N=$NINI
 NPCNF=`cat $INICNF| awk -F : '{if ($1=="parnum") print $2}'` 
@@ -44,6 +47,7 @@ NMIN=$N
 fi
 DN="N_${NMIN}_${NMAX}"
 cd $DN
+cp ../set_params.py ../set_params.sh ../set_one_param.sh .
 # FIND THE LATEST COORD_TMP_ASCII FILE (and check that it is not corrupted)
 CFO=`ls -rt COORD_TMP_ASCII*| head -1`
 CFN=`ls -rt COORD_TMP_ASCII*| tail -1`
