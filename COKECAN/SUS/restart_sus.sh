@@ -46,6 +46,17 @@ NMAX=$[$[N]+$[DELN]]
 NMIN=$N
 fi
 DN="N_${NMIN}_${NMAX}"
+if [ ! -e $DN ]
+then
+echo "DIR= " $DN " does not exist, skipping..."
+if [ $NFIN -lt $NINI ]
+then
+N=$[${N}-${DELN}]
+else
+N=$[${N}+${DELN}]
+fi
+continue
+fi
 cd $DN
 cp ../set_params.py ../set_params.sh ../set_one_param.sh .
 # FIND THE LATEST COORD_TMP_ASCII FILE (and check that it is not corrupted)
