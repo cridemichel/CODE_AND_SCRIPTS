@@ -1,3 +1,4 @@
+echo $BASHPID > MY_PID_BLOCKS
 if [ "$2" == "" ]
 then
 echo "please provide max and min N"

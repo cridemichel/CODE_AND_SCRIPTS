@@ -1,3 +1,4 @@
+echo $BASHPID > MY_PID_BLOCKS
 if [ "$2" == "" ]
 then
 echo "please provide max and min N"
@@ -39,6 +40,7 @@ else
 WF="0"
 fi
 echo "block #" $i " NI=" $NI " NF=" $NF 
+rm -f N_*_*/screen
 ./start_sus_para.sh $NI $NF 50 >> ./screen_blocks
 NI=$[$NI+$BL]
 NF=$[$NI+$BL]
