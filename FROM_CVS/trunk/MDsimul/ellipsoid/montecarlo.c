@@ -5524,14 +5524,14 @@ void calc_bonding_volume_kf(long long int maxtrials, int outits, int type, doubl
       fclose(vbf);
 #endif
     }
-#endif
 }
+#endif
 void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, double alpha)
 {
   FILE *f;	
   int k1, k2, ierr, i;
   long long int tt;
-  double deldistcc=0.0, deltotdist=0.0, dist, fact, shift[3], Lb, totene=0.0, ox, oy, oz, Rl[3][3];
+  double Pi,deldistcc=0.0, deltotdist=0.0, dist, fact, shift[3], Lb, totene=0.0, ox, oy, oz, Rl[3][3];
 #ifdef MC_VB_PLOT
   FILE *vbf;
 #endif
@@ -5541,14 +5541,20 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, doubl
 #ifdef MC_VB_PLOT
   vbf = fopen("bonding-volume.dat", "w+");
 #endif
-  printf("calc vbonding MC\n");
-  
+  if (type==9)
+    printf("calc B2 MC\n");
+  else
+    printf("calc vbonding MC\n");
+  Pi = 2.0*acos(0.0);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       {
      	R[0][k1][k2] = (k1==k2)?1:0;
       }
-  f = fopen("vbonding.dat","w+");
+  if (type==9)
+    f = fopen("B2.dat","w+");
+  else
+    f = fopen("vbonding.dat","w+");
   fclose(f);
   totene = toteneini;
   for (tt=ttini; tt < maxtrials; tt++)
@@ -5560,13 +5566,27 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, doubl
 	    {
 	      printf("Bonding distance=%.15G\n", totdist/distcc);
 	    }
-	  f=fopen("vbonding.dat", "a");
+	  if (type==9)
+	      f=fopen("B2.dat", "a");
+	  else
+	      f=fopen("vbonding.dat", "a");
 	  fact=Oparams.parnum-1;
+	 if (type==9)
+	   {
 #ifdef MD_LXYZ
-	  fprintf(f, "%lld %.15G %G\n", tt, (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots)/fact, totene);
+	     fprintf(f, "%lld %.15G %G\n", tt, 0.5*(totene/((double)tt))*(L[0]*L[1]*L[2])/fact, totene);
 #else
-	  fprintf(f, "%lld %.15G %G\n", tt, (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots)/fact, totene);
+   	     fprintf(f, "%lld %.15G %G\n", tt, 0.5*(totene/((double)tt))*(L*L*L)/fact, totene);
 #endif
+	   }
+	 else
+	   {
+#ifdef MD_LXYZ
+	     fprintf(f, "%lld %.15G %G\n", tt, (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots)/fact, totene);
+#else
+   	     fprintf(f, "%lld %.15G %G\n", tt, (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots)/fact, totene);
+#endif
+	   }
 	  sync();
 	  fclose(f);
 	}
@@ -5640,7 +5660,7 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, doubl
 	    {
 	      if (!check_overlap_all(0, 1, Oparams.parnum-1))
 		{
-		  totene += numbonds[0];		  
+	    	  totene += numbonds[0];		  
 		  totdist += deltotdist;
 		  distcc += deldistcc;
 		}
@@ -5664,11 +5684,29 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, doubl
 #ifdef MC_VB_PLOT
 		      fprintf(vbf, "%.15G %.15G %.15G\n", rx[1], ry[1], rz[1]);
 #endif
-		      totene += 1.0;
+	    	      if (type==9)
+	    		{
+	    		  totene += 1.0-exp(1.0/Oparams.T);
+	    		}
+	    	      else
+	    		{
+			  totene += 1.0;
+			}
 		    }
 		} 
+	      else
+		{
+		  if (type==9)
+		    totene += 1.0;
+		}
 	    }
 	}
+      else
+	{
+	  if (type==9 && (check_overlap(0,1, shift, &ierr) <= 0.0))
+	    totene += 1.0;
+      	}
+	      
 #if 0
       if (tt%500000==0)
 	{
@@ -5676,23 +5714,34 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, doubl
 	}
 #endif
     }
-  if (Oparams.parnum > 2)
+  if (type==9)
     {
 #ifdef MD_LXYZ
-      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots)/Oparams.parnum-1, totene);
+      printf("B2=%.10f (totene=%f)\n", 0.5*(totene/((double)tt))*(L[0]*L[1]*L[2]), totene);
 #else
-      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots)/Oparams.parnum-1, totene);
+      printf("B2=%.10f (totene=%f)\n", 0.5*(totene/((double)tt))*(L*L*L), totene);
 #endif
     }
   else
     {
+      if (Oparams.parnum > 2)
+	{
 #ifdef MD_LXYZ
-      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots), totene);
+	  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots)/Oparams.parnum-1, totene);
 #else
-      printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
+	  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots)/Oparams.parnum-1, totene);
 #endif
+	}
+      else
+	{
+#ifdef MD_LXYZ
+	  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots), totene);
+#else
+	  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots), totene);
+#endif
+	}
+      //fclose(f);
     }
-  //fclose(f);
 #ifdef MC_VB_PLOT
   fclose(vbf);
 #endif
@@ -6303,6 +6352,7 @@ void calc_cov_additive(void)
      type = 4 -> covolume if perfectly aligned (i.e. alpha -> infinity)
      type = 5 -> bonding volume using onsager trial function
      type = 8 -> standard deviation of bonding angle in the nematic phase
+     type = 9 -> B2
    */
  if (type==1||type==5||type==7||type==8)
     {
@@ -6338,7 +6388,7 @@ void calc_cov_additive(void)
     }
 #endif
  
-  if (type==3||type==5)
+  if (type==3||type==5||type==9)
     {
 #ifdef MC_KERN_FRENKEL
 	  /* calc_poly_bonding_volume */
