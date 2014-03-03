@@ -7,12 +7,158 @@
 
 char inputfile[4096];
 int numat, cells[3];
-double *pos[3];
+double *pos[3], *posBody[3];
 double *rad, proberad;
 double com[3], maxdist[3], L[3], L2[3], maxrad;
+double R[3][3];
 int *cellList;
 int *inCell[3];
 long long int outits=100000, maxtrials=1000000;
+
+/* apply a random rotation around the supplied axis because 
+   bent cylinders do not have azimuthal symmetry */
+double thetaGlobalBondangle;
+void orient(double *omx, double *omy, double* omz)
+{
+  int i;
+  //double inert;                 /* momentum of inertia of the molecule */
+  //double norm, dot, osq, o, mean;
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, osq, norm;
+  
+  //Mtot = m; /* total mass of molecule */
+
+  //inert = I; /* momentum of inertia */
+ 
+  //mean = 3.0*temp / inert;
+
+  xisq = 1.0;
+
+  while (xisq >= 1.0)
+    {
+      xi1  = drand48() * 2.0 - 1.0;
+      xi2  = drand48() * 2.0 - 1.0;
+      xisq = xi1 * xi1 + xi2 * xi2;
+    }
+
+  xi = sqrt (fabs(1.0 - xisq));
+  ox = 2.0 * xi1 * xi;
+  oy = 2.0 * xi2 * xi;
+  oz = 1.0 - 2.0 * xisq;
+
+  /* Renormalize */
+  osq   = ox * ox + oy * oy + oz * oz;
+  norm  = sqrt(fabs(osq));
+  ox    = ox / norm;
+  oy    = oy / norm;
+  oz    = oz / norm;
+  *omx = ox;
+  *omy = oy;
+  *omz = oz; 
+}
+
+void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3], double Rout[3][3])
+{
+  double theta, thetaSq, sinw, cosw;
+  double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
+  int k1, k2, k3;
+  /* pick a random rotation angle between 0 and 2*pi*/
+  theta = 4.0*acos(0.0)*drand48();
+  /* set to be used in az. angle distro calculation */
+  thetaGlobalBondangle = theta;
+
+  thetaSq=Sqr(theta);
+  sinw = sin(theta);
+  cosw = (1.0 - cos(theta));
+  Omega[0][0] = 0;
+  Omega[0][1] = -oz;
+  Omega[0][2] = oy;
+  Omega[1][0] = oz;
+  Omega[1][1] = 0;
+  Omega[1][2] = -ox;
+  Omega[2][0] = -oy;
+  Omega[2][1] = ox;
+  Omega[2][2] = 0;
+  OmegaSq[0][0] = -Sqr(oy) - Sqr(oz);
+  OmegaSq[0][1] = ox*oy;
+  OmegaSq[0][2] = ox*oz;
+  OmegaSq[1][0] = ox*oy;
+  OmegaSq[1][1] = -Sqr(ox) - Sqr(oz);
+  OmegaSq[1][2] = oy*oz;
+  OmegaSq[2][0] = ox*oz;
+  OmegaSq[2][1] = oy*oz;
+  OmegaSq[2][2] = -Sqr(ox) - Sqr(oy);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Ro[k1][k2] = Rin[k1][k2];
+	for (k3 = 0; k3 < 3; k3++)
+	  Ro[k1][k2] += Rin[k1][k3]*M[k3][k2];
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+     Rout[k1][k2] = Ro[k1][k2]; 
+}
+
+void versor_to_R(double ox, double oy, double oz, double R[3][3])
+{
+  int k;
+  double angle, u[3], sp, norm, up[3], xx, yy;
+  double Rout[3][3];
+  int k1, k2;
+  /* first row vector */
+  R[0][0] = ox;
+  R[0][1] = oy;
+  R[0][2] = oz;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
+  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
+    {
+      u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[0][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[0][k];
+  norm = calc_norm(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[1][k] = u[k]/norm;
+  if (typesArr[0].nspots==3 && type==0)
+    {
+      for (k=0; k < 3 ; k++)
+	u[k] = R[1][k];
+      vectProdVec(R[0], u, up);
+      /* rotate randomly second axis */
+      angle=4.0*acos(0.0)*ranf_vb();
+      xx = cos(angle);
+      yy = sin(angle);
+      for (k=0; k < 3 ; k++)
+	R[1][k] = u[k]*xx + up[k]*yy;
+      //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
+    }
+  /* third row vector */
+  vectProdVec(R[0], R[1], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+  /* add a random rotation around the axis (ox, oy, oz) */
+  add_rotation_around_axis(ox, oy, oz, R, Rout);
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      R[k1][k2] = Rout[k1][k2];
+}
+
 void build_linked_lists(void)
 {
   int j, n;
@@ -106,12 +252,13 @@ void read_file(void)
       fscanf(f, "%lf %lf %lf %lf ", &a, &b, &c, &d);
       cc++;
     }
-  numat=cc+1;
+  numat=2*cc;
   rewind(f);
   for (kk=0; kk < 3; kk++)
     {
       /* l'ultima particella è il probe */
       pos[kk] = malloc(sizeof(double)*numat);
+      posBody[kk] = malloc(sizeof(double)*numat);
       rad = malloc(sizeof(double)*numat);
     }
   for (cc=0; cc < numat-1; cc++)
@@ -205,6 +352,9 @@ int check_overlap(int ip)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
+		      /* gli atomi devono appartenere a proteine diverse */
+		      if ( !((n < numat && na >= numat) || (n >= numat && na < numat)) )
+			continue;
 		      if (check_overlap_ij(na, n)<0.0)
 			{
 			  return 1;
@@ -216,25 +366,36 @@ int check_overlap(int ip)
     }
   return 0;
 }
+int check_overlap_12(void)
+{
+  int i;
+  for (i=0; i < numat/2; i++)
+    {
+      if(check_overlap(i))
+	return 1;
+    }
+  return 0;
+}
 int main(int argc, char **argv)
 {
   FILE *f;
   long long int tt;
   double totov, vol;
-  int kk, i, j;
+  int kk, i, j, k1, k2;
 
   parse_param(argc, argv);
 
   read_file();
   for (kk=0; kk < 3; kk++)
     com[kk] = 0.0;
-  for (i = 0; i < numat; i++)
+  /*  la prima proteina sarà fissa in (0,0,0) con il suo centro di massa */
+  for (i = 0; i < numat/2; i++)
     {
       for (kk=0; kk < 3; kk++)
 	com[kk] += pos[kk][i];
     }
   for (kk=0; kk < 3; kk++)
-    com[kk] /= ((double)numat);
+    com[kk] /= ((double)numat)/2.0;
 
   maxrad = 0.0;
   for (i = 0; i < numat; i++)
@@ -244,11 +405,27 @@ int main(int argc, char **argv)
       if (maxrad < rad[i])
        maxrad = rad[i];	
     }
+
+  for (i = numat/2; i < numat; i++)
+    {
+      for (kk=0; kk < 3; kk++)
+	com[kk] += pos[kk][i];
+    }
+  for (kk=0; kk < 3; kk++)
+    com[kk] /= ((double)numat)/2.0;
+
+  for (i = numat/2; i < numat; i++)
+    {
+      for (kk=0; kk < 3; kk++)
+	pos[kk][i] -= com[kk];
+    }
+
   for (kk=0; kk < 3; kk++)
     maxdist[kk] = 0.0;
-  for (i = 0; i < numat; i++)
+
+  for (i = 0; i < numat/2; i++)
     {
-      for (j = i+1; j < numat; j++)
+      for (j = i+1; j < numat/2; j++)
 	{
 	  for (kk=0; kk < 3; kk++)
 	    {
@@ -259,7 +436,7 @@ int main(int argc, char **argv)
     }
   for (kk=0; kk < 3; kk++)
     {
-      L[kk] = maxdist[kk] + 2.1*proberad;
+      L[kk] = 3.1*maxdist[kk];
       L2[kk] = 0.5*L[kk];
       cells[kk] = L[kk]/(2.0*maxrad);
     }
@@ -270,28 +447,47 @@ int main(int argc, char **argv)
   inCell[1] = malloc(sizeof(int)*numat);
   inCell[2] = malloc(sizeof(int)*numat);
   printf("cells = %d %d %d  atoms=%d \n", cells[0], cells[1], cells[2], numat);
-  f = fopen("volume.dat","w+");
+  f = fopen("covolume.dat","w+");
   fclose(f); 
   totov=0.0;
-  for (tt=0; tt < maxtrials; tt++)
+  for (i=numat/2; i < numat; i++)
     {
       for (kk = 0; kk < 3; kk++)
-	pos[kk][numat-1] = L[kk]*(drand48()-0.5); 
+	posBody[kk][i] = pos[kk][i];
+    }      
+  for (tt=0; tt < maxtrials; tt++)
+    {
+      orient(&ox, &oy, &oz); 
+      versor_to_R(ox, oy, oz, Rl);
+      for (kk = 0; kk < 3; kk++)
+	com[kk] = L[kk]*(drand48()-0.5); 
+      for (i=numat/2; i < numat; i++)
+	{
+	  for (k1 = 0; k1 < 3; k1++)
+	    {
+	      pos[k1][i] = com[k1];
+	      for (k2 = 0; k2 < 3; k2++)
+		pos[k1][i] += R[k2][k1]*posBody[k2][i];
+	    }
+	}	
+
       build_linked_lists();
-      if (check_overlap(numat-1))
+
+	
+      if (check_overlap_12())
 	totov++;
       if (tt % outits==0)
 	{
 	   if (tt!=0)
 	    {
 	      vol = (totov/((double)tt))*(L[0]*L[1]*L[2]);
-	      f=fopen("volume.dat", "a");
-	      printf("volume=%.10f (totov=%f/%lld)\n", vol, totov, tt);
+	      f=fopen("covolume.dat", "a");
+	      printf("covolume=%.10f (totov=%f/%lld)\n", vol, totov, tt);
 	      fprintf(f, "%lld %.15G %.15G\n", tt, vol, totov);
 	      fclose(f);
 	      sync();
 	    }
 	}
     }
-  printf("DONE volume=%.12f\n",(totov/((double)tt))*(L[0]*L[1]*L[2]));
+  printf("DONE covolume=%.12f\n",(totov/((double)tt))*(L[0]*L[1]*L[2]));
 }
