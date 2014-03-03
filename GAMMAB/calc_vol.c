@@ -123,16 +123,17 @@ void read_file(void)
 
 int check_overlap_ij(int i, int j)
 {
-  double distSq, radSq, avrad;
+  double distSq, sigmaSq, avsigma;
   int kk;
 
-  avrad = 0.5*(rad[i]+rad[j]);
-  radSq = Sqr(avrad);
+  avsigma = rad[i]+rad[j];
+  //printf("rad[%d]=%f rad[%d]=%f\n", i, rad[i], j, rad[j]);
+  sigmaSq = Sqr(avsigma);
   distSq = 0.0;
   for (kk=0; kk < 3; kk++)
     distSq += Sqr(pos[kk][i] - pos[kk][j]);
   //printf("dist=%f avrad=%f\n", sqrt(distSq), avrad);
-  if ( distSq < radSq )
+  if ( distSq < sigmaSq )
     return -1;  
   else
     return 1;
