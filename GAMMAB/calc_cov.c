@@ -284,7 +284,7 @@ void read_file(void)
   fclose(f);
 }
 
-int check_overlap_ij(int i, int j)
+int check_overlap_ij(int i, int j, double shift[3])
 {
   double distSq, sigmaSq, avsigma;
   int kk;
@@ -294,7 +294,7 @@ int check_overlap_ij(int i, int j)
   sigmaSq = Sqr(avsigma);
   distSq = 0.0;
   for (kk=0; kk < 3; kk++)
-    distSq += Sqr(pos[kk][i] - pos[kk][j]);
+    distSq += Sqr(pos[kk][i]- (pos[kk][j]+shift[kk]));
   //printf("dist=%f avrad=%f\n", sqrt(distSq), avrad);
   if ( distSq < sigmaSq )
     return -1;  
@@ -371,7 +371,7 @@ int check_overlap(int ip)
 		      /* gli atomi devono appartenere a proteine diverse */
 		      if ( !((n < numat/2 && na >= numat/2) || (n >= numat/2 && na < numat/2)) )
 			continue;
-		      if (check_overlap_ij(na, n)<0.0)
+		      if (check_overlap_ij(na, n, shift)<0.0)
 			{
 			  return 1;
 			}
