@@ -1,9 +1,9 @@
 BEGIN {
   print "";
   #angstrom units (radius)
-  Orad=1.5;
+  Orad=1.52;
   Hrad=1.2;
-  Crad=1.85;
+  Crad=1.7;
   Prad=1.8;
   Nrad=1.55;
   msms=1;
@@ -15,9 +15,9 @@ BEGIN {
  format="%7.5G    %7.5G    %7.5G  %G";
  got=0;
 
- rx = $6;
- ry = $7;
- rz = $8;
+ rx = $7;
+ ry = $8;
+ rz = $9;
  #rx = rx - comx;
  #ry = ry - comy;
  #rz = rz - comz; 
