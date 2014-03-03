@@ -14,6 +14,20 @@ double R[3][3];
 int *cellList;
 int *inCell[3];
 long long int outits=100000, maxtrials=1000000;
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
+void vectProdVec(double *A, double *B, double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
+}
 
 /* apply a random rotation around the supplied axis because 
    bent cylinders do not have azimuthal symmetry */
@@ -134,6 +148,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
   for (k=0; k < 3 ; k++)
     R[1][k] = u[k]/norm;
+#if 0
   if (typesArr[0].nspots==3 && type==0)
     {
       for (k=0; k < 3 ; k++)
@@ -147,6 +162,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
 	R[1][k] = u[k]*xx + up[k]*yy;
       //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
     }
+#endif
   /* third row vector */
   vectProdVec(R[0], R[1], u);
  
@@ -353,7 +369,7 @@ int check_overlap(int ip)
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
 		      /* gli atomi devono appartenere a proteine diverse */
-		      if ( !((n < numat && na >= numat) || (n >= numat && na < numat)) )
+		      if ( !((n < numat/2 && na >= numat/2) || (n >= numat/2 && na < numat/2)) )
 			continue;
 		      if (check_overlap_ij(na, n)<0.0)
 			{
@@ -380,7 +396,8 @@ int main(int argc, char **argv)
 {
   FILE *f;
   long long int tt;
-  double totov, vol;
+  double totov, vol, ox, oy, oz;
+  double Rl[3][3];
   int kk, i, j, k1, k2;
 
   parse_param(argc, argv);
@@ -453,12 +470,12 @@ int main(int argc, char **argv)
   for (i=numat/2; i < numat; i++)
     {
       for (kk = 0; kk < 3; kk++)
-	posBody[kk][i] = pos[kk][i];
+	posBody[kk][i] = pos[kk][i-numat/2];
     }      
   for (tt=0; tt < maxtrials; tt++)
     {
       orient(&ox, &oy, &oz); 
-      versor_to_R(ox, oy, oz, Rl);
+      versor_to_R(ox, oy, oz, R);
       for (kk = 0; kk < 3; kk++)
 	com[kk] = L[kk]*(drand48()-0.5); 
       for (i=numat/2; i < numat; i++)
@@ -468,12 +485,20 @@ int main(int argc, char **argv)
 	      pos[k1][i] = com[k1];
 	      for (k2 = 0; k2 < 3; k2++)
 		pos[k1][i] += R[k2][k1]*posBody[k2][i];
+	      //printf("posB=%f %f %f\n", posBody[0][i], posBody[1][i], posBody[2][i]);
+	    }
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      /* apply periodic boundary conditions */
+	      if (pos[kk][i] > L2[kk])
+		pos[kk][i] -= L[kk];	
+	      if (pos[kk][i] < -L2[kk])
+		pos[kk][i] += L[kk];
 	    }
 	}	
 
       build_linked_lists();
 
-	
       if (check_overlap_12())
 	totov++;
       if (tt % outits==0)
