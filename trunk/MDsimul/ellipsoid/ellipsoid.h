@@ -905,6 +905,10 @@ struct progStatus
   int susnmax;
   int susnmin;
 #endif
+#ifdef MC_SWHC
+  double deltasw[2];
+  int nswhc;
+#endif
 #endif
 #ifdef MC_FLIP_MOVE
   double flip_prob;
@@ -1357,6 +1361,10 @@ struct pascii opro_ascii[] =
   {"susnmin",     &OS(susnmin),                    1, 1, "%d"},
   {"susnmax",     &OS(susnmax),                    1, 1, "%d"},
 #endif
+#ifdef MC_SWHC
+  {"deltasw",         OS(deltasw),                   2,               1, "%.12G"},
+  {"nswhc"            OS(nswhc),                     1,               1, "%d"},
+#endif
 #endif
 #ifdef MC_FLIP_MOVE
   {"flip_prob",    &OS(flip_prob),                1, 1,   "%.12G"},
@@ -1532,6 +1540,11 @@ struct singlePar OsinglePar[] = {
 #ifdef MC_SUS
   {"susnmin", &OprogStatus.susnmin, INT},
   {"susnmax", &OprogStatus.susnmax, INT},
+#endif
+#ifdef MC_SWHC
+  {"deltaswL2", &OprogStatus.deltasw[0], CT},
+  {"deltaswD2", &OprogStatus.deltasw[1], CT},
+  {"nswhc",     &OprogStatus.nswhc, CT},
 #endif
 #endif
 #ifdef MC_FLIP_MOVE

@@ -3436,16 +3436,25 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	 dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
 #elif defined(MC_SWHC)
       /* first patch is the "cylindrical" one */
-      if (mapbondsa[nn] == 1 && mapbondsb[nn] == 1)
+      if (OprogStatus.nswhc==1 && mapbondsa[nn] == 1 && mapbondsb[nn] == 1)
 	{
 #if 0
 	  printf("sax=%f %f %f mapsigmaFlex=%f qui mapbondsa=%d mapbondsb=%d dist=%f\n", 
 typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],  
 		 mapSigmaFlex[nn], mapbondsa[nn], mapbondsb[nn], dists[nn]);
 #endif
-	  typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn];
-	  typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
-	  typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn];
+	  if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+	    {
+	      typesArr[typeOfPart[i]].sax[0] += OprogStatus.deltasw[0]; /* L+Delta */
+	      typesArr[typeOfPart[i]].sax[1] += OprogStatus.deltasw[1]; /* D+Delta */
+	      typesArr[typeOfPart[i]].sax[2] += OprogStatus.deltasw[1];
+	    }
+	  else
+	    {
+	      typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn];
+	      typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
+	      typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn];
+	    }
 	  if (check_overlap_ij(i, j, shift, &retchk) < 0.0)
 	    {
 	      //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
@@ -3454,11 +3463,73 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
    	  else
 	    dists[nn] = 1.0;
 	  //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
-	  typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn];
-	  typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
-	  typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
+	  if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+	    {
+	      typesArr[typeOfPart[i]].sax[0] -= OprogStatus.deltasw[0];
+	      typesArr[typeOfPart[i]].sax[1] -= OprogStatus.deltasw[1];
+	      typesArr[typeOfPart[i]].sax[2] -= OprogStatus.deltasw[1];
+	     }
+	  else
+	    {
+    	      typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn];
+    	      typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
+    	      typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
+	    }
 	}
+      else if (OprogStatus.nswhc == 2 && ( mapbondsa[nn]==1 || mapbondsa[nn]==2) && 
+	       (mapbondsb[nn]==1 || mapbondsb[nn]==2))
+	{
+	  if (mapbondsa[nn]==1)
+    	    {
+	      /* il primo cilindro è quello solito ed il secondo quelle relativo alle sole interazioni laterali */
+	      typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn]; /* L+Delta */
+	      typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
+	    }
+	  else
+	    {
+	      typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn]; /* D+Delta */
 
+    	    }
+	  if (mapbondsb[nn]==1)
+    	    {
+	      /* il primo cilindro è quello delle basi ed il secondo quello delle interazioni laterali */
+	      typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn]; /* L+Delta */
+	      typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
+	    }
+	  else
+	    {
+	      typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn]; /* D+Delta */
+    	    }
+	  if (check_overlap_ij(i, j, shift, &retchk) < 0.0)
+	    {
+	      //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
+	      dists[nn] = -1.0; 
+   	    }
+   	  else
+	    dists[nn] = 1.0;
+	  if (mapbondsa[nn]==1)
+    	    {
+	      /* il primo cilindro è quello solito ed il secondo quelle relativo alle sole interazioni laterali */
+	      typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn]; /* L+Delta */
+	      typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
+	    }
+	  else
+	    {
+	      typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn]; /* D+Delta */
+
+    	    }
+	  if (mapbondsb[nn]==1)
+    	    {
+	      /* il primo cilindro è quello delle basi ed il secondo quello delle interazioni laterali */
+	      typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn]; /* L+Delta */
+	      typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
+	    }
+	  else
+	    {
+	      typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn]; /* D+Delta */
+    	    }
+	
+	} 
       else
 	dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
 #else
