@@ -2002,6 +2002,12 @@ void usrInitBef(void)
     OprogStatus.susnmin=-1;
     OprogStatus.susnmax=-1;
 #endif
+#ifdef MC_SWHC
+    /* se almeno uno è pari a -1 uso il raggio dello spot fittizio */
+    OprogStatus.deltasw[0] = -1;
+    OprogStatus.deltasw[1] = -1;
+    OprogStatus.nswhc = 1; /* numero di cilindri square well */
+#endif
 #ifdef MC_FLIP_MOVE
     OprogStatus.flip_prob = -1.0; /* disable by default */
 #endif

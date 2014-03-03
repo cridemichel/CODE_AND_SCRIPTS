@@ -323,6 +323,7 @@ void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], do
   printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,nj));
 #endif 
 }
+
 #ifdef MC_HC_SPHERO_OPT
 double check_spherocyl(double CiCj[3], double D, double L, double Di[2][3], double *Ci, double *ni, double Dj[2][3], double *Cj, double *nj, int *rim);
 #endif
