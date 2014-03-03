@@ -1116,7 +1116,7 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
       saxi[k] = 1.01* typesArr[typeOfPart[i]].sax[k];
       saxj[k] = 1.01* typesArr[typeOfPart[j]].sax[k];
 #endif
-    }  
+    }
   rA[0] = rx[i];
   rA[1] = ry[i];
   rA[2] = rz[i];
@@ -1169,7 +1169,7 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
       saxi[k] = saxfactMC[k]*typesArr[typeOfPart[i]].sax[k];
       saxj[k] = saxfactMC[k]*typesArr[typeOfPart[j]].sax[k];
 #endif    
-    }  
+    }
   d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
   //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
