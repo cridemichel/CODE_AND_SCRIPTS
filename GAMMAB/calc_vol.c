@@ -6,9 +6,9 @@
 #define Sqr(x) ((x)*(x))
 
 char inputfile[4096];
-int numat;
+int numat, cells[3];
 double *pos[3];
-double *rad, proberad, cells[3];
+double *rad, proberad;
 double com[3], maxdist[3], L[3], L2[3], maxrad;
 double *cellList, *inCell[3];
 long long int outits=100000, maxtrials=1000000;
@@ -95,11 +95,13 @@ void parse_param(int argc, char** argv)
 void read_file(void)
 { 
   FILE* f;
+  double a, b, c, d;
   int cc=0, kk;
   f = fopen(inputfile, "r");
   /* count atoms */
   while (!feof(f))
     {
+      fscanf(f, "%lf %lf %lf %lf ", &a, &b, &c, &d);
       cc++;
     }
   numat=cc+1;
@@ -110,7 +112,7 @@ void read_file(void)
       pos[kk] = malloc(sizeof(double)*numat);
       rad = malloc(sizeof(double)*numat);
     }
-  for (cc=0; cc < numat; cc++)
+  for (cc=0; cc < numat-1; cc++)
     {
       fscanf(f, "%lf %lf %lf %lf\n", &(pos[0][cc]),&(pos[1][cc]),&(pos[2][cc]), &(rad[cc]));
     }
@@ -221,7 +223,6 @@ int main(int argc, char **argv)
   parse_param(argc, argv);
 
   read_file();
-
   for (kk=0; kk < 3; kk++)
     com[kk] = 0.0;
   for (i = 0; i < numat; i++)
@@ -265,6 +266,7 @@ int main(int argc, char **argv)
   inCell[0] = malloc(sizeof(int)*numat);
   inCell[1] = malloc(sizeof(int)*numat);
   inCell[2] = malloc(sizeof(int)*numat);
+  printf("cells = %d %d %d  atoms=%d \n", cells[0], cells[1], cells[2], numat);
   f = fopen("volume.dat","w+");
   fclose(f); 
   totov=0.0;
