@@ -261,7 +261,7 @@ int main(int argc, char **argv)
     {
       L[kk] = maxdist[kk] + 2.1*proberad;
       L2[kk] = 0.5*L[kk];
-      cells[kk] = L[kk]/maxrad;
+      cells[kk] = L[kk]/(2.0*maxrad);
     }
   /* set probe radius */
   rad[numat-1] = proberad;
