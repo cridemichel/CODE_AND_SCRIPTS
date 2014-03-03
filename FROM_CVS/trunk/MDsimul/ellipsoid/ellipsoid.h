@@ -907,7 +907,6 @@ struct progStatus
 #endif
 #ifdef MC_SWHC
   double deltasw[2];
-  int nswhc;
 #endif
 #endif
 #ifdef MC_FLIP_MOVE
@@ -1363,7 +1362,6 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef MC_SWHC
   {"deltasw",         OS(deltasw),                   2,               1, "%.12G"},
-  {"nswhc"            OS(nswhc),                     1,               1, "%d"},
 #endif
 #endif
 #ifdef MC_FLIP_MOVE
@@ -1544,7 +1542,6 @@ struct singlePar OsinglePar[] = {
 #ifdef MC_SWHC
   {"deltaswL2", &OprogStatus.deltasw[0], CT},
   {"deltaswD2", &OprogStatus.deltasw[1], CT},
-  {"nswhc",     &OprogStatus.nswhc, CT},
 #endif
 #endif
 #ifdef MC_FLIP_MOVE
