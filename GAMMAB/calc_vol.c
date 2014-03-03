@@ -1,6 +1,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 
+#define Sqr(x) ((x)*(x))
+
 char inputfile[4096];
 int numat;
 double *pos[3];
@@ -113,6 +115,97 @@ void read_file(void)
   fclose(f);
 }
 
+int check_overlap_ij(int i, int j)
+{
+  double rad, radSq;
+  rad = 0.5*(rad[i]+rad[j]);
+
+  radSq = Sqr(rad);
+  distSq = 0.0;
+  for (kk=0; kk < 3; kk++)
+    distSq += Sqr(pos[kk][i] - pos[kk][j]);
+  if ( distSq < radSq)
+    return 1;  
+  else
+    return 0;
+}
+
+int check_overlap(int ip)
+{
+  int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na;
+  int cellRangeT[6];
+  double shift[3];
+  na=ip;
+  nb=-1;
+  for (kk = 0;  kk < 3; kk++)
+    {
+      cellRange[2*kk]   = - 1;
+      cellRange[2*kk+1] =   1;
+    }
+
+  for (k = 0; k < 6; k++) cellRangeT[k] = cellRange[k];
+
+  for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+    {
+      jZ = inCell[2][na] + iZ;    
+      shift[2] = 0.;
+      /* apply periodico boundary condition along z if gravitational
+       * fiels is not present */
+      if (jZ == -1) 
+	{
+	  jZ = cellsz - 1;    
+	  shift[2] = - L[2];
+	} 
+      else if (jZ == cellsz) 
+	{
+	  jZ = 0;    
+	  shift[2] = L[2];
+	}
+      
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	{
+	  jY = inCell[1][na] + iY;    
+	  shift[1] = 0.0;
+	  if (jY == -1) 
+	    {
+	      jY = cellsy - 1;    
+	      shift[1] = -L[1];
+	    } 
+	  else if (jY == cellsy) 
+	    {
+	      jY = 0;    
+	      shift[1] = L[1];
+	    }
+	  for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	    {
+	      jX = inCell[0][na] + iX;    
+	      shift[0] = 0.0;
+	      if (jX == -1) 
+		{
+		  jX = cellsx - 1;    
+		  shift[0] = - L[0];
+		} 
+	      else if (jX == cellsx) 
+		{
+		  jX = 0;   
+		  shift[0] = L[0];
+		}
+	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+	      for (n = cellList[n]; n > -1; n = cellList[n]) 
+		{
+		  if (n != na && n != nb && (nb >= -1 || n < na)) 
+		    {
+		      if (check_overlap_ij(na, n)<0.0)
+			{
+			  return 1;
+			}
+		    }
+		} 
+	    }
+	}
+    }
+  return 0;
+}
 int main(int argc, char **argv)
 {
   long long int tt;
@@ -157,6 +250,8 @@ int main(int argc, char **argv)
       L[kk] = maxdist[kk] + 2.1*proberad;
       cells[kk] = L[kk]/maxrad;
     }
+  /* set probe radius */
+  rad[numat-1] = proberad;
   cellList = malloc(sizeof(int)*(cells[0]*cells[1]*cells[2]+numat));
   inCell[0] = malloc(sizeof(int)*numat);
   inCell[1] = malloc(sizeof(int)*numat);
@@ -169,7 +264,7 @@ int main(int argc, char **argv)
       for (kk = 0; kk < 3; kk++)
 	pos[kk][numat-1] = L[kk]*(drand48()-0.5); 
       build_linked_lists();
-      if (check_overlap())
+      if (check_overlap(numat-1))
 	totov++;
       if (tt % outits==0)
 	{
