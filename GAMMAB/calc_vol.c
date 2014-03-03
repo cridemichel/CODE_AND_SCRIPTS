@@ -10,7 +10,8 @@ int numat, cells[3];
 double *pos[3];
 double *rad, proberad;
 double com[3], maxdist[3], L[3], L2[3], maxrad;
-double *cellList, *inCell[3];
+int *cellList;
+int *inCell[3];
 long long int outits=100000, maxtrials=1000000;
 void build_linked_lists(void)
 {
@@ -25,6 +26,7 @@ void build_linked_lists(void)
       inCell[0][n] =  (pos[0][n] + L2[0]) * cells[0] / L[0];
       inCell[1][n] =  (pos[1][n] + L2[1]) * cells[1] / L[1];
       inCell[2][n] =  (pos[2][n] + L2[2]) * cells[2] / L[2];
+      // printf("n=%d inCell=%d %d %d\n", n, inCell[0][n], inCell[1][n],inCell[2][n]);
       j = (inCell[2][n]*cells[1] + inCell[1][n])*cells[0] + 
 	inCell[0][n] + numat;
       cellList[n] = cellList[j];
@@ -125,15 +127,15 @@ int check_overlap_ij(int i, int j)
   int kk;
 
   avrad = 0.5*(rad[i]+rad[j]);
-
   radSq = Sqr(avrad);
   distSq = 0.0;
   for (kk=0; kk < 3; kk++)
     distSq += Sqr(pos[kk][i] - pos[kk][j]);
-  if ( distSq < radSq)
-    return 1;  
+  //printf("dist=%f avrad=%f\n", sqrt(distSq), avrad);
+  if ( distSq < radSq )
+    return -1;  
   else
-    return 0;
+    return 1;
 }
 
 int check_overlap(int ip)
@@ -257,7 +259,7 @@ int main(int argc, char **argv)
   for (kk=0; kk < 3; kk++)
     {
       L[kk] = maxdist[kk] + 2.1*proberad;
-      L2[kk] = 0.2*L[kk];
+      L2[kk] = 0.5*L[kk];
       cells[kk] = L[kk]/maxrad;
     }
   /* set probe radius */
