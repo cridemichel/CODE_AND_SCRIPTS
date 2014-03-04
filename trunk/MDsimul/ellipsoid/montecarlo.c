@@ -2350,6 +2350,9 @@ double calc_elastic_torsional_energy(int ip)
   return elene;
 }
 #endif
+#ifdef MC_HYDROPHOBIC_INT
+extern double **eneij;
+#endif
 double calcpotene_GC(int ip)
 {
   double Epot; 
@@ -2382,7 +2385,11 @@ double calcpotene_GC(int ip)
 		is_in_ranges(typeOfPart[na], intersArr[kk2].type2, intersArr[kk2].nr2, intersArr[kk2].r2) &&
 		intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
 	    {
+#ifdef MC_HYDROPHOBIC_INT
+	      Epot -= eneij[ip][jj];
+#else
 	      Epot -= intersArr[kk2].bheight;
+#endif
 #ifdef MD_SPHERICAL_WALL
 	      /* 14/07/08 NOTA: i muri sferici hanno sempre numbonds[sphWall/sphWallOuter]=0 quindi
 		 si considerano doppie le interazioni tra una certa particella ed un muro sferico,

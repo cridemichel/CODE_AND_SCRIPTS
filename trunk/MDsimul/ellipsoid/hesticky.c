@@ -3246,6 +3246,81 @@ extern int are_spheres(int i, int j);
 extern double scalProd(double *A, double *B);
 extern double check_overlap_ij(int i, int j, double shift[3], int *errchk);
 
+#ifdef MC_HYDROPHOBIC_INT
+extern double calc_norm(double *vec);
+double calc_overlap_volume(int i, int j, double shift[3], double delL, double delD)
+{
+  int maxtrials=500;
+  int k1, k2, kk, tt, numov;
+  double norm, vp[3], totoverlaps, Lhc, Dhc, Ci[3], Cj[3],  ni[3], nj[3], rp[3], drp[3];
+  double rpB[3];
+  Lhc = 2.0*(typesArr[typeOfPart[i]].sax[0]);
+  Dhc = 2.0*(typesArr[typeOfPart[i]].sax[1]);
+ 
+  //printf("Lhc=%f Dhc=%f\n", Lhc, Dhc);
+  for (kk=0; kk < 3; kk++)
+    {
+      ni[kk] = R[i][0][kk];
+      nj[kk] = R[j][0][kk];
+    }
+  Ci[0] = rx[i];
+  Ci[1] = ry[i];
+  Ci[2] = rz[i]; 
+  Cj[0] = rx[j] + shift[0];
+  Cj[1] = ry[j] + shift[1];
+  Cj[2] = rz[j] + shift[2]; 
+ 
+  totoverlaps=0;
+  tt=0;
+  while (tt < maxtrials)
+    {
+      /* pick a random point inside the box containing the external cylinder */
+      rpB[0] = Lhc*(drand48()-0.5);
+      rpB[1] = Dhc*(drand48()-0.5);
+      rpB[2] = Dhc*(drand48()-0.5);
+
+      for (k1 = 0; k1 < 3; k1++)
+	{ 
+	  rp[k1] = Ci[k1];
+	  for (k2 = 0; k2 < 3; k2++)
+	    rp[k1] += R[i][k2][k1]*rpB[k2]; 
+	}
+
+      /* check overlap here */
+      for (kk=0; kk < 3; kk++)
+	drp[kk] = rp[kk] - Ci[kk];
+      numov=0;
+      if (fabs(scalProd(drp, ni)) < Lhc * 0.5)
+	{
+	  vectProdVec(drp, ni, vp);
+	  norm=calc_norm(vp);
+	  if (norm < Dhc*0.5)
+	    {
+	      numov+=1;
+	    }
+	}
+      for (kk=0; kk < 3; kk++)
+	drp[kk] = rp[kk] - Cj[kk];
+      if (numov==1)
+	{	
+	  if (fabs(scalProd(drp, nj)) < Lhc * 0.5)
+	    {
+	      vectProdVec(drp, nj, vp);
+	      norm=calc_norm(vp);
+	      if (norm < Dhc*0.5)
+		numov+=1;
+	    }
+	}
+      if (numov==2)
+	totoverlaps += 1.0;
+      tt++;
+    }
+  return totoverlaps/((double) tt);
+}
+#endif
+#ifdef MC_HYDROPHOBIC_INT
+extern double **eneij;
+#endif
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
 {
@@ -3459,6 +3534,13 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
 	    {
 	      //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
 	      dists[nn] = -1.0; 
+#ifdef MC_HYDROPHOBIC_INT
+#if 1
+	      eneij[i][j]=
+		calc_overlap_volume(i,j, shift, mapSigmaFlex[nn], mapSigmaFlex[nn]); 
+	     //printf("eneij=%.15G\n", eneij[i][j]);
+#endif
+#endif
    	    }
    	  else
 	    dists[nn] = 1.0;

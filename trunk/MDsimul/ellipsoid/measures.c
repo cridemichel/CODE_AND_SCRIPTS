@@ -75,6 +75,9 @@ extern int sphWall, sphWallOuter;
 #ifdef MD_SWDUMBBELL
 extern double swdb_adjust_Epot(int i);
 #endif
+#ifdef MC_HYDROPHOBIC_INT
+extern double **eneij;
+#endif
 double calcpotene(void)
 {
   double Epot; 
@@ -182,7 +185,11 @@ double calcpotene(void)
 		    intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
 		{
 		  MD_DEBUG21(printf("(%d,%d)-(%d,%d) height=%.15G\n", na, aa-1, jj, bb-1, intersArr[kk2].bheight));
+#ifdef MC_HYDROPHOBIC_INT
+		  Epot -= eneij[na][jj];
+#else
 		  Epot -= intersArr[kk2].bheight;
+#endif
 #ifdef MD_SPHERICAL_WALL
 		  /* 14/07/08 NOTA: i muri sferici hanno sempre numbonds[sphWall/sphWallOuter]=0 quindi
 		  si considerano doppie le interazioni tra una certa particella ed un muro sferico,
