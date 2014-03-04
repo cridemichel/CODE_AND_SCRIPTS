@@ -4852,6 +4852,9 @@ void get_restr_matrix(void)
       printf("Rl[%d][%d]=%f\n", k1, k2, restrMatrix[k1][k2]);
 }
 #endif
+#ifdef MC_HYDROPHOBIC_INT
+double **eneij;
+#endif
 void usrInitAft(void)
 {
   long long int maxp;
@@ -6171,6 +6174,13 @@ void usrInitAft(void)
     }
   printf("MAXAX: %.15G rcut: %.15G\n", MAXAX, Oparams.rcut);
   //Oparams.rcut = pow(L*L*L / Oparams.parnum, 1.0/3.0); 
+#ifdef MC_HYDROPHOBIC_INT
+  eneij = malloc(sizeof(double*)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      eneij[i]=malloc(sizeof(double)*Oparams.parnum);
+    }
+#endif
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
