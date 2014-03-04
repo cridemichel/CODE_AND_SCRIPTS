@@ -186,7 +186,7 @@ double calcpotene(void)
 		{
 		  MD_DEBUG21(printf("(%d,%d)-(%d,%d) height=%.15G\n", na, aa-1, jj, bb-1, intersArr[kk2].bheight));
 #ifdef MC_HYDROPHOBIC_INT
-		  Epot -= eneij[na][jj];
+		  Epot -= eneij[na][jj]*intersArr[kk2].bheight;
 #else
 		  Epot -= intersArr[kk2].bheight;
 #endif
