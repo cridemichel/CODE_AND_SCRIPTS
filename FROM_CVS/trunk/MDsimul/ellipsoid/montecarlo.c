@@ -2386,7 +2386,7 @@ double calcpotene_GC(int ip)
 		intersArr[kk2].spot1 == bb-1 && intersArr[kk2].spot2 == aa-1) )  
 	    {
 #ifdef MC_HYDROPHOBIC_INT
-	      Epot -= eneij[ip][jj];
+	      Epot -= eneij[ip][jj]*intersArr[kk2].bheight;
 #else
 	      Epot -= intersArr[kk2].bheight;
 #endif
