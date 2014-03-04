@@ -908,6 +908,9 @@ struct progStatus
 #ifdef MC_SWHC
   double deltasw[2];
 #endif
+#ifdef MC_HYDROPHOBIC_INT
+  int maxtrialsH;
+#endif
 #endif
 #ifdef MC_FLIP_MOVE
   double flip_prob;
@@ -1363,6 +1366,9 @@ struct pascii opro_ascii[] =
 #ifdef MC_SWHC
   {"deltasw",         OS(deltasw),                   2,               1, "%.12G"},
 #endif
+#ifdef MC_SWHC
+  {"maxtrialsH",         &OS(maxtrialsH),                   1,               1, "%d"},
+#endif
 #endif
 #ifdef MC_FLIP_MOVE
   {"flip_prob",    &OS(flip_prob),                1, 1,   "%.12G"},
@@ -1542,6 +1548,9 @@ struct singlePar OsinglePar[] = {
 #ifdef MC_SWHC
   {"deltaswL2", &OprogStatus.deltasw[0], CT},
   {"deltaswD2", &OprogStatus.deltasw[1], CT},
+#endif
+#ifdef MC_HYDROPHOBIC_INT
+  {"maxtrialsH", &OprogStatus.maxtrialsH, INT},
 #endif
 #endif
 #ifdef MC_FLIP_MOVE
