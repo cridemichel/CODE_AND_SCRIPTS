@@ -2007,6 +2007,9 @@ void usrInitBef(void)
     OprogStatus.deltasw[0] = -1;
     OprogStatus.deltasw[1] = -1;
 #endif
+#ifdef MC_HYDROPHOBIC_INT
+    OprogStatus.maxtrialsH = 500;
+#endif
 #ifdef MC_FLIP_MOVE
     OprogStatus.flip_prob = -1.0; /* disable by default */
 #endif

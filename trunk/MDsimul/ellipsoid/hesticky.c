@@ -3250,7 +3250,7 @@ extern double check_overlap_ij(int i, int j, double shift[3], int *errchk);
 extern double calc_norm(double *vec);
 double calc_overlap_volume(int i, int j, double shift[3], double delL, double delD)
 {
-  int maxtrials=500;
+  int maxtrials;
   int k1, k2, kk, tt, numov;
   double norm, vp[3], totoverlaps, Lhc, Dhc, Ci[3], Cj[3],  ni[3], nj[3], rp[3], drp[3];
   double rpB[3];
@@ -3272,6 +3272,7 @@ double calc_overlap_volume(int i, int j, double shift[3], double delL, double de
  
   totoverlaps=0;
   tt=0;
+  maxtrials = OprogStatus.maxtrialsH;
   while (tt < maxtrials)
     {
       /* pick a random point inside the box containing the external cylinder */
