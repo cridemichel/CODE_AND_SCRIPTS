@@ -3539,6 +3539,12 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
 #if 1
 	      eneij[i][j]=
 		calc_overlap_volume(i,j, shift, mapSigmaFlex[nn], mapSigmaFlex[nn]); 
+#if 0
+	      if (eneij[i][j] > 0.08)
+		{
+		  store_bump(i,j);
+		}
+#endif		
 	     //printf("eneij=%.15G\n", eneij[i][j]);
 #endif
 #endif
