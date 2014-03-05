@@ -10089,10 +10089,14 @@ void store_bump(int i, int j)
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
 #endif
 #endif
+#ifdef MC_HC
+  sprintf(fileop2 ,"StoreBump-%d-%d-s%d", i, j, Oparams.curStep);
+#else
 #ifdef MD_BIG_DT
   sprintf(fileop2 ,"StoreBump-%d-%d-t%.8f", i, j, Oparams.time + OprogStatus.refTime);
 #else
   sprintf(fileop2 ,"StoreBump-%d-%d-t%.8f", i, j, Oparams.time);
+#endif
 #endif
   /* store conf */
   strcpy(fileop, absTmpAsciiHD(fileop2));
