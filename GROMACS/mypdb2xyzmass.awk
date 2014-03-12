@@ -23,13 +23,19 @@ BEGIN {
  #rx = rx - comx;
  #ry = ry - comy;
  #rz = rz - comz; 
+ if ($1=="HETATM")
+  {
+    mass+=18; comx+=18*rx; comy+=18*ry; comz+=18*rz;
+  }
+ else 
+ {
  if ($3~"^H.*") {mass+=Hmass; comx+=Hmass*rx; comy+=Hmass*ry; comz+=Hmass*rz;  printf(format, rx,ry,rz,Hmass); got=1};
  if ($3~"^O.*") {mass+= Omass; comx+=Omass*rx; comy+=Omass*ry; comz+=Omass*rz;  printf(format, rx,ry,rz,Omass)  ; got=1};
  if ($3~"^P.*") {mass+=Pmass; comx+=Pmass*rx; comy+=Pmass*ry; comz+=Pmass*rz;  printf(format, rx,ry,rz,Pmass)  ; got=1};
  if ($3~"^C.*") {mass+=Cmass; comx+=Cmass*rx; comy+=Cmass*ry; comz+=Cmass*rz;  printf(format, rx,ry,rz,Cmass)  ; got=1};
  if ($3~"^N.*") {mass+=Nmass; comx+=Nmass*rx; comy+=Nmass*ry; comz+=Nmass*rz;  printf(format, rx,ry,rz,Nmass)  ; got=1};
  if ($3~"^1H.*"){mass+= Hmass; comx+=Hmass*rx; comy+=Hmass*ry; comz+=Hmass*rz;  printf(format, rx,ry,rz,Hmass)  ; got=1};
- if ($3~"^2H.*"){mass+= Hmass: comx+=Hmass*rx; comy+=Hmass*ry; comz+=Hmass*rz;  printf(format, rx,ry,rz,Hmass)  ; got=1};
+ if ($3~"^2H.*"){mass+= Hmass; comx+=Hmass*rx; comy+=Hmass*ry; comz+=Hmass*rz;  printf(format, rx,ry,rz,Hmass)  ; got=1};
  if (got==1)
   {
     if (msms==0)
@@ -37,8 +43,9 @@ BEGIN {
     else 
       print "";
   }
+ }
 }
 
 END {
-printf("CoM = %f %f %f\n", comx/mass, comy/mass, comz/mass);
+printf("CoM - Mtot = %f %f %f %f\n", comx/mass, comy/mass, comz/mass, mass);
 }
