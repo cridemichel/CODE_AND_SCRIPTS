@@ -8,12 +8,12 @@ char **fname;
 double L, Lx, Ly, Lz, time, *ti, *rotMSD, *alpha2, *alpha2A, *alpha2B, *MSD, *rotMSDA, *MSDA, *rotMSDB, *MSDB, *cc, *rotMSDcls[2], *MSDcls[2], *cc_cls[2];
 double **DR, **DR0;
 double *r0[3], *w0[3], *rt[3], *wt[3], *rtold[3];
-char parname[128], parval[256000], line[256000];
-char dummy[2048];
+char parname[10000000], parval[10000000], line[10000000];
+char dummy[256000];
 int points=-1, foundDRs=0, foundrot=0, eventDriven=0, skip=1, clusters=0, nongauss=0;
 int *isPercPart;
 char *pnum;
-char inputfile[2048], cluststr[2048];
+char inputfile[256000], cluststr[2048];
 double storerate = -1;
 int bakSaveMode = -1;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double **DR)
@@ -26,7 +26,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 
   *ti = -1.0;
   f = fopen(fname, "r");
-  while (!feof(f) && nat < 2) 
+  while (!feof(f) && nat < 3) 
     {
       cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
@@ -99,7 +99,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
-      else
+      else if (nat==3)
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
@@ -210,13 +210,13 @@ int main(int argc, char **argv)
   fclose(f2);
   f = fopen(fname[0], "r");
   nat = 0;
-  while (!feof(f) && nat < 2) 
+  while (!feof(f)) 
     {
       fscanf(f, "%[^\n]\n)", line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
-	  if (nat==2)
+	  if (nat==3)
 	    {
 	      for (i=0; i < NP; i++)
 		fscanf(f, "%[^\n]\n", line);
@@ -266,8 +266,8 @@ int main(int argc, char **argv)
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
-  if (eventDriven==0)
-    L = cbrt(L);
+  //if (eventDriven==0)
+   // L = cbrt(L);
   ti = malloc(sizeof(double)*points);
   rotMSD = malloc(sizeof(double)*points);
   MSD = malloc(sizeof(double)*points);
