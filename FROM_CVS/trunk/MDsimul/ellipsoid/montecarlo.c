@@ -1213,7 +1213,21 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
 #ifdef MC_HELIX
 #define nmaxNxi 1000
 double xihel[nmaxNxi], xhel[nmaxNxi][3], xhelA[nmaxNxi][3], xhelB[nmaxNxi][3];
-
+void mgl_helix(FILE* fs, int i, char *col)
+{
+  double rA[3], rB[3];
+  int Nxi, jj, j1, j2;
+  static double sigSq;
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+  for (jj=0; jj < OprogStatus.Nxi; jj++)
+    {
+      body2lab(i, xhel[jj], xhelA[jj], rA, R[i]);
+      fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",xhelA[jj][0], xhelA[jj][1], xhelA[jj][2],
+	      OprogStatus.sighelix/2.0, col);
+    }
+}
 double check_overlap_helices(int i, int j, double shift[3])
 {
   double rA[3], rB[3], temp, pi, npitch, deltaxi, length_eucl, radius;
