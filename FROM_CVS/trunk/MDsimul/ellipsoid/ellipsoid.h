@@ -911,6 +911,13 @@ struct progStatus
 #ifdef MC_HYDROPHOBIC_INT
   int maxtrialsH;
 #endif
+#ifdef MC_HELIX
+  double pitch;
+  int Nxi;
+  double sighelix;
+  double lenhelix;
+  double radhelix;
+#endif
 #endif
 #ifdef MC_FLIP_MOVE
   double flip_prob;
@@ -1369,6 +1376,13 @@ struct pascii opro_ascii[] =
 #ifdef MC_SWHC
   {"maxtrialsH",         &OS(maxtrialsH),                   1,               1, "%d"},
 #endif
+#ifdef MC_HELIX
+  {"Nxi", &OS(Nxi),  1, 1, "%d"},
+  {"pitch", &OS(pitch), 1, 1, "%.8G"},
+  {"sighelix", &OS(sighelix), 1, 1, "%.8G"},
+  {"lenhelix", &OS(lenhelix), 1, 1, "%.8G"},
+  {"radhelix", &OS(radhelix), 1, 1, "%.8G"},
+#endif
 #endif
 #ifdef MC_FLIP_MOVE
   {"flip_prob",    &OS(flip_prob),                1, 1,   "%.12G"},
@@ -1551,6 +1565,13 @@ struct singlePar OsinglePar[] = {
 #endif
 #ifdef MC_HYDROPHOBIC_INT
   {"maxtrialsH", &OprogStatus.maxtrialsH, INT},
+#endif
+#ifdef MC_HELIX
+  {"Nxi", &OprogStatus.Nxi, INT},
+  {"pitch", &OprogStatus.pitch, CT},
+  {"sighelix", &OprogStatus.sighelix, CT},
+  {"radhelix", &OprogStatus.radhelix, CT},
+  {"lenhelix", &OprogStatus.lenhelix, CT},
 #endif
 #endif
 #ifdef MC_FLIP_MOVE

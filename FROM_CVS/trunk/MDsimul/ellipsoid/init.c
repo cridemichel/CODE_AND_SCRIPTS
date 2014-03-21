@@ -6791,6 +6791,9 @@ void writeAllCor(FILE* fs, int saveAll)
 {
   int i;
   int nn;
+#ifdef MC_HELIX
+  int j1;
+#endif
 #ifndef MD_SPOT_GLOBAL_ALLOC
   double ratA[NA][3];
 #endif
@@ -6977,6 +6980,12 @@ void writeAllCor(FILE* fs, int saveAll)
 			  2.0*typesArr[typeOfPart[i]].hardobjs[k1].sax[0], colsFlex[typeOfPart[i]%numcols]);
 	  	  load_pos_R(i, xi, Ri);
 		}
+	    }
+#elif defined(MC_HELIX)
+	  for (j1=0; j1 < OprogStatus.Nxi; j1++)
+	    {
+	      fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], OprogStatus.radhelix, 
+	  	      colsFlex[typeOfPart[i]%numcols]);
 	    }
 #else
 	  //printf("sax= %.15G %.15G %.15G\n",  typesArr[typeOfPart[i]].sax[0],  typesArr[typeOfPart[i]].sax[1],
