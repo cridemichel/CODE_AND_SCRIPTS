@@ -1214,42 +1214,40 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
 #define nmaxNxi 1000
 double xihel[nmaxNxi], xhel[nmaxNxi][3], xhelA[nmaxNxi][3], xhelB[nmaxNxi][3];
 
-double check_overlap_hexlices(int i, int j, double shift[3])
+double check_overlap_helices(int i, int j, double shift[3])
 {
-  double rA[3], rB[3], temp, pi, npitch, deltaxi, length_eucl;
-  int Nxi, jj;
+  double rA[3], rB[3], temp, pi, npitch, deltaxi, length_eucl, radius;
+  int Nxi, jj, j1, j2;
   static double sigSq;
   static int first=1;
 
-  rA[0] = rx[j] + shift[0];
-  rA[1] = ry[j] + shift[1];
-  rA[2] = rz[j] + shift[2];
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
   rB[0] = rx[j] + shift[0];
   rB[1] = ry[j] + shift[1];
   rB[2] = rz[j] + shift[2];
-
-   if (first)
-      {
-	first = 0;
-      	radius = typesArr[typeOfPart[i]].sax[1];
-	length_eucl = 2.0*typesArr[typeOfPart[i]].sax[0];
-	Nxi = OprogStatus.Nxi;
-	pi = acos(0.0)*2.0;
-	temp=OprogStatus.npitch*sqrt(OprogStatus.radius**2+(OprogStatus.pitch/(2.0*pi))**2)
-	  npitch = length_eucl/OprogStatus.pitch;
-	deltaxi=2.0*pi*npitch/((double)(Nxi-1));
-	// length_eucl=OprogStatus.npitch*OprogStatus.pitch;
-
-      	sigSq=Sqr(OprogStatus.sigmaSpheresHel);
- 	for (jj=0,jj < OprogStatus.Nxi; jj++)
-	  {
-	    xihel[jj]=((double)jj)*deltaxi;
-	    xhel[jj][0]=radius*cos(xihel[jj]);
-	    xhel[jj][1]=radius*sin(xihel[jj]);
-	    xhel[jj][2]=pitch*xihel[jj]/(2.0*pi);
-	  }
-      }
-   for (jj=0,jj < OprogStatus.Nxi; jj++)
+  if (first)
+    {
+      first = 0;
+      radius = OprogStatus.radhelix; /* x,y perpendicular to helix axis in body reference frame */
+      length_eucl = OprogStatus.lenhelix; /* helix axis along z in body reference frame */
+      Nxi = OprogStatus.Nxi;
+      pi = acos(0.0)*2.0;
+      npitch = length_eucl/OprogStatus.pitch;
+      temp=npitch*sqrt(Sqr(radius)+Sqr(OprogStatus.pitch/(2.0*pi)));
+      deltaxi=2.0*pi*npitch/((double)(Nxi-1));
+      // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
+      sigSq=Sqr(OprogStatus.sighelix);
+      for (jj=0; jj < Nxi; jj++)
+	{
+	  xihel[jj]=((double)jj)*deltaxi;
+	  xhel[jj][0]=radius*cos(xihel[jj]);
+	  xhel[jj][1]=radius*sin(xihel[jj]);
+	  xhel[jj][2]=OprogStatus.pitch*xihel[jj]/(2.0*pi);
+	}
+    }
+   for (jj=0; jj < OprogStatus.Nxi; jj++)
      {
        body2lab(i, xhel[jj], xhelA[jj], rA, R[i]);
        body2lab(j, xhel[jj], xhelB[jj], rB, R[j]);
@@ -1263,6 +1261,7 @@ double check_overlap_hexlices(int i, int j, double shift[3])
        }
 
    return 1.0;
+}
 #endif
 #ifdef MC_BENT_DBLCYL
 double check_overlap_bent_dblcyl(int i, int j, double shift[3], int *errchk)
@@ -7816,7 +7815,7 @@ void move(void)
 	  printf("Cluster move acceptance: %.15G (tra=%.15G rot=%.15G) delTcls=%.12G delRcls=%.12G\n", acceptance, traaccept, rotaccept, OprogStatus.delTclsMC, OprogStatus.delRclsMC);
 	}
 #endif
-#ifdef MC_HC
+#if defined(MC_HC) && !defined(MC_HELIX)
       printf("Average iterations in case A.2:%G\n", totitsHC/numcallsHC);
 #endif
     }
