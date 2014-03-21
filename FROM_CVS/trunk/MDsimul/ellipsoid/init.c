@@ -6786,6 +6786,9 @@ extern void load_pos_R(int i, double xi[3], double Ri[3][3]);
 extern void save_pos_R(int i, double xi[3], double Ri[3][3]);
 extern void set_pos_R_ho(int i, int a);
 #endif
+#ifdef MC_HELIX
+extern void mgl_helix(FILE* fs, int i, int col);
+#endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
 {
@@ -6982,11 +6985,9 @@ void writeAllCor(FILE* fs, int saveAll)
 		}
 	    }
 #elif defined(MC_HELIX)
-	  for (j1=0; j1 < OprogStatus.Nxi; j1++)
-	    {
-	      fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], OprogStatus.radhelix, 
-	  	      colsFlex[typeOfPart[i]%numcols]);
-	    }
+	  mgl_helix(fs, i, colsFlex[typeOfPart[i]%numcols]);
+	  //fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], OprogStatus.radhelix, 
+	  //     colsFlex[typeOfPart[i]%numcols]);
 #else
 	  //printf("sax= %.15G %.15G %.15G\n",  typesArr[typeOfPart[i]].sax[0],  typesArr[typeOfPart[i]].sax[1],
  //typesArr[typeOfPart[i]].sax[2]   );
