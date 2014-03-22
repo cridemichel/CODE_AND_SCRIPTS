@@ -11,6 +11,7 @@ BEGIN {
   comx= 0;
   comy= 0;
   comz= 0;
+  hydration=0;
 }
 {
  format="%7.5G    %7.5G    %7.5G  %G";
@@ -25,8 +26,16 @@ BEGIN {
  #rz = rz - comz; 
  if ($1=="HETATM")
   {
-    mass+=18; comx+=18*rx; comy+=18*ry; comz+=18*rz;
-  }
+    if (hydration==1)
+     {
+       mass+=18; comx+=18*rx; comy+=18*ry; comz+=18*rz;
+       printf(format,rx,ry,rz,18);
+       if (msms==0)
+        print $3;
+       else 
+         print "";
+      }
+ }
  else 
  {
  if ($3~"^H.*") {mass+=Hmass; comx+=Hmass*rx; comy+=Hmass*ry; comz+=Hmass*rz;  printf(format, rx,ry,rz,Hmass); got=1};
