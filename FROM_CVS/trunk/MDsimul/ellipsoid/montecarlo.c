@@ -1188,7 +1188,6 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
   tpo = OprogStatus.targetPhi;
   OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
   calcdist_retcheck = 0;
-
   d=calcDistNeg(0.0, 0.0, i, j, shift, r1, r2, &alpha, vecg, 1);
   *errchk = calcdist_retcheck;
   OprogStatus.targetPhi = tpo;
@@ -1315,8 +1314,6 @@ double check_overlap(int i, int j, double shift[3], int *errchk)
     return check_overlap_bent_dblcyl(i, j, shift, errchk);
   else
     return check_overlap_ij(i, j, shift, errchk);
-#elif defined(MC_HELIX)
-  return check_overlap_helices(i, j, shift); 
 #else
   return check_overlap_ij(i, j, shift, errchk);
 #endif
