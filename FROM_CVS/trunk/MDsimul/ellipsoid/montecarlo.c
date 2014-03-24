@@ -1212,14 +1212,22 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
 #ifdef MC_HELIX
 #define nmaxNxi 1000
 double xihel[nmaxNxi], xhel[nmaxNxi][3], xhelA[nmaxNxi][3], xhelB[nmaxNxi][3];
+void build_helix(void);
 void mgl_helix(FILE* fs, int i, char *col)
 {
   double rA[3], rB[3];
   int Nxi, jj, j1, j2;
   static double sigSq;
+  static int first=1;
+
   rA[0] = rx[i];
   rA[1] = ry[i];
   rA[2] = rz[i];
+  if (first)
+    {
+      first = 0;
+      build_helix();
+    }
   for (jj=0; jj < OprogStatus.Nxi; jj++)
     {
       body2lab(i, xhel[jj], xhelA[jj], rA, R[i]);
@@ -1227,10 +1235,30 @@ void mgl_helix(FILE* fs, int i, char *col)
 	      OprogStatus.sighelix/2.0, col);
     }
 }
+void build_helix(void)
+{
+  double temp, pi, npitch, deltaxi, length_eucl, radius;
+  int jj, Nxi;
+  radius = OprogStatus.radhelix; /* x,y perpendicular to helix axis in body reference frame */
+  length_eucl = OprogStatus.lenhelix; /* helix axis along z in body reference frame */
+  Nxi = OprogStatus.Nxi;
+  pi = acos(0.0)*2.0;
+  npitch = length_eucl/OprogStatus.pitch;
+  temp=npitch*sqrt(Sqr(radius)+Sqr(OprogStatus.pitch/(2.0*pi)));
+  deltaxi=2.0*pi*npitch/((double)(Nxi-1));
+  // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
+  for (jj=0; jj < Nxi; jj++)
+    {
+      xihel[jj]=((double)jj)*deltaxi;
+      xhel[jj][0]=radius*cos(xihel[jj]);
+      xhel[jj][1]=radius*sin(xihel[jj]);
+      xhel[jj][2]=OprogStatus.pitch*xihel[jj]/(2.0*pi);
+    }
+}
 double check_overlap_helices(int i, int j, double shift[3])
 {
-  double rA[3], rB[3], temp, pi, npitch, deltaxi, length_eucl, radius;
-  int Nxi, jj, j1, j2;
+  double rA[3], rB[3];
+  int jj, j1, j2;
   static double sigSq;
   static int first=1;
 
@@ -1243,22 +1271,8 @@ double check_overlap_helices(int i, int j, double shift[3])
   if (first)
     {
       first = 0;
-      radius = OprogStatus.radhelix; /* x,y perpendicular to helix axis in body reference frame */
-      length_eucl = OprogStatus.lenhelix; /* helix axis along z in body reference frame */
-      Nxi = OprogStatus.Nxi;
-      pi = acos(0.0)*2.0;
-      npitch = length_eucl/OprogStatus.pitch;
-      temp=npitch*sqrt(Sqr(radius)+Sqr(OprogStatus.pitch/(2.0*pi)));
-      deltaxi=2.0*pi*npitch/((double)(Nxi-1));
-      // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
       sigSq=Sqr(OprogStatus.sighelix);
-      for (jj=0; jj < Nxi; jj++)
-	{
-	  xihel[jj]=((double)jj)*deltaxi;
-	  xhel[jj][0]=radius*cos(xihel[jj]);
-	  xhel[jj][1]=radius*sin(xihel[jj]);
-	  xhel[jj][2]=OprogStatus.pitch*xihel[jj]/(2.0*pi);
-	}
+      build_helix();
     }
    for (jj=0; jj < OprogStatus.Nxi; jj++)
      {
