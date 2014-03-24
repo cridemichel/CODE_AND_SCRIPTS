@@ -772,6 +772,8 @@ double calc_phi(void)
 		N += typesArr[typeOfPart[i]].sax[0]*typesArr[typeOfPart[i]].sax[1]*typesArr[typeOfPart[i]].sax[2]*
 		  SQvolPrefact[typeOfPart[i]];
 	    }
+#elif defined(MC_HC) && defined(MC_HELIX)
+	  N += 7.02;
 #else
 
 	  N += SQvolPrefact[typei]*typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
@@ -787,8 +789,10 @@ double calc_phi(void)
       N += axa[i]*axb[i]*axc[i];
     }
 #endif
+#ifndef MC_HELIX
 #ifndef MD_SUPERELLIPSOID
   N *= 4.0*pi/3.0;
+#endif
 #endif
 #ifdef MD_LXYZ
   return N / (L[0]*L[1]*L[2]);
@@ -5817,6 +5821,9 @@ double calcDistNegHS(double t, double t1, int i, int j, double shift[3], double 
 #ifdef MC_HC
 extern double calcDistNegHC(int i, int j, double shift[3], int *retchk);
 #endif
+#ifdef MC_HELIX
+extern double check_overlap_helices(int i, int j, double shift[3]);
+#endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -5845,6 +5852,8 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
 #ifdef MC_HC
   return calcDistNegHC(i, j, shift, &calcdist_retcheck);
+#elif defined(MC_HELIX)
+  return check_overlap_helices(i, j, shift);
 #endif
 #ifdef EDHE_FLEX
   if (are_spheres(i, j))

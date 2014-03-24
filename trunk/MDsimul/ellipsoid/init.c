@@ -6787,7 +6787,7 @@ extern void save_pos_R(int i, double xi[3], double Ri[3][3]);
 extern void set_pos_R_ho(int i, int a);
 #endif
 #ifdef MC_HELIX
-extern void mgl_helix(FILE* fs, int i, int col);
+extern void mgl_helix(FILE* fs, int i, char* col);
 #endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
