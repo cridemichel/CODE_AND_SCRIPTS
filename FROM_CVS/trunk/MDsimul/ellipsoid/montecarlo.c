@@ -1238,7 +1238,9 @@ void mgl_helix(FILE* fs, int i, char *col)
 void build_helix(void)
 {
   double temp, pi, npitch, deltaxi, length_eucl, radius;
-  int jj, Nxi;
+  int jj, Nxi, kk;
+  double xcm[3];
+
   radius = OprogStatus.radhelix; /* x,y perpendicular to helix axis in body reference frame */
   length_eucl = OprogStatus.lenhelix; /* helix axis along z in body reference frame */
   Nxi = OprogStatus.Nxi;
@@ -1254,6 +1256,20 @@ void build_helix(void)
       xhel[jj][1]=radius*sin(xihel[jj]);
       xhel[jj][2]=OprogStatus.pitch*xihel[jj]/(2.0*pi);
     }
+  xcm[0]=xcm[1]=xcm[2]=0.0;
+  for (jj=0; jj < Nxi; jj++)
+    {
+      for (kk=0; kk < 3; kk++)
+	xcm[kk] += xhel[jj][kk]; 
+    } 
+
+  for (kk=0; kk < 3; kk++)
+    xcm[kk] /= Nxi;
+  for (jj=0; jj < Nxi; jj++)
+    {
+      for (kk=0; kk < 3; kk++)
+	xhel[jj][kk] -= xcm[kk];
+    }   
 }
 double check_overlap_helices(int i, int j, double shift[3])
 {
