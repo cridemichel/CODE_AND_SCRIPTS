@@ -34,14 +34,55 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
+#define nmaxNxi 1000
+const int Nxi=15;
+const double sighelix=1.0, pitch=4.0, radhelix=0.2, lenhelix=10.0;
+double xihel[nmaxNxi], xhel[nmaxNxi][3], xhelA[nmaxNxi][3], xhelB[nmaxNxi][3];
+void build_helix(void)
+{
+  double temp, pi, npitch, deltaxi, length_eucl, radius;
+  int jj, kk;
+  double xcm[3];
 
+  radius = radhelix; /* x,y perpendicular to helix axis in body reference frame */
+  length_eucl = lenhelix; /* helix axis along z in body reference frame */
+  pi = acos(0.0)*2.0;
+  npitch = length_eucl/pitch;
+  temp=npitch*sqrt(Sqr(radius)+Sqr(pitch/(2.0*pi)));
+  deltaxi=2.0*pi*npitch/((double)(Nxi-1));
+ // printf("pi=%f npitch=%f Nxi-1=%d\n", pi, npitch, Nxi-1);
+ // printf("deltaxi=%f\n", deltaxi);
+  // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
+  for (jj=0; jj < Nxi; jj++)
+    {
+      xihel[jj]=((double)jj)*deltaxi;
+      xhel[jj][0]=radius*cos(xihel[jj]);
+      xhel[jj][1]=radius*sin(xihel[jj]);
+      xhel[jj][2]=pitch*xihel[jj]/(2.0*pi);
+    }
+  xcm[0]=xcm[1]=xcm[2]=0.0;
+  for (jj=0; jj < Nxi; jj++)
+    {
+      for (kk=0; kk < 3; kk++)
+	xcm[kk] += xhel[jj][kk]; 
+    } 
+
+  for (kk=0; kk < 3; kk++)
+    xcm[kk] /= Nxi;
+  for (jj=0; jj < Nxi; jj++)
+    {
+      for (kk=0; kk < 3; kk++)
+	xhel[jj][kk] -= xcm[kk];
+    }   
+}
+#define Sqr(x) ((x)*(x))
 double Lhc, Dhc=2.0;
 double PI;
-double Lx=5, Ly=5, Lz=5;
+double Lx=2, Ly=2, Lz=11;
 int main(int argc, char** argv)
 {
   FILE *f;
-  int dontcheck;
+  int jj;
   char fn[255];
   double angle, norm, pos1[3], pos2[3];
   double n1[3], n2[3], vp[3], fact, delx, rp[3], drp[3];
@@ -49,39 +90,19 @@ int main(int argc, char** argv)
   int i;
   if (argc==1)
     {
-      printf("You have to supplly the angle!\n");
+      printf("You have to supply the angle!\n");
       exit(-1);
     }
   if (argc>1)
-    maxtrials=atoi(argv[2]);
+    maxtrials=atoi(argv[1]);
   if (argc>2)
-    outits=atoi(argv[3]);
+    outits=atoi(argv[2]);
   printf("maxtrials=%lld\n", maxtrials);
-  PI = 2.0*acos(0.0);
-  angle=PI*(180.0 - atof(argv[1]))/180.0;
-  n1[0] = cos(angle);
-  n1[1] = sin(angle);
-  n1[2] = 0.0;
-  n2[0] = -1.0;
-  n2[1] = 0.0;
-  n2[2] = 0.0;
-
-  delx = tan(angle/2.0)*Dhc/2.0; 
-  Lhc = (Dhc + delx);
-  printf("delx=%f\n", delx);
   /* com1 = uvec[\[Theta]] (X0*D*0.5 - delx*0.5); */
-  fact= Dhc*0.5 - delx*0.5;
-  pos1[0]=n1[0]*fact;
-  pos1[1]=n1[1]*fact;
-  pos1[2]=n1[2]*fact;
-  printf("n=%f %f %f pos1=%f %f %f (norm=%f)\n", n1[0], n1[1], n1[2], pos1[0], pos1[1], pos1[2], calc_norm(pos1));
-  /* com2 = {-(X0 D /2 - delx*0.5), 0, 0};*/
-  pos2[0]=-(Dhc/2.0 - delx*0.5);
-  pos2[1]=0.0;
-  pos2[2]=0.0;
-  
-  printf("n=%f %f %f pos2=%f %f %f (norm=%f)\n", n2[0], n2[1], n2[2], pos2[0], pos2[1], pos2[2], calc_norm(pos2));
+ // printf("n=%f %f %f pos2=%f %f %f (norm=%f)\n", n2[0], n2[1], n2[2], pos2[0], pos2[1], pos2[2], calc_norm(pos2));
+
   overlaps=0;
+  build_helix();
   while (tt < maxtrials)
     {
       if (tt % outits == 0 && overlaps!=0)
@@ -92,29 +113,12 @@ int main(int argc, char** argv)
       rp[1] = 0.5*Ly*(2.0*ranf()-1.0);
       rp[2] = 0.5*Lz*(2.0*ranf()-1.0);
       /* check overlap here */
-      for (i=0; i < 3; i++)
-	drp[i] = rp[i] - pos1[i];
-      dontcheck=0;
-      if (fabs(scalProd(drp, n1)) < Lhc * 0.5)
+      for (jj=0; jj < Nxi; jj++)
 	{
-	  vectProdVec(drp, n1, vp);
-	  norm=calc_norm(vp);
-	  if (norm < Dhc*0.5)
+	  if (Sqr(rp[0]-xhel[jj][0])+Sqr(rp[1]-xhel[jj][1])+Sqr(rp[2]-xhel[jj][2]) <= Sqr(0.5*sighelix))
 	    {
-	      overlaps+=1;
-	      dontcheck=1;
-	    }
-	}
-      for (i=0; i < 3; i++)
-	drp[i] = rp[i] - pos2[i];
-      if (dontcheck==0)
-	{	
-	  if (fabs(scalProd(drp, n2)) < Lhc * 0.5)
-	    {
-	      vectProdVec(drp, n2, vp);
-	      norm=calc_norm(vp);
-	      if (norm < Dhc*0.5)
-		overlaps+=1;
+	      overlaps+=1.0;
+	      break;
 	    }
 	}
       tt++;
