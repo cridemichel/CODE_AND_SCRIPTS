@@ -3479,8 +3479,12 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #ifdef MC_AMYLOID_FIBRILS
 	  /* uso bhin e bhout come costheta e distKF per il modello di kern frenkel */
 	  get_inter_bheights(i, j, mapbondsa[nn], mapbondsb[nn], &bheight, &bhin, &bhout, &nmax);
+#if 0
 	  costhKF = bhin;
 	  distKFSQ = Sqr(bhout);
+#endif
+	  costhKF = OprogStatus.costhKF;
+	  distKFSQ = Sqr(OprogStatus.distKF);
 #else
 	  costhKF = OprogStatus.costhKF;
 	  distKFSQ = Sqr(OprogStatus.distKF);
