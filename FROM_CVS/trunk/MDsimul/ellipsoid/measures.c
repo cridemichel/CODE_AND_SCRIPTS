@@ -227,7 +227,7 @@ double calcpotene(void)
 #else
       Epot -= numbonds[na];
 #endif
-#ifdef MC_AMYLOID_FIBRILS
+#if defined(MC_AMYLOID_FIBRILS)
       Epot += calc_elastic_torsional_energy(na);
 #endif
     }
