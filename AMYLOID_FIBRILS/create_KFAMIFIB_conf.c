@@ -4,11 +4,13 @@
 double nx, ny, nz, L, *rx, *ry, *rz, extradel;
 double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
 int full, ibeg, numpoly;
+#define maxpolylen 10000;
+double *R[3][3], R0[3][3], *Ri[3][3];
 int main(int argc, char **argv)
 {
   FILE *f;
-  double theta0, phi, Diam, del0, del0x, del0y, del0z, maxL, pi;
-  int numpoly, parnum=2800, i, j, polylen=20;
+  double theta0, theta0rad, phi, Diam, del0, del0x, del0y, del0z, maxL, pi;
+  int k1, k2, numpoly, parnum=2800, i, j, polylen=20;
 
   if (argc == 1)
    {
@@ -46,15 +48,34 @@ int main(int argc, char **argv)
   rxc =malloc(sizeof(double)*polylen);
   ryc =malloc(sizeof(double)*polylen);
   rzc =malloc(sizeof(double)*polylen);
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	Ri[k1][k2] = malloc(sizeof(double)*parnum);     
+	R[k1][k2] =  malloc(sizeof(double)*polylen);
+      }
   del0 = Diam*0.5+0.0001;
   del0x = 0.0001;
   del0y=del0z=Diam*2;
   theta0=10.0; /* in gradi */
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      R0[k1][k2]=0.0;
+  R0[0][0]=1.0;
   for (i=0; i < polylen; i++)
     {
       rxc[i] = i*Diam;
       ryc[i] = 0.0;
       rzc[i] = 0.0;
+      /*apply theta0 rotation around x-axis */
+      theta0rad=pi*(i*theta0)/180.0;
+      R0[1][1]=cos(theta0rad);
+      R0[1][2]=-sin(theta0rad);
+      R0[2][1]=sin(theta0rad);
+      R0[2][2]=cos(theta0rad);
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  R[k1][k2][i] = R0[k1][k2];
     }
   fprintf(f, "parnum: %d\n", parnum);
   fprintf(f,"ninters: 11\n");
@@ -127,6 +148,9 @@ int main(int argc, char **argv)
 	  //printf("nx=%f i=%d j=%d x=%f\n", nx, i, j,  rx[i*polylen+j]);
 	  ry[i*polylen+j] = ryc[j]+ny*dry+del0;
 	  rz[i*polylen+j] = rzc[j]+nz*drz+del0;
+      	  for (k1=0; k1 < 3; k1++)
+    	    for (k2=0; k2 < 3; k2++)
+    	      Ri[k1][k2][i*polylen+j]= R[k1][k2][j];
 	  //printf("np=%d\n", i*polylen+j);
 	}
       if (full==1)
@@ -143,7 +167,9 @@ int main(int argc, char **argv)
       rx[i] -= L*0.5;
       ry[i] -= L*0.5;
       rz[i] -= L*0.5;
-      fprintf(f, "%f %f %f 1 0 0 0 1 0 0 0 1 0\n", rx[i], ry[i], rz[i]);
+      fprintf(f, "%f %f %f %f %f %f %f %f %f %f %f %f 0\n", rx[i], ry[i], rz[i],
+	      Ri[0][0][i], Ri[0][1][i], Ri[0][2][i], Ri[1][0][i], Ri[1][1][i], Ri[1][2][i],
+	      Ri[2][0][i], Ri[2][1][i], Ri[2][2][i]);
     }
   fprintf(f, "%.15G %.15G %.15G\n", L, L, L);
   return 1;
