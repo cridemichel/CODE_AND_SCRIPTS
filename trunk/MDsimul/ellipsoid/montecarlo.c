@@ -833,7 +833,9 @@ void rot_move(int ip, int flip)
   if (typesArr[typeOfPart[ip]].nhardobjs == 0)
     remove_parall(ip, &ox, &oy, &oz);
 #else
+#ifndef MC_HELIX
   remove_parall(ip, &ox, &oy, &oz);
+#endif
 #endif
 #endif
   /* pick a random rotation angle */
@@ -2410,7 +2412,7 @@ double calc_el_ij(int i, int j)
 #endif  
   sp = scalProd(uyi,uyj);
   /* theta in gradi */
-  theta = fabs(90.0*arccos(sp)/acos(0.0));
+  theta = fabs(90.0*acos(sp)/acos(0.0));
   return OprogStatus.tors_k*Sqr(theta - OprogStatus.tors_theta0);
 }
 double calc_elastic_torsional_energy(int ip)
