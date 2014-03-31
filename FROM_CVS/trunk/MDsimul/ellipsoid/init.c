@@ -1738,6 +1738,10 @@ void usrInitBef(void)
     OprogStatus.distKF = 1.2;
     OprogStatus.polylen = 4;
 #endif
+#ifdef MC_AMYLOID_FIBRILS
+    OprogStatus.tors_theta0 = 10.0;
+    OprogStatus.tors_k = 11.1;
+#endif
 #ifdef MC_SIMUL
     OprogStatus.targetPhiMC = -1.0;
 #endif

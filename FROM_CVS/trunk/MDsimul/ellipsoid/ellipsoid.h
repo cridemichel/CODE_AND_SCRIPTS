@@ -778,6 +778,10 @@ struct progStatus
   double costhKF;
   double distKF;
 #endif
+#ifdef MC_AMYLOID_FIBRILS
+  double tors_k;
+  double tors_theta0;
+#endif
 #ifdef MC_SIMUL
   double targetPhiMC;
 #endif
@@ -1187,6 +1191,10 @@ struct pascii opro_ascii[] =
   {"costhKF",   &OS(costhKF),                       1,         1, "%.8G"},
   {"distKF" ,   &OS(distKF),                        1,         1, "%.8G"},
   {"polylen",   &OS(polylen),                       1,         1, "%d"},
+#endif
+#ifdef MC_AMYLOID_FIBRILS
+  {"tors_theta0",   &OS(tors_theta0),               1,         1, "%.8G"},
+  {"tors_k",        &OS(tors_k),                    1,         1, "%.8G"},
 #endif
 #ifdef MC_SIMUL
   {"targetPhiMC",  &OS(targetPhiMC),               1,          1, "%.12G"},
@@ -1789,6 +1797,10 @@ struct singlePar OsinglePar[] = {
   {"costhKF",   &OprogStatus.costhKF, CT},
   {"distKF",    &OprogStatus.distKF,  CT},
   {"polylen",   &OprogStatus.polylen, INT},
+#endif
+#ifdef MC_AMYLOID_FIBRILS
+  {"tors_theta0", &OprogStatus.tors_theta0,  CT},
+  {"tors_k",       &OprogStatus.tors_k,       CT},
 #endif
 #ifdef MC_SIMUL
   {"targetPhiMC", &OprogStatus.targetPhiMC, CT},
