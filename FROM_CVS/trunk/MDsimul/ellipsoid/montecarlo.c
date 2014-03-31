@@ -833,7 +833,7 @@ void rot_move(int ip, int flip)
   if (typesArr[typeOfPart[ip]].nhardobjs == 0)
     remove_parall(ip, &ox, &oy, &oz);
 #else
-#ifndef MC_HELIX
+#if !defined(MC_HELIX) && !defined(MC_KERN_FRENKEL)
   remove_parall(ip, &ox, &oy, &oz);
 #endif
 #endif
@@ -2449,6 +2449,7 @@ double calc_elastic_torsional_energy(int ip)
     {
       elene += calc_el_ij(ip, ((int)covmonomers[nn]));
     }
+  //printf("elene(i=%d)=%.15G\n", ip, elene);
   return elene;
 }
 #endif

@@ -78,6 +78,9 @@ extern double swdb_adjust_Epot(int i);
 #ifdef MC_HYDROPHOBIC_INT
 extern double **eneij;
 #endif
+#ifdef MC_AMYLOID_FIBRILS
+extern double calc_elastic_torsional_energy(int ip);
+#endif
 double calcpotene(void)
 {
   double Epot; 
@@ -223,6 +226,9 @@ double calcpotene(void)
       //Epot -= numbonds[na];
 #else
       Epot -= numbonds[na];
+#endif
+#ifdef MC_AMYLOID_FIBRILS
+      Epot += calc_elastic_torsional_energy(na);
 #endif
     }
   MD_DEBUG21(printf("END\n"));
