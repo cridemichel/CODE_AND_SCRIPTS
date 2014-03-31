@@ -2398,8 +2398,8 @@ double calc_el_ij(int i, int j)
     {
       /* permanent patches are along x-axis */
       uxi[kk] = R[i][0][kk];
-      uxi[kk] = R[i][0][kk];
-      uyj[kk] = R[j][1][kk];
+      uyi[kk] = R[i][1][kk];
+      uxj[kk] = R[j][0][kk];
       uyj[kk] = R[j][1][kk];
     }
 #if 0
