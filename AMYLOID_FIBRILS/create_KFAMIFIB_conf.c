@@ -66,8 +66,8 @@ int main(int argc, char **argv)
   fprintf(f,"2 2 2\n");
   fprintf(f, "1 1 1 1 2 0\n");
   fprintf(f,"6 0\n");
-  fprintf(f,"1 0 0 0.09\n");/* 0: along x axis (permanent) 0.05 means lp=20 */
-  fprintf(f,"-1 0 0 0.09\n");/* 1: along x axis (permanent) */
+  fprintf(f,"1 0 0 0.119\n");/* 0: along x axis (permanent) 0.05 means lp=20 */
+  fprintf(f,"-1 0 0 0.119\n");/* 1: along x axis (permanent) */
   fprintf(f,"0  1  0 0.5\n");/* 2: along y axis */ 
   fprintf(f,"0 -1  0 0.5\n");/* 3: along y axis */
   fprintf(f,"0  0  1 0.5\n");/* 4: along z axis */
