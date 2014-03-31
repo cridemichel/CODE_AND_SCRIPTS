@@ -7,7 +7,7 @@ int full, ibeg, numpoly;
 int main(int argc, char **argv)
 {
   FILE *f;
-  double phi, Diam, del0, del0x, del0y, del0z, maxL, pi;
+  double theta0, phi, Diam, del0, del0x, del0y, del0z, maxL, pi;
   int numpoly, parnum=2800, i, j, polylen=20;
 
   if (argc == 1)
@@ -49,6 +49,7 @@ int main(int argc, char **argv)
   del0 = Diam*0.5+0.0001;
   del0x = 0.0001;
   del0y=del0z=Diam*2;
+  theta0=10.0; /* in gradi */
   for (i=0; i < polylen; i++)
     {
       rxc[i] = i*Diam;
