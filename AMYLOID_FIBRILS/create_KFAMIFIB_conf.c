@@ -1,13 +1,13 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<math.h>
-double nx, ny, nz, L, *rx, *ry, *rz;
+double nx, ny, nz, L, *rx, *ry, *rz, extradel;
 double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
 int full, ibeg, numpoly;
 int main(int argc, char **argv)
 {
   FILE *f;
-  double phi, Diam, del0, maxL, pi;
+  double phi, Diam, del0, del0x, del0y, del0z, maxL, pi;
   int numpoly, parnum=2800, i, j, polylen=20;
 
   if (argc == 1)
@@ -38,6 +38,7 @@ int main(int argc, char **argv)
     }
   else
     L=50.0;
+  extradel=0.5;
   printf("L=%f phi=%f argc=%d polylen=%d\n", L, phi, argc, polylen);
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
@@ -45,7 +46,9 @@ int main(int argc, char **argv)
   rxc =malloc(sizeof(double)*polylen);
   ryc =malloc(sizeof(double)*polylen);
   rzc =malloc(sizeof(double)*polylen);
-  del0 = Diam*0.5+0.00001;
+  del0 = Diam*0.5+0.0001;
+  del0x = 0.0001;
+  del0y=del0z=Diam*2;
   for (i=0; i < polylen; i++)
     {
       rxc[i] = i*Diam;
@@ -63,8 +66,8 @@ int main(int argc, char **argv)
   fprintf(f,"2 2 2\n");
   fprintf(f, "1 1 1 1 2 0\n");
   fprintf(f,"6 0\n");
-  fprintf(f,"1 0 0 0.119\n");/* 0: along x axis (permanent) */
-  fprintf(f,"-1 0 0 0.119\n");/* 1: along x axis (permanent) */
+  fprintf(f,"1 0 0 0.09\n");/* 0: along x axis (permanent) 0.05 means lp=20 */
+  fprintf(f,"-1 0 0 0.09\n");/* 1: along x axis (permanent) */
   fprintf(f,"0  1  0 0.5\n");/* 2: along y axis */ 
   fprintf(f,"0 -1  0 0.5\n");/* 3: along y axis */
   fprintf(f,"0  0  1 0.5\n");/* 4: along z axis */
@@ -72,14 +75,14 @@ int main(int argc, char **argv)
   fprintf(f,"0 0 0 0 0.0001 1000000000 10000000000 100000\n");
   fprintf(f,"0 0 0 1 0.0001 1000000000 10000000000 100000\n");
   fprintf(f,"0 1 0 1 0.0001 1000000000 10000000000 100000\n");
-  fprintf(f,"0 2 0 2 0.323 0 0 100000\n"); /* y-axis kern-frenkel patches */
-  fprintf(f,"0 2 0 3 0.323 0 0 100000\n"); /* y-axis kern-frenkel patches */
-  fprintf(f,"0 3 0 3 0.323 0 0 100000\n"); /* y-axis kern-frenkel patches */
-  fprintf(f,"0 4 0 4 1.67 0 0 100000\n"); /* z-axiz KF patch */ 
-  fprintf(f,"0 5 0 5 1.67 0 0 100000\n");  /* z-axiz KF patch */
-  fprintf(f,"0 4 0 5 4.65 0 0 100000\n");  /* z-axiz KF patch */
-  fprintf(f,"0 3 0 4 0.8 0 0 100000\n");  /* perp conf */
-  fprintf(f,"0 2 0 5 0.8 0 0 100000\n");  /* perp conf */
+  fprintf(f,"0 2 0 2 3.1 0 0 100000\n"); /* y-axis kern-frenkel patches */
+  fprintf(f,"0 2 0 3 3.1 0 0 100000\n"); /* y-axis kern-frenkel patches */
+  fprintf(f,"0 3 0 3 3.1 0 0 100000\n"); /* y-axis kern-frenkel patches */
+  fprintf(f,"0 4 0 4 0.6 0 0 100000\n"); /* z-axis KF patch */ 
+  fprintf(f,"0 5 0 5 0.6 0 0 100000\n");  /* z-axis KF patch */
+  fprintf(f,"0 4 0 5 0.215 0 0 100000\n");  /* z-axis KF patch */
+  fprintf(f,"0 3 0 4 1.25 0 0 100000\n");  /* perp conf */
+  fprintf(f,"0 2 0 5 1.25 0 0 100000\n");  /* perp conf */
   fprintf(f,"@@@\n");  
   nx=ny=nz=0;
   full=0;
@@ -87,9 +90,9 @@ int main(int argc, char **argv)
   maxL = L;
   numpoly=parnum/polylen;
   printf("numpoly=%d numpoly*polylen=%d\n", numpoly, numpoly*polylen);
-  drx = Diam*((double)polylen); //0.500000000001;
-  dry = Diam;
-  drz = Diam;
+  drx = Diam*((double)polylen)+del0x; //0.500000000001;
+  dry = Diam+del0y;
+  drz = Diam+del0z;
   if (parnum%polylen != 0)
     {
       printf("number of particles must a multiple of %d\n", polylen);
