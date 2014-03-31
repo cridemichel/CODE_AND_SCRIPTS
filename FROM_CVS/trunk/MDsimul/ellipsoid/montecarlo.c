@@ -2417,19 +2417,21 @@ double calc_el_ij(int i, int j)
 }
 double calc_elastic_torsional_energy(int ip)
 {
-  int nextip, previp, nn, ncov, covmonomers[2];
+  int nextip, previp, nn, ncov;
   double elene; 
 #ifdef MD_LL_BONDS
   int i, nb;
   long long int aa, bb, ii, jj, jj2;
+  long long int covmonomers[2];
 #else
   int i, nb, ii, jj, aa, bb, jj2;
+  int covmonomers[2];
 #endif
   ncov = 0;
   elene = 0;
   /* fine previsous (if any) and next (if any) particles which
      are covalently bonded */
-  for (nn = 0; nn < numbonds[ip]; nn)
+  for (nn = 0; nn < numbonds[ip]; nn++)
     {
       jj = bonds[ip][nn] / (NANA);
       jj2 = bonds[ip][nn] % (NANA);
@@ -2437,13 +2439,15 @@ double calc_elastic_torsional_energy(int ip)
       bb = jj2 % NA;
       if (aa == 1 || aa == 2)
 	{
+	  //printf("ip=%d numbonds[ip]=%d jj=%d ncov=%d\n", ip, numbonds[ip], jj, ncov);
 	  covmonomers[ncov] = jj;
 	  ncov++;
 	}
     }
-  for (nn = 0; nn < 2; nn++)
+  //printf("covmonomers: %lld %lld\n", covmonomers[0], covmonomers[1]);
+  for (nn = 0; nn < ncov; nn++)
     {
-      elene += calc_el_ij(ip, covmonomers[nn]);
+      elene += calc_el_ij(ip, ((int)covmonomers[nn]));
     }
   return elene;
 }
