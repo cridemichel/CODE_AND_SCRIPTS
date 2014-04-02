@@ -909,7 +909,7 @@ struct progStatus
   int susnmax;
   int susnmin;
 #endif
-#ifdef MC_SWHC
+#if defined(MC_SWHC) || defined(MC_SWELL)
   double deltasw[2];
 #endif
 #ifdef MC_HYDROPHOBIC_INT
@@ -1378,10 +1378,10 @@ struct pascii opro_ascii[] =
   {"susnmin",     &OS(susnmin),                    1, 1, "%d"},
   {"susnmax",     &OS(susnmax),                    1, 1, "%d"},
 #endif
-#ifdef MC_SWHC
+#if defined(MC_SWHC) || defined(MC_SWELL)
   {"deltasw",         OS(deltasw),                   2,               1, "%.12G"},
 #endif
-#ifdef MC_SWHC
+#if defined(MC_HYDROPHOBIC_INT) 
   {"maxtrialsH",         &OS(maxtrialsH),                   1,               1, "%d"},
 #endif
 #ifdef MC_HELIX
@@ -1567,7 +1567,7 @@ struct singlePar OsinglePar[] = {
   {"susnmin", &OprogStatus.susnmin, INT},
   {"susnmax", &OprogStatus.susnmax, INT},
 #endif
-#ifdef MC_SWHC
+#if defined(MC_SWHC) || defined(MC_SWELL)
   {"deltaswL2", &OprogStatus.deltasw[0], CT},
   {"deltaswD2", &OprogStatus.deltasw[1], CT},
 #endif

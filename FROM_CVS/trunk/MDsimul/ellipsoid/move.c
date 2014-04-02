@@ -5869,7 +5869,6 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #ifdef EDHE_FLEX
   typei = typeOfPart[i];
   typej = typeOfPart[j];
-     
   if (OprogStatus.targetPhi > 0.0)
     {
       axaiF = axa[i];
@@ -5912,12 +5911,18 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #endif
   MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
-
+#ifdef MC_SIMUL
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      RtA[k1][k2] = R[i][k1][k2];
+#else
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
   UpdateOrient(i, ti, RtA, Omega);
 #endif
+#endif
+
   na = (i < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   na = 0;
@@ -5971,11 +5976,18 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   rB[1] = ry[j] + vy[j]*ti + shift[1];
   rB[2] = rz[j] + vz[j]*ti + shift[2];
 #endif
+#ifdef MC_SIMUL
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      RtB[k1][k2] = R[j][k1][k2];
+#else
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
   UpdateOrient(j, ti, RtB, Omega);
 #endif
+#endif
+
   na = (j < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   na = 0;

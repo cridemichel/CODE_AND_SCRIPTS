@@ -833,7 +833,7 @@ void rot_move(int ip, int flip)
   if (typesArr[typeOfPart[ip]].nhardobjs == 0)
     remove_parall(ip, &ox, &oy, &oz);
 #else
-#if !defined(MC_HELIX) && !defined(MC_KERN_FRENKEL)
+#if !defined(MC_HELIX) && !defined(MC_KERN_FRENKEL) && !defined(MC_SWELL)
   remove_parall(ip, &ox, &oy, &oz);
 #endif
 #endif
@@ -1196,6 +1196,9 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
 #ifndef MC_QUASI_CUBE
   if (*errchk)
     {
+      //store_bump(0,1);
+      //exit(-1);
+      //printf("parnum=%d\n", Oparams.parnum);
       d0=overlap_using_multibox(i, j, shift);
       if (d0 > 0)
 	printf("I used multibox routine and d0=%f\n", d0);
@@ -2198,6 +2201,7 @@ void check_alloc_GC(void)
       inCell[0] = realloc(inCell[0],sizeof(int)*allocnpGC);
       inCell[1] = realloc(inCell[1],sizeof(int)*allocnpGC);
       inCell[2] = realloc(inCell[2],sizeof(int)*allocnpGC);
+      
 #ifdef MD_DYNAMIC_OPROG
       dyn_realloc_oprog(allocnpGC);
 #endif
@@ -2265,6 +2269,93 @@ void assign_cell_GC(int np)
 #ifdef MC_RESTR_MATRIX
 extern double restrMatrix[3][3];
 #endif
+extern double eval_max_dist_for_spots(int pt);
+void calc_maxax(void)
+{
+  double MAXAX, maxSpots;
+  int i, a;
+  MAXAX = 0.0;
+
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      maxax[i] = 0.0;
+#if defined(MD_POLYDISP) 
+      if (axaP[i] > maxax[i])
+	maxax[i] = axaP[i];
+      if (axbP[i] > maxax[i])
+	maxax[i] = axbP[i];
+      if (axcP[i] > maxax[i])
+	maxax[i] = axcP[i];
+#elif defined(EDHE_FLEX)
+#ifdef MD_SUPERELLIPSOID
+#if 0
+      if (typesArr[typeOfPart[i]].sax[0] > maxax[i])
+	maxax[i] = typesArr[typeOfPart[i]].sax[0];
+      if (typesArr[typeOfPart[i]].sax[1] > maxax[i])
+	maxax[i] = typesArr[typeOfPart[i]].sax[1];
+      if (typesArr[typeOfPart[i]].sax[2] > maxax[i])
+	maxax[i] = typesArr[typeOfPart[i]].sax[2];
+#else 
+      /* per i superellissoidi il centroide non puo' essere uguale al raggio maggiore,
+	 così lo sceglo pari alla metà della diagonale maggiore del parallelepipedo
+	 con i lati pari al doppio dei semi-assi */
+      maxax[i] = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
+	Sqr(typesArr[typeOfPart[i]].sax[2]));
+#endif
+#else
+      maxax[i] = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
+	Sqr(typesArr[typeOfPart[i]].sax[2]));
+#endif
+#ifdef MC_SIMUL
+      /* se è una sfera setta maxax pari al raggio della stessa */
+      if (typesArr[typeOfPart[i]].sax[0] == typesArr[typeOfPart[i]].sax[1] && 
+	    typesArr[typeOfPart[i]].sax[1] == typesArr[typeOfPart[i]].sax[2]) 
+	{
+#ifdef MD_SUPERELLIPSOID
+    	  if (!is_superellipse(i))
+    	    {
+	      maxax[i] = typesArr[typeOfPart[i]].sax[0];
+    	    }
+#else
+	  maxax[i] = typesArr[typeOfPart[i]].sax[0];
+#endif
+	}
+#endif
+      maxSpots = eval_max_dist_for_spots(typeOfPart[i]);
+      if (maxSpots > maxax[i])
+	maxax[i] = maxSpots;
+#ifdef MC_SIMUL
+      maxax[i] *= 1.0001;
+#endif
+      //printf("maxax[%d]:%f maxSpots:%f\n", i, 2.0*maxax[i], 2.0*maxSpots);
+#else
+      a=(i<Oparams.parnumA)?0:1;
+      if (Oparams.a[a] > maxax[i])
+	maxax[i] = Oparams.a[a];
+      if (Oparams.b[a] > maxax[i])
+	maxax[i] = Oparams.b[a];
+      if (Oparams.c[a] > maxax[i])
+	maxax[i] = Oparams.c[a];
+#endif
+      //printf("distSPA=%.15G distSPB=%.15G\n", distSPA, distSPB);
+      maxax[i] *= 2.0;
+
+      if (maxax[i] > MAXAX)
+	MAXAX = maxax[i];
+      //printf("maxax aft[%d]: %.15G\n", i, maxax[i]);
+    }
+
+}
+void calc_ax(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      axa[i] = typesArr[typeOfPart[i]].sax[0];
+      axb[i] = typesArr[typeOfPart[i]].sax[1];
+      axc[i] = typesArr[typeOfPart[i]].sax[2];
+    }
+}
 int insert_particle_GC(void)
 {
   int np, k1, k2;
@@ -2355,6 +2446,15 @@ int insert_particle_GC(void)
   numbonds[np] = 0;
   typeOfPart[np]=0;
   vx[np]=vy[np]=vz[np]=wx[np]=wy[np]=wz[np]=Mx[np]=My[np]=Mz[np]=0.0;
+
+  if (Oparams.parnum==1)
+    {
+      /* se parnum=1 vuol dire che prima c'erano 0 particelle quindi vanno calcolati i valori in 0 per
+	 axa, axb, axc e maxax */
+      find_spheres_NNL();
+      calc_maxax();
+      calc_ax();
+    }
   is_a_sphere_NNL[np] = is_a_sphere_NNL[0]; 
   maxax[np] = maxax[0];
   axa[np]=axa[0];
@@ -2585,9 +2685,17 @@ void mcexc(int *ierr)
       //printf("Inserting #%d\n", Oparams.parnum);
       if (OprogStatus.susnmin==-1 && OprogStatus.susnmax > 0 && Oparams.parnum >= OprogStatus.susnmax)
 	return;
+#if defined(MC_SUS) && defined(MC_SWELL)	  
+      if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0 &&  Oparams.parnum >= OprogStatus.susnmax)
+	{
+	  OprogStatus.sushisto[Oparams.parnum-OprogStatus.susnmin]++;
+	  return;
+	}
+#endif
 
       np=insert_particle_GC();
-      //printf("FINE-2 MCEXC\n"); 
+      //printf("FINE-2 MCEXC\n");//// 
+
       if (overlapMC(np, ierr))
 	{
 	  /* reject insertion */
