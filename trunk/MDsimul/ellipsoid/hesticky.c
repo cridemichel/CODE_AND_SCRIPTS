@@ -3325,7 +3325,7 @@ extern double **eneij;
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
 {
-#ifdef MC_SWHC
+#if defined(MC_SWHC) || defined(MC_SWELL)
   int retchk;
 #endif
 #ifdef MC_KERN_FRENKEL
@@ -3397,7 +3397,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   rB[2] = rz[j] + vz[j]*ti + shift[2];
 #endif
 
-#if defined(MC_SIMUL) && !defined(MC_KERN_FRENKEL) && !defined(MC_SWHC)
+#if defined(MC_SIMUL) && !defined(MC_KERN_FRENKEL) && !defined(MC_SWHC) && !defined(MC_SWELL)
   if (are_spheres(i,j))
     {
       if (Sqr(rA[0]-rB[0])+Sqr(rA[1]-rB[1])+Sqr(rA[2]-rB[2]) > Sqr(0.5*(maxax[i]+maxax[j])))
@@ -3514,7 +3514,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	}
       else 
 	 dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
-#elif defined(MC_SWHC)
+#elif defined(MC_SWHC) || defined(MC_SWELL)
       /* first patch is the "cylindrical" one */
       if (mapbondsa[nn] == 1 && mapbondsb[nn] == 1)
 	{
