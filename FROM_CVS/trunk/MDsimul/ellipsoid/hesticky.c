@@ -3523,6 +3523,38 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],  
 		 mapSigmaFlex[nn], mapbondsa[nn], mapbondsb[nn], dists[nn]);
 #endif
+#ifdef MC_SWELL
+	  if (OprogStatus.constDelta==1)
+	    {
+	      if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+		{
+		  typesArr[typeOfPart[i]].sax[0] += OprogStatus.deltasw[0]; /* L*Delta */
+		  typesArr[typeOfPart[i]].sax[1] += OprogStatus.deltasw[1]; /* D*Delta */
+		  typesArr[typeOfPart[i]].sax[2] += OprogStatus.deltasw[1];
+		}
+	      else
+		{
+		  typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn];
+		}
+	    }
+	  else
+	    {
+	      if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+		{
+	    	  typesArr[typeOfPart[i]].sax[0] *= OprogStatus.deltasw[0]; /* L*Delta */
+		  typesArr[typeOfPart[i]].sax[1] *= OprogStatus.deltasw[1]; /* D*Delta */
+		  typesArr[typeOfPart[i]].sax[2] *= OprogStatus.deltasw[1];
+		}
+	      else
+		{
+		  typesArr[typeOfPart[i]].sax[0] *= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[1] *= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[2] *= mapSigmaFlex[nn];
+		}
+	    }
+#else
 	  if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
 	    {
 	      typesArr[typeOfPart[i]].sax[0] += OprogStatus.deltasw[0]; /* L+Delta */
@@ -3535,6 +3567,7 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
 	      typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
 	      typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn];
 	    }
+#endif
 	  if (check_overlap_ij(i, j, shift, &retchk) < 0.0)
 	    {
 	      //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
@@ -3556,6 +3589,38 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
    	  else
 	    dists[nn] = 1.0;
 	  //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
+#ifdef MC_SWELL
+	  if (OprogStatus.constDelta==1)
+	    {
+	      if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+		{
+		  typesArr[typeOfPart[i]].sax[0] -= OprogStatus.deltasw[0]; /* L*Delta */
+		  typesArr[typeOfPart[i]].sax[1] -= OprogStatus.deltasw[1]; /* D*Delta */
+		  typesArr[typeOfPart[i]].sax[2] -= OprogStatus.deltasw[1];
+		}
+	      else
+		{
+		  typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
+		}
+	    }
+	  else
+	    {
+	      if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+		{
+		  typesArr[typeOfPart[i]].sax[0] /= OprogStatus.deltasw[0];
+		  typesArr[typeOfPart[i]].sax[1] /= OprogStatus.deltasw[1];
+		  typesArr[typeOfPart[i]].sax[2] /= OprogStatus.deltasw[1];
+		}
+	      else
+		{
+		  typesArr[typeOfPart[i]].sax[0] /= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[1] /= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[2] /= mapSigmaFlex[nn];
+		}
+	    }
+#else
 	  if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
 	    {
 	      typesArr[typeOfPart[i]].sax[0] -= OprogStatus.deltasw[0];
@@ -3568,6 +3633,7 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
     	      typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
     	      typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
 	    }
+#endif
 	}
       else
 	dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
