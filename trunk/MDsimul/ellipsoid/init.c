@@ -2010,6 +2010,7 @@ void usrInitBef(void)
     /* se almeno uno è pari a -1 uso il raggio dello spot fittizio */
     OprogStatus.deltasw[0] = -1;
     OprogStatus.deltasw[1] = -1;
+    OprogStatus.constDelta = 1;
 #endif
 #ifdef MC_HYDROPHOBIC_INT
     OprogStatus.maxtrialsH = 500;
