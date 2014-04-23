@@ -850,25 +850,30 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[])
 	  || strchr(strutt[i].type, 'G'))
 	{
 	  bd = (double *) strutt[i].ptr;
-	/* N.B. se nel .h si mette -MAXPAR come qty (vedi struct pascii)
-	 * allora vengono salvati solo Oparams.parnum elementi risparmiando disco.*/
-	if (strutt[i].qty == -MAXPAR)		
-	  strutt[i].qty = Oparams.parnum;
-	for (n = 0; n < strutt[i].qty; n++)
-	  {
-#ifdef EDHE_FLEX
-	    if ((strutt[i].qty==Oparams.parnum || strutt[i].qty==MAXPAR) 
-		&& !globSaveAll)
-	      {
-		if (!is_to_save(n))
-		  continue;
-	      }
+	  /* N.B. se nel .h si mette -MAXPAR come qty (vedi struct pascii)
+	   * allora vengono salvati solo Oparams.parnum elementi risparmiando disco.*/
+#ifdef MC_SUS
+	  if (strutt[i].qty == -MAXSUSWINDOW)		
+	    strutt[i].qty = OprogStatus.susnmax-OprogStatus.susnmin+1;
+
 #endif
-	    for (e = 0; e < strutt[i].block_length; e++)
-	      {
-		fprintf(fs, strutt[i].type, *(bd + n*strutt[i].block_length + e));
-		fprintf(fs, " ");
-	      }
+	  if (strutt[i].qty == -MAXPAR)		
+	    strutt[i].qty = Oparams.parnum;
+	  for (n = 0; n < strutt[i].qty; n++)
+	    {
+#ifdef EDHE_FLEX
+	      if ((strutt[i].qty==Oparams.parnum || strutt[i].qty==MAXPAR) 
+		  && !globSaveAll)
+		{
+		  if (!is_to_save(n))
+		    continue;
+		}
+#endif
+	      for (e = 0; e < strutt[i].block_length; e++)
+		{
+		  fprintf(fs, strutt[i].type, *(bd + n*strutt[i].block_length + e));
+		  fprintf(fs, " ");
+		}
 	    }
 	}
       else if (strchr(strutt[i].type, 'd'))
