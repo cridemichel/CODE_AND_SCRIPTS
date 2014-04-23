@@ -668,7 +668,10 @@ void read_parnum(FILE *pfs)
   char str1[NAME_LENGTH], *str2;
   int ll, cpos;
   int atc=0;
-
+#if defined(MC_SUS) && defined(MD_DYNAMIC_OPROG)
+  int itemsfound;
+#endif
+ 
   cpos = ftell(pfs);
 #ifdef MAXPAR
   /* if we have an array of double MAXPAR long we assume here 20 bytes for each element (usually %.15G
@@ -680,6 +683,9 @@ void read_parnum(FILE *pfs)
   line = malloc((ll+NAME_LENGTH)*sizeof(char));
   str2 = malloc(ll*sizeof(char)); 
   /* scanning the file for the other params */
+#if defined(MC_SUS) && defined(MD_DYNAMIC_OPROG)
+  itemsfound = 0;
+#endif
   while (!feof(pfs))
     {
       /* The syntax must be <parameter>:<value> 
@@ -696,8 +702,10 @@ void read_parnum(FILE *pfs)
 	  if (atc==2)
 	    break;
 	}
+#if !(defined(MD_DYNAMIC_OPROG) && defined(MC_SUS))
       if (atc==0)
 	continue;
+#endif
       //printf("line=%s\n", line);
       //printf("line: %s\n", line);
       if (!strcmp(line, "")) /* If a void line */
@@ -714,17 +722,46 @@ void read_parnum(FILE *pfs)
 	  Oparams.parnum = atoi(str2);
 	  printf("[readBakAscii()->read_parnum()]: Oparams.parnum=%d\n", Oparams.parnum);
 #endif
-	  fseek(pfs, cpos, SEEK_SET);
 	  /* 17/05/2010: qui bisognava fare la free! a valgrind non sfugge nulla! */
+#if defined (MD_DYNAMIC_OPROG) && defined(MC_SUS)
+	  itemsfound++;
+#else
+	  fseek(pfs, cpos, SEEK_SET);
 	  free(line);
 	  free(str2);
 	  return;
+#endif
 	}	
+#if defined(MD_DYNAMIC_OPROG) && defined(MC_SUS)
+      if (!strcmp(str1, "susnmin"))
+	{
+	  OprogStatus.susnmin = atoi(str2);	  
+	  printf("[readBakAscii()->read_parnum()]: Oparams.susnmin=%d\n", OprogStatus.susnmin);
+	  itemsfound++;
+	}
+      if (!strcmp(str1, "susnmax"))
+	{
+	  OprogStatus.susnmax = atoi(str2);	  
+	  printf("[readBakAscii()->read_parnum()]: Oparams.susnmax=%d\n", OprogStatus.susnmax);
+	  itemsfound++;
+	}
+      if (itemsfound==3)
+	{
+     	  fseek(pfs, cpos, SEEK_SET);
+	  free(line);
+	  free(str2);
+	  return;
+	}
+#endif
     }
   fseek(pfs, cpos, SEEK_SET);
   free(line);
   free(str2);
+#if defined(MC_SUS)
+  printf("[WARNING] not all items found (parnum,susnmix,susnmax) not found in ascii file\n");
+#else 
   printf("[WARNING] parnum not found in ascii file\n");
+#endif
   exit(-1);
 }
 /* ======================== >>> readAsciiPars <<< ========================= */
