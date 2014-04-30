@@ -1,7 +1,9 @@
 #include<mdsimul.h>
 #undef DEBUG_HCMC
-#ifdef MC_HC
+#if defined(MC_HC)
 const double saxfactMC[3]={0.999,0.7071,0.7071};
+#elif defined(MC_SWELL)
+const double saxfactMC[3]={0.85,0.37249,0.37249};
 #else
 const double saxfactMC[3]={0.85,0.68,0.68};
 #endif
@@ -495,6 +497,53 @@ void build_parallelepipeds(void)
       /* secondo set di parallelepipedi: 
 	 ne considero 2 che sono lungo x lunghi quanto il precedente ma che vanno a rimepire
 	 i "buchi" lungo y e z. Per ora li costruisco a mano "ad hoc" */
+#ifdef MC_SWELL
+      mbox[tt][0].dr[0]=0.0;
+      mbox[tt][0].dr[1]=0.0;
+      //mbox[tt][1].dr[2]=(saxfactMC[2]+0.1*0.5)*sa[2];
+      mbox[tt][0].dr[2]=0.0;
+      mbox[tt][0].sa[0]=0.85*sa[0];
+      mbox[tt][0].sa[1]=0.48*sa[1]; 
+      mbox[tt][0].sa[2]=0.21702*sa[2];
+
+      mbox[tt][1].dr[0]=0;
+      mbox[tt][1].dr[1]=0;
+      //mbox[tt][1].dr[2]=-(saxfactMC[2]+0.1*0.5)*sa[2];
+      mbox[tt][1].dr[2]=0.0;
+      mbox[tt][1].sa[0]=0.85*sa[0];
+      mbox[tt][1].sa[1]=0.21702*sa[1]; 
+      mbox[tt][1].sa[2]=0.48*sa[2];
+
+      /* con questo ultimo multibox si evitano configurazioni molto overlapped
+	 con asse x quasi parallelo nel caso di grandi elongazioni */
+      mbox[tt][2].dr[0]=0;
+      mbox[tt][2].dr[1]=0;
+      //mbox[tt][1].dr[2]=-(saxfactMC[2]+0.1*0.5)*sa[2];
+      mbox[tt][2].dr[2]=0.0;
+      mbox[tt][2].sa[0]=0.94*sa[0];
+      mbox[tt][2].sa[1]=0.24124*sa[1]; 
+      mbox[tt][2].sa[2]=0.24124*sa[2];
+     
+      mbox[tt][3].dr[0]=0;
+      mbox[tt][3].dr[1]=0;
+      //mbox[tt][1].dr[2]=-(saxfactMC[2]+0.1*0.5)*sa[2];
+      mbox[tt][3].dr[2]=0.0;
+      mbox[tt][3].sa[0]=0.99*sa[0];
+      mbox[tt][3].sa[1]=0.099749*sa[1]; 
+      mbox[tt][3].sa[2]=0.099749*sa[2];
+
+#if 1
+      mbox[tt][4].dr[0]=0;
+      mbox[tt][4].dr[1]=0;
+      //mbox[tt][1].dr[2]=-(saxfactMC[2]+0.1*0.5)*sa[2];
+      mbox[tt][4].dr[2]=0.0;
+      mbox[tt][4].sa[0]=0.999*sa[0];
+      mbox[tt][4].sa[1]=0.031614*sa[1]; 
+      mbox[tt][4].sa[2]=0.031614*sa[2];
+#endif
+#endif
+
+#else
       mbox[tt][0].dr[0]=0.0;
       mbox[tt][0].dr[1]=0.0;
       //mbox[tt][1].dr[2]=(saxfactMC[2]+0.1*0.5)*sa[2];
@@ -537,6 +586,7 @@ void build_parallelepipeds(void)
       mbox[tt][4].sa[0]=0.999*sa[0];
       mbox[tt][4].sa[1]=0.08*sa[1]; 
       mbox[tt][4].sa[2]=0.08*sa[2];
+#endif
 #endif
     }
 }
