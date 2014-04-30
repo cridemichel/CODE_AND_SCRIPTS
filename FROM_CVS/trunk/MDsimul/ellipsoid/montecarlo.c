@@ -541,8 +541,6 @@ void build_parallelepipeds(void)
       mbox[tt][4].sa[1]=0.031614*sa[1]; 
       mbox[tt][4].sa[2]=0.031614*sa[2];
 #endif
-#endif
-
 #else
       mbox[tt][0].dr[0]=0.0;
       mbox[tt][0].dr[1]=0.0;
