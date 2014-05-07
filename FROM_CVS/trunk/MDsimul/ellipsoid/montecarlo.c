@@ -1102,6 +1102,142 @@ void set_pos_R_ho(int i, int a)
 #endif
 }
 #endif
+#ifdef MC_PERWER
+void tRDiagRpw(int i, double M[][], double D[3], double **Ri)
+{
+  int k1, k2, k3;
+  double Di[3][3];
+  double Rtmp[3][3];
+  /* calcolo del tensore d'inerzia */ 
+  Di[0][0] = D[0];
+  Di[1][1] = D[1];
+  Di[2][2] = D[2];
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	if (k1 != k2)
+	  Di[k1][k2] = 0.0;
+      } 
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Rtmp[k1][k2] = 0.0;
+	for (k3=0; k3 < 3; k3++)
+	  {
+	    if (Di[k1][k3] == 0.0)
+	      continue;
+	    Rtmp[k1][k2] += Di[k1][k3]*Ri[k3][k2];
+	  }
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	M[k1][k2] = 0.0;
+	for (k3=0; k3 < 3; k3++)
+	  {
+	    M[k1][k2] += Ri[k3][k1]*Rtmp[k3][k2];
+	  }
+      }
+}
+void xlambda(double lambda, double rA[], double A[][], double rB[], double B[][], double x[3])
+{
+  double lamA[3][3], onemlamB[3][3], ABL[3][3], invABL[3][3];
+  double x1[3], x2[3], x3[3];
+  /* calcola xlambda, vedi L. Paramonov and S. N. Yaliraki J. Chem. Phys. 123, 194111 (2005) */
+  for (k1=0; k1 < 3; k1++)
+    {
+      for (k1=0; k1 < 3; k1++)
+	{
+	  lamA[k1][k2] = lambda*A[k1][k2];
+	  onemlamB[k1][k2] = (1.0-lambda)*B[k1][k2];
+ 	  ABL[k1][k2] = lamA[k1][k2] + onemlamB[k1][k2];
+	}
+    }
+  for (k1=0; k1 < 3; k1++)
+    {
+      x1[k1]=0;
+      x2[k1]=0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  x1[k1] += lamA[k1][k2]*rA[k2];
+	  x2[k1] += onemlamB[k1][k2]*rB[k2];
+	}
+      x3[k1] = x1[k1] + x2[k1];
+    }
+  detinvABL=-ABL[0][2]*ABL[1][1]*ABL[2][0] + ABL[0][1]*ABL[1][2]*ABL[2][0] + 
+    ABL[0][2]*ABL[1][0]*ABL[2][1] - ABL[0][0]*ABL[1][2]*ABL[2][1] - 
+    ABL[0][1]*ABL[1][0]*ABL[2][2] + ABL[0][0]*ABL[1][1]*ABL[2][2]; 
+
+  invABL[0][0] = -ABL[1][2]*ABL[2][1] + ABL[1][1]*ABL[2][2];
+  invABL[0][1] =  ABL[0][2]*ABL[2][1] - ABL[0][1]*ABL[2][2];
+  invABL[0][2] = -ABL[0][2]*ABL[1][1] + ABL[0][1]*ABL[1][2];
+  invABL[1][0] =  ABL[1][2]*ABL[2][0] - ABL[1][0]*ABL[2][2]; /* a12 a20 - a10 a22 */
+  invABL[1][1] = -ABL[0][2]*ABL[2][0] + ABL[0][0]*ABL[2][2]; /* -a02 a20 + a00 a22 */
+  invABL[1][2] =  ABL[0][2]*ABL[1][0] - ABL[0][0]*ABL[1][2]; /* a02 a10 - a00 a12 */
+  invABL[2][0] = -ABL[1][1]*ABL[2][0] + ABL[1][0]*ABL[2][1]; /* -a11 a20 + a10 a21 */
+  invABL[2][1] =  ABL[0][1]*ABL[2][0] - ABL[0][0]*ABL[2][1]; /* a01 a20 - a00 a21 */
+  invABL[2][2] = -ABL[0][1]*ABL[1][0] + ABL[0][0]*ABL[1][1]; /* -a01 a10 + a00 a11 */
+
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      invABL[k1][k2] /= detinvABL;
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      x[k1] = 0.0;
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  x[k1] += invABL[k1][k2]*x3[k2];
+	}
+    }
+}
+
+double Slam(double lambda, double rA[], double A[][], double rB[], double B[][])
+{
+  int k1, k2;
+  double xlam[3], fA[3], fB[3], SA, SB;
+
+  xlambda(lambda, rA, A, rB, B, xlam);
+
+  for (k1=0; k1 < 3; k1++)
+    {
+      fA[k1] = 0;
+      fB[k1] = 0;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  fA[k1] += A[k1][k2]*(xlam[k2]-rA[k2]);
+	  fB[k1] += B[k1][k2]*(xlam[k2]-rB[k2]);
+	}
+    }
+
+  SA = SB = 0.0;
+  for (k1=0; k1 < 3; k1++)
+    {
+      SA += lambda*(xlam[k1]-rA[k1])*fA[k1];
+      SB += (1.0-lambda)*(xlam[k1]-rB[k1])*fB[k1];
+    }
+  return SA+SB;
+}
+double check_overlap_pw(int i, int j, double shift[3])
+{
+  double A[3][3], B[3][3]; 
+  int k1, k2;
+  double  DA[3], DB[3];
+  int typei, typej;
+
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+
+  for (k1=0; k1 < 3; k1++)
+    {
+      DA[k1]= 1.0/Sqr(typesArr[typei].sax[k1]);
+      DB[k1]= 1.0/Sqr(typesArr[typej].sax[k1]);
+    }
+  tRDiagRpw(i, A, DA, R[i]);
+  tRDiagRpw(j, B, DB, R[j]);
+
+}
+#endif
 double check_overlap_ij(int i, int j, double shift[3], int *errchk)
 {
   int k, k1, k2, kk;
