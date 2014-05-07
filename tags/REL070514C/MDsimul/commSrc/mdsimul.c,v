@@ -1,0 +1,446 @@
+head	1.1;
+access;
+symbols;
+locks
+	demichel:1.1; strict;
+comment	@ * @;
+
+
+1.1
+date	2000.05.02.09.14.00;	author demichel;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@/*      $Id: mdsimul.c,v,v 1.1.1.1 2004-02-28 10:53:56 demichel Exp $     */
+#ifndef lint
+static char vcid[] = "$Id: mdsimul.c,v,v 1.1.1.1 2004-02-28 10:53:56 demichel Exp $";
+#endif /* lint */
+/* Sintassi: mdsimul -f <nomefile> 
+   dove <nomefile> e' il nome del file contenente i parametri della 
+   simulazione.
+   Tale file deve essere della forma:
+   <PARAM>:<VALORE> , dove PARAM puo'assumere uno dei valori contenuti 
+   nell'array pars_arr (ved. dopo).
+   Se tale opzione viene (cioe'  si lancia semplicemente mdsimul ) allora 
+   si assume che si tratta di una simulazione interrotta e viene caricata
+   direttamente la struttura simul_pars contenuta nel file PARS_FILE */
+#define MAIN
+#include<mdsimul.h>
+
+struct simStat OsimStat;	     /* global istance of sim_status 
+					structure */
+/* ----------------------------------------------------------------------*/
+int SEGSIZE;         /* arrays dimension in bytes 
+				 ( set in NewSimul() or Continue(),
+				 see mdinit.c file )*/
+unsigned char BAK, STA;       /* each is a switch (0/1) which determine 
+				 the next file to save to on HD 
+				 ("double buffering") */
+unsigned char BAKT;           /* switch used for tape (analogous to BAK for 
+				 Tape)*/ 
+				 
+volatile sig_atomic_t* sc_;
+/* shared counter,it is an array of two integer shared */
+
+volatile sig_atomic_t* semA_;
+volatile sig_atomic_t* semB_; 
+extern char TXT[MSG_LEN];
+/* shared array of two integers for active lock/unlock (semaphores) */
+
+int process;  /* this variable will be set to 0 for child and 1 for
+			  father */
+/* log stream */
+FILE* output;
+
+int pid;                    /* value returned by fork() (see later) */
+
+/* strings to store messages (use calling mdMsg()) */
+char msgStrA[MSG_LEN], msgStrB[MSG_LEN], msgStrC[MSG_LEN]; 
+
+/* variables that counts the number of accesses to function 
+   doubleBufBak and doubleSaveMeasure respectively */
+int bakTimes = 0, measureTimes = 0, xvaTimes = 0;
+char paramFile[NAME_LENGTH];
+int ENDSIM = 0;
+#ifdef MPI
+  int MPIpid;
+  int my_rank;
+  int numOfProcs; /* number of processeses in a communicator */
+#endif 
+
+/* ============================= >>> commMD <<< ======================= */
+void commMD(void)
+{
+  int i;   
+  int stato;            /* set by wait */
+  time_t tempo;         /* returned by time(NULL) */
+  
+
+  if (pid == 0)
+    {	      
+      
+      /* ------------------>>> function to call at exit <<<-------------- */ 
+      atexit(endChild);
+      /* ---------------------------------------------------------------- */
+      
+      /* --------------------->>> signal handling<<<--------------------- */
+      signal(SIGINT, SuspendChild); /* CtrlC */
+      signal(SIGTSTP, SuspendChild);/* CtrlZ */
+      /* ------------------------------------------------------------------*/
+      
+      /* <-------------------------------------  THIS IS THE CHILD */
+
+      process = CHILD; /* process = CHILD = 0 (used in move and calc 
+			  functions) */
+      ProcSync0();
+      /* <------------------------------------------------MAIN LOOP(CHILD) */
+      //sleep(2);
+      while ( (Oparams.curStep <= Oparams.totStep) && (ENDSIM == 0) )
+	{
+	  //ProcSync0();
+	  // printf("CHILD STEP: %d\n", Oparams.cur_step);
+	  
+	  move();    /* syncronization is inside move() (see mdfuncSD.c )*/
+
+	  ProcSync0(); /* <----------------------  SYNCRONIZATION (CHILD)*/
+	  
+	  /* FATHER HERE CALCUATE ( calc() ) */
+	  
+	  ProcSync0();/* <------------------------------- SYNCRONIZATION */
+	 
+	  /* --------------------------------------------------------------- */
+	  
+	  /* Inc temporal step counter */
+	  ++Oparams.curStep;
+	}
+    }         /* <----------------------------------------END CHILD */
+  else
+    {	      /* <--------------------------------------- THIS IS THE FATHER */
+      
+
+      // printf("PID CHILD: %d\n",pid);
+      /* ------------------>>> function to call at exit <<<-------------- */ 
+      atexit(endFather);
+      /* ---------------------------------------------------------------- */
+
+      /* --------------------->>> signal handling<<<--------------------- */
+      signal(SIGINT, SuspendFather); /* CtrlC */
+      signal(SIGTSTP, SuspendFather);/* CtrlZ */
+      /* ------------------------------------------------------------------*/
+      
+      process = FATHER; /* process = FATHER = 1 (used in move and calc
+			   functions )*/
+      ProcSync0();  
+#ifdef NO_PARALLEL_CODE
+      mdMsg(ALL, NOSYS, "Begin", "NOTICE", NULL,
+	    "Single job simulation",
+	    NULL);
+#endif
+      tempo = time(NULL);
+      sprintf(msgStrA, "INITIAL TIME: %s", ctime(&tempo));
+      mdMsg(ALL,NOSYS, "Begin", "NOTICE", NULL,
+	    msgStrA,
+	    NULL);
+      
+      /* <---------------------------------------------- NEW STEP (FATHER) */
+      while ( (Oparams.curStep <= Oparams.totStep) && (ENDSIM == 0) )
+	{
+	  //printf("rank[%d] vx[10]: %f\n", my_rank, vx[10]);
+	  //ProcSync0();
+	  move(); /* syncronization is inside move() (see mdfuncSD.c )*/
+	  
+
+	  ProcSync0(); /* <-----NOT NECESSARY !!!!--------SYNCRONIZATION */
+
+	  /* <------------------------------------------- MEASURES (FATHER)
+             ACTUALLY NOT PARALLELIZED !!! */
+	  calc(); 
+	  
+	  /* --------------------------------------------------------------- */
+
+	  ProcSync0(); /* <------------------------------ SYNCRONIZATION */
+	
+	  /* <--------------------------------------------------- SAVE MEASURE 
+	     Every 'OprogStatus.measSteps[i]' steps save measure structure 'i' 
+	     into the file Ofilenames.data_files[i] (see TECH_INFO file) */
+
+	  for (i = 0; Omeasure[i].buf != NULL; ++i) 
+	    /* NULL in the buf pointer of measure sruct means end of list */
+	    {
+	    
+	      if ( (OprogStatus.measSteps[i] != 0) &&
+		   ((Oparams.curStep % OprogStatus.measSteps[i]) == 0) &&
+		   ((Oparams.curStep / OprogStatus.measSteps[i]) >=
+		    OprogStatus.initStep[i]) )
+		/* It begins to save from step: 
+		   Oprogstatus.initStep[i] * OprogStatus.measStep[i], 
+		   that is the initial step is given in unit of 
+		   OprogStatus.measStep[i] */
+		
+		{
+		 
+		  /* makes two savings of the i-th measure, the second 
+		     arguments indicate which measure to save first (must 
+		     be a pointer), the third arguments must be a pointer 
+		     to a global variable that store the number of access 
+		     to the function, the fourth  arguments says to save 
+		     on zip every 'OprogStatus.measSteps[i] * <value>' steps, 
+		     where value is the third arg value. (if value is 0, 
+		     don't save on zip) */
+		  doubleSaveMeasure(i, &measureTimes, OprogStatus.tapeTimes);
+		  /* save measures on Tape and on HD doublely
+		     i -> measure number 
+		     measureTimes -> number of access to doubleSavemeasure
+		     OprogSatus.tapeTimes -> multiplicative factor for 
+		                             Tape savings */ 
+		
+		  //sprintf(TXT, "measure %s saved\n", 
+		  //OprogStatus.dataFiles[i]);
+		  //mdPrintf(STD, TXT, NULL);
+		}
+	    }
+	  /* this message  will be removed <------------!!!!!!!!!! */
+	  //mdMsg(STD, NOSYS, NULL, "NOTICE", NULL,
+	  //	"All measures saved",
+	  //	NULL);
+ 	  
+	  /* <-------------------------------------------- SAVE XVA FILE 
+	   NOTE: xva file is the file containing positions, velocities and
+	         accelerations save every 'OprogStatus.xvaSteps' steps*/
+	  if (  ((OprogStatus.xvaSteps != 0) || (OprogStatus.NN != 0) ) &&
+		chkXvaSteps() )
+	    //((Oparams.curStep % OprogStatus.xvaSteps) == 0)  )
+	    {
+	      saveXva(&xvaTimes, OprogStatus.tapeTimes); 
+	      /* don't use double save in this case, anyway save also on tape*/
+	      mdMsg(STD, NOSYS, NULL, "NOTICE", NULL, /* only on screen */
+		    "Saved on tape file",
+		    NULL);
+	    }
+
+	  /* <--------------------------------------------- SAVE RESTORE FILES
+	     save restore files every OprogStatus.bakSteps steps 
+	     (see header file) */
+	  if ( (OprogStatus.bakSteps != 0) &&
+	       ((Oparams.curStep % OprogStatus.bakSteps) == 0) )
+	    {
+	     
+	      doubleBufBak(&BAK, &BAKT, &bakTimes, OprogStatus.tapeTimes);	
+	      /* save restore datas on Tape and on HD, BAK is the switch
+		 for HD and BAKT is the switch for Tape 
+		 bakTimes -> number of access to doubleBufBak
+		 OprogStatus.tapeTimes -> multiplicative factor for 
+		                          savings on Tape 
+	      */
+	      mdMsg(STD, NOSYS,NULL, "NOTICE", NULL,
+		    "Restore file saved",
+		    NULL);
+	    }
+	    
+	  /* <--------------------------------------------------- SAVE STATUS 
+	     Every OprogStatus.staSteps save simStat structure into the file 
+	     STATUS_FILE (see TECH_INFO file) */
+	  if ( (OprogStatus.staSteps != 0) &&
+	       ((Oparams.curStep % OprogStatus.staSteps) == 0) )
+	    {
+	      doubleBufStatus();  
+	      /* save staus only on HD */
+	      mdMsg(STD, NOSYS, NULL, "NOTICE", NULL,
+		    "Status file saved",
+		    NULL);
+	    }
+
+	  /* incrementa il contatore degli step temporali */
+	  ++Oparams.curStep;
+	}
+
+      /* <-------------------------------------------- MAIN LOOP END(FATHER) */
+      tempo = time(NULL);
+      sprintf(msgStrA, "FINAL TIME: %s", ctime (&tempo));
+#ifndef NO_PARALLEL_CODE      
+      mdMsg(ALL, NOSYS, "End", "NOTICE", NULL,
+	    "Father is waiting...",
+	    msgStrA,
+	    NULL);
+
+      /* waits child death */
+      wait(&stato);
+
+      if (WIFEXITED(stato))
+	{
+	  mdMsg(ALL, NOSYS, "Child Exit", "NOTICE", NULL,
+		"Child exited normally.",
+		NULL);
+	} 
+      else
+	{
+	  sprintf(msgStrA, "Child Exit Status %d", WEXITSTATUS(stato));
+	  mdMsg(ALL, NOSYS, "Child exit", "NOTICE", NULL,
+		msgStrA,
+		NULL);
+	}
+#else 
+      mdMsg(ALL, NOSYS, "End", "NOTICE", NULL,
+	    msgStrA,
+	    NULL);
+
+#endif
+      /* <----------------------------------------------------- SAVE ENDFILE */
+     
+      saveCoord(absTmpHD(OprogStatus.endfile)); 
+      /* take coords from restore files on HD and write them to the
+	 coordinate file specified as argument */	
+      
+      /* <------------------------------------------------- DELETE TMP FILES */
+      
+      /* delete files STATUS_FILE_NAME + '0' and + '1' */
+      delDoubleHD(STATUS_FILE_NAME);      
+      /* This file is deleted before because if the system crash occurs
+	 just after this unlinking, chkStatus will not try to restart 
+	 simulation (not being the STATUS_FILE). */
+
+      /* se e' stato regolarmente creato e scritto 
+         il file chiamato Oparams.endfile allora cancella i 
+         files  temporanei di ripristino */
+
+      /* delete restore files on the Hard Disk, that is 
+	 BAK_FILE_NAME + '0' and + '1' */
+      delDoubleHD(BAK_FILE_NAME);    
+
+      /* delete restore files on tape */ 
+      if (OprogStatus.tapeTimes !=0) delDoubleTape(BAK_FILE_NAME);
+
+      /* NOTA: se accadono degli errori durante l'unlink i files non vengono
+         cancellati !!! */
+
+      delTmpHD(CF); /* remove check file if exist, because 
+		       at this point it is no more useful */
+      
+      /* <------------------------------------------------REMOVE SHM END SEM */
+#ifndef NO_PARALLEL_CODE
+      removesem();
+#endif
+      /* all shared memory segment are removed by delAllShm 
+	 (see endFather in mdinit.c file) */  
+      
+      mdMsg(ALL, NOSYS, "End", "NOTICE", NULL,
+	    "Simulation successfully terminated",
+	    NULL);
+    } /* <------------------------------------------------------- END FATHER */
+}
+/* =============================== >>> MAIN <<< ============================*/
+void main(int argc, char *argv[])
+{
+#ifdef MPI  
+  int mpiStatus;
+#endif
+  /* check if program is already running 
+     19/3/99 REMOVED this check */
+  
+  /*if (progExist("mdsimul"))
+    {
+    printf("Program already running!\n");
+    exit(-1);
+    }*/      
+
+#ifdef MPI 
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numOfProcs);
+
+#ifdef MPI
+  srand(my_rank*1000);
+#endif
+
+  /* The child (pid = 0) process is used for Output only */
+  if (my_rank == MPI_OUT_PROCESS)
+  {
+    MPIpid = fork();
+    if (MPIpid==-1)
+      {
+	perror("fork error");
+	exit(-1);
+      }
+    if (MPIpid == 0)
+      {
+	_printing();
+      }
+  }
+#endif 
+   //nice(-20);       /* this works only if the superuser starts the simulation */
+   
+  if ( argsMd(argc, argv) == 1) /* args parse commandline arguments  */
+    /* args = 1 means:  'begin  a new simulation' */
+    {
+      Newsimul(paramFile);/* parsFile is the params file passed as argument */
+    }
+  else /* otherwise continue a previuosly interrupted simulation */
+    {
+      /* inside Continue() BAK is initialized in a way that the next 
+	 saving is in a restore file different to the file used to 
+	 restart simulation.
+	 This is because if another system crash occurs too closely 
+	 it can damage the unique good file and the simulation 
+	 couldn't restart again. 
+	 Similarly STA is initialized so that the next status file 
+	 saved is not the corrupted one. */
+      Continue();
+      /* increments the step counter, so that the next step to save
+	 is not this one ( see main loop ) */
+      ++Oparams.curStep;
+    }       
+  
+  
+  usrInitAft(); /* user initialization */
+  
+  delTmpHD(CF); /* Delete the check file */
+  
+  /* this function allocates in a shared segment all the variables you need 
+     to share */
+  AllocMem();  
+  //printf("Ho allocato sc_ .. credo!\n");
+  /* Create a set of two semaphores ( changeable by lock and unlock 
+     primitives) */  
+#ifndef NO_PARALLEL_CODE  
+  createsem(5);
+  setsem(4, 1); 
+#endif
+
+   /* initial process forks into two process:
+     - FATHER PID != 0
+     - CHILD PID   = 0           (see later) */
+  ENDSIM = 0;
+  /* This variable could be set to 1 inside loop to ende the simulation */
+
+  
+  pid = FORK;
+  if (pid==-1)
+    {
+      perror("fork error");
+      exit(-1);
+    }
+  //printf("dt: %f", Oparams.steplength);
+
+  commMD();
+
+#ifdef MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (my_rank == MPI_OUT_PROCESS) 
+    {
+      kill(MPIpid, SIGKILL);
+      wait(&mpiStatus);
+    }
+  MPI_Finalize();
+#endif 
+}
+@
