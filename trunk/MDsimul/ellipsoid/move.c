@@ -5824,6 +5824,9 @@ extern double calcDistNegHC(int i, int j, double shift[3], int *retchk);
 #ifdef MC_HELIX
 extern double check_overlap_helices(int i, int j, double shift[3]);
 #endif
+#ifdef MC_PERWER
+extern double check_overlap_pw(int i, int j, double shift[3]);
+#endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
@@ -5852,6 +5855,8 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
 #ifdef MC_HC
   return calcDistNegHC(i, j, shift, &calcdist_retcheck);
+#elif defined(MC_PERWER)
+  return check_overlap_pw(i, j, shift);
 #elif defined(MC_HELIX)
   return check_overlap_helices(i, j, shift);
 #endif
