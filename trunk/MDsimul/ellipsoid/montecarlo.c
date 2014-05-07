@@ -1335,7 +1335,7 @@ double brentPW(double ax, double bx, double cx, double tol, double *xmin, double
 
 double check_overlap_pw(int i, int j, double shift[3])
 {
-  const double tolPW=1.0E-14;
+  const double tolPW=1.0E-12;
   double res, A[3][3], B[3][3], xmin; 
   int k1, k2;
   double  DA[3], DB[3], rA[3], rB[3];
@@ -1360,7 +1360,7 @@ double check_overlap_pw(int i, int j, double shift[3])
   tRDiagRpw(i, A, DA, R[i]);
   tRDiagRpw(j, B, DB, R[j]);
 
-  res =  -brentPW(0, 0.5, 1.0, tolPW, &xmin, rA, A, rB, B);
+  res =  - brentPW(0, 0.5, 1.0, tolPW, &xmin, rA, A, rB, B);
   if (brentPWTooManyIter)
     {
       printf("res=%f xmin=%f\n", res, xmin);
@@ -1478,6 +1478,7 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
 		  saxfactMC[2]*typesArr[typeOfPart[0]].sax[2]);
 #endif
 #endif
+#ifndef MC_PERWER
   for (k=0; k < 3; k++)
     {
 #ifdef MC_QUASI_CUBE
@@ -1502,6 +1503,7 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
     {
       return d0;
     }
+#endif
 #endif
   tpo = OprogStatus.targetPhi;
   OprogStatus.targetPhi=1.0; /* valore fittizio dato solo per far si che non esca se calcDist fallisce */
