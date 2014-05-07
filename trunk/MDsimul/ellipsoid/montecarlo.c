@@ -1348,9 +1348,9 @@ double check_overlap_pw(int i, int j, double shift[3])
   rA[1] = ry[i];
   rA[2] = rz[i];
 
-  rB[0] = rx[j];
-  rB[1] = ry[j];
-  rB[2] = rz[j];
+  rB[0] = rx[j]+shift[0];
+  rB[1] = ry[j]+shift[1];
+  rB[2] = rz[j]+shift[2];
 
   for (k1=0; k1 < 3; k1++)
     {
