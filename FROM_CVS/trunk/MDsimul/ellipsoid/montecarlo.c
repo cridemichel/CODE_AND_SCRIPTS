@@ -1103,7 +1103,7 @@ void set_pos_R_ho(int i, int a)
 }
 #endif
 #ifdef MC_PERWER
-void tRDiagRpw(int i, double M[][], double D[3], double **Ri)
+void tRDiagRpw(int i, double M[3][3], double D[3], double **Ri)
 {
   int k1, k2, k3;
   double Di[3][3];
@@ -1139,14 +1139,15 @@ void tRDiagRpw(int i, double M[][], double D[3], double **Ri)
 	  }
       }
 }
-void xlambda(double lambda, double rA[], double A[][], double rB[], double B[][], double x[3])
+void xlambda(double lambda, double rA[3], double A[3][3], double rB[3], double B[3][3], double x[3])
 {
   double lamA[3][3], onemlamB[3][3], ABL[3][3], invABL[3][3];
-  double x1[3], x2[3], x3[3];
+  double x1[3], x2[3], x3[3], detinvABL;
+  int k1, k2;
   /* calcola xlambda, vedi L. Paramonov and S. N. Yaliraki J. Chem. Phys. 123, 194111 (2005) */
   for (k1=0; k1 < 3; k1++)
     {
-      for (k1=0; k1 < 3; k1++)
+      for (k2=0; k2 < 3; k2++)
 	{
 	  lamA[k1][k2] = lambda*A[k1][k2];
 	  onemlamB[k1][k2] = (1.0-lambda)*B[k1][k2];
@@ -1192,7 +1193,7 @@ void xlambda(double lambda, double rA[], double A[][], double rB[], double B[][]
     }
 }
 
-double Slam(double lambda, double rA[], double A[][], double rB[], double B[][])
+double Slam(double lambda, double rA[3], double A[3][3], double rB[3], double B[3][3])
 {
   int k1, k2;
   double xlam[3], fA[3], fB[3], SA, SB;
@@ -1216,17 +1217,140 @@ double Slam(double lambda, double rA[], double A[][], double rB[], double B[][])
       SA += lambda*(xlam[k1]-rA[k1])*fA[k1];
       SB += (1.0-lambda)*(xlam[k1]-rB[k1])*fB[k1];
     }
-  return SA+SB;
+  /* ho messo un - così la funzione ha un minimo invece
+     che un massimo e questo minimo viene trovato dalla funzione brentPW */
+  return -(SA+SB);
 }
+#define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
+#define SHFT(a,b,c,d) (a)=(b);(b)=(c);(c)=(d); 
+int brentPWTooManyIter=0;
+double brentPW(double ax, double bx, double cx, double tol, double *xmin, double rA[3], double A[3][3], double rB[3], double B[3][3])
+/*Given a function f, and given a bracketing triplet of abscissas ax, bx, cx 
+ * (such that bx is between ax and cx, and f(bx) is less than both f(ax) and f(cx)),
+ * this routine isolates the minimum to a fractional precision of about tol using Brent's
+ * method. The abscissa of the minimum is returned as xmin, and the minimum function value 
+ * is returned as brent, the returned function value. */
+{ 
+  int iter, ITMAXBR=100;
+  const double CGOLD=0.3819660;
+  const double ZEPSBR=1E-20;
+  double a,b,d=0.0,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
+  double e=0.0, fuold;
+  brentPWTooManyIter=0;
+  /* This will be the distance moved on the step before last.*/
+  a=(ax < cx ? ax : cx); /*a and b must be in ascending order, 
+			   but input abscissas need not be.*/
+  b=(ax > cx ? ax : cx);
+  x=w=v=bx; /*Initializations...*/
+  fw=fv=fx=Slam(x, rA, A, rB, B); 
+  if (fw < -1.0)
+    {
+      /* non-overlap! */
+      return -100.0;
+    }
+  fuold = fv;
+  for (iter=1;iter<=ITMAXBR;iter++)
+    { 
+      /*Main program loop.*/
+      xm=0.5*(a+b);
+      tol2=2.0*(tol1=tol*fabs(x)+ZEPSBR); 
+      if (fabs(x-xm) <= (tol2-0.5*(b-a)))
+	{ /*Test for done here.*/
+	  *xmin=x;
+	  return fx;
+	} 
+      if (fabs(e) > tol1) 
+	{ /*Construct a trial parabolic fit.*/
+	  r=(x-w)*(fx-fv);
+	  q=(x-v)*(fx-fw);
+	  p=(x-v)*q-(x-w)*r;
+	  q=2.0*(q-r);
+	  if (q > 0.0)
+	    p = -p; 
+	  q=fabs(q);
+	  etemp=e; 
+	  e=d; 
+	  if (fabs(p) >= fabs(0.5*q*etemp) || p <= q*(a-x) || p >= q*(b-x))
+	    d=CGOLD*(e=(x >= xm ? a-x : b-x)); 
+	    /*The above conditions determine the acceptability of the parabolic fit.
+	     * Here we take the golden section step into the larger of the two segments.*/
+	  else
+	    {
+	      d=p/q; /* Take the parabolic step.*/
+	      u=x+d; 
+	      if (u-a < tol2 || b-u < tol2)
+		d=SIGN(tol1,xm-x); 
+	    }
+	}
+      else
+	{
+	  d=CGOLD*(e=(x >= xm ? a-x : b-x));
+	} 
+      u=(fabs(d) >= tol1 ? x+d : x+SIGN(tol1,d));
+      fu=Slam(u, rA, A, rB, B); /*This is the one function evaluation per iteration.*/
+      if (fu < -1.0)
+	{
+	  /* non overlap! */
+	  return -100.0;
+	}
+#if 0
+      if (2.0*fabs(fuold-fu) <= tol*(fabs(fuold)+fabs(fu)+ZEPSBR)) 
+	{ 
+	  *xmin=u;
+	  return fu;
+	}
+#endif
+      fuold = fu;//
+      if (fu <= fx)
+	{ /*Now decide what to do with our function evaluation.*/
+	  if (u >= x) 
+	    a=x;
+	  else
+	    b=x;
+	  SHFT(v,w,x,u); /* Housekeeping follows:*/
+	  SHFT(fv,fw,fx,fu); 
+	} 
+      else
+	{ 
+	  if (u < x) 
+	    a=u; 
+	  else 
+	    b=u; 
+	  if (fu <= fw || w == x)
+	    {
+	      v=w; w=u; fv=fw; fw=fu;
+	    }
+	  else if (fu <= fv || v == x || v == w)
+	    { 
+	      v=u; fv=fu;
+	    }
+	} /* Done with housekeeping. Back for another iteration.*/
+    }
+  printf("Too many iterations in brent!\n");
+  brentPWTooManyIter=1;
+  //nrerror("Too many iterations in brent"); 
+  *xmin=x; /*Never get here.*/
+  return fx;
+}
+
 double check_overlap_pw(int i, int j, double shift[3])
 {
-  double A[3][3], B[3][3]; 
+  const double tolPW=1.0E-14;
+  double res, A[3][3], B[3][3], xmin; 
   int k1, k2;
-  double  DA[3], DB[3];
+  double  DA[3], DB[3], rA[3], rB[3];
   int typei, typej;
 
   typei = typeOfPart[i];
   typej = typeOfPart[j];
+
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+
+  rB[0] = rx[j];
+  rB[1] = ry[j];
+  rB[2] = rz[j];
 
   for (k1=0; k1 < 3; k1++)
     {
@@ -1236,6 +1360,14 @@ double check_overlap_pw(int i, int j, double shift[3])
   tRDiagRpw(i, A, DA, R[i]);
   tRDiagRpw(j, B, DB, R[j]);
 
+  res =  -brentPW(0, 0.5, 1.0, tolPW, &xmin, rA, A, rB, B);
+  if (brentPWTooManyIter)
+    {
+      printf("res=%f xmin=%f\n", res, xmin);
+      exit(-1);
+    }
+  //printf("res=%f\n", res);
+  return res - 1.0;
 }
 #endif
 double check_overlap_ij(int i, int j, double shift[3], int *errchk)
