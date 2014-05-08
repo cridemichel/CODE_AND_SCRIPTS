@@ -3504,12 +3504,12 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	  if (distCoMSq < distKFSQ &&
 	      scalProd(drA,drAB) > costhKF && -scalProd(drB, drAB) > costhKF)
 	    {
-	      dists[nn] = -1.0;
+	      dists[nn] = dist = -1.0;
 	    }
 	  else
 	    {
 	      //printf("qui drA.drAB)=%f -drB.drAB=%f\n", scalProd(drA, drAB), -scalProd(drB, drAB));
-	      dists[nn] = 1.0; 
+	      dists[nn] = dist = 1.0; 
 	    }
 	}
       else 
@@ -3571,7 +3571,7 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
 	  if (check_overlap_ij(i, j, shift, &retchk) < 0.0)
 	    {
 	      //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
-	      dists[nn] = -1.0; 
+	      dists[nn] = dist = -1.0; 
 #ifdef MC_HYDROPHOBIC_INT
 #if 1
 	      eneij[i][j]=
@@ -3587,7 +3587,7 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
 #endif
    	    }
    	  else
-	    dists[nn] = 1.0;
+	    dists[nn] = dist = 1.0;
 	  //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
 #ifdef MC_SWELL
 	  if (OprogStatus.constDelta==1)
