@@ -831,6 +831,8 @@ void writeAsciiPars(FILE* fs, struct pascii strutt[])
   for  (i=0; strutt[i].ptr != NULL; ++i) /* parname=NULL means END */
 #endif
     {
+      if (strutt[i].ptr == NULL)
+	continue;
 #ifdef EDHE_FLEX
       if (OprogStatus.stripStore && strutt == opro_ascii)
 	{
