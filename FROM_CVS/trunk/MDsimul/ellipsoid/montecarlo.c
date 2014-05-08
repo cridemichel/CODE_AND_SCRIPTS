@@ -1246,6 +1246,7 @@ double brentPW(double ax, double bx, double cx, double tol, double *xmin, double
   if (fw < -1.0)
     {
       /* non-overlap! */
+      *xmin=x;
       return -100.0;
     }
   fuold = fv;
@@ -1291,6 +1292,7 @@ double brentPW(double ax, double bx, double cx, double tol, double *xmin, double
       if (fu < -1.0)
 	{
 	  /* non overlap! */
+	  *xmin=x;
 	  return -100.0;
 	}
 #if 0
