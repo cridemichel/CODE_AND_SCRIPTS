@@ -1,0 +1,4 @@
+scala.awk -v S=<fattore di scala> -v tipo=<tipo> NOME_FILE_DI_RESTART
+<tipo> = "pos" o "vel" o "for" o "blo"
+chgpar.sh <pattern dei file> <nome_parametro> <nuovo_valore>
+scala.sh <pattern dei file da scalare> <fattore> <tipo> <blocco> (tipo è come sopra)
