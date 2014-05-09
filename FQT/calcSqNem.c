@@ -21,7 +21,7 @@ int ntripl[]=
 int mesh[][NKSHELL][3]= 
 #include "./kmesh.dat"
 double twopi, sinrCMk, cosrCMk;
-double Sq[KMODMAX], SqPara[KMODMAX], SqPerp[KMODMAX], ccperp, ccpara,
+double Sq[KMODMAX], SqPara[KMODMAX], SqPerp[KMODMAX], ccperp[KMODMAX], ccpara[KMODMAX],
        sumRho, reRho, sumRhoPara, sumRhoPerp, imRho, rCMk, scalFact, invNm, invL, L, invNmAA, invNmBB, invNmAB;
 double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, imRhoB;
 void print_usage(void)
@@ -141,8 +141,6 @@ int main(int argc, char** argv)
   int nf, i, a, b, n, mp, k1;
   double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
   int qmod, first = 1, NP1, NP2;
-  ccperp = 0.0;
-  ccpara = 0.0;
   nv[0] = 1.0;
   nv[1] = 0.0;
   nv[2] = 0.0;
@@ -376,6 +374,7 @@ int main(int argc, char** argv)
 	  for(n = qmin; n <= qmax; n++)
 	    {
 	      sumRho = sumRhoPerp = sumRhoPara = 0.0;
+	      ccperp[n] = ccpara[n] = 0.0;
 	      for(mp = 0; mp < ntripl[n]; mp++)
 		{
 		  reRho = 0.0;
@@ -407,12 +406,12 @@ int main(int argc, char** argv)
     		  if (1.0-scalprodnvq < nemthr) 
 		    {
 		      sumRhoPerp += Sqr(reRho) + Sqr(imRho);
-		      ccperp++;
+		      ccperp[n]++;
 		    }
 		  else if (scalprodnvq < nemthr)
 		    {
 		      sumRhoPara += Sqr(reRho) + Sqr(imRho);
-		      ccpara++;
+		      ccpara[n]++;
 	    	    }
 		}
 	      Sq[n] += sumRho;  
@@ -486,7 +485,7 @@ int main(int argc, char** argv)
   of = fopen("SqPerp.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      SqPerp[qmod] = (SqPerp[qmod]  * invNm) / ccperp;  
+      SqPerp[qmod] = (SqPerp[qmod]  * invNm) / ccperp[qmod] /((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqPerp[qmod]); 
@@ -497,7 +496,7 @@ int main(int argc, char** argv)
   of = fopen("SqPara.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      SqPara[qmod] = (SqPara[qmod]  * invNm) / ccpara;  
+      SqPara[qmod] = (SqPara[qmod]  * invNm) / ccpara[qmod] /((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqPara[qmod]); 
