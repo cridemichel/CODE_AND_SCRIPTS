@@ -403,12 +403,12 @@ int main(int argc, char** argv)
 		  for (k1=0; k1 < 3; k1++)
 		    meshvec[k1] = ((double)mesh[n][mp][k1]);
 	    	  scalprodnvq=fabs(scalProd(meshvec, nv)/calc_norm(nv)/calc_norm(meshvec));
-    		  if (1.0-scalprodnvq < nemthr) 
+    		  if (scalprodnvq < nemthr) 
 		    {
 		      sumRhoPerp += Sqr(reRho) + Sqr(imRho);
 		      ccperp[n]++;
 		    }
-		  else if (scalprodnvq < nemthr)
+		  else if (1.0-scalprodnvq < nemthr)
 		    {
 		      sumRhoPara += Sqr(reRho) + Sqr(imRho);
 		      ccpara[n]++;
