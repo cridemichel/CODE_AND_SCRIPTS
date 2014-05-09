@@ -212,7 +212,12 @@ int main(int argc, char** argv)
 		eventDriven = 1;
 	    }
 	  while (strcmp(line,"@@@"));
-	  for (i=0; i < 2*N; i++)
+          do 
+		{
+		  fscanf(f,"%[^\n]\n",line);
+		}
+	  while (strcmp(line,"@@@"));
+	  for (i=0; i < N; i++)
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
 	    }	
@@ -266,6 +271,11 @@ int main(int argc, char** argv)
   	}
       while (strcmp(line,"@@@"));
       //printf("fname=%s %d ellipsoids...\n", fname, N);
+      do 
+	{
+          fscanf(f,"%[^\n]\n",line);
+	}
+      while (strcmp(line,"@@@"));
 
       if (first)
 	{
@@ -383,6 +393,7 @@ int main(int argc, char** argv)
 		      rCMk = kbeg + scalFact * 
 			(r[0][i] * mesh[n][mp][0] + r[1][i] * mesh[n][mp][1] + 
 			 r[2][i] * mesh[n][mp][2]);
+		      //printf("i=%d r=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
 		      cosrCMk = cos(rCMk);
 		      sinrCMk = sin(rCMk);
 		      reRho = reRho + cosrCMk; 
