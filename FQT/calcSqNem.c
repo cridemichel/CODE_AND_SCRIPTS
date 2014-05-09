@@ -13,14 +13,14 @@ int readCnf = 0, physunit=0;
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 int nonem=0;
-double qavg[KMODMAX], nv[3], scalprodnvq;
+double qavg[KMODMAX], nv[3], scalprodnvq, meshvec[3];
 int qmin=0, qmax=KMODMAX-1, eventDriven = 0;
 double qminpu=-1.0, qmaxpu=-1.0;
 int ntripl[]=
 #include "./ntripl.dat"
 int mesh[][NKSHELL][3]= 
 #include "./kmesh.dat"
-double twopi;
+double twopi, sinrCMk, cosrCMk;
 double Sq[KMODMAX], SqPara[KMODMAX], SqPerp[KMODMAX], ccperp, ccpara,
        sumRho, reRho, sumRhoPara, sumRhoPerp, imRho, rCMk, scalFact, invNm, invL, L, invNmAA, invNmBB, invNmAB;
 double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, imRhoB;
@@ -118,7 +118,7 @@ void parse_param(int argc, char** argv)
 }
 double twopi;
 char dummy[2048];
-double scalProd(double *A, double *B)
+double scalProd(double A[], double B[])
 {
   int kk;
   double R=0.0;
@@ -126,7 +126,7 @@ double scalProd(double *A, double *B)
     R += A[kk]*B[kk];
   return R;
 }
-double calc_norm(double *vec)
+double calc_norm(double vec[3])
 {
   int k1;
   double norm=0.0;
@@ -138,7 +138,7 @@ double calc_norm(double *vec)
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *of;
-  int nf, i, a, b, n, mp;
+  int nf, i, a, b, n, mp, k1;
   double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
   int qmod, first = 1, NP1, NP2;
   ccperp = 0.0;
@@ -390,7 +390,9 @@ int main(int argc, char** argv)
 		      /* Imaginary part of exp(i*k*r) for the actual molecule*/
 		    }
 		  sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
-	    	  scalprodnvq=fabs(scalProd(mesh[n][mp], nv)/calc_norm(nv)/calc_norm(mesh[n][mp]));
+		  for (k1=0; k1 < 3; k1++)
+		    meshvec[k1] = ((double)mesh[n][mp][k1]);
+	    	  scalprodnvq=fabs(scalProd(meshvec, nv)/calc_norm(nv)/calc_norm(meshvec));
     		  if (1.0-scalprodnvq < nemthr) 
 		    {
 		      sumRhoPerp += Sqr(reRho) + Sqr(imRho);
