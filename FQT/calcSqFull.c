@@ -434,7 +434,7 @@ int main(int argc, char** argv)
 		  imRho = 0.0;
 		  for(i=0; i < N; i++)
 		    {
-		      for (a = 0; a < Npts; a++)
+		      for (a = 0; a < Nptseff; a++)
 			{
 			  /* il passo della mesh e' 0.5*pi2/L */
 			  if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
