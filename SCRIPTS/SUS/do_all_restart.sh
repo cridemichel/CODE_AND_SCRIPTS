@@ -28,11 +28,12 @@ while [ "$F" = "no" ]
 do
 R=`./count_running.sh`
 T=`./count_terminated.sh`
-#echo "N=" $N "/ terminate # " $T " / running # " $R
 if [ $T -lt $Nfin ]
 then
 if [ $R -lt $BS ]
 then
+echo "N=" $N "/ terminated # " $T " / running # " $R
+echo "Starting new simulation"
 if [ $TYPE = "start" ]
 then
 ./start_sus.sh $N $[$N+1]
