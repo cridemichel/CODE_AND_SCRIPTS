@@ -349,7 +349,7 @@ int main(int argc, char** argv)
 		  &R[2][0][i], &R[2][1][i], &R[2][2][i], &type); 
 	   //printf("r=(%.15G,%.15G,%.15G)\n", r[0][i], r[1][i], r[2][i]);
 	}
-      body2lab(N, Npts);
+      body2lab(N, Nptseff);
       if (NA == -1)
 	NA = N;
       //NA = N;//force monodisperse
