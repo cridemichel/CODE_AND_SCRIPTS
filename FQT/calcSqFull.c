@@ -5,8 +5,8 @@
 //#include <lapack.h>
 #define Sqr(x) ((x)*(x))
 char line[1000000], parname[124], parval[2560000];
-int N, NA=-1;
-double x[3], *r[3];
+int N, NA=-1, Npts=100;
+double x[3], *r[3], sax[3], *R[3][3];
 char fname[1024], inputfile[1024];
 int readCnf = 0, physunit=0;
 #define KMODMAX 599
@@ -62,6 +62,13 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  qmax = atoi(argv[cc]);
 	}
+      else if (!strcmp(argv[cc],"--Npts") || !strcmp(argv[cc],"-Np"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  Npts = atoi(argv[cc]);
+	}
       else if (!strcmp(argv[cc],"--qpumin") || !strcmp(argv[cc],"-qpum"))
 	{
 	  cc++;
@@ -102,10 +109,66 @@ void parse_param(int argc, char** argv)
 }
 double twopi;
 char dummy[2048];
+double *rmesh[3];
+
+void generate_mesh(int N, double sax[3])
+{
+  int cc, k1, k2, k3;
+  double dx, dy, dz, rx, ry, rz;
+  double dens, pi;
+
+  pi = 2.0*arccos(0.0);
+  for (k1=0; k1 < 3; k1++)
+    rmesh[k1]=malloc(sizeof(double)*N); 
+  dens = N / (sax[0]*sax[1]*sax[2]*4.0*pi/3.0);
+  dx=dy=dz=pow(1.0/dens,1.0/3.0);
+  cc=0;
+  for (k1 = 0; rx <= sax[0]; k1++)
+    for (k2 = 0; ry <= sax[1]; k2++)
+      for (k3 = 0; rz <= sax[2]; k3++)
+	{
+	  rx = -sax[0] + k1*dx;
+	  ry = -sax[1] + k2*dy;
+	  rz = -sax[2] + k3*dz;
+	  if (cc >= N) 
+	    {
+	      printf("[WARNING] Maximum number of points reached!");
+	      break;
+	    }
+	  if (Sqr(rx/sax[0]) + Sqr(ry/sax[1]) + Sqr(rz/sax[2]) <= 1.0)
+	    {
+	      rmesh[cc][0] = rx;
+	      rmesh[cc][1] = ry;
+	      rmesh[cc][2] = rz;
+	      cc++;
+	    }
+	}
+}
+void body2lab(int N, int Npts)
+{
+  int k1, k2;
+  int i;
+
+  for (i=0; i < N; i++)
+    {
+      for (a = 0; a < Npts; a++)
+	{
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      rmeshLab[k1][i] = 0;
+	      for (k2=0; k2 < 3; k2++)
+	     	{
+		  x[k1] += R[k2][k1][i]*rmesh[k2][a];
+		} 
+	      rmeshLab[k1][i] += r[k1][i];
+	    }
+	}
+    }
+}
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *of;
-  int nf, i, a, b, n, mp;
+  int nf, i, a, b, n, mp, cc=0, type, k1, k2, ccq;
   double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
   int qmod, first = 1, NP1, NP2;
 #if 0
@@ -174,7 +237,26 @@ int main(int argc, char** argv)
 		eventDriven = 1;
 	    }
 	  while (strcmp(line,"@@@"));
-	  for (i=0; i < 2*N; i++)
+
+	  while (strcmp(line,"@@@"));
+	  cc=0;
+	  do 
+	    {
+	      if (cc==1)
+		fscanf("%lf %lf %lf\n", &sax[0], &sax[1], &sax[2]);
+	      else
+		fscanf(f,"%[^\n]\n",line);
+	      cc++;
+	    }
+	  while (strcmp(line,"@@@"));
+	  generate_mesh(Npts, sax);
+	  for (k1=0; k1 < 3; k1++)
+	    { 
+	      rmeshLab[k1]=malloc(sizeof(double*)*N); 
+	      for (k2 = 0; k2 < N; k2++)
+		rmeshLab[k1][k2]=malloc(sizeof(double)*Npts); 
+	    }
+	  for (i=0; i < N; i++)
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
 	    }	
@@ -241,13 +323,13 @@ int main(int argc, char** argv)
 	{
 	   fscanf(f, "%[^\n]\n", line); 
 	   //printf("line=%s\n", line);
-	   if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
-	     {
-	       //printf("boh\n");
-	       sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
-	     }
+       	   sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n", &r[0][i], &r[1][i], &r[2][i], 
+		  &R[i][0][0], &R[i][0][1], &R[i][0][2], 
+		  &R[i][1][0], &R[i][1][1], &R[i][1][2], 
+		  &R[i][2][0], &R[i][2][1], &R[i][2][2], &type); 
 	   //printf("r=(%.15G,%.15G,%.15G)\n", r[0][i], r[1][i], r[2][i]);
 	}
+      body2lab(N, Npts);
       if (NA == -1)
 	NA = N;
       //NA = N;//force monodisperse
@@ -332,22 +414,25 @@ int main(int argc, char** argv)
 		  imRho = 0.0;
 		  for(i=0; i < N; i++)
 		    {
-		      /* il passo della mesh e' 0.5*pi2/L */
-		      if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
-			  mesh[n][mp][2] == 0)
+		      for (a = 0; < Ntps; a++)
 			{
-			  printf("ERRORE nella MESH!!!!!!!! n=%d mp=%d ntripl[n]:%d\n", n,
-				 mp, ntripl[n]);
-			  exit(-1);
+			  /* il passo della mesh e' 0.5*pi2/L */
+			  if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
+			      mesh[n][mp][2] == 0)
+			    {
+			      printf("ERRORE nella MESH!!!!!!!! n=%d mp=%d ntripl[n]:%d\n", n,
+				     mp, ntripl[n]);
+			      exit(-1);
+			    }
+			  rCMk = kbeg + scalFact * 
+			    (rmeshLab[0][i][a] * mesh[n][mp][0] + rmeshLab[1][i][a] * mesh[n][mp][1] + 
+			     rmeshLab[2][i][a] * mesh[n][mp][2]);
+			  reRho = reRho + cos(rCMk); 
+			  imRho = imRho + sin(rCMk);
+			  /* Imaginary part of exp(i*k*r) for the actual molecule*/
 			}
-		      rCMk = kbeg + scalFact * 
-			(r[0][i] * mesh[n][mp][0] + r[1][i] * mesh[n][mp][1] + 
-			 r[2][i] * mesh[n][mp][2]);
-		      reRho = reRho + cos(rCMk); 
-		      imRho = imRho + sin(rCMk);
-		      /* Imaginary part of exp(i*k*r) for the actual molecule*/
+		      sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
 		    }
-		  sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
 		}
 	      Sq[n] += sumRho;  
 	      //printf("sumRho=%.15G Sq[%d]=%.15G\n", sumRho, n, Sq[n]);
@@ -404,10 +489,10 @@ int main(int argc, char** argv)
 	}
     }
   fclose(f2); 
-  of = fopen("Sq.dat", "w+");
+  of = fopen("SqFull.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      Sq[qmod] = (Sq[qmod]  * invNm) / ((double) ntripl[qmod]) / ((double)nf);  
+      Sq[qmod] = (Sq[qmod]  * (1.0/((double)(Npts+N)))) / ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], Sq[qmod]); 
