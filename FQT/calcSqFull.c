@@ -5,7 +5,7 @@
 //#include <lapack.h>
 #define Sqr(x) ((x)*(x))
 char line[1000000], parname[124], parval[2560000];
-int N, NA=-1, Npts=100;
+int N, NA=-1, Npts=100, Nptseff;
 double x[3], *r[3], sax[3], *R[3][3];
 char fname[1024], inputfile[1024];
 int readCnf = 0, physunit=0;
@@ -111,7 +111,7 @@ double twopi;
 char dummy[2048];
 double *rmesh[3];
 
-void generate_mesh(int N, double sax[3])
+int generate_mesh(int N, double sax[3])
 {
   int cc, k1, k2, k3, fine=0;
   double dx, dy, dz, rx, ry, rz;
@@ -158,6 +158,7 @@ void generate_mesh(int N, double sax[3])
 	}
     }
   printf("Assigned # %d points out of %d\n", cc, N);
+  return cc; 
 }
 double **rmeshLab[3];
 void body2lab(int N, int Npts)
@@ -265,7 +266,7 @@ int main(int argc, char** argv)
 	      cc++;
 	    }
 	  while (strcmp(line,"@@@"));
-	  generate_mesh(Npts, sax);
+	  Nptseff=generate_mesh(Npts, sax);
 	  printf("===>N=%d Npts=%d\n", N, Npts);
 	  for (k1=0; k1 < 3; k1++)
 	    { 
@@ -511,7 +512,7 @@ int main(int argc, char** argv)
   of = fopen("SqFull.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      Sq[qmod] = (Sq[qmod]  * (1.0 / (((double)Npts)*((double)N)))/ ((double) ntripl[qmod]) / ((double)nf);  
+      Sq[qmod] = Sq[qmod] * (1.0 / (((double)Nptseff)*((double)N))) / ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], Sq[qmod]); 
