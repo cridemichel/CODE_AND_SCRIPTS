@@ -4,7 +4,7 @@
 #include <string.h>
 //#include <lapack.h>
 #define Sqr(x) ((x)*(x))
-char line[1000000], parname[124], parval[2560000];
+char line[10000000], parname[1240], parval[25600000];
 int N, NA=-1, Npts=100, Nptseff;
 double x[3], *r[3], sax[3], *R[3][3];
 char fname[1024], inputfile[1024];
@@ -129,6 +129,13 @@ int generate_mesh(int N, double sax[3])
   rz = -sax[2];
   while (!fine)
     {
+      if (N==1)
+	{
+	  rmesh[0][0]=rmesh[1][0]=rmesh[2][0] =0.0;
+	  fine=1;
+	  cc=1;
+	  break;
+	}
       if (Sqr(rx/sax[0]) + Sqr(ry/sax[1]) + Sqr(rz/sax[2]) <= 1.0)
 	{
 	  printf("assigned cc=%d r=%f %f %f\n", cc, rx, ry, rz);
@@ -255,7 +262,6 @@ int main(int argc, char** argv)
 	    }
 	  while (strcmp(line,"@@@"));
 
-	  while (strcmp(line,"@@@"));
 	  cc=0;
 	  do 
 	    {
@@ -292,10 +298,10 @@ int main(int argc, char** argv)
 	      L = cbrt(Vol);
 	      invL = 1.0/L;
 	    }
+	  rewind(f);
 	}
       //printf("L=%.15G\n", L);
       /* -------- */
-      rewind(f);
       if (readCnf)
 	{
 	  do 
@@ -330,6 +336,11 @@ int main(int argc, char** argv)
   	}
       while (strcmp(line,"@@@"));
       //printf("fname=%s %d ellipsoids...\n", fname, N);
+      do 
+	{
+	  fscanf(f,"%[^\n]\n",line);
+	}
+      while (strcmp(line,"@@@"));
 
       if (first)
 	{
@@ -437,7 +448,7 @@ int main(int argc, char** argv)
 		      for (a = 0; a < Nptseff; a++)
 			{
 			  /* il passo della mesh e' 0.5*pi2/L */
-			  if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
+			  if (mesh[n][mp][0] == 0 && mesh[n][mp][1] == 0 && 
 			      mesh[n][mp][2] == 0)
 			    {
 			      printf("ERRORE nella MESH!!!!!!!! n=%d mp=%d ntripl[n]:%d\n", n,
@@ -447,12 +458,15 @@ int main(int argc, char** argv)
 			  rCMk = kbeg + scalFact * 
 			    (rmeshLab[0][i][a] * mesh[n][mp][0] + rmeshLab[1][i][a] * mesh[n][mp][1] + 
 			     rmeshLab[2][i][a] * mesh[n][mp][2]);
+			  //printf("i=%d a=%d r=%f %f %f\n", i, a,rmeshLab[0][i][a], rmeshLab[1][i][a],
+			//					 rmeshLab[2][i][a]);
+			  //printf("R=%f\n", R[2][2][i]); 
 			  reRho = reRho + cos(rCMk); 
 			  imRho = imRho + sin(rCMk);
 			  /* Imaginary part of exp(i*k*r) for the actual molecule*/
 			}
-		      sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
 		    }
+		  sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
 		}
 	      Sq[n] += sumRho;  
 	      //printf("sumRho=%.15G Sq[%d]=%.15G\n", sumRho, n, Sq[n]);
