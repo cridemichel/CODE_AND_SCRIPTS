@@ -511,7 +511,7 @@ int main(int argc, char** argv)
   of = fopen("SqFull.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      Sq[qmod] = (Sq[qmod]  * (1.0/((double)(Npts+N)))) / ((double) ntripl[qmod]) / ((double)nf);  
+      Sq[qmod] = (Sq[qmod]  * (1.0 / ((double)Npts)/ ((double)N)/ ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], Sq[qmod]); 
