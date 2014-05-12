@@ -113,7 +113,7 @@ double *rmesh[3];
 
 void generate_mesh(int N, double sax[3])
 {
-  int cc, k1, k2, k3;
+  int cc, k1, k2, k3, fine=0;
   double dx, dy, dz, rx, ry, rz;
   double dens, pi;
 
@@ -121,28 +121,43 @@ void generate_mesh(int N, double sax[3])
   for (k1=0; k1 < 3; k1++)
     rmesh[k1]=malloc(sizeof(double)*N); 
   dens = N / (sax[0]*sax[1]*sax[2]*4.0*pi/3.0);
-  dx=dy=dz=pow(1.0/dens,1.0/3.0);
+  dx=dy=dz=pow((sax[0]*sax[1]*sax[2]*4.0*pi/3.0)/N,1.0/3.0);
   cc=0;
-  for (k1 = 0; rx <= sax[0]; k1++)
-    for (k2 = 0; ry <= sax[1]; k2++)
-      for (k3 = 0; rz <= sax[2]; k3++)
+  printf("vol=%f dx=%f sax=%f %f %f N=%d\n",sax[0]*sax[1]*sax[2]*4.0*pi/3.0, dx, sax[0], sax[1], sax[2], N);
+  rx = -sax[0];
+  ry = -sax[1];
+  rz = -sax[2];
+  while (!fine)
+    {
+      if (Sqr(rx/sax[0]) + Sqr(ry/sax[1]) + Sqr(rz/sax[2]) <= 1.0)
 	{
-	  rx = -sax[0] + k1*dx;
-	  ry = -sax[1] + k2*dy;
-	  rz = -sax[2] + k3*dz;
-	  if (cc >= N) 
+	  printf("assigned cc=%d r=%f %f %f\n", cc, rx, ry, rz);
+	  rmesh[0][cc] = rx;
+	  rmesh[1][cc] = ry;
+	  rmesh[2][cc] = rz;
+	  cc++;
+	}
+      if (cc >= N) 
+	{
+	  printf("OK all points set!\n");
+	  fine=1;
+	  break;
+	}
+      rx += dx;
+      if (rx > sax[0])
+	{
+	  rx = -sax[0];
+	  ry += dy;
+	  if (ry > sax[1])
 	    {
-	      printf("[WARNING] Maximum number of points reached!");
-	      break;
-	    }
-	  if (Sqr(rx/sax[0]) + Sqr(ry/sax[1]) + Sqr(rz/sax[2]) <= 1.0)
-	    {
-	      rmesh[cc][0] = rx;
-	      rmesh[cc][1] = ry;
-	      rmesh[cc][2] = rz;
-	      cc++;
+	      ry = -sax[1];
+	      rz += dz;
+	      if (rz > sax[2])
+		fine=1;
 	    }
 	}
+    }
+  printf("Assigned # %d points out of %d\n", cc, N);
 }
 double **rmeshLab[3];
 void body2lab(int N, int Npts)
@@ -251,9 +266,12 @@ int main(int argc, char** argv)
 	    }
 	  while (strcmp(line,"@@@"));
 	  generate_mesh(Npts, sax);
+	  printf("===>N=%d Npts=%d\n", N, Npts);
 	  for (k1=0; k1 < 3; k1++)
 	    { 
 	      rmeshLab[k1]=malloc(sizeof(double*)*N); 
+	      for (k2=0; k2 < 3; k2++)
+		R[k1][k2] = malloc(sizeof(double)*N);
 	      for (k2 = 0; k2 < N; k2++)
 		rmeshLab[k1][k2]=malloc(sizeof(double)*Npts); 
 	    }
@@ -325,9 +343,9 @@ int main(int argc, char** argv)
 	   fscanf(f, "%[^\n]\n", line); 
 	   //printf("line=%s\n", line);
        	   sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n", &r[0][i], &r[1][i], &r[2][i], 
-		  &R[i][0][0], &R[i][0][1], &R[i][0][2], 
-		  &R[i][1][0], &R[i][1][1], &R[i][1][2], 
-		  &R[i][2][0], &R[i][2][1], &R[i][2][2], &type); 
+		  &R[0][0][i], &R[0][1][i], &R[0][2][i], 
+		  &R[1][0][i], &R[1][1][i], &R[1][2][i], 
+		  &R[2][0][i], &R[2][1][i], &R[2][2][i], &type); 
 	   //printf("r=(%.15G,%.15G,%.15G)\n", r[0][i], r[1][i], r[2][i]);
 	}
       body2lab(N, Npts);
@@ -372,7 +390,7 @@ int main(int argc, char** argv)
 	      if (qmax < 0)
 		qmax = 0;
 	    }
-	  printf("scalFact: %.15G qmin: %d qmax: %d qminpu: %.15G qmaxpu: %.15G\n", scalFact, qmin, qmax, qminpu, qmaxpu);
+	  printf("sax= %f %f %f scalFact: %.15G qmin: %d qmax: %d qminpu: %.15G qmaxpu: %.15G\n", sax[0], sax[1], sax[2], scalFact, qmin, qmax, qminpu, qmaxpu);
 	  for (qmod=qmin; qmod <= qmax; qmod++)
 	    {
 	      Sq[qmod] = 0.0;      
