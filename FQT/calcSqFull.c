@@ -117,7 +117,7 @@ void generate_mesh(int N, double sax[3])
   double dx, dy, dz, rx, ry, rz;
   double dens, pi;
 
-  pi = 2.0*arccos(0.0);
+  pi = 2.0*acos(0.0);
   for (k1=0; k1 < 3; k1++)
     rmesh[k1]=malloc(sizeof(double)*N); 
   dens = N / (sax[0]*sax[1]*sax[2]*4.0*pi/3.0);
@@ -144,9 +144,10 @@ void generate_mesh(int N, double sax[3])
 	    }
 	}
 }
+double **rmeshLab[3];
 void body2lab(int N, int Npts)
 {
-  int k1, k2;
+  int k1, k2, a;
   int i;
 
   for (i=0; i < N; i++)
@@ -155,12 +156,12 @@ void body2lab(int N, int Npts)
 	{
 	  for (k1=0; k1 < 3; k1++)
 	    {
-	      rmeshLab[k1][i] = 0;
+	      rmeshLab[k1][i][a] = 0;
 	      for (k2=0; k2 < 3; k2++)
 	     	{
-		  x[k1] += R[k2][k1][i]*rmesh[k2][a];
+		  rmeshLab[k1][i][a] += R[k2][k1][i]*rmesh[k2][a];
 		} 
-	      rmeshLab[k1][i] += r[k1][i];
+	      rmeshLab[k1][i][a] += r[k1][i];
 	    }
 	}
     }
@@ -243,7 +244,7 @@ int main(int argc, char** argv)
 	  do 
 	    {
 	      if (cc==1)
-		fscanf("%lf %lf %lf\n", &sax[0], &sax[1], &sax[2]);
+		fscanf(f, "%lf %lf %lf\n", &sax[0], &sax[1], &sax[2]);
 	      else
 		fscanf(f,"%[^\n]\n",line);
 	      cc++;
@@ -414,7 +415,7 @@ int main(int argc, char** argv)
 		  imRho = 0.0;
 		  for(i=0; i < N; i++)
 		    {
-		      for (a = 0; < Ntps; a++)
+		      for (a = 0; a < Npts; a++)
 			{
 			  /* il passo della mesh e' 0.5*pi2/L */
 			  if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
