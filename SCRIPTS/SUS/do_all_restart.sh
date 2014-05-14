@@ -24,7 +24,7 @@ fi
 sleep 120
 N=$BS
 F="no"
-while [ "$F" = "no" ]
+while [ $F = "no" ]
 do
 R=`./count_running.sh`
 T=`./count_terminated.sh`
@@ -43,6 +43,10 @@ fi
 N=$[$N+1]
 fi
 else
+F="yes"
+fi
+if [ $N -ge $Nfin ]
+then
 F="yes"
 fi
 sleep 5
