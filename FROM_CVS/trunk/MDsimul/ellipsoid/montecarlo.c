@@ -1337,7 +1337,7 @@ double brentPW(double ax, double bx, double cx, double tol, double *xmin, double
 
 double check_overlap_pw(int i, int j, double shift[3])
 {
-  const double tolPW=1.0E-12;
+  const double tolPW=1.0E-14;
   double res, A[3][3], B[3][3], xmin; 
   int k1, k2;
   double  DA[3], DB[3], rA[3], rB[3];
