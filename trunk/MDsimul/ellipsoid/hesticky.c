@@ -955,6 +955,7 @@ void find_bonds_one(int i)
 			  //printf("mapbondsaFlex=%d mapbondsbFlex=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn]);
 //if (mapbondsaFlex[nn]==3 && mapbondsbFlex[nn])
   //printf("%d %d\n", i, j);
+			  //printf("add bonds i=%d j=%d\n", i, j);
 			  add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
 			  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
 			}
@@ -2872,6 +2873,8 @@ inline void check_bonds_size(int i)
 #endif
       printf("[INFO] bonds array overflow I have just increased OprogStatus.maxbonds (old: %d new:%d)\n",
 	     olds, OprogStatus.maxbonds);
+      printf("numbonds[%d]=%d\n", i, numbonds[i]);
+      //saveBakAscii("boh");
     }
 }
 int bound(int na, int n, int a, int b);
