@@ -3242,7 +3242,6 @@ void find_bonds(void)
 		//printf("adding bond i=%d j=%d aa=%d bb=%d\n", i, j, aa, bb);
 		aa = mapbondsa[nn];
 		bb = mapbondsb[nn];
-		//printf("adding bond (%d,%d)-(%d,%d)\n", i, aa, j, bb);
 		add_bond(i, j, aa, bb);
 		add_bond(j, i, bb, aa);
 	      }
