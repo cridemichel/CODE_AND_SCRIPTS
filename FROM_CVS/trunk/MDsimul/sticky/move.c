@@ -6355,6 +6355,7 @@ void ProcessCollision(void)
 	    }
 	}
 #endif
+      //printf("time=%f sp_start_time=%f sp_equilib=%d spdelta=%f\n", Oparams.time, sp_start_time, sp_equilib, OprogStatus.spdeltat);
       if (!sp_has_collided[evIdA])
 	{
 	  sp_firstcolltime[evIdA] = Oparams.time - sp_start_time;

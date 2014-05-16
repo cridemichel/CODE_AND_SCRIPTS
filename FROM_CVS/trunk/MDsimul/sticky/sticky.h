@@ -1078,6 +1078,9 @@ struct singlePar OsinglePar[] = {
   {"iniBak",         &OprogStatus.iniBak,         STR},
 #endif
   {"maxcoll",    &maxcoll,                        INT},  
+#ifdef MD_SURV_PROB
+  {"spdeltat",    &OprogStatus.spdeltat,    CT},
+#endif
   /* ======================================================================= */
 
   {"", NULL, 0} /* end of list, don't touch this !!! */
