@@ -494,6 +494,10 @@ struct progStatus
   char iniBak[NAME_LENGTH];
 #endif
   /* ======================================================================= */
+#ifdef MD_SURV_PROB
+  double spdeltat;
+#endif
+
 };
 
 /* ======================== >>> filenames instance <<< ======================= 
@@ -779,6 +783,9 @@ struct pascii opro_ascii[] =
   {"readBinTree",    &OS(readBinTree),    1, 1, "%d"},
   {"iniTree",        &OS(iniTree),         1, NAME_LENGTH, "%s"},
   {"iniBak",         &OS(iniBak),          1, NAME_LENGTH, "%s"},
+#endif
+#ifdef MD_SURV_PROB
+  {"spdeltat",          &OS(spdeltat),  1,   1, "%.15G"},
 #endif
   {"", NULL, 0, 0, ""}
 };

@@ -1651,6 +1651,9 @@ accumulators initialization is crucial */
   strcpy(OprogStatus.iniBak,"BinaryBak");
 #endif
   maxcoll=-1;
+#ifdef MD_SURV_PROB
+  OprogStatus.spdeltat = 10.0;
+#endif
 }
 extern void check (int *overlap, double *K, double *V);
 extern double *atomTime, *treeTime, *treeRxC, *treeRyC, *treeRzC;
@@ -2582,6 +2585,44 @@ void set_dyn_ascii(void)
 
 }
 #endif
+#ifdef MD_SURV_PROB
+int *sp_has_collided, sp_equilib;
+double *sp_firstcolltime, sp_start_time, *sp_coll_type;
+int sp_tot_collisions;
+void sp_reset_fct(void)
+{
+  int i;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      sp_has_collided[i] = 0;
+      sp_coll_type[i] = -1;
+    }
+  sp_tot_collisions = 0;
+}
+void save_sp(void)
+{
+  FILE *fAA, *fBB, *fAB;
+  int i;
+  fAA = fopen("surv_prob_AA.dat","a");
+  fAB = fopen("surv_prob_AB.dat","a");
+  fBB = fopen("surv_prob_BB.dat","a");
+
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (sp_coll_type[i] == 0)
+ 	fprintf(fAA, "%.15G\n", sp_firstcolltime[i]);
+      else if (sp_coll_type[i] == 1)
+	fprintf(fBB, "%.15G\n", sp_firstcolltime[i]);
+      else if (sp_coll_type[i] == 2)
+	fprintf(fAB, "%.15G\n", sp_firstcolltime[i]);
+    }
+
+  fclose(fAA);
+  fclose(fBB);
+  fclose(fAB);
+}
+#endif
+
 void usrInitAft(void)
 {
   /* DESCRIPTION:
@@ -2703,7 +2744,26 @@ void usrInitAft(void)
   mgA = Oparams.m[0]*Oparams.ggrav; 
   mgB = Oparams.m[1]*Oparams.ggrav;
 #endif
-
+#ifdef MD_SURV_PROB
+  sp_firstcolltime = malloc(sizeof(double)*Oparams.parnum);
+  sp_has_collided = malloc(sizeof(int)*Oparams.parnum);
+  sp_coll_type = malloc(sizeof(int)*Oparams.parnum);
+  sp_reset_fct();
+#if 0
+  if (Oparams.ntypes==2 && typeNP[0]==1)
+    {
+      /* if TRAPPING problem */
+      for (i=0; i < Oparams.parnum; i++)
+	if (typeOfPart[i]==1)
+	  {
+	    /* particles of type 1 are immobile */
+	    vx[i]=vy[i]=vz[i]=0;
+	  }
+    }
+#endif
+  sp_equilib=1;
+  sp_start_time = Oparams.time;
+#endif
   lastcol= malloc(sizeof(double)*Oparams.parnum);
   atomTime = malloc(sizeof(double)*Oparams.parnum);
   lastbump = malloc(sizeof(struct LastBumpS)*Oparams.parnum);
@@ -3051,6 +3111,15 @@ void usrInitAft(void)
       fclose(f);
       f = fopenMPI(absMisHD("msdA.dat"), "w+");
       fclose(f);
+#ifdef MD_SURV_PROB
+      f = fopenMPI(absMisHD("surv_prob_AA.dat"), "w+");
+      fclose(f);
+      f = fopenMPI(absMisHD("surv_prob_BB.dat"), "w+");
+      fclose(f);
+      f = fopenMPI(absMisHD("surv_prob_AB.dat"), "w+");
+      fclose(f);
+#endif
+
       if (Oparams.parnum > Oparams.parnumA)
 	{
 	  f = fopenMPI(absMisHD("msdB.dat"), "w+");
