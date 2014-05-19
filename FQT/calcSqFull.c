@@ -20,7 +20,8 @@ int ntripl[]=
 int mesh[][NKSHELL][3]= 
 #include "./kmesh.dat"
 double twopi;
-double Sq[KMODMAX], sumRho, reRho, imRho, rCMk, scalFact, invNm, invL, L, invNmAA, invNmBB, invNmAB;
+double SqFF[KMODMAX], Sq[KMODMAX], sumRhoFF, sumRho, reRho, reRhoFF, imRho, imRhoFF, rCMk, rCMkFF, scalFact, 
+       invNm, invL, L, invNmAA, invNmBB, invNmAB;
 double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, imRhoB;
 void print_usage(void)
 {
@@ -406,6 +407,7 @@ int main(int argc, char** argv)
 	  for (qmod=qmin; qmod <= qmax; qmod++)
 	    {
 	      Sq[qmod] = 0.0;      
+	      SqFF[qmod] = 0.0;
 	      if (NA < N)
 		{
 	    	  SqAA[qmod] = SqAB[qmod] = SqBB[qmod] = 0.0;
@@ -438,11 +440,11 @@ int main(int argc, char** argv)
 	{
 	  for(n = qmin; n <= qmax; n++)
 	    {
-	      sumRho = 0.0;
+	      sumRho = sumRhoFF = 0.0;
 	      for(mp = 0; mp < ntripl[n]; mp++)
 		{
-		  reRho = 0.0;
-		  imRho = 0.0;
+		  reRho = reRhoFF = 0.0;
+		  imRho = imRhoFF = 0.0;
 		  for(i=0; i < N; i++)
 		    {
 		      for (a = 0; a < Nptseff; a++)
@@ -458,17 +460,27 @@ int main(int argc, char** argv)
 			  rCMk = kbeg + scalFact * 
 			    (rmeshLab[0][i][a] * mesh[n][mp][0] + rmeshLab[1][i][a] * mesh[n][mp][1] + 
 			     rmeshLab[2][i][a] * mesh[n][mp][2]);
+			  //rCMkFF = kbeg + scalFact *  (rmeshLab[0][i][a]-r[0][i]) * mesh[n][mp][0] + 
+			    //(rmeshLab[1][i][a]-r[1][i]) * mesh[n][mp][1] + 
+			    //(rmeshLab[2][i][a]-r[2][i]) * mesh[n][mp][2];
+ 
 			  //printf("i=%d a=%d r=%f %f %f\n", i, a,rmeshLab[0][i][a], rmeshLab[1][i][a],
-			//					 rmeshLab[2][i][a]);
+			  //					 rmeshLab[2][i][a]);
 			  //printf("R=%f\n", R[2][2][i]); 
 			  reRho = reRho + cos(rCMk); 
 			  imRho = imRho + sin(rCMk);
+
+			  //reRhoFF = reRhoFF + cos(rCMkFF); 
+			  //imRhoFF = imRhoFF + sin(rCMkFF);
+
 			  /* Imaginary part of exp(i*k*r) for the actual molecule*/
 			}
 		    }
 		  sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
+		  //sumRhoFF = sumRhoFF + Sqr(reRhoFF) + Sqr(imRhoFF);
 		}
 	      Sq[n] += sumRho;  
+	      //SqFF[n] += sumRhoFF;
 	      //printf("sumRho=%.15G Sq[%d]=%.15G\n", sumRho, n, Sq[n]);
 	    }
 	  fclose(f);
@@ -526,7 +538,8 @@ int main(int argc, char** argv)
   of = fopen("SqFull.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      Sq[qmod] = Sq[qmod] * (1.0 / (((double)Nptseff)*((double)N))) / ((double) ntripl[qmod]) / ((double)nf);  
+      //SqFF[qmod] = SqFF[qmod] * (1.0/((doube)Nptseff) / ((double) ntripl[qmod]) / ((double)nf);
+      Sq[qmod] = Sq[qmod] * (1.0 / (((double)Nptseff)*((double)N))) / ((double) ntripl[qmod]) / ((double)nf) ;  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], Sq[qmod]); 
