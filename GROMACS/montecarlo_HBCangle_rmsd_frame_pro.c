@@ -93,16 +93,16 @@ int main( int argc, char *argv[] ){
 	  fscanf(buffer_read, "%f %f %f ", &x, &y, &z);
 	  fscanf(buffer_read, "%f %f\n", &l, &m);
 #endif
-	  // printf("%f %f %f \n", x, y, z);
-	  // printf("%d ", res);
+	   //printf("%f %f %f \n", x, y, z);
+	   //printf("%d ", res);
 
-	  if (res==2)       { PA1_1.x=x; PA1_1.y=y; PA1_1.z=z; }
-	  else if (res==12) { PA2_1.x=x; PA2_1.y=y; PA2_1.z=z; }
-	  else if (res==14) { PB2_1.x=x; PB2_1.y=y; PB2_1.z=z; }
-	  else if (res==24) { PB1_1.x=x; PB1_1.y=y; PB1_1.z=z; }
+	  if ((res-1)%24==2-1)       { PA1_1.x=x; PA1_1.y=y; PA1_1.z=z; }
+	  else if ((res-1)%24==12-1) { PA2_1.x=x; PA2_1.y=y; PA2_1.z=z; }
+	  else if ((res-1)%24==14-1) { PB2_1.x=x; PB2_1.y=y; PB2_1.z=z; }
+	  else if ((res-1)%24==24-1) { PB1_1.x=x; PB1_1.y=y; PB1_1.z=z; }
 	  
 
-	  if(res==24){
+	  if((res-1)%24==24-1){
 	    bar1_1.x=(PA1_1.x+PB1_1.x)/2.; bar1_1.y=(PA1_1.y+PB1_1.y)/2.; bar1_1.z=(PA1_1.z+PB1_1.z)/2.;
 	    bar2_1.x=(PA2_1.x+PB2_1.x)/2.; bar2_1.y=(PA2_1.y+PB2_1.y)/2.; bar2_1.z=(PA2_1.z+PB2_1.z)/2.;
 	    
@@ -127,6 +127,7 @@ int main( int argc, char *argv[] ){
 	rewind(buffer_read);
 	frame=0;
 
+#if 0
 	float dist_final;
 
 	PA1_1.x=0.; PA1_1.y=0.; PA1_1.z=0.;
@@ -178,7 +179,7 @@ int main( int argc, char *argv[] ){
 	printf("bar1: %f %f %f \n", bar1_1.x,bar1_1.y,bar1_1.z);
 	printf("bar2: %f %f %f \n", bar2_1.x,bar2_1.y,bar2_1.z);
 	//**** END second section ****//
-
+#endif
 
 	//**** START third section ****//
 	//store every P atoms to compute montecarlo
@@ -186,7 +187,7 @@ int main( int argc, char *argv[] ){
 	int P_count=0, k;
 #if 1
        while ( !feof(buffer_read)){
-	       	fscanf(buffer_read, "%22c %f %f %f %f %f\n", a, &res, &x, &y, &z, &l, &m);
+	       	fscanf(buffer_read, "%22c %d %f %f %f %f %f\n", a, &res, &x, &y, &z, &l, &m);
 
 		P_x[P_count] = x;
 		P_y[P_count] = y;
@@ -196,7 +197,7 @@ int main( int argc, char *argv[] ){
 		P[P_count].y = y;
 		P[P_count].z = z;
 		P_count++;
-
+                if (P_count%10000==0) printf("P_count=%d\n", P_count);
 		//printf("%f %f %f \n", P_x[P_count], P_y[P_count], P_z[P_count]);
 	}
 
@@ -249,7 +250,7 @@ int main( int argc, char *argv[] ){
 			random[j].y = (BOX_SIZE_Y * drand48() );
 			random[j].z = (BOX_SIZE_Z * drand48() );
 	}
-
+        printf("qui P_counr=%d\n", P_count);
 	for(i=0; i<P_count; i=i+22){
 		rmsd_min=100000000.;
 		ellips_check=0.;
@@ -300,7 +301,7 @@ int main( int argc, char *argv[] ){
 			//double cylindrical fit
 			if( (ellips_check < 40.) && (ellips_check > 36.) && (l1/l2 <1.3) && (l1/l2 >0.7) ){
 
-				//if(phi>=120.){
+				//if(phi>=120.)
 				//fprintf (ra, "%d %f %f %f \n", i, l1, l2, phi);	
 	
 				
@@ -372,7 +373,7 @@ int main( int argc, char *argv[] ){
 					if ( rad1 < rad2 ) rmsd = rmsd + rad1;
 				 	if ( rad1 >= rad2 ) rmsd = rmsd + rad2;
 					//printf("*");
-				}
+				      }
 		
 				//fprintf(ra, "%f %f %f %lf\n", l1_new, l2_new, phi_new, rmsd);
 
@@ -386,16 +387,14 @@ int main( int argc, char *argv[] ){
 			}
 
 		}
-		
 		angle_aver = angle_aver + phi_new_min;
 		l1_aver = l1_aver + l1_new_min;
 		l2_aver = l2_aver + l2_new_min;
 
+             if ((i/22)%1000==0) 
 		printf("frame: %d -- %f %f %f %f\n", i/22,l1_new_min, l2_new_min, phi_new_min, rmsd_min);
 		fprintf(ra, "%d %f %f %f 	%lf %f %f 	%f\n", i/22, l1_new_min, l2_new_min, phi_new_min, l1_aver/(i/22+1), l2_aver/(i/22+1), angle_aver/(i/22+1), rmsd_min);
-	}
-
-	fclose(ra);
-	return 0;
-
+      }
+  fclose(ra);
+  return 0;
 }
