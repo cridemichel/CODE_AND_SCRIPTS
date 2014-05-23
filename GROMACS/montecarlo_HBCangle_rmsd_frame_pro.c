@@ -6,9 +6,9 @@
 #include <unistd.h>
 
 #define MC_STEPS 100000
-#define BOX_SIZE_X 30
-#define BOX_SIZE_Y 30
-#define BOX_SIZE_Z 50
+#define BOX_SIZE_X 100
+#define BOX_SIZE_Y 100
+#define BOX_SIZE_Z 100
 #define RADIUS 9.5
 struct vector {
 		float x;
@@ -18,7 +18,7 @@ struct vector {
 float P_x[5000000], P_y[5000000], P_z[5000000];
 
 struct vector P[5000000];
-
+int found_one=0;
 ////********  main starts here  ********/////
 int main( int argc, char *argv[] ){
 
@@ -26,8 +26,29 @@ int main( int argc, char *argv[] ){
 	FILE *e2e;
 	FILE *ra;
   	int opt;
+        float cc;
+ 	//compute average
+	float x,y,z;
+	float l,m;
+	float comx, comy, comz;
+	char a[10000], c[10000], d[10000], e[10000];
+	int b,res;
 
- 	while ((opt = getopt (argc, argv, "i:e:o:")) != -1){
+		struct vector PA1_1, PA2_1, PB2_1, PB1_1;
+	struct vector bar1_1, bar2_1;
+
+	float dist_1;
+	float dist_ist, dist_aver=0.;
+	int frame=0;
+
+	FILE *buffer_read;
+		
+	char input[100]="traj1_fit.pdb", output[100]="e2e.dat";
+
+	FILE *buffer;
+	
+	char string[100];
+        while ((opt = getopt (argc, argv, "i:e:o:")) != -1){
 
 		switch (opt){
 			case 'i':
@@ -50,12 +71,8 @@ int main( int argc, char *argv[] ){
 
 
 
-	char input[100]="traj1_fit.pdb", output[100]="e2e.dat";
-
-	FILE *buffer;
-	buffer=fopen("buffer.pdb", "w");
+        buffer=fopen("buffer.pdb", "w");
  
-	char string[100];
 
 	//buffering P positions into a file
 	while ( fgets(string, 100, traj) != NULL ){
@@ -69,21 +86,7 @@ int main( int argc, char *argv[] ){
 
 
 
-	//compute average
-	float x,y,z;
-	float l,m;
-	char a[10000], c[10000], d[10000], e[10000];
-	int b,res;
-
-		struct vector PA1_1, PA2_1, PB2_1, PB1_1;
-	struct vector bar1_1, bar2_1;
-
-	float dist_1;
-	float dist_ist, dist_aver=0.;
-	int frame=0;
-
-	FILE *buffer_read;
-	buffer_read=fopen("buffer.pdb", "r");
+        buffer_read=fopen("buffer.pdb", "r");
 
 	while ( !feof(buffer_read) ){
 	       	fscanf(buffer_read, "%22c %d %f %f %f %f %f\n", a, &res, &x, &y, &z, &l, &m);
@@ -239,10 +242,10 @@ int main( int argc, char *argv[] ){
 	float rad1, rad2;
 	float dist1, p1_x, p1_y;
 	float dist2, p2_x, p2_y;
-	double rmsd=0., rmsd_min=100000000.;
+	float rmsd=0., rmsd_min=100000000.;
 	float sphere_check=0., ellips_check=0.;
 
-	double l1_aver=0., l2_aver=0., angle_aver=0.;
+	float l1_aver=0., l2_aver=0., angle_aver=0.;
 
 
 	for(j=0; j<MC_STEPS; j++){
@@ -250,7 +253,9 @@ int main( int argc, char *argv[] ){
 			random[j].y = (BOX_SIZE_Y * drand48() );
 			random[j].z = (BOX_SIZE_Z * drand48() );
 	}
-        printf("qui P_counr=%d\n", P_count);
+        printf("qui P_count=%d\n", P_count);
+        cc=0;
+        srand48(145);
 	for(i=0; i<P_count; i=i+22){
 		rmsd_min=100000000.;
 		ellips_check=0.;
@@ -266,12 +271,23 @@ int main( int argc, char *argv[] ){
 		bar2.z = (P[i+10].z+P[i+11].z)*0.5;
 
 		//printf("%f %f %f \n", bar1.x,bar1.y,bar1.z);
+		found_one=0;
+                comx=comy=comz=0.0;	
+		for(k=0; k<22; k++)
+		{
+                       comx += P[i+k].x;
+                       comy += P[i+k].y;
+		       comz += P[i+k].z;
 
+                }
+                comx /=22.;
+                comy /=22.;
+                comz /=22.;
 		for(j=0; j<MC_STEPS; j++){
 			count=0;
-			/*random.x = (BOX_SIZE_X * drand48() );
-			random.y = (BOX_SIZE_Y * drand48() );
-			random.z = (BOX_SIZE_Z * drand48() );*/
+			random[j].x = comx+(BOX_SIZE_X * (drand48()-0.5));
+			random[j].y = comy+(BOX_SIZE_Y * (drand48()-0.5));
+			random[j].z = comz+(BOX_SIZE_Z * (drand48()-0.5));
 		
 			//printf ( "%f %f %f \n", random.x, random.y, random.z);	
 
@@ -292,19 +308,19 @@ int main( int argc, char *argv[] ){
 			u2.y=v2.y/l2;
 			u2.z=v2.z/l2;
 	
-			phi = (360./6.28) * acos( (v1.x*v2.x + v1.y*v2.y + v1.z*v2.z)/(l1*l2) );
+			phi = (360./6.28319) * acos( (v1.x*v2.x + v1.y*v2.y + v1.z*v2.z)/(l1*l2) );
 	
 			ellips_check = l1 + l2;
 			//printf ("%d %f %f %f \n", i, l1, l2, phi);
 
 			
-			//double cylindrical fit
-			if( (ellips_check < 40.) && (ellips_check > 36.) && (l1/l2 <1.3) && (l1/l2 >0.7) ){
+			//float cylindrical fit
+			if( (ellips_check < 36.) && (ellips_check > 34.) && (l1/l2 <1.3) && (l1/l2 >0.7) ){
 
 				//if(phi>=120.)
 				//fprintf (ra, "%d %f %f %f \n", i, l1, l2, phi);	
 	
-				
+			        found_one=1;	
 				//find the centers of each basis
 				base1_A.x = random[j].x + u1.x*(l1+1.5);
 				base1_A.y = random[j].y + u1.y*(l1+1.5);
@@ -323,13 +339,13 @@ int main( int argc, char *argv[] ){
 				q1.z = w1.z/l1_new;
 		
 		
-				base2_A.x = random[j].x + u2.x*(l2+0.15);
-				base2_A.y = random[j].y + u2.y*(l2+0.15);
-				base2_A.z = random[j].z + u2.z*(l2+0.15);
+				base2_A.x = random[j].x + u2.x*(l2+1.5);
+				base2_A.y = random[j].y + u2.y*(l2+1.5);
+				base2_A.z = random[j].z + u2.z*(l2+1.5);
 			
-				base2_B.x = bar2.x - u2.x*(l2+0.15);
-				base2_B.y = bar2.y - u2.y*(l2+0.15);
-				base2_B.z = bar2.z - u2.z*(l2+0.15);
+				base2_B.x = bar2.x - u2.x*(l2+1.5);
+				base2_B.y = bar2.y - u2.y*(l2+1.5);
+				base2_B.z = bar2.z - u2.z*(l2+1.5);
 		
 				w2.x = base2_A.x - base2_B.x;
 				w2.y = base2_A.y - base2_B.y;
@@ -339,7 +355,7 @@ int main( int argc, char *argv[] ){
 				q2.y = w2.y/l2_new;
 				q2.z = w2.z/l2_new;
 		
-				phi_new = (360./6.28) * acos( (w1.x*w2.x + w1.y*w2.y + w1.z*w2.z)/(l1_new*l2_new) );	
+				phi_new = (360./6.28319) * acos( (w1.x*w2.x + w1.y*w2.y + w1.z*w2.z)/(l1_new*l2_new) );	
 		
 	
 			       	//fprintf (ra, "%d %f %f %f %f %f \n", i, l1, l2, l1_new, l2_new, phi);
@@ -387,13 +403,16 @@ int main( int argc, char *argv[] ){
 			}
 
 		}
-		angle_aver = angle_aver + phi_new_min;
-		l1_aver = l1_aver + l1_new_min;
-		l2_aver = l2_aver + l2_new_min;
-
-             if ((i/22)%1000==0) 
-		printf("frame: %d -- %f %f %f %f\n", i/22,l1_new_min, l2_new_min, phi_new_min, rmsd_min);
-		fprintf(ra, "%d %f %f %f 	%lf %f %f 	%f\n", i/22, l1_new_min, l2_new_min, phi_new_min, l1_aver/(i/22+1), l2_aver/(i/22+1), angle_aver/(i/22+1), rmsd_min);
+                if (found_one)
+                {
+		  angle_aver = angle_aver + phi_new_min;
+		  l1_aver = l1_aver + l1_new_min;
+		  l2_aver = l2_aver + l2_new_min;
+                  cc++;
+                }
+             if ((i/22)%200==0 && cc > 0.0) 
+		printf("#found: %f -- %f %f %f %f\n", cc,l1_aver/cc, l2_aver/cc, angle_aver/cc, rmsd_min);
+		fprintf(ra, "%d %f %f %f 	%lf %f %f 	%f\n", cc, l1_aver/cc, l2_aver/cc, angle_aver/cc, rmsd_min);
       }
   fclose(ra);
   return 0;
