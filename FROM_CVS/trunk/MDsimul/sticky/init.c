@@ -2586,8 +2586,8 @@ void set_dyn_ascii(void)
 }
 #endif
 #ifdef MD_SURV_PROB
-int *sp_has_collided, sp_equilib;
-double *sp_firstcolltime, sp_start_time, *sp_coll_type;
+int *sp_has_collided, sp_equilib, *sp_coll_type;
+double *sp_firstcolltime, sp_start_time;
 int sp_tot_collisions;
 void sp_reset_fct(void)
 {
