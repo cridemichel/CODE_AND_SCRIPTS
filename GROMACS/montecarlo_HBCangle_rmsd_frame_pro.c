@@ -19,7 +19,9 @@ float P_x[5000000], P_y[5000000], P_z[5000000];
 
 struct vector P[5000000];
 int found_one=0;
+
 ////********  main starts here  ********/////
+
 int main( int argc, char *argv[] ){
 
   	FILE *traj;
@@ -315,20 +317,20 @@ int main( int argc, char *argv[] ){
 
 			
 			//float cylindrical fit
-			if( (ellips_check < 36.) && (ellips_check > 34.) && (l1/l2 <1.3) && (l1/l2 >0.7) ){
+			if( (ellips_check < 44.) && (ellips_check > 36.) && (l1/l2 <1.3) && (l1/l2 >0.7) ){
 
 				//if(phi>=120.)
 				//fprintf (ra, "%d %f %f %f \n", i, l1, l2, phi);	
 	
 			        found_one=1;	
 				//find the centers of each basis
-				base1_A.x = random[j].x + u1.x*(l1+1.5);
-				base1_A.y = random[j].y + u1.y*(l1+1.5);
-				base1_A.z = random[j].z + u1.z*(l1+1.5);
+				base1_A.x = random[j].x + u1.x*(l1-1.5);
+				base1_A.y = random[j].y + u1.y*(l1-1.5);
+				base1_A.z = random[j].z + u1.z*(l1-1.5);
 		
-				base1_B.x = bar1.x - u1.x*(l1+1.5);
-				base1_B.y = bar1.y - u1.y*(l1+1.5);
-				base1_B.z = bar1.z - u1.z*(l1+1.5);
+				base1_B.x = bar1.x - u1.x*(l1-1.5);
+				base1_B.y = bar1.y - u1.y*(l1-1.5);
+				base1_B.z = bar1.z - u1.z*(l1-1.5);
 		
 				w1.x = base1_A.x - base1_B.x;
 				w1.y = base1_A.y - base1_B.y;
@@ -339,13 +341,13 @@ int main( int argc, char *argv[] ){
 				q1.z = w1.z/l1_new;
 		
 		
-				base2_A.x = random[j].x + u2.x*(l2+1.5);
-				base2_A.y = random[j].y + u2.y*(l2+1.5);
-				base2_A.z = random[j].z + u2.z*(l2+1.5);
+				base2_A.x = random[j].x + u2.x*(l2-1.5);
+				base2_A.y = random[j].y + u2.y*(l2-1.5);
+				base2_A.z = random[j].z + u2.z*(l2-1.5);
 			
-				base2_B.x = bar2.x - u2.x*(l2+1.5);
-				base2_B.y = bar2.y - u2.y*(l2+1.5);
-				base2_B.z = bar2.z - u2.z*(l2+1.5);
+				base2_B.x = bar2.x - u2.x*(l2-1.5);
+				base2_B.y = bar2.y - u2.y*(l2-1.5);
+				base2_B.z = bar2.z - u2.z*(l2-1.5);
 		
 				w2.x = base2_A.x - base2_B.x;
 				w2.y = base2_A.y - base2_B.y;
