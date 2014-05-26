@@ -3519,7 +3519,14 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	 dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
 #elif defined(MC_SWHC) || defined(MC_SWELL)
       /* first patch is the "cylindrical" one */
-      if (mapbondsa[nn] == 1 && mapbondsb[nn] == 1)
+      if ( 
+#if defined(SW_SOFTHE)
+	  (mapbondsa[nn] == 1 && mapbondsb[nn] == 1) ||
+	  (mapbondsa[nn] == 2 && mapbondsb[nn] == 2) 
+#else
+	  mapbondsa[nn] == 1 && mapbondsb[nn] == 1
+#endif
+	  )
 	{
 #if 0
 	  printf("sax=%f %f %f mapsigmaFlex=%f qui mapbondsa=%d mapbondsb=%d dist=%f\n", 
