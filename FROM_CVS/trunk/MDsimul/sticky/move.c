@@ -6224,8 +6224,8 @@ void store_bump(int i, int j)
 
 extern void delete_events(int evIdA);
 #ifdef MD_SURV_PROB
-extern double *sp_firstcolltime, sp_start_time, *sp_coll_type;
-extern int *sp_has_collided, sp_equilib;
+extern double *sp_firstcolltime, sp_start_time;
+extern int *sp_has_collided, sp_equilib, *sp_coll_type;
 extern int sp_tot_collisions;
 extern void sp_reset_fct(void);
 extern double gauss(void);
