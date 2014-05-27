@@ -71,7 +71,7 @@ void body2labR(double xp[3], double x[3], double R[3][3])
     }
 }
 
-double dist_func(double l1, double l2, double phi, double Ro[3][3], double b1[3], double b2[3])
+double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], double b1[3], double b2[3])
 {
   /* params = {L_1, L_2, theta} */
   int k, i, dontcheck;
@@ -114,43 +114,44 @@ double dist_func(double l1, double l2, double phi, double Ro[3][3], double b1[3]
   pos2B[2]=n2B[2]*fact;
   body2lab(pos2B, pos2, b2, Ro);
 
-  dist=-1.0;
+  dist=1000000;
 
   for(k=0; k<22; k++)
     {
       /* check overlap here */
-      drp[0] = P[i].x - pos1[0];
-      drp[1] = P[i].y - pos1[1];
-      drp[2] = P[i].z - pos1[2];
+      drp[0] = P[i0+k].x - pos1[0];
+      drp[1] = P[i0+k].y - pos1[1];
+      drp[2] = P[i0+k].z - pos1[2];
       dontcheck=0;
       sp = scalProd(drp, n1);
       if (sp > 0.0)
-	dist1Sq = Sqr(fabs(sp) - Lhc * 0.5);
-      else dist1Sq = -1.0;
-      if (dist1Sq < dist)
-	dist=dist1Sq;
+	{
+	  dist1Sq = Sqr(fabs(sp) - Lhc * 0.5);
+	  if (dist1Sq < dist)
+	    dist=dist1Sq;
+	}
       vectProdVec(drp, n1, vp);
       norm=calc_norm(vp);
       dist2Sq = Sqr(norm - Dhc*0.5);
       if (dist2Sq < dist)
 	dist = dist2Sq;
-      drp[0] = P[i].x - pos2[0];
-      drp[1] = P[i].y - pos2[1];
-      drp[2] = P[i].z - pos2[2];
+      drp[0] = P[i0+k].x - pos2[0];
+      drp[1] = P[i0+k].y - pos2[1];
+      drp[2] = P[i0+k].z - pos2[2];
       sp = scalProd(drp, n2);
       if (sp > 0.0)
-  	dist3Sq = Sqr(fabs(sp) - Lhc * 0.5); 
-      else
-	dist3Sq = -1.0; 
-      if (dist3Sq < dist)
-	dist = dist3Sq;
+	{
+  	  dist3Sq = Sqr(fabs(sp) - Lhc * 0.5); 
+	  if (dist3Sq < dist)
+	    dist = dist3Sq;
+	}
       vectProdVec(drp, n2, vp);
       norm=calc_norm(vp);
       dist4Sq = Sqr(norm - Dhc*0.5);   
       if (dist < dist4Sq)
 	dist = dist4Sq;
     }
-  if (dist == -1)
+  if (dist == 1000000)
     {
       printf("We have a problem, dist=-1\n");
       exit(-1);
@@ -341,9 +342,11 @@ int main(int argc, char *argv[])
   buffer = fopen("buffer.pdb", "r");
   e2e = fopen(e2efile, "w+");  
   numP=0;
+  dist_aver=0.0;
   while ( !feof(buffer) )
     {
-    fscanf(buffer, "%22c %d %f %f %f %f %f\n", dummystr, &res, &x, &y, &z, &l, &m);
+    fscanf(buffer, "%22c %d %lf %lf %lf %lf %lf\n", dummystr, &res, &x, &y, &z, &l, &m);
+    //printf("x=%f %f %f\n", x, y, z);
     if ((res-1)%24==2-1)       
       { 
 	PA1_1.x=x; PA1_1.y=y; PA1_1.z=z;
@@ -361,7 +364,6 @@ int main(int argc, char *argv[])
 	PB1_1.x=x; PB1_1.y=y; PB1_1.z=z;
       }
 
-
     if((res-1)%24==24-1)
       {
 	bar1_1.x=(PA1_1.x+PB1_1.x)/2.; bar1_1.y=(PA1_1.y+PB1_1.y)/2.; bar1_1.z=(PA1_1.z+PB1_1.z)/2.;
@@ -369,13 +371,14 @@ int main(int argc, char *argv[])
 
 	dist_ist=pow ( (bar1_1.x-bar2_1.x)*(bar1_1.x-bar2_1.x) + (bar1_1.y-bar2_1.y)*(bar1_1.y-bar2_1.y) + (bar1_1.z-bar2_1.z)*(bar1_1.z-bar2_1.z) , 0.5);
 
-	frame++;
+	frame+=1.0;
+	//printf("res=%d mod=%d\n", res,(res-1)%24);
 	dist_aver = dist_aver+dist_ist;
-	fprintf(e2e, "%d %f %f\n", frame, dist_ist, dist_aver/frame);
+	fprintf(e2e, "%f %f %f\n", frame, dist_ist, dist_aver/frame);
       }
     numP++;
     }
-  printf("\nafter %d steps the average e2e is:  %f\n", frame, dist_aver/frame);
+  printf("\nafter %f steps the average e2e is:  %f\n", frame, dist_aver/frame);
   fclose(e2e);
   rewind(buffer);
 
@@ -383,7 +386,7 @@ int main(int argc, char *argv[])
   frame = 0;
   while ( !feof(buffer))
     {
-      fscanf(buffer, "%22c %d %f %f %f %f %f\n", a, &res, &x, &y, &z, &l, &m);
+      fscanf(buffer, "%22c %d %lf %lf %lf %lf %lf\n", a, &res, &x, &y, &z, &l, &m);
       P[P_count].x = x;
       P[P_count].y = y;
       P[P_count].z = z;
@@ -447,32 +450,33 @@ int main(int argc, char *argv[])
       sp = scalProd(xv, zv);
       for (k=0; k < 3; k++)
 	xv[k] = xv[k] - zv[k]*sp;
-     
+
       norm = calc_norm(xv);
       for (k=0; k < 3; k++)
 	xv[k] /= norm;
 
-     vectProdVec(zv, xv, yv);
-     Ro[0][0] = xv[0];
-     Ro[1][0] = xv[1];
-     Ro[2][0] = xv[2];
-     Ro[0][1] = yv[0];
-     Ro[1][1] = yv[1];
-     Ro[2][1] = yv[2];
-     Ro[0][2] = zv[0];
-     Ro[1][2] = zv[1];
-     Ro[2][2] = zv[2];
-     del_ltot = (ltotmax-ltotmin)/10.;
-     del_l1 = (l1max-l1min)/100.;
-     dphi = 2.0*pi/100;
-     first=1;
-     for (phi=0; phi < 2.0*pi; phi += dphi)
+      vectProdVec(zv, xv, yv);
+      Ro[0][0] = xv[0];
+      Ro[1][0] = xv[1];
+      Ro[2][0] = xv[2];
+      Ro[0][1] = yv[0];
+      Ro[1][1] = yv[1];
+      Ro[2][1] = yv[2];
+      Ro[0][2] = zv[0];
+      Ro[1][2] = zv[1];
+      Ro[2][2] = zv[2];
+      del_ltot = (ltotmax-ltotmin)/10.;
+      del_l1 = (l1max-l1min)/100.;
+      dphi = 2.0*pi/100;
+      first=1;
+      distav=angleav=l1av=l2av=0.0;
+      for (phi=0; phi < 2.0*pi; phi += dphi)
 	{
 	  for (ltot=ltotmin; ltot < ltotmax; ltot +=del_ltot)
 	    {
 	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		{
-		  dist=dist_func(l1, ltot-l2, phi, Ro, b1, b2);
+		  dist=dist_func(i, l1, ltot-l2, phi, Ro, b1, b2);
 		  if (first || dist < distbest)
 		    {
 		      first=0;
@@ -483,12 +487,12 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
-     anglebest = acos((Sqr(l1best+l2best)-Sqr(l1best)-Sqr(l2best))/(2.0*l1best*l2best));
-     distav += distbest;
-     l1av += l1best;
-     l2av += l2best;
-     angleav += anglebest;
-     cc++;
+      anglebest = acos((Sqr(l1best+l2best)-Sqr(l1best)-Sqr(l2best))/(2.0*l1best*l2best));
+      distav += distbest;
+      l1av += l1best;
+      l2av += l2best;
+      angleav += anglebest;
+      cc++;
     }
   printf("l1=%.15G l2=%.15G theta_b=%.15G\n", l1av/cc, l2av/cc, angleav/cc);
 
