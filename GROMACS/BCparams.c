@@ -292,11 +292,11 @@ int conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*f
 
 int main(int argc, char *argv[])
 {
-  int opt, res, numP, P_count, i, k, found_one=0, first;
+  int opt, res, numP, P_count, i, k, found_one=0, first, kk;
   double pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double dl, ltot, l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
   double e2eav, xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3];
-  double cc, angle, angleav, distav, l1av, l2av, dist, anglebest;
+  double cc, angle, angleav, distav, l1av, l2av, dist, anglebest, delb[3], e2ebest;
   pi = 2.0*acos(0.0);
 #if 0
   angle=PI*(180.0 - atof(argv[1]))/180.0;
@@ -487,12 +487,15 @@ int main(int argc, char *argv[])
 		      first=0;
 		      l1best = l1;
 		      l2best = ltot-l1best;
+		      for (kk=0; kk < 3; kk++)
+			delb[kk] = b2[kk]-b1[kk];
+		      e2ebest = calc_norm(delb);
 		      distbest = dist;
 		    }
 		}
 	    }
 	}
-      anglebest = 180.*acos((-Sqr(e2eav)+Sqr(l1best)+Sqr(l2best))/(2.0*l1best*l2best))/acos(0.0)/2.0;
+      anglebest = 180.*acos((-Sqr(e2ebest)+Sqr(l1best)+Sqr(l2best))/(2.0*l1best*l2best))/acos(0.0)/2.0;
       distav += distbest;
       l1av += l1best;
       l2av += l2best;
