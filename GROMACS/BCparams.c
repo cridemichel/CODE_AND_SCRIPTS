@@ -22,28 +22,62 @@ double frame, dist_ist, dist_aver;
 double Lhc, Dhc=2.0;
 double PI;
 
-double conjgrad_func(double params[3], int i)
+void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+      x[k1] += rO[k1];
+    }
+}
+
+double dist_func(double l1, double l2, double phi, double R[3][3], double b1[3], double b2[3])
 {
   /* params = {L_1, L_2, theta} */
   int k, i;
-  double fact, angle, norm, pos1[3], pos2[3], delx, angle;
+  double fact, angle, norm, pos1[3], pos2[3], delx, angle, pos1B[3], pos2B[3];
   double n1[3], n2[3], vp[3], fact, delx, rp[3], drp[3];
-  double n1[3], n2[3];
+  double norm, n1[3], n2[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
+  double ltot, th1, th2, db12[3];
+  
+  ltot = l1+l2;
   /* use cosine theorem to calculate angle */
   angle = calc_angle(params[0], params[1]);
   delx = tan(angle/2.0)*Dhc/2.0; 
   Lhc = (Dhc + delx);
-  
+
+  th1 = acos((Sqr(l2)-Sqr(l1)-Sqr(ltot))/(l1*ltot));
+  th2 = 2.0*acos(0.0)-acos((Sqr(l1)-Sqr(l2)-Sqr(ltot))/(l2*ltot));
+
+  n1[0] = sin(th1)*cos(phi);
+  n1[1] = sin(th1)*sin(phi);
+  n1[2] = cos(th1);
+
+  n2[0] = sin(th2)*cos(phi);
+  n2[1] = sin(th2)*sin(phi);
+  n2[2] = cos(th2);
+
   fact= Dhc*0.5 - delx*0.5;
-  pos1[0]=n1[0]*fact;
-  pos1[1]=n1[1]*fact;
-  pos1[2]=n1[2]*fact;
+
+  pos1B[0]=n1[0]*fact;
+  pos1B[1]=n1[1]*fact;
+  pos1B[2]=n1[2]*fact;
+  body2lab(pos1B, pos1, b1, Ro);
+    
   printf("n=%f %f %f pos1=%f %f %f (norm=%f)\n", n1[0], n1[1], n1[2], pos1[0], pos1[1], pos1[2], calc_norm(pos1));
   /* com2 = {-(X0 D /2 - delx*0.5), 0, 0};*/
   fact = -(Dhc/2.0 - delx*0.5);
-  pos2[0]=n2[0]*fact;
-  pos2[1]=n2[1]*fact;
-  pos2[2]=n2[2]*fact;
+  pos2B[0]=n2[0]*fact;
+  pos2B[1]=n2[1]*fact;
+  pos2B[2]=n2[2]*fact;
+  body2lab(pos2B, pos2, b2, Ro);
+
+  dist=-1.0;
 
   for(k=0; k<22; k++)
     {
@@ -52,18 +86,39 @@ double conjgrad_func(double params[3], int i)
       drp[1] = P[i].y - pos1[1];
       drp[2] = P[i].z - pos1[2];
       dontcheck=0;
-      dist1Sq = Sqr(fabs(scalProd(drp, n1)) - Lhc * 0.5);
+      sp = scalProd(drp, n1);
+      if (sp > 0.0)
+	dist1Sq = Sqr(fabs(sp) - Lhc * 0.5);
+      else dist1Sq = -1.0;
+      if (dist1Sq < dist)
+	dist=dist1Sq;
       vectProdVec(drp, n1, vp);
       norm=calc_norm(vp);
       dist2Sq = Sqr(norm - Dhc*0.5);
+      if (dist2Sq < dist)
+	dist = dist2Sq;
       drp[0] = P[i].x - pos2[0];
       drp[1] = P[i].y - pos2[1];
       drp[2] = P[i].z - pos2[2];
-      dist3Sq = Sqr(fabs(scalProd(drp, n2)) - Lhc * 0.5); 
+      sp = scalProd(drp, n2);
+      if (sp > 0.0)
+  	dist3Sq = Sqr(fabs(sp) - Lhc * 0.5); 
+      else
+	dist3Sq = -1.0; 
+      if (dist3Sq < dist)
+	dist = dist3Sq;
       vectProdVec(drp, n2, vp);
       norm=calc_norm(vp);
       dist4Sq = Sqr(norm - Dhc*0.5);   
+      if (dist < dist4Sq)
+	dist = dist4Sq;
     }
+  if (dist == -1)
+    {
+      printf("We have a problem, dist=-1\n");
+      exit(-1);
+    }
+  return dist;
 }
 
 void conjgrad_grad(double *angs, double *grad)
@@ -197,8 +252,10 @@ int conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*f
 int main(int argc, char *argv[])
 {
   int opt, re, numP, P_count, i, k, found_one=0;
-  double x, y, z, l, m, comx, comy, comz;
-  PI = 2.0*acos(0.0);
+  double pi, x, y, z, l, m, comx, comy, comz, phi, dphi;
+  double l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
+  double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3];
+  pi = 2.0*acos(0.0);
 #if 0
   angle=PI*(180.0 - atof(argv[1]))/180.0;
   n1[0] = cos(angle);
@@ -321,8 +378,66 @@ int main(int argc, char *argv[])
       comx /=22.;
       comy /=22.;
       comz /=22.;
-      /* do a conjugate gradient here to find best BC! */
 
+      pi = 2.0*arccos(0.0);
+      /* swearch among all possible values of l_1, l_2 and phi! */
+      dl = 1./6.;
+      /* le lunghezze sono in angstrom */
+      ltotmin = 38.0-dl;
+      ltotmax = 42.0-dl;
+      l1min = 18.0;
+      l1max = 22.0;
+
+      b1[0] = bar1.x;
+      b1[1] = bar1.y;
+      b1[2] = bar1.z;
+      b2[0] = bar2.x;
+      b2[1] = bar2.y;
+      b2[2] = bar2.z;
+
+      zv[0] = bar2.x-bar1.x;
+      zv[1] = bar2.y-bar1.y;
+      zv[2] = bar2.z-bar1.z;
+      norm = calc_norm(zv);
+      for (k=0; k < 3; k++)
+	zv[k] /= norm;
+
+      xv[0] = bar2.x - comx;
+      xv[1] = bar2.y - comy;
+      xv[2] = bar2.z - comz;
+
+      sp = scalProd(xv, zv);
+      for (k=0; k < 3; k++)
+	xv[k] = xv[k] - zv[k]*sp;
+     
+      norm = calc_norm(xv);
+      for (k=0; k < 3; k++)
+	xv[k] /= norm;
+
+     vectProdVec(zv, xv, yv);
+     Ro[0][0] = xv[0];
+     Ro[1][0] = xv[1];
+     Ro[2][0] = xv[2];
+     Ro[0][1] = yv[0];
+     Ro[1][1] = yv[1];
+     Ro[2][1] = yv[2];
+     Ro[0][2] = zv[0];
+     Ro[1][2] = zv[1];
+     Ro[2][2] = zv[2];
+     del_ltot = (ltotmax-ltotmin)/10.;
+     del_l1 = (l1max-l1min)/100.;
+     dphi = 2.0*pi/100;
+     for (phi=0; phi < 2.0*pi; phi += dphi)
+	{
+	  for (ltot=ltotmin; ltot < ltotmax; ltot +=del_ltot)
+	    {
+	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
+		{
+		  dist_func(l1, l2, phi, Ro, b1, b2);
+
+		}
+	    }
+	}
     }
 }
 
