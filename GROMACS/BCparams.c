@@ -74,22 +74,30 @@ void body2labR(double xp[3], double x[3], double R[3][3])
 double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], double b1[3], double b2[3])
 {
   /* params = {L_1, L_2, theta} */
-  int k, i, dontcheck;
+  int k, i, dontcheck, kk;
   double fact, pos1[3], pos2[3], delx, angle, pos1B[3], pos2B[3];
-  double vp[3], rp[3], drp[3];
+  double vp[3], rp[3], drp[3], b12[3], distbb;
   double dist, norm, n1B[3], n2B[3], n1[3], n2[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
   double ltot, th1, th2, db12[3];
   
-  ltot = l1+l2;
-  /* use cosine theorem to calculate angle */
+
+  for (kk=0; kk < 3; kk++)
+    b12[kk] = b2[kk]-b1[kk];
+
+  distbb = calc_norm(b12);
+  if (l1+l2 < distbb)
+    return 1E100;
   //angle = calc_angle(params[0], params[1]);
+  th1 = acos((-Sqr(l2)+Sqr(l1)+Sqr(distbb))/(2.0*l1*distbb));
+  th2 = acos((-Sqr(l1)+Sqr(l2)+Sqr(distbb))/(2.0*l2*distbb));
+  angle = 2.0*acos(0.0)-th1-th2;
+  //printf("distbb=%f l1=%f l2=%f\n", distbb, l1, l2);
+  //printf("th1=%f th2=%f angle=%f\n", th1*180/3.14, th2*180/3.14, angle*180/3.14);
   delx = tan(angle/2.0)*Dhc/2.0; 
+  th2=2.0*acos(0.0)-th2;
   Lhc = (Dhc + delx);
 
-  th1 = acos((-Sqr(l2)+Sqr(l1)+Sqr(ltot))/(2.0*l1*ltot));
-  th2 = 2.0*acos(0.0)-acos((-Sqr(l1)+Sqr(l2)+Sqr(ltot))/(2.0*l2*ltot));
-
-  //printf("l1=%f l2=%f th1=%f th2=%f phi=%f\n", l1, l2, th1, th2, phi);
+   //printf("l1=%f l2=%f th1=%f th2=%f phi=%f\n", l1, l2, th1, th2, phi);
   n1B[0] = sin(th1)*cos(phi);
   n1B[1] = sin(th1)*sin(phi);
   n1B[2] = cos(th1);
@@ -430,10 +438,10 @@ int main(int argc, char *argv[])
       /* swearch among all possible values of l_1, l_2 and phi! */
       dl = 1./6.;
       /* le lunghezze sono in angstrom */
-      ltotmin = 38.0-dl;
-      ltotmax = 42.0-dl;
-      l1min = 18.0;
-      l1max = 22.0;
+      ltotmin = 35.0-dl;
+      ltotmax = 45.0-dl;
+      l1min = 15.0;
+      l1max = 20.0;
 
       b1[0] = bar1.x;
       b1[1] = bar1.y;
@@ -482,6 +490,7 @@ int main(int argc, char *argv[])
 	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		{
 		  dist=dist_func(i, l1, ltot-l1, phi, Ro, b1, b2);
+		  //printf("l1=%f del_l1=%f\n", l1, del_l1);
 		  if (first || dist < distbest)
 		    {
 		      first=0;
@@ -499,6 +508,7 @@ int main(int argc, char *argv[])
       distav += distbest;
       l1av += l1best;
       l2av += l2best;
+      //printf("anglebest=%f\n", anglebest);
       angleav += anglebest;
       cc++;
     }
