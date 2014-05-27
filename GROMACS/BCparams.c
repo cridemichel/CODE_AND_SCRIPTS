@@ -58,6 +58,18 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
       x[k1] += rO[k1];
     }
 }
+void body2labR(double xp[], double x[], double **R)
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+    }
+}
 
 double dist_func(double l1, double l2, double phi, double Ro[3][3], double b1[3], double b2[3])
 {
@@ -65,7 +77,7 @@ double dist_func(double l1, double l2, double phi, double Ro[3][3], double b1[3]
   int k, i, dontcheck;
   double fact, pos1[3], pos2[3], delx, angle, pos1B[3], pos2B[3];
   double vp[3], rp[3], drp[3];
-  double dist, norm, n1[3], n2[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
+  double dist, norm, n1B[3], n2B[3], n1[3], n2[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
   double ltot, th1, th2, db12[3];
   
   ltot = l1+l2;
@@ -77,27 +89,29 @@ double dist_func(double l1, double l2, double phi, double Ro[3][3], double b1[3]
   th1 = acos((Sqr(l2)-Sqr(l1)-Sqr(ltot))/(2.0*l1*ltot));
   th2 = 2.0*acos(0.0)-acos((Sqr(l1)-Sqr(l2)-Sqr(ltot))/(2.0*l2*ltot));
 
-  n1[0] = sin(th1)*cos(phi);
-  n1[1] = sin(th1)*sin(phi);
-  n1[2] = cos(th1);
+  n1B[0] = sin(th1)*cos(phi);
+  n1B[1] = sin(th1)*sin(phi);
+  n1B[2] = cos(th1);
+  body2labR(n1B, n1, Ro);
 
-  n2[0] = sin(th2)*cos(phi);
-  n2[1] = sin(th2)*sin(phi);
-  n2[2] = cos(th2);
+  n2B[0] = sin(th2)*cos(phi);
+  n2B[1] = sin(th2)*sin(phi);
+  n2B[2] = cos(th2);
+  body2labR(n2B, n2, Ro);
 
   fact= Dhc*0.5 - delx*0.5;
 
-  pos1B[0]=n1[0]*fact;
-  pos1B[1]=n1[1]*fact;
-  pos1B[2]=n1[2]*fact;
+  pos1B[0]=n1B[0]*fact;
+  pos1B[1]=n1B[1]*fact;
+  pos1B[2]=n1B[2]*fact;
   body2lab(pos1B, pos1, b1, Ro);
     
-  printf("n=%f %f %f pos1=%f %f %f (norm=%f)\n", n1[0], n1[1], n1[2], pos1[0], pos1[1], pos1[2], calc_norm(pos1));
+  //printf("n=%f %f %f pos1=%f %f %f (norm=%f)\n", n1[0], n1[1], n1[2], pos1[0], pos1[1], pos1[2], calc_norm(pos1));
   /* com2 = {-(X0 D /2 - delx*0.5), 0, 0};*/
   fact = -(Dhc/2.0 - delx*0.5);
-  pos2B[0]=n2[0]*fact;
-  pos2B[1]=n2[1]*fact;
-  pos2B[2]=n2[2]*fact;
+  pos2B[0]=n2B[0]*fact;
+  pos2B[1]=n2B[1]*fact;
+  pos2B[2]=n2B[2]*fact;
   body2lab(pos2B, pos2, b2, Ro);
 
   dist=-1.0;
@@ -398,11 +412,10 @@ int main(int argc, char *argv[])
 	  comx += P[i+k].x;
 	  comy += P[i+k].y;
 	  comz += P[i+k].z;
-
 	}
-      comx /=22.;
-      comy /=22.;
-      comz /=22.;
+      comx /= 22.;
+      comy /= 22.;
+      comz /= 22.;
 
       pi = 2.0*acos(0.0);
       /* swearch among all possible values of l_1, l_2 and phi! */
