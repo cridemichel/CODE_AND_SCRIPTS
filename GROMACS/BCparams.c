@@ -58,7 +58,7 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
       x[k1] += rO[k1];
     }
 }
-void body2labR(double xp[], double x[], double **R)
+void body2labR(double xp[3], double x[3], double R[3][3])
 {
   int k1, k2;
   for (k1=0; k1 < 3; k1++)
@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
   double pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double dl, ltot, l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
   double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3];
-  double cc, angle, angleav, distac, l1av, l2av;
+  double cc, angle, angleav, distav, l1av, l2av, dist, anglebest;
   pi = 2.0*acos(0.0);
 #if 0
   angle=PI*(180.0 - atof(argv[1]))/180.0;
@@ -473,7 +473,7 @@ int main(int argc, char *argv[])
 	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		{
 		  dist=dist_func(l1, ltot-l2, phi, Ro, b1, b2);
-		  if (first || dist < distmin)
+		  if (first || dist < distbest)
 		    {
 		      first=0;
 		      l1best = l1;
