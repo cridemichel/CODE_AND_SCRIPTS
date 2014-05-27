@@ -86,9 +86,10 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   delx = tan(angle/2.0)*Dhc/2.0; 
   Lhc = (Dhc + delx);
 
-  th1 = acos((Sqr(l2)-Sqr(l1)-Sqr(ltot))/(2.0*l1*ltot));
-  th2 = 2.0*acos(0.0)-acos((Sqr(l1)-Sqr(l2)-Sqr(ltot))/(2.0*l2*ltot));
+  th1 = acos((-Sqr(l2)+Sqr(l1)+Sqr(ltot))/(2.0*l1*ltot));
+  th2 = 2.0*acos(0.0)-acos((-Sqr(l1)+Sqr(l2)+Sqr(ltot))/(2.0*l2*ltot));
 
+  //printf("l1=%f l2=%f th1=%f th2=%f phi=%f\n", l1, l2, th1, th2, phi);
   n1B[0] = sin(th1)*cos(phi);
   n1B[1] = sin(th1)*sin(phi);
   n1B[2] = cos(th1);
@@ -105,7 +106,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   pos1B[1]=n1B[1]*fact;
   pos1B[2]=n1B[2]*fact;
   body2lab(pos1B, pos1, b1, Ro);
-    
+
   //printf("n=%f %f %f pos1=%f %f %f (norm=%f)\n", n1[0], n1[1], n1[2], pos1[0], pos1[1], pos1[2], calc_norm(pos1));
   /* com2 = {-(X0 D /2 - delx*0.5), 0, 0};*/
   fact = -(Dhc/2.0 - delx*0.5);
@@ -135,6 +136,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
       dist2Sq = Sqr(norm - Dhc*0.5);
       if (dist2Sq < dist)
 	dist = dist2Sq;
+      //printf("dist2Sq=%f\n", dist2Sq);
       drp[0] = P[i0+k].x - pos2[0];
       drp[1] = P[i0+k].y - pos2[1];
       drp[2] = P[i0+k].z - pos2[2];
@@ -293,7 +295,7 @@ int main(int argc, char *argv[])
   int opt, res, numP, P_count, i, k, found_one=0, first;
   double pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double dl, ltot, l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
-  double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3];
+  double e2eav, xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3];
   double cc, angle, angleav, distav, l1av, l2av, dist, anglebest;
   pi = 2.0*acos(0.0);
 #if 0
@@ -378,6 +380,7 @@ int main(int argc, char *argv[])
       }
     numP++;
     }
+  e2eav=dist_aver/frame;
   printf("\nafter %f steps the average e2e is:  %f\n", frame, dist_aver/frame);
   fclose(e2e);
   rewind(buffer);
@@ -396,8 +399,11 @@ int main(int argc, char *argv[])
     }
   fclose(buffer);
   srand48(145); /* seeding */
+  distav=angleav=l1av=l2av=0.0;
   for (i=0; i < numP; i=i+22)
     {
+      if (i%100==0) 
+	printf("i=%d/%d\n", i, numP);
       //center of mass of terminal Phosphate pairs 
       bar1.x = (P[i].x+P[i+21].x)*0.5;
       bar1.y = (P[i].y+P[i+21].y)*0.5;
@@ -466,17 +472,16 @@ int main(int argc, char *argv[])
       Ro[1][2] = zv[1];
       Ro[2][2] = zv[2];
       del_ltot = (ltotmax-ltotmin)/10.;
-      del_l1 = (l1max-l1min)/100.;
-      dphi = 2.0*pi/100;
+      del_l1 = (l1max-l1min)/20.;
+      dphi = 2.0*pi/20;
       first=1;
-      distav=angleav=l1av=l2av=0.0;
       for (phi=0; phi < 2.0*pi; phi += dphi)
 	{
 	  for (ltot=ltotmin; ltot < ltotmax; ltot +=del_ltot)
 	    {
 	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		{
-		  dist=dist_func(i, l1, ltot-l2, phi, Ro, b1, b2);
+		  dist=dist_func(i, l1, ltot-l1, phi, Ro, b1, b2);
 		  if (first || dist < distbest)
 		    {
 		      first=0;
@@ -487,7 +492,7 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
-      anglebest = acos((Sqr(l1best+l2best)-Sqr(l1best)-Sqr(l2best))/(2.0*l1best*l2best));
+      anglebest = 180.*acos((-Sqr(e2eav)+Sqr(l1best)+Sqr(l2best))/(2.0*l1best*l2best))/acos(0.0)/2.0;
       distav += distbest;
       l1av += l1best;
       l2av += l2best;
