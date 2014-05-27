@@ -4,7 +4,30 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#define Sqr(x) ((x)*(x))
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
+void vectProdVec(double *A, double *B, double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
+}
 
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
 
 struct vector 
 {
@@ -14,9 +37,9 @@ struct vector
 };
 
 char infile[1024], e2efile[1024]="e2e.dat", bcparfile[1024]="bcpar.dat";
-char string[1024], dummystr[256];
+char string[1024], dummystr[256], a[1024];
 struct vector PA1_1, PA2_1, PB2_1, PB1_1;
-struct vector bar1_1, bar2_1;
+struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
 double frame, dist_ist, dist_aver;
 double Lhc, Dhc=2.0;
@@ -36,18 +59,18 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
     }
 }
 
-double dist_func(double l1, double l2, double phi, double R[3][3], double b1[3], double b2[3])
+double dist_func(double l1, double l2, double phi, double Ro[3][3], double b1[3], double b2[3])
 {
   /* params = {L_1, L_2, theta} */
-  int k, i;
-  double fact, angle, norm, pos1[3], pos2[3], delx, angle, pos1B[3], pos2B[3];
-  double n1[3], n2[3], vp[3], fact, delx, rp[3], drp[3];
-  double norm, n1[3], n2[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
+  int k, i, dontcheck;
+  double fact, pos1[3], pos2[3], delx, angle, pos1B[3], pos2B[3];
+  double vp[3], rp[3], drp[3];
+  double dist, norm, n1[3], n2[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
   double ltot, th1, th2, db12[3];
   
   ltot = l1+l2;
   /* use cosine theorem to calculate angle */
-  angle = calc_angle(params[0], params[1]);
+  //angle = calc_angle(params[0], params[1]);
   delx = tan(angle/2.0)*Dhc/2.0; 
   Lhc = (Dhc + delx);
 
@@ -120,7 +143,7 @@ double dist_func(double l1, double l2, double phi, double R[3][3], double b1[3],
     }
   return dist;
 }
-
+#if 0
 void conjgrad_grad(double *angs, double *grad)
 {
   double r1[3], r2[3], xp[6], dd[3], jac[6][4];
@@ -248,12 +271,13 @@ int conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*f
   //exit(-1);
   return 0;
 }
+#endif
 
 int main(int argc, char *argv[])
 {
-  int opt, re, numP, P_count, i, k, found_one=0;
-  double pi, x, y, z, l, m, comx, comy, comz, phi, dphi;
-  double l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
+  int opt, res, numP, P_count, i, k, found_one=0;
+  double pi, x, y, z, l, m, norm, comx, comy, comz, phi, dphi, l1, l2;
+  double dl, ltot, l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
   double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3];
   pi = 2.0*acos(0.0);
 #if 0
@@ -265,7 +289,7 @@ int main(int argc, char *argv[])
   n2[1] = 0.0;
   n2[2] = 0.0;
 #endif
-  FILE *buffer, *in, *e2ef;
+  FILE *buffer, *in, *e2e;
   while ((opt = getopt (argc, argv, "i:e:o:")) != -1)
     {
     switch (opt)
@@ -276,7 +300,7 @@ int main(int argc, char *argv[])
 	break;
       case 'e':
 	printf ("Output file: \"%s\"\n", optarg);
-	strcpy(e2efile,optfile);
+	strcpy(e2efile,optarg);
 	break;
       case 'o':
 	printf ("bcparfile: \"%s\"\n", optarg);
@@ -289,7 +313,7 @@ int main(int argc, char *argv[])
   //buffering P positions into a file
   in= fopen(infile, "r");
   buffer = fopen("buffer.pdb", "w");
-  while ( fgets(string, 100, traj) != NULL )
+  while ( fgets(string, 100, in) != NULL )
     {
       if(string[13] == 'P'  )
 	{
@@ -299,8 +323,8 @@ int main(int argc, char *argv[])
   fclose(buffer);
   fclose(in);
   frame = 0;
-  buffer = fopen("buffer.pdb", r);
-  e2ef = fopen(e2efile, "w+");  
+  buffer = fopen("buffer.pdb", "r");
+  e2e = fopen(e2efile, "w+");  
   numP=0;
   while ( !feof(buffer) )
     {
@@ -337,14 +361,14 @@ int main(int argc, char *argv[])
     numP++;
     }
   printf("\nafter %d steps the average e2e is:  %f\n", frame, dist_aver/frame);
-  fclose(e2ef);
+  fclose(e2e);
   rewind(buffer);
 
   P = malloc(sizeof(struct vector)*numP); 
   frame = 0;
   while ( !feof(buffer))
     {
-      fscanf(buffer_read, "%22c %d %f %f %f %f %f\n", a, &res, &x, &y, &z, &l, &m);
+      fscanf(buffer, "%22c %d %f %f %f %f %f\n", a, &res, &x, &y, &z, &l, &m);
       P[P_count].x = x;
       P[P_count].y = y;
       P[P_count].z = z;
@@ -379,7 +403,7 @@ int main(int argc, char *argv[])
       comy /=22.;
       comz /=22.;
 
-      pi = 2.0*arccos(0.0);
+      pi = 2.0*acos(0.0);
       /* swearch among all possible values of l_1, l_2 and phi! */
       dl = 1./6.;
       /* le lunghezze sono in angstrom */
@@ -433,7 +457,7 @@ int main(int argc, char *argv[])
 	    {
 	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		{
-		  dist_func(l1, l2, phi, Ro, b1, b2);
+		  dist_func(l1, ltot-l2, phi, Ro, b1, b2);
 
 		}
 	    }
