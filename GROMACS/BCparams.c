@@ -74,8 +74,8 @@ double dist_func(double l1, double l2, double phi, double Ro[3][3], double b1[3]
   delx = tan(angle/2.0)*Dhc/2.0; 
   Lhc = (Dhc + delx);
 
-  th1 = acos((Sqr(l2)-Sqr(l1)-Sqr(ltot))/(l1*ltot));
-  th2 = 2.0*acos(0.0)-acos((Sqr(l1)-Sqr(l2)-Sqr(ltot))/(l2*ltot));
+  th1 = acos((Sqr(l2)-Sqr(l1)-Sqr(ltot))/(2.0*l1*ltot));
+  th2 = 2.0*acos(0.0)-acos((Sqr(l1)-Sqr(l2)-Sqr(ltot))/(2.0*l2*ltot));
 
   n1[0] = sin(th1)*cos(phi);
   n1[1] = sin(th1)*sin(phi);
@@ -275,10 +275,11 @@ int conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*f
 
 int main(int argc, char *argv[])
 {
-  int opt, res, numP, P_count, i, k, found_one=0;
-  double pi, x, y, z, l, m, norm, comx, comy, comz, phi, dphi, l1, l2;
+  int opt, res, numP, P_count, i, k, found_one=0, first;
+  double pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double dl, ltot, l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
   double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3];
+  double cc, angle, angleav, distac, l1av, l2av;
   pi = 2.0*acos(0.0);
 #if 0
   angle=PI*(180.0 - atof(argv[1]))/180.0;
@@ -451,17 +452,32 @@ int main(int argc, char *argv[])
      del_ltot = (ltotmax-ltotmin)/10.;
      del_l1 = (l1max-l1min)/100.;
      dphi = 2.0*pi/100;
+     first=1;
      for (phi=0; phi < 2.0*pi; phi += dphi)
 	{
 	  for (ltot=ltotmin; ltot < ltotmax; ltot +=del_ltot)
 	    {
 	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		{
-		  dist_func(l1, ltot-l2, phi, Ro, b1, b2);
-
+		  dist=dist_func(l1, ltot-l2, phi, Ro, b1, b2);
+		  if (first || dist < distmin)
+		    {
+		      first=0;
+		      l1best = l1;
+		      l2best = ltot-l1best;
+		      distbest = dist;
+		    }
 		}
 	    }
 	}
+     anglebest = acos((Sqr(l1best+l2best)-Sqr(l1best)-Sqr(l2best))/(2.0*l1best*l2best));
+     distav += distbest;
+     l1av += l1best;
+     l2av += l2best;
+     angleav += anglebest;
+     cc++;
     }
+  printf("l1=%.15G l2=%.15G theta_b=%.15G\n", l1av/cc, l2av/cc, angleav/cc);
+
 }
 
