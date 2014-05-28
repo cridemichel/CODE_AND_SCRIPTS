@@ -521,7 +521,11 @@ int main(int argc, char *argv[])
 
   /* un frame è un duplex */
   if (lastframe > 0 && lastframe > firstframe)
-    iend = 22*lastframe;
+    {
+      iend = 22*lastframe;
+      if (iend > numP)
+	iend = numP;
+    }
   else
     iend=numP;
   if (mglout)
