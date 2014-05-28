@@ -21,7 +21,7 @@ struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
 double frame, dist_ist, dist_aver;
 double Lhc, Dhc=20.0;
-double PI;
+double PI, Prad=1.8;
 int mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
 FILE *mglfile;
 char mglfn[1024]="out.mgl"; 
@@ -323,7 +323,7 @@ void print_matrix(double M[3][3], int n)
 }
 void print_usage(void)
 {
-  printf("BCAparam [-o <params_file> | -e <end2end_file> | --mglmode/-m | --firstframe/-f <first_frame> | --lastframe/-l <last_frame> | --mglfn|-mf <mgl_file_name> ]  <pdb_file\n");
+  printf("BCAparam [-o <params_file> | -e <end2end_file> | --mglmode/-m | --firstframe/-f <first_frame> | --lastframe/-l <last_frame> | --mglfn|-mf <mgl_file_name> | --Prad/-Pr <phospate radius> ]  <pdb_file\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -377,6 +377,13 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  lastframe = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--Prad") || !strcmp(argv[cc],"-Pr"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  Prad = atof(argv[cc]);
 	}
       else if (cc == argc || extraparam == 1)
 	print_usage();
@@ -572,7 +579,7 @@ int main(int argc, char *argv[])
 	  comz += P[i+k].z;
 	  if (mglout==1)
 	    {
-	      fprintf(mglfile, "%f %f %f @ 3.6 C[green]\n", P[i+k].x-mglcomx, P[i+k].y-mglcomy, P[i+k].z-mglcomz);
+	      fprintf(mglfile, "%f %f %f @ %f C[green]\n", P[i+k].x-mglcomx, P[i+k].y-mglcomy, P[i+k].z-mglcomz, Prad);
 	    }
 	}
       comx /= 22.;
