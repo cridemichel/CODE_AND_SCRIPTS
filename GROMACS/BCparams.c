@@ -20,7 +20,7 @@ struct vector PA1_1, PA2_1, PB2_1, PB1_1;
 struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
 double frame, dist_ist, dist_aver;
-double Lhc, Dhc=20.0;
+double Lhc, Dhc=20.0, Lhc1, Lhc2;
 double PI, Prad=1.8;
 int mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
 FILE *mglfile;
@@ -94,12 +94,16 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   th1 = acos((-Sqr(l2)+Sqr(l1)+Sqr(distbb))/(2.0*l1*distbb));
   th2 = acos((-Sqr(l1)+Sqr(l2)+Sqr(distbb))/(2.0*l2*distbb));
   angle = 2.0*acos(0.0)-th1-th2;
-  //printf("distbb=%f l1=%f l2=%f\n", distbb, l1, l2);
-  //printf("th1=%f th2=%f angle=%f\n", th1*180/3.14, th2*180/3.14, angle*180/3.14);
-  delx = tan(angle/2.0)*Dhc/2.0; 
+  printf("distbb=%f l1=%f l2=%f\n", distbb, l1, l2);
+  printf("th1=%f th2=%f angle=%f\n", th1*180/3.14, th2*180/3.14, angle*180/3.14);
+  
+  ////delx = tan(angle/2.0)*Dhc/2.0; 
+  delx = 0.0;
   th2=2.0*acos(0.0)-th2;
   Lhc = (Dhc + delx);
-
+ 
+  Lhc1 = l1 + delx;
+  Lhc2 = l2 + delx; 
    //printf("l1=%f l2=%f th1=%f th2=%f phi=%f\n", l1, l2, th1, th2, phi);
   n1B[0] = sin(th1)*cos(phi);
   n1B[1] = sin(th1)*sin(phi);
@@ -110,22 +114,40 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   n2B[1] = sin(th2)*sin(phi);
   n2B[2] = cos(th2);
   body2labR(n2B, n2, Ro);
-
-  fact= Dhc*0.5 - delx*0.5;
-
+#if 0
+  n2[0] = -n1[0];
+  n2[1] = -n1[1];
+  n2[2] = -n1[2];
+#endif  
+  fact = Lhc1*0.5 - delx*0.5;
+#if 1
+  pos1[0] = b1[0]+n1[0]*fact;
+  pos1[1] = b1[1]+n1[1]*fact;
+  pos1[2] = b1[2]+n1[2]*fact;
+#else
   pos1B[0]=n1B[0]*fact;
   pos1B[1]=n1B[1]*fact;
   pos1B[2]=n1B[2]*fact;
   body2lab(pos1B, pos1, b1, Ro);
-
+#endif
   //printf("n=%f %f %f pos1=%f %f %f (norm=%f)\n", n1[0], n1[1], n1[2], pos1[0], pos1[1], pos1[2], calc_norm(pos1));
   /* com2 = {-(X0 D /2 - delx*0.5), 0, 0};*/
-  fact = Dhc/2.0 - delx*0.5;
+  //fact = Dhc/2.0 - delx*0.5;
+  fact = Lhc2*0.5 - delx*0.5;
+  
+#if 1
+  pos2[0] = b2[0]+n2[0]*fact;
+  pos2[1] = b2[1]+n2[1]*fact;
+  pos2[2] = b2[2]+n2[2]*fact;
+#else
   pos2B[0]=n2B[0]*fact;
   pos2B[1]=n2B[1]*fact;
   pos2B[2]=n2B[2]*fact;
   body2lab(pos2B, pos2, b2, Ro);
+#endif
 
+  printf("P1=P2 P1:%f %f %f P2:%f %f %f\n",  b1[0]+n1[0]*Lhc1, b1[1]+n1[1]*Lhc1, b1[2]+n1[2]*Lhc1,
+                                             b2[0]+n2[0]*Lhc2, b2[1]+n2[1]*Lhc2, b2[2]+n2[2]*Lhc2);
   dist=DISTMAX;
   disttot=0.0;
 
@@ -139,7 +161,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
       sp = scalProd(drp, n1);
       if (sp < 0.0)
 	{
-	  dist1Sq = Sqr(fabs(sp) - Lhc * 0.5);
+	  dist1Sq = Sqr(fabs(sp) - Lhc1 * 0.5);
 	  if (dist1Sq < dist)
 	    dist=dist1Sq;
 	}
@@ -155,7 +177,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
       sp = scalProd(drp, n2);
       if (sp < 0.0)
 	{
-  	  dist3Sq = Sqr(fabs(sp) - Lhc * 0.5); 
+  	  dist3Sq = Sqr(fabs(sp) - Lhc2 * 0.5); 
 	  if (dist3Sq < dist)
 	    dist = dist3Sq;
 	}
@@ -405,7 +427,8 @@ int main(int argc, char *argv[])
   double dl, ltot, l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
   double e2eav, xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
   double n1best[3], n2best[3], pos1best[3], pos2best[3], Lmgl=0.0;
-  double cc=0, angle, angleav, distav, l1av, l2av, dist, anglebest, delb[3], e2ebest, Lhcbest, mglcomx, mglcomy, mglcomz;
+  double cc=0, angle, angleav, distav, l1av, l2av, dist, anglebest, delb[3], e2ebest, Lhc1best, Lhc2best,
+	 mglcomx, mglcomy, mglcomz;
   pi = 2.0*acos(0.0);
 #if 0
   angle=PI*(180.0 - atof(argv[1]))/180.0;
@@ -555,7 +578,7 @@ int main(int argc, char *argv[])
 	  if (fabs(P[i].z - mglcomz) > Lmgl)
 	    Lmgl = fabs(P[i].z - mglcomz);
 	}
-      //Lmgl *= 2.0;
+      Lmgl *= 2.0;
       fprintf(mglfile, ".Vol: %f\n", pow(Lmgl,3.0));
     }
 
@@ -634,8 +657,8 @@ int main(int argc, char *argv[])
       dphi = 2.0*pi/20;
       dl = 1./6.;
       /* le lunghezze sono in angstrom */
-      ltotmin = 35.0-dl;
-      ltotmax = 45.0-dl;
+      ltotmin = 36.0-dl;
+      ltotmax = 44.0-dl;
       l1min = 12;
       l1max = 20;
 
@@ -644,8 +667,8 @@ int main(int argc, char *argv[])
 	{
 	  for (ltot=ltotmin; ltot < ltotmax; ltot += del_ltot)
 	    {
-	      l1min = 0.2*ltot/2.0;
-	      l1max = 1.5*ltot/2.0;
+	      l1min = 0.9*ltot/2.0;
+	      l1max = 1.1*ltot/2.0;
 	      del_l1 =  (l1max-l1min)/20.;
 	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		{
@@ -667,7 +690,8 @@ int main(int argc, char *argv[])
 			  pos1best[kk] = pos1[kk];
 			  pos2best[kk] = pos2[kk];
 			}
-		      Lhcbest = Lhc;
+		      Lhc1best = Lhc1;
+		      Lhc2best = Lhc2;
 		    }
 		}
 	    }
@@ -686,8 +710,8 @@ int main(int argc, char *argv[])
 	}
       if (mglout==1)
 	{
-	  fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos1best[0]-mglcomx, pos1best[1]-mglcomy, pos1best[2]-mglcomz, n1best[0], n1best[1], n1best[1], Dhc/2.0, Lhcbest);
-	  fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos2best[0]-mglcomx, pos2best[1]-mglcomy, pos2best[2]-mglcomz, n2best[0], n2best[1], n2best[1], Dhc/2.0, Lhcbest);
+	  fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos1best[0]-mglcomx, pos1best[1]-mglcomy, pos1best[2]-mglcomz, n1best[0], n1best[1], n1best[2], Dhc/2.0, Lhc1best);
+	  fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos2best[0]-mglcomx, pos2best[1]-mglcomy, pos2best[2]-mglcomz, n2best[0], n2best[1], n2best[2], Dhc/2.0, Lhc2best);
 	}
 
       //printf("anglebest=%f\n", anglebest);
