@@ -20,7 +20,7 @@ struct vector PA1_1, PA2_1, PB2_1, PB1_1;
 struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
 double ltotmin=38.0, ltotmax=42.0, l1l2min=0.8, l1l2max=1.2, frame, dist_ist, dist_aver;
-int nl=20, nlt=20, nphi=20; 
+int outframes=1000, nl=20, nlt=20, nphi=20; 
 double Lhc, Dhc=20.0, Lhc1, Lhc2;
 double PI, Prad=1.8;
 int mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
@@ -352,7 +352,7 @@ void print_usage(void)
   printf("   | --lastframe/-l <last_frame> | --mglfn|-mf <mgl_file_name> | --Prad/-Pr <phospate radius>\n"); 
   printf("   | --l12min/-l1m <l1_over_l2_min> | --l12max|-l12M <l1_over_l2_max> | --ltotmin/-ltm <ltotmin>\n");
   printf("   | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot>\n");
-  printf("   | -nphi <mesh_points_for_phi> ]  <pdb_file>\n");
+  printf("   | -nphi <mesh_points_for_phi> | --outframes/-of <output frames> ]  <pdb_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -455,6 +455,13 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  nphi = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--outframes") || !strcmp(argv[cc],"-of") )
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  outframes = atoi(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--Prad") || !strcmp(argv[cc],"-Pr"))
 	{
@@ -648,7 +655,7 @@ int main(int argc, char *argv[])
   cc=0;
   for (i=ibeg; i < iend; i=i+22)
     {
-      if (i%100==0) 
+      if (i%outframes==0) 
 	printf("i=%d/%d\n", i, numP);
       //center of mass of terminal Phosphate pairs 
       bar1.x = (P[i].x+P[i+21].x)*0.5;
