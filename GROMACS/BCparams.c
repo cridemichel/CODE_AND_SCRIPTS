@@ -735,12 +735,12 @@ int main(int argc, char *argv[])
 	      Dx = P[i+21-k].x - P[i+k].x;
     	      Dy = P[i+21-k].y - P[i+k].y;
 	      Dz = P[i+21-k].z - P[i+k].z;
-	      //printf("del=%f %f %f L=%f %f %f\n", Dx, Dy, Dz, Lx, Ly, Lz);
-	      //printf("P1= %f %f %f P2=%f %f %f\n", P[i+21-k].x,P[i+21-k].y,P[i+21-k].z,
-	      //	P[i+k].x,P[i+k].y,P[i+k].z);
+	      printf("del=%f %f %f L=%f %f %f\n", Dx, Dy, Dz, Lx, Ly, Lz);
+	      printf("P1= %f %f %f P2=%f %f %f\n", P[i+21-k].x,P[i+21-k].y,P[i+21-k].z,
+	      	P[i+k].x,P[i+k].y,P[i+k].z);
 	      if (fixbroken==3)
 		{
-		  if (fabs(Dx) > Lx || fabs(Dx) > Ly || fabs(Dz) > Lz)
+		  if (fabs(Dx) > Lx || fabs(Dy) > Ly || fabs(Dz) > Lz)
 		    ignore[i/22]=1;
 		}	
 	      else 
