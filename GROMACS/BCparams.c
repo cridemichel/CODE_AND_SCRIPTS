@@ -23,7 +23,7 @@ double Lx=-1., Ly=-1., Lz=-1., ltotmin=38.0, ltotmax=42.0, l1l2min=0.8, l1l2max=
 int fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20; 
 double Lhc, Dhc=20.0, Lhc1, Lhc2;
 double PI, Prad=1.8;
-int mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
+int *ignore, mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
 FILE *mglfile;
 char mglfn[1024]="out.mgl"; 
 double max3(double a, double b, double c)
@@ -365,7 +365,7 @@ void print_usage(void)
   printf("   | --l12min/-l1m <l1_over_l2_min> | --l12max|-l12M <l1_over_l2_max> | --ltotmin/-ltm <ltotmin>\n");
   printf("   | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot>\n");
   printf("   | -nphi <mesh_points_for_phi> | --outframes/-of <output frames> | -Lx/y/z <box_size_along_x/y/z>\n");
-  printf(" | --fixbroken|-fb ] <pdb_file>\n");
+  printf(" | --fixbroken/-fb <1=fix 2=ignore> ] <pdb_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -479,7 +479,10 @@ void parse_param(int argc, char** argv)
 	}
       else if (!strcmp(argv[cc],"--fixbroken")||!strcmp(argv[cc],"-fb"))
 	{
-	  fixbroken = 1;
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  fixbroken = atoi(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"-nl"))
 	{
@@ -532,7 +535,7 @@ void parse_param(int argc, char** argv)
 int main(int argc, char *argv[])
 {
   int ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
-  double Dx, Dy, Dz, e2e_ist, e2eav=0.0, pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
+  double shift[3], Dx, Dy, Dz, e2e_ist, e2eav=0.0, pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double dl, ltot, l1min, l1max, del_l1, del_ltot, sp;
   double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
   double Lgx, Lgy, Lgz, n1best[3], n2best[3], pos1best[3], pos2best[3], Lmgl=0.0;
@@ -641,6 +644,7 @@ int main(int argc, char *argv[])
 #endif
 
   P = malloc(sizeof(struct vector)*numP); 
+  ignore = malloc(sizeof(int)*(numP/22));
   frame = 0;
   P_count = 0;
   while ( !feof(buffer))
@@ -678,7 +682,7 @@ int main(int argc, char *argv[])
   printf("l1l2 range=(%f-%f) ltot range=(%f,%f) dl=%d dlt=%d dphi=%d\n",
 	 l1l2min, l1l2max, ltotmin, ltotmax, nl, nlt, nphi);
 
-  if (mglout || fixbroken)
+  if (mglout || fixbroken > 0)
     {
       cc = 0;
       mglcomx = mglcomy = mglcomz = 0.0;
@@ -706,7 +710,7 @@ int main(int argc, char *argv[])
 	}
       
       Lmgl = 2.0*max3(Lgx,Lgy,Lgz);
-      if (fixbroken && (Lx<=0 || Ly<=0 || Lz<=0))
+      if (fixbroken > 0 && (Lx<=0 || Ly<=0 || Lz<=0))
 	{
 	  Lx = Lgx*2.0;
 	  Ly = Lgy*2.0;
@@ -720,33 +724,65 @@ int main(int argc, char *argv[])
 
   cc=0;
   e2eav = 0.0;
+  if (fixbroken==1 || fixbroken==2 || fixbroken==3)
+    {
+      for (i=ibeg; i < iend; i=i+22)
+	{
+	  if (fixbroken==2)
+	    ignore[i/22] = 0;
+	  for (k=0; k < 11; k++)
+	    {
+	      Dx = P[i+21-k].x - P[i+k].x;
+    	      Dy = P[i+21-k].y - P[i+k].y;
+	      Dz = P[i+21-k].z - P[i+k].z;
+	      //printf("del=%f %f %f L=%f %f %f\n", Dx, Dy, Dz, Lx, Ly, Lz);
+	      //printf("P1= %f %f %f P2=%f %f %f\n", P[i+21-k].x,P[i+21-k].y,P[i+21-k].z,
+	      //	P[i+k].x,P[i+k].y,P[i+k].z);
+	      if (fixbroken==3)
+		{
+		  if (fabs(Dx) > Lx || fabs(Dx) > Ly || fabs(Dz) > Lz)
+		    ignore[i/22]=1;
+		}	
+	      else 
+		{
+		  if ((fabs(rint(Dx/Lx)) >= 1)||
+		      (fabs(rint(Dy/Ly)) >= 1)||
+		      (fabs(rint(Dz/Lz)) >= 1))
+		    {
+		      if (fixbroken==2)
+			ignore[i/22]=1;
+		      else 
+			{
+			  shift[0] = Lx*rint(Dx/Lx);
+			  shift[1] = Ly*rint(Dy/Ly);
+			  shift[2] = Lz*rint(Dz/Lz);
+			}
+		      break;
+		    }
+		}
+		
+	    } 
+	  if (fixbroken==1)
+	    {
+	      for (k=0; k < 11; k++)
+		{
+		  P[i+k].x += shift[0];
+		  P[i+k].y += shift[1];
+		  P[i+k].z += shift[2];
+		}	  
+	    }    
+	}
+    }
   for (i=ibeg; i < iend; i=i+22)
     {
       if ((i/22)%outframes==0 && i > ibeg) 
 	printf("# duplex=%d/%d\n", i/22, numP/22);
       //center of mass of terminal Phosphate pairs 
-      if (fixbroken)
-	{
-	  Dx = P[i+21].x - P[i].x;
-	  Dy = P[i+21].y - P[i].y;
-	  Dz = P[i+21].z - P[i].z;
-	  P[i].x += Lx*rint(Dx/Lx);
-	  P[i].y += Ly*rint(Dy/Ly);
-	  P[i].z += Lz*rint(Dz/Lz);
-	}
+      if (ignore[i/22]==1)
+	continue;	
       bar1.x = (P[i].x+P[i+21].x)*0.5;
       bar1.y = (P[i].y+P[i+21].y)*0.5;
       bar1.z = (P[i].z+P[i+21].z)*0.5;
-      if (fixbroken)
-	{
-	  Dx = P[i+11].x - P[i+10].x;
-	  Dy = P[i+11].y - P[i+10].y;
-	  Dz = P[i+11].z - P[i+10].z;
-	  P[i+10].x += Lx*rint(Dx/Lx);
-	  P[i+10].y += Ly*rint(Dy/Ly);
-	  P[i+10].z += Lz*rint(Dz/Lz);
-	}
-
       bar2.x = (P[i+10].x+P[i+11].x)*0.5;
       bar2.y = (P[i+10].y+P[i+11].y)*0.5;
       bar2.z = (P[i+10].z+P[i+11].z)*0.5;
@@ -876,7 +912,9 @@ int main(int argc, char *argv[])
   if (mglout)
     fclose(mglfile);
   fclose(e2e);
-  printf("l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
-
+  if (fixbroken==1 || fixbroken==2||fixbroken==3)
+    printf("#good duplexes=%d/%d l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), (iend-ibeg)/22, l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
+  else
+    printf("#duplexes=%d dl1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
 }
 
