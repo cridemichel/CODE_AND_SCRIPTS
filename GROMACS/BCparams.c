@@ -20,7 +20,7 @@ struct vector PA1_1, PA2_1, PB2_1, PB1_1;
 struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
 double frame, dist_ist, dist_aver;
-double Lhc, Dhc=2.0;
+double Lhc, Dhc=20.0;
 double PI;
 int mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
 FILE *mglfile;
@@ -74,13 +74,14 @@ void body2labR(double xp[3], double x[3], double R[3][3])
     }
 }
 #define DISTMAX 1E100
-double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], double b1[3], double b2[3])
+double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], double b1[3], double b2[3], 
+		 double pos1[3], double n1[3], double pos2[3], double n2[3])
 {
   /* params = {L_1, L_2, theta} */
   int k, i, dontcheck, kk;
-  double fact, pos1[3], disttot, pos2[3], delx, angle, pos1B[3], pos2B[3];
+  double fact, disttot, delx, angle, pos1B[3], pos2B[3];
   double vp[3], rp[3], drp[3], b12[3], distbb;
-  double dist, norm, n1B[3], n2B[3], n1[3], n2[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
+  double dist, norm, n1B[3], n2B[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
   double ltot, th1, th2, db12[3];
   
   for (kk=0; kk < 3; kk++)
@@ -128,11 +129,6 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   dist=DISTMAX;
   disttot=0.0;
 
-  if (mglout==1)
-    {
-      fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos1[0], pos1[1], pos1[2], n1[0], n1[1], n1[1], Dhc/2.0, Lhc);
-      fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos2[0], pos2[1], pos2[2], n2[0], n2[1], n2[1], Dhc/2.0, Lhc);
-    }
   for(k=0; k<22; k++)
     {
       /* check overlap here */
@@ -156,10 +152,6 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
       drp[0] = P[i0+k].x - pos2[0];
       drp[1] = P[i0+k].y - pos2[1];
       drp[2] = P[i0+k].z - pos2[2];
-      if (mglout==1)
-	{
-	  fprintf(mglfile, "%f %f %f @ 1.8\n", P[i0+k].x, P[i0+k].y, P[i0+k].z);
-	}
       sp = scalProd(drp, n2);
       if (sp < 0.0)
 	{
@@ -404,8 +396,9 @@ int main(int argc, char *argv[])
   int ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
   double pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double dl, ltot, l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
-  double e2eav, xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3];
-  double cc, angle, angleav, distav, l1av, l2av, dist, anglebest, delb[3], e2ebest;
+  double e2eav, xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
+  double n1best[3], n2best[3], pos1best[3], pos2best[3], Lmgl=0.0;
+  double cc=0, angle, angleav, distav, l1av, l2av, dist, anglebest, delb[3], e2ebest, Lhcbest, mglcomx, mglcomy, mglcomz;
   pi = 2.0*acos(0.0);
 #if 0
   angle=PI*(180.0 - atof(argv[1]))/180.0;
@@ -524,7 +517,38 @@ int main(int argc, char *argv[])
     iend = 22*lastframe;
   else
     iend=numP;
+  if (mglout)
+    printf("[mglmode] ibeg=%d iend=%d\n", ibeg, iend);
+  if (mglout)
+    {
+      cc = 0;
+      mglcomx = mglcomy = mglcomz = 0.0;
+      for (i=ibeg; i < iend; i=i+1)
+	{
+	  mglcomx += P[i].x;
+	  mglcomy += P[i].y;
+	  mglcomz += P[i].z;
+	  cc++;
+	}
+      /* quest è il centro di massa di tutti i fosfori che si considerano */
+      mglcomx /= cc;
+      mglcomy /= cc;
+      mglcomz /= cc;
+      Lmgl = 0.0;
+      for (i=ibeg; i < iend; i=i+1)
+	{
+	  if (fabs(P[i].x - mglcomx) > Lmgl)
+	    Lmgl = fabs(P[i].x - mglcomx);
+	  if (fabs(P[i].y - mglcomy) > Lmgl)
+	    Lmgl = fabs(P[i].y - mglcomy);
+	  if (fabs(P[i].z - mglcomz) > Lmgl)
+	    Lmgl = fabs(P[i].z - mglcomz);
+	}
+      //Lmgl *= 2.0;
+      fprintf(mglfile, ".Vol: %f\n", pow(Lmgl,3.0));
+    }
 
+  cc=0;
   for (i=ibeg; i < iend; i=i+22)
     {
       if (i%100==0) 
@@ -546,11 +570,15 @@ int main(int argc, char *argv[])
 	  comx += P[i+k].x;
 	  comy += P[i+k].y;
 	  comz += P[i+k].z;
+	  if (mglout==1)
+	    {
+	      fprintf(mglfile, "%f %f %f @ 3.6 C[green]\n", P[i+k].x-mglcomx, P[i+k].y-mglcomy, P[i+k].z-mglcomz);
+	    }
 	}
       comx /= 22.;
       comy /= 22.;
       comz /= 22.;
-
+      
       pi = 2.0*acos(0.0);
       /* swearch among all possible values of l_1, l_2 and phi! */
       b1[0] = bar1.x;
@@ -610,7 +638,7 @@ int main(int argc, char *argv[])
 	      del_l1 =  (l1max-l1min)/20.;
 	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		{
-		  dist=dist_func(i, l1, ltot-l1, phi, Ro, b1, b2);
+		  dist=dist_func(i, l1, ltot-l1, phi, Ro, b1, b2, pos1, n1, pos2, n2);
 		  //printf("l1=%f del_l1=%f\n", l1, del_l1);
 		  if (first || dist < distbest)
 		    {
@@ -621,6 +649,14 @@ int main(int argc, char *argv[])
 			delb[kk] = b2[kk]-b1[kk];
 		      e2ebest = calc_norm(delb);
 		      distbest = dist;
+		      for (kk=0; kk < 3; kk++)
+			{
+			  n1best[kk] = n1[kk];
+			  n2best[kk] = n2[kk];
+			  pos1best[kk] = pos1[kk];
+			  pos2best[kk] = pos2[kk];
+			}
+		      Lhcbest = Lhc;
 		    }
 		}
 	    }
@@ -637,6 +673,12 @@ int main(int argc, char *argv[])
 	  l1av += l2best;
 	  l2av += l1best;
 	}
+      if (mglout==1)
+	{
+	  fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos1best[0]-mglcomx, pos1best[1]-mglcomy, pos1best[2]-mglcomz, n1best[0], n1best[1], n1best[1], Dhc/2.0, Lhcbest);
+	  fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos2best[0]-mglcomx, pos2best[1]-mglcomy, pos2best[2]-mglcomz, n2best[0], n2best[1], n2best[1], Dhc/2.0, Lhcbest);
+	}
+
       //printf("anglebest=%f\n", anglebest);
       angleav += anglebest;
       cc++;
