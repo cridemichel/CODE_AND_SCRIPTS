@@ -5,6 +5,26 @@
 #include <string.h>
 #include <unistd.h>
 #define Sqr(x) ((x)*(x))
+
+
+struct vector 
+{
+  double x;
+  double y;
+  double z;
+};
+
+char infile[1024], e2efile[1024]="e2e.dat", bcparfile[1024]="bcpar.dat";
+char string[1024], dummystr[256], a[1024];
+struct vector PA1_1, PA2_1, PB2_1, PB1_1;
+struct vector bar1, bar2, bar1_1, bar2_1;
+struct vector *P;
+double frame, dist_ist, dist_aver;
+double Lhc, Dhc=2.0;
+double PI;
+int mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
+FILE *mglfile;
+char mglfn[1024]="out.mgl"; 
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -28,24 +48,6 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
-
-struct vector 
-{
-  double x;
-  double y;
-  double z;
-};
-
-char infile[1024], e2efile[1024]="e2e.dat", bcparfile[1024]="bcpar.dat";
-char string[1024], dummystr[256], a[1024];
-struct vector PA1_1, PA2_1, PB2_1, PB1_1;
-struct vector bar1, bar2, bar1_1, bar2_1;
-struct vector *P;
-double frame, dist_ist, dist_aver;
-double Lhc, Dhc=2.0;
-double PI;
-int mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
-FILE *mglfile;
 void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 {
   int k1, k2;
@@ -329,7 +331,7 @@ void print_matrix(double M[3][3], int n)
 }
 void print_usage(void)
 {
-  printf("BCAparam [-o <params_file> | -e <end2end_file> | --mglmode/-m | --firstframe/-f <first_frame> | --lastframe/-l <last_frame> ]  <pdb_file\n");
+  printf("BCAparam [-o <params_file> | -e <end2end_file> | --mglmode/-m | --firstframe/-f <first_frame> | --lastframe/-l <last_frame> | --mglfn|-mf <mgl_file_name> ]  <pdb_file\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -358,6 +360,13 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  strcpy(e2efile,argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--mglfn")|!strcmp(argv[cc],"-mf"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  strcpy(mglfn,argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--mglmode") || !strcmp(argv[cc],"-m"))
 	{
@@ -434,6 +443,8 @@ int main(int argc, char *argv[])
   //buffering P positions into a file
   in= fopen(infile, "r");
   buffer = fopen("buffer.pdb", "w");
+  if (mglout)
+    mglfile = fopen(mglfn, "w+");
   while ( fgets(string, 100, in) != NULL )
     {
       if(string[13] == 'P'  )
@@ -630,7 +641,8 @@ int main(int argc, char *argv[])
       angleav += anglebest;
       cc++;
     }
-
+  if (mglout)
+    fclose(mglfile);
   printf("l1=%.15G l2=%.15G theta_b=%.15G\n", l1av/cc, l2av/cc, angleav/cc);
 
 }
