@@ -479,9 +479,6 @@ void parse_param(int argc, char** argv)
 	}
       else if (!strcmp(argv[cc],"--fixbroken")||!strcmp(argv[cc],"-fb"))
 	{
-	  cc++;
-	  if (cc == argc)
-	    print_usage();
 	  fixbroken = 1;
 	}
       else if (!strcmp(argv[cc],"-nl"))
@@ -535,7 +532,7 @@ void parse_param(int argc, char** argv)
 int main(int argc, char *argv[])
 {
   int ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
-  double e2e_ist, e2eav=0.0, pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
+  double Dx, Dy, Dz, e2e_ist, e2eav=0.0, pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double dl, ltot, l1min, l1max, del_l1, del_ltot, sp;
   double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
   double Lgx, Lgy, Lgz, n1best[3], n2best[3], pos1best[3], pos2best[3], Lmgl=0.0;
@@ -681,7 +678,7 @@ int main(int argc, char *argv[])
   printf("l1l2 range=(%f-%f) ltot range=(%f,%f) dl=%d dlt=%d dphi=%d\n",
 	 l1l2min, l1l2max, ltotmin, ltotmax, nl, nlt, nphi);
 
-  if (mglout)
+  if (mglout || fixbroken)
     {
       cc = 0;
       mglcomx = mglcomy = mglcomz = 0.0;
@@ -717,7 +714,8 @@ int main(int argc, char *argv[])
 	  printf("[WARNING] You want me to fix broken duplexes but you did not supply box dimensions, hence\n");
 	  printf("I tried to guess box dimensions and they turn out to be: %f %f %f\n", Lx, Ly, Lz);
 	}
-      fprintf(mglfile, ".Vol: %f\n", pow(Lmgl,3.0));
+      if (mglout)
+	fprintf(mglfile, ".Vol: %f\n", pow(Lmgl,3.0));
     }
 
   cc=0;
@@ -727,9 +725,27 @@ int main(int argc, char *argv[])
       if ((i/22)%outframes==0 && i > ibeg) 
 	printf("# duplex=%d/%d\n", i/22, numP/22);
       //center of mass of terminal Phosphate pairs 
+      if (fixbroken)
+	{
+	  Dx = P[i+21].x - P[i].x;
+	  Dy = P[i+21].y - P[i].y;
+	  Dz = P[i+21].z - P[i].z;
+	  P[i].x += Lx*rint(Dx/Lx);
+	  P[i].y += Ly*rint(Dy/Ly);
+	  P[i].z += Lz*rint(Dz/Lz);
+	}
       bar1.x = (P[i].x+P[i+21].x)*0.5;
       bar1.y = (P[i].y+P[i+21].y)*0.5;
       bar1.z = (P[i].z+P[i+21].z)*0.5;
+      if (fixbroken)
+	{
+	  Dx = P[i+11].x - P[i+10].x;
+	  Dy = P[i+11].y - P[i+10].y;
+	  Dz = P[i+11].z - P[i+10].z;
+	  P[i+10].x += Lx*rint(Dx/Lx);
+	  P[i+10].y += Ly*rint(Dy/Ly);
+	  P[i+10].z += Lz*rint(Dz/Lz);
+	}
 
       bar2.x = (P[i+10].x+P[i+11].x)*0.5;
       bar2.y = (P[i+10].y+P[i+11].y)*0.5;
