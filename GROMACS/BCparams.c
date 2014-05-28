@@ -19,7 +19,8 @@ char string[1024], dummystr[256], a[1024];
 struct vector PA1_1, PA2_1, PB2_1, PB1_1;
 struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
-double frame, dist_ist, dist_aver;
+double ltotmin=38.0, ltotmax=42.0, l1l2min=0.8, l1l2max=1.2, frame, dist_ist, dist_aver;
+int nl=20, nlt=20, nphi=20; 
 double Lhc, Dhc=20.0, Lhc1, Lhc2;
 double PI, Prad=1.8;
 int mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
@@ -94,9 +95,10 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   th1 = acos((-Sqr(l2)+Sqr(l1)+Sqr(distbb))/(2.0*l1*distbb));
   th2 = acos((-Sqr(l1)+Sqr(l2)+Sqr(distbb))/(2.0*l2*distbb));
   angle = 2.0*acos(0.0)-th1-th2;
+#if 0
   printf("distbb=%f l1=%f l2=%f\n", distbb, l1, l2);
   printf("th1=%f th2=%f angle=%f\n", th1*180/3.14, th2*180/3.14, angle*180/3.14);
-  
+#endif
   ////delx = tan(angle/2.0)*Dhc/2.0; 
   delx = 0.0;
   th2=2.0*acos(0.0)-th2;
@@ -145,9 +147,10 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   pos2B[2]=n2B[2]*fact;
   body2lab(pos2B, pos2, b2, Ro);
 #endif
-
+#if 0
   printf("P1=P2 P1:%f %f %f P2:%f %f %f\n",  b1[0]+n1[0]*Lhc1, b1[1]+n1[1]*Lhc1, b1[2]+n1[2]*Lhc1,
                                              b2[0]+n2[0]*Lhc2, b2[1]+n2[1]*Lhc2, b2[2]+n2[2]*Lhc2);
+#endif
   dist=DISTMAX;
   disttot=0.0;
 
@@ -345,7 +348,9 @@ void print_matrix(double M[3][3], int n)
 }
 void print_usage(void)
 {
-  printf("BCAparam [-o <params_file> | -e <end2end_file> | --mglmode/-m | --firstframe/-f <first_frame> | --lastframe/-l <last_frame> | --mglfn|-mf <mgl_file_name> | --Prad/-Pr <phospate radius> ]  <pdb_file\n");
+  printf("BCAparam [-o <params_file> | -e <end2end_file> | --mglmode/-m | --firstframe/-f <first_frame> | --lastframe/-l <last_frame> | --mglfn|-mf <mgl_file_name>\n");
+  printf(" | --Prad/-Pr <phospate radius> | --l12min/-l1m <l1_over_l2_min> | --l12max|-l12M <l1_over_l2_max> | --ltotmin/-ltm <ltotmin> | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot> | -nphi <mesh_points_for_phi> \n");
+  printf(" ]  <pdb_file\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -400,6 +405,55 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  lastframe = atoi(argv[cc]);
 	}
+      else if (!strcmp(argv[cc],"--l1l2min") || !strcmp(argv[cc],"-l12m"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  l1l2min = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--l1l2max") || !strcmp(argv[cc],"-l12M"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  l1l2max = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--ltotmin") || !strcmp(argv[cc],"-ltm"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  ltotmin = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--ltotmax") || !strcmp(argv[cc],"-ltM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  ltotmax = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"-nl"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  nl = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"-nlt"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  nlt = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"-nphi"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  nphi = atoi(argv[cc]);
+	}
       else if (!strcmp(argv[cc],"--Prad") || !strcmp(argv[cc],"-Pr"))
 	{
 	  cc++;
@@ -424,7 +478,7 @@ int main(int argc, char *argv[])
 {
   int ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
   double pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
-  double dl, ltot, l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
+  double dl, ltot, l1min, l1max, del_l1, del_ltot, sp;
   double e2eav, xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
   double n1best[3], n2best[3], pos1best[3], pos2best[3], Lmgl=0.0;
   double cc=0, angle, angleav, distav, l1av, l2av, dist, anglebest, delb[3], e2ebest, Lhc1best, Lhc2best,
@@ -462,6 +516,10 @@ int main(int argc, char *argv[])
       }
     }
 #endif
+  dl=1./6.;
+  ltotmin = 36.0-dl;
+  ltotmax = 44.0-dl;
+     
   parse_param(argc, argv);
   //buffering P positions into a file
   in= fopen(infile, "r");
@@ -652,24 +710,21 @@ int main(int argc, char *argv[])
       Ro[2][1] = zv[1];
       Ro[2][2] = zv[2];
       //print_matrix(Ro,3);
-      del_ltot = (ltotmax-ltotmin)/20.;
-      del_l1 = (l1max-l1min)/20.;
-      dphi = 2.0*pi/20;
-      dl = 1./6.;
+      del_ltot = (ltotmax-ltotmin)/((double)nlt);
+      //del_l1 = (l1max-l1min)/20.;
+      dphi = 2.0*pi/((double)nphi);
       /* le lunghezze sono in angstrom */
-      ltotmin = 36.0-dl;
-      ltotmax = 44.0-dl;
-      l1min = 12;
-      l1max = 20;
+      //l1min = 12;
+      //l1max = 20;
 
       first=1;
       for (phi=0; phi < 2.0*pi; phi += dphi)
 	{
 	  for (ltot=ltotmin; ltot < ltotmax; ltot += del_ltot)
 	    {
-	      l1min = 0.9*ltot/2.0;
-	      l1max = 1.1*ltot/2.0;
-	      del_l1 =  (l1max-l1min)/20.;
+	      l1min = l1l2min*ltot/2.0;
+	      l1max = l1l2max*ltot/2.0;
+	      del_l1 =  (l1max-l1min)/((double)nl);
 	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		{
 		  dist=dist_func(i, l1, ltot-l1, phi, Ro, b1, b2, pos1, n1, pos2, n2);
