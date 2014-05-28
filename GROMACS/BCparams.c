@@ -598,7 +598,7 @@ int main(int argc, char *argv[])
       P[P_count].y = y;
       P[P_count].z = z;
       P_count++;
-      if (P_count%10000==0) printf("P_count=%d\n", P_count);
+      //if (P_count%10000==0) printf("P_count=%d\n", P_count);
       //printf("%f %f %f \n", P_x[P_count], P_y[P_count], P_z[P_count]);
     }
   fclose(buffer);
@@ -620,9 +620,12 @@ int main(int argc, char *argv[])
     iend=numP;
   if (mglout)
     printf("[mglmode] ibeg=%d iend=%d\n", ibeg, iend);
+
   printf("Finding best parameters for BCA model\n");
+  printf("# duplexes is %d\n", (iend-ibeg)/22);
   printf("l1l2 range=(%f-%f) ltot range=(%f,%f) dl=%d dlt=%d dphi=%d\n",
 	 l1l2min, l1l2max, ltotmin, ltotmax, nl, nlt, nphi);
+
   if (mglout)
     {
       cc = 0;
@@ -655,8 +658,8 @@ int main(int argc, char *argv[])
   cc=0;
   for (i=ibeg; i < iend; i=i+22)
     {
-      if (i%outframes==0) 
-	printf("i=%d/%d\n", i, numP);
+      if ((i/22)%outframes==0 && i > ibeg) 
+	printf("# duplex=%d/%d\n", i/22, numP/22);
       //center of mass of terminal Phosphate pairs 
       bar1.x = (P[i].x+P[i+21].x)*0.5;
       bar1.y = (P[i].y+P[i+21].y)*0.5;
