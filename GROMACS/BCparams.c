@@ -611,6 +611,9 @@ int main(int argc, char *argv[])
     iend=numP;
   if (mglout)
     printf("[mglmode] ibeg=%d iend=%d\n", ibeg, iend);
+  printf("Finding best parameters for BCA model\n");
+  printf("l1l2 range=(%f-%f) ltot range=(%f,%f) dl=%d dlt=%d dphi=%d\n",
+	 l1l2min, l1l2max, ltotmin, ltotmax, nl, nlt, nphi);
   if (mglout)
     {
       cc = 0;
