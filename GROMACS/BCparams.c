@@ -535,9 +535,9 @@ void parse_param(int argc, char** argv)
 int main(int argc, char *argv[])
 {
   int ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
-  double pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
+  double e2e_ist, e2eav=0.0, pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double dl, ltot, l1min, l1max, del_l1, del_ltot, sp;
-  double e2eav, xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
+  double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
   double Lgx, Lgy, Lgz, n1best[3], n2best[3], pos1best[3], pos2best[3], Lmgl=0.0;
   double cc=0, angle, angleav, distav, l1av, l2av, dist, anglebest, delb[3], e2ebest, Lhc1best, Lhc2best,
 	 mglcomx, mglcomy, mglcomz;
@@ -584,11 +584,13 @@ int main(int argc, char *argv[])
   buffer = fopen("buffer.pdb", "w");
   if (mglout)
     mglfile = fopen(mglfn, "w+");
+  numP=0;
   while ( fgets(string, 100, in) != NULL )
     {
       if(string[13] == 'P'  )
 	{
 	  fprintf(buffer, "%s", string);
+	  numP++;
 	}
     }
   fclose(buffer);
@@ -596,50 +598,54 @@ int main(int argc, char *argv[])
   frame = 0;
   buffer = fopen("buffer.pdb", "r");
   e2e = fopen(e2efile, "w+");  
-  numP=0;
   dist_aver=0.0;
+#if 0
   while ( !feof(buffer) )
     {
-    fscanf(buffer, "%22c %d %lf %lf %lf %lf %lf\n", dummystr, &res, &x, &y, &z, &l, &m);
-    //printf("x=%f %f %f\n", x, y, z);
-    if ((res-1)%24==2-1)       
-      { 
-	PA1_1.x=x; PA1_1.y=y; PA1_1.z=z;
-      }
-    else if ((res-1)%24==12-1) 
-      { 
-	PA2_1.x=x; PA2_1.y=y; PA2_1.z=z; 
-      }
-    else if ((res-1)%24==14-1) 
-      {
-       	PB2_1.x=x; PB2_1.y=y; PB2_1.z=z; 
-      }
-    else if ((res-1)%24==24-1) 
-      { 
-	PB1_1.x=x; PB1_1.y=y; PB1_1.z=z;
-      }
+      fscanf(buffer, "%22c %d %lf %lf %lf %lf %lf\n", dummystr, &res, &x, &y, &z, &l, &m);
+      //printf("x=%f %f %f\n", x, y, z);
+      if ((res-1)%24==2-1)       
+	{ 
+	  PA1_1.x=x; PA1_1.y=y; PA1_1.z=z;
+	}
+      else if ((res-1)%24==12-1) 
+	{ 
+	  PA2_1.x=x; PA2_1.y=y; PA2_1.z=z; 
+	}
+      else if ((res-1)%24==14-1) 
+	{
+	  PB2_1.x=x; PB2_1.y=y; PB2_1.z=z; 
+	}
+      else if ((res-1)%24==24-1) 
+	{ 
+	  PB1_1.x=x; PB1_1.y=y; PB1_1.z=z;
+	}
 
-    if((res-1)%24==24-1)
-      {
-	bar1_1.x=(PA1_1.x+PB1_1.x)/2.; bar1_1.y=(PA1_1.y+PB1_1.y)/2.; bar1_1.z=(PA1_1.z+PB1_1.z)/2.;
-	bar2_1.x=(PA2_1.x+PB2_1.x)/2.; bar2_1.y=(PA2_1.y+PB2_1.y)/2.; bar2_1.z=(PA2_1.z+PB2_1.z)/2.;
+      if((res-1)%24==24-1)
+	{
+	  bar1_1.x=(PA1_1.x+PB1_1.x)/2.; bar1_1.y=(PA1_1.y+PB1_1.y)/2.; bar1_1.z=(PA1_1.z+PB1_1.z)/2.;
+	  bar2_1.x=(PA2_1.x+PB2_1.x)/2.; bar2_1.y=(PA2_1.y+PB2_1.y)/2.; bar2_1.z=(PA2_1.z+PB2_1.z)/2.;
 
-	dist_ist=pow ( (bar1_1.x-bar2_1.x)*(bar1_1.x-bar2_1.x) + (bar1_1.y-bar2_1.y)*(bar1_1.y-bar2_1.y) + (bar1_1.z-bar2_1.z)*(bar1_1.z-bar2_1.z) , 0.5);
+	  dist_ist=pow ( (bar1_1.x-bar2_1.x)*(bar1_1.x-bar2_1.x) + (bar1_1.y-bar2_1.y)*(bar1_1.y-bar2_1.y) + (bar1_1.z-bar2_1.z)*(bar1_1.z-bar2_1.z) , 0.5);
 
-	frame+=1.0;
-	//printf("res=%d mod=%d\n", res,(res-1)%24);
-	dist_aver = dist_aver+dist_ist;
-	fprintf(e2e, "%f %f %f\n", frame, dist_ist, dist_aver/frame);
-      }
-    numP++;
+	  frame+=1.0;
+	  //printf("res=%d mod=%d\n", res,(res-1)%24);
+	  dist_aver = dist_aver+dist_ist;
+	  fprintf(e2e, "%f %f %f\n", frame, dist_ist, dist_aver/frame);
+	}
+      numP++;
     }
+#if 0  
   e2eav=dist_aver/frame;
   printf("\nafter %f steps the average e2e is:  %f\n", frame, dist_aver/frame);
   fclose(e2e);
+#endif
   rewind(buffer);
+#endif
 
   P = malloc(sizeof(struct vector)*numP); 
   frame = 0;
+  P_count = 0;
   while ( !feof(buffer))
     {
       fscanf(buffer, "%22c %d %lf %lf %lf %lf %lf\n", a, &res, &x, &y, &z, &l, &m);
@@ -715,6 +721,7 @@ int main(int argc, char *argv[])
     }
 
   cc=0;
+  e2eav = 0.0;
   for (i=ibeg; i < iend; i=i+22)
     {
       if ((i/22)%outframes==0 && i > ibeg) 
@@ -790,6 +797,10 @@ int main(int argc, char *argv[])
       /* le lunghezze sono in angstrom */
       //l1min = 12;
       //l1max = 20;
+      for (kk=0; kk < 3; kk++)
+	delb[kk] = b2[kk]-b1[kk];
+      e2e_ist = calc_norm(delb);
+      e2eav += e2e_ist;
 
       first=1;
       for (phi=0; phi < 2.0*pi; phi += dphi)
@@ -808,9 +819,6 @@ int main(int argc, char *argv[])
 		      first=0;
 		      l1best = l1;
 		      l2best = ltot-l1best;
-		      for (kk=0; kk < 3; kk++)
-			delb[kk] = b2[kk]-b1[kk];
-		      e2ebest = calc_norm(delb);
 		      distbest = dist;
 		      for (kk=0; kk < 3; kk++)
 			{
@@ -825,8 +833,10 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
-      anglebest = 180.*acos((-Sqr(e2ebest)+Sqr(l1best)+Sqr(l2best))/(2.0*l1best*l2best))/acos(0.0)/2.0;
+      anglebest = 180.*acos((-Sqr(e2e_ist)+Sqr(l1best)+Sqr(l2best))/(2.0*l1best*l2best))/acos(0.0)/2.0;
       distav += distbest;
+      fprintf(e2e, "%f %f\n", frame, e2e_ist);
+
       if (l1best < l2best)
 	{
 	  l1av += l1best;
@@ -849,7 +859,8 @@ int main(int argc, char *argv[])
     }
   if (mglout)
     fclose(mglfile);
-  printf("l1=%.15G l2=%.15G theta_b=%.15G\n", l1av/cc, l2av/cc, angleav/cc);
+  fclose(e2e);
+  printf("l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
 
 }
 
