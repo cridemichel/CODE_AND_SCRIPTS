@@ -348,9 +348,11 @@ void print_matrix(double M[3][3], int n)
 }
 void print_usage(void)
 {
-  printf("BCAparam [-o <params_file> | -e <end2end_file> | --mglmode/-m | --firstframe/-f <first_frame> | --lastframe/-l <last_frame> | --mglfn|-mf <mgl_file_name>\n");
-  printf(" | --Prad/-Pr <phospate radius> | --l12min/-l1m <l1_over_l2_min> | --l12max|-l12M <l1_over_l2_max> | --ltotmin/-ltm <ltotmin> | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot> | -nphi <mesh_points_for_phi> \n");
-  printf(" ]  <pdb_file\n");
+  printf("BCAparam [-o <params_file> | -e <end2end_file> | --mglmode/-m | --firstframe/-f <first_frame> \n");
+  printf("   | --lastframe/-l <last_frame> | --mglfn|-mf <mgl_file_name> | --Prad/-Pr <phospate radius>\n"); 
+  printf("   | --l12min/-l1m <l1_over_l2_min> | --l12max|-l12M <l1_over_l2_max> | --ltotmin/-ltm <ltotmin>\n");
+  printf("   | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot>\n");
+  printf("   | -nphi <mesh_points_for_phi> ]  <pdb_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
