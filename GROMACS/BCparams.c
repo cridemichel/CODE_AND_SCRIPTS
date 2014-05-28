@@ -19,13 +19,25 @@ char string[1024], dummystr[256], a[1024];
 struct vector PA1_1, PA2_1, PB2_1, PB1_1;
 struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
-double ltotmin=38.0, ltotmax=42.0, l1l2min=0.8, l1l2max=1.2, frame, dist_ist, dist_aver;
-int outframes=1000, nl=20, nlt=20, nphi=20; 
+double Lx=-1., Ly=-1., Lz=-1., ltotmin=38.0, ltotmax=42.0, l1l2min=0.8, l1l2max=1.2, frame, dist_ist, dist_aver;
+int fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20; 
 double Lhc, Dhc=20.0, Lhc1, Lhc2;
 double PI, Prad=1.8;
 int mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
 FILE *mglfile;
 char mglfn[1024]="out.mgl"; 
+double max3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b > m)
+    m = b;
+  if (c > m)
+    m = c;
+  return m;
+}
+
+
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -352,7 +364,8 @@ void print_usage(void)
   printf("   | --lastframe/-l <last_frame> | --mglfn|-mf <mgl_file_name> | --Prad/-Pr <phospate radius>\n"); 
   printf("   | --l12min/-l1m <l1_over_l2_min> | --l12max|-l12M <l1_over_l2_max> | --ltotmin/-ltm <ltotmin>\n");
   printf("   | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot>\n");
-  printf("   | -nphi <mesh_points_for_phi> | --outframes/-of <output frames> ]  <pdb_file>\n");
+  printf("   | -nphi <mesh_points_for_phi> | --outframes/-of <output frames> | -Lx/y/z <box_size_along_x/y/z>\n");
+  printf(" | --fixbroken|-fb ] <pdb_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -443,6 +456,34 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  ltotmax = atof(argv[cc]);
 	}
+      else if (!strcmp(argv[cc],"-Lx"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  Lx = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"-Ly"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  Ly = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"-Lz"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  Lz = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--fixbroken")||!strcmp(argv[cc],"-fb"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  fixbroken = 1;
+	}
       else if (!strcmp(argv[cc],"-nl"))
 	{
 	  cc++;
@@ -497,7 +538,7 @@ int main(int argc, char *argv[])
   double pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double dl, ltot, l1min, l1max, del_l1, del_ltot, sp;
   double e2eav, xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
-  double n1best[3], n2best[3], pos1best[3], pos2best[3], Lmgl=0.0;
+  double Lgx, Lgy, Lgz, n1best[3], n2best[3], pos1best[3], pos2best[3], Lmgl=0.0;
   double cc=0, angle, angleav, distav, l1av, l2av, dist, anglebest, delb[3], e2ebest, Lhc1best, Lhc2best,
 	 mglcomx, mglcomy, mglcomz;
   pi = 2.0*acos(0.0);
@@ -650,16 +691,26 @@ int main(int argc, char *argv[])
       mglcomy /= cc;
       mglcomz /= cc;
       Lmgl = 0.0;
+      Lgx=Lgy=Lgz=0.0;
       for (i=ibeg; i < iend; i=i+1)
 	{
-	  if (fabs(P[i].x - mglcomx) > Lmgl)
-	    Lmgl = fabs(P[i].x - mglcomx);
-	  if (fabs(P[i].y - mglcomy) > Lmgl)
-	    Lmgl = fabs(P[i].y - mglcomy);
-	  if (fabs(P[i].z - mglcomz) > Lmgl)
-	    Lmgl = fabs(P[i].z - mglcomz);
+	  if (fabs(P[i].x - mglcomx) > Lgx)
+	    Lgx = fabs(P[i].x - mglcomx);
+	  if (fabs(P[i].y - mglcomy) > Lgy)
+	    Lgy = fabs(P[i].y - mglcomy);
+	  if (fabs(P[i].z - mglcomz) > Lgz)
+	    Lgz = fabs(P[i].z - mglcomz);
 	}
-      Lmgl *= 2.0;
+      
+      Lmgl = 2.0*max3(Lgx,Lgy,Lgz);
+      if (fixbroken && (Lx<=0 || Ly<=0 || Lz<=0))
+	{
+	  Lx = Lgx*2.0;
+	  Ly = Lgy*2.0;
+	  Lz = Lgz*2.0;
+	  printf("[WARNING] You want me to fix broken duplexes but you did not supply box dimensions, hence\n");
+	  printf("I tried to guess box dimensions and they turn out to be: %f %f %f\n", Lx, Ly, Lz);
+	}
       fprintf(mglfile, ".Vol: %f\n", pow(Lmgl,3.0));
     }
 
