@@ -44,7 +44,8 @@ struct vector *P;
 double frame, dist_ist, dist_aver;
 double Lhc, Dhc=2.0;
 double PI;
-
+int mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
+FILE *mglfile;
 void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 {
   int k1, k2;
@@ -70,23 +71,22 @@ void body2labR(double xp[3], double x[3], double R[3][3])
        	} 
     }
 }
-
+#define DISTMAX 1E100
 double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], double b1[3], double b2[3])
 {
   /* params = {L_1, L_2, theta} */
   int k, i, dontcheck, kk;
-  double fact, pos1[3], pos2[3], delx, angle, pos1B[3], pos2B[3];
+  double fact, pos1[3], disttot, pos2[3], delx, angle, pos1B[3], pos2B[3];
   double vp[3], rp[3], drp[3], b12[3], distbb;
   double dist, norm, n1B[3], n2B[3], n1[3], n2[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
   double ltot, th1, th2, db12[3];
   
-
   for (kk=0; kk < 3; kk++)
     b12[kk] = b2[kk]-b1[kk];
 
   distbb = calc_norm(b12);
   if (l1+l2 < distbb)
-    return 1E100;
+    return DISTMAX;
   //angle = calc_angle(params[0], params[1]);
   th1 = acos((-Sqr(l2)+Sqr(l1)+Sqr(distbb))/(2.0*l1*distbb));
   th2 = acos((-Sqr(l1)+Sqr(l2)+Sqr(distbb))/(2.0*l2*distbb));
@@ -117,14 +117,20 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
 
   //printf("n=%f %f %f pos1=%f %f %f (norm=%f)\n", n1[0], n1[1], n1[2], pos1[0], pos1[1], pos1[2], calc_norm(pos1));
   /* com2 = {-(X0 D /2 - delx*0.5), 0, 0};*/
-  fact = -(Dhc/2.0 - delx*0.5);
+  fact = Dhc/2.0 - delx*0.5;
   pos2B[0]=n2B[0]*fact;
   pos2B[1]=n2B[1]*fact;
   pos2B[2]=n2B[2]*fact;
   body2lab(pos2B, pos2, b2, Ro);
 
-  dist=1000000;
+  dist=DISTMAX;
+  disttot=0.0;
 
+  if (mglout==1)
+    {
+      fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos1[0], pos1[1], pos1[2], n1[0], n1[1], n1[1], Dhc/2.0, Lhc);
+      fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos2[0], pos2[1], pos2[2], n2[0], n2[1], n2[1], Dhc/2.0, Lhc);
+    }
   for(k=0; k<22; k++)
     {
       /* check overlap here */
@@ -133,7 +139,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
       drp[2] = P[i0+k].z - pos1[2];
       dontcheck=0;
       sp = scalProd(drp, n1);
-      if (sp > 0.0)
+      if (sp < 0.0)
 	{
 	  dist1Sq = Sqr(fabs(sp) - Lhc * 0.5);
 	  if (dist1Sq < dist)
@@ -148,8 +154,12 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
       drp[0] = P[i0+k].x - pos2[0];
       drp[1] = P[i0+k].y - pos2[1];
       drp[2] = P[i0+k].z - pos2[2];
+      if (mglout==1)
+	{
+	  fprintf(mglfile, "%f %f %f @ 1.8\n", P[i0+k].x, P[i0+k].y, P[i0+k].z);
+	}
       sp = scalProd(drp, n2);
-      if (sp > 0.0)
+      if (sp < 0.0)
 	{
   	  dist3Sq = Sqr(fabs(sp) - Lhc * 0.5); 
 	  if (dist3Sq < dist)
@@ -160,13 +170,14 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
       dist4Sq = Sqr(norm - Dhc*0.5);   
       if (dist < dist4Sq)
 	dist = dist4Sq;
+      disttot+=dist;
     }
-  if (dist == 1000000)
+  if (disttot == DISTMAX)
     {
       printf("We have a problem, dist=-1\n");
       exit(-1);
     }
-  return dist;
+  return disttot;
 }
 #if 0
 void conjgrad_grad(double *angs, double *grad)
@@ -297,10 +308,91 @@ int conjgrad(double p[], int n, double ftol, int *iter, double *fret, double (*f
   return 0;
 }
 #endif
+void print_matrix(double M[3][3], int n)
+{
+  int k1, k2;
+  printf("{");
+  for (k1 = 0; k1 < n; k1++)
+    {
+      printf("{");
+      for (k2 = 0; k2 < n; k2++)
+	{
+	  printf("%.15G", M[k1][k2]);
+	  if (k2 < n - 1)
+	    printf(", ");
+	}
+      printf("}");
+      if (k1 < n-1)
+	printf(",\n");
+    }
+  printf("}\n");
+}
+void print_usage(void)
+{
+  printf("BCAparam [-o <params_file> | -e <end2end_file> | --mglmode/-m | --firstframe/-f <first_frame> | --lastframe/-l <last_frame> ]  <pdb_file\n");
+  exit(0);
+}
+void parse_param(int argc, char** argv)
+{
+  int cc=1;
+  int extraparam = 0;  
+
+  if (argc==1)
+    print_usage();
+  while (cc < argc)
+    {
+      if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
+	{
+	  print_usage();
+	}
+      else if (!strcmp(argv[cc],"-o" ))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  strcpy(bcparfile,argv[cc]);
+	} 
+      else if (!strcmp(argv[cc],"-e"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  strcpy(e2efile,argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--mglmode") || !strcmp(argv[cc],"-m"))
+	{
+	  mglout=1;
+	}
+      else if (!strcmp(argv[cc],"--firstframe") || !strcmp(argv[cc],"-f"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  firstframe = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--lastframe") || !strcmp(argv[cc],"-l"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  lastframe = atoi(argv[cc]);
+	}
+      else if (cc == argc || extraparam == 1)
+	print_usage();
+      else if (extraparam == 0)
+	{ 
+	  extraparam = 1;
+	  strcpy(infile,argv[cc]);
+	}
+      else
+	print_usage();
+      cc++;
+    }
+}
 
 int main(int argc, char *argv[])
 {
-  int opt, res, numP, P_count, i, k, found_one=0, first, kk;
+  int ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
   double pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double dl, ltot, l1min, l1max, ltotmin, ltotmax, del_l1, del_ltot, sp;
   double e2eav, xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3];
@@ -316,6 +408,7 @@ int main(int argc, char *argv[])
   n2[2] = 0.0;
 #endif
   FILE *buffer, *in, *e2e;
+#if 0
   while ((opt = getopt (argc, argv, "i:e:o:")) != -1)
     {
     switch (opt)
@@ -336,6 +429,8 @@ int main(int argc, char *argv[])
 	//	printf("./nameprogram -i input_trajectori.pdb -e output_end2end -o output_angle");
       }
     }
+#endif
+  parse_param(argc, argv);
   //buffering P positions into a file
   in= fopen(infile, "r");
   buffer = fopen("buffer.pdb", "w");
@@ -408,7 +503,18 @@ int main(int argc, char *argv[])
   fclose(buffer);
   srand48(145); /* seeding */
   distav=angleav=l1av=l2av=0.0;
-  for (i=0; i < numP; i=i+22)
+  if (firstframe > 0)
+    ibeg = 22*firstframe;
+  else
+    ibeg = 0;
+
+  /* un frame è un duplex */
+  if (lastframe > 0 && lastframe > firstframe)
+    iend = 22*lastframe;
+  else
+    iend=numP;
+
+  for (i=ibeg; i < iend; i=i+22)
     {
       if (i%100==0) 
 	printf("i=%d/%d\n", i, numP);
@@ -436,13 +542,6 @@ int main(int argc, char *argv[])
 
       pi = 2.0*acos(0.0);
       /* swearch among all possible values of l_1, l_2 and phi! */
-      dl = 1./6.;
-      /* le lunghezze sono in angstrom */
-      ltotmin = 35.0-dl;
-      ltotmax = 45.0-dl;
-      l1min = 15.0;
-      l1max = 20.0;
-
       b1[0] = bar1.x;
       b1[1] = bar1.y;
       b1[2] = bar1.z;
@@ -471,22 +570,33 @@ int main(int argc, char *argv[])
 
       vectProdVec(zv, xv, yv);
       Ro[0][0] = xv[0];
-      Ro[1][0] = xv[1];
-      Ro[2][0] = xv[2];
-      Ro[0][1] = yv[0];
+      Ro[0][1] = xv[1];
+      Ro[0][2] = xv[2];
+      Ro[1][0] = yv[0];
       Ro[1][1] = yv[1];
-      Ro[2][1] = yv[2];
-      Ro[0][2] = zv[0];
-      Ro[1][2] = zv[1];
+      Ro[1][2] = yv[2];
+      Ro[2][0] = zv[0];
+      Ro[2][1] = zv[1];
       Ro[2][2] = zv[2];
-      del_ltot = (ltotmax-ltotmin)/10.;
+      //print_matrix(Ro,3);
+      del_ltot = (ltotmax-ltotmin)/20.;
       del_l1 = (l1max-l1min)/20.;
       dphi = 2.0*pi/20;
+      dl = 1./6.;
+      /* le lunghezze sono in angstrom */
+      ltotmin = 35.0-dl;
+      ltotmax = 45.0-dl;
+      l1min = 12;
+      l1max = 20;
+
       first=1;
       for (phi=0; phi < 2.0*pi; phi += dphi)
 	{
-	  for (ltot=ltotmin; ltot < ltotmax; ltot +=del_ltot)
+	  for (ltot=ltotmin; ltot < ltotmax; ltot += del_ltot)
 	    {
+	      l1min = 0.2*ltot/2.0;
+	      l1max = 1.5*ltot/2.0;
+	      del_l1 =  (l1max-l1min)/20.;
 	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		{
 		  dist=dist_func(i, l1, ltot-l1, phi, Ro, b1, b2);
@@ -506,12 +616,21 @@ int main(int argc, char *argv[])
 	}
       anglebest = 180.*acos((-Sqr(e2ebest)+Sqr(l1best)+Sqr(l2best))/(2.0*l1best*l2best))/acos(0.0)/2.0;
       distav += distbest;
-      l1av += l1best;
-      l2av += l2best;
+      if (l1best < l2best)
+	{
+	  l1av += l1best;
+	  l2av += l2best;
+	}
+      else
+	{
+	  l1av += l2best;
+	  l2av += l1best;
+	}
       //printf("anglebest=%f\n", anglebest);
       angleav += anglebest;
       cc++;
     }
+
   printf("l1=%.15G l2=%.15G theta_b=%.15G\n", l1av/cc, l2av/cc, angleav/cc);
 
 }
