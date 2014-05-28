@@ -421,6 +421,14 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  l1l2max = atof(argv[cc]);
 	}
+      else if (!strcmp(argv[cc],"--diameter") || !strcmp(argv[cc],"-D"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  Dhc = atof(argv[cc]);
+	}
+
       else if (!strcmp(argv[cc],"--ltotmin") || !strcmp(argv[cc],"-ltm"))
 	{
 	  cc++;
