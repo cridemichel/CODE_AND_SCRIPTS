@@ -20,7 +20,7 @@ struct vector PA1_1, PA2_1, PB2_1, PB1_1;
 struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
 double Lx=-1., Ly=-1., Lz=-1., ltotmin=38.0, ltotmax=42.0, l1l2min=0.8, l1l2max=1.2, frame, dist_ist, dist_aver;
-int fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20; 
+int fraying=0, fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20; 
 double Lhc, Dhc=20.0, Lhc1, Lhc2;
 double PI, Prad=1.8;
 int *ignore, mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
@@ -91,7 +91,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
 		 double pos1[3], double n1[3], double pos2[3], double n2[3])
 {
   /* params = {L_1, L_2, theta} */
-  int k, i, dontcheck, kk;
+  int kbeg, kend, k, i, dontcheck, kk;
   double fact, disttot, delx, angle, pos1B[3], pos2B[3];
   double vp[3], rp[3], drp[3], b12[3], distbb;
   double dist, norm, n1B[3], n2B[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
@@ -111,10 +111,13 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   printf("distbb=%f l1=%f l2=%f\n", distbb, l1, l2);
   printf("th1=%f th2=%f angle=%f\n", th1*180/3.14, th2*180/3.14, angle*180/3.14);
 #endif
-  ////delx = tan(angle/2.0)*Dhc/2.0; 
+#if 0
+  delx = tan(angle/2.0)*Dhc/2.0; 
+#else  
   delx = 0.0;
+#endif
   th2=2.0*acos(0.0)-th2;
-  Lhc = (Dhc + delx);
+  //Lhc = (Dhc + delx);
  
   Lhc1 = l1 + delx;
   Lhc2 = l2 + delx; 
@@ -166,9 +169,21 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   dist=DISTMAX;
   disttot=0.0;
 
-  for(k=0; k<22; k++)
+  if (fraying)
+    {
+      kbeg=1;
+      kend=21;
+    }
+  else 
+    {
+      kbeg=0;
+      kend=22;
+    }
+  for(k=kbeg; k<kend; k++)
     {
       /* check overlap here */
+      if (fraying && (k==10 || k==11))
+	 continue; 
       drp[0] = P[i0+k].x - pos1[0];
       drp[1] = P[i0+k].y - pos1[1];
       drp[2] = P[i0+k].z - pos1[2];
@@ -365,7 +380,7 @@ void print_usage(void)
   printf("   | --l12min/-l1m <l1_over_l2_min> | --l12max|-l12M <l1_over_l2_max> | --ltotmin/-ltm <ltotmin>\n");
   printf("   | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot>\n");
   printf("   | -nphi <mesh_points_for_phi> | --outframes/-of <output frames> | -Lx/y/z <box_size_along_x/y/z>\n");
-  printf(" | --fixbroken/-fb <1=fix 2=ignore> ] <pdb_file>\n");
+  printf(" | --fixbroken/-fb <1=fix 2=ignore> | --fraying/-fr ] <pdb_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -388,6 +403,10 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  strcpy(bcparfile,argv[cc]);
 	} 
+      else if (!strcmp(argv[cc],"--fraying")|!strcmp(argv[cc],"-fr"))
+	{
+	  fraying=1;
+	}
       else if (!strcmp(argv[cc],"-e"))
 	{
 	  cc++;
@@ -666,7 +685,7 @@ int main(int argc, char *argv[])
     ibeg = 0;
 
   /* un frame è un duplex */
-  if (lastframe > 0 && lastframe > firstframe)
+  if (lastframe > 0 && lastframe >= firstframe)
     {
       iend = 22*lastframe;
       if (iend > numP)
@@ -735,9 +754,11 @@ int main(int argc, char *argv[])
 	      Dx = P[i+21-k].x - P[i+k].x;
     	      Dy = P[i+21-k].y - P[i+k].y;
 	      Dz = P[i+21-k].z - P[i+k].z;
+#if 0
 	      printf("del=%f %f %f L=%f %f %f\n", Dx, Dy, Dz, Lx, Ly, Lz);
 	      printf("P1= %f %f %f P2=%f %f %f\n", P[i+21-k].x,P[i+21-k].y,P[i+21-k].z,
 	      	P[i+k].x,P[i+k].y,P[i+k].z);
+#endif
 	      if (fixbroken==3)
 		{
 		  if (fabs(Dx) > Lx || fabs(Dy) > Ly || fabs(Dz) > Lz)
@@ -780,13 +801,24 @@ int main(int argc, char *argv[])
       //center of mass of terminal Phosphate pairs 
       if (ignore[i/22]==1)
 	continue;	
-      bar1.x = (P[i].x+P[i+21].x)*0.5;
-      bar1.y = (P[i].y+P[i+21].y)*0.5;
-      bar1.z = (P[i].z+P[i+21].z)*0.5;
-      bar2.x = (P[i+10].x+P[i+11].x)*0.5;
-      bar2.y = (P[i+10].y+P[i+11].y)*0.5;
-      bar2.z = (P[i+10].z+P[i+11].z)*0.5;
-
+      if (fraying)
+	{
+	  bar1.x = (P[i+1].x+P[i+20].x)*0.5;
+	  bar1.y = (P[i+1].y+P[i+20].y)*0.5;
+	  bar1.z = (P[i+1].z+P[i+20].z)*0.5;
+	  bar2.x = (P[i+9].x+P[i+12].x)*0.5;
+	  bar2.y = (P[i+9].y+P[i+12].y)*0.5;
+	  bar2.z = (P[i+9].z+P[i+12].z)*0.5;
+	}
+      else
+	{
+	  bar1.x = (P[i].x+P[i+21].x)*0.5;
+	  bar1.y = (P[i].y+P[i+21].y)*0.5;
+	  bar1.z = (P[i].z+P[i+21].z)*0.5;
+	  bar2.x = (P[i+10].x+P[i+11].x)*0.5;
+	  bar2.y = (P[i+10].y+P[i+11].y)*0.5;
+	  bar2.z = (P[i+10].z+P[i+11].z)*0.5;
+	}
       /* center of mass */
       found_one=0;
       comx=comy=comz=0.0;	
@@ -872,6 +904,9 @@ int main(int argc, char *argv[])
 		      l1best = l1;
 		      l2best = ltot-l1best;
 		      distbest = dist;
+		      //printf("l1l2min=%f l1l2max=%f\n", l1l2min, l1l2max);
+		      //printf("l1min=%f l1max=%f l2=%f %f ltot=%f\n", l1min, l1max, ltot-l1min, ltot-l1max, ltot);
+		      //printf("distbest=%f\n", distbest);
 		      for (kk=0; kk < 3; kk++)
 			{
 			  n1best[kk] = n1[kk];
@@ -885,14 +920,29 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
+      if (dist==DISTMAX)
+	{
+	  //printf("i=%d ibeg=%d iend=%d\n", i, ibeg, iend);
+	  continue;
+	}
       anglebest = 180.*acos((-Sqr(e2e_ist)+Sqr(l1best)+Sqr(l2best))/(2.0*l1best*l2best))/acos(0.0)/2.0;
+#if 0
+      if (isnan(anglebest))
+	 {
+	   printf("frame=%d\n", i/22);
+	   printf("distbest=%f\n", distbest);
+	   printf("l1best=%f l2best=%f e2e_ist=%f\n", l1best, l2best, e2e_ist);
+	   exit(-1);
+	 }
+#endif
       distav += distbest;
-      fprintf(e2e, "%f %f\n", frame, e2e_ist);
+      fprintf(e2e, "%d %f\n", i/22, e2e_ist);
 
       if (l1best < l2best)
 	{
 	  l1av += l1best;
 	  l2av += l2best;
+	  //printf("l1best=%f\n", l1best);
 	}
       else
 	{
