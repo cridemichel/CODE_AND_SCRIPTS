@@ -20,7 +20,7 @@ struct vector PA1_1, PA2_1, PB2_1, PB1_1;
 struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
 double Lx=-1., Ly=-1., Lz=-1., ltotmin=38.0, ltotmax=42.0, l1l2min=0.8, l1l2max=1.2, frame, dist_ist, dist_aver;
-int fraying=0, fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20; 
+int onlye2e=0, ignoremidbases=1, fraying=0, fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20; 
 double Lhc, Dhc=20.0, Lhc1, Lhc2;
 double PI, Prad=1.8;
 int *ignore, mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
@@ -96,6 +96,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   double vp[3], rp[3], drp[3], b12[3], distbb;
   double dist, norm, n1B[3], n2B[3], sp, dist1Sq, dist2Sq, dist3Sq, dist4Sq;
   double ltot, th1, th2, db12[3];
+  double Pb[3], sp2, xi[3], distaux;
   
   for (kk=0; kk < 3; kk++)
     b12[kk] = b2[kk]-b1[kk];
@@ -111,14 +112,14 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   printf("distbb=%f l1=%f l2=%f\n", distbb, l1, l2);
   printf("th1=%f th2=%f angle=%f\n", th1*180/3.14, th2*180/3.14, angle*180/3.14);
 #endif
-#if 0
-  delx = tan(angle/2.0)*Dhc/2.0; 
+#if 1
+  delx = tan((th1+th2)/2.0)*Dhc/2.0; 
 #else  
   delx = 0.0;
 #endif
   th2=2.0*acos(0.0)-th2;
   //Lhc = (Dhc + delx);
- 
+  //printf("angle=%f delx=%f l1=%f l2=%f Dhc=%f\n", angle, delx, l1, l2, Dhc); 
   Lhc1 = l1 + delx;
   Lhc2 = l2 + delx; 
    //printf("l1=%f l2=%f th1=%f th2=%f phi=%f\n", l1, l2, th1, th2, phi);
@@ -195,6 +196,34 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
 	  if (dist1Sq < dist)
 	    dist=dist1Sq;
 	}
+      else if (!ignoremidbases)
+	{
+	  Pb[0]=P[i0+k].x-b1[0];
+	  Pb[1]=P[i0+k].y-b1[1];
+	  Pb[2]=P[i0+k].z-b1[2];
+	  sp2 = scalProd(Pb,n1);
+	  /* xi is the minimum distance point */
+	  xi[0] = P[i0+k].x + n1[0]*(Lhc1-sp2);
+	  xi[1] = P[i0+k].y + n1[1]*(Lhc1-sp2);
+	  xi[2] = P[i0+k].z + n1[2]*(Lhc1-sp2);
+	  drp[0] = xi[0] - pos2[0];
+	  drp[1] = xi[1] - pos2[1];
+	  drp[2] = xi[2] - pos2[2];
+	  vectProdVec(drp, n2, vp);
+	  norm=calc_norm(vp);
+	  distaux = norm-Dhc*0.5; 
+	  if (distaux > 0.0)
+	    {
+	      //printf("qui distaux=%f\n", distaux);
+	      drp[0] = P[i0+k].x - pos1[0];
+	      drp[1] = P[i0+k].y - pos1[1];
+	      drp[2] = P[i0+k].z - pos1[2];
+	      sp = scalProd(drp, n1);
+	      dist1Sq = Sqr(fabs(sp) - Lhc1 * 0.5); 
+	      if (dist1Sq < dist)
+		dist = dist1Sq;
+	    }
+	}
       vectProdVec(drp, n1, vp);
       norm=calc_norm(vp);
       dist2Sq = Sqr(norm - Dhc*0.5);
@@ -210,6 +239,34 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   	  dist3Sq = Sqr(fabs(sp) - Lhc2 * 0.5); 
 	  if (dist3Sq < dist)
 	    dist = dist3Sq;
+	}
+      else if (!ignoremidbases)
+	{
+	  Pb[0]=P[i0+k].x-b2[0];
+	  Pb[1]=P[i0+k].y-b2[1];
+	  Pb[2]=P[i0+k].z-b2[2];
+	  sp2 = scalProd(Pb,n1);
+	  /* xi is the minimum distance point */
+	  xi[0] = P[i0+k].x + n2[0]*(Lhc2-sp2);
+	  xi[1] = P[i0+k].y + n2[1]*(Lhc2-sp2);
+	  xi[2] = P[i0+k].z + n2[2]*(Lhc2-sp2);
+	  drp[0] = xi[0] - pos1[0];
+	  drp[1] = xi[1] - pos1[1];
+	  drp[2] = xi[2] - pos1[2];
+	  vectProdVec(drp, n1, vp);
+	  norm=calc_norm(vp);
+	  distaux = norm-Dhc*0.5; 
+	  /* se sta fuori dall'altro cilindro */	
+	  if (distaux > 0.0)
+	    {
+	      drp[0] = P[i0+k].x - pos2[0];
+	      drp[1] = P[i0+k].y - pos2[1];
+	      drp[2] = P[i0+k].z - pos2[2];
+	      sp = scalProd(drp, n2);
+	      dist3Sq = Sqr(fabs(sp) - Lhc2 * 0.5); 
+	      if (dist3Sq < dist)
+		dist = dist3Sq;
+	    }
 	}
       vectProdVec(drp, n2, vp);
       norm=calc_norm(vp);
@@ -380,7 +437,7 @@ void print_usage(void)
   printf("   | --l12min/-l1m <l1_over_l2_min> | --l12max|-l12M <l1_over_l2_max> | --ltotmin/-ltm <ltotmin>\n");
   printf("   | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot>\n");
   printf("   | -nphi <mesh_points_for_phi> | --outframes/-of <output frames> | -Lx/y/z <box_size_along_x/y/z>\n");
-  printf(" | --fixbroken/-fb <1=fix 2=ignore> | --fraying/-fr ] <pdb_file>\n");
+  printf(" | --fixbroken/-fb <1=fix 2=ignore> | --fraying/-fr | --ignoremidbases|-imb ] <pdb_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -424,6 +481,14 @@ void parse_param(int argc, char** argv)
       else if (!strcmp(argv[cc],"--mglmode") || !strcmp(argv[cc],"-m"))
 	{
 	  mglout=1;
+	}
+      else if (!strcmp(argv[cc],"--onlye2e") || !strcmp(argv[cc],"-oe"))
+	{
+	  onlye2e=1;
+	}
+      else if (!strcmp(argv[cc],"--includemidbases") || !strcmp(argv[cc],"-imb"))
+	{
+	  ignoremidbases=0;
 	}
       else if (!strcmp(argv[cc],"--firstframe") || !strcmp(argv[cc],"-f"))
 	{
@@ -887,35 +952,38 @@ int main(int argc, char *argv[])
       e2eav += e2e_ist;
 
       first=1;
-      for (phi=0; phi < 2.0*pi; phi += dphi)
+      if (!onlye2e)
 	{
-	  for (ltot=ltotmin; ltot < ltotmax; ltot += del_ltot)
+	  for (phi=0; phi < 2.0*pi; phi += dphi)
 	    {
-	      l1min = l1l2min*ltot/2.0;
-	      l1max = l1l2max*ltot/2.0;
-	      del_l1 =  (l1max-l1min)/((double)nl);
-	      for (l1 = l1min; l1 < l1max; l1 += del_l1)
+	      for (ltot=ltotmin; ltot < ltotmax; ltot += del_ltot)
 		{
-		  dist=dist_func(i, l1, ltot-l1, phi, Ro, b1, b2, pos1, n1, pos2, n2);
-		  //printf("l1=%f del_l1=%f\n", l1, del_l1);
-		  if (first || dist < distbest)
+		  l1min = l1l2min*ltot/2.0;
+		  l1max = l1l2max*ltot/2.0;
+		  del_l1 =  (l1max-l1min)/((double)nl);
+		  for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		    {
-		      first=0;
-		      l1best = l1;
-		      l2best = ltot-l1best;
-		      distbest = dist;
-		      //printf("l1l2min=%f l1l2max=%f\n", l1l2min, l1l2max);
-		      //printf("l1min=%f l1max=%f l2=%f %f ltot=%f\n", l1min, l1max, ltot-l1min, ltot-l1max, ltot);
-		      //printf("distbest=%f\n", distbest);
-		      for (kk=0; kk < 3; kk++)
+		      dist=dist_func(i, l1, ltot-l1, phi, Ro, b1, b2, pos1, n1, pos2, n2);
+		      //printf("l1=%f del_l1=%f\n", l1, del_l1);
+		      if (first || dist < distbest)
 			{
-			  n1best[kk] = n1[kk];
-			  n2best[kk] = n2[kk];
-			  pos1best[kk] = pos1[kk];
-			  pos2best[kk] = pos2[kk];
+			  first=0;
+			  l1best = l1;
+			  l2best = ltot-l1best;
+			  distbest = dist;
+			  //printf("l1l2min=%f l1l2max=%f\n", l1l2min, l1l2max);
+			  //printf("l1min=%f l1max=%f l2=%f %f ltot=%f\n", l1min, l1max, ltot-l1min, ltot-l1max, ltot);
+			  //printf("distbest=%f\n", distbest);
+			  for (kk=0; kk < 3; kk++)
+			    {
+			      n1best[kk] = n1[kk];
+			      n2best[kk] = n2[kk];
+			      pos1best[kk] = pos1[kk];
+			      pos2best[kk] = pos2[kk];
+			    }
+			  Lhc1best = Lhc1;
+			  Lhc2best = Lhc2;
 			}
-		      Lhc1best = Lhc1;
-		      Lhc2best = Lhc2;
 		    }
 		}
 	    }
@@ -962,9 +1030,19 @@ int main(int argc, char *argv[])
   if (mglout)
     fclose(mglfile);
   fclose(e2e);
-  if (fixbroken==1 || fixbroken==2||fixbroken==3)
-    printf("#good duplexes=%d/%d l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), (iend-ibeg)/22, l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
+  if (onlye2e)
+    {
+      if (fixbroken==1 || fixbroken==2||fixbroken==3)
+	printf("#good duplexes=%d/%d e2e=%G\n", ((int)cc), (iend-ibeg)/22, e2eav/cc);
+      else
+	printf("#duplexes=%d e2e=%G\n", ((int)cc), e2eav/cc);
+    }
   else
-    printf("#duplexes=%d dl1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
+    {
+      if (fixbroken==1 || fixbroken==2||fixbroken==3)
+	printf("#good duplexes=%d/%d l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), (iend-ibeg)/22, l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
+      else
+	printf("#duplexes=%d l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
+    }    
 }
 
