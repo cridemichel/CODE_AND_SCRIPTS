@@ -86,7 +86,7 @@ void body2labR(double xp[3], double x[3], double R[3][3])
        	} 
     }
 }
-
+#if 0
 struct distStr {
   double dist;
   /* x[] saranno le coordinate del punti di minima distanza sul cilindro */
@@ -97,43 +97,88 @@ struct distStr {
 
 void calc_dist_from_cyl(struct vector P, double Dhc, double Lhc, double pos[3], double n[3], struct distStr *dist)
 {
-  double fsp, ssp, sp, sp2, Pb[3], vp[3], norm, nperp[3], drp[3];
+  double fsp, ssp, sp, sp2, Pb[3], vp[3], norm, nperp[3], drp[3], np, npara[3];
 
   drp[0] = P.x - pos[0];
   drp[1] = P.y - pos[1];
   drp[2] = P.z - pos[2];
   sp = scalProd(drp, n);
 
-  dist[0].dist = fabs(sp) - Lhc * 0.5;
+  npara[0] = n[0]*sp;
+  npara[1] = n[1]*sp;
+  npara[2] = n[2]*sp;
 
+  nperp[0] = drp[0] - npara[0];
+  nperp[1] = drp[1] - npara[1];
+  nperp[2] = drp[2] - npara[2];
+
+#if 0
+  norm = calc_norm(npara);
+  npara[0] /= norm;
+  npara[1] /= norm;
+  npara[2] /= norm;
+#endif
+  /* il versore del cilindro n[] va dalla base esterna a quella interna (ossia in mezzo) */
+  np = calc_norm(nperp);
+  //dist[0].dist = sp - Lhc * 0.5; /* questa è la base interna */
+  /* la distanza è negativa se il punto è all'interno del cilindro */
+  dist[0].dist = -(sp + Lhc * 0.5); /* questa è la base "esterna" */
+
+  dist[0].check = 0;
+#if 0
   if (sp >= 0)
-    dist[0].check = 1;
+    {
+#if 0
+      dist[0].check=0;
+      dist[0].ignore=1;
+#else
+      dist[0].check = 1;
+#endif
+    }
   else
-    dist[0].check = 0;
+    {
+      dist[0].check = 0;
+    }
+#endif
   /* xi is the minimum distance point */
+#if 0
   fsp = fabs(sp);
   ssp = sp/fsp;
-  dist[0].x[0] = P.x + ssp*n[0]*(Lhc-fsp);
-  dist[0].x[1] = P.y + ssp*n[1]*(Lhc-fsp);
-  dist[0].x[2] = P.z + ssp*n[2]*(Lhc-fsp);
-
+  dist[0].x[0] = P.x + ssp*n[0]*(Lhc*0.5-fsp);
+  dist[0].x[1] = P.y + ssp*n[1]*(Lhc*0.5-fsp);
+  dist[0].x[2] = P.z + ssp*n[2]*(Lhc*0.5-fsp);
+#else
+#if 0
+  dist[0].x[0] = pos[0] + n[0]*Lhc*0.5 + nperp[0];/* base interna */
+  dist[0].x[1] = pos[1] + n[1]*Lhc*0.5 + nperp[1];
+  dist[0].x[2] = pos[2] + n[2]*Lhc*0.5 + nperp[2];
+  /* la base esterna non va controllata */
+  dist[1].x[0] = pos[0] - n[0]*Lhc*0.5 + nperp[0]; /* base esterna */
+  dist[1].x[1] = pos[1] - n[1]*Lhc*0.5 + nperp[1];
+  dist[1].x[2] = pos[2] - n[2]*Lhc*0.5 + nperp[2];
+#endif
+#endif
   //vectProdVec(drp, n, vp);
   //norm=calc_norm(vp);
 
-  nperp[0] = drp[0] - sp*n[0];
-  nperp[1] = drp[1] - sp*n[1];
-  nperp[2] = drp[2] - sp*n[2];
-
-  norm=calc_norm(nperp);
+#if 1
+  //norm=calc_norm(nperp);
+  dist[1].dist = np - Dhc*0.5;
+#else
+  vectProdVec(drp, n, vp);
+  norm=calc_norm(vp);
   dist[1].dist = norm - Dhc*0.5;
+#endif
 
-  nperp[0] /= norm;
-  nperp[1] /= norm;
-  nperp[2] /= norm;
-  dist[1].x[0] = pos[0] + n[0]*sp + nperp[0]*Dhc*0.5;
-  dist[1].x[1] = pos[1] + n[1]*sp + nperp[1]*Dhc*0.5;
-  dist[1].x[2] = pos[2] + n[2]*sp + nperp[2]*Dhc*0.5;
+  nperp[0] /= np;
+  nperp[1] /= np;
+  nperp[2] /= np;
+
+  dist[1].x[0] = pos[0] + npara[0] + nperp[0]*Dhc*0.5;
+  dist[1].x[1] = pos[1] + npara[1] + nperp[1]*Dhc*0.5;
+  dist[1].x[2] = pos[2] + npara[2] + nperp[2]*Dhc*0.5;
   dist[1].check = 1;
+  //dist[1].ignore = 1;
 }
 int is_inside(double x[3], double Dhc, double Lhc, double pos[3], double n[3])
 {
@@ -154,19 +199,21 @@ int is_inside(double x[3], double Dhc, double Lhc, double pos[3], double n[3])
     }
   return 0;
 }
-
+#endif
 #define DISTMAX 1E100
 double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], double b1[3], double b2[3], 
 		 double pos1[3], double n1[3], double pos2[3], double n2[3])
 {
   /* params = {L_1, L_2, theta} */
   int nd, jj, kbeg, kend, k, i, dontcheck, kk;
-  double fact, disttot, delx, angle, pos1B[3], pos2B[3];
+  double fact, disttot, delx, angle, pos1B[3], dist, vp[3], drp[3], sp, pos2B[3], dist1Sq, dist2Sq, dist3Sq, dist4Sq;
   double b12[3], distbb;
   double distSq, norm, n1B[3], n2B[3];
   double ltot, th1, th2, db12[3];
   double Pb[3], xi[3], distaux;
-  struct distStr distance[4];  
+#if 0
+  struct distStr distance[6];  
+#endif
   for (kk=0; kk < 3; kk++)
     b12[kk] = b2[kk]-b1[kk];
 
@@ -192,6 +239,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   Lhc1 = l1 + delx;
   Lhc2 = l2 + delx; 
    //printf("l1=%f l2=%f th1=%f th2=%f phi=%f\n", l1, l2, th1, th2, phi);
+  /* N.B. i versori n1[] e n2[] dei cilindri vanno dalle basi esterne a quelle interne */	
   n1B[0] = sin(th1)*cos(phi);
   n1B[1] = sin(th1)*sin(phi);
   n1B[2] = cos(th1);
@@ -206,7 +254,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   n2[1] = -n1[1];
   n2[2] = -n1[2];
 #endif  
-  fact = Lhc1*0.5 - delx*0.5;
+  fact = l1*0.5 + delx*0.5;
 #if 1
   pos1[0] = b1[0]+n1[0]*fact;
   pos1[1] = b1[1]+n1[1]*fact;
@@ -220,7 +268,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   //printf("n=%f %f %f pos1=%f %f %f (norm=%f)\n", n1[0], n1[1], n1[2], pos1[0], pos1[1], pos1[2], calc_norm(pos1));
   /* com2 = {-(X0 D /2 - delx*0.5), 0, 0};*/
   //fact = Dhc/2.0 - delx*0.5;
-  fact = Lhc2*0.5 - delx*0.5;
+  fact = l2*0.5 + delx*0.5;
   
 #if 1
   pos2[0] = b2[0]+n2[0]*fact;
@@ -251,74 +299,21 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
     }
   for(k=kbeg; k<kend; k++)
     {
+#if 1
       /* check overlap here */
       if (fraying && (k==10 || k==11))
 	 continue; 
-#if 0
       drp[0] = P[i0+k].x - pos1[0];
       drp[1] = P[i0+k].y - pos1[1];
       drp[2] = P[i0+k].z - pos1[2];
       dontcheck=0;
-#endif
-      calc_dist_from_cyl(P[i0+k], Dhc, Lhc, pos1, n1, distance);
-      calc_dist_from_cyl(P[i0+k], Dhc, Lhc, pos2, n2, &(distance[2]));
-      for (jj = 0; jj < 4; jj++)
-	{
-	  if (distance[jj].check)
-	    {
-	      if (jj < 2)
-		{
-		  if (is_inside(distance[jj].x, Dhc, Lhc2, pos2, n2))
-		      distance[jj].ignore=1;
-		  else
-		      distance[jj].ignore=0;
-		}
-	      else
-		{
-		  if (is_inside(distance[jj].x, Dhc, Lhc1, pos1, n1))
-		    distance[jj].ignore=1;
-		  else
-		    distance[jj].ignore=0;
-		}
-	    }
-	  else
-	    distance[jj].ignore=0;
-	}
-#if 0
+      /*  i versori n1 e n2 vanno dalle basi esterne a quelle interne */
       sp = scalProd(drp, n1);
       if (sp < 0.0)
 	{
 	  dist1Sq = Sqr(fabs(sp) - Lhc1 * 0.5);
 	  if (dist1Sq < dist)
 	    dist=dist1Sq;
-	}
-      else if (!ignoremidbases)
-	{
-	  Pb[0]=P[i0+k].x-b1[0];
-	  Pb[1]=P[i0+k].y-b1[1];
-	  Pb[2]=P[i0+k].z-b1[2];
-	  sp2 = scalProd(Pb,n1);
-	  /* xi is the minimum distance point */
-	  xi[0] = P[i0+k].x + n1[0]*(Lhc1-sp2);
-	  xi[1] = P[i0+k].y + n1[1]*(Lhc1-sp2);
-	  xi[2] = P[i0+k].z + n1[2]*(Lhc1-sp2);
-	  drp[0] = xi[0] - pos2[0];
-	  drp[1] = xi[1] - pos2[1];
-	  drp[2] = xi[2] - pos2[2];
-	  vectProdVec(drp, n2, vp);
-	  norm=calc_norm(vp);
-	  distaux = norm-Dhc*0.5; 
-	  if (distaux > 0.0)
-	    {
-	      //printf("qui distaux=%f\n", distaux);
-	      drp[0] = P[i0+k].x - pos1[0];
-	      drp[1] = P[i0+k].y - pos1[1];
-	      drp[2] = P[i0+k].z - pos1[2];
-	      sp = scalProd(drp, n1);
-	      dist1Sq = Sqr(fabs(sp) - Lhc1 * 0.5); 
-	      if (dist1Sq < dist)
-		dist = dist1Sq;
-	    }
 	}
       vectProdVec(drp, n1, vp);
       norm=calc_norm(vp);
@@ -336,59 +331,62 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
 	  if (dist3Sq < dist)
 	    dist = dist3Sq;
 	}
-            else if (!ignoremidbases)
-	{
-	  Pb[0]=P[i0+k].x-b2[0];
-	  Pb[1]=P[i0+k].y-b2[1];
-	  Pb[2]=P[i0+k].z-b2[2];
-	  sp2 = scalProd(Pb,n1);
-	  /* xi is the minimum distance point */
-	  xi[0] = P[i0+k].x + n2[0]*(Lhc2-sp2);
-	  xi[1] = P[i0+k].y + n2[1]*(Lhc2-sp2);
-	  xi[2] = P[i0+k].z + n2[2]*(Lhc2-sp2);
-	  drp[0] = xi[0] - pos1[0];
-	  drp[1] = xi[1] - pos1[1];
-	  drp[2] = xi[2] - pos1[2];
-	  vectProdVec(drp, n1, vp);
-	  norm=calc_norm(vp);
-	  distaux = norm-Dhc*0.5; 
-	  /* se sta fuori dall'altro cilindro */	
-	  if (distaux > 0.0)
-	    {
-	      drp[0] = P[i0+k].x - pos2[0];
-	      drp[1] = P[i0+k].y - pos2[1];
-	      drp[2] = P[i0+k].z - pos2[2];
-	      //sp = scalProd(drp, n2);
-	      dist3Sq = Sqr(fabs(sp) - Lhc2 * 0.5); 
-	      if (dist3Sq < dist)
-		dist = dist3Sq;
-	    }
-	}
       vectProdVec(drp, n2, vp);
       norm=calc_norm(vp);
       dist4Sq = Sqr(norm - Dhc*0.5);   
-      drp[0] = drp[0] - sp*n1[0];
-      drp[1] = drp[1] - sp*n1[1];
-      drp[2] = drp[2] - sp*n1[2];
-      norm=calc_norm(drp);
-      drp[0] /= norm;
-      drp[1] /= norm;
-      drp[2] /= norm;
-      xi[0] = pos1[0] + n1[0]*sp + drp[0]*Dhc*0.5;
-      xi[1] = pos1[1] + n1[1]*sp + drp[1]*Dhc*0.5;
-      xi[2] = pos1[2] + n1[2]*sp + drp[2]*Dhc*0.5;
-
       if (dist < dist4Sq)
 	dist = dist4Sq;
-#endif
-      for (jj=0; jj < 4; jj++)
+      disttot+=dist;
+#else
+      for (jj = 0; jj < 6; jj++)
 	{
-	  if (!distance[jj].ignore && Sqr(distance[jj].dist) < distSq)
+	  dist[jj].ignore=dist[jj].check=0;
+	}
+      /* check overlap here */
+      if (fraying && (k==10 || k==11))
+	 continue; 
+
+#if 0
+      drp[0] = P[i0+k].x - pos1[0];
+      drp[1] = P[i0+k].y - pos1[1];
+      drp[2] = P[i0+k].z - pos1[2];
+      dontcheck=0;
+#endif
+      calc_dist_from_cyl(P[i0+k], Dhc, Lhc1, pos1, n1, distance);
+      calc_dist_from_cyl(P[i0+k], Dhc, Lhc2, pos2, n2, &(distance[3]));
+#if 1
+      for (jj = 0; jj < 6; jj++)
+	{
+	  if (distance[jj].check)
+	    {
+	      if (jj < 3)
+		{
+		  if (is_inside(distance[jj].x, Dhc, Lhc2, pos2, n2))
+		      distance[jj].ignore=1;
+		  else
+		      distance[jj].ignore=0;
+		}
+	      else
+		{
+		  if (is_inside(distance[jj].x, Dhc, Lhc1, pos1, n1))
+		    distance[jj].ignore=1;
+		  else
+		    distance[jj].ignore=0;
+		}
+	    }
+	  //else
+	    //distance[jj].ignore=0;
+	}
+#endif
+      for (jj=0; jj < 6; jj++)
+	{
+	  if (!(distance[jj].ignore) && Sqr(distance[jj].dist) < distSq)
 	    {
 	      distSq = Sqr(distance[jj].dist);
 	    }
 	}
       disttot+=distSq;
+#endif
     }
   if (disttot == DISTMAX)
     {
@@ -552,7 +550,8 @@ void print_usage(void)
   printf("   | --l12min/-l1m <l1_over_l2_min> | --l12max|-l12M <l1_over_l2_max> | --ltotmin/-ltm <ltotmin>\n");
   printf("   | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot>\n");
   printf("   | -nphi <mesh_points_for_phi> | --outframes/-of <output frames> | -Lx/y/z <box_size_along_x/y/z>\n");
-  printf(" | --fixbroken/-fb <1=fix 2=ignore> | --fraying/-fr | --ignoremidbases|-imb ] <pdb_file>\n");
+  printf(" | --fixbroken/-fb <1=fix 2=ignore> | --fraying/-fr | --ignoremidbases|-imb |\n");
+  printf("--bufferinput/bi ] <pdb_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -782,6 +781,7 @@ int main(int argc, char *argv[])
   ltotmax = 44.0-dl;
      
   parse_param(argc, argv);
+#if 0
   /* check whether buffer.pdb exists */
   buffer=fopen("buffer.pdb","r");
   if (buffer!=NULL)
@@ -790,6 +790,7 @@ int main(int argc, char *argv[])
       strcpy(infile, "buffer.pdb");
     }
   fclose(buffer);
+#endif
   //buffering P positions into a file
   if (!bufferin)
     {
@@ -971,6 +972,7 @@ int main(int argc, char *argv[])
 	      printf("P1= %f %f %f P2=%f %f %f\n", P[i+21-k].x,P[i+21-k].y,P[i+21-k].z,
 	      	P[i+k].x,P[i+k].y,P[i+k].z);
 #endif
+	      shift[0]=shift[1]=shift[2]=0.0;
 	      if (fixbroken==3)
 		{
 		  if (fabs(Dx) > Lx || fabs(Dy) > Ly || fabs(Dz) > Lz)
@@ -1141,8 +1143,9 @@ int main(int argc, char *argv[])
 	}
       if (dist==DISTMAX)
 	{
-	  //printf("i=%d ibeg=%d iend=%d\n", i, ibeg, iend);
-	  numdistinf++;
+	  if (!onlye2e)
+	    numdistinf++;
+	  printf("i=%d ibeg=%d iend=%d\n", i, ibeg, iend);
 	  continue;
 	}
       anglebest = 180.*acos((-Sqr(e2e_ist)+Sqr(l1best)+Sqr(l2best))/(2.0*l1best*l2best))/acos(0.0)/2.0;
@@ -1169,7 +1172,7 @@ int main(int argc, char *argv[])
 	  l1av += l2best;
 	  l2av += l1best;
 	}
-      if (mglout==1)
+      if (mglout)
 	{
 	  fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos1best[0]-mglcomx, pos1best[1]-mglcomy, pos1best[2]-mglcomz, n1best[0], n1best[1], n1best[2], Dhc/2.0, Lhc1best);
 	  fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos2best[0]-mglcomx, pos2best[1]-mglcomy, pos2best[2]-mglcomz, n2best[0], n2best[1], n2best[2], Dhc/2.0, Lhc2best);
@@ -1185,7 +1188,7 @@ int main(int argc, char *argv[])
   if (onlye2e)
     {
       if (fixbroken==1 || fixbroken==2||fixbroken==3)
-	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) e2e=%G\n", ((int)cc), numbroken, numdistinf, (iend-ibeg)/22, e2eav/cc);
+	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, e2eav/cc);
       else
 	printf("#duplexes=%d (#distinf=%d) e2e=%G\n", ((int)cc), numdistinf, e2eav/cc);
     }
@@ -1196,5 +1199,6 @@ int main(int argc, char *argv[])
       else
 	printf("#duplexes=%d (#distinf=%d) l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), numdistinf, l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
     }    
+  return 1;
 }
 
