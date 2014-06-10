@@ -3152,10 +3152,12 @@ void bump (int i, int j, double rCx, double rCy, double rCz, double* W)
 #else
   factorinvIa = factor*invIa;
   factorinvIb = factor*invIb;
+#ifndef MD_EDHEFLEX_2D
   wx[i] += factorinvIa*rACn[0];
   wx[j] -= factorinvIb*rBCn[0];
   wy[i] += factorinvIa*rACn[1];
   wy[j] -= factorinvIb*rBCn[1];
+#endif
   wz[i] += factorinvIa*rACn[2];
   wz[j] -= factorinvIb*rBCn[2];
 #endif
