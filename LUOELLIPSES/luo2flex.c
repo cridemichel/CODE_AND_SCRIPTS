@@ -188,8 +188,8 @@ void angvel(double *wx, double *wy, double* wz, int Nm)
       ox    = o * ox;
       oy    = o * oy;
       oz    = o * oz;
-      wx[i] = ox;
-      wy[i] = oy;
+      wx[i] = 0.0;//ox;
+      wy[i] = 0.0;//oy;
       wz[i] = oz;
     }
 }
@@ -279,8 +279,8 @@ void main(int argc, char **argv)
   fprintf(outf,"@@@\n");
   fprintf(outf,"%d\n",parnum); 
   fprintf(outf,"%f 0.5 0.5\n", kh); 
-  fprintf(outf,"1 1 1\n"); 
-  fprintf(outf,"%f %f %f %f 0 0\n", Ix, Iy, Iz, mass); 
+  fprintf(outf,"2 2 2\n"); 
+  fprintf(outf,"%f %f %f %f 0 0\n", mass, Ix, Iy, Iz); 
   fprintf(outf,"0 0\n");
   fprintf(outf, "@@@\n");
   for (i=0; i < parnum; i++)
