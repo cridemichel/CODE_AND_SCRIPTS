@@ -6,9 +6,9 @@
 double *rx, *ry, *rz, *R[3][3];
 double ux, uy, uz, *vx, *vy, *vz, *wx, *wy, *wz;
 double mass;
-double temp;
+double temp=1.0;
 double Ix, Iy, Iz;
-double k=4.0;
+double kappa=4.0;
 double calc_norm(double *vec)
 {
   int k1;
@@ -188,9 +188,9 @@ void angvel(double *wx, double *wy, double* wz, int Nm)
       ox    = o * ox;
       oy    = o * oy;
       oz    = o * oz;
-      *wx = ox;
-      *wy = oy;
-      *wz = oz;
+      wx[i] = ox;
+      wy[i] = oy;
+      wz[i] = oz;
     }
 }
 
@@ -219,10 +219,11 @@ void main(int argc, char **argv)
     for (k2=0; k2 < 3; k2++)
       R[k1][k2] = malloc(sizeof(double)*parnum);
   pi = acos(0.0)*2.0;
-  mass = k;
+  mass = kappa;
   Ix = Iy = Iz = mass*(Sqr(k)+1.0)*Sqr(0.5)/5.0;
   rTemp = sqrt(temp/mass);
   sumx = sumy = sumz = 0.0;
+  printf("parnum=%d mass=%f I=%f\n", parnum, mass, Ix);
   for (i=0; i < parnum; i++)
     {
       fscanf(inpf, "%lf %lf %lf %lf %lf %lf\n", &(rx[i]), &(ry[i]), &(rz[i]), &ux, &uy, &uz);
@@ -261,7 +262,7 @@ void main(int argc, char **argv)
   angvel(wx, wy, wz, parnum);
 
   outf = fopen(argv[2], "w+");
-  kh=k*0.5;
+  kh=kappa*0.5;
   fprintf(outf,"totStep: 50000\n");
   fprintf(outf,"equilibrat: 0\n");
   fprintf(outf,"curStep: 4400\n");
