@@ -309,17 +309,25 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
       dontcheck=0;
       /*  i versori n1 e n2 vanno dalle basi esterne a quelle interne */
       sp = scalProd(drp, n1);
+
+
       if (sp < 0.0)
 	{
 	  dist1Sq = Sqr(fabs(sp) - Lhc1 * 0.5);
 	  if (dist1Sq < dist)
 	    dist=dist1Sq;
 	}
-      vectProdVec(drp, n1, vp);
-      norm=calc_norm(vp);
-      dist2Sq = Sqr(norm - Dhc*0.5);
-      if (dist2Sq < dist)
-	dist = dist2Sq;
+      if (fabs(sp) - Lhc2*0.5 < 0)
+	{
+	  vectProdVec(drp, n1, vp);
+	  norm=calc_norm(vp);
+
+	  dist2Sq = Sqr(norm - Dhc*0.5);
+	    {
+	      if (dist2Sq < dist)
+		dist = dist2Sq;
+	    }
+	}
       //printf("dist2Sq=%f\n", dist2Sq);
       drp[0] = P[i0+k].x - pos2[0];
       drp[1] = P[i0+k].y - pos2[1];
@@ -331,11 +339,14 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
 	  if (dist3Sq < dist)
 	    dist = dist3Sq;
 	}
-      vectProdVec(drp, n2, vp);
-      norm=calc_norm(vp);
-      dist4Sq = Sqr(norm - Dhc*0.5);   
-      if (dist < dist4Sq)
-	dist = dist4Sq;
+      if (fabs(sp) - Lhc2*0.5 < 0)
+	{
+	  vectProdVec(drp, n2, vp);
+	  norm=calc_norm(vp);
+	  dist4Sq = Sqr(norm - Dhc*0.5);   
+	  if (dist < dist4Sq)
+	    dist = dist4Sq;
+	}
       disttot+=dist;
 #else
       for (jj = 0; jj < 6; jj++)
@@ -1145,7 +1156,7 @@ int main(int argc, char *argv[])
 	{
 	  if (!onlye2e)
 	    numdistinf++;
-	  printf("i=%d ibeg=%d iend=%d\n", i, ibeg, iend);
+	  //printf("i=%d ibeg=%d iend=%d\n", i, ibeg, iend);
 	  continue;
 	}
       anglebest = 180.*acos((-Sqr(e2e_ist)+Sqr(l1best)+Sqr(l2best))/(2.0*l1best*l2best))/acos(0.0)/2.0;
@@ -1188,16 +1199,16 @@ int main(int argc, char *argv[])
   if (onlye2e)
     {
       if (fixbroken==1 || fixbroken==2||fixbroken==3)
-	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, e2eav/cc);
+	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, e2eav/((iend-ibeg)/22.));
       else
-	printf("#duplexes=%d (#distinf=%d) e2e=%G\n", ((int)cc), numdistinf, e2eav/cc);
+	printf("#duplexes=%d (#distinf=%d) e2e=%G\n", ((int)cc), numdistinf, e2eav/((iend-ibeg)/22.));
     }
   else
     {
       if (fixbroken==1 || fixbroken==2||fixbroken==3)
-	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
+	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, l1av/cc, l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
       else
-	printf("#duplexes=%d (#distinf=%d) l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), numdistinf, l1av/cc, l2av/cc, angleav/cc, e2eav/cc);
+	printf("#duplexes=%d (#distinf=%d) l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), numdistinf, l1av/cc, l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
     }    
   return 1;
 }
