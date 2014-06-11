@@ -6584,6 +6584,9 @@ void usrInitAft(void)
 #endif
 #ifdef MD_PATCHY_HE
   printf("Energia potenziale all'inizio: %.15f\n", calcpotene());
+#ifdef MD_EDHEFLEX_2D
+  printf("Energia cinetica all'inizio: %f\n", calc_energy("[UsrInitAft()]"));
+#endif
 #endif
  
 #ifdef MC_SIMUL

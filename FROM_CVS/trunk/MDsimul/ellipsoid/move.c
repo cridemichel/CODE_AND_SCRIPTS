@@ -9937,6 +9937,7 @@ void calc_energy(char *msg)
 #endif
 #ifdef EDHE_FLEX
 	  Ktra += typesArr[typeOfPart[i]].m*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
+	  //printf("=>> qui v=%f %f %f\n", vx[i], vy[i], vz[i]);
 #else
 	  Ktra += Oparams.m[0]*(Sqr(vx[i])+Sqr(vy[i])+Sqr(vz[i]));  
 #endif
@@ -9971,6 +9972,7 @@ void calc_energy(char *msg)
 	      //printf("I[%d][%d]=%.15G wt[%d]:%.15G wtp[%d]:%.15G\n", 0, k1, Oparams.I[0][k1],
 		//     k1, wt[k1], k1, wtp[k1]);
 	    }
+
 #else
 	  for (k1=0; k1 < 3; k1++)
 	    {
@@ -10013,7 +10015,8 @@ void calc_energy(char *msg)
   Ktra *= 0.5;
   Krot *= 0.5;
   K = Ktra + Krot;
-
+  //printf("======== parA=%d ==========I=%f %f %f mass=%f==============================>K=%f\n",Oparams.parnumA,
+    //typesArr[typeOfPart[0]].I[0], typesArr[typeOfPart[0]].I[1], typesArr[typeOfPart[0]].I[2], typesArr[typeOfPart[0]].m, K);
 #ifdef MD_ASYM_ITENS
   //free_matrix(Ia,3);
   //free_matrix(Ib,3);
