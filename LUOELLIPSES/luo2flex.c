@@ -294,6 +294,7 @@ void main(int argc, char **argv)
     }
   for (i=0; i < parnum; i++)
     {
+      /* in the EDHE code I use MD_ASYM_ITENS hence it needs angular momentum, i.e. I*w and not angular veocity w*/
       fprintf(outf, "%f %f %f %f %f %f\n", vx[i], vy[i], vz[i], Ix*wx[i], Iy*wy[i], Iz*wz[i]);
     }
   fprintf(outf, "%f %f %f\n", Lx, Ly, Lz);
