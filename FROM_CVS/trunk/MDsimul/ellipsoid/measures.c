@@ -978,7 +978,11 @@ int all_spots_on_symaxis(int sa, int pt);
 int get_dof_flex_per_type(int *doft)
 {
   int pt, dofOfType, dofTot, sa, dofR2sub=0, dofT2sub=0;
-  dofTot = 0;
+#ifdef MD_EDHEFLEX_2D
+  doft[0] = Oparams.parnum*3;
+  return Oparams.parnum*3;
+#endif
+   dofTot = 0;
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
       dofT2sub = 0;
@@ -1095,7 +1099,7 @@ void temperat(void)
   dof = OprogStatus.dofA*((double)Oparams.parnumA) + 
     OprogStatus.dofB*((double) (Oparams.parnum-Oparams.parnumA));
 #endif
-  if (OprogStatus.brownian==1)
+ if (OprogStatus.brownian==1)
     temp = 2.0 * K / dof;
   else
 #ifdef EDHE_FLEX
