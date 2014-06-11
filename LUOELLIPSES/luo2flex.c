@@ -138,6 +138,7 @@ double calc_energy(int nummol)
 	  for (k1=0; k1 < 3; k1++)
 	    K += Sqr(wt[k1])*Ix;
     }
+  //printf("Ix=%f mass=%f\n", Ix, mass);
   K *= 0.5;
   return K;
 }
@@ -233,7 +234,7 @@ void main(int argc, char **argv)
 	 R[k1][k2][i] = Rt[k1][k2]; 
       vx[i] = rTemp * gauss(); 
       vy[i] = rTemp * gauss();
-      vz[i] = rTemp * gauss();
+      vz[i] = 0.0;//rTemp * gauss();
       sumx += vx[i]*mass;
       sumy += vy[i]*mass;
       sumz += vz[i]*mass;
@@ -247,8 +248,10 @@ void main(int argc, char **argv)
       vy[i] -= sumy;
       vz[i] -= sumz;
     }	
+  angvel(wx, wy, wz, parnum);
   K = calc_energy(parnum);
-  sf = sqrt( ( (4.0*((double)parnum)-3.0) * temp ) / (2.0*K) );
+  printf("mass=%f I=%f tot ene bef=%f\n", mass, Ix, K);
+  sf = sqrt( ( (3.0*((double)parnum)-3.0) * temp ) / (2.0*K) );
   for (i = 0; i < parnum; i++)
     {
       vx[i] *= sf;
@@ -259,8 +262,9 @@ void main(int argc, char **argv)
       wz[i] *= sf;
     } 
 
-  angvel(wx, wy, wz, parnum);
 
+  K = calc_energy(parnum);
+  printf("tot ene aft=%f\n", K);
   outf = fopen(argv[2], "w+");
   kh=kappa*0.5;
   fprintf(outf,"totStep: 50000\n");
@@ -290,7 +294,7 @@ void main(int argc, char **argv)
     }
   for (i=0; i < parnum; i++)
     {
-      fprintf(outf, "%f %f %f %f %f %f\n", vx[i], vy[i], vz[i], wx[i], wy[i], wz[i]);
+      fprintf(outf, "%f %f %f %f %f %f\n", vx[i], vy[i], vz[i], Ix*wx[i], Iy*wy[i], Iz*wz[i]);
     }
   fprintf(outf, "%f %f %f\n", Lx, Ly, Lz);
   fclose(outf);
