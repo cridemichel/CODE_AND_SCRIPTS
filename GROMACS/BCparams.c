@@ -6,6 +6,31 @@
 #include <unistd.h>
 #define Sqr(x) ((x)*(x))
 
+/* =========================== >>> min <<< =============================== */
+double min(double a, double b)
+{
+  if (a >= b)
+    {
+      return b;
+    }
+  else
+    {
+      return a;
+    }
+}
+/* =========================== >>> max <<< ================================= */
+double max(double a, double b)
+{
+  if (a >= b)
+    {
+      return a;
+    }
+  else
+    {
+      return b;
+    }
+}
+
 
 struct vector 
 {
@@ -749,7 +774,7 @@ int main(int argc, char *argv[])
 {
   int numbroken, numdistinf, ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
   double shift[3], Dx, Dy, Dz, e2e_ist, e2eav=0.0, pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
-  double dl, ltot, l1min, l1max, del_l1, del_ltot, sp;
+  double ltotminE, ltotmaxE, dl, ltot, l1min, l1max, del_l1, del_ltot, sp, l1l2av;
   double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
   double Lgx, Lgy, Lgz, n1best[3], n2best[3], pos1best[3], pos2best[3], Lmgl=0.0;
   double cc=0, angle, angleav, distav, l1av, l2av, dist, anglebest, delb[3], e2ebest, Lhc1best, Lhc2best,
@@ -966,7 +991,7 @@ int main(int argc, char *argv[])
     }
 
   cc=0;
-  e2eav = 0.0;
+  e2eav = l1l2av = 0.0;
   if (fixbroken==1 || fixbroken==2 || fixbroken==3)
     {
       for (i=ibeg; i < iend; i=i+22)
@@ -1120,10 +1145,16 @@ int main(int argc, char *argv[])
 	{
 	  for (phi=0; phi < 2.0*pi; phi += dphi)
 	    {
-	      for (ltot=ltotmin; ltot < ltotmax; ltot += del_ltot)
+	      /* è inutile considerare ltot=l1+l2 < e2eist (distanza
+		 end2end) poiché non è possibile costruire un triangolo di lati 
+		 l1, l2 a e2eist in tal caso */
+	      ltotminE = max(e2e_ist*1.01, ltotmin);
+	      ltotmaxE = max(e2e_ist*1.01,ltotmax);
+	      del_ltot = (ltotmaxE-ltotminE)/((double)nlt);
+	      for (ltot=ltotminE; ltot < ltotmaxE; ltot += del_ltot)
 		{
-		  l1min = l1l2min*ltot/2.0;
-		  l1max = l1l2max*ltot/2.0;
+		  l1min = l1l2min*ltot/(1.0+l1l2min);
+		  l1max = l1l2max*ltot/(1.0+l1l2max);
 		  del_l1 =  (l1max-l1min)/((double)nl);
 		  for (l1 = l1min; l1 < l1max; l1 += del_l1)
 		    {
@@ -1160,6 +1191,13 @@ int main(int argc, char *argv[])
 	  continue;
 	}
       anglebest = 180.*acos((-Sqr(e2e_ist)+Sqr(l1best)+Sqr(l2best))/(2.0*l1best*l2best))/acos(0.0)/2.0;
+      if (isnan(anglebest))
+	{
+	  if (!onlye2e)
+	    numdistinf++;
+	  //printf("i=%d ibeg=%d iend=%d\n", i, ibeg, iend);
+	  continue;
+	}
 #if 0
       if (isnan(anglebest))
 	 {
@@ -1171,17 +1209,18 @@ int main(int argc, char *argv[])
 #endif
       distav += distbest;
       fprintf(e2e, "%d %f\n", i/22, e2e_ist);
-
       if (l1best < l2best)
 	{
 	  l1av += l1best;
 	  l2av += l2best;
 	  //printf("l1best=%f\n", l1best);
+	  l1l2av += l1best/l2best;
 	}
       else
 	{
 	  l1av += l2best;
 	  l2av += l1best;
+	  l1l2av += l2best/l1best;
 	}
       if (mglout)
 	{
@@ -1206,9 +1245,9 @@ int main(int argc, char *argv[])
   else
     {
       if (fixbroken==1 || fixbroken==2||fixbroken==3)
-	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, l1av/cc, l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
+	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) l1=%.15G l2=%.15G l1/l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, l1av/cc, l2av/cc, l1l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
       else
-	printf("#duplexes=%d (#distinf=%d) l1=%.15G l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), numdistinf, l1av/cc, l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
+	printf("#duplexes=%d (#distinf=%d) l1=%.15G l2=%.15G l1l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), numdistinf, l1av/cc, l2av/cc, l1l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
     }    
   return 1;
 }
