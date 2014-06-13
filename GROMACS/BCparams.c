@@ -205,6 +205,73 @@ void calc_dist_from_cyl(struct vector P, double Dhc, double Lhc, double pos[3], 
   dist[1].check = 1;
   //dist[1].ignore = 1;
 }
+#endif
+#if 0
+void calc_dist_from_cyl(double x[3], double Dhc, double Lhc, double pos[3], double n[3], double nperp[3])
+{
+  double fsp, ssp, sp, sp2, Pb[3], vp[3], norm, nperp[3], drp[3], np, npara[3];
+
+  np = calc_norm(nperp);
+  //dist[0].dist = sp - Lhc * 0.5; /* questa è la base interna */
+  /* la distanza è negativa se il punto è all'interno del cilindro */
+  dist[0].dist = -(sp + Lhc * 0.5); /* questa è la base "esterna" */
+
+  dist[0].check = 0;
+#if 0
+  if (sp >= 0)
+    {
+#if 0
+      dist[0].check=0;
+      dist[0].ignore=1;
+#else
+      dist[0].check = 1;
+#endif
+    }
+  else
+    {
+      dist[0].check = 0;
+    }
+#endif
+  /* xi is the minimum distance point */
+#if 0
+  fsp = fabs(sp);
+  ssp = sp/fsp;
+  dist[0].x[0] = P.x + ssp*n[0]*(Lhc*0.5-fsp);
+  dist[0].x[1] = P.y + ssp*n[1]*(Lhc*0.5-fsp);
+  dist[0].x[2] = P.z + ssp*n[2]*(Lhc*0.5-fsp);
+#else
+#if 0
+  dist[0].x[0] = pos[0] + n[0]*Lhc*0.5 + nperp[0];/* base interna */
+  dist[0].x[1] = pos[1] + n[1]*Lhc*0.5 + nperp[1];
+  dist[0].x[2] = pos[2] + n[2]*Lhc*0.5 + nperp[2];
+  /* la base esterna non va controllata */
+  dist[1].x[0] = pos[0] - n[0]*Lhc*0.5 + nperp[0]; /* base esterna */
+  dist[1].x[1] = pos[1] - n[1]*Lhc*0.5 + nperp[1];
+  dist[1].x[2] = pos[2] - n[2]*Lhc*0.5 + nperp[2];
+#endif
+#endif
+  //vectProdVec(drp, n, vp);
+  //norm=calc_norm(vp);
+
+#if 1
+  //norm=calc_norm(nperp);
+  dist[1].dist = np - Dhc*0.5;
+#else
+  vectProdVec(drp, n, vp);
+  norm=calc_norm(vp);
+  dist[1].dist = norm - Dhc*0.5;
+#endif
+
+  nperp[0] /= np;
+  nperp[1] /= np;
+  nperp[2] /= np;
+
+  dist[1].x[0] = pos[0] + npara[0] + nperp[0]*Dhc*0.5;
+  dist[1].x[1] = pos[1] + npara[1] + nperp[1]*Dhc*0.5;
+  dist[1].x[2] = pos[2] + npara[2] + nperp[2]*Dhc*0.5;
+  dist[1].check = 1;
+  //dist[1].ignore = 1;
+}
 int is_inside(double x[3], double Dhc, double Lhc, double pos[3], double n[3])
 {
   double drp[3], vp[3], norm;
@@ -232,7 +299,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   /* params = {L_1, L_2, theta} */
   int nd, jj, kbeg, kend, k, i, dontcheck, kk;
   double fact, disttot, delx, angle, pos1B[3], dist, vp[3], drp[3], sp, pos2B[3], dist1Sq, dist2Sq, dist3Sq, dist4Sq;
-  double b12[3], distbb;
+  double b12[3], distbb, sp1, sp2, norm1, norm2;
   double distSq, norm, n1B[3], n2B[3];
   double ltot, th1, th2, db12[3];
   double Pb[3], xi[3], distaux;
@@ -333,44 +400,82 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
       drp[2] = P[i0+k].z - pos1[2];
       dontcheck=0;
       /*  i versori n1 e n2 vanno dalle basi esterne a quelle interne */
-      sp = scalProd(drp, n1);
+      sp1=sp = scalProd(drp, n1);
+      vectProdVec(drp, n1, vp);
+      norm1=norm=calc_norm(vp);
 
-
-      if (sp < 0.0)
+      dist=DISTMAX;
+      if (fabs(sp) - Lhc1*0.5 < 0)
 	{
-	  dist1Sq = Sqr(fabs(sp) - Lhc1 * 0.5);
-	  if (dist1Sq < dist)
-	    dist=dist1Sq;
-	}
-      if (fabs(sp) - Lhc2*0.5 < 0)
-	{
-	  vectProdVec(drp, n1, vp);
-	  norm=calc_norm(vp);
-
+    	  if (sp < 0.0)
+    	    {
+    	      dist1Sq = Sqr(fabs(sp) - Lhc1 * 0.5);
+    	      if (dist1Sq < dist)
+    		dist=dist1Sq;
+    	    }
 	  dist2Sq = Sqr(norm - Dhc*0.5);
+	  if (dist2Sq < dist)
+    	    dist = dist2Sq;
+	}
+#if 1
+      else 
+	{
+	  if (norm > Dhc*0.5)
 	    {
+	      dist2Sq= Sqr(norm - Dhc*0.5)+Sqr(fabs(sp) - Lhc1 * 0.5);   
 	      if (dist2Sq < dist)
 		dist = dist2Sq;
 	    }
+	  else if (sp < 0.0)
+	    {
+	      dist1Sq = Sqr(fabs(sp) - Lhc1 * 0.5);
+	      if (dist1Sq < dist)
+		dist=dist1Sq;
+	    }
 	}
+#endif
       //printf("dist2Sq=%f\n", dist2Sq);
       drp[0] = P[i0+k].x - pos2[0];
       drp[1] = P[i0+k].y - pos2[1];
       drp[2] = P[i0+k].z - pos2[2];
-      sp = scalProd(drp, n2);
-      if (sp < 0.0)
-	{
-  	  dist3Sq = Sqr(fabs(sp) - Lhc2 * 0.5); 
-	  if (dist3Sq < dist)
-	    dist = dist3Sq;
-	}
+      sp2 = sp = scalProd(drp, n2);
+      vectProdVec(drp, n2, vp);
+      norm2=norm=calc_norm(vp);
       if (fabs(sp) - Lhc2*0.5 < 0)
 	{
-	  vectProdVec(drp, n2, vp);
-	  norm=calc_norm(vp);
-	  dist4Sq = Sqr(norm - Dhc*0.5);   
-	  if (dist < dist4Sq)
+	  if (sp < 0.0)
+	    {
+	      dist3Sq = Sqr(fabs(sp) - Lhc2 * 0.5); 
+	      if (dist3Sq < dist)
+		dist = dist3Sq;
+	    }
+  	  dist4Sq = Sqr(norm - Dhc*0.5);   
+	  if (dist4Sq < dist)
 	    dist = dist4Sq;
+	}
+#if 1
+      else 
+	{
+	  if (norm > Dhc*0.5)
+	    {
+	      dist4Sq = Sqr(norm - Dhc*0.5)+Sqr(fabs(sp) - Lhc2 * 0.5);   
+	      if (dist4Sq < dist)
+		dist = dist4Sq;
+	    }
+	  else if (sp < 0.0)
+	    {
+	      dist3Sq = Sqr(fabs(sp) - Lhc2 * 0.5); 
+	      if (dist3Sq < dist)
+		dist = dist3Sq;
+	    }
+
+	}
+#endif
+      if (dist==DISTMAX)
+	{
+	  printf("sp1=%f sp2=%f sp1-Lhc1=%f  sp2-Lhc2=%f norm1=%f norm2=%f\n", sp1, sp2, fabs(sp1)-Lhc1*0.5, fabs(sp2)-Lhc2*0.5,
+		 norm1, norm2);
+
 	}
       disttot+=dist;
 #else
