@@ -46,7 +46,7 @@ struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
 double Lx=-1., Ly=-1., Lz=-1., ltotmin=38.0, ltotmax=42.0, l1l2min=0.8, l1l2max=1.2, frame, dist_ist, dist_aver;
 int bufferin=0, onlye2e=0, ignoremidbases=1, fraying=0, numD=4, fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20; 
-double Lhc, Dhc, Lhc1, Lhc2, Dmax=18, Dmin=22, delD;
+double Lhc, Dhc=20.0, Lhc1, Lhc2, Dmax=20.0, Dmin=20.0, delD;
 double PI, Prad=1.8;
 int *ignore, mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
 FILE *mglfile;
@@ -1170,6 +1170,15 @@ int main(int argc, char *argv[])
 	}
     }
   numbroken=numdistinf=0;
+  delD=(Dmax-Dmin)/((double)numD);
+  //printf("Dmin=%f Dmax=%f delD=%f\n", Dmin, Dmax, delD);
+  if (Dmax==Dmin)
+    {
+      delD=1.0;
+      Dmin=Dhc;
+      Dmax=Dmin+0.01;
+      //printf("Dmin=%f delD=%f\n", Dhc, delD);
+    }
   for (i=ibeg; i < iend; i=i+22)
     {
       if ((i/22)%outframes==0 && i > ibeg) 
@@ -1268,12 +1277,9 @@ int main(int argc, char *argv[])
       first=1;
       if (!onlye2e)
 	{
-	  Dmin=18;
-	  Dmax=22;
-	  delD=(Dmax-Dmin)/((double)numD);
-	  //printf("Dmin=%f Dmax=%f delD=%f\n", Dmin, Dmax, delD);
-	  for (Dhc=Dmin; Dhc < Dmax; Dhc+=delD)
+ 	  for (Dhc=Dmin; Dhc < Dmax; Dhc+=delD)
 	    {
+	      //printf("Dhc=%f\n", Dhc);
 	      for (phi=0; phi < 2.0*pi; phi += dphi)
 		{
 		  /* è inutile considerare ltot=l1+l2 < e2eist (distanza
