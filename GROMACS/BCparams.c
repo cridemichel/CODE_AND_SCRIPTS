@@ -45,8 +45,8 @@ struct vector PA1_1, PA2_1, PB2_1, PB1_1;
 struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
 double Lx=-1., Ly=-1., Lz=-1., ltotmin=38.0, ltotmax=42.0, l1l2min=0.8, l1l2max=1.2, frame, dist_ist, dist_aver;
-int bufferin=0, onlye2e=0, ignoremidbases=1, fraying=0, fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20; 
-double Lhc, Dhc=20.0, Lhc1, Lhc2;
+int bufferin=0, onlye2e=0, ignoremidbases=1, fraying=0, numD=4, fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20; 
+double Lhc, Dhc, Lhc1, Lhc2, Dmax=18, Dmin=22, delD;
 double PI, Prad=1.8;
 int *ignore, mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
 FILE *mglfile;
@@ -294,7 +294,7 @@ int is_inside(double x[3], double Dhc, double Lhc, double pos[3], double n[3])
 #endif
 #define DISTMAX 1E100
 double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], double b1[3], double b2[3], 
-		 double pos1[3], double n1[3], double pos2[3], double n2[3])
+		 double pos1[3], double n1[3], double pos2[3], double n2[3], double Dhc)
 {
   /* params = {L_1, L_2, theta} */
   int nd, jj, kbeg, kend, k, i, dontcheck, kk;
@@ -692,7 +692,7 @@ void print_usage(void)
   printf("   | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot>\n");
   printf("   | -nphi <mesh_points_for_phi> | --outframes/-of <output frames> | -Lx/y/z <box_size_along_x/y/z>\n");
   printf(" | --fixbroken/-fb <1=fix 2=ignore> | --fraying/-fr | --ignoremidbases|-imb |\n");
-  printf("--bufferinput/bi ] <pdb_file>\n");
+  printf("--bufferinput/bi | --Dmin/-Dm <dmin> | --Dmax/-DM <dmax> | -nD <numD> ] <pdb_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -784,7 +784,27 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  Dhc = atof(argv[cc]);
 	}
-
+      else if (!strcmp(argv[cc],"--Dmin") || !strcmp(argv[cc],"-Dm"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  Dmin = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--Dmax") || !strcmp(argv[cc],"-DM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  Dmax = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"-nD"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  numD = atoi(argv[cc]);
+	}
       else if (!strcmp(argv[cc],"--ltotmin") || !strcmp(argv[cc],"-ltm"))
 	{
 	  cc++;
@@ -1248,41 +1268,54 @@ int main(int argc, char *argv[])
       first=1;
       if (!onlye2e)
 	{
-	  for (phi=0; phi < 2.0*pi; phi += dphi)
+	  Dmin=18;
+	  Dmax=22;
+	  delD=(Dmax-Dmin)/((double)numD);
+	  //printf("Dmin=%f Dmax=%f delD=%f\n", Dmin, Dmax, delD);
+	  for (Dhc=Dmin; Dhc < Dmax; Dhc+=delD)
 	    {
-	      /* è inutile considerare ltot=l1+l2 < e2eist (distanza
-		 end2end) poiché non è possibile costruire un triangolo di lati 
-		 l1, l2 a e2eist in tal caso */
-	      ltotminE = max(e2e_ist*1.01, ltotmin);
-	      ltotmaxE = max(e2e_ist*1.01,ltotmax);
-	      del_ltot = (ltotmaxE-ltotminE)/((double)nlt);
-	      for (ltot=ltotminE; ltot < ltotmaxE; ltot += del_ltot)
+	      for (phi=0; phi < 2.0*pi; phi += dphi)
 		{
-		  l1min = l1l2min*ltot/(1.0+l1l2min);
-		  l1max = l1l2max*ltot/(1.0+l1l2max);
-		  del_l1 =  (l1max-l1min)/((double)nl);
-		  for (l1 = l1min; l1 < l1max; l1 += del_l1)
+		  /* è inutile considerare ltot=l1+l2 < e2eist (distanza
+		     end2end) poiché non è possibile costruire un triangolo di lati 
+		     l1, l2 a e2eist in tal caso */
+#if 0
+		  ltotminE = max(e2e_ist*1.01, ltotmin);
+		  ltotmaxE = max(e2e_ist*1.01,ltotmax);
+#else
+		  ltotminE = ltotmin*e2e_ist;
+		  ltotmaxE = ltotmax*e2e_ist;
+#endif
+
+		  del_ltot = (ltotmaxE-ltotminE)/((double)nlt);
+		  for (ltot=ltotminE; ltot < ltotmaxE; ltot += del_ltot)
 		    {
-		      dist=dist_func(i, l1, ltot-l1, phi, Ro, b1, b2, pos1, n1, pos2, n2);
-		      //printf("l1=%f del_l1=%f\n", l1, del_l1);
-		      if (first || dist < distbest)
+		      l1min = l1l2min*ltot/(1.0+l1l2min);
+		      l1max = l1l2max*ltot/(1.0+l1l2max);
+		      del_l1 =  (l1max-l1min)/((double)nl);
+		      for (l1 = l1min; l1 < l1max; l1 += del_l1)
 			{
-			  first=0;
-			  l1best = l1;
-			  l2best = ltot-l1best;
-			  distbest = dist;
-			  //printf("l1l2min=%f l1l2max=%f\n", l1l2min, l1l2max);
-			  //printf("l1min=%f l1max=%f l2=%f %f ltot=%f\n", l1min, l1max, ltot-l1min, ltot-l1max, ltot);
-			  //printf("distbest=%f\n", distbest);
-			  for (kk=0; kk < 3; kk++)
+			  dist=dist_func(i, l1, ltot-l1, phi, Ro, b1, b2, pos1, n1, pos2, n2, Dhc);
+			  //printf("l1=%f del_l1=%f\n", l1, del_l1);
+			  if (first || dist < distbest)
 			    {
-			      n1best[kk] = n1[kk];
-			      n2best[kk] = n2[kk];
-			      pos1best[kk] = pos1[kk];
-			      pos2best[kk] = pos2[kk];
+			      first=0;
+			      l1best = l1;
+			      l2best = ltot-l1best;
+			      distbest = dist;
+			      //printf("l1l2min=%f l1l2max=%f\n", l1l2min, l1l2max);
+			      //printf("l1min=%f l1max=%f l2=%f %f ltot=%f\n", l1min, l1max, ltot-l1min, ltot-l1max, ltot);
+			      //printf("distbest=%f\n", distbest);
+			      for (kk=0; kk < 3; kk++)
+				{
+				  n1best[kk] = n1[kk];
+				  n2best[kk] = n2[kk];
+				  pos1best[kk] = pos1[kk];
+				  pos2best[kk] = pos2[kk];
+				}
+			      Lhc1best = Lhc1;
+			      Lhc2best = Lhc2;
 			    }
-			  Lhc1best = Lhc1;
-			  Lhc2best = Lhc2;
 			}
 		    }
 		}
