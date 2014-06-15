@@ -899,7 +899,7 @@ int main(int argc, char *argv[])
 {
   int numbroken, numdistinf, ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
   double shift[3], Dx, Dy, Dz, e2e_ist, e2eav=0.0, pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
-  double ltotminE, ltotmaxE, dl, ltot, l1min, l1max, del_l1, del_ltot, sp, l1l2av;
+  double Dav, ltotav, angle2, ltotminE, ltotmaxE, dl, ltot, l1min, l1max, del_l1, del_ltot, sp, l1l2av;
   double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
   double Lgx, Lgy, Lgz, n1best[3], n2best[3], pos1best[3], pos2best[3], Lmgl=0.0;
   double cc=0, angle, angleav, distav, l1av, l2av, dist, anglebest, delb[3], e2ebest, Lhc1best, Lhc2best,
@@ -1119,6 +1119,7 @@ int main(int argc, char *argv[])
   e2eav = l1l2av = 0.0;
   if (fixbroken==1 || fixbroken==2 || fixbroken==3)
     {
+      Dav = 0.0;
       for (i=ibeg; i < iend; i=i+22)
 	{
 	  if (fixbroken==2)
@@ -1128,6 +1129,8 @@ int main(int argc, char *argv[])
 	      Dx = P[i+21-k].x - P[i+k].x;
     	      Dy = P[i+21-k].y - P[i+k].y;
 	      Dz = P[i+21-k].z - P[i+k].z;
+	      Dav += sqrt(Sqr(Dx)+Sqr(Dy)+Sqr(Dz));
+	      cc++;
 #if 0
 	      printf("del=%f %f %f L=%f %f %f\n", Dx, Dy, Dz, Lx, Ly, Lz);
 	      printf("P1= %f %f %f P2=%f %f %f\n", P[i+21-k].x,P[i+21-k].y,P[i+21-k].z,
@@ -1168,7 +1171,10 @@ int main(int argc, char *argv[])
 		}	  
 	    }    
 	}
+	Dav /= cc;
+	cc=0.0;
     }
+  printf("Dav=%f\n", Dav);
   numbroken=numdistinf=0;
   delD=(Dmax-Dmin)/((double)numD);
   //printf("Dmin=%f Dmax=%f delD=%f\n", Dmin, Dmax, delD);
@@ -1200,12 +1206,22 @@ int main(int argc, char *argv[])
 	}
       else
 	{
+#if 1
 	  bar1.x = (P[i].x+P[i+21].x)*0.5;
 	  bar1.y = (P[i].y+P[i+21].y)*0.5;
 	  bar1.z = (P[i].z+P[i+21].z)*0.5;
 	  bar2.x = (P[i+10].x+P[i+11].x)*0.5;
 	  bar2.y = (P[i+10].y+P[i+11].y)*0.5;
 	  bar2.z = (P[i+10].z+P[i+11].z)*0.5;
+#else
+	  bar1.x = (P[i].x+P[i+21].x+P[i+1].x+P[i+20].x)*0.25;
+	  bar1.y = (P[i].y+P[i+21].y+P[i+1].y+P[i+20].y)*0.25;
+	  bar1.z = (P[i].z+P[i+21].z+P[i+1].z+P[i+20].z)*0.25;
+	  bar2.x = (P[i+10].x+P[i+11].x+P[i+9].x+P[i+12].x)*0.25;
+	  bar2.y = (P[i+10].y+P[i+11].y+P[i+9].y+P[i+12].y)*0.25;
+	  bar2.z = (P[i+10].z+P[i+11].z+P[i+9].z+P[i+12].z)*0.25;
+
+#endif
 	}
       /* center of mass */
       found_one=0;
@@ -1277,7 +1293,7 @@ int main(int argc, char *argv[])
       first=1;
       if (!onlye2e)
 	{
- 	  for (Dhc=Dmin; Dhc < Dmax; Dhc+=delD)
+ 	  for (Dhc=Dmin; Dhc <= Dmax; Dhc+=delD)
 	    {
 	      //printf("Dhc=%f\n", Dhc);
 	      for (phi=0; phi < 2.0*pi; phi += dphi)
@@ -1285,6 +1301,12 @@ int main(int argc, char *argv[])
 		  /* è inutile considerare ltot=l1+l2 < e2eist (distanza
 		     end2end) poiché non è possibile costruire un triangolo di lati 
 		     l1, l2 a e2eist in tal caso */
+#if 0
+		  anglebest = acos((-Sqr(e2e_ist)+Sqr(20.0-10/6.0)+Sqr(20.0-10/6.0))/(2.0*(20.0-10./6.)*(20.0-10./6.)));
+		  angle2= (pi - anglebest)/2.0;
+		  ltotav = e2e_ist/cos(angle2);
+#endif
+	//printf("anglebest=%f ltotav=%f\n", anglebest, ltotav);
 #if 0
 		  ltotminE = max(e2e_ist*1.01, ltotmin);
 		  ltotmaxE = max(e2e_ist*1.01,ltotmax);
