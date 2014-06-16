@@ -45,7 +45,7 @@ struct vector PA1_1, PA2_1, PB2_1, PB1_1;
 struct vector bar1, bar2, bar1_1, bar2_1;
 struct vector *P;
 double Lx=-1., Ly=-1., Lz=-1., ltotmin=38.0, ltotmax=42.0, l1l2min=0.8, l1l2max=1.2, frame, dist_ist, dist_aver;
-int bufferin=0, onlye2e=0, ignoremidbases=1, fraying=0, numD=4, fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20; 
+int onlycorrected=0, bufferin=0, onlye2e=0, ignoremidbases=1, fraying=0, numD=4, fixbroken=0, outframes=1000, nl=20, nlt=20, nphi=20, correct_anomal=0; 
 double Lhc, Dhc=20.0, Lhc1, Lhc2, Dmax=20.0, Dmin=20.0, delD;
 double PI, Prad=1.8;
 int *ignore, mglout=0, firstframe=-1, lastframe=-1; /* lastframe/firstfram=-1 means do not check */
@@ -710,7 +710,8 @@ void print_usage(void)
   printf("   | --ltotmax|-ltM <ltotmax> | -nl <mesh_points_for_l> | -nlt <mesh_points_for_ltot>\n");
   printf("   | -nphi <mesh_points_for_phi> | --outframes/-of <output frames> | -Lx/y/z <box_size_along_x/y/z>\n");
   printf(" | --fixbroken/-fb <1=fix 2=ignore> | --fraying/-fr | --ignoremidbases|-imb |\n");
-  printf("--bufferinput/bi | --Dmin/-Dm <dmin> | --Dmax/-DM <dmax> | -nD <numD> ] <pdb_file>\n");
+  printf(" | --bufferinput/bi | --Dmin/-Dm <dmin> | --Dmax/-DM <dmax> | -nD <numD>  \n");
+  printf(" | --only-corrected/-oc | --correct-anomal/-corr ] <pdb_file>\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -736,6 +737,14 @@ void parse_param(int argc, char** argv)
       else if (!strcmp(argv[cc],"--fraying")|!strcmp(argv[cc],"-fr"))
 	{
 	  fraying=1;
+	}
+      else if (!strcmp(argv[cc],"--only-corrected")|!strcmp(argv[cc],"-oc"))
+	{
+	  onlycorrected=1;
+	}
+      else if (!strcmp(argv[cc],"--correct-anomal")|!strcmp(argv[cc],"-corr"))
+	{
+	  correct_anomal=1;
 	}
       else if (!strcmp(argv[cc],"-e"))
 	{
@@ -915,7 +924,7 @@ void parse_param(int argc, char** argv)
 
 int main(int argc, char *argv[])
 {
-  int numcorrected=0,numbroken, numdistinf, ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
+  int outcorrected=0, numcorrected=0,numbroken, numdistinf, numdistinf2, ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
   double shift[3], Dx, Dy, Dz, e2e_ist, e2eav=0.0, pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double Dav, ltotav, angle2, ltotminE, ltotmaxE, dl, ltot, l1min, l1max, del_l1, del_ltot, sp, l1l2av;
   double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
@@ -1193,7 +1202,7 @@ int main(int argc, char *argv[])
 	cc=0.0;
     }
   printf("Dav=%f\n", Dav);
-  numbroken=numdistinf=0;
+  numbroken=numdistinf=numdistinf2=0;
   delD=(Dmax-Dmin)/((double)numD);
   //printf("Dmin=%f Dmax=%f delD=%f\n", Dmin, Dmax, delD);
   if (Dmax==Dmin)
@@ -1203,8 +1212,11 @@ int main(int argc, char *argv[])
       Dmax=Dmin+0.01;
       //printf("Dmin=%f delD=%f\n", Dhc, delD);
     }
+
+  numcorrected=0;
   for (i=ibeg; i < iend; i=i+22)
     {
+      outcorrected=0;
       if ((i/22)%outframes==0 && i > ibeg) 
 	printf("# duplex=%d/%d\n", i/22, numP/22);
       //center of mass of terminal Phosphate pairs 
@@ -1249,7 +1261,7 @@ int main(int argc, char *argv[])
 	  comx += P[i+k].x;
 	  comy += P[i+k].y;
 	  comz += P[i+k].z;
-	  if (mglout==1)
+	  if (mglout==1 && !onlycorrected)
 	    {
 	      fprintf(mglfile, "%f %f %f @ %f C[green]\n", P[i+k].x-mglcomx, P[i+k].y-mglcomy, P[i+k].z-mglcomz, Prad);
 	    }
@@ -1311,7 +1323,6 @@ int main(int argc, char *argv[])
       first=1;
       if (!onlye2e)
 	{
-	  numcorrected=0;
  	  for (Dhc=Dmin; Dhc <= Dmax; Dhc+=delD)
 	    {
 	      //printf("Dhc=%f\n", Dhc);
@@ -1326,24 +1337,34 @@ int main(int argc, char *argv[])
 		  ltotav = e2e_ist/cos(angle2);
 #endif
 	//printf("anglebest=%f ltotav=%f\n", anglebest, ltotav);
-#if 1
 
-		  ltotminE = ltotmin;//max(e2e_ist*1.00001, ltotmin);
-		  ltotmaxE = ltotmax;//max(e2e_ist*1.05, ltotmax);
-		  if (ltotmax < e2e_ist)
+		  if (correct_anomal)
 		    {
-		      double delbn[3];
-		      /* sposta un le basi dei cilindri se ltotmax è minore della distanza end2end */
-		      numcorrected++;
-		      for (kk=0; kk < 3; kk++)
-			{
-			  delbn[kk] = delb[kk];
-		  	  delbn[kk] /= e2e_ist;
-			  delbn[kk] *= ltotmin*0.99;
-			  b1[kk] -= (delbn[kk]-delb[kk])*0.5;
-			  b2[kk] += (delbn[kk]-delb[kk])*0.5;
-			}
-		      e2e_ist = ltotmin;
+		      ltotminE = ltotmin;//max(e2e_ist*1.00001, ltotmin);
+		      ltotmaxE = ltotmax;//max(e2e_ist*1.05, ltotmax);
+#if 1
+    		      if (ltotmax < e2e_ist || ltotmin < e2e_ist)
+    			{
+#if 1
+    			  double delbn[3];
+    			  /* sposta le basi dei cilindri se ltotmax è minore della distanza end2end */
+    			  outcorrected=1;
+    			  numcorrected++;
+			  /* le basi vengono spostate in modo che sia possibile costruire un triangolo
+			     con due lati la cui lunghezza totale (contour length del cilindro) sia
+			     ltotmin. Qui in sostanza sto assumendo che la contour length sia comunque fissa
+			     per i vari duplex e che se cambia la end2end ciò sia dovuto probabilmente al fraying
+			     delle coppie terminali. */
+    			  for (kk=0; kk < 3; kk++)
+    			    {
+    			      delbn[kk] = delb[kk];
+    			      delbn[kk] /= e2e_ist;
+    			      delbn[kk] *= ltotmin*0.99;
+    			      b1[kk] -= (delbn[kk]-delb[kk])*0.5;
+    			      b2[kk] += (delbn[kk]-delb[kk])*0.5;
+    			    }
+    			  e2e_ist = ltotmin*0.99;
+#endif
 #if 0		      
 		      for (kk=0; kk < 3; kk++)
 			{
@@ -1351,10 +1372,18 @@ int main(int argc, char *argv[])
 			}	  
 		      printf("normold=%f normnew=%f ltotmin=%f ltotmax=%f\n", calc_norm(delb), calc_norm(delbn), ltotmin, ltotmax);
 #endif
+    			}
 		    }
-#else
-		  ltotminE = ltotmin*e2e_ist;
-		  ltotmaxE = ltotmax*e2e_ist;
+		  else
+	    	    {
+		      if (ltotmax < e2e_ist || ltotmin < e2e_ist)
+			{
+			  outcorrected=1;	
+			  numcorrected++;
+			}	
+    		      ltotminE = max(e2e_ist*1.00001, ltotmin);
+		      ltotmaxE = max(e2e_ist*1.02, ltotmax);
+		    }
 #endif
 
 		  del_ltot = (ltotmaxE-ltotminE)/((double)nlt);
@@ -1391,7 +1420,7 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
-      if (dist==DISTMAX)
+      if (distbest==DISTMAX)
 	{
 	  if (!onlye2e)
 	    numdistinf++;
@@ -1402,7 +1431,7 @@ int main(int argc, char *argv[])
       if (isnan(anglebest))
 	{
 	  if (!onlye2e)
-	    numdistinf++;
+	    numdistinf2++;
 	  //printf("i=%d ibeg=%d iend=%d\n", i, ibeg, iend);
 	  continue;
 	}
@@ -1416,7 +1445,14 @@ int main(int argc, char *argv[])
 	 }
 #endif
       distav += distbest;
-      fprintf(e2e, "%d %f\n", i/22, e2e_ist);
+      if (outcorrected)
+	{
+	  fprintf(e2e, "%d %f %f\n", i/22, e2e_ist, -distbest);
+	}
+      else
+	{
+	  fprintf(e2e, "%d %f %f\n", i/22, e2e_ist, distbest);
+	}
       if (l1best < l2best)
 	{
 	  l1av += l1best;
@@ -1432,10 +1468,19 @@ int main(int argc, char *argv[])
 	}
       if (mglout)
 	{
-	  fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos1best[0]-mglcomx, pos1best[1]-mglcomy, pos1best[2]-mglcomz, n1best[0], n1best[1], n1best[2], Dhc/2.0, Lhc1best);
-	  fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos2best[0]-mglcomx, pos2best[1]-mglcomy, pos2best[2]-mglcomz, n2best[0], n2best[1], n2best[2], Dhc/2.0, Lhc2best);
+	  if (onlycorrected && outcorrected)
+	    {
+	      for(k=0; k<22; k++)
+		{
+		  fprintf(mglfile, "%f %f %f @ %f C[green]\n", P[i+k].x-mglcomx, P[i+k].y-mglcomy, P[i+k].z-mglcomz, Prad);
+		}
+	    }
+	if ((onlycorrected && outcorrected)|| !onlycorrected)
+	    {
+	    fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos1best[0]-mglcomx, pos1best[1]-mglcomy, pos1best[2]-mglcomz, n1best[0], n1best[1], n1best[2], Dhc/2.0, Lhc1best);
+	    fprintf(mglfile, "%f %f %f %f %f %f @ %f %f C[red]\n", pos2best[0]-mglcomx, pos2best[1]-mglcomy, pos2best[2]-mglcomz, n2best[0], n2best[1], n2best[2], Dhc/2.0, Lhc2best);
+	    }
 	}
-
       //printf("anglebest=%f\n", anglebest);
       angleav += anglebest;
       cc++;
@@ -1446,16 +1491,16 @@ int main(int argc, char *argv[])
   if (onlye2e)
     {
       if (fixbroken==1 || fixbroken==2||fixbroken==3)
-	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, e2eav/((iend-ibeg)/22.));
+	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d #numnan=%d) e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, numdistinf2, e2eav/((iend-ibeg)/22.));
       else
-	printf("#duplexes=%d (#distinf=%d) e2e=%G\n", ((int)cc), numdistinf, e2eav/((iend-ibeg)/22.));
+	printf("#duplexes=%d (#distinf=%d) e2e=%G\n", ((int)cc), numdistinf+numdistinf2, e2eav/((iend-ibeg)/22.));
     }
   else
     {
       if (fixbroken==1 || fixbroken==2||fixbroken==3)
-	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) l1=%.15G l2=%.15G l1/l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, l1av/cc, l2av/cc, l1l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
+	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d #numnan=%d) l1=%.15G l2=%.15G l1/l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, numdistinf2, l1av/cc, l2av/cc, l1l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
       else
-	printf("#duplexes=%d (#distinf=%d) l1=%.15G l2=%.15G l1l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), numdistinf, l1av/cc, l2av/cc, l1l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
+	printf("#duplexes=%d (#distinf=%d) l1=%.15G l2=%.15G l1l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), numdistinf+numdistinf2, l1av/cc, l2av/cc, l1l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
       printf("#numcorrected=%d\n", numcorrected);
     }    
   return 1;
