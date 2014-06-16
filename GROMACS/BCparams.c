@@ -302,7 +302,7 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
   double b12[3], distbb, sp1, sp2, norm1, norm2;
   double distSq, norm, n1B[3], n2B[3];
   double ltot, th1, th2, db12[3];
-  double Pb[3], xi[3], distaux;
+  double Pb[3], xi[3], distaux, ce[3], dce[3], norms;
 #if 0
   struct distStr distance[6];  
 #endif
@@ -394,7 +394,10 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
 #if 1
       /* check overlap here */
       if (fraying && (k==10 || k==11))
-	 continue; 
+       	continue; 
+      //if ((k >= 4 && k <= 6)||(k >=15 && k <=17))
+	//continue;
+
       drp[0] = P[i0+k].x - pos1[0];
       drp[1] = P[i0+k].y - pos1[1];
       drp[2] = P[i0+k].z - pos1[2];
@@ -471,11 +474,26 @@ double dist_func(int i0, double l1, double l2, double phi, double Ro[3][3], doub
 
 	}
 #endif
+#if 0
+      if (sp1 > 0.0 && sp2 > 0.0 && fabs(sp1) - Lhc1*0.5 > 0 && fabs(sp2) - Lhc2*0.5 > 0)
+	{
+	  ce[0] = pos1[0] + n1[0]*Lhc1*0.5;
+	  ce[1] = pos1[1] + n1[1]*Lhc1*0.5;
+	  ce[2] = pos1[2] + n1[2]*Lhc1*0.5;
+	  dce[0] = P[i0+k].x - ce[0];
+	  dce[1] = P[i0+k].y - ce[1];
+	  dce[2] = P[i0+k].z - ce[2];
+	  dist4Sq = Sqr(calc_norm(dce) - Dhc*0.5); 
+	  if (dist4Sq < dist)
+	    dist = dist4Sq;
+	}
+#endif
       if (dist==DISTMAX)
 	{
 	  printf("sp1=%f sp2=%f sp1-Lhc1=%f  sp2-Lhc2=%f norm1=%f norm2=%f\n", sp1, sp2, fabs(sp1)-Lhc1*0.5, fabs(sp2)-Lhc2*0.5,
 		 norm1, norm2);
 
+	printf("l1=%f l2=%f distbb=%f n1=%f %f %f\n", l1, l2, distbb, n1[0], n1[1], n1[2]);
 	}
       disttot+=dist;
 #else
@@ -897,7 +915,7 @@ void parse_param(int argc, char** argv)
 
 int main(int argc, char *argv[])
 {
-  int numbroken, numdistinf, ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
+  int numcorrected=0,numbroken, numdistinf, ibeg, iend, opt, res, numP, P_count, i, k, found_one=0, first, kk;
   double shift[3], Dx, Dy, Dz, e2e_ist, e2eav=0.0, pi, x, y, z, l, m, norm, comx, comy, comz, distbest, l1best, l2best, phi, dphi, l1, l2;
   double Dav, ltotav, angle2, ltotminE, ltotmaxE, dl, ltot, l1min, l1max, del_l1, del_ltot, sp, l1l2av;
   double xv[3], yv[3], zv[3], Ro[3][3], b1[3], b2[3], n1[3], n2[3], pos1[3], pos2[3];
@@ -1241,7 +1259,7 @@ int main(int argc, char *argv[])
       comz /= 22.;
       
       pi = 2.0*acos(0.0);
-      /* swearch among all possible values of l_1, l_2 and phi! */
+      /* search among all possible values of l_1, l_2 and phi! */
       b1[0] = bar1.x;
       b1[1] = bar1.y;
       b1[2] = bar1.z;
@@ -1293,6 +1311,7 @@ int main(int argc, char *argv[])
       first=1;
       if (!onlye2e)
 	{
+	  numcorrected=0;
  	  for (Dhc=Dmin; Dhc <= Dmax; Dhc+=delD)
 	    {
 	      //printf("Dhc=%f\n", Dhc);
@@ -1307,9 +1326,32 @@ int main(int argc, char *argv[])
 		  ltotav = e2e_ist/cos(angle2);
 #endif
 	//printf("anglebest=%f ltotav=%f\n", anglebest, ltotav);
-#if 0
-		  ltotminE = max(e2e_ist*1.01, ltotmin);
-		  ltotmaxE = max(e2e_ist*1.01,ltotmax);
+#if 1
+
+		  ltotminE = ltotmin;//max(e2e_ist*1.00001, ltotmin);
+		  ltotmaxE = ltotmax;//max(e2e_ist*1.05, ltotmax);
+		  if (ltotmax < e2e_ist)
+		    {
+		      double delbn[3];
+		      /* sposta un le basi dei cilindri se ltotmax è minore della distanza end2end */
+		      numcorrected++;
+		      for (kk=0; kk < 3; kk++)
+			{
+			  delbn[kk] = delb[kk];
+		  	  delbn[kk] /= e2e_ist;
+			  delbn[kk] *= ltotmin*0.99;
+			  b1[kk] -= (delbn[kk]-delb[kk])*0.5;
+			  b2[kk] += (delbn[kk]-delb[kk])*0.5;
+			}
+		      e2e_ist = ltotmin;
+#if 0		      
+		      for (kk=0; kk < 3; kk++)
+			{
+			  delbn[kk] = b2[kk]-b1[kk];
+			}	  
+		      printf("normold=%f normnew=%f ltotmin=%f ltotmax=%f\n", calc_norm(delb), calc_norm(delbn), ltotmin, ltotmax);
+#endif
+		    }
 #else
 		  ltotminE = ltotmin*e2e_ist;
 		  ltotmaxE = ltotmax*e2e_ist;
@@ -1414,6 +1456,7 @@ int main(int argc, char *argv[])
 	printf("#good duplexes=%d/(%d with #broken=%d and #distinf=%d) l1=%.15G l2=%.15G l1/l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), (iend-ibeg)/22, numbroken, numdistinf, l1av/cc, l2av/cc, l1l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
       else
 	printf("#duplexes=%d (#distinf=%d) l1=%.15G l2=%.15G l1l2=%.15G theta_b=%.15G e2e=%G\n", ((int)cc), numdistinf, l1av/cc, l2av/cc, l1l2av/cc, angleav/cc, e2eav/((iend-ibeg)/22.));
+      printf("#numcorrected=%d\n", numcorrected);
     }    
   return 1;
 }
