@@ -930,18 +930,6 @@ void find_bonds_one(int i)
 		  for (nn=0; nn < nbonds; nn++)
 		    {
 		      //printf("aa=%d bb=%d uno=%d due=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn], i/4, j/4);
-#ifdef MC_HCSOFT 
-		      /* 2-2 is the soft overlap interaction (0 and 1 are the sticky spots) */
-		      if (mapbondsaFlex[nn] == 3 && mapbondsbFlex[nn] == 3)
-			{
-			  if (check_overlap(i, j, shift, &err) < 0.0)
-			    { 
-			      add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
-			      add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
-			    }
-			  continue;
-			}
-#endif
 #ifdef MC_KERN_FRENKEL
 		      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
 			  && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
@@ -3345,7 +3333,7 @@ extern double **eneij;
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
 {
-#if defined(MC_SWHC) || defined(MC_SWELL)
+#if defined(MC_SWHC) || defined(MC_SWELL) || defined(MC_HCSOFT)
   int retchk;
 #endif
 #ifdef MC_KERN_FRENKEL
@@ -3661,6 +3649,23 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
     	      typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
 	    }
 #endif
+	}
+      else
+	dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
+#elif defined(MC_HCSOFT)
+      /* 2-2 is the soft overlap interaction (0 and 1 are the sticky spots) */
+      if (mapbondsaFlex[nn] == 3 && mapbondsbFlex[nn] == 3)
+	{
+	  typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn];
+  	  if (check_overlap(i, j, shift, &retchk) < 0.0)
+	    dists[nn] = dist = -1.0;
+	  else 
+	    dists[nn] = dist =  1.0;
+	  typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
 	}
       else
 	dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);

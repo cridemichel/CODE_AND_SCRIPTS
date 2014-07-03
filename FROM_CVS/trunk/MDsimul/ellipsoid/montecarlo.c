@@ -7315,13 +7315,7 @@ int mcmotion(void)
 #ifdef MC_FREEZE_BONDS
   //check_all_bonds();
 #endif
-#ifdef MC_HCSOFT
-  /* XXX */
-  dorej=0;
-  err=0;
-#else
   dorej = overlapMC(ip, &err);
-#endif
   if (!dorej)
     {
 #ifdef MC_STOREBONDS
