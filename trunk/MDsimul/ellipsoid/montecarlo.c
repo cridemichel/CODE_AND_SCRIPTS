@@ -2911,6 +2911,8 @@ double calcpotene_GC(int ip)
 #ifdef MC_HYDROPHOBIC_INT
 	      Epot -= eneij[ip][jj]*intersArr[kk2].bheight;
 #else
+	      //if (aa==2 && bb==2)
+		//printf("height=%f\n", intersArr[kk2].bheight);
 	      Epot -= intersArr[kk2].bheight;
 #endif
 #ifdef MD_SPHERICAL_WALL
@@ -7313,7 +7315,13 @@ int mcmotion(void)
 #ifdef MC_FREEZE_BONDS
   //check_all_bonds();
 #endif
+#ifdef MC_HCSOFT
+  /* XXX */
+  dorej=0;
+  err=0;
+#else
   dorej = overlapMC(ip, &err);
+#endif
   if (!dorej)
     {
 #ifdef MC_STOREBONDS
