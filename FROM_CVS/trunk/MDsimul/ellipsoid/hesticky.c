@@ -733,9 +733,14 @@ extern int refFB, fakeFB;
 #ifdef MC_KERN_FRENKEL
 int rejectMove, checkMoveKF=0;
 #endif
-
+#ifdef MC_HCSOFT
+extern double check_overlap(int i, int j, double shift[3], int *errchk);
+#endif
 void find_bonds_one(int i)
 {
+#ifdef MC_HCSOFT
+  int err;
+#endif
   int nn,  amin, bmin, j, nbonds, bonded;
   double shift[3], dist;
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
@@ -925,6 +930,18 @@ void find_bonds_one(int i)
 		  for (nn=0; nn < nbonds; nn++)
 		    {
 		      //printf("aa=%d bb=%d uno=%d due=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn], i/4, j/4);
+#ifdef MC_HCSOFT 
+		      /* 2-2 is the soft overlap interaction (0 and 1 are the sticky spots) */
+		      if (mapbondsaFlex[nn] == 3 && mapbondsbFlex[nn] == 3)
+			{
+			  if (check_overlap(i, j, shift, &err) < 0.0)
+			    { 
+			      add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
+			      add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
+			    }
+			  continue;
+			}
+#endif
 #ifdef MC_KERN_FRENKEL
 		      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
 			  && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)

@@ -794,10 +794,19 @@ double calc_phi(void)
   N *= 4.0*pi/3.0;
 #endif
 #endif
+
 #ifdef MD_LXYZ
+#ifdef MD_EDHEFLEX_2D
+  return Oparams.parnum*pi*typesArr[0].sax[0]*typesArr[0].sax[1]/(L[0]*L[1]);
+#else
   return N / (L[0]*L[1]*L[2]);
+#endif
+#else
+#ifdef MD_EDHEFLEX_2D
+  return Oparams.parnum*pi*typesArr[0].sax[0]*typesArr[0].sax[1]/(L*L);
 #else
   return N / (L*L*L);
+#endif
 #endif
 }
 double calc_norm(double *vec);
@@ -8271,6 +8280,76 @@ void calc_grad_and_point_plane_hwbump(int i, double *grad, double *point, int np
 		    point[0], point[1], point[2]));
 }
 int globalHW = 0;
+#ifdef MD_SPHERICAL_WALL
+extern struct sphere_wall sphwall;
+void bumpSHW(int i, int type, double rCx, double rCy, double rCz, double *W)
+{
+  double rsph[3], innrad, outrad;
+  double nrad[3], vv[3], vrad, vperp[3];
+  int k;
+
+  for (k=0; k < 3; k++)
+    rsph[k] = OprogStatus.rsph[k];
+
+  innrad = OprogStatus.innrad;
+  outrad = OprogStatus.outrad;
+  switch (type)
+    {
+    case 0: /* center of mass outer sphere*/
+      /* calculare radial versor here and use it to invert radial velocity */
+      nrad[0] = rx[evIdA] - rsph[0];
+      nrad[1] = ry[evIdA] - rsph[1];
+      nrad[2] = rz[evIdA] - rsph[2];
+      norm = calc_norm(nrad);
+      for (k=0; k < 3; k++)
+	nrad[k] /= norm;
+      vv[0] = vx[evIdA];
+      vv[1] = vy[evIdA];
+      vv[2] = vz[evIdA];
+      vrad=scalProd(vv,nrad);
+      vperp[0] = vx[evIdA] - vrad*nrad[0];
+      vperp[1] = vy[evIdA] - vrad*nrad[1];
+      vperp[2] = vz[evIdA] - vrad*nrad[2];
+      vx[i] = vperp[0] - vrad*nrad[0];
+      vy[i] = vperp[1] - vrad*nrad[1];
+      vz[i] = vperp[2] - vrad*nrad[2];
+      break;
+    case 1: /* orientation outer sphere */
+      /* calculate the tangential vector and use it to invert tangential angular velocity */
+      break;
+    case 2: /* center of mass inner sphere */
+      break;
+    case 3: /* orientation inner sphere */
+      break;
+    }
+  /*printf("qui time: %.15f\n", Oparams.time);*/
+  OprogStatus.lastcolltime[evIdA] = lastcol[evIdA] = Oparams.time;
+#ifdef MD_CALC_DPP
+  store_last_u(evIdA);
+#endif
+  lastbump[evIdA].mol=evIdB-ATOM_LIMIT;
+  lastbump[evIdA].at = evIdC;
+  //printf("lastbump[%d].at=%d lastbump[%d].at=%d\n", evIdA, lastbump[evIdA].at, evIdB, lastbump[evIdB].at);
+  lastbump[evIdA].type = evIdE;
+#ifdef MD_HSVISCO
+  OprogStatus.lastcoll = Oparams.time;
+#endif
+  if (OprogStatus.useNNL)
+    {
+      /* ricalcola i tempi di collisione con la NL */
+      updrebuildNNL(evIdA);
+      PredictEventNNL(evIdA, -1);
+    }
+  else
+    {
+      PredictEvent(evIdA, -1);
+    }
+#ifdef MD_ASYM_ITENS
+  calc_angmom(i, Ia);
+  upd_refsysM(i);
+#endif
+}
+#endif
 void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
 {
   double factor, invmi;
@@ -8467,7 +8546,11 @@ void ProcessWallColl(void)
 		    Oparams.time,evIdA,evIdC, evIdB, evIdD, evIdE)); 
 
   MD_DEBUG38( printf("i=%d pos=%f %f %f vel=%f %f %f\n", evIdA, rx[evIdA], ry[evIdA], rz[evIdA], vx[evIdA], vy[evIdA], vz[evIdA]));
+#ifdef MD_SPHERICAL_WALL
+  bumpSHW(evIdA, evIdB-ATOM_LIMIT, rxC, ryC, rzC, &W);
+#else
   bumpHW(evIdA, evIdB-ATOM_LIMIT, rxC, ryC, rzC, &W);
+#endif
   MD_DEBUG36(calc_energy("dopo"));
   MD_DEBUG(store_bump(evIdA, evIdB));
   //ENDSIM=1;
