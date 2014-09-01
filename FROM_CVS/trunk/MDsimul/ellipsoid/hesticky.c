@@ -895,6 +895,15 @@ void find_bonds_one(int i)
 		  if (j==sphWall || j==sphWallOuter)
 		    continue;
 #endif
+#ifdef MD_GHOST_IGG
+	    	  if (Oparams.ghostsim==3 && ghostInfoArr[i].iggnum >= 0 && 
+		      ghostInfoArr[j].iggnum >= 0 && ghostInfoArr[i].iggnum !=ghostInfoArr[j].iggnum)
+		    {
+		      printf("[WARNING] ignoring fake bond between ghost %d[igg#%d] and %d[igg#%d] particles\n", i, ghostInfoArr[i].iggnum, j,
+			     ghostInfoArr[j].iggnum);
+		      continue;
+		    }
+#endif
 #if defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)
 		  /* se una delle due particelle ha due bond è inutile controllare i bond
 		     perché non potranno esserci bond tra i e j */
@@ -1284,6 +1293,15 @@ void find_bonds_one_NLL(int i)
 #ifdef MD_SPHERICAL_WALL
       if (j==sphWall || j==sphWallOuter)
 	continue;
+#endif
+#ifdef MD_GHOST_IGG
+      if (Oparams.ghostsim==3 && ghostInfoArr[i].iggnum >= 0 && 
+	  ghostInfoArr[j].iggnum >= 0 && ghostInfoArr[i].iggnum !=ghostInfoArr[j].iggnum)
+	{
+	  printf("[WARNING] ignoring fake bond between ghost %d[igg#%d] and %d[igg#%d] particles\n", i, ghostInfoArr[i].iggnum, j,
+		 ghostInfoArr[j].iggnum);
+	      continue;
+	}
 #endif
       // check_shift(i, j, shift);
       /* calculate shift */
@@ -3656,14 +3674,14 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
       /* 2-2 is the soft overlap interaction (0 and 1 are the sticky spots) */
       if (mapbondsaFlex[nn] == 3 && mapbondsbFlex[nn] == 3)
 	{
-	  typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn];
+	  //typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn];
 	  typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
 	  typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn];
   	  if (check_overlap(i, j, shift, &retchk) < 0.0)
 	    dists[nn] = dist = -1.0;
 	  else 
 	    dists[nn] = dist =  1.0;
-	  typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn];
+	  //typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn];
 	  typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
 	  typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
 	}
