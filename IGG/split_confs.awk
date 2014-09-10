@@ -25,7 +25,7 @@ if (iggnum !=-1 && NR >= iggnum && NR < iggnum+4)
   {
      xc = $1-xm-dl*0.5;
      yc = $2-ym-dl*0.5;
-     zc = $3+Lbox*0.5;
+     zc = $3;#+Lbox*0.5;
      # apply PBC 
      if (xc > dl*0.5) xc = xc - dl;
      if (xc < -dl*0.5) xc = xc + dl;
