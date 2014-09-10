@@ -1,25 +1,33 @@
 L="101.234693"
-XS=`"echo -$L/2"|bc -l`
-YS=`"echo -$L/2"|bc -l`
-DL="101.234693/16.0327"
-NP=3050
+XS=`echo -$L/2|bc -l`
+YS=`echo -$L/2|bc -l`
+DL="16.0327"
+NP="3050"
+cc=0
 for f in `cat $1`
 do
-i=1
-j=1
-xmax=$XS
-ymax=$YS
-while [ $i -lt 7 ]
+i=0
+j=0
+while [ $i -lt 6 ]
 do 
-while [ $i -lt 7 ]
+while [ $j -lt 6 ]
 do
-xmin=$xmax
-ymin=$ymax
-xmax=`echo $xmax+$DL| bc -l`
-ymax=`echo $ymax+$DL| bc -l`
-cat $f | awk -v np=$NP -v xm=$xmin -v ym=$ymin -v xM=$xmax -v yM=$ymax -v dl=$DL -f split_confs.awk 
-i=$[$i+1]
-done
+xmin=`echo $XS+$DL*$i|bc -l`
+ymin=`echo $YS+$DL*$j|bc -l`
+xmax=`echo $XS+$DL*$i+$DL| bc -l`
+ymax=`echo $YS+$DL*$j+$DL| bc -l`
+cat $f | gawk -v Nigg=1000 -v Lbox=$L -v np=$NP -v xm=$xmin -v ym=$ymin -v xM=$xmax -v yM=$ymax -v dl=$DL -f split_confs.awk >_aaa_
+RES=`tail -1 _aaa_`
+if [ "$RES" != "FAILED" ]
+then
+mv _aaa_ monoGhostR$cc
+cc=$[$cc+1]
+fi
+#echo "BOH xmin= " $xmin, " xmax=", $xmax, " DL=" $DL
+echo "i= ", $i, " j=" $j > /dev/stderr
 j=$[$j+1]
+done
+j=0
+i=$[$i+1]
 done
 done
