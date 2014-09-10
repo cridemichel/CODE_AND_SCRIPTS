@@ -40,7 +40,7 @@ if (iggnum!=-1 && NR >= iggnum+np && NR < iggnum+np+4)
 if (NR-NRB >= Nigg && NR < NRE && $1 > xm && $1 < xM && $2 > ym && $2 < yM)
  {
    numant++;
-   print $0;
+   print ($1-xm-dl*0.5, $2-ym-dl*0.5, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
  }
 ##if (NR-NRB >= Nigg+np && NR < NRE+np)
 ##  print $0;
