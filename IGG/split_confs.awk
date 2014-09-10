@@ -44,7 +44,6 @@ if (NR-NRB >= Nigg && NR < NRE && $1 > xm && $1 < xM && $2 > ym && $2 < yM)
  }
 ##if (NR-NRB >= Nigg+np && NR < NRE+np)
 ##  print $0;
-
 if ($0=="@@@") 
    at++; 
 if (at==2 && NRB==-1) 
