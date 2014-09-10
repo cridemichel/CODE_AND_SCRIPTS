@@ -19,27 +19,26 @@ if (iggnum==-1 && NR >= NRB && NR < NRB+Nigg && $1 > xm && $1 < xM && $2 > ym &&
    {
      for (kk=0; kk < $13; kk++)
        {
-	for (jj=1; jj <= 13; jj++)
-         {
-	   if (jj == 1)
-	     printf("%.15G ", linea[kk][jj]-xm-dl*0.5);
-	   else if (jj==2)
-	     printf("%.15G ", linea[kk][jj]-ym-dl*0.5);
-	   else
+	 printf("%.15G ", linea[kk][1]-xm-dl*0.5);
+	 printf("%.15G ", linea[kk][2]-ym-dl*0.5);
+	 print("BOH ",linea[kk][2],ym,yM)>"/dev/stderr";
+	  for (jj=3; jj <= 13; jj++)
+           {
 	     printf("%.15G ", linea[kk][jj]);
-         }
-	printf("\n");
-	}	
-  }	
-  iggnum=NR-$13;
-  print ("TYPE=", $13) > "/dev/stderr" 
+           }
+	 printf("\n");
+        }
+    }	
+ iggnum=NR-$13;
+ reftype=$13;
+ print ("TYPE=", $13) > "/dev/stderr" 
 }
 #print out a single igg coordinates
 if (iggnum !=-1 && NR >= iggnum && NR < iggnum+4)
   {
      xc = $1-xm-dl*0.5;
      yc = $2-ym-dl*0.5;
-     zc = $3;#+Lbox*0.5;
+     zc = $3; #+Lbox*0.5;
      # apply PBC 
      if (xc > dl*0.5) xc = xc - dl;
      if (xc < -dl*0.5) xc = xc + dl;
