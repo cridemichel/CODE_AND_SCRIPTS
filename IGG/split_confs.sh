@@ -25,7 +25,7 @@ NPR=`echo $NUMANT+4|bc`
 cat _aaa_ | awk -v numant=$NUMANT -v np=$NPR '{if ($5=="_FIXNUMANT_") {print ("1 1 1 1", numant);} else if ($2=="_FIXPARNUM_") print("parnum:",np); else print $0; }' > _bbb_
 # if any particles which belongs to IGG is out of the box along y pull it inside
 DZ=`cat _bbb_ | awk -v dl=$DL 'BEGIN {dz=0} {if (NF==13 && $3 > dl*0.5 && $3-dl*0.5 > dz) dz=($3-dl*0.5); } END {print -dz*1.01}'`
-cat _bbb_ | awk  -v dz=$DZ '{if (NF==13 && $13 <= 3) print ($1,$2,$3+dz,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13);}' > monoGhostSymFlex-0.200000-50.000000-$cc 
+cat _bbb_ | awk  -v dz=$DZ '{if (NF==13 && $13 <= 3) print ($1,$2,$3+dz,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13); else print $0}' > monoGhostSymFlex-0.200000-50.000000-$cc 
 rm -f _NUMANT_ _aaa_ 2>/dev/null
 cc=$[$cc+1]
 fi
