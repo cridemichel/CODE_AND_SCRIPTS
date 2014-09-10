@@ -23,7 +23,7 @@ then
 NUMANT=`cat _NUMANT_`
 NPR=`echo $NUMANT+4|bc`
 cat _aaa_ | awk -v numant=$NUMANT -v np=$NPR '{if ($5=="_FIXNUMANT_") {print ("1 1 1 1", numant);} else if ($2=="_FIXPARNUM_") print("parnum:",np); else print $0; }' > monoGhostR$cc 
-rm -f NUMANT 2>/dev/null
+rm -f _NUMANT_ _aaa_ 2>/dev/null
 cc=$[$cc+1]
 fi
 #echo "BOH xmin= " $xmin, " xmax=", $xmax, " DL=" $DL

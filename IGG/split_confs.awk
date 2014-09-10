@@ -22,7 +22,17 @@ if (iggnum==-1 && NR >= NRB && NR < NRB+Nigg && $1 > xm && $1 < xM && $2 > ym &&
 }
 #print out a single igg coordinates
 if (iggnum !=-1 && NR >= iggnum && NR < iggnum+4)
-  print ($1-xm-dl*0.5,$2-ym-dl*0.5,$3+Lbox*0.5,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13); 
+  {
+     xc = $1-xm-dl*0.5;
+     yc = $2-ym-dl*0.5;
+     zc = $3+Lbox*0.5;
+     # apply PBC 
+     if (xc > dl*0.5) xc = xc - dl;
+     if (xc < -dl*0.5) xc = xc + dl;
+     if (yc > dl*0.5) yc = yc - dl;
+     if (yc < -dl*0.5) yc = yc + dl;
+     print (xc,yc,zc,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13); 
+  }
 #print out igg velocities
 if (iggnum!=-1 && NR >= iggnum+np && NR < iggnum+np+4)
   print $0;
