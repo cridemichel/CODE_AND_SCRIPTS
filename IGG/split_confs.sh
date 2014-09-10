@@ -8,9 +8,9 @@ for f in `cat $1`
 do
 i=0
 j=0
-while [ $i -lt 1 ]
+while [ $i -lt 6 ]
 do 
-while [ $j -lt 1 ]
+while [ $j -lt 6 ]
 do
 xmin=`echo $XS+$DL*$i|bc -l`
 ymin=`echo $YS+$DL*$j|bc -l`
