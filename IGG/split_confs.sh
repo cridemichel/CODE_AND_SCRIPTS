@@ -8,9 +8,9 @@ for f in `cat $1`
 do
 i=0
 j=0
-while [ $i -lt 5 ]
+while [ $i -lt 6 ]
 do 
-while [ $j -lt 5 ]
+while [ $j -lt 6 ]
 do
 xmin=`echo $XS+$DL*$i|bc -l`
 ymin=`echo $YS+$DL*$j|bc -l`
@@ -21,8 +21,8 @@ RES=`tail -1 _aaa_`
 if [ "$RES" != "FAILED" ]
 then
 NUMANT=`cat _NUMANT_`
-NP=`echo $NUMANT+4|bc`
-cat _aaa_ | awk -v numant=$NUMANT -v np=$NP '{if ($5=="_FIXNUMANT_") {print ("1 1 1 1", numant);} else if ($2=="_FIXPARNUM_") print("parnum:",np); else print $0; }' > monoGhostR$cc 
+NPR=`echo $NUMANT+4|bc`
+cat _aaa_ | awk -v numant=$NUMANT -v np=$NPR '{if ($5=="_FIXNUMANT_") {print ("1 1 1 1", numant);} else if ($2=="_FIXPARNUM_") print("parnum:",np); else print $0; }' > monoGhostR$cc 
 rm -f NUMANT 2>/dev/null
 cc=$[$cc+1]
 fi
