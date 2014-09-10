@@ -1,11 +1,11 @@
-BEGIN { iggnum=-1; NRB=-1; NRE=-1; at=0;}
+BEGIN { numant=0; iggnum=-1; NRB=-1; NRE=-1; at=0;}
 { 
 if (at < 2)
 { 
   if ($1=="250" && $2=="250" && $3=="250" && $4=="250" && $5=="2050")
-    print ("1 1 1 1 2050");
+    print ("1 1 1 1 _FIXNUMANT_");
   else if ($1=="parnum:") 
-    print ("parnum: 2054");
+    print ("parnum: _FIXPARNUM_");
   else print ($0);
 } 
 if (NR >= NRB && NR < NRB+Nigg && NF==13)
@@ -28,9 +28,12 @@ if (iggnum!=-1 && NR >= iggnum+np && NR < iggnum+np+4)
   print $0;
 #print out antigens
 if (NR-NRB >= Nigg && NR < NRE && $1 > xm && $1 < xM && $2 > ym && $2 < yM)
-  print $0;
-if (NR-NRB >= Nigg+np && NR < NRE+np)
-  print $0;
+ {
+   numant++;
+   print $0;
+ }
+##if (NR-NRB >= Nigg+np && NR < NRE+np)
+##  print $0;
 
 if ($0=="@@@") 
    at++; 
@@ -41,6 +44,10 @@ END {
    print ("NRB= ", NRB, "NRE=", NRE, "iggnum=", iggnum) > "/dev/stderr"; 
    print("xm=", xm, " xM=", xM, " ym=",ym, " yM=",yM)> "/dev/stderr"; 
     #print out box size
+   for (kk=0; kk < numant; kk++)
+     print ("0 0 0 0 0 0");
+   printf ("%d\n",numant) > "./_NUMANT_";
+   print(numant)
    print(dl,dl,dl);
    if (iggnum==-1)
     {print "FAILED"};
