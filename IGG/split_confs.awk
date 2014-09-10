@@ -77,7 +77,7 @@ END {
    for (kk=0; kk < numant; kk++)
      print ("0 0 0 0 0 0");
    printf ("%d\n",numant) > "./_NUMANT_";
-   print(dl,dl,dl);
+   print(dl);
    if (iggnum==-1)
     {print "FAILED"};
  }
