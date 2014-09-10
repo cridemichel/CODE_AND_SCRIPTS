@@ -9,13 +9,27 @@ if (at < 2)
   else print ($0);
 } 
 if (NR >= NRB && NR < NRB+Nigg && NF==13)
-  linea[$13]=$0;
+ { 
+   for (kk=1; kk <= 13; kk++)
+     linea[$13][kk]=$kk;
+ }
 if (iggnum==-1 && NR >= NRB && NR < NRB+Nigg && $1 > xm && $1 < xM && $2 > ym && $2 < yM && $3+Lbox*0.5 < dl) 
 {
   if ($13!=0)
    {
      for (kk=0; kk < $13; kk++)
-       print(linea[kk]);
+       {
+	for (jj=1; jj <= 13; jj++)
+         {
+	   if (jj == 1)
+	     printf("%.15G ", linea[kk][jj]-xm-dl*0.5);
+	   else if (jj==2)
+	     printf("%.15G ", linea[kk][jj]-ym-dl*0.5);
+	   else
+	     printf("%.15G ", linea[kk][jj]);
+         }
+	printf("\n");
+	}	
   }	
   iggnum=NR-$13;
   print ("TYPE=", $13) > "/dev/stderr" 
