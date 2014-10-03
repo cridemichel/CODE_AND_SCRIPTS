@@ -4225,7 +4225,7 @@ int mcinAVB(int i, int j, int dist_type, double alpha, int *merr)
   //printf("trials=%d nb=%d avgtrials=%.15G\n", trials,nb, tottrials/calls);
   return nb;
 }
-#ifdef MC_HC
+#if defined(MC_HC) || defined(MC_BIFUNC_SPHERES)
 int check_bond_added(int j, int nb)
 {
 #ifdef MD_LL_BONDS
@@ -4353,9 +4353,15 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	dz = 2.0*(ranf_vb()-0.5);
       } 
       while (dx*dx+dy*dy+dz*dz > 1);
+#ifdef MC_BIFUNC_SPHERES
+      dx = dx*OprogStatus.distKF;
+      dy = dy*OprogStatus.distKF;
+      dz = dz*OprogStatus.distKF;
+#else
       dx = dx*mapSigmaFlex[0];
       dy = dy*mapSigmaFlex[0];
       dz = dz*mapSigmaFlex[0];
+#endif
       //printf("nbB=%d dx=%f %f %f\n",nbB, dx, dy, dz);
 #else
 #if 0
@@ -4434,6 +4440,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	}
 #endif
 #endif
+
 #ifndef MCIN_OPT
       pbc(i);
 #endif
@@ -4466,9 +4473,15 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	}
 #ifdef MCIN_OPT
 #ifndef MC_BENT_DBLCYL
+#ifdef MC_BIFUNC_SPHERES
+      rx[i] = rA[0] + dx;
+      ry[i] = rA[1] + dy;
+      rz[i] = rA[2] + dz;
+#else
       rx[i] = dx + ox*norm + rat[0];
       ry[i] = dy + oy*norm + rat[1];
       rz[i] = dz + oz*norm + rat[2];
+#endif
 #if 0
       ox = rat[0] + dx - rx[i];
       oy = rat[1] + dy - ry[i];
@@ -4525,7 +4538,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 
       if (fake)
 	{
-#ifndef MCIN_OPT
+#if !defined(MCIN_OPT) || defined(MC_BIFUNC_SPHERES)
 	  ene = find_bonds_fake(i, j, &nbf);
 #else
 	  /* N.B. the optimized version always create a bonded conf
@@ -4545,7 +4558,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	}
       else
 	{
-#ifdef MCIN_OPT
+#if defined(MCIN_OPT) && !defined(MC_BIFUNC_SPHERES)
 	  /* con il metodo ottimizzato creiamo un legame tra gli spot
           (i, nbB) e (j, nb) */
 	  ene = -1;
@@ -4565,7 +4578,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  ene = calcpotene_GC(i);
 	  if (ene >= 0)
 	    {
+#ifndef MC_BIFUNC_SPHERES
 	      printf("[WARNING] MCIN FAILED PARTICLES NOT BONDED!\n");
+#endif
 	      //exit(-1);
 #if 0
 	      rO[0] = rx[i];
@@ -4642,14 +4657,14 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 		}
 #endif
 	    }
-#if defined(MC_HC)
+#if defined(MC_HC) || defined(MC_BIFUNC_SPHERES)
 	if (bonded)
 	  {
 	    if (!fake)
 	      {
 		/* 16/11/13: nel metodo ottimizzato formo un legame sicuramente tra (j,nb) e uno dei due spot di i 
 		   quindi non si deve controllare nulla */
-#ifndef MCIN_OPT
+#if !defined(MCIN_OPT) || defined(MC_BIFUNC_SPHERES)
 		if (!check_bond_added(j, nb))
 		  {
 		    numbonds[j] = nbold;
@@ -4658,12 +4673,14 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 		    //printf("BOH\n");
 		  }
 #endif
-#ifndef MCIN_OPT
+#if !defined(MCIN_OPT) || defined(MC_BIFUNC_SPHERES)
     		else
      		  {
 		    /* se il bond trovato non è quello prescelto allora continua a provare */
-    		    if (nbf != nb)
+#ifndef MC_BIFUNC_SPHERES
+		    if (nbf != nb)
     		      bonded=0;	
+#endif
      		  } 
 #endif
 	      }
@@ -5819,7 +5836,7 @@ int check_overlap_all(int i0, int i_ini, int i_fin)
   return 0;
 }
 #undef MC_VB_PLOT
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) && !defined(MC_BIFUNC_SPHERES)
 int insert_two_polymers_kf(int size1, int size2)
 {
   int i, j, nb, bt;
@@ -5853,7 +5870,7 @@ int insert_two_polymers_kf(int size1, int size2)
       if (merr!=0)
 	{
 	  save_conf_mc(0, 0);
-	  printf("[mcin] attemp to add a bonded particle failed!\n");
+	  printf("[mcin] attempt to add a bonded particle failed!\n");
 	  break;
 	}
       if (check_self_overlap(0, i))
@@ -5918,7 +5935,7 @@ int insert_two_polymers_kf(int size1, int size2)
 	  if (merr!=0)
 	    {
 	      save_conf_mc(0, 0);
-	      printf("[mcin] attemp to add a bonded particle failed!\n");
+	      printf("[mcin] attempt to add a bonded particle failed!\n");
 	      break;
 	    }
 	  if (check_self_overlap(size1, i))
@@ -6488,7 +6505,7 @@ void calc_sigma_parsons(int size1, int size2, double alpha, int type, int outits
 	  if (merr!=0)
 	    {
 	      save_conf_mc(0, 0);
-	      printf("[mcin] attemp to add a bonded particle failed!\n");
+	      printf("[mcin] attempt to add a bonded particle failed!\n");
 	      break;
 	    }
 	  if (check_self_overlap(0, i))
@@ -6584,7 +6601,7 @@ void calc_sigma_parsons(int size1, int size2, double alpha, int type, int outits
 	      if (merr!=0)
 		{
 		  save_conf_mc(0, 0);
-		  printf("[mcin] attemp to add a bonded particle failed!\n");
+		  printf("[mcin] attempt to add a bonded particle failed!\n");
 		  break;
 		}
 	      if (check_self_overlap(size1, i))
@@ -6864,8 +6881,10 @@ void calc_cov_additive(void)
   int bt=0, merr=0, i, j=-1, selfoverlap=0, size1, size2, nb, k1, k2, overlap=0, ierr, type, outits;
   long long int maxtrials, tt;
   double ox, oy, oz, Rl[3][3];
+
   fi = fopen("covmc.conf", "r");
   fscanf(fi, "%lld %d %d %d ", &maxtrials, &type, &size1, &outits);
+
   printf("type=%d\n", type);
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -6930,7 +6949,7 @@ void calc_cov_additive(void)
  
   if (type==3||type==5||type==9)
     {
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) && !defined(MC_BIFUNC_SPHERES)
 	  /* calc_poly_bonding_volume */
       calc_bonding_volume_kf(maxtrials, outits, type, alpha);
       exit(-1);
@@ -7052,7 +7071,7 @@ void calc_cov_additive(void)
 	  if (merr!=0)
 	    {
 	      save_conf_mc(0, 0);
-	      printf("[mcin] attemp to add a bonded particle failed!\n");
+	      printf("[mcin covolume] attempt to add a bonded particle failed!\n");
 	      break;
 	    }
 	  if (check_self_overlap(0, i))
@@ -7135,7 +7154,7 @@ void calc_cov_additive(void)
 	      if (merr!=0)
 		{
 		  save_conf_mc(0, 0);
-		  printf("[mcin] attemp to add a bonded particle failed!\n");
+		  printf("[mcin] attempt to add a bonded particle failed!\n");
 		  break;
 		}
 	      if (check_self_overlap(size1, i))
