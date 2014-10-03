@@ -3486,7 +3486,10 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 // *** KERN-FRENKEL MODEL FOR PATCH #3 (the other two ones are used for covalent bonds) ***
 #ifdef MC_KERN_FRENKEL
       if (
-#ifdef MC_AMYLOID_FIBRILS
+#ifdef MC_BIFUNC_SPHERES
+	  /* le prime due patch sono KF */
+	  mapbondsa[nn]<=3 && mapbondsb[nn]<=3
+#elif defined(MC_AMYLOID_FIBRILS)
 	  /* gli spot >=2 sono tutti kern frenkel, mentre i primi due sono permanenti e sferici */
 	  mapbondsa[nn]>=3 && mapbondsb[nn]>=3
 #else	  

@@ -3094,6 +3094,9 @@ void find_bonds_flex_all(void)
 {
   int i;
   //printf("===========================>QUI\n");
+#if defined(MC_CALC_COVADD) && defined(MC_KERN_FRENKEL)
+  return;
+#endif
   for (i=0; i < Oparams.parnum; i++)
     {
       //printf("pos=%.15G %.15G %.15G\n", rx[i], ry[i], rz[i]);
