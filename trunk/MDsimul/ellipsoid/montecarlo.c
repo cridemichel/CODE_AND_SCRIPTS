@@ -4432,7 +4432,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #endif
 #endif
 #if 1
-#if !defined(MC_HC)
+#if !defined(MC_HC) 
       if (!are_spheres(i,j) && Sqr(rx[j]-rx[i])+Sqr(ry[j]-ry[i])+Sqr(rz[j]-rz[i]) > Sqr(2.0*sax+bondlen))
 	{
 	  trials++;
@@ -4561,9 +4561,11 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #if defined(MCIN_OPT) && !defined(MC_BIFUNC_SPHERES)
 	  /* con il metodo ottimizzato creiamo un legame tra gli spot
           (i, nbB) e (j, nb) */
+#if defined(MC_BENT_DBLCYL)
 	  ene = -1;
 	  add_bond(i, j, nbB+1, nb+1);
       	  add_bond(j, i, nb+1, nbB+1);
+
 #if 0
 	  if (numbonds[i] > 1)
 	    printf("BOH numbonds=%d nbold=%d\n", numbonds[i], nbold);
@@ -4573,6 +4575,14 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     	      printf("[WARNING] MCIN FAILED PARTICLES NOT BONDED!\n");
 	    }
 #endif	    
+#else
+	  dist=find_bonds_covadd(i, j);
+	  ene = calcpotene_GC(i);
+	  if (ene >= 0)
+	    {
+	      printf("[WARNING] MCIN FAILED PARTICLES NOT BONDED!\n");
+	    }
+#endif
 #else
 	  dist=find_bonds_covadd(i, j);
 	  ene = calcpotene_GC(i);
@@ -4657,7 +4667,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 		}
 #endif
 	    }
-#if defined(MC_HC) || defined(MC_BIFUNC_SPHERES)
+#if defined(MC_HC) || defined(MC_BIFUNC_SPHERES) 
 	if (bonded)
 	  {
 	    if (!fake)
@@ -6326,10 +6336,12 @@ int check_self_overlap(int i0, int i)
       if (check_overlap(i, j, shift, &ierr)<0.0)
 	{
 	  overlap=1;
-	  //printf("i=%d j=%d overlap!\n", i, j);
-	  //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
-	  //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
-	  //printf("self overlap!\n");
+#if 0
+      	  printf("i=%d j=%d overlap!\n", i, j);
+	  printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+	  printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+	  printf("self overlap!\n");
+#endif
 	  return 1;
 	}
     }
@@ -7129,6 +7141,7 @@ void calc_cov_additive(void)
 		{
 		  nb = (int)(ranf_vb()*2.0);
 		  j = ((int) (ranf_vb()*(i-size1)))+size1;
+		  //printf("i=%d j=%d size1=%d\n", i, j, size1);
 
 #if 1
 	    	  if (bt > Oparams.parnum*1000)
@@ -7159,6 +7172,10 @@ void calc_cov_additive(void)
 		}
 	      if (check_self_overlap(size1, i))
 		{
+#if 0
+		  printf("BOH i=%d j=%d\n", i, j);
+		  save_conf_mc(tt, 0); 
+#endif
 		  selfoverlap = 1;
 		  break;
 		}
@@ -7169,8 +7186,9 @@ void calc_cov_additive(void)
 	    }
 	  if (selfoverlap||merr)
 	    {
-	      tt++;
-	      continue;
+	      break;
+	      //tt++;
+	      //continue;
 	    }
 	  overlap = 0;
 	  for (j=0; j < size1; j++)
@@ -7197,7 +7215,8 @@ void calc_cov_additive(void)
 	  if (overlap)
 	    break;
 	}
-      if (merr)
+
+      if (selfoverlap||merr)
 	{
 	  tt++;
 #if 0	  
