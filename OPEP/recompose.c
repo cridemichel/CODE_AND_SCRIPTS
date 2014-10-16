@@ -19,7 +19,6 @@ char fname[256], dummy[1024];
 struct anatom *p=NULL;
 int numatoms, natprot;
 
-
 int main(int argc, char **argv)
 {
   FILE *fin;
