@@ -49,10 +49,11 @@ int main(int argc, char **argv)
   qsort(p, numatoms,sizeof(struct anatom), cmpfunc);
   fclose(fin);
   natprot=numatoms/numprot;
+  fprintf(stderr,"natprot=%d\n", natprot);
   for (i=0; i < numprot; i++)
     {
       ifirst= i*natprot;
-
+      fprintf(stderr,"ifirst=%d\n", ifirst);
       for (j=1; j < natprot; j++)
 	{
 	  jj = ifirst + j;
