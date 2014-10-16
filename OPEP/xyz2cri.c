@@ -4,6 +4,8 @@
 #include<string.h>
 const double L[3]={120.0,120.0,120.0};
 const int numprot=8;
+const int stepinterval=20000;
+const double dt=0.5;
 struct anatom {
   char resname[32];
   double x;
@@ -38,18 +40,27 @@ int main(int argc, char **argv)
     {
       sprintf(fnout,"Store-%d", nframe);
       fout = fopen(fnout, "w+");
+      fprintf(fout, "initFormat:0\n");
+      fprintf(fout, "@@@\n");
       fprintf(fout, "parnum:%d\n", numatoms);
+      fprintf(fout, "steplength:%f\n", dt);
+      fprintf(fout, "curStep: %d\n", stepinterval*nframe); 
       fprintf(fout, "@@@\n");
 	
       fscanf(fin,"%[^\n] ",line);
       fscanf(fin,"%[^\n] ",line);
 
       for (i=0; i < numatoms; i++) 
-	sscanf(line, "%s %lf %lf %lf %d ", p[i].resname, &(p[i].x), &(p[i].y), &(p[i].z),
-	       &(p[i].idx));
-      qsort(p, numatoms,sizeof(struct anatom), cmpfunc);
+	{
+	  fscanf(fin, " %s %lf %lf %lf %d ", p[i].resname, &(p[i].x), &(p[i].y), &(p[i].z),
+	     	 &(p[i].idx));
+	}
+      qsort(p, numatoms, sizeof(struct anatom), cmpfunc);
       for (i=0; i < numatoms; i++) 
-	fprintf(fout, "%12s %12lf %12lf %12lf %12d\n", p[i].resname, p[i].x, p[i].y, p[i].z, p[i].idx);
+	fprintf(fout, "%.12G %.12G %.12G\n", p[i].x, p[i].y, p[i].z);
+      for (i=0; i < numatoms; i++) 
+	fprintf(fout, "0 0 0\n");
+      fprintf(fout, "%f\n", L[0]);
       //fprintf(fout, "%s\n", line);
       fclose(fout);
       nframe++;

@@ -45,7 +45,7 @@ int main(int argc, char **argv)
       nr++;
     }
   /* sorting particles */
-  qsort(p, numatoms,sizeof(struct anatom), cmpfunc);
+  qsort(p, numatoms, sizeof(struct anatom), cmpfunc);
   fclose(fin);
   natprot=numatoms/numprot;
   fprintf(stderr,"natprot=%d\n", natprot);
