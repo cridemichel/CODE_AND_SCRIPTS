@@ -10,7 +10,7 @@ double **DR, **DR0;
 double *r0[3], *w0[3], *rt[3], *wt[3], *rtold[3];
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int points=-1, foundDRs=0, foundrot=0, eventDriven=0, skip=1, clusters=0, nongauss=0;
+int points=-1, foundDRs=0, foundrot=0, eventDriven=0, skip=1, clusters=0, nongauss=0, formfact=0;
 int *isPercPart;
 char *pnum;
 char inputfile[2048], cluststr[2048];
@@ -151,6 +151,13 @@ void parse_param(int argc, char** argv)
       else if (!strcmp(argv[cc],"--nongauss") || !strcmp(argv[cc],"-ng"))
 	{
 	  nongauss=1;
+	}
+      else if (!strcmp(argv[cc],"--formfact") || !strcmp(argv[cc],"-ff"))
+	{
+	   cc++;
+	   if (cc == argc)
+	     print_usage();
+	   formfact = atoi(argv[cc]);
 	}
       else if (cc == argc || extraparam == 2)
 	print_usage();
