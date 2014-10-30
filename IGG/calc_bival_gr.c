@@ -96,7 +96,7 @@ int MAXBONDS = 100;
 double L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
-       Dr, theta, sigmaSticky=-1.0, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
+       Dr, theta, sigmaSticky=-1.0, ratLA[NA][3], ratLB[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
 double deltaAA=-1.0, deltaAB=-1.0, deltaBB=-1.0;
 int *dupcluster, shift[3];
 #ifdef EDHE_FLEX
@@ -1227,31 +1227,13 @@ const int nlin=20;
 int l1[npmax], l2[npmax];
 double dlog[npmax], xlog[npmax];
 int maxnbonds;
-
-void diagonalize(double M[3][3], double ev[3])
-{
-  double a[9], work[45];
-  char jobz, uplo;
-  int info, i, j, lda, lwork;
-  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
-    {				/* have to transform the matrix */
-      for(j=0; j<3; j++) a[j+3*i]=M[j][i];		
-      //for(j=0; j<3; j++) a[j][i]=M[j][i];		
-    }	
-  lda = 3;
-  jobz='N';
-  uplo='U';
-  lwork = 45;
-  dsyev_(&jobz, &uplo, &lda, a, &lda, ev, work, &lwork,  &info);  
-}
-
+double antpos[3];
+double pos4dist[2][3];
 int main(int argc, char **argv)
 {
-  int kk, kmax, kj, i3;
+  int kk, kmax, kj, i3, j, nbonds, bin;
   long long int jj2, aa, bb;
-  double *Q[3][3], Snem, *normQ;
-  double ev[3];
-  double am, xmed;
+  double am, xmed, dist, distSq, rlower, rupper, nIdeal, g0m, r;
   FILE *f, *f2, *f3;
   char *s1, *s2;
   int beg, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
@@ -1265,8 +1247,6 @@ int main(int argc, char **argv)
   parse_params(argc, argv);
 
    
-  if (only_average_clsdistro)
-   check_percolation = 0; 
   f2 = fopen(inputfile, "r");
   c2 = 0;
   maxl = 0;
@@ -1446,929 +1426,106 @@ int main(int argc, char **argv)
 	NI = atoi(parval);
     }
   fclose(f);
-  /* default = ellipsoids */
-  //printf("sigmaAA=%.15G\n", sigmaAA);
-  if (deltaAA!=-1)
-    particles_type = 2; /* 2 means square well system*/
-  else if (sigmaAA != -1.0)
-    particles_type = 0;
-  if (NPA == -1)
-    NPA = NP;
-  if (mix_type==-1 || NPA==NP)
-    {
-    	START=0;
-        END=NP;
-    }
-   else if (mix_type==0)
-    {
-       START=0;
-       END=NPA;
-     }	 
-  else
-     {
-     	START=NPA;
-        END=NP;
-     }
-  if (calcordparam)
-    {
-      for (a=0; a<3; a++)
-	for (b=0; b<3; b++)
-	  Q[a][b] = malloc(sizeof(double)*NP);
-      normQ = malloc(sizeof(double)*NP);
-    }  
-  color = malloc(sizeof(int)*NP);
-  color2= malloc(sizeof(int)*NP*NUMREP);
-  clsdim2=malloc(sizeof(int)*NP*NUMREP);
   nspots = malloc(sizeof(int)*NP);
-  clsdim = malloc(sizeof(int)*NP);
-  clsdimNV = malloc(sizeof(int)*NP);
-  clscolNV = malloc(sizeof(int)*NP);
-  clscol   = malloc(sizeof(int)*NP);
-  cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NP);
-  clssizedst = malloc(sizeof(int)*NP);
-  clssizedstAVG = malloc(sizeof(double)*NP);
-  dupcluster = malloc(sizeof(int)*NP*NUMREP); 
-  percola = malloc(sizeof(int)*NP);
-  if (avgbondlen || output_bonds || saveBonds)
+  for (a = 0; a < 3; a++)
     {
-#ifdef EDHE_FLEX
-      numbonds  = malloc(sizeof(int)*NP); 
-      bonds = AllocMatLLI(NP, MAXBONDS);
-#else
-      numbonds  = malloc(sizeof(int)*NP); 
-      bonds = AllocMatI(NP, MAXBONDS);
-#endif    
-    }
-  if (particles_type == 1)
-    {
-      maxax0 = sa[0];
-      if (sb[0] > maxax0)
-	maxax0 = sb[0];
-      if (sc[0] > maxax0)
-	maxax0 = sc[0];
-      maxax1 = sa[1];
-      if (sb[1] > maxax1)
-	maxax1 = sb[1];
-      if (sc[0] > maxax1)
-	maxax1 = sc[1];
-      maxsax = fabs(maxax1)+fabs(maxax0)+2.0*sigmaSticky;
-      //printf("maxsax=%.15G\n", maxsax);
-    }
-  else if (particles_type == 0)
-    {
-      maxsaxAA = fabs(sigmaAA)+2.0*sigmaSticky;
-      maxsaxAB = fabs(sigmaAB)+2.0*sigmaSticky;
-      maxsaxBB = fabs(sigmaBB)+2.0*sigmaSticky;
-    }
-  else if (particles_type == 2)
-    {
-      maxsaxAA = sigmaAA + deltaAA;
-      maxsaxAB = sigmaAB + deltaAB;
-      maxsaxBB = sigmaBB + deltaBB;
-      maxsax = maxsaxAA;
-      if (maxsaxAB > maxsax)
-	maxsax = maxsaxAB;
-      if (maxsaxBB > maxsax)
-	maxsax = maxsaxBB;
-    }
-  if (!saveBonds)
-    {
-      for (a = 0; a < 3; a++)
+      for (b = 0; b < NA; b++)
+	rat[b][a] = malloc(sizeof(double)*NP);
+      r0[a] = malloc(sizeof(double)*NP);
+      DR0[a] = malloc(sizeof(double)*NP);
+      for (b = 0; b < 3; b++)
 	{
-	  for (b = 0; b < NA; b++)
-	    rat[b][a] = malloc(sizeof(double)*NP);
-	  r0[a] = malloc(sizeof(double)*NP);
-	  DR0[a] = malloc(sizeof(double)*NP);
-	  for (b = 0; b < 3; b++)
-	    {
-	      R[a][b] = malloc(sizeof(double)*NP);
-	    }
+	  R[a][b] = malloc(sizeof(double)*NP);
 	}
     }
-  if (particles_type==3)
-    {
-      typeOfPart = malloc(sizeof(int)*NP);
-      /* CALCOLA I MAXAX QUI !!! servono per la costruzione delle LL */
-      readconf(fname[0], &time, &refTime, NP, r0, DR0, R);
-      MAXAX = 0.0;
-      for (i = 0; i < NP; i++)
-	{
-	  
-	  maxax = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
-		       Sqr(typesArr[typeOfPart[i]].sax[2]));
-	  //printf("i=%d, typeOfPart=%d maxax=%f\n", i, typeOfPart[i], maxax);
-	  maxSpots = eval_max_dist_for_spots(typeOfPart[i]);
-	  if (maxSpots > maxax)
-	    maxax = maxSpots;
-	  maxax *= 2.0;
-	  if (i==0 || maxax > MAXAX)
-	    MAXAX=maxax;
-	}
-    }  
+  points=100;
+  delr= 6.0/points;
+
+  typeOfPart = malloc(sizeof(int)*NP);
+  /* CALCOLA I MAXAX QUI !!! servono per la costruzione delle LL */
   /* WARNING: se i diametri sono diversi va cambiato qua!! */ 
-  if (particles_type == 1)
-    RCUT = maxsax;
-  else if (particles_type == 0)
-    RCUT = maxsaxAA*1.01;
-  else if (particles_type == 2)
-    RCUT = maxsax*1.01;
-  else if (particles_type == 3)
-    RCUT = MAXAX*1.01;
+  g0 = malloc(sizeof(double)*points);
+  for (ii=0; ii < points; ii++)
+    g0[ii] = 0.0;
 
-  printf("====> RCUT=%G\n", RCUT);
-  if (particles_type==1)
+  for (nr1=0; nr1 < nfiles; nr1++)
     {
-      build_atom_positions();
-      printf("SYSTEM: ELLISPOIDS - DGEBA\n");
-    }
-  else if (particles_type==0)
-    {
-      printf("SYSTEM: SPHERES 3-2\n");
-    }
-  else if (particles_type == 2)
-    {
-      printf("SYSTEM: SQUARE WELL\n");
-    }
-  else if (particles_type == 3)
-    {
-      printf("SYSTEM: HEFLEX\n");
-      printf("saveBonds=%d\n", saveBonds);
-    }
-  if (NPA != NP)
-    printf("[MIXTURE] files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", nfiles, NP, NPA, L, NN, maxl);
-  else
-    printf("[MONODISPERE] files=%d NP = %d L=%.15G NN=%d maxl=%d\n", nfiles, NP, L, NN, maxl);
-  //printf("sigmaSticky=%.15G\n", sigmaSticky);
-  for (i = 0; i < NP; i++)
-    {
-      clssizedstAVG[i] = 0.0;
-    }      
-  if (calcordparam)
-    {
-      for (i = 0; i < NP; i++)
-	{
-	  for (a=0; a < 3; a++)
-	    for (b=0; b < 3; b++)
-	      Q[a][b][i] = 0;
-	  normQ[i] = 0;
-	}
-    }
-  for (nr1 = 0; nr1 < nfiles; nr1++)
-    {	
-      if (saveBonds)
-	{
-	  for (i = 0; i < NP; i++)
-	    {
-	      color[i] = -1;	  
-	      clssizedst[i] = 0;
-	    }
-	  curcolor = 0;
-	  readconfBonds(fname[nr1], &time, &refTime, NP, r0, DR0, R);
-	  ti = time + refTime;
-	  for (i=0; i < NP; i++)
-	    {
-    	      if (color[i] == -1)
-    		color[i] = curcolor;
-	      //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
-	      for (j=0; j < numbonds[i]; j++)
-		{
-		  jj = bonds[i][j] / ((long long int)NANA);
-		  //printf("i=%d jj=%d\n", i, jj);
-		  if (color[jj] == -1)
-		    color[jj] = color[i];
-		  else
-		    {
-		      if (color[i] < color[jj])
-			change_all_colors(NP, color, color[jj], color[i]);
-		      else if (color[i] > color[jj])
-			change_all_colors(NP, color, color[i], color[jj]);
-		    }
-		}
-	      curcolor = findmaxColor(NP, color)+1;
-	    }
-	}
-      if (!cellList)
-	{
-	  free(cellList);
-	  free(inCell[0]);
-	  free(inCell[1]);
-	  free(inCell[2]);
-	}
+      readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
       
-      if (!saveBonds)
+      for (i=0; i < typeNP[0]; i++)
 	{
-	  cellsx = L / RCUT;
-	  cellsy = L / RCUT;
-	  cellsz = L / RCUT;
-	  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP));
-	  inCell[0] = malloc(sizeof(int)*NP);
-	  inCell[1] = malloc(sizeof(int)*NP);
-	  inCell[2] = malloc(sizeof(int)*NP);
-	}
-      for (i = 0; i < NP; i++)
-	{
-	  percola[i] = 0; 
-	  if (avgbondlen || saveBonds || output_bonds)
-	    numbonds[i] = 0;
-	}
+      	  for (a = 0; a < 3; a++)
+	    {
+	      r0L[a] = r0[a][i];
+	      for (b = 0; b < 3; b++)
+		RL[a][b] = R[a][b][i];
+	      //printf("r0=%f %f %f R=%f %f %f\n", r0L[0], r0L[1], r0L[2], RL[0][0], RL[0][1], RL[0][2]);
+	    }
+	  /* calc spot positions of two FABs */
+       	  BuildAtomPosSQ(i*4, r0L, RL, ratLA);
+	  BuildAtomPosSQ(i*4+1, r0L, RL, ratLB);
+	  /* check double bonding here */
+	  nbonds=0;
+	  for (j=typeNP[0]*4; j < NP; j++)
+	    {
+	      for (kk=0; kk < 3; kk++)
+		antpos[kk] = r0[0][j];
 
-      if (!saveBonds)
-	{
-	  readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
-	  ti = time + refTime;
-
-	  /* costruisce la posizione di tutti gli sticky spots */
-	  for (i = 0; i < NP; i++)
-	    {
-	      /* qui va il codice per individuare i cluster */
-	      for (a = 0; a < 3; a++)
+	      distSq = 0.0;
+	      for (kk=0; kk < 3; kk++)
+		distSq += Sqr(ratLA[2][kk]-antpos[kk]);
+	      
+	      if (distSq < Sqr((0.612+0.79)*0.5))
 		{
-		  r0L[a] = r0[a][i];
-		  for (b = 0; b < 3; b++)
-		    RL[a][b] = R[a][b][i];
-		  //printf("r0=%f %f %f R=%f %f %f\n", r0L[0], r0L[1], r0L[2], RL[0][0], RL[0][1], RL[0][2]);
-		}
-	      //printf("r0L[%d]=%.15G %.15G %.15G\n", i, r0L[0], r0L[1], r0L[2]);
-	      if (particles_type == 1)
-		BuildAtomPos(i, r0L, RL, ratL);
-	      else if (particles_type == 0)
-		BuildAtomPos32(i, r0L, RL, ratL);
-	      else if (particles_type == 3) 
-		BuildAtomPosSQ(i, r0L, RL, ratL);
-	      if (particles_type == 3)
-		{
-		  for (a = 0; a < typesArr[typeOfPart[i]].nspots+1; a++)
-		    for (b = 0; b < 3; b++)
-		      rat[a][b][i] = ratL[a][b];
-		}
-	      else
-		{
-		  for (a = 0; a < NA; a++)
-		    for (b = 0; b < 3; b++)
-		      rat[a][b][i] = ratL[a][b];
-		}
-	      //printf("rat[]=%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
-	    }
-	}
-      if (!saveBonds)
-	{
-	  for (i = 0; i < NP; i++)
-	    {
-	      color[i] = -1;	  
-	      clssizedst[i] = 0;
-	    }
-	}
-      if (!saveBonds)
-	curcolor = 0;
-      ene=0;
-      //coppie = 0;
-      if (!saveBonds)
-	build_linked_list();
-      //printf("cellList[0]=%d\n", cellList[0]);
-      if (particles_type == 1)
-	{
-	  jbeg = NPA;
-	  ifin = NPA;
-	}
-      else if (particles_type == 0 || particles_type == 2 || particles_type==3)
-	{
-	  jbeg = 0; 
-	  ifin = NP;
-	}
-      for (i = START; i < END; i++)
-	{
-	  if (saveBonds)
-	    break;
-    	  if (color[i] == -1)
-	    color[i] = curcolor;
-	    
-	  for (iZ = -1; iZ <= +1; iZ++) 
-	    {
-	      jZ = inCell[2][i] + iZ;    
-	      shift[2] = 0.;
-	      /* apply periodico boundary condition along z if gravitational
-	       * fiels is not present */
-	      if (jZ == -1) 
-		{
-		  jZ = cellsz - 1;    
-		  shift[2] = - L;
-		} 
-	      else if (jZ == cellsz) 
-		{
-		  jZ = 0;    
-		  shift[2] = L;
-		}
-	      for (iY = -1; iY <= +1; iY ++) 
-		{
-		  jY = inCell[1][i] + iY;    
-		  shift[1] = 0.0;
-		  if (jY == -1) 
-		    {
-		      jY = cellsy - 1;    
-		      shift[1] = -L;
-		    } 
-		  else if (jY == cellsy) 
-		    {
-		      jY = 0;    
-		      shift[1] = L;
-		    }
-		  for (iX = -1; iX <= +1; iX ++) 
-		    {
-		      jX = inCell[0][i] + iX;    
-		      shift[0] = 0.0;
-		      if (jX == -1) 
-			{
-			  jX = cellsx - 1;    
-			  shift[0] = - L;
-			} 
-		      else if (jX == cellsx) 
-			{
-			  jX = 0;   
-			  shift[0] = L;
-			}
-		      j = (jZ *cellsy + jY) * cellsx + jX + NP;
-		      for (j = cellList[j]; j > -1; j = cellList[j]) 
-			{
-			  switch (particles_type)
-			    {
-			    case 0:
-			      if (j <= i) 
-				continue;
-			      break;
-			    case 1:
-			      if ((i < NPA && j < NPA) || ( i >= NPA && j >= NPA) ||
-				  (i >= NPA && j < NPA))
-				continue;
-			      break;
-			    case 2:
-			      if (j <= i) 
-				continue;
-			      break;
-			    case 3:
-			      if (j <= i)
-				continue;
-			      break;
-			    }
-			  if (bond_found(i, j))  
-			    {
-			      if (output_bonds || avgbondlen)
-				{
-				  add_bond(i, j);
-				  add_bond(j, i);
-				}
-			      //printf("i=%d j=%d ene=%f\n", i, j, ene);
-			      ene=ene+1.0;
-			      if (color[j] == -1)
-				color[j] = color[i];
-			      else
-				{
-				  if (color[i] < color[j])
-				    change_all_colors(NP, color, color[j], color[i]);
-				  else if (color[i] > color[j])
-				    change_all_colors(NP, color, color[i], color[j]);
-				}
-			    }
-			}
-		    }
-		}
-	    }
-#if 0 
-	  for (j = jbeg; j < NP; j++)
-	    {
-	      //coppie++;
-	      if (particles_type == 0 && j <= i) 
-		continue;
-      	      if (bond_found(i, j))  
-		{
-		  ene=ene+1.0;
-		  if (color[j] == -1)
-		    color[j] = color[i];
-		  else
-		    {
-		      if (color[i] < color[j])
-			change_all_colors(NP, color, color[j], color[i]);
-		      else if (color[i] > color[j])
-			change_all_colors(NP, color, color[i], color[j]);
-		    }
-		  
-		}
-	    }
-#endif
-	  curcolor = findmaxColor(NP, color)+1;
-	}
-      /* considera la particelle singole come cluster da 1 */
-      for (i = START; i < END; i++)
-	{
-	  if (color[i]==-1)
-	    {	    
-	      color[i] = curcolor;
-	      curcolor++;
-	    } 
-	  //printf("color[%d]=%d\n", i, color[i]);
-	}
-      ncls = curcolor;
-      //printf("curcolor:%d\n", curcolor);
-      if (!only_average_clsdistro)
-	{
-	  sprintf(fncls, "%s.clusters", fname[nr1]);
-	  f = fopen(fncls, "w+");
-	}
-      for (nc = 0; nc < ncls; nc++)
-	{
-	  clsdim[nc] = 0; 
-	}
-      for (nc = 0; nc < ncls; nc++)
-	{
-	  for (a = 0; a < NP; a++)
-	    if (color[a] == nc)
-	      {
-		clsdim[color[a]]++;
-		clscol[nc] = color[a];
-	      }
-	}
-#if 0
-      if (avgbondlen)
-	{
-	  double Dx, Dy, Dz, shift[3];
-	  for (i=0; i < NP; i++)
-	    {
-	      if (numbonds[i] > 2)
-		{
-		  printf("boh numbods[%d]=%d\n", i, numbonds[i]);
-		  exit(-1);	
-		}
-	      for (jj=0; jj < numbonds[i]; jj++)
-		{
-		  dist = 0;
-		  j = bonds[i][jj] / ((long long int)NANA);
-		  jj2 = bonds[i][jj] % ((long long int)NANA); 
-		  aa = jj2 / NA;
-		  bb = jj2 % NA;
-		  Dx = rat[aa][0][i] - rat[bb][0][j];
-		  Dy = rat[aa][1][i] - rat[bb][1][j];
-		  Dz = rat[aa][2][i] - rat[bb][2][j];
-	printf("aa=%lld bb=%lld\n", aa, bb);
-    		  shift[0] = L*rint(Dx/L);
-    		  shift[1] = L*rint(Dy/L);
-    		  shift[2] = L*rint(Dz/L);
-		  //assign_bond_mapping(i, j); 
 		  for (kk=0; kk < 3; kk++)
-		    dist += Sqr(rat[aa][kk][i]-rat[bb][kk][j]-shift[kk]);
-		  dist = sqrt(dist);
-		  dist = dist - 2.0*(2.0-1.541665);
-		  totdist += dist;
-		  distcc += 1.0;
+		    pos4dist[nbonds][kk] = antpos[kk];
+		  nbonds+=1;
+		  continue;	  
+		}
+	      distSq = 0.0;
+	      for (kk=0; kk < 3; kk++)
+		distSq += Sqr(ratLB[2][kk]-antpos[kk]);
+	      
+	      if (distSq < Sqr((0.612+0.79)*0.5))
+		{
+		  for (kk=0; kk < 3; kk++)
+		    pos4dist[nbonds][kk] = antpos[kk];
+		  nbonds+=1;
+		}
+	      if (nbonds==2)
+		{
+		  break;
 		}
 	    }
-	  printf("Average Bond Distance=%.15G\n", totdist/distcc);
-	}
-#endif
-
-      printf("Average Bond Distance=%.15G\n", totdist/distcc);
-      //printf("NP=%d ncls=%d\n", NP, ncls);
-      /*  ==== >>> REMOVE VOIDS <<< ==== */
-      ncNV=0;
-      for (nc = 0; nc < ncls; nc++)
-	{
-	  if (clsdim[nc] != 0)
+	  if (nbonds==2)
 	    {
-	      clsdimNV[ncNV] = clsdim[nc];
-	      clscolNV[ncNV] = clscol[nc]; 
-	      ncNV++;
+	      distSq=0.0;
+	      for (kk=0; kk < 3; kk++)
+		distSq += Sqr(pos4dist[0][kk]-pos4dist[1][kk]);
+	      dist = sqrt(distSq);
+	      bin = ((int) (dist / delr)); 
+	      if (bin < points || bin >= 0)
+  		{
+  		  g0[bin] += 2.0;
+  		  //printf("g0[%d]=%.15G\n", bin, g0[bin]);
+  		}
 	    }
-
-	}
-      ncls = ncNV;
-      if (!saveBonds)
-	printf("E/N = %.15G\n", ene/((double)NP));
-      //printf("coppie PERC=%d\n", coppie);
-      for (nc = 0; nc < ncls; nc++)
-	{
-	  //printf("clsdimNV[%d]=%d\n",nc ,clsdimNV[nc]);
-	  cluster_sort[nc].dim = clsdimNV[nc];
-	  cluster_sort[nc].color = clscolNV[nc];
-	}
-      qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
-      /* ============== >>> PERCOLATION <<< ================== */
-      if (check_percolation && !saveBonds)
-	{
-	  free(cellList);
-	  free(inCell[0]);
-	  free(inCell[1]);
-	  free(inCell[2]);
-	  cellsx = 2.0*L / RCUT;
-	  cellsy = 2.0*L / RCUT;
-	  cellsz = 2.0*L / RCUT;
-	  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP*NUMREP));
-	  inCell[0] = malloc(sizeof(int)*NP*NUMREP);
-	  inCell[1] = malloc(sizeof(int)*NP*NUMREP);
-	  inCell[2] = malloc(sizeof(int)*NP*NUMREP);
-
-	  for (i=START; i < END; i++)
-	    {
-	      if (particles_type == 1)
-		{
-		  if (i < NPA)
-		    nspots[i] = MD_STSPOTS_A;
-		  else
-		    nspots[i] = MD_STSPOTS_B;		
-		}
-	      else if (particles_type == 0)
-		{
-		  if (i < NPA)
-		    nspots[i] = 2;
-		  else
-		    nspots[i] = 3;		
-		}
-	      else if (particles_type == 2);
-		{
-		  if (i < NPA)
-		    nspots[i] = 1;
-		  else
-		    nspots[i] = 1;		
-		}
-	    }	
-	  ene=0;
-	  //coppie = 0;
-	  for (nc = 0; nc < ncls; nc++)
-	    {
-	      if (cluster_sort[nc].dim==1)
-		continue;
-
-	      //printf("Analysing cluster #%d of #%d\n", nc+1, ncls);
-	      /* N.B per verificare la percolazione ogni cluster va "duplicato"
-	       * in tutte le direzioni e se alla fine risulta comunque un unico 
-	       * cluster allora tale cluster è percolante.*/
-	      na = 0;
-	      //printf("i=1011 j=277 rat=%.15G %.15G\n", rat[0][0][1011], rat[0][0][377]);
-	      for (i=START; i < END; i++)
-		{
-		  if (color[i]==cluster_sort[nc].color)
-		    {
-		      for (c = 0; c < NUMREP; c++)
-			{
-			  dupcluster[c*cluster_sort[nc].dim+na] = i;
-			}
-		      na++;
-		    }
-		}
-
-	      build_linked_list_perc(cluster_sort[nc].dim, 2.0*L);
-	      //printf("i=1011 j=277 rat=%.15G %.15G\n", rat[0][0][1011], rat[0][0][377]);
-	      //printf("NP=%d NPA=%d na=%d,clsdim[%d]=%d\n", NP, NPA,na,nc,cluster_sort[nc].dim);
-	      curcolor = 0;
-	      for (i2 = 0; i2 < na*NUMREP; i2++)
-		{
-		  color2[i2] = -1;	  
-		}
-	      for (i2 = 0; i2 < na*NUMREP; i2++)
-		{
-		  if (color2[i2]==-1)
-		    color2[i2] = curcolor;
-		  //printf("nc=%d na*NUMREP=%d i2=%d\n",nc, na*NUMREP, i2);
-		  //printf("curcolor:%d\n", curcolor);
-		  i = dupcluster[i2];
-		  for (iZ = -1; iZ <= 1; iZ++) 
-		    {
-		      jZ = inCell[2][i2] + iZ;    
-		      shift[2] = 0.;
-		      /* apply periodico boundary condition along z if gravitational
-		       * fiels is not present */
-		      if (jZ == -1) 
-			{
-			  jZ = cellsz - 1;    
-			  shift[2] = - L;
-			} 
-		      else if (jZ == cellsz) 
-			{
-			  jZ = 0;    
-			  shift[2] = L;
-			}
-		      for (iY = -1; iY <= 1; iY ++) 
-			{
-			  jY = inCell[1][i2] + iY;    
-			  shift[1] = 0.0;
-			  if (jY == -1) 
-			    {
-			      jY = cellsy - 1;    
-			      shift[1] = -L;
-			    } 
-			  else if (jY == cellsy) 
-			    {
-			      jY = 0;    
-			      shift[1] = L;
-			    }
-			  for (iX = -1; iX <= +1; iX ++) 
-			    {
-			      jX = inCell[0][i2] + iX;    
-			      shift[0] = 0.0;
-			      if (jX == -1) 
-				{
-				  jX = cellsx - 1;    
-				  shift[0] = - L;
-				} 
-			      else if (jX == cellsx) 
-				{
-				  jX = 0;   
-				  shift[0] = L;
-				}
-			      j2 = (jZ *cellsy + jY) * cellsx + jX + NP*NUMREP;
-			      for (j2 = cellList[j2]; j2 > -1; j2 = cellList[j2]) 
-				{
-				  //if (color[j] != cluster_sort[nc].color)
-				    //continue;
-				  //coppie++;
-				  j = dupcluster[j2];
-			 	  if (j2 <= i2) 
-				    continue;
-			 	  if (particles_type == 1)
-			       	   {
-				      if ((nspots[i]==MD_STSPOTS_A && nspots[j]==MD_STSPOTS_A) ||
-					  (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
-					continue;
-				    }
-				  //dix = diy = diz = 0;
-				  //djx = djy = djz = 0;
-				  imgi2 = i2 / na;
-				  imgj2 = j2 / na;
-				  				  //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
-				  choose_image(imgi2, &dix, &diy, &diz);
-				  choose_image(imgj2, &djx, &djy, &djz);
-				  
-				  //if (dix!=0||diy!=0||diz!=0||djx!=0||djy!=0||djz!=0)
-				  //printf("(%d,%d,%d)-(%d,%d,%d)\n", dix, diy, diz, djx, djy, djz);
-				  if ( bond_foundR(i, j, dix, diy, diz, djx, djy, djz, 2.0*L) )
-				    {
-				      ene=ene+1.0;
-				      //printf("qui!!!\n");
-				      if (color2[j2] == -1)
-					{
-					  color2[j2] = color2[i2];
-					  //printf("color2[j2]=color2[i2]=%d\n", color2[i2]);
-					}
-				      else
-					{
-					  if (color2[i2] < color2[j2])
-					    change_all_colors(na*NUMREP, color2, color2[j2], color2[i2]);
-					  else if (color2[i2] > color2[j2])
-					    change_all_colors(na*NUMREP, color2, color2[i2], color2[j2]);
-					}
-				    }
-				}
-			    }
-			}
-		    }
-#if 0
-		  for (j2 = 0; j2 < na*NUMREP; j2++)
-		    {
-		      i = dupcluster[i2];
-		      j = dupcluster[j2];
-		      if (i2 >= j2)
-			continue;
-		      if (particles_type == 1)
-			{
-			  if ((nspots[i]==MD_STSPOTS_A && nspots[j]==MD_STSPOTS_A) ||
-			      (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
-			    continue;
-			}
-		      //coppie++;
-		      dix = diy = diz = 0;
-		      djx = djy = djz = 0;
-		      imgi2 = i2 / na;
-		      imgj2 = j2 / na;
-		      if (i2==j2)
-			continue;
-		      //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
-		      choose_image(imgi2, &dix, &diy, &diz);
-		      choose_image(imgj2, &djx, &djy, &djz);
-		      //if (dix!=0||diy!=0||diz!=0||djx!=0||djy!=0||djz!=0)
-			//printf("(%d,%d,%d)-(%d,%d,%d)\n", dix, diy, diz, djx, djy, djz);
-		      if ( bond_foundR(i, j, dix, diy, diz, djx, djy, djz, 2.0*L) )
-			{
-			  ene=ene+1.0;
-			  //printf("qui!!!\n");
-			  if (color2[j2] == -1)
-			    {
-			      color2[j2] = color2[i2];
-			      //printf("color2[j2]=color2[i2]=%d\n", color2[i2]);
-			    }
-			  else
-			    {
-			      if (color2[i2] < color2[j2])
-				change_all_colors(na*NUMREP, color2, color2[j2], color2[i2]);
-			      else if (color2[i2] > color2[j2])
-				change_all_colors(na*NUMREP, color2, color2[i2], color2[j2]);
-			    }
-			}
-		    }
-#endif
-		  curcolor = findmaxColor(na*NUMREP, color2)+1;
-		  //printf("curcolor2=%d\n", curcolor);
-		}
-	      ncls2 = curcolor;
-	      for (nc2 = 0; nc2 < ncls2; nc2++)
-		{
-		  clsdim2[nc2] = 0; 
-		}
-	      for (nc2 = 0; nc2 < ncls2; nc2++)
-		{
-		  for (a = 0; a < na*NUMREP; a++)
-		    if (color2[a] == nc2)
-		      {
-			clsdim2[color2[a]]++;
-		      }
-		}
-
-	      /* ==== >>> REMOVE_VOIDS <<< ==== */
-	      ncNV2=0;
-	      for (nc2 = 0; nc2 < ncls2; nc2++)
-		{
-		  if (clsdim2[nc2] != 0)
-		    {
-		      ncNV2++;
-		    }
-		}
-	      //printf("ncls2=%d\n", ncNV2);
-	      if (ncNV2 < NUMREP)
-		percola[nc] = 1;
-	    }
-	  printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
-	}
-      //printf("coppie PERC=%d\n", coppie);
-      almenouno = 0;
-      if (!only_average_clsdistro)
-	{
-	  if (check_percolation)
-	    {
-	      sprintf(fn, "perc%s.dat", fname[nr1]);
-	      f2 = fopen(fn, "w");
-	      fclose(f2);
-	    }
-	  for (nc = 0; nc < ncls; nc++)
-	    {
-	      //if (cluster_sort[nc].dim >= 2)
-	      //almenouno = 1;
-	      if (check_percolation)
-		{
-		  if (percola[cluster_sort[nc].color])
-		    {
-		      sprintf(fn, "perc%s.dat", fname[nr1]);
-		      f2 = fopen(fn, "a");
-		      fprintf(f2, "%d %d\n", nc, cluster_sort[nc].dim);
-		      fclose(f2);
-		    }
-
-		  if (percola[cluster_sort[nc].color])
-		    fprintf(f, "1 ");
-		  else
-		    fprintf(f, "0 ");
-		}	      
-	     
-	      for (i = 0; i < NP; i++)
-		{
-		  if (color[i]==cluster_sort[nc].color)
-		    {
-		    
-		      fprintf(f, "%d ", i);
-
-		    }
-		}
-	      fprintf(f, "\n");
-	    }
-	  
-	  //if (almenouno==0)
-	  //fprintf(f, "WARNING: No clusters found!\n");
-	  fclose(f);
-	}
-      for (nc = 0; nc < ncls; nc++)
-	{
-	  //printf("cluster_sort[%d].dim=%d color=%d\n", nc, cluster_sort[nc].dim, cluster_sort[nc].color);
-	  clssizedst[cluster_sort[nc].dim]++;
-	  clssizedstAVG[cluster_sort[nc].dim] += 1.0;
-	  if (calcordparam)
-	    {
-	      int a, b;
-	      for (i=0; i < NP; i++)
-		{
-		  if (color[i] == cluster_sort[nc].color) 
-		    {
-		      for (a=0; a < 3; a++)
-			for (b=0; b < 3; b++)
-			  {
-			    Q[a][b][cluster_sort[nc].dim] += 1.5 * R[0][a][i]*R[0][b][i];
-			    if (a==b)
-			      Q[a][a][cluster_sort[nc].dim] -= 0.5;
-			  }
-		      normQ[cluster_sort[nc].dim]+=1.0;
-		    }
-		}
-	    } 
-	}
-      if (!only_average_clsdistro)
-	{
-	  sprintf(fncls, "%s.clsdst", fname[nr1]);
-	  f = fopen(fncls, "w+");
-	  for (i = 1; i < NP; i++)
-	    {
-	      if (clssizedst[i] != 0)
-	    fprintf(f, "%d %d\n", i, clssizedst[i]);
-	    }
-	  fclose(f);
-	}
-      if (output_bonds)
-	{
-	  sprintf(fn, "%s.bonds", fname[nr1]);
-	  f = fopen(fn, "w+");
-	  fprintf(f, "%d %.15G\n", START-END, L);
-	  for (i = START; i < END; i++)
-	    {
-	      fprintf(f,"%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
-	    }	  
-	  for (i = START; i < END; i++)
-	    {
-	      fprintf(f,"%d %d\n", i+1, numbonds[i]);
-	      for (c = 0; c < numbonds[i]-1; c++)
-	    	fprintf(f, "%lld ", bonds[i][c]+1);
-	      fprintf(f, "%lld\n", bonds[i][numbonds[i]-1]+1);
-	    }
-	  fclose(f);
 	}
     }
-  f = fopen("avg_cluster_size_distr.dat", "w+");
-  /* fa la media log delle cluster size distributions (codice passato da Francesco) */
-  if (media_log)
+    
+  f2 = fopen("grBIV.dat","w");
+  cost = 3.14159265359; 
+  r=delr*0.5; 
+  for (i=0; i < points; i++)
     {
-      for (kk=1; kk <= 51; kk++)
-	l1[kk]=(int) nlin*pow(1.25,kk-1);
+      rlower = ( (double) i )*delr;
+      rupper = rlower + delr;
+      nIdeal= cost * (Sqr(rupper)-Sqr(rlower));
+      g0m = g0[ii] / ((double)nfiles)/NP/nIdeal;
+      fprintf(f2, "%d %.15G\n", r, g0m);
+      r += delr;
+    }
+  fclose(f2);
 
-      for(kk=1; kk <= 50; kk++)
-	{
-	  l2[kk]=l1[kk+1]-1;
-	  if (l2[kk] < npmax) 
-	    kmax=kk;
-	}
-      for(kk=1; kk <= kmax; kk++)
-	{
-	  dlog[kk]=0.0;
-	  xlog[kk]=0.0;
-	  for (kj=l1[kk]; kj <= l2[kk]; kj++)
-	    {
-	      if (clssizedstAVG[kj] !=0 && kj < NP)
-		{   
-		  dlog[kk]=dlog[kk]+clssizedstAVG[kj];
-		}		  
-	      xlog[kk]=xlog[kk]+kj;
-	    }
-	}
-      for (i3=0; i3 < nlin; i3++)
-	{
-	  if (clssizedstAVG[i3] != 0) fprintf(f,"%d %.15G\n", i3,((double)clssizedstAVG[i3])/((double)(nfiles)));
-	}
-      for (kk=1; kk <= kmax; kk++)
-	{
-	  if (dlog[kk]!=0) 
-	    {
-	      am=l2[kk]-l1[kk]+1; 
-	      xmed=xlog[kk]/am;
-	      dlog[kk]=dlog[kk]/am; 
-	      fprintf(f,"%.15G %.15G\n", xmed,((double) dlog[kk])/((double)nfiles));
-	    }
-	}
-    }
-  else
-    {
-      for (i = 1; i < NP; i++)
-	{
-	  if (clssizedstAVG[i] != 0.0)
-	    fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
-	}
-    }
-  if (calcordparam)
-    {
-      int a, b;
-      double Ql[3][3];
-
-      f2 = fopen("SnemCls.dat","w");      
-      for (i=0; i < NP; i++)
-	{
-	  if (normQ[i] == 0)
-	    continue;
-	  for (a=0; a < 3; a++)
-	    for (b=0; b < 3; b++)
-	      {
-		Ql[a][b] = Q[a][b][i] / normQ[i]; 
-	      }
-  	  diagonalize(Ql, ev);
-	  if (fabs(ev[0]) > fabs(ev[1]))
-	    Snem = ev[0];
-	  else
-	    Snem = ev[1];  
-	  if (fabs(ev[2]) > Snem)
-	    Snem = ev[2];
-	  fprintf(f2, "%d %.15G\n", i, Snem);
-	}
-      fclose(f2);
-    }
-  fclose(f);
   return 0;
 }
