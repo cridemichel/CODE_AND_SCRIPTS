@@ -93,7 +93,7 @@ partType *typesArr=NULL;
 int *typeOfPart;
 const int NUMREP = 8;
 int MAXBONDS = 100;
-double L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
+double L, time, *ti, *R[3][3], *r0[3], r0LA[3], r0LB[3], RLA[3][3], RLB[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
        Dr, theta, sigmaSticky=-1.0, ratLA[NA][3], ratLB[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
@@ -933,6 +933,7 @@ int main(int argc, char **argv)
   for (ii=0; ii < points; ii++)
     g0[ii] = 0.0;
 
+	//printf("r0[1003]= %f %f %f\n", r0[0][1003], r0[1][1003], r0[2][1003]);
   for (nr1=0; nr1 < nfiles; nr1++)
     {
       readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
@@ -941,36 +942,50 @@ int main(int argc, char **argv)
 	{
       	  for (a = 0; a < 3; a++)
 	    {
-	      r0L[a] = r0[a][i];
+	      r0LA[a] = r0[a][i*4];
 	      for (b = 0; b < 3; b++)
-		RL[a][b] = R[a][b][i];
+		RLA[a][b] = R[a][b][i*4];
 	      //printf("r0=%f %f %f R=%f %f %f\n", r0L[0], r0L[1], r0L[2], RL[0][0], RL[0][1], RL[0][2]);
 	    }
+	  for (a = 0; a < 3; a++)
+	    {
+	      r0LB[a] = r0[a][i*4+1];
+	      for (b = 0; b < 3; b++)
+		RLB[a][b] = R[a][b][i*4+1];
+	      //printf("r0=%f %f %f R=%f %f %f\n", r0L[0], r0L[1], r0L[2], RL[0][0], RL[0][1], RL[0][2]);
+	    }
+
 	  /* calc spot positions of two FABs */
-       	  BuildAtomPosSQ(i*4, r0L, RL, ratLA);
-	  BuildAtomPosSQ(i*4+1, r0L, RL, ratLB);
+       	  BuildAtomPosSQ(i*4, r0LA, RLA, ratLA);
+	  BuildAtomPosSQ(i*4+1, r0LB, RLB, ratLB);
+	  //printf("A typeOfPart[%d]=%d\n", i*4, typeOfPart[i*4]);
+	  //printf("B typeOfPart[%d]=%d\n", i*4+1, typeOfPart[i*4+1]);
 	  /* check double bonding here */
 	  nbonds=0;
 	  for (j=typeNP[0]*4; j < NP; j++)
 	    {
+//	printf("r0[1003]= %f %f %f\n", r0[0][1003], r0[1][1003], r0[2][1003]);
 	      for (kk=0; kk < 3; kk++)
 		antpos[kk] = r0[kk][j];
-
+	      //printf("j=%d %f %f %f\n", j, antpos[0], antpos[1], antpos[2]);
 	      distSq = 0.0;
-	      for (kk=0; kk < 3; kk++)
-		distSq += Sqr(ratLA[2][kk]-antpos[kk]);
+	      //for (kk=0; kk < 3; kk++)
+		//distSq += Sqr(ratLA[2][kk]-antpos[kk]);
 	      
 	      if (distSq < Sqr((0.612+0.79)*0.5))
 		{
 		  for (kk=0; kk < 3; kk++)
 		    pos4dist[nbonds][kk] = antpos[kk];
 		  nbonds+=1;
-		  continue;	  
+		  if (nbonds < 2)
+		    continue;	 
+		 else 
+		   break; 
 		}
 	      distSq = 0.0;
 	      for (kk=0; kk < 3; kk++)
 		distSq += Sqr(ratLB[2][kk]-antpos[kk]);
-	      
+	      //printf("dist=%f\n", sqrt(distSq)); 
 	      if (distSq < Sqr((0.612+0.79)*0.5))
 		{
 		  for (kk=0; kk < 3; kk++)
