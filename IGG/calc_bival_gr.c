@@ -870,7 +870,7 @@ int main(int argc, char **argv)
 	      for (i = 0; i < NP; i++) 
 		{
 		  fscanf(f, "%[^\n]\n", line); 
-		  printf("NP=%d i=%d line=%s\n", NP, i, line);
+		  //printf("NP=%d i=%d line=%s\n", NP, i, line);
 		  sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %[^\n]\n", 
 			 &r0[0][i], &r0[1][i], &r0[2][i], 
 			 &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
@@ -1007,7 +1007,7 @@ int main(int argc, char **argv)
       rupper = rlower + delr;
       nIdeal= cost * (Sqr(rupper)-Sqr(rlower));
       g0m = g0[ii] / ((double)nfiles)/NP/nIdeal;
-      fprintf(f2, "%d %.15G\n", r, g0m);
+      fprintf(f2, "%.15G %.15G\n", r, g0m);
       r += delr;
     }
   fclose(f2);
