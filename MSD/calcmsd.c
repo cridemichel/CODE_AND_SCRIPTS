@@ -429,6 +429,14 @@ int main(int argc, char **argv)
 				else
 				  adjDr[a][i] += L;
 			    }
+			  else
+			    {
+			      if (nr2 > nr1 && fabs(dr) > L*0.5)
+				if (dr > 0.0)
+				  adjDr[a][i] -= L;
+				else
+				  adjDr[a][i] += L;
+			    }
 			}
 		      //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
 

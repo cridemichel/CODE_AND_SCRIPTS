@@ -2,8 +2,8 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<string.h>
-const double L[3]={120.0,120.0,120.0};
-const int numprot=8;
+const double L[3]={260.0,260.0,260.0};
+const int numprot=64;
 const int stepinterval=20000;
 const double dt=0.5;
 struct anatom {
