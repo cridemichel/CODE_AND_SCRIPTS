@@ -1229,11 +1229,12 @@ double dlog[npmax], xlog[npmax];
 int maxnbonds;
 double antpos[3];
 double pos4dist[2][3];
+double *g0, delr;
 int main(int argc, char **argv)
 {
-  int kk, kmax, kj, i3, j, nbonds, bin;
+  int kk, kmax, kj, i3, j, nbonds, bin, points;
   long long int jj2, aa, bb;
-  double am, xmed, dist, distSq, rlower, rupper, nIdeal, g0m, r;
+  double am, xmed, dist, distSq, rlower, rupper, nIdeal, g0m, r, cost;
   FILE *f, *f2, *f3;
   char *s1, *s2;
   int beg, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
@@ -1241,11 +1242,10 @@ int main(int argc, char **argv)
   int jX, jY, jZ, iX, iY, iZ, jj;
   //int coppie;
   double refTime=0.0, ti, ene=0.0;
-  int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
+  int curcolor, ncls, b, almenouno, na, c, i2, j2, ncls2;
   pi = acos(0.0)*2.0;
     /* parse arguments */
   parse_params(argc, argv);
-
    
   f2 = fopen(inputfile, "r");
   c2 = 0;
