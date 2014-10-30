@@ -108,7 +108,7 @@ int *numbonds, **bonds;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2, START, END, NT, NI;
-int check_percolation = 1, *nspots, particles_type=1, output_bonds=0, mix_type=-1, saveBonds=-1;
+int check_percolation = 1, *nspots, output_bonds=0, mix_type=-1, saveBonds=-1;
 int avgbondlen=1, calcordparam=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
@@ -251,24 +251,15 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
-      else if (!(particles_type==3) || ((particles_type==3) && (nat==3)))
+      else if (nat==3)
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
-	      if (particles_type == 2)
-		sscanf(line, "%lf %lf %lf\n", 
-		       &r[0][i], &r[1][i], &r[2][i]); 
-	      else if (particles_type == 3)
-	      	sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %[^\n]\n", 
-		       &r[0][i], &r[1][i], &r[2][i], 
-		       &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
-		       &R[2][0][i], &R[2][1][i], &R[2][2][i], &(typeOfPart[i]), dummy); 
-	      else
-		sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %[^\n]\n", 
-		       &r[0][i], &r[1][i], &r[2][i], 
-		       &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
-		       &R[2][0][i], &R[2][1][i], &R[2][2][i], dummy); 
+	      sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %[^\n]\n", 
+      		     &r[0][i], &r[1][i], &r[2][i], 
+		     &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
+		     &R[2][0][i], &R[2][1][i], &R[2][2][i], &(typeOfPart[i]), dummy); 
 	      //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
 	    
 	    }
@@ -514,171 +505,7 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
     }
 }
 #define Sqr(x) ((x)*(x))
-int check_distance(int i, int j, double Dx, double Dy, double Dz)
-{
-  double DxL, DyL, DzL;
-  double ma=0.0;
-  DxL = fabs(Dx);
-  DyL = fabs(Dy);
-  DzL = fabs(Dz);
 
-  if (particles_type == 1)
-    {
-      ma = maxsax;
-    }
-  else if (particles_type == 0)
-    {
-      if (i < NPA && j < NPA)
-	ma = maxsaxAA;
-      else if (i >= NPA && j >= NPA)
-	ma = maxsaxBB;
-      else
-	ma = maxsaxAB;
-    }
-  else if (particles_type == 2)
-    {
-      if (i < NPA && j < NPA)
-	ma = maxsaxAA;
-      else if (i >= NPA && j >= NPA)
-	ma = maxsaxBB;
-      else
-	ma = maxsaxAB;
-    }
-  else if (particles_type==3)
-    {
-      ma = MAXAX;
-    }
-  if (DxL > ma || DyL > ma || DzL > ma)
-    return 1;
-  else 
-    return 0;
-}
-
-
-double distance(int i, int j)
-{
-  int a, b, nn, kk;
-  int maxa=0, maxb=0;
-  double imgx, imgy, imgz, dist, distSq, imga[3];
-  double Dx, Dy, Dz;
-  double wellWidth;
-
-  Dx = rat[0][0][i] - rat[0][0][j];
-  Dy = rat[0][1][i] - rat[0][1][j];
-  Dz = rat[0][2][i] - rat[0][2][j];
-  imgx = -L*rint(Dx/L);
-  imgy = -L*rint(Dy/L);
-  imgz = -L*rint(Dz/L);
-#if 1
-  if (check_distance(i, j, Dx+imgx, Dy+imgy, Dz+imgz))
-    return 1;
-#endif
-  if (particles_type == 1)
-    {
-      maxa = MD_STSPOTS_A;
-      maxb = MD_STSPOTS_B;
-      wellWidth = sigmaSticky;
-    }
-  else if (particles_type == 0)
-    {
-      if (i < NPA && j >= NPA)
-	{
-	  maxa = 2;
-	  maxb = 3;
-	}
-      else if (i < NPA && j < NPA)
-	{
-	  maxa = 2;
-	  maxb = 2;
-	}
-      else if (i >= NPA && j >= NPA)
-	{
-	  maxa = 3; 
-	  maxb = 3;
-	}
-      else
-	{
-	  maxa = 3;
-	  maxb = 2;
-	}
-      wellWidth = sigmaSticky;
-    }
-  else if (particles_type==2)
-    {
-      maxa = 1;
-      maxb = 1;
-      if (i < NPA && j >= NPA)
-	{
-	  wellWidth = sigmaAB+deltaAB;
-	}
-      else if (i < NPA && j < NPA)
-	{
-	  wellWidth = sigmaAA+deltaAA;
-	}
-      else if (i >= NPA && j >= NPA)
-	{
-	  wellWidth = sigmaBB+deltaBB;
-	}
-      else
-	{
-	  wellWidth = sigmaAB+deltaAB;
-	}
-    }
-  else if (particles_type==3)
-    {
-#if 0
-      maxa=2;
-      maxb=2;
-      wellWidth = typesArr[0].spots[0].sigma;
-      for (a = 1; a < maxa+1; a++)
-	{
-	  for (b = 1; b < maxb+1; b++)
-	    {
-	      if (Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j])
-		  +Sqr(rat[a][2][i] + imgz -rat[b][2][j]) < Sqr(wellWidth))	  
-		{
-		  return -1;
-		}
-	    }
-	}
-#else
-      //printf("wellWidth=%f\n", wellWidth);
-      for (nn = 0; nn < nbondsFlex; nn++)
-	{
-	  distSq = 0;
-	  imga[0] = imgx;
-	  imga[1] = imgy;
-	  imga[2] = imgz;
-       	  for (kk=0; kk < 3; kk++)
-	    distSq += Sqr(rat[mapbondsa[nn]][kk][i]+imga[kk]-rat[mapbondsb[nn]][kk][j]);
-	  dist = sqrt(distSq) - mapSigmaFlex[nn];
-	  //printf("mapSigmaFlex=%f nbondsFlex=%d\n", mapSigmaFlex[nn], nbondsFlex);
-	  if (dist < 0.0)
-	    {
-	      return dist;
-	    }
-	}
-#endif
-    }
-  else
-    {
-      for (a = 1; a < maxa+1; a++)
-	{
-	  for (b = 1; b < maxb+1; b++)
-	    {
-	      //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
-	      //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
-	      //printf("[DISTANCE] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + imgz -rat[b][2][j])));
-	      if (Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j])
-		  +Sqr(rat[a][2][i] + imgz -rat[b][2][j]) < Sqr(wellWidth))	  
-		{
-		  return -1;
-		}
-	    }
-	}
-    }
-  return 1;
-}
 #if 0
 int check_distanceR(int i, int j, int imgix, int imgiy, int imgiz,
 		  int imgjx, int imgjy, int imgjz, double imgx, double imgy, double imgz)
@@ -699,97 +526,6 @@ int check_distanceR(int i, int j, int imgix, int imgiy, int imgiz,
     }
 }
 #endif
-double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
-		  int imgjx, int imgjy, int imgjz, double Lbig)
-{
-  int a, b, maxa=0, maxb=0;
-  double imgx, imgy, imgz;
-  double wellWidth, Dx, Dy, Dz, dx, dy, dz;
-  if (particles_type == 1)
-    {
-      if (i < NPA)
-	{
-	  maxa = MD_STSPOTS_A;
-	  maxb = MD_STSPOTS_B;
-	}
-      else
-	{
-	  maxa = MD_STSPOTS_B;
-	  maxb = MD_STSPOTS_A;
-	}
-      wellWidth = sigmaSticky;
-    }
-  else if (particles_type == 0)
-    {
-      if (i < NPA && j >= NPA)
-	{
-	  maxa = 2;
-	  maxb = 3;
-	}
-      else if (i < NPA && j < NPA)
-	{
-	  maxa = 2;
-	  maxb = 2;
-	}
-      else if (i >= NPA && j >= NPA)
-	{
-	  maxa = 3; 
-	  maxb = 3;
-	}
-      else
-	{
-	  maxa = 3;
-	  maxb = 2;
-	}
-      wellWidth = sigmaSticky;
-    }
-  else if (particles_type == 2)
-    {
-      maxa = 1;
-      maxb = 1;
-      if (i < NPA && j >= NPA)
-	{
-	  wellWidth = sigmaAB+deltaAB;
-	}
-      else if (i < NPA && j < NPA)
-	{
-	  wellWidth = sigmaAA+deltaAA;
-	}
-      else if (i >= NPA && j >= NPA)
-	{
-	  wellWidth = sigmaBB+deltaBB;
-	}
-      else
-	{
-	  wellWidth = sigmaAB+deltaAB;
-	}
-    }
-    
-  dx = L*(imgix-imgjx);
-  dy = L*(imgiy-imgjy);
-  dz = L*(imgiz-imgjz);
-  Dx = rat[0][0][i] - rat[0][0][j] + dx;
-  Dy = rat[0][1][i] - rat[0][1][j] + dy;
-  Dz = rat[0][2][i] - rat[0][2][j] + dz;
-  imgx = -Lbig*rint(Dx/Lbig);
-  imgy = -Lbig*rint(Dy/Lbig);
-  imgz = -Lbig*rint(Dz/Lbig);
-
-  if (check_distance(i, j, Dx + imgx, Dy + imgy, Dz + imgz))
-    return 1;
-  //printf("i=%d j=%d rat[][0][i]=%.15G,%.15G\n", i, j, rat[1][0][i], rat[2][0][i]);
-  for (a = 1; a < maxa+1; a++)
-    {
-      for (b = 1; b < maxb+1; b++)
-	{
-	  //printf("[DISTANCER] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + dx + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + dy + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + dz + imgz -rat[b][2][j])));
-	  if (Sqr(rat[a][0][i] + dx + imgx - rat[b][0][j])+Sqr(rat[a][1][i] + dy + imgy - rat[b][1][j])
-	      + Sqr(rat[a][2][i] + dz + imgz - rat[b][2][j]) < Sqr(wellWidth))	  
-		return -1;
-	}
-    }
-  return 1;
-}
 int is_in_ranges(int A, int B, int nr, rangeStruct* r)
 {
   int kk;
@@ -893,77 +629,8 @@ void assign_bond_mapping(int i, int j)
   mapbondsb = mapbondsbFlex;
 } 
 
-int bond_found(int i, int j)
-{
-  double d;
-  if (particles_type==3)
-    {
-      assign_bond_mapping(i, j);
-      if (nbondsFlex==0)
-	return 0;
-    }
-  if ((d=distance(i, j)) < 0.0)
-    {
-      totdist += d;
-      distcc += 1.0;
-      return 1;
-    }
-  else
-    return 0;
-}
-int bond_foundR(int i, int j, int imgix, int imgiy, int imgiz,
-		int imgjx, int imgjy, int imgjz, double Lbig)
-{
-  if (distanceR(i, j, imgix, imgiy, imgiz, imgjx, imgjy, imgjz, Lbig) < 0.0)
-    return 1;
-  else
-    return 0;
-}
-
-void change_all_colors(int NP, int* color, int colorsrc, int colordst)
-{
-  int ii;
-  for (ii = 0; ii < NP; ii++)
-    {
-      if (color[ii] == colorsrc)
-	color[ii] = colordst;
-    }
-}
 char fncls[1024];
 char fn[1024];
-int findmaxColor(int NP, int *color)
-{
-  int i, maxc=-1;
-  for (i = 0; i < NP; i++) 
-    {
-      if (color[i] > maxc)
-	maxc = color[i];
-    }
-  return maxc;
-}
-
-struct cluster_sort_struct { 
-  int dim;
-  int color;
-};
-struct cluster_sort_struct *cluster_sort;
-int compare_func (const void *aa, const void *bb)
-{
-  int ai, bi;
-  int temp;
-  struct cluster_sort_struct *a, *b;
-  a = (struct cluster_sort_struct*) aa;
-  b = (struct cluster_sort_struct*) bb;
-  ai = a->dim;
-  bi = b->dim;
-  temp = ai - bi;
-  if (temp < 0)
-    return 1;
-  else if (temp > 0)
-    return -1;
-  else
-    return 0;
-}
 #if 0
 const int images_array[27][3]={{0,0,0},
 {1,0,0},{0,1,0},{0,0,1},
@@ -988,7 +655,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [-mc] [--ordpar/-op] [--medialog/-ml] [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--average/-av] [--maxbonds] <listafile>\n");
+  printf("Usage: clusters [-mc] <listafile>\n");
   exit(0);
 }
 
@@ -1005,104 +672,16 @@ void parse_params(int argc, char** argv)
 	{
 	  print_usage();
 	}
-      else if (!strcmp(argv[cc],"--ptype") || !strcmp(argv[cc],"-pt" ))
-	{
-	  cc++;
-          if (cc == argc)
-	     print_usage();
-	  mix_type = atoi(argv[cc]);
-	}
-      else if (!strcmp(argv[cc],"--noperc") || !strcmp(argv[cc],"-np" ))
-	{
-	  check_percolation = 0;
-	} 
-      else if (!strcmp(argv[cc],"--medialog") || !strcmp(argv[cc],"-ml" ))
-	{
-	   media_log = 1;
-	}
       else if (!strcmp(argv[cc],"--montecarlo") || !strcmp(argv[cc],"-mc" ))
 	{
 	   mc_sim = 1;
 	}
-      else if (!strcmp(argv[cc],"--ordpar") || !strcmp(argv[cc],"-op" ))
-	{
-	   calcordparam = 1;
-	}
-      else if (!strcmp(argv[cc],"--average") || !strcmp(argv[cc],"-av" ))
-	{
-	  only_average_clsdistro = 1;
-	}
-      else if (!strcmp(argv[cc],"--bonds") || !strcmp(argv[cc],"-b" ))
-	{
-	  output_bonds = 1;
-	} 
-      else if (!strcmp(argv[cc],"--maxbonds") || !strcmp(argv[cc],"-mb" ))
-	{
-	  cc++;
-	  if (cc == argc)
-	    print_usage();
-	  MAXBONDS = atoi(argv[cc]);
- 	  output_bonds = 1;
-	} 
       else if (cc == argc)
 	print_usage();
       else
 	strcpy(inputfile,argv[cc]);
       cc++;
     }
-}
-int *inCell[3]={NULL,NULL,NULL}, *cellList=NULL, cellsx, cellsy, cellsz;
-void build_linked_list(void)
-{
-  double L2;
-  int j, n;
-  L2 = 0.5 * L;
-
-  for (j = 0; j < cellsx*cellsy*cellsz + NP; j++)
-    cellList[j] = -1;
-
-  //printf("START=%d END=%d L=%f NP=%d cells=%d %d %d\n", START, END, L, NP, cellsx, cellsy, cellsz);
-  for (n = START; n < END; n++)
-    {
-      inCell[0][n] =  (rat[0][0][n] + L2) * cellsx / L;
-      inCell[1][n] =  (rat[0][1][n] + L2) * cellsy / L;
-      inCell[2][n] =  (rat[0][2][n] + L2) * cellsz / L;
-      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
-	inCell[0][n] + NP;
-      //printf("n=%d incells=%d %d %d (%f %f %f) j=%d cellList=%d\n",n, inCell[0][n], inCell[1][n], inCell[2][n], 
-	//     rat[0][0][n], rat[0][1][n], rat[0][2][n], j, cellList[j]);
-
-      cellList[n] = cellList[j];
-      cellList[j] = n;
-    }
-}
-void build_linked_list_perc(int clsdim, double Lbig)
-{
-  double L2;
-  int img, j, n, np, dix, diy, diz;
-  L2 = 0.5 * L;
-
-  for (j = 0; j < cellsx*cellsy*cellsz + NP*NUMREP; j++)
-    cellList[j] = -1;
-  //printf("cells=%d %d %d Lbig=%.15G L=%.15G\n", cellsx, cellsy, cellsz, Lbig, L);
-  for (n = 0; n < clsdim*NUMREP; n++)
-    {
-      img = n / clsdim;
-      choose_image(img, &dix, &diy, &diz);
-      np = dupcluster[n];
-      inCell[0][n] =  (rat[0][0][np] + dix*L + L2) * cellsx / Lbig;
-      inCell[1][n] =  (rat[0][1][np] + diy*L + L2) * cellsy / Lbig;
-      inCell[2][n] =  (rat[0][2][np] + diz*L + L2) * cellsz / Lbig;
-      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
-	inCell[0][n] + NP*NUMREP;
-      cellList[n] = cellList[j];
-      cellList[j] = n;
-    }
-}
-void add_bond(int i, int j)
-{
-  bonds[i][numbonds[i]] = j;
-  numbonds[i]++;
 }
 /* Allocate memory for a matrix of integers */
 int** AllocMatI(int size1, int size2)
@@ -1274,7 +853,7 @@ int main(int argc, char **argv)
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
-	  if (particles_type==3 && nat==2 && saveBonds==0)
+	  if (nat==2 && saveBonds==0)
 	    {
 	      double rcutFact;
 	      /* read spots in HRB ref. system */
@@ -1369,7 +948,7 @@ int main(int argc, char **argv)
 	      free(s1);
 	      free(s2);
 	    }
-	  if ((particles_type==3 && nat==3) || (nat==2 && saveBonds==-1) ||
+	  if ((nat==3) || (nat==2 && saveBonds==-1) ||
 	      (nat==3 && saveBonds==1))
 	    {
 	      int l2s;
@@ -1402,7 +981,7 @@ int main(int argc, char **argv)
       else if (nat==1 && !strcmp(parname,"saveBonds"))
 	{
 	  sscanf(parval, "%d\n", &saveBonds);	
-	  particles_type = 3;
+	  //particles_type = 3;
 	}
       else if (nat==1 && !strcmp(parname,"a"))
 	sscanf(parval, "%lf %lf\n", &sa[0], &sa[1]);	
