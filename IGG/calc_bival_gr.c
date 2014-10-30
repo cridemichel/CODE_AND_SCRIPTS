@@ -105,8 +105,8 @@ int *numbonds;
 #else
 int *numbonds, **bonds;
 #endif
-char parname[128], parval[256000], line[256000];
-char dummy[2048];
+char parname[1024], parval[10000000], line[10000000];
+char dummy[20480000];
 int NP, NPA=-1, ncNV, ncNV2, START, END, NT, NI;
 int check_percolation = 1, *nspots, output_bonds=0, mix_type=-1, saveBonds=-1;
 int avgbondlen=1, calcordparam=0;
@@ -130,130 +130,27 @@ void vectProdVec(double *A, double *B, double *C)
   C[1] = A[2] * B[0] - A[0] * B[2];
   C[2] = A[0] * B[1] - A[1] * B[0];
 }
-#ifdef EDHE_FLEX
-void readconfBonds(char *fname, double *ti, double *refTime, int NP, double *r[3], double *DR[3], double *R[3][3])
-{
-  FILE *f;
-  int nat=0, i, cpos, j;
-  f = fopen(fname, "r");
 
-  while (!feof(f) && nat < 3) 
-    {
-      //cpos = ftell(f);
-      //printf("cpos=%d\n", cpos);
-      fscanf(f, "%[^\n]\n",line);
-      //printf("line=%s\n", line); 
-      if (!strcmp(line,"@@@"))
-	{
-	  nat++;
-	}
-      if (nat == 2)
-	{
-	  /* per ora faccio una porcata specifica delle conf COKECAN */
-	  //fseek(f, cpos, SEEK_SET);
-	  for (i = 0; i < LINES_TO_SKIP; i++)
-	    fscanf(f, "%[^\n]\n", line);
-	  for (i = 0; i < NP; i++)
-	    {
-	      fscanf(f, "%d ", &numbonds[i]);
-#if 0
-	      if (numbonds[i]!=0)
-		printf("numbonds[%d]=%d\n", i, numbonds[i]);
-#endif
-	      for (j = 0; j < numbonds[i]; j++)
-		{
-		  fscanf(f, "%lld ", &bonds[i][j]);
-		}
-	    }
-	}
-      else 
-	{
-	  sscanf(line, "%[^:]:%[^\n]\n", parname, parval);
-	  if (!strcmp(parname, "time"))
-	    {
-	      *ti = atof(parval);
-	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
-	    }	
-	  else if (!strcmp(parname, "refTime"))
-	    {
-	      *refTime = atof(parval);
-	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
-	    }	
-	}	  
-    }
-  fclose(f);
-}
-#endif
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *DR[3], double *R[3][3])
 {
   FILE *f;
   static first=1;
   int nat=0, i, cpos, j;
   f = fopen(fname, "r");
-  while (!feof(f) && nat < 3) 
+  while (!feof(f)) 
     {
-      cpos = ftell(f);
+      //cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
       fscanf(f, "%[^\n]\n",line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
+	  continue;
 	}
-      if (nat < 2)
+
+      if (nat==2)
 	{
-	  fseek(f, cpos, SEEK_SET);
-	  fscanf(f, "%[^:]:", parname);
-	  //printf("[%s] parname=%s\n", fname, parname);
-	  if (!strcmp(parname,"DR"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf %lf %lf ", &DR[0][i], &DR[1][i], &DR[2][i]);
-		}
-	      foundDRs = 1;
-	    }
-#if 0
-	  else if (!strcmp(parname,"sumox"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf ", &w[0][i]); 
-		}
-	      foundrot = 1;
-	    }
-	  else if (!strcmp(parname,"sumoy"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf ", &w[1][i]); 
-		}
-	    }
-	  else if (!strcmp(parname,"sumoz"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf ", &w[2][i]); 
-		}
-	    }
-#endif
-	  else if (!strcmp(parname, "time"))
-	    {
-	      fscanf(f, "%[^\n]\n", parval);
-	      *ti = atof(parval);
-	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
-	    }	
-	  else if (!strcmp(parname, "refTime"))
-	    {
-	      fscanf(f, "%[^\n]\n", parval);
-	      *refTime = atof(parval);
-	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
-	    }	
-	  else
-	    fscanf(f, " %[^\n]\n", parval);
-	}
-      else if (nat==3)
-	{
-	  for (i = 0; i < NP; i++) 
+	  for (i = 0; i < typeNP[0]*4; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
 	      sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %[^\n]\n", 
@@ -269,6 +166,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
     }
   fclose(f);
 }
+#if 0
 #define MD_SP_DELR 0.0
 
 
@@ -346,9 +244,11 @@ void build_atom_positions(void)
       spXYZ_B[k1][2] = z + grad[2]*(sigmaSticky*0.5 + spBpos[k1][0]) ;
     }
 }
+#endif
 /* array con le posizioni degli atomi nel riferimento del corpo rigido 
  * nel caso dell'acqua i siti idrogeno ed elettroni sono disposti su 
  * di un tetraedro */
+#if 0
 void BuildAtomPosAt(int i, int ata, double rO[3], double R[3][3], double rat[3])
 {
   /* QUESTA VA RISCRITTA PER GLI ELLISSOIDI STICKY!!! */
@@ -385,7 +285,8 @@ void BuildAtomPosAt(int i, int ata, double rO[3], double R[3][3], double rat[3])
     }
   
 }
-
+#endif
+#if 0
 void BuildAtomPosAt32(int i, int ata, double rO[3], double R[3][3], double rat[3])
 {
   /* calcola le coordinate nel laboratorio di uno specifico atomo */
@@ -424,6 +325,7 @@ void BuildAtomPosAt32(int i, int ata, double rO[3], double R[3][3], double rat[3
 	rat[kk] = rO[kk] - r3[kk]; 
     }
 }
+#endif
 void BuildAtomPosAtDNAD(int i, int ata, double *rO, double R[3][3], double rat[3])
 {
   /* QUESTA VA RISCRITTA PER GLI ELLISSOIDI STICKY!!! */
@@ -464,7 +366,6 @@ void BuildAtomPosAtDNAD(int i, int ata, double *rO, double R[3][3], double rat[3
     }
   
 }
-
 void BuildAtomPosSQ(int i, double rO[3], double R[3][3], double rat[NA][3])
 {
   int a;
@@ -475,6 +376,7 @@ void BuildAtomPosSQ(int i, double rO[3], double R[3][3], double rat[NA][3])
   for (a=0; a < typesArr[typeOfPart[i]].nspots+1; a++)
     BuildAtomPosAtDNAD(i, a, rO, R, rat[a]);
 }
+#if 0
 void BuildAtomPos32(int i, double rO[3], double R[3][3], double rat[5][3])
 {
   /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
@@ -504,6 +406,7 @@ void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
 	BuildAtomPosAt(i, a, rO, R, rat[a]);
     }
 }
+#endif
 #define Sqr(x) ((x)*(x))
 
 #if 0
@@ -845,15 +748,15 @@ int main(int argc, char **argv)
       fscanf(f2, "%[^\n]\n", fname[ii]); 
     }
   fclose(f2);
-  f = fopen(fname[0], "r");
+  f = fopen("CorIni", "r");
   nat = 0;
-  while (!feof(f) && nat < 3) 
+  while (!feof(f) && nat < 2) 
     {
       fscanf(f, "%[^\n]\n)", line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
-	  if (nat==2 && saveBonds==0)
+	  if (nat==1)
 	    {
 	      double rcutFact;
 	      /* read spots in HRB ref. system */
@@ -948,24 +851,38 @@ int main(int argc, char **argv)
 	      free(s1);
 	      free(s2);
 	    }
-	  if ((nat==3) || (nat==2 && saveBonds==-1) ||
-	      (nat==3 && saveBonds==1))
+	  if (nat==2)
 	    {
 	      int l2s;
 	      double dummy1, dummy2;
-	      if (mc_sim)
-		l2s=NP;
-	      else
-		l2s=2*NP;
-	      for (i=0; i < l2s; i++)
-               {
-		fscanf(f, "%[^\n]\n", line);
-                //printf("(mc_sim=%d) line=%s\n", mc_sim, line);
-               }
-              if (mc_sim)	
-                fscanf(f, "%lf %lf %lf\n", &L, &dummy1, &dummy2);
-              else
-                fscanf(f, "%lf\n", &L);
+	      for (a = 0; a < 3; a++)
+		{
+		  for (b = 0; b < NA; b++)
+		    rat[b][a] = malloc(sizeof(double)*NP);
+		  r0[a] = malloc(sizeof(double)*NP);
+		  DR0[a] = malloc(sizeof(double)*NP);
+		  for (b = 0; b < 3; b++)
+		    {
+		      R[a][b] = malloc(sizeof(double)*NP);
+		    }
+		}
+	      typeOfPart = malloc(sizeof(int)*NP);
+	      for (i = 0; i < NP; i++) 
+		{
+		  fscanf(f, "%[^\n]\n", line); 
+		  printf("NP=%d i=%d line=%s\n", NP, i, line);
+		  sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %[^\n]\n", 
+			 &r0[0][i], &r0[1][i], &r0[2][i], 
+			 &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
+			 &R[2][0][i], &R[2][1][i], &R[2][2][i], &(typeOfPart[i]), dummy); 
+		  //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
+
+		}
+	      for (i = 0; i < NP; i++) 
+		{
+		  fscanf(f, "%[^\n]\n", line); 
+		}	  
+	      fscanf(f, "%lf\n", &L);
 	      printf("====> L=%f\n", L);
 	      break;
 	    }
@@ -976,51 +893,40 @@ int main(int argc, char **argv)
 	NP = atoi(parval);
       else if (!strcmp(parname,"parnumA"))
 	NPA = atoi(parval);
-      else if (nat == 0 && !strcmp(parname,"NN"))
-	NN = atoi(parval);
-      else if (nat==1 && !strcmp(parname,"saveBonds"))
+      //else if (nat == 0 && !strcmp(parname,"NN"))
+	//NN = atoi(parval);
+      else if (nat==0 && !strcmp(parname,"saveBonds"))
 	{
 	  sscanf(parval, "%d\n", &saveBonds);	
 	  //particles_type = 3;
 	}
-      else if (nat==1 && !strcmp(parname,"a"))
+      else if (nat==0 && !strcmp(parname,"a"))
 	sscanf(parval, "%lf %lf\n", &sa[0], &sa[1]);	
-      else if (nat==1 && !strcmp(parname,"b"))
+      else if (nat==0 && !strcmp(parname,"b"))
 	sscanf(parval, "%lf %lf\n", &sb[0], &sb[1]);	
-      else if (nat==1 && !strcmp(parname,"c"))
+      else if (nat==0 && !strcmp(parname,"c"))
 	sscanf(parval, "%lf %lf\n", &sc[0], &sc[1]);	
-      else if (nat==1 && !strcmp(parname,"sigma"))
+      else if (nat==0 && !strcmp(parname,"sigma"))
 	sscanf(parval, "%lf %lf %lf %lf\n", &sigmaAA, &sigmaAB, &sigmaAB, &sigmaBB);	
-      else if (nat==1 && !strcmp(parname,"delta"))
+      else if (nat==0 && !strcmp(parname,"delta"))
 	sscanf(parval, "%lf %lf %lf %lf\n", &deltaAA, &deltaAB, &deltaAB, &deltaBB);	
-      else if (nat==1 && !strcmp(parname,"sigmaSticky"))
+      else if (nat==0 && !strcmp(parname,"sigmaSticky"))
 	sigmaSticky = atof(parval);
-      else if (nat==1 && !strcmp(parname,"theta"))
+      else if (nat==0 && !strcmp(parname,"theta"))
 	theta = atof(parval);
-      else if (nat==1 && !strcmp(parname,"Dr"))
+      else if (nat==0 && !strcmp(parname,"Dr"))
 	Dr = atof(parval);
-      else if (nat==1 && !strcmp(parname,"ntypes"))
+      else if (nat==0 && !strcmp(parname,"ntypes"))
 	NT = atoi(parval);
-      else if (nat==1 && !strcmp(parname,"ninters"))
+      else if (nat==0 && !strcmp(parname,"ninters"))
 	NI = atoi(parval);
     }
   fclose(f);
+  printf("NP=%d\n", NP);
   nspots = malloc(sizeof(int)*NP);
-  for (a = 0; a < 3; a++)
-    {
-      for (b = 0; b < NA; b++)
-	rat[b][a] = malloc(sizeof(double)*NP);
-      r0[a] = malloc(sizeof(double)*NP);
-      DR0[a] = malloc(sizeof(double)*NP);
-      for (b = 0; b < 3; b++)
-	{
-	  R[a][b] = malloc(sizeof(double)*NP);
-	}
-    }
   points=100;
   delr= 6.0/points;
 
-  typeOfPart = malloc(sizeof(int)*NP);
   /* CALCOLA I MAXAX QUI !!! servono per la costruzione delle LL */
   /* WARNING: se i diametri sono diversi va cambiato qua!! */ 
   g0 = malloc(sizeof(double)*points);
@@ -1048,7 +954,7 @@ int main(int argc, char **argv)
 	  for (j=typeNP[0]*4; j < NP; j++)
 	    {
 	      for (kk=0; kk < 3; kk++)
-		antpos[kk] = r0[0][j];
+		antpos[kk] = r0[kk][j];
 
 	      distSq = 0.0;
 	      for (kk=0; kk < 3; kk++)
@@ -1083,7 +989,7 @@ int main(int argc, char **argv)
 		distSq += Sqr(pos4dist[0][kk]-pos4dist[1][kk]);
 	      dist = sqrt(distSq);
 	      bin = ((int) (dist / delr)); 
-	      if (bin < points || bin >= 0)
+	      if (bin < points && bin >= 0)
   		{
   		  g0[bin] += 2.0;
   		  //printf("g0[%d]=%.15G\n", bin, g0[bin]);
@@ -1092,7 +998,7 @@ int main(int argc, char **argv)
 	}
     }
     
-  f2 = fopen("grBIV.dat","w");
+  f2 = fopen("grBIV.dat","w+");
   cost = 3.14159265359; 
   r=delr*0.5; 
   for (i=0; i < points; i++)
