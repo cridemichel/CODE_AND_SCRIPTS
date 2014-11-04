@@ -139,7 +139,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
   f = fopen(fname, "r");
   while (!feof(f)) 
     {
-      //cpos = ftell(f);
+      cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
       fscanf(f, "%[^\n]\n",line);
       if (!strcmp(line,"@@@"))
@@ -152,7 +152,8 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	{
 	  for (i = 0; i < typeNP[0]*4; i++) 
 	    {
-	      fscanf(f, "%[^\n]\n", line); 
+	      if (i > 0)
+		fscanf(f, "%[^\n]\n", line); 
 	      sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %[^\n]\n", 
       		     &r[0][i], &r[1][i], &r[2][i], 
 		     &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
@@ -709,7 +710,7 @@ const int nlin=20;
 int l1[npmax], l2[npmax];
 double dlog[npmax], xlog[npmax];
 int maxnbonds;
-double antpos[3];
+double antpos[3], ndb;
 double pos4dist[2][3];
 double *g0, delr;
 int main(int argc, char **argv)
@@ -925,15 +926,15 @@ int main(int argc, char **argv)
   printf("NP=%d\n", NP);
   nspots = malloc(sizeof(int)*NP);
   points=100;
-  delr= 6.0/points;
+  delr= 15.0/points;
 
   /* CALCOLA I MAXAX QUI !!! servono per la costruzione delle LL */
   /* WARNING: se i diametri sono diversi va cambiato qua!! */ 
   g0 = malloc(sizeof(double)*points);
   for (ii=0; ii < points; ii++)
     g0[ii] = 0.0;
-
-	//printf("r0[1003]= %f %f %f\n", r0[0][1003], r0[1][1003], r0[2][1003]);
+  ndb=0;
+  //printf("r0[1003]= %f %f %f\n", r0[0][1003], r0[1][1003], r0[2][1003]);
   for (nr1=0; nr1 < nfiles; nr1++)
     {
       readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
@@ -962,15 +963,20 @@ int main(int argc, char **argv)
 	  //printf("B typeOfPart[%d]=%d\n", i*4+1, typeOfPart[i*4+1]);
 	  /* check double bonding here */
 	  nbonds=0;
+	  //printf("A i=%d %f %f %f\n", i*4, RLA[0][2],RLA[1][2],RLA[2][2]);
+	  //printf("B i=%d %f %f %f\n", i*4+1, RLB[0][2],RLB[1][2],RLB[2][2]);
+
+	  //printf("typeof A=%d i=%d %f %f %f\n", typeOfPart[i*4], i*4, ratLA[2][0],ratLA[2][1],ratLA[2][2]);
+	  //printf("typeof B=%d i=%d %f %f %f\n", typeOfPart[i*4+1], i*4+1, ratLB[2][0],ratLB[2][1],ratLB[2][2]);
 	  for (j=typeNP[0]*4; j < NP; j++)
 	    {
-//	printf("r0[1003]= %f %f %f\n", r0[0][1003], r0[1][1003], r0[2][1003]);
+	      //printf("r0[1003]= %f %f %f\n", r0[0][1003], r0[1][1003], r0[2][1003]);
 	      for (kk=0; kk < 3; kk++)
 		antpos[kk] = r0[kk][j];
 	      //printf("j=%d %f %f %f\n", j, antpos[0], antpos[1], antpos[2]);
 	      distSq = 0.0;
-	      //for (kk=0; kk < 3; kk++)
-		//distSq += Sqr(ratLA[2][kk]-antpos[kk]);
+	      for (kk=0; kk < 3; kk++)
+		distSq += Sqr(ratLA[2][kk]-antpos[kk]);
 	      
 	      if (distSq < Sqr((0.612+0.79)*0.5))
 		{
@@ -1004,6 +1010,7 @@ int main(int argc, char **argv)
 		distSq += Sqr(pos4dist[0][kk]-pos4dist[1][kk]);
 	      dist = sqrt(distSq);
 	      bin = ((int) (dist / delr)); 
+              ndb++;
 	      if (bin < points && bin >= 0)
   		{
   		  g0[bin] += 2.0;
@@ -1016,12 +1023,13 @@ int main(int argc, char **argv)
   f2 = fopen("grBIV.dat","w+");
   cost = 3.14159265359; 
   r=delr*0.5; 
+  printf("ndb=%f\n", ndb);
   for (i=0; i < points; i++)
     {
       rlower = ( (double) i )*delr;
       rupper = rlower + delr;
       nIdeal= cost * (Sqr(rupper)-Sqr(rlower));
-      g0m = g0[ii] / ((double)nfiles)/NP/nIdeal;
+      g0m = g0[i] /((double)ndb)/nIdeal;
       fprintf(f2, "%.15G %.15G\n", r, g0m);
       r += delr;
     }
