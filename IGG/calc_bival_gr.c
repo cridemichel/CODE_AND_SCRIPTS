@@ -720,6 +720,7 @@ void readCorIni(char* cif)
   int nat, i, a, b, j, beg;
   f = fopen(cif, "r");
   nat = 0;
+  printf("reading: %s\n", cif);
   while (!feof(f) && nat < 2) 
     {
       fscanf(f, "%[^\n]\n)", line);
@@ -948,8 +949,11 @@ int main(int argc, char **argv)
       
       if (fname[nr1][strlen(fname[nr1])-1]=='i' &&
 	  fname[nr1][strlen(fname[nr1])-3]=='I')
-	readCorIni(fname[nr1]);
-
+	{
+	  readCorIni(fname[nr1]);
+	  continue;
+	}
+      printf("reading conf: %s\n", fname[nr1]);
       readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
       
       for (i=0; i < typeNP[0]; i++)
