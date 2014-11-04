@@ -713,43 +713,12 @@ int maxnbonds;
 double antpos[3], ndb;
 double pos4dist[2][3];
 double *g0, delr;
-int main(int argc, char **argv)
+void readCorIni(char* cif)
 {
-  int kk, kmax, kj, i3, j, nbonds, bin, points;
-  long long int jj2, aa, bb;
-  double am, xmed, dist, distSq, rlower, rupper, nIdeal, g0m, r, cost;
-  FILE *f, *f2, *f3;
+  FILE *f;
   char *s1, *s2;
-  int beg, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
-  int jX, jY, jZ, iX, iY, iZ, jj;
-  //int coppie;
-  double refTime=0.0, ti, ene=0.0;
-  int curcolor, ncls, b, almenouno, na, c, i2, j2, ncls2;
-  pi = acos(0.0)*2.0;
-    /* parse arguments */
-  parse_params(argc, argv);
-   
-  f2 = fopen(inputfile, "r");
-  c2 = 0;
-  maxl = 0;
-  while (!feof(f2))
-    {
-      fscanf(f2, "%[^\n]\n", dummy); 
-      if (strlen(dummy)+1 > maxl)
-	maxl = strlen(dummy)+1;
-      c2++;
-    }	
-  nfiles = c2;
-  rewind(f2);
-  fname = malloc(sizeof(char*)*nfiles);
-  for (ii=0; ii < nfiles; ii++)
-    {
-      fname[ii] = malloc(sizeof(char)*maxl);
-      fscanf(f2, "%[^\n]\n", fname[ii]); 
-    }
-  fclose(f2);
-  f = fopen("CorIni", "r");
+  int nat, i, a, b, j, beg;
+  f = fopen(cif, "r");
   nat = 0;
   while (!feof(f) && nat < 2) 
     {
@@ -768,29 +737,29 @@ int main(int argc, char **argv)
 		}
 	      printf("NT=%d\n", NT);
 	      fscanf(f, "%s ", line);
-  	      if (!strcmp(line, "RF"))
-    		{ 
-      		  //printf("line=%s\n", line);
-      		  beg=0;
-      	          for (i=0; i < NT; i++)
+	      if (!strcmp(line, "RF"))
+		{ 
+		  //printf("line=%s\n", line);
+		  beg=0;
+		  for (i=0; i < NT; i++)
 		    {
-	  	      fscanf(f, "%lf ", &(typesArr[i].rcutFact));
-	  	      printf("typeArr[%d].rcutFact=%f\n", i, typesArr[i].rcutFact);
+		      fscanf(f, "%lf ", &(typesArr[i].rcutFact));
+		      printf("typeArr[%d].rcutFact=%f\n", i, typesArr[i].rcutFact);
 		    }
-    	    	}
-  	      else
-    		{
-     		   sscanf(line, "%d", &typeNP[0]);
-      		   beg=1;
-                   for (i=0; i < NT; i++)
-	             typesArr[i].rcutFact = -1.0;
- 
-                }
-  	      for (i=beg; i < NT; i++)
-    	         {
-      		   fscanf(f, "%d ", &typeNP[i]);
-      		   //printf("typeNP[%d]=%d\n", i, typeNP[i]);
-    		 }
+		}
+	      else
+		{
+		  sscanf(line, "%d", &typeNP[0]);
+		  beg=1;
+		  for (i=0; i < NT; i++)
+		    typesArr[i].rcutFact = -1.0;
+
+		}
+	      for (i=beg; i < NT; i++)
+		{
+		  fscanf(f, "%d ", &typeNP[i]);
+		  //printf("typeNP[%d]=%d\n", i, typeNP[i]);
+		}
 
 #if 0
 	      for (i=0; i < NT; i++)
@@ -895,7 +864,7 @@ int main(int argc, char **argv)
       else if (!strcmp(parname,"parnumA"))
 	NPA = atoi(parval);
       //else if (nat == 0 && !strcmp(parname,"NN"))
-	//NN = atoi(parval);
+      //NN = atoi(parval);
       else if (nat==0 && !strcmp(parname,"saveBonds"))
 	{
 	  sscanf(parval, "%d\n", &saveBonds);	
@@ -923,6 +892,45 @@ int main(int argc, char **argv)
 	NI = atoi(parval);
     }
   fclose(f);
+}
+
+int main(int argc, char **argv)
+{
+  int kk, kmax, kj, i3, j, nbonds, bin, points;
+  long long int jj2, aa, bb;
+  double am, xmed, dist, distSq, rlower, rupper, nIdeal, g0m, r, cost, dx, dy;
+  FILE *f, *f2, *f3;
+  char *s1, *s2;
+  int beg, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
+  int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
+  int jX, jY, jZ, iX, iY, iZ, jj;
+  //int coppie;
+  double refTime=0.0, ti, ene=0.0;
+  int curcolor, ncls, b, almenouno, na, c, i2, j2, ncls2;
+  pi = acos(0.0)*2.0;
+    /* parse arguments */
+  parse_params(argc, argv);
+   
+  f2 = fopen(inputfile, "r");
+  c2 = 0;
+  maxl = 0;
+  while (!feof(f2))
+    {
+      fscanf(f2, "%[^\n]\n", dummy); 
+      if (strlen(dummy)+1 > maxl)
+	maxl = strlen(dummy)+1;
+      c2++;
+    }	
+  nfiles = c2;
+  rewind(f2);
+  fname = malloc(sizeof(char*)*nfiles);
+  for (ii=0; ii < nfiles; ii++)
+    {
+      fname[ii] = malloc(sizeof(char)*maxl);
+      fscanf(f2, "%[^\n]\n", fname[ii]); 
+    }
+  fclose(f2);
+  readCorIni("CorIni");
   printf("NP=%d\n", NP);
   nspots = malloc(sizeof(int)*NP);
   points=100;
@@ -937,6 +945,11 @@ int main(int argc, char **argv)
   //printf("r0[1003]= %f %f %f\n", r0[0][1003], r0[1][1003], r0[2][1003]);
   for (nr1=0; nr1 < nfiles; nr1++)
     {
+      
+      if (fname[nr1][strlen(fname[nr1])-1]=='i' &&
+	  fname[nr1][strlen(fname[nr1])-3]=='I')
+	readCorIni(fname[nr1]);
+
       readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
       
       for (i=0; i < typeNP[0]; i++)
@@ -975,9 +988,11 @@ int main(int argc, char **argv)
 		antpos[kk] = r0[kk][j];
 	      //printf("j=%d %f %f %f\n", j, antpos[0], antpos[1], antpos[2]);
 	      distSq = 0.0;
-	      for (kk=0; kk < 3; kk++)
-		distSq += Sqr(ratLA[2][kk]-antpos[kk]);
-	      
+	      dx = ratLA[2][0]-antpos[0];
+	      dy = ratLA[2][1]-antpos[1];
+	      dx = dx - L*rint(dx/L);
+	      dy = dy - L*rint(dy/L);
+	      distSq = Sqr(dx)+Sqr(dy)+Sqr(ratLA[2][2]-antpos[2]);
 	      if (distSq < Sqr((0.612+0.79)*0.5))
 		{
 		  for (kk=0; kk < 3; kk++)
@@ -989,8 +1004,11 @@ int main(int argc, char **argv)
 		   break; 
 		}
 	      distSq = 0.0;
-	      for (kk=0; kk < 3; kk++)
-		distSq += Sqr(ratLB[2][kk]-antpos[kk]);
+	      dx = ratLB[2][0]-antpos[0];
+	      dy = ratLB[2][1]-antpos[1];
+	      dx = dx - L*rint(dx/L);
+	      dy = dy - L*rint(dy/L);
+	      distSq = Sqr(dx)+Sqr(dy)+Sqr(ratLB[2][2]-antpos[2]);
 	      //printf("dist=%f\n", sqrt(distSq)); 
 	      if (distSq < Sqr((0.612+0.79)*0.5))
 		{
@@ -1021,7 +1039,7 @@ int main(int argc, char **argv)
     }
     
   f2 = fopen("grBIV.dat","w+");
-  cost = 3.14159265359; 
+  cost = 3.14159265359;//*ndb/(L*L); 
   r=delr*0.5; 
   printf("ndb=%f\n", ndb);
   for (i=0; i < points; i++)
