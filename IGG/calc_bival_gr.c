@@ -899,7 +899,7 @@ int main(int argc, char **argv)
 {
   int kk, kmax, kj, i3, j, nbonds, bin, points;
   long long int jj2, aa, bb;
-  double am, xmed, dist, distSq, rlower, rupper, nIdeal, g0m, r, cost, dx, dy;
+  double am, xmed, dist, distSq, rlower, rupper, nIdeal, g0m, r, cost, dx, dy, rmed;
   FILE *f, *f2, *f3;
   char *s1, *s2;
   int beg, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
@@ -934,7 +934,7 @@ int main(int argc, char **argv)
   readCorIni("CorIni");
   printf("NP=%d\n", NP);
   nspots = malloc(sizeof(int)*NP);
-  points=100;
+  points=300;
   delr= 15.0/points;
 
   /* CALCOLA I MAXAX QUI !!! servono per la costruzione delle LL */
@@ -1027,17 +1027,24 @@ int main(int argc, char **argv)
 	    }
 	  if (nbonds==2)
 	    {
-	      distSq=0.0;
-	      for (kk=0; kk < 3; kk++)
-		distSq += Sqr(pos4dist[0][kk]-pos4dist[1][kk]);
+	      //     distSq=0.0;
+	      dx = pos4dist[0][0]-pos4dist[1][0];
+	      dy = pos4dist[0][1]-pos4dist[1][1];
+	      dx = dx - L*rint(dx/L);
+	      dy = dy - L*rint(dy/L);
+	      distSq = Sqr(dx)+Sqr(dy)+Sqr(pos4dist[0][2]-pos4dist[1][2]);
+	      //  for (kk=0; kk < 3; kk++)
+	      //  distSq += Sqr(pos4dist[0][kk]-pos4dist[1][kk]);
 	      dist = sqrt(distSq);
 	      bin = ((int) (dist / delr)); 
               ndb++;
 	      if (bin < points && bin >= 0)
   		{
-  		  g0[bin] += 2.0;
+  		  g0[bin] += 1.0;
   		  //printf("g0[%d]=%.15G\n", bin, g0[bin]);
   		}
+	      else
+		printf("boh bin=%d\n", bin);
 	    }
 	}
     }
@@ -1055,7 +1062,25 @@ int main(int argc, char **argv)
       fprintf(f2, "%.15G %.15G\n", r, g0m);
       r += delr;
     }
+  
   fclose(f2);
 
+  f2 = fopen("grBIV_cumul.dat","w+");
+
+  g0m=0.0;
+  rmed=0.0;
+  r=delr*0.5;
+  for (i=0; i < points; i++)
+    {
+      rlower = ( (double) i )*delr;
+      rupper = rlower + delr;
+      //nIdeal= cost * (Sqr(rupper)-Sqr(rlower));
+      g0m += g0[i] /((double)ndb);
+      rmed += r * g0[i] /((double)ndb);
+      fprintf(f2, "%.15G %.15G\n", r, g0m);
+      r += delr;
+    }
+  printf("AVG R=%f\n", rmed/g0m);
+  fclose(f2);
   return 0;
 }
