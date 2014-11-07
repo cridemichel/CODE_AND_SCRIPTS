@@ -899,7 +899,7 @@ int main(int argc, char **argv)
 {
   int kk, kmax, kj, i3, j, nbonds, bin, points;
   long long int jj2, aa, bb;
-  double am, xmed, dist, distSq, rlower, rupper, nIdeal, g0m, r, cost, dx, dy, rmed;
+  double mindist, am, xmed, dist, distSq, rlower, rupper, nIdeal, g0m, r, cost, dx, dy, rmed;
   FILE *f, *f2, *f3;
   char *s1, *s2;
   int beg, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
@@ -956,6 +956,7 @@ int main(int argc, char **argv)
       printf("reading conf: %s\n", fname[nr1]);
       //readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
       
+      mindist=-1.0;
       for (i=typeNP[0]*4; i < NP; i++)
 	{
 	  for (j=i+1; j < NP; j++)
@@ -973,6 +974,8 @@ int main(int argc, char **argv)
 	      dy = dy - L*rint(dy/L);
 	      distSq = Sqr(dx)+Sqr(dy)+Sqr(antposA[2]-antposB[2]);
 	      dist = sqrt(distSq);
+	      if (mindist==-1 || dist < mindist)
+		mindist=dist;
 	      bin = ((int) (dist / delr)); 
 	      if (bin < points && bin >= 0)
   		{
@@ -983,7 +986,8 @@ int main(int argc, char **argv)
 	    }
 	}
     }
-    
+   
+  printf("Minimum distance is=%f\n", mindist); 
   f2 = fopen("grANT.dat","w+");
   cost = 3.14159265359*typeNP[4]/(L*L); 
   r=delr*0.5; 
@@ -993,7 +997,7 @@ int main(int argc, char **argv)
       rlower = ( (double) i )*delr;
       rupper = rlower + delr;
       nIdeal= cost * (Sqr(rupper)-Sqr(rlower));
-      g0m = g0[i] /((double)typeNP[4])/nIdeal;
+      g0m = g0[i] /((double)typeNP[4])/nIdeal/((double)nfiles);
       fprintf(f2, "%.15G %.15G\n", r, g0m);
       r += delr;
     }
