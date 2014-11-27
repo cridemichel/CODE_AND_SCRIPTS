@@ -2948,10 +2948,12 @@ double calcpotene_GC(int ip)
 #else
   Epot -= numbonds[na];
 #endif
+
 #ifdef MC_AMYLOID_FIBRILS
   /* add torsional elastic energy here! */
   Epot += calc_elastic_torsional_energy(ip);
 #endif
+
   return Epot;
 }
 

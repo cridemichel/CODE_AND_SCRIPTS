@@ -3357,7 +3357,8 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #ifdef MC_KERN_FRENKEL
   double drA[3], drB[3], drAB[3], costhKF, distCoMSq;
   double normdrA, normdrB, normdrAB;
-  double bhin, bhout, nmax, bheight, distKF, distKFSQ;;
+  double bhin, bhout, bheight, distKF, distKFSQ;;
+  int nmax;
 #endif
   double distmin, distSq, ti;
 #ifndef MD_SPOT_GLOBAL_ALLOC
