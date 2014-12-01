@@ -13,6 +13,8 @@ int main(int argc, char **argv)
   double thmax, del, sigb, delfb1, delfb2, delfb3, delfb4;
   int k1, k2, numpoly, parnum=2800, i, j, polylen=20;
 
+  del=0.5;
+  thmax=(30.0/180.0)*3.14159265358979;
   if (argc == 1)
    {
 
@@ -102,8 +104,6 @@ int main(int argc, char **argv)
   fprintf(f,"0 0 0 0 0.0001 1000000000 10000000000 100000\n");
   fprintf(f,"0 0 0 1 0.0001 1000000000 10000000000 100000\n");
   fprintf(f,"0 1 0 1 0.0001 1000000000 10000000000 100000\n");
-  del=0.5;
-  thmax=(30.0/180.0)*3.14159265358979;
   sigb=log(2.0*(pow(1.0+del/2.0,3.0)-1.0)*(1.0-cos(thmax)));
   delfb1=3.1-sigb;	
   delfb2=0.6-sigb;
