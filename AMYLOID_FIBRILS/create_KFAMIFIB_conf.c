@@ -10,6 +10,7 @@ int main(int argc, char **argv)
 {
   FILE *f;
   double theta0, theta0rad, phi, Diam, del0, del0x, del0y, del0z, maxL, pi;
+  double thmax, del, sigb, delfb1, delfb2, delfb3, delfb4;
   int k1, k2, numpoly, parnum=2800, i, j, polylen=20;
 
   if (argc == 1)
@@ -41,6 +42,10 @@ int main(int argc, char **argv)
   else
     L=50.0;
   extradel=0.5;
+  if (L < Diam*polylen*1.01)
+    {
+      L = Diam*polylen*1.01;
+    }
   printf("L=%f phi=%f argc=%d polylen=%d\n", L, phi, argc, polylen);
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
@@ -97,14 +102,21 @@ int main(int argc, char **argv)
   fprintf(f,"0 0 0 0 0.0001 1000000000 10000000000 100000\n");
   fprintf(f,"0 0 0 1 0.0001 1000000000 10000000000 100000\n");
   fprintf(f,"0 1 0 1 0.0001 1000000000 10000000000 100000\n");
-  fprintf(f,"0 2 0 2 3.1 0 0 100000\n"); /* y-axis kern-frenkel patches */
-  fprintf(f,"0 2 0 3 3.1 0 0 100000\n"); /* y-axis kern-frenkel patches */
-  fprintf(f,"0 3 0 3 3.1 0 0 100000\n"); /* y-axis kern-frenkel patches */
-  fprintf(f,"0 4 0 4 0.6 0 0 100000\n"); /* z-axis KF patch */ 
-  fprintf(f,"0 5 0 5 0.6 0 0 100000\n");  /* z-axis KF patch */
-  fprintf(f,"0 4 0 5 0.215 0 0 100000\n");  /* z-axis KF patch */
-  fprintf(f,"0 3 0 4 1.25 0 0 100000\n");  /* perp conf */
-  fprintf(f,"0 2 0 5 1.25 0 0 100000\n");  /* perp conf */
+  del=0.5;
+  thmax=180*30/3.14159265358979;
+  sigb=ln(2.0*(pow(1.0+del/2.0,3.0)-1.0)*(1.0-cos(thmax)));
+  delfb1=3.1-sigb;	
+  delfb2=0.6-sigb;
+  delfb3=0.215-sigb;
+  delfb4=1.25-sigb;
+  fprintf(f,"0 2 0 2 %.15G 0 0 100000\n",delfb1); /* y-axis kern-frenkel patches */
+  fprintf(f,"0 2 0 3 %.15G 0 0 100000\n",delfb1); /* y-axis kern-frenkel patches */
+  fprintf(f,"0 3 0 3 %.15G 0 0 100000\n",delfb1); /* y-axis kern-frenkel patches */
+  fprintf(f,"0 4 0 4 %.15G 0 0 100000\n",delfb2); /* z-axis KF patch */ 
+  fprintf(f,"0 5 0 5 %.15G 0 0 100000\n",delfb2);  /* z-axis KF patch */
+  fprintf(f,"0 4 0 5 %.15G 0 0 100000\n",delfb3);  /* z-axis KF patch */
+  fprintf(f,"0 3 0 4 %.15G 0 0 100000\n",delfb4);  /* perp conf */
+  fprintf(f,"0 2 0 5 %.15G 0 0 100000\n",delfb4);  /* perp conf */
   fprintf(f,"@@@\n");  
   nx=ny=nz=0;
   full=0;
