@@ -2951,7 +2951,7 @@ double calcpotene_GC(int ip)
 
 #ifdef MC_AMYLOID_FIBRILS
   /* add torsional elastic energy here! */
-  Epot += calc_elastic_torsional_energy(ip);
+  Epot += 0.5*calc_elastic_torsional_energy(ip);
 #endif
 
   return Epot;
