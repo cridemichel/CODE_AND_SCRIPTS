@@ -10,11 +10,13 @@ int main(int argc, char **argv)
 {
   FILE *f;
   double theta0, theta0rad, phi, Diam, del0, del0x, del0y, del0z, maxL, pi;
-  double thmax, del, sigb, delfb1, delfb2, delfb3, delfb4;
+  double permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4;
   int k1, k2, numpoly, parnum=2800, i, j, polylen=20;
 
   del=0.5;
-  thmax=(30.0/180.0)*3.14159265358979;
+  thmax=(37.5/180.0)*3.14159265358979;
+   /* permanent spots diameter */
+  permdiam=0.15; /* era 0.119 */
   if (argc == 1)
    {
 
@@ -95,8 +97,8 @@ int main(int argc, char **argv)
   fprintf(f,"2 2 2\n");
   fprintf(f, "1 1 1 1 2 0\n");
   fprintf(f,"6 0\n");
-  fprintf(f,"1 0 0 0.119\n");/* 0: along x axis (permanent) 0.05 means lp=20 */
-  fprintf(f,"-1 0 0 0.119\n");/* 1: along x axis (permanent) */
+  fprintf(f,"1 0 0 %f\n", permdiam);/* 0: along x axis (permanent) 0.05 means lp=20 */
+  fprintf(f,"-1 0 0 %f\n", permdiam);/* 1: along x axis (permanent) */
   fprintf(f,"0  1  0 0.5\n");/* 2: along y axis */ 
   fprintf(f,"0 -1  0 0.5\n");/* 3: along y axis */
   fprintf(f,"0  0  1 0.5\n");/* 4: along z axis */
@@ -104,7 +106,7 @@ int main(int argc, char **argv)
   fprintf(f,"0 0 0 0 0.0001 1000000000 10000000000 100000\n");
   fprintf(f,"0 0 0 1 0.0001 1000000000 10000000000 100000\n");
   fprintf(f,"0 1 0 1 0.0001 1000000000 10000000000 100000\n");
-  sigb=log(2.0*(pow(1.0+del/2.0,3.0)-1.0)*(1.0-cos(thmax)));
+  sigb=log(2.0*(pow(1.0+del/2.0,3.0)-1.0)*pow(1.0-cos(thmax),2.0));
   delfb1=3.1-sigb;	
   delfb2=0.6-sigb;
   delfb3=0.215-sigb;
