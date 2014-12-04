@@ -3900,11 +3900,21 @@ void update_bonds_MC(int ip)
       bb = jj2 % NA;
       if (checkMoveKF==1)
 	{
+#ifdef MC_AMYLOID_FIBRILS
+	  /* 04/12/14 BUG FIX: all spots but first two are kern frenkel ones! */
+	  if (aa >= 3 && bb >= 3)
+	    {
+	      remove_bond(jj, ip, bb, aa);
+	      remove_bond(ip, jj, aa, bb);
+	    }
+
+#else
 	  if (aa == 3 && bb == 3)
 	    {
 	      remove_bond(jj, ip, bb, aa);
 	      remove_bond(ip, jj, aa, bb);
 	    }
+#endif
 	}
       else
 	remove_bond(jj, ip, bb, aa);
