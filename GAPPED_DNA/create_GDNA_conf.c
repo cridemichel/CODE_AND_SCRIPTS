@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 #endif
   del0 = 0.0001;
   del0x = 0.0001;
-  del0y=del0z=Diam*0.5+0.0001;
+  del0y=del0z=Diam*0.4+0.0001;
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       R0[k1][k2]=0.0;
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
   fprintf(f,"%f 0 0 %f\n", permdiam*0.5+16.0, permdiam);/* 0: along x axis (permanent) 0.05 means lp=20 */
   fprintf(f,"%f 0 0 %f\n", -16.15, 0.5);
   fprintf(f,"0 0 0 0 1 0 0 1\n");
-  fprintf(f,"0 1 0 1 0.00001 0 0 1\n");
+  fprintf(f,"0 1 0 1 1 0 0 100000\n");
   fprintf(f, "@@@\n");
   nx=ny=nz=0;
   full=0;
