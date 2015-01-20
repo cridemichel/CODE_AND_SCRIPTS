@@ -939,15 +939,6 @@ void find_bonds_one(int i)
 		  for (nn=0; nn < nbonds; nn++)
 		    {
 		      //printf("aa=%d bb=%d uno=%d due=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn], i/4, j/4);
-#ifdef MC_GAPDNA
-		      if (dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
-			  && mapbondsaFlex[nn] < 1 && mapbondsbFlex[nn] < 1)
-			{
-		  	  rejectMove = 1;
-			  continue;
-			}
-
-#endif
 #ifdef MC_KERN_FRENKEL
 		      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
 			  && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
@@ -957,7 +948,7 @@ void find_bonds_one(int i)
 			}
 #elif defined(MC_GAPDNA)
 		      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
-			  && mapbondsaFlex[nn] == 0 && mapbondsbFlex[nn] == 0)
+			  && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1)
 			{
 		  	  rejectMove = 1;
 			  continue;
@@ -975,8 +966,12 @@ void find_bonds_one(int i)
 			      continue;
 			    }
 #elif defined(MC_GAPDNA)
+#if 0
+			  printf("i=%d j=%d numbonds[i]=%d numbonds[j]=%d\n", i, j, numbonds[i], numbonds[j]);
+			  printf("polylen=%d i/OprogStatus.polylen=%d j/OprogStatus.polylen=%d mapbondsaFlexa[nn]=%d\n", OprogStatus.polylen, i/OprogStatus.polylen, j/OprogStatus.polylen, mapbondsaFlex[nn]);
+#endif
 			  if ((i/OprogStatus.polylen != j/OprogStatus.polylen) && 
-			      mapbondsaFlex[nn] == 0 && mapbondsbFlex[nn] == 0)
+			      mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1)
 			    {
 			      //rejectMove = 1;
 			      continue;
