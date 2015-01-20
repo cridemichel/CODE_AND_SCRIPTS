@@ -222,12 +222,12 @@ int parnumA, parnumB;
 #ifdef MD_LL_BONDS
 long long int *bondscache, **bonds;
 int *numbonds;
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
 long long int *bondscache2;
 #endif
 #else
 int *bondscache, *numbonds, **bonds;
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
 int *bondscache2;
 #endif
 #endif
@@ -1737,6 +1737,9 @@ void usrInitBef(void)
     OprogStatus.costhKF = 0.1;
     OprogStatus.distKF = 1.2;
     OprogStatus.polylen = 4;
+#endif
+#ifdef MC_GAPDNA
+    OprogStatus.polylen = 2;
 #endif
 #ifdef MC_AMYLOID_FIBRILS
     OprogStatus.tors_theta0 = 10.0;
@@ -5143,12 +5146,12 @@ void usrInitAft(void)
 #else
 #ifdef MD_LL_BONDS
   bondscache = (long long int *) malloc(sizeof(long long int)*OprogStatus.maxbonds);
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
   bondscache2 = (long long int *) malloc(sizeof(long long int)*OprogStatus.maxbonds);
 #endif
 #else
   bondscache = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
   bondscache2 = (int *) malloc(sizeof(int)*OprogStatus.maxbonds);
 #endif
 #endif

@@ -730,7 +730,7 @@ extern int clsNPT;
 #ifdef MC_FREEZE_BONDS
 extern int refFB, fakeFB;
 #endif
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
 int rejectMove, checkMoveKF=0;
 #endif
 #ifdef MC_HCSOFT
@@ -939,6 +939,15 @@ void find_bonds_one(int i)
 		  for (nn=0; nn < nbonds; nn++)
 		    {
 		      //printf("aa=%d bb=%d uno=%d due=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn], i/4, j/4);
+#ifdef MC_GAPDNA
+		      if (dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
+			  && mapbondsaFlex[nn] < 1 && mapbondsbFlex[nn] < 1)
+			{
+		  	  rejectMove = 1;
+			  continue;
+			}
+
+#endif
 #ifdef MC_KERN_FRENKEL
 		      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
 			  && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
@@ -946,6 +955,14 @@ void find_bonds_one(int i)
 		  	  rejectMove = 1;
 			  continue;
 			}
+#elif defined(MC_GAPDNA)
+		      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
+			  && mapbondsaFlex[nn] == 0 && mapbondsbFlex[nn] == 0)
+			{
+		  	  rejectMove = 1;
+			  continue;
+			}
+
 #endif
 		      if (dists[nn] < 0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			{
@@ -957,6 +974,14 @@ void find_bonds_one(int i)
 			      //rejectMove = 1;
 			      continue;
 			    }
+#elif defined(MC_GAPDNA)
+			  if ((i/OprogStatus.polylen != j/OprogStatus.polylen) && 
+			      mapbondsaFlex[nn] == 0 && mapbondsbFlex[nn] == 0)
+			    {
+			      //rejectMove = 1;
+			      continue;
+			    }
+
 #endif
 #if defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)
 			  /* se trova un solo bond termina */
@@ -3354,7 +3379,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #if defined(MC_SWHC) || defined(MC_SWELL) || defined(MC_HCSOFT)
   int retchk;
 #endif
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
   double drA[3], drB[3], drAB[3], costhKF, distCoMSq;
   double normdrA, normdrB, normdrAB;
   double bhin, bhout, bheight, distKF, distKFSQ;;
@@ -3691,6 +3716,8 @@ typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfP
 	}
       else
 	dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
+#elif defined(MC_GAPDNA)
+      dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
 #else
       dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
 #endif
