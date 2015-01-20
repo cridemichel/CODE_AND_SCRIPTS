@@ -947,13 +947,22 @@ void find_bonds_one(int i)
 			  continue;
 			}
 #elif defined(MC_GAPDNA)
-		      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
+#if 0
+	    	      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
+			  && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1)
+			printf("qui\n");
+#endif
+      		      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
 			  && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1)
 			{
 		  	  rejectMove = 1;
 			  continue;
 			}
 
+#if 0
+		      if (checkMoveKF && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
+			printf("qui dist=%f i=%d j=%d mapbondsaFlex=%d %d rejectMove=%d\n", dists[nn], i, j, mapbondsaFlex[nn], mapbondsbFlex[nn], rejectMove);
+#endif
 #endif
 		      if (dists[nn] < 0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			{
