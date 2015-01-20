@@ -7430,6 +7430,7 @@ int mcmotion(void)
       checkMoveKF=1;
 #endif
       update_bonds_MC(ip);
+
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
       checkMoveKF = 0;
 #endif	
@@ -7458,8 +7459,6 @@ int mcmotion(void)
 	{
      	  if (enn <= eno)
     	    {
-    	      //	  if (abs(enn-eno) >=1 )
-    	      //	    printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
     	      dorej=0;
 #ifdef MC_NVE
 	      if (OprogStatus.ensembleMC==4)
@@ -7500,7 +7499,6 @@ int mcmotion(void)
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
       if (rejectMove==1)
 	{
-	  //printf("qui?!?\n");
 	  dorej=2;
 	}
       else
