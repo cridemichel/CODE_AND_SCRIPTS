@@ -778,6 +778,9 @@ struct progStatus
   double costhKF;
   double distKF;
 #endif
+#ifdef MC_GAPDNA
+  int polylen;
+#endif
 #ifdef MC_AMYLOID_FIBRILS
   double tors_k;
   double tors_theta0;
@@ -1191,6 +1194,9 @@ struct pascii opro_ascii[] =
 #ifdef MC_KERN_FRENKEL
   {"costhKF",   &OS(costhKF),                       1,         1, "%.8G"},
   {"distKF" ,   &OS(distKF),                        1,         1, "%.8G"},
+  {"polylen",   &OS(polylen),                       1,         1, "%d"},
+#endif
+#ifdef MC_GAPDNA
   {"polylen",   &OS(polylen),                       1,         1, "%d"},
 #endif
 #ifdef MC_AMYLOID_FIBRILS
@@ -1799,6 +1805,9 @@ struct singlePar OsinglePar[] = {
 #ifdef MC_KERN_FRENKEL
   {"costhKF",   &OprogStatus.costhKF, CT},
   {"distKF",    &OprogStatus.distKF,  CT},
+  {"polylen",   &OprogStatus.polylen, INT},
+#endif
+#ifdef MC_GAPDNA
   {"polylen",   &OprogStatus.polylen, INT},
 #endif
 #ifdef MC_AMYLOID_FIBRILS
