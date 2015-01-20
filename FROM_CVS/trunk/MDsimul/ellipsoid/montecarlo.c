@@ -206,13 +206,13 @@ extern int evIdC, evIdD, evIdE;
 extern double *treeRxC, *treeRyC, *treeRzC;
 #ifdef MD_LL_BONDS
 extern long long int *bondscache, **bonds;
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
 extern long long int *bondscache2;
 #endif
 extern int *numbonds;
 #else
 extern int *bondscache, *numbonds, **bonds;
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL)||defined(MC_GAPDNA)
 extern int *bondscache2;
 #endif
 #endif
@@ -3623,7 +3623,7 @@ extern int refFB, fakeFB;
 
 void move_box(int *ierr)
 {
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
 #ifdef MD_LL_BONDS
   int nb, kk;
   long long int jj, jj2, aa, bb;
@@ -3744,6 +3744,23 @@ void move_box(int *ierr)
 	    }
 	}
     }
+#elif defined(MC_GAPDNA)
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      nb = numbonds[i];
+      for (kk = 0; kk < nb; kk++)
+	{
+	  jj = bonds[i][kk] / (NANA);
+	  jj2 = bonds[i][kk] % (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  if (aa > 0 && bb > 0)
+    	    {
+	      //remove_bond(jj, i, bb, aa);
+	      remove_bond(i, jj, aa, bb);
+	    }
+	}
+    }
 #else
   for (i=0; i < Oparams.parnum; i++)
     numbonds[i] = 0;
@@ -3856,7 +3873,7 @@ void move_box(int *ierr)
 }
 extern void remove_bond(int , int , int , int);
 void find_bonds_one(int ip);
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL)||defined(MC_GAPDNA)
 extern int checkMoveKF;
 #endif
 void update_bonds_MC(int ip)
@@ -3919,6 +3936,30 @@ void update_bonds_MC(int ip)
       else
 	remove_bond(jj, ip, bb, aa);
     }
+#elif defined(MC_GAPDNA)
+#ifdef MD_LL_BONDS
+  memcpy(bondscache2, bonds[ip], sizeof(long long int)*numbonds[ip]);
+#else
+  memcpy(bondscache2, bonds[ip], sizeof(int)*numbonds[ip]);
+#endif
+  for (kk = 0; kk < nb; kk++)
+    {
+      jj = bondscache2[kk] / (NANA);
+      jj2 = bondscache2[kk] % (NANA);
+      aa = jj2 / NA;
+      bb = jj2 % NA;
+      if (checkMoveKF==1)
+	{
+	  /* 04/12/14 BUG FIX: all spots but first two are kern frenkel ones! */
+	  if (aa > 0 && bb > 0)
+	    {
+	      remove_bond(jj, ip, bb, aa);
+	      remove_bond(ip, jj, aa, bb);
+	    }
+	}
+      else
+	remove_bond(jj, ip, bb, aa);
+    }
 #else
   for (kk = 0; kk < nb; kk++)
     {
@@ -3931,6 +3972,9 @@ void update_bonds_MC(int ip)
 #endif
     
 #ifdef MC_KERN_FRENKEL
+  if (!checkMoveKF)
+    numbonds[ip] = 0;
+#elif defined(MC_GAPDNA)
   if (!checkMoveKF)
     numbonds[ip] = 0;
 #else
@@ -7336,7 +7380,7 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
     return 0;
 }
 #endif
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
 extern int rejectMove, checkMoveKF;
 #endif
 int mcmotion(void)
@@ -7381,12 +7425,12 @@ int mcmotion(void)
 	  fakeFB=1;
 	}
 #endif
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
       rejectMove = 0;
       checkMoveKF=1;
 #endif
       update_bonds_MC(ip);
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
       checkMoveKF = 0;
 #endif	
       /* qui basta calcolare l'energia della particella che sto muovendo */
@@ -7453,7 +7497,7 @@ int mcmotion(void)
 	    }
 	}
 #else
-#ifdef MC_KERN_FRENKEL
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
       if (rejectMove==1)
 	{
 	  //printf("qui?!?\n");
