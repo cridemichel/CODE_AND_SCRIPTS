@@ -3951,7 +3951,7 @@ void update_bonds_MC(int ip)
       if (checkMoveKF==1)
 	{
 	  /* 04/12/14 BUG FIX: all spots but first two are kern frenkel ones! */
-	  if (aa > 0 && bb > 0)
+	  if (aa > 1 && bb > 1)
 	    {
 	      remove_bond(jj, ip, bb, aa);
 	      remove_bond(ip, jj, aa, bb);
@@ -7443,6 +7443,10 @@ int mcmotion(void)
       enn=calcpotene();
 #else
       enn=calcpotene_GC(ip);
+#endif
+#if 0
+      if (enn > eno) 
+	printf("BOH rejectMove=%d\n", rejectMove);
 #endif
 #ifdef MC_FREEZE_BONDS
  //exit(-1);
