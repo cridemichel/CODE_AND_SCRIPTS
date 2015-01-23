@@ -11,11 +11,12 @@ int main(int argc, char **argv)
   FILE *f;
   double orient, theta0, theta0rad, phi, Diam, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len;
+  double del00x, del00y, del00z;
   int k1, k2, numpoly, parnum=1000, i, j, polylen=2;
 
   del=0.5;
   /* permanent spots diameter */
-  permdiam=6.67; 
+  permdiam=3.333; 
   Len=32.0;
   if (argc == 1)
    {
@@ -68,9 +69,10 @@ int main(int argc, char **argv)
 	R[k1][k2] =  malloc(sizeof(double)*polylen);
       }
 #endif
-  del0 = 0.0001;
-  del0x = 0.0001;
-  del0y=del0z=Diam*0.4+0.0001;
+  del00x = Len*0.5+0.0001;
+  del00y=del00z=Diam*0.5+0.0001;
+  del0x = 0.01;
+  del0y=del0z=Diam*0.1+0.0001;
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       R0[k1][k2]=0.0;
@@ -114,7 +116,7 @@ int main(int argc, char **argv)
   maxL = L;
   numpoly=parnum/polylen;
   printf("numpoly=%d numpoly*polylen=%d\n", numpoly, numpoly*polylen);
-  drx = Len*1.0001*((double)polylen)+del0x; //0.500000000001;
+  drx = Len*((double)polylen)+del0x; //0.500000000001;
   dry = Diam+del0y;
   drz = Diam+del0z;
   if (parnum%polylen != 0)
@@ -124,21 +126,21 @@ int main(int argc, char **argv)
     }
   for (i=0; i < numpoly; i++)
     {
-      rxl = rxc[polylen-1]+nx*drx+del0;
-      if (rxl+Diam*0.5 > L)
+      rxl = rxc[polylen-1]+nx*drx+del00x;
+      if (rxl+Len*0.5 > L)
 	{
 	  ny++;
 	  nx=0;
-	  rxl = rxc[polylen-1]+nx*drx+del0;
+	  rxl = rxc[polylen-1]+nx*drx+del00x;
 	}
-      ryl = ryc[polylen-1]+ny*dry+del0;
+      ryl = ryc[polylen-1]+ny*dry+del00y;
       if (ryl+Diam*0.5 > L)
 	{
 	  nz++;
 	  ny=0;
-	  ryl = ryc[polylen-1]+ny*dry+del0;
+	  ryl = ryc[polylen-1]+ny*dry+del00y;
       	}
-      rzl = rzc[polylen-1]+nz*drz+del0;
+      rzl = rzc[polylen-1]+nz*drz+del00z;
       if (rzl+Diam*0.5 > L)
 	{
 	  full=1;
@@ -146,10 +148,10 @@ int main(int argc, char **argv)
 
       for (j = 0; j < polylen; j++)
 	{
-	  rx[i*polylen+j] = rxc[j]+nx*drx+del0;
+	  rx[i*polylen+j] = rxc[j]+nx*drx+del00x;
 	  //printf("nx=%f i=%d j=%d x=%f\n", nx, i, j,  rx[i*polylen+j]);
-	  ry[i*polylen+j] = ryc[j]+ny*dry+del0;
-	  rz[i*polylen+j] = rzc[j]+nz*drz+del0;
+	  ry[i*polylen+j] = ryc[j]+ny*dry+del00y;
+	  rz[i*polylen+j] = rzc[j]+nz*drz+del00z;
 #if 0
       	  for (k1=0; k1 < 3; k1++)
     	    for (k2=0; k2 < 3; k2++)
