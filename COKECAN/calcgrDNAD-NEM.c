@@ -122,14 +122,17 @@ void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, doubl
 	  for (i = 0; i < *NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
+#if 0	      
 	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
 		{
-		  //sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
-		  sscanf (line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
-	  	    &(r[0][i]), &(r[1][i]), &(r[2][i]), 
-	  	    &(R[0][0][i]), &(R[0][1][i]), &(R[0][2][i]), &(R[1][0][i]), &(R[1][1][i]), 
-	  	    &(R[1][2][i]), &(R[2][0][i]), &(R[2][1][i]), &(R[2][2][i]), &dummyint);
-	}
+		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+		}
+#endif
+	      sscanf (line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
+	    	      &(r[0][i]), &(r[1][i]), &(r[2][i]), 
+	    	      &(R[0][0][i]), &(R[0][1][i]), &(R[0][2][i]), &(R[1][0][i]), &(R[1][1][i]), 
+	    	      &(R[1][2][i]), &(R[2][0][i]), &(R[2][1][i]), &(R[2][2][i]), &dummyint);
+
 	      //printf("r[%d]=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
 	    }
 	  if (mcsim==1)
@@ -341,10 +344,10 @@ void diagonalize(double M[3][3], double ev[3])
       for(j=0; j<3; j++) eigvec[i][j]=a[j+3*i];		
     }	
 }
-void build_ref_system(void);
+void build_ref_system(void)
 {
   int k;
-  double sp;
+  double sp, norm;
   /* build the nematic reference system */
   vecz[0] = nv[0];
   vecz[1] = nv[1];
@@ -372,7 +375,7 @@ void build_ref_system(void);
 
 void calc_nem_vec(void)
 {
-  int a, b, numev;
+  int a, b, numev, i;
   double St, ev[3];
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
@@ -671,7 +674,7 @@ int main(int argc, char** argv)
   rewind(f2);
   nf = 0;
 
-  if (!nonem)
+  if (!nonem && calcnv==0)
     {
       /* build the nematic reference system */
       vecz[0] = nv[0];
@@ -709,7 +712,6 @@ int main(int argc, char** argv)
       readconf(fname, &time, &refTime, &NP, &NPA, x, w, DR);
       if (calcnv)
 	{
-	
 	  calc_nem_vec();
 	  build_ref_system();
 	}
@@ -946,7 +948,7 @@ int main(int argc, char** argv)
   fclose(f2);
   printf("Parallel Range [%.15G:%.15G]\n", minpara, maxpara);
   printf("Perpendicular Range [%.15G:%.15G]\n", minperp, maxperp);
-  printf("Average S=%f\n", S/((double)nf);)
+  printf("Average S=%f\n", S/((double)nf));
   return 0;
 }
 
