@@ -9,7 +9,7 @@ int mcsim=0, cubic_box=1, nonem=0, calcnv=0;
 int N, particles_type=1, k1, k2;
 double *x[3], L, ti, *w[3], storerate; 
 double Lx, Ly, Lz;
-double nv[3], vecx[3], vecy[3], vecz[3];
+double nv[3], vecx[3], vecy[3], vecz[3], *R[3][3];
 double *DR[3], deltaAA=-1.0, deltaBB=-1.0, deltaAB=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0, 
        Dr, theta, sigmaSticky=-1.0, sa[2], sb[2], sc[2], maxax0, maxax1, maxax, maxsax, maxsaxAA, maxsaxAB, maxsaxBB;
 char fname[1024], inputfile[1024];
@@ -20,7 +20,7 @@ int foundDRs=0, foundrot=0;
 void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, double *r[3], double *w[3], double *DR[3])
 {
   FILE *f;
-  int nat=0, i, cpos;
+  int nat=0, i, cpos, dummyint;
   double dt=-1;
   int curstp=-1, NP1, NP2;
   *ti = -1.0;
@@ -124,8 +124,12 @@ void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, doubl
 	      fscanf(f, "%[^\n]\n", line); 
 	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
 		{
-		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
-		}
+		  //sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+		  sscanf (line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
+	  	    &(r[0][i]), &(r[1][i]), &(r[2][i]), 
+	  	    &(R[0][0][i]), &(R[0][1][i]), &(R[0][2][i]), &(R[1][0][i]), &(R[1][1][i]), 
+	  	    &(R[1][2][i]), &(R[2][0][i]), &(R[2][1][i]), &(R[2][2][i]), &dummyint);
+	}
 	      //printf("r[%d]=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
 	    }
 	  if (mcsim==1)
@@ -366,7 +370,7 @@ void build_ref_system(void);
   vectProdVec(vecz, vecx, vecy);
 }
 
-void calcnv(void)
+void calc_nem_vec(void)
 {
   int a, b, numev;
   double St, ev[3];
@@ -375,17 +379,20 @@ void calcnv(void)
       {
 	Q[a][b] = 0.0;      
       }
+  for (i=0; i < NP; i++)
+    {
+      for (a=0; a < 3; a++)
+	for (b=0; b < 3; b++)
+	  {
+	    Q[a][b] += 1.5 * R[0][a][i]*R[0][b][i];
+	    if (a==b)
+	      Q[a][a] -= 0.5;
+	  }
+    }
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
-	Q[a][b] += 1.5 * R[0][a]*R[0][b];
-	if (a==b)
-	  Q[a][a] -= 0.5;
-      }
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      {
-	Q[a][b] /= ((double)N);
+	Q[a][b] /= ((double)NP);
       } 
   diagonalize(Q, ev);
   if (fabs(ev[0]) > fabs(ev[1]))
@@ -528,6 +535,9 @@ int main(int argc, char** argv)
     {
       x[a] = malloc(sizeof(double)*NP);
       w[a] = malloc(sizeof(double)*NP);
+      /* allocate orientations */
+      for (b=0; b < 3; b++)      
+	R[a][b] = malloc(sizeof(double)*NP);
     }
 
   if (!eventDriven)
@@ -699,6 +709,7 @@ int main(int argc, char** argv)
       readconf(fname, &time, &refTime, &NP, &NPA, x, w, DR);
       if (calcnv)
 	{
+	
 	  calc_nem_vec();
 	  build_ref_system();
 	}
