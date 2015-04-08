@@ -5,7 +5,7 @@
 #define Sqr(x) ((x)*(x))
 char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
-int mcsim=0, cubic_box=1, nonem=0;
+int mcsim=0, cubic_box=1, nonem=0, calcnv=0;
 int N, particles_type=1, k1, k2;
 double *x[3], L, ti, *w[3], storerate; 
 double Lx, Ly, Lz;
@@ -162,7 +162,7 @@ void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, doubl
 
 void print_usage(void)
 {
-  printf("calcgr [--nonem/-nn] [--mcsim/-mc] [--isoav/-ia] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
+  printf("calcgr [--nonem/-nn] [--calcnemvec/-cv] [--mcsim/-mc] [--isoav/-ia] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
   exit(0);
 }
 double threshold=0.05;
@@ -200,6 +200,10 @@ void parse_param(int argc, char** argv)
       else if (!strcmp(argv[cc],"--nonem")||!strcmp(argv[cc],"-nn"))
 	{
 	  nonem=1;
+	}
+      else if (!strcmp(argv[cc],"--calcnemvec")||!strcmp(argv[cc],"-cv"))
+	{
+	  calcnv=1;
 	}
       else if (!strcmp(argv[cc],"--nemvector")||!strcmp(argv[cc],"-nv"))
 	{
@@ -305,8 +309,92 @@ double max3(double a, double b, double c)
     m = c;
   return m;
 }
+double eigvec[3][3], *eigvec_n[3][3], eigvec_t[3][3];
+int eigenvectors=1;
+double S=0, Q[3][3];
+void diagonalize(double M[3][3], double ev[3])
+{
+  double a[9], work[45];
+  char jobz, uplo;
+  int info, i, j, lda, lwork;
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) a[j+3*i]=M[j][i];		
+      //for(j=0; j<3; j++) a[j][i]=M[j][i];		
+    }	
+  lda = 3;
+  if (eigenvectors)
+    jobz='V';
+  else
+    jobz='N';
+  uplo='U';
+  lwork = 45;
+  dsyev_(&jobz, &uplo, &lda, a, &lda, ev, work, &lwork,  &info);  
+  if (!eigenvectors)
+    return;
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) eigvec[i][j]=a[j+3*i];		
+    }	
+}
 
-
+void calcnv(void)
+{
+  int a, b;
+  double ev[3];
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      {
+	Q[a][b] = 0.0;      
+      }
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      {
+	Q[a][b] += 1.5 * R[0][a]*R[0][b];
+	if (a==b)
+	  Q[a][a] -= 0.5;
+      }
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      {
+	Q[a][b] /= ((double)N);
+      } 
+  diagonalize(Q, ev);
+  if (fabs(ev[0]) > fabs(ev[1]))
+    S += ev[0];
+  else
+    S += ev[1];  
+  if (fabs(ev[2]) > S)
+    S += ev[2];
+}
+void build_ref_system(void);
+{
+  int k;
+  double sp;
+  /* build the nematic reference system */
+  vecz[0] = nv[0];
+  vecz[1] = nv[1];
+  vecz[2] = nv[2];
+  //printf("delr=%.15G nematic=%f %f %f\n", delr, nv[0], nv[1], nv[2]);
+  vecx[0] = 1.0;
+  vecx[1] = 1.0;
+  vecx[2] = 1.0;
+  if (vecx[0] == vecz[0] && vecx[1]==vecz[1] && vecx[2]==vecz[2])
+    {
+      vecx[0] = 1.0;
+      vecx[1] = -1.0;
+      vecx[2] = 1.0;
+    }
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=vecx[k]*vecz[k];
+  for (k=0; k < 3 ; k++)
+    vecx[k] -= sp*vecz[k];
+  norm = calc_norm(vecx);
+  for (k=0; k < 3 ; k++)
+    vecx[k] = vecx[k]/norm;
+  vectProdVec(vecz, vecx, vecy);
+}
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *f1;
@@ -436,9 +524,8 @@ int main(int argc, char** argv)
     particles_type = 2; /* 2 means square well system*/
   else if (sigmaAA != -1.0)
     particles_type = 0;
-  
 
-   if (particles_type == 1)
+  if (particles_type == 1)
     {
       maxax0 = sa[0];
       if (sb[0] > maxax0)
@@ -598,6 +685,8 @@ int main(int argc, char** argv)
       nf++;
       NPA = -1;
       readconf(fname, &time, &refTime, &NP, &NPA, x, w, DR);
+      if (calcnv)
+	calc_nem_vec();
       //printf("NP=%d NPA=%d\n", NP, NPA);
       for (i=0; i < NP-1; i++)
 	for (j = i+1; j < NP; j++)
@@ -831,6 +920,7 @@ int main(int argc, char** argv)
   fclose(f2);
   printf("Parallel Range [%.15G:%.15G]\n", minpara, maxpara);
   printf("Perpendicular Range [%.15G:%.15G]\n", minperp, maxperp);
+  printf("Average S=%f\n", S/((double)nf);)
   return 0;
 }
 
