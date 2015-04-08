@@ -337,36 +337,6 @@ void diagonalize(double M[3][3], double ev[3])
       for(j=0; j<3; j++) eigvec[i][j]=a[j+3*i];		
     }	
 }
-
-void calcnv(void)
-{
-  int a, b;
-  double ev[3];
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      {
-	Q[a][b] = 0.0;      
-      }
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      {
-	Q[a][b] += 1.5 * R[0][a]*R[0][b];
-	if (a==b)
-	  Q[a][a] -= 0.5;
-      }
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      {
-	Q[a][b] /= ((double)N);
-      } 
-  diagonalize(Q, ev);
-  if (fabs(ev[0]) > fabs(ev[1]))
-    S += ev[0];
-  else
-    S += ev[1];  
-  if (fabs(ev[2]) > S)
-    S += ev[2];
-}
 void build_ref_system(void);
 {
   int k;
@@ -394,6 +364,48 @@ void build_ref_system(void);
   for (k=0; k < 3 ; k++)
     vecx[k] = vecx[k]/norm;
   vectProdVec(vecz, vecx, vecy);
+}
+
+void calcnv(void)
+{
+  int a, b, numev;
+  double St, ev[3];
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      {
+	Q[a][b] = 0.0;      
+      }
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      {
+	Q[a][b] += 1.5 * R[0][a]*R[0][b];
+	if (a==b)
+	  Q[a][a] -= 0.5;
+      }
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      {
+	Q[a][b] /= ((double)N);
+      } 
+  diagonalize(Q, ev);
+  if (fabs(ev[0]) > fabs(ev[1]))
+   { 
+     St = ev[0];
+     numev=0;
+   }
+  else
+    {
+      St = ev[1];
+      numev=1;
+    }  
+  if (fabs(ev[2]) > St)
+    {
+      St = ev[2];
+      numev=2;
+    }
+  S+=St;
+  for (a=0; a < 3; a++)
+    nv[a] = eigvec[numev][a];
 }
 int main(int argc, char** argv)
 {
@@ -686,7 +698,10 @@ int main(int argc, char** argv)
       NPA = -1;
       readconf(fname, &time, &refTime, &NP, &NPA, x, w, DR);
       if (calcnv)
-	calc_nem_vec();
+	{
+	  calc_nem_vec();
+	  build_ref_system();
+	}
       //printf("NP=%d NPA=%d\n", NP, NPA);
       for (i=0; i < NP-1; i++)
 	for (j = i+1; j < NP; j++)
