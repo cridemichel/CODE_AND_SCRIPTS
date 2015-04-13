@@ -151,8 +151,8 @@ int main(int argc, char **argv)
 	  CM[2] = comz;
 	  calcItens(Itens, CM, i*natprot, i*natprot+natprot-1);
 	  diagonalize(Itens, ev);
-	  fprintf(fout, "%.12G %.12G %.12G %f %f %f %f %f %f %f %f %f\n", comx, comy, comz, eigvec[0][0], eigvec[0][1], eigvec[0][2], 
-		  eigvec[1][0], eigvec[1][1], eigvec[1][2], eigvec[2][0], eigvec[2][1], eigvec[2][2]);
+	  fprintf(fout, "%.12G %.12G %.12G %f %f %f %f %f %f %f %f %f %f %f %f\n", comx, comy, comz, eigvec[0][0], eigvec[0][1], eigvec[0][2], 
+		  eigvec[1][0], eigvec[1][1], eigvec[1][2], eigvec[2][0], eigvec[2][1], eigvec[2][2], sqrt(ev[0]), sqrt(ev[1]), sqrt(ev[2]));
 	}
       for (i=0; i < numprot; i++) 
 	fprintf(fout, "0 0 0\n");
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
       for (i=0; i < numatoms; i++) 
 	fprintf(fout, "0 0 0\n");
 #endif
-      fprintf(fout, "%f\n", L[0]);
+      fprintf(fout, "%f %f %f\n", L[0], L[1], L[2]);
       //fprintf(fout, "%s\n", line);
       fclose(fout);
       nframe++;
