@@ -6,7 +6,7 @@
 double *r[3], *R[3][3], L[3], *sax[3], *msax[3], Lx, Ly, Lz;
 const int numprot = 64;
 int mcsim=0;
-void tRDiagRpw(int i, double M[3][3], double D[3], double **Ri)
+void tRDiagRpw(int i, double M[3][3], double D[3], double Ri[3][3])
 {
   int k1, k2, k3;
   double Di[3][3];
@@ -241,8 +241,8 @@ double brentPW(double ax, double bx, double cx, double tol, double *xmin, double
 double check_overlap_pw(int i, int j, double shift[3])
 {
   const double tolPW=1.0E-12;
-  double res, A[3][3], B[3][3], xmin; 
-  int k1, k2;
+  double res, A[3][3], B[3][3], xmin, RMi[3][3], RMj[3][3]; 
+  int k1, k2, a, b;
   double  DA[3], DB[3], rA[3], rB[3];
 
 
@@ -256,11 +256,17 @@ double check_overlap_pw(int i, int j, double shift[3])
 
   for (k1=0; k1 < 3; k1++)
     {
-      DA[k1]= 1.0/Sqr(sax[i][k1]);
-      DB[k1]= 1.0/Sqr(sax[j][k1]);
+      DA[k1]= 1.0/Sqr(sax[k1][i]);
+      DB[k1]= 1.0/Sqr(sax[k1][j]);
     }
-  tRDiagRpw(i, A, DA, R[i]);
-  tRDiagRpw(j, B, DB, R[j]);
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      {
+	RMi[a][b] = R[a][b][i];
+	RMj[a][b] = R[a][b][j];
+      }
+  tRDiagRpw(i, A, DA, RMi);
+  tRDiagRpw(j, B, DB, RMj);
 
   res =  - brentPW(0, 0.5, 1.0, tolPW, &xmin, rA, A, rB, B);
   if (brentPWTooManyIter)
@@ -279,7 +285,8 @@ void readconf(char *fname, double *r[3], double *R[3][3], int *NP, int *NPA)
   int nat=0, i, cpos, dummyint;
   double dt=-1;
   int curstp=-1, NP1, NP2;
-//  *ti = -1.0;
+  //  *ti = -1.0;
+  //printf("fn=%s\n", fname);
   f = fopen(fname, "r");
   while (!feof(f)) 
     {
@@ -388,11 +395,11 @@ void readconf(char *fname, double *r[3], double *R[3][3], int *NP, int *NPA)
 		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
 		}
 #endif
-	      sscanf (line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
+	      sscanf (line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n",
 	    	      &(r[0][i]), &(r[1][i]), &(r[2][i]), 
 	    	      &(R[0][0][i]), &(R[0][1][i]), &(R[0][2][i]), &(R[1][0][i]), &(R[1][1][i]), 
 	    	      &(R[1][2][i]), &(R[2][0][i]), &(R[2][1][i]), &(R[2][2][i]), &sax[0][i], &sax[1][i], &sax[2][i],
-		      &msax[0], &msax[1], &msax[2]);
+		      &msax[0][i], &msax[1][i], &msax[2][i]);
 
 	      //printf("r[%d]=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
 	    }
@@ -434,7 +441,7 @@ void main(int argc, char **argv)
   FILE *f;
   double nf=0.0, shift[3], sf, avsax[3];
   int i, j, a, b, done;
-  strcpy(inputfile, argv[0]);
+  strcpy(inputfile, argv[1]);
 
   for (a=0; a < 3; a++)
     {
@@ -455,11 +462,13 @@ void main(int argc, char **argv)
     {
       fscanf(f, "%[^\n]\n", fname);
       nf++; 
+      printf("fname=%s\n", fname);
       readconf(fname, r, R, &NP, &NPA);
       for (i=0; i < numprot; i++)
 	{
+	  printf("i=%d sax= %f %f %f\n", i, sax[0][i], sax[1][i], sax[2][i]);
 	  done=0;
-	  for (sf=1.0; sf < 100 && done==0; sf+=0.05)
+	  for (sf=1.0; sf < 100 && done==0; sf+=0.5)
 	    {
 	      sax[0][i] *= sf;
 	      sax[1][i] *= sf;
