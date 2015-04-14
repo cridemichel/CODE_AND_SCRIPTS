@@ -92,11 +92,36 @@ void calcItens(double I[3][3], double RCM[3], int iINI, int iEND)
 #endif	
 }
 #endif
+double max3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b > m)
+    m = b;
+  if (c > m)
+    m = c;
+  return m;
+}
+void vectProdVec(double *A, double *B, double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
+}
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
 int main(int argc, char **argv)
 {
   FILE *fin, *fout;
   int i, ifirst, jj, j, nframe, nhdr;
-  double dx, dy, dz, CM[3], Itens[3][3], ev[3];
+  double distx, disty, distz;
+  double norm, vp[3], pp[3], dx, dy, dz, CM[3], Itens[3][3], ev[3], maxpx, maxpy, maxpz;
   strcpy(fname,argv[1]);
   fin=fopen(fname,"r");
   nframe=0;
@@ -149,10 +174,27 @@ int main(int argc, char **argv)
 	  CM[0] = comx;
 	  CM[1] = comy;
 	  CM[2] = comz;
-	  calcItens(Itens, CM, i*natprot, i*natprot+natprot-1);
+  	  calcItens(Itens, CM, i*natprot, i*natprot+natprot-1);
 	  diagonalize(Itens, ev);
-	  fprintf(fout, "%.12G %.12G %.12G %f %f %f %f %f %f %f %f %f %f %f %f\n", comx, comy, comz, eigvec[0][0], eigvec[0][1], eigvec[0][2], 
-		  eigvec[1][0], eigvec[1][1], eigvec[1][2], eigvec[2][0], eigvec[2][1], eigvec[2][2], sqrt(ev[0]), sqrt(ev[1]), sqrt(ev[2]));
+	  for (j=0; j < natprot; j++)
+	    {
+	      pp[0] = p[i*natprot+j].x-CM[0];
+	      pp[1] = p[i*natprot+j].y-CM[1];
+	      pp[2] = p[i*natprot+j].z-CM[2];
+	      vectProdVec(pp,eigvec[0],vp);
+	      distx=fabs(scalProd(pp,eigvec[0]));
+	      disty=fabs(scalProd(pp,eigvec[1]));
+	      distz=fabs(scalProd(pp,eigvec[2]));
+	      if (distx > maxpx || j==0)
+		maxpx = distx;
+	      if (disty > maxpy || j==0)
+		maxpy = disty;
+	      if (distz > maxpz || j==0)
+		maxpz = distz;
+	    }
+	 
+	  fprintf(fout, "%.12G %.12G %.12G %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n", comx, comy, comz, eigvec[0][0], eigvec[0][1], eigvec[0][2], 
+		  eigvec[1][0], eigvec[1][1], eigvec[1][2], eigvec[2][0], eigvec[2][1], eigvec[2][2], sqrt(ev[0]), sqrt(ev[1]), sqrt(ev[2]), maxpx, maxpy, maxpz);
 	}
       for (i=0; i < numprot; i++) 
 	fprintf(fout, "0 0 0\n");
