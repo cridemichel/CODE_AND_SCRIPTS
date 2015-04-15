@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #define Sqr(x) ((x)*(x))
+double lenHC=4.0, surfRad=10.0;
 char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
 int mcsim=0, cubic_box=1, nonem=0, calcnv=0;
@@ -169,7 +170,7 @@ void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, doubl
 
 void print_usage(void)
 {
-  printf("calcgr [--nonem/-nn] [--calcnemvec/-cv] [--mcsim/-mc] [--isoav/-ia] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
+  printf("calcgr [--lenhc/-lhc] [--nonem/-nn] [--calcnemvec/-cv] [--mcsim/-mc] [--isoav/-ia] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
   exit(0);
 }
 double threshold=0.05;
@@ -211,6 +212,13 @@ void parse_param(int argc, char** argv)
       else if (!strcmp(argv[cc],"--calcnemvec")||!strcmp(argv[cc],"-cv"))
 	{
 	  calcnv=1;
+	}
+      else if (!strcmp(argv[cc],"--lenhc")||!strcmp(argv[cc],"-lhc"))
+	{
+	  cc++;
+	  if (cc==argc)
+	    print_usage();
+	  lenHC = atof(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--nemvector")||!strcmp(argv[cc],"-nv"))
 	{
@@ -417,6 +425,7 @@ void calc_nem_vec(void)
   for (a=0; a < 3; a++)
     nv[a] = eigvec[numev][a];
 }
+double pos1[3], pos2[3], uhc[3], pos1Nem[3], pos2Nem[3], numsd=0.0;
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *f1;
@@ -716,6 +725,17 @@ int main(int argc, char** argv)
 	  build_ref_system();
 	}
       //printf("NP=%d NPA=%d\n", NP, NPA);
+      for (i=0; i < NP; i++)
+	{
+	  for (a=0; a < 3; a++)
+	    uhc[a] = R[0][a][i];
+	  pos1[a]=x[a][i] + uhc[a]*lenHC/2.0; 
+	  pos2[a]=x[a][i] - uhc[a]*lenHC/2.0;
+  	  lab2nem(pos1,pos1Nem);
+	  lab2nem(pos2,pos2Nem);
+	  if (pos1Nem[2]*pos2Nem[2] < 0.0 && (Sqr(pos1Nem[0])+Sqr(pos2Nem[1]) < Sqr(surfRad)))
+	    numsd++;
+	}
       for (i=0; i < NP-1; i++)
 	for (j = i+1; j < NP; j++)
 	  {
@@ -739,7 +759,7 @@ int main(int argc, char** argv)
 	      {
 		lab2nem(Dx,DxNem);
 	      }	      
-	    //printf("DxNem=%f %f %f\n", DxNem[0], DxNem[1], DxNem[2]);
+	   //printf("DxNem=%f %f %f\n", DxNem[0], DxNem[1], DxNem[2]);
 	    distSq = 0.0;
 	    for (a = 0; a < 3; a++)
 	      distSq += Sqr(Dx[a]);
@@ -949,6 +969,7 @@ int main(int argc, char** argv)
   printf("Parallel Range [%.15G:%.15G]\n", minpara, maxpara);
   printf("Perpendicular Range [%.15G:%.15G]\n", minperp, maxperp);
   printf("Average S=%f\n", S/((double)nf));
+  printf("surface number density=%f\n", numsd/3.1415926535897932385/Sqr(surfRad)/((double)nf));
   return 0;
 }
 

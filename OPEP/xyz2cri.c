@@ -3,7 +3,7 @@
 #include<stdio.h>
 #include<string.h>
 #define Sqr(x) ((x)*(x))
-const double L[3]={260.0,260.0,260.0};
+const double L[3]={168.0,152.0,232.0};
 const int numprot=64;
 const int stepinterval=20000;
 const double dt=0.5;
@@ -116,12 +116,21 @@ double scalProd(double *A, double *B)
     R += A[kk]*B[kk];
   return R;
 }
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
 int main(int argc, char **argv)
 {
   FILE *fin, *fout;
   int i, ifirst, jj, j, nframe, nhdr;
   double distx, disty, distz;
   double norm, vp[3], pp[3], dx, dy, dz, CM[3], Itens[3][3], ev[3], maxpx, maxpy, maxpz;
+  double shift[3];
   strcpy(fname,argv[1]);
   fin=fopen(fname,"r");
   nframe=0;
@@ -164,6 +173,16 @@ int main(int argc, char **argv)
 	  comx=comy=comz=0.0;
 	  for (j=0; j < natprot; j++)
 	    {
+	      if (j > 0)
+		{ 
+		  shift[0] = L[0]*rint((p[i*natprot+j].x-p[i*natprot].x)/L[0]);
+		  shift[1] = L[1]*rint((p[i*natprot+j].y-p[i*natprot].y)/L[1]);
+		  shift[2] = L[2]*rint((p[i*natprot+j].z-p[i*natprot].z)/L[2]);
+		  p[i*natprot+j].x -= shift[0];
+		  p[i*natprot+j].y -= shift[1];
+		  p[i*natprot+j].z -= shift[2];
+		}
+	     
 	      comx+=p[i*natprot+j].x;
 	      comy+=p[i*natprot+j].y;
 	      comz+=p[i*natprot+j].z;
@@ -174,14 +193,14 @@ int main(int argc, char **argv)
 	  CM[0] = comx;
 	  CM[1] = comy;
 	  CM[2] = comz;
-  	  calcItens(Itens, CM, i*natprot, i*natprot+natprot-1);
+  	  calcItens(Itens, CM, i*natprot, i*natprot+natprot);
 	  diagonalize(Itens, ev);
 	  for (j=0; j < natprot; j++)
 	    {
 	      pp[0] = p[i*natprot+j].x-CM[0];
 	      pp[1] = p[i*natprot+j].y-CM[1];
 	      pp[2] = p[i*natprot+j].z-CM[2];
-	      vectProdVec(pp,eigvec[0],vp);
+	      //vectProdVec(pp,eigvec[0],vp);
 	      distx=fabs(scalProd(pp,eigvec[0]));
 	      disty=fabs(scalProd(pp,eigvec[1]));
 	      distz=fabs(scalProd(pp,eigvec[2]));
@@ -193,8 +212,12 @@ int main(int argc, char **argv)
 		maxpz = distz;
 	    }
 	 
-	  fprintf(fout, "%.12G %.12G %.12G %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n", comx, comy, comz, eigvec[0][0], eigvec[0][1], eigvec[0][2], 
-		  eigvec[1][0], eigvec[1][1], eigvec[1][2], eigvec[2][0], eigvec[2][1], eigvec[2][2], sqrt(ev[0]), sqrt(ev[1]), sqrt(ev[2]), maxpx, maxpy, maxpz);
+	  fprintf(fout, "%.12G %.12G %.12G %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n", comx, comy, comz,
+		  eigvec[0][0], eigvec[0][1], eigvec[0][2], 
+		  eigvec[1][0], eigvec[1][1], eigvec[1][2], 
+		  eigvec[2][0], eigvec[2][1], eigvec[2][2], 
+		  sqrt(ev[0]/((double)natprot)), sqrt(ev[1]/((double)natprot)), sqrt(ev[2]/((double)natprot)),
+		  maxpx, maxpy, maxpz);
 	}
       for (i=0; i < numprot; i++) 
 	fprintf(fout, "0 0 0\n");
