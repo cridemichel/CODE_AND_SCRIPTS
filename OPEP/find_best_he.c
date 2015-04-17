@@ -381,7 +381,7 @@ void readconf(char *fname, double *r[3], double *R[3][3], int *NP, int *NPA)
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
-      else if (nat==3)
+      else if (nat==2)
 	{
 	  if (*NPA==-1)
 	    *NPA = *NP;
@@ -401,7 +401,7 @@ void readconf(char *fname, double *r[3], double *R[3][3], int *NP, int *NPA)
 	    	      &(R[1][2][i]), &(R[2][0][i]), &(R[2][1][i]), &(R[2][2][i]), &sax[0][i], &sax[1][i], &sax[2][i],
 		      &msax[0][i], &msax[1][i], &msax[2][i]);
 
-	      //printf("r[%d]=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
+	      //printf("r[%d]=%f %f %f sax=%f %f %f\n", i, r[0][i], r[1][i], r[2][i], sax[0][i], sax[1][i], sax[2][i]);
 	    }
 	  if (mcsim==1)
 	    {
@@ -414,12 +414,7 @@ void readconf(char *fname, double *r[3], double *R[3][3], int *NP, int *NPA)
 	      for (i=0; i < *NP; i++)
 		fscanf(f, "%[^\n]\n", line);
 	      // fscanf(f, "%lf\n", &L);
-	      if (fscanf(f, "%lf %lf %lf\n", &Lx, &Ly, &Lz)==1)
-		{
-		  L[0]=Lx;
-		  L[1]=Ly;
-		  L[2]=Lz;
-		}
+	      fscanf(f, "%lf %lf %lf\n", &L[0], &L[1], &L[2]);
 	      break;
 	    }
 
@@ -439,7 +434,7 @@ char fname[1024], inputfile[1024];
 void main(int argc, char **argv)
 {
   FILE *f;
-  double nf=0.0, shift[3], sf, avsax[3];
+  double delsf, nf=0.0, shift[3], sf, avsax[3], saxl[3];
   int i, j, a, b, done;
   strcpy(inputfile, argv[1]);
 
@@ -464,16 +459,19 @@ void main(int argc, char **argv)
       nf++; 
       printf("fname=%s\n", fname);
       readconf(fname, r, R, &NP, &NPA);
+      if (nf==1)
+	printf("BOX: %f %f %f\n", L[0], L[1], L[2]);
+      delsf=0.05;
       for (i=0; i < numprot; i++)
 	{
-	  printf("i=%d sax= %f %f %f\n", i, sax[0][i], sax[1][i], sax[2][i]);
 	  done=0;
-	  for (sf=1.0; sf < 100 && done==0; sf+=0.5)
+	  // printf("i=%d sax= %f %f %f\n", i, sax[0][i], sax[1][i], sax[2][i]);
+	  for (sf=0.5; sf < 100 && done==0; sf+=delsf)
 	    {
-	      sax[0][i] *= sf;
-	      sax[1][i] *= sf;
-	      sax[2][i] *= sf;
-	      if (sax[0][i] > msax[0][i] && sax[1][i] > msax[1][i] && sax[2][i] > msax[2][i])
+	      saxl[0] = sax[0][i]*sf;
+	      saxl[1] = sax[1][i]*sf;
+	      saxl[2] = sax[2][i]*sf;
+	      if (saxl[0] > msax[0][i] && saxl[1] > msax[1][i] && saxl[2] > msax[2][i])
 		{
 		  done=1;
 		  for (a=0; a < 3; a++)
@@ -488,11 +486,11 @@ void main(int argc, char **argv)
 		  if (check_overlap_pw(i, j, shift) < 0.0)
 		    {
 		      /* overlap found */
-		      sax[0][i] /= sf;
-		      sax[1][i] /= sf;
-		      sax[2][i] /= sf;
+		      saxl[0] = sax[0][i]*(sf-delsf);
+		      saxl[1] = sax[1][i]*(sf-delsf);
+		      saxl[2] = sax[2][i]*(sf-delsf);
 		      for (a=0; a < 3; a++)
-			avsax[a] += sax[a][i];
+			avsax[a] += saxl[a];
 		      done=1;
 		    }
 		}

@@ -124,10 +124,22 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
+struct evStruct {
+  double eigvec[3];
+  double ev;
+  int idx;
+} evstruct[3];
+int cmpfuncev (const void *p1, const void *p2)
+{
+  if (((struct evStruct*)p1)->ev > ((struct evStruct*)p2)->ev) 
+    return 1;
+  else
+    return -1;
+}
 int main(int argc, char **argv)
 {
   FILE *fin, *fout;
-  int i, ifirst, jj, j, nframe, nhdr;
+  int i, ifirst, jj, j, nframe, nhdr, a, b;
   double distx, disty, distz;
   double norm, vp[3], pp[3], dx, dy, dz, CM[3], Itens[3][3], ev[3], maxpx, maxpy, maxpz;
   double shift[3];
@@ -195,15 +207,23 @@ int main(int argc, char **argv)
 	  CM[2] = comz;
   	  calcItens(Itens, CM, i*natprot, i*natprot+natprot);
 	  diagonalize(Itens, ev);
+	  evstruct[0].ev=ev[0];
+	  evstruct[1].ev=ev[1];
+	  evstruct[2].ev=ev[2];
+	  for (a=0; a < 3; a++)
+	    for (b=0; b < 3; b++)
+	      evstruct[a].eigvec[b] = eigvec[a][b];
+	  evstruct[a].idx = a;
+	  qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
 	  for (j=0; j < natprot; j++)
 	    {
 	      pp[0] = p[i*natprot+j].x-CM[0];
 	      pp[1] = p[i*natprot+j].y-CM[1];
 	      pp[2] = p[i*natprot+j].z-CM[2];
 	      //vectProdVec(pp,eigvec[0],vp);
-	      distx=fabs(scalProd(pp,eigvec[0]));
-	      disty=fabs(scalProd(pp,eigvec[1]));
-	      distz=fabs(scalProd(pp,eigvec[2]));
+	      distx=fabs(scalProd(pp,evstruct[0].eigvec));
+	      disty=fabs(scalProd(pp,evstruct[1].eigvec));
+	      distz=fabs(scalProd(pp,evstruct[2].eigvec));
 	      if (distx > maxpx || j==0)
 		maxpx = distx;
 	      if (disty > maxpy || j==0)
@@ -213,10 +233,10 @@ int main(int argc, char **argv)
 	    }
 	 
 	  fprintf(fout, "%.12G %.12G %.12G %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n", comx, comy, comz,
-		  eigvec[0][0], eigvec[0][1], eigvec[0][2], 
-		  eigvec[1][0], eigvec[1][1], eigvec[1][2], 
-		  eigvec[2][0], eigvec[2][1], eigvec[2][2], 
-		  sqrt(ev[0]/((double)natprot)), sqrt(ev[1]/((double)natprot)), sqrt(ev[2]/((double)natprot)),
+		  evstruct[0].eigvec[0], evstruct[0].eigvec[1], evstruct[0].eigvec[2], 
+		  evstruct[1].eigvec[0], evstruct[1].eigvec[1], evstruct[1].eigvec[2], 
+		  evstruct[2].eigvec[0], evstruct[2].eigvec[1], evstruct[2].eigvec[2], 
+		  sqrt(evstruct[0].ev/((double)natprot)), sqrt(evstruct[1].ev/((double)natprot)), sqrt(evstruct[2].ev/((double)natprot)),
 		  maxpx, maxpy, maxpz);
 	}
       for (i=0; i < numprot; i++) 
