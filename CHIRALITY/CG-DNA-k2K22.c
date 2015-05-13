@@ -1,4 +1,5 @@
 #include "./G-DNA-k2K22.h"
+#define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 
 char fn[1024];
 struct DNA {
@@ -215,7 +216,8 @@ void orient_donsager(double *omx, double *omy, double* omz, double alpha)
 int main(int argc, char**argv)
 {
   FILE *fin;
-  int k;
+  int k, i, j, overlap;
+  double sigijsq, distsq, v1=0.0, v2=0.0;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> */
   strcpy(fin,argv[1]);
   fin=fopen(fin,"r");
@@ -265,6 +267,27 @@ int main(int argc, char**argv)
       rcmz = L*(rand48()-0.5);
       orient_donsager(&ux, &uy, &uz, alpha);
       place_DNAD(rcmx, rcmy, rcmz, ux, uy, uz, 1);
-
+      /* check overlaps */
+      overlap=0;
+      for (i=0; i < len; i++)
+	{
+	  for (j=0; j < len; j++)
+	    {
+	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) +  Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z) ;
+	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
+	      if (distsq < sigijsq)
+		{
+		  overlap=1;
+		  break;
+		}
+	    }
+	  if (overlap)
+	    break;
+	}
+      if (overlap)
+	continue;
+      /* otherwise calculate the integrand */
+      v1 += ;
+      v2 += ;
     }
 }
