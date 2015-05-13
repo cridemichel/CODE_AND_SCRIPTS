@@ -370,7 +370,7 @@ int main(int argc, char**argv)
     DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*len);
   L = 1.05*2.0*120*len; /* 120 nm is approximately the length of a 12 bp DNAD */ 
   /* read the CG structure */
-  printf("alpha=%f I am going to calculate v%d and I will do %d trials\n", alpha, type, tot_trials);
+  printf("L=%f alpha=%f I am going to calculate v%d and I will do %d trials\n", L, alpha, type, tot_trials);
   while (!feof)
     {
       fscanf(fin, "%s %d %s %s %s %d %lf %lf %lf ", dummy1, &atnum, atname, nbname, dummy2, &nbnum, &rx, &ry, &rz);
@@ -396,6 +396,22 @@ int main(int argc, char**argv)
 	}
     };
   nat=atnum;
+  rcmx=rcmy=rcmz=0.0;
+  for (i=0; i < nat; i++)
+    {
+      rcmx += DNAchain[i].x;
+      rcmy += DNAchain[i].y;
+      rcmz += DNAchain[i].z;
+    }
+  rcmx /= (double) nat;
+  rcmy /= (double) nat;
+  rcmz /= (double) nat;
+  for (i=0; i < nat; i++)
+    {
+      DNAchain[i].x -= rcmx;
+      DNAchain[i].y -= rcmy;
+      DNAchain[i].z -= rcmz;
+    }
   fclose(fin);
   srand48((int)time(NULL));
   sprintf(fnout, "v%d.dat", type);
