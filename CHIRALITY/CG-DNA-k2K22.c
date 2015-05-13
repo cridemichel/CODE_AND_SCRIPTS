@@ -278,7 +278,7 @@ double dfons(double theta, double alpha)
   pi = acos(0.0)*2.0;
   /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return sin(theta)*sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
+  return sin(theta)*cosh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
 }
 
 /* return an angle theta sampled from an Onsager angular distribution */
@@ -370,7 +370,7 @@ int main(int argc, char**argv)
     DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*len);
   L = 1.05*2.0*120*len; /* 120 nm is approximately the length of a 12 bp DNAD */ 
   /* read the CG structure */
-  printf("I am going to calculate v%d and I will do %d trials\n", type, tot_trials);
+  printf("alpha=%f I am going to calculate v%d and I will do %d trials\n", alpha, type, tot_trials);
   while (!feof)
     {
       fscanf(fin, "%s %d %s %s %s %d %lf %lf %lf ", dummy1, &atnum, atname, nbname, dummy2, &nbnum, &rx, &ry, &rz);
@@ -401,15 +401,17 @@ int main(int argc, char**argv)
   sprintf(fnout, "v%d.dat", type);
   factor=0.0;
 
-  thetapts = 10000;
+  thetapts = 100000;
   dth=2.0*(acos(0.0))/((double)thetapts);
   th=0.0;
   for (i=0; i < thetapts; i++)
     {
-      factor += 0.5*dth*(dfons(th, alpha) + dfons(th+dth,alpha));
+      factor += 0.5*dth*sin(th)*(dfons(th, alpha) + dfons(th+dth,alpha));
       th += dth;
+      //printf("%f %.15G\n", th, dfons(th, alpha));
     }
-
+  factor *= 4.0*acos(0.0);
+  printf("dth=%f factor=%.15G\n", dth, factor);
   for (tt=0; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
