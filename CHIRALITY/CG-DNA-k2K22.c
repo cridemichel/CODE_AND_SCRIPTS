@@ -1,4 +1,4 @@
-#include "./G-DNA-k2K22.h"
+//#include "./G-DNA-k2K22.h"
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 
 char fn[1024];
@@ -9,13 +9,7 @@ struct DNA {
   double rad;
 } *DNAchain;
 
-struct DNA {
-  double x;
-  double y;
-  double z;
-  double rad;
-} *DNADs[2];
-
+struct DNA *DNADs[2];
 
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int atnum, nbnum, len, tot_trials, tt=0;
