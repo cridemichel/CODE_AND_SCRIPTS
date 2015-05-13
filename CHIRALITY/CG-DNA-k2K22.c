@@ -101,7 +101,8 @@ void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3],
       {
 	Ro[k1][k2] = Rin[k1][k2];
 	for (k3 = 0; k3 < 3; k3++)
-	  Ro[k1][k2] += Rin[k1][k3]*M[k3][k2];
+//	  Ro[k1][k2] += Rin[k1][k3]*M[k3][k2];
+	  Ro[k1][k2] += M[k1][k3]*Rin[k3][k2];
       }
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
@@ -118,21 +119,21 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   int k1, k2;
 #endif
   /* first row vector */
-  R[0][0] = ox;
-  R[0][1] = oy;
-  R[0][2] = oz;
+  R[2][0] = ox;
+  R[2][1] = oy;
+  R[2][2] = oz;
   //printf("orient=%f %f %f\n", ox, oy, oz);
   u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
-  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
+  if (u[0]==R[2][0] && u[1]==R[2][1] && u[2]==R[2][2])
     {
       u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
     }
   /* second row vector */
   sp = 0;
   for (k=0; k < 3 ; k++)
-    sp+=u[k]*R[0][k];
+    sp+=u[k]*R[2][k];
   for (k=0; k < 3 ; k++)
-    u[k] -= sp*R[0][k];
+    u[k] -= sp*R[2][k];
   norm = calc_norm(u);
   //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
   for (k=0; k < 3 ; k++)
@@ -153,10 +154,10 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
     }
 #endif
   /* third row vector */
-  vectProdVec(R[0], R[1], u);
+  vectProdVec(R[1], R[2], u);
  
   for (k=0; k < 3 ; k++)
-    R[2][k] = u[k];
+    R[0][k] = u[k];
 #ifdef MC_BENT_DBLCYL
   /* add a random rotation around the axis (ox, oy, oz) */
   add_rotation_around_axis(ox, oy, oz, R, Rout);
@@ -446,6 +447,7 @@ int main(int argc, char**argv)
 	orient_onsager(&u1x, &u1y, &u1z, alpha);
       else
 	orient_donsager(&u1x, &u1y, &u1z, alpha);
+
       place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0);      
       /* place second DNAD randomly */
       rcmx = L*(drand48()-0.5);
