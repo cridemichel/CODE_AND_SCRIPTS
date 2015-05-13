@@ -207,7 +207,7 @@ double dfons(double theta, double alpha)
   pi = acos(0.0)*2.0;
   /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return -sin(theta)*sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
+  return sin(theta)*sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
 }
 
 /* return an angle theta sampled from an Onsager angular distribution */
@@ -224,7 +224,9 @@ double theta_donsager(double alpha)
   if (first == 1)
     {
       first=0;
-      f0 = 1.01*dfons(0.0,alpha);
+      /* qui va fornito il massimo della funzione nell'intervallo
+	 [0,Pi] */
+      f0 = 1.01*alpha*fons(0.0,alpha);
     }
 
   do 
@@ -357,9 +359,9 @@ int main(int argc, char**argv)
       if (type==0)
 	vexcl += 1.0;
       else if (type==1)
-	vexcl += rcmy;
+	vexcl += -rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
       else 
-	vexcl += -rcmy*rcmy;
+	vexcl += rcmy*rcmy;
       if (tt % outits == 0)
 	{
 	 f = fopen(fnout, "w+");
