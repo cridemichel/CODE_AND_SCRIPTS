@@ -456,7 +456,7 @@ int main(int argc, char**argv)
 	    {
 	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) +  Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z) ;
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
-	      printf("dist=%f sigijsq=%f\n", sqrt(distsq), sqrt(sigijsq));
+	      //printf("dist=%f sigijsq=%f\n", sqrt(distsq), sqrt(sigijsq));
 	      if (distsq < sigijsq)
 		{
 		  overlap=1;
