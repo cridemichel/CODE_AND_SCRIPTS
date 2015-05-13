@@ -342,7 +342,7 @@ void orient_donsager(double *omx, double *omy, double* omz, double alpha)
 int main(int argc, char**argv)
 {
   FILE *fin, *fout;
-  int k, i, j, overlap, type, outits, thetapts, fileoutits;
+  int nat, k, i, j, overlap, type, outits, thetapts, fileoutits;
   char fnin[1024],fnout[256];
   double ux, uy, uz, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, factor, dth, th;
@@ -394,7 +394,6 @@ int main(int argc, char**argv)
 	  printf("Unrecognized atom name, exiting...\n");
 	  exit(1);
 	}
-
     };
   fclose(fin);
   srand48((int)time(NULL));
@@ -432,9 +431,9 @@ int main(int argc, char**argv)
       place_DNAD(rcmx, rcmy, rcmz, ux, uy, uz, 1);
       /* check overlaps */
       overlap=0;
-      for (i=0; i < len; i++)
+      for (i=0; i < nat; i++)
 	{
-	  for (j=0; j < len; j++)
+	  for (j=0; j < nat; j++)
 	    {
 	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) +  Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z) ;
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
