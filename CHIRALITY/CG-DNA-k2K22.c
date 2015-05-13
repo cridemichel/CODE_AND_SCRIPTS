@@ -484,7 +484,7 @@ int main(int argc, char**argv)
 	vexcl += -u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
       else 
 	vexcl += u1x*u2x*rcmy*rcmy;
-      if (tt % fileoutits == 0)
+      if (tt > 0 && tt % fileoutits == 0)
 	{
 	 fout = fopen(fnout, "a+");
 	 if (type==0)
