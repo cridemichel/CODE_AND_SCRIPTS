@@ -344,7 +344,7 @@ int main(int argc, char**argv)
   FILE *fin, *fout;
   int k, i, j, overlap, type, outits, thetapts, fileoutits;
   char fnin[1024],fnout[256];
-  double ux, uy, uz, rcmx, rcmy, rcmz;
+  double u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
   if (argc < 7)
@@ -365,10 +365,11 @@ int main(int argc, char**argv)
   else
     outits = atoi(argv[7]);
    /* ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
-  DNAchain = (struct DNA*) malloc(sizeof(struct DNA)*len); 
+  nat = 70*len;
+  DNAchain = (struct DNA*) malloc(sizeof(struct DNA)*nat); 
   for (k=0; k < 2; k++)
-    DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*len);
-  L = 1.05*2.0*120*len; /* 120 nm is approximately the length of a 12 bp DNAD */ 
+    DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*nat);
+  L = 1.05*2.0*40*len; /* 4 nm is approximately the length of a 12 bp DNAD */ 
   /* read the CG structure */
   while (!feof(fin))
     {
@@ -395,7 +396,6 @@ int main(int argc, char**argv)
 	}
     };
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %d trials\n", nat, L, alpha, type, tot_trials);
-  nat=atnum;
   rcmx=rcmy=rcmz=0.0;
   for (i=0; i < nat; i++)
     {
@@ -435,28 +435,27 @@ int main(int argc, char**argv)
       /* place first DNAD in the origin oriented according to the proper distribution */
 
       if (type==0||type==1)
-	orient_onsager(&ux, &uy, &uz, alpha);
+	orient_onsager(&u1x, &u1y, &u1z, alpha);
       else
-	orient_donsager(&ux, &uy, &uz, alpha);
-      place_DNAD(0.0,0.0,0.0,ux,uy,uz,0);      
+	orient_donsager(&u1x, &u1y, &u1z, alpha);
+      place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0);      
       /* place second DNAD randomly */
       rcmx = L*(drand48()-0.5);
       rcmy = L*(drand48()-0.5);
       rcmz = L*(drand48()-0.5);
       if (type==0)
-	orient_onsager(&ux, &uy, &uz, alpha);
+	orient_onsager(&u2x, &u2y, &u2z, alpha);
       else
-	orient_donsager(&ux, &uy, &uz, alpha);
-      place_DNAD(rcmx, rcmy, rcmz, ux, uy, uz, 1);
+	orient_donsager(&u2x, &u2y, &u2z, alpha);
+      place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1);
       /* check overlaps */
       overlap=0;
       for (i=0; i < nat; i++)
 	{
 	  for (j=0; j < nat; j++)
 	    {
-	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) +  Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z) ;
+	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z) ;
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
-	      //printf("dist=%f sigijsq=%f\n", sqrt(distsq), sqrt(sigijsq));
 	      if (distsq < sigijsq)
 		{
 		  overlap=1;
@@ -472,9 +471,9 @@ int main(int argc, char**argv)
       if (type==0)
 	vexcl += 1.0;
       else if (type==1)
-	vexcl += -rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+	vexcl += -u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
       else 
-	vexcl += rcmy*rcmy;
+	vexcl += u1x*u2x*rcmy*rcmy;
       if (tt % fileoutits == 0)
 	{
 	 fout = fopen(fnout, "a+");
