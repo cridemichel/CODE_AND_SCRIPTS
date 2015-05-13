@@ -101,8 +101,8 @@ void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3],
       {
 	Ro[k1][k2] = Rin[k1][k2];
 	for (k3 = 0; k3 < 3; k3++)
-//	  Ro[k1][k2] += Rin[k1][k3]*M[k3][k2];
-	  Ro[k1][k2] += M[k1][k3]*Rin[k3][k2];
+	  Ro[k1][k2] += Rin[k1][k3]*M[k3][k2];
+//	  Ro[k1][k2] += M[k1][k3]*Rin[k3][k2];
       }
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
@@ -187,7 +187,7 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
   rO[2] = z;
   /* build R here from the orientation (ux,uy,uz) */
   versor_to_R(ux, uy, uz, R);
-  f=fopen("molgl.xyz", "w+");
+  //f=fopen("molgl.xyz", "w+");
   /* ============ */
   for (i=0; i < nat; i++)
     {
@@ -199,11 +199,11 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
       DNADs[which][i].x = xl[0];
       DNADs[which][i].y = xl[1];
       DNADs[which][i].z = xl[2];
-      fprintf(f,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
+      //fprintf(f,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
       DNADs[which][i].rad = DNAchain[i].rad;
     }
-  fclose(f);
-  exit(-1);
+  //fclose(f);
+  //exit(-1);
 }
 /* ============================ >>> ranf <<< =============================== */
 double ranf_vb(void)
