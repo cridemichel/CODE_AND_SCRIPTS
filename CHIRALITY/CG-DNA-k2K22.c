@@ -490,9 +490,9 @@ int main(int argc, char**argv)
 	 if (type==0)
 	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt));
 	 else if (type==1)
-	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt)/factor);
+	   fprintf(fout,"%d %.15G\n", tt, (L*L*L*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
 	 else
-	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt)/Sqr(factor));
+	   fprintf(fout,"%d %.15G\n", tt, (L*L*L*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
 	 fclose(fout);
 	}
       if (tt % outits==0)
