@@ -144,6 +144,61 @@ double fons(double theta, double alpha)
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
   return cosh(alpha*cos(theta))*alpha/(4.0*pi*sinh(alpha));
 }
+/* return an angle theta sampled from an Onsager angular distribution */
+double theta_onsager(double alpha)
+{
+  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
+     using rejection method */
+  /* the comparison function g(theta) is just g(theta)=1 */ 
+  static int first = 1;
+  static double f0;
+  double pi, y, f, theta, dtheta;
+  //printf("alpha=%f\n", alpha);
+  pi = acos(0.0)*2.0;
+  if (first == 1)
+    {
+      first=0;
+      f0 = 1.01*fons(0.0,alpha);
+    }
+
+  do 
+    {
+      /* uniform theta between 0 and pi */
+      theta = pi*ranf_vb();
+      /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
+      y = f0*ranf_vb();
+      f = sin(theta)*fons(theta,alpha);
+      //printf("theta=%f y=%f\n", theta, y);
+    }
+  while (y >= f);
+  return theta;
+}
+double *distro;
+extern const int nfons;
+void orient_onsager(double *omx, double *omy, double* omz, double alpha)
+{
+  double thons;
+  double pi, phi, verso;
+
+  pi = acos(0.0)*2.0;
+  /* random angle from onsager distribution */
+  thons = theta_onsager(alpha);
+  //printf("thos=%f\n", thons);
+  distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
+  phi = 2.0*pi*ranf_vb();
+  //verso = (ranf_vb()<0.5)?1:-1;
+  verso=1;
+#if 1 /* along z */
+  *omx = verso*sin(thons)*cos(phi);
+  *omy = verso*sin(thons)*sin(phi);
+  *omz = verso*cos(thons); 
+#else /* or along x (but it has to be same of course!) */
+  *omy = verso*sin(thons)*cos(phi);
+  *omz = verso*sin(thons)*sin(phi);
+  *omx = verso*cos(thons); 
+#endif
+  //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
+}
 
 /* first derivative of Onsager distribution */
 double dfons(double theta, double alpha)
@@ -154,7 +209,6 @@ double dfons(double theta, double alpha)
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
   return -sin(theta)*sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
 }
-
 
 /* return an angle theta sampled from an Onsager angular distribution */
 double theta_donsager(double alpha)
@@ -216,14 +270,17 @@ void orient_donsager(double *omx, double *omy, double* omz, double alpha)
 int main(int argc, char**argv)
 {
   FILE *fin;
-  int k, i, j, overlap;
-  double sigijsq, distsq, v1=0.0, v2=0.0;
-  /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> */
+  int k, i, j, overlap, type, outits;
+  char fnout[256];
+  double sigijsq, distsq, vexcl=0.0;
+  /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
   strcpy(fin,argv[1]);
   fin=fopen(fin,"r");
   len=atoi(argv[2]);
   alpha = atof(argv[3]);
   tot_trials=atoi(argv[3]);
+  type = atoi(argv[4]);
+  outits = atoi(argv[5]);
   /* ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   DNAchain = (struct DNA*) malloc(sizeof(struct DNA)*len); 
   for (k=0; k < 2; k++)
@@ -257,15 +314,25 @@ int main(int argc, char**argv)
     };
   fclose(fin);
   seed48((long)time(0));
+  sprint(fnout, "v%d.dat", type);
+	  
   for (tt=0; tt < tot_trials; tt++)
     {
-      /* place first DNAD in the origin oriented along z */
-      place_DNAD(0.0,0.0,0.0,0.0,0.0,1.0,0);      
+      /* place first DNAD in the origin oriented according to the proper distribution */
+
+      if (type==0||type==1)
+	orient_onsager(&ux, &uy, &uz, alpha);
+      else
+	orient_donsager(&ux, &uy, &uz, alpha);
+      place_DNAD(0.0,0.0,0.0,ux,uy,uz,0);      
       /* place second DNAD randomly */
       rcmx = L*(rand48()-0.5);
       rcmy = L*(rand48()-0.5);
       rcmz = L*(rand48()-0.5);
-      orient_donsager(&ux, &uy, &uz, alpha);
+      if (type==0)
+	orient_onsager(&ux, &uy, &uz, alpha);
+      else
+	orient_donsager(&ux, &uy, &uz, alpha);
       place_DNAD(rcmx, rcmy, rcmz, ux, uy, uz, 1);
       /* check overlaps */
       overlap=0;
@@ -287,7 +354,19 @@ int main(int argc, char**argv)
       if (overlap)
 	continue;
       /* otherwise calculate the integrand */
-      v1 += ;
-      v2 += ;
+      if (type==0)
+	vexcl += 1.0;
+      else if (type==1)
+	vexcl += rcmy;
+      else 
+	vexcl += -rcmy*rcmy;
+      if (tt % outits == 0)
+	{
+	 f = fopen(fnout, "w+");
+	 fprint("%d %.15G\n", tt, L*L*L*vexcl/((double)tt));
+	 fclose(f);
+	}
+      if (tt % 10*outits==0)
+	printf("trials: %d/%d\n", tt, tot_trials);
     }
 }
