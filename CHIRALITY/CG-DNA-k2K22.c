@@ -179,24 +179,30 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
 {
   double xp[3], rO[3], xl[3];
   double R[3][3];
+  FILE *f;
   int i; 
   rO[0] = x;
   rO[1] = y;
   rO[2] = z;
   /* build R here from the orientation (ux,uy,uz) */
   versor_to_R(ux, uy, uz, R);
+  f=fopen("molgl.xyz", "w+");
   /* ============ */
   for (i=0; i < nat; i++)
     {
       xp[0] = DNAchain[i].x;
       xp[1] = DNAchain[i].y;
       xp[2] = DNAchain[i].z;
+      
       body2lab(xp, xl, rO, R);
       DNADs[which][i].x = xl[0];
       DNADs[which][i].y = xl[1];
       DNADs[which][i].z = xl[2];
+      fprintf(f,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
       DNADs[which][i].rad = DNAchain[i].rad;
     }
+  fclose(f);
+  exit(-1);
 }
 /* ============================ >>> ranf <<< =============================== */
 double ranf_vb(void)
