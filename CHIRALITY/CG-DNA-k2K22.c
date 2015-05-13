@@ -1,5 +1,15 @@
 //#include "./G-DNA-k2K22.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <string.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
+void vectProdVec(double *A, double *B, double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
+}
 
 char fn[1024];
 struct DNA {
@@ -10,6 +20,16 @@ struct DNA {
 } *DNAchain;
 
 struct DNA *DNADs[2];
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
+
+#define MC_BENT_DBLCYL
 
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int atnum, nbnum, len, tot_trials, tt=0;
@@ -20,7 +40,7 @@ double L, rx, ry, rz, alpha;
     phosphate   B           3.0         
     base        Se          4.0    
 */
-void body2lab(double xp[], double x[], double *rO, double **R)
+void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 {
   int k1, k2;
   for (k1=0; k1 < 3; k1++)
@@ -33,6 +53,61 @@ void body2lab(double xp[], double x[], double *rO, double **R)
       x[k1] += rO[k1];
     }
 }
+#ifdef MC_BENT_DBLCYL
+/* apply a random rotation around the supplied axis because 
+   bent cylinders do not have azimuthal symmetry */
+double thetaGlobalBondangle;
+void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3], double Rout[3][3])
+{
+  double theta, thetaSq, sinw, cosw;
+  double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
+  int k1, k2, k3;
+  /* pick a random rotation angle between 0 and 2*pi*/
+  theta = 4.0*acos(0.0)*drand48();
+  /* set to be used in az. angle distro calculation */
+  thetaGlobalBondangle = theta;
+
+  thetaSq=Sqr(theta);
+  sinw = sin(theta);
+  cosw = (1.0 - cos(theta));
+  Omega[0][0] = 0;
+  Omega[0][1] = -oz;
+  Omega[0][2] = oy;
+  Omega[1][0] = oz;
+  Omega[1][1] = 0;
+  Omega[1][2] = -ox;
+  Omega[2][0] = -oy;
+  Omega[2][1] = ox;
+  Omega[2][2] = 0;
+  OmegaSq[0][0] = -Sqr(oy) - Sqr(oz);
+  OmegaSq[0][1] = ox*oy;
+  OmegaSq[0][2] = ox*oz;
+  OmegaSq[1][0] = ox*oy;
+  OmegaSq[1][1] = -Sqr(ox) - Sqr(oz);
+  OmegaSq[1][2] = oy*oz;
+  OmegaSq[2][0] = ox*oz;
+  OmegaSq[2][1] = oy*oz;
+  OmegaSq[2][2] = -Sqr(ox) - Sqr(oy);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Ro[k1][k2] = Rin[k1][k2];
+	for (k3 = 0; k3 < 3; k3++)
+	  Ro[k1][k2] += Rin[k1][k3]*M[k3][k2];
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+     Rout[k1][k2] = Ro[k1][k2]; 
+}
+#endif
 
 void versor_to_R(double ox, double oy, double oz, double R[3][3])
 {
@@ -62,6 +137,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
   for (k=0; k < 3 ; k++)
     R[1][k] = u[k]/norm;
+#if 0
   if (typesArr[0].nspots==3 && type==0)
     {
       for (k=0; k < 3 ; k++)
@@ -75,6 +151,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
 	R[1][k] = u[k]*xx + up[k]*yy;
       //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
     }
+#endif
   /* third row vector */
   vectProdVec(R[0], R[1], u);
  
@@ -167,8 +244,8 @@ double theta_onsager(double alpha)
   while (y >= f);
   return theta;
 }
-double *distro;
-extern const int nfons;
+double distro[10000];
+const int nfons=100;
 void orient_onsager(double *omx, double *omy, double* omz, double alpha)
 {
   double thons;
@@ -236,7 +313,6 @@ double theta_donsager(double alpha)
   return theta;
 }
 
-double *distro;
 extern const int nfons;
 void orient_donsager(double *omx, double *omy, double* omz, double alpha)
 {
@@ -247,7 +323,7 @@ void orient_donsager(double *omx, double *omy, double* omz, double alpha)
   /* random angle from onsager distribution */
   thons = theta_donsager(alpha);
   //printf("thos=%f\n", thons);
-  distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
+  //distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
   phi = 2.0*pi*ranf_vb();
   //verso = (ranf_vb()<0.5)?1:-1;
   verso=1;
@@ -265,13 +341,14 @@ void orient_donsager(double *omx, double *omy, double* omz, double alpha)
 
 int main(int argc, char**argv)
 {
-  FILE *fin;
-  int k, i, j, overlap, type, outits;
-  char fnout[256];
-  double sigijsq, distsq, vexcl=0.0;
+  FILE *fin, *fout;
+  int k, i, j, overlap, type, outits, thetapts;
+  char fnin[1024],fnout[256];
+  double ux, uy, uz, rcmx, rcmy, rcmz;
+  double sigijsq, distsq, vexcl=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
-  strcpy(fin,argv[1]);
-  fin=fopen(fin,"r");
+  strcpy(fnin,argv[1]);
+  fin=fopen(fnin,"r");
   len=atoi(argv[2]);
   alpha = atof(argv[3]);
   tot_trials=atoi(argv[3]);
@@ -309,9 +386,19 @@ int main(int argc, char**argv)
 
     };
   fclose(fin);
-  seed48((long)time(0));
-  sprint(fnout, "v%d.dat", type);
-	  
+  srand48((int)time(NULL));
+  sprintf(fnout, "v%d.dat", type);
+  factor=0.0;
+
+  thetapts = 10000;
+  dth=2.0*(acos(0.0))/((double)thetapts);
+  th=0.0;
+  for (i=0; i < thetapts; i++)
+    {
+      factor += 0.5*dth*(dfons(th, alpha) + dfons(th+dth,alpha));
+      th += dth;
+    }
+
   for (tt=0; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
@@ -322,9 +409,9 @@ int main(int argc, char**argv)
 	orient_donsager(&ux, &uy, &uz, alpha);
       place_DNAD(0.0,0.0,0.0,ux,uy,uz,0);      
       /* place second DNAD randomly */
-      rcmx = L*(rand48()-0.5);
-      rcmy = L*(rand48()-0.5);
-      rcmz = L*(rand48()-0.5);
+      rcmx = L*(drand48()-0.5);
+      rcmy = L*(drand48()-0.5);
+      rcmz = L*(drand48()-0.5);
       if (type==0)
 	orient_onsager(&ux, &uy, &uz, alpha);
       else
@@ -358,9 +445,14 @@ int main(int argc, char**argv)
 	vexcl += rcmy*rcmy;
       if (tt % outits == 0)
 	{
-	 f = fopen(fnout, "w+");
-	 fprint("%d %.15G\n", tt, L*L*L*vexcl/((double)tt));
-	 fclose(f);
+	 fout = fopen(fnout, "w+");
+	 if (type==0)
+	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt));
+	 else if (type==1)
+	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt)/factor);
+	 else
+	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt)/Sqr(factor));
+	 fclose(fout);
 	}
       if (tt % 10*outits==0)
 	printf("trials: %d/%d\n", tt, tot_trials);
