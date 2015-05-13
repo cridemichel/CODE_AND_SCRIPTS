@@ -33,7 +33,8 @@ double calc_norm(double *vec)
 
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len, tot_trials, tt=0;
-double L, rx, ry, rz, alpha;
+double L, rx, ry, rz, alpha, dfons_max;
+const double thetapts=100000;
 /*
                 pdb        radius (angstrom)
     sugar       Xe          3.5        
@@ -304,9 +305,9 @@ double theta_donsager(double alpha)
       first=0;
       /* qui va fornito il massimo della funzione nell'intervallo
 	 [0,Pi] */
-      f0 = 1.01*alpha*fons(0.0,alpha);
+      //f0 = 1.01*alpha*fons(0.0,alpha);
+      f0 = 1.01*dfons_max;
     }
-
   do 
     {
       /* uniform theta between 0 and pi */
@@ -345,11 +346,25 @@ void orient_donsager(double *omx, double *omy, double* omz, double alpha)
 #endif
   //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
 }
-
+double estimate_maximum_dfons(double alpha)
+{
+  double th, dth, maxval, m;
+  int i;
+  dth=2.0*(acos(0.0))/((double)thetapts);
+  th=0.0;
+  for (i=0; i < thetapts; i++)
+    {
+      if (i==0 || maxval < (m=sin(th)*dfons(th,alpha)))
+	maxval = m;
+      th += dth;
+      //printf("%f %.15G\n", th, dfons(th, alpha));
+    }
+    return maxval;
+}
 int main(int argc, char**argv)
 {
   FILE *fin, *fout;
-  int k, i, j, overlap, type, outits, thetapts, fileoutits;
+  int k, i, j, overlap, type, outits, fileoutits;
   char fnin[1024],fnout[256];
   double u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, factor, dth, th;
@@ -425,8 +440,8 @@ int main(int argc, char**argv)
   srand48((int)time(NULL));
   sprintf(fnout, "v%d.dat", type);
   factor=0.0;
-
-  thetapts = 100000;
+  dfons_max=estimate_maximum_dfons(alpha);
+  printf("Estimated maximum of dfons is %f\n", dfons_max);
   dth=2.0*(acos(0.0))/((double)thetapts);
   th=0.0;
   for (i=0; i < thetapts; i++)
