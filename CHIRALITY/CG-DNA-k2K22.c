@@ -33,7 +33,7 @@ double calc_norm(double *vec)
 
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len, tot_trials, tt=0;
-double L, rx, ry, rz, alpha, dfons_max;
+double L, rx, ry, rz, alpha, dfons_sinth_max;
 const double thetapts=100000;
 /*
                 pdb        radius (angstrom)
@@ -306,7 +306,7 @@ double theta_donsager(double alpha)
       /* qui va fornito il massimo della funzione nell'intervallo
 	 [0,Pi] */
       //f0 = 1.01*alpha*fons(0.0,alpha);
-      f0 = 1.01*dfons_max;
+      f0 = 1.01*dfons_sinth_max;
     }
   do 
     {
@@ -440,8 +440,8 @@ int main(int argc, char**argv)
   srand48((int)time(NULL));
   sprintf(fnout, "v%d.dat", type);
   factor=0.0;
-  dfons_max=estimate_maximum_dfons(alpha);
-  printf("Estimated maximum of dfons is %f\n", dfons_max);
+  dfons_sinth_max=estimate_maximum_dfons(alpha);
+  printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
   dth=2.0*(acos(0.0))/((double)thetapts);
   th=0.0;
   for (i=0; i < thetapts; i++)
