@@ -364,7 +364,9 @@ int main(int argc, char**argv)
     outits=100*fileoutits;
   else
     outits = atoi(argv[7]);
-   /* ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
+  /* ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
+  /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
+     in our CG model */
   nat = 70*len;
   DNAchain = (struct DNA*) malloc(sizeof(struct DNA)*nat); 
   for (k=0; k < 2; k++)
