@@ -342,24 +342,35 @@ void orient_donsager(double *omx, double *omy, double* omz, double alpha)
 int main(int argc, char**argv)
 {
   FILE *fin, *fout;
-  int k, i, j, overlap, type, outits, thetapts;
+  int k, i, j, overlap, type, outits, thetapts, fileoutits;
   char fnin[1024],fnout[256];
   double ux, uy, uz, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
+  if (argc < 7)
+    {
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits]\n");
+      exit(1);
+    }
   strcpy(fnin,argv[1]);
   fin=fopen(fnin,"r");
   len=atoi(argv[2]);
   alpha = atof(argv[3]);
-  tot_trials=atoi(argv[3]);
-  type = atoi(argv[4]);
-  outits = atoi(argv[5]);
-  /* ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
+  tot_trials=atoi(argv[4]);
+  type = atoi(argv[5]);
+  fileoutits = atoi(argv[6]);
+  
+  if (argc == 7)
+    outits=100*fileoutits;
+  else
+    outits = atoi(argv[7]);
+   /* ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   DNAchain = (struct DNA*) malloc(sizeof(struct DNA)*len); 
   for (k=0; k < 2; k++)
     DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*len);
   L = 1.05*2.0*120*len; /* 120 nm is approximately the length of a 12 bp DNAD */ 
   /* read the CG structure */
+  printf("I am going to calculate v%d and I will do %d trials\n", type, tot_trials);
   while (!feof)
     {
       fscanf(fin, "%s %d %s %s %s %d %lf %lf %lf ", dummy1, &atnum, atname, nbname, dummy2, &nbnum, &rx, &ry, &rz);
@@ -443,7 +454,7 @@ int main(int argc, char**argv)
 	vexcl += -rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
       else 
 	vexcl += rcmy*rcmy;
-      if (tt % outits == 0)
+      if (tt % fileoutits == 0)
 	{
 	 fout = fopen(fnout, "w+");
 	 if (type==0)
@@ -454,7 +465,7 @@ int main(int argc, char**argv)
 	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt)/Sqr(factor));
 	 fclose(fout);
 	}
-      if (tt % 10*outits==0)
+      if (tt % outits==0)
 	printf("trials: %d/%d\n", tt, tot_trials);
     }
 }
