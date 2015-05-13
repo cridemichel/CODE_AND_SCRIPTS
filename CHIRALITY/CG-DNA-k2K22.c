@@ -32,7 +32,7 @@ double calc_norm(double *vec)
 #define MC_BENT_DBLCYL
 
 char dummy1[32], dummy2[32], atname[32], nbname[8];
-int atnum, nbnum, len, tot_trials, tt=0;
+int nat, atnum, nbnum, len, tot_trials, tt=0;
 double L, rx, ry, rz, alpha;
 /*
                 pdb        radius (angstrom)
@@ -186,7 +186,7 @@ void place_DNAD(double x,double y, double z, double ux, double uy, double uz, in
   /* build R here from the orientation (ux,uy,uz) */
   versor_to_R(ux, uy, uz, R);
   /* ============ */
-  for (i=0; i < len; i++)
+  for (i=0; i < nat; i++)
     {
       xp[0] = DNAchain[i].x;
       xp[1] = DNAchain[i].y;
@@ -342,7 +342,7 @@ void orient_donsager(double *omx, double *omy, double* omz, double alpha)
 int main(int argc, char**argv)
 {
   FILE *fin, *fout;
-  int nat, k, i, j, overlap, type, outits, thetapts, fileoutits;
+  int k, i, j, overlap, type, outits, thetapts, fileoutits;
   char fnin[1024],fnout[256];
   double ux, uy, uz, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, factor, dth, th;
@@ -395,6 +395,7 @@ int main(int argc, char**argv)
 	  exit(1);
 	}
     };
+  nat=atnum;
   fclose(fin);
   srand48((int)time(NULL));
   sprintf(fnout, "v%d.dat", type);
@@ -411,6 +412,8 @@ int main(int argc, char**argv)
     }
   factor *= 4.0*acos(0.0);
   printf("dth=%f factor=%.15G\n", dth, factor);
+  fout = fopen(fnout, "w+");
+  fclose(fout);  
   for (tt=0; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
@@ -457,7 +460,7 @@ int main(int argc, char**argv)
 	vexcl += rcmy*rcmy;
       if (tt % fileoutits == 0)
 	{
-	 fout = fopen(fnout, "w+");
+	 fout = fopen(fnout, "a+");
 	 if (type==0)
 	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt));
 	 else if (type==1)
