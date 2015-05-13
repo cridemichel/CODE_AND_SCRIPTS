@@ -10,7 +10,7 @@ void vectProdVec(double *A, double *B, double *C)
   C[1] = A[2] * B[0] - A[0] * B[2];
   C[2] = A[0] * B[1] - A[1] * B[0];
 }
-
+//#define ALBERTA
 char fn[1024];
 struct DNA {
   double x;
@@ -386,21 +386,41 @@ int main(int argc, char**argv)
     outits=100*fileoutits;
   else
     outits = atoi(argv[7]);
-  /* ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
+  /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
+  /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
   /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
      in our CG model */
   nat = 70*len;
   DNAchain = (struct DNA*) malloc(sizeof(struct DNA)*nat); 
   for (k=0; k < 2; k++)
     DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*nat);
-  L = 1.05*2.0*40*len; /* 4 nm is approximately the length of a 12 bp DNAD */ 
+  L = 1.05*3.0*40*len; /* 4 nm is approximately the length of a 12 bp DNAD */ 
   /* read the CG structure */
   while (!feof(fin))
     {
+#ifdef ALBERTA
+      fscanf(fin, "%s %d %s %d %lf %lf %lf ", dummy1, &atnum, atname, &nbnum, &rx, &ry, &rz);
+#else
       fscanf(fin, "%s %d %s %s %s %d %lf %lf %lf ", dummy1, &atnum, atname, nbname, dummy2, &nbnum, &rx, &ry, &rz);
+#endif
+      atnum--;
       DNAchain[atnum].x = rx;
       DNAchain[atnum].y = ry;
       DNAchain[atnum].z = rz;
+#ifdef ALBERTA
+      if (!strcmp(atname, "S"))
+	{
+	  DNAchain[atnum].rad = 3.5;
+	}
+      else if (!strcmp(atname, "P"))
+	{
+	  DNAchain[atnum].rad = 3.0;
+	}
+      else if (!strcmp(atname, "B"))
+	{
+	  DNAchain[atnum].rad = 4.0;
+	}
+#else
       if (!strcmp(atname, "Xe"))
 	{
 	  DNAchain[atnum].rad = 3.5;
@@ -413,6 +433,7 @@ int main(int argc, char**argv)
 	{
 	  DNAchain[atnum].rad = 4.0;
 	}
+#endif     
       else
 	{
 	  printf("Unrecognized atom name, exiting...\n");
