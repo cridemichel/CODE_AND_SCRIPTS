@@ -175,7 +175,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
 }
 
-void place_DNAD(double x,double y, double z, double ux, double uy, double uz, int which)
+void place_DNAD(double x, double y, double z, double ux, double uy, double uz, int which)
 {
   double xp[3], rO[3], xl[3];
   double R[3][3];
@@ -370,8 +370,7 @@ int main(int argc, char**argv)
     DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*len);
   L = 1.05*2.0*120*len; /* 120 nm is approximately the length of a 12 bp DNAD */ 
   /* read the CG structure */
-  printf("L=%f alpha=%f I am going to calculate v%d and I will do %d trials\n", L, alpha, type, tot_trials);
-  while (!feof)
+  while (!feof(fin))
     {
       fscanf(fin, "%s %d %s %s %s %d %lf %lf %lf ", dummy1, &atnum, atname, nbname, dummy2, &nbnum, &rx, &ry, &rz);
       DNAchain[atnum].x = rx;
@@ -395,6 +394,7 @@ int main(int argc, char**argv)
 	  exit(1);
 	}
     };
+  printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %d trials\n", nat, L, alpha, type, tot_trials);
   nat=atnum;
   rcmx=rcmy=rcmz=0.0;
   for (i=0; i < nat; i++)
@@ -456,6 +456,7 @@ int main(int argc, char**argv)
 	    {
 	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) +  Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z) ;
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
+	      printf("dist=%f sigijsq=%f\n", sqrt(distsq), sqrt(sigijsq));
 	      if (distsq < sigijsq)
 		{
 		  overlap=1;
