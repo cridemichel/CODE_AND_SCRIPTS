@@ -528,7 +528,9 @@ int main(int argc, char**argv)
   for (tt=0; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
-
+      /* per la v2: contrib = 0 e 3 sono contributi con lo stesso segno ossia tra [0,Pi/2] e [0,Pi2] e tra [Pi/2,Pi] e [Pi/2,P]
+	 invece 1 e 2 sono quelli misti che danno un segno meno
+	 per la v1: contrib = 0 è il contributo positivo tra [0,Pi/2] e 1 quello negativo tra [Pi/2,Pi] */
       for (contrib=0; contrib < ncontrib; contrib++)
 	{
 	  if (type==0||type==1)
@@ -590,9 +592,9 @@ int main(int argc, char**argv)
 	      if (type==1) 
 		{
 		  if (contrib==0)
-		    segno = -1.0;
-		  else
 		    segno = 1.0;
+		  else
+		    segno = -1.0;
 		}
 	      if (type==2)
 		{
