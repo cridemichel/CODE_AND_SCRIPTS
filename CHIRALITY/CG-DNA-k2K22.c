@@ -321,7 +321,7 @@ double theta_donsager(double alpha)
   return theta;
 }
 
-extern const int nfons;
+//extern const int nfons;
 void orient_donsager(double *omx, double *omy, double* omz, double alpha)
 {
   double thons;
