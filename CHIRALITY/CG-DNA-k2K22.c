@@ -110,6 +110,25 @@ void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3],
      Rout[k1][k2] = Ro[k1][k2]; 
 }
 #endif
+void print_matrix(double M[3][3], int n)
+{
+  int k1, k2;
+  printf("{");
+  for (k1 = 0; k1 < n; k1++)
+    {
+      printf("{");
+      for (k2 = 0; k2 < n; k2++)
+	{
+	  printf("%.15G", M[k1][k2]);
+	  if (k2 < n - 1)
+	    printf(", ");
+	}
+      printf("}");
+      if (k1 < n-1)
+	printf(",\n");
+    }
+  printf("}\n");
+}
 
 void versor_to_R(double ox, double oy, double oz, double R[3][3])
 {
@@ -175,6 +194,11 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
     R[k1][k2]=Rt[k1][k2];
 #endif
   //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
+#ifdef DEBUG
+  printf("==============\n");
+  print_matrix(R, 3);
+  printf("==============\n");
+#endif
 }
 void place_DNAD(double x, double y, double z, double ux, double uy, double uz, int which)
 {
@@ -449,6 +473,7 @@ int main(int argc, char**argv)
 	  printf("Unrecognized atom name, exiting...\n");
 	  exit(1);
 	}
+      cc++;
     };
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %d trials\n", nat, L, alpha, type, tot_trials);
   rcmx=rcmy=rcmz=0.0;
