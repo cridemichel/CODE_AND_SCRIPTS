@@ -391,12 +391,14 @@ double estimate_maximum_dfons(double alpha)
   th=0.0;
   for (i=0; i < thetapts; i++)
     {
-      if (i==0 || maxval < (m=sin(th)*dfons(th,alpha)))
+      m=sin(th)*dfons(th,alpha);
+      if (i==0 || maxval < m)
 	maxval = m;
       th += dth;
-      //printf("%f %.15G\n", th, dfons(th, alpha));
+      //printf("%f %.15G\n", th, sin(th)*dfons(th, alpha));
     }
-    return maxval;
+  // printf("maxval=%f\n", maxval);
+  return maxval;
 }
 int main(int argc, char**argv)
 {
@@ -503,6 +505,7 @@ int main(int argc, char**argv)
   factor=0.0;
   dfons_sinth_max=estimate_maximum_dfons(alpha);
   printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
+  //exit(-1);
   dth=acos(0.0)/((double)thetapts);
   th=0.0;
   for (i=0; i < thetapts; i++)
