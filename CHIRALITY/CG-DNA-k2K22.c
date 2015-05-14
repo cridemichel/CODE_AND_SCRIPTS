@@ -559,7 +559,7 @@ int main(int argc, char**argv)
 	  else if (type==1)
 	    vexcl += -u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
 	  else 
-	    vexcl += u1x*u2x*rcmy*rcmy;
+	    vexcl += -u1x*u2x*rcmy*rcmy;
 	}
       if (tt > 0 && tt % fileoutits == 0)
 	{
