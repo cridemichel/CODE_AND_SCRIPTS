@@ -403,7 +403,7 @@ double estimate_maximum_dfons(double alpha)
 int main(int argc, char**argv)
 {
   FILE *fin, *fout;
-  int cc, k, i, j, overlap, type, outits, fileoutits, contrib;
+  int ncontrib, cc, k, i, j, overlap, type, outits, fileoutits, contrib;
   char fnin[1024],fnout[256];
   double segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, factor, dth, th;
@@ -519,17 +519,23 @@ int main(int argc, char**argv)
   printf("dth=%f factor=%.15G\n", dth, factor);
   fout = fopen(fnout, "w+");
   fclose(fout);  
+  if (type==0)
+    ncontrib=1;
+  else if (type==1)
+    ncontrib=2;
+  else
+    ncontrib=4;
   for (tt=0; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
 
-      for (contrib=0; contrib < 1+type; contrib++)
+      for (contrib=0; contrib < ncontrib; contrib++)
 	{
 	  if (type==0||type==1)
 	    orient_onsager(&u1x, &u1y, &u1z, alpha);
 	  else
 	    {
-	      if (contrib==0||contrib==2)
+	      if (contrib==0||contrib==1)
 		orient_donsager(&u1x, &u1y, &u1z, alpha, 0);
 	      else 
 		orient_donsager(&u1x, &u1y, &u1z, alpha, 1);
@@ -543,10 +549,20 @@ int main(int argc, char**argv)
 	    orient_onsager(&u2x, &u2y, &u2z, alpha);
 	  else
 	    {
-	      if (contrib==0)
-		orient_donsager(&u2x, &u2y, &u2z, alpha,0);
-	      else 
-		orient_donsager(&u2x, &u2y, &u2z, alpha,1);
+	      if (type==1)
+		{
+		  if (contrib==0)
+		     orient_donsager(&u2x, &u2y, &u2z, alpha,0);
+		  else
+		    orient_donsager(&u2x, &u2y, &u2z, alpha,1);
+		}
+	      else
+		{
+		  if (contrib==0||contrib==2)
+		    orient_donsager(&u2x, &u2y, &u2z, alpha,0);
+		  else 
+		    orient_donsager(&u2x, &u2y, &u2z, alpha,1);
+		}
 	    }
 	  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1);
 #ifdef DEBUg
@@ -580,10 +596,10 @@ int main(int argc, char**argv)
 		}
 	      if (type==2)
 		{
-		  if (contrib==0||contrib==1)
+		  if (contrib==0||contrib==3)
 		    segno = 1.0; 
 		  else
-		    segno = -2.0;
+		    segno = -1.0;
 		}
 	      /* otherwise calculate the integrand */
 	      if (type==0)
