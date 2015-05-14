@@ -180,6 +180,10 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
 {
   double xp[3], rO[3], xl[3];
   double R[3][3];
+#ifdef DEBUG
+  FILE *fd;
+  char fn[128];
+#endif
   FILE *f;
   int i; 
   rO[0] = x;
@@ -188,7 +192,9 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
   /* build R here from the orientation (ux,uy,uz) */
   versor_to_R(ux, uy, uz, R);
 #ifdef DEBUG 
-  f=fopen("molgl.xyz", "w+");
+  sprintf(fn, "DNAD%d.mgl", which);
+  fd=fopen(fn, "w+");
+  fprintf(fd, ".Vol: %f\n", L*L*L);
 #endif
   /* ============ */
   for (i=0; i < nat; i++)
@@ -202,13 +208,12 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
       DNADs[which][i].y = xl[1];
       DNADs[which][i].z = xl[2];
 #ifdef DEBUG
-      fprintf(f,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
+      fprintf(fd,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
 #endif
       DNADs[which][i].rad = DNAchain[i].rad;
     }
 #ifdef DEBUG
-  fclose(f);
-  exit(-1);
+  fclose(fd);
 #endif
 }
 /* ============================ >>> ranf <<< =============================== */
@@ -369,7 +374,7 @@ double estimate_maximum_dfons(double alpha)
 int main(int argc, char**argv)
 {
   FILE *fin, *fout;
-  int k, i, j, overlap, type, outits, fileoutits;
+  int cc, k, i, j, overlap, type, outits, fileoutits;
   char fnin[1024],fnout[256];
   double u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, factor, dth, th;
@@ -401,6 +406,7 @@ int main(int argc, char**argv)
     DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*nat);
   L = 1.05*3.0*40*len; /* 4 nm is approximately the length of a 12 bp DNAD */ 
   /* read the CG structure */
+  cc=0;
   while (!feof(fin))
     {
 #ifdef ALBERTA
@@ -408,35 +414,34 @@ int main(int argc, char**argv)
 #else
       fscanf(fin, "%s %d %s %s %s %d %lf %lf %lf ", dummy1, &atnum, atname, nbname, dummy2, &nbnum, &rx, &ry, &rz);
 #endif
-      atnum--;
-      DNAchain[atnum].x = rx;
-      DNAchain[atnum].y = ry;
-      DNAchain[atnum].z = rz;
+      DNAchain[cc].x = rx;
+      DNAchain[cc].y = ry;
+      DNAchain[cc].z = rz;
 #ifdef ALBERTA
       if (!strcmp(atname, "S"))
 	{
-	  DNAchain[atnum].rad = 3.5;
+	  DNAchain[cc].rad = 3.5;
 	}
       else if (!strcmp(atname, "P"))
 	{
-	  DNAchain[atnum].rad = 3.0;
+	  DNAchain[cc].rad = 3.0;
 	}
       else if (!strcmp(atname, "B"))
 	{
-	  DNAchain[atnum].rad = 4.0;
+	  DNAchain[cc].rad = 4.0;
 	}
 #else
       if (!strcmp(atname, "Xe"))
 	{
-	  DNAchain[atnum].rad = 3.5;
+	  DNAchain[cc].rad = 3.5;
 	}
       else if (!strcmp(atname, "B"))
 	{
-	  DNAchain[atnum].rad = 3.0;
+	  DNAchain[cc].rad = 3.0;
 	}
       else if (!strcmp(atname, "Se"))
 	{
-	  DNAchain[atnum].rad = 4.0;
+	  DNAchain[cc].rad = 4.0;
 	}
 #endif     
       else
@@ -499,6 +504,9 @@ int main(int argc, char**argv)
       else
 	orient_donsager(&u2x, &u2y, &u2z, alpha);
       place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1);
+#ifdef DEBUG
+      exit(-1);
+#endif
       /* check overlaps */
       overlap=0;
       for (i=0; i < nat; i++)
@@ -529,7 +537,7 @@ int main(int argc, char**argv)
 	{
 	 fout = fopen(fnout, "a+");
 	 if (type==0)
-	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt));
+	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt)/1E3);
 	 else if (type==1)
 	   fprintf(fout,"%d %.15G\n", tt, (L*L*L*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
 	 else
