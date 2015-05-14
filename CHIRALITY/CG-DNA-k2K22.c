@@ -320,11 +320,11 @@ double dfons(double theta, double alpha)
   pi = acos(0.0)*2.0;
   /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return sin(theta)*cosh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
+  return -sin(theta)*sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
 }
 
 /* return an angle theta sampled from an Onsager angular distribution */
-double theta_donsager(double alpha)
+double theta_donsager(double alpha, int domain)
 {
   /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
      using rejection method */
@@ -344,11 +344,14 @@ double theta_donsager(double alpha)
     }
   do 
     {
-      /* uniform theta between 0 and pi */
-      theta = pi*ranf_vb();
+      /* uniform theta between 0 and pi/2 (domain=0) or pi/2 and pi (domain=1) */
+      if (domain==0)
+	theta = ranf_vb()*pi/2.;
+      else
+	theta = pi/2.*(1.+ranf_vb());
       /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
       y = f0*ranf_vb();
-      f = sin(theta)*dfons(theta,alpha);
+      f = fabs(sin(theta)*dfons(theta,alpha));
       //printf("theta=%f y=%f\n", theta, y);
     }
   while (y >= f);
@@ -356,14 +359,14 @@ double theta_donsager(double alpha)
 }
 
 //extern const int nfons;
-void orient_donsager(double *omx, double *omy, double* omz, double alpha)
+void orient_donsager(double *omx, double *omy, double* omz, double alpha, int domain)
 {
   double thons;
   double pi, phi, verso;
 
   pi = acos(0.0)*2.0;
   /* random angle from onsager distribution */
-  thons = theta_donsager(alpha);
+  thons = theta_donsager(alpha, domain);
   //printf("thos=%f\n", thons);
   //distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
   phi = 2.0*pi*ranf_vb();
@@ -398,9 +401,9 @@ double estimate_maximum_dfons(double alpha)
 int main(int argc, char**argv)
 {
   FILE *fin, *fout;
-  int cc, k, i, j, overlap, type, outits, fileoutits;
+  int cc, k, i, j, overlap, type, outits, fileoutits, contrib;
   char fnin[1024],fnout[256];
-  double u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
+  double segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
   if (argc < 7)
@@ -500,7 +503,7 @@ int main(int argc, char**argv)
   factor=0.0;
   dfons_sinth_max=estimate_maximum_dfons(alpha);
   printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
-  dth=2.0*(acos(0.0))/((double)thetapts);
+  dth=acos(0.0)/((double)thetapts);
   th=0.0;
   for (i=0; i < thetapts; i++)
     {
@@ -508,6 +511,7 @@ int main(int argc, char**argv)
       th += dth;
       //printf("%f %.15G\n", th, dfons(th, alpha));
     }
+  factor= fabs(factor);
   factor *= 4.0*acos(0.0);
   printf("dth=%f factor=%.15G\n", dth, factor);
   fout = fopen(fnout, "w+");
@@ -516,50 +520,76 @@ int main(int argc, char**argv)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
 
-      if (type==0||type==1)
-	orient_onsager(&u1x, &u1y, &u1z, alpha);
-      else
-	orient_donsager(&u1x, &u1y, &u1z, alpha);
-
-      place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0);      
-      /* place second DNAD randomly */
-      rcmx = L*(drand48()-0.5);
-      rcmy = L*(drand48()-0.5);
-      rcmz = L*(drand48()-0.5);
-      if (type==0)
-	orient_onsager(&u2x, &u2y, &u2z, alpha);
-      else
-	orient_donsager(&u2x, &u2y, &u2z, alpha);
-      place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1);
-#ifdef DEBUG
-      exit(-1);
-#endif
-      /* check overlaps */
-      overlap=0;
-      for (i=0; i < nat; i++)
+      for (contrib=0; contrib < 1+type; contrib++)
 	{
-	  for (j=0; j < nat; j++)
+	  if (type==0||type==1)
+	    orient_onsager(&u1x, &u1y, &u1z, alpha);
+	  else
 	    {
-	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
-	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
-	      if (distsq < sigijsq)
+	      if (contrib==0||contrib==2)
+		orient_donsager(&u1x, &u1y, &u1z, alpha, 0);
+	      else 
+		orient_donsager(&u1x, &u1y, &u1z, alpha, 1);
+	    }
+	  place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0);      
+	  /* place second DNAD randomly */
+	  rcmx = L*(drand48()-0.5);
+	  rcmy = L*(drand48()-0.5);
+	  rcmz = L*(drand48()-0.5);
+	  if (type==0)
+	    orient_onsager(&u2x, &u2y, &u2z, alpha);
+	  else
+	    {
+	      if (contrib==0)
+		orient_donsager(&u2x, &u2y, &u2z, alpha,0);
+	      else 
+		orient_donsager(&u2x, &u2y, &u2z, alpha,1);
+	    }
+	  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1);
+#ifdef DEBUg
+	  exit(-1);
+#endif
+	  /* check overlaps */
+	  overlap=0;
+	  for (i=0; i < nat; i++)
+	    {
+	      for (j=0; j < nat; j++)
 		{
-		  overlap=1;
-		  break;
+		  distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
+		  sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
+		  if (distsq < sigijsq)
+		    {
+		      overlap=1;
+		      break;
+		    }
 		}
+	      if (overlap)
+		break;
 	    }
 	  if (overlap)
-	    break;
-	}
-      if (overlap)
-	{
-	  /* otherwise calculate the integrand */
-	  if (type==0)
-	    vexcl += 1.0;
-	  else if (type==1)
-	    vexcl += -u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	  else 
-	    vexcl += -u1x*u2x*rcmy*rcmy;
+	    {
+	      if (type==1) 
+		{
+		  if (contrib==0)
+		    segno = -1.0;
+		  else
+		    segno = 1.0;
+		}
+	      if (type==2)
+		{
+		  if (contrib==0||contrib==1)
+		    segno = 1.0; 
+		  else
+		    segno = -1.0;
+		}
+	      /* otherwise calculate the integrand */
+	      if (type==0)
+		vexcl += 1.0;
+	      else if (type==1)
+		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+	      else 
+		vexcl += segno*u1x*u2x*rcmy*rcmy;
+	    }
 	}
       if (tt > 0 && tt % fileoutits == 0)
 	{
