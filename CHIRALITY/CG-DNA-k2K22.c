@@ -176,7 +176,6 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
 #endif
   //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
 }
-
 void place_DNAD(double x, double y, double z, double ux, double uy, double uz, int which)
 {
   double xp[3], rO[3], xl[3];
@@ -188,7 +187,9 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
   rO[2] = z;
   /* build R here from the orientation (ux,uy,uz) */
   versor_to_R(ux, uy, uz, R);
-  //f=fopen("molgl.xyz", "w+");
+#ifdef DEBUG 
+  f=fopen("molgl.xyz", "w+");
+#endif
   /* ============ */
   for (i=0; i < nat; i++)
     {
@@ -200,11 +201,15 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
       DNADs[which][i].x = xl[0];
       DNADs[which][i].y = xl[1];
       DNADs[which][i].z = xl[2];
-      //fprintf(f,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
+#ifdef DEBUG
+      fprintf(f,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
+#endif
       DNADs[which][i].rad = DNAchain[i].rad;
     }
-  //fclose(f);
-  //exit(-1);
+#ifdef DEBUG
+  fclose(f);
+  exit(-1);
+#endif
 }
 /* ============================ >>> ranf <<< =============================== */
 double ranf_vb(void)
