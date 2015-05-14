@@ -320,7 +320,7 @@ double dfons(double theta, double alpha)
   pi = acos(0.0)*2.0;
   /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return -sin(theta)*sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
+  return sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
 }
 
 /* return an angle theta sampled from an Onsager angular distribution */
@@ -565,7 +565,7 @@ int main(int argc, char**argv)
 		}
 	    }
 	  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1);
-#ifdef DEBUg
+#ifdef DEBUG
 	  exit(-1);
 #endif
 	  /* check overlaps */
