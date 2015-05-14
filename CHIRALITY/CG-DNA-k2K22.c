@@ -538,7 +538,7 @@ int main(int argc, char**argv)
 	{
 	  for (j=0; j < nat; j++)
 	    {
-	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z) ;
+	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
 	      if (distsq < sigijsq)
 		{
@@ -550,19 +550,20 @@ int main(int argc, char**argv)
 	    break;
 	}
       if (overlap)
-	continue;
-      /* otherwise calculate the integrand */
-      if (type==0)
-	vexcl += 1.0;
-      else if (type==1)
-	vexcl += -u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-      else 
-	vexcl += u1x*u2x*rcmy*rcmy;
+	{
+	  /* otherwise calculate the integrand */
+	  if (type==0)
+	    vexcl += 1.0;
+	  else if (type==1)
+	    vexcl += -u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+	  else 
+	    vexcl += u1x*u2x*rcmy*rcmy;
+	}
       if (tt > 0 && tt % fileoutits == 0)
 	{
 	 fout = fopen(fnout, "a+");
 	 if (type==0)
-	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt)/1E3);
+	   fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
 	 else if (type==1)
 	   fprintf(fout,"%d %.15G\n", tt, (L*L*L*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
 	 else
