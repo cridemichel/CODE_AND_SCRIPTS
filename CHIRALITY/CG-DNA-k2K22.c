@@ -474,6 +474,8 @@ int main(int argc, char**argv)
 	  exit(1);
 	}
       cc++;
+      if (cc >= nat)
+	break;
     };
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %d trials\n", nat, L, alpha, type, tot_trials);
   rcmx=rcmy=rcmz=0.0;
@@ -563,7 +565,8 @@ int main(int argc, char**argv)
 	{
 	 fout = fopen(fnout, "a+");
 	 if (type==0)
-	   fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt)/1E3);
 	 else if (type==1)
 	   fprintf(fout,"%d %.15G\n", tt, (L*L*L*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
 	 else
