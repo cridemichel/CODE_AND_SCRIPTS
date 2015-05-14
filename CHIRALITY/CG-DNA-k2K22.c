@@ -583,7 +583,7 @@ int main(int argc, char**argv)
 		  if (contrib==0||contrib==1)
 		    segno = 1.0; 
 		  else
-		    segno = -1.0;
+		    segno = -2.0;
 		}
 	      /* otherwise calculate the integrand */
 	      if (type==0)
@@ -591,7 +591,7 @@ int main(int argc, char**argv)
 	      else if (type==1)
 		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
 	      else 
-		vexcl += segno*u1x*u2x*rcmy*rcmy;
+		vexcl += -segno*u1x*u2x*rcmy*rcmy;
 	    }
 	}
       if (tt > 0 && tt % fileoutits == 0)
