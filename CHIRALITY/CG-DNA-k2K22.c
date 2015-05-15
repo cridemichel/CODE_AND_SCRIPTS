@@ -4,6 +4,180 @@
 #include <math.h>
 #include <string.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
+struct DNADallStr {
+  double R[3][3];
+  double rcm[3];
+  double sax[3];
+} DNADall[2];
+
+double calcDistBox(void)
+{
+  double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
+  double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
+  int k, k1, k2, existsParallelPair = 0;
+  /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
+   * maniera molto efficiente */ 
+  for (k=0; k < 3; k++)
+    {
+      rA[k] = DNADall[0].rcm[k];
+      rB[k] = DNADall[1].rcm[k];
+      EA[k] = DNADall[0].sax[k];
+      EB[k] = DNADall[1].sax[k];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  AA[k1][k2] = DNADall[0].R[k1][k2];
+	  BB[k1][k2] = DNADall[1].R[k1][k2];
+	}
+    	DD[k1] = rA[k1] - rB[k1];
+    }
+  /* axis C0+s*A0 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[0][k1] =  scalProd(AA[0], BB[k1]);
+      fabscij[0][k1] = fabs(cij[0][k1]);
+      if ( fabscij[0][k1] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[0] = scalProd(AA[0],DD);
+  RR = fabs(AD[0]);
+  R1 = EB[0]*fabscij[0][0]+EB[1]*fabscij[0][1]+EB[2]*fabscij[0][2];
+  R01 = EA[0] + R1;
+  if ( RR > R01 )
+    return 1.0; /* non si intersecano */
+  /* axis C0+s*A1 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[1][k1] = scalProd(AA[1],BB[k1]);
+      fabscij[1][k1] = fabs(cij[1][k1]);
+      if ( fabscij[1][k1] == 1.0  )
+	existsParallelPair = 1;
+    }
+  AD[1] = scalProd(AA[1],DD);
+  RR = fabs(AD[1]);
+  R1 = EB[0]*fabscij[1][0]+EB[1]*fabscij[1][1]+EB[2]*fabscij[1][2];
+  R01 = EA[1] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*A2 */
+  for (k1= 0; k1 < 3; k1++)
+    {
+      cij[2][k1] = scalProd(AA[2], BB[k1]);
+      fabscij[2][k1] = fabs(cij[2][k1]);
+      if ( fabscij[2][k1] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[2] = scalProd(AA[2],DD);
+  RR = fabs(AD[2]);
+  R1 = EB[0]*fabscij[2][0]+EB[1]*fabscij[2][1]+EB[2]*fabscij[2][2];
+  R01 = EA[2] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*B0 */
+  RR = fabs(scalProd(BB[0],DD));
+  R0 = EA[0]*fabscij[0][0]+EA[1]*fabscij[1][0]+EA[2]*fabscij[2][0];
+  R01 = R0 + EB[0];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*B1 */
+  RR = fabs(scalProd(BB[1],DD));
+  R0 = EA[0]*fabscij[0][1]+EA[1]*fabscij[1][1]+EA[2]*fabscij[2][1];
+  R01 = R0 + EB[1];
+  if ( RR > R01 )
+    return 1.0;
+  
+  /* axis C0+s*B2 */
+  RR = fabs(scalProd(BB[2],DD));
+  R0 = EA[0]*fabscij[0][2]+EA[1]*fabscij[1][2]+EA[2]*fabscij[2][2];
+  R01 = R0 + EB[2];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* At least one pair of box axes was parallel, therefore the separation is
+   * effectively in 2D, i.e. checking the "edge" normals is sufficient for
+   * the separation of the boxes. 
+   */
+  if ( existsParallelPair )
+    return -1.0;
+
+  /* axis C0+s*A0xB0 */
+  RR = fabs(AD[2]*cij[1][0]-AD[1]*cij[2][0]);
+  R0 = EA[1]*fabscij[2][0] + EA[2]*fabscij[1][0];
+  R1 = EB[1]*fabscij[0][2] + EB[2]*fabscij[0][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A0xB1 */
+  RR = fabs(AD[2]*cij[1][1]-AD[1]*cij[2][1]);
+  R0 = EA[1]*fabscij[2][1] + EA[2]*fabscij[1][1];
+  R1 = EB[0]*fabscij[0][2] + EB[2]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A0xB2 */
+  RR = fabs(AD[2]*cij[1][2]-AD[1]*cij[2][2]);
+  R0 = EA[1]*fabscij[2][2] + EA[2]*fabscij[1][2];
+  R1 = EB[0]*fabscij[0][1] + EB[1]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB0 */
+  RR = fabs(AD[0]*cij[2][0]-AD[2]*cij[0][0]);
+  R0 = EA[0]*fabscij[2][0] + EA[2]*fabscij[0][0];
+  R1 = EB[1]*fabscij[1][2] + EB[2]*fabscij[1][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB1 */
+  RR = fabs(AD[0]*cij[2][1]-AD[2]*cij[0][1]);
+  R0 = EA[0]*fabscij[2][1] + EA[2]*fabscij[0][1];
+  R1 = EB[0]*fabscij[1][2] + EB[2]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB2 */
+  RR = fabs(AD[0]*cij[2][2]-AD[2]*cij[0][2]);
+  R0 = EA[0]*fabscij[2][2] + EA[2]*fabscij[0][2];
+  R1 = EB[0]*fabscij[1][1] + EB[1]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB0 */
+  RR = fabs(AD[1]*cij[0][0]-AD[0]*cij[1][0]);
+  R0 = EA[0]*fabscij[1][0] + EA[1]*fabscij[0][0];
+  R1 = EB[1]*fabscij[2][2] + EB[2]*fabscij[2][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB1 */
+  RR = fabs(AD[1]*cij[0][1]-AD[0]*cij[1][1]);
+  R0 = EA[0]*fabscij[1][1] + EA[1]*fabscij[0][1];
+  R1 = EB[0]*fabscij[2][2] + EB[2]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB2 */
+  RR = fabs(AD[1]*cij[0][2]-AD[0]*cij[1][2]);
+  R0 = EA[0]*fabscij[1][2] + EA[1]*fabscij[0][2];
+  R1 = EB[0]*fabscij[2][1] + EB[1]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  return -1.0;
+}
+
 void vectProdVec(double *A, double *B, double *C)
 {
   C[0] = A[1] * B[2] - A[2] * B[1]; 
@@ -200,10 +374,12 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   printf("==============\n");
 #endif
 }
+double RMDNA[2][3][3];
 void place_DNAD(double x, double y, double z, double ux, double uy, double uz, int which)
 {
   double xp[3], rO[3], xl[3];
   double R[3][3];
+  int k1, k2;
 #ifdef DEBUG
   FILE *fd;
   char fn[128];
@@ -228,6 +404,12 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
       xp[2] = DNAchain[i].z;
       
       body2lab(xp, xl, rO, R);
+      for (k1=0; k1 < 3; k1++)
+	{
+	  DNADall[which].rcm[k1] = rO[k1];
+	  for (k2=0; k2 < 3; k2++)
+	    DNADall[which].R[k1][k2] = R[k1][k2];
+	}
       DNADs[which][i].x = xl[0];
       DNADs[which][i].y = xl[1];
       DNADs[which][i].z = xl[2];
@@ -506,6 +688,8 @@ int main(int argc, char**argv)
   dfons_sinth_max=estimate_maximum_dfons(alpha);
   printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
   //exit(-1);
+  /* avendo diviso l'integrazione in theta negli intervalli [0,pi/2] e [pi/2,pi]
+     il fattore si deve ottenere integrando fra 0 e pi/2 */
   dth=acos(0.0)/((double)thetapts);
   th=0.0;
   for (i=0; i < thetapts; i++)
