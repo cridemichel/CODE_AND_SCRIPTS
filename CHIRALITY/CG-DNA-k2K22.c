@@ -650,7 +650,9 @@ double ximanning, deltamann; /* Debye screening length */
 double zeta_a, zeta_b;
 double Ucoul(double rab)
 {
+  //return esq_eps_prime10*zeta_a*zeta_b/rab;
   return esq_eps_prime10*zeta_a*zeta_b/rab;
+
 }
 double Uyuk(double rab)
 {
@@ -962,7 +964,7 @@ int main(int argc, char**argv)
 
 			}
 #endif
-		      		    }
+      		    }
 		  if (overlap)
 		    break;
 		}
