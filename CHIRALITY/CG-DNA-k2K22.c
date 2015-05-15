@@ -5,7 +5,7 @@
 #include <string.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #ifdef ELEC
-double kD, yukcut;
+double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
 double scalProd(double *A, double *B)
 {
@@ -613,11 +613,11 @@ void init_distbox(void)
 #ifdef ELEC
       if (DNAchain[i].atype==1)/* se si tratta di un P */
 	{
-	  if (yukcut*kD*0.5 > DNAchain[i].rad)
+	  if (yukcutkD*0.5 > DNAchain[i].rad)
 	    {
-	      distx = fabs(DNAchain[i].x) + yukcut*0.5/kD;
-	      disty = fabs(DNAchain[i].y) + yukcut*0.5/kD;
-	      distz = fabs(DNAchain[i].z) + yukcut*0.5/kD;
+	      distx = fabs(DNAchain[i].x) + yukcutkD*0.5;
+	      disty = fabs(DNAchain[i].y) + yukcutkD*0.5;
+	      distz = fabs(DNAchain[i].z) + yukcutkD*0.5;
 	    }
 	}
 #endif
@@ -663,9 +663,10 @@ double calc_yukawa(int i, int j, double distsq)
   rab = sqrt(distsq);
   sigab = DNADs[0][i].rad + DNADs[1][j].rad;
   rab0 = sigab + 2; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
+  
   if (rab < rab0)
     {
-       return Ucoul(rab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
+      return Ucoul(rab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
 #if 0
       if (isnan(ret))
 	{
@@ -676,10 +677,11 @@ double calc_yukawa(int i, int j, double distsq)
 #endif    
     }
   /* we set a cutoff for electrostatic interactions */
-  else if (rab < yukcut/kD)
+  else if (rab < yukcutkD)
     {
       return Uyuk(rab);
     } 
+  else return 0.0;
 }
 #endif
 int main(int argc, char**argv)
@@ -751,8 +753,10 @@ int main(int argc, char**argv)
    */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
+  yukcutkD = yukcut/kD;
+  yukcutkDsq = Sqr(yukcutkD);
   printf("beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
-  printf("yukawa cutoff=%.15G\n", yukcut/kD);
+  printf("yukawa cutoff=%.15G\n", yukcutkD);
  #endif
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
@@ -939,9 +943,18 @@ int main(int argc, char**argv)
 		      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
 #ifdef ELEC
 		      /* if they are both phosphate groups we need to calculate electrostatic interaction here */
-		      if (DNADs[0][i].atype==1 && DNADs[1][i].atype==1)
+		      if (DNADs[0][i].atype==1 && DNADs[1][j].atype==1 && distsq < yukcutkDsq)
 			{
+#if 0
+			  if (distsq < Sqr(yukcut/kD))
+			      printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD);
+#endif
+#if 0
+			  if (calc_yukawa(i,j,distsq)!= 0.0)
+			      printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f yuk=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD, calc_yukawa(i,j,distsq));
+#endif
 			  uel += calc_yukawa(i, j, distsq); 
+
 			}
 #endif
 		      if (distsq < sigijsq)
@@ -981,6 +994,7 @@ int main(int argc, char**argv)
 #ifdef ELEC
 	  else if (interact)
 	    {
+	      // printf("boh?!? tt=%lld uel=%f\n", tt, uel);	
 	      if (type==1) 
 		{
 		  if (contrib==0)
