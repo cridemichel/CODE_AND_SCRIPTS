@@ -639,7 +639,7 @@ void init_distbox(void)
 #ifdef ELEC
 double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*angstrom */
 double esq_eps10, esq_eps_prime10;
-const double bmann = 10.0*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
+const double bmann = 1E-9*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
 const double Dalton = 1.660538921E-27;
 const double kB = 1.3806503E-23, eps0=8.85E-12; /* boltzmann constant */
 const double qel = 1.602176565E-19, Nav=6.02214129E23;
@@ -750,7 +750,7 @@ int main(int argc, char**argv)
    */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
-  printf("beta=%f ximanning=%f kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", beta, ximanning, kB, kD, esq_eps, esq_eps_prime, yukcut);
+  printf("beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
  #endif
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
