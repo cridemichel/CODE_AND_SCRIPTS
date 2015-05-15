@@ -674,7 +674,11 @@ int main(int argc, char**argv)
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
   if (argc < 7)
     {
+#ifdef ELEC
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml]\n");
+#else
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits]\n");
+#endif
       exit(1);
     }
   strcpy(fnin,argv[1]);
@@ -705,6 +709,10 @@ int main(int argc, char**argv)
   deltamann = 1.0/ximanning;
   zeta_a = deltamann;
   zeta_b = deltamann;
+
+  esq_eps = Sqr(qel)/(4.0*M_PI*eps0*10.0);
+  esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)
+
   /*
      rho_salt =2 csalt Nav 1000;
      rho_counter[cdna_]:=(2 cdna)/(660*Dalton);
