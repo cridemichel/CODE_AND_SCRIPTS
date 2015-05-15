@@ -726,7 +726,7 @@ int main(int argc, char**argv)
 
    */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
-  kD = sqrt(esq_eps*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000)/kB);
+  kD = sqrt(esq_eps*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000)/kB)/1E10;
 #endif
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
@@ -804,6 +804,9 @@ int main(int argc, char**argv)
 	break;
     };
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
+#ifdef ELEC
+  printf("kD=%f (in Angstrom)\n", kD);
+#endif
   rcmx=rcmy=rcmz=0.0;
   for (i=0; i < nat; i++)
     {
