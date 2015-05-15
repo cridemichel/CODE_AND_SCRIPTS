@@ -4,6 +4,9 @@
 #include <math.h>
 #include <string.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
+#ifdef ELEC
+double kD, yukcut;
+#endif
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -608,7 +611,7 @@ void init_distbox(void)
       disty = fabs(DNAchain[i].y) + DNAchain[i].rad;
       distz = fabs(DNAchain[i].z) + DNAchain[i].rad;
 #ifdef ELEC
-      if (DNADchain[i].atype==1)/* se si tratta di un P */
+      if (DNAchain[i].atype==1)/* se si tratta di un P */
 	{
 	  if (yukcut*kD*0.5 > DNAchain[i].rad)
 	    {
@@ -642,8 +645,7 @@ const double kB = 1.3806503E-23, eps0=8.85E-12; /* boltzmann constant */
 const double qel = 1.602176565E-19, Nav=6.02214129E23;
 const double qdna = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
 double cdna, csalt = 0.0; /* concentrazione del sale aggiunto molare */
-double yukcut;
-double kD, ximanning, deltamann; /* Debye screening length */
+double ximanning, deltamann; /* Debye screening length */
 /* charge on phosphate groups */
 double zeta_a, zeta_b;
 double Ucoul(double rab)
