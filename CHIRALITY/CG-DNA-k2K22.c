@@ -615,9 +615,9 @@ void init_distbox(void)
 	{
 	  if (yukcut*kD*0.5 > DNAchain[i].rad)
 	    {
-	      distx = fabs(DNAchain[i].x) + yukcut*kD*0.5;
-	      disty = fabs(DNAchain[i].y) + yukcut*kD*0.5;
-	      distz = fabs(DNAchain[i].z) + yukcut*kD*0.5;
+	      distx = fabs(DNAchain[i].x) + yukcut*0.5/kD;
+	      disty = fabs(DNAchain[i].y) + yukcut*0.5/kD;
+	      distz = fabs(DNAchain[i].z) + yukcut*0.5/kD;
 	    }
 	}
 #endif
@@ -675,7 +675,8 @@ double calc_yukawa(int i, int j, double distsq)
       return ret;
 #endif    
     }
-  else
+  /* we set a cutoff for electrostatic interactions */
+  else if (rab < yukcut/kD)
     {
       return Uyuk(rab);
     } 
