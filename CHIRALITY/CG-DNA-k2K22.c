@@ -214,7 +214,8 @@ double calc_norm(double *vec)
 #define MC_BENT_DBLCYL
 
 char dummy1[32], dummy2[32], atname[32], nbname[8];
-int nat, atnum, nbnum, len, tot_trials, tt=0;
+int nat, atnum, nbnum, len;
+long long int tot_trials, tt=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max;
 const double thetapts=100000;
 /*
@@ -618,7 +619,8 @@ void init_distbox(void)
 int main(int argc, char**argv)
 {
   FILE *fin, *fout;
-  int ncontrib, cc, k, i, j, overlap, type, outits, fileoutits, contrib;
+  int ncontrib, cc, k, i, j, overlap, type, contrib;
+  long long int fileoutits, outits;
   char fnin[1024],fnout[256];
   double segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, factor, dth, th;
@@ -632,14 +634,14 @@ int main(int argc, char**argv)
   fin=fopen(fnin,"r");
   len=atoi(argv[2]);
   alpha = atof(argv[3]);
-  tot_trials=atoi(argv[4]);
+  tot_trials=atoll(argv[4]);
   type = atoi(argv[5]);
-  fileoutits = atoi(argv[6]);
+  fileoutits = atoll(argv[6]);
   
   if (argc == 7)
     outits=100*fileoutits;
   else
-    outits = atoi(argv[7]);
+    outits = atoll(argv[7]);
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
   /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
@@ -697,7 +699,7 @@ int main(int argc, char**argv)
       if (cc >= nat)
 	break;
     };
-  printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %d trials\n", nat, L, alpha, type, tot_trials);
+  printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
   rcmx=rcmy=rcmz=0.0;
   for (i=0; i < nat; i++)
     {
@@ -838,14 +840,14 @@ int main(int argc, char**argv)
 	 fout = fopen(fnout, "a+");
 	 if (type==0)
 	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%d %.15G\n", tt, L*L*L*vexcl/((double)tt)/1E3);
+	   fprintf(fout,"%lld %.15G\n", tt, L*L*L*vexcl/((double)tt)/1E3);
 	 else if (type==1)
-	   fprintf(fout,"%d %.15G\n", tt, (L*L*L*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
 	 else
-	   fprintf(fout,"%d %.15G\n", tt, (L*L*L*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
 	 fclose(fout);
 	}
       if (tt % outits==0)
-	printf("trials: %d/%d\n", tt, tot_trials);
+	printf("trials: %lld/%lld\n", tt, tot_trials);
     }
 }
