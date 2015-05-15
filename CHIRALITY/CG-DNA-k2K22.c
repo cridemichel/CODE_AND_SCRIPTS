@@ -629,7 +629,7 @@ const double bmann = 10.0*0.34/2.0; /* spacing between charged phosphate groups 
 const double Dalton = 1.660538921E-27;
 const double kB = 1.3806503E-23; /* boltzmann constant */
 const double qdna = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
-double csalt = 0.0; /* concentrazione del sale aggiunto in mg/ml */
+double csalt = 0.0; /* concentrazione del sale aggiunto molare */
 double kD, ximanning, deltamann; /* Debye screening length */
 /* charge on phosphate groups */
 double zeta_a, zeta_b;
