@@ -630,6 +630,7 @@ const double kB = 1.3806503E-23, eps0=8.85E-12; /* boltzmann constant */
 const double qel = 1.602176565E-19, 6.02214129E23;
 const double qdna = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
 double cdna, csalt = 0.0; /* concentrazione del sale aggiunto molare */
+double yukcut;
 double kD, ximanning, deltamann; /* Debye screening length */
 /* charge on phosphate groups */
 double zeta_a, zeta_b;
@@ -675,7 +676,7 @@ int main(int argc, char**argv)
   if (argc < 7)
     {
 #ifdef ELEC
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD]\n");
 #else
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits]\n");
 #endif
@@ -704,12 +705,16 @@ int main(int argc, char**argv)
     cdna =  600; /* mg/ml */
   else
     cdna = atof(argv[9]);
+  
+  if (argc <= 10)
+    yukcut = 2.0;
+  else 
+    yukcut = atof(argv[10]);
 
   ximanning = esq_eps*beta/bmann;
   deltamann = 1.0/ximanning;
   zeta_a = deltamann;
   zeta_b = deltamann;
-
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1); /* epsilon_r per l'acqua a 20°C vale 80.1 */
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)
 
@@ -723,6 +728,7 @@ int main(int argc, char**argv)
    */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
   kD = sqrt(esq_eps*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000)/kB)
+  yukcut = 2.0;/* in unità di 1.0/kD */
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
   /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
