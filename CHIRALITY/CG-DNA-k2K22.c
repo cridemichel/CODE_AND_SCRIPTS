@@ -623,7 +623,8 @@ void init_distbox(void)
 
 }
 #ifdef ELEC
-double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon) */
+double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*angstrom */
+double esq_eps10, esq_eps_prime10;
 const double bmann = 10.0*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
 const double Dalton = 1.660538921E-27;
 const double kB = 1.3806503E-23, eps0=8.85E-12; /* boltzmann constant */
@@ -636,12 +637,12 @@ double kD, ximanning, deltamann; /* Debye screening length */
 double zeta_a, zeta_b;
 double Ucoul(double rab)
 {
-  return esq_eps_prime*zeta_a*zeta_b/rab;
+  return esq_eps_prime10*zeta_a*zeta_b/rab;
 }
 double Uyuk(double rab)
 {
 
-  return esq_eps*zeta_a*zeta_b*exp(-kD*rab);
+  return esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab;
 } 
 
 double calc_yukawa(int i, int j, double distsq)
@@ -715,8 +716,10 @@ int main(int argc, char**argv)
   deltamann = 1.0/ximanning;
   zeta_a = deltamann;
   zeta_b = deltamann;
-  esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1); /* epsilon_r per l'acqua a 20°C vale 80.1 */
-  esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0);
+  esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1)/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
+  esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)/kB;
+  esq_eps10 = esq_eps10*1E10;
+  esq_eps_prime10 = esq_eps_prime*1E10;
   /*
      rho_salt =2 csalt Nav 1000;
      rho_counter[cdna_]:=(2 cdna)/(660*Dalton);
@@ -726,8 +729,9 @@ int main(int argc, char**argv)
 
    */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
-  kD = sqrt(esq_eps*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000)/kB)/1E10;
-#endif
+  kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.)/kB)/1E10;
+  printf("kD=%.15G (in Angstrom) esq_eps=%.15G esq_eps_prime=%.15G \n", kD, esq_eps, esq_eps_prime);
+ #endif
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
   /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
@@ -804,9 +808,6 @@ int main(int argc, char**argv)
 	break;
     };
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
-#ifdef ELEC
-  printf("kD=%f (in Angstrom)\n", kD);
-#endif
   rcmx=rcmy=rcmz=0.0;
   for (i=0; i < nat; i++)
     {
