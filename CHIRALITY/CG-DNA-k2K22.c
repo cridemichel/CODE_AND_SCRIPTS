@@ -665,7 +665,7 @@ double calc_yukawa(int i, int j, double distsq)
   rab0 = sigab + 2; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
   if (rab < rab0)
     {
-       return Ucoul(rab) + (rab-sigab)*(Uyuk(rab) - Uyuk(sigab))/(rab0-sigab);
+       return Ucoul(rab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
 #if 0
       if (isnan(ret))
 	{
