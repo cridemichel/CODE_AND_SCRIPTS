@@ -625,9 +625,10 @@ void init_distbox(void)
 #ifdef ELEC
 const double esq_eps = 1.0; /* = e^2 / (4*pi*epsilon0*epsilon) */
 const double esq_eps_prime = 1.0;/* = e^2 / (4*pi*epsilon0*epsilon' */
-double kD; /* Debye screening length */
+const double bmann = 10.0*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
+double kD, ximanning, deltamann; /* Debye screening length */
 /* charge on phosphate groups */
-const double zeta_a=1.0, zeta_b=1.0;
+double zeta_a, zeta_b;
 double Ucoul(double rab)
 {
   return esq_eps_prime*zeta_a*zeta_b/rab;
@@ -695,6 +696,12 @@ int main(int argc, char**argv)
     kD = 10.0;
   else
     kD = atof(argv[9]);
+
+  ximanning = esq_eps*beta/bmann;
+  deltamann = 1.0/ximanning;
+  zeta_a = deltamann;
+  zeta_b = deltamann;
+  kD = 1.0;
 #endif
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
