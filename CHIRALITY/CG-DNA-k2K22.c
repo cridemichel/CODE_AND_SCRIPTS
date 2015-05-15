@@ -627,7 +627,7 @@ double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon) */
 const double bmann = 10.0*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
 const double Dalton = 1.660538921E-27;
 const double kB = 1.3806503E-23, eps0=8.85E-12; /* boltzmann constant */
-const double qel = 1.602176565E-19, 6.02214129E23;
+const double qel = 1.602176565E-19, Nav=6.02214129E23;
 const double qdna = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
 double cdna, csalt = 0.0; /* concentrazione del sale aggiunto molare */
 double yukcut;
@@ -646,7 +646,7 @@ double Uyuk(double rab)
 
 double calc_yukawa(int i, int j, double distsq)
 {
-  double rab0, rab;
+  double rab0, rab, sigab;
   rab = sqrt(distsq);
   sigab = DNADs[0][i].rad + DNADs[1][j].rad;
   rab0 = sigab + 2; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
@@ -697,7 +697,7 @@ int main(int argc, char**argv)
 
 #ifdef ELEC
   if (argc <= 8)
-    beta = 1.0
+    beta = 1.0;
   else  
     beta = 1.0/atof(argv[8]);
 
@@ -716,8 +716,7 @@ int main(int argc, char**argv)
   zeta_a = deltamann;
   zeta_b = deltamann;
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1); /* epsilon_r per l'acqua a 20°C vale 80.1 */
-  esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)
-
+  esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0);
   /*
      rho_salt =2 csalt Nav 1000;
      rho_counter[cdna_]:=(2 cdna)/(660*Dalton);
@@ -727,8 +726,8 @@ int main(int argc, char**argv)
 
    */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
-  kD = sqrt(esq_eps*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000)/kB)
-  yukcut = 2.0;/* in unità di 1.0/kD */
+  kD = sqrt(esq_eps*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000)/kB);
+#endif
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
   /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
@@ -914,7 +913,7 @@ int main(int argc, char**argv)
 		      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
 #ifdef ELEC
 		      /* if they are both phosphate groups we need to calculate electrostatic interaction here */
-		      if DNADs[0][i].atype==1 && DNADsπ[1][i].atype==1)
+		      if (DNADs[0][i].atype==1 && DNADs[1][i].atype==1)
 			{
 			  uel += calc_yukawa(i, j, distsq); 
 			}
@@ -987,7 +986,7 @@ int main(int argc, char**argv)
 #ifdef ELEC
 	 if (type==0)
 	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%lld %.15G\n", tt, L*L*L*(vexcl+vexclel)/((double)tt)/1E3, L*L*L*vexcl/((double)tt)/1E3
+	   fprintf(fout,"%lld %.15G\n", tt, L*L*L*(vexcl+vexclel)/((double)tt)/1E3, L*L*L*vexcl/((double)tt)/1E3,
 		   L*L*L*vexclel/((double)tt)/1E3);
 	 else if (type==1)
 	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*(vexcl+vexclel)/((double)tt))*factor/1E4,
