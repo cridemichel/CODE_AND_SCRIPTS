@@ -199,6 +199,9 @@ struct DNA {
   double y;
   double z;
   double rad;
+#ifdef ELEC
+  int atype;
+#endif
 } *DNAchain;
 
 struct DNA *DNADs[2];
@@ -422,6 +425,9 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
       DNADs[which][i].x = xl[0];
       DNADs[which][i].y = xl[1];
       DNADs[which][i].z = xl[2];
+#ifdef ELEC
+      DNADs[which][i].atype = DNAchain[i].atype;
+#endif
 #ifdef DEBUG
       fprintf(fd,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
 #endif
@@ -624,6 +630,10 @@ int main(int argc, char**argv)
   char fnin[1024],fnout[256];
   double segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, factor, dth, th;
+#ifdef ELEC
+  double uel, beta;
+  int interact;
+#endif
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
   if (argc < 7)
     {
@@ -642,6 +652,13 @@ int main(int argc, char**argv)
     outits=100*fileoutits;
   else
     outits = atoll(argv[7]);
+
+#ifdef ELEC
+  if (argc <= 8)
+    beta = 1.0
+  else  
+    beta = 1.0/atof(argv[8]);
+#endif
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
   /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
@@ -667,28 +684,46 @@ int main(int argc, char**argv)
       if (!strcmp(atname, "S"))
 	{
 	  DNAchain[cc].rad = 3.5;
+#ifdef ELEC
+	  DNAchain[cc].atype = 0;
+#endif
 	}
       else if (!strcmp(atname, "P"))
 	{
 	  DNAchain[cc].rad = 3.0;
+#ifdef ELEC
+	  DNAchain[cc].atype = 1;
+#endif
 	}
       else if (!strcmp(atname, "B"))
 	{
 	  DNAchain[cc].rad = 4.0;
+#ifdef ELEC
+	  DNAchain[cc].atype = 2;
+#endif
 	}
 #else
       if (!strcmp(atname, "Xe"))
 	{
 	  DNAchain[cc].rad = 3.5;
+#ifdef ELEC
+	  DNAchain[cc].atype = 0;
+#endif
 	}
       else if (!strcmp(atname, "B"))
 	{
 	  DNAchain[cc].rad = 3.0;
+#ifdef ELEC
+	  DNAchain[cc].atype = 1;
+#endif
 	}
       else if (!strcmp(atname, "Se"))
 	{
 	  DNAchain[cc].rad = 4.0;
-	}
+#ifdef ELEC
+	  DNAchain[cc].atype = 2;
+#endif
+}
 #endif     
       else
 	{
@@ -792,14 +827,28 @@ int main(int argc, char**argv)
 #endif
 	  /* check overlaps */
 	  overlap=0;
+#ifdef ELEC
+	  uel = 0.0;
+	  interact = 0;
+#endif
 	  if (calcDistBox() < 0.0)
 	    {
+#ifdef ELEC
+	      interact = 1;
+#endif
 	      for (i=0; i < nat; i++)
 		{
 		  for (j=0; j < nat; j++)
 		    {
 		      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
 		      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
+#ifdef ELEC
+		      /* if they are both phosphate groups we need to calculate electrostatic interaction here */
+		      if DNADs[0][i].atype==1 && DNADsπ[1][i].atype==1)
+			{
+			  uel += calc_yukawa(i, j); 
+			}
+#endif
 		      if (distsq < sigijsq)
 			{
 			  overlap=1;
@@ -810,7 +859,7 @@ int main(int argc, char**argv)
 		    break;
 		}
 	    }
-	  if (overlap)
+	  if (overlap) 
 	    {
 	      if (type==1) 
 		{
@@ -834,7 +883,34 @@ int main(int argc, char**argv)
 	      else 
 		vexcl += -segno*u1x*u2x*rcmy*rcmy;
 	    }
+#ifdef ELEC
+	  else if (interact)
+	    {
+	      if (type==1) 
+		{
+		  if (contrib==0)
+		    segno = 1.0;
+		  else
+		    segno = -1.0;
+		}
+	      if (type==2)
+		{
+		  if (contrib==0||contrib==3)
+		    segno = 1.0; 
+		  else
+		    segno = -1.0;
+		}
+	      /* otherwise calculate the integrand */
+	      if (type==0)
+		vexcl += (1.0-exp(-beta*uel));
+	      else if (type==1)
+		vexcl += segno*u2x*rcmy*(1.0-exp(-beta*uel)); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+	      else 
+		vexcl += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel);
+	    }
+#endif
 	}
+      
       if (tt > 0 && tt % fileoutits == 0)
 	{
 	 fout = fopen(fnout, "a+");
