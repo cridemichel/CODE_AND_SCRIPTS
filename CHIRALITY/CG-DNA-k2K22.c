@@ -626,6 +626,10 @@ void init_distbox(void)
 const double esq_eps = 1.0; /* = e^2 / (4*pi*epsilon0*epsilon) */
 const double esq_eps_prime = 1.0;/* = e^2 / (4*pi*epsilon0*epsilon' */
 const double bmann = 10.0*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
+const double Dalton = 1.660538921E-27;
+const double kB = 1.3806503E-23; /* boltzmann constant */
+const double qdna = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
+double csalt = 0.0; /* concentrazione del sale aggiunto in mg/ml */
 double kD, ximanning, deltamann; /* Debye screening length */
 /* charge on phosphate groups */
 double zeta_a, zeta_b;
@@ -701,8 +705,16 @@ int main(int argc, char**argv)
   deltamann = 1.0/ximanning;
   zeta_a = deltamann;
   zeta_b = deltamann;
-  kD = 1.0;
-#endif
+  /*
+     rho_salt =2 csalt Nav 1000;
+     rho_counter[cdna_]:=(2 cdna)/(660*Dalton);
+     (* cdna in mg/ml e csalt Molare (=moli/litro), nu=numero di cariche per unità di lunghezza *)
+     InvDebyeScrLen[T_,qdna_,cdna_,qsalt_,csalt_,\[Epsilon]rel_]:= Sqrt[qdna^2 qel^2/(kB T \[Epsilon]0 \[Epsilon]rel ) ( 2cdna)/(660*Dalton)+qsalt^2 qel^2/(kB T \[Epsilon]0 \[Epsilon]rel ) 2 csalt Nav 1000 ];
+     InvDebyeScrLen[300, 2, 200, 2, 1, 20]^-1*10^9
+
+   */
+  /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
+  kD = sqrt(esq_eps*beta*(Sqr(qdna)*2.0*cdna/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000)/kB)
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
   /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
