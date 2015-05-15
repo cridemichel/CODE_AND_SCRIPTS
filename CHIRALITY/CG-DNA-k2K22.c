@@ -666,7 +666,7 @@ double calc_yukawa(int i, int j, double distsq)
   
   if (rab < rab0)
     {
-      return Ucoul(rab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
+      return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
 #if 0
       if (isnan(ret))
 	{
@@ -941,6 +941,11 @@ int main(int argc, char**argv)
 		    {
 		      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
 		      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
+		      if (distsq < sigijsq)
+			{
+			  overlap=1;
+			  break;
+			}
 #ifdef ELEC
 		      /* if they are both phosphate groups we need to calculate electrostatic interaction here */
 		      if (DNADs[0][i].atype==1 && DNADs[1][j].atype==1 && distsq < yukcutkDsq)
@@ -950,19 +955,14 @@ int main(int argc, char**argv)
 			      printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD);
 #endif
 #if 0
-			  if (calc_yukawa(i,j,distsq)!= 0.0)
+			  if (calc_yukawa(i,j,distsq) < 0.0)
 			      printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f yuk=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD, calc_yukawa(i,j,distsq));
 #endif
 			  uel += calc_yukawa(i, j, distsq); 
 
 			}
 #endif
-		      if (distsq < sigijsq)
-			{
-			  overlap=1;
-			  break;
-			}
-		    }
+		      		    }
 		  if (overlap)
 		    break;
 		}
