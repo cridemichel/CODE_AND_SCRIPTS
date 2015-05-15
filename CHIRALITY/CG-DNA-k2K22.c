@@ -654,19 +654,26 @@ double Ucoul(double rab)
 }
 double Uyuk(double rab)
 {
-
   return esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab;
 } 
 
 double calc_yukawa(int i, int j, double distsq)
 {
-  double rab0, rab, sigab;
+  double ret, rab0, rab, sigab;
   rab = sqrt(distsq);
   sigab = DNADs[0][i].rad + DNADs[1][j].rad;
   rab0 = sigab + 2; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
   if (rab < rab0)
     {
-      return Ucoul(rab) + (rab-sigab)*(Uyuk(rab) - Uyuk(sigab))/(rab0-sigab);
+       return Ucoul(rab) + (rab-sigab)*(Uyuk(rab) - Uyuk(sigab))/(rab0-sigab);
+#if 0
+      if (isnan(ret))
+	{
+	  printf("a=%f rab=%f boh ret=%f Ucoul(rab)=%f Uyuk(rab)=%f\n", zeta_a, rab, ret, Ucoul(rab), Uyuk(rab));
+	  exit(-1);
+	}
+      return ret;
+#endif    
     }
   else
     {
@@ -725,15 +732,15 @@ int main(int argc, char**argv)
   else 
     yukcut = atof(argv[10]);
 
-  ximanning = esq_eps*beta/bmann;
-  deltamann = 1.0/ximanning;
-  zeta_a = deltamann;
-  zeta_b = deltamann;
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1)/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)/kB;
   esq_eps10 = esq_eps10*1E10;
   esq_eps_prime10 = esq_eps_prime*1E10;
-  /*
+  ximanning = esq_eps*beta/bmann;
+  deltamann = 1.0/ximanning;
+  zeta_a = deltamann;
+  zeta_b = deltamann;
+ /*
      rho_salt =2 csalt Nav 1000;
      rho_counter[cdna_]:=(2 cdna)/(660*Dalton);
      (* cdna in mg/ml e csalt Molare (=moli/litro), nu=numero di cariche per unità di lunghezza *)
@@ -743,7 +750,7 @@ int main(int argc, char**argv)
    */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
-  printf("kB=%.15G kD=%.15G (in Angstrom) esq_eps=%.15G esq_eps_prime=%.15G \n", kB, kD, esq_eps, esq_eps_prime);
+  printf("beta=%f ximanning=%f kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G \n", beta, ximanning, kB, kD, esq_eps, esq_eps_prime);
  #endif
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
@@ -1003,14 +1010,14 @@ int main(int argc, char**argv)
 #ifdef ELEC
 	 if (type==0)
 	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%lld %.15G\n", tt, L*L*L*(vexcl+vexclel)/((double)tt)/1E3, L*L*L*vexcl/((double)tt)/1E3,
+	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, L*L*L*(vexcl+vexclel)/((double)tt)/1E3, L*L*L*vexcl/((double)tt)/1E3,
 		   L*L*L*vexclel/((double)tt)/1E3);
 	 else if (type==1)
-	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*(vexcl+vexclel)/((double)tt))*factor/1E4,
+	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (L*L*L*(vexcl+vexclel)/((double)tt))*factor/1E4,
 		   (L*L*L*vexcl/((double)tt))*factor/1E4,
 		   (L*L*L*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
 	 else
-	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
+	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (L*L*L*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
 		   (L*L*L*vexcl/((double)tt))*Sqr(factor)/1E5,
 		   (L*L*L*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
 #else 
