@@ -690,6 +690,11 @@ int main(int argc, char**argv)
     beta = 1.0
   else  
     beta = 1.0/atof(argv[8]);
+
+  if (argc <= 9)
+      kD = 10.0;
+  else
+    kD = atof(argv[9]);
 #endif
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
