@@ -623,13 +623,13 @@ void init_distbox(void)
 
 }
 #ifdef ELEC
-const double esq_eps = 1.0; /* = e^2 / (4*pi*epsilon0*epsilon) */
-const double esq_eps_prime = 1.0;/* = e^2 / (4*pi*epsilon0*epsilon' */
+double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon) */
 const double bmann = 10.0*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
 const double Dalton = 1.660538921E-27;
-const double kB = 1.3806503E-23; /* boltzmann constant */
+const double kB = 1.3806503E-23, eps0=8.85E-12; /* boltzmann constant */
+const double qel = 1.602176565E-19, 6.02214129E23;
 const double qdna = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
-double csalt = 0.0; /* concentrazione del sale aggiunto molare */
+double cdna, csalt = 0.0; /* concentrazione del sale aggiunto molare */
 double kD, ximanning, deltamann; /* Debye screening length */
 /* charge on phosphate groups */
 double zeta_a, zeta_b;
@@ -697,9 +697,9 @@ int main(int argc, char**argv)
     beta = 1.0/atof(argv[8]);
 
   if (argc <= 9)
-    kD = 10.0;
+    cdna =  600; /* mg/ml */
   else
-    kD = atof(argv[9]);
+    cdna = atof(argv[9]);
 
   ximanning = esq_eps*beta/bmann;
   deltamann = 1.0/ximanning;
