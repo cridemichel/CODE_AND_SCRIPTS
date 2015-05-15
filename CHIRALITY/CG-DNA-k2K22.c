@@ -666,7 +666,7 @@ int main(int argc, char**argv)
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
   double segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
-  double sigijsq, distsq, vexcl=0.0, factor, dth, th;
+  double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
 #ifdef ELEC
   double uel, beta;
   int interact;
@@ -714,7 +714,7 @@ int main(int argc, char**argv)
 
    */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
-  kD = sqrt(esq_eps*beta*(Sqr(qdna)*2.0*cdna/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000)/kB)
+  kD = sqrt(esq_eps*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000)/kB)
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
   /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
@@ -958,11 +958,11 @@ int main(int argc, char**argv)
 		}
 	      /* otherwise calculate the integrand */
 	      if (type==0)
-		vexcl += (1.0-exp(-beta*uel));
+		vexclel += (1.0-exp(-beta*uel));
 	      else if (type==1)
-		vexcl += segno*u2x*rcmy*(1.0-exp(-beta*uel)); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+		vexclel += segno*u2x*rcmy*(1.0-exp(-beta*uel)); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
 	      else 
-		vexcl += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel));
+		vexclel += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel));
 	    }
 #endif
 	}
@@ -970,6 +970,20 @@ int main(int argc, char**argv)
       if (tt > 0 && tt % fileoutits == 0)
 	{
 	 fout = fopen(fnout, "a+");
+#ifdef ELEC
+	 if (type==0)
+	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+	   fprintf(fout,"%lld %.15G\n", tt, L*L*L*(vexcl+vexclel)/((double)tt)/1E3, L*L*L*vexcl/((double)tt)/1E3
+		   L*L*L*vexclel/((double)tt)/1E3);
+	 else if (type==1)
+	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*(vexcl+vexclel)/((double)tt))*factor/1E4,
+		   (L*L*L*vexcl/((double)tt))*factor/1E4,
+		   (L*L*L*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+	 else
+	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
+		   (L*L*L*vexcl/((double)tt))*Sqr(factor)/1E5,
+		   (L*L*L*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+#else 
 	 if (type==0)
 	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
 	   fprintf(fout,"%lld %.15G\n", tt, L*L*L*vexcl/((double)tt)/1E3);
@@ -977,6 +991,7 @@ int main(int argc, char**argv)
 	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
 	 else
 	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+#endif
 	 fclose(fout);
 	}
       if (tt % outits==0)
