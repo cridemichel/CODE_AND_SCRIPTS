@@ -710,7 +710,7 @@ int main(int argc, char**argv)
   zeta_a = deltamann;
   zeta_b = deltamann;
 
-  esq_eps = Sqr(qel)/(4.0*M_PI*eps0*10.0);
+  esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1); /* epsilon_r per l'acqua a 20°C vale 80.1 */
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)
 
   /*
