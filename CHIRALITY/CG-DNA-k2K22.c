@@ -692,7 +692,7 @@ int main(int argc, char**argv)
     beta = 1.0/atof(argv[8]);
 
   if (argc <= 9)
-      kD = 10.0;
+    kD = 10.0;
   else
     kD = atof(argv[9]);
 #endif
