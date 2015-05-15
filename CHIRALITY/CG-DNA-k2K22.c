@@ -607,6 +607,17 @@ void init_distbox(void)
       distx = fabs(DNAchain[i].x) + DNAchain[i].rad;
       disty = fabs(DNAchain[i].y) + DNAchain[i].rad;
       distz = fabs(DNAchain[i].z) + DNAchain[i].rad;
+#ifdef ELEC
+      if (DNADchain[i].atype==1)/* se si tratta di un P */
+	{
+	  if (yukcut*kD*0.5 > DNAchain[i].rad)
+	    {
+	      distx = fabs(DNAchain[i].x) + yukcut*kD*0.5;
+	      disty = fabs(DNAchain[i].y) + yukcut*kD*0.5;
+	      distz = fabs(DNAchain[i].z) + yukcut*kD*0.5;
+	    }
+	}
+#endif
       if (i==0 || distx > max_x)
 	max_x = distx;
        if (i==0 || disty > max_y)
