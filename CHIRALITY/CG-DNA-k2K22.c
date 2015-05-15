@@ -622,6 +622,38 @@ void init_distbox(void)
     }
 
 }
+#ifdef ELEC
+const double esq_eps = 1.0; /* = e^2 / (4*pi*epsilon0*epsilon) */
+const double esq_eps_prime = 1.0;/* = e^2 / (4*pi*epsilon0*epsilon' */
+double kD; /* Debye screening length */
+/* charge on phosphate groups */
+const double zeta_a=1.0, zeta_b=1.0;
+double Ucoul(double rab)
+{
+  return esq_eps_prime*zeta_a*zeta_b/rab;
+}
+double Uyuk(double rab)
+{
+
+  return esq_eps*zeta_a*zeta_b*exp(-kD*rab);
+} 
+
+double calc_yukawa(int i, int j, double distsq)
+{
+  double rab0, rab;
+  rab = sqrt(distsq);
+  sigab = DNADs[0][i].rad + DNADs[1][j].rad;
+  rab0 = sigab + 2; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
+  if (rab < rab0)
+    {
+      return Ucoul(rab) + (rab-sigab)*(Uyuk(rab) - Uyuk(sigab))/(rab0-sigab);
+    }
+  else
+    {
+      return Uyuk(rab);
+    } 
+}
+#endif
 int main(int argc, char**argv)
 {
   FILE *fin, *fout;
@@ -846,7 +878,7 @@ int main(int argc, char**argv)
 		      /* if they are both phosphate groups we need to calculate electrostatic interaction here */
 		      if DNADs[0][i].atype==1 && DNADsπ[1][i].atype==1)
 			{
-			  uel += calc_yukawa(i, j); 
+			  uel += calc_yukawa(i, j, distsq); 
 			}
 #endif
 		      if (distsq < sigijsq)
@@ -906,7 +938,7 @@ int main(int argc, char**argv)
 	      else if (type==1)
 		vexcl += segno*u2x*rcmy*(1.0-exp(-beta*uel)); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
 	      else 
-		vexcl += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel);
+		vexcl += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel));
 	    }
 #endif
 	}
