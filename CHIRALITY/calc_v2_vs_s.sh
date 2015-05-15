@@ -9,7 +9,7 @@ do
 cd $f
 cd alpha_$A
 #echo "pwd=" `pwd`
-AV=`tail -1 v2.dat| awk '{print $2}'`
+AV=`tail -1 v2.dat| awk '{print $2/1.97^5/1E4}'`
 S=`echo $f| awk -F s '{print $2}'`
 echo "AV= " $AV " S=" $S
 echo "$S $AV" >> ../../${FN}
