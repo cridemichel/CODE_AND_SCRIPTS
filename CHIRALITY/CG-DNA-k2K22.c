@@ -4,6 +4,14 @@
 #include <math.h>
 #include <string.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
 struct DNADallStr {
   double R[3][3];
   double rcm[3];
@@ -582,6 +590,31 @@ double estimate_maximum_dfons(double alpha)
   // printf("maxval=%f\n", maxval);
   return maxval;
 }
+void init_distbox(void)
+{
+  int i, k;
+  double max_x, max_y, max_z, distx, disty, distz;
+  /* maximum distance to z-axis */
+  for (i=0; i < nat; i++)
+    {
+      distx = fabs(DNAchain[i].x) + DNAchain[i].rad;
+      disty = fabs(DNAchain[i].y) + DNAchain[i].rad;
+      distz = fabs(DNAchain[i].z) + DNAchain[i].rad;
+      if (i==0 || distx > max_x)
+	max_x = distx;
+       if (i==0 || disty > max_y)
+	max_y = disty;
+       if (i==0 || distz > max_z)
+	max_z = distz;
+    } 
+  for (k=0; k < 2; k++)
+    {
+      DNADall[k].sax[0] = max_x*1.01;
+      DNADall[k].sax[1] = max_y*1.01;
+      DNADall[k].sax[2] = max_z*1.01;
+    }
+
+}
 int main(int argc, char**argv)
 {
   FILE *fin, *fout;
@@ -682,6 +715,7 @@ int main(int argc, char**argv)
       DNAchain[i].z -= rcmz;
     }
   fclose(fin);
+  init_distbox();
   srand48((int)time(NULL));
   sprintf(fnout, "v%d.dat", type);
   factor=0.0;
@@ -756,20 +790,23 @@ int main(int argc, char**argv)
 #endif
 	  /* check overlaps */
 	  overlap=0;
-	  for (i=0; i < nat; i++)
+	  if (calcDistBox() < 0.0)
 	    {
-	      for (j=0; j < nat; j++)
+	      for (i=0; i < nat; i++)
 		{
-		  distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
-		  sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
-		  if (distsq < sigijsq)
+		  for (j=0; j < nat; j++)
 		    {
-		      overlap=1;
-		      break;
+		      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
+		      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
+		      if (distsq < sigijsq)
+			{
+			  overlap=1;
+			  break;
+			}
 		    }
+		  if (overlap)
+		    break;
 		}
-	      if (overlap)
-		break;
 	    }
 	  if (overlap)
 	    {
