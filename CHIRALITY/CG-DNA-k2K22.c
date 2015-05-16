@@ -686,9 +686,20 @@ double calc_yukawa(int i, int j, double distsq)
   else return 0.0;
 }
 #endif
+double max3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b > m)
+    m = b;
+  if (c > m)
+    m = c;
+  return m;
+}
+
 int main(int argc, char**argv)
 {
-  FILE *fin, *fout;
+  FILE *fin, *fout, *f;
   int ncontrib, cc, k, i, j, overlap, type, contrib;
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
@@ -768,7 +779,7 @@ int main(int argc, char**argv)
   DNAchain = (struct DNA*) malloc(sizeof(struct DNA)*nat); 
   for (k=0; k < 2; k++)
     DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*nat);
-  L = 1.05*3.0*40*len; /* 4 nm is approximately the length of a 12 bp DNAD */ 
+  //L = 1.05*3.0*40*len; /* 4 nm is approximately the length of a 12 bp DNAD */ 
   /* read the CG structure */
   cc=0;
   while (!feof(fin))
@@ -835,7 +846,6 @@ int main(int argc, char**argv)
       if (cc >= nat)
 	break;
     };
-  printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
   rcmx=rcmy=rcmz=0.0;
   for (i=0; i < nat; i++)
     {
@@ -854,6 +864,8 @@ int main(int argc, char**argv)
     }
   fclose(fin);
   init_distbox();
+  L=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*3.0;
+  printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
   srand48((int)time(NULL));
   sprintf(fnout, "v%d.dat", type);
   factor=0.0;
@@ -864,12 +876,14 @@ int main(int argc, char**argv)
      il fattore si deve ottenere integrando fra 0 e pi/2 */
   dth=acos(0.0)/((double)thetapts);
   th=0.0;
+  //f = fopen("dfons.dat", "w+");
   for (i=0; i < thetapts; i++)
     {
       factor += 0.5*dth*sin(th)*(dfons(th, alpha) + dfons(th+dth,alpha));
       th += dth;
-      //printf("%f %.15G\n", th, dfons(th, alpha));
+      //fprintf(f,"%f %.15G\n", th, dfons(th, alpha));
     }
+  //fclose(f);
   factor= fabs(factor);
   factor *= 4.0*acos(0.0);
   printf("dth=%f factor=%.15G\n", dth, factor);
