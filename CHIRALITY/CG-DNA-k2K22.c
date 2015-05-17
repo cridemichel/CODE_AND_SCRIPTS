@@ -875,18 +875,22 @@ int main(int argc, char**argv)
   //exit(-1);
   /* avendo diviso l'integrazione in theta negli intervalli [0,pi/2] e [pi/2,pi]
      il fattore si deve ottenere integrando fra 0 e pi/2 */
+#if 0
   dth=acos(0.0)/((double)thetapts);
   th=0.0;
   //f = fopen("dfons.dat", "w+");
   for (i=0; i < thetapts; i++)
-    {
+  {
       factor += 0.5*dth*sin(th)*(dfons(th, alpha) + dfons(th+dth,alpha));
       th += dth;
       //fprintf(f,"%f %.15G\n", th, dfons(th, alpha));
-    }
-  //fclose(f);
+    };
+ //fclose(f);
   factor= fabs(factor);
   factor *= 4.0*acos(0.0);
+#else
+  factor = alpha/2.0;
+ #endif
   printf("dth=%f factor=%.15G\n", dth, factor);
   fout = fopen(fnout, "w+");
   fclose(fout);  
