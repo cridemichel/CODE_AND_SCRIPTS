@@ -222,7 +222,7 @@ double calc_norm(double *vec)
 
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len;
-long long int tot_trials, tt=0;
+long long int tot_trials, tt=0, ttini=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
 const double thetapts=100000;
 /*
@@ -703,16 +703,16 @@ double max3(double a, double b, double c)
 
 int main(int argc, char**argv)
 {
-  FILE *fin, *fout, *f;
-  int ncontrib, cc, k, i, j, overlap, type, contrib;
-  long long int fileoutits, outits;
-  char fnin[1024],fnout[256];
-  double segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
-  double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
 #ifdef ELEC
   double uel, beta;
   int interact;
 #endif
+  FILE *fin, *fout, *f, *fread;
+  int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
+  long long int fileoutits, outits;
+  char fnin[1024],fnout[256];
+  double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
+  double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
   if (argc < 7)
     {
@@ -751,7 +751,7 @@ int main(int argc, char**argv)
     yukcut = 2.0;
   else 
     yukcut = atof(argv[10]);
-
+ 
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1)/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)/kB;
   esq_eps10 = esq_eps10*1E10;
@@ -767,14 +767,49 @@ int main(int argc, char**argv)
      InvDebyeScrLen[T_,qdna_,cdna_,qsalt_,csalt_,\[Epsilon]rel_]:= Sqrt[qdna^2 qel^2/(kB T \[Epsilon]0 \[Epsilon]rel ) ( 2cdna)/(660*Dalton)+qsalt^2 qel^2/(kB T \[Epsilon]0 \[Epsilon]rel ) 2 csalt Nav 1000 ];
      InvDebyeScrLen[300, 2, 200, 2, 1, 20]^-1*10^9
 
-   */
+  */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
   yukcutkD = yukcut/kD;
   yukcutkDsq = Sqr(yukcutkD);
   printf("beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
   printf("yukawa cutoff=%.15G\n", yukcutkD);
- #endif
+#endif
+  cont=0;
+#ifdef ELEC
+  nfrarg = 12;
+#else
+  nfrarg = 9;
+#endif
+  if (argc == nfrarg)
+    {
+      cont=1;
+      fread = fopen(argv[nfrarg-1], "r");
+      printf("reading file = %s\n", argv[nfrarg-1]);
+      while (!feof(fread))
+	{
+#ifdef ELEC
+	  fscanf(fread, "%lld %lf %lf %lf\n", &ttini, &dummydbl, &vexcl, &vexclel);
+#else
+	  fscanf(fread, "%lld %lf\n", &ttini, &vexcl);
+#endif
+	}
+      fclose(fread);
+#ifdef ELEC
+      printf("restarting tt=%lld vexcltot=%.15G vexcl=%.15G vexclel=%.15G\n", ttini, vexcl+vexclel, vexclel);
+#else
+      printf("restarting tt=%lld vexcl=%.15G\n", ttini, vexcl);
+#endif
+    }
+  else
+    {
+      vexcl = 0.0;
+#ifdef ELEC
+      vexclel = 0.0;
+#endif
+      ttini = 0;
+    }
+
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
   /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
@@ -895,9 +930,29 @@ int main(int argc, char**argv)
 #else
   factor = alpha/2.0;
  #endif
-  printf("factor=%.15G\n", dth, factor);
-  fout = fopen(fnout, "w+");
-  fclose(fout);  
+  printf("factor=%.15G\n", factor);
+  if (cont)
+  { 
+#ifdef ELEC
+      if (type == 0)
+	vexclel *= 1E3*((double)ttini)/(L*L*L);
+      else if (type==1)
+	vexclel *= 1E4*((double)ttini)/(L*L*L);
+      else
+	vexclel *= 1E5*((double)ttini)/(L*L*L);
+#endif    
+      if (type == 0)
+	vexcl *= 1E3*((double)ttini)/(L*L*L);
+      else if (type==1)
+	vexcl *= 1E4*((double)ttini)/(L*L*L);
+      else
+	vexcl *= 1E5*((double)ttini)/(L*L*L);
+    }
+  if (!cont)
+    {
+      fout = fopen(fnout, "w+");
+      fclose(fout);
+    }  
   if (type==0)
     ncontrib=1;
   else if (type==1)
@@ -908,7 +963,7 @@ int main(int argc, char**argv)
 #else
     ncontrib=4;
 #endif  
-    for (tt=0; tt < tot_trials; tt++)
+    for (tt=ttini; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
       /* per la v2: contrib = 0 e 3 sono contributi con lo stesso segno ossia tra [0,Pi/2] e [0,Pi2] e tra [Pi/2,Pi] e [Pi/2,P]
