@@ -223,7 +223,7 @@ double calc_norm(double *vec)
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len;
 long long int tot_trials, tt=0;
-double L, rx, ry, rz, alpha, dfons_sinth_max;
+double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
 const double thetapts=100000;
 /*
                 pdb        radius (angstrom)
@@ -472,9 +472,12 @@ double theta_onsager(double alpha)
   if (first == 1)
     {
       first=0;
+#if 0
       f0 = 1.01*fons(0.0,alpha);
+#else      
+      f0 = 1.01*fons_sinth_max;
+#endif
     }
-
   do 
     {
       /* uniform theta between 0 and pi */
@@ -871,6 +874,7 @@ int main(int argc, char**argv)
   sprintf(fnout, "v%d.dat", type);
   factor=0.0;
   dfons_sinth_max=estimate_maximum_dfons(alpha);
+  fons_sinth_max=dfons_sinth_max/alpha;
   printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
   //exit(-1);
   /* avendo diviso l'integrazione in theta negli intervalli [0,pi/2] e [pi/2,pi]
@@ -891,7 +895,7 @@ int main(int argc, char**argv)
 #else
   factor = alpha/2.0;
  #endif
-  printf("dth=%f factor=%.15G\n", dth, factor);
+  printf("factor=%.15G\n", dth, factor);
   fout = fopen(fnout, "w+");
   fclose(fout);  
   if (type==0)
