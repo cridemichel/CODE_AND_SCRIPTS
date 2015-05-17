@@ -549,7 +549,7 @@ double theta_donsager(double alpha, int domain)
       if (domain==0)
 	theta = ranf_vb()*pi/2.;
       else
-	theta = pi/2.*(1.+ranf_vb());
+	theta = (pi/2.)*(1.+ranf_vb());
       /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
       y = f0*ranf_vb();
       f = fabs(sin(theta)*dfons(theta,alpha));
@@ -929,7 +929,7 @@ int main(int argc, char**argv)
 	      if (type==1)
 		{
 		  if (contrib==0)
-		     orient_donsager(&u2x, &u2y, &u2z, alpha,0);
+		    orient_donsager(&u2x, &u2y, &u2z, alpha,0);
 		  else
 		    orient_donsager(&u2x, &u2y, &u2z, alpha,1);
 		}
