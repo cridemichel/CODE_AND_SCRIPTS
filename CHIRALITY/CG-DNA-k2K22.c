@@ -4,6 +4,7 @@
 #include <math.h>
 #include <string.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
+#define SYMMETRY
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
@@ -894,8 +895,12 @@ int main(int argc, char**argv)
   else if (type==1)
     ncontrib=2;
   else
+#ifdef SYMMETRY
+    ncontrib=2;
+#else
     ncontrib=4;
-  for (tt=0; tt < tot_trials; tt++)
+#endif  
+    for (tt=0; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
       /* per la v2: contrib = 0 e 3 sono contributi con lo stesso segno ossia tra [0,Pi/2] e [0,Pi2] e tra [Pi/2,Pi] e [Pi/2,P]
@@ -994,10 +999,18 @@ int main(int argc, char**argv)
 		}
 	      if (type==2)
 		{
+#ifdef SYMMETRY
+		  if (contrib==0||contrib==3)
+		    segno = 2.0; 
+		  else
+		    segno = -2.0;
+
+#else
 		  if (contrib==0||contrib==3)
 		    segno = 1.0; 
 		  else
 		    segno = -1.0;
+#endif
 		}
 	      /* otherwise calculate the integrand */
 	      if (type==0)
@@ -1020,10 +1033,17 @@ int main(int argc, char**argv)
 		}
 	      if (type==2)
 		{
+#ifdef SYMMETRY
+		  if (contrib==0||contrib==3)
+		    segno = 2.0; 
+		  else
+		    segno = -2.0;
+#else
 		  if (contrib==0||contrib==3)
 		    segno = 1.0; 
 		  else
 		    segno = -1.0;
+#endif
 		}
 	      /* otherwise calculate the integrand */
 	      if (type==0)
