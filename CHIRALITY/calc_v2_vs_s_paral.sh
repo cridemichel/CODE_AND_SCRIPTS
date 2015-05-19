@@ -1,7 +1,7 @@
 ALFA="10 20 30"
 for A in `echo $ALFA`
 do 
-FN="v1_vs_l_alpha$A.dat"
+FN="v2_vs_l_alpha$A.dat"
 echo -n "" > $FN
 #DIRS="s1 s2 s3 s4 s5 s6 s7 s8 s9 s10"
 DIRS="s10 s12 s15 s16"
