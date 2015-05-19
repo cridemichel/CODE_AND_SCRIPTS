@@ -5,6 +5,7 @@
 #include <string.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
+#define ALBERTA
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
