@@ -1,4 +1,4 @@
-ALFA="7 9 12 20"
+ALFA="10 20 30"
 for A in `echo $ALFA`
 do 
 FN="v1_vs_l_alpha$A.dat"
@@ -8,13 +8,12 @@ DIRS="s10 s12 s15 s16"
 for f in `echo $DIRS`
 do
 cd $f
-cd alpha_$A
+#cd alpha_$A
 #echo "pwd=" `pwd`
-AV=`tail -1 v1.dat| awk '{print $2/1.97^4}'`
+AV=`tail -q -n 1 alpha_${A}_R*/v2.dat| gawk 'BEGIN {tt=0; sum=0;} {tt+=$1; sum+=$2*$1} END {print sum/(1.97^5)/tt/1E4;}'`
 S=`echo $f| awk -F s '{print $2}'`
 echo "AV= " $AV " S=" $S
-echo "$S $AV" >> ../../${FN}
-cd ..  
+echo "$S $AV" >> ../${FN}
 cd ..
 done
 done
