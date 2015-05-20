@@ -1126,11 +1126,11 @@ int main(int argc, char**argv)
 #else 
 	      if (type==0)
 		//fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-		fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
+		fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt));
 	      else if (type==1)
-		fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E3); /* divido per 10^4 per convertire in nm */
+		fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))); /* divido per 10^4 per convertire in nm */
 	      else
-		fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E3); /* divido per 10^5 per convertire in nm */
+		fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))); /* divido per 10^5 per convertire in nm */
 #endif
 	      fclose(fout);
 	    }

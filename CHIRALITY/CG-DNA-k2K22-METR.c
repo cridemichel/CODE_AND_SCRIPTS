@@ -673,7 +673,7 @@ double acc_donsager(double alpha, double theta_old, double theta_new)
   /* the comparison function g(theta) is just g(theta)=1 */ 
   double thr;
   
-  thr= min(1.0,sin(theta_new)*dfons(theta_new,alpha)/(sin(theta_old)*dfons(theta_old,alpha)));
+  thr= min(1.0,fabs(sin(theta_new)*dfons(theta_new,alpha)/(sin(theta_old)*dfons(theta_old,alpha))));
   if (drand48() < thr)
     return 1;
   else 
@@ -957,7 +957,7 @@ int main(int argc, char**argv)
   int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
-  double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
+  double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz, segno1, segno2;
   double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
   deltaMC = 5;
@@ -1233,9 +1233,9 @@ int main(int argc, char**argv)
       shift[1] = Ly*rint((DNADall[0].rcm[1]-DNADall[1].rcm[1])/Ly);
       shift[2] = Lz*rint((DNADall[0].rcm[2]-DNADall[1].rcm[2])/Lz);
 
-      if (type < 3 && calcDistBox(shift) > 0.0)
+      if (calcDistBox(shift) > 0.0)
 	{
-	  reject=1;
+	  //reject=1;
 	}
       else
 	{
@@ -1267,23 +1267,47 @@ int main(int argc, char**argv)
 	    acctramoveMC++;
 	  else
 	    accrotmoveMC++;
-	  if (type >= 3)
-	    {
-	      if (calcDistBox(shift) < 0.0)
-		vexcl += 1.0;
-	    }
-	  else if (areoverlapping(shift))
+	  if (areoverlapping(shift))
 	    {	
 	      rcmy = DNADall[1].rcm[1]-DNADall[0].rcm[1];
 	      R2u(&u1x, &u1y, &u1z, 0);
 	      R2u(&u2x, &u2y, &u2z, 1);
 	      //printf("rcmy=%f u2x=%f\n", rcmy, u2x);
+	      if (ip==0)
+		{
+		  theta1=theta_new;
+		  theta2=calc_theta(1);
+		}
+	      else
+		{
+		  theta1=calc_theta(0);
+		  theta2=theta_new;
+		}
+	      if (type==1)
+		{
+		  if (theta2 < M_PI*0.5)
+		    segno=1.0;
+		  else
+		    segno=-1.0;
+		}
+	      else if (type==2)
+		{
+		  if (theta1 < M_PI*0.5)
+		    segno1=1.0;
+		  else
+		    segno1=-1.0;
+		  if (theta2 < M_PI*0.5)
+		    segno2=1.0;
+		  else
+		    segno2=-1.0;
+		  segno=segno1*segno2;
+		}
 	      if (type==0)
 		vexcl += 1.0;
 	      else if (type==1)
-		vexcl += u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
 	      else 
-		vexcl += -u1x*u2x*rcmy*rcmy;
+		vexcl += -segno*u1x*u2x*rcmy*rcmy;
 	      //printf("a=%f\n",u1x*u2x*rcmy*rcmy);
 	    }
 	}
@@ -1306,13 +1330,11 @@ int main(int argc, char**argv)
 #else 
 	  if (type==0)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E3);
+	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
 	  else if (type==1)
-	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E4); /* divido per 10^4 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*factor*vexcl/((double)tt)/1E4); /* divido per 10^4 per convertire in nm */
 	  else if (type==2)
-	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E5); /* divido per 10^5 per convertire in nm */
-	  else
-	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lx*vexcl/((double)tt)/1E3); /* divido per 10^3 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*Sqr(factor)*vexcl/((double)tt)/1E5); /* divido per 10^5 per convertire in nm */
 #endif
 	  fclose(fout);
 	}
