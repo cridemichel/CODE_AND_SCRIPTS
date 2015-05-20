@@ -939,6 +939,12 @@ void restore_state(int ip)
 	DNADall[ip].R[k1][k2] = Rold[k1][k2];
     }
 }
+void R2u(double *ox, double *oy, double *oz, int which)
+{
+  *ox = DNADall[which].R[2][0];
+  *oy = DNADall[which].R[2][1];
+  *oz = DNADall[which].R[2][2];
+}
 int main(int argc, char**argv)
 {
 #ifdef ELEC
@@ -972,7 +978,7 @@ int main(int argc, char**argv)
   tot_trials=atoll(argv[4]);
   type = atoi(argv[5]);
   fileoutits = atoll(argv[6]);
-  
+
   if (argc == 7)
     outits=100*fileoutits;
   else
@@ -988,12 +994,12 @@ int main(int argc, char**argv)
     cdna =  600; /* mg/ml */
   else
     cdna = atof(argv[9]);
-  
+
   if (argc <= 10)
     yukcut = 2.0;
   else 
     yukcut = atof(argv[10]);
- 
+
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1)/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)/kB;
   esq_eps10 = esq_eps10*1E10;
@@ -1002,14 +1008,14 @@ int main(int argc, char**argv)
   deltamann = 1.0/ximanning;
   zeta_a = deltamann;
   zeta_b = deltamann;
- /*
+  /*
      rho_salt =2 csalt Nav 1000;
      rho_counter[cdna_]:=(2 cdna)/(660*Dalton);
      (* cdna in mg/ml e csalt Molare (=moli/litro), nu=numero di cariche per unità di lunghezza *)
      InvDebyeScrLen[T_,qdna_,cdna_,qsalt_,csalt_,\[Epsilon]rel_]:= Sqrt[qdna^2 qel^2/(kB T \[Epsilon]0 \[Epsilon]rel ) ( 2cdna)/(660*Dalton)+qsalt^2 qel^2/(kB T \[Epsilon]0 \[Epsilon]rel ) 2 csalt Nav 1000 ];
      InvDebyeScrLen[300, 2, 200, 2, 1, 20]^-1*10^9
 
-  */
+   */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
   yukcutkD = yukcut/kD;
@@ -1116,7 +1122,7 @@ int main(int argc, char**argv)
 #ifdef ELEC
 	  DNAchain[cc].atype = 2;
 #endif
-}
+	}
 #endif     
       else
 	{
@@ -1157,7 +1163,7 @@ int main(int argc, char**argv)
   printf("factor=%.15G\n", factor);
 #if 0
   if (cont)
-  { 
+    { 
 #ifdef ELEC
       if (type == 0)
 	vexclel *= 1E3*((double)ttini)/(L*L*L);
@@ -1179,20 +1185,20 @@ int main(int argc, char**argv)
       fclose(fout);
     }
 #endif  
-   Lx=Ly=Lz=L;
-   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
+  Lx=Ly=Lz=L;
+  printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
 
-   for (k1=0; k1 < 3; k1++)
-     {
-       DNADall[0].rcm[k1] = DNADall[0].sax[0]/1.001;
-       DNADall[1].rcm[k1] = -DNADall[1].sax[0]/1.001;
-       for (k2=0; k2 < 3; k2++)
-	 {
-	   DNADall[0].R[k1][k2] = (k1==k2)?1:0;
-	   DNADall[1].R[k1][k2] = (k1==k2)?1:0;
-	 } 
-     }
-   for (tt=0; tt < tot_trials; tt++)
+  for (k1=0; k1 < 3; k1++)
+    {
+      DNADall[0].rcm[k1] = DNADall[0].sax[0]/1.001;
+      DNADall[1].rcm[k1] = -DNADall[1].sax[0]/1.001;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  DNADall[0].R[k1][k2] = (k1==k2)?1:0;
+	  DNADall[1].R[k1][k2] = (k1==k2)?1:0;
+	} 
+    }
+  for (tt=0; tt < tot_trials; tt++)
     {
       ip=(int) 2.0*drand48();
       store_state(ip);
@@ -1203,18 +1209,18 @@ int main(int argc, char**argv)
       /* apply periodic boundary conditions */ 
       if (movtype==0)
 	{
-	   if (DNADall[ip].rcm[0] > Lx*0.5)
-	     DNADall[ip].rcm[0] -= Lx;
-	   if (DNADall[ip].rcm[0] < -Lx*0.5)
-	     DNADall[ip].rcm[0] += Lx;
-	   if (DNADall[ip].rcm[1] > Ly*0.5)
-	     DNADall[ip].rcm[1] -= Ly;
-	   if (DNADall[ip].rcm[1] < -Ly*0.5)
-	     DNADall[ip].rcm[1] += Ly;
-	   if (DNADall[ip].rcm[2] > Lz*0.5)
-	     DNADall[ip].rcm[2] -= Lz;
-	   if (DNADall[ip].rcm[2] < -Lz*0.5)
-	     DNADall[ip].rcm[2] += Lz;
+	  if (DNADall[ip].rcm[0] > Lx*0.5)
+	    DNADall[ip].rcm[0] -= Lx;
+	  if (DNADall[ip].rcm[0] < -Lx*0.5)
+	    DNADall[ip].rcm[0] += Lx;
+	  if (DNADall[ip].rcm[1] > Ly*0.5)
+	    DNADall[ip].rcm[1] -= Ly;
+	  if (DNADall[ip].rcm[1] < -Ly*0.5)
+	    DNADall[ip].rcm[1] += Ly;
+	  if (DNADall[ip].rcm[2] > Lz*0.5)
+	    DNADall[ip].rcm[2] -= Lz;
+	  if (DNADall[ip].rcm[2] < -Lz*0.5)
+	    DNADall[ip].rcm[2] += Lz;
 	}
       shift[0] = Lx*rint((DNADall[0].rcm[0]-DNADall[1].rcm[0])/Lx);
       shift[1] = Ly*rint((DNADall[0].rcm[1]-DNADall[1].rcm[1])/Ly);
@@ -1248,7 +1254,7 @@ int main(int argc, char**argv)
 	  restore_state(ip);
 	}
       else
-        {
+	{
 	  place_DNAD(ip);      
 	  if (movtype==0)
 	    acctramoveMC++;
@@ -1256,6 +1262,9 @@ int main(int argc, char**argv)
 	    accrotmoveMC++;
 	  if (areoverlapping(shift))
 	    {	
+	      rcmy = DNADall[1].rcm[1]-DNADall[0].rcm[1];
+	      R2u(&u1x, &u1y, &u1z, 0);
+	      R2u(&u2x, &u2y, &u2z, 1);
 	      if (type==0)
 		vexcl += 1.0;
 	      else if (type==1)
@@ -1292,8 +1301,8 @@ int main(int argc, char**argv)
 	  fclose(fout);
 	}
       if (tt % outits==0)
-        {
-          printf("trials: %lld/%lld rate tra: %f rot: %f\n", tt, tot_trials, acctramoveMC/((double)tramoveMC), accrotmoveMC/((double)rotmoveMC));
-        }
-     }
+	{
+	  printf("trials: %lld/%lld rate tra: %f rot: %f\n", tt, tot_trials, acctramoveMC/((double)tramoveMC), accrotmoveMC/((double)rotmoveMC));
+	}
+    }
 }
