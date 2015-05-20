@@ -225,7 +225,7 @@ double calc_norm(double *vec)
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len;
 double deltaMC, dthetaMC;
-long long int tot_trials, tt=0, ttini=0, tramoveMC=0, rotmoveMC=0;
+long long int tot_trials, tt=0, ttini=0, tramoveMC=0, rotmoveMC=0, acctramoveMC=0, accrotmoveMC=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
 const double thetapts=100000;
 /*
@@ -954,6 +954,8 @@ int main(int argc, char**argv)
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
+  deltaMC = 5;
+  dthetaMC = 0.2;
   if (argc < 7)
     {
 #ifdef ELEC
@@ -1190,7 +1192,7 @@ int main(int argc, char**argv)
 	   DNADall[1].R[k1][k2] = (k1==k2)?1:0;
 	 } 
      }
-   for (tt=ttini; tt < tot_trials; tt++)
+   for (tt=0; tt < tot_trials; tt++)
     {
       ip=(int) 2.0*drand48();
       store_state(ip);
@@ -1245,8 +1247,12 @@ int main(int argc, char**argv)
 	  continue;
 	}
       place_DNAD(ip);      
+      if (movtype==0)
+	acctramoveMC++;
+      else
+	accrotmoveMC++;
       if (areoverlapping(shift))
-	{
+	
 	  if (type==0)
 	    vexcl += 1.0;
 	  else if (type==1)
@@ -1280,8 +1286,9 @@ int main(int argc, char**argv)
 	   fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E5); /* divido per 10^5 per convertire in nm */
 #endif
 	 fclose(fout);
-	}
-    }
-  if (tt % outits==0)
-    printf("trials: %lld/%lld\n", tt, tot_trials);
+       if (tt % outits==0)
+        {
+          printf("trials: %lld/%lld rate tra: %f rot: %f\n", tt, tot_trials, acctramoveMC/((double)tramoveMC), accrotmoveMC/((double)rotmoveMC));
+        }
+     }
 }
