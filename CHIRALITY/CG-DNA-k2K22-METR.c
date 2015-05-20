@@ -1221,7 +1221,9 @@ int main(int argc, char**argv)
       shift[2] = Lz*rint((DNADall[0].rcm[2]-DNADall[1].rcm[2])/Lz);
 
       if (calcDistBox(shift) > 0.0)
-	reject=1;
+	{
+	  reject=1;
+	}
       else
 	{
 	  if (type==0)
@@ -1244,49 +1246,52 @@ int main(int argc, char**argv)
 	{
 	  /* reject move */
 	  restore_state(ip);
-	  continue;
 	}
-      place_DNAD(ip);      
-      if (movtype==0)
-	acctramoveMC++;
       else
-	accrotmoveMC++;
-      if (areoverlapping(shift))
-	
-	  if (type==0)
-	    vexcl += 1.0;
-	  else if (type==1)
-	    vexcl += u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	  else 
-	    vexcl += -u1x*u2x*rcmy*rcmy;
+        {
+	  place_DNAD(ip);      
+	  if (movtype==0)
+	    acctramoveMC++;
+	  else
+	    accrotmoveMC++;
+	  if (areoverlapping(shift))
+	    {	
+	      if (type==0)
+		vexcl += 1.0;
+	      else if (type==1)
+		vexcl += u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+	      else 
+		vexcl += -u1x*u2x*rcmy*rcmy;
+	    }
 	}
       if (tt > 0 && tt % fileoutits == 0)
 	{
-	 fout = fopen(fnout, "a+");
+	  fout = fopen(fnout, "a+");
 #ifdef ELEC
-	 if (type==0)
-	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
-		   Lx*Ly*Lz*vexclel/((double)tt)/1E3);
-	 else if (type==1)
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
-		   (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
-		   (Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
-	 else
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
-		   (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
-		   (Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	  if (type==0)
+	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
+		    Lx*Ly*Lz*vexclel/((double)tt)/1E3);
+	  else if (type==1)
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
+		    (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
+		    (Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+	  else
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
+		    (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
+		    (Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
 #else 
-	 if (type==0)
-	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E3);
-	 else if (type==1)
-	   fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E4); /* divido per 10^4 per convertire in nm */
-	 else
-	   fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E5); /* divido per 10^5 per convertire in nm */
+	  if (type==0)
+	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E3);
+	  else if (type==1)
+	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E4); /* divido per 10^4 per convertire in nm */
+	  else
+	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E5); /* divido per 10^5 per convertire in nm */
 #endif
-	 fclose(fout);
-       if (tt % outits==0)
+	  fclose(fout);
+	}
+      if (tt % outits==0)
         {
           printf("trials: %lld/%lld rate tra: %f rot: %f\n", tt, tot_trials, acctramoveMC/((double)tramoveMC), accrotmoveMC/((double)rotmoveMC));
         }
