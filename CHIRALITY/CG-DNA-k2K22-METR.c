@@ -843,6 +843,10 @@ double areoverlapping(void)
   else
     return 0;
 }
+double calc_theta(int which)
+{
+  return acos(DNADs[which].R[2][2]);
+}
 int main(int argc, char**argv)
 {
 #ifdef ELEC
@@ -850,7 +854,7 @@ int main(int argc, char**argv)
   int interact;
 #endif
   int ip
-  double Lx, Ly, Lz;
+  double Lx, Ly, Lz, theta1, theta2;
   FILE *fin, *fout, *f, *fread;
   int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
