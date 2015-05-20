@@ -739,7 +739,7 @@ int main(int argc, char**argv)
   tot_trials=atoll(argv[4]);
   type = atoi(argv[5]);
   fileoutits = atoll(argv[6]);
-  
+
   if (argc == 7)
     outits=100*fileoutits;
   else
@@ -755,12 +755,12 @@ int main(int argc, char**argv)
     cdna =  600; /* mg/ml */
   else
     cdna = atof(argv[9]);
-  
+
   if (argc <= 10)
     yukcut = 2.0;
   else 
     yukcut = atof(argv[10]);
- 
+
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1)/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)/kB;
   esq_eps10 = esq_eps10*1E10;
@@ -769,14 +769,14 @@ int main(int argc, char**argv)
   deltamann = 1.0/ximanning;
   zeta_a = deltamann;
   zeta_b = deltamann;
- /*
+  /*
      rho_salt =2 csalt Nav 1000;
      rho_counter[cdna_]:=(2 cdna)/(660*Dalton);
      (* cdna in mg/ml e csalt Molare (=moli/litro), nu=numero di cariche per unità di lunghezza *)
      InvDebyeScrLen[T_,qdna_,cdna_,qsalt_,csalt_,\[Epsilon]rel_]:= Sqrt[qdna^2 qel^2/(kB T \[Epsilon]0 \[Epsilon]rel ) ( 2cdna)/(660*Dalton)+qsalt^2 qel^2/(kB T \[Epsilon]0 \[Epsilon]rel ) 2 csalt Nav 1000 ];
      InvDebyeScrLen[300, 2, 200, 2, 1, 20]^-1*10^9
 
-  */
+   */
   /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
   yukcutkD = yukcut/kD;
@@ -883,7 +883,7 @@ int main(int argc, char**argv)
 #ifdef ELEC
 	  DNAchain[cc].atype = 2;
 #endif
-}
+	}
 #endif     
       else
 	{
@@ -928,20 +928,20 @@ int main(int argc, char**argv)
   th=0.0;
   //f = fopen("dfons.dat", "w+");
   for (i=0; i < thetapts; i++)
-  {
+    {
       factor += 0.5*dth*sin(th)*(dfons(th, alpha) + dfons(th+dth,alpha));
       th += dth;
       //fprintf(f,"%f %.15G\n", th, dfons(th, alpha));
     };
- //fclose(f);
+  //fclose(f);
   factor= fabs(factor);
   factor *= 4.0*acos(0.0);
 #else
   factor = alpha/2.0;
- #endif
+#endif
   printf("factor=%.15G\n", factor);
   if (cont)
-  { 
+    { 
 #ifdef ELEC
       if (type == 0)
 	vexclel *= 1E3*((double)ttini)/(L*L*L);
@@ -970,20 +970,20 @@ int main(int argc, char**argv)
 #ifdef SYMMETRY
     ncontrib=2;
 #else
-    ncontrib=4;
+  ncontrib=4;
 #endif  
 #if 0
-   if (type==1)
+  if (type==1)
     {
       Lx=Ly=max3(DNADall[0].sax[0],DNADall[0].sax[1],3.0*2.0*DNADall[0].sax[2]*sin(2.0*sqrt(2.0/alpha)));
       Lz=L;
       printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
     }
-   else
+  else
 #endif
-   Lx=Ly=Lz=L;
-   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
-   for (tt=ttini; tt < tot_trials; tt++)
+    Lx=Ly=Lz=L;
+  printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
+  for (tt=ttini; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
       /* per la v2: contrib = 0 e 3 sono contributi con lo stesso segno ossia tra [0,Pi/2] e [0,Pi2] e tra [Pi/2,Pi] e [Pi/2,P]
@@ -1003,9 +1003,9 @@ int main(int argc, char**argv)
 	  /* place second DNAD randomly */
 	  rcmx = Lx*(drand48()-0.5);
 	  rcmy = Ly*(drand48()-0.5);
-      	  rcmz = Lz*(drand48()-0.5);
+	  rcmz = Lz*(drand48()-0.5);
 	  //if (type==1 && rcmy > 2.0*max2(DNADall[k].sax[0],DNADall[k].sax[1]))
-	    //break;
+	  //break;
 	  place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0);      
 	  if (type==0)
 	    orient_onsager(&u2x, &u2y, &u2z, alpha);
@@ -1036,11 +1036,13 @@ int main(int argc, char**argv)
 	  uel = 0.0;
 	  interact = 0;
 #endif
-  	  if (calcDistBox() < 0.0)
+	  if (calcDistBox() < 0.0)
 	    {
+	      overlap = 1;
 #ifdef ELEC
 	      interact = 1;
 #endif
+#if 0
 	      for (i=0; i < nat; i++)
 		{
 		  for (j=0; j < nat; j++)
@@ -1058,29 +1060,33 @@ int main(int argc, char**argv)
 			{
 #if 0
 			  if (distsq < Sqr(yukcut/kD))
-			      printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD);
+			    printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD);
 #endif
 #if 0
 			  if (calc_yukawa(i,j,distsq) < 0.0)
-			      printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f yuk=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD, calc_yukawa(i,j,distsq));
+			    printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f yuk=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD, calc_yukawa(i,j,distsq));
 #endif
 			  uel += calc_yukawa(i, j, distsq); 
 
 			}
 #endif
-      		    }
+		    }
+
 		  if (overlap)
 		    break;
 		}
+#endif
 	    }
 	  if (overlap) 
 	    {
-	      if (type==1) 
+	      if (type==0)
+		segno=1.0;
+	      else if (type==1) 
 		{
 		  if (contrib==0)
 		    segno = 1.0;
 		  else
-		    segno = -1.0;
+		    segno = 1.0;
 		}
 	      if (type==2)
 		{
@@ -1088,87 +1094,48 @@ int main(int argc, char**argv)
 		  if (contrib==0||contrib==3)
 		    segno = 2.0; 
 		  else
-		    segno = -2.0;
+		    segno = 2.0;
 
 #else
 		  if (contrib==0||contrib==3)
 		    segno = 1.0; 
 		  else
-		    segno = -1.0;
-#endif
-		}
-	      /* otherwise calculate the integrand */
-	      if (type==0)
-		vexcl += 1.0;
-	      else if (type==1)
-		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	      else 
-		vexcl += -segno*u1x*u2x*rcmy*rcmy;
-	    }
-#ifdef ELEC
-	  else if (interact)
-	    {
-	      // printf("boh?!? tt=%lld uel=%f\n", tt, uel);	
-	      if (type==1) 
-		{
-		  if (contrib==0)
 		    segno = 1.0;
-		  else
-		    segno = -1.0;
-		}
-	      if (type==2)
-		{
-#ifdef SYMMETRY
-		  if (contrib==0||contrib==3)
-		    segno = 2.0; 
-		  else
-		    segno = -2.0;
-#else
-		  if (contrib==0||contrib==3)
-		    segno = 1.0; 
-		  else
-		    segno = -1.0;
 #endif
 		}
 	      /* otherwise calculate the integrand */
-	      if (type==0)
-		vexclel += (1.0-exp(-beta*uel));
-	      else if (type==1)
-		vexclel += segno*u2x*rcmy*(1.0-exp(-beta*uel)); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	      else 
-		vexclel += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel));
+	      vexcl += segno;
 	    }
-#endif
-	}
-      
-      if (tt > 0 && tt % fileoutits == 0)
-	{
-	 fout = fopen(fnout, "a+");
+
+	  if (tt > 0 && tt % fileoutits == 0)
+	    {
+	      fout = fopen(fnout, "a+");
 #ifdef ELEC
-	 if (type==0)
-	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
-		   Lx*Ly*Lz*vexclel/((double)tt)/1E3);
-	 else if (type==1)
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
-		   (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
-		   (Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
-	 else
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
-		   (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
-		   (Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	      if (type==0)
+		//fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
+			Lx*Ly*Lz*vexclel/((double)tt)/1E3);
+	      else if (type==1)
+		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
+			(Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
+			(Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+	      else
+		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
+			(Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
+			(Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
 #else 
-	 if (type==0)
-	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
-	 else if (type==1)
-	   fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
-	 else
-	   fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	      if (type==0)
+		//fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+		fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
+	      else if (type==1)
+		fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E3); /* divido per 10^4 per convertire in nm */
+	      else
+		fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E3); /* divido per 10^5 per convertire in nm */
 #endif
-	 fclose(fout);
+	      fclose(fout);
+	    }
+	  if (tt % outits==0)
+	    printf("trials: %lld/%lld\n", tt, tot_trials);
 	}
-      if (tt % outits==0)
-	printf("trials: %lld/%lld\n", tt, tot_trials);
     }
 }
