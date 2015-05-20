@@ -1243,85 +1243,80 @@ int main(int argc, char**argv)
       shift[1] = Ly*rint((DNADall[0].rcm[1]-DNADall[1].rcm[1])/Ly);
       shift[2] = Lz*rint((DNADall[0].rcm[2]-DNADall[1].rcm[2])/Lz);
 
-      if (calcDistBox(shift) > 0.0)
+      if (type==0||type==3)
 	{
-	  //reject=1;
-	  overlap=0;
+	  if (!acc_onsager(alpha, theta_old, theta_new) || !acc_onsager(alpha, theta_old, theta_new))
+	    reject=1;
 	}
+      else if (type==1||type==4)
+	{
+	  if (!acc_onsager(alpha, theta_old, theta_new) || !acc_donsager(alpha, theta_old, theta_new))
+		reject=1;
+	}  
       else
 	{
-	  if (type==0||type==3)
-	    {
-	      if (!acc_onsager(alpha, theta_old, theta_new) || !acc_onsager(alpha, theta_old, theta_new))
-		reject=1;
-	    }
-	  else if (type==1||type==4)
-	    {
-	      if (!acc_onsager(alpha, theta_old, theta_new) || !acc_donsager(alpha, theta_old, theta_new))
-		reject=1;
-	    }  
-	  else
-	    {
-	      if (!acc_donsager(alpha, theta_old, theta_new) || !acc_donsager(alpha, theta_old, theta_new))
-		reject=1;
-	    }
-	}
-      place_DNAD(ip);      
-      if (areoverlapping(shift))
-	{	
-	  //reject = 1;
-	  rcmy = DNADall[1].rcm[1]-DNADall[0].rcm[1];
-	  R2u(&u1x, &u1y, &u1z, 0);
-	  R2u(&u2x, &u2y, &u2z, 1);
-	  //printf("rcmy=%f u2x=%f\n", rcmy, u2x);
-	  if (ip==0)
-	    {
-	      theta1=theta_new;
-	      theta2=calc_theta(1);
-	    }
-	  else
-	    {
-	      theta1=calc_theta(0);
-	      theta2=theta_new;
-	    }
-	  if (type==1)
-	    {
-	      if (theta2 < M_PI*0.5)
-		segno=1.0;
-	      else
-		segno=-1.0;
-	    }
-	  else if (type==2)
-	    {
-	      if (theta1 < M_PI*0.5)
-		segno1=1.0;
-	      else
-		segno1=-1.0;
-	      if (theta2 < M_PI*0.5)
-		segno2=1.0;
-	      else
-		segno2=-1.0;
-	      segno=segno1*segno2;
-	    }
-	  if (type==0)
-	    vexcl += 1.0;
-	  else if (type==1)
-	    vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	  else 
-	    vexcl += -segno*u1x*u2x*rcmy*rcmy;
-	  //printf("a=%f\n",u1x*u2x*rcmy*rcmy);
-	}
-      else
-	{
-	  if (movtype==0)
-	    acctramoveMC++;
-	  else
-	    accrotmoveMC++;
+	  if (!acc_donsager(alpha, theta_old, theta_new) || !acc_donsager(alpha, theta_old, theta_new))
+	    reject=1;
 	}
       if (reject)
 	{
 	  /* reject move */
 	  restore_state(ip);
+	}
+      else
+	{
+	  if (calcDistBox(shift) < 0.0)
+	    {
+	      place_DNAD(ip);      
+	      if (areoverlapping(shift))
+		{	
+		  //reject = 1;
+		  rcmy = DNADall[1].rcm[1]-DNADall[0].rcm[1];
+		  R2u(&u1x, &u1y, &u1z, 0);
+		  R2u(&u2x, &u2y, &u2z, 1);
+		  //printf("rcmy=%f u2x=%f\n", rcmy, u2x);
+		  if (ip==0)
+		    {
+		      theta1=theta_new;
+		      theta2=calc_theta(1);
+		    }
+		  else
+		    {
+		      theta1=calc_theta(0);
+		      theta2=theta_new;
+		    }
+		  if (type==1)
+		    {
+		      if (theta2 < M_PI*0.5)
+			segno=1.0;
+		      else
+			segno=-1.0;
+		    }
+		  else if (type==2)
+		    {
+		      if (theta1 < M_PI*0.5)
+			segno1=1.0;
+		      else
+			segno1=-1.0;
+		      if (theta2 < M_PI*0.5)
+			segno2=1.0;
+		      else
+			segno2=-1.0;
+		      segno=segno1*segno2;
+		    }
+		  if (type==0)
+		    vexcl += 1.0;
+		  else if (type==1)
+		    vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+		  else 
+		    vexcl += -segno*u1x*u2x*rcmy*rcmy;
+		  //printf("a=%f\n",u1x*u2x*rcmy*rcmy);
+		}
+	      if (movtype==0)
+		acctramoveMC++;
+	      else
+		accrotmoveMC++;
+	    }
 	}
       if (tt > 0 && tt % fileoutits == 0)
 	{
