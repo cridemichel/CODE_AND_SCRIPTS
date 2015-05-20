@@ -224,7 +224,8 @@ double calc_norm(double *vec)
 
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len;
-long long int tot_trials, tt=0, ttini=0;
+double deltaMC, dthetaMC;
+long long int tot_trials, tt=0, ttini=0, tramoveMC=0, rotmoveMC=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
 const double thetapts=100000;
 /*
@@ -321,6 +322,46 @@ void print_matrix(double M[3][3], int n)
     }
   printf("}\n");
 }
+void orient(double *omx, double *omy, double* omz)
+{
+  int i;
+  //double inert;                 /* momentum of inertia of the molecule */
+  //double norm, dot, osq, o, mean;
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, osq, norm;
+  
+  //Mtot = m; /* total mass of molecule */
+
+  //inert = I; /* momentum of inertia */
+ 
+  //mean = 3.0*temp / inert;
+
+  xisq = 1.0;
+
+  while (xisq >= 1.0)
+    {
+      xi1  = drand48() * 2.0 - 1.0;
+      xi2  = drand48() * 2.0 - 1.0;
+      xisq = xi1 * xi1 + xi2 * xi2;
+    }
+
+  xi = sqrt (fabs(1.0 - xisq));
+  ox = 2.0 * xi1 * xi;
+  oy = 2.0 * xi2 * xi;
+  oz = 1.0 - 2.0 * xisq;
+
+  /* Renormalize */
+  osq   = ox * ox + oy * oy + oz * oz;
+  norm  = sqrt(fabs(osq));
+  ox    = ox / norm;
+  oy    = oy / norm;
+  oz    = oz / norm;
+
+  *omx = ox;
+  *omy = oy;
+  *omz = oz; 
+  //distro[(int) (acos(oz)/(pi/1000.0))] += 1.0;
+}
 
 void versor_to_R(double ox, double oy, double oz, double R[3][3])
 {
@@ -393,7 +434,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
 #endif
 }
 double RMDNA[2][3][3];
-void place_DNAD(double x, double y, double z, double ux, double uy, double uz, int which)
+void place_DNAD(int which)
 {
   double xp[3], rO[3], xl[3];
   double R[3][3];
@@ -404,11 +445,16 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
 #endif
   FILE *f;
   int i; 
-  rO[0] = x;
-  rO[1] = y;
-  rO[2] = z;
+  rO[0] = DNADall[which].rcm[0];
+  rO[1] = DNADall[which].rcm[1];
+  rO[2] = DNADall[which].rcm[2];
   /* build R here from the orientation (ux,uy,uz) */
-  versor_to_R(ux, uy, uz, R);
+  //versor_to_R(ux, uy, uz, R);
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	R[k1][k2] = DNADall[which].R[k1][k2];
+      }
 #ifdef DEBUG 
   sprintf(fn, "DNAD%d.mgl", which);
   fd=fopen(fn, "w+");
@@ -422,12 +468,6 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
       xp[2] = DNAchain[i].z;
       
       body2lab(xp, xl, rO, R);
-      for (k1=0; k1 < 3; k1++)
-	{
-	  DNADall[which].rcm[k1] = rO[k1];
-	  for (k2=0; k2 < 3; k2++)
-	    DNADall[which].R[k1][k2] = R[k1][k2];
-	}
       DNADs[which][i].x = xl[0];
       DNADs[which][i].y = xl[1];
       DNADs[which][i].z = xl[2];
@@ -460,37 +500,38 @@ double fons(double theta, double alpha)
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
   return cosh(alpha*cos(theta))*alpha/(4.0*pi*sinh(alpha));
 }
+double min(double a, double b)
+{
+  return (a < b)?a:b;
+}
 /* return an angle theta sampled from an Onsager angular distribution */
-double theta_onsager(double alpha)
+double acc_onsager(double alpha, double theta_old, double theta_new)
 {
   /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
      using rejection method */
   /* the comparison function g(theta) is just g(theta)=1 */ 
-  static int first = 1;
-  static double f0;
-  double pi, y, f, theta, dtheta;
-  //printf("alpha=%f\n", alpha);
-  pi = acos(0.0)*2.0;
-  if (first == 1)
-    {
-      first=0;
-#if 0
-      f0 = 1.01*fons(0.0,alpha);
-#else      
-      f0 = 1.01*fons_sinth_max;
-#endif
-    }
-  do 
-    {
-      /* uniform theta between 0 and pi */
-      theta = pi*ranf_vb();
-      /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
-      y = f0*ranf_vb();
-      f = sin(theta)*fons(theta,alpha);
-      //printf("theta=%f y=%f\n", theta, y);
-    }
-  while (y >= f);
-  return theta;
+  double thr;
+  
+  thr = min(1.0,sin(theta_new)*fons(theta_new,alpha)/(sin(theta_old)*fons(theta_old,alpha)));
+  if (drand48() < thr)
+    return 1;
+  else 
+    return 0;
+    
+}
+double acc_donsager(double alpha, double theta_old, double theta_new)
+{
+  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
+     using rejection method */
+  /* the comparison function g(theta) is just g(theta)=1 */ 
+  double thr;
+  
+  thr= min(1.0,sin(theta_new)*dfons(theta_new,alpha)/(sin(theta_old)*dfons(theta_old,alpha)));
+  if (drand48() < thr)
+    return 1;
+  else 
+    return 0;
+    
 }
 double distro[10000];
 const int nfons=100;
@@ -712,19 +753,15 @@ double max2(double a, double b)
 void tra_move(int ip)
 {
   double dx, dy, dz;
-  dx = OprogStatus.deltaMC*(ranf()-0.5);
-  dy = OprogStatus.deltaMC*(ranf()-0.5);
-  dz = OprogStatus.deltaMC*(ranf()-0.5);
-  rx[ip]+= dx;
-  ry[ip]+= dy;
-  rz[ip]+= dz;
-  if (OprogStatus.useNNL)
-    {
-      displMC = sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz))*1.001;
-    }
+  dx = deltaMC*(drand48()-0.5);
+  dy = deltaMC*(drand48()-0.5);
+  dz = deltaMC*(drand48()-0.5);
+  DNADall[ip].rcm[0] += dx;
+  DNADall[ip].rcm[1] += dy;
+  DNADall[ip].rcm[2] += dz;
   tramoveMC++; 
 }
-void rot_move(int ip, int flip)
+void rot_move(int ip)
 {
   double theta, thetaSq, sinw, cosw;
   double ox, oy, oz, OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
@@ -736,7 +773,7 @@ void rot_move(int ip, int flip)
   xp[0] = 0.0;
   xp[1] = cos(thor);
   xp[2] = sin(thor);
-  body2labR(ip, xp, xl, NULL, R[ip]); 
+  body2labR(ip, xp, xl, NULL, DNADall[which].R); 
   ox = xl[0];
   oy = xl[1];
   oz = xl[2];
@@ -745,7 +782,7 @@ void rot_move(int ip, int flip)
     //remove_parall(ip, &ox, &oy, &oz);
 #endif
   /* pick a random rotation angle */
-  theta= OprogStatus.dthetaMC*(ranf()-0.5);
+  theta= dthetaMC*(drand48()-0.5);
   thetaSq=Sqr(theta);
   sinw = sin(theta);
   cosw = (1.0 - cos(theta));
@@ -778,20 +815,20 @@ void rot_move(int ip, int flip)
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       {
-	Ro[k1][k2] = R[ip][k1][k2];
+	Ro[k1][k2] = DNADall[ip].R[k1][k2];
 	for (k3 = 0; k3 < 3; k3++)
-	  Ro[k1][k2] += R[ip][k1][k3]*M[k3][k2];
+	  Ro[k1][k2] += DNADall[ip].R[k1][k3]*M[k3][k2];
       }
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
-     R[ip][k1][k2] = Ro[k1][k2]; 
+     DNADall[ip].R[k1][k2] = Ro[k1][k2]; 
   rotmoveMC++;
 }
 int random_move(int ip)
 {
   double p;
   //printf("random move ip=%d\n", ip);
-  p=rand48();
+  p=drand48();
   if (p <= 0.5)
    {
      tra_move(ip);
@@ -799,7 +836,7 @@ int random_move(int ip)
    }
   else
     {
-      rot_move(ip, 0);
+      rot_move(ip);
       return 1;
     } 
 }
@@ -845,7 +882,28 @@ double areoverlapping(void)
 }
 double calc_theta(int which)
 {
-  return acos(DNADs[which].R[2][2]);
+  return acos(DNADall[which].R[2][2]);
+}
+double Rold[3][3], rold[3]; 
+void store_state(int ip)
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      rold[k1] = DNADall[ip].rcm[k1];
+      for (k2=0; k2 < 3; k2++)
+    	Rold[k1][k2] = DNADall[ip].R[k1][k2];
+    }
+}
+void restore_state(int ip)
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      DNADall[ip].rcm[k1] = rold[k1];
+      for (k2=0; k2 < 3; k2++)
+	DNADall[ip].R[k1][k2] = Rold[k1][k2];
+    }
 }
 int main(int argc, char**argv)
 {
@@ -853,8 +911,8 @@ int main(int argc, char**argv)
   double uel, beta;
   int interact;
 #endif
-  int ip
-  double Lx, Ly, Lz, theta1, theta2;
+  int ip, k1, k2, reject;
+  double Lx, Ly, Lz, theta1, theta2, theta_old, theta_new;
   FILE *fin, *fout, *f, *fread;
   int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
@@ -1122,14 +1180,52 @@ int main(int argc, char**argv)
 #endif
    Lx=Ly=Lz=L;
    printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
-   
-   /* place two overlapping DNADs to start */
-   place_DNAD(0.0, 0.0, 0.0, 1, 0, 0, 0);      
-   place_DNAD(0.0, 0.0, 0.0, 1, 0, 0, 1);
+
+   for (k1=0; k1 < 3; k1++)
+     {
+       DNADall[0].rcm[k1] = 0.0;
+       DNADall[1].rcm[k1] = 0.0;
+       for (k2=0; k2 < 3; k2++)
+	 {
+	   DNADall[0].R[k1][k2] = (k1==k2)?1:0;
+	   DNADall[1].R[k1][k2] = (k1==k2)?1:0;
+	 } 
+     }
    for (tt=ttini; tt < tot_trials; tt++)
     {
-      ip=(int) 2.0*rand48();
+      ip=(int) 2.0*drand48();
+      store_R(ip);
+      theta_old=acos(DNADall[ip].R[2][2]);
       random_move(ip);
+      place_DNAD(ip);      
+      theta_new=acos(DNADall[ip].R[2][2]); 
+      reject=0;
+      if (calcDistBox() > 0.0)
+	reject=1;
+      else
+	{
+	  if (type==0)
+	    {
+	      if (!acc_onsager(alpha, theta_old, theta_new) || !acc_onsager(alpha, theta_old, theta_new))
+		reject=1;
+	    }
+	  else if (type==1)
+	    {
+	      if (!acc_onsager(alpha, theta_old, theta_new) || !acc_donsager(alpha, theta_old, theta_new))
+		reject=1;
+	    }  
+	  else
+	    {
+	      if (!acc_donsager(alpha, theta_old, theta_new) || !acc_donsager(alpha, theta_old, theta_new))
+		reject=1;
+	    }
+	}
+      if (reject)
+	{
+	  /* reject move */
+	  restore_state(ip);
+	  continue;
+	}
       if (calcDistBox() > 0.0 || !areoverlapping())
 	{
 	  /* otherwise calculate the integrand */
