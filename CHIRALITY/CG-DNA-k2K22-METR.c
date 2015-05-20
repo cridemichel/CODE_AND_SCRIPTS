@@ -24,7 +24,7 @@ struct DNADallStr {
   double sax[3];
 } DNADall[2];
 
-double calcDistBox(void)
+double calcDistBox(double shift[3])
 {
   double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
   double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
@@ -34,7 +34,7 @@ double calcDistBox(void)
   for (k=0; k < 3; k++)
     {
       rA[k] = DNADall[0].rcm[k];
-      rB[k] = DNADall[1].rcm[k];
+      rB[k] = DNADall[1].rcm[k] + shift[k];
       EA[k] = DNADall[0].sax[k];
       EB[k] = DNADall[1].sax[k];
     }
@@ -840,7 +840,7 @@ int random_move(int ip)
       return 1;
     } 
 }
-double areoverlapping(void)
+double areoverlapping(double shift[3])
 {
   int i, j, overlap=0;
   double distsq, sigijsq;
@@ -848,7 +848,7 @@ double areoverlapping(void)
     {
       for (j=0; j < nat; j++)
 	{
-	  distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
+	  distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x-shift[0]) + Sqr(DNADs[0][i].y-DNADs[1][j].y-shift[1]) + Sqr(DNADs[0][i].z-DNADs[1][j].z-shift[2]);
 	  sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
 	  if (distsq < sigijsq)
 	    {
@@ -911,8 +911,8 @@ int main(int argc, char**argv)
   double uel, beta;
   int interact;
 #endif
-  int ip, k1, k2, reject;
-  double Lx, Ly, Lz, theta1, theta2, theta_old, theta_new;
+  int ip, k1, k2, reject, movtype;
+  double Lx, Ly, Lz, theta1, theta2, theta_old, theta_new, shift[3];
   FILE *fin, *fout, *f, *fread;
   int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
@@ -1117,26 +1117,9 @@ int main(int argc, char**argv)
   dfons_sinth_max=estimate_maximum_dfons(alpha);
   fons_sinth_max=dfons_sinth_max/alpha;
   printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
-  //exit(-1);
-  /* avendo diviso l'integrazione in theta negli intervalli [0,pi/2] e [pi/2,pi]
-     il fattore si deve ottenere integrando fra 0 e pi/2 */
-#if 0
-  dth=acos(0.0)/((double)thetapts);
-  th=0.0;
-  //f = fopen("dfons.dat", "w+");
-  for (i=0; i < thetapts; i++)
-  {
-      factor += 0.5*dth*sin(th)*(dfons(th, alpha) + dfons(th+dth,alpha));
-      th += dth;
-      //fprintf(f,"%f %.15G\n", th, dfons(th, alpha));
-    };
- //fclose(f);
-  factor= fabs(factor);
-  factor *= 4.0*acos(0.0);
-#else
   factor = alpha/2.0;
- #endif
   printf("factor=%.15G\n", factor);
+#if 0
   if (cont)
   { 
 #ifdef ELEC
@@ -1158,33 +1141,15 @@ int main(int argc, char**argv)
     {
       fout = fopen(fnout, "w+");
       fclose(fout);
-    }  
-  if (type==0)
-    ncontrib=1;
-  else if (type==1)
-    ncontrib=2;
-  else
-#ifdef SYMMETRY
-    ncontrib=2;
-#else
-    ncontrib=4;
-#endif  
-#if 0
-   if (type==1)
-    {
-      Lx=Ly=max3(DNADall[0].sax[0],DNADall[0].sax[1],3.0*2.0*DNADall[0].sax[2]*sin(2.0*sqrt(2.0/alpha)));
-      Lz=L;
-      printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
     }
-   else
-#endif
+#endif  
    Lx=Ly=Lz=L;
    printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
 
    for (k1=0; k1 < 3; k1++)
      {
-       DNADall[0].rcm[k1] = 0.0;
-       DNADall[1].rcm[k1] = 0.0;
+       DNADall[0].rcm[k1] = DNADall[0].sax[0]/1.001;
+       DNADall[1].rcm[k1] = -DNADall[1].sax[0]/1.001;
        for (k2=0; k2 < 3; k2++)
 	 {
 	   DNADall[0].R[k1][k2] = (k1==k2)?1:0;
@@ -1195,12 +1160,31 @@ int main(int argc, char**argv)
     {
       ip=(int) 2.0*drand48();
       store_R(ip);
-      theta_old=acos(DNADall[ip].R[2][2]);
-      random_move(ip);
-      place_DNAD(ip);      
-      theta_new=acos(DNADall[ip].R[2][2]); 
+      theta_old=calc_theta(ip);
+      movtype=random_move(ip);
+      theta_new=calc_theta(ip); 
       reject=0;
-      if (calcDistBox() > 0.0)
+      /* apply periodic boundary conditions */ 
+      if (movtype==0)
+	{
+	   if (DNADall[ip].rcm[0] > Lx*0.5)
+	     DNADall[ip].rcm[0] -= Lx;
+	   if (DNADall[ip].rcm[0] < -Lx*0.5)
+	     DNADall[ip].rcm[0] += Lx;
+	   if (DNADall[ip].rcm[1] > Ly*0.5)
+	     DNADall[ip].rcm[1] -= Ly;
+	   if (DNADall[ip].rcm[1] < -Ly*0.5)
+	     DNADall[ip].rcm[1] += Ly;
+	   if (DNADall[ip].rcm[2] > Lz*0.5)
+	     DNADall[ip].rcm[2] -= Lz;
+	   if (DNADall[ip].rcm[2] < -Lz*0.5)
+	     DNADall[ip].rcm[2] += Lz;
+	}
+      shift[0] = Lx*rint((DNADall[0].rcm[0]-DNADall[1].rcm[0])/L[0]);
+      shift[1] = Ly*rint((DNADall[0].rcm[1]-DNADall[1].rcm[1])/L[1]);
+      shift[2] = Lz*rint((DNADall[0].rcm[2]-DNADall[1].rcm[2])/L[2]);
+
+      if (calcDistBox(shift) > 0.0)
 	reject=1;
       else
 	{
@@ -1226,17 +1210,15 @@ int main(int argc, char**argv)
 	  restore_state(ip);
 	  continue;
 	}
-      if (calcDistBox() > 0.0 || !areoverlapping())
+      place_DNAD(ip);      
+      if (areoverlapping(shift))
 	{
-	  /* otherwise calculate the integrand */
-	  theta1=calc_theta(0);
-      	  theta2=calc_theta(1);
 	  if (type==0)
-	    vexcl += fons(theta1,alpha)*fons(theta2,alpha)*sin(theta1)*sin(theta2);
+	    vexcl += 1.0;
 	  else if (type==1)
-	    vexcl += u2x*rcmy*fons(theta1,alpha)*dfons(theta2,alpha)*sin(theta1)*sin(theta2); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+	    vexcl += u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
 	  else 
-	    vexcl += -u1x*u2x*rcmy*rcmy*dfons(theta1,alpha)*dfons(theta2,alpha)*sin(theta1)*sin(theta2);
+	    vexcl += -u1x*u2x*rcmy*rcmy;
 	}
       if (tt > 0 && tt % fileoutits == 0)
 	{
@@ -1265,7 +1247,7 @@ int main(int argc, char**argv)
 #endif
 	 fclose(fout);
 	}
-      if (tt % outits==0)
-	printf("trials: %lld/%lld\n", tt, tot_trials);
     }
+  if (tt % outits==0)
+    printf("trials: %lld/%lld\n", tt, tot_trials);
 }
