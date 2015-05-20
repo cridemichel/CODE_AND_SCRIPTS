@@ -504,37 +504,41 @@ double min(double a, double b)
 {
   return (a < b)?a:b;
 }
-/* return an angle theta sampled from an Onsager angular distribution */
-double acc_onsager(double alpha, double theta_old, double theta_new)
-{
-  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
-     using rejection method */
-  /* the comparison function g(theta) is just g(theta)=1 */ 
-  double thr;
-  
-  thr = min(1.0,sin(theta_new)*fons(theta_new,alpha)/(sin(theta_old)*fons(theta_old,alpha)));
-  if (drand48() < thr)
-    return 1;
-  else 
-    return 0;
-    
-}
-double acc_donsager(double alpha, double theta_old, double theta_new)
-{
-  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
-     using rejection method */
-  /* the comparison function g(theta) is just g(theta)=1 */ 
-  double thr;
-  
-  thr= min(1.0,sin(theta_new)*dfons(theta_new,alpha)/(sin(theta_old)*dfons(theta_old,alpha)));
-  if (drand48() < thr)
-    return 1;
-  else 
-    return 0;
-    
-}
 double distro[10000];
 const int nfons=100;
+/* return an angle theta sampled from an Onsager angular distribution */
+double theta_onsager(double alpha)
+{
+  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
+     using rejection method */
+  /* the comparison function g(theta) is just g(theta)=1 */ 
+  static int first = 1;
+  static double f0;
+  double pi, y, f, theta, dtheta;
+  //printf("alpha=%f\n", alpha);
+  pi = acos(0.0)*2.0;
+  if (first == 1)
+    {
+      first=0;
+#if 0
+      f0 = 1.01*fons(0.0,alpha);
+#else      
+      f0 = 1.01*fons_sinth_max;
+#endif
+    }
+  do 
+    {
+      /* uniform theta between 0 and pi */
+      theta = pi*ranf_vb();
+      /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
+      y = f0*ranf_vb();
+      f = sin(theta)*fons(theta,alpha);
+      //printf("theta=%f y=%f\n", theta, y);
+    }
+  while (y >= f);
+  return theta;
+}
+
 void orient_onsager(double *omx, double *omy, double* omz, double alpha)
 {
   double thons;
@@ -647,6 +651,36 @@ double estimate_maximum_dfons(double alpha)
   // printf("maxval=%f\n", maxval);
   return maxval;
 }
+/* return an angle theta sampled from an Onsager angular distribution */
+double acc_onsager(double alpha, double theta_old, double theta_new)
+{
+  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
+     using rejection method */
+  /* the comparison function g(theta) is just g(theta)=1 */ 
+  double thr;
+  
+  thr = min(1.0,sin(theta_new)*fons(theta_new,alpha)/(sin(theta_old)*fons(theta_old,alpha)));
+  if (drand48() < thr)
+    return 1;
+  else 
+    return 0;
+    
+}
+double acc_donsager(double alpha, double theta_old, double theta_new)
+{
+  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
+     using rejection method */
+  /* the comparison function g(theta) is just g(theta)=1 */ 
+  double thr;
+  
+  thr= min(1.0,sin(theta_new)*dfons(theta_new,alpha)/(sin(theta_old)*dfons(theta_old,alpha)));
+  if (drand48() < thr)
+    return 1;
+  else 
+    return 0;
+    
+}
+
 void init_distbox(void)
 {
   int i, k;
@@ -1159,7 +1193,7 @@ int main(int argc, char**argv)
    for (tt=ttini; tt < tot_trials; tt++)
     {
       ip=(int) 2.0*drand48();
-      store_R(ip);
+      store_state(ip);
       theta_old=calc_theta(ip);
       movtype=random_move(ip);
       theta_new=calc_theta(ip); 
@@ -1180,9 +1214,9 @@ int main(int argc, char**argv)
 	   if (DNADall[ip].rcm[2] < -Lz*0.5)
 	     DNADall[ip].rcm[2] += Lz;
 	}
-      shift[0] = Lx*rint((DNADall[0].rcm[0]-DNADall[1].rcm[0])/L[0]);
-      shift[1] = Ly*rint((DNADall[0].rcm[1]-DNADall[1].rcm[1])/L[1]);
-      shift[2] = Lz*rint((DNADall[0].rcm[2]-DNADall[1].rcm[2])/L[2]);
+      shift[0] = Lx*rint((DNADall[0].rcm[0]-DNADall[1].rcm[0])/Lx);
+      shift[1] = Ly*rint((DNADall[0].rcm[1]-DNADall[1].rcm[1])/Ly);
+      shift[2] = Lz*rint((DNADall[0].rcm[2]-DNADall[1].rcm[2])/Lz);
 
       if (calcDistBox(shift) > 0.0)
 	reject=1;
