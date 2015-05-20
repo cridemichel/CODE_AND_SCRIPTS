@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
 #define ALBERTA
@@ -639,7 +640,7 @@ void init_distbox(void)
       DNADall[k].sax[1] = max_y*1.01;
       DNADall[k].sax[2] = max_z*1.01;
     }
-
+  //printf("maxx=%f %f\n",DNADall[0].sax[0],DNADall[0].sax[1]);
 }
 #ifdef ELEC
 double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*angstrom */
@@ -701,13 +702,20 @@ double max3(double a, double b, double c)
     m = c;
   return m;
 }
-
+double max2(double a, double b)
+{
+  if (a > b)
+    return a;
+  else 
+    return b;
+}
 int main(int argc, char**argv)
 {
 #ifdef ELEC
   double uel, beta;
   int interact;
 #endif
+  double Lx, Ly, Lz;
   FILE *fin, *fout, *f, *fread;
   int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
@@ -964,7 +972,18 @@ int main(int argc, char**argv)
 #else
     ncontrib=4;
 #endif  
-    for (tt=ttini; tt < tot_trials; tt++)
+#if 0
+   if (type==1)
+    {
+      Lx=Ly=max3(DNADall[0].sax[0],DNADall[0].sax[1],3.0*2.0*DNADall[0].sax[2]*sin(2.0*sqrt(2.0/alpha)));
+      Lz=L;
+      printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
+    }
+   else
+#endif
+   Lx=Ly=Lz=L;
+   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
+   for (tt=ttini; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
       /* per la v2: contrib = 0 e 3 sono contributi con lo stesso segno ossia tra [0,Pi/2] e [0,Pi2] e tra [Pi/2,Pi] e [Pi/2,P]
@@ -981,11 +1000,13 @@ int main(int argc, char**argv)
 	      else 
 		orient_donsager(&u1x, &u1y, &u1z, alpha, 1);
 	    }
-	  place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0);      
 	  /* place second DNAD randomly */
-	  rcmx = L*(drand48()-0.5);
-	  rcmy = L*(drand48()-0.5);
-	  rcmz = L*(drand48()-0.5);
+	  rcmx = Lx*(drand48()-0.5);
+	  rcmy = Ly*(drand48()-0.5);
+      	  rcmz = Lz*(drand48()-0.5);
+	  //if (type==1 && rcmy > 2.0*max2(DNADall[k].sax[0],DNADall[k].sax[1]))
+	    //break;
+	  place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0);      
 	  if (type==0)
 	    orient_onsager(&u2x, &u2y, &u2z, alpha);
 	  else
@@ -1015,7 +1036,7 @@ int main(int argc, char**argv)
 	  uel = 0.0;
 	  interact = 0;
 #endif
-	  if (calcDistBox() < 0.0)
+  	  if (calcDistBox() < 0.0)
 	    {
 #ifdef ELEC
 	      interact = 1;
@@ -1126,24 +1147,24 @@ int main(int argc, char**argv)
 #ifdef ELEC
 	 if (type==0)
 	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, L*L*L*(vexcl+vexclel)/((double)tt)/1E3, L*L*L*vexcl/((double)tt)/1E3,
-		   L*L*L*vexclel/((double)tt)/1E3);
+	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
+		   Lx*Ly*Lz*vexclel/((double)tt)/1E3);
 	 else if (type==1)
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (L*L*L*(vexcl+vexclel)/((double)tt))*factor/1E4,
-		   (L*L*L*vexcl/((double)tt))*factor/1E4,
-		   (L*L*L*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
+		   (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
+		   (Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
 	 else
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (L*L*L*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
-		   (L*L*L*vexcl/((double)tt))*Sqr(factor)/1E5,
-		   (L*L*L*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
+		   (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
+		   (Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
 #else 
 	 if (type==0)
 	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%lld %.15G\n", tt, L*L*L*vexcl/((double)tt)/1E3);
+	   fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
 	 else if (type==1)
-	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+	   fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
 	 else
-	   fprintf(fout,"%lld %.15G\n", tt, (L*L*L*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	   fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
 #endif
 	 fclose(fout);
 	}
