@@ -967,7 +967,7 @@ int main(int argc, char**argv)
 #ifdef ELEC
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD]\n");
 #else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] <dtra> <drot> \n");
 #endif
       exit(1);
     }
@@ -983,6 +983,16 @@ int main(int argc, char**argv)
     outits=100*fileoutits;
   else
     outits = atoll(argv[7]);
+
+  if (argc <= 8)
+    deltaMC=5;
+  else 
+    deltaMC= atof(argv[8]);
+
+  if (argc <= 8)
+    dthetaMC=0.5;
+  else 
+    dthetaMC= atof(argv[9]);
 
 #ifdef ELEC
   if (argc <= 8)
@@ -1236,6 +1246,7 @@ int main(int argc, char**argv)
       if (calcDistBox(shift) > 0.0)
 	{
 	  //reject=1;
+	  overlap=0;
 	}
       else
 	{
@@ -1255,61 +1266,62 @@ int main(int argc, char**argv)
 		reject=1;
 	    }
 	}
-      if (reject)
-	{
-	  /* reject move */
-	  restore_state(ip);
+      place_DNAD(ip);      
+      if (areoverlapping(shift))
+	{	
+	  //reject = 1;
+	  rcmy = DNADall[1].rcm[1]-DNADall[0].rcm[1];
+	  R2u(&u1x, &u1y, &u1z, 0);
+	  R2u(&u2x, &u2y, &u2z, 1);
+	  //printf("rcmy=%f u2x=%f\n", rcmy, u2x);
+	  if (ip==0)
+	    {
+	      theta1=theta_new;
+	      theta2=calc_theta(1);
+	    }
+	  else
+	    {
+	      theta1=calc_theta(0);
+	      theta2=theta_new;
+	    }
+	  if (type==1)
+	    {
+	      if (theta2 < M_PI*0.5)
+		segno=1.0;
+	      else
+		segno=-1.0;
+	    }
+	  else if (type==2)
+	    {
+	      if (theta1 < M_PI*0.5)
+		segno1=1.0;
+	      else
+		segno1=-1.0;
+	      if (theta2 < M_PI*0.5)
+		segno2=1.0;
+	      else
+		segno2=-1.0;
+	      segno=segno1*segno2;
+	    }
+	  if (type==0)
+	    vexcl += 1.0;
+	  else if (type==1)
+	    vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+	  else 
+	    vexcl += -segno*u1x*u2x*rcmy*rcmy;
+	  //printf("a=%f\n",u1x*u2x*rcmy*rcmy);
 	}
       else
 	{
-	  place_DNAD(ip);      
 	  if (movtype==0)
 	    acctramoveMC++;
 	  else
 	    accrotmoveMC++;
-	  if (areoverlapping(shift))
-	    {	
-	      rcmy = DNADall[1].rcm[1]-DNADall[0].rcm[1];
-	      R2u(&u1x, &u1y, &u1z, 0);
-	      R2u(&u2x, &u2y, &u2z, 1);
-	      //printf("rcmy=%f u2x=%f\n", rcmy, u2x);
-	      if (ip==0)
-		{
-		  theta1=theta_new;
-		  theta2=calc_theta(1);
-		}
-	      else
-		{
-		  theta1=calc_theta(0);
-		  theta2=theta_new;
-		}
-	      if (type==1)
-		{
-		  if (theta2 < M_PI*0.5)
-		    segno=1.0;
-		  else
-		    segno=-1.0;
-		}
-	      else if (type==2)
-		{
-		  if (theta1 < M_PI*0.5)
-		    segno1=1.0;
-		  else
-		    segno1=-1.0;
-		  if (theta2 < M_PI*0.5)
-		    segno2=1.0;
-		  else
-		    segno2=-1.0;
-		  segno=segno1*segno2;
-		}
-	      if (type==0)
-		vexcl += 1.0;
-	      else if (type==1)
-		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	      else 
-		vexcl += -segno*u1x*u2x*rcmy*rcmy;
-	      //printf("a=%f\n",u1x*u2x*rcmy*rcmy);
-	    }
+	}
+      if (reject)
+	{
+	  /* reject move */
+	  restore_state(ip);
 	}
       if (tt > 0 && tt % fileoutits == 0)
 	{
