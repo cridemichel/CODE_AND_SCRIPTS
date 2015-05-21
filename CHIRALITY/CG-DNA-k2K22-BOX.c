@@ -967,21 +967,23 @@ int main(int argc, char**argv)
   else if (type==1)
     ncontrib=2;
   else
+    {
 #ifdef SYMMETRY
-    ncontrib=2;
+      ncontrib=2;
 #else
-  ncontrib=4;
-#endif  
-#if 0
+      ncontrib=4;
+#endif
+    };  
+  Lx=Ly=Lz=L;
+#if 1
   if (type==1)
     {
-      Lx=Ly=max3(DNADall[0].sax[0],DNADall[0].sax[1],3.0*2.0*DNADall[0].sax[2]*sin(2.0*sqrt(2.0/alpha)));
-      Lz=L;
+      Lx=1.1*max2(DNADall[0].sax[0],DNADall[0].sax[1]);
+      Ly=max3(DNADall[0].sax[0],DNADall[0].sax[1],3.0*2.0*DNADall[0].sax[2]*sin(2.0*sqrt(2.0/alpha)));
+      Lz=1.1*L/3.0;
       printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
     }
-  else
 #endif
-    Lx=Ly=Lz=L;
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
   for (tt=ttini; tt < tot_trials; tt++)
     {
