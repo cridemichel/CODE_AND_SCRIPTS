@@ -787,6 +787,7 @@ int main(int argc, char**argv)
     yukcut = 2.0;
   else 
     yukcut = atof(argv[10]);
+
   if (argc <= 11)
     epsr_prime = 1.8;
   else
@@ -812,12 +813,12 @@ int main(int argc, char**argv)
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
   yukcutkD = yukcut/kD;
   yukcutkDsq = Sqr(yukcutkD);
-  printf("epsr=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr(1.0/beta), beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
+  printf("epsr_prime=%f epsr=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, epsr(1.0/beta), beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
   printf("yukawa cutoff=%.15G\n", yukcutkD);
 #endif
   cont=0;
 #ifdef ELEC
-  nfrarg = 12;
+  nfrarg = 13;
 #else
   nfrarg = 9;
 #endif
