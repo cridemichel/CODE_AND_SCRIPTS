@@ -643,6 +643,7 @@ void init_distbox(void)
   //printf("maxx=%f %f\n",DNADall[0].sax[0],DNADall[0].sax[1]);
 }
 #ifdef ELEC
+const double epsr_prime=1.8;
 double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*angstrom */
 double esq_eps10, esq_eps_prime10;
 const double bmann = 1E-9*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
@@ -786,9 +787,9 @@ int main(int argc, char**argv)
     yukcut = 2.0;
   else 
     yukcut = atof(argv[10]);
- 
+
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
-  esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)/kB;
+  esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*epsr_prime)/kB;
   esq_eps10 = esq_eps*1E10;
   esq_eps_prime10 = esq_eps_prime*1E10;
   ximanning = esq_eps*beta/bmann;
