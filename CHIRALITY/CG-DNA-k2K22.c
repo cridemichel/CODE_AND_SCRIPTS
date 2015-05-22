@@ -6,7 +6,7 @@
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
-#define ALBERTA
+//#define ALBERTA
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
@@ -656,13 +656,17 @@ double ximanning, deltamann; /* Debye screening length */
 double zeta_a, zeta_b;
 double Ucoul(double rab)
 {
-  //return esq_eps_prime10*zeta_a*zeta_b/rab;
+  //return esq_eps_prime10/rab;
   return esq_eps_prime10*zeta_a*zeta_b/rab;
 
 }
 double Uyuk(double rab)
 {
-  return esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab;
+#if 0
+  printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
+  printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
+#endif
+  return esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab; 
 } 
 
 double calc_yukawa(int i, int j, double distsq)
@@ -763,7 +767,7 @@ int main(int argc, char**argv)
  
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1)/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)/kB;
-  esq_eps10 = esq_eps10*1E10;
+  esq_eps10 = esq_eps*1E10;
   esq_eps_prime10 = esq_eps_prime*1E10;
   ximanning = esq_eps*beta/bmann;
   deltamann = 1.0/ximanning;
@@ -805,7 +809,7 @@ int main(int argc, char**argv)
 	}
       fclose(fread);
 #ifdef ELEC
-      printf("restarting tt=%lld vexcltot=%.15G vexcl=%.15G vexclel=%.15G\n", ttini, vexcl+vexclel, vexclel);
+      printf("restarting tt=%lld vexcltot=%.15G vexcl=%.15G vexclel=%.15G\n", ttini, vexcl+vexclel, vexcl, vexclel);
 #else
       printf("restarting tt=%lld vexcl=%.15G\n", ttini, vexcl);
 #endif
@@ -840,6 +844,7 @@ int main(int argc, char**argv)
       DNAchain[cc].x = rx;
       DNAchain[cc].y = ry;
       DNAchain[cc].z = rz;
+      //printf("cc=%d (%f,%f,%f)\n", cc, rx, ry, rz);
 #ifdef ALBERTA
       if (!strcmp(atname, "S"))
 	{
