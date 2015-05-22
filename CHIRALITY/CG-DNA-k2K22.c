@@ -715,6 +715,26 @@ double max2(double a, double b)
   else 
     return b;
 }
+double epsrtbl[21][2]={{0,87.740},{5,85.763},{10,83.832},{15,81.946},{20,80.103},{25,78.304},{30,76.546},{35,74.828},{40,73.151},{45,71.512},{50,69.910},{55,68.345},{60,66.815},{65,65.319},{70,63.857},{75,62.427},{80,61.027},{85,59.659},{90,58.319},{95,57.007},{100,55.720}};
+double epsr(double T)
+{
+  int i;
+  i = 0;
+  T = T - 273.15;
+  if (T <= 0.0 || T >= 100.0)
+    {
+      printf("Temperature must be between 0 and 100!\n");
+      exit(-1);
+    }
+  for (i=0; i < 21; i++)
+    {
+      if (T > epsrtbl[i][0])
+	{
+	  /* linear interpolation */
+	  return epsrtbl[i][1]+(T-epsrtbl[i][0])*(epsrtbl[i+1][1]-epsrtbl[i][1])/(epsrtbl[i+1][0]-epsrtbl[i][0]);
+	}
+    }
+}
 int main(int argc, char**argv)
 {
 #ifdef ELEC
@@ -767,7 +787,7 @@ int main(int argc, char**argv)
   else 
     yukcut = atof(argv[10]);
  
-  esq_eps = Sqr(qel)/(4.0*M_PI*eps0*80.1)/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
+  esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*2.0)/kB;
   esq_eps10 = esq_eps*1E10;
   esq_eps_prime10 = esq_eps_prime*1E10;
@@ -783,11 +803,11 @@ int main(int argc, char**argv)
      InvDebyeScrLen[300, 2, 200, 2, 1, 20]^-1*10^9
 
   */
-  /* qdna è la carica rilasciata da ogni grupppo fosfato in soluzione (tipicamente=1) */
+  /* qdna è la carica rilasciata da ogni gruppo fosfato in soluzione (tipicamente=1) */
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
   yukcutkD = yukcut/kD;
   yukcutkDsq = Sqr(yukcutkD);
-  printf("beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
+  printf("epsr=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr(1.0/beta), beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
   printf("yukawa cutoff=%.15G\n", yukcutkD);
 #endif
   cont=0;
