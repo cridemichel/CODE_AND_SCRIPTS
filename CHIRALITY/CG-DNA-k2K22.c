@@ -678,6 +678,7 @@ double calc_yukawa(int i, int j, double distsq)
   
   if (rab < rab0)
     {
+      //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
       return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
 #if 0
       if (isnan(ret))
@@ -691,6 +692,7 @@ double calc_yukawa(int i, int j, double distsq)
   /* we set a cutoff for electrostatic interactions */
   else if (rab < yukcutkD)
     {
+      //printf("Yuk=%.15G\n", Uyuk(rab));
       return Uyuk(rab);
     } 
   else return 0.0;
