@@ -8,6 +8,7 @@
 #define SYMMETRY
 #define ELEC
 //#define ALBERTA
+#define NO_INTERP
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
@@ -644,7 +645,7 @@ void init_distbox(void)
   //printf("maxx=%f %f\n",DNADall[0].sax[0],DNADall[0].sax[1]);
 }
 #ifdef ELEC
-double delta_rab0=2.0, epsr_prime=1.8;
+double delta_rab0=2.0, epsr_prime=1.8, yuk_corr_fact;
 double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*angstrom */
 double esq_eps10, esq_eps_prime10;
 const double bmann = 1E-9*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
@@ -668,7 +669,8 @@ double Uyuk(double rab)
   printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
   printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
 #endif
-  return esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab; 
+
+  return yuk_corr_fact*esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab; 
 } 
 
 double calc_yukawa(int i, int j, double distsq)
@@ -820,10 +822,12 @@ int main(int argc, char**argv)
   */
   /* qdna è la carica rilasciata da ogni gruppo fosfato in soluzione (tipicamente=1) */
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
+  /* 6.0 Angstrom is the closest distance between phosphate charges */
+  yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
   yukcutkD = yukcut/kD;
   yukcutkDsq = Sqr(yukcutkD);
   printf("epsr_prime=%f epsr=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, epsr(1.0/beta), beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
-  printf("yukawa cutoff=%.15G\n", yukcutkD);
+  printf("yukawa cutoff=%.15G yuk_corr_fact=%.15G\n", yukcutkD, yuk_corr_fact);
 #endif
   cont=0;
 #ifdef ELEC
