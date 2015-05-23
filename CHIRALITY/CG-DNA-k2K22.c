@@ -681,7 +681,11 @@ double calc_yukawa(int i, int j, double distsq)
   if (rab < rab0)
     {
       //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
+#ifdef NO_INTERP
+      return Ucoul(rab);
+#else
       return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
+#endif
 #if 0
       if (isnan(ret))
 	{
