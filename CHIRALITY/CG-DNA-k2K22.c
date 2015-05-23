@@ -8,7 +8,7 @@
 #define SYMMETRY
 #define ELEC
 //#define ALBERTA
-#define NO_INTERP
+//#define NO_INTERP
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
