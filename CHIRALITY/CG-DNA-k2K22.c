@@ -6,6 +6,7 @@
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
+#define ELEC
 //#define ALBERTA
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
@@ -643,7 +644,7 @@ void init_distbox(void)
   //printf("maxx=%f %f\n",DNADall[0].sax[0],DNADall[0].sax[1]);
 }
 #ifdef ELEC
-double epsr_prime=1.8;
+double delta_rab0=2.0, epsr_prime=1.8;
 double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*angstrom */
 double esq_eps10, esq_eps_prime10;
 const double bmann = 1E-9*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
@@ -675,7 +676,7 @@ double calc_yukawa(int i, int j, double distsq)
   double ret, rab0, rab, sigab;
   rab = sqrt(distsq);
   sigab = DNADs[0][i].rad + DNADs[1][j].rad;
-  rab0 = sigab + 2; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
+  rab0 = sigab + delta_rab0; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
   
   if (rab < rab0)
     {
@@ -753,7 +754,7 @@ int main(int argc, char**argv)
   if (argc < 7)
     {
 #ifdef ELEC
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0)]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
 #else
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits]\n");
 #endif
@@ -792,6 +793,10 @@ int main(int argc, char**argv)
     epsr_prime = 1.8;
   else
     epsr_prime = atof(argv[11]);
+  if (argc <= 12)
+    delta_rab0 = 2.0;
+  else
+    delta_rab0 = atof(argv[12]);
 
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*epsr_prime)/kB;
@@ -818,7 +823,7 @@ int main(int argc, char**argv)
 #endif
   cont=0;
 #ifdef ELEC
-  nfrarg = 13;
+  nfrarg = 14;
 #else
   nfrarg = 9;
 #endif
