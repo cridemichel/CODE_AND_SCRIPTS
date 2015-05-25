@@ -22,6 +22,7 @@ double *cdna_arr, *beta_arr;
 int numtemps, numconcs;
 double **yukcutkD_arr, **kD_arr, **yukcutkDsq_arr, **uel_arr, **vexclel_arr;
 double num_kD=0;
+double maxyukcutkDsq, maxyukcutkD;
 #endif
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len;
@@ -632,6 +633,12 @@ void init_distbox(void)
 #ifdef ELEC
       if (DNAchain[i].atype==1)/* se si tratta di un P */
 	{
+#ifdef PARALLEL
+	  if (numtemps > 1 || numconcs > 1)
+	    {
+	      yukcutkD = maxyukcutkD;
+	    }
+#endif
 	  if (yukcutkD*0.5 > DNAchain[i].rad)
 	    {
 	      distx = fabs(DNAchain[i].x) + yukcutkD*0.5;
@@ -810,7 +817,7 @@ int main(int argc, char**argv)
   FILE *fin, *fout, *f, *fread;
 #ifdef PARALLEL
   FILE *fp;
-  double sigab, rab0, rab0sq, uelcontrib, tempfact, maxyukcutkDsq;
+  double sigab, rab0, rab0sq, uelcontrib, tempfact;
   int k1, k2, kk;
 #endif
   int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
@@ -1001,7 +1008,7 @@ int main(int argc, char**argv)
       for (k1 = 0; k1 < numconcs; k1++)
 	for (k2 = 0; k2 < numtemps; k2++)
 	  {
-	    kD_arr[k1][k2] = sqrt((4.0*M_PI*esq_eps*(1.0/epsr(1.0/beta_arr[k1])))*beta_arr[k1]*(Sqr(qdna)*2.0*epsr(1.0/beta_arr[k1])*deltamann*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
+	    kD_arr[k1][k2] = sqrt((4.0*M_PI*esq_eps*(1.0/epsr(1.0/beta_arr[k1])))*beta_arr[k1]*(Sqr(qdna)*2.0*epsr(1.0/beta_arr[k1])*(deltamann/beta_arr[k1])*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
 	    printf("numtemps=%d numconcs=%d kD:%f beta_arr:%f cdna_arr: %f\n", numtemps, numconcs, kD_arr[k1][k2], beta_arr[k1], cdna_arr[k2]);
 	    printf("esq_eps: %f qdna=%f deltamann=%f qsalt=%f csalt=%f\n", esq_eps, qdna, deltamann, qsalt, csalt);
 	    /* 6.0 Angstrom is the closest distance between phosphate charges */
@@ -1021,8 +1028,9 @@ int main(int argc, char**argv)
 	    cc++;
 	  }
       qsort(kD_sorted, cc, sizeof(struct kDsortS), compare_func);
+      maxyukcutkD = yukcut*kD_sorted[cc-1].invkD;
       maxyukcutkDsq = Sqr(yukcut*kD_sorted[cc-1].invkD);
-      printf("min: %f max: %f\n",kD_sorted[0].invkD,kD_sorted[cc-1].invkD);
+      printf("min: %f max: %f maxyukcutkD=%f\n",kD_sorted[0].invkD,kD_sorted[cc-1].invkD, sqrt(maxyukcutkDsq));
     }
   else
     {
@@ -1372,9 +1380,11 @@ int main(int argc, char**argv)
 			}
 #ifdef ELEC
 		      /* if they are both phosphate groups we need to calculate electrostatic interaction here */
-#ifdef PARALELL
+#ifdef PARALLEL
 		      if (numtemps > 1 || numconcs > 1)
-			yukcutkDsq = maxyukcutkDsq;
+			{
+			  yukcutkDsq = maxyukcutkDsq;
+			}
 #endif
 		      if (DNADs[0][i].atype==1 && DNADs[1][j].atype==1 && distsq < yukcutkDsq)
 			{
@@ -1404,6 +1414,7 @@ int main(int argc, char**argv)
 				      break;
 				    }
 				}
+			      //printf("uelcontrib:%f\n", uelcontrib);
 			      if (uelcontrib > 0.0)
 				{
 				  for (k1=0; k1 < numtemps; k1++)
