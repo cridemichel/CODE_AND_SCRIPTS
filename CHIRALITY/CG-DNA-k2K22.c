@@ -809,7 +809,7 @@ int main(int argc, char**argv)
   FILE *fin, *fout, *f, *fread;
 #ifdef PARALLEL
   FILE *fp;
-  double sigab, rab0, rab0sq, uelcontrib, tempfact;
+  double sigab, rab0, rab0sq, uelcontrib, tempfact, maxyukcutkDsq;
   int k1, k2, kk;
 #endif
   int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
@@ -1000,6 +1000,7 @@ int main(int argc, char**argv)
 	    cc++;
 	  }
       qsort(kD_sorted, cc, sizeof(struct kDsortS), compare_func);
+      maxyukcutkDsq = Sqr(yukcut*kD_sorted[cc-1].invkD);
     }
   else
     {
@@ -1283,8 +1284,24 @@ int main(int argc, char**argv)
 	  /* check overlaps */
 	  overlap=0;
 #ifdef ELEC
+#ifdef PARALLEL
+	  if (numtemps > 1 || numconcs > 1)
+	    {
+	      for (k1=0; k1 < numtemps; k1++)
+		for (k2=0; k2 < numconcs; k2++)
+		  {
+		    uel_arr[k1][k2]=0.0;
+		  }		  
+	    }
+	  else
+	    {
+	      uel = 0.0;
+	    }
+	  interact = 0;
+#else
 	  uel = 0.0;
 	  interact = 0;
+#endif
 #endif
 	  if (calcDistBox() < 0.0)
 	    {
@@ -1304,6 +1321,10 @@ int main(int argc, char**argv)
 			}
 #ifdef ELEC
 		      /* if they are both phosphate groups we need to calculate electrostatic interaction here */
+#ifdef PARALELL
+		      if (numtemps > 1 || numconcs > 1)
+			yukcutkDsq = maxyukcutkDsq;
+#endif
 		      if (DNADs[0][i].atype==1 && DNADs[1][j].atype==1 && distsq < yukcutkDsq)
 			{
 #if 0
@@ -1420,8 +1441,8 @@ int main(int argc, char**argv)
 			    vexclel_arr[k1][k2] += (1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
 			  else if (type==1)
 			    vexclel_arr[k1][k2] += segno*u2x*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2])); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-			else 
-			  vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
+		  	  else 
+		  	    vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
 			}
 		    }
 		}
@@ -1457,7 +1478,7 @@ int main(int argc, char**argv)
 	      for (k1=0; k1 < numtemps; k1++)
 		for (k2=0; k2 < numconcs; k2++)
 		  {
-		    sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], (int)rint((1.0/beta_arr[k1])));
+		    sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], 1.0/beta_arr[k1]);
 		    fout = fopen(fnout, "a+");
 		    if (type==0)
 		      //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
@@ -1471,6 +1492,7 @@ int main(int argc, char**argv)
 		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))*Sqr(factor)/1E5,
 			      (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
 			      (Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+		    fclose(fout);
 		  }
 	    }
 	  else
