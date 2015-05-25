@@ -1244,17 +1244,18 @@ int main(int argc, char**argv)
       if (type == 0)
 	vexclel *= 1E3*((double)ttini)/(L*L*L);
       else if (type==1)
-	vexclel *= 1E4*((double)ttini)/(L*L*L);
+	vexclel *= 1E4*((double)ttini)/(L*L*L)/factor;
       else
-	vexclel *= 1E5*((double)ttini)/(L*L*L);
+	vexclel *= 1E5*((double)ttini)/(L*L*L)/Sqr(factor);
 #endif    
       if (type == 0)
 	vexcl *= 1E3*((double)ttini)/(L*L*L);
       else if (type==1)
-	vexcl *= 1E4*((double)ttini)/(L*L*L);
+	vexcl *= 1E4*((double)ttini)/(L*L*L)/factor;
       else
-	vexcl *= 1E5*((double)ttini)/(L*L*L);
+	vexcl *= 1E5*((double)ttini)/(L*L*L)/Sqr(factor);
     }
+ // printf("VEXCL=%f VEXCLEL=%f\n", vexcl, vexclel);
   if (!cont)
     {
 #ifdef PARALLEL
@@ -1308,7 +1309,7 @@ int main(int argc, char**argv)
     }
 #endif
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
-  for (tt=ttini; tt < tot_trials; tt++)
+  for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
       /* per la v2: contrib = 0 e 3 sono contributi con lo stesso segno ossia tra [0,Pi/2] e [0,Pi2] e tra [Pi/2,Pi] e [Pi/2,P]
