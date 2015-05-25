@@ -6,7 +6,11 @@
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
-#define ELEC
+#if defined(MPI)
+int MPIpid;
+extern int my_rank;
+extern int numOfProcs; /* number of processeses in a communicator */
+#endif #define ELEC
 //#define ALBERTA
 //#define NO_INTERP
 #ifdef ELEC
@@ -824,6 +828,9 @@ int compare_func(const void *aa, const void *bb)
 #endif
 int main(int argc, char**argv)
 {
+#ifdef MPI
+  MPI_Status status;
+#endif
 #ifdef ELEC
   double uel, beta;
   int interact;
@@ -841,6 +848,13 @@ int main(int argc, char**argv)
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
+#if defined(MPI) 
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numOfProcs);
+  //sprintf(TXT, "rank:%d\n", my_rank);
+#endif
+
   if (argc < 7)
     {
 #ifdef ELEC
@@ -1212,7 +1226,11 @@ int main(int argc, char**argv)
   init_distbox();
   L=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*3.0;
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
+#ifdef MPI
+  srand48(((int)time(NULL))+my_rank);
+#else
   srand48((int)time(NULL));
+#endif
   sprintf(fnout, "v%d.dat", type);
   factor=0.0;
   dfons_sinth_max=estimate_maximum_dfons(alpha);
@@ -1616,4 +1634,7 @@ int main(int argc, char**argv)
       if (tt % outits==0)
 	printf("trials: %lld/%lld\n", tt, tot_trials);
     }
+#ifdef MPI
+  MPI_Finalize();
+#endif
 }
