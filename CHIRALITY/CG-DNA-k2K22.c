@@ -1415,7 +1415,7 @@ int main(int argc, char**argv)
 				    }
 				}
 			      //printf("uelcontrib:%f\n", uelcontrib);
-			      if (uelcontrib > 0.0)
+			      if (uelcontrib != 0.0)
 				{
 				  for (k1=0; k1 < numtemps; k1++)
 				    for (k2=0; k2 < numconcs; k2++)
@@ -1504,7 +1504,7 @@ int main(int argc, char**argv)
 		{
 		  for (k1=0; k1 < numtemps; k1++)
 		    {
-		      tempfact = Sqr(1.0/beta_arr[k1])*Sqr(epsr(1.0/beta_arr[k1])); 
+		      tempfact = Sqr(epsr(1.0/beta_arr[k1])/beta_arr[k1]); 
 		      for (k2=0; k2 < numconcs; k2++)
 			{
 			  /* otherwise calculate the integrand */
