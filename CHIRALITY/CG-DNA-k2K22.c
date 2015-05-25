@@ -1421,7 +1421,7 @@ int main(int argc, char**argv)
 				  for (k1=0; k1 < numtemps; k1++)
 				    for (k2=0; k2 < numconcs; k2++)
 				      {
-					if (kk==-1 || 1.0/kD_arr[k1][k2] <= kD_sorted[kk].invkD)  
+					if (kk==-1 || 1.0/kD_arr[k1][k2] >= kD_sorted[kk].invkD)  
 					  {
 					    if (kk==-1)
 					      uel_arr[k1][k2] += uelcontrib;
