@@ -10,7 +10,8 @@
 int MPIpid;
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
-#endif #define ELEC
+#endif 
+#define ELEC
 //#define ALBERTA
 //#define NO_INTERP
 #ifdef ELEC
