@@ -809,7 +809,7 @@ int main(int argc, char**argv)
   FILE *fin, *fout, *f, *fread;
 #ifdef PARALLEL
   FILE *fp;
-  double sigab, rab0, rab0sq, uelcontrib;
+  double sigab, rab0, rab0sq, uelcontrib, tempfact;
   int k1, k2, kk;
 #endif
   int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
@@ -864,10 +864,11 @@ int main(int argc, char**argv)
 	  while(!feof(fp))
 	    {
 	      fscanf(fp, "%lf ", &dummydbl);
-	      beta_arr[cc] = dummydbl;
+	      beta_arr[cc] = 1.0/dummydbl;
 	      cc++;
 	    }
 	  fclose(fp);
+	  numtemps=cc;
 	}
       else
 	{
@@ -893,6 +894,7 @@ int main(int argc, char**argv)
 	    }
 	  cdna_arr = malloc(sizeof(double)*cc);
 	  rewind(fp);
+	  numconcs=cc;
 	  cc=0;
 	  while(!feof(fp))
 	    {
@@ -933,9 +935,20 @@ int main(int argc, char**argv)
   else
     delta_rab0 = atof(argv[12]);
 
+#ifdef PARALLEL
+  if (numtemps > 1 || numconcs > 1)
+    {
+      esq_eps = Sqr(qel)/(4.0*M_PI*eps0)/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
+    }
+  else
+    {
+      esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
+    }
+#else
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
-  esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*epsr_prime)/kB;
+#endif
   esq_eps10 = esq_eps*1E10;
+  esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*epsr_prime)/kB;
   esq_eps_prime10 = esq_eps_prime*1E10;
   ximanning = esq_eps*beta/bmann;
   deltamann = 1.0/ximanning;
@@ -953,15 +966,12 @@ int main(int argc, char**argv)
 #ifdef PARALLEL
   if (numtemps > 1 || numconcs > 1)
     {
-      sigab = DNADs[0][i].rad + DNADs[1][j].rad;
-      rab0 = sigab + delta_rab0; 
-      rab0sq = Sqr(rab0);
       kD_arr = malloc(sizeof(double*)*numtemps);
       yukcutkD_arr = malloc(sizeof(double*)*numtemps);
       yukcutkDsq_arr = malloc(sizeof(double*)*numtemps); 
       vexclel_arr = malloc(sizeof(double*)*numtemps); 
       uel_arr = malloc(sizeof(double*)*numtemps);
-      for (k1=0; k1 < numconcs; k1++)
+      for (k1=0; k1 < numtemps; k1++)
 	{
 	  kD_arr[k1] = malloc(sizeof(double)*numconcs);
 	  yukcutkD_arr[k1] = malloc(sizeof(double)*numconcs);
@@ -1206,8 +1216,17 @@ int main(int argc, char**argv)
       printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
     }
   else
+    {}
 #endif
-    Lx=Ly=Lz=L;
+  Lx=Ly=Lz=L;
+#ifdef PARALLEL
+  if (numtemps > 1 || numconcs > 1)
+    {
+      sigab = DNADs[0][0].rad + DNADs[1][0].rad;
+      rab0 = sigab + delta_rab0; 
+      rab0sq = Sqr(rab0);
+    }
+#endif
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
   for (tt=ttini; tt < tot_trials; tt++)
     {
@@ -1387,16 +1406,19 @@ int main(int argc, char**argv)
 	      if (numtemps > 1 || numconcs > 1)
 		{
 		  for (k1=0; k1 < numtemps; k1++)
-		    for (k2=0; k2 < numconcs; k2++)
-		      {
-			/* otherwise calculate the integrand */
-			if (type==0)
-			  vexclel_arr[k1][k2] += (1.0-exp(-beta_arr[k1]*uel_arr[k1][k2]));
-			else if (type==1)
-			  vexclel_arr[k1][k2] += segno*u2x*rcmy*(1.0-exp(-beta_arr[k1]*uel_arr[k1][k2])); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+		    {
+		      tempfact = 1.0/epsr(1.0/beta_arr[k1]); 
+		      for (k2=0; k2 < numconcs; k2++)
+			{
+			  /* otherwise calculate the integrand */
+			  if (type==0)
+			    vexclel_arr[k1][k2] += (1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
+			  else if (type==1)
+			    vexclel_arr[k1][k2] += segno*u2x*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2])); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
 			else 
-			  vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta_arr[k1]*uel_arr[k1][k2]));
-		      }
+			  vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
+			}
+		    }
 		}
 	      else
 		{
