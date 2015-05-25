@@ -691,6 +691,14 @@ double Uyuk(double rab)
   return yuk_corr_fact*esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab; 
 } 
 #ifdef PARALLEL
+double Uyuk_arr(double rab)
+{
+#if 0
+  printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
+  printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
+#endif
+  return yuk_corr_fact*esq_eps10*zeta_a*zeta_b/rab; 
+}
 double calc_yukawa_arr(int i, int j, double distsq, int k1, int k2)
 {
   double ret, rab0, rab, sigab;
@@ -719,7 +727,7 @@ double calc_yukawa_arr(int i, int j, double distsq, int k1, int k2)
   else if (rab < yukcut/kD_arr[k1][k2])
     {
       //printf("Yuk=%.15G\n", Uyuk(rab));
-      return Uyuk(rab);
+      return Uyuk_arr(rab);
     } 
   else return 0.0;
 }
@@ -1425,7 +1433,7 @@ int main(int argc, char**argv)
 					    if (kk==-1)
 					      uel_arr[k1][k2] += uelcontrib;
 					    else
-					      uel_arr[k1][k2] += uelcontrib/epsr(1.0/beta_arr[k1]);
+					      uel_arr[k1][k2] += exp(-kD_arr[k1][k2]*sqrt(distsq))*uelcontrib/epsr(1.0/beta_arr[k1]);
 					  }
 				      }
 				}
