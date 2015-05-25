@@ -12,6 +12,15 @@
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
+#ifdef PARALLEL
+double *cdna_arr, *beta_arr, numtemps, numconcs;
+double **yukcutkD_arr, **kD_arr, **yukcutkDsq_arr, **uel_arr, **vexclel_arr;
+#endif
+char dummy1[32], dummy2[32], atname[32], nbname[8];
+int nat, atnum, nbnum, len;
+long long int tot_trials, tt=0, ttini=0;
+double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
+const double thetapts=100000;
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -224,11 +233,6 @@ double calc_norm(double *vec)
 
 #define MC_BENT_DBLCYL
 
-char dummy1[32], dummy2[32], atname[32], nbname[8];
-int nat, atnum, nbnum, len;
-long long int tot_trials, tt=0, ttini=0;
-double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
-const double thetapts=100000;
 /*
                 pdb        radius (angstrom)
     sugar       Xe          3.5        
@@ -672,7 +676,40 @@ double Uyuk(double rab)
 
   return yuk_corr_fact*esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab; 
 } 
-
+#ifdef PARALLEL
+double calc_yukawa_arr(int i, int j, double distsq, int k1, int k2)
+{
+  double ret, rab0, rab, sigab;
+  rab = sqrt(distsq);
+  sigab = DNADs[0][i].rad + DNADs[1][j].rad;
+  rab0 = sigab + delta_rab0; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
+  
+  if (rab < rab0)
+    {
+      //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
+#ifdef NO_INTERP
+      return Ucoul(rab);
+#else
+      return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
+#endif
+#if 0
+      if (isnan(ret))
+	{
+	  printf("a=%f rab=%f boh ret=%f Ucoul(rab)=%f Uyuk(rab)=%f\n", zeta_a, rab, ret, Ucoul(rab), Uyuk(rab));
+	  exit(-1);
+	}
+      return ret;
+#endif    
+    }
+  /* we set a cutoff for electrostatic interactions */
+  else if (rab < yukcutkDk2_arr[k1][k2])
+    {
+      //printf("Yuk=%.15G\n", Uyuk(rab));
+      return Uyuk(rab);
+    } 
+  else return 0.0;
+}
+#endif
 double calc_yukawa(int i, int j, double distsq)
 {
   double ret, rab0, rab, sigab;
@@ -751,6 +788,9 @@ int main(int argc, char**argv)
 #endif
   double Lx, Ly, Lz;
   FILE *fin, *fout, *f, *fread;
+#ifdef PARALLEL
+  FILE *fp;
+#endif
   int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
@@ -780,6 +820,73 @@ int main(int argc, char**argv)
     outits = atoll(argv[7]);
 
 #ifdef ELEC
+#ifdef PARALLEL
+  if (argc <= 8)
+    {
+      numtemps=1;
+      beta = 1.0;
+    }
+  else
+    {
+      if (!isnum(argv[8]))
+	{
+	  fp=fopen(argv[8],"r");
+	  cc=0
+	    while(!feof(fp))
+	      {
+		fscanf("%lf ", &dummydbl);
+		cc++;
+	      }
+	  beta_arr = malloc(sizeof(double)*cc);
+	  rewind(fp);
+	  cc=0;
+	  while(!feof(fp))
+	    {
+	      fscanf("%lf ", &dummydbl);
+	      beta_arr[cc] = dummydbl;
+	      cc++;
+	    }
+	  fclose(fp);
+	}
+      else
+	{
+	  numtemps = 1;
+	  beta = 1.0/atof(argv[8]);
+	} 
+      if (argc <= 9)
+	{
+	  numconcs = 1;
+	  cdna = 600;
+	}
+      else
+	{
+	  if (!isnum(argv[9]))
+	    {
+	      fp=fopen(argv[9],"r");
+	      cc=0;
+	      while(!feof(fp))
+	       	{
+      		  fscanf("%lf ", &dummydbl);
+		  cc++;
+		}
+	      cdna_arr = malloc(sizeof(double)*cc);
+	      rewind(fp);
+	      cc=0;
+	      while(!feof(fp))
+		{
+		  fscanf("%lf ", &dummydbl);
+		  cdna_arr[cc] = dummydbl;
+		  cc++;
+		}
+	      fclose(fp);
+	    }
+	  else
+	    {
+	      numconcs = 1;
+	      cdna = atof(argv[9]);
+	    }
+	}
+#else
   if (argc <= 8)
     beta = 1.0;
   else  
@@ -789,7 +896,7 @@ int main(int argc, char**argv)
     cdna =  600; /* mg/ml */
   else
     cdna = atof(argv[9]);
-  
+#endif
   if (argc <= 10)
     yukcut = 2.0;
   else 
@@ -821,11 +928,47 @@ int main(int argc, char**argv)
 
   */
   /* qdna è la carica rilasciata da ogni gruppo fosfato in soluzione (tipicamente=1) */
+#ifdef PARALLEL
+  if (numtemps > 1 || num_concs > 1)
+    {
+      kD_arr = malloc(sizeof(double*)*numtemps);
+      yukcutkD_arr = malloc(sizeof(double*)*numtemps);
+      yukcutkDsq_arr = malloc(sizeof(double*)*numtemps); 
+      vexclel_arr = malloc(sizeof(double*)*numtemps); 
+      uel_arr = malloc(sizeof(double*)*numtemps);
+      for (k1=0; k1 < num_concs; k1++)
+	{
+	  kD_arr[k1] = malloc(sizeof(double)*numconcs);
+	  yukcutkD_arr[k1] = malloc(sizeof(double)*numconcs);
+	  yukcutkDsq_arr[k1] = malloc(sizeof(double)*numconcs);
+	  vexclel_arr[k1] = malloc(sizeof(double)*numconcs);
+	  uel_arr[k1] = malloc(sizeof(double)*numconcs);
+	}
+      for (k1 = 1; k1 < numconcs; k1++)
+	for (k2 = 1; k2 < numtemps; k2++)
+	  {
+	    kD_arr[k1][k2] = sqrt((4.0*M_PI*esq_eps)*beta_arr[k1]*(Sqr(qdna)*2.0*deltamann*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
+	    /* 6.0 Angstrom is the closest distance between phosphate charges */
+	    yukcutkD_arr[k1][k2] = yukcut/kD_arr[k1][k2];
+	    yukcutkDsq_arr[k1][k2] = Sqr(yukcutkD_arr[k1][k2]);	
+	  }
+      yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
+    }
+  else
+    {
+      kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
+      /* 6.0 Angstrom is the closest distance between phosphate charges */
+      yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
+      yukcutkD = yukcut/kD;
+      yukcutkDsq = Sqr(yukcutkD);
+    }
+#else
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
   /* 6.0 Angstrom is the closest distance between phosphate charges */
   yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
   yukcutkD = yukcut/kD;
   yukcutkDsq = Sqr(yukcutkD);
+#endif
   printf("epsr_prime=%f epsr=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, epsr(1.0/beta), beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
   printf("yukawa cutoff=%.15G yuk_corr_fact=%.15G\n", yukcutkD, yuk_corr_fact);
 #endif
@@ -1110,8 +1253,18 @@ int main(int argc, char**argv)
 			  if (calc_yukawa(i,j,distsq) < 0.0)
 			      printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f yuk=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD, calc_yukawa(i,j,distsq));
 #endif
-			  uel += calc_yukawa(i, j, distsq); 
-
+#ifdef PARALLEL
+			  if (numtemps > 1 || numconcs > 1)
+			    {
+			      for (k1=0; k1 < numtemps; k1++)
+				for (k2=0; k2 < numconcs; k2++)
+				  uel_arr[k1][k2] += calc_yukawa_arr(i, j, distsq, k1, k2);
+			    }
+			  else
+			    uel += calc_yukawa(i, j, distsq); 
+#else
+			    uel += calc_yukawa(i, j, distsq); 
+#endif
 			}
 #endif
       		    }
@@ -1176,6 +1329,32 @@ int main(int argc, char**argv)
 		    segno = -1.0;
 #endif
 		}
+#ifdef PARALLEL
+	      if (numtemps > 1 || numconcs > 1)
+		{
+		  for (k1=0; k1 < numtemps; k1++)
+		    for (k2=0; k2 < numconcs; k2++)
+		      {
+			/* otherwise calculate the integrand */
+			if (type==0)
+			  vexclel_arr[k1][k2] += (1.0-exp(-beta_arr[k1]*uel[k1][k2]));
+			else if (type==1)
+			  vexclel_arr[k1][k2] += segno*u2x*rcmy*(1.0-exp(-beta_arr[k1]*uel[k1][k2])); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+			else 
+			  vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta_arr[k1]*uel[k1][k2]));
+		      }
+		}
+	      else
+		{
+		  /* otherwise calculate the integrand */
+		  if (type==0)
+		    vexclel += (1.0-exp(-beta*uel));
+		  else if (type==1)
+		    vexclel += segno*u2x*rcmy*(1.0-exp(-beta*uel)); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
+		  else 
+		    vexclel += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel));
+		}		
+#else
 	      /* otherwise calculate the integrand */
 	      if (type==0)
 		vexclel += (1.0-exp(-beta*uel));
@@ -1185,34 +1364,72 @@ int main(int argc, char**argv)
 		vexclel += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel));
 	    }
 #endif
+#endif
 	}
       
       if (tt > 0 && tt % fileoutits == 0)
 	{
-	 fout = fopen(fnout, "a+");
 #ifdef ELEC
-	 if (type==0)
-	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
-		   Lx*Ly*Lz*vexclel/((double)tt)/1E3);
-	 else if (type==1)
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
-		   (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
-		   (Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
-	 else
-	   fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
-		   (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
-		   (Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+#ifdef PARALLEL
+	  if (numtemps > 1 || numconcs > 1)
+	    {
+	      for (k1=0; k1 < numtemps; k1++)
+		for (k2=0; k2 < numconcs; k2++)
+		  {
+		    sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k1][k2], (int)rint((1.0/beta_arr[k1][k2])));
+		    fout = fopen(fnout, "a+");
+		    if (type==0)
+		      //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
+			      Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt)/1E3);
+		    else if (type==1)
+		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))*factor/1E4,
+			      (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
+			      (Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+		    else
+		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))*Sqr(factor)/1E5,
+			      (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
+			      (Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+		  }
+	      else
+		{
+		  fout = fopen(fnout, "a+");
+		  if (type==0)
+		    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+		    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
+		  else if (type==1)
+		    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+		  else
+		    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+		  fclose(fnout);
+		}
+	    }
 #else 
-	 if (type==0)
-	   //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	   fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
-	 else if (type==1)
-	   fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
-	 else
-	   fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	  if (type==0)
+	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
+		    Lx*Ly*Lz*vexclel/((double)tt)/1E3);
+	  else if (type==1)
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
+		    (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
+		    (Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+	  else
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
+		    (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
+		    (Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	  fclose(fout);
 #endif
-	 fclose(fout);
+#else 
+	  fout = fopen(fnout, "a+");
+	  if (type==0)
+	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
+	  else if (type==1)
+	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+	  else
+	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	  fclose(fout);
+#endif
 	}
       if (tt % outits==0)
 	printf("trials: %lld/%lld\n", tt, tot_trials);
