@@ -1035,8 +1035,8 @@ int main(int argc, char**argv)
 	  vexclel_arr[k1] = malloc(sizeof(double)*numconcs);
 	  uel_arr[k1] = malloc(sizeof(double)*numconcs);
 	}
-      for (k1 = 0; k1 < numconcs; k1++)
-	for (k2 = 0; k2 < numtemps; k2++)
+      for (k1 = 0; k1 < numtemps; k1++)
+	for (k2 = 0; k2 < numconcs; k2++)
 	  {
 	    kD_arr[k1][k2] = sqrt((4.0*M_PI*esq_eps*(1.0/epsr(1.0/beta_arr[k1])))*beta_arr[k1]*(Sqr(qdna)*2.0*epsr(1.0/beta_arr[k1])*(deltamann/beta_arr[k1])*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
 	    printf("numtemps=%d numconcs=%d kD:%f beta_arr:%f cdna_arr: %f\n", numtemps, numconcs, kD_arr[k1][k2], beta_arr[k1], cdna_arr[k2]);
