@@ -699,37 +699,44 @@ double Uyuk_arr(double rab)
 #endif
   return yuk_corr_fact*esq_eps10*zeta_a*zeta_b/rab; 
 }
-double calc_yukawa_arr(int i, int j, double distsq, int k1, int k2)
+double calc_yukawa_arr(int i, int j, double distsq, int *kks)
 {
   double ret, rab0, rab, sigab;
+  int kk, k1, k2;
   rab = sqrt(distsq);
   sigab = DNADs[0][i].rad + DNADs[1][j].rad;
   rab0 = sigab + delta_rab0; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
-  
-  if (rab < rab0)
-    {
-      //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
+  *kks=-2;
+  if (distsq > maxyukcutkDsq)
+    return 0.0;
+  for (kk=0; kk < num_kD; kk++)
+    {    
+      if (rab < rab0)
+	{
+	  *kks=-1;
+	  //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
 #ifdef NO_INTERP
-      return Ucoul(rab);
+	  return Ucoul(rab);
 #else
-      return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
+	  return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
 #endif
 #if 0
-      if (isnan(ret))
-	{
-	  printf("a=%f rab=%f boh ret=%f Ucoul(rab)=%f Uyuk(rab)=%f\n", zeta_a, rab, ret, Ucoul(rab), Uyuk(rab));
-	  exit(-1);
-	}
-      return ret;
+	  if (isnan(ret))
+	    {
+	      printf("a=%f rab=%f boh ret=%f Ucoul(rab)=%f Uyuk(rab)=%f\n", zeta_a, rab, ret, Ucoul(rab), Uyuk(rab));
+	      exit(-1);
+	    }
+	  return ret;
 #endif    
+	}
+      /* we set a cutoff for electrostatic interactions */
+      else if (rab < yukcut*kD_sorted[kk].invkD)
+	{
+	  //printf("Yuk=%.15G\n", Uyuk(rab));
+	  *kks = kk; 
+	  return Uyuk_arr(rab);
+	} 
     }
-  /* we set a cutoff for electrostatic interactions */
-  else if (rab < yukcut/kD_arr[k1][k2])
-    {
-      //printf("Yuk=%.15G\n", Uyuk(rab));
-      return Uyuk_arr(rab);
-    } 
-  else return 0.0;
 }
 #endif
 double calc_yukawa(int i, int j, double distsq)
@@ -1407,21 +1414,7 @@ int main(int argc, char**argv)
 #ifdef PARALLEL
 			  if (numtemps > 1 || numconcs > 1)
 			    {
-			      uelcontrib=0.0;
-			      for (kk=0; kk < num_kD; kk++)
-				{
-				  if (distsq <= rab0sq)
-				    {
-				      uelcontrib=calc_yukawa_arr(i, j, distsq, 0, 0);
-				      kk=-1;
-				      break;
-				    }
-				  else if (distsq <=  Sqr(yukcut*kD_sorted[kk].invkD)) 
-				    {
-				      uelcontrib = calc_yukawa_arr(i, j, distsq, kD_sorted[kk].k1, kD_sorted[kk].k2);
-				      break;
-				    }
-				}
+			      uelcontrib=calc_yukawa_arr(i, j, distsq, &kk);
 			      //printf("uelcontrib:%f\n", uelcontrib);
 			      if (uelcontrib != 0.0)
 				{
