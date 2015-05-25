@@ -1077,7 +1077,18 @@ int main(int argc, char**argv)
     {
       vexcl = 0.0;
 #ifdef ELEC
+#ifdef PARALLEL
+      if (numtemps > 1 || numconcs > 1)
+	{
+	  for (k1=0; k1 < numtemps; k1++)
+	    for (k2=0; k2 < numconcs; k2++)
+	      vexclel_arr[k1][k2] = 0.0;
+	}
+      else
+	vexclel = 0.0;
+#else
       vexclel = 0.0;
+#endif
 #endif
       ttini = 0;
     }
@@ -1223,8 +1234,26 @@ int main(int argc, char**argv)
     }
   if (!cont)
     {
+#ifdef PARALLEL
+      if (numtemps > 1 || numconcs > 1)
+	{
+	  for (k1=0; k1 < numtemps; k1++)
+    	    for (k2=0; k2 < numconcs; k2++)
+	      {
+		sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], 1.0/beta_arr[k1]);
+		fout = fopen(fnout, "w+");
+      		fclose(fout);
+	      }
+	}
+      else
+	{    
+	  fout = fopen(fnout, "w+");
+	  fclose(fout);
+	}
+#else
       fout = fopen(fnout, "w+");
       fclose(fout);
+#endif
     }  
   if (type==0)
     ncontrib=1;
@@ -1360,6 +1389,7 @@ int main(int argc, char**argv)
 #ifdef PARALLEL
 			  if (numtemps > 1 || numconcs > 1)
 			    {
+			      uelcontrib=0.0;
 			      for (kk=0; kk < num_kD; kk++)
 				{
 				  if (distsq <= rab0sq)
@@ -1374,17 +1404,20 @@ int main(int argc, char**argv)
 				      break;
 				    }
 				}
-			      for (k1=0; k1 < numtemps; k1++)
-				for (k2=0; k2 < numconcs; k2++)
-				  {
-				    if (kk==-1 || 1.0/kD_arr[k1][k2] <= kD_sorted[kk].invkD)  
+			      if (uelcontrib > 0.0)
+				{
+				  for (k1=0; k1 < numtemps; k1++)
+				    for (k2=0; k2 < numconcs; k2++)
 				      {
-					if (kk==-1)
-					  uel_arr[k1][k2] += calc_yukawa_arr(i, j, distsq, k1, k2);
-					else
-					  uel_arr[k1][k2] += calc_yukawa_arr(i, j, distsq, k1, k2)/epsr(1.0/beta_arr[k1]);
+					if (kk==-1 || 1.0/kD_arr[k1][k2] <= kD_sorted[kk].invkD)  
+					  {
+					    if (kk==-1)
+					      uel_arr[k1][k2] += uelcontrib;
+					    else
+					      uel_arr[k1][k2] += uelcontrib/epsr(1.0/beta_arr[k1]);
+					  }
 				      }
-				  }
+				}
 			    }
 			  else
 			    uel += calc_yukawa(i, j, distsq); 
