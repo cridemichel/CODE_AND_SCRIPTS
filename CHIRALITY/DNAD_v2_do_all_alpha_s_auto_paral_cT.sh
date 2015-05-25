@@ -1,5 +1,5 @@
-EXEN="CG-DNA-allAT-v1-P"
-EXE="$HOME/CALCk2K22/allAT/v1_elec/PARALL/CG-DNA-allAT-v1-P"
+EXEN="CG-DNA-allAT-v2-P"
+EXE="$HOME/CALCk2K22/allAT/v2_elec/PARALL/CG-DNA-allAT-v2-P"
 LISTA="7 15 30"
 LISTAS="4 6 8 10"
 INR="10"
@@ -23,7 +23,7 @@ mkdir alpha_${f}_R$ir
 fi
 cd alpha_${f}_R$ir
 ln -sf $EXE $EXEN
-nohup mosrun ./$EXEN $HOME/CALCk2K22/allAT/CGDNA/allAT_${s}.pdb $s $f 10000000000 1 500000 500000 ../../$TEMP ../../$CONC 5.0 > screen &
+nohup mosrun ./$EXEN $HOME/CALCk2K22/allAT/CGDNA/allAT_${s}.pdb $s $f 10000000000 2 500000 500000 ../../$TEMP ../../$CONC 5.0 > screen &
 sleep 1.1
 cd ..
 #echo "$alpha $CV" >> $FN
