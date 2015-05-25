@@ -18,7 +18,8 @@ int k1;
 int k2;
 double invkD;
 } *kD_sorted;
-double *cdna_arr, *beta_arr, numtemps, numconcs;
+double *cdna_arr, *beta_arr;
+int numtemps, numconcs;
 double **yukcutkD_arr, **kD_arr, **yukcutkDsq_arr, **uel_arr, **vexclel_arr;
 double num_kD=0;
 #endif
@@ -950,10 +951,28 @@ int main(int argc, char**argv)
   esq_eps10 = esq_eps*1E10;
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*epsr_prime)/kB;
   esq_eps_prime10 = esq_eps_prime*1E10;
+#ifdef PARALLEL
+  if (numtemps > 1 || numconcs > 1)
+    {
+      ximanning = esq_eps/bmann;
+      deltamann = 1.0/ximanning;
+      zeta_a = deltamann;
+      zeta_b = deltamann;
+      //printf("zeta_a=%f zeta_b:%f\n", zeta_a, zeta_b);
+    }
+  else
+    {
+      ximanning = esq_eps*beta/bmann;
+      deltamann = 1.0/ximanning;
+      zeta_a = deltamann;
+      zeta_b = deltamann;
+    }
+#else
   ximanning = esq_eps*beta/bmann;
   deltamann = 1.0/ximanning;
   zeta_a = deltamann;
   zeta_b = deltamann;
+#endif
   /*
      rho_salt =2 csalt Nav 1000;
      rho_counter[cdna_]:=(2 cdna)/(660*Dalton);
@@ -979,10 +998,12 @@ int main(int argc, char**argv)
 	  vexclel_arr[k1] = malloc(sizeof(double)*numconcs);
 	  uel_arr[k1] = malloc(sizeof(double)*numconcs);
 	}
-      for (k1 = 1; k1 < numconcs; k1++)
-	for (k2 = 1; k2 < numtemps; k2++)
+      for (k1 = 0; k1 < numconcs; k1++)
+	for (k2 = 0; k2 < numtemps; k2++)
 	  {
-	    kD_arr[k1][k2] = sqrt((4.0*M_PI*esq_eps)*beta_arr[k1]*(Sqr(qdna)*2.0*deltamann*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
+	    kD_arr[k1][k2] = sqrt((4.0*M_PI*esq_eps*(1.0/epsr(1.0/beta_arr[k1])))*beta_arr[k1]*(Sqr(qdna)*2.0*epsr(1.0/beta_arr[k1])*deltamann*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
+	    printf("numtemps=%d numconcs=%d kD:%f beta_arr:%f cdna_arr: %f\n", numtemps, numconcs, kD_arr[k1][k2], beta_arr[k1], cdna_arr[k2]);
+	    printf("esq_eps: %f qdna=%f deltamann=%f qsalt=%f csalt=%f\n", esq_eps, qdna, deltamann, qsalt, csalt);
 	    /* 6.0 Angstrom is the closest distance between phosphate charges */
 	    yukcutkD_arr[k1][k2] = yukcut/kD_arr[k1][k2];
 	    yukcutkDsq_arr[k1][k2] = Sqr(yukcutkD_arr[k1][k2]);	
@@ -1001,6 +1022,7 @@ int main(int argc, char**argv)
 	  }
       qsort(kD_sorted, cc, sizeof(struct kDsortS), compare_func);
       maxyukcutkDsq = Sqr(yukcut*kD_sorted[cc-1].invkD);
+      printf("min: %f max: %f\n",kD_sorted[0].invkD,kD_sorted[cc-1].invkD);
     }
   else
     {
@@ -1356,7 +1378,12 @@ int main(int argc, char**argv)
 				for (k2=0; k2 < numconcs; k2++)
 				  {
 				    if (kk==-1 || 1.0/kD_arr[k1][k2] <= kD_sorted[kk].invkD)  
-				      uel_arr[k1][k2] += calc_yukawa_arr(i, j, distsq, k1, k2);
+				      {
+					if (kk==-1)
+					  uel_arr[k1][k2] += calc_yukawa_arr(i, j, distsq, k1, k2);
+					else
+					  uel_arr[k1][k2] += calc_yukawa_arr(i, j, distsq, k1, k2)/epsr(1.0/beta_arr[k1]);
+				      }
 				  }
 			    }
 			  else
@@ -1433,7 +1460,7 @@ int main(int argc, char**argv)
 		{
 		  for (k1=0; k1 < numtemps; k1++)
 		    {
-		      tempfact = 1.0/epsr(1.0/beta_arr[k1]); 
+		      tempfact = Sqr(1.0/beta_arr[k1])*Sqr(epsr(1.0/beta_arr[k1])); 
 		      for (k2=0; k2 < numconcs; k2++)
 			{
 			  /* otherwise calculate the integrand */
