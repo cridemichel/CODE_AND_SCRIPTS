@@ -965,7 +965,7 @@ int main(int argc, char**argv)
     yukcut = atof(argv[10]);
 
   if (argc <= 11)
-    epsr_prime = 1.8;
+    epsr_prime = 2.0;
   else
     epsr_prime = atof(argv[11]);
   if (argc <= 12)
