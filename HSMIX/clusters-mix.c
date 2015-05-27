@@ -44,92 +44,27 @@ void vectProdVec(double *A, double *B, double *C)
   C[1] = A[2] * B[0] - A[0] * B[2];
   C[2] = A[0] * B[1] - A[1] * B[0];
 }
-
-void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *DR[3], double *R[3][3])
+char line[4096];
+void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
   FILE *f;
   int nat=0, i, cpos;
   f = fopen(fname, "r");
-  while (!feof(f) && nat < 2) 
+  fscanf("%[^\n]\n", line);
+  fscanf("%[^\n]\n", line);
+  fscanf("%lf %lf %lf ", Lx, Ly, Lz);
+  fscanf("%[^\n]\n", line);
+  fscanf("%[^\n]\n", line);
+  while (!feof(f)) 
     {
-      cpos = ftell(f);
+      //cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
       fscanf(f, "%[^\n]\n",line);
-      if (!strcmp(line,"@@@"))
+      for (i = 0; i < NP; i++) 
 	{
-	  nat++;
+	  fscanf(f, "%lf %lf %lf ", &r[0][i], &r[1][i], &r[2][i]); 
+	  //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
 	}
-      if (nat < 2)
-	{
-	  fseek(f, cpos, SEEK_SET);
-	  fscanf(f, "%[^:]:", parname);
-	  //printf("[%s] parname=%s\n", fname, parname);
-	  if (!strcmp(parname,"DR"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf %lf %lf ", &DR[0][i], &DR[1][i], &DR[2][i]);
-		}
-	      foundDRs = 1;
-	    }
-#if 0
-	  else if (!strcmp(parname,"sumox"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf ", &w[0][i]); 
-		}
-	      foundrot = 1;
-	    }
-	  else if (!strcmp(parname,"sumoy"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf ", &w[1][i]); 
-		}
-	    }
-	  else if (!strcmp(parname,"sumoz"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf ", &w[2][i]); 
-		}
-	    }
-#endif
-	  else if (!strcmp(parname, "time"))
-	    {
-	      fscanf(f, "%[^\n]\n", parval);
-	      *ti = atof(parval);
-	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
-	    }	
-	  else if (!strcmp(parname, "refTime"))
-	    {
-	      fscanf(f, "%[^\n]\n", parval);
-	      *refTime = atof(parval);
-	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
-	    }	
-	  else
-	    fscanf(f, " %[^\n]\n", parval);
-	}
-      else
-	{
-	  for (i = 0; i < NP; i++) 
-	    {
-	      fscanf(f, "%[^\n]\n", line); 
-	      if (particles_type == 2)
-		sscanf(line, "%lf %lf %lf\n", 
-		       &r[0][i], &r[1][i], &r[2][i]); 
-	      else
-		sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %[^\n]\n", 
-		       &r[0][i], &r[1][i], &r[2][i], 
-		       &R[0][0][i], &R[0][1][i], &R[0][2][i], &R[1][0][i], &R[1][1][i], &R[1][2][i],
-		       &R[2][0][i], &R[2][1][i], &R[2][2][i], dummy); 
-	      //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
-	    
-	    }
-	  break; 
-	}
-
     }
   fclose(f);
 }
@@ -143,186 +78,6 @@ double spBpos[MD_STSPOTS_B][3] = {{MD_SP_DELR, 0.0, 0.0},{MD_SP_DELR, 3.14159, 0
 double spXYZ_A[MD_STSPOTS_A][3];
 double spXYZ_B[MD_STSPOTS_B][3];
 
-void build_atom_positions(void)
-{
- /* N.B. le coordinate spXpos sono del tipo (Dr, theta, phi),
-  * dove se Dr=0 la sfera sticky viene posizionata esattamente in 
-  * maniera tangente e theta (0 <= theta <= Pi) e phi (0 <= phi < 2Pi)
-  * sono gli angoli in coordinate sferiche che individuano il punto di contatto
-  * tra sticky sphere ed ellissoide.
-  * Tale routine converte le coordinate spXpos in coordinate cartesiane 
-  * riferite al riferimento del corpo rigido. */  
-  int kk, k1, aa;
-  double x,y,z, grad[3], ng, dd[3];
-
-  spApos[0][1] = theta;
-  spApos[1][1] = theta;
-  spApos[2][1] = pi - theta;
-  spApos[3][1] = pi - theta;
-  spApos[0][0] = Dr;
-  spApos[1][0] = Dr;
-  spApos[2][0] = Dr;
-  spApos[3][0] = Dr;
-  spApos[4][0] = Dr;
-  spBpos[0][0] = Dr;
-  spBpos[1][0] = Dr;
-  //printf("Dr:%.15G pi=%.15G theta=%.15G\n", Dr, pi, theta);
-  //printf("Dr: %.15G theta: %.15G pi=%.15G a=%.15G b=%.15G c=%.15G\n",
-  //	 Dr, theta, pi, sa[1], sb[1], sc[1]);
-  for (k1 = 0; k1 < MD_STSPOTS_A; k1++)
-    {
-      x = sa[0]*cos(spApos[k1][2])*sin(spApos[k1][1]);
-      y = sb[0]*sin(spApos[k1][2])*sin(spApos[k1][1]);
-      z = sc[0]*cos(spApos[k1][1]);
-      //printf("xyz=%f %f %f\n", x, y, z);
-      grad[0] = 2.0 * x / Sqr(sa[0]);
-      grad[1] = 2.0 * y / Sqr(sb[0]);
-      grad[2] = 2.0 * z / Sqr(sc[0]);
-      ng = calc_norm(grad);
-      for (aa = 0; aa < 3; aa++)
-	grad[aa] /= ng;
-      spXYZ_A[k1][0] = x + grad[0]*(sigmaSticky*0.5 + spApos[k1][0]);
-      spXYZ_A[k1][1] = y + grad[1]*(sigmaSticky*0.5 + spApos[k1][0]);
-      spXYZ_A[k1][2] = z + grad[2]*(sigmaSticky*0.5 + spApos[k1][0]);
-	
-	      //printf("k1=%d %f %f %f \n", k1,  spXYZ_A[k1][0] ,    spXYZ_A[k1][1] ,  spXYZ_A[k1][2]  );
-    }
-  for (kk=0; kk < 3; kk++)
-    dd[kk] = spXYZ_A[0][kk] - spXYZ_A[1][kk];
-  printf("Molecule A distance between Atoms 0 and 1: %.15G\n", calc_norm(dd));;
-  for (kk=0; kk < 3; kk++)
-    dd[kk] = spXYZ_A[2][kk] - spXYZ_A[3][kk];
-  printf("Molecule A distance between Atoms 2 and 3: %.15G\n", calc_norm(dd));;
-
-  for (k1 = 0; k1 < MD_STSPOTS_B; k1++)
-    {
-      x = sa[1]*cos(spBpos[k1][2])*sin(spBpos[k1][1]);
-      y = sb[1]*sin(spBpos[k1][2])*sin(spBpos[k1][1]);
-      z = sc[1]*cos(spBpos[k1][1]);
-      grad[0] = 2.0 * x / Sqr(sa[1]);
-      grad[1] = 2.0 * y / Sqr(sb[1]);
-      grad[2] = 2.0 * z / Sqr(sc[1]);
-      ng = calc_norm(grad);
-      for (aa = 0; aa < 3; aa++)
-	grad[aa] /= ng;
-      spXYZ_B[k1][0] = x + grad[0]*(sigmaSticky*0.5 + spBpos[k1][0]);
-      spXYZ_B[k1][1] = y + grad[1]*(sigmaSticky*0.5 + spBpos[k1][0]);
-      spXYZ_B[k1][2] = z + grad[2]*(sigmaSticky*0.5 + spBpos[k1][0]) ;
-    }
-}
-/* array con le posizioni degli atomi nel riferimento del corpo rigido 
- * nel caso dell'acqua i siti idrogeno ed elettroni sono disposti su 
- * di un tetraedro */
-void BuildAtomPosAt(int i, int ata, double rO[3], double R[3][3], double rat[3])
-{
-  /* QUESTA VA RISCRITTA PER GLI ELLISSOIDI STICKY!!! */
-  /* calcola le coordinate nel laboratorio di uno specifico atomo */
-  int k1, k2;
-  double *spXYZ=NULL;
-  //double radius; 
-  /* l'atomo zero si suppone nell'origine 
-   * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
-   * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
-   * a partire da questi. */
-
-  if (ata > 0)
-    {
-      if (i < NPA)
-	spXYZ = spXYZ_A[ata-1];
-      else  
-	spXYZ = spXYZ_B[ata-1];
-    }
-  //radius = Oparams.sigma[0][1] / 2.0;
-  if (ata == 0)
-    {
-      for (k1 = 0; k1 < 3; k1++)
-	rat[k1] = rO[k1];
-    }
-  else 
-    {
-      for (k1 = 0; k1 < 3; k1++)
-	{ 
-	  rat[k1] = rO[k1];
-	  for (k2 = 0; k2 < 3; k2++)
-	    rat[k1] += R[k2][k1]*spXYZ[k2]; 
-	}
-    }
-  
-}
-
-void BuildAtomPosAt32(int i, int ata, double rO[3], double R[3][3], double rat[3])
-{
-  /* calcola le coordinate nel laboratorio di uno specifico atomo */
-  int kk;
-  double r1[3], r2[3], r3[3], nr;
-  double radius; 
-  /* l'atomo zero si suppone nell'origine 
-   * la matrice di orientazione ha per vettori colonna le coordinate nel riferimento
-   * del corpo rigido di tre sticky point. Il quarto sticky point viene ricostruito
-   * a partire da questi. */
-
-  /* NOTA: qui si assume che tutte e due le specie abbiamo lo stesso diametro!!! */
-  radius = sigmaAA / 2.0;
-  if (ata == 0)
-    {
-      for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk];
-    }
-  else if (ata <= 3)
-    {
-      for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk] + R[kk][ata-1]; 
-    }
-  else
-    {
-      for (kk = 0; kk < 3; kk++)
-	{
-	  r1[kk] = R[kk][1]-R[kk][0];
-	  r2[kk] = R[kk][2]-R[kk][0];
-	}
-      vectProdVec(r1, r2, r3);
-      nr = calc_norm(r3);
-      for (kk = 0; kk < 3; kk++)
-	r3[kk] *= radius/nr;
-      for (kk = 0; kk < 3; kk++)
-	rat[kk] = rO[kk] - r3[kk]; 
-    }
-}
-void BuildAtomPosSQ(int i, double rO[3], double rat[1][3])
-{
-  int a;
-  for (a = 0; a < 3; a++)
-    rat[1][a] = rO[a];
-}
-void BuildAtomPos32(int i, double rO[3], double R[3][3], double rat[5][3])
-{
-  /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
-  int a, NUMAT;
-  /* l'atomo zero si suppone nell'origine */
-  if (i >= NPA)
-    NUMAT = 4;
-  else
-    NUMAT = 3;
-  for (a=0; a < NUMAT; a++)
-    BuildAtomPosAt32(i, a, rO, R, rat[a]);
-}
-
-void BuildAtomPos(int i, double rO[3], double R[3][3], double rat[NA][3])
-{
-  /* calcola le posizioni nel laboratorio di tutti gli atomi della molecola data */
-  int a;
-  /* l'atomo zero si suppone nell'origine */
-  if (i < NPA)
-    {
-      for (a=0; a < MD_STSPOTS_A+1; a++)
-	BuildAtomPosAt(i, a, rO, R, rat[a]);
-    }
-  else
-    {
-      for (a=0; a < MD_STSPOTS_B+1; a++)
-	BuildAtomPosAt(i, a, rO, R, rat[a]);
-    }
-}
 #define Sqr(x) ((x)*(x))
 int check_distance(int i, int j, double Dx, double Dy, double Dz)
 {
@@ -332,28 +87,8 @@ int check_distance(int i, int j, double Dx, double Dy, double Dz)
   DyL = fabs(Dy);
   DzL = fabs(Dz);
 
-  if (particles_type == 1)
-    {
-      ma = maxsax;
-    }
-  else if (particles_type == 0)
-    {
-      if (i < NPA && j < NPA)
-	ma = maxsaxAA;
-      else if (i >= NPA && j >= NPA)
-	ma = maxsaxBB;
-      else
-	ma = maxsaxAB;
-    }
-  else if (particles_type == 2)
-    {
-      if (i < NPA && j < NPA)
-	ma = maxsaxAA;
-      else if (i >= NPA && j >= NPA)
-	ma = maxsaxBB;
-      else
-	ma = maxsaxAB;
-    }
+  ma = maxsaxBB;
+
   if (DxL > ma || DyL > ma || DzL > ma)
     return 1;
   else 
@@ -369,79 +104,22 @@ double distance(int i, int j)
   double Dx, Dy, Dz;
   double wellWidth;
 
-  Dx = rat[0][0][i] - rat[0][0][j];
-  Dy = rat[0][1][i] - rat[0][1][j];
-  Dz = rat[0][2][i] - rat[0][2][j];
+  Dx = r[0][i] - r[0][j];
+  Dy = r[1][i] - r[1][j];
+  Dz = r[2][i] - r[2][j];
   imgx = -L*rint(Dx/L);
   imgy = -L*rint(Dy/L);
   imgz = -L*rint(Dz/L);
 
+#if 0
   if (check_distance(i, j, Dx+imgx, Dy+imgy, Dz+imgz))
     return 1;
-
-  if (particles_type == 1)
-    {
-      maxa = MD_STSPOTS_A;
-      maxb = MD_STSPOTS_B;
-      wellWidth = sigmaSticky;
-    }
-  else if (particles_type == 0)
-    {
-      if (i < NPA && j >= NPA)
-	{
-	  maxa = 2;
-	  maxb = 3;
-	}
-      else if (i < NPA && j < NPA)
-	{
-	  maxa = 2;
-	  maxb = 2;
-	}
-      else if (i >= NPA && j >= NPA)
-	{
-	  maxa = 3; 
-	  maxb = 3;
-	}
-      else
-	{
-	  maxa = 3;
-	  maxb = 2;
-	}
-      wellWidth = sigmaSticky;
-    }
-  else if (particles_type==2)
-    {
-      maxa = 1;
-      maxb = 1;
-      if (i < NPA && j >= NPA)
-	{
-	  wellWidth = sigmaAB+deltaAB;
-	}
-      else if (i < NPA && j < NPA)
-	{
-	  wellWidth = sigmaAA+deltaAA;
-	}
-      else if (i >= NPA && j >= NPA)
-	{
-	  wellWidth = sigmaBB+deltaBB;
-	}
-      else
-	{
-	  wellWidth = sigmaAB+deltaAB;
-	}
-    }
-  for (a = 1; a < maxa+1; a++)
-    {
-      for (b = 1; b < maxb+1; b++)
-	{
-	  //printf("dist=%.14G\n", sqrt( Sqr(rat[a][0][i] + img*L -rat[a][0][j])+Sqr(rat[a][1][i] + img*L -rat[a][1][j])
-	    //  +Sqr(rat[a][2][i] + img*L -rat[a][2][j])));
-	  //printf("[DISTANCE] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + imgz -rat[b][2][j])));
-	  if (Sqr(rat[a][0][i] + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + imgy -rat[b][1][j])
-    	      +Sqr(rat[a][2][i] + imgz -rat[b][2][j]) < Sqr(wellWidth))	  
-	    return -1;
-	}
-    }
+#endif
+  wellWidth = sigmaBB;
+  if (Sqr(r[0][i] + imgx - r[0][j])+Sqr(r[1][i] + imgy - r[1][j])
+      +Sqr(r[2][i] + imgz - r[2][j]) < Sqr(wellWidth))	  
+    return -1;
+	
   return 1;
 }
 #if 0
@@ -470,89 +148,27 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
   int a, b, maxa=0, maxb=0;
   double imgx, imgy, imgz;
   double wellWidth, Dx, Dy, Dz, dx, dy, dz;
-  if (particles_type == 1)
-    {
-      if (i < NPA)
-	{
-	  maxa = MD_STSPOTS_A;
-	  maxb = MD_STSPOTS_B;
-	}
-      else
-	{
-	  maxa = MD_STSPOTS_B;
-	  maxb = MD_STSPOTS_A;
-	}
-      wellWidth = sigmaSticky;
-    }
-  else if (particles_type == 0)
-    {
-      if (i < NPA && j >= NPA)
-	{
-	  maxa = 2;
-	  maxb = 3;
-	}
-      else if (i < NPA && j < NPA)
-	{
-	  maxa = 2;
-	  maxb = 2;
-	}
-      else if (i >= NPA && j >= NPA)
-	{
-	  maxa = 3; 
-	  maxb = 3;
-	}
-      else
-	{
-	  maxa = 3;
-	  maxb = 2;
-	}
-      wellWidth = sigmaSticky;
-    }
-  else if (particles_type == 2)
-    {
-      maxa = 1;
-      maxb = 1;
-      if (i < NPA && j >= NPA)
-	{
-	  wellWidth = sigmaAB+deltaAB;
-	}
-      else if (i < NPA && j < NPA)
-	{
-	  wellWidth = sigmaAA+deltaAA;
-	}
-      else if (i >= NPA && j >= NPA)
-	{
-	  wellWidth = sigmaBB+deltaBB;
-	}
-      else
-	{
-	  wellWidth = sigmaAB+deltaAB;
-	}
-    }
+  
+  wellWidth = sigmaBB;
     
   dx = L*(imgix-imgjx);
   dy = L*(imgiy-imgjy);
   dz = L*(imgiz-imgjz);
-  Dx = rat[0][0][i] - rat[0][0][j] + dx;
-  Dy = rat[0][1][i] - rat[0][1][j] + dy;
-  Dz = rat[0][2][i] - rat[0][2][j] + dz;
+  Dx = r[0][i] - r[0][j] + dx;
+  Dy = r[1][i] - r[1][j] + dy;
+  Dz = r[2][i] - r[2][j] + dz;
   imgx = -Lbig*rint(Dx/Lbig);
   imgy = -Lbig*rint(Dy/Lbig);
   imgz = -Lbig*rint(Dz/Lbig);
 
+#if 0
   if (check_distance(i, j, Dx + imgx, Dy + imgy, Dz + imgz))
     return 1;
-  //printf("i=%d j=%d rat[][0][i]=%.15G,%.15G\n", i, j, rat[1][0][i], rat[2][0][i]);
-  for (a = 1; a < maxa+1; a++)
-    {
-      for (b = 1; b < maxb+1; b++)
-	{
-	  //printf("[DISTANCER] (%d,%d)-(%d,%d) dist=%.14G\n", i, a, j, b, sqrt( Sqr(rat[a][0][i] + dx + imgx -rat[b][0][j])+Sqr(rat[a][1][i] + dy + imgy -rat[b][1][j]) +Sqr(rat[a][2][i] + dz + imgz -rat[b][2][j])));
-	  if (Sqr(rat[a][0][i] + dx + imgx - rat[b][0][j])+Sqr(rat[a][1][i] + dy + imgy - rat[b][1][j])
-	      + Sqr(rat[a][2][i] + dz + imgz - rat[b][2][j]) < Sqr(wellWidth))	  
-		return -1;
-	}
-    }
+#endif
+  if (Sqr(r[0][i] + dx + imgx - r[0][j])+Sqr(r[1][i] + dy + imgy - r[1][j])
+      + Sqr(r[2][i] + dz + imgz - r[2][j]) < Sqr(wellWidth))	  
+    return -1;
+
   return 1;
 }
 
@@ -783,54 +399,23 @@ int main(int argc, char **argv)
   fclose(f2);
   f = fopen(fname[0], "r");
   nat = 0;
-  while (!feof(f) && nat < 2) 
-    {
-      fscanf(f, "%[^\n]\n)", line);
-      if (!strcmp(line,"@@@"))
-	{
-	  nat++;
-	  if (nat==2)
-	    {
-	      for (i=0; i < 2*NP; i++)
-		fscanf(f, "%[^\n]\n", line);
-	      fscanf(f, "%lf\n", &L);
-	      break;
-	    }
-	  continue;
-	}
-      sscanf(line, "%[^:]:%[^\n]\n", parname, parval); 
-      if (!strcmp(parname,"parnum"))
-	NP = atoi(parval);
-      else if (!strcmp(parname,"parnumA"))
-	NPA = atoi(parval);
-      else if (nat == 0 && !strcmp(parname,"NN"))
-	NN = atoi(parval);
-      else if (nat==1 && !strcmp(parname,"a"))
-	sscanf(parval, "%lf %lf\n", &sa[0], &sa[1]);	
-      else if (nat==1 && !strcmp(parname,"b"))
-	sscanf(parval, "%lf %lf\n", &sb[0], &sb[1]);	
-      else if (nat==1 && !strcmp(parname,"c"))
-	sscanf(parval, "%lf %lf\n", &sc[0], &sc[1]);	
-      else if (nat==1 && !strcmp(parname,"sigma"))
-	sscanf(parval, "%lf %lf %lf %lf\n", &sigmaAA, &sigmaAB, &sigmaAB, &sigmaBB);	
-      else if (nat==1 && !strcmp(parname,"delta"))
-	sscanf(parval, "%lf %lf %lf %lf\n", &deltaAA, &deltaAB, &deltaAB, &deltaBB);	
-      else if (nat==1 && !strcmp(parname,"sigmaSticky"))
-	sigmaSticky = atof(parval);
-      else if (nat==1 && !strcmp(parname,"theta"))
-	theta = atof(parval);
-      else if (nat==1 && !strcmp(parname,"Dr"))
-	Dr = atof(parval);
-    }
+  fscanf("%[^\n]\n", line);
+  fscanf("%[^\n]\n", line);
+  fscanf("%lf %lf %lf ", Lx, Ly, Lz);
+  fscanf("%[^\n]\n", line);
+  fscanf("%[^\n]\n", line);
   fclose(f);
-  /* default = ellipsoids */
-  //printf("sigmaAA=%.15G\n", sigmaAA);
-  if (deltaAA!=-1)
-    particles_type = 2; /* 2 means square well system*/
-  else if (sigmaAA != -1.0)
-    particles_type = 0;
-  if (NPA == -1)
-    NPA = NP;
+
+  f = fopen("mols.dat", "r");
+  fscanf("%d %d ", &NP, &NPA);
+  fclose(f);
+
+  f = fopen("sigma.dat", "r");
+  fscanf("%lf %lf ", &sigmaAA, &sigmaBB);
+  sigmaAB=0.5*(sigmaAA+sigmaBB);
+  fclose(f);
+  particles_type = 0;
+  
   if (mix_type==-1 || NPA==NP)
     {
     	START=0;
@@ -864,74 +449,27 @@ int main(int argc, char **argv)
       numbonds  = malloc(sizeof(int)*NP); 
       bonds = AllocMatI(NP, MAXBONDS);
     }
-  if (particles_type == 1)
-    {
-      maxax0 = sa[0];
-      if (sb[0] > maxax0)
-	maxax0 = sb[0];
-      if (sc[0] > maxax0)
-	maxax0 = sc[0];
-      maxax1 = sa[1];
-      if (sb[1] > maxax1)
-	maxax1 = sb[1];
-      if (sc[0] > maxax1)
-	maxax1 = sc[1];
-      maxsax = fabs(maxax1)+fabs(maxax0)+2.0*sigmaSticky;
-      //printf("maxsax=%.15G\n", maxsax);
-    }
-  else if (particles_type == 0)
-    {
-      maxsaxAA = fabs(sigmaAA)+2.0*sigmaSticky;
-      maxsaxAB = fabs(sigmaAB)+2.0*sigmaSticky;
-      maxsaxBB = fabs(sigmaBB)+2.0*sigmaSticky;
-    }
-  else if (particles_type == 2)
-    {
-      maxsaxAA = sigmaAA + deltaAA;
-      maxsaxAB = sigmaAB + deltaAB;
-      maxsaxBB = sigmaBB + deltaBB;
-      maxsax = maxsaxAA;
-      if (maxsaxAB > maxsax)
-	maxsax = maxsaxAB;
-      if (maxsaxBB > maxsax)
-	maxsax = maxsaxBB;
-    }
-  /* WARNING: se i diametri sono diversi va cambiato qua!! */ 
-  if (particles_type == 1)
-    RCUT = maxsax;
-  else if (particles_type == 0)
-    RCUT = maxsaxAA*1.01;
-  else if (particles_type == 2)
-    RCUT = maxsax*1.01;
+  maxsaxAA = fabs(sigmaAA);
+  maxsaxAB = fabs(sigmaAB);
+  maxsaxBB = fabs(sigmaBB);
+  /* le AA sono le grandi quindi usiamo quelle per RCUT */
+  RCUT = maxsaxAA*1.01;
   for (a = 0; a < 3; a++)
     {
+#if 0
       for (b = 0; b < NA; b++)
 	rat[b][a] = malloc(sizeof(double)*NP);
+#endif
       r0[a] = malloc(sizeof(double)*NP);
-      DR0[a] = malloc(sizeof(double)*NP);
+      //DR0[a] = malloc(sizeof(double)*NP);
+#if 0
       for (b = 0; b < 3; b++)
 	{
 	  R[a][b] = malloc(sizeof(double)*NP);
 	}
+#endif
     }
-  if (particles_type==1)
-    {
-      build_atom_positions();
-      printf("SYSTEM: ELLISPOIDS - DGEBA\n");
-    }
-  else if (particles_type==0)
-    {
-      printf("SYSTEM: SPHERES 3-2\n");
-    }
-  else if (particles_type == 2)
-    {
-      printf("SYSTEM: SQUARE WELL\n");
-    }
-
-  if (NPA != NP)
-    printf("[MIXTURE] files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", nfiles, NP, NPA, L, NN, maxl);
-  else
-    printf("[MONODISPERE] files=%d NP = %d L=%.15G NN=%d maxl=%d\n", nfiles, NP, L, NN, maxl);
+  printf("[MIXTURE] files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", nfiles, NP, NPA, L, NN, maxl);
   //printf("sigmaSticky=%.15G\n", sigmaSticky);
   for (i = 0; i < NP; i++)
     {
@@ -959,7 +497,7 @@ int main(int argc, char **argv)
 	  percola[i] = 0; 
 	}
 
-      readconf(fname[nr1], &time, &refTime, NP, r0, DR0, R);
+      readconf(fname[nr1], &time, &refTime, NP, r0);
       ti = time + refTime;
       /* costruisce la posizione di tutti gli sticky spots */
       for (i = 0; i < NP; i++)
@@ -968,21 +506,12 @@ int main(int argc, char **argv)
 	  for (a = 0; a < 3; a++)
 	    {
 	      r0L[a] = r0[a][i];
+#if 0
 	      for (b = 0; b < 3; b++)
 		RL[a][b] = R[a][b][i];
+#endif
 	    }
 	  //printf("r0L[%d]=%.15G %.15G %.15G\n", i, r0L[0], r0L[1], r0L[2]);
-	  if (particles_type == 1)
-	    BuildAtomPos(i, r0L, RL, ratL);
-	  else if (particles_type == 0)
-	    BuildAtomPos32(i, r0L, RL, ratL);
-	  else if (particles_type == 2) 
-	    BuildAtomPosSQ(i, r0L, ratL);
-	  for (a = 0; a < NA; a++)
-	    for (b = 0; b < 3; b++)
-	      rat[a][b][i] = ratL[a][b];
-
-	  //printf("rat[]=%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
 	}
       for (i = 0; i < NP; i++)
 	{
@@ -994,16 +523,8 @@ int main(int argc, char **argv)
       //coppie = 0;
       build_linked_list();
 
-      if (particles_type == 1)
-	{
-	  jbeg = NPA;
-	  ifin = NPA;
-	}
-      else if (particles_type == 0 || particles_type == 2)
-	{
-	  jbeg = 0; 
-	  ifin = NP;
-	}
+      jbeg = 0; 
+      ifin = NP;
       for (i = START; i < END; i++)
 	{
     	  if (color[i] == -1)
