@@ -18,7 +18,7 @@ int MAXBONDS = 10;
 double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
-       Dr, theta, sigmaSticky=-1.0, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
+       Dr, theta, sigmaSticky=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
 double deltaAA=-1.0, deltaAB=-1.0, deltaBB=-1.0;
 int *dupcluster, shift[3], *numbonds, **bonds;
 char parname[128], parval[256000], line[256000];
@@ -51,7 +51,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
   f = fopen(fname, "r");
   fscanf(f,"%[^\n]\n", line);
   fscanf(f,"%[^\n]\n", line);
-  fscanf(f,"%lf %lf %lf ", Lx, Ly, Lz);
+  fscanf(f,"%lf %lf %lf ", &Lx, &Ly, &Lz);
   fscanf(f,"%[^\n]\n", line);
   fscanf(f,"%[^\n]\n", line);
   while (!feof(f)) 
@@ -63,6 +63,10 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	{
 	  fscanf(f, "%lf %lf %lf ", &r[0][i], &r[1][i], &r[2][i]); 
 	  //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
+	  printf("%f, %f, %f\n", r[0][i], r[1][i], r[2][i]);
+	  r[0][i] -= Lx*0.5;
+	  r[1][i] -= Ly*0.5;
+	  r[2][i] -= Lz*0.5;
 	}
     }
   fclose(f);
@@ -316,9 +320,9 @@ void build_linked_list(void)
 
   for (n = START; n < END; n++)
     {
-      inCell[0][n] =  (rat[0][0][n] + L2) * cellsx / L;
-      inCell[1][n] =  (rat[0][1][n] + L2) * cellsy / L;
-      inCell[2][n] =  (rat[0][2][n] + L2) * cellsz / L;
+      inCell[0][n] =  (r0[0][n] + L2) * cellsx / L;
+      inCell[1][n] =  (r0[1][n] + L2) * cellsy / L;
+      inCell[2][n] =  (r0[2][n] + L2) * cellsz / L;
       j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
 	inCell[0][n] + NP;
       cellList[n] = cellList[j];
@@ -339,9 +343,9 @@ void build_linked_list_perc(int clsdim, double Lbig)
       img = n / clsdim;
       choose_image(img, &dix, &diy, &diz);
       np = dupcluster[n];
-      inCell[0][n] =  (rat[0][0][np] + dix*L + L2) * cellsx / Lbig;
-      inCell[1][n] =  (rat[0][1][np] + diy*L + L2) * cellsy / Lbig;
-      inCell[2][n] =  (rat[0][2][np] + diz*L + L2) * cellsz / Lbig;
+      inCell[0][n] =  (r0[0][np] + dix*L + L2) * cellsx / Lbig;
+      inCell[1][n] =  (r0[1][np] + diy*L + L2) * cellsy / Lbig;
+      inCell[2][n] =  (r0[2][np] + diz*L + L2) * cellsz / Lbig;
       j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
 	inCell[0][n] + NP*NUMREP;
       cellList[n] = cellList[j];
@@ -369,7 +373,7 @@ int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
+  int  NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ;
   //int coppie;
   double refTime=0.0, ti, ene=0.0;
@@ -401,21 +405,24 @@ int main(int argc, char **argv)
   nat = 0;
   fscanf(f,"%[^\n]\n", line);
   fscanf(f,"%[^\n]\n", line);
-  fscanf(f,"%lf %lf %lf ", Lx, Ly, Lz);
+  fscanf(f,"%lf %lf %lf ", &Lx, &Ly, &Lz);
   fscanf(f,"%[^\n]\n", line);
   fscanf(f,"%[^\n]\n", line);
   fclose(f);
 
   L=Lx;
   f = fopen("mols.dat", "r");
-  fscanf(f, "%d %d ", &NP, &NPA);
+  fscanf(f, "%s %d ", line, &NP);
+  fscanf(f, "%s %d ", line, &NPA);
   fclose(f);
 
   f = fopen("sigma.dat", "r");
   fscanf(f, "%lf %lf ", &sigmaAA, &sigmaBB);
   sigmaAB=0.5*(sigmaAA+sigmaBB);
   fclose(f);
-  
+ 
+  printf("NP=%d NPA=%d sigmaBB=%f\n", NP, NPA, sigmaBB);  
+  mix_type=1;
   if (mix_type==-1 || NPA==NP)
     {
     	START=0;
@@ -423,14 +430,14 @@ int main(int argc, char **argv)
     }
    else if (mix_type==0)
     {
-       START=0;
-       END=NPA;
-     }	 
+      START=0;
+      END=NPA;
+    }	 
   else
-     {
-     	START=NPA;
-        END=NP;
-     }
+    {
+      START=NPA;
+      END=NP;
+    }
   color = malloc(sizeof(int)*NP);
   color2= malloc(sizeof(int)*NP*NUMREP);
   clsdim2=malloc(sizeof(int)*NP*NUMREP);
@@ -453,7 +460,8 @@ int main(int argc, char **argv)
   maxsaxAB = fabs(sigmaAB);
   maxsaxBB = fabs(sigmaBB);
   /* le AA sono le grandi quindi usiamo quelle per RCUT */
-  RCUT = maxsaxAA*1.01;
+  RCUT = maxsaxBB*1.01;
+  printf("maxsaxBB=%f RCUT=%f\n", maxsaxBB, RCUT);	
   for (a = 0; a < 3; a++)
     {
 #if 0
@@ -945,7 +953,7 @@ int main(int argc, char **argv)
 	  fprintf(f, "%d %.15G\n", START-END, L);
 	  for (i = START; i < END; i++)
 	    {
-	      fprintf(f,"%.15G %.15G %.15G\n", rat[0][0][i], rat[0][1][i], rat[0][2][i]);
+	      fprintf(f,"%.15G %.15G %.15G\n", r0[0][i], r0[1][i], r0[2][i]);
 	    }	  
 	  for (i = START; i < END; i++)
 	    {
