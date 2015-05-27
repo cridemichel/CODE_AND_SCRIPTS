@@ -24,7 +24,7 @@ int *dupcluster, shift[3], *numbonds, **bonds;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2, START, END;
-int check_percolation = 1, *nspots, particles_type=1, output_bonds=0, mix_type=-1;
+int check_percolation = 1, *nspots, output_bonds=0, mix_type=-1;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
@@ -415,7 +415,6 @@ int main(int argc, char **argv)
   fscanf(f, "%lf %lf ", &sigmaAA, &sigmaBB);
   sigmaAB=0.5*(sigmaAA+sigmaBB);
   fclose(f);
-  particles_type = 0;
   
   if (mix_type==-1 || NPA==NP)
     {
@@ -578,22 +577,8 @@ int main(int argc, char **argv)
 		      j = (jZ *cellsy + jY) * cellsx + jX + NP;
 		      for (j = cellList[j]; j > -1; j = cellList[j]) 
 			{
-			  switch (particles_type)
-			    {
-			    case 0:
-			      if (j <= i) 
-				continue;
-			      break;
-			    case 1:
-			      if ((i < NPA && j < NPA) || ( i >= NPA && j >= NPA) ||
-				  (i >= NPA && j < NPA))
-				continue;
-			      break;
-			    case 2:
-			      if (j <= i) 
-				continue;
-			      break;
-			    }
+		      	  if (j <= i) 
+	    		    continue;
 			  if (bond_found(i, j))  
 			    {
 			      if (output_bonds)
@@ -705,30 +690,6 @@ int main(int argc, char **argv)
 	  inCell[1] = malloc(sizeof(int)*NP*NUMREP);
 	  inCell[2] = malloc(sizeof(int)*NP*NUMREP);
 
-	  for (i=START; i < END; i++)
-	    {
-	      if (particles_type == 1)
-		{
-		  if (i < NPA)
-		    nspots[i] = MD_STSPOTS_A;
-		  else
-		    nspots[i] = MD_STSPOTS_B;		
-		}
-	      else if (particles_type == 0)
-		{
-		  if (i < NPA)
-		    nspots[i] = 2;
-		  else
-		    nspots[i] = 3;		
-		}
-	      else if (particles_type == 2);
-		{
-		  if (i < NPA)
-		    nspots[i] = 1;
-		  else
-		    nspots[i] = 1;		
-		}
-	    }	
 	  ene=0;
 	  //coppie = 0;
 	  for (nc = 0; nc < ncls; nc++)
@@ -822,12 +783,6 @@ int main(int argc, char **argv)
 				  j = dupcluster[j2];
 			 	  if (j2 <= i2) 
 				    continue;
-			 	  if (particles_type == 1)
-			       	   {
-				      if ((nspots[i]==MD_STSPOTS_A && nspots[j]==MD_STSPOTS_A) ||
-					  (nspots[i]==MD_STSPOTS_B && nspots[j]==MD_STSPOTS_B))
-					continue;
-				    }
 				  //dix = diy = diz = 0;
 				  //djx = djy = djz = 0;
 				  imgi2 = i2 / na;
