@@ -15,7 +15,7 @@ char **fname;
 
 const int NUMREP = 8;
 int MAXBONDS = 10;
-double L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
+double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
        Dr, theta, sigmaSticky=-1.0, ratL[NA][3], *rat[NA][3], sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
@@ -44,17 +44,16 @@ void vectProdVec(double *A, double *B, double *C)
   C[1] = A[2] * B[0] - A[0] * B[2];
   C[2] = A[0] * B[1] - A[1] * B[0];
 }
-char line[4096];
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
   FILE *f;
   int nat=0, i, cpos;
   f = fopen(fname, "r");
-  fscanf("%[^\n]\n", line);
-  fscanf("%[^\n]\n", line);
-  fscanf("%lf %lf %lf ", Lx, Ly, Lz);
-  fscanf("%[^\n]\n", line);
-  fscanf("%[^\n]\n", line);
+  fscanf(f,"%[^\n]\n", line);
+  fscanf(f,"%[^\n]\n", line);
+  fscanf(f,"%lf %lf %lf ", Lx, Ly, Lz);
+  fscanf(f,"%[^\n]\n", line);
+  fscanf(f,"%[^\n]\n", line);
   while (!feof(f)) 
     {
       //cpos = ftell(f);
@@ -79,6 +78,7 @@ double spXYZ_A[MD_STSPOTS_A][3];
 double spXYZ_B[MD_STSPOTS_B][3];
 
 #define Sqr(x) ((x)*(x))
+#if 0
 int check_distance(int i, int j, double Dx, double Dy, double Dz)
 {
   double DxL, DyL, DzL;
@@ -95,7 +95,7 @@ int check_distance(int i, int j, double Dx, double Dy, double Dz)
     return 0;
 }
 
-
+#endif
 double distance(int i, int j)
 {
   int a, b;
@@ -104,9 +104,9 @@ double distance(int i, int j)
   double Dx, Dy, Dz;
   double wellWidth;
 
-  Dx = r[0][i] - r[0][j];
-  Dy = r[1][i] - r[1][j];
-  Dz = r[2][i] - r[2][j];
+  Dx = r0[0][i] - r0[0][j];
+  Dy = r0[1][i] - r0[1][j];
+  Dz = r0[2][i] - r0[2][j];
   imgx = -L*rint(Dx/L);
   imgy = -L*rint(Dy/L);
   imgz = -L*rint(Dz/L);
@@ -116,8 +116,8 @@ double distance(int i, int j)
     return 1;
 #endif
   wellWidth = sigmaBB;
-  if (Sqr(r[0][i] + imgx - r[0][j])+Sqr(r[1][i] + imgy - r[1][j])
-      +Sqr(r[2][i] + imgz - r[2][j]) < Sqr(wellWidth))	  
+  if (Sqr(r0[0][i] + imgx - r0[0][j])+Sqr(r0[1][i] + imgy - r0[1][j])
+      +Sqr(r0[2][i] + imgz - r0[2][j]) < Sqr(wellWidth))	  
     return -1;
 	
   return 1;
@@ -154,9 +154,9 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
   dx = L*(imgix-imgjx);
   dy = L*(imgiy-imgjy);
   dz = L*(imgiz-imgjz);
-  Dx = r[0][i] - r[0][j] + dx;
-  Dy = r[1][i] - r[1][j] + dy;
-  Dz = r[2][i] - r[2][j] + dz;
+  Dx = r0[0][i] - r0[0][j] + dx;
+  Dy = r0[1][i] - r0[1][j] + dy;
+  Dz = r0[2][i] - r0[2][j] + dz;
   imgx = -Lbig*rint(Dx/Lbig);
   imgy = -Lbig*rint(Dy/Lbig);
   imgz = -Lbig*rint(Dz/Lbig);
@@ -165,8 +165,8 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
   if (check_distance(i, j, Dx + imgx, Dy + imgy, Dz + imgz))
     return 1;
 #endif
-  if (Sqr(r[0][i] + dx + imgx - r[0][j])+Sqr(r[1][i] + dy + imgy - r[1][j])
-      + Sqr(r[2][i] + dz + imgz - r[2][j]) < Sqr(wellWidth))	  
+  if (Sqr(r0[0][i] + dx + imgx - r0[0][j])+Sqr(r0[1][i] + dy + imgy - r0[1][j])
+      + Sqr(r0[2][i] + dz + imgz - r0[2][j]) < Sqr(wellWidth))	  
     return -1;
 
   return 1;
@@ -399,19 +399,20 @@ int main(int argc, char **argv)
   fclose(f2);
   f = fopen(fname[0], "r");
   nat = 0;
-  fscanf("%[^\n]\n", line);
-  fscanf("%[^\n]\n", line);
-  fscanf("%lf %lf %lf ", Lx, Ly, Lz);
-  fscanf("%[^\n]\n", line);
-  fscanf("%[^\n]\n", line);
+  fscanf(f,"%[^\n]\n", line);
+  fscanf(f,"%[^\n]\n", line);
+  fscanf(f,"%lf %lf %lf ", Lx, Ly, Lz);
+  fscanf(f,"%[^\n]\n", line);
+  fscanf(f,"%[^\n]\n", line);
   fclose(f);
 
+  L=Lx;
   f = fopen("mols.dat", "r");
-  fscanf("%d %d ", &NP, &NPA);
+  fscanf(f, "%d %d ", &NP, &NPA);
   fclose(f);
 
   f = fopen("sigma.dat", "r");
-  fscanf("%lf %lf ", &sigmaAA, &sigmaBB);
+  fscanf(f, "%lf %lf ", &sigmaAA, &sigmaBB);
   sigmaAB=0.5*(sigmaAA+sigmaBB);
   fclose(f);
   particles_type = 0;
