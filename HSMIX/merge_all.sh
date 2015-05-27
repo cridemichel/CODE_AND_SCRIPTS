@@ -7,9 +7,10 @@ FF=`head -n 1 lista`
 echo "Primo file=" $FF
 NP=`cat $FF| awk '{if (NR==2) {print $0}; }'`
 BOX=`cat $FF| awk '{if (NR==3) {print $0}; }'`
-for f in `cat lista`
+for f in `cat $1`
 do
-cat $f | awk '{if (NR==2) {NP=$2}; if (NR>5 && NR-5 <= NP) print $0; }' >> $P2
+echo "file=" $f
+cat $f | awk '{if (NR==2) {NP=$0}; if (NR>5 && NR-5 <= NP) print $0; }' >> $P2
 cc=$[${cc}+1]
 done
 echo "QUI cc=$cc NP=$NP"
