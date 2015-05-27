@@ -54,21 +54,19 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
   fscanf(f,"%lf %lf %lf ", &Lx, &Ly, &Lz);
   fscanf(f,"%[^\n]\n", line);
   fscanf(f,"%[^\n]\n", line);
-  while (!feof(f)) 
+  //cpos = ftell(f);
+  //printf("cpos=%d\n", cpos);
+  //fscanf(f, "%[^\n]\n",line);
+  for (i = 0; i < NP; i++) 
     {
-      //cpos = ftell(f);
-      //printf("cpos=%d\n", cpos);
-      fscanf(f, "%[^\n]\n",line);
-      for (i = 0; i < NP; i++) 
-	{
-	  fscanf(f, "%lf %lf %lf ", &r[0][i], &r[1][i], &r[2][i]); 
-	  //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
-	  printf("%f, %f, %f\n", r[0][i], r[1][i], r[2][i]);
-	  r[0][i] -= Lx*0.5;
-	  r[1][i] -= Ly*0.5;
-	  r[2][i] -= Lz*0.5;
-	}
+      fscanf(f, "%lf %lf %lf\n", &(r[0][i]), &(r[1][i]), &(r[2][i])); 
+      //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
+      //printf("%f, %f, %f\n", r[0][i], r[1][i], r[2][i]);
+      r[0][i] -= Lx*0.5;
+      r[1][i] -= Ly*0.5;
+      r[2][i] -= Lz*0.5;
     }
+    
   fclose(f);
 }
 #define MD_SP_DELR 0.0
