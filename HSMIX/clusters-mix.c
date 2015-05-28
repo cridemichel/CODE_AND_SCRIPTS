@@ -13,8 +13,9 @@
  * particles_type == 0 ( DGEBA - sticky ellipsoid), 1 (sticky 2-3), 2 (bimixhs) */
 char **fname; 
 
-const int NUMREP = 8;
+const int NUMREP = 4;
 int MAXBONDS = 10;
+double wellWidth;
 double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
@@ -104,7 +105,7 @@ double distance(int i, int j)
   int maxa=0, maxb=0;
   double imgx, imgy, imgz;
   double Dx, Dy, Dz;
-  double wellWidth;
+  //double wellWidth;
 
   Dx = r0[0][i] - r0[0][j];
   Dy = r0[1][i] - r0[1][j];
@@ -117,7 +118,7 @@ double distance(int i, int j)
   if (check_distance(i, j, Dx+imgx, Dy+imgy, Dz+imgz))
     return 1;
 #endif
-  wellWidth = sigmaBB;
+  //wellWidth = sigmaBB;
   if (Sqr(r0[0][i] + imgx - r0[0][j])+Sqr(r0[1][i] + imgy - r0[1][j])
       +Sqr(r0[2][i] + imgz - r0[2][j]) < Sqr(wellWidth))	  
     return -1;
@@ -149,9 +150,9 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
 {
   int a, b, maxa=0, maxb=0;
   double imgx, imgy, imgz;
-  double wellWidth, Dx, Dy, Dz, dx, dy, dz;
+  double Dx, Dy, Dz, dx, dy, dz;
   
-  wellWidth = sigmaBB;
+  //wellWidth = sigmaBB;
     
   dx = L*(imgix-imgjx);
   dy = L*(imgiy-imgjy);
@@ -247,9 +248,11 @@ const int images_array[27][3]={{0,0,0},
 {-1,1,1},{1,-1,1},{1,1,-1},
 {-1,-1,1},{1,-1,-1},{-1,1,-1}};
 #else
-const int images_array[8][3]={{0,0,0},
-{1,0,0},{0,1,0},{0,0,1},
-{1,1,0},{1,0,1},{0,1,1},{1,1,1}};
+const int images_array[4][3]={{0,0,0},
+{1,0,0},{0,1,0},{0,0,1}};
+//const int images_array[3][3]={{0,0,0},
+//{1,0,0},{0,1,0},{0,0,1},
+//{1,1,0},{1,0,1},{0,1,1},{1,1,1}};
 #endif
 void choose_image(int img, int *dix, int *diy, int *diz)
 {
@@ -259,7 +262,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--maxbonds] <listafile>\n");
+  printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--maxbonds] [--wellwidth/-ww <value>] <listafile>\n");
   exit(0);
 }
 
@@ -290,6 +293,11 @@ void parse_params(int argc, char** argv)
       else if (!strcmp(argv[cc],"--bonds") || !strcmp(argv[cc],"-b" ))
 	{
 	  output_bonds = 1;
+	} 
+      else if (!strcmp(argv[cc],"-ww") || !strcmp(argv[cc],"--wellwidth" ))
+	{
+	  cc++;
+	  wellWidth = atof(argv[cc]);
 	} 
       else if (!strcmp(argv[cc],"--maxbonds") || !strcmp(argv[cc],"-mb" ))
 	{
@@ -376,6 +384,7 @@ int main(int argc, char **argv)
   //int coppie;
   double refTime=0.0, ti, ene=0.0;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
+  wellWidth=-1.0;
   pi = acos(0.0)*2.0;
     /* parse arguments */
   parse_params(argc, argv);
@@ -457,6 +466,8 @@ int main(int argc, char **argv)
   maxsaxAA = fabs(sigmaAA);
   maxsaxAB = fabs(sigmaAB);
   maxsaxBB = fabs(sigmaBB);
+  if (wellWidth==-1)
+    wellWidth=sigmaBB;
   /* le AA sono le grandi quindi usiamo quelle per RCUT */
   RCUT = maxsaxBB*1.01;
   printf("maxsaxBB=%f RCUT=%f\n", maxsaxBB, RCUT);	
@@ -698,7 +709,7 @@ int main(int argc, char **argv)
 
 	  ene=0;
 	  //coppie = 0;
-	  for (nc = 0; nc < ncls; nc++)
+	  for (nc = ncls-1; nc >= 0; nc--)
 	    {
 	      if (cluster_sort[nc].dim==1)
 		continue;
@@ -892,7 +903,10 @@ int main(int argc, char **argv)
 		}
 	      //printf("ncls2=%d\n", ncNV2);
 	      if (ncNV2 < NUMREP)
-		percola[nc] = 1;
+		{
+		  percola[nc] = 1;
+		  break;
+		}
 	    }
 	  printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
 	}
