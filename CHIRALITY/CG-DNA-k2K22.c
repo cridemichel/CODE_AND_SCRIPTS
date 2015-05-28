@@ -1449,7 +1449,13 @@ int main(int argc, char**argv)
 					    if (kk==-1)
 					      uel_arr[k1][k2] += uelcontrib;
 					    else
-					      uel_arr[k1][k2] += exp(-kD_arr[k1][k2]*sqrt(distsq))*uelcontrib/epsr(1.0/beta_arr[k1]);
+					      {
+#ifdef YUK_CORR
+						uel_arr[k1][k2] += yuk_corr_fact_arr[k1][k2]*exp(-kD_arr[k1][k2]*sqrt(distsq))*uelcontrib/epsr(1.0/beta_arr[k1]);
+#else
+						uel_arr[k1][k2] += exp(-kD_arr[k1][k2]*sqrt(distsq))*uelcontrib/epsr(1.0/beta_arr[k1]);
+#endif
+					      }
 					  }
 				      }
 				}
