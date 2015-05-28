@@ -25,7 +25,7 @@ double invkD;
 } *kD_sorted;
 double *cdna_arr, *beta_arr;
 int numtemps, numconcs;
-double **yukcutkD_arr, **kD_arr, **yukcutkDsq_arr, **uel_arr, **vexclel_arr;
+double **yukcutkD_arr, **kD_arr, **yuk_corr_fact_arr, **yukcutkDsq_arr, **uel_arr, **vexclel_arr;
 double num_kD=0;
 double maxyukcutkDsq, maxyukcutkD;
 #endif
@@ -692,7 +692,7 @@ double Uyuk(double rab)
   printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
   printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
 #endif
-
+  
   return yuk_corr_fact*esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab; 
 } 
 #ifdef PARALLEL
@@ -1027,6 +1027,7 @@ int main(int argc, char**argv)
       yukcutkDsq_arr = malloc(sizeof(double*)*numtemps); 
       vexclel_arr = malloc(sizeof(double*)*numtemps); 
       uel_arr = malloc(sizeof(double*)*numtemps);
+      yuk_corr_fact_arr = malloc(sizeof(double*)*numtemps); 
       for (k1=0; k1 < numtemps; k1++)
 	{
 	  kD_arr[k1] = malloc(sizeof(double)*numconcs);
@@ -1034,6 +1035,7 @@ int main(int argc, char**argv)
 	  yukcutkDsq_arr[k1] = malloc(sizeof(double)*numconcs);
 	  vexclel_arr[k1] = malloc(sizeof(double)*numconcs);
 	  uel_arr[k1] = malloc(sizeof(double)*numconcs);
+	  yuk_corr_fact_arr[k1] = malloc(sizeof(double)*numconcs); 
 	}
       for (k1 = 0; k1 < numtemps; k1++)
 	for (k2 = 0; k2 < numconcs; k2++)
@@ -1044,8 +1046,8 @@ int main(int argc, char**argv)
 	    /* 6.0 Angstrom is the closest distance between phosphate charges */
 	    yukcutkD_arr[k1][k2] = yukcut/kD_arr[k1][k2];
 	    yukcutkDsq_arr[k1][k2] = Sqr(yukcutkD_arr[k1][k2]);	
+	    yuk_corr_fact_arr[k1][k2] = exp(kD_arr[k1][k2]*6.0)/(1.0+kD_arr[k1][k2]*6.0);
 	  }
-      yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
       num_kD = numtemps*numconcs;
       kD_sorted = malloc(sizeof(struct kDsortS)*num_kD);
       cc=0;
@@ -1058,6 +1060,7 @@ int main(int argc, char**argv)
 	    cc++;
 	  }
       qsort(kD_sorted, cc, sizeof(struct kDsortS), compare_func);
+      yuk_corr_fact = 1.0;//exp((1.0/kD_sorted[cc-1].invkD)*6.0)/(1.0+(1.0/kD_sorted[cc-1].invkD)*6.0);
       maxyukcutkD = yukcut*kD_sorted[cc-1].invkD;
       maxyukcutkDsq = Sqr(yukcut*kD_sorted[cc-1].invkD);
       printf("min: %f max: %f maxyukcutkD=%f\n",kD_sorted[0].invkD,kD_sorted[cc-1].invkD, sqrt(maxyukcutkDsq));
