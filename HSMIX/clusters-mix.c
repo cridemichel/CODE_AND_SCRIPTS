@@ -463,12 +463,12 @@ int main(int argc, char **argv)
       numbonds  = malloc(sizeof(int)*NP); 
       bonds = AllocMatI(NP, MAXBONDS);
     }
-  maxsaxAA = fabs(sigmaAA);
-  maxsaxAB = fabs(sigmaAB);
-  maxsaxBB = fabs(sigmaBB);
   if (wellWidth==-1)
     wellWidth=sigmaBB;
-  /* le AA sono le grandi quindi usiamo quelle per RCUT */
+  maxsaxAA = fabs(sigmaAA);
+  maxsaxAB = fabs(sigmaAB);
+  maxsaxBB = fabs(wellWidth);
+    /* le AA sono le grandi quindi usiamo quelle per RCUT */
   RCUT = maxsaxBB*1.01;
   printf("maxsaxBB=%f RCUT=%f\n", maxsaxBB, RCUT);	
   for (a = 0; a < 3; a++)
@@ -905,6 +905,7 @@ int main(int argc, char **argv)
 	      if (ncNV2 < NUMREP)
 		{
 		  percola[nc] = 1;
+		  printf("#clusters in the replicated system: %d (of %d replicas)\n", ncNV2, NUMREP);
 		  break;
 		}
 	    }
@@ -971,7 +972,7 @@ int main(int argc, char **argv)
 	    {
 	      fprintf(f,"%d %d\n", i+1, numbonds[i]);
 	      for (c = 0; c < numbonds[i]-1; c++)
-	    fprintf(f, "%d ", bonds[i][c]+1);
+    		fprintf(f, "%d ", bonds[i][c]+1);
 	      fprintf(f, "%d\n", bonds[i][numbonds[i]-1]+1);
 	    }
 	  fclose(f);
