@@ -13,7 +13,7 @@
  * particles_type == 0 ( DGEBA - sticky ellipsoid), 1 (sticky 2-3), 2 (bimixhs) */
 char **fname; 
 
-const int NUMREP = 4;
+const int NUMREP = 8;
 int MAXBONDS = 10;
 double wellWidth;
 double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
@@ -248,8 +248,8 @@ const int images_array[27][3]={{0,0,0},
 {-1,1,1},{1,-1,1},{1,1,-1},
 {-1,-1,1},{1,-1,-1},{-1,1,-1}};
 #else
-const int images_array[4][3]={{0,0,0},
-{1,0,0},{0,1,0},{0,0,1}};
+const int images_array[8][3]={{0,0,0},
+{1,0,0},{0,1,0},{0,0,1},{1,1,1},{1,1,0},{0,1,1},{1,0,1}};
 //const int images_array[3][3]={{0,0,0},
 //{1,0,0},{0,1,0},{0,0,1},
 //{1,1,0},{1,0,1},{0,1,1},{1,1,1}};
@@ -740,6 +740,7 @@ int main(int argc, char **argv)
 		{
 		  color2[i2] = -1;	  
 		}
+	      //printf("na=%d clsdim=%d\n", na, cluster_sort[nc].dim);
 	      for (i2 = 0; i2 < na*NUMREP; i2++)
 		{
 		  if (color2[i2]==-1)
@@ -921,14 +922,14 @@ int main(int argc, char **argv)
 	{
 	  //if (cluster_sort[nc].dim >= 2)
 	    //almenouno = 1;
-	  if (percola[cluster_sort[nc].color])
+	  if (percola[nc])
 	    {
 	      sprintf(fn, "perc%s.dat", fname[nr1]);
 	      f2 = fopen(fn, "a");
 	      fprintf(f2, "%d %d\n", nc, cluster_sort[nc].dim);
 	      fclose(f2);
 	    }
-	  if (percola[cluster_sort[nc].color])
+	  if (percola[nc])
 	    fprintf(f, "1 ");
 	  else
 	    fprintf(f, "0 ");
