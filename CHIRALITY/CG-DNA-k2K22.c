@@ -11,7 +11,7 @@ int MPIpid;
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 #endif 
-#define ELEC
+//#define ELEC
 //#define ALBERTA
 //#define NO_INTERP
 #ifdef ELEC
@@ -1230,6 +1230,7 @@ int main(int argc, char**argv)
   init_distbox();
   L=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*3.0;
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
+  printf("box semiaxes=%f %f %f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2]);
 #ifdef MPI
   srand48(((int)time(NULL))+my_rank);
 #else
@@ -1331,6 +1332,7 @@ int main(int argc, char**argv)
     }
 #endif
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
+  printf("type=%d ncontrib=%d\n", type, ncontrib);
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
