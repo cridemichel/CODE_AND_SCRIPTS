@@ -250,9 +250,6 @@ const int images_array[27][3]={{0,0,0},
 #else
 const int images_array[8][3]={{0,0,0},
 {1,0,0},{0,1,0},{0,0,1},{1,1,1},{1,1,0},{0,1,1},{1,0,1}};
-//const int images_array[3][3]={{0,0,0},
-//{1,0,0},{0,1,0},{0,0,1},
-//{1,1,0},{1,0,1},{0,1,1},{1,1,1}};
 #endif
 void choose_image(int img, int *dix, int *diy, int *diz)
 {
