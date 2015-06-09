@@ -55,6 +55,7 @@ double calcDistBox(void)
   int k, k1, k2, existsParallelPair = 0;
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
+  //return -1;
   for (k=0; k < 3; k++)
     {
       rA[k] = DNADall[0].rcm[k];
@@ -1402,8 +1403,27 @@ int main(int argc, char**argv)
 	  interact = 0;
 #endif
 #endif
+#if 0
+	  printf("res=%f\n", calcDistBox());
+
+	  printf("{%f,%f,%f},", DNADall[0].rcm[0], DNADall[0].rcm[1], DNADall[0].rcm[2]);
+	  print_matrix(DNADall[0].R,3);
+	  printf(",{%f,%f,%f},", DNADall[1].rcm[0], DNADall[1].rcm[1], DNADall[1].rcm[2]);
+	  print_matrix(DNADall[1].R,3);
+	  printf(",{%f,%f,%f}\n", DNADall[0].sax[0],DNADall[0].sax[1],DNADall[0].sax[2]);
+	  exit(-1);
+#endif
 	  if (calcDistBox() < 0.0)
 	    {
+#if 0
+	      printf("res=%f\n", calcDistBox());
+	      printf("{%f,%f,%f},", DNADall[0].rcm[0], DNADall[0].rcm[1], DNADall[0].rcm[2]);
+	      print_matrix(DNADall[0].R,3);
+	      printf(",{%f,%f,%f},", DNADall[1].rcm[0], DNADall[1].rcm[1], DNADall[1].rcm[2]);
+	      print_matrix(DNADall[1].R,3);
+	      printf(",{%f,%f,%f}\n", DNADall[0].sax[0],DNADall[0].sax[1],DNADall[0].sax[2]);
+	      exit(-1);
+#endif
 #ifdef ELEC
 	      interact = 1;
 #endif
