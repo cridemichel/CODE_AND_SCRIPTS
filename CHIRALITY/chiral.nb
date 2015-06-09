@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[    109006,       2762]
-NotebookOptionsPosition[    105894,       2658]
-NotebookOutlinePosition[    106282,       2675]
-CellTagsIndexPosition[    106239,       2672]
+NotebookDataLength[    106192,       2700]
+NotebookOptionsPosition[    103223,       2599]
+NotebookOutlinePosition[    103609,       2616]
+CellTagsIndexPosition[    103566,       2613]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -2076,6 +2076,37 @@ Cell[BoxData[
    3.642851437407092*^9}, 3.642851481152817*^9, {3.642851538142652*^9, 
    3.64285158146424*^9}}],
 
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ALPHA", "=", "10"}], ";"}]], "Input",
+ CellChangeTimes->{{3.642855365499969*^9, 3.642855367660945*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"IntegrandoV1Int", "[", 
+    RowBox[{
+     RowBox[{"theta1_", "?", "NumericQ"}], ",", 
+     RowBox[{"phi1_", "?", "NumericQ"}], ",", 
+     RowBox[{"gamma1_", "?", "NumericQ"}], ",", " ", "\[IndentingNewLine]", 
+     RowBox[{"rx_", "?", "NumericQ"}], ",", " ", 
+     RowBox[{"ry_", "?", "NumericQ"}], ",", " ", 
+     RowBox[{"rz_", "?", "NumericQ"}], ",", " ", 
+     RowBox[{"theta2_", "?", "NumericQ"}], ",", 
+     RowBox[{"phi2_", "?", "NumericQ"}], ",", 
+     RowBox[{"gamma2_", "?", "NumericQ"}]}], "]"}], ":=", 
+   RowBox[{"IntegrandoV1", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"theta1", ",", "phi1", ",", "gamma1"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"rx", ",", "ry", ",", "rz"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"theta2", ",", "phi2", ",", "gamma2"}], "}"}], ",", "ALPHA"}], 
+    "]"}]}], ";"}]], "Input",
+ CellChangeTimes->{{3.642855255142866*^9, 3.642855408443791*^9}, {
+  3.64285546790191*^9, 3.642855496239196*^9}}],
+
 Cell[CellGroupData[{
 
 Cell[BoxData[
@@ -2090,24 +2121,20 @@ Cell[BoxData["22.806`"], "Output",
 Cell[CellGroupData[{
 
 Cell[BoxData[
- RowBox[{"IntegrandoV1", "[", 
+ RowBox[{"IntegrandoV1Int", "[", 
   RowBox[{
-   RowBox[{"{", 
-    RowBox[{"0.1", ",", "3", ",", "0.2"}], "}"}], ",", 
-   RowBox[{"{", 
-    RowBox[{"0.", ",", "0.1", ",", "0."}], "}"}], ",", 
-   RowBox[{"{", 
-    RowBox[{"0.2", ",", "0.2", ",", "0.2"}], "}"}], ",", "10"}], 
-  "]"}]], "Input",
+  "0.1", ",", "3", ",", "0.2", ",", "0.", ",", "0.1", ",", "0.", ",", "0.2", 
+   ",", "0.2", ",", "0.2"}], "]"}]], "Input",
  CellChangeTimes->{{3.642851226290753*^9, 3.642851240899232*^9}, {
   3.642851285456111*^9, 3.642851293133729*^9}, {3.642851591510722*^9, 
   3.6428516383306637`*^9}, {3.64285324875301*^9, 3.642853259177128*^9}, {
   3.642854562394899*^9, 3.642854661241906*^9}, {3.642854751259862*^9, 
-  3.642854767379734*^9}}],
+  3.642854767379734*^9}, {3.6428554466116543`*^9, 3.64285545517745*^9}}],
 
 Cell[BoxData[
  RowBox[{"-", "0.047422740487500586`"}]], "Output",
- CellChangeTimes->{{3.6428547528237343`*^9, 3.642854767702445*^9}}]
+ CellChangeTimes->{{3.6428547528237343`*^9, 3.642854767702445*^9}, {
+  3.6428554555362597`*^9, 3.642855498069305*^9}}]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -2498,15 +2525,10 @@ Cell[BoxData[
        RowBox[{"gamma2", ",", "Reals"}], "]"}]}], ","}]}], "*)"}], 
   RowBox[{"NIntegrate", "[", 
    RowBox[{
-    RowBox[{"IntegrandoV1", "[", 
+    RowBox[{"IntegrandoV1Int", "[", 
      RowBox[{
-      RowBox[{"{", 
-       RowBox[{"theta1", ",", "phi1", ",", "gamma1"}], "}"}], ",", 
-      RowBox[{"{", 
-       RowBox[{"rx", ",", "ry", ",", "rz"}], "}"}], ",", 
-      RowBox[{"{", 
-       RowBox[{"theta2", ",", "phi2", ",", "gamma2"}], "}"}], ",", "10."}], 
-     "]"}], ",", 
+     "theta1", ",", "phi1", ",", "gamma1", ",", "rx", ",", "ry", ",", "rz", 
+      ",", "theta2", ",", "phi2", ",", "gamma2"}], "]"}], ",", 
     RowBox[{"{", 
      RowBox[{"theta1", ",", "0.0", ",", " ", "Pi"}], "}"}], ",", 
     RowBox[{"{", 
@@ -2566,98 +2588,17 @@ Cell[BoxData[
    3.6428538791357203`*^9}, {3.642853935639381*^9, 3.64285396050023*^9}, {
    3.642854007277869*^9, 3.6428540904691153`*^9}, {3.6428541745707903`*^9, 
    3.6428542305619164`*^9}, {3.642854291719203*^9, 3.642854321316763*^9}, {
-   3.64285513107802*^9, 3.642855137098804*^9}}],
+   3.64285513107802*^9, 3.642855137098804*^9}, {3.642855416689102*^9, 
+   3.6428554297493153`*^9}}],
 
-Cell[BoxData[
- RowBox[{
-  StyleBox[
-   RowBox[{"CompiledFunction", "::", "cfta"}], "MessageName"], 
-  RowBox[{
-  ":", " "}], "\<\"Argument \[NoBreak]\\!\\({theta1, phi1, gamma1}\\)\
-\[NoBreak] at position \[NoBreak]\\!\\(1\\)\[NoBreak] should be a rank \
-\[NoBreak]\\!\\(1\\)\[NoBreak] tensor of \[NoBreak]\\!\\(\\\"machine-size \
-real number\\\"\\)\[NoBreak]s. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
-ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
-ButtonData:>\\\"paclet:ref/message/CompiledFunction/cfta\\\", ButtonNote -> \
-\\\"CompiledFunction::cfta\\\"]\\)\"\>"}]], "Message", "MSG",
- CellChangeTimes->{{3.642854308483556*^9, 3.642854323452112*^9}, 
-   3.642855137860622*^9}],
-
-Cell[BoxData[
- RowBox[{
-  StyleBox[
-   RowBox[{"CompiledFunction", "::", "cfta"}], "MessageName"], 
-  RowBox[{
-  ":", " "}], "\<\"Argument \[NoBreak]\\!\\({theta1, phi1, gamma1}\\)\
-\[NoBreak] at position \[NoBreak]\\!\\(1\\)\[NoBreak] should be a rank \
-\[NoBreak]\\!\\(1\\)\[NoBreak] tensor of \[NoBreak]\\!\\(\\\"machine-size \
-real number\\\"\\)\[NoBreak]s. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
-ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
-ButtonData:>\\\"paclet:ref/message/CompiledFunction/cfta\\\", ButtonNote -> \
-\\\"CompiledFunction::cfta\\\"]\\)\"\>"}]], "Message", "MSG",
- CellChangeTimes->{{3.642854308483556*^9, 3.642854323452112*^9}, 
-   3.642855137877324*^9}],
-
-Cell[BoxData[
- RowBox[{
-  StyleBox[
-   RowBox[{"CompiledFunction", "::", "cfta"}], "MessageName"], 
-  RowBox[{
-  ":", " "}], "\<\"Argument \[NoBreak]\\!\\({theta2, phi2, gamma2}\\)\
-\[NoBreak] at position \[NoBreak]\\!\\(1\\)\[NoBreak] should be a rank \
-\[NoBreak]\\!\\(1\\)\[NoBreak] tensor of \[NoBreak]\\!\\(\\\"machine-size \
-real number\\\"\\)\[NoBreak]s. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
-ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
-ButtonData:>\\\"paclet:ref/message/CompiledFunction/cfta\\\", ButtonNote -> \
-\\\"CompiledFunction::cfta\\\"]\\)\"\>"}]], "Message", "MSG",
- CellChangeTimes->{{3.642854308483556*^9, 3.642854323452112*^9}, 
-   3.6428551379261007`*^9}],
-
-Cell[BoxData[
- RowBox[{
-  StyleBox[
-   RowBox[{"General", "::", "stop"}], "MessageName"], 
-  RowBox[{
-  ":", " "}], "\<\"Further output of \
-\[NoBreak]\\!\\(\\*StyleBox[\\(CompiledFunction :: cfta\\), \\\"MessageName\\\
-\"]\\)\[NoBreak] will be suppressed during this calculation. \
-\\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", ButtonStyle->\\\"Link\\\", \
-ButtonFrame->None, ButtonData:>\\\"paclet:ref/message/General/stop\\\", \
-ButtonNote -> \\\"General::stop\\\"]\\)\"\>"}]], "Message", "MSG",
- CellChangeTimes->{{3.642854308483556*^9, 3.642854323452112*^9}, 
-   3.6428551379523783`*^9}],
-
-Cell[BoxData[
- RowBox[{
-  StyleBox[
-   RowBox[{"CompiledFunction", "::", "cfsa"}], "MessageName"], 
-  RowBox[{
-  ":", " "}], "\<\"Argument \[NoBreak]\\!\\(gamma1\\)\[NoBreak] at position \
-\[NoBreak]\\!\\(1\\)\[NoBreak] should be a \[NoBreak]\\!\\(\\\"machine-size \
-real number\\\"\\)\[NoBreak]. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
-ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
-ButtonData:>\\\"paclet:ref/message/CompiledFunction/cfsa\\\", ButtonNote -> \
-\\\"CompiledFunction::cfsa\\\"]\\)\"\>"}]], "Message", "MSG",
- CellChangeTimes->{{3.642854308483556*^9, 3.642854323452112*^9}, 
-   3.642855138013966*^9}],
-
-Cell[BoxData[
- RowBox[{
-  StyleBox[
-   RowBox[{"CompiledFunction", "::", "cfsa"}], "MessageName"], 
-  RowBox[{
-  ":", " "}], "\<\"Argument \[NoBreak]\\!\\(gamma2\\)\[NoBreak] at position \
-\[NoBreak]\\!\\(1\\)\[NoBreak] should be a \[NoBreak]\\!\\(\\\"machine-size \
-real number\\\"\\)\[NoBreak]. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
-ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
-ButtonData:>\\\"paclet:ref/message/CompiledFunction/cfsa\\\", ButtonNote -> \
-\\\"CompiledFunction::cfsa\\\"]\\)\"\>"}]], "Message", "MSG",
- CellChangeTimes->{{3.642854308483556*^9, 3.642854323452112*^9}, 
-   3.6428551380422907`*^9}]
+Cell[BoxData["$Aborted"], "Output",
+ CellChangeTimes->{{3.6428543100334673`*^9, 3.6428543275904427`*^9}, 
+   3.642855181229456*^9, 3.6428552234318438`*^9, 3.642855430543811*^9, 
+   3.642855749797778*^9}]
 }, Open  ]]
 },
 WindowSize->{1291, 779},
-WindowMargins->{{51, Automatic}, {-24, Automatic}},
+WindowMargins->{{51, Automatic}, {Automatic, 0}},
 Magnification:>1.25 Inherited,
 FrontEndVersion->"10.1 for Mac OS X x86 (32-bit, 64-bit Kernel) (March 23, \
 2015)",
@@ -2730,39 +2671,36 @@ Cell[75175, 1921, 265, 5, 35, "Output"]
 Cell[75455, 1929, 102, 1, 35, "Input"],
 Cell[75560, 1932, 877, 25, 111, "Input"],
 Cell[76440, 1959, 4929, 117, 393, "Input"],
+Cell[81372, 2078, 138, 3, 35, "Input"],
+Cell[81513, 2083, 1010, 24, 78, "Input"],
 Cell[CellGroupData[{
-Cell[81394, 2080, 152, 3, 35, "Input"],
-Cell[81549, 2085, 97, 1, 35, "Output"]
+Cell[82548, 2111, 152, 3, 35, "Input"],
+Cell[82703, 2116, 97, 1, 35, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[81683, 2091, 612, 14, 36, "Input"],
-Cell[82298, 2107, 133, 2, 35, "Output"]
+Cell[82837, 2122, 538, 9, 36, "Input"],
+Cell[83378, 2133, 184, 3, 35, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[82468, 2114, 124, 2, 35, "Input"],
-Cell[82595, 2118, 114, 1, 35, "Output"]
+Cell[83599, 2141, 124, 2, 35, "Input"],
+Cell[83726, 2145, 114, 1, 35, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[82746, 2124, 341, 9, 36, "Input"],
-Cell[83090, 2135, 13626, 294, 78, "Output"]
+Cell[83877, 2151, 341, 9, 36, "Input"],
+Cell[84221, 2162, 13626, 294, 78, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[96753, 2434, 125, 2, 35, "Input"],
-Cell[96881, 2438, 113, 1, 35, "Output"]
+Cell[97884, 2461, 125, 2, 35, "Input"],
+Cell[98012, 2465, 113, 1, 35, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[97031, 2444, 272, 7, 36, "Input"],
-Cell[97306, 2453, 615, 12, 29, "Message"],
-Cell[97924, 2467, 133, 2, 35, "Output"]
+Cell[98162, 2471, 272, 7, 36, "Input"],
+Cell[98437, 2480, 615, 12, 29, "Message"],
+Cell[99055, 2494, 133, 2, 35, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[98094, 2474, 3861, 94, 162, "Input"],
-Cell[101958, 2570, 688, 13, 29, "Message"],
-Cell[102649, 2585, 688, 13, 29, "Message"],
-Cell[103340, 2600, 690, 13, 29, "Message"],
-Cell[104033, 2615, 591, 12, 29, "Message"],
-Cell[104627, 2629, 623, 12, 29, "Message"],
-Cell[105253, 2643, 625, 12, 29, "Message"]
+Cell[99225, 2501, 3776, 90, 162, "Input"],
+Cell[103004, 2593, 203, 3, 69, "Output"]
 }, Open  ]]
 }
 ]
