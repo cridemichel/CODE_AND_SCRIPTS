@@ -10,7 +10,7 @@
 #define MD_PBONDS 10
 #define Sqr(x) ((x)*(x))
 
-#define npmax 10001
+#define npmax 10000001
 const int nlin=20;
 int l1[npmax], l2[npmax];
 double dlog[npmax], xlog[npmax];
@@ -338,6 +338,18 @@ void build_linked_list(void)
       inCell[0][n] =  (r0[0][n] + L2) * cellsx / L;
       inCell[1][n] =  (r0[1][n] + L2) * cellsy / L;
       inCell[2][n] =  (r0[2][n] + L2) * cellsz / L;
+      if (inCell[0][n] == cellsx)
+	inCell[0][n]=cellsx-1;
+      if (inCell[1][n] == cellsy)
+	inCell[1][n]=cellsy-1;
+      if (inCell[2][n] == cellsz)
+	inCell[2][n]=cellsz-1;
+      if (inCell[0][n] == -1)
+	inCell[0][n]=0;
+      if (inCell[1][n] == -1)
+	inCell[1][n]=0;
+      if (inCell[2][n] == -1)
+	inCell[2][n]=0;
       j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
 	inCell[0][n] + NP;
       cellList[n] = cellList[j];
@@ -361,7 +373,19 @@ void build_linked_list_perc(int clsdim, double Lbig)
       inCell[0][n] =  (r0[0][np] + dix*L + L2) * cellsx / Lbig;
       inCell[1][n] =  (r0[1][np] + diy*L + L2) * cellsy / Lbig;
       inCell[2][n] =  (r0[2][np] + diz*L + L2) * cellsz / Lbig;
-      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+      if (inCell[0][n] == cellsx)
+	inCell[0][n]=cellsx-1;
+      if (inCell[1][n] == cellsy)
+	inCell[1][n]=cellsy-1;
+      if (inCell[2][n] == cellsz)
+	inCell[2][n]=cellsz-1;
+      if (inCell[0][n] == -1)
+	inCell[0][n]=0;
+      if (inCell[1][n] == -1)
+	inCell[1][n]=0;
+      if (inCell[2][n] == -1)
+	inCell[2][n]=0;
+   j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
 	inCell[0][n] + NP*NUMREP;
       cellList[n] = cellList[j];
       cellList[j] = n;
@@ -506,7 +530,7 @@ int main(int argc, char **argv)
     }      
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
-      if (!cellList)
+      if (cellList)
 	{
 	  free(cellList);
 	  free(inCell[0]);
@@ -1010,7 +1034,7 @@ int main(int argc, char **argv)
 	  xlog[kk]=0.0;
 	  for (kj=l1[kk]; kj <= l2[kk]; kj++)
 	    {
-	      if (clssizedstAVG[kj] !=0 && kj < NP)
+	      if (kj < NP && clssizedstAVG[kj] !=0)
 		{   
 		  dlog[kk]=dlog[kk]+clssizedstAVG[kj];
 		}		  
