@@ -9,6 +9,14 @@
 #define MD_STSPOTS_B 2
 #define MD_PBONDS 10
 #define Sqr(x) ((x)*(x))
+
+#define npmax 10001
+const int nlin=20;
+int l1[npmax], l2[npmax];
+double dlog[npmax], xlog[npmax];
+int kk, kmax, kj, i3;
+double am, xmed;
+
 /* NOTA: 
  * particles_type == 0 ( DGEBA - sticky ellipsoid), 1 (sticky 2-3), 2 (bimixhs) */
 char **fname; 
@@ -25,7 +33,7 @@ int *dupcluster, shift[3], *numbonds, **bonds;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2, START, END;
-int check_percolation = 1, *nspots, output_bonds=0, mix_type=-1;
+int check_percolation = 1, *nspots, output_bonds=0, mix_type=-1, media_log=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
@@ -259,7 +267,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--maxbonds] [--wellwidth/-ww <value>] <listafile>\n");
+  printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [ --medialog/-ml ] [--bonds/-b] [--maxbonds] [--wellwidth/-ww <value>] <listafile>\n");
   exit(0);
 }
 
@@ -287,6 +295,10 @@ void parse_params(int argc, char** argv)
 	{
 	  check_percolation = 0;
 	} 
+      else if (!strcmp(argv[cc],"--medialog") || !strcmp(argv[cc],"-ml" ))
+	{
+	   media_log = 1;
+	}
       else if (!strcmp(argv[cc],"--bonds") || !strcmp(argv[cc],"-b" ))
 	{
 	  output_bonds = 1;
@@ -979,11 +991,54 @@ int main(int argc, char **argv)
 	  fclose(f);
 	}
     }
+
   f = fopen("avg_cluster_size_distr.dat", "w+");
-  for (i = 1; i < NP; i++)
+  if (media_log)
     {
-      if (clssizedstAVG[i] != 0.0)
-	fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
+      for (kk=1; kk <= 51; kk++)
+	l1[kk]=(int) nlin*pow(1.25,kk-1);
+
+      for(kk=1; kk <= 50; kk++)
+	{
+	  l2[kk]=l1[kk+1]-1;
+	  if (l2[kk] < npmax) 
+	    kmax=kk;
+	}
+      for(kk=1; kk <= kmax; kk++)
+	{
+	  dlog[kk]=0.0;
+	  xlog[kk]=0.0;
+	  for (kj=l1[kk]; kj <= l2[kk]; kj++)
+	    {
+	      if (clssizedstAVG[kj] !=0 && kj < NP)
+		{   
+		  dlog[kk]=dlog[kk]+clssizedstAVG[kj];
+		}		  
+	      xlog[kk]=xlog[kk]+kj;
+	    }
+	}
+      for (i3=0; i3 < nlin; i3++)
+	{
+	  if (clssizedstAVG[i3] != 0) fprintf(f,"%d %.15G\n", i3,((double)clssizedstAVG[i3])/((double)(nfiles)));
+	}
+      for (kk=1; kk <= kmax; kk++)
+	{
+	  if (dlog[kk]!=0) 
+	    {
+	      am=l2[kk]-l1[kk]+1; 
+	      xmed=xlog[kk]/am;
+	      dlog[kk]=dlog[kk]/am; 
+	      fprintf(f,"%.15G %.15G\n", xmed,((double) dlog[kk])/((double)nfiles));
+	    }
+	}
+    }
+  else
+    {
+      for (i = 1; i < NP; i++)
+	{
+	  if (clssizedstAVG[i] != 0.0)
+	    fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
+	}
     }
   fclose(f);
   return 0;
