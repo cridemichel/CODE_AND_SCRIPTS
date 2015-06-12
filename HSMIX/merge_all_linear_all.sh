@@ -30,7 +30,7 @@ NPATOT=`echo "${cc}*${NPA}" | bc`
 NPSMALL=$[${NPTOT}-${NPATOT}]
 echo "NPTOT= " $NPTOT " NPATOT= " $NPATOT " NPSMALL=" $NPSMALL
 echo "Ntot $NPTOT" >  supermols.dat
-#echo "Nlarge $NPATOT" >> supermols.dat
+echo "Nlarge $NPATOT" >> supermols.dat
 echo "0 0 " > $P1
 echo $NPTOT >> $P1
 echo $BOX >> $P1
