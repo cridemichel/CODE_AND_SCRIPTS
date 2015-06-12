@@ -13,8 +13,8 @@
  * particles_type == 0 ( DGEBA - sticky ellipsoid), 1 (sticky 2-3), 2 (bimixhs) */
 char **fname; 
 
-const int NUMREP = 26;
-int MAXBONDS = 10000;
+const int NUMREP = 8;
+int MAXBONDS = 10;
 double wellWidth;
 double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
@@ -236,7 +236,7 @@ int compare_func (const void *aa, const void *bb)
   else
     return 0;
 }
-#if 1
+#if 0
 const int images_array[27][3]={{0,0,0},
 {1,0,0},{0,1,0},{0,0,1},
 {-1,0,0},{0,-1,0},{0,0,-1},
@@ -249,8 +249,7 @@ const int images_array[27][3]={{0,0,0},
 {-1,-1,1},{1,-1,-1},{-1,1,-1}};
 #else
 const int images_array[8][3]={{0,0,0},
-{1,0,0},{0,1,0},{0,0,1},
-{1,1,0},{1,0,1},{0,1,1},{1,1,1}};
+{1,0,0},{0,1,0},{0,0,1},{1,1,1},{1,1,0},{0,1,1},{1,0,1}};
 #endif
 void choose_image(int img, int *dix, int *diy, int *diz)
 {
@@ -409,21 +408,18 @@ int main(int argc, char **argv)
   f = fopen(fname[0], "r");
   nat = 0;
   fscanf(f,"%[^\n]\n", line);
-  //fscanf(f,"%[^\n]\n", line);
-  fscanf(f, "%d\n", &NP);
-  NPA=NP;
+  fscanf(f,"%[^\n]\n", line);
   fscanf(f,"%lf %lf %lf ", &Lx, &Ly, &Lz);
   fscanf(f,"%[^\n]\n", line);
   fscanf(f,"%[^\n]\n", line);
   fclose(f);
 
   L=Lx;
-#if 0
   f = fopen("mols.dat", "r");
   fscanf(f, "%s %d ", line, &NP);
   fscanf(f, "%s %d ", line, &NPA);
   fclose(f);
-#endif
+
   f = fopen("sigma.dat", "r");
   fscanf(f, "%lf %lf ", &sigmaAA, &sigmaBB);
   sigmaAB=0.5*(sigmaAA+sigmaBB);
@@ -431,9 +427,6 @@ int main(int argc, char **argv)
  
   printf("NP=%d NPA=%d sigmaBB=%f\n", NP, NPA, sigmaBB);  
   mix_type=1;
-
-  /* numero di piccole */
-  //NP=NP-NPA;
   if (mix_type==-1 || NPA==NP)
     {
     	START=0;
@@ -467,12 +460,12 @@ int main(int argc, char **argv)
       numbonds  = malloc(sizeof(int)*NP); 
       bonds = AllocMatI(NP, MAXBONDS);
     }
-  maxsaxAA = fabs(sigmaAA);
-  maxsaxAB = fabs(sigmaAB);
-  maxsaxBB = fabs(sigmaBB);
   if (wellWidth==-1)
     wellWidth=sigmaBB;
-  /* le AA sono le grandi quindi usiamo quelle per RCUT */
+  maxsaxAA = fabs(sigmaAA);
+  maxsaxAB = fabs(sigmaAB);
+  maxsaxBB = fabs(wellWidth);
+    /* le AA sono le grandi quindi usiamo quelle per RCUT */
   RCUT = maxsaxBB*1.01;
   printf("maxsaxBB=%f RCUT=%f\n", maxsaxBB, RCUT);	
   for (a = 0; a < 3; a++)
@@ -713,7 +706,7 @@ int main(int argc, char **argv)
 
 	  ene=0;
 	  //coppie = 0;
-	  for (nc = 0; nc < ncls; nc++)
+	  for (nc = ncls-1; nc >= 0; nc--)
 	    {
 	      if (cluster_sort[nc].dim==1)
 		continue;
@@ -721,7 +714,7 @@ int main(int argc, char **argv)
 	      //printf("Analysing cluster #%d of #%d\n", nc+1, ncls);
 	      /* N.B per verificare la percolazione ogni cluster va "duplicato"
 	       * in tutte le direzioni e se alla fine risulta comunque un unico 
-	       * cluster allora tale cluster Ã¨ percolante.*/
+	       * cluster allora tale cluster è percolante.*/
 	      na = 0;
 	      //printf("i=1011 j=277 rat=%.15G %.15G\n", rat[0][0][1011], rat[0][0][377]);
 	      for (i=START; i < END; i++)
@@ -744,6 +737,7 @@ int main(int argc, char **argv)
 		{
 		  color2[i2] = -1;	  
 		}
+	      //printf("na=%d clsdim=%d\n", na, cluster_sort[nc].dim);
 	      for (i2 = 0; i2 < na*NUMREP; i2++)
 		{
 		  if (color2[i2]==-1)
@@ -908,8 +902,8 @@ int main(int argc, char **argv)
 	      //printf("ncls2=%d\n", ncNV2);
 	      if (ncNV2 < NUMREP)
 		{
-		  printf("#clusters in the replicated system: %d (of %d replicas)\n", ncNV2, NUMREP);
 		  percola[nc] = 1;
+		  printf("#clusters in the replicated system: %d (of %d replicas)\n", ncNV2, NUMREP);
 		  break;
 		}
 	    }
@@ -976,7 +970,7 @@ int main(int argc, char **argv)
 	    {
 	      fprintf(f,"%d %d\n", i+1, numbonds[i]);
 	      for (c = 0; c < numbonds[i]-1; c++)
-	    fprintf(f, "%d ", bonds[i][c]+1);
+    		fprintf(f, "%d ", bonds[i][c]+1);
 	      fprintf(f, "%d\n", bonds[i][numbonds[i]-1]+1);
 	    }
 	  fclose(f);
