@@ -721,7 +721,7 @@ int main(int argc, char **argv)
 	      //printf("Analysing cluster #%d of #%d\n", nc+1, ncls);
 	      /* N.B per verificare la percolazione ogni cluster va "duplicato"
 	       * in tutte le direzioni e se alla fine risulta comunque un unico 
-	       * cluster allora tale cluster è percolante.*/
+	       * cluster allora tale cluster Ã¨ percolante.*/
 	      na = 0;
 	      //printf("i=1011 j=277 rat=%.15G %.15G\n", rat[0][0][1011], rat[0][0][377]);
 	      for (i=START; i < END; i++)
@@ -907,7 +907,11 @@ int main(int argc, char **argv)
 		}
 	      //printf("ncls2=%d\n", ncNV2);
 	      if (ncNV2 < NUMREP)
-		percola[nc] = 1;
+		{
+		  printf("#clusters in the replicated system: %d (of %d replicas)\n", ncNV2, NUMREP);
+		  percola[nc] = 1;
+		  break;
+		}
 	    }
 	  printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
 	}
@@ -921,14 +925,14 @@ int main(int argc, char **argv)
 	{
 	  //if (cluster_sort[nc].dim >= 2)
 	    //almenouno = 1;
-	  if (percola[cluster_sort[nc].color])
+	  if (percola[nc])
 	    {
 	      sprintf(fn, "perc%s.dat", fname[nr1]);
 	      f2 = fopen(fn, "a");
 	      fprintf(f2, "%d %d\n", nc, cluster_sort[nc].dim);
 	      fclose(f2);
 	    }
-	  if (percola[cluster_sort[nc].color])
+	  if (percola[nc])
 	    fprintf(f, "1 ");
 	  else
 	    fprintf(f, "0 ");
