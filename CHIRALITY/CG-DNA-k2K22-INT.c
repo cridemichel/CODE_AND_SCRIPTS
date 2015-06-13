@@ -64,6 +64,7 @@ double qgaus(double a, double b)
 #define JMAX 20 
 #define JMAXP (JMAX+1) 
 #define K 5
+int polinterr=0;
 /*Here EPS is the fractional accuracy desired, as determined by the extrapolation error estimate; JMAX limits the total number of steps; K is the number of points used in the extrapolation.*/
 void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
 /* Given arrays xa[1..n] and ya[1..n], and given a value x, this routine returns a value y,
@@ -1044,7 +1045,9 @@ double intfunc(double phi1, double phi2, double theta1, double theta2)
 {
   return integrandv1(rcmxsav, rcmysav, rcmzsav, theta1, phi1, gamma1sav, theta2, phi2, gamma2sav, alphasav);
 }
-
+static int iminarg1,iminarg2;
+#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
+        (iminarg1) : (iminarg2))
 #define MAXBIT 30 
 #define MAXDIM 6
 void sobseq(int *n, double x[])
@@ -1112,7 +1115,7 @@ int main(int argc, char**argv)
   double uel, beta;
   int interact;
 #endif
-  double Lx, Ly, Lz;
+  double gamma1, gamma2, Lx, Ly, Lz;
   FILE *fin, *fout, *f, *fread;
 #ifdef PARALLEL
   FILE *fp;
@@ -1573,5 +1576,4 @@ int main(int argc, char**argv)
       if (tt % outits==0)
 	printf("trials: %lld/%lld\n", tt, tot_trials);
     } 
-
 }
