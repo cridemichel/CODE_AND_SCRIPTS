@@ -1031,7 +1031,6 @@ double ftheta1(double theta1)
   theta1sav=theta1;
   return qromb(ftheta2,0.0,M_PI); 
 }
-
 double ftheta2(double theta2) 
 {
   return (*nrfunc)(phi1sav,phi2sav,theta1sav,theta2);
