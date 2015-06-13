@@ -1008,7 +1008,6 @@ double (*nrfunc)(double,double,double,double);
 double quad4d(double (*func)(double,double,double,double), 
 	      double phi1_1, double phi1_2)
 {
-  double qromb(double (*func)(double), double a, double b); 
   double fphi1(double phi1);
 
   nrfunc=func;
@@ -1016,21 +1015,18 @@ double quad4d(double (*func)(double,double,double,double),
 }
 double fphi1(double phi1)
 {
-  double qromb(double (*func)(double), double a, double b); 
   double fphi2(double phi2);
   phi1sav=phi1;
   return qromb(fphi2,0.0,2.0*M_PI); 
 }
 double fphi2(double phi2) 
 {
-  double qromb(double (*func)(double), double a, double b); 
   double ftheta1(double theta1);
   phi2sav=phi2;
   return qromb(ftheta1,0.0,2.0*M_PI); 
 }
 double ftheta1(double theta1) 
 {
-  double qromb(double (*func)(double), double a, double b); 
   double ftheta2(double theta2);
   theta1sav=theta1;
   return qromb(ftheta2,0.0,M_PI); 
