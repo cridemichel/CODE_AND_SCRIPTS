@@ -34,6 +34,151 @@ int nat, atnum, nbnum, len;
 long long int tot_trials, tt=0, ttini=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
 const double thetapts=100000;
+
+double funcG(double x)
+{
+  return 1.0;
+};
+
+double qgaus(double a, double b)
+{
+  static const double x[]={0.1488743389816312,0.4333953941292472,
+    0.6794095682990244,0.8650633666889845,0.9739065285171717};
+  static const double w[]={0.2955242247147529,0.2692667193099963,
+    0.2190863625159821,0.1494513491505806,0.0666713443086881};
+  double xm, xr, s, dx;
+  int j;
+  xm=0.5*(b+a);
+  xr=0.5*(b-a);
+  s=0.;
+  for (j=0;j<5;j++) 
+    {
+      dx=xr*x[j];
+      s += w[j]*(funcG(xm+dx)+funcG(xm-dx));
+    }
+  return s *= xr;
+}
+
+#include <math.h> 
+#define EPS 1.0e-5
+#define JMAX 20 
+#define JMAXP (JMAX+1) 
+#define K 5
+/*Here EPS is the fractional accuracy desired, as determined by the extrapolation error estimate; JMAX limits the total number of steps; K is the number of points used in the extrapolation.*/
+void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
+/* Given arrays xa[1..n] and ya[1..n], and given a value x, this routine returns a value y,
+ * and an error estimate dy. If P(x) is the polynomial of degree N-1 such that P(xai) = yai, 
+ * i = 1, . . . , n, then the returned value y = P(x).*/
+{ 
+  int i,m,ns=1; 
+  double den,dif,dift,ho,hp,w;
+  double c[K+1], d[K+1];
+#if 0
+  for (i=0; i < n; i++)
+    {
+      xa[i+1] = xain[i];
+      ya[i+1] = yain[i];
+    }
+#endif
+  dif=fabs(x-xa[1]); 
+  //c=vector(n); 
+  //d=vector(n); 
+  for (i=1;i<=n;i++) 
+    { 
+      /* Here we find the index ns of the closest table entry,*/
+      if ( (dift=fabs(x-xa[i])) < dif) 
+	{ 
+	  ns=i; 
+	  dif=dift;
+	} 
+      c[i]=ya[i];
+      /* and initialize the tableau of c s and d s.*/
+      d[i]=ya[i]; 
+    } 
+  *y=ya[ns--];
+  /* This is the initial approximation to y.*/
+  for (m=1;m<n;m++) 
+    { 
+      /* For each column of the tableau,*/
+      for (i=1;i<=n-m;i++)
+	{
+	  /* we loop over the current c s and d s and update them.*/
+	  ho=xa[i]-x; 
+	  hp=xa[i+m]-x; 
+	  w=c[i+1]-d[i]; 
+	  if ( (den=ho-hp) == 0.0) 
+	    {
+	      polinterr=1;
+	      return ;
+	      //nrerror("Error in routine polint"); 
+	    }
+	  /* This error can occur only if two input xa s are (to within roundoff)*/
+	  den=w/den; d[i]=hp*den; 
+	  /*Here the c s and d s are updated. */
+	  c[i]=ho*den; 
+	} 
+      *y += (*dy=(2*ns < (n-m) ? c[ns+1] : d[ns--])); 
+      /* After each column in the tableau is completed, we decide which correction, 
+       * c or d, we want to add to our accumulating value of y, i.e., which path to take through the tableau 
+       * forking up or down. We do this in such a way as to take the most  straight line  route through the 
+       * tableau to its apex, updating ns accordingly to keep track of where we are. 
+       * This route keeps the partial approximations centered (insofar as possible) on the target x. 
+       * The last dy added is thus the error indication. */
+    } 
+  //free_vector(d); 
+  //free_vector(c); 
+}
+#define FUNC(x) ((*func)(x))
+double trapzd(double (*func)(double), double a, double b, int n)
+/*This routine computes the nth stage of refinement of an extended trapezoidal rule. func is input
+as a pointer to the function to be integrated between limits a and b, also input. When called with
+n=1, the routine returns the crudest estimate of b f (x)dx. Subsequent calls with n=2,3,... a
+(in that sequential order) will improve the accuracy by adding 2n-2 additional interior points.*/
+{
+  double x,tnm,sum,del; 
+  static double s;
+  int it,j;
+  if (n == 1) 
+    {
+      return (s=0.5*(b-a)*(FUNC(a)+FUNC(b)));
+    } 
+  else
+    {
+      for (it=1,j=1;j<n-1;j++) 
+	it <<= 1;
+      tnm=it;
+      del=(b-a)/tnm; /*This is the spacing of the points to be added.*/ 
+      x=a+0.5*del;
+      for (sum=0.0,j=1;j<=it;j++,x+=del) 
+	sum += FUNC(x); 
+      s=0.5*(s+(b-a)*sum/tnm); /* This replaces s by its refined value. */
+      return s;
+    } 
+}
+
+double qromb(double (*func)(double), double a, double b)
+/*Returns the integral of the function func from a to b. Integration is performed by Romberg’s method of order 2K, where, e.g., K=2 is Simpson’s rule.*/
+{
+  //void nrerror(char error_text[]);
+  double ss,dss;
+  double s[JMAXP],h[JMAXP+1]; 
+  int j;
+  h[1]=1.0;
+  for (j=1;j<=JMAX;j++) {
+    s[j]=trapzd(func,a,b,j); 
+    if (j >= K) {
+      /* These store the successive trapezoidal approxi- mations and their relative stepsizes.*/
+      polint(&h[j-K],&s[j-K],K,0.0,&ss,&dss);
+      if (fabs(dss) <= EPS*fabs(ss)) 
+	return ss; 
+    }
+    h[j+1]=0.25*h[j];
+    /*This is a key step: The factor is 0.25 even though the stepsize is decreased by only 0.5. This makes the extrapolation a polynomial in h2 as allowed by equation (4.2.1), not just a polynomial in h.*/
+  }
+  printf("Too many steps in routine qromb"); 
+  return 0.0; /*Never get here.*/
+}
+
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -269,13 +414,13 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 /* apply a random rotation around the supplied axis because 
    bent cylinders do not have azimuthal symmetry */
 double thetaGlobalBondangle;
-void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3], double Rout[3][3])
+void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3], double Rout[3][3], double theta)
 {
-  double theta, thetaSq, sinw, cosw;
+  double thetaSq, sinw, cosw;
   double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
   int k1, k2, k3;
   /* pick a random rotation angle between 0 and 2*pi*/
-  theta = 4.0*acos(0.0)*drand48();
+ 
   /* set to be used in az. angle distro calculation */
   thetaGlobalBondangle = theta;
 
@@ -341,7 +486,7 @@ void print_matrix(double M[3][3], int n)
   printf("}\n");
 }
 
-void versor_to_R(double ox, double oy, double oz, double R[3][3])
+void versor_to_R(double ox, double oy, double oz, double gamma, double R[3][3])
 {
   int k;
   double angle, u[3], sp, norm, up[3], xx, yy;
@@ -391,7 +536,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
     R[0][k] = u[k];
 #ifdef MC_BENT_DBLCYL
   /* add a random rotation around the axis (ox, oy, oz) */
-  add_rotation_around_axis(ox, oy, oz, R, Rout);
+  add_rotation_around_axis(ox, oy, oz, R, Rout, gamma);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       R[k1][k2] = Rout[k1][k2];
@@ -412,7 +557,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
 #endif
 }
 double RMDNA[2][3][3];
-void place_DNAD(double x, double y, double z, double ux, double uy, double uz, int which)
+void place_DNAD(double x, double y, double z, double ux, double uy, double uz, double gamma, int which)
 {
   double xp[3], rO[3], xl[3];
   double R[3][3];
@@ -427,26 +572,26 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
   rO[1] = y;
   rO[2] = z;
   /* build R here from the orientation (ux,uy,uz) */
-  versor_to_R(ux, uy, uz, R);
+  versor_to_R(ux, uy, uz, gamma, R);
 #ifdef DEBUG 
   sprintf(fn, "DNAD%d.mgl", which);
   fd=fopen(fn, "w+");
   fprintf(fd, ".Vol: %f\n", L*L*L);
 #endif
   /* ============ */
+  for (k1=0; k1 < 3; k1++)
+    {
+      DNADall[which].rcm[k1] = rO[k1];
+      for (k2=0; k2 < 3; k2++)
+	DNADall[which].R[k1][k2] = R[k1][k2];
+    }
   for (i=0; i < nat; i++)
     {
       xp[0] = DNAchain[i].x;
       xp[1] = DNAchain[i].y;
       xp[2] = DNAchain[i].z;
-      
+
       body2lab(xp, xl, rO, R);
-      for (k1=0; k1 < 3; k1++)
-	{
-	  DNADall[which].rcm[k1] = rO[k1];
-	  for (k2=0; k2 < 3; k2++)
-	    DNADall[which].R[k1][k2] = R[k1][k2];
-	}
       DNADs[which][i].x = xl[0];
       DNADs[which][i].y = xl[1];
       DNADs[which][i].z = xl[2];
@@ -513,7 +658,7 @@ double theta_onsager(double alpha)
 }
 double distro[10000];
 const int nfons=100;
-void orient_onsager(double *omx, double *omy, double* omz, double alpha)
+void angles_to_R(double *omx, double *omy, double* omz, double alpha)
 {
   double thons;
   double pi, phi, verso;
@@ -827,6 +972,79 @@ int compare_func(const void *aa, const void *bb)
     return 0;
 }
 #endif
+double integrandv1(double rcmx, double rcmy, double rcmz, double theta1, double phi1,
+		  double gamma1, double theta2, double phi2, double gamma2, double alpha)
+{
+  int i, j;
+  double sigsq, distsq, sigijsq, u1x, u1y, u1z, u2x, u2y, u2z;
+  u1x = sin(theta1)*cos(phi1);
+  u1y = sin(theta1)*sin(phi1);
+  u1z = cos(theta1); 
+  u2x = sin(theta2)*cos(phi2);
+  u2y = sin(theta2)*sin(phi2);
+  u2z = cos(theta2); 
+  //versor_to_R(u1x, u1y, u1z, gamma1, DNADall[0].R);
+  //versor_to_R(u2x, u2y, u2z, gamma2, DNADall[1].R);
+  place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, gamma1, 0);      
+  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma2, 1);
+  if (calcDistBox() < 0.0)
+    {
+      for (i=0; i < nat; i++)
+	{
+	  for (j=0; j < nat; j++)
+	    {
+	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
+	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
+	      if (distsq < sigsq)
+		return u2x*rcmy*sin(theta1)*sin(theta2)*fons(theta1, alpha)*dfons(theta2, alpha);
+	    }
+	}
+    }
+  return 0.0;
+}
+double phi1sav, phi2sav, theta1sav, theta2sav;
+double (*nrfunc)(double,double,double,double);
+double quad4d(double (*func)(double,double,double,double), 
+	      double phi1_1, double phi1_2)
+{
+  double qromb(double (*func)(double), double a, double b); 
+  double fphi1(double phi1);
+
+  nrfunc=func;
+  return qromb(fphi1,phi1_1,phi1_2);
+}
+double fphi1(double phi1)
+{
+  double qromb(double (*func)(double), double a, double b); 
+  double fphi2(double phi2);
+  phi1sav=phi1;
+  return qromb(fphi2,0.0,2.0*M_PI); 
+}
+double fphi2(double phi2) 
+{
+  double qromb(double (*func)(double), double a, double b); 
+  double ftheta1(double theta1);
+  phi2sav=phi2;
+  return qromb(ftheta1,0.0,2.0*M_PI); 
+}
+double ftheta1(double theta1) 
+{
+  double qromb(double (*func)(double), double a, double b); 
+  double ftheta2(double theta2);
+  theta1sav=theta1;
+  return qromb(ftheta2,0.0,M_PI); 
+}
+
+double ftheta2(double theta2) 
+{
+  return (*nrfunc)(phi1sav,phi2sav,theta1sav,theta2);
+}
+double rcmxsav, rcmysav, rcmzsav, gamma1sav, gamma2sav, alphasav;
+double intfunc(double phi1, double phi2, double theta1, double theta2)
+{
+  return integrandv1(rcmxsav, rcmysav, rcmzsav, theta1, phi1, gamma1sav, theta2, phi2, gamma2sav, alphasav);
+}
+
 int main(int argc, char**argv)
 {
 #ifdef MPI
@@ -1261,377 +1479,28 @@ int main(int argc, char**argv)
   factor = alpha/2.0;
 #endif
   printf("factor=%.15G\n", factor);
-  if (cont)
-    { 
-#ifdef ELEC
-      if (type == 0)
-	vexclel *= 1E3*((double)ttini)/(L*L*L);
-      else if (type==1)
-	vexclel *= 1E4*((double)ttini)/(L*L*L)/factor;
-      else
-	vexclel *= 1E5*((double)ttini)/(L*L*L)/Sqr(factor);
-#endif    
-      if (type == 0)
-	vexcl *= 1E3*((double)ttini)/(L*L*L);
-      else if (type==1)
-	vexcl *= 1E4*((double)ttini)/(L*L*L)/factor;
-      else
-	vexcl *= 1E5*((double)ttini)/(L*L*L)/Sqr(factor);
-    }
- // printf("VEXCL=%f VEXCLEL=%f\n", vexcl, vexclel);
-  if (!cont)
-    {
-#ifdef PARALLEL
-      if (numtemps > 1 || numconcs > 1)
-	{
-	  for (k1=0; k1 < numtemps; k1++)
-    	    for (k2=0; k2 < numconcs; k2++)
-	      {
-		sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], 1.0/beta_arr[k1]);
-		fout = fopen(fnout, "w+");
-      		fclose(fout);
-	      }
-	}
-      else
-	{    
-	  fout = fopen(fnout, "w+");
-	  fclose(fout);
-	}
-#else
-      fout = fopen(fnout, "w+");
-      fclose(fout);
-#endif
-    }  
-  if (type==0)
-    ncontrib=1;
-  else if (type==1)
-    ncontrib=2;
-  else
-#ifdef SYMMETRY
-    ncontrib=2;
-#else
-  ncontrib=4;
-#endif  
-#if 0
-  if (type==1)
-    {
-      Lx=Ly=max3(DNADall[0].sax[0],DNADall[0].sax[1],3.0*2.0*DNADall[0].sax[2]*sin(2.0*sqrt(2.0/alpha)));
-      Lz=L;
-      printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
-    }
-  else
-    {}
-#endif
+  fout = fopen(fnout, "w+");
+  fclose(fout);
   Lx=Ly=Lz=L;
-#ifdef PARALLEL
-  if (numtemps > 1 || numconcs > 1)
-    {
-      sigab = DNADs[0][0].rad + DNADs[1][0].rad;
-      rab0 = sigab + delta_rab0; 
-      rab0sq = Sqr(rab0);
-    }
-#endif
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
   printf("type=%d ncontrib=%d\n", type, ncontrib);
+  nrfunc = intfunc;
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
-      /* place first DNAD in the origin oriented according to the proper distribution */
-      /* per la v2: contrib = 0 e 3 sono contributi con lo stesso segno ossia tra [0,Pi/2] e [0,Pi2] e tra [Pi/2,Pi] e [Pi/2,P]
-	 invece 1 e 2 sono quelli misti che danno un segno meno
-	 per la v1: contrib = 0 è il contributo positivo tra [0,Pi/2] e 1 quello negativo tra [Pi/2,Pi] */
-      for (contrib=0; contrib < ncontrib; contrib++)
-	{
-	  if (type==0||type==1)
-	    orient_onsager(&u1x, &u1y, &u1z, alpha);
-	  else
-	    {
-	      if (contrib==0||contrib==1)
-		orient_donsager(&u1x, &u1y, &u1z, alpha, 0);
-	      else 
-		orient_donsager(&u1x, &u1y, &u1z, alpha, 1);
-	    }
-	  /* place second DNAD randomly */
-	  rcmx = Lx*(drand48()-0.5);
-	  rcmy = Ly*(drand48()-0.5);
-	  rcmz = Lz*(drand48()-0.5);
-	  //if (type==1 && rcmy > 2.0*max2(DNADall[k].sax[0],DNADall[k].sax[1]))
-	  //break;
-	  place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0);      
-	  if (type==0)
-	    orient_onsager(&u2x, &u2y, &u2z, alpha);
-	  else
-	    {
-	      if (type==1)
-		{
-		  if (contrib==0)
-		    orient_donsager(&u2x, &u2y, &u2z, alpha,0);
-		  else
-		    orient_donsager(&u2x, &u2y, &u2z, alpha,1);
-		}
-	      else
-		{
-		  if (contrib==0||contrib==2)
-		    orient_donsager(&u2x, &u2y, &u2z, alpha,0);
-		  else 
-		    orient_donsager(&u2x, &u2y, &u2z, alpha,1);
-		}
-	    }
-	  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1);
-#ifdef DEBUG
-	  exit(-1);
-#endif
-	  /* check overlaps */
-	  overlap=0;
-#ifdef ELEC
-#ifdef PARALLEL
-	  if (numtemps > 1 || numconcs > 1)
-	    {
-	      for (k1=0; k1 < numtemps; k1++)
-		for (k2=0; k2 < numconcs; k2++)
-		  {
-		    uel_arr[k1][k2]=0.0;
-		  }		  
-	    }
-	  else
-	    {
-	      uel = 0.0;
-	    }
-	  interact = 0;
-#else
-	  uel = 0.0;
-	  interact = 0;
-#endif
-#endif
-	  if (calcDistBox() < 0.0)
-	    {
-#ifdef ELEC
-	      interact = 1;
-#endif
-	      for (i=0; i < nat; i++)
-		{
-		  for (j=0; j < nat; j++)
-		    {
-		      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
-		      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
-		      if (distsq < sigijsq)
-			{
-			  overlap=1;
-			  break;
-			}
-#ifdef ELEC
-		      /* if they are both phosphate groups we need to calculate electrostatic interaction here */
-#ifdef PARALLEL
-		      if (numtemps > 1 || numconcs > 1)
-			{
-			  yukcutkDsq = maxyukcutkDsq;
-			}
-#endif
-		      if (DNADs[0][i].atype==1 && DNADs[1][j].atype==1 && distsq < yukcutkDsq)
-			{
-#if 0
-			  if (distsq < Sqr(yukcut/kD))
-			    printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD);
-#endif
-#if 0
-			  if (calc_yukawa(i,j,distsq) < 0.0)
-			    printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f yuk=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD, calc_yukawa(i,j,distsq));
-#endif
-#ifdef PARALLEL
-			  if (numtemps > 1 || numconcs > 1)
-			    {
-			      uelcontrib=calc_yukawa_arr(i, j, distsq, &kk);
-			      //printf("uelcontrib:%f\n", uelcontrib);
-			      if (uelcontrib != 0.0)
-				{
-				  for (k1=0; k1 < numtemps; k1++)
-				    for (k2=0; k2 < numconcs; k2++)
-				      {
-					if (kk==-1 || 1.0/kD_arr[k1][k2] >= kD_sorted[kk].invkD)  
-					  {
-					    if (kk==-1)
-					      uel_arr[k1][k2] += uelcontrib;
-					    else
-					      {
-#ifdef YUK_CORR
-						uel_arr[k1][k2] += yuk_corr_fact_arr[k1][k2]*exp(-kD_arr[k1][k2]*sqrt(distsq))*uelcontrib/epsr(1.0/beta_arr[k1]);
-#else
-						uel_arr[k1][k2] += exp(-kD_arr[k1][k2]*sqrt(distsq))*uelcontrib/epsr(1.0/beta_arr[k1]);
-#endif
-					      }
-					  }
-				      }
-				}
-			    }
-			  else
-			    uel += calc_yukawa(i, j, distsq); 
-#else
-			  uel += calc_yukawa(i, j, distsq); 
-#endif
-			}
-#endif
-		    }
-		  if (overlap)
-		    break;
-		}
-	    }
-	  if (overlap) 
-	    {
-	      if (type==1) 
-		{
-		  if (contrib==0)
-		    segno = 1.0;
-		  else
-		    segno = -1.0;
-		}
-	      if (type==2)
-		{
-#ifdef SYMMETRY
-		  if (contrib==0||contrib==3)
-		    segno = 2.0; 
-		  else
-		    segno = -2.0;
-
-#else
-		  if (contrib==0||contrib==3)
-		    segno = 1.0; 
-		  else
-		    segno = -1.0;
-#endif
-		}
-	      /* otherwise calculate the integrand */
-	      if (type==0)
-		vexcl += 1.0;
-	      else if (type==1)
-		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	      else 
-		vexcl += -segno*u1x*u2x*rcmy*rcmy;
-	    }
-#ifdef ELEC
-	  else if (interact)
-	    {
-	      // printf("boh?!? tt=%lld uel=%f\n", tt, uel);	
-	      if (type==1) 
-		{
-		  if (contrib==0)
-		    segno = 1.0;
-		  else
-		    segno = -1.0;
-		}
-	      if (type==2)
-		{
-#ifdef SYMMETRY
-		  if (contrib==0||contrib==3)
-		    segno = 2.0; 
-		  else
-		    segno = -2.0;
-#else
-		  if (contrib==0||contrib==3)
-		    segno = 1.0; 
-		  else
-		    segno = -1.0;
-#endif
-		}
-#ifdef PARALLEL
-	      if (numtemps > 1 || numconcs > 1)
-		{
-		  for (k1=0; k1 < numtemps; k1++)
-		    {
-		      tempfact = Sqr(epsr(1.0/beta_arr[k1])/beta_arr[k1]); 
-		      for (k2=0; k2 < numconcs; k2++)
-			{
-			  /* otherwise calculate the integrand */
-			  if (type==0)
-			    vexclel_arr[k1][k2] += (1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
-			  else if (type==1)
-			    vexclel_arr[k1][k2] += segno*u2x*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2])); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-		  	  else 
-		  	    vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
-			}
-		    }
-		}
-	      else
-		{
-		  /* otherwise calculate the integrand */
-		  if (type==0)
-		    vexclel += (1.0-exp(-beta*uel));
-		  else if (type==1)
-		    vexclel += segno*u2x*rcmy*(1.0-exp(-beta*uel)); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-		  else 
-		    vexclel += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel));
-		}		
-#else
-	      /* otherwise calculate the integrand */
-	      if (type==0)
-		vexclel += (1.0-exp(-beta*uel));
-	      else if (type==1)
-		vexclel += segno*u2x*rcmy*(1.0-exp(-beta*uel)); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	      else 
-		vexclel += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel));
-#endif
-	    }
-#endif
-	}
-
+      /* place second DNAD randomly */
+      rcmx = Lx*(drand48()-0.5);
+      rcmy = Ly*(drand48()-0.5);
+      rcmz = Lz*(drand48()-0.5);
+      gamma1 = 2.0*M_PI*drand48();
+      gamma2 = 2.0*M_PI*drand48();
+      gamma1sav=gamma1;
+      gamma2sav=gamma2;
+      rcmxsav = rcmx;
+      rcmysav = rcmy;
+      rcmzsav = rcmz;
+      vexcl += quad4d(nrfunc, 0.0, 2.0*M_PI);
       if (tt > 0 && tt % fileoutits == 0)
 	{
-#ifdef ELEC
-#ifdef PARALLEL
-	  if (numtemps > 1 || numconcs > 1)
-	    {
-	      for (k1=0; k1 < numtemps; k1++)
-		for (k2=0; k2 < numconcs; k2++)
-		  {
-		    sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], 1.0/beta_arr[k1]);
-		    fout = fopen(fnout, "a+");
-		    if (type==0)
-		      //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
-			      Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt)/1E3);
-		    else if (type==1)
-		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))*factor/1E4,
-			      (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
-			      (Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
-		    else
-		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))*Sqr(factor)/1E5,
-			      (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
-			      (Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
-		    fclose(fout);
-		  }
-	    }
-	  else
-	    {
-	      fout = fopen(fnout, "a+");
-      	      if (type==0)
-	    	//fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
-		      	Lx*Ly*Lz*vexclel/((double)tt)/1E3);
-	      else if (type==1)
-		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
-			(Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
-			(Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
-	      else
-		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
-			(Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
-			(Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
-	      fclose(fout);
-      	    }
-#else 
-	  fout = fopen(fnout, "a+");
-	  if (type==0)
-	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
-		    Lx*Ly*Lz*vexclel/((double)tt)/1E3);
-	  else if (type==1)
-	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
-		    (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
-		    (Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
-	  else
-	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
-		    (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
-		    (Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
-	  fclose(fout);
-#endif
-#else 
 	  fout = fopen(fnout, "a+");
 	  if (type==0)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
@@ -1641,12 +1510,9 @@ int main(int argc, char**argv)
 	  else
 	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
 	  fclose(fout);
-#endif
 	}
       if (tt % outits==0)
 	printf("trials: %lld/%lld\n", tt, tot_trials);
-    }
-#ifdef MPI
-  MPI_Finalize();
-#endif
+    } 
+
 }
