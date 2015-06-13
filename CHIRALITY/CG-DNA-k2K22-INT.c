@@ -1009,7 +1009,6 @@ double quad4d(double (*func)(double,double,double,double),
 	      double phi1_1, double phi1_2)
 {
   double fphi1(double phi1);
-
   nrfunc=func;
   return qromb(fphi1,phi1_1,phi1_2);
 }
