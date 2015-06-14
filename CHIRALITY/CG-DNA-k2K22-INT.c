@@ -60,7 +60,7 @@ double qgaus(double a, double b)
 }
 
 #include <math.h> 
-#define EPS 1.0e-5
+#define EPS 1.0e-2
 #define JMAX 20 
 #define JMAXP (JMAX+1) 
 #define K 5
@@ -996,7 +996,7 @@ double integrandv1(double rcmx, double rcmy, double rcmz, double theta1, double 
 	    {
 	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
-	      if (distsq < sigsq)
+	      if (distsq < sigijsq)
 		return u2x*rcmy*sin(theta1)*sin(theta2)*fons(theta1, alpha)*dfons(theta2, alpha);
 	    }
 	}
@@ -1108,6 +1108,10 @@ int main(int argc, char**argv)
 #ifdef ELEC
   double uel, beta;
   int interact;
+#endif
+#ifdef QUASIMC
+  double sv[10];
+  int nsv;
 #endif
   double gamma1, gamma2, Lx, Ly, Lz;
   FILE *fin, *fout, *f, *fread;
@@ -1539,16 +1543,39 @@ int main(int argc, char**argv)
   Lx=Ly=Lz=L;
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
   printf("type=%d ncontrib=%d\n", type, ncontrib);
+  alphasav=alpha;
+#if 0
+  rcmysav=0.1;
+  rcmxsav=rcmzsav=gamma1sav=gamma2sav=0.0;
+  printf("val=%.15G\n", intfunc(0.2, 0.1, 0.2, 0.2));
+  exit(-1);
+#endif
   nrfunc = intfunc;
+#ifdef QUASIMC
+  /* initialization */
+  nsv = -1;  
+  sobseq(&nsv, sv);
+  nsv = 5;
+#endif
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place second DNAD randomly */
+#ifdef QUASIMC
       /* implementare un quasi-MC */
+      sobseq(&nsv, sv);
+      //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
+      rcmx = Lx*(sv[1]-0.5);
+      rcmy = Ly*(sv[2]-0.5);
+      rcmz = Lz*(sv[3]-0.5);
+      gamma1 = 2.0*M_PI*sv[4];
+      gamma2 = 2.0*M_PI*sv[5];
+#else
       rcmx = Lx*(drand48()-0.5);
       rcmy = Ly*(drand48()-0.5);
       rcmz = Lz*(drand48()-0.5);
       gamma1 = 2.0*M_PI*drand48();
       gamma2 = 2.0*M_PI*drand48();
+#endif
       gamma1sav=gamma1;
       gamma2sav=gamma2;
       rcmxsav = rcmx;

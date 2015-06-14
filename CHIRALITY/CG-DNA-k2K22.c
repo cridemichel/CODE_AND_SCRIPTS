@@ -6,6 +6,69 @@
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
+
+static int iminarg1,iminarg2;
+#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
+        (iminarg1) : (iminarg2))
+#define MAXBIT 30 
+#define MAXDIM 6
+void sobseq(int *n, double x[])
+/*When n is negative, internally initializes a set of MAXBIT direction numbers for each of MAXDIM different Sobol’ sequences. When n is positive (but ≤MAXDIM), returns as the vector x[1..n] the next values from n of these sequences. (n must not be changed between initializations.)*/
+{
+  int j,k,l;
+  unsigned long i,im,ipp;
+  static double fac;
+  static unsigned long in,ix[MAXDIM+1],*iu[MAXBIT+1];
+  static unsigned long mdeg[MAXDIM+1]={0,1,2,3,3,4,4};
+  static unsigned long ip[MAXDIM+1]={0,0,1,1,2,1,4}; 
+  static unsigned long iv[MAXDIM*MAXBIT+1]={0,1,1,1,1,1,1,3,1,3,3,1,1,5,7,7,3,3,5,15,11,5,15,13,9};
+  if (*n < 0) 
+    { 
+      /*Initialize, don’t return a vector. */
+      for (k=1;k<=MAXDIM;k++) ix[k]=0;
+      in=0;
+      if (iv[1] != 1) return;
+      fac=1.0/(1L << MAXBIT);
+      for (j=1,k=0;j<=MAXBIT;j++,k+=MAXDIM) 
+	iu[j] = &iv[k];/* To allow both 1D and 2D addressing.*/
+      for (k=1;k<=MAXDIM;k++) 
+	{
+	  for (j=1;j<=mdeg[k];j++)
+	    iu[j][k] <<= (MAXBIT-j); /*Stored values only require normalization.*/
+	  for (j=mdeg[k]+1;j<=MAXBIT;j++) 
+	    {
+	      ipp=ip[k]; i=iu[j-mdeg[k]][k];
+	      i ^= (i >> mdeg[k]);
+	      for (l=mdeg[k]-1;l>=1;l--) 
+		{
+		  if (ipp & 1) i ^= iu[j-l][k];
+		  ipp >>= 1; 
+		}
+	      iu[j][k]=i;
+	    }
+	}
+    } 
+  else 
+    {
+      im=in++;
+      for (j=1;j<=MAXBIT;j++) {
+	if (!(im & 1)) break;
+	im >>= 1; }
+      if (j > MAXBIT) {
+	printf("MAXBIT too small in sobseq");
+	exit(-1);
+      } 
+      im=(j-1)*MAXDIM;
+      for (k=1;k<=IMIN(*n,MAXDIM);k++)
+	{
+	  ix[k] ^= iv[im+k]; 
+	  x[k]=ix[k]*fac;
+	}
+      /*XOR the appropriate direction num- ber into each component of the vector and convert to a floating number.
+       */
+    }
+}
+
 #if defined(MPI)
 int MPIpid;
 extern int my_rank;
@@ -32,7 +95,7 @@ double maxyukcutkDsq, maxyukcutkD;
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len;
 long long int tot_trials, tt=0, ttini=0;
-double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
+double gamma1, gamma2, L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
 const double thetapts=100000;
 double scalProd(double *A, double *B)
 {
@@ -270,13 +333,14 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 /* apply a random rotation around the supplied axis because 
    bent cylinders do not have azimuthal symmetry */
 double thetaGlobalBondangle;
-void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3], double Rout[3][3])
+void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3], double Rout[3][3], double gamma)
 {
   double theta, thetaSq, sinw, cosw;
   double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
   int k1, k2, k3;
   /* pick a random rotation angle between 0 and 2*pi*/
-  theta = 4.0*acos(0.0)*drand48();
+  //theta = 4.0*acos(0.0)*drand48();
+  theta = gamma;
   /* set to be used in az. angle distro calculation */
   thetaGlobalBondangle = theta;
 
@@ -342,7 +406,7 @@ void print_matrix(double M[3][3], int n)
   printf("}\n");
 }
 
-void versor_to_R(double ox, double oy, double oz, double R[3][3])
+void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
 {
   int k;
   double angle, u[3], sp, norm, up[3], xx, yy;
@@ -392,7 +456,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
     R[0][k] = u[k];
 #ifdef MC_BENT_DBLCYL
   /* add a random rotation around the axis (ox, oy, oz) */
-  add_rotation_around_axis(ox, oy, oz, R, Rout);
+  add_rotation_around_axis(ox, oy, oz, R, Rout, gamma);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       R[k1][k2] = Rout[k1][k2];
@@ -413,7 +477,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
 #endif
 }
 double RMDNA[2][3][3];
-void place_DNAD(double x, double y, double z, double ux, double uy, double uz, int which)
+void place_DNAD(double x, double y, double z, double ux, double uy, double uz, int which, double gamma)
 {
   double xp[3], rO[3], xl[3];
   double R[3][3];
@@ -428,7 +492,7 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
   rO[1] = y;
   rO[2] = z;
   /* build R here from the orientation (ux,uy,uz) */
-  versor_to_R(ux, uy, uz, R);
+  versor_to_R(ux, uy, uz, R, gamma);
 #ifdef DEBUG 
   sprintf(fn, "DNAD%d.mgl", which);
   fd=fopen(fn, "w+");
@@ -1334,6 +1398,13 @@ int main(int argc, char**argv)
 #endif
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
   printf("type=%d ncontrib=%d\n", type, ncontrib);
+#ifdef QUASIMC
+  /* initialization */
+  nsv = -1;  
+  sobseq(&nsv, sv);
+  nsv = 5;
+
+#endif
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place first DNAD in the origin oriented according to the proper distribution */
@@ -1351,13 +1422,27 @@ int main(int argc, char**argv)
 	      else 
 		orient_donsager(&u1x, &u1y, &u1z, alpha, 1);
 	    }
+#ifdef QUASIMC
+     	  /* quasi-MC per rcmx, rcmy, rcmz e gamma2, gamma1 rimane random per 
+	   poter fare run indipendenti */
+	  sobseq(&nsv, sv);
+	  //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
+	  rcmx = Lx*(sv[1]-0.5);
+	  rcmy = Ly*(sv[2]-0.5);
+	  rcmz = Lz*(sv[3]-0.5);
+	  gamma1 = 2.0*M_PI*drand48();
+	  gamma2 = 2.0*M_PI*sv[4];
+#else
 	  /* place second DNAD randomly */
 	  rcmx = Lx*(drand48()-0.5);
 	  rcmy = Ly*(drand48()-0.5);
 	  rcmz = Lz*(drand48()-0.5);
+	  gamma1 = 2.0*M_PI*drand48();
+	  gamma2 = 2.0*M_PI*drand48();
+#endif
 	  //if (type==1 && rcmy > 2.0*max2(DNADall[k].sax[0],DNADall[k].sax[1]))
 	  //break;
-	  place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0);      
+	  place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0, gamma1);      
 	  if (type==0)
 	    orient_onsager(&u2x, &u2y, &u2z, alpha);
 	  else
@@ -1377,7 +1462,7 @@ int main(int argc, char**argv)
 		    orient_donsager(&u2x, &u2y, &u2z, alpha,1);
 		}
 	    }
-	  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1);
+	  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1, gamma2);
 #ifdef DEBUG
 	  exit(-1);
 #endif
