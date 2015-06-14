@@ -35,12 +35,7 @@ long long int tot_trials, tt=0, ttini=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
 const double thetapts=100000;
 
-double funcG(double x)
-{
-  return 1.0;
-};
-
-double qgaus(double a, double b)
+double qgaus(double (*func)(double), double a, double b)
 {
   static const double x[]={0.1488743389816312,0.4333953941292472,
     0.6794095682990244,0.8650633666889845,0.9739065285171717};
@@ -54,7 +49,7 @@ double qgaus(double a, double b)
   for (j=0;j<5;j++) 
     {
       dx=xr*x[j];
-      s += w[j]*(funcG(xm+dx)+funcG(xm-dx));
+      s += w[j]*(func(xm+dx)+func(xm-dx));
     }
   return s *= xr;
 }
@@ -1010,25 +1005,41 @@ double quad4d(double (*func)(double,double,double,double),
 {
   double fphi1(double phi1);
   nrfunc=func;
+#ifdef GAUSS
+  return qgaus(fphi1,phi1_1,phi1_2);
+#else
   return qromb(fphi1,phi1_1,phi1_2);
+#endif
 }
 double fphi1(double phi1)
 {
   double fphi2(double phi2);
   phi1sav=phi1;
+#ifdef GAUSS
+  return qgaus(fphi2,0.0,2.0*M_PI); 
+#else
   return qromb(fphi2,0.0,2.0*M_PI); 
+#endif
 }
 double fphi2(double phi2) 
 {
   double ftheta1(double theta1);
   phi2sav=phi2;
+#ifdef GAUSS
+  return qgaus(ftheta1,0.0,2.0*M_PI); 
+#else
   return qromb(ftheta1,0.0,2.0*M_PI); 
+#endif
 }
 double ftheta1(double theta1) 
 {
   double ftheta2(double theta2);
   theta1sav=theta1;
+#ifdef GAUSS
+  return qgaus(ftheta2,0.0,M_PI); 
+#else
   return qromb(ftheta2,0.0,M_PI); 
+#endif
 }
 double ftheta2(double theta2) 
 {
