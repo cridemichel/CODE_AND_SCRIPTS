@@ -212,9 +212,9 @@ double qgaus(double (*func)(double), double a, double b, double *x, double *w, i
   return s;
 }
 #endif
-#define JMAX 20 
+#define JMAX 15
 #define JMAXP (JMAX+1) 
-#define K 5
+#define KROMB 5
 int polinterr=0;
 /*Here EPS is the fractional accuracy desired, as determined by the extrapolation error estimate; JMAX limits the total number of steps; K is the number of points used in the extrapolation.*/
 void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
@@ -224,7 +224,7 @@ void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
 { 
   int i,m,ns=1; 
   double den,dif,dift,ho,hp,w;
-  double c[K+1], d[K+1];
+  double c[KROMB+1], d[KROMB+1];
 #if 0
   for (i=0; i < n; i++)
     {
@@ -261,6 +261,7 @@ void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
 	  if ( (den=ho-hp) == 0.0) 
 	    {
 	      polinterr=1;
+	      printf("error in routinr polint\n");
 	      return ;
 	      //nrerror("Error in routine polint"); 
 	    }
@@ -318,16 +319,17 @@ double qromb(double (*func)(double), double a, double b)
   h[1]=1.0;
   for (j=1;j<=JMAX;j++) {
     s[j]=trapzd(func,a,b,j); 
-    if (j >= K) {
+    if (j >= KROMB) {
       /* These store the successive trapezoidal approxi- mations and their relative stepsizes.*/
-      polint(&h[j-K],&s[j-K],K,0.0,&ss,&dss);
+      polint(&h[j-KROMB],&s[j-KROMB],KROMB,0.0,&ss,&dss);
       if (fabs(dss) <= ROMBTOL*fabs(ss)) 
 	return ss; 
     }
     h[j+1]=0.25*h[j];
     /*This is a key step: The factor is 0.25 even though the stepsize is decreased by only 0.5. This makes the extrapolation a polynomial in h2 as allowed by equation (4.2.1), not just a polynomial in h.*/
   }
-  printf("Too many steps in routine qromb"); 
+  printf("Too many steps in routine qromb\n"); 
+  exit(-1);
   return 0.0; /*Never get here.*/
 }
 
@@ -1156,10 +1158,13 @@ double integrandv1(double rcmx, double rcmy, double rcmz, double theta1, double 
 }
 double phi1sav, phi2sav, theta1sav, theta2sav;
 double (*nrfunc)(double,double,double,double);
+double fphi1(double phi1);
+double ftheta1(double theta1);
+double ftheta2(double theta2);
+double fphi2(double phi2);
 double quad4d(double (*func)(double,double,double,double), 
 	      double phi1_1, double phi1_2)
 {
-  double fphi1(double phi1);
   nrfunc=func;
 #ifdef GAUSS
   return qgaus(fphi1,phi1_1,phi1_2,xphi,wphi,nphi);
@@ -1169,7 +1174,6 @@ double quad4d(double (*func)(double,double,double,double),
 }
 double fphi1(double phi1)
 {
-  double fphi2(double phi2);
   phi1sav=phi1;
 #ifdef GAUSS
   return qgaus(fphi2,0.0,2.0*M_PI, xphi, wphi, nphi); 
@@ -1179,17 +1183,15 @@ double fphi1(double phi1)
 }
 double fphi2(double phi2) 
 {
-  double ftheta1(double theta1);
   phi2sav=phi2;
 #ifdef GAUSS
-  return qgaus(ftheta1,0.0,2.0*M_PI, xtheta, wtheta, ntheta); 
+  return qgaus(ftheta1,0.0,M_PI, xtheta, wtheta, ntheta); 
 #else
-  return qromb(ftheta1,0.0,2.0*M_PI); 
+  return qromb(ftheta1,0.0,M_PI); 
 #endif
 }
 double ftheta1(double theta1) 
 {
-  double ftheta2(double theta2);
   theta1sav=theta1;
 #ifdef GAUSS
   return qgaus(ftheta2,0.0,M_PI, xtheta, wtheta, ntheta); 
@@ -1740,7 +1742,7 @@ int main(int argc, char**argv)
   printf("val=%.15G\n", intfunc(0.2, 0.1, 0.2, 0.2));
   exit(-1);
 #endif
-  nrfunc = intfunc;
+  //nrfunc = intfunc;
 #ifdef GAUSS
   xtheta = malloc(sizeof(double)*(ntheta+1));
   xphi = malloc(sizeof(double)*(nphi+1));
@@ -1785,7 +1787,7 @@ int main(int argc, char**argv)
       rcmxsav = rcmx;
       rcmysav = rcmy;
       rcmzsav = rcmz;
-      vexcl += quad4d(nrfunc, 0.0, 2.0*M_PI);
+      vexcl += quad4d(intfunc, 0.0, 2.0*M_PI);
       if (tt > 0 && tt % fileoutits == 0)
 	{
 	  fout = fopen(fnout, "a+");
