@@ -32,7 +32,7 @@ double maxyukcutkDsq, maxyukcutkD;
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len;
 long long int tot_trials, tt=0, ttini=0;
-double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
+double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max, ROMBTOL;
 const double thetapts=100000;
 #ifdef GAUSS
 double gammln(double xx)
@@ -212,8 +212,6 @@ double qgaus(double (*func)(double), double a, double b, double *x, double *w, i
   return s;
 }
 #endif
-#include <math.h> 
-#define EPS 1.0e-2
 #define JMAX 20 
 #define JMAXP (JMAX+1) 
 #define K 5
@@ -323,7 +321,7 @@ double qromb(double (*func)(double), double a, double b)
     if (j >= K) {
       /* These store the successive trapezoidal approxi- mations and their relative stepsizes.*/
       polint(&h[j-K],&s[j-K],K,0.0,&ss,&dss);
-      if (fabs(dss) <= EPS*fabs(ss)) 
+      if (fabs(dss) <= ROMBTOL*fabs(ss)) 
 	return ss; 
     }
     h[j+1]=0.25*h[j];
@@ -1307,7 +1305,11 @@ int main(int argc, char**argv)
 #ifdef ELEC
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
 #else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits]\n");
+#ifdef GAUSS
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta]\n");
+#else
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [romb-tol]\n");
+#endif
 #endif
       exit(1);
     }
@@ -1323,7 +1325,22 @@ int main(int argc, char**argv)
     outits=100*fileoutits;
   else
     outits = atoll(argv[7]);
+#ifdef GAUSS 
+  if (argc == 8)
+    nphi = 10;
+  else
+    nphi = atoi(argv[8]);
 
+  if (argc == 9)
+    ntheta = 10;
+  else
+    ntheta = atoi(argv[9]);
+#else
+  if (argc == 8)
+    ROMBTOL = 1.0E-2;
+  else
+    ROMBTOL = atof(argv[8]);
+#endif
 #ifdef ELEC
 #ifdef PARALLEL
   if (argc <= 8)
@@ -1538,7 +1555,11 @@ int main(int argc, char**argv)
 #ifdef ELEC
   nfrarg = 14;
 #else
-  nfrarg = 9;
+#ifdef GAUSS
+  nfrarg = 11;
+#else
+  nfrarg = 10;
+#endif
 #endif
   if (argc == nfrarg)
     {
@@ -1721,8 +1742,6 @@ int main(int argc, char**argv)
 #endif
   nrfunc = intfunc;
 #ifdef GAUSS
-  ntheta=10;
-  nphi=10;
   xtheta = malloc(sizeof(double)*(ntheta+1));
   xphi = malloc(sizeof(double)*(nphi+1));
   wtheta = malloc(sizeof(double)*(ntheta+1));
