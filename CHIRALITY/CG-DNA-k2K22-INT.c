@@ -35,6 +35,24 @@ long long int tot_trials, tt=0, ttini=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
 const double thetapts=100000;
 #ifdef GAUSS
+double gammln(double xx)
+  /*Returns the value ln[Γ(xx)] for xx > 0.*/
+{
+  /*Internal arithmetic will be done in double precision, a nicety that you can omit if five-figure accuracy is good enough.*/
+  double x,y,tmp,ser;
+  static double cof[6]={76.18009172947146,-86.50532032941677,
+    24.01409824083091,-1.231739572450155,
+    0.1208650973866179e-2,-0.5395239384953e-5}; 
+  int j;
+  y=x=xx;
+  tmp=x+5.5;
+  tmp -= (x+0.5)*log(tmp); ser=1.000000000190015;
+  for (j=0;j<=5;j++) 
+    ser += cof[j]/++y; 
+  return -tmp+log(2.5066282746310005*ser/x);
+}
+
+#if 0
 #define EPSJAC 3.0e-14 /*Increase EPS if you don’t have this precision */ 
 #define MAXITJAC 10 
 void gaujac(double x[], double w[], int n, double alf, double bet)
@@ -107,7 +125,7 @@ void gaujac(double x[], double w[], int n, double alf, double bet)
 	z=z1-p1/pp; /*Newton’s formula.*/
 	if (fabs(z-z1) <= EPSJAC) break;
       }
-    if (its > MAXIT)
+    if (its > MAXITJAC)
       {
 	printf("too many iterations in gaujac"); 
 	exit(-1);
@@ -117,6 +135,7 @@ void gaujac(double x[], double w[], int n, double alf, double bet)
 	     gammln(n+alfbet+1.0))*temp*pow(2.0,alfbet)/(pp*p2);
   }
 }
+#endif
 int ntheta, nphi;
 double *xtheta, *xphi, *wtheta, *wphi;
 #define EPSGAULEG 3.0e-11 
@@ -161,6 +180,20 @@ void gauleg(double x1, double x2, double x[], double w[], int n)
 	Compute the weight and its symmetric counterpart.*/
     }
 }
+#if 0
+int j;
+float xr,xm,dx,s;
+static float x[]={0.0,0.1488743389,0.4333953941,
+0.6794095682,0.8650633666,0.9739065285}; static float w[]={0.0,0.2955242247,0.2692667193, 0.2190863625,0.1494513491,0.0666713443};
+The abscissas and weights. First value of each array not used.
+xm=0.5*(b+a); xr=0.5*(b-a);
+s=0;
+for (j=1;j<=5;j++) {
+dx=xr*x[j];
+Will be twice the average value of the function, since the ten weights (five numbers above each used twice) sum to 2.
+s += w[j]*((*func)(xm+dx)+(*func)(xm-dx)); }
+return s *= xr;
+#endif
 double qgaus(double (*func)(double), double a, double b, double *x, double *w, int np)
 {
 #if 0
@@ -169,17 +202,14 @@ double qgaus(double (*func)(double), double a, double b, double *x, double *w, i
   static const double w[]={0.2955242247147529,0.2692667193099963,
     0.2190863625159821,0.1494513491505806,0.0666713443086881};
 #endif
-  double xm, xr, s, dx;
   int j;
-  xm=0.5*(b+a);
-  xr=0.5*(b-a);
-  s=0.;
+  double s;
+  s=0.0;
   for (j=1;j<=np;j++) 
     {
-      dx=xr*x[j];
-      s += w[j]*(func(xm+dx)+func(xm-dx));
+      s += w[j]*func(x[j]);
     }
-  return s *= xr;
+  return s;
 }
 #endif
 #include <math.h> 
@@ -1134,7 +1164,7 @@ double quad4d(double (*func)(double,double,double,double),
   double fphi1(double phi1);
   nrfunc=func;
 #ifdef GAUSS
-  return qgaus(fphi1,phi1_1,phi1_2, xphi, wphi, nphi);
+  return qgaus(fphi1,phi1_1,phi1_2,xphi,wphi,nphi);
 #else
   return qromb(fphi1,phi1_1,phi1_2);
 #endif
@@ -1691,12 +1721,19 @@ int main(int argc, char**argv)
 #endif
   nrfunc = intfunc;
 #ifdef GAUSS
-  ntheta=20;
+  ntheta=10;
   nphi=20;
   xtheta = malloc(sizeof(double)*(ntheta+1));
-  xphi=malloc(sizeof(double)*(nphi+1));
+  xphi = malloc(sizeof(double)*(nphi+1));
+  wtheta = malloc(sizeof(double)*(ntheta+1));
+  wphi = malloc(sizeof(double)*(nphi+1));
   gauleg(0.0, M_PI, xtheta, wtheta, ntheta);
+  printf("x=%.15G %.15G %.15G %.15G %.15G\n w=%.15G %.15G %.15G %.15G %.15G %.15G\n",
+       M_PI/2.0-xtheta[1]/(M_PI/2.), xtheta[2]/M_PI, xtheta[3]/M_PI, xtheta[4]/M_PI, (M_PI/2.)-xtheta[5]/(M_PI/2.0),
+       wtheta[1]/(M_PI/2.), wtheta[2]/(M_PI/2.), wtheta[3]/(M_PI/2.), wtheta[4]/(M_PI/2.), wtheta[5]/(M_PI/2.));
+  exit(-1);
   gauleg(0.0, 2.0*M_PI, xphi, wphi, nphi);
+  //gaujac(xphi, wphi, nphi, -0.5, -0.5); /* alpha=beta=-1/2 corresponds to Gauss-Chebyshev */
 #endif
 #ifdef QUASIMC
   /* initialization */
