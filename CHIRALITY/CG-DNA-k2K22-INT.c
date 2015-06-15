@@ -1722,18 +1722,19 @@ int main(int argc, char**argv)
   nrfunc = intfunc;
 #ifdef GAUSS
   ntheta=10;
-  nphi=20;
+  nphi=10;
   xtheta = malloc(sizeof(double)*(ntheta+1));
   xphi = malloc(sizeof(double)*(nphi+1));
   wtheta = malloc(sizeof(double)*(ntheta+1));
   wphi = malloc(sizeof(double)*(nphi+1));
   gauleg(0.0, M_PI, xtheta, wtheta, ntheta);
-  printf("x=%.15G %.15G %.15G %.15G %.15G\n w=%.15G %.15G %.15G %.15G %.15G %.15G\n",
-       M_PI/2.0-xtheta[1]/(M_PI/2.), xtheta[2]/M_PI, xtheta[3]/M_PI, xtheta[4]/M_PI, (M_PI/2.)-xtheta[5]/(M_PI/2.0),
+#if 0
+  printf("x=%.15G %.15G %.15G %.15G %.15G\n w=%.15G %.15G %.15G %.15G %.15G\n",
+       (M_PI/2.0-xtheta[1])/(M_PI/2.), xtheta[2]/M_PI, xtheta[3]/M_PI, xtheta[4]/M_PI, ((M_PI/2.)-xtheta[5])/(M_PI/2.0),
        wtheta[1]/(M_PI/2.), wtheta[2]/(M_PI/2.), wtheta[3]/(M_PI/2.), wtheta[4]/(M_PI/2.), wtheta[5]/(M_PI/2.));
   exit(-1);
+#endif
   gauleg(0.0, 2.0*M_PI, xphi, wphi, nphi);
-  //gaujac(xphi, wphi, nphi, -0.5, -0.5); /* alpha=beta=-1/2 corresponds to Gauss-Chebyshev */
 #endif
 #ifdef QUASIMC
   /* initialization */
