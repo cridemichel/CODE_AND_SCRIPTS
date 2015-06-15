@@ -1710,6 +1710,14 @@ int main(int argc, char**argv)
   dfons_sinth_max=estimate_maximum_dfons(alpha);
   fons_sinth_max=dfons_sinth_max/alpha;
   printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
+#ifdef GAUSS
+  printf("Gauss quadrature with %d %d points\n", nphi, ntheta);
+#else
+  printf("Romberg method with %.15G tolerance\n", ROMBTOL);
+#endif
+#ifdef QUASIMC
+  printf("I will generate a Quasi Monte Carlo sequence\n");
+#endif
   //exit(-1);
   /* avendo diviso l'integrazione in theta negli intervalli [0,pi/2] e [pi/2,pi]
      il fattore si deve ottenere integrando fra 0 e pi/2 */
