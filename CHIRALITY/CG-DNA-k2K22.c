@@ -6,7 +6,10 @@
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
-
+#ifdef QUASIMC
+  double sv[10];
+  int nsv;
+#endif
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
         (iminarg1) : (iminarg2))
@@ -1403,7 +1406,6 @@ int main(int argc, char**argv)
   nsv = -1;  
   sobseq(&nsv, sv);
   nsv = 5;
-
 #endif
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
@@ -1430,8 +1432,8 @@ int main(int argc, char**argv)
 	  rcmx = Lx*(sv[1]-0.5);
 	  rcmy = Ly*(sv[2]-0.5);
 	  rcmz = Lz*(sv[3]-0.5);
-	  gamma1 = 2.0*M_PI*drand48();
-	  gamma2 = 2.0*M_PI*sv[4];
+	  gamma1 = 2.0*M_PI*sv[4];
+	  gamma2 = 2.0*M_PI*sv[5];
 #else
 	  /* place second DNAD randomly */
 	  rcmx = Lx*(drand48()-0.5);
