@@ -1817,14 +1817,14 @@ int main(int argc, char**argv)
   nsv = 3;
 #endif
 #endif
-  XI1=malloc(sizeof(double)*nphi);
-  XI2=malloc(sizeof(double)*nphi);
-  XI3=malloc(sizeof(double)*nphi);
-  for (i=0; i < ntheta; i++)
+  XI1=malloc(sizeof(double)*(nphi+1));
+  XI2=malloc(sizeof(double)*(nphi+1));
+  XI3=malloc(sizeof(double)*(nphi+1));
+  for (i=1; i <= ntheta; i++)
     {
-      XI1[i] = malloc(sizeof(double)*ntheta);
-      XI2[i] = malloc(sizeof(double)*ntheta);
-      XI3[i] = malloc(sizeof(double)*ntheta);
+      XI1[i] = malloc(sizeof(double)*(ntheta+1));
+      XI2[i] = malloc(sizeof(double)*(ntheta+1));
+      XI3[i] = malloc(sizeof(double)*(ntheta+1));
     }
   /* read XI1, X2 and X3 */
   sprintf(fn, "XI1_v%d.dat", type);
@@ -1867,9 +1867,9 @@ int main(int argc, char**argv)
   for (i=0; i < nphi; i++)
     for (j=0; j < ntheta; j++)
       {
-	fscanf(fxi1, "%lf ", XI1[i][j]);
-	fscanf(fxi2, "%lf ", XI2[i][j]);
-	fscanf(fxi3, "%lf ", XI3[i][j]);
+	fscanf(fxi1, "%lf ", &(XI1[i+1][j+1]));
+	fscanf(fxi2, "%lf ", &(XI2[i+1][j+1]));
+	fscanf(fxi3, "%lf ", &(XI3[i+1][j+1]));
       }
   fclose(fxi1);
   fclose(fxi2);
