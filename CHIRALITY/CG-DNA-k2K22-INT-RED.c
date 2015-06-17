@@ -1188,10 +1188,42 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 
 double phi12sav, theta12sav, gamma12sav;
 int nphi12sav, ntheta12sav, ngamma12sav;
-double (*nrfunc)(double,int,double,int,double,int);
 double ftheta12(double theta12, int ntheta12);
 double fphi12(double phi12, int nphi12);
 double fgamma12(double gamma12, int ngamma12);
+#ifdef MCGAMMA
+double (*nrfunc)(double,int,double,int);
+double quad3d(double (*func)(double,int,double,int), 
+	      double phi12_1, double phi12_2)
+{
+  nrfunc=func;
+#ifdef GAUSS
+  return qgaus(fphi12,phi12_1,phi12_2,xphi,wphi,nphi);
+#else
+  return qromb(fphi12,phi12_1,phi12_2);
+#endif
+}
+double fphi12(double phi12, int nphi12) 
+{
+  phi12sav=phi12;
+  nphi12sav=nphi12;
+#ifdef GAUSS
+  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
+#else
+  return qromb(ftheta12,0.0,M_PI); 
+#endif
+}
+double ftheta12(double theta12, int ntheta12) 
+{
+  return (*nrfunc)(phi12sav,nphi12sav,theta12, ntheta12);
+}
+double rcmxsav, rcmysav, rcmzsav, alphasav;
+double intfunc(double phi12, int nphi12, double theta12, int ntheta12)
+{
+  return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12sav, 0, alphasav);
+}
+#else
+double (*nrfunc)(double,int,double,int,double,int);
 double quad3d(double (*func)(double,int,double,int,double,int), 
 	      double phi12_1, double phi12_2)
 {
@@ -1233,6 +1265,7 @@ double intfunc(double phi12, int nphi12, double theta12, int ntheta12, double ga
 {
   return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12, ngamma12, alphasav);
 }
+#endif
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
         (iminarg1) : (iminarg2))
@@ -1314,7 +1347,7 @@ int main(int argc, char**argv)
 #endif
   char fn[256];
   int aa, bb;
-  double ccc;
+  double ccc, totfact;
   int cc;
   double gamma1, gamma2, Lx, Ly, Lz;
   FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3;
@@ -1602,7 +1635,7 @@ int main(int argc, char**argv)
   nfrarg = 10;
 #endif
 #endif
-  if (argc == nfrarg)
+  if (0)
     {
       cont=1;
       fread = fopen(argv[nfrarg-1], "r");
@@ -1812,13 +1845,21 @@ int main(int argc, char**argv)
 #endif
 #ifdef QUASIMC
 #ifdef USEGSL
+#ifdef MCGAMMA
+  nsv = 4; 
+#else
   nsv = 3; 
+#endif
   qsob = gsl_qrng_alloc (gsl_qrng_sobol, nsv);
 #else
   /* initialization */
   nsv = -1;  
   sobseq(&nsv, sv);
+#ifdef MCGAMMA
+  nsv = 4;
+#else
   nsv = 3;
+#endif
 #endif
 #endif
   XI1=malloc(sizeof(double)*(nphi+1));
@@ -1883,9 +1924,11 @@ int main(int argc, char**argv)
   fclose(fxi3);
   /* we use as the reference system the body reference system of first particle */
   place_DNAD(0.0, 0.0, 0.0, 0., 0., 0., 0., 0);      
+#if 0
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
-
+#endif
+  totfact = 1.0/2.0/M_PI;
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place second DNAD randomly */
@@ -1896,13 +1939,19 @@ int main(int argc, char**argv)
       rcmx = Lx*(sv[0]-0.5);
       rcmy = Ly*(sv[1]-0.5);
       rcmz = Lz*(sv[2]-0.5);
+#ifdef MCGAMMA
+      gamma12sav = 2.0*M_PI*sv[3];
+#endif
 #else
-      /* implementare un quasi-MC */
+      /* quasi-MC */
       sobseq(&nsv, sv);
       //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
       rcmx = Lx*(sv[1]-0.5);
       rcmy = Ly*(sv[2]-0.5);
       rcmz = Lz*(sv[3]-0.5);
+#ifdef MCGAMMA
+      gamma12sav = 2.0*M_PI*sv[4];
+#endif
 #endif
 #else
       rcmx = Lx*(drand48()-0.5);
@@ -1910,11 +1959,18 @@ int main(int argc, char**argv)
       rcmz = Lz*(drand48()-0.5);
       //gamma1 = 2.0*M_PI*drand48();
       //gamma2 = 2.0*M_PI*drand48();
+#ifdef MCGAMMA
+      gamma12sav = 2.0*M_PI*drand48();
+#endif
 #endif
       rcmxsav = rcmx;
       rcmysav = rcmy;
       rcmzsav = rcmz;
+#ifdef MCGAMMA
       vexcl += quad3d(intfunc, 0.0, 2.0*M_PI);
+#else
+      vexcl += quad3d(intfunc, 0.0, 2.0*M_PI)*totfact;
+#endif
       if (tt > 0 && tt % fileoutits == 0)
 	{
 	  fout = fopen(fnout, "a+");

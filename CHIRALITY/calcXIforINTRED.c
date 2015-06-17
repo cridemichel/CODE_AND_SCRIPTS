@@ -431,7 +431,7 @@ int main(int argc, char**argv)
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
   printf("alpha=%f factors=%.15G %.15G sinh(alpha)=%f\n", alpha, fonsfact, dfonsfact, sinh(alpha));
-  totfact=fonsfact*dfonsfact;
+  totfact=fonsfact*dfonsfact/2.0/M_PI;
   for (i=1; i <= nphi12; i++)
     {
       for (j=1; j <= ntheta12; j++)
