@@ -154,8 +154,8 @@ void gaujac(double x[], double w[], int n, double alf, double bet)
   }
 }
 #endif
-int ntheta, nphi;
-double *xtheta, *xphi, *wtheta, *wphi;
+int ntheta, nphi, ngamma;
+double *xtheta, *xphi, *wtheta, *wphi, *xgamma, *xphi;
 #define EPSGAULEG 3.0e-11 
 /*EPS is the relative precision.*/
 void gauleg(double x1, double x2, double x[], double w[], int n)
@@ -1295,8 +1295,10 @@ int main(int argc, char**argv)
   double sv[10];
   int nsv;
 #endif
+  char fn[256];
+  int aa, bb;
   double gamma1, gamma2, Lx, Ly, Lz;
-  FILE *fin, *fout, *f, *fread;
+  FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3;
 #ifdef PARALLEL
   FILE *fp;
   double sigab, rab0, rab0sq, uelcontrib, tempfact;
@@ -1321,7 +1323,7 @@ int main(int argc, char**argv)
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
 #else
 #ifdef GAUSS
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
 #else
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [romb-tol]\n");
 #endif
@@ -1350,6 +1352,11 @@ int main(int argc, char**argv)
     ntheta = 10;
   else
     ntheta = atoi(argv[9]);
+
+  if (argc == 10)
+    ngamma = 10;
+  else
+    ngamma = atoi(argv[10]);
 #else
   if (argc == 8)
     ROMBTOL = 1.0E-2;
@@ -1724,7 +1731,7 @@ int main(int argc, char**argv)
   fons_sinth_max=dfons_sinth_max/alpha;
   printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
 #ifdef GAUSS
-  printf("Gauss quadrature with %d %d points\n", nphi, ntheta);
+  printf("Gauss quadrature with %d %d %d points\n", nphi, ntheta, ngamma);
 #else
   printf("Romberg method with %.15G tolerance\n", ROMBTOL);
 #endif
@@ -1767,8 +1774,11 @@ int main(int argc, char**argv)
 #ifdef GAUSS
   xtheta = malloc(sizeof(double)*(ntheta+1));
   xphi = malloc(sizeof(double)*(nphi+1));
+  xgamma = malloc(sizeof(double)*(ngamma+1));
   wtheta = malloc(sizeof(double)*(ntheta+1));
   wphi = malloc(sizeof(double)*(nphi+1));
+  wgamma = malloc(sizeof(double)*(ngamma+1));
+
   gauleg(0.0, M_PI, xtheta, wtheta, ntheta);
 #if 0
   printf("x=%.15G %.15G %.15G %.15G %.15G\n w=%.15G %.15G %.15G %.15G %.15G\n",
@@ -1777,6 +1787,7 @@ int main(int argc, char**argv)
   exit(-1);
 #endif
   gauleg(0.0, 2.0*M_PI, xphi, wphi, nphi);
+  gauleg(0.0, 2.0*M_PI, xgamma, wgamma, ngamma);
 #endif
 #ifdef QUASIMC
   /* initialization */
@@ -1784,6 +1795,54 @@ int main(int argc, char**argv)
   sobseq(&nsv, sv);
   nsv = 5;
 #endif
+  /* read XI1, X2 and X3 */
+  sprintf(fn, "XI1_v%d.dat", type);
+  if (fxi1=fopen(fn, "r")==NULL)
+    {
+      printf("You have to supply %s file\n", fn);
+      exit(-1);
+    }
+  sprintf(fn, "XI2_v%d.dat", type);
+  if (fxi1=fopen(fn, "r")==NULL)
+    {
+      printf("You have to supply %s file\n", fn);
+      exit(-1);
+    }
+  sprintf(fn, "XI3_v%d.dat", type);
+  if (fxi1=fopen(fn, "r")==NULL)
+    {
+      printf("You have to supply %s file\n", fn);
+      exit(-1);
+    }
+
+  fread(fxi1,"%d %d\n", &aa, &bb);
+  if (aa!=nphi || bb!=ntheta)
+    {
+      printf("Wrong numbers of abscissas!\n");
+      exit(-1);
+    };
+  fread(fxi2,"%d %d\n", &aa, &bb);
+  if (aa!=nphi || bb!=ntheta)
+    {
+      printf("Wrong numbers of abscissas!\n");
+      exit(-1);
+    };
+  fread(fxi3,"%d %d\n", &aa, &bb);
+  if (aa!=nphi || bb!=ntheta)
+    {
+      printf("Wrong numbers of abscissas!\n");
+      exit(-1);
+    };
+  for (i=0; i < nphi; i++)
+    for (j=0; j < ntheta; j++)
+      {
+	fread(fxi1, "%lf ", XI1[i][j]);
+	fread(fxi2, "%lf ", XI2[i][j]);
+	fread(fxi3, "%lf ", XI3[i][j]);
+      }
+  fclose(fxi1);
+  fclose(fxi2);
+  fclose(fxi3);
   /* we use as the reference system the body reference system of first particle */
   place_DNAD(0.0, 0.0, 0.0, 0., 0., 0., 0., 0);      
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
@@ -1813,17 +1872,17 @@ int main(int argc, char**argv)
       rcmxsav = rcmx;
       rcmysav = rcmy;
       rcmzsav = rcmz;
-      vexcl += quad4d(intfunc, 0.0, 2.0*M_PI);
+      vexcl += quad3d(intfunc, 0.0, 2.0*M_PI);
       if (tt > 0 && tt % fileoutits == 0)
 	{
 	  fout = fopen(fnout, "a+");
 	  if (type==0)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
+	    fprintf(fout,"%lld %.15G\n", tt, fonsfact*fonsfact*Lx*Ly*Lz*vexcl/((double)tt)/1E3);
 	  else if (type==1)
 	    fprintf(fout,"%lld %.15G\n", tt, fonsfact*dfonsfact*(Lx*Ly*Lz*vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
 	  else
-	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, dfonsfact*dfonsfact*(Lx*Ly*Lz*vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
 	  fclose(fout);
 	}
       if (tt % outits==0)
