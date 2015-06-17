@@ -7,6 +7,7 @@
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
 #define USEGSL
+#define GAUSS
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
@@ -1845,20 +1846,20 @@ int main(int argc, char**argv)
       exit(-1);
     }
 
-  fscanf(fxi1,"%d %d\n", &aa, &bb);
-  if (aa!=nphi || bb!=ntheta)
+  fscanf(fxi1,"%lf %d %d\n", &cc, &aa, &bb);
+  if (aa!=nphi || bb!=ntheta|| cc!= alpha)
     {
       printf("Wrong numbers of abscissas!\n");
       exit(-1);
     };
-  fscanf(fxi2,"%d %d\n", &aa, &bb);
-  if (aa!=nphi || bb!=ntheta)
+  fscanf(fxi2,"%lf %d %d\n", &cc, &aa, &bb);
+  if (aa!=nphi || bb!=ntheta|| cc!= alpha)
     {
       printf("Wrong numbers of abscissas!\n");
       exit(-1);
     };
-  fscanf(fxi3,"%d %d\n", &aa, &bb);
-  if (aa!=nphi || bb!=ntheta)
+  fscanf(fxi3,"%lf %d %d\n", &cc, &aa, &bb);
+  if (aa!=nphi || bb!=ntheta || cc!= alpha)
     {
       printf("Wrong numbers of abscissas!\n");
       exit(-1);

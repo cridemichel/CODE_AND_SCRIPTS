@@ -1313,6 +1313,7 @@ int main(int argc, char**argv)
 #endif
   char fn[256];
   int aa, bb;
+  double cc;
   double gamma1, gamma2, Lx, Ly, Lz;
   FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3;
 #ifdef PARALLEL
@@ -1326,17 +1327,11 @@ int main(int argc, char**argv)
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
-#if defined(MPI) 
-  MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &numOfProcs);
-  //sprintf(TXT, "rank:%d\n", my_rank);
-#endif
 
   if (argc < 7)
     {
 #ifdef ELEC
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
+      printf("syntax:  CG-DNA-k2K22 <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
 #else
 #ifdef GAUSS
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
@@ -1845,20 +1840,20 @@ int main(int argc, char**argv)
       exit(-1);
     }
 
-  fscanf(fxi1,"%d %d\n", &aa, &bb);
-  if (aa!=nphi || bb!=ntheta)
+  fscanf(fxi1,"%lf %d %d\n", &cc, &aa, &bb);
+  if (aa!=nphi || bb!=ntheta || cc != alpha)
     {
       printf("Wrong numbers of abscissas!\n");
       exit(-1);
     };
-  fscanf(fxi2,"%d %d\n", &aa, &bb);
-  if (aa!=nphi || bb!=ntheta)
+  fscanf(fxi2,"%lf %d %d\n", &cc, &aa, &bb);
+  if (aa!=nphi || bb!=ntheta || cc != alpha)
     {
       printf("Wrong numbers of abscissas!\n");
       exit(-1);
     };
-  fscanf(fxi3,"%d %d\n", &aa, &bb);
-  if (aa!=nphi || bb!=ntheta)
+  fscanf(fxi3,"%lf %d %d\n", &cc, &aa, &bb);
+  if (aa!=nphi || bb!=ntheta || cc != alpha)
     {
       printf("Wrong numbers of abscissas!\n");
       exit(-1);
