@@ -181,7 +181,7 @@ return s *= xr;
 /* nangle=0 phi
          =1 theta 
          =2 gamma */
-double qgaus(double (*func)(double, int), double a, double b, double *x, double *w, int np)
+double qgaus(double (*func)(double), double a, double b, double *x, double *w, int np)
 {
 #if 0
   static const double x[]={0.1488743389816312,0.4333953941292472,
@@ -194,7 +194,7 @@ double qgaus(double (*func)(double, int), double a, double b, double *x, double 
   s=0.0;
   for (j=1;j<=np;j++) 
     {
-      s += w[j]*func(x[j],j);
+      s += w[j]*func(x[j]);
     }
   return s;
 }
@@ -305,14 +305,14 @@ double max2(double a, double b)
   else 
     return b;
 }
-double func_u2z(double phi1, double theta1)
+double func_u2z(double phi1, double theta1, double gamma1)
 {
   return cos(theta1)*cos(theta12)-cos(gamma1)*cos(phi12)*sin(theta1)*sin(theta12)+sin(gamma1)*sin(theta1)*sin(theta12)*sin(phi12);
 }
 double commonfunc_v1(double phi1, double theta1, double gamma1)
 {
   return cos(theta12)*cos(phi1)*sin(theta1) + cos(phi12)*sin(theta12)*(cos(gamma1)*cos(theta1)*cos(phi1) - sin(gamma1)*sin(phi1)) +
-    sin(theta12)*sin(phi12)*(-cos(theta1)*cos(phi1)*sin(gamma1) - cos(gamma1)*sin(phi1))*fons(cos(theta1),alpha)*dfons(func_u2z(phi1,theta1),alpha);
+    sin(theta12)*sin(phi12)*(-cos(theta1)*cos(phi1)*sin(gamma1) - cos(gamma1)*sin(phi1))*fons(cos(theta1),alpha)*dfons(func_u2z(phi1,theta1,gamma1),alpha);
 }
 double integrandXI1_v1(double phi1, double theta1, double gamma1)
 {
@@ -360,7 +360,7 @@ int main(int argc, char**argv)
   double cc, xi1, xi2, xi3;
   double gamma1, gamma2, Lx, Ly, Lz;
   FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3;
-  int cc, k, i, j, overlap, type;
+  int k, i, j, overlap, type;
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
@@ -382,8 +382,8 @@ int main(int argc, char**argv)
   sprintf(fxi3n, "XI3_v%d.dat", type);
   fxi1 = fopen(fxi1n, "w+");
   fxi2 = fopen(fxi2n, "w+");
-  fxi3 = fopen(fxi2n, "w+");
-  printf("Gauss quadrature for %d %d 12 points\n", nphi12, ntheta12);
+  fxi3 = fopen(fxi3n, "w+");
+  printf("Gauss quadrature for %d %d points\n", nphi12, ntheta12);
  
   ntheta1 = nphi1 = ngamma1 = 50; 
   xtheta12 = malloc(sizeof(double)*(ntheta12+1));
@@ -405,6 +405,7 @@ int main(int argc, char**argv)
   gauleg(0.0, 2.0*M_PI, xphi12, wphi12, nphi12);
   gauleg(0.0, M_PI, xtheta12, wtheta12, ntheta12);
   
+#if 0
   XI1=malloc(sizeof(double)*nphi12);
   XI2=malloc(sizeof(double)*nphi12);
   XI3=malloc(sizeof(double)*nphi12);
@@ -414,6 +415,7 @@ int main(int argc, char**argv)
       XI2[i] = malloc(sizeof(double)*ntheta12);
       XI3[i] = malloc(sizeof(double)*ntheta12);
     }
+#endif
   fprintf(fxi1,"%.15G %d %d\n", alpha, nphi12, ntheta12);
   fprintf(fxi2,"%.15G %d %d\n", alpha, nphi12, ntheta12);
   fprintf(fxi3,"%.15G %d %d\n", alpha, nphi12, ntheta12);
@@ -429,7 +431,6 @@ int main(int argc, char**argv)
 	  phi12 = xphi12[i];
 	  theta12 = xtheta12[j];
 	  /* XI1 */
-	  nrfunc = ;
 	  xi1=quad3d(integrandXI1_v1, 0., 2.0*M_PI);
 	  /* XI2 */
 	  xi2=quad3d(integrandXI2_v1, 0., 2.0*M_PI);
@@ -439,11 +440,11 @@ int main(int argc, char**argv)
 	  fprintf(fxi2, "%.15G ", xi2);
 	  fprintf(fxi3, "%.15G ", xi3);
 	}
-      if (i < nphi12-1)
+      if (i <= nphi12-1)
 	{
 	  fprintf(fxi1, "\n");
 	  fprintf(fxi2, "\n");
-	  fprintf(fxi2, "\n");
+	  fprintf(fxi3, "\n");
 	}
     }
   fclose(fxi1);
