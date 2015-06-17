@@ -18,6 +18,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 //#define ELEC
 //#define ALBERTA
 //#define NO_INTERP
+double **XI1, **XI2, **XI3;
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
@@ -159,7 +160,7 @@ void gaujac(double x[], double w[], int n, double alf, double bet)
 }
 #endif
 int ntheta, nphi, ngamma;
-double *xtheta, *xphi, *wtheta, *wphi, *xgamma, *xphi;
+double *xtheta, *xphi, *wtheta, *wphi, *xgamma, *xphi, *wgamma;
 #define EPSGAULEG 3.0e-11 
 /*EPS is the relative precision.*/
 void gauleg(double x1, double x2, double x[], double w[], int n)
@@ -216,7 +217,10 @@ Will be twice the average value of the function, since the ten weights (five num
 s += w[j]*((*func)(xm+dx)+(*func)(xm-dx)); }
 return s *= xr;
 #endif
-double qgaus(double (*func)(double), double a, double b, double *x, double *w, int np)
+/* nangle=0 phi
+         =1 theta 
+         =2 gamma */
+double qgaus(double (*func)(double, int), double a, double b, double *x, double *w, int np)
 {
 #if 0
   static const double x[]={0.1488743389816312,0.4333953941292472,
@@ -229,7 +233,7 @@ double qgaus(double (*func)(double), double a, double b, double *x, double *w, i
   s=0.0;
   for (j=1;j<=np;j++) 
     {
-      s += w[j]*func(x[j]);
+      s += w[j]*func(x[j],j);
     }
   return s;
 }
@@ -1146,11 +1150,12 @@ int compare_func(const void *aa, const void *bb)
 }
 #endif
 double integrandv1(double rcmx, double rcmy, double rcmz, 
-		    double phi12, double theta12, double gamma12, double alpha)
+		    double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12,
+		    double alpha)
 {
   int i, j;
   double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
-  double sintheta12, cosphi12;
+  double sintheta12, costheta12, sinphi12, cosphi12;
 
   costheta12 = cos(theta12);
   sintheta12 = sin(theta12);
@@ -1171,22 +1176,22 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
 	      if (distsq < sigijsq)
-		return costheta12*XI1[int_phi12][int_theta12]+
-		  cosphi12*sintheta12*XI2[int_phi12][int_theta12]+
-		  sintheta12*sinphi12*XI3[int_phi12][int_theta12];
+		return costheta12*XI1[nphi12][ntheta12]+
+		  cosphi12*sintheta12*XI2[nphi12][ntheta12]+
+		  sintheta12*sinphi12*XI3[nphi12][ntheta12];
 	    }
 	}
     }
   return 0.0;
 }
-double phi1sav, phi12sav, theta1sav, theta12sav, gamma1sav, gamma12sav;
-double (*nrfunc)(double,double,double,double);
-double fphi1(double phi1);
-double ftheta1(double theta1);
-double ftheta12(double theta12);
-double fphi12(double phi12);
-double fgamma12(double gamma12);
-double quad3d(double (*func)(double,double,double,double), 
+
+double phi12sav, theta12sav, gamma12sav;
+int nphi12sav, ntheta12sav, ngamma12sav;
+double (*nrfunc)(double,int,double,int,double,int);
+double ftheta12(double theta12, int ntheta12);
+double fphi12(double phi12, int nphi12);
+double fgamma12(double gamma12, int ngamma12);
+double quad3d(double (*func)(double,int,double,int,double,int), 
 	      double phi12_1, double phi12_2)
 {
   nrfunc=func;
@@ -1196,18 +1201,20 @@ double quad3d(double (*func)(double,double,double,double),
   return qromb(fphi12,phi12_1,phi12_2);
 #endif
 }
-double fphi12(double phi2) 
+double fphi12(double phi12, int nphi12) 
 {
   phi12sav=phi12;
+  nphi12sav=nphi12;
 #ifdef GAUSS
   return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
 #else
   return qromb(ftheta12,0.0,M_PI); 
 #endif
 }
-double ftheta12(double theta12) 
+double ftheta12(double theta12, int ntheta12) 
 {
   theta12sav=theta12;
+  ntheta12sav=ntheta12;
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
@@ -1216,14 +1223,14 @@ double ftheta12(double theta12)
   return qromb(fgamma12,0.0,M_PI); 
 #endif
 }
-double fgamma12(double gamma12) 
+double fgamma12(double gamma12, int ngamma12) 
 {
-  return (*nrfunc)(phi12sav,theta12sav,gamma12);
+  return (*nrfunc)(phi12sav,nphi12sav,theta12sav, ntheta12sav, gamma12, ngamma12);
 }
 double rcmxsav, rcmysav, rcmzsav, alphasav;
-double intfunc(double phi12, double theta12, double gamma12)
+double intfunc(double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12)
 {
-  return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, theta12, gamma12, alphasav);
+  return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12, ngamma12, alphasav);
 }
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
@@ -1807,41 +1814,50 @@ int main(int argc, char**argv)
   nsv = -1;  
   sobseq(&nsv, sv);
   nsv = 3;
-#else
 #endif
+#endif
+  XI1=malloc(sizeof(double)*nphi);
+  XI2=malloc(sizeof(double)*nphi);
+  XI3=malloc(sizeof(double)*nphi);
+  for (i=0; i < ntheta; i++)
+    {
+      XI1[i] = malloc(sizeof(double)*ntheta);
+      XI2[i] = malloc(sizeof(double)*ntheta);
+      XI3[i] = malloc(sizeof(double)*ntheta);
+    }
   /* read XI1, X2 and X3 */
   sprintf(fn, "XI1_v%d.dat", type);
-  if (fxi1=fopen(fn, "r")==NULL)
+  if ((fxi1=fopen(fn, "r"))==NULL)
     {
       printf("You have to supply %s file\n", fn);
       exit(-1);
     }
   sprintf(fn, "XI2_v%d.dat", type);
-  if (fxi1=fopen(fn, "r")==NULL)
+  if ((fxi2=fopen(fn, "r"))==NULL)
     {
       printf("You have to supply %s file\n", fn);
       exit(-1);
     }
   sprintf(fn, "XI3_v%d.dat", type);
-  if (fxi1=fopen(fn, "r")==NULL)
+  if ((fxi3=fopen(fn, "r"))==NULL)
     {
       printf("You have to supply %s file\n", fn);
       exit(-1);
     }
 
-  fread(fxi1,"%d %d\n", &aa, &bb);
+  fscanf(fxi1,"%d %d\n", &aa, &bb);
   if (aa!=nphi || bb!=ntheta)
     {
       printf("Wrong numbers of abscissas!\n");
       exit(-1);
     };
-  fread(fxi2,"%d %d\n", &aa, &bb);
+  fscanf(fxi2,"%d %d\n", &aa, &bb);
   if (aa!=nphi || bb!=ntheta)
     {
       printf("Wrong numbers of abscissas!\n");
       exit(-1);
     };
-  fread(fxi3,"%d %d\n", &aa, &bb);
+  fscanf(fxi3,"%d %d\n", &aa, &bb);
   if (aa!=nphi || bb!=ntheta)
     {
       printf("Wrong numbers of abscissas!\n");
@@ -1850,9 +1866,9 @@ int main(int argc, char**argv)
   for (i=0; i < nphi; i++)
     for (j=0; j < ntheta; j++)
       {
-	fread(fxi1, "%lf ", XI1[i][j]);
-	fread(fxi2, "%lf ", XI2[i][j]);
-	fread(fxi3, "%lf ", XI3[i][j]);
+	fscanf(fxi1, "%lf ", XI1[i][j]);
+	fscanf(fxi2, "%lf ", XI2[i][j]);
+	fscanf(fxi3, "%lf ", XI3[i][j]);
       }
   fclose(fxi1);
   fclose(fxi2);
@@ -1887,8 +1903,6 @@ int main(int argc, char**argv)
       gamma1 = 2.0*M_PI*drand48();
       gamma2 = 2.0*M_PI*drand48();
 #endif
-      gamma1sav=gamma1;
-      gamma2sav=gamma2;
       rcmxsav = rcmx;
       rcmysav = rcmy;
       rcmzsav = rcmz;
