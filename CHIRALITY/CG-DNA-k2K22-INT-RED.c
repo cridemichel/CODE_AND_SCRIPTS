@@ -787,14 +787,13 @@ double ranf_vb(void)
       please use the one recommended for your machine. */
   return drand48();
 }
+double fonsfact, dfonsfact; 
 
-double fons(double theta, double alpha)
+double fons(double costheta, double alpha)
 {
-  double pi;
-  pi = acos(0.0)*2.0;
   /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return cosh(alpha*cos(theta))*alpha/(4.0*pi*sinh(alpha));
+  return cosh(alpha*costheta);
 }
 /* return an angle theta sampled from an Onsager angular distribution */
 double theta_onsager(double alpha)
@@ -856,13 +855,11 @@ void angles_to_R(double *omx, double *omy, double* omz, double alpha)
 }
 
 /* first derivative of Onsager distribution */
-double dfons(double theta, double alpha)
+double dfons(double costheta, double alpha)
 {
-  double pi;
-  pi = acos(0.0)*2.0;
   /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
+  return sinh(alpha*costheta);
 }
 
 /* return an angle theta sampled from an Onsager angular distribution */
@@ -1144,21 +1141,23 @@ int compare_func(const void *aa, const void *bb)
     return 0;
 }
 #endif
-double integrandv1(double rcmx, double rcmy, double rcmz, double theta1, double phi1,
-		  double gamma1, double theta2, double phi2, double gamma2, double alpha)
+double integrandv1(double rcmx, double rcmy, double rcmz, 
+		    double phi12, double theta12, double gamma12, double alpha)
 {
   int i, j;
-  double sigsq, distsq, sigijsq, u1x, u1y, u1z, u2x, u2y, u2z;
-  u1x = sin(theta1)*cos(phi1);
-  u1y = sin(theta1)*sin(phi1);
-  u1z = cos(theta1); 
-  u2x = sin(theta2)*cos(phi2);
-  u2y = sin(theta2)*sin(phi2);
-  u2z = cos(theta2); 
+  double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
+  double sintheta12, cosphi12;
+
+  costheta12 = cos(theta12);
+  sintheta12 = sin(theta12);
+  cosphi12 = cos(phi12);
+  sinphi12 = sin(phi12);
+  u2x = sintheta12*cosphi12;
+  u2y = sintheta12*sinphi12;
+  u2z = costheta12; 
   //versor_to_R(u1x, u1y, u1z, gamma1, DNADall[0].R);
   //versor_to_R(u2x, u2y, u2z, gamma2, DNADall[1].R);
-  place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, gamma1, 0);      
-  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma2, 1);
+  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
   if (calcDistBox() < 0.0)
     {
       for (i=0; i < nat; i++)
@@ -1168,63 +1167,59 @@ double integrandv1(double rcmx, double rcmy, double rcmz, double theta1, double 
 	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
 	      if (distsq < sigijsq)
-		return u2x*rcmy*sin(theta1)*sin(theta2)*fons(theta1, alpha)*dfons(theta2, alpha);
+		return costheta12*XI1[int_phi12][int_theta12]+
+		  cosphi12*sintheta12*XI2[int_phi12][int_theta12]+
+		  sintheta12*sinphi12*XI3[int_phi12][int_theta12];
 	    }
 	}
     }
   return 0.0;
 }
-double phi1sav, phi2sav, theta1sav, theta2sav;
+double phi1sav, phi12sav, theta1sav, theta12sav, gamma1sav, gamma12sav;
 double (*nrfunc)(double,double,double,double);
 double fphi1(double phi1);
 double ftheta1(double theta1);
-double ftheta2(double theta2);
-double fphi2(double phi2);
-double quad4d(double (*func)(double,double,double,double), 
-	      double phi1_1, double phi1_2)
+double ftheta12(double theta12);
+double fphi12(double phi12);
+double fgamma12(double gamma12);
+double quad3d(double (*func)(double,double,double,double), 
+	      double phi12_1, double phi12_2)
 {
   nrfunc=func;
 #ifdef GAUSS
-  return qgaus(fphi1,phi1_1,phi1_2,xphi,wphi,nphi);
+  return qgaus(fphi12,phi12_1,phi12_2,xphi,wphi,nphi);
 #else
-  return qromb(fphi1,phi1_1,phi1_2);
+  return qromb(fphi12,phi12_1,phi12_2);
 #endif
 }
-double fphi1(double phi1)
+double fphi12(double phi2) 
 {
-  phi1sav=phi1;
+  phi12sav=phi12;
 #ifdef GAUSS
-  return qgaus(fphi2,0.0,2.0*M_PI, xphi, wphi, nphi); 
+  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
 #else
-  return qromb(fphi2,0.0,2.0*M_PI); 
+  return qromb(ftheta12,0.0,M_PI); 
 #endif
 }
-double fphi2(double phi2) 
+double ftheta12(double theta12) 
 {
-  phi2sav=phi2;
+  theta12sav=theta12;
 #ifdef GAUSS
-  return qgaus(ftheta1,0.0,M_PI, xtheta, wtheta, ntheta); 
+  /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
+     gamma varia tra 0 e 2*pi come phi */
+  return qgaus(fgamma12,0.0,M_PI, xgamma, wgamma, ngamma); 
 #else
-  return qromb(ftheta1,0.0,M_PI); 
+  return qromb(fgamma12,0.0,M_PI); 
 #endif
 }
-double ftheta1(double theta1) 
+double fgamma12(double gamma12) 
 {
-  theta1sav=theta1;
-#ifdef GAUSS
-  return qgaus(ftheta2,0.0,M_PI, xtheta, wtheta, ntheta); 
-#else
-  return qromb(ftheta2,0.0,M_PI); 
-#endif
+  return (*nrfunc)(phi12sav,theta12sav,gamma12);
 }
-double ftheta2(double theta2) 
+double rcmxsav, rcmysav, rcmzsav, alphasav;
+double intfunc(double phi12, double theta12, double gamma12)
 {
-  return (*nrfunc)(phi1sav,phi2sav,theta1sav,theta2);
-}
-double rcmxsav, rcmysav, rcmzsav, gamma1sav, gamma2sav, alphasav;
-double intfunc(double phi1, double phi2, double theta1, double theta2)
-{
-  return integrandv1(rcmxsav, rcmysav, rcmzsav, theta1, phi1, gamma1sav, theta2, phi2, gamma2sav, alphasav);
+  return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, theta12, gamma12, alphasav);
 }
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
@@ -1789,6 +1784,11 @@ int main(int argc, char**argv)
   sobseq(&nsv, sv);
   nsv = 5;
 #endif
+  /* we use as the reference system the body reference system of first particle */
+  place_DNAD(0.0, 0.0, 0.0, 0., 0., 0., 0., 0);      
+  fonsfact= alpha/(4.0*M_PI*sinh(alpha));
+  dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
+
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place second DNAD randomly */
@@ -1821,7 +1821,7 @@ int main(int argc, char**argv)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
 	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
 	  else if (type==1)
-	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, fonsfact*dfonsfact*(Lx*Ly*Lz*vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
 	  else
 	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
 	  fclose(fout);
