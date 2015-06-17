@@ -6,6 +6,10 @@
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
+#define USEGSL
+#ifdef USEGSL
+#include <gsl/gsl_qrng.h>
+#endif
 #if defined(MPI)
 int MPIpid;
 extern int my_rank;
@@ -1289,6 +1293,11 @@ void sobseq(int *n, double x[])
 }
 int main(int argc, char**argv)
 {
+#ifdef QUASIMC
+#ifdef USEGSL
+  gsl_qrng *qsob;
+#endif
+#endif
 #ifdef MPI
   MPI_Status status;
 #endif
@@ -1785,14 +1794,27 @@ int main(int argc, char**argv)
 #endif
 #ifdef QUASIMC
   /* initialization */
+#ifdef USEGSL
+  nsv = 5; 
+  qsob = gsl_qrng_alloc (gsl_qrng_sobol, nsv);
+#else
   nsv = -1;  
   sobseq(&nsv, sv);
   nsv = 5;
+#endif
 #endif
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place second DNAD randomly */
 #ifdef QUASIMC
+#ifdef USEGSL
+      gsl_qrng_get (qsob, sv);
+      rcmx = Lx*(sv[0]-0.5);
+      rcmy = Ly*(sv[1]-0.5);
+      rcmz = Lz*(sv[2]-0.5);
+      gamma1 = 2.0*M_PI*sv[3];
+      gamma2 = 2.0*M_PI*sv[4];
+#else
       /* implementare un quasi-MC */
       sobseq(&nsv, sv);
       //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
@@ -1801,6 +1823,7 @@ int main(int argc, char**argv)
       rcmz = Lz*(sv[3]-0.5);
       gamma1 = 2.0*M_PI*sv[4];
       gamma2 = 2.0*M_PI*sv[5];
+#endif
 #else
       rcmx = Lx*(drand48()-0.5);
       rcmy = Ly*(drand48()-0.5);
@@ -1829,4 +1852,7 @@ int main(int argc, char**argv)
       if (tt % outits==0)
 	printf("trials: %lld/%lld\n", tt, tot_trials);
     } 
+#if defined(USEGSL) && defined(QUASIMC)
+  gsl_qrng_free(qsob);
+#endif
 }

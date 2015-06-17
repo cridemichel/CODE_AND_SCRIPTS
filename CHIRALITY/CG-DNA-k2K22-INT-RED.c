@@ -1908,4 +1908,7 @@ int main(int argc, char**argv)
       if (tt % outits==0)
 	printf("trials: %lld/%lld\n", tt, tot_trials);
     } 
+#if defined(USEGSL) && defined(QUASIMC)
+  gsl_qrng_free(qsob);
+#endif
 }
