@@ -4,6 +4,10 @@
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#define USEGSL
+#ifdef USEGSL
+#include <gsl/gsl_qrng.h>
+#endif
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
 #ifdef QUASIMC
@@ -897,6 +901,11 @@ int compare_func(const void *aa, const void *bb)
 #endif
 int main(int argc, char**argv)
 {
+#ifdef QUASIMC
+#ifdef USEGSL
+  gsl_qrng *qsob;
+#endif
+#endif
 #ifdef MPI
   MPI_Status status;
 #endif
@@ -1402,10 +1411,15 @@ int main(int argc, char**argv)
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
   printf("type=%d ncontrib=%d\n", type, ncontrib);
 #ifdef QUASIMC
+#ifdef USEGSL
+ nsv = 5; 
+ qsob = gsl_qrng_alloc (gsl_qrng_sobol, nsv);
+#else
   /* initialization */
   nsv = -1;  
   sobseq(&nsv, sv);
   nsv = 5;
+#endif
 #endif
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
@@ -1427,6 +1441,15 @@ int main(int argc, char**argv)
 #ifdef QUASIMC
      	  /* quasi-MC per rcmx, rcmy, rcmz e gamma2, gamma1 rimane random per 
 	   poter fare run indipendenti */
+#ifdef USEGSL
+	  gsl_qrng_get (qsob, sv);
+	  //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
+	  rcmx = Lx*(sv[0]-0.5);
+	  rcmy = Ly*(sv[1]-0.5);
+	  rcmz = Lz*(sv[2]-0.5);
+	  gamma1 = 2.0*M_PI*sv[3];
+	  gamma2 = 2.0*M_PI*sv[4];
+#else
 	  sobseq(&nsv, sv);
 	  //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
 	  rcmx = Lx*(sv[1]-0.5);
@@ -1434,6 +1457,7 @@ int main(int argc, char**argv)
 	  rcmz = Lz*(sv[3]-0.5);
 	  gamma1 = 2.0*M_PI*sv[4];
 	  gamma2 = 2.0*M_PI*sv[5];
+#endif
 #else
 	  /* place second DNAD randomly */
 	  rcmx = Lx*(drand48()-0.5);
@@ -1753,6 +1777,10 @@ int main(int argc, char**argv)
       if (tt % outits==0)
 	printf("trials: %lld/%lld\n", tt, tot_trials);
     }
+
+#if defined(QUASIMC) && defined(USEGSL)
+  gsl_qrng_free (qsob);   
+#endif
 #ifdef MPI
   MPI_Finalize();
 #endif
