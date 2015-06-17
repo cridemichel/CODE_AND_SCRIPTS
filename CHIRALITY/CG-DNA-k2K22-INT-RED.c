@@ -6,7 +6,7 @@
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
-#define USEGSL
+//#define USEGSL
 #define GAUSS
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
@@ -1179,7 +1179,7 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 	      if (distsq < sigijsq)
 		return rcmx*XI1[nphi12][ntheta12]+
 		  rcmy*XI2[nphi12][ntheta12]+
-		  rcmz*sinphi12*XI3[nphi12][ntheta12];
+		  rcmz*XI3[nphi12][ntheta12];
 	    }
 	}
     }
@@ -1314,6 +1314,8 @@ int main(int argc, char**argv)
 #endif
   char fn[256];
   int aa, bb;
+  double ccc;
+  int cc;
   double gamma1, gamma2, Lx, Ly, Lz;
   FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3;
 #ifdef PARALLEL
@@ -1321,7 +1323,7 @@ int main(int argc, char**argv)
   double sigab, rab0, rab0sq, uelcontrib, tempfact;
   int k1, k2, kk;
 #endif
-  int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
+  int ncontrib, k, i, j, overlap, type, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
@@ -1337,12 +1339,12 @@ int main(int argc, char**argv)
   if (argc < 7)
     {
 #ifdef ELEC
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
 #else
 #ifdef GAUSS
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
 #else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [romb-tol]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [romb-tol]\n");
 #endif
 #endif
       exit(1);
@@ -1744,9 +1746,11 @@ int main(int argc, char**argv)
 #endif
   sprintf(fnout, "v%d.dat", type);
   factor=0.0;
+#if 0
   dfons_sinth_max=estimate_maximum_dfons(alpha);
   fons_sinth_max=dfons_sinth_max/alpha;
   printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
+#endif
 #ifdef GAUSS
   printf("Gauss quadrature with %d %d %d points\n", nphi, ntheta, ngamma);
 #else
@@ -1846,22 +1850,25 @@ int main(int argc, char**argv)
       exit(-1);
     }
 
-  fscanf(fxi1,"%lf %d %d\n", &cc, &aa, &bb);
-  if (aa!=nphi || bb!=ntheta|| cc!= alpha)
+  fscanf(fxi1,"%lf %d %d\n", &ccc, &aa, &bb);
+  if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
     {
-      printf("Wrong numbers of abscissas!\n");
+      printf("Wrong numbers of abscissas or wrong alpha!\n");
+      printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
       exit(-1);
     };
-  fscanf(fxi2,"%lf %d %d\n", &cc, &aa, &bb);
-  if (aa!=nphi || bb!=ntheta|| cc!= alpha)
+  fscanf(fxi2,"%lf %d %d\n", &ccc, &aa, &bb);
+  if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
     {
-      printf("Wrong numbers of abscissas!\n");
+      printf("Wrong numbers of abscissas or wrong alpha!\n");
+      printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
       exit(-1);
     };
-  fscanf(fxi3,"%lf %d %d\n", &cc, &aa, &bb);
-  if (aa!=nphi || bb!=ntheta || cc!= alpha)
+  fscanf(fxi3,"%lf %d %d\n", &ccc, &aa, &bb);
+  if (aa!=nphi || bb!=ntheta || ccc!= alpha)
     {
-      printf("Wrong numbers of abscissas!\n");
+      printf("Wrong numbers of abscissas or wrong alpha!\n");
+      printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
       exit(-1);
     };
   for (i=0; i < nphi; i++)
@@ -1901,8 +1908,8 @@ int main(int argc, char**argv)
       rcmx = Lx*(drand48()-0.5);
       rcmy = Ly*(drand48()-0.5);
       rcmz = Lz*(drand48()-0.5);
-      gamma1 = 2.0*M_PI*drand48();
-      gamma2 = 2.0*M_PI*drand48();
+      //gamma1 = 2.0*M_PI*drand48();
+      //gamma2 = 2.0*M_PI*drand48();
 #endif
       rcmxsav = rcmx;
       rcmysav = rcmy;
@@ -1913,11 +1920,11 @@ int main(int argc, char**argv)
 	  fout = fopen(fnout, "a+");
 	  if (type==0)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G\n", tt, fonsfact*fonsfact*Lx*Ly*Lz*vexcl/((double)tt)/1E3);
+	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
 	  else if (type==1)
-	    fprintf(fout,"%lld %.15G\n", tt, fonsfact*dfonsfact*(Lx*Ly*Lz*vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
 	  else
-	    fprintf(fout,"%lld %.15G\n", tt, dfonsfact*dfonsfact*(Lx*Ly*Lz*vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
 	  fclose(fout);
 	}
       if (tt % outits==0)

@@ -18,6 +18,7 @@ char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len;
 long long int tot_trials, tt=0, ttini=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max, ROMBTOL, phi12, theta12;
+double costheta12, sintheta12, cosphi12, sinphi12;
 const double thetapts=100000;
 double gammln(double xx)
   /*Returns the value ln[Γ(xx)] for xx > 0.*/
@@ -288,26 +289,49 @@ double dfons(double costheta, double alpha)
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
   return sinh(alpha*costheta);
 }
-double func_u2z(double phi1, double theta1, double gamma1)
+double func_u2z(double costheta1, double sintheta1, double cosgamma1, double singamma1)
 {
-  return cos(theta1)*cos(theta12)-cos(gamma1)*cos(phi12)*sin(theta1)*sin(theta12)+sin(gamma1)*sin(theta1)*sin(theta12)*sin(phi12);
+  return costheta1*costheta12-cosgamma1*cosphi12*sintheta1*sintheta12+singamma1*sintheta1*sintheta12*sinphi12;
 }
-double commonfunc_v1(double phi1, double theta1, double gamma1)
+double commonfunc_v1(double cosphi1, double sinphi1, double costheta1, double sintheta1,
+		     double cosgamma1, double singamma1)
 {
-  return cos(theta12)*cos(phi1)*sin(theta1) + cos(phi12)*sin(theta12)*(cos(gamma1)*cos(theta1)*cos(phi1) - sin(gamma1)*sin(phi1)) +
-    sin(theta12)*sin(phi12)*(-cos(theta1)*cos(phi1)*sin(gamma1) - cos(gamma1)*sin(phi1))*fons(cos(theta1),alpha)*dfons(func_u2z(phi1,theta1,gamma1),alpha);
+  return sintheta1*sintheta12*(costheta12*cosphi1*sintheta1 + cosphi12*sintheta12*(cosgamma1*costheta1*cosphi1 - singamma1*sinphi1) +
+    sintheta12*sinphi12*(-costheta1*cosphi1*singamma1 - cosgamma1*sinphi1)*fons(costheta1,alpha)*dfons(func_u2z(costheta1, sintheta1, cosgamma1, singamma1),alpha));
 }
 double integrandXI1_v1(double phi1, double theta1, double gamma1)
 {
-  return commonfunc_v1(phi1, theta1, gamma1)*(cos(phi1)*sin(gamma1)+cos(gamma1)*cos(theta1)*sin(phi1));
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)
+    *(cosphi1*singamma1+cosgamma1*costheta1*sinphi1);
 }
 double integrandXI2_v1(double phi1, double theta1, double gamma1)
 {
-  return commonfunc_v1(phi1, theta1, gamma1)*(cos(gamma1)*cos(phi1)-cos(theta1)*sin(gamma1)*sin(phi1));
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*(cosgamma1*cosphi1-costheta1*singamma1*sinphi1);
 }
 double integrandXI3_v1(double phi1, double theta1, double gamma1)
 {
-  return commonfunc_v1(phi1, theta1, gamma1)*(sin(theta1)*sin(phi1));
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*(sintheta1*sinphi1);
 }
 
 double phi1sav, theta1sav;
@@ -323,13 +347,13 @@ double quad3d(double (*func)(double,double,double),
 }
 double fphi1(double phi1) 
 {
-  phi1sav=phi12;
+  phi1sav=phi1;
   return qgaus(ftheta1,0.0,M_PI, xtheta1, wtheta1, ntheta1); 
 }
 double ftheta1(double theta1) 
 {
   theta1sav=theta1;
-  return qgaus(fgamma1,0.0,M_PI, xgamma1, wgamma1, ngamma1); 
+  return qgaus(fgamma1,0.0,2.0*M_PI, xgamma1, wgamma1, ngamma1); 
 }
 double fgamma1(double gamma1)
 {
@@ -340,7 +364,7 @@ int main(int argc, char**argv)
 {
   char fn[256], fxi1n[256], fxi2n[256], fxi3n[256];
   int aa, bb;
-  double cc, xi1, xi2, xi3;
+  double cc, xi1, xi2, xi3, totfact;
   double gamma1, gamma2, Lx, Ly, Lz;
   FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3;
   int k, i, j, overlap, type;
@@ -368,7 +392,7 @@ int main(int argc, char**argv)
   fxi3 = fopen(fxi3n, "w+");
   printf("Gauss quadrature for %d %d points\n", nphi12, ntheta12);
  
-  ntheta1 = nphi1 = ngamma1 = 20; 
+  ntheta1 = nphi1 = ngamma1 = 50; 
   xtheta12 = malloc(sizeof(double)*(ntheta12+1));
   xphi12 = malloc(sizeof(double)*(nphi12+1));
   wtheta12 = malloc(sizeof(double)*(ntheta12+1));
@@ -381,8 +405,8 @@ int main(int argc, char**argv)
   wphi1 = malloc(sizeof(double)*(nphi1+1));
   wgamma1 = malloc(sizeof(double)*(ngamma1+1));
 
-  gauleg(0.0, M_PI, xtheta1, wtheta1, ntheta1);
   gauleg(0.0, 2.0*M_PI, xphi1, wphi1, nphi1);
+  gauleg(0.0, M_PI, xtheta1, wtheta1, ntheta1);
   gauleg(0.0, 2.0*M_PI, xgamma1, wgamma1, ngamma1);
 
   gauleg(0.0, 2.0*M_PI, xphi12, wphi12, nphi12);
@@ -406,19 +430,25 @@ int main(int argc, char**argv)
   /* we use as the reference system the body reference system of first particle */
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
-
+  printf("alpha=%f factors=%.15G %.15G sinh(alpha)=%f\n", alpha, fonsfact, dfonsfact, sinh(alpha));
+  totfact=fonsfact*dfonsfact;
   for (i=1; i <= nphi12; i++)
     {
       for (j=1; j <= ntheta12; j++)
 	{ 
 	  phi12 = xphi12[i];
 	  theta12 = xtheta12[j];
+	  costheta12 = cos(theta12);
+	  sintheta12 = sin(theta12);
+	  cosphi12 = cos(phi12);
+	  sinphi12 = sin(phi12);
 	  /* XI1 */
-	  xi1=quad3d(integrandXI1_v1, 0., 2.0*M_PI);
+	  xi1=totfact*quad3d(integrandXI1_v1, 0., 2.0*M_PI);
 	  /* XI2 */
-	  xi2=quad3d(integrandXI2_v1, 0., 2.0*M_PI);
+	  xi2=totfact*quad3d(integrandXI2_v1, 0., 2.0*M_PI);
 	  /* XI3 */
-	  xi3=quad3d(integrandXI3_v1, 0., 2.0*M_PI);
+	  xi3=totfact*quad3d(integrandXI3_v1, 0., 2.0*M_PI);
+
 	  fprintf(fxi1, "%.15G ", xi1);
 	  fprintf(fxi2, "%.15G ", xi2);
 	  fprintf(fxi3, "%.15G ", xi3);

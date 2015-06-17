@@ -6,7 +6,7 @@
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
-#define USEGSL
+//#define USEGSL
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif

@@ -4,7 +4,7 @@
 #include <math.h>
 #include <string.h>
 #include <time.h>
-#define USEGSL
+//#define USEGSL
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
