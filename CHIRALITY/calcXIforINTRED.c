@@ -385,7 +385,7 @@ int main(int argc, char**argv)
   fxi3 = fopen(fxi3n, "w+");
   printf("Gauss quadrature for %d %d points\n", nphi12, ntheta12);
  
-  ntheta1 = nphi1 = ngamma1 = 50; 
+  ntheta1 = nphi1 = ngamma1 = 20; 
   xtheta12 = malloc(sizeof(double)*(ntheta12+1));
   xphi12 = malloc(sizeof(double)*(nphi12+1));
   wtheta12 = malloc(sizeof(double)*(ntheta12+1));
@@ -424,9 +424,9 @@ int main(int argc, char**argv)
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
 
-  for (i=0; i < nphi12; i++)
+  for (i=1; i <= nphi12; i++)
     {
-      for (j=0; j < ntheta12; j++)
+      for (j=1; j <= ntheta12; j++)
 	{ 
 	  phi12 = xphi12[i];
 	  theta12 = xtheta12[j];
@@ -440,7 +440,7 @@ int main(int argc, char**argv)
 	  fprintf(fxi2, "%.15G ", xi2);
 	  fprintf(fxi3, "%.15G ", xi3);
 	}
-      if (i <= nphi12-1)
+      if (i <= nphi12)
 	{
 	  fprintf(fxi1, "\n");
 	  fprintf(fxi2, "\n");
