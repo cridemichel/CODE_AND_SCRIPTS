@@ -288,23 +288,6 @@ double dfons(double costheta, double alpha)
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
   return sinh(alpha*costheta);
 }
-double max3(double a, double b, double c)
-{
-  double m;
-  m = a;
-  if (b > m)
-    m = b;
-  if (c > m)
-    m = c;
-  return m;
-}
-double max2(double a, double b)
-{
-  if (a > b)
-    return a;
-  else 
-    return b;
-}
 double func_u2z(double phi1, double theta1, double gamma1)
 {
   return cos(theta1)*cos(theta12)-cos(gamma1)*cos(phi12)*sin(theta1)*sin(theta12)+sin(gamma1)*sin(theta1)*sin(theta12)*sin(phi12);
