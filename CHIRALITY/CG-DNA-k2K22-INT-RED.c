@@ -1177,9 +1177,9 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
 	      if (distsq < sigijsq)
-		return costheta12*XI1[nphi12][ntheta12]+
-		  cosphi12*sintheta12*XI2[nphi12][ntheta12]+
-		  sintheta12*sinphi12*XI3[nphi12][ntheta12];
+		return rcmx*XI1[nphi12][ntheta12]+
+		  rcmy*XI2[nphi12][ntheta12]+
+		  rcmz*sinphi12*XI3[nphi12][ntheta12];
 	    }
 	}
     }
