@@ -313,6 +313,13 @@ double commonfunc_v2(double cosphi1, double sinphi1, double costheta1, double si
 /* =========== >>> v0 <<< ==========*/
 double integrandXI1_v0(double phi1, double theta1, double gamma1)
 {
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
   return commonfunc_v0(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1);
 } 
 /* ========= >>> v1 <<< =========== */
@@ -351,6 +358,7 @@ double integrandXI3_v1(double phi1, double theta1, double gamma1)
   return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*(sintheta1*sinphi1);
 }
 /* ======== >>> v2 <<< ========= */
+/* rx*rx */
 double integrandXI1_v2(double phi1, double theta1, double gamma1)
 {
   double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
@@ -361,8 +369,10 @@ double integrandXI1_v2(double phi1, double theta1, double gamma1)
   costheta1=cos(theta1);
   sintheta1=sin(theta1);
   return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)
-    *(cosphi1*singamma1+cosgamma1*costheta1*sinphi1);
+    *(Sqr(cosphi1)*Sqr(singamma1)+2.*cosgamma1*costheta1*cosphi1*singamma1*sinphi1 + 
+      Sqr(cosgamma1)*Sqr(costheta1)*Sqr(sinphi1));
 }
+/* ry*ry */
 double integrandXI2_v2(double phi1, double theta1, double gamma1)
 {
   double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
@@ -372,8 +382,11 @@ double integrandXI2_v2(double phi1, double theta1, double gamma1)
   singamma1=sin(gamma1);
   costheta1=cos(theta1);
   sintheta1=sin(theta1);
-  return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*(cosgamma1*cosphi1-costheta1*singamma1*sinphi1);
+  return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    (Sqr(cosgamma1)*Sqr(cosphi1)-2.0*cosgamma1*costheta1*cosphi1*singamma1*sinphi1 + 
+     Sqr(costheta1)*Sqr(singamma1)*Sqr(sinphi1));
 }
+/* rz*rz */
 double integrandXI3_v2(double phi1, double theta1, double gamma1)
 {
   double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
@@ -383,16 +396,47 @@ double integrandXI3_v2(double phi1, double theta1, double gamma1)
   singamma1=sin(gamma1);
   costheta1=cos(theta1);
   sintheta1=sin(theta1);
-  return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*(sintheta1*sinphi1);
+  return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*(Sqr(sintheta1)*Sqr(sinphi1));
 }
+/* rx*ry */
 double integrandXI4_v2(double phi1, double theta1, double gamma1)
 {
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    (2.0*cosgamma1*Sqr(cosphi1)*singamma1 + 2.0*Sqr(cosgamma1)*costheta1*cosphi1*sinphi1 - 
+     2.0*costheta1*cosphi1*Sqr(singamma1)*sinphi1 - 2.0*cosgamma1*Sqr(costheta1)*singamma1*Sqr(sinphi1));
 }
+/* rx*rz */
 double integrandXI5_v2(double phi1, double theta1, double gamma1)
 {
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    2.0*(cosphi1*singamma1*sintheta1*sinphi1 + cosgamma1*costheta1*sintheta1*Sqr(sinphi1));
 }
+/* ry*rz */
 double integrandXI6_v2(double phi1, double theta1, double gamma1)
 {
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    2.0*(cosgamma1*cosphi1*sintheta1*sinphi1 - costheta1*singamma1*sintheta1*Sqr(sinphi1));
 }
 double phi1sav, theta1sav;
 double (*nrfunc)(double,double,double);
@@ -422,11 +466,12 @@ double fgamma1(double gamma1)
 
 int main(int argc, char**argv)
 {
-  char fn[256], fxi1n[256], fxi2n[256], fxi3n[256];
+  char fn[256], fxi1n[256], fxi2n[256], fxi3n[256],
+       fxi4n[256], fxi5n[256], fxi6n[256];
   int aa, bb;
-  double cc, xi1, xi2, xi3, totfact;
+  double cc, xi1, xi2, xi3, xi4, xi5, xi6, totfact;
   double gamma1, gamma2, Lx, Ly, Lz;
-  FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3;
+  FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
   int k, i, j, overlap, type;
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
@@ -444,14 +489,46 @@ int main(int argc, char**argv)
   nphi12 = atoi(argv[3]);
   ntheta12 = atoi(argv[4]);
   printf("alpha=%f I am going to calculate XI for v%d", alpha, type);
-  sprintf(fxi1n, "XI1_v%d.dat", type);
-  sprintf(fxi2n, "XI2_v%d.dat", type);
-  sprintf(fxi3n, "XI3_v%d.dat", type);
-  fxi1 = fopen(fxi1n, "w+");
-  fxi2 = fopen(fxi2n, "w+");
-  fxi3 = fopen(fxi3n, "w+");
+  switch (type)
+    {
+    case 0:
+      sprintf(fxi1n, "XI1_v%d.dat", type);
+      break;
+    case 1:
+      sprintf(fxi1n, "XI1_v%d.dat", type);
+      sprintf(fxi2n, "XI2_v%d.dat", type);
+      sprintf(fxi3n, "XI3_v%d.dat", type);
+      break;
+    case 2:
+      sprintf(fxi1n, "XI1_v%d.dat", type);
+      sprintf(fxi2n, "XI2_v%d.dat", type);
+      sprintf(fxi3n, "XI3_v%d.dat", type);
+      sprintf(fxi4n, "XI4_v%d.dat", type);
+      sprintf(fxi5n, "XI5_v%d.dat", type);
+      sprintf(fxi6n, "XI6_v%d.dat", type);
+      break;
+    }
+  switch (type)
+    {
+    case 0:
+      fxi1 = fopen(fxi1n, "w+");
+      break;
+    case 1:
+      fxi1 = fopen(fxi1n, "w+");
+      fxi2 = fopen(fxi2n, "w+");
+      fxi3 = fopen(fxi3n, "w+");
+      break;
+    case 2:
+      fxi1 = fopen(fxi1n, "w+");
+      fxi2 = fopen(fxi2n, "w+");
+      fxi3 = fopen(fxi3n, "w+");
+      fxi4 = fopen(fxi1n, "w+");
+      fxi5 = fopen(fxi2n, "w+");
+      fxi6 = fopen(fxi3n, "w+");
+      break;
+    }
+
   printf("Gauss quadrature for %d %d points\n", nphi12, ntheta12);
- 
   ntheta1 = nphi1 = ngamma1 = 50; 
   xtheta12 = malloc(sizeof(double)*(ntheta12+1));
   xphi12 = malloc(sizeof(double)*(nphi12+1));
@@ -483,15 +560,41 @@ int main(int argc, char**argv)
       XI3[i] = malloc(sizeof(double)*ntheta12);
     }
 #endif
-  fprintf(fxi1,"%.15G %d %d\n", alpha, nphi12, ntheta12);
-  fprintf(fxi2,"%.15G %d %d\n", alpha, nphi12, ntheta12);
-  fprintf(fxi3,"%.15G %d %d\n", alpha, nphi12, ntheta12);
-
+  switch (type)
+    {
+    case 0:
+      fprintf(fxi1,"%.15G %d %d\n", alpha, nphi12, ntheta12);
+      break;
+    case 1:
+      fprintf(fxi1,"%.15G %d %d\n", alpha, nphi12, ntheta12);
+      fprintf(fxi2,"%.15G %d %d\n", alpha, nphi12, ntheta12);
+      fprintf(fxi3,"%.15G %d %d\n", alpha, nphi12, ntheta12);
+      break;
+    case 2:
+      fprintf(fxi1,"%.15G %d %d\n", alpha, nphi12, ntheta12);
+      fprintf(fxi2,"%.15G %d %d\n", alpha, nphi12, ntheta12);
+      fprintf(fxi3,"%.15G %d %d\n", alpha, nphi12, ntheta12);
+      fprintf(fxi4,"%.15G %d %d\n", alpha, nphi12, ntheta12);
+      fprintf(fxi5,"%.15G %d %d\n", alpha, nphi12, ntheta12);
+      fprintf(fxi6,"%.15G %d %d\n", alpha, nphi12, ntheta12);
+      break;
+    }
   /* we use as the reference system the body reference system of first particle */
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
   printf("alpha=%f factors=%.15G %.15G sinh(alpha)=%f\n", alpha, fonsfact, dfonsfact, sinh(alpha));
-  totfact=fonsfact*dfonsfact/2.0/M_PI;
+  switch (type)
+    {
+    case 0:
+      totfact  = fonsfact*fonsfact/2.0/M_PI;
+      break;
+    case 1:
+      totfact=fonsfact*dfonsfact/2.0/M_PI;
+      break;
+    case 2:
+      totfact=dfonsfact*dfonsfact/2.0/M_PI;
+      break;
+    }
   for (i=1; i <= nphi12; i++)
     {
       for (j=1; j <= ntheta12; j++)
@@ -502,30 +605,99 @@ int main(int argc, char**argv)
 	  sintheta12 = sin(theta12);
 	  cosphi12 = cos(phi12);
 	  sinphi12 = sin(phi12);
-	  /* XI1 */
-	  xi1=totfact*quad3d(integrandXI1_v1, 0., 2.0*M_PI);
-	  /* XI2 */
-	  xi2=totfact*quad3d(integrandXI2_v1, 0., 2.0*M_PI);
-	  /* XI3 */
-	  xi3=totfact*quad3d(integrandXI3_v1, 0., 2.0*M_PI);
-
+	  switch (type)
+	    {
+	    case 0:
+	      xi1=totfact*quad3d(integrandXI1_v0, 0., 2.0*M_PI);
+	      break;
+	    case 1:
+	      /* XI1 */
+	      xi1=totfact*quad3d(integrandXI1_v1, 0., 2.0*M_PI);
+	      /* XI2 */
+	      xi2=totfact*quad3d(integrandXI2_v1, 0., 2.0*M_PI);
+	      /* XI3 */
+	      xi3=totfact*quad3d(integrandXI3_v1, 0., 2.0*M_PI);
+	      break;
+	    case 2:
+	      /* XI1 */
+	      xi1=totfact*quad3d(integrandXI1_v2, 0., 2.0*M_PI);
+	      /* XI2 */
+	      xi2=totfact*quad3d(integrandXI2_v2, 0., 2.0*M_PI);
+	      /* XI3 */
+	      xi3=totfact*quad3d(integrandXI3_v2, 0., 2.0*M_PI);
+	      /* XI1 */
+	      xi4=totfact*quad3d(integrandXI4_v2, 0., 2.0*M_PI);
+	      /* XI2 */
+	      xi5=totfact*quad3d(integrandXI5_v2, 0., 2.0*M_PI);
+	      /* XI3 */
+	      xi6=totfact*quad3d(integrandXI6_v2, 0., 2.0*M_PI);
+	      break;
+	    }
 #if 0
 	  fprintf(fxi1, "(%.15G %.15G %.15G) ", phi12, theta12, xi1);
 	  fprintf(fxi2, "(%.15G %.15G %.15G) ", phi12, theta12, xi2);
 	  fprintf(fxi3, "(%.15G %.15G %.15G) ", phi12, theta12, xi3);
 #endif
-	  fprintf(fxi1, "%.15G ", xi1);
-	  fprintf(fxi2, "%.15G ", xi2);
-	  fprintf(fxi3, "%.15G ", xi3);
+	  switch (type)
+	    {
+	    case 0:
+	      fprintf(fxi1, "%.15G ", xi1);
+	      break;
+	    case 1:
+	      fprintf(fxi1, "%.15G ", xi1);
+	      fprintf(fxi2, "%.15G ", xi2);
+	      fprintf(fxi3, "%.15G ", xi3);
+	      break;
+	    case 2:
+	      fprintf(fxi1, "%.15G ", xi1);
+	      fprintf(fxi2, "%.15G ", xi2);
+	      fprintf(fxi3, "%.15G ", xi3);
+	      fprintf(fxi4, "%.15G ", xi4);
+	      fprintf(fxi5, "%.15G ", xi5);
+	      fprintf(fxi6, "%.15G ", xi6);
+	      break;
+	    }
 	}
       if (i <= nphi12)
 	{
-	  fprintf(fxi1, "\n");
-	  fprintf(fxi2, "\n");
-	  fprintf(fxi3, "\n");
+	  switch (type)
+	    {
+	    case 0:
+	      fprintf(fxi1, "\n");
+	      break;
+	    case 1:
+	      fprintf(fxi1, "\n");
+	      fprintf(fxi2, "\n");
+	      fprintf(fxi3, "\n");
+	      break;
+	    case 2:
+	      fprintf(fxi1, "\n");
+	      fprintf(fxi2, "\n");
+	      fprintf(fxi3, "\n");
+	      fprintf(fxi4, "\n");
+	      fprintf(fxi5, "\n");
+	      fprintf(fxi6, "\n");
+	      break;
+	    }
 	}
     }
-  fclose(fxi1);
-  fclose(fxi2);
-  fclose(fxi3);
+  switch (type)
+    {
+    case 0:
+      fclose(fxi1);
+      break;
+    case 1:
+      fclose(fxi1);
+      fclose(fxi2);
+      fclose(fxi3);
+      break;
+    case 2:
+      fclose(fxi1);
+      fclose(fxi2);
+      fclose(fxi3);
+      fclose(fxi4);
+      fclose(fxi5);
+      fclose(fxi6);
+      break;
+    }
 }
