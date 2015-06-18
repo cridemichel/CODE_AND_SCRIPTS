@@ -8,6 +8,7 @@
 #define SYMMETRY
 //#define USEGSL
 #define GAUSS
+#define EULER_ROT
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
@@ -735,8 +736,7 @@ void versor_to_R(double ox, double oy, double oz, double gamma, double R[3][3])
 #endif
 }
 double RMDNA[2][3][3];
-#if 1
-
+#if defined(EULER_ROT)
 void place_DNAD(double x, double y, double z, double cosphi12, double sinphi12, double costheta12, 
 		double sintheta12, double cosgamma12, double singamma12,
 		int which)
@@ -1224,17 +1224,14 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
   sinphi12 = sin(phi12);
   cosgamma12 = cos(gamma12);
   singamma12 = sin(gamma12);
-#if 0
-  u2x = sintheta12*cosphi12;
-  u2y = sintheta12*sinphi12;
-  u2z = costheta12; 
-#endif
   //versor_to_R(u1x, u1y, u1z, gamma1, DNADall[0].R);
   //versor_to_R(u2x, u2y, u2z, gamma2, DNADall[1].R);
-#if 1
+#ifdef EULER_ROT
   place_DNAD(rcmx, rcmy, rcmz, cosphi12, sinphi12, costheta12, sintheta12, cosgamma12, singamma12, 1);
 #else
-  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
+  u2x = sintheta12*cosphi12;
+  u2y = sintheta12*sinphi12;
+  u2z = costheta12;  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
 #endif
   if (calcDistBox() < 0.0)
     {
@@ -1992,10 +1989,10 @@ int main(int argc, char**argv)
   fclose(fxi3);
   //printf("XI1[7][8]:%.15G \n", XI1[7][8]);
   /* we use as the reference system the body reference system of first particle */
-#if 1
+#ifdef EULER_ROT
   place_DNAD(0.0, 0.0, 0.0, 1., 0., 1., 0., 1., 0., 0);      
 #else
-  place_DNAD(0.0, 0.0, 0.0, 0., 0., 0., 0., 0);      
+  place_DNAD(0.0, 0.0, 0.0, 0., 0., 1., 0., 0);      
 #endif
 #if 0
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
