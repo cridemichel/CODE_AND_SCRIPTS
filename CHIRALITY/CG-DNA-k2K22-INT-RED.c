@@ -1232,7 +1232,8 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 #else
   u2x = sintheta12*cosphi12;
   u2y = sintheta12*sinphi12;
-  u2z = costheta12;  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
+  u2z = costheta12;  
+  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
 #endif
   if (calcDistBox() < 0.0)
     {
@@ -1255,7 +1256,7 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 			rcmz*XI3[nphi12][ntheta12];
 		      break;
 		    case 2:
-		      return -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
+		      return (Sqr(rcmx)*XI1[nphi12][ntheta12]+
 			Sqr(rcmy)*XI2[nphi12][ntheta12]+
 			Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
 			rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
