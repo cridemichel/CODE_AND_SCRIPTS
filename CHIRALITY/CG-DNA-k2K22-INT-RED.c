@@ -218,9 +218,6 @@ Will be twice the average value of the function, since the ten weights (five num
 s += w[j]*((*func)(xm+dx)+(*func)(xm-dx)); }
 return s *= xr;
 #endif
-/* nangle=0 phi
-         =1 theta 
-         =2 gamma */
 double qgaus(double (*func)(double, int), double a, double b, double *x, double *w, int np)
 {
 #if 0
@@ -1922,13 +1919,14 @@ int main(int argc, char**argv)
   fclose(fxi1);
   fclose(fxi2);
   fclose(fxi3);
+  //printf("XI1[7][8]:%.15G \n", XI1[7][8]);
   /* we use as the reference system the body reference system of first particle */
   place_DNAD(0.0, 0.0, 0.0, 0., 0., 0., 0., 0);      
 #if 0
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
 #endif
-  totfact = 1.0/2.0/M_PI;
+  totfact = 1.0/(2.0*M_PI);
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place second DNAD randomly */

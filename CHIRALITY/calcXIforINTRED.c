@@ -286,7 +286,7 @@ double fons(double costheta, double alpha)
 double dfons(double costheta, double alpha)
 {
   /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
-     di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
+     di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforme sull'angolo solido */
   return sinh(alpha*costheta);
 }
 double func_u2z(double costheta1, double sintheta1, double cosgamma1, double singamma1)
@@ -449,6 +449,11 @@ int main(int argc, char**argv)
 	  /* XI3 */
 	  xi3=totfact*quad3d(integrandXI3_v1, 0., 2.0*M_PI);
 
+#if 0
+	  fprintf(fxi1, "(%.15G %.15G %.15G) ", phi12, theta12, xi1);
+	  fprintf(fxi2, "(%.15G %.15G %.15G) ", phi12, theta12, xi2);
+	  fprintf(fxi3, "(%.15G %.15G %.15G) ", phi12, theta12, xi3);
+#endif
 	  fprintf(fxi1, "%.15G ", xi1);
 	  fprintf(fxi2, "%.15G ", xi2);
 	  fprintf(fxi3, "%.15G ", xi3);
