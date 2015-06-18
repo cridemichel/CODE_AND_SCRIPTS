@@ -293,12 +293,29 @@ double func_u2z(double costheta1, double sintheta1, double cosgamma1, double sin
 {
   return costheta1*costheta12-cosgamma1*cosphi12*sintheta1*sintheta12+singamma1*sintheta1*sintheta12*sinphi12;
 }
+double commonfunc_v0(double cosphi1, double sinphi1, double costheta1, double sintheta1,
+		     double cosgamma1, double singamma1)
+{
+  return fons(costheta1,alpha)*fons(func_u2z(costheta1, sintheta1, cosgamma1, singamma1),alpha)*sintheta1*sintheta12;
+}
+
 double commonfunc_v1(double cosphi1, double sinphi1, double costheta1, double sintheta1,
 		     double cosgamma1, double singamma1)
 {
   return (costheta12*cosphi1*sintheta1 + cosphi12*sintheta12*(cosgamma1*costheta1*cosphi1 - singamma1*sinphi1) +
     sintheta12*sinphi12*(-costheta1*cosphi1*singamma1 - cosgamma1*sinphi1))*fons(costheta1,alpha)*dfons(func_u2z(costheta1, sintheta1, cosgamma1, singamma1),alpha)*sintheta1*sintheta12;
 }
+double commonfunc_v2(double cosphi1, double sinphi1, double costheta1, double sintheta1,
+		     double cosgamma1, double singamma1)
+{
+  return (cosgamma1*costheta1*cosphi1-singamma1*sinphi1)*(costheta12*cosphi1*sintheta1 + cosphi12*sintheta12*(cosgamma1*costheta1*cosphi1 - singamma1*sinphi1) + sintheta12*sinphi12*(-costheta1*cosphi1*singamma1 - cosgamma1*sinphi1))*dfons(costheta1,alpha)*dfons(func_u2z(costheta1, sintheta1, cosgamma1, singamma1),alpha)*sintheta1*sintheta12;
+}
+/* =========== >>> v0 <<< ==========*/
+double integrandXI1_v0(double phi1, double theta1, double gamma1)
+{
+  return commonfunc_v0(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1);
+} 
+/* ========= >>> v1 <<< =========== */
 double integrandXI1_v1(double phi1, double theta1, double gamma1)
 {
   double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
@@ -333,7 +350,50 @@ double integrandXI3_v1(double phi1, double theta1, double gamma1)
   sintheta1=sin(theta1);
   return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*(sintheta1*sinphi1);
 }
-
+/* ======== >>> v2 <<< ========= */
+double integrandXI1_v2(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)
+    *(cosphi1*singamma1+cosgamma1*costheta1*sinphi1);
+}
+double integrandXI2_v2(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*(cosgamma1*cosphi1-costheta1*singamma1*sinphi1);
+}
+double integrandXI3_v2(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return commonfunc_v1(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*(sintheta1*sinphi1);
+}
+double integrandXI4_v2(double phi1, double theta1, double gamma1)
+{
+}
+double integrandXI5_v2(double phi1, double theta1, double gamma1)
+{
+}
+double integrandXI6_v2(double phi1, double theta1, double gamma1)
+{
+}
 double phi1sav, theta1sav;
 double (*nrfunc)(double,double,double);
 double ftheta1(double theta1);
