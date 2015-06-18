@@ -296,8 +296,8 @@ double func_u2z(double costheta1, double sintheta1, double cosgamma1, double sin
 double commonfunc_v1(double cosphi1, double sinphi1, double costheta1, double sintheta1,
 		     double cosgamma1, double singamma1)
 {
-  return sintheta1*sintheta12*(costheta12*cosphi1*sintheta1 + cosphi12*sintheta12*(cosgamma1*costheta1*cosphi1 - singamma1*sinphi1) +
-    sintheta12*sinphi12*(-costheta1*cosphi1*singamma1 - cosgamma1*sinphi1)*fons(costheta1,alpha)*dfons(func_u2z(costheta1, sintheta1, cosgamma1, singamma1),alpha));
+  return (costheta12*cosphi1*sintheta1 + cosphi12*sintheta12*(cosgamma1*costheta1*cosphi1 - singamma1*sinphi1) +
+    sintheta12*sinphi12*(-costheta1*cosphi1*singamma1 - cosgamma1*sinphi1))*fons(costheta1,alpha)*dfons(func_u2z(costheta1, sintheta1, cosgamma1, singamma1),alpha)*sintheta1*sintheta12*;
 }
 double integrandXI1_v1(double phi1, double theta1, double gamma1)
 {
