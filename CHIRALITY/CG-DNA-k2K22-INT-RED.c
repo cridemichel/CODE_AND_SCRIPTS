@@ -21,7 +21,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 //#define ELEC
 //#define ALBERTA
 //#define NO_INTERP
-double **XI1, **XI2, **XI3;
+double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
@@ -56,7 +56,7 @@ double num_kD=0;
 double maxyukcutkDsq, maxyukcutkD;
 #endif
 char dummy1[32], dummy2[32], atname[32], nbname[8];
-int nat, atnum, nbnum, len;
+int type, nat, atnum, nbnum, len;
 long long int tot_trials, tt=0, ttini=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max, ROMBTOL;
 const double thetapts=100000;
@@ -1243,9 +1243,25 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
 	      if (distsq < sigijsq)
-		return rcmx*XI1[nphi12][ntheta12]+
-		  rcmy*XI2[nphi12][ntheta12]+
-		  rcmz*XI3[nphi12][ntheta12];
+		{
+		  switch (type)
+		    {
+		    case 0:
+		      return XI1[nphi12][ntheta12];
+		      break;
+		    case 1:
+		      return rcmx*XI1[nphi12][ntheta12]+
+			rcmy*XI2[nphi12][ntheta12]+
+			rcmz*XI3[nphi12][ntheta12];
+		      break;
+		    case 2:
+		      return rcmx*XI1[nphi12][ntheta12]+
+			rcmy*XI2[nphi12][ntheta12]+
+			rcmz*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
+			rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12];
+		      break;
+		    }
+		}
 	    }
 	}
     }
@@ -1416,13 +1432,13 @@ int main(int argc, char**argv)
   double ccc, totfact;
   int cc;
   double gamma1, gamma2, Lx, Ly, Lz;
-  FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3;
+  FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
 #ifdef PARALLEL
   FILE *fp;
   double sigab, rab0, rab0sq, uelcontrib, tempfact;
   int k1, k2, kk;
 #endif
-  int ncontrib, k, i, j, overlap, type, contrib, cont=0, nfrarg;
+  int ncontrib, k, i, j, overlap, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
@@ -1928,35 +1944,70 @@ int main(int argc, char**argv)
 #endif
 #endif
 #endif
+  
   XI1=malloc(sizeof(double)*(nphi+1));
   XI2=malloc(sizeof(double)*(nphi+1));
   XI3=malloc(sizeof(double)*(nphi+1));
+  XI4=malloc(sizeof(double)*(nphi+1));
+  XI5=malloc(sizeof(double)*(nphi+1));
+  XI6=malloc(sizeof(double)*(nphi+1));
+
+
   for (i=1; i <= ntheta; i++)
     {
       XI1[i] = malloc(sizeof(double)*(ntheta+1));
       XI2[i] = malloc(sizeof(double)*(ntheta+1));
       XI3[i] = malloc(sizeof(double)*(ntheta+1));
+      XI4[i] = malloc(sizeof(double)*(ntheta+1));
+      XI5[i] = malloc(sizeof(double)*(ntheta+1));
+      XI6[i] = malloc(sizeof(double)*(ntheta+1));
+	
     }
   /* read XI1, X2 and X3 */
+  
   sprintf(fn, "XI1_v%d.dat", type);
   if ((fxi1=fopen(fn, "r"))==NULL)
     {
       printf("You have to supply %s file\n", fn);
       exit(-1);
     }
-  sprintf(fn, "XI2_v%d.dat", type);
-  if ((fxi2=fopen(fn, "r"))==NULL)
-    {
-      printf("You have to supply %s file\n", fn);
-      exit(-1);
+  if (type >= 1)
+    { 
+      sprintf(fn, "XI2_v%d.dat", type);
+      if ((fxi2=fopen(fn, "r"))==NULL)
+	{
+	  printf("You have to supply %s file\n", fn);
+	  exit(-1);
+	}
+      sprintf(fn, "XI3_v%d.dat", type);
+      if ((fxi3=fopen(fn, "r"))==NULL)
+	{
+	  printf("You have to supply %s file\n", fn);
+	  exit(-1);
+	}
     }
-  sprintf(fn, "XI3_v%d.dat", type);
-  if ((fxi3=fopen(fn, "r"))==NULL)
+  if (type == 2)
     {
-      printf("You have to supply %s file\n", fn);
-      exit(-1);
-    }
+      sprintf(fn, "XI4_v%d.dat", type);
+      if ((fxi4=fopen(fn, "r"))==NULL)
+	{
+	  printf("You have to supply %s file\n", fn);
+	  exit(-1);
+	} 
+      sprintf(fn, "XI5_v%d.dat", type);
+      if ((fxi5=fopen(fn, "r"))==NULL)
+	{
+	  printf("You have to supply %s file\n", fn);
+	  exit(-1);
+	}
+      sprintf(fn, "XI6_v%d.dat", type);
+      if ((fxi6=fopen(fn, "r"))==NULL)
+	{
+	  printf("You have to supply %s file\n", fn);
+	  exit(-1);
+	}
 
+    }
   fscanf(fxi1,"%lf %d %d\n", &ccc, &aa, &bb);
   if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
     {
@@ -1964,30 +2015,77 @@ int main(int argc, char**argv)
       printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
       exit(-1);
     };
-  fscanf(fxi2,"%lf %d %d\n", &ccc, &aa, &bb);
-  if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
+  if (type >= 1)
     {
-      printf("Wrong numbers of abscissas or wrong alpha!\n");
-      printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
-      exit(-1);
-    };
-  fscanf(fxi3,"%lf %d %d\n", &ccc, &aa, &bb);
-  if (aa!=nphi || bb!=ntheta || ccc!= alpha)
+      fscanf(fxi2,"%lf %d %d\n", &ccc, &aa, &bb);
+      if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
+	{
+	  printf("Wrong numbers of abscissas or wrong alpha!\n");
+	  printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
+	  exit(-1);
+	};
+      fscanf(fxi3,"%lf %d %d\n", &ccc, &aa, &bb);
+      if (aa!=nphi || bb!=ntheta || ccc!= alpha)
+	{
+	  printf("Wrong numbers of abscissas or wrong alpha!\n");
+	  printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
+	  exit(-1);
+	};
+    }
+  if (type == 2)
     {
-      printf("Wrong numbers of abscissas or wrong alpha!\n");
-      printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
-      exit(-1);
-    };
+      fscanf(fxi4,"%lf %d %d\n", &ccc, &aa, &bb);
+      if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
+	{
+	  printf("Wrong numbers of abscissas or wrong alpha!\n");
+	  printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
+	  exit(-1);
+	};
+      fscanf(fxi5,"%lf %d %d\n", &ccc, &aa, &bb);
+      if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
+	{
+	  printf("Wrong numbers of abscissas or wrong alpha!\n");
+	  printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
+	  exit(-1);
+	};
+      fscanf(fxi6,"%lf %d %d\n", &ccc, &aa, &bb);
+      if (aa!=nphi || bb!=ntheta || ccc!= alpha)
+	{
+	  printf("Wrong numbers of abscissas or wrong alpha!\n");
+	  printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
+	  exit(-1);
+	};
+
+    }
   for (i=0; i < nphi; i++)
     for (j=0; j < ntheta; j++)
       {
 	fscanf(fxi1, "%lf ", &(XI1[i+1][j+1]));
-	fscanf(fxi2, "%lf ", &(XI2[i+1][j+1]));
-	fscanf(fxi3, "%lf ", &(XI3[i+1][j+1]));
+	if (type >= 1)
+	  {
+	    fscanf(fxi2, "%lf ", &(XI2[i+1][j+1]));
+	    fscanf(fxi3, "%lf ", &(XI3[i+1][j+1]));
+	  }
+	if (type==2)
+	  {
+	    fscanf(fxi4, "%lf ", &(XI4[i+1][j+1]));
+	    fscanf(fxi5, "%lf ", &(XI5[i+1][j+1]));
+	    fscanf(fxi6, "%lf ", &(XI6[i+1][j+1]));
+	  }
       }
+  
   fclose(fxi1);
-  fclose(fxi2);
-  fclose(fxi3);
+  if (type >= 1)
+    {
+      fclose(fxi2);
+      fclose(fxi3);
+    }
+  if (type == 2)
+    {
+      fclose(fxi4);
+      fclose(fxi5);
+      fclose(fxi6);
+    }
   //printf("XI1[7][8]:%.15G \n", XI1[7][8]);
   /* we use as the reference system the body reference system of first particle */
 #ifdef EULER_ROT
