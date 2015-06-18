@@ -735,6 +735,68 @@ void versor_to_R(double ox, double oy, double oz, double gamma, double R[3][3])
 #endif
 }
 double RMDNA[2][3][3];
+#if 1
+
+void place_DNAD(double x, double y, double z, double cosphi12, double sinphi12, double costheta12, 
+		double sintheta12, double cosgamma12, double singamma12,
+		int which)
+{
+  FILE *fd;
+  char fn[256];
+  double xp[3], rO[3], xl[3];
+  double R[3][3];
+  int i, k1, k2;
+  rO[0] = x;
+  rO[1] = y;
+  rO[2] = z;
+  R[0][0] = cosgamma12*costheta12*cosphi12 - singamma12*sinphi12;
+  R[0][1] = cosphi12*singamma12 + cosgamma12*costheta12*sinphi12;
+  R[0][2] = -cosgamma12*sintheta12;
+  R[1][0] = -costheta12*cosphi12*singamma12-cosgamma12*sinphi12;
+  R[1][1] = cosgamma12*cosphi12-costheta12*singamma12*sinphi12;
+  R[1][2] = singamma12*sintheta12;
+  R[2][0] = cosphi12*sintheta12;
+  R[2][1] = sintheta12*sinphi12;
+  R[2][2] = costheta12; 
+#ifdef DEBUG 
+  /*printf("costhe=%f sinth=%f cosphi=%f sinphi=%f cosgmma=%f singamma=%f\n", 
+	 costheta12, sintheta12, cosphi12, sinphi12, cosgamma12, singamma12);*/
+  print_matrix(R,3);
+  sprintf(fn, "DNAD%d.mgl", which);
+  fd=fopen(fn, "w+");
+  fprintf(fd, ".Vol: %f\n", L*L*L);
+#endif
+  /* ============ */
+  for (k1=0; k1 < 3; k1++)
+    {
+      DNADall[which].rcm[k1] = rO[k1];
+      for (k2=0; k2 < 3; k2++)
+	DNADall[which].R[k1][k2] = R[k1][k2];
+    }
+  for (i=0; i < nat; i++)
+    {
+      xp[0] = DNAchain[i].x;
+      xp[1] = DNAchain[i].y;
+      xp[2] = DNAchain[i].z;
+
+      body2lab(xp, xl, rO, R);
+      DNADs[which][i].x = xl[0];
+      DNADs[which][i].y = xl[1];
+      DNADs[which][i].z = xl[2];
+#ifdef ELEC
+      DNADs[which][i].atype = DNAchain[i].atype;
+#endif
+#ifdef DEBUG
+      fprintf(fd,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
+#endif
+      DNADs[which][i].rad = DNAchain[i].rad;
+    }
+#ifdef DEBUG
+  fclose(fd);
+  exit(-1);
+#endif
+} 
+#else
 void place_DNAD(double x, double y, double z, double ux, double uy, double uz, double gamma, int which)
 {
   double xp[3], rO[3], xl[3];
@@ -785,6 +847,7 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, d
   fclose(fd);
 #endif
 }
+#endif
 /* ============================ >>> ranf <<< =============================== */
 double ranf_vb(void)
 {
@@ -1153,18 +1216,26 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 {
   int i, j;
   double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
-  double sintheta12, costheta12, sinphi12, cosphi12;
+  double sintheta12, costheta12, sinphi12, cosphi12, cosgamma12, singamma12;
 
   costheta12 = cos(theta12);
   sintheta12 = sin(theta12);
   cosphi12 = cos(phi12);
   sinphi12 = sin(phi12);
+  cosgamma12 = cos(gamma12);
+  singamma12 = sin(gamma12);
+#if 0
   u2x = sintheta12*cosphi12;
   u2y = sintheta12*sinphi12;
   u2z = costheta12; 
+#endif
   //versor_to_R(u1x, u1y, u1z, gamma1, DNADall[0].R);
   //versor_to_R(u2x, u2y, u2z, gamma2, DNADall[1].R);
+#if 1
+  place_DNAD(rcmx, rcmy, rcmz, cosphi12, sinphi12, costheta12, sintheta12, cosgamma12, singamma12, 1);
+#else
   place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
+#endif
   if (calcDistBox() < 0.0)
     {
       for (i=0; i < nat; i++)
@@ -1921,7 +1992,11 @@ int main(int argc, char**argv)
   fclose(fxi3);
   //printf("XI1[7][8]:%.15G \n", XI1[7][8]);
   /* we use as the reference system the body reference system of first particle */
+#if 1
+  place_DNAD(0.0, 0.0, 0.0, 1., 0., 1., 0., 1., 0., 0);      
+#else
   place_DNAD(0.0, 0.0, 0.0, 0., 0., 0., 0., 0);      
+#endif
 #if 0
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
