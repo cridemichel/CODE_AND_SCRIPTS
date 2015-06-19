@@ -58,7 +58,7 @@ double maxyukcutkDsq, maxyukcutkD;
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int type, nat, atnum, nbnum, len;
 long long int tot_trials, tt=0, ttini=0;
-double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max, ROMBTOL;
+double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max, ROMBTOL, Lx, Ly, Lz;
 const double thetapts=100000;
 #ifdef GAUSS
 double gammln(double xx)
@@ -1270,11 +1270,86 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 }
 
 double phi12sav, theta12sav, gamma12sav;
+#ifdef QFGAUSS
+double rcmxsav, nrcmxsav, rcmysav, nrcmysav, rcmzsav, nrcmzsav, nrcmx, nrcmy, nrcmz;
+double *xrcmx, *wrcmx, *xrcmy, *wrcmy, *xrcmz, *wrcmz;
+#endif
 int nphi12sav, ntheta12sav, ngamma12sav;
 double ftheta12(double theta12, int ntheta12);
 double fphi12(double phi12, int nphi12);
 double fgamma12(double gamma12, int ngamma12);
-#ifdef MCGAMMA
+#ifdef QFGAUSS
+double frcmx(double rcmx, int nrcmx);
+double frcmy(double rcmy, int nrcmy);
+double frcmz(double rcmz, int nrcmz);
+double (*nrfunc)(double,int,double,int,double,int,double,int,double,int);
+double quad3d(double (*func)(double,int,double,int,double,int,double,int,double,int), 
+	      double phi12_1, double phi12_2)
+{
+  nrfunc=func;
+#ifdef GAUSS
+  return qgaus(fphi12,phi12_1,phi12_2,xphi,wphi,nphi);
+#else
+  return qromb(fphi12,phi12_1,phi12_2);
+#endif
+}
+double fphi12(double phi12, int nphi12) 
+{
+  phi12sav=phi12;
+  nphi12sav=nphi12;
+#ifdef GAUSS
+  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
+#else
+  return qromb(ftheta12,0.0,M_PI); 
+#endif
+}
+double ftheta12(double theta12, int ntheta12) 
+{
+  theta12sav=theta12;
+  ntheta12sav=ntheta12;
+#ifdef GAUSS
+  /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
+     gamma varia tra 0 e 2*pi come phi */
+  return qgaus(frcmx,-Lx/2.,Lx/2., xrcmx, wrcmx, nrcmx); 
+#else
+  return qromb(frcmx,-Lx/2.,Lx/2.); 
+#endif
+}
+double frcmx(double rcmx, int nrcmx) 
+{
+  rcmxsav=rcmx;
+  nrcmxsav=nrcmx;
+#ifdef GAUSS
+  /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
+     gamma varia tra 0 e 2*pi come phi */
+  return qgaus(frcmy,-Ly/2.,Ly/2., xrcmy, wrcmy, nrcmy); 
+#else
+  return qromb(frcmy,-Ly/2.,Ly/2.); 
+#endif
+}
+double frcmy(double rcmy, int nrcmy) 
+{
+  rcmysav=rcmy;
+  nrcmysav=nrcmy;
+#ifdef GAUSS
+  /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
+     gamma varia tra 0 e 2*pi come phi */
+  return qgaus(frcmz,-Lz/2.,Lz/2., xrcmz, wrcmz, nrcmz); 
+#else
+  return qromb(frcmz,-Lz/2.,Lz/2.); 
+#endif
+}
+double frcmz(double rcmz, int nrcmz) 
+{
+  return (*nrfunc)(phi12sav,nphi12sav,theta12sav,ntheta12sav,rcmxsav,nrcmxsav,rcmysav,nrcmysav,rcmz,nrcmz);
+}
+double rcmxsav, rcmysav, rcmzsav, alphasav;
+double intfunc(double phi12, int nphi12, double theta12, int ntheta12, 
+	       double rcmx, int nrcmx, double rcmy, int nrcmy, double rcmz, int nrcmz)
+{
+  return integrandv1(rcmx, rcmy, rcmz, phi12, nphi12, theta12, ntheta12, gamma12sav, 0, alphasav);
+}
+#elif defined(MCGAMMA)
 double (*nrfunc)(double,int,double,int);
 double quad3d(double (*func)(double,int,double,int), 
 	      double phi12_1, double phi12_2)
@@ -1424,7 +1499,7 @@ int main(int argc, char**argv)
   double uel, beta;
   int interact;
 #endif
-#ifdef QUASIMC
+#if defined(QUASIMC) || defined(QFGAUSS)
   double sv[10];
   int nsv;
 #endif
@@ -1432,7 +1507,7 @@ int main(int argc, char**argv)
   int aa, bb;
   double ccc, totfact;
   int cc;
-  double gamma1, gamma2, Lx, Ly, Lz;
+  double gamma1, gamma2;
   FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
 #ifdef PARALLEL
   FILE *fp;
@@ -1492,6 +1567,23 @@ int main(int argc, char**argv)
     ngamma = 10;
   else
     ngamma = atoi(argv[10]);
+
+#ifdef QFGAUSS
+  if (argc == 11)
+    nrcmx = 10;
+  else
+    nrcmx = atoi(argv[11]);
+
+ if (argc == 12)
+    nrcmy = 10;
+  else
+    nrcmy = atoi(argv[12]);
+
+  if (argc == 13)
+    nrcmz = 10;
+  else
+    nrcmz = atoi(argv[13]);
+#endif
 #else
   if (argc == 8)
     ROMBTOL = 1.0E-2;
@@ -1915,7 +2007,14 @@ int main(int argc, char**argv)
   wtheta = malloc(sizeof(double)*(ntheta+1));
   wphi = malloc(sizeof(double)*(nphi+1));
   wgamma = malloc(sizeof(double)*(ngamma+1));
-
+#ifdef QFGAUSS
+  xrcmx = malloc(sizeof(double)*(nrcmx+1));
+  wrcmx = malloc(sizeof(double)*(nrcmx+1));
+  xrcmy = malloc(sizeof(double)*(nrcmy+1));
+  wrcmy = malloc(sizeof(double)*(nrcmy+1));
+  xrcmz = malloc(sizeof(double)*(nrcmz+1));
+  wrcmz = malloc(sizeof(double)*(nrcmz+1));
+#endif
   gauleg(0.0, M_PI, xtheta, wtheta, ntheta);
 #if 0
   printf("x=%.15G %.15G %.15G %.15G %.15G\n w=%.15G %.15G %.15G %.15G %.15G\n",
@@ -1925,6 +2024,14 @@ int main(int argc, char**argv)
 #endif
   gauleg(0.0, 2.0*M_PI, xphi, wphi, nphi);
   gauleg(0.0, 2.0*M_PI, xgamma, wgamma, ngamma);
+#endif
+#ifdef QFGAUSS
+  gauleg(-Lx/2., Lx/2., xrcmx, wrcmx, nrcmx);
+  gauleg(-Ly/2., Ly/2., xrcmy, wrcmy, nrcmy);
+  gauleg(-Lz/2., Lz/2., xrcmz, wrcmz, nrcmz);
+  nsv = -1;
+  sobseq(&nsv, sv);
+  nsv = 1;
 #endif
 #ifdef QUASIMC
 #ifdef USEGSL
@@ -2102,6 +2209,10 @@ int main(int argc, char**argv)
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place second DNAD randomly */
+#ifdef QFGAUSS
+      sobseq(&nsv, sv);
+      gamma12sav = 2.0*M_PI*sv[1];
+#else
 #ifdef QUASIMC
 #ifdef USEGSL
       gsl_qrng_get (qsob, sv);
@@ -2136,7 +2247,9 @@ int main(int argc, char**argv)
       rcmxsav = rcmx;
       rcmysav = rcmy;
       rcmzsav = rcmz;
-#ifdef MCGAMMA
+#endif
+
+#if defined(MCGAMMA) || defined(QFGAUSS)
       vexcl += quad3d(intfunc, 0.0, 2.0*M_PI);
 #else
       vexcl += quad3d(intfunc, 0.0, 2.0*M_PI)*totfact;
@@ -2144,6 +2257,16 @@ int main(int argc, char**argv)
       if (tt > 0 && tt % fileoutits == 0)
 	{
 	  fout = fopen(fnout, "a+");
+#ifdef QFGAUSS
+  	  if (type==0)
+	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E3);
+	  else if (type==1)
+	    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
+	  else
+	    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
+
+#else
 	  if (type==0)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
 	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
@@ -2151,6 +2274,7 @@ int main(int argc, char**argv)
 	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
 	  else
 	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
+#endif
 	  fclose(fout);
 	}
       if (tt % outits==0)
