@@ -1271,7 +1271,8 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 
 double phi12sav, theta12sav, gamma12sav;
 #ifdef QFGAUSS
-double rcmxsav, nrcmxsav, rcmysav, nrcmysav, rcmzsav, nrcmzsav, nrcmx, nrcmy, nrcmz;
+double rcmxsav, nrcmxsav, rcmysav, nrcmysav, rcmzsav, nrcmzsav;
+int nrcmx, nrcmy, nrcmz;
 double *xrcmx, *wrcmx, *xrcmy, *wrcmy, *xrcmz, *wrcmz;
 #endif
 int nphi12sav, ntheta12sav, ngamma12sav;
@@ -1958,6 +1959,9 @@ int main(int argc, char**argv)
   dfons_sinth_max=estimate_maximum_dfons(alpha);
   fons_sinth_max=dfons_sinth_max/alpha;
   printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
+#endif
+#ifdef QFGAUSS
+  printf("Quasi Full Gauss quadrature with nrcmx=%d nrcmy=%d nrcmz=%d points\n", nrcmx, nrcmy, nrcmz);
 #endif
 #ifdef GAUSS
   printf("Gauss quadrature with %d %d %d points\n", nphi, ntheta, ngamma);
