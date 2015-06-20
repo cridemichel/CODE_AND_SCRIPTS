@@ -759,7 +759,8 @@ int main(int argc, char**argv)
   double sv[10];
   int nsv;
 #endif
-  unsigned int *overlaparr;
+  int totbytes, nbit, ishift, bit2set;
+  unsigned char *overlaparr;
   int ircmx, ircmy, ircmz, iphi, itheta, igamma;
   char fn[256];
   int aa, bb;
@@ -1005,7 +1006,17 @@ int main(int argc, char**argv)
   sobseq(&nsv, sv);
   nsv = 1;
 #endif
-  
+
+  sprintf(fn, "overla-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, gamma, phi, theta);
+  fout = fopen(fn, "w+");
+  fwrite(&nrcmx, sizeof(int), 1, fout);
+  fwrite(&nrcmy, sizeof(int), 1, fout);
+  fwrite(&nrcmz, sizeof(int), 1, fout);
+  fwrite(&ngamma, sizeof(int), 1, fout);
+  fwrite(&nphi, sizeof(int), 1, fout);
+  fwrite(&ntheta, sizeof(int), 1, fout);
+  totbytes= nrcmx*nrcmy*nrcmz*ngamma*nphi*ntheta/8;
+  overlaparr = malloc(sizeof(unsigned char)*totbytes);
   //printf("XI1[7][8]:%.15G \n", XI1[7][8]);
   /* we use as the reference system the body reference system of first particle */
 #ifdef EULER_ROT
@@ -1014,6 +1025,7 @@ int main(int argc, char**argv)
   place_DNAD(0.0, 0.0, 0.0, 0., 0., 1., 0., 0);      
 #endif
   totfact = 1.0/(2.0*M_PI);
+  nbit = 0;
   for (ircmx = 0; ircmx < nrcmx; ircmx++)
     {
       rcmx = xrcmx[ircmx];
@@ -1037,14 +1049,19 @@ int main(int argc, char**argv)
 		  	    {
 		  	      printf("building mesh ircmx=%d/%d\n", ircmx, nrcmx)
 		  	    }
-		  	  if (integrandv1())
+		  	  if (integrandv1(rcmx, rcmy, rcmz, gamma, phi, theta)<0.0)
 		  	    {
-
+			      ishift = nbit % 8;
+			      bit2set = 1 << ishift;
+			      overlaparr[nbit/8] |= bitset;
 		  	    }
+			  nbit++;
 		    	}	 
 		    }		
 		}
 	    } 
 	}
     }
+  fwrite(overlaparr, sizeof(unsigned char), totbytes, fout);
+  fclose(fout);
 }
