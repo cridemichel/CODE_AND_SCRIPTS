@@ -1464,7 +1464,7 @@ int main(int argc, char**argv)
   double sv[10];
   int nsv;
 #endif
-  char fn[256];
+  char *mf, fn[256];
   int aa, bb;
   double ccc, totfact;
   int cc, totbytes;
@@ -1505,52 +1505,13 @@ int main(int argc, char**argv)
   fin=fopen(fnin,"r");
   len=atoi(argv[2]);
   alpha = atof(argv[3]);
-  tot_trials=atoll(argv[4]);
-  type = atoi(argv[5]);
-  fileoutits = atoll(argv[6]);
+  //tot_trials=atoll(argv[4]);
+  type = atoi(argv[4]);
+  fileoutits = atoll(argv[5]);
   
-  if (argc == 7)
-    outits=100*fileoutits;
-  else
-    outits = atoll(argv[7]);
-#ifdef GAUSS 
-  if (argc == 8)
-    nphi = 10;
-  else
-    nphi = atoi(argv[8]);
+  outits = atoll(argv[6]);
+  mf = argv[7];
 
-  if (argc == 9)
-    ntheta = 10;
-  else
-    ntheta = atoi(argv[9]);
-
-  if (argc == 10)
-    ngamma = 10;
-  else
-    ngamma = atoi(argv[10]);
-
-#ifdef QFGAUSS
-  if (argc == 11)
-    nrcmx = 10;
-  else
-    nrcmx = atoi(argv[11]);
-
- if (argc == 12)
-    nrcmy = 10;
-  else
-    nrcmy = atoi(argv[12]);
-
-  if (argc == 13)
-    nrcmz = 10;
-  else
-    nrcmz = atoi(argv[13]);
-#endif
-#else
-  if (argc == 8)
-    ROMBTOL = 1.0E-2;
-  else
-    ROMBTOL = atof(argv[8]);
-#endif
 #ifdef ELEC
 #ifdef PARALLEL
   if (argc <= 8)
@@ -1885,49 +1846,11 @@ int main(int argc, char**argv)
   L=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*3.0;
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
   printf("box semiaxes=%f %f %f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2]);
-#ifdef MPI
-  srand48(((int)time(NULL))+my_rank);
-#else
-  srand48((int)time(NULL));
-#endif
   sprintf(fnout, "v%d.dat", type);
   factor=0.0;
-#if 0
-  dfons_sinth_max=estimate_maximum_dfons(alpha);
-  fons_sinth_max=dfons_sinth_max/alpha;
-  printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
-#endif
-#ifdef QFGAUSS
-  printf("Quasi Full Gauss quadrature with nrcmx=%d nrcmy=%d nrcmz=%d points\n", nrcmx, nrcmy, nrcmz);
-#endif
-#ifdef GAUSS
-  printf("Gauss quadrature with %d %d %d points\n", nphi, ntheta, ngamma);
-#else
-  printf("Romberg method with %.15G tolerance\n", ROMBTOL);
-#endif
-#ifdef QUASIMC
-  printf("I will generate a Quasi Monte Carlo sequence\n");
-#endif
   //exit(-1);
   /* avendo diviso l'integrazione in theta negli intervalli [0,pi/2] e [pi/2,pi]
      il fattore si deve ottenere integrando fra 0 e pi/2 */
-#if 0
-  dth=acos(0.0)/((double)thetapts);
-  th=0.0;
-  //f = fopen("dfons.dat", "w+");
-  for (i=0; i < thetapts; i++)
-    {
-      factor += 0.5*dth*sin(th)*(dfons(th, alpha) + dfons(th+dth,alpha));
-      th += dth;
-      //fprintf(f,"%f %.15G\n", th, dfons(th, alpha));
-    };
-  //fclose(f);
-  factor= fabs(factor);
-  factor *= 4.0*acos(0.0);
-#else
-  factor = alpha/2.0;
-#endif
-  printf("factor=%.15G\n", factor);
   fout = fopen(fnout, "w+");
   fclose(fout);
   Lx=Ly=Lz=L;
@@ -1941,6 +1864,29 @@ int main(int argc, char**argv)
   exit(-1);
 #endif
   //nrfunc = intfunc;
+  //sprintf(fn, "overlap-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, ngamma, nphi, ntheta);
+  if ((fin=fopen(mf, "r"))==NULL)
+    {
+      printf("I need a file called %s\n", mf);
+      exit(-1);
+    }
+
+  fread(&nrcmx, sizeof(int), 1, fin);
+  fread(&nrcmy, sizeof(int), 1, fin);
+  fread(&nrcmz, sizeof(int), 1, fin);
+  fread(&ngamma, sizeof(int),1, fin);
+  fread(&nphi, sizeof(int),  1, fin);
+  fread(&ntheta, sizeof(int),1, fin);
+  
+  printf("Gauss quadrature with nrcmx=%d nrcmy=%d nrcmz=%d points\n", nrcmx, nrcmy, nrcmz);
+  printf("Gauss quadrature with %d %d %d points\n", nphi, ntheta, ngamma);
+
+  totbytes= nrcmx*nrcmy*nrcmz*ngamma*nphi*ntheta/8;
+
+  fread(overlaparr, sizeof(unsigned char), totbytes, fin);  
+  fclose(fin);
+
+
   xtheta = malloc(sizeof(double)*(ntheta+1));
   xphi = malloc(sizeof(double)*(nphi+1));
   xgamma = malloc(sizeof(double)*(ngamma+1));
@@ -2119,16 +2065,6 @@ int main(int argc, char**argv)
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
 #endif
   totfact = 1.0/(2.0*M_PI);
-  sprintf(fn, "overlap-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, ngamma, nphi, ntheta);
-  if ((fin=fopen(fn, "r"))==NULL)
-    {
-      printf("I need a file called %s\n", fn);
-      exit(-1);
-    }
-  totbytes= nrcmx*nrcmy*nrcmz*ngamma*nphi*ntheta/8;
-
-  fread(overlaparr, sizeof(unsigned char), totbytes, fin);  
-  fclose(fin);
   /* place second DNAD randomly */
   vexcl = quad3d(intfunc, 0.0, 2.0*M_PI)*totfact;
   fout = fopen(fnout, "a+");
