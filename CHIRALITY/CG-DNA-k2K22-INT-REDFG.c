@@ -1271,50 +1271,25 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 }
 
 double phi12sav, theta12sav, gamma12sav;
-#ifdef QFGAUSS
 double rcmxsav, nrcmxsav, rcmysav, nrcmysav, rcmzsav, nrcmzsav;
 int nrcmx, nrcmy, nrcmz;
 double *xrcmx, *wrcmx, *xrcmy, *wrcmy, *xrcmz, *wrcmz;
-#endif
 int nphi12sav, ntheta12sav, ngamma12sav;
 double ftheta12(double theta12, int ntheta12);
 double fphi12(double phi12, int nphi12);
 double fgamma12(double gamma12, int ngamma12);
-#ifdef QFGAUSS
 double frcmx(double rcmx, int nrcmx);
 double frcmy(double rcmy, int nrcmy);
 double frcmz(double rcmz, int nrcmz);
 double (*nrfunc)(double,int,double,int,double,int,double,int,double,int);
-double quad3d(double (*func)(double,int,double,int,double,int,double,int,double,int), 
-	      double phi12_1, double phi12_2)
+double quad3d(double (*func)(double,int,double,int,double,int,double,int,double,int,double, int), 
+	      double rcmx_1, double rcmx_2)
 {
   nrfunc=func;
 #ifdef GAUSS
-  return qgaus(fphi12,phi12_1,phi12_2,xphi,wphi,nphi);
+  return qgaus(frcmx,rcmx_1,rcmx_2,xrcmx,wrcmx,nrcmx);
 #else
-  return qromb(fphi12,phi12_1,phi12_2);
-#endif
-}
-double fphi12(double phi12, int nphi12) 
-{
-  phi12sav=phi12;
-  nphi12sav=nphi12;
-#ifdef GAUSS
-  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
-#else
-  return qromb(ftheta12,0.0,M_PI); 
-#endif
-}
-double ftheta12(double theta12, int ntheta12) 
-{
-  theta12sav=theta12;
-  ntheta12sav=ntheta12;
-#ifdef GAUSS
-  /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
-     gamma varia tra 0 e 2*pi come phi */
-  return qgaus(frcmx,-Lx/2.,Lx/2., xrcmx, wrcmx, nrcmx); 
-#else
-  return qromb(frcmx,-Lx/2.,Lx/2.); 
+  return qromb(frcmx,rcmx_1,rcmx_2);
 #endif
 }
 double frcmx(double rcmx, int nrcmx) 
@@ -1324,9 +1299,9 @@ double frcmx(double rcmx, int nrcmx)
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
-  return qgaus(frcmy,-Ly/2.,Ly/2., xrcmy, wrcmy, nrcmy); 
+  return qgaus(frcmz,-Ly/2.,Ly/2., xrcmy, wrcmy, nrcmy); 
 #else
-  return qromb(frcmy,-Ly/2.,Ly/2.); 
+  return qromb(frcmz,-Ly/2.,Ly/2.); 
 #endif
 }
 double frcmy(double rcmy, int nrcmy) 
@@ -1336,96 +1311,53 @@ double frcmy(double rcmy, int nrcmy)
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
-  return qgaus(frcmz,-Lz/2.,Lz/2., xrcmz, wrcmz, nrcmz); 
+  return qgaus(frcmy,-Lz/2.,Lz/2., xrcmz, wrcmz, nrcmz); 
 #else
-  return qromb(frcmz,-Lz/2.,Lz/2.); 
+  return qromb(frcmy,-Ly/2.,Ly/2.); 
 #endif
 }
 double frcmz(double rcmz, int nrcmz) 
 {
-  return (*nrfunc)(phi12sav,nphi12sav,theta12sav,ntheta12sav,rcmxsav,nrcmxsav,rcmysav,nrcmysav,rcmz,nrcmz);
-}
-double rcmxsav, rcmysav, rcmzsav, alphasav;
-double intfunc(double phi12, int nphi12, double theta12, int ntheta12, 
-	       double rcmx, int nrcmx, double rcmy, int nrcmy, double rcmz, int nrcmz)
-{
-  return integrandv1(rcmx, rcmy, rcmz, phi12, nphi12, theta12, ntheta12, gamma12sav, 0, alphasav);
-}
-#elif defined(MCGAMMA)
-double (*nrfunc)(double,int,double,int);
-double quad3d(double (*func)(double,int,double,int), 
-	      double phi12_1, double phi12_2)
-{
-  nrfunc=func;
-#ifdef GAUSS
-  return qgaus(fphi12,phi12_1,phi12_2,xphi,wphi,nphi);
-#else
-  return qromb(fphi12,phi12_1,phi12_2);
-#endif
-}
-double fphi12(double phi12, int nphi12) 
-{
-  phi12sav=phi12;
-  nphi12sav=nphi12;
-#ifdef GAUSS
-  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
-#else
-  return qromb(ftheta12,0.0,M_PI); 
-#endif
-}
-double ftheta12(double theta12, int ntheta12) 
-{
-  return (*nrfunc)(phi12sav,nphi12sav,theta12, ntheta12);
-}
-double rcmxsav, rcmysav, rcmzsav, alphasav;
-double intfunc(double phi12, int nphi12, double theta12, int ntheta12)
-{
-  return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12sav, 0, alphasav);
-}
-#else
-double (*nrfunc)(double,int,double,int,double,int);
-double quad3d(double (*func)(double,int,double,int,double,int), 
-	      double phi12_1, double phi12_2)
-{
-  nrfunc=func;
-#ifdef GAUSS
-  return qgaus(fphi12,phi12_1,phi12_2,xphi,wphi,nphi);
-#else
-  return qromb(fphi12,phi12_1,phi12_2);
-#endif
-}
-double fphi12(double phi12, int nphi12) 
-{
-  phi12sav=phi12;
-  nphi12sav=nphi12;
-#ifdef GAUSS
-  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
-#else
-  return qromb(ftheta12,0.0,M_PI); 
-#endif
-}
-double ftheta12(double theta12, int ntheta12) 
-{
-  theta12sav=theta12;
-  ntheta12sav=ntheta12;
+  rcmzsav=rcmz;
+  nrcmzsav=nrcmz;
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
-  return qgaus(fgamma12,0.0,M_PI, xgamma, wgamma, ngamma); 
+  return qgaus(fgamma12,0.0., 2.0*M_PI, xgamma, wgamma, ngamma); 
 #else
-  return qromb(fgamma12,0.0,M_PI); 
+  return qromb(fgamma12,0.0.,2.0*M_PI); 
 #endif
 }
-double fgamma12(double gamma12, int ngamma12) 
+double fgamma12(double phi12, int nphi12) 
 {
-  return (*nrfunc)(phi12sav,nphi12sav,theta12sav, ntheta12sav, gamma12, ngamma12);
-}
-double rcmxsav, rcmysav, rcmzsav, alphasav;
-double intfunc(double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12)
-{
-  return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12, ngamma12, alphasav);
-}
+  gamma12sav=gamma12;
+  ngamma12sav=ngamma12;
+#ifdef GAUSS
+  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
+#else
+  return qromb(ftheta12,0.0,M_PI); 
 #endif
+}
+double fphi12(double phi12, int nphi12) 
+{
+  phi12sav=phi12;
+  nphi12sav=nphi12;
+#ifdef GAUSS
+  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
+#else
+  return qromb(ftheta12,0.0,M_PI); 
+#endif
+}
+double ftheta12(double theta12, int ntheta12) 
+{
+  return (*nrfunc)(rcmxsav,nrcmxsav,rcmysav,nrcmysav,rcmzsav,nrcmzsav, gamma12sav, ngamma12sav, 
+		   phi12sav,nphi12sav,theta12,ntheta12);
+}
+double intfunc(double rcmx, int nrcmx, double rcmy, int nrcmy, double rcmz, int nrcmz,
+	       double gamma12, int ngamma12, double phi12, int nphi12, double theta12, int ntheta12)
+{
+  return integrandv1(rcmx, rcmy, rcmz, gamma12, ngamma12, phi12, nphi12, theta12, ntheta12, alphasav);
+}
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
         (iminarg1) : (iminarg2))
