@@ -1249,6 +1249,9 @@ double integrandv1(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, 
 	  return XI1[iphi12][itheta12];
 	  break;
 	case 1:
+	  //printf("boh=%.15G x=%f %f %f\n",  rcmx, rcmy, rcmz, rcmx*XI1[iphi12][itheta12]+
+	    //rcmy*XI2[iphi12][itheta12]+
+	    //rcmz*XI3[iphi12][itheta12]);
 	  return rcmx*XI1[iphi12][itheta12]+
 	    rcmy*XI2[iphi12][itheta12]+
 	    rcmz*XI3[iphi12][itheta12];
@@ -1322,7 +1325,7 @@ double quad3d(double (*func)(double,int,double,int,double,int,double,int,double,
 double frcmx(double rcmx, int ircmx) 
 {
   rcmxsav=rcmx;
-  ircmxsav=nrcmx;
+  ircmxsav=ircmx;
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
@@ -1340,7 +1343,7 @@ double frcmy(double rcmy, int ircmy)
      gamma varia tra 0 e 2*pi come phi */
   return qgaus(frcmz,-Lz/2.,Lz/2., xrcmz, wrcmz, nrcmz); 
 #else
-  return qromb(frcmz,-Ly/2.,Ly/2.); 
+  return qromb(frcmz,-Lz/2.,Lz/2.); 
 #endif
 }
 double frcmz(double rcmz, int ircmz) 
@@ -2064,7 +2067,7 @@ int main(int argc, char**argv)
   totfact = 1.0/(2.0*M_PI);
   /* place second DNAD randomly */
   vexcl = quad3d(intfunc, -Lx/2., Lx/2.)*totfact;
-  fout = fopen(fnout, "a+");
+  fout = fopen(fnout, "w+");
   if (type==0)
     //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
     fprintf(fout,"%.15G\n", vexcl/1E3);

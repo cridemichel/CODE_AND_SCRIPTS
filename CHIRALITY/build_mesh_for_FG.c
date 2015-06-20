@@ -995,22 +995,22 @@ int main(int argc, char**argv)
 	{
 	  printf("building mesh ircmx=%d/%d\n", ircmx, nrcmx);
 	}
-      rcmx = xrcmx[ircmx];
+      rcmx = xrcmx[ircmx+1];
       for (ircmy = 0; ircmy < nrcmy; ircmy++)
 	{
-	  rcmy = xrcmy[ircmy];
+	  rcmy = xrcmy[ircmy+1];
 	  for (ircmz = 0; ircmz < nrcmz; ircmz++)
 	    {
-	      rcmz = xrcmz[ircmz];
+	      rcmz = xrcmz[ircmz+1];
 	      for (igamma = 0; igamma < ngamma; igamma++)
 		{
-		  gamma12 = xgamma[igamma];
+		  gamma12 = xgamma[igamma+1];
 		  for (iphi = 0; iphi < nphi; iphi++)
 		    {
-		      phi = xphi[iphi];
+		      phi = xphi[iphi+1];
 		      for (itheta = 0; itheta < ntheta; itheta++)
 		    	{
-			  theta = xtheta[itheta];
+			  theta = xtheta[itheta+1];
 		  	  /* place second DNAD randomly */
   			  if (integrandv1(rcmx, rcmy, rcmz, gamma12, phi, theta)<0.0)
 		  	    {
