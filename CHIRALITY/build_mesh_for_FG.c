@@ -966,7 +966,7 @@ int main(int argc, char**argv)
   nsv = 1;
 #endif
 
-  sprintf(fn, "overlap-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, gamma12, nphi, ntheta);
+  sprintf(fn, "overlap-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, ngamma, nphi, ntheta);
   fout = fopen(fn, "w+");
 #if 0
   fwrite(&nrcmx, sizeof(int), 1, fout);
