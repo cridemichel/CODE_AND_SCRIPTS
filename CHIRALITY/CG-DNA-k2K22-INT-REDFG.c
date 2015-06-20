@@ -58,7 +58,7 @@ double num_kD=0;
 double maxyukcutkDsq, maxyukcutkD;
 #endif
 char dummy1[32], dummy2[32], atname[32], nbname[8];
-int type, nat, atnum, nbnum, len;
+int type, nat, atnum, nbnum, len, nbit=0;
 long long int tot_trials, tt=0, ttini=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max, ROMBTOL, Lx, Ly, Lz;
 const double thetapts=100000;
@@ -165,6 +165,7 @@ void gaujac(double x[], double w[], int n, double alf, double bet)
 }
 #endif
 int ntheta, nphi, ngamma;
+int nrcmx, nrcmy, nrcmz;
 double *xtheta, *xphi, *wtheta, *wphi, *xgamma, *xphi, *wgamma;
 #define EPSGAULEG 3.0e-11 
 /*EPS is the relative precision.*/
@@ -1213,14 +1214,14 @@ int compare_func(const void *aa, const void *bb)
     return 0;
 }
 #endif
-double integrandv1(double rcmx, double rcmy, double rcmz, 
-		    double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12,
+double integrandv1(double rcmx, ircmx, double rcmy, int ircmy, double rcmz, int ircmz;
+		    double phi12, int iphi12, double theta12, int itheta12, double gamma12, int igamma12,
 		    double alpha)
 {
   int i, j;
   double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
   double sintheta12, costheta12, sinphi12, cosphi12, cosgamma12, singamma12;
-
+  int numbyte, nshift;
   costheta12 = cos(theta12);
   sintheta12 = sin(theta12);
   cosphi12 = cos(phi12);
@@ -1237,6 +1238,30 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
   u2z = costheta12;  
   place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
 #endif
+#if 1
+  numbyte=nbit/8;
+  nshift = numbyte % 8;
+  if ((overlaparr[numbyte] >> nshift) & 0x1)
+    {
+      switch (type)
+	{
+	case 0:
+	  return XI1[nphi12][ntheta12];
+	  break;
+	case 1:
+	  return rcmx*XI1[nphi12][ntheta12]+
+	    rcmy*XI2[nphi12][ntheta12]+
+	    rcmz*XI3[nphi12][ntheta12];
+	  break;
+	case 2:
+	  return -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
+		   Sqr(rcmy)*XI2[nphi12][ntheta12]+
+		   Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
+		   rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
+		      break;
+	}
+    }
+#else
   if (calcDistBox() < 0.0)
     {
       for (i=0; i < nat; i++)
@@ -1268,20 +1293,20 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 	    }
 	}
     }
+#endif
   return 0.0;
 }
 
 double phi12sav, theta12sav, gamma12sav;
-double rcmxsav, nrcmxsav, rcmysav, nrcmysav, rcmzsav, nrcmzsav;
-int nrcmx, nrcmy, nrcmz;
+double rcmxsav, nrcmxsav, rcmysav, ircmysav, ircmzsav, ircmzsav;
 double *xrcmx, *wrcmx, *xrcmy, *wrcmy, *xrcmz, *wrcmz;
-int nphi12sav, ntheta12sav, ngamma12sav;
-double ftheta12(double theta12, int ntheta12);
-double fphi12(double phi12, int nphi12);
-double fgamma12(double gamma12, int ngamma12);
-double frcmx(double rcmx, int nrcmx);
-double frcmy(double rcmy, int nrcmy);
-double frcmz(double rcmz, int nrcmz);
+int iphi12sav, itheta12sav, igamma12sav;
+double ftheta12(double theta12, int itheta12);
+double fphi12(double phi12, int iphi12);
+double fgamma12(double gamma12, int igamma12);
+double frcmx(double rcmx, int ircmx);
+double frcmy(double rcmy, int ircmy);
+double frcmz(double rcmz, int ircmz);
 double (*nrfunc)(double,int,double,int,double,int,double,int,double,int,double,int);
 double quad3d(double (*func)(double,int,double,int,double,int,double,int,double,int,double, int), 
 	      double rcmx_1, double rcmx_2)
@@ -1293,10 +1318,10 @@ double quad3d(double (*func)(double,int,double,int,double,int,double,int,double,
   return qromb(frcmx,rcmx_1,rcmx_2);
 #endif
 }
-double frcmx(double rcmx, int nrcmx) 
+double frcmx(double rcmx, int ircmx) 
 {
   rcmxsav=rcmx;
-  nrcmxsav=nrcmx;
+  ircmxsav=nrcmx;
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
@@ -1305,10 +1330,10 @@ double frcmx(double rcmx, int nrcmx)
   return qromb(frcmz,-Ly/2.,Ly/2.); 
 #endif
 }
-double frcmy(double rcmy, int nrcmy) 
+double frcmy(double rcmy, int ircmy) 
 {
   rcmysav=rcmy;
-  nrcmysav=nrcmy;
+  ircmysav=ircmy;
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
@@ -1317,10 +1342,10 @@ double frcmy(double rcmy, int nrcmy)
   return qromb(frcmy,-Ly/2.,Ly/2.); 
 #endif
 }
-double frcmz(double rcmz, int nrcmz) 
+double frcmz(double rcmz, int ircmz) 
 {
   rcmzsav=rcmz;
-  nrcmzsav=nrcmz;
+  ircmzsav=ircmz;
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
@@ -1329,35 +1354,36 @@ double frcmz(double rcmz, int nrcmz)
   return qromb(fgamma12,0.0.,2.0*M_PI); 
 #endif
 }
-double fgamma12(double gamma12, int ngamma12) 
+double fgamma12(double gamma12, int igamma12) 
 {
   gamma12sav=gamma12;
-  ngamma12sav=ngamma12;
+  igamma12sav=igamma12;
 #ifdef GAUSS
   return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
 #else
   return qromb(ftheta12,0.0,M_PI); 
 #endif
 }
-double fphi12(double phi12, int nphi12) 
+double fphi12(double phi12, int iphi12) 
 {
   phi12sav=phi12;
-  nphi12sav=nphi12;
+  iphi12sav=iphi12;
 #ifdef GAUSS
   return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
 #else
   return qromb(ftheta12,0.0,M_PI); 
 #endif
 }
-double ftheta12(double theta12, int ntheta12) 
+double ftheta12(double theta12, int itheta12) 
 {
-  return (*nrfunc)(rcmxsav,nrcmxsav,rcmysav,nrcmysav,rcmzsav,nrcmzsav, gamma12sav, ngamma12sav, 
-		   phi12sav,nphi12sav,theta12,ntheta12);
+  return (*nrfunc)(rcmxsav,ircmxsav,rcmysav,ircmysav,rcmzsav,ircmzsav, gamma12sav, igamma12sav, 
+		   phi12sav,iphi12sav,theta12,itheta12);
 }
-double intfunc(double rcmx, int nrcmx, double rcmy, int nrcmy, double rcmz, int nrcmz,
-	       double gamma12, int ngamma12, double phi12, int nphi12, double theta12, int ntheta12)
+double intfunc(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, int ircmz,
+	       double gamma12, int igamma12, double phi12, int iphi12, double theta12, int itheta12)
 {
-  return integrandv1(rcmx, rcmy, rcmz, gamma12, ngamma12, phi12, nphi12, theta12, ntheta12, alphasav);
+  nbit++;
+  return integrandv1(rcmx, ircmx, rcmy, ircmy, rcmz, ircmz, gamma12, igamma12, phi12, iphi12, theta12, itheta12, alphasav);
 }
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
