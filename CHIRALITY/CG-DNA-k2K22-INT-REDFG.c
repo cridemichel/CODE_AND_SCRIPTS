@@ -1325,9 +1325,9 @@ double frcmx(double rcmx, int ircmx)
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
-  return qgaus(frcmz,-Ly/2.,Ly/2., xrcmy, wrcmy, nrcmy); 
+  return qgaus(frcmy,-Ly/2.,Ly/2., xrcmy, wrcmy, nrcmy); 
 #else
-  return qromb(frcmz,-Ly/2.,Ly/2.); 
+  return qromb(frcmy,-Ly/2.,Ly/2.); 
 #endif
 }
 double frcmy(double rcmy, int ircmy) 
@@ -1337,9 +1337,9 @@ double frcmy(double rcmy, int ircmy)
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
-  return qgaus(frcmy,-Lz/2.,Lz/2., xrcmz, wrcmz, nrcmz); 
+  return qgaus(frcmz,-Lz/2.,Lz/2., xrcmz, wrcmz, nrcmz); 
 #else
-  return qromb(frcmy,-Ly/2.,Ly/2.); 
+  return qromb(frcmz,-Ly/2.,Ly/2.); 
 #endif
 }
 double frcmz(double rcmz, int ircmz) 
@@ -1878,7 +1878,7 @@ int main(int argc, char**argv)
   printf("Gauss quadrature with %d %d %d points\n", nphi, ntheta, ngamma);
 
   totbytes= nrcmx*nrcmy*nrcmz*ngamma*nphi*ntheta/8;
-
+  overlaparr = malloc(sizeof(unsigned char)*totbytes);
   fread(overlaparr, sizeof(unsigned char), totbytes, fin);  
   fclose(fin);
 
@@ -2062,7 +2062,7 @@ int main(int argc, char**argv)
 #endif
   totfact = 1.0/(2.0*M_PI);
   /* place second DNAD randomly */
-  vexcl = quad3d(intfunc, 0.0, 2.0*M_PI)*totfact;
+  vexcl = quad3d(intfunc, -Lx/2., Lx/2.)*totfact;
   fout = fopen(fnout, "a+");
   if (type==0)
     //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
