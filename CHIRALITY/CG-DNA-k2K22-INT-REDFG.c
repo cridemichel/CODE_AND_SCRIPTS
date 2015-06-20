@@ -1214,7 +1214,7 @@ int compare_func(const void *aa, const void *bb)
     return 0;
 }
 #endif
-double integrandv1(double rcmx, ircmx, double rcmy, int ircmy, double rcmz, int ircmz;
+double integrandv1(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, int ircmz,
 		    double phi12, int iphi12, double theta12, int itheta12, double gamma12, int igamma12,
 		    double alpha)
 {
@@ -1241,24 +1241,24 @@ double integrandv1(double rcmx, ircmx, double rcmy, int ircmy, double rcmz, int 
 #if 1
   numbyte=nbit/8;
   nshift = numbyte % 8;
-  if ((overlaparr[numbyte] >> nshift) & 0x1)
+  if (overlaparr[numbyte] & (0x1 << nshift))
     {
       switch (type)
 	{
 	case 0:
-	  return XI1[nphi12][ntheta12];
+	  return XI1[iphi12][itheta12];
 	  break;
 	case 1:
-	  return rcmx*XI1[nphi12][ntheta12]+
-	    rcmy*XI2[nphi12][ntheta12]+
-	    rcmz*XI3[nphi12][ntheta12];
+	  return rcmx*XI1[iphi12][itheta12]+
+	    rcmy*XI2[iphi12][itheta12]+
+	    rcmz*XI3[iphi12][itheta12];
 	  break;
 	case 2:
-	  return -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
-		   Sqr(rcmy)*XI2[nphi12][ntheta12]+
-		   Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
-		   rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
-		      break;
+	  return -(Sqr(rcmx)*XI1[iphi12][itheta12]+
+		   Sqr(rcmy)*XI2[iphi12][itheta12]+
+		   Sqr(rcmz)*XI3[iphi12][itheta12]+rcmx*rcmy*XI4[iphi12][itheta12]+
+		   rcmx*rcmz*XI5[iphi12][itheta12]+rcmy*rcmz*XI6[iphi12][itheta12]);
+	  break;
 	}
     }
 #else
@@ -1298,7 +1298,7 @@ double integrandv1(double rcmx, ircmx, double rcmy, int ircmy, double rcmz, int 
 }
 
 double phi12sav, theta12sav, gamma12sav;
-double rcmxsav, nrcmxsav, rcmysav, ircmysav, ircmzsav, ircmzsav;
+double rcmxsav, ircmxsav, rcmysav, ircmysav, rcmzsav, ircmzsav;
 double *xrcmx, *wrcmx, *xrcmy, *wrcmy, *xrcmz, *wrcmz;
 int iphi12sav, itheta12sav, igamma12sav;
 double ftheta12(double theta12, int itheta12);
