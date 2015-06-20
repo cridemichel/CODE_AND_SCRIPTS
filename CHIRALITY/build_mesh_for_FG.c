@@ -978,6 +978,8 @@ int main(int argc, char**argv)
 #endif
   totbytes= nrcmx*nrcmy*nrcmz*ngamma*nphi*ntheta/8;
   overlaparr = malloc(sizeof(unsigned char)*totbytes);
+  for (i=0; i < totbytes; i++)
+    overlaparr[i] = 0;
   //printf("XI1[7][8]:%.15G \n", XI1[7][8]);
   /* we use as the reference system the body reference system of first particle */
 #ifdef EULER_ROT
@@ -1013,7 +1015,7 @@ int main(int argc, char**argv)
   			  if (integrandv1(rcmx, rcmy, rcmz, gamma12, phi, theta)<0.0)
 		  	    {
 			      ishift = nbit % 8;
-			      bit2set = 1 << ishift;
+			      bit2set = 0x1 << ishift;
 			      overlaparr[nbit/8] |= bit2set;
 		  	    }
 			  nbit++;
