@@ -1223,6 +1223,7 @@ double integrandv1(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, 
   double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
   double sintheta12, costheta12, sinphi12, cosphi12, cosgamma12, singamma12;
   int numbyte, nshift;
+#if 0
   costheta12 = cos(theta12);
   sintheta12 = sin(theta12);
   cosphi12 = cos(phi12);
@@ -1238,6 +1239,7 @@ double integrandv1(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, 
   u2y = sintheta12*sinphi12;
   u2z = costheta12;  
   place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
+#endif
 #endif
 #if 1
   nbit = itheta12-1  + ntheta*(iphi12-1) + ntheta*nphi*(igamma12-1) + ntheta*nphi*ngamma*(ircmx-1) + 
