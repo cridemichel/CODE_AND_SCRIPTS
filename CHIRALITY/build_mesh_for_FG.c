@@ -987,7 +987,7 @@ int main(int argc, char**argv)
   nbit = 0;
   for (ircmx = 0; ircmx < nrcmx; ircmx++)
     {
-      if (ircmx > 0 && ircmx % outits == 0)
+      if (ircmx % outits == 0)
 	{
 	  printf("building mesh ircmx=%d/%d\n", ircmx, nrcmx);
 	}
