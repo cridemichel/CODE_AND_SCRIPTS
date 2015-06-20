@@ -774,7 +774,7 @@ int main(int argc, char**argv)
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
-  if (argc < 5)
+  if (argc < 10)
     {
       printf("syntax:  build_mesh_for_FG <pdb file> <DNAD length> [outits] [nrcmx] [nrcmy] [nrcmz] [ngamma] [nphi] [ntheta]\n");
       exit(-1);
@@ -782,38 +782,15 @@ int main(int argc, char**argv)
   strcpy(fnin,argv[1]);
   fin=fopen(fnin,"r");
   len=atoi(argv[2]);
-  alpha = atof(argv[3]);
-  outits = atoll(argv[4]);
+  outits = atoll(argv[3]);
 	
-  if (argc == 5)
-    nrcmx = 20;
-  else
-    nrcmx = atoi(argv[5]);
+  nrcmx = atoi(argv[4]);
+  nrcmy = atoi(argv[5]);
+  nrcmz = atoi(argv[6]);
 
-  if (argc == 6)
-    nrcmy = 20;
-  else
-    nrcmy = atoi(argv[6]);
-
-  if (argc == 7)
-    nrcmz = 20;
-  else
-    nrcmz = atoi(argv[7]);
-
-  if (argc == 8)
-    ngamma = 10;
-  else
-    ngamma = atoi(argv[8]);
-
-  if (argc == 9)
-    nphi = 10;
-  else
-    nphi = atoi(argv[9]);
-
-  if (argc == 10)
-    ntheta = 10;
-  else
-    ntheta = atoi(argv[10]);
+  ngamma = atoi(argv[7]);
+  nphi = atoi(argv[8]);
+  ntheta = atoi(argv[9]);
 
    /*
      rho_salt =2 csalt Nav 1000;
@@ -921,29 +898,9 @@ int main(int argc, char**argv)
   L=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*3.0;
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
   printf("box semiaxes=%f %f %f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2]);
-#ifdef MPI
-  srand48(((int)time(NULL))+my_rank);
-#else
-  srand48((int)time(NULL));
-#endif
-  sprintf(fnout, "v%d.dat", type);
-  factor=0.0;
-#if 0
-  dfons_sinth_max=estimate_maximum_dfons(alpha);
-  fons_sinth_max=dfons_sinth_max/alpha;
-  printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
-#endif
-#ifdef QFGAUSS
-  printf("Quasi Full Gauss quadrature with nrcmx=%d nrcmy=%d nrcmz=%d points\n", nrcmx, nrcmy, nrcmz);
-#endif
-#ifdef GAUSS
-  printf("Gauss quadrature with %d %d %d points\n", nphi, ntheta, ngamma);
-#else
-  printf("Romberg method with %.15G tolerance\n", ROMBTOL);
-#endif
-#ifdef QUASIMC
-  printf("I will generate a Quasi Monte Carlo sequence\n");
-#endif
+  printf("outits=%d Gauss quadrature with x=%d y=%d z=%d g=%d p=%d t=%d points\n", 
+	 outits, nrcmx, nrcmy, nrcmz, ngamma, nphi, ntheta);
+
   //exit(-1);
   /* avendo diviso l'integrazione in theta negli intervalli [0,pi/2] e [pi/2,pi]
      il fattore si deve ottenere integrando fra 0 e pi/2 */
@@ -1009,7 +966,7 @@ int main(int argc, char**argv)
   nsv = 1;
 #endif
 
-  sprintf(fn, "overla-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, gamma12, nphi, ntheta);
+  sprintf(fn, "overlap-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, gamma12, nphi, ntheta);
   fout = fopen(fn, "w+");
   fwrite(&nrcmx, sizeof(int), 1, fout);
   fwrite(&nrcmy, sizeof(int), 1, fout);
@@ -1030,6 +987,10 @@ int main(int argc, char**argv)
   nbit = 0;
   for (ircmx = 0; ircmx < nrcmx; ircmx++)
     {
+      if (ircmx > 0 && ircmx % outits == 0)
+	{
+	  printf("building mesh ircmx=%d/%d\n", ircmx, nrcmx);
+	}
       rcmx = xrcmx[ircmx];
       for (ircmy = 0; ircmy < nrcmy; ircmy++)
 	{
@@ -1040,18 +1001,14 @@ int main(int argc, char**argv)
 	      for (igamma = 0; igamma < ngamma; igamma++)
 		{
 		  gamma12 = xgamma[igamma];
-		  for (iphi = 0; phi < nphi; iphi++)
+		  for (iphi = 0; iphi < nphi; iphi++)
 		    {
 		      phi = xphi[iphi];
 		      for (itheta = 0; itheta < ntheta; itheta++)
 		    	{
 			  theta = xtheta[itheta];
 		  	  /* place second DNAD randomly */
-		  	  if (ircmx > 0 && ircmx % outits == 0)
-		  	    {
-		  	      printf("building mesh ircmx=%d/%d\n", ircmx, nrcmx);
-		  	    }
-		  	  if (integrandv1(rcmx, rcmy, rcmz, gamma12, phi, theta)<0.0)
+  			  if (integrandv1(rcmx, rcmy, rcmz, gamma12, phi, theta)<0.0)
 		  	    {
 			      ishift = nbit % 8;
 			      bit2set = 1 << ishift;
