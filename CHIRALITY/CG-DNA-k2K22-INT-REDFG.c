@@ -62,6 +62,7 @@ int type, nat, atnum, nbnum, len, nbit=0;
 long long int tot_trials, tt=0, ttini=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max, ROMBTOL, Lx, Ly, Lz;
 const double thetapts=100000;
+int totbytes;
 #ifdef GAUSS
 double gammln(double xx)
   /*Returns the value ln[Γ(xx)] for xx > 0.*/
@@ -1215,7 +1216,7 @@ int compare_func(const void *aa, const void *bb)
 }
 #endif
 double integrandv1(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, int ircmz,
-		    double phi12, int iphi12, double theta12, int itheta12, double gamma12, int igamma12,
+		    double gamma12, int igamma12, double phi12, int iphi12, double theta12, int itheta12, 
 		    double alpha)
 {
   int i, j;
@@ -1239,8 +1240,14 @@ double integrandv1(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, 
   place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
 #endif
 #if 1
+  nbit = itheta12-1  + ntheta*(iphi12-1) + ntheta*nphi*(igamma12-1) + ntheta*nphi*ngamma*(ircmx-1) + 
+    ntheta*nphi*ngamma*nrcmx*(ircmy-1) +
+    ntheta*nphi*ngamma*nrcmx*nrcmy*(ircmz-1);
   numbyte=nbit/8;
-  nshift = numbyte % 8;
+  //printf("numbyte=%d itheta12=%d overlaparr=%x\n", numbyte, itheta12, overlaparr[numbyte]);
+  nshift = nbit % 8;
+  //if (numbyte==579119)
+    //printf("nbytes=%d nbit=%d overlaparr[]:%x totbytes=%d\n", numbyte, nbit, overlaparr[579119], totbytes);
   if (overlaparr[numbyte] & (0x1 << nshift))
     {
       switch (type)
@@ -1249,9 +1256,11 @@ double integrandv1(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, 
 	  return XI1[iphi12][itheta12];
 	  break;
 	case 1:
-	  //printf("boh=%.15G x=%f %f %f\n",  rcmx, rcmy, rcmz, rcmx*XI1[iphi12][itheta12]+
-	    //rcmy*XI2[iphi12][itheta12]+
-	    //rcmz*XI3[iphi12][itheta12]);
+#if 0
+	  printf("boh=%.15G x=%f %f %f\n",  rcmx*XI1[iphi12][itheta12]+
+	    rcmy*XI2[iphi12][itheta12]+
+	    rcmz*XI3[iphi12][itheta12],rcmx, rcmy, rcmz);
+#endif
 	  return rcmx*XI1[iphi12][itheta12]+
 	    rcmy*XI2[iphi12][itheta12]+
 	    rcmz*XI3[iphi12][itheta12];
@@ -1363,9 +1372,9 @@ double fgamma12(double gamma12, int igamma12)
   gamma12sav=gamma12;
   igamma12sav=igamma12;
 #ifdef GAUSS
-  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
+  return qgaus(fphi12,0.0,M_PI, xphi, wphi, nphi); 
 #else
-  return qromb(ftheta12,0.0,M_PI); 
+  return qromb(fphi12,0.0,M_PI); 
 #endif
 }
 double fphi12(double phi12, int iphi12) 
@@ -1386,7 +1395,6 @@ double ftheta12(double theta12, int itheta12)
 double intfunc(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, int ircmz,
 	       double gamma12, int igamma12, double phi12, int iphi12, double theta12, int itheta12)
 {
-  nbit++;
   return integrandv1(rcmx, ircmx, rcmy, ircmy, rcmz, ircmz, gamma12, igamma12, phi12, iphi12, theta12, itheta12, alphasav);
 }
 static int iminarg1,iminarg2;
@@ -1471,7 +1479,7 @@ int main(int argc, char**argv)
   char *mf, fn[256];
   int aa, bb;
   double ccc, totfact;
-  int cc, totbytes;
+  int cc;
   double gamma1, gamma2;
   FILE *fin, *fout, *f, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
 #ifdef PARALLEL
@@ -1879,14 +1887,17 @@ int main(int argc, char**argv)
   fread(&ntheta, sizeof(int),1, fin);
   
   printf("Gauss quadrature with nrcmx=%d nrcmy=%d nrcmz=%d points\n", nrcmx, nrcmy, nrcmz);
-  printf("Gauss quadrature with %d %d %d points\n", nphi, ntheta, ngamma);
 
   totbytes= nrcmx*nrcmy*nrcmz*ngamma*nphi*ntheta/8;
+  printf("Gauss quadrature with %d %d %d points totbytes=%d\n", nphi, ntheta, ngamma, totbytes);
   overlaparr = malloc(sizeof(unsigned char)*totbytes);
   fread(overlaparr, sizeof(unsigned char), totbytes, fin);  
   fclose(fin);
-  //printf("overlap[631740]:%x\n", overlaparr[631740]);
-
+#if 0
+  for (i=0; i < totbytes; i++)
+	if (overlaparr[i]!=0)
+	  printf("overlap[%d]:%x\n", i,overlaparr[i]);
+#endif
   xtheta = malloc(sizeof(double)*(ntheta+1));
   xphi = malloc(sizeof(double)*(nphi+1));
   xgamma = malloc(sizeof(double)*(ngamma+1));

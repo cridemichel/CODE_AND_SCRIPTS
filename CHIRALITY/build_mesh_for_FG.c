@@ -993,7 +993,7 @@ int main(int argc, char**argv)
     {
       if (ircmx % outits == 0)
 	{
-	  printf("building mesh ircmx=%d/%d\n", ircmx, nrcmx);
+	  printf("building mesh ircmx=%d/%d (totbytes=%d)\n", ircmx, nrcmx, totbytes);
 	}
       rcmx = xrcmx[ircmx+1];
       for (ircmy = 0; ircmy < nrcmy; ircmy++)
