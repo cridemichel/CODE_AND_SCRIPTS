@@ -1493,11 +1493,7 @@ int main(int argc, char**argv)
 #ifdef ELEC
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
 #else
-#ifdef GAUSS
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
-#else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [romb-tol]\n");
-#endif
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <type:0=v0, 1=v1, 2=v2> [outits] <mesh file>\n");
 #endif
       exit(1);
     }
@@ -1507,10 +1503,10 @@ int main(int argc, char**argv)
   alpha = atof(argv[3]);
   //tot_trials=atoll(argv[4]);
   type = atoi(argv[4]);
-  fileoutits = atoll(argv[5]);
+  //fileoutits = atoll(argv[5]);
   
-  outits = atoll(argv[6]);
-  mf = argv[7];
+  outits = atoll(argv[5]);
+  mf = argv[6];
 
 #ifdef ELEC
 #ifdef PARALLEL
