@@ -1298,7 +1298,8 @@ double integrandv1(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, 
 }
 
 double phi12sav, theta12sav, gamma12sav;
-double rcmxsav, ircmxsav, rcmysav, ircmysav, rcmzsav, ircmzsav;
+double rcmxsav, rcmysav, rcmzsav; 
+int ircmxsav, ircmysav, ircmzsav;
 double *xrcmx, *wrcmx, *xrcmy, *wrcmy, *xrcmz, *wrcmz;
 int iphi12sav, itheta12sav, igamma12sav;
 double ftheta12(double theta12, int itheta12);
@@ -2066,11 +2067,11 @@ int main(int argc, char**argv)
   fout = fopen(fnout, "a+");
   if (type==0)
     //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E3);
+    fprintf(fout,"%.15G\n", vexcl/1E3);
   else if (type==1)
-    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
+    fprintf(fout,"%.15G\n", vexcl/1E4); /* divido per 10^4 per convertire in nm */
   else
-    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
+    fprintf(fout,"%.15G\n", vexcl/1E5); /* divido per 10^5 per convertire in nm */
 
   fclose(fout);
 }
