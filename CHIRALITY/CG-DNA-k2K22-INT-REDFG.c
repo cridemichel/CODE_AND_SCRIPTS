@@ -22,6 +22,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 //#define ALBERTA
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
+unsigned char *overlaparr;
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
@@ -1507,7 +1508,7 @@ int main(int argc, char**argv)
   char fn[256];
   int aa, bb;
   double ccc, totfact;
-  int cc;
+  int cc, totbytes;
   double gamma1, gamma2;
   FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
 #ifdef PARALLEL
@@ -2004,21 +2005,18 @@ int main(int argc, char**argv)
   exit(-1);
 #endif
   //nrfunc = intfunc;
-#ifdef GAUSS
   xtheta = malloc(sizeof(double)*(ntheta+1));
   xphi = malloc(sizeof(double)*(nphi+1));
   xgamma = malloc(sizeof(double)*(ngamma+1));
   wtheta = malloc(sizeof(double)*(ntheta+1));
   wphi = malloc(sizeof(double)*(nphi+1));
   wgamma = malloc(sizeof(double)*(ngamma+1));
-#ifdef QFGAUSS
   xrcmx = malloc(sizeof(double)*(nrcmx+1));
   wrcmx = malloc(sizeof(double)*(nrcmx+1));
   xrcmy = malloc(sizeof(double)*(nrcmy+1));
   wrcmy = malloc(sizeof(double)*(nrcmy+1));
   xrcmz = malloc(sizeof(double)*(nrcmz+1));
   wrcmz = malloc(sizeof(double)*(nrcmz+1));
-#endif
   gauleg(0.0, M_PI, xtheta, wtheta, ntheta);
 #if 0
   printf("x=%.15G %.15G %.15G %.15G %.15G\n w=%.15G %.15G %.15G %.15G %.15G\n",
@@ -2028,34 +2026,9 @@ int main(int argc, char**argv)
 #endif
   gauleg(0.0, 2.0*M_PI, xphi, wphi, nphi);
   gauleg(0.0, 2.0*M_PI, xgamma, wgamma, ngamma);
-#endif
-#ifdef QFGAUSS
   gauleg(-Lx/2., Lx/2., xrcmx, wrcmx, nrcmx);
   gauleg(-Ly/2., Ly/2., xrcmy, wrcmy, nrcmy);
   gauleg(-Lz/2., Lz/2., xrcmz, wrcmz, nrcmz);
-  nsv = -1;
-  sobseq(&nsv, sv);
-  nsv = 1;
-#endif
-#ifdef QUASIMC
-#ifdef USEGSL
-#ifdef MCGAMMA
-  nsv = 4; 
-#else
-  nsv = 3; 
-#endif
-  qsob = gsl_qrng_alloc (gsl_qrng_sobol, nsv);
-#else
-  /* initialization */
-  nsv = -1;  
-  sobseq(&nsv, sv);
-#ifdef MCGAMMA
-  nsv = 4;
-#else
-  nsv = 3;
-#endif
-#endif
-#endif
   
   XI1=malloc(sizeof(double)*(nphi+1));
   XI2=malloc(sizeof(double)*(nphi+1));
@@ -2210,81 +2183,26 @@ int main(int argc, char**argv)
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
 #endif
   totfact = 1.0/(2.0*M_PI);
-  for (tt=ttini+1; tt < tot_trials; tt++)
+  sprintf(fn, "overlap-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, gamma12, nphi, ntheta);
+  if (fin=fopen(fn, "r")==NULL)
     {
-      /* place second DNAD randomly */
-#ifdef QFGAUSS
-      sobseq(&nsv, sv);
-      gamma12sav = 2.0*M_PI*sv[1];
-#else
-#ifdef QUASIMC
-#ifdef USEGSL
-      gsl_qrng_get (qsob, sv);
-      //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
-      rcmx = Lx*(sv[0]-0.5);
-      rcmy = Ly*(sv[1]-0.5);
-      rcmz = Lz*(sv[2]-0.5);
-#ifdef MCGAMMA
-      gamma12sav = 2.0*M_PI*sv[3];
-#endif
-#else
-      /* quasi-MC */
-      sobseq(&nsv, sv);
-      //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
-      rcmx = Lx*(sv[1]-0.5);
-      rcmy = Ly*(sv[2]-0.5);
-      rcmz = Lz*(sv[3]-0.5);
-#ifdef MCGAMMA
-      gamma12sav = 2.0*M_PI*sv[4];
-#endif
-#endif
-#else
-      rcmx = Lx*(drand48()-0.5);
-      rcmy = Ly*(drand48()-0.5);
-      rcmz = Lz*(drand48()-0.5);
-      //gamma1 = 2.0*M_PI*drand48();
-      //gamma2 = 2.0*M_PI*drand48();
-#ifdef MCGAMMA
-      gamma12sav = 2.0*M_PI*drand48();
-#endif
-#endif
-      rcmxsav = rcmx;
-      rcmysav = rcmy;
-      rcmzsav = rcmz;
-#endif
+      printf("I need a file called %s\n", fn);
+      exit(-1);
+    }
+  totbytes= nrcmx*nrcmy*nrcmz*ngamma*nphi*ntheta/8;
 
-#if defined(MCGAMMA) || defined(QFGAUSS)
-      vexcl += quad3d(intfunc, 0.0, 2.0*M_PI);
-#else
-      vexcl += quad3d(intfunc, 0.0, 2.0*M_PI)*totfact;
-#endif
-      if (tt > 0 && tt % fileoutits == 0)
-	{
-	  fout = fopen(fnout, "a+");
-#ifdef QFGAUSS
-  	  if (type==0)
-	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E3);
-	  else if (type==1)
-	    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
-	  else
-	    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
+  fread(overlaparr, sizeof(unsigned char), totbyes, fin);  
+  fclose(fin);
+  /* place second DNAD randomly */
+  vexcl = quad3d(intfunc, 0.0, 2.0*M_PI)*totfact;
+  fout = fopen(fnout, "a+");
+  if (type==0)
+    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E3);
+  else if (type==1)
+    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
+  else
+    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
 
-#else
-	  if (type==0)
-	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
-	  else if (type==1)
-	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
-	  else
-	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
-#endif
-	  fclose(fout);
-	}
-      if (tt % outits==0)
-	printf("trials: %lld/%lld\n", tt, tot_trials);
-    } 
-#if defined(USEGSL) && defined(QUASIMC)
-  gsl_qrng_free(qsob);
-#endif
+  fclose(fout);
 }
