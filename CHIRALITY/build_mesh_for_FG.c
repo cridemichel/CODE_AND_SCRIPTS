@@ -61,8 +61,8 @@ long long int tot_trials, tt=0, ttini=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max, ROMBTOL, Lx, Ly, Lz;
 const double thetapts=100000;
 
-int ntheta, nphi, ngamma;
-double *xtheta, *xphi, *wtheta, *wphi, *xgamma, *xphi, *wgamma;
+int ntheta, nphi, ngamma, nrcmx, nrcmy, nrcmz;
+double *xtheta, *xphi, *wtheta, *wphi, *xgamma, *xphi, *wgamma, *xrcmx, *wrcmx, *xrcmy, *wrcmy, *xrcmz, *wrcmz;
 #define EPSGAULEG 3.0e-11 
 /*EPS is the relative precision.*/
 void gauleg(double x1, double x2, double x[], double w[], int n)
@@ -766,7 +766,7 @@ int main(int argc, char**argv)
   int aa, bb;
   double ccc, totfact;
   int cc;
-  double gamma1, gamma2;
+  double gamma12, phi, theta;
   FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
   int ncontrib, k, i, j, overlap, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
@@ -995,19 +995,21 @@ int main(int argc, char**argv)
   gauleg(-Lx/2., Lx/2., xrcmx, wrcmx, nrcmx);
   gauleg(-Ly/2., Ly/2., xrcmy, wrcmy, nrcmy);
   gauleg(-Lz/2., Lz/2., xrcmz, wrcmz, nrcmz);
-  gauleg(0,2.0*M_PI, xgamma, wgamma ngamma);
-  gauleg(0,2.0*M_PI, xphi, wphi nphi);
-  gauleg(0, M_PI, xtheta, wtheta, ntheta);
+  gauleg(0.,2.0*M_PI, xgamma, wgamma, ngamma);
+  gauleg(0.,2.0*M_PI, xphi, wphi, nphi);
+  gauleg(0., M_PI, xtheta, wtheta, ntheta);
+#if 0
   nsv = -1;
   sobseq(&nsv, sv);
   nsv = 1;
+#endif
 #if 0
   nsv = -1;  
   sobseq(&nsv, sv);
   nsv = 1;
 #endif
 
-  sprintf(fn, "overla-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, gamma, phi, theta);
+  sprintf(fn, "overla-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, gamma12, nphi, ntheta);
   fout = fopen(fn, "w+");
   fwrite(&nrcmx, sizeof(int), 1, fout);
   fwrite(&nrcmy, sizeof(int), 1, fout);
@@ -1032,28 +1034,28 @@ int main(int argc, char**argv)
       for (ircmy = 0; ircmy < nrcmy; ircmy++)
 	{
 	  rcmy = xrcmy[ircmy];
-	  for (ircmz = 0; itcmz < nrcmz; ircmz++)
+	  for (ircmz = 0; ircmz < nrcmz; ircmz++)
 	    {
 	      rcmz = xrcmz[ircmz];
 	      for (igamma = 0; igamma < ngamma; igamma++)
 		{
-		  gamma = xgamma[igamma];
+		  gamma12 = xgamma[igamma];
 		  for (iphi = 0; phi < nphi; iphi++)
 		    {
-		      phi = xphi[iphi]
+		      phi = xphi[iphi];
 		      for (itheta = 0; itheta < ntheta; itheta++)
 		    	{
 			  theta = xtheta[itheta];
 		  	  /* place second DNAD randomly */
 		  	  if (ircmx > 0 && ircmx % outits == 0)
 		  	    {
-		  	      printf("building mesh ircmx=%d/%d\n", ircmx, nrcmx)
+		  	      printf("building mesh ircmx=%d/%d\n", ircmx, nrcmx);
 		  	    }
-		  	  if (integrandv1(rcmx, rcmy, rcmz, gamma, phi, theta)<0.0)
+		  	  if (integrandv1(rcmx, rcmy, rcmz, gamma12, phi, theta)<0.0)
 		  	    {
 			      ishift = nbit % 8;
 			      bit2set = 1 << ishift;
-			      overlaparr[nbit/8] |= bitset;
+			      overlaparr[nbit/8] |= bit2set;
 		  	    }
 			  nbit++;
 		    	}	 
