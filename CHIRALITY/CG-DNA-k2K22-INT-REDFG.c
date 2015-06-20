@@ -1882,7 +1882,7 @@ int main(int argc, char**argv)
   overlaparr = malloc(sizeof(unsigned char)*totbytes);
   fread(overlaparr, sizeof(unsigned char), totbytes, fin);  
   fclose(fin);
-
+  //printf("overlap[631740]:%x\n", overlaparr[631740]);
 
   xtheta = malloc(sizeof(double)*(ntheta+1));
   xphi = malloc(sizeof(double)*(nphi+1));

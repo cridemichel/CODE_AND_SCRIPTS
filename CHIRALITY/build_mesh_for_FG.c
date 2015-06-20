@@ -1025,6 +1025,14 @@ int main(int argc, char**argv)
 	    } 
 	}
     }
+#if 0
+  for (i=0; i < totbytes; i++)
+    if (overlaparr[i]!=0)
+      {
+	printf("overlaparr[%d]: %x\n", i, overlaparr[i]);
+	//break;
+      }
+#endif	
   fwrite(overlaparr, sizeof(unsigned char), totbytes, fout);
   fclose(fout);
 }
