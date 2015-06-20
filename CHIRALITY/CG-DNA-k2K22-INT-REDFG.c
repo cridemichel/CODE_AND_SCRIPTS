@@ -22,6 +22,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 //#define ALBERTA
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
+double alphasav;
 unsigned char *overlaparr;
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
@@ -1281,7 +1282,7 @@ double fgamma12(double gamma12, int ngamma12);
 double frcmx(double rcmx, int nrcmx);
 double frcmy(double rcmy, int nrcmy);
 double frcmz(double rcmz, int nrcmz);
-double (*nrfunc)(double,int,double,int,double,int,double,int,double,int);
+double (*nrfunc)(double,int,double,int,double,int,double,int,double,int,double,int);
 double quad3d(double (*func)(double,int,double,int,double,int,double,int,double,int,double, int), 
 	      double rcmx_1, double rcmx_2)
 {
@@ -1323,12 +1324,12 @@ double frcmz(double rcmz, int nrcmz)
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
-  return qgaus(fgamma12,0.0., 2.0*M_PI, xgamma, wgamma, ngamma); 
+  return qgaus(fgamma12,0.0, 2.0*M_PI, xgamma, wgamma, ngamma); 
 #else
   return qromb(fgamma12,0.0.,2.0*M_PI); 
 #endif
 }
-double fgamma12(double phi12, int nphi12) 
+double fgamma12(double gamma12, int ngamma12) 
 {
   gamma12sav=gamma12;
   ngamma12sav=ngamma12;
@@ -1442,7 +1443,7 @@ int main(int argc, char**argv)
   double ccc, totfact;
   int cc, totbytes;
   double gamma1, gamma2;
-  FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
+  FILE *fin, *fout, *f, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
 #ifdef PARALLEL
   FILE *fp;
   double sigab, rab0, rab0sq, uelcontrib, tempfact;
@@ -1744,45 +1745,22 @@ int main(int argc, char**argv)
   nfrarg = 10;
 #endif
 #endif
-  if (0)
-    {
-      cont=1;
-      fread = fopen(argv[nfrarg-1], "r");
-      printf("reading file = %s\n", argv[nfrarg-1]);
-      while (!feof(fread))
-	{
-#ifdef ELEC
-	  fscanf(fread, "%lld %lf %lf %lf\n", &ttini, &dummydbl, &vexcl, &vexclel);
-#else
-	  fscanf(fread, "%lld %lf\n", &ttini, &vexcl);
-#endif
-	}
-      fclose(fread);
-#ifdef ELEC
-      printf("restarting tt=%lld vexcltot=%.15G vexcl=%.15G vexclel=%.15G\n", ttini, vexcl+vexclel, vexcl, vexclel);
-#else
-      printf("restarting tt=%lld vexcl=%.15G\n", ttini, vexcl);
-#endif
-    }
-  else
-    {
-      vexcl = 0.0;
+  vexcl = 0.0;
 #ifdef ELEC
 #ifdef PARALLEL
-      if (numtemps > 1 || numconcs > 1)
-	{
-	  for (k1=0; k1 < numtemps; k1++)
-	    for (k2=0; k2 < numconcs; k2++)
-	      vexclel_arr[k1][k2] = 0.0;
-	}
-      else
-	vexclel = 0.0;
-#else
-      vexclel = 0.0;
-#endif
-#endif
-      ttini = 0;
+  if (numtemps > 1 || numconcs > 1)
+    {
+      for (k1=0; k1 < numtemps; k1++)
+	for (k2=0; k2 < numconcs; k2++)
+	  vexclel_arr[k1][k2] = 0.0;
     }
+  else
+    vexclel = 0.0;
+#else
+  vexclel = 0.0;
+#endif
+#endif
+  ttini = 0;
 
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
@@ -2115,15 +2093,15 @@ int main(int argc, char**argv)
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
 #endif
   totfact = 1.0/(2.0*M_PI);
-  sprintf(fn, "overlap-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, gamma12, nphi, ntheta);
-  if (fin=fopen(fn, "r")==NULL)
+  sprintf(fn, "overlap-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, ngamma, nphi, ntheta);
+  if ((fin=fopen(fn, "r"))==NULL)
     {
       printf("I need a file called %s\n", fn);
       exit(-1);
     }
   totbytes= nrcmx*nrcmy*nrcmz*ngamma*nphi*ntheta/8;
 
-  fread(overlaparr, sizeof(unsigned char), totbyes, fin);  
+  fread(overlaparr, sizeof(unsigned char), totbytes, fin);  
   fclose(fin);
   /* place second DNAD randomly */
   vexcl = quad3d(intfunc, 0.0, 2.0*M_PI)*totfact;
