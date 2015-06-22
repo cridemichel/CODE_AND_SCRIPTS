@@ -9,6 +9,7 @@
 #define GAUSS
 #define EULER_ROT
 #define MCGAMMA
+#define QUASIMC
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
