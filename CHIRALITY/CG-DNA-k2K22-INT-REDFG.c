@@ -23,7 +23,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
 double alphasav;
-int no_mesh=0;
+int no_mesh=0, outits;
 unsigned char *overlaparr;
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
@@ -1344,6 +1344,8 @@ double frcmx(double rcmx, int ircmx)
 {
   rcmxsav=rcmx;
   ircmxsav=ircmx;
+  if ((ircmx % outits)==0)
+    printf("ircmx=%d/%d\n", ircmx, nrcmx);
 #ifdef GAUSS
   /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
      gamma varia tra 0 e 2*pi come phi */
@@ -1500,7 +1502,7 @@ int main(int argc, char**argv)
   int k1, k2, kk;
 #endif
   int ncontrib, k, i, j, overlap, contrib, cont=0, nfrarg;
-  long long int fileoutits, outits;
+  long long int fileoutits;
   char fnin[1024],fnout[256];
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
