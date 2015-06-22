@@ -1486,11 +1486,14 @@ void sobseq(int *n, double x[])
        */
     }
 }
+#ifdef SOBOLBF
+void i8_sobol ( int dim_num, long long int *seed, double quasi[ ] );
+#endif
 int main(int argc, char**argv)
 {
 #ifdef QUASIMC
 #ifdef SOBOLBF
-  long long int bfseed;
+  long long bfseed=0;
 #endif
 #ifdef USEGSL
   gsl_qrng *qsob;
@@ -2055,13 +2058,7 @@ int main(int argc, char**argv)
 #endif
   qsob = gsl_qrng_alloc (gsl_qrng_sobol, nsv);
 #elif defined(SOBOLBF)
-#ifdef MCGAMMA
-  nsv = 4; 
-#else
-  nsv = 3; 
-#endif
-  bfseed = 0;
-  i8_sobol(nsv, &seed, sv);
+  // DO NOTHING
 #else
   /* initialization */
   nsv = -1;  
@@ -2237,6 +2234,20 @@ int main(int argc, char**argv)
 #ifdef QUASIMC
 #ifdef USEGSL
       gsl_qrng_get (qsob, sv);
+      //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
+      rcmx = Lx*(sv[0]-0.5);
+      rcmy = Ly*(sv[1]-0.5);
+      rcmz = Lz*(sv[2]-0.5);
+#ifdef MCGAMMA
+      gamma12sav = 2.0*M_PI*sv[3];
+#endif
+#elif defined(SOBOLBF)
+#ifdef MCGAMMA
+      nsv = 4; 
+#else
+      nsv = 3; 
+#endif
+      i8_sobol(nsv, &bfseed, sv);
       //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
       rcmx = Lx*(sv[0]-0.5);
       rcmy = Ly*(sv[1]-0.5);
