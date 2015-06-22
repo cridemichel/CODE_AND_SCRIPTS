@@ -23,6 +23,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
 double alphasav;
+int no_mesh=0;
 unsigned char *overlaparr;
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
@@ -1223,91 +1224,97 @@ double integrandv1(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, 
   double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
   double sintheta12, costheta12, sinphi12, cosphi12, cosgamma12, singamma12;
   int numbyte, nshift;
-#if 0
-  costheta12 = cos(theta12);
-  sintheta12 = sin(theta12);
-  cosphi12 = cos(phi12);
-  sinphi12 = sin(phi12);
-  cosgamma12 = cos(gamma12);
-  singamma12 = sin(gamma12);
-  //versor_to_R(u1x, u1y, u1z, gamma1, DNADall[0].R);
-  //versor_to_R(u2x, u2y, u2z, gamma2, DNADall[1].R);
-#ifdef EULER_ROT
-  place_DNAD(rcmx, rcmy, rcmz, cosphi12, sinphi12, costheta12, sintheta12, cosgamma12, singamma12, 1);
-#else
-  u2x = sintheta12*cosphi12;
-  u2y = sintheta12*sinphi12;
-  u2z = costheta12;  
-  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
-#endif
-#endif
-#if 1
-  nbit = itheta12-1  + ntheta*(iphi12-1) + ntheta*nphi*(igamma12-1) + ntheta*nphi*ngamma*(ircmx-1) + 
-    ntheta*nphi*ngamma*nrcmx*(ircmy-1) +
-    ntheta*nphi*ngamma*nrcmx*nrcmy*(ircmz-1);
-  numbyte=nbit/8;
-  //printf("numbyte=%d itheta12=%d overlaparr=%x\n", numbyte, itheta12, overlaparr[numbyte]);
-  nshift = nbit % 8;
-  //if (numbyte==579119)
-    //printf("nbytes=%d nbit=%d overlaparr[]:%x totbytes=%d\n", numbyte, nbit, overlaparr[579119], totbytes);
-  if (overlaparr[numbyte] & (0x1 << nshift))
+  if (no_mesh==1)
     {
-      switch (type)
-	{
-	case 0:
-	  return XI1[iphi12][itheta12];
-	  break;
-	case 1:
-#if 0
-	  printf("boh=%.15G x=%f %f %f\n",  rcmx*XI1[iphi12][itheta12]+
-	    rcmy*XI2[iphi12][itheta12]+
-	    rcmz*XI3[iphi12][itheta12],rcmx, rcmy, rcmz);
+      costheta12 = cos(theta12);
+      sintheta12 = sin(theta12);
+      cosphi12 = cos(phi12);
+      sinphi12 = sin(phi12);
+      cosgamma12 = cos(gamma12);
+      singamma12 = sin(gamma12);
+      //versor_to_R(u1x, u1y, u1z, gamma1, DNADall[0].R);
+      //versor_to_R(u2x, u2y, u2z, gamma2, DNADall[1].R);
+#ifdef EULER_ROT
+      place_DNAD(rcmx, rcmy, rcmz, cosphi12, sinphi12, costheta12, sintheta12, cosgamma12, singamma12, 1);
+#else
+      u2x = sintheta12*cosphi12;
+      u2y = sintheta12*sinphi12;
+      u2z = costheta12;  
+      place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
 #endif
-	  return rcmx*XI1[iphi12][itheta12]+
-	    rcmy*XI2[iphi12][itheta12]+
-	    rcmz*XI3[iphi12][itheta12];
-	  break;
-	case 2:
-	  return -(Sqr(rcmx)*XI1[iphi12][itheta12]+
-		   Sqr(rcmy)*XI2[iphi12][itheta12]+
-		   Sqr(rcmz)*XI3[iphi12][itheta12]+rcmx*rcmy*XI4[iphi12][itheta12]+
-		   rcmx*rcmz*XI5[iphi12][itheta12]+rcmy*rcmz*XI6[iphi12][itheta12]);
-	  break;
+    }
+  if (no_mesh==0)
+    {
+#if 0
+      nbit = itheta12-1  + ntheta*(iphi12-1) + ntheta*nphi*(igamma12-1) + ntheta*nphi*ngamma*(ircmx-1) + 
+	ntheta*nphi*ngamma*nrcmx*(ircmy-1) +
+	ntheta*nphi*ngamma*nrcmx*nrcmy*(ircmz-1);
+#endif
+      numbyte=nbit/8;
+      //printf("numbyte=%d itheta12=%d overlaparr=%x\n", numbyte, itheta12, overlaparr[numbyte]);
+      nshift = nbit % 8;
+      //if (numbyte==579119)
+      //printf("nbytes=%d nbit=%d overlaparr[]:%x totbytes=%d\n", numbyte, nbit, overlaparr[579119], totbytes);
+      if (overlaparr[numbyte] & (0x1 << nshift))
+	{
+	  switch (type)
+	    {
+	    case 0:
+	      return XI1[iphi12][itheta12];
+	      break;
+	    case 1:
+#if 0
+    	      printf("boh=%.15G x=%f %f %f\n",  rcmx*XI1[iphi12][itheta12]+
+	 	     rcmy*XI2[iphi12][itheta12]+
+		     rcmz*XI3[iphi12][itheta12],rcmx, rcmy, rcmz);
+#endif
+    	      return rcmx*XI1[iphi12][itheta12]+
+    		rcmy*XI2[iphi12][itheta12]+
+    		rcmz*XI3[iphi12][itheta12];
+    	      break;
+    	    case 2:
+    	      return -(Sqr(rcmx)*XI1[iphi12][itheta12]+
+    		       Sqr(rcmy)*XI2[iphi12][itheta12]+
+    		       Sqr(rcmz)*XI3[iphi12][itheta12]+rcmx*rcmy*XI4[iphi12][itheta12]+
+    		       rcmx*rcmz*XI5[iphi12][itheta12]+rcmy*rcmz*XI6[iphi12][itheta12]);
+    	      break;
+    	    }
 	}
     }
-#else
-  if (calcDistBox() < 0.0)
+  else
     {
-      for (i=0; i < nat; i++)
+      if (calcDistBox() < 0.0)
 	{
-	  for (j=0; j < nat; j++)
+	  for (i=0; i < nat; i++)
 	    {
-	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
-	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
-	      if (distsq < sigijsq)
+	      for (j=0; j < nat; j++)
 		{
-		  switch (type)
+		  distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
+		  sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
+		  if (distsq < sigijsq)
 		    {
-		    case 0:
-		      return XI1[nphi12][ntheta12];
-		      break;
-		    case 1:
-		      return rcmx*XI1[nphi12][ntheta12]+
-			rcmy*XI2[nphi12][ntheta12]+
-			rcmz*XI3[nphi12][ntheta12];
-		      break;
-		    case 2:
-		      return -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
-			Sqr(rcmy)*XI2[nphi12][ntheta12]+
-			Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
-			rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
-		      break;
+		      switch (type)
+			{
+			case 0:
+			  return XI1[iphi12][itheta12];
+			  break;
+			case 1:
+			  return rcmx*XI1[iphi12][itheta12]+
+			    rcmy*XI2[iphi12][itheta12]+
+			    rcmz*XI3[iphi12][itheta12];
+			  break;
+			case 2:
+			  return -(Sqr(rcmx)*XI1[iphi12][itheta12]+
+				   Sqr(rcmy)*XI2[iphi12][itheta12]+
+				   Sqr(rcmz)*XI3[iphi12][itheta12]+rcmx*rcmy*XI4[iphi12][itheta12]+
+				   rcmx*rcmz*XI5[iphi12][itheta12]+rcmy*rcmz*XI6[iphi12][itheta12]);
+			  break;
+			}
 		    }
 		}
 	    }
 	}
     }
-#endif
   return 0.0;
 }
 
@@ -1397,7 +1404,10 @@ double ftheta12(double theta12, int itheta12)
 double intfunc(double rcmx, int ircmx, double rcmy, int ircmy, double rcmz, int ircmz,
 	       double gamma12, int igamma12, double phi12, int iphi12, double theta12, int itheta12)
 {
-  return integrandv1(rcmx, ircmx, rcmy, ircmy, rcmz, ircmz, gamma12, igamma12, phi12, iphi12, theta12, itheta12, alphasav);
+  double aa;
+  aa=integrandv1(rcmx, ircmx, rcmy, ircmy, rcmz, ircmz, gamma12, igamma12, phi12, iphi12, theta12, itheta12, alphasav);
+  nbit++;
+  return aa;
 }
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
@@ -1502,7 +1512,7 @@ int main(int argc, char**argv)
   //sprintf(TXT, "rank:%d\n", my_rank);
 #endif
 
-  if (argc < 7)
+  if (argc != 7 && argc != 12)
     {
 #ifdef ELEC
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
@@ -1520,8 +1530,18 @@ int main(int argc, char**argv)
   //fileoutits = atoll(argv[5]);
   
   outits = atoll(argv[5]);
-  mf = argv[6];
-
+  if (argc ==7)
+    mf = argv[6];
+  else
+    {
+      no_mesh=1;
+      nrcmx = atoi(argv[6]);
+      nrcmy = atoi(argv[7]);
+      nrcmz = atoi(argv[8]);
+      ngamma = atoi(argv[9]);
+      nphi   = atoi(argv[10]);
+      ntheta = atoi(argv[11]);
+    }
 #ifdef ELEC
 #ifdef PARALLEL
   if (argc <= 8)
@@ -1875,26 +1895,28 @@ int main(int argc, char**argv)
 #endif
   //nrfunc = intfunc;
   //sprintf(fn, "overlap-x%d-y%d-z%d-g%d-p%d-t%d.bin", nrcmx, nrcmy, nrcmz, ngamma, nphi, ntheta);
-  if ((fin=fopen(mf, "r"))==NULL)
+  if (no_mesh==0)
     {
-      printf("I need a file called %s\n", mf);
-      exit(-1);
-    }
 
-  fread(&nrcmx, sizeof(int), 1, fin);
-  fread(&nrcmy, sizeof(int), 1, fin);
-  fread(&nrcmz, sizeof(int), 1, fin);
-  fread(&ngamma, sizeof(int),1, fin);
-  fread(&nphi, sizeof(int),  1, fin);
-  fread(&ntheta, sizeof(int),1, fin);
-  
+      if ((fin=fopen(mf, "r"))==NULL)
+	{
+	  printf("I need a file called %s\n", mf);
+	  exit(-1);
+	}
+
+      fread(&nrcmx, sizeof(int), 1, fin);
+      fread(&nrcmy, sizeof(int), 1, fin);
+      fread(&nrcmz, sizeof(int), 1, fin);
+      fread(&ngamma, sizeof(int),1, fin);
+      fread(&nphi, sizeof(int),  1, fin);
+      fread(&ntheta, sizeof(int),1, fin);
+      totbytes= nrcmx*nrcmy*nrcmz*ngamma*nphi*ntheta/8;
+      overlaparr = malloc(sizeof(unsigned char)*totbytes);
+      fread(overlaparr, sizeof(unsigned char), totbytes, fin);  
+      fclose(fin);
+  }
   printf("Gauss quadrature with nrcmx=%d nrcmy=%d nrcmz=%d points\n", nrcmx, nrcmy, nrcmz);
-
-  totbytes= nrcmx*nrcmy*nrcmz*ngamma*nphi*ntheta/8;
-  printf("Gauss quadrature with %d %d %d points totbytes=%d\n", nphi, ntheta, ngamma, totbytes);
-  overlaparr = malloc(sizeof(unsigned char)*totbytes);
-  fread(overlaparr, sizeof(unsigned char), totbytes, fin);  
-  fclose(fin);
+  printf("and ngamma=%d nphi=%d ntheta=%d points totbytes=%d\n", ngamma, nphi, ntheta, totbytes);
 #if 0
   for (i=0; i < totbytes; i++)
 	if (overlaparr[i]!=0)
