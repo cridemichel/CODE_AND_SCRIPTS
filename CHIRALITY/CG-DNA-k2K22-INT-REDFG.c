@@ -1956,7 +1956,6 @@ int main(int argc, char**argv)
   XI5=malloc(sizeof(double)*(nphi+1));
   XI6=malloc(sizeof(double)*(nphi+1));
 
-
   for (i=1; i <= ntheta; i++)
     {
       XI1[i] = malloc(sizeof(double)*(ntheta+1));

@@ -5,11 +5,10 @@
 #include <string.h>
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
-#define SYMMETRY
 //#define USEGSL
 #define GAUSS
 #define EULER_ROT
-//#define MCGAMMA
+#define MCGAMMA
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
@@ -1945,7 +1944,9 @@ int main(int argc, char**argv)
     }
   fclose(fin);
   init_distbox();
-  L=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*3.0;
+  Lz=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*3.0;
+  Lx=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[0];
+  Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
   printf("box semiaxes=%f %f %f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2]);
 #ifdef MPI
@@ -1964,7 +1965,11 @@ int main(int argc, char**argv)
   printf("Quasi Full Gauss quadrature with nrcmx=%d nrcmy=%d nrcmz=%d points\n", nrcmx, nrcmy, nrcmz);
 #endif
 #ifdef GAUSS
-  printf("Gauss quadrature with %d %d %d points\n", nphi, ntheta, ngamma);
+#ifdef MCGAMMA
+  printf("Gauss quadrature with nphi=%d ntheta=%d points\n", nphi, ntheta);
+#else
+  printf("Gauss quadrature with nphi=%d ntheta=%d ngamma=%d points\n", nphi, ntheta, ngamma);
+#endif
 #else
   printf("Romberg method with %.15G tolerance\n", ROMBTOL);
 #endif
@@ -1993,7 +1998,7 @@ int main(int argc, char**argv)
   printf("factor=%.15G\n", factor);
   fout = fopen(fnout, "w+");
   fclose(fout);
-  Lx=Ly=Lz=L;
+  //Lx=Ly=Lz=L;
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
   printf("type=%d ncontrib=%d\n", type, ncontrib);
   alphasav=alpha;
