@@ -1489,6 +1489,9 @@ void sobseq(int *n, double x[])
 int main(int argc, char**argv)
 {
 #ifdef QUASIMC
+#ifdef SOBOLBF
+  long long int bfseed;
+#endif
 #ifdef USEGSL
   gsl_qrng *qsob;
 #endif
@@ -2051,6 +2054,14 @@ int main(int argc, char**argv)
   nsv = 3; 
 #endif
   qsob = gsl_qrng_alloc (gsl_qrng_sobol, nsv);
+#elif defined(SOBOLBF)
+#ifdef MCGAMMA
+  nsv = 4; 
+#else
+  nsv = 3; 
+#endif
+  bfseed = 0;
+  i8_sobol(nsv, &seed, sv);
 #else
   /* initialization */
   nsv = -1;  

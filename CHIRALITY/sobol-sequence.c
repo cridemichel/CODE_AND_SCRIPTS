@@ -14142,7 +14142,7 @@ long long int i8_uniform ( long long int a, long long int b, int *seed )
   return value;
 }
 
-
+#if 0
 double r[2];
 void main(void)
 {
@@ -14150,9 +14150,10 @@ void main(void)
   long long seed;
 
   seed = 0;
-  for (i=0; i < 1024; i++)
+  for (i=0; i < 115; i++)
     {
       i8_sobol(4, &seed, r); 
-      printf("%f %f\n", r[0], r[1]);
+      printf("i=%d %.15f %.15f\n", i, r[0], r[1]);
     }
 }
+#endif
