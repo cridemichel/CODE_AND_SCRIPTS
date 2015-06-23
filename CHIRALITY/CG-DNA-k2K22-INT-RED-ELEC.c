@@ -169,6 +169,24 @@ void gauleg(double x1, double x2, double x[], double w[], int n)
 	Compute the weight and its symmetric counterpart.*/
     }
 }
+void alloc_contr(struct contribs *c)
+{
+  c->elec = malloc(sizeof(double*)*numtemps);
+  for (k1=0; k1 < numtemps; k1++)
+    {
+      c->elec[k1] = malloc(sizeof(double)*numconcs);
+    }
+}
+void free_contr(struct contribs *c)
+{
+  for (k1=0; k1 < numtemps; k1++)
+    {
+      free(c->elec[k1])
+    }
+  free(c->elec);
+} 
+
+struct contribs ctmp;
 void qgaus(void (*func)(double, int, struct contribs*), double a, double b, double *x, double *w, int np, 
 	    struct contribs* contr)
 {
@@ -178,15 +196,19 @@ void qgaus(void (*func)(double, int, struct contribs*), double a, double b, doub
   static const double w[]={0.2955242247147529,0.2692667193099963,
     0.2190863625159821,0.1494513491505806,0.0666713443086881};
 #endif
-  int j, elec;
-  double s;
-  struct contribs c;
-  s=0.0;
+  int j, k1, k2;
+
+  for (k1=0; k1 < numtemps; k1++)
+    for (k2=0; k2 < numconcs; k2++)
+      contr->elec[k1][k2] = 0;
+
   for (j=1;j<=np;j++) 
     {
-      func(x[j],j, &c);
-      contr->steric += w[j]*c.steric;
-      contr->elec += w[j]*c.elec;
+      func(x[j],j, &ctmp);
+      for (k1=0; k1 < numtemps; k1++)
+	for (k2=0; k2 < numconcs; k2++)
+	  contr->elec[k1][k1] += w[j]*ctmp.elec[k1][k2];
+      contr->steric += w[j]*ctmp.steric;
     }
 }
 double scalProd(double *A, double *B)
@@ -1598,10 +1620,15 @@ int main(int argc, char**argv)
       }
 
   contr.elec = malloc(sizeof(double*)*numtemps);
+  ctmp.elec  = malloc(sizeof(double*)*numtemps);
   for (k1=0; k1 < numtemps; k1++)
     {
       contr.elec[k1] = malloc(sizeof(double)*numconcs);
+      ctmp.elec[k1]  = malloc(sizeof(double)*numconcs);
     }
+  for (k1=0; k1 < numtemps; k1++)
+    for (k2=0; k2 < numconcs; k2++)
+      contr.elec[k1][k2] = 0.0;
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place second DNAD randomly */
