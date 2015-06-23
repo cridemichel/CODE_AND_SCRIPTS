@@ -10,6 +10,7 @@
 #define EULER_ROT
 #define MCGAMMA
 #define QUASIMC
+#define SOBOL_LL /* use long long to have MAXBIT=60! */
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
@@ -1425,7 +1426,7 @@ double intfunc(double phi12, int nphi12, double theta12, int ntheta12, double ga
   return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12, ngamma12, alphasav);
 }
 #endif
-#if 1
+#ifdef SOBOL_LL
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
         (iminarg1) : (iminarg2))
