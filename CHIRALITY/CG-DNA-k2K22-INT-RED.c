@@ -126,7 +126,7 @@ void miser(double (*func)(double []), double regn[], int ndim, unsigned long npt
 		}
 		*ave=summ/npts;
 		*var=FMAX(TINY,(summ2-summ*summ/npts)/(npts*npts));
-		printf("[npts < MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
+		//printf("[npts < MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
 	}
 	else {
 		rmid=vector(1,ndim);
@@ -200,7 +200,7 @@ void miser(double (*func)(double []), double regn[], int ndim, unsigned long npt
 		free_vector(regn_temp,1,2*ndim);
 		*ave=fracl*avel+(1-fracl)*(*ave);
 		*var=fracl*fracl*varl+(1-fracl)*(1-fracl)*(*var);
-		printf("[npts > MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
+		//printf("[npts > MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
 		free_vector(rmid,1,ndim);
 	}
 	free_vector(pt,1,ndim);
@@ -2345,7 +2345,7 @@ int main(int argc, char**argv)
 #ifdef ALBERTA
       if (!strcmp(atname, "S"))
 	{
-	  DNAchain[cc].rad = 4.0;//3.5;
+	  DNAchain[cc].rad = 3.5;
 #ifdef ELEC
 	  DNAchain[cc].atype = 0;
 #endif
