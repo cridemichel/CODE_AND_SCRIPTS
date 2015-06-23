@@ -96,8 +96,8 @@ void build_euler_matrix(double cosphi, double sinphi, double costheta, double si
   Reul[2][1] = -sintheta*cosphi;
   Reul[2][2] = costheta;
 }
-double *cdna, *beta;
 int numtemps, numconcs;
+double *beta_arr, *cdna_arr;
 double **yukcutkD_arr, **kD_arr, **yuk_corr_fact_arr, **yukcutkDsq_arr, **uel_arr, **vexclel_arr;
 double num_kD=0;
 double maxyukcutkDsq, maxyukcutkD;
@@ -171,6 +171,7 @@ void gauleg(double x1, double x2, double x[], double w[], int n)
 }
 void alloc_contr(struct contribs *c)
 {
+  int k1;
   c->elec = malloc(sizeof(double*)*numtemps);
   for (k1=0; k1 < numtemps; k1++)
     {
@@ -179,9 +180,10 @@ void alloc_contr(struct contribs *c)
 }
 void free_contr(struct contribs *c)
 {
+  int k1;
   for (k1=0; k1 < numtemps; k1++)
     {
-      free(c->elec[k1])
+      free(c->elec[k1]);
     }
   free(c->elec);
 } 
@@ -951,7 +953,7 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
 		    for (k2 = 0; k2 < numconcs; k2++)
 		      {
 			if (distsq < 1.0/kD_arr[k1][k2])
-			  uel_arr[k1][k2] += calc_yukawa(i, j, distSq, k1, k2);
+			  uel_arr[k1][k2] += calc_yukawa(i, j, distsq, k1, k2);
 		      }
 		}
 	    }
@@ -960,7 +962,7 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
   for (k1 = 0; k1 < numtemps; k1++)
     for (k2 = 0; k2 < numconcs; k2++)
       {
-      	yukfact = 1.0-exp(-beta*uel_arr[k1][k2]);
+      	yukfact = 1.0-exp(-beta_arr[k1]*uel_arr[k1][k2]);
 	switch (type)
 	  {
 	  case 0:
@@ -1250,13 +1252,13 @@ int main(int argc, char**argv)
   for (k1=0; k1 < numtemps; k1++)
     {
       esq_eps_arr[k1] = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta_arr[k1]))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
-      esq_eps10_arr[k1] = esq_eps_arr*1E10;
+      esq_eps10_arr[k1] = esq_eps_arr[k1]*1E10;
     }
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*epsr_prime)/kB;
   esq_eps_prime10 = esq_eps_prime*1E10;
   for (k1=0; k1 < numtemps; k1++)
     {
-      ximanning_arr[k1] = esq_eps*beta_arr[k1]/bmann;
+      ximanning_arr[k1] = esq_eps_arr[k1]*beta_arr[k1]/bmann;
       deltamann_arr[k1] = 1.0/ximanning_arr[k1];
       zeta_a_arr[k1] = deltamann_arr[k1];
       zeta_b_arr[k1] = deltamann_arr[k1];
@@ -1669,7 +1671,7 @@ int main(int argc, char**argv)
       rcmysav = rcmy;
       rcmzsav = rcmz;
 
-      quad3d(intfunc, 0.0, 2.0*M_PI, contr);
+      quad3d(intfunc, 0.0, 2.0*M_PI, &contr);
       vexcl += contr.steric;
       for (k1=0; k1 < numtemps; k1++)
 	{
@@ -1697,7 +1699,7 @@ int main(int argc, char**argv)
 			  (Lx*Ly*Lz*vexcl/((double)tt))/1E4,(Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))/1E4
 			 ); /* divido per 10^4 per convertire in nm */
 		else
-		  fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel[k1][k2])/((double)tt))/1E5,
+		  fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))/1E5,
 			  (Lx*Ly*Lz*vexcl/((double)tt))/1E5,(Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))/1E5
 			 ); /* divido per 10^5 per convertire in nm */
 		fclose(fout);
