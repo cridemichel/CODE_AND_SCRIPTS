@@ -79,6 +79,8 @@ double ran1(void)
 double sv[10];
 int nsv;
 #endif
+long long int fileoutits, outits;
+long long int tot_trials, tt=0, ttini=0;
 void ranpt(double pt[], double regn[], int n)
 {
   //	float ran1(long *idum);
@@ -139,11 +141,14 @@ void miser(double (*func)(double []), double regn[], int ndim, unsigned long npt
 			fminl[j]=fminr[j]=BIG;
 			fmaxl[j]=fmaxr[j] = -BIG;
 		}
-		for (n=1;n<=npre;n++) {
-			ranpt(pt,regn,ndim);
-			fval=(*func)(pt);
-			for (j=1;j<=ndim;j++) {
-				if (pt[j]<=rmid[j]) {
+		for (n=1;n<=npre;n++) 
+		  {
+		    if (n % outits == 0)
+		      printf("step %d/%lld\n", n, tot_trials);
+		    ranpt(pt,regn,ndim);
+		    fval=(*func)(pt);
+	    	    for (j=1;j<=ndim;j++) {
+		      if (pt[j]<=rmid[j]) {
 					fminl[j]=FMIN(fminl[j],fval);
 					fmaxl[j]=FMAX(fmaxl[j],fval);
 				}
@@ -441,7 +446,6 @@ double maxyukcutkDsq, maxyukcutkD;
 #endif
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int type, nat, atnum, nbnum, len;
-long long int tot_trials, tt=0, ttini=0;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max, ROMBTOL, Lx, Ly, Lz;
 const double thetapts=100000;
 #ifdef GAUSS
@@ -1980,7 +1984,6 @@ int main(int argc, char**argv)
   int k1, k2, kk;
 #endif
   int ncontrib, k, i, j, overlap, contrib, cont=0, nfrarg;
-  long long int fileoutits, outits;
   char fnin[1024],fnout[256];
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
@@ -2695,6 +2698,7 @@ int main(int argc, char**argv)
   printf("I will use MISER algorithm\n");
   miser(miser_func, regn, 4, tot_trials, 0., &mis_ave, &mis_var);
   vexcl = mis_ave;
+  printf("mis_ave=%.15G\n", mis_ave);
   fout = fopen(fnout, "a+");
   if (type==0)
     //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
