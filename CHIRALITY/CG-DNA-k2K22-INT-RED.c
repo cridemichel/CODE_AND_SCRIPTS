@@ -23,6 +23,389 @@ extern int numOfProcs; /* number of processeses in a communicator */
 //#define ALBERTA
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
+/* ============ MISER ============== */
+#define PFAC 0.1
+#define MNPT 15
+#define MNBS 60
+#define TINY 1.0e-30
+#define BIG 1.0e30
+
+static int imaxarg1,imaxarg2;
+#define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
+        (imaxarg1) : (imaxarg2))
+
+static int iminarg1,iminarg2;
+#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
+        (iminarg1) : (iminarg2))
+
+#define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
+
+static float maxarg1,maxarg2;
+#define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
+        (maxarg1) : (maxarg2))
+
+static float minarg1,minarg2;
+#define FMIN(a,b) (minarg1=(a),minarg2=(b),(minarg1) < (minarg2) ?\
+        (minarg1) : (minarg2))
+
+static long lmaxarg1,lmaxarg2;
+#define LMAX(a,b) (lmaxarg1=(a),lmaxarg2=(b),(lmaxarg1) > (lmaxarg2) ?\
+        (lmaxarg1) : (lmaxarg2))
+
+static long lminarg1,lminarg2;
+#define LMIN(a,b) (lminarg1=(a),lminarg2=(b),(lminarg1) < (lminarg2) ?\
+        (lminarg1) : (lminarg2))
+
+static int imaxarg1,imaxarg2;
+#define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
+        (imaxarg1) : (imaxarg2))
+
+static long iran=0;
+double *vector(int n1, int n2)
+{
+  return (double*)malloc(sizeof(double)*(n2+1));
+}
+double free_vector(double* p, int n1, int n2)
+{
+  free(p);
+}
+void sobseq(int *n, double x[]);
+#define SQR(x) ((x)*(x))
+double ran1(void)
+{
+  return drand48();
+}
+#if defined(QUASIMC) || defined(QFGAUSS)
+double sv[10];
+int nsv;
+#endif
+void ranpt(double pt[], double regn[], int n)
+{
+  //	float ran1(long *idum);
+  int j;
+#ifdef QUASIMC
+  double sv[10];
+
+  if (nsv!=n)
+    {
+      printf("nsv=%d is different from n=%d\n", nsv, n);
+      exit(-1);
+    }
+  sobseq(&nsv, sv);
+  for (j=1;j<=n;j++)
+    pt[j]=regn[j]+(regn[n+j]-regn[j])*sv[j];
+#else
+  for (j=1;j<=n;j++)
+    pt[j]=regn[j]+(regn[n+j]-regn[j])*ran1();
+#endif
+}
+void miser(double (*func)(double []), double regn[], int ndim, unsigned long npts,
+	double dith, double *ave, double *var)
+{
+	double *regn_temp;
+	unsigned long n,npre,nptl,nptr;
+	int j,jb;
+	double avel,varl;
+	double fracl,fval;
+	double rgl,rgm,rgr,s,sigl,siglb,sigr,sigrb;
+	double sum,sumb,summ,summ2;
+	double *fmaxl,*fmaxr,*fminl,*fminr;
+	double *pt,*rmid;
+
+	pt=vector(1,ndim);
+	//pt = malloc(sizeof(double)*(ndim+1));
+	if (npts < MNBS) {
+		summ=summ2=0.0;
+		for (n=1;n<=npts;n++) {
+			ranpt(pt,regn,ndim);
+			fval=(*func)(pt);
+			summ += fval;
+			summ2 += fval * fval;
+		}
+		*ave=summ/npts;
+		*var=FMAX(TINY,(summ2-summ*summ/npts)/(npts*npts));
+	}
+	else {
+		rmid=vector(1,ndim);
+		npre=LMAX((unsigned long)(npts*PFAC),MNPT);
+		fmaxl=vector(1,ndim);
+		fmaxr=vector(1,ndim);
+		fminl=vector(1,ndim);
+		fminr=vector(1,ndim);
+		for (j=1;j<=ndim;j++) {
+			iran=(iran*2661+36979) % 175000;
+			s=SIGN(dith,(float)(iran-87500));
+			rmid[j]=(0.5+s)*regn[j]+(0.5-s)*regn[ndim+j];
+			fminl[j]=fminr[j]=BIG;
+			fmaxl[j]=fmaxr[j] = -BIG;
+		}
+		for (n=1;n<=npre;n++) {
+			ranpt(pt,regn,ndim);
+			fval=(*func)(pt);
+			for (j=1;j<=ndim;j++) {
+				if (pt[j]<=rmid[j]) {
+					fminl[j]=FMIN(fminl[j],fval);
+					fmaxl[j]=FMAX(fmaxl[j],fval);
+				}
+				else {
+					fminr[j]=FMIN(fminr[j],fval);
+					fmaxr[j]=FMAX(fmaxr[j],fval);
+				}
+			}
+		}
+		sumb=BIG;
+		jb=0;
+		siglb=sigrb=1.0;
+		for (j=1;j<=ndim;j++) {
+			if (fmaxl[j] > fminl[j] && fmaxr[j] > fminr[j]) {
+				sigl=FMAX(TINY,pow(fmaxl[j]-fminl[j],2.0/3.0));
+				sigr=FMAX(TINY,pow(fmaxr[j]-fminr[j],2.0/3.0));
+				sum=sigl+sigr;
+				if (sum<=sumb) {
+					sumb=sum;
+					jb=j;
+					siglb=sigl;
+					sigrb=sigr;
+				}
+			}
+		}
+		free_vector(fminr,1,ndim);
+		free_vector(fminl,1,ndim);
+		free_vector(fmaxr,1,ndim);
+		free_vector(fmaxl,1,ndim);
+		if (!jb) jb=1+(ndim*iran)/175000;
+		rgl=regn[jb];
+		rgm=rmid[jb];
+		rgr=regn[ndim+jb];
+		fracl=fabs((rgm-rgl)/(rgr-rgl));
+		nptl=(unsigned long)(MNPT+(npts-npre-2*MNPT)*fracl*siglb
+			/(fracl*siglb+(1.0-fracl)*sigrb));
+		nptr=npts-npre-nptl;
+		regn_temp=vector(1,2*ndim);
+		for (j=1;j<=ndim;j++) {
+			regn_temp[j]=regn[j];
+			regn_temp[ndim+j]=regn[ndim+j];
+		}
+		regn_temp[ndim+jb]=rmid[jb];
+		miser(func,regn_temp,ndim,nptl,dith,&avel,&varl);
+		regn_temp[jb]=rmid[jb];
+		regn_temp[ndim+jb]=regn[ndim+jb];
+		miser(func,regn_temp,ndim,nptr,dith,ave,var);
+		free_vector(regn_temp,1,2*ndim);
+		*ave=fracl*avel+(1-fracl)*(*ave);
+		*var=fracl*fracl*varl+(1-fracl)*(1-fracl)*(*var);
+		free_vector(rmid,1,ndim);
+	}
+	free_vector(pt,1,ndim);
+}
+#undef MNPT
+#undef MNBS
+#undef TINY
+#undef BIG
+#undef PFAC
+#undef NRANSI
+/* =================== END MISER ================= */
+#if 0
+/* NOTA: la routine vegas fa un importance sampling e questo non 
+   dovrebbe essere molto utile nel caso presente poiché l'integrazione
+   su \phi_{12 }e \theta_{12} viene fatta con la quadratura di gauss */
+/* ================== BEGIN VEGAS ================ */
+#define ALPH 1.5
+#define NDMX 50
+#define MXDIM 10
+#define TINY 1.0e-30
+
+long idum;
+double ran2(long *idum)
+{
+  return drand48();
+}
+
+void rebin(double rc, int nd, double r[], double xin[], double xi[]);
+void vegas(double regn[], int ndim, double (*fxn)(double [], double), int init,
+	unsigned long ncall, int itmx, int nprn, double *tgral, double *sd,
+	double *chi2a)
+{
+	//double ran2(long *idum);
+	static int i,it,j,k,mds,nd,ndo,ng,npg,ia[MXDIM+1],kg[MXDIM+1];
+	static double calls,dv2g,dxg,f,f2,f2b,fb,rc,ti,tsi,wgt,xjac,xn,xnd,xo;
+	static double d[NDMX+1][MXDIM+1],di[NDMX+1][MXDIM+1],dt[MXDIM+1],
+		dx[MXDIM+1], r[NDMX+1],x[MXDIM+1],xi[MXDIM+1][NDMX+1],xin[NDMX+1];
+	static double schi,si,swgt;
+
+	if (init <= 0) {
+		mds=ndo=1;
+		for (j=1;j<=ndim;j++) xi[j][1]=1.0;
+	}
+	if (init <= 1) si=swgt=schi=0.0;
+	if (init <= 2) {
+		nd=NDMX;
+		ng=1;
+		if (mds) {
+			ng=(int)pow(ncall/2.0+0.25,1.0/ndim);
+			mds=1;
+			if ((2*ng-NDMX) >= 0) {
+				mds = -1;
+				npg=ng/NDMX+1;
+				nd=ng/npg;
+				ng=npg*nd;
+			}
+		}
+		for (k=1,i=1;i<=ndim;i++) k *= ng;
+		npg=IMAX(ncall/k,2);
+		calls=(float)npg * (float)k;
+		dxg=1.0/ng;
+		for (dv2g=1,i=1;i<=ndim;i++) dv2g *= dxg;
+		dv2g=SQR(calls*dv2g)/npg/npg/(npg-1.0);
+		xnd=nd;
+		dxg *= xnd;
+		xjac=1.0/calls;
+		for (j=1;j<=ndim;j++) {
+			dx[j]=regn[j+ndim]-regn[j];
+			xjac *= dx[j];
+		}
+		if (nd != ndo) {
+			for (i=1;i<=IMAX(nd,ndo);i++) r[i]=1.0;
+			for (j=1;j<=ndim;j++) rebin(ndo/xnd,nd,r,xin,xi[j]);
+			ndo=nd;
+		}
+		if (nprn >= 0) {
+			printf("%s:  ndim= %3d  ncall= %8.0f\n",
+				" Input parameters for vegas",ndim,calls);
+			printf("%28s  it=%5d  itmx=%5d\n"," ",it,itmx);
+			printf("%28s  nprn=%3d  ALPH=%5.2f\n"," ",nprn,ALPH);
+			printf("%28s  mds=%3d  nd=%4d\n"," ",mds,nd);
+			for (j=1;j<=ndim;j++) {
+				printf("%30s xl[%2d]= %11.4g xu[%2d]= %11.4g\n",
+					" ",j,regn[j],j,regn[j+ndim]);
+			}
+		}
+	}
+	for (it=1;it<=itmx;it++) {
+		ti=tsi=0.0;
+		for (j=1;j<=ndim;j++) {
+			kg[j]=1;
+			for (i=1;i<=nd;i++) d[i][j]=di[i][j]=0.0;
+		}
+		for (;;) {
+			fb=f2b=0.0;
+			for (k=1;k<=npg;k++) {
+				wgt=xjac;
+				for (j=1;j<=ndim;j++) {
+					xn=(kg[j]-ran2(&idum))*dxg+1.0;
+					ia[j]=IMAX(IMIN((int)(xn),NDMX),1);
+					if (ia[j] > 1) {
+						xo=xi[j][ia[j]]-xi[j][ia[j]-1];
+						rc=xi[j][ia[j]-1]+(xn-ia[j])*xo;
+					} else {
+						xo=xi[j][ia[j]];
+						rc=(xn-ia[j])*xo;
+					}
+					x[j]=regn[j]+rc*dx[j];
+					wgt *= xo*xnd;
+				}
+				f=wgt*(*fxn)(x,wgt);
+				f2=f*f;
+				fb += f;
+				f2b += f2;
+				for (j=1;j<=ndim;j++) {
+					di[ia[j]][j] += f;
+					if (mds >= 0) d[ia[j]][j] += f2;
+				}
+			}
+			f2b=sqrt(f2b*npg);
+			f2b=(f2b-fb)*(f2b+fb);
+			if (f2b <= 0.0) f2b=TINY;
+			ti += fb;
+			tsi += f2b;
+			if (mds < 0) {
+				for (j=1;j<=ndim;j++) d[ia[j]][j] += f2b;
+			}
+			for (k=ndim;k>=1;k--) {
+				kg[k] %= ng;
+				if (++kg[k] != 1) break;
+			}
+			if (k < 1) break;
+		}
+		tsi *= dv2g;
+		wgt=1.0/tsi;
+		si += wgt*ti;
+		schi += wgt*ti*ti;
+		swgt += wgt;
+		*tgral=si/swgt;
+		*chi2a=(schi-si*(*tgral))/(it-0.9999);
+		if (*chi2a < 0.0) *chi2a = 0.0;
+		*sd=sqrt(1.0/swgt);
+		tsi=sqrt(tsi);
+		if (nprn >= 0) {
+			printf("%s %3d : integral = %14.7g +/-  %9.2g\n",
+				" iteration no.",it,ti,tsi);
+			printf("%s integral =%14.7g+/-%9.2g chi**2/IT n = %9.2g\n",
+				" all iterations:  ",*tgral,*sd,*chi2a);
+			if (nprn) {
+				for (j=1;j<=ndim;j++) {
+					printf(" DATA FOR axis  %2d\n",j);
+					printf("%6s%13s%11s%13s%11s%13s\n",
+						"X","delta i","X","delta i","X","delta i");
+					for (i=1+nprn/2;i<=nd;i += nprn+2) {
+						printf("%8.5f%12.4g%12.5f%12.4g%12.5f%12.4g\n",
+							xi[j][i],di[i][j],xi[j][i+1],
+							di[i+1][j],xi[j][i+2],di[i+2][j]);
+					}
+				}
+			}
+		}
+		for (j=1;j<=ndim;j++) {
+			xo=d[1][j];
+			xn=d[2][j];
+			d[1][j]=(xo+xn)/2.0;
+			dt[j]=d[1][j];
+			for (i=2;i<nd;i++) {
+				rc=xo+xn;
+				xo=xn;
+				xn=d[i+1][j];
+				d[i][j] = (rc+xn)/3.0;
+				dt[j] += d[i][j];
+			}
+			d[nd][j]=(xo+xn)/2.0;
+			dt[j] += d[nd][j];
+		}
+		for (j=1;j<=ndim;j++) {
+			rc=0.0;
+			for (i=1;i<=nd;i++) {
+				if (d[i][j] < TINY) d[i][j]=TINY;
+				r[i]=pow((1.0-d[i][j]/dt[j])/
+					(log(dt[j])-log(d[i][j])),ALPH);
+				rc += r[i];
+			}
+			rebin(rc/xnd,nd,r,xin,xi[j]);
+		}
+	}
+}
+
+void rebin(double rc, int nd, double r[], double xin[], double xi[])
+{
+	int i,k=0;
+	double dr=0.0,xn=0.0,xo=0.0;
+
+	for (i=1;i<nd;i++) {
+		while (rc > dr)
+			dr += r[++k];
+		if (k > 1) xo=xi[k-1];
+		xn=xi[k];
+		dr -= rc;
+		xin[i]=xn-(xn-xo)*dr/r[k];
+	}
+	for (i=1;i<nd;i++) xi[i]=xin[i];
+	xi[nd]=1.0;
+}
+#undef ALPH
+#undef NDMX
+#undef MXDIM
+#undef TINY
+#undef NRANSI
+/* ================== END VEGAS ================== */ 
+#endif
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
@@ -1428,8 +1811,8 @@ double intfunc(double phi12, int nphi12, double theta12, int ntheta12, double ga
 #endif
 #ifdef SOBOL_LL
 static int iminarg1,iminarg2;
-#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
-        (iminarg1) : (iminarg2))
+/*#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
+        (iminarg1) : (iminarg2))*/
 #define MAXBIT 30 
 #define MAXDIM 6
 void sobseq(int *n, double x[])
@@ -1490,8 +1873,8 @@ void sobseq(int *n, double x[])
 }
 #else
 static int iminarg1,iminarg2;
-#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
-        (iminarg1) : (iminarg2))
+/*#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
+        (iminarg1) : (iminarg2))*/
 #define MAXBIT 30 
 #define MAXDIM 6
 void sobseq(int *n, double x[])
@@ -1554,8 +1937,22 @@ void sobseq(int *n, double x[])
 #ifdef SOBOLBF
 void i8_sobol ( int dim_num, long long int *seed, double quasi[ ] );
 #endif
+#ifdef USE_MISER
+double miser_func(double x[])
+{
+  rcmxsav = x[1];
+  rcmysav = x[2];
+  rcmzsav = x[3];
+  gamma12sav = x[4];
+  return quad3d(intfunc, 0.0, 2.0*M_PI);
+}
+#endif
 int main(int argc, char**argv)
 {
+#ifdef USE_MISER
+  double regn[4];
+  double mis_ave, mis_var;
+#endif
 #ifdef QUASIMC
 #ifdef SOBOLBF
   long long bfseed=0;
@@ -1570,10 +1967,6 @@ int main(int argc, char**argv)
 #ifdef ELEC
   double uel, beta;
   int interact;
-#endif
-#if defined(QUASIMC) || defined(QFGAUSS)
-  double sv[10];
-  int nsv;
 #endif
   char fn[256];
   int aa, bb;
@@ -1947,7 +2340,7 @@ int main(int argc, char**argv)
 #ifdef ALBERTA
       if (!strcmp(atname, "S"))
 	{
-	  DNAchain[cc].rad = 3.5;
+	  DNAchain[cc].rad = 4.0;//3.5;
 #ifdef ELEC
 	  DNAchain[cc].atype = 0;
 #endif
@@ -1969,7 +2362,7 @@ int main(int argc, char**argv)
 #else
       if (!strcmp(atname, "Xe"))
 	{
-	  DNAchain[cc].rad = 3.5;
+	  DNAchain[cc].rad = 4.0;//3.5;
 #ifdef ELEC
 	  DNAchain[cc].atype = 0;
 #endif
@@ -2289,6 +2682,31 @@ int main(int argc, char**argv)
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
 #endif
   totfact = 1.0/(2.0*M_PI);
+
+#ifdef USE_MISER
+  regn[1] = -Lx/2.;
+  regn[2] = -Ly/2.;
+  regn[3] = -Lz/2.;
+  regn[4] = 0.;
+  regn[5] = Lx/2.;
+  regn[6] = Ly/2.;
+  regn[7] = Lz/2.;
+  regn[8] = 2.0*M_PI;  
+  printf("I will use MISER algorithm\n");
+  miser(miser_func, regn, 4, tot_trials, 0., &mis_ave, &mis_var);
+  vexcl = mis_ave;
+  fout = fopen(fnout, "a+");
+  if (type==0)
+    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+    fprintf(fout,"%.15 %.15G\n", Lx*Ly*Lz*vexcl/1E3, mis_var);
+  else if (type==1)
+    fprintf(fout,"%.15G %.15G\n", Lx*Ly*Lz*vexcl/1E4, mis_var); /* divido per 10^4 per convertire in nm */
+  else
+    fprintf(fout,"%.15G %.15G\n", Lx*Ly*Lz*vexcl/1E5, mis_var); /* divido per 10^5 per convertire in nm */
+
+  fclose(fout);
+  return;
+#endif
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place second DNAD randomly */
