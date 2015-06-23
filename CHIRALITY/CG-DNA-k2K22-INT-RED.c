@@ -1425,6 +1425,7 @@ double intfunc(double phi12, int nphi12, double theta12, int ntheta12, double ga
   return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12, ngamma12, alphasav);
 }
 #endif
+#if 1
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
         (iminarg1) : (iminarg2))
@@ -1486,6 +1487,69 @@ void sobseq(int *n, double x[])
        */
     }
 }
+#else
+static int iminarg1,iminarg2;
+#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
+        (iminarg1) : (iminarg2))
+#define MAXBIT 30 
+#define MAXDIM 6
+void sobseq(int *n, double x[])
+/*When n is negative, internally initializes a set of MAXBIT direction numbers for each of MAXDIM different Sobol’ sequences. When n is positive (but ≤MAXDIM), returns as the vector x[1..n] the next values from n of these sequences. (n must not be changed between initializations.)*/
+{
+  int j,k,l;
+  unsigned long long i,im,ipp;
+  static double fac;
+  static unsigned long long  in,ix[MAXDIM+1],*iu[MAXBIT+1];
+  static unsigned long long mdeg[MAXDIM+1]={0,1,2,3,3,4,4};
+  static unsigned long long ip[MAXDIM+1]={0,0,1,1,2,1,4}; 
+  static unsigned long long iv[MAXDIM*MAXBIT+1]={0,1,1,1,1,1,1,3,1,3,3,1,1,5,7,7,3,3,5,15,11,5,15,13,9};
+  if (*n < 0) 
+    { 
+      /*Initialize, don’t return a vector. */
+      for (k=1;k<=MAXDIM;k++) ix[k]=0;
+      in=0;
+      if (iv[1] != 1) return;
+      fac=1.0/(1L << MAXBIT);
+      for (j=1,k=0;j<=MAXBIT;j++,k+=MAXDIM) 
+	iu[j] = &iv[k];/* To allow both 1D and 2D addressing.*/
+      for (k=1;k<=MAXDIM;k++) 
+	{
+	  for (j=1;j<=mdeg[k];j++)
+	    iu[j][k] <<= (MAXBIT-j); /*Stored values only require normalization.*/
+	  for (j=mdeg[k]+1;j<=MAXBIT;j++) 
+	    {
+	      ipp=ip[k]; i=iu[j-mdeg[k]][k];
+	      i ^= (i >> mdeg[k]);
+	      for (l=mdeg[k]-1;l>=1;l--) 
+		{
+		  if (ipp & 1) i ^= iu[j-l][k];
+		  ipp >>= 1; 
+		}
+	      iu[j][k]=i;
+	    }
+	}
+    } 
+  else 
+    {
+      im=in++;
+      for (j=1;j<=MAXBIT;j++) {
+	if (!(im & 1)) break;
+	im >>= 1; }
+      if (j > MAXBIT) {
+	printf("MAXBIT too small in sobseq");
+	exit(-1);
+      } 
+      im=(j-1)*MAXDIM;
+      for (k=1;k<=IMIN(*n,MAXDIM);k++)
+	{
+	  ix[k] ^= iv[im+k]; 
+	  x[k]=ix[k]*fac;
+	}
+      /*XOR the appropriate direction num- ber into each component of the vector and convert to a floating number.
+       */
+    }
+}
+#endif
 #ifdef SOBOLBF
 void i8_sobol ( int dim_num, long long int *seed, double quasi[ ] );
 #endif
