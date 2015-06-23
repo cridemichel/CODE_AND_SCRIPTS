@@ -2345,7 +2345,7 @@ int main(int argc, char**argv)
 #ifdef ALBERTA
       if (!strcmp(atname, "S"))
 	{
-	  DNAchain[cc].rad = 3.5;
+	  DNAchain[cc].rad = 4.0;//3.5;
 #ifdef ELEC
 	  DNAchain[cc].atype = 0;
 #endif
