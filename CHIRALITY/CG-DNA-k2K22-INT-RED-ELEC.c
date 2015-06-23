@@ -6,9 +6,7 @@
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 //#define USEGSL
-#define GAUSS
 #define EULER_ROT
-#define MCGAMMA
 #define QUASIMC
 #define SOBOL_LL /* use long long to have MAXBIT=60! */
 #ifdef USEGSL
@@ -23,13 +21,6 @@ extern int numOfProcs; /* number of processeses in a communicator */
 //#define ALBERTA
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
-/* ============ MISER ============== */
-#define PFAC 0.1
-#define MNPT 15
-#define MNBS 60
-#define TINY 1.0e-30
-#define BIG 1.0e30
-
 static int imaxarg1,imaxarg2;
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
@@ -75,344 +66,13 @@ double ran1(void)
 {
   return drand48();
 }
-#if defined(QUASIMC) || defined(QFGAUSS)
+#if defined(QUASIMC) 
 double sv[10];
 int nsv;
 #endif
 long long int fileoutits, outits;
 long long int tot_trials, tt=0, ttini=0;
-void ranpt(double pt[], double regn[], int n)
-{
-  //	float ran1(long *idum);
-  int j;
-#ifdef QUASIMC
-  double sv[10];
 
-  if (nsv!=n)
-    {
-      printf("nsv=%d is different from n=%d\n", nsv, n);
-      exit(-1);
-    }
-  sobseq(&nsv, sv);
-  for (j=1;j<=n;j++)
-    pt[j]=regn[j]+(regn[n+j]-regn[j])*sv[j];
-#else
-  for (j=1;j<=n;j++)
-    pt[j]=regn[j]+(regn[n+j]-regn[j])*ran1();
-#endif
-}
-void miser(double (*func)(double []), double regn[], int ndim, unsigned long npts,
-	double dith, double *ave, double *var)
-{
-	double *regn_temp;
-	unsigned long n,npre,nptl,nptr;
-	int j,jb;
-	double avel,varl;
-	double fracl,fval;
-	double rgl,rgm,rgr,s,sigl,siglb,sigr,sigrb;
-	double sum,sumb,summ,summ2;
-	double *fmaxl,*fmaxr,*fminl,*fminr;
-	double *pt,*rmid;
-
-	pt=vector(1,ndim);
-	//pt = malloc(sizeof(double)*(ndim+1));
-	if (npts < MNBS) {
-		summ=summ2=0.0;
-		for (n=1;n<=npts;n++) {
-			ranpt(pt,regn,ndim);
-			fval=(*func)(pt);
-			summ += fval;
-			summ2 += fval * fval;
-		}
-		*ave=summ/npts;
-		*var=FMAX(TINY,(summ2-summ*summ/npts)/(npts*npts));
-		//printf("[npts < MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
-	}
-	else {
-		rmid=vector(1,ndim);
-		npre=LMAX((unsigned long)(npts*PFAC),MNPT);
-		fmaxl=vector(1,ndim);
-		fmaxr=vector(1,ndim);
-		fminl=vector(1,ndim);
-		fminr=vector(1,ndim);
-		for (j=1;j<=ndim;j++) {
-			iran=(iran*2661+36979) % 175000;
-			s=SIGN(dith,(float)(iran-87500));
-			rmid[j]=(0.5+s)*regn[j]+(0.5-s)*regn[ndim+j];
-			fminl[j]=fminr[j]=BIG;
-			fmaxl[j]=fmaxr[j] = -BIG;
-		}
-		for (n=1;n<=npre;n++) 
-		  {
-		    //if (n % outits == 0)
-		      //printf("step %d/%lld\n", n, tot_trials);
-		    ranpt(pt,regn,ndim);
-		    fval=(*func)(pt);
-	    	    for (j=1;j<=ndim;j++) {
-		      if (pt[j]<=rmid[j]) {
-					fminl[j]=FMIN(fminl[j],fval);
-					fmaxl[j]=FMAX(fmaxl[j],fval);
-				}
-				else {
-					fminr[j]=FMIN(fminr[j],fval);
-					fmaxr[j]=FMAX(fmaxr[j],fval);
-				}
-			}
-		}
-		sumb=BIG;
-		jb=0;
-		siglb=sigrb=1.0;
-		for (j=1;j<=ndim;j++) {
-			if (fmaxl[j] > fminl[j] && fmaxr[j] > fminr[j]) {
-				sigl=FMAX(TINY,pow(fmaxl[j]-fminl[j],2.0/3.0));
-				sigr=FMAX(TINY,pow(fmaxr[j]-fminr[j],2.0/3.0));
-				sum=sigl+sigr;
-				if (sum<=sumb) {
-					sumb=sum;
-					jb=j;
-					siglb=sigl;
-					sigrb=sigr;
-				}
-			}
-		}
-		free_vector(fminr,1,ndim);
-		free_vector(fminl,1,ndim);
-		free_vector(fmaxr,1,ndim);
-		free_vector(fmaxl,1,ndim);
-		if (!jb) jb=1+(ndim*iran)/175000;
-		rgl=regn[jb];
-		rgm=rmid[jb];
-		rgr=regn[ndim+jb];
-		fracl=fabs((rgm-rgl)/(rgr-rgl));
-		nptl=(unsigned long)(MNPT+(npts-npre-2*MNPT)*fracl*siglb
-			/(fracl*siglb+(1.0-fracl)*sigrb));
-		nptr=npts-npre-nptl;
-		regn_temp=vector(1,2*ndim);
-		for (j=1;j<=ndim;j++) {
-			regn_temp[j]=regn[j];
-			regn_temp[ndim+j]=regn[ndim+j];
-		}
-		regn_temp[ndim+jb]=rmid[jb];
-		miser(func,regn_temp,ndim,nptl,dith,&avel,&varl);
-		regn_temp[jb]=rmid[jb];
-		regn_temp[ndim+jb]=regn[ndim+jb];
-		miser(func,regn_temp,ndim,nptr,dith,ave,var);
-		free_vector(regn_temp,1,2*ndim);
-		*ave=fracl*avel+(1-fracl)*(*ave);
-		*var=fracl*fracl*varl+(1-fracl)*(1-fracl)*(*var);
-		//printf("[npts > MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
-		free_vector(rmid,1,ndim);
-	}
-	free_vector(pt,1,ndim);
-}
-#undef MNPT
-#undef MNBS
-#undef TINY
-#undef BIG
-#undef PFAC
-#undef NRANSI
-/* =================== END MISER ================= */
-#if 0
-/* NOTA: la routine vegas fa un importance sampling e questo non 
-   dovrebbe essere molto utile nel caso presente poiché l'integrazione
-   su \phi_{12 }e \theta_{12} viene fatta con la quadratura di gauss */
-/* ================== BEGIN VEGAS ================ */
-#define ALPH 1.5
-#define NDMX 50
-#define MXDIM 10
-#define TINY 1.0e-30
-
-long idum;
-double ran2(long *idum)
-{
-  return drand48();
-}
-
-void rebin(double rc, int nd, double r[], double xin[], double xi[]);
-void vegas(double regn[], int ndim, double (*fxn)(double [], double), int init,
-	unsigned long ncall, int itmx, int nprn, double *tgral, double *sd,
-	double *chi2a)
-{
-	//double ran2(long *idum);
-	static int i,it,j,k,mds,nd,ndo,ng,npg,ia[MXDIM+1],kg[MXDIM+1];
-	static double calls,dv2g,dxg,f,f2,f2b,fb,rc,ti,tsi,wgt,xjac,xn,xnd,xo;
-	static double d[NDMX+1][MXDIM+1],di[NDMX+1][MXDIM+1],dt[MXDIM+1],
-		dx[MXDIM+1], r[NDMX+1],x[MXDIM+1],xi[MXDIM+1][NDMX+1],xin[NDMX+1];
-	static double schi,si,swgt;
-
-	if (init <= 0) {
-		mds=ndo=1;
-		for (j=1;j<=ndim;j++) xi[j][1]=1.0;
-	}
-	if (init <= 1) si=swgt=schi=0.0;
-	if (init <= 2) {
-		nd=NDMX;
-		ng=1;
-		if (mds) {
-			ng=(int)pow(ncall/2.0+0.25,1.0/ndim);
-			mds=1;
-			if ((2*ng-NDMX) >= 0) {
-				mds = -1;
-				npg=ng/NDMX+1;
-				nd=ng/npg;
-				ng=npg*nd;
-			}
-		}
-		for (k=1,i=1;i<=ndim;i++) k *= ng;
-		npg=IMAX(ncall/k,2);
-		calls=(float)npg * (float)k;
-		dxg=1.0/ng;
-		for (dv2g=1,i=1;i<=ndim;i++) dv2g *= dxg;
-		dv2g=SQR(calls*dv2g)/npg/npg/(npg-1.0);
-		xnd=nd;
-		dxg *= xnd;
-		xjac=1.0/calls;
-		for (j=1;j<=ndim;j++) {
-			dx[j]=regn[j+ndim]-regn[j];
-			xjac *= dx[j];
-		}
-		if (nd != ndo) {
-			for (i=1;i<=IMAX(nd,ndo);i++) r[i]=1.0;
-			for (j=1;j<=ndim;j++) rebin(ndo/xnd,nd,r,xin,xi[j]);
-			ndo=nd;
-		}
-		if (nprn >= 0) {
-			printf("%s:  ndim= %3d  ncall= %8.0f\n",
-				" Input parameters for vegas",ndim,calls);
-			printf("%28s  it=%5d  itmx=%5d\n"," ",it,itmx);
-			printf("%28s  nprn=%3d  ALPH=%5.2f\n"," ",nprn,ALPH);
-			printf("%28s  mds=%3d  nd=%4d\n"," ",mds,nd);
-			for (j=1;j<=ndim;j++) {
-				printf("%30s xl[%2d]= %11.4g xu[%2d]= %11.4g\n",
-					" ",j,regn[j],j,regn[j+ndim]);
-			}
-		}
-	}
-	for (it=1;it<=itmx;it++) {
-		ti=tsi=0.0;
-		for (j=1;j<=ndim;j++) {
-			kg[j]=1;
-			for (i=1;i<=nd;i++) d[i][j]=di[i][j]=0.0;
-		}
-		for (;;) {
-			fb=f2b=0.0;
-			for (k=1;k<=npg;k++) {
-				wgt=xjac;
-				for (j=1;j<=ndim;j++) {
-					xn=(kg[j]-ran2(&idum))*dxg+1.0;
-					ia[j]=IMAX(IMIN((int)(xn),NDMX),1);
-					if (ia[j] > 1) {
-						xo=xi[j][ia[j]]-xi[j][ia[j]-1];
-						rc=xi[j][ia[j]-1]+(xn-ia[j])*xo;
-					} else {
-						xo=xi[j][ia[j]];
-						rc=(xn-ia[j])*xo;
-					}
-					x[j]=regn[j]+rc*dx[j];
-					wgt *= xo*xnd;
-				}
-				f=wgt*(*fxn)(x,wgt);
-				f2=f*f;
-				fb += f;
-				f2b += f2;
-				for (j=1;j<=ndim;j++) {
-					di[ia[j]][j] += f;
-					if (mds >= 0) d[ia[j]][j] += f2;
-				}
-			}
-			f2b=sqrt(f2b*npg);
-			f2b=(f2b-fb)*(f2b+fb);
-			if (f2b <= 0.0) f2b=TINY;
-			ti += fb;
-			tsi += f2b;
-			if (mds < 0) {
-				for (j=1;j<=ndim;j++) d[ia[j]][j] += f2b;
-			}
-			for (k=ndim;k>=1;k--) {
-				kg[k] %= ng;
-				if (++kg[k] != 1) break;
-			}
-			if (k < 1) break;
-		}
-		tsi *= dv2g;
-		wgt=1.0/tsi;
-		si += wgt*ti;
-		schi += wgt*ti*ti;
-		swgt += wgt;
-		*tgral=si/swgt;
-		*chi2a=(schi-si*(*tgral))/(it-0.9999);
-		if (*chi2a < 0.0) *chi2a = 0.0;
-		*sd=sqrt(1.0/swgt);
-		tsi=sqrt(tsi);
-		if (nprn >= 0) {
-			printf("%s %3d : integral = %14.7g +/-  %9.2g\n",
-				" iteration no.",it,ti,tsi);
-			printf("%s integral =%14.7g+/-%9.2g chi**2/IT n = %9.2g\n",
-				" all iterations:  ",*tgral,*sd,*chi2a);
-			if (nprn) {
-				for (j=1;j<=ndim;j++) {
-					printf(" DATA FOR axis  %2d\n",j);
-					printf("%6s%13s%11s%13s%11s%13s\n",
-						"X","delta i","X","delta i","X","delta i");
-					for (i=1+nprn/2;i<=nd;i += nprn+2) {
-						printf("%8.5f%12.4g%12.5f%12.4g%12.5f%12.4g\n",
-							xi[j][i],di[i][j],xi[j][i+1],
-							di[i+1][j],xi[j][i+2],di[i+2][j]);
-					}
-				}
-			}
-		}
-		for (j=1;j<=ndim;j++) {
-			xo=d[1][j];
-			xn=d[2][j];
-			d[1][j]=(xo+xn)/2.0;
-			dt[j]=d[1][j];
-			for (i=2;i<nd;i++) {
-				rc=xo+xn;
-				xo=xn;
-				xn=d[i+1][j];
-				d[i][j] = (rc+xn)/3.0;
-				dt[j] += d[i][j];
-			}
-			d[nd][j]=(xo+xn)/2.0;
-			dt[j] += d[nd][j];
-		}
-		for (j=1;j<=ndim;j++) {
-			rc=0.0;
-			for (i=1;i<=nd;i++) {
-				if (d[i][j] < TINY) d[i][j]=TINY;
-				r[i]=pow((1.0-d[i][j]/dt[j])/
-					(log(dt[j])-log(d[i][j])),ALPH);
-				rc += r[i];
-			}
-			rebin(rc/xnd,nd,r,xin,xi[j]);
-		}
-	}
-}
-
-void rebin(double rc, int nd, double r[], double xin[], double xi[])
-{
-	int i,k=0;
-	double dr=0.0,xn=0.0,xo=0.0;
-
-	for (i=1;i<nd;i++) {
-		while (rc > dr)
-			dr += r[++k];
-		if (k > 1) xo=xi[k-1];
-		xn=xi[k];
-		dr -= rc;
-		xin[i]=xn-(xn-xo)*dr/r[k];
-	}
-	for (i=1;i<nd;i++) xi[i]=xin[i];
-	xi[nd]=1.0;
-}
-#undef ALPH
-#undef NDMX
-#undef MXDIM
-#undef TINY
-#undef NRANSI
-/* ================== END VEGAS ================== */ 
-#endif
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
 #endif
@@ -450,7 +110,6 @@ char dummy1[32], dummy2[32], atname[32], nbname[8];
 int type, nat, atnum, nbnum, len;
 double L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max, ROMBTOL, Lx, Ly, Lz;
 const double thetapts=100000;
-#ifdef GAUSS
 double gammln(double xx)
   /*Returns the value ln[Γ(xx)] for xx > 0.*/
 {
@@ -467,91 +126,10 @@ double gammln(double xx)
     ser += cof[j]/++y; 
   return -tmp+log(2.5066282746310005*ser/x);
 }
-
-#if 0
-#define EPSJAC 3.0e-14 /*Increase EPS if you don’t have this precision */ 
-#define MAXITJAC 10 
-void gaujac(double x[], double w[], int n, double alf, double bet)
-/*Given alf and bet, the parameters α and β of the Jacobi polynomials, this routine returns arrays x[1..n] and w[1..n] containing the abscissas and weights of the n-point Gauss-Jacobi quadrature formula. The largest abscissa is returned in x[1], the smallest in x[n].*/
-{
-  double gammln(double xx);
-  /*void nrerror(char error_text[]); */
-  int i,its,j;
-  double alfbet,an,bn,r1,r2,r3;
-  double a,b,c,p1,p2,p3,pp,temp,z,z1;
-  for (i=1;i<=n;i++) { 
-    if (i == 1) { 
-      an=alf/n;
-      /* High precision is a good idea for this rou- tine.
-	 Loop over the desired roots. Initial guess for the largest root.*/
-      bn=bet/n; 
-      r1=(1.0+alf)*(2.78/(4.0+n*n)+0.768*an/n); 
-      r2=1.0+1.48*an+0.96*bn+0.452*an*an+0.83*an*bn; 
-      z=1.0-r1/r2;
-    } 
-    else if (i == 2) 
-      { /* Initial guess for the second largest root.*/
-	r1=(4.1+alf)/((1.0+alf)*(1.0+0.156*alf)); 
-	r2=1.0+0.06*(n-8.0)*(1.0+0.12*alf)/n; 
-	r3=1.0+0.012*bet*(1.0+0.25*fabs(alf))/n;
-	z -= (1.0-z)*r1*r2*r3;
-      } 
-    else if (i == 3) 
-      { /* Initial guess for the third largest root.*/
-	r1=(1.67+0.28*alf)/(1.0+0.37*alf); 
-	r2=1.0+0.22*(n-8.0)/n; 
-	r3=1.0+8.0*bet/((6.28+bet)*n*n);
-	z -= (x[1]-z)*r1*r2*r3;
-      } 
-    else if (i == n-1) 
-      { /* Initial guess for the second smallest root. */ 
-	r1=(1.0+0.235*bet)/(0.766+0.119*bet); 
-	r2=1.0/(1.0+0.639*(n-4.0)/(1.0+0.71*(n-4.0))); 
-	r3=1.0/(1.0+20.0*alf/((7.5+alf)*n*n));
-	z += (z-x[n-3])*r1*r2*r3;
-      } 
-    else if (i == n) 
-      { /* Initial guess for the smallest root.*/
-	r1=(1.0+0.37*bet)/(1.67+0.28*bet); 
-	r2=1.0/(1.0+0.22*(n-8.0)/n); 
-	r3=1.0/(1.0+8.0*alf/((6.28+alf)*n*n)); 
-	z += (z-x[n-2])*r1*r2*r3;
-      } 
-    else 
-      { /* Initial guess for the other roots.*/
-       	z=3.0*x[i-1]-3.0*x[i-2]+x[i-3];
-      }
-    alfbet=alf+bet;
-    for (its=1;its<=MAXITJAC;its++) 
-      {
-	temp=2.0+alfbet; p1=(alf-bet+temp*z)/2.0; p2=1.0;
-	for (j=2;j<=n;j++) {
-	  p3=p2;
-	  p2=p1;
-	  temp=2*j+alfbet;
-	  a=2*j*(j+alfbet)*(temp-2.0);
-	  b=(temp-1.0)*(alf*alf-bet*bet+temp*(temp-2.0)*z); 
-	  c=2.0*(j-1+alf)*(j-1+bet)*temp;
-	  p1=(b*p2-c*p3)/a;
-	} 
-	pp=(n*(alf-bet-temp*z)*p1+2.0*(n+alf)*(n+bet)*p2)/(temp*(1.0-z*z)); 
-	/* p1 is now the desired Jacobi polynomial. We next compute pp, its derivative, 
-	   by a standard relation involving also p2, the polynomial of one lower order. */
-	z1=z;
-	z=z1-p1/pp; /*Newton’s formula.*/
-	if (fabs(z-z1) <= EPSJAC) break;
-      }
-    if (its > MAXITJAC)
-      {
-	printf("too many iterations in gaujac"); 
-	exit(-1);
-      }
-    x[i]=z; /* Store the root and the weight.*/
-    w[i]=exp(gammln(alf+n)+gammln(bet+n)-gammln(n+1.0)-
-	     gammln(n+alfbet+1.0))*temp*pow(2.0,alfbet)/(pp*p2);
-  }
-}
-#endif
+struct contribs {
+  double steric;
+  double elec;
+};
 int ntheta, nphi, ngamma;
 double *xtheta, *xphi, *wtheta, *wphi, *xgamma, *xphi, *wgamma;
 #define EPSGAULEG 3.0e-11 
@@ -596,21 +174,8 @@ void gauleg(double x1, double x2, double x[], double w[], int n)
 	Compute the weight and its symmetric counterpart.*/
     }
 }
-#if 0
-int j;
-float xr,xm,dx,s;
-static float x[]={0.0,0.1488743389,0.4333953941,
-0.6794095682,0.8650633666,0.9739065285}; static float w[]={0.0,0.2955242247,0.2692667193, 0.2190863625,0.1494513491,0.0666713443};
-The abscissas and weights. First value of each array not used.
-xm=0.5*(b+a); xr=0.5*(b-a);
-s=0;
-for (j=1;j<=5;j++) {
-dx=xr*x[j];
-Will be twice the average value of the function, since the ten weights (five numbers above each used twice) sum to 2.
-s += w[j]*((*func)(xm+dx)+(*func)(xm-dx)); }
-return s *= xr;
-#endif
-double qgaus(double (*func)(double, int), double a, double b, double *x, double *w, int np)
+void qgaus(void (*func)(double, int, struct contribs*), double a, double b, double *x, double *w, int np, 
+	    struct contribs* contr)
 {
 #if 0
   static const double x[]={0.1488743389816312,0.4333953941292472,
@@ -618,137 +183,17 @@ double qgaus(double (*func)(double, int), double a, double b, double *x, double 
   static const double w[]={0.2955242247147529,0.2692667193099963,
     0.2190863625159821,0.1494513491505806,0.0666713443086881};
 #endif
-  int j;
+  int j, elec;
   double s;
+  strucy contribs c;
   s=0.0;
   for (j=1;j<=np;j++) 
     {
-      s += w[j]*func(x[j],j);
+      func(x[j],j, &c);
+      contr->steric += w[j]*c.steric;
+      contr->elec += w[j]*c.elec;
     }
-  return s;
 }
-#endif
-#define JMAX 15
-#define JMAXP (JMAX+1) 
-#define KROMB 5
-int polinterr=0;
-/*Here EPS is the fractional accuracy desired, as determined by the extrapolation error estimate; JMAX limits the total number of steps; K is the number of points used in the extrapolation.*/
-void polint(double xa[], double ya[], int n, double x, double *y, double *dy)
-/* Given arrays xa[1..n] and ya[1..n], and given a value x, this routine returns a value y,
- * and an error estimate dy. If P(x) is the polynomial of degree N-1 such that P(xai) = yai, 
- * i = 1, . . . , n, then the returned value y = P(x).*/
-{ 
-  int i,m,ns=1; 
-  double den,dif,dift,ho,hp,w;
-  double c[KROMB+1], d[KROMB+1];
-#if 0
-  for (i=0; i < n; i++)
-    {
-      xa[i+1] = xain[i];
-      ya[i+1] = yain[i];
-    }
-#endif
-  dif=fabs(x-xa[1]); 
-  //c=vector(n); 
-  //d=vector(n); 
-  for (i=1;i<=n;i++) 
-    { 
-      /* Here we find the index ns of the closest table entry,*/
-      if ( (dift=fabs(x-xa[i])) < dif) 
-	{ 
-	  ns=i; 
-	  dif=dift;
-	} 
-      c[i]=ya[i];
-      /* and initialize the tableau of c s and d s.*/
-      d[i]=ya[i]; 
-    } 
-  *y=ya[ns--];
-  /* This is the initial approximation to y.*/
-  for (m=1;m<n;m++) 
-    { 
-      /* For each column of the tableau,*/
-      for (i=1;i<=n-m;i++)
-	{
-	  /* we loop over the current c s and d s and update them.*/
-	  ho=xa[i]-x; 
-	  hp=xa[i+m]-x; 
-	  w=c[i+1]-d[i]; 
-	  if ( (den=ho-hp) == 0.0) 
-	    {
-	      polinterr=1;
-	      printf("error in routinr polint\n");
-	      return ;
-	      //nrerror("Error in routine polint"); 
-	    }
-	  /* This error can occur only if two input xa s are (to within roundoff)*/
-	  den=w/den; d[i]=hp*den; 
-	  /*Here the c s and d s are updated. */
-	  c[i]=ho*den; 
-	} 
-      *y += (*dy=(2*ns < (n-m) ? c[ns+1] : d[ns--])); 
-      /* After each column in the tableau is completed, we decide which correction, 
-       * c or d, we want to add to our accumulating value of y, i.e., which path to take through the tableau 
-       * forking up or down. We do this in such a way as to take the most  straight line  route through the 
-       * tableau to its apex, updating ns accordingly to keep track of where we are. 
-       * This route keeps the partial approximations centered (insofar as possible) on the target x. 
-       * The last dy added is thus the error indication. */
-    } 
-  //free_vector(d); 
-  //free_vector(c); 
-}
-#define FUNC(x) ((*func)(x))
-double trapzd(double (*func)(double), double a, double b, int n)
-/*This routine computes the nth stage of refinement of an extended trapezoidal rule. func is input
-as a pointer to the function to be integrated between limits a and b, also input. When called with
-n=1, the routine returns the crudest estimate of b f (x)dx. Subsequent calls with n=2,3,... a
-(in that sequential order) will improve the accuracy by adding 2n-2 additional interior points.*/
-{
-  double x,tnm,sum,del; 
-  static double s;
-  int it,j;
-  if (n == 1) 
-    {
-      return (s=0.5*(b-a)*(FUNC(a)+FUNC(b)));
-    } 
-  else
-    {
-      for (it=1,j=1;j<n-1;j++) 
-	it <<= 1;
-      tnm=it;
-      del=(b-a)/tnm; /*This is the spacing of the points to be added.*/ 
-      x=a+0.5*del;
-      for (sum=0.0,j=1;j<=it;j++,x+=del) 
-	sum += FUNC(x); 
-      s=0.5*(s+(b-a)*sum/tnm); /* This replaces s by its refined value. */
-      return s;
-    } 
-}
-
-double qromb(double (*func)(double), double a, double b)
-/*Returns the integral of the function func from a to b. Integration is performed by Romberg’s method of order 2K, where, e.g., K=2 is Simpson’s rule.*/
-{
-  //void nrerror(char error_text[]);
-  double ss,dss;
-  double s[JMAXP],h[JMAXP+1]; 
-  int j;
-  h[1]=1.0;
-  for (j=1;j<=JMAX;j++) {
-    s[j]=trapzd(func,a,b,j); 
-    if (j >= KROMB) {
-      /* These store the successive trapezoidal approxi- mations and their relative stepsizes.*/
-      polint(&h[j-KROMB],&s[j-KROMB],KROMB,0.0,&ss,&dss);
-      if (fabs(dss) <= ROMBTOL*fabs(ss)) 
-	return ss; 
-    }
-    h[j+1]=0.25*h[j];
-    /*This is a key step: The factor is 0.25 even though the stepsize is decreased by only 0.5. This makes the extrapolation a polynomial in h2 as allowed by equation (4.2.1), not just a polynomial in h.*/
-  }
-  printf("Too many steps in routine qromb\n"); 
-  exit(-1);
-  return 0.0; /*Never get here.*/
-}
-
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -1084,21 +529,6 @@ void versor_to_R(double ox, double oy, double oz, double gamma, double R[3][3])
   //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
   for (k=0; k < 3 ; k++)
     R[1][k] = u[k]/norm;
-#if 0
-  if (typesArr[0].nspots==3 && type==0)
-    {
-      for (k=0; k < 3 ; k++)
-	u[k] = R[1][k];
-      vectProdVec(R[0], u, up);
-      /* rotate randomly second axis */
-      angle=4.0*acos(0.0)*ranf_vb();
-      xx = cos(angle);
-      yy = sin(angle);
-      for (k=0; k < 3 ; k++)
-	R[1][k] = u[k]*xx + up[k]*yy;
-      //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
-    }
-#endif
   /* third row vector */
   vectProdVec(R[1], R[2], u);
  
@@ -1249,156 +679,6 @@ double ranf_vb(void)
 }
 double fonsfact, dfonsfact; 
 
-double fons(double costheta, double alpha)
-{
-  /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
-     di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return cosh(alpha*costheta);
-}
-/* return an angle theta sampled from an Onsager angular distribution */
-double theta_onsager(double alpha)
-{
-  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
-     using rejection method */
-  /* the comparison function g(theta) is just g(theta)=1 */ 
-  static int first = 1;
-  static double f0;
-  double pi, y, f, theta, dtheta;
-  //printf("alpha=%f\n", alpha);
-  pi = acos(0.0)*2.0;
-  if (first == 1)
-    {
-      first=0;
-#if 0
-      f0 = 1.01*fons(0.0,alpha);
-#else      
-      f0 = 1.01*fons_sinth_max;
-#endif
-    }
-  do 
-    {
-      /* uniform theta between 0 and pi */
-      theta = pi*ranf_vb();
-      /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
-      y = f0*ranf_vb();
-      f = sin(theta)*fons(theta,alpha);
-      //printf("theta=%f y=%f\n", theta, y);
-    }
-  while (y >= f);
-  return theta;
-}
-double distro[10000];
-const int nfons=100;
-void angles_to_R(double *omx, double *omy, double* omz, double alpha)
-{
-  double thons;
-  double pi, phi, verso;
-
-  pi = acos(0.0)*2.0;
-  /* random angle from onsager distribution */
-  thons = theta_onsager(alpha);
-  //printf("thos=%f\n", thons);
-  distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
-  phi = 2.0*pi*ranf_vb();
-  //verso = (ranf_vb()<0.5)?1:-1;
-  verso=1;
-#if 1 /* along z */
-  *omx = verso*sin(thons)*cos(phi);
-  *omy = verso*sin(thons)*sin(phi);
-  *omz = verso*cos(thons); 
-#else /* or along x (but it has to be same of course!) */
-  *omy = verso*sin(thons)*cos(phi);
-  *omz = verso*sin(thons)*sin(phi);
-  *omx = verso*cos(thons); 
-#endif
-  //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
-}
-
-/* first derivative of Onsager distribution */
-double dfons(double costheta, double alpha)
-{
-  /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
-     di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return sinh(alpha*costheta);
-}
-
-/* return an angle theta sampled from an Onsager angular distribution */
-double theta_donsager(double alpha, int domain)
-{
-  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
-     using rejection method */
-  /* the comparison function g(theta) is just g(theta)=1 */ 
-  static int first = 1;
-  static double f0;
-  double pi, y, f, theta, dtheta;
-  //printf("alpha=%f\n", alpha);
-  pi = acos(0.0)*2.0;
-  if (first == 1)
-    {
-      first=0;
-      /* qui va fornito il massimo della funzione nell'intervallo
-	 [0,Pi] */
-      //f0 = 1.01*alpha*fons(0.0,alpha);
-      f0 = 1.01*dfons_sinth_max;
-    }
-  do 
-    {
-      /* uniform theta between 0 and pi/2 (domain=0) or pi/2 and pi (domain=1) */
-      if (domain==0)
-	theta = ranf_vb()*pi/2.;
-      else
-	theta = (pi/2.)*(1.+ranf_vb());
-      /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
-      y = f0*ranf_vb();
-      f = fabs(sin(theta)*dfons(theta,alpha));
-      //printf("theta=%f y=%f\n", theta, y);
-    }
-  while (y >= f);
-  return theta;
-}
-
-//extern const int nfons;
-void orient_donsager(double *omx, double *omy, double* omz, double alpha, int domain)
-{
-  double thons;
-  double pi, phi, verso;
-
-  pi = acos(0.0)*2.0;
-  /* random angle from onsager distribution */
-  thons = theta_donsager(alpha, domain);
-  //printf("thos=%f\n", thons);
-  //distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
-  phi = 2.0*pi*ranf_vb();
-  //verso = (ranf_vb()<0.5)?1:-1;
-  verso=1;
-#if 1 /* along z */
-  *omx = verso*sin(thons)*cos(phi);
-  *omy = verso*sin(thons)*sin(phi);
-  *omz = verso*cos(thons); 
-#else /* or along x (but it has to be same of course!) */
-  *omy = verso*sin(thons)*cos(phi);
-  *omz = verso*sin(thons)*sin(phi);
-  *omx = verso*cos(thons); 
-#endif
-  //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
-}
-double estimate_maximum_dfons(double alpha)
-{
-  double th, dth, maxval, m;
-  int i;
-  dth=2.0*(acos(0.0))/((double)thetapts);
-  th=0.0;
-  for (i=0; i < thetapts; i++)
-    {
-      m=sin(th)*dfons(th,alpha);
-      if (i==0 || maxval < m)
-	maxval = m;
-      th += dth;
-      //printf("%f %.15G\n", th, sin(th)*dfons(th, alpha));
-    }
-  // printf("maxval=%f\n", maxval);
-  return maxval;
-}
 void init_distbox(void)
 {
   int i, k;
@@ -1601,14 +881,14 @@ int compare_func(const void *aa, const void *bb)
     return 0;
 }
 #endif
-double integrandv1(double rcmx, double rcmy, double rcmz, 
+void integrandv1(double rcmx, double rcmy, double rcmz, 
 		    double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12,
-		    double alpha)
+		    double alpha, struct contribs *contr)
 {
   int i, j;
   double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
   double sintheta12, costheta12, sinphi12, cosphi12, cosgamma12, singamma12;
-
+  double uel = 0.0, yukfact;
   costheta12 = cos(theta12);
   sintheta12 = sin(theta12);
   cosphi12 = cos(phi12);
@@ -1625,6 +905,8 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
   u2z = costheta12;  
   place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
 #endif
+  contr->steric = 0;
+  contr->elec = 0;
   if (calcDistBox() < 0.0)
     {
       for (i=0; i < nat; i++)
@@ -1638,183 +920,79 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 		  switch (type)
 		    {
 		    case 0:
-		      return XI1[nphi12][ntheta12];
+		      contr->steric = XI1[nphi12][ntheta12];
+		      return;
 		      break;
 		    case 1:
-		      return rcmx*XI1[nphi12][ntheta12]+
+		      contr->steric = rcmx*XI1[nphi12][ntheta12]+
 			rcmy*XI2[nphi12][ntheta12]+
 			rcmz*XI3[nphi12][ntheta12];
+		      return;
 		      break;
 		    case 2:
-		      return -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
+		      contr->sterc = -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
 			Sqr(rcmy)*XI2[nphi12][ntheta12]+
 			Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
 			rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
+		      return;
 		      break;
 		    }
+		}
+	      /* if we have two phosphate groups take into account electrostatic interactions */
+	      else if (DNADs[0][i].atype==1 && DNADs[1][j].atype==1 && distsq < yukcutkDsq)
+		{
+		  uel += calc_yukawa(i, j, distSq);
 		}
 	    }
 	}
     }
-  return 0.0;
+  yukfact = 1.0-exp(-beta*uel);
+  switch (type)
+    {
+    case 0:
+      contr->elec = yukfact*XI1[nphi12][ntheta12];
+      break;
+    case 1:
+      contr->elec = yukfact*(rcmx*XI1[nphi12][ntheta12]+
+		      rcmy*XI2[nphi12][ntheta12]+
+		      rcmz*XI3[nphi12][ntheta12]);
+      break;
+    case 2:
+      contr->elec = -yukfact*(Sqr(rcmx)*XI1[nphi12][ntheta12]+
+		       Sqr(rcmy)*XI2[nphi12][ntheta12]+
+		       Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
+		       rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
+      break;
+    }
 }
 
 double phi12sav, theta12sav, gamma12sav;
-#ifdef QFGAUSS
-double rcmxsav, nrcmxsav, rcmysav, nrcmysav, rcmzsav, nrcmzsav;
-int nrcmx, nrcmy, nrcmz;
-double *xrcmx, *wrcmx, *xrcmy, *wrcmy, *xrcmz, *wrcmz;
-#endif
 int nphi12sav, ntheta12sav, ngamma12sav;
-double ftheta12(double theta12, int ntheta12);
-double fphi12(double phi12, int nphi12);
-double fgamma12(double gamma12, int ngamma12);
-#ifdef QFGAUSS
-double frcmx(double rcmx, int nrcmx);
-double frcmy(double rcmy, int nrcmy);
-double frcmz(double rcmz, int nrcmz);
-double (*nrfunc)(double,int,double,int,double,int,double,int,double,int);
-double quad3d(double (*func)(double,int,double,int,double,int,double,int,double,int), 
-	      double phi12_1, double phi12_2)
+void ftheta12(double theta12, int ntheta12, struct contribs*);
+void fphi12(double phi12, int nphi12, struct contribs*);
+void fgamma12(double gamma12, int ngamma12, struct contribs*);
+void (*nrfunc)(double,int,double,int,struct contribs*);
+void quad3d(void (*func)(double,int,double,int,struct contribs*), 
+	      double phi12_1, double phi12_2, struct contribs* contr)
 {
   nrfunc=func;
-#ifdef GAUSS
-  return qgaus(fphi12,phi12_1,phi12_2,xphi,wphi,nphi);
-#else
-  return qromb(fphi12,phi12_1,phi12_2);
-#endif
+  qgaus(fphi12,phi12_1,phi12_2,xphi,wphi,nphi, contr);
 }
-double fphi12(double phi12, int nphi12) 
+void fphi12(double phi12, int nphi12, struct contribs* contr) 
 {
   phi12sav=phi12;
   nphi12sav=nphi12;
-#ifdef GAUSS
-  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
-#else
-  return qromb(ftheta12,0.0,M_PI); 
-#endif
+  qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta, contr); 
 }
-double ftheta12(double theta12, int ntheta12) 
+void ftheta12(double theta12, int ntheta12, struct contribs *contr) 
 {
-  theta12sav=theta12;
-  ntheta12sav=ntheta12;
-#ifdef GAUSS
-  /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
-     gamma varia tra 0 e 2*pi come phi */
-  return qgaus(frcmx,-Lx/2.,Lx/2., xrcmx, wrcmx, nrcmx); 
-#else
-  return qromb(frcmx,-Lx/2.,Lx/2.); 
-#endif
-}
-double frcmx(double rcmx, int nrcmx) 
-{
-  rcmxsav=rcmx;
-  nrcmxsav=nrcmx;
-#ifdef GAUSS
-  /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
-     gamma varia tra 0 e 2*pi come phi */
-  return qgaus(frcmy,-Ly/2.,Ly/2., xrcmy, wrcmy, nrcmy); 
-#else
-  return qromb(frcmy,-Ly/2.,Ly/2.); 
-#endif
-}
-double frcmy(double rcmy, int nrcmy) 
-{
-  rcmysav=rcmy;
-  nrcmysav=nrcmy;
-#ifdef GAUSS
-  /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
-     gamma varia tra 0 e 2*pi come phi */
-  return qgaus(frcmz,-Lz/2.,Lz/2., xrcmz, wrcmz, nrcmz); 
-#else
-  return qromb(frcmz,-Lz/2.,Lz/2.); 
-#endif
-}
-double frcmz(double rcmz, int nrcmz) 
-{
-  return (*nrfunc)(phi12sav,nphi12sav,theta12sav,ntheta12sav,rcmxsav,nrcmxsav,rcmysav,nrcmysav,rcmz,nrcmz);
+  return (*nrfunc)(phi12sav,nphi12sav,theta12, ntheta12, contr);
 }
 double rcmxsav, rcmysav, rcmzsav, alphasav;
-double intfunc(double phi12, int nphi12, double theta12, int ntheta12, 
-	       double rcmx, int nrcmx, double rcmy, int nrcmy, double rcmz, int nrcmz)
+void intfunc(double phi12, int nphi12, double theta12, int ntheta12, struct contribs *contr)
 {
-  return integrandv1(rcmx, rcmy, rcmz, phi12, nphi12, theta12, ntheta12, gamma12sav, 0, alphasav);
+  integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12sav, 0, alphasav, contr);
 }
-#elif defined(MCGAMMA)
-double (*nrfunc)(double,int,double,int);
-double quad3d(double (*func)(double,int,double,int), 
-	      double phi12_1, double phi12_2)
-{
-  nrfunc=func;
-#ifdef GAUSS
-  return qgaus(fphi12,phi12_1,phi12_2,xphi,wphi,nphi);
-#else
-  return qromb(fphi12,phi12_1,phi12_2);
-#endif
-}
-double fphi12(double phi12, int nphi12) 
-{
-  phi12sav=phi12;
-  nphi12sav=nphi12;
-#ifdef GAUSS
-  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
-#else
-  return qromb(ftheta12,0.0,M_PI); 
-#endif
-}
-double ftheta12(double theta12, int ntheta12) 
-{
-  return (*nrfunc)(phi12sav,nphi12sav,theta12, ntheta12);
-}
-double rcmxsav, rcmysav, rcmzsav, alphasav;
-double intfunc(double phi12, int nphi12, double theta12, int ntheta12)
-{
-  return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12sav, 0, alphasav);
-}
-#else
-double (*nrfunc)(double,int,double,int,double,int);
-double quad3d(double (*func)(double,int,double,int,double,int), 
-	      double phi12_1, double phi12_2)
-{
-  nrfunc=func;
-#ifdef GAUSS
-  return qgaus(fphi12,phi12_1,phi12_2,xphi,wphi,nphi);
-#else
-  return qromb(fphi12,phi12_1,phi12_2);
-#endif
-}
-double fphi12(double phi12, int nphi12) 
-{
-  phi12sav=phi12;
-  nphi12sav=nphi12;
-#ifdef GAUSS
-  return qgaus(ftheta12,0.0,M_PI, xtheta, wtheta, ntheta); 
-#else
-  return qromb(ftheta12,0.0,M_PI); 
-#endif
-}
-double ftheta12(double theta12, int ntheta12) 
-{
-  theta12sav=theta12;
-  ntheta12sav=ntheta12;
-#ifdef GAUSS
-  /* notare che le ascisse e ordinate di phi vanno bene anche per theta poiché 
-     gamma varia tra 0 e 2*pi come phi */
-  return qgaus(fgamma12,0.0,M_PI, xgamma, wgamma, ngamma); 
-#else
-  return qromb(fgamma12,0.0,M_PI); 
-#endif
-}
-double fgamma12(double gamma12, int ngamma12) 
-{
-  return (*nrfunc)(phi12sav,nphi12sav,theta12sav, ntheta12sav, gamma12, ngamma12);
-}
-double rcmxsav, rcmysav, rcmzsav, alphasav;
-double intfunc(double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12)
-{
-  return integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12, ngamma12, alphasav);
-}
-#endif
 #ifdef SOBOL_LL
 static int iminarg1,iminarg2;
 /*#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
@@ -1943,22 +1121,9 @@ void sobseq(int *n, double x[])
 #ifdef SOBOLBF
 void i8_sobol ( int dim_num, long long int *seed, double quasi[ ] );
 #endif
-#ifdef USE_MISER
-double miser_func(double x[])
-{
-  rcmxsav = x[1];
-  rcmysav = x[2];
-  rcmzsav = x[3];
-  gamma12sav = x[4];
-  return quad3d(intfunc, 0.0, 2.0*M_PI);
-}
-#endif
 int main(int argc, char**argv)
 {
-#ifdef USE_MISER
-  double regn[4];
-  double mis_ave, mis_var;
-#endif
+  struct contribs *contr;
 #ifdef QUASIMC
 #ifdef SOBOLBF
   long long bfseed=0;
@@ -1999,15 +1164,7 @@ int main(int argc, char**argv)
 
   if (argc < 7)
     {
-#ifdef ELEC
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
-#else
-#ifdef GAUSS
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
-#else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [romb-tol]\n");
-#endif
-#endif
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
       exit(1);
     }
   strcpy(fnin,argv[1]);
@@ -2022,7 +1179,6 @@ int main(int argc, char**argv)
     outits=100*fileoutits;
   else
     outits = atoll(argv[7]);
-#ifdef GAUSS 
   if (argc == 8)
     nphi = 10;
   else
@@ -2033,165 +1189,39 @@ int main(int argc, char**argv)
   else
     ntheta = atoi(argv[9]);
 
-  if (argc == 10)
-    ngamma = 10;
-  else
-    ngamma = atoi(argv[10]);
-
-#ifdef QFGAUSS
-  if (argc == 11)
-    nrcmx = 10;
-  else
-    nrcmx = atoi(argv[11]);
-
- if (argc == 12)
-    nrcmy = 10;
-  else
-    nrcmy = atoi(argv[12]);
-
-  if (argc == 13)
-    nrcmz = 10;
-  else
-    nrcmz = atoi(argv[13]);
-#endif
-#else
-  if (argc == 8)
-    ROMBTOL = 1.0E-2;
-  else
-    ROMBTOL = atof(argv[8]);
-#endif
-#ifdef ELEC
-#ifdef PARALLEL
-  if (argc <= 8)
-    {
-      numtemps=1;
-      beta = 1.0;
-    }
-  else
-    {
-      if (sscanf(argv[8], "%lf", &dummydbl) < 1)
-	{
-	  fp=fopen(argv[8],"r");
-	  cc=0;
-	  while(!feof(fp))
-	    {
-	      fscanf(fp, "%lf ", &dummydbl);
-	      cc++;
-	    }
-	  beta_arr = malloc(sizeof(double)*cc);
-	  rewind(fp);
-	  cc=0;
-	  while(!feof(fp))
-	    {
-	      fscanf(fp, "%lf ", &dummydbl);
-	      beta_arr[cc] = 1.0/dummydbl;
-	      cc++;
-	    }
-	  fclose(fp);
-	  numtemps=cc;
-	}
-      else
-	{
-	  numtemps = 1;
-	  beta = 1.0/atof(argv[8]);
-	} 
-    }
-  if (argc <= 9)
-    {
-      numconcs = 1;
-      cdna = 600;
-    }
-  else
-    {
-      if (!sscanf(argv[9], "%lf", &dummydbl))
-	{
-	  fp=fopen(argv[9],"r");
-	  cc=0;
-	  while(!feof(fp))
-	    {
-	      fscanf(fp, "%lf ", &dummydbl);
-	      cc++;
-	    }
-	  cdna_arr = malloc(sizeof(double)*cc);
-	  rewind(fp);
-	  numconcs=cc;
-	  cc=0;
-	  while(!feof(fp))
-	    {
-	      fscanf(fp, "%lf ", &dummydbl);
-	      cdna_arr[cc] = dummydbl;
-	      cc++;
-	    }
-	  fclose(fp);
-	}
-      else
-	{
-	  numconcs = 1;
-	  cdna = atof(argv[9]);
-	}
-    }
-#else
-  if (argc <= 8)
+  if (argc <= 10)
     beta = 1.0;
   else  
-    beta = 1.0/atof(argv[8]);
-
-  if (argc <= 9)
-    cdna =  600; /* mg/ml */
-  else
-    cdna = atof(argv[9]);
-#endif
-  if (argc <= 10)
-    yukcut = 2.0;
-  else 
-    yukcut = atof(argv[10]);
+    beta = 1.0/atof(argv[10]);
 
   if (argc <= 11)
+    cdna =  600; /* mg/ml */
+  else
+    cdna = atof(argv[11]);
+
+  if (argc <= 12)
+    yukcut = 3.0;
+  else 
+    yukcut = atof(argv[12]);
+
+  if (argc <= 13)
     epsr_prime = 2.0;
   else
-    epsr_prime = atof(argv[11]);
-  if (argc <= 12)
+    epsr_prime = atof(argv[13]);
+ 
+  if (argc <= 14)
     delta_rab0 = 2.0;
   else
-    delta_rab0 = atof(argv[12]);
+    delta_rab0 = atof(argv[14]);
 
-#ifdef PARALLEL
-  if (numtemps > 1 || numconcs > 1)
-    {
-      esq_eps = Sqr(qel)/(4.0*M_PI*eps0)/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
-    }
-  else
-    {
-      esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
-    }
-#else
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
-#endif
   esq_eps10 = esq_eps*1E10;
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*epsr_prime)/kB;
   esq_eps_prime10 = esq_eps_prime*1E10;
-#ifdef PARALLEL
-  if (numtemps > 1 || numconcs > 1)
-    {
-      ximanning = esq_eps/bmann;
-      deltamann = 1.0/ximanning;
-      zeta_a = deltamann;
-      zeta_b = deltamann;
-      //printf("zeta_a=%f zeta_b:%f\n", zeta_a, zeta_b);
-    }
-  else
-    {
-      ximanning = esq_eps*beta/bmann;
-      deltamann = 1.0/ximanning;
-      zeta_a = deltamann;
-      zeta_b = deltamann;
-    }
-#else
   ximanning = esq_eps*beta/bmann;
   deltamann = 1.0/ximanning;
   zeta_a = deltamann;
   zeta_b = deltamann;
-#endif
   /*
      rho_salt =2 csalt Nav 1000;
      rho_counter[cdna_]:=(2 cdna)/(660*Dalton);
@@ -2201,124 +1231,18 @@ int main(int argc, char**argv)
 
    */
   /* qdna è la carica rilasciata da ogni gruppo fosfato in soluzione (tipicamente=1) */
-#ifdef PARALLEL
-  if (numtemps > 1 || numconcs > 1)
-    {
-      kD_arr = malloc(sizeof(double*)*numtemps);
-      yukcutkD_arr = malloc(sizeof(double*)*numtemps);
-      yukcutkDsq_arr = malloc(sizeof(double*)*numtemps); 
-      vexclel_arr = malloc(sizeof(double*)*numtemps); 
-      uel_arr = malloc(sizeof(double*)*numtemps);
-      yuk_corr_fact_arr = malloc(sizeof(double*)*numtemps); 
-      for (k1=0; k1 < numtemps; k1++)
-	{
-	  kD_arr[k1] = malloc(sizeof(double)*numconcs);
-	  yukcutkD_arr[k1] = malloc(sizeof(double)*numconcs);
-	  yukcutkDsq_arr[k1] = malloc(sizeof(double)*numconcs);
-	  vexclel_arr[k1] = malloc(sizeof(double)*numconcs);
-	  uel_arr[k1] = malloc(sizeof(double)*numconcs);
-	  yuk_corr_fact_arr[k1] = malloc(sizeof(double)*numconcs); 
-	}
-      for (k1 = 0; k1 < numtemps; k1++)
-	for (k2 = 0; k2 < numconcs; k2++)
-	  {
-	    kD_arr[k1][k2] = sqrt((4.0*M_PI*esq_eps*(1.0/epsr(1.0/beta_arr[k1])))*beta_arr[k1]*(Sqr(qdna)*2.0*epsr(1.0/beta_arr[k1])*(deltamann/beta_arr[k1])*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
-	    printf("numtemps=%d numconcs=%d kD:%f beta_arr:%f cdna_arr: %f\n", numtemps, numconcs, kD_arr[k1][k2], beta_arr[k1], cdna_arr[k2]);
-	    printf("esq_eps: %f qdna=%f deltamann=%f qsalt=%f csalt=%f\n", esq_eps, qdna, deltamann, qsalt, csalt);
-	    /* 6.0 Angstrom is the closest distance between phosphate charges */
-	    yukcutkD_arr[k1][k2] = yukcut/kD_arr[k1][k2];
-	    yukcutkDsq_arr[k1][k2] = Sqr(yukcutkD_arr[k1][k2]);	
-	    yuk_corr_fact_arr[k1][k2] = exp(kD_arr[k1][k2]*6.0)/(1.0+kD_arr[k1][k2]*6.0);
-	  }
-      num_kD = numtemps*numconcs;
-      kD_sorted = malloc(sizeof(struct kDsortS)*num_kD);
-      cc=0;
-      for (k1 = 0; k1 < numtemps; k1++)
-	for (k2 = 0; k2 < numconcs; k2++)
-	  {
-	    kD_sorted[cc].invkD = 1.0/kD_arr[k1][k2];
-	    kD_sorted[cc].k1 = k1;
-	    kD_sorted[cc].k2 = k2;
-	    cc++;
-	  }
-      qsort(kD_sorted, cc, sizeof(struct kDsortS), compare_func);
-      yuk_corr_fact = 1.0;//exp((1.0/kD_sorted[cc-1].invkD)*6.0)/(1.0+(1.0/kD_sorted[cc-1].invkD)*6.0);
-      maxyukcutkD = yukcut*kD_sorted[cc-1].invkD;
-      maxyukcutkDsq = Sqr(yukcut*kD_sorted[cc-1].invkD);
-      printf("min: %f max: %f maxyukcutkD=%f\n",kD_sorted[0].invkD,kD_sorted[cc-1].invkD, sqrt(maxyukcutkDsq));
-    }
-  else
-    {
-      kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
-      /* 6.0 Angstrom is the closest distance between phosphate charges */
-      yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
-      yukcutkD = yukcut/kD;
-      yukcutkDsq = Sqr(yukcutkD);
-    }
-#else
+
   kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
   /* 6.0 Angstrom is the closest distance between phosphate charges */
   yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
   yukcutkD = yukcut/kD;
   yukcutkDsq = Sqr(yukcutkD);
-#endif
-#ifdef PARALLEL
-  printf("epsr_prime=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
-  printf("yukawa cutoff=%.15G yuk_corr_fact=%.15G\n", yukcutkD, yuk_corr_fact);
-#else
   printf("epsr_prime=%f epsr=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, epsr(1.0/beta), beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
   printf("yukawa cutoff=%.15G yuk_corr_fact=%.15G\n", yukcutkD, yuk_corr_fact);
-#endif
-#endif
   cont=0;
-#ifdef ELEC
-  nfrarg = 14;
-#else
-#ifdef GAUSS
-  nfrarg = 11;
-#else
-  nfrarg = 10;
-#endif
-#endif
-  if (0)
-    {
-      cont=1;
-      fread = fopen(argv[nfrarg-1], "r");
-      printf("reading file = %s\n", argv[nfrarg-1]);
-      while (!feof(fread))
-	{
-#ifdef ELEC
-	  fscanf(fread, "%lld %lf %lf %lf\n", &ttini, &dummydbl, &vexcl, &vexclel);
-#else
-	  fscanf(fread, "%lld %lf\n", &ttini, &vexcl);
-#endif
-	}
-      fclose(fread);
-#ifdef ELEC
-      printf("restarting tt=%lld vexcltot=%.15G vexcl=%.15G vexclel=%.15G\n", ttini, vexcl+vexclel, vexcl, vexclel);
-#else
-      printf("restarting tt=%lld vexcl=%.15G\n", ttini, vexcl);
-#endif
-    }
-  else
-    {
-      vexcl = 0.0;
-#ifdef ELEC
-#ifdef PARALLEL
-      if (numtemps > 1 || numconcs > 1)
-	{
-	  for (k1=0; k1 < numtemps; k1++)
-	    for (k2=0; k2 < numconcs; k2++)
-	      vexclel_arr[k1][k2] = 0.0;
-	}
-      else
-	vexclel = 0.0;
-#else
-      vexclel = 0.0;
-#endif
-#endif
-      ttini = 0;
-    }
+  vexcl = 0.0;
+  vexclel = 0.0;
+  ttini = 0;
 
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
@@ -2346,45 +1270,33 @@ int main(int argc, char**argv)
       if (!strcmp(atname, "S"))
 	{
 	  DNAchain[cc].rad = 4.0;//3.5;
-#ifdef ELEC
 	  DNAchain[cc].atype = 0;
-#endif
 	}
       else if (!strcmp(atname, "P"))
 	{
 	  DNAchain[cc].rad = 3.0;
-#ifdef ELEC
 	  DNAchain[cc].atype = 1;
-#endif
 	}
       else if (!strcmp(atname, "B"))
 	{
 	  DNAchain[cc].rad = 4.0;
-#ifdef ELEC
 	  DNAchain[cc].atype = 2;
-#endif
 	}
 #else
       if (!strcmp(atname, "Xe"))
 	{
 	  DNAchain[cc].rad = 4.0;//3.5;
-#ifdef ELEC
 	  DNAchain[cc].atype = 0;
-#endif
 	}
       else if (!strcmp(atname, "B"))
 	{
 	  DNAchain[cc].rad = 3.0;
-#ifdef ELEC
 	  DNAchain[cc].atype = 1;
-#endif
 	}
       else if (!strcmp(atname, "Se"))
 	{
 	  DNAchain[cc].rad = 4.0;
-#ifdef ELEC
 	  DNAchain[cc].atype = 2;
-#endif
 	}
 #endif     
       else
@@ -2431,40 +1343,14 @@ int main(int argc, char**argv)
   fons_sinth_max=dfons_sinth_max/alpha;
   printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
 #endif
-#ifdef QFGAUSS
-  printf("Quasi Full Gauss quadrature with nrcmx=%d nrcmy=%d nrcmz=%d points\n", nrcmx, nrcmy, nrcmz);
-#endif
-#ifdef GAUSS
-#ifdef MCGAMMA
   printf("Gauss quadrature with nphi=%d ntheta=%d points\n", nphi, ntheta);
-#else
-  printf("Gauss quadrature with nphi=%d ntheta=%d ngamma=%d points\n", nphi, ntheta, ngamma);
-#endif
-#else
-  printf("Romberg method with %.15G tolerance\n", ROMBTOL);
-#endif
 #ifdef QUASIMC
   printf("I will generate a Quasi Monte Carlo sequence\n");
 #endif
   //exit(-1);
   /* avendo diviso l'integrazione in theta negli intervalli [0,pi/2] e [pi/2,pi]
      il fattore si deve ottenere integrando fra 0 e pi/2 */
-#if 0
-  dth=acos(0.0)/((double)thetapts);
-  th=0.0;
-  //f = fopen("dfons.dat", "w+");
-  for (i=0; i < thetapts; i++)
-    {
-      factor += 0.5*dth*sin(th)*(dfons(th, alpha) + dfons(th+dth,alpha));
-      th += dth;
-      //fprintf(f,"%f %.15G\n", th, dfons(th, alpha));
-    };
-  //fclose(f);
-  factor= fabs(factor);
-  factor *= 4.0*acos(0.0);
-#else
   factor = alpha/2.0;
-#endif
   printf("factor=%.15G\n", factor);
   fout = fopen(fnout, "w+");
   fclose(fout);
@@ -2472,53 +1358,18 @@ int main(int argc, char**argv)
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
   printf("type=%d ncontrib=%d\n", type, ncontrib);
   alphasav=alpha;
-#if 0
-  rcmysav=0.1;
-  rcmxsav=rcmzsav=gamma1sav=gamma2sav=0.0;
-  printf("val=%.15G\n", intfunc(0.2, 0.1, 0.2, 0.2));
-  exit(-1);
-#endif
-  //nrfunc = intfunc;
-#ifdef GAUSS
   xtheta = malloc(sizeof(double)*(ntheta+1));
   xphi = malloc(sizeof(double)*(nphi+1));
   xgamma = malloc(sizeof(double)*(ngamma+1));
   wtheta = malloc(sizeof(double)*(ntheta+1));
   wphi = malloc(sizeof(double)*(nphi+1));
   wgamma = malloc(sizeof(double)*(ngamma+1));
-#ifdef QFGAUSS
-  xrcmx = malloc(sizeof(double)*(nrcmx+1));
-  wrcmx = malloc(sizeof(double)*(nrcmx+1));
-  xrcmy = malloc(sizeof(double)*(nrcmy+1));
-  wrcmy = malloc(sizeof(double)*(nrcmy+1));
-  xrcmz = malloc(sizeof(double)*(nrcmz+1));
-  wrcmz = malloc(sizeof(double)*(nrcmz+1));
-#endif
   gauleg(0.0, M_PI, xtheta, wtheta, ntheta);
-#if 0
-  printf("x=%.15G %.15G %.15G %.15G %.15G\n w=%.15G %.15G %.15G %.15G %.15G\n",
-       (M_PI/2.0-xtheta[1])/(M_PI/2.), xtheta[2]/M_PI, xtheta[3]/M_PI, xtheta[4]/M_PI, ((M_PI/2.)-xtheta[5])/(M_PI/2.0),
-       wtheta[1]/(M_PI/2.), wtheta[2]/(M_PI/2.), wtheta[3]/(M_PI/2.), wtheta[4]/(M_PI/2.), wtheta[5]/(M_PI/2.));
-  exit(-1);
-#endif
   gauleg(0.0, 2.0*M_PI, xphi, wphi, nphi);
   gauleg(0.0, 2.0*M_PI, xgamma, wgamma, ngamma);
-#endif
-#ifdef QFGAUSS
-  gauleg(-Lx/2., Lx/2., xrcmx, wrcmx, nrcmx);
-  gauleg(-Ly/2., Ly/2., xrcmy, wrcmy, nrcmy);
-  gauleg(-Lz/2., Lz/2., xrcmz, wrcmz, nrcmz);
-  nsv = -1;
-  sobseq(&nsv, sv);
-  nsv = 1;
-#endif
 #ifdef QUASIMC
 #ifdef USEGSL
-#ifdef MCGAMMA
   nsv = 4; 
-#else
-  nsv = 3; 
-#endif
   qsob = gsl_qrng_alloc (gsl_qrng_sobol, nsv);
 #elif defined(SOBOLBF)
   // DO NOTHING
@@ -2526,11 +1377,7 @@ int main(int argc, char**argv)
   /* initialization */
   nsv = -1;  
   sobseq(&nsv, sv);
-#ifdef MCGAMMA
   nsv = 4;
-#else
-  nsv = 3;
-#endif
 #endif
 #endif
   
@@ -2688,38 +1535,9 @@ int main(int argc, char**argv)
 #endif
   totfact = 1.0/(2.0*M_PI);
 
-#ifdef USE_MISER
-  regn[1] = -Lx/2.;
-  regn[2] = -Ly/2.;
-  regn[3] = -Lz/2.;
-  regn[4] = 0.;
-  regn[5] = Lx/2.;
-  regn[6] = Ly/2.;
-  regn[7] = Lz/2.;
-  regn[8] = 2.0*M_PI;  
-  printf("I will use MISER algorithm\n");
-  miser(miser_func, regn, 4, tot_trials, 0., &mis_ave, &mis_var);
-  vexcl = mis_ave;
-  printf("mis_ave=%.15G\n", mis_ave);
-  fout = fopen(fnout, "a+");
-  if (type==0)
-    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-    fprintf(fout,"%.15 %.15G\n", Lx*Ly*Lz*vexcl/1E3, mis_var);
-  else if (type==1)
-    fprintf(fout,"%.15G %.15G\n", Lx*Ly*Lz*vexcl/1E4, mis_var); /* divido per 10^4 per convertire in nm */
-  else
-    fprintf(fout,"%.15G %.15G\n", Lx*Ly*Lz*vexcl/1E5, mis_var); /* divido per 10^5 per convertire in nm */
-
-  fclose(fout);
-  return;
-#endif
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place second DNAD randomly */
-#ifdef QFGAUSS
-      sobseq(&nsv, sv);
-      gamma12sav = 2.0*M_PI*sv[1];
-#else
 #ifdef QUASIMC
 #ifdef USEGSL
       gsl_qrng_get (qsob, sv);
@@ -2727,23 +1545,15 @@ int main(int argc, char**argv)
       rcmx = Lx*(sv[0]-0.5);
       rcmy = Ly*(sv[1]-0.5);
       rcmz = Lz*(sv[2]-0.5);
-#ifdef MCGAMMA
       gamma12sav = 2.0*M_PI*sv[3];
-#endif
 #elif defined(SOBOLBF)
-#ifdef MCGAMMA
       nsv = 4; 
-#else
-      nsv = 3; 
-#endif
       i8_sobol(nsv, &bfseed, sv);
       //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
       rcmx = Lx*(sv[0]-0.5);
       rcmy = Ly*(sv[1]-0.5);
       rcmz = Lz*(sv[2]-0.5);
-#ifdef MCGAMMA
       gamma12sav = 2.0*M_PI*sv[3];
-#endif
 #else
       /* quasi-MC */
       sobseq(&nsv, sv);
@@ -2751,9 +1561,7 @@ int main(int argc, char**argv)
       rcmx = Lx*(sv[1]-0.5);
       rcmy = Ly*(sv[2]-0.5);
       rcmz = Lz*(sv[3]-0.5);
-#ifdef MCGAMMA
       gamma12sav = 2.0*M_PI*sv[4];
-#endif
 #endif
 #else
       rcmx = Lx*(drand48()-0.5);
@@ -2761,41 +1569,31 @@ int main(int argc, char**argv)
       rcmz = Lz*(drand48()-0.5);
       //gamma1 = 2.0*M_PI*drand48();
       //gamma2 = 2.0*M_PI*drand48();
-#ifdef MCGAMMA
       gamma12sav = 2.0*M_PI*drand48();
-#endif
 #endif
       rcmxsav = rcmx;
       rcmysav = rcmy;
       rcmzsav = rcmz;
-#endif
 
-#if defined(MCGAMMA) || defined(QFGAUSS)
-      vexcl += quad3d(intfunc, 0.0, 2.0*M_PI);
-#else
-      vexcl += quad3d(intfunc, 0.0, 2.0*M_PI)*totfact;
-#endif
+      quad3d(intfunc, 0.0, 2.0*M_PI, contr);
+      vexcl += contr.steric;
+      vexclel += contr.elec; 
       if (tt > 0 && tt % fileoutits == 0)
 	{
 	  fout = fopen(fnout, "a+");
-#ifdef QFGAUSS
-  	  if (type==0)
-	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E3);
-	  else if (type==1)
-	    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
-	  else
-	    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
-
-#else
 	  if (type==0)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3,
+		    Lx*Ly*Lz*vexcl/((double)tt)/1E3, Lx*Ly*Lz*vexclel/((double)tt)/1E3
+		    );
 	  else if (type==1)
-	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))/1E4,
+		    (Lx*Ly*Lz*vexcl/((double)tt))/1E4,(Lx*Ly*Lz*vexclel/((double)tt))/1E4
+		   ); /* divido per 10^4 per convertire in nm */
 	  else
-	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
-#endif
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))/1E5,
+		    (Lx*Ly*Lz*vexcl/((double)tt))/1E5,(Lx*Ly*Lz*vexclel/((double)tt))/1E5
+		    ); /* divido per 10^5 per convertire in nm */
 	  fclose(fout);
 	}
       if (tt % outits==0)
