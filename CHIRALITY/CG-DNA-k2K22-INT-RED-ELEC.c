@@ -128,7 +128,7 @@ double gammln(double xx)
 }
 struct contribs {
   double steric;
-  double elec;
+  double **elec;
 };
 int ntheta, nphi, ngamma;
 double *xtheta, *xphi, *wtheta, *wphi, *xgamma, *xphi, *wgamma;
@@ -185,7 +185,7 @@ void qgaus(void (*func)(double, int, struct contribs*), double a, double b, doub
 #endif
   int j, elec;
   double s;
-  strucy contribs c;
+  struct contribs c;
   s=0.0;
   for (j=1;j<=np;j++) 
     {
@@ -885,10 +885,10 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
 		    double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12,
 		    double alpha, struct contribs *contr)
 {
-  int i, j;
+  int i, j, k1, k2;
   double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
   double sintheta12, costheta12, sinphi12, cosphi12, cosgamma12, singamma12;
-  double uel = 0.0, yukfact;
+  double yukfact;
   costheta12 = cos(theta12);
   sintheta12 = sin(theta12);
   cosphi12 = cos(phi12);
@@ -906,7 +906,13 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
   place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
 #endif
   contr->steric = 0;
-  contr->elec = 0;
+  for (k1 = 0; k1 < numtemps; k1++)
+    for(k2 = 0; k2 < numconcs; k2++)
+      {
+	contr->elec[k1][k2] = 0;
+	uel_arr[k1][k2] = 0;
+      }
+  yukcutkDsq = maxyukcutkDsq;
   if (calcDistBox() < 0.0)
     {
       for (i=0; i < nat; i++)
@@ -930,7 +936,7 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
 		      return;
 		      break;
 		    case 2:
-		      contr->sterc = -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
+		      contr->steric = -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
 			Sqr(rcmy)*XI2[nphi12][ntheta12]+
 			Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
 			rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
@@ -941,29 +947,38 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
 	      /* if we have two phosphate groups take into account electrostatic interactions */
 	      else if (DNADs[0][i].atype==1 && DNADs[1][j].atype==1 && distsq < yukcutkDsq)
 		{
-		  uel += calc_yukawa(i, j, distSq);
+		  for (k1 = 0; k1 < numtemps; k1++)
+		    for (k2 = 0; k2 < numconcs; k2++)
+		      {
+			if (distsq < 1.0/kD_arr[k1][k2])
+			  uel_arr[k1][k2] += calc_yukawa(i, j, distSq);
+		      }
 		}
 	    }
 	}
     }
-  yukfact = 1.0-exp(-beta*uel);
-  switch (type)
-    {
-    case 0:
-      contr->elec = yukfact*XI1[nphi12][ntheta12];
-      break;
-    case 1:
-      contr->elec = yukfact*(rcmx*XI1[nphi12][ntheta12]+
-		      rcmy*XI2[nphi12][ntheta12]+
-		      rcmz*XI3[nphi12][ntheta12]);
-      break;
-    case 2:
-      contr->elec = -yukfact*(Sqr(rcmx)*XI1[nphi12][ntheta12]+
-		       Sqr(rcmy)*XI2[nphi12][ntheta12]+
-		       Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
-		       rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
-      break;
-    }
+  for (k1 = 0; k1 < numtemps; k1++)
+    for (k2 = 0; k2 < numconcs; k2++)
+      {
+      	yukfact = 1.0-exp(-beta*uel_arr[k1][k2]);
+	switch (type)
+	  {
+	  case 0:
+	    contr->elec[k1][k2] = yukfact*XI1[nphi12][ntheta12];
+	    break;
+	  case 1:
+	    contr->elec[k1][k2] = yukfact*(rcmx*XI1[nphi12][ntheta12]+
+					   rcmy*XI2[nphi12][ntheta12]+
+					   rcmz*XI3[nphi12][ntheta12]);
+	    break;
+	  case 2:
+	    contr->elec[k1][k2] = -yukfact*(Sqr(rcmx)*XI1[nphi12][ntheta12]+
+					    Sqr(rcmy)*XI2[nphi12][ntheta12]+
+					    Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
+				    rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
+	    break;
+	  }
+      }
 }
 
 double phi12sav, theta12sav, gamma12sav;
@@ -1123,7 +1138,7 @@ void i8_sobol ( int dim_num, long long int *seed, double quasi[ ] );
 #endif
 int main(int argc, char**argv)
 {
-  struct contribs *contr;
+  struct contribs contr;
 #ifdef QUASIMC
 #ifdef SOBOLBF
   long long bfseed=0;
@@ -1151,7 +1166,7 @@ int main(int argc, char**argv)
   int k1, k2, kk;
 #endif
   int ncontrib, k, i, j, overlap, contrib, cont=0, nfrarg;
-  char fnin[1024],fnout[256];
+  char fnin[1024], fnout[256];
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
@@ -1534,7 +1549,19 @@ int main(int argc, char**argv)
   dfonsfact = alpha*alpha/(4.0*M_PI*sinh(alpha));
 #endif
   totfact = 1.0/(2.0*M_PI);
+  for (k1=0; k1 < numtemps; k1++)
+    for (k2=0; k2 < numconcs; k2++)
+      {
+	sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], 1.0/beta_arr[k1]);
+	fout = fopen(fnout, "w+");
+	fclose(fout);
+      }
 
+  contr.elec = malloc(sizeof(double*)*numtemps);
+  for (k1=0; k1 < numtemps; k1++)
+    {
+      contr.elec[k1] = malloc(sizeof(double)*numconcs);
+    }
   for (tt=ttini+1; tt < tot_trials; tt++)
     {
       /* place second DNAD randomly */
@@ -1577,24 +1604,37 @@ int main(int argc, char**argv)
 
       quad3d(intfunc, 0.0, 2.0*M_PI, contr);
       vexcl += contr.steric;
-      vexclel += contr.elec; 
+      for (k1=0; k1 < numtemps; k1++)
+	{
+	  tempfact = Sqr(epsr(1.0/beta_arr[k1])/beta_arr[k1]); 
+	  for (k2=0; k2 < numconcs; k2++)
+	    {
+      	      vexclel_arr[k1][k2] += contr.elec[k1][k2];
+	    }
+	}
+
       if (tt > 0 && tt % fileoutits == 0)
 	{
-	  fout = fopen(fnout, "a+");
-	  if (type==0)
-	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3,
-		    Lx*Ly*Lz*vexcl/((double)tt)/1E3, Lx*Ly*Lz*vexclel/((double)tt)/1E3
-		    );
-	  else if (type==1)
-	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))/1E4,
-		    (Lx*Ly*Lz*vexcl/((double)tt))/1E4,(Lx*Ly*Lz*vexclel/((double)tt))/1E4
-		   ); /* divido per 10^4 per convertire in nm */
-	  else
-	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))/1E5,
-		    (Lx*Ly*Lz*vexcl/((double)tt))/1E5,(Lx*Ly*Lz*vexclel/((double)tt))/1E5
-		    ); /* divido per 10^5 per convertire in nm */
-	  fclose(fout);
+	  for (k1=0; k1 < numtemps; k1++)
+	    for (k2=0; k2 < numconcs; k2++)
+	      {
+		sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], 1.0/beta_arr[k1]);
+		fout = fopen(fnout, "a+");
+		if (type==0)
+		  //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
+		  fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt)/1E3,
+			  Lx*Ly*Lz*vexcl/((double)tt)/1E3, Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt)/1E3
+			 );
+		else if (type==1)
+		  fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))/1E4,
+			  (Lx*Ly*Lz*vexcl/((double)tt))/1E4,(Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))/1E4
+			 ); /* divido per 10^4 per convertire in nm */
+		else
+		  fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel[k1][k2])/((double)tt))/1E5,
+			  (Lx*Ly*Lz*vexcl/((double)tt))/1E5,(Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))/1E5
+			 ); /* divido per 10^5 per convertire in nm */
+		fclose(fout);
+	      }
 	}
       if (tt % outits==0)
 	printf("trials: %lld/%lld\n", tt, tot_trials);
