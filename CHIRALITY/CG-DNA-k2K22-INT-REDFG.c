@@ -1383,9 +1383,9 @@ double fgamma12(double gamma12, int igamma12)
   gamma12sav=gamma12;
   igamma12sav=igamma12;
 #ifdef GAUSS
-  return qgaus(fphi12,0.0,M_PI, xphi, wphi, nphi); 
+  return qgaus(fphi12,0.0,2.0*M_PI, xphi, wphi, nphi); 
 #else
-  return qromb(fphi12,0.0,M_PI); 
+  return qromb(fphi12,0.0,2.0*M_PI); 
 #endif
 }
 double fphi12(double phi12, int iphi12) 
