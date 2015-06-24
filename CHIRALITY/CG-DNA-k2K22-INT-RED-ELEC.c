@@ -203,7 +203,7 @@ void qgaus(void (*func)(double, int, struct contribs*), double a, double b, doub
   for (k1=0; k1 < numtemps; k1++)
     for (k2=0; k2 < numconcs; k2++)
       cl.elec[k1][k2] = 0;
-
+  cl.steric = 0.0;
   for (j=1;j<=np;j++) 
     {
       func(x[j],j, &ctmp);
@@ -1421,7 +1421,7 @@ int main(int argc, char**argv)
   Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];
   Lz=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[2];
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
-  printf("box semiaxes=%f %f %f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2]);
+  printf("box semiaxes=%f %f %f rSugar=%f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2], rSugar);
 #ifdef MPI
   srand48(((int)time(NULL))+my_rank);
 #else
