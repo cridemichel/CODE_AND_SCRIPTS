@@ -1307,17 +1307,18 @@ int main(int argc, char**argv)
     }
   for (k1 = 0; k1 < numtemps; k1++)
     {
-      printf("esq_eps: %.15G qdna=%f deltamann=%f qsalt=%f csalt=%f\n", esq_eps_arr[k1], qdna, deltamann_arr[k1], qsalt, csalt);
       for (k2 = 0; k2 < numconcs; k2++)
 	{
 	  kD_arr[k1][k2] =  sqrt((4.0*M_PI*esq_eps_arr[k1])*beta_arr[k1]*(Sqr(qdna)*2.0*deltamann_arr[k1]*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
 	  //sqrt((4.0*M_PI*esq_eps*(1.0/epsr(1.0/beta_arr[k1])))*beta_arr[k1]*(Sqr(qdna)*2.0*epsr(1.0/beta_arr[k1])*(deltamann/beta_arr[k1])*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
-	  printf("numtemps=%d numconcs=%d kD:%f beta_arr:%f cdna_arr: %f\n", numtemps, numconcs, kD_arr[k1][k2], beta_arr[k1], cdna_arr[k2]);
 	  /* 6.0 Angstrom is the closest distance between phosphate charges */
 	  yukcutkD_arr[k1][k2] = yukcut/kD_arr[k1][k2];
 	  yukcutkDsq_arr[k1][k2] = Sqr(yukcutkD_arr[k1][k2]);	
 	  yuk_corr_fact_arr[k1][k2] = 1.0;//exp(kD_arr[k1][k2]*6.0)/(1.0+kD_arr[k1][k2]*6.0);
+	  printf("numtemps=%d numconcs=%d kD:%f beta_arr:%f cdna_arr: %f\n", numtemps, numconcs, kD_arr[k1][k2], beta_arr[k1], cdna_arr[k2]);
+	  printf("yukcutkD_arr: %f yukcutkDsq: %.15G\n", yukcutkD_arr[k1][k2], yukcutkDsq_arr[k1][k2]);
       }
+      printf("esq_eps: %.15G qdna=%f deltamann=%f qsalt=%f csalt=%f\n", esq_eps_arr[k1], qdna, deltamann_arr[k1], qsalt, csalt);
     }
   num_kD = numtemps*numconcs;
 #if 1
