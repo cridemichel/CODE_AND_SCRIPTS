@@ -1433,7 +1433,7 @@ int main(int argc, char**argv)
 #else
   srand48((int)time(NULL));
 #endif
-  sprintf(fnout, "v%d.dat", type);
+  //sprintf(fnout, "v%d.dat", type);
   factor=0.0;
 #if 0
   dfons_sinth_max=estimate_maximum_dfons(alpha);
@@ -1449,8 +1449,10 @@ int main(int argc, char**argv)
      il fattore si deve ottenere integrando fra 0 e pi/2 */
   factor = alpha/2.0;
   printf("factor=%.15G\n", factor);
+#if 0
   fout = fopen(fnout, "w+");
   fclose(fout);
+#endif
   //Lx=Ly=Lz=L;
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
   printf("type=%d ncontrib=%d\n", type, ncontrib);
