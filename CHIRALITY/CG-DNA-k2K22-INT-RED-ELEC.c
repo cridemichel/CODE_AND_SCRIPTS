@@ -1013,7 +1013,6 @@ void fphi12(double phi12, int nphi12, struct contribs* contr)
 void ftheta12(double theta12, int ntheta12, struct contribs *contr) 
 {
   (*nrfunc)(phi12sav,nphi12sav,theta12, ntheta12, contr);
-  return;
 }
 double rcmxsav, rcmysav, rcmzsav, alphasav;
 void intfunc(double phi12, int nphi12, double theta12, int ntheta12, struct contribs *contr)
