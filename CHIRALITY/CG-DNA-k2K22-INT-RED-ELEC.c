@@ -200,7 +200,7 @@ void qgaus(void (*func)(double, int, struct contribs*), double a, double b, doub
   int j, k1, k2;
   struct contribs *cl, *ctmp;
   alloc_contr(cl);
-  alloc_contr(ctmp)
+  alloc_contr(ctmp);
   for (k1=0; k1 < numtemps; k1++)
     for (k2=0; k2 < numconcs; k2++)
       cl->elec[k1][k2] = 0;

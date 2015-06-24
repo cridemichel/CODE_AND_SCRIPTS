@@ -81,6 +81,7 @@ int nsv;
 #endif
 long long int fileoutits, outits;
 long long int tot_trials, tt=0, ttini=0;
+double rSugar=3.5;
 void ranpt(double pt[], double regn[], int n)
 {
   //	float ran1(long *idum);
@@ -126,7 +127,7 @@ void miser(double (*func)(double []), double regn[], int ndim, unsigned long npt
 		}
 		*ave=summ/npts;
 		*var=FMAX(TINY,(summ2-summ*summ/npts)/(npts*npts));
-		//printf("[npts < MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
+		printf("[npts < MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
 	}
 	else {
 		rmid=vector(1,ndim);
@@ -200,7 +201,7 @@ void miser(double (*func)(double []), double regn[], int ndim, unsigned long npt
 		free_vector(regn_temp,1,2*ndim);
 		*ave=fracl*avel+(1-fracl)*(*ave);
 		*var=fracl*fracl*varl+(1-fracl)*(1-fracl)*(*var);
-		//printf("[npts > MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
+		printf("[npts > MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
 		free_vector(rmid,1,ndim);
 	}
 	free_vector(pt,1,ndim);
@@ -412,39 +413,6 @@ void rebin(double rc, int nd, double r[], double xin[], double xi[])
 #undef TINY
 #undef NRANSI
 /* ================== END VEGAS ================== */ 
-#endif
-#ifdef ELEC
-double kD, yukcut, yukcutkD, yukcutkDsq;
-#endif
-#ifdef PARALLEL
-struct kDsortS {
-int k1;
-int k2;
-double invkD;
-} *kD_sorted;
-
-/* Matrice di Eulero come viene definita nel Goldstein x' = Reul*x dove x' sono 
-   le coordinate nel sistema di riferimento del corpo rigido e x in quello
-   del laboratorio. */
-double Reul[3][3];
-void build_euler_matrix(double cosphi, double sinphi, double costheta, double sintheta,
-			double cospsi, double sinpsi)
-{ /* psi = gamma */
-  Reul[0][0] = cospsi*cosphi-costheta*sinphi*sinpsi;
-  Reul[0][1] = cospsi*sinphi+costheta*cosphi*sinpsi;
-  Reul[0][2] = sinpsi*sintheta;
-  Reul[1][0] = -sinpsi*cosphi-costheta*sinphi*cospsi;
-  Reul[1][1] = -sinpsi*sinphi+costheta*cosphi*cospsi;
-  Reul[1][2] = cospsi*sintheta;
-  Reul[2][0] = sintheta*sinphi;
-  Reul[2][1] = -sintheta*cosphi;
-  Reul[2][2] = costheta;
-}
-double *cdna_arr, *beta_arr;
-int numtemps, numconcs;
-double **yukcutkD_arr, **kD_arr, **yuk_corr_fact_arr, **yukcutkDsq_arr, **uel_arr, **vexclel_arr;
-double num_kD=0;
-double maxyukcutkDsq, maxyukcutkD;
 #endif
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int type, nat, atnum, nbnum, len;
@@ -944,9 +912,6 @@ struct DNA {
   double y;
   double z;
   double rad;
-#ifdef ELEC
-  int atype;
-#endif
 } *DNAchain;
 
 struct DNA *DNADs[2];
@@ -1174,9 +1139,6 @@ void place_DNAD(double x, double y, double z, double cosphi12, double sinphi12, 
       DNADs[which][i].x = xl[0];
       DNADs[which][i].y = xl[1];
       DNADs[which][i].z = xl[2];
-#ifdef ELEC
-      DNADs[which][i].atype = DNAchain[i].atype;
-#endif
 #ifdef DEBUG
       fprintf(fd,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
 #endif
@@ -1226,9 +1188,6 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, d
       DNADs[which][i].x = xl[0];
       DNADs[which][i].y = xl[1];
       DNADs[which][i].z = xl[2];
-#ifdef ELEC
-      DNADs[which][i].atype = DNAchain[i].atype;
-#endif
 #ifdef DEBUG
       fprintf(fd,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
 #endif
@@ -1409,23 +1368,6 @@ void init_distbox(void)
       distx = fabs(DNAchain[i].x) + DNAchain[i].rad;
       disty = fabs(DNAchain[i].y) + DNAchain[i].rad;
       distz = fabs(DNAchain[i].z) + DNAchain[i].rad;
-#ifdef ELEC
-      if (DNAchain[i].atype==1)/* se si tratta di un P */
-	{
-#ifdef PARALLEL
-	  if (numtemps > 1 || numconcs > 1)
-	    {
-	      yukcutkD = maxyukcutkD;
-	    }
-#endif
-	  if (yukcutkD*0.5 > DNAchain[i].rad)
-	    {
-	      distx = fabs(DNAchain[i].x) + yukcutkD*0.5;
-	      disty = fabs(DNAchain[i].y) + yukcutkD*0.5;
-	      distz = fabs(DNAchain[i].z) + yukcutkD*0.5;
-	    }
-	}
-#endif
       if (i==0 || distx > max_x)
 	max_x = distx;
        if (i==0 || disty > max_y)
@@ -1441,116 +1383,7 @@ void init_distbox(void)
     }
   //printf("maxx=%f %f\n",DNADall[0].sax[0],DNADall[0].sax[1]);
 }
-#ifdef ELEC
-double delta_rab0=2.0, epsr_prime=1.8, yuk_corr_fact;
-double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*angstrom */
-double esq_eps10, esq_eps_prime10;
-const double bmann = 1E-9*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
-const double Dalton = 1.660538921E-27;
-const double kB = 1.3806503E-23, eps0=8.85E-12; /* boltzmann constant */
-const double qel = 1.602176565E-19, Nav=6.02214129E23;
-const double qdna = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
-double cdna, csalt = 0.0; /* concentrazione del sale aggiunto molare */
-double ximanning, deltamann; /* Debye screening length */
-/* charge on phosphate groups */
-double zeta_a, zeta_b;
-double Ucoul(double rab)
-{
-  //return esq_eps_prime10/rab;
-  return esq_eps_prime10*zeta_a*zeta_b/rab;
 
-}
-double Uyuk(double rab)
-{
-#if 0
-  printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
-  printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
-#endif
-  
-  return yuk_corr_fact*esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab; 
-} 
-#ifdef PARALLEL
-double Uyuk_arr(double rab)
-{
-#if 0
-  printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
-  printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
-#endif
-  return yuk_corr_fact*esq_eps10*zeta_a*zeta_b/rab; 
-}
-double calc_yukawa_arr(int i, int j, double distsq, int *kks)
-{
-  double ret, rab0, rab, sigab;
-  int kk, k1, k2;
-  rab = sqrt(distsq);
-  sigab = DNADs[0][i].rad + DNADs[1][j].rad;
-  rab0 = sigab + delta_rab0; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
-  *kks=-2;
-  if (distsq > maxyukcutkDsq)
-    return 0.0;
-  for (kk=0; kk < num_kD; kk++)
-    {    
-      if (rab < rab0)
-	{
-	  *kks=-1;
-	  //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
-#ifdef NO_INTERP
-	  return Ucoul(rab);
-#else
-	  return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
-#endif
-#if 0
-	  if (isnan(ret))
-	    {
-	      printf("a=%f rab=%f boh ret=%f Ucoul(rab)=%f Uyuk(rab)=%f\n", zeta_a, rab, ret, Ucoul(rab), Uyuk(rab));
-	      exit(-1);
-	    }
-	  return ret;
-#endif    
-	}
-      /* we set a cutoff for electrostatic interactions */
-      else if (rab < yukcut*kD_sorted[kk].invkD)
-	{
-	  //printf("Yuk=%.15G\n", Uyuk(rab));
-	  *kks = kk; 
-	  return Uyuk_arr(rab);
-	} 
-    }
-}
-#endif
-double calc_yukawa(int i, int j, double distsq)
-{
-  double ret, rab0, rab, sigab;
-  rab = sqrt(distsq);
-  sigab = DNADs[0][i].rad + DNADs[1][j].rad;
-  rab0 = sigab + delta_rab0; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
-  
-  if (rab < rab0)
-    {
-      //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
-#ifdef NO_INTERP
-      return Ucoul(rab);
-#else
-      return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
-#endif
-#if 0
-      if (isnan(ret))
-	{
-	  printf("a=%f rab=%f boh ret=%f Ucoul(rab)=%f Uyuk(rab)=%f\n", zeta_a, rab, ret, Ucoul(rab), Uyuk(rab));
-	  exit(-1);
-	}
-      return ret;
-#endif    
-    }
-  /* we set a cutoff for electrostatic interactions */
-  else if (rab < yukcutkD)
-    {
-      //printf("Yuk=%.15G\n", Uyuk(rab));
-      return Uyuk(rab);
-    } 
-  else return 0.0;
-}
-#endif
 double max3(double a, double b, double c)
 {
   double m;
@@ -1588,19 +1421,6 @@ double epsr(double T)
 	}
     }
 }
-#ifdef PARALLEL
-int compare_func(const void *aa, const void *bb)
-{
-  double temp;
-  temp = ((struct kDsortS*)aa)->invkD - ((struct kDsortS*)bb)->invkD;
-  if (temp < 0)
-    return -1;
-  else if (temp > 0)
-    return 1;
-  else
-    return 0;
-}
-#endif
 double integrandv1(double rcmx, double rcmy, double rcmz, 
 		    double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12,
 		    double alpha)
@@ -1970,21 +1790,12 @@ int main(int argc, char**argv)
 #ifdef MPI
   MPI_Status status;
 #endif
-#ifdef ELEC
-  double uel, beta;
-  int interact;
-#endif
   char fn[256];
   int aa, bb;
   double ccc, totfact;
   int cc;
   double gamma1, gamma2;
   FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
-#ifdef PARALLEL
-  FILE *fp;
-  double sigab, rab0, rab0sq, uelcontrib, tempfact;
-  int k1, k2, kk;
-#endif
   int ncontrib, k, i, j, overlap, contrib, cont=0, nfrarg;
   char fnin[1024],fnout[256];
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
@@ -1999,14 +1810,18 @@ int main(int argc, char**argv)
 
   if (argc < 7)
     {
-#ifdef ELEC
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
-#else
 #ifdef GAUSS
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
+#ifdef QFGAUSS
+  printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [rSugar] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");#else
+#else
+#ifdef MCGAMMA
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [rSugar] [nphi] [ntheta]\n");
+#else
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [rSugar] [nphi] [ntheta] [ngamma]\n");
+#endif
+#endif
 #else
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [romb-tol]\n");
-#endif
 #endif
       exit(1);
     }
@@ -2022,303 +1837,60 @@ int main(int argc, char**argv)
     outits=100*fileoutits;
   else
     outits = atoll(argv[7]);
+  
+  if (argc <= 8)
+    rSugar = 3.5;
+  else
+    rSugar = atof(argv[8]);
 #ifdef GAUSS 
-  if (argc == 8)
+  if (argc <= 9)
     nphi = 10;
   else
-    nphi = atoi(argv[8]);
+    nphi = atoi(argv[9]);
 
-  if (argc == 9)
+  if (argc <= 10)
     ntheta = 10;
   else
-    ntheta = atoi(argv[9]);
+    ntheta = atoi(argv[10]);
 
-  if (argc == 10)
+#if !defined(MCGAMMA)  && !defined(QFGAUSS)
+  if (argc <= 10)
     ngamma = 10;
   else
     ngamma = atoi(argv[10]);
+#endif
 
 #ifdef QFGAUSS
-  if (argc == 11)
+  if (argc <= 11)
     nrcmx = 10;
   else
     nrcmx = atoi(argv[11]);
 
- if (argc == 12)
+ if (argc <= 12)
     nrcmy = 10;
   else
     nrcmy = atoi(argv[12]);
 
-  if (argc == 13)
+  if (argc <= 13)
     nrcmz = 10;
   else
     nrcmz = atoi(argv[13]);
 #endif
 #else
-  if (argc == 8)
+  if (argc <= 9)
     ROMBTOL = 1.0E-2;
   else
-    ROMBTOL = atof(argv[8]);
-#endif
-#ifdef ELEC
-#ifdef PARALLEL
-  if (argc <= 8)
-    {
-      numtemps=1;
-      beta = 1.0;
-    }
-  else
-    {
-      if (sscanf(argv[8], "%lf", &dummydbl) < 1)
-	{
-	  fp=fopen(argv[8],"r");
-	  cc=0;
-	  while(!feof(fp))
-	    {
-	      fscanf(fp, "%lf ", &dummydbl);
-	      cc++;
-	    }
-	  beta_arr = malloc(sizeof(double)*cc);
-	  rewind(fp);
-	  cc=0;
-	  while(!feof(fp))
-	    {
-	      fscanf(fp, "%lf ", &dummydbl);
-	      beta_arr[cc] = 1.0/dummydbl;
-	      cc++;
-	    }
-	  fclose(fp);
-	  numtemps=cc;
-	}
-      else
-	{
-	  numtemps = 1;
-	  beta = 1.0/atof(argv[8]);
-	} 
-    }
-  if (argc <= 9)
-    {
-      numconcs = 1;
-      cdna = 600;
-    }
-  else
-    {
-      if (!sscanf(argv[9], "%lf", &dummydbl))
-	{
-	  fp=fopen(argv[9],"r");
-	  cc=0;
-	  while(!feof(fp))
-	    {
-	      fscanf(fp, "%lf ", &dummydbl);
-	      cc++;
-	    }
-	  cdna_arr = malloc(sizeof(double)*cc);
-	  rewind(fp);
-	  numconcs=cc;
-	  cc=0;
-	  while(!feof(fp))
-	    {
-	      fscanf(fp, "%lf ", &dummydbl);
-	      cdna_arr[cc] = dummydbl;
-	      cc++;
-	    }
-	  fclose(fp);
-	}
-      else
-	{
-	  numconcs = 1;
-	  cdna = atof(argv[9]);
-	}
-    }
-#else
-  if (argc <= 8)
-    beta = 1.0;
-  else  
-    beta = 1.0/atof(argv[8]);
-
-  if (argc <= 9)
-    cdna =  600; /* mg/ml */
-  else
-    cdna = atof(argv[9]);
-#endif
-  if (argc <= 10)
-    yukcut = 2.0;
-  else 
-    yukcut = atof(argv[10]);
-
-  if (argc <= 11)
-    epsr_prime = 2.0;
-  else
-    epsr_prime = atof(argv[11]);
-  if (argc <= 12)
-    delta_rab0 = 2.0;
-  else
-    delta_rab0 = atof(argv[12]);
-
-#ifdef PARALLEL
-  if (numtemps > 1 || numconcs > 1)
-    {
-      esq_eps = Sqr(qel)/(4.0*M_PI*eps0)/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
-    }
-  else
-    {
-      esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
-    }
-#else
-  esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
-#endif
-  esq_eps10 = esq_eps*1E10;
-  esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*epsr_prime)/kB;
-  esq_eps_prime10 = esq_eps_prime*1E10;
-#ifdef PARALLEL
-  if (numtemps > 1 || numconcs > 1)
-    {
-      ximanning = esq_eps/bmann;
-      deltamann = 1.0/ximanning;
-      zeta_a = deltamann;
-      zeta_b = deltamann;
-      //printf("zeta_a=%f zeta_b:%f\n", zeta_a, zeta_b);
-    }
-  else
-    {
-      ximanning = esq_eps*beta/bmann;
-      deltamann = 1.0/ximanning;
-      zeta_a = deltamann;
-      zeta_b = deltamann;
-    }
-#else
-  ximanning = esq_eps*beta/bmann;
-  deltamann = 1.0/ximanning;
-  zeta_a = deltamann;
-  zeta_b = deltamann;
-#endif
-  /*
-     rho_salt =2 csalt Nav 1000;
-     rho_counter[cdna_]:=(2 cdna)/(660*Dalton);
-     (* cdna in mg/ml e csalt Molare (=moli/litro), nu=numero di cariche per unità di lunghezza *)
-     InvDebyeScrLen[T_,qdna_,cdna_,qsalt_,csalt_,\[Epsilon]rel_]:= Sqrt[qdna^2 qel^2/(kB T \[Epsilon]0 \[Epsilon]rel ) ( 2cdna)/(660*Dalton)+qsalt^2 qel^2/(kB T \[Epsilon]0 \[Epsilon]rel ) 2 csalt Nav 1000 ];
-     InvDebyeScrLen[300, 2, 200, 2, 1, 20]^-1*10^9
-
-   */
-  /* qdna è la carica rilasciata da ogni gruppo fosfato in soluzione (tipicamente=1) */
-#ifdef PARALLEL
-  if (numtemps > 1 || numconcs > 1)
-    {
-      kD_arr = malloc(sizeof(double*)*numtemps);
-      yukcutkD_arr = malloc(sizeof(double*)*numtemps);
-      yukcutkDsq_arr = malloc(sizeof(double*)*numtemps); 
-      vexclel_arr = malloc(sizeof(double*)*numtemps); 
-      uel_arr = malloc(sizeof(double*)*numtemps);
-      yuk_corr_fact_arr = malloc(sizeof(double*)*numtemps); 
-      for (k1=0; k1 < numtemps; k1++)
-	{
-	  kD_arr[k1] = malloc(sizeof(double)*numconcs);
-	  yukcutkD_arr[k1] = malloc(sizeof(double)*numconcs);
-	  yukcutkDsq_arr[k1] = malloc(sizeof(double)*numconcs);
-	  vexclel_arr[k1] = malloc(sizeof(double)*numconcs);
-	  uel_arr[k1] = malloc(sizeof(double)*numconcs);
-	  yuk_corr_fact_arr[k1] = malloc(sizeof(double)*numconcs); 
-	}
-      for (k1 = 0; k1 < numtemps; k1++)
-	for (k2 = 0; k2 < numconcs; k2++)
-	  {
-	    kD_arr[k1][k2] = sqrt((4.0*M_PI*esq_eps*(1.0/epsr(1.0/beta_arr[k1])))*beta_arr[k1]*(Sqr(qdna)*2.0*epsr(1.0/beta_arr[k1])*(deltamann/beta_arr[k1])*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
-	    printf("numtemps=%d numconcs=%d kD:%f beta_arr:%f cdna_arr: %f\n", numtemps, numconcs, kD_arr[k1][k2], beta_arr[k1], cdna_arr[k2]);
-	    printf("esq_eps: %f qdna=%f deltamann=%f qsalt=%f csalt=%f\n", esq_eps, qdna, deltamann, qsalt, csalt);
-	    /* 6.0 Angstrom is the closest distance between phosphate charges */
-	    yukcutkD_arr[k1][k2] = yukcut/kD_arr[k1][k2];
-	    yukcutkDsq_arr[k1][k2] = Sqr(yukcutkD_arr[k1][k2]);	
-	    yuk_corr_fact_arr[k1][k2] = exp(kD_arr[k1][k2]*6.0)/(1.0+kD_arr[k1][k2]*6.0);
-	  }
-      num_kD = numtemps*numconcs;
-      kD_sorted = malloc(sizeof(struct kDsortS)*num_kD);
-      cc=0;
-      for (k1 = 0; k1 < numtemps; k1++)
-	for (k2 = 0; k2 < numconcs; k2++)
-	  {
-	    kD_sorted[cc].invkD = 1.0/kD_arr[k1][k2];
-	    kD_sorted[cc].k1 = k1;
-	    kD_sorted[cc].k2 = k2;
-	    cc++;
-	  }
-      qsort(kD_sorted, cc, sizeof(struct kDsortS), compare_func);
-      yuk_corr_fact = 1.0;//exp((1.0/kD_sorted[cc-1].invkD)*6.0)/(1.0+(1.0/kD_sorted[cc-1].invkD)*6.0);
-      maxyukcutkD = yukcut*kD_sorted[cc-1].invkD;
-      maxyukcutkDsq = Sqr(yukcut*kD_sorted[cc-1].invkD);
-      printf("min: %f max: %f maxyukcutkD=%f\n",kD_sorted[0].invkD,kD_sorted[cc-1].invkD, sqrt(maxyukcutkDsq));
-    }
-  else
-    {
-      kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
-      /* 6.0 Angstrom is the closest distance between phosphate charges */
-      yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
-      yukcutkD = yukcut/kD;
-      yukcutkDsq = Sqr(yukcutkD);
-    }
-#else
-  kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
-  /* 6.0 Angstrom is the closest distance between phosphate charges */
-  yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
-  yukcutkD = yukcut/kD;
-  yukcutkDsq = Sqr(yukcutkD);
-#endif
-#ifdef PARALLEL
-  printf("epsr_prime=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
-  printf("yukawa cutoff=%.15G yuk_corr_fact=%.15G\n", yukcutkD, yuk_corr_fact);
-#else
-  printf("epsr_prime=%f epsr=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, epsr(1.0/beta), beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
-  printf("yukawa cutoff=%.15G yuk_corr_fact=%.15G\n", yukcutkD, yuk_corr_fact);
-#endif
+    ROMBTOL = atof(argv[9]);
 #endif
   cont=0;
-#ifdef ELEC
-  nfrarg = 14;
-#else
 #ifdef GAUSS
   nfrarg = 11;
 #else
   nfrarg = 10;
 #endif
-#endif
-  if (0)
-    {
-      cont=1;
-      fread = fopen(argv[nfrarg-1], "r");
-      printf("reading file = %s\n", argv[nfrarg-1]);
-      while (!feof(fread))
-	{
-#ifdef ELEC
-	  fscanf(fread, "%lld %lf %lf %lf\n", &ttini, &dummydbl, &vexcl, &vexclel);
-#else
-	  fscanf(fread, "%lld %lf\n", &ttini, &vexcl);
-#endif
-	}
-      fclose(fread);
-#ifdef ELEC
-      printf("restarting tt=%lld vexcltot=%.15G vexcl=%.15G vexclel=%.15G\n", ttini, vexcl+vexclel, vexcl, vexclel);
-#else
-      printf("restarting tt=%lld vexcl=%.15G\n", ttini, vexcl);
-#endif
-    }
-  else
-    {
-      vexcl = 0.0;
-#ifdef ELEC
-#ifdef PARALLEL
-      if (numtemps > 1 || numconcs > 1)
-	{
-	  for (k1=0; k1 < numtemps; k1++)
-	    for (k2=0; k2 < numconcs; k2++)
-	      vexclel_arr[k1][k2] = 0.0;
-	}
-      else
-	vexclel = 0.0;
-#else
-      vexclel = 0.0;
-#endif
-#endif
-      ttini = 0;
-    }
+  
+  vexcl = 0.0;
+  ttini = 0;
 
   /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
@@ -2345,46 +1917,28 @@ int main(int argc, char**argv)
 #ifdef ALBERTA
       if (!strcmp(atname, "S"))
 	{
-	  DNAchain[cc].rad = 4.0;//3.5;
-#ifdef ELEC
-	  DNAchain[cc].atype = 0;
-#endif
+	  DNAchain[cc].rad = rSugar;
 	}
       else if (!strcmp(atname, "P"))
 	{
 	  DNAchain[cc].rad = 3.0;
-#ifdef ELEC
-	  DNAchain[cc].atype = 1;
-#endif
 	}
       else if (!strcmp(atname, "B"))
 	{
 	  DNAchain[cc].rad = 4.0;
-#ifdef ELEC
-	  DNAchain[cc].atype = 2;
-#endif
 	}
 #else
       if (!strcmp(atname, "Xe"))
 	{
-	  DNAchain[cc].rad = 4.0;//3.5;
-#ifdef ELEC
-	  DNAchain[cc].atype = 0;
-#endif
+	  DNAchain[cc].rad = rSugar;
 	}
       else if (!strcmp(atname, "B"))
 	{
 	  DNAchain[cc].rad = 3.0;
-#ifdef ELEC
-	  DNAchain[cc].atype = 1;
-#endif
 	}
       else if (!strcmp(atname, "Se"))
 	{
 	  DNAchain[cc].rad = 4.0;
-#ifdef ELEC
-	  DNAchain[cc].atype = 2;
-#endif
 	}
 #endif     
       else
@@ -2698,7 +2252,7 @@ int main(int argc, char**argv)
   regn[7] = Lz/2.;
   regn[8] = 2.0*M_PI;  
   printf("I will use MISER algorithm\n");
-  miser(miser_func, regn, 4, tot_trials, 0., &mis_ave, &mis_var);
+  miser(miser_func, regn, 4, tot_trials, 0.1, &mis_ave, &mis_var);
   vexcl = mis_ave;
   printf("mis_ave=%.15G\n", mis_ave);
   fout = fopen(fnout, "a+");
