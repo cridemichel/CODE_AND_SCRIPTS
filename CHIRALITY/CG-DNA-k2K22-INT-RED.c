@@ -1972,7 +1972,7 @@ int main(int argc, char**argv)
   Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];
   Lz=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[2];
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
-  printf("box semiaxes=%f %f %f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2]);
+  printf("box semiaxes=%f %f %f rSugar=%f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2], rSugar);
 #ifdef MPI
   srand48(((int)time(NULL))+my_rank);
 #else
