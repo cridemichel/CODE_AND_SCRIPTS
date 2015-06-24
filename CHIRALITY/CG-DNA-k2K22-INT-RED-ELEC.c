@@ -958,8 +958,11 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
 		  for (k1 = 0; k1 < numtemps; k1++)
 		    for (k2 = 0; k2 < numconcs; k2++)
 		      {
-			if (distsq < 1.0/kD_arr[k1][k2])
-			  uel_arr[k1][k2] += calc_yukawa(i, j, distsq, k1, k2);
+			if (distsq < yukcutkDsq_arr[k1][k2])
+			  {
+			    //printf("qui\n");
+			    uel_arr[k1][k2] += calc_yukawa(i, j, distsq, k1, k2);
+			  }
 		      }
 		}
 	    }
@@ -1264,8 +1267,10 @@ int main(int argc, char**argv)
   for (k1=0; k1 < numtemps; k1++)
     {
       esq_eps_arr[k1] = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta_arr[k1]))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
+      //printf("esq_eqs:%.15G eps0=%.15G beta:%f\n", esq_eps_arr[k1], eps0, 1.0/beta_arr[k1]);
       esq_eps10_arr[k1] = esq_eps_arr[k1]*1E10;
     }
+  //exit(-1);
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*epsr_prime)/kB;
   esq_eps_prime10 = esq_eps_prime*1E10;
   for (k1=0; k1 < numtemps; k1++)
@@ -1302,7 +1307,7 @@ int main(int argc, char**argv)
     }
   for (k1 = 0; k1 < numtemps; k1++)
     {
-      printf("esq_eps: %f qdna=%f deltamann=%f qsalt=%f csalt=%f\n", esq_eps_arr[k1], qdna, deltamann_arr[k1], qsalt, csalt);
+      printf("esq_eps: %.15G qdna=%f deltamann=%f qsalt=%f csalt=%f\n", esq_eps_arr[k1], qdna, deltamann_arr[k1], qsalt, csalt);
       for (k2 = 0; k2 < numconcs; k2++)
 	{
 	  kD_arr[k1][k2] =  sqrt((4.0*M_PI*esq_eps_arr[k1])*beta_arr[k1]*(Sqr(qdna)*2.0*deltamann_arr[k1]*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
