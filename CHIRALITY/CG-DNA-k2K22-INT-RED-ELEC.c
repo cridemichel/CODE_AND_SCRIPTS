@@ -72,7 +72,7 @@ int nsv;
 long long int fileoutits, outits;
 long long int tot_trials, tt=0, ttini=0;
 
-double kD, yukcut, yukcutkD, yukcutkDsq;
+double rSugar, kD, yukcut, yukcutkD, yukcutkDsq;
 struct kDsortS {
 int k1;
 int k2;
@@ -172,19 +172,18 @@ void gauleg(double x1, double x2, double x[], double w[], int n)
 void alloc_contr(struct contribs *c)
 {
   int k1;
+
   c->elec = malloc(sizeof(double*)*numtemps);
-  for (k1=0; k1 < numtemps; k1++)
+  c->elec[0] = malloc(sizeof(double)*numtemps*numconcs);
+  for (k1=1; k1 < numtemps; k1++)
     {
-      c->elec[k1] = malloc(sizeof(double)*numconcs);
+      c->elec[k1] = c->elec[k1-1] + numconcs;
     }
 }
 void free_contr(struct contribs *c)
 {
   int k1;
-  for (k1=0; k1 < numtemps; k1++)
-    {
-      free(c->elec[k1]);
-    }
+  free(c->elec[0]);
   free(c->elec);
 } 
 
@@ -198,27 +197,27 @@ void qgaus(void (*func)(double, int, struct contribs*), double a, double b, doub
     0.2190863625159821,0.1494513491505806,0.0666713443086881};
 #endif
   int j, k1, k2;
-  struct contribs *cl, *ctmp;
-  alloc_contr(cl);
-  alloc_contr(ctmp);
+  struct contribs cl, ctmp;
+  alloc_contr(&cl);
+  alloc_contr(&ctmp);
   for (k1=0; k1 < numtemps; k1++)
     for (k2=0; k2 < numconcs; k2++)
-      cl->elec[k1][k2] = 0;
+      cl.elec[k1][k2] = 0;
 
   for (j=1;j<=np;j++) 
     {
-      func(x[j],j, ctmp);
+      func(x[j],j, &ctmp);
       for (k1=0; k1 < numtemps; k1++)
 	for (k2=0; k2 < numconcs; k2++)
-	  cl->elec[k1][k1] += w[j]*ctmp->elec[k1][k2];
-      cl->steric += w[j]*ctmp->steric;
+	  cl.elec[k1][k2] += w[j]*ctmp.elec[k1][k2];
+      cl.steric += w[j]*ctmp.steric;
     }
-  contr->steric = cl->steric;
+  contr->steric = cl.steric;
   for (k1=0; k1 < numtemps; k1++)
     for (k2=0; k2 < numconcs; k2++)
-      contr->elec[k1][k1] = cl->elec[k1][k2];
-  free_contr(cl);  
-  free_contr(ctmp);
+      contr->elec[k1][k2] = cl.elec[k1][k2];
+  free_contr(&cl);  
+  free_contr(&ctmp);
 }
 double scalProd(double *A, double *B)
 {
@@ -1145,9 +1144,9 @@ void sobseq(int *n, double x[])
 #ifdef SOBOLBF
 void i8_sobol ( int dim_num, long long int *seed, double quasi[ ] );
 #endif
+struct contribs contr;
 int main(int argc, char**argv)
 {
-  struct contribs contr;
 #ifdef QUASIMC
 #ifdef SOBOLBF
   long long bfseed=0;
@@ -1184,7 +1183,7 @@ int main(int argc, char**argv)
 
   if (argc < 7)
     {
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [file with temperatures (in K)] [file with concentrations in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [file with temperatures (in K)] [file with concentrations in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ] [rSugar]\n");
       exit(1);
     }
   strcpy(fnin,argv[1]);
@@ -1250,11 +1249,17 @@ int main(int argc, char**argv)
   else
     delta_rab0 = atof(argv[14]);
 
+  if (argc <= 15)
+    rSugar = 3.5;
+  else
+    rSugar = atof(argv[15]);
+
   esq_eps_arr = malloc(sizeof(double)*numtemps);
   esq_eps10_arr = malloc(sizeof(double)*numtemps);
   ximanning_arr = malloc(sizeof(double)*numtemps);
   deltamann_arr = malloc(sizeof(double)*numtemps);
-   
+  zeta_a_arr =      malloc(sizeof(double)*numtemps);
+  zeta_b_arr =      malloc(sizeof(double)*numtemps);
   //esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
   for (k1=0; k1 < numtemps; k1++)
     {
@@ -1355,7 +1360,7 @@ int main(int argc, char**argv)
 #ifdef ALBERTA
       if (!strcmp(atname, "S"))
 	{
-	  DNAchain[cc].rad = 4.0;//3.5;
+	  DNAchain[cc].rad = rSugar;//3.5;
 	  DNAchain[cc].atype = 0;
 	}
       else if (!strcmp(atname, "P"))
@@ -1371,7 +1376,7 @@ int main(int argc, char**argv)
 #else
       if (!strcmp(atname, "Xe"))
 	{
-	  DNAchain[cc].rad = 4.0;//3.5;
+	  DNAchain[cc].rad = rSugar;//3.5;
 	  DNAchain[cc].atype = 0;
 	}
       else if (!strcmp(atname, "B"))
@@ -1627,12 +1632,14 @@ int main(int argc, char**argv)
 	fout = fopen(fnout, "w+");
 	fclose(fout);
       }
-
+#if 0
   contr.elec = malloc(sizeof(double*)*numtemps);
   for (k1=0; k1 < numtemps; k1++)
     {
       contr.elec[k1] = malloc(sizeof(double)*numconcs);
     }
+#endif
+  alloc_contr(&contr);
   for (k1=0; k1 < numtemps; k1++)
     for (k2=0; k2 < numconcs; k2++)
       contr.elec[k1][k2] = 0.0;
