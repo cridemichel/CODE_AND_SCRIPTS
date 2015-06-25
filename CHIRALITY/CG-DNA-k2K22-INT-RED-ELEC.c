@@ -1258,7 +1258,7 @@ int main(int argc, char**argv)
     rSugar = atof(argv[15]);
 
   if (argc <= 16)
-    rPhosphate = 3.5;
+    rPhosphate = 3.0;
   else
     rPhosphate = atof(argv[16]);
 
