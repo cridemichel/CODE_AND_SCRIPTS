@@ -72,7 +72,7 @@ int nsv;
 long long int fileoutits, outits;
 long long int tot_trials, tt=0, ttini=0;
 
-double rSugar, kD, yukcut, yukcutkD, yukcutkDsq;
+double rPhosphate, rSugar, kD, yukcut, yukcutkD, yukcutkDsq;
 struct kDsortS {
 int k1;
 int k2;
@@ -1257,6 +1257,12 @@ int main(int argc, char**argv)
   else
     rSugar = atof(argv[15]);
 
+  if (argc <= 16)
+    rPhosphate = 3.5;
+  else
+    rPhosphate = atof(argv[16]);
+
+
   esq_eps_arr = malloc(sizeof(double)*numtemps);
   esq_eps10_arr = malloc(sizeof(double)*numtemps);
   ximanning_arr = malloc(sizeof(double)*numtemps);
@@ -1371,7 +1377,7 @@ int main(int argc, char**argv)
 	}
       else if (!strcmp(atname, "P"))
 	{
-	  DNAchain[cc].rad = 3.0;
+	  DNAchain[cc].rad = rPhosphate;
 	  DNAchain[cc].atype = 1;
 	}
       else if (!strcmp(atname, "B"))
@@ -1387,7 +1393,7 @@ int main(int argc, char**argv)
 	}
       else if (!strcmp(atname, "B"))
 	{
-	  DNAchain[cc].rad = 3.0;
+	  DNAchain[cc].rad = rPhosphate;//3.0;
 	  DNAchain[cc].atype = 1;
 	}
       else if (!strcmp(atname, "Se"))
