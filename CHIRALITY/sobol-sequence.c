@@ -13770,8 +13770,6 @@ void i4_sobol ( int dim_num, int *seed, float quasi[ ] )
 //  Calculate the remaining elements of row I as explained
 //  in Bratley and Fox, section 2.
 //
-//  Some tricky indexing here.  Did I change it correctly?
-//
       for ( j = m; j < maxcol; j++ )
       {
         newv = v[i][j-m];
@@ -27588,8 +27586,6 @@ void i8_sobol ( int dim_num, long long int *seed, double quasi[ ] )
 //
 //  Calculate the remaining elements of row I as explained
 //  in Bratley and Fox, section 2.
-//
-//  Some tricky indexing here.  Did I change it correctly?
 //
       for ( j = m; j < maxcol; j++ )
       {
