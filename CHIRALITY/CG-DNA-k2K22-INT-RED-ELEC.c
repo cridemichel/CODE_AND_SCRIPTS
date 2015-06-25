@@ -1262,7 +1262,6 @@ int main(int argc, char**argv)
   else
     rPhosphate = atof(argv[16]);
 
-
   esq_eps_arr = malloc(sizeof(double)*numtemps);
   esq_eps10_arr = malloc(sizeof(double)*numtemps);
   ximanning_arr = malloc(sizeof(double)*numtemps);
