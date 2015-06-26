@@ -72,7 +72,7 @@ int nsv;
 long long int fileoutits, outits;
 long long int tot_trials, tt=0, ttini=0;
 
-double rPhosphate, rSugar, kD, yukcut, yukcutkD, yukcutkDsq;
+double rPhosphate, rNucleo, rSugar, kD, yukcut, yukcutkD, yukcutkDsq;
 struct kDsortS {
 int k1;
 int k2;
@@ -1262,6 +1262,12 @@ int main(int argc, char**argv)
   else
     rPhosphate = atof(argv[16]);
 
+  if (argc <= 17)
+    rNucleo = 4.0;
+  else
+    rNucleo = atof(argv[17]);
+
+
   esq_eps_arr = malloc(sizeof(double)*numtemps);
   esq_eps10_arr = malloc(sizeof(double)*numtemps);
   ximanning_arr = malloc(sizeof(double)*numtemps);
@@ -1381,7 +1387,7 @@ int main(int argc, char**argv)
 	}
       else if (!strcmp(atname, "B"))
 	{
-	  DNAchain[cc].rad = 4.0;
+	  DNAchain[cc].rad = rNucleo;//4.0;
 	  DNAchain[cc].atype = 2;
 	}
 #else
@@ -1397,7 +1403,7 @@ int main(int argc, char**argv)
 	}
       else if (!strcmp(atname, "Se"))
 	{
-	  DNAchain[cc].rad = 4.0;
+	  DNAchain[cc].rad = rNucleo;//;4.0;
 	  DNAchain[cc].atype = 2;
 	}
 #endif     
@@ -1432,7 +1438,7 @@ int main(int argc, char**argv)
   Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];
   Lz=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[2];
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
-  printf("box semiaxes=%f %f %f rSugar=%f rPhosphate=%F\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2], rSugar, rPhosphate);
+  printf("box semiaxes=%f %f %f rSugar=%f rPhosphate=%F rNucleo:%f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2], rSugar, rPhosphate, rNucleo);
 #ifdef MPI
   srand48(((int)time(NULL))+my_rank);
 #else
