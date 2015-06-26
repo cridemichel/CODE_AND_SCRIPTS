@@ -758,7 +758,7 @@ double Uyuk(double rab, int k1, int k2)
   printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
 #endif
   
-  return yuk_corr_fact*esq_eps10_arr[k1]*zeta_a_arr[k1]*zeta_b_arr[k1]*exp(-kD_arr[k1][k2]*rab)/rab; 
+  return yuk_corr_fact_arr[k1][k2]*esq_eps10_arr[k1]*zeta_a_arr[k1]*zeta_b_arr[k1]*exp(-kD_arr[k1][k2]*rab)/rab; 
 } 
 #if 0
 double Uyuk_arr(double rab, int k1)
