@@ -1382,7 +1382,7 @@ int main(int argc, char**argv)
 	}
       else if (!strcmp(atname, "P"))
 	{
-	  DNAchain[cc].rad = rPhosphate;
+	  DNAchain[cc].rad = rPhosphate;//3.0;
 	  DNAchain[cc].atype = 1;
 	}
       else if (!strcmp(atname, "B"))
