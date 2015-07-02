@@ -733,6 +733,9 @@ void init_distbox(void)
     }
   //printf("maxx=%f %f\n",DNADall[0].sax[0],DNADall[0].sax[1]);
 }
+#ifdef NEW_ELEC_MOD
+double delta_rab1 = 5.0;
+#endif
 double delta_rab0=2.0, epsr_prime=1.8, yuk_corr_fact;
 double *esq_eps_arr, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*angstrom */
 double *esq_eps10_arr, esq_eps_prime10;
@@ -751,6 +754,12 @@ double Ucoul(double rab, int k1)
   return esq_eps_prime10*zeta_a_arr[k1]*zeta_b_arr[k1]/rab;
 
 }
+#ifdef NEW_ELEC_MOD
+double UcoulWater(double rab, int k1)
+{
+  return esq_eps10_arr[k1]*zeta_a_arr[k1]*zeta_b_arr[k1]/rab;
+} 
+#endif
 double Uyuk(double rab, int k1, int k2)
 {
 #if 0
@@ -809,6 +818,33 @@ double calc_yukawa_arr(int i, int j, double distsq, int *kks)
     }
 }
 #endif
+#ifdef NEW_ELEC_MOD
+double calc_yukawa(int i, int j, double distsq, int k1, int k2)
+{
+  double ret, rab0, rab, sigab, rab1;
+  rab = sqrt(distsq);
+  sigab = DNADs[0][i].rad + DNADs[1][j].rad;
+  rab0 = sigab + delta_rab0; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
+  rab1 = rab0 + delta_rab1;
+  
+  if (rab < rab0)
+    {
+      //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
+      return Ucoul(rab, k1);
+    }
+  else if (rab < rab1)
+    {
+      return UcoulWater(rab, k1);
+    }
+  /* we set a cutoff for electrostatic interactions */
+  else if (rab < yukcutkD)
+    {
+      //printf("Yuk=%.15G\n", Uyuk(rab));
+      return Uyuk(rab, k1, k2);
+    } 
+  else return 0.0;
+}
+#else
 double calc_yukawa(int i, int j, double distsq, int k1, int k2)
 {
   double ret, rab0, rab, sigab;
@@ -841,6 +877,7 @@ double calc_yukawa(int i, int j, double distsq, int k1, int k2)
     } 
   else return 0.0;
 }
+#endif
 double max3(double a, double b, double c)
 {
   double m;
@@ -1186,8 +1223,13 @@ int main(int argc, char**argv)
 
   if (argc < 7)
     {
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [file with temperatures (in K)] [file with concentrations in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ] [rSugar]\n");
+#ifdef NEW_ELEC_MOD
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [file with temperatures (in K)] [file with concentrations in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ] [rSugar] [rPhosphate] [rNucleob] [delta_rab1 (default=5)] \n");
       exit(1);
+#else
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [file with temperatures (in K)] [file with concentrations in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ] [rSugar] [rPhosphate] [rNucleob]\n");
+      exit(1);
+#endif
     }
   strcpy(fnin,argv[1]);
   fin=fopen(fnin,"r");
@@ -1267,6 +1309,12 @@ int main(int argc, char**argv)
   else
     rNucleo = atof(argv[17]);
 
+#ifdef NEW_ELEC_MOD
+  if (argc <= 18)
+    delta_rab1 = 5.0;
+  else
+    delta_rab1 = atof(argv[18]);
+#endif
 
   esq_eps_arr = malloc(sizeof(double)*numtemps);
   esq_eps10_arr = malloc(sizeof(double)*numtemps);

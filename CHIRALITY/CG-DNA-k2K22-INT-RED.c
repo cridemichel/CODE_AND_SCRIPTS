@@ -1773,6 +1773,136 @@ double miser_func(double x[])
   return quad3d(intfunc, 0.0, 2.0*M_PI);
 }
 #endif
+#ifdef PRINC_AXES
+double eigvec[3][3], *eigvec_n[3][3], eigvec_t[3][3];
+int eigenvectors=1;
+double It[3][3];
+void diagonalize(double M[3][3], double ev[3])
+{
+  double a[9], work[45];
+  char jobz, uplo;
+  int info, i, j, lda, lwork;
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) a[j+3*i]=M[j][i];		
+      //for(j=0; j<3; j++) a[j][i]=M[j][i];		
+    }	
+  lda = 3;
+  if (eigenvectors)
+    jobz='V';
+  else
+    jobz='N';
+  uplo='U';
+  lwork = 45;
+  dsyev_(&jobz, &uplo, &lda, a, &lda, ev, work, &lwork,  &info);  
+  if (!eigenvectors)
+    return;
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) eigvec[i][j]=a[j+3*i];		
+    }	
+}
+
+double pz[3];
+double Rlp[3][3];
+void build_ref_system(void)
+{
+  int k;
+  double sp, norm;
+  /* build the nematic reference system */
+  Rlp[2][1] = pz[0];
+  Rlp[2][1] = pz[1];
+  Rlp[2][2] = pz[2];
+  //printf("delr=%.15G nematic=%f %f %f\n", delr, nv[0], nv[1], nv[2]);
+  Rlp[0][0] = 1.0;
+  Rlp[0][1] = 1.0;
+  Rlp[0][2] = 1.0;
+  if (Rlp[0][0] == Rlp[2][0] && Rlp[0][1]==Rlp[2][1] && Rlp[0][2]==Rlp[2][2])
+    {
+      Rlp[0][0] = 1.0;
+      Rlp[0][1] = -1.0;
+      Rlp[0][2] = 1.0;
+    }
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=Rlp[0][k]*Rlp[2][k];
+  for (k=0; k < 3 ; k++)
+    Rlp[0][k] -= sp*Rlp[2][k];
+  norm = calc_norm(Rlp[0]);
+  for (k=0; k < 3 ; k++)
+    Rlp[0][k] = Rlp[0][k]/norm;
+  vectProdVec(Rlp[2], Rlp[0], Rlp[1]);
+}
+void calc_It(void)
+{
+  int i, j, k;
+  double distSq, ri[3], rj[3];
+  double Icom[3][3];
+  for (j=0; j < 3; j++)
+    for (k=0; k < 3; k++)
+      It[j][k] = 0.0;
+  /* moment of inertia of centers of mass */
+  for (j=0; j < 3; j++)
+    for (k=0; k < 3; k++)
+      {
+	It[j][k] = 0.0;
+	for (i=0; i < nat; i++)
+	  {
+	    ri[0] = DNAchain[i].x; /* notare che il centro di massa è stato già riportato nell'origine ossia Rcm=(0,0,0) */
+	    ri[1] = DNAchain[i].y;
+	    ri[2] = DNAchain[i].z;
+	    distSq = Sqr(ri[0])+Sqr(ri[1])+Sqr(ri[2]);
+	    It[j][k] += 1.0*(((j==k)?distSq:0.0) - ri[j]*ri[k]);
+	  }
+      }
+}
+void align_z_axis(void)
+{
+  double ev[3], St, xp[3], xl[3];
+  int numev, a, b, i, k1, k2;
+
+  calc_It();
+  diagonalize(It, ev);
+
+  /* find max eigenval */
+  if (fabs(ev[0]) > fabs(ev[1]))
+    { 
+      St = ev[0];
+      numev=0;
+    }
+  else
+    {
+      St = ev[1];
+      numev=1;
+    }  
+  if (fabs(ev[2]) > St)
+    {
+      St = ev[2];
+      numev=2;
+    }
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      Rlp[a][b] = eigvec[a][b]; /* ogni riga è un autovettore */
+
+  for (i=0; i < nat; i++)
+    {
+      xl[0] = DNAchain[i].x;
+      xl[1] = DNAchain[i].y;
+      xl[2] = DNAchain[i].z;
+      for (k1=0; k1 < 3; k1++)
+	{
+	  xp[k1] = 0;
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      xp[k1] += Rlp[k1][k2]*xl[k2];
+	    } 
+	}
+      DNAchain[i].x = xp[0];
+      DNAchain[i].y = xp[1];
+      DNAchain[i].z = xp[2];
+    }
+}
+#endif
 int main(int argc, char**argv)
 {
 #ifdef USE_MISER
@@ -1812,7 +1942,7 @@ int main(int argc, char**argv)
     {
 #ifdef GAUSS
 #ifdef QFGAUSS
-  printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [rSugar] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");#else
+  printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [rSugar] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
 #else
 #ifdef MCGAMMA
       printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [rSugar] [nphi] [ntheta]\n");
@@ -1967,6 +2097,9 @@ int main(int argc, char**argv)
       DNAchain[i].z -= rcmz;
     }
   fclose(fin);
+#ifdef PRINC_AXES
+  align_z_axis();
+#endif
   init_distbox();
   Lx=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[0];
   Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];
