@@ -9,6 +9,7 @@
 #define GAUSS
 #define EULER_ROT
 #define MCGAMMA
+#define PRINC_AXES
 #define QUASIMC
 #define SOBOL_LL /* use long long to have MAXBIT=60! */
 #ifdef USEGSL
@@ -1805,6 +1806,7 @@ void diagonalize(double M[3][3], double ev[3])
 
 double pz[3];
 double Rlp[3][3];
+#if 0
 void build_ref_system(void)
 {
   int k;
@@ -1833,6 +1835,7 @@ void build_ref_system(void)
     Rlp[0][k] = Rlp[0][k]/norm;
   vectProdVec(Rlp[2], Rlp[0], Rlp[1]);
 }
+#endif
 void calc_It(void)
 {
   int i, j, k;
@@ -1852,7 +1855,7 @@ void calc_It(void)
 	    ri[1] = DNAchain[i].y;
 	    ri[2] = DNAchain[i].z;
 	    distSq = Sqr(ri[0])+Sqr(ri[1])+Sqr(ri[2]);
-	    It[j][k] += 1.0*(((j==k)?distSq:0.0) - ri[j]*ri[k]);
+	    It[j][k] += ((j==k)?distSq:0.0) - ri[j]*ri[k];
 	  }
       }
 }
@@ -1874,6 +1877,7 @@ void align_z_axis(void)
   int numev, a, b, i, k1, k2;
 
   calc_It();
+  //print_matrix(It, 3);
   diagonalize(It, ev);
 #if 0
   /* find max eigenval */
@@ -1900,10 +1904,11 @@ void align_z_axis(void)
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       evstruct[a].eigvec[b] = eigvec[a][b];
+  //print_matrix(eigvec, 3);
   evstruct[a].idx = a;
   qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
 
-  printf("AFTER ev[0]=%f ev[1]=%f ev[2]=%f\n", evstruct[0].ev, evstruct[1].ev, evstruct[2].ev);
+  //printf("AFTER ev[0]=%f ev[1]=%f ev[2]=%f\n", evstruct[0].ev, evstruct[1].ev, evstruct[2].ev);
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       Rlp[a][b] = evstruct[a].eigvec[b]; /* ogni riga è un autovettore */
